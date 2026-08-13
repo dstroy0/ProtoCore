@@ -20,11 +20,11 @@
  *
  * NOTE: optional services are gated by a compile flag the *library* sources must
  * also see; for PlatformIO enable it for the whole build, e.g.:
- *     build_flags = -DPC_ENABLE_JWT=1
+ *     build_flags = -DPROTOCORE_ENABLE_JWT=1
  * (Arduino IDE: it is already set for you in the build_opt.h beside this sketch, so it builds as-is.)
  */
 
-#define PC_ENABLE_JWT 1
+#define PROTOCORE_ENABLE_JWT 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -40,15 +40,15 @@ static const char *JWT_SECRET = "s3cr3t-key";
 static void protected_handler(uint8_t id, HttpReq *req)
 {
     // req->authorization holds the FULL Authorization header (JWTs exceed
-    // MAX_VAL_LEN; the parser captures it whole when PC_ENABLE_JWT is set).
-    if (!pc_jwt_bearer_valid(req->authorization, (const uint8_t *)JWT_SECRET, strlen(JWT_SECRET)))
+    // MAX_VAL_LEN; the parser captures it whole when PROTOCORE_ENABLE_JWT is set).
+    if (!protocore_jwt_bearer_valid(req->authorization, (const uint8_t *)JWT_SECRET, strlen(JWT_SECRET)))
     {
         proto_add_response_header(id, "WWW-Authenticate", "Bearer");
         send_text(id, 401, "text/plain", "invalid or missing token");
         return;
     }
 
-    // Granular authorization from a token claim. pc_jwt_claim_str / pc_jwt_scope_allows
+    // Granular authorization from a token claim. protocore_jwt_claim_str / protocore_jwt_scope_allows
     // take the bare token, so step past the "Bearer " scheme first.
     const char *tok = req->authorization + 7;
     while (*tok == ' ')
@@ -56,15 +56,15 @@ static void protected_handler(uint8_t id, HttpReq *req)
         tok++;
     }
     char role[16];
-    if (!pc_jwt_claim_str(tok, strlen(tok), "role", role, sizeof(role)) || strcmp(role, "admin") != 0)
+    if (!protocore_jwt_claim_str(tok, strlen(tok), "role", role, sizeof(role)) || strcmp(role, "admin") != 0)
     {
         send_text(id, 403, "text/plain", "forbidden: admin role required");
         return;
     }
     // For OAuth2 space-separated scopes, gate on the "scope" claim instead:
     //   char scope[64];
-    //   if (pc_jwt_claim_str(tok, strlen(tok), "scope", scope, sizeof(scope)) &&
-    //       pc_jwt_scope_allows(scope, "telemetry:write")) { ... }
+    //   if (protocore_jwt_claim_str(tok, strlen(tok), "scope", scope, sizeof(scope)) &&
+    //       protocore_jwt_scope_allows(scope, "telemetry:write")) { ... }
 
     send_text(id, 200, "text/plain", "welcome admin - your token is valid");
 }

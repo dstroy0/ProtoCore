@@ -14,7 +14,7 @@ Ethernet / WiFi" badge in a UI.
 **Query on demand:**
 
 ```cpp
-pc_if_kind i = Physical.link->egress();       // PC_IF_ETH / PC_IF_WIFI_STA / PC_IF_WIFI_AP / none
+protocore_if_kind i = Physical.link->egress();       // PROTOCORE_IF_ETH / PROTOCORE_IF_WIFI_STA / PROTOCORE_IF_WIFI_AP / none
 uint32_t ip = Physical.link->egress_ip();   // current egress IP (network byte order)
 ```
 
@@ -50,15 +50,15 @@ static const char *PASSWORD = "YOUR_PASSWORD";
 PC server;
 
 // Map the egress interface enum to a human name.
-static const char *iface_name(pc_if_kind i)
+static const char *iface_name(protocore_if_kind i)
 {
     switch (i)
     {
-    case pc_if_kind::PC_IF_ETH:
+    case protocore_if_kind::PROTOCORE_IF_ETH:
         return "ethernet";
-    case pc_if_kind::PC_IF_WIFI_AP:
+    case protocore_if_kind::PROTOCORE_IF_WIFI_AP:
         return "softap";
-    case pc_if_kind::PC_IF_WIFI_STA:
+    case protocore_if_kind::PROTOCORE_IF_WIFI_STA:
         return "wifi-sta";
     default:
         return "none";

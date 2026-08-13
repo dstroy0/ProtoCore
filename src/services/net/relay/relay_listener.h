@@ -3,18 +3,18 @@
 
 /**
  * @file relay_listener.h
- * @brief Server-side TCP relay / DNAT listener (PC_ENABLE_RELAY) - publish an internal
+ * @brief Server-side TCP relay / DNAT listener (PROTOCORE_ENABLE_RELAY) - publish an internal
  *        `host:port` on a server port.
  *
  * Wires the pure relay engine (relay.h) into the server: an inbound connection accepted on a
- * published port is bridged to an origin (an outbound `pc_client` connection to the internal
+ * published port is bridged to an origin (an outbound `protocore_client` connection to the internal
  * service). A ProtoConn::PROTO_RELAY connection handler opens the origin on accept, pumps bytes both ways each
- * poll (via pc_relay_step), and tears both down on close - the DNAT return path is automatic.
+ * poll (via protocore_relay_step), and tears both down on close - the DNAT return path is automatic.
  *
  * Usage (opt-in twice: compiled out by default, and inert until you publish a port):
  * @code
  *   int32_t li = server.listen(8080, ProtoConn::PROTO_RELAY);   // front port 8080
- *   pc_relay_publish((uint8_t)li, "192.168.1.60", 80);  // -> internal 192.168.1.60:80
+ *   protocore_relay_publish((uint8_t)li, "192.168.1.60", 80);  // -> internal 192.168.1.60:80
  * @endcode
  *
  * Security: this is an open forward to whatever origin you publish - only publish trusted internal
@@ -29,9 +29,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_RELAY
+#if PROTOCORE_ENABLE_RELAY
 
 /**
  * @brief Bind a published listener to an origin. Call after `server.listen(port, ProtoConn::PROTO_RELAY)` with
@@ -40,15 +40,15 @@ PROTO_BEGIN_DECLS
  * @param origin_host  the internal host to forward to (dotted-quad or a name; copied).
  * @param origin_port  the internal port.
  * @return true; false if the origin host is null/too long or the bind table is full
- *         (PC_RELAY_MAX_PUBLISH).
+ *         (PROTOCORE_RELAY_MAX_PUBLISH).
  */
-proto_bool pc_relay_publish(uint8_t listener_id, const char *origin_host, uint16_t origin_port);
+proto_bool protocore_relay_publish(uint8_t listener_id, const char *origin_host, uint16_t origin_port);
 
 /** @brief Clear all published binds and active bridges (start from empty). */
-void pc_relay_listener_reset(void);
+void protocore_relay_listener_reset(void);
 
-#endif // PC_ENABLE_RELAY
+#endif // PROTOCORE_ENABLE_RELAY
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_RELAY_LISTENER_H

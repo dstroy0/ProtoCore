@@ -20,7 +20,7 @@
 //   STRESS     - large query, many headers, incremental feeds
 
 #include "network_drivers/presentation/http/http_parser/http_parser.h"
-#include "shared_primitives/ip.h" // PC_IP_STR_MAX for the recovered-client buffer
+#include "shared_primitives/ip.h" // PROTOCORE_IP_STR_MAX for the recovered-client buffer
 #include <string.h>
 #include <unity.h>
 
@@ -437,7 +437,7 @@ void test_forwarded_strips_quotes_and_port()
 
 void test_forwarded_ipv6_recovered_unknown_rejected()
 {
-    char ip[PC_IP_STR_MAX];
+    char ip[PROTOCORE_IP_STR_MAX];
     // RFC 7239 §6: an IPv6 for= value is DQUOTE-wrapped + bracketed, optional :port.
     feed_request(0, "GET / HTTP/1.1\r\nForwarded: for=\"[2001:db8::1]:8080\"\r\n\r\n");
     TEST_ASSERT_TRUE(http_forwarded_client(&http_pool[0], ip, sizeof(ip), NULL));
@@ -1141,9 +1141,9 @@ void test_header_value_overflow_truncated_not_error()
     TEST_ASSERT_EQUAL(MAX_VAL_LEN - 1, (int)strlen(v));
 }
 
-// --- Authorization header capture (PC_CAPTURE_AUTH_HEADER) -----------------------
+// --- Authorization header capture (PROTOCORE_CAPTURE_AUTH_HEADER) -----------------------
 
-#if PC_CAPTURE_AUTH_HEADER
+#if PROTOCORE_CAPTURE_AUTH_HEADER
 void test_authorization_header_captured()
 {
     feed_request(0, "GET / HTTP/1.1\r\nAuthorization: Bearer abc.def.ghi\r\n\r\n");
@@ -1154,10 +1154,10 @@ void test_authorization_header_captured()
 
 void test_authorization_header_capped_at_capacity()
 {
-    // A value longer than PC_AUTH_HDR_CAP must be truncated rather than overrun the buffer.
-    char req[PC_AUTH_HDR_CAP + 64];
+    // A value longer than PROTOCORE_AUTH_HDR_CAP must be truncated rather than overrun the buffer.
+    char req[PROTOCORE_AUTH_HDR_CAP + 64];
     int off = snprintf(req, sizeof(req), "GET / HTTP/1.1\r\nAuthorization: ");
-    for (int i = 0; i < PC_AUTH_HDR_CAP + 20; i++)
+    for (int i = 0; i < PROTOCORE_AUTH_HDR_CAP + 20; i++)
     {
         req[off++] = 'A';
     }
@@ -1166,7 +1166,7 @@ void test_authorization_header_capped_at_capacity()
 
     feed_request(0, req);
     TEST_ASSERT_EQUAL(PARSE_COMPLETE, http_pool[0].parse_state);
-    TEST_ASSERT_EQUAL(PC_AUTH_HDR_CAP - 1, (int)strlen(http_pool[0].authorization));
+    TEST_ASSERT_EQUAL(PROTOCORE_AUTH_HDR_CAP - 1, (int)strlen(http_pool[0].authorization));
 }
 #endif
 
@@ -1260,9 +1260,9 @@ void test_forwarded_bracketed_ipv6_overflow_and_unterminated()
     char req[128];
     char ip[24];
 
-    // Bracket content longer than the PC_IP_STR_MAX scratch buffer.
+    // Bracket content longer than the PROTOCORE_IP_STR_MAX scratch buffer.
     int off = snprintf(req, sizeof(req), "GET / HTTP/1.1\r\nForwarded: for=[");
-    for (int i = 0; i < PC_IP_STR_MAX + 10; i++)
+    for (int i = 0; i < PROTOCORE_IP_STR_MAX + 10; i++)
     {
         req[off++] = 'f';
     }
@@ -1284,13 +1284,13 @@ void test_forwarded_bare_colon_port_edge_cases()
     TEST_ASSERT_FALSE(http_forwarded_client(&http_pool[0], ip, sizeof(ip), NULL));
 
     // Two-or-more-colon token (treated as a bare IPv6 literal, no port stripped) longer than
-    // the PC_IP_STR_MAX scratch buffer.
+    // the PROTOCORE_IP_STR_MAX scratch buffer.
     feed_request(1, "GET / HTTP/1.1\r\n"
                     "X-Forwarded-For: 1234:1234:1234:1234:1234:1234:1234:1234:1234:1234\r\n\r\n");
     TEST_ASSERT_FALSE(http_forwarded_client(&http_pool[1], ip, sizeof(ip), NULL));
 }
 
-void test_forwarded_proto_missing_or_in_later_element()
+void test_forwarded_protocore_missing_or_in_later_element()
 {
     proto_bool https;
 
@@ -1333,7 +1333,7 @@ void test_forwarded_empty_for_token_rejected()
     TEST_ASSERT_FALSE(http_forwarded_client(&http_pool[0], ip, sizeof(ip), NULL));
 }
 
-void test_xff_proto_missing_or_mismatched()
+void test_xff_protocore_missing_or_mismatched()
 {
     char ip[24];
     proto_bool https;
@@ -1469,7 +1469,7 @@ int main()
     RUN_TEST(test_duplicate_host_header_is_error);
     RUN_TEST(test_header_value_overflow_truncated_not_error);
 
-#if PC_CAPTURE_AUTH_HEADER
+#if PROTOCORE_CAPTURE_AUTH_HEADER
     RUN_TEST(test_authorization_header_captured);
     RUN_TEST(test_authorization_header_capped_at_capacity);
 #endif
@@ -1486,10 +1486,10 @@ int main()
     RUN_TEST(test_forwarded_short_and_unterminated_quote_rejected);
     RUN_TEST(test_forwarded_bracketed_ipv6_overflow_and_unterminated);
     RUN_TEST(test_forwarded_bare_colon_port_edge_cases);
-    RUN_TEST(test_forwarded_proto_missing_or_in_later_element);
+    RUN_TEST(test_forwarded_protocore_missing_or_in_later_element);
     RUN_TEST(test_forwarded_header_present_without_for);
     RUN_TEST(test_forwarded_empty_for_token_rejected);
-    RUN_TEST(test_xff_proto_missing_or_mismatched);
+    RUN_TEST(test_xff_protocore_missing_or_mismatched);
 
     // http_get_form
     RUN_TEST(test_form_basic_lookup_first_middle_last);

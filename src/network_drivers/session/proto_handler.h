@@ -22,7 +22,7 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
 /**
  * @brief Per-protocol connection event/poll callbacks (Layer 5 dispatch vtable).
@@ -31,8 +31,12 @@ typedef struct ProtoHandler
 {
     void (*on_accept)(uint8_t slot); ///< EvtType::EVT_CONNECT: a new connection was accepted.
     void (*on_data)(uint8_t slot);   ///< EvtType::EVT_DATA: bytes are available in the slot's rx ring.
-    void (*on_close)(uint8_t slot);  ///< EvtType::EVT_DISCONNECT / EvtType::EVT_ERROR: tear down slot state.
-    void (*on_poll)(uint8_t slot);   ///< Called for an active slot each handle() loop (nullable).
+    void (*on_close)(uint8_t slot);  ///< EvtType::EVT_DISCONNECT: the peer closed normally.
+    /// EvtType::EVT_ERROR: the connection was aborted, not closed. RFC 9293 sec 3.6 MUST-12 - "the
+    /// local application MUST be informed whether it closed normally or was aborted" - so the two
+    /// arrive separately. Null falls back to on_close, which cannot tell them apart.
+    void (*on_abort)(uint8_t slot);
+    void (*on_poll)(uint8_t slot); ///< Called for an active slot each handle() loop (nullable).
 } ProtoHandler;
 
 /**
@@ -58,6 +62,6 @@ typedef struct
 /** @brief The one symbol this module exports. ProtoHandler is the per-protocol record above. */
 extern const ProtoRegistryNs Protocols;
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_PROTO_HANDLER_H

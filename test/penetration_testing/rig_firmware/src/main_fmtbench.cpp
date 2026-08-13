@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // On-device CCOUNT microbenchmark for the formatting path: snprintf (what SRCBANNED ban 20 bans)
-// vs a hand-written pc_sb append sequence vs pc_frame_build over a static pc_field spec.
+// vs a hand-written protocore_sb append sequence vs protocore_frame_build over a static protocore_field spec.
 //
 // Ban 20 asserts a format string costs roughly 3x an equivalent frame build because it re-parses at
 // runtime what the code already knew at compile time. That is a hypothesis until it meets a cycle
@@ -44,16 +44,16 @@ static char buf[256];
 // ---------------------------------------------------------------------------
 // Frame A: the HTTP response status line + headers. The hottest formatting path in the library.
 // ---------------------------------------------------------------------------
-static const pc_field FRAME_RESP[] = {{PC_FK_LIT, 0, 9, "HTTP/1.1 "},
-                                      PC_U32,
-                                      {PC_FK_LIT, 0, 1, " "},
-                                      PC_STR,
-                                      {PC_FK_LIT, 0, 16, "\r\nContent-Type: "},
-                                      PC_STR,
-                                      {PC_FK_LIT, 0, 18, "\r\nContent-Length: "},
-                                      PC_U32,
-                                      {PC_FK_LIT, 0, 2, "\r\n"},
-                                      PC_END};
+static const protocore_field FRAME_RESP[] = {{PROTOCORE_FK_LIT, 0, 9, "HTTP/1.1 "},
+                                             PROTOCORE_U32,
+                                             {PROTOCORE_FK_LIT, 0, 1, " "},
+                                             PROTOCORE_STR,
+                                             {PROTOCORE_FK_LIT, 0, 16, "\r\nContent-Type: "},
+                                             PROTOCORE_STR,
+                                             {PROTOCORE_FK_LIT, 0, 18, "\r\nContent-Length: "},
+                                             PROTOCORE_U32,
+                                             {PROTOCORE_FK_LIT, 0, 2, "\r\n"},
+                                             PROTOCORE_END};
 
 static void resp_snprintf()
 {
@@ -64,33 +64,34 @@ static void resp_snprintf()
 
 static void resp_sb()
 {
-    pc_sb b = {buf, sizeof(buf), 0, true};
-    pc_sb_lit(&b, "HTTP/1.1 ");
-    pc_sb_u32(&b, 200u);
-    pc_sb_lit(&b, " ");
-    pc_sb_put(&b, "OK");
-    pc_sb_lit(&b, "\r\nContent-Type: ");
-    pc_sb_put(&b, "text/plain");
-    pc_sb_lit(&b, "\r\nContent-Length: ");
-    pc_sb_u32(&b, 21u);
-    pc_sb_lit(&b, "\r\n");
-    g_sink += (uint32_t)pc_sb_finish(&b);
+    protocore_sb b = {buf, sizeof(buf), 0, true};
+    protocore_sb_lit(&b, "HTTP/1.1 ");
+    protocore_sb_u32(&b, 200u);
+    protocore_sb_lit(&b, " ");
+    protocore_sb_put(&b, "OK");
+    protocore_sb_lit(&b, "\r\nContent-Type: ");
+    protocore_sb_put(&b, "text/plain");
+    protocore_sb_lit(&b, "\r\nContent-Length: ");
+    protocore_sb_u32(&b, 21u);
+    protocore_sb_lit(&b, "\r\n");
+    g_sink += (uint32_t)protocore_sb_finish(&b);
 }
 
 static void resp_frame()
 {
-    g_sink +=
-        (uint32_t)frame.build(buf, sizeof(buf), FRAME_RESP,
-                              (const pc_fval[]){PC_VU32(200u), PC_VSTR("OK"), PC_VSTR("text/plain"), PC_VU32(21u)}, 4);
+    g_sink += (uint32_t)frame.build(buf, sizeof(buf), FRAME_RESP,
+                                    (const protocore_fval[]){PROTOCORE_VU32(200u), PROTOCORE_VSTR("OK"),
+                                                             PROTOCORE_VSTR("text/plain"), PROTOCORE_VU32(21u)},
+                                    4);
 }
 
 // ---------------------------------------------------------------------------
 // Frame B: a JSON metrics object - literals plus several numbers.
 // ---------------------------------------------------------------------------
-static const pc_field FRAME_JSON[] = {
-    {PC_FK_LIT, 0, 11, "{\"cpu_mhz\":"}, PC_U32, {PC_FK_LIT, 0, 8, ",\"heap\":"}, PC_U32,
-    {PC_FK_LIT, 0, 10, ",\"uptime\":"},  PC_U32, {PC_FK_LIT, 0, 8, ",\"reqs\":"}, PC_U32,
-    {PC_FK_LIT, 0, 10, ",\"temp_c\":"},  PC_I64, {PC_FK_LIT, 0, 1, "}"},          PC_END};
+static const protocore_field FRAME_JSON[] = {
+    {PROTOCORE_FK_LIT, 0, 11, "{\"cpu_mhz\":"}, PROTOCORE_U32, {PROTOCORE_FK_LIT, 0, 8, ",\"heap\":"}, PROTOCORE_U32,
+    {PROTOCORE_FK_LIT, 0, 10, ",\"uptime\":"},  PROTOCORE_U32, {PROTOCORE_FK_LIT, 0, 8, ",\"reqs\":"}, PROTOCORE_U32,
+    {PROTOCORE_FK_LIT, 0, 10, ",\"temp_c\":"},  PROTOCORE_I64, {PROTOCORE_FK_LIT, 0, 1, "}"},          PROTOCORE_END};
 
 static void json_snprintf()
 {
@@ -101,9 +102,11 @@ static void json_snprintf()
 
 static void json_frame()
 {
-    g_sink += (uint32_t)frame.build(
-        buf, sizeof(buf), FRAME_JSON,
-        (const pc_fval[]){PC_VU32(240u), PC_VU32(198000u), PC_VU32(123456u), PC_VU32(4200u), PC_VI64(-7)}, 5);
+    g_sink += (uint32_t)frame.build(buf, sizeof(buf), FRAME_JSON,
+                                    (const protocore_fval[]){PROTOCORE_VU32(240u), PROTOCORE_VU32(198000u),
+                                                             PROTOCORE_VU32(123456u), PROTOCORE_VU32(4200u),
+                                                             PROTOCORE_VI64(-7)},
+                                    5);
 }
 
 // ---------------------------------------------------------------------------
@@ -116,9 +119,9 @@ static void u32_snprintf()
 
 static void u32_sb()
 {
-    pc_sb b = {buf, sizeof(buf), 0, true};
-    pc_sb_u32(&b, 4294967295u);
-    g_sink += (uint32_t)pc_sb_finish(&b);
+    protocore_sb b = {buf, sizeof(buf), 0, true};
+    protocore_sb_u32(&b, 4294967295u);
+    g_sink += (uint32_t)protocore_sb_finish(&b);
 }
 
 // hex is the case the shift/mask split targets: one digit IS four bits, no division needed
@@ -129,12 +132,12 @@ static void hex_snprintf()
 
 static void hex_sb()
 {
-    pc_sb b = {buf, sizeof(buf), 0, true};
-    pc_sb_hex(&b, 0xdeadbeefu, 8);
-    g_sink += (uint32_t)pc_sb_finish(&b);
+    protocore_sb b = {buf, sizeof(buf), 0, true};
+    protocore_sb_hex(&b, 0xdeadbeefu, 8);
+    g_sink += (uint32_t)protocore_sb_finish(&b);
 }
 
-// %g is where the libc float formatter is linked in at all; pc_sb_g reads the decimal exponent
+// %g is where the libc float formatter is linked in at all; protocore_sb_g reads the decimal exponent
 // straight out of the IEEE-754 exponent field instead of converging on it with divides.
 static void g_snprintf()
 {
@@ -143,9 +146,9 @@ static void g_snprintf()
 
 static void g_sb()
 {
-    pc_sb b = {buf, sizeof(buf), 0, true};
-    pc_sb_g(&b, 3.14159265358979, 6);
-    g_sink += (uint32_t)pc_sb_finish(&b);
+    protocore_sb b = {buf, sizeof(buf), 0, true};
+    protocore_sb_g(&b, 3.14159265358979, 6);
+    g_sink += (uint32_t)protocore_sb_finish(&b);
 }
 
 static void fix_snprintf()
@@ -155,9 +158,9 @@ static void fix_snprintf()
 
 static void fix_sb()
 {
-    pc_sb b = {buf, sizeof(buf), 0, true};
-    pc_sb_fixed(&b, 1234.5678, 2);
-    g_sink += (uint32_t)pc_sb_finish(&b);
+    protocore_sb b = {buf, sizeof(buf), 0, true};
+    protocore_sb_fixed(&b, 1234.5678, 2);
+    g_sink += (uint32_t)protocore_sb_finish(&b);
 }
 
 // A pure literal copy: the floor for both, and the case a format string should lose least on.
@@ -166,7 +169,8 @@ static void lit_snprintf()
     g_sink += (uint32_t)snprintf(buf, sizeof(buf), "HTTP/1.1 200 OK\r\nConnection: close\r\n\r\n");
 }
 
-static const pc_field FRAME_LIT[] = {{PC_FK_LIT, 0, 38, "HTTP/1.1 200 OK\r\nConnection: close\r\n\r\n"}, PC_END};
+static const protocore_field FRAME_LIT[] = {{PROTOCORE_FK_LIT, 0, 38, "HTTP/1.1 200 OK\r\nConnection: close\r\n\r\n"},
+                                            PROTOCORE_END};
 
 static void lit_frame()
 {
@@ -218,22 +222,22 @@ static void fmt_bench_task(void *)
 
     Serial.println("CB --- frames ---");
     BENCH("resp/snprintf", 2000, resp_snprintf());
-    BENCH("resp/pc_sb", 2000, resp_sb());
-    BENCH("resp/pc_frame", 2000, resp_frame());
+    BENCH("resp/protocore_sb", 2000, resp_sb());
+    BENCH("resp/protocore_frame", 2000, resp_frame());
     BENCH("json/snprintf", 2000, json_snprintf());
-    BENCH("json/pc_frame", 2000, json_frame());
+    BENCH("json/protocore_frame", 2000, json_frame());
     BENCH("literal/snprintf", 2000, lit_snprintf());
-    BENCH("literal/pc_frame", 2000, lit_frame());
+    BENCH("literal/protocore_frame", 2000, lit_frame());
 
     Serial.println("CB --- primitives ---");
     BENCH("u32/snprintf", 5000, u32_snprintf());
-    BENCH("u32/pc_sb", 5000, u32_sb());
+    BENCH("u32/protocore_sb", 5000, u32_sb());
     BENCH("hex8/snprintf", 5000, hex_snprintf());
-    BENCH("hex8/pc_sb", 5000, hex_sb());
+    BENCH("hex8/protocore_sb", 5000, hex_sb());
     BENCH("g6/snprintf", 2000, g_snprintf());
-    BENCH("g6/pc_sb", 2000, g_sb());
+    BENCH("g6/protocore_sb", 2000, g_sb());
     BENCH("fixed2/snprintf", 2000, fix_snprintf());
-    BENCH("fixed2/pc_sb", 2000, fix_sb());
+    BENCH("fixed2/protocore_sb", 2000, fix_sb());
 
     Serial.printf("CB done (sink=%u)\n", (unsigned)g_sink);
     vTaskDelete(nullptr);

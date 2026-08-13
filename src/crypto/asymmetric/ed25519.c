@@ -12,25 +12,25 @@
  * implementation (test_ed25519).
  *
  * The field elements and point arithmetic have two implementations: the portable radix-2^16
- * `pc_gf` (from pc_curve25519, the native / non-S3 path), and on the ESP32-S3 a canonical
+ * `protocore_gf` (from protocore_curve25519, the native / non-S3 path), and on the ESP32-S3 a canonical
  * `uint32[8]` layer that does each field multiply as one 256-bit modular multiply on the
- * RSA/MPI accelerator (pc_fe25519.h, active as PC_FE25519_MPI_HW) - the same engine that
+ * RSA/MPI accelerator (protocore_fe25519.h, active as PROTOCORE_FE25519_MPI_HW) - the same engine that
  * accelerates the X25519 KEX, here driving the Edwards point arithmetic so the host-key
  * signature runs several times faster. Only the point/field layer differs; the SHA-512 hashing
  * and the scalar arithmetic mod L are shared. Both paths are byte-identical by construction.
  */
 
 #include "crypto/asymmetric/ed25519.h"
-#include "crypto/asymmetric/curve25519.h" // pc_gf + field ops (native / non-S3 path)
+#include "crypto/asymmetric/curve25519.h" // protocore_gf + field ops (native / non-S3 path)
 #include "crypto/asymmetric/fe25519.h"    // MODMULT dies: canonical uint32[8] field on the RSA accelerator
 #include "crypto/crypto_opt.h"
-#include "crypto/ct_eq.h" // pc_ct_eq
+#include "crypto/ct_eq.h" // protocore_ct_eq
 #include "crypto/hash/sha512.h"
-#include "mmgr/secure.h" // pc_secure_wipe
-#ifdef PC_FE25519_MPI_HW
+#include "mmgr/secure.h" // protocore_secure_wipe
+#ifdef PROTOCORE_FE25519_MPI_HW
 #include "crypto/asymmetric/ed25519_comb_table.h" // fixed-base comb ED_COMB[i][j] = (j+1)*256^i*B; drives the MODMULT sign
 #endif
-PC_CRYPTO_HOT
+PROTOCORE_CRYPTO_HOT
 
 // --- Shared constants -------------------------------------------------------
 
@@ -44,7 +44,7 @@ static const int64_t ED_L[32] = {0xed, 0xd3, 0xf5, 0x5c, 0x1a, 0x63, 0x12, 0x58,
 // Constant-time 32-byte compare: 0 if equal, -1 otherwise (Ed25519 verify + point decode, public data).
 static int ct_verify32(const uint8_t *x, const uint8_t *y)
 {
-    return pc_ct_eq(x, y, 32) ? 0 : -1;
+    return protocore_ct_eq(x, y, 32) ? 0 : -1;
 }
 
 // --- Scalar reduction mod L -------------------------------------------------
@@ -120,10 +120,10 @@ static proto_bool ed_scalar_canonical(const uint8_t s[32])
     return PROTO_FALSE; // S == L is out of range
 }
 
-#ifdef PC_FE25519_MPI_HW
+#ifdef PROTOCORE_FE25519_MPI_HW
 // ===================== ESP32-S3 Edwards point arithmetic on the RSA/MPI field ============================
-// The curve constants as canonical uint32[8] (each word = pc_gf limb 2i | limb 2i+1 << 16 of the radix-2^16
-// constants below; the point arithmetic is byte-identical to the pc_gf path, verified by the RFC 8032 KAT).
+// The curve constants as canonical uint32[8] (each word = protocore_gf limb 2i | limb 2i+1 << 16 of the radix-2^16
+// constants below; the point arithmetic is byte-identical to the protocore_gf path, verified by the RFC 8032 KAT).
 static const fe ED_D_FE = {0x135978a3, 0x75eb4dca, 0x4141d8ab, 0x00700a4d,
                            0x7779e898, 0x8cc74079, 0x2b6ffe73, 0x52036cee}; // d = -121665/121666
 static const fe ED_D2_FE = {0x26b2f159, 0xebd69b94, 0x8283b156, 0x00e0149a,
@@ -138,7 +138,7 @@ static const fe ED_I_FE = {0x4a0ea0b0, 0xc4ee1b27, 0xad2fe478, 0x2f431806,
 // ED_COMB (the fixed-base comb table) is included at the top of the file with the other headers.
 
 // p += q (twisted-Edwards addition, RFC 8032 §5.1.4). Safe when q aliases p (point doubling): every read of
-// q happens before any write of p. Requires pc_fe_hw_enable() (the fe_mul/fe_sq run on the accelerator).
+// q happens before any write of p. Requires protocore_fe_hw_enable() (the fe_mul/fe_sq run on the accelerator).
 static void edf_add(fe p[4], fe q[4])
 {
     fe a;
@@ -344,10 +344,10 @@ static int edf_unpackneg(fe r[4], const uint8_t p[32])
 static void ed_scalarbase_bytes(uint8_t out[32], const uint8_t s[32])
 {
     fe p[4];
-    pc_fe_hw_enable();
+    protocore_fe_hw_enable();
     edf_scalarbase(p, s);
     edf_pack(out, p);
-    pc_fe_hw_disable();
+    protocore_fe_hw_disable();
 }
 
 // out = pack(S*B - h*A); false if the public key A does not decode to a curve point.
@@ -356,133 +356,133 @@ static proto_bool ed_verify_recompute(uint8_t out[32], const uint8_t S[32], cons
     fe p[4];
     fe q[4];
     fe sb[4];
-    pc_fe_hw_enable();
+    protocore_fe_hw_enable();
     if (edf_unpackneg(q, pub) != 0) // q = -A
     {
-        pc_fe_hw_disable();
+        protocore_fe_hw_disable();
         return PROTO_FALSE;
     }
     edf_scalarmult(p, q, h); // p = h * (-A)
     edf_scalarbase(sb, S);   // sb = S * B
     edf_add(p, sb);          // p = S*B - h*A
     edf_pack(out, p);
-    pc_fe_hw_disable();
+    protocore_fe_hw_disable();
     return PROTO_TRUE;
 }
 #else
 // --- Curve constants (radix-2^16 field elements, little-endian limbs) --------
 
-static const pc_gf GF0 = {0};
-static const pc_gf GF1 = {1};
+static const protocore_gf GF0 = {0};
+static const protocore_gf GF1 = {1};
 // d = -121665/121666 (the twisted-Edwards curve constant) and 2d.
-static const pc_gf ED_D = {0x78a3, 0x1359, 0x4dca, 0x75eb, 0xd8ab, 0x4141, 0x0a4d, 0x0070,
+static const protocore_gf ED_D = {0x78a3, 0x1359, 0x4dca, 0x75eb, 0xd8ab, 0x4141, 0x0a4d, 0x0070,
                            0xe898, 0x7779, 0x4079, 0x8cc7, 0xfe73, 0x2b6f, 0x6cee, 0x5203};
-static const pc_gf ED_D2 = {0xf159, 0x26b2, 0x9b94, 0xebd6, 0xb156, 0x8283, 0x149a, 0x00e0,
+static const protocore_gf ED_D2 = {0xf159, 0x26b2, 0x9b94, 0xebd6, 0xb156, 0x8283, 0x149a, 0x00e0,
                             0xd130, 0xeef3, 0x80f2, 0x198e, 0xfce7, 0x56df, 0xd9dc, 0x2406};
 // Base point B = (X, Y).
-static const pc_gf ED_X = {0xd51a, 0x8f25, 0x2d60, 0xc956, 0xa7b2, 0x9525, 0xc760, 0x692c,
+static const protocore_gf ED_X = {0xd51a, 0x8f25, 0x2d60, 0xc956, 0xa7b2, 0x9525, 0xc760, 0x692c,
                            0xdc5c, 0xfdd6, 0xe231, 0xc0a4, 0x53fe, 0xcd6e, 0x36d3, 0x2169};
-static const pc_gf ED_Y = {0x6658, 0x6666, 0x6666, 0x6666, 0x6666, 0x6666, 0x6666, 0x6666,
+static const protocore_gf ED_Y = {0x6658, 0x6666, 0x6666, 0x6666, 0x6666, 0x6666, 0x6666, 0x6666,
                            0x6666, 0x6666, 0x6666, 0x6666, 0x6666, 0x6666, 0x6666, 0x6666};
 // sqrt(-1) mod p.
-static const pc_gf ED_I = {0xa0b0, 0x4a0e, 0x1b27, 0xc4ee, 0xe478, 0xad2f, 0x1806, 0x2f43,
+static const protocore_gf ED_I = {0xa0b0, 0x4a0e, 0x1b27, 0xc4ee, 0xe478, 0xad2f, 0x1806, 0x2f43,
                            0xd7a7, 0x3dfb, 0x0099, 0x2b4d, 0xdf0b, 0x4fc1, 0x2480, 0x2b83};
 
 // Parity (low bit) of the canonical encoding of a field element.
-static int gf_parity(const pc_gf a)
+static int gf_parity(const protocore_gf a)
 {
     uint8_t d[32];
-    pc_gf_pack(d, a);
+    protocore_gf_pack(d, a);
     return d[0] & 1;
 }
 
 // 0 if a and b encode the same field element, -1 otherwise.
-static int gf_neq(const pc_gf a, const pc_gf b)
+static int gf_neq(const protocore_gf a, const protocore_gf b)
 {
     uint8_t c[32];
     uint8_t d[32];
-    pc_gf_pack(c, a);
-    pc_gf_pack(d, b);
+    protocore_gf_pack(c, a);
+    protocore_gf_pack(d, b);
     return ct_verify32(c, d);
 }
 
 // out = a^(2^252 - 3) - used to take the square root during point decompression.
-static void gf_pow2523(pc_gf out, const pc_gf a)
+static void gf_pow2523(protocore_gf out, const protocore_gf a)
 {
-    pc_gf c;
-    pc_gf_copy(c, a);
+    protocore_gf c;
+    protocore_gf_copy(c, a);
     for (int i = 250; i >= 0; i--)
     {
-        pc_gf_sq(c, c);
+        protocore_gf_sq(c, c);
         if (i != 1)
         {
-            pc_gf_mul(c, c, a);
+            protocore_gf_mul(c, c, a);
         }
     }
-    pc_gf_copy(out, c);
+    protocore_gf_copy(out, c);
 }
 
 // p += q (twisted-Edwards addition, RFC 8032 §5.1.4 / the unified add formula).
-static void ed_add(pc_gf p[4], pc_gf q[4])
+static void ed_add(protocore_gf p[4], protocore_gf q[4])
 {
-    pc_gf a;
-    pc_gf b;
-    pc_gf c;
-    pc_gf d;
-    pc_gf t;
-    pc_gf e;
-    pc_gf f;
-    pc_gf g;
-    pc_gf h;
-    pc_gf_sub(a, p[1], p[0]);
-    pc_gf_sub(t, q[1], q[0]);
-    pc_gf_mul(a, a, t);
-    pc_gf_add(b, p[0], p[1]);
-    pc_gf_add(t, q[0], q[1]);
-    pc_gf_mul(b, b, t);
-    pc_gf_mul(c, p[3], q[3]);
-    pc_gf_mul(c, c, ED_D2);
-    pc_gf_mul(d, p[2], q[2]);
-    pc_gf_add(d, d, d);
-    pc_gf_sub(e, b, a);
-    pc_gf_sub(f, d, c);
-    pc_gf_add(g, d, c);
-    pc_gf_add(h, b, a);
-    pc_gf_mul(p[0], e, f);
-    pc_gf_mul(p[1], h, g);
-    pc_gf_mul(p[2], g, f);
-    pc_gf_mul(p[3], e, h);
+    protocore_gf a;
+    protocore_gf b;
+    protocore_gf c;
+    protocore_gf d;
+    protocore_gf t;
+    protocore_gf e;
+    protocore_gf f;
+    protocore_gf g;
+    protocore_gf h;
+    protocore_gf_sub(a, p[1], p[0]);
+    protocore_gf_sub(t, q[1], q[0]);
+    protocore_gf_mul(a, a, t);
+    protocore_gf_add(b, p[0], p[1]);
+    protocore_gf_add(t, q[0], q[1]);
+    protocore_gf_mul(b, b, t);
+    protocore_gf_mul(c, p[3], q[3]);
+    protocore_gf_mul(c, c, ED_D2);
+    protocore_gf_mul(d, p[2], q[2]);
+    protocore_gf_add(d, d, d);
+    protocore_gf_sub(e, b, a);
+    protocore_gf_sub(f, d, c);
+    protocore_gf_add(g, d, c);
+    protocore_gf_add(h, b, a);
+    protocore_gf_mul(p[0], e, f);
+    protocore_gf_mul(p[1], h, g);
+    protocore_gf_mul(p[2], g, f);
+    protocore_gf_mul(p[3], e, h);
 }
 
 // Constant-time conditional swap of points p and q when b == 1.
-static void ed_cswap(pc_gf p[4], pc_gf q[4], int b)
+static void ed_cswap(protocore_gf p[4], protocore_gf q[4], int b)
 {
     for (int i = 0; i < 4; i++)
     {
-        pc_gf_cswap(p[i], q[i], b);
+        protocore_gf_cswap(p[i], q[i], b);
     }
 }
 
 // Encode a point to 32 bytes: y with x's low bit in the top bit.
-static void ed_pack(uint8_t r[32], pc_gf p[4])
+static void ed_pack(uint8_t r[32], protocore_gf p[4])
 {
-    pc_gf tx;
-    pc_gf ty;
-    pc_gf zi;
-    pc_gf_inv(zi, p[2]);
-    pc_gf_mul(tx, p[0], zi);
-    pc_gf_mul(ty, p[1], zi);
-    pc_gf_pack(r, ty);
+    protocore_gf tx;
+    protocore_gf ty;
+    protocore_gf zi;
+    protocore_gf_inv(zi, p[2]);
+    protocore_gf_mul(tx, p[0], zi);
+    protocore_gf_mul(ty, p[1], zi);
+    protocore_gf_pack(r, ty);
     r[31] ^= (uint8_t)(gf_parity(tx) << 7);
 }
 
 // p = s * q (variable-base scalar mult), s is 32 bytes little-endian.
-static void ed_scalarmult(pc_gf p[4], pc_gf q[4], const uint8_t *s)
+static void ed_scalarmult(protocore_gf p[4], protocore_gf q[4], const uint8_t *s)
 {
-    pc_gf_copy(p[0], GF0);
-    pc_gf_copy(p[1], GF1);
-    pc_gf_copy(p[2], GF1);
-    pc_gf_copy(p[3], GF0);
+    protocore_gf_copy(p[0], GF0);
+    protocore_gf_copy(p[1], GF1);
+    protocore_gf_copy(p[2], GF1);
+    protocore_gf_copy(p[3], GF0);
     for (int i = 255; i >= 0; i--)
     {
         int b = (s[i >> 3] >> (i & 7)) & 1;
@@ -494,53 +494,53 @@ static void ed_scalarmult(pc_gf p[4], pc_gf q[4], const uint8_t *s)
 }
 
 // p = s * B (base-point scalar mult).
-static void ed_scalarbase(pc_gf p[4], const uint8_t *s)
+static void ed_scalarbase(protocore_gf p[4], const uint8_t *s)
 {
-    pc_gf q[4];
-    pc_gf_copy(q[0], ED_X);
-    pc_gf_copy(q[1], ED_Y);
-    pc_gf_copy(q[2], GF1);
-    pc_gf_mul(q[3], ED_X, ED_Y);
+    protocore_gf q[4];
+    protocore_gf_copy(q[0], ED_X);
+    protocore_gf_copy(q[1], ED_Y);
+    protocore_gf_copy(q[2], GF1);
+    protocore_gf_mul(q[3], ED_X, ED_Y);
     ed_scalarmult(p, q, s);
 }
 
 // Decode a point and negate it (r = -A) for the verification equation; returns 0 on
 // success, -1 if the encoding is not a valid curve point.
-static int ed_unpackneg(pc_gf r[4], const uint8_t p[32])
+static int ed_unpackneg(protocore_gf r[4], const uint8_t p[32])
 {
-    pc_gf t;
-    pc_gf chk;
-    pc_gf num;
-    pc_gf den;
-    pc_gf den2;
-    pc_gf den4;
-    pc_gf den6;
-    pc_gf_copy(r[2], GF1);
-    pc_gf_unpack(r[1], p); // y (top/sign bit masked off)
-    pc_gf_sq(num, r[1]);   // y^2
-    pc_gf_mul(den, num, ED_D);
-    pc_gf_sub(num, num, r[2]); // u = y^2 - 1
-    pc_gf_add(den, r[2], den); // v = d*y^2 + 1
+    protocore_gf t;
+    protocore_gf chk;
+    protocore_gf num;
+    protocore_gf den;
+    protocore_gf den2;
+    protocore_gf den4;
+    protocore_gf den6;
+    protocore_gf_copy(r[2], GF1);
+    protocore_gf_unpack(r[1], p); // y (top/sign bit masked off)
+    protocore_gf_sq(num, r[1]);   // y^2
+    protocore_gf_mul(den, num, ED_D);
+    protocore_gf_sub(num, num, r[2]); // u = y^2 - 1
+    protocore_gf_add(den, r[2], den); // v = d*y^2 + 1
 
-    pc_gf_sq(den2, den);
-    pc_gf_sq(den4, den2);
-    pc_gf_mul(den6, den4, den2);
-    pc_gf_mul(t, den6, num);
-    pc_gf_mul(t, t, den);
+    protocore_gf_sq(den2, den);
+    protocore_gf_sq(den4, den2);
+    protocore_gf_mul(den6, den4, den2);
+    protocore_gf_mul(t, den6, num);
+    protocore_gf_mul(t, t, den);
     gf_pow2523(t, t); // t = (u v^7)^((p-5)/8)
-    pc_gf_mul(t, t, num);
-    pc_gf_mul(t, t, den);
-    pc_gf_mul(t, t, den);
-    pc_gf_mul(r[0], t, den); // x candidate = u v^3 (u v^7)^((p-5)/8)
+    protocore_gf_mul(t, t, num);
+    protocore_gf_mul(t, t, den);
+    protocore_gf_mul(t, t, den);
+    protocore_gf_mul(r[0], t, den); // x candidate = u v^3 (u v^7)^((p-5)/8)
 
-    pc_gf_sq(chk, r[0]);
-    pc_gf_mul(chk, chk, den);
+    protocore_gf_sq(chk, r[0]);
+    protocore_gf_mul(chk, chk, den);
     if (gf_neq(chk, num))
     {
-        pc_gf_mul(r[0], r[0], ED_I); // multiply by sqrt(-1)
+        protocore_gf_mul(r[0], r[0], ED_I); // multiply by sqrt(-1)
     }
-    pc_gf_sq(chk, r[0]);
-    pc_gf_mul(chk, chk, den);
+    protocore_gf_sq(chk, r[0]);
+    protocore_gf_mul(chk, chk, den);
     if (gf_neq(chk, num))
     {
         return -1; // no square root: invalid point
@@ -548,16 +548,16 @@ static int ed_unpackneg(pc_gf r[4], const uint8_t p[32])
 
     if (gf_parity(r[0]) == (p[31] >> 7))
     {
-        pc_gf_sub(r[0], GF0, r[0]); // pick the correct sign, then negate for -A
+        protocore_gf_sub(r[0], GF0, r[0]); // pick the correct sign, then negate for -A
     }
-    pc_gf_mul(r[3], r[0], r[1]);
+    protocore_gf_mul(r[3], r[0], r[1]);
     return 0;
 }
 
 // out = pack(s * B).
 static void ed_scalarbase_bytes(uint8_t out[32], const uint8_t s[32])
 {
-    pc_gf p[4];
+    protocore_gf p[4];
     ed_scalarbase(p, s);
     ed_pack(out, p);
 }
@@ -565,9 +565,9 @@ static void ed_scalarbase_bytes(uint8_t out[32], const uint8_t s[32])
 // out = pack(S*B - h*A); false if the public key A does not decode to a curve point.
 static proto_bool ed_verify_recompute(uint8_t out[32], const uint8_t S[32], const uint8_t h[32], const uint8_t pub[32])
 {
-    pc_gf p[4];
-    pc_gf q[4];
-    pc_gf sb[4];
+    protocore_gf p[4];
+    protocore_gf q[4];
+    protocore_gf sb[4];
     if (ed_unpackneg(q, pub) != 0) // q = -A
     {
         return PROTO_FALSE;
@@ -578,27 +578,27 @@ static proto_bool ed_verify_recompute(uint8_t out[32], const uint8_t S[32], cons
     ed_pack(out, p);
     return PROTO_TRUE;
 }
-#endif // PC_FE25519_MPI_HW
+#endif // PROTOCORE_FE25519_MPI_HW
 
 // --- Public API -------------------------------------------------------------
 
-void pc_ed25519_pubkey(uint8_t *work, uint8_t pub[32], const uint8_t seed[32])
+void protocore_ed25519_pubkey(uint8_t *work, uint8_t pub[32], const uint8_t seed[32])
 {
     uint8_t d[64];
-    pc_sha512(work, seed, 32, d);
+    protocore_sha512(work, seed, 32, d);
     d[0] &= 248;
     d[31] &= 127;
     d[31] |= 64; // clamp -> secret scalar a = d[0..31]
     ed_scalarbase_bytes(pub, d);
 }
 
-void pc_ed25519_sign(uint8_t *work, uint8_t sig[64], const uint8_t *msg, size_t mlen, const uint8_t seed[32])
+void protocore_ed25519_sign(uint8_t *work, uint8_t sig[64], const uint8_t *msg, size_t mlen, const uint8_t seed[32])
 {
     uint8_t d[64];
     uint8_t pub[32];
     uint8_t r[64];
     uint8_t h[64];
-    pc_sha512(work, seed, 32, d);
+    protocore_sha512(work, seed, 32, d);
     d[0] &= 248;
     d[31] &= 127;
     d[31] |= 64; // a = d[0..31]; prefix = d[32..63]
@@ -607,22 +607,22 @@ void pc_ed25519_sign(uint8_t *work, uint8_t sig[64], const uint8_t *msg, size_t 
     ed_scalarbase_bytes(pub, d);
 
     // r = SHA-512(prefix || M) mod L
-    pc_sha512_ctx c;
-    pc_sha512_init(&c, work);
-    pc_sha512_update(&c, d + 32, 32);
-    pc_sha512_update(&c, msg, mlen);
-    pc_sha512_final(&c, r);
+    protocore_sha512_ctx c;
+    protocore_sha512_init(&c, work);
+    protocore_sha512_update(&c, d + 32, 32);
+    protocore_sha512_update(&c, msg, mlen);
+    protocore_sha512_final(&c, r);
     ed_reduce(r);
 
     // R = r * B
     ed_scalarbase_bytes(sig, r); // sig[0..31] = R
 
     // h = SHA-512(R || A || M) mod L
-    pc_sha512_init(&c, work);
-    pc_sha512_update(&c, sig, 32);
-    pc_sha512_update(&c, pub, 32);
-    pc_sha512_update(&c, msg, mlen);
-    pc_sha512_final(&c, h);
+    protocore_sha512_init(&c, work);
+    protocore_sha512_update(&c, sig, 32);
+    protocore_sha512_update(&c, pub, 32);
+    protocore_sha512_update(&c, msg, mlen);
+    protocore_sha512_final(&c, h);
     ed_reduce(h);
 
     // S = (r + h*a) mod L
@@ -646,13 +646,13 @@ void pc_ed25519_sign(uint8_t *work, uint8_t sig[64], const uint8_t *msg, size_t 
 
     // d[0..31] the secret scalar, d[32..63] the nonce prefix, r the nonce, h the challenge, x the S
     // accumulator.
-    pc_secure_wipe(d, sizeof(d));
-    pc_secure_wipe(r, sizeof(r));
-    pc_secure_wipe(h, sizeof(h));
-    pc_secure_wipe(x, sizeof(x));
+    protocore_secure_wipe(d, sizeof(d));
+    protocore_secure_wipe(r, sizeof(r));
+    protocore_secure_wipe(h, sizeof(h));
+    protocore_secure_wipe(x, sizeof(x));
 }
 
-proto_bool pc_ed25519_verify(uint8_t *work, const uint8_t pub[32], const uint8_t *msg, size_t mlen,
+proto_bool protocore_ed25519_verify(uint8_t *work, const uint8_t pub[32], const uint8_t *msg, size_t mlen,
                              const uint8_t sig[64])
 {
     if (!ed_scalar_canonical(sig + 32))
@@ -662,12 +662,12 @@ proto_bool pc_ed25519_verify(uint8_t *work, const uint8_t pub[32], const uint8_t
 
     // h = SHA-512(R || A || M) mod L
     uint8_t h[64];
-    pc_sha512_ctx c;
-    pc_sha512_init(&c, work);
-    pc_sha512_update(&c, sig, 32); // R
-    pc_sha512_update(&c, pub, 32); // A
-    pc_sha512_update(&c, msg, mlen);
-    pc_sha512_final(&c, h);
+    protocore_sha512_ctx c;
+    protocore_sha512_init(&c, work);
+    protocore_sha512_update(&c, sig, 32); // R
+    protocore_sha512_update(&c, pub, 32); // A
+    protocore_sha512_update(&c, msg, mlen);
+    protocore_sha512_final(&c, h);
     ed_reduce(h);
 
     uint8_t t[32];

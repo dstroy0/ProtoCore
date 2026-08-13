@@ -26,7 +26,7 @@ void test_event(void)
     iv[0] = (OpenAdrInterval){1720000000u, 3600, "SIMPLE", 1.0};
     iv[1] = (OpenAdrInterval){1720003600u, 3600, "PRICE", 0.125};
     char buf[1024];
-    size_t n = pc_openadr_event("program-1", "peak", iv, 2, buf, sizeof(buf));
+    size_t n = protocore_openadr_event("program-1", "peak", iv, 2, buf, sizeof(buf));
     TEST_ASSERT_TRUE(n > 0);
     TEST_ASSERT_EQUAL_size_t(strlen(buf), n);
     TEST_ASSERT_TRUE(has(buf, "\"objectType\":\"EVENT\""));
@@ -41,7 +41,7 @@ void test_event(void)
 void test_report_negative_value(void)
 {
     char buf[512];
-    pc_openadr_report("program-1", "event-9", "meter-A", -2.5, 1720000000u, buf, sizeof(buf));
+    protocore_openadr_report("program-1", "event-9", "meter-A", -2.5, 1720000000u, buf, sizeof(buf));
     TEST_ASSERT_TRUE(has(buf, "\"objectType\":\"REPORT\""));
     TEST_ASSERT_TRUE(has(buf, "\"eventID\":\"event-9\""));
     TEST_ASSERT_TRUE(has(buf, "\"resourceName\":\"meter-A\""));
@@ -53,7 +53,7 @@ void test_json_escape(void)
 {
     OpenAdrInterval iv = {0, 60, "SIMPLE", 0.0};
     char buf[512];
-    pc_openadr_event("prog\"x", "a\\b", &iv, 1, buf, sizeof(buf));
+    protocore_openadr_event("prog\"x", "a\\b", &iv, 1, buf, sizeof(buf));
     TEST_ASSERT_TRUE(has(buf, "\"programID\":\"prog\\\"x\""));
     TEST_ASSERT_TRUE(has(buf, "\"eventName\":\"a\\\\b\""));
 }
@@ -62,19 +62,19 @@ void test_overflow(void)
 {
     OpenAdrInterval iv = {0, 60, "SIMPLE", 1.0};
     char buf[16];
-    TEST_ASSERT_EQUAL_size_t(0, pc_openadr_event("p", "e", &iv, 1, buf, sizeof(buf)));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_openadr_event("p", "e", &iv, 1, buf, sizeof(buf)));
 }
 
 void test_openadr_escape_and_overflow()
 {
     char out[512];
-    size_t n = pc_openadr_event("prog", "line1\nline2", NULL, 0, out, sizeof(out));
+    size_t n = protocore_openadr_event("prog", "line1\nline2", NULL, 0, out, sizeof(out));
     TEST_ASSERT_TRUE(n > 0);
     TEST_ASSERT_NOT_NULL(strstr(out, "\\n"));                                                 // newline escaped
-    TEST_ASSERT_EQUAL_size_t(0, pc_openadr_event("p", "e", NULL, 0, NULL, sizeof(out)));      // null out
-    TEST_ASSERT_EQUAL_size_t(0, pc_openadr_event("p", "eventNameTooLong", NULL, 0, out, 8));  // overflow
-    TEST_ASSERT_EQUAL_size_t(0, pc_openadr_report("p", "e", "r", 1.0, 0, NULL, sizeof(out))); // null out
-    TEST_ASSERT_EQUAL_size_t(0, pc_openadr_report("p", "e", "res", 1.0, 0, out, 8));          // overflow
+    TEST_ASSERT_EQUAL_size_t(0, protocore_openadr_event("p", "e", NULL, 0, NULL, sizeof(out)));      // null out
+    TEST_ASSERT_EQUAL_size_t(0, protocore_openadr_event("p", "eventNameTooLong", NULL, 0, out, 8));  // overflow
+    TEST_ASSERT_EQUAL_size_t(0, protocore_openadr_report("p", "e", "r", 1.0, 0, NULL, sizeof(out))); // null out
+    TEST_ASSERT_EQUAL_size_t(0, protocore_openadr_report("p", "e", "res", 1.0, 0, out, 8));          // overflow
 }
 
 void test_openadr_null_program_and_count_without_intervals(void)
@@ -82,13 +82,13 @@ void test_openadr_null_program_and_count_without_intervals(void)
     // NULL program_id/event_name exercise put_json_str's `s ? s : ""` defensive branch.
     OpenAdrInterval iv = {0, 60, "SIMPLE", 1.0};
     char buf[256];
-    size_t n = pc_openadr_event(NULL, NULL, &iv, 1, buf, sizeof(buf));
+    size_t n = protocore_openadr_event(NULL, NULL, &iv, 1, buf, sizeof(buf));
     TEST_ASSERT_TRUE(n > 0);
     TEST_ASSERT_TRUE(has(buf, "\"programID\":\"\""));
     TEST_ASSERT_TRUE(has(buf, "\"eventName\":\"\""));
 
     // count > 0 with a NULL intervals pointer must fail closed (never dereference).
-    TEST_ASSERT_EQUAL_size_t(0, pc_openadr_event("p", "e", NULL, 3, buf, sizeof(buf)));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_openadr_event("p", "e", NULL, 3, buf, sizeof(buf)));
 }
 
 int main(void)

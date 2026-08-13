@@ -38,9 +38,9 @@ void dbench_run(void)
     static uint8_t bcc_frame[32];
     static uint8_t crc_frame[32];
     size_t bcc_frame_len =
-        pc_df1_build_frame(bcc_frame, sizeof(bcc_frame), bcc_frame_data, sizeof(bcc_frame_data), DF1_CHECK_BCC);
+        protocore_df1_build_frame(bcc_frame, sizeof(bcc_frame), bcc_frame_data, sizeof(bcc_frame_data), DF1_CHECK_BCC);
     size_t crc_frame_len =
-        pc_df1_build_frame(crc_frame, sizeof(crc_frame), crc_frame_data, sizeof(crc_frame_data), DF1_CHECK_CRC);
+        protocore_df1_build_frame(crc_frame, sizeof(crc_frame), crc_frame_data, sizeof(crc_frame_data), DF1_CHECK_CRC);
 
     static uint8_t out[32];
 
@@ -51,23 +51,23 @@ void dbench_run(void)
         volatile uint16_t sink16 = 0;
         size_t out_len;
 
-        DBENCH_BULK("pc_df1_bcc", 200000, sizeof(bcc_data), sink += pc_df1_bcc(bcc_data, sizeof(bcc_data)));
+        DBENCH_BULK("protocore_df1_bcc", 200000, sizeof(bcc_data), sink += protocore_df1_bcc(bcc_data, sizeof(bcc_data)));
 
-        DBENCH_BULK("pc_df1_crc", 100000, sizeof(crc_data) - 1, sink16 += pc_df1_crc(crc_data, sizeof(crc_data) - 1));
+        DBENCH_BULK("protocore_df1_crc", 100000, sizeof(crc_data) - 1, sink16 += protocore_df1_crc(crc_data, sizeof(crc_data) - 1));
 
-        DBENCH_OP("pc_df1_build_frame BCC", 50000,
-                  sink += pc_df1_build_frame(bcc_frame, sizeof(bcc_frame), bcc_frame_data, sizeof(bcc_frame_data),
+        DBENCH_OP("protocore_df1_build_frame BCC", 50000,
+                  sink += protocore_df1_build_frame(bcc_frame, sizeof(bcc_frame), bcc_frame_data, sizeof(bcc_frame_data),
                                              DF1_CHECK_BCC));
 
-        DBENCH_OP("pc_df1_build_frame CRC", 50000,
-                  sink += pc_df1_build_frame(crc_frame, sizeof(crc_frame), crc_frame_data, sizeof(crc_frame_data),
+        DBENCH_OP("protocore_df1_build_frame CRC", 50000,
+                  sink += protocore_df1_build_frame(crc_frame, sizeof(crc_frame), crc_frame_data, sizeof(crc_frame_data),
                                              DF1_CHECK_CRC));
 
-        DBENCH_OP("pc_df1_parse_frame BCC", 50000,
-                  sink += pc_df1_parse_frame(bcc_frame, bcc_frame_len, DF1_CHECK_BCC, out, sizeof(out), &out_len));
+        DBENCH_OP("protocore_df1_parse_frame BCC", 50000,
+                  sink += protocore_df1_parse_frame(bcc_frame, bcc_frame_len, DF1_CHECK_BCC, out, sizeof(out), &out_len));
 
-        DBENCH_OP("pc_df1_parse_frame CRC", 50000,
-                  sink += pc_df1_parse_frame(crc_frame, crc_frame_len, DF1_CHECK_CRC, out, sizeof(out), &out_len));
+        DBENCH_OP("protocore_df1_parse_frame CRC", 50000,
+                  sink += protocore_df1_parse_frame(crc_frame, crc_frame_len, DF1_CHECK_CRC, out, sizeof(out), &out_len));
 
         (void)sink;
         (void)sink16;

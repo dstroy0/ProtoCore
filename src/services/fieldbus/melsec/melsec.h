@@ -3,7 +3,7 @@
 
 /**
  * @file melsec.h
- * @brief Mitsubishi MELSEC MC protocol (binary 3E frame) codec (PC_ENABLE_MELSEC) -
+ * @brief Mitsubishi MELSEC MC protocol (binary 3E frame) codec (PROTOCORE_ENABLE_MELSEC) -
  *        zero-heap batch-read request builder + response parser for MELSEC PLCs over TCP/UDP.
  *
  * The QnA-compatible binary 3E request frame (all multi-octet fields LITTLE-endian, unlike
@@ -37,9 +37,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_MELSEC
+#if PROTOCORE_ENABLE_MELSEC
 
 #define MELSEC_3E_REQ_SUBHEADER0 0x50 ///< request subheader (sent 0x50 then 0x00)
 #define MELSEC_3E_REQ_SUBHEADER1 0x00
@@ -47,7 +47,7 @@ PROTO_BEGIN_DECLS
 #define MELSEC_3E_RES_SUBHEADER1 0x00
 
 #define MELSEC_NETWORK_DEFAULT 0x00   ///< local network
-#define MELSEC_PC_DEFAULT 0xFF        ///< host station
+#define MELSEC_PROTOCORE_DEFAULT 0xFF ///< host station
 #define MELSEC_DEST_IO_DEFAULT 0x03FF ///< own station CPU
 #define MELSEC_DEST_MULTIDROP_DEFAULT 0x00
 
@@ -87,8 +87,8 @@ PROTO_BEGIN_DECLS
  * @param monitoring_timer the CPU monitoring timer (units of 250 ms; 0 = wait indefinitely).
  * @return total octets written (21), or 0 on overflow / bad input.
  */
-size_t pc_melsec_build_read(uint8_t *buf, size_t cap, uint8_t device_code, uint32_t head_device, uint16_t points,
-                            uint16_t monitoring_timer);
+size_t protocore_melsec_build_read(uint8_t *buf, size_t cap, uint8_t device_code, uint32_t head_device, uint16_t points,
+                                   uint16_t monitoring_timer);
 
 /**
  * @brief Build a binary 3E batch-write (word units) request: the same device / head / points parameters as
@@ -97,8 +97,8 @@ size_t pc_melsec_build_read(uint8_t *buf, size_t cap, uint8_t device_code, uint3
  * @return total octets written (21 + @p data_len), or 0 on a null data pointer with a nonzero length, an
  *         over-large data length, or an overflow.
  */
-size_t pc_melsec_build_write(uint8_t *buf, size_t cap, uint8_t device_code, uint32_t head_device, uint16_t points,
-                             uint16_t monitoring_timer, const uint8_t *data, size_t data_len);
+size_t protocore_melsec_build_write(uint8_t *buf, size_t cap, uint8_t device_code, uint32_t head_device,
+                                    uint16_t points, uint16_t monitoring_timer, const uint8_t *data, size_t data_len);
 
 /** @brief A parsed 3E response. @ref data points INTO the source buffer (LE word values). */
 typedef struct
@@ -109,10 +109,10 @@ typedef struct
 } MelsecResponse;
 
 /** @brief Parse + validate a binary 3E response (subheader 0xD0 0x00, length, end code, data). */
-proto_bool pc_melsec_parse_response(const uint8_t *buf, size_t len, MelsecResponse *out);
+proto_bool protocore_melsec_parse_response(const uint8_t *buf, size_t len, MelsecResponse *out);
 
-#endif // PC_ENABLE_MELSEC
+#endif // PROTOCORE_ENABLE_MELSEC
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_MELSEC_H

@@ -3,9 +3,9 @@
 //
 // On-device CCOUNT microbenchmark for the receive-only radio sniffer capture codec
 // (services/radio/radio_sniff): turning frames pulled off the air into a wired-Wireshark .pcap. Three pure
-// pieces are benched - pc_radiosniff_i2f32() (int dBm -> IEEE-754 float32 bit pattern for the TAP
-// RSSI TLV, a hand-rolled highest-set-bit encode), pc_radiosniff_global() (the 24-byte pcap global
-// header with DLT_IEEE802_15_4_TAP=283), and pc_radiosniff_tap_record() (one capture record: pcap
+// pieces are benched - protocore_radiosniff_i2f32() (int dBm -> IEEE-754 float32 bit pattern for the TAP
+// RSSI TLV, a hand-rolled highest-set-bit encode), protocore_radiosniff_global() (the 24-byte pcap global
+// header with DLT_IEEE802_15_4_TAP=283), and protocore_radiosniff_tap_record() (one capture record: pcap
 // record header + 20-byte 802.15.4 TAP pseudo-header carrying the RSSI/channel TLVs + the raw MAC
 // frame copied through). All three are pure byte-framing (no heap, no stdlib) - the radio drivers
 // (CC1101 / LoRa / the Thread 802.15.4 RCP) own the actual receive off the air, so no SPI/radio I/O
@@ -44,17 +44,17 @@ void dbench_run(void)
         volatile size_t sink = 0;
 
         // int dBm -> float32 bit pattern (the RSSI TLV payload encode).
-        DBENCH_OP("pc_radiosniff_i2f32", 200000, sink32 += pc_radiosniff_i2f32(-55));
+        DBENCH_OP("protocore_radiosniff_i2f32", 200000, sink32 += protocore_radiosniff_i2f32(-55));
         // 24-byte pcap global header (DLT 802.15.4 TAP).
-        DBENCH_OP("pc_radiosniff_global", 200000, sink += pc_radiosniff_global(rec, sizeof(rec)));
+        DBENCH_OP("protocore_radiosniff_global", 200000, sink += protocore_radiosniff_global(rec, sizeof(rec)));
         // Full capture record for a tiny 5-byte frame (record hdr + TAP + frame = 41 bytes).
-        DBENCH_OP("pc_radiosniff_tap_record 5B", 100000,
-                  sink += pc_radiosniff_tap_record(rec, sizeof(rec), frame_small, sizeof(frame_small), -55, 11, 0x1234,
+        DBENCH_OP("protocore_radiosniff_tap_record 5B", 100000,
+                  sink += protocore_radiosniff_tap_record(rec, sizeof(rec), frame_small, sizeof(frame_small), -55, 11, 0x1234,
                                                    0x5678));
         // Full capture record for a realistic 64-byte frame - report throughput over the frame bytes.
-        DBENCH_BULK("pc_radiosniff_tap_record 64B", 100000, sizeof(frame_big),
+        DBENCH_BULK("protocore_radiosniff_tap_record 64B", 100000, sizeof(frame_big),
                     sink +=
-                    pc_radiosniff_tap_record(rec, sizeof(rec), frame_big, sizeof(frame_big), -72, 15, 0x1234, 0x5678));
+                    protocore_radiosniff_tap_record(rec, sizeof(rec), frame_big, sizeof(frame_big), -72, 15, 0x1234, 0x5678));
         (void)sink32;
         (void)sink;
         DBENCH_DONE();

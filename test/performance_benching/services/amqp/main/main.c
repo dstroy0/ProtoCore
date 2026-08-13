@@ -31,7 +31,7 @@ void dbench_run(void)
 
     // Pre-build a method frame once so the parsers have a real, known-good frame to chew on.
     size_t method_len =
-        pc_amqp_build_method(method_buf, sizeof(method_buf), 1, 10, 10, method_args, sizeof(method_args));
+        protocore_amqp_build_method(method_buf, sizeof(method_buf), 1, 10, 10, method_args, sizeof(method_args));
 
     for (;;)
     {
@@ -43,16 +43,17 @@ void dbench_run(void)
         const uint8_t *args;
         size_t args_len;
 
-        DBENCH_OP("pc_amqp_protocol_header", 200000, sink += pc_amqp_protocol_header(hdr_buf, sizeof(hdr_buf)));
-        DBENCH_OP("pc_amqp_build_method", 100000,
-                  sink +=
-                  pc_amqp_build_method(method_buf, sizeof(method_buf), 1, 10, 10, method_args, sizeof(method_args)));
-        DBENCH_OP("pc_amqp_build_heartbeat", 200000,
-                  sink += pc_amqp_build_heartbeat(heartbeat_buf, sizeof(heartbeat_buf)));
-        DBENCH_OP("pc_amqp_parse_frame", 100000,
-                  sink += pc_amqp_parse_frame(method_buf, method_len, &f, &consumed) ? consumed : 0);
-        DBENCH_OP("pc_amqp_parse_method", 100000,
-                  sink += pc_amqp_parse_method(f.payload, f.payload_len, &cls, &meth, &args, &args_len) ? 1 : 0);
+        DBENCH_OP("protocore_amqp_protocol_header", 200000,
+                  sink += protocore_amqp_protocol_header(hdr_buf, sizeof(hdr_buf)));
+        DBENCH_OP("protocore_amqp_build_method", 100000,
+                  sink += protocore_amqp_build_method(method_buf, sizeof(method_buf), 1, 10, 10, method_args,
+                                                      sizeof(method_args)));
+        DBENCH_OP("protocore_amqp_build_heartbeat", 200000,
+                  sink += protocore_amqp_build_heartbeat(heartbeat_buf, sizeof(heartbeat_buf)));
+        DBENCH_OP("protocore_amqp_parse_frame", 100000,
+                  sink += protocore_amqp_parse_frame(method_buf, method_len, &f, &consumed) ? consumed : 0);
+        DBENCH_OP("protocore_amqp_parse_method", 100000,
+                  sink += protocore_amqp_parse_method(f.payload, f.payload_len, &cls, &meth, &args, &args_len) ? 1 : 0);
         (void)sink;
         DBENCH_DONE();
     }

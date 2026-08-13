@@ -7,12 +7,12 @@
  */
 
 #include "services/transportation/utmc/utmc.h"
-#include "mmgr/membuild.h" // pc_sb frame builder
+#include "mmgr/membuild.h" // protocore_sb frame builder
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_UTMC
+#if PROTOCORE_ENABLE_UTMC
 
-static void put_u(pc_sb *b, uint32_t v)
+static void put_u(protocore_sb *b, uint32_t v)
 {
     char tmp[11];
     int n = 0;
@@ -27,35 +27,35 @@ static void put_u(pc_sb *b, uint32_t v)
         out[i] = tmp[n - 1 - i];
     }
     out[n] = '\0';
-    pc_sb_put(b, out);
+    protocore_sb_put(b, out);
 }
 
-size_t pc_utmc_request(const char *object_id, char *out, size_t cap)
+size_t protocore_utmc_request(const char *object_id, char *out, size_t cap)
 {
-    pc_sb b = {out, cap, 0, out != NULL && cap > 0};
-    pc_sb_put(&b, "<?xml version=\"1.0\"?><UTMCRequest><object id=\"");
-    pc_sb_xml(&b, object_id);
-    pc_sb_put(&b, "\"/></UTMCRequest>");
-    return pc_sb_finish(&b);
+    protocore_sb b = {out, cap, 0, out != NULL && cap > 0};
+    protocore_sb_put(&b, "<?xml version=\"1.0\"?><UTMCRequest><object id=\"");
+    protocore_sb_xml(&b, object_id);
+    protocore_sb_put(&b, "\"/></UTMCRequest>");
+    return protocore_sb_finish(&b);
 }
 
-size_t pc_utmc_response(const char *object_id, const char *value, uint8_t quality, const char *timestamp, char *out,
+size_t protocore_utmc_response(const char *object_id, const char *value, uint8_t quality, const char *timestamp, char *out,
                         size_t cap)
 {
-    pc_sb b2 = {out, cap, 0, out != NULL && cap > 0};
-    pc_sb_put(&b2, "<?xml version=\"1.0\"?><UTMCResponse><object id=\"");
-    pc_sb_xml(&b2, object_id);
-    pc_sb_put(&b2, "\" value=\"");
-    pc_sb_xml(&b2, value);
-    pc_sb_put(&b2, "\" quality=\"");
+    protocore_sb b2 = {out, cap, 0, out != NULL && cap > 0};
+    protocore_sb_put(&b2, "<?xml version=\"1.0\"?><UTMCResponse><object id=\"");
+    protocore_sb_xml(&b2, object_id);
+    protocore_sb_put(&b2, "\" value=\"");
+    protocore_sb_xml(&b2, value);
+    protocore_sb_put(&b2, "\" quality=\"");
     put_u(&b2, quality);
-    pc_sb_put(&b2, "\" timestamp=\"");
-    pc_sb_xml(&b2, timestamp);
-    pc_sb_put(&b2, "\"/></UTMCResponse>");
-    return pc_sb_finish(&b2);
+    protocore_sb_put(&b2, "\" timestamp=\"");
+    protocore_sb_xml(&b2, timestamp);
+    protocore_sb_put(&b2, "\"/></UTMCResponse>");
+    return protocore_sb_finish(&b2);
 }
 
-size_t pc_utmc_parse_request(const char *xml, size_t len, char *out, size_t cap)
+size_t protocore_utmc_parse_request(const char *xml, size_t len, char *out, size_t cap)
 {
     if (!xml || !out || cap == 0)
     {
@@ -90,4 +90,4 @@ size_t pc_utmc_parse_request(const char *xml, size_t len, char *out, size_t cap)
     return 0;
 }
 
-#endif // PC_ENABLE_UTMC
+#endif // PROTOCORE_ENABLE_UTMC

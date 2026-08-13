@@ -32,9 +32,9 @@
 #include "network_drivers/presentation/codec/codec.h" // pc_codec_type - one item vocabulary
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_MSGPACK
+#if PROTOCORE_ENABLE_MSGPACK
 
 // The encoder writes into a pc_span and the decoder reads from a pc_cspan. Bind with
 // pc_span_from(buf, cap), check with pc_span_ok(), and take the encoded length from pc_span_len().
@@ -47,8 +47,8 @@ PROTO_BEGIN_DECLS
  */
 extern const pc_codec MsgPack;
 
-#endif // PC_ENABLE_MSGPACK
+#endif // PROTOCORE_ENABLE_MSGPACK
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_MSGPACK_H

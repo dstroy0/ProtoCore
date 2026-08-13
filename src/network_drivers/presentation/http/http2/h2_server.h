@@ -24,9 +24,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_HTTP2 && PC_ENABLE_TLS
+#if PROTOCORE_ENABLE_HTTP2 && PROTOCORE_ENABLE_TLS
 
 /** @brief Start the HTTP/2 engine for @p slot after ALPN "h2" (sends our initial SETTINGS). */
 void pc_h2_server_open(uint8_t slot);
@@ -43,8 +43,8 @@ proto_bool pc_h2_server_respond(uint8_t slot, int code, const char *content_type
 /** @brief Release per-slot HTTP/2 state on connection close. */
 void pc_h2_server_close(uint8_t slot);
 
-#endif // PC_ENABLE_HTTP2 && PC_ENABLE_TLS
+#endif // PROTOCORE_ENABLE_HTTP2 && PROTOCORE_ENABLE_TLS
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_H2_SERVER_H

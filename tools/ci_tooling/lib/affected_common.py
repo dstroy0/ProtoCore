@@ -7,7 +7,7 @@ Shared by test/select_envs.py (native test envs) and tools/ci_tooling/generate/e
 (ESP32 example builds). EVERY feature commit touches the same three "global" files -
 src/protocore_config.h (a new gate), test/test_matrix.json (a new env) and the generated
 platformio.ini - and a name-only diff can only treat those as "runs everything". But
-a feature's change to each is *additive*: a new default-off `#define PC_ENABLE_X 0`
+a feature's change to each is *additive*: a new default-off `#define PROTOCORE_ENABLE_X 0`
 gate, a new `native_x` env object, a new `[env:native_x]` section. None of that alters
 how any EXISTING env/example compiles, so it must not force a whole-matrix rebuild.
 
@@ -97,7 +97,7 @@ def config_header_additive(old, new):
     every removed/replaced OLD line is a comment or blank, and every added/replacement NEW
     line is inert (comment/blank, an inert preprocessor directive, or a new-macro #define).
 
-    A typical feature diff here is exactly that: a new `#ifndef PC_ENABLE_X / #define ... 0
+    A typical feature diff here is exactly that: a new `#ifndef PROTOCORE_ENABLE_X / #define ... 0
     / #endif` block (plus its doc comment). Anything else - editing an existing #define,
     adding real code, a new #include - returns False so the caller falls back to FULL.
     """

@@ -16,7 +16,7 @@
 #include <stdint.h>
 
 // The injected answer: host-order IPv4, 0 meaning the name does not resolve. Weak, so the test and
-// the resolver reach the same word - see the note on linkage in pc_net_host.h.
+// the resolver reach the same word - see the note on linkage in protocore_net_host.h.
 __attribute__((weak)) uint32_t g_mock_dns_answer;
 
 typedef void (*dns_found_callback)(const char *name, const ip_addr_t *addr, void *arg);

@@ -4,7 +4,7 @@
 /**
  * @file spnego.h
  * @brief SPNEGO (RFC 4178) GSS-API wrapping of the NTLMSSP tokens for the SMB2 client
- *        (PC_ENABLE_SMB).
+ *        (PROTOCORE_ENABLE_SMB).
  *
  * SMB2 SESSION_SETUP carries the NTLM handshake tokens inside a SPNEGO negotiation token. This is
  * the minimal ASN.1 DER layer that a client needs:
@@ -26,34 +26,34 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_SMB
+#if PROTOCORE_ENABLE_SMB
 
 /**
  * @brief Wrap an NTLMSSP NEGOTIATE token in a SPNEGO GSS-API InitialContextToken (the first
  *        SESSION_SETUP security buffer).
  * @return the token length written to @p out, or 0 on overflow.
  */
-size_t pc_spnego_wrap_negotiate(const uint8_t *ntlm, size_t pc_ntlm_len, uint8_t *out, size_t cap);
+size_t protocore_spnego_wrap_negotiate(const uint8_t *ntlm, size_t protocore_ntlm_len, uint8_t *out, size_t cap);
 
 /**
  * @brief Extract the responseToken (the NTLMSSP CHALLENGE) from a server NegTokenResp.
- * @param pc_resp_token receives a pointer INTO @p blob; @p pc_resp_len its length.
+ * @param protocore_resp_token receives a pointer INTO @p blob; @p protocore_resp_len its length.
  * @return true if a `[2]` responseToken OCTET STRING was found and is within bounds.
  */
-proto_bool pc_spnego_parse_response(const uint8_t *blob, size_t len, const uint8_t **pc_resp_token,
-                                    size_t *pc_resp_len);
+proto_bool protocore_spnego_parse_response(const uint8_t *blob, size_t len, const uint8_t **protocore_resp_token,
+                                           size_t *protocore_resp_len);
 
 /**
  * @brief Wrap an NTLMSSP AUTHENTICATE token in a SPNEGO NegTokenResp (the second SESSION_SETUP
  *        security buffer).
  * @return the token length written to @p out, or 0 on overflow.
  */
-size_t pc_spnego_wrap_authenticate(const uint8_t *ntlm, size_t pc_ntlm_len, uint8_t *out, size_t cap);
+size_t protocore_spnego_wrap_authenticate(const uint8_t *ntlm, size_t protocore_ntlm_len, uint8_t *out, size_t cap);
 
-#endif // PC_ENABLE_SMB
+#endif // PROTOCORE_ENABLE_SMB
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_SPNEGO_H

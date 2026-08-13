@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file pc_snmp_ber.h
- * @brief Zero-heap ASN.1 BER encoder/decoder for the SNMP agent (PC_ENABLE_SNMP).
+ * @file protocore_snmp_ber.h
+ * @brief Zero-heap ASN.1 BER encoder/decoder for the SNMP agent (PROTOCORE_ENABLE_SNMP).
  *
  * A minimal, bounded TLV codec covering exactly the types SNMP uses: INTEGER,
  * OCTET STRING, NULL, OBJECT IDENTIFIER, SEQUENCE, and the SNMP application
@@ -18,9 +18,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_SNMP
+#if PROTOCORE_ENABLE_SNMP
 
 // ASN.1 / SNMP tags
 typedef enum PROTO_ENUM_PACKED
@@ -64,19 +64,19 @@ typedef struct BerEnc
     proto_bool ok;
 } BerEnc;
 
-void pc_ber_enc_init(BerEnc *e, uint8_t *buf, size_t cap);
+void protocore_ber_enc_init(BerEnc *e, uint8_t *buf, size_t cap);
 
-proto_bool pc_ber_put_integer(BerEnc *e, long v);               ///< INTEGER (signed, minimal)
-proto_bool pc_ber_put_uint(BerEnc *e, uint8_t tag, uint32_t v); ///< non-negative int with @p tag
-proto_bool pc_ber_put_octet_string(BerEnc *e, uint8_t tag, const uint8_t *d,
-                                   size_t n);                                    ///< OCTET STRING / IpAddress / Opaque
-proto_bool pc_ber_put_null(BerEnc *e);                                           ///< NULL
-proto_bool pc_ber_put_oid(BerEnc *e, const uint32_t *arcs, size_t n);            ///< OBJECT IDENTIFIER (n >= 2)
-proto_bool pc_ber_put_tlv(BerEnc *e, uint8_t tag, const uint8_t *val, size_t n); ///< raw primitive TLV
-proto_bool pc_ber_put_raw(BerEnc *e, const uint8_t *bytes, size_t n);            ///< append pre-encoded bytes verbatim
+proto_bool protocore_ber_put_integer(BerEnc *e, long v);               ///< INTEGER (signed, minimal)
+proto_bool protocore_ber_put_uint(BerEnc *e, uint8_t tag, uint32_t v); ///< non-negative int with @p tag
+proto_bool protocore_ber_put_octet_string(BerEnc *e, uint8_t tag, const uint8_t *d,
+                                          size_t n);                         ///< OCTET STRING / IpAddress / Opaque
+proto_bool protocore_ber_put_null(BerEnc *e);                                ///< NULL
+proto_bool protocore_ber_put_oid(BerEnc *e, const uint32_t *arcs, size_t n); ///< OBJECT IDENTIFIER (n >= 2)
+proto_bool protocore_ber_put_tlv(BerEnc *e, uint8_t tag, const uint8_t *val, size_t n); ///< raw primitive TLV
+proto_bool protocore_ber_put_raw(BerEnc *e, const uint8_t *bytes, size_t n); ///< append pre-encoded bytes verbatim
 
-size_t pc_ber_seq_begin(BerEnc *e, uint8_t tag); ///< open a constructed type; returns a token
-void pc_ber_seq_end(BerEnc *e, size_t token);    ///< close it (back-patch the length)
+size_t protocore_ber_seq_begin(BerEnc *e, uint8_t tag); ///< open a constructed type; returns a token
+void protocore_ber_seq_end(BerEnc *e, size_t token);    ///< close it (back-patch the length)
 
 // ---------------------------------------------------------------------------
 // Decoder - forward reader over a buffer.
@@ -89,19 +89,19 @@ typedef struct
     proto_bool ok;
 } BerDec;
 
-void pc_ber_dec_init(BerDec *d, const uint8_t *buf, size_t len);
+void protocore_ber_dec_init(BerDec *d, const uint8_t *buf, size_t len);
 
 /** @brief Read a tag + length; on success @p d->pos is left at the value. */
-proto_bool pc_ber_read_header(BerDec *d, uint8_t *tag, size_t *length);
+proto_bool protocore_ber_read_header(BerDec *d, uint8_t *tag, size_t *length);
 /** @brief Read an INTEGER into @p out. */
-proto_bool pc_ber_read_integer(BerDec *d, long *out);
+proto_bool protocore_ber_read_integer(BerDec *d, long *out);
 /** @brief Read an OBJECT IDENTIFIER into @p arcs (capacity @p max); count in @p n. */
-proto_bool pc_ber_read_oid(BerDec *d, uint32_t *arcs, size_t max, size_t *n);
+proto_bool protocore_ber_read_oid(BerDec *d, uint32_t *arcs, size_t max, size_t *n);
 /** @brief Advance the cursor past @p length value bytes. */
-proto_bool pc_ber_skip(BerDec *d, size_t length);
+proto_bool protocore_ber_skip(BerDec *d, size_t length);
 
-#endif // PC_ENABLE_SNMP
+#endif // PROTOCORE_ENABLE_SNMP
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_SNMP_BER_H

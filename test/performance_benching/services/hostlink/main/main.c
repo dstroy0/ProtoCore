@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // On-device CCOUNT microbenchmark for the Omron Host Link (C-mode) frame codec (services/fieldbus/hostlink):
-// the FCS (an 8-bit XOR over the ASCII body), the command builder (pc_hostlink_build: @UU + header +
-// text + FCS + *CR), the FCS-validating parser (pc_hostlink_parse), and the response end-code reader
-// (pc_hostlink_end_code). Every operation here is pure - no heap, no sockets, no UART - so this is
+// the FCS (an 8-bit XOR over the ASCII body), the command builder (protocore_hostlink_build: @UU + header +
+// text + FCS + *CR), the FCS-validating parser (protocore_hostlink_parse), and the response end-code reader
+// (protocore_hostlink_end_code). Every operation here is pure - no heap, no sockets, no UART - so this is
 // like performance_benching/device/modbus, a pure protocol codec where each call exercises the real production code
 // path. The RS-232/485 serial transport is the application's responsibility and is deliberately out
 // of scope (nothing is wired to this rig); only the deterministic CPU-side framing is benched.
@@ -28,7 +28,7 @@ void dbench_run(void)
     const size_t body_len = sizeof(body) - 1; // exclude the NUL
 
     static char frame[32];
-    const size_t frame_len = pc_hostlink_build(frame, sizeof(frame), 0, "RD", "00000010", 8);
+    const size_t frame_len = protocore_hostlink_build(frame, sizeof(frame), 0, "RD", "00000010", 8);
 
     static char outbuf[32];
 
@@ -38,20 +38,20 @@ void dbench_run(void)
         volatile uint32_t sink = 0;
 
         // FCS: 8-bit XOR over the ASCII body (throughput over the frame body bytes).
-        DBENCH_BULK("pc_hostlink_fcs", 100000, body_len, sink += pc_hostlink_fcs(body, body_len));
+        DBENCH_BULK("protocore_hostlink_fcs", 100000, body_len, sink += protocore_hostlink_fcs(body, body_len));
 
         // Build a full DM-read command frame (@UU + header + text + FCS + *CR).
-        DBENCH_OP("pc_hostlink_build RD", 100000,
-                  sink += pc_hostlink_build(outbuf, sizeof(outbuf), 0, "RD", "00000010", 8));
+        DBENCH_OP("protocore_hostlink_build RD", 100000,
+                  sink += protocore_hostlink_build(outbuf, sizeof(outbuf), 0, "RD", "00000010", 8));
 
         // Parse + FCS-validate a complete frame.
         HostlinkFrame f;
-        DBENCH_OP("pc_hostlink_parse", 100000, sink += pc_hostlink_parse(frame, frame_len, &f));
+        DBENCH_OP("protocore_hostlink_parse", 100000, sink += protocore_hostlink_parse(frame, frame_len, &f));
 
         // Read the response end code (first 2 text chars) off an already-parsed frame.
-        (void)pc_hostlink_parse(frame, frame_len, &f);
+        (void)protocore_hostlink_parse(frame, frame_len, &f);
         uint8_t code = 0;
-        DBENCH_OP("pc_hostlink_end_code", 200000, sink += pc_hostlink_end_code(&f, &code));
+        DBENCH_OP("protocore_hostlink_end_code", 200000, sink += protocore_hostlink_end_code(&f, &code));
 
         (void)sink;
         DBENCH_DONE();

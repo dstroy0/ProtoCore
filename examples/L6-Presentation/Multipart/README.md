@@ -5,8 +5,8 @@
 ## What this example teaches
 
 This parses a `multipart/form-data` POST body (RFC 7578) without allocation:
-`pc_multipart_parse()` splits the in-buffer body into parts, and
-`pc_multipart_get_field()` returns a named text field. A test form is served at `/`.
+`protocore_multipart_parse()` splits the in-buffer body into parts, and
+`protocore_multipart_get_field()` returns a named text field. A test form is served at `/`.
 
 **In-place, bounded parsing.** The whole body must fit in `BODY_BUF_SIZE` (there
 is no streaming), so this is for small form fields and tiny uploads. The parser
@@ -15,11 +15,11 @@ than copying:
 
 ```cpp
 Multipart mp;
-if (!pc_multipart_parse(req, &mp)) {            // false if not multipart, or too big for BODY_BUF_SIZE
+if (!protocore_multipart_parse(req, &mp)) {            // false if not multipart, or too big for BODY_BUF_SIZE
     server.send(id, 400, "text/plain", "expected multipart/form-data (and within BODY_BUF_SIZE)");
     return;
 }
-const char *name = pc_multipart_get_field(&mp, "name");   // a named text part, or nullptr
+const char *name = protocore_multipart_get_field(&mp, "name");   // a named text part, or nullptr
 ```
 
 `mp.part_count` tells you how many parts were found. For large/streamed uploads
@@ -63,12 +63,12 @@ static const char FORM[] = "<!doctype html><meta charset=utf-8><title>upload</ti
 void handle_upload(uint8_t id, HttpReq *req)
 {
     Multipart mp;
-    if (!pc_multipart_parse(req, &mp)) // requires multipart/form-data and a body <= BODY_BUF_SIZE
+    if (!protocore_multipart_parse(req, &mp)) // requires multipart/form-data and a body <= BODY_BUF_SIZE
     {
         server.send(id, 400, "text/plain", "expected multipart/form-data (and within BODY_BUF_SIZE)");
         return;
     }
-    const char *name = pc_multipart_get_field(&mp, "name"); // index into the body, no copy
+    const char *name = protocore_multipart_get_field(&mp, "name"); // index into the body, no copy
     char out[160];
     snprintf(out, sizeof(out), "parsed %d part(s); field 'name' = %s", mp.part_count, name ? name : "(absent)");
     server.send(id, 200, "text/plain", out);

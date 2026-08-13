@@ -20,12 +20,12 @@ void dbench_run(void)
         DBENCH_BANNER("sep2");
         volatile size_t sink = 0;
         static char out[512];
-        DBENCH_OP("pc_sep2_device_capability", 200000,
-                  sink += pc_sep2_device_capability(300, "/edev", "/derp", out, sizeof(out)));
-        DBENCH_OP("pc_sep2_end_device", 200000,
-                  sink += pc_sep2_end_device(0x0123456789ABull, "3E4F...LFDI", "/edev/1", out, sizeof(out)));
-        DBENCH_OP("pc_sep2_der_control", 200000,
-                  sink += pc_sep2_der_control("D7A1B2C3", 1720700000u, 3600u, -1500, out, sizeof(out)));
+        DBENCH_OP("protocore_sep2_device_capability", 200000,
+                  sink += protocore_sep2_device_capability(300, "/edev", "/derp", out, sizeof(out)));
+        DBENCH_OP("protocore_sep2_end_device", 200000,
+                  sink += protocore_sep2_end_device(0x0123456789ABull, "3E4F...LFDI", "/edev/1", out, sizeof(out)));
+        DBENCH_OP("protocore_sep2_der_control", 200000,
+                  sink += protocore_sep2_der_control("D7A1B2C3", 1720700000u, 3600u, -1500, out, sizeof(out)));
         (void)sink;
         DBENCH_DONE();
     }

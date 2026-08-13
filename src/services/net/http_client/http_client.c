@@ -8,11 +8,11 @@
  */
 
 #include "services/net/http_client/http_client.h"
-#include "mmgr/membuild.h" // pc_sb frame builder
+#include "mmgr/membuild.h" // protocore_sb frame builder
 #include "mmgr/protomem.h"
 #include "server/clock/clock.h" // pcdelay
 
-#if PC_ENABLE_HTTP_CLIENT
+#if PROTOCORE_ENABLE_HTTP_CLIENT
 
 #include "mmgr/protostr.h"
 #include "shared_primitives/mime.h"
@@ -22,10 +22,10 @@
 // Pure helpers (host-testable)
 // ---------------------------------------------------------------------------
 
-#if PC_HAS_NET_STACK
+#if PROTOCORE_HAS_NET_STACK
 #include "network_drivers/transport/tcp.h" // shared outbound TCP client (L4)
 #endif
-#if PC_HAS_VENDOR_TLS && PC_ENABLE_HTTP_CLIENT_TLS
+#if PROTOCORE_HAS_VENDOR_TLS && PROTOCORE_ENABLE_HTTP_CLIENT_TLS
 #include "network_drivers/tls/tls.h"
 #include <mbedtls/ssl.h> // MBEDTLS_ERR_SSL_WANT_READ for the BIO recv callback
 #endif
@@ -123,20 +123,20 @@ size_t http_client_build_request(const char *method, const char *host, uint16_t 
     char hosthdr[80];
     if (port == 80 || port == 443)
     {
-        pc_sb sb_hosthdr = {hosthdr, sizeof(hosthdr), 0, PROTO_TRUE};
-        pc_sb_put(&sb_hosthdr, host);
-        if (pc_sb_finish(&sb_hosthdr) == 0)
+        protocore_sb sb_hosthdr = {hosthdr, sizeof(hosthdr), 0, PROTO_TRUE};
+        protocore_sb_put(&sb_hosthdr, host);
+        if (protocore_sb_finish(&sb_hosthdr) == 0)
         {
             hosthdr[0] = '\0';
         }
     }
     else
     {
-        pc_sb sb_hosthdr2 = {hosthdr, sizeof(hosthdr), 0, PROTO_TRUE};
-        pc_sb_put(&sb_hosthdr2, host);
-        pc_sb_put(&sb_hosthdr2, ":");
-        pc_sb_u32(&sb_hosthdr2, (uint32_t)((unsigned)port));
-        if (pc_sb_finish(&sb_hosthdr2) == 0)
+        protocore_sb sb_hosthdr2 = {hosthdr, sizeof(hosthdr), 0, PROTO_TRUE};
+        protocore_sb_put(&sb_hosthdr2, host);
+        protocore_sb_put(&sb_hosthdr2, ":");
+        protocore_sb_u32(&sb_hosthdr2, (uint32_t)((unsigned)port));
+        if (protocore_sb_finish(&sb_hosthdr2) == 0)
         {
             hosthdr[0] = '\0';
         }
@@ -145,19 +145,19 @@ size_t http_client_build_request(const char *method, const char *host, uint16_t 
     int n;
     if (body && body_len)
     {
-        pc_sb sb_out = {out, cap, 0, PROTO_TRUE};
-        pc_sb_put(&sb_out, method);
-        pc_sb_put(&sb_out, " ");
-        pc_sb_put(&sb_out, path);
-        pc_sb_put(&sb_out, " HTTP/1.1\r\nHost: ");
-        pc_sb_put(&sb_out, hosthdr);
-        pc_sb_put(&sb_out, "\r\nUser-Agent: PC\r\nContent-Type: ");
-        pc_sb_put(&sb_out, content_type ? content_type : PC_MIME_OCTET_STREAM);
-        pc_sb_put(&sb_out, "\r\nContent-Length: ");
-        pc_sb_u32(&sb_out, (uint32_t)((unsigned)body_len));
-        pc_sb_put(&sb_out, "\r\nConnection: close\r\n\r\n");
-        n = (int)pc_sb_finish(&sb_out);
-        // The builder's flag is the overflow signal. pc_sb_finish reports 0 for a frame that did
+        protocore_sb sb_out = {out, cap, 0, PROTO_TRUE};
+        protocore_sb_put(&sb_out, method);
+        protocore_sb_put(&sb_out, " ");
+        protocore_sb_put(&sb_out, path);
+        protocore_sb_put(&sb_out, " HTTP/1.1\r\nHost: ");
+        protocore_sb_put(&sb_out, hosthdr);
+        protocore_sb_put(&sb_out, "\r\nUser-Agent: PC\r\nContent-Type: ");
+        protocore_sb_put(&sb_out, content_type ? content_type : PROTOCORE_MIME_OCTET_STREAM);
+        protocore_sb_put(&sb_out, "\r\nContent-Length: ");
+        protocore_sb_u32(&sb_out, (uint32_t)((unsigned)body_len));
+        protocore_sb_put(&sb_out, "\r\nConnection: close\r\n\r\n");
+        n = (int)protocore_sb_finish(&sb_out);
+        // The builder's flag is the overflow signal. protocore_sb_finish reports 0 for a frame that did
         // not fit, so a length comparison cannot detect it: headers too long for cap left n == 0,
         // this guard passed, and the body was copied over an empty buffer and returned as a valid
         // request. The body still has to fit in what remains.
@@ -169,14 +169,14 @@ size_t http_client_build_request(const char *method, const char *host, uint16_t 
         return (size_t)n + body_len;
     }
 
-    pc_sb sb_out2 = {out, cap, 0, PROTO_TRUE};
-    pc_sb_put(&sb_out2, method);
-    pc_sb_put(&sb_out2, " ");
-    pc_sb_put(&sb_out2, path);
-    pc_sb_put(&sb_out2, " HTTP/1.1\r\nHost: ");
-    pc_sb_put(&sb_out2, hosthdr);
-    pc_sb_put(&sb_out2, "\r\nUser-Agent: PC\r\nConnection: close\r\n\r\n");
-    n = (int)pc_sb_finish(&sb_out2);
+    protocore_sb sb_out2 = {out, cap, 0, PROTO_TRUE};
+    protocore_sb_put(&sb_out2, method);
+    protocore_sb_put(&sb_out2, " ");
+    protocore_sb_put(&sb_out2, path);
+    protocore_sb_put(&sb_out2, " HTTP/1.1\r\nHost: ");
+    protocore_sb_put(&sb_out2, hosthdr);
+    protocore_sb_put(&sb_out2, "\r\nUser-Agent: PC\r\nConnection: close\r\n\r\n");
+    n = (int)protocore_sb_finish(&sb_out2);
     // n < 0 is unreachable here, for the same reason as the body-request snprintf above.
     if (!sb_out2.ok)
     {
@@ -347,11 +347,11 @@ int http_client_parse_response(uint8_t *buf, size_t len, size_t *body_off, size_
 // ---------------------------------------------------------------------------
 // Transport (ESP32 only): raw-lwIP TCP client + DNS, optional client mbedTLS.
 // ---------------------------------------------------------------------------
-#if PC_HAS_NET_STACK
+#if PROTOCORE_HAS_NET_STACK
 
-// Optional stage tracing: build with -DPC_HTTP_CLIENT_DEBUG to print where a
+// Optional stage tracing: build with -DPROTOCORE_HTTP_CLIENT_DEBUG to print where a
 // request stalls (DNS / connect / send / receive). Goes to the console UART.
-#ifdef PC_HTTP_CLIENT_DEBUG
+#ifdef PROTOCORE_HTTP_CLIENT_DEBUG
 #define CL_DBG(...) printf(__VA_ARGS__)
 #else
 #define CL_DBG(...) ((void)0)
@@ -360,15 +360,15 @@ int http_client_parse_response(uint8_t *buf, size_t len, size_t *body_off, size_
 // All HTTP-client state, owned by one instance (internal linkage): a single in-flight request
 // (one loop task). rx holds the *response to parse*: the raw wire bytes for http, or (for
 // https) the plaintext decrypted by the TLS engine; the TCP connection lives in the shared
-// client pool (pc_client). One named owner, unreachable from any other translation unit.
+// client pool (protocore_client). One named owner, unreachable from any other translation unit.
 typedef struct
 {
-    uint8_t rx[PC_HTTP_CLIENT_BUF_SIZE];
-    int cid; // active outbound connection id (pc_client pool)
+    uint8_t rx[PROTOCORE_HTTP_CLIENT_BUF_SIZE];
+    int cid; // active outbound connection id (protocore_client pool)
 } HttpClientCtx;
 static HttpClientCtx s_http = {.cid = -1};
 
-#if PC_ENABLE_HTTP_CLIENT_TLS
+#if PROTOCORE_ENABLE_HTTP_CLIENT_TLS
 // mbedTLS BIO over the shared client transport: send wire bytes through the pool,
 // recv by draining its wire ring (which carries ciphertext for https).
 static int cl_tls_send(void *ctx, const unsigned char *buf, size_t len)
@@ -387,7 +387,7 @@ static int cl_tls_recv(void *ctx, unsigned char *buf, size_t len)
     }
     return (int)n;
 }
-#endif // PC_ENABLE_HTTP_CLIENT_TLS
+#endif // PROTOCORE_ENABLE_HTTP_CLIENT_TLS
 
 // Core request: build, connect, send, receive, parse.
 static int http_request(const char *method, const char *url, const char *content_type, const uint8_t *body,
@@ -408,7 +408,7 @@ static int http_request(const char *method, const char *url, const char *content
         return (int)HTTP_CLIENT_ERR_URL;
     }
     CL_DBG("[hc] url host=%s port=%u https=%d path=%s\n", host, (unsigned)port, (int)is_https, path);
-#if !PC_ENABLE_HTTP_CLIENT_TLS
+#if !PROTOCORE_ENABLE_HTTP_CLIENT_TLS
     if (is_https)
     {
         return (int)HTTP_CLIENT_ERR_TLS;
@@ -423,10 +423,10 @@ static int http_request(const char *method, const char *url, const char *content
         return (int)HTTP_CLIENT_ERR_URL;
     }
 
-    uint32_t deadline = pc_millis() + PC_HTTP_CLIENT_TIMEOUT_MS;
+    uint32_t deadline = protocore_millis() + PROTOCORE_HTTP_CLIENT_TIMEOUT_MS;
 
     // Open the connection (DNS + connect) via the shared client transport.
-    s_http.cid = Tcp.client->open(host, port, PC_HTTP_CLIENT_TIMEOUT_MS);
+    s_http.cid = Tcp.client->open(host, port, PROTOCORE_HTTP_CLIENT_TIMEOUT_MS);
     CL_DBG("[hc] Tcp.client->open cid=%d\n", s_http.cid);
     if (s_http.cid < 0)
     {
@@ -435,14 +435,14 @@ static int http_request(const char *method, const char *url, const char *content
 
     // The response to parse: raw wire bytes (http) or decrypted plaintext (https),
     // both land in s_http.rx.
-    size_t pc_resp_len = 0;
+    size_t protocore_resp_len = 0;
 
     if (is_https)
     {
-#if PC_ENABLE_HTTP_CLIENT_TLS
-        int rc = pc_tls_client_run(host, (const uint8_t *)req, reqlen, s_http.rx, sizeof(s_http.rx), &pc_resp_len,
+#if PROTOCORE_ENABLE_HTTP_CLIENT_TLS
+        int rc = protocore_tls_client_run(host, (const uint8_t *)req, reqlen, s_http.rx, sizeof(s_http.rx), &protocore_resp_len,
                                    cl_tls_send, cl_tls_recv, deadline);
-        CL_DBG("[hc] tls rc=%d pt_len=%u\n", rc, (unsigned)pc_resp_len);
+        CL_DBG("[hc] tls rc=%d pt_len=%u\n", rc, (unsigned)protocore_resp_len);
         if (rc < 0)
         {
             Tcp.client->close(s_http.cid);
@@ -465,11 +465,11 @@ static int http_request(const char *method, const char *url, const char *content
             s_http.cid = -1;
             return (int)HTTP_CLIENT_ERR_SEND;
         }
-        while ((int32_t)(deadline - pc_millis()) > 0)
+        while ((int32_t)(deadline - protocore_millis()) > 0)
         {
-            size_t n = Tcp.client->read(s_http.cid, s_http.rx + pc_resp_len, sizeof(s_http.rx) - pc_resp_len);
-            pc_resp_len += n;
-            if (pc_resp_len >= sizeof(s_http.rx))
+            size_t n = Tcp.client->read(s_http.cid, s_http.rx + protocore_resp_len, sizeof(s_http.rx) - protocore_resp_len);
+            protocore_resp_len += n;
+            if (protocore_resp_len >= sizeof(s_http.rx))
             {
                 break;
             }
@@ -484,17 +484,17 @@ static int http_request(const char *method, const char *url, const char *content
         }
     }
 
-    CL_DBG("[hc] done pc_resp_len=%u\n", (unsigned)pc_resp_len);
+    CL_DBG("[hc] done protocore_resp_len=%u\n", (unsigned)protocore_resp_len);
     Tcp.client->close(s_http.cid);
     s_http.cid = -1;
 
-    if (pc_resp_len == 0)
+    if (protocore_resp_len == 0)
     {
         return (int)HTTP_CLIENT_ERR_TIMEOUT;
     }
 
     size_t body_off = 0, blen = 0;
-    int status = http_client_parse_response(s_http.rx, pc_resp_len, &body_off, &blen);
+    int status = http_client_parse_response(s_http.rx, protocore_resp_len, &body_off, &blen);
     if (status < 0)
     {
         return (int)HTTP_CLIENT_ERR_RESPONSE;
@@ -520,8 +520,8 @@ int http_post(const char *url, const char *content_type, const uint8_t *body, si
 
 void http_client_set_ca(const uint8_t *ca, size_t ca_len)
 {
-#if PC_ENABLE_HTTP_CLIENT_TLS
-    pc_tls_client_set_ca(ca, ca_len);
+#if PROTOCORE_ENABLE_HTTP_CLIENT_TLS
+    protocore_tls_client_set_ca(ca, ca_len);
 #else
     (void)ca;
     (void)ca_len;
@@ -529,16 +529,16 @@ void http_client_set_ca(const uint8_t *ca, size_t ca_len)
 }
 void http_client_set_pin(const uint8_t sha256[32])
 {
-#if PC_ENABLE_HTTP_CLIENT_TLS
-    pc_tls_client_set_pin(sha256);
+#if PROTOCORE_ENABLE_HTTP_CLIENT_TLS
+    protocore_tls_client_set_pin(sha256);
 #else
     (void)sha256;
 #endif
 }
 void http_client_clear_verify()
 {
-#if PC_ENABLE_HTTP_CLIENT_TLS
-    pc_tls_client_clear_verify();
+#if PROTOCORE_ENABLE_HTTP_CLIENT_TLS
+    protocore_tls_client_clear_verify();
 #endif
 }
 
@@ -572,6 +572,6 @@ void http_client_clear_verify()
 {
 }
 
-#endif // PC_HAS_NET_STACK
+#endif // PROTOCORE_HAS_NET_STACK
 
-#endif // PC_ENABLE_HTTP_CLIENT
+#endif // PROTOCORE_ENABLE_HTTP_CLIENT

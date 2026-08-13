@@ -1,6 +1,6 @@
 # IKEv2 - frame an IKE_SA_INIT and walk an IKEv2 message
 
-**Layer:** L5 Session · **Build flags:** `PC_ENABLE_IKEV2`
+**Layer:** L5 Session · **Build flags:** `PROTOCORE_ENABLE_IKEV2`
 
 ## What this example teaches
 
@@ -19,17 +19,17 @@ An IKEv2 message is a fixed header then a forward-linked chain of payloads, each
 header (next-payload + critical bit + length):
 
 ```cpp
-IkeHeader h = { .next_payload = IkePayloadType::IKE_PL_SA, .version = PC_IKE_VERSION, .exchange = IkeExchange::IKE_SA_INIT, ... };
-size_t off  = pc_ike_hdr_build(buf, cap, &h);
+IkeHeader h = { .next_payload = IkePayloadType::IKE_PL_SA, .version = PROTOCORE_IKE_VERSION, .exchange = IkeExchange::IKE_SA_INIT, ... };
+size_t off  = protocore_ike_hdr_build(buf, cap, &h);
 IkeTransform tr[] = { {IkeTransformType::IKE_TRANSFORM_ENCR, IKE_ENCR_AES_CBC, 256}, {IkeTransformType::IKE_TRANSFORM_DH, IKE_DH_MODP2048, -1}, ... };
-off += pc_ike_sa_build(buf + off, cap - off, IkePayloadType::IKE_PL_KE, 1, IkeProtocol::IKE_PROTO_IKE, nullptr, 0, tr, 4);
-off += pc_ike_ke_build(buf + off, cap - off, IkePayloadType::IKE_PL_NONCE, IKE_DH_MODP2048, ke_pub, ke_len);
-off += pc_ike_nonce_build(buf + off, cap - off, IkePayloadType::IKE_PL_NONE, nonce, nonce_len);
-pc_ike_set_length(buf, cap, off);   // backfill the whole-message length
+off += protocore_ike_sa_build(buf + off, cap - off, IkePayloadType::IKE_PL_KE, 1, IkeProtocol::IKE_PROTO_IKE, nullptr, 0, tr, 4);
+off += protocore_ike_ke_build(buf + off, cap - off, IkePayloadType::IKE_PL_NONCE, IKE_DH_MODP2048, ke_pub, ke_len);
+off += protocore_ike_nonce_build(buf + off, cap - off, IkePayloadType::IKE_PL_NONE, nonce, nonce_len);
+protocore_ike_set_length(buf, cap, off);   // backfill the whole-message length
 
 // walk any incoming message
-IkePayloadIter it;  pc_ike_payload_iter_init(&it, h.next_payload, buf + PC_IKE_HDR_LEN, off - PC_IKE_HDR_LEN);
-IkePayload pl;  while (pc_ike_payload_next(&it, &pl)) { /* pl.type, pl.body, pl.body_len */ }
+IkePayloadIter it;  protocore_ike_payload_iter_init(&it, h.next_payload, buf + PROTOCORE_IKE_HDR_LEN, off - PROTOCORE_IKE_HDR_LEN);
+IkePayload pl;  while (protocore_ike_payload_next(&it, &pl)) { /* pl.type, pl.body, pl.body_len */ }
 ```
 
 The sketch builds an IKE_SA_INIT, hexdumps it, and walks its own payload chain. If you set `GATEWAY_IP`
@@ -46,7 +46,7 @@ IKEv2 responder (e.g. a strongSwan / libreswan host, or a router's IPsec endpoin
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_IKEV2=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_IKEV2=1" \
   --lib="." examples/L5-Session/IKEv2/IKEv2.ino
 ```
 

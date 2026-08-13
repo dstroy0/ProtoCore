@@ -1,6 +1,6 @@
 # HaasMdc - collect machine data from a Haas CNC control
 
-**Layer:** L7 Application · **Build flags:** `PC_ENABLE_HAAS_MDC`
+**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_HAAS_MDC`
 
 ## What this example teaches
 
@@ -23,17 +23,17 @@ The codec builds the queries and decodes the replies - scanning for the STX/ETB 
 (never fixed offsets), so `read_frame` just accumulates bytes through the ETB:
 
 ```cpp
-pc_haas_mdc_build_q(cmd, sizeof(cmd), HAAS_Q_SERIAL);   // "?Q100\r"
-pc_haas_mdc_build_var(cmd, sizeof(cmd), 100);           // "?Q600 100\r"
-HaasMdcResp r;  pc_haas_mdc_parse(frame, len, &r);      // payload -> trimmed CSV fields
-pc_haas_mdc_value(&r, &v, &vl);                         // simple "LABEL, value" reply
-pc_haas_mdc_parse_status(&r, &s);                       // Q500: PROGRAM,... vs STATUS, BUSY
-pc_haas_mdc_parse_macro(&r, &var, &val, &vl);           // Q600: MACRO, <var>, <value>
+protocore_haas_mdc_build_q(cmd, sizeof(cmd), HAAS_Q_SERIAL);   // "?Q100\r"
+protocore_haas_mdc_build_var(cmd, sizeof(cmd), 100);           // "?Q600 100\r"
+HaasMdcResp r;  protocore_haas_mdc_parse(frame, len, &r);      // payload -> trimmed CSV fields
+protocore_haas_mdc_value(&r, &v, &vl);                         // simple "LABEL, value" reply
+protocore_haas_mdc_parse_status(&r, &s);                       // Q500: PROGRAM,... vs STATUS, BUSY
+protocore_haas_mdc_parse_macro(&r, &var, &val, &vl);           // Q600: MACRO, <var>, <value>
 ```
 
 `Q500` has two branches (running/idle vs `STATUS, BUSY`); an unsupported or lowercase command
-returns `UNKNOWN` (`pc_haas_mdc_is_error`). A running G-code program can also push `DPRNT(...)`
-lines on the same link - raw CRLF text with no STX/ETB - which `pc_haas_mdc_dprnt_line`
+returns `UNKNOWN` (`protocore_haas_mdc_is_error`). A running G-code program can also push `DPRNT(...)`
+lines on the same link - raw CRLF text with no STX/ETB - which `protocore_haas_mdc_dprnt_line`
 separates from framed Q replies.
 
 ## Prerequisites (a Haas control, or a simulator)
@@ -46,7 +46,7 @@ above) works for a dry run.
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_HAAS_MDC=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_HAAS_MDC=1" \
   --lib="." examples/L7-Application/HaasMdc/HaasMdc.ino
 ```
 

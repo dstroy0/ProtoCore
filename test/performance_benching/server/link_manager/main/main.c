@@ -3,8 +3,8 @@
 //
 // On-device CCOUNT microbenchmark for the multi-interface link-manager policy (server/signaling/link_manager):
 // a caller-owned table of interfaces (kind + priority + up/down) with a deterministic "best link that
-// is up" selection (pc_link_select), initial-egress compute (pc_link_init), and up/down state change
-// with escalation/failover + change detection (pc_link_set). All three are pure integer table scans -
+// is up" selection (protocore_link_select), initial-egress compute (protocore_link_init), and up/down state change
+// with escalation/failover + change detection (protocore_link_set). All three are pure integer table scans -
 // no heap, no stdlib, no PHY bring-up, no netif reconfigure (those belong to the app and the stack;
 // this only decides which interface should be active). So every call here exercises the real
 // production code path, exactly like the modbus pure-codec worked example - nothing is stubbed.
@@ -31,7 +31,7 @@ void dbench_run(void)
         {LINK_KIND_WIFI_AP, 5, true},
     };
     static LinkManager m;
-    pc_link_init(&m, ifaces, 3);
+    protocore_link_init(&m, ifaces, 3);
 
     for (;;)
     {
@@ -41,16 +41,16 @@ void dbench_run(void)
         int from = 0, to = 0;
 
         // Best-link-up selection: full priority scan over the 3-interface table (all up).
-        DBENCH_OP("pc_link_select all-up", 200000, sink += pc_link_select(&m));
+        DBENCH_OP("protocore_link_select all-up", 200000, sink += protocore_link_select(&m));
 
-        // Initial-egress compute over caller storage: seeds active via one pc_link_select scan.
-        DBENCH_OP("pc_link_init recompute", 200000, pc_link_init(&m, ifaces, 3));
+        // Initial-egress compute over caller storage: seeds active via one protocore_link_select scan.
+        DBENCH_OP("protocore_link_init recompute", 200000, protocore_link_init(&m, ifaces, 3));
 
         // State change + recompute + change detection (idx 0 held up -> escalation path, full rescan).
-        DBENCH_OP("pc_link_set escalate", 100000, bsink = pc_link_set(&m, 0, true, &from, &to));
+        DBENCH_OP("protocore_link_set escalate", 100000, bsink = protocore_link_set(&m, 0, true, &from, &to));
 
         // Fail-over path: drop the top-priority link, rescan picks the next best up.
-        DBENCH_OP("pc_link_set failover", 100000, bsink = pc_link_set(&m, 0, false, &from, &to));
+        DBENCH_OP("protocore_link_set failover", 100000, bsink = protocore_link_set(&m, 0, false, &from, &to));
 
         (void)sink;
         (void)bsink;

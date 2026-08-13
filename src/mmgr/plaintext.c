@@ -5,26 +5,26 @@
  * @file plaintext.c
  * @brief Plaintext pool accessor - implementation.
  *
- * This file is an access layer, not a second allocator. The pool mechanism is ::pc_arena
+ * This file is an access layer, not a second allocator. The pool mechanism is ::protocore_arena
  * (mmgr/arena) and there is exactly one of it; this module owns one instance per worker slot over
  * compile-time-sized storage and decides who may reach it. The secret pool is the same mechanism
  * instantiated again behind its own accessor - identical resource, identical mechanics, different
  * access and control.
  *
  * Each instance has exactly one accessor (its worker), so the lock-free guarantees in plaintext.h hold
- * per slot. With PC_WORKER_COUNT == 1 this is byte-for-byte the original single arena.
+ * per slot. With PROTOCORE_WORKER_COUNT == 1 this is byte-for-byte the original single arena.
  */
 
 #include "plaintext.h"
-#include "core_setup/board_profiles/pc_platform.h" // pc_platform_context_id()
+#include "core_setup/board_profiles/protocore_platform.h" // protocore_platform_context_id()
 #include "mmgr/arena.h"
 #include <assert.h>
 
-// Per-slot pool instances (offsets + high-water live inside pc_arena), owned by one instance with
+// Per-slot pool instances (offsets + high-water live inside protocore_arena), owned by one instance with
 // internal linkage.
 typedef struct
 {
-    pc_arena pool[PC_REG_POOL_SLOTS];
+    protocore_arena pool[PROTOCORE_REG_POOL_SLOTS];
 } PlainPoolCtx;
 static PlainPoolCtx s_plain;
 
@@ -33,14 +33,14 @@ static PlainPoolCtx s_plain;
 // Nothing outside bind() below names this symbol, and bind() is reachable only from the allocation
 // path. A firmware that never allocates plaintext scratch (a plain TLS/HTTP server - no SSH /
 // WebSocket / OIDC) therefore has the allocator garbage-collected and, with it, this storage,
-// reclaiming PC_REG_POOL_SLOTS * PC_PLAINTEXT_ARENA_SIZE bytes of DRAM. That is why pc_plaintext_reset() -
+// reclaiming PROTOCORE_REG_POOL_SLOTS * PROTOCORE_PLAINTEXT_ARENA_SIZE bytes of DRAM. That is why protocore_plaintext_reset() -
 // which runs every dispatch and so is always live - must NOT bind: --gc-sections is per-symbol, and
 // one always-live reference would anchor the multi-KB storage into builds that never touch it.
 typedef struct
 {
     // The pool aligns allocation offsets, so the base must itself satisfy the strictest alignment a
     // caller can request. As a struct member it would only inherit 8-byte alignment; force 32.
-    _Alignas(32) uint8_t mem[PC_REG_POOL_SLOTS][PC_PLAINTEXT_ARENA_SIZE];
+    _Alignas(32) uint8_t mem[PROTOCORE_REG_POOL_SLOTS][PROTOCORE_PLAINTEXT_ARENA_SIZE];
 } PlainPoolStorageCtx;
 static PlainPoolStorageCtx s_plain_storage;
 
@@ -62,8 +62,8 @@ static inline uintptr_t plain_offset(const void *p)
 // ghost, which is what the tripwire below is for.
 static inline int cur_worker(void)
 {
-    int w = pc_worker_self();
-    return (w >= 0 && w < PC_REG_POOL_SLOTS) ? w : PC_GHOST_WORKER_SLOT;
+    int w = protocore_worker_self();
+    return (w >= 0 && w < PROTOCORE_REG_POOL_SLOTS) ? w : PROTOCORE_GHOST_WORKER_SLOT;
 }
 
 // Debug tripwire: each pool instance must only ever be touched from one execution context (its
@@ -72,11 +72,11 @@ static inline int cur_worker(void)
 // violation into an immediate failure instead of a silent cross-core race.
 static inline void assert_single_owner(int w)
 {
-#if PC_DEBUG_CHECKS
-    // Off by default; see PC_DEBUG_CHECKS. The identity comes from core_setup/ - the core does
+#if PROTOCORE_DEBUG_CHECKS
+    // Off by default; see PROTOCORE_DEBUG_CHECKS. The identity comes from core_setup/ - the core does
     // not name an RTOS.
-    static uintptr_t s_owner[PC_REG_POOL_SLOTS] = {0};
-    const uintptr_t cur = pc_platform_context_id();
+    static uintptr_t s_owner[PROTOCORE_REG_POOL_SLOTS] = {0};
+    const uintptr_t cur = protocore_platform_context_id();
     if (s_owner[w] == 0)
     {
         s_owner[w] = cur;
@@ -92,25 +92,25 @@ static inline void assert_single_owner(int w)
 
 // Bind slot @p w's pool to its storage on first use. The ONLY reference to s_plain_storage - see
 // the note on PlainPoolStorageCtx for why it must stay confined to the allocation path.
-static inline pc_arena *bind(int w)
+static inline protocore_arena *bind(int w)
 {
-    pc_arena *a = &s_plain.pool[w];
+    protocore_arena *a = &s_plain.pool[w];
     if (a->base == NULL)
     {
-        pc_arena_init(a, s_plain_storage.mem[w], PC_PLAINTEXT_ARENA_SIZE);
+        protocore_arena_init(a, s_plain_storage.mem[w], PROTOCORE_PLAINTEXT_ARENA_SIZE);
     }
     return a;
 }
 
 // The pool for slot @p w WITHOUT binding it: for the observers and the reset, which must not anchor
 // the storage. An unbound slot has never allocated, so it is empty by definition.
-static inline pc_arena *peek(int w)
+static inline protocore_arena *peek(int w)
 {
-    pc_arena *a = &s_plain.pool[w];
+    protocore_arena *a = &s_plain.pool[w];
     return (a->base != NULL) ? a : NULL;
 }
 
-void *pc_plaintext_alloc(size_t n, size_t align)
+void *protocore_plaintext_alloc(size_t n, size_t align)
 {
     int w = cur_worker();
     assert_single_owner(w);
@@ -118,66 +118,66 @@ void *pc_plaintext_alloc(size_t n, size_t align)
     // the process, so it cannot be exercised from an in-process host test without killing the whole
     // test binary mid-run.
     assert((align & (align - 1)) == 0 && "plaintext alignment must be a power of two");
-    return pc_arena_scratch_alloc_aligned(bind(w), n, align);
+    return protocore_arena_scratch_alloc_aligned(bind(w), n, align);
 }
 
-pc_span pc_plaintext_span(size_t n, size_t align)
+protocore_span protocore_plaintext_span(size_t n, size_t align)
 {
     // One argument sets both fields, so the capacity can never disagree with the allocation. On
-    // exhaustion pc_span_from() normalizes to {NULL, 0} rather than a null with a live capacity,
-    // which is what makes an omitted pc_span_ok() check drop bytes instead of dereference null.
-    return pc_span_from((uint8_t *)pc_plaintext_alloc(n, align), n);
+    // exhaustion protocore_span_from() normalizes to {NULL, 0} rather than a null with a live capacity,
+    // which is what makes an omitted protocore_span_ok() check drop bytes instead of dereference null.
+    return protocore_span_from((uint8_t *)protocore_plaintext_alloc(n, align), n);
 }
 
-pc_span pc_plaintext_persist_span(size_t n)
+protocore_span protocore_plaintext_persist_span(size_t n)
 {
     int w = cur_worker();
     assert_single_owner(w);
     // The persistent end grows up from the base and the scratch end bumps down from the top, so the
     // per-dispatch reset never reaches this and no release reclaims it. The arena hands these bytes
-    // back zeroed. The secure pool's half of this is pc_secure_persist_span().
-    return pc_span_from((uint8_t *)pc_arena_persist_alloc(bind(w), n), n);
+    // back zeroed. The secure pool's half of this is protocore_secure_persist_span().
+    return protocore_span_from((uint8_t *)protocore_arena_persist_alloc(bind(w), n), n);
 }
 
-void pc_plaintext_reset(void)
+void protocore_plaintext_reset(void)
 {
     int w = cur_worker();
     assert_single_owner(w);
-    pc_arena *a = peek(w); // must not bind: this runs every dispatch and would anchor the storage
+    protocore_arena *a = peek(w); // must not bind: this runs every dispatch and would anchor the storage
     if (a != NULL)
     {
-        pc_arena_scratch_reset(a);
+        protocore_arena_scratch_reset(a);
     }
 }
 
-size_t pc_plaintext_mark(void)
+size_t protocore_plaintext_mark(void)
 {
     int w = cur_worker();
     assert_single_owner(w);
-    return pc_arena_scratch_mark(bind(w));
+    return protocore_arena_scratch_mark(bind(w));
 }
 
-void pc_plaintext_release(size_t mark)
+void protocore_plaintext_release(size_t mark)
 {
     int w = cur_worker();
     assert_single_owner(w);
-    pc_arena_scratch_release(bind(w), mark);
+    protocore_arena_scratch_release(bind(w), mark);
 }
 
-size_t pc_plaintext_used(void)
+size_t protocore_plaintext_used(void)
 {
-    const pc_arena *a = peek(cur_worker());
-    return (a != NULL) ? pc_arena_scratch_used(a) : 0;
+    const protocore_arena *a = peek(cur_worker());
+    return (a != NULL) ? protocore_arena_scratch_used(a) : 0;
 }
 
-size_t pc_plaintext_high_water(void)
+size_t protocore_plaintext_high_water(void)
 {
-    // Peak any single slot reached - the value to size PC_PLAINTEXT_ARENA_SIZE by. This is the
+    // Peak any single slot reached - the value to size PROTOCORE_PLAINTEXT_ARENA_SIZE by. This is the
     // backward direction of the run-length constant: the pool reports what was actually needed.
     size_t peak = 0;
-    for (int w = 0; w < PC_REG_POOL_SLOTS; w++)
+    for (int w = 0; w < PROTOCORE_REG_POOL_SLOTS; w++)
     {
-        const pc_arena *a = peek(w);
+        const protocore_arena *a = peek(w);
         if (a != NULL && a->scratch_hw > peak)
         {
             peak = a->scratch_hw;
@@ -186,17 +186,17 @@ size_t pc_plaintext_high_water(void)
     return peak;
 }
 
-size_t pc_plaintext_capacity(void)
+size_t protocore_plaintext_capacity(void)
 {
-    return PC_PLAINTEXT_ARENA_SIZE;
+    return PROTOCORE_PLAINTEXT_ARENA_SIZE;
 }
 
-proto_bool pc_plaintext_owns(const void *p)
+proto_bool protocore_plaintext_owns(const void *p)
 {
     return plain_offset(p) < (uintptr_t)sizeof(s_plain_storage.mem);
 }
 
-int pc_plaintext_slot_of(const void *p)
+int protocore_plaintext_slot_of(const void *p)
 {
     const uintptr_t off = plain_offset(p);
     if (off >= (uintptr_t)sizeof(s_plain_storage.mem))
@@ -206,5 +206,5 @@ int pc_plaintext_slot_of(const void *p)
     // A divide by a compile-time constant, which the compiler emits as a multiply-and-shift. Not a
     // hot path either way: this exists so a borrow handed back can be asserted to belong to the
     // calling worker.
-    return (int)(off / PC_PLAINTEXT_ARENA_SIZE);
+    return (int)(off / PROTOCORE_PLAINTEXT_ARENA_SIZE);
 }

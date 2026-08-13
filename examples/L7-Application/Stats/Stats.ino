@@ -3,22 +3,22 @@
 
 /**
  * @file Stats.ino
- * @brief Runtime statistics endpoint (PC_ENABLE_STATS).
+ * @brief Runtime statistics endpoint (PROTOCORE_ENABLE_STATS).
  *
  * stats(slot_id) writes a JSON snapshot - uptime, request/error counts,
  * connection-pool usage, free heap - straight to the response. Wire it to a
  * route to expose live diagnostics.
  *
- * NOTE: this feature is compiled into the library only when PC_ENABLE_STATS
+ * NOTE: this feature is compiled into the library only when PROTOCORE_ENABLE_STATS
  * is set for the whole build (a .ino #define does not reach the separately
  * compiled library). In platformio.ini:
- *     build_flags = -DPC_ENABLE_STATS=1
+ *     build_flags = -DPROTOCORE_ENABLE_STATS=1
  * (Arduino IDE: it is already set for you in the build_opt.h beside this sketch, so it builds as-is.)
  *
  * Flash, open Serial @ 115200 for the IP, then GET http://<ip>/stats.
  */
 
-#define PC_ENABLE_STATS 1
+#define PROTOCORE_ENABLE_STATS 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"

@@ -7,103 +7,103 @@
  */
 
 #include "services/instrumentation/gpib/gpib.h"
-#include "mmgr/membuild.h" // pc_sb frame builder
+#include "mmgr/membuild.h" // protocore_sb frame builder
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_GPIB
+#if PROTOCORE_ENABLE_GPIB
 
-size_t pc_gpib_command(char *buf, size_t cap, const char *cmd)
+size_t protocore_gpib_command(char *buf, size_t cap, const char *cmd)
 {
     if (!buf || cap == 0 || !cmd)
     {
         return 0;
     }
-    pc_sb sb_cmd = {buf, cap, 0, PROTO_TRUE};
-    pc_sb_lit(&sb_cmd, "++");
-    pc_sb_put(&sb_cmd, cmd);
-    pc_sb_lit(&sb_cmd, "\n");
-    return pc_sb_finish(&sb_cmd);
+    protocore_sb sb_cmd = {buf, cap, 0, PROTO_TRUE};
+    protocore_sb_lit(&sb_cmd, "++");
+    protocore_sb_put(&sb_cmd, cmd);
+    protocore_sb_lit(&sb_cmd, "\n");
+    return protocore_sb_finish(&sb_cmd);
 }
 
-size_t pc_gpib_addr(char *buf, size_t cap, uint8_t pad, int sad)
+size_t protocore_gpib_addr(char *buf, size_t cap, uint8_t pad, int sad)
 {
     if (!buf || cap == 0 || pad > 30)
     {
         return 0;
     }
-    pc_sb sb_addr = {buf, cap, 0, PROTO_TRUE};
-    pc_sb_lit(&sb_addr, "++addr ");
-    pc_sb_u32(&sb_addr, pad);
+    protocore_sb sb_addr = {buf, cap, 0, PROTO_TRUE};
+    protocore_sb_lit(&sb_addr, "++addr ");
+    protocore_sb_u32(&sb_addr, pad);
     if (sad >= 0)
     {
-        pc_sb_ch(&sb_addr, ' ');
-        pc_sb_i64(&sb_addr, sad);
+        protocore_sb_ch(&sb_addr, ' ');
+        protocore_sb_i64(&sb_addr, sad);
     }
-    pc_sb_lit(&sb_addr, "\n");
-    return pc_sb_finish(&sb_addr);
+    protocore_sb_lit(&sb_addr, "\n");
+    return protocore_sb_finish(&sb_addr);
 }
 
-size_t pc_gpib_read(char *buf, size_t cap, GpibRead mode, uint8_t ch)
+size_t protocore_gpib_read(char *buf, size_t cap, GpibRead mode, uint8_t ch)
 {
     if (!buf || cap == 0)
     {
         return 0;
     }
-    pc_sb sb_read = {buf, cap, 0, PROTO_TRUE};
+    protocore_sb sb_read = {buf, cap, 0, PROTO_TRUE};
     switch (mode)
     {
     case UNTIL_EOI:
-        pc_sb_lit(&sb_read, "++read eoi\n");
+        protocore_sb_lit(&sb_read, "++read eoi\n");
         break;
     case UNTIL_CHAR:
-        pc_sb_lit(&sb_read, "++read ");
-        pc_sb_u32(&sb_read, ch);
-        pc_sb_lit(&sb_read, "\n");
+        protocore_sb_lit(&sb_read, "++read ");
+        protocore_sb_u32(&sb_read, ch);
+        protocore_sb_lit(&sb_read, "\n");
         break;
     case UNTIL_TIMEOUT:
     default:
-        pc_sb_lit(&sb_read, "++read\n");
+        protocore_sb_lit(&sb_read, "++read\n");
         break;
     }
-    return pc_sb_finish(&sb_read);
+    return protocore_sb_finish(&sb_read);
 }
 
-size_t pc_gpib_spoll(char *buf, size_t cap, int pad, int sad)
+size_t protocore_gpib_spoll(char *buf, size_t cap, int pad, int sad)
 {
     if (!buf || cap == 0)
     {
         return 0;
     }
-    pc_sb sb_spoll = {buf, cap, 0, PROTO_TRUE};
-    pc_sb_lit(&sb_spoll, "++spoll");
+    protocore_sb sb_spoll = {buf, cap, 0, PROTO_TRUE};
+    protocore_sb_lit(&sb_spoll, "++spoll");
     if (pad >= 0)
     {
-        pc_sb_ch(&sb_spoll, ' ');
-        pc_sb_i64(&sb_spoll, pad);
+        protocore_sb_ch(&sb_spoll, ' ');
+        protocore_sb_i64(&sb_spoll, pad);
         if (sad >= 0)
         {
-            pc_sb_ch(&sb_spoll, ' ');
-            pc_sb_i64(&sb_spoll, sad);
+            protocore_sb_ch(&sb_spoll, ' ');
+            protocore_sb_i64(&sb_spoll, sad);
         }
     }
-    pc_sb_lit(&sb_spoll, "\n");
-    return pc_sb_finish(&sb_spoll);
+    protocore_sb_lit(&sb_spoll, "\n");
+    return protocore_sb_finish(&sb_spoll);
 }
 
-size_t pc_gpib_eos(char *buf, size_t cap, GpibEos eos)
+size_t protocore_gpib_eos(char *buf, size_t cap, GpibEos eos)
 {
     if (!buf || cap == 0)
     {
         return 0;
     }
-    pc_sb sb_eos = {buf, cap, 0, PROTO_TRUE};
-    pc_sb_lit(&sb_eos, "++eos ");
-    pc_sb_i64(&sb_eos, (int64_t)eos); // the wire field IS the enumerator's decimal value
-    pc_sb_lit(&sb_eos, "\n");
-    return pc_sb_finish(&sb_eos);
+    protocore_sb sb_eos = {buf, cap, 0, PROTO_TRUE};
+    protocore_sb_lit(&sb_eos, "++eos ");
+    protocore_sb_i64(&sb_eos, (int64_t)eos); // the wire field IS the enumerator's decimal value
+    protocore_sb_lit(&sb_eos, "\n");
+    return protocore_sb_finish(&sb_eos);
 }
 
-size_t pc_gpib_build_data(uint8_t *buf, size_t cap, const uint8_t *src, size_t len)
+size_t protocore_gpib_build_data(uint8_t *buf, size_t cap, const uint8_t *src, size_t len)
 {
     if (!buf || cap == 0 || (len && !src))
     {
@@ -129,7 +129,7 @@ size_t pc_gpib_build_data(uint8_t *buf, size_t cap, const uint8_t *src, size_t l
     return o;
 }
 
-proto_bool pc_gpib_is_command(const char *line, size_t len)
+proto_bool protocore_gpib_is_command(const char *line, size_t len)
 {
     return line && len >= 2 && line[0] == '+' && line[1] == '+';
 }
@@ -152,7 +152,7 @@ static void trim(const char **s, size_t *len)
     *len = n;
 }
 
-proto_bool pc_gpib_parse_decimal(const char *s, size_t len, uint32_t *out)
+proto_bool protocore_gpib_parse_decimal(const char *s, size_t len, uint32_t *out)
 {
     if (!s)
     {
@@ -179,7 +179,7 @@ proto_bool pc_gpib_parse_decimal(const char *s, size_t len, uint32_t *out)
     return PROTO_TRUE;
 }
 
-proto_bool pc_gpib_parse_addr(const char *s, size_t len, uint8_t *pad, int *sad)
+proto_bool protocore_gpib_parse_addr(const char *s, size_t len, uint8_t *pad, int *sad)
 {
     if (!s)
     {
@@ -241,7 +241,7 @@ proto_bool pc_gpib_parse_addr(const char *s, size_t len, uint8_t *pad, int *sad)
     return PROTO_TRUE;
 }
 
-proto_bool pc_gpib_parse_version(const char *s, size_t len, const char **ver, size_t *ver_len)
+proto_bool protocore_gpib_parse_version(const char *s, size_t len, const char **ver, size_t *ver_len)
 {
     if (!s)
     {
@@ -278,4 +278,4 @@ proto_bool pc_gpib_parse_version(const char *s, size_t len, const char **ver, si
     return PROTO_FALSE;
 }
 
-#endif // PC_ENABLE_GPIB
+#endif // PROTOCORE_ENABLE_GPIB

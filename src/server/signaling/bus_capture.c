@@ -8,26 +8,26 @@
 
 #include "server/signaling/bus_capture.h"
 
-#if PC_ENABLE_BUS_CAPTURE
+#if PROTOCORE_ENABLE_BUS_CAPTURE
 
-#if PC_HAS_VENDOR_CAN
+#if PROTOCORE_HAS_VENDOR_CAN
 #include "driver/twai.h"
 #endif
 size_t can_to_socketcan(const CanFrame *f, uint8_t *out, size_t cap)
 {
-    if (!f || !out || cap < PC_SOCKETCAN_FRAME_LEN)
+    if (!f || !out || cap < PROTOCORE_SOCKETCAN_FRAME_LEN)
     {
         return 0;
     }
 
-    uint32_t id = f->id & (f->extended ? PC_CAN_EXT_ID_MASK : PC_CAN_STD_ID_MASK);
+    uint32_t id = f->id & (f->extended ? PROTOCORE_CAN_EXT_ID_MASK : PROTOCORE_CAN_STD_ID_MASK);
     if (f->extended)
     {
-        id |= PC_CAN_EFF_FLAG;
+        id |= PROTOCORE_CAN_EFF_FLAG;
     }
     if (f->rtr)
     {
-        id |= PC_CAN_RTR_FLAG;
+        id |= PROTOCORE_CAN_RTR_FLAG;
     }
 
     out[0] = (uint8_t)(id >> 24); // can_id, big-endian
@@ -35,20 +35,20 @@ size_t can_to_socketcan(const CanFrame *f, uint8_t *out, size_t cap)
     out[2] = (uint8_t)(id >> 8);
     out[3] = (uint8_t)id;
 
-    uint8_t dlc = f->dlc > PC_CAN_MAX_DLC ? PC_CAN_MAX_DLC : f->dlc;
+    uint8_t dlc = f->dlc > PROTOCORE_CAN_MAX_DLC ? PROTOCORE_CAN_MAX_DLC : f->dlc;
     out[4] = dlc; // length
     out[5] = 0;   // __pad
     out[6] = 0;   // __res0
     out[7] = 0;   // len8_dlc / __res1
-    for (int i = 0; i < PC_CAN_MAX_DLC; i++)
+    for (int i = 0; i < PROTOCORE_CAN_MAX_DLC; i++)
     {
         out[8 + i] = (i < dlc && !f->rtr) ? f->data[i] : 0;
     }
-    return PC_SOCKETCAN_FRAME_LEN;
+    return PROTOCORE_SOCKETCAN_FRAME_LEN;
 }
 
 // --- ESP32 TWAI (CAN) binding ------------------------------------------------------------
-#if PC_HAS_VENDOR_CAN
+#if PROTOCORE_HAS_VENDOR_CAN
 
 // All bus-capture bind state, owned by one instance (internal linkage): the frame sink and
 // the running flag, grouped so it is one named owner, unreachable from any other TU.
@@ -129,8 +129,8 @@ void bus_capture_poll(void)
         f.id = m.identifier;
         f.extended = m.extd;
         f.rtr = m.rtr;
-        f.dlc = m.data_length_code > PC_CAN_MAX_DLC ? PC_CAN_MAX_DLC : m.data_length_code;
-        for (int i = 0; i < PC_CAN_MAX_DLC; i++)
+        f.dlc = m.data_length_code > PROTOCORE_CAN_MAX_DLC ? PROTOCORE_CAN_MAX_DLC : m.data_length_code;
+        for (int i = 0; i < PROTOCORE_CAN_MAX_DLC; i++)
         {
             f.data[i] = (i < f.dlc) ? m.data[i] : 0;
         }
@@ -169,6 +169,6 @@ void bus_capture_end(void)
     // host build: no TWAI controller, nothing to stop
 }
 
-#endif // PC_HAS_VENDOR_CAN
+#endif // PROTOCORE_HAS_VENDOR_CAN
 
-#endif // PC_ENABLE_BUS_CAPTURE
+#endif // PROTOCORE_ENABLE_BUS_CAPTURE

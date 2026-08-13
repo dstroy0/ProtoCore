@@ -8,15 +8,15 @@
 
 #include "services/machine_tool/packml/packml.h"
 
-#if PC_ENABLE_PACKML
+#if PROTOCORE_ENABLE_PACKML
 
-#include "server/clock/clock.h" // pc_millis - the monotonic source
+#include "server/clock/clock.h" // protocore_millis - the monotonic source
 
 // ---------------------------------------------------------------------------
 // Pure state engine
 // ---------------------------------------------------------------------------
 
-PackMlState pc_packml_command(PackMlState s, PackMlCommand c)
+PackMlState protocore_packml_command(PackMlState s, PackMlCommand c)
 {
     // Abort is legal from every state except the abort branch itself -> Aborting.
     if (c == PACK_ML_COMMAND_ABORT && s != PACK_ML_STATE_ABORTING && s != PACK_ML_STATE_ABORTED)
@@ -85,7 +85,7 @@ PackMlState pc_packml_command(PackMlState s, PackMlCommand c)
     return s; // command not legal in this state: no transition
 }
 
-PackMlState pc_packml_state_complete(PackMlState s)
+PackMlState protocore_packml_state_complete(PackMlState s)
 {
     switch (s)
     {
@@ -114,12 +114,12 @@ PackMlState pc_packml_state_complete(PackMlState s)
     }
 }
 
-PackMlState pc_packml_execute_complete(PackMlState s)
+PackMlState protocore_packml_execute_complete(PackMlState s)
 {
     return (s == PACK_ML_STATE_EXECUTE) ? PACK_ML_STATE_COMPLETING : s;
 }
 
-proto_bool pc_packml_is_acting(PackMlState s)
+proto_bool protocore_packml_is_acting(PackMlState s)
 {
     switch (s)
     {
@@ -139,12 +139,12 @@ proto_bool pc_packml_is_acting(PackMlState s)
     }
 }
 
-proto_bool pc_packml_command_valid(PackMlState s, PackMlCommand c)
+proto_bool protocore_packml_command_valid(PackMlState s, PackMlCommand c)
 {
-    return pc_packml_command(s, c) != s;
+    return protocore_packml_command(s, c) != s;
 }
 
-const char *pc_packml_state_name(PackMlState s)
+const char *protocore_packml_state_name(PackMlState s)
 {
     switch (s)
     {
@@ -187,7 +187,7 @@ const char *pc_packml_state_name(PackMlState s)
     }
 }
 
-const char *pc_packml_command_name(PackMlCommand c)
+const char *protocore_packml_command_name(PackMlCommand c)
 {
     switch (c)
     {
@@ -227,11 +227,11 @@ typedef struct
     float mach_speed_cmd;
     uint32_t prod_processed;
     uint32_t prod_defective;
-    uint32_t reset_ms;       // pc_millis at the last Reset -> AccTimeSinceReset base
-    uint32_t state_entry_ms; // pc_millis at the last state change -> StateCurrentTime base
+    uint32_t reset_ms;       // protocore_millis at the last Reset -> AccTimeSinceReset base
+    uint32_t state_entry_ms; // protocore_millis at the last state change -> StateCurrentTime base
 } PackMlSvcCtx;
 // mode is the only member whose default is not the zero fill: PACK_ML_MODE_PRODUCING is 1, and
-// nothing sets it before a read (pc_packml_set_mode is a caller-driven setter).
+// nothing sets it before a read (protocore_packml_set_mode is a caller-driven setter).
 // PACK_ML_STATE_UNDEFINED is 0, so state needs no initializer.
 static PackMlSvcCtx s_pml = {
     .mode = PACK_ML_MODE_PRODUCING,
@@ -244,42 +244,42 @@ static void enter_state(PackMlState s)
         return;
     }
     s_pml.state = s;
-    s_pml.state_entry_ms = pc_millis();
+    s_pml.state_entry_ms = protocore_millis();
 }
 
-void pc_packml_svc_init(PackMlMode mode)
+void protocore_packml_svc_init(PackMlMode mode)
 {
     s_pml.mode = mode;
     s_pml.mach_speed_cmd = 0.0f;
     s_pml.prod_processed = 0;
     s_pml.prod_defective = 0;
-    s_pml.reset_ms = pc_millis();
+    s_pml.reset_ms = protocore_millis();
     s_pml.state = PACK_ML_STATE_UNDEFINED; // force enter_state to stamp the entry time
     enter_state(PACK_ML_STATE_STOPPED);
 }
 
-proto_bool pc_packml_svc_command(PackMlCommand c)
+proto_bool protocore_packml_svc_command(PackMlCommand c)
 {
-    PackMlState next = pc_packml_command(s_pml.state, c);
+    PackMlState next = protocore_packml_command(s_pml.state, c);
     if (next == s_pml.state)
     {
         return PROTO_FALSE;
     }
     if (c == PACK_ML_COMMAND_RESET) // a fresh run: restart the accumulated-time clock
     {
-        s_pml.reset_ms = pc_millis();
+        s_pml.reset_ms = protocore_millis();
     }
     enter_state(next);
     return PROTO_TRUE;
 }
 
-PackMlState pc_packml_svc_state_complete(void)
+PackMlState protocore_packml_svc_state_complete(void)
 {
-    enter_state(pc_packml_state_complete(s_pml.state));
+    enter_state(protocore_packml_state_complete(s_pml.state));
     return s_pml.state;
 }
 
-void pc_packml_svc_count(proto_bool defective)
+void protocore_packml_svc_count(proto_bool defective)
 {
     if (s_pml.state != PACK_ML_STATE_EXECUTE)
     {
@@ -292,9 +292,9 @@ void pc_packml_svc_count(proto_bool defective)
     }
 }
 
-proto_bool pc_packml_svc_complete_run(void)
+proto_bool protocore_packml_svc_complete_run(void)
 {
-    PackMlState next = pc_packml_execute_complete(s_pml.state);
+    PackMlState next = protocore_packml_execute_complete(s_pml.state);
     if (next == s_pml.state)
     {
         return PROTO_FALSE;
@@ -303,7 +303,7 @@ proto_bool pc_packml_svc_complete_run(void)
     return PROTO_TRUE;
 }
 
-proto_bool pc_packml_svc_set_mode(PackMlMode mode)
+proto_bool protocore_packml_svc_set_mode(PackMlMode mode)
 {
     // A unit-mode change is only allowed in a stable, non-producing state (ISA-TR88.00.02 mode-change rules).
     if (s_pml.state != PACK_ML_STATE_STOPPED && s_pml.state != PACK_ML_STATE_IDLE &&
@@ -315,23 +315,23 @@ proto_bool pc_packml_svc_set_mode(PackMlMode mode)
     return PROTO_TRUE;
 }
 
-void pc_packml_svc_set_speed(float mach_speed)
+void protocore_packml_svc_set_speed(float mach_speed)
 {
     s_pml.mach_speed_cmd = mach_speed;
 }
 
-PackMlState pc_packml_svc_state(void)
+PackMlState protocore_packml_svc_state(void)
 {
     return s_pml.state;
 }
 
-void pc_packml_svc_status(PackMlStatus *out)
+void protocore_packml_svc_status(PackMlStatus *out)
 {
     if (!out)
     {
         return;
     }
-    uint32_t now = pc_millis();
+    uint32_t now = protocore_millis();
     out->state_current = s_pml.state;
     out->unit_mode_current = s_pml.mode;
     // MachSpeedActual is the commanded speed while producing, otherwise zero.
@@ -342,4 +342,4 @@ void pc_packml_svc_status(PackMlStatus *out)
     out->prod_defective = s_pml.prod_defective;
 }
 
-#endif // PC_ENABLE_PACKML
+#endif // PROTOCORE_ENABLE_PACKML

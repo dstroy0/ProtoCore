@@ -9,7 +9,7 @@
 #include "services/storage/dbm/dbm.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_DBM
+#if PROTOCORE_ENABLE_DBM
 
 // dbm record payload header: op u8 | key_len u16 | val_len u32.
 static const size_t DBM_HDR = 7;
@@ -48,14 +48,14 @@ static uint64_t key_hash(const char *key, uint16_t len)
 }
 
 // Find a live slot for (hash,key). Linear probe, stopping at the first empty. -1 if absent.
-static int find_live(const struct pc_dbm *db, uint64_t hash, const char *key, uint16_t key_len)
+static int find_live(const struct protocore_dbm *db, uint64_t hash, const char *key, uint16_t key_len)
 {
-    const size_t n = PC_DBM_SLOTS;
+    const size_t n = PROTOCORE_DBM_SLOTS;
     size_t start = (size_t)(hash % n);
     for (size_t i = 0; i < n; i++)
     {
         size_t j = (start + i) % n;
-        const pc_dbm_slot *s = &db->slots[j];
+        const protocore_dbm_slot *s = &db->slots[j];
         if (s->state == 0)
         {
             return -1; // empty -> the probe chain ends, key not present
@@ -70,15 +70,15 @@ static int find_live(const struct pc_dbm *db, uint64_t hash, const char *key, ui
 
 // Find the slot to write (hash,key): an existing live match, or the first reusable slot (tombstone/empty).
 // Sets *is_new when the returned slot is not already this key. -1 if the table has no room for a new key.
-static int reserve(const struct pc_dbm *db, uint64_t hash, const char *key, uint16_t key_len, proto_bool *is_new)
+static int reserve(const struct protocore_dbm *db, uint64_t hash, const char *key, uint16_t key_len, proto_bool *is_new)
 {
-    const size_t n = PC_DBM_SLOTS;
+    const size_t n = PROTOCORE_DBM_SLOTS;
     size_t start = (size_t)(hash % n);
     int first_free = -1;
     for (size_t i = 0; i < n; i++)
     {
         size_t j = (start + i) % n;
-        const pc_dbm_slot *s = &db->slots[j];
+        const protocore_dbm_slot *s = &db->slots[j];
         if (s->state == 1)
         {
             if (s->hash == hash && s->key_len == key_len && mem.cmp(s->key, key, key_len) == 0)
@@ -107,7 +107,7 @@ static int reserve(const struct pc_dbm *db, uint64_t hash, const char *key, uint
 
 typedef struct
 {
-    struct pc_dbm *db;
+    struct protocore_dbm *db;
     proto_bool overflow;
 } ReplayCtx;
 
@@ -115,7 +115,7 @@ static void replay_cb(uint64_t seq, uint64_t data_off, const uint8_t *payload, u
 {
     (void)seq;
     ReplayCtx *rc = (ReplayCtx *)ctx;
-    struct pc_dbm *db = rc->db;
+    struct protocore_dbm *db = rc->db;
     if (len < DBM_HDR)
     {
         return;
@@ -123,7 +123,7 @@ static void replay_cb(uint64_t seq, uint64_t data_off, const uint8_t *payload, u
     uint8_t op = payload[0];
     uint16_t klen = get_u16(payload + 1);
     uint32_t vlen = get_u32(payload + 3);
-    if (klen == 0 || klen > PC_DBM_KEY_MAX)
+    if (klen == 0 || klen > PROTOCORE_DBM_KEY_MAX)
     {
         return;
     }
@@ -142,7 +142,7 @@ static void replay_cb(uint64_t seq, uint64_t data_off, const uint8_t *payload, u
             rc->overflow = PROTO_TRUE;
             return;
         }
-        pc_dbm_slot *s = &db->slots[slot];
+        protocore_dbm_slot *s = &db->slots[slot];
         if (s->state != 1)
         {
             db->count++;
@@ -165,19 +165,20 @@ static void replay_cb(uint64_t seq, uint64_t data_off, const uint8_t *payload, u
     }
 }
 
-proto_bool pc_dbm_open(struct pc_dbm *db, WalStore *wal)
+proto_bool protocore_dbm_open(struct protocore_dbm *db, WalStore *wal)
 {
     mem.set(db, 0, sizeof(*db));
     db->wal = wal;
     ReplayCtx rc = {db, PROTO_FALSE};
-    uint8_t scratch[WAL_RECORD_HEADER + DBM_HDR + PC_DBM_KEY_MAX + PC_DBM_VAL_MAX];
-    pc_wal_store_scan(wal, replay_cb, &rc, scratch, sizeof(scratch));
+    uint8_t scratch[WAL_RECORD_HEADER + DBM_HDR + PROTOCORE_DBM_KEY_MAX + PROTOCORE_DBM_VAL_MAX];
+    protocore_wal_store_scan(wal, replay_cb, &rc, scratch, sizeof(scratch));
     return !rc.overflow;
 }
 
-proto_bool pc_dbm_put(struct pc_dbm *db, const char *key, uint16_t key_len, const uint8_t *val, uint32_t val_len)
+proto_bool protocore_dbm_put(struct protocore_dbm *db, const char *key, uint16_t key_len, const uint8_t *val,
+                             uint32_t val_len)
 {
-    if (key_len == 0 || key_len > PC_DBM_KEY_MAX || val_len > PC_DBM_VAL_MAX)
+    if (key_len == 0 || key_len > PROTOCORE_DBM_KEY_MAX || val_len > PROTOCORE_DBM_VAL_MAX)
     {
         return PROTO_FALSE;
     }
@@ -189,7 +190,7 @@ proto_bool pc_dbm_put(struct pc_dbm *db, const char *key, uint16_t key_len, cons
         return PROTO_FALSE; // index full: do not append an orphan record
     }
 
-    uint8_t rec[DBM_HDR + PC_DBM_KEY_MAX + PC_DBM_VAL_MAX];
+    uint8_t rec[DBM_HDR + PROTOCORE_DBM_KEY_MAX + PROTOCORE_DBM_VAL_MAX];
     rec[0] = 0;
     put_u16(rec + 1, key_len);
     put_u32(rec + 3, val_len);
@@ -198,13 +199,13 @@ proto_bool pc_dbm_put(struct pc_dbm *db, const char *key, uint16_t key_len, cons
     {
         mem.cpy(rec + DBM_HDR + key_len, val, val_len);
     }
-    uint64_t old_head = pc_wal_store_used(db->wal);
-    if (!pc_wal_store_append(db->wal, rec, (uint32_t)(DBM_HDR + key_len + val_len)))
+    uint64_t old_head = protocore_wal_store_used(db->wal);
+    if (!protocore_wal_store_append(db->wal, rec, (uint32_t)(DBM_HDR + key_len + val_len)))
     {
         return PROTO_FALSE; // WAL full: index unchanged
     }
 
-    pc_dbm_slot *s = &db->slots[slot];
+    protocore_dbm_slot *s = &db->slots[slot];
     if (s->state != 1)
     {
         db->count++;
@@ -218,7 +219,7 @@ proto_bool pc_dbm_put(struct pc_dbm *db, const char *key, uint16_t key_len, cons
     return PROTO_TRUE;
 }
 
-long pc_dbm_get(struct pc_dbm *db, const char *key, uint16_t key_len, uint8_t *buf, size_t cap)
+long protocore_dbm_get(struct protocore_dbm *db, const char *key, uint16_t key_len, uint8_t *buf, size_t cap)
 {
     uint64_t h = key_hash(key, key_len);
     int slot = find_live(db, h, key, key_len);
@@ -226,19 +227,19 @@ long pc_dbm_get(struct pc_dbm *db, const char *key, uint16_t key_len, uint8_t *b
     {
         return -1;
     }
-    const pc_dbm_slot *s = &db->slots[slot];
+    const protocore_dbm_slot *s = &db->slots[slot];
     if (s->val_len > cap)
     {
         return -1;
     }
-    if (s->val_len && !pc_wal_store_pread(db->wal, s->val_off, buf, s->val_len))
+    if (s->val_len && !protocore_wal_store_pread(db->wal, s->val_off, buf, s->val_len))
     {
         return -1;
     }
     return (long)s->val_len;
 }
 
-proto_bool pc_dbm_del(struct pc_dbm *db, const char *key, uint16_t key_len)
+proto_bool protocore_dbm_del(struct protocore_dbm *db, const char *key, uint16_t key_len)
 {
     uint64_t h = key_hash(key, key_len);
     int slot = find_live(db, h, key, key_len);
@@ -246,12 +247,12 @@ proto_bool pc_dbm_del(struct pc_dbm *db, const char *key, uint16_t key_len)
     {
         return PROTO_FALSE;
     }
-    uint8_t rec[DBM_HDR + PC_DBM_KEY_MAX];
+    uint8_t rec[DBM_HDR + PROTOCORE_DBM_KEY_MAX];
     rec[0] = 1;
     put_u16(rec + 1, key_len);
     put_u32(rec + 3, 0);
     mem.cpy(rec + DBM_HDR, key, key_len);
-    if (!pc_wal_store_append(db->wal, rec, (uint32_t)(DBM_HDR + key_len)))
+    if (!protocore_wal_store_append(db->wal, rec, (uint32_t)(DBM_HDR + key_len)))
     {
         return PROTO_FALSE; // WAL full: key stays live
     }
@@ -260,27 +261,27 @@ proto_bool pc_dbm_del(struct pc_dbm *db, const char *key, uint16_t key_len)
     return PROTO_TRUE;
 }
 
-proto_bool pc_dbm_contains(const struct pc_dbm *db, const char *key, uint16_t key_len)
+proto_bool protocore_dbm_contains(const struct protocore_dbm *db, const char *key, uint16_t key_len)
 {
     return find_live(db, key_hash(key, key_len), key, key_len) >= 0;
 }
 
-uint32_t pc_dbm_count(const struct pc_dbm *db)
+uint32_t protocore_dbm_count(const struct protocore_dbm *db)
 {
     return db->count;
 }
 
-proto_bool pc_dbm_sync(struct pc_dbm *db)
+proto_bool protocore_dbm_sync(struct protocore_dbm *db)
 {
-    return pc_wal_store_checkpoint(db->wal);
+    return protocore_wal_store_checkpoint(db->wal);
 }
 
-uint32_t pc_dbm_iterate(const struct pc_dbm *db, pc_dbm_iter_cb cb, void *ctx)
+uint32_t protocore_dbm_iterate(const struct protocore_dbm *db, protocore_dbm_iter_cb cb, void *ctx)
 {
     uint32_t visited = 0;
-    for (uint32_t i = 0; i < PC_DBM_SLOTS; i++)
+    for (uint32_t i = 0; i < PROTOCORE_DBM_SLOTS; i++)
     {
-        const pc_dbm_slot *s = &db->slots[i];
+        const protocore_dbm_slot *s = &db->slots[i];
         if (s->state != 1)
         {
             continue;
@@ -294,12 +295,12 @@ uint32_t pc_dbm_iterate(const struct pc_dbm *db, pc_dbm_iter_cb cb, void *ctx)
     return visited;
 }
 
-uint64_t pc_dbm_live_bytes(const struct pc_dbm *db)
+uint64_t protocore_dbm_live_bytes(const struct protocore_dbm *db)
 {
     uint64_t bytes = 0;
-    for (uint32_t i = 0; i < PC_DBM_SLOTS; i++)
+    for (uint32_t i = 0; i < PROTOCORE_DBM_SLOTS; i++)
     {
-        const pc_dbm_slot *s = &db->slots[i];
+        const protocore_dbm_slot *s = &db->slots[i];
         if (s->state == 1)
         {
             bytes += WAL_RECORD_HEADER + DBM_HDR + s->key_len + s->val_len; // one framed record per live key
@@ -308,14 +309,14 @@ uint64_t pc_dbm_live_bytes(const struct pc_dbm *db)
     return bytes;
 }
 
-proto_bool pc_dbm_compact(struct pc_dbm *db, WalStore *dst)
+proto_bool protocore_dbm_compact(struct protocore_dbm *db, WalStore *dst)
 {
     // Copy each live key (latest value, no tombstones) into the fresh destination. Read the value straight
     // from the old log so this needs no per-key RAM beyond one record buffer, the same the put path uses.
-    uint8_t rec[DBM_HDR + PC_DBM_KEY_MAX + PC_DBM_VAL_MAX];
-    for (uint32_t i = 0; i < PC_DBM_SLOTS; i++)
+    uint8_t rec[DBM_HDR + PROTOCORE_DBM_KEY_MAX + PROTOCORE_DBM_VAL_MAX];
+    for (uint32_t i = 0; i < PROTOCORE_DBM_SLOTS; i++)
     {
-        const pc_dbm_slot *s = &db->slots[i];
+        const protocore_dbm_slot *s = &db->slots[i];
         if (s->state != 1)
         {
             continue;
@@ -325,20 +326,20 @@ proto_bool pc_dbm_compact(struct pc_dbm *db, WalStore *dst)
         put_u32(rec + 3, s->val_len);
         mem.cpy(rec + DBM_HDR, s->key, s->key_len);
         // On any failure, return before rebinding so db keeps using its intact original log (no data loss).
-        if (s->val_len && !pc_wal_store_pread(db->wal, s->val_off, rec + DBM_HDR + s->key_len, s->val_len))
+        if (s->val_len && !protocore_wal_store_pread(db->wal, s->val_off, rec + DBM_HDR + s->key_len, s->val_len))
         {
             return PROTO_FALSE;
         }
-        if (!pc_wal_store_append(dst, rec, (uint32_t)(DBM_HDR + s->key_len + s->val_len)))
+        if (!protocore_wal_store_append(dst, rec, (uint32_t)(DBM_HDR + s->key_len + s->val_len)))
         {
             return PROTO_FALSE; // destination too small
         }
     }
-    if (!pc_wal_store_checkpoint(dst))
+    if (!protocore_wal_store_checkpoint(dst))
     {
         return PROTO_FALSE;
     }
-    return pc_dbm_open(db, dst); // rebind to the compacted log + rebuild the index with fresh offsets
+    return protocore_dbm_open(db, dst); // rebind to the compacted log + rebuild the index with fresh offsets
 }
 
-#endif // PC_ENABLE_DBM
+#endif // PROTOCORE_ENABLE_DBM

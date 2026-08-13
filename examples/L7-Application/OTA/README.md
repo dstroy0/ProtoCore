@@ -1,6 +1,6 @@
 # OTA - authenticated over-the-air firmware update
 
-**Layer:** L7 Application · **Build flags:** `PC_ENABLE_OTA`
+**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_OTA`
 
 ## What this example teaches
 
@@ -12,7 +12,7 @@ device reboots into the new firmware.
 **One call wires authenticated streaming OTA:**
 
 ```cpp
-pc_ota_begin(server, "/update", "admin", "s3cret"); // POST body -> Update, then reboot
+protocore_ota_begin(server, "/update", "admin", "s3cret"); // POST body -> Update, then reboot
 ```
 
 The body is streamed chunk by chunk into flash as it arrives; only requests with
@@ -25,7 +25,7 @@ streaming-body hook as file upload, **enable OTA or upload, not both** (see
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_OTA=1 -DMAX_CONNS=4" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_OTA=1 -DMAX_CONNS=4" \
   --lib="." examples/L7-Application/OTA/OTA.ino
 ```
 
@@ -42,7 +42,7 @@ explanatory comments:
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-#define PC_ENABLE_OTA 1
+#define PROTOCORE_ENABLE_OTA 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -79,7 +79,7 @@ void setup()
     }
 
     // Authenticated streaming OTA at POST /update (Basic admin:s3cret).
-    pc_ota_begin(server, "/update", "admin", "s3cret");
+    protocore_ota_begin(server, "/update", "admin", "s3cret");
 
     Serial.println("Server up; OTA at POST /update");
 }

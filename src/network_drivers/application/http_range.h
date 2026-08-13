@@ -4,7 +4,7 @@
 /**
  * @file http_range.h
  * @brief Shared single-range `Range: bytes=...` parser (RFC 7233), used by static file serving and the
- *        edge cache (PC_ENABLE_RANGE).
+ *        edge cache (PROTOCORE_ENABLE_RANGE).
  *
  * One owner for the range math, shared by the filesystem file server and the CDN edge cache. Pure
  * and size/string-driven - no PC or fs:: dependency.
@@ -18,9 +18,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_RANGE
+#if PROTOCORE_ENABLE_RANGE
 
 /**
  * @brief Parse a single-range `Range: bytes=...` header value against a resource of @p size bytes.
@@ -34,8 +34,8 @@ PROTO_BEGIN_DECLS
  */
 int http_parse_byte_range(const char *hdr, size_t size, size_t *out_start, size_t *out_end);
 
-#endif // PC_ENABLE_RANGE
+#endif // PROTOCORE_ENABLE_RANGE
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_HTTP_RANGE_H

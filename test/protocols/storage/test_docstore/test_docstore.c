@@ -55,8 +55,8 @@ static uint8_t g_disk[64 * 1024];
 static RamDisk g_d;
 static WalDev g_dev;
 static WalStore g_wal;
-static pc_dbm g_db;
-static pc_doc_store g_ds;
+static protocore_dbm g_db;
+static protocore_doc_store g_ds;
 
 static WalDev dev_over(RamDisk *d)
 {
@@ -73,33 +73,33 @@ static void fresh(void)
     g_d.buf = g_disk;
     g_d.size = sizeof(g_disk);
     g_dev = dev_over(&g_d);
-    TEST_ASSERT_TRUE(pc_wal_store_format(&g_wal, &g_dev));
-    TEST_ASSERT_TRUE(pc_dbm_open(&g_db, &g_wal));
-    pc_docstore_open(&g_ds, &g_db);
+    TEST_ASSERT_TRUE(protocore_wal_store_format(&g_wal, &g_dev));
+    TEST_ASSERT_TRUE(protocore_dbm_open(&g_db, &g_wal));
+    protocore_docstore_open(&g_ds, &g_db);
 }
 static proto_bool reboot(void)
 {
     g_dev = dev_over(&g_d);
-    if (!pc_wal_store_mount(&g_wal, &g_dev))
+    if (!protocore_wal_store_mount(&g_wal, &g_dev))
     {
         return PROTO_FALSE;
     }
-    if (!pc_dbm_open(&g_db, &g_wal))
+    if (!protocore_dbm_open(&g_db, &g_wal))
     {
         return PROTO_FALSE;
     }
-    pc_docstore_open(&g_ds, &g_db);
+    protocore_docstore_open(&g_ds, &g_db);
     return PROTO_TRUE;
 }
 
 static proto_bool put_doc(const char *id, const char *json)
 {
-    return pc_docstore_put(&g_ds, id, (uint16_t)strlen(id), (const uint8_t *)json, (uint32_t)strlen(json));
+    return protocore_docstore_put(&g_ds, id, (uint16_t)strlen(id), (const uint8_t *)json, (uint32_t)strlen(json));
 }
 static proto_bool get_eq(const char *id, const char *expect)
 {
-    uint8_t buf[PC_DBM_VAL_MAX + 1];
-    long n = pc_docstore_get(&g_ds, id, (uint16_t)strlen(id), buf, sizeof(buf));
+    uint8_t buf[PROTOCORE_DBM_VAL_MAX + 1];
+    long n = protocore_docstore_get(&g_ds, id, (uint16_t)strlen(id), buf, sizeof(buf));
     if (n < 0)
     {
         return PROTO_FALSE;
@@ -144,11 +144,11 @@ void test_put_get_del(void)
     TEST_ASSERT_TRUE(put_doc("u1", "{\"name\":\"alice\",\"age\":30,\"admin\":true}"));
     TEST_ASSERT_TRUE(put_doc("u2", "{\"name\":\"bob\",\"age\":25,\"admin\":false}"));
     TEST_ASSERT_TRUE(get_eq("u1", "{\"name\":\"alice\",\"age\":30,\"admin\":true}"));
-    TEST_ASSERT_EQUAL_UINT32(2, pc_docstore_count(&g_ds));
+    TEST_ASSERT_EQUAL_UINT32(2, protocore_docstore_count(&g_ds));
 
-    TEST_ASSERT_TRUE(pc_docstore_del(&g_ds, "u2", 2));
-    TEST_ASSERT_FALSE(pc_docstore_contains(&g_ds, "u2", 2));
-    TEST_ASSERT_EQUAL_UINT32(1, pc_docstore_count(&g_ds));
+    TEST_ASSERT_TRUE(protocore_docstore_del(&g_ds, "u2", 2));
+    TEST_ASSERT_FALSE(protocore_docstore_contains(&g_ds, "u2", 2));
+    TEST_ASSERT_EQUAL_UINT32(1, protocore_docstore_count(&g_ds));
 
     // Replace u1's document.
     TEST_ASSERT_TRUE(put_doc("u1", "{\"name\":\"alice2\",\"age\":31}"));
@@ -164,7 +164,7 @@ void test_find_by_field(void)
 
     // String field.
     Collected c = {0};
-    uint32_t m = pc_docstore_find_str(&g_ds, "city", "paris", collect, &c);
+    uint32_t m = protocore_docstore_find_str(&g_ds, "city", "paris", collect, &c);
     TEST_ASSERT_EQUAL_UINT32(2, m);
     TEST_ASSERT_EQUAL_INT(2, c.n);
     TEST_ASSERT_TRUE(has_id(&c, "u1"));
@@ -173,14 +173,14 @@ void test_find_by_field(void)
 
     // Integer field.
     Collected c2 = {0};
-    m = pc_docstore_find_int(&g_ds, "age", 30, collect, &c2);
+    m = protocore_docstore_find_int(&g_ds, "age", 30, collect, &c2);
     TEST_ASSERT_EQUAL_UINT32(2, m);
     TEST_ASSERT_TRUE(has_id(&c2, "u1"));
     TEST_ASSERT_TRUE(has_id(&c2, "u2"));
 
     // No matches.
     Collected c3 = {0};
-    m = pc_docstore_find_str(&g_ds, "city", "berlin", collect, &c3);
+    m = protocore_docstore_find_str(&g_ds, "city", "berlin", collect, &c3);
     TEST_ASSERT_EQUAL_UINT32(0, m);
     TEST_ASSERT_EQUAL_INT(0, c3.n);
 }
@@ -192,7 +192,7 @@ void test_find_bool(void)
     put_doc("b", "{\"on\":false,\"n\":2}");
     put_doc("c", "{\"on\":true,\"n\":3}");
     Collected c = {0};
-    uint32_t m = pc_docstore_find_bool(&g_ds, "on", PROTO_TRUE, collect, &c);
+    uint32_t m = protocore_docstore_find_bool(&g_ds, "on", PROTO_TRUE, collect, &c);
     TEST_ASSERT_EQUAL_UINT32(2, m);
     TEST_ASSERT_TRUE(has_id(&c, "a"));
     TEST_ASSERT_TRUE(has_id(&c, "c"));
@@ -204,15 +204,15 @@ void test_persist_and_query_across_reboot(void)
     put_doc("u1", "{\"name\":\"alice\",\"role\":\"admin\"}");
     put_doc("u2", "{\"name\":\"bob\",\"role\":\"user\"}");
     put_doc("u3", "{\"name\":\"carol\",\"role\":\"admin\"}");
-    TEST_ASSERT_TRUE(pc_docstore_sync(&g_ds));
+    TEST_ASSERT_TRUE(protocore_docstore_sync(&g_ds));
 
     TEST_ASSERT_TRUE(reboot());
-    TEST_ASSERT_EQUAL_UINT32(3, pc_docstore_count(&g_ds));
+    TEST_ASSERT_EQUAL_UINT32(3, protocore_docstore_count(&g_ds));
     TEST_ASSERT_TRUE(get_eq("u2", "{\"name\":\"bob\",\"role\":\"user\"}"));
 
     // The field index (JSON scan) works after a remount too.
     Collected c = {0};
-    uint32_t m = pc_docstore_find_str(&g_ds, "role", "admin", collect, &c);
+    uint32_t m = protocore_docstore_find_str(&g_ds, "role", "admin", collect, &c);
     TEST_ASSERT_EQUAL_UINT32(2, m);
     TEST_ASSERT_TRUE(has_id(&c, "u1"));
     TEST_ASSERT_TRUE(has_id(&c, "u3"));
@@ -246,7 +246,7 @@ void test_find_early_stop(void)
     }
     // A callback that stops after the first match sees exactly one.
     Once once = {0};
-    uint32_t m = pc_docstore_find_str(&g_ds, "grp", "x", stop_after_one, &once);
+    uint32_t m = protocore_docstore_find_str(&g_ds, "grp", "x", stop_after_one, &once);
     TEST_ASSERT_EQUAL_UINT32(1, m);
     TEST_ASSERT_EQUAL_INT(1, once.seen);
 }
@@ -259,16 +259,16 @@ void test_find_field_absent(void)
     put_doc("b", "{\"other\":\"y\"}"); // lacks name / age / on
 
     Collected cs = {0};
-    TEST_ASSERT_EQUAL_UINT32(1, pc_docstore_find_str(&g_ds, "name", "x", collect, &cs)); // "b" has no name
+    TEST_ASSERT_EQUAL_UINT32(1, protocore_docstore_find_str(&g_ds, "name", "x", collect, &cs)); // "b" has no name
     TEST_ASSERT_TRUE(has_id(&cs, "a"));
     TEST_ASSERT_FALSE(has_id(&cs, "b"));
 
     Collected ci = {0};
-    TEST_ASSERT_EQUAL_UINT32(1, pc_docstore_find_int(&g_ds, "age", 5, collect, &ci)); // "b" has no age
+    TEST_ASSERT_EQUAL_UINT32(1, protocore_docstore_find_int(&g_ds, "age", 5, collect, &ci)); // "b" has no age
     TEST_ASSERT_TRUE(has_id(&ci, "a"));
 
     Collected cb = {0};
-    TEST_ASSERT_EQUAL_UINT32(1, pc_docstore_find_bool(&g_ds, "on", PROTO_TRUE, collect, &cb)); // "b" has no on
+    TEST_ASSERT_EQUAL_UINT32(1, protocore_docstore_find_bool(&g_ds, "on", PROTO_TRUE, collect, &cb)); // "b" has no on
     TEST_ASSERT_TRUE(has_id(&cb, "a"));
 }
 
@@ -279,9 +279,9 @@ void test_find_count_only_null_cb(void)
     put_doc("u1", "{\"grp\":\"x\"}");
     put_doc("u2", "{\"grp\":\"x\"}");
     put_doc("u3", "{\"grp\":\"y\"}");
-    TEST_ASSERT_EQUAL_UINT32(2, pc_docstore_find_str(&g_ds, "grp", "x", NULL, NULL));
-    TEST_ASSERT_EQUAL_UINT32(1, pc_docstore_find_str(&g_ds, "grp", "y", NULL, NULL));
-    TEST_ASSERT_EQUAL_UINT32(0, pc_docstore_find_str(&g_ds, "grp", "z", NULL, NULL));
+    TEST_ASSERT_EQUAL_UINT32(2, protocore_docstore_find_str(&g_ds, "grp", "x", NULL, NULL));
+    TEST_ASSERT_EQUAL_UINT32(1, protocore_docstore_find_str(&g_ds, "grp", "y", NULL, NULL));
+    TEST_ASSERT_EQUAL_UINT32(0, protocore_docstore_find_str(&g_ds, "grp", "z", NULL, NULL));
 }
 
 // A document whose value becomes unreadable mid-scan (e.g. a truncated/corrupted backing store) is
@@ -293,11 +293,11 @@ void test_find_skips_unreadable_document(void)
     put_doc("b", "{\"grp\":\"x\"}");
 
     // Truncate the backing device out from under the store: any value pread now reads short and fails,
-    // without touching the in-RAM slot index that pc_dbm_iterate walks.
+    // without touching the in-RAM slot index that protocore_dbm_iterate walks.
     g_d.size = 4;
 
     Collected c = {0};
-    uint32_t m = pc_docstore_find_str(&g_ds, "grp", "x", collect, &c);
+    uint32_t m = protocore_docstore_find_str(&g_ds, "grp", "x", collect, &c);
     TEST_ASSERT_EQUAL_UINT32(0, m);
     TEST_ASSERT_EQUAL_INT(0, c.n);
 }

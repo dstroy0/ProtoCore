@@ -8,15 +8,15 @@
 
 #include "services/net/southbound/sb_modbus.h"
 
-#if PC_ENABLE_SOUTHBOUND && PC_ENABLE_MODBUS_MASTER
+#if PROTOCORE_ENABLE_SOUTHBOUND && PROTOCORE_ENABLE_MODBUS_MASTER
 
 #include "services/fieldbus/modbus/modbus_master.h"
 
 // Read a contiguous span of `n` registers (1..125) at `first` in one Modbus request; write the parsed
 // values to `out` as int32. Shared by the single-point and block reads. Returns the register count
-// (>= 0), a negative transport error (propagated from txn), PC_SB_MODBUS_EXCEPTION on a Modbus
+// (>= 0), a negative transport error (propagated from txn), PROTOCORE_SB_MODBUS_EXCEPTION on a Modbus
 // exception reply, or SB_ERR_ARG on a bad argument / malformed reply.
-static int sb_modbus_read_span(pc_sb_modbus_ctx *c, uint32_t first, int32_t *out, size_t n)
+static int sb_modbus_read_span(protocore_sb_modbus_ctx *c, uint32_t first, int32_t *out, size_t n)
 {
     // A Modbus register address is 16-bit and a single request reads at most 125 registers.
     if (n == 0 || n > 125 || first > 0xFFFFu || first + n > 0x10000u)
@@ -26,7 +26,7 @@ static int sb_modbus_read_span(pc_sb_modbus_ctx *c, uint32_t first, int32_t *out
 
     uint8_t req[12];
     size_t rn =
-        pc_modbus_build_read((uint8_t)c->fc, c->txid++, c->unit, (uint16_t)first, (uint16_t)n, req, sizeof(req));
+        protocore_modbus_build_read((uint8_t)c->fc, c->txid++, c->unit, (uint16_t)first, (uint16_t)n, req, sizeof(req));
     if (rn == 0)
     {
         return SB_ERR_ARG;
@@ -41,7 +41,7 @@ static int sb_modbus_read_span(pc_sb_modbus_ctx *c, uint32_t first, int32_t *out
 
     uint16_t regs[125];
     uint8_t ex = 0;
-    int got = pc_modbus_parse_response(resp, (size_t)pn, regs, n, &ex);
+    int got = protocore_modbus_parse_response(resp, (size_t)pn, regs, n, &ex);
     if (got < 0)
     {
         return SB_ERR_ARG; // malformed / short frame
@@ -49,7 +49,7 @@ static int sb_modbus_read_span(pc_sb_modbus_ctx *c, uint32_t first, int32_t *out
     c->last_exception = ex;
     if (ex)
     {
-        return PC_SB_MODBUS_EXCEPTION;
+        return PROTOCORE_SB_MODBUS_EXCEPTION;
     }
     for (int i = 0; i < got; i++)
     {
@@ -60,7 +60,7 @@ static int sb_modbus_read_span(pc_sb_modbus_ctx *c, uint32_t first, int32_t *out
 
 static int sb_modbus_read(void *vctx, uint32_t point, int32_t *value_out)
 {
-    pc_sb_modbus_ctx *c = (pc_sb_modbus_ctx *)vctx;
+    protocore_sb_modbus_ctx *c = (protocore_sb_modbus_ctx *)vctx;
     int got = sb_modbus_read_span(c, point, value_out, 1);
     if (got < 0)
     {
@@ -71,14 +71,14 @@ static int sb_modbus_read(void *vctx, uint32_t point, int32_t *value_out)
 
 static int sb_modbus_read_block(void *vctx, uint32_t first, int32_t *out, size_t n)
 {
-    return sb_modbus_read_span((pc_sb_modbus_ctx *)vctx, first, out, n);
+    return sb_modbus_read_span((protocore_sb_modbus_ctx *)vctx, first, out, n);
 }
 
 // Run one write request through the transport seam and interpret the reply. Shared by the single-point
 // and block writes: `req`/`req_len` is the built request. Returns the register count written (>= 0), a
-// propagated transport error, PC_SB_MODBUS_EXCEPTION on a Modbus exception reply, or SB_ERR_ARG on
+// propagated transport error, PROTOCORE_SB_MODBUS_EXCEPTION on a Modbus exception reply, or SB_ERR_ARG on
 // a malformed reply.
-static int sb_modbus_write_txn(pc_sb_modbus_ctx *c, const uint8_t *req, size_t req_len)
+static int sb_modbus_write_txn(protocore_sb_modbus_ctx *c, const uint8_t *req, size_t req_len)
 {
     uint8_t resp[MODBUS_ADU_MAX];
     int pn = c->txn(c->io, req, req_len, resp, sizeof(resp));
@@ -87,7 +87,7 @@ static int sb_modbus_write_txn(pc_sb_modbus_ctx *c, const uint8_t *req, size_t r
         return pn; // transport error, propagated unchanged
     }
     uint8_t ex = 0;
-    int w = pc_modbus_parse_write_response(resp, (size_t)pn, NULL, &ex);
+    int w = protocore_modbus_parse_write_response(resp, (size_t)pn, NULL, &ex);
     if (w < 0)
     {
         return SB_ERR_ARG; // malformed / short frame
@@ -95,20 +95,20 @@ static int sb_modbus_write_txn(pc_sb_modbus_ctx *c, const uint8_t *req, size_t r
     c->last_exception = ex;
     if (ex)
     {
-        return PC_SB_MODBUS_EXCEPTION;
+        return PROTOCORE_SB_MODBUS_EXCEPTION;
     }
     return w;
 }
 
 static int sb_modbus_write(void *vctx, uint32_t point, int32_t value)
 {
-    pc_sb_modbus_ctx *c = (pc_sb_modbus_ctx *)vctx;
+    protocore_sb_modbus_ctx *c = (protocore_sb_modbus_ctx *)vctx;
     if (point > 0xFFFFu || value < 0 || value > 0xFFFF) // a Modbus register is a 16-bit address / value
     {
         return SB_ERR_ARG;
     }
     uint8_t req[12];
-    size_t rn = pc_modbus_build_write_single(c->txid++, c->unit, (uint16_t)point, (uint16_t)value, req, sizeof(req));
+    size_t rn = protocore_modbus_build_write_single(c->txid++, c->unit, (uint16_t)point, (uint16_t)value, req, sizeof(req));
     if (rn == 0)
     {
         return SB_ERR_ARG;
@@ -123,7 +123,7 @@ static int sb_modbus_write(void *vctx, uint32_t point, int32_t value)
 
 static int sb_modbus_write_block(void *vctx, uint32_t first, const int32_t *in, size_t n)
 {
-    pc_sb_modbus_ctx *c = (pc_sb_modbus_ctx *)vctx;
+    protocore_sb_modbus_ctx *c = (protocore_sb_modbus_ctx *)vctx;
     // FC 0x10 writes at most 123 registers per request; the span must stay in the 16-bit address space.
     if (n == 0 || n > 123 || first > 0xFFFFu || first + n > 0x10000u)
     {
@@ -140,7 +140,7 @@ static int sb_modbus_write_block(void *vctx, uint32_t first, const int32_t *in, 
     }
     uint8_t req[13 + 2 * 123];
     size_t rn =
-        pc_modbus_build_write_multiple(c->txid++, c->unit, (uint16_t)first, vals, (uint16_t)n, req, sizeof(req));
+        protocore_modbus_build_write_multiple(c->txid++, c->unit, (uint16_t)first, vals, (uint16_t)n, req, sizeof(req));
     if (rn == 0)
     {
         return SB_ERR_ARG;
@@ -148,7 +148,7 @@ static int sb_modbus_write_block(void *vctx, uint32_t first, const int32_t *in, 
     return sb_modbus_write_txn(c, req, rn); // count written (>= 0) / negative code
 }
 
-int pc_sb_modbus_init(pc_sb_modbus_ctx *ctx, pc_sb_modbus_txn txn, void *io, ModbusFunction fc, uint8_t unit)
+int protocore_sb_modbus_init(protocore_sb_modbus_ctx *ctx, protocore_sb_modbus_txn txn, void *io, ModbusFunction fc, uint8_t unit)
 {
     if (!ctx || !txn)
     {
@@ -167,7 +167,7 @@ int pc_sb_modbus_init(pc_sb_modbus_ctx *ctx, pc_sb_modbus_txn txn, void *io, Mod
     return SB_OK;
 }
 
-int pc_sb_modbus_driver(SouthboundDriver *drv_out, const char *name, pc_sb_modbus_ctx *ctx)
+int protocore_sb_modbus_driver(SouthboundDriver *drv_out, const char *name, protocore_sb_modbus_ctx *ctx)
 {
     if (!drv_out || !name || !ctx || !ctx->txn)
     {
@@ -185,4 +185,4 @@ int pc_sb_modbus_driver(SouthboundDriver *drv_out, const char *name, pc_sb_modbu
     return SB_OK;
 }
 
-#endif // PC_ENABLE_SOUTHBOUND && PC_ENABLE_MODBUS_MASTER
+#endif // PROTOCORE_ENABLE_SOUTHBOUND && PROTOCORE_ENABLE_MODBUS_MASTER

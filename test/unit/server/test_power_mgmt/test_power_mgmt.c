@@ -14,7 +14,7 @@ static PowerCfg cfg;
 
 void setUp()
 {
-    pc_power_cfg_defaults(&cfg);
+    protocore_power_cfg_defaults(&cfg);
     // Pin the values the tests reason about, so a change to the shipped defaults does not silently
     // rewrite what these assertions mean.
     cfg.mhz_max = 240;
@@ -30,7 +30,7 @@ void tearDown()
 
 static PowerPlan plan(uint8_t load, int16_t temp, proto_bool bo, uint32_t up, proto_bool was)
 {
-    return pc_power_plan(&cfg, load, temp, bo, up, was);
+    return protocore_power_plan(&cfg, load, temp, bo, up, was);
 }
 
 // --- load scaling ---------------------------------------------------------
@@ -155,19 +155,19 @@ void test_missing_sensor_does_not_read_as_ice_cold()
 
 void test_null_cfg_is_not_a_crash()
 {
-    PowerPlan p = pc_power_plan(NULL, 50, 40, PROTO_FALSE, 0, PROTO_FALSE);
+    PowerPlan p = protocore_power_plan(NULL, 50, 40, PROTO_FALSE, 0, PROTO_FALSE);
     TEST_ASSERT_EQUAL_UINT16(0, p.cpu_mhz);
 }
 
 void test_null_cfg_defaults_is_not_a_crash()
 {
-    pc_power_cfg_defaults(NULL); // must not crash; there is no output to assert on
+    protocore_power_cfg_defaults(NULL); // must not crash; there is no output to assert on
 }
 
 void test_defaults_are_self_consistent()
 {
     PowerCfg d;
-    pc_power_cfg_defaults(&d);
+    protocore_power_cfg_defaults(&d);
     TEST_ASSERT_TRUE(d.temp_cool_c < d.temp_hot_c); // hysteresis must have a gap
     TEST_ASSERT_TRUE(d.mhz_min <= d.mhz_max);
     TEST_ASSERT_TRUE(d.busy_pct <= 100);
@@ -177,11 +177,11 @@ void test_json()
 {
     char buf[128];
     PowerPlan p = plan(0, 41, PROTO_FALSE, 60000, PROTO_FALSE);
-    TEST_ASSERT_TRUE(pc_power_json(&p, 41, buf, sizeof(buf)) > 0);
+    TEST_ASSERT_TRUE(protocore_power_json(&p, 41, buf, sizeof(buf)) > 0);
     TEST_ASSERT_EQUAL_STRING("{\"cpu_mhz\":80,\"throttled\":false,\"recovering\":false,\"temp_c\":41}", buf);
 
     PowerPlan h = plan(100, 85, PROTO_FALSE, 60000, PROTO_FALSE);
-    TEST_ASSERT_TRUE(pc_power_json(&h, 85, buf, sizeof(buf)) > 0);
+    TEST_ASSERT_TRUE(protocore_power_json(&h, 85, buf, sizeof(buf)) > 0);
     TEST_ASSERT_EQUAL_STRING("{\"cpu_mhz\":80,\"throttled\":true,\"recovering\":false,\"temp_c\":85}", buf);
 }
 
@@ -189,7 +189,7 @@ void test_json_reports_a_missing_sensor_as_null()
 {
     char buf[128];
     PowerPlan p = plan(0, INT16_MIN, PROTO_FALSE, 60000, PROTO_FALSE);
-    TEST_ASSERT_TRUE(pc_power_json(&p, INT16_MIN, buf, sizeof(buf)) > 0);
+    TEST_ASSERT_TRUE(protocore_power_json(&p, INT16_MIN, buf, sizeof(buf)) > 0);
     TEST_ASSERT_EQUAL_STRING("{\"cpu_mhz\":80,\"throttled\":false,\"recovering\":false,\"temp_c\":null}", buf);
 }
 
@@ -202,7 +202,7 @@ void test_json_missing_sensor_reports_throttled_and_recovering_true()
     p.cpu_mhz = 80;
     p.throttled = PROTO_TRUE;
     p.recovering = PROTO_TRUE;
-    TEST_ASSERT_TRUE(pc_power_json(&p, INT16_MIN, buf, sizeof(buf)) > 0);
+    TEST_ASSERT_TRUE(protocore_power_json(&p, INT16_MIN, buf, sizeof(buf)) > 0);
     TEST_ASSERT_EQUAL_STRING("{\"cpu_mhz\":80,\"throttled\":true,\"recovering\":true,\"temp_c\":null}", buf);
 }
 
@@ -215,7 +215,7 @@ void test_json_with_a_sensor_reading_reports_recovering_true()
     p.cpu_mhz = 80;
     p.throttled = PROTO_FALSE;
     p.recovering = PROTO_TRUE;
-    TEST_ASSERT_TRUE(pc_power_json(&p, 41, buf, sizeof(buf)) > 0);
+    TEST_ASSERT_TRUE(protocore_power_json(&p, 41, buf, sizeof(buf)) > 0);
     TEST_ASSERT_EQUAL_STRING("{\"cpu_mhz\":80,\"throttled\":false,\"recovering\":true,\"temp_c\":41}", buf);
 }
 
@@ -223,22 +223,22 @@ void test_json_overflow_is_fail_closed()
 {
     char tiny[12];
     PowerPlan p = plan(0, 41, PROTO_FALSE, 60000, PROTO_FALSE);
-    TEST_ASSERT_EQUAL_UINT32(0, pc_power_json(&p, 41, tiny, sizeof(tiny)));
+    TEST_ASSERT_EQUAL_UINT32(0, protocore_power_json(&p, 41, tiny, sizeof(tiny)));
     TEST_ASSERT_EQUAL_STRING("", tiny);
-    TEST_ASSERT_EQUAL_UINT32(0, pc_power_json(NULL, 41, tiny, sizeof(tiny)));
+    TEST_ASSERT_EQUAL_UINT32(0, protocore_power_json(NULL, 41, tiny, sizeof(tiny)));
 }
 
 void test_json_null_out_is_rejected()
 {
     PowerPlan p = plan(0, 41, PROTO_FALSE, 60000, PROTO_FALSE);
-    TEST_ASSERT_EQUAL_UINT32(0, pc_power_json(&p, 41, NULL, 128));
+    TEST_ASSERT_EQUAL_UINT32(0, protocore_power_json(&p, 41, NULL, 128));
 }
 
 void test_json_zero_cap_is_rejected()
 {
     char buf[128];
     PowerPlan p = plan(0, 41, PROTO_FALSE, 60000, PROTO_FALSE);
-    TEST_ASSERT_EQUAL_UINT32(0, pc_power_json(&p, 41, buf, 0));
+    TEST_ASSERT_EQUAL_UINT32(0, protocore_power_json(&p, 41, buf, 0));
 }
 
 int main(void)

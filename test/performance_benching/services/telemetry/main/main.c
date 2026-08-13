@@ -16,32 +16,32 @@
 void dbench_run(void)
 {
     static float wbuf[32];
-    static pc_window win;
-    static pc_rate rate;
-    static pc_totalizer tot;
+    static protocore_window win;
+    static protocore_rate rate;
+    static protocore_totalizer tot;
 
     for (;;)
     {
         DBENCH_BANNER("telemetry");
         volatile float sink = 0;
-        pc_window_init(&win, wbuf, 32);
+        protocore_window_init(&win, wbuf, 32);
         for (int i = 0; i < 32; i++)
         {
-            pc_window_push(&win, (float)(i % 7) + 0.5f);
+            protocore_window_push(&win, (float)(i % 7) + 0.5f);
         }
-        DBENCH_OP("pc_window_push", 200000, pc_window_push(&win, (float)(sink)));
-        DBENCH_OP("pc_window_mean", 200000, sink += pc_window_mean(&win));
-        DBENCH_OP("pc_window_variance", 200000, sink += pc_window_variance(&win));
-        pc_rate_init(&rate);
+        DBENCH_OP("protocore_window_push", 200000, protocore_window_push(&win, (float)(sink)));
+        DBENCH_OP("protocore_window_mean", 200000, sink += protocore_window_mean(&win));
+        DBENCH_OP("protocore_window_variance", 200000, sink += protocore_window_variance(&win));
+        protocore_rate_init(&rate);
         uint32_t t = 0;
-        DBENCH_OP("pc_rate_update", 200000, {
-            sink += pc_rate_update(&rate, sink + 1.0f, t);
+        DBENCH_OP("protocore_rate_update", 200000, {
+            sink += protocore_rate_update(&rate, sink + 1.0f, t);
             t += 10;
         });
-        pc_totalizer_init(&tot);
+        protocore_totalizer_init(&tot);
         t = 0;
-        DBENCH_OP("pc_totalizer_add", 200000, {
-            sink += (float)pc_totalizer_add(&tot, 2.5f, t);
+        DBENCH_OP("protocore_totalizer_add", 200000, {
+            sink += (float)protocore_totalizer_add(&tot, 2.5f, t);
             t += 10;
         });
         (void)sink;

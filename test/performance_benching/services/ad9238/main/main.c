@@ -32,13 +32,14 @@ void dbench_run(void)
         volatile bool sinkb = false;
         volatile size_t sinkz = 0;
 
-        DBENCH_OP("pc_ad9238_build_instruction", 200000,
-                  sinkb = pc_ad9238_build_instruction(false, (uint16_t)AD9238_REG_POWER_DOWN, 1, out2));
-        DBENCH_OP("pc_ad9238_build_write", 200000,
-                  sinkz += pc_ad9238_build_write((uint16_t)AD9238_REG_POWER_DOWN, 0x01, out3, sizeof(out3)));
-        DBENCH_OP("pc_ad9238_build_read", 200000,
-                  sinkz += pc_ad9238_build_read((uint16_t)AD9238_REG_CHIP_ID, out2, sizeof(out2)));
-        DBENCH_OP("pc_ad9238_build_transfer", 200000, sinkz += pc_ad9238_build_transfer(out3, sizeof(out3)));
+        DBENCH_OP("protocore_ad9238_build_instruction", 200000,
+                  sinkb = protocore_ad9238_build_instruction(false, (uint16_t)AD9238_REG_POWER_DOWN, 1, out2));
+        DBENCH_OP("protocore_ad9238_build_write", 200000,
+                  sinkz += protocore_ad9238_build_write((uint16_t)AD9238_REG_POWER_DOWN, 0x01, out3, sizeof(out3)));
+        DBENCH_OP("protocore_ad9238_build_read", 200000,
+                  sinkz += protocore_ad9238_build_read((uint16_t)AD9238_REG_CHIP_ID, out2, sizeof(out2)));
+        DBENCH_OP("protocore_ad9238_build_transfer", 200000,
+                  sinkz += protocore_ad9238_build_transfer(out3, sizeof(out3)));
 
         (void)sinkb;
         (void)sinkz;

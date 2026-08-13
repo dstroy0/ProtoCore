@@ -15,7 +15,7 @@
 
 void dbench_run(void)
 {
-    static const pc_ui_fragment frags[3] = {
+    static const protocore_ui_fragment frags[3] = {
         {"head", "<head><title>PC</title></head>", NULL},
         {"nav", "<nav>menu</nav>", NULL},
         {"body", "<main>dashboard</main>", NULL},
@@ -25,14 +25,14 @@ void dbench_run(void)
     {
         DBENCH_BANNER("spa_router");
         volatile size_t sink = 0;
-        DBENCH_OP("pc_spa_has_extension", 200000, sink += pc_spa_has_extension("/app/users/42"));
+        DBENCH_OP("protocore_spa_has_extension", 200000, sink += protocore_spa_has_extension("/app/users/42"));
         static char out[128];
-        DBENCH_OP("pc_ui_stream (3 fragments)", 100000, {
-            pc_ui_stream s;
-            pc_ui_stream_begin(&s, frags, 3, NULL);
-            while (!pc_ui_stream_done(&s))
+        DBENCH_OP("protocore_ui_stream (3 fragments)", 100000, {
+            protocore_ui_stream s;
+            protocore_ui_stream_begin(&s, frags, 3, NULL);
+            while (!protocore_ui_stream_done(&s))
             {
-                sink += pc_ui_stream_next(&s, out, sizeof(out));
+                sink += protocore_ui_stream_next(&s, out, sizeof(out));
             }
         });
         (void)sink;

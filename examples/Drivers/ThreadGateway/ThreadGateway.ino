@@ -6,8 +6,8 @@
 // HDLC-lite frames and both (a) decodes the named spinel property each one carries and (b)
 // bridges the raw spinel payload northbound.
 //
-//   Thread RCP --UART--> pc_spinel_frame_decode() --> spinel command -> property registry
-//                                                                     -> pc_gateway_uplink()
+//   Thread RCP --UART--> protocore_spinel_frame_decode() --> spinel command -> property registry
+//                                                                     -> protocore_gateway_uplink()
 //                                                                         |
 //                                                  envelope + topic  thread/0/<tid>
 //                                                                         |
@@ -18,7 +18,7 @@
 // test/test_thread. This sketch queries NCP_VERSION / PROTOCOL_VERSION at boot and prints
 // each inbound property update by name, so the value semantics are exercised end to end.
 //
-// Build flags (whole build): PC_ENABLE_THREAD=1 PC_ENABLE_GATEWAY=1
+// Build flags (whole build): PROTOCORE_ENABLE_THREAD=1 PROTOCORE_ENABLE_GATEWAY=1
 
 #include "protocore.h" // discovers the library (adds src/ to the include path)
 #include "services/net/gateway/gateway.h"
@@ -30,10 +30,10 @@ static const int PIN_RX = 16, PIN_TX = 17; // UART2 to the Thread RCP
 static uint8_t g_buf[1024];
 static uint16_t g_len = 0;
 
-static bool northbound_publish(const pc_gateway_msg *m, void *)
+static bool northbound_publish(const protocore_gateway_msg *m, void *)
 {
     char topic[48];
-    pc_gateway_topic(m, topic, sizeof(topic));
+    protocore_gateway_topic(m, topic, sizeof(topic));
     Serial.printf("PUBLISH %s  (%u bytes)\n", topic, m->len);
     return true;
 }
@@ -48,10 +48,10 @@ static void drop_front(uint16_t n)
 static void rcp_get(uint32_t prop)
 {
     uint8_t payload[16];
-    uint16_t plen = pc_spinel_command_build(pc_spinel_header(0, 1), SPINEL_CMD_PROP_VALUE_GET, prop, nullptr,
+    uint16_t plen = protocore_spinel_command_build(protocore_spinel_header(0, 1), SPINEL_CMD_PROP_VALUE_GET, prop, nullptr,
                                             0, payload, sizeof(payload));
     uint8_t frame[32];
-    uint16_t n = pc_spinel_frame_encode(payload, plen, frame, sizeof(frame));
+    uint16_t n = protocore_spinel_frame_encode(payload, plen, frame, sizeof(frame));
     if (n)
     {
         Serial2.write(frame, n);
@@ -65,7 +65,7 @@ static void print_property(const uint8_t *payload, uint16_t plen)
     uint32_t cmd = 0, prop = 0;
     const uint8_t *val = nullptr;
     uint16_t vlen = 0;
-    if (pc_spinel_command_parse(payload, plen, &header, &cmd, &prop, &val, &vlen) < 0)
+    if (protocore_spinel_command_parse(payload, plen, &header, &cmd, &prop, &val, &vlen) < 0)
     {
         return;
     }
@@ -75,21 +75,21 @@ static void print_property(const uint8_t *payload, uint16_t plen)
     }
 
     SpinelReader r;
-    pc_spinel_reader_init(&r, val, vlen);
-    const char *name = pc_spinel_prop_name(prop);
+    protocore_spinel_reader_init(&r, val, vlen);
+    const char *name = protocore_spinel_prop_name(prop);
     if (prop == SPINEL_PROP_LAST_STATUS)
     {
         uint32_t status = 0;
-        if (pc_spinel_get_uint(&r, &status))
+        if (protocore_spinel_get_uint(&r, &status))
         {
-            Serial.printf("  %s = %s (%u)\n", name, pc_spinel_status_name(status), status);
+            Serial.printf("  %s = %s (%u)\n", name, protocore_spinel_status_name(status), status);
         }
     }
     else if (prop == SPINEL_PROP_NCP_VERSION || prop == SPINEL_PROP_NET_NETWORK_NAME)
     {
         const char *s = nullptr;
         uint16_t slen = 0;
-        if (pc_spinel_get_utf8(&r, &s, &slen))
+        if (protocore_spinel_get_utf8(&r, &s, &slen))
         {
             Serial.printf("  %s = %.*s\n", name, (int)slen, s);
         }
@@ -97,7 +97,7 @@ static void print_property(const uint8_t *payload, uint16_t plen)
     else if (prop == SPINEL_PROP_PROTOCOL_VERSION)
     {
         uint32_t major = 0, minor = 0;
-        if (pc_spinel_get_uint(&r, &major) && pc_spinel_get_uint(&r, &minor))
+        if (protocore_spinel_get_uint(&r, &major) && protocore_spinel_get_uint(&r, &minor))
         {
             Serial.printf("  %s = %u.%u\n", name, major, minor);
         }
@@ -105,7 +105,7 @@ static void print_property(const uint8_t *payload, uint16_t plen)
     else if (prop == SPINEL_PROP_MAC_15_4_PANID || prop == SPINEL_PROP_MAC_15_4_SADDR)
     {
         uint16_t v = 0;
-        if (pc_spinel_get_u16(&r, &v))
+        if (protocore_spinel_get_u16(&r, &v))
         {
             Serial.printf("  %s = 0x%04X\n", name, v);
         }
@@ -113,7 +113,7 @@ static void print_property(const uint8_t *payload, uint16_t plen)
     else if (prop == SPINEL_PROP_HWADDR || prop == SPINEL_PROP_MAC_15_4_LADDR)
     {
         const uint8_t *eui = nullptr;
-        if (pc_spinel_get_eui64(&r, &eui))
+        if (protocore_spinel_get_eui64(&r, &eui))
         {
             Serial.printf("  %s = %02X%02X%02X%02X%02X%02X%02X%02X\n", name, eui[0], eui[1], eui[2], eui[3], eui[4],
                           eui[5], eui[6], eui[7]);
@@ -131,18 +131,18 @@ void setup()
     Serial2.begin(115200, SERIAL_8N1, PIN_RX, PIN_TX);
     delay(300);
 
-    pc_gateway_reset();
-    pc_gateway_port_config p = {};
+    protocore_gateway_reset();
+    protocore_gateway_port_config p = {};
     p.port_id = RADIO_PORT;
-    p.kind = pc_gateway_kind::PC_GW_THREAD;
-    pc_gateway_add_port(&p);
-    pc_gateway_set_uplink_cb(northbound_publish, nullptr);
-    pc_gateway_set_topic_prefix("thread");
+    p.kind = protocore_gateway_kind::PROTOCORE_GW_THREAD;
+    protocore_gateway_add_port(&p);
+    protocore_gateway_set_uplink_cb(northbound_publish, nullptr);
+    protocore_gateway_set_topic_prefix("thread");
 
     // Reset the NCP: spinel RESET command (header | CMD_RESET), then query identity.
-    const uint8_t reset[2] = {pc_spinel_header(0, 0), SPINEL_CMD_RESET};
+    const uint8_t reset[2] = {protocore_spinel_header(0, 0), SPINEL_CMD_RESET};
     uint8_t frame[8];
-    uint16_t n = pc_spinel_frame_encode(reset, 2, frame, sizeof(frame));
+    uint16_t n = protocore_spinel_frame_encode(reset, 2, frame, sizeof(frame));
     Serial2.write(frame, n);
     delay(200);
     rcp_get(SPINEL_PROP_PROTOCOL_VERSION);
@@ -164,9 +164,9 @@ void loop()
         {
             break;
         }
-        uint8_t payload[PC_THREAD_MAX_DATA];
+        uint8_t payload[PROTOCORE_THREAD_MAX_DATA];
         uint16_t plen = 0;
-        int n = pc_spinel_frame_decode(g_buf, g_len, payload, sizeof(payload), &plen);
+        int n = protocore_spinel_frame_decode(g_buf, g_len, payload, sizeof(payload), &plen);
         if (n == 0)
         {
             break; // need more
@@ -182,7 +182,7 @@ void loop()
         {
             print_property(payload, plen);
             uint16_t tid = payload[0] & 0x0F;
-            pc_gateway_uplink(RADIO_PORT, tid, payload, plen, 0);
+            protocore_gateway_uplink(RADIO_PORT, tid, payload, plen, 0);
         }
         drop_front((uint16_t)n);
     }

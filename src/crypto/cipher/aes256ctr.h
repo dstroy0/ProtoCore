@@ -37,16 +37,16 @@
 #ifndef PROTOCORE_AES256CTR_H
 #define PROTOCORE_AES256CTR_H
 
-#include "protocore_config.h" // the entry point: types.h for the widths and PROTO_BEGIN_DECLS
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths and PROTOCORE_BEGIN_DECLS
 #include <stddef.h>
 #include <stdint.h>
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
 /** @brief AES-256-CTR key length (bytes). */
-#define PC_AES256CTR_KEY_LEN 32
+#define PROTOCORE_AES256CTR_KEY_LEN 32
 /** @brief AES-256-CTR counter/IV block length (bytes). */
-#define PC_AES256CTR_CTR_LEN 16
+#define PROTOCORE_AES256CTR_CTR_LEN 16
 
 /**
  * @brief Encrypt or decrypt @p len bytes with AES-256-CTR (the two are identical).
@@ -61,13 +61,14 @@ PROTO_BEGIN_DECLS
  * @param out      Output bytes (may equal @p in).
  * @param len      Number of bytes to process.
  */
-void pc_aes256ctr_crypt(const uint8_t key[PC_AES256CTR_KEY_LEN], uint8_t counter[PC_AES256CTR_CTR_LEN],
-                        const uint8_t *in, uint8_t *out, size_t len);
+void protocore_aes256ctr_crypt(const uint8_t key[PROTOCORE_AES256CTR_KEY_LEN],
+                               uint8_t counter[PROTOCORE_AES256CTR_CTR_LEN], const uint8_t *in, uint8_t *out,
+                               size_t len);
 
 /**
  * @brief Decrypt only the 4-byte SSH packet_length prefix WITHOUT advancing @p counter.
  *
- * Mirrors pc_chachapoly_get_length: lets the receiver learn a packet's length (and thus how many bytes
+ * Mirrors protocore_chachapoly_get_length: lets the receiver learn a packet's length (and thus how many bytes
  * to wait for) before the whole packet has arrived, without consuming counter state. The key schedule
  * and keystream block live in the shared crypto scratch; no cipher state touches the stack.
  *
@@ -76,9 +77,9 @@ void pc_aes256ctr_crypt(const uint8_t key[PC_AES256CTR_KEY_LEN], uint8_t counter
  * @param enc4     the 4 encrypted length bytes (start of the packet).
  * @return the decrypted big-endian SSH packet_length.
  */
-uint32_t pc_aes256ctr_get_length(const uint8_t key[PC_AES256CTR_KEY_LEN], const uint8_t counter[PC_AES256CTR_CTR_LEN],
-                                 const uint8_t enc4[4]);
+uint32_t protocore_aes256ctr_get_length(const uint8_t key[PROTOCORE_AES256CTR_KEY_LEN],
+                                        const uint8_t counter[PROTOCORE_AES256CTR_CTR_LEN], const uint8_t enc4[4]);
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_AES256CTR_H

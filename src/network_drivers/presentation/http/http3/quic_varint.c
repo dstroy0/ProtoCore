@@ -2,15 +2,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file pc_quic_varint.c
- * @brief QUIC variable-length integer coding - implementation. See pc_quic_varint.h.
+ * @file protocore_quic_varint.c
+ * @brief QUIC variable-length integer coding - implementation. See protocore_quic_varint.h.
  */
 
 #include "network_drivers/presentation/http/http3/quic_varint.h"
 
-#if PC_ENABLE_HTTP3
+#if PROTOCORE_ENABLE_HTTP3
 
-size_t pc_quic_varint_len(uint64_t value)
+size_t protocore_quic_varint_len(uint64_t value)
 {
     if (value <= 0x3F)
     {
@@ -31,9 +31,9 @@ size_t pc_quic_varint_len(uint64_t value)
     return 0;
 }
 
-size_t pc_quic_varint_encode(uint8_t *out, size_t cap, uint64_t value)
+size_t protocore_quic_varint_encode(uint8_t *out, size_t cap, uint64_t value)
 {
-    size_t n = pc_quic_varint_len(value);
+    size_t n = protocore_quic_varint_len(value);
     if (n == 0 || cap < n)
     {
         return 0;
@@ -48,7 +48,7 @@ size_t pc_quic_varint_encode(uint8_t *out, size_t cap, uint64_t value)
     return n;
 }
 
-proto_bool pc_quic_varint_decode(const uint8_t *in, size_t len, uint64_t *value, size_t *consumed)
+proto_bool protocore_quic_varint_decode(const uint8_t *in, size_t len, uint64_t *value, size_t *consumed)
 {
     if (len < 1)
     {
@@ -69,4 +69,4 @@ proto_bool pc_quic_varint_decode(const uint8_t *in, size_t len, uint64_t *value,
     return PROTO_TRUE;
 }
 
-#endif // PC_ENABLE_HTTP3
+#endif // PROTOCORE_ENABLE_HTTP3

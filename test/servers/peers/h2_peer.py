@@ -8,7 +8,7 @@ and serves its routes over HTTP/2. This peer proves the binary framing works end
 mature client - the connection negotiates HTTP/2, requests return 200 over HEADERS/DATA frames with
 HPACK-compressed headers, and several streams multiplex over the one connection. The device cert is
 self-signed, so verification is disabled; the check is the h2 framing + request/response cycle, not
-the PKI chain. HTTP/2 on the device is PSRAM-gated (PC_ENABLE_HTTP2 + PC_H2_POOL_IN_PSRAM).
+the PKI chain. HTTP/2 on the device is PSRAM-gated (PROTOCORE_ENABLE_HTTP2 + PROTOCORE_H2_POOL_IN_PSRAM).
 """
 
 from __future__ import annotations

@@ -34,48 +34,48 @@
  */
 
 #include "protocore.h"
-#include "crypto/rng/rng.h"  // pc_rand_fill(): the CSRF secret's seed
-#include "mmgr/membuild.h"   // pc_sb frame builder
+#include "crypto/rng/rng.h"  // protocore_rand_fill(): the CSRF secret's seed
+#include "mmgr/membuild.h"   // protocore_sb frame builder
 #include "mmgr/plaintext.h"  // the diag document is borrowed, not a stack array
 #include "mmgr/protoframe.h" // the diag document is a frame spec, not a concatenation
 #include "mmgr/protostr.h"   // str: the bounded-run walks
 #include "mmgr/rawmemcpy.h"  // proto_raw_read: every move here is into our own buffer
 #include "network_drivers/presentation/http/http.h"
 #include "network_drivers/presentation/http/route/http_route.h"
-#include "network_drivers/presentation/presentation.h" // http_proto_set_poll (install the instance-bound HTTP poll)
+#include "network_drivers/presentation/presentation.h" // http_protocore_set_poll (install the instance-bound HTTP poll)
 #include "network_drivers/session/proto_handler.h"
 #include "network_drivers/session/worker.h"
 #include "network_drivers/tls/tls.h"
-#include "network_drivers/transport/tcp.h" // TcpConn, conn_pool, pc_ap_ip: the slots this drives
-#include "server/clock/clock.h"            // pc_millis(): the QUIC poll stamp and the request timeout
+#include "network_drivers/transport/tcp.h" // TcpConn, conn_pool, protocore_ap_ip: the slots this drives
+#include "server/clock/clock.h"            // protocore_millis(): the QUIC poll stamp and the request timeout
 #include "shared_primitives/hex.h"
 #include "shared_primitives/mime.h"
-#if PC_ENABLE_HTTP2
+#if PROTOCORE_ENABLE_HTTP2
 #include "network_drivers/presentation/http/http2/h2_server.h"
 #endif
-#if PC_ENABLE_HTTP3
+#if PROTOCORE_ENABLE_HTTP3
 #include "network_drivers/presentation/http/http3/h3_server.h"   // the request seam begin() installs
-#include "network_drivers/presentation/http/http3/quic_server.h" // pc_quic_server_begin / _poll
+#include "network_drivers/presentation/http/http3/quic_server.h" // protocore_quic_server_begin / _poll
 #endif
-#if PC_ENABLE_HTTP_DELIVERY
-#include "services/file_transfer/http_delivery/http_delivery.h" // pc_delivery_cache_control (SWR directive)
+#if PROTOCORE_ENABLE_HTTP_DELIVERY
+#include "services/file_transfer/http_delivery/http_delivery.h" // protocore_delivery_cache_control (SWR directive)
 #endif
-#if PC_ENABLE_CSRF
+#if PROTOCORE_ENABLE_CSRF
 #include "services/security/csrf/csrf.h"
 #endif
-#if PC_ENABLE_WEBDAV
+#if PROTOCORE_ENABLE_WEBDAV
 #include "network_drivers/application/webdav/webdav.h"
 #include "server/webdav_handler.h" // try_serve_dav()
 #include <time.h>                  // RFC 1123 Last-Modified formatting
 #endif
-#if PC_ENABLE_METRICS || PC_ENABLE_STATS
-#include "network_drivers/application/web_assets.h" // PC_METRICS_PROM / PC_STATS_JSON (generated)
+#if PROTOCORE_ENABLE_METRICS || PROTOCORE_ENABLE_STATS
+#include "network_drivers/application/web_assets.h" // PROTOCORE_METRICS_PROM / PROTOCORE_STATS_JSON (generated)
 #endif
-#if PC_HTTP_EMIT_DATE
-#if PC_ENABLE_TIME_SOURCE
-#include "services/timing_position/time_source/time_source.h" // pc_time_http_date() - any NTP/GPS/RTC/... source
+#if PROTOCORE_HTTP_EMIT_DATE
+#if PROTOCORE_ENABLE_TIME_SOURCE
+#include "services/timing_position/time_source/time_source.h" // protocore_time_http_date() - any NTP/GPS/RTC/... source
 #else
-#include "network_drivers/application/ntp_service/ntp_service.h" // pc_ntp_http_date() - direct NTP (or the host test seam)
+#include "network_drivers/application/ntp_service/ntp_service.h" // protocore_ntp_http_date() - direct NTP (or the host test seam)
 #endif
 #endif
 // No <string.h> and no <stdio.h>: every scan, compare, copy and search on this layer goes through
@@ -103,7 +103,7 @@ typedef struct
     proto_bool listen_tls[MAX_LISTENERS];   ///< True for TLS listeners (listen_tls()).
     uint8_t listener_count;                 ///< Registered listeners.
 
-#if PC_ENABLE_HTTP3
+#if PROTOCORE_ENABLE_HTTP3
     const uint8_t *h3_cert;
     size_t h3_cert_len;
     uint8_t h3_seed[32];
@@ -115,7 +115,7 @@ typedef struct
 // Static storage duration zero-initializes every field: no handlers bound, no listeners registered.
 static ServerCtx s_inst;
 
-void pc_server_reset(void)
+void protocore_server_reset(void)
 {
     // The server's state is spread across the files that own it, which is the point - but "start
     // over" is one concern, so it is one call rather than a checklist each caller has to keep in
@@ -125,15 +125,15 @@ void pc_server_reset(void)
     s_inst = blank;
     HttpRoutes.reset();
     Http.reset(); // the not-found handler, which answers instead of the built-in 404 while it is set
-#if PC_ENABLE_AUTH
+#if PROTOCORE_ENABLE_AUTH
     // A credential id names a row by index and a route holds that id, so the two tables empty
     // together: routes left behind rows the table has no way to reach, and the table is bounded.
     Auth.reset();
 #endif
-    pc_mnt_point_reset(); // the same, for the mount id a static or DAV route holds
-    pc_resp_reset();
-    pc_middleware_reset();
-    pc_signal_reset();
+    protocore_mnt_point_reset(); // the same, for the mount id a static or DAV route holds
+    protocore_resp_reset();
+    protocore_middleware_reset();
+    protocore_signal_reset();
 }
 
 void on_request_log(RequestLogCb cb)
@@ -149,7 +149,7 @@ void note_response(uint8_t slot_id, int code, int body_len)
     // Deposited, not tallied here. The loop knows the status at the instant it goes out, and
     // signaling is where a reader finds it; counting it here as well would be a second tally beside
     // the one every reader already consults.
-    pc_signal_put_response(code);
+    protocore_signal_put_response(code);
     if (s_inst.log_cb)
     {
         const HttpReq *r = &http_pool[slot_id];
@@ -161,36 +161,36 @@ int32_t listen(uint16_t port, ProtoConn proto)
 {
     if (s_inst.listener_count >= MAX_LISTENERS)
     {
-        return (int32_t)PC_ERR_LISTENER_FULL;
+        return (int32_t)PROTOCORE_ERR_LISTENER_FULL;
     }
     s_inst.listen_ports[s_inst.listener_count] = port;
     s_inst.listen_protos[s_inst.listener_count] = proto;
     s_inst.listen_tls[s_inst.listener_count] = PROTO_FALSE;
     s_inst.listener_count++;
-    // Return the listener id (its index), not PC_OK: begin() binds listener_pool[i] from
+    // Return the listener id (its index), not PROTOCORE_OK: begin() binds listener_pool[i] from
     // s_inst.listen_ports[i] and the accept path stamps that same index onto the slot, so this id is what
-    // pc_relay_publish() / pc_ssh_forward_begin() must match against. (Errors are negative.)
+    // protocore_relay_publish() / protocore_ssh_forward_begin() must match against. (Errors are negative.)
     return (int32_t)(s_inst.listener_count - 1);
 }
 
-#if PC_HAS_SCHEDULER
-// The worker task's per-tick entry (registered with pc_workers_start below); ESP32-only, so it is
+#if PROTOCORE_HAS_SCHEDULER
+// The worker task's per-tick entry (registered with protocore_workers_start below); ESP32-only, so it is
 // compiled only where it is used - on host the pipeline runs inline via handle().
-static void pc_pump_trampoline(int worker_id)
+static void protocore_pump_trampoline(int worker_id)
 {
     service_once(worker_id);
 }
 #endif
 
-#if PC_ENABLE_HTTP3
+#if PROTOCORE_ENABLE_HTTP3
 
-#endif // PC_ENABLE_HTTP3
+#endif // PROTOCORE_ENABLE_HTTP3
 
 // Installed by begin() as the HTTP ProtoHandler's on_poll, so the worker loop pumps HTTP through
 // the same uniform seam as every other protocol. The ProtoHandler seam takes a plain slot, which is
 // all http_poll_slot() needs: the route table and the slot pools are single global owners, so there
 // is no per-server context to thread through.
-static void pc_http_on_poll(uint8_t slot)
+static void protocore_http_on_poll(uint8_t slot)
 {
     Http.poll_slot(slot);
 }
@@ -198,73 +198,73 @@ static void pc_http_on_poll(uint8_t slot)
 int32_t proto_begin(const WebServerConfig *cfg)
 {
     if (s_inst.listener_count == 0
-#if PC_ENABLE_HTTP3
+#if PROTOCORE_ENABLE_HTTP3
         && !s_inst.h3_enabled // an HTTP/3-only server binds UDP, not a TCP listener
 #endif
     )
     {
-        return (int32_t)PC_ERR_NO_LISTENERS;
+        return (int32_t)PROTOCORE_ERR_NO_LISTENERS;
     }
     Tcp.conn->init(cfg);
-#if PC_ENABLE_AUTH
+#if PROTOCORE_ENABLE_AUTH
     {
         // Fresh server keying secret per begin(): one borrow for the hash behind it, returned here.
-        size_t mark = pc_secure_mark();
-        pc_span ws = pc_secure_span(PC_SHA256_BORROW, _Alignof(uint32_t));
-        if (pc_span_ok(ws))
+        size_t mark = protocore_secure_mark();
+        protocore_span ws = protocore_secure_span(PROTOCORE_SHA256_BORROW, _Alignof(uint32_t));
+        if (protocore_span_ok(ws))
         {
             Auth.rekey(ws.buf);
         }
-        pc_secure_release(mark);
+        protocore_secure_release(mark);
     }
 #endif
-#if PC_ENABLE_CSRF
+#if PROTOCORE_ENABLE_CSRF
     {
         // Seed the CSRF HMAC secret from the generator, which binds and seeds itself on first use
         // and redraws from the platform on its own schedule.
         uint8_t sec[32];
-        pc_rand_fill(sec, sizeof(sec));
-        pc_csrf_set_secret(sec, sizeof(sec));
+        protocore_rand_fill(sec, sizeof(sec));
+        protocore_csrf_set_secret(sec, sizeof(sec));
     }
 #endif
     for (uint8_t i = 0; i < MAX_CONNS; i++)
     {
         http_reset(i);
     }
-#if PC_ENABLE_WEBSOCKET
+#if PROTOCORE_ENABLE_WEBSOCKET
     ws_init();
 #endif
-#if PC_ENABLE_SSE
-    pc_sse_init();
+#if PROTOCORE_ENABLE_SSE
+    protocore_sse_init();
 #endif
     for (uint8_t i = 0; i < s_inst.listener_count; i++)
     {
         if (Tcp.listener->add(i, s_inst.listen_ports[i], s_inst.listen_protos[i], s_inst.listen_tls[i]) < 0)
         {
-            return (int32_t)PC_ERR_LISTEN_FAILED;
+            return (int32_t)PROTOCORE_ERR_LISTEN_FAILED;
         }
     }
-#if PC_ENABLE_HTTP3
+#if PROTOCORE_ENABLE_HTTP3
     // Bind the HTTP/3 QUIC server's UDP port. Requests dispatch through the route table via the
-    // trampoline; pc_quic_server_poll() runs in service_once.
+    // trampoline; protocore_quic_server_poll() runs in service_once.
     if (s_inst.h3_enabled)
     {
         QuicServerConfig h3cfg = {0};
         h3cfg.cert_der = s_inst.h3_cert;
         h3cfg.cert_len = s_inst.h3_cert_len;
         proto_raw_read(h3cfg.ed25519_seed, s_inst.h3_seed, sizeof(h3cfg.ed25519_seed));
-        h3cfg.rng = pc_h3_server_rng;
+        h3cfg.rng = protocore_h3_server_rng;
         // No app pointer: the trampoline dispatches through the global route table. The QUIC server
-        // records whether it came up and pc_quic_server_poll() reads its own answer.
-        (void)pc_quic_server_begin(s_inst.h3_port, &h3cfg, pc_h3_server_request, NULL);
+        // records whether it came up and protocore_quic_server_poll() reads its own answer.
+        (void)protocore_quic_server_begin(s_inst.h3_port, &h3cfg, protocore_h3_server_request, NULL);
     }
 #endif
-#if PC_HAS_SCHEDULER
+#if PROTOCORE_HAS_SCHEDULER
     // Routes/listeners are now fixed; start the worker task(s) that drive the
     // pipeline off the user's loop(). On host the pipeline runs inline via handle().
-    Session.workers->start(pc_pump_trampoline);
+    Session.workers->start(protocore_pump_trampoline);
 #endif
-    return (int32_t)PC_OK;
+    return (int32_t)PROTOCORE_OK;
 }
 
 int32_t begin_http(uint16_t port, const WebServerConfig *cfg)
@@ -277,8 +277,8 @@ int32_t begin_http(uint16_t port, const WebServerConfig *cfg)
     return proto_begin(cfg);
 }
 
-#if PC_ENABLE_HTTP3
-proto_bool pc_h3_cert(const uint8_t *cert_der, size_t cert_len, const uint8_t ed25519_seed[32], uint16_t port)
+#if PROTOCORE_ENABLE_HTTP3
+proto_bool protocore_h3_cert(const uint8_t *cert_der, size_t cert_len, const uint8_t ed25519_seed[32], uint16_t port)
 {
     if (!cert_der || cert_len == 0 || !ed25519_seed)
     {
@@ -292,25 +292,25 @@ proto_bool pc_h3_cert(const uint8_t *cert_der, size_t cert_len, const uint8_t ed
     return PROTO_TRUE;
 }
 
-#endif // PC_ENABLE_HTTP3
+#endif // PROTOCORE_ENABLE_HTTP3
 
-#if PC_ENABLE_TLS
+#if PROTOCORE_ENABLE_TLS
 proto_bool tls_cert(const uint8_t *cert, size_t cert_len, const uint8_t *key, size_t key_len)
 {
-    return pc_tls_global_init(cert, cert_len, key, key_len);
+    return protocore_tls_global_init(cert, cert_len, key, key_len);
 }
 
 int32_t listen_tls(uint16_t port)
 {
     if (s_inst.listener_count >= MAX_LISTENERS)
     {
-        return (int32_t)PC_ERR_LISTENER_FULL;
+        return (int32_t)PROTOCORE_ERR_LISTENER_FULL;
     }
     s_inst.listen_ports[s_inst.listener_count] = port;
     s_inst.listen_protos[s_inst.listener_count] = PROTO_HTTP;
     s_inst.listen_tls[s_inst.listener_count] = PROTO_TRUE;
     s_inst.listener_count++;
-    return (int32_t)PC_OK;
+    return (int32_t)PROTOCORE_OK;
 }
 
 int32_t begin_tls(uint16_t port, const uint8_t *cert, size_t cert_len, const uint8_t *key, size_t key_len,
@@ -318,7 +318,7 @@ int32_t begin_tls(uint16_t port, const uint8_t *cert, size_t cert_len, const uin
 {
     if (!tls_cert(cert, cert_len, key, key_len))
     {
-        return (int32_t)PC_ERR_LISTEN_FAILED;
+        return (int32_t)PROTOCORE_ERR_LISTEN_FAILED;
     }
     int32_t rc = listen_tls(port);
     if (rc < 0)
@@ -328,24 +328,24 @@ int32_t begin_tls(uint16_t port, const uint8_t *cert, size_t cert_len, const uin
     return proto_begin(cfg);
 }
 
-#if PC_ENABLE_MTLS
+#if PROTOCORE_ENABLE_MTLS
 proto_bool tls_require_client_cert(const uint8_t *ca, size_t ca_len)
 {
-    return pc_tls_set_client_ca(ca, ca_len);
+    return protocore_tls_set_client_ca(ca, ca_len);
 }
 
 int tls_client_subject(uint8_t slot_id, char *out, size_t out_len)
 {
-    return pc_tls_peer_subject(slot_id, out, out_len);
+    return protocore_tls_peer_subject(slot_id, out, out_len);
 }
-#endif // PC_ENABLE_MTLS
-#endif // PC_ENABLE_TLS
+#endif // PROTOCORE_ENABLE_MTLS
+#endif // PROTOCORE_ENABLE_TLS
 
 int32_t restart(const WebServerConfig *cfg)
 {
     if (s_inst.listener_count == 0)
     {
-        return (int32_t)PC_ERR_NO_LISTENERS;
+        return (int32_t)PROTOCORE_ERR_NO_LISTENERS;
     }
     stop();
     return proto_begin(cfg);
@@ -353,7 +353,7 @@ int32_t restart(const WebServerConfig *cfg)
 
 void stop(void)
 {
-#if PC_HAS_SCHEDULER
+#if PROTOCORE_HAS_SCHEDULER
     // Stop the worker task(s) before tearing down the slots they service.
     Session.workers->stop();
 #endif
@@ -363,11 +363,11 @@ void stop(void)
     {
         http_reset(i);
     }
-#if PC_ENABLE_WEBSOCKET
+#if PROTOCORE_ENABLE_WEBSOCKET
     ws_init();
 #endif
-#if PC_ENABLE_SSE
-    pc_sse_init();
+#if PROTOCORE_ENABLE_SSE
+    protocore_sse_init();
 #endif
 }
 
@@ -393,21 +393,21 @@ void fill_route_base(HttpRoute *r, const char *path)
     // the first `/`, which a route path is full of.
     r->is_param = str.has(r->path, MAX_PATH_LEN, "/:", sizeof("/:"), PROTO_FALSE);
     r->is_regex = PROTO_FALSE;
-    r->iface_filter = PC_IF_ANY;
-#if PC_ENABLE_AUTH
+    r->iface_filter = PROTOCORE_IF_ANY;
+#if PROTOCORE_ENABLE_AUTH
     // Stated, not inherited from the zeroed slot: zero is a valid credential id, so a route that
     // registers no credentials has to say so, or the first set anyone registers would guard every
     // route in the table.
-    r->auth_id = PC_AUTH_NONE;
+    r->auth_id = PROTOCORE_AUTH_NONE;
 #endif
-#if PC_ENABLE_WEBSOCKET
-    r->ws_id = PC_WS_NONE; // same reason: zero names a real handler set
+#if PROTOCORE_ENABLE_WEBSOCKET
+    r->ws_id = PROTOCORE_WS_NONE; // same reason: zero names a real handler set
 #endif
-#if PC_ENABLE_SSE
-    r->sse_id = PC_SSE_NONE; // same reason
+#if PROTOCORE_ENABLE_SSE
+    r->sse_id = PROTOCORE_SSE_NONE; // same reason
 #endif
-#if PC_ENABLE_FILE_SERVING
-    r->mnt_id = PC_MNT_NONE; // same reason
+#if PROTOCORE_ENABLE_FILE_SERVING
+    r->mnt_id = PROTOCORE_MNT_NONE; // same reason
 #endif
 }
 
@@ -425,7 +425,7 @@ void on_http(const char *path, HttpMethod method, Handler callback)
     r->callback = callback;
 }
 
-void on_http_iface(const char *path, HttpMethod method, Handler callback, pc_if_kind iface)
+void on_http_iface(const char *path, HttpMethod method, Handler callback, protocore_if_kind iface)
 {
     HttpRoute *r = HttpRoutes.add();
     if (r == NULL)
@@ -442,7 +442,7 @@ void on_http_iface(const char *path, HttpMethod method, Handler callback, pc_if_
 
 void set_ap_ip(uint32_t ap_ip)
 {
-    pc_ap_ip = ap_ip;
+    protocore_ap_ip = ap_ip;
 }
 
 void on_regex(const char *pattern, HttpMethod method, Handler callback)
@@ -460,7 +460,7 @@ void on_regex(const char *pattern, HttpMethod method, Handler callback)
     r->is_regex = PROTO_TRUE;
 }
 
-#if PC_ENABLE_AUTH
+#if PROTOCORE_ENABLE_AUTH
 void on_http_auth(const char *path, HttpMethod method, Handler callback, const char *realm, const char *user,
                   const char *pass, proto_bool digest)
 {
@@ -477,9 +477,9 @@ void on_http_auth(const char *path, HttpMethod method, Handler callback, const c
     // The credential goes to the module that checks it; the route keeps only the id naming it.
     r->auth_id = Auth.add(realm, user, pass, digest);
 }
-#endif // PC_ENABLE_AUTH
+#endif // PROTOCORE_ENABLE_AUTH
 
-#if PC_ENABLE_WEBSOCKET
+#if PROTOCORE_ENABLE_WEBSOCKET
 void on_ws(const char *path, WsConnectHandler on_connect, WsMessageHandler on_message, WsCloseHandler on_close)
 {
     HttpRoute *r = HttpRoutes.add();
@@ -492,9 +492,9 @@ void on_ws(const char *path, WsConnectHandler on_connect, WsMessageHandler on_me
     r->type = ROUTE_WS;
     r->ws_id = ws_route_add(on_connect, on_message, on_close);
 }
-#endif // PC_ENABLE_WEBSOCKET
+#endif // PROTOCORE_ENABLE_WEBSOCKET
 
-#if PC_ENABLE_SSE
+#if PROTOCORE_ENABLE_SSE
 void on_sse(const char *path, SseConnectHandler on_connect)
 {
     HttpRoute *r = HttpRoutes.add();
@@ -505,9 +505,9 @@ void on_sse(const char *path, SseConnectHandler on_connect)
 
     fill_route_base(r, path);
     r->type = ROUTE_SSE;
-    r->sse_id = pc_sse_route_add(on_connect);
+    r->sse_id = protocore_sse_route_add(on_connect);
 }
-#endif // PC_ENABLE_SSE
+#endif // PROTOCORE_ENABLE_SSE
 
 void on_not_found(Handler callback)
 {
@@ -516,13 +516,13 @@ void on_not_found(Handler callback)
 
 // set_cors() / set_cache_control() live in server/response.cpp, with the buffers they fill.
 
-#if PC_ENABLE_HTTP_DELIVERY
+#if PROTOCORE_ENABLE_HTTP_DELIVERY
 proto_bool set_cache_control_swr(uint32_t max_age_s, uint32_t swr_s)
 {
-    // Build the directive with the RFC 5861 core so the header and the pc_delivery_swr decision
+    // Build the directive with the RFC 5861 core so the header and the protocore_delivery_swr decision
     // can never drift apart.
     char directive[64];
-    if (pc_delivery_cache_control(max_age_s, swr_s, directive, sizeof(directive)) == 0)
+    if (protocore_delivery_cache_control(max_age_s, swr_s, directive, sizeof(directive)) == 0)
     {
         return PROTO_FALSE;
     }
@@ -531,7 +531,7 @@ proto_bool set_cache_control_swr(uint32_t max_age_s, uint32_t swr_s)
 }
 #endif
 
-#if PC_ENABLE_WEBSOCKET
+#if PROTOCORE_ENABLE_WEBSOCKET
 void ws_dispatch_message(const WsConn *ws)
 {
     for (uint8_t r = 0; r < HttpRoutes.count(); r++)
@@ -567,7 +567,7 @@ void ws_dispatch_close(const WsConn *ws)
         }
     }
 }
-#endif // PC_ENABLE_WEBSOCKET
+#endif // PROTOCORE_ENABLE_WEBSOCKET
 
 /**
  * @brief Main application tick - tick the session layer then dispatch completed requests.
@@ -581,7 +581,7 @@ void ws_dispatch_close(const WsConn *ws)
  */
 void handle(void)
 {
-#if PC_HAS_SCHEDULER
+#if PROTOCORE_HAS_SCHEDULER
     if (Session.workers->running())
     {
         return;
@@ -596,16 +596,16 @@ void service_once(int worker_id)
     // ProtoHandler.on_poll seam (see http_poll_slot). Done here rather than only in begin() so a
     // caller that drives service_once() directly still gets it. One pointer store; negligible at
     // poll cadence.
-    http_proto_set_poll(pc_http_on_poll);
+    http_protocore_set_poll(protocore_http_on_poll);
 
     Session.tick(worker_id);
 
-#if PC_ENABLE_HTTP3
+#if PROTOCORE_ENABLE_HTTP3
     // Drive the QUIC/HTTP-3 server: ingest queued datagrams, run the engines (which dispatch requests
     // through the route table), flush replies. One worker owns it, so requests stay single-threaded.
     if (worker_id == 0)
     {
-        pc_quic_server_poll(pc_millis());
+        protocore_quic_server_poll(protocore_millis());
     }
 #endif
 
@@ -623,7 +623,7 @@ void service_once(int worker_id)
         Tcp.conn->ack_consumed(i);
 
         // Every protocol - HTTP included - is pumped through the one uniform ProtoHandler.on_poll
-        // seam, so there is no per-protocol branch here. HTTP reaches it via http_proto_set_poll()
+        // seam, so there is no per-protocol branch here. HTTP reaches it via http_protocore_set_poll()
         // -> http_poll_slot(); the singleton pollers (SSH etc.) gate on CONN_ACTIVE
         // inside their own on_poll.
         const ProtoHandler *ph = Session.proto->get(conn_pool[i].proto);
@@ -637,7 +637,7 @@ void service_once(int worker_id)
     Session.workers->run_deferred(worker_id);
 }
 
-proto_bool defer(uint8_t slot, pc_deferred_fn fn, void *arg)
+proto_bool defer(uint8_t slot, protocore_deferred_fn fn, void *arg)
 {
     if (slot >= MAX_CONNS)
     {
@@ -652,187 +652,188 @@ proto_bool defer(uint8_t slot, pc_deferred_fn fn, void *arg)
 // Diagnostic endpoint
 // ---------------------------------------------------------------------------
 
-#if PC_ENABLE_DIAG
+#if PROTOCORE_ENABLE_DIAG
 
 // The build-info document. Every value is a compile-time constant, so nothing is discovered at
 // runtime: each flag selects one of two literals and each sizing constant renders as a decimal.
 // A frame spec like every other here, so the conversions come from the shared engine.
 
 // A flag indexes this; !!flag is 0 or 1, so the selection is a load rather than a branch.
-static const char *const PC_DIAG_BOOL[2] = {"false", "true"};
+static const char *const PROTOCORE_DIAG_BOOL[2] = {"false", "true"};
 
-static const pc_field DIAG_DOC[] = {
-    {PC_FK_LIT, 0, 31, "{\"lib\":\"ProtoCore\",\"features\":{"},
-    {PC_FK_LIT, 0, 12, "\"websocket\":"},
-    PC_STR,
-    {PC_FK_LIT, 0, 7, ",\"sse\":"},
-    PC_STR,
-    {PC_FK_LIT, 0, 13, ",\"multipart\":"},
-    PC_STR,
-    {PC_FK_LIT, 0, 16, ",\"file_serving\":"},
-    PC_STR,
-    {PC_FK_LIT, 0, 8, ",\"auth\":"},
-    PC_STR,
-    {PC_FK_LIT, 0, 10, ",\"webdav\":"},
-    PC_STR,
-    {PC_FK_LIT, 0, 8, ",\"coap\":"},
-    PC_STR,
-    {PC_FK_LIT, 0, 8, ",\"snmp\":"},
-    PC_STR,
-    {PC_FK_LIT, 0, 9, ",\"opcua\":"},
-    PC_STR,
-    {PC_FK_LIT, 0, 9, ",\"umati\":"},
-    PC_STR,
-    {PC_FK_LIT, 0, 10, ",\"modbus\":"},
-    PC_STR,
-    {PC_FK_LIT, 0, 8, ",\"mqtt\":"},
-    PC_STR,
-    {PC_FK_LIT, 0, 13, ",\"mtconnect\":"},
-    PC_STR,
-    {PC_FK_LIT, 0, 9, ",\"redis\":"},
-    PC_STR,
-    {PC_FK_LIT, 0, 7, ",\"ftp\":"},
-    PC_STR,
-    {PC_FK_LIT, 0, 8, ",\"smtp\":"},
-    PC_STR,
-    {PC_FK_LIT, 0, 7, ",\"smb\":"},
-    PC_STR,
-    {PC_FK_LIT, 0, 10, ",\"syslog\":"},
-    PC_STR,
-    {PC_FK_LIT, 0, 17, ",\"pc_ntp_server\":"},
-    PC_STR,
-    {PC_FK_LIT, 0, 14, ",\"dns_server\":"},
-    PC_STR,
-    {PC_FK_LIT, 0, 8, ",\"nats\":"},
-    PC_STR,
-    {PC_FK_LIT, 0, 9, ",\"stomp\":"},
-    PC_STR,
-    {PC_FK_LIT, 0, 10, ",\"statsd\":"},
-    PC_STR,
-    {PC_FK_LIT, 0, 7, ",\"jwt\":"},
-    PC_STR,
-    {PC_FK_LIT, 0, 7, ",\"tls\":"},
-    PC_STR,
-    {PC_FK_LIT, 0, 9, ",\"http2\":"},
-    PC_STR,
-    {PC_FK_LIT, 0, 9, ",\"http3\":"},
-    PC_STR,
-    {PC_FK_LIT, 0, 7, ",\"ssh\":"},
-    PC_STR,
-    {PC_FK_LIT, 0, 14, ",\"ws_deflate\":"},
-    PC_STR,
-    {PC_FK_LIT, 0, 9, ",\"range\":"},
-    PC_STR,
-    {PC_FK_LIT, 0, 8, ",\"csrf\":"},
-    PC_STR,
-    {PC_FK_LIT, 0, 19, ",\"accept_throttle\":"},
-    PC_STR,
-    {PC_FK_LIT, 0, 19, ",\"per_ip_throttle\":"},
-    PC_STR,
-    {PC_FK_LIT, 0, 16, ",\"auth_lockout\":"},
-    PC_STR,
-    {PC_FK_LIT, 0, 12, "},\"config\":{"},
-    {PC_FK_LIT, 0, 12, "\"MAX_CONNS\":"},
-    PC_U32,
-    {PC_FK_LIT, 0, 15, ",\"RX_BUF_SIZE\":"},
-    PC_U32,
-    {PC_FK_LIT, 0, 17, ",\"BODY_BUF_SIZE\":"},
-    PC_U32,
-    {PC_FK_LIT, 0, 14, ",\"MAX_ROUTES\":"},
-    PC_U32,
-    {PC_FK_LIT, 0, 15, ",\"MAX_HEADERS\":"},
-    PC_U32,
-    {PC_FK_LIT, 0, 16, ",\"MAX_PATH_LEN\":"},
-    PC_U32,
-    {PC_FK_LIT, 0, 15, ",\"MAX_KEY_LEN\":"},
-    PC_U32,
-    {PC_FK_LIT, 0, 15, ",\"MAX_VAL_LEN\":"},
-    PC_U32,
-    {PC_FK_LIT, 0, 17, ",\"MAX_QUERY_LEN\":"},
-    PC_U32,
-    {PC_FK_LIT, 0, 20, ",\"MAX_QUERY_PARAMS\":"},
-    PC_U32,
-    {PC_FK_LIT, 0, 19, ",\"CONN_TIMEOUT_MS\":"},
-    PC_U32,
-    {PC_FK_LIT, 0, 21, ",\"RESP_HDR_BUF_SIZE\":"},
-    PC_U32,
-    {PC_FK_LIT, 0, 19, ",\"WS_HDR_BUF_SIZE\":"},
-    PC_U32,
-    {PC_FK_LIT, 0, 21, ",\"CORS_HDR_BUF_SIZE\":"},
-    PC_U32,
-    {PC_FK_LIT, 0, 19, ",\"EVT_QUEUE_DEPTH\":"},
-    PC_U32,
-    {PC_FK_LIT, 0, 2, "}}"},
-    PC_END,
+static const protocore_field DIAG_DOC[] = {
+    {PROTOCORE_FK_LIT, 0, 31, "{\"lib\":\"ProtoCore\",\"features\":{"},
+    {PROTOCORE_FK_LIT, 0, 12, "\"websocket\":"},
+    PROTOCORE_STR,
+    {PROTOCORE_FK_LIT, 0, 7, ",\"sse\":"},
+    PROTOCORE_STR,
+    {PROTOCORE_FK_LIT, 0, 13, ",\"multipart\":"},
+    PROTOCORE_STR,
+    {PROTOCORE_FK_LIT, 0, 16, ",\"file_serving\":"},
+    PROTOCORE_STR,
+    {PROTOCORE_FK_LIT, 0, 8, ",\"auth\":"},
+    PROTOCORE_STR,
+    {PROTOCORE_FK_LIT, 0, 10, ",\"webdav\":"},
+    PROTOCORE_STR,
+    {PROTOCORE_FK_LIT, 0, 8, ",\"coap\":"},
+    PROTOCORE_STR,
+    {PROTOCORE_FK_LIT, 0, 8, ",\"snmp\":"},
+    PROTOCORE_STR,
+    {PROTOCORE_FK_LIT, 0, 9, ",\"opcua\":"},
+    PROTOCORE_STR,
+    {PROTOCORE_FK_LIT, 0, 9, ",\"umati\":"},
+    PROTOCORE_STR,
+    {PROTOCORE_FK_LIT, 0, 10, ",\"modbus\":"},
+    PROTOCORE_STR,
+    {PROTOCORE_FK_LIT, 0, 8, ",\"mqtt\":"},
+    PROTOCORE_STR,
+    {PROTOCORE_FK_LIT, 0, 13, ",\"mtconnect\":"},
+    PROTOCORE_STR,
+    {PROTOCORE_FK_LIT, 0, 9, ",\"redis\":"},
+    PROTOCORE_STR,
+    {PROTOCORE_FK_LIT, 0, 7, ",\"ftp\":"},
+    PROTOCORE_STR,
+    {PROTOCORE_FK_LIT, 0, 8, ",\"smtp\":"},
+    PROTOCORE_STR,
+    {PROTOCORE_FK_LIT, 0, 7, ",\"smb\":"},
+    PROTOCORE_STR,
+    {PROTOCORE_FK_LIT, 0, 10, ",\"syslog\":"},
+    PROTOCORE_STR,
+    {PROTOCORE_FK_LIT, 0, 17, ",\"protocore_ntp_server\":"},
+    PROTOCORE_STR,
+    {PROTOCORE_FK_LIT, 0, 14, ",\"dns_server\":"},
+    PROTOCORE_STR,
+    {PROTOCORE_FK_LIT, 0, 8, ",\"nats\":"},
+    PROTOCORE_STR,
+    {PROTOCORE_FK_LIT, 0, 9, ",\"stomp\":"},
+    PROTOCORE_STR,
+    {PROTOCORE_FK_LIT, 0, 10, ",\"statsd\":"},
+    PROTOCORE_STR,
+    {PROTOCORE_FK_LIT, 0, 7, ",\"jwt\":"},
+    PROTOCORE_STR,
+    {PROTOCORE_FK_LIT, 0, 7, ",\"tls\":"},
+    PROTOCORE_STR,
+    {PROTOCORE_FK_LIT, 0, 9, ",\"http2\":"},
+    PROTOCORE_STR,
+    {PROTOCORE_FK_LIT, 0, 9, ",\"http3\":"},
+    PROTOCORE_STR,
+    {PROTOCORE_FK_LIT, 0, 7, ",\"ssh\":"},
+    PROTOCORE_STR,
+    {PROTOCORE_FK_LIT, 0, 14, ",\"ws_deflate\":"},
+    PROTOCORE_STR,
+    {PROTOCORE_FK_LIT, 0, 9, ",\"range\":"},
+    PROTOCORE_STR,
+    {PROTOCORE_FK_LIT, 0, 8, ",\"csrf\":"},
+    PROTOCORE_STR,
+    {PROTOCORE_FK_LIT, 0, 19, ",\"accept_throttle\":"},
+    PROTOCORE_STR,
+    {PROTOCORE_FK_LIT, 0, 19, ",\"per_ip_throttle\":"},
+    PROTOCORE_STR,
+    {PROTOCORE_FK_LIT, 0, 16, ",\"auth_lockout\":"},
+    PROTOCORE_STR,
+    {PROTOCORE_FK_LIT, 0, 12, "},\"config\":{"},
+    {PROTOCORE_FK_LIT, 0, 12, "\"MAX_CONNS\":"},
+    PROTOCORE_U32,
+    {PROTOCORE_FK_LIT, 0, 15, ",\"RX_BUF_SIZE\":"},
+    PROTOCORE_U32,
+    {PROTOCORE_FK_LIT, 0, 17, ",\"BODY_BUF_SIZE\":"},
+    PROTOCORE_U32,
+    {PROTOCORE_FK_LIT, 0, 14, ",\"MAX_ROUTES\":"},
+    PROTOCORE_U32,
+    {PROTOCORE_FK_LIT, 0, 15, ",\"MAX_HEADERS\":"},
+    PROTOCORE_U32,
+    {PROTOCORE_FK_LIT, 0, 16, ",\"MAX_PATH_LEN\":"},
+    PROTOCORE_U32,
+    {PROTOCORE_FK_LIT, 0, 15, ",\"MAX_KEY_LEN\":"},
+    PROTOCORE_U32,
+    {PROTOCORE_FK_LIT, 0, 15, ",\"MAX_VAL_LEN\":"},
+    PROTOCORE_U32,
+    {PROTOCORE_FK_LIT, 0, 17, ",\"MAX_QUERY_LEN\":"},
+    PROTOCORE_U32,
+    {PROTOCORE_FK_LIT, 0, 20, ",\"MAX_QUERY_PARAMS\":"},
+    PROTOCORE_U32,
+    {PROTOCORE_FK_LIT, 0, 19, ",\"CONN_TIMEOUT_MS\":"},
+    PROTOCORE_U32,
+    {PROTOCORE_FK_LIT, 0, 21, ",\"RESP_HDR_BUF_SIZE\":"},
+    PROTOCORE_U32,
+    {PROTOCORE_FK_LIT, 0, 19, ",\"WS_HDR_BUF_SIZE\":"},
+    PROTOCORE_U32,
+    {PROTOCORE_FK_LIT, 0, 21, ",\"CORS_HDR_BUF_SIZE\":"},
+    PROTOCORE_U32,
+    {PROTOCORE_FK_LIT, 0, 19, ",\"EVT_QUEUE_DEPTH\":"},
+    PROTOCORE_U32,
+    {PROTOCORE_FK_LIT, 0, 2, "}}"},
+    PROTOCORE_END,
 };
 
 // Worst case: every flag rendering as the longer "false", every size at a uint32_t's ten digits.
-#define PC_PLAINTEXT_WORK_DIAG 975
-static_assert(PC_PLAINTEXT_WORK_DIAG <= PC_PLAINTEXT_ARENA_SIZE, "diag document exceeds the arena");
+#define PROTOCORE_PLAINTEXT_WORK_DIAG 975
+static_assert(PROTOCORE_PLAINTEXT_WORK_DIAG <= PROTOCORE_PLAINTEXT_ARENA_SIZE, "diag document exceeds the arena");
 
 void diag(uint8_t slot_id)
 {
     // Mark before the borrow and release on every exit: the document is transient, and the
     // per-dispatch reset is only the backstop.
-    const size_t mark = pc_plaintext_mark();
-    char *doc = (char *)pc_plaintext_alloc(PC_PLAINTEXT_WORK_DIAG, 1);
-    if (doc == NULL || frame.build(doc, PC_PLAINTEXT_WORK_DIAG, DIAG_DOC,
-                                   (const pc_fval[]){PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_WEBSOCKET]),
-                                                     PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_SSE]),
-                                                     PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_MULTIPART]),
-                                                     PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_FILE_SERVING]),
-                                                     PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_AUTH]),
-                                                     PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_WEBDAV]),
-                                                     PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_COAP]),
-                                                     PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_SNMP]),
-                                                     PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_OPCUA]),
-                                                     PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_UMATI]),
-                                                     PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_MODBUS]),
-                                                     PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_MQTT]),
-                                                     PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_MTCONNECT]),
-                                                     PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_REDIS]),
-                                                     PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_FTP]),
-                                                     PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_SMTP]),
-                                                     PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_SMB]),
-                                                     PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_SYSLOG]),
-                                                     PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_NTP_SERVER]),
-                                                     PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_DNS_SERVER]),
-                                                     PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_NATS]),
-                                                     PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_STOMP]),
-                                                     PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_STATSD]),
-                                                     PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_JWT]),
-                                                     PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_TLS]),
-                                                     PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_HTTP2]),
-                                                     PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_HTTP3]),
-                                                     PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_SSH]),
-                                                     PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_WS_DEFLATE]),
-                                                     PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_RANGE]),
-                                                     PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_CSRF]),
-                                                     PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_ACCEPT_THROTTLE]),
-                                                     PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_PER_IP_THROTTLE]),
-                                                     PC_VSTR(PC_DIAG_BOOL[!!PC_ENABLE_AUTH_LOCKOUT]),
-                                                     PC_VU32((uint32_t)MAX_CONNS),
-                                                     PC_VU32((uint32_t)RX_BUF_SIZE),
-                                                     PC_VU32((uint32_t)BODY_BUF_SIZE),
-                                                     PC_VU32((uint32_t)MAX_ROUTES),
-                                                     PC_VU32((uint32_t)MAX_HEADERS),
-                                                     PC_VU32((uint32_t)MAX_PATH_LEN),
-                                                     PC_VU32((uint32_t)MAX_KEY_LEN),
-                                                     PC_VU32((uint32_t)MAX_VAL_LEN),
-                                                     PC_VU32((uint32_t)MAX_QUERY_LEN),
-                                                     PC_VU32((uint32_t)MAX_QUERY_PARAMS),
-                                                     PC_VU32((uint32_t)CONN_TIMEOUT_MS),
-                                                     PC_VU32((uint32_t)RESP_HDR_BUF_SIZE),
-                                                     PC_VU32((uint32_t)WS_HDR_BUF_SIZE),
-                                                     PC_VU32((uint32_t)CORS_HDR_BUF_SIZE),
-                                                     PC_VU32((uint32_t)EVT_QUEUE_DEPTH)},
-                                   49) == 0)
+    const size_t mark = protocore_plaintext_mark();
+    char *doc = (char *)protocore_plaintext_alloc(PROTOCORE_PLAINTEXT_WORK_DIAG, 1);
+    if (doc == NULL ||
+        frame.build(doc, PROTOCORE_PLAINTEXT_WORK_DIAG, DIAG_DOC,
+                    (const protocore_fval[]){PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_WEBSOCKET]),
+                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_SSE]),
+                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_MULTIPART]),
+                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_FILE_SERVING]),
+                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_AUTH]),
+                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_WEBDAV]),
+                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_COAP]),
+                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_SNMP]),
+                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_OPCUA]),
+                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_UMATI]),
+                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_MODBUS]),
+                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_MQTT]),
+                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_MTCONNECT]),
+                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_REDIS]),
+                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_FTP]),
+                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_SMTP]),
+                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_SMB]),
+                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_SYSLOG]),
+                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_NTP_SERVER]),
+                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_DNS_SERVER]),
+                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_NATS]),
+                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_STOMP]),
+                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_STATSD]),
+                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_JWT]),
+                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_TLS]),
+                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_HTTP2]),
+                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_HTTP3]),
+                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_SSH]),
+                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_WS_DEFLATE]),
+                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_RANGE]),
+                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_CSRF]),
+                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_ACCEPT_THROTTLE]),
+                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_PER_IP_THROTTLE]),
+                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_AUTH_LOCKOUT]),
+                                             PROTOCORE_VU32((uint32_t)MAX_CONNS),
+                                             PROTOCORE_VU32((uint32_t)RX_BUF_SIZE),
+                                             PROTOCORE_VU32((uint32_t)BODY_BUF_SIZE),
+                                             PROTOCORE_VU32((uint32_t)MAX_ROUTES),
+                                             PROTOCORE_VU32((uint32_t)MAX_HEADERS),
+                                             PROTOCORE_VU32((uint32_t)MAX_PATH_LEN),
+                                             PROTOCORE_VU32((uint32_t)MAX_KEY_LEN),
+                                             PROTOCORE_VU32((uint32_t)MAX_VAL_LEN),
+                                             PROTOCORE_VU32((uint32_t)MAX_QUERY_LEN),
+                                             PROTOCORE_VU32((uint32_t)MAX_QUERY_PARAMS),
+                                             PROTOCORE_VU32((uint32_t)CONN_TIMEOUT_MS),
+                                             PROTOCORE_VU32((uint32_t)RESP_HDR_BUF_SIZE),
+                                             PROTOCORE_VU32((uint32_t)WS_HDR_BUF_SIZE),
+                                             PROTOCORE_VU32((uint32_t)CORS_HDR_BUF_SIZE),
+                                             PROTOCORE_VU32((uint32_t)EVT_QUEUE_DEPTH)},
+                    49) == 0)
     {
-        pc_plaintext_release(mark);
-        send_text(slot_id, 503, PC_MIME_TEXT_PLAIN, ""); // fail closed: no partial document reaches the wire
+        protocore_plaintext_release(mark);
+        send_text(slot_id, 503, PROTOCORE_MIME_TEXT_PLAIN, ""); // fail closed: no partial document reaches the wire
         return;
     }
-    send_text(slot_id, 200, PC_MIME_JSON, doc); // reads doc, so it runs before the release
-    pc_plaintext_release(mark);
+    send_text(slot_id, 200, PROTOCORE_MIME_JSON, doc); // reads doc, so it runs before the release
+    protocore_plaintext_release(mark);
 }
 #endif

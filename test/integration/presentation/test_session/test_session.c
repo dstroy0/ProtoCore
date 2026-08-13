@@ -284,13 +284,13 @@ void test_multiple_events_drained_in_one_tick()
 
 // An out-of-range ProtoConn must not write past proto_handlers[] (proto_register)
 // and must resolve to NULL rather than an out-of-bounds read (proto_get).
-void test_proto_register_out_of_range_is_nop()
+void test_protocore_register_out_of_range_is_nop()
 {
     Session.proto->add((ProtoConn)250, NULL);
     TEST_PASS();
 }
 
-void test_proto_get_out_of_range_returns_null()
+void test_protocore_get_out_of_range_returns_null()
 {
     TEST_ASSERT_NULL(Session.proto->get((ProtoConn)250));
 }
@@ -467,8 +467,8 @@ int main()
     RUN_TEST(test_multiple_events_drained_in_one_tick);
 
     // Dispatch table edge cases
-    RUN_TEST(test_proto_register_out_of_range_is_nop);
-    RUN_TEST(test_proto_get_out_of_range_returns_null);
+    RUN_TEST(test_protocore_register_out_of_range_is_nop);
+    RUN_TEST(test_protocore_get_out_of_range_returns_null);
     RUN_TEST(test_dispatch_drops_unregistered_protocol_event);
     RUN_TEST(test_dispatch_skips_null_callback_fields);
     RUN_TEST(test_dispatch_ignores_unknown_evt_type);

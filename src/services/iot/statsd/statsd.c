@@ -6,7 +6,7 @@
  * @brief StatsD metrics client - implementation. See statsd.h.
  *
  * The value and sample-rate are rendered by hand (no printf %lld/%f, which need extra
- * newlib support on some targets), then pc_statsd_format assembles the line and the transport
+ * newlib support on some targets), then protocore_statsd_format assembles the line and the transport
  * UDP service sends it.
  */
 
@@ -14,7 +14,7 @@
 #include "mmgr/protomem.h"
 #include "protocore_config.h"
 
-#if PC_ENABLE_STATSD
+#if PROTOCORE_ENABLE_STATSD
 
 #include "network_drivers/transport/udp.h"
 
@@ -103,8 +103,8 @@ static proto_bool app(char *out, size_t cap, size_t *pos, const char *s, size_t 
     return PROTO_TRUE;
 }
 
-size_t pc_statsd_format(char *out, size_t cap, const char *name, const char *value, StatsdType type, float rate,
-                        const char *tags)
+size_t protocore_statsd_format(char *out, size_t cap, const char *name, const char *value, StatsdType type, float rate,
+                               const char *tags)
 {
     if (!out || cap == 0 || !name || !name[0] || !value)
     {
@@ -159,12 +159,12 @@ size_t pc_statsd_format(char *out, size_t cap, const char *name, const char *val
 // The destination is an address, resolved at begin(): a metric call is a format and a queue.
 typedef struct
 {
-    pc_ip dst;
+    protocore_ip dst;
     uint16_t port;
     char tags[96];
     proto_bool ready;
 } StatsdCtx;
-static StatsdCtx s_statsd = {.port = PC_STATSD_PORT};
+static StatsdCtx s_statsd = {.port = PROTOCORE_STATSD_PORT};
 
 static void emit(const StatsdCtx *c, const char *name, const char *value, StatsdType type, float rate)
 {
@@ -172,15 +172,15 @@ static void emit(const StatsdCtx *c, const char *name, const char *value, Statsd
     {
         return;
     }
-    char line[PC_STATSD_LINE_MAX];
-    size_t n = pc_statsd_format(line, sizeof(line), name, value, type, rate, c->tags[0] ? c->tags : NULL);
+    char line[PROTOCORE_STATSD_LINE_MAX];
+    size_t n = protocore_statsd_format(line, sizeof(line), name, value, type, rate, c->tags[0] ? c->tags : NULL);
     if (n)
     {
         Udp.client->sendto(&c->dst, c->port, (const uint8_t *)line, n);
     }
 }
 
-void pc_statsd_begin(const char *host, uint16_t port, const char *global_tags)
+void protocore_statsd_begin(const char *host, uint16_t port, const char *global_tags)
 {
     if (!host)
     {
@@ -192,7 +192,7 @@ void pc_statsd_begin(const char *host, uint16_t port, const char *global_tags)
         s_statsd.ready = PROTO_FALSE;
         return;
     }
-    s_statsd.port = port ? port : PC_STATSD_PORT;
+    s_statsd.port = port ? port : PROTOCORE_STATSD_PORT;
     if (global_tags)
     {
         strncpy(s_statsd.tags, global_tags, sizeof(s_statsd.tags) - 1);
@@ -205,44 +205,44 @@ void pc_statsd_begin(const char *host, uint16_t port, const char *global_tags)
     s_statsd.ready = PROTO_TRUE;
 }
 
-void pc_statsd_count(const char *name, int64_t delta)
+void protocore_statsd_count(const char *name, int64_t delta)
 {
     char v[24];
     v[i64_str(v, delta)] = '\0';
     emit(&s_statsd, name, v, STATSD_COUNTER, 1.0f);
 }
 
-void pc_statsd_count_sampled(const char *name, int64_t delta, float rate)
+void protocore_statsd_count_sampled(const char *name, int64_t delta, float rate)
 {
     char v[24];
     v[i64_str(v, delta)] = '\0';
     emit(&s_statsd, name, v, STATSD_COUNTER, rate);
 }
 
-void pc_statsd_gauge(const char *name, int64_t value)
+void protocore_statsd_gauge(const char *name, int64_t value)
 {
     char v[24];
     v[i64_str(v, value)] = '\0';
     emit(&s_statsd, name, v, STATSD_GAUGE, 1.0f);
 }
 
-void pc_statsd_gauge_delta(const char *name, int64_t delta)
+void protocore_statsd_gauge_delta(const char *name, int64_t delta)
 {
     char v[24];
     v[i64_delta_str(v, delta)] = '\0';
     emit(&s_statsd, name, v, STATSD_GAUGE, 1.0f);
 }
 
-void pc_statsd_timing(const char *name, uint32_t ms)
+void protocore_statsd_timing(const char *name, uint32_t ms)
 {
     char v[16];
     v[u64_str(v, ms)] = '\0';
     emit(&s_statsd, name, v, STATSD_TIMING, 1.0f);
 }
 
-void pc_statsd_set(const char *name, const char *member)
+void protocore_statsd_set(const char *name, const char *member)
 {
     emit(&s_statsd, name, member ? member : "", STATSD_SET, 1.0f);
 }
 
-#endif // PC_ENABLE_STATSD
+#endif // PROTOCORE_ENABLE_STATSD

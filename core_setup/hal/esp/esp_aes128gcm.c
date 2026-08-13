@@ -16,56 +16,56 @@
  * Vendor headers are fine here: this is board_drivers, the partition vendor code is segregated to.
  */
 
-#include "core_setup/board_profiles/pc_platform.h"
+#include "core_setup/board_profiles/protocore_platform.h"
 #include "crypto/aead/aes128gcm.h"
 #include "crypto/crypto_opt.h"
 #include "mmgr/secure.h"
-#include "protocore_config.h" // PC_ENABLE_* gate the whole file; pc_platform.h does not pull this in
+#include "protocore_config.h" // PROTOCORE_ENABLE_* gate the whole file; protocore_platform.h does not pull this in
 
-#if (PC_ENABLE_HTTP3 || PC_ENABLE_DTLS || PC_ENABLE_SMB)
-#if PC_HAS_HW_AESGCM
+#if (PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_ENABLE_SMB)
+#if PROTOCORE_HAS_HW_AESGCM
 
 #include <mbedtls/aes.h>
 #include <mbedtls/gcm.h>
 
-PC_CRYPTO_HOT
+PROTOCORE_CRYPTO_HOT
 
-// pc_aes128 - definition private to this backend; aes128gcm.h forward-declares the symbol only.
-typedef struct pc_aes128
+// protocore_aes128 - definition private to this backend; aes128gcm.h forward-declares the symbol only.
+typedef struct protocore_aes128
 {
     mbedtls_aes_context mbed; ///< mbedtls context (HW-accelerated), key schedule loaded.
-} pc_aes128;
+} protocore_aes128;
 
-static_assert(sizeof(pc_aes128) <= PC_WORK_AES128, "pc_aes128 outgrew PC_WORK_AES128 - raise it in protocore_config.h");
+static_assert(sizeof(protocore_aes128) <= PROTOCORE_WORK_AES128, "protocore_aes128 outgrew PROTOCORE_WORK_AES128 - raise it in protocore_config.h");
 
-struct pc_aes128 *pc_aes128_wants(void)
+struct protocore_aes128 *protocore_aes128_wants(void)
 {
-    pc_span ws = pc_secure_span(sizeof(pc_aes128), 8);
-    return pc_span_ok(ws) ? (struct pc_aes128 *)(ws.buf) : NULL;
+    protocore_span ws = protocore_secure_span(sizeof(protocore_aes128), 8);
+    return protocore_span_ok(ws) ? (struct protocore_aes128 *)(ws.buf) : NULL;
 }
 
-void pc_aes128_init(struct pc_aes128 *ctx, const uint8_t key[16])
+void protocore_aes128_init(struct protocore_aes128 *ctx, const uint8_t key[16])
 {
     mbedtls_aes_init(&ctx->mbed);
     mbedtls_aes_setkey_enc(&ctx->mbed, key, 128);
 }
 
-void pc_aes128_encrypt_block(struct pc_aes128 *ctx, const uint8_t in[16], uint8_t out[16])
+void protocore_aes128_encrypt_block(struct protocore_aes128 *ctx, const uint8_t in[16], uint8_t out[16])
 {
     mbedtls_aes_crypt_ecb(&ctx->mbed, MBEDTLS_AES_ENCRYPT, in, out);
 }
 
-void pc_aes128_wipe(struct pc_aes128 *ctx)
+void protocore_aes128_wipe(struct protocore_aes128 *ctx)
 {
     mbedtls_aes_free(&ctx->mbed);
 }
 
-// The size assert is what keeps PC_WORK_AES128GCM honest against a vendor header we do not own.
-static_assert(sizeof(mbedtls_gcm_context) <= PC_WORK_AES128GCM,
-              "mbedtls_gcm_context outgrew PC_WORK_AES128GCM - raise it in protocore_config.h, which derives "
-              "PC_SECURE_ARENA_SIZE from it");
+// The size assert is what keeps PROTOCORE_WORK_AES128GCM honest against a vendor header we do not own.
+static_assert(sizeof(mbedtls_gcm_context) <= PROTOCORE_WORK_AES128GCM,
+              "mbedtls_gcm_context outgrew PROTOCORE_WORK_AES128GCM - raise it in protocore_config.h, which derives "
+              "PROTOCORE_SECURE_ARENA_SIZE from it");
 
-struct pc_aes128gcm_key *pc_aes128gcm_key_init(void *storage, const uint8_t key[PC_AES128GCM_KEY_LEN])
+struct protocore_aes128gcm_key *protocore_aes128gcm_key_init(void *storage, const uint8_t key[PROTOCORE_AES128GCM_KEY_LEN])
 {
     mbedtls_gcm_context *g = (mbedtls_gcm_context *)(storage);
     mbedtls_gcm_init(g);
@@ -74,37 +74,37 @@ struct pc_aes128gcm_key *pc_aes128gcm_key_init(void *storage, const uint8_t key[
         mbedtls_gcm_free(g);
         return NULL;
     }
-    return (struct pc_aes128gcm_key *)(g);
+    return (struct protocore_aes128gcm_key *)(g);
 }
 
-void pc_aes128gcm_key_wipe(struct pc_aes128gcm_key *k)
+void protocore_aes128gcm_key_wipe(struct protocore_aes128gcm_key *k)
 {
     mbedtls_gcm_context *g = (mbedtls_gcm_context *)(k);
     mbedtls_gcm_free(g); // releases whatever the vendor attached
-    pc_secure_wipe((uint8_t *)(g), sizeof(mbedtls_gcm_context));
+    protocore_secure_wipe((uint8_t *)(g), sizeof(mbedtls_gcm_context));
 }
 
-pc_cspan pc_aes128gcm_seal(struct pc_aes128gcm_key *k, const uint8_t nonce[PC_AES128GCM_IV_LEN], const uint8_t *aad,
+protocore_cspan protocore_aes128gcm_seal(struct protocore_aes128gcm_key *k, const uint8_t nonce[PROTOCORE_AES128GCM_IV_LEN], const uint8_t *aad,
                            size_t aad_len, const uint8_t *pt, size_t pt_len, uint8_t *ct_out,
-                           uint8_t tag_out[PC_AES128GCM_TAG_LEN])
+                           uint8_t tag_out[PROTOCORE_AES128GCM_TAG_LEN])
 {
     mbedtls_gcm_context *g = (mbedtls_gcm_context *)(k);
-    if (mbedtls_gcm_crypt_and_tag(g, MBEDTLS_GCM_ENCRYPT, pt_len, nonce, PC_AES128GCM_IV_LEN, aad, aad_len, pt, ct_out,
-                                  PC_AES128GCM_TAG_LEN, tag_out) != 0)
+    if (mbedtls_gcm_crypt_and_tag(g, MBEDTLS_GCM_ENCRYPT, pt_len, nonce, PROTOCORE_AES128GCM_IV_LEN, aad, aad_len, pt, ct_out,
+                                  PROTOCORE_AES128GCM_TAG_LEN, tag_out) != 0)
     {
-        return pc_cspan_from(NULL, 0);
+        return protocore_cspan_from(NULL, 0);
     }
-    return pc_cspan_from(ct_out, pt_len); // the tag rides in tag_out, not in this span
+    return protocore_cspan_from(ct_out, pt_len); // the tag rides in tag_out, not in this span
 }
 
-proto_bool pc_aes128gcm_open(struct pc_aes128gcm_key *k, const uint8_t nonce[PC_AES128GCM_IV_LEN], const uint8_t *aad,
-                             size_t aad_len, const uint8_t *ct, size_t ct_len, const uint8_t tag[PC_AES128GCM_TAG_LEN],
+proto_bool protocore_aes128gcm_open(struct protocore_aes128gcm_key *k, const uint8_t nonce[PROTOCORE_AES128GCM_IV_LEN], const uint8_t *aad,
+                             size_t aad_len, const uint8_t *ct, size_t ct_len, const uint8_t tag[PROTOCORE_AES128GCM_TAG_LEN],
                              uint8_t *out)
 {
     mbedtls_gcm_context *g = (mbedtls_gcm_context *)(k);
-    return mbedtls_gcm_auth_decrypt(g, ct_len, nonce, PC_AES128GCM_IV_LEN, aad, aad_len, tag, PC_AES128GCM_TAG_LEN, ct,
+    return mbedtls_gcm_auth_decrypt(g, ct_len, nonce, PROTOCORE_AES128GCM_IV_LEN, aad, aad_len, tag, PROTOCORE_AES128GCM_TAG_LEN, ct,
                                     out) == 0;
 }
 
-#endif // PC_HAS_HW_AESGCM
-#endif // PC_ENABLE_HTTP3 || PC_ENABLE_DTLS || PC_ENABLE_SMB
+#endif // PROTOCORE_HAS_HW_AESGCM
+#endif // PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_ENABLE_SMB

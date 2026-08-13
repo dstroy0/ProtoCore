@@ -14,7 +14,7 @@ Numbers are stable and cited from source comments; #16 is folded into #12 and ke
 | 8   | `gmtime` `localtime` `ctime` `asctime`                                                                                                                                             |
 | 9   | `(int)` `(byte)` `(uint8_t)` on an enum member                                                                                                                                     |
 | 10  | signed `+` `*` `<<` that can overflow                                                                                                                                              |
-| 11  | a declaration with no initializer                                                                                                                                                  |
+| 11  | a declaration with no initializer, except `extern const <Name>Ns` for a `typedef struct` namespace                                                                                 |
 | 12  | a file-scope mutable outside one `<Name>Ctx`                                                                                                                                       |
 | 13  | an alias, a wrapper, a second spelling                                                                                                                                             |
 | 14  | British spelling                                                                                                                                                                   |

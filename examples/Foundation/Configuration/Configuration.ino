@@ -15,12 +15,12 @@
  * ============================================================
  * FEATURE FLAGS  (set to 0 to strip from the build entirely)
  * ============================================================
- *   PC_ENABLE_WEBSOCKET    default 1  RFC 6455 framing + SHA-1/base64 handshake
- *   PC_ENABLE_SSE          default 1  Server-Sent Events push
- *   PC_ENABLE_MULTIPART    default 1  multipart/form-data body parser
- *   PC_ENABLE_FILE_SERVING default 1  static files via Arduino FS
- *   PC_ENABLE_AUTH         default 1  HTTP Basic Authentication per-route
- *   PC_ENABLE_DIAG         default 0  /diag JSON of the compile-time config
+ *   PROTOCORE_ENABLE_WEBSOCKET    default 1  RFC 6455 framing + SHA-1/base64 handshake
+ *   PROTOCORE_ENABLE_SSE          default 1  Server-Sent Events push
+ *   PROTOCORE_ENABLE_MULTIPART    default 1  multipart/form-data body parser
+ *   PROTOCORE_ENABLE_FILE_SERVING default 1  static files via Arduino FS
+ *   PROTOCORE_ENABLE_AUTH         default 1  HTTP Basic Authentication per-route
+ *   PROTOCORE_ENABLE_DIAG         default 0  /diag JSON of the compile-time config
  *
  * ============================================================
  * FEATURE DEPENDENCIES  (a child needs its parent; illegal combos #error)
@@ -83,14 +83,14 @@
 // nodes sharing the heap with other subsystems.
 // -------------------------------------------------------------------
 
-#define PC_ENABLE_WEBSOCKET 0
-#define PC_ENABLE_SSE 0
-#define PC_ENABLE_MULTIPART 0
-#define PC_ENABLE_FILE_SERVING 0
-#define PC_ENABLE_AUTH 0
+#define PROTOCORE_ENABLE_WEBSOCKET 0
+#define PROTOCORE_ENABLE_SSE 0
+#define PROTOCORE_ENABLE_MULTIPART 0
+#define PROTOCORE_ENABLE_FILE_SERVING 0
+#define PROTOCORE_ENABLE_AUTH 0
 
 // Diagnostic endpoint: exposes the compile-time config; disable in production.
-#define PC_ENABLE_DIAG 1
+#define PROTOCORE_ENABLE_DIAG 1
 
 // Tightened capacity to match a small REST API.
 #define MAX_CONNS 2
@@ -200,7 +200,7 @@ void setup()
     on_http("/echo", HTTP_POST, handle_echo);
     on_http("/search", HTTP_GET, handle_search);
 
-    // Diagnostic route (PC_ENABLE_DIAG=1): remove or protect in production.
+    // Diagnostic route (PROTOCORE_ENABLE_DIAG=1): remove or protect in production.
     on_http("/diag", HTTP_GET, [](uint8_t id, HttpReq *) { diag(id); });
 
     // Pass a runtime config to override the idle timeout without a rebuild.

@@ -1,6 +1,6 @@
 # HeidenhainLsv2 - read run state from a Heidenhain TNC control
 
-**Layer:** L7 Application · **Build flags:** `PC_ENABLE_LSV2`
+**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_LSV2`
 
 ## What this example teaches
 
@@ -22,12 +22,12 @@ A_LO                 ->  00 00 00 00 T_OK            (rights dropped)
 The codec frames each request and slices each reply off the byte stream:
 
 ```cpp
-pc_lsv2_build_login(tx, sizeof(tx), PC_LSV2_LOGIN_INSPECT, nullptr); // A_LG "INSPECT\0"
-pc_lsv2_build_run_info(tx, sizeof(tx), LSV2_RI_EXEC_STATE);           // R_RI <2-byte selector>
-pc_lsv2_build_filename(tx, sizeof(tx), PC_LSV2_CMD_FILE_LOAD, "PGM.H"); // R_FL "PGM.H\0"
-Lsv2Telegram r;  size_t used;  pc_lsv2_parse(rx, n, &r, &used);       // one telegram off the stream
-pc_lsv2_is_ok(&r);                                                    // T_OK?
-pc_lsv2_error(&r, &err_class, &err_code);                             // T_ER / T_BD 2-byte error
+protocore_lsv2_build_login(tx, sizeof(tx), PROTOCORE_LSV2_LOGIN_INSPECT, nullptr); // A_LG "INSPECT\0"
+protocore_lsv2_build_run_info(tx, sizeof(tx), LSV2_RI_EXEC_STATE);           // R_RI <2-byte selector>
+protocore_lsv2_build_filename(tx, sizeof(tx), PROTOCORE_LSV2_CMD_FILE_LOAD, "PGM.H"); // R_FL "PGM.H\0"
+Lsv2Telegram r;  size_t used;  protocore_lsv2_parse(rx, n, &r, &used);       // one telegram off the stream
+protocore_lsv2_is_ok(&r);                                                    // T_OK?
+protocore_lsv2_error(&r, &err_class, &err_code);                             // T_ER / T_BD 2-byte error
 ```
 
 Access is privilege-gated: log in to a group (`INSPECT` to read, `FILE` for the file system, `DNC`
@@ -44,7 +44,7 @@ server that answers each request with the `00 00 00 00 T_OK` / `S_RI` frames abo
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_LSV2=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_LSV2=1" \
   --lib="." examples/L7-Application/HeidenhainLsv2/HeidenhainLsv2.ino
 ```
 

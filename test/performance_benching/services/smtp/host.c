@@ -7,11 +7,11 @@
 // exercises the reply parser (reply_complete, the untrusted-input hot op) + the message builder together.
 // The device number comes from the rig /bench smtp_run op; this host ns/op is a relative baseline. Build:
 //   gcc -O2 -std=c11 -I. -Isrc -Itest/mocks -Itest/support -Itest/performance_benching/common
-//   -DPC_ENABLE_SMTP=1 test/performance_benching/services/smtp/host.c
+//   -DPROTOCORE_ENABLE_SMTP=1 test/performance_benching/services/smtp/host.c
 //   src/services/net/smtp/smtp.c src/network_drivers/presentation/codec/base64/base64.c
 //   src/mmgr/protomem.c src/mmgr/protostr.c -o /tmp/bs && /tmp/bs
 
-#define PC_ENABLE_SMTP 1
+#define PROTOCORE_ENABLE_SMTP 1
 #include "services/net/smtp/smtp.h"
 
 #include "host_bench.h"

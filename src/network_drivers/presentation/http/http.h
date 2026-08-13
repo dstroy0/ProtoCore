@@ -16,7 +16,7 @@
 
 #include "network_drivers/presentation/http/http_parser/http_parser.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
 /** @brief The request methods a route binds to. */
 typedef enum
@@ -63,7 +63,7 @@ typedef struct
     void (*set_not_found)(Handler cb);
     void (*poll_slot)(uint8_t slot);
     void (*reset)(void);
-#if PC_ENABLE_EDGE_CACHE
+#if PROTOCORE_ENABLE_EDGE_CACHE
     void (*set_edge_poll)(proto_bool (*fn)(uint8_t slot));
 #endif
 } HttpNs;
@@ -71,6 +71,6 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern const HttpNs Http;
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_HTTP_H

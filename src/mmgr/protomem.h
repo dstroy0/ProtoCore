@@ -6,7 +6,7 @@
  * @brief The byte-span operations: copy, move, compare, fill.
  *
  * In mmgr because they move what mmgr hands out. Every allocation leaves the arena rounded up to
- * PC_ARENA_ALIGN and starting on it, so a span's trailing lanes belong to that same allocation.
+ * PROTOCORE_ARENA_ALIGN and starting on it, so a span's trailing lanes belong to that same allocation.
  *
  * The module exports one symbol, @ref mem. Everything in protomem.c has internal linkage.
  *
@@ -20,7 +20,7 @@
 #include "mmgr/rawmemcpy.h" // the loads and stores every walk below steps with
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
 /**
  * @brief The byte-span module. Every access is one register-width load or store.
@@ -45,7 +45,7 @@ PROTO_BEGIN_DECLS
  * so this is a span comparison and not a string one.
  *
  * **Not constant time.** It stops at the first difference, so how long it runs says how many leading
- * bytes matched. A secret comparison uses pc_ct_eq (crypto/ct_eq.h) instead.
+ * bytes matched. A secret comparison uses protocore_ct_eq (crypto/ct_eq.h) instead.
  *
  * @var MemNs::chr
  * The first byte equal to @c c in @c n bytes at @c p, or NULL. @c n is the whole bound: a span has
@@ -75,12 +75,12 @@ typedef struct
 
 // The span walks, in protomem.c. Named here because the table below has to name them, and prefixed
 // because that puts them in the linker's namespace.
-void pc_mem_cpy(void *dst, const void *src, size_t n);
-void pc_mem_move(void *dst, const void *src, size_t n);
-int pc_mem_cmp(const void *a, const void *b, size_t n);
-const void *pc_mem_chr(const void *p, size_t n, uint8_t c);
-void pc_mem_set(void *dst, unsigned char v, size_t n);
-void pc_mem_zero(void *dst, size_t n);
+void protocore_mem_cpy(void *dst, const void *src, size_t n);
+void protocore_mem_move(void *dst, const void *src, size_t n);
+int protocore_mem_cmp(const void *a, const void *b, size_t n);
+const void *protocore_mem_chr(const void *p, size_t n, uint8_t c);
+void protocore_mem_set(void *dst, unsigned char v, size_t n);
+void protocore_mem_zero(void *dst, size_t n);
 
 /**
  * @brief The names, aliased.
@@ -92,9 +92,9 @@ void pc_mem_zero(void *dst, size_t n);
  *
  * `unused` because a header this wide is included by files that take none of it.
  */
-static const MemNs mem
-    __attribute__((unused)) = {pc_mem_cpy, pc_mem_move, pc_mem_cmp, pc_mem_chr, pc_mem_set, pc_mem_zero};
+static const MemNs mem __attribute__((unused)) = {protocore_mem_cpy, protocore_mem_move, protocore_mem_cmp,
+                                                  protocore_mem_chr, protocore_mem_set,  protocore_mem_zero};
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_PROTOMEM_H

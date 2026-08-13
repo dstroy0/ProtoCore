@@ -6,15 +6,15 @@
  * @brief FTP client session driver: the two sockets the ftp.h codec deliberately does not own.
  *
  * ftp.h is pure bytes-on-the-wire. This is the other half: it drives a real control connection
- * (`pc_client_*`) through the RFC 959 login -> TYPE I -> passive-mode -> transfer -> QUIT
+ * (`protocore_client_*`) through the RFC 959 login -> TYPE I -> passive-mode -> transfer -> QUIT
  * sequence, opens the second (data) connection the server names, and streams a payload across it.
  *
- * The payload is **pulled**, not pushed: the caller supplies a `pc_ftp_source` that fills a chunk at
+ * The payload is **pulled**, not pushed: the caller supplies a `protocore_ftp_source` that fills a chunk at
  * a given offset. So the bytes can come from anywhere - a file, a sensor log, or the core-dump
- * partition (`pc_exc_coredump_read`) - without this owner knowing about any of them, and nothing
+ * partition (`protocore_exc_coredump_read`) - without this owner knowing about any of them, and nothing
  * ever has to fit in RAM at once.
  *
- * Blocking and synchronous, bounded by PC_FTP_TIMEOUT_MS per reply: an offload runs at boot or
+ * Blocking and synchronous, bounded by PROTOCORE_FTP_TIMEOUT_MS per reply: an offload runs at boot or
  * from a maintenance route, not from the request hot path.
  *
  * @author  Douglas Quigg (dstroy0)
@@ -26,9 +26,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_FTP_SESSION
+#if PROTOCORE_ENABLE_FTP_SESSION
 
 /** @brief Where to connect and who to log in as. */
 typedef struct
@@ -48,7 +48,7 @@ typedef struct
  *
  * @return bytes written into @p buf.
  */
-typedef size_t (*pc_ftp_source)(void *ctx, size_t offset, uint8_t *buf, size_t cap);
+typedef size_t (*protocore_ftp_source)(void *ctx, size_t offset, uint8_t *buf, size_t cap);
 
 /**
  * @brief Upload @p total bytes pulled from @p src to @p remote_path (RFC 959 STOR).
@@ -60,10 +60,11 @@ typedef size_t (*pc_ftp_source)(void *ctx, size_t offset, uint8_t *buf, size_t c
  *
  * @return true only if the server confirmed the completed transfer.
  */
-proto_bool pc_ftp_store(const FtpTarget *target, const char *remote_path, size_t total, pc_ftp_source src, void *ctx);
+proto_bool protocore_ftp_store(const FtpTarget *target, const char *remote_path, size_t total, protocore_ftp_source src,
+                               void *ctx);
 
-#endif // PC_ENABLE_FTP_SESSION
+#endif // PROTOCORE_ENABLE_FTP_SESSION
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_FTP_SESSION_H

@@ -1,12 +1,12 @@
 # AcceptThrottle - global connection-flood defense
 
-**Layer:** L4 Transport · **Build flags:** `PC_ENABLE_ACCEPT_THROTTLE`
+**Layer:** L4 Transport · **Build flags:** `PROTOCORE_ENABLE_ACCEPT_THROTTLE`
 
 ## What this example teaches
 
 This is a build-time defense, not an API. When enabled, the accept callback
-rejects new connections once more than `PC_ACCEPT_THROTTLE_MAX` have been
-accepted within `PC_ACCEPT_THROTTLE_WINDOW_MS` - a global fixed window using
+rejects new connections once more than `PROTOCORE_ACCEPT_THROTTLE_MAX` have been
+accepted within `PROTOCORE_ACCEPT_THROTTLE_WINDOW_MS` - a global fixed window using
 two counters, no per-IP table. It bounds connection churn (reconnect/brute-force
 floods) on top of the already-bounded connection pool. The sketch's only job is
 to show that enabling the flag is all it takes.
@@ -24,7 +24,7 @@ server.begin(80); // the accept throttle is active automatically when the flag i
 example a window of 1000 ms and a cap of 20 accepts/window:
 
 ```text
-build_flags = -DPC_ENABLE_ACCEPT_THROTTLE=1 -DPC_ACCEPT_THROTTLE_MAX=20 -DPC_ACCEPT_THROTTLE_WINDOW_MS=1000
+build_flags = -DPROTOCORE_ENABLE_ACCEPT_THROTTLE=1 -DPROTOCORE_ACCEPT_THROTTLE_MAX=20 -DPROTOCORE_ACCEPT_THROTTLE_WINDOW_MS=1000
 ```
 
 For a per-source-IP throttle (so one noisy host cannot starve everyone), see
@@ -34,7 +34,7 @@ For a per-source-IP throttle (so one noisy host cannot starve everyone), see
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_ACCEPT_THROTTLE=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_ACCEPT_THROTTLE=1" \
   --lib="." examples/L4-Transport/AcceptThrottle/AcceptThrottle.ino
 ```
 
@@ -50,7 +50,7 @@ verbatim with added explanatory comments:
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-#define PC_ENABLE_ACCEPT_THROTTLE 1
+#define PROTOCORE_ENABLE_ACCEPT_THROTTLE 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"

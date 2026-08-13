@@ -12,28 +12,28 @@
  * other file can name.
  */
 
-#include "mmgr/membuild.h" // pc_sb frame builder (replaces snprintf)
+#include "mmgr/membuild.h" // protocore_sb frame builder (replaces snprintf)
 #include "mmgr/protomem.h"
 #include "mmgr/protostr.h" // str.len: send_text measures the body it was handed
 #include "network_drivers/presentation/http/http.h"
 #include "network_drivers/transport/tcp.h" // conn_pool, Tcp.conn->send, TcpConn/ConnState
 #include "protocore.h"
-#include "shared_primitives/hex.h"  // pc_hex_u32 (chunk size-line writer)
-#include "shared_primitives/mime.h" // PC_MIME_*, mime tables
+#include "shared_primitives/hex.h"  // protocore_hex_u32 (chunk size-line writer)
+#include "shared_primitives/mime.h" // PROTOCORE_MIME_*, mime tables
 
-#if PC_ENABLE_METRICS || PC_ENABLE_STATS
-#include "network_drivers/application/web_assets.h" // PC_STATS_JSON / PC_METRICS_PROM (generated)
-#include "server/clock/clock.h"                     // pc_millis: the library clock, not the platform's
+#if PROTOCORE_ENABLE_METRICS || PROTOCORE_ENABLE_STATS
+#include "network_drivers/application/web_assets.h" // PROTOCORE_STATS_JSON / PROTOCORE_METRICS_PROM (generated)
+#include "server/clock/clock.h"                     // protocore_millis: the library clock, not the platform's
 
 // Render @p v as decimal into the fixed field @p dst. Both exposition snapshots below fill a
-// dozen of these. Unlike snprintf, pc_sb_finish() does NOT terminate when the value would not
+// dozen of these. Unlike snprintf, protocore_sb_finish() does NOT terminate when the value would not
 // fit - it reports 0 and leaves the buffer untouched - so an over-long value must be turned
 // into an empty field explicitly, or the exposition would serve the PREVIOUS snapshot's digits.
 static void num_field(char *dst, size_t cap, uint32_t v)
 {
-    pc_sb b = {dst, cap, 0, PROTO_TRUE};
-    pc_sb_u32(&b, v);
-    if (pc_sb_finish(&b) == 0)
+    protocore_sb b = {dst, cap, 0, PROTO_TRUE};
+    protocore_sb_u32(&b, v);
+    if (protocore_sb_finish(&b) == 0)
     {
         dst[0] = '\0';
     }
@@ -46,7 +46,7 @@ static void num_field(char *dst, size_t cap, uint32_t v)
 //
 // A chunked body larger than the TCP send window cannot go out in one dispatch, so send_chunked()
 // records what remains and chunk_send_pump() pages it out across worker loops. The state is one
-// entry per slot and nothing outside this file can name it: the poll asks pc_resp_holds_slot()
+// entry per slot and nothing outside this file can name it: the poll asks protocore_resp_holds_slot()
 // instead of reading it.
 
 // Per-slot chunked-send continuation: what is left to emit and how to frame it.
@@ -76,22 +76,22 @@ typedef struct
 } RespCtx;
 static RespCtx s_resp;
 
-proto_bool pc_resp_cors_enabled(void)
+proto_bool protocore_resp_cors_enabled(void)
 {
     return s_resp.cors_enabled;
 }
 
-const char *pc_resp_cors_header(void)
+const char *protocore_resp_cors_header(void)
 {
     return s_resp.cors_header_buf;
 }
 
-const char *pc_resp_cache_control(void)
+const char *protocore_resp_cache_control(void)
 {
     return s_resp.cache_control_buf;
 }
 
-char *pc_resp_extra_hdr(uint8_t slot)
+char *protocore_resp_extra_hdr(uint8_t slot)
 {
     return s_resp.extra_hdr[slot];
 }
@@ -118,12 +118,12 @@ void set_cors(const char *origin)
         s_resp.cors_header_buf[0] = '\0';
         return;
     }
-    pc_sb sb = {s_resp.cors_header_buf, sizeof(s_resp.cors_header_buf), 0, PROTO_TRUE};
-    pc_sb_put(&sb, "Access-Control-Allow-Origin: ");
-    pc_sb_put(&sb, origin);
-    pc_sb_put(&sb, "\r\nAccess-Control-Allow-Methods: GET, POST, PUT, DELETE, PATCH, HEAD, "
-                   "OPTIONS\r\nAccess-Control-Allow-Headers: Content-Type\r\n");
-    if (pc_sb_finish(&sb) == 0)
+    protocore_sb sb = {s_resp.cors_header_buf, sizeof(s_resp.cors_header_buf), 0, PROTO_TRUE};
+    protocore_sb_put(&sb, "Access-Control-Allow-Origin: ");
+    protocore_sb_put(&sb, origin);
+    protocore_sb_put(&sb, "\r\nAccess-Control-Allow-Methods: GET, POST, PUT, DELETE, PATCH, HEAD, "
+                          "OPTIONS\r\nAccess-Control-Allow-Headers: Content-Type\r\n");
+    if (protocore_sb_finish(&sb) == 0)
     {
         s_resp.cors_header_buf[0] = '\0';
     }
@@ -137,22 +137,22 @@ void set_cache_control(const char *value)
         s_resp.cache_control_buf[0] = '\0';
         return;
     }
-    pc_sb sb = {s_resp.cache_control_buf, sizeof(s_resp.cache_control_buf), 0, PROTO_TRUE};
-    pc_sb_put(&sb, "Cache-Control: ");
-    pc_sb_put(&sb, value);
-    pc_sb_put(&sb, "\r\n");
-    if (pc_sb_finish(&sb) == 0)
+    protocore_sb sb = {s_resp.cache_control_buf, sizeof(s_resp.cache_control_buf), 0, PROTO_TRUE};
+    protocore_sb_put(&sb, "Cache-Control: ");
+    protocore_sb_put(&sb, value);
+    protocore_sb_put(&sb, "\r\n");
+    if (protocore_sb_finish(&sb) == 0)
     {
         s_resp.cache_control_buf[0] = '\0';
     }
 }
 
-proto_bool pc_resp_holds_slot(uint8_t slot)
+proto_bool protocore_resp_holds_slot(uint8_t slot)
 {
     return s_resp.chunk[slot].active;
 }
 
-void pc_resp_reset(void)
+void protocore_resp_reset(void)
 {
     // Everything this file owns is per-run configuration or an in-flight transfer, and a test case
     // starts with neither. One store: the whole context is trivially copyable and its zero state is
@@ -245,7 +245,7 @@ void send_template(uint8_t slot_id, int code, const char *content_type, const ch
     {
         return;
     }
-    if (!pc_conn_active(slot_id))
+    if (!protocore_conn_active(slot_id))
     {
         http_reset(slot_id);
         return;
@@ -255,20 +255,20 @@ void send_template(uint8_t slot_id, int code, const char *content_type, const ch
     size_t body_len = tmpl_walk(slot_id, tmpl, resolver, PROTO_FALSE);
 
     proto_bool keep;
-    const char *cl = pc_resp_conn_hdr(slot_id, &keep);
+    const char *cl = protocore_resp_conn_hdr(slot_id, &keep);
 
     char header[RESP_HDR_BUF_SIZE];
-    pc_sb hb = {header, RESP_HDR_BUF_SIZE, 0, PROTO_TRUE};
-    pc_sb_lit(&hb, "HTTP/1.1 ");
-    pc_sb_u32(&hb, (uint32_t)code);
-    pc_sb_lit(&hb, " ");
-    pc_sb_put(&hb, Http.status_text(code));
-    pc_sb_lit(&hb, "\r\nContent-Type: ");
-    pc_sb_put(&hb, content_type);
-    pc_sb_lit(&hb, "\r\nContent-Length: ");
-    pc_sb_u32(&hb, (uint32_t)body_len);
-    pc_sb_lit(&hb, "\r\n");
-    int hlen = (int)pc_sb_finish(&hb);
+    protocore_sb hb = {header, RESP_HDR_BUF_SIZE, 0, PROTO_TRUE};
+    protocore_sb_lit(&hb, "HTTP/1.1 ");
+    protocore_sb_u32(&hb, (uint32_t)code);
+    protocore_sb_lit(&hb, " ");
+    protocore_sb_put(&hb, Http.status_text(code));
+    protocore_sb_lit(&hb, "\r\nContent-Type: ");
+    protocore_sb_put(&hb, content_type);
+    protocore_sb_lit(&hb, "\r\nContent-Length: ");
+    protocore_sb_u32(&hb, (uint32_t)body_len);
+    protocore_sb_lit(&hb, "\r\n");
+    int hlen = (int)protocore_sb_finish(&hb);
     hlen = proto_append_resp_trailer(header, RESP_HDR_BUF_SIZE, hlen, slot_id, cl);
 
     proto_bool head = Http.req_is_head(slot_id);
@@ -280,7 +280,7 @@ void send_template(uint8_t slot_id, int code, const char *content_type, const ch
         tmpl_walk(slot_id, tmpl, resolver, PROTO_TRUE);
     }
 
-    pc_resp_end(slot_id, code, (int)body_len, keep, /*pre_flushed=*/PROTO_FALSE);
+    protocore_resp_end(slot_id, code, (int)body_len, keep, /*pre_flushed=*/PROTO_FALSE);
 }
 
 // ---------------------------------------------------------------------------
@@ -301,14 +301,14 @@ void send_chunked(uint8_t slot_id, int code, const char *content_type, ChunkSour
     {
         return;
     }
-    if (!pc_conn_active(slot_id))
+    if (!protocore_conn_active(slot_id))
     {
         http_reset(slot_id);
         return;
     }
 
     proto_bool keep;
-    const char *cl = pc_resp_conn_hdr(slot_id, &keep);
+    const char *cl = protocore_resp_conn_hdr(slot_id, &keep);
 
     // RFC 7230 3.3.1: chunked is an HTTP/1.1 transfer-coding - it MUST NOT be sent
     // to an HTTP/1.0 (or unknown-version) client. Fall back to a close-delimited
@@ -317,24 +317,24 @@ void send_chunked(uint8_t slot_id, int code, const char *content_type, ChunkSour
     proto_bool raw = (http_pool[slot_id].version != HTTP_11);
 
     char header[RESP_HDR_BUF_SIZE];
-    pc_sb hb2 = {header, RESP_HDR_BUF_SIZE, 0, PROTO_TRUE};
+    protocore_sb hb2 = {header, RESP_HDR_BUF_SIZE, 0, PROTO_TRUE};
     if (raw)
     {
         keep = PROTO_FALSE; // close-delimited: the connection close IS the message boundary
         cl = "Connection: close\r\n";
-        pc_sb_put(&hb2, "HTTP/1.0 ");
+        protocore_sb_put(&hb2, "HTTP/1.0 ");
     }
     else
     {
-        pc_sb_put(&hb2, "HTTP/1.1 ");
+        protocore_sb_put(&hb2, "HTTP/1.1 ");
     }
-    pc_sb_u32(&hb2, (uint32_t)code);
-    pc_sb_put(&hb2, " ");
-    pc_sb_put(&hb2, Http.status_text(code));
-    pc_sb_put(&hb2, "\r\nContent-Type: ");
-    pc_sb_put(&hb2, content_type);
-    pc_sb_put(&hb2, raw ? "\r\n" : "\r\nTransfer-Encoding: chunked\r\n");
-    int hlen = (int)pc_sb_finish(&hb2);
+    protocore_sb_u32(&hb2, (uint32_t)code);
+    protocore_sb_put(&hb2, " ");
+    protocore_sb_put(&hb2, Http.status_text(code));
+    protocore_sb_put(&hb2, "\r\nContent-Type: ");
+    protocore_sb_put(&hb2, content_type);
+    protocore_sb_put(&hb2, raw ? "\r\n" : "\r\nTransfer-Encoding: chunked\r\n");
+    int hlen = (int)protocore_sb_finish(&hb2);
     hlen = proto_append_resp_trailer(header, RESP_HDR_BUF_SIZE, hlen, slot_id, cl);
 
     Tcp.conn->send(slot_id, header, (proto_u16)hlen);
@@ -342,7 +342,7 @@ void send_chunked(uint8_t slot_id, int code, const char *content_type, ChunkSour
     // HEAD carries the headers but no body or terminator.
     if (Http.req_is_head(slot_id) || !source)
     {
-        pc_resp_end(slot_id, code, 0, keep, /*pre_flushed=*/PROTO_FALSE);
+        protocore_resp_end(slot_id, code, 0, keep, /*pre_flushed=*/PROTO_FALSE);
         return;
     }
 
@@ -367,7 +367,7 @@ void chunk_send_pump(uint8_t slot_id)
         return;
     }
 
-    if (!pc_conn_active(slot_id))
+    if (!protocore_conn_active(slot_id))
     {
         s->active = PROTO_FALSE; // connection gone mid-stream
         return;
@@ -409,8 +409,8 @@ void chunk_send_pump(uint8_t slot_id)
             }
             Tcp.conn->flush(slot_id);
             s->active = PROTO_FALSE;
-            pc_resp_end(slot_id, s->status, s->total, s->keep,
-                        /*pre_flushed=*/PROTO_FALSE); // raw: keep==false -> connection close ends the body
+            protocore_resp_end(slot_id, s->status, s->total, s->keep,
+                               /*pre_flushed=*/PROTO_FALSE); // raw: keep==false -> connection close ends the body
             return;
         }
         if (n > cap)
@@ -425,11 +425,11 @@ void chunk_send_pump(uint8_t slot_id)
         else
         {
             // Prepend the size line (right-justified against the body) + append the trailing CRLF,
-            // then send the framed chunk in one call. The size line is a hand-written hex (pc_hex_u32),
+            // then send the framed chunk in one call. The size line is a hand-written hex (protocore_hex_u32),
             // not snprintf("%x") - the format-string parse dwarfed the few nibble writes on the hot
             // per-chunk path (performance_benching/server/send_pump: ~9x on the host, more on the ESP32).
             char digits[8];
-            size_t nd = pc_hex_u32((uint32_t)n, digits);
+            size_t nd = protocore_hex_u32((uint32_t)n, digits);
             size_t sn = nd + 2; // "<hex>\r\n"
             uint8_t *start = body - sn;
             mem.cpy(start, digits, nd);
@@ -462,14 +462,14 @@ void proto_add_response_header(uint8_t slot_id, const char *name, const char *va
     char *buf = s_resp.extra_hdr[slot_id];
     size_t used = strnlen(buf, EXTRA_HDR_BUF_SIZE);
     size_t room = EXTRA_HDR_BUF_SIZE - used;
-    pc_sb hb3 = {buf + used, room, 0, PROTO_TRUE};
-    pc_sb_put(&hb3, name);
-    pc_sb_put(&hb3, ": ");
-    pc_sb_put(&hb3, value);
-    pc_sb_put(&hb3, "\r\n");
+    protocore_sb hb3 = {buf + used, room, 0, PROTO_TRUE};
+    protocore_sb_put(&hb3, name);
+    protocore_sb_put(&hb3, ": ");
+    protocore_sb_put(&hb3, value);
+    protocore_sb_put(&hb3, "\r\n");
     // A latched builder may have written the pieces that did fit, so rewinding to `used` is what
     // drops the header whole rather than leaving a truncated one.
-    if (pc_sb_finish(&hb3) == 0)
+    if (protocore_sb_finish(&hb3) == 0)
     {
         buf[used] = '\0';
     }
@@ -485,18 +485,18 @@ void set_cookie(uint8_t slot_id, const char *name, const char *value, const char
     char *buf = s_resp.extra_hdr[slot_id];
     size_t used = strnlen(buf, EXTRA_HDR_BUF_SIZE);
     size_t room = EXTRA_HDR_BUF_SIZE - used;
-    pc_sb cb = {buf + used, room, 0, PROTO_TRUE};
-    pc_sb_put(&cb, "Set-Cookie: ");
-    pc_sb_put(&cb, name);
-    pc_sb_put(&cb, "=");
-    pc_sb_put(&cb, value);
+    protocore_sb cb = {buf + used, room, 0, PROTO_TRUE};
+    protocore_sb_put(&cb, "Set-Cookie: ");
+    protocore_sb_put(&cb, name);
+    protocore_sb_put(&cb, "=");
+    protocore_sb_put(&cb, value);
     if (attrs != NULL && attrs[0] != '\0')
     {
-        pc_sb_put(&cb, "; ");
-        pc_sb_put(&cb, attrs);
+        protocore_sb_put(&cb, "; ");
+        protocore_sb_put(&cb, attrs);
     }
-    pc_sb_put(&cb, "\r\n");
-    if (pc_sb_finish(&cb) == 0)
+    protocore_sb_put(&cb, "\r\n");
+    if (protocore_sb_finish(&cb) == 0)
     {
         buf[used] = '\0'; // would not fit: drop this cookie entirely
     }
@@ -519,7 +519,7 @@ const char *mime_type(const char *path)
 {
     if (!path)
     {
-        return PC_MIME_OCTET_STREAM;
+        return PROTOCORE_MIME_OCTET_STREAM;
     }
 
     // Find the last '.' after the last '/'.
@@ -537,7 +537,7 @@ const char *mime_type(const char *path)
     }
     if (!dot || dot[1] == '\0')
     {
-        return PC_MIME_OCTET_STREAM;
+        return PROTOCORE_MIME_OCTET_STREAM;
     }
     const char *ext = dot + 1;
 
@@ -547,13 +547,27 @@ const char *mime_type(const char *path)
         const char *ext;
         const char *type;
     } table[] = {
-        {"html", PC_MIME_TEXT_HTML}, {"htm", PC_MIME_TEXT_HTML},   {"css", "text/css"},
-        {"js", PC_MIME_JAVASCRIPT},  {"mjs", PC_MIME_JAVASCRIPT},  {"json", PC_MIME_JSON},
-        {"xml", "application/xml"},  {"txt", PC_MIME_TEXT_PLAIN},  {"csv", "text/csv"},
-        {"svg", "image/svg+xml"},    {"png", "image/png"},         {"jpg", "image/jpeg"},
-        {"jpeg", "image/jpeg"},      {"gif", "image/gif"},         {"ico", "image/x-icon"},
-        {"webp", "image/webp"},      {"wasm", "application/wasm"}, {"woff", "font/woff"},
-        {"woff2", "font/woff2"},     {"ttf", "font/ttf"},          {"pdf", "application/pdf"},
+        {"html", PROTOCORE_MIME_TEXT_HTML},
+        {"htm", PROTOCORE_MIME_TEXT_HTML},
+        {"css", "text/css"},
+        {"js", PROTOCORE_MIME_JAVASCRIPT},
+        {"mjs", PROTOCORE_MIME_JAVASCRIPT},
+        {"json", PROTOCORE_MIME_JSON},
+        {"xml", "application/xml"},
+        {"txt", PROTOCORE_MIME_TEXT_PLAIN},
+        {"csv", "text/csv"},
+        {"svg", "image/svg+xml"},
+        {"png", "image/png"},
+        {"jpg", "image/jpeg"},
+        {"jpeg", "image/jpeg"},
+        {"gif", "image/gif"},
+        {"ico", "image/x-icon"},
+        {"webp", "image/webp"},
+        {"wasm", "application/wasm"},
+        {"woff", "font/woff"},
+        {"woff2", "font/woff2"},
+        {"ttf", "font/ttf"},
+        {"pdf", "application/pdf"},
         {"gz", "application/gzip"},
     };
     for (size_t i = 0; i < sizeof(table) / sizeof(table[0]); i++)
@@ -578,15 +592,15 @@ const char *mime_type(const char *path)
             return table[i].type;
         }
     }
-    return PC_MIME_OCTET_STREAM;
+    return PROTOCORE_MIME_OCTET_STREAM;
 }
 
 // ---------------------------------------------------------------------------
 // Runtime stats endpoint
 // ---------------------------------------------------------------------------
 
-#if PC_ENABLE_STATS
-// The stats body is an editable template asset (src/web_assets/input/PC_STATS_JSON.json)
+#if PROTOCORE_ENABLE_STATS
+// The stats body is an editable template asset (src/web_assets/input/PROTOCORE_STATS_JSON.json)
 // rendered through the {{name}} engine, like /metrics - values are substituted by
 // name, with no printf-format coupling. Snapshot into statics just before the
 // (twice-invoked, size + emit) resolver runs.
@@ -629,7 +643,7 @@ static const char *stats_var(const char *name)
         return s_stats.active;
     }
     // The not-found tail is unreachable: stats_var is only ever invoked by stats() against
-    // PC_STATS_JSON, and that asset's seven placeholders are exactly the seven names tested here,
+    // PROTOCORE_STATS_JSON, and that asset's seven placeholders are exactly the seven names tested here,
     // so the last one always matches. Kept because the resolver has to answer an unknown name.
     if (!strcmp(name, "free_heap"))
     {
@@ -642,8 +656,8 @@ void stats(uint8_t slot_id)
 {
     int active = Tcp.conn->active_count();
 
-    unsigned long up = pc_millis();
-#if PC_HAS_VENDOR_HEAP_INFO
+    unsigned long up = protocore_millis();
+#if PROTOCORE_HAS_VENDOR_HEAP_INFO
     uint32_t heap = ESP.getFreeHeap();
 #else
     uint32_t heap = 0;
@@ -651,8 +665,8 @@ void stats(uint8_t slot_id)
 
     // One read of the bucket, not four reads of four owners: a report that gathered field by field
     // could straddle two server states while it was still formatting the first.
-    pc_signal_snapshot sig;
-    pc_signal_know(&sig);
+    protocore_signal_snapshot sig;
+    protocore_signal_know(&sig);
 
     // millis() is a 32-bit tick counter, so the uptime field wraps with it.
     num_field(s_stats.uptime, sizeof(s_stats.uptime), (uint32_t)up);
@@ -663,13 +677,13 @@ void stats(uint8_t slot_id)
     num_field(s_stats.active, sizeof(s_stats.active), (uint32_t)(active < 0 ? 0 : active));
     num_field(s_stats.heap, sizeof(s_stats.heap), heap);
 
-    send_template(slot_id, 200, PC_MIME_JSON, PC_STATS_JSON, stats_var);
+    send_template(slot_id, 200, PROTOCORE_MIME_JSON, PROTOCORE_STATS_JSON, stats_var);
 }
-#endif // PC_ENABLE_STATS
+#endif // PROTOCORE_ENABLE_STATS
 
-#if PC_ENABLE_METRICS
+#if PROTOCORE_ENABLE_METRICS
 // The Prometheus exposition is an editable template asset (src/web_assets/input/
-// PC_METRICS_PROM.txt) rendered through the {{name}} engine, so values are
+// PROTOCORE_METRICS_PROM.txt) rendered through the {{name}} engine, so values are
 // substituted by name (no printf format coupling). metrics() snapshots the live
 // values into these statics just before send_template(), which invokes the
 // resolver twice (size + emit) - deterministic because the snapshot is fixed.
@@ -732,7 +746,7 @@ static const char *metrics_var(const char *name)
         return s_metrics.heapsize;
     }
     // The not-found tail is unreachable: metrics_var is only ever driven by the placeholders in
-    // PC_METRICS_PROM.txt, and every one of the 11 resolves to a case above. That is not an
+    // PROTOCORE_METRICS_PROM.txt, and every one of the 11 resolves to a case above. That is not an
     // assumption - test_metrics_emits_prometheus asserts every emitted sample line carries a
     // value, which fails the moment a placeholder stops resolving (as three of them silently did
     // until the resolver names were aligned with the template).
@@ -747,8 +761,8 @@ void metrics(uint8_t slot_id)
 {
     int active = Tcp.conn->active_count();
 
-    unsigned long up = pc_millis();
-#if PC_HAS_VENDOR_HEAP_INFO
+    unsigned long up = protocore_millis();
+#if PROTOCORE_HAS_VENDOR_HEAP_INFO
     uint32_t heap = ESP.getFreeHeap();
     uint32_t min_heap = ESP.getMinFreeHeap();
     uint32_t heap_size = ESP.getHeapSize();
@@ -760,8 +774,8 @@ void metrics(uint8_t slot_id)
     uint32_t max_alloc = 0;
 #endif
 
-    pc_signal_snapshot sig;
-    pc_signal_know(&sig);
+    protocore_signal_snapshot sig;
+    protocore_signal_know(&sig);
 
     num_field(s_metrics.uptime, sizeof(s_metrics.uptime), (uint32_t)(up / 1000UL));
     num_field(s_metrics.requests, sizeof(s_metrics.requests), sig.requests_total);
@@ -775,9 +789,9 @@ void metrics(uint8_t slot_id)
     num_field(s_metrics.heapsize, sizeof(s_metrics.heapsize), heap_size);
     num_field(s_metrics.maxalloc, sizeof(s_metrics.maxalloc), max_alloc);
 
-    send_template(slot_id, 200, "text/plain; version=0.0.4; charset=utf-8", PC_METRICS_PROM, metrics_var);
+    send_template(slot_id, 200, "text/plain; version=0.0.4; charset=utf-8", PROTOCORE_METRICS_PROM, metrics_var);
 }
-#endif // PC_ENABLE_METRICS
+#endif // PROTOCORE_ENABLE_METRICS
 
 // Finish a response: flush, then either begin the graceful CONN_CLOSING dwell
 // (close path) or leave the slot active for reuse (keep-alive). The HTTP parser
@@ -790,7 +804,7 @@ void metrics(uint8_t slot_id)
 // The connection is addressed by slot alone and the transport resolves the pcb internally, the
 // same way the RX read path does: no pcb is threaded through the app layer, so the send target
 // cannot disagree with the slot.
-void pc_resp_end(uint8_t slot_id, int code, int body_len, proto_bool keep, proto_bool pre_flushed)
+void protocore_resp_end(uint8_t slot_id, int code, int body_len, proto_bool keep, proto_bool pre_flushed)
 {
     if (!pre_flushed)
     {
@@ -806,10 +820,10 @@ void pc_resp_end(uint8_t slot_id, int code, int body_len, proto_bool keep, proto
 
 // Resolve the Connection response header (and report keep-alive intent) in one
 // place so every response path agrees. Keep-alive compiled out always closes.
-const char *pc_resp_conn_hdr(uint8_t slot_id, proto_bool *keep_out)
+const char *protocore_resp_conn_hdr(uint8_t slot_id, proto_bool *keep_out)
 {
     proto_bool keep = PROTO_FALSE;
-#if PC_ENABLE_KEEPALIVE
+#if PROTOCORE_ENABLE_KEEPALIVE
     keep = keepalive_eval(slot_id);
 #else
     (void)slot_id;
@@ -827,17 +841,17 @@ const char *pc_resp_conn_hdr(uint8_t slot_id, proto_bool *keep_out)
 // the terminating blank line) to a header buffer already holding the status line
 // and per-response headers. One owner for the trailer every dynamic response ends
 // with. Returns the new total length.
-const char PC_RESP_HDR_OVERFLOW[] = "HTTP/1.1 500 Internal Server Error\r\n"
-                                    "Content-Length: 0\r\n"
-                                    "Connection: close\r\n\r\n";
+const char PROTOCORE_RESP_HDR_OVERFLOW[] = "HTTP/1.1 500 Internal Server Error\r\n"
+                                           "Content-Length: 0\r\n"
+                                           "Connection: close\r\n\r\n";
 // Taken with sizeof at the definition, where the array bound is still visible. The send site sees
 // only `extern const char[]`, so measuring it there would mean scanning a string whose length was
 // known when it was written.
-const size_t PC_RESP_HDR_OVERFLOW_LEN = sizeof(PC_RESP_HDR_OVERFLOW) - 1;
+const size_t PROTOCORE_RESP_HDR_OVERFLOW_LEN = sizeof(PROTOCORE_RESP_HDR_OVERFLOW) - 1;
 
 int proto_append_resp_trailer(char *buf, size_t cap, int hlen, uint8_t slot_id, const char *cl)
 {
-    // hlen is the caller's status-line length from pc_sb_finish, which reports 0 for a status line
+    // hlen is the caller's status-line length from protocore_sb_finish, which reports 0 for a status line
     // that did not fit. Appending the trailer at offset 0 in that case would emit a response with
     // no status line at all, so 0 propagates as failure and the caller sends a canned reply.
     //
@@ -852,24 +866,24 @@ int proto_append_resp_trailer(char *buf, size_t cap, int hlen, uint8_t slot_id, 
     {
         return 0;
     }
-#if PC_HTTP_EMIT_DATE
+#if PROTOCORE_HTTP_EMIT_DATE
     // RFC 7231 7.1.1.2: emit Date only when a real wall-clock time exists; a clock-less device (no
     // synced/valid time source yet) omits it. The time comes from the multi-source registry (any
-    // enabled NTP / GPS / RTC / ... by priority) when PC_ENABLE_TIME_SOURCE is set, else straight
+    // enabled NTP / GPS / RTC / ... by priority) when PROTOCORE_ENABLE_TIME_SOURCE is set, else straight
     // from NTP.
     char date_hdr[48] = "";
     char imf[40];
-#if PC_ENABLE_TIME_SOURCE
-    if (pc_time_http_date(imf, sizeof(imf)) > 0)
+#if PROTOCORE_ENABLE_TIME_SOURCE
+    if (protocore_time_http_date(imf, sizeof(imf)) > 0)
 #else
-    if (pc_ntp_http_date(imf, sizeof(imf)) > 0)
+    if (protocore_ntp_http_date(imf, sizeof(imf)) > 0)
 #endif
     {
-        pc_sb sb_date_hdr = {date_hdr, sizeof(date_hdr), 0, PROTO_TRUE};
-        pc_sb_put(&sb_date_hdr, "Date: ");
-        pc_sb_put(&sb_date_hdr, imf);
-        pc_sb_put(&sb_date_hdr, "\r\n");
-        if (pc_sb_finish(&sb_date_hdr) == 0)
+        protocore_sb sb_date_hdr = {date_hdr, sizeof(date_hdr), 0, PROTO_TRUE};
+        protocore_sb_put(&sb_date_hdr, "Date: ");
+        protocore_sb_put(&sb_date_hdr, imf);
+        protocore_sb_put(&sb_date_hdr, "\r\n");
+        if (protocore_sb_finish(&sb_date_hdr) == 0)
         {
             date_hdr[0] = '\0';
         }
@@ -877,13 +891,13 @@ int proto_append_resp_trailer(char *buf, size_t cap, int hlen, uint8_t slot_id, 
 #else
     const char *date_hdr = "";
 #endif
-    pc_sb sb411 = {buf + hlen, cap - (size_t)hlen, 0, PROTO_TRUE};
-    pc_sb_put(&sb411, date_hdr);
-    pc_sb_put(&sb411, pc_resp_cors_enabled() ? pc_resp_cors_header() : "");
-    pc_sb_put(&sb411, pc_resp_extra_hdr(slot_id));
-    pc_sb_put(&sb411, cl);
-    pc_sb_put(&sb411, "\r\n");
-    int n = (int)pc_sb_finish(&sb411);
+    protocore_sb sb411 = {buf + hlen, cap - (size_t)hlen, 0, PROTO_TRUE};
+    protocore_sb_put(&sb411, date_hdr);
+    protocore_sb_put(&sb411, protocore_resp_cors_enabled() ? protocore_resp_cors_header() : "");
+    protocore_sb_put(&sb411, protocore_resp_extra_hdr(slot_id));
+    protocore_sb_put(&sb411, cl);
+    protocore_sb_put(&sb411, "\r\n");
+    int n = (int)protocore_sb_finish(&sb411);
     if (!sb411.ok)
     {
         return 0; // trailer does not fit: refuse the response rather than send a headless one
@@ -917,14 +931,14 @@ void send_bin(uint8_t slot_id, int code, const char *content_type, const uint8_t
     }
     const char *payload = (const char *)body;
     TcpConn *conn = &conn_pool[slot_id];
-#if PC_ENABLE_HTTP2 || PC_ENABLE_HTTP3
+#if PROTOCORE_ENABLE_HTTP2 || PROTOCORE_ENABLE_HTTP3
     // A self-framing protocol (HTTP/2, HTTP/3) installed its own response sink at negotiation /
     // dispatch time; route through it and let it own its framing + connection lifecycle. This runs
     // before the HTTP/1.1 pcb check because that check is a TCP-transport concern (the HTTP/3 slot
     // has no pcb by design, and an h2 connection manages its own).
-    if (conn->pc_resp_sink)
+    if (conn->protocore_resp_sink)
     {
-        conn->pc_resp_sink(slot_id, code, content_type, payload, body_len);
+        conn->protocore_resp_sink(slot_id, code, content_type, payload, body_len);
         return;
     }
 #endif
@@ -937,20 +951,20 @@ void send_bin(uint8_t slot_id, int code, const char *content_type, const uint8_t
     int payload_len = (int)(body_len > 0xFFFF ? 0xFFFF : body_len);
 
     proto_bool keep;
-    const char *cl = pc_resp_conn_hdr(slot_id, &keep);
+    const char *cl = protocore_resp_conn_hdr(slot_id, &keep);
 
     char header[RESP_HDR_BUF_SIZE];
-    pc_sb sb_header2 = {header, sizeof(header), 0, PROTO_TRUE};
-    pc_sb_put(&sb_header2, "HTTP/1.1 ");
-    pc_sb_i64(&sb_header2, (int64_t)(code));
-    pc_sb_put(&sb_header2, " ");
-    pc_sb_put(&sb_header2, Http.status_text(code));
-    pc_sb_put(&sb_header2, "\r\nContent-Type: ");
-    pc_sb_put(&sb_header2, content_type);
-    pc_sb_put(&sb_header2, "\r\nContent-Length: ");
-    pc_sb_i64(&sb_header2, (int64_t)(payload_len));
-    pc_sb_put(&sb_header2, "\r\n");
-    int hlen = (int)pc_sb_finish(&sb_header2);
+    protocore_sb sb_header2 = {header, sizeof(header), 0, PROTO_TRUE};
+    protocore_sb_put(&sb_header2, "HTTP/1.1 ");
+    protocore_sb_i64(&sb_header2, (int64_t)(code));
+    protocore_sb_put(&sb_header2, " ");
+    protocore_sb_put(&sb_header2, Http.status_text(code));
+    protocore_sb_put(&sb_header2, "\r\nContent-Type: ");
+    protocore_sb_put(&sb_header2, content_type);
+    protocore_sb_put(&sb_header2, "\r\nContent-Length: ");
+    protocore_sb_i64(&sb_header2, (int64_t)(payload_len));
+    protocore_sb_put(&sb_header2, "\r\n");
+    int hlen = (int)protocore_sb_finish(&sb_header2);
     hlen = proto_append_resp_trailer(header, sizeof(header), hlen, slot_id, cl);
     if (hlen == 0)
     {
@@ -958,12 +972,12 @@ void send_bin(uint8_t slot_id, int code, const char *content_type, const uint8_t
         // block that filled the buffer). Truncating them would emit a header block with no
         // terminating CRLF and desync the connection, so a fixed reply that always fits goes out
         // instead and the connection closes.
-        Tcp.conn->send_flush(slot_id, PC_RESP_HDR_OVERFLOW, (proto_u16)PC_RESP_HDR_OVERFLOW_LEN);
-        pc_resp_end(slot_id, 500, 0, PROTO_FALSE, /*pre_flushed=*/PROTO_FALSE);
+        Tcp.conn->send_flush(slot_id, PROTOCORE_RESP_HDR_OVERFLOW, (proto_u16)PROTOCORE_RESP_HDR_OVERFLOW_LEN);
+        protocore_resp_end(slot_id, 500, 0, PROTO_FALSE, /*pre_flushed=*/PROTO_FALSE);
         return;
     }
 
-    // The slot stays CONN_ACTIVE through the write for both paths; pc_resp_end then
+    // The slot stays CONN_ACTIVE through the write for both paths; protocore_resp_end then
     // begins the CONN_CLOSING dwell on the close path (finalized once ACKed).
 
     proto_bool head = Http.req_is_head(slot_id);
@@ -971,7 +985,7 @@ void send_bin(uint8_t slot_id, int code, const char *content_type, const uint8_t
     // HEAD responses carry the headers (incl. Content-Length) but no body. For a
     // body that fits the header scratch, coalesce headers+body into a single send
     // so the response costs one tcpip_thread round-trip rather than two. The final
-    // write carries the flush (Tcp.conn->send_flush) and pc_resp_end skips it, so a
+    // write carries the flush (Tcp.conn->send_flush) and protocore_resp_end skips it, so a
     // small keep-alive response is one marshal (write+output).
     if (!head && payload_len > 0 && (size_t)hlen + (size_t)payload_len <= sizeof(header))
     {
@@ -988,7 +1002,7 @@ void send_bin(uint8_t slot_id, int code, const char *content_type, const uint8_t
         Tcp.conn->send_flush(slot_id, header, (proto_u16)hlen);
     }
 
-    pc_resp_end(slot_id, code, payload_len, keep, /*pre_flushed=*/PROTO_TRUE);
+    protocore_resp_end(slot_id, code, payload_len, keep, /*pre_flushed=*/PROTO_TRUE);
 }
 
 /**
@@ -996,7 +1010,7 @@ void send_bin(uint8_t slot_id, int code, const char *content_type, const uint8_t
  *
  * Used for CORS preflight (204) and any response where only status headers are needed. Takes the
  * same slot lifecycle as send_bin(): a self-framing protocol's sink wins if one is installed, an
- * inactive slot is reset without writing, and pc_resp_end() owns the close-or-recycle decision.
+ * inactive slot is reset without writing, and protocore_resp_end() owns the close-or-recycle decision.
  *
  * @param slot_id Connection slot index.
  * @param code    HTTP status code, e.g. 204.
@@ -1008,10 +1022,10 @@ void send_empty(uint8_t slot_id, int code)
         return;
     }
     TcpConn *conn = &conn_pool[slot_id];
-#if PC_ENABLE_HTTP2 || PC_ENABLE_HTTP3
-    if (conn->pc_resp_sink)
+#if PROTOCORE_ENABLE_HTTP2 || PROTOCORE_ENABLE_HTTP3
+    if (conn->protocore_resp_sink)
     {
-        conn->pc_resp_sink(slot_id, code, "text/plain", "", 0);
+        conn->protocore_resp_sink(slot_id, code, "text/plain", "", 0);
         return;
     }
 #endif
@@ -1022,21 +1036,21 @@ void send_empty(uint8_t slot_id, int code)
     }
 
     proto_bool keep;
-    const char *cl = pc_resp_conn_hdr(slot_id, &keep);
+    const char *cl = protocore_resp_conn_hdr(slot_id, &keep);
 
     char header[RESP_HDR_BUF_SIZE];
-    pc_sb sb_header3 = {header, sizeof(header), 0, PROTO_TRUE};
-    pc_sb_put(&sb_header3, "HTTP/1.1 ");
-    pc_sb_i64(&sb_header3, (int64_t)(code));
-    pc_sb_put(&sb_header3, " ");
-    pc_sb_put(&sb_header3, Http.status_text(code));
-    pc_sb_put(&sb_header3, "\r\nContent-Length: 0\r\n");
-    int hlen = (int)pc_sb_finish(&sb_header3);
+    protocore_sb sb_header3 = {header, sizeof(header), 0, PROTO_TRUE};
+    protocore_sb_put(&sb_header3, "HTTP/1.1 ");
+    protocore_sb_i64(&sb_header3, (int64_t)(code));
+    protocore_sb_put(&sb_header3, " ");
+    protocore_sb_put(&sb_header3, Http.status_text(code));
+    protocore_sb_put(&sb_header3, "\r\nContent-Length: 0\r\n");
+    int hlen = (int)protocore_sb_finish(&sb_header3);
     hlen = proto_append_resp_trailer(header, sizeof(header), hlen, slot_id, cl);
 
     Tcp.conn->send_flush(slot_id, header, (proto_u16)hlen);
 
-    pc_resp_end(slot_id, code, 0, keep, /*pre_flushed=*/PROTO_TRUE);
+    protocore_resp_end(slot_id, code, 0, keep, /*pre_flushed=*/PROTO_TRUE);
 }
 
 void redirect(uint8_t slot_id, int code, const char *location)
@@ -1067,21 +1081,21 @@ void redirect(uint8_t slot_id, int code, const char *location)
     }
 
     proto_bool keep;
-    const char *cl = pc_resp_conn_hdr(slot_id, &keep);
+    const char *cl = protocore_resp_conn_hdr(slot_id, &keep);
 
     char header[RESP_HDR_BUF_SIZE];
-    pc_sb sb_header4 = {header, sizeof(header), 0, PROTO_TRUE};
-    pc_sb_put(&sb_header4, "HTTP/1.1 ");
-    pc_sb_i64(&sb_header4, (int64_t)(code));
-    pc_sb_put(&sb_header4, " ");
-    pc_sb_put(&sb_header4, Http.status_text(code));
-    pc_sb_put(&sb_header4, "\r\nLocation: ");
-    pc_sb_put(&sb_header4, location);
-    pc_sb_put(&sb_header4, "\r\nContent-Length: 0\r\n");
-    int hlen = (int)pc_sb_finish(&sb_header4);
+    protocore_sb sb_header4 = {header, sizeof(header), 0, PROTO_TRUE};
+    protocore_sb_put(&sb_header4, "HTTP/1.1 ");
+    protocore_sb_i64(&sb_header4, (int64_t)(code));
+    protocore_sb_put(&sb_header4, " ");
+    protocore_sb_put(&sb_header4, Http.status_text(code));
+    protocore_sb_put(&sb_header4, "\r\nLocation: ");
+    protocore_sb_put(&sb_header4, location);
+    protocore_sb_put(&sb_header4, "\r\nContent-Length: 0\r\n");
+    int hlen = (int)protocore_sb_finish(&sb_header4);
     hlen = proto_append_resp_trailer(header, sizeof(header), hlen, slot_id, cl);
 
     Tcp.conn->send_flush(slot_id, header, (proto_u16)hlen);
 
-    pc_resp_end(slot_id, code, 0, keep, /*pre_flushed=*/PROTO_TRUE);
+    protocore_resp_end(slot_id, code, 0, keep, /*pre_flushed=*/PROTO_TRUE);
 }

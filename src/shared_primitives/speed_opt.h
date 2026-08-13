@@ -8,7 +8,7 @@
  * The framework's size-optimized level is appended after any build-system flags, so a consumer
  * cannot raise it from outside. That level declines to inline small functions, and an appender
  * chain that does not inline cannot fold: a literal's length stays a runtime scan and a bounded
- * copy stays a call. Put @ref PC_OPTIMIZE_O2 at the top of such a `.cpp`, after its includes.
+ * copy stays a call. Put @ref PROTOCORE_OPTIMIZE_O2 at the top of such a `.cpp`, after its includes.
  *
  * The level is in the name rather than behind a knob, so a file states what it is built at and a
  * reader does not have to resolve a second macro to find out. A macro rather than the pragma itself
@@ -33,12 +33,12 @@
 // A toolchain without the per-file pragma expands to nothing and keeps its own level - speed only,
 // never behaviour.
 #if defined(__GNUC__) && !defined(__clang__)
-#define PC_TU_PRAGMA(directive) _Pragma(#directive)
+#define PROTOCORE_TU_PRAGMA(directive) _Pragma(#directive)
 #else
-#define PC_TU_PRAGMA(directive)
+#define PROTOCORE_TU_PRAGMA(directive)
 #endif
 
 /** @brief Build this file at optimization level 2, overriding the framework's size-optimized level. */
-#define PC_OPTIMIZE_O2 PC_TU_PRAGMA(GCC optimize("O2"))
+#define PROTOCORE_OPTIMIZE_O2 PROTOCORE_TU_PRAGMA(GCC optimize("O2"))
 
 #endif // PROTOCORE_SPEED_OPT_H

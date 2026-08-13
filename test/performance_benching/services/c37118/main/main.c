@@ -29,15 +29,15 @@ void dbench_run(void)
     // cmd C37118_CMD_SEND_CFG2 -> an 18-octet frame.
     static uint8_t cmd_buf[32];
     size_t cmd_len =
-        pc_c37118_build_command(cmd_buf, sizeof(cmd_buf), 0x1234, 0x5F5E1100, 0x00ABCDEF, C37118_CMD_SEND_CFG2);
+        protocore_c37118_build_command(cmd_buf, sizeof(cmd_buf), 0x1234, 0x5F5E1100, 0x00ABCDEF, C37118_CMD_SEND_CFG2);
 
     // Data frame payload (STAT + a 4-byte value), straight out of test_data_frame_payload().
     static const uint8_t data_payload[] = {0x00, 0x00, 0x12, 0x34, 0x56, 0x78};
     static uint8_t data_buf[64];
 
-    // A parsed Command frame, used to bench pc_c37118_parse_command() in isolation.
+    // A parsed Command frame, used to bench protocore_c37118_parse_command() in isolation.
     C37118Frame parsed_cmd;
-    pc_c37118_parse_frame(cmd_buf, cmd_len, &parsed_cmd);
+    protocore_c37118_parse_frame(cmd_buf, cmd_len, &parsed_cmd);
 
     for (;;)
     {
@@ -47,20 +47,24 @@ void dbench_run(void)
         volatile size_t sinksz = 0;
         volatile bool sinkb = false;
 
-        DBENCH_BULK("pc_c37118_crc", 100000, (size_t)(cmd_len - 2), sink16 += pc_c37118_crc(cmd_buf, cmd_len - 2));
+        DBENCH_BULK("protocore_c37118_crc", 100000, (size_t)(cmd_len - 2),
+                    sink16 += protocore_c37118_crc(cmd_buf, cmd_len - 2));
 
-        DBENCH_OP("pc_c37118_build_command", 50000,
-                  sinksz += pc_c37118_build_command(cmd_buf, sizeof(cmd_buf), 0x1234, 0x5F5E1100, 0x00ABCDEF,
-                                                    C37118_CMD_SEND_CFG2));
+        DBENCH_OP("protocore_c37118_build_command", 50000,
+                  sinksz += protocore_c37118_build_command(cmd_buf, sizeof(cmd_buf), 0x1234, 0x5F5E1100, 0x00ABCDEF,
+                                                           C37118_CMD_SEND_CFG2));
 
-        DBENCH_OP("pc_c37118_build_frame (data)", 50000,
-                  sinksz += pc_c37118_build_frame(data_buf, sizeof(data_buf), C37118_TYPE_DATA, C37118_VERSION_2011, 60,
-                                                  100, 200, data_payload, sizeof(data_payload)));
+        DBENCH_OP("protocore_c37118_build_frame (data)", 50000,
+                  sinksz +=
+                  protocore_c37118_build_frame(data_buf, sizeof(data_buf), C37118_TYPE_DATA, C37118_VERSION_2011, 60,
+                                               100, 200, data_payload, sizeof(data_payload)));
 
-        DBENCH_OP("pc_c37118_parse_frame (cmd)", 50000, sinkb = pc_c37118_parse_frame(cmd_buf, cmd_len, &parsed_cmd));
+        DBENCH_OP("protocore_c37118_parse_frame (cmd)", 50000,
+                  sinkb = protocore_c37118_parse_frame(cmd_buf, cmd_len, &parsed_cmd));
 
         uint16_t cmd_out = 0;
-        DBENCH_OP("pc_c37118_parse_command", 200000, sinkb = pc_c37118_parse_command(&parsed_cmd, &cmd_out));
+        DBENCH_OP("protocore_c37118_parse_command", 200000,
+                  sinkb = protocore_c37118_parse_command(&parsed_cmd, &cmd_out));
 
         (void)sink16;
         (void)sinksz;

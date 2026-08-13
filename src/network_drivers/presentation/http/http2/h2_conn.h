@@ -14,7 +14,7 @@
  * engine has no transport dependency and is host-testable by feeding it a byte stream.
  *
  * Fixed storage, no heap: one frame-reassembly buffer, one header-block buffer, an HPACK decoder
- * table, and a small stream table per connection (sizes from PC_H2_*).
+ * table, and a small stream table per connection (sizes from PROTOCORE_H2_*).
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -25,7 +25,7 @@
 
 #include "protocore_config.h"
 
-#if PC_ENABLE_HTTP2
+#if PROTOCORE_ENABLE_HTTP2
 
 #include "network_drivers/presentation/http/http2/h2_frame.h"
 #include "network_drivers/presentation/http/http2/hpack.h"
@@ -59,8 +59,9 @@ typedef struct
  * is a power of two, so every offset after it is a multiple of one and the payload starts at the
  * span's own alignment. HTTP is what the plaintext pool is for, and the connection owns the bytes.
  */
-#define PC_H2_FRAME_HDR_CAP 16u
-#define PC_H2_CONN_BORROW ((size_t)PC_H2_MAX_FRAME + PC_H2_HDR_BLOCK + PC_H2_HDR_BLOCK + PC_H2_FRAME_HDR_CAP)
+#define PROTOCORE_H2_FRAME_HDR_CAP 16u
+#define PROTOCORE_H2_CONN_BORROW                                                                                       \
+    ((size_t)PROTOCORE_H2_MAX_FRAME + PROTOCORE_H2_HDR_BLOCK + PROTOCORE_H2_HDR_BLOCK + PROTOCORE_H2_FRAME_HDR_CAP)
 
 /** @brief Application callbacks the engine drives (all optional except write). */
 typedef struct
@@ -87,13 +88,13 @@ typedef struct
     H2Callbacks cb;
 
     // Inbound frame reassembly.
-    uint8_t *fhdr; ///< PC_H2_FRAME_HDR_CAP bytes of the connection's borrow: the 9-octet frame header
-    uint8_t *fbuf; ///< PC_H2_MAX_FRAME bytes of the connection's borrow: the payload after it
+    uint8_t *fhdr; ///< PROTOCORE_H2_FRAME_HDR_CAP bytes of the connection's borrow: the 9-octet frame header
+    uint8_t *fbuf; ///< PROTOCORE_H2_MAX_FRAME bytes of the connection's borrow: the payload after it
     size_t fhave;  ///< bytes buffered for the current frame, header included
     size_t pre;    ///< preface bytes matched so far
 
     // Header-block reassembly (HEADERS + CONTINUATION); empty when a frame carries END_HEADERS.
-    uint8_t *hblock; ///< PC_H2_HDR_BLOCK bytes of the connection's borrow
+    uint8_t *hblock; ///< PROTOCORE_H2_HDR_BLOCK bytes of the connection's borrow
     size_t hblock_len;
     uint32_t hblock_stream;
     proto_bool hblock_end_stream;
@@ -102,12 +103,12 @@ typedef struct
     proto_bool in_header_block; ///< between a non-END_HEADERS HEADERS and its END_HEADERS CONTINUATION
 
     HpackDynTable hdec; ///< HPACK decoder (peer's encoder state)
-    char *hscratch;     ///< PC_H2_HDR_BLOCK bytes of the connection's borrow: HPACK per-header emit scratch
+    char *hscratch;     ///< PROTOCORE_H2_HDR_BLOCK bytes of the connection's borrow: HPACK per-header emit scratch
 
     H2Settings peer;          ///< the peer's settings (affect how we send)
     int32_t conn_send_window; ///< our connection-level DATA flow window
 
-    H2Stream streams[PC_H2_MAX_STREAMS];
+    H2Stream streams[PROTOCORE_H2_MAX_STREAMS];
     uint32_t last_peer_stream; ///< highest client (odd) stream id accepted
 } H2Conn;
 
@@ -131,5 +132,5 @@ proto_bool pc_h2_conn_respond(H2Conn *c, uint32_t stream_id, int status, const c
 /** @brief Send a GOAWAY (last accepted stream, @p error) to begin a graceful shutdown. */
 void pc_h2_conn_goaway(H2Conn *c, uint32_t error);
 
-#endif // PC_ENABLE_HTTP2
+#endif // PROTOCORE_ENABLE_HTTP2
 #endif // PROTOCORE_H2_CONN_H

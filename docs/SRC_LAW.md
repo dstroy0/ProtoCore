@@ -9,32 +9,19 @@ standards in the bibliography. Two companion documents carry the other halves:
 
 ## 0. The language is C11
 
-**`src/` is C11.** `.c` and `.h` are the only extensions, with the three `core_setup/` vendor
-adapters SYMBOLS.md section 4 records. `examples/` are Arduino sketches; `test/` is unconstrained.
-The target list and the reasoning are in SYMBOLS.md.
-
-It comes first because it is what makes the rest decidable rather than advisory. Every rule below is
-an argument about what the emitted instructions do, and each is only finishable once the language is
-fixed: rule 2's provable stack depth assumes no constructor runs where you did not write a call;
-rule 7's "initialized at its declaration" means a value, not a constructor that may be elided;
-rule 8's short list of casts assumes no implicit conversion operator exists to lengthen it;
-rule 10's `(void)f()` assumes `f` has one return path and not an exception edge.
-
-The rules are renumbered 1 to 13 here. Two FreeRTOS-specific rules were dropped: they governed
-`xTaskCreateStatic` and `vTaskDelete`, which appear nowhere in `src/`.
+**`src/, test/, core_setup/` are C11.** `.c` and `.h` are the only extensions allowed. `.cpp` is only
+allowed in `core_setup/` as vendor supplied headers. `examples/` are split by vendor, `.cpp` is
+allowed here.
 
 ## Real-time and object allocation
 
 1. **Zero runtime heap allocation** (MISRA Directive 4.12)
     - Rule: `malloc`, `calloc`, `realloc`, and `free` are never called. There is no
-      pre-initialization exception: `check_src_banned.py` bans both the calls and the
-      `<stdlib.h>` include outright, so every byte the library owns is BSS reserved at link time.
-    - Rationale: removes non-deterministic timing spikes from heap traversal and gives total
-      immunity from runtime out-of-memory.
+      pre-initialization exception. `<stdlib>` is banned outright.
 
 2. **Static stack sizing, no VLAs** (Rule 18.8)
     - Rule: all task stacks and local hardware buffers are bounded by a compile-time constant.
-      Variable-length arrays are prohibited. Function-local arrays are separately banned
+      Variable-length arrays are prohibited. Function-local arrays are prohibited.
       ([SRCBANNED.md](SRCBANNED.md) #19).
     - Rationale: makes maximum stack depth provable before deployment.
 
@@ -63,12 +50,10 @@ The rules are renumbered 1 to 13 here. Two FreeRTOS-specific rules were dropped:
 ## Type conversion and explicit memory
 
 7. **Explicit initialization at the declaration** (Rule 9.1)
-    - Rule: every object is given its value where it is declared. A scalar takes a literal of its own
-      type (`proto_u32 scalar = 100U;`), an aggregate takes `= {0}`. A declaration that names storage
-      without setting it is banned, and a later `return false` guard does not count as setting it.
-    - Rationale: an object read before it is set has no value the standard defines, so the read emits
-      whatever was in the register or the stack slot. Setting it at the declaration removes the
-      window rather than relying on every path afterwards to close it.
+    - Rule: every object is given its value where it is declared.
+      bounded recasting is allowed. `ex: **void->**uint32_t` is fine if you know the width.
+      In general, memory is bound by a secure/plaintext pool, and the mmgr will return unavailable
+      on out of bounds read/write.
 
 8. **Casts appear only at a boundary** (Rules 11.3, 11.4)
     - Rule: a cast is written where a value crosses out of the library's own type system: a byte read
@@ -120,10 +105,3 @@ guarantee without that chain is a comment, and comments do not survive a compile
 
 1. **MISRA C** - "Guidelines for the use of the C language in critical and safety-related systems",
    MIRA / MISRA Consortium. MISRA C:2004, MISRA C:2012 (Amendments 1-4), MISRA C:2023 / C:2025.
-   **Governing.**
-
-2. **AUTOSAR C++14** - "Guidelines for the use of the C++14 language in critical and safety-related
-   systems", AUTOSAR Development Partnership, R17-03 through R19-11. **Historical, not governing.**
-   Several rules above were first written against it while the implementation was C++ under a C API,
-   and their numbers are kept so the provenance stays traceable. Where the two disagree, MISRA C
-   wins, and an AUTOSAR rule with meaning only in C++ is satisfied here by the language.

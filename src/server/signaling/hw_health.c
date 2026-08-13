@@ -7,11 +7,11 @@
  */
 
 #include "server/signaling/hw_health.h"
-#include "mmgr/membuild.h" // pc_sb frame builder
+#include "mmgr/membuild.h" // protocore_sb frame builder
 
-#if PC_ENABLE_HW_HEALTH
+#if PROTOCORE_ENABLE_HW_HEALTH
 
-void pc_hwhealth_rail_init(HwRailMonitor *m, uint32_t nominal_mv, uint32_t warn_mv, uint32_t crit_mv)
+void protocore_hwhealth_rail_init(HwRailMonitor *m, uint32_t nominal_mv, uint32_t warn_mv, uint32_t crit_mv)
 {
     if (!m)
     {
@@ -25,7 +25,7 @@ void pc_hwhealth_rail_init(HwRailMonitor *m, uint32_t nominal_mv, uint32_t warn_
     m->brownout_events = 0;
 }
 
-HwRailVerdict pc_hwhealth_rail_sample(HwRailMonitor *m, uint32_t mv)
+HwRailVerdict protocore_hwhealth_rail_sample(HwRailMonitor *m, uint32_t mv)
 {
     if (!m)
     {
@@ -48,22 +48,22 @@ HwRailVerdict pc_hwhealth_rail_sample(HwRailMonitor *m, uint32_t mv)
     return HW_RAIL_OK;
 }
 
-size_t pc_hwhealth_rail_json(const HwRailMonitor *m, char *out, size_t cap)
+size_t protocore_hwhealth_rail_json(const HwRailMonitor *m, char *out, size_t cap)
 {
     if (!m || !out || cap == 0)
     {
         return 0;
     }
-    pc_sb b = {out, cap, 0, PROTO_TRUE};
-    pc_sb_put(&b, "{\"nominal_mv\":");
-    pc_sb_u32(&b, m->nominal_mv);
-    pc_sb_put(&b, ",\"min_mv\":");
-    pc_sb_u32(&b, m->min_mv);
-    pc_sb_put(&b, ",\"sag\":");
-    pc_sb_u32(&b, m->sag_events);
-    pc_sb_put(&b, ",\"brownout\":");
-    pc_sb_u32(&b, m->brownout_events);
-    pc_sb_put(&b, "}");
+    protocore_sb b = {out, cap, 0, PROTO_TRUE};
+    protocore_sb_put(&b, "{\"nominal_mv\":");
+    protocore_sb_u32(&b, m->nominal_mv);
+    protocore_sb_put(&b, ",\"min_mv\":");
+    protocore_sb_u32(&b, m->min_mv);
+    protocore_sb_put(&b, ",\"sag\":");
+    protocore_sb_u32(&b, m->sag_events);
+    protocore_sb_put(&b, ",\"brownout\":");
+    protocore_sb_u32(&b, m->brownout_events);
+    protocore_sb_put(&b, "}");
     if (!b.ok)
     {
         return 0;
@@ -72,7 +72,7 @@ size_t pc_hwhealth_rail_json(const HwRailMonitor *m, char *out, size_t cap)
     return b.len;
 }
 
-void pc_hwhealth_spi_init(HwSpiBackoff *s, uint32_t start_hz, uint32_t min_hz, uint32_t max_hz, uint16_t fail_trip,
+void protocore_hwhealth_spi_init(HwSpiBackoff *s, uint32_t start_hz, uint32_t min_hz, uint32_t max_hz, uint16_t fail_trip,
                           uint16_t ok_trip)
 {
     if (!s)
@@ -99,7 +99,7 @@ void pc_hwhealth_spi_init(HwSpiBackoff *s, uint32_t start_hz, uint32_t min_hz, u
     s->ok_trip = ok_trip ? ok_trip : 1;
 }
 
-uint32_t pc_hwhealth_spi_result(HwSpiBackoff *s, proto_bool crc_ok)
+uint32_t protocore_hwhealth_spi_result(HwSpiBackoff *s, proto_bool crc_ok)
 {
     if (!s)
     {
@@ -136,7 +136,7 @@ uint32_t pc_hwhealth_spi_result(HwSpiBackoff *s, proto_bool crc_ok)
     return s->hz;
 }
 
-HwGpioVerdict pc_hwhealth_gpio_short(proto_bool driven_high, proto_bool read_high)
+HwGpioVerdict protocore_hwhealth_gpio_short(proto_bool driven_high, proto_bool read_high)
 {
     if (driven_high && !read_high)
     {
@@ -149,7 +149,7 @@ HwGpioVerdict pc_hwhealth_gpio_short(proto_bool driven_high, proto_bool read_hig
     return HW_GPIO_OK;
 }
 
-HwCapVerdict pc_hwhealth_cap_leak(uint32_t measured_ms, uint32_t expected_ms, uint8_t tol_pct)
+HwCapVerdict protocore_hwhealth_cap_leak(uint32_t measured_ms, uint32_t expected_ms, uint8_t tol_pct)
 {
     if (expected_ms == 0)
     {
@@ -170,4 +170,4 @@ HwCapVerdict pc_hwhealth_cap_leak(uint32_t measured_ms, uint32_t expected_ms, ui
     return HW_CAP_OK;
 }
 
-#endif // PC_ENABLE_HW_HEALTH
+#endif // PROTOCORE_ENABLE_HW_HEALTH

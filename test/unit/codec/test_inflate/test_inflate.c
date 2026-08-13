@@ -79,7 +79,7 @@ static const uint8_t k_len_extra_aligned[] = {59, 113, 226, 196, 137, 19, 39, 14
 static const uint8_t k_dist_extra_aligned[] = {59, 1, 36};                          // distance extra bits past end
 static const uint8_t k_header_leftover_bits[] = {58, 113, 226, 196, 137, 19, 0};    // next block header needs a byte
 static const uint8_t k_dyn_decode_hole[] = {5, 224, 1,   5,   0,   0,   0,
-                                            0, 32,  252, 127, 157, 255, 63};  // code past PC_MAXBITS
+                                            0, 32,  252, 127, 157, 255, 63};  // code past PROTOCORE_MAXBITS
 static const uint8_t k_dyn_literal_len[] = {5, 224, 1, 4, 0, 0, 0, 0, 16, 4}; // literal code length then truncated
 
 // Hand-built (scratchpad/build_vectors.py, driven off a Python port of the decoder): each

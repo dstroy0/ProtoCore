@@ -2,16 +2,16 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file pc_lwm2m_tlv.c
+ * @file protocore_lwm2m_tlv.c
  * @brief OMA LwM2M TLV writer + reader (pure, host-tested).
  */
 
 #include "services/iot/lwm2m/lwm2m_tlv.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_LWM2M
+#if PROTOCORE_ENABLE_LWM2M
 
-void pc_lwm2m_tlv_init(Lwm2mTlvWriter *w, uint8_t *buf, size_t cap)
+void protocore_lwm2m_tlv_init(Lwm2mTlvWriter *w, uint8_t *buf, size_t cap)
 {
     w->buf = buf;
     w->cap = cap;
@@ -19,7 +19,7 @@ void pc_lwm2m_tlv_init(Lwm2mTlvWriter *w, uint8_t *buf, size_t cap)
     w->error = PROTO_FALSE;
 }
 
-proto_bool pc_lwm2m_tlv_write(Lwm2mTlvWriter *w, uint8_t id_type, uint16_t id, const uint8_t *value, size_t value_len)
+proto_bool protocore_lwm2m_tlv_write(Lwm2mTlvWriter *w, uint8_t id_type, uint16_t id, const uint8_t *value, size_t value_len)
 {
     if (!w || (value_len && !value))
     {
@@ -83,7 +83,7 @@ proto_bool pc_lwm2m_tlv_write(Lwm2mTlvWriter *w, uint8_t id_type, uint16_t id, c
     return PROTO_TRUE;
 }
 
-proto_bool pc_lwm2m_tlv_write_int(Lwm2mTlvWriter *w, uint16_t id, int64_t v)
+proto_bool protocore_lwm2m_tlv_write_int(Lwm2mTlvWriter *w, uint16_t id, int64_t v)
 {
     size_t n;
     if (v >= -128 && v <= 127)
@@ -107,25 +107,25 @@ proto_bool pc_lwm2m_tlv_write_int(Lwm2mTlvWriter *w, uint16_t id, int64_t v)
     {
         b[i] = (uint8_t)((uint64_t)v >> (8 * (n - 1 - i)));
     }
-    return pc_lwm2m_tlv_write(w, LWM2M_TLV_RESOURCE, id, b, n);
+    return protocore_lwm2m_tlv_write(w, LWM2M_TLV_RESOURCE, id, b, n);
 }
 
-proto_bool pc_lwm2m_tlv_write_bool(Lwm2mTlvWriter *w, uint16_t id, proto_bool v)
+proto_bool protocore_lwm2m_tlv_write_bool(Lwm2mTlvWriter *w, uint16_t id, proto_bool v)
 {
     uint8_t b = v ? 1 : 0;
-    return pc_lwm2m_tlv_write(w, LWM2M_TLV_RESOURCE, id, &b, 1);
+    return protocore_lwm2m_tlv_write(w, LWM2M_TLV_RESOURCE, id, &b, 1);
 }
 
-proto_bool pc_lwm2m_tlv_write_string(Lwm2mTlvWriter *w, uint16_t id, const char *s)
+proto_bool protocore_lwm2m_tlv_write_string(Lwm2mTlvWriter *w, uint16_t id, const char *s)
 {
     if (!s)
     {
         return PROTO_FALSE;
     }
-    return pc_lwm2m_tlv_write(w, LWM2M_TLV_RESOURCE, id, (const uint8_t *)s, strnlen(s, w->cap + 1));
+    return protocore_lwm2m_tlv_write(w, LWM2M_TLV_RESOURCE, id, (const uint8_t *)s, strnlen(s, w->cap + 1));
 }
 
-proto_bool pc_lwm2m_tlv_write_float(Lwm2mTlvWriter *w, uint16_t id, double v)
+proto_bool protocore_lwm2m_tlv_write_float(Lwm2mTlvWriter *w, uint16_t id, double v)
 {
     uint64_t bits;
     mem.cpy(&bits, &v, 8);
@@ -134,15 +134,15 @@ proto_bool pc_lwm2m_tlv_write_float(Lwm2mTlvWriter *w, uint16_t id, double v)
     {
         b[i] = (uint8_t)(bits >> (8 * (7 - i))); // big-endian
     }
-    return pc_lwm2m_tlv_write(w, LWM2M_TLV_RESOURCE, id, b, 8);
+    return protocore_lwm2m_tlv_write(w, LWM2M_TLV_RESOURCE, id, b, 8);
 }
 
-size_t pc_lwm2m_tlv_finish(Lwm2mTlvWriter *w)
+size_t protocore_lwm2m_tlv_finish(Lwm2mTlvWriter *w)
 {
     return w->error ? 0 : w->pos;
 }
 
-proto_bool pc_lwm2m_tlv_read(const uint8_t *buf, size_t len, size_t *pos, Lwm2mTlv *out)
+proto_bool protocore_lwm2m_tlv_read(const uint8_t *buf, size_t len, size_t *pos, Lwm2mTlv *out)
 {
     if (!buf || !pos || !out || *pos >= len)
     {
@@ -192,7 +192,7 @@ proto_bool pc_lwm2m_tlv_read(const uint8_t *buf, size_t len, size_t *pos, Lwm2mT
     return PROTO_TRUE;
 }
 
-proto_bool pc_lwm2m_tlv_value_int(const uint8_t *value, size_t len, int64_t *out)
+proto_bool protocore_lwm2m_tlv_value_int(const uint8_t *value, size_t len, int64_t *out)
 {
     if (!value || (len != 1 && len != 2 && len != 4 && len != 8))
     {
@@ -210,4 +210,4 @@ proto_bool pc_lwm2m_tlv_value_int(const uint8_t *value, size_t len, int64_t *out
     return PROTO_TRUE;
 }
 
-#endif // PC_ENABLE_LWM2M
+#endif // PROTOCORE_ENABLE_LWM2M

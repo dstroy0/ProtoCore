@@ -35,7 +35,7 @@ static void reset_slot(uint8_t slot)
     conn_pool[slot].id = slot;
     conn_pool[slot].state = CONN_ACTIVE;
     conn_pool[slot].proto = PROTO_HTTP; // dispatch requires an explicit protocol
-    conn_pool[slot].pcb = pc_net_host_pcb();
+    conn_pool[slot].pcb = protocore_net_host_pcb();
     http_reset(slot);
 }
 

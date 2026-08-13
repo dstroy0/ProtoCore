@@ -5,13 +5,13 @@
  * @file DiffServ.ino
  * @brief DiffServ QoS marking (RFC 2474): stamp outbound traffic with a DSCP.
  *
- * With PC_ENABLE_DIFFSERV the transport writes the 6-bit DSCP into the IP DS field of outbound traffic so
+ * With PROTOCORE_ENABLE_DIFFSERV the transport writes the 6-bit DSCP into the IP DS field of outbound traffic so
  * a QoS-aware network - and the Wi-Fi WMM access-category mapping - prioritizes it over best-effort.
  *
- *   - pc_set_default_dscp(EF)   -> every accepted connection's data is marked Expedited Forwarding (46)
- *   - pc_conn_set_dscp(slot, X) -> re-tag ONE connection with any DSCP (real per-flow QoS, or arbitrary
+ *   - protocore_set_default_dscp(EF)   -> every accepted connection's data is marked Expedited Forwarding (46)
+ *   - protocore_conn_set_dscp(slot, X) -> re-tag ONE connection with any DSCP (real per-flow QoS, or arbitrary
  *                                   tagging for network testing)
- *   - pc_udp_set_dscp(X)        -> mark outbound UDP datagrams
+ *   - protocore_udp_set_dscp(X)        -> mark outbound UDP datagrams
  *
  * Verify on the wire (from a machine on the same LAN):
  *   sudo tcpdump -i <iface> -v host <board-ip> and tcp port 80
@@ -38,7 +38,7 @@ void handle_root(uint8_t slot, HttpReq *req)
 void handle_tag(uint8_t slot, HttpReq *req)
 {
     (void)req;
-    pc_conn_set_dscp(slot, PC_DSCP_CS6);
+    protocore_conn_set_dscp(slot, PROTOCORE_DSCP_CS6);
     send_text(slot, 200, "text/plain", "re-tagged CS6 (DSCP 48)\n");
 }
 
@@ -59,8 +59,8 @@ void setup()
 
     // Mark every outbound TCP connection Expedited Forwarding, and outbound UDP too. A DSCP of 0 would
     // mean best-effort (no marking). Set before begin() so listeners pick it up.
-    pc_set_default_dscp(PC_DSCP_EF);
-    pc_udp_set_dscp(PC_DSCP_EF);
+    protocore_set_default_dscp(PROTOCORE_DSCP_EF);
+    protocore_udp_set_dscp(PROTOCORE_DSCP_EF);
 
     on_http("/", HTTP_GET, handle_root);
     on_http("/tag", HTTP_GET, handle_tag);

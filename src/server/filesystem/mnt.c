@@ -17,15 +17,15 @@
 
 // --- the HAL: which store is mounted -------------------------------------------------------------
 // Ungated, because mnt.h declares it ungated: this is the seam every caller reads through, and the
-// filesystem accessor calls pc_mnt_active() on every operation whether or not the RAM disk is built.
-// Gating it with PC_ENABLE_MNT left the accessor with an unresolved symbol in the default build - a
+// filesystem accessor calls protocore_mnt_active() on every operation whether or not the RAM disk is built.
+// Gating it with PROTOCORE_ENABLE_MNT left the accessor with an unresolved symbol in the default build - a
 // library that compiled cleanly file by file and then would not link.
 //
 // The cost of keeping it is one pointer. The RAM disk below is what has a footprint, and it is what
 // the flag gates.
 typedef struct
 {
-    const pc_mnt_backend *backend;
+    const protocore_mnt_backend *backend;
 } MntCtx;
 static MntCtx s_hal;
 
@@ -34,8 +34,8 @@ static MntCtx s_hal;
 // rest of mounting rather than being copied into each of their route entries.
 typedef struct
 {
-    const pc_mnt_backend *backend; ///< null is legal: the accessor uses whatever is mounted
-    const char *root;              ///< the subtree, as a request-path piece
+    const protocore_mnt_backend *backend; ///< null is legal: the accessor uses whatever is mounted
+    const char *root;                     ///< the subtree, as a request-path piece
 } MntPoint;
 
 typedef struct
@@ -45,11 +45,11 @@ typedef struct
 } MntPointCtx;
 static MntPointCtx s_point;
 
-uint8_t pc_mnt_point_add(const pc_mnt_backend *backend, const char *root)
+uint8_t protocore_mnt_point_add(const protocore_mnt_backend *backend, const char *root)
 {
     if (s_point.count >= MAX_ROUTES)
     {
-        return PC_MNT_NONE;
+        return PROTOCORE_MNT_NONE;
     }
     MntPoint *m = &s_point.point[s_point.count];
     m->backend = backend;
@@ -57,7 +57,7 @@ uint8_t pc_mnt_point_add(const pc_mnt_backend *backend, const char *root)
     return s_point.count++;
 }
 
-const pc_mnt_backend *pc_mnt_point_backend(uint8_t id)
+const protocore_mnt_backend *protocore_mnt_point_backend(uint8_t id)
 {
     if (id >= s_point.count)
     {
@@ -66,7 +66,7 @@ const pc_mnt_backend *pc_mnt_point_backend(uint8_t id)
     return s_point.point[id].backend;
 }
 
-const char *pc_mnt_point_root(uint8_t id)
+const char *protocore_mnt_point_root(uint8_t id)
 {
     // Empty rather than null, because every caller wants the subtree as a path piece to compare or
     // append: handing back null would put the same null test at each of them.
@@ -77,32 +77,32 @@ const char *pc_mnt_point_root(uint8_t id)
     return s_point.point[id].root;
 }
 
-void pc_mnt_point_reset(void)
+void protocore_mnt_point_reset(void)
 {
     // The count is the table: a row above it is unreachable, and add() writes both fields before the
     // count reaches it, so there is nothing to clear here.
     s_point.count = 0;
 }
 
-void pc_mnt_mount(const pc_mnt_backend *backend)
+void protocore_mnt_mount(const protocore_mnt_backend *backend)
 {
     s_hal.backend = backend;
 }
 
-const pc_mnt_backend *pc_mnt_active(void)
+const protocore_mnt_backend *protocore_mnt_active(void)
 {
     return s_hal.backend;
 }
 
 // --- the RAM disk: the part with a footprint ------------------------------------------------------
-#if PC_ENABLE_MNT
+#if PROTOCORE_ENABLE_MNT
 
 typedef struct
 {
     proto_bool is_dir;
-    char name[PC_MNT_NAME_MAX];
+    char name[PROTOCORE_MNT_NAME_MAX];
     size_t len;
-    uint8_t data[PC_MNT_RAM_FILE_SIZE];
+    uint8_t data[PROTOCORE_MNT_RAM_FILE_SIZE];
 } RamFile;
 
 typedef struct
@@ -111,7 +111,7 @@ typedef struct
     proto_bool is_dir;
     int file;   ///< index into rf[]; for a directory cursor, -1 means the root
     size_t pos; ///< file: byte offset. directory: the next rf[] index to examine.
-    pc_mnt_mode mode;
+    protocore_mnt_mode mode;
 } RamHandle;
 
 // All RAM-disk state in one owner with internal linkage: the file pool and the handle table. The RAM
@@ -121,14 +121,14 @@ typedef struct
     // Which pool entries hold a file, one bit each, so the whole pool's answer fits in a register
     // and a free entry is one bit scan.
     uint32_t used;
-    RamFile rf[PC_MNT_RAM_FILES];
-    RamHandle rh[PC_MNT_MAX_OPEN];
+    RamFile rf[PROTOCORE_MNT_RAM_FILES];
+    RamHandle rh[PROTOCORE_MNT_MAX_OPEN];
 } RamCtx;
 static RamCtx s_mnt;
 
-static_assert(PC_MNT_RAM_FILES > 0 && PC_MNT_RAM_FILES <= 32,
+static_assert(PROTOCORE_MNT_RAM_FILES > 0 && PROTOCORE_MNT_RAM_FILES <= 32,
               "the RAM pool's occupancy is one 32-bit word, one bit per file");
-#define PC_MNT_RAM_BITS ((uint32_t)(((uint64_t)1 << PC_MNT_RAM_FILES) - 1u))
+#define PROTOCORE_MNT_RAM_BITS ((uint32_t)(((uint64_t)1 << PROTOCORE_MNT_RAM_FILES) - 1u))
 
 static proto_bool ram_used(int i)
 {
@@ -137,9 +137,9 @@ static proto_bool ram_used(int i)
 
 static int ram_find(const char *name)
 {
-    for (int i = 0; i < PC_MNT_RAM_FILES; i++)
+    for (int i = 0; i < PROTOCORE_MNT_RAM_FILES; i++)
     {
-        if (ram_used(i) && strncmp(s_mnt.rf[i].name, name, PC_MNT_NAME_MAX) == 0)
+        if (ram_used(i) && strncmp(s_mnt.rf[i].name, name, PROTOCORE_MNT_NAME_MAX) == 0)
         {
             return i;
         }
@@ -149,11 +149,11 @@ static int ram_find(const char *name)
 
 static int ram_create(const char *name, proto_bool is_dir)
 {
-    if (strnlen(name, PC_MNT_NAME_MAX + 1) >= PC_MNT_NAME_MAX)
+    if (strnlen(name, PROTOCORE_MNT_NAME_MAX + 1) >= PROTOCORE_MNT_NAME_MAX)
     {
         return -1;
     }
-    uint32_t free_bits = ~s_mnt.used & PC_MNT_RAM_BITS;
+    uint32_t free_bits = ~s_mnt.used & PROTOCORE_MNT_RAM_BITS;
     if (free_bits == 0)
     {
         return -1;
@@ -161,15 +161,15 @@ static int ram_create(const char *name, proto_bool is_dir)
     int i = (int)__builtin_ctz(free_bits);
     s_mnt.used |= (1u << i);
     s_mnt.rf[i].is_dir = is_dir;
-    strncpy(s_mnt.rf[i].name, name, PC_MNT_NAME_MAX - 1);
-    s_mnt.rf[i].name[PC_MNT_NAME_MAX - 1] = '\0';
+    strncpy(s_mnt.rf[i].name, name, PROTOCORE_MNT_NAME_MAX - 1);
+    s_mnt.rf[i].name[PROTOCORE_MNT_NAME_MAX - 1] = '\0';
     s_mnt.rf[i].len = 0;
     return i;
 }
 
 static int ram_alloc_handle(void)
 {
-    for (int h = 0; h < PC_MNT_MAX_OPEN; h++)
+    for (int h = 0; h < PROTOCORE_MNT_MAX_OPEN; h++)
     {
         if (!s_mnt.rh[h].open)
         {
@@ -181,7 +181,7 @@ static int ram_alloc_handle(void)
 
 static proto_bool ram_handle_ok(int h)
 {
-    return h >= 0 && h < PC_MNT_MAX_OPEN && s_mnt.rh[h].open;
+    return h >= 0 && h < PROTOCORE_MNT_MAX_OPEN && s_mnt.rh[h].open;
 }
 
 // The directory a cursor is walking, as a name prefix. The root is not a table entry - it always
@@ -195,7 +195,7 @@ static const char *ram_dirpath(const RamHandle *h)
 // own name. The root prefix is "/" and carries its own separator; any other prefix needs one.
 static proto_bool ram_child_of(const char *name, const char *prefix, const char **rest)
 {
-    size_t plen = strnlen(prefix, PC_MNT_NAME_MAX);
+    size_t plen = strnlen(prefix, PROTOCORE_MNT_NAME_MAX);
     if (strncmp(name, prefix, plen) != 0)
     {
         return PROTO_FALSE;
@@ -223,13 +223,13 @@ static int ram_open(const char *path, int mode)
     {
         return -1;
     }
-    const pc_mnt_mode m = (pc_mnt_mode)(mode); // the backend ABI carries mode as int
+    const protocore_mnt_mode m = (protocore_mnt_mode)(mode); // the backend ABI carries mode as int
     int f = ram_find(path);
     if (f >= 0 && s_mnt.rf[f].is_dir)
     {
         return -1; // a directory is opened with opendir
     }
-    if (m == PC_MNT_READ || m == PC_MNT_RDWR)
+    if (m == PROTOCORE_MNT_READ || m == PROTOCORE_MNT_RDWR)
     {
         if (f < 0)
         {
@@ -246,7 +246,7 @@ static int ram_open(const char *path, int mode)
         {
             return -1;
         }
-        if (m == PC_MNT_WRITE)
+        if (m == PROTOCORE_MNT_WRITE)
         {
             s_mnt.rf[f].len = 0;
         }
@@ -260,7 +260,7 @@ static int ram_open(const char *path, int mode)
     s_mnt.rh[h].is_dir = PROTO_FALSE;
     s_mnt.rh[h].file = f;
     s_mnt.rh[h].mode = m;
-    s_mnt.rh[h].pos = (m == PC_MNT_APPEND) ? s_mnt.rf[f].len : 0;
+    s_mnt.rh[h].pos = (m == PROTOCORE_MNT_APPEND) ? s_mnt.rf[f].len : 0;
     return h;
 }
 
@@ -280,12 +280,12 @@ static int ram_read(int h, void *buf, size_t n)
 
 static int ram_write(int h, const void *buf, size_t n)
 {
-    if (!ram_handle_ok(h) || s_mnt.rh[h].is_dir || s_mnt.rh[h].mode == PC_MNT_READ)
+    if (!ram_handle_ok(h) || s_mnt.rh[h].is_dir || s_mnt.rh[h].mode == PROTOCORE_MNT_READ)
     {
         return -1;
     }
     RamFile *f = &s_mnt.rf[s_mnt.rh[h].file];
-    size_t cap = (s_mnt.rh[h].pos < PC_MNT_RAM_FILE_SIZE) ? (PC_MNT_RAM_FILE_SIZE - s_mnt.rh[h].pos) : 0;
+    size_t cap = (s_mnt.rh[h].pos < PROTOCORE_MNT_RAM_FILE_SIZE) ? (PROTOCORE_MNT_RAM_FILE_SIZE - s_mnt.rh[h].pos) : 0;
     size_t k = n < cap ? n : cap;
     mem.cpy(f->data + s_mnt.rh[h].pos, buf, k);
     s_mnt.rh[h].pos += k;
@@ -298,7 +298,7 @@ static int ram_write(int h, const void *buf, size_t n)
 
 static void ram_close(int h)
 {
-    if (h >= 0 && h < PC_MNT_MAX_OPEN)
+    if (h >= 0 && h < PROTOCORE_MNT_MAX_OPEN)
     {
         s_mnt.rh[h].open = PROTO_FALSE;
     }
@@ -306,7 +306,7 @@ static void ram_close(int h)
 
 static proto_bool ram_seek(int h, uint64_t off)
 {
-    if (!ram_handle_ok(h) || s_mnt.rh[h].is_dir || off > PC_MNT_RAM_FILE_SIZE)
+    if (!ram_handle_ok(h) || s_mnt.rh[h].is_dir || off > PROTOCORE_MNT_RAM_FILE_SIZE)
     {
         return PROTO_FALSE;
     }
@@ -326,7 +326,7 @@ static proto_bool ram_exists(const char *path)
 }
 
 // Delete one file. mnt is blind: it does not know what a subtree is, because it does not know what a
-// path means. Removing a directory and its members is the accessor's operation (pc_fs_remove), built
+// path means. Removing a directory and its members is the accessor's operation (protocore_fs_remove), built
 // out of these per-node calls.
 static proto_bool ram_remove(const char *path)
 {
@@ -341,7 +341,7 @@ static proto_bool ram_remove(const char *path)
 
 static proto_bool ram_rename(const char *from, const char *to)
 {
-    if (from == NULL || to == NULL || strnlen(to, PC_MNT_NAME_MAX + 1) >= PC_MNT_NAME_MAX)
+    if (from == NULL || to == NULL || strnlen(to, PROTOCORE_MNT_NAME_MAX + 1) >= PROTOCORE_MNT_NAME_MAX)
     {
         return PROTO_FALSE;
     }
@@ -355,8 +355,8 @@ static proto_bool ram_rename(const char *from, const char *to)
     {
         s_mnt.used &= ~(1u << dst); // overwrite an existing destination
     }
-    strncpy(s_mnt.rf[f].name, to, PC_MNT_NAME_MAX - 1);
-    s_mnt.rf[f].name[PC_MNT_NAME_MAX - 1] = '\0';
+    strncpy(s_mnt.rf[f].name, to, PROTOCORE_MNT_NAME_MAX - 1);
+    s_mnt.rf[f].name[PROTOCORE_MNT_NAME_MAX - 1] = '\0';
     return PROTO_TRUE;
 }
 
@@ -376,7 +376,7 @@ static proto_bool ram_rmdir(const char *path)
     {
         return PROTO_FALSE;
     }
-    for (int i = 0; i < PC_MNT_RAM_FILES; i++)
+    for (int i = 0; i < PROTOCORE_MNT_RAM_FILES; i++)
     {
         const char *rest = NULL;
         if (i != d && ram_used(i) && ram_child_of(s_mnt.rf[i].name, s_mnt.rf[d].name, &rest))
@@ -388,16 +388,16 @@ static proto_bool ram_rmdir(const char *path)
     return PROTO_TRUE;
 }
 
-// The RAM pool keeps no clock, so mtime is 0 - which pc_mnt_stat states as the contract. A listing
+// The RAM pool keeps no clock, so mtime is 0 - which protocore_mnt_stat states as the contract. A listing
 // then formats a stable epoch rather than an invented time.
-static void ram_fill_stat(const RamFile *f, pc_mnt_stat *out)
+static void ram_fill_stat(const RamFile *f, protocore_mnt_stat *out)
 {
     out->is_dir = f->is_dir;
     out->size = f->is_dir ? 0 : (uint64_t)(f->len);
     out->mtime = 0;
 }
 
-static proto_bool ram_stat(const char *path, pc_mnt_stat *out)
+static proto_bool ram_stat(const char *path, protocore_mnt_stat *out)
 {
     if (path == NULL || out == NULL)
     {
@@ -446,14 +446,14 @@ static int ram_opendir(const char *path)
     return h;
 }
 
-static proto_bool ram_readdir(int h, pc_mnt_stat *out, char *name, size_t name_cap)
+static proto_bool ram_readdir(int h, protocore_mnt_stat *out, char *name, size_t name_cap)
 {
     if (!ram_handle_ok(h) || !s_mnt.rh[h].is_dir || out == NULL || name == NULL || name_cap == 0)
     {
         return PROTO_FALSE;
     }
     const char *prefix = ram_dirpath(&s_mnt.rh[h]);
-    for (size_t i = s_mnt.rh[h].pos; i < PC_MNT_RAM_FILES; i++)
+    for (size_t i = s_mnt.rh[h].pos; i < PROTOCORE_MNT_RAM_FILES; i++)
     {
         const char *rest = NULL;
         if (!ram_used((int)i) || !ram_child_of(s_mnt.rf[i].name, prefix, &rest))
@@ -471,28 +471,28 @@ static proto_bool ram_readdir(int h, pc_mnt_stat *out, char *name, size_t name_c
         s_mnt.rh[h].pos = i + 1;
         return PROTO_TRUE;
     }
-    s_mnt.rh[h].pos = PC_MNT_RAM_FILES;
+    s_mnt.rh[h].pos = PROTOCORE_MNT_RAM_FILES;
     return PROTO_FALSE;
 }
 
 // sync is NULL: the RAM disk has no medium to push bytes to, so it cannot promise durability and
 // says so rather than reporting a barrier it did not perform.
-static const pc_mnt_backend s_ram_backend = {ram_open,  ram_read,   ram_write,   ram_close,   ram_seek,
-                                             ram_size,  ram_exists, ram_remove,  ram_rename,  ram_mkdir,
-                                             ram_rmdir, ram_stat,   ram_opendir, ram_readdir, NULL};
+static const protocore_mnt_backend s_ram_backend = {ram_open,  ram_read,   ram_write,   ram_close,   ram_seek,
+                                                    ram_size,  ram_exists, ram_remove,  ram_rename,  ram_mkdir,
+                                                    ram_rmdir, ram_stat,   ram_opendir, ram_readdir, NULL};
 
-const pc_mnt_backend *pc_mnt_ram(void)
+const protocore_mnt_backend *protocore_mnt_ram(void)
 {
     return &s_ram_backend;
 }
 
-void pc_mnt_ram_format(void)
+void protocore_mnt_ram_format(void)
 {
     s_mnt.used = 0; // the whole pool, one store rather than a loop
-    for (int h = 0; h < PC_MNT_MAX_OPEN; h++)
+    for (int h = 0; h < PROTOCORE_MNT_MAX_OPEN; h++)
     {
         s_mnt.rh[h].open = PROTO_FALSE;
     }
 }
 
-#endif // PC_ENABLE_MNT
+#endif // PROTOCORE_ENABLE_MNT

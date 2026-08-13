@@ -3,7 +3,7 @@
 
 /**
  * @file PidTuning.ino
- * @brief PID control loop + the offline-tuning workflow (PC_ENABLE_CONTROL).
+ * @brief PID control loop + the offline-tuning workflow (PROTOCORE_ENABLE_CONTROL).
  *
  * Shows the whole services/system/control tuning loop end to end:
  *   1. run a PID (`pid_update`) at a fixed rate against a plant,
@@ -21,10 +21,10 @@
  *   curl http://<ip>/log.csv > run.csv
  *   python tools/pid_tune.py run.csv --autotune --png tune.png
  *
- * Build flag (platformio.ini):  build_flags = -DPC_ENABLE_CONTROL=1
+ * Build flag (platformio.ini):  build_flags = -DPROTOCORE_ENABLE_CONTROL=1
  */
 
-#define PC_ENABLE_CONTROL 1
+#define PROTOCORE_ENABLE_CONTROL 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"

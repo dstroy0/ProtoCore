@@ -3,7 +3,7 @@
 
 /**
  * @file csrf.c
- * @brief Stateless HMAC-signed CSRF token implementation (PC_ENABLE_CSRF).
+ * @brief Stateless HMAC-signed CSRF token implementation (PROTOCORE_ENABLE_CSRF).
  *
  * The token is `<nonce_hex>.<sig_hex>`; the signature is the first CSRF_SIG_BYTES
  * of HMAC-SHA256(secret, nonce). Verification recomputes the HMAC over the
@@ -14,15 +14,16 @@
 #include "mmgr/protoframe.h" // the one frame engine
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_CSRF
+#if PROTOCORE_ENABLE_CSRF
 
-#include "crypto/ct_eq.h" // pc_ct_eq
+#include "crypto/ct_eq.h" // protocore_ct_eq
 #include "crypto/mac/hmac_sha256.h"
 #include "mmgr/secure.h" // the token MAC's working set, wiped on release
 #include "shared_primitives/hex.h"
 
 // nonce-hex "." signature-hex
-static const pc_field CSRF_TOKEN[] = {PC_STR, {PC_FK_LIT, 0, 1, "."}, PC_STR, PC_END};
+static const protocore_field CSRF_TOKEN[] = {
+    PROTOCORE_STR, {PROTOCORE_FK_LIT, 0, 1, "."}, PROTOCORE_STR, PROTOCORE_END};
 
 // All CSRF state, owned by one instance (internal linkage): the HMAC secret and the
 // monotonic nonce counter, grouped so it is one named owner, unreachable cross-TU.
@@ -37,12 +38,12 @@ static CsrfCtx s_csrf = {{0}, 0, 0};
 // Hex of the truncated HMAC-SHA256(secret, nonce) into sig_hex (2*CSRF_SIG_BYTES + 1).
 static void sign_nonce(uint8_t *work, const CsrfCtx *c, const uint8_t *nonce, size_t nlen, char *sig_hex)
 {
-    uint8_t mac[PC_HMAC_SHA256_LEN];
-    pc_hmac_sha256(work, c->secret, c->secret_len, nonce, nlen, mac);
-    pc_hex_encode(mac, CSRF_SIG_BYTES, sig_hex, PROTO_FALSE); // truncate the MAC to CSRF_SIG_BYTES
+    uint8_t mac[PROTOCORE_HMAC_SHA256_LEN];
+    protocore_hmac_sha256(work, c->secret, c->secret_len, nonce, nlen, mac);
+    protocore_hex_encode(mac, CSRF_SIG_BYTES, sig_hex, PROTO_FALSE); // truncate the MAC to CSRF_SIG_BYTES
 }
 
-void pc_csrf_set_secret(const uint8_t *secret, size_t len)
+void protocore_csrf_set_secret(const uint8_t *secret, size_t len)
 {
     if (!secret)
     {
@@ -53,7 +54,7 @@ void pc_csrf_set_secret(const uint8_t *secret, size_t len)
     mem.cpy(s_csrf.secret, secret, s_csrf.secret_len);
 }
 
-int pc_csrf_issue(char *out, size_t cap)
+int protocore_csrf_issue(char *out, size_t cap)
 {
     if (s_csrf.secret_len == 0 || !out || cap < CSRF_TOKEN_BUF)
     {
@@ -69,23 +70,23 @@ int pc_csrf_issue(char *out, size_t cap)
 
     char nhex[CSRF_NONCE_BYTES * 2 + 1];
     char shex[CSRF_SIG_BYTES * 2 + 1];
-    pc_hex_encode(nonce, CSRF_NONCE_BYTES, nhex, PROTO_FALSE);
+    protocore_hex_encode(nonce, CSRF_NONCE_BYTES, nhex, PROTO_FALSE);
     // One borrow for this token's MAC, returned before the frame is built.
-    size_t mark = pc_secure_mark();
-    pc_span ws = pc_secure_span(PC_HMAC_SHA256_BORROW, _Alignof(uint32_t));
-    if (!pc_span_ok(ws))
+    size_t mark = protocore_secure_mark();
+    protocore_span ws = protocore_secure_span(PROTOCORE_HMAC_SHA256_BORROW, _Alignof(uint32_t));
+    if (!protocore_span_ok(ws))
     {
-        pc_secure_release(mark);
+        protocore_secure_release(mark);
         return 0;
     }
     sign_nonce(ws.buf, &s_csrf, nonce, CSRF_NONCE_BYTES, shex);
-    pc_secure_release(mark);
+    protocore_secure_release(mark);
 
     // The frame's contract is this function's contract: the length written, or 0 and out emptied.
-    return frame.build(out, cap, CSRF_TOKEN, (const pc_fval[]){PC_VSTR(nhex), PC_VSTR(shex)}, 2);
+    return frame.build(out, cap, CSRF_TOKEN, (const protocore_fval[]){PROTOCORE_VSTR(nhex), PROTOCORE_VSTR(shex)}, 2);
 }
 
-proto_bool pc_csrf_verify(const char *token)
+proto_bool protocore_csrf_verify(const char *token)
 {
     if (s_csrf.secret_len == 0 || !token)
     {
@@ -105,7 +106,7 @@ proto_bool pc_csrf_verify(const char *token)
     }
 
     uint8_t nonce[CSRF_NONCE_BYTES];
-    if (pc_hex_decode(token, nhexlen, nonce, sizeof(nonce)) != CSRF_NONCE_BYTES)
+    if (protocore_hex_decode(token, nhexlen, nonce, sizeof(nonce)) != CSRF_NONCE_BYTES)
     {
         return PROTO_FALSE;
     }
@@ -118,23 +119,23 @@ proto_bool pc_csrf_verify(const char *token)
 
     char expect[CSRF_SIG_BYTES * 2 + 1];
     // One borrow for the MAC this compare rebuilds, returned before the answer.
-    size_t mark = pc_secure_mark();
-    pc_span ws = pc_secure_span(PC_HMAC_SHA256_BORROW, _Alignof(uint32_t));
-    if (!pc_span_ok(ws))
+    size_t mark = protocore_secure_mark();
+    protocore_span ws = protocore_secure_span(PROTOCORE_HMAC_SHA256_BORROW, _Alignof(uint32_t));
+    if (!protocore_span_ok(ws))
     {
-        pc_secure_release(mark);
+        protocore_secure_release(mark);
         return PROTO_FALSE;
     }
     sign_nonce(ws.buf, &s_csrf, nonce, CSRF_NONCE_BYTES, expect);
-    pc_secure_release(mark);
-    return pc_ct_eq(sig, expect, CSRF_SIG_BYTES * 2);
+    protocore_secure_release(mark);
+    return protocore_ct_eq(sig, expect, CSRF_SIG_BYTES * 2);
 }
 
-void pc_csrf_reset(void)
+void protocore_csrf_reset(void)
 {
     mem.set(s_csrf.secret, 0, sizeof(s_csrf.secret));
     s_csrf.secret_len = 0;
     s_csrf.counter = 0;
 }
 
-#endif // PC_ENABLE_CSRF
+#endif // PROTOCORE_ENABLE_CSRF

@@ -172,7 +172,7 @@ def main():
         targets = [t for t in targets if t == only_chip]
     libs = [l for l in LIBS if only_lib is None or l == only_lib]
 
-    work = os.path.join(os.environ.get("TEMP", "/tmp"), "pc_blob_diff")
+    work = os.path.join(os.environ.get("TEMP", "/tmp"), "protocore_blob_diff")
     rows, detail = [], []
     for chip in targets:
         objdump, ar = tools_for(chip)

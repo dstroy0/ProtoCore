@@ -4,7 +4,7 @@
 /**
  * @file Vxi11.ino
  * @brief VXI-11 instrument controller - drive an instrument over the legacy LXI transport
- *        (VXI-11 / ONC RPC) carrying SCPI (PC_ENABLE_VXI11).
+ *        (VXI-11 / ONC RPC) carrying SCPI (PROTOCORE_ENABLE_VXI11).
  *
  * VXI-11 rides on ONC RPC (Sun RPC) with XDR over TCP. services/instrumentation/vxi11 is a pure codec (it builds
  * RPC calls + parses replies); the sketch owns the sockets and runs the standard session:
@@ -17,10 +17,10 @@
  *
  * Point INSTRUMENT_IP at a real VXI-11 / LXI instrument (or a python-vxi11 server). See the README.
  *
- * Build flags (platformio.ini):  build_flags = -DPC_ENABLE_VXI11=1
+ * Build flags (platformio.ini):  build_flags = -DPROTOCORE_ENABLE_VXI11=1
  */
 
-#define PC_ENABLE_VXI11 1
+#define PROTOCORE_ENABLE_VXI11 1
 
 #include "protocore.h" // library entry header (also sets the src/ include root)
 #include "network_drivers/physical/physical.h"
@@ -55,7 +55,7 @@ static size_t rpc_call(int cid, size_t req_len)
     }
     bool last = false;
     uint32_t frag = 0;
-    if (got < 4 || !pc_rpc_parse_record_mark(rm, 4, &last, &frag) || frag > sizeof(c_resp))
+    if (got < 4 || !protocore_rpc_parse_record_mark(rm, 4, &last, &frag) || frag > sizeof(c_resp))
     {
         return 0;
     }
@@ -73,16 +73,16 @@ static size_t rpc_call(int cid, size_t req_len)
 static void run_session(const char *host)
 {
     // 1) Ask the portmapper (TCP 111) for the DEVICE_CORE port.
-    int pmap_cid = Tcp.client->open(host, PC_RPC_PMAP_PORT, 8000);
+    int pmap_cid = Tcp.client->open(host, PROTOCORE_RPC_PMAP_PORT, 8000);
     if (pmap_cid < 0)
     {
         Serial.println("[vxi11] portmap connect failed");
         return;
     }
     size_t n =
-        pc_vxi11_build_getport(c_req, sizeof(c_req), 1, PC_VXI11_CORE_PROG, PC_VXI11_CORE_VERS, PC_RPC_PROTO_TCP);
+        protocore_vxi11_build_getport(c_req, sizeof(c_req), 1, PROTOCORE_VXI11_CORE_PROG, PROTOCORE_VXI11_CORE_VERS, PROTOCORE_RPC_PROTO_TCP);
     uint32_t core_port = 0;
-    if (!pc_vxi11_parse_getport_resp(c_resp, rpc_call(pmap_cid, n), &core_port) || core_port == 0)
+    if (!protocore_vxi11_parse_getport_resp(c_resp, rpc_call(pmap_cid, n), &core_port) || core_port == 0)
     {
         Serial.println("[vxi11] GETPORT failed");
         Tcp.client->close(pmap_cid);
@@ -98,9 +98,9 @@ static void run_session(const char *host)
         Serial.println("[vxi11] core connect failed");
         return;
     }
-    n = pc_vxi11_build_create_link(c_req, sizeof(c_req), 2, 0x44575345 /* "PCE" */, false, 0, "inst0");
+    n = protocore_vxi11_build_create_link(c_req, sizeof(c_req), 2, 0x44575345 /* "PCE" */, false, 0, "inst0");
     Vxi11CreateLinkResp link;
-    if (!pc_vxi11_parse_create_link_resp(c_resp, rpc_call(core_cid, n), &link) || link.error != PC_VXI11_ERR_NONE)
+    if (!protocore_vxi11_parse_create_link_resp(c_resp, rpc_call(core_cid, n), &link) || link.error != PROTOCORE_VXI11_ERR_NONE)
     {
         Serial.println("[vxi11] create_link failed");
         Tcp.client->close(core_cid);
@@ -109,14 +109,14 @@ static void run_session(const char *host)
     Serial.printf("[vxi11] link=%d maxRecv=%u\n", link.lid, link.max_recv_size);
 
     // 3) Write "*IDN?" (END-terminated), then read the identity back.
-    n = pc_vxi11_build_device_write(c_req, sizeof(c_req), 3, link.lid, 10000, 0, PC_VXI11_FLAG_END,
+    n = protocore_vxi11_build_device_write(c_req, sizeof(c_req), 3, link.lid, 10000, 0, PROTOCORE_VXI11_FLAG_END,
                                     (const uint8_t *)"*IDN?\n", 6);
     Vxi11WriteResp wr;
-    pc_vxi11_parse_write_resp(c_resp, rpc_call(core_cid, n), &wr);
+    protocore_vxi11_parse_write_resp(c_resp, rpc_call(core_cid, n), &wr);
 
-    n = pc_vxi11_build_device_read(c_req, sizeof(c_req), 4, link.lid, 1024, 10000, 0, 0, 0);
+    n = protocore_vxi11_build_device_read(c_req, sizeof(c_req), 4, link.lid, 1024, 10000, 0, 0, 0);
     Vxi11ReadResp rd;
-    if (pc_vxi11_parse_read_resp(c_resp, rpc_call(core_cid, n), &rd) && rd.error == PC_VXI11_ERR_NONE)
+    if (protocore_vxi11_parse_read_resp(c_resp, rpc_call(core_cid, n), &rd) && rd.error == PROTOCORE_VXI11_ERR_NONE)
     {
         Serial.printf("[vxi11] *IDN? -> %.*s\n", (int)rd.data_len, (const char *)rd.data);
     }
@@ -126,9 +126,9 @@ static void run_session(const char *host)
     }
 
     // 4) Close the link.
-    n = pc_vxi11_build_destroy_link(c_req, sizeof(c_req), 5, link.lid);
+    n = protocore_vxi11_build_destroy_link(c_req, sizeof(c_req), 5, link.lid);
     int32_t err = 0;
-    pc_vxi11_parse_error_resp(c_resp, rpc_call(core_cid, n), &err);
+    protocore_vxi11_parse_error_resp(c_resp, rpc_call(core_cid, n), &err);
     Tcp.client->close(core_cid);
     Serial.println("[vxi11] done");
 }

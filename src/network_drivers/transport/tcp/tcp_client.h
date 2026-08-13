@@ -16,8 +16,8 @@
  *
  * The receive ring carries **wire bytes**: for a plaintext connection those are
  * the application bytes; for a TLS connection they are ciphertext and the caller
- * layers the shared client-TLS session (`pc_tls_client_session_*`) on top, pointing its
- * BIO at pc_client_send() / pc_client_read().
+ * layers the shared client-TLS session (`protocore_tls_client_session_*`) on top, pointing its
+ * BIO at protocore_client_send() / protocore_client_read().
  *
  * Nothing here blocks. open() takes a slot, starts the resolve and returns a cid straight away; the
  * slot carries its own timer and steps from resolving to connected each time the caller asks
@@ -27,7 +27,7 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
 /**
  * @brief The outbound side of TCP.
@@ -58,6 +58,6 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern const TcpClientNs TcpClient;
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_TCP_CLIENT_H

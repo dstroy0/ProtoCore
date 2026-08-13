@@ -3,40 +3,40 @@
 
 #include "services/security/forwarded_trust/forwarded_trust.h"
 
-#if PC_ENABLE_FORWARDED_TRUST
+#if PROTOCORE_ENABLE_FORWARDED_TRUST
 
 typedef struct
 {
-    pc_ip network;      // network address (family V4/V6; PC_NONE marks unused).
-    uint8_t prefix_len; // CIDR prefix length: 0..32 for v4, 0..128 for v6.
-} pc_forwarded_trust_rule;
+    protocore_ip network; // network address (family V4/V6; PROTOCORE_NONE marks unused).
+    uint8_t prefix_len;   // CIDR prefix length: 0..32 for v4, 0..128 for v6.
+} protocore_forwarded_trust_rule;
 
 // Trusted-upstream state, owned by one instance (internal linkage): the CIDR rule table and its
 // count (empty = trust no forwarded header). One named owner, unreachable from any other unit.
 typedef struct
 {
-    pc_forwarded_trust_rule rules[PC_TRUSTED_PROXY_MAX];
+    protocore_forwarded_trust_rule rules[PROTOCORE_TRUSTED_PROXY_MAX];
     uint8_t count;
-} pc_forwarded_trust_ctx;
-static pc_forwarded_trust_ctx s_trust;
+} protocore_forwarded_trust_ctx;
+static protocore_forwarded_trust_ctx s_trust;
 
-void pc_forwarded_trust_reset(void)
+void protocore_forwarded_trust_reset(void)
 {
     s_trust.count = 0;
 }
 
-proto_bool pc_forwarded_trust_add(const pc_ip *network, uint8_t prefix_len)
+proto_bool protocore_forwarded_trust_add(const protocore_ip *network, uint8_t prefix_len)
 {
     if (!network)
     {
         return PROTO_FALSE;
     }
     int bits = -1; // stays negative for a family we do not recognize
-    if (network->family == PC_IP_V4)
+    if (network->family == PROTOCORE_IP_V4)
     {
         bits = 32;
     }
-    else if (network->family == PC_IP_V6)
+    else if (network->family == PROTOCORE_IP_V6)
     {
         bits = 128;
     }
@@ -44,7 +44,7 @@ proto_bool pc_forwarded_trust_add(const pc_ip *network, uint8_t prefix_len)
     {
         return PROTO_FALSE; // reject a malformed family or an over-long prefix
     }
-    if (s_trust.count >= PC_TRUSTED_PROXY_MAX)
+    if (s_trust.count >= PROTOCORE_TRUSTED_PROXY_MAX)
     {
         return PROTO_FALSE;
     }
@@ -54,7 +54,7 @@ proto_bool pc_forwarded_trust_add(const pc_ip *network, uint8_t prefix_len)
     return PROTO_TRUE;
 }
 
-proto_bool pc_forwarded_trust_add_cidr(const char *cidr)
+proto_bool protocore_forwarded_trust_add_cidr(const char *cidr)
 {
     if (!cidr)
     {
@@ -63,7 +63,7 @@ proto_bool pc_forwarded_trust_add_cidr(const char *cidr)
 
     // Split "address/prefix" at the slash. The address half is copied into a bounded buffer (a CIDR
     // string is never longer than an address plus "/128") for the parser.
-    char addr[PC_IP_STR_MAX];
+    char addr[PROTOCORE_IP_STR_MAX];
     const char *slash = NULL;
     size_t n = 0;
     for (const char *p = cidr; *p; p++)
@@ -81,14 +81,14 @@ proto_bool pc_forwarded_trust_add_cidr(const char *cidr)
     }
     addr[n] = '\0';
 
-    pc_ip net;
-    net.family = PC_IP_NONE;
+    protocore_ip net;
+    net.family = PROTOCORE_IP_NONE;
     if (!Ip.parse(addr, &net))
     {
         return PROTO_FALSE;
     }
 
-    uint8_t width = (net.family == PC_IP_V4) ? 32 : 128;
+    uint8_t width = (net.family == PROTOCORE_IP_V4) ? 32 : 128;
     uint8_t prefix = width; // bare address -> host route
     if (slash)
     {
@@ -114,10 +114,10 @@ proto_bool pc_forwarded_trust_add_cidr(const char *cidr)
         prefix = (uint8_t)v;
     }
 
-    return pc_forwarded_trust_add(&net, prefix);
+    return protocore_forwarded_trust_add(&net, prefix);
 }
 
-proto_bool pc_forwarded_trust_contains(const pc_ip *peer)
+proto_bool protocore_forwarded_trust_contains(const protocore_ip *peer)
 {
     if (!peer)
     {
@@ -133,7 +133,7 @@ proto_bool pc_forwarded_trust_contains(const pc_ip *peer)
     return PROTO_FALSE;
 }
 
-proto_bool pc_forwarded_effective_ip(const pc_ip *peer, const char *fwd_ip_str, pc_ip *out)
+proto_bool protocore_forwarded_effective_ip(const protocore_ip *peer, const char *fwd_ip_str, protocore_ip *out)
 {
     if (!out)
     {
@@ -145,10 +145,10 @@ proto_bool pc_forwarded_effective_ip(const pc_ip *peer, const char *fwd_ip_str, 
     }
     else
     {
-        out->family = PC_IP_NONE;
+        out->family = PROTOCORE_IP_NONE;
     }
 
-    if (!peer || !pc_forwarded_trust_contains(peer))
+    if (!peer || !protocore_forwarded_trust_contains(peer))
     {
         return PROTO_FALSE; // peer is not a trusted upstream -> ignore the spoofable header
     }
@@ -157,8 +157,8 @@ proto_bool pc_forwarded_effective_ip(const pc_ip *peer, const char *fwd_ip_str, 
         return PROTO_FALSE; // no forwarded client present
     }
 
-    pc_ip fip;
-    fip.family = PC_IP_NONE;
+    protocore_ip fip;
+    fip.family = PROTOCORE_IP_NONE;
     if (!Ip.parse(fwd_ip_str, &fip) || Ip.is_unspecified(&fip))
     {
         return PROTO_FALSE; // malformed / obfuscated / unspecified -> keep the proxy's address
@@ -168,4 +168,4 @@ proto_bool pc_forwarded_effective_ip(const pc_ip *peer, const char *fwd_ip_str, 
     return PROTO_TRUE;
 }
 
-#endif // PC_ENABLE_FORWARDED_TRUST
+#endif // PROTOCORE_ENABLE_FORWARDED_TRUST

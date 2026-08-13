@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // Does a namespace struct cost anything? Built twice from one source (see ../build_s3_nsbench.sh):
-// PC_NS_FORM=0 calls three of twenty-four leaves by name, PC_NS_FORM=1 calls the same three through
+// PROTOCORE_NS_FORM=0 calls three of twenty-four leaves by name, PROTOCORE_NS_FORM=1 calls the same three through
 // Network.auth.login / Network.tls.handshake / Server.signaling.peek, with each group's opaque
 // context carried as a member of its own namespace struct.
 //
@@ -11,8 +11,8 @@
 // size the table is free; if the second is larger by the twenty-one unused leaves plus the pointers,
 // it is not.
 
-#ifndef PC_NS_FORM
-#define PC_NS_FORM 0
+#ifndef PROTOCORE_NS_FORM
+#define PROTOCORE_NS_FORM 0
 #endif
 
 volatile uint32_t sink = 0;
@@ -35,7 +35,7 @@ LEAF(08) LEAF(09) LEAF(10) LEAF(11) LEAF(12) LEAF(13) LEAF(14) LEAF(15)
 LEAF(16) LEAF(17) LEAF(18) LEAF(19) LEAF(20) LEAF(21) LEAF(22) LEAF(23)
 // clang-format on
 
-#if PC_NS_FORM
+#if PROTOCORE_NS_FORM
 
     // The owned context each concern already has (SRCBANNED #12), reached as a member of the namespace
     // struct rather than as a file-scope name.
@@ -115,12 +115,12 @@ static const ServerNs Server = {
     {&s_signal, f16, f17, f18, f19, f20, f21, f22, f23},
 };
 
-#endif // PC_NS_FORM
+#endif // PROTOCORE_NS_FORM
 
 void setup()
 {
     Serial.begin(115200);
-#if PC_NS_FORM
+#if PROTOCORE_NS_FORM
     Network.auth.login(1);
     Network.tls.handshake(2);
     Server.signaling.peek(3);

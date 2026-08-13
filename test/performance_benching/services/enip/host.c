@@ -7,10 +7,10 @@
 // links standalone. The device figure comes from the rig /bench op; this host ns/op + MB/s is a relative
 // baseline. Build + run:
 //   gcc -O2 -std=c11 -I. -Isrc -Itest/mocks -Itest/support -Itest/performance_benching/common
-//   -DPC_ENABLE_ENIP=1 test/performance_benching/services/enip/host.c
+//   -DPROTOCORE_ENABLE_ENIP=1 test/performance_benching/services/enip/host.c
 //   src/services/fieldbus/enip/enip.c src/mmgr/protomem.c src/mmgr/protostr.c -o /tmp/be && /tmp/be
 
-#define PC_ENABLE_ENIP 1
+#define PROTOCORE_ENABLE_ENIP 1
 #include "services/fieldbus/enip/enip.h"
 
 #include "host_bench.h"
@@ -28,25 +28,25 @@ int main(void)
     h.status = EIP_STATUS_SUCCESS;
     h.options = 0;
     uint8_t frame[64];
-    size_t frame_len = pc_eip_build(frame, sizeof(frame), &h, cip, sizeof(cip));
+    size_t frame_len = protocore_eip_build(frame, sizeof(frame), &h, cip, sizeof(cip));
 
     uint8_t rs[64];
     const uint8_t ctx[8] = {1, 2, 3, 4, 5, 6, 7, 8};
-    size_t rs_len = pc_eip_build_register_session(rs, sizeof(rs), ctx);
+    size_t rs_len = protocore_eip_build_register_session(rs, sizeof(rs), ctx);
 
     hbench_header();
 
-    // pc_eip_build: lay down the 24-octet encapsulation header + command data (the transmit op).
+    // protocore_eip_build: lay down the 24-octet encapsulation header + command data (the transmit op).
     {
         uint8_t buf[64];
         volatile size_t sink = 0;
         double ns = 0.0;
-        HBENCH_NS(5000000, sink += pc_eip_build(buf, sizeof(buf), &h, cip, sizeof(cip)), ns);
-        hbench_row("enip", "pc_eip_build (encap)", ns, (double)frame_len);
+        HBENCH_NS(5000000, sink += protocore_eip_build(buf, sizeof(buf), &h, cip, sizeof(cip)), ns);
+        hbench_row("enip", "protocore_eip_build (encap)", ns, (double)frame_len);
         (void)sink;
     }
 
-    // pc_eip_parse: validate the encapsulation header (command/length/status) + slice the command data (receive
+    // protocore_eip_parse: validate the encapsulation header (command/length/status) + slice the command data (receive
     // op; this is the parser the fuzz attack targets - a length lie must not over-read past the 24-octet header).
     {
         volatile size_t sink = 0;
@@ -57,22 +57,22 @@ int main(void)
                 EipHeader out;
                 const uint8_t *data = NULL;
                 size_t dlen = 0;
-                if (pc_eip_parse(frame, frame_len, &out, &data, &dlen))
+                if (protocore_eip_parse(frame, frame_len, &out, &data, &dlen))
                 {
                     sink += dlen + out.command;
                 }
             },
             ns);
-        hbench_row("enip", "pc_eip_parse (encap)", ns, (double)frame_len);
+        hbench_row("enip", "protocore_eip_parse (encap)", ns, (double)frame_len);
         (void)sink;
     }
 
-    // pc_eip_build_register_session: the session-open handshake frame (fixed 28 octets).
+    // protocore_eip_build_register_session: the session-open handshake frame (fixed 28 octets).
     {
         uint8_t buf[64];
         volatile size_t sink = 0;
         double ns = 0.0;
-        HBENCH_NS(5000000, sink += pc_eip_build_register_session(buf, sizeof(buf), ctx), ns);
+        HBENCH_NS(5000000, sink += protocore_eip_build_register_session(buf, sizeof(buf), ctx), ns);
         hbench_row("enip", "register_session (build)", ns, (double)rs_len);
         (void)sink;
     }

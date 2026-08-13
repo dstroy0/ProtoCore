@@ -9,7 +9,7 @@
  * DESIGN RATIONALE
  * ═══════════════════════════════════════════════════════════════════════════
  *
- * pc_bignum is a fixed-width 2048-bit integer stored as 64 little-endian
+ * protocore_bignum is a fixed-width 2048-bit integer stored as 64 little-endian
  * 32-bit limbs (d[0] = least significant).  Fixed width means:
  *   - Struct size is a compile-time constant: 256 bytes.
  *   - No dynamic allocation - both DH scalars and RSA key fragments fit in
@@ -45,14 +45,14 @@
  *   2. Compute MonPro(aR, bR) = a·b·R mod p
  *   3. Convert back: MonPro(a·b·R, 1) = a·b mod p
  *
- * R² mod p is a precomputed 2048-bit constant (see pc_bignum.cpp).
+ * R² mod p is a precomputed 2048-bit constant (see protocore_bignum.cpp).
  *
  * ═══════════════════════════════════════════════════════════════════════════
  * SCRATCH BUFFER
  * ═══════════════════════════════════════════════════════════════════════════
  *
  * The Montgomery SOS multiplication needs a 129-word (516-byte) temporary and the
- * expmod three pc_bignum temporaries (768 bytes). bn_expmod_group14() borrows all of
+ * expmod three protocore_bignum temporaries (768 bytes). bn_expmod_group14() borrows all of
  * them as ONE working set from the secure pool (mmgr/secure.h), so the layout
  * is the struct's own field order rather than byte offsets kept in step by hand here.
  *
@@ -72,14 +72,14 @@
 #include "mmgr/secure.h"
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
 // ---------------------------------------------------------------------------
 // Fixed-width 2048-bit integer
 // ---------------------------------------------------------------------------
 
 /** @brief Number of 32-bit limbs in a 2048-bit integer. */
-#define PC_BN_LIMBS 64
+#define PROTOCORE_BN_LIMBS 64
 
 /**
  * @brief A 2048-bit unsigned integer stored as 64 little-endian 32-bit limbs.
@@ -89,11 +89,11 @@ PROTO_BEGIN_DECLS
  */
 typedef struct
 {
-    uint32_t d[PC_BN_LIMBS]; ///< 256 bytes of magnitude, little-endian limbs.
-} pc_bignum;
+    uint32_t d[PROTOCORE_BN_LIMBS]; ///< 256 bytes of magnitude, little-endian limbs.
+} protocore_bignum;
 
 // ---------------------------------------------------------------------------
-// Scratch buffer (defined in pc_bignum.cpp)
+// Scratch buffer (defined in protocore_bignum.cpp)
 // ---------------------------------------------------------------------------
 
 // bn_expmod_group14() borrows its Montgomery temporaries from the secure pool as one working set; the pool
@@ -104,7 +104,7 @@ typedef struct
 // ---------------------------------------------------------------------------
 
 /**
- * @brief Read a big-endian byte array of @p len bytes into a pc_bignum.
+ * @brief Read a big-endian byte array of @p len bytes into a protocore_bignum.
  *
  * If @p len < 256 the most-significant limbs are zeroed.
  * If @p len > 256 only the least-significant 256 bytes are read.
@@ -113,30 +113,30 @@ typedef struct
  * @param bytes Big-endian source bytes.
  * @param len   Number of source bytes (typically 256 for 2048-bit).
  */
-void bn_from_bytes(pc_bignum *out, const uint8_t *bytes, size_t len);
+void bn_from_bytes(protocore_bignum *out, const uint8_t *bytes, size_t len);
 
 /**
- * @brief Write a pc_bignum as a 256-byte big-endian array.
+ * @brief Write a protocore_bignum as a 256-byte big-endian array.
  *
  * @param bytes Destination buffer (exactly 256 bytes).
  * @param in    Source bignum.
  */
-void bn_to_bytes(uint8_t bytes[256], const pc_bignum *in);
+void bn_to_bytes(uint8_t bytes[256], const protocore_bignum *in);
 
 // ---------------------------------------------------------------------------
 // Comparison
 // ---------------------------------------------------------------------------
 
 /**
- * @brief Compare two pc_bignum values.
+ * @brief Compare two protocore_bignum values.
  * @return -1 if a < b, 0 if a == b, 1 if a > b.
  */
-int bn_cmp(const pc_bignum *a, const pc_bignum *b);
+int bn_cmp(const protocore_bignum *a, const protocore_bignum *b);
 
 /**
  * @brief Return non-zero if @p a is zero (all limbs zero).
  */
-int bn_is_zero(const pc_bignum *a);
+int bn_is_zero(const protocore_bignum *a);
 
 // ---------------------------------------------------------------------------
 // DH-group14 modular exponentiation
@@ -160,14 +160,14 @@ int bn_is_zero(const pc_bignum *a);
 // ---------------------------------------------------------------------------
 //
 // bn_expmod_group14() is DECLARED here and DEFINED by exactly one backend under core_setup/,
-// chosen by the vendor's PC_HAS_HW_BIGNUM. There is no weak default: link no backend and this is an
+// chosen by the vendor's PROTOCORE_HAS_HW_BIGNUM. There is no weak default: link no backend and this is an
 // undefined reference; link two and it is a duplicate definition. Software crypto is a legitimate
 // choice - on some parts the only one - but it is always a stated one, never a fallback.
 
 /** @brief Compare two @p n-limb magnitudes: -1, 0 or 1. Shared with the backends. */
 int bn_cmp_raw(const uint32_t *a, const uint32_t *b, int n);
 
-void bn_expmod_group14(pc_bignum *out, const pc_bignum *base, const pc_bignum *exp);
+void bn_expmod_group14(protocore_bignum *out, const protocore_bignum *base, const protocore_bignum *exp);
 
 /**
  * @brief Validate a received DH public value.
@@ -177,18 +177,18 @@ void bn_expmod_group14(pc_bignum *out, const pc_bignum *base, const pc_bignum *e
  *
  * @param v  Received public DH value.
  */
-int bn_dh_validate(const pc_bignum *v);
+int bn_dh_validate(const protocore_bignum *v);
 
 // ---------------------------------------------------------------------------
 // Group-14 prime constant (exposed for key-derivation and validation)
 // ---------------------------------------------------------------------------
 
 /** @brief The RFC 3526 MODP group-14 prime (2048-bit). */
-extern const pc_bignum group14_p;
+extern const protocore_bignum group14_p;
 
 /** @brief Generator for group-14: g = 2. */
-extern const pc_bignum group14_g;
+extern const protocore_bignum group14_g;
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_BIGNUM_H

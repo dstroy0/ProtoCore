@@ -3,27 +3,27 @@
 
 /**
  * @file Ptp.ino
- * @brief PTP / IEEE 1588 ordinary clock - grandmaster OR slave (PC_ENABLE_PTP).
+ * @brief PTP / IEEE 1588 ordinary clock - grandmaster OR slave (PROTOCORE_ENABLE_PTP).
  *
  * The Precision Time Protocol keeps a LAN's clocks in lock-step. Set PTP_MASTER below:
  *
  *  - **PTP_MASTER 1 (grandmaster):** the device *sources* time and hands it out. Each second it sends
  *    Announce + Sync + Follow_Up (with its precise send time), and answers each slave's Delay_Req with
  *    a Delay_Resp. Feed `master_time_ns()` from an accurate source - a GPS fix (see the UbloxGnss
- *    example), a DS3231/PCF8523 RTC, `pc_ntp_epoch()`, or the Time Source feature - and every slave
+ *    example), a DS3231/PCF8523 RTC, `protocore_ntp_epoch()`, or the Time Source feature - and every slave
  *    on the LAN follows it. The Announce advertises clockClass 6 (locked to a primary reference) and
  *    timeSource GPS.
  *  - **PTP_MASTER 0 (slave):** the device follows a master, running the four-message exchange
  *    (Sync/Follow_Up/Delay_Req/Delay_Resp) and reporting offset + path delay.
  *
- * Timestamps here are taken in software (in the UDP callback / send path) with `pc_micros()`, so the
+ * Timestamps here are taken in software (in the UDP callback / send path) with `protocore_micros()`, so the
  * accuracy is millisecond-class over Wi-Fi. Sub-microsecond PTP needs MAC hardware timestamping, which
  * this chip's Ethernet MAC supports but Wi-Fi does not - so on Ethernet this same code gets far tighter.
  *
- * Build flag (PlatformIO): `-DPC_ENABLE_PTP=1`
+ * Build flag (PlatformIO): `-DPROTOCORE_ENABLE_PTP=1`
  */
 
-#define PC_ENABLE_PTP 1
+#define PROTOCORE_ENABLE_PTP 1
 #define PTP_MASTER 0 // 1 = grandmaster (source time from GPS/RTC/...), 0 = slave (follow a master)
 
 #include "protocore.h"
@@ -36,7 +36,7 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 static const char *PTP_GROUP = "224.0.1.129"; // PTP default (primary) domain multicast address
-static pc_ip g_group;                   // PTP_GROUP, parsed once in setup()
+static protocore_ip g_group;                   // PTP_GROUP, parsed once in setup()
 
 // This clock's port identity (a locally-administered EUI-64 clockIdentity + port 1).
 static uint8_t my_clock_id[8] = {0x02, 0x00, 0x00, 0xFF, 0xFE, 0x00, 0x00, 0x01};
@@ -44,11 +44,11 @@ static const uint16_t MY_PORT = 1;
 
 static int64_t now_ns()
 {
-    return (int64_t)pc_micros() * 1000;
+    return (int64_t)protocore_micros() * 1000;
 } // local monotonic software timestamp
 
 // ------- accurate time source (grandmaster) -------
-// Wire this to your reference: a GPS fix (UbloxGnss), a DS3231 RTC, pc_ntp_epoch(), or the Time
+// Wire this to your reference: a GPS fix (UbloxGnss), a DS3231 RTC, protocore_ntp_epoch(), or the Time
 // Source feature. Standalone, it advances a base epoch with the monotonic clock. Set s_base_ns from
 // your source (e.g. on each GPS fix: s_base_ns = gps_epoch_ns - now_ns();).
 static int64_t s_base_ns = 0;
@@ -92,7 +92,7 @@ static uint16_t m_seq = 0;
 
 static void master_tick()
 {
-    pc_ptp_header h;
+    protocore_ptp_header h;
     memset(&h, 0, sizeof(h));
     memcpy(h.clock_identity, my_clock_id, 8);
     h.port_number = MY_PORT;
@@ -100,7 +100,7 @@ static void master_tick()
     uint8_t buf[80];
 
     // Announce: advertise this grandmaster's quality + identity.
-    pc_ptp_announce a;
+    protocore_ptp_announce a;
     memset(&a, 0, sizeof(a));
     a.utc_offset = 37;    // TAI - UTC as of 2017+
     a.gm_priority1 = 128; // default selectable priority
@@ -111,54 +111,54 @@ static void master_tick()
     memcpy(a.gm_identity, my_clock_id, 8);
     a.steps_removed = 0;
     a.time_source = 0x20; // GPS
-    pc_ptp_ts_from_ns(master_time_ns(), &a.origin);
-    size_t n = pc_ptp_build_announce(buf, sizeof(buf), &h, &a);
-    Udp.listener->sendto(PC_PTP_GENERAL_PORT, &g_group, PC_PTP_GENERAL_PORT, buf, n);
+    protocore_ptp_ts_from_ns(master_time_ns(), &a.origin);
+    size_t n = protocore_ptp_build_announce(buf, sizeof(buf), &h, &a);
+    Udp.listener->sendto(PROTOCORE_PTP_GENERAL_PORT, &g_group, PROTOCORE_PTP_GENERAL_PORT, buf, n);
 
     // Sync (two-step: the precise time follows in Follow_Up).
     h.flags = 0x0200; // twoStepFlag
-    pc_ptp_timestamp zero = {0, 0};
-    n = pc_ptp_build_sync(buf, sizeof(buf), &h, &zero);
+    protocore_ptp_timestamp zero = {0, 0};
+    n = protocore_ptp_build_sync(buf, sizeof(buf), &h, &zero);
     int64_t t1 = master_time_ns(); // precise egress instant
-    Udp.listener->sendto(PC_PTP_EVENT_PORT, &g_group, PC_PTP_EVENT_PORT, buf, n);
+    Udp.listener->sendto(PROTOCORE_PTP_EVENT_PORT, &g_group, PROTOCORE_PTP_EVENT_PORT, buf, n);
 
     // Follow_Up carries t1.
     h.flags = 0;
-    pc_ptp_timestamp ts1;
-    pc_ptp_ts_from_ns(t1, &ts1);
-    n = pc_ptp_build_follow_up(buf, sizeof(buf), &h, &ts1);
-    Udp.listener->sendto(PC_PTP_GENERAL_PORT, &g_group, PC_PTP_GENERAL_PORT, buf, n);
+    protocore_ptp_timestamp ts1;
+    protocore_ptp_ts_from_ns(t1, &ts1);
+    n = protocore_ptp_build_follow_up(buf, sizeof(buf), &h, &ts1);
+    Udp.listener->sendto(PROTOCORE_PTP_GENERAL_PORT, &g_group, PROTOCORE_PTP_GENERAL_PORT, buf, n);
 
     m_seq++;
 }
 
 // Answer a slave's Delay_Req with a Delay_Resp (t4 = when we received it).
-static void master_on_delay_req(const pc_ptp_header *req)
+static void master_on_delay_req(const protocore_ptp_header *req)
 {
     int64_t t4 = master_time_ns();
-    pc_ptp_header h;
+    protocore_ptp_header h;
     memset(&h, 0, sizeof(h));
     memcpy(h.clock_identity, my_clock_id, 8);
     h.port_number = MY_PORT;
     h.sequence_id = req->sequence_id; // echo the requester's sequenceId
-    pc_ptp_timestamp t4ts;
-    pc_ptp_ts_from_ns(t4, &t4ts);
+    protocore_ptp_timestamp t4ts;
+    protocore_ptp_ts_from_ns(t4, &t4ts);
     uint8_t buf[64];
-    size_t n = pc_ptp_build_delay_resp(buf, sizeof(buf), &h, &t4ts, req->clock_identity, req->port_number);
-    Udp.listener->sendto(PC_PTP_GENERAL_PORT, &g_group, PC_PTP_GENERAL_PORT, buf, n);
+    size_t n = protocore_ptp_build_delay_resp(buf, sizeof(buf), &h, &t4ts, req->clock_identity, req->port_number);
+    Udp.listener->sendto(PROTOCORE_PTP_GENERAL_PORT, &g_group, PROTOCORE_PTP_GENERAL_PORT, buf, n);
 }
 
-static void on_event(const uint8_t *data, size_t len, const struct pc_udp_peer *peer, void *ctx)
+static void on_event(const uint8_t *data, size_t len, const struct protocore_udp_peer *peer, void *ctx)
 {
     (void)peer;
     (void)ctx;
-    pc_ptp_header h;
-    if (pc_ptp_parse_header(data, len, &h) && h.message_type == PC_PTP_DELAY_REQ)
+    protocore_ptp_header h;
+    if (protocore_ptp_parse_header(data, len, &h) && h.message_type == PROTOCORE_PTP_DELAY_REQ)
     {
         master_on_delay_req(&h);
     }
 }
-static void on_general(const uint8_t *, size_t, const struct pc_udp_peer *, void *)
+static void on_general(const uint8_t *, size_t, const struct protocore_udp_peer *, void *)
 {
 }
 
@@ -171,25 +171,25 @@ static bool awaiting_t1 = false;
 
 static void send_delay_req()
 {
-    pc_ptp_header h;
+    protocore_ptp_header h;
     memset(&h, 0, sizeof(h));
     memcpy(h.clock_identity, my_clock_id, 8);
     h.port_number = MY_PORT;
     h.sequence_id = ++dreq_seq;
     h.log_interval = 0x7F;
-    pc_ptp_timestamp zero = {0, 0};
-    uint8_t buf[PC_PTP_HEADER_LEN + PC_PTP_TS_LEN];
-    size_t n = pc_ptp_build_delay_req(buf, sizeof(buf), &h, &zero);
+    protocore_ptp_timestamp zero = {0, 0};
+    uint8_t buf[PROTOCORE_PTP_HEADER_LEN + PROTOCORE_PTP_TS_LEN];
+    size_t n = protocore_ptp_build_delay_req(buf, sizeof(buf), &h, &zero);
     t3 = now_ns();
-    Udp.listener->sendto(PC_PTP_EVENT_PORT, &g_group, PC_PTP_EVENT_PORT, buf, n);
+    Udp.listener->sendto(PROTOCORE_PTP_EVENT_PORT, &g_group, PROTOCORE_PTP_EVENT_PORT, buf, n);
 }
 
-static void on_event(const uint8_t *data, size_t len, const struct pc_udp_peer *peer, void *ctx)
+static void on_event(const uint8_t *data, size_t len, const struct protocore_udp_peer *peer, void *ctx)
 {
     (void)peer;
     (void)ctx;
-    pc_ptp_header h;
-    if (!pc_ptp_parse_header(data, len, &h) || h.message_type != PC_PTP_SYNC)
+    protocore_ptp_header h;
+    if (!protocore_ptp_parse_header(data, len, &h) || h.message_type != PROTOCORE_PTP_SYNC)
     {
         return;
     }
@@ -201,53 +201,53 @@ static void on_event(const uint8_t *data, size_t len, const struct pc_udp_peer *
     }
     else
     {
-        pc_ptp_timestamp ts;
-        if (pc_ptp_parse_timestamp_msg(data, len, &h, &ts))
+        protocore_ptp_timestamp ts;
+        if (protocore_ptp_parse_timestamp_msg(data, len, &h, &ts))
         {
-            t1 = pc_ptp_ts_to_ns(&ts);
+            t1 = protocore_ptp_ts_to_ns(&ts);
         }
         awaiting_t1 = false;
         send_delay_req();
     }
 }
 
-static void on_general(const uint8_t *data, size_t len, const struct pc_udp_peer *peer, void *ctx)
+static void on_general(const uint8_t *data, size_t len, const struct protocore_udp_peer *peer, void *ctx)
 {
     (void)peer;
     (void)ctx;
-    pc_ptp_header h;
-    if (!pc_ptp_parse_header(data, len, &h))
+    protocore_ptp_header h;
+    if (!protocore_ptp_parse_header(data, len, &h))
     {
         return;
     }
-    if (h.message_type == PC_PTP_FOLLOW_UP && awaiting_t1 && h.sequence_id == sync_seq)
+    if (h.message_type == PROTOCORE_PTP_FOLLOW_UP && awaiting_t1 && h.sequence_id == sync_seq)
     {
-        pc_ptp_timestamp ts;
-        if (pc_ptp_parse_timestamp_msg(data, len, &h, &ts))
+        protocore_ptp_timestamp ts;
+        if (protocore_ptp_parse_timestamp_msg(data, len, &h, &ts))
         {
-            t1 = pc_ptp_ts_to_ns(&ts);
+            t1 = protocore_ptp_ts_to_ns(&ts);
             awaiting_t1 = false;
             send_delay_req();
         }
     }
-    else if (h.message_type == PC_PTP_DELAY_RESP)
+    else if (h.message_type == PROTOCORE_PTP_DELAY_RESP)
     {
-        pc_ptp_delay_resp r;
-        if (pc_ptp_parse_delay_resp(data, len, &h, &r) && h.sequence_id == dreq_seq && r.req_port == MY_PORT &&
+        protocore_ptp_delay_resp r;
+        if (protocore_ptp_parse_delay_resp(data, len, &h, &r) && h.sequence_id == dreq_seq && r.req_port == MY_PORT &&
             memcmp(r.req_clock_id, my_clock_id, 8) == 0)
         {
-            t4 = pc_ptp_ts_to_ns(&r.receive);
-            pc_ptp_sync s;
-            pc_ptp_compute(t1, t2, t3, t4, &s);
+            t4 = protocore_ptp_ts_to_ns(&r.receive);
+            protocore_ptp_sync s;
+            protocore_ptp_compute(t1, t2, t3, t4, &s);
             char a[24], b[24];
             Serial.printf("PTP seq=%u  offset=%s ns  path_delay=%s ns\n", h.sequence_id, i64(s.offset_ns, a),
                           i64(s.delay_ns, b));
         }
     }
-    else if (h.message_type == PC_PTP_ANNOUNCE)
+    else if (h.message_type == PROTOCORE_PTP_ANNOUNCE)
     {
-        pc_ptp_announce an;
-        if (pc_ptp_parse_announce(data, len, &h, &an))
+        protocore_ptp_announce an;
+        if (protocore_ptp_parse_announce(data, len, &h, &an))
         {
             Serial.printf("PTP master: clockClass=%u priority1=%u stepsRemoved=%u utcOffset=%d\n", an.gm_clock_class,
                           an.gm_priority1, an.steps_removed, an.utc_offset);
@@ -275,8 +275,8 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    bool e = Udp.listener->listen_multicast(PTP_GROUP, PC_PTP_EVENT_PORT, on_event, nullptr);
-    bool g = Udp.listener->listen_multicast(PTP_GROUP, PC_PTP_GENERAL_PORT, on_general, nullptr);
+    bool e = Udp.listener->listen_multicast(PTP_GROUP, PROTOCORE_PTP_EVENT_PORT, on_event, nullptr);
+    bool g = Udp.listener->listen_multicast(PTP_GROUP, PROTOCORE_PTP_GENERAL_PORT, on_general, nullptr);
     Serial.printf("PTP on 319/320 (event=%d general=%d)\n", e, g);
 }
 
@@ -284,9 +284,9 @@ void loop()
 {
 #if PTP_MASTER
     static uint32_t last = 0;
-    if (pc_millis() - last >= 1000)
+    if (protocore_millis() - last >= 1000)
     {
-        last = pc_millis();
+        last = protocore_millis();
         master_tick(); // send Announce + Sync + Follow_Up once per second
     }
 #endif

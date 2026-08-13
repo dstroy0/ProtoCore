@@ -3,7 +3,7 @@
 """GraphQL interop: validate the device's query engine with the reference graphql-core library.
 
 Role: the *device is the server*. It runs a zero-heap, schema-free GraphQL *query* engine
-(pc_graphql_execute) behind POST /graphql. This peer uses `graphql-core` - the reference Python
+(protocore_graphql_execute) behind POST /graphql. This peer uses `graphql-core` - the reference Python
 GraphQL implementation - to PARSE + VALIDATE each query (which proves it is spec-valid GraphQL and yields
 the exact field shape the client asked for), sends the raw query to the device, and asserts the device's
 `{"data":{...}}` response MIRRORS that shape. That mirroring is the defining GraphQL property: the client

@@ -10,15 +10,15 @@
 
 #include "mmgr/rawmemcpy.h" // proto_raw_read: the label bytes move whole
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
 // A label length byte carries its type in the top two bits: 00 is a length, 11 is a pointer, and
 // 01 / 10 are undefined.
-#define PC_DNS_LABEL_TYPE 0xC0u
-#define PC_DNS_LABEL_PTR 0xC0u
-#define PC_DNS_PTR_OFF 0x3Fu
+#define PROTOCORE_DNS_LABEL_TYPE 0xC0u
+#define PROTOCORE_DNS_LABEL_PTR 0xC0u
+#define PROTOCORE_DNS_PTR_OFF 0x3Fu
 
-proto_bool pc_dns_name_decode(const uint8_t *pkt, size_t len, size_t off, char *out, size_t out_cap, size_t *next,
+proto_bool protocore_dns_name_decode(const uint8_t *pkt, size_t len, size_t off, char *out, size_t out_cap, size_t *next,
                               proto_bool allow_ptr)
 {
     if (pkt == NULL || out == NULL || out_cap == 0)
@@ -37,9 +37,9 @@ proto_bool pc_dns_name_decode(const uint8_t *pkt, size_t len, size_t off, char *
             return PROTO_FALSE;
         }
         uint8_t b = pkt[cur];
-        if ((b & PC_DNS_LABEL_TYPE) == PC_DNS_LABEL_PTR)
+        if ((b & PROTOCORE_DNS_LABEL_TYPE) == PROTOCORE_DNS_LABEL_PTR)
         {
-            if (!allow_ptr || cur + 1 >= len || hops >= PC_DNS_PTR_HOPS)
+            if (!allow_ptr || cur + 1 >= len || hops >= PROTOCORE_DNS_PTR_HOPS)
             {
                 return PROTO_FALSE;
             }
@@ -50,10 +50,10 @@ proto_bool pc_dns_name_decode(const uint8_t *pkt, size_t len, size_t off, char *
                 jumped = PROTO_TRUE;
             }
             hops++;
-            cur = (size_t)(((uint16_t)(b & PC_DNS_PTR_OFF) << 8) | pkt[cur + 1]);
+            cur = (size_t)(((uint16_t)(b & PROTOCORE_DNS_PTR_OFF) << 8) | pkt[cur + 1]);
             continue;
         }
-        if ((b & PC_DNS_LABEL_TYPE) != 0)
+        if ((b & PROTOCORE_DNS_LABEL_TYPE) != 0)
         {
             return PROTO_FALSE; // 01 / 10: no such label type
         }
@@ -66,7 +66,7 @@ proto_bool pc_dns_name_decode(const uint8_t *pkt, size_t len, size_t off, char *
             }
             break;
         }
-        if (b > PC_DNS_LABEL_MAX || cur + b > len)
+        if (b > PROTOCORE_DNS_LABEL_MAX || cur + b > len)
         {
             return PROTO_FALSE;
         }
@@ -95,7 +95,7 @@ proto_bool pc_dns_name_decode(const uint8_t *pkt, size_t len, size_t off, char *
     return PROTO_TRUE;
 }
 
-size_t pc_dns_name_encode(uint8_t *out, size_t cap, const char *dotted)
+size_t protocore_dns_name_encode(uint8_t *out, size_t cap, const char *dotted)
 {
     if (out == NULL || dotted == NULL)
     {
@@ -119,7 +119,7 @@ size_t pc_dns_name_encode(uint8_t *out, size_t cap, const char *dotted)
             }
             return 0; // an empty label inside a name encodes to nothing readable
         }
-        if (label > PC_DNS_LABEL_MAX)
+        if (label > PROTOCORE_DNS_LABEL_MAX)
         {
             return 0;
         }
@@ -146,7 +146,7 @@ size_t pc_dns_name_encode(uint8_t *out, size_t cap, const char *dotted)
     return n;
 }
 
-proto_bool pc_dns_name_eq(const char *a, const char *b)
+proto_bool protocore_dns_name_eq(const char *a, const char *b)
 {
     if (a == NULL || b == NULL)
     {
@@ -174,4 +174,4 @@ proto_bool pc_dns_name_eq(const char *a, const char *b)
     return a[i] == b[i];
 }
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS

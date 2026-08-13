@@ -9,14 +9,14 @@
 #include "relay.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_RELAY
+#if PROTOCORE_ENABLE_RELAY
 
 // Read one non-blocking chunk from src and forward it to dst. Sets *src_eof on a src seam error;
 // returns -1 on a dst send error, else 0. A zero-length read leaves the buffers untouched.
-static int pump_refill(pc_relay_end *src, pc_relay_end *dst, uint8_t *buf, uint16_t *len, uint16_t *off,
+static int pump_refill(protocore_relay_end *src, protocore_relay_end *dst, uint8_t *buf, uint16_t *len, uint16_t *off,
                        proto_bool *src_eof, uint32_t *counter)
 {
-    int r = src->recv(src->ctx, buf, PC_RELAY_BUF);
+    int r = src->recv(src->ctx, buf, PROTOCORE_RELAY_BUF);
     if (r < 0)
     {
         *src_eof = PROTO_TRUE;
@@ -39,7 +39,7 @@ static int pump_refill(pc_relay_end *src, pc_relay_end *dst, uint8_t *buf, uint1
 // Pump one direction (src -> dst) one non-blocking pass: flush pending bytes, then read more.
 // @param dst_shut_sent  the "shutdown already called" flag for @p dst (the peer that stops receiving
 //                       once this direction finishes). Returns -1 on a seam error, else 0.
-static int pump(pc_relay_end *src, pc_relay_end *dst, uint8_t *buf, uint16_t *len, uint16_t *off, proto_bool *src_eof,
+static int pump(protocore_relay_end *src, protocore_relay_end *dst, uint8_t *buf, uint16_t *len, uint16_t *off, proto_bool *src_eof,
                 proto_bool *dir_done, proto_bool *dst_shut_sent, uint32_t *counter)
 {
     if (*dir_done)
@@ -76,11 +76,11 @@ static int pump(pc_relay_end *src, pc_relay_end *dst, uint8_t *buf, uint16_t *le
     {
         *dir_done = PROTO_TRUE;
         // The `!*dst_shut_sent` == false side is unreachable: *dst_shut_sent is written only inside
-        // this block (right below), which can execute at most once per direction over a pc_relay's
+        // this block (right below), which can execute at most once per direction over a protocore_relay's
         // lifetime - *dir_done just went true on the line above, and the guard at the top of this
         // function (`if (*dir_done) return 0;`) skips this whole block on every later call for that
-        // direction. pc_relay_init() zero-fills the struct, so *dst_shut_sent starts false, and
-        // nothing outside this block (and outside pc_relay_init's memset) ever writes it. So on
+        // direction. protocore_relay_init() zero-fills the struct, so *dst_shut_sent starts false, and
+        // nothing outside this block (and outside protocore_relay_init's memset) ever writes it. So on
         // this - the only - entry, *dst_shut_sent cannot already be true.
         if (dst->shutdown && !*dst_shut_sent)
         {
@@ -91,7 +91,7 @@ static int pump(pc_relay_end *src, pc_relay_end *dst, uint8_t *buf, uint16_t *le
     return 0;
 }
 
-void pc_relay_init(pc_relay *r, const pc_relay_end *client, const pc_relay_end *origin)
+void protocore_relay_init(protocore_relay *r, const protocore_relay_end *client, const protocore_relay_end *origin)
 {
     if (!r || !client || !origin)
     {
@@ -102,35 +102,35 @@ void pc_relay_init(pc_relay *r, const pc_relay_end *client, const pc_relay_end *
     r->b = *origin;
 }
 
-pc_relay_status pc_relay_step(pc_relay *r)
+protocore_relay_status protocore_relay_step(protocore_relay *r)
 {
     if (!r)
     {
-        return PC_RELAY_ERROR;
+        return PROTOCORE_RELAY_ERROR;
     }
     // a -> b: dst is b, so b's shutdown fires when this direction finishes
     if (pump(&r->a, &r->b, r->buf_a2b, &r->a2b_len, &r->a2b_off, &r->a_eof, &r->a2b_done, &r->b_shut_sent,
              &r->bytes_a2b) < 0)
     {
-        return PC_RELAY_ERROR;
+        return PROTOCORE_RELAY_ERROR;
     }
     // b -> a: dst is a
     if (pump(&r->b, &r->a, r->buf_b2a, &r->b2a_len, &r->b2a_off, &r->b_eof, &r->b2a_done, &r->a_shut_sent,
              &r->bytes_b2a) < 0)
     {
-        return PC_RELAY_ERROR;
+        return PROTOCORE_RELAY_ERROR;
     }
 
-    return (r->a2b_done && r->b2a_done) ? PC_RELAY_DONE : PC_RELAY_RUNNING;
+    return (r->a2b_done && r->b2a_done) ? PROTOCORE_RELAY_DONE : PROTOCORE_RELAY_RUNNING;
 }
 
-void pc_relay_note_eof(pc_relay *r, proto_bool origin)
+void protocore_relay_note_eof(protocore_relay *r, proto_bool origin)
 {
     if (!r)
     {
         return;
     }
-    // The next pc_relay_step drains that source's buffered bytes, then finishes its direction.
+    // The next protocore_relay_step drains that source's buffered bytes, then finishes its direction.
     if (origin)
     {
         r->b_eof = PROTO_TRUE;
@@ -141,4 +141,4 @@ void pc_relay_note_eof(pc_relay *r, proto_bool origin)
     }
 }
 
-#endif // PC_ENABLE_RELAY
+#endif // PROTOCORE_ENABLE_RELAY

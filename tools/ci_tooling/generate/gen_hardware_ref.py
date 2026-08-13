@@ -12,7 +12,7 @@ facts worth stating are mechanical, and mechanical facts should be derived.
 For each module under the hardware-touching groups this emits:
   * how it attaches   - inferred from the bring-up signature and includes
   * its bring-up call - the actual signature from the header
-  * its feature flag  - PC_ENABLE_<MODULE>, when the config defines one
+  * its feature flag  - PROTOCORE_ENABLE_<MODULE>, when the config defines one
 
 Wiring CONCEPTS (transceivers, termination, 3.3 V, grounding) stay hand-written in the
 prose above this block: those are taught once per bus type, not once per module.
@@ -63,7 +63,7 @@ def classify(text, sig):
 
 def main() -> int:
     cfg = read(os.path.join(ROOT, "src/protocore_config.h"))
-    flags = set(re.findall(r"#\s*(?:define|ifndef)\s+(PC_ENABLE_[A-Z0-9_]+)", cfg))
+    flags = set(re.findall(r"#\s*(?:define|ifndef)\s+(PROTOCORE_ENABLE_[A-Z0-9_]+)", cfg))
 
     # Group by the SAME taxonomy the configurator and FEATURES.md use - OSI layer for
     # non-application features, functional category for L7 - rather than by src/
@@ -90,11 +90,11 @@ def main() -> int:
                 continue
             text = "".join(read(os.path.join(d, f)) for f in sorted(os.listdir(d)))
             # Signatures come from the module's own HEADERS only. Scanning .cpp too
-            # picked up call SITES with real arguments (pc_presence_core_init(c, ...))
-            # and, for I2C parts, the shared pc_i2c_begin() bus call rather than the
+            # picked up call SITES with real arguments (protocore_presence_core_init(c, ...))
+            # and, for I2C parts, the shared protocore_i2c_begin() bus call rather than the
             # module's own entry point.
             hdrs = "".join(read(os.path.join(d, f)) for f in sorted(os.listdir(d)) if f.endswith(".h"))
-            # A bring-up call, not a frame builder: `pc_canopen_build_sdo_download_init`
+            # A bring-up call, not a frame builder: `protocore_canopen_build_sdo_download_init`
             # ends in "init" but constructs a CAN frame, it does not open a link.
             NOT_BRINGUP = re.compile(r"_(build|encode|decode|parse|make)_")
             sig = ""
@@ -116,11 +116,11 @@ def main() -> int:
                 if sig:
                     break
             # A directory is NOT one feature. `gnss/` holds ntrip_caster + rtcm3 +
-            # gnss_survey, and `ntp_service/` is gated by PC_ENABLE_NTP. So take the
+            # gnss_survey, and `ntp_service/` is gated by PROTOCORE_ENABLE_NTP. So take the
             # flags the module's own sources actually reference and prefer one the
-            # taxonomy knows, rather than assuming PC_ENABLE_<DIRNAME>.
-            guess = f"PC_ENABLE_{mod.upper()}"
-            used = sorted(set(re.findall(r"\bPC_ENABLE_[A-Z0-9_]+\b", text)))
+            # taxonomy knows, rather than assuming PROTOCORE_ENABLE_<DIRNAME>.
+            guess = f"PROTOCORE_ENABLE_{mod.upper()}"
+            used = sorted(set(re.findall(r"\bPROTOCORE_ENABLE_[A-Z0-9_]+\b", text)))
             cands = (
                 ([guess] if guess in flags else [])
                 + [f for f in used if f in flag_to_group]
@@ -132,7 +132,9 @@ def main() -> int:
                 # FEATURES.md is the source of truth for the feature grid, so a module
                 # that cannot be placed means its entry there is absent or malformed.
                 # Report it rather than hiding it behind a directory-name fallback.
-                unplaced.append((f"src/services/{grp}/{mod}", flag or f"(no PC_ENABLE_* found; expected {guess})"))
+                unplaced.append(
+                    (f"src/services/{grp}/{mod}", flag or f"(no PROTOCORE_ENABLE_* found; expected {guess})")
+                )
                 group = grp.replace("_", " ")
             rows.append((group, mod, classify(text, sig), sig, flag))
 

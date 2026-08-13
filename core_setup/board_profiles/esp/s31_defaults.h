@@ -16,26 +16,26 @@
 #define PROTOCORE_S31_DEFAULTS_H
 
 // --- HW crypto accelerators (full suite) ---
-#ifndef PC_HW_AES
-#define PC_HW_AES 1
+#ifndef PROTOCORE_HW_AES
+#define PROTOCORE_HW_AES 1
 #endif
-#ifndef PC_HW_SHA
-#define PC_HW_SHA 1
+#ifndef PROTOCORE_HW_SHA
+#define PROTOCORE_HW_SHA 1
 #endif
-#ifndef PC_HW_RSA
-#define PC_HW_RSA 1
+#ifndef PROTOCORE_HW_RSA
+#define PROTOCORE_HW_RSA 1
 #endif
-#ifndef PC_HW_ECC
-#define PC_HW_ECC 1
+#ifndef PROTOCORE_HW_ECC
+#define PROTOCORE_HW_ECC 1
 #endif
-#ifndef PC_HW_ECDSA
-#define PC_HW_ECDSA 1
+#ifndef PROTOCORE_HW_ECDSA
+#define PROTOCORE_HW_ECDSA 1
 #endif
-#ifndef PC_HW_HMAC
-#define PC_HW_HMAC 1
+#ifndef PROTOCORE_HW_HMAC
+#define PROTOCORE_HW_HMAC 1
 #endif
-#ifndef PC_HW_DS
-#define PC_HW_DS 1
+#ifndef PROTOCORE_HW_DS
+#define PROTOCORE_HW_DS 1
 #endif
 
 // --- Sizing (modest bump like the S3; dual core, 512 KB SRAM) ---
@@ -49,11 +49,11 @@
 #ifndef RX_BUF_SIZE
 #define RX_BUF_SIZE 2048
 #endif
-#ifndef PC_PLAINTEXT_SCRATCH
-#define PC_PLAINTEXT_SCRATCH 12288
+#ifndef PROTOCORE_PLAINTEXT_SCRATCH
+#define PROTOCORE_PLAINTEXT_SCRATCH 12288
 #endif
-#ifndef PC_CLIENT_RX_BUF
-#define PC_CLIENT_RX_BUF 8192
+#ifndef PROTOCORE_CLIENT_RX_BUF
+#define PROTOCORE_CLIENT_RX_BUF 8192
 #endif
 
 // HTTP surface.
@@ -84,28 +84,28 @@
 #ifndef MAX_SSH_CONNS
 #define MAX_SSH_CONNS 2
 #endif
-#ifndef PC_SSH_MAX_CHANNELS
-#define PC_SSH_MAX_CHANNELS 4
+#ifndef PROTOCORE_SSH_MAX_CHANNELS
+#define PROTOCORE_SSH_MAX_CHANNELS 4
 #endif
-#ifndef PC_SSH_CLIENT_MAX_CHANNELS
-#define PC_SSH_CLIENT_MAX_CHANNELS 6
+#ifndef PROTOCORE_SSH_CLIENT_MAX_CHANNELS
+#define PROTOCORE_SSH_CLIENT_MAX_CHANNELS 6
 #endif
 
 // Edge cache + mesh (RAM-backed L1).
-#ifndef PC_EDGE_CACHE_SLOTS
-#define PC_EDGE_CACHE_SLOTS 8
+#ifndef PROTOCORE_EDGE_CACHE_SLOTS
+#define PROTOCORE_EDGE_CACHE_SLOTS 8
 #endif
-#ifndef PC_EDGE_BODY_MAX
-#define PC_EDGE_BODY_MAX 4096
+#ifndef PROTOCORE_EDGE_BODY_MAX
+#define PROTOCORE_EDGE_BODY_MAX 4096
 #endif
-#ifndef PC_EDGE_FETCH_SLOTS
-#define PC_EDGE_FETCH_SLOTS 3
+#ifndef PROTOCORE_EDGE_FETCH_SLOTS
+#define PROTOCORE_EDGE_FETCH_SLOTS 3
 #endif
-#ifndef PC_MESH_MAX_PEERS
-#define PC_MESH_MAX_PEERS 6
+#ifndef PROTOCORE_MESH_MAX_PEERS
+#define PROTOCORE_MESH_MAX_PEERS 6
 #endif
-#ifndef PC_MESH_MAX_CONNS
-#define PC_MESH_MAX_CONNS 2
+#ifndef PROTOCORE_MESH_MAX_CONNS
+#define PROTOCORE_MESH_MAX_CONNS 2
 #endif
 
 #include "../classic_defaults.h"

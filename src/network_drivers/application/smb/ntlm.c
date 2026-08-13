@@ -9,31 +9,31 @@
 #include "ntlm.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_SMB
+#if PROTOCORE_ENABLE_SMB
 
 #include "crypto/hash/md.h"
 #include "mmgr/secure.h" // SecureScope: lifetime of the borrowed digest state
 
-void pc_ntlm_nt_hash(const char *password, uint8_t nt_hash[16])
+void protocore_ntlm_nt_hash(const char *password, uint8_t nt_hash[16])
 {
-    size_t mark = pc_secure_mark();
-    struct MdCtx *c = pc_md_wants();
+    size_t mark = protocore_secure_mark();
+    struct MdCtx *c = protocore_md_wants();
     if (c == NULL)
     {
-        pc_secure_release(mark);
+        protocore_secure_release(mark);
         return;
     }
-    pc_md4_init(c);
+    protocore_md4_init(c);
     for (const char *p = password; *p; p++)
     {
         uint8_t pair[2] = {(uint8_t)*p, 0}; // UTF-16LE (ASCII/UTF-8 code unit + high byte 0)
-        pc_md4_update(c, pair, 2);
+        protocore_md4_update(c, pair, 2);
     }
-    pc_md4_final(c, nt_hash);
-    pc_secure_release(mark);
+    protocore_md4_final(c, nt_hash);
+    protocore_secure_release(mark);
 }
 
-proto_bool pc_ntlm_ntowfv2(const uint8_t nt_hash[16], const char *user, const char *domain, uint8_t owf[16])
+proto_bool protocore_ntlm_ntowfv2(const uint8_t nt_hash[16], const char *user, const char *domain, uint8_t owf[16])
 {
     uint8_t buf[512]; // UTF-16LE of Uppercase(user) + domain; 256 chars max
     size_t n = 0;
@@ -60,13 +60,13 @@ proto_bool pc_ntlm_ntowfv2(const uint8_t nt_hash[16], const char *user, const ch
         buf[n++] = (uint8_t)*p;
         buf[n++] = 0;
     }
-    pc_hmac_md5(nt_hash, 16, buf, n, owf);
+    protocore_hmac_md5(nt_hash, 16, buf, n, owf);
     return PROTO_TRUE;
 }
 
 // HMAC-MD5 over a two-part message (the key here is always the 16-byte NTOWFv2, < 64 bytes,
 // so no key-shortening is needed).
-static void pc_hmac_md5_2(const uint8_t key[16], const uint8_t *m1, size_t l1, const uint8_t *m2, size_t l2,
+static void protocore_hmac_md5_2(const uint8_t key[16], const uint8_t *m1, size_t l1, const uint8_t *m2, size_t l2,
                           uint8_t out[16])
 {
     uint8_t ipad[64];
@@ -78,35 +78,35 @@ static void pc_hmac_md5_2(const uint8_t key[16], const uint8_t *m1, size_t l1, c
         opad[i] = (uint8_t)(k ^ 0x5c);
     }
     uint8_t inner[16];
-    size_t mark = pc_secure_mark();
-    struct MdCtx *c = pc_md_wants();
+    size_t mark = protocore_secure_mark();
+    struct MdCtx *c = protocore_md_wants();
     if (c == NULL)
     {
-        pc_secure_release(mark);
+        protocore_secure_release(mark);
         return;
     }
-    pc_md5_init(c);
-    pc_md5_update(c, ipad, 64);
-    pc_md5_update(c, m1, l1);
+    protocore_md5_init(c);
+    protocore_md5_update(c, ipad, 64);
+    protocore_md5_update(c, m1, l1);
     if (m2 && l2)
     {
-        pc_md5_update(c, m2, l2);
+        protocore_md5_update(c, m2, l2);
     }
-    pc_md5_final(c, inner);
-    pc_md5_init(c);
-    pc_md5_update(c, opad, 64);
-    pc_md5_update(c, inner, 16);
-    pc_md5_final(c, out);
-    pc_secure_release(mark);
+    protocore_md5_final(c, inner);
+    protocore_md5_init(c);
+    protocore_md5_update(c, opad, 64);
+    protocore_md5_update(c, inner, 16);
+    protocore_md5_final(c, out);
+    protocore_secure_release(mark);
 }
 
-size_t pc_ntlm_v2_response(const uint8_t owf[16], const uint8_t server_challenge[8], const uint8_t client_challenge[8],
+size_t protocore_ntlm_v2_response(const uint8_t owf[16], const uint8_t server_challenge[8], const uint8_t client_challenge[8],
                            const uint8_t timestamp[8], const uint8_t *target_info, size_t ti_len, uint8_t *out,
                            size_t out_cap, uint8_t session_key[16])
 {
     const size_t temp_len = 2 + 6 + 8 + 8 + 4 + ti_len + 4; // MS-NLMP temp layout
-    const size_t pc_resp_len = 16 + temp_len;               // NTProofStr(16) + temp
-    if (!out || pc_resp_len > out_cap)
+    const size_t protocore_resp_len = 16 + temp_len;               // NTProofStr(16) + temp
+    if (!out || protocore_resp_len > out_cap)
     {
         return 0;
     }
@@ -129,16 +129,16 @@ size_t pc_ntlm_v2_response(const uint8_t owf[16], const uint8_t server_challenge
     mem.set(temp + k, 0, 4); // Z(4) trailer; temp_len (line 83) already accounts for it, so k is done
 
     uint8_t ntproof[16];
-    pc_hmac_md5_2(owf, server_challenge, 8, temp, temp_len, ntproof);
+    protocore_hmac_md5_2(owf, server_challenge, 8, temp, temp_len, ntproof);
     mem.cpy(out, ntproof, 16); // out = NTProofStr || temp
     if (session_key)
     {
-        pc_hmac_md5(owf, 16, ntproof, 16, session_key);
+        protocore_hmac_md5(owf, 16, ntproof, 16, session_key);
     }
-    return pc_resp_len;
+    return protocore_resp_len;
 }
 
-size_t pc_ntlm_set_mic_flag(const uint8_t *target_info, size_t ti_len, uint8_t *out, size_t out_cap)
+size_t protocore_ntlm_set_mic_flag(const uint8_t *target_info, size_t ti_len, uint8_t *out, size_t out_cap)
 {
     if (!target_info || !out)
     {
@@ -202,7 +202,7 @@ size_t pc_ntlm_set_mic_flag(const uint8_t *target_info, size_t ti_len, uint8_t *
     return ti_len + 8;
 }
 
-void pc_ntlm_mic(const uint8_t session_key[16], const uint8_t *neg, size_t neg_len, const uint8_t *chal,
+void protocore_ntlm_mic(const uint8_t session_key[16], const uint8_t *neg, size_t neg_len, const uint8_t *chal,
                  size_t chal_len, const uint8_t *auth, size_t auth_len, uint8_t out[16])
 {
     // HMAC-MD5(session_key, neg || chal || auth), streamed. The key is 16 bytes (< 64), no shortening.
@@ -214,25 +214,25 @@ void pc_ntlm_mic(const uint8_t session_key[16], const uint8_t *neg, size_t neg_l
         ipad[i] = (uint8_t)(k ^ 0x36);
         opad[i] = (uint8_t)(k ^ 0x5c);
     }
-    size_t mark = pc_secure_mark();
-    struct MdCtx *c = pc_md_wants();
+    size_t mark = protocore_secure_mark();
+    struct MdCtx *c = protocore_md_wants();
     if (c == NULL)
     {
-        pc_secure_release(mark);
+        protocore_secure_release(mark);
         return;
     }
     uint8_t inner[16];
-    pc_md5_init(c);
-    pc_md5_update(c, ipad, 64);
-    pc_md5_update(c, neg, neg_len);
-    pc_md5_update(c, chal, chal_len);
-    pc_md5_update(c, auth, auth_len);
-    pc_md5_final(c, inner);
-    pc_md5_init(c);
-    pc_md5_update(c, opad, 64);
-    pc_md5_update(c, inner, 16);
-    pc_md5_final(c, out);
-    pc_secure_release(mark);
+    protocore_md5_init(c);
+    protocore_md5_update(c, ipad, 64);
+    protocore_md5_update(c, neg, neg_len);
+    protocore_md5_update(c, chal, chal_len);
+    protocore_md5_update(c, auth, auth_len);
+    protocore_md5_final(c, inner);
+    protocore_md5_init(c);
+    protocore_md5_update(c, opad, 64);
+    protocore_md5_update(c, inner, 16);
+    protocore_md5_final(c, out);
+    protocore_secure_release(mark);
 }
 
-#endif // PC_ENABLE_SMB
+#endif // PROTOCORE_ENABLE_SMB

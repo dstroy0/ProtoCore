@@ -16,7 +16,7 @@
 #include "mmgr/protomem.h"
 #include "mmgr/swar.h" // the lane math the ordering walk reads its answer out of
 
-#define PC_MEM_MASK ((uintptr_t)(PROTO_RAW_WORD - 1u))
+#define PROTOCORE_MEM_MASK ((uintptr_t)(PROTO_RAW_WORD - 1u))
 
 // The low @p nbytes lanes of a word, as bits. A count at or past the width is the whole word, which
 // is the case a shift by the full width would leave undefined.
@@ -34,7 +34,7 @@ static proto_mv_word lo_lanes(size_t nbytes)
 // a big-endian one, so the two ends are named from opposite sides.
 static proto_mv_word span_lanes(size_t from, size_t to)
 {
-#if PC_HW_BIG_ENDIAN
+#if PROTOCORE_HW_BIG_ENDIAN
     return (proto_mv_word)(~lo_lanes(PROTO_RAW_WORD - to) & lo_lanes(PROTO_RAW_WORD - from));
 #else
     return (proto_mv_word)(lo_lanes(to) & ~lo_lanes(from));
@@ -46,7 +46,7 @@ static proto_mv_word span_lanes(size_t from, size_t to)
 // into the next word and never past the span's own allocation.
 static proto_mv_word src_word(const unsigned char *p, size_t avail)
 {
-    const size_t off = (size_t)((uintptr_t)p & PC_MEM_MASK);
+    const size_t off = (size_t)((uintptr_t)p & PROTOCORE_MEM_MASK);
     const unsigned char *sa = p - off;
     const proto_mv_word w0 = proto_mv_load(sa);
 
@@ -62,14 +62,14 @@ static proto_mv_word src_word(const unsigned char *p, size_t avail)
     {
         w1 = proto_mv_load(sa + PROTO_RAW_WORD);
     }
-#if PC_HW_BIG_ENDIAN
+#if PROTOCORE_HW_BIG_ENDIAN
     return (proto_mv_word)((w0 << lo) | (w1 >> hi));
 #else
     return (proto_mv_word)((w0 >> lo) | (w1 << hi));
 #endif
 }
 
-void pc_mem_cpy(void *dst, const void *src, size_t n)
+void protocore_mem_cpy(void *dst, const void *src, size_t n)
 {
     unsigned char *d = (unsigned char *)dst;
     const unsigned char *s = (const unsigned char *)src;
@@ -87,7 +87,7 @@ void pc_mem_cpy(void *dst, const void *src, size_t n)
     }
 }
 
-void pc_mem_move(void *dst, const void *src, size_t n)
+void protocore_mem_move(void *dst, const void *src, size_t n)
 {
     unsigned char *d = (unsigned char *)dst;
     const unsigned char *s = (const unsigned char *)src;
@@ -98,13 +98,13 @@ void pc_mem_move(void *dst, const void *src, size_t n)
     }
     if (d < s || d >= s + n)
     {
-        pc_mem_cpy(dst, src, n);
+        protocore_mem_cpy(dst, src, n);
         return;
     }
 
     // Destination ahead of the source and inside it: walk down so a word is read before the store
     // that would overwrite it. The trailing partial goes first, for the same reason.
-    size_t i = n & ~(size_t)PC_MEM_MASK;
+    size_t i = n & ~(size_t)PROTOCORE_MEM_MASK;
     if (i < n)
     {
         const proto_mv_word keep = span_lanes(0u, n - i);
@@ -127,22 +127,22 @@ void pc_mem_move(void *dst, const void *src, size_t n)
  * The tail runs the same rule a byte at a time. A partial word cannot be loaded whole without
  * reading past what the caller offered: @p n is a promise about both operands, not a hint.
  */
-int pc_mem_cmp(const void *a, const void *b, size_t n)
+int protocore_mem_cmp(const void *a, const void *b, size_t n)
 {
     const char *x = (const char *)a;
     const char *y = (const char *)b;
     size_t i = 0;
 
-    while (i + PC_SWAR_BYTES <= n)
+    while (i + PROTOCORE_SWAR_BYTES <= n)
     {
-        pc_swar_word d = swar.load(x + i) ^ swar.load(y + i);
+        protocore_swar_word d = swar.load(x + i) ^ swar.load(y + i);
         if (d != 0)
         {
             // The guard bit stands on every lane that differs, and the lowest one is where they part.
-            i += swar.zero_lane(PC_SWAR_HIGH & ~swar.has_zero(d));
+            i += swar.zero_lane(PROTOCORE_SWAR_HIGH & ~swar.has_zero(d));
             return (int)(unsigned char)x[i] - (int)(unsigned char)y[i];
         }
-        i += PC_SWAR_BYTES;
+        i += PROTOCORE_SWAR_BYTES;
     }
     while (i < n)
     {
@@ -165,12 +165,12 @@ int pc_mem_cmp(const void *a, const void *b, size_t n)
  * That is what separates this from ::StrNs::find, which stops at a NUL because it searches a string.
  * A buffer that deliberately carries NULs - a decoded credential, a wire frame - needs this one.
  */
-const void *pc_mem_chr(const void *p, size_t n, uint8_t c)
+const void *protocore_mem_chr(const void *p, size_t n, uint8_t c)
 {
     const char *s = (const char *)p;
     size_t i = 0;
 
-    while (i < n && ((uintptr_t)(s + i) & (PC_SWAR_BYTES - 1u)) != 0u)
+    while (i < n && ((uintptr_t)(s + i) & (PROTOCORE_SWAR_BYTES - 1u)) != 0u)
     {
         if ((uint8_t)s[i] == c)
         {
@@ -178,14 +178,14 @@ const void *pc_mem_chr(const void *p, size_t n, uint8_t c)
         }
         ++i;
     }
-    while (i + PC_SWAR_BYTES <= n)
+    while (i + PROTOCORE_SWAR_BYTES <= n)
     {
-        pc_swar_word m = swar.eq(swar.load_al(s + i), c, PROTO_FALSE);
+        protocore_swar_word m = swar.eq(swar.load_al(s + i), c, PROTO_FALSE);
         if (m != 0)
         {
             return s + i + swar.zero_lane(m);
         }
-        i += PC_SWAR_BYTES;
+        i += PROTOCORE_SWAR_BYTES;
     }
     // The final partial word, a byte at a time: a whole load would read past what @p n offers.
     while (i < n)
@@ -199,7 +199,7 @@ const void *pc_mem_chr(const void *p, size_t n, uint8_t c)
     return NULL;
 }
 
-void pc_mem_set(void *dst, unsigned char v, size_t n)
+void protocore_mem_set(void *dst, unsigned char v, size_t n)
 {
     unsigned char *d = (unsigned char *)dst;
     size_t i = 0;
@@ -221,7 +221,7 @@ void pc_mem_set(void *dst, unsigned char v, size_t n)
     }
 }
 
-void pc_mem_zero(void *dst, size_t n)
+void protocore_mem_zero(void *dst, size_t n)
 {
-    pc_mem_set(dst, 0u, n);
+    protocore_mem_set(dst, 0u, n);
 }

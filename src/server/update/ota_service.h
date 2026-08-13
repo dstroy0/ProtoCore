@@ -3,13 +3,13 @@
 
 /**
  * @file ota_service.h
- * @brief Optional authenticated OTA firmware update (PC_ENABLE_OTA).
+ * @brief Optional authenticated OTA firmware update (PROTOCORE_ENABLE_OTA).
  *
  * Registers a POST endpoint that streams a firmware image straight into the
  * ESP32 `Update` API via the parser's streaming-body hook
  * (http_parser_set_stream_hooks), so the image never has to fit in RAM. On a
  * successful flash the device responds and reboots into the new firmware.
- * Compiled to a no-op stub when PC_ENABLE_OTA is 0 or off-Arduino.
+ * Compiled to a no-op stub when PROTOCORE_ENABLE_OTA is 0 or off-Arduino.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -20,9 +20,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_OTA
+#if PROTOCORE_ENABLE_OTA
 
 /**
  * @brief Register an authenticated streaming OTA endpoint.
@@ -40,10 +40,10 @@ PROTO_BEGIN_DECLS
  * curl -u admin:s3cret --data-binary @firmware.bin http://<ip>/update
  * @endcode
  */
-void pc_ota_begin(const char *path, const char *user, const char *pass);
+void protocore_ota_begin(const char *path, const char *user, const char *pass);
 
-#endif // PC_ENABLE_OTA
+#endif // PROTOCORE_ENABLE_OTA
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_OTA_SERVICE_H

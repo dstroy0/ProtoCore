@@ -3,7 +3,7 @@
 
 /**
  * @file ConfigExport.ino
- * @brief Schema-driven config export / restore (PC_ENABLE_CONFIG_IO).
+ * @brief Schema-driven config export / restore (PROTOCORE_ENABLE_CONFIG_IO).
  *
  * Declares a schema of persisted fields and serves them as a portable text blob:
  *   GET  /config            -> dumps `key=value` lines (backup / migrate)
@@ -11,12 +11,12 @@
  * Schema-driven over the typed NVS config store - deterministic, zero-heap.
  *
  * NOTE: enable both flags for the whole build. In platformio.ini:
- *     build_flags = -DPC_ENABLE_CONFIG_STORE=1 -DPC_ENABLE_CONFIG_IO=1
+ *     build_flags = -DPROTOCORE_ENABLE_CONFIG_STORE=1 -DPROTOCORE_ENABLE_CONFIG_IO=1
  * (Arduino IDE: they are already set for you in the build_opt.h beside this sketch, so it builds as-is.)
  */
 
-#define PC_ENABLE_CONFIG_STORE 1
-#define PC_ENABLE_CONFIG_IO 1
+#define PROTOCORE_ENABLE_CONFIG_STORE 1
+#define PROTOCORE_ENABLE_CONFIG_IO 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -28,10 +28,10 @@ static const char *PASSWORD = "YOUR_PASSWORD";
 
 
 // The persisted fields to back up / restore.
-static const pc_cfg_field SCHEMA[] = {
-    {"hostname", pc_cfg_type::PC_CFG_STR},
-    {"http_port", pc_cfg_type::PC_CFG_U32},
-    {"location", pc_cfg_type::PC_CFG_STR},
+static const protocore_cfg_field SCHEMA[] = {
+    {"hostname", protocore_cfg_type::PROTOCORE_CFG_STR},
+    {"http_port", protocore_cfg_type::PROTOCORE_CFG_U32},
+    {"location", protocore_cfg_type::PROTOCORE_CFG_STR},
 };
 static const size_t SCHEMA_N = sizeof(SCHEMA) / sizeof(SCHEMA[0]);
 
@@ -48,18 +48,18 @@ void setup()
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     // Seed a couple of values (normally set at provisioning).
-    pc_config_begin("app");
-    pc_config_set_str("hostname", "sensor-01");
-    pc_config_set_u32("http_port", 80);
-    pc_config_set_str("location", "lab");
+    protocore_config_begin("app");
+    protocore_config_set_str("hostname", "sensor-01");
+    protocore_config_set_u32("http_port", 80);
+    protocore_config_set_str("location", "lab");
 
     on_http("/config", HTTP_GET, [](uint8_t id, HttpReq *) {
         char buf[512];
-        pc_config_export("app", SCHEMA, SCHEMA_N, buf, sizeof(buf));
+        protocore_config_export("app", SCHEMA, SCHEMA_N, buf, sizeof(buf));
         send_text(id, 200, "text/plain", buf);
     });
     on_http("/config", HTTP_POST, [](uint8_t id, HttpReq *req) {
-        int n = pc_config_import("app", SCHEMA, SCHEMA_N, (const char *)req->body, req->body_len);
+        int n = protocore_config_import("app", SCHEMA, SCHEMA_N, (const char *)req->body, req->body_len);
         char msg[48];
         snprintf(msg, sizeof(msg), "imported %d field(s)\n", n);
         send_text(id, 200, "text/plain", msg);

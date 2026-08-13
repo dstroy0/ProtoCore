@@ -9,7 +9,7 @@
 #include "services/energy/iccp/iccp.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_ICCP
+#if PROTOCORE_ENABLE_ICCP
 
 // Append a short-form TLV (value length < 128). Returns bytes written at out, or 0 on overflow.
 static size_t tlv(uint8_t tag, const uint8_t *val, size_t val_len, uint8_t *out, size_t cap)
@@ -52,7 +52,7 @@ static size_t int_content(int32_t v, uint8_t *buf)
     return n;
 }
 
-size_t pc_iccp_state_q(uint8_t state, uint8_t flags, const uint8_t time[4], uint8_t *out, size_t cap)
+size_t protocore_iccp_state_q(uint8_t state, uint8_t flags, const uint8_t time[4], uint8_t *out, size_t cap)
 {
     if (!out)
     {
@@ -81,7 +81,7 @@ size_t pc_iccp_state_q(uint8_t state, uint8_t flags, const uint8_t time[4], uint
     return tlv(0xA2, inner, n, out, cap);
 }
 
-size_t pc_iccp_real_q(int32_t milli, uint8_t flags, const uint8_t time[4], uint8_t *out, size_t cap)
+size_t protocore_iccp_real_q(int32_t milli, uint8_t flags, const uint8_t time[4], uint8_t *out, size_t cap)
 {
     if (!out)
     {
@@ -117,4 +117,4 @@ size_t pc_iccp_real_q(int32_t milli, uint8_t flags, const uint8_t time[4], uint8
     return tlv(0xA3, inner, n, out, cap);
 }
 
-#endif // PC_ENABLE_ICCP
+#endif // PROTOCORE_ENABLE_ICCP

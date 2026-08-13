@@ -69,7 +69,7 @@ def placement(objdump, ar, archive, work):
 
 def main():
     targets = sorted(d for d in os.listdir(PHY_DIR) if os.path.isdir(os.path.join(PHY_DIR, d)))
-    work = os.path.join(os.environ.get("TEMP", "/tmp"), "pc_blob_iram")
+    work = os.path.join(os.environ.get("TEMP", "/tmp"), "protocore_blob_iram")
 
     doc = [
         "# Radio blob functions that must live in IRAM",

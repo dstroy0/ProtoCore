@@ -3,21 +3,22 @@
 
 /**
  * @file upload_service.c
- * @brief Streaming file upload: POST body -> Arduino FS file (PC_ENABLE_UPLOAD).
+ * @brief Streaming file upload: POST body -> Arduino FS file (PROTOCORE_ENABLE_UPLOAD).
  */
 
 #include "upload_service.h"
 #include "mmgr/protoframe.h" // the one frame engine
 
-#if PC_ENABLE_UPLOAD
+#if PROTOCORE_ENABLE_UPLOAD
 
 #include "network_drivers/presentation/http/http_parser/http_parser.h"
 #include "protocore.h"
-#include "server/filesystem/mnt.h" // the storage seam: pc_mnt_active()
+#include "server/filesystem/mnt.h" // the storage seam: protocore_mnt_active()
 #include "shared_primitives/mime.h"
 #include <stdio.h>
 
-static const pc_field UPLOAD_OK[] = {{PC_FK_LIT, 0, 3, "OK "}, PC_U32, {PC_FK_LIT, 0, 6, " bytes"}, PC_END};
+static const protocore_field UPLOAD_OK[] = {
+    {PROTOCORE_FK_LIT, 0, 3, "OK "}, PROTOCORE_U32, {PROTOCORE_FK_LIT, 0, 6, " bytes"}, PROTOCORE_END};
 
 // All upload-service state, owned by one instance (internal linkage): the server handle, the
 // route path, the destination filesystem + path, and the per-upload file/flags/counter (one
@@ -41,7 +42,7 @@ static proto_bool upload_stream_begin(HttpReq *req)
     {
         return PROTO_FALSE;
     }
-    // The `!s_upl.path` half is unreachable: s_upl.path is only ever set by pc_upload_begin(),
+    // The `!s_upl.path` half is unreachable: s_upl.path is only ever set by protocore_upload_begin(),
     // which immediately hands that same pointer to on_http() -> fill_route_base(), whose
     // strncpy() would fault on a null path before any request could reach this hook. So by the
     // time this hook is installed, s_upl.path is always a live C string.
@@ -56,10 +57,10 @@ static proto_bool upload_stream_begin(HttpReq *req)
     s_upl.handle = -1;
     // The seam fails closed when nothing is mounted, so a cold mount answers "upload failed"
     // rather than faulting.
-    const pc_mnt_backend *mnt = pc_mnt_active();
+    const protocore_mnt_backend *mnt = protocore_mnt_active();
     if (mnt && s_upl.dest)
     {
-        s_upl.handle = mnt->open(s_upl.dest, PC_MNT_WRITE);
+        s_upl.handle = mnt->open(s_upl.dest, PROTOCORE_MNT_WRITE);
         if (s_upl.handle >= 0)
         {
             s_upl.active = PROTO_TRUE;
@@ -83,7 +84,7 @@ static void upload_stream_data(HttpReq *req, const uint8_t *data, size_t len)
     (void)req; // a single upload streams at a time
     if (s_upl.active && !s_upl.error)
     {
-        const pc_mnt_backend *mnt = pc_mnt_active();
+        const protocore_mnt_backend *mnt = protocore_mnt_active();
         if (!mnt || mnt->write(s_upl.handle, data, len) != (int)len)
         {
             s_upl.error = PROTO_TRUE;
@@ -100,12 +101,12 @@ static void upload_handle(uint8_t slot_id, HttpReq *req)
 {
     if (!req->body_streaming)
     {
-        send_text(slot_id, 400, PC_MIME_TEXT_PLAIN, "POST a file body");
+        send_text(slot_id, 400, PROTOCORE_MIME_TEXT_PLAIN, "POST a file body");
         return;
     }
     if (s_upl.active)
     {
-        const pc_mnt_backend *mnt = pc_mnt_active();
+        const protocore_mnt_backend *mnt = protocore_mnt_active();
         if (mnt)
         {
             mnt->close(s_upl.handle);
@@ -114,20 +115,20 @@ static void upload_handle(uint8_t slot_id, HttpReq *req)
     }
     if (!s_upl.active || s_upl.error)
     {
-        send_text(slot_id, 500, PC_MIME_TEXT_PLAIN, "upload failed");
+        send_text(slot_id, 500, PROTOCORE_MIME_TEXT_PLAIN, "upload failed");
         return;
     }
     char msg[48];
-    frame.build(msg, sizeof(msg), UPLOAD_OK, (const pc_fval[]){PC_VU32((uint32_t)s_upl.written)}, 1);
-    send_text(slot_id, 200, PC_MIME_TEXT_PLAIN, msg);
+    frame.build(msg, sizeof(msg), UPLOAD_OK, (const protocore_fval[]){PROTOCORE_VU32((uint32_t)s_upl.written)}, 1);
+    send_text(slot_id, 200, PROTOCORE_MIME_TEXT_PLAIN, msg);
 }
 
-size_t pc_upload_last_size()
+size_t protocore_upload_last_size()
 {
     return s_upl.written;
 }
 
-void pc_upload_begin(const char *path, const char *dest_path)
+void protocore_upload_begin(const char *path, const char *dest_path)
 {
     s_upl.path = path;
     s_upl.dest = dest_path;
@@ -137,4 +138,4 @@ void pc_upload_begin(const char *path, const char *dest_path)
     on_http(path, HTTP_POST, upload_handle);
 }
 
-#endif // PC_ENABLE_UPLOAD
+#endif // PROTOCORE_ENABLE_UPLOAD

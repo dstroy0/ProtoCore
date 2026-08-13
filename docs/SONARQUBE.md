@@ -25,7 +25,7 @@ observe. The C/C++ analyzer needs a **compilation database**
 
 ## How the compilation database is built
 
-No single build enables all ~111 `PC_ENABLE_*` features, so a feature-gated
+No single build enables all ~111 `PROTOCORE_ENABLE_*` features, so a feature-gated
 source file is only compiled in the env whose flag turns it on. To give Sonar a
 command for **every** file, [`tools/ci_tooling/sonar/gen_compiledb.sh`](../tools/ci_tooling/sonar/gen_compiledb.sh)
 runs `pio run -t compiledb` for each native env, and

@@ -9,11 +9,11 @@
 #include "services/fieldbus/cia402/cia402.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_CIA402
+#if PROTOCORE_ENABLE_CIA402
 
 #include "mmgr/endian.h"
 
-Cia402State pc_cia402_state(uint16_t sw)
+Cia402State protocore_cia402_state(uint16_t sw)
 {
     // Mask/value table from IEC 61800-7-201 (CiA 402). Order matters where masks differ.
     if ((sw & 0x4F) == 0x00)
@@ -51,7 +51,7 @@ Cia402State pc_cia402_state(uint16_t sw)
     return CIA402_STATE_UNKNOWN;
 }
 
-uint16_t pc_cia402_controlword(Cia402Command cmd)
+uint16_t protocore_cia402_controlword(Cia402Command cmd)
 {
     switch (cmd)
     {
@@ -72,63 +72,63 @@ uint16_t pc_cia402_controlword(Cia402Command cmd)
     return 0x0000;
 }
 
-uint16_t pc_cia402_enable_sequence(Cia402State state)
+uint16_t protocore_cia402_enable_sequence(Cia402State state)
 {
     switch (state)
     {
     case CIA402_STATE_FAULT:
     case CIA402_STATE_FAULT_REACTION_ACTIVE:
-        return pc_cia402_controlword(CIA402_COMMAND_FAULT_RESET);
+        return protocore_cia402_controlword(CIA402_COMMAND_FAULT_RESET);
     case CIA402_STATE_SWITCH_ON_DISABLED:
-        return pc_cia402_controlword(CIA402_COMMAND_SHUTDOWN);
+        return protocore_cia402_controlword(CIA402_COMMAND_SHUTDOWN);
     case CIA402_STATE_READY_TO_SWITCH_ON:
-        return pc_cia402_controlword(CIA402_COMMAND_SWITCH_ON);
+        return protocore_cia402_controlword(CIA402_COMMAND_SWITCH_ON);
     case CIA402_STATE_SWITCHED_ON:
     case CIA402_STATE_QUICK_STOP_ACTIVE:
     case CIA402_STATE_OPERATION_ENABLED:
-        return pc_cia402_controlword(CIA402_COMMAND_ENABLE_OPERATION);
+        return protocore_cia402_controlword(CIA402_COMMAND_ENABLE_OPERATION);
     default: // not_ready_to_switch_on / unknown: wait, hold voltage off
-        return pc_cia402_controlword(CIA402_COMMAND_DISABLE_VOLTAGE);
+        return protocore_cia402_controlword(CIA402_COMMAND_DISABLE_VOLTAGE);
     }
 }
 
-proto_bool pc_cia402_sdo_set_controlword(CanFrame *out, uint8_t node, uint16_t controlword)
+proto_bool protocore_cia402_sdo_set_controlword(CanFrame *out, uint8_t node, uint16_t controlword)
 {
     uint8_t d[2];
-    pc_wr16le(d, controlword);
-    return pc_canopen_build_sdo_write(out, node, CIA402_OD_CONTROLWORD, 0, d, 2);
+    protocore_wr16le(d, controlword);
+    return protocore_canopen_build_sdo_write(out, node, CIA402_OD_CONTROLWORD, 0, d, 2);
 }
 
-proto_bool pc_cia402_sdo_set_mode(CanFrame *out, uint8_t node, Cia402Mode mode)
+proto_bool protocore_cia402_sdo_set_mode(CanFrame *out, uint8_t node, Cia402Mode mode)
 {
     uint8_t d = (uint8_t)(int8_t)mode; // wire byte
-    return pc_canopen_build_sdo_write(out, node, CIA402_OD_MODES_OF_OPERATION, 0, &d, 1);
+    return protocore_canopen_build_sdo_write(out, node, CIA402_OD_MODES_OF_OPERATION, 0, &d, 1);
 }
 
-proto_bool pc_cia402_sdo_set_target_position(CanFrame *out, uint8_t node, int32_t position)
+proto_bool protocore_cia402_sdo_set_target_position(CanFrame *out, uint8_t node, int32_t position)
 {
     uint8_t d[4];
-    pc_wr32le(d, (uint32_t)position);
-    return pc_canopen_build_sdo_write(out, node, CIA402_OD_TARGET_POSITION, 0, d, 4);
+    protocore_wr32le(d, (uint32_t)position);
+    return protocore_canopen_build_sdo_write(out, node, CIA402_OD_TARGET_POSITION, 0, d, 4);
 }
 
-proto_bool pc_cia402_sdo_set_target_velocity(CanFrame *out, uint8_t node, int32_t velocity)
+proto_bool protocore_cia402_sdo_set_target_velocity(CanFrame *out, uint8_t node, int32_t velocity)
 {
     uint8_t d[4];
-    pc_wr32le(d, (uint32_t)velocity);
-    return pc_canopen_build_sdo_write(out, node, CIA402_OD_TARGET_VELOCITY, 0, d, 4);
+    protocore_wr32le(d, (uint32_t)velocity);
+    return protocore_canopen_build_sdo_write(out, node, CIA402_OD_TARGET_VELOCITY, 0, d, 4);
 }
 
-proto_bool pc_cia402_sdo_set_target_torque(CanFrame *out, uint8_t node, int16_t torque)
+proto_bool protocore_cia402_sdo_set_target_torque(CanFrame *out, uint8_t node, int16_t torque)
 {
     uint8_t d[2];
-    pc_wr16le(d, (uint16_t)torque);
-    return pc_canopen_build_sdo_write(out, node, CIA402_OD_TARGET_TORQUE, 0, d, 2);
+    protocore_wr16le(d, (uint16_t)torque);
+    return protocore_canopen_build_sdo_write(out, node, CIA402_OD_TARGET_TORQUE, 0, d, 2);
 }
 
-proto_bool pc_cia402_sdo_read(CanFrame *out, uint8_t node, uint16_t index, uint8_t sub)
+proto_bool protocore_cia402_sdo_read(CanFrame *out, uint8_t node, uint16_t index, uint8_t sub)
 {
-    return pc_canopen_build_sdo_read(out, node, index, sub);
+    return protocore_canopen_build_sdo_read(out, node, index, sub);
 }
 
 // Validate an expedited SDO upload response and copy its inline payload into @p out (>= need
@@ -136,7 +136,7 @@ proto_bool pc_cia402_sdo_read(CanFrame *out, uint8_t node, uint16_t index, uint8
 static proto_bool sdo_upload_bytes(const CanFrame *f, uint16_t want_index, uint8_t need, uint8_t *out)
 {
     CanopenSdoResponse resp;
-    if (!pc_canopen_parse_sdo_response(f, &resp))
+    if (!protocore_canopen_parse_sdo_response(f, &resp))
     {
         return PROTO_FALSE;
     }
@@ -152,48 +152,48 @@ static proto_bool sdo_upload_bytes(const CanFrame *f, uint16_t want_index, uint8
     return PROTO_TRUE;
 }
 
-proto_bool pc_cia402_sdo_get_u16(const CanFrame *f, uint16_t want_index, uint16_t *value)
+proto_bool protocore_cia402_sdo_get_u16(const CanFrame *f, uint16_t want_index, uint16_t *value)
 {
     uint8_t d[2];
     if (!value || !sdo_upload_bytes(f, want_index, 2, d))
     {
         return PROTO_FALSE;
     }
-    *value = pc_rd16le(d);
+    *value = protocore_rd16le(d);
     return PROTO_TRUE;
 }
 
-proto_bool pc_cia402_sdo_get_i32(const CanFrame *f, uint16_t want_index, int32_t *value)
+proto_bool protocore_cia402_sdo_get_i32(const CanFrame *f, uint16_t want_index, int32_t *value)
 {
     uint8_t d[4];
     if (!value || !sdo_upload_bytes(f, want_index, 4, d))
     {
         return PROTO_FALSE;
     }
-    *value = (int32_t)pc_rd32le(d);
+    *value = (int32_t)protocore_rd32le(d);
     return PROTO_TRUE;
 }
 
-size_t pc_cia402_pack_command(uint8_t *buf, size_t cap, uint16_t controlword, int32_t target)
+size_t protocore_cia402_pack_command(uint8_t *buf, size_t cap, uint16_t controlword, int32_t target)
 {
     if (!buf || cap < 6)
     {
         return 0;
     }
-    size_t p = pc_wr16le(buf, controlword);
-    p += pc_wr32le(buf + p, (uint32_t)target);
+    size_t p = protocore_wr16le(buf, controlword);
+    p += protocore_wr32le(buf + p, (uint32_t)target);
     return p; // 6
 }
 
-proto_bool pc_cia402_unpack_status(const uint8_t *buf, size_t len, uint16_t *statusword, int32_t *actual)
+proto_bool protocore_cia402_unpack_status(const uint8_t *buf, size_t len, uint16_t *statusword, int32_t *actual)
 {
     if (!buf || !statusword || !actual || len < 6)
     {
         return PROTO_FALSE;
     }
-    *statusword = pc_rd16le(buf);
-    *actual = (int32_t)pc_rd32le(buf + 2);
+    *statusword = protocore_rd16le(buf);
+    *actual = (int32_t)protocore_rd32le(buf + 2);
     return PROTO_TRUE;
 }
 
-#endif // PC_ENABLE_CIA402
+#endif // PROTOCORE_ENABLE_CIA402

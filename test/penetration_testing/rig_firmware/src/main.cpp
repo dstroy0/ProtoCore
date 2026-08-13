@@ -3,7 +3,7 @@
 
 /**
  * @file main.cpp
- * @brief ESP32-S3 test-rig firmware: the target for penetration_testing/pc_pentest.py and the JTAG
+ * @brief ESP32-S3 test-rig firmware: the target for penetration_testing/protocore_pentest.py and the JTAG
  *        perf-profiling harness.
  *
  * Exposes a broad attack surface (auth, file serving + range, websocket, SSE, CSRF, accept
@@ -24,7 +24,7 @@
 #include "network_drivers/presentation/codec/deflate/deflate.h" // deflate_raw (permessage-deflate TX hot op)
 #include "network_drivers/presentation/codec/inflate/inflate.h" // inflate_raw (permessage-deflate RX hot op)
 #include "network_drivers/presentation/http/sse/sse.h"          // sse_format (SSE framing hot op)
-#include "network_drivers/transport/client.h"                   // pc_client_* (device-as-Redis-client probe)
+#include "network_drivers/transport/client.h"                   // protocore_client_* (device-as-Redis-client probe)
 #include "protocore.h"
 #include "services/energy/dnp3/dnp3.h"          // DNP3 (IEEE 1815) data-link codec - dnp3_parse_frame device bench
 #include "services/energy/iec60870/iec60870.h"  // IEC 60870-5-104 SCADA codec - iec104_parse device bench + fuzz
@@ -57,8 +57,8 @@
 #include "services/net/syslog/syslog.h"         // RFC 5424 syslog client (UDP) - device-as-syslog-client probe
 #include "services/net/ws_client/ws_client.h"   // outbound WebSocket client codec - WAMP transport for the probe
 #include "services/security/jwt/jwt.h"          // JWT HS256 bearer-auth verify - device-as-server /jwt/verify
-#include "services/timing_position/time_source/time_source.h" // pc_time_now registry - feeds the NTP server a wall clock
-#include "shared_primitives/hex.h"                            // pc_hex_encode/decode (ETag / digest)
+#include "services/timing_position/time_source/time_source.h" // protocore_time_now registry - feeds the NTP server a wall clock
+#include "shared_primitives/hex.h"                            // protocore_hex_encode/decode (ETag / digest)
 #include <Arduino.h>
 #include <LittleFS.h> // WebDAV share backing store (internal flash, no SD card)
 #include <WiFi.h>
@@ -242,7 +242,7 @@ static void h_bench(uint8_t id, HttpReq *)
     uint32_t c0 = ESP.getCycleCount();
     for (int i = 0; i < N; i++)
     {
-        pc_hex_encode(hin, 16, hout);
+        protocore_hex_encode(hin, 16, hout);
     }
     uint32_t hexenc = (ESP.getCycleCount() - c0) / N;
 
@@ -251,7 +251,7 @@ static void h_bench(uint8_t id, HttpReq *)
     c0 = ESP.getCycleCount();
     for (int i = 0; i < N; i++)
     {
-        hd = pc_hex_decode(hout, 32, hdout, sizeof(hdout));
+        hd = protocore_hex_decode(hout, 32, hdout, sizeof(hdout));
     }
     uint32_t hexdec = (ESP.getCycleCount() - c0) / N;
     (void)hd;
@@ -468,7 +468,7 @@ static void h_bench(uint8_t id, HttpReq *)
 
     // syslog_format: build one RFC 5424 line (<PRI>1 - HOST APP - - - MSG) into a caller buffer - the
     // per-log-line hot op of the UDP syslog client (pure; no socket). A LOCAL0/INFO line with a typical msg.
-    static char slbuf[PC_SYSLOG_MSG_MAX];
+    static char slbuf[PROTOCORE_SYSLOG_MSG_MAX];
     volatile size_t sln = 0;
     c0 = ESP.getCycleCount();
     for (int i = 0; i < N; i++)
@@ -497,7 +497,7 @@ static void h_bench(uint8_t id, HttpReq *)
     // per-query hot op of the UDP/53 authoritative DNS server (pure). Query for "test.lan" A IN.
     static const uint8_t dq[] = {0x12, 0x34, 0x01, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04,
                                  't',  'e',  's',  't',  0x03, 'l',  'a',  'n',  0x00, 0x00, 0x01, 0x00, 0x01};
-    static uint8_t drsp[PC_DNS_NAME_MAX + 32];
+    static uint8_t drsp[PROTOCORE_DNS_NAME_MAX + 32];
     volatile size_t dnn = 0;
     c0 = ESP.getCycleCount();
     for (int i = 0; i < N; i++)
@@ -539,7 +539,7 @@ static void h_bench(uint8_t id, HttpReq *)
 
     // statsd_format: build one StatsD line (name:value|type[|@rate][|#tags]) - the per-metric hot op of the
     // UDP StatsD client (pure; no socket). A sampled counter with DogStatsD tags.
-    static char stbuf[PC_STATSD_LINE_MAX];
+    static char stbuf[PROTOCORE_STATSD_LINE_MAX];
     volatile size_t stn = 0;
     c0 = ESP.getCycleCount();
     for (int i = 0; i < N; i++)
@@ -578,17 +578,22 @@ static void h_bench(uint8_t id, HttpReq *)
         {
             ck[i] = (uint8_t)(i * 7 + 3);
         }
-        ntsrl += pc_nts_ke_record(true, Nts::NTS_KE_NEXT_PROTOCOL, np, 2, ntsresp + ntsrl, sizeof(ntsresp) - ntsrl);
-        ntsrl += pc_nts_ke_record(true, Nts::NTS_KE_AEAD_ALGORITHM, ad, 2, ntsresp + ntsrl, sizeof(ntsresp) - ntsrl);
-        ntsrl += pc_nts_ke_record(false, Nts::NTS_KE_COOKIE, ck, 32, ntsresp + ntsrl, sizeof(ntsresp) - ntsrl);
         ntsrl +=
-            pc_nts_ke_record(true, Nts::NTS_KE_END_OF_MESSAGE, nullptr, 0, ntsresp + ntsrl, sizeof(ntsresp) - ntsrl);
+            protocore_nts_ke_record(true, Nts::NTS_KE_NEXT_PROTOCOL, np, 2, ntsresp + ntsrl, sizeof(ntsresp) - ntsrl);
+        ntsrl +=
+            protocore_nts_ke_record(true, Nts::NTS_KE_AEAD_ALGORITHM, ad, 2, ntsresp + ntsrl, sizeof(ntsresp) - ntsrl);
+        ntsrl += protocore_nts_ke_record(false, Nts::NTS_KE_COOKIE, ck, 32, ntsresp + ntsrl, sizeof(ntsresp) - ntsrl);
+        ntsrl += protocore_nts_ke_record(true, Nts::NTS_KE_END_OF_MESSAGE, nullptr, 0, ntsresp + ntsrl,
+                                         sizeof(ntsresp) - ntsrl);
     }
     volatile int ntsn = 0;
     c0 = ESP.getCycleCount();
     for (int i = 0; i < N; i++)
     {
-        ntsn = pc_nts_ke_parse(ntsresp, ntsrl, [](bool, uint16_t, const uint8_t *, size_t, void *) {}, nullptr) ? 1 : 0;
+        ntsn = protocore_nts_ke_parse(
+                   ntsresp, ntsrl, [](bool, uint16_t, const uint8_t *, size_t, void *) {}, nullptr)
+                   ? 1
+                   : 0;
     }
     uint32_t ntscyc = (ESP.getCycleCount() - c0) / N;
     (void)ntsn;
@@ -738,7 +743,7 @@ static void sse_open(uint8_t sse_id)
     server.sse_send(sse_id, "42", "tick", "3");
 }
 
-// CoAP resources (RFC 7252) on UDP/5683 - a live interop + attack surface for pc_pentest.py.
+// CoAP resources (RFC 7252) on UDP/5683 - a live interop + attack surface for protocore_pentest.py.
 static void coap_info(const CoapRequest *, CoapResponse *resp)
 {
     int n = snprintf((char *)resp->payload, resp->payload_cap, "{\"uptime_ms\":%lu,\"free_heap\":%u}",
@@ -853,7 +858,7 @@ static int32_t opcua_browse(uint16_t ns, uint32_t id, OpcUaReference *out, uint3
 
 // MQTT device-as-client probe: connect OUT to the broker named in the query (?host=&port=), subscribe +
 // publish, then pump mqtt_loop() to receive whatever the broker sends. This drives the CLIENT parser
-// (mqtt_parse_connack/publish/suback) against a broker run by pc_pentest.py - possibly a malicious one.
+// (mqtt_parse_connack/publish/suback) against a broker run by protocore_pentest.py - possibly a malicious one.
 // mqtt_connect blocks up to 8 s (bounded); the whole probe returns to keep the server responsive.
 static volatile int g_mqtt_rx = 0;
 static void mqtt_msg_cb(const char *, const uint8_t *, size_t)
@@ -899,7 +904,7 @@ static void h_mqtt_probe(uint8_t id, HttpReq *r)
     server.send(id, 200, "application/json", b);
 }
 
-#if PC_ENABLE_SPARKPLUG
+#if PROTOCORE_ENABLE_SPARKPLUG
 // Sparkplug B device-as-client: connect to an MQTT broker (?host=&port=), build an NBIRTH payload (the Tahu
 // Payload protobuf) with a float / uint32 / string metric, and publish it to spBv1.0/<group>/NBIRTH/<node>.
 // A real Sparkplug subscriber decodes + verifies the payload (interop). group/node default, overridable.
@@ -972,20 +977,20 @@ static void h_sparkplug_probe(uint8_t id, HttpReq *r)
 // MTConnect (ANSI/MTC1.4) agent: a read-only HTTP agent answering probe/current/sample with XML. The
 // device model + a rolling sample buffer are static (zero heap). from/count on /sample are the attack
 // surface (the query must be bounded, never over-read the ring).
-static pc_mtc_sample_buffer g_mtc;
+static protocore_mtc_sample_buffer g_mtc;
 static const uint64_t g_mtc_instance = 1;
 
 static void mtc_seed()
 {
-    pc_mtc_sample_buffer_init(&g_mtc, 1);
-    pc_mtc_sample_buffer_add(&g_mtc, pc_mtc_category::PC_MTC_EVENT, "Availability", "avail", "2026-07-11T10:00:00Z",
-                             "AVAILABLE");
-    pc_mtc_sample_buffer_add(&g_mtc, pc_mtc_category::PC_MTC_SAMPLE, "Position", "xpos", "2026-07-11T10:00:01Z",
-                             "12.5");
-    pc_mtc_sample_buffer_add(&g_mtc, pc_mtc_category::PC_MTC_EVENT, "Execution", "exec", "2026-07-11T10:00:02Z",
-                             "ACTIVE");
-    pc_mtc_sample_buffer_add(&g_mtc, pc_mtc_category::PC_MTC_SAMPLE, "Position", "xpos", "2026-07-11T10:00:03Z",
-                             "13.0");
+    protocore_mtc_sample_buffer_init(&g_mtc, 1);
+    protocore_mtc_sample_buffer_add(&g_mtc, protocore_mtc_category::PROTOCORE_MTC_EVENT, "Availability", "avail",
+                                    "2026-07-11T10:00:00Z", "AVAILABLE");
+    protocore_mtc_sample_buffer_add(&g_mtc, protocore_mtc_category::PROTOCORE_MTC_SAMPLE, "Position", "xpos",
+                                    "2026-07-11T10:00:01Z", "12.5");
+    protocore_mtc_sample_buffer_add(&g_mtc, protocore_mtc_category::PROTOCORE_MTC_EVENT, "Execution", "exec",
+                                    "2026-07-11T10:00:02Z", "ACTIVE");
+    protocore_mtc_sample_buffer_add(&g_mtc, protocore_mtc_category::PROTOCORE_MTC_SAMPLE, "Position", "xpos",
+                                    "2026-07-11T10:00:03Z", "13.0");
 }
 
 static uint64_t mtc_parse_u64(const char *p)
@@ -1001,25 +1006,28 @@ static uint64_t mtc_parse_u64(const char *p)
 static void h_mtc_probe(uint8_t id, HttpReq *)
 {
     static char buf[4096];
-    pc_mtc_streams s;
-    pc_mtc_devices_begin(&s, buf, sizeof(buf), g_mtc_instance, "dev1", "pc-rig", "pc-rig-uuid");
-    pc_mtc_devices_add_item(&s, pc_mtc_category::PC_MTC_EVENT, "avail", "Availability", nullptr, nullptr);
-    pc_mtc_devices_add_item(&s, pc_mtc_category::PC_MTC_SAMPLE, "xpos", "Position", "Xpos", "MILLIMETER");
-    pc_mtc_devices_add_item(&s, pc_mtc_category::PC_MTC_EVENT, "exec", "Execution", nullptr, nullptr);
-    pc_mtc_devices_end(&s);
+    protocore_mtc_streams s;
+    protocore_mtc_devices_begin(&s, buf, sizeof(buf), g_mtc_instance, "dev1", "pc-rig", "pc-rig-uuid");
+    protocore_mtc_devices_add_item(&s, protocore_mtc_category::PROTOCORE_MTC_EVENT, "avail", "Availability", nullptr,
+                                   nullptr);
+    protocore_mtc_devices_add_item(&s, protocore_mtc_category::PROTOCORE_MTC_SAMPLE, "xpos", "Position", "Xpos",
+                                   "MILLIMETER");
+    protocore_mtc_devices_add_item(&s, protocore_mtc_category::PROTOCORE_MTC_EVENT, "exec", "Execution", nullptr,
+                                   nullptr);
+    protocore_mtc_devices_end(&s);
     server.send(id, s.ok ? 200 : 500, "application/xml", buf);
 }
 
 static void h_mtc_current(uint8_t id, HttpReq *)
 {
     static char buf[4096];
-    pc_mtc_streams s;
-    pc_mtc_streams_begin(&s, buf, sizeof(buf), g_mtc_instance, g_mtc.next_seq, "pc-rig");
-    pc_mtc_streams_add(&s, pc_mtc_category::PC_MTC_EVENT, "Availability", "avail", g_mtc.next_seq - 3,
-                       "2026-07-11T10:00:00Z", "AVAILABLE");
-    pc_mtc_streams_add(&s, pc_mtc_category::PC_MTC_SAMPLE, "Position", "xpos", g_mtc.next_seq - 1,
-                       "2026-07-11T10:00:03Z", "13.0");
-    pc_mtc_streams_end(&s);
+    protocore_mtc_streams s;
+    protocore_mtc_streams_begin(&s, buf, sizeof(buf), g_mtc_instance, g_mtc.next_seq, "pc-rig");
+    protocore_mtc_streams_add(&s, protocore_mtc_category::PROTOCORE_MTC_EVENT, "Availability", "avail",
+                              g_mtc.next_seq - 3, "2026-07-11T10:00:00Z", "AVAILABLE");
+    protocore_mtc_streams_add(&s, protocore_mtc_category::PROTOCORE_MTC_SAMPLE, "Position", "xpos", g_mtc.next_seq - 1,
+                              "2026-07-11T10:00:03Z", "13.0");
+    protocore_mtc_streams_end(&s);
     server.send(id, s.ok ? 200 : 500, "application/xml", buf);
 }
 
@@ -1030,11 +1038,11 @@ static void h_mtc_sample(uint8_t id, HttpReq *r)
     uint64_t from = froms ? mtc_parse_u64(froms) : g_mtc.first_seq;
     uint32_t count = counts ? (uint32_t)mtc_parse_u64(counts) : 100;
     static char buf[4096];
-    size_t n = pc_mtc_sample_query(&g_mtc, buf, sizeof(buf), g_mtc_instance, "pc-rig", from, count);
+    size_t n = protocore_mtc_sample_query(&g_mtc, buf, sizeof(buf), g_mtc_instance, "pc-rig", from, count);
     if (n == 0)
     {
         static char eb[512];
-        size_t en = pc_mtc_error(g_mtc_instance, "OUT_OF_RANGE", "sample window did not fit", eb, sizeof(eb));
+        size_t en = protocore_mtc_error(g_mtc_instance, "OUT_OF_RANGE", "sample window did not fit", eb, sizeof(eb));
         server.send(id, 400, "application/xml", en ? eb : "<MTConnectError/>");
         return;
     }
@@ -1134,49 +1142,49 @@ static void h_iec104_parse(uint8_t id, HttpReq *r)
     server.send(id, 200, "application/json", b);
 }
 
-#if PC_ENABLE_GRAPHQL
+#if PROTOCORE_ENABLE_GRAPHQL
 // GraphQL leaf resolver for the interop rig: a few device scalars + an arg-carrying `sensor` path so the peer
 // can prove arguments reach the leaf resolver. device.uptime/heap are live; sensor.value = id*10+1 encodes the
 // `id` argument so the peer can assert it flowed through (`sensor(id: 2) { value }` -> 21).
-static bool rig_gql_resolver(const char *path, const pc_gql_args *args, pc_gql_value *out)
+static bool rig_gql_resolver(const char *path, const protocore_gql_args *args, protocore_gql_value *out)
 {
     if (!strcmp(path, "device.name"))
     {
-        out->type = pc_gql_type::PC_GQL_STR;
+        out->type = protocore_gql_type::PROTOCORE_GQL_STR;
         out->s = "esp32-pc";
         return true;
     }
     if (!strcmp(path, "device.uptime"))
     {
-        out->type = pc_gql_type::PC_GQL_INT;
+        out->type = protocore_gql_type::PROTOCORE_GQL_INT;
         out->i = (long long)(millis() / 1000);
         return true;
     }
     if (!strcmp(path, "device.heap"))
     {
-        out->type = pc_gql_type::PC_GQL_INT;
+        out->type = protocore_gql_type::PROTOCORE_GQL_INT;
         out->i = (long long)ESP.getFreeHeap();
         return true;
     }
     if (!strcmp(path, "device.online"))
     {
-        out->type = pc_gql_type::PC_GQL_BOOL;
+        out->type = protocore_gql_type::PROTOCORE_GQL_BOOL;
         out->b = true;
         return true;
     }
     if (!strcmp(path, "sensor.id"))
     {
         long long sid = 0;
-        pc_gql_arg_int(args, "id", &sid);
-        out->type = pc_gql_type::PC_GQL_INT;
+        protocore_gql_arg_int(args, "id", &sid);
+        out->type = protocore_gql_type::PROTOCORE_GQL_INT;
         out->i = sid;
         return true;
     }
     if (!strcmp(path, "sensor.value"))
     {
         long long sid = 0;
-        out->type = pc_gql_type::PC_GQL_INT;
-        out->i = pc_gql_arg_int(args, "id", &sid) ? sid * 10 + 1 : -1;
+        out->type = protocore_gql_type::PROTOCORE_GQL_INT;
+        out->i = protocore_gql_arg_int(args, "id", &sid) ? sid * 10 + 1 : -1;
         return true;
     }
     return false; // unknown leaf -> JSON null
@@ -1188,13 +1196,14 @@ static void h_graphql(uint8_t id, HttpReq *r)
 {
     static char out[512];
     out[0] = 0;
-    pc_gql_result rc = pc_graphql_execute((const char *)r->body, r->body_len, rig_gql_resolver, out, sizeof(out));
-    server.send(id, rc == pc_gql_result::PC_GQL_OK ? 200 : 400, "application/json",
+    protocore_gql_result rc =
+        protocore_graphql_execute((const char *)r->body, r->body_len, rig_gql_resolver, out, sizeof(out));
+    server.send(id, rc == protocore_gql_result::PROTOCORE_GQL_OK ? 200 : 400, "application/json",
                 out[0] ? out : "{\"errors\":[{\"message\":\"overflow\"}]}");
 }
 #endif
 
-#if PC_ENABLE_GRPC_WEB && PC_ENABLE_PROTOBUF
+#if PROTOCORE_ENABLE_GRPC_WEB && PROTOCORE_ENABLE_PROTOBUF
 // gRPC-web "Greeter/SayHello" echo: the request is one gRPC-web message frame ([flags][len BE32][body]) whose
 // body is a HelloRequest protobuf { name = field 1, string }. Reply with a HelloReply { message = field 1 } =
 // "hello, <name>" as a gRPC-web message frame followed by a trailers frame (grpc-status: 0). Exercises the
@@ -1239,7 +1248,7 @@ static void h_grpc(uint8_t id, HttpReq *r)
 #endif
 
 // Redis device-as-client probe: connect OUT to a Redis server (?host=&port=) with the shared outbound
-// client transport (pc_client_*), run PING / SET / GET using the RESP codec, and report. Drives the
+// client transport (protocore_client_*), run PING / SET / GET using the RESP codec, and report. Drives the
 // full client round trip against a real redis-server (interop) - and, when the server is malicious,
 // the reply parser (like the MQTT harness).
 static void h_redis_probe(uint8_t id, HttpReq *r)
@@ -1257,7 +1266,7 @@ static void h_redis_probe(uint8_t id, HttpReq *r)
         port = (uint16_t)(port * 10 + (*p - '0'));
     }
 
-    int cid = pc_client_open(host, port, 4000);
+    int cid = protocore_client_open(host, port, 4000);
     if (cid < 0)
     {
         server.send(id, 200, "application/json", "{\"connected\":0}");
@@ -1277,7 +1286,7 @@ static void h_redis_probe(uint8_t id, HttpReq *r)
                 rxlen -= used;
                 return true;
             }
-            size_t got = pc_client_read(cid, rx + rxlen, sizeof(rx) - rxlen);
+            size_t got = protocore_client_read(cid, rx + rxlen, sizeof(rx) - rxlen);
             rxlen += got;
             if (got == 0)
             {
@@ -1289,7 +1298,7 @@ static void h_redis_probe(uint8_t id, HttpReq *r)
     auto send_cmd = [&](const char *const *args, size_t argc) -> bool {
         char cmd[256];
         size_t n = resp_encode_command(cmd, sizeof(cmd), args, nullptr, argc);
-        return n > 0 && pc_client_send(cid, cmd, n);
+        return n > 0 && protocore_client_send(cid, cmd, n);
     };
 
     RespReply rep;
@@ -1299,7 +1308,7 @@ static void h_redis_probe(uint8_t id, HttpReq *r)
     bool setok = send_cmd(setc, 3) && read_reply(&rep) && rep.type == RespType::RESP_SIMPLE;
     const char *getc[] = {"GET", "pc:rig"};
     bool getok = send_cmd(getc, 2) && read_reply(&rep) && rep.type == RespType::RESP_BULK && rep.str_len == 5;
-    pc_client_close(cid);
+    protocore_client_close(cid);
 
     char b[128];
     snprintf(b, sizeof(b), "{\"connected\":1,\"ping\":%d,\"set\":%d,\"get\":%d,\"heap\":%u}", pong, setok, getok,
@@ -1308,7 +1317,7 @@ static void h_redis_probe(uint8_t id, HttpReq *r)
 }
 
 // FTP device-as-client probe: connect OUT to an FTP server (?host=&port=&user=&pass=) over the shared
-// outbound client transport (pc_client_*), run a passive-mode STOR round trip with the ftp.h wire codec
+// outbound client transport (protocore_client_*), run a passive-mode STOR round trip with the ftp.h wire codec
 // (USER/PASS -> TYPE I -> PASV -> data connect -> STOR -> data EOF -> 226 -> SIZE), and report. Drives the
 // full control+data client dialog against a real FTP server (interop) and, when the server is malicious,
 // exercises the reply / PASV parsers (the malicious-FTP-server harness, like the MQTT/Redis probes).
@@ -1338,7 +1347,7 @@ static void h_ftp_probe(uint8_t id, HttpReq *r)
         port = (uint16_t)(port * 10 + (*p - '0'));
     }
 
-    int cc = pc_client_open(host, port, 4000);
+    int cc = protocore_client_open(host, port, 4000);
     if (cc < 0)
     {
         server.send(id, 200, "application/json", "{\"connected\":0}");
@@ -1361,7 +1370,7 @@ static void h_ftp_probe(uint8_t id, HttpReq *r)
                 rxlen -= used;
                 return code;
             }
-            size_t got = pc_client_read(cc, (uint8_t *)rx + rxlen, sizeof(rx) - rxlen);
+            size_t got = protocore_client_read(cc, (uint8_t *)rx + rxlen, sizeof(rx) - rxlen);
             rxlen += got;
             if (got == 0)
             {
@@ -1373,7 +1382,7 @@ static void h_ftp_probe(uint8_t id, HttpReq *r)
     auto send_cmd = [&](const char *verb, const char *arg) -> bool {
         char cmd[128];
         size_t n = ftp_build_command(cmd, sizeof(cmd), verb, arg);
-        return n > 0 && pc_client_send(cc, cmd, n);
+        return n > 0 && protocore_client_send(cc, cmd, n);
     };
 
     int greet = read_reply();                                                   // 220 service ready
@@ -1405,7 +1414,7 @@ static void h_ftp_probe(uint8_t id, HttpReq *r)
                 pasvok = (code == 227) && ftp_parse_pasv(line, ll, dip, &dport);
                 break;
             }
-            size_t got = pc_client_read(cc, (uint8_t *)rx + rxlen, sizeof(rx) - rxlen);
+            size_t got = protocore_client_read(cc, (uint8_t *)rx + rxlen, sizeof(rx) - rxlen);
             rxlen += got;
             if (got == 0)
             {
@@ -1420,25 +1429,25 @@ static void h_ftp_probe(uint8_t id, HttpReq *r)
     {
         char dipstr[16];
         snprintf(dipstr, sizeof(dipstr), "%u.%u.%u.%u", dip[0], dip[1], dip[2], dip[3]);
-        int dc = pc_client_open(dipstr, dport, 4000);
+        int dc = protocore_client_open(dipstr, dport, 4000);
         if (dc >= 0)
         {
-            bool stor = send_cmd("STOR", "pc_rig.txt") && ftp_reply_class(read_reply()) == 1; // 150 opening
-            if (stor && pc_client_send(dc, FTP_UPLOAD, sizeof(FTP_UPLOAD) - 1))
+            bool stor = send_cmd("STOR", "protocore_rig.txt") && ftp_reply_class(read_reply()) == 1; // 150 opening
+            if (stor && protocore_client_send(dc, FTP_UPLOAD, sizeof(FTP_UPLOAD) - 1))
             {
                 sent = (int)(sizeof(FTP_UPLOAD) - 1);
             }
-            pc_client_close(dc);                         // EOF on the data channel -> server finalizes the transfer
+            protocore_client_close(dc);                  // EOF on the data channel -> server finalizes the transfer
             storok = stor && ftp_reply_ok(read_reply()); // 226 transfer complete
         }
     }
 
     // SIZE (RFC 3659) is an independent server-side existence check: a 213 for the file we just stored
     // proves the STOR landed (mirrors the redis probe's server-side GET-after-SET verification).
-    bool sizeok = send_cmd("SIZE", "pc_rig.txt") && read_reply() == 213;
+    bool sizeok = send_cmd("SIZE", "protocore_rig.txt") && read_reply() == 213;
     send_cmd("QUIT", nullptr);
     read_reply();
-    pc_client_close(cc);
+    protocore_client_close(cc);
 
     char b[192];
     snprintf(b, sizeof(b),
@@ -1522,7 +1531,7 @@ static void url_decode(const char *src, char *out, size_t cap)
 }
 
 // Syslog device-as-client probe: ship one RFC 5424 log line OUT to a collector (?host=&port=&msg=&sev=)
-// via the UDP syslog client. Drives syslog_init + syslog_log -> pc_udp_sendto against a real collector
+// via the UDP syslog client. Drives syslog_init + syslog_log -> protocore_udp_sendto against a real collector
 // (interop) - and, with a percent-encoded msg, exercises the log-forging surface (embedded CR/LF/control).
 static void h_syslog_probe(uint8_t id, HttpReq *r)
 {
@@ -1546,7 +1555,7 @@ static void h_syslog_probe(uint8_t id, HttpReq *r)
         sev = (uint8_t)(sevs[0] - '0');
     }
 
-    static char msg[512]; // larger than PC_SYSLOG_MSG_MAX so oversized inputs test the format bound
+    static char msg[512]; // larger than PROTOCORE_SYSLOG_MSG_MAX so oversized inputs test the format bound
     url_decode(rawmsg ? rawmsg : "pc rig test message", msg, sizeof(msg));
 
     syslog_init(host, port, "pc-rig", "rig-app");
@@ -1583,7 +1592,7 @@ static void h_nats_probe(uint8_t id, HttpReq *r)
         port = (uint16_t)(port * 10 + (*p - '0'));
     }
 
-    int cid = pc_client_open(host, port, 4000);
+    int cid = protocore_client_open(host, port, 4000);
     if (cid < 0)
     {
         server.send(id, 200, "application/json", "{\"connected\":0}");
@@ -1607,12 +1616,12 @@ static void h_nats_probe(uint8_t id, HttpReq *r)
                 {
                     char pg[8];
                     size_t pn = nats_build_pong(pg, sizeof(pg));
-                    pc_client_send(cid, pg, pn);
+                    protocore_client_send(cid, pg, pn);
                     continue; // keep reading for the message we actually want
                 }
                 return true;
             }
-            size_t got = pc_client_read(cid, (uint8_t *)rx + rxlen, sizeof(rx) - rxlen);
+            size_t got = protocore_client_read(cid, (uint8_t *)rx + rxlen, sizeof(rx) - rxlen);
             rxlen += got;
             if (got == 0)
             {
@@ -1626,18 +1635,18 @@ static void h_nats_probe(uint8_t id, HttpReq *r)
     NatsMsg m;
     bool info = read_msg(&m) && m.type == NatsMsgType::NATS_INFO;
     size_t n = nats_build_connect(line, sizeof(line), "{\"verbose\":false,\"pedantic\":false,\"name\":\"pc-rig\"}");
-    bool sent_connect = n > 0 && pc_client_send(cid, line, n);
+    bool sent_connect = n > 0 && protocore_client_send(cid, line, n);
     n = nats_build_sub(line, sizeof(line), subject, nullptr, "1");
-    bool subd = n > 0 && pc_client_send(cid, line, n);
+    bool subd = n > 0 && protocore_client_send(cid, line, n);
     static const uint8_t payload[] = "hello-from-pc-rig";
     n = nats_build_pub(line, sizeof(line), subject, nullptr, payload, sizeof(payload) - 1);
-    bool pubd = n > 0 && pc_client_send(cid, line, n);
+    bool pubd = n > 0 && protocore_client_send(cid, line, n);
 
     // The server routes our PUB back to our own SUB as a MSG; verify the payload round-trips.
     bool got_msg = read_msg(&m) && m.type == NatsMsgType::NATS_MSG;
     bool payload_ok =
         got_msg && m.payload_len == sizeof(payload) - 1 && memcmp(m.payload, payload, sizeof(payload) - 1) == 0;
-    pc_client_close(cid);
+    protocore_client_close(cid);
 
     char b[160];
     snprintf(b, sizeof(b), "{\"connected\":1,\"info\":%d,\"connect\":%d,\"sub\":%d,\"pub\":%d,\"msg\":%d,\"heap\":%u}",
@@ -1670,7 +1679,7 @@ static void h_stomp_probe(uint8_t id, HttpReq *r)
         port = (uint16_t)(port * 10 + (*p - '0'));
     }
 
-    int cid = pc_client_open(host, port, 4000);
+    int cid = protocore_client_open(host, port, 4000);
     if (cid < 0)
     {
         server.send(id, 200, "application/json", "{\"connected\":0}");
@@ -1691,7 +1700,7 @@ static void h_stomp_probe(uint8_t id, HttpReq *r)
                 rxlen -= used;
                 return true;
             }
-            size_t got = pc_client_read(cid, (uint8_t *)rx + rxlen, sizeof(rx) - rxlen);
+            size_t got = protocore_client_read(cid, (uint8_t *)rx + rxlen, sizeof(rx) - rxlen);
             rxlen += got;
             if (got == 0)
             {
@@ -1704,7 +1713,7 @@ static void h_stomp_probe(uint8_t id, HttpReq *r)
                           size_t blen) -> bool {
         char f[384];
         size_t fn = stomp_build_frame(f, sizeof(f), cmd, k, v, nh, body, blen);
-        return fn > 0 && pc_client_send(cid, f, fn); // fn includes the terminating NUL, which is on the wire
+        return fn > 0 && protocore_client_send(cid, f, fn); // fn includes the terminating NUL, which is on the wire
     };
 
     const char *ck[] = {"accept-version", "host", "heart-beat"};
@@ -1736,7 +1745,7 @@ static void h_stomp_probe(uint8_t id, HttpReq *r)
         }
     }
     send_frame("DISCONNECT", nullptr, nullptr, 0, nullptr, 0);
-    pc_client_close(cid);
+    protocore_client_close(cid);
 
     char b[176];
     snprintf(b, sizeof(b), "{\"connected\":1,\"stomp\":%d,\"sub\":%d,\"send\":%d,\"msg\":%d,\"heap\":%u}", connected,
@@ -1744,7 +1753,7 @@ static void h_stomp_probe(uint8_t id, HttpReq *r)
     server.send(id, 200, "application/json", b);
 }
 
-#if PC_ENABLE_XMPP
+#if PROTOCORE_ENABLE_XMPP
 // XMPP device-as-client probe: connect OUT to an XMPP c2s server (?host=&port=&domain=&user=&pass=&to=) over
 // the shared client transport and run the full RFC 6120 client dialogue with the xmpp.h stanza codec -
 // stream open -> read <stream:features> -> SASL PLAIN <auth> -> read <success> -> stream restart -> read
@@ -1782,7 +1791,7 @@ static void h_xmpp_probe(uint8_t id, HttpReq *r)
         port = (uint16_t)(port * 10 + (*p - '0'));
     }
 
-    int cid = pc_client_open(host, port, 4000);
+    int cid = protocore_client_open(host, port, 4000);
     if (cid < 0)
     {
         server.send(id, 200, "application/json", "{\"connected\":0}");
@@ -1808,7 +1817,7 @@ static void h_xmpp_probe(uint8_t id, HttpReq *r)
                     return true;
                 }
             }
-            size_t got = pc_client_read(cid, (uint8_t *)rx + rxlen, sizeof(rx) - 1 - rxlen);
+            size_t got = protocore_client_read(cid, (uint8_t *)rx + rxlen, sizeof(rx) - 1 - rxlen);
             rxlen += got;
             if (got == 0)
             {
@@ -1828,8 +1837,8 @@ static void h_xmpp_probe(uint8_t id, HttpReq *r)
     snprintf(jid, sizeof(jid), "%s@%s", user, domain);
 
     // 1. open the stream (to=domain) and read the server's features (SASL mechanisms).
-    size_t n = pc_xmpp_stream_open(jid, domain, bufo, sizeof(bufo));
-    pc_client_send(cid, bufo, n);
+    size_t n = protocore_xmpp_stream_open(jid, domain, bufo, sizeof(bufo));
+    protocore_client_send(cid, bufo, n);
     bool features = read_until("</stream:features>");
 
     // 2. SASL PLAIN: base64( authzid \0 authcid \0 passwd ). Built in app code (the codec is stanza-only).
@@ -1849,26 +1858,28 @@ static void h_xmpp_probe(uint8_t id, HttpReq *r)
     base64_encode(plain, pl, b64);
     int an =
         snprintf(bufo, sizeof(bufo), "<auth xmlns='urn:ietf:params:xml:ns:xmpp-sasl' mechanism='PLAIN'>%s</auth>", b64);
-    pc_client_send(cid, bufo, an);
+    protocore_client_send(cid, bufo, an);
     bool auth = read_until("<success");
 
     // 3. restart the stream, read the bind feature, bind a resource, read the result JID.
-    n = pc_xmpp_stream_open(jid, domain, bufo, sizeof(bufo));
-    pc_client_send(cid, bufo, n);
+    n = protocore_xmpp_stream_open(jid, domain, bufo, sizeof(bufo));
+    protocore_client_send(cid, bufo, n);
     bool restart = read_until("</stream:features>");
-    n = pc_xmpp_iq("set", "bind1", "<bind xmlns='urn:ietf:params:xml:ns:xmpp-bind'><resource>rig</resource></bind>",
-                   bufo, sizeof(bufo));
-    pc_client_send(cid, bufo, n);
+    n = protocore_xmpp_iq("set", "bind1",
+                          "<bind xmlns='urn:ietf:params:xml:ns:xmpp-bind'><resource>rig</resource></bind>", bufo,
+                          sizeof(bufo));
+    protocore_client_send(cid, bufo, n);
     bool bind = read_until("</iq>");
 
     // 4. presence, then a chat message the server captures + validates.
-    n = pc_xmpp_presence(nullptr, bufo, sizeof(bufo));
-    pc_client_send(cid, bufo, n);
-    n = pc_xmpp_message(to && to[0] ? to : "sink@pc.local", nullptr, "chat", "hello-from-pc-rig", bufo, sizeof(bufo));
-    bool message = n > 0 && pc_client_send(cid, bufo, n);
+    n = protocore_xmpp_presence(nullptr, bufo, sizeof(bufo));
+    protocore_client_send(cid, bufo, n);
+    n = protocore_xmpp_message(to && to[0] ? to : "sink@pc.local", nullptr, "chat", "hello-from-pc-rig", bufo,
+                               sizeof(bufo));
+    bool message = n > 0 && protocore_client_send(cid, bufo, n);
 
-    pc_client_send(cid, "</stream:stream>", 16);
-    pc_client_close(cid);
+    protocore_client_send(cid, "</stream:stream>", 16);
+    protocore_client_close(cid);
 
     char b[192];
     snprintf(b, sizeof(b),
@@ -1876,9 +1887,9 @@ static void h_xmpp_probe(uint8_t id, HttpReq *r)
              features, auth, restart, bind, message, (unsigned)ESP.getFreeHeap());
     server.send(id, 200, "application/json", b);
 }
-#endif // PC_ENABLE_XMPP
+#endif // PROTOCORE_ENABLE_XMPP
 
-#if PC_ENABLE_AMQP
+#if PROTOCORE_ENABLE_AMQP
 // AMQP 0-9-1 argument encoders (field types). App code: the amqp.h codec frames these; the method arguments
 // are the application's (per amqp.h). Big-endian per the AMQP 0-9-1 spec.
 static size_t amqp_put_u16(uint8_t *b, size_t n, uint16_t v)
@@ -1944,7 +1955,7 @@ static void h_amqp_probe(uint8_t id, HttpReq *r)
         port = (uint16_t)(port * 10 + (*p - '0'));
     }
 
-    int cid = pc_client_open(host, port, 4000);
+    int cid = protocore_client_open(host, port, 4000);
     if (cid < 0)
     {
         server.send(id, 200, "application/json", "{\"connected\":0}");
@@ -1974,7 +1985,7 @@ static void h_amqp_probe(uint8_t id, HttpReq *r)
                 rxlen -= consumed;
                 return ok;
             }
-            size_t got = pc_client_read(cid, rx + rxlen, sizeof(rx) - rxlen);
+            size_t got = protocore_client_read(cid, rx + rxlen, sizeof(rx) - rxlen);
             rxlen += got;
             if (got == 0)
             {
@@ -1989,7 +2000,7 @@ static void h_amqp_probe(uint8_t id, HttpReq *r)
 
     // 1. protocol header -> Connection.Start (10,10)
     size_t hn = amqp_protocol_header(frame, sizeof(frame));
-    pc_client_send(cid, frame, hn);
+    protocore_client_send(cid, frame, hn);
     bool start = read_method(&cls, &mth) && cls == 10 && mth == 10;
 
     // 2. Connection.Start-Ok (10,11): empty client-props table, mechanism PLAIN, response = \0user\0pass, en_US
@@ -2010,7 +2021,7 @@ static void h_amqp_probe(uint8_t id, HttpReq *r)
     an = amqp_put_longstr(abuf, an, resp, rn);
     an = amqp_put_shortstr(abuf, an, "en_US");
     size_t fn = amqp_build_method(frame, sizeof(frame), 0, 10, 11, abuf, an);
-    pc_client_send(cid, frame, fn);
+    protocore_client_send(cid, frame, fn);
 
     // 3. read Connection.Tune (10,30) -> Tune-Ok (10,31) -> Connection.Open (10,40) -> read Open-Ok (10,41)
     bool tune = read_method(&cls, &mth) && cls == 10 && mth == 30;
@@ -2018,18 +2029,18 @@ static void h_amqp_probe(uint8_t id, HttpReq *r)
     an = amqp_put_u32(abuf, an, 131072);
     an = amqp_put_u16(abuf, an, 0);
     fn = amqp_build_method(frame, sizeof(frame), 0, 10, 31, abuf, an);
-    pc_client_send(cid, frame, fn);
+    protocore_client_send(cid, frame, fn);
     an = amqp_put_shortstr(abuf, 0, "/");
     an = amqp_put_shortstr(abuf, an, "");
     abuf[an++] = 0; // reserved-2 bit
     fn = amqp_build_method(frame, sizeof(frame), 0, 10, 40, abuf, an);
-    pc_client_send(cid, frame, fn);
+    protocore_client_send(cid, frame, fn);
     bool openok = read_method(&cls, &mth) && cls == 10 && mth == 41;
 
     // 4. Channel.Open (20,10) on channel 1 -> read Channel.Open-Ok (20,11)
     an = amqp_put_shortstr(abuf, 0, "");
     fn = amqp_build_method(frame, sizeof(frame), 1, 20, 10, abuf, an);
-    pc_client_send(cid, frame, fn);
+    protocore_client_send(cid, frame, fn);
     bool chanok = read_method(&cls, &mth) && cls == 20 && mth == 11;
 
     // 5. Basic.Publish (60,40) + content header + body on channel 1
@@ -2038,7 +2049,7 @@ static void h_amqp_probe(uint8_t id, HttpReq *r)
     an = amqp_put_shortstr(abuf, an, rk); // routing-key
     abuf[an++] = 0;                       // mandatory/immediate bits
     fn = amqp_build_method(frame, sizeof(frame), 1, 60, 40, abuf, an);
-    pc_client_send(cid, frame, fn);
+    protocore_client_send(cid, frame, fn);
     static const char body[] = "hello-from-pc-rig";
     size_t blen = sizeof(body) - 1;
     an = amqp_put_u16(abuf, 0, 60);              // content class-id
@@ -2047,11 +2058,11 @@ static void h_amqp_probe(uint8_t id, HttpReq *r)
     an = amqp_put_u32(abuf, an, (uint32_t)blen); // body-size (low 32)
     an = amqp_put_u16(abuf, an, 0);              // property-flags (none)
     fn = amqp_build_frame(frame, sizeof(frame), AMQP_FRAME_HEADER, 1, abuf, an);
-    pc_client_send(cid, frame, fn);
+    protocore_client_send(cid, frame, fn);
     fn = amqp_build_frame(frame, sizeof(frame), AMQP_FRAME_BODY, 1, (const uint8_t *)body, blen);
-    bool published = fn > 0 && pc_client_send(cid, frame, fn);
+    bool published = fn > 0 && protocore_client_send(cid, frame, fn);
 
-    pc_client_close(cid);
+    protocore_client_close(cid);
 
     char b[176];
     snprintf(b, sizeof(b),
@@ -2059,9 +2070,9 @@ static void h_amqp_probe(uint8_t id, HttpReq *r)
              start, tune, openok, chanok, published, (unsigned)ESP.getFreeHeap());
     server.send(id, 200, "application/json", b);
 }
-#endif // PC_ENABLE_AMQP
+#endif // PROTOCORE_ENABLE_AMQP
 
-#if PC_ENABLE_WAMP && PC_ENABLE_WS_CLIENT
+#if PROTOCORE_ENABLE_WAMP && PROTOCORE_ENABLE_WS_CLIENT
 // WAMP device-as-client probe: connect OUT to a WAMP-over-WebSocket router (?host=&port=&topic=), do the WS
 // client handshake requesting the `wamp.2.json` subprotocol (ws_client codec over the shared TCP transport),
 // then run the WAMP client dialogue with the wamp.h codec - HELLO -> read WELCOME -> SUBSCRIBE -> read
@@ -2087,7 +2098,7 @@ static void h_wamp_probe(uint8_t id, HttpReq *r)
         port = (uint16_t)(port * 10 + (*p - '0'));
     }
 
-    int cid = pc_client_open(host, port, 4000);
+    int cid = protocore_client_open(host, port, 4000);
     if (cid < 0)
     {
         server.send(id, 200, "application/json", "{\"connected\":0}");
@@ -2122,7 +2133,7 @@ static void h_wamp_probe(uint8_t id, HttpReq *r)
                 }
                 continue; // control frame (ping/pong/close) - keep reading
             }
-            size_t g = pc_client_read(cid, rx + rxlen, sizeof(rx) - rxlen);
+            size_t g = protocore_client_read(cid, rx + rxlen, sizeof(rx) - rxlen);
             rxlen += g;
             if (g == 0)
             {
@@ -2138,7 +2149,7 @@ static void h_wamp_probe(uint8_t id, HttpReq *r)
         static uint8_t fr[640];
         size_t fn =
             ws_client_build_frame(fr, sizeof(fr), WsClientOpcode::WSC_OP_TEXT, (const uint8_t *)json, jlen, mask);
-        return fn > 0 && pc_client_send(cid, fr, fn);
+        return fn > 0 && protocore_client_send(cid, fr, fn);
     };
 
     // 1. WebSocket client handshake, offering the wamp.2.json subprotocol.
@@ -2154,13 +2165,13 @@ static void h_wamp_probe(uint8_t id, HttpReq *r)
     ws_client_accept_for_key(key, expect, sizeof(expect));
     static uint8_t hs[256];
     size_t hn = ws_client_build_handshake(hs, sizeof(hs), host, "/ws", key, "wamp.2.json");
-    pc_client_send(cid, hs, hn);
+    protocore_client_send(cid, hs, hn);
 
     bool upgraded = false;
     uint32_t t0 = millis();
     while (millis() - t0 < 3000)
     {
-        size_t g = pc_client_read(cid, rx + rxlen, sizeof(rx) - rxlen);
+        size_t g = protocore_client_read(cid, rx + rxlen, sizeof(rx) - rxlen);
         rxlen += g;
         int hdr_end = -1;
         for (size_t i = 0; i + 3 < rxlen; i++)
@@ -2185,7 +2196,7 @@ static void h_wamp_probe(uint8_t id, HttpReq *r)
     }
     if (!upgraded)
     {
-        pc_client_close(cid);
+        protocore_client_close(cid);
         server.send(id, 200, "application/json", "{\"connected\":0}");
         return;
     }
@@ -2232,7 +2243,7 @@ static void h_wamp_probe(uint8_t id, HttpReq *r)
 
     n = wamp_build_goodbye(buf, sizeof(buf), "wamp.close.normal", nullptr);
     send_wamp(buf, n);
-    pc_client_close(cid);
+    protocore_client_close(cid);
 
     char b[176];
     snprintf(
@@ -2241,9 +2252,9 @@ static void h_wamp_probe(uint8_t id, HttpReq *r)
         welcome, subscribed, published, event, result, (unsigned)ESP.getFreeHeap());
     server.send(id, 200, "application/json", b);
 }
-#endif // PC_ENABLE_WAMP && PC_ENABLE_WS_CLIENT
+#endif // PROTOCORE_ENABLE_WAMP && PROTOCORE_ENABLE_WS_CLIENT
 
-#if PC_ENABLE_SEP2
+#if PROTOCORE_ENABLE_SEP2
 // IEEE 2030.5 (Smart Energy Profile 2.0) device-as-server: serve the core resource documents built by the
 // sep2.h codec as `application/sep+xml`. GET /dcap is the DeviceCapability root (hrefs to the EndDevice list
 // + DER-program list); GET /edev is the EndDevice registration (sFDI/lFDI identity); GET /derc is a DERControl
@@ -2253,24 +2264,24 @@ static void h_wamp_probe(uint8_t id, HttpReq *r)
 static void h_sep2_dcap(uint8_t id, HttpReq *)
 {
     static char buf[512];
-    size_t n = pc_sep2_device_capability(900, "/edev", "/derp", buf, sizeof(buf));
+    size_t n = protocore_sep2_device_capability(900, "/edev", "/derp", buf, sizeof(buf));
     server.send(id, 200, "application/sep+xml", (const uint8_t *)buf, n);
 }
 static void h_sep2_edev(uint8_t id, HttpReq *)
 {
     static char buf[512];
-    size_t n = pc_sep2_end_device(123456789ULL, "3E4FA1B2C3D4E5F60718293A4B5C6D7E", "/edev/0", buf, sizeof(buf));
+    size_t n = protocore_sep2_end_device(123456789ULL, "3E4FA1B2C3D4E5F60718293A4B5C6D7E", "/edev/0", buf, sizeof(buf));
     server.send(id, 200, "application/sep+xml", (const uint8_t *)buf, n);
 }
 static void h_sep2_derc(uint8_t id, HttpReq *)
 {
     static char buf[512];
-    size_t n = pc_sep2_der_control("A1B2C3D4E5F6", 1720000000u, 3600u, -1500, buf, sizeof(buf));
+    size_t n = protocore_sep2_der_control("A1B2C3D4E5F6", 1720000000u, 3600u, -1500, buf, sizeof(buf));
     server.send(id, 200, "application/sep+xml", (const uint8_t *)buf, n);
 }
-#endif // PC_ENABLE_SEP2
+#endif // PROTOCORE_ENABLE_SEP2
 
-#if PC_ENABLE_OPENADR
+#if PROTOCORE_ENABLE_OPENADR
 // OpenADR 3.0 device-as-VEN: serve the two core JSON objects built by the openadr.h codec. GET /openadr/event
 // is a demand-response EVENT (a program + named event + an intervals array of typed payload points); GET
 // /openadr/report is a VEN REPORT (a resource reading answering an event). An OpenADR 3.0 consumer validates
@@ -2282,19 +2293,19 @@ static void h_openadr_event(uint8_t id, HttpReq *)
         {1720003600u, 3600u, "PRICE", 0.125},
     };
     static char buf[512];
-    size_t n = pc_openadr_event("program-1", "pc-dr-event", iv, 2, buf, sizeof(buf));
+    size_t n = protocore_openadr_event("program-1", "pc-dr-event", iv, 2, buf, sizeof(buf));
     server.send(id, 200, "application/json", (const uint8_t *)buf, n);
 }
 static void h_openadr_report(uint8_t id, HttpReq *)
 {
     static char buf[512];
-    size_t n = pc_openadr_report("program-1", "event-9", "meter-A", -2.5, 1720000000u, buf, sizeof(buf));
+    size_t n = protocore_openadr_report("program-1", "event-9", "meter-A", -2.5, 1720000000u, buf, sizeof(buf));
     server.send(id, 200, "application/json", (const uint8_t *)buf, n);
 }
-#endif // PC_ENABLE_OPENADR
+#endif // PROTOCORE_ENABLE_OPENADR
 
 // StatsD device-as-client probe: push one metric OUT to a StatsD collector (?host=&port=&name=&value=&type=)
-// via the UDP StatsD client. Drives statsd_begin + the emit helper -> pc_udp_sendto against a real collector
+// via the UDP StatsD client. Drives statsd_begin + the emit helper -> protocore_udp_sendto against a real collector
 // (interop) - and, with a percent-encoded name, exercises the metric-line-injection surface (embedded newline
 // forges extra metrics; embedded :/| corrupt the line - StatsD line hygiene is the caller's job).
 static void h_statsd_probe(uint8_t id, HttpReq *r)
@@ -2320,7 +2331,7 @@ static void h_statsd_probe(uint8_t id, HttpReq *r)
     }
     char tc = (types && types[0]) ? types[0] : 'c';
 
-    static char name[512]; // larger than PC_STATSD_LINE_MAX so oversized names test the format bound
+    static char name[512]; // larger than PROTOCORE_STATSD_LINE_MAX so oversized names test the format bound
     url_decode(rawname ? rawname : "pc.rig.metric", name, sizeof(name));
 
     // Parse the value as a signed integer by hand (no stdlib in the library zone; this is app code but keep it
@@ -2348,7 +2359,7 @@ static void h_statsd_probe(uint8_t id, HttpReq *r)
                     : (tc == 's') ? StatsdType::STATSD_SET
                                   : StatsdType::STATSD_COUNTER;
     // A statsd_format preview tells us whether the line fits (the emit helper drops it silently if not).
-    char preview[PC_STATSD_LINE_MAX];
+    char preview[PROTOCORE_STATSD_LINE_MAX];
     size_t plen =
         statsd_format(preview, sizeof(preview), name, (st == StatsdType::STATSD_SET) ? name : value, st, 1.0f, nullptr);
     if (st == StatsdType::STATSD_GAUGE)
@@ -2375,7 +2386,7 @@ static void h_statsd_probe(uint8_t id, HttpReq *r)
 }
 
 // JWT device-as-server verify: validate a `Authorization: Bearer <jwt>` HS256 token against the shared secret.
-// The token rides the Authorization header (the parser's full-length capture, PC_AUTH_HDR_CAP) - a query
+// The token rides the Authorization header (the parser's full-length capture, PROTOCORE_AUTH_HDR_CAP) - a query
 // param would be truncated by MAX_QUERY_LEN, and the header is the real bearer-auth path anyway. Reports the
 // signature check (jwt_bearer_valid - enforces alg==HS256, rejecting alg=none / RS256 / HS384 before the HMAC)
 // separately from the full check (jwt_bearer_valid_at, which also enforces exp/nbf against the rig clock), so
@@ -2388,7 +2399,7 @@ static void h_jwt_verify(uint8_t id, HttpReq *r)
         server.send(id, 400, "application/json", "{\"err\":\"Authorization: Bearer <jwt> required\"}");
         return;
     }
-    long now = (long)pc_time_now();
+    long now = (long)protocore_time_now();
     bool sig = jwt_bearer_valid(auth, JWT_RIG_SECRET, sizeof(JWT_RIG_SECRET) - 1);
     bool valid = jwt_bearer_valid_at(auth, JWT_RIG_SECRET, sizeof(JWT_RIG_SECRET) - 1, now, 60);
 
@@ -2400,7 +2411,7 @@ static void h_jwt_verify(uint8_t id, HttpReq *r)
 
 // Synthetic wall clock for the NTP server: a fixed base epoch (2026-07-11) + device uptime, so the rig
 // serves a deterministic, plausible time with no dependency on reaching the public NTP pool. Registered in
-// the pc_time_source registry, which the NTP server reads via pc_time_now().
+// the protocore_time_source registry, which the NTP server reads via protocore_time_now().
 static const uint32_t RIG_BASE_EPOCH = 1783900000u; // ~2026-07-11 00:00 UTC
 static uint32_t rig_time_source(void)
 {
@@ -2478,7 +2489,7 @@ void setup()
         modbus_set_holding_reg(i, (uint16_t)(0x1000 + i));
     }
     modbus_set_input_reg(0, 0);
-#if PC_ENABLE_SUNSPEC
+#if PROTOCORE_ENABLE_SUNSPEC
     // Seed a SunSpec device-information model into the holding registers at SUNSPEC_BASE (well clear of the
     // low regs the plain-Modbus interop uses), so a real SunSpec client (pysunspec2) can discover + read it
     // over Modbus TCP: "SunS" marker + Common model (ID 1, L=66) + end model.
@@ -2507,10 +2518,10 @@ void setup()
     server.listen(502, ProtoConn::PROTO_MODBUS);
     Serial.println("MODBUS=tcp/502");
 
-    // NTP/SNTP server (RFC 5905 server mode) on UDP/123. Feed pc_time_now() a deterministic synthetic
+    // NTP/SNTP server (RFC 5905 server mode) on UDP/123. Feed protocore_time_now() a deterministic synthetic
     // clock (base epoch + uptime) so the rig serves time without reaching the public pool; advertise
     // stratum 2 with an undisciplined local-clock refid.
-    pc_time_source_add("rig", 10, rig_time_source);
+    protocore_time_source_add("rig", 10, rig_time_source);
     if (ntp_server_begin(2, NTP_REFID_LOCL))
     {
         Serial.println("NTP=udp/123");
@@ -2545,7 +2556,7 @@ void setup()
     server.on("/bench", HttpMethod::HTTP_GET, h_bench);
     server.on("/bench/reqparse", HttpMethod::HTTP_GET, h_bench_reqparse); // core request-path CCOUNT (reset + feed)
     server.on("/mqtt/probe", HttpMethod::HTTP_GET, h_mqtt_probe);         // device-as-client MQTT trigger
-#if PC_ENABLE_SPARKPLUG
+#if PROTOCORE_ENABLE_SPARKPLUG
     server.on("/sparkplug/probe", HttpMethod::HTTP_GET, h_sparkplug_probe); // device-as-Sparkplug-client NBIRTH
 #endif
     mtc_seed();
@@ -2557,10 +2568,10 @@ void setup()
     server.on("/bacnet/parse", HttpMethod::HTTP_POST, h_bacnet_parse); // BACnet/IP BVLC+NPDU parser fuzz surface
     server.on("/s7/parse", HttpMethod::HTTP_POST, h_s7_parse);         // Siemens S7 header parser fuzz surface
     server.on("/iec104/parse", HttpMethod::HTTP_POST, h_iec104_parse); // IEC 60870-5-104 APCI/ASDU parser fuzz surface
-#if PC_ENABLE_GRAPHQL
+#if PROTOCORE_ENABLE_GRAPHQL
     server.on("/graphql", HttpMethod::HTTP_POST, h_graphql); // device-as-GraphQL-server (interop + query-abuse)
 #endif
-#if PC_ENABLE_GRPC_WEB && PC_ENABLE_PROTOBUF
+#if PROTOCORE_ENABLE_GRPC_WEB && PROTOCORE_ENABLE_PROTOBUF
     server.on("/grpc", HttpMethod::HTTP_POST, h_grpc); // device-as-gRPC-web-server Greeter echo (interop)
 #endif
     server.on("/redis/probe", HttpMethod::HTTP_GET, h_redis_probe);   // device-as-Redis-client (interop)
@@ -2569,21 +2580,21 @@ void setup()
     server.on("/syslog/probe", HttpMethod::HTTP_GET, h_syslog_probe); // device-as-syslog-client (interop)
     server.on("/nats/probe", HttpMethod::HTTP_GET, h_nats_probe);     // device-as-NATS-client (interop)
     server.on("/stomp/probe", HttpMethod::HTTP_GET, h_stomp_probe);   // device-as-STOMP-client (interop)
-#if PC_ENABLE_XMPP
+#if PROTOCORE_ENABLE_XMPP
     server.on("/xmpp/probe", HttpMethod::HTTP_GET, h_xmpp_probe); // device-as-XMPP-client (interop)
 #endif
-#if PC_ENABLE_AMQP
+#if PROTOCORE_ENABLE_AMQP
     server.on("/amqp/probe", HttpMethod::HTTP_GET, h_amqp_probe); // device-as-AMQP-client (interop)
 #endif
-#if PC_ENABLE_WAMP && PC_ENABLE_WS_CLIENT
+#if PROTOCORE_ENABLE_WAMP && PROTOCORE_ENABLE_WS_CLIENT
     server.on("/wamp/probe", HttpMethod::HTTP_GET, h_wamp_probe); // device-as-WAMP-client over WebSocket (interop)
 #endif
-#if PC_ENABLE_SEP2
+#if PROTOCORE_ENABLE_SEP2
     server.on("/dcap", HttpMethod::HTTP_GET, h_sep2_dcap); // device-as-IEEE-2030.5-server (interop)
     server.on("/edev", HttpMethod::HTTP_GET, h_sep2_edev);
     server.on("/derc", HttpMethod::HTTP_GET, h_sep2_derc);
 #endif
-#if PC_ENABLE_OPENADR
+#if PROTOCORE_ENABLE_OPENADR
     server.on("/openadr/event", HttpMethod::HTTP_GET, h_openadr_event); // device-as-OpenADR-3.0-VEN (interop)
     server.on("/openadr/report", HttpMethod::HTTP_GET, h_openadr_report);
 #endif

@@ -3,7 +3,7 @@
 
 /**
  * @file provisioning_service.c
- * @brief First-boot WiFi provisioning / captive portal (PC_ENABLE_PROVISIONING).
+ * @brief First-boot WiFi provisioning / captive portal (PROTOCORE_ENABLE_PROVISIONING).
  *
  * The catch-all DNS responder uses the transport-layer UDP service (no add-on library);
  * credentials persist through hal/nvs.h.
@@ -19,14 +19,14 @@
 // Form-field parser (always compiled; the only non-trivial logic, unit-tested).
 // ---------------------------------------------------------------------------
 
-#if PC_ENABLE_PROVISIONING && PC_HAS_VENDOR_NVS
+#if PROTOCORE_ENABLE_PROVISIONING && PROTOCORE_HAS_VENDOR_NVS
 #include "core_setup/hal/nvs.h" // the credentials outlive the reboot that applies them
 #include "network_drivers/application/web_assets.h"
 #include "network_drivers/physical/physical.h"
 #include "network_drivers/transport/udp.h"
 #include "protocore.h"
 #endif
-proto_bool pc_prov_form_field(const char *body, const char *key, char *out, size_t cap)
+proto_bool protocore_prov_form_field(const char *body, const char *key, char *out, size_t cap)
 {
     if (out && cap)
     {
@@ -63,8 +63,8 @@ proto_bool pc_prov_form_field(const char *body, const char *key, char *out, size
         }
         else if (c == '%')
         {
-            int h = pc_hex_val(q[1]);
-            int l = (h >= 0) ? pc_hex_val(q[2]) : -1;
+            int h = protocore_hex_val(q[1]);
+            int l = (h >= 0) ? protocore_hex_val(q[2]) : -1;
             if (h >= 0 && l >= 0)
             {
                 c = (char)((h << 4) | l);
@@ -88,7 +88,7 @@ proto_bool pc_prov_form_field(const char *body, const char *key, char *out, size
 // ESP32 captive portal (softAP + lwIP UDP DNS + form/save routes)
 // ---------------------------------------------------------------------------
 
-#if PC_ENABLE_PROVISIONING && PC_HAS_VENDOR_NVS
+#if PROTOCORE_ENABLE_PROVISIONING && PROTOCORE_HAS_VENDOR_NVS
 
 // All provisioning-service state, owned by one instance (internal linkage): the server handle
 // and the softAP IP the captive-portal DNS answers with. Grouped so it is one named owner,
@@ -99,12 +99,12 @@ typedef struct
 } ProvCtx;
 static ProvCtx s_prov = {.ap_ip = {192, 168, 4, 1}};
 
-// The NVS namespace + credential keys (PC_PROV_NVS_NAMESPACE / _KEY_SSID / _KEY_PSK) live in
-// protocore_config.h under PC_ENABLE_PROVISIONING so a deployment can override them; used across
+// The NVS namespace + credential keys (PROTOCORE_PROV_NVS_NAMESPACE / _KEY_SSID / _KEY_PSK) live in
+// protocore_config.h under PROTOCORE_ENABLE_PROVISIONING so a deployment can override them; used across
 // the read / clear / save paths (and, for ssid/psk, as the HTML form field names).
 
 // Catch-all DNS: answer every query with our softAP IP (captive-portal hijack).
-static void prov_dns_recv(const uint8_t *req, size_t qlen, const struct pc_udp_peer *peer, void *ctx)
+static void prov_dns_recv(const uint8_t *req, size_t qlen, const struct protocore_udp_peer *peer, void *ctx)
 {
     (void)ctx;
     if (qlen < 12)
@@ -158,7 +158,7 @@ static void prov_dns_recv(const uint8_t *req, size_t qlen, const struct pc_udp_p
     Udp.listener->reply(peer, resp, n);
 }
 
-proto_bool pc_provisioning_load(char *ssid, size_t ssid_cap, char *psk, size_t psk_cap)
+proto_bool protocore_provisioning_load(char *ssid, size_t ssid_cap, char *psk, size_t psk_cap)
 {
     if (ssid && ssid_cap)
     {
@@ -168,26 +168,28 @@ proto_bool pc_provisioning_load(char *ssid, size_t ssid_cap, char *psk, size_t p
     {
         psk[0] = '\0';
     }
-    if (!ssid || ssid_cap == 0 || pc_nvs_get_str(PC_PROV_NVS_NAMESPACE, PC_PROV_KEY_SSID, ssid, ssid_cap) == 0)
+    if (!ssid || ssid_cap == 0 ||
+        protocore_nvs_get_str(PROTOCORE_PROV_NVS_NAMESPACE, PROTOCORE_PROV_KEY_SSID, ssid, ssid_cap) == 0)
     {
         return PROTO_FALSE;
     }
     if (psk && psk_cap)
     {
-        (void)pc_nvs_get_str(PC_PROV_NVS_NAMESPACE, PC_PROV_KEY_PSK, psk, psk_cap); // an open AP has none
+        (void)protocore_nvs_get_str(PROTOCORE_PROV_NVS_NAMESPACE, PROTOCORE_PROV_KEY_PSK, psk,
+                                    psk_cap); // an open AP has none
     }
     return PROTO_TRUE;
 }
 
-void pc_provisioning_clear(void)
+void protocore_provisioning_clear(void)
 {
-    (void)pc_nvs_clear(PC_PROV_NVS_NAMESPACE);
+    (void)protocore_nvs_clear(PROTOCORE_PROV_NVS_NAMESPACE);
 }
 
 static void prov_form_handler(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
-    send_text(slot_id, 200, PC_MIME_TEXT_HTML, PC_PROV_FORM);
+    send_text(slot_id, 200, PROTOCORE_MIME_TEXT_HTML, PROTOCORE_PROV_FORM);
 }
 
 static void prov_save_handler(uint8_t slot_id, HttpReq *req)
@@ -195,21 +197,22 @@ static void prov_save_handler(uint8_t slot_id, HttpReq *req)
     char ssid[33];
     char psk[64];
     proto_bool have_ssid =
-        pc_prov_form_field((const char *)req->body, PC_PROV_KEY_SSID, ssid, sizeof(ssid)) && ssid[0] != '\0';
-    pc_prov_form_field((const char *)req->body, PC_PROV_KEY_PSK, psk, sizeof(psk));
+        protocore_prov_form_field((const char *)req->body, PROTOCORE_PROV_KEY_SSID, ssid, sizeof(ssid)) &&
+        ssid[0] != '\0';
+    protocore_prov_form_field((const char *)req->body, PROTOCORE_PROV_KEY_PSK, psk, sizeof(psk));
     if (!have_ssid)
     {
-        send_text(slot_id, 400, PC_MIME_TEXT_PLAIN, "SSID required");
+        send_text(slot_id, 400, PROTOCORE_MIME_TEXT_PLAIN, "SSID required");
         return;
     }
-    (void)pc_nvs_put_str(PC_PROV_NVS_NAMESPACE, PC_PROV_KEY_SSID, ssid);
-    (void)pc_nvs_put_str(PC_PROV_NVS_NAMESPACE, PC_PROV_KEY_PSK, psk);
-    send_text(slot_id, 200, PC_MIME_TEXT_HTML, PC_PROV_SAVED_HTML);
+    (void)protocore_nvs_put_str(PROTOCORE_PROV_NVS_NAMESPACE, PROTOCORE_PROV_KEY_SSID, ssid);
+    (void)protocore_nvs_put_str(PROTOCORE_PROV_NVS_NAMESPACE, PROTOCORE_PROV_KEY_PSK, psk);
+    send_text(slot_id, 200, PROTOCORE_MIME_TEXT_HTML, PROTOCORE_PROV_SAVED_HTML);
     pcdelay(500);
-    pc_platform_restart();
+    protocore_platform_restart();
 }
 
-void pc_provisioning_begin(const char *ap_ssid)
+void protocore_provisioning_begin(const char *ap_ssid)
 {
     Physical.wifi->init_ap(ap_ssid, NULL); // AP mode is implied by which bring-up you call
     uint32_t ip = Physical.wifi->ap_ip();  // network byte order
@@ -227,7 +230,7 @@ void pc_provisioning_begin(const char *ap_ssid)
 
 #else // disabled / non-Arduino: stubs (form-field parser above stays available)
 
-proto_bool pc_provisioning_load(char *ssid, size_t ssid_cap, char *psk, size_t psk_cap)
+proto_bool protocore_provisioning_load(char *ssid, size_t ssid_cap, char *psk, size_t psk_cap)
 {
     if (ssid && ssid_cap)
     {
@@ -240,12 +243,12 @@ proto_bool pc_provisioning_load(char *ssid, size_t ssid_cap, char *psk, size_t p
     return PROTO_FALSE;
 }
 // The host stub: the Arduino build registers routes via on_http(); there is nothing to do here.
-void pc_provisioning_begin(const char *ap_ssid)
+void protocore_provisioning_begin(const char *ap_ssid)
 {
     (void)ap_ssid;
 }
-void pc_provisioning_clear()
+void protocore_provisioning_clear()
 {
 }
 
-#endif // PC_ENABLE_PROVISIONING && PC_HAS_VENDOR_NVS
+#endif // PROTOCORE_ENABLE_PROVISIONING && PROTOCORE_HAS_VENDOR_NVS

@@ -49,13 +49,13 @@ void test_ntowfv2()
 {
     uint8_t nt[16], owf[16];
     char hex[33];
-    pc_ntlm_nt_hash("Password", nt);
-    TEST_ASSERT_TRUE(pc_ntlm_ntowfv2(nt, "User", "Domain", owf));
+    protocore_ntlm_nt_hash("Password", nt);
+    TEST_ASSERT_TRUE(protocore_ntlm_ntowfv2(nt, "User", "Domain", owf));
     to_hex(owf, 16, hex);
     // MS-NLMP 4.2.4.1 published value
     TEST_ASSERT_EQUAL_STRING("0c868a403bfd7a93a3001ef22ef02e3f", hex);
     // the NT hash of "password" (lowercase) is the well-known 8846f7ea...
-    pc_ntlm_nt_hash("password", nt);
+    protocore_ntlm_nt_hash("password", nt);
     to_hex(nt, 16, hex);
     TEST_ASSERT_EQUAL_STRING("8846f7eaee8fb117ad06bdd830b7586c", hex);
 }
@@ -63,8 +63,8 @@ void test_ntowfv2()
 void test_ntlmv2_response()
 {
     uint8_t nt[16], owf[16];
-    pc_ntlm_nt_hash("Password", nt);
-    pc_ntlm_ntowfv2(nt, "User", "Domain", owf);
+    protocore_ntlm_nt_hash("Password", nt);
+    protocore_ntlm_ntowfv2(nt, "User", "Domain", owf);
 
     uint8_t srv[8], cli[8], ti[64];
     unhex("0123456789abcdef", srv);
@@ -73,7 +73,7 @@ void test_ntlmv2_response()
     size_t ti_len = unhex("02000c0044006f006d00610069006e0001000c0053006500720076006500720000000000", ti);
 
     uint8_t out[256], skey[16];
-    size_t n = pc_ntlm_v2_response(owf, srv, cli, time, ti, ti_len, out, sizeof(out), skey);
+    size_t n = protocore_ntlm_v2_response(owf, srv, cli, time, ti, ti_len, out, sizeof(out), skey);
     TEST_ASSERT_EQUAL_size_t(48 + ti_len, n);
 
     char hex[513];
@@ -92,7 +92,8 @@ void test_ntlmv2_response()
 void test_fail_closed()
 {
     uint8_t owf[16] = {0}, srv[8] = {0}, cli[8] = {0}, time[8] = {0}, ti[4] = {0}, out[16], skey[16];
-    TEST_ASSERT_EQUAL_size_t(0, pc_ntlm_v2_response(owf, srv, cli, time, ti, sizeof(ti), out, sizeof(out), skey));
+    TEST_ASSERT_EQUAL_size_t(0,
+                             protocore_ntlm_v2_response(owf, srv, cli, time, ti, sizeof(ti), out, sizeof(out), skey));
 }
 
 // A user long enough that its UTF-16LE expansion overflows the 256-char (512-byte) scratch: the
@@ -103,7 +104,7 @@ void test_ntowfv2_user_overflow()
     char user[300];
     memset(user, 'a', sizeof(user) - 1); // 299 chars -> 598 bytes UTF-16LE, over the 512-byte buffer
     user[sizeof(user) - 1] = 0;
-    TEST_ASSERT_FALSE(pc_ntlm_ntowfv2(nt, user, "X", owf));
+    TEST_ASSERT_FALSE(protocore_ntlm_ntowfv2(nt, user, "X", owf));
 }
 
 // A user that fits but a domain that pushes the concatenation over the scratch: the domain loop's
@@ -117,7 +118,7 @@ void test_ntowfv2_domain_overflow()
     char domain[40];
     memset(domain, 'c', 39); // 39 chars -> tips n past 512 in the domain loop
     domain[39] = 0;
-    TEST_ASSERT_FALSE(pc_ntlm_ntowfv2(nt, user, domain, owf));
+    TEST_ASSERT_FALSE(protocore_ntlm_ntowfv2(nt, user, domain, owf));
 }
 
 // A user char that is >= 'a' but > 'z' ('{') exercises the ASCII-uppercase compound guard's
@@ -125,14 +126,14 @@ void test_ntowfv2_domain_overflow()
 void test_ntowfv2_upper_high_char()
 {
     uint8_t nt[16] = {0}, owf[16];
-    TEST_ASSERT_TRUE(pc_ntlm_ntowfv2(nt, "a{z", "", owf));
+    TEST_ASSERT_TRUE(protocore_ntlm_ntowfv2(nt, "a{z", "", owf));
 }
 
 // A null out buffer fails closed before any write (ntlm.cpp:86, the !out side of the guard).
 void test_v2_response_null_out()
 {
     uint8_t owf[16] = {0}, srv[8] = {0}, cli[8] = {0}, time[8] = {0}, ti[4] = {0}, skey[16];
-    TEST_ASSERT_EQUAL_size_t(0, pc_ntlm_v2_response(owf, srv, cli, time, ti, sizeof(ti), NULL, 100, skey));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_ntlm_v2_response(owf, srv, cli, time, ti, sizeof(ti), NULL, 100, skey));
 }
 
 // A null session_key skips the SessionBaseKey derivation (ntlm.cpp:109 false side); the returned
@@ -140,8 +141,8 @@ void test_v2_response_null_out()
 void test_v2_response_null_skey()
 {
     uint8_t nt[16], owf[16];
-    pc_ntlm_nt_hash("Password", nt);
-    pc_ntlm_ntowfv2(nt, "User", "Domain", owf);
+    protocore_ntlm_nt_hash("Password", nt);
+    protocore_ntlm_ntowfv2(nt, "User", "Domain", owf);
 
     uint8_t srv[8], cli[8], ti[64];
     unhex("0123456789abcdef", srv);
@@ -150,14 +151,14 @@ void test_v2_response_null_skey()
     size_t ti_len = unhex("02000c0044006f006d00610069006e0001000c0053006500720076006500720000000000", ti);
 
     uint8_t out[256];
-    size_t n = pc_ntlm_v2_response(owf, srv, cli, time, ti, ti_len, out, sizeof(out), NULL);
+    size_t n = protocore_ntlm_v2_response(owf, srv, cli, time, ti, ti_len, out, sizeof(out), NULL);
     TEST_ASSERT_EQUAL_size_t(48 + ti_len, n);
     char hex[513];
     to_hex(out, 16, hex);
     TEST_ASSERT_EQUAL_STRING("68cd0ab851e51c96aabc927bebef6a1c", hex); // NTProofStr unaffected
 }
 
-// pc_ntlm_set_mic_flag: OR the MsvAvFlags MIC bit into an existing pair, splice one in before the EOL
+// protocore_ntlm_set_mic_flag: OR the MsvAvFlags MIC bit into an existing pair, splice one in before the EOL
 // when absent, or append at the tail of a list with no EOL terminator.
 void test_set_mic_flag()
 {
@@ -166,7 +167,7 @@ void test_set_mic_flag()
     // (a) MsvAvTimestamp + EOL: no MsvAvFlags -> a new pair is inserted just before the EOL.
     const uint8_t ti_ts[] = {0x07, 0x00, 0x08, 0x00, 0x11, 0x22, 0x33, 0x44,
                              0x55, 0x66, 0x77, 0x88, 0x00, 0x00, 0x00, 0x00}; // ts(12) + EOL(4)
-    size_t n = pc_ntlm_set_mic_flag(ti_ts, sizeof(ti_ts), out, sizeof(out));
+    size_t n = protocore_ntlm_set_mic_flag(ti_ts, sizeof(ti_ts), out, sizeof(out));
     TEST_ASSERT_EQUAL_size_t(sizeof(ti_ts) + 8, n);
     const uint8_t exp_a[] = {0x07, 0x00, 0x08, 0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, // ts
                              0x06, 0x00, 0x04, 0x00, 0x02, 0x00, 0x00, 0x00,                         // flags
@@ -175,23 +176,23 @@ void test_set_mic_flag()
 
     // (b) existing MsvAvFlags value 0x00000001 -> the bit is OR'd to 0x03, same length.
     const uint8_t ti_fl[] = {0x06, 0x00, 0x04, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-    n = pc_ntlm_set_mic_flag(ti_fl, sizeof(ti_fl), out, sizeof(out));
+    n = protocore_ntlm_set_mic_flag(ti_fl, sizeof(ti_fl), out, sizeof(out));
     TEST_ASSERT_EQUAL_size_t(sizeof(ti_fl), n);
     TEST_ASSERT_EQUAL_HEX8(0x03, out[4]); // 0x01 | 0x02
 
     // (c) no EOL terminator -> the pair is appended at the end (leniently, never fails).
     const uint8_t ti_bad[] = {0x07, 0x00, 0x08, 0x00}; // header only, runs off the end
-    n = pc_ntlm_set_mic_flag(ti_bad, sizeof(ti_bad), out, sizeof(out));
+    n = protocore_ntlm_set_mic_flag(ti_bad, sizeof(ti_bad), out, sizeof(out));
     TEST_ASSERT_EQUAL_size_t(sizeof(ti_bad) + 8, n);
     const uint8_t exp_c[] = {0x07, 0x00, 0x08, 0x00, 0x06, 0x00, 0x04, 0x00, 0x02, 0x00, 0x00, 0x00};
     TEST_ASSERT_EQUAL_HEX8_ARRAY(exp_c, out, (int)n);
 
     // fail-closed: null args and a too-small output buffer.
-    TEST_ASSERT_EQUAL_size_t(0, pc_ntlm_set_mic_flag(NULL, 4, out, sizeof(out)));
-    TEST_ASSERT_EQUAL_size_t(0, pc_ntlm_set_mic_flag(ti_ts, sizeof(ti_ts), out, 4));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_ntlm_set_mic_flag(NULL, 4, out, sizeof(out)));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_ntlm_set_mic_flag(ti_ts, sizeof(ti_ts), out, 4));
 }
 
-// pc_ntlm_mic == HMAC-MD5(key, neg || chal || auth), cross-checked against Python hmac/hashlib.
+// protocore_ntlm_mic == HMAC-MD5(key, neg || chal || auth), cross-checked against Python hmac/hashlib.
 void test_ntlm_mic()
 {
     uint8_t key[16];
@@ -207,7 +208,7 @@ void test_ntlm_mic()
         auth[i] = (uint8_t)(0x20 + i);
     }
     uint8_t mic[16];
-    pc_ntlm_mic(key, neg, sizeof(neg), chal, sizeof(chal), auth, sizeof(auth), mic);
+    protocore_ntlm_mic(key, neg, sizeof(neg), chal, sizeof(chal), auth, sizeof(auth), mic);
     const uint8_t expect[16] = {0xd2, 0x3e, 0x19, 0x94, 0x2c, 0xa7, 0x07, 0x7a,
                                 0x14, 0x92, 0x22, 0x17, 0x69, 0x4f, 0xc7, 0x8d};
     TEST_ASSERT_EQUAL_HEX8_ARRAY(expect, mic, 16);

@@ -20,16 +20,16 @@ static uint8_t tw[4096]; // test-side working bytes for the crypto entry points
 // The keyed api needs a context, not a key. These are one-shot vectors, so one scratch context is
 // enough - rebuilt per call, and released first so a backend that attaches vendor resources to a
 // context (ESP's mbedtls does) does not leak one per vector.
-static uint8_t g_gcm_ws[PC_WORK_AESGCM] __attribute__((aligned(8)));
+static uint8_t g_gcm_ws[PROTOCORE_WORK_AESGCM] __attribute__((aligned(8)));
 static proto_bool g_gcm_live = PROTO_FALSE;
-static struct pc_aesgcm_key *gcm_key(const uint8_t *key)
+static struct protocore_aesgcm_key *gcm_key(const uint8_t *key)
 {
     if (g_gcm_live)
     {
-        pc_aesgcm_key_wipe((struct pc_aesgcm_key *)(g_gcm_ws));
+        protocore_aesgcm_key_wipe((struct protocore_aesgcm_key *)(g_gcm_ws));
     }
     g_gcm_live = PROTO_TRUE;
-    return pc_aesgcm_key_init(g_gcm_ws, key);
+    return protocore_aesgcm_key_init(g_gcm_ws, key);
 }
 
 void setUp()
@@ -74,24 +74,24 @@ void test_transport_frame()
 {
     const uint8_t msg[] = {1, 2, 3, 4, 5};
     uint8_t out[16];
-    size_t n = pc_smb2_transport_frame(out, sizeof(out), msg, sizeof(msg));
+    size_t n = protocore_smb2_transport_frame(out, sizeof(out), msg, sizeof(msg));
     TEST_ASSERT_EQUAL_size_t(4 + 5, n);
     TEST_ASSERT_EQUAL_HEX8(0x00, out[0]); // Direct-TCP: leading zero
     TEST_ASSERT_EQUAL_HEX8(0x00, out[1]); // 24-bit big-endian length = 5
     TEST_ASSERT_EQUAL_HEX8(0x00, out[2]);
     TEST_ASSERT_EQUAL_HEX8(0x05, out[3]);
     TEST_ASSERT_EQUAL_MEMORY(msg, out + 4, 5);
-    TEST_ASSERT_EQUAL_UINT32(5, pc_smb2_transport_len(out, n));
+    TEST_ASSERT_EQUAL_UINT32(5, protocore_smb2_transport_len(out, n));
     // fail closed: too small, and a non-zero leading byte
-    TEST_ASSERT_EQUAL_size_t(0, pc_smb2_transport_frame(out, 3, msg, sizeof(msg)));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_smb2_transport_frame(out, 3, msg, sizeof(msg)));
     uint8_t bad[4] = {0x01, 0, 0, 5};
-    TEST_ASSERT_EQUAL_UINT32(0, pc_smb2_transport_len(bad, 4));
+    TEST_ASSERT_EQUAL_UINT32(0, protocore_smb2_transport_len(bad, 4));
 }
 
 void test_build_and_parse_header()
 {
     uint8_t buf[64];
-    TEST_ASSERT_EQUAL_size_t(64, pc_smb2_build_header(buf, sizeof(buf), SMB2_TREE_CONNECT, 8, 0x1122334455667788ULL,
+    TEST_ASSERT_EQUAL_size_t(64, protocore_smb2_build_header(buf, sizeof(buf), SMB2_TREE_CONNECT, 8, 0x1122334455667788ULL,
                                                       0xABCD, 0x99AABBCCDDEEFF00ULL));
     // ProtocolId + StructureSize + Command at their offsets
     const uint8_t pid[4] = {0xFE, 'S', 'M', 'B'};
@@ -100,7 +100,7 @@ void test_build_and_parse_header()
     TEST_ASSERT_EQUAL_UINT16(SMB2_TREE_CONNECT, r16(buf + 12));
 
     Smb2Header h;
-    TEST_ASSERT_TRUE(pc_smb2_parse_header(buf, sizeof(buf), &h));
+    TEST_ASSERT_TRUE(protocore_smb2_parse_header(buf, sizeof(buf), &h));
     TEST_ASSERT_EQUAL_UINT16(SMB2_TREE_CONNECT, h.command);
     TEST_ASSERT_EQUAL_HEX64(0x1122334455667788ULL, h.message_id);
     TEST_ASSERT_EQUAL_HEX32(0xABCD, h.tree_id);
@@ -110,16 +110,16 @@ void test_build_and_parse_header()
 void test_parse_header_rejects()
 {
     uint8_t buf[64];
-    pc_smb2_build_header(buf, sizeof(buf), SMB2_NEGOTIATE, 1, 0, 0, 0);
+    protocore_smb2_build_header(buf, sizeof(buf), SMB2_NEGOTIATE, 1, 0, 0, 0);
     Smb2Header h;
-    TEST_ASSERT_FALSE(pc_smb2_parse_header(buf, 63, &h)); // too short
+    TEST_ASSERT_FALSE(protocore_smb2_parse_header(buf, 63, &h)); // too short
     uint8_t b2[64];
     memcpy(b2, buf, 64);
     b2[0] = 0x00; // bad ProtocolId
-    TEST_ASSERT_FALSE(pc_smb2_parse_header(b2, 64, &h));
+    TEST_ASSERT_FALSE(protocore_smb2_parse_header(b2, 64, &h));
     memcpy(b2, buf, 64);
     w16(b2 + 4, 63); // bad StructureSize
-    TEST_ASSERT_FALSE(pc_smb2_parse_header(b2, 64, &h));
+    TEST_ASSERT_FALSE(protocore_smb2_parse_header(b2, 64, &h));
 }
 
 void test_build_negotiate()
@@ -130,11 +130,11 @@ void test_build_negotiate()
         gid[i] = (uint8_t)(0x10 + i);
     }
     uint8_t buf[160];
-    size_t n = pc_smb2_build_negotiate(buf, sizeof(buf), gid, SMB2_NEGOTIATE_SIGNING_ENABLED);
+    size_t n = protocore_smb2_build_negotiate(buf, sizeof(buf), gid, SMB2_NEGOTIATE_SIGNING_ENABLED);
     TEST_ASSERT_EQUAL_size_t(64 + 36 + 8, n); // header + fixed body + 4 dialects
 
     Smb2Header h;
-    TEST_ASSERT_TRUE(pc_smb2_parse_header(buf, n, &h));
+    TEST_ASSERT_TRUE(protocore_smb2_parse_header(buf, n, &h));
     TEST_ASSERT_EQUAL_UINT16(SMB2_NEGOTIATE, h.command);
 
     const uint8_t *b = buf + 64;              // NEGOTIATE request body
@@ -147,13 +147,13 @@ void test_build_negotiate()
     TEST_ASSERT_EQUAL_UINT16(SMB2_DIALECT_0300, r16(b + 40));
     TEST_ASSERT_EQUAL_UINT16(SMB2_DIALECT_0302, r16(b + 42));
     // overflow fails closed
-    TEST_ASSERT_EQUAL_size_t(0, pc_smb2_build_negotiate(buf, 100, gid, 0));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_smb2_build_negotiate(buf, 100, gid, 0));
 }
 
 // Build a well-formed NEGOTIATE response message into m; returns its length.
 static size_t build_neg_resp(uint8_t *m, Smb2Dialect dialect, const uint8_t *sec, uint16_t sec_len)
 {
-    pc_smb2_build_header(m, 256, SMB2_NEGOTIATE, 1, 5, 0, 0);
+    protocore_smb2_build_header(m, 256, SMB2_NEGOTIATE, 1, 5, 0, 0);
     m[16] |= 0x01; // SMB2_FLAGS_SERVER_TO_REDIR
     uint8_t *b = m + 64;
     memset(b, 0, 64);
@@ -188,7 +188,7 @@ void test_parse_negotiate_response()
     size_t n = build_neg_resp(m, SMB2_DIALECT_0300, token, sizeof(token));
 
     Smb2NegotiateResp r;
-    TEST_ASSERT_TRUE(pc_smb2_parse_negotiate_response(m, n, &r));
+    TEST_ASSERT_TRUE(protocore_smb2_parse_negotiate_response(m, n, &r));
     TEST_ASSERT_EQUAL_UINT16(SMB2_DIALECT_0300, r.dialect);
     TEST_ASSERT_EQUAL_UINT16(SMB2_NEGOTIATE_SIGNING_REQUIRED, r.security_mode);
     TEST_ASSERT_EQUAL_UINT32(0x00080000, r.max_read);
@@ -199,7 +199,7 @@ void test_parse_negotiate_response()
 
     // an empty security buffer -> NULL, still valid
     n = build_neg_resp(m, SMB2_DIALECT_0210, NULL, 0);
-    TEST_ASSERT_TRUE(pc_smb2_parse_negotiate_response(m, n, &r));
+    TEST_ASSERT_TRUE(protocore_smb2_parse_negotiate_response(m, n, &r));
     TEST_ASSERT_NULL(r.sec_buf);
     TEST_ASSERT_EQUAL_UINT16(0, r.sec_buf_len);
 }
@@ -214,17 +214,17 @@ void test_parse_negotiate_response_rejects()
     uint8_t bad[256];
     memcpy(bad, m, n);
     w16(bad + 64, 64); // wrong StructureSize (must be 65)
-    TEST_ASSERT_FALSE(pc_smb2_parse_negotiate_response(bad, n, &r));
+    TEST_ASSERT_FALSE(protocore_smb2_parse_negotiate_response(bad, n, &r));
 
     memcpy(bad, m, n);
     w16(bad + 12, (uint16_t)SMB2_READ); // wrong command
-    TEST_ASSERT_FALSE(pc_smb2_parse_negotiate_response(bad, n, &r));
+    TEST_ASSERT_FALSE(protocore_smb2_parse_negotiate_response(bad, n, &r));
 
     memcpy(bad, m, n);
     w16(bad + 64 + 58, 5000); // SecurityBufferLength past the message
-    TEST_ASSERT_FALSE(pc_smb2_parse_negotiate_response(bad, n, &r));
+    TEST_ASSERT_FALSE(protocore_smb2_parse_negotiate_response(bad, n, &r));
 
-    TEST_ASSERT_FALSE(pc_smb2_parse_negotiate_response(m, 100, &r)); // truncated before the body
+    TEST_ASSERT_FALSE(protocore_smb2_parse_negotiate_response(m, 100, &r)); // truncated before the body
 }
 
 // ---- SMB 3.1.1 negotiate contexts (MS-SMB2 §2.2.3 / §2.2.3.1 / §2.2.4) ----
@@ -245,14 +245,14 @@ void test_build_negotiate_311()
     const uint16_t offer[4] = {SMB2_ENCRYPTION_AES128_GCM, SMB2_ENCRYPTION_AES256_GCM, SMB2_ENCRYPTION_AES128_CCM,
                                SMB2_ENCRYPTION_AES256_CCM};
     uint8_t buf[256];
-    size_t n = pc_smb2_build_negotiate_311(buf, sizeof(buf), gid, SMB2_NEGOTIATE_SIGNING_ENABLED, salt, sizeof(salt),
+    size_t n = protocore_smb2_build_negotiate_311(buf, sizeof(buf), gid, SMB2_NEGOTIATE_SIGNING_ENABLED, salt, sizeof(salt),
                                            offer, 4);
     // header(64)+body(36)+5 dialects(10) -> pad to 112; preauth ctx(46) -> pad to 160; signing ctx(12) -> pad
     // to 176; encryption ctx(8 + 2 + 4*2 = 18) = 194
     TEST_ASSERT_EQUAL_size_t(194, n);
 
     Smb2Header h;
-    TEST_ASSERT_TRUE(pc_smb2_parse_header(buf, n, &h));
+    TEST_ASSERT_TRUE(protocore_smb2_parse_header(buf, n, &h));
     TEST_ASSERT_EQUAL_UINT16(SMB2_NEGOTIATE, h.command);
 
     const uint8_t *b = buf + 64;
@@ -290,22 +290,22 @@ void test_build_negotiate_311()
 
     // With no ciphers offered the encryption context is omitted (NegotiateContextCount = 2, total 172).
     size_t n0 =
-        pc_smb2_build_negotiate_311(buf, sizeof(buf), gid, SMB2_NEGOTIATE_SIGNING_ENABLED, salt, sizeof(salt), NULL, 0);
+        protocore_smb2_build_negotiate_311(buf, sizeof(buf), gid, SMB2_NEGOTIATE_SIGNING_ENABLED, salt, sizeof(salt), NULL, 0);
     TEST_ASSERT_EQUAL_size_t(172, n0);
     TEST_ASSERT_EQUAL_UINT16(2, r16(buf + 64 + 32)); // NegotiateContextCount
 
     // overflow + bad-arg fail closed
-    TEST_ASSERT_EQUAL_size_t(0, pc_smb2_build_negotiate_311(buf, 100, gid, 0, salt, sizeof(salt), offer, 4));
-    TEST_ASSERT_EQUAL_size_t(0, pc_smb2_build_negotiate_311(buf, sizeof(buf), gid, 0, NULL, 32, offer, 4));
-    TEST_ASSERT_EQUAL_size_t(0, pc_smb2_build_negotiate_311(buf, sizeof(buf), gid, 0, salt, 0, offer, 4));
-    TEST_ASSERT_EQUAL_size_t(0, pc_smb2_build_negotiate_311(buf, sizeof(buf), gid, 0, salt, 32, NULL, 4));  // null list
-    TEST_ASSERT_EQUAL_size_t(0, pc_smb2_build_negotiate_311(buf, sizeof(buf), gid, 0, salt, 32, offer, 5)); // too many
+    TEST_ASSERT_EQUAL_size_t(0, protocore_smb2_build_negotiate_311(buf, 100, gid, 0, salt, sizeof(salt), offer, 4));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_smb2_build_negotiate_311(buf, sizeof(buf), gid, 0, NULL, 32, offer, 4));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_smb2_build_negotiate_311(buf, sizeof(buf), gid, 0, salt, 0, offer, 4));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_smb2_build_negotiate_311(buf, sizeof(buf), gid, 0, salt, 32, NULL, 4));  // null list
+    TEST_ASSERT_EQUAL_size_t(0, protocore_smb2_build_negotiate_311(buf, sizeof(buf), gid, 0, salt, 32, offer, 5)); // too many
 }
 
 // A NEGOTIATE response (dialect 3.1.1) carrying preauth-integrity + encryption + signing contexts.
 static size_t build_neg_resp_311(uint8_t *m)
 {
-    pc_smb2_build_header(m, 512, SMB2_NEGOTIATE, 1, 5, 0, 0);
+    protocore_smb2_build_header(m, 512, SMB2_NEGOTIATE, 1, 5, 0, 0);
     uint8_t *b = m + 64;
     memset(b, 0, 64);
     w16(b + 0, 65); // StructureSize
@@ -352,7 +352,7 @@ void test_parse_negotiate_contexts()
     uint8_t m[512];
     size_t n = build_neg_resp_311(m);
     Smb2NegotiateContexts c;
-    TEST_ASSERT_TRUE(pc_smb2_parse_negotiate_contexts(m, n, &c));
+    TEST_ASSERT_TRUE(protocore_smb2_parse_negotiate_contexts(m, n, &c));
     TEST_ASSERT_TRUE(c.have_preauth);
     TEST_ASSERT_EQUAL_UINT16(SMB2_PREAUTH_INTEGRITY_SHA512, c.hash_algorithm);
     TEST_ASSERT_EQUAL_UINT16(16, c.salt_len);
@@ -374,17 +374,17 @@ void test_parse_negotiate_contexts_rejects()
 
     memcpy(bad, m, n);
     w16(bad + 64 + 6, 0); // NegotiateContextCount 0 -> not a context-bearing response
-    TEST_ASSERT_FALSE(pc_smb2_parse_negotiate_contexts(bad, n, &c));
+    TEST_ASSERT_FALSE(protocore_smb2_parse_negotiate_contexts(bad, n, &c));
 
     memcpy(bad, m, n);
     w16(bad + 128 + 2, 5000); // a context DataLength that runs past the message
-    TEST_ASSERT_FALSE(pc_smb2_parse_negotiate_contexts(bad, n, &c));
+    TEST_ASSERT_FALSE(protocore_smb2_parse_negotiate_contexts(bad, n, &c));
 
     memcpy(bad, m, n);
     w32(bad + 64 + 60, 10); // NegotiateContextOffset below the header
-    TEST_ASSERT_FALSE(pc_smb2_parse_negotiate_contexts(bad, n, &c));
+    TEST_ASSERT_FALSE(protocore_smb2_parse_negotiate_contexts(bad, n, &c));
 
-    TEST_ASSERT_FALSE(pc_smb2_parse_negotiate_contexts(m, 100, &c)); // truncated before the body
+    TEST_ASSERT_FALSE(protocore_smb2_parse_negotiate_contexts(m, 100, &c)); // truncated before the body
 }
 
 // The SMB 3.1.1 preauth-integrity hash chain (MS-SMB2 §3.1.5.2): SHA-512 folded over each handshake
@@ -392,7 +392,7 @@ void test_parse_negotiate_contexts_rejects()
 void test_preauth_hash_chain()
 {
     SmbPreauth p;
-    pc_smb_preauth_init(&p);
+    protocore_smb_preauth_init(&p);
     const uint8_t zero[64] = {0};
     TEST_ASSERT_EQUAL_MEMORY(zero, p.hash, 64); // the initial value is 64 zero bytes
 
@@ -406,8 +406,8 @@ void test_preauth_hash_chain()
     {
         m2[i] = (uint8_t)(0x80 + i);
     }
-    pc_smb_preauth_update(tw, &p, m1, sizeof(m1)); // fold in a stand-in NEGOTIATE, then a SESSION_SETUP
-    pc_smb_preauth_update(tw, &p, m2, sizeof(m2));
+    protocore_smb_preauth_update(tw, &p, m1, sizeof(m1)); // fold in a stand-in NEGOTIATE, then a SESSION_SETUP
+    protocore_smb_preauth_update(tw, &p, m2, sizeof(m2));
     const uint8_t expected_preauth[64] = {0x0a, 0xa8, 0x6d, 0xd5, 0xf7, 0x6b, 0x17, 0xb2, 0x92, 0xb7, 0xc5, 0xbe, 0xfe,
                                           0x58, 0xde, 0xfa, 0xad, 0xfc, 0xad, 0x9b, 0x66, 0x2b, 0x32, 0x54, 0xc2, 0x08,
                                           0x54, 0x4c, 0xe1, 0xad, 0x96, 0x93, 0xf7, 0xd6, 0x9f, 0xbc, 0x7c, 0x73, 0x17,
@@ -424,12 +424,12 @@ void test_build_session_setup()
         tok[i] = (uint8_t)(i + 1);
     }
     uint8_t buf[256];
-    size_t n = pc_smb2_build_session_setup(buf, sizeof(buf), 7, 0xDEADBEEFULL, SMB2_NEGOTIATE_SIGNING_ENABLED, tok,
+    size_t n = protocore_smb2_build_session_setup(buf, sizeof(buf), 7, 0xDEADBEEFULL, SMB2_NEGOTIATE_SIGNING_ENABLED, tok,
                                            sizeof(tok));
     TEST_ASSERT_EQUAL_size_t(64 + 24 + 40, n);
 
     Smb2Header h;
-    TEST_ASSERT_TRUE(pc_smb2_parse_header(buf, n, &h));
+    TEST_ASSERT_TRUE(protocore_smb2_parse_header(buf, n, &h));
     TEST_ASSERT_EQUAL_UINT16(SMB2_SESSION_SETUP, h.command);
     TEST_ASSERT_EQUAL_HEX64(0xDEADBEEFULL, h.session_id); // echoes the server SessionId
     TEST_ASSERT_EQUAL_HEX64(7, h.message_id);
@@ -441,15 +441,15 @@ void test_build_session_setup()
     TEST_ASSERT_EQUAL_UINT16(40, r16(b + 14));      // SecurityBufferLength
     TEST_ASSERT_EQUAL_MEMORY(tok, buf + 88, 40);
     // overflow + empty token fail closed
-    TEST_ASSERT_EQUAL_size_t(0, pc_smb2_build_session_setup(buf, 100, 7, 0, 0, tok, sizeof(tok)));
-    TEST_ASSERT_EQUAL_size_t(0, pc_smb2_build_session_setup(buf, sizeof(buf), 7, 0, 0, tok, 0));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_smb2_build_session_setup(buf, 100, 7, 0, 0, tok, sizeof(tok)));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_smb2_build_session_setup(buf, sizeof(buf), 7, 0, 0, tok, 0));
 }
 
 // Build a well-formed SESSION_SETUP response message into m; returns its length.
 static size_t build_ss_resp(uint8_t *m, uint64_t session_id, uint32_t status, uint16_t flags, const uint8_t *sec,
                             uint16_t sec_len)
 {
-    pc_smb2_build_header(m, 512, SMB2_SESSION_SETUP, 1, 6, 0, session_id);
+    protocore_smb2_build_header(m, 512, SMB2_SESSION_SETUP, 1, 6, 0, session_id);
     w32(m + 8, status); // Status (STATUS_MORE_PROCESSING_REQUIRED then SUCCESS)
     m[16] |= 0x01;      // SMB2_FLAGS_SERVER_TO_REDIR
     uint8_t *b = m + 64;
@@ -477,19 +477,19 @@ void test_parse_session_setup_response()
         build_ss_resp(m, 0x1234ULL, SMB2_STATUS_MORE_PROCESSING_REQUIRED, SMB2_SESSION_FLAG_IS_GUEST, tok, sizeof(tok));
 
     Smb2Header h;
-    TEST_ASSERT_TRUE(pc_smb2_parse_header(m, n, &h));
+    TEST_ASSERT_TRUE(protocore_smb2_parse_header(m, n, &h));
     TEST_ASSERT_EQUAL_HEX32(SMB2_STATUS_MORE_PROCESSING_REQUIRED, h.status);
     TEST_ASSERT_EQUAL_HEX64(0x1234ULL, h.session_id);
 
     Smb2SessionSetupResp r;
-    TEST_ASSERT_TRUE(pc_smb2_parse_session_setup_response(m, n, &r));
+    TEST_ASSERT_TRUE(protocore_smb2_parse_session_setup_response(m, n, &r));
     TEST_ASSERT_EQUAL_UINT16(SMB2_SESSION_FLAG_IS_GUEST, r.session_flags);
     TEST_ASSERT_EQUAL_UINT16(sizeof(tok), r.sec_buf_len);
     TEST_ASSERT_EQUAL_MEMORY(tok, r.sec_buf, sizeof(tok));
 
     // the final SUCCESS round carries no security buffer -> NULL, still valid
     n = build_ss_resp(m, 0x1234ULL, SMB2_STATUS_SUCCESS, 0, NULL, 0);
-    TEST_ASSERT_TRUE(pc_smb2_parse_session_setup_response(m, n, &r));
+    TEST_ASSERT_TRUE(protocore_smb2_parse_session_setup_response(m, n, &r));
     TEST_ASSERT_NULL(r.sec_buf);
     TEST_ASSERT_EQUAL_UINT16(0, r.sec_buf_len);
 }
@@ -504,14 +504,14 @@ void test_session_setup_rejects()
 
     memcpy(bad, m, n);
     w16(bad + 64, 8); // wrong StructureSize (must be 9)
-    TEST_ASSERT_FALSE(pc_smb2_parse_session_setup_response(bad, n, &r));
+    TEST_ASSERT_FALSE(protocore_smb2_parse_session_setup_response(bad, n, &r));
     memcpy(bad, m, n);
     w16(bad + 12, (uint16_t)SMB2_READ); // wrong command
-    TEST_ASSERT_FALSE(pc_smb2_parse_session_setup_response(bad, n, &r));
+    TEST_ASSERT_FALSE(protocore_smb2_parse_session_setup_response(bad, n, &r));
     memcpy(bad, m, n);
     w16(bad + 64 + 6, 5000); // SecurityBufferLength past the message
-    TEST_ASSERT_FALSE(pc_smb2_parse_session_setup_response(bad, n, &r));
-    TEST_ASSERT_FALSE(pc_smb2_parse_session_setup_response(m, 68, &r)); // truncated before the body
+    TEST_ASSERT_FALSE(protocore_smb2_parse_session_setup_response(bad, n, &r));
+    TEST_ASSERT_FALSE(protocore_smb2_parse_session_setup_response(m, 68, &r)); // truncated before the body
 }
 
 // A minimal NTLMSSP CHALLENGE (server type-2) with the given server challenge and a single-EOL
@@ -537,11 +537,11 @@ static size_t build_ntlmssp_challenge(uint8_t *m, const uint8_t sc[8])
 void test_session_setup_spnego_flow()
 {
     uint8_t neg[64];
-    size_t neg_n = pc_ntlmssp_build_negotiate(neg, sizeof(neg), NTLMSSP_CLIENT_DEFAULT_FLAGS);
+    size_t neg_n = protocore_ntlmssp_build_negotiate(neg, sizeof(neg), NTLMSSP_CLIENT_DEFAULT_FLAGS);
     uint8_t spnego[128];
-    size_t sp_n = pc_spnego_wrap_negotiate(neg, neg_n, spnego, sizeof(spnego));
+    size_t sp_n = protocore_spnego_wrap_negotiate(neg, neg_n, spnego, sizeof(spnego));
     uint8_t req[256];
-    size_t req_n = pc_smb2_build_session_setup(req, sizeof(req), 1, 0, SMB2_NEGOTIATE_SIGNING_ENABLED, spnego, sp_n);
+    size_t req_n = protocore_smb2_build_session_setup(req, sizeof(req), 1, 0, SMB2_NEGOTIATE_SIGNING_ENABLED, spnego, sp_n);
     TEST_ASSERT_GREATER_THAN_size_t(0, req_n);
     TEST_ASSERT_EQUAL_MEMORY(spnego, req + 88, sp_n); // the token is framed at offset 88
 
@@ -549,18 +549,18 @@ void test_session_setup_spnego_flow()
     uint8_t chal[64];
     size_t chal_n = build_ntlmssp_challenge(chal, sc);
     uint8_t srv_tok[128];
-    size_t srv_n = pc_spnego_wrap_authenticate(chal, chal_n, srv_tok, sizeof(srv_tok)); // server NegTokenResp shape
+    size_t srv_n = protocore_spnego_wrap_authenticate(chal, chal_n, srv_tok, sizeof(srv_tok)); // server NegTokenResp shape
     uint8_t resp[256];
-    size_t pc_resp_n =
+    size_t protocore_resp_n =
         build_ss_resp(resp, 0xABCDULL, SMB2_STATUS_MORE_PROCESSING_REQUIRED, 0, srv_tok, (uint16_t)srv_n);
 
     Smb2SessionSetupResp r;
-    TEST_ASSERT_TRUE(pc_smb2_parse_session_setup_response(resp, pc_resp_n, &r));
+    TEST_ASSERT_TRUE(protocore_smb2_parse_session_setup_response(resp, protocore_resp_n, &r));
     const uint8_t *ct = NULL;
     size_t cl = 0;
-    TEST_ASSERT_TRUE(pc_spnego_parse_response(r.sec_buf, r.sec_buf_len, &ct, &cl));
+    TEST_ASSERT_TRUE(protocore_spnego_parse_response(r.sec_buf, r.sec_buf_len, &ct, &cl));
     NtlmChallenge nch;
-    TEST_ASSERT_TRUE(pc_ntlmssp_parse_challenge(ct, cl, &nch));
+    TEST_ASSERT_TRUE(protocore_ntlmssp_parse_challenge(ct, cl, &nch));
     TEST_ASSERT_EQUAL_MEMORY(sc, nch.server_challenge, 8); // survived framing -> SPNEGO -> NTLMSSP
 }
 
@@ -568,11 +568,11 @@ void test_build_tree_connect()
 {
     const uint8_t path[] = {'\\', 0, '\\', 0, 's', 0, 'r', 0, 'v', 0, '\\', 0, 's', 0, 'h', 0}; // \\srv\sh
     uint8_t buf[128];
-    size_t n = pc_smb2_build_tree_connect(buf, sizeof(buf), 2, 0xABCDULL, path, sizeof(path));
+    size_t n = protocore_smb2_build_tree_connect(buf, sizeof(buf), 2, 0xABCDULL, path, sizeof(path));
     TEST_ASSERT_EQUAL_size_t(64 + 8 + sizeof(path), n);
 
     Smb2Header h;
-    TEST_ASSERT_TRUE(pc_smb2_parse_header(buf, n, &h));
+    TEST_ASSERT_TRUE(protocore_smb2_parse_header(buf, n, &h));
     TEST_ASSERT_EQUAL_UINT16(SMB2_TREE_CONNECT, h.command);
     TEST_ASSERT_EQUAL_HEX64(0xABCDULL, h.session_id);
 
@@ -581,13 +581,13 @@ void test_build_tree_connect()
     TEST_ASSERT_EQUAL_UINT16(72, r16(b + 4));           // PathOffset
     TEST_ASSERT_EQUAL_UINT16(sizeof(path), r16(b + 6)); // PathLength
     TEST_ASSERT_EQUAL_MEMORY(path, buf + 72, sizeof(path));
-    TEST_ASSERT_EQUAL_size_t(0, pc_smb2_build_tree_connect(buf, 60, 2, 0, path, sizeof(path))); // overflow
-    TEST_ASSERT_EQUAL_size_t(0, pc_smb2_build_tree_connect(buf, sizeof(buf), 2, 0, path, 0));   // empty path
+    TEST_ASSERT_EQUAL_size_t(0, protocore_smb2_build_tree_connect(buf, 60, 2, 0, path, sizeof(path))); // overflow
+    TEST_ASSERT_EQUAL_size_t(0, protocore_smb2_build_tree_connect(buf, sizeof(buf), 2, 0, path, 0));   // empty path
 }
 
 static size_t build_tc_resp(uint8_t *m, uint32_t tree_id, uint8_t share_type, uint32_t maximal_access)
 {
-    pc_smb2_build_header(m, 128, SMB2_TREE_CONNECT, 1, 2, tree_id, 0xABCD);
+    protocore_smb2_build_header(m, 128, SMB2_TREE_CONNECT, 1, 2, tree_id, 0xABCD);
     m[16] |= 0x01; // SERVER_TO_REDIR
     uint8_t *b = m + 64;
     memset(b, 0, 16);
@@ -602,31 +602,31 @@ void test_parse_tree_connect_response()
     uint8_t m[128];
     size_t n = build_tc_resp(m, 0x777, SMB2_SHARE_TYPE_DISK, 0x001f01ff);
     Smb2Header h;
-    TEST_ASSERT_TRUE(pc_smb2_parse_header(m, n, &h));
+    TEST_ASSERT_TRUE(protocore_smb2_parse_header(m, n, &h));
     TEST_ASSERT_EQUAL_HEX32(0x777, h.tree_id); // TreeId comes from the header
 
     Smb2TreeConnectResp r;
-    TEST_ASSERT_TRUE(pc_smb2_parse_tree_connect_response(m, n, &r));
+    TEST_ASSERT_TRUE(protocore_smb2_parse_tree_connect_response(m, n, &r));
     TEST_ASSERT_EQUAL_HEX8(SMB2_SHARE_TYPE_DISK, r.share_type);
     TEST_ASSERT_EQUAL_HEX32(0x001f01ff, r.maximal_access);
 
     uint8_t bad[128];
     memcpy(bad, m, n);
     w16(bad + 64, 15); // wrong StructureSize (must be 16)
-    TEST_ASSERT_FALSE(pc_smb2_parse_tree_connect_response(bad, n, &r));
-    TEST_ASSERT_FALSE(pc_smb2_parse_tree_connect_response(m, 70, &r)); // truncated
+    TEST_ASSERT_FALSE(protocore_smb2_parse_tree_connect_response(bad, n, &r));
+    TEST_ASSERT_FALSE(protocore_smb2_parse_tree_connect_response(m, 70, &r)); // truncated
 }
 
 void test_build_create()
 {
     const uint8_t name[] = {'a', 0, '.', 0, 'n', 0, 'c', 0}; // "a.nc" UTF-16LE
     uint8_t buf[256];
-    size_t n = pc_smb2_build_create(buf, sizeof(buf), 3, 0xAAAA, 0x777, SMB2_FILE_GENERIC_READ, SMB2_FILE_SHARE_READ,
+    size_t n = protocore_smb2_build_create(buf, sizeof(buf), 3, 0xAAAA, 0x777, SMB2_FILE_GENERIC_READ, SMB2_FILE_SHARE_READ,
                                     SMB2_FILE_OPEN, SMB2_FILE_NON_DIRECTORY_FILE, name, sizeof(name));
     TEST_ASSERT_EQUAL_size_t(64 + 56 + sizeof(name), n);
 
     Smb2Header h;
-    TEST_ASSERT_TRUE(pc_smb2_parse_header(buf, n, &h));
+    TEST_ASSERT_TRUE(protocore_smb2_parse_header(buf, n, &h));
     TEST_ASSERT_EQUAL_UINT16(SMB2_CREATE, h.command);
     TEST_ASSERT_EQUAL_HEX32(0x777, h.tree_id);
 
@@ -640,13 +640,13 @@ void test_build_create()
     TEST_ASSERT_EQUAL_UINT16(120, r16(b + 44));          // NameOffset
     TEST_ASSERT_EQUAL_UINT16(sizeof(name), r16(b + 46)); // NameLength
     TEST_ASSERT_EQUAL_MEMORY(name, buf + 120, sizeof(name));
-    TEST_ASSERT_EQUAL_size_t(0, pc_smb2_build_create(buf, 100, 3, 0, 0, 0, 0, 0, 0, name, sizeof(name))); // overflow
-    TEST_ASSERT_EQUAL_size_t(0, pc_smb2_build_create(buf, sizeof(buf), 3, 0, 0, 0, 0, 0, 0, name, 0));    // empty name
+    TEST_ASSERT_EQUAL_size_t(0, protocore_smb2_build_create(buf, 100, 3, 0, 0, 0, 0, 0, 0, name, sizeof(name))); // overflow
+    TEST_ASSERT_EQUAL_size_t(0, protocore_smb2_build_create(buf, sizeof(buf), 3, 0, 0, 0, 0, 0, 0, name, 0));    // empty name
 }
 
 static size_t build_create_resp(uint8_t *m, const uint8_t fid[16], uint64_t eof, uint32_t action)
 {
-    pc_smb2_build_header(m, 256, SMB2_CREATE, 1, 3, 0x777, 0xAAAA);
+    protocore_smb2_build_header(m, 256, SMB2_CREATE, 1, 3, 0x777, 0xAAAA);
     m[16] |= 0x01;
     uint8_t *b = m + 64;
     memset(b, 0, 88);
@@ -669,7 +669,7 @@ void test_parse_create_response()
     size_t n = build_create_resp(m, fid, 0x123456789ULL, 1);
 
     Smb2CreateResp r;
-    TEST_ASSERT_TRUE(pc_smb2_parse_create_response(m, n, &r));
+    TEST_ASSERT_TRUE(protocore_smb2_parse_create_response(m, n, &r));
     TEST_ASSERT_EQUAL_MEMORY(fid, r.file_id, 16);
     TEST_ASSERT_EQUAL_HEX64(0x123456789ULL, r.end_of_file);
     TEST_ASSERT_EQUAL_UINT32(1, r.create_action);
@@ -678,8 +678,8 @@ void test_parse_create_response()
     uint8_t bad[256];
     memcpy(bad, m, n);
     w16(bad + 64, 88); // wrong StructureSize (must be 89)
-    TEST_ASSERT_FALSE(pc_smb2_parse_create_response(bad, n, &r));
-    TEST_ASSERT_FALSE(pc_smb2_parse_create_response(m, 100, &r)); // truncated
+    TEST_ASSERT_FALSE(protocore_smb2_parse_create_response(bad, n, &r));
+    TEST_ASSERT_FALSE(protocore_smb2_parse_create_response(m, 100, &r)); // truncated
 }
 
 void test_close_roundtrip()
@@ -690,19 +690,19 @@ void test_close_roundtrip()
         fid[i] = (uint8_t)(i + 1);
     }
     uint8_t buf[128];
-    size_t n = pc_smb2_build_close(buf, sizeof(buf), 4, 0xAAAA, 0x777, fid);
+    size_t n = protocore_smb2_build_close(buf, sizeof(buf), 4, 0xAAAA, 0x777, fid);
     TEST_ASSERT_EQUAL_size_t(64 + 24, n);
 
     Smb2Header h;
-    TEST_ASSERT_TRUE(pc_smb2_parse_header(buf, n, &h));
+    TEST_ASSERT_TRUE(protocore_smb2_parse_header(buf, n, &h));
     TEST_ASSERT_EQUAL_UINT16(SMB2_CLOSE, h.command);
     const uint8_t *b = buf + 64;
     TEST_ASSERT_EQUAL_UINT16(24, r16(b + 0));                                // StructureSize
     TEST_ASSERT_EQUAL_MEMORY(fid, b + 8, 16);                                // FileId
-    TEST_ASSERT_EQUAL_size_t(0, pc_smb2_build_close(buf, 80, 4, 0, 0, fid)); // overflow
+    TEST_ASSERT_EQUAL_size_t(0, protocore_smb2_build_close(buf, 80, 4, 0, 0, fid)); // overflow
 
     uint8_t m[128];
-    pc_smb2_build_header(m, 128, SMB2_CLOSE, 1, 4, 0x777, 0xAAAA);
+    protocore_smb2_build_header(m, 128, SMB2_CLOSE, 1, 4, 0x777, 0xAAAA);
     m[16] |= 0x01;
     uint8_t *rb = m + 64;
     memset(rb, 0, 60);
@@ -710,13 +710,13 @@ void test_close_roundtrip()
     w64(rb + 48, 0x4000ULL); // EndofFile
     w32(rb + 56, 0x80);      // FileAttributes
     Smb2CloseResp r;
-    TEST_ASSERT_TRUE(pc_smb2_parse_close_response(m, 64 + 60, &r));
+    TEST_ASSERT_TRUE(protocore_smb2_parse_close_response(m, 64 + 60, &r));
     TEST_ASSERT_EQUAL_HEX64(0x4000ULL, r.end_of_file);
     TEST_ASSERT_EQUAL_HEX32(0x80, r.file_attributes);
     uint8_t bad[128];
     memcpy(bad, m, 64 + 60);
     w16(bad + 64, 59); // wrong StructureSize (must be 60)
-    TEST_ASSERT_FALSE(pc_smb2_parse_close_response(bad, 64 + 60, &r));
+    TEST_ASSERT_FALSE(protocore_smb2_parse_close_response(bad, 64 + 60, &r));
 }
 
 void test_build_read()
@@ -727,11 +727,11 @@ void test_build_read()
         fid[i] = (uint8_t)(0xC0 + i);
     }
     uint8_t buf[128];
-    size_t n = pc_smb2_build_read(buf, sizeof(buf), 5, 0xAAAA, 0x777, fid, 0x10000, 0x1000ULL);
+    size_t n = protocore_smb2_build_read(buf, sizeof(buf), 5, 0xAAAA, 0x777, fid, 0x10000, 0x1000ULL);
     TEST_ASSERT_EQUAL_size_t(64 + 48 + 1, n);
 
     Smb2Header h;
-    TEST_ASSERT_TRUE(pc_smb2_parse_header(buf, n, &h));
+    TEST_ASSERT_TRUE(protocore_smb2_parse_header(buf, n, &h));
     TEST_ASSERT_EQUAL_UINT16(SMB2_READ, h.command);
     TEST_ASSERT_EQUAL_HEX32(0x777, h.tree_id);
 
@@ -742,12 +742,12 @@ void test_build_read()
     TEST_ASSERT_EQUAL_HEX64(0x1000ULL, r64(b + 8));                                // Offset
     TEST_ASSERT_EQUAL_MEMORY(fid, b + 16, 16);                                     // FileId
     TEST_ASSERT_EQUAL_UINT32(1, r32(b + 32));                                      // MinimumCount
-    TEST_ASSERT_EQUAL_size_t(0, pc_smb2_build_read(buf, 100, 5, 0, 0, fid, 1, 0)); // overflow
+    TEST_ASSERT_EQUAL_size_t(0, protocore_smb2_build_read(buf, 100, 5, 0, 0, fid, 1, 0)); // overflow
 }
 
 static size_t build_read_resp(uint8_t *m, const uint8_t *data, uint32_t data_len)
 {
-    pc_smb2_build_header(m, 512, SMB2_READ, 1, 5, 0x777, 0xAAAA);
+    protocore_smb2_build_header(m, 512, SMB2_READ, 1, 5, 0x777, 0xAAAA);
     m[16] |= 0x01;
     uint8_t *b = m + 64;
     memset(b, 0, 16);
@@ -770,13 +770,13 @@ void test_parse_read_response()
     size_t n = build_read_resp(m, data, sizeof(data));
 
     Smb2ReadResp r;
-    TEST_ASSERT_TRUE(pc_smb2_parse_read_response(m, n, &r));
+    TEST_ASSERT_TRUE(protocore_smb2_parse_read_response(m, n, &r));
     TEST_ASSERT_EQUAL_UINT32(sizeof(data), r.data_len);
     TEST_ASSERT_EQUAL_MEMORY(data, r.data, sizeof(data));
 
     // empty read (EOF) -> NULL, still valid
     n = build_read_resp(m, NULL, 0);
-    TEST_ASSERT_TRUE(pc_smb2_parse_read_response(m, n, &r));
+    TEST_ASSERT_TRUE(protocore_smb2_parse_read_response(m, n, &r));
     TEST_ASSERT_NULL(r.data);
     TEST_ASSERT_EQUAL_UINT32(0, r.data_len);
 
@@ -785,11 +785,11 @@ void test_parse_read_response()
     uint8_t bad[512];
     memcpy(bad, m, n);
     w16(bad + 64, 16); // wrong StructureSize (must be 17)
-    TEST_ASSERT_FALSE(pc_smb2_parse_read_response(bad, n, &r));
+    TEST_ASSERT_FALSE(protocore_smb2_parse_read_response(bad, n, &r));
     memcpy(bad, m, n);
     w32(bad + 64 + 4, 9000); // DataLength past the message
-    TEST_ASSERT_FALSE(pc_smb2_parse_read_response(bad, n, &r));
-    TEST_ASSERT_FALSE(pc_smb2_parse_read_response(m, 70, &r)); // truncated before the body
+    TEST_ASSERT_FALSE(protocore_smb2_parse_read_response(bad, n, &r));
+    TEST_ASSERT_FALSE(protocore_smb2_parse_read_response(m, 70, &r)); // truncated before the body
 }
 
 void test_build_write()
@@ -801,11 +801,11 @@ void test_build_write()
     }
     const uint8_t data[] = "O0001 (PART)\r\n";
     uint8_t buf[256];
-    size_t n = pc_smb2_build_write(buf, sizeof(buf), 6, 0xAAAA, 0x777, fid, data, sizeof(data), 0x800ULL);
+    size_t n = protocore_smb2_build_write(buf, sizeof(buf), 6, 0xAAAA, 0x777, fid, data, sizeof(data), 0x800ULL);
     TEST_ASSERT_EQUAL_size_t(64 + 48 + sizeof(data), n);
 
     Smb2Header h;
-    TEST_ASSERT_TRUE(pc_smb2_parse_header(buf, n, &h));
+    TEST_ASSERT_TRUE(protocore_smb2_parse_header(buf, n, &h));
     TEST_ASSERT_EQUAL_UINT16(SMB2_WRITE, h.command);
 
     const uint8_t *b = buf + 64;
@@ -815,14 +815,14 @@ void test_build_write()
     TEST_ASSERT_EQUAL_HEX64(0x800ULL, r64(b + 8));      // Offset
     TEST_ASSERT_EQUAL_MEMORY(fid, b + 16, 16);          // FileId
     TEST_ASSERT_EQUAL_MEMORY(data, buf + 112, sizeof(data));
-    TEST_ASSERT_EQUAL_size_t(0, pc_smb2_build_write(buf, 100, 6, 0, 0, fid, data, sizeof(data), 0)); // overflow
-    TEST_ASSERT_EQUAL_size_t(0, pc_smb2_build_write(buf, sizeof(buf), 6, 0, 0, fid, data, 0, 0));    // empty data
+    TEST_ASSERT_EQUAL_size_t(0, protocore_smb2_build_write(buf, 100, 6, 0, 0, fid, data, sizeof(data), 0)); // overflow
+    TEST_ASSERT_EQUAL_size_t(0, protocore_smb2_build_write(buf, sizeof(buf), 6, 0, 0, fid, data, 0, 0));    // empty data
 }
 
 void test_parse_write_response()
 {
     uint8_t m[128];
-    pc_smb2_build_header(m, 128, SMB2_WRITE, 1, 6, 0x777, 0xAAAA);
+    protocore_smb2_build_header(m, 128, SMB2_WRITE, 1, 6, 0x777, 0xAAAA);
     m[16] |= 0x01;
     uint8_t *b = m + 64;
     memset(b, 0, 16);
@@ -830,14 +830,14 @@ void test_parse_write_response()
     w32(b + 4, 4096); // Count
 
     Smb2WriteResp r;
-    TEST_ASSERT_TRUE(pc_smb2_parse_write_response(m, 64 + 16, &r));
+    TEST_ASSERT_TRUE(protocore_smb2_parse_write_response(m, 64 + 16, &r));
     TEST_ASSERT_EQUAL_UINT32(4096, r.count);
 
     uint8_t bad[128];
     memcpy(bad, m, 64 + 16);
     w16(bad + 64, 16); // wrong StructureSize (must be 17)
-    TEST_ASSERT_FALSE(pc_smb2_parse_write_response(bad, 64 + 16, &r));
-    TEST_ASSERT_FALSE(pc_smb2_parse_write_response(m, 70, &r)); // truncated
+    TEST_ASSERT_FALSE(protocore_smb2_parse_write_response(bad, 64 + 16, &r));
+    TEST_ASSERT_FALSE(protocore_smb2_parse_write_response(m, 70, &r)); // truncated
 }
 
 // ---- fail-closed guards: the null / out-of-range / wrong-command sides the happy paths skip ----
@@ -846,37 +846,37 @@ void test_transport_rejects_null_and_oversize()
 {
     const uint8_t msg[] = {1, 2, 3, 4, 5};
     uint8_t out[16];
-    TEST_ASSERT_EQUAL_size_t(0, pc_smb2_transport_frame(NULL, sizeof(out), msg, sizeof(msg)));
-    TEST_ASSERT_EQUAL_size_t(0, pc_smb2_transport_frame(out, sizeof(out), NULL, sizeof(msg)));
-    TEST_ASSERT_EQUAL_size_t(0, pc_smb2_transport_frame(out, sizeof(out), msg, 0x01000000)); // past 24 bits
-    TEST_ASSERT_EQUAL_UINT32(0, pc_smb2_transport_len(NULL, 4));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_smb2_transport_frame(NULL, sizeof(out), msg, sizeof(msg)));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_smb2_transport_frame(out, sizeof(out), NULL, sizeof(msg)));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_smb2_transport_frame(out, sizeof(out), msg, 0x01000000)); // past 24 bits
+    TEST_ASSERT_EQUAL_UINT32(0, protocore_smb2_transport_len(NULL, 4));
     uint8_t pre[4] = {0x00, 0x00, 0x00, 0x05};
-    TEST_ASSERT_EQUAL_UINT32(0, pc_smb2_transport_len(pre, 3)); // shorter than the prefix
-    TEST_ASSERT_EQUAL_UINT32(5, pc_smb2_transport_len(pre, 4));
+    TEST_ASSERT_EQUAL_UINT32(0, protocore_smb2_transport_len(pre, 3)); // shorter than the prefix
+    TEST_ASSERT_EQUAL_UINT32(5, protocore_smb2_transport_len(pre, 4));
 }
 
 void test_build_header_rejects()
 {
     uint8_t buf[64];
-    TEST_ASSERT_EQUAL_size_t(0, pc_smb2_build_header(NULL, 64, SMB2_NEGOTIATE, 1, 0, 0, 0));
-    TEST_ASSERT_EQUAL_size_t(0, pc_smb2_build_header(buf, 63, SMB2_NEGOTIATE, 1, 0, 0, 0));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_smb2_build_header(NULL, 64, SMB2_NEGOTIATE, 1, 0, 0, 0));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_smb2_build_header(buf, 63, SMB2_NEGOTIATE, 1, 0, 0, 0));
 }
 
 void test_parse_header_null_args()
 {
     uint8_t buf[64];
-    pc_smb2_build_header(buf, sizeof(buf), SMB2_NEGOTIATE, 1, 0, 0, 0);
+    protocore_smb2_build_header(buf, sizeof(buf), SMB2_NEGOTIATE, 1, 0, 0, 0);
     Smb2Header h;
-    TEST_ASSERT_FALSE(pc_smb2_parse_header(NULL, 64, &h));
-    TEST_ASSERT_FALSE(pc_smb2_parse_header(buf, 64, NULL));
+    TEST_ASSERT_FALSE(protocore_smb2_parse_header(NULL, 64, &h));
+    TEST_ASSERT_FALSE(protocore_smb2_parse_header(buf, 64, NULL));
 }
 
 void test_build_negotiate_null_args()
 {
     uint8_t gid[16] = {0};
     uint8_t buf[160];
-    TEST_ASSERT_EQUAL_size_t(0, pc_smb2_build_negotiate(NULL, sizeof(buf), gid, 0));
-    TEST_ASSERT_EQUAL_size_t(0, pc_smb2_build_negotiate(buf, sizeof(buf), NULL, 0));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_smb2_build_negotiate(NULL, sizeof(buf), gid, 0));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_smb2_build_negotiate(buf, sizeof(buf), NULL, 0));
 }
 
 void test_parse_negotiate_response_null_and_low_offset()
@@ -885,26 +885,26 @@ void test_parse_negotiate_response_null_and_low_offset()
     uint8_t m[256];
     size_t n = build_neg_resp(m, SMB2_DIALECT_0202, token, sizeof(token));
     Smb2NegotiateResp r;
-    TEST_ASSERT_FALSE(pc_smb2_parse_negotiate_response(NULL, n, &r));
-    TEST_ASSERT_FALSE(pc_smb2_parse_negotiate_response(m, n, NULL));
+    TEST_ASSERT_FALSE(protocore_smb2_parse_negotiate_response(NULL, n, &r));
+    TEST_ASSERT_FALSE(protocore_smb2_parse_negotiate_response(m, n, NULL));
 
     uint8_t bad[256];
     memcpy(bad, m, n);
     bad[0] = 0x00; // broken ProtocolId -> the header parse fails
-    TEST_ASSERT_FALSE(pc_smb2_parse_negotiate_response(bad, n, &r));
+    TEST_ASSERT_FALSE(protocore_smb2_parse_negotiate_response(bad, n, &r));
 
     memcpy(bad, m, n);
     w16(bad + 64 + 56, 10); // SecurityBufferOffset inside the 64-byte header, though still within the message
-    TEST_ASSERT_FALSE(pc_smb2_parse_negotiate_response(bad, n, &r));
+    TEST_ASSERT_FALSE(protocore_smb2_parse_negotiate_response(bad, n, &r));
 }
 
 void test_build_session_setup_null_args()
 {
     uint8_t tok[8] = {0};
     uint8_t buf[256];
-    TEST_ASSERT_EQUAL_size_t(0, pc_smb2_build_session_setup(NULL, sizeof(buf), 1, 0, 0, tok, sizeof(tok)));
-    TEST_ASSERT_EQUAL_size_t(0, pc_smb2_build_session_setup(buf, sizeof(buf), 1, 0, 0, NULL, sizeof(tok)));
-    TEST_ASSERT_EQUAL_size_t(0, pc_smb2_build_session_setup(buf, sizeof(buf), 1, 0, 0, tok, 0x10000)); // > 0xFFFF
+    TEST_ASSERT_EQUAL_size_t(0, protocore_smb2_build_session_setup(NULL, sizeof(buf), 1, 0, 0, tok, sizeof(tok)));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_smb2_build_session_setup(buf, sizeof(buf), 1, 0, 0, NULL, sizeof(tok)));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_smb2_build_session_setup(buf, sizeof(buf), 1, 0, 0, tok, 0x10000)); // > 0xFFFF
 }
 
 void test_parse_session_setup_null_and_low_offset()
@@ -913,26 +913,26 @@ void test_parse_session_setup_null_and_low_offset()
     uint8_t m[256];
     size_t n = build_ss_resp(m, 1, 0, 0, tok, sizeof(tok));
     Smb2SessionSetupResp r;
-    TEST_ASSERT_FALSE(pc_smb2_parse_session_setup_response(NULL, n, &r));
-    TEST_ASSERT_FALSE(pc_smb2_parse_session_setup_response(m, n, NULL));
+    TEST_ASSERT_FALSE(protocore_smb2_parse_session_setup_response(NULL, n, &r));
+    TEST_ASSERT_FALSE(protocore_smb2_parse_session_setup_response(m, n, NULL));
 
     uint8_t bad[256];
     memcpy(bad, m, n);
     bad[0] = 0x00; // broken ProtocolId
-    TEST_ASSERT_FALSE(pc_smb2_parse_session_setup_response(bad, n, &r));
+    TEST_ASSERT_FALSE(protocore_smb2_parse_session_setup_response(bad, n, &r));
 
     memcpy(bad, m, n);
     w16(bad + 64 + 4, 10); // SecurityBufferOffset inside the header
-    TEST_ASSERT_FALSE(pc_smb2_parse_session_setup_response(bad, n, &r));
+    TEST_ASSERT_FALSE(protocore_smb2_parse_session_setup_response(bad, n, &r));
 }
 
 void test_build_tree_connect_null_args()
 {
     const uint8_t path[8] = {0};
     uint8_t buf[128];
-    TEST_ASSERT_EQUAL_size_t(0, pc_smb2_build_tree_connect(NULL, sizeof(buf), 2, 0, path, sizeof(path)));
-    TEST_ASSERT_EQUAL_size_t(0, pc_smb2_build_tree_connect(buf, sizeof(buf), 2, 0, NULL, sizeof(path)));
-    TEST_ASSERT_EQUAL_size_t(0, pc_smb2_build_tree_connect(buf, sizeof(buf), 2, 0, path, 0x10000)); // > 0xFFFF
+    TEST_ASSERT_EQUAL_size_t(0, protocore_smb2_build_tree_connect(NULL, sizeof(buf), 2, 0, path, sizeof(path)));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_smb2_build_tree_connect(buf, sizeof(buf), 2, 0, NULL, sizeof(path)));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_smb2_build_tree_connect(buf, sizeof(buf), 2, 0, path, 0x10000)); // > 0xFFFF
 }
 
 void test_parse_tree_connect_null_and_command()
@@ -940,25 +940,25 @@ void test_parse_tree_connect_null_and_command()
     uint8_t m[128];
     size_t n = build_tc_resp(m, 0x777, SMB2_SHARE_TYPE_DISK, 0x001f01ff);
     Smb2TreeConnectResp r;
-    TEST_ASSERT_FALSE(pc_smb2_parse_tree_connect_response(NULL, n, &r));
-    TEST_ASSERT_FALSE(pc_smb2_parse_tree_connect_response(m, n, NULL));
+    TEST_ASSERT_FALSE(protocore_smb2_parse_tree_connect_response(NULL, n, &r));
+    TEST_ASSERT_FALSE(protocore_smb2_parse_tree_connect_response(m, n, NULL));
 
     uint8_t bad[128];
     memcpy(bad, m, n);
     bad[0] = 0x00; // broken ProtocolId
-    TEST_ASSERT_FALSE(pc_smb2_parse_tree_connect_response(bad, n, &r));
+    TEST_ASSERT_FALSE(protocore_smb2_parse_tree_connect_response(bad, n, &r));
     memcpy(bad, m, n);
     w16(bad + 12, (uint16_t)SMB2_CREATE); // wrong command
-    TEST_ASSERT_FALSE(pc_smb2_parse_tree_connect_response(bad, n, &r));
+    TEST_ASSERT_FALSE(protocore_smb2_parse_tree_connect_response(bad, n, &r));
 }
 
 void test_build_create_null_args()
 {
     const uint8_t name[8] = {0};
     uint8_t buf[256];
-    TEST_ASSERT_EQUAL_size_t(0, pc_smb2_build_create(NULL, sizeof(buf), 3, 0, 0, 0, 0, 0, 0, name, sizeof(name)));
-    TEST_ASSERT_EQUAL_size_t(0, pc_smb2_build_create(buf, sizeof(buf), 3, 0, 0, 0, 0, 0, 0, NULL, sizeof(name)));
-    TEST_ASSERT_EQUAL_size_t(0, pc_smb2_build_create(buf, sizeof(buf), 3, 0, 0, 0, 0, 0, 0, name, 0x10000));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_smb2_build_create(NULL, sizeof(buf), 3, 0, 0, 0, 0, 0, 0, name, sizeof(name)));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_smb2_build_create(buf, sizeof(buf), 3, 0, 0, 0, 0, 0, 0, NULL, sizeof(name)));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_smb2_build_create(buf, sizeof(buf), 3, 0, 0, 0, 0, 0, 0, name, 0x10000));
 }
 
 void test_parse_create_null_and_command()
@@ -967,22 +967,22 @@ void test_parse_create_null_and_command()
     uint8_t m[256];
     size_t n = build_create_resp(m, fid, 0x100ULL, 1);
     Smb2CreateResp r;
-    TEST_ASSERT_FALSE(pc_smb2_parse_create_response(NULL, n, &r));
-    TEST_ASSERT_FALSE(pc_smb2_parse_create_response(m, n, NULL));
+    TEST_ASSERT_FALSE(protocore_smb2_parse_create_response(NULL, n, &r));
+    TEST_ASSERT_FALSE(protocore_smb2_parse_create_response(m, n, NULL));
 
     uint8_t bad[256];
     memcpy(bad, m, n);
     bad[0] = 0x00; // broken ProtocolId
-    TEST_ASSERT_FALSE(pc_smb2_parse_create_response(bad, n, &r));
+    TEST_ASSERT_FALSE(protocore_smb2_parse_create_response(bad, n, &r));
     memcpy(bad, m, n);
     w16(bad + 12, (uint16_t)SMB2_CLOSE); // wrong command
-    TEST_ASSERT_FALSE(pc_smb2_parse_create_response(bad, n, &r));
+    TEST_ASSERT_FALSE(protocore_smb2_parse_create_response(bad, n, &r));
 }
 
 // A well-formed CLOSE response message (header + the fixed 60-byte body).
 static size_t build_close_resp(uint8_t *m, uint64_t eof)
 {
-    pc_smb2_build_header(m, 128, SMB2_CLOSE, 1, 4, 0x777, 0xAAAA);
+    protocore_smb2_build_header(m, 128, SMB2_CLOSE, 1, 4, 0x777, 0xAAAA);
     m[16] |= 0x01; // SERVER_TO_REDIR
     uint8_t *b = m + 64;
     memset(b, 0, 60);
@@ -996,8 +996,8 @@ void test_build_close_null_args()
 {
     uint8_t fid[16] = {0};
     uint8_t buf[128];
-    TEST_ASSERT_EQUAL_size_t(0, pc_smb2_build_close(NULL, sizeof(buf), 4, 0, 0, fid));
-    TEST_ASSERT_EQUAL_size_t(0, pc_smb2_build_close(buf, sizeof(buf), 4, 0, 0, NULL));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_smb2_build_close(NULL, sizeof(buf), 4, 0, 0, fid));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_smb2_build_close(buf, sizeof(buf), 4, 0, 0, NULL));
 }
 
 void test_parse_close_null_command_and_truncated()
@@ -1005,25 +1005,25 @@ void test_parse_close_null_command_and_truncated()
     uint8_t m[128];
     size_t n = build_close_resp(m, 0x4000ULL);
     Smb2CloseResp r;
-    TEST_ASSERT_FALSE(pc_smb2_parse_close_response(NULL, n, &r));
-    TEST_ASSERT_FALSE(pc_smb2_parse_close_response(m, n, NULL));
+    TEST_ASSERT_FALSE(protocore_smb2_parse_close_response(NULL, n, &r));
+    TEST_ASSERT_FALSE(protocore_smb2_parse_close_response(m, n, NULL));
 
     uint8_t bad[128];
     memcpy(bad, m, n);
     bad[0] = 0x00; // broken ProtocolId
-    TEST_ASSERT_FALSE(pc_smb2_parse_close_response(bad, n, &r));
+    TEST_ASSERT_FALSE(protocore_smb2_parse_close_response(bad, n, &r));
     memcpy(bad, m, n);
     w16(bad + 12, (uint16_t)SMB2_READ); // wrong command
-    TEST_ASSERT_FALSE(pc_smb2_parse_close_response(bad, n, &r));
-    TEST_ASSERT_FALSE(pc_smb2_parse_close_response(m, 64 + 59, &r)); // one byte short of the 60-byte body
+    TEST_ASSERT_FALSE(protocore_smb2_parse_close_response(bad, n, &r));
+    TEST_ASSERT_FALSE(protocore_smb2_parse_close_response(m, 64 + 59, &r)); // one byte short of the 60-byte body
 }
 
 void test_build_read_null_args()
 {
     uint8_t fid[16] = {0};
     uint8_t buf[128];
-    TEST_ASSERT_EQUAL_size_t(0, pc_smb2_build_read(NULL, sizeof(buf), 5, 0, 0, fid, 16, 0));
-    TEST_ASSERT_EQUAL_size_t(0, pc_smb2_build_read(buf, sizeof(buf), 5, 0, 0, NULL, 16, 0));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_smb2_build_read(NULL, sizeof(buf), 5, 0, 0, fid, 16, 0));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_smb2_build_read(buf, sizeof(buf), 5, 0, 0, NULL, 16, 0));
 }
 
 void test_parse_read_null_command_and_low_offset()
@@ -1032,19 +1032,19 @@ void test_parse_read_null_command_and_low_offset()
     uint8_t m[512];
     size_t n = build_read_resp(m, data, sizeof(data));
     Smb2ReadResp r;
-    TEST_ASSERT_FALSE(pc_smb2_parse_read_response(NULL, n, &r));
-    TEST_ASSERT_FALSE(pc_smb2_parse_read_response(m, n, NULL));
+    TEST_ASSERT_FALSE(protocore_smb2_parse_read_response(NULL, n, &r));
+    TEST_ASSERT_FALSE(protocore_smb2_parse_read_response(m, n, NULL));
 
     uint8_t bad[512];
     memcpy(bad, m, n);
     bad[0] = 0x00; // broken ProtocolId
-    TEST_ASSERT_FALSE(pc_smb2_parse_read_response(bad, n, &r));
+    TEST_ASSERT_FALSE(protocore_smb2_parse_read_response(bad, n, &r));
     memcpy(bad, m, n);
     w16(bad + 12, (uint16_t)SMB2_WRITE); // wrong command
-    TEST_ASSERT_FALSE(pc_smb2_parse_read_response(bad, n, &r));
+    TEST_ASSERT_FALSE(protocore_smb2_parse_read_response(bad, n, &r));
     memcpy(bad, m, n);
     bad[64 + 2] = 40; // DataOffset inside the 64-byte header, though the data still fits the message
-    TEST_ASSERT_FALSE(pc_smb2_parse_read_response(bad, n, &r));
+    TEST_ASSERT_FALSE(protocore_smb2_parse_read_response(bad, n, &r));
 }
 
 void test_build_write_null_args()
@@ -1052,33 +1052,33 @@ void test_build_write_null_args()
     uint8_t fid[16] = {0};
     const uint8_t data[8] = {0};
     uint8_t buf[256];
-    TEST_ASSERT_EQUAL_size_t(0, pc_smb2_build_write(NULL, sizeof(buf), 6, 0, 0, fid, data, sizeof(data), 0));
-    TEST_ASSERT_EQUAL_size_t(0, pc_smb2_build_write(buf, sizeof(buf), 6, 0, 0, NULL, data, sizeof(data), 0));
-    TEST_ASSERT_EQUAL_size_t(0, pc_smb2_build_write(buf, sizeof(buf), 6, 0, 0, fid, NULL, sizeof(data), 0));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_smb2_build_write(NULL, sizeof(buf), 6, 0, 0, fid, data, sizeof(data), 0));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_smb2_build_write(buf, sizeof(buf), 6, 0, 0, NULL, data, sizeof(data), 0));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_smb2_build_write(buf, sizeof(buf), 6, 0, 0, fid, NULL, sizeof(data), 0));
     size_t over32 = (size_t)0xFFFFFFFFULL;
     over32 += 1; // 0x1_0000_0000 on a 64-bit size_t; wraps to 0 (the empty-data guard) on a 32-bit one
-    TEST_ASSERT_EQUAL_size_t(0, pc_smb2_build_write(buf, sizeof(buf), 6, 0, 0, fid, data, over32, 0));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_smb2_build_write(buf, sizeof(buf), 6, 0, 0, fid, data, over32, 0));
 }
 
 void test_parse_write_null_and_command()
 {
     uint8_t m[128];
-    pc_smb2_build_header(m, 128, SMB2_WRITE, 1, 6, 0x777, 0xAAAA);
+    protocore_smb2_build_header(m, 128, SMB2_WRITE, 1, 6, 0x777, 0xAAAA);
     m[16] |= 0x01;
     memset(m + 64, 0, 16);
     w16(m + 64, 17);       // StructureSize
     w32(m + 64 + 4, 4096); // Count
     Smb2WriteResp r;
-    TEST_ASSERT_FALSE(pc_smb2_parse_write_response(NULL, 64 + 16, &r));
-    TEST_ASSERT_FALSE(pc_smb2_parse_write_response(m, 64 + 16, NULL));
+    TEST_ASSERT_FALSE(protocore_smb2_parse_write_response(NULL, 64 + 16, &r));
+    TEST_ASSERT_FALSE(protocore_smb2_parse_write_response(m, 64 + 16, NULL));
 
     uint8_t bad[128];
     memcpy(bad, m, 64 + 16);
     bad[0] = 0x00; // broken ProtocolId
-    TEST_ASSERT_FALSE(pc_smb2_parse_write_response(bad, 64 + 16, &r));
+    TEST_ASSERT_FALSE(protocore_smb2_parse_write_response(bad, 64 + 16, &r));
     memcpy(bad, m, 64 + 16);
     w16(bad + 12, (uint16_t)SMB2_READ); // wrong command
-    TEST_ASSERT_FALSE(pc_smb2_parse_write_response(bad, 64 + 16, &r));
+    TEST_ASSERT_FALSE(protocore_smb2_parse_write_response(bad, 64 + 16, &r));
 }
 
 // SMB2 message signing (MS-SMB2 §3.1.4.1 / §3.1.5.1): sign sets the SIGNED flag + writes the HMAC-SHA256
@@ -1113,7 +1113,7 @@ void test_smb2_signing()
         key[i] = (uint8_t)(i + 1); // 01..10
     }
 
-    pc_smb2_sign(tw, key, msg, sizeof(msg));
+    protocore_smb2_sign(tw, key, msg, sizeof(msg));
     TEST_ASSERT_EQUAL_HEX8(0x08, msg[16]); // SMB2_FLAGS_SIGNED now set
 
     // The Signature matches the reference HMAC-SHA256(key, message)[:16] (Python hashlib/hmac).
@@ -1124,19 +1124,19 @@ void test_smb2_signing()
     // Verify accepts the freshly-signed message and restores it unchanged.
     uint8_t before[72];
     memcpy(before, msg, sizeof(msg));
-    TEST_ASSERT_TRUE(pc_smb2_verify(tw, key, msg, sizeof(msg)));
+    TEST_ASSERT_TRUE(protocore_smb2_verify(tw, key, msg, sizeof(msg)));
     TEST_ASSERT_EQUAL_HEX8_ARRAY(before, msg, sizeof(msg));
 
     // A tampered body byte, a wrong key, and a too-short message all fail closed.
     msg[70] ^= 0x01;
-    TEST_ASSERT_FALSE(pc_smb2_verify(tw, key, msg, sizeof(msg)));
+    TEST_ASSERT_FALSE(protocore_smb2_verify(tw, key, msg, sizeof(msg)));
     msg[70] ^= 0x01;
     uint8_t wrong[16];
     memcpy(wrong, key, 16);
     wrong[0] ^= 0xFF;
-    TEST_ASSERT_FALSE(pc_smb2_verify(tw, wrong, msg, sizeof(msg)));
-    TEST_ASSERT_FALSE(pc_smb2_verify(tw, key, msg, 63));
-    pc_smb2_sign(tw, key, msg, 63); // too short: a no-op, must not corrupt memory
+    TEST_ASSERT_FALSE(protocore_smb2_verify(tw, wrong, msg, sizeof(msg)));
+    TEST_ASSERT_FALSE(protocore_smb2_verify(tw, key, msg, 63));
+    protocore_smb2_sign(tw, key, msg, 63); // too short: a no-op, must not corrupt memory
 }
 
 // SMB 3.x AES-128-CMAC signing (MS-SMB2 §3.1.4.1): same framing as HMAC signing, but the Signature is
@@ -1170,7 +1170,7 @@ void test_smb2_signing_cmac()
         key[i] = (uint8_t)(i + 1); // 01..10
     }
 
-    pc_smb2_sign_cmac(tw, key, msg, sizeof(msg));
+    protocore_smb2_sign_cmac(tw, key, msg, sizeof(msg));
     TEST_ASSERT_EQUAL_HEX8(0x08, msg[16]); // SMB2_FLAGS_SIGNED set
 
     // The Signature matches the reference AES-CMAC(key, message) (impacket crypto.AES_CMAC).
@@ -1181,22 +1181,22 @@ void test_smb2_signing_cmac()
     // Verify accepts the freshly-signed message and restores it unchanged.
     uint8_t before[72];
     memcpy(before, msg, sizeof(msg));
-    TEST_ASSERT_TRUE(pc_smb2_verify_cmac(tw, key, msg, sizeof(msg)));
+    TEST_ASSERT_TRUE(protocore_smb2_verify_cmac(tw, key, msg, sizeof(msg)));
     TEST_ASSERT_EQUAL_HEX8_ARRAY(before, msg, sizeof(msg));
 
     // A CMAC signature must not verify under the HMAC verifier (the two MACs are distinct).
-    TEST_ASSERT_FALSE(pc_smb2_verify(tw, key, msg, sizeof(msg)));
+    TEST_ASSERT_FALSE(protocore_smb2_verify(tw, key, msg, sizeof(msg)));
 
     // A tampered body byte, a wrong key, and a too-short message all fail closed.
     msg[70] ^= 0x01;
-    TEST_ASSERT_FALSE(pc_smb2_verify_cmac(tw, key, msg, sizeof(msg)));
+    TEST_ASSERT_FALSE(protocore_smb2_verify_cmac(tw, key, msg, sizeof(msg)));
     msg[70] ^= 0x01;
     uint8_t wrong[16];
     memcpy(wrong, key, 16);
     wrong[0] ^= 0xFF;
-    TEST_ASSERT_FALSE(pc_smb2_verify_cmac(tw, wrong, msg, sizeof(msg)));
-    TEST_ASSERT_FALSE(pc_smb2_verify_cmac(tw, key, msg, 63));
-    pc_smb2_sign_cmac(tw, key, msg, 63); // too short: a no-op
+    TEST_ASSERT_FALSE(protocore_smb2_verify_cmac(tw, wrong, msg, sizeof(msg)));
+    TEST_ASSERT_FALSE(protocore_smb2_verify_cmac(tw, key, msg, 63));
+    protocore_smb2_sign_cmac(tw, key, msg, 63); // too short: a no-op
 }
 
 // ---- SMB 3.x transport encryption (TRANSFORM_HEADER + AES-128/256-GCM and AES-128/256-CCM) --------------
@@ -1265,25 +1265,25 @@ void test_smb3_cipher_kat()
     uint8_t pt[64];
 
     TEST_ASSERT_TRUE(
-        pc_aesccm_seal_tag(kat_ccm128_key, 16, kat_ccm128_nonce, 11, kat_ccm128_aad, 32, kat_ccm128_pt, 50, ct, tag));
+        protocore_aesccm_seal_tag(kat_ccm128_key, 16, kat_ccm128_nonce, 11, kat_ccm128_aad, 32, kat_ccm128_pt, 50, ct, tag));
     TEST_ASSERT_EQUAL_MEMORY(kat_ccm128_ct, ct, 50);
     TEST_ASSERT_EQUAL_MEMORY(kat_ccm128_tag, tag, 16);
-    TEST_ASSERT_TRUE(pc_aesccm_open_tag(kat_ccm128_key, 16, kat_ccm128_nonce, 11, kat_ccm128_aad, 32, kat_ccm128_ct, 50,
+    TEST_ASSERT_TRUE(protocore_aesccm_open_tag(kat_ccm128_key, 16, kat_ccm128_nonce, 11, kat_ccm128_aad, 32, kat_ccm128_ct, 50,
                                         kat_ccm128_tag, pt));
     TEST_ASSERT_EQUAL_MEMORY(kat_ccm128_pt, pt, 50);
 
     TEST_ASSERT_TRUE(
-        pc_aesccm_seal_tag(kat_ccm256_key, 32, kat_ccm256_nonce, 11, kat_ccm256_aad, 32, kat_ccm256_pt, 50, ct, tag));
+        protocore_aesccm_seal_tag(kat_ccm256_key, 32, kat_ccm256_nonce, 11, kat_ccm256_aad, 32, kat_ccm256_pt, 50, ct, tag));
     TEST_ASSERT_EQUAL_MEMORY(kat_ccm256_ct, ct, 50);
     TEST_ASSERT_EQUAL_MEMORY(kat_ccm256_tag, tag, 16);
-    TEST_ASSERT_TRUE(pc_aesccm_open_tag(kat_ccm256_key, 32, kat_ccm256_nonce, 11, kat_ccm256_aad, 32, kat_ccm256_ct, 50,
+    TEST_ASSERT_TRUE(protocore_aesccm_open_tag(kat_ccm256_key, 32, kat_ccm256_nonce, 11, kat_ccm256_aad, 32, kat_ccm256_ct, 50,
                                         kat_ccm256_tag, pt));
     TEST_ASSERT_EQUAL_MEMORY(kat_ccm256_pt, pt, 50);
 
-    pc_aesgcm_seal(gcm_key(kat_gcm256_key), kat_gcm256_nonce, kat_gcm256_aad, 32, kat_gcm256_pt, 50, ct, tag);
+    protocore_aesgcm_seal(gcm_key(kat_gcm256_key), kat_gcm256_nonce, kat_gcm256_aad, 32, kat_gcm256_pt, 50, ct, tag);
     TEST_ASSERT_EQUAL_MEMORY(kat_gcm256_ct, ct, 50);
     TEST_ASSERT_EQUAL_MEMORY(kat_gcm256_tag, tag, 16);
-    TEST_ASSERT_TRUE(pc_aesgcm_open(gcm_key(kat_gcm256_key), kat_gcm256_nonce, kat_gcm256_aad, 32, kat_gcm256_ct, 50,
+    TEST_ASSERT_TRUE(protocore_aesgcm_open(gcm_key(kat_gcm256_key), kat_gcm256_nonce, kat_gcm256_aad, 32, kat_gcm256_ct, 50,
                                     kat_gcm256_tag, pt));
     TEST_ASSERT_EQUAL_MEMORY(kat_gcm256_pt, pt, 50);
 
@@ -1292,7 +1292,7 @@ void test_smb3_cipher_kat()
     memcpy(bad, kat_ccm128_tag, 16);
     bad[0] ^= 0x01;
     TEST_ASSERT_FALSE(
-        pc_aesccm_open_tag(kat_ccm128_key, 16, kat_ccm128_nonce, 11, kat_ccm128_aad, 32, kat_ccm128_ct, 50, bad, pt));
+        protocore_aesccm_open_tag(kat_ccm128_key, 16, kat_ccm128_nonce, 11, kat_ccm128_aad, 32, kat_ccm128_ct, 50, bad, pt));
 }
 
 void test_smb3_derive_encryption_keys()
@@ -1310,8 +1310,8 @@ void test_smb3_derive_encryption_keys()
 
     uint8_t c2s[32] = {0}, s2c[32] = {0}, c2s2[32] = {0}, s2c2[32] = {0};
     // 128-bit cipher keys (AES-128 ciphers).
-    TEST_ASSERT_TRUE(pc_smb3_derive_encryption_keys(sk, 0x0311, preauth, 16, c2s, s2c));
-    TEST_ASSERT_TRUE(pc_smb3_derive_encryption_keys(sk, 0x0311, preauth, 16, c2s2, s2c2)); // deterministic
+    TEST_ASSERT_TRUE(protocore_smb3_derive_encryption_keys(sk, 0x0311, preauth, 16, c2s, s2c));
+    TEST_ASSERT_TRUE(protocore_smb3_derive_encryption_keys(sk, 0x0311, preauth, 16, c2s2, s2c2)); // deterministic
     TEST_ASSERT_EQUAL_MEMORY(c2s, c2s2, 16);
     TEST_ASSERT_EQUAL_MEMORY(s2c, s2c2, 16);
     TEST_ASSERT_TRUE(memcmp(c2s, s2c, 16) != 0); // the two directions use different labels
@@ -1319,15 +1319,15 @@ void test_smb3_derive_encryption_keys()
     // 256-bit cipher keys (AES-256 ciphers): 32 bytes, distinct directions, and different from the 128-bit key
     // (the [L] length field differs, so the whole KDF output differs).
     uint8_t c2s256[32] = {0}, s2c256[32] = {0};
-    TEST_ASSERT_TRUE(pc_smb3_derive_encryption_keys(sk, 0x0311, preauth, 32, c2s256, s2c256));
+    TEST_ASSERT_TRUE(protocore_smb3_derive_encryption_keys(sk, 0x0311, preauth, 32, c2s256, s2c256));
     TEST_ASSERT_TRUE(memcmp(c2s256, s2c256, 32) != 0);
     TEST_ASSERT_TRUE(memcmp(c2s256, c2s, 16) != 0);
 
     // 3.1.1 requires the preauth hash; an invalid key length fails closed.
-    TEST_ASSERT_FALSE(pc_smb3_derive_encryption_keys(sk, 0x0311, NULL, 16, c2s, s2c));
-    TEST_ASSERT_FALSE(pc_smb3_derive_encryption_keys(sk, 0x0311, preauth, 24, c2s, s2c));
+    TEST_ASSERT_FALSE(protocore_smb3_derive_encryption_keys(sk, 0x0311, NULL, 16, c2s, s2c));
+    TEST_ASSERT_FALSE(protocore_smb3_derive_encryption_keys(sk, 0x0311, preauth, 24, c2s, s2c));
     // 3.0.2 uses the fixed contexts (no preauth) and still derives distinct keys.
-    TEST_ASSERT_TRUE(pc_smb3_derive_encryption_keys(sk, 0x0302, NULL, 16, c2s, s2c));
+    TEST_ASSERT_TRUE(protocore_smb3_derive_encryption_keys(sk, 0x0302, NULL, 16, c2s, s2c));
     TEST_ASSERT_TRUE(memcmp(c2s, s2c, 16) != 0);
 }
 
@@ -1346,38 +1346,38 @@ void test_smb3_encrypt_decrypt_roundtrip()
     for (int ci = 0; ci < 4; ci++)
     {
         const uint16_t cipher = ciphers[ci];
-        const size_t klen = pc_smb2_cipher_key_len(cipher);
+        const size_t klen = protocore_smb2_cipher_key_len(cipher);
         uint8_t c2s[32], s2c[32];
-        TEST_ASSERT_TRUE(pc_smb3_derive_encryption_keys(sk, 0x0311, preauth, klen, c2s, s2c));
+        TEST_ASSERT_TRUE(protocore_smb3_derive_encryption_keys(sk, 0x0311, preauth, klen, c2s, s2c));
 
         uint8_t msg[100];
         for (int i = 0; i < 100; i++)
         {
             msg[i] = (uint8_t)(i * 7 + 3);
         }
-        uint8_t nonce[PC_SMB2_NONCE_FIELD_LEN] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 0, 0, 0, 0};
+        uint8_t nonce[PROTOCORE_SMB2_NONCE_FIELD_LEN] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 0, 0, 0, 0};
         const uint64_t sid = 0x0011223344556677ULL;
 
-        uint8_t enc[PC_SMB2_TRANSFORM_HDR_LEN + sizeof(msg)];
-        size_t elen = pc_smb2_encrypt(cipher, c2s, nonce, sid, msg, sizeof(msg), enc, sizeof(enc));
-        TEST_ASSERT_EQUAL_UINT32(PC_SMB2_TRANSFORM_HDR_LEN + sizeof(msg), elen);
+        uint8_t enc[PROTOCORE_SMB2_TRANSFORM_HDR_LEN + sizeof(msg)];
+        size_t elen = protocore_smb2_encrypt(cipher, c2s, nonce, sid, msg, sizeof(msg), enc, sizeof(enc));
+        TEST_ASSERT_EQUAL_UINT32(PROTOCORE_SMB2_TRANSFORM_HDR_LEN + sizeof(msg), elen);
         TEST_ASSERT_EQUAL_HEX8(0xFD, enc[0]);
         TEST_ASSERT_EQUAL_HEX8('S', enc[1]);
         TEST_ASSERT_EQUAL_HEX8('M', enc[2]);
         TEST_ASSERT_EQUAL_HEX8('B', enc[3]);
-        TEST_ASSERT_EQUAL_MEMORY(nonce, enc + 20, PC_SMB2_NONCE_FIELD_LEN); // full 16-byte Nonce field
+        TEST_ASSERT_EQUAL_MEMORY(nonce, enc + 20, PROTOCORE_SMB2_NONCE_FIELD_LEN); // full 16-byte Nonce field
         TEST_ASSERT_EQUAL_HEX8(0x01, enc[42]);                              // Flags = Encrypted
-        TEST_ASSERT_TRUE(memcmp(enc + PC_SMB2_TRANSFORM_HDR_LEN, msg, sizeof(msg)) != 0);
+        TEST_ASSERT_TRUE(memcmp(enc + PROTOCORE_SMB2_TRANSFORM_HDR_LEN, msg, sizeof(msg)) != 0);
 
         uint8_t dec[sizeof(msg)];
-        size_t dlen = pc_smb2_decrypt(cipher, c2s, enc, elen, dec, sizeof(dec));
+        size_t dlen = protocore_smb2_decrypt(cipher, c2s, enc, elen, dec, sizeof(dec));
         TEST_ASSERT_EQUAL_UINT32(sizeof(msg), dlen);
         TEST_ASSERT_EQUAL_MEMORY(msg, dec, sizeof(msg));
 
         // Decrypting with a different cipher id must fail (different key length / nonce length / construction).
         const uint16_t other =
             (cipher == SMB2_ENCRYPTION_AES128_GCM) ? SMB2_ENCRYPTION_AES128_CCM : SMB2_ENCRYPTION_AES128_GCM;
-        TEST_ASSERT_EQUAL_UINT32(0, pc_smb2_decrypt(other, c2s, enc, elen, dec, sizeof(dec)));
+        TEST_ASSERT_EQUAL_UINT32(0, protocore_smb2_decrypt(other, c2s, enc, elen, dec, sizeof(dec)));
     }
 }
 
@@ -1387,42 +1387,42 @@ void test_smb3_decrypt_rejects_tamper()
     uint8_t sk[16] = {0};
     uint8_t preauth[64] = {0};
     uint8_t c2s[32], s2c[32];
-    pc_smb3_derive_encryption_keys(sk, 0x0311, preauth, 16, c2s, s2c);
+    protocore_smb3_derive_encryption_keys(sk, 0x0311, preauth, 16, c2s, s2c);
 
     uint8_t msg[40];
     memset(msg, 0x5A, sizeof(msg));
-    uint8_t nonce[PC_SMB2_NONCE_FIELD_LEN] = {9, 9, 9, 9, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0};
-    uint8_t enc[PC_SMB2_TRANSFORM_HDR_LEN + sizeof(msg)];
-    size_t elen = pc_smb2_encrypt(cipher, c2s, nonce, 42, msg, sizeof(msg), enc, sizeof(enc));
+    uint8_t nonce[PROTOCORE_SMB2_NONCE_FIELD_LEN] = {9, 9, 9, 9, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0};
+    uint8_t enc[PROTOCORE_SMB2_TRANSFORM_HDR_LEN + sizeof(msg)];
+    size_t elen = protocore_smb2_encrypt(cipher, c2s, nonce, 42, msg, sizeof(msg), enc, sizeof(enc));
     uint8_t dec[sizeof(msg)];
 
     // Flip a ciphertext byte -> tag mismatch.
     uint8_t t1[sizeof(enc)];
     memcpy(t1, enc, elen);
-    t1[PC_SMB2_TRANSFORM_HDR_LEN + 5] ^= 0x01;
-    TEST_ASSERT_EQUAL_UINT32(0, pc_smb2_decrypt(cipher, c2s, t1, elen, dec, sizeof(dec)));
+    t1[PROTOCORE_SMB2_TRANSFORM_HDR_LEN + 5] ^= 0x01;
+    TEST_ASSERT_EQUAL_UINT32(0, protocore_smb2_decrypt(cipher, c2s, t1, elen, dec, sizeof(dec)));
     // Flip a Signature (tag) byte.
     memcpy(t1, enc, elen);
     t1[4] ^= 0x01;
-    TEST_ASSERT_EQUAL_UINT32(0, pc_smb2_decrypt(cipher, c2s, t1, elen, dec, sizeof(dec)));
+    TEST_ASSERT_EQUAL_UINT32(0, protocore_smb2_decrypt(cipher, c2s, t1, elen, dec, sizeof(dec)));
     // Flip an AAD byte (SessionId, part of the header covered by the AEAD).
     memcpy(t1, enc, elen);
     t1[44] ^= 0x01;
-    TEST_ASSERT_EQUAL_UINT32(0, pc_smb2_decrypt(cipher, c2s, t1, elen, dec, sizeof(dec)));
+    TEST_ASSERT_EQUAL_UINT32(0, protocore_smb2_decrypt(cipher, c2s, t1, elen, dec, sizeof(dec)));
     // Wrong key.
     uint8_t wrong[32];
     memcpy(wrong, c2s, 32);
     wrong[0] ^= 0xFF;
-    TEST_ASSERT_EQUAL_UINT32(0, pc_smb2_decrypt(cipher, wrong, enc, elen, dec, sizeof(dec)));
+    TEST_ASSERT_EQUAL_UINT32(0, protocore_smb2_decrypt(cipher, wrong, enc, elen, dec, sizeof(dec)));
     // Bad ProtocolId, short input, and OriginalMessageSize mismatch.
     memcpy(t1, enc, elen);
     t1[0] ^= 0x01;
-    TEST_ASSERT_EQUAL_UINT32(0, pc_smb2_decrypt(cipher, c2s, t1, elen, dec, sizeof(dec)));
-    TEST_ASSERT_EQUAL_UINT32(0, pc_smb2_decrypt(cipher, c2s, enc, PC_SMB2_TRANSFORM_HDR_LEN - 1, dec, sizeof(dec)));
-    TEST_ASSERT_EQUAL_UINT32(0, pc_smb2_decrypt(cipher, c2s, enc, elen, dec, sizeof(dec) - 1)); // out too small
+    TEST_ASSERT_EQUAL_UINT32(0, protocore_smb2_decrypt(cipher, c2s, t1, elen, dec, sizeof(dec)));
+    TEST_ASSERT_EQUAL_UINT32(0, protocore_smb2_decrypt(cipher, c2s, enc, PROTOCORE_SMB2_TRANSFORM_HDR_LEN - 1, dec, sizeof(dec)));
+    TEST_ASSERT_EQUAL_UINT32(0, protocore_smb2_decrypt(cipher, c2s, enc, elen, dec, sizeof(dec) - 1)); // out too small
     // An unrecognized cipher id fails closed (encrypt and decrypt).
-    TEST_ASSERT_EQUAL_UINT32(0, pc_smb2_encrypt(0x00FF, c2s, nonce, 42, msg, sizeof(msg), enc, sizeof(enc)));
-    TEST_ASSERT_EQUAL_UINT32(0, pc_smb2_decrypt(0x00FF, c2s, enc, elen, dec, sizeof(dec)));
+    TEST_ASSERT_EQUAL_UINT32(0, protocore_smb2_encrypt(0x00FF, c2s, nonce, 42, msg, sizeof(msg), enc, sizeof(enc)));
+    TEST_ASSERT_EQUAL_UINT32(0, protocore_smb2_decrypt(0x00FF, c2s, enc, elen, dec, sizeof(dec)));
 }
 
 int main()

@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// The littlefs-backed pc_mnt_backend, checked through the seam rather than through lfs_* directly:
+// The littlefs-backed protocore_mnt_backend, checked through the seam rather than through lfs_* directly:
 // what the rest of the tree sees is the fourteen backend calls, so that is what is asserted here.
 // It is the same filesystem the device runs, so a directory walk, a rename and a full volume all
 // answer the way hardware does.
@@ -21,11 +21,11 @@ void tearDown()
 
 void test_format_mounts_an_empty_volume()
 {
-    const pc_mnt_backend *b = lfsm();
+    const protocore_mnt_backend *b = lfsm();
     TEST_ASSERT_FALSE(b->exists("/nothing.txt"));
     int d = b->opendir("/");
     TEST_ASSERT_GREATER_OR_EQUAL_INT(0, d);
-    pc_mnt_stat st;
+    protocore_mnt_stat st;
     char name[64];
     TEST_ASSERT_FALSE(b->readdir(d, &st, name, sizeof(name))); // empty: no children
     b->close(d);
@@ -33,9 +33,9 @@ void test_format_mounts_an_empty_volume()
 
 void test_write_then_read_round_trips()
 {
-    const pc_mnt_backend *b = lfsm();
+    const protocore_mnt_backend *b = lfsm();
     const char *body = "hello littlefs";
-    int h = b->open("/a.txt", PC_MNT_WRITE);
+    int h = b->open("/a.txt", PROTOCORE_MNT_WRITE);
     TEST_ASSERT_GREATER_OR_EQUAL_INT(0, h);
     TEST_ASSERT_EQUAL_INT((int)strlen(body), b->write(h, body, strlen(body)));
     b->close(h);
@@ -44,7 +44,7 @@ void test_write_then_read_round_trips()
     TEST_ASSERT_EQUAL_INT((long)strlen(body), b->size("/a.txt"));
 
     char back[64] = {0};
-    h = b->open("/a.txt", PC_MNT_READ);
+    h = b->open("/a.txt", PROTOCORE_MNT_READ);
     TEST_ASSERT_GREATER_OR_EQUAL_INT(0, h);
     TEST_ASSERT_EQUAL_INT((int)strlen(body), b->read(h, back, sizeof(back)));
     b->close(h);
@@ -53,9 +53,9 @@ void test_write_then_read_round_trips()
 
 void test_seek_reads_from_the_offset()
 {
-    const pc_mnt_backend *b = lfsm();
+    const protocore_mnt_backend *b = lfsm();
     TEST_ASSERT_TRUE(lfsm_write_text("/s.txt", "0123456789"));
-    int h = b->open("/s.txt", PC_MNT_READ);
+    int h = b->open("/s.txt", PROTOCORE_MNT_READ);
     TEST_ASSERT_TRUE(b->seek(h, 4));
     char back[8] = {0};
     TEST_ASSERT_EQUAL_INT(6, b->read(h, back, sizeof(back)));
@@ -65,7 +65,7 @@ void test_seek_reads_from_the_offset()
 
 void test_directory_lists_its_children_only()
 {
-    const pc_mnt_backend *b = lfsm();
+    const protocore_mnt_backend *b = lfsm();
     TEST_ASSERT_TRUE(b->mkdir("/d"));
     TEST_ASSERT_TRUE(lfsm_write_text("/d/one.txt", "1"));
     TEST_ASSERT_TRUE(lfsm_write_text("/d/two.txt", "22"));
@@ -73,7 +73,7 @@ void test_directory_lists_its_children_only()
 
     int d = b->opendir("/d");
     TEST_ASSERT_GREATER_OR_EQUAL_INT(0, d);
-    pc_mnt_stat st;
+    protocore_mnt_stat st;
     char name[64];
     int files = 0, dirs = 0;
     while (b->readdir(d, &st, name, sizeof(name)))
@@ -97,11 +97,11 @@ void test_directory_lists_its_children_only()
 
 void test_stat_tells_a_directory_from_a_file()
 {
-    const pc_mnt_backend *b = lfsm();
+    const protocore_mnt_backend *b = lfsm();
     TEST_ASSERT_TRUE(b->mkdir("/dir"));
     TEST_ASSERT_TRUE(lfsm_write_text("/f.txt", "abc"));
 
-    pc_mnt_stat st;
+    protocore_mnt_stat st;
     TEST_ASSERT_TRUE(b->stat("/dir", &st));
     TEST_ASSERT_TRUE(st.is_dir);
     TEST_ASSERT_EQUAL_UINT64(0, st.size);
@@ -115,7 +115,7 @@ void test_stat_tells_a_directory_from_a_file()
 
 void test_rename_and_remove()
 {
-    const pc_mnt_backend *b = lfsm();
+    const protocore_mnt_backend *b = lfsm();
     TEST_ASSERT_TRUE(lfsm_write_text("/from.txt", "x"));
     TEST_ASSERT_TRUE(b->rename("/from.txt", "/to.txt"));
     TEST_ASSERT_FALSE(b->exists("/from.txt"));
@@ -127,9 +127,9 @@ void test_rename_and_remove()
 
 void test_append_adds_to_the_end()
 {
-    const pc_mnt_backend *b = lfsm();
+    const protocore_mnt_backend *b = lfsm();
     TEST_ASSERT_TRUE(lfsm_write_text("/ap.txt", "one"));
-    int h = b->open("/ap.txt", PC_MNT_APPEND);
+    int h = b->open("/ap.txt", PROTOCORE_MNT_APPEND);
     TEST_ASSERT_GREATER_OR_EQUAL_INT(0, h);
     TEST_ASSERT_EQUAL_INT(3, b->write(h, "two", 3));
     b->close(h);
@@ -138,19 +138,19 @@ void test_append_adds_to_the_end()
 
 void test_open_missing_for_read_fails()
 {
-    const pc_mnt_backend *b = lfsm();
-    TEST_ASSERT_EQUAL_INT(-1, b->open("/nope.txt", PC_MNT_READ));
+    const protocore_mnt_backend *b = lfsm();
+    TEST_ASSERT_EQUAL_INT(-1, b->open("/nope.txt", PROTOCORE_MNT_READ));
 }
 
 void test_a_full_volume_refuses_rather_than_pretending()
 {
     // The reason this fixture is the real filesystem: a hand-rolled tree never runs out, so the
     // path a caller takes when the store is full is never exercised at all.
-    const pc_mnt_backend *b = lfsm();
+    const protocore_mnt_backend *b = lfsm();
     static uint8_t chunk[512];
     memset(chunk, 'A', sizeof(chunk));
 
-    int h = b->open("/big.bin", PC_MNT_WRITE);
+    int h = b->open("/big.bin", PROTOCORE_MNT_WRITE);
     TEST_ASSERT_GREATER_OR_EQUAL_INT(0, h);
     int total = 0;
     int rc = 0;
@@ -172,18 +172,18 @@ void test_a_full_volume_refuses_rather_than_pretending()
 // otherwise a test that expects a refusal quietly gets a success.
 void test_fill_volume_leaves_nothing_creatable()
 {
-    const pc_mnt_backend *b = lfsm();
+    const protocore_mnt_backend *b = lfsm();
     lfsm_fill_volume();
-    TEST_ASSERT_EQUAL_INT(-1, b->open("/after_fill.txt", PC_MNT_WRITE));
+    TEST_ASSERT_EQUAL_INT(-1, b->open("/after_fill.txt", PROTOCORE_MNT_WRITE));
     TEST_ASSERT_FALSE(b->mkdir("/after_fill_dir"));
 }
 
 // Leaving headroom is the other half: the file must be creatable, its body must not fit.
 void test_fill_leaving_room_still_creates_but_cannot_write()
 {
-    const pc_mnt_backend *b = lfsm();
+    const protocore_mnt_backend *b = lfsm();
     lfsm_fill_volume_leaving(2);
-    int h = b->open("/hdr.bin", PC_MNT_WRITE);
+    int h = b->open("/hdr.bin", PROTOCORE_MNT_WRITE);
     TEST_ASSERT_GREATER_OR_EQUAL_INT(0, h);
     static uint8_t big[4096];
     memset(big, 'B', sizeof(big));
@@ -205,12 +205,12 @@ void test_fill_leaving_room_still_creates_but_cannot_write()
 // cannot do that, every recursive copy in the suite is running on borrowed luck.
 void test_read_one_file_while_writing_another()
 {
-    const pc_mnt_backend *b = lfsm();
+    const protocore_mnt_backend *b = lfsm();
     TEST_ASSERT_TRUE(lfsm_write_text("/src.txt", "source-bytes"));
 
-    int r = b->open("/src.txt", PC_MNT_READ);
+    int r = b->open("/src.txt", PROTOCORE_MNT_READ);
     TEST_ASSERT_GREATER_OR_EQUAL_INT(0, r);
-    int w = b->open("/dst.txt", PC_MNT_WRITE);
+    int w = b->open("/dst.txt", PROTOCORE_MNT_WRITE);
     TEST_ASSERT_GREATER_OR_EQUAL_INT(0, w);
 
     char buf[8];
@@ -231,9 +231,9 @@ void test_read_one_file_while_writing_another()
 // Two writers at once, which a recursive copy of a collection reaches.
 void test_two_writers_at_once()
 {
-    const pc_mnt_backend *b = lfsm();
-    int a = b->open("/a.bin", PC_MNT_WRITE);
-    int c = b->open("/b.bin", PC_MNT_WRITE);
+    const protocore_mnt_backend *b = lfsm();
+    int a = b->open("/a.bin", PROTOCORE_MNT_WRITE);
+    int c = b->open("/b.bin", PROTOCORE_MNT_WRITE);
     TEST_ASSERT_GREATER_OR_EQUAL_INT(0, a);
     TEST_ASSERT_GREATER_OR_EQUAL_INT(0, c);
     for (int i = 0; i < 40; i++)
@@ -252,19 +252,19 @@ void test_two_writers_at_once()
 // program asserts, every test that fills is standing on a landmine.
 void test_store_still_answers_after_a_full_fill()
 {
-    const pc_mnt_backend *b = lfsm();
+    const protocore_mnt_backend *b = lfsm();
     TEST_ASSERT_TRUE(lfsm_write_text("/keep.txt", "kept"));
     lfsm_fill_volume();
 
     // reads still work
-    int h = b->open("/keep.txt", PC_MNT_READ);
+    int h = b->open("/keep.txt", PROTOCORE_MNT_READ);
     TEST_ASSERT_GREATER_OR_EQUAL_INT(0, h);
     char buf[8] = {0};
     TEST_ASSERT_EQUAL_INT(4, b->read(h, buf, sizeof(buf)));
     b->close(h);
 
     // and a write to an existing file is refused rather than exploding
-    h = b->open("/keep.txt", PC_MNT_APPEND);
+    h = b->open("/keep.txt", PROTOCORE_MNT_APPEND);
     if (h >= 0)
     {
         (void)b->write(h, "more", 4);
@@ -277,11 +277,11 @@ void test_store_still_answers_after_a_full_fill()
 // its normal path, so the store stays usable afterwards and the caller simply sees a failure.
 void test_medium_error_refuses_a_write_and_leaves_the_store_usable()
 {
-    const pc_mnt_backend *b = lfsm();
+    const protocore_mnt_backend *b = lfsm();
     TEST_ASSERT_TRUE(lfsm_write_text("/before.txt", "ok"));
 
     lfsm_fail_prog_after(1);
-    int h = b->open("/fails.txt", PC_MNT_WRITE);
+    int h = b->open("/fails.txt", PROTOCORE_MNT_WRITE);
     int rc = 0;
     if (h >= 0)
     {

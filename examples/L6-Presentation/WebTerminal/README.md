@@ -1,6 +1,6 @@
 # WebTerminal - a browser "web serial" terminal
 
-**Layer:** L6 Presentation · **Build flags:** `PC_ENABLE_WEB_TERMINAL` (requires `PC_ENABLE_WEBSOCKET`)
+**Layer:** L6 Presentation · **Build flags:** `PROTOCORE_ENABLE_WEB_TERMINAL` (requires `PROTOCORE_ENABLE_WEBSOCKET`)
 
 ## What this example teaches
 
@@ -11,16 +11,16 @@ a command callback. It rides the library's existing WebSocket layer, so it is
 zero-heap, and the page auto-selects `ws://` or `wss://` (works unchanged once
 TLS is on).
 
-**One call mounts the whole thing.** `pc_web_terminal_begin(server, path)`
+**One call mounts the whole thing.** `protocore_web_terminal_begin(server, path)`
 serves the page and the WebSocket; `..._on_command` registers your handler:
 
 ```cpp
-pc_web_terminal_begin(server, "/terminal");
-pc_web_terminal_on_command(on_command);
+protocore_web_terminal_begin(server, "/terminal");
+protocore_web_terminal_on_command(on_command);
 ```
 
 **Browser to device.** The command callback receives a typed line; respond with
-`pc_web_terminal_println` / `..._printf`, which broadcast to all open
+`protocore_web_terminal_println` / `..._printf`, which broadcast to all open
 terminals:
 
 ```cpp
@@ -30,18 +30,18 @@ void on_command(const char *line, uint8_t client_id) {
         frame.build(out, sizeof(out), REPLY_HEAP, (uint32_t)ESP.getFreeHeap());
     else
         frame.build(out, sizeof(out), REPLY_ECHO, line);
-    pc_web_terminal_print(out);
+    protocore_web_terminal_print(out);
 }
 ```
 
 **Device to browser.** From `loop()` you can push output any time; gate it on
-`pc_web_terminal_client_count()` so you only format when someone is watching:
+`protocore_web_terminal_client_count()` so you only format when someone is watching:
 
 ```cpp
-if (pc_web_terminal_client_count() > 0) {
+if (protocore_web_terminal_client_count() > 0) {
     char out[96];
     frame.build(out, sizeof(out), HEARTBEAT, (uint32_t)millis(), (uint32_t)ESP.getFreeHeap());
-    pc_web_terminal_print(out);
+    protocore_web_terminal_print(out);
 }
 ```
 
@@ -52,7 +52,7 @@ WebSocket primitive is [WebSocket](../WebSocket).
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_WEB_TERMINAL=1 -DPC_ENABLE_WEBSOCKET=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_WEB_TERMINAL=1 -DPROTOCORE_ENABLE_WEBSOCKET=1" \
   --lib="." examples/L6-Presentation/WebTerminal/WebTerminal.ino
 ```
 
@@ -67,7 +67,7 @@ verbatim with added explanatory comments:
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-#define PC_ENABLE_WEB_TERMINAL 1
+#define PROTOCORE_ENABLE_WEB_TERMINAL 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -82,7 +82,7 @@ void on_command(const char *line, uint8_t client_id)
     (void)client_id;
     if (strcmp(line, "help") == 0)
     {
-        pc_web_terminal_println("commands: help, heap, uptime, <echo>");
+        protocore_web_terminal_println("commands: help, heap, uptime, <echo>");
         return;
     }
 
@@ -93,7 +93,7 @@ void on_command(const char *line, uint8_t client_id)
         frame.build(out, sizeof(out), REPLY_UPTIME, (uint32_t)millis());
     else
         frame.build(out, sizeof(out), REPLY_ECHO, line);
-    pc_web_terminal_print(out);
+    protocore_web_terminal_print(out);
 }
 
 void setup()
@@ -113,8 +113,8 @@ void setup()
     Serial.println("Open http://<ip>/terminal in a browser");
 
 
-    pc_web_terminal_begin("/terminal"); // serves the page + the WebSocket
-    pc_web_terminal_on_command(on_command);
+    protocore_web_terminal_begin("/terminal"); // serves the page + the WebSocket
+    protocore_web_terminal_on_command(on_command);
 
     int32_t result = begin_http(80);
     if (result < 0)
@@ -134,11 +134,11 @@ void loop()
     if (millis() - last >= 3000)
     {
         last = millis();
-        if (pc_web_terminal_client_count() > 0)
+        if (protocore_web_terminal_client_count() > 0)
         {
             char out[96];
             frame.build(out, sizeof(out), HEARTBEAT, (uint32_t)millis(), (uint32_t)ESP.getFreeHeap());
-            pc_web_terminal_print(out);
+            protocore_web_terminal_print(out);
         }
     }
 }

@@ -7,7 +7,7 @@
 // a relative baseline (a fast RPi core), not the device cost. Build + run (same include roots as
 // the native test env):
 //   gcc -O2 -std=c11 -I. -Isrc -Itest/mocks -Itest/support -Itest/performance_benching/common
-//   -DPC_ENFORCE_HOST_HEADER=0
+//   -DPROTOCORE_ENFORCE_HOST_HEADER=0
 //   test/performance_benching/network_drivers/presentation/http_parser/host.c
 //   src/network_drivers/presentation/http/http_parser/http_parser.c
 //   src/network_drivers/presentation/codec/json/json.c src/shared_primitives/ip.c
@@ -83,7 +83,7 @@ int main(void)
         HBENCH_NS(
             500000,
             {
-                pc_json_writer w;
+                protocore_json_writer w;
                 Json.init(&w, buf, sizeof(buf));
                 Json.begin_object(&w);
                 Json.kv_str(&w, "status", "ok");
@@ -98,7 +98,7 @@ int main(void)
                 Json.put_int(&w, 23);
                 Json.end_array(&w);
                 Json.end_object(&w);
-                sink += pc_json_length(&w);
+                sink += protocore_json_length(&w);
             },
             ns);
         hbench_row("json", "encode (8 fields)", ns, (double)sink / 500000.0);

@@ -3,7 +3,7 @@
 
 /**
  * @file wal.h
- * @brief Write-ahead journal for atomic buffer-to-flash storage (PC_ENABLE_WAL).
+ * @brief Write-ahead journal for atomic buffer-to-flash storage (PROTOCORE_ENABLE_WAL).
  *
  * A power-loss-safe write-ahead log, the substrate for on-device data stores (dbm / sqlite / nosql). It
  * is built to the envelope measured on real hardware (docs/FEATURE_PERFORMANCE.md): an SD card over SPI
@@ -22,9 +22,9 @@
  * image with a corrupted or truncated tail and it recovers to the last good record.
  *
  * The durable store layer - A/B superblock, checkpoint, and mount/recover over a block-device seam - is
- * built on this codec in pc_wal_store.h; pc_wal_fs.h binds that seam to a real fs::FS file (SD / LittleFS). The
- * whole path is hardware-verified on an SD card over SPI (checkpoint recovery, torn-tail drop, byte-level
- * payload persistence, and survival across a chip reset all pass).
+ * built on this codec in protocore_wal_store.h; protocore_wal_fs.h binds that seam to a real fs::FS file (SD /
+ * LittleFS). The whole path is hardware-verified on an SD card over SPI (checkpoint recovery, torn-tail drop,
+ * byte-level payload persistence, and survival across a chip reset all pass).
  */
 
 #ifndef PROTOCORE_WAL_H
@@ -32,9 +32,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_WAL
+#if PROTOCORE_ENABLE_WAL
 
 /** @brief Bytes of fixed record header before the payload (magic + seq + len + crc). */
 #define WAL_RECORD_HEADER 20
@@ -43,18 +43,18 @@ PROTO_BEGIN_DECLS
 #define WAL_MAGIC 0x314C4157u
 
 /** @brief CRC-32 (IEEE 802.3, poly 0xEDB88320, init/final 0xFFFFFFFF) over @p data. */
-uint32_t pc_wal_crc32(const uint8_t *data, size_t len);
+uint32_t protocore_wal_crc32(const uint8_t *data, size_t len);
 
 /**
  * @name Streaming CRC-32
- * The same CRC as ::pc_wal_crc32, split so a record header and a large payload can be folded in without
+ * The same CRC as ::protocore_wal_crc32, split so a record header and a large payload can be folded in without
  * ever buffering both together - which is how the store CRCs an append (header then payload) and how
  * recovery CRCs a record it reads back from media in small chunks.
  * @{
  */
-uint32_t pc_wal_crc32_init(void);                                       ///< seed (0xFFFFFFFF)
-uint32_t pc_wal_crc32_update(uint32_t crc, const uint8_t *d, size_t n); ///< fold @p n bytes into @p crc
-uint32_t pc_wal_crc32_final(uint32_t crc);                              ///< finalize (xor 0xFFFFFFFF)
+uint32_t protocore_wal_crc32_init(void);                                       ///< seed (0xFFFFFFFF)
+uint32_t protocore_wal_crc32_update(uint32_t crc, const uint8_t *d, size_t n); ///< fold @p n bytes into @p crc
+uint32_t protocore_wal_crc32_final(uint32_t crc);                              ///< finalize (xor 0xFFFFFFFF)
 /** @} */
 
 /**
@@ -63,9 +63,9 @@ uint32_t pc_wal_crc32_final(uint32_t crc);                              ///< fin
  * @param payload the record body (may be null when @p len is 0).
  * @return total bytes written (::WAL_RECORD_HEADER + @p len), or 0 if it does not fit @p cap.
  */
-size_t pc_wal_record_encode(uint8_t *out, size_t cap, uint64_t seq, const uint8_t *payload, uint32_t len);
+size_t protocore_wal_record_encode(uint8_t *out, size_t cap, uint64_t seq, const uint8_t *payload, uint32_t len);
 
-/** @brief Per-record callback for ::pc_wal_replay. */
+/** @brief Per-record callback for ::protocore_wal_replay. */
 typedef void (*WalRecordCb)(uint64_t seq, const uint8_t *payload, uint32_t len, void *ctx);
 
 /**
@@ -75,10 +75,10 @@ typedef void (*WalRecordCb)(uint64_t seq, const uint8_t *payload, uint32_t len, 
  * truncated tail from a power loss). @return the offset just past the last good record - the durable
  * journal length; any bytes beyond it are the torn tail to discard/overwrite.
  */
-size_t pc_wal_replay(const uint8_t *img, size_t len, WalRecordCb cb, void *ctx);
+size_t protocore_wal_replay(const uint8_t *img, size_t len, WalRecordCb cb, void *ctx);
 
-#endif // PC_ENABLE_WAL
+#endif // PROTOCORE_ENABLE_WAL
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_WAL_H

@@ -4,15 +4,15 @@
 // On-device CCOUNT microbenchmark scaffold for services/mdns_service.
 //
 // DELIBERATELY EMPTY OF TIMED OPS (a NOTE-4 service). mdns_service is a thin wrapper over the
-// ESP-IDF `mdns` component: pc_mdns_begin() -> mdns_init()/mdns_hostname_set()/mdns_service_add(),
-// pc_mdns_txt() -> mdns_service_txt_item_set(), pc_mdns_add_service() -> mdns_service_add(). Every
+// ESP-IDF `mdns` component: protocore_mdns_begin() -> mdns_init()/mdns_hostname_set()/mdns_service_add(),
+// protocore_mdns_txt() -> mdns_service_txt_item_set(), protocore_mdns_add_service() -> mdns_service_add(). Every
 // real code path is a direct pass-through into the mDNS responder, which performs real network/OS
 // I/O (starts the responder, joins the multicast group, transmits DNS-SD records). The only pure
 // CPU-side logic in the module is a couple of trivial null / empty-string argument guards - not a
 // separable codec, checksum, or packer worth timing. Per the performance_benching/device NOTE-4 policy we do NOT
 // fabricate a benchmark for such a service; this sketch exists only to compile-verify the real
-// production mdns_service.cpp on-device (built with -DPC_ENABLE_MDNS=1) and prints an explanatory
-// banner. This rig has no network attached, so none of the pc_mdns_* transport functions are ever
+// production mdns_service.cpp on-device (built with -DPROTOCORE_ENABLE_MDNS=1) and prints an explanatory
+// banner. This rig has no network attached, so none of the protocore_mdns_* transport functions are ever
 // called here.
 //
 // Build/flash (JTAG-capable S3 over its USB-Serial/JTAG port):
@@ -33,8 +33,8 @@ void dbench_run(void)
         DBENCH_BANNER("mdns_service");
         // No timed operations: mdns_service is a 100% pass-through wrapper over the ESP-IDF `mdns`
         // component (real network/OS I/O), with no pure, hardware-independent codec to bench. See
-        // the file header for the full rationale. Calling pc_mdns_begin()/pc_mdns_txt()/
-        // pc_mdns_add_service() would start the real mDNS responder and transmit on the network,
+        // the file header for the full rationale. Calling protocore_mdns_begin()/protocore_mdns_txt()/
+        // protocore_mdns_add_service() would start the real mDNS responder and transmit on the network,
         // which is out of scope for this peripheral-less bench rig.
         printf("DB note: mdns_service is a pure ESP-IDF mdns pass-through - nothing to bench"
                "\n");

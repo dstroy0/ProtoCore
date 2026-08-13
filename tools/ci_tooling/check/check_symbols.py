@@ -10,19 +10,19 @@ is a name descriptive, should this enum de-prefix - are review, and this script 
 not pretend to decide them.
 
 Checks:
-  1. include guard is PC_<PATH>_H derived from the file's own path (s4)
+  1. include guard is PROTOCORE_<PATH>_H derived from the file's own path (s4)
   2. include guard is <= 31 characters (s2, the C89 significant-identifier limit)
   3. no `#pragma once` (s4: not standard, and the target list includes toolchains
      where its behavior across duplicated/symlinked headers is unspecified)
-  4. exported macros are PC_UPPER_SNAKE and <= 31 characters (s2)
-  5. enum types are pc_snake_case (s3)
+  4. exported macros are PROTOCORE_UPPER_SNAKE and <= 31 characters (s2)
+  5. enum types are protocore_snake_case (s3)
   6. no NAMED namespace and no `using namespace` (s1). Anonymous `namespace {` is
      explicitly fine - it is how file-local owner-context state is scoped, which is
      a different rule (check_owned_context.py) pulling in the same direction.
   7. source file and directory names are snake_case (s4; markdown is the documented
      exception and is not scanned here)
   8. no type/function collision after normalization - `PCConnCounters` and
-     `pc_conn_counters()` collapsed onto each other during the rename and only a
+     `protocore_conn_counters()` collapsed onto each other during the rename and only a
      link error caught it.
 
 BASELINE. The prefix sweep is not finished (roadmap "Now"), so a bare run reports
@@ -54,7 +54,7 @@ MACRO_LIMIT = 31
 # Foreign names that must never be "corrected": vendor parts and silicon registers whose
 # spelling is fixed by a datasheet. The rename pass learned this the hard way - a blanket
 # PC-prefix sweep would have renamed PCA9685 and the PCR_* register block.
-FOREIGN = re.compile(r"^(PCB|PCA\d|PCF\d|PCR_|PCNT|PCIE|PC_?LCD)", re.I)
+FOREIGN = re.compile(r"^(PCB|PCA\d|PCF\d|PCR_|PCNT|PCIE|PROTOCORE_?LCD)", re.I)
 
 
 def decomment(t):
@@ -184,24 +184,24 @@ def check():
         # 4. macros (headers only: a .cpp macro is not exported)
         if is_header:
             # the file's own include guard is a macro, but s4 gives it PROTOCORE_,
-            # not PC_ - checking it here would contradict the guard rule above
+            # not PROTOCORE_ - checking it here would contradict the guard rule above
             own_guard = guard_for(rel)
             for m in re.finditer(r"^\s*#\s*define\s+([A-Za-z_]\w*)", text, re.M):
                 name = m.group(1)
                 ln = text[: m.start(1)].count("\n") + 1
                 if FOREIGN.match(name) or name == own_guard or name.startswith("PROTOCORE_"):
                     continue
-                if not name.startswith("PC_"):
-                    add("macro-prefix", rel, ln, f"macro {name} lacks the PC_ prefix")
-                elif not re.fullmatch(r"PC_[A-Z0-9_]+", name):
-                    add("macro-case", rel, ln, f"macro {name} is not PC_UPPER_SNAKE")
+                if not name.startswith("PROTOCORE_"):
+                    add("macro-prefix", rel, ln, f"macro {name} lacks the PROTOCORE_ prefix")
+                elif not re.fullmatch(r"PROTOCORE_[A-Z0-9_]+", name):
+                    add("macro-case", rel, ln, f"macro {name} is not PROTOCORE_UPPER_SNAKE")
                 if len(name) > MACRO_LIMIT:
                     add("macro-length", rel, ln, f"macro {name} is {len(name)} chars, over {MACRO_LIMIT}")
 
         # 5. enum types
         #
         # The declaration carries the packing attribute between `enum` and the name
-        # (`typedef enum PROTO_ENUM_PACKED { ... } pc_foo;`), so the attribute is stepped over
+        # (`typedef enum PROTO_ENUM_PACKED { ... } protocore_foo;`), so the attribute is stepped over
         # rather than read as the tag. Every enum in the tree carries it, and reading it as the
         # name reported one violation per enum against a macro no rename could fix.
         #
@@ -226,7 +226,7 @@ def check():
                 name, at = tail.group(1), i + 1 + tail.start(1)
             ln = text[:at].count("\n") + 1
             if not re.fullmatch(r"pc_[a-z0-9_]+", name):
-                add("enum-name", rel, ln, f"enum type {name} is not pc_snake_case")
+                add("enum-name", rel, ln, f"enum type {name} is not protocore_snake_case")
             types_seen.setdefault(name.lower(), rel)
 
         # 8. collision material: exported function names

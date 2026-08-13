@@ -4,7 +4,7 @@
 /**
  * @file ForwardedTrust.ino
  * @brief Key the auth lockout on the real client behind a trusted reverse proxy
- *        (PC_ENABLE_FORWARDED_TRUST).
+ *        (PROTOCORE_ENABLE_FORWARDED_TRUST).
  *
  * When the device sits behind a reverse proxy / load balancer, every request arrives from the proxy's
  * one TCP address, so a per-IP brute-force lockout would lock out EVERY client at once (one abuser
@@ -13,11 +13,11 @@
  * a proxy you have explicitly trusted, because that header is client-spoofable. A direct, untrusted
  * client's header is ignored, so it can neither dodge its own lockout nor frame another address.
  *
- * Register each trusted upstream with pc_forwarded_trust_add_cidr(). The accept-time throttle and the
+ * Register each trusted upstream with protocore_forwarded_trust_add_cidr(). The accept-time throttle and the
  * IP allowlist deliberately keep using the real TCP source.
  *
  * NOTE: enable the flags for the whole build (a .ino #define does not reach the separately compiled
- * library). PlatformIO: build_flags = -DPC_ENABLE_AUTH_LOCKOUT=1 -DPC_ENABLE_FORWARDED_TRUST=1.
+ * library). PlatformIO: build_flags = -DPROTOCORE_ENABLE_AUTH_LOCKOUT=1 -DPROTOCORE_ENABLE_FORWARDED_TRUST=1.
  * Arduino IDE: already set in the build_opt.h beside this sketch, so it builds as-is.
  *
  * Try (from a host inside the trusted CIDR, standing in for the proxy):
@@ -27,8 +27,8 @@
  *   curl -u admin:wrong -H 'X-Forwarded-For: 198.51.100.9' http://<ip>/secret   # 401, not 429
  */
 
-#define PC_ENABLE_AUTH_LOCKOUT 1
-#define PC_ENABLE_FORWARDED_TRUST 1
+#define PROTOCORE_ENABLE_AUTH_LOCKOUT 1
+#define PROTOCORE_ENABLE_FORWARDED_TRUST 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -55,7 +55,7 @@ void setup()
     // Trust the reverse proxy(ies) in front of this device. Only a request whose real TCP peer falls in
     // one of these CIDRs has its Forwarded / X-Forwarded-For client address believed. Set this to YOUR
     // proxy's address / subnet; the RFC 5737 documentation range below is a placeholder.
-    pc_forwarded_trust_add_cidr("192.0.2.0/24");
+    protocore_forwarded_trust_add_cidr("192.0.2.0/24");
 
     on_http("/", HTTP_GET,
               [](uint8_t id, HttpReq *) { send_text(id, 200, "text/plain", "public page"); });

@@ -6,7 +6,7 @@
  * @brief AES-256-GCM in software - the backend for a target with no accelerated AEAD.
  *
  * Software AES-256 plus a 4-bit-table GHASH. Selected explicitly by a vendor profile that sets
- * PC_HAS_HW_AESGCM 0; never a fallback. Software crypto is a legitimate choice and on some parts the
+ * PROTOCORE_HAS_HW_AESGCM 0; never a fallback. Software crypto is a legitimate choice and on some parts the
  * only one, but arriving here by default is not - there is no weak symbol anywhere in the chain, so
  * linking no backend is an undefined reference and linking two is a duplicate definition.
  *
@@ -15,18 +15,18 @@
  * accelerated GCM should never be pointed here.
  */
 
-#include "core_setup/board_profiles/pc_platform.h"
+#include "core_setup/board_profiles/protocore_platform.h"
 #include "crypto/aead/aesgcm.h"
 #include "crypto/cipher/aes_block.h"
 #include "crypto/crypto_opt.h"
-#include "crypto/ct_eq.h" // pc_ct_eq
+#include "crypto/ct_eq.h" // protocore_ct_eq
 #include "crypto/mac/ghash.h"
 #include "mmgr/rawmemcpy.h" // proto_raw_u32 - the aliasing-permitted word load
 #include "mmgr/secure.h"
 
-#if !PC_HAS_HW_AESGCM
+#if !PROTOCORE_HAS_HW_AESGCM
 
-PC_CRYPTO_HOT
+PROTOCORE_CRYPTO_HOT
 
 // ===========================================================================
 // GcmWork: the entire AES-256-GCM working set, laid over the shared crypto scratch. No cipher state on
@@ -44,20 +44,20 @@ typedef struct
     uint8_t j0[16];  ///< pre-counter block J0 = nonce || 0^31 || 1.
     uint8_t ctr[16]; ///< running GCTR counter.
 } GcmWork;
-static_assert(
-    sizeof(GcmWork) <= PC_WORK_AESGCM,
-    "GcmWork outgrew PC_WORK_AESGCM - raise it in protocore_config.h, which derives PC_SECURE_ARENA_SIZE from it");
+static_assert(sizeof(GcmWork) <= PROTOCORE_WORK_AESGCM,
+              "GcmWork outgrew PROTOCORE_WORK_AESGCM - raise it in protocore_config.h, which derives "
+              "PROTOCORE_SECURE_ARENA_SIZE from it");
 
 // ---------------------------------------------------------------------------
 // AES-256 single-block primitive (operates on the schedule inside GcmWork)
 // ---------------------------------------------------------------------------
 static inline void aes256_ecb(GcmWork *w, const uint8_t in[16], uint8_t out[16])
 {
-    pc_aes_encrypt_block(w->rk, 14, in, out);
+    protocore_aes_encrypt_block(w->rk, 14, in, out);
 }
 static inline void aes256_load_key(GcmWork *w, const uint8_t key[32])
 {
-    pc_aes_key_expand(key, 8, w->rk);
+    protocore_aes_key_expand(key, 8, w->rk);
 }
 static inline void aes256_free_key(GcmWork *w)
 {
@@ -159,24 +159,24 @@ static void gcm_tag(GcmWork *w, const uint8_t *aad, size_t aad_len, const uint8_
 // Public API (keyed)
 // ===========================================================================
 
-struct pc_aesgcm_key *pc_aesgcm_key_init(void *storage, const uint8_t key[PC_AESGCM_KEY_LEN])
+struct protocore_aesgcm_key *protocore_aesgcm_key_init(void *storage, const uint8_t key[PROTOCORE_AESGCM_KEY_LEN])
 {
     GcmWork *w = (GcmWork *)(storage);
     aes256_load_key(w, key);
     gcm_key_setup(w);
-    return (struct pc_aesgcm_key *)(w);
+    return (struct protocore_aesgcm_key *)(w);
 }
 
-void pc_aesgcm_key_wipe(struct pc_aesgcm_key *k)
+void protocore_aesgcm_key_wipe(struct protocore_aesgcm_key *k)
 {
     GcmWork *w = (GcmWork *)(k);
     aes256_free_key(w);
-    pc_secure_wipe((uint8_t *)(w), sizeof(GcmWork));
+    protocore_secure_wipe((uint8_t *)(w), sizeof(GcmWork));
 }
 
-pc_cspan pc_aesgcm_seal(struct pc_aesgcm_key *k, const uint8_t nonce[PC_AESGCM_IV_LEN], const uint8_t *aad,
-                        size_t aad_len, const uint8_t *pt, size_t pt_len, uint8_t *ct_out,
-                        uint8_t tag_out[PC_AESGCM_TAG_LEN])
+protocore_cspan protocore_aesgcm_seal(struct protocore_aesgcm_key *k, const uint8_t nonce[PROTOCORE_AESGCM_IV_LEN],
+                                      const uint8_t *aad, size_t aad_len, const uint8_t *pt, size_t pt_len,
+                                      uint8_t *ct_out, uint8_t tag_out[PROTOCORE_AESGCM_TAG_LEN])
 {
     GcmWork *w = (GcmWork *)(k);
     gcm_set_nonce(w, nonce);
@@ -185,18 +185,18 @@ pc_cspan pc_aesgcm_seal(struct pc_aesgcm_key *k, const uint8_t nonce[PC_AESGCM_I
     inc32(w->ctr);
     gctr(w, pt, pt_len, ct_out);
     gcm_tag(w, aad, aad_len, ct_out, pt_len, tag_out);
-    return pc_cspan_from(ct_out, pt_len); // the tag rides in tag_out, not in this span
+    return protocore_cspan_from(ct_out, pt_len); // the tag rides in tag_out, not in this span
 }
 
-proto_bool pc_aesgcm_open(struct pc_aesgcm_key *k, const uint8_t nonce[PC_AESGCM_IV_LEN], const uint8_t *aad,
-                          size_t aad_len, const uint8_t *ct, size_t ct_len, const uint8_t tag[PC_AESGCM_TAG_LEN],
-                          uint8_t *out)
+proto_bool protocore_aesgcm_open(struct protocore_aesgcm_key *k, const uint8_t nonce[PROTOCORE_AESGCM_IV_LEN],
+                                 const uint8_t *aad, size_t aad_len, const uint8_t *ct, size_t ct_len,
+                                 const uint8_t tag[PROTOCORE_AESGCM_TAG_LEN], uint8_t *out)
 {
     GcmWork *w = (GcmWork *)(k);
     gcm_set_nonce(w, nonce);
     // Authenticate over the received ciphertext BEFORE producing any plaintext (tag reuses the ej0 slot).
     gcm_tag(w, aad, aad_len, ct, ct_len, w->ej0);
-    if (!pc_ct_eq(w->ej0, tag, PC_AESGCM_TAG_LEN))
+    if (!protocore_ct_eq(w->ej0, tag, PROTOCORE_AESGCM_TAG_LEN))
     {
         return PROTO_FALSE; // tag mismatch: nothing written
     }
@@ -206,4 +206,4 @@ proto_bool pc_aesgcm_open(struct pc_aesgcm_key *k, const uint8_t nonce[PC_AESGCM
     return PROTO_TRUE;
 }
 
-#endif // !PC_HAS_HW_AESGCM
+#endif // !PROTOCORE_HAS_HW_AESGCM

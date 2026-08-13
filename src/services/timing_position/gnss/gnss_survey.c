@@ -2,18 +2,18 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file pc_gnss_survey.c
- * @brief GNSS survey-in: WGS84 geodetic <-> ECEF + fixed-position averaging. See pc_gnss_survey.h.
+ * @file protocore_gnss_survey.c
+ * @brief GNSS survey-in: WGS84 geodetic <-> ECEF + fixed-position averaging. See protocore_gnss_survey.h.
  */
 
 #include "services/timing_position/gnss/gnss_survey.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_NTRIP_CASTER
+#if PROTOCORE_ENABLE_NTRIP_CASTER
 
 #include <math.h>
 
-#if PC_NEED_NMEA0183
+#if PROTOCORE_NEED_NMEA0183
 #include "mmgr/protostr.h"
 #include "services/timing_position/nmea0183/nmea0183.h"
 #endif
@@ -25,7 +25,7 @@ static const double WGS84_E2 = WGS84_F * (2.0 - WGS84_F); // first eccentricity 
 static const double DEG2RAD = 0.017453292519943295;       // pi / 180
 static const double RAD2DEG = 57.29577951308232;          // 180 / pi
 
-void pc_gnss_geodetic_to_ecef(const GnssGeodetic *g, GnssEcef *e)
+void protocore_gnss_geodetic_to_ecef(const GnssGeodetic *g, GnssEcef *e)
 {
     double lat = g->lat_deg * DEG2RAD;
     double lon = g->lon_deg * DEG2RAD;
@@ -39,7 +39,7 @@ void pc_gnss_geodetic_to_ecef(const GnssGeodetic *g, GnssEcef *e)
     e->z = (n * (1.0 - WGS84_E2) + g->height_m) * slat;
 }
 
-void pc_gnss_ecef_to_geodetic(const GnssEcef *e, GnssGeodetic *g)
+void protocore_gnss_ecef_to_geodetic(const GnssEcef *e, GnssGeodetic *g)
 {
     double p = sqrt(e->x * e->x + e->y * e->y);
     g->lon_deg = atan2(e->y, e->x) * RAD2DEG;
@@ -63,7 +63,7 @@ void pc_gnss_ecef_to_geodetic(const GnssEcef *e, GnssGeodetic *g)
     g->height_m = p / cos(lat) - n;
 }
 
-int64_t pc_gnss_ecef_m_to_01mm(double metres)
+int64_t protocore_gnss_ecef_m_to_01mm(double metres)
 {
     double v = metres * 10000.0; // metres -> 0.1 mm
     return (int64_t)(v >= 0.0 ? v + 0.5 : v - 0.5);
@@ -73,12 +73,12 @@ int64_t pc_gnss_ecef_m_to_01mm(double metres)
 // Survey-in accumulator.
 // ---------------------------------------------------------------------------------------------
 
-void pc_gnss_survey_reset(GnssSurvey *s)
+void protocore_gnss_survey_reset(GnssSurvey *s)
 {
     mem.set(s, 0, sizeof(*s));
 }
 
-void pc_gnss_survey_add_ecef(GnssSurvey *s, const GnssEcef *e)
+void protocore_gnss_survey_add_ecef(GnssSurvey *s, const GnssEcef *e)
 {
     if (!s->has_origin)
     {
@@ -99,19 +99,19 @@ void pc_gnss_survey_add_ecef(GnssSurvey *s, const GnssEcef *e)
     s->count++;
 }
 
-void pc_gnss_survey_add_geodetic(GnssSurvey *s, const GnssGeodetic *g)
+void protocore_gnss_survey_add_geodetic(GnssSurvey *s, const GnssGeodetic *g)
 {
     GnssEcef e;
-    pc_gnss_geodetic_to_ecef(g, &e);
-    pc_gnss_survey_add_ecef(s, &e);
+    protocore_gnss_geodetic_to_ecef(g, &e);
+    protocore_gnss_survey_add_ecef(s, &e);
 }
 
-uint32_t pc_gnss_survey_count(const GnssSurvey *s)
+uint32_t protocore_gnss_survey_count(const GnssSurvey *s)
 {
     return s->count;
 }
 
-proto_bool pc_gnss_survey_mean(const GnssSurvey *s, GnssEcef *out)
+proto_bool protocore_gnss_survey_mean(const GnssSurvey *s, GnssEcef *out)
 {
     if (s->count == 0)
     {
@@ -124,7 +124,7 @@ proto_bool pc_gnss_survey_mean(const GnssSurvey *s, GnssEcef *out)
     return PROTO_TRUE;
 }
 
-double pc_gnss_survey_accuracy_m(const GnssSurvey *s)
+double protocore_gnss_survey_accuracy_m(const GnssSurvey *s)
 {
     if (s->count < 2)
     {
@@ -152,16 +152,16 @@ double pc_gnss_survey_accuracy_m(const GnssSurvey *s)
     return sqrt(vx + vy + vz);
 }
 
-proto_bool pc_gnss_survey_complete(const GnssSurvey *s, uint32_t min_obs, double acc_limit_m)
+proto_bool protocore_gnss_survey_complete(const GnssSurvey *s, uint32_t min_obs, double acc_limit_m)
 {
-    return s->count >= min_obs && s->count >= 2 && pc_gnss_survey_accuracy_m(s) <= acc_limit_m;
+    return s->count >= min_obs && s->count >= 2 && protocore_gnss_survey_accuracy_m(s) <= acc_limit_m;
 }
 
 // ---------------------------------------------------------------------------------------------
 // GGA -> geodetic (only when the NMEA 0183 codec is available).
 // ---------------------------------------------------------------------------------------------
 
-#if PC_NEED_NMEA0183
+#if PROTOCORE_NEED_NMEA0183
 
 // A GGA lat/lon field is ddmm.mmmm / dddmm.mmmm; split into whole degrees + decimal minutes.
 static proto_bool dm_to_deg(const char *field, uint8_t len, double *out)
@@ -182,7 +182,7 @@ static proto_bool dm_to_deg(const char *field, uint8_t len, double *out)
     return PROTO_TRUE;
 }
 
-proto_bool pc_gnss_gga_to_geodetic(const Nmea0183 *m, GnssGeodetic *out)
+proto_bool protocore_gnss_gga_to_geodetic(const Nmea0183 *m, GnssGeodetic *out)
 {
     if (!m || !out || m->type[0] != 'G' || m->type[1] != 'G' || m->type[2] != 'A')
     {
@@ -194,7 +194,7 @@ proto_bool pc_gnss_gga_to_geodetic(const Nmea0183 *m, GnssGeodetic *out)
     }
 
     long quality = 0;
-    if (!pc_nmea0183_field_int(m, 6, &quality) || quality <= 0) // 0 = no fix
+    if (!protocore_nmea0183_field_int(m, 6, &quality) || quality <= 0) // 0 = no fix
     {
         return PROTO_FALSE;
     }
@@ -219,12 +219,12 @@ proto_bool pc_gnss_gga_to_geodetic(const Nmea0183 *m, GnssGeodetic *out)
     }
 
     float msl = 0.0f;
-    if (!pc_nmea0183_field_float(m, 9, &msl)) // orthometric (mean-sea-level) altitude
+    if (!protocore_nmea0183_field_float(m, 9, &msl)) // orthometric (mean-sea-level) altitude
     {
         return PROTO_FALSE;
     }
     float geoid = 0.0f;
-    pc_nmea0183_field_float(m, 11, &geoid); // geoid separation; absent -> 0 (ellipsoidal height = MSL)
+    protocore_nmea0183_field_float(m, 11, &geoid); // geoid separation; absent -> 0 (ellipsoidal height = MSL)
 
     out->lat_deg = lat;
     out->lon_deg = lon;
@@ -232,17 +232,17 @@ proto_bool pc_gnss_gga_to_geodetic(const Nmea0183 *m, GnssGeodetic *out)
     return PROTO_TRUE;
 }
 
-proto_bool pc_gnss_survey_add_gga(GnssSurvey *s, const Nmea0183 *m)
+proto_bool protocore_gnss_survey_add_gga(GnssSurvey *s, const Nmea0183 *m)
 {
     GnssGeodetic g;
-    if (!pc_gnss_gga_to_geodetic(m, &g))
+    if (!protocore_gnss_gga_to_geodetic(m, &g))
     {
         return PROTO_FALSE;
     }
-    pc_gnss_survey_add_geodetic(s, &g);
+    protocore_gnss_survey_add_geodetic(s, &g);
     return PROTO_TRUE;
 }
 
-#endif // PC_NEED_NMEA0183
+#endif // PROTOCORE_NEED_NMEA0183
 
-#endif // PC_ENABLE_NTRIP_CASTER
+#endif // PROTOCORE_ENABLE_NTRIP_CASTER

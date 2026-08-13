@@ -3,9 +3,9 @@
 
 /**
  * @file nrf24.h
- * @brief nRF24L01+ radio driver (PC_ENABLE_NRF24) - Nordic 2.4 GHz over SPI.
+ * @brief nRF24L01+ radio driver (PROTOCORE_ENABLE_NRF24) - Nordic 2.4 GHz over SPI.
  *
- * A radio driver plugin for the gateway (PC_ENABLE_GATEWAY): cheap point-to-multipoint
+ * A radio driver plugin for the gateway (PROTOCORE_ENABLE_GATEWAY): cheap point-to-multipoint
  * 2.4 GHz sensor links bridged to the web stack. Unlike the SX127x (plain register
  * read/write), the nRF24L01+ speaks an **SPI command protocol** (each transaction is a
  * command byte + data, and every command returns the STATUS register) and needs a separate
@@ -14,9 +14,9 @@
  *
  * The nRF24 does its own **hardware addressing** (5-byte pipe addresses), so a received
  * frame's "source" is the pipe number it arrived on - there is no in-payload header and
- * therefore no separate codec. It uses a **static payload width** (PC_NRF24_PAYLOAD):
+ * therefore no separate codec. It uses a **static payload width** (PROTOCORE_NRF24_PAYLOAD):
  * every frame is that many bytes (a short send is zero-padded). Bridge received payloads
- * northbound with pc_gateway_uplink(port, pipe, payload, width, 0). The register/command
+ * northbound with protocore_gateway_uplink(port, pipe, payload, width, 0). The register/command
  * protocol is host-testable against a mock; the RF link needs the module.
  *
  * @author  Douglas Quigg (dstroy0)
@@ -28,9 +28,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_NRF24
+#if PROTOCORE_ENABLE_NRF24
 
 /** @brief Full-duplex SPI transfer of @p len bytes (chip-select toggled by the callback). */
 typedef void (*nrf_spi_fn)(const uint8_t *tx, uint8_t *rx, uint8_t len, void *ctx);
@@ -45,7 +45,7 @@ typedef struct
     void *ctx;
 } nrf_bus;
 
-/** @brief Radio configuration applied by pc_nrf24_init(). */
+/** @brief Radio configuration applied by protocore_nrf24_init(). */
 typedef struct
 {
     const uint8_t *address; ///< 5-byte pipe-0 / TX address (RX and TX share it here).
@@ -59,29 +59,29 @@ typedef struct
  * @return true; false if a written register does not read back - i.e. the bus is not
  *         talking to the chip.
  */
-proto_bool pc_nrf24_init(const nrf_bus *bus, const nrf_config *cfg);
+proto_bool protocore_nrf24_init(const nrf_bus *bus, const nrf_config *cfg);
 
 /**
- * @brief Transmit @p len bytes (zero-padded to PC_NRF24_PAYLOAD). Poll pc_nrf24_tx_done().
- * @return true; false if @p len exceeds PC_NRF24_PAYLOAD.
+ * @brief Transmit @p len bytes (zero-padded to PROTOCORE_NRF24_PAYLOAD). Poll protocore_nrf24_tx_done().
+ * @return true; false if @p len exceeds PROTOCORE_NRF24_PAYLOAD.
  */
-proto_bool pc_nrf24_send(const nrf_bus *bus, const uint8_t *data, uint8_t len);
+proto_bool protocore_nrf24_send(const nrf_bus *bus, const uint8_t *data, uint8_t len);
 
 /** @brief True once a transmit has finished (STATUS TX_DS); clears the flag. */
-proto_bool pc_nrf24_tx_done(const nrf_bus *bus);
+proto_bool protocore_nrf24_tx_done(const nrf_bus *bus);
 
-/** @brief Enter receive mode (PRX + CE high); then poll pc_nrf24_recv(). */
-void pc_nrf24_set_rx(const nrf_bus *bus);
+/** @brief Enter receive mode (PRX + CE high); then poll protocore_nrf24_recv(). */
+void protocore_nrf24_set_rx(const nrf_bus *bus);
 
 /**
  * @brief If a frame is waiting, copy it into @p buf and report the pipe it arrived on.
  * @param[out] pipe set to the receiving pipe number 0..5 (may be null).
- * @return the payload width (PC_NRF24_PAYLOAD, capped at @p cap), or -1 if none.
+ * @return the payload width (PROTOCORE_NRF24_PAYLOAD, capped at @p cap), or -1 if none.
  */
-int pc_nrf24_recv(const nrf_bus *bus, uint8_t *buf, uint8_t cap, uint8_t *pipe);
+int protocore_nrf24_recv(const nrf_bus *bus, uint8_t *buf, uint8_t cap, uint8_t *pipe);
 
-#endif // PC_ENABLE_NRF24
+#endif // PROTOCORE_ENABLE_NRF24
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_NRF24_H

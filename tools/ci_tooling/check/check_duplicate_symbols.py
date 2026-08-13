@@ -12,7 +12,7 @@ linkage. The second half is what makes this precise rather than noisy: in C++ a 
 has INTERNAL linkage by default, so four codecs may each define their own ``const DIST_BASE[]``
 without ever colliding. It becomes external only when a header declares it ``extern`` - which is
 exactly the shape of the case this exists for, since ``web_assets.h`` declares
-``extern const char PC_DASHBOARD_PAGE[]`` and two .cpp files then defined it.
+``extern const char PROTOCORE_DASHBOARD_PAGE[]`` and two .cpp files then defined it.
 
 So a symbol is reported only when it is both defined in several files and declared ``extern`` in a
 header, or defined non-``const`` (externally linked with no declaration needed).

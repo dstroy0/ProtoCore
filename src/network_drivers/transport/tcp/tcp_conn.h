@@ -11,7 +11,7 @@
  *
  * This layer and tls/ are the only two that speak the platform network stack, so the
  * stack's types appear in the signatures below. Every layer above reaches the connection
- * through the pc_conn_* API and never sees them.
+ * through the protocore_conn_* API and never sees them.
  *
  * **Concurrency model**
  * | Context          | Reads                  | Writes                  |
@@ -39,12 +39,12 @@
 #define PROTOCORE_TCP_CONN_H
 
 #include "../tcp_evt.h" // EvtType, TcpEvt: what this layer posts to a listener queue
-#include "core_setup/board_profiles/pc_platform.h"
+#include "core_setup/board_profiles/protocore_platform.h"
 #include "mmgr/ring.h" // PROTO_ATOMIC_LOAD/STORE + the shared SPSC ring drain primitive
 #include "protocore_config.h"
-#include "shared_primitives/ip.h" // pc_ip (family-tagged peer address)
+#include "shared_primitives/ip.h" // protocore_ip (family-tagged peer address)
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
 // ---------------------------------------------------------------------------
 // Connection state
@@ -53,16 +53,28 @@ PROTO_BEGIN_DECLS
 /**
  * @brief Lifecycle state of a connection pool slot.
  *
- * Transitions:
- * - `CONN_FREE → CONN_ACTIVE` : accept callback fires.
- * - `CONN_ACTIVE → CONN_FREE` : graceful close, error, or timeout.
- * - `CONN_ACTIVE → CONN_CLOSING` : (reserved for future half-close support).
+ * NOT the RFC 9293 sec 3.3.2 connection state machine. That machine (LISTEN, SYN-RECEIVED,
+ * ESTABLISHED, FIN-WAIT-1/2, CLOSE-WAIT, CLOSING, LAST-ACK, TIME-WAIT) belongs to the stack under
+ * this layer; these three name only whether the pool slot is available. A test mapping CONN_* to
+ * RFC state names 1:1 is testing the wrong thing.
+ *
+ * Transitions, as the code performs them:
+ * - `CONN_FREE → CONN_ACTIVE`     accept callback fires.
+ * - `CONN_ACTIVE → CONN_CLOSING`  protocore_conn_begin_close().
+ * - `CONN_CLOSING → CONN_FREE`    the peer ACKed the outbound data (snd_queuelen == 0), or the
+ *                                 dwell timed out.
+ * - `CONN_ACTIVE → CONN_FREE`     local close, remote FIN, stack error, or the idle sweep.
+ *
+ * Every terminal edge detaches the pcb and frees the slot before handing the pcb to the stack, so
+ * the slot's lifetime ends before the connection's does; the FIN and its retransmission are the
+ * stack's from that point (RFC 9293 sec 3.6).
  */
 typedef enum PROTO_ENUM_PACKED
 {
     CONN_FREE,   ///< Slot is available; no PCB is attached.
     CONN_ACTIVE, ///< Live connection; PCB is valid.
-    CONN_CLOSING ///< FIN sent; waiting for final ACK (reserved).
+    CONN_CLOSING ///< Transmit-drain dwell: holding the slot until the peer ACKs what was sent. No
+                 ///< FIN has been emitted yet - it goes out as the slot is released.
 } ConnState;
 static_assert(sizeof(ConnState) == 1,
               "ConnState must stay one byte (PROTO_ENUM_PACKED); TcpConn and conn_pool[] size themselves on it");
@@ -78,10 +90,10 @@ typedef struct TcpConn
 {
     uint8_t id;                ///< Fixed slot index (0 … MAX_CONNS-1).
     _Atomic ConnState state;   ///< Lifecycle state; acquire/release for inter-task visibility.
-    pc_pcb *pcb;               ///< Stack control block; null when slot is free.
-    uint32_t last_activity_ms; ///< `pc_millis()` timestamp of last TX/RX event.
-    uint32_t req_start_ms;     ///< `pc_millis()` at the first byte of the in-progress request (0 = none). The
-                               ///< request-header deadline (PC_REQUEST_TIMEOUT_MS, slow-loris defense) measures
+    protocore_pcb *pcb;        ///< Stack control block; null when slot is free.
+    uint32_t last_activity_ms; ///< `protocore_millis()` timestamp of last TX/RX event.
+    uint32_t req_start_ms;     ///< `protocore_millis()` at the first byte of the in-progress request (0 = none). The
+                               ///< request-header deadline (PROTOCORE_REQUEST_TIMEOUT_MS, slow-loris defense) measures
                                ///< against this; unlike last_activity_ms a trickle byte cannot reset it.
 
     uint8_t rx_buffer[RX_BUF_SIZE]; ///< Ring buffer storage.
@@ -95,38 +107,71 @@ typedef struct TcpConn
     uint8_t owner;       ///< Worker that owns this slot (round-robin at accept). Always 0 at N=1.
     ProtoConn proto;     ///< Application protocol for this connection.
     uint8_t
-        proto_slot;   ///< Per-protocol session/pool index (0xFF = none): the SSH session, an MQTT/Modbus session, etc.
-    pc_if_kind iface; ///< Interface this connection arrived on; set at accept time.
-    uint8_t tls;      ///< Non-zero when this connection is TLS (set at accept time).
-#if PC_ENABLE_HTTP2 || PC_ENABLE_HTTP3
+        proto_slot; ///< Per-protocol session/pool index (0xFF = none): the SSH session, an MQTT/Modbus session, etc.
+    protocore_if_kind iface; ///< Interface this connection arrived on; set at accept time.
+    uint8_t tls;             ///< Non-zero when this connection is TLS (set at accept time).
+#if PROTOCORE_ENABLE_HTTP2 || PROTOCORE_ENABLE_HTTP3
     /// Self-framing protocol response sink (Layer 5 TX seam): HTTP/2 installs it at ALPN, HTTP/3 at
     /// dispatch, so the response methods route through it instead of building an HTTP/1.1 message.
     /// Null means plain HTTP/1.1 (the default builder). Extends the ProtoHandler seam to the TX side.
-    proto_bool (*pc_resp_sink)(uint8_t slot, int code, const char *content_type, const char *body, size_t len);
+    proto_bool (*protocore_resp_sink)(uint8_t slot, int code, const char *content_type, const char *body, size_t len);
 #endif
-#if PC_ENABLE_HTTP2
-    uint8_t h2;            ///< Non-zero once this connection negotiated HTTP/2 (ALPN "h2").
-    uint8_t pc_h2_checked; ///< The post-handshake ALPN check ran (once per connection).
-    uint32_t pc_h2_stream; ///< Stream id of the request currently being dispatched (for the response).
+#if PROTOCORE_ENABLE_HTTP2
+    uint8_t h2;                   ///< Non-zero once this connection negotiated HTTP/2 (ALPN "h2").
+    uint8_t protocore_h2_checked; ///< The post-handshake ALPN check ran (once per connection).
+    uint32_t protocore_h2_stream; ///< Stream id of the request currently being dispatched (for the response).
 #endif
-#if PC_ENABLE_HTTP3
-    uint8_t h3;             ///< Non-zero when this is the reserved HTTP/3 dispatch slot (no TCP pcb).
-    uint32_t pc_h3_conn_id; ///< pc_quic_server connection id the response routes back to.
-    uint64_t pc_h3_stream;  ///< HTTP/3 request stream id the response is written on.
+#if PROTOCORE_ENABLE_HTTP3
+    uint8_t h3;                    ///< Non-zero when this is the reserved HTTP/3 dispatch slot (no TCP pcb).
+    uint32_t protocore_h3_conn_id; ///< protocore_quic_server connection id the response routes back to.
+    uint64_t protocore_h3_stream;  ///< HTTP/3 request stream id the response is written on.
 #endif
 } TcpConn;
 
 /** @brief Sentinel for TcpConn.proto_slot meaning "no per-protocol session bound". */
-#define PC_PROTO_SLOT_NONE 0xFFu
+#define PROTOCORE_PROTO_SLOT_NONE 0xFFu
+
+// ---------------------------------------------------------------------------
+// Slot state, as bits
+// ---------------------------------------------------------------------------
+//
+// A slot's availability is two questions, and each is one bit in a mask rather than a field to
+// load and compare:
+//
+//   free  bit i set = conn_pool[i] is CONN_FREE. Written through protocore_conn_set_state() only,
+//         so it stays in lock-step with the state.
+//   held  bit i set = something still owns bytes in slot i - a transfer the wire has not finished
+//         reading. Taken when that begins and dropped when it completes.
+//
+// A slot is allocatable only when it is free AND not held: protocore_slot_ready() is
+// `free & ~held`, and protocore_slot_next() picks the lowest with one ctz. Holding is what makes
+// reuse safe. Without it a slot reads free while a transfer is still walking its bytes, and the
+// index is handed to a new connection on top of the old one's in-flight data - the collision RFC
+// 9293 sec 3.6.1 keeps a connection identifier out of circulation to avoid, expressed as a bit
+// rather than a timer, because a pool index is not a socket and has no quiet period to wait out.
+
+/** @brief The pool's slot bitmaps. Both are read by the allocator and written from stack and
+ *  worker context, so both are atomic. */
+typedef struct
+{
+    _Atomic uint32_t free; ///< bit i = conn_pool[i] is CONN_FREE.
+    _Atomic uint32_t held; ///< bit i = slot i still owns bytes in flight.
+} ConnSlotBits;
+
+/** @brief The one instance, defined in tcp_conn.c. */
+extern ConnSlotBits protocore_conn_bits;
+
+_Static_assert(MAX_CONNS <= PROTOCORE_RING_SLOTS_MAX,
+               "the slot bitmaps are uint32; raise them or fall back to a scan if MAX_CONNS exceeds 32");
 
 /**
  * @brief Access-point IPv4 address (network byte order) for STA/AP interface tagging.
  *
  * Zero when no access point is configured. Set via set_ap_ip(); the
- * accept callback tags each connection PC_IF_WIFI_AP when its local IP equals
- * this, else PC_IF_WIFI_STA. Used by per-route interface filters.
+ * accept callback tags each connection PROTOCORE_IF_WIFI_AP when its local IP equals
+ * this, else PROTOCORE_IF_WIFI_STA. Used by per-route interface filters.
  */
-extern uint32_t pc_ap_ip;
+extern uint32_t protocore_ap_ip;
 
 /** @brief Static pool of connection contexts.  Defined in tcp.c.
  *  Sized CONN_POOL_SLOTS: MAX_CONNS TCP slots plus any reserved internal dispatch slot(s)
@@ -153,9 +198,9 @@ extern TcpConn conn_pool[CONN_POOL_SLOTS];
 // ---------------------------------------------------------------------------
 // The one send/flush/close path for all higher layers. Presentation (WebSocket,
 // SSE, SSH) and the HTTP application call these instead of touching the stack, so the
-// transport layer stays the sole owner of TCP I/O. pc_conn_send/flush are
+// transport layer stays the sole owner of TCP I/O. protocore_conn_send/flush are
 // TLS-aware (route through the TLS record layer when the slot is a TLS conn);
-// with PC_ENABLE_TLS off they are a bare write and flush.
+// with PROTOCORE_ENABLE_TLS off they are a bare write and flush.
 
 // ---------------------------------------------------------------------------
 // RX ring read API - the single way any layer drains received bytes.
@@ -163,7 +208,7 @@ extern TcpConn conn_pool[CONN_POOL_SLOTS];
 // Transport owns the ring; consumers (HTTP/WS/Telnet/SSH/TLS and the framed
 // services) must never index rx_buffer or advance rx_tail themselves - they call
 // these. Consuming functions advance rx_tail only; the window is reopened by the
-// worker's pc_conn_ack_consumed() once per loop (one owner, no per-byte ACK).
+// worker's protocore_conn_ack_consumed() once per loop (one owner, no per-byte ACK).
 // Single-consumer per slot (the owning worker), so no locking here. These are
 // inline because the byte path is hot and the ring internals live in this header.
 // ---------------------------------------------------------------------------
@@ -172,37 +217,37 @@ extern TcpConn conn_pool[CONN_POOL_SLOTS];
 // rx_buffer - the server transport never reimplements the ring math.
 
 /** @brief Bytes currently available to read from @p slot's ring. */
-static inline size_t pc_conn_available(uint8_t slot)
+static inline size_t protocore_conn_available(uint8_t slot)
 {
     const TcpConn *c = &conn_pool[slot];
-    return pc_ring_available(&c->rx_head, &c->rx_tail, RX_BUF_SIZE);
+    return protocore_ring_available(&c->rx_head, &c->rx_tail, RX_BUF_SIZE);
 }
 
 /** @brief Pop one byte into @p out; false if the ring is empty. */
-static inline proto_bool pc_conn_read_byte(uint8_t slot, uint8_t *out)
+static inline proto_bool protocore_conn_read_byte(uint8_t slot, uint8_t *out)
 {
     TcpConn *c = &conn_pool[slot];
-    return pc_ring_read_byte(c->rx_buffer, RX_BUF_SIZE, &c->rx_head, &c->rx_tail, out);
+    return protocore_ring_read_byte(c->rx_buffer, RX_BUF_SIZE, &c->rx_head, &c->rx_tail, out);
 }
 
 /** @brief Copy @p n bytes at @p off from the tail into @p dst WITHOUT consuming (lookahead). */
-static inline void pc_conn_peek(uint8_t slot, size_t off, uint8_t *dst, size_t n)
+static inline void protocore_conn_peek(uint8_t slot, size_t off, uint8_t *dst, size_t n)
 {
     const TcpConn *c = &conn_pool[slot];
-    pc_ring_peek(c->rx_buffer, RX_BUF_SIZE, &c->rx_tail, off, dst, n);
+    protocore_ring_peek(c->rx_buffer, RX_BUF_SIZE, &c->rx_tail, off, dst, n);
 }
 
 /** @brief Drop @p n bytes from the tail (advance past already-peeked data). */
-static inline void pc_conn_consume(uint8_t slot, size_t n)
+static inline void protocore_conn_consume(uint8_t slot, size_t n)
 {
-    pc_ring_consume(&conn_pool[slot].rx_tail, RX_BUF_SIZE, n);
+    protocore_ring_consume(&conn_pool[slot].rx_tail, RX_BUF_SIZE, n);
 }
 
 /** @brief Pop up to @p cap bytes into @p buf; returns the count read. */
-static inline size_t pc_conn_read(uint8_t slot, uint8_t *buf, size_t cap)
+static inline size_t protocore_conn_read(uint8_t slot, uint8_t *buf, size_t cap)
 {
     TcpConn *c = &conn_pool[slot];
-    return pc_ring_read(c->rx_buffer, RX_BUF_SIZE, &c->rx_head, &c->rx_tail, buf, cap);
+    return protocore_ring_read(c->rx_buffer, RX_BUF_SIZE, &c->rx_head, &c->rx_tail, buf, cap);
 }
 
 /**
@@ -212,22 +257,22 @@ static inline size_t pc_conn_read(uint8_t slot, uint8_t *buf, size_t cap)
  * CONN_ACTIVE state check and the non-null pcb check the send / flush / close paths
  * require. Callers outside transport/ + tls/ must NOT test conn_pool[slot].state or
  * .pcb themselves - .pcb is a raw stack pointer, so poking it couples a higher layer to
- * the transport's internals. Guard a send with `if (!pc_conn_active(slot)) return;`.
+ * the transport's internals. Guard a send with `if (!protocore_conn_active(slot)) return;`.
  */
-static inline proto_bool pc_conn_active(uint8_t slot)
+static inline proto_bool protocore_conn_active(uint8_t slot)
 {
     const TcpConn *c = &conn_pool[slot];
     return PROTO_ATOMIC_LOAD(&c->state) == CONN_ACTIVE && c->pcb != NULL;
 }
 
 /** @brief The network interface (STA / AP / ANY) @p slot's connection arrived on. */
-static inline pc_if_kind pc_conn_iface(uint8_t slot)
+static inline protocore_if_kind protocore_conn_iface(uint8_t slot)
 {
     return conn_pool[slot].iface;
 }
 
 /** @brief The id of the listener @p slot's connection was accepted on. */
-static inline uint8_t pc_conn_listener_id(uint8_t slot)
+static inline uint8_t protocore_conn_listener_id(uint8_t slot)
 {
     return conn_pool[slot].listener_id;
 }
@@ -239,27 +284,27 @@ static inline uint8_t pc_conn_listener_id(uint8_t slot)
  */
 
 // ---------------------------------------------------------------------------
-// Observability (PC_ENABLE_OBSERVABILITY) - connection event hook + counters
+// Observability (PROTOCORE_ENABLE_OBSERVABILITY) - connection event hook + counters
 // ---------------------------------------------------------------------------
-#if PC_ENABLE_OBSERVABILITY
+#if PROTOCORE_ENABLE_OBSERVABILITY
 
 /** @brief Why a connection event fired (the reason for a transition or notice). */
 typedef enum PROTO_ENUM_PACKED
 {
-    PC_CONN_R_ACCEPT,       ///< New connection accepted (CONN_FREE -> CONN_ACTIVE).
-    PC_CONN_R_CLOSE_REMOTE, ///< Peer closed gracefully (FIN received).
-    PC_CONN_R_CLOSE_LOCAL,  ///< Application initiated the close.
-    PC_CONN_R_ERROR,        ///< The stack reported a fatal error on the connection.
-    PC_CONN_R_TIMEOUT,      ///< Idle-timeout sweep reaped the slot.
-    PC_CONN_R_ABORT,        ///< Forced abort (server stop / pool reset).
-    PC_CONN_R_DRAINED,      ///< CONN_CLOSING slot finished draining -> closed.
-    PC_CONN_R_BACKPRESSURE, ///< RX segment refused (ring full); no state change.
-    PC_CONN_R_DEFER_DROP    ///< Event queue full; an event was dropped (no state change).
-} pc_conn_reason;
-static_assert(sizeof(pc_conn_reason) == 1, "pc_conn_reason must stay one byte (PROTO_ENUM_PACKED)");
+    PROTOCORE_CONN_R_ACCEPT,       ///< New connection accepted (CONN_FREE -> CONN_ACTIVE).
+    PROTOCORE_CONN_R_CLOSE_REMOTE, ///< Peer closed gracefully (FIN received).
+    PROTOCORE_CONN_R_CLOSE_LOCAL,  ///< Application initiated the close.
+    PROTOCORE_CONN_R_ERROR,        ///< The stack reported a fatal error on the connection.
+    PROTOCORE_CONN_R_TIMEOUT,      ///< Idle-timeout sweep reaped the slot.
+    PROTOCORE_CONN_R_ABORT,        ///< Forced abort (server stop / pool reset).
+    PROTOCORE_CONN_R_DRAINED,      ///< CONN_CLOSING slot finished draining -> closed.
+    PROTOCORE_CONN_R_BACKPRESSURE, ///< RX segment refused (ring full); no state change.
+    PROTOCORE_CONN_R_DEFER_DROP    ///< Event queue full; an event was dropped (no state change).
+} protocore_conn_reason;
+static_assert(sizeof(protocore_conn_reason) == 1, "protocore_conn_reason must stay one byte (PROTO_ENUM_PACKED)");
 
 /** @brief Snapshot of the transport's lifetime counters (plus a live gauge). */
-typedef struct pc_conn_counters
+typedef struct protocore_conn_counters
 {
     uint32_t accepts;        ///< Connections accepted.
     uint32_t closes_remote;  ///< Closed by peer FIN.
@@ -270,7 +315,7 @@ typedef struct pc_conn_counters
     uint32_t backpressure;   ///< RX segments refused for lack of ring space.
     uint32_t defer_drops;    ///< Deferred events dropped because the queue was full.
     uint32_t closing_gauge;  ///< Slots currently in CONN_CLOSING (live, not cumulative).
-} pc_conn_counters;
+} protocore_conn_counters;
 
 /**
  * @brief Callback fired on every connection state transition.
@@ -280,23 +325,24 @@ typedef struct pc_conn_counters
  * not call back into the server from it. @p old_state == @p new_state for the
  * non-transition notices (backpressure, defer-drop).
  */
-typedef void (*pc_conn_event_cb)(uint8_t slot, ConnState old_state, ConnState new_state, pc_conn_reason reason);
+typedef void (*protocore_conn_event_cb)(uint8_t slot, ConnState old_state, ConnState new_state,
+                                        protocore_conn_reason reason);
 
 // Internal notify points (tcp.c), reached via the macros below so both
 // tcp.c and listener.c (accept) record through one path.
-void pc_obs_transition(uint8_t slot, ConnState olds, ConnState news, pc_conn_reason reason);
-void pc_obs_notice(uint8_t slot, ConnState st, pc_conn_reason reason);
-#define PC_OBS_TRANSITION(slot, olds, news, reason) pc_obs_transition((slot), (olds), (news), (reason))
-#define PC_OBS_NOTICE(slot, st, reason) pc_obs_notice((slot), (st), (reason))
+void protocore_obs_transition(uint8_t slot, ConnState olds, ConnState news, protocore_conn_reason reason);
+void protocore_obs_notice(uint8_t slot, ConnState st, protocore_conn_reason reason);
+#define PROTOCORE_OBS_TRANSITION(slot, olds, news, reason) protocore_obs_transition((slot), (olds), (news), (reason))
+#define PROTOCORE_OBS_NOTICE(slot, st, reason) protocore_obs_notice((slot), (st), (reason))
 
-#else // !PC_ENABLE_OBSERVABILITY
+#else // !PROTOCORE_ENABLE_OBSERVABILITY
 
-// Compile to nothing; the arguments (incl. pc_conn_reason names, only declared
+// Compile to nothing; the arguments (incl. protocore_conn_reason names, only declared
 // when the feature is on) are dropped unparsed by the preprocessor.
-#define PC_OBS_TRANSITION(slot, olds, news, reason) ((void)0)
-#define PC_OBS_NOTICE(slot, st, reason) ((void)0)
+#define PROTOCORE_OBS_TRANSITION(slot, olds, news, reason) ((void)0)
+#define PROTOCORE_OBS_NOTICE(slot, st, reason) ((void)0)
 
-#endif // PC_ENABLE_OBSERVABILITY
+#endif // PROTOCORE_ENABLE_OBSERVABILITY
 
 // ---------------------------------------------------------------------------
 // Per-connection stack callbacks (defined in tcp.c, used in listener.c)
@@ -306,19 +352,19 @@ void pc_obs_notice(uint8_t slot, ConnState st, pc_conn_reason reason);
  * @brief Receive callback - wired to each new connection by listener_accept_cb.
  * @see tcp.c
  */
-pc_net_err lowlevel_recv_cb(void *arg, pc_pcb *tpcb, pc_pbuf *p, pc_net_err err);
+protocore_net_err lowlevel_recv_cb(void *arg, protocore_pcb *tpcb, protocore_pbuf *p, protocore_net_err err);
 
 /**
  * @brief Sent callback - refreshes the idle-timeout timestamp.
  * @see tcp.c
  */
-pc_net_err lowlevel_sent_cb(void *arg, pc_pcb *tpcb, proto_u16 len);
+protocore_net_err lowlevel_sent_cb(void *arg, protocore_pcb *tpcb, proto_u16 len);
 
 /**
  * @brief Error callback - fires when the stack detects a fatal error.
  * @see tcp.c
  */
-void lowlevel_err_cb(void *arg, pc_net_err err);
+void lowlevel_err_cb(void *arg, protocore_net_err err);
 
 /**
  * @brief The connection pool: one accepted TCP connection per slot.
@@ -369,22 +415,22 @@ typedef struct
     void (*touch_active)(uint8_t slot);
     void (*ack_consumed)(uint8_t slot);
     uint8_t (*active_count)(void);
-    proto_bool (*raw_send)(pc_pcb *pcb, const void *data, proto_u16 len);
+    proto_bool (*raw_send)(protocore_pcb *pcb, const void *data, proto_u16 len);
     void (*close)(uint8_t slot);
     void (*begin_close)(uint8_t slot_id);
-    void (*detach)(pc_pcb *pcb);
-    void (*abort)(pc_pcb *pcb);
+    void (*detach)(protocore_pcb *pcb);
+    void (*abort)(protocore_pcb *pcb);
     void (*abort_slot)(uint8_t slot);
-#if PC_ENABLE_DIFFSERV
+#if PROTOCORE_ENABLE_DIFFSERV
     proto_bool (*set_dscp)(uint8_t slot, uint8_t dscp);
 #endif
     uint32_t (*remote_ip)(uint8_t slot);
-    proto_bool (*remote_addr)(uint8_t slot, pc_ip *out);
-#if PC_ENABLE_OBSERVABILITY
+    proto_bool (*remote_addr)(uint8_t slot, protocore_ip *out);
+#if PROTOCORE_ENABLE_OBSERVABILITY
     // The callback and counter types exist only with the feature, so the members do too. A caller
     // tests the pointer rather than repeating the flag.
-    void (*on_event)(pc_conn_event_cb cb);
-    pc_conn_counters (*counters_get)(void);
+    void (*on_event)(protocore_conn_event_cb cb);
+    protocore_conn_counters (*counters_get)(void);
     void (*counters_reset)(void);
 #endif
 } ConnPoolNs;
@@ -392,6 +438,6 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern const ConnPoolNs ConnPool;
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif

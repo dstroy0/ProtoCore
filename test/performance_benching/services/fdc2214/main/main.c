@@ -7,7 +7,7 @@
 // frequency (data/2^28 * fref, a 64-bit multiply+shift), and building the single-channel (CH0)
 // continuous-conversion config sequence - all pure, no I2C. Worked example for
 // performance_benching/device/<service>/ peripheral drivers: this rig has no FDC2214 breakout attached, so
-// pc_fdc2214_begin/read_ch0 (the I2C-over-Wire half, gated on `#if defined(ARDUINO)` inside
+// protocore_fdc2214_begin/read_ch0 (the I2C-over-Wire half, gated on `#if defined(ARDUINO)` inside
 // fdc2214.cpp) are out of scope everywhere - only the deterministic CPU-side codec is ever
 // benched, and since we never call those two functions, no hardware stub is needed to satisfy
 // the linker (contrast with services that reference an external stub function directly).
@@ -43,11 +43,11 @@ void dbench_run(void)
         volatile uint8_t sink8 = 0;
         volatile uint64_t sink64 = 0;
         volatile size_t sinksz = 0;
-        DBENCH_OP("pc_fdc2214_data", 200000, sink32 += pc_fdc2214_data(msb_reg, lsb_reg));
-        DBENCH_OP("pc_fdc2214_error", 200000, sink8 += pc_fdc2214_error(msb_reg));
-        DBENCH_OP("pc_fdc2214_sensor_freq_hz", 200000, sink64 += pc_fdc2214_sensor_freq_hz(data28, fref_hz));
-        DBENCH_BULK("pc_fdc2214_build_config", 50000, FDC2214_CONFIG_MAX,
-                    sinksz += pc_fdc2214_build_config(cfg, sizeof(cfg), rcount, settlecount));
+        DBENCH_OP("protocore_fdc2214_data", 200000, sink32 += protocore_fdc2214_data(msb_reg, lsb_reg));
+        DBENCH_OP("protocore_fdc2214_error", 200000, sink8 += protocore_fdc2214_error(msb_reg));
+        DBENCH_OP("protocore_fdc2214_sensor_freq_hz", 200000, sink64 += protocore_fdc2214_sensor_freq_hz(data28, fref_hz));
+        DBENCH_BULK("protocore_fdc2214_build_config", 50000, FDC2214_CONFIG_MAX,
+                    sinksz += protocore_fdc2214_build_config(cfg, sizeof(cfg), rcount, settlecount));
         (void)sink32;
         (void)sink8;
         (void)sink64;

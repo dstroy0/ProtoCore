@@ -5,28 +5,28 @@
  * @file gateway.c
  * @brief Radio / wireless gateway bridge - implementation.
  *
- * A static port table; pc_gateway_uplink() envelopes a received frame and publishes it through
- * the installed northbound callback (per-port rate-capped, fail-closed), pc_gateway_downlink()
- * routes a command to a port's transmit callback, and pc_gateway_topic() formats a routing key.
+ * A static port table; protocore_gateway_uplink() envelopes a received frame and publishes it through
+ * the installed northbound callback (per-port rate-capped, fail-closed), protocore_gateway_downlink()
+ * routes a command to a port's transmit callback, and protocore_gateway_topic() formats a routing key.
  * Zero heap.
  */
 
 #include "services/net/gateway/gateway.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_GATEWAY
+#if PROTOCORE_ENABLE_GATEWAY
 
-#include "server/clock/clock.h" // pc_millis(): the one time source the rate window reads
+#include "server/clock/clock.h" // protocore_millis(): the one time source the rate window reads
 
 typedef struct
 {
-    pc_gateway_tx_fn tx;
+    protocore_gateway_tx_fn tx;
     void *ctx;
     uint32_t window_start; // ms of the current uplink rate window
     uint16_t rate_cap;     // uplink frames per second (0 = unlimited)
     uint16_t count;        // uplinks in the current window
     uint8_t id;
-    pc_gateway_kind kind;
+    protocore_gateway_kind kind;
     proto_bool used;
 } port;
 
@@ -35,26 +35,26 @@ typedef struct
 // grouped so it is one named owner, unreachable from any other translation unit.
 typedef struct
 {
-    port ports[PC_GW_MAX_PORTS];
-    pc_gateway_uplink_fn uplink;
+    port ports[PROTOCORE_GW_MAX_PORTS];
+    protocore_gateway_uplink_fn uplink;
     void *uplink_ctx;
     const char *prefix;
     uint32_t seq;
-    pc_gateway_stats stats;
+    protocore_gateway_stats stats;
 } GatewayCtx;
-static GatewayCtx s_gw = {.prefix = PC_GW_DEFAULT_PREFIX};
+static GatewayCtx s_gw = {.prefix = PROTOCORE_GW_DEFAULT_PREFIX};
 
 // The one time source (server/clock/clock.h). A caller that needs to drive the rate window - a
-// test stepping it - installs its own clock with pc_set_clock(), which governs every module.
+// test stepping it - installs its own clock with protocore_set_clock(), which governs every module.
 static uint32_t gw_now()
 {
-    return pc_millis();
+    return protocore_millis();
 }
 
 // Returns a mutable port (callers mutate it), so it takes the owner by non-const reference.
 static port *find_port(GatewayCtx *g, uint8_t id)
 {
-    for (uint8_t i = 0; i < PC_GW_MAX_PORTS; i++)
+    for (uint8_t i = 0; i < PROTOCORE_GW_MAX_PORTS; i++)
     {
         if (g->ports[i].used && g->ports[i].id == id)
         {
@@ -118,23 +118,23 @@ static proto_bool put_u32(char *buf, uint16_t *pos, uint16_t cap, uint32_t v)
     return PROTO_TRUE;
 }
 
-void pc_gateway_reset(void)
+void protocore_gateway_reset(void)
 {
     mem.set(s_gw.ports, 0, sizeof(s_gw.ports));
     s_gw.uplink = NULL;
     s_gw.uplink_ctx = NULL;
-    s_gw.prefix = PC_GW_DEFAULT_PREFIX;
+    s_gw.prefix = PROTOCORE_GW_DEFAULT_PREFIX;
     s_gw.seq = 0;
     mem.set(&s_gw.stats, 0, sizeof(s_gw.stats));
 }
 
-proto_bool pc_gateway_add_port(const pc_gateway_port_config *cfg)
+proto_bool protocore_gateway_add_port(const protocore_gateway_port_config *cfg)
 {
     if (!cfg || find_port(&s_gw, cfg->port_id))
     {
         return PROTO_FALSE;
     }
-    for (uint8_t i = 0; i < PC_GW_MAX_PORTS; i++)
+    for (uint8_t i = 0; i < PROTOCORE_GW_MAX_PORTS; i++)
     {
         if (s_gw.ports[i].used)
         {
@@ -153,18 +153,18 @@ proto_bool pc_gateway_add_port(const pc_gateway_port_config *cfg)
     return PROTO_FALSE; // table full
 }
 
-void pc_gateway_set_uplink_cb(pc_gateway_uplink_fn fn, void *ctx)
+void protocore_gateway_set_uplink_cb(protocore_gateway_uplink_fn fn, void *ctx)
 {
     s_gw.uplink = fn;
     s_gw.uplink_ctx = ctx;
 }
 
-void pc_gateway_set_topic_prefix(const char *prefix)
+void protocore_gateway_set_topic_prefix(const char *prefix)
 {
-    s_gw.prefix = prefix ? prefix : PC_GW_DEFAULT_PREFIX;
+    s_gw.prefix = prefix ? prefix : PROTOCORE_GW_DEFAULT_PREFIX;
 }
 
-proto_bool pc_gateway_uplink(uint8_t port_id, uint16_t src_addr, const uint8_t *payload, uint16_t len, int16_t rssi)
+proto_bool protocore_gateway_uplink(uint8_t port_id, uint16_t src_addr, const uint8_t *payload, uint16_t len, int16_t rssi)
 {
     s_gw.stats.up_in++;
     port *p = find_port(&s_gw, port_id);
@@ -173,7 +173,7 @@ proto_bool pc_gateway_uplink(uint8_t port_id, uint16_t src_addr, const uint8_t *
         s_gw.stats.up_dropped++;
         return PROTO_FALSE;
     }
-    pc_gateway_msg msg;
+    protocore_gateway_msg msg;
     msg.payload = payload;
     msg.seq = s_gw.seq++;
     msg.len = len;
@@ -190,7 +190,7 @@ proto_bool pc_gateway_uplink(uint8_t port_id, uint16_t src_addr, const uint8_t *
     return PROTO_FALSE;
 }
 
-proto_bool pc_gateway_downlink(uint8_t port_id, uint16_t dst_addr, const uint8_t *payload, uint16_t len)
+proto_bool protocore_gateway_downlink(uint8_t port_id, uint16_t dst_addr, const uint8_t *payload, uint16_t len)
 {
     s_gw.stats.down_in++;
     port *p = find_port(&s_gw, port_id);
@@ -203,7 +203,7 @@ proto_bool pc_gateway_downlink(uint8_t port_id, uint16_t dst_addr, const uint8_t
     return PROTO_TRUE;
 }
 
-uint16_t pc_gateway_topic(const pc_gateway_msg *msg, char *buf, uint16_t buflen)
+uint16_t protocore_gateway_topic(const protocore_gateway_msg *msg, char *buf, uint16_t buflen)
 {
     if (!msg || !buf || buflen == 0)
     {
@@ -240,7 +240,7 @@ uint16_t pc_gateway_topic(const pc_gateway_msg *msg, char *buf, uint16_t buflen)
     return pos;
 }
 
-void pc_gateway_get_stats(pc_gateway_stats *out)
+void protocore_gateway_get_stats(protocore_gateway_stats *out)
 {
     if (out)
     {
@@ -248,4 +248,4 @@ void pc_gateway_get_stats(pc_gateway_stats *out)
     }
 }
 
-#endif // PC_ENABLE_GATEWAY
+#endif // PROTOCORE_ENABLE_GATEWAY

@@ -1,6 +1,6 @@
 # CoAP - a zero-heap CoAP server
 
-**Layer:** L7 Application · **Build flags:** `PC_ENABLE_COAP`
+**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_COAP`
 
 ## What this example teaches
 
@@ -14,12 +14,12 @@ static.
 mask, and a handler:
 
 ```cpp
-pc_coap_server_reset();
-pc_coap_server_add_resource("/info", CoapMethodMask::COAP_ALLOW_GET, coap_info);
-pc_coap_server_add_resource("/led", CoapMethodMask::COAP_ALLOW_GET | CoapMethodMask::COAP_ALLOW_PUT,
+protocore_coap_server_reset();
+protocore_coap_server_add_resource("/info", CoapMethodMask::COAP_ALLOW_GET, coap_info);
+protocore_coap_server_add_resource("/led", CoapMethodMask::COAP_ALLOW_GET | CoapMethodMask::COAP_ALLOW_PUT,
                          coap_led);
-pc_coap_server_add_resource("/hello", CoapMethodMask::COAP_ALLOW_GET, coap_hello);
-pc_coap_server_begin(5683);
+protocore_coap_server_add_resource("/hello", CoapMethodMask::COAP_ALLOW_GET, coap_hello);
+protocore_coap_server_begin(5683);
 ```
 
 **The handler shape.** A handler fills a `CoapResponse` from the `CoapRequest`:
@@ -47,7 +47,7 @@ the library. For server-push and large transfers, see
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_COAP=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_COAP=1" \
   --lib="." examples/L7-Application/CoAP/CoAP.ino
 ```
 
@@ -66,7 +66,7 @@ explanatory comments:
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-#define PC_ENABLE_COAP 1
+#define PROTOCORE_ENABLE_COAP 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -144,12 +144,12 @@ void setup()
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     // Build the resource table, then bind the server to UDP/5683.
-    pc_coap_server_reset();
-    pc_coap_server_add_resource("/info", CoapMethodMask::COAP_ALLOW_GET, coap_info);
-    pc_coap_server_add_resource("/led", CoapMethodMask::COAP_ALLOW_GET | CoapMethodMask::COAP_ALLOW_PUT,
+    protocore_coap_server_reset();
+    protocore_coap_server_add_resource("/info", CoapMethodMask::COAP_ALLOW_GET, coap_info);
+    protocore_coap_server_add_resource("/led", CoapMethodMask::COAP_ALLOW_GET | CoapMethodMask::COAP_ALLOW_PUT,
                          coap_led);
-    pc_coap_server_add_resource("/hello", CoapMethodMask::COAP_ALLOW_GET, coap_hello);
-    pc_coap_server_begin(5683);
+    protocore_coap_server_add_resource("/hello", CoapMethodMask::COAP_ALLOW_GET, coap_hello);
+    protocore_coap_server_begin(5683);
     Serial.println("CoAP server listening on UDP/5683 (try: coap-client -m get coap://<ip>/info)");
 
     int32_t result = server.begin(80);

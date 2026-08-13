@@ -105,7 +105,7 @@ DAQ_WIFI_SSID='your-ssid' DAQ_WIFI_PASS='your-pass' DAQ_ANALYSIS_HOST='192.168.1
 ```
 
 `daq_adc_dma` runs on `services/dma`'s shipped ingress/egress **simulator**
-(`PC_DMA_SIMULATE=1`, the default) until a real `pc_dma_hw_*` SPI/UART backend is written
+(`PROTOCORE_DMA_SIMULATE=1`, the default) until a real `protocore_dma_hw_*` SPI/UART backend is written
 _and hardware-verified_ - shipping an unverified driver is against this project's
 test-on-hardware rule (see `docs/KNOWN_LIMITATIONS.md`). The DMA -> preempt-queue -> trace-
 capture -> network pipeline above it is real and runs identically once that backend lands;
@@ -170,10 +170,10 @@ plaintext at all.
 ### Wall-clock sync (`wall_clock_us`)
 
 `trace_id` alone only orders windows relative to each other; `wall_clock_us` anchors a window
-to a real Unix-epoch timestamp. `main.cpp`'s `wall_clock_us_now()` anchors `pc_micros()`
-against `services/ntp_service`'s synced epoch second the first time `pc_ntp_synced()` goes
-true, and re-anchors on every epoch-second rollover so `pc_micros()`'s own wraparound never
-corrupts it - then adds the sub-second `pc_micros()` delta for microsecond resolution riding
+to a real Unix-epoch timestamp. `main.cpp`'s `wall_clock_us_now()` anchors `protocore_micros()`
+against `services/ntp_service`'s synced epoch second the first time `protocore_ntp_synced()` goes
+true, and re-anchors on every epoch-second rollover so `protocore_micros()`'s own wraparound never
+corrupts it - then adds the sub-second `protocore_micros()` delta for microsecond resolution riding
 on a whole-second NTP anchor. It reads `0` until the first sync lands, so a receiver can tell
 "no time source yet" from a real (if only ordinary-NTP-accurate) timestamp. This is what makes
 it possible to correlate multiple DAQ nodes' captures in absolute time - an EM probe node and a
@@ -318,7 +318,7 @@ mask`, a fresh uniform-random `mask` every trace) defeats a first-order CPA outr
 
 Everything above is capture and analysis tooling - it needs something real to point a probe at.
 `targets/leaky_target/` is a physically-probeable target: a single AES SubBytes step
-(`PC_AES_SBOX[plaintext ^ KEY_BYTE] ^ plaintext`, the exact Hamming-distance intermediate this
+(`PROTOCORE_AES_SBOX[plaintext ^ KEY_BYTE] ^ plaintext`, the exact Hamming-distance intermediate this
 whole suite's CPA/TVLA/SPA/template code already targets) running on real silicon, with
 `TRIGGER_PIN` (default GPIO4) toggling around it so a capture front end has a clean edge to arm
 on. Two build environments, one source file:
@@ -372,29 +372,29 @@ python -m tests.simulate_pipeline
 
 ## New library primitives this work added (`src/`)
 
-- **`services/trace_capture`** (`PC_ENABLE_TRACE_CAPTURE`) - the pre/post-trigger window
-  assembler: a continuously-running pre-trigger ring, `pc_tc_trigger()` freezing it as the
-  window's pre-trigger half, `pc_tc_feed()` filling the post-trigger half and firing the sink
+- **`services/trace_capture`** (`PROTOCORE_ENABLE_TRACE_CAPTURE`) - the pre/post-trigger window
+  assembler: a continuously-running pre-trigger ring, `protocore_tc_trigger()` freezing it as the
+  window's pre-trigger half, `protocore_tc_feed()` filling the post-trigger half and firing the sink
   on completion. Zero-heap, fail-closed (one capture in flight), ISR-safe. Host-tested
   (`test/test_trace_capture`).
-- **`services/ad9238`** (`PC_ENABLE_AD9238`) - the AD9238's SPI configuration-port framing
+- **`services/ad9238`** (`PROTOCORE_ENABLE_AD9238`) - the AD9238's SPI configuration-port framing
   (the 16-bit instruction word + shadow-register transfer shared across this generation of ADI
   high-speed ADCs). Host-tested (`test/test_ad9238`); the per-register bit-field constants are
   transcribed from the datasheet and, per this project's hardware-verification policy, not yet
   confirmed against physical silicon - see `services/peripherals/ad9238/ad9238.h`'s confidence note before
   writing to a real part.
-- **`services/clock.h`: `pc_cycles()` / `pc_cycles_to_ns()`** - a CPU-cycle-counter time
+- **`services/clock.h`: `protocore_cycles()` / `protocore_cycles_to_ns()`** - a CPU-cycle-counter time
   source for sub-microsecond jitter measurement, alongside the existing millisecond/microsecond
-  tiers. `pc_micros()` under-resolves a single SPI-DMA transaction (one byte at 20 MHz SPI is
+  tiers. `protocore_micros()` under-resolves a single SPI-DMA transaction (one byte at 20 MHz SPI is
   400 ns); `trace_capture` uses this to report `assembly_ns` (trigger-to-window latency).
-- **`services/dma`: `pc_dma_event::t_us`** - a microsecond completion timestamp alongside the
+- **`services/dma`: `protocore_dma_event::t_us`** - a microsecond completion timestamp alongside the
   existing `t_ms`, for peripherals fast enough to complete several transfers inside one
   millisecond tick.
 
 ## Known limitations
 
 - `daq_adc_dma`'s bulk sample ingest runs on the shipped DMA simulator until a real
-  `pc_dma_hw_*` SPI/UART backend is written and bench-verified (see `docs/KNOWN_LIMITATIONS.md`
+  `protocore_dma_hw_*` SPI/UART backend is written and bench-verified (see `docs/KNOWN_LIMITATIONS.md`
     - this is a whole-library policy, not specific to this firmware).
 - `services/ad9238`'s per-register bit fields need confirmation against your part's exact
   datasheet revision before a real SPI write (see the confidence note in `ad9238.h`).

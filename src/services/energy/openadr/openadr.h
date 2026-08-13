@@ -3,7 +3,7 @@
 
 /**
  * @file openadr.h
- * @brief OpenADR 3.0 (Open Automated Demand Response) JSON codec (PC_ENABLE_OPENADR).
+ * @brief OpenADR 3.0 (Open Automated Demand Response) JSON codec (PROTOCORE_ENABLE_OPENADR).
  *
  * OpenADR 3.0 is the demand-response protocol as a REST/JSON API (over HTTP + OAuth2, both already
  * shipped): a VTN (server) posts `event` objects to VENs, and VENs post `report` objects back. This
@@ -24,9 +24,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_OPENADR
+#if PROTOCORE_ENABLE_OPENADR
 
 /** @brief One OpenADR interval payload point (a single value over a time interval). */
 typedef struct
@@ -45,8 +45,8 @@ typedef struct
  * @param count      number of intervals.
  * @return length written (excl NUL), or 0 on overflow.
  */
-size_t pc_openadr_event(const char *program_id, const char *event_name, const OpenAdrInterval *intervals, size_t count,
-                        char *out, size_t cap);
+size_t protocore_openadr_event(const char *program_id, const char *event_name, const OpenAdrInterval *intervals,
+                               size_t count, char *out, size_t cap);
 
 /**
  * @brief Build an OpenADR 3.0 report JSON object (one reading for one resource).
@@ -57,11 +57,11 @@ size_t pc_openadr_event(const char *program_id, const char *event_name, const Op
  * @param timestamp     the reading time (epoch seconds).
  * @return length written (excl NUL), or 0 on overflow.
  */
-size_t pc_openadr_report(const char *program_id, const char *event_id, const char *resource_name, double value,
-                         uint32_t timestamp, char *out, size_t cap);
+size_t protocore_openadr_report(const char *program_id, const char *event_id, const char *resource_name, double value,
+                                uint32_t timestamp, char *out, size_t cap);
 
-#endif // PC_ENABLE_OPENADR
+#endif // PROTOCORE_ENABLE_OPENADR
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_OPENADR_H

@@ -9,7 +9,7 @@
 #include "services/net/syslog/syslog.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_SYSLOG
+#if PROTOCORE_ENABLE_SYSLOG
 
 #include "network_drivers/transport/udp.h"
 #include <stdio.h>
@@ -19,13 +19,13 @@
 // heap), grouped so it is one named owner, unreachable from any other translation unit.
 typedef struct
 {
-    pc_ip server;  // the collector, parsed once by pc_syslog_init()
-    uint16_t port; // set by pc_syslog_init(); every read is gated on `ready`
-    char hostname[PC_SYSLOG_FIELD_MAX];
-    char appname[PC_SYSLOG_FIELD_MAX];
-    SyslogFacility facility; // likewise set by pc_syslog_init()
+    protocore_ip server;  // the collector, parsed once by protocore_syslog_init()
+    uint16_t port; // set by protocore_syslog_init(); every read is gated on `ready`
+    char hostname[PROTOCORE_SYSLOG_FIELD_MAX];
+    char appname[PROTOCORE_SYSLOG_FIELD_MAX];
+    SyslogFacility facility; // likewise set by protocore_syslog_init()
     proto_bool ready;
-    char buf[PC_SYSLOG_MSG_MAX];
+    char buf[PROTOCORE_SYSLOG_MSG_MAX];
 } SyslogCtx;
 static SyslogCtx s_syslog;
 
@@ -40,7 +40,7 @@ static void copy_field(char *dst, size_t cap, const char *src)
     dst[cap - 1] = '\0';
 }
 
-void pc_syslog_init(const char *server_ip, uint16_t port, const char *hostname, const char *appname,
+void protocore_syslog_init(const char *server_ip, uint16_t port, const char *hostname, const char *appname,
                     SyslogFacility facility)
 {
     s_syslog.ready = Ip.parse(server_ip, &s_syslog.server);
@@ -63,7 +63,7 @@ static inline proto_bool sl_append(char *out, size_t cap, size_t *pos, const cha
     return PROTO_TRUE;
 }
 
-size_t pc_syslog_format(char *out, size_t cap, SyslogFacility facility, SyslogSeverity severity, const char *hostname,
+size_t protocore_syslog_format(char *out, size_t cap, SyslogFacility facility, SyslogSeverity severity, const char *hostname,
                         const char *appname, const char *msg)
 {
     if (!out || cap == 0)
@@ -113,13 +113,13 @@ size_t pc_syslog_format(char *out, size_t cap, SyslogFacility facility, SyslogSe
     return pos;
 }
 
-proto_bool pc_syslog_log(SyslogSeverity severity, const char *msg)
+proto_bool protocore_syslog_log(SyslogSeverity severity, const char *msg)
 {
     if (!s_syslog.ready)
     {
         return PROTO_FALSE;
     }
-    size_t n = pc_syslog_format(s_syslog.buf, sizeof(s_syslog.buf), s_syslog.facility, severity, s_syslog.hostname,
+    size_t n = protocore_syslog_format(s_syslog.buf, sizeof(s_syslog.buf), s_syslog.facility, severity, s_syslog.hostname,
                                 s_syslog.appname, msg);
     if (n == 0)
     {
@@ -128,4 +128,4 @@ proto_bool pc_syslog_log(SyslogSeverity severity, const char *msg)
     return Udp.client->sendto(&s_syslog.server, s_syslog.port, (const uint8_t *)s_syslog.buf, n);
 }
 
-#endif // PC_ENABLE_SYSLOG
+#endif // PROTOCORE_ENABLE_SYSLOG

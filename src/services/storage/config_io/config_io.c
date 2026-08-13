@@ -13,20 +13,20 @@
 #include "mmgr/protoframe.h" // the one frame engine
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_CONFIG_IO
+#if PROTOCORE_ENABLE_CONFIG_IO
 
 #include "mmgr/protostr.h"
 #include "services/storage/config_store/config_store.h"
 #include <stdio.h>
 
 // An exported u32 field is one number.
-static const pc_field CFG_U32[] = {PC_U32, PC_END};
+static const protocore_field CFG_U32[] = {PROTOCORE_U32, PROTOCORE_END};
 
-#define PC_VAL_MAX 128 // export/import value field cap
-#define PC_KEY_MAX 16  // NVS key cap (15 + null)
+#define PROTOCORE_VAL_MAX 128 // export/import value field cap
+#define PROTOCORE_KEY_MAX 16  // NVS key cap (15 + null)
 
-// Look up a key in the schema; write its pc_cfg_type to *out and return true, or return false if absent.
-static proto_bool field_type(const pc_cfg_field *fields, size_t n, const char *key, pc_cfg_type *out)
+// Look up a key in the schema; write its protocore_cfg_type to *out and return true, or return false if absent.
+static proto_bool field_type(const protocore_cfg_field *fields, size_t n, const char *key, protocore_cfg_type *out)
 {
     for (size_t i = 0; i < n; i++)
     {
@@ -58,31 +58,32 @@ static proto_bool append_kv(char *out, size_t cap, size_t *pos, const char *key,
     return PROTO_TRUE;
 }
 
-int pc_config_export(const char *ns, const pc_cfg_field *fields, size_t n, char *out, size_t cap)
+int protocore_config_export(const char *ns, const protocore_cfg_field *fields, size_t n, char *out, size_t cap)
 {
     if (!out || cap == 0)
     {
         return 0;
     }
     out[0] = '\0';
-    if (!fields || !pc_config_begin(ns))
+    if (!fields || !protocore_config_begin(ns))
     {
-        return 0; // host config_store backend's pc_config_begin always returns true
+        return 0; // host config_store backend's protocore_config_begin always returns true
     }
 
     size_t pos = 0;
     for (size_t i = 0; i < n; i++)
     {
-        char val[PC_VAL_MAX];
-        if (fields[i].type == PC_CFG_U32)
+        char val[PROTOCORE_VAL_MAX];
+        if (fields[i].type == PROTOCORE_CFG_U32)
         {
             // Fails closed to an empty string on its own, so there is no failure arm to write here.
             frame.build(val, sizeof(val), CFG_U32,
-                        (const pc_fval[]){PC_VU32((uint32_t)pc_config_get_u32(fields[i].key, 0))}, 1);
+                        (const protocore_fval[]){PROTOCORE_VU32((uint32_t)protocore_config_get_u32(fields[i].key, 0))},
+                        1);
         }
         else
         {
-            pc_config_get_str(fields[i].key, val, sizeof(val), "");
+            protocore_config_get_str(fields[i].key, val, sizeof(val), "");
         }
 
         if (!append_kv(out, cap, &pos, fields[i].key, val))
@@ -96,29 +97,29 @@ int pc_config_export(const char *ns, const pc_cfg_field *fields, size_t n, char 
 
 // Set one key=val pair against the field table; returns true iff a matching field was found and its
 // setter accepted the value. Extracted so the import loop stays flat (one dispatch, no nested type switch).
-static proto_bool config_apply_field(const pc_cfg_field *fields, size_t n, const char *key, const char *val)
+static proto_bool config_apply_field(const protocore_cfg_field *fields, size_t n, const char *key, const char *val)
 {
-    pc_cfg_type t;
+    protocore_cfg_type t;
     if (!field_type(fields, n, key, &t))
     {
         return PROTO_FALSE;
     }
-    if (t == PC_CFG_U32)
+    if (t == PROTOCORE_CFG_U32)
     {
-        return pc_config_set_u32(key, (uint32_t)str.to_ulong(val, NULL));
+        return protocore_config_set_u32(key, (uint32_t)str.to_ulong(val, NULL));
     }
-    if (t == PC_CFG_STR)
+    if (t == PROTOCORE_CFG_STR)
     {
-        return pc_config_set_str(key, val);
+        return protocore_config_set_str(key, val);
     }
     return PROTO_FALSE;
 }
 
-int pc_config_import(const char *ns, const pc_cfg_field *fields, size_t n, const char *text, size_t len)
+int protocore_config_import(const char *ns, const protocore_cfg_field *fields, size_t n, const char *text, size_t len)
 {
-    if (!text || !fields || !pc_config_begin(ns))
+    if (!text || !fields || !protocore_config_begin(ns))
     {
-        return 0; // the host config_store backend's pc_config_begin always returns true
+        return 0; // the host config_store backend's protocore_config_begin always returns true
     }
 
     int count = 0;
@@ -146,10 +147,10 @@ int pc_config_import(const char *ns, const pc_cfg_field *fields, size_t n, const
         }
         size_t klen = eq - i;
         size_t vlen = eol - (eq + 1);
-        if (klen > 0 && klen < PC_KEY_MAX && vlen < PC_VAL_MAX)
+        if (klen > 0 && klen < PROTOCORE_KEY_MAX && vlen < PROTOCORE_VAL_MAX)
         {
-            char key[PC_KEY_MAX];
-            char val[PC_VAL_MAX];
+            char key[PROTOCORE_KEY_MAX];
+            char val[PROTOCORE_VAL_MAX];
             mem.cpy(key, text + i, klen);
             key[klen] = '\0';
             mem.cpy(val, text + eq + 1, vlen);
@@ -164,4 +165,4 @@ int pc_config_import(const char *ns, const pc_cfg_field *fields, size_t n, const
     return count;
 }
 
-#endif // PC_ENABLE_CONFIG_IO
+#endif // PROTOCORE_ENABLE_CONFIG_IO

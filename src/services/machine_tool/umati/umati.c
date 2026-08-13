@@ -13,12 +13,12 @@
 
 #include "services/machine_tool/umati/umati.h"
 
-#if PC_ENABLE_UMATI
+#if PROTOCORE_ENABLE_UMATI
 
 // strnlen (string.h is allowed; the no-stdlib rule is about stdlib.h/malloc)
 
 // ---------------------------------------------------------------------------
-// Node identifiers (namespace PC_UMATI_NS). Objects end in 0; their variables count up from it.
+// Node identifiers (namespace PROTOCORE_UMATI_NS). Objects end in 0; their variables count up from it.
 // ---------------------------------------------------------------------------
 static enum : uint32_t // NOSONAR(cpp:S3642): anonymous table of OPC-UA node ids used as bare uint32_t (arithmetic +
                        // wire compares); enum class would force a cast at every use
@@ -63,7 +63,7 @@ static enum : uint32_t // NOSONAR(cpp:S3642): anonymous table of OPC-UA node ids
 };
 
 // All MachineTool model state, owned by one instance (internal linkage): the bound machine-data
-// pointer the resolvers read from. Null until pc_umati_bind(); a Read/Browse before binding is a clean
+// pointer the resolvers read from. Null until protocore_umati_bind(); a Read/Browse before binding is a clean
 // miss (BadNodeIdUnknown), so the server never dereferences a null model.
 typedef struct
 {
@@ -112,9 +112,9 @@ static int32_t add_ref(OpcUaReference *out, int32_t n, uint32_t max, uint32_t ta
     OpcUaReference *r = &out[n];
     r->ref_type_id = organizes ? OPCUA_REFTYPE_ORGANIZES : OPCUA_REFTYPE_HAS_COMPONENT;
     r->is_forward = PROTO_TRUE;
-    r->target_ns = PC_UMATI_NS;
+    r->target_ns = PROTOCORE_UMATI_NS;
     r->target_id = target_id;
-    r->browse_name_ns = PC_UMATI_NS;
+    r->browse_name_ns = PROTOCORE_UMATI_NS;
     r->browse_name = name;
     r->display_name = name;
     r->node_class = node_class;
@@ -134,15 +134,15 @@ static int32_t add_var(OpcUaReference *out, int32_t n, uint32_t max, uint32_t id
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
-void pc_umati_bind(const UmatiMachineTool *mt)
+void protocore_umati_bind(const UmatiMachineTool *mt)
 {
     s_umati.mt = mt;
 }
 
-proto_bool pc_umati_read(uint16_t ns, uint32_t id, uint32_t attribute, OpcUaVariant *out)
+proto_bool protocore_umati_read(uint16_t ns, uint32_t id, uint32_t attribute, OpcUaVariant *out)
 {
     const UmatiMachineTool *mt = s_umati.mt;
-    if (!mt || ns != PC_UMATI_NS || attribute != OPCUA_ATTR_VALUE)
+    if (!mt || ns != PROTOCORE_UMATI_NS || attribute != OPCUA_ATTR_VALUE)
     {
         return PROTO_FALSE;
     }
@@ -226,7 +226,7 @@ proto_bool pc_umati_read(uint16_t ns, uint32_t id, uint32_t attribute, OpcUaVari
     }
 }
 
-int32_t pc_umati_browse(uint16_t ns, uint32_t id, OpcUaReference *out, uint32_t max)
+int32_t protocore_umati_browse(uint16_t ns, uint32_t id, OpcUaReference *out, uint32_t max)
 {
     const UmatiMachineTool *mt = s_umati.mt;
     if (!mt)
@@ -241,7 +241,7 @@ int32_t pc_umati_browse(uint16_t ns, uint32_t id, OpcUaReference *out, uint32_t 
                        /*organizes=*/PROTO_TRUE);
     }
 
-    if (ns != PC_UMATI_NS)
+    if (ns != PROTOCORE_UMATI_NS)
     {
         return -1;
     }
@@ -305,11 +305,11 @@ int32_t pc_umati_browse(uint16_t ns, uint32_t id, OpcUaReference *out, uint32_t 
     }
 }
 
-void pc_umati_install(const UmatiMachineTool *mt)
+void protocore_umati_install(const UmatiMachineTool *mt)
 {
-    pc_umati_bind(mt);
-    pc_opcua_set_read_handler(pc_umati_read);
-    pc_opcua_set_browse_handler(pc_umati_browse);
+    protocore_umati_bind(mt);
+    protocore_opcua_set_read_handler(protocore_umati_read);
+    protocore_opcua_set_browse_handler(protocore_umati_browse);
 }
 
-#endif // PC_ENABLE_UMATI
+#endif // PROTOCORE_ENABLE_UMATI

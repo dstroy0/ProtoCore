@@ -37,15 +37,15 @@ http_get_header	KEYWORD2
 http_get_query	KEYWORD2
 init_wifi_physical	KEYWORD2
 wifi_ready	KEYWORD2
-pc_mdns_begin	KEYWORD2
-pc_ntp_begin	KEYWORD2
-pc_ntp_synced	KEYWORD2
-pc_ntp_epoch	KEYWORD2
-pc_ntp_http_date	KEYWORD2
-pc_ota_begin	KEYWORD2
-pc_provisioning_load	KEYWORD2
-pc_provisioning_begin	KEYWORD2
-pc_provisioning_clear	KEYWORD2
+protocore_mdns_begin	KEYWORD2
+protocore_ntp_begin	KEYWORD2
+protocore_ntp_synced	KEYWORD2
+protocore_ntp_epoch	KEYWORD2
+protocore_ntp_http_date	KEYWORD2
+protocore_ota_begin	KEYWORD2
+protocore_provisioning_load	KEYWORD2
+protocore_provisioning_begin	KEYWORD2
+protocore_provisioning_clear	KEYWORD2
 
 ##############################
 # Enumerators (LITERAL1)
@@ -63,10 +63,10 @@ HTTP_UNKNOWN	LITERAL1
 HTTP_10	LITERAL1
 HTTP_11	LITERAL1
 
-PC_OK	LITERAL1
-PC_ERR_NO_LISTENERS	LITERAL1
-PC_ERR_LISTENER_FULL	LITERAL1
-PC_ERR_LISTEN_FAILED	LITERAL1
+PROTOCORE_OK	LITERAL1
+PROTOCORE_ERR_NO_LISTENERS	LITERAL1
+PROTOCORE_ERR_LISTENER_FULL	LITERAL1
+PROTOCORE_ERR_LISTEN_FAILED	LITERAL1
 
 CONN_FREE	LITERAL1
 CONN_ACTIVE	LITERAL1

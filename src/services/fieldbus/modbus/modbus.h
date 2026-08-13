@@ -8,18 +8,18 @@
  * Split like the CoAP/SNMP services into a pure, host-testable core and an
  * ESP32-only TCP transport:
  *
- *  - pc_modbus_process_adu() takes a complete Modbus TCP ADU (MBAP header + PDU) and
+ *  - protocore_modbus_process_adu() takes a complete Modbus TCP ADU (MBAP header + PDU) and
  *    produces the response ADU in a caller buffer - no sockets, no heap. It is
  *    unit-tested on the host (env:native_modbus).
- *  - pc_modbus_rx() is the ProtoConn::PROTO_MODBUS data handler dispatched by the session layer;
+ *  - protocore_modbus_rx() is the ProtoConn::PROTO_MODBUS data handler dispatched by the session layer;
  *    it frames ADUs out of the rx ring and feeds them through
- *    pc_modbus_process_adu(). The slave keeps no per-connection state (a partial
+ *    protocore_modbus_process_adu(). The slave keeps no per-connection state (a partial
  *    frame waits in the rx ring), so no accept/close hooks are needed. Open the
  *    port with listen(502, ProtoConn::PROTO_MODBUS).
  *
  * The data model is four fixed BSS tables (coils, discrete inputs, holding
  * registers, input registers). The application reads and writes them with the
- * accessors below; a write arriving from a client also fires pc_modbus_on_write().
+ * accessors below; a write arriving from a client also fires protocore_modbus_on_write().
  *
  * Supported function codes: 0x01 Read Coils, 0x02 Read Discrete Inputs,
  * 0x03 Read Holding Registers, 0x04 Read Input Registers, 0x05 Write Single Coil,
@@ -34,9 +34,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_NEED_MODBUS
+#if PROTOCORE_NEED_MODBUS
 
 /** @brief Modbus function codes (Modbus Application Protocol §6). */
 typedef enum PROTO_ENUM_PACKED
@@ -79,19 +79,19 @@ typedef void (*ModbusWriteCb)(uint8_t fc, uint16_t start, uint16_t count);
 // ---------------------------------------------------------------------------
 
 /** @brief Zero the entire data model and clear the write callback. */
-void pc_modbus_server_init();
+void protocore_modbus_server_init();
 
 /** @brief Register a callback invoked after each client write (nullable). */
-void pc_modbus_on_write(ModbusWriteCb cb);
+void protocore_modbus_on_write(ModbusWriteCb cb);
 
-proto_bool pc_modbus_get_coil(uint16_t addr);                    ///< Read a coil (false if out of range).
-void pc_modbus_set_coil(uint16_t addr, proto_bool on);           ///< Set a coil (no-op if out of range).
-proto_bool pc_modbus_get_discrete_input(uint16_t addr);          ///< Read a discrete input.
-void pc_modbus_set_discrete_input(uint16_t addr, proto_bool on); ///< Set a discrete input (application side).
-uint16_t pc_modbus_get_holding_reg(uint16_t addr);               ///< Read a holding register (0 if out of range).
-void pc_modbus_set_holding_reg(uint16_t addr, uint16_t value);   ///< Set a holding register.
-uint16_t pc_modbus_get_input_reg(uint16_t addr);                 ///< Read an input register.
-void pc_modbus_set_input_reg(uint16_t addr, uint16_t value);     ///< Set an input register (application side).
+proto_bool protocore_modbus_get_coil(uint16_t addr);                    ///< Read a coil (false if out of range).
+void protocore_modbus_set_coil(uint16_t addr, proto_bool on);           ///< Set a coil (no-op if out of range).
+proto_bool protocore_modbus_get_discrete_input(uint16_t addr);          ///< Read a discrete input.
+void protocore_modbus_set_discrete_input(uint16_t addr, proto_bool on); ///< Set a discrete input (application side).
+uint16_t protocore_modbus_get_holding_reg(uint16_t addr);             ///< Read a holding register (0 if out of range).
+void protocore_modbus_set_holding_reg(uint16_t addr, uint16_t value); ///< Set a holding register.
+uint16_t protocore_modbus_get_input_reg(uint16_t addr);               ///< Read an input register.
+void protocore_modbus_set_input_reg(uint16_t addr, uint16_t value);   ///< Set an input register (application side).
 
 // ---------------------------------------------------------------------------
 // Core processing (host-testable; no sockets, no heap)
@@ -108,9 +108,9 @@ void pc_modbus_set_input_reg(uint16_t addr, uint16_t value);     ///< Set an inp
  *
  * @return number of response bytes written, or 0 to send nothing.
  */
-size_t pc_modbus_process_adu(const uint8_t *req, size_t req_len, uint8_t *resp, size_t pc_resp_cap);
+size_t protocore_modbus_process_adu(const uint8_t *req, size_t req_len, uint8_t *resp, size_t protocore_resp_cap);
 
-#if PC_ENABLE_MODBUS_RTU
+#if PROTOCORE_ENABLE_MODBUS_RTU
 /**
  * @brief Process one complete Modbus RTU ADU (`[addr][PDU][CRC16]`) for slave
  *        @p my_addr against the data model, writing the RTU response ADU.
@@ -122,8 +122,8 @@ size_t pc_modbus_process_adu(const uint8_t *req, size_t req_len, uint8_t *resp, 
  *
  * @return number of RTU response bytes written, or 0 to send nothing.
  */
-size_t pc_modbus_rtu_process_adu(const uint8_t *req, size_t req_len, uint8_t *resp, size_t pc_resp_cap,
-                                 uint8_t my_addr);
+size_t protocore_modbus_rtu_process_adu(const uint8_t *req, size_t req_len, uint8_t *resp, size_t protocore_resp_cap,
+                                        uint8_t my_addr);
 #endif
 
 // ---------------------------------------------------------------------------
@@ -131,14 +131,14 @@ size_t pc_modbus_rtu_process_adu(const uint8_t *req, size_t req_len, uint8_t *re
 // ---------------------------------------------------------------------------
 
 /** @brief Frame and process received Modbus ADUs for the connection on @p slot. */
-void pc_modbus_rx(uint8_t slot);
+void protocore_modbus_rx(uint8_t slot);
 
 /** @brief The Modbus ProtoHandler (accessor; nullptr on host builds; installed by the builtins list). */
 struct ProtoHandler;
-const struct ProtoHandler *pc_modbus_proto_handler(void);
+const struct ProtoHandler *protocore_modbus_protocore_handler(void);
 
-#endif // PC_NEED_MODBUS
+#endif // PROTOCORE_NEED_MODBUS
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_MODBUS_H

@@ -3,7 +3,7 @@
 
 /**
  * @file grpcweb.h
- * @brief gRPC-Web message framing (PC_ENABLE_GRPC_WEB) - zero-heap length-prefixed frame
+ * @brief gRPC-Web message framing (PROTOCORE_ENABLE_GRPC_WEB) - zero-heap length-prefixed frame
  *        builder + parser, the HTTP/1.1-reachable subset of gRPC that wraps the Protobuf
  *        codec (services/iot/protobuf). gRPC proper needs HTTP/2; gRPC-Web rides the shipped
  *        HTTP/1.1 server/client.
@@ -29,26 +29,27 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_GRPC_WEB
+#if PROTOCORE_ENABLE_GRPC_WEB
 
 #define GRPCWEB_FLAG_COMPRESSED 0x01
 #define GRPCWEB_FLAG_TRAILER 0x80
 #define GRPCWEB_PREFIX_LEN 5
 
 /** @brief Frame a body: `[flags][len BE32][body]`. Returns total octets, or 0 on overflow. */
-size_t pc_grpcweb_frame(uint8_t *buf, size_t cap, uint8_t flags, const uint8_t *body, size_t body_len);
+size_t protocore_grpcweb_frame(uint8_t *buf, size_t cap, uint8_t flags, const uint8_t *body, size_t body_len);
 
 /** @brief Frame a (Protobuf) message; @p compressed sets the compressed flag. */
-size_t pc_grpcweb_frame_message(uint8_t *buf, size_t cap, const uint8_t *msg, size_t msg_len, proto_bool compressed);
+size_t protocore_grpcweb_frame_message(uint8_t *buf, size_t cap, const uint8_t *msg, size_t msg_len,
+                                       proto_bool compressed);
 
 /**
  * @brief Build a trailers frame: `grpc-status:<status>\r\n` plus, when @p message is given,
  *        `grpc-message:<message>\r\n`, wrapped with the 0x80 trailer flag.
  * @return total octets written, or 0 on overflow.
  */
-size_t pc_grpcweb_frame_trailer(uint8_t *buf, size_t cap, int status, const char *message);
+size_t protocore_grpcweb_frame_trailer(uint8_t *buf, size_t cap, int status, const char *message);
 
 /** @brief One parsed frame; @ref body points INTO the source buffer. */
 typedef struct
@@ -65,20 +66,20 @@ typedef struct
  * @param consumed receives the frame's total length so the caller can advance.
  * @return true on a complete frame; false if fewer than the prefix + body octets are buffered.
  */
-proto_bool pc_grpcweb_parse(const uint8_t *buf, size_t len, GrpcWebFrame *out, size_t *consumed);
+proto_bool protocore_grpcweb_parse(const uint8_t *buf, size_t len, GrpcWebFrame *out, size_t *consumed);
 
 /** @brief Extract `grpc-status` (an integer) from a trailers-frame body. */
-proto_bool pc_grpcweb_trailer_status(const uint8_t *body, size_t len, int *status);
+proto_bool protocore_grpcweb_trailer_status(const uint8_t *body, size_t len, int *status);
 
 /**
  * @brief Extract `grpc-message` (the human-readable status text) from a trailers-frame body. The value is
  *        the slice up to the end of its line; per the gRPC spec it is percent-encoded on the wire (any
  *        decoding is the caller's). @p msg / @p msg_len point INTO @p body. @return true iff the key exists.
  */
-proto_bool pc_grpcweb_trailer_message(const uint8_t *body, size_t len, const char **msg, size_t *msg_len);
+proto_bool protocore_grpcweb_trailer_message(const uint8_t *body, size_t len, const char **msg, size_t *msg_len);
 
-#endif // PC_ENABLE_GRPC_WEB
+#endif // PROTOCORE_ENABLE_GRPC_WEB
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_GRPCWEB_H

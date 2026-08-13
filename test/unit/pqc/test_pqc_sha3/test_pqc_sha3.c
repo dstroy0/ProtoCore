@@ -16,7 +16,7 @@
 // to satisfy the symbol too or it does not link - the sibling suites (test_pqc_mlkem,
 // test_pqc_sntrup761) each define the same deterministic source for their own round-trips.
 static uint32_t s_rng = 0xA5A5F00Du;
-void pc_rand_fill(uint8_t *b, size_t n)
+void protocore_rand_fill(uint8_t *b, size_t n)
 {
     for (size_t i = 0; i < n; ++i)
     {
@@ -74,7 +74,7 @@ static void sha3_256_case(size_t n, const char *want_hex, const char *msg_label)
     uint8_t got[32];
     uint8_t want[32];
     fill_msg(msg, n);
-    pc_sha3_256(got, msg, n);
+    protocore_sha3_256(got, msg, n);
     hx(want_hex, want, 32);
     TEST_ASSERT_EQUAL_MEMORY_MESSAGE(want, got, 32, msg_label);
 }
@@ -85,7 +85,7 @@ static void sha3_512_case(size_t n, const char *want_hex, const char *msg_label)
     uint8_t got[64];
     uint8_t want[64];
     fill_msg(msg, n);
-    pc_sha3_512(got, msg, n);
+    protocore_sha3_512(got, msg, n);
     hx(want_hex, want, 64);
     TEST_ASSERT_EQUAL_MEMORY_MESSAGE(want, got, 64, msg_label);
 }
@@ -123,12 +123,12 @@ void test_shake128_rate_boundaries()
     uint8_t want[32];
 
     fill_msg(msg, 167);
-    pc_shake128(got, sizeof(got), msg, 167);
+    protocore_shake128(got, sizeof(got), msg, 167);
     hx("bb961bb015521037905f9baf69ce60dd3ba73f6ead09a559c8d8a85e10753bca", want, 32);
     TEST_ASSERT_EQUAL_MEMORY_MESSAGE(want, got, 32, "SHAKE128 167 (rate-1)");
 
     fill_msg(msg, 168);
-    pc_shake128(got, sizeof(got), msg, 168);
+    protocore_shake128(got, sizeof(got), msg, 168);
     hx("d4f73f3b6c4b72d05f45ed1f80b5774409f9cf336fc202bffa42ac38a6d3fbee", want, 32);
     TEST_ASSERT_EQUAL_MEMORY_MESSAGE(want, got, 32, "SHAKE128 168 (one block)");
 }
@@ -136,11 +136,11 @@ void test_shake128_rate_boundaries()
 void test_sha3_256()
 {
     uint8_t got[32], want[32];
-    pc_sha3_256(got, (const uint8_t *)"", 0);
+    protocore_sha3_256(got, (const uint8_t *)"", 0);
     hx("a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a", want, 32);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(want, got, 32);
 
-    pc_sha3_256(got, (const uint8_t *)"abc", 3);
+    protocore_sha3_256(got, (const uint8_t *)"abc", 3);
     hx("3a985da74fe225b2045c172d6bd390bd855f086e3e9d525b46bfe24511431532", want, 32);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(want, got, 32);
 }
@@ -148,13 +148,13 @@ void test_sha3_256()
 void test_sha3_512()
 {
     uint8_t got[64], want[64];
-    pc_sha3_512(got, (const uint8_t *)"", 0);
+    protocore_sha3_512(got, (const uint8_t *)"", 0);
     hx("a69f73cca23a9ac5c8b567dc185a756e97c982164fe25859e0d1dcc1475c80a6"
        "15b2123af1f5f94c11e3e9402c3ac558f500199d95b6d3e301758586281dcd26",
        want, 64);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(want, got, 64);
 
-    pc_sha3_512(got, (const uint8_t *)"abc", 3);
+    protocore_sha3_512(got, (const uint8_t *)"abc", 3);
     hx("b751850b1a57168a5693cd924b6b096e08f621827444f70d884f5d0240d2712e"
        "10e116e9192af3c91a7ec57647e3934057340b4cf408d5a56592f8274eec53f0",
        want, 64);
@@ -164,16 +164,16 @@ void test_sha3_512()
 void test_shake_empty()
 {
     uint8_t got[32], want[32];
-    pc_shake128(got, 32, (const uint8_t *)"", 0);
+    protocore_shake128(got, 32, (const uint8_t *)"", 0);
     hx("7f9c2ba4e88f827d616045507605853ed73b8093f6efbc88eb1a6eacfa66ef26", want, 32);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(want, got, 32);
 
-    pc_shake256(got, 32, (const uint8_t *)"", 0);
+    protocore_shake256(got, 32, (const uint8_t *)"", 0);
     hx("46b9dd2b0ba88d13233b3feb743eeb243fcd52ea62b81b82b50c27646ed5762f", want, 32);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(want, got, 32);
 }
 
-// The incremental XOF (pc_shake128_absorb + repeated pc_keccak_squeeze) must produce the same stream as one
+// The incremental XOF (protocore_shake128_absorb + repeated protocore_keccak_squeeze) must produce the same stream as one
 // shot, including across the 168-octet block boundary that ML-KEM's rejection sampler crosses.
 // The continuity check below compares the one-shot against the incremental path, but sha3.c routes
 // the one-shot through that same squeeze - so it proves the split does not corrupt state, and not
@@ -184,7 +184,7 @@ void test_shake128_stream_matches_published()
 {
     uint8_t got[200];
     uint8_t want[200];
-    pc_shake128(got, sizeof(got), (const uint8_t *)"abc", 3);
+    protocore_shake128(got, sizeof(got), (const uint8_t *)"abc", 3);
     hx("5881092dd818bf5cf8a3ddb793fbcba74097d5c526a6d35f97b83351940f2cc8"
        "44c50af32acd3f2cdd066568706f509bc1bdde58295dae3f891a9a0fca578378"
        "9a41f8611214ce612394df286a62d1a2252aa94db9c538956c717dc2bed4f232"
@@ -200,7 +200,7 @@ void test_shake256_stream_matches_published()
 {
     uint8_t got[200];
     uint8_t want[200];
-    pc_shake256(got, sizeof(got), (const uint8_t *)"abc", 3);
+    protocore_shake256(got, sizeof(got), (const uint8_t *)"abc", 3);
     hx("483366601360a8771c6863080cc4114d8db44530f8f1e1ee4f94ea37e78b5739"
        "d5a15bef186a5386c75744c0527e1faa9f8726e462a12a4feb06bd8801e751e4"
        "1385141204f329979fd3047a13c5657724ada64d2470157b3cdc288620944d78"
@@ -219,13 +219,13 @@ void test_shake256_stream_continuity()
     const uint8_t msg[3] = {'a', 'b', 'c'};
 
     uint8_t oneshot[200];
-    pc_shake256(oneshot, sizeof(oneshot), msg, sizeof(msg));
+    protocore_shake256(oneshot, sizeof(oneshot), msg, sizeof(msg));
 
     KeccakCtx ctx;
-    pc_keccak_absorb(&ctx, KECCAK_RATE_SHAKE256, msg, sizeof(msg), 0x1F);
+    protocore_keccak_absorb(&ctx, KECCAK_RATE_SHAKE256, msg, sizeof(msg), 0x1F);
     uint8_t split[200];
-    pc_keccak_squeeze(&ctx, split, 100);       // inside the first 136-octet block
-    pc_keccak_squeeze(&ctx, split + 100, 100); // continues past the boundary
+    protocore_keccak_squeeze(&ctx, split, 100);       // inside the first 136-octet block
+    protocore_keccak_squeeze(&ctx, split + 100, 100); // continues past the boundary
     TEST_ASSERT_EQUAL_HEX8_ARRAY(oneshot, split, sizeof(oneshot));
 }
 
@@ -234,13 +234,13 @@ void test_shake_stream_continuity()
     const uint8_t msg[3] = {'a', 'b', 'c'};
 
     uint8_t oneshot[200];
-    pc_shake128(oneshot, sizeof(oneshot), msg, sizeof(msg));
+    protocore_shake128(oneshot, sizeof(oneshot), msg, sizeof(msg));
 
     KeccakCtx ctx;
-    pc_shake128_absorb(&ctx, msg, sizeof(msg));
+    protocore_shake128_absorb(&ctx, msg, sizeof(msg));
     uint8_t split[200];
-    pc_keccak_squeeze(&ctx, split, 120);      // first block plus into the second
-    pc_keccak_squeeze(&ctx, split + 120, 80); // continues past the 168-octet boundary
+    protocore_keccak_squeeze(&ctx, split, 120);      // first block plus into the second
+    protocore_keccak_squeeze(&ctx, split + 120, 80); // continues past the 168-octet boundary
     TEST_ASSERT_EQUAL_HEX8_ARRAY(oneshot, split, sizeof(oneshot));
 }
 

@@ -3,7 +3,7 @@
 
 /**
  * @file OpcUa.ino
- * @brief OPC UA Binary server - SecureChannel + Session + Read/Write + Browse (PC_ENABLE_OPCUA).
+ * @brief OPC UA Binary server - SecureChannel + Session + Read/Write + Browse (PROTOCORE_ENABLE_OPCUA).
  *
  * Opens an OPC UA endpoint on TCP/4840. Implements the OPC UA Binary type codec,
  * UA-TCP (UACP) framing, the Hello/Acknowledge handshake, the SecureChannel
@@ -19,11 +19,11 @@
  * event loop - OPC UA is just another protocol on its own port.
  *
  * NOTE: enable it for the whole build. In platformio.ini:
- *     build_flags = -DPC_ENABLE_OPCUA=1
+ *     build_flags = -DPROTOCORE_ENABLE_OPCUA=1
  * (Arduino IDE: it is already set for you in the build_opt.h beside this sketch, so it builds as-is.)
  */
 
-#define PC_ENABLE_OPCUA 1
+#define PROTOCORE_ENABLE_OPCUA 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -38,7 +38,7 @@ static uint32_t setpoint = 100; // a writable variable, exposed at ns=1;i=10
 // Read resolver: map a tiny address space (namespace 1) onto live values. A client
 // Reads node ns=1;i=1 (uptime), i=2 (free heap), i=3 (a Double) or i=10 (the writable
 // setpoint). Return false for anything else and the server answers BadNodeIdUnknown.
-static bool pc_opcua_read(uint16_t ns, uint32_t id, uint32_t attribute, OpcUaVariant *out)
+static bool protocore_opcua_read(uint16_t ns, uint32_t id, uint32_t attribute, OpcUaVariant *out)
 {
     if (ns != 1 || attribute != OPCUA_ATTR_VALUE)
     {
@@ -69,7 +69,7 @@ static bool pc_opcua_read(uint16_t ns, uint32_t id, uint32_t attribute, OpcUaVar
 
 // Write resolver: only ns=1;i=10 (the setpoint) is writable. Returns a StatusCode -
 // Good (0) on success, or a Bad code the client surfaces as the write result.
-static uint32_t pc_opcua_write(uint16_t ns, uint32_t id, uint32_t attribute, const OpcUaVariant *value)
+static uint32_t protocore_opcua_write(uint16_t ns, uint32_t id, uint32_t attribute, const OpcUaVariant *value)
 {
     if (ns == 1 && id == 10 && attribute == OPCUA_ATTR_VALUE && value->type == OPCUA_VAR_UINT32)
     {
@@ -81,7 +81,7 @@ static uint32_t pc_opcua_write(uint16_t ns, uint32_t id, uint32_t attribute, con
 
 // Browse resolver: the standard Objects folder (ns=0;i=85) organizes our three
 // variables (ns=1;i=1..3). Browsing anything else is BadNodeIdUnknown.
-static int32_t pc_opcua_browse(uint16_t ns, uint32_t id, OpcUaReference *out, uint32_t max)
+static int32_t protocore_opcua_browse(uint16_t ns, uint32_t id, OpcUaReference *out, uint32_t max)
 {
     if (ns != 0 || id != 85) // i=85 == Objects folder
     {
@@ -118,9 +118,9 @@ void setup()
 
     on_http("/", HTTP_GET,
               [](uint8_t id, HttpReq *) { send_text(id, 200, "text/plain", "OPC UA on :4840"); });
-    pc_opcua_set_read_handler(pc_opcua_read);     // serve Reads for ns=1;i=1..3,10
-    pc_opcua_set_write_handler(pc_opcua_write);   // accept Writes to ns=1;i=10 (the setpoint)
-    pc_opcua_set_browse_handler(pc_opcua_browse); // list those under the Objects folder
+    protocore_opcua_set_read_handler(protocore_opcua_read);     // serve Reads for ns=1;i=1..3,10
+    protocore_opcua_set_write_handler(protocore_opcua_write);   // accept Writes to ns=1;i=10 (the setpoint)
+    protocore_opcua_set_browse_handler(protocore_opcua_browse); // list those under the Objects folder
     listen(4840, PROTO_OPCUA);  // OPC UA Binary endpoint - before begin() (it activates listeners)
     begin_http(80, NULL);
     Serial.println("OPC UA endpoint: opc.tcp://<ip>:4840 (handshake + SecureChannel + Session + Read/Write + Browse)");

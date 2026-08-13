@@ -13,12 +13,12 @@
 #include "crypto/asymmetric/rsa.h"
 #include "crypto/hash/sha256.h"
 #include "crypto/hash/sha512.h"
-#include "crypto/rng/rng.h" // pc_rand_fill: the mbedtls RNG callback
+#include "crypto/rng/rng.h" // protocore_rand_fill: the mbedtls RNG callback
 #include "mmgr/protomem.h"
 #include "mmgr/secure.h"
-#include "network_drivers/presentation/ssh/transport/ssh_keymat.h"
+#include "network_drivers/presentation/ssh/transport/transport.h"
 
-#if PC_HAS_HW_BIGNUM
+#if PROTOCORE_HAS_HW_BIGNUM
 #include <mbedtls/md.h>
 #include <mbedtls/pk.h>
 #include <mbedtls/rsa.h>
@@ -27,7 +27,7 @@
 // Public host key (BSS - no secret material).
 SshRsaPubKey ssh_host_pubkey;
 
-#if PC_HAS_HW_BIGNUM
+#if PROTOCORE_HAS_HW_BIGNUM
 
 // ---------------------------------------------------------------------------
 // Accelerated - cached mbedtls host-key signer over the vendor's modexp (NVS-backed)
@@ -37,7 +37,7 @@ SshRsaPubKey ssh_host_pubkey;
 static int ssh_mbedtls_rng(void *ctx, unsigned char *buf, size_t len)
 {
     (void)ctx;
-    pc_rand_fill(buf, len);
+    protocore_rand_fill(buf, len);
     return 0;
 }
 
@@ -45,25 +45,25 @@ static int ssh_mbedtls_rng(void *ctx, unsigned char *buf, size_t len)
 // blinding setup (~170 ms wasted per sign); the parsed context caches the blinding state, so keeping it
 // resident means each sign pays only the CRT modexp. The private key stays in RAM for the server
 // lifetime (as an SSH host key normally does); the mutex serializes signs because mbedtls mutates the
-// blinding values per operation. Loaded once at startup by pc_ssh_rsa_load_pubkey().
+// blinding values per operation. Loaded once at startup by protocore_ssh_rsa_load_pubkey().
 typedef struct
 {
     mbedtls_pk_context pk;             ///< parsed host key + cached blinding state
-    pc_platform_mutex lock;            ///< serializes signs on the shared context
-    pc_platform_mutex_ctrl lock_store; ///< the mutex object itself, in BSS
+    protocore_platform_mutex lock;            ///< serializes signs on the shared context
+    protocore_platform_mutex_ctrl lock_store; ///< the mutex object itself, in BSS
     proto_bool ready;                  ///< pk holds a valid parsed key
 } SshRsaCtx;
 static SshRsaCtx s_rsa;
 
-int pc_ssh_rsa_load_pubkey(void)
+int protocore_ssh_rsa_load_pubkey(void)
 {
     if (!s_rsa.lock)
     {
-        s_rsa.lock = pc_platform_mutex_create(&s_rsa.lock_store);
+        s_rsa.lock = protocore_platform_mutex_create(&s_rsa.lock_store);
     }
 
     uint8_t der[SSH_RSA_KEY_DER_MAX];
-    size_t der_len = pc_nvs_get_blob(PC_SSH_HOST_KEY_NS, PC_SSH_HOST_KEY_ITEM, der, sizeof(der));
+    size_t der_len = protocore_nvs_get_blob(PROTOCORE_SSH_HOST_KEY_NS, PROTOCORE_SSH_HOST_KEY_ITEM, der, sizeof(der));
     if (der_len == 0)
     {
         return -1;
@@ -82,7 +82,7 @@ int pc_ssh_rsa_load_pubkey(void)
                                   ssh_mbedtls_rng, NULL
 #endif
     );
-    pc_secure_wipe(der, der_len);
+    protocore_secure_wipe(der, der_len);
 
     if (rc != 0)
     {
@@ -91,7 +91,7 @@ int pc_ssh_rsa_load_pubkey(void)
     }
 
     mbedtls_rsa_context *rsa = mbedtls_pk_rsa(s_rsa.pk);
-    if (mbedtls_rsa_get_len(rsa) != PC_RSA_KEY_BYTES)
+    if (mbedtls_rsa_get_len(rsa) != PROTOCORE_RSA_KEY_BYTES)
     {
         mbedtls_pk_free(&s_rsa.pk);
         return -1;
@@ -103,7 +103,7 @@ int pc_ssh_rsa_load_pubkey(void)
     mbedtls_mpi_init(&n_mpi);
     mbedtls_mpi_init(&e_mpi);
     mbedtls_rsa_export(rsa, &n_mpi, NULL, NULL, NULL, &e_mpi);
-    mbedtls_mpi_write_binary(&n_mpi, ssh_host_pubkey.n, PC_RSA_KEY_BYTES);
+    mbedtls_mpi_write_binary(&n_mpi, ssh_host_pubkey.n, PROTOCORE_RSA_KEY_BYTES);
     mbedtls_mpi_write_binary(&e_mpi, ssh_host_pubkey.e_bytes + 4 - sizeof(ssh_host_pubkey.e_bytes),
                              sizeof(ssh_host_pubkey.e_bytes));
     mbedtls_mpi_free(&n_mpi);
@@ -114,47 +114,47 @@ int pc_ssh_rsa_load_pubkey(void)
     return 0;
 }
 
-int ssh_rsa_sign(uint8_t *work, const uint8_t *msg, size_t msg_len, pc_rsa_hash hash, uint8_t sig[PC_RSA_SIG_BYTES])
+int ssh_rsa_sign(uint8_t *work, const uint8_t *msg, size_t msg_len, protocore_rsa_hash hash, uint8_t sig[PROTOCORE_RSA_SIG_BYTES])
 {
     // Reuse the key parsed once at startup; lazy-load as a fallback if the sketch never did.
-    if (!s_rsa.ready && pc_ssh_rsa_load_pubkey() != 0)
+    if (!s_rsa.ready && protocore_ssh_rsa_load_pubkey() != 0)
     {
         return -1;
     }
 
     // mbedtls_pk_sign() PKCS#1-pads the supplied digest (it does NOT hash), so for rsa-sha2-256/512 we
     // pass SHA-256(msg) / SHA-512(msg).
-    const proto_bool sha512 = (hash == PC_RSA_HASH_SHA512);
+    const proto_bool sha512 = (hash == PROTOCORE_RSA_HASH_SHA512);
     const mbedtls_md_type_t md = sha512 ? MBEDTLS_MD_SHA512 : MBEDTLS_MD_SHA256;
-    const size_t dlen = sha512 ? PC_SHA512_DIGEST_LEN : PC_SHA256_DIGEST_LEN;
-    uint8_t digest[PC_SHA512_DIGEST_LEN];
+    const size_t dlen = sha512 ? PROTOCORE_SHA512_DIGEST_LEN : PROTOCORE_SHA256_DIGEST_LEN;
+    uint8_t digest[PROTOCORE_SHA512_DIGEST_LEN];
     if (sha512)
     {
-        pc_sha512(work, msg, msg_len, digest);
+        protocore_sha512(work, msg, msg_len, digest);
     }
     else
     {
-        pc_sha256(work, msg, msg_len, digest);
+        protocore_sha256(work, msg, msg_len, digest);
     }
 
     // Serialize: mbedtls mutates the context's blinding state on each private op.
     if (s_rsa.lock)
     {
-        pc_platform_mutex_take(s_rsa.lock, PC_PLATFORM_WAIT_FOREVER);
+        protocore_platform_mutex_take(s_rsa.lock, PROTOCORE_PLATFORM_WAIT_FOREVER);
     }
     size_t sig_len = 0;
 #if MBEDTLS_VERSION_MAJOR >= 3
-    int rc = mbedtls_pk_sign(&s_rsa.pk, md, digest, dlen, sig, PC_RSA_SIG_BYTES, &sig_len, ssh_mbedtls_rng, NULL);
+    int rc = mbedtls_pk_sign(&s_rsa.pk, md, digest, dlen, sig, PROTOCORE_RSA_SIG_BYTES, &sig_len, ssh_mbedtls_rng, NULL);
 #else
     int rc = mbedtls_pk_sign(&s_rsa.pk, md, digest, dlen, sig, &sig_len, ssh_mbedtls_rng, NULL);
 #endif
     if (s_rsa.lock)
     {
-        pc_platform_mutex_give(s_rsa.lock);
+        protocore_platform_mutex_give(s_rsa.lock);
     }
-    pc_secure_wipe(digest, sizeof(digest));
+    protocore_secure_wipe(digest, sizeof(digest));
 
-    return (rc == 0 && sig_len == PC_RSA_SIG_BYTES) ? 0 : -1;
+    return (rc == 0 && sig_len == PROTOCORE_RSA_SIG_BYTES) ? 0 : -1;
 }
 
 #else
@@ -169,13 +169,13 @@ int ssh_rsa_sign(uint8_t *work, const uint8_t *msg, size_t msg_len, pc_rsa_hash 
 // arm gives its parsed mbedtls context.
 typedef struct
 {
-    pc_span d;        ///< private exponent, PC_RSA_KEY_BYTES big-endian
+    protocore_span d;        ///< private exponent, PROTOCORE_RSA_KEY_BYTES big-endian
     proto_bool ready; ///< d holds a parsed key
 } SshRsaCtx;
 static SshRsaCtx s_rsa;
 
-_Static_assert(PC_RSA_KEY_BYTES + SSH_RSA_KEY_DER_MAX <= PC_WORK_SSH_HOST_KEY,
-               "PC_WORK_SSH_HOST_KEY must cover the private exponent and the DER walked over it");
+_Static_assert(PROTOCORE_RSA_KEY_BYTES + SSH_RSA_KEY_DER_MAX <= PROTOCORE_WORK_SSH_HOST_KEY,
+               "PROTOCORE_WORK_SSH_HOST_KEY must cover the private exponent and the DER walked over it");
 
 // Step over the DER element at *off. Writes the value's offset and length, and advances *off past
 // the element. False if the header or the value runs past len.
@@ -298,18 +298,18 @@ static proto_bool rsa_key_parse(const uint8_t *der, size_t len, uint8_t *d)
             return PROTO_FALSE;
         }
     }
-    return der_int(der, end, &off, ssh_host_pubkey.n, PC_RSA_KEY_BYTES) &&
+    return der_int(der, end, &off, ssh_host_pubkey.n, PROTOCORE_RSA_KEY_BYTES) &&
            der_int(der, end, &off, ssh_host_pubkey.e_bytes, sizeof(ssh_host_pubkey.e_bytes)) &&
-           der_int(der, end, &off, d, PC_RSA_KEY_BYTES);
+           der_int(der, end, &off, d, PROTOCORE_RSA_KEY_BYTES);
 }
 
-int pc_ssh_rsa_load_pubkey(void)
+int protocore_ssh_rsa_load_pubkey(void)
 {
-    if (!pc_span_has_storage(s_rsa.d))
+    if (!protocore_span_has_storage(s_rsa.d))
     {
-        s_rsa.d = pc_secure_persist_span(PC_RSA_KEY_BYTES);
+        s_rsa.d = protocore_secure_persist_span(PROTOCORE_RSA_KEY_BYTES);
     }
-    if (!pc_span_has_storage(s_rsa.d))
+    if (!protocore_span_has_storage(s_rsa.d))
     {
         return -1;
     }
@@ -317,20 +317,20 @@ int pc_ssh_rsa_load_pubkey(void)
     ssh_host_pubkey.loaded = PROTO_FALSE;
 
     // The DER is a working set: borrowed for this call, wiped by the release on every path out.
-    const size_t mark = pc_secure_mark();
-    pc_span der = pc_secure_span(SSH_RSA_KEY_DER_MAX, 0);
-    if (!pc_span_has_storage(der))
+    const size_t mark = protocore_secure_mark();
+    protocore_span der = protocore_secure_span(SSH_RSA_KEY_DER_MAX, 0);
+    if (!protocore_span_has_storage(der))
     {
-        pc_secure_release(mark);
+        protocore_secure_release(mark);
         return -1;
     }
-    const size_t der_len = pc_nvs_get_blob(PC_SSH_HOST_KEY_NS, PC_SSH_HOST_KEY_ITEM, der.buf, der.cap);
+    const size_t der_len = protocore_nvs_get_blob(PROTOCORE_SSH_HOST_KEY_NS, PROTOCORE_SSH_HOST_KEY_ITEM, der.buf, der.cap);
     if (der_len != 0 && rsa_key_parse(der.buf, der_len, s_rsa.d.buf))
     {
         s_rsa.ready = PROTO_TRUE;
         ssh_host_pubkey.loaded = PROTO_TRUE;
     }
-    pc_secure_release(mark);
+    protocore_secure_release(mark);
     if (!s_rsa.ready)
     {
         return -1;
@@ -338,17 +338,17 @@ int pc_ssh_rsa_load_pubkey(void)
     return 0;
 }
 
-int ssh_rsa_sign(uint8_t *work, const uint8_t *msg, size_t msg_len, pc_rsa_hash hash, uint8_t sig[PC_RSA_SIG_BYTES])
+int ssh_rsa_sign(uint8_t *work, const uint8_t *msg, size_t msg_len, protocore_rsa_hash hash, uint8_t sig[PROTOCORE_RSA_SIG_BYTES])
 {
     // Reuse the key parsed once at startup; lazy-load as a fallback if the sketch never did.
-    if (!s_rsa.ready && pc_ssh_rsa_load_pubkey() != 0)
+    if (!s_rsa.ready && protocore_ssh_rsa_load_pubkey() != 0)
     {
         return -1;
     }
-    return pc_rsa_sign_sw(ssh_host_pubkey.n, s_rsa.d.buf, work, msg, msg_len, hash, sig);
+    return protocore_rsa_sign_sw(ssh_host_pubkey.n, s_rsa.d.buf, work, msg, msg_len, hash, sig);
 }
 
-#endif // PC_HAS_HW_BIGNUM
+#endif // PROTOCORE_HAS_HW_BIGNUM
 
 // ---------------------------------------------------------------------------
 // "ssh-rsa" public-key blob serialization (both backends)
@@ -404,7 +404,7 @@ int ssh_rsa_encode_pubkey(uint8_t *out, size_t *out_len, size_t out_cap)
     mem.cpy(p, alg, alg_len);
     p += alg_len;
     p = put_mpint(p, ssh_host_pubkey.e_bytes, sizeof(ssh_host_pubkey.e_bytes));
-    p = put_mpint(p, ssh_host_pubkey.n, PC_RSA_KEY_BYTES);
+    p = put_mpint(p, ssh_host_pubkey.n, PROTOCORE_RSA_KEY_BYTES);
 
     *out_len = (size_t)(p - out);
     return 0;

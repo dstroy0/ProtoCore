@@ -17,23 +17,23 @@ void dbench_run(void)
 {
     static const uint8_t data[8] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88};
     static uint8_t frame[32];
-    uint16_t flen = pc_zwave_build_frame(ZWAVE_REQ, 0x13, data, sizeof(data), frame, sizeof(frame));
+    uint16_t flen = protocore_zwave_build_frame(ZWAVE_REQ, 0x13, data, sizeof(data), frame, sizeof(frame));
 
     for (;;)
     {
         DBENCH_BANNER("zwave");
         volatile uint32_t sink = 0;
         static uint8_t out[32];
-        DBENCH_OP("pc_zwave_build_frame", 200000,
-                  sink += pc_zwave_build_frame(ZWAVE_REQ, 0x13, data, sizeof(data), out, sizeof(out)));
-        DBENCH_OP("pc_zwave_parse_frame", 200000, {
+        DBENCH_OP("protocore_zwave_build_frame", 200000,
+                  sink += protocore_zwave_build_frame(ZWAVE_REQ, 0x13, data, sizeof(data), out, sizeof(out)));
+        DBENCH_OP("protocore_zwave_parse_frame", 200000, {
             uint8_t type;
             uint8_t cmd;
             const uint8_t *pdata;
             uint8_t pdata_len;
-            sink += pc_zwave_parse_frame(frame, flen, &type, &cmd, &pdata, &pdata_len) >= 0 ? cmd : 0;
+            sink += protocore_zwave_parse_frame(frame, flen, &type, &cmd, &pdata, &pdata_len) >= 0 ? cmd : 0;
         });
-        DBENCH_OP("pc_zwave_build_ack", 200000, sink += pc_zwave_build_ack(out, sizeof(out)));
+        DBENCH_OP("protocore_zwave_build_ack", 200000, sink += protocore_zwave_build_ack(out, sizeof(out)));
         (void)sink;
         DBENCH_DONE();
     }

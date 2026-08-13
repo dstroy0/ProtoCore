@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // On-device CCOUNT microbenchmark for the GraphQL query subset (services/iot/graphql):
-// pc_graphql_execute() parses a query document into a fixed AST node pool (no heap) and walks the
+// protocore_graphql_execute() parses a query document into a fixed AST node pool (no heap) and walks the
 // selection set, calling a single leaf resolver and emitting a `{"data":{...}}` JSON response that
 // mirrors the requested shape. Every operation here is pure - a parse + execute over a query string
 // into a caller buffer - so each call exercises the real production code path (like performance_benching/device/
@@ -29,58 +29,58 @@
 
 // Demo schema resolver (mirrors test/test_graphql's): a handful of flat scalar fields, a nested
 // `device` object, and argument-driven `sensor`/`greet` leaves. Pure - no I/O of any kind.
-static bool gql_resolver(const char *path, const struct pc_gql_args *args, pc_gql_value *out)
+static bool gql_resolver(const char *path, const struct protocore_gql_args *args, protocore_gql_value *out)
 {
     if (!strcmp(path, "name"))
     {
-        out->type = PC_GQL_STR;
+        out->type = PROTOCORE_GQL_STR;
         out->s = "esp32";
         return true;
     }
     if (!strcmp(path, "uptime"))
     {
-        out->type = PC_GQL_INT;
+        out->type = PROTOCORE_GQL_INT;
         out->i = 12345;
         return true;
     }
     if (!strcmp(path, "temp"))
     {
-        out->type = PC_GQL_FLOAT;
+        out->type = PROTOCORE_GQL_FLOAT;
         out->f = 21.5;
         return true;
     }
     if (!strcmp(path, "online"))
     {
-        out->type = PC_GQL_BOOL;
+        out->type = PROTOCORE_GQL_BOOL;
         out->b = true;
         return true;
     }
     if (!strcmp(path, "device.name"))
     {
-        out->type = PC_GQL_STR;
+        out->type = PROTOCORE_GQL_STR;
         out->s = "dev1";
         return true;
     }
     if (!strcmp(path, "device.uptime"))
     {
-        out->type = PC_GQL_INT;
+        out->type = PROTOCORE_GQL_INT;
         out->i = 99;
         return true;
     }
     if (!strcmp(path, "sensor.value"))
     {
         long long id = 0;
-        out->type = PC_GQL_INT;
-        out->i = pc_gql_arg_int(args, "id", &id) ? id * 10 : -1;
+        out->type = PROTOCORE_GQL_INT;
+        out->i = protocore_gql_arg_int(args, "id", &id) ? id * 10 : -1;
         return true;
     }
     if (!strcmp(path, "greet"))
     {
         const char *who = "?";
-        pc_gql_arg_str(args, "name", &who);
+        protocore_gql_arg_str(args, "name", &who);
         static char b[64];
         snprintf(b, sizeof(b), "hi %s", who);
-        out->type = PC_GQL_STR;
+        out->type = PROTOCORE_GQL_STR;
         out->s = b;
         return true;
     }
@@ -104,20 +104,20 @@ void dbench_run(void)
     {
         DBENCH_BANNER("graphql");
         volatile int32_t sink = 0;
-        DBENCH_OP("pc_graphql_execute flat", 20000,
-                  sink += (int32_t)pc_graphql_execute(q_flat, sizeof(q_flat) - 1, gql_resolver, resp, sizeof(resp)));
-        DBENCH_OP("pc_graphql_execute nested", 20000,
+        DBENCH_OP("protocore_graphql_execute flat", 20000,
+                  sink += (int32_t)protocore_graphql_execute(q_flat, sizeof(q_flat) - 1, gql_resolver, resp, sizeof(resp)));
+        DBENCH_OP("protocore_graphql_execute nested", 20000,
                   sink +=
-                  (int32_t)pc_graphql_execute(q_nested, sizeof(q_nested) - 1, gql_resolver, resp, sizeof(resp)));
-        DBENCH_OP("pc_graphql_execute args", 20000,
-                  sink += (int32_t)pc_graphql_execute(q_args, sizeof(q_args) - 1, gql_resolver, resp, sizeof(resp)));
-        DBENCH_OP("pc_graphql_execute strarg", 20000,
+                  (int32_t)protocore_graphql_execute(q_nested, sizeof(q_nested) - 1, gql_resolver, resp, sizeof(resp)));
+        DBENCH_OP("protocore_graphql_execute args", 20000,
+                  sink += (int32_t)protocore_graphql_execute(q_args, sizeof(q_args) - 1, gql_resolver, resp, sizeof(resp)));
+        DBENCH_OP("protocore_graphql_execute strarg", 20000,
                   sink +=
-                  (int32_t)pc_graphql_execute(q_strarg, sizeof(q_strarg) - 1, gql_resolver, resp, sizeof(resp)));
-        DBENCH_OP("pc_graphql_execute parse_err", 20000,
-                  sink += (int32_t)pc_graphql_execute(q_err, sizeof(q_err) - 1, gql_resolver, resp, sizeof(resp)));
-        DBENCH_BULK("pc_graphql_execute bulk", 20000, sizeof(q_bulk) - 1,
-                    sink += (int32_t)pc_graphql_execute(q_bulk, sizeof(q_bulk) - 1, gql_resolver, resp, sizeof(resp)));
+                  (int32_t)protocore_graphql_execute(q_strarg, sizeof(q_strarg) - 1, gql_resolver, resp, sizeof(resp)));
+        DBENCH_OP("protocore_graphql_execute parse_err", 20000,
+                  sink += (int32_t)protocore_graphql_execute(q_err, sizeof(q_err) - 1, gql_resolver, resp, sizeof(resp)));
+        DBENCH_BULK("protocore_graphql_execute bulk", 20000, sizeof(q_bulk) - 1,
+                    sink += (int32_t)protocore_graphql_execute(q_bulk, sizeof(q_bulk) - 1, gql_resolver, resp, sizeof(resp)));
         (void)sink;
         DBENCH_DONE();
     }

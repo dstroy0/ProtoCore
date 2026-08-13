@@ -9,7 +9,7 @@
  * records with @ref DnsServerNs::add and the device answers matching A/IN queries from that fixed
  * table (NXDOMAIN for anything else). Devices can then use `printer.lan` instead of
  * `192.168.1.5`, a companion to the NTP server for self-hosted, offline infrastructure. Zero
- * heap; gated by PC_ENABLE_DNS_SERVER.
+ * heap; gated by PROTOCORE_ENABLE_DNS_SERVER.
  *
  * The response builder (@ref DnsServerNs::build_response) is pure - it parses the query and, via a
  * resolver callback, writes the reply - so the wire format is host-tested with no lwIP.
@@ -24,11 +24,11 @@
 #ifndef PROTOCORE_DNS_SERVER_H
 #define PROTOCORE_DNS_SERVER_H
 
-#include "protocore_config.h" // the entry point: types.h for the widths and PC_INLINE
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths and PROTOCORE_INLINE
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_DNS_SERVER
+#if PROTOCORE_ENABLE_DNS_SERVER
 
 /**
  * @brief Resolve a queried name to an IPv4 address.
@@ -94,8 +94,8 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern const DnsServerNs DnsServer;
 
-#endif // PC_ENABLE_DNS_SERVER
+#endif // PROTOCORE_ENABLE_DNS_SERVER
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_DNS_SERVER_H

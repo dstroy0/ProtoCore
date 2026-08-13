@@ -34,7 +34,7 @@ static const uint8_t KAT_WIRE[35] = {
 };
 static const char *KAT_PLAINTEXT = "hello tls 1.3";
 static const uint64_t KAT_SEQ = 5;
-static const uint8_t KAT_CT = PC_TLS_CT_HANDSHAKE; // 22
+static const uint8_t KAT_CT = PROTOCORE_TLS_CT_HANDSHAKE; // 22
 
 // Whether needle occurs in hay. memmem is a GNU extension and these envs ask glibc for POSIX alone.
 static proto_bool contains(const uint8_t *hay, size_t hay_len, const uint8_t *needle, size_t needle_len)
@@ -58,7 +58,7 @@ static TlsRecordKeys g_recv;
 
 void setUp()
 {
-    pc_secure_reset();
+    protocore_secure_reset();
     memset(&g_send, 0, sizeof(g_send));
     memset(&g_recv, 0, sizeof(g_recv));
     TlsRecord.keys_derive(&g_send, TLS_CIPHER_AES_128_GCM_SHA256, SECRET);
@@ -74,11 +74,11 @@ void test_plaintext_round_trips()
 {
     const uint8_t frag[] = {0x01, 0x02, 0x03, 0x04};
     uint8_t rec[64];
-    size_t n = TlsRecord.plaintext_build(PC_TLS_CT_HANDSHAKE, frag, sizeof(frag), rec, sizeof(rec));
-    TEST_ASSERT_EQUAL_INT((int)(PC_TLS_PLAINTEXT_HDR_LEN + sizeof(frag)), n);
+    size_t n = TlsRecord.plaintext_build(PROTOCORE_TLS_CT_HANDSHAKE, frag, sizeof(frag), rec, sizeof(rec));
+    TEST_ASSERT_EQUAL_INT((int)(PROTOCORE_TLS_PLAINTEXT_HDR_LEN + sizeof(frag)), n);
 
     // Header: type, legacy_record_version 0x0303, length.
-    TEST_ASSERT_EQUAL_HEX8(PC_TLS_CT_HANDSHAKE, rec[0]);
+    TEST_ASSERT_EQUAL_HEX8(PROTOCORE_TLS_CT_HANDSHAKE, rec[0]);
     TEST_ASSERT_EQUAL_HEX8(0x03, rec[1]);
     TEST_ASSERT_EQUAL_HEX8(0x03, rec[2]);
     TEST_ASSERT_EQUAL_HEX8(0x00, rec[3]);
@@ -86,7 +86,7 @@ void test_plaintext_round_trips()
 
     TlsPlaintext p;
     TEST_ASSERT_EQUAL_INT((int)n, TlsRecord.plaintext_parse(rec, n, &p));
-    TEST_ASSERT_EQUAL_HEX8(PC_TLS_CT_HANDSHAKE, p.content_type);
+    TEST_ASSERT_EQUAL_HEX8(PROTOCORE_TLS_CT_HANDSHAKE, p.content_type);
     TEST_ASSERT_EQUAL_INT((int)sizeof(frag), p.frag_len);
     TEST_ASSERT_EQUAL_MEMORY(frag, p.fragment, sizeof(frag));
 }
@@ -94,7 +94,7 @@ void test_plaintext_round_trips()
 void test_plaintext_parse_refuses_truncated()
 {
     uint8_t rec[16];
-    size_t n = TlsRecord.plaintext_build(PC_TLS_CT_ALERT, (const uint8_t *)"\x02\x28", 2, rec, sizeof(rec));
+    size_t n = TlsRecord.plaintext_build(PROTOCORE_TLS_CT_ALERT, (const uint8_t *)"\x02\x28", 2, rec, sizeof(rec));
     TlsPlaintext p;
     TEST_ASSERT_EQUAL_INT((int)0, TlsRecord.plaintext_parse(rec, n - 1, &p)); // one byte short of the body
     TEST_ASSERT_EQUAL_INT((int)0, TlsRecord.plaintext_parse(rec, 4, &p));     // short of the header
@@ -103,7 +103,7 @@ void test_plaintext_parse_refuses_truncated()
 // A ClientHello arrives carrying legacy_record_version 0x0301; RFC 8446 sec 5.1 says ignore it.
 void test_plaintext_parse_ignores_legacy_version()
 {
-    uint8_t rec[8] = {PC_TLS_CT_HANDSHAKE, 0x03, 0x01, 0x00, 0x02, 0xAA, 0xBB, 0x00};
+    uint8_t rec[8] = {PROTOCORE_TLS_CT_HANDSHAKE, 0x03, 0x01, 0x00, 0x02, 0xAA, 0xBB, 0x00};
     TlsPlaintext p;
     TEST_ASSERT_EQUAL_INT((int)7, TlsRecord.plaintext_parse(rec, sizeof(rec), &p));
     TEST_ASSERT_EQUAL_INT((int)2, p.frag_len);
@@ -113,7 +113,7 @@ void test_plaintext_build_refuses_overflow()
 {
     uint8_t rec[8];
     const uint8_t frag[8] = {0};
-    TEST_ASSERT_EQUAL_INT((int)0, TlsRecord.plaintext_build(PC_TLS_CT_HANDSHAKE, frag, sizeof(frag), rec, sizeof(rec)));
+    TEST_ASSERT_EQUAL_INT((int)0, TlsRecord.plaintext_build(PROTOCORE_TLS_CT_HANDSHAKE, frag, sizeof(frag), rec, sizeof(rec)));
 }
 
 // ---- TLSCiphertext --------------------------------------------------------
@@ -123,19 +123,19 @@ void test_protect_round_trips_and_hides_the_type()
     const uint8_t pt[] = "the quick brown fox";
     const size_t pt_len = sizeof(pt) - 1;
     uint8_t rec[128];
-    size_t n = TlsRecord.protect(&g_send, PC_TLS_CT_HANDSHAKE, pt, pt_len, rec, sizeof(rec));
-    TEST_ASSERT_EQUAL_INT((int)(PC_TLS_PLAINTEXT_HDR_LEN + pt_len + 1 + PC_TLS_TAG_LEN), n);
+    size_t n = TlsRecord.protect(&g_send, PROTOCORE_TLS_CT_HANDSHAKE, pt, pt_len, rec, sizeof(rec));
+    TEST_ASSERT_EQUAL_INT((int)(PROTOCORE_TLS_PLAINTEXT_HDR_LEN + pt_len + 1 + PROTOCORE_TLS_TAG_LEN), n);
 
     // The outer type is application_data whatever the inner type is (RFC 8446 sec 5.2).
-    TEST_ASSERT_EQUAL_HEX8(PC_TLS_CT_APPLICATION_DATA, rec[0]);
-    TEST_ASSERT_EQUAL_INT((int)(n - PC_TLS_PLAINTEXT_HDR_LEN), (int)(((size_t)rec[3] << 8) | rec[4]));
+    TEST_ASSERT_EQUAL_HEX8(PROTOCORE_TLS_CT_APPLICATION_DATA, rec[0]);
+    TEST_ASSERT_EQUAL_INT((int)(n - PROTOCORE_TLS_PLAINTEXT_HDR_LEN), (int)(((size_t)rec[3] << 8) | rec[4]));
     // The plaintext must not be on the wire.
     TEST_ASSERT_FALSE(contains(rec, n, pt, pt_len));
 
     uint8_t out[128];
     TlsCiphertext info;
     TEST_ASSERT_TRUE(TlsRecord.unprotect(&g_recv, rec, n, out, sizeof(out), &info));
-    TEST_ASSERT_EQUAL_HEX8(PC_TLS_CT_HANDSHAKE, info.content_type);
+    TEST_ASSERT_EQUAL_HEX8(PROTOCORE_TLS_CT_HANDSHAKE, info.content_type);
     TEST_ASSERT_EQUAL_INT((int)pt_len, info.pt_len);
     TEST_ASSERT_EQUAL_MEMORY(pt, out, pt_len);
 }
@@ -147,8 +147,8 @@ void test_sequence_advances_and_records_differ()
     const uint8_t pt[] = {0x42, 0x42, 0x42, 0x42};
     uint8_t a[64];
     uint8_t b[64];
-    size_t na = TlsRecord.protect(&g_send, PC_TLS_CT_APPLICATION_DATA, pt, sizeof(pt), a, sizeof(a));
-    size_t nb = TlsRecord.protect(&g_send, PC_TLS_CT_APPLICATION_DATA, pt, sizeof(pt), b, sizeof(b));
+    size_t na = TlsRecord.protect(&g_send, PROTOCORE_TLS_CT_APPLICATION_DATA, pt, sizeof(pt), a, sizeof(a));
+    size_t nb = TlsRecord.protect(&g_send, PROTOCORE_TLS_CT_APPLICATION_DATA, pt, sizeof(pt), b, sizeof(b));
     TEST_ASSERT_EQUAL_INT((int)na, nb);
     TEST_ASSERT_NOT_EQUAL(0, memcmp(a, b, na)); // different nonce -> different ciphertext
 
@@ -165,8 +165,8 @@ void test_out_of_order_record_fails()
     const uint8_t pt[] = {0x01};
     uint8_t a[64];
     uint8_t b[64];
-    size_t na = TlsRecord.protect(&g_send, PC_TLS_CT_APPLICATION_DATA, pt, sizeof(pt), a, sizeof(a));
-    size_t nb = TlsRecord.protect(&g_send, PC_TLS_CT_APPLICATION_DATA, pt, sizeof(pt), b, sizeof(b));
+    size_t na = TlsRecord.protect(&g_send, PROTOCORE_TLS_CT_APPLICATION_DATA, pt, sizeof(pt), a, sizeof(a));
+    size_t nb = TlsRecord.protect(&g_send, PROTOCORE_TLS_CT_APPLICATION_DATA, pt, sizeof(pt), b, sizeof(b));
     (void)na;
 
     uint8_t out[64];
@@ -178,14 +178,14 @@ void test_tampered_record_is_refused()
 {
     const uint8_t pt[] = {0x10, 0x20, 0x30};
     uint8_t rec[64];
-    size_t n = TlsRecord.protect(&g_send, PC_TLS_CT_APPLICATION_DATA, pt, sizeof(pt), rec, sizeof(rec));
+    size_t n = TlsRecord.protect(&g_send, PROTOCORE_TLS_CT_APPLICATION_DATA, pt, sizeof(pt), rec, sizeof(rec));
 
     uint8_t out[64];
     TlsCiphertext info;
 
-    rec[PC_TLS_PLAINTEXT_HDR_LEN] ^= 0x01; // flip a ciphertext bit
+    rec[PROTOCORE_TLS_PLAINTEXT_HDR_LEN] ^= 0x01; // flip a ciphertext bit
     TEST_ASSERT_FALSE(TlsRecord.unprotect(&g_recv, rec, n, out, sizeof(out), &info));
-    rec[PC_TLS_PLAINTEXT_HDR_LEN] ^= 0x01;
+    rec[PROTOCORE_TLS_PLAINTEXT_HDR_LEN] ^= 0x01;
 
     rec[n - 1] ^= 0x80; // flip a tag bit
     TEST_ASSERT_FALSE(TlsRecord.unprotect(&g_recv, rec, n, out, sizeof(out), &info));
@@ -204,12 +204,12 @@ void test_short_and_malformed_records_are_refused()
 {
     uint8_t out[64];
     TlsCiphertext info;
-    uint8_t rec[PC_TLS_PLAINTEXT_HDR_LEN + PC_TLS_TAG_LEN];
+    uint8_t rec[PROTOCORE_TLS_PLAINTEXT_HDR_LEN + PROTOCORE_TLS_TAG_LEN];
     memset(rec, 0, sizeof(rec));
 
     TEST_ASSERT_FALSE(TlsRecord.unprotect(&g_recv, rec, 4, out, sizeof(out), &info)); // short of a header
     rec[3] = 0;
-    rec[4] = PC_TLS_TAG_LEN; // a body that is tag-only carries no inner plaintext
+    rec[4] = PROTOCORE_TLS_TAG_LEN; // a body that is tag-only carries no inner plaintext
     TEST_ASSERT_FALSE(TlsRecord.unprotect(&g_recv, rec, sizeof(rec), out, sizeof(out), &info));
 }
 
@@ -223,7 +223,7 @@ void test_unkeyed_context_fails_closed()
     uint8_t out[64];
     TlsCiphertext info;
     TEST_ASSERT_EQUAL_INT((int)0,
-                          TlsRecord.protect(&cold, PC_TLS_CT_APPLICATION_DATA, pt, sizeof(pt), rec, sizeof(rec)));
+                          TlsRecord.protect(&cold, PROTOCORE_TLS_CT_APPLICATION_DATA, pt, sizeof(pt), rec, sizeof(rec)));
     TEST_ASSERT_FALSE(TlsRecord.unprotect(&cold, rec, sizeof(rec), out, sizeof(out), &info));
 }
 
@@ -232,7 +232,7 @@ void test_protect_refuses_overflow()
     const uint8_t pt[] = {1, 2, 3, 4};
     uint8_t rec[8]; // header + inner + tag does not fit
     TEST_ASSERT_EQUAL_INT((int)0,
-                          TlsRecord.protect(&g_send, PC_TLS_CT_APPLICATION_DATA, pt, sizeof(pt), rec, sizeof(rec)));
+                          TlsRecord.protect(&g_send, PROTOCORE_TLS_CT_APPLICATION_DATA, pt, sizeof(pt), rec, sizeof(rec)));
 }
 
 // RFC 8446 sec 5.4: "Implementations MUST NOT send Handshake and Alert records that have a
@@ -243,15 +243,15 @@ void test_protect_refuses_overflow()
 void test_empty_handshake_and_alert_records_are_refused()
 {
     uint8_t rec[64];
-    TEST_ASSERT_EQUAL_INT(0, (int)TlsRecord.protect(&g_send, PC_TLS_CT_ALERT, NULL, 0, rec, sizeof(rec)));
-    TEST_ASSERT_EQUAL_INT(0, (int)TlsRecord.protect(&g_send, PC_TLS_CT_HANDSHAKE, NULL, 0, rec, sizeof(rec)));
+    TEST_ASSERT_EQUAL_INT(0, (int)TlsRecord.protect(&g_send, PROTOCORE_TLS_CT_ALERT, NULL, 0, rec, sizeof(rec)));
+    TEST_ASSERT_EQUAL_INT(0, (int)TlsRecord.protect(&g_send, PROTOCORE_TLS_CT_HANDSHAKE, NULL, 0, rec, sizeof(rec)));
 
-    size_t n = TlsRecord.protect(&g_send, PC_TLS_CT_APPLICATION_DATA, NULL, 0, rec, sizeof(rec));
-    TEST_ASSERT_EQUAL_INT((int)(PC_TLS_PLAINTEXT_HDR_LEN + 1 + PC_TLS_TAG_LEN), (int)n);
+    size_t n = TlsRecord.protect(&g_send, PROTOCORE_TLS_CT_APPLICATION_DATA, NULL, 0, rec, sizeof(rec));
+    TEST_ASSERT_EQUAL_INT((int)(PROTOCORE_TLS_PLAINTEXT_HDR_LEN + 1 + PROTOCORE_TLS_TAG_LEN), (int)n);
     uint8_t out[64];
     TlsCiphertext info;
     TEST_ASSERT_TRUE(TlsRecord.unprotect(&g_recv, rec, n, out, sizeof(out), &info));
-    TEST_ASSERT_EQUAL_HEX8(PC_TLS_CT_APPLICATION_DATA, info.content_type);
+    TEST_ASSERT_EQUAL_HEX8(PROTOCORE_TLS_CT_APPLICATION_DATA, info.content_type);
     TEST_ASSERT_EQUAL_INT(0, (int)info.pt_len);
 }
 
@@ -260,7 +260,7 @@ void test_empty_handshake_and_alert_records_are_refused()
 // here {0x15, 0x00}, which the padding strip reads back as a zero-length Alert.
 void test_zero_length_alert_on_receipt_is_refused()
 {
-    const uint8_t alert_type[1] = {PC_TLS_CT_ALERT};
+    const uint8_t alert_type[1] = {PROTOCORE_TLS_CT_ALERT};
     uint8_t rec[64];
     size_t n = TlsRecord.protect(&g_send, 0x00, alert_type, sizeof(alert_type), rec, sizeof(rec));
     TEST_ASSERT_NOT_EQUAL(0, n);
@@ -288,19 +288,19 @@ void test_all_zero_inner_plaintext_is_refused()
 // TLSInnerPlaintext at 2^14 + 1. A record claiming more is refused before any AEAD work.
 void test_record_overflow_is_refused()
 {
-    static uint8_t rec[PC_TLS_PLAINTEXT_HDR_LEN + PC_TLS_MAX_PLAINTEXT + 2 + PC_TLS_TAG_LEN];
+    static uint8_t rec[PROTOCORE_TLS_PLAINTEXT_HDR_LEN + PROTOCORE_TLS_MAX_PLAINTEXT + 2 + PROTOCORE_TLS_TAG_LEN];
     memset(rec, 0, sizeof rec);
-    const size_t inner_len = PC_TLS_MAX_PLAINTEXT + 2; // one past the sec 5.4 bound
-    const size_t body_len = inner_len + PC_TLS_TAG_LEN;
-    rec[0] = PC_TLS_CT_APPLICATION_DATA;
+    const size_t inner_len = PROTOCORE_TLS_MAX_PLAINTEXT + 2; // one past the sec 5.4 bound
+    const size_t body_len = inner_len + PROTOCORE_TLS_TAG_LEN;
+    rec[0] = PROTOCORE_TLS_CT_APPLICATION_DATA;
     rec[1] = 0x03;
     rec[2] = 0x03;
     rec[3] = (uint8_t)(body_len >> 8);
     rec[4] = (uint8_t)body_len;
 
-    static uint8_t out[PC_TLS_MAX_PLAINTEXT + 2];
+    static uint8_t out[PROTOCORE_TLS_MAX_PLAINTEXT + 2];
     TlsCiphertext info;
-    TEST_ASSERT_FALSE(TlsRecord.unprotect(&g_recv, rec, PC_TLS_PLAINTEXT_HDR_LEN + body_len, out, sizeof(out), &info));
+    TEST_ASSERT_FALSE(TlsRecord.unprotect(&g_recv, rec, PROTOCORE_TLS_PLAINTEXT_HDR_LEN + body_len, out, sizeof(out), &info));
 }
 
 // The trailing content type sits after the content, so plaintext that itself ends in zero bytes
@@ -309,13 +309,13 @@ void test_content_with_trailing_zeros_round_trips()
 {
     uint8_t inner[8] = {0xAA, 0xBB, 0xCC, 0xDD, 0, 0, 0, 0};
     uint8_t rec[64];
-    size_t n = TlsRecord.protect(&g_send, PC_TLS_CT_APPLICATION_DATA, inner, sizeof(inner), rec, sizeof(rec));
+    size_t n = TlsRecord.protect(&g_send, PROTOCORE_TLS_CT_APPLICATION_DATA, inner, sizeof(inner), rec, sizeof(rec));
     TEST_ASSERT_NOT_EQUAL(0, n);
 
     uint8_t out[64];
     TlsCiphertext info;
     TEST_ASSERT_TRUE(TlsRecord.unprotect(&g_recv, rec, n, out, sizeof(out), &info));
-    TEST_ASSERT_EQUAL_HEX8(PC_TLS_CT_APPLICATION_DATA, info.content_type);
+    TEST_ASSERT_EQUAL_HEX8(PROTOCORE_TLS_CT_APPLICATION_DATA, info.content_type);
     TEST_ASSERT_EQUAL_INT((int)sizeof(inner), info.pt_len);
     TEST_ASSERT_EQUAL_MEMORY(inner, out, sizeof(inner));
 }
@@ -326,7 +326,7 @@ void test_keys_wipe_disables_the_context()
     const uint8_t pt[] = {0x01};
     uint8_t rec[64];
     TEST_ASSERT_EQUAL_INT((int)0,
-                          TlsRecord.protect(&g_send, PC_TLS_CT_APPLICATION_DATA, pt, sizeof(pt), rec, sizeof(rec)));
+                          TlsRecord.protect(&g_send, PROTOCORE_TLS_CT_APPLICATION_DATA, pt, sizeof(pt), rec, sizeof(rec)));
 }
 
 // ---- KAT ------------------------------------------------------------------

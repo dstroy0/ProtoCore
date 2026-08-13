@@ -10,39 +10,40 @@
  */
 
 #include "services/security/guardrails/guardrails.h"
-#include "mmgr/membuild.h" // pc_sb frame builder
+#include "mmgr/membuild.h" // protocore_sb frame builder
 
-#if PC_ENABLE_GUARDRAILS
+#if PROTOCORE_ENABLE_GUARDRAILS
 
 #include <stdio.h>
 
-#if PC_HAS_VENDOR_HEAP_INFO
+#if PROTOCORE_HAS_VENDOR_HEAP_INFO
 #include "esp_heap_caps.h"
 #include "esp_system.h"
 #endif
-uint8_t pc_guardrail_eval(const pc_health *h, uint32_t heap_min, uint32_t frag_min_block, uint32_t stack_min)
+uint8_t protocore_guardrail_eval(const protocore_health *h, uint32_t heap_min, uint32_t frag_min_block,
+                                 uint32_t stack_min)
 {
-    uint8_t b = PC_BREACH_NONE;
+    uint8_t b = PROTOCORE_BREACH_NONE;
     if (!h)
     {
         return b;
     }
     if (h->free_heap < heap_min)
     {
-        b |= PC_BREACH_HEAP;
+        b |= PROTOCORE_BREACH_HEAP;
     }
     if (h->largest_free_block < frag_min_block)
     {
-        b |= PC_BREACH_FRAG;
+        b |= PROTOCORE_BREACH_FRAG;
     }
     if (h->stack_free < stack_min)
     {
-        b |= PC_BREACH_STACK;
+        b |= PROTOCORE_BREACH_STACK;
     }
     return b;
 }
 
-int pc_health_json(const pc_health *h, char *out, size_t cap)
+int protocore_health_json(const protocore_health *h, char *out, size_t cap)
 {
     if (!out || cap == 0)
     {
@@ -53,17 +54,17 @@ int pc_health_json(const pc_health *h, char *out, size_t cap)
     {
         return 0;
     }
-    pc_sb sb_out = {out, cap, 0, PROTO_TRUE};
-    pc_sb_put(&sb_out, "{\"free_heap\":");
-    pc_sb_u32(&sb_out, (uint32_t)((unsigned)h->free_heap));
-    pc_sb_put(&sb_out, ",\"min_free_heap\":");
-    pc_sb_u32(&sb_out, (uint32_t)((unsigned)h->min_free_heap));
-    pc_sb_put(&sb_out, ",\"largest_free_block\":");
-    pc_sb_u32(&sb_out, (uint32_t)((unsigned)h->largest_free_block));
-    pc_sb_put(&sb_out, ",\"stack_free\":");
-    pc_sb_u32(&sb_out, (uint32_t)((unsigned)h->stack_free));
-    pc_sb_put(&sb_out, "}");
-    int w = (int)pc_sb_finish(&sb_out);
+    protocore_sb sb_out = {out, cap, 0, PROTO_TRUE};
+    protocore_sb_put(&sb_out, "{\"free_heap\":");
+    protocore_sb_u32(&sb_out, (uint32_t)((unsigned)h->free_heap));
+    protocore_sb_put(&sb_out, ",\"min_free_heap\":");
+    protocore_sb_u32(&sb_out, (uint32_t)((unsigned)h->min_free_heap));
+    protocore_sb_put(&sb_out, ",\"largest_free_block\":");
+    protocore_sb_u32(&sb_out, (uint32_t)((unsigned)h->largest_free_block));
+    protocore_sb_put(&sb_out, ",\"stack_free\":");
+    protocore_sb_u32(&sb_out, (uint32_t)((unsigned)h->stack_free));
+    protocore_sb_put(&sb_out, "}");
+    int w = (int)protocore_sb_finish(&sb_out);
     // w < 0 is unreachable: this format is all %u (unsigned) with literal text, no
     // multibyte/wide-character conversion, which is the only way snprintf goes negative.
     if (!sb_out.ok)
@@ -74,17 +75,17 @@ int pc_health_json(const pc_health *h, char *out, size_t cap)
     return w;
 }
 
-#if PC_HAS_VENDOR_HEAP_INFO
+#if PROTOCORE_HAS_VENDOR_HEAP_INFO
 
 // All guardrails sampler state, owned by one instance (internal linkage): the breach
 // callback, so it is one named owner, unreachable from any other translation unit.
 typedef struct
 {
-    pc_breach_fn cb;
+    protocore_breach_fn cb;
 } GuardrailsCtx;
 static GuardrailsCtx s_gr;
 
-void pc_guardrails_sample(pc_health *h)
+void protocore_guardrails_sample(protocore_health *h)
 {
     if (!h)
     {
@@ -96,17 +97,18 @@ void pc_guardrails_sample(pc_health *h)
     h->stack_free = (uint32_t)uxTaskGetStackHighWaterMark(NULL) * sizeof(StackType_t);
 }
 
-void pc_guardrails_begin(pc_breach_fn cb)
+void protocore_guardrails_begin(protocore_breach_fn cb)
 {
     s_gr.cb = cb;
 }
 
-uint8_t pc_guardrails_check(void)
+uint8_t protocore_guardrails_check(void)
 {
-    pc_health h;
-    pc_guardrails_sample(&h);
-    uint8_t b = pc_guardrail_eval(&h, PC_GUARDRAIL_HEAP_MIN, PC_GUARDRAIL_FRAG_MIN_BLOCK, PC_GUARDRAIL_STACK_MIN);
-    if (b != PC_BREACH_NONE && s_gr.cb)
+    protocore_health h;
+    protocore_guardrails_sample(&h);
+    uint8_t b = protocore_guardrail_eval(&h, PROTOCORE_GUARDRAIL_HEAP_MIN, PROTOCORE_GUARDRAIL_FRAG_MIN_BLOCK,
+                                         PROTOCORE_GUARDRAIL_STACK_MIN);
+    if (b != PROTOCORE_BREACH_NONE && s_gr.cb)
     {
         s_gr.cb(b, &h);
     }
@@ -115,23 +117,23 @@ uint8_t pc_guardrails_check(void)
 
 #else // host build - no live counters
 
-void pc_guardrails_sample(pc_health *h)
+void protocore_guardrails_sample(protocore_health *h)
 {
     if (h)
     {
-        const pc_health blank = {0};
+        const protocore_health blank = {0};
         *h = blank;
     }
 }
-void pc_guardrails_begin(pc_breach_fn cb)
+void protocore_guardrails_begin(protocore_breach_fn cb)
 {
     (void)cb;
 }
-uint8_t pc_guardrails_check(void)
+uint8_t protocore_guardrails_check(void)
 {
-    return PC_BREACH_NONE;
+    return PROTOCORE_BREACH_NONE;
 }
 
-#endif // PC_HAS_VENDOR_HEAP_INFO
+#endif // PROTOCORE_HAS_VENDOR_HEAP_INFO
 
-#endif // PC_ENABLE_GUARDRAILS
+#endif // PROTOCORE_ENABLE_GUARDRAILS

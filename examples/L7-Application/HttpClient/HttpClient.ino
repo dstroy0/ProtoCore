@@ -15,9 +15,9 @@
  *
  * NOTE: optional services are gated by a compile flag the *library* sources must
  * also see; for PlatformIO enable it for the whole build, e.g.:
- *     build_flags = -DPC_ENABLE_HTTP_CLIENT=1
- *     ; for https:// add: -DPC_ENABLE_TLS=1 -DPC_ENABLE_HTTP_CLIENT_TLS=1
- *     ; to trace where a request stalls, add: -DPC_HTTP_CLIENT_DEBUG
+ *     build_flags = -DPROTOCORE_ENABLE_HTTP_CLIENT=1
+ *     ; for https:// add: -DPROTOCORE_ENABLE_TLS=1 -DPROTOCORE_ENABLE_HTTP_CLIENT_TLS=1
+ *     ; to trace where a request stalls, add: -DPROTOCORE_HTTP_CLIENT_DEBUG
  * (Arduino IDE: they are already set for you in the build_opt.h beside this sketch, so it builds as-is.)
  *
  * https:// note: encrypt-only by default (the device has no trust store), so the
@@ -27,7 +27,7 @@
  * request. Call once before issuing requests.
  */
 
-#define PC_ENABLE_HTTP_CLIENT 1
+#define PROTOCORE_ENABLE_HTTP_CLIENT 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"

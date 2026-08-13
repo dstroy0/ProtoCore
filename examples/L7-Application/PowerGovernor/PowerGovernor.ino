@@ -18,11 +18,11 @@
 // GET /power  -> {"cpu_mhz":80,"throttled":false,"recovering":false,"temp_c":48}
 // GET /busy   -> burns CPU for a moment so you can watch the clock climb and settle back
 //
-// Build flags (whole build): PC_ENABLE_POWER_MGMT=1
+// Build flags (whole build): PROTOCORE_ENABLE_POWER_MGMT=1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
-#include "server/clock/clock.h" // pc_millis - the library's monotonic source
+#include "server/clock/clock.h" // protocore_millis - the library's monotonic source
 #include "server/power_mgmt.h"
 #include "shared_primitives/mime.h"
 
@@ -39,26 +39,26 @@ static uint32_t g_busy_until = 0;
 
 static uint8_t sample_load_pct(void)
 {
-    return (pc_millis() < g_busy_until) ? 100 : 0;
+    return (protocore_millis() < g_busy_until) ? 100 : 0;
 }
 
 static void power_handler(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
     char json[128];
-    if (pc_power_json(&g_plan, g_temp, json, sizeof(json)) == 0)
+    if (protocore_power_json(&g_plan, g_temp, json, sizeof(json)) == 0)
     {
-        send_text(slot_id, 500, PC_MIME_JSON, "{}");
+        send_text(slot_id, 500, PROTOCORE_MIME_JSON, "{}");
         return;
     }
-    send_text(slot_id, 200, PC_MIME_JSON, json);
+    send_text(slot_id, 200, PROTOCORE_MIME_JSON, json);
 }
 
 static void busy_handler(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
-    g_busy_until = pc_millis() + 5000; // report "busy" for 5 s
-    send_text(slot_id, 200, PC_MIME_TEXT_PLAIN, "busy for 5s - poll /power to watch the clock\n");
+    g_busy_until = protocore_millis() + 5000; // report "busy" for 5 s
+    send_text(slot_id, 200, PROTOCORE_MIME_TEXT_PLAIN, "busy for 5s - poll /power to watch the clock\n");
 }
 
 void setup()
@@ -66,21 +66,21 @@ void setup()
     Serial.begin(115200);
     delay(300);
 
-    pc_power_cfg_defaults(&g_cfg);
+    protocore_power_cfg_defaults(&g_cfg);
 
     // Reset reason is read once and latched, so this reads the same through the whole window.
-    if (pc_power_brownout_boot())
+    if (protocore_power_brownout_boot())
     {
         Serial.println("last reset was a BROWNOUT - coming up at the floor clock");
     }
 
     // A build with no BLE is holding the Bluetooth domain for nothing.
-    if (pc_power_gate_bt())
+    if (protocore_power_gate_bt())
     {
         Serial.println("released the Bluetooth power domain");
     }
 
-    Serial.printf("boot clock: %u MHz, die %d C\n", (unsigned)pc_power_cpu_mhz(), (int)pc_power_temp_c());
+    Serial.printf("boot clock: %u MHz, die %d C\n", (unsigned)protocore_power_cpu_mhz(), (int)protocore_power_temp_c());
 
     Physical.wifi->init(WIFI_SSID, WIFI_PASS);
     while (!Physical.wifi->ready())
@@ -102,18 +102,18 @@ void loop()
     handle();
 
     static uint32_t next = 0;
-    uint32_t now = pc_millis();
+    uint32_t now = protocore_millis();
     if ((int32_t)(now - next) < 0)
     {
         return;
     }
     next = now + 500;
 
-    g_temp = pc_power_temp_c();
+    g_temp = protocore_power_temp_c();
     // The previous plan's throttle flag goes back in: that feedback is what gives the thermal
     // decision its hysteresis. Passing false here would re-create the oscillation it exists to stop.
-    PowerPlan p = pc_power_plan(&g_cfg, sample_load_pct(), g_temp, pc_power_brownout_boot(), now, g_plan.throttled);
-    if (pc_power_apply(&p))
+    PowerPlan p = protocore_power_plan(&g_cfg, sample_load_pct(), g_temp, protocore_power_brownout_boot(), now, g_plan.throttled);
+    if (protocore_power_apply(&p))
     {
         Serial.printf("clock -> %u MHz (throttled=%d recovering=%d die=%d C)\n", (unsigned)p.cpu_mhz, (int)p.throttled,
                       (int)p.recovering, (int)g_temp);

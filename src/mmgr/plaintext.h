@@ -13,13 +13,13 @@
  * peak RAM without weakening the zero-heap / deterministic guarantee (fixed
  * size, no runtime growth).
  *
- * There is one arena per slot (::PC_REG_POOL_SLOTS): one per server worker, plus
- * the ghost, which is the library's own. pc_plaintext_alloc() resolves the
- * caller's slot with pc_worker_self(), so a borrow never crosses workers.
+ * There is one arena per slot (::PROTOCORE_REG_POOL_SLOTS): one per server worker, plus
+ * the ghost, which is the library's own. protocore_plaintext_alloc() resolves the
+ * caller's slot with protocore_worker_self(), so a borrow never crosses workers.
  *
- * **Model - region reset per dispatch.** pc_plaintext_alloc() bump-allocates from the
- * caller's arena; pc_plaintext_reset() empties that one arena in O(1).
- * dispatch_event() calls pc_plaintext_reset() before handing an event to its
+ * **Model - region reset per dispatch.** protocore_plaintext_alloc() bump-allocates from the
+ * caller's arena; protocore_plaintext_reset() empties that one arena in O(1).
+ * dispatch_event() calls protocore_plaintext_reset() before handing an event to its
  * protocol handler, so a borrow is valid only until the handler returns. There
  * is no per-allocation free - the whole arena is reclaimed at once.
  *
@@ -28,18 +28,18 @@
  * through its queue, so a context that is not a worker never borrows: the lwIP
  * callbacks run in tcpip_thread and only fill the rx ring + enqueue events, and
  * an ISR posts a fixed-size item to a preempt-queue lane whose task does the
- * work. In debug builds an owner assertion (pc_platform_context_id()) records
+ * work. In debug builds an owner assertion (protocore_platform_context_id()) records
  * the first context to touch each arena and fails loud if a second one does,
  * turning a future mistake into an immediate visible failure instead of a
  * silent cross-core race.
  *
  * **Exhaustion-safety.** Borrows live only within one dispatch and are
  * auto-reclaimed by the reset, so a forgotten free cannot accumulate (no
- * creeping exhaustion). An over-budget pc_plaintext_alloc() returns NULL; every
+ * creeping exhaustion). An over-budget protocore_plaintext_alloc() returns NULL; every
  * caller must take a defined fail-closed path (drop the optional optimization,
  * close the connection, answer 503) and must never dereference a null borrow.
  *
- * **No implicit zeroing.** pc_plaintext_alloc() returns uninitialized memory and the
+ * **No implicit zeroing.** protocore_plaintext_alloc() returns uninitialized memory and the
  * reset does not wipe. This pool is for plaintext: anything whose bytes are key
  * material belongs in the secure pool (mmgr/secure.h), which is the same
  * mechanism with one added control - reclaiming wipes, before the bytes become
@@ -55,7 +55,7 @@
 #include "mmgr/span.h"
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
 /**
  * @brief Slots in the plaintext pool.
@@ -63,15 +63,15 @@ PROTO_BEGIN_DECLS
  * Sized off the ghost rather than the worker count so the invariant is the definition: the pool
  * must reach the highest slot any caller can resolve to, and that is the ghost.
  *
- * The secure pool states its own count (::PC_SEC_POOL_SLOTS). They are equal today and neither is
+ * The secure pool states its own count (::PROTOCORE_SEC_POOL_SLOTS). They are equal today and neither is
  * derived from the other - one pool growing a slot is not a reason for the other to.
  */
-#define PC_REG_POOL_SLOTS (PC_GHOST_WORKER_SLOT + 1)
+#define PROTOCORE_REG_POOL_SLOTS (PROTOCORE_GHOST_WORKER_SLOT + 1)
 
 /**
  * @brief Borrow @p n bytes of plaintext, aligned to @p align.
  *
- * The returned pointer is valid only until the next pc_plaintext_reset() (i.e. only
+ * The returned pointer is valid only until the next protocore_plaintext_reset() (i.e. only
  * within the current session dispatch). Returns NULL if the request does not
  * fit the remaining arena - callers MUST handle null and fail closed.
  *
@@ -81,76 +81,76 @@ PROTO_BEGIN_DECLS
  *              platform default).
  * @return pointer to @p n writable bytes, or NULL if it does not fit.
  */
-void *pc_plaintext_alloc(size_t n, size_t align);
+void *protocore_plaintext_alloc(size_t n, size_t align);
 
 /**
  * @brief Borrow @p n bytes as a span whose capacity is bound to the allocation.
  *
- * The preferred form. pc_plaintext_alloc() hands back a bare pointer, which leaves the caller to carry
+ * The preferred form. protocore_plaintext_alloc() hands back a bare pointer, which leaves the caller to carry
  * the length separately and keep the two in agreement by hand at every call - the same severed
  * binding that makes `sizeof()` on a converted array read 4 bytes instead of the extent. Here one
  * argument sets both fields, so the run length is stated once and cannot drift.
  *
  * Fails closed: an over-budget request yields `{NULL, 0}`, so a caller that omits the
- * pc_span_ok() check writes nothing rather than dereferencing null. Callers should still check and
+ * protocore_span_ok() check writes nothing rather than dereferencing null. Callers should still check and
  * take their defined fail-closed path.
  *
  * @param n     bytes requested.
  * @param align required alignment in bytes, a power of two (0 selects the platform default).
  * @return a span over @p n writable bytes, or an empty span if it does not fit.
  */
-pc_span pc_plaintext_span(size_t n, size_t align);
+protocore_span protocore_plaintext_span(size_t n, size_t align);
 
 /**
  * @brief Borrow @p n bytes that outlive the dispatch, as a span.
  *
- * The transient borrows above die at the next pc_plaintext_reset(), which runs before every event.
+ * The transient borrows above die at the next protocore_plaintext_reset(), which runs before every event.
  * State that spans dispatches - a receive ring holding a partial message between polls, a packet
  * held for retransmit until it is acknowledged - comes from here instead: the persistent end grows
  * up from the arena base while the scratch end bumps down from the top, so the reset never reaches
  * it. The bytes come back zeroed.
  *
- * This is the plaintext half of ::pc_secure_persist_span. Bytes that are key material belong in the
+ * This is the plaintext half of ::protocore_secure_persist_span. Bytes that are key material belong in the
  * secure pool, whose reclaim wipes; these are not wiped.
  *
  * @param n bytes requested.
  * @return a span over @p n writable bytes, or an empty span if it does not fit.
  */
-pc_span pc_plaintext_persist_span(size_t n);
+protocore_span protocore_plaintext_persist_span(size_t n);
 
 /**
  * @brief Reclaim the whole arena (empties it).
  *
  * Called by Session.tick() before each event dispatch. Invalidates every pointer
- * previously returned by pc_plaintext_alloc().
+ * previously returned by protocore_plaintext_alloc().
  */
-void pc_plaintext_reset(void);
+void protocore_plaintext_reset(void);
 
 /**
- * @brief Capture the current arena offset (a savepoint for pc_plaintext_release()).
- * @return an opaque mark to pass to pc_plaintext_release().
+ * @brief Capture the current arena offset (a savepoint for protocore_plaintext_release()).
+ * @return an opaque mark to pass to protocore_plaintext_release().
  */
-size_t pc_plaintext_mark(void);
+size_t protocore_plaintext_mark(void);
 
 /**
  * @brief Reclaim everything allocated since @p mark (LIFO).
  *
- * Restores the arena to a previous pc_plaintext_mark(), freeing every pc_plaintext_alloc()
+ * Restores the arena to a previous protocore_plaintext_mark(), freeing every protocore_plaintext_alloc()
  * made in between. Marks must be released in reverse order (nested scopes).
  *
- * @param mark a value previously returned by pc_plaintext_mark() (must be <= the
+ * @param mark a value previously returned by protocore_plaintext_mark() (must be <= the
  *             current offset).
  */
-void pc_plaintext_release(size_t mark);
+void protocore_plaintext_release(size_t mark);
 
 /** @brief Bytes currently handed out (0 immediately after a reset). */
-size_t pc_plaintext_used(void);
+size_t protocore_plaintext_used(void);
 
-/** @brief Largest pc_plaintext_used() value seen since boot (for sizing the arena). */
-size_t pc_plaintext_high_water(void);
+/** @brief Largest protocore_plaintext_used() value seen since boot (for sizing the arena). */
+size_t protocore_plaintext_high_water(void);
 
-/** @brief Total arena capacity in bytes (PC_PLAINTEXT_ARENA_SIZE). */
-size_t pc_plaintext_capacity(void);
+/** @brief Total arena capacity in bytes (PROTOCORE_PLAINTEXT_ARENA_SIZE). */
+size_t protocore_plaintext_capacity(void);
 
 /**
  * @brief True if @p p points inside the plaintext pool.
@@ -165,7 +165,7 @@ size_t pc_plaintext_capacity(void);
  * answers its own question, so a secure-pool pointer can never be accepted where a plaintext one
  * is required, or the reverse.
  */
-proto_bool pc_plaintext_owns(const void *p);
+proto_bool protocore_plaintext_owns(const void *p);
 
 /**
  * @brief Which plaintext slot owns @p p, or -1 if @p p is not in the plaintext pool.
@@ -174,7 +174,7 @@ proto_bool pc_plaintext_owns(const void *p);
  * assert that a borrow being handed back belongs to the calling worker: crossing slots is the one
  * way the lock-free single-accessor invariant can be violated, and this makes it checkable.
  */
-int pc_plaintext_slot_of(const void *p);
+int protocore_plaintext_slot_of(const void *p);
 
 /**
  * @brief The plaintext pool.
@@ -197,8 +197,8 @@ int pc_plaintext_slot_of(const void *p);
 typedef struct
 {
     void *(*alloc)(size_t n, size_t align);
-    pc_span (*span)(size_t n, size_t align);
-    pc_span (*persist)(size_t n);
+    protocore_span (*span)(size_t n, size_t align);
+    protocore_span (*persist)(size_t n);
     void (*reset)(void);
     size_t (*mark)(void);
     void (*release)(size_t mark);
@@ -217,18 +217,18 @@ typedef struct
  * `unused` because this header reaches files that take none of it.
  */
 // Designated, so a member's position in the struct does not decide what it binds to.
-static const PlainNs plain __attribute__((unused)) = {.alloc = pc_plaintext_alloc,
-                                                      .span = pc_plaintext_span,
-                                                      .persist = pc_plaintext_persist_span,
-                                                      .reset = pc_plaintext_reset,
-                                                      .mark = pc_plaintext_mark,
-                                                      .release = pc_plaintext_release,
-                                                      .used = pc_plaintext_used,
-                                                      .high_water = pc_plaintext_high_water,
-                                                      .capacity = pc_plaintext_capacity,
-                                                      .owns = pc_plaintext_owns,
-                                                      .slot_of = pc_plaintext_slot_of};
+static const PlainNs plain __attribute__((unused)) = {.alloc = protocore_plaintext_alloc,
+                                                      .span = protocore_plaintext_span,
+                                                      .persist = protocore_plaintext_persist_span,
+                                                      .reset = protocore_plaintext_reset,
+                                                      .mark = protocore_plaintext_mark,
+                                                      .release = protocore_plaintext_release,
+                                                      .used = protocore_plaintext_used,
+                                                      .high_water = protocore_plaintext_high_water,
+                                                      .capacity = protocore_plaintext_capacity,
+                                                      .owns = protocore_plaintext_owns,
+                                                      .slot_of = protocore_plaintext_slot_of};
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_PLAINTEXT_H

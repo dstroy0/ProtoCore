@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Round-trip tests for the OPC UA client (services/pc_opcua_client): the client builds
+// Round-trip tests for the OPC UA client (services/protocore_opcua_client): the client builds
 // each request, the server (services/fieldbus/opcua) parses it and builds its response, and
 // the client parses that response. This proves full client<->server wire interop
 // in-process - the same exchange the board runs over TCP.
@@ -45,44 +45,44 @@ static int32_t srv_browse(uint16_t ns, uint32_t id, OpcUaReference *out, uint32_
 void test_hello_ack_roundtrip()
 {
     OpcUaClient c;
-    pc_opcua_client_init(&c);
+    protocore_opcua_client_init(&c);
 
     uint8_t req[128];
-    size_t rn = pc_opcua_client_hello("opc.tcp://host:4840", req, sizeof(req));
+    size_t rn = protocore_opcua_client_hello("opc.tcp://host:4840", req, sizeof(req));
     TEST_ASSERT_TRUE(rn > 0);
 
     OpcUaHello hello;
-    TEST_ASSERT_TRUE(pc_opcua_parse_hello(req, rn, &hello));
-    TEST_ASSERT_EQUAL_UINT32(PC_OPCUA_BUF, hello.recv_buf_size);
+    TEST_ASSERT_TRUE(protocore_opcua_parse_hello(req, rn, &hello));
+    TEST_ASSERT_EQUAL_UINT32(PROTOCORE_OPCUA_BUF, hello.recv_buf_size);
 
     uint8_t ack[64];
-    size_t an = pc_opcua_build_ack(&hello, ack, sizeof(ack));
+    size_t an = protocore_opcua_build_ack(&hello, ack, sizeof(ack));
     TEST_ASSERT_TRUE(an > 0);
 
     OpcUaAckInfo info;
-    TEST_ASSERT_TRUE(pc_opcua_client_on_ack(ack, an, &info));
-    TEST_ASSERT_EQUAL_UINT32(PC_OPCUA_BUF, info.recv_buf_size);
+    TEST_ASSERT_TRUE(protocore_opcua_client_on_ack(ack, an, &info));
+    TEST_ASSERT_EQUAL_UINT32(PROTOCORE_OPCUA_BUF, info.recv_buf_size);
     TEST_ASSERT_EQUAL_UINT32(1, info.max_chunk_count);
 }
 
 void test_open_roundtrip()
 {
     OpcUaClient c;
-    pc_opcua_client_init(&c);
+    protocore_opcua_client_init(&c);
 
     uint8_t req[256];
-    size_t rn = pc_opcua_client_open(&c, req, sizeof(req));
+    size_t rn = protocore_opcua_client_open(&c, req, sizeof(req));
     TEST_ASSERT_TRUE(rn > 0);
 
     OpcUaOpenChannel oc;
-    TEST_ASSERT_TRUE(pc_opcua_parse_open(req, rn, &oc));
+    TEST_ASSERT_TRUE(protocore_opcua_parse_open(req, rn, &oc));
     TEST_ASSERT_EQUAL_UINT32(1, oc.message_security_mode); // None
 
     uint8_t resp[256];
-    size_t sn = pc_opcua_build_open_response(&oc, 77, 88, 1, 0, 3600000, resp, sizeof(resp));
+    size_t sn = protocore_opcua_build_open_response(&oc, 77, 88, 1, 0, 3600000, resp, sizeof(resp));
     TEST_ASSERT_TRUE(sn > 0);
 
-    TEST_ASSERT_TRUE(pc_opcua_client_on_open(&c, resp, sn));
+    TEST_ASSERT_TRUE(protocore_opcua_client_on_open(&c, resp, sn));
     TEST_ASSERT_EQUAL_UINT32(77, c.channel_id);
     TEST_ASSERT_EQUAL_UINT32(88, c.token_id);
 }
@@ -90,48 +90,48 @@ void test_open_roundtrip()
 void test_session_roundtrip()
 {
     OpcUaClient c;
-    pc_opcua_client_init(&c);
+    protocore_opcua_client_init(&c);
     c.token_id = 88; // pretend the channel is open
 
     // CreateSession
     uint8_t req[256];
-    size_t rn = pc_opcua_client_create_session(&c, "sess", "opc.tcp://host:4840", req, sizeof(req));
+    size_t rn = protocore_opcua_client_create_session(&c, "sess", "opc.tcp://host:4840", req, sizeof(req));
     TEST_ASSERT_TRUE(rn > 0);
     OpcUaMsg m;
-    TEST_ASSERT_TRUE(pc_opcua_parse_msg(req, rn, &m));
+    TEST_ASSERT_TRUE(protocore_opcua_parse_msg(req, rn, &m));
     TEST_ASSERT_EQUAL_UINT32(OPCUA_ID_CREATE_SESSION_REQ, m.type_id);
 
     uint8_t resp[512];
     OpcUaServerInfo si = {"opc.tcp://host:4840", "urn:test", "TestServer"};
-    size_t sn = pc_opcua_build_create_session_response(&m, 0x500, 0x600, 1200000.0, &si, 1, 0, resp, sizeof(resp));
+    size_t sn = protocore_opcua_build_create_session_response(&m, 0x500, 0x600, 1200000.0, &si, 1, 0, resp, sizeof(resp));
     TEST_ASSERT_TRUE(sn > 0);
-    TEST_ASSERT_TRUE(pc_opcua_client_on_create_session(&c, resp, sn));
+    TEST_ASSERT_TRUE(protocore_opcua_client_on_create_session(&c, resp, sn));
     TEST_ASSERT_EQUAL_UINT32(0x600, c.session_auth_id); // AuthenticationToken captured
     TEST_ASSERT_EQUAL_UINT16(1, c.session_auth_ns);
 
     // ActivateSession (must now carry the session AuthenticationToken)
-    rn = pc_opcua_client_activate_session(&c, req, sizeof(req));
+    rn = protocore_opcua_client_activate_session(&c, req, sizeof(req));
     TEST_ASSERT_TRUE(rn > 0);
-    TEST_ASSERT_TRUE(pc_opcua_parse_msg(req, rn, &m));
+    TEST_ASSERT_TRUE(protocore_opcua_parse_msg(req, rn, &m));
     TEST_ASSERT_EQUAL_UINT32(OPCUA_ID_ACTIVATE_SESSION_REQ, m.type_id);
-    sn = pc_opcua_build_activate_session_response(&m, 2, 0, resp, sizeof(resp));
+    sn = protocore_opcua_build_activate_session_response(&m, 2, 0, resp, sizeof(resp));
     TEST_ASSERT_TRUE(sn > 0);
-    TEST_ASSERT_TRUE(pc_opcua_client_on_activate_session(resp, sn));
+    TEST_ASSERT_TRUE(protocore_opcua_client_on_activate_session(resp, sn));
 }
 
 void test_read_roundtrip()
 {
     OpcUaClient c;
-    pc_opcua_client_init(&c);
+    protocore_opcua_client_init(&c);
     c.token_id = 88;
 
     OpcUaReadItem items[2] = {{1, 1, PROTO_TRUE, OPCUA_ATTR_VALUE}, {1, 2, PROTO_TRUE, OPCUA_ATTR_VALUE}};
     uint8_t req[256];
-    size_t rn = pc_opcua_client_read(&c, items, 2, req, sizeof(req));
+    size_t rn = protocore_opcua_client_read(&c, items, 2, req, sizeof(req));
     TEST_ASSERT_TRUE(rn > 0);
 
     OpcUaReadRequest rr;
-    TEST_ASSERT_TRUE(pc_opcua_parse_read(req, rn, &rr));
+    TEST_ASSERT_TRUE(protocore_opcua_parse_read(req, rn, &rr));
     TEST_ASSERT_EQUAL_UINT32(2, rr.count);
     TEST_ASSERT_EQUAL_UINT32(1, rr.items[0].id);
     TEST_ASSERT_EQUAL_UINT32(2, rr.items[1].id);
@@ -147,12 +147,12 @@ void test_read_roundtrip()
     ssts[1] = OPCUA_STATUS_GOOD;
 
     uint8_t resp[256];
-    size_t sn = pc_opcua_build_read_response(&rr, svals, ssts, 3, 0, resp, sizeof(resp));
+    size_t sn = protocore_opcua_build_read_response(&rr, svals, ssts, 3, 0, resp, sizeof(resp));
     TEST_ASSERT_TRUE(sn > 0);
 
     OpcUaVariant cvals[2];
     uint32_t csts[2];
-    int32_t n = pc_opcua_client_on_read(resp, sn, cvals, csts, 2);
+    int32_t n = protocore_opcua_client_on_read(resp, sn, cvals, csts, 2);
     TEST_ASSERT_EQUAL_INT32(2, n);
     TEST_ASSERT_EQUAL_HEX8(OPCUA_VAR_UINT32, cvals[0].type);
     TEST_ASSERT_EQUAL_UINT32(4242, cvals[0].u32);
@@ -164,24 +164,24 @@ void test_read_roundtrip()
 void test_browse_roundtrip()
 {
     OpcUaClient c;
-    pc_opcua_client_init(&c);
+    protocore_opcua_client_init(&c);
     c.token_id = 88;
 
     uint8_t req[256];
-    size_t rn = pc_opcua_client_browse(&c, 0, 85, req, sizeof(req));
+    size_t rn = protocore_opcua_client_browse(&c, 0, 85, req, sizeof(req));
     TEST_ASSERT_TRUE(rn > 0);
 
     OpcUaBrowseRequest br;
-    TEST_ASSERT_TRUE(pc_opcua_parse_browse(req, rn, &br));
+    TEST_ASSERT_TRUE(protocore_opcua_parse_browse(req, rn, &br));
     TEST_ASSERT_EQUAL_UINT32(1, br.count);
     TEST_ASSERT_EQUAL_UINT32(85, br.items[0].id);
 
     uint8_t resp[512];
-    size_t sn = pc_opcua_build_browse_response(&br, srv_browse, 4, 0, resp, sizeof(resp));
+    size_t sn = protocore_opcua_build_browse_response(&br, srv_browse, 4, 0, resp, sizeof(resp));
     TEST_ASSERT_TRUE(sn > 0);
 
     OpcUaClientRef refs[4];
-    int32_t n = pc_opcua_client_on_browse(resp, sn, refs, 4);
+    int32_t n = protocore_opcua_client_on_browse(resp, sn, refs, 4);
     TEST_ASSERT_EQUAL_INT32(2, n);
     TEST_ASSERT_EQUAL_STRING("Uptime", refs[0].browse_name);
     TEST_ASSERT_EQUAL_UINT32(1, refs[0].target_id);
@@ -193,22 +193,22 @@ void test_browse_roundtrip()
 void test_get_endpoints_roundtrip()
 {
     OpcUaClient c;
-    pc_opcua_client_init(&c);
+    protocore_opcua_client_init(&c);
     c.token_id = 88;
 
     uint8_t req[256];
-    size_t rn = pc_opcua_client_get_endpoints(&c, "opc.tcp://host:4840", req, sizeof(req));
+    size_t rn = protocore_opcua_client_get_endpoints(&c, "opc.tcp://host:4840", req, sizeof(req));
     TEST_ASSERT_TRUE(rn > 0);
     OpcUaMsg m;
-    TEST_ASSERT_TRUE(pc_opcua_parse_msg(req, rn, &m));
+    TEST_ASSERT_TRUE(protocore_opcua_parse_msg(req, rn, &m));
     TEST_ASSERT_EQUAL_UINT32(OPCUA_ID_GET_ENDPOINTS_REQ, m.type_id);
 
     OpcUaServerInfo si = {"opc.tcp://host:4840", "urn:test", "TestServer"};
     uint8_t resp[512];
-    size_t sn = pc_opcua_build_get_endpoints_response(&m, &si, 7, 0, resp, sizeof(resp));
+    size_t sn = protocore_opcua_build_get_endpoints_response(&m, &si, 7, 0, resp, sizeof(resp));
     TEST_ASSERT_TRUE(sn > 0);
 
-    int32_t ep = pc_opcua_client_on_get_endpoints(resp, sn);
+    int32_t ep = protocore_opcua_client_on_get_endpoints(resp, sn);
     TEST_ASSERT_EQUAL_INT32(1, ep);
 }
 
@@ -221,19 +221,19 @@ void test_service_fault_rejected_by_parsers()
     m.request_id = 9;
     m.request_handle = 3;
     uint8_t resp[64];
-    size_t sn = pc_opcua_build_service_fault(&m, OPCUA_STATUS_BAD_SERVICE_UNSUPPORTED, 1, 0, resp, sizeof(resp));
+    size_t sn = protocore_opcua_build_service_fault(&m, OPCUA_STATUS_BAD_SERVICE_UNSUPPORTED, 1, 0, resp, sizeof(resp));
     TEST_ASSERT_TRUE(sn > 0);
 
     OpcUaVariant vals[1];
     uint32_t sts[1];
-    TEST_ASSERT_EQUAL_INT32(-1, pc_opcua_client_on_read(resp, sn, vals, sts, 1));
-    TEST_ASSERT_FALSE(pc_opcua_client_on_activate_session(resp, sn));
+    TEST_ASSERT_EQUAL_INT32(-1, protocore_opcua_client_on_read(resp, sn, vals, sts, 1));
+    TEST_ASSERT_FALSE(protocore_opcua_client_on_activate_session(resp, sn));
 }
 
 void test_write_roundtrip()
 {
     OpcUaClient c;
-    pc_opcua_client_init(&c);
+    protocore_opcua_client_init(&c);
     c.token_id = 88;
 
     OpcUaWriteItem items[1];
@@ -246,11 +246,11 @@ void test_write_roundtrip()
     items[0].value.u32 = 4242;
 
     uint8_t req[128];
-    size_t rn = pc_opcua_client_write(&c, items, 1, req, sizeof(req));
+    size_t rn = protocore_opcua_client_write(&c, items, 1, req, sizeof(req));
     TEST_ASSERT_TRUE(rn > 0);
 
     OpcUaWriteRequest wr;
-    TEST_ASSERT_TRUE(pc_opcua_parse_write(req, rn, &wr));
+    TEST_ASSERT_TRUE(protocore_opcua_parse_write(req, rn, &wr));
     TEST_ASSERT_EQUAL_UINT32(1, wr.count);
     TEST_ASSERT_EQUAL_UINT32(10, wr.items[0].id);
     TEST_ASSERT_EQUAL_HEX8(OPCUA_VAR_UINT32, wr.items[0].value.type);
@@ -258,11 +258,11 @@ void test_write_roundtrip()
 
     uint32_t res[1] = {OPCUA_STATUS_GOOD};
     uint8_t resp[64];
-    size_t sn = pc_opcua_build_write_response(&wr, res, 9, 0, resp, sizeof(resp));
+    size_t sn = protocore_opcua_build_write_response(&wr, res, 9, 0, resp, sizeof(resp));
     TEST_ASSERT_TRUE(sn > 0);
 
     uint32_t got[1] = {0xFFFFFFFFu};
-    int32_t nres = pc_opcua_client_on_write(resp, sn, got, 1);
+    int32_t nres = protocore_opcua_client_on_write(resp, sn, got, 1);
     TEST_ASSERT_EQUAL_INT32(1, nres);
     TEST_ASSERT_EQUAL_HEX32(OPCUA_STATUS_GOOD, got[0]);
 }
@@ -270,41 +270,41 @@ void test_write_roundtrip()
 void test_close_session_roundtrip()
 {
     OpcUaClient c;
-    pc_opcua_client_init(&c);
+    protocore_opcua_client_init(&c);
     c.token_id = 88;
 
     uint8_t req[128];
-    size_t rn = pc_opcua_client_close_session(&c, req, sizeof(req));
+    size_t rn = protocore_opcua_client_close_session(&c, req, sizeof(req));
     TEST_ASSERT_TRUE(rn > 0);
     OpcUaMsg m;
-    TEST_ASSERT_TRUE(pc_opcua_parse_msg(req, rn, &m));
+    TEST_ASSERT_TRUE(protocore_opcua_parse_msg(req, rn, &m));
     TEST_ASSERT_EQUAL_UINT32(OPCUA_ID_CLOSE_SESSION_REQ, m.type_id);
 
     uint8_t resp[64];
-    size_t sn = pc_opcua_build_close_session_response(&m, 5, 0, resp, sizeof(resp));
+    size_t sn = protocore_opcua_build_close_session_response(&m, 5, 0, resp, sizeof(resp));
     TEST_ASSERT_TRUE(sn > 0);
     UaMsgHeader h;
-    TEST_ASSERT_TRUE(pc_opcua_parse_header(resp, sn, &h));
+    TEST_ASSERT_TRUE(protocore_opcua_parse_header(resp, sn, &h));
     TEST_ASSERT_EQUAL_MEMORY("MSG", h.type, 3);
 }
 
 void test_close_channel_is_clo()
 {
     uint8_t req[16];
-    size_t rn = pc_opcua_client_close_channel(req, sizeof(req));
+    size_t rn = protocore_opcua_client_close_channel(req, sizeof(req));
     TEST_ASSERT_EQUAL_size_t(8, rn);
     UaMsgHeader h;
-    TEST_ASSERT_TRUE(pc_opcua_parse_header(req, rn, &h));
+    TEST_ASSERT_TRUE(protocore_opcua_parse_header(req, rn, &h));
     TEST_ASSERT_EQUAL_MEMORY("CLO", h.type, 3);
 }
 
 void test_seq_and_request_id_increment()
 {
     OpcUaClient c;
-    pc_opcua_client_init(&c);
+    protocore_opcua_client_init(&c);
     uint8_t req[256];
-    pc_opcua_client_open(&c, req, sizeof(req));                     // seq 1, request 1
-    pc_opcua_client_create_session(&c, "s", "u", req, sizeof(req)); // seq 2, request 2
+    protocore_opcua_client_open(&c, req, sizeof(req));                     // seq 1, request 1
+    protocore_opcua_client_create_session(&c, "s", "u", req, sizeof(req)); // seq 2, request 2
     TEST_ASSERT_EQUAL_UINT32(2, c.seq);
     TEST_ASSERT_EQUAL_UINT32(2, c.request_id);
     TEST_ASSERT_TRUE(c.request_handle >= 2);
@@ -335,12 +335,12 @@ void test_on_read_all_variant_types()
     ss[4] = OPCUA_STATUS_BAD_SERVICE_UNSUPPORTED; // forces the StatusCode mask bit
 
     uint8_t resp[512];
-    size_t sn = pc_opcua_build_read_response(&rr, sv, ss, 5, 0, resp, sizeof(resp));
+    size_t sn = protocore_opcua_build_read_response(&rr, sv, ss, 5, 0, resp, sizeof(resp));
     TEST_ASSERT_TRUE(sn > 0);
 
     OpcUaVariant cv[5];
     uint32_t cs[5];
-    int32_t n = pc_opcua_client_on_read(resp, sn, cv, cs, 5);
+    int32_t n = protocore_opcua_client_on_read(resp, sn, cv, cs, 5);
     TEST_ASSERT_EQUAL_INT32(5, n);
     TEST_ASSERT_TRUE(cv[0].b);
     TEST_ASSERT_EQUAL_INT32(-5, cv[1].i32);
@@ -356,17 +356,17 @@ void test_client_parsers_reject_fault()
     OpcUaMsg m;
     memset(&m, 0, sizeof(m));
     uint8_t resp[128];
-    size_t sn = pc_opcua_build_service_fault(&m, OPCUA_STATUS_BAD_SERVICE_UNSUPPORTED, 1, 0, resp, sizeof(resp));
+    size_t sn = protocore_opcua_build_service_fault(&m, OPCUA_STATUS_BAD_SERVICE_UNSUPPORTED, 1, 0, resp, sizeof(resp));
     TEST_ASSERT_TRUE(sn > 0);
 
     OpcUaClient c;
-    pc_opcua_client_init(&c);
-    TEST_ASSERT_EQUAL_INT32(-1, pc_opcua_client_on_get_endpoints(resp, sn));
-    TEST_ASSERT_FALSE(pc_opcua_client_on_create_session(&c, resp, sn));
+    protocore_opcua_client_init(&c);
+    TEST_ASSERT_EQUAL_INT32(-1, protocore_opcua_client_on_get_endpoints(resp, sn));
+    TEST_ASSERT_FALSE(protocore_opcua_client_on_create_session(&c, resp, sn));
     uint32_t results[1];
-    TEST_ASSERT_EQUAL_INT32(-1, pc_opcua_client_on_write(resp, sn, results, 1));
+    TEST_ASSERT_EQUAL_INT32(-1, protocore_opcua_client_on_write(resp, sn, results, 1));
     OpcUaClientRef refs[1];
-    TEST_ASSERT_EQUAL_INT32(-1, pc_opcua_client_on_browse(resp, sn, refs, 1));
+    TEST_ASSERT_EQUAL_INT32(-1, protocore_opcua_client_on_browse(resp, sn, refs, 1));
 }
 
 // Malformed responses are rejected: wrong UACP type, too-short ACK, corrupt body
@@ -376,12 +376,12 @@ void test_client_parsers_reject_malformed()
     OpcUaAckInfo ai;
     uint8_t ack[28] = {'A', 'C', 'K', 'F', 28, 0, 0, 0};
     ack[0] = 'X'; // wrong type
-    TEST_ASSERT_FALSE(pc_opcua_client_on_ack(ack, sizeof(ack), &ai));
+    TEST_ASSERT_FALSE(protocore_opcua_client_on_ack(ack, sizeof(ack), &ai));
     uint8_t shortack[12] = {'A', 'C', 'K', 'F', 12, 0, 0, 0};
-    TEST_ASSERT_FALSE(pc_opcua_client_on_ack(shortack, sizeof(shortack), &ai)); // < 8+20
+    TEST_ASSERT_FALSE(protocore_opcua_client_on_ack(shortack, sizeof(shortack), &ai)); // < 8+20
 
     OpcUaClient c;
-    pc_opcua_client_init(&c);
+    protocore_opcua_client_init(&c);
     uint8_t opn[64];
     memset(opn, 0, sizeof(opn));
     opn[0] = 'M'; // OPN expected, MSG given
@@ -389,34 +389,34 @@ void test_client_parsers_reject_malformed()
     opn[2] = 'G';
     opn[3] = 'F';
     opn[4] = 64;
-    TEST_ASSERT_FALSE(pc_opcua_client_on_open(&c, opn, sizeof(opn)));
+    TEST_ASSERT_FALSE(protocore_opcua_client_on_open(&c, opn, sizeof(opn)));
 
     // Build a valid Read response, then corrupt the body TypeId NodeId kind.
     OpcUaReadRequest rr;
     memset(&rr, 0, sizeof(rr));
     rr.count = 0;
     uint8_t resp[128];
-    size_t sn = pc_opcua_build_read_response(&rr, NULL, NULL, 0, 0, resp, sizeof(resp));
+    size_t sn = protocore_opcua_build_read_response(&rr, NULL, NULL, 0, 0, resp, sizeof(resp));
     TEST_ASSERT_TRUE(sn > 0);
     uint8_t save = resp[24];
     resp[24] = 0x06; // invalid NodeId encoding kind
     OpcUaVariant v[1];
     uint32_t s[1];
-    TEST_ASSERT_EQUAL_INT32(-1, pc_opcua_client_on_read(resp, sn, v, s, 1));
+    TEST_ASSERT_EQUAL_INT32(-1, protocore_opcua_client_on_read(resp, sn, v, s, 1));
     resp[24] = save;
     // A body truncated mid-header underruns the reader.
-    TEST_ASSERT_EQUAL_INT32(-1, pc_opcua_client_on_read(resp, sn - 4, v, s, 1));
+    TEST_ASSERT_EQUAL_INT32(-1, protocore_opcua_client_on_read(resp, sn - 4, v, s, 1));
 }
 
 void test_builder_overflow_guard()
 {
     // A capacity too small for even the frame header overflows the writer; cw_patch returns 0.
     uint8_t tiny[6];
-    TEST_ASSERT_EQUAL_size_t(0, pc_opcua_client_hello("opc.tcp://host:4840", tiny, sizeof(tiny)));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_opcua_client_hello("opc.tcp://host:4840", tiny, sizeof(tiny)));
     OpcUaClient c;
-    pc_opcua_client_init(&c);
-    TEST_ASSERT_EQUAL_size_t(0, pc_opcua_client_open(&c, tiny, sizeof(tiny)));
-    TEST_ASSERT_EQUAL_size_t(0, pc_opcua_client_activate_session(&c, tiny, sizeof(tiny)));
+    protocore_opcua_client_init(&c);
+    TEST_ASSERT_EQUAL_size_t(0, protocore_opcua_client_open(&c, tiny, sizeof(tiny)));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_opcua_client_activate_session(&c, tiny, sizeof(tiny)));
 }
 
 void test_on_read_unknown_variant_rejected()
@@ -424,12 +424,12 @@ void test_on_read_unknown_variant_rejected()
     // A server sending a DataValue whose Variant type byte is unsupported must be rejected, not
     // mis-decoded. Build a valid UINT32 response with a distinctive value, then patch its type byte.
     OpcUaClient c;
-    pc_opcua_client_init(&c);
+    protocore_opcua_client_init(&c);
     OpcUaReadItem items[1] = {{1, 1, PROTO_TRUE, OPCUA_ATTR_VALUE}};
     uint8_t req[128];
-    size_t rn = pc_opcua_client_read(&c, items, 1, req, sizeof(req));
+    size_t rn = protocore_opcua_client_read(&c, items, 1, req, sizeof(req));
     OpcUaReadRequest rr;
-    TEST_ASSERT_TRUE(pc_opcua_parse_read(req, rn, &rr));
+    TEST_ASSERT_TRUE(protocore_opcua_parse_read(req, rn, &rr));
     OpcUaVariant sv[1];
     uint32_t ss[1];
     memset(sv, 0, sizeof(sv));
@@ -437,7 +437,7 @@ void test_on_read_unknown_variant_rejected()
     sv[0].u32 = 0xA1B2C3D4; // distinctive little-endian marker D4 C3 B2 A1
     ss[0] = OPCUA_STATUS_GOOD;
     uint8_t resp[128];
-    size_t sn = pc_opcua_build_read_response(&rr, sv, ss, 1, 0, resp, sizeof(resp));
+    size_t sn = protocore_opcua_build_read_response(&rr, sv, ss, 1, 0, resp, sizeof(resp));
     TEST_ASSERT_TRUE(sn > 0);
     int type_off = -1;
     for (size_t i = 1; i + 4 < sn; i++)
@@ -453,7 +453,7 @@ void test_on_read_unknown_variant_rejected()
     resp[type_off] = 200; // an unsupported Variant type
     OpcUaVariant cv[1];
     uint32_t cs[1];
-    TEST_ASSERT_EQUAL_INT32(-1, pc_opcua_client_on_read(resp, sn, cv, cs, 1)); // default arm -> err -> -1
+    TEST_ASSERT_EQUAL_INT32(-1, protocore_opcua_client_on_read(resp, sn, cv, cs, 1)); // default arm -> err -> -1
 }
 
 // Build a minimal valid MSG response (header + security/sequence + TypeId + ResponseHeader) whose
@@ -461,28 +461,28 @@ void test_on_read_unknown_variant_rejected()
 static size_t build_min_response(uint8_t *out, size_t cap, uint32_t type_id, int32_t count_field, int32_t str_table)
 {
     UaWriter w = {out, cap, 0, PROTO_TRUE};
-    pc_ua_w_u8(&w, 'M');
-    pc_ua_w_u8(&w, 'S');
-    pc_ua_w_u8(&w, 'G');
-    pc_ua_w_u8(&w, 'F');
-    pc_ua_w_u32(&w, 0); // size placeholder
-    pc_ua_w_u32(&w, 0); // SecureChannelId
-    pc_ua_w_u32(&w, 0); // TokenId
-    pc_ua_w_u32(&w, 0); // SequenceNumber
-    pc_ua_w_u32(&w, 0); // RequestId
-    pc_ua_w_nodeid_numeric(&w, 0, type_id);
-    pc_ua_w_u64(&w, 0);                 // ResponseHeader.Timestamp
-    pc_ua_w_u32(&w, 0);                 // RequestHandle
-    pc_ua_w_u32(&w, OPCUA_STATUS_GOOD); // ServiceResult
-    pc_ua_w_u8(&w, 0);                  // ServiceDiagnostics
-    pc_ua_w_i32(&w, str_table);         // StringTable count
+    protocore_ua_w_u8(&w, 'M');
+    protocore_ua_w_u8(&w, 'S');
+    protocore_ua_w_u8(&w, 'G');
+    protocore_ua_w_u8(&w, 'F');
+    protocore_ua_w_u32(&w, 0); // size placeholder
+    protocore_ua_w_u32(&w, 0); // SecureChannelId
+    protocore_ua_w_u32(&w, 0); // TokenId
+    protocore_ua_w_u32(&w, 0); // SequenceNumber
+    protocore_ua_w_u32(&w, 0); // RequestId
+    protocore_ua_w_nodeid_numeric(&w, 0, type_id);
+    protocore_ua_w_u64(&w, 0);                 // ResponseHeader.Timestamp
+    protocore_ua_w_u32(&w, 0);                 // RequestHandle
+    protocore_ua_w_u32(&w, OPCUA_STATUS_GOOD); // ServiceResult
+    protocore_ua_w_u8(&w, 0);                  // ServiceDiagnostics
+    protocore_ua_w_i32(&w, str_table);         // StringTable count
     for (int32_t i = 0; i < str_table; i++)
     {
-        pc_ua_w_i32(&w, -1); // one (null) StringTable entry each
+        protocore_ua_w_i32(&w, -1); // one (null) StringTable entry each
     }
-    pc_ua_w_nodeid_numeric(&w, 0, 0); // AdditionalHeader NodeId (null)
-    pc_ua_w_u8(&w, 0);                // AdditionalHeader ExtensionObject (no body)
-    pc_ua_w_i32(&w, count_field);     // service body: Results/Endpoints count
+    protocore_ua_w_nodeid_numeric(&w, 0, 0); // AdditionalHeader NodeId (null)
+    protocore_ua_w_u8(&w, 0);                // AdditionalHeader ExtensionObject (no body)
+    protocore_ua_w_i32(&w, count_field);     // service body: Results/Endpoints count
     out[4] = (uint8_t)w.n;
     out[5] = (uint8_t)(w.n >> 8);
     out[6] = (uint8_t)(w.n >> 16);
@@ -497,13 +497,13 @@ void test_response_parsers_reject_negative_count()
     uint32_t s[1];
     size_t n = build_min_response(resp, sizeof(resp), OPCUA_ID_READ_RESP, -1, 0);
     TEST_ASSERT_TRUE(n > 0);
-    TEST_ASSERT_EQUAL_INT32(-1, pc_opcua_client_on_read(resp, n, v, s, 1));
+    TEST_ASSERT_EQUAL_INT32(-1, protocore_opcua_client_on_read(resp, n, v, s, 1));
     uint32_t wr[1];
     n = build_min_response(resp, sizeof(resp), OPCUA_ID_WRITE_RESP, -1, 0);
-    TEST_ASSERT_EQUAL_INT32(-1, pc_opcua_client_on_write(resp, n, wr, 1));
+    TEST_ASSERT_EQUAL_INT32(-1, protocore_opcua_client_on_write(resp, n, wr, 1));
     OpcUaClientRef refs[1];
     n = build_min_response(resp, sizeof(resp), OPCUA_ID_BROWSE_RESP, -1, 0);
-    TEST_ASSERT_EQUAL_INT32(-1, pc_opcua_client_on_browse(resp, n, refs, 1));
+    TEST_ASSERT_EQUAL_INT32(-1, protocore_opcua_client_on_browse(resp, n, refs, 1));
 }
 
 // Build an OPN response frame with a controllable SecurityPolicyUri length, body TypeId, whether a
@@ -513,48 +513,48 @@ static size_t build_opn(uint8_t *out, size_t cap, uint32_t type_id, int32_t poli
                         uint32_t svc, proto_bool with_body, proto_bool string_type_id)
 {
     UaWriter w = {out, cap, 0, PROTO_TRUE};
-    pc_ua_w_u8(&w, 'O');
-    pc_ua_w_u8(&w, 'P');
-    pc_ua_w_u8(&w, 'N');
-    pc_ua_w_u8(&w, 'F');
-    pc_ua_w_u32(&w, 0); // size placeholder
-    pc_ua_w_u32(&w, 0); // SecureChannelId
-    pc_ua_w_i32(&w, policy_len);
+    protocore_ua_w_u8(&w, 'O');
+    protocore_ua_w_u8(&w, 'P');
+    protocore_ua_w_u8(&w, 'N');
+    protocore_ua_w_u8(&w, 'F');
+    protocore_ua_w_u32(&w, 0); // size placeholder
+    protocore_ua_w_u32(&w, 0); // SecureChannelId
+    protocore_ua_w_i32(&w, policy_len);
     for (int32_t i = 0; i < policy_len; i++)
     {
-        pc_ua_w_u8(&w, 'x'); // SecurityPolicyUri bytes
+        protocore_ua_w_u8(&w, 'x'); // SecurityPolicyUri bytes
     }
-    pc_ua_w_i32(&w, -1); // SenderCertificate (null)
-    pc_ua_w_i32(&w, -1); // ReceiverCertificateThumbprint (null)
-    pc_ua_w_u32(&w, 0);  // SequenceNumber
-    pc_ua_w_u32(&w, 0);  // RequestId
+    protocore_ua_w_i32(&w, -1); // SenderCertificate (null)
+    protocore_ua_w_i32(&w, -1); // ReceiverCertificateThumbprint (null)
+    protocore_ua_w_u32(&w, 0);  // SequenceNumber
+    protocore_ua_w_u32(&w, 0);  // RequestId
     if (string_type_id)
     {
-        pc_ua_w_u8(&w, 0x03);              // NodeId encoding: String
-        pc_ua_w_u16(&w, 0);                // NamespaceIndex
-        pc_ua_w_string(&w, "OpenResp", 8); // String identifier
+        protocore_ua_w_u8(&w, 0x03);              // NodeId encoding: String
+        protocore_ua_w_u16(&w, 0);                // NamespaceIndex
+        protocore_ua_w_string(&w, "OpenResp", 8); // String identifier
     }
     else
     {
-        pc_ua_w_nodeid_numeric(&w, 0, type_id);
+        protocore_ua_w_nodeid_numeric(&w, 0, type_id);
     }
     if (with_rh)
     {
-        pc_ua_w_u64(&w, 0);
-        pc_ua_w_u32(&w, 0);
-        pc_ua_w_u32(&w, svc);
-        pc_ua_w_u8(&w, 0);
-        pc_ua_w_i32(&w, 0);
-        pc_ua_w_nodeid_numeric(&w, 0, 0);
-        pc_ua_w_u8(&w, 0);
+        protocore_ua_w_u64(&w, 0);
+        protocore_ua_w_u32(&w, 0);
+        protocore_ua_w_u32(&w, svc);
+        protocore_ua_w_u8(&w, 0);
+        protocore_ua_w_i32(&w, 0);
+        protocore_ua_w_nodeid_numeric(&w, 0, 0);
+        protocore_ua_w_u8(&w, 0);
     }
     if (with_body)
     {
-        pc_ua_w_u32(&w, 0);    // ServerProtocolVersion
-        pc_ua_w_u32(&w, 0x2A); // SecurityToken.ChannelId
-        pc_ua_w_u32(&w, 0x2B); // SecurityToken.TokenId
-        pc_ua_w_u64(&w, 0);    // CreatedAt
-        pc_ua_w_u32(&w, 1000); // RevisedLifetime
+        protocore_ua_w_u32(&w, 0);    // ServerProtocolVersion
+        protocore_ua_w_u32(&w, 0x2A); // SecurityToken.ChannelId
+        protocore_ua_w_u32(&w, 0x2B); // SecurityToken.TokenId
+        protocore_ua_w_u64(&w, 0);    // CreatedAt
+        protocore_ua_w_u32(&w, 1000); // RevisedLifetime
     }
     out[4] = (uint8_t)w.n;
     out[5] = (uint8_t)(w.n >> 8);
@@ -571,35 +571,35 @@ static size_t forge_msg(uint8_t *out, size_t cap, uint32_t type_id, uint32_t svc
                         proto_bool string_type_id, const char *magic)
 {
     UaWriter w = {out, cap, 0, PROTO_TRUE};
-    pc_ua_w_u8(&w, (uint8_t)magic[0]);
-    pc_ua_w_u8(&w, (uint8_t)magic[1]);
-    pc_ua_w_u8(&w, (uint8_t)magic[2]);
-    pc_ua_w_u8(&w, 'F');
-    pc_ua_w_u32(&w, 0); // size placeholder
-    pc_ua_w_u32(&w, 0); // SecureChannelId
-    pc_ua_w_u32(&w, 0); // TokenId
-    pc_ua_w_u32(&w, 0); // SequenceNumber
-    pc_ua_w_u32(&w, 0); // RequestId
+    protocore_ua_w_u8(&w, (uint8_t)magic[0]);
+    protocore_ua_w_u8(&w, (uint8_t)magic[1]);
+    protocore_ua_w_u8(&w, (uint8_t)magic[2]);
+    protocore_ua_w_u8(&w, 'F');
+    protocore_ua_w_u32(&w, 0); // size placeholder
+    protocore_ua_w_u32(&w, 0); // SecureChannelId
+    protocore_ua_w_u32(&w, 0); // TokenId
+    protocore_ua_w_u32(&w, 0); // SequenceNumber
+    protocore_ua_w_u32(&w, 0); // RequestId
     if (string_type_id)
     {
-        pc_ua_w_u8(&w, 0x03); // NodeId encoding: String
-        pc_ua_w_u16(&w, 0);
-        pc_ua_w_string(&w, "Resp", 4);
+        protocore_ua_w_u8(&w, 0x03); // NodeId encoding: String
+        protocore_ua_w_u16(&w, 0);
+        protocore_ua_w_string(&w, "Resp", 4);
     }
     else
     {
-        pc_ua_w_nodeid_numeric(&w, 0, type_id);
+        protocore_ua_w_nodeid_numeric(&w, 0, type_id);
     }
-    pc_ua_w_u64(&w, 0);               // ResponseHeader.Timestamp
-    pc_ua_w_u32(&w, 0);               // RequestHandle
-    pc_ua_w_u32(&w, svc);             // ServiceResult
-    pc_ua_w_u8(&w, 0);                // ServiceDiagnostics
-    pc_ua_w_i32(&w, 0);               // StringTable count (none)
-    pc_ua_w_nodeid_numeric(&w, 0, 0); // AdditionalHeader NodeId (null)
-    pc_ua_w_u8(&w, 0);                // AdditionalHeader ExtensionObject (no body)
+    protocore_ua_w_u64(&w, 0);               // ResponseHeader.Timestamp
+    protocore_ua_w_u32(&w, 0);               // RequestHandle
+    protocore_ua_w_u32(&w, svc);             // ServiceResult
+    protocore_ua_w_u8(&w, 0);                // ServiceDiagnostics
+    protocore_ua_w_i32(&w, 0);               // StringTable count (none)
+    protocore_ua_w_nodeid_numeric(&w, 0, 0); // AdditionalHeader NodeId (null)
+    protocore_ua_w_u8(&w, 0);                // AdditionalHeader ExtensionObject (no body)
     for (size_t i = 0; i < body_len; i++)
     {
-        pc_ua_w_u8(&w, body[i]);
+        protocore_ua_w_u8(&w, body[i]);
     }
     out[4] = (uint8_t)w.n;
     out[5] = (uint8_t)(w.n >> 8);
@@ -611,29 +611,29 @@ static size_t forge_msg(uint8_t *out, size_t cap, uint32_t type_id, uint32_t svc
 void test_on_open_guards()
 {
     OpcUaClient c;
-    pc_opcua_client_init(&c);
+    protocore_opcua_client_init(&c);
     uint8_t buf[128];
     // Non-empty SecurityPolicyUri exercises the cr_skip_string skip; then the missing ResponseHeader
     // underruns the reader -> parse fails.
     size_t n =
         build_opn(buf, sizeof(buf), OPCUA_ID_OPEN_RESP, 10, PROTO_FALSE, OPCUA_STATUS_GOOD, PROTO_FALSE, PROTO_FALSE);
-    TEST_ASSERT_FALSE(pc_opcua_client_on_open(&c, buf, n));
+    TEST_ASSERT_FALSE(protocore_opcua_client_on_open(&c, buf, n));
     // A wrong body TypeId is rejected.
     n = build_opn(buf, sizeof(buf), 999, 0, PROTO_TRUE, OPCUA_STATUS_GOOD, PROTO_FALSE, PROTO_FALSE);
-    TEST_ASSERT_FALSE(pc_opcua_client_on_open(&c, buf, n));
+    TEST_ASSERT_FALSE(protocore_opcua_client_on_open(&c, buf, n));
     // A SecurityPolicyUri length larger than the frame overflows cr_skip.
     uint8_t ovf[16];
     UaWriter w = {ovf, sizeof(ovf), 0, PROTO_TRUE};
-    pc_ua_w_u8(&w, 'O');
-    pc_ua_w_u8(&w, 'P');
-    pc_ua_w_u8(&w, 'N');
-    pc_ua_w_u8(&w, 'F');
-    pc_ua_w_u32(&w, 0);
-    pc_ua_w_u32(&w, 0);       // SecureChannelId
-    pc_ua_w_i32(&w, 1000000); // SecurityPolicyUri length far past the frame
+    protocore_ua_w_u8(&w, 'O');
+    protocore_ua_w_u8(&w, 'P');
+    protocore_ua_w_u8(&w, 'N');
+    protocore_ua_w_u8(&w, 'F');
+    protocore_ua_w_u32(&w, 0);
+    protocore_ua_w_u32(&w, 0);       // SecureChannelId
+    protocore_ua_w_i32(&w, 1000000); // SecurityPolicyUri length far past the frame
     ovf[4] = (uint8_t)w.n;
     ovf[5] = ovf[6] = ovf[7] = 0;
-    TEST_ASSERT_FALSE(pc_opcua_client_on_open(&c, ovf, w.n));
+    TEST_ASSERT_FALSE(protocore_opcua_client_on_open(&c, ovf, w.n));
 }
 
 void test_response_header_string_table_skip()
@@ -644,48 +644,48 @@ void test_response_header_string_table_skip()
     size_t n = build_min_response(resp, sizeof(resp), OPCUA_ID_READ_RESP, 0, 1);
     OpcUaVariant v[1];
     uint32_t s[1];
-    TEST_ASSERT_EQUAL_INT32(0, pc_opcua_client_on_read(resp, n, v, s, 1));
+    TEST_ASSERT_EQUAL_INT32(0, protocore_opcua_client_on_read(resp, n, v, s, 1));
 }
 
 // Forge a BrowseResponse carrying one ReferenceDescription whose DisplayName LocalizedText sets the
-// Locale mask bit (0x01). Our own server never emits a Locale (pc_ua_w_localizedtext is always called
+// Locale mask bit (0x01). Our own server never emits a Locale (protocore_ua_w_localizedtext is always called
 // with a null locale), so only a forged / third-party-server response exercises the client's
 // Locale-skip parse path - a real path for a spec-compliant peer that does send a Locale.
 static size_t build_browse_with_locale(uint8_t *out, size_t cap)
 {
     UaWriter w = {out, cap, 0, PROTO_TRUE};
-    pc_ua_w_u8(&w, 'M');
-    pc_ua_w_u8(&w, 'S');
-    pc_ua_w_u8(&w, 'G');
-    pc_ua_w_u8(&w, 'F');
-    pc_ua_w_u32(&w, 0); // size placeholder
-    pc_ua_w_u32(&w, 0); // SecureChannelId
-    pc_ua_w_u32(&w, 0); // TokenId
-    pc_ua_w_u32(&w, 0); // SequenceNumber
-    pc_ua_w_u32(&w, 0); // RequestId
-    pc_ua_w_nodeid_numeric(&w, 0, OPCUA_ID_BROWSE_RESP);
-    pc_ua_w_u64(&w, 0);                 // ResponseHeader.Timestamp
-    pc_ua_w_u32(&w, 0);                 // RequestHandle
-    pc_ua_w_u32(&w, OPCUA_STATUS_GOOD); // ServiceResult
-    pc_ua_w_u8(&w, 0);                  // ServiceDiagnostics
-    pc_ua_w_i32(&w, 0);                 // StringTable count (none)
-    pc_ua_w_nodeid_numeric(&w, 0, 0);   // AdditionalHeader NodeId (null)
-    pc_ua_w_u8(&w, 0);                  // AdditionalHeader ExtensionObject (no body)
+    protocore_ua_w_u8(&w, 'M');
+    protocore_ua_w_u8(&w, 'S');
+    protocore_ua_w_u8(&w, 'G');
+    protocore_ua_w_u8(&w, 'F');
+    protocore_ua_w_u32(&w, 0); // size placeholder
+    protocore_ua_w_u32(&w, 0); // SecureChannelId
+    protocore_ua_w_u32(&w, 0); // TokenId
+    protocore_ua_w_u32(&w, 0); // SequenceNumber
+    protocore_ua_w_u32(&w, 0); // RequestId
+    protocore_ua_w_nodeid_numeric(&w, 0, OPCUA_ID_BROWSE_RESP);
+    protocore_ua_w_u64(&w, 0);                 // ResponseHeader.Timestamp
+    protocore_ua_w_u32(&w, 0);                 // RequestHandle
+    protocore_ua_w_u32(&w, OPCUA_STATUS_GOOD); // ServiceResult
+    protocore_ua_w_u8(&w, 0);                  // ServiceDiagnostics
+    protocore_ua_w_i32(&w, 0);                 // StringTable count (none)
+    protocore_ua_w_nodeid_numeric(&w, 0, 0);   // AdditionalHeader NodeId (null)
+    protocore_ua_w_u8(&w, 0);                  // AdditionalHeader ExtensionObject (no body)
     // BrowseResponse body: Results[1] -> one BrowseResult -> one ReferenceDescription.
-    pc_ua_w_i32(&w, 1);                                              // Results count
-    pc_ua_w_u32(&w, OPCUA_STATUS_GOOD);                              // BrowseResult.StatusCode
-    pc_ua_w_i32(&w, -1);                                             // ContinuationPoint (null ByteString)
-    pc_ua_w_i32(&w, 1);                                              // References count
-    pc_ua_w_nodeid_numeric(&w, 0, OPCUA_REFTYPE_ORGANIZES);          // ReferenceTypeId
-    pc_ua_w_bool(&w, PROTO_TRUE);                                    // IsForward
-    pc_ua_w_nodeid_numeric(&w, 1, 7);                                // TargetId (NodeId, numeric)
-    pc_ua_w_u16(&w, 1);                                              // BrowseName.NamespaceIndex
-    pc_ua_w_string(&w, "Node7", 5);                                  // BrowseName.Name
-    pc_ua_w_u8(&w, 0x03);                                            // DisplayName mask: Locale (0x01) + Text (0x02)
-    pc_ua_w_string(&w, "en-US", 5);                                  // Locale -> client Locale-skip path
-    pc_ua_w_string(&w, "Node 7", 6);                                 // Text
-    pc_ua_w_u32(&w, OPCUA_NODECLASS_VARIABLE);                       // NodeClass
-    pc_ua_w_nodeid_numeric(&w, 0, OPCUA_TYPEDEF_BASE_DATA_VARIABLE); // TypeDefinition
+    protocore_ua_w_i32(&w, 1);                                              // Results count
+    protocore_ua_w_u32(&w, OPCUA_STATUS_GOOD);                              // BrowseResult.StatusCode
+    protocore_ua_w_i32(&w, -1);                                             // ContinuationPoint (null ByteString)
+    protocore_ua_w_i32(&w, 1);                                              // References count
+    protocore_ua_w_nodeid_numeric(&w, 0, OPCUA_REFTYPE_ORGANIZES);          // ReferenceTypeId
+    protocore_ua_w_bool(&w, PROTO_TRUE);                                    // IsForward
+    protocore_ua_w_nodeid_numeric(&w, 1, 7);                                // TargetId (NodeId, numeric)
+    protocore_ua_w_u16(&w, 1);                                              // BrowseName.NamespaceIndex
+    protocore_ua_w_string(&w, "Node7", 5);                                  // BrowseName.Name
+    protocore_ua_w_u8(&w, 0x03);                                            // DisplayName mask: Locale (0x01) + Text (0x02)
+    protocore_ua_w_string(&w, "en-US", 5);                                  // Locale -> client Locale-skip path
+    protocore_ua_w_string(&w, "Node 7", 6);                                 // Text
+    protocore_ua_w_u32(&w, OPCUA_NODECLASS_VARIABLE);                       // NodeClass
+    protocore_ua_w_nodeid_numeric(&w, 0, OPCUA_TYPEDEF_BASE_DATA_VARIABLE); // TypeDefinition
     out[4] = (uint8_t)w.n;
     out[5] = (uint8_t)(w.n >> 8);
     out[6] = (uint8_t)(w.n >> 16);
@@ -701,7 +701,7 @@ void test_browse_display_name_locale()
     TEST_ASSERT_TRUE(n > 0);
 
     OpcUaClientRef refs[2];
-    int32_t got = pc_opcua_client_on_browse(resp, n, refs, 2);
+    int32_t got = protocore_opcua_client_on_browse(resp, n, refs, 2);
     TEST_ASSERT_EQUAL_INT32(1, got);
     TEST_ASSERT_EQUAL_STRING("Node7", refs[0].browse_name);
     TEST_ASSERT_EQUAL_UINT32(7, refs[0].target_id);
@@ -713,23 +713,23 @@ void test_browse_display_name_locale()
 void test_builders_encode_null_strings()
 {
     uint8_t req[256];
-    size_t rn = pc_opcua_client_hello(NULL, req, sizeof(req));
+    size_t rn = protocore_opcua_client_hello(NULL, req, sizeof(req));
     TEST_ASSERT_TRUE(rn > 0);
     OpcUaHello hello;
-    TEST_ASSERT_TRUE(pc_opcua_parse_hello(req, rn, &hello));
+    TEST_ASSERT_TRUE(protocore_opcua_parse_hello(req, rn, &hello));
     TEST_ASSERT_EQUAL_MEMORY("\xFF\xFF\xFF\xFF", req + rn - 4, 4); // EndpointUrl written as a null String
 
     OpcUaClient c;
-    pc_opcua_client_init(&c);
-    rn = pc_opcua_client_get_endpoints(&c, NULL, req, sizeof(req));
+    protocore_opcua_client_init(&c);
+    rn = protocore_opcua_client_get_endpoints(&c, NULL, req, sizeof(req));
     TEST_ASSERT_TRUE(rn > 0);
     OpcUaMsg m;
-    TEST_ASSERT_TRUE(pc_opcua_parse_msg(req, rn, &m));
+    TEST_ASSERT_TRUE(protocore_opcua_parse_msg(req, rn, &m));
     TEST_ASSERT_EQUAL_UINT32(OPCUA_ID_GET_ENDPOINTS_REQ, m.type_id);
 
-    rn = pc_opcua_client_create_session(&c, NULL, NULL, req, sizeof(req));
+    rn = protocore_opcua_client_create_session(&c, NULL, NULL, req, sizeof(req));
     TEST_ASSERT_TRUE(rn > 0);
-    TEST_ASSERT_TRUE(pc_opcua_parse_msg(req, rn, &m));
+    TEST_ASSERT_TRUE(protocore_opcua_parse_msg(req, rn, &m));
     TEST_ASSERT_EQUAL_UINT32(OPCUA_ID_CREATE_SESSION_REQ, m.type_id);
 }
 
@@ -739,24 +739,24 @@ void test_on_ack_header_guards()
 {
     OpcUaAckInfo ai;
     uint8_t tiny[4] = {'A', 'C', 'K', 'F'};
-    TEST_ASSERT_FALSE(pc_opcua_client_on_ack(tiny, sizeof(tiny), &ai)); // no room for the 8-byte header
+    TEST_ASSERT_FALSE(protocore_opcua_client_on_ack(tiny, sizeof(tiny), &ai)); // no room for the 8-byte header
 
     uint8_t ack[28];
     memset(ack, 0, sizeof(ack));
     memcpy(ack, "ACKF", 4);
     ack[4] = 28;
     ack[12] = 0x11; // ReceiveBufferSize, to prove the body is read on the accepted frame
-    TEST_ASSERT_TRUE(pc_opcua_client_on_ack(ack, sizeof(ack), &ai));
+    TEST_ASSERT_TRUE(protocore_opcua_client_on_ack(ack, sizeof(ack), &ai));
     TEST_ASSERT_EQUAL_UINT32(0x11, ai.recv_buf_size);
 
     ack[4] = 27; // MessageSize disagrees with the frame length
-    TEST_ASSERT_FALSE(pc_opcua_client_on_ack(ack, sizeof(ack), &ai));
+    TEST_ASSERT_FALSE(protocore_opcua_client_on_ack(ack, sizeof(ack), &ai));
     ack[4] = 28;
     ack[1] = 'X'; // "AXK"
-    TEST_ASSERT_FALSE(pc_opcua_client_on_ack(ack, sizeof(ack), &ai));
+    TEST_ASSERT_FALSE(protocore_opcua_client_on_ack(ack, sizeof(ack), &ai));
     ack[1] = 'C';
     ack[2] = 'X'; // "ACX"
-    TEST_ASSERT_FALSE(pc_opcua_client_on_ack(ack, sizeof(ack), &ai));
+    TEST_ASSERT_FALSE(protocore_opcua_client_on_ack(ack, sizeof(ack), &ai));
 }
 
 // cr_msg_open validates the whole envelope before touching the service body: a frame too short for a
@@ -767,7 +767,7 @@ void test_msg_envelope_guards()
     OpcUaVariant v[1];
     uint32_t s[1];
     uint8_t tiny[4] = {'M', 'S', 'G', 'F'};
-    TEST_ASSERT_EQUAL_INT32(-1, pc_opcua_client_on_read(tiny, sizeof(tiny), v, s, 1));
+    TEST_ASSERT_EQUAL_INT32(-1, protocore_opcua_client_on_read(tiny, sizeof(tiny), v, s, 1));
 
     uint8_t resp[128];
     const uint8_t cnt0[4] = {0, 0, 0, 0}; // Results[] with no entries
@@ -777,23 +777,23 @@ void test_msg_envelope_guards()
         size_t bad = forge_msg(resp, sizeof(resp), OPCUA_ID_READ_RESP, OPCUA_STATUS_GOOD, cnt0, sizeof(cnt0),
                                PROTO_FALSE, wrong[i]);
         TEST_ASSERT_TRUE(bad > 0);
-        TEST_ASSERT_EQUAL_INT32(-1, pc_opcua_client_on_read(resp, bad, v, s, 1));
+        TEST_ASSERT_EQUAL_INT32(-1, protocore_opcua_client_on_read(resp, bad, v, s, 1));
     }
 
     size_t sn =
         forge_msg(resp, sizeof(resp), OPCUA_ID_READ_RESP, OPCUA_STATUS_GOOD, cnt0, sizeof(cnt0), PROTO_FALSE, "MSG");
     TEST_ASSERT_TRUE(sn > 0);
-    TEST_ASSERT_EQUAL_INT32(0, pc_opcua_client_on_read(resp, sn, v, s, 1)); // baseline: accepted, 0 results
+    TEST_ASSERT_EQUAL_INT32(0, protocore_opcua_client_on_read(resp, sn, v, s, 1)); // baseline: accepted, 0 results
     uint8_t save = resp[4];
     resp[4] = (uint8_t)(save + 1); // MessageSize now disagrees with the frame
-    TEST_ASSERT_EQUAL_INT32(-1, pc_opcua_client_on_read(resp, sn, v, s, 1));
+    TEST_ASSERT_EQUAL_INT32(-1, protocore_opcua_client_on_read(resp, sn, v, s, 1));
     resp[4] = save;
 
     // A String body TypeId is well formed but is not the expected numeric ReadResponse id.
     sn = forge_msg(resp, sizeof(resp), OPCUA_ID_READ_RESP, OPCUA_STATUS_GOOD, cnt0, sizeof(cnt0),
                    /*string_type_id=*/PROTO_TRUE, "MSG");
     TEST_ASSERT_TRUE(sn > 0);
-    TEST_ASSERT_EQUAL_INT32(-1, pc_opcua_client_on_read(resp, sn, v, s, 1));
+    TEST_ASSERT_EQUAL_INT32(-1, protocore_opcua_client_on_read(resp, sn, v, s, 1));
 }
 
 // on_open validates the OPN envelope, the body TypeId kind, the ServiceResult and the presence of the
@@ -801,35 +801,35 @@ void test_msg_envelope_guards()
 void test_on_open_envelope_and_result_guards()
 {
     OpcUaClient c;
-    pc_opcua_client_init(&c);
+    protocore_opcua_client_init(&c);
     uint8_t tiny[4] = {'O', 'P', 'N', 'F'};
-    TEST_ASSERT_FALSE(pc_opcua_client_on_open(&c, tiny, sizeof(tiny)));
+    TEST_ASSERT_FALSE(protocore_opcua_client_on_open(&c, tiny, sizeof(tiny)));
 
     uint8_t buf[192];
     size_t n = build_opn(buf, sizeof(buf), OPCUA_ID_OPEN_RESP, 0, PROTO_TRUE, OPCUA_STATUS_GOOD,
                          /*with_body=*/PROTO_TRUE, PROTO_FALSE);
     TEST_ASSERT_TRUE(n > 0);
-    TEST_ASSERT_TRUE(pc_opcua_client_on_open(&c, buf, n)); // baseline: Good + full SecurityToken
+    TEST_ASSERT_TRUE(protocore_opcua_client_on_open(&c, buf, n)); // baseline: Good + full SecurityToken
     TEST_ASSERT_EQUAL_UINT32(0x2A, c.channel_id);
     TEST_ASSERT_EQUAL_UINT32(0x2B, c.token_id);
 
     buf[1] = 'X'; // "OXN"
-    TEST_ASSERT_FALSE(pc_opcua_client_on_open(&c, buf, n));
+    TEST_ASSERT_FALSE(protocore_opcua_client_on_open(&c, buf, n));
     buf[1] = 'P';
     buf[2] = 'X'; // "OPX"
-    TEST_ASSERT_FALSE(pc_opcua_client_on_open(&c, buf, n));
+    TEST_ASSERT_FALSE(protocore_opcua_client_on_open(&c, buf, n));
 
     // A Bad ServiceResult is rejected even though the token body is complete.
     n = build_opn(buf, sizeof(buf), OPCUA_ID_OPEN_RESP, 0, PROTO_TRUE, OPCUA_STATUS_BAD_SERVICE_UNSUPPORTED, PROTO_TRUE,
                   PROTO_FALSE);
-    TEST_ASSERT_FALSE(pc_opcua_client_on_open(&c, buf, n));
+    TEST_ASSERT_FALSE(protocore_opcua_client_on_open(&c, buf, n));
     // A Good ResponseHeader with the SecurityToken body missing underruns the reader.
     n = build_opn(buf, sizeof(buf), OPCUA_ID_OPEN_RESP, 0, PROTO_TRUE, OPCUA_STATUS_GOOD, PROTO_FALSE, PROTO_FALSE);
-    TEST_ASSERT_FALSE(pc_opcua_client_on_open(&c, buf, n));
+    TEST_ASSERT_FALSE(protocore_opcua_client_on_open(&c, buf, n));
     // A String body TypeId is not the numeric OpenSecureChannelResponse id.
     n = build_opn(buf, sizeof(buf), 0, 0, PROTO_TRUE, OPCUA_STATUS_GOOD, PROTO_TRUE, /*string_type_id=*/PROTO_TRUE);
     TEST_ASSERT_TRUE(n > 0);
-    TEST_ASSERT_FALSE(pc_opcua_client_on_open(&c, buf, n));
+    TEST_ASSERT_FALSE(protocore_opcua_client_on_open(&c, buf, n));
 }
 
 // The OPN header's MessageSize must agree with the delivered frame length: a header claiming a
@@ -838,17 +838,17 @@ void test_on_open_envelope_and_result_guards()
 void test_on_open_rejects_message_size_mismatch(void)
 {
     OpcUaClient c;
-    pc_opcua_client_init(&c);
+    protocore_opcua_client_init(&c);
     uint8_t buf[192];
     size_t n = build_opn(buf, sizeof(buf), OPCUA_ID_OPEN_RESP, 0, PROTO_TRUE, OPCUA_STATUS_GOOD,
                          /*with_body=*/PROTO_TRUE, PROTO_FALSE);
     TEST_ASSERT_TRUE(n > 0);
-    TEST_ASSERT_TRUE(pc_opcua_client_on_open(&c, buf, n)); // baseline: header size == len
+    TEST_ASSERT_TRUE(protocore_opcua_client_on_open(&c, buf, n)); // baseline: header size == len
 
     c.channel_id = 0;
     c.token_id = 0;
     buf[4] = (uint8_t)(n + 1); // MessageSize one byte longer than the frame actually delivered
-    TEST_ASSERT_FALSE(pc_opcua_client_on_open(&c, buf, n));
+    TEST_ASSERT_FALSE(protocore_opcua_client_on_open(&c, buf, n));
     TEST_ASSERT_EQUAL_UINT32(0, c.channel_id); // rejected before the SecurityToken was applied
     TEST_ASSERT_EQUAL_UINT32(0, c.token_id);
 }
@@ -863,26 +863,26 @@ void test_parsers_reject_bad_service_result()
 
     size_t sn = forge_msg(resp, sizeof(resp), OPCUA_ID_GET_ENDPOINTS_RESP, bad, cnt0, sizeof(cnt0), PROTO_FALSE, "MSG");
     TEST_ASSERT_TRUE(sn > 0);
-    TEST_ASSERT_EQUAL_INT32(-1, pc_opcua_client_on_get_endpoints(resp, sn));
+    TEST_ASSERT_EQUAL_INT32(-1, protocore_opcua_client_on_get_endpoints(resp, sn));
 
     OpcUaVariant v[1];
     uint32_t s[1];
     sn = forge_msg(resp, sizeof(resp), OPCUA_ID_READ_RESP, bad, cnt0, sizeof(cnt0), PROTO_FALSE, "MSG");
-    TEST_ASSERT_EQUAL_INT32(-1, pc_opcua_client_on_read(resp, sn, v, s, 1));
+    TEST_ASSERT_EQUAL_INT32(-1, protocore_opcua_client_on_read(resp, sn, v, s, 1));
 
     sn = forge_msg(resp, sizeof(resp), OPCUA_ID_WRITE_RESP, bad, cnt0, sizeof(cnt0), PROTO_FALSE, "MSG");
-    TEST_ASSERT_EQUAL_INT32(-1, pc_opcua_client_on_write(resp, sn, s, 1));
+    TEST_ASSERT_EQUAL_INT32(-1, protocore_opcua_client_on_write(resp, sn, s, 1));
 
     OpcUaClientRef refs[1];
     sn = forge_msg(resp, sizeof(resp), OPCUA_ID_BROWSE_RESP, bad, cnt0, sizeof(cnt0), PROTO_FALSE, "MSG");
-    TEST_ASSERT_EQUAL_INT32(-1, pc_opcua_client_on_browse(resp, sn, refs, 1));
+    TEST_ASSERT_EQUAL_INT32(-1, protocore_opcua_client_on_browse(resp, sn, refs, 1));
 
     // CreateSession decodes its body first, then reports the fault through the return value.
     const uint8_t ids[4] = {0x00, 0x11, 0x00, 0x22}; // SessionId then AuthenticationToken (TwoByte NodeIds)
     OpcUaClient c;
-    pc_opcua_client_init(&c);
+    protocore_opcua_client_init(&c);
     sn = forge_msg(resp, sizeof(resp), OPCUA_ID_CREATE_SESSION_RESP, bad, ids, sizeof(ids), PROTO_FALSE, "MSG");
-    TEST_ASSERT_FALSE(pc_opcua_client_on_create_session(&c, resp, sn));
+    TEST_ASSERT_FALSE(protocore_opcua_client_on_create_session(&c, resp, sn));
     TEST_ASSERT_EQUAL_UINT32(0x22, c.session_auth_id); // token still captured from the decoded body
 }
 
@@ -894,26 +894,26 @@ void test_parsers_reject_truncated_body()
     size_t sn =
         forge_msg(resp, sizeof(resp), OPCUA_ID_GET_ENDPOINTS_RESP, OPCUA_STATUS_GOOD, NULL, 0, PROTO_FALSE, "MSG");
     TEST_ASSERT_TRUE(sn > 0);
-    TEST_ASSERT_EQUAL_INT32(-1, pc_opcua_client_on_get_endpoints(resp, sn)); // Endpoints count underruns
+    TEST_ASSERT_EQUAL_INT32(-1, protocore_opcua_client_on_get_endpoints(resp, sn)); // Endpoints count underruns
 
     const uint8_t neg[4] = {0xFF, 0xFF, 0xFF, 0xFF}; // Endpoints[] count = -1
     sn = forge_msg(resp, sizeof(resp), OPCUA_ID_GET_ENDPOINTS_RESP, OPCUA_STATUS_GOOD, neg, sizeof(neg), PROTO_FALSE,
                    "MSG");
-    TEST_ASSERT_EQUAL_INT32(-1, pc_opcua_client_on_get_endpoints(resp, sn));
+    TEST_ASSERT_EQUAL_INT32(-1, protocore_opcua_client_on_get_endpoints(resp, sn));
 
     OpcUaClient c;
-    pc_opcua_client_init(&c);
+    protocore_opcua_client_init(&c);
     sn = forge_msg(resp, sizeof(resp), OPCUA_ID_CREATE_SESSION_RESP, OPCUA_STATUS_GOOD, NULL, 0, PROTO_FALSE, "MSG");
-    TEST_ASSERT_FALSE(pc_opcua_client_on_create_session(&c, resp, sn)); // SessionId NodeId underruns
+    TEST_ASSERT_FALSE(protocore_opcua_client_on_create_session(&c, resp, sn)); // SessionId NodeId underruns
 
     const uint8_t one[4] = {1, 0, 0, 0}; // one result promised, none present
     uint32_t got[2];
     sn = forge_msg(resp, sizeof(resp), OPCUA_ID_WRITE_RESP, OPCUA_STATUS_GOOD, one, sizeof(one), PROTO_FALSE, "MSG");
-    TEST_ASSERT_EQUAL_INT32(-1, pc_opcua_client_on_write(resp, sn, got, 2));
+    TEST_ASSERT_EQUAL_INT32(-1, protocore_opcua_client_on_write(resp, sn, got, 2));
 
     OpcUaClientRef refs[2];
     sn = forge_msg(resp, sizeof(resp), OPCUA_ID_BROWSE_RESP, OPCUA_STATUS_GOOD, one, sizeof(one), PROTO_FALSE, "MSG");
-    TEST_ASSERT_EQUAL_INT32(-1, pc_opcua_client_on_browse(resp, sn, refs, 2));
+    TEST_ASSERT_EQUAL_INT32(-1, protocore_opcua_client_on_browse(resp, sn, refs, 2));
 }
 
 // on_read handles the optional DataValue fields and the caller's buffer limits: a DataValue with no
@@ -937,13 +937,13 @@ void test_on_read_optional_fields_and_limits()
     // sv[3] stays OPCUA_VAR_NULL -> the server writes a DataValue with an empty mask
 
     uint8_t resp[256];
-    size_t sn = pc_opcua_build_read_response(&rr, sv, NULL, 1, 0, resp, sizeof(resp));
+    size_t sn = protocore_opcua_build_read_response(&rr, sv, NULL, 1, 0, resp, sizeof(resp));
     TEST_ASSERT_TRUE(sn > 0);
 
     OpcUaVariant cv[4];
     uint32_t cs[4];
     memset(cv, 0, sizeof(cv));
-    TEST_ASSERT_EQUAL_INT32(4, pc_opcua_client_on_read(resp, sn, cv, cs, 4));
+    TEST_ASSERT_EQUAL_INT32(4, protocore_opcua_client_on_read(resp, sn, cv, cs, 4));
     TEST_ASSERT_EQUAL_HEX8(OPCUA_VAR_STRING, cv[0].type);
     TEST_ASSERT_EQUAL_INT32(-1, cv[0].str_len); // null String: no bytes consumed
     TEST_ASSERT_NULL(cv[0].str);
@@ -952,13 +952,13 @@ void test_on_read_optional_fields_and_limits()
 
     // More results than the caller's buffer: the surplus is counted out, never written.
     memset(cv, 0, sizeof(cv));
-    TEST_ASSERT_EQUAL_INT32(2, pc_opcua_client_on_read(resp, sn, cv, cs, 2));
+    TEST_ASSERT_EQUAL_INT32(2, protocore_opcua_client_on_read(resp, sn, cv, cs, 2));
     TEST_ASSERT_EQUAL_INT32(11, cv[1].i32);
     TEST_ASSERT_EQUAL_HEX8(OPCUA_VAR_NULL, cv[2].type); // untouched
 
     // Either sink may be omitted - the caller may only want the count, or only the statuses.
-    TEST_ASSERT_EQUAL_INT32(4, pc_opcua_client_on_read(resp, sn, NULL, cs, 4));
-    TEST_ASSERT_EQUAL_INT32(4, pc_opcua_client_on_read(resp, sn, cv, NULL, 4));
+    TEST_ASSERT_EQUAL_INT32(4, protocore_opcua_client_on_read(resp, sn, NULL, cs, 4));
+    TEST_ASSERT_EQUAL_INT32(4, protocore_opcua_client_on_read(resp, sn, cv, NULL, 4));
 }
 
 // on_write respects the caller's buffer limit and tolerates a null results array.
@@ -970,41 +970,41 @@ void test_on_write_limits_and_null_sink()
     uint32_t res[3] = {OPCUA_STATUS_GOOD, OPCUA_STATUS_BAD_NOT_WRITABLE, OPCUA_STATUS_BAD_NODE_ID_UNKNOWN};
 
     uint8_t resp[128];
-    size_t sn = pc_opcua_build_write_response(&wr, res, 1, 0, resp, sizeof(resp));
+    size_t sn = protocore_opcua_build_write_response(&wr, res, 1, 0, resp, sizeof(resp));
     TEST_ASSERT_TRUE(sn > 0);
 
     uint32_t got[3] = {0, 0, 0};
-    TEST_ASSERT_EQUAL_INT32(3, pc_opcua_client_on_write(resp, sn, got, 3));
+    TEST_ASSERT_EQUAL_INT32(3, protocore_opcua_client_on_write(resp, sn, got, 3));
     TEST_ASSERT_EQUAL_HEX32(OPCUA_STATUS_BAD_NOT_WRITABLE, got[1]);
 
     memset(got, 0, sizeof(got));
-    TEST_ASSERT_EQUAL_INT32(2, pc_opcua_client_on_write(resp, sn, got, 2)); // third result dropped
+    TEST_ASSERT_EQUAL_INT32(2, protocore_opcua_client_on_write(resp, sn, got, 2)); // third result dropped
     TEST_ASSERT_EQUAL_HEX32(0, got[2]);
 
-    TEST_ASSERT_EQUAL_INT32(3, pc_opcua_client_on_write(resp, sn, NULL, 3)); // count only
+    TEST_ASSERT_EQUAL_INT32(3, protocore_opcua_client_on_write(resp, sn, NULL, 3)); // count only
 }
 
 // on_browse respects the caller's buffer limit and tolerates a null refs array.
 void test_on_browse_limits_and_null_sink()
 {
     OpcUaClient c;
-    pc_opcua_client_init(&c);
+    protocore_opcua_client_init(&c);
     uint8_t req[256];
-    size_t rn = pc_opcua_client_browse(&c, 0, 85, req, sizeof(req));
+    size_t rn = protocore_opcua_client_browse(&c, 0, 85, req, sizeof(req));
     TEST_ASSERT_TRUE(rn > 0);
     OpcUaBrowseRequest br;
-    TEST_ASSERT_TRUE(pc_opcua_parse_browse(req, rn, &br));
+    TEST_ASSERT_TRUE(protocore_opcua_parse_browse(req, rn, &br));
 
     uint8_t resp[512];
-    size_t sn = pc_opcua_build_browse_response(&br, srv_browse, 4, 0, resp, sizeof(resp));
+    size_t sn = protocore_opcua_build_browse_response(&br, srv_browse, 4, 0, resp, sizeof(resp));
     TEST_ASSERT_TRUE(sn > 0);
 
     OpcUaClientRef refs[2];
     memset(refs, 0, sizeof(refs));
-    TEST_ASSERT_EQUAL_INT32(1, pc_opcua_client_on_browse(resp, sn, refs, 1)); // second reference dropped
+    TEST_ASSERT_EQUAL_INT32(1, protocore_opcua_client_on_browse(resp, sn, refs, 1)); // second reference dropped
     TEST_ASSERT_EQUAL_STRING("Uptime", refs[0].browse_name);
     TEST_ASSERT_EQUAL_UINT32(0, refs[1].target_id);                           // untouched
-    TEST_ASSERT_EQUAL_INT32(2, pc_opcua_client_on_browse(resp, sn, NULL, 2)); // count only
+    TEST_ASSERT_EQUAL_INT32(2, protocore_opcua_client_on_browse(resp, sn, NULL, 2)); // count only
 }
 
 // A ReferenceDescription whose DisplayName LocalizedText sets neither the Locale nor the Text bit is
@@ -1013,18 +1013,18 @@ void test_on_browse_display_name_empty_mask()
 {
     uint8_t body[128];
     UaWriter b = {body, sizeof(body), 0, PROTO_TRUE};
-    pc_ua_w_i32(&b, 1);                 // Results count
-    pc_ua_w_u32(&b, OPCUA_STATUS_GOOD); // BrowseResult.StatusCode
-    pc_ua_w_i32(&b, -1);                // ContinuationPoint (null ByteString)
-    pc_ua_w_i32(&b, 1);                 // References count
-    pc_ua_w_nodeid_numeric(&b, 0, OPCUA_REFTYPE_HAS_COMPONENT);
-    pc_ua_w_bool(&b, PROTO_FALSE);    // IsForward = false (an inverse reference)
-    pc_ua_w_nodeid_numeric(&b, 2, 9); // TargetId
-    pc_ua_w_u16(&b, 2);               // BrowseName.NamespaceIndex
-    pc_ua_w_string(&b, "Inv", 3);     // BrowseName.Name
-    pc_ua_w_u8(&b, 0x00);             // DisplayName mask: neither Locale nor Text present
-    pc_ua_w_u32(&b, OPCUA_NODECLASS_OBJECT);
-    pc_ua_w_nodeid_numeric(&b, 0, OPCUA_TYPEDEF_BASE_OBJECT);
+    protocore_ua_w_i32(&b, 1);                 // Results count
+    protocore_ua_w_u32(&b, OPCUA_STATUS_GOOD); // BrowseResult.StatusCode
+    protocore_ua_w_i32(&b, -1);                // ContinuationPoint (null ByteString)
+    protocore_ua_w_i32(&b, 1);                 // References count
+    protocore_ua_w_nodeid_numeric(&b, 0, OPCUA_REFTYPE_HAS_COMPONENT);
+    protocore_ua_w_bool(&b, PROTO_FALSE);    // IsForward = false (an inverse reference)
+    protocore_ua_w_nodeid_numeric(&b, 2, 9); // TargetId
+    protocore_ua_w_u16(&b, 2);               // BrowseName.NamespaceIndex
+    protocore_ua_w_string(&b, "Inv", 3);     // BrowseName.Name
+    protocore_ua_w_u8(&b, 0x00);             // DisplayName mask: neither Locale nor Text present
+    protocore_ua_w_u32(&b, OPCUA_NODECLASS_OBJECT);
+    protocore_ua_w_nodeid_numeric(&b, 0, OPCUA_TYPEDEF_BASE_OBJECT);
     TEST_ASSERT_TRUE(b.ok);
 
     uint8_t resp[256];
@@ -1032,7 +1032,7 @@ void test_on_browse_display_name_empty_mask()
     TEST_ASSERT_TRUE(sn > 0);
 
     OpcUaClientRef refs[2];
-    TEST_ASSERT_EQUAL_INT32(1, pc_opcua_client_on_browse(resp, sn, refs, 2));
+    TEST_ASSERT_EQUAL_INT32(1, protocore_opcua_client_on_browse(resp, sn, refs, 2));
     TEST_ASSERT_EQUAL_STRING("Inv", refs[0].browse_name);
     TEST_ASSERT_FALSE(refs[0].is_forward);
     TEST_ASSERT_EQUAL_UINT32(9, refs[0].target_id);

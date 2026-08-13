@@ -3,7 +3,7 @@
 
 /**
  * @file c37118.h
- * @brief IEEE C37.118.2 synchrophasor frame codec (PC_ENABLE_C37118) - zero-heap frame
+ * @brief IEEE C37.118.2 synchrophasor frame codec (PROTOCORE_ENABLE_C37118) - zero-heap frame
  *        builder + parser for the PMU / PDC wide-area-measurement wire protocol.
  *
  * A C37.118.2 frame (all fields big-endian / network order):
@@ -31,9 +31,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_C37118
+#if PROTOCORE_ENABLE_C37118
 
 #define C37118_SYNC_LEADER 0xAA  ///< SYNC byte 0 (frame leader)
 #define C37118_TYPE_SHIFT 4      ///< SYNC byte 1: frame type occupies bits 6-4
@@ -62,7 +62,7 @@ PROTO_BEGIN_DECLS
 #define C37118_MIN_FRAME 16 ///< header (14) + CHK (2), no payload
 
 /** @brief CRC-CCITT (0x1021, init 0xFFFF, no reflection, no final mask). */
-uint16_t pc_c37118_crc(const uint8_t *data, size_t len);
+uint16_t protocore_c37118_crc(const uint8_t *data, size_t len);
 
 /**
  * @brief Build a frame: SYNC + FRAMESIZE + IDCODE + SOC + FRACSEC + payload + CHK.
@@ -70,11 +70,12 @@ uint16_t pc_c37118_crc(const uint8_t *data, size_t len);
  * @param version version nibble (e.g. C37118_VERSION_2011).
  * @return total octets written, or 0 on overflow / bad input.
  */
-size_t pc_c37118_build_frame(uint8_t *buf, size_t cap, uint8_t type, uint8_t version, uint16_t idcode, uint32_t soc,
-                             uint32_t fracsec, const uint8_t *payload, size_t payload_len);
+size_t protocore_c37118_build_frame(uint8_t *buf, size_t cap, uint8_t type, uint8_t version, uint16_t idcode,
+                                    uint32_t soc, uint32_t fracsec, const uint8_t *payload, size_t payload_len);
 
 /** @brief Build a Command frame (DATA = the 16-bit command word), version 2011. */
-size_t pc_c37118_build_command(uint8_t *buf, size_t cap, uint16_t idcode, uint32_t soc, uint32_t fracsec, uint16_t cmd);
+size_t protocore_c37118_build_command(uint8_t *buf, size_t cap, uint16_t idcode, uint32_t soc, uint32_t fracsec,
+                                      uint16_t cmd);
 
 /** @brief A parsed frame; @ref data points INTO the source buffer (between FRACSEC and CHK). */
 typedef struct
@@ -94,10 +95,10 @@ typedef struct
  * @return true on a complete, CRC-valid frame; false on a bad SYNC, truncation, an
  *         out-of-range FRAMESIZE, or a CHK mismatch.
  */
-proto_bool pc_c37118_parse_frame(const uint8_t *buf, size_t len, C37118Frame *out);
+proto_bool protocore_c37118_parse_frame(const uint8_t *buf, size_t len, C37118Frame *out);
 
 /** @brief Read the command word from a parsed Command frame. */
-proto_bool pc_c37118_parse_command(const C37118Frame *f, uint16_t *cmd);
+proto_bool protocore_c37118_parse_command(const C37118Frame *f, uint16_t *cmd);
 
 // --- DATA frame STAT word (IEEE C37.118.2-2011 Table 6): the 16-bit status opening a data frame ---
 
@@ -135,10 +136,10 @@ typedef struct
  * @brief Decode the 16-bit STAT word that opens a DATA frame's payload (IEEE C37.118.2-2011 Table 6).
  * @return true iff @p f is a data frame (type C37118_TYPE_DATA) carrying at least the 2-octet STAT word.
  */
-proto_bool pc_c37118_decode_stat(const C37118Frame *f, C37118Stat *out);
+proto_bool protocore_c37118_decode_stat(const C37118Frame *f, C37118Stat *out);
 
-#endif // PC_ENABLE_C37118
+#endif // PROTOCORE_ENABLE_C37118
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_C37118_H

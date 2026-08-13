@@ -24,7 +24,7 @@ or by email to **dquigg123@gmail.com**.
 
 Please include:
 
-- The affected version and build flags (`PC_ENABLE_*`) in use.
+- The affected version and build flags (`PROTOCORE_ENABLE_*`) in use.
 - A description of the issue and its impact (for example: memory disclosure,
   authentication bypass, protocol-parsing flaw, remote crash).
 - A minimal reproduction: request bytes, a script, or a test case.

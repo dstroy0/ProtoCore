@@ -23,17 +23,17 @@
 // ---------------------------------------------------------------------------
 
 TcpConn conn_pool[CONN_POOL_SLOTS];
-uint32_t pc_ap_ip;
+uint32_t protocore_ap_ip;
 
 #define WIRE_MAX 8192
 
-static uint8_t g_in[WIRE_MAX]; // bytes pc_tls_read hands to the module
+static uint8_t g_in[WIRE_MAX]; // bytes protocore_tls_read hands to the module
 static size_t g_in_len;
 static size_t g_in_off;
 static uint8_t g_out[WIRE_MAX]; // bytes the module wrote back
 static size_t g_out_len;
 
-int pc_tls_read(uint8_t slot, uint8_t *buf, size_t len)
+int protocore_tls_read(uint8_t slot, uint8_t *buf, size_t len)
 {
     (void)slot;
     size_t n = g_in_len - g_in_off;
@@ -50,7 +50,7 @@ int pc_tls_read(uint8_t slot, uint8_t *buf, size_t len)
     return (int)n;
 }
 
-int pc_tls_write(uint8_t slot, const void *data, size_t len)
+int protocore_tls_write(uint8_t slot, const void *data, size_t len)
 {
     (void)slot;
     if (g_out_len + len <= WIRE_MAX)
@@ -83,7 +83,7 @@ static int out_count(uint8_t type, uint32_t *last_err)
     while (off + H2_FRAME_HEADER_LEN <= g_out_len)
     {
         H2FrameHeader h;
-        pc_h2_parse_header(g_out + off, H2_FRAME_HEADER_LEN, &h);
+        protocore_h2_parse_header(g_out + off, H2_FRAME_HEADER_LEN, &h);
         if (off + H2_FRAME_HEADER_LEN + h.length > g_out_len)
         {
             break;
@@ -118,25 +118,25 @@ static void feed_request(const Hdr *fields, size_t n)
 {
     wire_reset();
     memset(&conn_pool[0], 0, sizeof conn_pool[0]);
-    pc_h2_server_open(0);
+    protocore_h2_server_open(0);
     g_out_len = 0; // drop our initial SETTINGS; the test only cares what the request provokes
 
     uint8_t block[1024];
     size_t bo = 0;
     for (size_t i = 0; i < n; i++)
     {
-        bo += pc_hpack_encode_header(block + bo, sizeof block - bo, fields[i].name, strlen(fields[i].name),
-                                     fields[i].value, strlen(fields[i].value));
+        bo += protocore_hpack_encode_header(block + bo, sizeof block - bo, fields[i].name, strlen(fields[i].name),
+                                            fields[i].value, strlen(fields[i].value));
     }
 
     uint8_t sf[9];
     in_add(H2_PREFACE, H2_PREFACE_LEN);
-    in_add(sf, pc_h2_build_settings(sf, sizeof sf, NULL, NULL, 0));
+    in_add(sf, protocore_h2_build_settings(sf, sizeof sf, NULL, NULL, 0));
 
     uint8_t hf[H2_FRAME_HEADER_LEN + sizeof block];
-    in_add(hf, pc_h2_build_headers(hf, sizeof hf, 1, block, bo, PROTO_TRUE));
+    in_add(hf, protocore_h2_build_headers(hf, sizeof hf, 1, block, bo, PROTO_TRUE));
 
-    pc_h2_server_data(0);
+    protocore_h2_server_data(0);
 }
 
 // A well-formed minimum: the three sec 8.3.1 pseudo-headers.
@@ -174,7 +174,7 @@ void test_h2s_minimal_request_is_accepted(void)
     assert_accepted();
     TEST_ASSERT_EQUAL_STRING("GET", http_pool[0].method);
     TEST_ASSERT_EQUAL_STRING("/", http_pool[0].path);
-    TEST_ASSERT_EQUAL_UINT32(1, conn_pool[0].pc_h2_stream);
+    TEST_ASSERT_EQUAL_UINT32(1, conn_pool[0].protocore_h2_stream);
 }
 
 void test_h2s_path_query_split(void)

@@ -14,8 +14,8 @@ the application layer so they ship in flash with no filesystem or heap.
 | `wizard/build_assets.py`                          | The generator.                                                        |
 | `../network_drivers/application/web_assets.{h,c}` | Generated output (committed; do not hand-edit).                       |
 
-A file's **base name is the C symbol**: `PC_PROV_FORM.html` becomes
-`extern const char PC_PROV_FORM[];`. Every document is emitted into the single
+A file's **base name is the C symbol**: `PROTOCORE_PROV_FORM.html` becomes
+`extern const char PROTOCORE_PROV_FORM[];`. Every document is emitted into the single
 `application/web_assets.{h,c}` translation unit - all generated assets are one
 machine-produced artifact, so they live in one clearly-named unit rather than per
 -content-type files (which would conflate source format with output module and
@@ -62,6 +62,6 @@ these are for pages you add. Drop a new `.css` in `themes/` to add one.
 
 A document may contain `{{name}}` placeholders rendered at request time by
 `send_template()` (the value comes from a resolver in the C code, so there is no
-`printf`-format coupling). The Prometheus exposition (`PC_METRICS_PROM.txt`)
+`printf`-format coupling). The Prometheus exposition (`PROTOCORE_METRICS_PROM.txt`)
 works this way: it lists **every** available metric, and you disable one by
 commenting its value line out with a leading `#` (Prometheus ignores `#` lines).

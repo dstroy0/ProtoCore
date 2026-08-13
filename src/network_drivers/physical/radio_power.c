@@ -20,28 +20,28 @@ struct RadioCtx
 };
 static struct RadioCtx s_radio;
 
-static const char *ps_name(pc_phy_ps mode)
+static const char *ps_name(protocore_phy_ps mode)
 {
     switch (mode)
     {
-    case PC_PHY_PS_MIN_MODEM:
+    case PROTOCORE_PHY_PS_MIN_MODEM:
         return "min_modem";
-    case PC_PHY_PS_MAX_MODEM:
+    case PROTOCORE_PHY_PS_MAX_MODEM:
         return "max_modem";
-    case PC_PHY_PS_NONE:
+    case PROTOCORE_PHY_PS_NONE:
         return "none";
     default:
         return "none";
     }
 }
 
-#if PC_PHYSICAL_HAS_BACKEND
+#if PROTOCORE_PHYSICAL_HAS_BACKEND
 
 static void power(void)
 {
-    pc_phy_ps_set((pc_phy_ps)PC_RADIO_WIFI_PS);
-#if PC_RADIO_MAX_TX_DBM > 0
-    pc_phy_tx_power_set((int8_t)PC_RADIO_MAX_TX_DBM); // whole dBm; the backend owns the unit
+    protocore_phy_ps_set((protocore_phy_ps)PROTOCORE_RADIO_WIFI_PS);
+#if PROTOCORE_RADIO_MAX_TX_DBM > 0
+    protocore_phy_tx_power_set((int8_t)PROTOCORE_RADIO_MAX_TX_DBM); // whole dBm; the backend owns the unit
 #endif
 }
 
@@ -49,7 +49,7 @@ static void busy_hold(void)
 {
     if (s_radio.held == 0)
     {
-        pc_phy_ps_set(PC_PHY_PS_NONE); // modem sleep off during a bulk transfer
+        protocore_phy_ps_set(PROTOCORE_PHY_PS_NONE); // modem sleep off during a bulk transfer
     }
     s_radio.held++;
 }
@@ -78,21 +78,21 @@ static void busy_hold(void)
 static void busy_release(void)
 {
 }
-#endif // PC_PHYSICAL_HAS_BACKEND
+#endif // PROTOCORE_PHYSICAL_HAS_BACKEND
 
 // Designated, so a member's position in the struct does not decide what it binds to. The table is
 // split by a feature flag, where a positional list shifts every member below the arm at once.
 const RadioNs Radio = {
-#if PC_ENABLE_RADIO_POWER
+#if PROTOCORE_ENABLE_RADIO_POWER
     .ctx = &s_radio,
     .power = power,
     .ps_name = ps_name,
     .busy_hold = busy_hold,
     .busy_release = busy_release,
 #endif
-    .ps_set = pc_phy_ps_set,
-    .ps_mode = pc_phy_ps_get,
-    .tx_power_set = pc_phy_tx_power_set,
-    .monitor_begin = pc_phy_monitor_begin,
-    .monitor_set_channel = pc_phy_monitor_set_channel,
-    .monitor_end = pc_phy_monitor_end};
+    .ps_set = protocore_phy_ps_set,
+    .ps_mode = protocore_phy_ps_get,
+    .tx_power_set = protocore_phy_tx_power_set,
+    .monitor_begin = protocore_phy_monitor_begin,
+    .monitor_set_channel = protocore_phy_monitor_set_channel,
+    .monitor_end = protocore_phy_monitor_end};

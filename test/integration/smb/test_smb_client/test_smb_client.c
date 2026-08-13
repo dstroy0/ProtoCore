@@ -57,7 +57,7 @@ static uint64_t rd64(const uint8_t *p)
 }
 
 // A minimal NTLMSSP CHALLENGE (server type-2) with a timestamp+EOL target info.
-static size_t pc_ntlmssp_challenge(uint8_t *m, const uint8_t sc[8])
+static size_t protocore_ntlmssp_challenge(uint8_t *m, const uint8_t sc[8])
 {
     memset(m, 0, 64);
     const uint8_t sig[8] = {'N', 'T', 'L', 'M', 'S', 'S', 'P', 0};
@@ -81,7 +81,7 @@ static size_t pc_ntlmssp_challenge(uint8_t *m, const uint8_t sc[8])
 
 // Same CHALLENGE, but with a caller-supplied target-info blob (exercises find_av_timestamp's
 // scan/skip/EOL branches and large target infos that overflow the client's crypto buffers).
-static size_t pc_ntlmssp_challenge_ti(uint8_t *m, const uint8_t sc[8], const uint8_t *ti, size_t ti_len)
+static size_t protocore_ntlmssp_challenge_ti(uint8_t *m, const uint8_t sc[8], const uint8_t *ti, size_t ti_len)
 {
     memset(m, 0, 48);
     const uint8_t sig[8] = {'N', 'T', 'L', 'M', 'S', 'S', 'P', 0};
@@ -101,7 +101,7 @@ enum MockFault
 {
     FAULT_NONE = 0,
     FAULT_DROP,       // append no response (the peer closes mid-handshake)
-    FAULT_BAD_HEADER, // corrupt the response ProtocolId so pc_smb2_parse_header fails
+    FAULT_BAD_HEADER, // corrupt the response ProtocolId so protocore_smb2_parse_header fails
     FAULT_BAD_BODY,   // corrupt the response body StructureSize so the body parser fails
 };
 
@@ -165,14 +165,14 @@ typedef struct
     proto_bool encrypt_share_only;
     uint16_t cipher;     // the Smb2Cipher to negotiate (0 => AES-128-GCM); selects key + nonce length
     proto_bool enc_keys; // cipher keys derived (round-2 onward)
-    uint8_t enc_c2s[PC_SMB2_MAX_CIPHER_KEY_LEN]; // client->server key: the mock decrypts requests with it
-    uint8_t enc_s2c[PC_SMB2_MAX_CIPHER_KEY_LEN]; // server->client key: the mock encrypts responses with it
+    uint8_t enc_c2s[PROTOCORE_SMB2_MAX_CIPHER_KEY_LEN]; // client->server key: the mock decrypts requests with it
+    uint8_t enc_s2c[PROTOCORE_SMB2_MAX_CIPHER_KEY_LEN]; // server->client key: the mock encrypts responses with it
     uint64_t enc_nonce;                          // the mock's monotonic response nonce
 } Mock;
 
 static void append_frame(Mock *m, const uint8_t *resp, size_t rlen)
 {
-    m->rx_len += pc_smb2_transport_frame(m->rx + m->rx_len, sizeof(m->rx) - m->rx_len, resp, rlen);
+    m->rx_len += protocore_smb2_transport_frame(m->rx + m->rx_len, sizeof(m->rx) - m->rx_len, resp, rlen);
 }
 
 // Re-derive the SMB 2.x signing key (the NTLMv2 SessionBaseKey) from the client's round-2 SESSION_SETUP
@@ -192,7 +192,7 @@ static proto_bool mock_derive_key(const uint8_t *msg, size_t mlen, const SmbConf
     }
     const uint8_t *auth = NULL;
     size_t auth_len = 0;
-    if (!pc_spnego_parse_response(msg + sec_off, sec_len, &auth, &auth_len) || auth_len < 28)
+    if (!protocore_spnego_parse_response(msg + sec_off, sec_len, &auth, &auth_len) || auth_len < 28)
     {
         return PROTO_FALSE;
     }
@@ -204,12 +204,12 @@ static proto_bool mock_derive_key(const uint8_t *msg, size_t mlen, const SmbConf
     }
     uint8_t nt_hash[16];
     uint8_t owf[16];
-    pc_ntlm_nt_hash(cfg->pass, nt_hash);
-    if (!pc_ntlm_ntowfv2(nt_hash, cfg->user, cfg->domain ? cfg->domain : "", owf))
+    protocore_ntlm_nt_hash(cfg->pass, nt_hash);
+    if (!protocore_ntlm_ntowfv2(nt_hash, cfg->user, cfg->domain ? cfg->domain : "", owf))
     {
         return PROTO_FALSE;
     }
-    pc_hmac_md5(owf, 16, auth + nt_off, 16, key); // SessionBaseKey = HMAC-MD5(NTOWFv2, NTProofStr)
+    protocore_hmac_md5(owf, 16, auth + nt_off, 16, key); // SessionBaseKey = HMAC-MD5(NTOWFv2, NTProofStr)
     return PROTO_TRUE;
 }
 
@@ -218,24 +218,24 @@ static void mock_sign(const Mock *m, uint8_t *msg, size_t len)
 {
     if (m->sign_algo == SMB2_SIGN_ALGO_AES_CMAC)
     {
-        pc_smb2_sign_cmac(tw, m->sign_key, msg, len);
+        protocore_smb2_sign_cmac(tw, m->sign_key, msg, len);
     }
     else
     {
-        pc_smb2_sign(tw, m->sign_key, msg, len);
+        protocore_smb2_sign(tw, m->sign_key, msg, len);
     }
 }
 static proto_bool mock_verify(const Mock *m, uint8_t *msg, size_t len)
 {
-    return m->sign_algo == SMB2_SIGN_ALGO_AES_CMAC ? pc_smb2_verify_cmac(tw, m->sign_key, msg, len)
-                                                   : pc_smb2_verify(tw, m->sign_key, msg, len);
+    return m->sign_algo == SMB2_SIGN_ALGO_AES_CMAC ? protocore_smb2_verify_cmac(tw, m->sign_key, msg, len)
+                                                   : protocore_smb2_verify(tw, m->sign_key, msg, len);
 }
 
 // Build the SMB 3.1.1 NEGOTIATE response body (dialect 0x0311 + SIGNING_REQUIRED + a preauth-integrity
 // SHA-512 context with a server salt + an AES-CMAC signing context) into resp; returns the total length.
 static size_t build_neg_resp_311(uint8_t *resp, uint64_t msg_id, proto_bool offer_encrypt, uint16_t cipher)
 {
-    pc_smb2_build_header(resp, PC_SMB_BUF + 128, SMB2_NEGOTIATE, 1, msg_id, 0, 0);
+    protocore_smb2_build_header(resp, PROTOCORE_SMB_BUF + 128, SMB2_NEGOTIATE, 1, msg_id, 0, 0);
     uint8_t *b = resp + 64;
     memset(b, 0, 64);
     w16(b + 0, 65);                              // StructureSize
@@ -284,12 +284,12 @@ static int mock_send(void *c, const uint8_t *d, size_t n)
     size_t mlen = n - 4;
     // SMB 3.x: a request wrapped in a TRANSFORM_HEADER (ProtocolId 0xFD 'S' 'M' 'B') is decrypted before
     // processing, using the same C2S key the client encrypted with (the mock is a reference peer).
-    uint8_t plain[PC_SMB_BUF];
+    uint8_t plain[PROTOCORE_SMB_BUF];
     proto_bool req_enc = PROTO_FALSE;
-    if (m->enc_keys && mlen >= PC_SMB2_TRANSFORM_HDR_LEN && msg[0] == 0xFD && msg[1] == 'S' && msg[2] == 'M' &&
+    if (m->enc_keys && mlen >= PROTOCORE_SMB2_TRANSFORM_HDR_LEN && msg[0] == 0xFD && msg[1] == 'S' && msg[2] == 'M' &&
         msg[3] == 'B')
     {
-        size_t pl = pc_smb2_decrypt(m->cipher, m->enc_c2s, msg, mlen, plain, sizeof(plain));
+        size_t pl = protocore_smb2_decrypt(m->cipher, m->enc_c2s, msg, mlen, plain, sizeof(plain));
         if (pl == 0)
         {
             return -1; // bad tag / not decryptable -> the client will see the connection drop
@@ -299,7 +299,7 @@ static int mock_send(void *c, const uint8_t *d, size_t n)
         req_enc = PROTO_TRUE;
     }
     Smb2Header h;
-    if (!pc_smb2_parse_header(msg, mlen, &h))
+    if (!protocore_smb2_parse_header(msg, mlen, &h))
     {
         return -1;
     }
@@ -310,11 +310,11 @@ static int mock_send(void *c, const uint8_t *d, size_t n)
     {
         if (h.command == SMB2_NEGOTIATE)
         {
-            pc_smb_preauth_init(&m->preauth);
+            protocore_smb_preauth_init(&m->preauth);
         }
         if (h.command == SMB2_NEGOTIATE || h.command == SMB2_SESSION_SETUP)
         {
-            pc_smb_preauth_update(tw, &m->preauth, msg, mlen);
+            protocore_smb_preauth_update(tw, &m->preauth, msg, mlen);
         }
     }
 
@@ -322,7 +322,7 @@ static int mock_send(void *c, const uint8_t *d, size_t n)
     // encrypted, in which case the AEAD tag (already verified on decrypt) is the integrity check, not a signature.
     if (m->signing && !req_enc)
     {
-        uint8_t vbuf[PC_SMB_BUF];
+        uint8_t vbuf[PROTOCORE_SMB_BUF];
         if (mlen <= sizeof(vbuf))
         {
             memcpy(vbuf, msg, mlen);
@@ -333,7 +333,7 @@ static int mock_send(void *c, const uint8_t *d, size_t n)
         }
     }
 
-    uint8_t resp[PC_SMB_BUF + 128];
+    uint8_t resp[PROTOCORE_SMB_BUF + 128];
     memset(resp, 0, sizeof(resp));
     size_t rlen = 0;
     uint8_t *b = resp + 64;
@@ -350,7 +350,7 @@ static int mock_send(void *c, const uint8_t *d, size_t n)
                                       m->cipher); // dialect 0x0311 + preauth + signing (+ encryption)
             break;
         }
-        pc_smb2_build_header(resp, sizeof(resp), SMB2_NEGOTIATE, 1, h.message_id, 0, 0);
+        protocore_smb2_build_header(resp, sizeof(resp), SMB2_NEGOTIATE, 1, h.message_id, 0, 0);
         w16(b + 0, 65); // StructureSize
         if (m->require_signing)
         {
@@ -360,7 +360,7 @@ static int mock_send(void *c, const uint8_t *d, size_t n)
         rlen = 128;                              // header + 64-byte fixed body, empty buffer
         break;
     case SMB2_SESSION_SETUP: {
-        pc_smb2_build_header(resp, sizeof(resp), SMB2_SESSION_SETUP, 1, h.message_id, 0, m->session_id);
+        protocore_smb2_build_header(resp, sizeof(resp), SMB2_SESSION_SETUP, 1, h.message_id, 0, m->session_id);
         w16(b + 0, 9); // StructureSize
         if (m->ss_round++ == 0)
         {
@@ -386,13 +386,13 @@ static int mock_send(void *c, const uint8_t *d, size_t n)
                 {
                     uint8_t junk[16];
                     memset(junk, 0x55, sizeof(junk)); // wrapped, but too short/wrong to be an NTLMSSP CHALLENGE
-                    sc_n = pc_spnego_wrap_authenticate(junk, sizeof(junk), sctok, sizeof(sctok));
+                    sc_n = protocore_spnego_wrap_authenticate(junk, sizeof(junk), sctok, sizeof(sctok));
                 }
                 else
                 {
-                    size_t chal_n = m->chal_ti ? pc_ntlmssp_challenge_ti(chal, sc, m->chal_ti, m->chal_ti_len)
-                                               : pc_ntlmssp_challenge(chal, sc);
-                    sc_n = pc_spnego_wrap_authenticate(chal, chal_n, sctok, sizeof(sctok)); // NegTokenResp shape
+                    size_t chal_n = m->chal_ti ? protocore_ntlmssp_challenge_ti(chal, sc, m->chal_ti, m->chal_ti_len)
+                                               : protocore_ntlmssp_challenge(chal, sc);
+                    sc_n = protocore_spnego_wrap_authenticate(chal, chal_n, sctok, sizeof(sctok)); // NegTokenResp shape
                 }
                 w16(b + 4, 72); // SecurityBufferOffset
                 w16(b + 6, (uint16_t)sc_n);
@@ -410,7 +410,7 @@ static int mock_send(void *c, const uint8_t *d, size_t n)
             {
                 if (m->require_311)
                 {
-                    pc_smb3_derive_signing_key(base_key, (uint16_t)SMB2_DIALECT_0311, m->preauth.hash, m->sign_key);
+                    protocore_smb3_derive_signing_key(base_key, (uint16_t)SMB2_DIALECT_0311, m->preauth.hash, m->sign_key);
                     m->sign_algo = SMB2_SIGN_ALGO_AES_CMAC;
                     m->signing = PROTO_TRUE;
                     if (m->require_encrypt || m->encrypt_share_only)
@@ -419,8 +419,8 @@ static int mock_send(void *c, const uint8_t *d, size_t n)
                         // session encrypt-required (the client then encrypts from TREE_CONNECT onward); a
                         // share-only requirement derives keys but leaves the flag clear, so only a client that
                         // forces encryption (cfg.encrypt) proceeds. This SS2 reply always stays plaintext.
-                        pc_smb3_derive_encryption_keys(base_key, (uint16_t)SMB2_DIALECT_0311, m->preauth.hash,
-                                                       pc_smb2_cipher_key_len(m->cipher), m->enc_c2s, m->enc_s2c);
+                        protocore_smb3_derive_encryption_keys(base_key, (uint16_t)SMB2_DIALECT_0311, m->preauth.hash,
+                                                       protocore_smb2_cipher_key_len(m->cipher), m->enc_c2s, m->enc_s2c);
                         m->enc_keys = PROTO_TRUE;
                         if (m->require_encrypt)
                         {
@@ -440,7 +440,7 @@ static int mock_send(void *c, const uint8_t *d, size_t n)
         break;
     }
     case SMB2_TREE_CONNECT:
-        pc_smb2_build_header(resp, sizeof(resp), SMB2_TREE_CONNECT, 1, h.message_id, m->tree_id, m->session_id);
+        protocore_smb2_build_header(resp, sizeof(resp), SMB2_TREE_CONNECT, 1, h.message_id, m->tree_id, m->session_id);
         // A share that requires encryption rejects an unencrypted TREE_CONNECT (ACCESS_DENIED) - exactly what a
         // real Samba `smb encrypt = required` share does, forcing the client to encrypt from here on.
         if (m->encrypt_share_only && !req_enc)
@@ -456,7 +456,7 @@ static int mock_send(void *c, const uint8_t *d, size_t n)
         rlen = 64 + 16;
         break;
     case SMB2_CREATE:
-        pc_smb2_build_header(resp, sizeof(resp), SMB2_CREATE, 1, h.message_id, m->tree_id, m->session_id);
+        protocore_smb2_build_header(resp, sizeof(resp), SMB2_CREATE, 1, h.message_id, m->tree_id, m->session_id);
         w32(resp + 8, m->create_status);
         w16(b + 0, 89); // StructureSize
         w32(b + 4, 1);  // CreateAction = FILE_OPENED
@@ -468,7 +468,7 @@ static int mock_send(void *c, const uint8_t *d, size_t n)
         const uint8_t *rq = msg + 64; // READ request body
         uint32_t length = rd32(rq + 4);
         uint64_t off = rd64(rq + 8);
-        pc_smb2_build_header(resp, sizeof(resp), SMB2_READ, 1, h.message_id, m->tree_id, m->session_id);
+        protocore_smb2_build_header(resp, sizeof(resp), SMB2_READ, 1, h.message_id, m->tree_id, m->session_id);
         if (off >= m->file_data_len)
         {
             w32(resp + 8, SMB2_STATUS_END_OF_FILE);
@@ -500,14 +500,14 @@ static int mock_send(void *c, const uint8_t *d, size_t n)
                 m->file_data_len = (size_t)(off + length);
             }
         }
-        pc_smb2_build_header(resp, sizeof(resp), SMB2_WRITE, 1, h.message_id, m->tree_id, m->session_id);
+        protocore_smb2_build_header(resp, sizeof(resp), SMB2_WRITE, 1, h.message_id, m->tree_id, m->session_id);
         w16(b + 0, 17);     // StructureSize
         w32(b + 4, length); // Count
         rlen = 64 + 16;
         break;
     }
     case SMB2_CLOSE:
-        pc_smb2_build_header(resp, sizeof(resp), SMB2_CLOSE, 1, h.message_id, m->tree_id, m->session_id);
+        protocore_smb2_build_header(resp, sizeof(resp), SMB2_CLOSE, 1, h.message_id, m->tree_id, m->session_id);
         w16(b + 0, 60); // StructureSize
         rlen = 64 + 60;
         break;
@@ -524,7 +524,7 @@ static int mock_send(void *c, const uint8_t *d, size_t n)
         }
         else if (m->fault_kind == FAULT_BAD_HEADER)
         {
-            resp[0] = 0x00; // break the ProtocolId magic (FE 53 4D 42) -> pc_smb2_parse_header fails
+            resp[0] = 0x00; // break the ProtocolId magic (FE 53 4D 42) -> protocore_smb2_parse_header fails
         }
         else if (m->fault_kind == FAULT_BAD_BODY)
         {
@@ -536,7 +536,7 @@ static int mock_send(void *c, const uint8_t *d, size_t n)
     // NOT folded - the key is already derived by then - so ss_round == 1 is exactly the round-1 case.
     if (m->require_311 && (h.command == SMB2_NEGOTIATE || (h.command == SMB2_SESSION_SETUP && m->ss_round == 1)))
     {
-        pc_smb_preauth_update(tw, &m->preauth, resp, rlen);
+        protocore_smb_preauth_update(tw, &m->preauth, resp, rlen);
     }
 
     if (m->signing && !req_enc)
@@ -553,17 +553,17 @@ static int mock_send(void *c, const uint8_t *d, size_t n)
         {
             // Encrypt the response with the S2C key + a fresh monotonic nonce (the client reads the nonce from
             // the TRANSFORM_HEADER, so it need not track ours). Encrypted replies are never separately signed.
-            uint8_t enc[PC_SMB_BUF + 128];
-            uint8_t nonce[PC_SMB2_NONCE_FIELD_LEN] = {0};
+            uint8_t enc[PROTOCORE_SMB_BUF + 128];
+            uint8_t nonce[PROTOCORE_SMB2_NONCE_FIELD_LEN] = {0};
             uint64_t ctr = m->enc_nonce++;
             for (int i = 0; i < 8; i++)
             {
                 nonce[i] = (uint8_t)(ctr >> (8 * i));
             }
-            size_t el = pc_smb2_encrypt(m->cipher, m->enc_s2c, nonce, m->session_id, resp, rlen, enc, sizeof(enc));
+            size_t el = protocore_smb2_encrypt(m->cipher, m->enc_s2c, nonce, m->session_id, resp, rlen, enc, sizeof(enc));
             if (m->corrupt_read_sig && h.command == SMB2_READ)
             {
-                enc[PC_SMB2_TRANSFORM_HDR_LEN + 2] ^= 0xFF; // tamper a ciphertext byte -> the client's open fails
+                enc[PROTOCORE_SMB2_TRANSFORM_HDR_LEN + 2] ^= 0xFF; // tamper a ciphertext byte -> the client's open fails
             }
             append_frame(m, enc, el);
         }
@@ -973,7 +973,7 @@ void test_long_user_overflow()
     Mock m = make_mock();
     SmbConfig cfg = make_cfg();
     char user[300];
-    memset(user, 'u', sizeof(user) - 1); // 299 chars -> pc_ntlm_ntowfv2 fails closed
+    memset(user, 'u', sizeof(user) - 1); // 299 chars -> protocore_ntlm_ntowfv2 fails closed
     user[sizeof(user) - 1] = 0;
     cfg.user = user;
     SmbHandle h;
@@ -1067,7 +1067,7 @@ void test_av_truncated_timestamp()
 typedef struct
 {
     uint8_t resp[512];
-    size_t pc_resp_len;
+    size_t protocore_resp_len;
     size_t pos;
     proto_bool short_send; // send returns a short count (1) instead of the true length
 } Canned;
@@ -1082,11 +1082,11 @@ static int canned_send(void *c, const uint8_t *d, size_t n)
 static int canned_recv(void *c, uint8_t *buf, size_t cap)
 {
     Canned *cn = (Canned *)c;
-    if (cn->pos >= cn->pc_resp_len)
+    if (cn->pos >= cn->protocore_resp_len)
     {
         return 0; // exhausted -> peer closed
     }
-    size_t avail = cn->pc_resp_len - cn->pos;
+    size_t avail = cn->protocore_resp_len - cn->pos;
     size_t take = avail < cap ? avail : cap;
     memcpy(buf, cn->resp + cn->pos, take);
     cn->pos += take;
@@ -1094,9 +1094,9 @@ static int canned_recv(void *c, uint8_t *buf, size_t cap)
 }
 
 // Build a 64-byte SMB2 response header (command + status) into msg; returns the body pointer.
-static uint8_t *pc_resp_hdr(uint8_t *msg, Smb2Command cmd, uint32_t status)
+static uint8_t *protocore_resp_hdr(uint8_t *msg, Smb2Command cmd, uint32_t status)
 {
-    pc_smb2_build_header(msg, 64, cmd, 1, 5, 0x00A1, 0x1122334455667788ULL);
+    protocore_smb2_build_header(msg, 64, cmd, 1, 5, 0x00A1, 0x1122334455667788ULL);
     w32(msg + 8, status);
     msg[16] |= 0x01; // server-to-redir
     return msg + 64;
@@ -1104,7 +1104,7 @@ static uint8_t *pc_resp_hdr(uint8_t *msg, Smb2Command cmd, uint32_t status)
 
 static void canned_frame(Canned *cn, const uint8_t *msg, size_t mlen)
 {
-    cn->pc_resp_len = pc_smb2_transport_frame(cn->resp, sizeof(cn->resp), msg, mlen);
+    cn->protocore_resp_len = protocore_smb2_transport_frame(cn->resp, sizeof(cn->resp), msg, mlen);
     cn->pos = 0;
 }
 
@@ -1151,7 +1151,7 @@ void test_read_send_io()
 void test_read_recv_io()
 {
     Canned cn;
-    memset(&cn, 0, sizeof(cn)); // pc_resp_len 0 -> recv returns 0
+    memset(&cn, 0, sizeof(cn)); // protocore_resp_len 0 -> recv returns 0
     SmbHandle h = make_handle();
     uint8_t buf[16];
     size_t got = 0;
@@ -1164,7 +1164,7 @@ void test_read_bad_header()
     Canned cn;
     memset(&cn, 0, sizeof(cn));
     uint8_t msg[128] = {0};
-    uint8_t *b = pc_resp_hdr(msg, SMB2_READ, SMB2_STATUS_SUCCESS);
+    uint8_t *b = protocore_resp_hdr(msg, SMB2_READ, SMB2_STATUS_SUCCESS);
     w16(b + 0, 17);
     b[2] = 80;
     w32(b + 4, 0);
@@ -1182,7 +1182,7 @@ void test_read_status_error()
     Canned cn;
     memset(&cn, 0, sizeof(cn));
     uint8_t msg[128] = {0};
-    uint8_t *b = pc_resp_hdr(msg, SMB2_READ, 0xC0000022); // STATUS_ACCESS_DENIED
+    uint8_t *b = protocore_resp_hdr(msg, SMB2_READ, 0xC0000022); // STATUS_ACCESS_DENIED
     w16(b + 0, 17);
     b[2] = 80;
     w32(b + 4, 0);
@@ -1199,7 +1199,7 @@ void test_read_bad_body()
     Canned cn;
     memset(&cn, 0, sizeof(cn));
     uint8_t msg[128] = {0};
-    uint8_t *b = pc_resp_hdr(msg, SMB2_READ, SMB2_STATUS_SUCCESS);
+    uint8_t *b = protocore_resp_hdr(msg, SMB2_READ, SMB2_STATUS_SUCCESS);
     w16(b + 0, 99); // not 17
     b[2] = 80;
     w32(b + 4, 0);
@@ -1216,7 +1216,7 @@ void test_read_data_too_long()
     Canned cn;
     memset(&cn, 0, sizeof(cn));
     uint8_t msg[256] = {0};
-    uint8_t *b = pc_resp_hdr(msg, SMB2_READ, SMB2_STATUS_SUCCESS);
+    uint8_t *b = protocore_resp_hdr(msg, SMB2_READ, SMB2_STATUS_SUCCESS);
     w16(b + 0, 17);
     b[2] = 80;       // DataOffset
     w32(b + 4, 100); // DataLength 100, but only 16 requested
@@ -1234,7 +1234,7 @@ void test_read_zero_data()
     Canned cn;
     memset(&cn, 0, sizeof(cn));
     uint8_t msg[128] = {0};
-    uint8_t *b = pc_resp_hdr(msg, SMB2_READ, SMB2_STATUS_SUCCESS);
+    uint8_t *b = protocore_resp_hdr(msg, SMB2_READ, SMB2_STATUS_SUCCESS);
     w16(b + 0, 17);
     b[2] = 80;
     w32(b + 4, 0); // DataLength 0
@@ -1289,8 +1289,8 @@ void test_write_recv_overflow()
     cn.resp[0] = 0x00;
     cn.resp[1] = 0x00;
     cn.resp[2] = 0x20;
-    cn.resp[3] = 0x00; // length 0x2000 = 8192 > PC_SMB_BUF (1024)
-    cn.pc_resp_len = 4;
+    cn.resp[3] = 0x00; // length 0x2000 = 8192 > PROTOCORE_SMB_BUF (1024)
+    cn.protocore_resp_len = 4;
     SmbHandle h = make_handle();
     uint8_t data[16] = {0};
     size_t wrote = 0;
@@ -1304,7 +1304,7 @@ void test_write_bad_header()
     Canned cn;
     memset(&cn, 0, sizeof(cn));
     uint8_t msg[128] = {0};
-    uint8_t *b = pc_resp_hdr(msg, SMB2_WRITE, SMB2_STATUS_SUCCESS);
+    uint8_t *b = protocore_resp_hdr(msg, SMB2_WRITE, SMB2_STATUS_SUCCESS);
     w16(b + 0, 17);
     w32(b + 4, 16); // Count
     msg[0] = 0x00;  // corrupt ProtocolId
@@ -1322,7 +1322,7 @@ void test_write_status_error()
     Canned cn;
     memset(&cn, 0, sizeof(cn));
     uint8_t msg[128] = {0};
-    uint8_t *b = pc_resp_hdr(msg, SMB2_WRITE, 0xC0000022);
+    uint8_t *b = protocore_resp_hdr(msg, SMB2_WRITE, 0xC0000022);
     w16(b + 0, 17);
     w32(b + 4, 16);
     canned_frame(&cn, msg, 80);
@@ -1339,7 +1339,7 @@ void test_write_bad_body()
     Canned cn;
     memset(&cn, 0, sizeof(cn));
     uint8_t msg[128] = {0};
-    uint8_t *b = pc_resp_hdr(msg, SMB2_WRITE, SMB2_STATUS_SUCCESS);
+    uint8_t *b = protocore_resp_hdr(msg, SMB2_WRITE, SMB2_STATUS_SUCCESS);
     w16(b + 0, 99); // not 17
     w32(b + 4, 16);
     canned_frame(&cn, msg, 80);
@@ -1356,7 +1356,7 @@ void test_write_zero_count()
     Canned cn;
     memset(&cn, 0, sizeof(cn));
     uint8_t msg[128] = {0};
-    uint8_t *b = pc_resp_hdr(msg, SMB2_WRITE, SMB2_STATUS_SUCCESS);
+    uint8_t *b = protocore_resp_hdr(msg, SMB2_WRITE, SMB2_STATUS_SUCCESS);
     w16(b + 0, 17);
     w32(b + 4, 0); // Count 0
     canned_frame(&cn, msg, 80);
@@ -1373,7 +1373,7 @@ void test_write_count_too_big()
     Canned cn;
     memset(&cn, 0, sizeof(cn));
     uint8_t msg[128] = {0};
-    uint8_t *b = pc_resp_hdr(msg, SMB2_WRITE, SMB2_STATUS_SUCCESS);
+    uint8_t *b = protocore_resp_hdr(msg, SMB2_WRITE, SMB2_STATUS_SUCCESS);
     w16(b + 0, 17);
     w32(b + 4, 999); // Count > 16 requested
     canned_frame(&cn, msg, 80);
@@ -1405,17 +1405,17 @@ void test_close_send_io()
 }
 
 // A reply whose transport length prefix exceeds the receive buffer -> overflow error. smb_close now shares
-// the PC_SMB_BUF-sized s_smb.rx (via smb_round_trip, so encryption applies uniformly), so the length must
+// the PROTOCORE_SMB_BUF-sized s_smb.rx (via smb_round_trip, so encryption applies uniformly), so the length must
 // exceed that, not the old 128-byte stack buffer.
 void test_close_recv_overflow()
 {
     Canned cn;
     memset(&cn, 0, sizeof(cn));
     cn.resp[0] = 0x00;
-    cn.resp[1] = 0xFF; // length ~16 MiB, far beyond PC_SMB_BUF -> recv_msg rejects it as overflow
+    cn.resp[1] = 0xFF; // length ~16 MiB, far beyond PROTOCORE_SMB_BUF -> recv_msg rejects it as overflow
     cn.resp[2] = 0xFF;
     cn.resp[3] = 0xFF;
-    cn.pc_resp_len = 4;
+    cn.protocore_resp_len = 4;
     SmbHandle h = make_handle();
     TEST_ASSERT_EQUAL_INT(SMB_ERR_OVERFLOW, smb_close(&h, canned_send, canned_recv, &cn));
 }
@@ -1429,7 +1429,7 @@ void test_close_recv_zero_len()
     cn.resp[1] = 0x00;
     cn.resp[2] = 0x00;
     cn.resp[3] = 0x00;
-    cn.pc_resp_len = 4;
+    cn.protocore_resp_len = 4;
     SmbHandle h = make_handle();
     TEST_ASSERT_EQUAL_INT(SMB_ERR_IO, smb_close(&h, canned_send, canned_recv, &cn));
 }
@@ -1443,7 +1443,7 @@ void test_close_recv_trunc_body()
     cn.resp[1] = 0x00;
     cn.resp[2] = 0x00;
     cn.resp[3] = 0x64;       // length 100
-    cn.pc_resp_len = 4 + 40; // only 40 of the 100 body bytes follow
+    cn.protocore_resp_len = 4 + 40; // only 40 of the 100 body bytes follow
     SmbHandle h = make_handle();
     TEST_ASSERT_EQUAL_INT(SMB_ERR_IO, smb_close(&h, canned_send, canned_recv, &cn));
 }
@@ -1454,7 +1454,7 @@ void test_close_bad_header()
     Canned cn;
     memset(&cn, 0, sizeof(cn));
     uint8_t msg[128] = {0};
-    uint8_t *b = pc_resp_hdr(msg, SMB2_CLOSE, SMB2_STATUS_SUCCESS);
+    uint8_t *b = protocore_resp_hdr(msg, SMB2_CLOSE, SMB2_STATUS_SUCCESS);
     w16(b + 0, 60);
     msg[0] = 0x00; // corrupt ProtocolId
     canned_frame(&cn, msg, 124);
@@ -1468,7 +1468,7 @@ void test_close_status_error()
     Canned cn;
     memset(&cn, 0, sizeof(cn));
     uint8_t msg[128] = {0};
-    uint8_t *b = pc_resp_hdr(msg, SMB2_CLOSE, 0xC0000022);
+    uint8_t *b = protocore_resp_hdr(msg, SMB2_CLOSE, 0xC0000022);
     w16(b + 0, 60);
     canned_frame(&cn, msg, 124);
     SmbHandle h = make_handle();
@@ -1481,7 +1481,7 @@ void test_close_bad_body()
     Canned cn;
     memset(&cn, 0, sizeof(cn));
     uint8_t msg[128] = {0};
-    uint8_t *b = pc_resp_hdr(msg, SMB2_CLOSE, SMB2_STATUS_SUCCESS);
+    uint8_t *b = protocore_resp_hdr(msg, SMB2_CLOSE, SMB2_STATUS_SUCCESS);
     w16(b + 0, 99); // not 60
     canned_frame(&cn, msg, 124);
     SmbHandle h = make_handle();
@@ -1573,8 +1573,8 @@ void test_read_recv_overflow()
     cn.resp[0] = 0x00;
     cn.resp[1] = 0x00;
     cn.resp[2] = 0x20;
-    cn.resp[3] = 0x00; // length 0x2000 = 8192 > PC_SMB_BUF (1024)
-    cn.pc_resp_len = 4;
+    cn.resp[3] = 0x00; // length 0x2000 = 8192 > PROTOCORE_SMB_BUF (1024)
+    cn.protocore_resp_len = 4;
     SmbHandle h = make_handle();
     uint8_t buf[16];
     size_t got = 0;
@@ -1587,7 +1587,7 @@ void test_read_eof_status()
     Canned cn;
     memset(&cn, 0, sizeof(cn));
     uint8_t msg[128] = {0};
-    uint8_t *b = pc_resp_hdr(msg, SMB2_READ, SMB2_STATUS_END_OF_FILE);
+    uint8_t *b = protocore_resp_hdr(msg, SMB2_READ, SMB2_STATUS_END_OF_FILE);
     w16(b + 0, 17);
     b[2] = 80;
     w32(b + 4, 0);
@@ -1606,7 +1606,7 @@ void test_write_no_extend()
     Canned cn;
     memset(&cn, 0, sizeof(cn));
     uint8_t msg[128] = {0};
-    uint8_t *b = pc_resp_hdr(msg, SMB2_WRITE, SMB2_STATUS_SUCCESS);
+    uint8_t *b = protocore_resp_hdr(msg, SMB2_WRITE, SMB2_STATUS_SUCCESS);
     w16(b + 0, 17);
     w32(b + 4, 16); // Count = the 16 bytes offered
     canned_frame(&cn, msg, 80);
@@ -1628,7 +1628,7 @@ void test_close_bad_transport_prefix()
     cn.resp[1] = 0x00;
     cn.resp[2] = 0x00;
     cn.resp[3] = 0x50;
-    cn.pc_resp_len = 4;
+    cn.protocore_resp_len = 4;
     SmbHandle h = make_handle();
     TEST_ASSERT_EQUAL_INT(SMB_ERR_IO, smb_close(&h, canned_send, canned_recv, &cn));
 }

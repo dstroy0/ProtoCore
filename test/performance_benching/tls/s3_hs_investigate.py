@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # TLS handshake curve investigation vs a PC HTTPS rig. For each ECDHE group, times the handshake with
 # DEFINITIVE curve control (openssl -groups) and reports the group the server actually used, plus a TCP
-# baseline to separate crypto from network. Pairs with the server-side PC_TLS_HS_BENCH probe (device CPU
+# baseline to separate crypto from network. Pairs with the server-side PROTOCORE_TLS_HS_BENCH probe (device CPU
 # vs wall) - see docs/FEATURE_PERFORMANCE.md "Device-CPU breakdown".
 #
 #   python3 performance_benching/tls/s3_hs_investigate.py <server-ip>

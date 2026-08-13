@@ -36,9 +36,9 @@ void dbench_run(void)
     // A populated rolling observation ring for the `sample` long-poll query (built once).
     static pc_mtc_sample_buffer ring;
     pc_mtc_sample_buffer_init(&ring, 1);
-    pc_mtc_sample_buffer_add(&ring, PC_MTC_SAMPLE, "Position", "xpos", "T1", "1.0");
-    pc_mtc_sample_buffer_add(&ring, PC_MTC_SAMPLE, "Position", "xpos", "T2", "2.0");
-    pc_mtc_sample_buffer_add(&ring, PC_MTC_EVENT, "Execution", "exec", "T3", "ACTIVE");
+    pc_mtc_sample_buffer_add(&ring, PROTOCORE_MTC_SAMPLE, "Position", "xpos", "T1", "1.0");
+    pc_mtc_sample_buffer_add(&ring, PROTOCORE_MTC_SAMPLE, "Position", "xpos", "T2", "2.0");
+    pc_mtc_sample_buffer_add(&ring, PROTOCORE_MTC_EVENT, "Execution", "exec", "T3", "ACTIVE");
 
     for (;;)
     {
@@ -46,19 +46,20 @@ void dbench_run(void)
         volatile size_t sink = 0;
 
         // MTConnectStreams (`current`/`sample`): header + one Event, one Sample, one Condition.
-        DBENCH_OP(
-            "pc_mtc_streams build", 20000, pc_mtc_streams_begin(&s, buf, sizeof(buf), 1500, 42, "cnc1");
-            pc_mtc_streams_add(&s, PC_MTC_EVENT, "Availability", "avail", 40, "2026-07-06T00:00:00Z", "AVAILABLE");
-            pc_mtc_streams_add(&s, PC_MTC_SAMPLE, "Position", "xpos", 41, "2026-07-06T00:00:01Z", "12.5");
-            pc_mtc_streams_add(&s, PC_MTC_CONDITION, "SystemCondition", "sys", 42, "2026-07-06T00:00:02Z", "Fault");
-            sink += pc_mtc_streams_end(&s));
+        DBENCH_OP("pc_mtc_streams build", 20000, pc_mtc_streams_begin(&s, buf, sizeof(buf), 1500, 42, "cnc1");
+                  pc_mtc_streams_add(&s, PROTOCORE_MTC_EVENT, "Availability", "avail", 40, "2026-07-06T00:00:00Z",
+                                     "AVAILABLE");
+                  pc_mtc_streams_add(&s, PROTOCORE_MTC_SAMPLE, "Position", "xpos", 41, "2026-07-06T00:00:01Z", "12.5");
+                  pc_mtc_streams_add(&s, PROTOCORE_MTC_CONDITION, "SystemCondition", "sys", 42, "2026-07-06T00:00:02Z",
+                                     "Fault");
+                  sink += pc_mtc_streams_end(&s));
 
         // MTConnectDevices (`probe`): the device model with three DataItems.
         DBENCH_OP("pc_mtc_devices probe build", 20000,
                   pc_mtc_devices_begin(&s, buf, sizeof(buf), 1500, "dev1", "cnc1", "uuid-abc");
-                  pc_mtc_devices_add_item(&s, PC_MTC_EVENT, "avail", "Availability", NULL, NULL);
-                  pc_mtc_devices_add_item(&s, PC_MTC_SAMPLE, "xpos", "Position", "Xabs", "MILLIMETER");
-                  pc_mtc_devices_add_item(&s, PC_MTC_CONDITION, "sys", "SystemCondition", NULL, NULL);
+                  pc_mtc_devices_add_item(&s, PROTOCORE_MTC_EVENT, "avail", "Availability", NULL, NULL);
+                  pc_mtc_devices_add_item(&s, PROTOCORE_MTC_SAMPLE, "xpos", "Position", "Xabs", "MILLIMETER");
+                  pc_mtc_devices_add_item(&s, PROTOCORE_MTC_CONDITION, "sys", "SystemCondition", NULL, NULL);
                   sink += pc_mtc_devices_end(&s));
 
         // MTConnectAssets (`asset`): one CuttingTool with a ToolLife.

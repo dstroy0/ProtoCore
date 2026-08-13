@@ -3,7 +3,7 @@
 
 /**
  * @file simatic.h
- * @brief Siemens SIMATIC serial point-to-point link (PC_ENABLE_SIMATIC) - the 3964R link protocol +
+ * @brief Siemens SIMATIC serial point-to-point link (PROTOCORE_ENABLE_SIMATIC) - the 3964R link protocol +
  *        the RK512 computer-link telegrams, zero-heap.
  *
  * The pre-Ethernet Siemens point-to-point link, two layers:
@@ -35,9 +35,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_SIMATIC
+#if PROTOCORE_ENABLE_SIMATIC
 
 // 3964R control characters (wire bytes).
 #define SIMATIC_STX 0x02
@@ -56,7 +56,7 @@ PROTO_BEGIN_DECLS
  * terminating DLE ETX - so callers pass exactly those bytes. XOR (not DF1's 2's-complement sum): a doubled
  * DLE pair cancels (0x10 ^ 0x10 = 0).
  */
-uint8_t pc_3964r_bcc(const uint8_t *data, size_t len);
+uint8_t protocore_3964r_bcc(const uint8_t *data, size_t len);
 
 /**
  * @brief Build the 3964R block body: DLE-stuffed @p data, then DLE ETX, then (if @p with_bcc) the BCC.
@@ -65,7 +65,7 @@ uint8_t pc_3964r_bcc(const uint8_t *data, size_t len);
  * a caller hands the state machine (or a test drives directly).
  * @return octets written, or 0 on overflow / bad input.
  */
-size_t pc_3964r_build_block(uint8_t *buf, size_t cap, const uint8_t *data, size_t len, proto_bool with_bcc);
+size_t protocore_3964r_build_block(uint8_t *buf, size_t cap, const uint8_t *data, size_t len, proto_bool with_bcc);
 
 /**
  * @brief Parse + validate a 3964R block body (the bytes after STX): un-stuff the payload, check DLE ETX
@@ -76,8 +76,8 @@ size_t pc_3964r_build_block(uint8_t *buf, size_t cap, const uint8_t *data, size_
  * @return true on a complete, check-valid block; false on bad framing, a lone control byte, truncation,
  *         an out overflow, or a BCC mismatch (fail-closed).
  */
-proto_bool pc_3964r_parse_block(const uint8_t *buf, size_t len, proto_bool with_bcc, uint8_t *out, size_t out_cap,
-                                size_t *out_len);
+proto_bool protocore_3964r_parse_block(const uint8_t *buf, size_t len, proto_bool with_bcc, uint8_t *out,
+                                       size_t out_cap, size_t *out_len);
 
 // ---------------------------------------------------------------------------
 // 3964R link state machine (interactive half-duplex: STX/DLE handshake, retries, priority arbitration)
@@ -110,9 +110,9 @@ typedef struct
     Simatic3964RxFn rx;       ///< received-block delivery
     void *user;               ///< passed to tx / rx
 
-    uint8_t txbuf[PC_SIMATIC_BLOCK_MAX]; ///< the block body being sent (built once, re-sent on retry)
+    uint8_t txbuf[PROTOCORE_SIMATIC_BLOCK_MAX]; ///< the block body being sent (built once, re-sent on retry)
     size_t txlen;
-    uint8_t rxbuf[PC_SIMATIC_BLOCK_MAX]; ///< raw inbound block body (pre un-stuffing)
+    uint8_t rxbuf[PROTOCORE_SIMATIC_BLOCK_MAX]; ///< raw inbound block body (pre un-stuffing)
     size_t rxpos;
 
     uint8_t block_retries; ///< block resends this connection (max 6)
@@ -127,23 +127,23 @@ typedef struct
 #define SIMATIC_MAX_CONN_RETRY 6
 
 /** @brief Initialize the link. @p high_priority: one end true, the other false (collision arbitration). */
-void pc_3964r_init(Simatic3964Ctx *ctx, proto_bool high_priority, proto_bool with_bcc, Simatic3964TxFn tx,
-                   Simatic3964RxFn rx, void *user);
+void protocore_3964r_init(Simatic3964Ctx *ctx, proto_bool high_priority, proto_bool with_bcc, Simatic3964TxFn tx,
+                          Simatic3964RxFn rx, void *user);
 
 /**
  * @brief Start sending @p data (one job in flight). Emits STX and arms the connect timeout.
  * @return true if accepted; false if a job is already in flight or @p len exceeds the block buffer.
  */
-proto_bool pc_3964r_send(Simatic3964Ctx *ctx, const uint8_t *data, size_t len, uint32_t now_ms);
+proto_bool protocore_3964r_send(Simatic3964Ctx *ctx, const uint8_t *data, size_t len, uint32_t now_ms);
 
 /** @brief Feed one inbound byte at @p now_ms; drives the handshake / block collection. */
-void pc_3964r_rx_byte(Simatic3964Ctx *ctx, uint8_t b, uint32_t now_ms);
+void protocore_3964r_rx_byte(Simatic3964Ctx *ctx, uint8_t b, uint32_t now_ms);
 
 /** @brief Drive timeouts (QVZ/ZVZ) + retries; call periodically with the current time. */
-void pc_3964r_tick(Simatic3964Ctx *ctx, uint32_t now_ms);
+void protocore_3964r_tick(Simatic3964Ctx *ctx, uint32_t now_ms);
 
 /** @brief True when no job is in flight and no block is being received. */
-proto_bool pc_3964r_idle(const Simatic3964Ctx *ctx);
+proto_bool protocore_3964r_idle(const Simatic3964Ctx *ctx);
 
 // ---------------------------------------------------------------------------
 // RK512 computer-link telegrams (carried as the 3964R block payload; big-endian words)
@@ -184,34 +184,35 @@ typedef struct
  * @brief Build a SEND telegram header + the @p wcount big-endian data words at @p words.
  * @return octets written, or 0 on overflow / bad input.
  */
-size_t pc_rk512_build_send(uint8_t *buf, size_t cap, Rk512Area area, uint8_t dbnr, uint16_t addr, const uint16_t *words,
-                           uint16_t wcount);
+size_t protocore_rk512_build_send(uint8_t *buf, size_t cap, Rk512Area area, uint8_t dbnr, uint16_t addr,
+                                  const uint16_t *words, uint16_t wcount);
 
 /**
  * @brief Build a FETCH telegram header (no data words - the partner returns them).
  * @return octets written, or 0 on overflow / bad input.
  */
-size_t pc_rk512_build_fetch(uint8_t *buf, size_t cap, Rk512Area area, uint8_t dbnr, uint16_t addr, uint16_t wcount);
+size_t protocore_rk512_build_fetch(uint8_t *buf, size_t cap, Rk512Area area, uint8_t dbnr, uint16_t addr,
+                                   uint16_t wcount);
 
 /**
  * @brief Build a reaction (acknowledge) telegram carrying @p status (0 = ok).
  * @return octets written, or 0 on overflow.
  */
-size_t pc_rk512_build_reaction(uint8_t *buf, size_t cap, uint16_t status);
+size_t protocore_rk512_build_reaction(uint8_t *buf, size_t cap, uint16_t status);
 
 /** @brief Parse an RK512 header off a telegram. @return true on a complete, valid header. */
-proto_bool pc_rk512_parse_header(const uint8_t *buf, size_t len, Rk512Header *out);
+proto_bool protocore_rk512_parse_header(const uint8_t *buf, size_t len, Rk512Header *out);
 
 /**
  * @brief Parse a reaction telegram: the status word, and (for a FETCH response) a pointer to the data
  *        words + their byte length inside @p buf.
  * @return true on a valid reaction telegram.
  */
-proto_bool pc_rk512_parse_reaction(const uint8_t *buf, size_t len, uint16_t *status, const uint8_t **data,
-                                   size_t *dlen);
+proto_bool protocore_rk512_parse_reaction(const uint8_t *buf, size_t len, uint16_t *status, const uint8_t **data,
+                                          size_t *dlen);
 
-#endif // PC_ENABLE_SIMATIC
+#endif // PROTOCORE_ENABLE_SIMATIC
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_SIMATIC_H

@@ -5,7 +5,7 @@
  * @file PackML.ino
  * @brief PackML / OMAC machine state model over HTTP - a packaging machine that runs the ISA-TR88.00.02
  *        state machine and surfaces its PackTags so a line controller / HMI can observe and command it
- *        (PC_ENABLE_PACKML).
+ *        (PROTOCORE_ENABLE_PACKML).
  *
  * services/machine_tool/packml is a pure, fixed-BSS state engine + owned PackTags service; this sketch drives it as a
  * simulated machine and exposes it over the library's HTTP server:
@@ -19,10 +19,10 @@
  * after a short dwell, the way a real machine's State-Complete would, and produces a unit every second
  * while in Execute. Point a browser at http://<device-ip>/packml, then drive it with the command routes.
  *
- * Build flags (platformio.ini):  build_flags = -DPC_ENABLE_PACKML=1
+ * Build flags (platformio.ini):  build_flags = -DPROTOCORE_ENABLE_PACKML=1
  */
 
-#define PC_ENABLE_PACKML 1
+#define PROTOCORE_ENABLE_PACKML 1
 
 #include "protocore.h" // library entry header (also sets the src/ include root)
 #include "network_drivers/physical/physical.h"
@@ -39,13 +39,13 @@ static void handle_status(uint8_t slot, HttpReq *req)
 {
     (void)req;
     PackMlStatus st;
-    pc_packml_svc_status(&st);
+    protocore_packml_svc_status(&st);
     char body[256];
     int n = snprintf(body, sizeof(body),
                      "{\"stateCurrent\":%u,\"state\":\"%s\",\"unitMode\":%u,\"machSpeedActual\":%.1f,"
                      "\"prodProcessedCount\":%lu,\"prodDefectiveCount\":%lu,\"stateCurrentTimeMs\":%lu,"
                      "\"accTimeSinceResetMs\":%lu}",
-                     (unsigned)st.state_current, pc_packml_state_name(st.state_current), (unsigned)st.unit_mode_current,
+                     (unsigned)st.state_current, protocore_packml_state_name(st.state_current), (unsigned)st.unit_mode_current,
                      (double)st.mach_speed_actual, (unsigned long)st.prod_processed, (unsigned long)st.prod_defective,
                      (unsigned long)st.state_current_ms, (unsigned long)st.acc_time_since_reset_ms);
     if (n < 0)
@@ -58,10 +58,10 @@ static void handle_status(uint8_t slot, HttpReq *req)
 // Apply a command and answer with the resulting state name.
 static void apply(uint8_t slot, PackMlCommand cmd)
 {
-    bool ok = pc_packml_svc_command(cmd);
+    bool ok = protocore_packml_svc_command(cmd);
     char body[96];
     int n = snprintf(body, sizeof(body), "{\"accepted\":%s,\"state\":\"%s\"}", ok ? "true" : "false",
-                     pc_packml_state_name(pc_packml_svc_state()));
+                     protocore_packml_state_name(protocore_packml_svc_state()));
     send_text(slot, ok ? 200 : 409, "application/json", (const uint8_t *)body, (size_t)(n < 0 ? 0 : n));
 }
 
@@ -115,10 +115,10 @@ static void h_clear(uint8_t s, HttpReq *r)
 static void h_complete(uint8_t s, HttpReq *r)
 {
     (void)r;
-    bool ok = pc_packml_svc_complete_run();
+    bool ok = protocore_packml_svc_complete_run();
     char body[96];
     int n = snprintf(body, sizeof(body), "{\"accepted\":%s,\"state\":\"%s\"}", ok ? "true" : "false",
-                     pc_packml_state_name(pc_packml_svc_state()));
+                     protocore_packml_state_name(protocore_packml_svc_state()));
     send_text(s, ok ? 200 : 409, "application/json", (const uint8_t *)body, (size_t)(n < 0 ? 0 : n));
 }
 
@@ -135,8 +135,8 @@ void setup()
     Serial.printf("PackML machine at http://%u.%u.%u.%u/packml\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    pc_packml_svc_init(PackMlMode::PRODUCING);
-    pc_packml_svc_set_speed(120.0f); // 120 units/min commanded
+    protocore_packml_svc_init(PackMlMode::PRODUCING);
+    protocore_packml_svc_set_speed(120.0f); // 120 units/min commanded
 
     on_http("/packml", HTTP_GET, handle_status);
     on_http("/packml/reset", HTTP_GET, h_reset);
@@ -158,7 +158,7 @@ void loop()
 
     // Simulate the machine finishing each transient action: an acting state auto-advances after a dwell.
     static uint32_t acting_since = 0;
-    if (pc_packml_is_acting(pc_packml_svc_state()))
+    if (protocore_packml_is_acting(protocore_packml_svc_state()))
     {
         if (acting_since == 0)
         {
@@ -166,7 +166,7 @@ void loop()
         }
         else if (millis() - acting_since >= ACTING_DWELL_MS)
         {
-            pc_packml_svc_state_complete();
+            protocore_packml_svc_state_complete();
             acting_since = 0;
         }
     }
@@ -177,10 +177,10 @@ void loop()
 
     // Produce one unit per second while executing (1-in-20 flagged defective, for the counters).
     static uint32_t last_unit = 0;
-    if (pc_packml_svc_state() == PackMlState::EXECUTE && millis() - last_unit >= 1000)
+    if (protocore_packml_svc_state() == PackMlState::EXECUTE && millis() - last_unit >= 1000)
     {
         last_unit = millis();
         static uint32_t made = 0;
-        pc_packml_svc_count((++made % 20) == 0);
+        protocore_packml_svc_count((++made % 20) == 0);
     }
 }

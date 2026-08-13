@@ -12,9 +12,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
-static uint32_t crc_one(const pc_crc_params *p, const uint8_t *d, size_t n)
+static uint32_t crc_one(const protocore_crc_params *p, const uint8_t *d, size_t n)
 {
-    return pc_crc_final(p, pc_crc_update(p, pc_crc_begin(p), d, n));
+    return protocore_crc_final(p, protocore_crc_update(p, protocore_crc_begin(p), d, n));
 }
 
 void dbench_run(void)
@@ -28,8 +28,8 @@ void dbench_run(void)
     {
         DBENCH_BANNER("crc");
         volatile uint32_t sink = 0;
-        DBENCH_BULK("pc_crc CRC-16/MODBUS (1 KiB)", 20000, 1024, sink += crc_one(&PC_CRC16_MODBUS, buf, 1024));
-        DBENCH_BULK("pc_crc CRC-16/XMODEM (1 KiB)", 20000, 1024, sink += crc_one(&PC_CRC16_XMODEM, buf, 1024));
+        DBENCH_BULK("protocore_crc CRC-16/MODBUS (1 KiB)", 20000, 1024, sink += crc_one(&PROTOCORE_CRC16_MODBUS, buf, 1024));
+        DBENCH_BULK("protocore_crc CRC-16/XMODEM (1 KiB)", 20000, 1024, sink += crc_one(&PROTOCORE_CRC16_XMODEM, buf, 1024));
         (void)sink;
         DBENCH_DONE();
     }

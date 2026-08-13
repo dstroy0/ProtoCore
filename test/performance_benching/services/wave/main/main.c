@@ -18,20 +18,20 @@ void dbench_run(void)
                                         0xCC, 0xDD, 0xEE, 0xFF, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
                                         0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10};
     static uint8_t wsmp[64];
-    size_t wlen = pc_wsmp_build(0x20, payload, sizeof(payload), wsmp, sizeof(wsmp));
+    size_t wlen = protocore_wsmp_build(0x20, payload, sizeof(payload), wsmp, sizeof(wsmp));
 
     for (;;)
     {
         DBENCH_BANNER("wave");
         volatile size_t sink = 0;
         static uint8_t out[64];
-        DBENCH_OP("pc_wave_encode_psid", 200000, sink += pc_wave_encode_psid(0x20, out, sizeof(out)));
+        DBENCH_OP("protocore_wave_encode_psid", 200000, sink += protocore_wave_encode_psid(0x20, out, sizeof(out)));
         uint32_t psid;
-        DBENCH_OP("pc_wave_decode_psid", 200000, sink += pc_wave_decode_psid(out, 4, &psid));
-        DBENCH_OP("pc_wsmp_build (32B)", 200000,
-                  sink += pc_wsmp_build(0x20, payload, sizeof(payload), out, sizeof(out)));
+        DBENCH_OP("protocore_wave_decode_psid", 200000, sink += protocore_wave_decode_psid(out, 4, &psid));
+        DBENCH_OP("protocore_wsmp_build (32B)", 200000,
+                  sink += protocore_wsmp_build(0x20, payload, sizeof(payload), out, sizeof(out)));
         WsmpFrame wf;
-        DBENCH_OP("pc_wsmp_parse", 200000, sink += pc_wsmp_parse(wsmp, wlen, &wf));
+        DBENCH_OP("protocore_wsmp_parse", 200000, sink += protocore_wsmp_parse(wsmp, wlen, &wf));
         (void)sink;
         DBENCH_DONE();
     }

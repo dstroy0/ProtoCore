@@ -7,7 +7,7 @@
  *
  * `listener_accept_cb` is the single lwIP accept callback registered for
  * every listener.  The listener index is embedded in the PCB user-data via
- * `pc_net_arg(listen_pcb, (void*)(uintptr_t)idx)` so this one function handles
+ * `protocore_net_arg(listen_pcb, (void*)(uintptr_t)idx)` so this one function handles
  * all ports without a lookup table.
  *
  * The non-static per-connection callbacks (lowlevel_recv_cb, lowlevel_sent_cb,
@@ -19,21 +19,21 @@
 
 #include "tcp_listener.h"
 #include "../diffserv.h" // DiffServ DSCP marking for accepted connections (compiles out when off)
-#include "../net_addr.h" // NetAddr.to_ip(): the stack's address as a pc_ip
+#include "../net_addr.h" // NetAddr.to_ip(): the stack's address as a protocore_ip
 #include "../tcp.h"      // Tcp.conn->: an accept claims its slot through the owner
-#include "core_setup/board_profiles/pc_platform.h" // the stack's queues, under our names
+#include "core_setup/board_profiles/protocore_platform.h" // the stack's queues, under our names
 #include "network_drivers/session/worker.h"        // Workers.wake() - nudge the owning worker task
 #include "network_drivers/tls/tls.h"               // TLS handshake begin (self-stubbing)
-#include "server/clock/clock.h"                    // pc_millis() pluggable monotonic clock
+#include "server/clock/clock.h"                    // protocore_millis() pluggable monotonic clock
 #include "tcp_conn.h"                              // TcpConn, conn_pool: the slots an accept claims
 
 // Listener pool - all storage in BSS.
 Listener listener_pool[MAX_LISTENERS];
 
 // Per-connection callbacks defined in tcp.c.
-extern pc_net_err lowlevel_recv_cb(void *arg, pc_pcb *tpcb, pc_pbuf *p, pc_net_err err);
-extern pc_net_err lowlevel_sent_cb(void *arg, pc_pcb *tpcb, proto_u16 len);
-extern void lowlevel_err_cb(void *arg, pc_net_err err);
+extern protocore_net_err lowlevel_recv_cb(void *arg, protocore_pcb *tpcb, protocore_pbuf *p, protocore_net_err err);
+extern protocore_net_err lowlevel_sent_cb(void *arg, protocore_pcb *tpcb, proto_u16 len);
+extern void lowlevel_err_cb(void *arg, protocore_net_err err);
 
 // Both teardowns are called by the add that replaces an active row, above their definitions.
 static void listener_stop(uint8_t idx);
@@ -56,12 +56,12 @@ static AcceptThrottleCtx s_accept;
 static proto_bool listener_accept_allowed(uint32_t now_ms)
 {
     // Unsigned subtraction wraps correctly across the millis() rollover.
-    if ((uint32_t)(now_ms - s_accept.window_start) >= PC_ACCEPT_THROTTLE_WINDOW_MS)
+    if ((uint32_t)(now_ms - s_accept.window_start) >= PROTOCORE_ACCEPT_THROTTLE_WINDOW_MS)
     {
         s_accept.window_start = now_ms;
         s_accept.count = 0;
     }
-    if (s_accept.count >= PC_ACCEPT_THROTTLE_MAX)
+    if (s_accept.count >= PROTOCORE_ACCEPT_THROTTLE_MAX)
     {
         return PROTO_FALSE;
     }
@@ -83,7 +83,7 @@ static void listener_accept_throttle_reset(void)
 
 typedef struct
 {
-    pc_ip addr;            ///< source address (family PC_IP_NONE marks an empty bucket).
+    protocore_ip addr;            ///< source address (family PROTOCORE_IP_NONE marks an empty bucket).
     uint32_t window_start; ///< millis() at the start of this bucket's current window.
     uint16_t count;        ///< connections counted from this address in the window.
 } IpThrottleBucket;
@@ -91,11 +91,11 @@ typedef struct
 // bucket table keyed by source address. One named owner, unreachable from any other TU.
 typedef struct
 {
-    IpThrottleBucket buckets[PC_PER_IP_THROTTLE_SLOTS];
+    IpThrottleBucket buckets[PROTOCORE_PER_IP_THROTTLE_SLOTS];
 } IpThrottleCtx;
 static IpThrottleCtx s_iptt;
 
-static proto_bool listener_accept_allowed_ip(const pc_ip *ip, uint32_t now_ms)
+static proto_bool listener_accept_allowed_ip(const protocore_ip *ip, uint32_t now_ms)
 {
     if (Ip.is_unspecified(ip))
     {
@@ -105,25 +105,25 @@ static proto_bool listener_accept_allowed_ip(const pc_ip *ip, uint32_t now_ms)
     int empty = -1;
     int expired = -1;
     int lru = 0;
-    for (int i = 0; i < PC_PER_IP_THROTTLE_SLOTS; i++)
+    for (int i = 0; i < PROTOCORE_PER_IP_THROTTLE_SLOTS; i++)
     {
         IpThrottleBucket *b = &s_iptt.buckets[i];
-        if (b->addr.family != PC_IP_NONE && Ip.equal(&b->addr, ip))
+        if (b->addr.family != PROTOCORE_IP_NONE && Ip.equal(&b->addr, ip))
         {
             // Unsigned subtraction wraps correctly across the millis() rollover.
-            if ((uint32_t)(now_ms - b->window_start) >= PC_PER_IP_THROTTLE_WINDOW_MS)
+            if ((uint32_t)(now_ms - b->window_start) >= PROTOCORE_PER_IP_THROTTLE_WINDOW_MS)
             {
                 b->window_start = now_ms;
                 b->count = 0;
             }
-            if (b->count >= PC_PER_IP_THROTTLE_MAX)
+            if (b->count >= PROTOCORE_PER_IP_THROTTLE_MAX)
             {
                 return PROTO_FALSE;
             }
             b->count++;
             return PROTO_TRUE;
         }
-        if (b->addr.family == PC_IP_NONE)
+        if (b->addr.family == PROTOCORE_IP_NONE)
         {
             if (empty < 0)
             {
@@ -132,7 +132,7 @@ static proto_bool listener_accept_allowed_ip(const pc_ip *ip, uint32_t now_ms)
         }
         else
         {
-            if (expired < 0 && (uint32_t)(now_ms - b->window_start) >= PC_PER_IP_THROTTLE_WINDOW_MS)
+            if (expired < 0 && (uint32_t)(now_ms - b->window_start) >= PROTOCORE_PER_IP_THROTTLE_WINDOW_MS)
             {
                 expired = i;
             }
@@ -156,9 +156,9 @@ static proto_bool listener_accept_allowed_ip(const pc_ip *ip, uint32_t now_ms)
 
 static void listener_per_ip_throttle_reset(void)
 {
-    for (int i = 0; i < PC_PER_IP_THROTTLE_SLOTS; i++)
+    for (int i = 0; i < PROTOCORE_PER_IP_THROTTLE_SLOTS; i++)
     {
-        s_iptt.buckets[i].addr.family = PC_IP_NONE;
+        s_iptt.buckets[i].addr.family = PROTOCORE_IP_NONE;
         s_iptt.buckets[i].window_start = 0;
         s_iptt.buckets[i].count = 0;
     }
@@ -167,36 +167,36 @@ static void listener_per_ip_throttle_reset(void)
 // ---------------------------------------------------------------------------
 // Source-IP allowlist (accept-time firewall). A bounded BSS table of CIDR rules
 // in host byte order. Always compiled (unit-testable); only consulted when
-// PC_ENABLE_IP_ALLOWLIST is set. An empty table allows everything so enabling
+// PROTOCORE_ENABLE_IP_ALLOWLIST is set. An empty table allows everything so enabling
 // the feature before adding rules cannot lock the device out.
 // ---------------------------------------------------------------------------
 
 typedef struct
 {
-    pc_ip network;      ///< network address (family PC_IP_V4 / V6; PC_IP_NONE marks unused).
+    protocore_ip network;      ///< network address (family PROTOCORE_IP_V4 / V6; PROTOCORE_IP_NONE marks unused).
     uint8_t prefix_len; ///< CIDR prefix length: 0..32 for v4, 0..128 for v6.
 } IpAllowRule;
 // IP allowlist state, owned by one instance (internal linkage): the CIDR rule table and its
 // count (empty = allow all). One named owner, unreachable from any other translation unit.
 typedef struct
 {
-    IpAllowRule rules[PC_IP_ALLOWLIST_SLOTS];
+    IpAllowRule rules[PROTOCORE_IP_ALLOWLIST_SLOTS];
     uint8_t count;
 } IpAllowCtx;
 static IpAllowCtx s_allow;
 
-static proto_bool listener_ip_allow_add(const pc_ip *network, uint8_t prefix_len)
+static proto_bool listener_ip_allow_add(const protocore_ip *network, uint8_t prefix_len)
 {
     if (!network)
     {
         return PROTO_FALSE;
     }
-    int bits = (network->family == PC_IP_V4) ? 32 : (network->family == PC_IP_V6 ? 128 : -1);
+    int bits = (network->family == PROTOCORE_IP_V4) ? 32 : (network->family == PROTOCORE_IP_V6 ? 128 : -1);
     if (bits < 0 || prefix_len > (uint8_t)bits)
     {
         return PROTO_FALSE; // reject a malformed family or an over-long prefix
     }
-    if (s_allow.count >= PC_IP_ALLOWLIST_SLOTS)
+    if (s_allow.count >= PROTOCORE_IP_ALLOWLIST_SLOTS)
     {
         return PROTO_FALSE;
     }
@@ -215,7 +215,7 @@ static proto_bool listener_ip_allow_add_cidr(const char *cidr)
 
     // Split "address/prefix" at the slash. The address half is copied into a bounded
     // buffer (a CIDR string is never longer than an address plus "/128") for the parser.
-    char addr[PC_IP_STR_MAX];
+    char addr[PROTOCORE_IP_STR_MAX];
     const char *slash = NULL;
     size_t n = 0;
     for (const char *p = cidr; *p; p++)
@@ -233,14 +233,14 @@ static proto_bool listener_ip_allow_add_cidr(const char *cidr)
     }
     addr[n] = '\0';
 
-    pc_ip net;
-    net.family = PC_IP_NONE;
+    protocore_ip net;
+    net.family = PROTOCORE_IP_NONE;
     if (!Ip.parse(addr, &net))
     {
         return PROTO_FALSE;
     }
 
-    uint8_t width = (net.family == PC_IP_V4) ? 32 : 128;
+    uint8_t width = (net.family == PROTOCORE_IP_V4) ? 32 : 128;
     uint8_t prefix = width; // bare address -> host route
     if (slash)
     {
@@ -269,7 +269,7 @@ static proto_bool listener_ip_allow_add_cidr(const char *cidr)
     return listener_ip_allow_add(&net, prefix);
 }
 
-static proto_bool listener_ip_allowed(const pc_ip *ip)
+static proto_bool listener_ip_allowed(const protocore_ip *ip)
 {
     if (s_allow.count == 0)
     {
@@ -277,7 +277,7 @@ static proto_bool listener_ip_allowed(const pc_ip *ip)
     }
     for (uint8_t i = 0; i < s_allow.count; i++)
     {
-        // pc_ip_prefix_match requires the same family, so a v4 peer never matches a v6 rule.
+        // protocore_ip_prefix_match requires the same family, so a v4 peer never matches a v6 rule.
         if (Ip.prefix_match(ip, &s_allow.rules[i].network, s_allow.rules[i].prefix_len))
         {
             return PROTO_TRUE;
@@ -288,14 +288,14 @@ static proto_bool listener_ip_allowed(const pc_ip *ip)
 
 static void listener_ip_allowlist_reset(void)
 {
-    for (int i = 0; i < PC_IP_ALLOWLIST_SLOTS; i++)
+    for (int i = 0; i < PROTOCORE_IP_ALLOWLIST_SLOTS; i++)
     {
-        s_allow.rules[i].network.family = PC_IP_NONE;
+        s_allow.rules[i].network.family = PROTOCORE_IP_NONE;
     }
     s_allow.count = 0;
 }
 
-#if PC_WORKER_COUNT > 1
+#if PROTOCORE_WORKER_COUNT > 1
 // Per-worker event queues: each worker drains only its own queue, so connection
 // slots partition across workers with no shared-queue contention. Static BSS, no
 // heap. Created once (idempotent) before the first accept can fire.
@@ -303,45 +303,49 @@ static void listener_ip_allowlist_reset(void)
 // control blocks, their storage, and the queue handles. One named owner, unreachable cross-TU.
 typedef struct
 {
-    pc_platform_queue_ctrl wq_struct[PC_WORKER_COUNT];
-    uint8_t wq_storage[PC_WORKER_COUNT][EVT_QUEUE_DEPTH * sizeof(TcpEvt)];
-    pc_platform_queue wq[PC_WORKER_COUNT];
+    protocore_platform_queue_ctrl wq_struct[PROTOCORE_WORKER_COUNT];
+    uint8_t wq_storage[PROTOCORE_WORKER_COUNT][EVT_QUEUE_DEPTH * sizeof(TcpEvt)];
+    protocore_platform_queue wq[PROTOCORE_WORKER_COUNT];
 } ListenerQueueCtx;
 static ListenerQueueCtx s_lq;
 
 static void listener_worker_queues_init(void)
 {
-    for (int i = 0; i < PC_WORKER_COUNT; i++)
+    for (int i = 0; i < PROTOCORE_WORKER_COUNT; i++)
     {
         if (!s_lq.wq[i])
         {
             s_lq.wq[i] =
-                pc_platform_queue_create(EVT_QUEUE_DEPTH, sizeof(TcpEvt), s_lq.wq_storage[i], &s_lq.wq_struct[i]);
+                protocore_platform_queue_create(EVT_QUEUE_DEPTH, sizeof(TcpEvt), s_lq.wq_storage[i], &s_lq.wq_struct[i]);
         }
     }
 }
 
-static pc_platform_queue listener_worker_queue(int worker_id)
+static protocore_platform_queue listener_worker_queue(int worker_id)
 {
-    if (worker_id < 0 || worker_id >= PC_WORKER_COUNT)
+    if (worker_id < 0 || worker_id >= PROTOCORE_WORKER_COUNT)
     {
         return NULL;
     }
     return s_lq.wq[worker_id];
 }
-#endif // PC_WORKER_COUNT > 1
+#endif // PROTOCORE_WORKER_COUNT > 1
 
 static proto_bool listener_enqueue(uint8_t listener_id, const TcpEvt *evt)
 {
-#if PC_WORKER_COUNT > 1
-    // HttpRoute by the slot's owner so the owning worker is the sole consumer.
-    (void)listener_id;
-    uint8_t owner = conn_pool[evt->slot_id].owner;
-    if (owner >= PC_WORKER_COUNT || !s_lq.wq[owner])
+    if (evt == NULL || evt->slot_id >= CONN_POOL_SLOTS)
     {
         return PROTO_FALSE;
     }
-    if (pc_platform_queue_send(s_lq.wq[owner], evt, 0) != PC_PLATFORM_OK)
+#if PROTOCORE_WORKER_COUNT > 1
+    // HttpRoute by the slot's owner so the owning worker is the sole consumer.
+    (void)listener_id;
+    uint8_t owner = conn_pool[evt->slot_id].owner;
+    if (owner >= PROTOCORE_WORKER_COUNT || !s_lq.wq[owner])
+    {
+        return PROTO_FALSE;
+    }
+    if (protocore_platform_queue_send(s_lq.wq[owner], evt, 0) != PROTOCORE_PLATFORM_OK)
     {
         return PROTO_FALSE;
     }
@@ -356,7 +360,7 @@ static proto_bool listener_enqueue(uint8_t listener_id, const TcpEvt *evt)
     {
         return PROTO_FALSE;
     }
-    if (pc_platform_queue_send(lst->queue, evt, 0) != PC_PLATFORM_OK)
+    if (protocore_platform_queue_send(lst->queue, evt, 0) != PROTOCORE_PLATFORM_OK)
     {
         return PROTO_FALSE;
     }
@@ -369,76 +373,76 @@ static proto_bool listener_enqueue(uint8_t listener_id, const TcpEvt *evt)
  * @brief lwIP accept callback - single handler for all listener ports.
  *
  * @p arg carries the listener index cast to a pointer via
- * `pc_net_arg(listen_pcb, (void*)(uintptr_t)idx)`.  Finds a free TcpConn slot,
+ * `protocore_net_arg(listen_pcb, (void*)(uintptr_t)idx)`.  Finds a free TcpConn slot,
  * sets its protocol, wires the per-connection callbacks, and posts EVT_CONNECT
- * to the owning listener's queue.  Rejects the connection with PC_NET_ERR_ABRT when
- * the pool is full - PC_NET_ERR_ABRT tells lwIP the PCB is already gone from our side.
+ * to the owning listener's queue.  Rejects the connection with PROTOCORE_NET_ERR_ABRT when
+ * the pool is full - PROTOCORE_NET_ERR_ABRT tells lwIP the PCB is already gone from our side.
  *
  * Non-static (like tcp.c's lowlevel_*_cb) so the host unit tests can call it
  * directly with a fabricated newpcb: on native there is no real lwIP accept event
- * to drive it through pc_net_on_accept(), whose mock (test/mocks/lwip/tcp.h) does not
+ * to drive it through protocore_net_on_accept(), whose mock (test/mocks/lwip/tcp.h) does not
  * store or invoke the registered callback at all.
  */
-pc_net_err listener_accept_cb(void *arg, pc_pcb *newpcb, pc_net_err err)
+protocore_net_err listener_accept_cb(void *arg, protocore_pcb *newpcb, protocore_net_err err)
 {
-    if (err != PC_NET_OK || newpcb == NULL)
+    if (err != PROTOCORE_NET_OK || newpcb == NULL)
     {
-        return PC_NET_ERR_VAL;
+        return PROTOCORE_NET_ERR_VAL;
     }
 
     uint8_t idx = (uint8_t)(uintptr_t)arg;
     if (idx >= MAX_LISTENERS)
     {
-        return PC_NET_ERR_VAL;
+        return PROTOCORE_NET_ERR_VAL;
     }
     Listener *lst = &listener_pool[idx];
 
-#if PC_ENABLE_ACCEPT_THROTTLE
+#if PROTOCORE_ENABLE_ACCEPT_THROTTLE
     // Connection-flood defense: drop accepts beyond the per-window budget before
     // claiming a pool slot or doing any per-connection work.
-    if (!listener_accept_allowed(pc_millis()))
+    if (!listener_accept_allowed(protocore_millis()))
     {
-        pc_net_abort(newpcb);
-        return PC_NET_ERR_ABRT;
+        protocore_net_abort(newpcb);
+        return PROTOCORE_NET_ERR_ABRT;
     }
 #endif
 
-#if PC_ENABLE_PER_IP_THROTTLE || PC_ENABLE_IP_ALLOWLIST
+#if PROTOCORE_ENABLE_PER_IP_THROTTLE || PROTOCORE_ENABLE_IP_ALLOWLIST
     // Resolve the peer's family-tagged source address once for the accept-time abuse gates
     // below - the full IPv4 or IPv6 address, never a lossy hash.
-    pc_ip remote;
-    remote.family = PC_IP_NONE;
+    protocore_ip remote;
+    remote.family = PROTOCORE_IP_NONE;
     NetAddr.to_ip(&newpcb->remote_ip, &remote);
 #endif
 
-#if PC_ENABLE_PER_IP_THROTTLE
+#if PROTOCORE_ENABLE_PER_IP_THROTTLE
     // Per-source-IP flood defense: drop accepts beyond one address's per-window
     // budget (the global throttle cannot tell one noisy client from many). Keyed on
     // the full address, so an IPv6 peer cannot spray a /64 past a per-address cap.
     //
     // The reject branch below is unreachable THROUGH THIS CALL SITE on native: `remote`
-    // is hardcoded to PC_IP_NONE just above (no real lwIP pcb to read an
+    // is hardcoded to PROTOCORE_IP_NONE just above (no real lwIP pcb to read an
     // address from), and listener_accept_allowed_ip()'s very first check
-    // (pc_ip_is_unspecified) always allows an unspecified address through, deferring to
+    // (protocore_ip_is_unspecified) always allows an unspecified address through, deferring to
     // the global throttle - see test_accept_gate.cpp's test_per_ip_unspecified_defers.
     // The function's own reject path IS fully host-tested directly with a synthetic
-    // pc_ip (test_per_ip_independent_budgets et al.); only ITS USE HERE, gated behind a
+    // protocore_ip (test_per_ip_independent_budgets et al.); only ITS USE HERE, gated behind a
     // peer address this host build can never resolve, cannot be driven to the false case.
-    if (!listener_accept_allowed_ip(&remote, pc_millis()))
+    if (!listener_accept_allowed_ip(&remote, protocore_millis()))
     {
-        pc_net_abort(newpcb);
-        return PC_NET_ERR_ABRT;
+        protocore_net_abort(newpcb);
+        return PROTOCORE_NET_ERR_ABRT;
     }
 #endif
 
-#if PC_ENABLE_IP_ALLOWLIST
+#if PROTOCORE_ENABLE_IP_ALLOWLIST
     // Source-IP firewall: drop connections from addresses outside the configured
     // allowlist (an empty allowlist allows all, so this is a no-op until rules are
     // added). CIDR prefix match on the full v4/v6 address.
     if (!listener_ip_allowed(&remote))
     {
-        pc_net_abort(newpcb);
-        return PC_NET_ERR_ABRT;
+        protocore_net_abort(newpcb);
+        return PROTOCORE_NET_ERR_ABRT;
     }
 #endif
 
@@ -448,25 +452,25 @@ pc_net_err listener_accept_cb(void *arg, pc_pcb *newpcb, pc_net_err err)
     int32_t free_slot = Tcp.conn->alloc_free();
     if (free_slot < 0)
     {
-        pc_net_abort(newpcb);
-        return PC_NET_ERR_ABRT;
+        protocore_net_abort(newpcb);
+        return PROTOCORE_NET_ERR_ABRT;
     }
 
     TcpConn *slot = &conn_pool[free_slot];
-#if PC_WORKER_COUNT > 1
+#if PROTOCORE_WORKER_COUNT > 1
     // Round-robin the new connection across workers. Runs only in tcpip_thread,
     // so the counter needs no lock. Set BEFORE the state release store so a worker
     // that observes CONN_ACTIVE also sees the owner, and so the EVT_CONNECT below
     // routes to the owner's queue.
     static uint8_t s_next_owner = 0;
     slot->owner = s_next_owner;
-    s_next_owner = (uint8_t)((s_next_owner + 1) % PC_WORKER_COUNT);
+    s_next_owner = (uint8_t)((s_next_owner + 1) % PROTOCORE_WORKER_COUNT);
 #else
     slot->owner = 0;
 #endif
     Tcp.conn->set_state((uint8_t)free_slot, CONN_ACTIVE); // reserves the slot in the bitmask
     slot->pcb = newpcb;
-    slot->last_activity_ms = pc_millis();
+    slot->last_activity_ms = protocore_millis();
     slot->req_start_ms = 0; // no request yet; armed on the first RX byte (request-completion deadline)
     slot->rx_head = 0;
     slot->rx_tail = 0;
@@ -477,63 +481,63 @@ pc_net_err listener_accept_cb(void *arg, pc_pcb *newpcb, pc_net_err err)
     // Tag the ingress interface for per-route STA/AP filtering: the connection's local IP against
     // the configured softAP IP.
     {
-        uint32_t lip = pc_net_ip4_u32(pc_net_ip_as_v4(&newpcb->local_ip));
-        slot->iface = PC_IF_WIFI_STA;
-        if (pc_ap_ip != 0 && lip == pc_ap_ip)
+        uint32_t lip = protocore_net_ip4_u32(protocore_net_ip_as_v4(&newpcb->local_ip));
+        slot->iface = PROTOCORE_IF_WIFI_STA;
+        if (protocore_ap_ip != 0 && lip == protocore_ap_ip)
         {
-            slot->iface = PC_IF_WIFI_AP;
+            slot->iface = PROTOCORE_IF_WIFI_AP;
         }
     }
 
-    pc_net_arg(newpcb, slot);
+    protocore_net_arg(newpcb, slot);
 
-#if PC_TCP_NODELAY
+#if PROTOCORE_TCP_NODELAY
     // Latency-first: disable Nagle so the final sub-MSS segment of a response (or a streamed chunk) is not held
     // waiting for the peer's ACK of the prior segment (a ~40-200 ms delayed-ACK stall). Runs in tcpip_thread
-    // (accept callback), so touching the pcb here is safe. See PC_TCP_NODELAY.
-    pc_net_nagle_disable(newpcb);
+    // (accept callback), so touching the pcb here is safe. See PROTOCORE_TCP_NODELAY.
+    protocore_net_nagle_disable(newpcb);
 #endif
 
-#if PC_ENABLE_DIFFSERV
+#if PROTOCORE_ENABLE_DIFFSERV
     // DiffServ (RFC 2474): stamp this connection's DS field so a QoS-aware network - and the Wi-Fi WMM
     // mapping - prioritizes it. The per-listener DSCP wins over the server-wide default; 0 means best-effort
     // (leave the lwIP default of 0). Safe here: the accept callback runs in tcpip_thread, so touching the
-    // pcb is race-free (same context as pc_net_nagle_disable above).
+    // pcb is race-free (same context as protocore_net_nagle_disable above).
     {
-        uint8_t dscp = (lst->dscp != PC_DSCP_UNSET) ? lst->dscp : DiffServ.default_dscp();
+        uint8_t dscp = (lst->dscp != PROTOCORE_DSCP_UNSET) ? lst->dscp : DiffServ.default_dscp();
         if (dscp)
         {
-            newpcb->tos = pc_dscp_to_tos(dscp);
+            newpcb->tos = protocore_dscp_to_tos(dscp);
         }
     }
 #endif
 
-#if PC_ENABLE_TLS
+#if PROTOCORE_ENABLE_TLS
     // TLS listeners begin a handshake immediately; the session loop pumps it.
     slot->tls = lst->tls ? 1 : 0;
     if (lst->tls)
     {
-        pc_tls_conn_begin(free_slot);
+        protocore_tls_conn_begin(free_slot);
     }
 #else
     slot->tls = 0;
 #endif
-    pc_net_on_recv(newpcb, lowlevel_recv_cb);
-    pc_net_on_sent(newpcb, lowlevel_sent_cb);
-    pc_net_on_err(newpcb, lowlevel_err_cb);
+    protocore_net_on_recv(newpcb, lowlevel_recv_cb);
+    protocore_net_on_sent(newpcb, lowlevel_sent_cb);
+    protocore_net_on_err(newpcb, lowlevel_err_cb);
 
-    PC_OBS_TRANSITION((uint8_t)free_slot, CONN_FREE, CONN_ACTIVE, PC_CONN_R_ACCEPT);
+    PROTOCORE_OBS_TRANSITION((uint8_t)free_slot, CONN_FREE, CONN_ACTIVE, PROTOCORE_CONN_R_ACCEPT);
 
     TcpEvt evt = {EVT_CONNECT, (uint8_t)free_slot, 0};
     if (!listener_enqueue(idx, &evt))
     {
-        PC_OBS_NOTICE((uint8_t)free_slot, CONN_ACTIVE, PC_CONN_R_DEFER_DROP);
+        PROTOCORE_OBS_NOTICE((uint8_t)free_slot, CONN_ACTIVE, PROTOCORE_CONN_R_DEFER_DROP);
     }
 
-    return PC_NET_OK;
+    return PROTOCORE_NET_OK;
 }
 
-static pc_net_err listener_lwip_marshal(uint8_t idx, uint16_t port, proto_bool create);
+static protocore_net_err listener_lwip_marshal(uint8_t idx, uint16_t port, proto_bool create);
 
 static int32_t listener_add(uint8_t idx, uint16_t port, ProtoConn proto, proto_bool tls)
 {
@@ -544,7 +548,7 @@ static int32_t listener_add(uint8_t idx, uint16_t port, ProtoConn proto, proto_b
 
     listener_stop(idx); // clean up if already active
 
-#if PC_WORKER_COUNT > 1
+#if PROTOCORE_WORKER_COUNT > 1
     listener_worker_queues_init(); // create the per-worker event queues once (idempotent)
 #endif
 
@@ -552,11 +556,11 @@ static int32_t listener_add(uint8_t idx, uint16_t port, ProtoConn proto, proto_b
     lst->port = port;
     lst->proto = proto;
     lst->tls = tls;
-#if PC_ENABLE_DIFFSERV
-    lst->dscp = PC_DSCP_UNSET; // no per-listener override until pc_listen_set_dscp(); accept() uses the default
+#if PROTOCORE_ENABLE_DIFFSERV
+    lst->dscp = PROTOCORE_DSCP_UNSET; // no per-listener override until protocore_listen_set_dscp(); accept() uses the default
 #endif
 
-    lst->queue = pc_platform_queue_create(EVT_QUEUE_DEPTH, sizeof(TcpEvt), lst->_queue_storage, &lst->_queue_struct);
+    lst->queue = protocore_platform_queue_create(EVT_QUEUE_DEPTH, sizeof(TcpEvt), lst->_queue_storage, &lst->_queue_struct);
     if (!lst->queue)
     {
         return -1;
@@ -567,9 +571,9 @@ static int32_t listener_add(uint8_t idx, uint16_t port, ProtoConn proto, proto_b
     // begin() asserts ("Required to lock TCPIP core functionality"), so marshal it -
     // the same path the dynamic listener uses. Fields the accept callback reads (proto,
     // queue) are set above, before the pcb can accept.
-    if (listener_lwip_marshal(idx, port, PROTO_TRUE) != PC_NET_OK)
+    if (listener_lwip_marshal(idx, port, PROTO_TRUE) != PROTOCORE_NET_OK)
     {
-        pc_platform_queue_delete(lst->queue);
+        protocore_platform_queue_delete(lst->queue);
         lst->queue = NULL;
         return -1;
     }
@@ -593,7 +597,7 @@ static void listener_stop(uint8_t idx)
     (void)listener_lwip_marshal(idx, 0, PROTO_FALSE); // close the listen pcb in tcpip_thread
     if (lst->queue)
     {
-        pc_platform_queue_delete(lst->queue);
+        protocore_platform_queue_delete(lst->queue);
         lst->queue = NULL;
     }
 }
@@ -611,68 +615,68 @@ static void listener_stop_all(void)
 // must run in tcpip_thread: with lwIP core-locking (arduino-esp32 3.x / IDF 5.x) a
 // call from any other task asserts, and without it a call off tcpip_thread races the
 // stack. Both listener_add/stop (from begin()) and the dynamic listeners (SSH `ssh -R`
-// remote-forward, opened from a worker task) route through here via pc_net_call_marshal().
+// remote-forward, opened from a worker task) route through here via protocore_net_call_marshal().
 // ---------------------------------------------------------------------------
 
 typedef struct
 {
-    pc_net_call base;
+    protocore_net_call base;
     uint8_t idx;
     uint16_t port;
     proto_bool create; // true = new+bind+listen+accept, false = close the listen pcb
-    pc_net_err result;
-} pc_listener_call;
+    protocore_net_err result;
+} protocore_listener_call;
 
 // Runs in tcpip_thread. Creates or closes the listening PCB for listener_pool[idx].
-static pc_net_err listener_lwip_do(pc_net_call *c)
+static protocore_net_err listener_lwip_do(protocore_net_call *c)
 {
-    pc_listener_call *k = (pc_listener_call *)c;
+    protocore_listener_call *k = (protocore_listener_call *)c;
     Listener *lst = &listener_pool[k->idx];
-    k->result = PC_NET_OK;
+    k->result = PROTOCORE_NET_OK;
     if (k->create)
     {
-        pc_pcb *pcb = pc_net_new(PC_NET_TYPE_ANY);
+        protocore_pcb *pcb = protocore_net_new(PROTOCORE_NET_TYPE_ANY);
         if (!pcb)
         {
-            k->result = PC_NET_ERR_MEM;
-            return PC_NET_OK;
+            k->result = PROTOCORE_NET_ERR_MEM;
+            return PROTOCORE_NET_OK;
         }
-        if (pc_net_bind(pcb, PC_NET_ADDR_ANY, k->port) != PC_NET_OK)
+        if (protocore_net_bind(pcb, PROTOCORE_NET_ADDR_ANY, k->port) != PROTOCORE_NET_OK)
         {
-            pc_net_abort(pcb);
-            k->result = PC_NET_ERR_USE; // port already bound
-            return PC_NET_OK;
+            protocore_net_abort(pcb);
+            k->result = PROTOCORE_NET_ERR_USE; // port already bound
+            return PROTOCORE_NET_OK;
         }
-        pc_pcb *lp = pc_net_listen(pcb, MAX_CONNS);
+        protocore_pcb *lp = protocore_net_listen(pcb, MAX_CONNS);
         if (!lp)
         {
-            pc_net_abort(pcb); // tcp_listen did not consume pcb on failure
-            k->result = PC_NET_ERR_MEM;
-            return PC_NET_OK;
+            protocore_net_abort(pcb); // tcp_listen did not consume pcb on failure
+            k->result = PROTOCORE_NET_ERR_MEM;
+            return PROTOCORE_NET_OK;
         }
-        pc_net_arg(lp, (void *)(uintptr_t)k->idx);
-        pc_net_on_accept(lp, listener_accept_cb);
+        protocore_net_arg(lp, (void *)(uintptr_t)k->idx);
+        protocore_net_on_accept(lp, listener_accept_cb);
         lst->listen_pcb = lp;
     }
     else if (lst->listen_pcb)
     {
-        pc_net_close(lst->listen_pcb);
+        protocore_net_close(lst->listen_pcb);
         lst->listen_pcb = NULL;
     }
-    return PC_NET_OK;
+    return PROTOCORE_NET_OK;
 }
 
-static pc_net_err listener_lwip_marshal(uint8_t idx, uint16_t port, proto_bool create)
+static protocore_net_err listener_lwip_marshal(uint8_t idx, uint16_t port, proto_bool create)
 {
-    pc_listener_call k = {0};
+    protocore_listener_call k = {0};
     k.idx = idx;
     k.port = port;
     k.create = create;
-    pc_net_call_marshal(listener_lwip_do, &k.base);
+    protocore_net_call_marshal(listener_lwip_do, &k.base);
     return k.result;
 }
 
-#if PC_ENABLE_DIFFSERV
+#if PROTOCORE_ENABLE_DIFFSERV
 static proto_bool set_dscp(uint16_t port, uint8_t dscp)
 {
     for (uint8_t i = 0; i < MAX_LISTENERS; i++)
@@ -685,13 +689,13 @@ static proto_bool set_dscp(uint16_t port, uint8_t dscp)
             // DSCP they were stamped with. The handshake (SYN-ACK) stays best-effort: it is emitted by lwIP
             // before any app callback and ESP32 lwIP does not inherit the listen-pcb TOS (HW-tested), so
             // marking begins at the connection's first data segment.
-            lst->dscp = (dscp == PC_DSCP_UNSET) ? PC_DSCP_UNSET : (uint8_t)(dscp & 0x3F);
+            lst->dscp = (dscp == PROTOCORE_DSCP_UNSET) ? PROTOCORE_DSCP_UNSET : (uint8_t)(dscp & 0x3F);
             return PROTO_TRUE;
         }
     }
     return PROTO_FALSE;
 }
-#endif // PC_ENABLE_DIFFSERV
+#endif // PROTOCORE_ENABLE_DIFFSERV
 
 static int32_t listener_add_dynamic(uint8_t idx, uint16_t port, ProtoConn proto)
 {
@@ -701,7 +705,7 @@ static int32_t listener_add_dynamic(uint8_t idx, uint16_t port, ProtoConn proto)
     }
     listener_stop_dynamic(idx); // clean up if this slot was already active
 
-#if PC_WORKER_COUNT > 1
+#if PROTOCORE_WORKER_COUNT > 1
     listener_worker_queues_init(); // idempotent (queue creation is task-safe)
 #endif
 
@@ -709,11 +713,11 @@ static int32_t listener_add_dynamic(uint8_t idx, uint16_t port, ProtoConn proto)
     lst->port = port;
     lst->proto = proto;
     lst->tls = PROTO_FALSE; // forwarded ports are plaintext bridges
-#if PC_ENABLE_DIFFSERV
-    lst->dscp = PC_DSCP_UNSET; // dynamic (forwarded) listeners inherit the server-wide default DSCP
+#if PROTOCORE_ENABLE_DIFFSERV
+    lst->dscp = PROTOCORE_DSCP_UNSET; // dynamic (forwarded) listeners inherit the server-wide default DSCP
 #endif
 
-    lst->queue = pc_platform_queue_create(EVT_QUEUE_DEPTH, sizeof(TcpEvt), lst->_queue_storage, &lst->_queue_struct);
+    lst->queue = protocore_platform_queue_create(EVT_QUEUE_DEPTH, sizeof(TcpEvt), lst->_queue_storage, &lst->_queue_struct);
     if (!lst->queue)
     {
         return -1;
@@ -721,9 +725,9 @@ static int32_t listener_add_dynamic(uint8_t idx, uint16_t port, ProtoConn proto)
 
     // Create the listening PCB in tcpip_thread. Fields the accept callback reads
     // (proto, queue) are set above, before the pcb can accept anything.
-    if (listener_lwip_marshal(idx, port, PROTO_TRUE) != PC_NET_OK)
+    if (listener_lwip_marshal(idx, port, PROTO_TRUE) != PROTOCORE_NET_OK)
     {
-        pc_platform_queue_delete(lst->queue);
+        protocore_platform_queue_delete(lst->queue);
         lst->queue = NULL;
         return -1;
     }
@@ -747,7 +751,7 @@ static void listener_stop_dynamic(uint8_t idx)
     (void)listener_lwip_marshal(idx, 0, PROTO_FALSE); // close the listen pcb in tcpip_thread
     if (lst->queue)
     {
-        pc_platform_queue_delete(lst->queue);
+        protocore_platform_queue_delete(lst->queue);
         lst->queue = NULL;
     }
 }
@@ -759,10 +763,10 @@ const TcpListenerNs TcpListener = {.stop = listener_stop,
                                    .add = listener_add,
                                    .add_dynamic = listener_add_dynamic,
                                    .enqueue = listener_enqueue,
-#if PC_ENABLE_DIFFSERV
+#if PROTOCORE_ENABLE_DIFFSERV
                                    .set_dscp = set_dscp,
 #endif
-#if PC_WORKER_COUNT > 1
+#if PROTOCORE_WORKER_COUNT > 1
                                    .worker_queues_init = listener_worker_queues_init,
                                    .worker_queue = listener_worker_queue,
 #endif

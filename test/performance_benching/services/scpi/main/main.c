@@ -24,11 +24,11 @@ void dbench_run(void)
         DBENCH_BANNER("scpi");
         volatile size_t sink = 0;
         static char buf[64];
-        DBENCH_OP("pc_scpi_build (2 args)", 200000, sink += pc_scpi_build(buf, sizeof(buf), "SOUR:VOLT", args2, 2));
-        DBENCH_OP("pc_scpi_fmt_real", 200000, sink += pc_scpi_fmt_real(buf, sizeof(buf), 3.14159265));
+        DBENCH_OP("protocore_scpi_build (2 args)", 200000, sink += protocore_scpi_build(buf, sizeof(buf), "SOUR:VOLT", args2, 2));
+        DBENCH_OP("protocore_scpi_fmt_real", 200000, sink += protocore_scpi_fmt_real(buf, sizeof(buf), 3.14159265));
         double d = 0;
-        DBENCH_OP("pc_scpi_parse_number", 200000, sink += pc_scpi_parse_number("1.2345E+3", 9, &d));
-        DBENCH_OP("pc_scpi_match (short/long)", 200000, sink += pc_scpi_match("SOUR:VOLT", 9, "SOURce:VOLTage"));
+        DBENCH_OP("protocore_scpi_parse_number", 200000, sink += protocore_scpi_parse_number("1.2345E+3", 9, &d));
+        DBENCH_OP("protocore_scpi_match (short/long)", 200000, sink += protocore_scpi_match("SOUR:VOLT", 9, "SOURce:VOLTage"));
         (void)sink;
         DBENCH_DONE();
     }

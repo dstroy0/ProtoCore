@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // On-device CCOUNT microbenchmark for schema-driven config export/restore (services/storage/config_io):
-// pc_config_export() serializes a schema's current values from the config store into `key=value`
-// lines; pc_config_import() parses such a blob back into the store. Both functions call through to
-// services/storage/config_store, and both call pc_config_begin() internally on *every* invocation - on
+// protocore_config_export() serializes a schema's current values from the config store into `key=value`
+// lines; protocore_config_import() parses such a blob back into the store. Both functions call through to
+// services/storage/config_store, and both call protocore_config_begin() internally on *every* invocation - on
 // ESP32 that is the real Arduino `Preferences` NVS wrapper, so (unlike modbus's pure protocol codec)
 // each iteration here really does close/reopen the NVS namespace handle, and import performs a real
 // flash write per field. There is no missing/unattached peripheral to work around here (contrast
@@ -28,10 +28,10 @@
 #include <stddef.h>
 #include <stdint.h>
 
-static const pc_cfg_field SCHEMA[] = {
-    {"ssid", PC_CFG_STR},
-    {"port", PC_CFG_U32},
-    {"name", PC_CFG_STR},
+static const protocore_cfg_field SCHEMA[] = {
+    {"ssid", PROTOCORE_CFG_STR},
+    {"port", PROTOCORE_CFG_U32},
+    {"name", PROTOCORE_CFG_STR},
 };
 static const size_t N_FIELDS = sizeof(SCHEMA) / sizeof(SCHEMA[0]);
 
@@ -42,11 +42,11 @@ static const char IMPORT_BLOB[] = "ssid=abc\nport=1234\nname=x\n";
 void dbench_run(void)
 {
     // Seed the schema's values once, outside the timed loop (mirrors modbus's one-time
-    // pc_modbus_set_holding_reg() seeding) - the export bench below re-serializes these every call.
-    pc_config_begin("bench");
-    pc_config_set_str("ssid", "myssid");
-    pc_config_set_u32("port", 8080);
-    pc_config_set_str("name", "node1");
+    // protocore_modbus_set_holding_reg() seeding) - the export bench below re-serializes these every call.
+    protocore_config_begin("bench");
+    protocore_config_set_str("ssid", "myssid");
+    protocore_config_set_u32("port", 8080);
+    protocore_config_set_str("name", "node1");
 
     static char buf[256];
 
@@ -55,10 +55,10 @@ void dbench_run(void)
         DBENCH_BANNER("config_io");
         volatile size_t sink = 0;
         // Reopens NVS + 3 reads per call; small N bounds real flash latency, not just CPU cycles.
-        DBENCH_OP("pc_config_export", 50, sink += pc_config_export("bench", SCHEMA, N_FIELDS, buf, sizeof(buf)));
+        DBENCH_OP("protocore_config_export", 50, sink += protocore_config_export("bench", SCHEMA, N_FIELDS, buf, sizeof(buf)));
         // Reopens NVS + 3 writes per call (real flash commits); smaller N than export.
-        DBENCH_OP("pc_config_import", 20,
-                  sink += pc_config_import("bench", SCHEMA, N_FIELDS, IMPORT_BLOB, sizeof(IMPORT_BLOB) - 1));
+        DBENCH_OP("protocore_config_import", 20,
+                  sink += protocore_config_import("bench", SCHEMA, N_FIELDS, IMPORT_BLOB, sizeof(IMPORT_BLOB) - 1));
         (void)sink;
         DBENCH_DONE();
     }

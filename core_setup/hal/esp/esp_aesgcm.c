@@ -19,16 +19,16 @@
  * Vendor headers are fine here: this is board_drivers, the partition vendor code is segregated to.
  */
 
-#include "core_setup/board_profiles/pc_platform.h"
+#include "core_setup/board_profiles/protocore_platform.h"
 #include "crypto/aead/aesgcm.h"
 #include "crypto/crypto_opt.h"
 #include "mmgr/secure.h"
 
-#if PC_HAS_HW_AESGCM
+#if PROTOCORE_HAS_HW_AESGCM
 
 #include <mbedtls/gcm.h>
 
-PC_CRYPTO_HOT
+PROTOCORE_CRYPTO_HOT
 
 // ===========================================================================
 // Hardware GCM path (mbedtls_gcm -> the ESP32 AES peripheral).
@@ -36,13 +36,13 @@ PC_CRYPTO_HOT
 
 // The context is the vendor's, held for the life of the key. Standing one up and tearing it down
 // costs ~9,200 cycles once the AES peripheral has been used - measured, and the whole reason this
-// api is keyed rather than one-shot. The size assert is what keeps PC_WORK_AESGCM honest against a
+// api is keyed rather than one-shot. The size assert is what keeps PROTOCORE_WORK_AESGCM honest against a
 // vendor header we do not control.
-static_assert(sizeof(mbedtls_gcm_context) <= PC_WORK_AESGCM,
-              "mbedtls_gcm_context outgrew PC_WORK_AESGCM - raise it in protocore_config.h, which derives "
-              "PC_SECURE_ARENA_SIZE from it");
+static_assert(sizeof(mbedtls_gcm_context) <= PROTOCORE_WORK_AESGCM,
+              "mbedtls_gcm_context outgrew PROTOCORE_WORK_AESGCM - raise it in protocore_config.h, which derives "
+              "PROTOCORE_SECURE_ARENA_SIZE from it");
 
-struct pc_aesgcm_key *pc_aesgcm_key_init(void *storage, const uint8_t key[PC_AESGCM_KEY_LEN])
+struct protocore_aesgcm_key *protocore_aesgcm_key_init(void *storage, const uint8_t key[PROTOCORE_AESGCM_KEY_LEN])
 {
     mbedtls_gcm_context *g = (mbedtls_gcm_context *)(storage);
     mbedtls_gcm_init(g);
@@ -51,36 +51,36 @@ struct pc_aesgcm_key *pc_aesgcm_key_init(void *storage, const uint8_t key[PC_AES
         mbedtls_gcm_free(g);
         return NULL;
     }
-    return (struct pc_aesgcm_key *)(g);
+    return (struct protocore_aesgcm_key *)(g);
 }
 
-void pc_aesgcm_key_wipe(struct pc_aesgcm_key *k)
+void protocore_aesgcm_key_wipe(struct protocore_aesgcm_key *k)
 {
     mbedtls_gcm_context *g = (mbedtls_gcm_context *)(k);
     mbedtls_gcm_free(g); // releases whatever the vendor attached
-    pc_secure_wipe((uint8_t *)(g), sizeof(mbedtls_gcm_context));
+    protocore_secure_wipe((uint8_t *)(g), sizeof(mbedtls_gcm_context));
 }
 
-pc_cspan pc_aesgcm_seal(struct pc_aesgcm_key *k, const uint8_t nonce[PC_AESGCM_IV_LEN], const uint8_t *aad,
-                        size_t aad_len, const uint8_t *pt, size_t pt_len, uint8_t *ct_out,
-                        uint8_t tag_out[PC_AESGCM_TAG_LEN])
+protocore_cspan protocore_aesgcm_seal(struct protocore_aesgcm_key *k, const uint8_t nonce[PROTOCORE_AESGCM_IV_LEN],
+                                      const uint8_t *aad, size_t aad_len, const uint8_t *pt, size_t pt_len,
+                                      uint8_t *ct_out, uint8_t tag_out[PROTOCORE_AESGCM_TAG_LEN])
 {
     mbedtls_gcm_context *g = (mbedtls_gcm_context *)(k);
-    if (mbedtls_gcm_crypt_and_tag(g, MBEDTLS_GCM_ENCRYPT, pt_len, nonce, PC_AESGCM_IV_LEN, aad, aad_len, pt, ct_out,
-                                  PC_AESGCM_TAG_LEN, tag_out) != 0)
+    if (mbedtls_gcm_crypt_and_tag(g, MBEDTLS_GCM_ENCRYPT, pt_len, nonce, PROTOCORE_AESGCM_IV_LEN, aad, aad_len, pt,
+                                  ct_out, PROTOCORE_AESGCM_TAG_LEN, tag_out) != 0)
     {
-        return pc_cspan_from(NULL, 0);
+        return protocore_cspan_from(NULL, 0);
     }
-    return pc_cspan_from(ct_out, pt_len); // the tag rides in tag_out, not in this span
+    return protocore_cspan_from(ct_out, pt_len); // the tag rides in tag_out, not in this span
 }
 
-proto_bool pc_aesgcm_open(struct pc_aesgcm_key *k, const uint8_t nonce[PC_AESGCM_IV_LEN], const uint8_t *aad,
-                          size_t aad_len, const uint8_t *ct, size_t ct_len, const uint8_t tag[PC_AESGCM_TAG_LEN],
-                          uint8_t *out)
+proto_bool protocore_aesgcm_open(struct protocore_aesgcm_key *k, const uint8_t nonce[PROTOCORE_AESGCM_IV_LEN],
+                                 const uint8_t *aad, size_t aad_len, const uint8_t *ct, size_t ct_len,
+                                 const uint8_t tag[PROTOCORE_AESGCM_TAG_LEN], uint8_t *out)
 {
     mbedtls_gcm_context *g = (mbedtls_gcm_context *)(k);
-    return mbedtls_gcm_auth_decrypt(g, ct_len, nonce, PC_AESGCM_IV_LEN, aad, aad_len, tag, PC_AESGCM_TAG_LEN, ct,
-                                    out) == 0;
+    return mbedtls_gcm_auth_decrypt(g, ct_len, nonce, PROTOCORE_AESGCM_IV_LEN, aad, aad_len, tag,
+                                    PROTOCORE_AESGCM_TAG_LEN, ct, out) == 0;
 }
 
-#endif // PC_HAS_HW_AESGCM
+#endif // PROTOCORE_HAS_HW_AESGCM

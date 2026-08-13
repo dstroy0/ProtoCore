@@ -1,6 +1,6 @@
 # Provisioning - first-boot WiFi setup via a captive portal
 
-**Layer:** L7 Application · **Build flags:** `PC_ENABLE_PROVISIONING`
+**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_PROVISIONING`
 
 ## What this example teaches
 
@@ -15,26 +15,26 @@ Preferences (NVS).
 
 ```cpp
 char ssid[33], psk[64];
-if (pc_provisioning_load(ssid, sizeof(ssid), psk, sizeof(psk))) {
+if (protocore_provisioning_load(ssid, sizeof(ssid), psk, sizeof(psk))) {
     Physical.wifi->init(ssid, psk);          // we have creds -> normal station
     server.on("/", HttpMethod::HTTP_GET, handle_root);
     server.begin(80);
 } else {
     server.begin(80);
-    pc_provisioning_begin(server, "PC-Setup"); // no creds -> captive portal
+    protocore_provisioning_begin(server, "PC-Setup"); // no creds -> captive portal
 }
 ```
 
-`pc_provisioning_load()` returns false until the device has been provisioned;
-`pc_provisioning_begin()` stands up the softAP, the catch-all DNS, and the
+`protocore_provisioning_load()` returns false until the device has been provisioned;
+`protocore_provisioning_begin()` stands up the softAP, the catch-all DNS, and the
 form handler that writes NVS and reboots. To re-provision later, call
-`pc_provisioning_clear()` (for example from a button handler).
+`protocore_provisioning_clear()` (for example from a button handler).
 
 ## Build and run
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_PROVISIONING=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_PROVISIONING=1" \
   --lib="." examples/L7-Application/Provisioning/Provisioning.ino
 ```
 
@@ -51,7 +51,7 @@ verbatim with added explanatory comments:
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-#define PC_ENABLE_PROVISIONING 1
+#define PROTOCORE_ENABLE_PROVISIONING 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -71,7 +71,7 @@ void setup()
 
     char ssid[33];
     char psk[64];
-    if (pc_provisioning_load(ssid, sizeof(ssid), psk, sizeof(psk)))
+    if (protocore_provisioning_load(ssid, sizeof(ssid), psk, sizeof(psk)))
     {
         // Credentials present: connect as a normal station.
         Physical.wifi->init(ssid, psk);
@@ -91,7 +91,7 @@ void setup()
     {
         // No credentials: bring up the captive portal (softAP + catch-all DNS + form).
         server.begin(80);
-        pc_provisioning_begin(server, "PC-Setup");
+        protocore_provisioning_begin(server, "PC-Setup");
         Serial.println("Provisioning: join WiFi 'PC-Setup' and open any page");
     }
 }

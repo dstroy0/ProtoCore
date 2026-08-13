@@ -1,6 +1,6 @@
 # AuthLockout - brute-force lockout for HTTP auth
 
-**Layer:** L6 Presentation · **Build flags:** `PC_ENABLE_AUTH_LOCKOUT` (requires `PC_ENABLE_AUTH`, on by default)
+**Layer:** L6 Presentation · **Build flags:** `PROTOCORE_ENABLE_AUTH_LOCKOUT` (requires `PROTOCORE_ENABLE_AUTH`, on by default)
 
 ## What this example teaches
 
@@ -21,20 +21,20 @@ server.on(
 ```
 
 **Tuning.** The thresholds live in `protocore_config.h`:
-`PC_AUTH_LOCKOUT_THRESHOLD` (failures before locking),
-`PC_AUTH_LOCKOUT_BASE_MS` and `PC_AUTH_LOCKOUT_MAX_MS` (the backoff window,
+`PROTOCORE_AUTH_LOCKOUT_THRESHOLD` (failures before locking),
+`PROTOCORE_AUTH_LOCKOUT_BASE_MS` and `PROTOCORE_AUTH_LOCKOUT_MAX_MS` (the backoff window,
 which doubles per subsequent failure up to the max), and
-`PC_AUTH_LOCKOUT_SLOTS` (how many addresses are tracked). Set them as build
+`PROTOCORE_AUTH_LOCKOUT_SLOTS` (how many addresses are tracked). Set them as build
 flags alongside the enable flag.
 
-**Build dependency.** `PC_ENABLE_AUTH_LOCKOUT` requires `PC_ENABLE_AUTH`
+**Build dependency.** `PROTOCORE_ENABLE_AUTH_LOCKOUT` requires `PROTOCORE_ENABLE_AUTH`
 (which is on by default) - enforced by a compile-time `#error`.
 
 ## Build and run
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_AUTH=1 -DPC_ENABLE_AUTH_LOCKOUT=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_AUTH=1 -DPROTOCORE_ENABLE_AUTH_LOCKOUT=1" \
   --lib="." examples/L6-Presentation/AuthLockout/AuthLockout.ino
 ```
 
@@ -53,7 +53,7 @@ verbatim with added explanatory comments:
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-#define PC_ENABLE_AUTH_LOCKOUT 1
+#define PROTOCORE_ENABLE_AUTH_LOCKOUT 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -81,7 +81,7 @@ void setup()
 
     // Protected route. Repeated wrong passwords from one IP trip the lockout
     // (429) with exponential backoff; the tuning lives in protocore_config.h
-    // (PC_AUTH_LOCKOUT_THRESHOLD / _BASE_MS / _MAX_MS).
+    // (PROTOCORE_AUTH_LOCKOUT_THRESHOLD / _BASE_MS / _MAX_MS).
     server.on(
         "/secret", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) { server.send(id, 200, "text/plain", "authenticated!"); },
         "Restricted", "admin", "s3cret");

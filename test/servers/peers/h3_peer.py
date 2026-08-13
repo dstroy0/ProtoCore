@@ -4,7 +4,7 @@
 through an independent, spec-compliant stack (aioquic).
 
 Role: the *device is the server*. It runs a static-pool QUIC/HTTP-3 server on UDP:443 (the engine's
-pool lives in PSRAM; PC_ENABLE_HTTP3 + PC_QUIC_SERVER_IN_PSRAM) with an Ed25519 leaf. This peer
+pool lives in PSRAM; PROTOCORE_ENABLE_HTTP3 + PROTOCORE_QUIC_SERVER_IN_PSRAM) with an Ed25519 leaf. This peer
 uses aioquic - a mature QUIC/HTTP-3 implementation - to prove the whole stack end to end: the QUIC
 TLS-1.3 handshake (X25519 + Ed25519 + AES-128-GCM) completes, an HTTP/3 request (QPACK-encoded
 HEADERS + the request stream) returns 200, and a second request multiplexes over the same connection.

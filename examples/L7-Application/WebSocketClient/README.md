@@ -1,6 +1,6 @@
 # WebSocketClient - the device connects to a WebSocket server
 
-**Layer:** L7 Application · **Build flags:** `PC_ENABLE_WS_CLIENT` (optional `PC_ENABLE_TLS` + `PC_ENABLE_WS_CLIENT_TLS` for `wss://`)
+**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_WS_CLIENT` (optional `PROTOCORE_ENABLE_TLS` + `PROTOCORE_ENABLE_WS_CLIENT_TLS` for `wss://`)
 
 ## What this example teaches
 
@@ -30,18 +30,18 @@ void loop() {
 ```
 
 This demo uses a `wss://` echo so it needs the TLS flags; for a plain `ws://`
-endpoint, build with only `-DPC_ENABLE_WS_CLIENT=1`, set `USE_TLS=false`, and
+endpoint, build with only `-DPROTOCORE_ENABLE_WS_CLIENT=1`, set `USE_TLS=false`, and
 `PORT=80`.
 
 ## Build and run
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_WS_CLIENT=1 -DPC_ENABLE_TLS=1 -DPC_ENABLE_WS_CLIENT_TLS=1 -DPC_WS_CLIENT_BUF_SIZE=768 -DMAX_CONNS=4 -DPC_TLS_ARENA_SIZE=32768" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_WS_CLIENT=1 -DPROTOCORE_ENABLE_TLS=1 -DPROTOCORE_ENABLE_WS_CLIENT_TLS=1 -DPROTOCORE_WS_CLIENT_BUF_SIZE=768 -DMAX_CONNS=4 -DPROTOCORE_TLS_ARENA_SIZE=32768" \
   --lib="." examples/L7-Application/WebSocketClient/WebSocketClient.ino
 ```
 
-`PC_WS_CLIENT_BUF_SIZE=768` trims the four outbound-WS buffers from the 1 KB default so the
+`PROTOCORE_WS_CLIENT_BUF_SIZE=768` trims the four outbound-WS buffers from the 1 KB default so the
 `wss://` stack (TLS arena + WS client) fits the classic ESP32's DRAM; 768 B is ample for this demo's
 small text messages. Boards with more DRAM (ESP32-S3) can keep the default.
 
@@ -57,7 +57,7 @@ verbatim with added explanatory comments:
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-#define PC_ENABLE_WS_CLIENT 1
+#define PROTOCORE_ENABLE_WS_CLIENT 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"

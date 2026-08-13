@@ -25,14 +25,14 @@
 #include "protocore_config.h"
 
 // SMB 3.x is the only consumer of AES-CCM today; gate it so non-SMB builds do not carry the code.
-#if PC_ENABLE_SMB
+#if PROTOCORE_ENABLE_SMB
 
-#if PC_HAS_HW_AES
+#if PROTOCORE_HAS_HW_AES
 #include <mbedtls/ccm.h> // hardware-backed AES-CCM on ESP32
 #endif
 
 /** @brief AES-CCM authentication tag length used by SMB 3.x (bytes). */
-#define PC_AESCCM_TAG_LEN 16
+#define PROTOCORE_AESCCM_TAG_LEN 16
 
 /**
  * @brief Seal: AES-CCM encrypt-and-authenticate with a detached tag.
@@ -49,9 +49,9 @@
  * @param tag_out   Output: the 16-byte authentication tag.
  * @return true on success, false on a bad argument.
  */
-proto_bool pc_aesccm_seal_tag(const uint8_t *key, size_t key_len, const uint8_t *nonce, size_t nonce_len,
-                              const uint8_t *aad, size_t aad_len, const uint8_t *pt, size_t pt_len, uint8_t *ct_out,
-                              uint8_t tag_out[PC_AESCCM_TAG_LEN]);
+proto_bool protocore_aesccm_seal_tag(const uint8_t *key, size_t key_len, const uint8_t *nonce, size_t nonce_len,
+                                     const uint8_t *aad, size_t aad_len, const uint8_t *pt, size_t pt_len,
+                                     uint8_t *ct_out, uint8_t tag_out[PROTOCORE_AESCCM_TAG_LEN]);
 
 /**
  * @brief Open: AES-CCM verify-and-decrypt with a detached tag.
@@ -61,10 +61,10 @@ proto_bool pc_aesccm_seal_tag(const uint8_t *key, size_t key_len, const uint8_t 
  * @p out receives @p ct_len plaintext bytes and may alias @p ct.
  * @return true iff the tag is valid.
  */
-proto_bool pc_aesccm_open_tag(const uint8_t *key, size_t key_len, const uint8_t *nonce, size_t nonce_len,
-                              const uint8_t *aad, size_t aad_len, const uint8_t *ct, size_t ct_len,
-                              const uint8_t tag[PC_AESCCM_TAG_LEN], uint8_t *out);
+proto_bool protocore_aesccm_open_tag(const uint8_t *key, size_t key_len, const uint8_t *nonce, size_t nonce_len,
+                                     const uint8_t *aad, size_t aad_len, const uint8_t *ct, size_t ct_len,
+                                     const uint8_t tag[PROTOCORE_AESCCM_TAG_LEN], uint8_t *out);
 
-#endif // PC_ENABLE_SMB
+#endif // PROTOCORE_ENABLE_SMB
 
 #endif // PROTOCORE_AESCCM_H

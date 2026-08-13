@@ -26,11 +26,11 @@ void dbench_run(void)
     {
         DBENCH_BANNER("wal");
         volatile uint32_t sink = 0;
-        DBENCH_BULK("pc_wal_crc32 (1 KiB)", 100000, 1024, sink += pc_wal_crc32(src, 1024));
-        DBENCH_BULK("pc_wal_crc32 (128 B)", 200000, 128, sink += pc_wal_crc32(src, 128));
+        DBENCH_BULK("protocore_wal_crc32 (1 KiB)", 100000, 1024, sink += protocore_wal_crc32(src, 1024));
+        DBENCH_BULK("protocore_wal_crc32 (128 B)", 200000, 128, sink += protocore_wal_crc32(src, 128));
         static uint8_t rec[256];
-        DBENCH_OP("pc_wal_record_encode (128B)", 200000,
-                  sink += (uint32_t)pc_wal_record_encode(rec, sizeof(rec), 1, src, 128));
+        DBENCH_OP("protocore_wal_record_encode (128B)", 200000,
+                  sink += (uint32_t)protocore_wal_record_encode(rec, sizeof(rec), 1, src, 128));
         (void)sink;
         DBENCH_DONE();
     }

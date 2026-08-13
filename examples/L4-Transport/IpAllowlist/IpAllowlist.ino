@@ -3,7 +3,7 @@
 
 /**
  * @file IpAllowlist.ino
- * @brief Restrict who may connect with a source-IP allowlist (PC_ENABLE_IP_ALLOWLIST).
+ * @brief Restrict who may connect with a source-IP allowlist (PROTOCORE_ENABLE_IP_ALLOWLIST).
  *
  * The accept callback drops any TCP connection whose source address falls
  * outside the configured CIDR rules - a coarse first-line firewall in front of
@@ -12,7 +12,7 @@
  *
  * NOTE: enable the feature for the whole build (a .ino #define does not reach the
  * separately compiled library). In platformio.ini:
- *     build_flags = -DPC_ENABLE_IP_ALLOWLIST=1
+ *     build_flags = -DPROTOCORE_ENABLE_IP_ALLOWLIST=1
  * (Arduino IDE: it is already set for you in the build_opt.h beside this sketch, so it builds as-is.)
  *
  * Here only the 192.168.1.0/24 LAN, a single host 10.0.0.5, and an IPv6 prefix
@@ -21,7 +21,7 @@
  * address per family - a v4 rule never admits a v6 peer and vice versa.
  */
 
-#define PC_ENABLE_IP_ALLOWLIST 1
+#define PROTOCORE_ENABLE_IP_ALLOWLIST 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"

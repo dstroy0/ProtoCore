@@ -13,7 +13,7 @@
 
 #include "services/radio/nrf24/nrf24.h"
 
-#if PC_ENABLE_NRF24
+#if PROTOCORE_ENABLE_NRF24
 
 // Commands.
 #define CMD_R_REGISTER 0x00
@@ -90,7 +90,7 @@ static void cmd(const nrf_bus *b, uint8_t c)
     b->spi(tx, rx, 1, b->ctx);
 }
 
-proto_bool pc_nrf24_init(const nrf_bus *bus, const nrf_config *cfg)
+proto_bool protocore_nrf24_init(const nrf_bus *bus, const nrf_config *cfg)
 {
     if (!bus || !bus->spi || !bus->ce || !cfg || !cfg->address)
     {
@@ -119,7 +119,7 @@ proto_bool pc_nrf24_init(const nrf_bus *bus, const nrf_config *cfg)
         dr = 0x20; // 250 kbps
     }
     reg_write(bus, REG_RF_SETUP, (uint8_t)(dr | ((cfg->tx_power & 0x03) << 1)));
-    reg_write(bus, REG_RX_PW_P0, PC_NRF24_PAYLOAD);
+    reg_write(bus, REG_RX_PW_P0, PROTOCORE_NRF24_PAYLOAD);
     reg_write_buf(bus, REG_RX_ADDR_P0, cfg->address, 5);
     reg_write_buf(bus, REG_TX_ADDR, cfg->address, 5);
 
@@ -132,9 +132,9 @@ proto_bool pc_nrf24_init(const nrf_bus *bus, const nrf_config *cfg)
     return PROTO_TRUE;
 }
 
-proto_bool pc_nrf24_send(const nrf_bus *bus, const uint8_t *data, uint8_t len)
+proto_bool protocore_nrf24_send(const nrf_bus *bus, const uint8_t *data, uint8_t len)
 {
-    if (!bus || !data || len == 0 || len > PC_NRF24_PAYLOAD)
+    if (!bus || !data || len == 0 || len > PROTOCORE_NRF24_PAYLOAD)
     {
         return PROTO_FALSE;
     }
@@ -142,20 +142,20 @@ proto_bool pc_nrf24_send(const nrf_bus *bus, const uint8_t *data, uint8_t len)
     reg_write(bus, REG_CONFIG,
               CFG_EN_CRC | CFG_CRCO | CFG_PWR_UP); // PRIM_RX = 0 -> PTX
 
-    uint8_t tx[1 + PC_NRF24_PAYLOAD];
-    uint8_t rx[1 + PC_NRF24_PAYLOAD];
+    uint8_t tx[1 + PROTOCORE_NRF24_PAYLOAD];
+    uint8_t rx[1 + PROTOCORE_NRF24_PAYLOAD];
     tx[0] = CMD_W_TX_PAYLOAD;
-    for (uint8_t i = 0; i < PC_NRF24_PAYLOAD; i++)
+    for (uint8_t i = 0; i < PROTOCORE_NRF24_PAYLOAD; i++)
     {
         tx[1 + i] = (i < len) ? data[i] : 0x00; // zero-pad to the static width
     }
-    bus->spi(tx, rx, (uint8_t)(PC_NRF24_PAYLOAD + 1), bus->ctx);
+    bus->spi(tx, rx, (uint8_t)(PROTOCORE_NRF24_PAYLOAD + 1), bus->ctx);
 
     bus->ce(PROTO_TRUE, bus->ctx); // key the transmit
     return PROTO_TRUE;
 }
 
-proto_bool pc_nrf24_tx_done(const nrf_bus *bus)
+proto_bool protocore_nrf24_tx_done(const nrf_bus *bus)
 {
     if (!bus)
     {
@@ -169,7 +169,7 @@ proto_bool pc_nrf24_tx_done(const nrf_bus *bus)
     return PROTO_FALSE;
 }
 
-void pc_nrf24_set_rx(const nrf_bus *bus)
+void protocore_nrf24_set_rx(const nrf_bus *bus)
 {
     if (!bus)
     {
@@ -180,7 +180,7 @@ void pc_nrf24_set_rx(const nrf_bus *bus)
     bus->ce(PROTO_TRUE, bus->ctx);
 }
 
-int pc_nrf24_recv(const nrf_bus *bus, uint8_t *buf, uint8_t cap, uint8_t *pipe)
+int protocore_nrf24_recv(const nrf_bus *bus, uint8_t *buf, uint8_t cap, uint8_t *pipe)
 {
     if (!bus || !buf)
     {
@@ -197,16 +197,16 @@ int pc_nrf24_recv(const nrf_bus *bus, uint8_t *buf, uint8_t cap, uint8_t *pipe)
         reg_write(bus, REG_STATUS, ST_RX_DR);
         return -1;
     }
-    uint8_t tx[1 + PC_NRF24_PAYLOAD];
-    uint8_t rx[1 + PC_NRF24_PAYLOAD];
+    uint8_t tx[1 + PROTOCORE_NRF24_PAYLOAD];
+    uint8_t rx[1 + PROTOCORE_NRF24_PAYLOAD];
     tx[0] = CMD_R_RX_PAYLOAD;
-    for (uint8_t i = 0; i < PC_NRF24_PAYLOAD; i++)
+    for (uint8_t i = 0; i < PROTOCORE_NRF24_PAYLOAD; i++)
     {
         tx[1 + i] = 0xFF;
     }
-    bus->spi(tx, rx, (uint8_t)(PC_NRF24_PAYLOAD + 1), bus->ctx);
+    bus->spi(tx, rx, (uint8_t)(PROTOCORE_NRF24_PAYLOAD + 1), bus->ctx);
 
-    uint8_t n = (PC_NRF24_PAYLOAD < cap) ? PC_NRF24_PAYLOAD : cap;
+    uint8_t n = (PROTOCORE_NRF24_PAYLOAD < cap) ? PROTOCORE_NRF24_PAYLOAD : cap;
     for (uint8_t i = 0; i < n; i++)
     {
         buf[i] = rx[1 + i];
@@ -219,4 +219,4 @@ int pc_nrf24_recv(const nrf_bus *bus, uint8_t *buf, uint8_t cap, uint8_t *pipe)
     return (int)n;
 }
 
-#endif // PC_ENABLE_NRF24
+#endif // PROTOCORE_ENABLE_NRF24

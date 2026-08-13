@@ -13,18 +13,18 @@
 #include "crypto/mac/aes_cmac.h"
 #include "crypto/crypto_opt.h"
 
-#if PC_HAS_HW_AES
+#if PROTOCORE_HAS_HW_AES
 #include <mbedtls/aes.h> // AES-128 single-block via the ESP32 AES peripheral
 #else
 #include "crypto/cipher/aes_block.h" // native software AES-128 block
 #endif
-PC_CRYPTO_HOT
+PROTOCORE_CRYPTO_HOT
 
 // ---------------------------------------------------------------------------
 // AES-128 single-block encrypt seam - one small wrapper, two platform bodies
 // ---------------------------------------------------------------------------
 
-#if PC_HAS_HW_AES
+#if PROTOCORE_HAS_HW_AES
 
 typedef struct
 {
@@ -52,18 +52,18 @@ typedef struct
 } AesBlk;
 static inline void blk_init(AesBlk *b, const uint8_t key[16])
 {
-    pc_aes_key_expand(key, 4, b->rk);
+    protocore_aes_key_expand(key, 4, b->rk);
 }
 static inline void blk_enc(AesBlk *b, const uint8_t in[16], uint8_t out[16])
 {
-    pc_aes_encrypt_block(b->rk, 10, in, out);
+    protocore_aes_encrypt_block(b->rk, 10, in, out);
 }
 static inline void blk_free(AesBlk *b)
 {
     (void)b; // the software path holds no vendor allocation to release
 }
 
-#endif // PC_HAS_HW_AES
+#endif // PROTOCORE_HAS_HW_AES
 
 // ---------------------------------------------------------------------------
 // CMAC construction (RFC 4493 / NIST SP800-38B)
@@ -99,7 +99,7 @@ static void subkeys(AesBlk *blk, uint8_t k1[16], uint8_t k2[16])
     }
 }
 
-void pc_aes_cmac(const uint8_t key[16], const uint8_t *msg, size_t msg_len, uint8_t mac[PC_AES_CMAC_LEN])
+void protocore_aes_cmac(const uint8_t key[16], const uint8_t *msg, size_t msg_len, uint8_t mac[PROTOCORE_AES_CMAC_LEN])
 {
     AesBlk blk;
     blk_init(&blk, key);

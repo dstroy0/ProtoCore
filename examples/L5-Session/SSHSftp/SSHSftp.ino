@@ -3,7 +3,7 @@
 
 /**
  * @file SSHSftp.ino
- * @brief SFTP (and SCP) file server over SSH (PC_ENABLE_SSH_SFTP / _SCP).
+ * @brief SFTP (and SCP) file server over SSH (PROTOCORE_ENABLE_SSH_SFTP / _SCP).
  *
  * The board serves files from a LittleFS partition over the one authenticated SSH port: a client's
  * `sftp` (or `scp`) session reads/writes/lists files under a mount root. This is the standards-track
@@ -20,14 +20,14 @@
  *   scp -P 22 admin@<ip>:/f out
  *
  * NOTE (PlatformIO): the SFTP server is compiled into the *library*, so the flags must reach the whole
- * build: -DPC_ENABLE_SSH=1 -DPC_ENABLE_SSH_SFTP=1 -DPC_ENABLE_MNT=1 (+ _SCP for scp).
+ * build: -DPROTOCORE_ENABLE_SSH=1 -DPROTOCORE_ENABLE_SSH_SFTP=1 -DPROTOCORE_ENABLE_MNT=1 (+ _SCP for scp).
  * In the Arduino IDE they are set for you in build_opt.h.
  */
 
-#define PC_ENABLE_SSH 1
-#define PC_ENABLE_SSH_SFTP 1
-#define PC_ENABLE_SSH_SCP 1
-#define PC_ENABLE_MNT 1
+#define PROTOCORE_ENABLE_SSH 1
+#define PROTOCORE_ENABLE_SSH_SFTP 1
+#define PROTOCORE_ENABLE_SSH_SCP 1
+#define PROTOCORE_ENABLE_MNT 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -71,12 +71,12 @@ void setup()
         return;
     }
 
-    if (pc_ssh_rsa_load_pubkey() != 0)
+    if (protocore_ssh_rsa_load_pubkey() != 0)
     {
         Serial.println("No SSH host key in NVS - see docs/SSH.md (Host key provisioning)");
         return;
     }
-    pc_ssh_auth_set_password_cb(ssh_password_auth);
+    protocore_ssh_auth_set_password_cb(ssh_password_auth);
 
     listen(22, PROTO_SSH);
     if (begin() < 0)
@@ -84,18 +84,18 @@ void setup()
         Serial.println("begin() failed");
         return;
     }
-    pc_ssh_conn_setup();
+    protocore_ssh_conn_setup();
 
     // Serve SFTP + SCP from the whole LittleFS volume. A "subsystem sftp" request opens an SFTP session;
     // `scp localfile admin@<ip>:/path` drops a file onto the volume.
     //
     // The mount and the root are set once, for the device, not once per protocol: both servers reach
     // storage through the filesystem accessor, so they cannot disagree about where the volume begins.
-    // Narrow the exposure by mounting a subdirectory here (e.g. pc_fs_begin("/gcode")).
-    pc_mnt_mount(pc_mnt_fs(&LittleFS));
-    pc_fs_begin("/");
-    pc_ssh_sftp_begin();
-    pc_ssh_scp_begin();
+    // Narrow the exposure by mounting a subdirectory here (e.g. protocore_fs_begin("/gcode")).
+    protocore_mnt_mount(protocore_mnt_fs(&LittleFS));
+    protocore_fs_begin("/");
+    protocore_ssh_sftp_begin();
+    protocore_ssh_scp_begin();
 
     Serial.println("SFTP/SCP server started: sftp -P 22 admin@<ip> ; scp file admin@<ip>:/path");
 }

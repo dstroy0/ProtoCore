@@ -11,7 +11,7 @@
 
 #include "services/storage/partition_monitor/partition_monitor.h"
 
-#if PC_ENABLE_PARTITION_MONITOR
+#if PROTOCORE_ENABLE_PARTITION_MONITOR
 
 #include "protocore.h"
 #include "shared_primitives/mime.h"
@@ -26,17 +26,17 @@ static PartitionRoutesCtx s_partr;
 static void partition_handler(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
-    pc_partition_info parts[PC_PARTITION_MAX];
-    uint8_t n = pc_partition_collect(parts, PC_PARTITION_MAX);
-    char buf[PC_PARTITION_JSON_BUF];
-    pc_partition_json(parts, n, buf, sizeof(buf));
+    protocore_partition_info parts[PROTOCORE_PARTITION_MAX];
+    uint8_t n = protocore_partition_collect(parts, PROTOCORE_PARTITION_MAX);
+    char buf[PROTOCORE_PARTITION_JSON_BUF];
+    protocore_partition_json(parts, n, buf, sizeof(buf));
     // No instance test: a handler only runs because begin() registered its route.
-    send_text(slot_id, 200, PC_MIME_JSON, buf);
+    send_text(slot_id, 200, PROTOCORE_MIME_JSON, buf);
 }
 
-void pc_partition_monitor_begin(const char *path)
+void protocore_partition_monitor_begin(const char *path)
 {
     on_http((path && path[0]) ? path : "/partitions", HTTP_GET, partition_handler);
 }
 
-#endif // PC_ENABLE_PARTITION_MONITOR
+#endif // PROTOCORE_ENABLE_PARTITION_MONITOR

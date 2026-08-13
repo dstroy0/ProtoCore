@@ -5,7 +5,7 @@
  * @file portable_bignum.c
  * @brief Software Montgomery modexp - the bignum backend for a vendor with no accelerator.
  *
- * Selected EXPLICITLY by a vendor profile that sets PC_HAS_HW_BIGNUM 0. It is never a fallback: the
+ * Selected EXPLICITLY by a vendor profile that sets PROTOCORE_HAS_HW_BIGNUM 0. It is never a fallback: the
  * core declares bn_expmod_group14() and links whatever backend the vendor provides, so linking none
  * is an undefined reference and linking two is a duplicate definition. Both fail the build.
  *
@@ -15,21 +15,21 @@
  * on it silently; with no weak symbol anywhere in the chain, it cannot.
  */
 
-#include "core_setup/board_profiles/pc_platform.h" // PC_HAS_HW_BIGNUM
+#include "core_setup/board_profiles/protocore_platform.h" // PROTOCORE_HAS_HW_BIGNUM
 #include "crypto/asymmetric/bignum.h"
 #include "crypto/crypto_opt.h"
 #include "mmgr/secure.h"
 
-#if !PC_HAS_HW_BIGNUM
+#if !PROTOCORE_HAS_HW_BIGNUM
 
-PC_CRYPTO_HOT
+PROTOCORE_CRYPTO_HOT
 
 // Group14 Montgomery constants, owned by one instance (internal linkage): R mod p, R^2 mod p,
 // and the init flag (all filled by bn_init()). One named owner, unreachable cross-TU.
 typedef struct
 {
-    pc_bignum r1; // R mod p = 2^2048 - p (two's complement of p in 2048 bits)
-    pc_bignum r2; // R^2 mod p = 2^4096 mod p (bn_init() via repeated doubling)
+    protocore_bignum r1; // R mod p = 2^2048 - p (two's complement of p in 2048 bits)
+    protocore_bignum r2; // R^2 mod p = 2^4096 mod p (bn_init() via repeated doubling)
     proto_bool initialized;
 } Group14Ctx;
 static Group14Ctx s_g14 = {0};
@@ -75,7 +75,7 @@ static void bn_init(void)
     // Compute via borrow subtraction: 0 - p with 2048-bit wrap.
     {
         uint64_t borrow = 0;
-        for (int i = 0; i < PC_BN_LIMBS; i++)
+        for (int i = 0; i < PROTOCORE_BN_LIMBS; i++)
         {
             uint64_t v = (uint64_t)0 - group14_p.d[i] - borrow;
             s_g14.r1.d[i] = (uint32_t)v;
@@ -87,10 +87,10 @@ static void bn_init(void)
 
     // R^2 mod p = 2^4096 mod p.
     // Compute by starting from R mod p and doubling it 2048 times mod p.
-    memcpy(s_g14.r2.d, s_g14.r1.d, sizeof(pc_bignum));
+    memcpy(s_g14.r2.d, s_g14.r1.d, sizeof(protocore_bignum));
     for (int i = 0; i < 2048; i++)
     {
-        uint32_t overflow = bn_shl1(s_g14.r2.d, PC_BN_LIMBS);
+        uint32_t overflow = bn_shl1(s_g14.r2.d, PROTOCORE_BN_LIMBS);
         // If overflow bit set OR result >= p, subtract p.
         // bn_init() takes no parameters and reads no state besides the compile-time constant
         // group14_p; combined with the s_g14.initialized memo guard above, this doubling loop
@@ -101,9 +101,9 @@ static void bn_init(void)
         // the doubled 2048-bit value is already < p, so the cmp_raw() half of this OR is never
         // the deciding vote - it only ever agrees with an overflow that is already false.
         // Structurally unreachable (a mathematical constant of this trace), not merely untested.
-        if (overflow || bn_cmp_raw(s_g14.r2.d, group14_p.d, PC_BN_LIMBS) >= 0)
+        if (overflow || bn_cmp_raw(s_g14.r2.d, group14_p.d, PROTOCORE_BN_LIMBS) >= 0)
         {
-            bn_sub_inplace(s_g14.r2.d, group14_p.d, PC_BN_LIMBS);
+            bn_sub_inplace(s_g14.r2.d, group14_p.d, PROTOCORE_BN_LIMBS);
         }
     }
 
@@ -116,16 +116,16 @@ static void bn_init(void)
 // Native path: the Montgomery temporaries plus bn_monpro's 129-limb accumulator.
 typedef struct
 {
-    pc_bignum base_mont;
-    pc_bignum result;
-    pc_bignum tmp;
+    protocore_bignum base_mont;
+    protocore_bignum result;
+    protocore_bignum tmp;
     uint32_t t[129];
 } BnExpmodWork;
 
-// Worst-case bytes this backend borrows in one modexp. PC_SECURE_ARENA_SIZE is derived
+// Worst-case bytes this backend borrows in one modexp. PROTOCORE_SECURE_ARENA_SIZE is derived
 // from declarations like this one; the static_assert below is what proves it.
-static_assert(sizeof(BnExpmodWork) <= PC_WORK_BIGNUM_SW,
-              "BnExpmodWork outgrew PC_WORK_BIGNUM_SW - raise it; PC_SECURE_ARENA_SIZE derives from it");
+static_assert(sizeof(BnExpmodWork) <= PROTOCORE_WORK_BIGNUM_SW,
+              "BnExpmodWork outgrew PROTOCORE_WORK_BIGNUM_SW - raise it; PROTOCORE_SECURE_ARENA_SIZE derives from it");
 
 // ---------------------------------------------------------------------------
 // Montgomery SOS multiplication: out = a * b * R^-1 mod p
@@ -134,39 +134,39 @@ static_assert(sizeof(BnExpmodWork) <= PC_WORK_BIGNUM_SW,
 // p_inv = 1 for group-14 (see file header).
 // ---------------------------------------------------------------------------
 
-static void bn_monpro(pc_bignum *out, const pc_bignum *a, const pc_bignum *b, uint32_t *t)
+static void bn_monpro(protocore_bignum *out, const protocore_bignum *a, const protocore_bignum *b, uint32_t *t)
 {
     memset(t, 0, 129 * sizeof(uint32_t));
 
-    for (int i = 0; i < PC_BN_LIMBS; i++)
+    for (int i = 0; i < PROTOCORE_BN_LIMBS; i++)
     {
         // Multiply step: t[0..63] += a[i] * b[0..63]
         uint64_t carry = 0;
-        for (int j = 0; j < PC_BN_LIMBS; j++)
+        for (int j = 0; j < PROTOCORE_BN_LIMBS; j++)
         {
             uint64_t uv = (uint64_t)t[i + j] + (uint64_t)a->d[i] * (uint64_t)b->d[j] + carry;
             t[i + j] = (uint32_t)uv;
             carry = uv >> 32;
         }
-        t[i + PC_BN_LIMBS] += (uint32_t)carry;
+        t[i + PROTOCORE_BN_LIMBS] += (uint32_t)carry;
 
         // Reduction step: m = t[i] * p_inv = t[i] * 1 = t[i]
         uint32_t m = t[i];
         carry = 0;
-        for (int j = 0; j < PC_BN_LIMBS; j++)
+        for (int j = 0; j < PROTOCORE_BN_LIMBS; j++)
         {
             uint64_t uv = (uint64_t)t[i + j] + (uint64_t)m * (uint64_t)group14_p.d[j] + carry;
             t[i + j] = (uint32_t)uv;
             carry = uv >> 32;
         }
         // Add carry into the high word (t[i+64]); t[128] absorbs final overflow.
-        uint64_t hi = (uint64_t)t[i + PC_BN_LIMBS] + carry;
-        t[i + PC_BN_LIMBS] = (uint32_t)hi;
-        t[i + PC_BN_LIMBS + 1] += (uint32_t)(hi >> 32);
+        uint64_t hi = (uint64_t)t[i + PROTOCORE_BN_LIMBS] + carry;
+        t[i + PROTOCORE_BN_LIMBS] = (uint32_t)hi;
+        t[i + PROTOCORE_BN_LIMBS + 1] += (uint32_t)(hi >> 32);
     }
 
     // Result is in t[64..127].  Conditionally subtract p if result >= p.
-    uint32_t *res = t + PC_BN_LIMBS;
+    uint32_t *res = t + PROTOCORE_BN_LIMBS;
     // For 0 <= a,b < p the raw (pre-correction) SOS value is < 2p, so it needs the guard
     // limb t[128] for the case where it reaches/exceeds 2^2048. group14_p's top two limbs are
     // both 0xFFFFFFFF, i.e. p sits within about 2^-64 of 2^2048, so "the raw value is >= p but
@@ -177,65 +177,65 @@ static void bn_monpro(pc_bignum *out, const pc_bignum *a, const pc_bignum *b, ui
     // compute base*R mod p = 1 exactly, landing the pre-correction raw value at exactly p+1
     // (t[128]==0, cmp_raw()>=0 true). Exercised by
     // test_bn_expmod_group14_hits_correction_sliver_without_overflow_limb (test_ssh_conn.cpp).
-    if (t[128] || bn_cmp_raw(res, group14_p.d, PC_BN_LIMBS) >= 0)
+    if (t[128] || bn_cmp_raw(res, group14_p.d, PROTOCORE_BN_LIMBS) >= 0)
     {
-        bn_sub_inplace(res, group14_p.d, PC_BN_LIMBS);
+        bn_sub_inplace(res, group14_p.d, PROTOCORE_BN_LIMBS);
     }
 
-    memcpy(out->d, res, PC_BN_LIMBS * sizeof(uint32_t));
+    memcpy(out->d, res, PROTOCORE_BN_LIMBS * sizeof(uint32_t));
 }
 
-void bn_expmod_group14(pc_bignum *out, const pc_bignum *base, const pc_bignum *exp)
+void bn_expmod_group14(protocore_bignum *out, const protocore_bignum *base, const protocore_bignum *exp)
 {
     bn_init(); // ensure s_g14.r1, s_g14.r2 are computed
 
     // The whole working set in one borrow. These are the same bytes the fixed layout carved by hand;
     // as struct members they cannot drift from a layout documented somewhere else.
-    size_t mark = pc_secure_mark();
-    pc_span ws = pc_secure_span(sizeof(BnExpmodWork), _Alignof(BnExpmodWork));
-    if (!pc_span_ok(ws))
+    size_t mark = protocore_secure_mark();
+    protocore_span ws = protocore_secure_span(sizeof(BnExpmodWork), _Alignof(BnExpmodWork));
+    if (!protocore_span_ok(ws))
     {
-        pc_secure_release(mark);
+        protocore_secure_release(mark);
         memset(out, 0, sizeof(*out)); // pool exhausted: a zero result fails every downstream check
         return;
     }
     BnExpmodWork *w = (BnExpmodWork *)(ws.buf);
-    pc_bignum *base_mont = &w->base_mont;
-    pc_bignum *result = &w->result;
-    pc_bignum *tmp = &w->tmp;
+    protocore_bignum *base_mont = &w->base_mont;
+    protocore_bignum *result = &w->result;
+    protocore_bignum *tmp = &w->tmp;
 
     // Convert base to Montgomery form: base_mont = base * R mod p
     //   = MonPro(base, R^2 mod p)
     bn_monpro(base_mont, base, &s_g14.r2, w->t);
 
     // result = 1 in Montgomery form = R mod p = s_g14.r1
-    memcpy(result->d, s_g14.r1.d, sizeof(pc_bignum));
+    memcpy(result->d, s_g14.r1.d, sizeof(protocore_bignum));
 
     // Left-to-right binary square-and-multiply (MSB first: d[63]..d[0], bit 31..0)
-    for (int i = PC_BN_LIMBS - 1; i >= 0; i--)
+    for (int i = PROTOCORE_BN_LIMBS - 1; i >= 0; i--)
     {
         for (int b = 31; b >= 0; b--)
         {
             // Square: result = result^2 * R^-1 mod p
             bn_monpro(tmp, result, result, w->t);
-            memcpy(result->d, tmp->d, sizeof(pc_bignum));
+            memcpy(result->d, tmp->d, sizeof(protocore_bignum));
 
             if ((exp->d[i] >> b) & 1u)
             {
                 // Multiply: result = result * base_mont * R^-1 mod p
                 bn_monpro(tmp, result, base_mont, w->t);
-                memcpy(result->d, tmp->d, sizeof(pc_bignum));
+                memcpy(result->d, tmp->d, sizeof(protocore_bignum));
             }
         }
     }
 
     // Convert back from Montgomery form: out = result * R^-1 mod p
     //   = MonPro(result, 1)
-    pc_bignum one;
-    memset(one.d, 0, sizeof(pc_bignum));
+    protocore_bignum one;
+    memset(one.d, 0, sizeof(protocore_bignum));
     one.d[0] = 1u;
     bn_monpro(out, result, &one, w->t);
-    pc_secure_release(mark);
+    protocore_secure_release(mark);
 }
 
-#endif // !PC_HAS_HW_BIGNUM
+#endif // !PROTOCORE_HAS_HW_BIGNUM

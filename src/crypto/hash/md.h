@@ -18,14 +18,14 @@
 #ifndef PROTOCORE_MD_H
 #define PROTOCORE_MD_H
 
-#include "protocore_config.h" // the entry point: types.h for the widths
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
 /**
  * @brief Opaque streaming digest context (MD4 / MD5). Forward-declared only: the definition is private to
  * md.cpp, so other translation units know the symbol but never its members - they hold it via `struct MdCtx *`,
- * getting their storage from pc_md_wants() below.
+ * getting their storage from protocore_md_wants() below.
  */
 struct MdCtx;
 
@@ -37,26 +37,26 @@ struct MdCtx;
  * resource, and the pool wipes the digest state when that scope ends. MD4/MD5 here carry NTLM
  * password and session-key material, so the storage comes from the secure pool.
  *
- * @return a context to pass to pc_md4_init() / pc_md5_init(), or nullptr if the pool could not
+ * @return a context to pass to protocore_md4_init() / protocore_md5_init(), or nullptr if the pool could not
  *         satisfy it.
  */
-struct MdCtx *pc_md_wants(void);
+struct MdCtx *protocore_md_wants(void);
 
-void pc_md5_init(struct MdCtx *c);
-void pc_md5_update(struct MdCtx *c, const uint8_t *data, size_t len);
-void pc_md5_final(struct MdCtx *c, uint8_t out[16]);
+void protocore_md5_init(struct MdCtx *c);
+void protocore_md5_update(struct MdCtx *c, const uint8_t *data, size_t len);
+void protocore_md5_final(struct MdCtx *c, uint8_t out[16]);
 /** @brief One-shot MD5. */
-void pc_md5(const uint8_t *data, size_t len, uint8_t out[16]);
+void protocore_md5(const uint8_t *data, size_t len, uint8_t out[16]);
 
-void pc_md4_init(struct MdCtx *c);
-void pc_md4_update(struct MdCtx *c, const uint8_t *data, size_t len);
-void pc_md4_final(struct MdCtx *c, uint8_t out[16]);
+void protocore_md4_init(struct MdCtx *c);
+void protocore_md4_update(struct MdCtx *c, const uint8_t *data, size_t len);
+void protocore_md4_final(struct MdCtx *c, uint8_t out[16]);
 /** @brief One-shot MD4 (the NT-hash primitive). */
-void pc_md4(const uint8_t *data, size_t len, uint8_t out[16]);
+void protocore_md4(const uint8_t *data, size_t len, uint8_t out[16]);
 
 /** @brief HMAC-MD5 (RFC 2104): the NTLMv2 MAC primitive. */
-void pc_hmac_md5(const uint8_t *key, size_t key_len, const uint8_t *msg, size_t msg_len, uint8_t out[16]);
+void protocore_hmac_md5(const uint8_t *key, size_t key_len, const uint8_t *msg, size_t msg_len, uint8_t out[16]);
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_MD_H

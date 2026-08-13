@@ -4,10 +4,10 @@
 // On-device CCOUNT microbenchmark for server/update/ota_service - EXCEPT there is nothing pure to
 // benchmark here, so this sketch deliberately benches nothing and exists only to keep
 // server/update/ota_service under the same performance_benching/device/<service>/ umbrella and to prove the real
-// production ota_service.cpp still compiles and links on-device (built with -DPC_ENABLE_OTA=1).
+// production ota_service.cpp still compiles and links on-device (built with -DPROTOCORE_ENABLE_OTA=1).
 //
 // Why nothing is benched (a NOTE-4 service): ota_service.h exposes exactly one public function,
-// pc_ota_begin(server, path, user, pass). That call is a one-time, side-effectful REGISTRATION - it
+// protocore_ota_begin(server, path, user, pass). That call is a one-time, side-effectful REGISTRATION - it
 // stores the Basic-auth credentials, installs the HTTP parser's streaming-body hooks
 // (http_parser_set_stream_hooks) and adds a POST route (server.on) - not a deterministic, loopable
 // codec. Everything ota_service actually DOES is real hardware/transport that this peripheral-less
@@ -20,7 +20,7 @@
 // performance_benching/device/ads1115 - where the I2C transaction is stubbed but a deterministic config-word /
 // conversion codec remains to bench - ota_service has no such codec to isolate, so the honest result
 // is an empty benchmark (same call as performance_benching/device/i2c and performance_benching/device/mdns_service). We
-// still #include the header and take (never call) the address of pc_ota_begin() so the compiler/linker prove the real
+// still #include the header and take (never call) the address of protocore_ota_begin() so the compiler/linker prove the real
 // production symbol is valid in this context.
 //
 // Build/flash (JTAG-capable S3 over its USB-Serial/JTAG port):
@@ -37,11 +37,11 @@
 void dbench_run(void)
 {
     // Reference the real production symbol so it is compiled/linked, but NEVER call it: invoking
-    // pc_ota_begin() would mutate the live server's route table + parser stream hooks and wire up
+    // protocore_ota_begin() would mutate the live server's route table + parser stream hooks and wire up
     // the ESP32 `Update` flash path - side-effectful setup, not a pure microbench, and out of scope
     // for this peripheral-less rig. (PC is only forward-declared in ota_service.h; a function
     // pointer to a function taking `PC &` needs no complete type.)
-    void (*volatile fn)(const char *, const char *, const char *) = &pc_ota_begin;
+    void (*volatile fn)(const char *, const char *, const char *) = &protocore_ota_begin;
     (void)fn;
 
     for (;;)

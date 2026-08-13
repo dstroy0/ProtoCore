@@ -3,7 +3,7 @@
 
 /**
  * @file mqtt_sn.h
- * @brief MQTT-SN v1.2 wire codec (PC_ENABLE_MQTT_SN) - zero-heap message builder +
+ * @brief MQTT-SN v1.2 wire codec (PROTOCORE_ENABLE_MQTT_SN) - zero-heap message builder +
  *        parser for MQTT for Sensor Networks, the UDP / non-TCP MQTT variant for
  *        constrained, lossy links (topic IDs instead of strings, gateway discovery,
  *        sleeping-client keep-alive).
@@ -31,9 +31,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_MQTT_SN
+#if PROTOCORE_ENABLE_MQTT_SN
 
 #define MQTTSN_LEN3_PREFIX 0x01 ///< a first Length octet of 0x01 signals the 3-octet length form
 
@@ -85,41 +85,44 @@ PROTO_BEGIN_DECLS
 #define MQTTSN_PROTOCOL_ID 0x01 ///< CONNECT ProtocolId octet
 
 /** @brief Compose a Flags octet. @p qos is 0..3 (3 = QoS -1); @p topic_id_type is MQTTSN_TOPIC_*. */
-uint8_t pc_mqttsn_make_flags(proto_bool dup, uint8_t qos, proto_bool retain, proto_bool will, proto_bool clean,
-                             uint8_t topic_id_type);
+uint8_t protocore_mqttsn_make_flags(proto_bool dup, uint8_t qos, proto_bool retain, proto_bool will, proto_bool clean,
+                                    uint8_t topic_id_type);
 
 // ---- builders (return total bytes written, or 0 on overflow / bad input) ----
 
 /** @brief CONNECT: Flags, ProtocolId(=1), Duration, ClientId. */
-size_t pc_mqttsn_build_connect(uint8_t *buf, size_t cap, uint8_t flags, uint16_t duration, const char *client_id);
+size_t protocore_mqttsn_build_connect(uint8_t *buf, size_t cap, uint8_t flags, uint16_t duration,
+                                      const char *client_id);
 
 /** @brief REGISTER: TopicId (0x0000 from a client), MsgId, TopicName. */
-size_t pc_mqttsn_build_register(uint8_t *buf, size_t cap, uint16_t topic_id, uint16_t msg_id, const char *topic_name);
+size_t protocore_mqttsn_build_register(uint8_t *buf, size_t cap, uint16_t topic_id, uint16_t msg_id,
+                                       const char *topic_name);
 
 /** @brief REGACK: TopicId, MsgId, ReturnCode. */
-size_t pc_mqttsn_build_regack(uint8_t *buf, size_t cap, uint16_t topic_id, uint16_t msg_id, uint8_t ret_code);
+size_t protocore_mqttsn_build_regack(uint8_t *buf, size_t cap, uint16_t topic_id, uint16_t msg_id, uint8_t ret_code);
 
 /** @brief PUBLISH: Flags, TopicId, MsgId, Data. */
-size_t pc_mqttsn_build_publish(uint8_t *buf, size_t cap, uint8_t flags, uint16_t topic_id, uint16_t msg_id,
-                               const uint8_t *data, size_t data_len);
+size_t protocore_mqttsn_build_publish(uint8_t *buf, size_t cap, uint8_t flags, uint16_t topic_id, uint16_t msg_id,
+                                      const uint8_t *data, size_t data_len);
 
 /** @brief PUBACK: TopicId, MsgId, ReturnCode. */
-size_t pc_mqttsn_build_puback(uint8_t *buf, size_t cap, uint16_t topic_id, uint16_t msg_id, uint8_t ret_code);
+size_t protocore_mqttsn_build_puback(uint8_t *buf, size_t cap, uint16_t topic_id, uint16_t msg_id, uint8_t ret_code);
 
 /** @brief SUBSCRIBE by topic name: Flags, MsgId, TopicName (set TopicIdType normal/short in @p flags). */
-size_t pc_mqttsn_build_subscribe_name(uint8_t *buf, size_t cap, uint8_t flags, uint16_t msg_id, const char *topic_name);
+size_t protocore_mqttsn_build_subscribe_name(uint8_t *buf, size_t cap, uint8_t flags, uint16_t msg_id,
+                                             const char *topic_name);
 
 /** @brief SUBSCRIBE by pre-defined topic id: Flags, MsgId, TopicId (TopicIdType predefined). */
-size_t pc_mqttsn_build_subscribe_id(uint8_t *buf, size_t cap, uint8_t flags, uint16_t msg_id, uint16_t topic_id);
+size_t protocore_mqttsn_build_subscribe_id(uint8_t *buf, size_t cap, uint8_t flags, uint16_t msg_id, uint16_t topic_id);
 
 /** @brief PINGREQ: optional ClientId (nullptr for an empty keep-alive ping). */
-size_t pc_mqttsn_build_pingreq(uint8_t *buf, size_t cap, const char *client_id);
+size_t protocore_mqttsn_build_pingreq(uint8_t *buf, size_t cap, const char *client_id);
 
 /** @brief DISCONNECT: optional sleep Duration (pass with_duration=false for a plain disconnect). */
-size_t pc_mqttsn_build_disconnect(uint8_t *buf, size_t cap, proto_bool with_duration, uint16_t duration);
+size_t protocore_mqttsn_build_disconnect(uint8_t *buf, size_t cap, proto_bool with_duration, uint16_t duration);
 
 /** @brief SEARCHGW: broadcast Radius. */
-size_t pc_mqttsn_build_searchgw(uint8_t *buf, size_t cap, uint8_t radius);
+size_t protocore_mqttsn_build_searchgw(uint8_t *buf, size_t cap, uint8_t radius);
 
 // ---- parsing ----
 
@@ -136,23 +139,23 @@ typedef struct
  * @param consumed receives the full message length (so the caller can advance).
  * @return true on a complete, self-consistent message; false if incomplete / malformed.
  */
-proto_bool pc_mqttsn_parse_header(const uint8_t *buf, size_t len, MqttsnHeader *out, size_t *consumed);
+proto_bool protocore_mqttsn_parse_header(const uint8_t *buf, size_t len, MqttsnHeader *out, size_t *consumed);
 
 // The typed parsers below take the @ref MqttsnHeader payload/payload_len.
-proto_bool pc_mqttsn_parse_connack(const uint8_t *payload, size_t len, uint8_t *ret_code);
-proto_bool pc_mqttsn_parse_regack(const uint8_t *payload, size_t len, uint16_t *topic_id, uint16_t *msg_id,
-                                  uint8_t *ret_code);
-proto_bool pc_mqttsn_parse_puback(const uint8_t *payload, size_t len, uint16_t *topic_id, uint16_t *msg_id,
-                                  uint8_t *ret_code);
-proto_bool pc_mqttsn_parse_suback(const uint8_t *payload, size_t len, uint8_t *flags, uint16_t *topic_id,
-                                  uint16_t *msg_id, uint8_t *ret_code);
-proto_bool pc_mqttsn_parse_publish(const uint8_t *payload, size_t len, uint8_t *flags, uint16_t *topic_id,
-                                   uint16_t *msg_id, const uint8_t **data, size_t *data_len);
-proto_bool pc_mqttsn_parse_register(const uint8_t *payload, size_t len, uint16_t *topic_id, uint16_t *msg_id,
-                                    const char **topic_name, size_t *topic_name_len);
+proto_bool protocore_mqttsn_parse_connack(const uint8_t *payload, size_t len, uint8_t *ret_code);
+proto_bool protocore_mqttsn_parse_regack(const uint8_t *payload, size_t len, uint16_t *topic_id, uint16_t *msg_id,
+                                         uint8_t *ret_code);
+proto_bool protocore_mqttsn_parse_puback(const uint8_t *payload, size_t len, uint16_t *topic_id, uint16_t *msg_id,
+                                         uint8_t *ret_code);
+proto_bool protocore_mqttsn_parse_suback(const uint8_t *payload, size_t len, uint8_t *flags, uint16_t *topic_id,
+                                         uint16_t *msg_id, uint8_t *ret_code);
+proto_bool protocore_mqttsn_parse_publish(const uint8_t *payload, size_t len, uint8_t *flags, uint16_t *topic_id,
+                                          uint16_t *msg_id, const uint8_t **data, size_t *data_len);
+proto_bool protocore_mqttsn_parse_register(const uint8_t *payload, size_t len, uint16_t *topic_id, uint16_t *msg_id,
+                                           const char **topic_name, size_t *topic_name_len);
 
-#endif // PC_ENABLE_MQTT_SN
+#endif // PROTOCORE_ENABLE_MQTT_SN
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_MQTT_SN_H

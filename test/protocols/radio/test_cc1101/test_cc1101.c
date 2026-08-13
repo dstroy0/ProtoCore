@@ -117,15 +117,15 @@ static void mock_spi(const uint8_t *tx, uint8_t *rx, uint8_t len, void *)
     }
 }
 
-static pc_cc1101_bus g_bus = {mock_spi, NULL};
-static pc_cc1101_bus g_bus_no_spi = {NULL, NULL}; // a bus whose transfer callback is missing
+static protocore_cc1101_bus g_bus = {mock_spi, NULL};
+static protocore_cc1101_bus g_bus_no_spi = {NULL, NULL}; // a bus whose transfer callback is missing
 
 // A minimal SmartRF-style register table (just a couple of entries for the test).
-static const pc_cc1101_reg REGS[] = {{0x00, 0x29}, {0x08, 0x05}};
+static const protocore_cc1101_reg REGS[] = {{0x00, 0x29}, {0x08, 0x05}};
 
-static pc_cc1101_config default_cfg()
+static protocore_cc1101_config default_cfg()
 {
-    pc_cc1101_config c = {0};
+    protocore_cc1101_config c = {0};
     c.regs = REGS;
     c.nregs = 2;
     c.channel = 20;
@@ -143,8 +143,8 @@ void tearDown()
 
 void test_init_configures_and_detects(void)
 {
-    pc_cc1101_config c = default_cfg();
-    TEST_ASSERT_TRUE(pc_cc1101_init(&g_bus, &c));
+    protocore_cc1101_config c = default_cfg();
+    TEST_ASSERT_TRUE(protocore_cc1101_init(&g_bus, &c));
     TEST_ASSERT_EQUAL_HEX8(0x30, g.last_strobe); // SRES was the only strobe issued (reset)
     TEST_ASSERT_EQUAL_HEX8(0x29, g.reg[0x00]);   // register table applied
     TEST_ASSERT_EQUAL_HEX8(0x05, g.reg[0x08]);
@@ -154,16 +154,16 @@ void test_init_configures_and_detects(void)
 void test_init_fails_when_absent(void)
 {
     g.version = 0x00; // floating bus
-    pc_cc1101_config c = default_cfg();
-    TEST_ASSERT_FALSE(pc_cc1101_init(&g_bus, &c));
+    protocore_cc1101_config c = default_cfg();
+    TEST_ASSERT_FALSE(protocore_cc1101_init(&g_bus, &c));
     g.version = 0xFF;
-    TEST_ASSERT_FALSE(pc_cc1101_init(&g_bus, &c));
+    TEST_ASSERT_FALSE(protocore_cc1101_init(&g_bus, &c));
 }
 
 void test_send_writes_fifo_and_strobes_tx(void)
 {
     const uint8_t data[3] = {0xAA, 0xBB, 0xCC};
-    TEST_ASSERT_TRUE(pc_cc1101_send(&g_bus, data, 3));
+    TEST_ASSERT_TRUE(protocore_cc1101_send(&g_bus, data, 3));
     TEST_ASSERT_EQUAL_UINT8(4, g.txlen);     // length byte + 3 payload
     TEST_ASSERT_EQUAL_UINT8(3, g.txfifo[0]); // leading length
     TEST_ASSERT_EQUAL_MEMORY(data, g.txfifo + 1, 3);
@@ -174,22 +174,22 @@ void test_send_writes_fifo_and_strobes_tx(void)
 void test_send_rejects_bad_len(void)
 {
     const uint8_t d[1] = {0};
-    TEST_ASSERT_FALSE(pc_cc1101_send(&g_bus, d, 0));
+    TEST_ASSERT_FALSE(protocore_cc1101_send(&g_bus, d, 0));
     uint8_t big[64] = {0};
-    TEST_ASSERT_FALSE(pc_cc1101_send(&g_bus, big, 64));
+    TEST_ASSERT_FALSE(protocore_cc1101_send(&g_bus, big, 64));
 }
 
 void test_tx_done(void)
 {
     g.state = 2; // TX in progress
-    TEST_ASSERT_FALSE(pc_cc1101_tx_done(&g_bus));
+    TEST_ASSERT_FALSE(protocore_cc1101_tx_done(&g_bus));
     g.state = 0; // returned to IDLE
-    TEST_ASSERT_TRUE(pc_cc1101_tx_done(&g_bus));
+    TEST_ASSERT_TRUE(protocore_cc1101_tx_done(&g_bus));
 }
 
 void test_set_rx(void)
 {
-    pc_cc1101_set_rx(&g_bus);
+    protocore_cc1101_set_rx(&g_bus);
     TEST_ASSERT_EQUAL_HEX8(0x34, g.last_strobe); // last strobe is SRX
     TEST_ASSERT_EQUAL_UINT8(1, g.state);         // RX
 }
@@ -206,7 +206,7 @@ void test_recv_reads_packet_and_rssi(void)
     g.rxread = 0;
     uint8_t buf[16];
     int16_t rssi = 0;
-    int n = pc_cc1101_recv(&g_bus, buf, sizeof(buf), &rssi);
+    int n = protocore_cc1101_recv(&g_bus, buf, sizeof(buf), &rssi);
     TEST_ASSERT_EQUAL_INT(3, n);
     TEST_ASSERT_EQUAL_MEMORY(payload, buf, 3);
     TEST_ASSERT_EQUAL_INT16(-34, rssi);
@@ -216,7 +216,7 @@ void test_recv_empty(void)
 {
     g.rxcount = 0;
     uint8_t buf[16];
-    TEST_ASSERT_EQUAL_INT(-1, pc_cc1101_recv(&g_bus, buf, sizeof(buf), NULL));
+    TEST_ASSERT_EQUAL_INT(-1, protocore_cc1101_recv(&g_bus, buf, sizeof(buf), NULL));
 }
 
 void test_recv_truncates(void)
@@ -231,7 +231,7 @@ void test_recv_truncates(void)
     g.rxcount = 7;
     g.rxread = 0;
     uint8_t buf[2];
-    int n = pc_cc1101_recv(&g_bus, buf, sizeof(buf), NULL);
+    int n = protocore_cc1101_recv(&g_bus, buf, sizeof(buf), NULL);
     TEST_ASSERT_EQUAL_INT(2, n);
     TEST_ASSERT_EQUAL_HEX8(0x60, buf[0]);
     TEST_ASSERT_EQUAL_HEX8(0x61, buf[1]);
@@ -240,54 +240,54 @@ void test_recv_truncates(void)
 void test_rssi_decode(void)
 {
     // TI formula: raw>=128 -> (raw-256)/2-74 ; else raw/2-74.
-    TEST_ASSERT_EQUAL_INT16(-34, pc_cc1101_rssi_dbm(0x50));  // 80/2-74
-    TEST_ASSERT_EQUAL_INT16(-74, pc_cc1101_rssi_dbm(0x00));  // 0/2-74
-    TEST_ASSERT_EQUAL_INT16(-138, pc_cc1101_rssi_dbm(0x80)); // (128-256)/2-74 = -64-74
+    TEST_ASSERT_EQUAL_INT16(-34, protocore_cc1101_rssi_dbm(0x50));  // 80/2-74
+    TEST_ASSERT_EQUAL_INT16(-74, protocore_cc1101_rssi_dbm(0x00));  // 0/2-74
+    TEST_ASSERT_EQUAL_INT16(-138, protocore_cc1101_rssi_dbm(0x80)); // (128-256)/2-74 = -64-74
 }
 
 void test_send_guard_subconditions()
 {
     uint8_t data[8] = {0};
-    TEST_ASSERT_FALSE(pc_cc1101_send(NULL, data, 8));    // null bus
-    TEST_ASSERT_FALSE(pc_cc1101_send(&g_bus, NULL, 8));  // null data
-    TEST_ASSERT_FALSE(pc_cc1101_send(&g_bus, data, 0));  // zero len
-    TEST_ASSERT_FALSE(pc_cc1101_send(&g_bus, data, 64)); // len > 63
-    TEST_ASSERT_TRUE(pc_cc1101_send(&g_bus, data, 8));   // valid FIFO burst
+    TEST_ASSERT_FALSE(protocore_cc1101_send(NULL, data, 8));    // null bus
+    TEST_ASSERT_FALSE(protocore_cc1101_send(&g_bus, NULL, 8));  // null data
+    TEST_ASSERT_FALSE(protocore_cc1101_send(&g_bus, data, 0));  // zero len
+    TEST_ASSERT_FALSE(protocore_cc1101_send(&g_bus, data, 64)); // len > 63
+    TEST_ASSERT_TRUE(protocore_cc1101_send(&g_bus, data, 8));   // valid FIFO burst
 }
 
 // init guards each argument: a null bus, a bus with no transfer callback, and a null config.
 void test_init_null_args(void)
 {
-    pc_cc1101_config c = default_cfg();
-    TEST_ASSERT_FALSE(pc_cc1101_init(NULL, &c));
-    TEST_ASSERT_FALSE(pc_cc1101_init(&g_bus_no_spi, &c));
-    TEST_ASSERT_FALSE(pc_cc1101_init(&g_bus, NULL));
+    protocore_cc1101_config c = default_cfg();
+    TEST_ASSERT_FALSE(protocore_cc1101_init(NULL, &c));
+    TEST_ASSERT_FALSE(protocore_cc1101_init(&g_bus_no_spi, &c));
+    TEST_ASSERT_FALSE(protocore_cc1101_init(&g_bus, NULL));
 }
 
 // init with a null register table skips the table write loop but still sets the channel and detects.
 void test_init_no_regs(void)
 {
-    pc_cc1101_config c = {0};
+    protocore_cc1101_config c = {0};
     c.regs = NULL; // no table
     c.nregs = 2;   // nregs non-zero, but regs null -> loop body never runs
     c.channel = 7;
-    TEST_ASSERT_TRUE(pc_cc1101_init(&g_bus, &c));
+    TEST_ASSERT_TRUE(protocore_cc1101_init(&g_bus, &c));
     TEST_ASSERT_EQUAL_UINT8(7, g.reg[0x0A]); // CHANNR still applied
 }
 
 // tx_done guards a null bus / missing transfer callback.
 void test_tx_done_null_args(void)
 {
-    TEST_ASSERT_FALSE(pc_cc1101_tx_done(NULL));
-    TEST_ASSERT_FALSE(pc_cc1101_tx_done(&g_bus_no_spi));
+    TEST_ASSERT_FALSE(protocore_cc1101_tx_done(NULL));
+    TEST_ASSERT_FALSE(protocore_cc1101_tx_done(&g_bus_no_spi));
 }
 
 // set_rx guards a null bus / missing transfer callback (no strobe issued).
 void test_set_rx_null_args(void)
 {
     g.last_strobe = 0xEE;
-    pc_cc1101_set_rx(NULL);
-    pc_cc1101_set_rx(&g_bus_no_spi);
+    protocore_cc1101_set_rx(NULL);
+    protocore_cc1101_set_rx(&g_bus_no_spi);
     TEST_ASSERT_EQUAL_HEX8(0xEE, g.last_strobe); // untouched: the guard returned before any SPI
 }
 
@@ -296,9 +296,9 @@ void test_recv_null_args(void)
 {
     uint8_t buf[16];
     int16_t rssi = 0;
-    TEST_ASSERT_EQUAL_INT(-1, pc_cc1101_recv(NULL, buf, sizeof(buf), &rssi));
-    TEST_ASSERT_EQUAL_INT(-1, pc_cc1101_recv(&g_bus_no_spi, buf, sizeof(buf), &rssi));
-    TEST_ASSERT_EQUAL_INT(-1, pc_cc1101_recv(&g_bus, NULL, sizeof(buf), &rssi));
+    TEST_ASSERT_EQUAL_INT(-1, protocore_cc1101_recv(NULL, buf, sizeof(buf), &rssi));
+    TEST_ASSERT_EQUAL_INT(-1, protocore_cc1101_recv(&g_bus_no_spi, buf, sizeof(buf), &rssi));
+    TEST_ASSERT_EQUAL_INT(-1, protocore_cc1101_recv(&g_bus, NULL, sizeof(buf), &rssi));
 }
 
 // recv flushes the RX FIFO and bails on a corrupt length byte (0 or > 63).
@@ -310,7 +310,7 @@ void test_recv_bad_length(void)
     g.rxcount = 1;
     g.rxread = 0;
     g.last_strobe = 0;
-    TEST_ASSERT_EQUAL_INT(-1, pc_cc1101_recv(&g_bus, buf, sizeof(buf), NULL));
+    TEST_ASSERT_EQUAL_INT(-1, protocore_cc1101_recv(&g_bus, buf, sizeof(buf), NULL));
     TEST_ASSERT_EQUAL_HEX8(0x3A, g.last_strobe); // SFRX flush issued
 
     // Over-long length byte.
@@ -318,7 +318,7 @@ void test_recv_bad_length(void)
     g.rxcount = 5;
     g.rxread = 0;
     g.last_strobe = 0;
-    TEST_ASSERT_EQUAL_INT(-1, pc_cc1101_recv(&g_bus, buf, sizeof(buf), NULL));
+    TEST_ASSERT_EQUAL_INT(-1, protocore_cc1101_recv(&g_bus, buf, sizeof(buf), NULL));
     TEST_ASSERT_EQUAL_HEX8(0x3A, g.last_strobe);
 }
 
@@ -326,7 +326,7 @@ void test_recv_bad_length(void)
 void test_send_null_spi(void)
 {
     const uint8_t data[8] = {0};
-    TEST_ASSERT_FALSE(pc_cc1101_send(&g_bus_no_spi, data, 8));
+    TEST_ASSERT_FALSE(protocore_cc1101_send(&g_bus_no_spi, data, 8));
 }
 
 int main()

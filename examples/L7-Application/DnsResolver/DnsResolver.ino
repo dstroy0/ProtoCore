@@ -3,7 +3,7 @@
 
 /**
  * @file DnsResolver.ino
- * @brief DNS resolver with answer verification (PC_ENABLE_DNS_RESOLVER).
+ * @brief DNS resolver with answer verification (PROTOCORE_ENABLE_DNS_RESOLVER).
  *
  * Resolves a hostname to an IPv4 address and rejects suspicious answers (0.0.0.0,
  * loopback, broadcast, multicast - DNS-rebinding / spoof indicators).
@@ -13,11 +13,11 @@
  * app, resolve off the request hot path (e.g. from loop() / a setup step) and cache.
  *
  * NOTE: enable it for the whole build. In platformio.ini:
- *     build_flags = -DPC_ENABLE_DNS_RESOLVER=1
+ *     build_flags = -DPROTOCORE_ENABLE_DNS_RESOLVER=1
  * (Arduino IDE: it is already set for you in the build_opt.h beside this sketch, so it builds as-is.)
  */
 
-#define PC_ENABLE_DNS_RESOLVER 1
+#define PROTOCORE_ENABLE_DNS_RESOLVER 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -47,7 +47,7 @@ void setup()
             return;
         }
         uint32_t ip = 0;
-        bool ok = pc_dns_resolver_resolve(host, &ip);
+        bool ok = protocore_dns_resolver_resolve(host, &ip);
         if (!ok)
         {
             send_text(id, 502, "application/json", "{\"error\":\"resolve failed\"}");
@@ -55,7 +55,7 @@ void setup()
         }
         char b[80];
         snprintf(b, sizeof(b), "{\"ip\":\"%u.%u.%u.%u\",\"verified\":%s}", (ip >> 24) & 0xFF, (ip >> 16) & 0xFF,
-                 (ip >> 8) & 0xFF, ip & 0xFF, pc_dns_resolver_verify(ip) ? "true" : "false");
+                 (ip >> 8) & 0xFF, ip & 0xFF, protocore_dns_resolver_verify(ip) ? "true" : "false");
         send_text(id, 200, "application/json", b);
     });
     begin_http(80, NULL);

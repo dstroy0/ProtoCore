@@ -2,7 +2,7 @@
 """Merge per-environment compile_commands.json fragments into one, deduped by file.
 
 PlatformIO writes compile_commands.json to the project root one env at a time, and
-no single env enables all of the ~111 PC_ENABLE_* features, so a feature-gated
+no single env enables all of the ~111 PROTOCORE_ENABLE_* features, so a feature-gated
 source file is only compiled in the env that turns its flag on. To give the
 SonarQube C/C++ analyzer a command for *every* file, gen_compiledb.sh runs
 `pio run -t compiledb` for each native env, stashes each result, and this script

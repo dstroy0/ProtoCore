@@ -22,7 +22,7 @@
 
 #include <time.h> // time_t and strftime
 
-#include "shared_primitives/time_compat.h" // pc_gmtime_r, and the entry point behind it
+#include "shared_primitives/time_compat.h" // protocore_gmtime_r, and the entry point behind it
 
 /**
  * @brief Smallest buffer that holds an RFC 7231 IMF-fixdate plus its NUL.
@@ -31,13 +31,13 @@
  * property of the protocol rather than a tuning choice. A smaller buffer truncates silently,
  * because strftime writes nothing and returns 0 when the result does not fit.
  */
-#define PC_HTTP_DATE_MAX 30
+#define PROTOCORE_HTTP_DATE_MAX 30
 
 /**
  * @brief Write @p epoch into @p out as an IMF-fixdate in GMT.
  * @return characters written, excluding the NUL, or 0 with an empty @p out on any rejection.
  */
-PC_INLINE uint8_t pc_http_date(time_t epoch, char *out, uint32_t out_cap)
+PROTOCORE_INLINE uint8_t protocore_http_date(time_t epoch, char *out, uint32_t out_cap)
 {
     if (!out || out_cap == 0)
     {
@@ -49,7 +49,7 @@ PC_INLINE uint8_t pc_http_date(time_t epoch, char *out, uint32_t out_cap)
         return 0;
     }
     struct tm broken_down;
-    if (!pc_gmtime_r(&epoch, &broken_down))
+    if (!protocore_gmtime_r(&epoch, &broken_down))
     {
         out[0] = '\0';
         return 0;

@@ -92,19 +92,19 @@ void test_be_writers_match_the_oracle()
     for (unsigned v = 0; v < NVALS; v++)
     {
         memset(buf, POISON, sizeof(buf));
-        TEST_ASSERT_EQUAL_size_t(2, pc_wr16be(at(0), (uint16_t)VALS[v]));
+        TEST_ASSERT_EQUAL_size_t(2, protocore_wr16be(at(0), (uint16_t)VALS[v]));
         oracle_be(want, VALS[v], 2);
         TEST_ASSERT_EQUAL_MEMORY(want, at(0), 2);
         assert_only_width_written(0, 2);
 
         memset(buf, POISON, sizeof(buf));
-        TEST_ASSERT_EQUAL_size_t(4, pc_wr32be(at(0), (uint32_t)VALS[v]));
+        TEST_ASSERT_EQUAL_size_t(4, protocore_wr32be(at(0), (uint32_t)VALS[v]));
         oracle_be(want, VALS[v], 4);
         TEST_ASSERT_EQUAL_MEMORY(want, at(0), 4);
         assert_only_width_written(0, 4);
 
         memset(buf, POISON, sizeof(buf));
-        TEST_ASSERT_EQUAL_size_t(8, pc_wr64be(at(0), VALS[v]));
+        TEST_ASSERT_EQUAL_size_t(8, protocore_wr64be(at(0), VALS[v]));
         oracle_be(want, VALS[v], 8);
         TEST_ASSERT_EQUAL_MEMORY(want, at(0), 8);
         assert_only_width_written(0, 8);
@@ -118,19 +118,19 @@ void test_le_writers_match_the_oracle()
     for (unsigned v = 0; v < NVALS; v++)
     {
         memset(buf, POISON, sizeof(buf));
-        TEST_ASSERT_EQUAL_size_t(2, pc_wr16le(at(0), (uint16_t)VALS[v]));
+        TEST_ASSERT_EQUAL_size_t(2, protocore_wr16le(at(0), (uint16_t)VALS[v]));
         oracle_le(want, VALS[v], 2);
         TEST_ASSERT_EQUAL_MEMORY(want, at(0), 2);
         assert_only_width_written(0, 2);
 
         memset(buf, POISON, sizeof(buf));
-        TEST_ASSERT_EQUAL_size_t(4, pc_wr32le(at(0), (uint32_t)VALS[v]));
+        TEST_ASSERT_EQUAL_size_t(4, protocore_wr32le(at(0), (uint32_t)VALS[v]));
         oracle_le(want, VALS[v], 4);
         TEST_ASSERT_EQUAL_MEMORY(want, at(0), 4);
         assert_only_width_written(0, 4);
 
         memset(buf, POISON, sizeof(buf));
-        TEST_ASSERT_EQUAL_size_t(8, pc_wr64le(at(0), VALS[v]));
+        TEST_ASSERT_EQUAL_size_t(8, protocore_wr64le(at(0), VALS[v]));
         oracle_le(want, VALS[v], 8);
         TEST_ASSERT_EQUAL_MEMORY(want, at(0), 8);
         assert_only_width_written(0, 8);
@@ -143,18 +143,18 @@ void test_readers_match_the_oracle()
     for (unsigned v = 0; v < NVALS; v++)
     {
         oracle_be(at(0), VALS[v], 2);
-        TEST_ASSERT_EQUAL_HEX16((uint16_t)VALS[v], pc_rd16be(at(0)));
+        TEST_ASSERT_EQUAL_HEX16((uint16_t)VALS[v], protocore_rd16be(at(0)));
         oracle_be(at(0), VALS[v], 4);
-        TEST_ASSERT_EQUAL_HEX32((uint32_t)VALS[v], pc_rd32be(at(0)));
+        TEST_ASSERT_EQUAL_HEX32((uint32_t)VALS[v], protocore_rd32be(at(0)));
         oracle_be(at(0), VALS[v], 8);
-        TEST_ASSERT_EQUAL_HEX64(VALS[v], pc_rd64be(at(0)));
+        TEST_ASSERT_EQUAL_HEX64(VALS[v], protocore_rd64be(at(0)));
 
         oracle_le(at(0), VALS[v], 2);
-        TEST_ASSERT_EQUAL_HEX16((uint16_t)VALS[v], pc_rd16le(at(0)));
+        TEST_ASSERT_EQUAL_HEX16((uint16_t)VALS[v], protocore_rd16le(at(0)));
         oracle_le(at(0), VALS[v], 4);
-        TEST_ASSERT_EQUAL_HEX32((uint32_t)VALS[v], pc_rd32le(at(0)));
+        TEST_ASSERT_EQUAL_HEX32((uint32_t)VALS[v], protocore_rd32le(at(0)));
         oracle_le(at(0), VALS[v], 8);
-        TEST_ASSERT_EQUAL_HEX64(VALS[v], pc_rd64le(at(0)));
+        TEST_ASSERT_EQUAL_HEX64(VALS[v], protocore_rd64le(at(0)));
     }
 }
 
@@ -165,8 +165,8 @@ void test_be_is_the_reverse_of_le()
     {
         uint8_t b[8];
         uint8_t l[8];
-        pc_wr64be(b, VALS[v]);
-        pc_wr64le(l, VALS[v]);
+        protocore_wr64be(b, VALS[v]);
+        protocore_wr64le(l, VALS[v]);
         for (unsigned i = 0; i < 8; i++)
         {
             TEST_ASSERT_EQUAL_HEX8(b[i], l[7u - i]);
@@ -183,19 +183,19 @@ void test_round_trip_at_every_offset()
     {
         for (unsigned v = 0; v < NVALS; v++)
         {
-            pc_wr16be(at(off), (uint16_t)VALS[v]);
-            TEST_ASSERT_EQUAL_HEX16((uint16_t)VALS[v], pc_rd16be(at(off)));
-            pc_wr32be(at(off), (uint32_t)VALS[v]);
-            TEST_ASSERT_EQUAL_HEX32((uint32_t)VALS[v], pc_rd32be(at(off)));
-            pc_wr64be(at(off), VALS[v]);
-            TEST_ASSERT_EQUAL_HEX64(VALS[v], pc_rd64be(at(off)));
+            protocore_wr16be(at(off), (uint16_t)VALS[v]);
+            TEST_ASSERT_EQUAL_HEX16((uint16_t)VALS[v], protocore_rd16be(at(off)));
+            protocore_wr32be(at(off), (uint32_t)VALS[v]);
+            TEST_ASSERT_EQUAL_HEX32((uint32_t)VALS[v], protocore_rd32be(at(off)));
+            protocore_wr64be(at(off), VALS[v]);
+            TEST_ASSERT_EQUAL_HEX64(VALS[v], protocore_rd64be(at(off)));
 
-            pc_wr16le(at(off), (uint16_t)VALS[v]);
-            TEST_ASSERT_EQUAL_HEX16((uint16_t)VALS[v], pc_rd16le(at(off)));
-            pc_wr32le(at(off), (uint32_t)VALS[v]);
-            TEST_ASSERT_EQUAL_HEX32((uint32_t)VALS[v], pc_rd32le(at(off)));
-            pc_wr64le(at(off), VALS[v]);
-            TEST_ASSERT_EQUAL_HEX64(VALS[v], pc_rd64le(at(off)));
+            protocore_wr16le(at(off), (uint16_t)VALS[v]);
+            TEST_ASSERT_EQUAL_HEX16((uint16_t)VALS[v], protocore_rd16le(at(off)));
+            protocore_wr32le(at(off), (uint32_t)VALS[v]);
+            TEST_ASSERT_EQUAL_HEX32((uint32_t)VALS[v], protocore_rd32le(at(off)));
+            protocore_wr64le(at(off), VALS[v]);
+            TEST_ASSERT_EQUAL_HEX64(VALS[v], protocore_rd64le(at(off)));
         }
     }
 }
@@ -203,12 +203,12 @@ void test_round_trip_at_every_offset()
 // A narrow write leaves the bytes above it alone, so packed fields do not clobber each other.
 void test_adjacent_fields_do_not_overlap()
 {
-    pc_wr16be(at(0), 0x1122u);
-    pc_wr32be(at(2), 0x33445566u);
-    pc_wr16be(at(6), 0x7788u);
-    TEST_ASSERT_EQUAL_HEX16(0x1122u, pc_rd16be(at(0)));
-    TEST_ASSERT_EQUAL_HEX32(0x33445566u, pc_rd32be(at(2)));
-    TEST_ASSERT_EQUAL_HEX16(0x7788u, pc_rd16be(at(6)));
+    protocore_wr16be(at(0), 0x1122u);
+    protocore_wr32be(at(2), 0x33445566u);
+    protocore_wr16be(at(6), 0x7788u);
+    TEST_ASSERT_EQUAL_HEX16(0x1122u, protocore_rd16be(at(0)));
+    TEST_ASSERT_EQUAL_HEX32(0x33445566u, protocore_rd32be(at(2)));
+    TEST_ASSERT_EQUAL_HEX16(0x7788u, protocore_rd16be(at(6)));
     assert_only_width_written(0, 8);
 }
 

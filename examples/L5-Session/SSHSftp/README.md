@@ -7,9 +7,9 @@ files - e.g. NC / G-code programs - onto the device securely, alongside a shell
 on the same port.
 
 It is the SSH server example ([SSH](../SSH/)) plus **four calls**: mount a
-filesystem behind the mount backend (`pc_mnt_mount(pc_mnt_fs(&LittleFS))`), set
-the root once (`pc_fs_begin("/")`), then start the two servers
-(`pc_ssh_sftp_begin()` and `pc_ssh_scp_begin()`). The SFTP subsystem and the SCP
+filesystem behind the mount backend (`protocore_mnt_mount(protocore_mnt_fs(&LittleFS))`), set
+the root once (`protocore_fs_begin("/")`), then start the two servers
+(`protocore_ssh_sftp_begin()` and `protocore_ssh_scp_begin()`). The SFTP subsystem and the SCP
 exec attach to the existing SSH channel layer.
 
 The root is set once for the device rather than once per protocol, because where
@@ -21,7 +21,7 @@ storage cannot disagree about it.
 - **SFTP v3** (the OpenSSH `sftp` client's default): `put` / `get` / `ls` /
   `mkdir` / `rmdir` / `rm` / `rename` / `stat` / `realpath`, with streamed
   reads/writes (no heap beyond the fs layer's file handle) and a fixed handle
-  table (`PC_SFTP_MAX_HANDLES`). Every path is checked for `..` traversal
+  table (`PROTOCORE_SFTP_MAX_HANDLES`). Every path is checked for `..` traversal
   before touching the filesystem.
 - **SCP upload** (`scp localfile admin@<ip>:/path`): the rcp SINK direction, one
   file per transfer. (Download - `scp <ip>:/path localfile` - is a follow-up; use
@@ -33,7 +33,7 @@ storage cannot disagree about it.
   first boot); an **SD card** works too - open it with `SD.begin(...)` and pass
   `SD` instead of `LittleFS`.
 - An SSH **host key** provisioned in NVS (see `docs/SSH.md`, "Host key
-  provisioning") - the sketch loads it with `pc_ssh_rsa_load_pubkey()`.
+  provisioning") - the sketch loads it with `protocore_ssh_rsa_load_pubkey()`.
 
 ## Configure + connect
 
@@ -68,10 +68,10 @@ scp -P 22 part.nc admin@<board-ip>:/gcode/part.nc   # upload via scp
 ## Going further
 
 - **Bigger transfers.** SFTP `READ` returns a short `DATA` bounded by one SSH
-  packet (`SSH_PKT_BUF_SIZE`); raise `SSH_PKT_BUF_SIZE` **and** `PC_SFTP_MAX_READ`
+  packet (`SSH_PKT_BUF_SIZE`); raise `SSH_PKT_BUF_SIZE` **and** `PROTOCORE_SFTP_MAX_READ`
   for higher throughput (`SSH_CHAN_MAX_PACKET` derives from `SSH_PKT_BUF_SIZE`).
 - **Restrict the mount.** Set a subdirectory as the root (e.g.
-  `pc_fs_begin("/gcode")`) so a client cannot see the whole volume; the `..`
+  `protocore_fs_begin("/gcode")`) so a client cannot see the whole volume; the `..`
   guard keeps requests inside it. A trailing slash is not required - the
   accessor appends one, so `"/gcode"` and `"/gcode/"` mean the same thing.
 - **Machine-tool push.** Combine with `services/dnc` to drip a pushed `.nc`
@@ -86,7 +86,7 @@ build:
 pio ci examples/L5-Session/SSHSftp \
   --board esp32dev \
   --lib "." \
-  --project-option="build_flags=-DPC_ENABLE_SSH=1 -DPC_ENABLE_SSH_SFTP=1 -DPC_ENABLE_SSH_SCP=1 -DPC_ENABLE_MNT=1"
+  --project-option="build_flags=-DPROTOCORE_ENABLE_SSH=1 -DPROTOCORE_ENABLE_SSH_SFTP=1 -DPROTOCORE_ENABLE_SSH_SCP=1 -DPROTOCORE_ENABLE_MNT=1"
 ```
 
 (The Arduino IDE reads the flags from `build_opt.h` beside the sketch automatically.)
@@ -100,7 +100,7 @@ recognized in the channel layer, which tags the channel and routes its data to
 the SFTP/SCP binding instead of the shell echo. The binding accumulates the
 channel byte stream into `SSH_FXP_*` (or rcp) records, executes each against the
 `fs::FS` mount - reusing the same file operations WebDAV and the static file
-server use - and frames responses back with `pc_ssh_conn_send`. A large SFTP `WRITE`
+server use - and frames responses back with `protocore_ssh_conn_send`. A large SFTP `WRITE`
 (or an SCP upload) is streamed straight to the file as the fragments arrive, so a
 transfer is never bounded by a buffer. The wire codecs (`services/sftp`,
 `services/scp`) are pure and host-tested (`native_ssh_sftp`, `native_scp`); this

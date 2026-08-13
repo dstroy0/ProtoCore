@@ -26,9 +26,9 @@
 #define PROTOCORE_UDP_LISTENER_H
 
 #include "protocore_config.h"
-#include "shared_primitives/ip.h" // pc_ip: the destination, already an address
+#include "shared_primitives/ip.h" // protocore_ip: the destination, already an address
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
 /**
  * @brief The sender of a received datagram.
@@ -37,7 +37,7 @@ PROTO_BEGIN_DECLS
  * arrived on so a reply leaves from the same endpoint. Valid for the duration of the handler call.
  * The layout lives in udp_listener.c so no stack type escapes the transport.
  */
-struct pc_udp_peer;
+struct protocore_udp_peer;
 
 /**
  * @brief Datagram handler, invoked once per received datagram by poll().
@@ -47,7 +47,8 @@ struct pc_udp_peer;
  * @param peer  reply token, valid only during this call.
  * @param ctx   the opaque context passed to listen().
  */
-typedef void (*pc_udp_handler)(const uint8_t *data, size_t len, const struct pc_udp_peer *peer, void *ctx);
+typedef void (*protocore_udp_handler)(const uint8_t *data, size_t len, const struct protocore_udp_peer *peer,
+                                      void *ctx);
 
 /**
  * @brief The receiving side of UDP.
@@ -65,17 +66,18 @@ typedef void (*pc_udp_handler)(const uint8_t *data, size_t len, const struct pc_
  * reply() and sendto() send the caller's bytes from where they already are, and report whether the
  * stack took them. There is nothing between the caller and the wire: a refusal means the datagram
  * did not leave, the caller's buffer is untouched, and the caller sends it again. A datagram longer
- * than ::PC_UDP_RX_BUF_SIZE is refused.
+ * than ::PROTOCORE_UDP_RX_BUF_SIZE is refused.
  */
 typedef struct
 {
-    proto_bool (*listen)(uint16_t port, pc_udp_handler handler, void *ctx);
-    proto_bool (*listen_multicast)(const char *group_ip, uint16_t port, pc_udp_handler handler, void *ctx);
+    proto_bool (*listen)(uint16_t port, protocore_udp_handler handler, void *ctx);
+    proto_bool (*listen_multicast)(const char *group_ip, uint16_t port, protocore_udp_handler handler, void *ctx);
     proto_bool (*leave_multicast)(uint16_t port);
     void (*poll)(void);
-    proto_bool (*reply)(const struct pc_udp_peer *peer, const uint8_t *data, size_t len);
-    proto_bool (*peer_addr)(const struct pc_udp_peer *peer, char *ip_out, size_t ip_cap, uint16_t *port_out);
-    proto_bool (*sendto)(uint16_t listen_port, const pc_ip *dst, uint16_t dst_port, const uint8_t *data, size_t len);
+    proto_bool (*reply)(const struct protocore_udp_peer *peer, const uint8_t *data, size_t len);
+    proto_bool (*peer_addr)(const struct protocore_udp_peer *peer, char *ip_out, size_t ip_cap, uint16_t *port_out);
+    proto_bool (*sendto)(uint16_t listen_port, const protocore_ip *dst, uint16_t dst_port, const uint8_t *data,
+                         size_t len);
     proto_bool (*close)(uint16_t port);
     const char *(*joined_group)(uint16_t port);
 } UdpListenerNs;
@@ -83,6 +85,6 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern const UdpListenerNs UdpListener;
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_UDP_LISTENER_H

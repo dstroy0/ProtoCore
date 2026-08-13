@@ -9,7 +9,7 @@
  * password; the handler runs only after the credentials check passes, otherwise
  * the server answers 401 with a WWW-Authenticate challenge. Pass digest=true for
  * Digest auth instead (see the DigestAuth example). Auth is on by default
- * (PC_ENABLE_AUTH).
+ * (PROTOCORE_ENABLE_AUTH).
  *
  * NOTE: Basic credentials are base64 (not encryption) - use it over HTTPS or an
  * SSH tunnel on untrusted networks.

@@ -37,7 +37,7 @@ static void arm_slot(uint8_t slot)
     conn_pool[slot].id = slot;
     conn_pool[slot].state = CONN_ACTIVE;
     conn_pool[slot].proto = PROTO_HTTP; // dispatch requires an explicit protocol
-    conn_pool[slot].pcb = pc_net_host_pcb();
+    conn_pool[slot].pcb = protocore_net_host_pcb();
     http_reset(slot);
     tcp_capture_reset();
 }
@@ -101,18 +101,18 @@ static MwResult mw_order_b(uint8_t slot, HttpReq *req)
 
 void setUp()
 {
-    pc_server_reset();
+    protocore_server_reset();
     for (int i = 0; i < MAX_CONNS; i++)
     {
         conn_pool[i] = (TcpConn){0};
         conn_pool[i].id = (uint8_t)i;
         conn_pool[i].state = CONN_ACTIVE;
         conn_pool[i].proto = PROTO_HTTP; // dispatch requires an explicit protocol
-        conn_pool[i].pcb = pc_net_host_pcb();
+        conn_pool[i].pcb = protocore_net_host_pcb();
         http_reset(i);
     }
     ws_init();
-    pc_sse_init();
+    protocore_sse_init();
     tcp_capture_reset();
 
     g_handler_called = PROTO_FALSE;

@@ -8,12 +8,12 @@
 
 #include "services/iot/wamp/wamp.h"
 
-#if PC_ENABLE_WAMP
+#if PROTOCORE_ENABLE_WAMP
 
 #include "network_drivers/presentation/codec/json/json.h"
 
 // Emit a uint64 as a JSON number (JsonWriter's integer() is only platform-long wide).
-static void emit_uint(pc_json_writer *w, uint64_t v)
+static void emit_uint(protocore_json_writer *w, uint64_t v)
 {
     char rev[20];
     size_t r = 0;
@@ -37,13 +37,13 @@ static void emit_uint(pc_json_writer *w, uint64_t v)
     Json.put_raw(w, tmp);
 }
 
-static size_t finish(pc_json_writer *w)
+static size_t finish(protocore_json_writer *w)
 {
-    return pc_json_ok(w) ? pc_json_length(w) : 0;
+    return protocore_json_ok(w) ? protocore_json_length(w) : 0;
 }
 
 // Append the trailing Arguments / ArgumentsKw of a PUBLISH / CALL / YIELD.
-static void emit_args(pc_json_writer *w, const char *args_json, const char *kwargs_json)
+static void emit_args(protocore_json_writer *w, const char *args_json, const char *kwargs_json)
 {
     if (!args_json && !kwargs_json)
     {
@@ -56,13 +56,13 @@ static void emit_args(pc_json_writer *w, const char *args_json, const char *kwar
     }
 }
 
-size_t pc_wamp_build_hello(char *buf, size_t cap, const char *realm, const char *details_json)
+size_t protocore_wamp_build_hello(char *buf, size_t cap, const char *realm, const char *details_json)
 {
     if (!buf || !realm)
     {
         return 0;
     }
-    pc_json_writer w = {0};
+    protocore_json_writer w = {0};
     Json.init(&w, buf, cap);
     Json.begin_array(&w);
     Json.put_int(&w, WAMP_HELLO);
@@ -72,13 +72,13 @@ size_t pc_wamp_build_hello(char *buf, size_t cap, const char *realm, const char 
     return finish(&w);
 }
 
-size_t pc_wamp_build_goodbye(char *buf, size_t cap, const char *reason_uri, const char *details_json)
+size_t protocore_wamp_build_goodbye(char *buf, size_t cap, const char *reason_uri, const char *details_json)
 {
     if (!buf || !reason_uri)
     {
         return 0;
     }
-    pc_json_writer w = {0};
+    protocore_json_writer w = {0};
     Json.init(&w, buf, cap);
     Json.begin_array(&w);
     Json.put_int(&w, WAMP_GOODBYE);
@@ -88,13 +88,13 @@ size_t pc_wamp_build_goodbye(char *buf, size_t cap, const char *reason_uri, cons
     return finish(&w);
 }
 
-size_t pc_wamp_build_subscribe(char *buf, size_t cap, uint64_t request, const char *topic, const char *options_json)
+size_t protocore_wamp_build_subscribe(char *buf, size_t cap, uint64_t request, const char *topic, const char *options_json)
 {
     if (!buf || !topic)
     {
         return 0;
     }
-    pc_json_writer w = {0};
+    protocore_json_writer w = {0};
     Json.init(&w, buf, cap);
     Json.begin_array(&w);
     Json.put_int(&w, WAMP_SUBSCRIBE);
@@ -105,13 +105,13 @@ size_t pc_wamp_build_subscribe(char *buf, size_t cap, uint64_t request, const ch
     return finish(&w);
 }
 
-size_t pc_wamp_build_unsubscribe(char *buf, size_t cap, uint64_t request, uint64_t subscription_id)
+size_t protocore_wamp_build_unsubscribe(char *buf, size_t cap, uint64_t request, uint64_t subscription_id)
 {
     if (!buf)
     {
         return 0;
     }
-    pc_json_writer w = {0};
+    protocore_json_writer w = {0};
     Json.init(&w, buf, cap);
     Json.begin_array(&w);
     Json.put_int(&w, WAMP_UNSUBSCRIBE);
@@ -121,13 +121,13 @@ size_t pc_wamp_build_unsubscribe(char *buf, size_t cap, uint64_t request, uint64
     return finish(&w);
 }
 
-size_t pc_wamp_build_unregister(char *buf, size_t cap, uint64_t request, uint64_t registration_id)
+size_t protocore_wamp_build_unregister(char *buf, size_t cap, uint64_t request, uint64_t registration_id)
 {
     if (!buf)
     {
         return 0;
     }
-    pc_json_writer w = {0};
+    protocore_json_writer w = {0};
     Json.init(&w, buf, cap);
     Json.begin_array(&w);
     Json.put_int(&w, WAMP_UNREGISTER);
@@ -137,14 +137,14 @@ size_t pc_wamp_build_unregister(char *buf, size_t cap, uint64_t request, uint64_
     return finish(&w);
 }
 
-size_t pc_wamp_build_publish(char *buf, size_t cap, uint64_t request, const char *topic, const char *options_json,
+size_t protocore_wamp_build_publish(char *buf, size_t cap, uint64_t request, const char *topic, const char *options_json,
                              const char *args_json, const char *kwargs_json)
 {
     if (!buf || !topic)
     {
         return 0;
     }
-    pc_json_writer w = {0};
+    protocore_json_writer w = {0};
     Json.init(&w, buf, cap);
     Json.begin_array(&w);
     Json.put_int(&w, WAMP_PUBLISH);
@@ -156,14 +156,14 @@ size_t pc_wamp_build_publish(char *buf, size_t cap, uint64_t request, const char
     return finish(&w);
 }
 
-size_t pc_wamp_build_call(char *buf, size_t cap, uint64_t request, const char *procedure, const char *options_json,
+size_t protocore_wamp_build_call(char *buf, size_t cap, uint64_t request, const char *procedure, const char *options_json,
                           const char *args_json, const char *kwargs_json)
 {
     if (!buf || !procedure)
     {
         return 0;
     }
-    pc_json_writer w = {0};
+    protocore_json_writer w = {0};
     Json.init(&w, buf, cap);
     Json.begin_array(&w);
     Json.put_int(&w, WAMP_CALL);
@@ -175,13 +175,13 @@ size_t pc_wamp_build_call(char *buf, size_t cap, uint64_t request, const char *p
     return finish(&w);
 }
 
-size_t pc_wamp_build_register(char *buf, size_t cap, uint64_t request, const char *procedure, const char *options_json)
+size_t protocore_wamp_build_register(char *buf, size_t cap, uint64_t request, const char *procedure, const char *options_json)
 {
     if (!buf || !procedure)
     {
         return 0;
     }
-    pc_json_writer w = {0};
+    protocore_json_writer w = {0};
     Json.init(&w, buf, cap);
     Json.begin_array(&w);
     Json.put_int(&w, WAMP_REGISTER);
@@ -192,14 +192,14 @@ size_t pc_wamp_build_register(char *buf, size_t cap, uint64_t request, const cha
     return finish(&w);
 }
 
-size_t pc_wamp_build_yield(char *buf, size_t cap, uint64_t request, const char *options_json, const char *args_json,
+size_t protocore_wamp_build_yield(char *buf, size_t cap, uint64_t request, const char *options_json, const char *args_json,
                            const char *kwargs_json)
 {
     if (!buf)
     {
         return 0;
     }
-    pc_json_writer w = {0};
+    protocore_json_writer w = {0};
     Json.init(&w, buf, cap);
     Json.begin_array(&w);
     Json.put_int(&w, WAMP_YIELD);
@@ -294,7 +294,7 @@ static size_t scan_value(const char *s, size_t i)
     return i > start ? i : 0;
 }
 
-proto_bool pc_wamp_element(const char *msg, size_t index, const char **start, size_t *len)
+proto_bool protocore_wamp_element(const char *msg, size_t index, const char **start, size_t *len)
 {
     if (!msg)
     {
@@ -343,13 +343,13 @@ proto_bool pc_wamp_element(const char *msg, size_t index, const char **start, si
     }
 }
 
-proto_bool pc_wamp_get_uint(const char *msg, size_t index, uint64_t *out)
+proto_bool protocore_wamp_get_uint(const char *msg, size_t index, uint64_t *out)
 {
     const char *s;
     size_t n;
-    // n == 0 is defensive only: scan_value() either fails (0, rejected inside pc_wamp_element) or
+    // n == 0 is defensive only: scan_value() either fails (0, rejected inside protocore_wamp_element) or
     // returns an index strictly past where it started, so a returned element is never empty.
-    if (!pc_wamp_element(msg, index, &s, &n) || n == 0)
+    if (!protocore_wamp_element(msg, index, &s, &n) || n == 0)
     {
         return PROTO_FALSE;
     }
@@ -369,10 +369,10 @@ proto_bool pc_wamp_get_uint(const char *msg, size_t index, uint64_t *out)
     return PROTO_TRUE;
 }
 
-proto_bool pc_wamp_get_type(const char *msg, int *out)
+proto_bool protocore_wamp_get_type(const char *msg, int *out)
 {
     uint64_t v;
-    if (!pc_wamp_get_uint(msg, 0, &v))
+    if (!protocore_wamp_get_uint(msg, 0, &v))
     {
         return PROTO_FALSE;
     }
@@ -383,11 +383,11 @@ proto_bool pc_wamp_get_type(const char *msg, int *out)
     return PROTO_TRUE;
 }
 
-proto_bool pc_wamp_get_uri(const char *msg, size_t index, char *out, size_t out_cap)
+proto_bool protocore_wamp_get_uri(const char *msg, size_t index, char *out, size_t out_cap)
 {
     const char *s;
     size_t n;
-    if (!out || out_cap == 0 || !pc_wamp_element(msg, index, &s, &n))
+    if (!out || out_cap == 0 || !protocore_wamp_element(msg, index, &s, &n))
     {
         return PROTO_FALSE;
     }
@@ -411,4 +411,4 @@ proto_bool pc_wamp_get_uri(const char *msg, size_t index, char *out, size_t out_
     return PROTO_TRUE;
 }
 
-#endif // PC_ENABLE_WAMP
+#endif // PROTOCORE_ENABLE_WAMP

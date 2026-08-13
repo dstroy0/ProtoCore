@@ -255,39 +255,39 @@ the matching header in `src/services/` and its description in
 
 ## Quick-reference table
 
-"Flag" is the `PC_ENABLE_*` macro you set to compile the codec in (all default
+"Flag" is the `PROTOCORE_ENABLE_*` macro you set to compile the codec in (all default
 **off**). "Talks to" is the machine on the other end.
 
-| Codec         | Flag                      | Transport                  | External hardware               | Typical settings                | Talks to                           |
-| ------------- | ------------------------- | -------------------------- | ------------------------------- | ------------------------------- | ---------------------------------- |
-| Modbus RTU    | `PC_ENABLE_MODBUS_RTU`    | Serial (RS-485/232)        | RS-485 transceiver              | 19200 8E1, unit 1-247           | Modbus sensors, drives, meters     |
-| Modbus TCP    | `PC_ENABLE_MODBUS`        | TCP                        | Wi-Fi/Ethernet                  | port 502                        | Modbus PLCs and gateways           |
-| Modbus master | `PC_ENABLE_MODBUS_MASTER` | TCP (client)               | Wi-Fi/Ethernet                  | port 502                        | Modbus slave devices               |
-| SunSpec       | `PC_ENABLE_SUNSPEC`       | Modbus (RTU or TCP)        | per Modbus row                  | model base reg 40000            | Solar inverters, meters, batteries |
-| DF1           | `PC_ENABLE_DF1`           | Serial (RS-232/485)        | RS-232 or RS-485 transceiver    | 19200, full-duplex              | Allen-Bradley (Rockwell) PLCs      |
-| Host Link     | `PC_ENABLE_HOSTLINK`      | Serial (RS-232/422/485)    | transceiver                     | 9600 7E2, unit 00-31            | Omron PLCs (C-mode)                |
-| FINS          | `PC_ENABLE_FINS`          | UDP                        | Wi-Fi/Ethernet                  | UDP port 9600                   | Omron PLCs (FINS)                  |
-| MELSEC        | `PC_ENABLE_MELSEC`        | TCP or UDP                 | Wi-Fi/Ethernet                  | port set on the PLC             | Mitsubishi PLCs (MC 3E)            |
-| S7comm        | `PC_ENABLE_S7COMM`        | TCP (ISO-on-TCP)           | Wi-Fi/Ethernet                  | port 102, rack/slot             | Siemens S7-300/400/1200/1500       |
-| BACnet/IP     | `PC_ENABLE_BACNET`        | UDP                        | Wi-Fi/Ethernet                  | UDP port 47808                  | Building automation controllers    |
-| EtherNet/IP   | `PC_ENABLE_ENIP`          | TCP + UDP                  | Wi-Fi/Ethernet                  | TCP 44818, UDP 2222             | Allen-Bradley / ODVA devices       |
-| CIP           | `PC_ENABLE_CIP`           | over EtherNet/IP           | Wi-Fi/Ethernet                  | (rides ENIP)                    | CIP objects on ODVA devices        |
-| DNP3          | `PC_ENABLE_DNP3`          | Serial or TCP              | transceiver or Wi-Fi            | TCP 20000, 16-bit addresses     | SCADA / utility outstations        |
-| C37.118       | `PC_ENABLE_C37118`        | Serial, TCP or UDP         | transceiver or Wi-Fi            | no fixed port (often 4712/4713) | Power-grid PMUs / PDCs             |
-| M-Bus         | `PC_ENABLE_MBUS`          | Serial (M-Bus bus)         | M-Bus level converter (TSS721)  | 2400 8E1, primary addr 1-250    | Water / gas / heat / power meters  |
-| SDI-12        | `PC_ENABLE_SDI12`         | Serial (1-wire SDI-12)     | level / direction circuit       | 1200 7E1, sensor addr 0-9/A-Z   | Soil / water / weather sensors     |
-| DMX512 / RDM  | `PC_ENABLE_DMX`           | Serial (RS-485)            | RS-485 transceiver (MAX485)     | 250k 8N2, up to 512 channels    | Stage / architectural lighting     |
-| NMEA 0183     | `PC_ENABLE_NMEA0183`      | Serial (UART / RS-422)     | none (TTL) or RS-422 receiver   | 4800 or 9600 8N1                | GPS / marine instruments           |
-| IO-Link       | `PC_ENABLE_IOLINK`        | Serial (3-wire SDCI)       | IO-Link transceiver (MAX14819)  | 4.8 / 38.4 / 230.4 kbit/s       | Smart sensors / actuators          |
-| IEC 60870     | `PC_ENABLE_IEC60870`      | TCP (-104) / serial (-101) | Wi-Fi or RS-232/485 transceiver | TCP 2404; -101 link address     | Utility RTUs / SCADA outstations   |
-| CANopen       | `PC_ENABLE_CANOPEN`       | CAN (TWAI or SPI)          | CAN transceiver                 | 125k-1M bit/s, node 1-127       | Motion drives, I/O, CANopen nodes  |
-| J1939         | `PC_ENABLE_J1939`         | CAN (TWAI or SPI)          | CAN transceiver                 | 250k bit/s, 29-bit ids          | Trucks, tractors, gensets, marine  |
-| DeviceNet     | `PC_ENABLE_DEVICENET`     | CAN (TWAI or SPI)          | CAN transceiver (+ 24 V bus)    | 125/250/500k, MAC 0-63          | DeviceNet I/O, drives (CIP/CAN)    |
-| NMEA 2000     | `PC_ENABLE_NMEA2000`      | CAN (TWAI or SPI)          | CAN transceiver (+ N2K tap)     | 250k bit/s, Fast Packet         | Marine GPS / wind / depth / engine |
-| OPC UA        | `PC_ENABLE_OPCUA`         | TCP                        | Wi-Fi/Ethernet                  | port 4840, SecurityPolicy None  | OPC UA clients / SCADA             |
-| OPC UA client | `PC_ENABLE_OPCUA_CLIENT`  | TCP (client)               | Wi-Fi/Ethernet                  | port 4840                       | OPC UA servers                     |
-| SNMP          | `PC_ENABLE_SNMP`          | UDP                        | Wi-Fi/Ethernet                  | UDP 161 (agent), 162 (trap)     | Network monitoring systems         |
-| ESP-NOW       | `PC_ENABLE_ESPNOW`        | 2.4 GHz radio              | none (a peer ESP board)         | shared channel, peer MAC        | Other ESP32 / ESP8266 boards       |
+| Codec         | Flag                             | Transport                  | External hardware               | Typical settings                | Talks to                           |
+| ------------- | -------------------------------- | -------------------------- | ------------------------------- | ------------------------------- | ---------------------------------- |
+| Modbus RTU    | `PROTOCORE_ENABLE_MODBUS_RTU`    | Serial (RS-485/232)        | RS-485 transceiver              | 19200 8E1, unit 1-247           | Modbus sensors, drives, meters     |
+| Modbus TCP    | `PROTOCORE_ENABLE_MODBUS`        | TCP                        | Wi-Fi/Ethernet                  | port 502                        | Modbus PLCs and gateways           |
+| Modbus master | `PROTOCORE_ENABLE_MODBUS_MASTER` | TCP (client)               | Wi-Fi/Ethernet                  | port 502                        | Modbus slave devices               |
+| SunSpec       | `PROTOCORE_ENABLE_SUNSPEC`       | Modbus (RTU or TCP)        | per Modbus row                  | model base reg 40000            | Solar inverters, meters, batteries |
+| DF1           | `PROTOCORE_ENABLE_DF1`           | Serial (RS-232/485)        | RS-232 or RS-485 transceiver    | 19200, full-duplex              | Allen-Bradley (Rockwell) PLCs      |
+| Host Link     | `PROTOCORE_ENABLE_HOSTLINK`      | Serial (RS-232/422/485)    | transceiver                     | 9600 7E2, unit 00-31            | Omron PLCs (C-mode)                |
+| FINS          | `PROTOCORE_ENABLE_FINS`          | UDP                        | Wi-Fi/Ethernet                  | UDP port 9600                   | Omron PLCs (FINS)                  |
+| MELSEC        | `PROTOCORE_ENABLE_MELSEC`        | TCP or UDP                 | Wi-Fi/Ethernet                  | port set on the PLC             | Mitsubishi PLCs (MC 3E)            |
+| S7comm        | `PROTOCORE_ENABLE_S7COMM`        | TCP (ISO-on-TCP)           | Wi-Fi/Ethernet                  | port 102, rack/slot             | Siemens S7-300/400/1200/1500       |
+| BACnet/IP     | `PROTOCORE_ENABLE_BACNET`        | UDP                        | Wi-Fi/Ethernet                  | UDP port 47808                  | Building automation controllers    |
+| EtherNet/IP   | `PROTOCORE_ENABLE_ENIP`          | TCP + UDP                  | Wi-Fi/Ethernet                  | TCP 44818, UDP 2222             | Allen-Bradley / ODVA devices       |
+| CIP           | `PROTOCORE_ENABLE_CIP`           | over EtherNet/IP           | Wi-Fi/Ethernet                  | (rides ENIP)                    | CIP objects on ODVA devices        |
+| DNP3          | `PROTOCORE_ENABLE_DNP3`          | Serial or TCP              | transceiver or Wi-Fi            | TCP 20000, 16-bit addresses     | SCADA / utility outstations        |
+| C37.118       | `PROTOCORE_ENABLE_C37118`        | Serial, TCP or UDP         | transceiver or Wi-Fi            | no fixed port (often 4712/4713) | Power-grid PMUs / PDCs             |
+| M-Bus         | `PROTOCORE_ENABLE_MBUS`          | Serial (M-Bus bus)         | M-Bus level converter (TSS721)  | 2400 8E1, primary addr 1-250    | Water / gas / heat / power meters  |
+| SDI-12        | `PROTOCORE_ENABLE_SDI12`         | Serial (1-wire SDI-12)     | level / direction circuit       | 1200 7E1, sensor addr 0-9/A-Z   | Soil / water / weather sensors     |
+| DMX512 / RDM  | `PROTOCORE_ENABLE_DMX`           | Serial (RS-485)            | RS-485 transceiver (MAX485)     | 250k 8N2, up to 512 channels    | Stage / architectural lighting     |
+| NMEA 0183     | `PROTOCORE_ENABLE_NMEA0183`      | Serial (UART / RS-422)     | none (TTL) or RS-422 receiver   | 4800 or 9600 8N1                | GPS / marine instruments           |
+| IO-Link       | `PROTOCORE_ENABLE_IOLINK`        | Serial (3-wire SDCI)       | IO-Link transceiver (MAX14819)  | 4.8 / 38.4 / 230.4 kbit/s       | Smart sensors / actuators          |
+| IEC 60870     | `PROTOCORE_ENABLE_IEC60870`      | TCP (-104) / serial (-101) | Wi-Fi or RS-232/485 transceiver | TCP 2404; -101 link address     | Utility RTUs / SCADA outstations   |
+| CANopen       | `PROTOCORE_ENABLE_CANOPEN`       | CAN (TWAI or SPI)          | CAN transceiver                 | 125k-1M bit/s, node 1-127       | Motion drives, I/O, CANopen nodes  |
+| J1939         | `PROTOCORE_ENABLE_J1939`         | CAN (TWAI or SPI)          | CAN transceiver                 | 250k bit/s, 29-bit ids          | Trucks, tractors, gensets, marine  |
+| DeviceNet     | `PROTOCORE_ENABLE_DEVICENET`     | CAN (TWAI or SPI)          | CAN transceiver (+ 24 V bus)    | 125/250/500k, MAC 0-63          | DeviceNet I/O, drives (CIP/CAN)    |
+| NMEA 2000     | `PROTOCORE_ENABLE_NMEA2000`      | CAN (TWAI or SPI)          | CAN transceiver (+ N2K tap)     | 250k bit/s, Fast Packet         | Marine GPS / wind / depth / engine |
+| OPC UA        | `PROTOCORE_ENABLE_OPCUA`         | TCP                        | Wi-Fi/Ethernet                  | port 4840, SecurityPolicy None  | OPC UA clients / SCADA             |
+| OPC UA client | `PROTOCORE_ENABLE_OPCUA_CLIENT`  | TCP (client)               | Wi-Fi/Ethernet                  | port 4840                       | OPC UA servers                     |
+| SNMP          | `PROTOCORE_ENABLE_SNMP`          | UDP                        | Wi-Fi/Ethernet                  | UDP 161 (agent), 162 (trap)     | Network monitoring systems         |
+| ESP-NOW       | `PROTOCORE_ENABLE_ESPNOW`        | 2.4 GHz radio              | none (a peer ESP board)         | shared channel, peer MAC        | Other ESP32 / ESP8266 boards       |
 
 ## Serial field-bus codecs (you wire a transceiver)
 
@@ -391,37 +391,37 @@ a frame, then hand it to the codec.
 
 ### Modbus RTU
 
-- **Flag:** `PC_ENABLE_MODBUS_RTU` (turns on `PC_ENABLE_MODBUS` too).
+- **Flag:** `PROTOCORE_ENABLE_MODBUS_RTU` (turns on `PROTOCORE_ENABLE_MODBUS` too).
 - **Hardware:** RS-485 transceiver (occasionally RS-232 point-to-point).
 - **Settings:** the Modbus spec default is **19200 baud, 8 data bits, even
   parity, 1 stop bit (8E1)**; **9600 8N1** is also very common. Every device on a
   bus must use the **same** baud and framing. Each slave has a **unit address**
   from **1 to 247** (0 is a broadcast with no reply).
-- **Codec:** `pc_modbus_rtu_process_adu()` validates the CRC-16 and the unit address
+- **Codec:** `protocore_modbus_rtu_process_adu()` validates the CRC-16 and the unit address
   and dispatches to the host-tested PDU layer; a bad CRC or a non-matching
   address is dropped silently, exactly as the spec requires. See
   `src/services/fieldbus/modbus/modbus.h`.
 
 ### DF1 (Allen-Bradley)
 
-- **Flag:** `PC_ENABLE_DF1`.
+- **Flag:** `PROTOCORE_ENABLE_DF1`.
 - **Hardware:** RS-232 to a PLC serial port (a DB9), or RS-485 for multidrop;
   use the matching transceiver above.
 - **Settings:** commonly **19200** (also 9600/4800), full-duplex DF1. The codec
   supports both check types: **BCC** (a simple checksum) and **CRC-16/ARC**;
   match what the PLC channel is configured for. Node/station addressing lives in
   the PCCC application header carried inside the frame.
-- **Codec:** `pc_df1_build_frame` / `pc_df1_parse_frame` handle the `DLE STX ... DLE
+- **Codec:** `protocore_df1_build_frame` / `protocore_df1_parse_frame` handle the `DLE STX ... DLE
 ETX` framing and byte-stuffing. See `src/services/fieldbus/df1/df1.h`.
 
 ### Host Link (Omron)
 
-- **Flag:** `PC_ENABLE_HOSTLINK`.
+- **Flag:** `PROTOCORE_ENABLE_HOSTLINK`.
 - **Hardware:** RS-232, RS-422, or RS-485 to an Omron PLC host-link port.
 - **Settings:** a typical Omron host-link port is **9600 baud, 7 data bits, even
   parity, 2 stop bits (7E2)**; confirm the PLC's setting. Each PLC has a **unit
   number 00-31** that begins every command frame.
-- **Codec:** `pc_hostlink_build` / `pc_hostlink_parse` build the `@` + unit + code +
+- **Codec:** `protocore_hostlink_build` / `protocore_hostlink_parse` build the `@` + unit + code +
   text + FCS + `*`CR ASCII frame and validate the XOR checksum (FCS). See
   `src/services/fieldbus/hostlink/hostlink.h`.
 
@@ -434,7 +434,7 @@ the framing is transport-independent.
 
 ### M-Bus (meters)
 
-`PC_ENABLE_MBUS`. Wired M-Bus is the European utility-meter bus (water, gas,
+`PROTOCORE_ENABLE_MBUS`. Wired M-Bus is the European utility-meter bus (water, gas,
 heat, electricity). Electrically it is **not** RS-485: it is its own powered
 two-wire bus where the master sends by voltage modulation and the meter replies
 by current modulation. So you need an **M-Bus master level converter** (a
@@ -445,11 +445,11 @@ address 1-250.
 
 The codec is the framing + record layer:
 
-- Wake / address a meter: `pc_mbus_build_snd_nke(buf, cap, addr)` (link reset), then
-  `pc_mbus_build_req_ud2(buf, cap, addr, fcb)` to request data (toggle `fcb` each
+- Wake / address a meter: `protocore_mbus_build_snd_nke(buf, cap, addr)` (link reset), then
+  `protocore_mbus_build_req_ud2(buf, cap, addr, fcb)` to request data (toggle `fcb` each
   poll).
-- Parse the reply: `pc_mbus_parse()` validates the frame and gives you C / A / CI +
-  the user data; then walk the values with `pc_mbus_record_next()` (each record's
+- Parse the reply: `protocore_mbus_parse()` validates the frame and gives you C / A / CI +
+  the user data; then walk the values with `protocore_mbus_record_next()` (each record's
   DIF gives the data type/length, the VIF the unit).
 
 A natural **wireless meter gateway**: poll meters over the M-Bus and publish the
@@ -458,7 +458,7 @@ BCD-length LVAR variants are not. See `src/services/fieldbus/mbus/mbus.h`.
 
 ### SDI-12 (environmental sensors)
 
-`PC_ENABLE_SDI12`. SDI-12 is the **1200-baud single-wire** bus for soil,
+`PROTOCORE_ENABLE_SDI12`. SDI-12 is the **1200-baud single-wire** bus for soil,
 water, and weather sensors. One data line carries both directions (half-duplex,
 **7E1**); the recorder addresses a sensor by one character (0-9, A-Z, a-z). The
 electrical layer is a 5 V line with a marking/break convention, so on a 3.3 V
@@ -467,48 +467,48 @@ of the ready-made SDI-12 interface boards) between a UART and the bus.
 
 A measurement is two steps: start it, wait, then fetch:
 
-- `pc_sdi12_build_measure(buf, cap, addr, false)` sends `aM!`; parse the reply with
-  `pc_sdi12_parse_measure()` to learn how many seconds to wait and how many values
+- `protocore_sdi12_build_measure(buf, cap, addr, false)` sends `aM!`; parse the reply with
+  `protocore_sdi12_parse_measure()` to learn how many seconds to wait and how many values
   to expect.
-- After the wait, `pc_sdi12_build_data(buf, cap, addr, 0)` sends `aD0!`; split the
-  reply into floats with `pc_sdi12_parse_values()`.
+- After the wait, `protocore_sdi12_build_data(buf, cap, addr, 0)` sends `aD0!`; split the
+  reply into floats with `protocore_sdi12_parse_values()`.
 - For the CRC-protected forms (`aMC!` / `aCC!`), check the reply with
-  `pc_sdi12_check_crc()`.
+  `protocore_sdi12_check_crc()`.
 
 Poll a sensor string and publish the readings over Wi-Fi. See
 `src/services/peripherals/sdi12/sdi12.h`.
 
 ### DMX512 / RDM (lighting)
 
-`PC_ENABLE_DMX`. DMX512 drives stage and architectural lighting over **RS-485**
+`PROTOCORE_ENABLE_DMX`. DMX512 drives stage and architectural lighting over **RS-485**
 at **250 kbit/s, 8N2** - so wire the same RS-485 transceiver (a `MAX485` is the
 classic cheap part) as in the RS-485 section above. DMX is one-way and positional:
 each fixture listens on a start address and reads N consecutive channel slots.
 
-- Send a universe: fill a channel array and `pc_dmx_build(buf, cap, DMX_SC_DIMMER,
+- Send a universe: fill a channel array and `protocore_dmx_build(buf, cap, DMX_SC_DIMMER,
 channels, n)`; your transport sends a **break** then the returned bytes.
-- `pc_dmx_get_channel()` reads a 1-based channel from a received packet.
+- `protocore_dmx_get_channel()` reads a 1-based channel from a received packet.
 
 **RDM** (ANSI E1.20) adds two-way device management on the same pair (the
 transceiver must be switched to receive for the reply, and RDM needs proper
-direction timing). Build a request with `pc_rdm_build()` (set the destination /
-source `pc_rdm_uid()`, command class, and PID) and read a reply with `pc_rdm_parse()`,
+direction timing). Build a request with `protocore_rdm_build()` (set the destination /
+source `protocore_rdm_uid()`, command class, and PID) and read a reply with `protocore_rdm_parse()`,
 which checks the RDM checksum. Discover, address, and configure fixtures from a
 web UI - a tidy **wireless lighting controller**. See `src/services/peripherals/dmx/dmx.h`.
 
 ### NMEA 0183 (GPS / marine)
 
-`PC_ENABLE_NMEA0183`. The classic GPS / marine sentence protocol. A hobby GPS
+`PROTOCORE_ENABLE_NMEA0183`. The classic GPS / marine sentence protocol. A hobby GPS
 breakout outputs **3.3 V TTL serial** that wires straight to an ESP32 RX pin (no
 transceiver) - typically **9600 baud, 8N1** (older units 4800). Full-size marine
 instruments use **RS-422**, so for those add an RS-422 receiver. It is mostly
 one-way (the receiver talks; you listen).
 
-- Read a fix: accumulate a line, then `pc_nmea0183_parse(line, len, &m)`. Check
+- Read a fix: accumulate a line, then `protocore_nmea0183_parse(line, len, &m)`. Check
   `m.type` ("GGA", "RMC", "VTG", ...) and pull fields with
-  `pc_nmea0183_field_float()` / `pc_nmea0183_field_int()` (field 0 is the address;
+  `protocore_nmea0183_field_float()` / `protocore_nmea0183_field_int()` (field 0 is the address;
   data fields are 1..n).
-- To send (e.g. configuration to a receiver), `pc_nmea0183_build()` adds the `$`,
+- To send (e.g. configuration to a receiver), `protocore_nmea0183_build()` adds the `$`,
   checksum, and CR/LF around your comma-separated body.
 
 Decode position / speed / heading and republish it over Wi-Fi (a web map, MQTT,
@@ -517,7 +517,7 @@ or an NMEA-0183-to-NMEA-2000 bridge with the codec next door). See
 
 ### IO-Link (smart sensors)
 
-`PC_ENABLE_IOLINK`. IO-Link (SDCI) is the point-to-point link to modern smart
+`PROTOCORE_ENABLE_IOLINK`. IO-Link (SDCI) is the point-to-point link to modern smart
 sensors and actuators - a single device per port over a 3-wire cable (L+, L-, and
 the C/Q data line). The data line is **not** plain UART levels: it swings to the
 24 V supply, so you need a dedicated **IO-Link master transceiver** (a `MAX14819`
@@ -528,10 +528,10 @@ the three SDCI rates (**COM1 4.8 / COM2 38.4 / COM3 230.4 kbit/s**).
 This codec is the data-link **message** layer - in particular the SDCI checksum,
 which is the easy thing to get wrong:
 
-- Master message: lay out the M-sequence (the `pc_iol_mc()` control octet, any
-  on-request / process octets, and an `pc_iol_ckt()` checksum/type octet), then
-  `pc_iol_finalize(msg, len, check_index)` fills the checksum.
-- Device reply: `pc_iol_verify(msg, len, check_index)` checks the reply's
+- Master message: lay out the M-sequence (the `protocore_iol_mc()` control octet, any
+  on-request / process octets, and an `protocore_iol_ckt()` checksum/type octet), then
+  `protocore_iol_finalize(msg, len, check_index)` fills the checksum.
+- Device reply: `protocore_iol_verify(msg, len, check_index)` checks the reply's
   checksum/status octet; read its Event and PD-valid flags.
 
 The per-device M-sequence and ISDU layout come from the device's IODD profile.
@@ -563,18 +563,18 @@ common). All nodes on a CAN bus must agree on the bit rate.
 
 ### CANopen
 
-`PC_ENABLE_CANOPEN`. CANopen (CiA 301) is the dominant higher-layer protocol
+`PROTOCORE_ENABLE_CANOPEN`. CANopen (CiA 301) is the dominant higher-layer protocol
 for CAN in factory automation: motion drives, I/O blocks, sensors. Each node has
 an id 1-127. The codec builds and parses the messages; your sketch moves the
 frames with the TWAI driver (or the MCP2515):
 
-- Bring a node up: `pc_canopen_build_nmt(&frame, CANOPEN_NMT_START, node)`.
-- Read an object (expedited SDO): `pc_canopen_build_sdo_read(&frame, node, index,
-sub)`, send it, then `pc_canopen_parse_sdo_response()` on the reply.
-- Write an object: `pc_canopen_build_sdo_write(...)`.
-- Watch liveness: `pc_canopen_parse_heartbeat()` on each `0x700+node` frame;
-  `pc_canopen_parse_emcy()` on emergencies.
-- Receive process data: `pc_canopen_parse()` classifies each frame, and a TPDO's
+- Bring a node up: `protocore_canopen_build_nmt(&frame, CANOPEN_NMT_START, node)`.
+- Read an object (expedited SDO): `protocore_canopen_build_sdo_read(&frame, node, index,
+sub)`, send it, then `protocore_canopen_parse_sdo_response()` on the reply.
+- Write an object: `protocore_canopen_build_sdo_write(...)`.
+- Watch liveness: `protocore_canopen_parse_heartbeat()` on each `0x700+node` frame;
+  `protocore_canopen_parse_emcy()` on emergencies.
+- Receive process data: `protocore_canopen_parse()` classifies each frame, and a TPDO's
   `data[]` is the raw mapped payload.
 
 This is the classic **wireless bridge**: poll CANopen drives over the wire and
@@ -584,22 +584,22 @@ publish their state over MQTT / HTTP / a WebSocket. SDO transfers are expedited
 
 ### J1939
 
-`PC_ENABLE_J1939`. The CAN higher-layer protocol for heavy-duty vehicles,
+`PROTOCORE_ENABLE_J1939`. The CAN higher-layer protocol for heavy-duty vehicles,
 agriculture, marine, and gensets - same wiring as above (transceiver +
 terminators), but it uses **29-bit extended** ids, almost always at **250
 kbit/s**. The codec packs and unpacks the id (priority / PGN / source /
 destination) and handles multi-packet messages:
 
-- Decode a received frame: `pc_j1939_decode_id(frame.id, &id)` gives you the PGN,
+- Decode a received frame: `protocore_j1939_decode_id(frame.id, &id)` gives you the PGN,
   source, and destination; the 8 data octets are the parameter group's signals
   (SPNs), which you scale per the PGN definition.
-- Ask a device for a PGN: `pc_j1939_build_request(&frame, my_addr, dest, pgn)`.
-- Announce your address: `pc_j1939_build_address_claim(&frame, my_addr,
-pc_j1939_build_name(...))`.
+- Ask a device for a PGN: `protocore_j1939_build_request(&frame, my_addr, dest, pgn)`.
+- Announce your address: `protocore_j1939_build_address_claim(&frame, my_addr,
+protocore_j1939_build_name(...))`.
 - Long messages (> 8 octets, e.g. diagnostics): feed every received frame to
-  `pc_j1939_tp_feed(&rx, &frame)`; when it returns `J1939_TP_COMPLETE`, `rx.buf`
-  holds the reassembled message for `rx.pgn`. To send one, `pc_j1939_build_bam_cm()`
-  then a `pc_j1939_build_tp_dt()` per 7-octet chunk.
+  `protocore_j1939_tp_feed(&rx, &frame)`; when it returns `J1939_TP_COMPLETE`, `rx.buf`
+  holds the reassembled message for `rx.pgn`. To send one, `protocore_j1939_build_bam_cm()`
+  then a `protocore_j1939_build_tp_dt()` per 7-octet chunk.
 
 A classic **wireless gateway**: decode engine / transmission / genset PGNs off
 the bus and publish them over MQTT or a web dashboard. See
@@ -607,7 +607,7 @@ the bus and publish them over MQTT or a web dashboard. See
 
 ### DeviceNet
 
-`PC_ENABLE_DEVICENET`. DeviceNet is **CIP over CAN** (the same CIP objects as
+`PROTOCORE_ENABLE_DEVICENET`. DeviceNet is **CIP over CAN** (the same CIP objects as
 EtherNet/IP, but on a CAN wire). Electrically it is CAN with a twist: a DeviceNet
 cable carries **24 V power** alongside CAN_H / CAN_L, so a real drop also needs
 the power conductors and the standard 5-pin connector - but the signalling is
@@ -615,23 +615,23 @@ ordinary CAN, so the **same transceiver wiring** as above applies (use 125, 250,
 or 500 kbit/s; each node has a MAC id 0-63).
 
 This module supplies the DeviceNet-specific link layer; you build the CIP message
-body with the `pc_cip_*` functions (enable `PC_ENABLE_CIP`):
+body with the `protocore_cip_*` functions (enable `PROTOCORE_ENABLE_CIP`):
 
-- Address a frame: `pc_devicenet_encode_id(&id, DEVICENET_GROUP_2, msg_id, mac)`
-  picks the message group + MAC id; `pc_devicenet_decode_id()` reverses it.
-- Send a short explicit request: build the CIP body with `pc_cip_*`, then
-  `pc_devicenet_build_explicit(&frame, group, msg_id, mac, body, len)` prepends the
+- Address a frame: `protocore_devicenet_encode_id(&id, DEVICENET_GROUP_2, msg_id, mac)`
+  picks the message group + MAC id; `protocore_devicenet_decode_id()` reverses it.
+- Send a short explicit request: build the CIP body with `protocore_cip_*`, then
+  `protocore_devicenet_build_explicit(&frame, group, msg_id, mac, body, len)` prepends the
   message-header octet (fits when the body is <= 7 octets).
 - Receive a long response: feed each frame's data octets to
-  `pc_devicenet_frag_feed(&rx, body, len)`; on `DEVICENET_FRAG_COMPLETE`, `rx.buf`
-  holds the reassembled CIP response to parse with `pc_cip_*`.
+  `protocore_devicenet_frag_feed(&rx, body, len)`; on `DEVICENET_FRAG_COMPLETE`, `rx.buf`
+  holds the reassembled CIP response to parse with `protocore_cip_*`.
 
 Bridge a DeviceNet segment onto Wi-Fi the same way as the other CAN buses. See
 `src/services/fieldbus/devicenet/devicenet.h`.
 
 ### NMEA 2000
 
-`PC_ENABLE_NMEA2000`. The marine instrumentation backbone (GPS, wind, depth,
+`PROTOCORE_ENABLE_NMEA2000`. The marine instrumentation backbone (GPS, wind, depth,
 AIS, engine data) - electrically it is CAN at **250 kbit/s**, and protocol-wise
 it is J1939, so the wiring is the same transceiver setup. A real N2K backbone
 uses a powered trunk with drop "tees"; tap a drop with your transceiver (it only
@@ -641,12 +641,12 @@ NMEA 2000 carries most data either in a single 8-octet frame or via **Fast
 Packet** (up to 223 octets). The codec reuses the J1939 id functions and adds
 Fast Packet:
 
-- Receive: decode the id with `pc_j1939_decode_id()`; for a single-frame PGN read
+- Receive: decode the id with `protocore_j1939_decode_id()`; for a single-frame PGN read
   the 8 octets directly, and for a Fast Packet PGN feed each frame to
-  `pc_n2k_fastpacket_feed(&rx, &frame)` until `N2K_FP_COMPLETE`, then parse
+  `protocore_n2k_fastpacket_feed(&rx, &frame)` until `N2K_FP_COMPLETE`, then parse
   `rx.buf` per the PGN definition.
-- Send: `pc_n2k_build_single()` for short PGNs, or loop
-  `pc_n2k_fastpacket_build_frame()` over `pc_n2k_fastpacket_num_frames()` for long ones.
+- Send: `protocore_n2k_build_single()` for short PGNs, or loop
+  `protocore_n2k_fastpacket_build_frame()` over `protocore_n2k_fastpacket_num_frames()` for long ones.
 
 Bridge the backbone onto Wi-Fi: turn boat data into a web dashboard or MQTT feed.
 See `src/services/timing_position/nmea2000/nmea2000.h`.
@@ -674,7 +674,7 @@ the ESP32's built-in Wi-Fi supplies the link.
       ~7.2 Mbit/s at the default 20 MHz SPI clock, ~8.2 Mbit/s at 24 MHz, plateauing
       near the W5500's internal ~8.3 Mbit/s ceiling around 30 MHz. For near-100-Mbit
       speed use an RMII PHY (LAN8720) instead.
-    - **SPI clock and signal integrity.** `PC_ETH_W5500_SPI_MHZ` sets the SPI
+    - **SPI clock and signal integrity.** `PROTOCORE_ETH_W5500_SPI_MHZ` sets the SPI
       clock (default 20; the W5500 allows up to 33.3 MHz). Higher clocks need clean,
       short wiring: on breadboard jumpers, sustained transfers stay reliable to about
       24 MHz, and above ~33 MHz the SPI reads corrupt (a mis-read chip ID or truncated
@@ -686,66 +686,66 @@ the ESP32's built-in Wi-Fi supplies the link.
 
 ### Modbus TCP and Modbus master
 
-- **Flags:** `PC_ENABLE_MODBUS` (the ESP32 is the **slave/server**, using this
+- **Flags:** `PROTOCORE_ENABLE_MODBUS` (the ESP32 is the **slave/server**, using this
   library's TCP server with the `PROTO_MODBUS` listener) or
-  `PC_ENABLE_MODBUS_MASTER` (the ESP32 is the **master/client**, your sketch
+  `PROTOCORE_ENABLE_MODBUS_MASTER` (the ESP32 is the **master/client**, your sketch
   owns the TCP connection).
 - **Settings:** **TCP port 502.** The request carries a **unit identifier**
   (often 1, or 255/0xFF for a native TCP device). No serial parity or baud here;
   Modbus TCP wraps the same PDU in an MBAP header.
-- **Codec:** the same `pc_modbus_*` data model and PDU dispatch as RTU, minus the
+- **Codec:** the same `protocore_modbus_*` data model and PDU dispatch as RTU, minus the
   CRC (TCP already guarantees integrity). See `src/services/fieldbus/modbus/modbus.h`.
 
 ### SunSpec
 
-- **Flag:** `PC_ENABLE_SUNSPEC`.
+- **Flag:** `PROTOCORE_ENABLE_SUNSPEC`.
 - **Hardware:** whatever your Modbus link uses (RS-485 for RTU, Wi-Fi/Ethernet
   for TCP). SunSpec is a **map on top of Modbus holding registers**, not a new
   wire.
 - **Settings:** the device exposes a chain of "models" beginning at a base
   holding register (commonly **40000**, sometimes 50000) marked by the ASCII
   **`SunS`** signature. Read that register block over Modbus, then walk it.
-- **Codec:** `pc_sunspec_check_marker` / `pc_sunspec_begin` / `pc_sunspec_next_model` plus
+- **Codec:** `protocore_sunspec_check_marker` / `protocore_sunspec_begin` / `protocore_sunspec_next_model` plus
   typed point readers. Makes a solar inverter, meter, or battery interoperable.
   See `src/services/energy/sunspec/sunspec.h`.
 
 ### S7comm (Siemens)
 
-- **Flag:** `PC_ENABLE_S7COMM` (needs `PC_ENABLE_COTP`).
+- **Flag:** `PROTOCORE_ENABLE_S7COMM` (needs `PROTOCORE_ENABLE_COTP`).
 - **Hardware:** Wi-Fi/Ethernet to a Siemens S7 PLC.
 - **Settings:** **TCP port 102** (ISO-on-TCP). The connection is addressed by a
   **rack and slot** number that identify the CPU (for example rack 0 / slot 1 or
   slot 2 on an S7-300, rack 0 / slot 1 on an S7-1200/1500); the PLC must also
   permit "PUT/GET" access for external reads.
-- **Codec:** `pc_s7_build_setup` / `pc_s7_build_read_request` / `pc_s7_parse_header` /
-  `pc_s7_read_next_item`, wrapped with `pc_cotp_build_dt` + `pc_tpkt_build`. See
+- **Codec:** `protocore_s7_build_setup` / `protocore_s7_build_read_request` / `protocore_s7_parse_header` /
+  `protocore_s7_read_next_item`, wrapped with `protocore_cotp_build_dt` + `protocore_tpkt_build`. See
   `src/services/fieldbus/s7comm/s7comm.h`.
 
 ### MELSEC (Mitsubishi)
 
-- **Flag:** `PC_ENABLE_MELSEC`.
+- **Flag:** `PROTOCORE_ENABLE_MELSEC`.
 - **Hardware:** Wi-Fi/Ethernet to a Mitsubishi PLC with an MC-protocol port open.
 - **Settings:** **TCP or UDP**, on the **port you configure on the PLC** (MC
   protocol has no fixed IANA port). This codec speaks the **binary 3E** frame.
   Pick word or bit devices (D, M, X, Y, R, ...) by their device code.
-- **Codec:** `pc_melsec_build_read` / `pc_melsec_parse_response`. See
+- **Codec:** `protocore_melsec_build_read` / `protocore_melsec_parse_response`. See
   `src/services/fieldbus/melsec/melsec.h`.
 
 ### FINS (Omron)
 
-- **Flag:** `PC_ENABLE_FINS`.
+- **Flag:** `PROTOCORE_ENABLE_FINS`.
 - **Hardware:** Wi-Fi/Ethernet to an Omron PLC. (FINS also has a serial sibling;
   for serial use [Host Link](#host-link-omron).)
 - **Settings:** **FINS/UDP, port 9600** by default. Addressing is a
   **network / node / unit** triple for both source and destination; the node
   number usually matches the last octet of the PLC's IP by convention.
-- **Codec:** `pc_fins_build_command` / `pc_fins_build_memory_area_read` /
-  `pc_fins_parse_response`, carried over this library's UDP transport
+- **Codec:** `protocore_fins_build_command` / `protocore_fins_build_memory_area_read` /
+  `protocore_fins_parse_response`, carried over this library's UDP transport
   (`Udp.client->sendto`). See `src/services/fieldbus/fins/fins.h`.
 
 ### BACnet/IP
 
-- **Flag:** `PC_ENABLE_BACNET`.
+- **Flag:** `PROTOCORE_ENABLE_BACNET`.
 - **Hardware:** Wi-Fi/Ethernet to a building-automation network.
 - **Settings:** **UDP port 47808** (hex 0xBAC0). Devices are identified by a
   **device instance** number; multi-subnet sites use a BBMD/`network number`. The
@@ -755,41 +755,41 @@ the ESP32's built-in Wi-Fi supplies the link.
 
 ### EtherNet/IP and CIP
 
-- **Flags:** `PC_ENABLE_ENIP` (the encapsulation) and `PC_ENABLE_CIP` (the
+- **Flags:** `PROTOCORE_ENABLE_ENIP` (the encapsulation) and `PROTOCORE_ENABLE_CIP` (the
   object messages, which turn ENIP on automatically).
 - **Hardware:** Wi-Fi/Ethernet to an ODVA / Allen-Bradley device.
 - **Settings:** **TCP port 44818** for explicit messaging (register a session,
   then send requests); **UDP port 2222** carries implicit (cyclic I/O) data. CIP
   addresses objects by a **class / instance / attribute** path (an EPATH).
 - **Codec:** `enip_*` builds the 24-byte encapsulation header and CPF items;
-  `pc_cip_build_epath` + `pc_cip_build_get_attribute_single` build the CIP request. See
+  `protocore_cip_build_epath` + `protocore_cip_build_get_attribute_single` build the CIP request. See
   `src/services/fieldbus/enip/enip.h` and `src/services/fieldbus/cip/cip.h`.
 
 ### DNP3 and C37.118 over IP
 
-- **DNP3** (`PC_ENABLE_DNP3`): the IEEE 1815 SCADA outstation link. Over IP it
+- **DNP3** (`PROTOCORE_ENABLE_DNP3`): the IEEE 1815 SCADA outstation link. Over IP it
   uses **TCP (or UDP) port 20000**; data-link **source and destination addresses**
   are 16-bit. The codec frames and CRC-checks the `0x0564` data-link layer; the
   transport-function and application (objects/function codes) layer on top. See
   `src/services/energy/dnp3/dnp3.h`.
-- **C37.118** (`PC_ENABLE_C37118`): the IEEE C37.118.2 synchrophasor stream
+- **C37.118** (`PROTOCORE_ENABLE_C37118`): the IEEE C37.118.2 synchrophasor stream
   from a power-grid PMU/PDC. There is **no IANA-assigned port** (TCP/UDP 4712 and
   4713 are common conventions). Each PMU/PDC is identified by an **IDCODE**; a
   Command frame starts/stops the data stream. See `src/services/energy/c37118/c37118.h`.
 
 ### IEC 60870-5 (-104 and -101)
 
-`PC_ENABLE_IEC60870`. The European utility-SCADA protocol. It has two
+`PROTOCORE_ENABLE_IEC60870`. The European utility-SCADA protocol. It has two
 transports and this codec does both:
 
 - **-104 over TCP (port 2404)** - no extra hardware beyond Wi-Fi. Open the link
-  with a U-format `STARTDT act` (`pc_iec104_build_u`), then exchange I-format APDUs
-  (`pc_iec104_build_i` wraps an ASDU; `pc_iec104_parse` reads one back) and acknowledge
-  with S-format. Build the ASDU with `pc_iec_asdu_build_header` + `pc_iec_put_ioa` and
+  with a U-format `STARTDT act` (`protocore_iec104_build_u`), then exchange I-format APDUs
+  (`protocore_iec104_build_i` wraps an ASDU; `protocore_iec104_parse` reads one back) and acknowledge
+  with S-format. Build the ASDU with `protocore_iec_asdu_build_header` + `protocore_iec_put_ioa` and
   the type-specific information elements.
 - **-101 over serial** - wire an RS-232 or RS-485 transceiver as in the serial
-  section. Frame with `pc_iec101_build_fixed` / `pc_iec101_build_variable` and parse
-  with `pc_iec101_parse` (the ASDU payload is identical to -104's).
+  section. Frame with `protocore_iec101_build_fixed` / `protocore_iec101_build_variable` and parse
+  with `protocore_iec101_parse` (the ASDU payload is identical to -104's).
 
 This makes a clean **protocol-converting gateway**: terminate -101 from an old
 RTU on the serial side and re-expose it as -104 over Wi-Fi (or vice-versa), since
@@ -797,8 +797,8 @@ both share the ASDU layer. See `src/services/energy/iec60870/iec60870.h`.
 
 ### OPC UA (server and client)
 
-- **Flags:** `PC_ENABLE_OPCUA` (the ESP32 is the **server**, using this
-  library's TCP listener) and/or `PC_ENABLE_OPCUA_CLIENT` (the ESP32 connects
+- **Flags:** `PROTOCORE_ENABLE_OPCUA` (the ESP32 is the **server**, using this
+  library's TCP listener) and/or `PROTOCORE_ENABLE_OPCUA_CLIENT` (the ESP32 connects
   out to another server; your sketch owns the socket).
 - **Hardware:** Wi-Fi/Ethernet.
 - **Settings:** **TCP port 4840** (the default OPC UA Binary endpoint, URL
@@ -809,8 +809,8 @@ both share the ASDU layer. See `src/services/energy/iec60870/iec60870.h`.
 
 ### SNMP (agent and traps)
 
-- **Flags:** `PC_ENABLE_SNMP` (agent), `PC_ENABLE_SNMP_V3` (USM
-  authentication/privacy), `PC_ENABLE_SNMP_TRAP` (outbound traps/informs).
+- **Flags:** `PROTOCORE_ENABLE_SNMP` (agent), `PROTOCORE_ENABLE_SNMP_V3` (USM
+  authentication/privacy), `PROTOCORE_ENABLE_SNMP_TRAP` (outbound traps/informs).
 - **Hardware:** Wi-Fi/Ethernet to your monitoring system.
 - **Settings:** the agent listens on **UDP port 161**; traps and informs go to
   the manager on **UDP port 162**. v1/v2c use a **community string** (a shared
@@ -820,7 +820,7 @@ both share the ASDU layer. See `src/services/energy/iec60870/iec60870.h`.
 
 ## Radio: ESP-NOW
 
-- **Flag:** `PC_ENABLE_ESPNOW`.
+- **Flag:** `PROTOCORE_ENABLE_ESPNOW`.
 - **Hardware:** **none beyond a second board.** ESP-NOW uses the ESP32's built-in
   2.4 GHz radio to talk directly to other ESP32/ESP8266 boards with no router or
   access point in between.
@@ -840,19 +840,19 @@ meter. Unlike the field buses above, these run at **3.3 V and wire directly** - 
 transceiver, no level shifter. Most are **I2C** (two shared wires); the LD2410 and a
 GPS are plain **UART**.
 
-Each is a `PC_ENABLE_*` flag (default off) with a pure, host-tested codec and a
+Each is a `PROTOCORE_ENABLE_*` flag (default off) with a pure, host-tested codec and a
 hand-held beginner example under `examples/L7-Application/`.
 
-| Breakout         | Flag                 | Bus  | Address | Wiring                              | Measures / does                    |
-| ---------------- | -------------------- | ---- | ------- | ----------------------------------- | ---------------------------------- |
-| DS3231 / DS1307  | `PC_ENABLE_RTC`      | I2C  | 0x68    | SDA 21, SCL 22 (+ coin cell)        | Battery-backed wall-clock time     |
-| SHT3x (GY-SHT31) | `PC_ENABLE_SHT3X`    | I2C  | 0x44    | SDA 21, SCL 22                      | Temperature + humidity             |
-| MPR121           | `PC_ENABLE_MPR121`   | I2C  | 0x5A    | SDA 21, SCL 22, ADDR->GND           | 12 capacitive touch buttons        |
-| ADS1115          | `PC_ENABLE_ADS1115`  | I2C  | 0x48    | SDA 21, SCL 22, ADDR->GND           | 16-bit analog voltage (4 channels) |
-| INA219           | `PC_ENABLE_INA219`   | I2C  | 0x40    | SDA 21, SCL 22, Vin+/Vin- in series | Current + power of a load          |
-| PCA9685          | `PC_ENABLE_PCA9685`  | I2C  | 0x40    | SDA 21, SCL 22, V+ = servo supply   | 16 PWM / servo outputs             |
-| LD2410           | `PC_ENABLE_LD2410`   | UART | -       | module TX -> GPIO 16, RX -> GPIO 17 | mmWave human presence / motion     |
-| GT-U7 GPS (NMEA) | `PC_ENABLE_NMEA0183` | UART | -       | module TX -> GPIO 16 (9600 baud)    | Position / time (NMEA 0183)        |
+| Breakout         | Flag                        | Bus  | Address | Wiring                              | Measures / does                    |
+| ---------------- | --------------------------- | ---- | ------- | ----------------------------------- | ---------------------------------- |
+| DS3231 / DS1307  | `PROTOCORE_ENABLE_RTC`      | I2C  | 0x68    | SDA 21, SCL 22 (+ coin cell)        | Battery-backed wall-clock time     |
+| SHT3x (GY-SHT31) | `PROTOCORE_ENABLE_SHT3X`    | I2C  | 0x44    | SDA 21, SCL 22                      | Temperature + humidity             |
+| MPR121           | `PROTOCORE_ENABLE_MPR121`   | I2C  | 0x5A    | SDA 21, SCL 22, ADDR->GND           | 12 capacitive touch buttons        |
+| ADS1115          | `PROTOCORE_ENABLE_ADS1115`  | I2C  | 0x48    | SDA 21, SCL 22, ADDR->GND           | 16-bit analog voltage (4 channels) |
+| INA219           | `PROTOCORE_ENABLE_INA219`   | I2C  | 0x40    | SDA 21, SCL 22, Vin+/Vin- in series | Current + power of a load          |
+| PCA9685          | `PROTOCORE_ENABLE_PCA9685`  | I2C  | 0x40    | SDA 21, SCL 22, V+ = servo supply   | 16 PWM / servo outputs             |
+| LD2410           | `PROTOCORE_ENABLE_LD2410`   | UART | -       | module TX -> GPIO 16, RX -> GPIO 17 | mmWave human presence / motion     |
+| GT-U7 GPS (NMEA) | `PROTOCORE_ENABLE_NMEA0183` | UART | -       | module TX -> GPIO 16 (9600 baud)    | Position / time (NMEA 0183)        |
 
 ### The shared I2C bus
 
@@ -865,13 +865,13 @@ already include the small pull-up resistors I2C needs. If two boards share an ad
 
 All the I2C drivers bring the bus up and address it through one shared owner
 (`services/peripherals/i2c.h`), so there is a single place to move the pins:
-**`PC_I2C_SDA_PIN` / `PC_I2C_SCL_PIN`** (default `-1` = the platform default 21 /
+**`PROTOCORE_I2C_SDA_PIN` / `PROTOCORE_I2C_SCL_PIN`** (default `-1` = the platform default 21 /
 22). Set both to free GPIOs to relocate the whole bus.
 
-Two more knobs live with them. **`PC_I2C_HZ`** (default `100000`) is the bus clock;
+Two more knobs live with them. **`PROTOCORE_I2C_HZ`** (default `100000`) is the bus clock;
 100 kHz standard mode is what every driver here is rated for, and a device that
 supports 400 kHz fast mode will take it if the wiring is short and well pulled up.
-**`PC_I2C_TIMEOUT_MS`** (default `50`) bounds one transfer, so a device that stops
+**`PROTOCORE_I2C_TIMEOUT_MS`** (default `50`) bounds one transfer, so a device that stops
 clocking stalls that read instead of the main loop.
 
 > **Running alongside wired Ethernet.** Only the **classic ESP32 (WROOM/WROVER)** and
@@ -880,9 +880,9 @@ clocking stalls that read instead of the main loop.
 > **W5500** instead. On an RMII board the LAN8720 uses **GPIO 21 (TX_EN)** and
 > **GPIO 22 (TXD1)** - the very pins I2C defaults to - plus, on boards that route the
 > 50 MHz RMII clock there, GPIO 16/17. So with an RMII PHY enabled you **must** move
-> the peripheral buses off those pins: set `-DPC_I2C_SDA_PIN=32
--DPC_I2C_SCL_PIN=33` (or any free pair) to relocate the I2C sensors, and pass
-> **alternate RX/TX** to `pc_ld2410_begin(rx, tx)` / your GPS
+> the peripheral buses off those pins: set `-DPROTOCORE_I2C_SDA_PIN=32
+-DPROTOCORE_I2C_SCL_PIN=33` (or any free pair) to relocate the I2C sensors, and pass
+> **alternate RX/TX** to `protocore_ld2410_begin(rx, tx)` / your GPS
 > `Serial.begin(baud, SERIAL_8N1, rx, tx)` (e.g. GPIO 4 / 2). Avoid the other RMII
 > pins (19, 23, 25, 26, 27, 18) and the strapping pins (0, 2, 5, 12, 15). On an S3 with
 > a W5500 there is no RMII clash, but still keep the I2C/UART pins clear of the SPI pins
@@ -890,44 +890,44 @@ clocking stalls that read instead of the main loop.
 
 ### Time: RTC and GPS
 
-- **RTC (DS3231 / DS1307), `PC_ENABLE_RTC`** - a battery-backed clock chip at I2C
+- **RTC (DS3231 / DS1307), `PROTOCORE_ENABLE_RTC`** - a battery-backed clock chip at I2C
   0x68 so the board knows the time the instant it boots, offline. Wire SDA/SCL, fit its
-  coin cell, and register `pc_rtc_time_source` with the time-source chain;
-  `pc_rtc_read_epoch()` / `pc_rtc_set_epoch()` read and set it. Example Rtc.
-- **GPS (u-blox GT-U7), `PC_ENABLE_NMEA0183`** - the GT-U7 is a u-blox-7 GPS that
+  coin cell, and register `protocore_rtc_time_source` with the time-source chain;
+  `protocore_rtc_read_epoch()` / `protocore_rtc_set_epoch()` read and set it. Example Rtc.
+- **GPS (u-blox GT-U7), `PROTOCORE_ENABLE_NMEA0183`** - the GT-U7 is a u-blox-7 GPS that
   streams **NMEA 0183** sentences over a plain 3.3 V UART at **9600 baud** (it also has
   a **PPS** pin that pulses once a second for precise timing). Wire its **TX to an
   ESP32 RX** (its RX is optional - only needed to send it config). Accumulate a line
-  and `pc_nmea0183_parse()` it, then read the fix with the field helpers - see
+  and `protocore_nmea0183_parse()` it, then read the fix with the field helpers - see
   [NMEA 0183](#nmea-0183-gps--marine) above and the TimeSourceFallback example. In a time-source
   chain it is the best source: **GPS -> RTC -> upstream NTP** (feed all three to the
   NTP server to serve time to your whole LAN).
 
 ### Sensing: radar, touch, temperature/humidity, voltage, current
 
-- **LD2410 mmWave radar, `PC_ENABLE_LD2410`** - a 24 GHz presence sensor that sees a
+- **LD2410 mmWave radar, `PROTOCORE_ENABLE_LD2410`** - a 24 GHz presence sensor that sees a
   still person (breathing), in the dark, through thin walls - over a UART at **256000
-  baud**. Cross the data wires (module TX -> ESP32 RX). `pc_ld2410_poll()` decodes each
-  frame; `pc_ld2410_present()` / `pc_ld2410_distance_cm()` act on it. Example Ld2410.
-- **MPR121 capacitive touch, `PC_ENABLE_MPR121`** - turns 12 wires or pads into
-  touch buttons (I2C 0x5A). `pc_mpr121_read_touched()` returns a 12-bit mask. Example
+  baud**. Cross the data wires (module TX -> ESP32 RX). `protocore_ld2410_poll()` decodes each
+  frame; `protocore_ld2410_present()` / `protocore_ld2410_distance_cm()` act on it. Example Ld2410.
+- **MPR121 capacitive touch, `PROTOCORE_ENABLE_MPR121`** - turns 12 wires or pads into
+  touch buttons (I2C 0x5A). `protocore_mpr121_read_touched()` returns a 12-bit mask. Example
   Mpr121.
-- **SHT3x temperature / humidity, `PC_ENABLE_SHT3X`** - a CRC-checked Sensirion
-  sensor (I2C 0x44). `pc_sht3x_read()` returns temperature and humidity in integer
+- **SHT3x temperature / humidity, `PROTOCORE_ENABLE_SHT3X`** - a CRC-checked Sensirion
+  sensor (I2C 0x44). `protocore_sht3x_read()` returns temperature and humidity in integer
   milli-units. Example Sht3x.
-- **ADS1115 16-bit ADC, `PC_ENABLE_ADS1115`** - four precise analog inputs with a
-  programmable gain (I2C 0x48). `pc_ads1115_read_uv()` gives a channel's voltage in
+- **ADS1115 16-bit ADC, `PROTOCORE_ENABLE_ADS1115`** - four precise analog inputs with a
+  programmable gain (I2C 0x48). `protocore_ads1115_read_uv()` gives a channel's voltage in
   microvolts. Example Ads1115.
-- **INA219 current / power, `PC_ENABLE_INA219`** - sits **in series** with a load
+- **INA219 current / power, `PROTOCORE_ENABLE_INA219`** - sits **in series** with a load
   (Vin+ -> shunt -> Vin-) and reports voltage, current, and power (I2C 0x40).
-  `pc_ina219_read_current_ua()` / `pc_ina219_read_power_uw()`. Example Ina219.
+  `protocore_ina219_read_current_ua()` / `protocore_ina219_read_power_uw()`. Example Ina219.
 
 ### Actuation: servos and LEDs
 
-- **PCA9685 16-channel PWM, `PC_ENABLE_PCA9685`** - drives up to 16 servos or LEDs
+- **PCA9685 16-channel PWM, `PROTOCORE_ENABLE_PCA9685`** - drives up to 16 servos or LEDs
   from the I2C bus (0x40), with its own precise PWM timer. Power the **servos** from the
   board's `V+` screw terminal (a separate 5-6 V supply), never the ESP32.
-  `pc_pca9685_set_servo_us()` positions a servo; `pc_pca9685_set_pwm()` dims an LED. Example
+  `protocore_pca9685_set_servo_us()` positions a servo; `protocore_pca9685_set_pwm()` dims an LED. Example
   Pca9685.
 
 These all follow the same shape as the field-bus codecs: a pure codec you can unit-test
@@ -939,13 +939,13 @@ These format data but do **not** add a new physical connection: they ride
 whatever transport already carries the data (MQTT, CoAP, HTTP), so their hardware
 needs are simply that transport's.
 
-- **SenML** (`PC_ENABLE_SENML`, implies CBOR): a standard JSON/CBOR shape for
+- **SenML** (`PROTOCORE_ENABLE_SENML`, implies CBOR): a standard JSON/CBOR shape for
   sensor measurements. The "hardware" is whatever sensor produces the readings;
   send the encoded payload over MQTT/CoAP/HTTP. See `src/services/iot/senml/`.
-- **Sparkplug B** (`PC_ENABLE_SPARKPLUG`, implies Protobuf): an MQTT payload
+- **Sparkplug B** (`PROTOCORE_ENABLE_SPARKPLUG`, implies Protobuf): an MQTT payload
   and topic convention for SCADA. Needs an **MQTT broker** and a Sparkplug host
   (see the MQTT client setup); no new wiring. See `src/services/iot/sparkplug/`.
-- **LwM2M TLV** (`PC_ENABLE_LWM2M`): the device-management value encoding
+- **LwM2M TLV** (`PROTOCORE_ENABLE_LWM2M`): the device-management value encoding
   carried over **CoAP** (this library's CoAP/UDP service); no new wiring. See
   `src/services/iot/lwm2m/`.
 - **Protobuf, CBOR, MessagePack, gRPC-Web, NATS, STOMP, Redis, WAMP, AMQP,
@@ -995,109 +995,109 @@ pinout and none is documented here. Pure codecs have no bring-up call at all: yo
 
 | Module | Attaches via | Bring-up call | Feature flag |
 | ------ | ------------ | ------------- | ------------ |
-| `rtc` | I2C | `pc_rtc_begin(void)` | `PC_ENABLE_RTC` |
-| `time_source` | codec only - caller owns the link | _none (pure codec)_ | `PC_ENABLE_TIME_SOURCE` |
+| `rtc` | I2C | `protocore_rtc_begin(void)` | `PROTOCORE_ENABLE_RTC` |
+| `time_source` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_TIME_SOURCE` |
 
 ### Physical & Data Link (L1-L2)
 
 | Module | Attaches via | Bring-up call | Feature flag |
 | ------ | ------------ | ------------- | ------------ |
-| `ads1115` | I2C | `pc_ads1115_begin(uint8_t addr)` | `PC_ENABLE_ADS1115` |
-| `dshot` | codec only - caller owns the link | _none (pure codec)_ | `PC_ENABLE_DSHOT` |
-| `fdc2214` | I2C | `pc_fdc2214_begin(uint8_t addr, uint16_t rcount, uint16_t settlecount)` | `PC_ENABLE_FDC2214` |
-| `ina219` | I2C | `pc_ina219_begin(uint8_t addr, uint32_t current_lsb_ua, uint32_t shunt_mohm)` | `PC_ENABLE_INA219` |
-| `ld2410` | UART | `pc_ld2410_begin(int rx_pin, int tx_pin)` | `PC_ENABLE_LD2410` |
-| `ldc1614` | I2C | `pc_ldc1614_begin(uint8_t addr, uint16_t rcount, uint16_t settlecount)` | `PC_ENABLE_LDC1614` |
-| `mpr121` | I2C | `pc_mpr121_begin(uint8_t addr)` | `PC_ENABLE_MPR121` |
-| `pca9685` | I2C | `pc_pca9685_begin(uint8_t addr, uint32_t freq_hz)` | `PC_ENABLE_PCA9685` |
-| `pn532` | codec only - caller owns the link | _none (pure codec)_ | `PC_ENABLE_PN532` |
-| `sht3x` | I2C | `pc_sht3x_begin(uint8_t addr)` | `PC_ENABLE_SHT3X` |
-| `vl53l0x` | I2C | `pc_vl53l0x_begin(uint8_t addr)` | `PC_ENABLE_VL53L0X` |
-| `ble_gatt` | codec only - caller owns the link | _none (pure codec)_ | `PC_ENABLE_BLE_GATT` |
-| `cc1101` | SPI (caller-supplied bus) | `pc_cc1101_init(const pc_cc1101_bus *bus, const pc_cc1101_config *cfg)` | `PC_ENABLE_CC1101` |
-| `enocean` | codec only - caller owns the link | _none (pure codec)_ | `PC_ENABLE_ENOCEAN` |
-| `espnow` | caller-supplied link | `pc_espnow_begin(uint8_t channel, pc_espnow_recv_fn cb)` | `PC_ENABLE_ESPNOW` |
-| `lora` | SPI (caller-supplied bus) | `pc_lora_init(const pc_lora_bus *bus, const pc_lora_config *cfg)` | `PC_ENABLE_LORA` |
-| `nrf24` | SPI (caller-supplied bus) | `pc_nrf24_init(const nrf_bus *bus, const nrf_config *cfg)` | `PC_ENABLE_NRF24` |
-| `promisc` | caller-supplied link | `pc_promisc_begin(uint8_t channel, pc_promisc_sink_fn sink)` | `PC_ENABLE_PROMISC` |
-| `radio_sniff` | CAN | _none (pure codec)_ | `PC_ENABLE_RADIO_SNIFF` |
-| `sigfox` | codec only - caller owns the link | _none (pure codec)_ | `PC_ENABLE_SIGFOX` |
-| `thread` | codec only - caller owns the link | _none (pure codec)_ | `PC_ENABLE_THREAD` |
-| `wifi_sniffer` | caller-supplied link | `pc_wifi_sniffer_begin(uint8_t first_chan, uint8_t last_chan, uint16_t dwell_ms)` | `PC_ENABLE_WIFI_SNIFFER` |
-| `wisun` | caller-supplied link | `pc_wisun_init(WisunFan *fan, const pc_ip *border_router, WisunNode *storage, size_t cap)` | `PC_ENABLE_WISUN` |
-| `zigbee` | codec only - caller owns the link | _none (pure codec)_ | `PC_ENABLE_ZIGBEE` |
-| `zwave` | CAN | _none (pure codec)_ | `PC_ENABLE_ZWAVE` |
-| `rawl2` | codec only - caller owns the link | _none (pure codec)_ | `PC_ENABLE_RAWL2` |
+| `ads1115` | I2C | `protocore_ads1115_begin(uint8_t addr)` | `PROTOCORE_ENABLE_ADS1115` |
+| `dshot` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_DSHOT` |
+| `fdc2214` | I2C | `protocore_fdc2214_begin(uint8_t addr, uint16_t rcount, uint16_t settlecount)` | `PROTOCORE_ENABLE_FDC2214` |
+| `ina219` | I2C | `protocore_ina219_begin(uint8_t addr, uint32_t current_lsb_ua, uint32_t shunt_mohm)` | `PROTOCORE_ENABLE_INA219` |
+| `ld2410` | UART | `protocore_ld2410_begin(int rx_pin, int tx_pin)` | `PROTOCORE_ENABLE_LD2410` |
+| `ldc1614` | I2C | `protocore_ldc1614_begin(uint8_t addr, uint16_t rcount, uint16_t settlecount)` | `PROTOCORE_ENABLE_LDC1614` |
+| `mpr121` | I2C | `protocore_mpr121_begin(uint8_t addr)` | `PROTOCORE_ENABLE_MPR121` |
+| `pca9685` | I2C | `protocore_pca9685_begin(uint8_t addr, uint32_t freq_hz)` | `PROTOCORE_ENABLE_PCA9685` |
+| `pn532` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_PN532` |
+| `sht3x` | I2C | `protocore_sht3x_begin(uint8_t addr)` | `PROTOCORE_ENABLE_SHT3X` |
+| `vl53l0x` | I2C | `protocore_vl53l0x_begin(uint8_t addr)` | `PROTOCORE_ENABLE_VL53L0X` |
+| `ble_gatt` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_BLE_GATT` |
+| `cc1101` | SPI (caller-supplied bus) | `protocore_cc1101_init(const protocore_cc1101_bus *bus, const protocore_cc1101_config *cfg)` | `PROTOCORE_ENABLE_CC1101` |
+| `enocean` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_ENOCEAN` |
+| `espnow` | caller-supplied link | `protocore_espnow_begin(uint8_t channel, protocore_espnow_recv_fn cb)` | `PROTOCORE_ENABLE_ESPNOW` |
+| `lora` | SPI (caller-supplied bus) | `protocore_lora_init(const protocore_lora_bus *bus, const protocore_lora_config *cfg)` | `PROTOCORE_ENABLE_LORA` |
+| `nrf24` | SPI (caller-supplied bus) | `protocore_nrf24_init(const nrf_bus *bus, const nrf_config *cfg)` | `PROTOCORE_ENABLE_NRF24` |
+| `promisc` | caller-supplied link | `protocore_promisc_begin(uint8_t channel, protocore_promisc_sink_fn sink)` | `PROTOCORE_ENABLE_PROMISC` |
+| `radio_sniff` | CAN | _none (pure codec)_ | `PROTOCORE_ENABLE_RADIO_SNIFF` |
+| `sigfox` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_SIGFOX` |
+| `thread` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_THREAD` |
+| `wifi_sniffer` | caller-supplied link | `protocore_wifi_sniffer_begin(uint8_t first_chan, uint8_t last_chan, uint16_t dwell_ms)` | `PROTOCORE_ENABLE_WIFI_SNIFFER` |
+| `wisun` | caller-supplied link | `protocore_wisun_init(WisunFan *fan, const protocore_ip *border_router, WisunNode *storage, size_t cap)` | `PROTOCORE_ENABLE_WISUN` |
+| `zigbee` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_ZIGBEE` |
+| `zwave` | CAN | _none (pure codec)_ | `PROTOCORE_ENABLE_ZWAVE` |
+| `rawl2` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_RAWL2` |
 
 ### Industrial & Fieldbus
 
 | Module | Attaches via | Bring-up call | Feature flag |
 | ------ | ------------ | ------------- | ------------ |
-| `dmx` | codec only - caller owns the link | _none (pure codec)_ | `PC_ENABLE_DMX` |
-| `sdi12` | codec only - caller owns the link | _none (pure codec)_ | `PC_ENABLE_SDI12` |
-| `ads` | codec only - caller owns the link | _none (pure codec)_ | `PC_ENABLE_ADS` |
-| `bacnet` | codec only - caller owns the link | _none (pure codec)_ | `PC_ENABLE_BACNET` |
-| `canopen` | CAN | `pc_canopen_sdo_reasm_init(CanopenSdoReasm *r, uint8_t *buf, size_t cap)` | `PC_ENABLE_CANOPEN` |
-| `cclink` | codec only - caller owns the link | _none (pure codec)_ | `PC_ENABLE_CCLINK` |
-| `cia402` | CAN | _none (pure codec)_ | `PC_ENABLE_CIA402` |
-| `cip` | codec only - caller owns the link | _none (pure codec)_ | `PC_ENABLE_CIP` |
-| `cotp` | codec only - caller owns the link | _none (pure codec)_ | `PC_ENABLE_COTP` |
-| `devicenet` | CAN | _none (pure codec)_ | `PC_ENABLE_DEVICENET` |
-| `df1` | codec only - caller owns the link | _none (pure codec)_ | `PC_ENABLE_DF1` |
-| `directnet` | codec only - caller owns the link | _none (pure codec)_ | `PC_ENABLE_DIRECTNET` |
-| `enip` | codec only - caller owns the link | _none (pure codec)_ | `PC_ENABLE_ENIP` |
-| `fins` | codec only - caller owns the link | _none (pure codec)_ | `PC_ENABLE_FINS` |
-| `hart` | codec only - caller owns the link | _none (pure codec)_ | `PC_ENABLE_HART` |
-| `hostlink` | codec only - caller owns the link | _none (pure codec)_ | `PC_ENABLE_HOSTLINK` |
-| `interbus` | codec only - caller owns the link | _none (pure codec)_ | `PC_ENABLE_INTERBUS` |
-| `iolink` | codec only - caller owns the link | _none (pure codec)_ | `PC_ENABLE_IOLINK` |
-| `lonworks` | codec only - caller owns the link | _none (pure codec)_ | `PC_ENABLE_LONWORKS` |
-| `mbplus` | codec only - caller owns the link | _none (pure codec)_ | `PC_ENABLE_MBPLUS` |
-| `melsec` | codec only - caller owns the link | _none (pure codec)_ | `PC_ENABLE_MELSEC` |
-| `modbus` | caller-supplied link | `pc_modbus_server_init()` | `PC_ENABLE_MODBUS` |
-| `powerlink` | codec only - caller owns the link | _none (pure codec)_ | `PC_ENABLE_POWERLINK` |
-| `profibus` | codec only - caller owns the link | _none (pure codec)_ | `PC_ENABLE_PROFIBUS` |
-| `profinet` | codec only - caller owns the link | _none (pure codec)_ | `PC_ENABLE_PROFINET` |
-| `s7comm` | codec only - caller owns the link | _none (pure codec)_ | `PC_ENABLE_S7COMM` |
-| `sercos` | codec only - caller owns the link | _none (pure codec)_ | `PC_ENABLE_SERCOS` |
-| `snp` | codec only - caller owns the link | _none (pure codec)_ | `PC_ENABLE_SNP` |
+| `dmx` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_DMX` |
+| `sdi12` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_SDI12` |
+| `ads` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_ADS` |
+| `bacnet` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_BACNET` |
+| `canopen` | CAN | `protocore_canopen_sdo_reasm_init(CanopenSdoReasm *r, uint8_t *buf, size_t cap)` | `PROTOCORE_ENABLE_CANOPEN` |
+| `cclink` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_CCLINK` |
+| `cia402` | CAN | _none (pure codec)_ | `PROTOCORE_ENABLE_CIA402` |
+| `cip` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_CIP` |
+| `cotp` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_COTP` |
+| `devicenet` | CAN | _none (pure codec)_ | `PROTOCORE_ENABLE_DEVICENET` |
+| `df1` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_DF1` |
+| `directnet` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_DIRECTNET` |
+| `enip` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_ENIP` |
+| `fins` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_FINS` |
+| `hart` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_HART` |
+| `hostlink` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_HOSTLINK` |
+| `interbus` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_INTERBUS` |
+| `iolink` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_IOLINK` |
+| `lonworks` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_LONWORKS` |
+| `mbplus` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_MBPLUS` |
+| `melsec` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_MELSEC` |
+| `modbus` | caller-supplied link | `protocore_modbus_server_init()` | `PROTOCORE_ENABLE_MODBUS` |
+| `powerlink` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_POWERLINK` |
+| `profibus` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_PROFIBUS` |
+| `profinet` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_PROFINET` |
+| `s7comm` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_S7COMM` |
+| `sercos` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_SERCOS` |
+| `snp` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_SNP` |
 
 ### SCADA, Energy & Monitoring
 
 | Module | Attaches via | Bring-up call | Feature flag |
 | ------ | ------------ | ------------- | ------------ |
-| `mbus` | codec only - caller owns the link | _none (pure codec)_ | `PC_ENABLE_MBUS` |
+| `mbus` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_MBUS` |
 
 ### Machine Tools & OT
 
 | Module | Attaches via | Bring-up call | Feature flag |
 | ------ | ------------ | ------------- | ------------ |
-| `opcua` | codec only - caller owns the link | _none (pure codec)_ | `PC_ENABLE_OPCUA` |
-| `opcua_client` | caller-supplied link | `pc_opcua_client_init(OpcUaClient *c)` | `PC_ENABLE_OPCUA_CLIENT` |
+| `opcua` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_OPCUA` |
+| `opcua_client` | caller-supplied link | `protocore_opcua_client_init(OpcUaClient *c)` | `PROTOCORE_ENABLE_OPCUA_CLIENT` |
 
 ### Transportation & ITS
 
 | Module | Attaches via | Bring-up call | Feature flag |
 | ------ | ------------ | ------------- | ------------ |
-| `j1939` | CAN | _none (pure codec)_ | `PC_ENABLE_J1939` |
-| `gnss` | codec only - caller owns the link | _none (pure codec)_ | `PC_ENABLE_NMEA0183` |
-| `nmea0183` | codec only - caller owns the link | _none (pure codec)_ | `PC_ENABLE_NMEA0183` |
-| `nmea2000` | CAN | _none (pure codec)_ | `PC_ENABLE_NMEA2000` |
+| `j1939` | CAN | _none (pure codec)_ | `PROTOCORE_ENABLE_J1939` |
+| `gnss` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_NMEA0183` |
+| `nmea0183` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_NMEA0183` |
+| `nmea2000` | CAN | _none (pure codec)_ | `PROTOCORE_ENABLE_NMEA2000` |
 
 ### Application (L7) - Other
 
 | Module | Attaches via | Bring-up call | Feature flag |
 | ------ | ------------ | ------------- | ------------ |
-| `ad9238` | codec only - caller owns the link | _none (pure codec)_ | `PC_ENABLE_AD9238` |
-| `hmmd` | UART | `pc_hmmd_begin(int rx_pin, int tx_pin)` | `PC_ENABLE_HMMD` |
-| `rcwl0516` | caller-supplied link | `pc_rcwl0516_core_init(PresenceCore *c, uint32_t now)` | `PC_ENABLE_RCWL0516` |
-| `sen0192` | caller-supplied link | `pc_sen0192_motion_init(Sen0192Motion *m, uint32_t hold_ms, proto_bool active_high)` | `PC_ENABLE_SEN0192` |
-| `gpib` | codec only - caller owns the link | _none (pure codec)_ | `PC_ENABLE_GPIB` |
-| `hislip` | codec only - caller owns the link | _none (pure codec)_ | `PC_ENABLE_HISLIP` |
-| `scpi` | caller-supplied link | `pc_scpi_status_init(ScpiStatus *s)` | `PC_ENABLE_SCPI` |
-| `vxi11` | codec only - caller owns the link | _none (pure codec)_ | `PC_ENABLE_VXI11` |
-| `simatic` | codec only - caller owns the link | _none (pure codec)_ | `PC_ENABLE_SIMATIC` |
-| `ubx` | caller-supplied link | `pc_ubx_stream_init(pc_ubx_stream *st)` | `PC_ENABLE_UBX` |
+| `ad9238` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_AD9238` |
+| `hmmd` | UART | `protocore_hmmd_begin(int rx_pin, int tx_pin)` | `PROTOCORE_ENABLE_HMMD` |
+| `rcwl0516` | caller-supplied link | `protocore_rcwl0516_core_init(PresenceCore *c, uint32_t now)` | `PROTOCORE_ENABLE_RCWL0516` |
+| `sen0192` | caller-supplied link | `protocore_sen0192_motion_init(Sen0192Motion *m, uint32_t hold_ms, proto_bool active_high)` | `PROTOCORE_ENABLE_SEN0192` |
+| `gpib` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_GPIB` |
+| `hislip` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_HISLIP` |
+| `scpi` | caller-supplied link | `protocore_scpi_status_init(ScpiStatus *s)` | `PROTOCORE_ENABLE_SCPI` |
+| `vxi11` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_VXI11` |
+| `simatic` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_SIMATIC` |
+| `ubx` | caller-supplied link | `protocore_ubx_stream_init(protocore_ubx_stream *st)` | `PROTOCORE_ENABLE_UBX` |
 
 <!-- prettier-ignore-end -->
 

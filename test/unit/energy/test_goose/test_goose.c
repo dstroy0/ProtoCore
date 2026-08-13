@@ -32,9 +32,9 @@ static int find(const uint8_t *hay, size_t hlen, const uint8_t *needle, size_t n
     return -1;
 }
 
-static pc_goose base(void)
+static protocore_goose base(void)
 {
-    pc_goose g = {0};
+    protocore_goose g = {0};
     g.gocb_ref = "X";
     g.time_allowed_to_live = 1;
     g.dat_set = "D";
@@ -53,9 +53,9 @@ static pc_goose base(void)
 
 void test_pdu_structure(void)
 {
-    pc_goose g = base();
+    protocore_goose g = base();
     uint8_t out[128];
-    size_t n = pc_goose_pdu(&g, out, sizeof(out));
+    size_t n = protocore_goose_pdu(&g, out, sizeof(out));
     // Content is 42 octets (see goose.cpp field sizes); PDU = 61 2A <42> = 44.
     TEST_ASSERT_EQUAL_size_t(44, n);
     TEST_ASSERT_EQUAL_HEX8(0x61, out[0]);
@@ -75,26 +75,26 @@ void test_pdu_structure(void)
 
 void test_integer_leading_zero(void)
 {
-    pc_goose g = base();
+    protocore_goose g = base();
     g.st_num = 200; // 0xC8, MSB set -> BER positive INTEGER needs a leading 0x00: 85 02 00 C8.
     uint8_t out[128];
-    size_t n = pc_goose_pdu(&g, out, sizeof(out));
+    size_t n = protocore_goose_pdu(&g, out, sizeof(out));
     const uint8_t st[] = {0x85, 0x02, 0x00, 0xC8};
     TEST_ASSERT_TRUE(find(out, n, st, 4) >= 0);
     // A value < 0x80 stays one octet.
     g.st_num = 0x7F;
-    n = pc_goose_pdu(&g, out, sizeof(out));
+    n = protocore_goose_pdu(&g, out, sizeof(out));
     const uint8_t st2[] = {0x85, 0x01, 0x7F};
     TEST_ASSERT_TRUE(find(out, n, st2, 3) >= 0);
 }
 
 void test_frame(void)
 {
-    pc_goose g = base();
+    protocore_goose g = base();
     uint8_t dst[6] = {0x01, 0x0C, 0xCD, 0x01, 0x00, 0x01};
     uint8_t src[6] = {0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF};
     uint8_t out[128];
-    size_t n = pc_goose_frame(dst, src, 0x1234, &g, out, sizeof(out));
+    size_t n = protocore_goose_frame(dst, src, 0x1234, &g, out, sizeof(out));
     TEST_ASSERT_TRUE(n > 22);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(dst, out, 6);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(src, out + 6, 6);
@@ -111,45 +111,45 @@ void test_frame(void)
 // encoding (long-form), driven by a >=128-octet allData.
 void test_goose_error_and_longform(void)
 {
-    pc_goose g = base();
+    protocore_goose g = base();
     uint8_t out[512];
 
-    TEST_ASSERT_EQUAL_size_t(0, pc_goose_pdu(NULL, out, sizeof(out))); // null g
-    TEST_ASSERT_EQUAL_size_t(0, pc_goose_pdu(&g, NULL, sizeof(out)));  // null out
-    TEST_ASSERT_EQUAL_size_t(0, pc_goose_pdu(&g, out, 3));             // cap < reserved header
-    TEST_ASSERT_EQUAL_size_t(0, pc_goose_pdu(&g, out, 10)); // fits the header but overflows on a field -> !ok
+    TEST_ASSERT_EQUAL_size_t(0, protocore_goose_pdu(NULL, out, sizeof(out))); // null g
+    TEST_ASSERT_EQUAL_size_t(0, protocore_goose_pdu(&g, NULL, sizeof(out)));  // null out
+    TEST_ASSERT_EQUAL_size_t(0, protocore_goose_pdu(&g, out, 3));             // cap < reserved header
+    TEST_ASSERT_EQUAL_size_t(0, protocore_goose_pdu(&g, out, 10)); // fits the header but overflows on a field -> !ok
 
     // A >=128-octet allData forces multi-octet BER lengths (len_octets + write_len long-form).
     static uint8_t big[200];
     memset(big, 0x5A, sizeof(big));
     g.all_data = big;
     g.all_data_len = sizeof(big);
-    size_t n = pc_goose_pdu(&g, out, sizeof(out));
+    size_t n = protocore_goose_pdu(&g, out, sizeof(out));
     TEST_ASSERT_TRUE(n > 200);
     TEST_ASSERT_EQUAL_HEX8(0x61, out[0]);
     TEST_ASSERT_EQUAL_HEX8(0x81, out[1]); // content length >= 128 -> long-form (one following octet)
 
     uint8_t dst[6] = {0};
     uint8_t src[6] = {0};
-    pc_goose g2 = base();
-    TEST_ASSERT_EQUAL_size_t(0, pc_goose_frame(NULL, src, 0x1234, &g2, out, sizeof(out))); // null dst
-    TEST_ASSERT_EQUAL_size_t(0, pc_goose_frame(dst, src, 0x1234, &g2, out, 20));           // cap < 22
-    TEST_ASSERT_EQUAL_size_t(0, pc_goose_frame(dst, src, 0x1234, &g2, out, 30)); // >=22 but the PDU cannot fit
+    protocore_goose g2 = base();
+    TEST_ASSERT_EQUAL_size_t(0, protocore_goose_frame(NULL, src, 0x1234, &g2, out, sizeof(out))); // null dst
+    TEST_ASSERT_EQUAL_size_t(0, protocore_goose_frame(dst, src, 0x1234, &g2, out, 20));           // cap < 22
+    TEST_ASSERT_EQUAL_size_t(0, protocore_goose_frame(dst, src, 0x1234, &g2, out, 30)); // >=22 but the PDU cannot fit
 }
 
-// pc_ber_str's `s ? s : ""` / `s ? strnlen(...) : 0` ternaries (null gocbRef), pc_ber_bool's
+// protocore_ber_str's `s ? s : ""` / `s ? strnlen(...) : 0` ternaries (null gocbRef), protocore_ber_bool's
 // `v ? 0xFF : 0x00` ternary (simulation true), and the `g->t ? g->t : ZT` ternary (a caller-supplied
 // UtcTime) all only ever took their "false"/default operand in the tests above; drive each one's
 // other side here.
 void test_goose_null_string_true_bool_and_time(void)
 {
-    pc_goose g = base();
-    g.gocb_ref = NULL;         // pc_ber_str: s is null -> value "" / length 0.
-    g.simulation = PROTO_TRUE; // pc_ber_bool: v is true -> 0xFF.
+    protocore_goose g = base();
+    g.gocb_ref = NULL;         // protocore_ber_str: s is null -> value "" / length 0.
+    g.simulation = PROTO_TRUE; // protocore_ber_bool: v is true -> 0xFF.
     uint8_t tbuf[8] = {1, 2, 3, 4, 5, 6, 7, 8};
     g.t = tbuf; // g->t is non-null -> use it instead of ZT.
     uint8_t out[128];
-    size_t n = pc_goose_pdu(&g, out, sizeof(out));
+    size_t n = protocore_goose_pdu(&g, out, sizeof(out));
     TEST_ASSERT_TRUE(n > 0);
     const uint8_t gocb[] = {0x80, 0x00}; // empty gocbRef
     TEST_ASSERT_TRUE(find(out, n, gocb, 2) >= 0);
@@ -159,7 +159,7 @@ void test_goose_null_string_true_bool_and_time(void)
     TEST_ASSERT_TRUE(find(out, n, t, sizeof(t)) >= 0);
 }
 
-// pc_goose_pdu's field chain is a run of `&&`-joined encoders; each field's success (already
+// protocore_goose_pdu's field chain is a run of `&&`-joined encoders; each field's success (already
 // exercised above) and failure (only exercised for a couple of fields above) both need to be seen
 // for full branch coverage of that field's `&&`. Drive cap to the exact cumulative size needed
 // just before each successive field, so that field's tlv() always overflows while every prior
@@ -168,7 +168,7 @@ void test_goose_null_string_true_bool_and_time(void)
 // taking its "succeeded, keep going" branch right before the chain finally fails.
 void test_goose_pdu_field_boundary_failures(void)
 {
-    pc_goose g = base();
+    protocore_goose g = base();
     uint8_t out[64];
     static const size_t fail_cap[] = {
         4,  // 0x80 gocbRef
@@ -186,28 +186,28 @@ void test_goose_pdu_field_boundary_failures(void)
     };
     for (size_t i = 0; i < sizeof(fail_cap) / sizeof(fail_cap[0]); i++)
     {
-        TEST_ASSERT_EQUAL_size_t(0, pc_goose_pdu(&g, out, fail_cap[i]));
+        TEST_ASSERT_EQUAL_size_t(0, protocore_goose_pdu(&g, out, fail_cap[i]));
     }
 }
 
-// pc_goose_frame has its own null-pointer guard (dst, src, g, out) ahead of the size check;
+// protocore_goose_frame has its own null-pointer guard (dst, src, g, out) ahead of the size check;
 // only the dst-null and cap<22 sides were exercised above.
 void test_goose_frame_null_guards(void)
 {
-    pc_goose g = base();
+    protocore_goose g = base();
     uint8_t dst[6] = {0};
     uint8_t src[6] = {0};
     uint8_t out[128];
-    TEST_ASSERT_EQUAL_size_t(0, pc_goose_frame(dst, NULL, 0x1234, &g, out, sizeof(out)));  // null src
-    TEST_ASSERT_EQUAL_size_t(0, pc_goose_frame(dst, src, 0x1234, NULL, out, sizeof(out))); // null g
-    TEST_ASSERT_EQUAL_size_t(0, pc_goose_frame(dst, src, 0x1234, &g, NULL, sizeof(out)));  // null out
+    TEST_ASSERT_EQUAL_size_t(0, protocore_goose_frame(dst, NULL, 0x1234, &g, out, sizeof(out)));  // null src
+    TEST_ASSERT_EQUAL_size_t(0, protocore_goose_frame(dst, src, 0x1234, NULL, out, sizeof(out))); // null g
+    TEST_ASSERT_EQUAL_size_t(0, protocore_goose_frame(dst, src, 0x1234, &g, NULL, sizeof(out)));  // null out
 }
 
 // Build a frame with the publisher, then subscribe to it and confirm every field round-trips
 // (multi-octet integers, a caller-supplied UtcTime, the true booleans, and the allData blob).
 void test_parse_roundtrip(void)
 {
-    pc_goose g = base();
+    protocore_goose g = base();
     g.gocb_ref = "GE1/LLN0$GO$gcb";
     g.time_allowed_to_live = 1000;
     g.dat_set = "GE1/LLN0$DS";
@@ -227,11 +227,11 @@ void test_parse_roundtrip(void)
     uint8_t dst[6] = {0x01, 0x0C, 0xCD, 0x01, 0x00, 0x01};
     uint8_t src[6] = {0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF};
     uint8_t frame[256];
-    size_t n = pc_goose_frame(dst, src, 0x3001, &g, frame, sizeof(frame));
+    size_t n = protocore_goose_frame(dst, src, 0x3001, &g, frame, sizeof(frame));
     TEST_ASSERT_TRUE(n > 22);
 
-    pc_goose_rx rx;
-    TEST_ASSERT_TRUE(pc_goose_parse_frame(frame, n, &rx));
+    protocore_goose_rx rx;
+    TEST_ASSERT_TRUE(protocore_goose_parse_frame(frame, n, &rx));
     TEST_ASSERT_EQUAL_HEX16(0x3001, rx.appid);
     TEST_ASSERT_EQUAL_size_t(strlen("GE1/LLN0$GO$gcb"), rx.gocb_ref_len);
     TEST_ASSERT_EQUAL_MEMORY("GE1/LLN0$GO$gcb", rx.gocb_ref, rx.gocb_ref_len);
@@ -253,24 +253,24 @@ void test_parse_roundtrip(void)
 
 void test_parse_rejects(void)
 {
-    pc_goose g = base();
+    protocore_goose g = base();
     uint8_t dst[6] = {0};
     uint8_t src[6] = {0};
     uint8_t frame[256];
-    size_t n = pc_goose_frame(dst, src, 0x1234, &g, frame, sizeof(frame));
+    size_t n = protocore_goose_frame(dst, src, 0x1234, &g, frame, sizeof(frame));
 
-    pc_goose_rx rx;
+    protocore_goose_rx rx;
     // A non-GOOSE ethertype is rejected.
     uint8_t bad[256];
     memcpy(bad, frame, n);
     bad[13] = 0xB9;
-    TEST_ASSERT_FALSE(pc_goose_parse_frame(bad, n, &rx));
+    TEST_ASSERT_FALSE(protocore_goose_parse_frame(bad, n, &rx));
     // A frame truncated into the PDU fails the BER definite-length bound check.
-    TEST_ASSERT_FALSE(pc_goose_parse_frame(frame, 25, &rx));
+    TEST_ASSERT_FALSE(protocore_goose_parse_frame(frame, 25, &rx));
     // Too short (< 24) and null guards.
-    TEST_ASSERT_FALSE(pc_goose_parse_frame(frame, 23, &rx));
-    TEST_ASSERT_FALSE(pc_goose_parse_frame(NULL, n, &rx));
-    TEST_ASSERT_FALSE(pc_goose_parse_frame(frame, n, NULL));
+    TEST_ASSERT_FALSE(protocore_goose_parse_frame(frame, 23, &rx));
+    TEST_ASSERT_FALSE(protocore_goose_parse_frame(NULL, n, &rx));
+    TEST_ASSERT_FALSE(protocore_goose_parse_frame(frame, n, NULL));
 }
 
 int main(void)

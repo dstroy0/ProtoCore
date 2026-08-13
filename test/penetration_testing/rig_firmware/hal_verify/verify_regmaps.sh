@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Ground-truth check for core_setup/hal/esp/esp_crypto_hal.h: compile HalRegmapVerify for every supported die. Each build
-# static_asserts our PC_ register values EQUAL the manufacturer's soc macros for that die, so a clean compile
+# static_asserts our PROTOCORE_ register values EQUAL the manufacturer's soc macros for that die, so a clean compile
 # proves the map matches Espressif's own implementation - including dies we have no board for. Run in WSL with
 # the arduino-esp32 3.x core installed (arduino-cli on PATH):
 #

@@ -9,9 +9,9 @@
 #include "services/iot/protobuf/protobuf.h"
 #include "mmgr/protomem.h"
 
-#if PC_NEED_PROTOBUF
+#if PROTOCORE_NEED_PROTOBUF
 
-void pc_pb_writer_init(PbWriter *w, uint8_t *buf, size_t cap)
+void protocore_pb_writer_init(PbWriter *w, uint8_t *buf, size_t cap)
 {
     w->buf = buf;
     w->cap = cap;
@@ -19,7 +19,7 @@ void pc_pb_writer_init(PbWriter *w, uint8_t *buf, size_t cap)
     w->error = PROTO_FALSE;
 }
 
-proto_bool pc_pb_write_varint(PbWriter *w, uint64_t v)
+proto_bool protocore_pb_write_varint(PbWriter *w, uint64_t v)
 {
     if (w->error)
     {
@@ -47,13 +47,14 @@ proto_bool pc_pb_write_varint(PbWriter *w, uint64_t v)
     return PROTO_TRUE;
 }
 
-proto_bool pc_pb_write_tag(PbWriter *w, uint32_t field, uint8_t wire_type)
+proto_bool protocore_pb_write_tag(PbWriter *w, uint32_t field, uint8_t wire_type)
 {
-    return pc_pb_write_varint(w, ((uint64_t)field << 3) | (wire_type & 0x07)); // tag = field<<3 | wire(low 3 bits)
+    return protocore_pb_write_varint(w,
+                                     ((uint64_t)field << 3) | (wire_type & 0x07)); // tag = field<<3 | wire(low 3 bits)
 }
 
 // Append @p n raw little-endian octets of @p v.
-static proto_bool pc_pb_write_le(PbWriter *w, uint64_t v, size_t n)
+static proto_bool protocore_pb_write_le(PbWriter *w, uint64_t v, size_t n)
 {
     if (w->error)
     {
@@ -71,54 +72,54 @@ static proto_bool pc_pb_write_le(PbWriter *w, uint64_t v, size_t n)
     return PROTO_TRUE;
 }
 
-proto_bool pc_pb_uint64(PbWriter *w, uint32_t field, uint64_t v)
+proto_bool protocore_pb_uint64(PbWriter *w, uint32_t field, uint64_t v)
 {
-    return pc_pb_write_tag(w, field, PB_WT_VARINT) && pc_pb_write_varint(w, v);
+    return protocore_pb_write_tag(w, field, PB_WT_VARINT) && protocore_pb_write_varint(w, v);
 }
 
-proto_bool pc_pb_int64(PbWriter *w, uint32_t field, int64_t v)
+proto_bool protocore_pb_int64(PbWriter *w, uint32_t field, int64_t v)
 {
-    return pc_pb_uint64(w, field, (uint64_t)v); // two's complement; negatives take 10 bytes
+    return protocore_pb_uint64(w, field, (uint64_t)v); // two's complement; negatives take 10 bytes
 }
 
-proto_bool pc_pb_sint64(PbWriter *w, uint32_t field, int64_t v)
+proto_bool protocore_pb_sint64(PbWriter *w, uint32_t field, int64_t v)
 {
     uint64_t zz = ((uint64_t)v << 1) ^ (uint64_t)(v >> 63); // ZigZag
-    return pc_pb_uint64(w, field, zz);
+    return protocore_pb_uint64(w, field, zz);
 }
 
-proto_bool pc_pb_bool(PbWriter *w, uint32_t field, proto_bool v)
+proto_bool protocore_pb_bool(PbWriter *w, uint32_t field, proto_bool v)
 {
-    return pc_pb_uint64(w, field, v ? 1 : 0);
+    return protocore_pb_uint64(w, field, v ? 1 : 0);
 }
 
-proto_bool pc_pb_fixed32(PbWriter *w, uint32_t field, uint32_t v)
+proto_bool protocore_pb_fixed32(PbWriter *w, uint32_t field, uint32_t v)
 {
-    return pc_pb_write_tag(w, field, PB_WT_I32) && pc_pb_write_le(w, v, 4);
+    return protocore_pb_write_tag(w, field, PB_WT_I32) && protocore_pb_write_le(w, v, 4);
 }
 
-proto_bool pc_pb_fixed64(PbWriter *w, uint32_t field, uint64_t v)
+proto_bool protocore_pb_fixed64(PbWriter *w, uint32_t field, uint64_t v)
 {
-    return pc_pb_write_tag(w, field, PB_WT_I64) && pc_pb_write_le(w, v, 8);
+    return protocore_pb_write_tag(w, field, PB_WT_I64) && protocore_pb_write_le(w, v, 8);
 }
 
-proto_bool pc_pb_float(PbWriter *w, uint32_t field, float v)
+proto_bool protocore_pb_float(PbWriter *w, uint32_t field, float v)
 {
     uint32_t bits;
     mem.cpy(&bits, &v, 4);
-    return pc_pb_fixed32(w, field, bits);
+    return protocore_pb_fixed32(w, field, bits);
 }
 
-proto_bool pc_pb_double(PbWriter *w, uint32_t field, double v)
+proto_bool protocore_pb_double(PbWriter *w, uint32_t field, double v)
 {
     uint64_t bits;
     mem.cpy(&bits, &v, 8);
-    return pc_pb_fixed64(w, field, bits);
+    return protocore_pb_fixed64(w, field, bits);
 }
 
-proto_bool pc_pb_bytes(PbWriter *w, uint32_t field, const uint8_t *data, size_t len)
+proto_bool protocore_pb_bytes(PbWriter *w, uint32_t field, const uint8_t *data, size_t len)
 {
-    if (!pc_pb_write_tag(w, field, PB_WT_LEN) || !pc_pb_write_varint(w, len))
+    if (!protocore_pb_write_tag(w, field, PB_WT_LEN) || !protocore_pb_write_varint(w, len))
     {
         return PROTO_FALSE;
     }
@@ -140,22 +141,22 @@ proto_bool pc_pb_bytes(PbWriter *w, uint32_t field, const uint8_t *data, size_t 
     return PROTO_TRUE;
 }
 
-proto_bool pc_pb_string(PbWriter *w, uint32_t field, const char *s)
+proto_bool protocore_pb_string(PbWriter *w, uint32_t field, const char *s)
 {
     if (!s)
     {
         w->error = PROTO_TRUE;
         return PROTO_FALSE;
     }
-    return pc_pb_bytes(w, field, (const uint8_t *)s, strnlen(s, w->cap + 1));
+    return protocore_pb_bytes(w, field, (const uint8_t *)s, strnlen(s, w->cap + 1));
 }
 
-size_t pc_pb_writer_finish(PbWriter *w)
+size_t protocore_pb_writer_finish(PbWriter *w)
 {
     return w->error ? 0 : w->pos;
 }
 
-proto_bool pc_pb_read_varint(const uint8_t *buf, size_t len, size_t *pos, uint64_t *out)
+proto_bool protocore_pb_read_varint(const uint8_t *buf, size_t len, size_t *pos, uint64_t *out)
 {
     if (!buf || !pos || !out)
     {
@@ -183,14 +184,14 @@ proto_bool pc_pb_read_varint(const uint8_t *buf, size_t len, size_t *pos, uint64
     return PROTO_FALSE; // overlong / unterminated
 }
 
-proto_bool pc_pb_read_field(const uint8_t *buf, size_t len, size_t *pos, PbField *out)
+proto_bool protocore_pb_read_field(const uint8_t *buf, size_t len, size_t *pos, PbField *out)
 {
     if (!buf || !pos || !out || *pos >= len)
     {
         return PROTO_FALSE;
     }
     uint64_t tag;
-    if (!pc_pb_read_varint(buf, len, pos, &tag))
+    if (!protocore_pb_read_varint(buf, len, pos, &tag))
     {
         return PROTO_FALSE;
     }
@@ -203,7 +204,7 @@ proto_bool pc_pb_read_field(const uint8_t *buf, size_t len, size_t *pos, PbField
     switch (out->wire_type)
     {
     case PB_WT_VARINT:
-        return pc_pb_read_varint(buf, len, pos, &out->value);
+        return protocore_pb_read_varint(buf, len, pos, &out->value);
     case PB_WT_I64: {
         if (*pos + 8 > len)
         {
@@ -234,7 +235,7 @@ proto_bool pc_pb_read_field(const uint8_t *buf, size_t len, size_t *pos, PbField
     }
     case PB_WT_LEN: {
         uint64_t l;
-        if (!pc_pb_read_varint(buf, len, pos, &l))
+        if (!protocore_pb_read_varint(buf, len, pos, &l))
         {
             return PROTO_FALSE;
         }
@@ -252,28 +253,28 @@ proto_bool pc_pb_read_field(const uint8_t *buf, size_t len, size_t *pos, PbField
     }
 }
 
-int64_t pc_pb_zigzag64(uint64_t v)
+int64_t protocore_pb_zigzag64(uint64_t v)
 {
     return (int64_t)(v >> 1) ^ -(int64_t)(v & 1);
 }
 
-int32_t pc_pb_zigzag32(uint32_t v)
+int32_t protocore_pb_zigzag32(uint32_t v)
 {
     return (int32_t)(v >> 1) ^ -(int32_t)(v & 1);
 }
 
-float pc_pb_float_bits(uint32_t bits)
+float protocore_pb_float_bits(uint32_t bits)
 {
     float f;
     mem.cpy(&f, &bits, 4);
     return f;
 }
 
-double pc_pb_double_bits(uint64_t bits)
+double protocore_pb_double_bits(uint64_t bits)
 {
     double d;
     mem.cpy(&d, &bits, 8);
     return d;
 }
 
-#endif // PC_NEED_PROTOBUF
+#endif // PROTOCORE_NEED_PROTOBUF

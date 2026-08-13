@@ -181,8 +181,8 @@ Still stuck? Watch the mail server's own log while the ESP32 tries:
   set `cfg.user` and `cfg.pass`. The client uses **AUTH LOGIN** automatically.
 
 - **Encrypted mail (SMTPS), e.g. a real provider.** Set `cfg.tls = true` and
-  `cfg.port = 465`, and build with TLS on: add `-DPC_ENABLE_TLS=1` next to
-  `-DPC_ENABLE_SMTP=1`. The whole conversation is then encrypted.
+  `cfg.port = 465`, and build with TLS on: add `-DPROTOCORE_ENABLE_TLS=1` next to
+  `-DPROTOCORE_ENABLE_SMTP=1`. The whole conversation is then encrypted.
 
 - **Send a text message (SMS).** Most phone carriers accept an "email-to-SMS gateway"
   address. Put that address in `MAIL_TO` (e.g. `5551234567@txt.att.net` for AT&T in the
@@ -199,7 +199,7 @@ SMTP lives inside the library, so the flag must reach the whole build:
 pio ci examples/L7-Application/SmtpAlert \
   --board esp32dev \
   --lib "." \
-  --project-option="build_flags=-DPC_ENABLE_SMTP=1"
+  --project-option="build_flags=-DPROTOCORE_ENABLE_SMTP=1"
 ```
 
 (The Arduino IDE reads the flag from `build_opt.h` beside the sketch automatically.)
@@ -209,11 +209,11 @@ pio ci examples/L7-Application/SmtpAlert \
 ## How it works under the hood (for the curious)
 
 `smtp_send()` opens one TCP connection through the library's shared client transport
-(`pc_client`) and runs the RFC 5321 conversation: read the `220` greeting, say `EHLO`,
+(`protocore_client`) and runs the RFC 5321 conversation: read the `220` greeting, say `EHLO`,
 optionally `AUTH LOGIN` (username/password base64-encoded), then `MAIL FROM`, `RCPT TO`,
 `DATA`, the message itself, and `QUIT`. The body is **dot-stuffed** (a line that begins
 with a `.` gets an extra `.`) so it can never accidentally end the message early, and the
 message finishes with the required `<CR><LF>.<CR><LF>`. There is **no heap allocation** -
-every buffer is a fixed compile-time size (`PC_SMTP_*`). The conversation logic
+every buffer is a fixed compile-time size (`PROTOCORE_SMTP_*`). The conversation logic
 (`smtp_run`) is separated from the network behind a tiny send/recv interface, which is why
 it can be fully unit-tested on a PC with a pretend server (see `test/test_smtp`).

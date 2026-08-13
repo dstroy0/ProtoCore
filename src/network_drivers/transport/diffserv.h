@@ -28,25 +28,25 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_DIFFSERV
+#if PROTOCORE_ENABLE_DIFFSERV
 
 // Common RFC 2474 / RFC 4594 code points for convenience; any 0-63 value is accepted.
-#define PC_DSCP_CS0 0      ///< default / best effort
-#define PC_DSCP_CS6 48     ///< network control
-#define PC_DSCP_EF 46      ///< expedited forwarding (low-latency real-time)
-#define PC_DSCP_AF41 34    ///< assured forwarding, class 4 low drop (interactive)
-#define PC_DSCP_AF31 26    ///< assured forwarding, class 3 low drop (multimedia streaming)
-#define PC_DSCP_UNSET 0xFF ///< per-listener sentinel: fall back to the server-wide default
+#define PROTOCORE_DSCP_CS0 0      ///< default / best effort
+#define PROTOCORE_DSCP_CS6 48     ///< network control
+#define PROTOCORE_DSCP_EF 46      ///< expedited forwarding (low-latency real-time)
+#define PROTOCORE_DSCP_AF41 34    ///< assured forwarding, class 4 low drop (interactive)
+#define PROTOCORE_DSCP_AF31 26    ///< assured forwarding, class 3 low drop (multimedia streaming)
+#define PROTOCORE_DSCP_UNSET 0xFF ///< per-listener sentinel: fall back to the server-wide default
 
 /** @brief DSCP (0-63) -> the 8-bit DS field. The low 2 bits are ECN (left 0); TOS = DSCP << 2. */
-static inline uint8_t pc_dscp_to_tos(uint8_t dscp)
+static inline uint8_t protocore_dscp_to_tos(uint8_t dscp)
 {
     return (uint8_t)((dscp & 0x3F) << 2);
 }
 
-#endif // PC_ENABLE_DIFFSERV
+#endif // PROTOCORE_ENABLE_DIFFSERV
 
 /**
  * @brief The DSCP marks this server sets on what it sends.
@@ -72,6 +72,6 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern const DiffServNs DiffServ;
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_DIFFSERV_H

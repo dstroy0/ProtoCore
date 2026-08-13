@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // On-device CCOUNT microbenchmark for the BACnet/IP BVLC + NPDU codec (services/fieldbus/bacnet):
-// pc_bvlc_build()/pc_bvlc_parse() frame and slice the Annex J BVLL envelope (type + function +
-// big-endian length), and pc_npdu_build()/pc_npdu_parse() frame and slice the Clause 6 NPDU
+// protocore_bvlc_build()/protocore_bvlc_parse() frame and slice the Annex J BVLL envelope (type + function +
+// big-endian length), and protocore_npdu_build()/protocore_npdu_parse() frame and slice the Clause 6 NPDU
 // header (version + NPCI control, with optional DNET/DADR/hop-count addressing) around an APDU -
 // all pure (no sockets, no heap). Worked example for performance_benching/device/<service>/: a pure protocol codec
 // with no hardware involved, so every call here exercises the real production code path (contrast
@@ -45,28 +45,31 @@ void dbench_run(void)
         volatile size_t sinkz = 0;
         volatile bool sinkb = false;
 
-        DBENCH_OP("pc_bvlc_build", 50000,
-                  sinkz += pc_bvlc_build(bvlc_buf, sizeof(bvlc_buf), BVLC_FUNC_ORIGINAL_UNICAST, npdu_local,
-                                         sizeof(npdu_local)));
+        DBENCH_OP("protocore_bvlc_build", 50000,
+                  sinkz += protocore_bvlc_build(bvlc_buf, sizeof(bvlc_buf), BVLC_FUNC_ORIGINAL_UNICAST, npdu_local,
+                                                sizeof(npdu_local)));
 
         {
             uint8_t func;
             const uint8_t *p;
             size_t plen;
-            DBENCH_OP("pc_bvlc_parse", 50000, sinkb = pc_bvlc_parse(bvlc_buf, sizeof(bvlc_buf), &func, &p, &plen));
+            DBENCH_OP("protocore_bvlc_parse", 50000,
+                      sinkb = protocore_bvlc_parse(bvlc_buf, sizeof(bvlc_buf), &func, &p, &plen));
         }
 
-        DBENCH_OP("pc_npdu_build local", 50000,
-                  sinkz += pc_npdu_build(npdu_buf, sizeof(npdu_buf), false, NPDU_PRIO_NORMAL, false, 0, NULL, 0, 0,
-                                         apdu_local, sizeof(apdu_local)));
+        DBENCH_OP("protocore_npdu_build local", 50000,
+                  sinkz += protocore_npdu_build(npdu_buf, sizeof(npdu_buf), false, NPDU_PRIO_NORMAL, false, 0, NULL, 0,
+                                                0, apdu_local, sizeof(apdu_local)));
 
-        DBENCH_OP("pc_npdu_build routed", 50000,
-                  sinkz += pc_npdu_build(npdu_buf, sizeof(npdu_buf), true, NPDU_PRIO_NORMAL, true, 0x0005, dadr_routed,
-                                         sizeof(dadr_routed), 0xFF, apdu_routed, sizeof(apdu_routed)));
+        DBENCH_OP("protocore_npdu_build routed", 50000,
+                  sinkz +=
+                  protocore_npdu_build(npdu_buf, sizeof(npdu_buf), true, NPDU_PRIO_NORMAL, true, 0x0005, dadr_routed,
+                                       sizeof(dadr_routed), 0xFF, apdu_routed, sizeof(apdu_routed)));
 
         {
             NpduInfo info;
-            DBENCH_OP("pc_npdu_parse dest+src", 50000, sinkb = pc_npdu_parse(npdu_full, sizeof(npdu_full), &info));
+            DBENCH_OP("protocore_npdu_parse dest+src", 50000,
+                      sinkb = protocore_npdu_parse(npdu_full, sizeof(npdu_full), &info));
         }
 
         (void)sinkz;

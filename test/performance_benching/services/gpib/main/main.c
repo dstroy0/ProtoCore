@@ -44,24 +44,24 @@ void dbench_run(void)
         volatile bool bsink = false;
 
         // ── command builders (snprintf-backed) ──
-        DBENCH_OP("pc_gpib_addr", 50000, sink += pc_gpib_addr(cbuf, sizeof(cbuf), 9, 96));
-        DBENCH_OP("pc_gpib_read eoi", 50000, sink += pc_gpib_read(cbuf, sizeof(cbuf), UNTIL_EOI, 0));
-        DBENCH_OP("pc_gpib_spoll", 50000, sink += pc_gpib_spoll(cbuf, sizeof(cbuf), 9, 96));
+        DBENCH_OP("protocore_gpib_addr", 50000, sink += protocore_gpib_addr(cbuf, sizeof(cbuf), 9, 96));
+        DBENCH_OP("protocore_gpib_read eoi", 50000, sink += protocore_gpib_read(cbuf, sizeof(cbuf), UNTIL_EOI, 0));
+        DBENCH_OP("protocore_gpib_spoll", 50000, sink += protocore_gpib_spoll(cbuf, sizeof(cbuf), 9, 96));
 
         // ── data-line escaping (byte-throughput hot path) ──
-        DBENCH_BULK("pc_gpib_build_data esc", 50000, sizeof(esc_src),
-                    sink += pc_gpib_build_data(dbuf, sizeof(dbuf), esc_src, sizeof(esc_src)));
-        DBENCH_BULK("pc_gpib_build_data plain", 50000, sizeof(idn_src),
-                    sink += pc_gpib_build_data(dbuf, sizeof(dbuf), idn_src, sizeof(idn_src)));
+        DBENCH_BULK("protocore_gpib_build_data esc", 50000, sizeof(esc_src),
+                    sink += protocore_gpib_build_data(dbuf, sizeof(dbuf), esc_src, sizeof(esc_src)));
+        DBENCH_BULK("protocore_gpib_build_data plain", 50000, sizeof(idn_src),
+                    sink += protocore_gpib_build_data(dbuf, sizeof(dbuf), idn_src, sizeof(idn_src)));
 
         // ── classifier + response parsers ──
-        DBENCH_OP("pc_gpib_is_command", 200000, bsink ^= pc_gpib_is_command("++mode 1", 8));
-        DBENCH_OP("pc_gpib_parse_decimal", 100000,
-                  bsink ^= pc_gpib_parse_decimal(dec_resp, sizeof(dec_resp) - 1, NULL));
-        DBENCH_OP("pc_gpib_parse_addr", 100000,
-                  bsink ^= pc_gpib_parse_addr(addr_resp, sizeof(addr_resp) - 1, NULL, NULL));
-        DBENCH_OP("pc_gpib_parse_version", 100000,
-                  bsink ^= pc_gpib_parse_version(ver_resp, sizeof(ver_resp) - 1, NULL, NULL));
+        DBENCH_OP("protocore_gpib_is_command", 200000, bsink ^= protocore_gpib_is_command("++mode 1", 8));
+        DBENCH_OP("protocore_gpib_parse_decimal", 100000,
+                  bsink ^= protocore_gpib_parse_decimal(dec_resp, sizeof(dec_resp) - 1, NULL));
+        DBENCH_OP("protocore_gpib_parse_addr", 100000,
+                  bsink ^= protocore_gpib_parse_addr(addr_resp, sizeof(addr_resp) - 1, NULL, NULL));
+        DBENCH_OP("protocore_gpib_parse_version", 100000,
+                  bsink ^= protocore_gpib_parse_version(ver_resp, sizeof(ver_resp) - 1, NULL, NULL));
 
         (void)sink;
         (void)bsink;

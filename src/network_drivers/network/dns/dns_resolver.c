@@ -9,13 +9,13 @@
 #include "network_drivers/network/dns/dns_resolver.h"
 #include "mmgr/protomem.h"
 
-#if PC_NEED_DNS_RESOLVER
+#if PROTOCORE_NEED_DNS_RESOLVER
 
-#include "mmgr/secure.h"                          // pc_secure_persist_span: this module's storage
+#include "mmgr/secure.h"                          // protocore_secure_persist_span: this module's storage
 #include "network_drivers/network/dns/dns_wire.h" // the name codec both DNS halves share
-#include "server/clock/clock.h"                   // pc_millis(): the deadline the resolve waits to
+#include "server/clock/clock.h"                   // protocore_millis(): the deadline the resolve waits to
 
-#if PC_HAS_VENDOR_DNS_RESOLVER
+#if PROTOCORE_HAS_VENDOR_DNS_RESOLVER
 #include "lwip/def.h"
 #include "lwip/dns.h"
 #include "lwip/ip_addr.h"
@@ -31,53 +31,53 @@
 // Pure: what an address is, and whether it is a plausible answer
 // ---------------------------------------------------------------------------
 
-static pc_ip_class classify(uint32_t ip)
+static protocore_ip_class classify(uint32_t ip)
 {
     if (ip == 0u)
     {
-        return PC_IP_UNSPECIFIED;
+        return PROTOCORE_IP_UNSPECIFIED;
     }
     if (ip == 0xFFFFFFFFu)
     {
-        return PC_IP_BROADCAST;
+        return PROTOCORE_IP_BROADCAST;
     }
     uint8_t a = (uint8_t)((ip >> 24) & 0xFF);
     uint8_t b = (uint8_t)((ip >> 16) & 0xFF);
     if (a == 127)
     {
-        return PC_IP_LOOPBACK;
+        return PROTOCORE_IP_LOOPBACK;
     }
     if (a == 10)
     {
-        return PC_IP_PRIVATE;
+        return PROTOCORE_IP_PRIVATE;
     }
     if (a == 172 && b >= 16 && b <= 31)
     {
-        return PC_IP_PRIVATE;
+        return PROTOCORE_IP_PRIVATE;
     }
     if (a == 192 && b == 168)
     {
-        return PC_IP_PRIVATE;
+        return PROTOCORE_IP_PRIVATE;
     }
     if (a == 169 && b == 254)
     {
-        return PC_IP_LINKLOCAL;
+        return PROTOCORE_IP_LINKLOCAL;
     }
     if (a >= 224 && a <= 239)
     {
-        return PC_IP_MULTICAST;
+        return PROTOCORE_IP_MULTICAST;
     }
-    return PC_IP_PUBLIC;
+    return PROTOCORE_IP_PUBLIC;
 }
 
 static proto_bool verify(uint32_t ip)
 {
     switch (classify(ip))
     {
-    case PC_IP_UNSPECIFIED: // 0.0.0.0 - blocked / no answer
-    case PC_IP_BROADCAST:   // 255.255.255.255 - never a host
-    case PC_IP_LOOPBACK:    // 127.x - DNS-rebinding to localhost
-    case PC_IP_MULTICAST:   // 224-239 - never an A-record host
+    case PROTOCORE_IP_UNSPECIFIED: // 0.0.0.0 - blocked / no answer
+    case PROTOCORE_IP_BROADCAST:   // 255.255.255.255 - never a host
+    case PROTOCORE_IP_LOOPBACK:    // 127.x - DNS-rebinding to localhost
+    case PROTOCORE_IP_MULTICAST:   // 224-239 - never an A-record host
         return PROTO_FALSE;
     default:
         return PROTO_TRUE; // private / link-local / public are plausible
@@ -89,29 +89,29 @@ static proto_bool verify(uint32_t ip)
 // ---------------------------------------------------------------------------
 
 /** @brief Header words, and the record type / class an A query names (RFC 1035 sec 4.1.1). */
-#define PC_DNS_HDR_LEN 12u
-#define PC_DNS_T_A 1u
-#define PC_DNS_C_IN 1u
-#define PC_DNS_FLAG_RD 0x0100u ///< recursion desired
-#define PC_DNS_FLAG_QR 0x8000u ///< this message is a response
-#define PC_DNS_RCODE_MASK 0x000Fu
+#define PROTOCORE_DNS_HDR_LEN 12u
+#define PROTOCORE_DNS_T_A 1u
+#define PROTOCORE_DNS_C_IN 1u
+#define PROTOCORE_DNS_FLAG_RD 0x0100u ///< recursion desired
+#define PROTOCORE_DNS_FLAG_QR 0x8000u ///< this message is a response
+#define PROTOCORE_DNS_RCODE_MASK 0x000Fu
 
-size_t pc_dns_query_build(uint8_t *out, size_t cap, uint16_t id, const char *host)
+size_t protocore_dns_query_build(uint8_t *out, size_t cap, uint16_t id, const char *host)
 {
-    if (out == NULL || host == NULL || cap < PC_DNS_HDR_LEN)
+    if (out == NULL || host == NULL || cap < PROTOCORE_DNS_HDR_LEN)
     {
         return 0;
     }
-    for (size_t i = 0; i < PC_DNS_HDR_LEN; i++)
+    for (size_t i = 0; i < PROTOCORE_DNS_HDR_LEN; i++)
     {
         out[i] = 0;
     }
     out[0] = (uint8_t)(id >> 8);
     out[1] = (uint8_t)id;
-    out[2] = (uint8_t)(PC_DNS_FLAG_RD >> 8);
+    out[2] = (uint8_t)(PROTOCORE_DNS_FLAG_RD >> 8);
     out[5] = 1; // QDCOUNT = 1
-    size_t n = PC_DNS_HDR_LEN;
-    size_t w = pc_dns_name_encode(out + n, cap - n, host);
+    size_t n = PROTOCORE_DNS_HDR_LEN;
+    size_t w = protocore_dns_name_encode(out + n, cap - n, host);
     if (w == 0)
     {
         return 0;
@@ -123,11 +123,11 @@ size_t pc_dns_query_build(uint8_t *out, size_t cap, uint16_t id, const char *hos
     }
     out[n] = 0;
     n++;
-    out[n] = PC_DNS_T_A;
+    out[n] = PROTOCORE_DNS_T_A;
     n++;
     out[n] = 0;
     n++;
-    out[n] = PC_DNS_C_IN;
+    out[n] = PROTOCORE_DNS_C_IN;
     n++;
     return n;
 }
@@ -138,32 +138,32 @@ size_t pc_dns_query_build(uint8_t *out, size_t cap, uint16_t id, const char *hos
 // unreachable cross-TU.
 typedef struct
 {
-    pc_span name;   ///< where a record's owner name lands while the walk steps over it
-    pc_span tx;     ///< the query in flight
-    pc_span server; ///< the nameserver being asked
+    protocore_span name;   ///< where a record's owner name lands while the walk steps over it
+    protocore_span tx;     ///< the query in flight
+    protocore_span server; ///< the nameserver being asked
 } DnsMemCtx;
 static DnsMemCtx s_dns_mem;
 
 // Take the borrows on first use. False when the pool cannot cover them, and every caller fails closed.
 static proto_bool dns_mem_bind(void)
 {
-    if (pc_span_has_storage(s_dns_mem.name))
+    if (protocore_span_has_storage(s_dns_mem.name))
     {
         return PROTO_TRUE;
     }
-    s_dns_mem.name = pc_secure_persist_span(PC_DNS_NAME_MAX);
-    return pc_span_has_storage(s_dns_mem.name);
+    s_dns_mem.name = protocore_secure_persist_span(PROTOCORE_DNS_NAME_MAX);
+    return protocore_span_has_storage(s_dns_mem.name);
 }
 
-proto_bool pc_dns_answer_parse(const uint8_t *pkt, size_t len, uint16_t id, uint32_t *out_ip)
+proto_bool protocore_dns_answer_parse(const uint8_t *pkt, size_t len, uint16_t id, uint32_t *out_ip)
 {
-    if (pkt == NULL || out_ip == NULL || len < PC_DNS_HDR_LEN || !dns_mem_bind())
+    if (pkt == NULL || out_ip == NULL || len < PROTOCORE_DNS_HDR_LEN || !dns_mem_bind())
     {
         return PROTO_FALSE;
     }
     uint16_t got_id = (uint16_t)(((uint16_t)pkt[0] << 8) | pkt[1]);
     uint16_t flags = (uint16_t)(((uint16_t)pkt[2] << 8) | pkt[3]);
-    if (got_id != id || (flags & PC_DNS_FLAG_QR) == 0 || (flags & PC_DNS_RCODE_MASK) != 0)
+    if (got_id != id || (flags & PROTOCORE_DNS_FLAG_QR) == 0 || (flags & PROTOCORE_DNS_RCODE_MASK) != 0)
     {
         return PROTO_FALSE; // not our answer, not an answer, or the server said no
     }
@@ -176,11 +176,11 @@ proto_bool pc_dns_answer_parse(const uint8_t *pkt, size_t len, uint16_t id, uint
 
     // Step over the questions: each is a name then QTYPE + QCLASS. The name goes into the caller's
     // borrow and is discarded; what the walk wants from the decode is where the record's fields begin.
-    size_t off = PC_DNS_HDR_LEN;
+    size_t off = PROTOCORE_DNS_HDR_LEN;
     char *name = (char *)s_dns_mem.name.buf;
     for (uint16_t q = 0; q < qd; q++)
     {
-        if (!pc_dns_name_decode(pkt, len, off, name, s_dns_mem.name.cap, &off, PROTO_TRUE))
+        if (!protocore_dns_name_decode(pkt, len, off, name, s_dns_mem.name.cap, &off, PROTO_TRUE))
         {
             return PROTO_FALSE;
         }
@@ -195,7 +195,7 @@ proto_bool pc_dns_answer_parse(const uint8_t *pkt, size_t len, uint16_t id, uint
     // address is the one this resolver was asked for, so anything that is not an A is stepped over.
     for (uint16_t r = 0; r < an; r++)
     {
-        if (!pc_dns_name_decode(pkt, len, off, name, s_dns_mem.name.cap, &off, PROTO_TRUE))
+        if (!protocore_dns_name_decode(pkt, len, off, name, s_dns_mem.name.cap, &off, PROTO_TRUE))
         {
             return PROTO_FALSE;
         }
@@ -211,7 +211,7 @@ proto_bool pc_dns_answer_parse(const uint8_t *pkt, size_t len, uint16_t id, uint
         {
             return PROTO_FALSE;
         }
-        if (type == PC_DNS_T_A && cls == PC_DNS_C_IN && rdlen == 4)
+        if (type == PROTOCORE_DNS_T_A && cls == PROTOCORE_DNS_C_IN && rdlen == 4)
         {
             *out_ip = ((uint32_t)pkt[off] << 24) | ((uint32_t)pkt[off + 1] << 16) | ((uint32_t)pkt[off + 2] << 8) |
                       (uint32_t)pkt[off + 3];
@@ -226,7 +226,7 @@ proto_bool pc_dns_answer_parse(const uint8_t *pkt, size_t len, uint16_t id, uint
 // The resolve
 // ---------------------------------------------------------------------------
 
-#if PC_HAS_VENDOR_DNS_RESOLVER
+#if PROTOCORE_HAS_VENDOR_DNS_RESOLVER
 
 // All DNS-resolve binding state, owned by one instance (internal linkage): the resolved address,
 // the done/ok flags the lwIP callback sets, and the module's one timer, grouped so it is one named
@@ -288,18 +288,18 @@ static proto_bool dns_busy(void)
     return s_dr.busy;
 }
 
-static pc_dns_state resolve(const char *host, uint32_t *out_ip)
+static protocore_dns_state resolve(const char *host, uint32_t *out_ip)
 {
     if (!host || !out_ip)
     {
-        return PC_DNS_FAILED;
+        return PROTOCORE_DNS_FAILED;
     }
 
     ip_addr_t literal;
     if (ipaddr_aton(host, &literal)) // dotted-quad fast path, no DNS
     {
         *out_ip = to_host_order(&literal);
-        return PC_DNS_READY;
+        return PROTOCORE_DNS_READY;
     }
 
     if (s_dr.busy)
@@ -309,17 +309,17 @@ static pc_dns_state resolve(const char *host, uint32_t *out_ip)
             s_dr.busy = PROTO_FALSE;
             if (!s_dr.ok)
             {
-                return PC_DNS_FAILED;
+                return PROTOCORE_DNS_FAILED;
             }
             *out_ip = to_host_order(&s_dr.addr);
-            return PC_DNS_READY;
+            return PROTOCORE_DNS_READY;
         }
-        if ((uint32_t)(pc_millis() - s_dr.timer) >= PC_DNS_TIMEOUT_MS)
+        if ((uint32_t)(protocore_millis() - s_dr.timer) >= PROTOCORE_DNS_TIMEOUT_MS)
         {
             s_dr.busy = PROTO_FALSE;
-            return PC_DNS_FAILED;
+            return PROTOCORE_DNS_FAILED;
         }
-        return PC_DNS_BUSY;
+        return PROTOCORE_DNS_BUSY;
     }
 
     s_dr.done = PROTO_FALSE;
@@ -334,14 +334,14 @@ static pc_dns_state resolve(const char *host, uint32_t *out_ip)
     {
         if (!s_dr.ok)
         {
-            return PC_DNS_FAILED;
+            return PROTOCORE_DNS_FAILED;
         }
         *out_ip = to_host_order(&s_dr.addr);
-        return PC_DNS_READY;
+        return PROTOCORE_DNS_READY;
     }
     s_dr.busy = PROTO_TRUE;
-    s_dr.timer = pc_millis();
-    return PC_DNS_BUSY;
+    s_dr.timer = protocore_millis();
+    return PROTOCORE_DNS_BUSY;
 }
 
 // The stack keeps its own nameserver list, learned from DHCP, so there is nothing here to point.
@@ -369,7 +369,7 @@ static DnsResolverCtx s_dr = {0, 0, 0, PROTO_FALSE, PROTO_FALSE};
 // Take the query and nameserver borrows on first use, and seat the configured default in the latter.
 static proto_bool dns_client_bind(void)
 {
-    if (pc_span_has_storage(s_dns_mem.tx))
+    if (protocore_span_has_storage(s_dns_mem.tx))
     {
         return PROTO_TRUE;
     }
@@ -377,18 +377,18 @@ static proto_bool dns_client_bind(void)
     {
         return PROTO_FALSE;
     }
-    s_dns_mem.tx = pc_secure_persist_span(PC_DNS_NAME_MAX + 32);
-    s_dns_mem.server = pc_secure_persist_span(PC_IP_STR_MAX);
-    if (!pc_span_has_storage(s_dns_mem.tx) || !pc_span_has_storage(s_dns_mem.server))
+    s_dns_mem.tx = protocore_secure_persist_span(PROTOCORE_DNS_NAME_MAX + 32);
+    s_dns_mem.server = protocore_secure_persist_span(PROTOCORE_IP_STR_MAX);
+    if (!protocore_span_has_storage(s_dns_mem.tx) || !protocore_span_has_storage(s_dns_mem.server))
     {
         return PROTO_FALSE;
     }
-    size_t n = str.len(PC_DNS_SERVER, s_dns_mem.server.cap);
+    size_t n = str.len(PROTOCORE_DNS_SERVER, s_dns_mem.server.cap);
     if (n >= s_dns_mem.server.cap)
     {
         return PROTO_FALSE;
     }
-    proto_raw_read(s_dns_mem.server.buf, PC_DNS_SERVER, n);
+    proto_raw_read(s_dns_mem.server.buf, PROTOCORE_DNS_SERVER, n);
     s_dns_mem.server.buf[n] = '\0';
     return PROTO_TRUE;
 }
@@ -396,12 +396,12 @@ static proto_bool dns_client_bind(void)
 // Take a reply, on the listener's drain. Always armed: busy is the sending side, so this runs
 // whether or not a query is out. Anything that does not parse as an answer to the query in flight is
 // ignored, and that query keeps waiting rather than failing on it.
-static void dns_reply(const uint8_t *data, size_t len, const struct pc_udp_peer *peer, void *ctx)
+static void dns_reply(const uint8_t *data, size_t len, const struct protocore_udp_peer *peer, void *ctx)
 {
     (void)peer;
     (void)ctx;
     uint32_t ip = 0;
-    if (pc_dns_answer_parse(data, len, s_dr.id, &ip))
+    if (protocore_dns_answer_parse(data, len, s_dr.id, &ip))
     {
         s_dr.answer = ip;
         s_dr.done = PROTO_TRUE;
@@ -410,7 +410,7 @@ static void dns_reply(const uint8_t *data, size_t len, const struct pc_udp_peer 
 
 static proto_bool set_server(const char *ip)
 {
-    pc_ip probe = {PC_IP_NONE, {0}};
+    protocore_ip probe = {PROTOCORE_IP_NONE, {0}};
     if (ip == NULL || !dns_client_bind() || !Ip.parse(ip, &probe))
     {
         return PROTO_FALSE;
@@ -430,18 +430,18 @@ static proto_bool dns_busy(void)
     return s_dr.busy;
 }
 
-static pc_dns_state resolve(const char *host, uint32_t *out_ip)
+static protocore_dns_state resolve(const char *host, uint32_t *out_ip)
 {
     if (host == NULL || out_ip == NULL)
     {
-        return PC_DNS_FAILED;
+        return PROTOCORE_DNS_FAILED;
     }
-    pc_ip literal = {PC_IP_NONE, {0}};
+    protocore_ip literal = {PROTOCORE_IP_NONE, {0}};
     if (Ip.parse(host, &literal)) // a dotted quad answers itself, no query
     {
         *out_ip = ((uint32_t)literal.bytes[0] << 24) | ((uint32_t)literal.bytes[1] << 16) |
                   ((uint32_t)literal.bytes[2] << 8) | (uint32_t)literal.bytes[3];
-        return PC_DNS_READY;
+        return PROTOCORE_DNS_READY;
     }
 
     // The query already out: the reply landed on the listener's drain, or the timer ran out.
@@ -451,63 +451,63 @@ static pc_dns_state resolve(const char *host, uint32_t *out_ip)
         {
             s_dr.busy = PROTO_FALSE;
             *out_ip = s_dr.answer;
-            return PC_DNS_READY;
+            return PROTOCORE_DNS_READY;
         }
-        if ((uint32_t)(pc_millis() - s_dr.timer) >= PC_DNS_TIMEOUT_MS)
+        if ((uint32_t)(protocore_millis() - s_dr.timer) >= PROTOCORE_DNS_TIMEOUT_MS)
         {
             s_dr.busy = PROTO_FALSE;
-            return PC_DNS_FAILED;
+            return PROTOCORE_DNS_FAILED;
         }
-        return PC_DNS_BUSY;
+        return PROTOCORE_DNS_BUSY;
     }
 
-    pc_ip server = {PC_IP_NONE, {0}};
+    protocore_ip server = {PROTOCORE_IP_NONE, {0}};
     if (!dns_client_bind() || !Ip.parse((const char *)s_dns_mem.server.buf, &server))
     {
-        return PC_DNS_FAILED;
+        return PROTOCORE_DNS_FAILED;
     }
-    if (!Udp.listener->listen(PC_DNS_CLIENT_PORT, dns_reply, NULL))
+    if (!Udp.listener->listen(PROTOCORE_DNS_CLIENT_PORT, dns_reply, NULL))
     {
-        return PC_DNS_FAILED;
+        return PROTOCORE_DNS_FAILED;
     }
 
     // The id ties the reply to this query. Ticks, so two resolves in a row do not share one.
-    s_dr.id = (uint16_t)(pc_millis() | 1u);
+    s_dr.id = (uint16_t)(protocore_millis() | 1u);
     s_dr.answer = 0;
     s_dr.done = PROTO_FALSE;
-    size_t n = pc_dns_query_build(s_dns_mem.tx.buf, s_dns_mem.tx.cap, s_dr.id, host);
+    size_t n = protocore_dns_query_build(s_dns_mem.tx.buf, s_dns_mem.tx.cap, s_dr.id, host);
     if (n == 0)
     {
-        return PC_DNS_FAILED;
+        return PROTOCORE_DNS_FAILED;
     }
-    if (!Udp.listener->sendto(PC_DNS_CLIENT_PORT, &server, 53, s_dns_mem.tx.buf, n))
+    if (!Udp.listener->sendto(PROTOCORE_DNS_CLIENT_PORT, &server, 53, s_dns_mem.tx.buf, n))
     {
-        return PC_DNS_FAILED;
+        return PROTOCORE_DNS_FAILED;
     }
     s_dr.busy = PROTO_TRUE;
-    s_dr.timer = pc_millis();
-    return PC_DNS_BUSY;
+    s_dr.timer = protocore_millis();
+    return PROTOCORE_DNS_BUSY;
 }
 
-#endif // PC_HAS_VENDOR_DNS_RESOLVER
+#endif // PROTOCORE_HAS_VENDOR_DNS_RESOLVER
 
-static pc_dns_state resolve_verified(const char *host, uint32_t *out_ip)
+static protocore_dns_state resolve_verified(const char *host, uint32_t *out_ip)
 {
     uint32_t ip = 0;
-    pc_dns_state s = resolve(host, &ip);
-    if (s != PC_DNS_READY)
+    protocore_dns_state s = resolve(host, &ip);
+    if (s != PROTOCORE_DNS_READY)
     {
         return s;
     }
     if (!verify(ip))
     {
-        return PC_DNS_FAILED;
+        return PROTOCORE_DNS_FAILED;
     }
     if (out_ip)
     {
         *out_ip = ip;
     }
-    return PC_DNS_READY;
+    return PROTOCORE_DNS_READY;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
@@ -518,4 +518,4 @@ const ResolverNs Resolver = {.classify = classify,
                              .busy = dns_busy,
                              .set_server = set_server};
 
-#endif // PC_NEED_DNS_RESOLVER
+#endif // PROTOCORE_NEED_DNS_RESOLVER

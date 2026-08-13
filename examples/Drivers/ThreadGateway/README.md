@@ -1,6 +1,6 @@
 # ThreadGateway - an OpenThread RCP bridged to the gateway
 
-**Layer:** Foundation · **Build flags:** `PC_ENABLE_THREAD`, `PC_ENABLE_GATEWAY`
+**Layer:** Foundation · **Build flags:** `PROTOCORE_ENABLE_THREAD`, `PROTOCORE_ENABLE_GATEWAY`
 
 ## What this example teaches
 
@@ -10,7 +10,7 @@ OpenThread **radio co-processor** (RCP - an nRF52840 / EFR32), which speaks **sp
 payload northbound - the basis of a Thread / Matter border router.
 
 ```
-Thread RCP --UART--> pc_spinel_frame_decode() --> spinel payload -> pc_gateway_uplink()
+Thread RCP --UART--> protocore_spinel_frame_decode() --> spinel payload -> protocore_gateway_uplink()
                                                                       |
                                                envelope + topic  thread/0/<tid>
                                                                       |
@@ -22,12 +22,12 @@ bytes, and terminates with a Flag `0x7E`. `services/thread` does the framing:
 
 ```cpp
 uint8_t payload[256]; uint16_t plen;
-int n = pc_spinel_frame_decode(buf, len, payload, sizeof(payload), &plen);  // >0 / need-more / -1
+int n = protocore_spinel_frame_decode(buf, len, payload, sizeof(payload), &plen);  // >0 / need-more / -1
 if (n > 0)
-    pc_gateway_uplink(0, tid, payload, plen, 0);
+    protocore_gateway_uplink(0, tid, payload, plen, 0);
 ```
 
-`pc_spinel_frame_encode()` builds a frame the same way (this sketch sends a spinel RESET at
+`protocore_spinel_frame_encode()` builds a frame the same way (this sketch sends a spinel RESET at
 boot). Note the FCS is CRC-16/**X-25** (reflected, final XOR), transmitted low byte first -
 distinct from Zigbee's ASH CRC. The codec is host-tested against the X-25 catalog check
 value (`0x906E`) and the byte-stuffing in `test/test_thread`.
@@ -36,25 +36,25 @@ value (`0x906E`) and the byte-stuffing in `test/test_thread`.
 
 `services/thread` also does the spinel **command** layer and the **property registry / value
 semantics**, so the sketch reads each frame's meaning, not just its bytes. A frame's payload is
-`header | command | property | value`; `pc_spinel_command_parse()` splits it, the registry names
+`header | command | property | value`; `protocore_spinel_command_parse()` splits it, the registry names
 the property, and a typed cursor decodes the value by the property's datatype:
 
 ```cpp
 uint8_t hdr; uint32_t cmd, prop; const uint8_t *val; uint16_t vlen;
-pc_spinel_command_parse(payload, plen, &hdr, &cmd, &prop, &val, &vlen);
+protocore_spinel_command_parse(payload, plen, &hdr, &cmd, &prop, &val, &vlen);
 if (cmd == SpinelCmd::SPINEL_CMD_PROP_VALUE_IS && prop == SpinelProp::SPINEL_PROP_NCP_VERSION) {
-    SpinelReader r; pc_spinel_reader_init(&r, val, vlen);
+    SpinelReader r; protocore_spinel_reader_init(&r, val, vlen);
     const char *s; uint16_t slen;
-    if (pc_spinel_get_utf8(&r, &s, &slen))       // "OPENTHREAD/... ; ESP32C6; ..."
-        Serial.printf("%s = %.*s\n", pc_spinel_prop_name(prop), (int)slen, s);
+    if (protocore_spinel_get_utf8(&r, &s, &slen))       // "OPENTHREAD/... ; ESP32C6; ..."
+        Serial.printf("%s = %.*s\n", protocore_spinel_prop_name(prop), (int)slen, s);
 }
 ```
 
 The cursor has an accessor per spinel datatype (`get_bool` / `get_u8` / `get_i8` / `get_u16` /
 `get_u32` / `get_uint` (packed) / `get_eui64` / `get_ipv6` / `get_utf8` / `get_data` /
 `get_data_wlen`) and matching `put_*` builders; an out-of-bounds read latches an error you check
-once with `pc_spinel_reader_ok()`. This sketch GETs `PROTOCOL_VERSION`, `NCP_VERSION`, and
-`HWADDR` at boot and prints each inbound `PROP_VALUE_IS` by name. `pc_spinel_status_name()` maps
+once with `protocore_spinel_reader_ok()`. This sketch GETs `PROTOCOL_VERSION`, `NCP_VERSION`, and
+`HWADDR` at boot and prints each inbound `PROP_VALUE_IS` by name. `protocore_spinel_status_name()` maps
 a `LAST_STATUS` code to text (e.g. a reset cause `0x70` -> `RESET`).
 
 ## Wiring (ESP32 host <-> Thread RCP)
@@ -75,7 +75,7 @@ UART wires to the C6's RCP UART pins).
 
 **HW-verified (2026-07-19)** against a real **ESP32-C6 running ESP-IDF `ot_rcp`** - genuine
 OpenThread RCP firmware on a native 802.15.4 radio. The shipped codec built every byte sent and
-decoded every byte received (`pc_spinel_frame_encode`/`_decode`, `pc_spinel_command_build`/`_parse`,
+decoded every byte received (`protocore_spinel_frame_encode`/`_decode`, `protocore_spinel_command_build`/`_parse`,
 the property registry and typed accessors); nothing hand-rolled HDLC or spinel:
 
 ```
@@ -119,6 +119,6 @@ The flags must reach the library build, so pass them as build flags:
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_THREAD=1 -DPC_ENABLE_GATEWAY=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_THREAD=1 -DPROTOCORE_ENABLE_GATEWAY=1" \
   --lib="." examples/Drivers/ThreadGateway/ThreadGateway.ino
 ```

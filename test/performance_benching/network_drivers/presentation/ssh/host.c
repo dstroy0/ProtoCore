@@ -11,12 +11,12 @@
 // is offloaded to the MPI/RSA accelerator, so the DEVICE figures come from the rig /bench ssh ops and
 // this host ns/op is a relative baseline. Build + run:
 //   gcc -O2 -std=c11 -I. -Isrc -Itest/mocks -Itest/support -Itest/performance_benching/common
-//   -DPC_ENABLE_SSH=1 test/performance_benching/network_drivers/presentation/ssh/host.c
+//   -DPROTOCORE_ENABLE_SSH=1 test/performance_benching/network_drivers/presentation/ssh/host.c
 //   src/crypto/asymmetric/curve25519.c src/crypto/asymmetric/ed25519.c src/crypto/hash/sha512.c
 //   src/crypto/cipher/chacha20.c src/crypto/mac/poly1305.c src/crypto/aead/chachapoly.c
 //   src/mmgr/secure.c src/mmgr/arena.c src/mmgr/protomem.c src/mmgr/protostr.c -o /tmp/bssh && /tmp/bssh
 
-#define PC_ENABLE_SSH 1
+#define PROTOCORE_ENABLE_SSH 1
 #include "crypto/aead/chachapoly.h"
 #include "crypto/asymmetric/curve25519.h"
 #include "crypto/asymmetric/ed25519.h"
@@ -42,7 +42,7 @@ int main(void)
         HBENCH_NS(
             4000,
             {
-                pc_x25519_base(pk, sk);
+                protocore_x25519_base(pk, sk);
                 sink += pk[0];
             },
             ns);
@@ -55,17 +55,17 @@ int main(void)
         HBENCH_NS(
             4000,
             {
-                pc_x25519(shared, sk, peer_pk);
+                protocore_x25519(shared, sk, peer_pk);
                 sink += shared[0];
             },
             ns);
         hbench_row("ssh", "x25519 (KEX shared secret)", ns, 0);
     }
 
-    // Field arithmetic: the radix-2^16 schoolbook multiply / square (pc_gf = int64[16]). This is the
+    // Field arithmetic: the radix-2^16 schoolbook multiply / square (protocore_gf = int64[16]). This is the
     // innermost hot op of the Montgomery ladder (~9 field mul/sq per ladder step x 255 steps) and thus the
     // dominant cost of every X25519 / ed25519 scalar multiplication - the target for S3 vector (QACC) SIMD.
-    pc_gf ga, gb, go;
+    protocore_gf ga, gb, go;
     for (int k = 0; k < 16; k++)
     {
         ga[k] = 0x5a5a + k;
@@ -76,7 +76,7 @@ int main(void)
         HBENCH_NS(
             200000,
             {
-                pc_gf_mul(go, ga, gb);
+                protocore_gf_mul(go, ga, gb);
                 sink += (uint32_t)go[0];
             },
             ns);
@@ -87,7 +87,7 @@ int main(void)
         HBENCH_NS(
             200000,
             {
-                pc_gf_sq(go, ga);
+                protocore_gf_sq(go, ga);
                 sink += (uint32_t)go[0];
             },
             ns);
@@ -103,7 +103,7 @@ int main(void)
         HBENCH_NS(
             2000,
             {
-                pc_ed25519_sign(tw, sig, hash, sizeof(hash), seed);
+                protocore_ed25519_sign(tw, sig, hash, sizeof(hash), seed);
                 sink += sig[0];
             },
             ns);
@@ -113,10 +113,10 @@ int main(void)
     // Record layer: chacha20-poly1305@openssh.com encrypt of a full 1 KB data packet. The per-packet
     // steady-state op, so its throughput (MB/s over the payload) is the interesting figure.
     const uint32_t plen = 1024;
-    uint8_t key[PC_CHACHAPOLY_KEY_LEN];
+    uint8_t key[PROTOCORE_CHACHAPOLY_KEY_LEN];
     memset(key, 0x55, sizeof(key));
     static uint8_t src[4 + 1024];
-    static uint8_t dst[4 + 1024 + PC_CHACHAPOLY_TAG_LEN];
+    static uint8_t dst[4 + 1024 + PROTOCORE_CHACHAPOLY_TAG_LEN];
     src[0] = 0;
     src[1] = 0;
     src[2] = (uint8_t)(plen >> 8);
@@ -128,7 +128,7 @@ int main(void)
         HBENCH_NS(
             40000,
             {
-                pc_chachapoly_encrypt(key, seq++, dst, src, plen);
+                protocore_chachapoly_encrypt(key, seq++, dst, src, plen);
                 sink += dst[0];
             },
             ns);

@@ -8,9 +8,9 @@
 
 #include "services/security/tls_policy/tls_policy.h"
 
-#if PC_ENABLE_TLS_POLICY
+#if PROTOCORE_ENABLE_TLS_POLICY
 
-uint16_t pc_tls_negotiate_version(uint16_t client_max, uint16_t server_min, uint16_t server_max)
+uint16_t protocore_tls_negotiate_version(uint16_t client_max, uint16_t server_min, uint16_t server_max)
 {
     if (server_min > server_max)
     {
@@ -24,7 +24,7 @@ uint16_t pc_tls_negotiate_version(uint16_t client_max, uint16_t server_min, uint
     return chosen;
 }
 
-const char *pc_tls_version_name(uint16_t version)
+const char *protocore_tls_version_name(uint16_t version)
 {
     switch (version)
     {
@@ -37,7 +37,7 @@ const char *pc_tls_version_name(uint16_t version)
     }
 }
 
-uint16_t pc_tls_select_cipher(const uint16_t *client_offered, size_t n_client, const uint16_t *server_pinned,
+uint16_t protocore_tls_select_cipher(const uint16_t *client_offered, size_t n_client, const uint16_t *server_pinned,
                               size_t n_server)
 {
     if (!client_offered || !server_pinned)
@@ -58,7 +58,7 @@ uint16_t pc_tls_select_cipher(const uint16_t *client_offered, size_t n_client, c
     return 0;
 }
 
-proto_bool pc_tls_is_aead(uint16_t suite)
+proto_bool protocore_tls_is_aead(uint16_t suite)
 {
     switch (suite)
     {
@@ -79,4 +79,4 @@ proto_bool pc_tls_is_aead(uint16_t suite)
     }
 }
 
-#endif // PC_ENABLE_TLS_POLICY
+#endif // PROTOCORE_ENABLE_TLS_POLICY

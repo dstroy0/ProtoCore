@@ -7,10 +7,10 @@
 // exporter) sits on top and is not part of these hot ops. The device figure comes from the rig /bench op;
 // this host ns/op + MB/s is a relative baseline. Build + run:
 //   gcc -O2 -std=c11 -I. -Isrc -Itest/mocks -Itest/support -Itest/performance_benching/common
-//   -DPC_ENABLE_NTS=1 test/performance_benching/services/nts/host.c
+//   -DPROTOCORE_ENABLE_NTS=1 test/performance_benching/services/nts/host.c
 //   src/network_drivers/application/nts/nts.c src/mmgr/protomem.c src/mmgr/protostr.c -o /tmp/bn && /tmp/bn
 
-#define PC_ENABLE_NTS 1
+#define PROTOCORE_ENABLE_NTS 1
 #include "network_drivers/application/nts/nts.h"
 
 #include "host_bench.h"

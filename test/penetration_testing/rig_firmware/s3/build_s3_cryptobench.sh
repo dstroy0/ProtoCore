@@ -3,7 +3,7 @@
 #
 # Same shape as build_s3_poolbench.sh: the bench body is the SHARED ../src/main_cryptobench.cpp,
 # staged next to its sketch anchor before compiling. Used here to A/B the word-width XOR in gctr and
-# the GHASH absorb - "pc_aesgcm seal" and "pc_chacha20" are the lines that move.
+# the GHASH absorb - "protocore_aesgcm seal" and "protocore_chacha20" are the lines that move.
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -11,9 +11,9 @@ ROOT=$(git rev-parse --show-toplevel)
 SKETCH="$PWD/S3CryptoBench"
 SHARED="$ROOT/test/penetration_testing/rig_firmware/src/main_cryptobench.cpp"
 ACLI=$(command -v arduino-cli || echo "$HOME/bin/arduino-cli")
-FQBN="${PC_FQBN:-esp32:esp32:esp32s3:PSRAM=opi,FlashMode=qio,FlashSize=16M,CDCOnBoot=cdc,USBMode=hwcdc}"
+FQBN="${PROTOCORE_FQBN:-esp32:esp32:esp32s3:PSRAM=opi,FlashMode=qio,FlashSize=16M,CDCOnBoot=cdc,USBMode=hwcdc}"
 LIBDIR="$HOME/Arduino/libraries"
-OUTDIR="${PC_OUTDIR:-$SKETCH/build}"
+OUTDIR="${PROTOCORE_OUTDIR:-$SKETCH/build}"
 
 mkdir -p "$LIBDIR"
 # Idempotent: $LIBDIR is shared by every arduino-cli build on this machine, so deleting and

@@ -9,7 +9,7 @@
 #include "services/web/edge_cache/edge_mesh.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_EDGE_MESH
+#if PROTOCORE_ENABLE_EDGE_MESH
 
 static void put_u16(uint8_t *p, uint16_t v)
 {
@@ -52,15 +52,15 @@ static int64_t get_i64(const uint8_t *p)
 // True (and stops) once buf[0..min(len,4)] diverges from the fixed request/response magic+version prefix.
 static proto_bool magic_bad(const uint8_t *buf, size_t len)
 {
-    if (len >= 1 && buf[0] != PC_EDGE_MESH_MAGIC0)
+    if (len >= 1 && buf[0] != PROTOCORE_EDGE_MESH_MAGIC0)
     {
         return PROTO_TRUE;
     }
-    if (len >= 2 && buf[1] != PC_EDGE_MESH_MAGIC1)
+    if (len >= 2 && buf[1] != PROTOCORE_EDGE_MESH_MAGIC1)
     {
         return PROTO_TRUE;
     }
-    if (len >= 3 && buf[2] != PC_EDGE_MESH_VERSION)
+    if (len >= 3 && buf[2] != PROTOCORE_EDGE_MESH_VERSION)
     {
         return PROTO_TRUE;
     }
@@ -77,9 +77,9 @@ size_t edge_mesh_build_request(const uint8_t digest[32], const char *canon, cons
         return 0;
     }
     const char *hdrs = req_hdrs ? req_hdrs : "";
-    size_t kl = strnlen(canon, PC_EDGE_KEY_MAX);
-    size_t hl = strnlen(hdrs, PC_MESH_HDRS_MAX);
-    // Both lengths are strnlen-capped to PC_EDGE_KEY_MAX (128) and PC_MESH_HDRS_MAX, neither of
+    size_t kl = strnlen(canon, PROTOCORE_EDGE_KEY_MAX);
+    size_t hl = strnlen(hdrs, PROTOCORE_MESH_HDRS_MAX);
+    // Both lengths are strnlen-capped to PROTOCORE_EDGE_KEY_MAX (128) and PROTOCORE_MESH_HDRS_MAX, neither of
     // which is within three orders of magnitude of the 16-bit wire limit, so neither arm can be
     // taken in any build this library is sized for. The guard is what keeps the u16 length prefixes
     // below honest if either cap is ever raised.
@@ -93,10 +93,10 @@ size_t edge_mesh_build_request(const uint8_t digest[32], const char *canon, cons
         return 0;
     }
     size_t pos = 0;
-    out[pos++] = PC_EDGE_MESH_MAGIC0;
-    out[pos++] = PC_EDGE_MESH_MAGIC1;
-    out[pos++] = PC_EDGE_MESH_VERSION;
-    out[pos++] = PC_EDGE_MESH_OP_GET;
+    out[pos++] = PROTOCORE_EDGE_MESH_MAGIC0;
+    out[pos++] = PROTOCORE_EDGE_MESH_MAGIC1;
+    out[pos++] = PROTOCORE_EDGE_MESH_VERSION;
+    out[pos++] = PROTOCORE_EDGE_MESH_OP_GET;
     mem.cpy(out + pos, digest, 32);
     pos += 32;
     put_u16(out + pos, (uint16_t)kl);
@@ -121,7 +121,7 @@ EdgeMeshParse edge_mesh_parse_request(const uint8_t *buf, size_t len, uint8_t di
     {
         return EDGE_MESH_PARSE_INCOMPLETE;
     }
-    if (buf[3] != PC_EDGE_MESH_OP_GET)
+    if (buf[3] != PROTOCORE_EDGE_MESH_OP_GET)
     {
         return EDGE_MESH_PARSE_MALFORMED;
     }
@@ -182,7 +182,7 @@ EdgeMeshParse edge_mesh_parse_request(const uint8_t *buf, size_t len, uint8_t di
 
 size_t edge_mesh_serialize_entry(const EdgeEntry *e, long current_age, uint8_t *out, size_t cap)
 {
-    if (!e || !out || cap < PC_EDGE_MESH_TRAILER)
+    if (!e || !out || cap < PROTOCORE_EDGE_MESH_TRAILER)
     {
         return 0;
     }
@@ -195,17 +195,17 @@ size_t edge_mesh_serialize_entry(const EdgeEntry *e, long current_age, uint8_t *
     put_u32(out + 16, (uint32_t)(e->lifetime_s < 0 ? 0 : e->lifetime_s));
     put_u32(out + 20, (uint32_t)(e->age_hdr < 0 ? 0 : e->age_hdr));
     put_u32(out + 24, (uint32_t)current_age);
-    size_t n = edge_sd_serialize(e, out + PC_EDGE_MESH_TRAILER, cap - PC_EDGE_MESH_TRAILER);
+    size_t n = edge_sd_serialize(e, out + PROTOCORE_EDGE_MESH_TRAILER, cap - PROTOCORE_EDGE_MESH_TRAILER);
     if (n == 0)
     {
         return 0;
     }
-    return PC_EDGE_MESH_TRAILER + n;
+    return PROTOCORE_EDGE_MESH_TRAILER + n;
 }
 
 proto_bool edge_mesh_deserialize_entry(uint8_t *work, const uint8_t *buf, size_t len, EdgeEntry *e, uint32_t now_ms)
 {
-    if (!buf || !e || len < PC_EDGE_MESH_TRAILER)
+    if (!buf || !e || len < PROTOCORE_EDGE_MESH_TRAILER)
     {
         return PROTO_FALSE;
     }
@@ -214,7 +214,7 @@ proto_bool edge_mesh_deserialize_entry(uint8_t *work, const uint8_t *buf, size_t
     uint32_t lifetime = get_u32(buf + 16);
     uint32_t age_hdr = get_u32(buf + 20);
     uint32_t current_age = get_u32(buf + 24);
-    if (!edge_sd_deserialize(work, buf + PC_EDGE_MESH_TRAILER, len - PC_EDGE_MESH_TRAILER, e))
+    if (!edge_sd_deserialize(work, buf + PROTOCORE_EDGE_MESH_TRAILER, len - PROTOCORE_EDGE_MESH_TRAILER, e))
     {
         return PROTO_FALSE;
     }
@@ -235,9 +235,9 @@ size_t edge_mesh_build_response(proto_bool hit, const uint8_t *entry, size_t ent
         return 0;
     }
     size_t pos = 0;
-    out[pos++] = PC_EDGE_MESH_MAGIC0;
-    out[pos++] = PC_EDGE_MESH_MAGIC1;
-    out[pos++] = PC_EDGE_MESH_VERSION;
+    out[pos++] = PROTOCORE_EDGE_MESH_MAGIC0;
+    out[pos++] = PROTOCORE_EDGE_MESH_MAGIC1;
+    out[pos++] = PROTOCORE_EDGE_MESH_VERSION;
     out[pos++] = hit ? 1 : 0;
     if (hit)
     {
@@ -309,12 +309,12 @@ void edge_mesh_fetch_begin(EdgeMeshFetch *m, const EdgeFetchTransport *t, const 
     m->entry_len = 0;
     m->buf = buf;
     m->cap = cap;
-    if (!t || !host || !request || req_len == 0 || !buf || cap < PC_EDGE_MESH_RESP_MAX)
+    if (!t || !host || !request || req_len == 0 || !buf || cap < PROTOCORE_EDGE_MESH_RESP_MAX)
     {
         m->st = EDGE_MESH_STATUS_FAILED;
         return;
     }
-    int cid = t->open(t->ctx, host, port, PC_MESH_QUERY_MS); // blocking connect (LAN sibling), bounded by the timeout
+    int cid = t->open(t->ctx, host, port, PROTOCORE_MESH_QUERY_MS); // blocking connect (LAN sibling), bounded by the timeout
     if (cid < 0)
     {
         m->st = EDGE_MESH_STATUS_FAILED;
@@ -340,7 +340,7 @@ EdgeMeshStatus edge_mesh_fetch_pump(EdgeMeshFetch *m, const EdgeFetchTransport *
         m->st = EDGE_MESH_STATUS_FAILED;
         return m->st;
     }
-    if (now_ms - m->start_ms > PC_MESH_QUERY_MS)
+    if (now_ms - m->start_ms > PROTOCORE_MESH_QUERY_MS)
     {
         m->st = EDGE_MESH_STATUS_FAILED; // query deadline
         return m->st;
@@ -384,4 +384,4 @@ void edge_mesh_fetch_end(EdgeMeshFetch *m, const EdgeFetchTransport *t)
     m->cid = -1;
 }
 
-#endif // PC_ENABLE_EDGE_MESH
+#endif // PROTOCORE_ENABLE_EDGE_MESH

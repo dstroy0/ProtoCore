@@ -46,7 +46,7 @@ SHARED_SUBSTRATE = {
     "conn_pool",  # tcp.cpp   - the TCP connection pool (extern in tcp.h)
     "http_pool",  # http_parser.cpp - the parsed-request pool (extern in http_parser.h)
     "ws_pool",  # websocket.cpp   - the WebSocket connection pool (extern in websocket.h)
-    "pc_sse_pool",  # sse.cpp         - the SSE connection pool (extern in sse.h)
+    "protocore_sse_pool",  # sse.cpp         - the SSE connection pool (extern in sse.h)
     "listener_pool",  # listener.cpp    - the listener pool
     "http_req_count",  # presentation.cpp - per-slot request counter (extern)
     # SSH per-connection substrate: one row per SSH slot, indexed cross-TU by the SSH layers.
@@ -57,11 +57,11 @@ SHARED_SUBSTRATE = {
     "ssh_sess",  # ssh_transport.c- per-conn session state
     "ssh_host_pubkey",  # ssh_rsa.cpp      - the loaded RSA host public key
     "crypto_work",  # ssh_bignum.cpp   - shared SSH bignum scratch
-    "pc_ap_ip",  # tcp.cpp    - the softAP IP (extern)
+    "protocore_ap_ip",  # tcp.cpp    - the softAP IP (extern)
 }
 
 # A file-scope definition line (column 0). Optional ALL_CAPS attribute macros
-# (EXT_RAM_BSS_ATTR, PC_*_ATTR, ...) may bracket `static`.
+# (EXT_RAM_BSS_ATTR, PROTOCORE_*_ATTR, ...) may bracket `static`.
 ATTR = r"(?:[A-Z_][A-Z0-9_]*\s+)*"
 DEF_RE = re.compile(
     r"^(?P<pre>" + ATTR + r"static\s+" + ATTR + r"|" + ATTR + r")"
@@ -143,9 +143,9 @@ def classify(name: str, type_str: str, in_anon_ns: bool) -> bool:
     # loose global.
     if re.search(r"\b(const|constexpr|thread_local|_Thread_local)\b", type_str):
         return True
-    # The single rooted owner: its type ends in `_ctx` (pc_coap_ctx, pc_client_ctx, ...).
+    # The single rooted owner: its type ends in `_ctx` (protocore_coap_ctx, protocore_client_ctx, ...).
     # `Ctx` is also accepted so a stray PascalCase holdout still passes rather than
-    # reading as a loose global; docs/SYMBOLS.md makes `pc_snake_case` the law.
+    # reading as a loose global; docs/SYMBOLS.md makes `protocore_snake_case` the law.
     #
     # Naming the type `*Ctx` is NOT what makes state owned - INTERNAL LINKAGE is. A context with
     # external linkage is reachable by `extern` from any TU, which is the condition the owner rule
@@ -239,7 +239,7 @@ def main(argv) -> int:
                 f"\n{len(externs)} violation(s). A context reachable by `extern` is shared state, "
                 "not owned state - naming the type `*Ctx` does not make it owned, internal linkage "
                 "does. Keep the definition private to its TU and expose what callers need as "
-                "functions (see pc_resp_holds_slot / pc_file_holds_slot)."
+                "functions (see protocore_resp_holds_slot / protocore_file_holds_slot)."
             )
         return 1
     tail = f" ({known} known linkage site(s) remain{f', {fixed} fixed' if fixed else ''})" if known else ""

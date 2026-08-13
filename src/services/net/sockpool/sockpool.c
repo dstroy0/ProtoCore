@@ -8,9 +8,9 @@
 
 #include "services/net/sockpool/sockpool.h"
 
-#if PC_ENABLE_SOCKPOOL
+#if PROTOCORE_ENABLE_SOCKPOOL
 
-void pc_sockpool_init(SockPool *p, SockSlot *slots, size_t n)
+void protocore_sockpool_init(SockPool *p, SockSlot *slots, size_t n)
 {
     if (!p)
     {
@@ -26,7 +26,7 @@ void pc_sockpool_init(SockPool *p, SockSlot *slots, size_t n)
     }
 }
 
-SockAcq pc_sockpool_acquire(SockPool *p, uint32_t id, uint32_t now, size_t *idx, uint32_t *evicted_id)
+SockAcq protocore_sockpool_acquire(SockPool *p, uint32_t id, uint32_t now, size_t *idx, uint32_t *evicted_id)
 {
     if (!p || !p->slots || p->n == 0)
     {
@@ -71,7 +71,7 @@ SockAcq pc_sockpool_acquire(SockPool *p, uint32_t id, uint32_t now, size_t *idx,
     return SOCK_ACQ_RECYCLED;
 }
 
-void pc_sockpool_touch(SockPool *p, size_t idx, uint32_t now)
+void protocore_sockpool_touch(SockPool *p, size_t idx, uint32_t now)
 {
     if (!p || !p->slots || idx >= p->n)
     {
@@ -83,7 +83,7 @@ void pc_sockpool_touch(SockPool *p, size_t idx, uint32_t now)
     }
 }
 
-proto_bool pc_sockpool_release(SockPool *p, size_t idx)
+proto_bool protocore_sockpool_release(SockPool *p, size_t idx)
 {
     if (!p || !p->slots || idx >= p->n || !p->slots[idx].in_use)
     {
@@ -93,7 +93,7 @@ proto_bool pc_sockpool_release(SockPool *p, size_t idx)
     return PROTO_TRUE;
 }
 
-proto_bool pc_sockpool_find(const SockPool *p, uint32_t id, size_t *idx)
+proto_bool protocore_sockpool_find(const SockPool *p, uint32_t id, size_t *idx)
 {
     if (!p || !p->slots)
     {
@@ -113,7 +113,7 @@ proto_bool pc_sockpool_find(const SockPool *p, uint32_t id, size_t *idx)
     return PROTO_FALSE;
 }
 
-size_t pc_sockpool_in_use(const SockPool *p)
+size_t protocore_sockpool_in_use(const SockPool *p)
 {
     if (!p || !p->slots)
     {
@@ -130,4 +130,4 @@ size_t pc_sockpool_in_use(const SockPool *p)
     return c;
 }
 
-#endif // PC_ENABLE_SOCKPOOL
+#endif // PROTOCORE_ENABLE_SOCKPOOL

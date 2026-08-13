@@ -56,7 +56,7 @@ static void h_exact(uint8_t slot, HttpReq *req)
 
 void setUp()
 {
-    pc_server_reset();
+    protocore_server_reset();
     g_called = g_found_a = g_found_b = g_found_missing = PROTO_FALSE;
     g_a[0] = g_b[0] = '\0';
     for (int i = 0; i < MAX_CONNS; i++)
@@ -65,11 +65,11 @@ void setUp()
         conn_pool[i].id = (uint8_t)i;
         conn_pool[i].state = CONN_ACTIVE;
         conn_pool[i].proto = PROTO_HTTP; // dispatch requires an explicit protocol
-        conn_pool[i].pcb = pc_net_host_pcb();
+        conn_pool[i].pcb = protocore_net_host_pcb();
         http_reset(i);
     }
     ws_init();
-    pc_sse_init();
+    protocore_sse_init();
     tcp_capture_reset();
 }
 

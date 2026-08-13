@@ -5,24 +5,24 @@
  * @file coaps_server.h
  * @brief CoAP-over-DTLS server front-end - binds a UDP port to a pool of DtlsConn + the CoAPs bridge.
  *
- * The socket / per-peer glue on top of pc_coaps_process(): it owns a fixed pool of @ref DtlsConn
- * handshake engines, binds the CoAPs UDP port (5684, coaps://) through the transport layer (pc_udp),
+ * The socket / per-peer glue on top of protocore_coaps_process(): it owns a fixed pool of @ref DtlsConn
+ * handshake engines, binds the CoAPs UDP port (5684, coaps://) through the transport layer (protocore_udp),
  * routes each inbound datagram to the connection for its peer address (a new peer opens a pool slot),
  * drives the DTLS 1.3 handshake and its retransmission timer, and hands established application records
- * to pc_coap_server_process() through pc_coaps_process(). CoAP resources are registered with the existing
- * pc_coap_server_add_resource() API; this module only carries them over DTLS, so a plaintext CoAP server
- * (pc_coap_server_begin on :5683) and this secured one can run side by side over the same resources.
+ * to protocore_coap_server_process() through protocore_coaps_process(). CoAP resources are registered with the existing
+ * protocore_coap_server_add_resource() API; this module only carries them over DTLS, so a plaintext CoAP server
+ * (protocore_coap_server_begin on :5683) and this secured one can run side by side over the same resources.
  *
- * Threading (ESP32): pc_udp delivers datagrams on the lwIP thread, but the handshake engines must run
+ * Threading (ESP32): protocore_udp delivers datagrams on the lwIP thread, but the handshake engines must run
  * on the server loop, so the UDP handler only copies each datagram into a lock-free ingest ring;
- * pc_coaps_server_poll() (called from the loop) drains the ring, runs pc_coaps_process(), fires the PTO
+ * protocore_coaps_server_poll() (called from the loop) drains the ring, runs protocore_coaps_process(), fires the PTO
  * retransmission timer, and reaps idle or failed connections. The engines therefore only ever run in
- * one context. On host builds there is no UDP; datagrams are injected with pc_coaps_server_ingest() and
+ * one context. On host builds there is no UDP; datagrams are injected with protocore_coaps_server_ingest() and
  * replies captured through an output sink, so the whole server is host-testable by shuttling byte
- * buffers to an in-test DTLS client, exactly like pc_dtls_conn and pc_coaps_process themselves.
+ * buffers to an in-test DTLS client, exactly like protocore_dtls_conn and protocore_coaps_process themselves.
  *
  * Constrained-friendly: unlike the HTTP/3 pool this is not PSRAM-gated - a small DtlsConn pool fits
- * internal DRAM, which is the whole point of CoAP. Raise PC_COAPS_MAX_CONNS for more simultaneous
+ * internal DRAM, which is the whole point of CoAP. Raise PROTOCORE_COAPS_MAX_CONNS for more simultaneous
  * peers (each slot is one DtlsConn handshake engine plus its per-connection key material).
  *
  * @author  Douglas Quigg (dstroy0)
@@ -34,21 +34,22 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_DTLS && PC_ENABLE_COAP
+#if PROTOCORE_ENABLE_DTLS && PROTOCORE_ENABLE_COAP
 
-#ifndef PC_COAPS_MAX_CONNS
-#define PC_COAPS_MAX_CONNS 2 ///< simultaneous CoAPs (DTLS) connections; each slot is one DtlsConn engine
+#ifndef PROTOCORE_COAPS_MAX_CONNS
+#define PROTOCORE_COAPS_MAX_CONNS 2 ///< simultaneous CoAPs (DTLS) connections; each slot is one DtlsConn engine
 #endif
-#ifndef PC_COAPS_INGEST_RING
-#define PC_COAPS_INGEST_RING 6 ///< datagrams buffered from the lwIP thread until pc_coaps_server_poll() drains them
+#ifndef PROTOCORE_COAPS_INGEST_RING
+#define PROTOCORE_COAPS_INGEST_RING                                                                                    \
+    6 ///< datagrams buffered from the lwIP thread until protocore_coaps_server_poll() drains them
 #endif
-#ifndef PC_COAPS_PORT
-#define PC_COAPS_PORT 5684 ///< default UDP port the CoAPs server binds (coaps://, RFC 7252 §12.8)
+#ifndef PROTOCORE_COAPS_PORT
+#define PROTOCORE_COAPS_PORT 5684 ///< default UDP port the CoAPs server binds (coaps://, RFC 7252 §12.8)
 #endif
-#ifndef PC_COAPS_IDLE_MS
-#define PC_COAPS_IDLE_MS 60000 ///< reclaim a connection with no inbound datagram for this long (§idle-reaping)
+#ifndef PROTOCORE_COAPS_IDLE_MS
+#define PROTOCORE_COAPS_IDLE_MS 60000 ///< reclaim a connection with no inbound datagram for this long (§idle-reaping)
 #endif
 
 /**
@@ -71,47 +72,47 @@ typedef struct
 
 /**
  * @brief Start the CoAPs server: install @p cfg, bind @p port over UDP, and route datagrams into the
- * DtlsConn pool. Register CoAP resources first with pc_coap_server_add_resource().
+ * DtlsConn pool. Register CoAP resources first with protocore_coap_server_add_resource().
  *
- * @param port UDP port to bind, or 0 for @ref PC_COAPS_PORT (5684).
+ * @param port UDP port to bind, or 0 for @ref PROTOCORE_COAPS_PORT (5684).
  * @return false if @p cfg is invalid, or (Arduino) the UDP bind fails; on host builds it always
- *         returns true and is driven through pc_coaps_server_ingest() / the output sink.
+ *         returns true and is driven through protocore_coaps_server_ingest() / the output sink.
  */
-proto_bool pc_coaps_server_begin(uint16_t port, const CoapsServerConfig *cfg);
+proto_bool protocore_coaps_server_begin(uint16_t port, const CoapsServerConfig *cfg);
 
 /**
  * @brief Drive the server once: drain queued datagrams into their connections (running the handshake,
  * or decrypting a CoAP request and answering it), fire the DTLS retransmission timer for any
- * outstanding flight (RFC 9147 §5.8), and reap closed or idle (@ref PC_COAPS_IDLE_MS) connections.
- * Call every loop iteration. The monotonic clock is @ref pc_millis (no @c now_ms argument).
+ * outstanding flight (RFC 9147 §5.8), and reap closed or idle (@ref PROTOCORE_COAPS_IDLE_MS) connections.
+ * Call every loop iteration. The monotonic clock is @ref protocore_millis (no @c now_ms argument).
  */
-void pc_coaps_server_poll();
+void protocore_coaps_server_poll();
 
 /** @brief Number of pool slots currently in use (open connections). For diagnostics / tests. */
-uint8_t pc_coaps_server_active_conns();
+uint8_t protocore_coaps_server_active_conns();
 
 /** @brief Stop the server: close the UDP binding and release every pool slot. */
-void pc_coaps_server_stop();
+void protocore_coaps_server_stop();
 
 // ---------------------------------------------------------------------------
 // Host / test seam (no UDP on host builds)
 // ---------------------------------------------------------------------------
-#if !PC_HAS_NET_STACK
+#if !PROTOCORE_HAS_NET_STACK
 /** @brief Sink invoked for every outbound datagram (host builds route sends here instead of UDP). */
 typedef void (*CoapsServerOutFn)(void *ctx, const uint8_t *datagram, size_t len, const char *ip, uint16_t port);
 
 /** @brief Register the outbound-datagram sink used on host builds. */
-void pc_coaps_server_set_out_sink_cb(CoapsServerOutFn fn, void *ctx);
+void protocore_coaps_server_set_out_sink_cb(CoapsServerOutFn fn, void *ctx);
 
 /**
  * @brief Inject a received datagram from @p ip:@p port (the host-build stand-in for the UDP handler).
- * pc_coaps_server_poll() then processes it exactly as a real datagram. @return false if the ring is full.
+ * protocore_coaps_server_poll() then processes it exactly as a real datagram. @return false if the ring is full.
  */
-proto_bool pc_coaps_server_ingest(const uint8_t *datagram, size_t len, const char *ip, uint16_t port);
+proto_bool protocore_coaps_server_ingest(const uint8_t *datagram, size_t len, const char *ip, uint16_t port);
 #endif
 
-#endif // PC_ENABLE_DTLS && PC_ENABLE_COAP
+#endif // PROTOCORE_ENABLE_DTLS && PROTOCORE_ENABLE_COAP
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_COAPS_SERVER_H

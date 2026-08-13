@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // CoAP-over-DTLS server front-end (coaps_server.h): the per-peer DtlsConn pool + ingest/poll seam.
-// An in-test DTLS 1.3 client drives the server entirely through pc_coaps_server_ingest() (datagrams in)
+// An in-test DTLS 1.3 client drives the server entirely through protocore_coaps_server_ingest() (datagrams in)
 // and an output sink (datagrams out) - never touching the server's DtlsConn directly - so it exercises
 // exactly the front-end's jobs: routing a datagram to the right connection by peer address, running the
-// handshake + CoAP exchange through pc_coaps_process(), driving the retransmission timer from the poll, and
+// handshake + CoAP exchange through protocore_coaps_process(), driving the retransmission timer from the poll, and
 // reaping idle connections. The DTLS/CoAP crypto correctness itself is covered by test_dtls_conn and
 // test_coaps; here the client is just a vehicle to reach and use an established connection.
 
@@ -120,14 +120,14 @@ static uint8_t g_server_cert[32]; // Ed25519 public key used as the raw leaf "ce
 
 void setUp()
 {
-    pc_coap_server_reset();
-    pc_coap_server_add_resource("/temp", COAP_ALLOW_GET, h_temp);
-    pc_set_clock(test_clock, 1000);
+    protocore_coap_server_reset();
+    protocore_coap_server_add_resource("/temp", COAP_ALLOW_GET, h_temp);
+    protocore_set_clock(test_clock, 1000);
     g_ms = 0;
     g_rng_ctr = 0;
     out_reset();
 
-    pc_ed25519_pubkey(tw, g_server_cert, SERVER_ED_SEED);
+    protocore_ed25519_pubkey(tw, g_server_cert, SERVER_ED_SEED);
     CoapsServerConfig cfg;
     memset(&cfg, 0, sizeof cfg);
     cfg.cert_der = g_server_cert;
@@ -135,13 +135,13 @@ void setUp()
     memcpy(cfg.ed25519_seed, SERVER_ED_SEED, 32);
     memcpy(cfg.cookie_key, SERVER_COOKIE_KEY, 32);
     cfg.rng = test_rng;
-    TEST_ASSERT_TRUE(pc_coaps_server_begin(PC_COAPS_PORT, &cfg));
-    pc_coaps_server_set_out_sink_cb(out_sink, NULL);
+    TEST_ASSERT_TRUE(protocore_coaps_server_begin(PROTOCORE_COAPS_PORT, &cfg));
+    protocore_coaps_server_set_out_sink_cb(out_sink, NULL);
 }
 void tearDown()
 {
-    pc_coaps_server_stop();
-    pc_set_clock(NULL, 0);
+    protocore_coaps_server_stop();
+    protocore_set_clock(NULL, 0);
 }
 
 // ---- minimal DTLS 1.3 client (offers X25519 directly, no HRR) ----
@@ -320,20 +320,20 @@ static void client_handshake(const char *ip, uint16_t port, DtlsRecordKeys *cli_
                              const uint8_t *client_cid, size_t client_cid_len, uint8_t *scid_out, size_t *scid_len_out)
 {
     uint8_t client_pub[32];
-    pc_x25519_base(client_pub, CLIENT_X25519_PRIV);
+    protocore_x25519_base(client_pub, CLIENT_X25519_PRIV);
 
     uint8_t ch[256];
     size_t ch_len = build_client_hello(ch, client_pub, client_cid, client_cid_len);
-    pc_sha256_ctx tr;
-    pc_sha256_init(&tr, tw_tr);
-    pc_sha256_update(&tr, ch, ch_len);
+    protocore_sha256_ctx tr;
+    protocore_sha256_init(&tr, tw_tr);
+    protocore_sha256_update(&tr, ch, ch_len);
     uint8_t ch_frag[300];
     size_t ch_fl = DtlsHandshake.frag_build(ch[0], 0, (uint32_t)(ch_len - 4), 0, ch + 4, (uint32_t)(ch_len - 4),
                                             ch_frag, sizeof(ch_frag));
     uint8_t ch_rec[320];
-    size_t ch_rl = DtlsRecord.plaintext_build(PC_DTLS_CT_HANDSHAKE, 0, 0, ch_frag, ch_fl, ch_rec, sizeof(ch_rec));
-    TEST_ASSERT_TRUE(pc_coaps_server_ingest(ch_rec, ch_rl, ip, port));
-    pc_coaps_server_poll();
+    size_t ch_rl = DtlsRecord.plaintext_build(PROTOCORE_DTLS_CT_HANDSHAKE, 0, 0, ch_frag, ch_fl, ch_rec, sizeof(ch_rec));
+    TEST_ASSERT_TRUE(protocore_coaps_server_ingest(ch_rec, ch_rl, ip, port));
+    protocore_coaps_server_poll();
 
     OutDg fldg;
     TEST_ASSERT_TRUE(take_out_for(ip, port, &fldg)); // the server flight
@@ -348,13 +348,13 @@ static void client_handshake(const char *ip, uint16_t port, DtlsRecordKeys *cli_
     uint8_t sh[512];
     size_t sh_len = frag_to_tls(pt.fragment, pt.frag_len, sh);
     TEST_ASSERT_TRUE(sh_len > 0);
-    pc_sha256_update(&tr, sh, sh_len);
+    protocore_sha256_update(&tr, sh, sh_len);
     uint8_t server_pub[32];
     TEST_ASSERT_TRUE(sh_keyshare(sh, sh_len, server_pub));
 
     // When we offered a CID, the ServerHello carries the server's CID (which we place in the records we
     // send); its epoch-2 flight carries our CID (@p client_cid).
-    uint8_t scid[PC_DTLS_CID_MAX];
+    uint8_t scid[PROTOCORE_DTLS_CID_MAX];
     size_t scid_len = client_cid_len ? sh_conn_id(sh, sh_len, scid) : 0;
     if (client_cid_len)
     {
@@ -367,13 +367,13 @@ static void client_handshake(const char *ip, uint16_t port, DtlsRecordKeys *cli_
     }
 
     uint8_t ecdhe[32];
-    pc_x25519(ecdhe, CLIENT_X25519_PRIV, server_pub);
+    protocore_x25519(ecdhe, CLIENT_X25519_PRIV, server_pub);
     Tls13KeySchedule cks;
     uint8_t hh[32];
-    pc_sha256_final(&tr, hh);
-    static uint8_t ks_store_372[PC_TLS13_KS_BORROW];
-    pc_tls13_ks_early(&DTLS13_KDF, &cks, ks_store_372);
-    pc_tls13_ks_handshake(&cks, ecdhe, hh, 32);
+    protocore_sha256_final(&tr, hh);
+    static uint8_t ks_store_372[PROTOCORE_TLS13_KS_BORROW];
+    protocore_tls13_ks_early(&DTLS13_KDF, &cks, ks_store_372);
+    protocore_tls13_ks_handshake(&cks, ecdhe, hh, 32);
     DtlsRecordKeys srv_read;
     DtlsRecord.keys_derive(&srv_read, DTLS_CIPHER_AES_128_GCM_SHA256, 2, cks.s + TLS13_KS_SERVER_HS);
 
@@ -391,26 +391,26 @@ static void client_handshake(const char *ip, uint16_t port, DtlsRecordKeys *cli_
         uint8_t msg[512];
         size_t mlen = frag_to_tls(inner, info.pt_len, msg);
         TEST_ASSERT_TRUE(mlen > 0);
-        pc_sha256_update(&tr, msg, mlen);
+        protocore_sha256_update(&tr, msg, mlen);
     }
 
     uint8_t h_sfin[32];
-    pc_sha256_final(&tr, h_sfin);
-    pc_tls13_ks_master(&cks, h_sfin);
+    protocore_sha256_final(&tr, h_sfin);
+    protocore_tls13_ks_master(&cks, h_sfin);
     uint8_t cfin_verify[32];
-    pc_tls13_finished_mac(&cks, cks.s + TLS13_KS_CLIENT_HS, h_sfin, cfin_verify);
+    protocore_tls13_finished_mac(&cks, cks.s + TLS13_KS_CLIENT_HS, h_sfin, cfin_verify);
     uint8_t cfin[64];
-    size_t cfin_len = pc_tls13_build_finished(cfin, sizeof(cfin), cfin_verify);
+    size_t cfin_len = protocore_tls13_build_finished(cfin, sizeof(cfin), cfin_verify);
     DtlsRecordKeys cli_write;
     DtlsRecord.keys_derive(&cli_write, DTLS_CIPHER_AES_128_GCM_SHA256, 2, cks.s + TLS13_KS_CLIENT_HS);
     uint8_t cfin_frag[80];
     size_t cff = DtlsHandshake.frag_build(cfin[0], 1, (uint32_t)(cfin_len - 4), 0, cfin + 4, (uint32_t)(cfin_len - 4),
                                           cfin_frag, sizeof(cfin_frag));
     uint8_t cfin_rec[128];
-    size_t cfr = DtlsRecord.protect(&cli_write, 0, PC_DTLS_CT_HANDSHAKE, cfin_frag, cff, cfin_rec, sizeof(cfin_rec),
+    size_t cfr = DtlsRecord.protect(&cli_write, 0, PROTOCORE_DTLS_CT_HANDSHAKE, cfin_frag, cff, cfin_rec, sizeof(cfin_rec),
                                     scid_len ? scid : NULL, scid_len);
-    TEST_ASSERT_TRUE(pc_coaps_server_ingest(cfin_rec, cfr, ip, port));
-    pc_coaps_server_poll();
+    TEST_ASSERT_TRUE(protocore_coaps_server_ingest(cfin_rec, cfr, ip, port));
+    protocore_coaps_server_poll();
 
     // The server acknowledges the client Finished with an epoch-3 ACK (seq 0); pull and discard it so
     // the CoAP response that follows is epoch-3 seq 1 on the wire.
@@ -426,7 +426,7 @@ static size_t client_get_temp(DtlsRecordKeys *w, uint64_t cseq, uint8_t *out, si
                               size_t cid_len)
 {
     const uint8_t coap_get[] = {0x40, 0x01, 0x12, 0x34, 0xB4, 't', 'e', 'm', 'p'};
-    return DtlsRecord.protect(w, cseq, PC_DTLS_CT_APPLICATION_DATA, coap_get, sizeof(coap_get), out, cap, cid, cid_len);
+    return DtlsRecord.protect(w, cseq, PROTOCORE_DTLS_CT_APPLICATION_DATA, coap_get, sizeof(coap_get), out, cap, cid, cid_len);
 }
 
 // Decrypt the server's response record (epoch-3 send-seq 1, after the completion ACK) and assert it is
@@ -436,7 +436,7 @@ static void assert_coap_205(DtlsRecordKeys *r, const OutDg *dg, const uint8_t *c
     uint8_t coap_resp[256];
     DtlsCiphertext info;
     TEST_ASSERT_TRUE(DtlsRecord.unprotect(r, 1, dg->buf, dg->len, coap_resp, sizeof(coap_resp), &info, cid, cid_len));
-    TEST_ASSERT_EQUAL_UINT8(PC_DTLS_CT_APPLICATION_DATA, info.content_type);
+    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_DTLS_CT_APPLICATION_DATA, info.content_type);
     TEST_ASSERT_TRUE(info.pt_len >= 6);
     TEST_ASSERT_EQUAL_UINT8(0x60, coap_resp[0] & 0xF0); // Ver 1, Type ACK
     TEST_ASSERT_EQUAL_UINT8(0x45, coap_resp[1]);        // 2.05 Content
@@ -450,12 +450,12 @@ static void test_server_single_peer(void)
 {
     DtlsRecordKeys w, r;
     client_handshake("10.0.0.5", 40001, &w, &r, NULL, 0, NULL, NULL);
-    TEST_ASSERT_EQUAL_UINT8(1, pc_coaps_server_active_conns());
+    TEST_ASSERT_EQUAL_UINT8(1, protocore_coaps_server_active_conns());
 
     uint8_t rec[128];
     size_t n = client_get_temp(&w, 0, rec, sizeof(rec), NULL, 0);
-    TEST_ASSERT_TRUE(pc_coaps_server_ingest(rec, n, "10.0.0.5", 40001));
-    pc_coaps_server_poll();
+    TEST_ASSERT_TRUE(protocore_coaps_server_ingest(rec, n, "10.0.0.5", 40001));
+    protocore_coaps_server_poll();
 
     OutDg dg;
     TEST_ASSERT_TRUE(take_out_for("10.0.0.5", 40001, &dg));
@@ -469,14 +469,14 @@ static void test_two_peers_routing(void)
     DtlsRecordKeys wA, rA, wB, rB;
     client_handshake("10.0.0.5", 40001, &wA, &rA, NULL, 0, NULL, NULL);
     client_handshake("10.0.0.6", 40002, &wB, &rB, NULL, 0, NULL, NULL);
-    TEST_ASSERT_EQUAL_UINT8(2, pc_coaps_server_active_conns());
+    TEST_ASSERT_EQUAL_UINT8(2, protocore_coaps_server_active_conns());
 
     uint8_t recA[128], recB[128];
     size_t nA = client_get_temp(&wA, 0, recA, sizeof(recA), NULL, 0);
     size_t nB = client_get_temp(&wB, 0, recB, sizeof(recB), NULL, 0);
-    TEST_ASSERT_TRUE(pc_coaps_server_ingest(recB, nB, "10.0.0.6", 40002));
-    TEST_ASSERT_TRUE(pc_coaps_server_ingest(recA, nA, "10.0.0.5", 40001));
-    pc_coaps_server_poll();
+    TEST_ASSERT_TRUE(protocore_coaps_server_ingest(recB, nB, "10.0.0.6", 40002));
+    TEST_ASSERT_TRUE(protocore_coaps_server_ingest(recA, nA, "10.0.0.5", 40001));
+    protocore_coaps_server_poll();
 
     OutDg dgA, dgB;
     TEST_ASSERT_TRUE(take_out_for("10.0.0.5", 40001, &dgA));
@@ -485,16 +485,16 @@ static void test_two_peers_routing(void)
     assert_coap_205(&rB, &dgB, NULL, 0);
 }
 
-// A connection with no inbound datagram for PC_COAPS_IDLE_MS is reclaimed by the poll.
+// A connection with no inbound datagram for PROTOCORE_COAPS_IDLE_MS is reclaimed by the poll.
 static void test_idle_reap(void)
 {
     DtlsRecordKeys w, r;
     client_handshake("10.0.0.5", 40001, &w, &r, NULL, 0, NULL, NULL);
-    TEST_ASSERT_EQUAL_UINT8(1, pc_coaps_server_active_conns());
+    TEST_ASSERT_EQUAL_UINT8(1, protocore_coaps_server_active_conns());
 
-    g_ms += PC_COAPS_IDLE_MS + 1;
-    pc_coaps_server_poll();
-    TEST_ASSERT_EQUAL_UINT8(0, pc_coaps_server_active_conns());
+    g_ms += PROTOCORE_COAPS_IDLE_MS + 1;
+    protocore_coaps_server_poll();
+    TEST_ASSERT_EQUAL_UINT8(0, protocore_coaps_server_active_conns());
 }
 
 // The poll drives the DTLS retransmission timer: a lost client reply leaves the server flight
@@ -502,33 +502,33 @@ static void test_idle_reap(void)
 static void test_pto_retransmit_driven_by_poll(void)
 {
     uint8_t client_pub[32];
-    pc_x25519_base(client_pub, CLIENT_X25519_PRIV);
+    protocore_x25519_base(client_pub, CLIENT_X25519_PRIV);
     uint8_t ch[256];
     size_t ch_len = build_client_hello(ch, client_pub, NULL, 0);
     uint8_t ch_frag[300];
     size_t ch_fl = DtlsHandshake.frag_build(ch[0], 0, (uint32_t)(ch_len - 4), 0, ch + 4, (uint32_t)(ch_len - 4),
                                             ch_frag, sizeof(ch_frag));
     uint8_t ch_rec[320];
-    size_t ch_rl = DtlsRecord.plaintext_build(PC_DTLS_CT_HANDSHAKE, 0, 0, ch_frag, ch_fl, ch_rec, sizeof(ch_rec));
-    TEST_ASSERT_TRUE(pc_coaps_server_ingest(ch_rec, ch_rl, "10.0.0.7", 40003));
-    pc_coaps_server_poll();
+    size_t ch_rl = DtlsRecord.plaintext_build(PROTOCORE_DTLS_CT_HANDSHAKE, 0, 0, ch_frag, ch_fl, ch_rec, sizeof(ch_rec));
+    TEST_ASSERT_TRUE(protocore_coaps_server_ingest(ch_rec, ch_rl, "10.0.0.7", 40003));
+    protocore_coaps_server_poll();
 
     OutDg f1;
     TEST_ASSERT_TRUE(take_out_for("10.0.0.7", 40003, &f1)); // original flight, PTO timer now armed
 
     // Before the PTO elapses a poll must not retransmit.
-    g_ms += PC_DTLS_PTO_INITIAL_MS - 1;
-    pc_coaps_server_poll();
+    g_ms += PROTOCORE_DTLS_PTO_INITIAL_MS - 1;
+    protocore_coaps_server_poll();
     OutDg none;
     TEST_ASSERT_FALSE(take_out_for("10.0.0.7", 40003, &none));
 
     // At the PTO the poll fires the timer and the flight is re-sent (fresh record sequence numbers).
     g_ms += 1;
-    pc_coaps_server_poll();
+    protocore_coaps_server_poll();
     OutDg f2;
     TEST_ASSERT_TRUE(take_out_for("10.0.0.7", 40003, &f2));
     TEST_ASSERT_TRUE(f2.len > 0);
-    TEST_ASSERT_EQUAL_UINT8(1, pc_coaps_server_active_conns()); // still handshaking, not reaped
+    TEST_ASSERT_EQUAL_UINT8(1, protocore_coaps_server_active_conns()); // still handshaking, not reaped
 }
 
 // HttpRoute-by-CID + address migration (RFC 9146 / RFC 9147 §9): a connection that negotiated a connection id
@@ -537,18 +537,18 @@ static void test_pto_retransmit_driven_by_poll(void)
 static void test_cid_address_migration(void)
 {
     const uint8_t client_cid[3] = {0xC1, 0xC2, 0xC3};
-    uint8_t scid[PC_DTLS_CID_MAX];
+    uint8_t scid[PROTOCORE_DTLS_CID_MAX];
     size_t scid_len = 0;
     DtlsRecordKeys w, r;
     client_handshake("10.0.0.5", 40001, &w, &r, client_cid, sizeof(client_cid), scid, &scid_len);
     TEST_ASSERT_TRUE(scid_len > 0); // the server chose a connection id
-    TEST_ASSERT_EQUAL_UINT8(1, pc_coaps_server_active_conns());
+    TEST_ASSERT_EQUAL_UINT8(1, protocore_coaps_server_active_conns());
 
     // The peer roams to a new address and sends a CoAP GET protected with the server's CID.
     uint8_t rec[128];
     size_t n = client_get_temp(&w, 0, rec, sizeof(rec), scid, scid_len);
-    TEST_ASSERT_TRUE(pc_coaps_server_ingest(rec, n, "10.9.9.9", 55555)); // a different ip:port
-    pc_coaps_server_poll();
+    TEST_ASSERT_TRUE(protocore_coaps_server_ingest(rec, n, "10.9.9.9", 55555)); // a different ip:port
+    protocore_coaps_server_poll();
 
     // The response is routed to the connection by its CID and sent to the NEW address, not the old one.
     OutDg dg;
@@ -556,7 +556,7 @@ static void test_cid_address_migration(void)
     OutDg stale;
     TEST_ASSERT_FALSE(take_out_for("10.0.0.5", 40001, &stale));
     assert_coap_205(&r, &dg, client_cid, sizeof(client_cid));   // the response carries our CID
-    TEST_ASSERT_EQUAL_UINT8(1, pc_coaps_server_active_conns()); // migrated the existing connection, not a new one
+    TEST_ASSERT_EQUAL_UINT8(1, protocore_coaps_server_active_conns()); // migrated the existing connection, not a new one
 }
 
 // ---- helpers for the coverage tests below ----
@@ -565,15 +565,15 @@ static void test_cid_address_migration(void)
 static void ingest_real_client_hello(const char *ip, uint16_t port)
 {
     uint8_t client_pub[32];
-    pc_x25519_base(client_pub, CLIENT_X25519_PRIV);
+    protocore_x25519_base(client_pub, CLIENT_X25519_PRIV);
     uint8_t ch[256];
     size_t ch_len = build_client_hello(ch, client_pub, NULL, 0);
     uint8_t ch_frag[300];
     size_t ch_fl = DtlsHandshake.frag_build(ch[0], 0, (uint32_t)(ch_len - 4), 0, ch + 4, (uint32_t)(ch_len - 4),
                                             ch_frag, sizeof(ch_frag));
     uint8_t ch_rec[320];
-    size_t ch_rl = DtlsRecord.plaintext_build(PC_DTLS_CT_HANDSHAKE, 0, 0, ch_frag, ch_fl, ch_rec, sizeof(ch_rec));
-    TEST_ASSERT_TRUE(pc_coaps_server_ingest(ch_rec, ch_rl, ip, port));
+    size_t ch_rl = DtlsRecord.plaintext_build(PROTOCORE_DTLS_CT_HANDSHAKE, 0, 0, ch_frag, ch_fl, ch_rec, sizeof(ch_rec));
+    TEST_ASSERT_TRUE(protocore_coaps_server_ingest(ch_rec, ch_rl, ip, port));
 }
 
 // Ingest a handshake record carrying a "ClientHello" whose body is too short to parse: the server rejects
@@ -585,90 +585,90 @@ static void ingest_bad_client_hello(const char *ip, uint16_t port)
     size_t fl = DtlsHandshake.frag_build(0x01, 0, (uint32_t)sizeof(garbage), 0, garbage, (uint32_t)sizeof(garbage),
                                          frag, sizeof(frag));
     uint8_t rec[128];
-    size_t rl = DtlsRecord.plaintext_build(PC_DTLS_CT_HANDSHAKE, 0, 0, frag, fl, rec, sizeof(rec));
-    pc_coaps_server_ingest(rec, rl, ip, port);
+    size_t rl = DtlsRecord.plaintext_build(PROTOCORE_DTLS_CT_HANDSHAKE, 0, 0, frag, fl, rec, sizeof(rec));
+    protocore_coaps_server_ingest(rec, rl, ip, port);
 }
 
-// A one-byte record too short to parse: routed to its peer slot it is a no-op (pc_coaps_process returns 0),
+// A one-byte record too short to parse: routed to its peer slot it is a no-op (protocore_coaps_process returns 0),
 // but the front-end still refreshes the slot's idle clock - a keepalive that never advances the handshake.
 static void ingest_noop(const char *ip, uint16_t port)
 {
     uint8_t junk[1] = {0x16};
-    pc_coaps_server_ingest(junk, sizeof(junk), ip, port);
+    protocore_coaps_server_ingest(junk, sizeof(junk), ip, port);
 }
 
-// pc_coaps_server_begin rejects a null config and each missing required field, and port 0 selects the default.
+// protocore_coaps_server_begin rejects a null config and each missing required field, and port 0 selects the default.
 static void test_begin_rejects_invalid_cfg(void)
 {
     CoapsServerConfig c;
-    TEST_ASSERT_FALSE(pc_coaps_server_begin(PC_COAPS_PORT, NULL)); // null cfg
+    TEST_ASSERT_FALSE(protocore_coaps_server_begin(PROTOCORE_COAPS_PORT, NULL)); // null cfg
 
     memset(&c, 0, sizeof c); // rng missing
     c.cert_der = g_server_cert;
     c.cert_len = 32;
     c.rng = NULL;
-    TEST_ASSERT_FALSE(pc_coaps_server_begin(PC_COAPS_PORT, &c));
+    TEST_ASSERT_FALSE(protocore_coaps_server_begin(PROTOCORE_COAPS_PORT, &c));
 
     memset(&c, 0, sizeof c); // cert_der missing
     c.rng = test_rng;
     c.cert_der = NULL;
     c.cert_len = 32;
-    TEST_ASSERT_FALSE(pc_coaps_server_begin(PC_COAPS_PORT, &c));
+    TEST_ASSERT_FALSE(protocore_coaps_server_begin(PROTOCORE_COAPS_PORT, &c));
 
     memset(&c, 0, sizeof c); // cert_len 0
     c.rng = test_rng;
     c.cert_der = g_server_cert;
     c.cert_len = 0;
-    TEST_ASSERT_FALSE(pc_coaps_server_begin(PC_COAPS_PORT, &c));
+    TEST_ASSERT_FALSE(protocore_coaps_server_begin(PROTOCORE_COAPS_PORT, &c));
 
-    memset(&c, 0, sizeof c); // valid; port 0 -> PC_COAPS_PORT
+    memset(&c, 0, sizeof c); // valid; port 0 -> PROTOCORE_COAPS_PORT
     c.cert_der = g_server_cert;
     c.cert_len = 32;
     c.rng = test_rng;
     memcpy(c.ed25519_seed, SERVER_ED_SEED, 32);
     memcpy(c.cookie_key, SERVER_COOKIE_KEY, 32);
-    TEST_ASSERT_TRUE(pc_coaps_server_begin(0, &c));
+    TEST_ASSERT_TRUE(protocore_coaps_server_begin(0, &c));
 }
 
 // A poll on a stopped server is a no-op (does not touch the pool).
 static void test_poll_when_stopped(void)
 {
-    pc_coaps_server_stop();
-    pc_coaps_server_poll();
-    TEST_ASSERT_EQUAL_UINT8(0, pc_coaps_server_active_conns());
+    protocore_coaps_server_stop();
+    protocore_coaps_server_poll();
+    TEST_ASSERT_EQUAL_UINT8(0, protocore_coaps_server_active_conns());
 }
 
 // ingest rejects a zero-length and an over-sized datagram.
 static void test_ingest_rejects_bad_len(void)
 {
     uint8_t d[8] = {0};
-    TEST_ASSERT_FALSE(pc_coaps_server_ingest(d, 0, "10.0.0.5", 1)); // zero length
-    static uint8_t big[2000];                                       // > PC_COAPS_MAX_DATAGRAM (1500)
+    TEST_ASSERT_FALSE(protocore_coaps_server_ingest(d, 0, "10.0.0.5", 1)); // zero length
+    static uint8_t big[2000];                                       // > PROTOCORE_COAPS_MAX_DATAGRAM (1500)
     memset(big, 0, sizeof big);
-    TEST_ASSERT_FALSE(pc_coaps_server_ingest(big, sizeof big, "10.0.0.5", 1));
+    TEST_ASSERT_FALSE(protocore_coaps_server_ingest(big, sizeof big, "10.0.0.5", 1));
 }
 
-// The SPSC ingest ring drops datagrams once full (PC_COAPS_INGEST_RING - 1 usable entries).
+// The SPSC ingest ring drops datagrams once full (PROTOCORE_COAPS_INGEST_RING - 1 usable entries).
 static void test_ingest_ring_full(void)
 {
     uint8_t d[8] = {0x16, 0, 0, 0, 0, 0, 0, 0};
     int pushed = 0;
-    for (int i = 0; i < PC_COAPS_INGEST_RING + 3; i++)
+    for (int i = 0; i < PROTOCORE_COAPS_INGEST_RING + 3; i++)
     {
-        if (pc_coaps_server_ingest(d, sizeof d, "10.0.0.5", 1))
+        if (protocore_coaps_server_ingest(d, sizeof d, "10.0.0.5", 1))
         {
             pushed++;
         }
     }
-    TEST_ASSERT_EQUAL_INT(PC_COAPS_INGEST_RING - 1, pushed);
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_COAPS_INGEST_RING - 1, pushed);
 }
 
 // The peer-address copy tolerates a null ip (stored empty) and truncates an over-long one to the field.
 static void test_ingest_addr_copy_edges(void)
 {
     uint8_t d[8] = {0x16, 0, 0, 0, 0, 0, 0, 0};
-    TEST_ASSERT_TRUE(pc_coaps_server_ingest(d, sizeof d, NULL, 1));
-    TEST_ASSERT_TRUE(pc_coaps_server_ingest(d, sizeof d, "111.111.111.111.111.111", 2));
+    TEST_ASSERT_TRUE(protocore_coaps_server_ingest(d, sizeof d, NULL, 1));
+    TEST_ASSERT_TRUE(protocore_coaps_server_ingest(d, sizeof d, "111.111.111.111.111.111", 2));
 }
 
 // Every malformed peer address fails serialize_peer (no HRR cookie binding); the connection still opens and
@@ -685,8 +685,8 @@ static void test_malformed_peer_addr(void)
     for (unsigned i = 0; i < sizeof(bad) / sizeof(bad[0]); i++)
     {
         ingest_bad_client_hello(bad[i], (uint16_t)(50000 + i));
-        pc_coaps_server_poll();
-        TEST_ASSERT_EQUAL_UINT8(0, pc_coaps_server_active_conns());
+        protocore_coaps_server_poll();
+        TEST_ASSERT_EQUAL_UINT8(0, protocore_coaps_server_active_conns());
     }
 }
 
@@ -694,8 +694,8 @@ static void test_malformed_peer_addr(void)
 static void test_fatal_handshake_frees_slot(void)
 {
     ingest_bad_client_hello("10.0.0.5", 40001);
-    pc_coaps_server_poll();
-    TEST_ASSERT_EQUAL_UINT8(0, pc_coaps_server_active_conns());
+    protocore_coaps_server_poll();
+    TEST_ASSERT_EQUAL_UINT8(0, protocore_coaps_server_active_conns());
     OutDg dg;
     TEST_ASSERT_FALSE(take_out_for("10.0.0.5", 40001, &dg));
 }
@@ -703,46 +703,46 @@ static void test_fatal_handshake_frees_slot(void)
 // When the pool is full a new peer's datagram is dropped: no slot is opened, no reply, no eviction.
 static void test_pool_full_rejects_new_peer(void)
 {
-    for (uint8_t i = 0; i < PC_COAPS_MAX_CONNS; i++)
+    for (uint8_t i = 0; i < PROTOCORE_COAPS_MAX_CONNS; i++)
     {
         char ip[16] = "10.0.1.0";
         ip[7] = (char)('1' + i);
         ingest_real_client_hello(ip, (uint16_t)(1000 + i));
-        pc_coaps_server_poll();
+        protocore_coaps_server_poll();
     }
-    TEST_ASSERT_EQUAL_UINT8(PC_COAPS_MAX_CONNS, pc_coaps_server_active_conns());
+    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_COAPS_MAX_CONNS, protocore_coaps_server_active_conns());
 
     out_reset();
     ingest_real_client_hello("10.0.1.9", 1099); // one peer too many
-    pc_coaps_server_poll();
-    TEST_ASSERT_EQUAL_UINT8(PC_COAPS_MAX_CONNS, pc_coaps_server_active_conns());
+    protocore_coaps_server_poll();
+    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_COAPS_MAX_CONNS, protocore_coaps_server_active_conns());
     OutDg dg;
     TEST_ASSERT_FALSE(take_out_for("10.0.1.9", 1099, &dg));
 }
 
 // The PTO retransmission ceiling abandons a handshake: with the client Finished never arriving but the peer
 // dribbling keepalive traffic (so the idle reaper does not fire first), the flight is re-sent up to
-// PC_DTLS_MAX_RETRANSMITS times and then the connection is dropped (RFC 9147 §5.8.1).
+// PROTOCORE_DTLS_MAX_RETRANSMITS times and then the connection is dropped (RFC 9147 §5.8.1).
 static void test_pto_ceiling_frees_slot(void)
 {
     ingest_real_client_hello("10.0.0.7", 40003);
-    pc_coaps_server_poll();
-    TEST_ASSERT_EQUAL_UINT8(1, pc_coaps_server_active_conns());
+    protocore_coaps_server_poll();
+    TEST_ASSERT_EQUAL_UINT8(1, protocore_coaps_server_active_conns());
 
-    for (uint8_t i = 0; i < PC_DTLS_MAX_RETRANSMITS; i++)
+    for (uint8_t i = 0; i < PROTOCORE_DTLS_MAX_RETRANSMITS; i++)
     {
-        g_ms += PC_DTLS_PTO_MAX_MS + 1; // past any PTO deadline
+        g_ms += PROTOCORE_DTLS_PTO_MAX_MS + 1; // past any PTO deadline
         out_reset();
         ingest_noop("10.0.0.7", 40003); // refresh the idle clock so the reaper does not preempt the PTO
-        pc_coaps_server_poll();
-        TEST_ASSERT_EQUAL_UINT8(1, pc_coaps_server_active_conns()); // retransmitted, still handshaking
+        protocore_coaps_server_poll();
+        TEST_ASSERT_EQUAL_UINT8(1, protocore_coaps_server_active_conns()); // retransmitted, still handshaking
     }
 
-    g_ms += PC_DTLS_PTO_MAX_MS + 1;
+    g_ms += PROTOCORE_DTLS_PTO_MAX_MS + 1;
     out_reset();
     ingest_noop("10.0.0.7", 40003);
-    pc_coaps_server_poll();
-    TEST_ASSERT_EQUAL_UINT8(0, pc_coaps_server_active_conns()); // ceiling hit: handshake abandoned
+    protocore_coaps_server_poll();
+    TEST_ASSERT_EQUAL_UINT8(0, protocore_coaps_server_active_conns()); // ceiling hit: handshake abandoned
 }
 
 // A CID record whose connection id matches no connection is dropped: slot_by_cid skips the unused slot and
@@ -750,14 +750,14 @@ static void test_pto_ceiling_frees_slot(void)
 static void test_unknown_cid_dropped(void)
 {
     const uint8_t client_cid[3] = {0xC1, 0xC2, 0xC3};
-    uint8_t scid[PC_DTLS_CID_MAX];
+    uint8_t scid[PROTOCORE_DTLS_CID_MAX];
     size_t scid_len = 0;
     DtlsRecordKeys w, r;
     client_handshake("10.0.0.5", 40001, &w, &r, client_cid, sizeof(client_cid), scid, &scid_len);
     TEST_ASSERT_TRUE(scid_len > 0);
-    TEST_ASSERT_EQUAL_UINT8(1, pc_coaps_server_active_conns());
+    TEST_ASSERT_EQUAL_UINT8(1, protocore_coaps_server_active_conns());
 
-    uint8_t unknown[PC_DTLS_CID_MAX];
+    uint8_t unknown[PROTOCORE_DTLS_CID_MAX];
     memcpy(unknown, scid, scid_len);
     unknown[0] = (uint8_t)(unknown[0] ^ 0xFF); // differs from the negotiated server CID
     uint8_t rec[128];
@@ -765,21 +765,21 @@ static void test_unknown_cid_dropped(void)
     TEST_ASSERT_TRUE(n > 0);
 
     out_reset();
-    TEST_ASSERT_TRUE(pc_coaps_server_ingest(rec, n, "10.9.9.9", 55555));
-    pc_coaps_server_poll();
+    TEST_ASSERT_TRUE(protocore_coaps_server_ingest(rec, n, "10.9.9.9", 55555));
+    protocore_coaps_server_poll();
     OutDg dg;
     TEST_ASSERT_FALSE(take_out_for("10.9.9.9", 55555, &dg));    // dropped
-    TEST_ASSERT_EQUAL_UINT8(1, pc_coaps_server_active_conns()); // existing connection untouched
+    TEST_ASSERT_EQUAL_UINT8(1, protocore_coaps_server_active_conns()); // existing connection untouched
 }
 
 // server_send is a no-op when no output sink is configured (the host build's sink-unset branch): the
 // handshake still proceeds server-side, but nothing is captured.
 static void test_server_send_without_sink(void)
 {
-    pc_coaps_server_set_out_sink_cb(NULL, NULL);
+    protocore_coaps_server_set_out_sink_cb(NULL, NULL);
     ingest_real_client_hello("10.0.0.5", 40001);
-    pc_coaps_server_poll();
-    TEST_ASSERT_EQUAL_UINT8(1, pc_coaps_server_active_conns()); // handshake still opened the slot
+    protocore_coaps_server_poll();
+    TEST_ASSERT_EQUAL_UINT8(1, protocore_coaps_server_active_conns()); // handshake still opened the slot
     OutDg dg;
     TEST_ASSERT_FALSE(take_out_for("10.0.0.5", 40001, &dg)); // nothing captured: sink was unset
 }
@@ -791,14 +791,14 @@ static void test_slot_lookup_same_port_different_ip(void)
     DtlsRecordKeys wA, rA, wB, rB;
     client_handshake("10.0.2.5", 41000, &wA, &rA, NULL, 0, NULL, NULL);
     client_handshake("10.0.2.6", 41000, &wB, &rB, NULL, 0, NULL, NULL); // same port, different ip
-    TEST_ASSERT_EQUAL_UINT8(2, pc_coaps_server_active_conns());
+    TEST_ASSERT_EQUAL_UINT8(2, protocore_coaps_server_active_conns());
 
     uint8_t recA[128], recB[128];
     size_t nA = client_get_temp(&wA, 0, recA, sizeof(recA), NULL, 0);
     size_t nB = client_get_temp(&wB, 0, recB, sizeof(recB), NULL, 0);
-    TEST_ASSERT_TRUE(pc_coaps_server_ingest(recA, nA, "10.0.2.5", 41000));
-    TEST_ASSERT_TRUE(pc_coaps_server_ingest(recB, nB, "10.0.2.6", 41000));
-    pc_coaps_server_poll();
+    TEST_ASSERT_TRUE(protocore_coaps_server_ingest(recA, nA, "10.0.2.5", 41000));
+    TEST_ASSERT_TRUE(protocore_coaps_server_ingest(recB, nB, "10.0.2.6", 41000));
+    protocore_coaps_server_poll();
 
     OutDg dgA, dgB;
     TEST_ASSERT_TRUE(take_out_for("10.0.2.5", 41000, &dgA));
@@ -818,18 +818,18 @@ static void test_slot_by_cid_skips_and_bounds(void)
 
     // A second connection negotiates a CID.
     const uint8_t client_cid[3] = {0xA1, 0xA2, 0xA3};
-    uint8_t scid[PC_DTLS_CID_MAX];
+    uint8_t scid[PROTOCORE_DTLS_CID_MAX];
     size_t scid_len = 0;
     DtlsRecordKeys w, r;
     client_handshake("10.0.3.2", 42002, &w, &r, client_cid, sizeof(client_cid), scid, &scid_len);
     TEST_ASSERT_TRUE(scid_len > 0);
-    TEST_ASSERT_EQUAL_UINT8(2, pc_coaps_server_active_conns());
+    TEST_ASSERT_EQUAL_UINT8(2, protocore_coaps_server_active_conns());
 
     // A GET protected under the CID connection is routed by its cid, skipping the plain (sl == 0) slot.
     uint8_t rec[128];
     size_t n = client_get_temp(&w, 0, rec, sizeof(rec), scid, scid_len);
-    TEST_ASSERT_TRUE(pc_coaps_server_ingest(rec, n, "10.0.3.2", 42002));
-    pc_coaps_server_poll();
+    TEST_ASSERT_TRUE(protocore_coaps_server_ingest(rec, n, "10.0.3.2", 42002));
+    protocore_coaps_server_poll();
     OutDg dg;
     TEST_ASSERT_TRUE(take_out_for("10.0.3.2", 42002, &dg));
     assert_coap_205(&r, &dg, client_cid, sizeof(client_cid));
@@ -837,11 +837,11 @@ static void test_slot_by_cid_skips_and_bounds(void)
     // A CID-tagged datagram too short to carry any negotiated CID (avail < sl) is dropped, not matched.
     uint8_t tiny[1] = {0x30}; // header byte only: (b0 & 0xE0) == 0x20 && (b0 & 0x10), 0 bytes of cid follow
     out_reset();
-    TEST_ASSERT_TRUE(pc_coaps_server_ingest(tiny, sizeof(tiny), "10.9.9.8", 60000));
-    pc_coaps_server_poll();
+    TEST_ASSERT_TRUE(protocore_coaps_server_ingest(tiny, sizeof(tiny), "10.9.9.8", 60000));
+    protocore_coaps_server_poll();
     OutDg none;
     TEST_ASSERT_FALSE(take_out_for("10.9.9.8", 60000, &none));
-    TEST_ASSERT_EQUAL_UINT8(2, pc_coaps_server_active_conns()); // unchanged: dropped, no new slot opened
+    TEST_ASSERT_EQUAL_UINT8(2, protocore_coaps_server_active_conns()); // unchanged: dropped, no new slot opened
 }
 
 // A CID-tagged request from the address the connection already migrated to (or was established from)
@@ -850,7 +850,7 @@ static void test_slot_by_cid_skips_and_bounds(void)
 static void test_cid_no_migration_when_address_unchanged(void)
 {
     const uint8_t client_cid[3] = {0xB1, 0xB2, 0xB3};
-    uint8_t scid[PC_DTLS_CID_MAX];
+    uint8_t scid[PROTOCORE_DTLS_CID_MAX];
     size_t scid_len = 0;
     DtlsRecordKeys w, r;
     client_handshake("10.0.4.1", 43001, &w, &r, client_cid, sizeof(client_cid), scid, &scid_len);
@@ -858,12 +858,12 @@ static void test_cid_no_migration_when_address_unchanged(void)
 
     uint8_t rec1[128];
     size_t n1 = client_get_temp(&w, 0, rec1, sizeof(rec1), scid, scid_len);
-    TEST_ASSERT_TRUE(pc_coaps_server_ingest(rec1, n1, "10.0.4.1", 43001)); // same address as the handshake
-    pc_coaps_server_poll();
+    TEST_ASSERT_TRUE(protocore_coaps_server_ingest(rec1, n1, "10.0.4.1", 43001)); // same address as the handshake
+    protocore_coaps_server_poll();
     OutDg dg1;
     TEST_ASSERT_TRUE(take_out_for("10.0.4.1", 43001, &dg1));
     assert_coap_205(&r, &dg1, client_cid, sizeof(client_cid));
-    TEST_ASSERT_EQUAL_UINT8(1, pc_coaps_server_active_conns());
+    TEST_ASSERT_EQUAL_UINT8(1, protocore_coaps_server_active_conns());
 }
 
 // A partial migration - only the ip changes, the port stays the same - still updates peer_ip and routes
@@ -871,7 +871,7 @@ static void test_cid_no_migration_when_address_unchanged(void)
 static void test_cid_migration_same_port_different_ip(void)
 {
     const uint8_t client_cid[3] = {0xD1, 0xD2, 0xD3};
-    uint8_t scid[PC_DTLS_CID_MAX];
+    uint8_t scid[PROTOCORE_DTLS_CID_MAX];
     size_t scid_len = 0;
     DtlsRecordKeys w, r;
     client_handshake("10.0.5.1", 44001, &w, &r, client_cid, sizeof(client_cid), scid, &scid_len);
@@ -879,15 +879,15 @@ static void test_cid_migration_same_port_different_ip(void)
 
     uint8_t rec[128];
     size_t n = client_get_temp(&w, 0, rec, sizeof(rec), scid, scid_len);
-    TEST_ASSERT_TRUE(pc_coaps_server_ingest(rec, n, "10.0.5.2", 44001)); // same port, different ip
-    pc_coaps_server_poll();
+    TEST_ASSERT_TRUE(protocore_coaps_server_ingest(rec, n, "10.0.5.2", 44001)); // same port, different ip
+    protocore_coaps_server_poll();
 
     OutDg dg;
     TEST_ASSERT_TRUE(take_out_for("10.0.5.2", 44001, &dg));
     OutDg stale;
     TEST_ASSERT_FALSE(take_out_for("10.0.5.1", 44001, &stale));
     assert_coap_205(&r, &dg, client_cid, sizeof(client_cid));
-    TEST_ASSERT_EQUAL_UINT8(1, pc_coaps_server_active_conns());
+    TEST_ASSERT_EQUAL_UINT8(1, protocore_coaps_server_active_conns());
 }
 
 int main(void)

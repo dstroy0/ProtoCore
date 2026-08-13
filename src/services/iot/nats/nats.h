@@ -3,7 +3,7 @@
 
 /**
  * @file nats.h
- * @brief NATS client protocol codec (PC_ENABLE_NATS) - zero-heap builder + parser for the
+ * @brief NATS client protocol codec (PROTOCORE_ENABLE_NATS) - zero-heap builder + parser for the
  *        text-based NATS pub/sub protocol, so a device can be a NATS client over the shipped
  *        outbound client transport.
  *
@@ -33,38 +33,38 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_NATS
+#if PROTOCORE_ENABLE_NATS
 
 // ---- builders (return bytes written, or 0 on overflow / bad input) ----
 
 /** @brief CONNECT: `CONNECT <options_json>\r\n`. */
-size_t pc_nats_build_connect(char *buf, size_t cap, const char *options_json);
+size_t protocore_nats_build_connect(char *buf, size_t cap, const char *options_json);
 
 /** @brief PUB: `PUB <subject> [reply_to] <len>\r\n<payload>\r\n` (@p reply_to may be null). */
-size_t pc_nats_build_pub(char *buf, size_t cap, const char *subject, const char *reply_to, const uint8_t *payload,
-                         size_t payload_len);
+size_t protocore_nats_build_pub(char *buf, size_t cap, const char *subject, const char *reply_to,
+                                const uint8_t *payload, size_t payload_len);
 
 /**
  * @brief HPUB (headers publish, NATS 2.2+): `HPUB <subject> [reply_to] <hdr_len> <total_len>\r\n<headers>
  *        <payload>\r\n`. @p headers is the pre-formatted header block (e.g. `NATS/1.0\r\nKey: Value\r\n\r\n`),
  *        which must be non-empty; the two length fields are the header-block length and header+payload.
  */
-size_t pc_nats_build_hpub(char *buf, size_t cap, const char *subject, const char *reply_to, const char *headers,
-                          size_t headers_len, const uint8_t *payload, size_t payload_len);
+size_t protocore_nats_build_hpub(char *buf, size_t cap, const char *subject, const char *reply_to, const char *headers,
+                                 size_t headers_len, const uint8_t *payload, size_t payload_len);
 
 /** @brief SUB: `SUB <subject> [queue] <sid>\r\n` (@p queue may be null). */
-size_t pc_nats_build_sub(char *buf, size_t cap, const char *subject, const char *queue, const char *sid);
+size_t protocore_nats_build_sub(char *buf, size_t cap, const char *subject, const char *queue, const char *sid);
 
 /** @brief UNSUB: `UNSUB <sid> [max]\r\n` (@p with_max controls the optional max-messages field). */
-size_t pc_nats_build_unsub(char *buf, size_t cap, const char *sid, uint32_t max_msgs, proto_bool with_max);
+size_t protocore_nats_build_unsub(char *buf, size_t cap, const char *sid, uint32_t max_msgs, proto_bool with_max);
 
 /** @brief PING: `PING\r\n`. */
-size_t pc_nats_build_ping(char *buf, size_t cap);
+size_t protocore_nats_build_ping(char *buf, size_t cap);
 
 /** @brief PONG: `PONG\r\n`. */
-size_t pc_nats_build_pong(char *buf, size_t cap);
+size_t protocore_nats_build_pong(char *buf, size_t cap);
 
 /** @brief Inbound message kind. */
 typedef enum PROTO_ENUM_PACKED
@@ -101,10 +101,10 @@ typedef struct
  * @param consumed receives the message length (control line + any payload) so the caller can advance.
  * @return true on a complete message; false if the control line or the MSG payload is not yet buffered.
  */
-proto_bool pc_nats_parse(const char *buf, size_t len, NatsMsg *out, size_t *consumed);
+proto_bool protocore_nats_parse(const char *buf, size_t len, NatsMsg *out, size_t *consumed);
 
-#endif // PC_ENABLE_NATS
+#endif // PROTOCORE_ENABLE_NATS
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_NATS_H

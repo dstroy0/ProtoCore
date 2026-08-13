@@ -23,7 +23,7 @@ void test_header_roundtrip()
 {
     uint8_t buf[16];
     TEST_ASSERT_EQUAL_size_t(
-        16, pc_hislip_build_header(buf, sizeof(buf), HISLIP_MSG_DATA_END, 0x01, 0xDEADBEEF, 0x0102030405060708ULL));
+        16, protocore_hislip_build_header(buf, sizeof(buf), HISLIP_MSG_DATA_END, 0x01, 0xDEADBEEF, 0x0102030405060708ULL));
     // prologue + fields on the wire
     TEST_ASSERT_EQUAL_HEX8('H', buf[0]);
     TEST_ASSERT_EQUAL_HEX8('S', buf[1]);
@@ -35,7 +35,7 @@ void test_header_roundtrip()
     TEST_ASSERT_EQUAL_MEMORY(len_be, buf + 8, 8);
 
     HislipHeader h;
-    TEST_ASSERT_TRUE(pc_hislip_parse_header(buf, sizeof(buf), &h));
+    TEST_ASSERT_TRUE(protocore_hislip_parse_header(buf, sizeof(buf), &h));
     TEST_ASSERT_EQUAL_UINT8((uint8_t)HISLIP_MSG_DATA_END, (uint8_t)h.type);
     TEST_ASSERT_EQUAL_HEX8(0x01, h.control);
     TEST_ASSERT_EQUAL_HEX32(0xDEADBEEF, h.parameter);
@@ -46,31 +46,31 @@ void test_header_rejects()
 {
     HislipHeader h;
     const uint8_t good[16] = {'H', 'S', 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    TEST_ASSERT_TRUE(pc_hislip_parse_header(good, 16, &h));
+    TEST_ASSERT_TRUE(protocore_hislip_parse_header(good, 16, &h));
     // short buffer
-    TEST_ASSERT_FALSE(pc_hislip_parse_header(good, 15, &h));
+    TEST_ASSERT_FALSE(protocore_hislip_parse_header(good, 15, &h));
     // bad prologue
     const uint8_t bad[16] = {'X', 'S', 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    TEST_ASSERT_FALSE(pc_hislip_parse_header(bad, 16, &h));
+    TEST_ASSERT_FALSE(protocore_hislip_parse_header(bad, 16, &h));
     // build fails closed on a too-small buffer
     uint8_t small[15];
-    TEST_ASSERT_EQUAL_size_t(0, pc_hislip_build_header(small, sizeof(small), HISLIP_MSG_DATA, 0, 0, 0));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_hislip_build_header(small, sizeof(small), HISLIP_MSG_DATA, 0, 0, 0));
 }
 
 void test_header_null_args()
 {
     // build_header fails closed on a null buffer
-    TEST_ASSERT_EQUAL_size_t(0, pc_hislip_build_header(NULL, 16, HISLIP_MSG_DATA, 0, 0, 0));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_hislip_build_header(NULL, 16, HISLIP_MSG_DATA, 0, 0, 0));
 
     HislipHeader h;
     const uint8_t good[16] = {'H', 'S', 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     // parse_header fails closed on a null source buffer
-    TEST_ASSERT_FALSE(pc_hislip_parse_header(NULL, 16, &h));
+    TEST_ASSERT_FALSE(protocore_hislip_parse_header(NULL, 16, &h));
     // parse_header fails closed on a null output pointer
-    TEST_ASSERT_FALSE(pc_hislip_parse_header(good, 16, NULL));
+    TEST_ASSERT_FALSE(protocore_hislip_parse_header(good, 16, NULL));
     // prologue byte 0 ok, byte 1 wrong ('S' -> 'X')
     const uint8_t bad_second_byte[16] = {'H', 'X', 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    TEST_ASSERT_FALSE(pc_hislip_parse_header(bad_second_byte, 16, &h));
+    TEST_ASSERT_FALSE(protocore_hislip_parse_header(bad_second_byte, 16, &h));
 }
 
 // ── message type codes (spot-check the enum against the IVI-6.1 table) ──────────────────────────
@@ -95,7 +95,7 @@ void test_message_type_codes()
 void test_build_initialize_vector()
 {
     uint8_t buf[64];
-    size_t n = pc_hislip_build_initialize(buf, sizeof(buf), PC_HISLIP_VERSION_1_0, 0x5859, "hislip0");
+    size_t n = protocore_hislip_build_initialize(buf, sizeof(buf), PROTOCORE_HISLIP_VERSION_1_0, 0x5859, "hislip0");
     const uint8_t expected[] = {'H',  'S',  0x00, 0x00, 0x01, 0x00, 0x58, 0x59, 0x00, 0x00, 0x00, 0x00,
                                 0x00, 0x00, 0x00, 0x07, 'h',  'i',  's',  'l',  'i',  'p',  '0'};
     TEST_ASSERT_EQUAL_size_t(sizeof(expected), n);
@@ -105,46 +105,46 @@ void test_build_initialize_vector()
 void test_parse_initialize()
 {
     uint8_t buf[64];
-    size_t n = pc_hislip_build_initialize(buf, sizeof(buf), PC_HISLIP_VERSION_2_0, 0x4142, "hislip0");
+    size_t n = protocore_hislip_build_initialize(buf, sizeof(buf), PROTOCORE_HISLIP_VERSION_2_0, 0x4142, "hislip0");
     HislipInitialize init;
-    TEST_ASSERT_TRUE(pc_hislip_parse_initialize(buf, n, &init));
-    TEST_ASSERT_EQUAL_HEX16(PC_HISLIP_VERSION_2_0, init.protocol_version);
+    TEST_ASSERT_TRUE(protocore_hislip_parse_initialize(buf, n, &init));
+    TEST_ASSERT_EQUAL_HEX16(PROTOCORE_HISLIP_VERSION_2_0, init.protocol_version);
     TEST_ASSERT_EQUAL_HEX16(0x4142, init.vendor_id);
     TEST_ASSERT_EQUAL_size_t(7, init.sub_address_len);
     TEST_ASSERT_EQUAL_MEMORY("hislip0", init.sub_address, 7);
 
     // a truncated payload (header claims 7 bytes, only 3 present) is rejected
-    TEST_ASSERT_FALSE(pc_hislip_parse_initialize(buf, PC_HISLIP_HEADER_LEN + 3, &init));
+    TEST_ASSERT_FALSE(protocore_hislip_parse_initialize(buf, PROTOCORE_HISLIP_HEADER_LEN + 3, &init));
 }
 
 void test_parse_initialize_rejects()
 {
     uint8_t buf[64];
-    size_t n = pc_hislip_build_initialize(buf, sizeof(buf), PC_HISLIP_VERSION_1_0, 0x1234, "hislip0");
+    size_t n = protocore_hislip_build_initialize(buf, sizeof(buf), PROTOCORE_HISLIP_VERSION_1_0, 0x1234, "hislip0");
     HislipInitialize init;
 
     // null output pointer
-    TEST_ASSERT_FALSE(pc_hislip_parse_initialize(buf, n, NULL));
+    TEST_ASSERT_FALSE(protocore_hislip_parse_initialize(buf, n, NULL));
 
     // header itself fails to parse (bad prologue)
     const uint8_t bad[16] = {'X', 'S', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    TEST_ASSERT_FALSE(pc_hislip_parse_initialize(bad, sizeof(bad), &init));
+    TEST_ASSERT_FALSE(protocore_hislip_parse_initialize(bad, sizeof(bad), &init));
 
     // well-formed header, but wrong message type (DATA, not INITIALIZE)
     uint8_t data_buf[32];
-    size_t dn = pc_hislip_build_data(data_buf, sizeof(data_buf), PROTO_FALSE, 0, 0, NULL, 0);
-    TEST_ASSERT_FALSE(pc_hislip_parse_initialize(data_buf, dn, &init));
+    size_t dn = protocore_hislip_build_data(data_buf, sizeof(data_buf), PROTO_FALSE, 0, 0, NULL, 0);
+    TEST_ASSERT_FALSE(protocore_hislip_parse_initialize(data_buf, dn, &init));
 }
 
 void test_initialize_response()
 {
     uint8_t buf[16];
-    size_t n = pc_hislip_build_initialize_response(
-        buf, sizeof(buf), PC_HISLIP_INITRESP_OVERLAP | PC_HISLIP_INITRESP_ENC_MANDATORY, PC_HISLIP_VERSION_1_1, 0x0042);
+    size_t n = protocore_hislip_build_initialize_response(
+        buf, sizeof(buf), PROTOCORE_HISLIP_INITRESP_OVERLAP | PROTOCORE_HISLIP_INITRESP_ENC_MANDATORY, PROTOCORE_HISLIP_VERSION_1_1, 0x0042);
     TEST_ASSERT_EQUAL_size_t(16, n);
     HislipInitializeResponse resp;
-    TEST_ASSERT_TRUE(pc_hislip_parse_initialize_response(buf, n, &resp));
-    TEST_ASSERT_EQUAL_HEX16(PC_HISLIP_VERSION_1_1, resp.protocol_version);
+    TEST_ASSERT_TRUE(protocore_hislip_parse_initialize_response(buf, n, &resp));
+    TEST_ASSERT_EQUAL_HEX16(PROTOCORE_HISLIP_VERSION_1_1, resp.protocol_version);
     TEST_ASSERT_EQUAL_HEX16(0x0042, resp.session_id);
     TEST_ASSERT_TRUE(resp.overlap);
     TEST_ASSERT_TRUE(resp.encryption_mandatory);
@@ -153,35 +153,35 @@ void test_initialize_response()
 void test_parse_initialize_response_rejects()
 {
     uint8_t buf[16];
-    size_t n = pc_hislip_build_initialize_response(buf, sizeof(buf), 0, PC_HISLIP_VERSION_1_0, 0x0001);
+    size_t n = protocore_hislip_build_initialize_response(buf, sizeof(buf), 0, PROTOCORE_HISLIP_VERSION_1_0, 0x0001);
     HislipInitializeResponse resp;
 
     // null output pointer
-    TEST_ASSERT_FALSE(pc_hislip_parse_initialize_response(buf, n, NULL));
+    TEST_ASSERT_FALSE(protocore_hislip_parse_initialize_response(buf, n, NULL));
 
     // header itself fails to parse (bad prologue)
     const uint8_t bad[16] = {'X', 'S', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    TEST_ASSERT_FALSE(pc_hislip_parse_initialize_response(bad, sizeof(bad), &resp));
+    TEST_ASSERT_FALSE(protocore_hislip_parse_initialize_response(bad, sizeof(bad), &resp));
 
     // well-formed header, but wrong message type (ASYNC_INITIALIZE, not INITIALIZE_RESPONSE)
     uint8_t async_buf[16];
-    size_t an = pc_hislip_build_async_initialize(async_buf, sizeof(async_buf), 0x0042);
-    TEST_ASSERT_FALSE(pc_hislip_parse_initialize_response(async_buf, an, &resp));
+    size_t an = protocore_hislip_build_async_initialize(async_buf, sizeof(async_buf), 0x0042);
+    TEST_ASSERT_FALSE(protocore_hislip_parse_initialize_response(async_buf, an, &resp));
 }
 
 void test_async_initialize()
 {
     uint8_t buf[16];
-    TEST_ASSERT_EQUAL_size_t(16, pc_hislip_build_async_initialize(buf, sizeof(buf), 0x0042));
+    TEST_ASSERT_EQUAL_size_t(16, protocore_hislip_build_async_initialize(buf, sizeof(buf), 0x0042));
     HislipHeader h;
-    TEST_ASSERT_TRUE(pc_hislip_parse_header(buf, 16, &h));
+    TEST_ASSERT_TRUE(protocore_hislip_parse_header(buf, 16, &h));
     TEST_ASSERT_EQUAL_UINT8((uint8_t)HISLIP_MSG_ASYNC_INITIALIZE, (uint8_t)h.type);
     TEST_ASSERT_EQUAL_HEX32(0x0042, h.parameter); // session id in the low 16 bits
     TEST_ASSERT_EQUAL_HEX64(0, h.payload_len);
 
     // AsyncInitializeResponse carries the server vendor id
-    TEST_ASSERT_EQUAL_size_t(16, pc_hislip_build_async_initialize_response(buf, sizeof(buf), 0x01, 0x5859));
-    TEST_ASSERT_TRUE(pc_hislip_parse_header(buf, 16, &h));
+    TEST_ASSERT_EQUAL_size_t(16, protocore_hislip_build_async_initialize_response(buf, sizeof(buf), 0x01, 0x5859));
+    TEST_ASSERT_TRUE(protocore_hislip_parse_header(buf, 16, &h));
     TEST_ASSERT_EQUAL_UINT8((uint8_t)HISLIP_MSG_ASYNC_INITIALIZE_RESPONSE, (uint8_t)h.type);
     TEST_ASSERT_EQUAL_HEX32(0x5859, h.parameter);
     TEST_ASSERT_EQUAL_HEX8(0x01, h.control);
@@ -194,7 +194,7 @@ void test_build_dataend_vector()
 {
     uint8_t buf[64];
     const char *scpi = "*IDN?\n";
-    size_t n = pc_hislip_build_data(buf, sizeof(buf), PROTO_TRUE, 0, PC_HISLIP_MESSAGE_ID_INIT, (const uint8_t *)scpi,
+    size_t n = protocore_hislip_build_data(buf, sizeof(buf), PROTO_TRUE, 0, PROTOCORE_HISLIP_MESSAGE_ID_INIT, (const uint8_t *)scpi,
                                     strlen(scpi));
     const uint8_t expected[] = {'H',  'S',  0x07, 0x00, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00,
                                 0x00, 0x00, 0x00, 0x00, 0x06, '*',  'I',  'D',  'N',  '?',  '\n'};
@@ -206,10 +206,10 @@ void test_data_roundtrip()
 {
     uint8_t buf[64];
     const uint8_t payload[] = {'V', 'O', 'L', 'T', '?'};
-    size_t n = pc_hislip_build_data(buf, sizeof(buf), PROTO_FALSE, 0, 0x00001000, payload, sizeof(payload));
+    size_t n = protocore_hislip_build_data(buf, sizeof(buf), PROTO_FALSE, 0, 0x00001000, payload, sizeof(payload));
     TEST_ASSERT_EQUAL_size_t(16 + sizeof(payload), n);
     HislipHeader h;
-    TEST_ASSERT_TRUE(pc_hislip_parse_header(buf, n, &h));
+    TEST_ASSERT_TRUE(protocore_hislip_parse_header(buf, n, &h));
     TEST_ASSERT_EQUAL_UINT8((uint8_t)HISLIP_MSG_DATA, (uint8_t)h.type); // not END
     TEST_ASSERT_EQUAL_HEX32(0x00001000, h.parameter);
     TEST_ASSERT_EQUAL_HEX64(sizeof(payload), h.payload_len);
@@ -218,11 +218,11 @@ void test_data_roundtrip()
 
 void test_message_id_increment()
 {
-    TEST_ASSERT_EQUAL_HEX32(0xFFFFFF02, pc_hislip_next_message_id(PC_HISLIP_MESSAGE_ID_INIT));
-    TEST_ASSERT_EQUAL_HEX32(0xFFFFFF04, pc_hislip_next_message_id(0xFFFFFF02));
+    TEST_ASSERT_EQUAL_HEX32(0xFFFFFF02, protocore_hislip_next_message_id(PROTOCORE_HISLIP_MESSAGE_ID_INIT));
+    TEST_ASSERT_EQUAL_HEX32(0xFFFFFF04, protocore_hislip_next_message_id(0xFFFFFF02));
     // unsigned 32-bit wrap
-    TEST_ASSERT_EQUAL_HEX32(0x00000001, pc_hislip_next_message_id(0xFFFFFFFF));
-    TEST_ASSERT_EQUAL_HEX32(0x00000000, pc_hislip_next_message_id(0xFFFFFFFE));
+    TEST_ASSERT_EQUAL_HEX32(0x00000001, protocore_hislip_next_message_id(0xFFFFFFFF));
+    TEST_ASSERT_EQUAL_HEX32(0x00000000, protocore_hislip_next_message_id(0xFFFFFFFE));
 }
 
 void test_build_overflow()
@@ -230,25 +230,25 @@ void test_build_overflow()
     uint8_t small[20];
     // a 6-byte payload needs 22 bytes; a 20-byte buffer fails closed
     TEST_ASSERT_EQUAL_size_t(
-        0, pc_hislip_build_data(small, sizeof(small), PROTO_TRUE, 0, 0, (const uint8_t *)"*IDN?\n", 6));
+        0, protocore_hislip_build_data(small, sizeof(small), PROTO_TRUE, 0, 0, (const uint8_t *)"*IDN?\n", 6));
     // null payload with non-zero length is rejected
     uint8_t buf[32];
-    TEST_ASSERT_EQUAL_size_t(0, pc_hislip_build_data(buf, sizeof(buf), PROTO_FALSE, 0, 0, NULL, 4));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_hislip_build_data(buf, sizeof(buf), PROTO_FALSE, 0, 0, NULL, 4));
 }
 
 void test_build_with_payload_edge_cases()
 {
     // build_with_payload (via build_data) fails closed on a null destination buffer
     const uint8_t payload[] = {'X'};
-    TEST_ASSERT_EQUAL_size_t(0, pc_hislip_build_data(NULL, 64, PROTO_FALSE, 0, 0, payload, sizeof(payload)));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_hislip_build_data(NULL, 64, PROTO_FALSE, 0, 0, payload, sizeof(payload)));
 
     // Initialize with a null sub-address takes the zero-length payload path (no memcpy, no
     // sub-address strnlen call)
     uint8_t buf[16];
-    size_t n = pc_hislip_build_initialize(buf, sizeof(buf), PC_HISLIP_VERSION_1_0, 0x1234, NULL);
-    TEST_ASSERT_EQUAL_size_t(PC_HISLIP_HEADER_LEN, n);
+    size_t n = protocore_hislip_build_initialize(buf, sizeof(buf), PROTOCORE_HISLIP_VERSION_1_0, 0x1234, NULL);
+    TEST_ASSERT_EQUAL_size_t(PROTOCORE_HISLIP_HEADER_LEN, n);
     HislipHeader h;
-    TEST_ASSERT_TRUE(pc_hislip_parse_header(buf, n, &h));
+    TEST_ASSERT_TRUE(protocore_hislip_parse_header(buf, n, &h));
     TEST_ASSERT_EQUAL_UINT8((uint8_t)HISLIP_MSG_INITIALIZE, (uint8_t)h.type);
     TEST_ASSERT_EQUAL_HEX64(0, h.payload_len);
 }

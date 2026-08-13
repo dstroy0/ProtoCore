@@ -3,7 +3,7 @@
 
 /**
  * @file TlsResumption.ino
- * @brief HTTPS with TLS session resumption (RFC 5077 tickets, PC_ENABLE_TLS_RESUMPTION).
+ * @brief HTTPS with TLS session resumption (RFC 5077 tickets, PROTOCORE_ENABLE_TLS_RESUMPTION).
  *
  * Same HTTPS server as example 22, but with session tickets enabled: a returning
  * client completes an abbreviated handshake (no certificate or full key exchange),
@@ -17,15 +17,15 @@
  *
  * NOTE: optional services are gated by a compile flag the *library* sources must
  * also see; for PlatformIO enable it for the whole build, e.g.:
- *     build_flags = -DPC_ENABLE_TLS=1 -DPC_ENABLE_TLS_RESUMPTION=1
+ *     build_flags = -DPROTOCORE_ENABLE_TLS=1 -DPROTOCORE_ENABLE_TLS_RESUMPTION=1
  * (Arduino IDE: they are already set for you in the build_opt.h beside this sketch, so it builds as-is.)
  *
  * WARNING: the certificate and PRIVATE KEY below are a throwaway self-signed pair
  * committed for the demo - the key is public. NEVER use them in production.
  */
 
-#define PC_ENABLE_TLS 1
-#define PC_ENABLE_TLS_RESUMPTION 1
+#define PROTOCORE_ENABLE_TLS 1
+#define PROTOCORE_ENABLE_TLS_RESUMPTION 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"

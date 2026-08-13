@@ -1,11 +1,11 @@
 # Ethernet - run the server over a wired Ethernet PHY
 
-**Layer:** Foundation · **Build flags:** `PC_ENABLE_ETHERNET`, `ETH_PHY_*`
+**Layer:** Foundation · **Build flags:** `PROTOCORE_ENABLE_ETHERNET`, `ETH_PHY_*`
 
 ## What this example teaches
 
 Some deployments want a **wired** uplink - PoE cameras, panel-mount controllers, RF-noisy
-factory floors, anything that can't rely on Wi-Fi. With `PC_ENABLE_ETHERNET` the physical
+factory floors, anything that can't rely on Wi-Fi. With `PROTOCORE_ENABLE_ETHERNET` the physical
 layer gains `Physical.eth->init()` alongside `Physical.wifi->init()`:
 
 ```cpp
@@ -16,7 +16,7 @@ while (!Physical.eth->ready()) delay(250);
 
 It is a thin wrapper over the Arduino **ETH** library for an RMII PHY (LAN8720 / TLK110 /
 RTL8201 / DP83848). Nothing else changes: the egress reporting already classifies a wired
-route as `PC_IF_ETH`, so `Physical.link->egress()`, per-route STA/AP/ETH interface filters, and
+route as `PROTOCORE_IF_ETH`, so `Physical.link->egress()`, per-route STA/AP/ETH interface filters, and
 every protocol work over the wired link the moment it has an IP. Wi-Fi and Ethernet can also
 run together (dual-homed) - the stack picks the default route.
 
@@ -51,12 +51,12 @@ answered HTTP over pure wired Ethernet:
 # arduino-esp32 3.x; the waveshare_p4_poe_eth variant supplies the IP101 pins, so only the library
 # flag is needed:
 arduino-cli compile --fqbn esp32:esp32:waveshare_p4_poe_eth \
-  --build-property "compiler.cpp.extra_flags=-DPC_ENABLE_ETHERNET=1" \
+  --build-property "compiler.cpp.extra_flags=-DPROTOCORE_ENABLE_ETHERNET=1" \
   examples/Peripherals/Ethernet/Ethernet.ino
 ```
 
 For a P4 board without a ready-made variant, pass the pins explicitly (from the board's schematic),
-e.g. `-DPC_ENABLE_ETHERNET=1 -DETH_PHY_TYPE=ETH_PHY_IP101 -DETH_PHY_ADDR=0 -DETH_PHY_MDC=31 -DETH_PHY_MDIO=52 -DETH_PHY_POWER=51 -DETH_CLK_MODE=EMAC_CLK_EXT_IN`.
+e.g. `-DPROTOCORE_ENABLE_ETHERNET=1 -DETH_PHY_TYPE=ETH_PHY_IP101 -DETH_PHY_ADDR=0 -DETH_PHY_MDC=31 -DETH_PHY_MDIO=52 -DETH_PHY_POWER=51 -DETH_CLK_MODE=EMAC_CLK_EXT_IN`.
 
 ## Build-flag note
 
@@ -64,6 +64,6 @@ The flags must reach the library build, so pass them as build flags:
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_ETHERNET=1 -DETH_PHY_TYPE=ETH_PHY_LAN8720 -DETH_PHY_ADDR=1 -DETH_PHY_POWER=-1 -DETH_PHY_MDC=23 -DETH_PHY_MDIO=18 -DETH_CLK_MODE=ETH_CLOCK_GPIO0_IN" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_ETHERNET=1 -DETH_PHY_TYPE=ETH_PHY_LAN8720 -DETH_PHY_ADDR=1 -DETH_PHY_POWER=-1 -DETH_PHY_MDC=23 -DETH_PHY_MDIO=18 -DETH_CLK_MODE=ETH_CLOCK_GPIO0_IN" \
   --lib="." examples/Peripherals/Ethernet/Ethernet.ino
 ```

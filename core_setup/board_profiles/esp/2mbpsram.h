@@ -15,14 +15,14 @@
 #define PROTOCORE_2MBPSRAM_H
 
 // PSRAM fitted: move the big TLS/HTTP-2/zlib pools off internal DRAM and raise concurrency.
-#ifndef PC_TLS_ARENA_IN_PSRAM
-#define PC_TLS_ARENA_IN_PSRAM 1
+#ifndef PROTOCORE_TLS_ARENA_IN_PSRAM
+#define PROTOCORE_TLS_ARENA_IN_PSRAM 1
 #endif
-#ifndef PC_H2_POOL_IN_PSRAM
-#define PC_H2_POOL_IN_PSRAM 1
+#ifndef PROTOCORE_H2_POOL_IN_PSRAM
+#define PROTOCORE_H2_POOL_IN_PSRAM 1
 #endif
-#ifndef PC_SSH_ZLIB_IN_PSRAM
-#define PC_SSH_ZLIB_IN_PSRAM 1
+#ifndef PROTOCORE_SSH_ZLIB_IN_PSRAM
+#define PROTOCORE_SSH_ZLIB_IN_PSRAM 1
 #endif
 #ifndef MAX_TLS_CONNS
 #define MAX_TLS_CONNS 3

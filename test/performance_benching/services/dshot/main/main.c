@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // On-device CCOUNT microbenchmark for the DShot ESC throttle codec (services/peripherals/dshot):
-// pc_dshot_encode()/pc_dshot_decode() build and validate the 16-bit frame (11-bit value +
+// protocore_dshot_encode()/protocore_dshot_decode() build and validate the 16-bit frame (11-bit value +
 // telemetry bit + 4-bit nibble-xor CRC, including the bidirectional inverted-CRC variant), and
-// pc_dshot_bit_ns()/pc_esc_pwm_ns() are the pure bit-timing / throttle->pulse-width math a
+// protocore_dshot_bit_ns()/protocore_esc_pwm_ns() are the pure bit-timing / throttle->pulse-width math a
 // driver needs to program the RMT peripheral or MCPWM. All four are pure integer math - no heap,
 // no stdlib, no RMT/MCPWM touched. Worked example for performance_benching/device/<service>/: like
 // performance_benching/device/modbus, this is a pure protocol codec with no hardware involved, so every call here
@@ -41,16 +41,16 @@ void dbench_run(void)
         volatile uint32_t sink32 = 0;
         volatile bool sinkb = false;
 
-        DBENCH_OP("pc_dshot_encode std", 200000, sink16 += pc_dshot_encode(kValue, false, false));
-        DBENCH_OP("pc_dshot_encode bidir", 200000, sink16 += pc_dshot_encode(kValue, true, true));
+        DBENCH_OP("protocore_dshot_encode std", 200000, sink16 += protocore_dshot_encode(kValue, false, false));
+        DBENCH_OP("protocore_dshot_encode bidir", 200000, sink16 += protocore_dshot_encode(kValue, true, true));
 
         uint16_t val = 0;
         bool tel = false;
-        DBENCH_OP("pc_dshot_decode std", 200000, sinkb |= pc_dshot_decode(kFrameStd, &val, &tel, false));
-        DBENCH_OP("pc_dshot_decode bidir", 200000, sinkb |= pc_dshot_decode(kFrameBidir, &val, &tel, true));
+        DBENCH_OP("protocore_dshot_decode std", 200000, sinkb |= protocore_dshot_decode(kFrameStd, &val, &tel, false));
+        DBENCH_OP("protocore_dshot_decode bidir", 200000, sinkb |= protocore_dshot_decode(kFrameBidir, &val, &tel, true));
 
-        DBENCH_OP("pc_dshot_bit_ns", 200000, sink32 += pc_dshot_bit_ns(600, true));
-        DBENCH_OP("pc_esc_pwm_ns", 200000, sink32 += pc_esc_pwm_ns(500, PC_ESC_ONESHOT125));
+        DBENCH_OP("protocore_dshot_bit_ns", 200000, sink32 += protocore_dshot_bit_ns(600, true));
+        DBENCH_OP("protocore_esc_pwm_ns", 200000, sink32 += protocore_esc_pwm_ns(500, PROTOCORE_ESC_ONESHOT125));
 
         (void)sink16;
         (void)sink32;

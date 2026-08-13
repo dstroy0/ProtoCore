@@ -10,11 +10,11 @@ from the binary (ban #22: ``virtual``, class hierarchies, RTTI, ``std::function`
 expression (ban #23: ``?:`` anywhere in a code body), and mid-file
 ``#include`` (ban #17: any
 ``#include`` after code - every include must be hoisted to the top of the file; the sole exemption is a
-justified ``// PC_ALLOW_LATE_INCLUDE:`` on an ordered include that derives from earlier macros).
+justified ``// PROTOCORE_ALLOW_LATE_INCLUDE:`` on an ordered include that derives from earlier macros).
 
 Ban #5 (bare ``millis()``) is deliberately *not* enforced here: it is a "for new timing" rule, so a
 whole-file scan cannot distinguish a new call from a grandfathered timing site, and the clock source
-(``services/clock.h``) must call the platform ``millis()`` to provide ``pc_millis()``. It stays a
+(``services/clock.h``) must call the platform ``millis()`` to provide ``protocore_millis()``. It stays a
 review item (``rg -n '\bmillis\s*\(' src/``) rather than a mechanical gate.
 
 Comments and string / char literals are blanked out first (line numbers preserved), so a construct
@@ -50,7 +50,7 @@ EXTS = {".c", ".cc", ".cpp", ".h", ".hpp", ".ino"}
 # same nondeterminism this library refuses everywhere else - fixed pools, compile-time sizing, a
 # bounded worst case. RTTI is unbounded on top of it, and std::function type-erases through an
 # allocation. Dispatch here is a function pointer in an owned context (ProtoHandler) or a spec/table
-# walk (pc_field), both of which the linker can see whole.
+# walk (protocore_field), both of which the linker can see whole.
 _VIRTUAL_MSG = (
     "virtual dispatch; the call target is not known from the binary, so the worst case is not "
     "either. Use a function pointer in an owned context, or a spec/table walk"
@@ -76,8 +76,8 @@ _TERNARY_MSG = (
 )
 
 # (compiled pattern, ban number, message). Patterns run on comment/string-stripped code. Every
-# use-instead pattern (pcdelay, pc_millis, strnlen, gmtime_r) survives because the banned token is
-# not on a word boundary there ("pc_millis" has no boundary before "millis", etc.).
+# use-instead pattern (pcdelay, protocore_millis, strnlen, gmtime_r) survives because the banned token is
+# not on a word boundary there ("protocore_millis" has no boundary before "millis", etc.).
 BANS = [
     (re.compile(r"\bstrlen\s*\("), 1, "strlen (unbounded read); use strnlen(p, cap)"),
     (re.compile(r"#\s*include\s*<c?stdlib\.h>"), 2, "<stdlib.h>/<cstdlib>; no heap / hidden parse"),
@@ -106,7 +106,7 @@ BANS = [
     (re.compile(r"\?"), 23, _TERNARY_MSG),
     # Ban 18 is applied in scan_file, not here: it only fires at file/namespace scope.
     # A `static constexpr` MEMBER of a namespacing struct (LoraReg::REG_FIFO, the
-    # pc_radio_ps pattern SYMBOLS.md endorses) is a scoped data table, not a value other
+    # protocore_radio_ps pattern SYMBOLS.md endorses) is a scoped data table, not a value other
     # code sizes itself against - 616 of 815 sites are those, and flattening them would
     # put 616 more names in the global macro space to fix a problem they do not have.
 ]
@@ -122,23 +122,23 @@ _PREPROC = re.compile(r"^\s*#")
 # directive; comments/strings are already blanked. Preprocessor lines (#if/#define/#pragma/...) and
 # blank lines do NOT open the code region, so a top-of-file `#if ... #include ... #endif` block is fine.
 # A load-bearing ordered include that genuinely cannot be hoisted (it must run after earlier macros
-# resolve) is exempt only with a justified `// PC_ALLOW_LATE_INCLUDE: <reason>` on the include line.
+# resolve) is exempt only with a justified `// PROTOCORE_ALLOW_LATE_INCLUDE: <reason>` on the include line.
 # The two linkage markers do not open the code region either: in C they expand to nothing at all, and
 # in C++ to `extern "C" {` and `}`, so an include after one is neither read-order-dependent nor
 # layering-hiding. protocore.h opens the block above its include list to give every header underneath
 # C linkage in one place.
 _MIDINC_MSG = "#include after code; hoist all includes to the top of the file"
-_ALLOW_LATE = "PC_ALLOW_LATE_INCLUDE"
+_ALLOW_LATE = "PROTOCORE_ALLOW_LATE_INCLUDE"
 _LINKAGE = re.compile(r"^\s*PROTO_(?:BEGIN|END)_DECLS\s*$")
 
 # Ban #18: constexpr. A value the preprocessor cannot see cannot appear in an #if, set another
-# knob's #define default, or fail at config time - which is exactly how PC_ENABLE_EDGE_MESH
+# knob's #define default, or fail at config time - which is exactly how PROTOCORE_ENABLE_EDGE_MESH
 # became uncompilable. Exempt only where the standard being implemented dictates constexpr,
-# with a justified `// PC_ALLOW_CONSTEXPR: <reason>` on the line.
-_ALLOW_CONSTEXPR = "PC_ALLOW_CONSTEXPR"
+# with a justified `// PROTOCORE_ALLOW_CONSTEXPR: <reason>` on the line.
+_ALLOW_CONSTEXPR = "PROTOCORE_ALLOW_CONSTEXPR"
 # Only a SCALAR free constant is a value other code sizes itself against. Two shapes at
 # file scope are not, and flagging them would be asking for a #define that cannot exist:
-#   * a struct/class-typed constant - `constexpr pc_crc_params PC_CRC8_SMBUS = {...}` is a
+#   * a struct/class-typed constant - `constexpr protocore_crc_params PROTOCORE_CRC8_SMBUS = {...}` is a
 #     data table, not a size, and an aggregate initializer is not a macro.
 #   * an out-of-line definition of a static member - `constexpr FocasCmd FocasCommand::x;`
 #     is required before C++17 and is a definition of something already declared in a class.
@@ -153,7 +153,7 @@ _AGGREGATE = re.compile(r"\b(?:struct|class|union)\b[^;{]*$|\b(?:struct|class|un
 _CONSTEXPR_MSG = (
     "constexpr at file/namespace scope; #define it in protocore_config.h so the "
     "preprocessor can see it (justify a standard-dictated one with "
-    "// PC_ALLOW_CONSTEXPR: <reason>)"
+    "// PROTOCORE_ALLOW_CONSTEXPR: <reason>)"
 )
 
 
@@ -162,26 +162,26 @@ _CONSTEXPR_MSG = (
 # number you can compute before flashing - but a local array is invisible to that accounting,
 # and worst-case stack depth becomes whatever the deepest call chain happens to allocate.
 # The work buffers already exist and are reentrant by construction, so there is no cost to
-# using them: pc_plaintext_alloc()/PlaintextScope borrows from the caller's OWN per-worker arena
-# (one slot per worker plus the ghost, PC_REG_POOL_SLOTS), and crypto leaf math takes fixed offsets in
+# using them: protocore_plaintext_alloc()/PlaintextScope borrows from the caller's OWN per-worker arena
+# (one slot per worker plus the ghost, PROTOCORE_REG_POOL_SLOTS), and crypto leaf math takes fixed offsets in
 # crypto_work via the region map. Exempt: `static` locals only (already BSS - ban 16 and
 # check_owned_context.py own those). There is no comment that waives this one.
 
 # Ban #20: snprintf and vsnprintf. A format string is parsed at
 # RUNTIME, every call, to rediscover what the code already knew at compile time - roughly 3x
 # the cost of appending the pieces directly, plus it drags in the libc float formatter. Build
-# the frame instead: pc_sb (shared_primitives/strbuf.h) bump-appends into a caller-owned
+# the frame instead: protocore_sb (shared_primitives/strbuf.h) bump-appends into a caller-owned
 # buffer and latches ok=false the first time something would not fit, so overflow is one flag
 # test at the end rather than a truncation nobody notices. It also carries its own capacity,
 # which is why this ban is swept BEFORE #19: it makes each buffer's size explicit at the
-# pc_sb init, so turning the array into a borrowed pointer can no longer silently change a
+# protocore_sb init, so turning the array into a borrowed pointer can no longer silently change a
 # sizeof() into 4.
 _SNPRINTF = re.compile(r"\bv?snprintf\s*\(")
-_ALLOW_SNPRINTF = "PC_ALLOW_SNPRINTF"
+_ALLOW_SNPRINTF = "PROTOCORE_ALLOW_SNPRINTF"
 _SNPRINTF_MSG = (
-    "snprintf/format-string formatting; build the frame with pc_sb (shared_primitives/"
-    "strbuf.h) - pc_sb_put/pc_sb_u32/pc_sb_json then pc_sb_finish (justify a true "
-    "exception with // PC_ALLOW_SNPRINTF: <reason>)"
+    "snprintf/format-string formatting; build the frame with protocore_sb (shared_primitives/"
+    "strbuf.h) - protocore_sb_put/protocore_sb_u32/protocore_sb_json then protocore_sb_finish (justify a true "
+    "exception with // PROTOCORE_ALLOW_SNPRINTF: <reason>)"
 )
 # Anchored at the start of a statement and requiring `;`, `=` or `{` after the subscripts, so
 # a USE (`buf[i] = x;`, `return t[n];`) can never match - a declaration is the only shape with
@@ -197,7 +197,7 @@ _STACK_ARRAY = re.compile(
 )
 _STACK_ARRAY_MSG = (
     "function-local array; stack is outside the deterministic footprint. Borrow it: "
-    "PlaintextScope + pc_plaintext_alloc() for handler/IO buffers (fail closed on null), or a "
+    "PlaintextScope + protocore_plaintext_alloc() for handler/IO buffers (fail closed on null), or a "
     "crypto_work region for crypto leaf math"
 )
 

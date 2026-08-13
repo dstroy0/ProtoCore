@@ -25,9 +25,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_HTTP2
+#if PROTOCORE_ENABLE_HTTP2
 
 /** @brief One dynamic-table entry descriptor (its bytes live in the table's byte ring). */
 typedef struct
@@ -49,14 +49,14 @@ typedef struct
     uint16_t ecount;   ///< number of live entries
     uint16_t rtail;    ///< byte ring: start of the oldest entry's bytes
     uint16_t rused;    ///< byte ring: bytes in use
-    HpackEntry ent[PC_HPACK_MAX_ENTRIES];
-    char ring[PC_HPACK_TABLE_BYTES];
+    HpackEntry ent[PROTOCORE_HPACK_MAX_ENTRIES];
+    char ring[PROTOCORE_HPACK_TABLE_BYTES];
 } HpackDynTable;
 
 /** @brief Callback invoked for each decoded header; return false to abort the decode. */
 typedef proto_bool (*HpackEmitFn)(void *ctx, const char *name, size_t name_len, const char *value, size_t value_len);
 
-/** @brief Initialize a dynamic table to empty, max size @p max_bytes (0 = PC_HPACK_TABLE_BYTES). */
+/** @brief Initialize a dynamic table to empty, max size @p max_bytes (0 = PROTOCORE_HPACK_TABLE_BYTES). */
 void pc_hpack_dyn_init(HpackDynTable *t, uint32_t max_bytes);
 
 /**
@@ -77,8 +77,8 @@ size_t pc_hpack_encode_header(uint8_t *out, size_t cap, const char *name, size_t
 
 // The prefix-integer and Huffman primitives moved to pc_hpack_prim.h (shared with QPACK).
 
-#endif // PC_ENABLE_HTTP2
+#endif // PROTOCORE_ENABLE_HTTP2
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_HPACK_H

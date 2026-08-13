@@ -3,7 +3,7 @@
 
 /**
  * @file totp.h
- * @brief TOTP two-factor auth (RFC 6238) (PC_ENABLE_TOTP).
+ * @brief TOTP two-factor auth (RFC 6238) (PROTOCORE_ENABLE_TOTP).
  *
  * Time-based one-time passwords over HMAC-SHA1 (the existing software SHA-1) -
  * Google Authenticator / Authy compatible. Compute the current code from a shared
@@ -20,9 +20,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_TOTP
+#if PROTOCORE_ENABLE_TOTP
 
 /**
  * @brief HOTP / TOTP code for @p counter (RFC 4226 dynamic truncation).
@@ -32,29 +32,29 @@ PROTO_BEGIN_DECLS
  * @param digits   code length (6 or 8).
  * @return the @p digits-digit code (zero-padded by the caller when formatting).
  */
-uint32_t pc_hotp(const uint8_t *key, size_t keylen, uint64_t counter, uint8_t digits);
+uint32_t protocore_hotp(const uint8_t *key, size_t keylen, uint64_t counter, uint8_t digits);
 
 /**
  * @brief TOTP code (RFC 6238) at @p unix_time.
  * @param period  time step in seconds (30 is standard).
  */
-uint32_t pc_totp(const uint8_t *key, size_t keylen, uint64_t unix_time, uint32_t period, uint8_t digits);
+uint32_t protocore_totp(const uint8_t *key, size_t keylen, uint64_t unix_time, uint32_t period, uint8_t digits);
 
 /**
  * @brief Verify @p code against the current step +/- @p window steps (clock skew).
  * @return true if @p code matches any step in the window.
  */
-proto_bool pc_totp_verify(const uint8_t *key, size_t keylen, uint64_t unix_time, uint32_t code, uint32_t period,
-                          uint8_t digits, int window);
+proto_bool protocore_totp_verify(const uint8_t *key, size_t keylen, uint64_t unix_time, uint32_t code, uint32_t period,
+                                 uint8_t digits, int window);
 
 /**
  * @brief Decode a base32 (RFC 4648) secret into @p out; ignores padding/spaces/dashes.
  * @return decoded byte count, or -1 on an invalid character / overflow.
  */
-int pc_base32_decode(const char *b32, uint8_t *out, size_t cap);
+int protocore_base32_decode(const char *b32, uint8_t *out, size_t cap);
 
-#endif // PC_ENABLE_TOTP
+#endif // PROTOCORE_ENABLE_TOTP
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_TOTP_H

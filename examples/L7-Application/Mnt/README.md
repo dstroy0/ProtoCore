@@ -1,12 +1,12 @@
 # Mnt - mounted storage over a real filesystem
 
-**Layer:** L7 Application · **Build flags:** `PC_ENABLE_MNT`
+**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_MNT`
 
 ## What this example teaches
 
-Storage in ProtoCore is two pieces that do two jobs. The **mount** (`pc_mnt_*`) says
+Storage in ProtoCore is two pieces that do two jobs. The **mount** (`protocore_mnt_*`) says
 _what is behind the filesystem_ - a RAM pool in host tests, real flash on the device.
-The **accessor** (`pc_fs_*`) is how you use it, and it owns the mount root and the
+The **accessor** (`protocore_fs_*`) is how you use it, and it owns the mount root and the
 resolved path. Features target the accessor, and the application chooses the medium.
 
 Here it is mounted on LittleFS so writes persist across reboots; mounting the RAM
@@ -16,18 +16,18 @@ backend instead changes nothing in the endpoints.
 
 ```cpp
 LittleFS.begin(true);
-pc_mnt_mount(pc_mnt_fs(&LittleFS)); // real flash...
-// pc_mnt_mount(pc_mnt_ram());      // ...or pure RAM - endpoints identical
-pc_fs_begin("/");                   // what every name below is resolved against
+protocore_mnt_mount(protocore_mnt_fs(&LittleFS)); // real flash...
+// protocore_mnt_mount(protocore_mnt_ram());      // ...or pure RAM - endpoints identical
+protocore_fs_begin("/");                   // what every name below is resolved against
 ```
 
 **The file operations are backend-agnostic:**
 
 ```cpp
-pc_fs_write_file(name, data, strlen(data)); // create / overwrite
-long n = pc_fs_read_file(name, buf, cap);   // n < 0 if absent
-long sz = pc_fs_size(name);                 // -1 if absent
-pc_fs_remove(name);
+protocore_fs_write_file(name, data, strlen(data)); // create / overwrite
+long n = protocore_fs_read_file(name, buf, cap);   // n < 0 if absent
+long sz = protocore_fs_size(name);                 // -1 if absent
+protocore_fs_remove(name);
 ```
 
 **Notice what the handlers do not do: they never build a path.** They pass the
@@ -41,7 +41,7 @@ buffer, rather than one of each per caller.
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_MNT=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_MNT=1" \
   --lib="." examples/L7-Application/Mnt/Mnt.ino
 ```
 
@@ -62,7 +62,7 @@ explanatory comments:
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-#define PC_ENABLE_MNT 1
+#define PROTOCORE_ENABLE_MNT 1
 
 #include "protocore.h"
 #include "core_setup/hal/esp/esp_mnt_fs.h" // the Arduino FS backend lives in the board layer
@@ -86,8 +86,8 @@ void setup()
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     LittleFS.begin(true); // format on first use
-    pc_mnt_mount(pc_mnt_fs(&LittleFS));
-    pc_fs_begin("/"); // every name below is resolved against this root
+    protocore_mnt_mount(protocore_mnt_fs(&LittleFS));
+    protocore_fs_begin("/"); // every name below is resolved against this root
 
     server.on("/save", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *req) {
         const char *name = http_get_query(req, "name");
@@ -98,7 +98,7 @@ void setup()
             return;
         }
         // The raw query value goes straight in - resolution and the `..` guard are the accessor's.
-        bool ok = pc_fs_write_file(name, data, strlen(data));
+        bool ok = protocore_fs_write_file(name, data, strlen(data));
         server.send(id, ok ? 200 : 500, "application/json", ok ? "{\"ok\":true}" : "{\"ok\":false}");
     });
 
@@ -110,7 +110,7 @@ void setup()
             return;
         }
         char buf[512];
-        long n = pc_fs_read_file(name, buf, sizeof(buf) - 1);
+        long n = protocore_fs_read_file(name, buf, sizeof(buf) - 1);
         if (n < 0) // absent, too big for buf, or a refused path - all one fail-closed answer
         {
             server.send(id, 404, "text/plain", "not found");
@@ -122,7 +122,7 @@ void setup()
 
     server.on("/size", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *req) {
         const char *name = http_get_query(req, "name");
-        long n = (name && *name) ? pc_fs_size(name) : -1;
+        long n = (name && *name) ? protocore_fs_size(name) : -1;
         char b[24];
         snprintf(b, sizeof(b), "%ld", n);
         server.send(id, 200, "text/plain", b);
@@ -130,7 +130,7 @@ void setup()
 
     server.on("/rm", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *req) {
         const char *name = http_get_query(req, "name");
-        bool ok = (name && *name) && pc_fs_remove(name);
+        bool ok = (name && *name) && protocore_fs_remove(name);
         server.send(id, ok ? 200 : 404, "application/json", ok ? "{\"ok\":true}" : "{\"ok\":false}");
     });
 

@@ -20,7 +20,7 @@
 
 #include "core_setup/hal/esp/esp_crypto_hal.h"
 
-#ifdef PC_RSA_MODMUL_HW
+#ifdef PROTOCORE_RSA_MODMUL_HW
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
@@ -40,9 +40,9 @@ static HalRsaCtx s_rsa = {NULL, portMUX_INITIALIZER_UNLOCKED};
 // which are always accessible even when the RSA block itself is unclocked.
 static proto_bool rsa_is_up(void)
 {
-    const proto_bool clocked = (PC_HW_REG(PC_RSA_CLK_REG) & PC_RSA_CLK_BIT) != 0u;
-#if PC_RSA_HAS_PD
-    const proto_bool powered = (PC_HW_REG(PC_RSA_PD_REG) & PC_RSA_PD_DOWN_BIT) == 0u;
+    const proto_bool clocked = (PROTOCORE_HW_REG(PROTOCORE_RSA_CLK_REG) & PROTOCORE_RSA_CLK_BIT) != 0u;
+#if PROTOCORE_RSA_HAS_PD
+    const proto_bool powered = (PROTOCORE_HW_REG(PROTOCORE_RSA_PD_REG) & PROTOCORE_RSA_PD_DOWN_BIT) == 0u;
     return clocked && powered;
 #else
     return clocked;
@@ -55,47 +55,47 @@ static proto_bool rsa_is_up(void)
 // the caller holds s_rsa.hw_mux. Each RMW is an explicit read-modify-write of one bit.
 static void rsa_bring_up(void)
 {
-    uint32_t v = PC_HW_REG(PC_RSA_CLK_REG);
-    v |= PC_RSA_CLK_BIT; // bus clock on
-    PC_HW_REG(PC_RSA_CLK_REG) = v;
+    uint32_t v = PROTOCORE_HW_REG(PROTOCORE_RSA_CLK_REG);
+    v |= PROTOCORE_RSA_CLK_BIT; // bus clock on
+    PROTOCORE_HW_REG(PROTOCORE_RSA_CLK_REG) = v;
 
-    v = PC_HW_REG(PC_RSA_RST_REG);
-    v |= PC_RSA_RST_BIT; // assert RSA reset
-    PC_HW_REG(PC_RSA_RST_REG) = v;
-    v = PC_HW_REG(PC_RSA_RST_REG);
-    v &= ~PC_RSA_RST_BIT; // deassert RSA reset
-    PC_HW_REG(PC_RSA_RST_REG) = v;
+    v = PROTOCORE_HW_REG(PROTOCORE_RSA_RST_REG);
+    v |= PROTOCORE_RSA_RST_BIT; // assert RSA reset
+    PROTOCORE_HW_REG(PROTOCORE_RSA_RST_REG) = v;
+    v = PROTOCORE_HW_REG(PROTOCORE_RSA_RST_REG);
+    v &= ~PROTOCORE_RSA_RST_BIT; // deassert RSA reset
+    PROTOCORE_HW_REG(PROTOCORE_RSA_RST_REG) = v;
 
-    v = PC_HW_REG(PC_RSA_HOLD_REG);
-    v &= ~PC_RSA_HOLD_CLEAR; // release the sibling resets (DS / crypto / ECDSA) that would hold RSA in reset
-    PC_HW_REG(PC_RSA_HOLD_REG) = v;
+    v = PROTOCORE_HW_REG(PROTOCORE_RSA_HOLD_REG);
+    v &= ~PROTOCORE_RSA_HOLD_CLEAR; // release the sibling resets (DS / crypto / ECDSA) that would hold RSA in reset
+    PROTOCORE_HW_REG(PROTOCORE_RSA_HOLD_REG) = v;
 
-#ifdef PC_RSA_HOLD2_REG
-    v = PC_HW_REG(PC_RSA_HOLD2_REG);
-    v &= ~PC_RSA_HOLD2_CLEAR; // some dies (C5/H2) hold the ECDSA reset in a second, separate register
-    PC_HW_REG(PC_RSA_HOLD2_REG) = v;
+#ifdef PROTOCORE_RSA_HOLD2_REG
+    v = PROTOCORE_HW_REG(PROTOCORE_RSA_HOLD2_REG);
+    v &= ~PROTOCORE_RSA_HOLD2_CLEAR; // some dies (C5/H2) hold the ECDSA reset in a second, separate register
+    PROTOCORE_HW_REG(PROTOCORE_RSA_HOLD2_REG) = v;
 #endif
 
-#if PC_RSA_HAS_PD
-    v = PC_HW_REG(PC_RSA_PD_REG);
-    v &= ~PC_RSA_PD_UP_CLEAR; // power up the RSA memory
-    PC_HW_REG(PC_RSA_PD_REG) = v;
+#if PROTOCORE_RSA_HAS_PD
+    v = PROTOCORE_HW_REG(PROTOCORE_RSA_PD_REG);
+    v &= ~PROTOCORE_RSA_PD_UP_CLEAR; // power up the RSA memory
+    PROTOCORE_HW_REG(PROTOCORE_RSA_PD_REG) = v;
 #endif
 
     // Bounded: this runs with interrupts off, so a clean bit that never clears would leave only the
     // watchdog. On expiry the block is left as it is and the modmul that follows zeroes its result.
     uint32_t spins = 0u;
-    while (PC_HW_REG(PC_RSA_CLEAN) != 0u) // wait until the accelerator's memory init completes
+    while (PROTOCORE_HW_REG(PROTOCORE_RSA_CLEAN) != 0u) // wait until the accelerator's memory init completes
     {
         spins++;
-        if (spins >= PC_RSA_SPIN_MAX)
+        if (spins >= PROTOCORE_RSA_SPIN_MAX)
         {
             return;
         }
     }
 }
 
-void pc_rsa_hw_acquire(void)
+void protocore_rsa_hw_acquire(void)
 {
     if (s_rsa.lock == NULL)
     {
@@ -116,10 +116,10 @@ void pc_rsa_hw_acquire(void)
         rsa_bring_up();
         portEXIT_CRITICAL(&s_rsa.hw_mux);
     }
-    PC_HW_REG(PC_RSA_INTENA) = 0u; // poll only, no completion IRQ
+    PROTOCORE_HW_REG(PROTOCORE_RSA_INTENA) = 0u; // poll only, no completion IRQ
 }
 
-void pc_rsa_hw_release(void)
+void protocore_rsa_hw_release(void)
 {
     // Leave the peripheral clocked+powered for the next op (a MODMULT run is stateless; a per-op power-cycle is
     // both wasteful and, measured, non-deterministic). It is re-brought-up on the next acquire only if some
@@ -127,4 +127,4 @@ void pc_rsa_hw_release(void)
     (void)xSemaphoreGiveRecursive(s_rsa.lock); // a give on a mutex this task holds has no failure to report
 }
 
-#endif // PC_RSA_MODMUL_HW
+#endif // PROTOCORE_RSA_MODMUL_HW

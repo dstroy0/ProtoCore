@@ -19,7 +19,7 @@ description is accurate, whether it is too long, or whether prose without one of
 markers is really a justification. Those stay review items.
 
 Exempt: docs/, test/, examples/, performance_benching/; file-header Doxygen blocks;
-@param / @return / @brief lines; SPDX and license headers; the PC_ALLOW_* and NOSONAR
+@param / @return / @brief lines; SPDX and license headers; the PROTOCORE_ALLOW_* and NOSONAR
 justification markers the other checkers require.
 
   python -m tools.ci_tooling.check.check_comments --all      # report, honor the baseline
@@ -82,7 +82,7 @@ RULES = (("measurement", MEASURED), ("history", HISTORY), ("tradeoff", TRADEOFF)
 # Lines a comment scan must not judge.
 EXEMPT_LINE = re.compile(
     r"SPDX-License-Identifier|Copyright \(C\)|@file\b|@brief\b|@param\b|@return\b|"
-    r"@author\b|@date\b|PC_ALLOW_[A-Z_]+|NOSONAR|@ref\b|@p\b",
+    r"@author\b|@date\b|PROTOCORE_ALLOW_[A-Z_]+|NOSONAR|@ref\b|@p\b",
 )
 
 

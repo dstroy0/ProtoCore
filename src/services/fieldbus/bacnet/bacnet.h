@@ -3,7 +3,7 @@
 
 /**
  * @file bacnet.h
- * @brief BACnet/IP BVLC + NPDU codec (PC_ENABLE_BACNET) - zero-heap framing for the
+ * @brief BACnet/IP BVLC + NPDU codec (PROTOCORE_ENABLE_BACNET) - zero-heap framing for the
  *        ASHRAE 135 building-automation network layer over UDP (default port 47808).
  *
  * Two stacked layers:
@@ -27,9 +27,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_BACNET
+#if PROTOCORE_ENABLE_BACNET
 
 #define BVLC_TYPE_BIP 0x81 ///< BVLC Type: BACnet/IP
 #define BVLC_HEADER_SIZE 4 ///< type + function + 2-octet length
@@ -60,10 +60,11 @@ PROTO_BEGIN_DECLS
 // ---- BVLC ----
 
 /** @brief Wrap an NPDU in a BVLC envelope. Returns total octets, or 0 on overflow. */
-size_t pc_bvlc_build(uint8_t *buf, size_t cap, uint8_t function, const uint8_t *npdu, size_t pc_npdu_len);
+size_t protocore_bvlc_build(uint8_t *buf, size_t cap, uint8_t function, const uint8_t *npdu, size_t protocore_npdu_len);
 
 /** @brief Parse a BVLC envelope; reports the function and the NPDU slice. */
-proto_bool pc_bvlc_parse(const uint8_t *buf, size_t len, uint8_t *function, const uint8_t **npdu, size_t *pc_npdu_len);
+proto_bool protocore_bvlc_parse(const uint8_t *buf, size_t len, uint8_t *function, const uint8_t **npdu,
+                                size_t *protocore_npdu_len);
 
 // ---- NPDU ----
 
@@ -72,9 +73,9 @@ proto_bool pc_bvlc_parse(const uint8_t *buf, size_t len, uint8_t *function, cons
  *        (DNET / DLEN / DADR) and the hop count are emitted (DLEN 0 + @p dnet 0xFFFF is a
  *        remote/global broadcast).
  */
-size_t pc_npdu_build(uint8_t *buf, size_t cap, proto_bool expecting_reply, uint8_t priority, proto_bool has_dest,
-                     uint16_t dnet, const uint8_t *dadr, uint8_t dadr_len, uint8_t hop_count, const uint8_t *apdu,
-                     size_t apdu_len);
+size_t protocore_npdu_build(uint8_t *buf, size_t cap, proto_bool expecting_reply, uint8_t priority, proto_bool has_dest,
+                            uint16_t dnet, const uint8_t *dadr, uint8_t dadr_len, uint8_t hop_count,
+                            const uint8_t *apdu, size_t apdu_len);
 
 /** @brief A parsed NPDU. @ref apdu points INTO the source buffer. */
 typedef struct
@@ -91,9 +92,9 @@ typedef struct
 } NpduInfo;
 
 /** @brief Parse + validate an NPDU (version, control, optional addressing) and slice the APDU. */
-proto_bool pc_npdu_parse(const uint8_t *buf, size_t len, NpduInfo *out);
+proto_bool protocore_npdu_parse(const uint8_t *buf, size_t len, NpduInfo *out);
 
-// --- APDU header (the application layer sliced out by pc_npdu_parse) ---
+// --- APDU header (the application layer sliced out by protocore_npdu_parse) ---
 
 // PDU types (the high nibble of the first APDU octet).
 #define BACNET_PDU_CONFIRMED_REQUEST 0
@@ -132,7 +133,7 @@ proto_bool pc_npdu_parse(const uint8_t *buf, size_t len, NpduInfo *out);
 #define BACNET_PROP_OBJECT_NAME 77   ///< object-name property
 #define BACNET_PROP_PRESENT_VALUE 85 ///< present-value property
 
-/** @brief A decoded APDU header (from pc_apdu_parse). Service data points INTO the source buffer. */
+/** @brief A decoded APDU header (from protocore_apdu_parse). Service data points INTO the source buffer. */
 typedef struct
 {
     uint8_t pdu_type;            ///< PDU type (BACNET_PDU_*)
@@ -151,7 +152,7 @@ typedef struct
  *         simple / complex ACK); false for a short buffer or an unsupported type (segment-ack / error /
  *         reject / abort).
  */
-proto_bool pc_apdu_parse(const uint8_t *apdu, size_t len, BacnetApdu *out);
+proto_bool protocore_apdu_parse(const uint8_t *apdu, size_t len, BacnetApdu *out);
 
 /**
  * @brief Build a Who-Is unconfirmed-request APDU (service choice 8). With @p has_limits, the device-instance
@@ -159,7 +160,8 @@ proto_bool pc_apdu_parse(const uint8_t *apdu, size_t len, BacnetApdu *out);
  *        encoded minimal-length); without it, the APDU is the 2-octet unbounded form that every device answers.
  * @return the APDU length, or 0 on overflow, a limit above BACNET_MAX_INSTANCE, or low > high.
  */
-size_t pc_apdu_build_who_is(uint8_t *buf, size_t cap, uint32_t low_limit, uint32_t high_limit, proto_bool has_limits);
+size_t protocore_apdu_build_who_is(uint8_t *buf, size_t cap, uint32_t low_limit, uint32_t high_limit,
+                                   proto_bool has_limits);
 
 /**
  * @brief Build an I-Am unconfirmed-request APDU (service choice 0) - a device's answer to Who-Is. Carries the
@@ -167,8 +169,8 @@ size_t pc_apdu_build_who_is(uint8_t *buf, size_t cap, uint32_t low_limit, uint32
  *        segmentation-supported enumeration (0..3), and the vendor id, each as an application-tagged value.
  * @return the APDU length, or 0 on overflow, @p device_instance above BACNET_MAX_INSTANCE, or @p segmentation > 3.
  */
-size_t pc_apdu_build_i_am(uint8_t *buf, size_t cap, uint32_t device_instance, uint32_t max_apdu, uint8_t segmentation,
-                          uint16_t vendor_id);
+size_t protocore_apdu_build_i_am(uint8_t *buf, size_t cap, uint32_t device_instance, uint32_t max_apdu,
+                                 uint8_t segmentation, uint16_t vendor_id);
 
 /**
  * @brief Build a ReadProperty confirmed-request APDU (service choice 12) - the BACnet workhorse a client sends to
@@ -179,11 +181,11 @@ size_t pc_apdu_build_i_am(uint8_t *buf, size_t cap, uint32_t device_instance, ui
  *        optional property-array-index (context tag 2) is not emitted - it applies only to array-typed properties.
  * @return the APDU length, or 0 on overflow, @p object_instance above BACNET_MAX_INSTANCE, or @p object_type > 0x3FF.
  */
-size_t pc_apdu_build_read_property(uint8_t *buf, size_t cap, uint8_t invoke_id, uint8_t max_resp, uint16_t object_type,
-                                   uint32_t object_instance, uint32_t property_id);
+size_t protocore_apdu_build_read_property(uint8_t *buf, size_t cap, uint8_t invoke_id, uint8_t max_resp,
+                                          uint16_t object_type, uint32_t object_instance, uint32_t property_id);
 
-#endif // PC_ENABLE_BACNET
+#endif // PROTOCORE_ENABLE_BACNET
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_BACNET_H

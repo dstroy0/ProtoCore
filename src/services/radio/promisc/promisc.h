@@ -3,7 +3,7 @@
 
 /**
  * @file promisc.h
- * @brief Wi-Fi promiscuous (monitor) capture (PC_ENABLE_PROMISC) - passive 802.11 sniffing.
+ * @brief Wi-Fi promiscuous (monitor) capture (PROTOCORE_ENABLE_PROMISC) - passive 802.11 sniffing.
  *
  * A read-only capture path: instead of joining a network and terminating traffic, listen to
  * every 802.11 frame on a channel and hand it to a sink. The canonical wiring feeds the sink
@@ -15,7 +15,7 @@
  *     layout -> src / dst / bssid, sequence number, header length). Pure.
  *   - pcap_* : build the classic libpcap global + per-record headers (DLT_IEEE802_11) so a
  *     forwarded frame is a valid PCAP stream a wired Wireshark / tcpdump can read. Pure.
- *   - pc_promisc_begin() / _set_channel() / _end(): monitor-mode bring-up whose rx
+ *   - protocore_promisc_begin() / _set_channel() / _end(): monitor-mode bring-up whose rx
  *     callback copies each frame (with RSSI + channel) to the registered sink. ESP32 only.
  *
  * Capture is strictly passive (no injection) and fail-closed: the sink is expected to drop, not
@@ -30,9 +30,9 @@
 
 #include "protocore_config.h"
 
-#if PC_ENABLE_PROMISC
+#if PROTOCORE_ENABLE_PROMISC
 
-#include "shared_primitives/pcap.h" // pc_pcap_* framing + PC_DLT_IEEE802_11
+#include "shared_primitives/pcap.h" // protocore_pcap_* framing + PROTOCORE_DLT_IEEE802_11
 
 /** @brief 802.11 frame type (frame-control bits 2-3). */
 typedef enum PROTO_ENUM_PACKED
@@ -65,8 +65,8 @@ typedef struct
  */
 proto_bool wifi_frame_parse(const uint8_t *frame, uint16_t len, WifiFrameInfo *out);
 
-// libpcap framing lives in shared_primitives/pcap.h: pc_pcap_global_header() with
-// PC_DLT_IEEE802_11 + pc_pcap_record_header() wrap a captured 802.11 frame as a valid PCAP.
+// libpcap framing lives in shared_primitives/pcap.h: protocore_pcap_global_header() with
+// PROTOCORE_DLT_IEEE802_11 + protocore_pcap_record_header() wrap a captured 802.11 frame as a valid PCAP.
 
 /**
  * @brief Sink for one captured frame: the raw 802.11 bytes plus radio metadata.
@@ -75,7 +75,7 @@ proto_bool wifi_frame_parse(const uint8_t *frame, uint16_t len, WifiFrameInfo *o
  * @param rssi    received signal strength (dBm).
  * @param channel the channel it was captured on.
  */
-typedef void (*pc_promisc_sink_fn)(const uint8_t *frame, uint16_t len, int8_t rssi, uint8_t channel);
+typedef void (*protocore_promisc_sink_fn)(const uint8_t *frame, uint16_t len, int8_t rssi, uint8_t channel);
 
 /**
  * @brief Start promiscuous capture on @p channel; every frame is delivered to @p sink.
@@ -84,14 +84,14 @@ typedef void (*pc_promisc_sink_fn)(const uint8_t *frame, uint16_t len, int8_t rs
  * Returns immediately.
  * @return true if capture started; false if @p sink is null or on host builds.
  */
-proto_bool pc_promisc_begin(uint8_t channel, pc_promisc_sink_fn sink);
+proto_bool protocore_promisc_begin(uint8_t channel, protocore_promisc_sink_fn sink);
 
 /** @brief Retune the capture to a different channel (1..14). */
-void pc_promisc_set_channel(uint8_t channel);
+void protocore_promisc_set_channel(uint8_t channel);
 
 /** @brief Stop promiscuous capture. */
-void pc_promisc_end(void);
+void protocore_promisc_end(void);
 
-#endif // PC_ENABLE_PROMISC
+#endif // PROTOCORE_ENABLE_PROMISC
 
 #endif // PROTOCORE_PROMISC_H

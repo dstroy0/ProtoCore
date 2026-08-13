@@ -3,7 +3,7 @@
 
 /**
  * @file chacha20.c
- * @brief ChaCha20 (RFC 8439) - implementation. See pc_chacha20.h.
+ * @brief ChaCha20 (RFC 8439) - implementation. See protocore_chacha20.h.
  */
 
 #include "crypto/cipher/chacha20.h"
@@ -21,9 +21,9 @@
 // (bisected on-device); pin just that transform on the -O2 floor. The P4 takes full -O3 via the per-die default
 // (its win is -O3's inline/unroll parameter budget, not one flag).
 #if defined(CONFIG_IDF_TARGET_ESP32S3) && CONFIG_IDF_TARGET_ESP32S3
-PC_CRYPTO_HOT_UNSWITCH
+PROTOCORE_CRYPTO_HOT_UNSWITCH
 #else
-PC_CRYPTO_HOT
+PROTOCORE_CRYPTO_HOT
 #endif
 
 static uint32_t rd_le32(const uint8_t *p)
@@ -58,9 +58,9 @@ typedef struct
     uint8_t ks[64];  // keystream block
     uint32_t x[16];  // round state
 } Chacha20Work;
-static_assert(sizeof(Chacha20Work) <= PC_WORK_CHACHA20,
-              "Chacha20Work outgrew PC_WORK_CHACHA20 - raise it in protocore_config.h, which derives "
-              "PC_SECURE_ARENA_SIZE from it");
+static_assert(sizeof(Chacha20Work) <= PROTOCORE_WORK_CHACHA20,
+              "Chacha20Work outgrew PROTOCORE_WORK_CHACHA20 - raise it in protocore_config.h, which derives "
+              "PROTOCORE_SECURE_ARENA_SIZE from it");
 
 // The ChaCha20 core: 20 rounds over w->st, add the original state, serialize LE into @p out (64 bytes).
 static void chacha_core(Chacha20Work *w, uint8_t out[64])
@@ -96,14 +96,14 @@ static const uint32_t SIGMA1 = 0x3320646e;
 static const uint32_t SIGMA2 = 0x79622d32;
 static const uint32_t SIGMA3 = 0x6b206574;
 
-void pc_chacha20_xor(const uint8_t key[PC_CHACHA20_KEY_LEN], const uint8_t iv[8], uint64_t counter, const uint8_t *in,
+void protocore_chacha20_xor(const uint8_t key[PROTOCORE_CHACHA20_KEY_LEN], const uint8_t iv[8], uint64_t counter, const uint8_t *in,
                      uint8_t *out, size_t len)
 {
-    size_t mark = pc_secure_mark();
-    pc_span ws = pc_secure_span(sizeof(Chacha20Work), _Alignof(Chacha20Work));
-    if (!pc_span_ok(ws))
+    size_t mark = protocore_secure_mark();
+    protocore_span ws = protocore_secure_span(sizeof(Chacha20Work), _Alignof(Chacha20Work));
+    if (!protocore_span_ok(ws))
     {
-        pc_secure_release(mark);
+        protocore_secure_release(mark);
         return; // pool exhausted: an empty borrow is the failure signal, as with malloc
     }
     Chacha20Work *w = (Chacha20Work *)ws.buf;
@@ -131,17 +131,17 @@ void pc_chacha20_xor(const uint8_t key[PC_CHACHA20_KEY_LEN], const uint8_t iv[8]
         off += n;
         counter++;
     }
-    pc_secure_release(mark);
+    protocore_secure_release(mark);
 }
 
-void pc_chacha20_block_ietf(const uint8_t key[PC_CHACHA20_KEY_LEN], uint32_t counter, const uint8_t nonce[12],
-                            uint8_t out[PC_CHACHA20_BLOCK_LEN])
+void protocore_chacha20_block_ietf(const uint8_t key[PROTOCORE_CHACHA20_KEY_LEN], uint32_t counter, const uint8_t nonce[12],
+                            uint8_t out[PROTOCORE_CHACHA20_BLOCK_LEN])
 {
-    size_t mark = pc_secure_mark();
-    pc_span ws = pc_secure_span(sizeof(Chacha20Work), _Alignof(Chacha20Work));
-    if (!pc_span_ok(ws))
+    size_t mark = protocore_secure_mark();
+    protocore_span ws = protocore_secure_span(sizeof(Chacha20Work), _Alignof(Chacha20Work));
+    if (!protocore_span_ok(ws))
     {
-        pc_secure_release(mark);
+        protocore_secure_release(mark);
         return; // pool exhausted: an empty borrow is the failure signal, as with malloc
     }
     Chacha20Work *w = (Chacha20Work *)ws.buf;
@@ -158,5 +158,5 @@ void pc_chacha20_block_ietf(const uint8_t key[PC_CHACHA20_KEY_LEN], uint32_t cou
     w->st[14] = rd_le32(nonce + 4);
     w->st[15] = rd_le32(nonce + 8);
     chacha_core(w, out);
-    pc_secure_release(mark);
+    protocore_secure_release(mark);
 }

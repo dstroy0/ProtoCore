@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Exercises the build-flag reporter (diag() / PC_ENABLE_DIAG): the gated diag()
+// Exercises the build-flag reporter (diag() / PROTOCORE_ENABLE_DIAG): the gated diag()
 // entry point and its DIAG_DOC frame spec are only compiled when the flag is on,
 // so this env (native_diag) is what keeps that code building + running in CI
 // rather than bit-rotting.
@@ -21,18 +21,18 @@ static void diag_handler(uint8_t slot, HttpReq *req)
 
 void setUp()
 {
-    pc_server_reset();
+    protocore_server_reset();
     for (int i = 0; i < MAX_CONNS; i++)
     {
         conn_pool[i] = (TcpConn){0};
         conn_pool[i].id = (uint8_t)i;
         conn_pool[i].state = CONN_ACTIVE;
         conn_pool[i].proto = PROTO_HTTP;
-        conn_pool[i].pcb = pc_net_host_pcb();
+        conn_pool[i].pcb = protocore_net_host_pcb();
         http_reset(i);
     }
     ws_init();
-    pc_sse_init();
+    protocore_sse_init();
     tcp_capture_reset();
 }
 

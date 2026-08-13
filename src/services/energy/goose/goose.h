@@ -3,7 +3,7 @@
 
 /**
  * @file goose.h
- * @brief IEC 61850 GOOSE publisher + subscriber codec (PC_ENABLE_GOOSE).
+ * @brief IEC 61850 GOOSE publisher + subscriber codec (PROTOCORE_ENABLE_GOOSE).
  *
  * GOOSE (Generic Object Oriented Substation Event) is the fast raw-L2 multicast publish IEC 61850 uses
  * for protection trips. A GOOSE frame is an Ethernet frame (ethertype 0x88B8, see services/fieldbus/rawl2) with
@@ -13,8 +13,8 @@
  *             86 sqNum  87 simulation(BOOL)  88 confRev  89 ndsCom(BOOL)  8A numDatSetEntries  AB allData }
  *
  * This builds the control PDU (all fields above) with `allData` supplied as a caller-encoded BER blob
- * (a SEQUENCE of Data elements), then wraps it in the GOOSE header + Ethernet frame; `pc_goose_parse_frame`
- * decodes a received frame the other way (the subscriber side), walking the BER TLVs into a pc_goose_rx.
+ * (a SEQUENCE of Data elements), then wraps it in the GOOSE header + Ethernet frame; `protocore_goose_parse_frame`
+ * decodes a received frame the other way (the subscriber side), walking the BER TLVs into a protocore_goose_rx.
  * Pure, zero heap, no stdlib, host-testable; the raw-L2 transmit / receive is the
  * device step.
  */
@@ -24,9 +24,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_GOOSE
+#if PROTOCORE_ENABLE_GOOSE
 
 /** @brief The GOOSE control fields (strings are borrowed, not copied). */
 typedef struct
@@ -44,20 +44,20 @@ typedef struct
     uint32_t num_entries;          ///< number of dataset entries in allData.
     const uint8_t *all_data;       ///< pre-encoded BER SEQUENCE-of-Data body (contents of the AB field).
     size_t all_data_len;
-} pc_goose;
+} protocore_goose;
 
 /**
  * @brief Build the BER IECGoosePdu (the `61 ...` structure) into @p out. @return length, or 0 on overflow.
  */
-size_t pc_goose_pdu(const pc_goose *g, uint8_t *out, size_t cap);
+size_t protocore_goose_pdu(const protocore_goose *g, uint8_t *out, size_t cap);
 
 /**
  * @brief Build a full GOOSE Ethernet frame: [dst][src][88B8][APPID len rsvd rsvd][IECGoosePdu].
  * @param appid the GOOSE APPID.
- * @return the frame length, or 0 on overflow. Requires PC_ENABLE_RAWL2 for the Ethernet framing.
+ * @return the frame length, or 0 on overflow. Requires PROTOCORE_ENABLE_RAWL2 for the Ethernet framing.
  */
-size_t pc_goose_frame(const uint8_t *dst, const uint8_t *src, uint16_t appid, const pc_goose *g, uint8_t *out,
-                      size_t cap);
+size_t protocore_goose_frame(const uint8_t *dst, const uint8_t *src, uint16_t appid, const protocore_goose *g,
+                             uint8_t *out, size_t cap);
 
 /** @brief The decoded fields of a received GOOSE frame. String / blob members point INTO the source buffer
  *  and are NOT NUL-terminated (each has an explicit length), so the caller must keep the buffer alive. */
@@ -80,17 +80,17 @@ typedef struct
     uint32_t num_entries;    ///< number of dataset entries
     const uint8_t *all_data; ///< the BER-encoded allData contents (inside the 0xAB tag), or nullptr
     size_t all_data_len;
-} pc_goose_rx;
+} protocore_goose_rx;
 
 /**
  * @brief Parse (subscribe to) a received GOOSE Ethernet frame into @p out. String / blob members borrow the
  *        input buffer. Unknown / future PDU tags are skipped.
  * @return true iff the ethertype is 0x88B8 and the IECGoosePdu parses without truncation; false otherwise.
  */
-proto_bool pc_goose_parse_frame(const uint8_t *buf, size_t len, pc_goose_rx *out);
+proto_bool protocore_goose_parse_frame(const uint8_t *buf, size_t len, protocore_goose_rx *out);
 
-#endif // PC_ENABLE_GOOSE
+#endif // PROTOCORE_ENABLE_GOOSE
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_GOOSE_H

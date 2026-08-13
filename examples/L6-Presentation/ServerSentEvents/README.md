@@ -11,21 +11,21 @@ broadcasts a counter to all of them once a second.
 
 **Registering the endpoint + greeting one subscriber.** `on_sse(path, cb)` makes
 `/events` an SSE endpoint; the connect callback fires per new subscriber, where
-`pc_sse_send()` pushes to just that client:
+`protocore_sse_send()` pushes to just that client:
 
 ```cpp
-void pc_sse_connect(uint8_t pc_sse_id) {
-    server.pc_sse_send(pc_sse_id, "subscribed", "tick");   // (data, event-name) to this subscriber
+void protocore_sse_connect(uint8_t protocore_sse_id) {
+    server.protocore_sse_send(protocore_sse_id, "subscribed", "tick");   // (data, event-name) to this subscriber
 }
-server.on_sse("/events", pc_sse_connect);
+server.on_sse("/events", protocore_sse_connect);
 ```
 
-**Broadcasting to everyone.** From `loop()`, `pc_sse_broadcast(path, data, event)`
+**Broadcasting to everyone.** From `loop()`, `protocore_sse_broadcast(path, data, event)`
 sends to every subscriber of that endpoint - here a counter every second:
 
 ```cpp
 char buf[24]; snprintf(buf, sizeof(buf), "%lu", n++);
-server.pc_sse_broadcast("/events", buf, "tick");
+server.protocore_sse_broadcast("/events", buf, "tick");
 ```
 
 The third argument names the event, so the browser listens with
@@ -68,9 +68,9 @@ static const char PAGE[] = "<!doctype html><meta charset=utf-8><title>SSE</title
                            "s.addEventListener('tick',function(e){o.textContent+=e.data+'\\n'})</script>";
 
 // Fires once per new subscriber; greet just this client.
-void pc_sse_connect(uint8_t pc_sse_id)
+void protocore_sse_connect(uint8_t protocore_sse_id)
 {
-    server.pc_sse_send(pc_sse_id, "subscribed", "tick"); // (data, event name)
+    server.protocore_sse_send(protocore_sse_id, "subscribed", "tick"); // (data, event name)
 }
 
 void setup()
@@ -88,7 +88,7 @@ void setup()
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     server.on("/", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) { server.send(id, 200, "text/html", PAGE); });
-    server.on_sse("/events", pc_sse_connect); // register the SSE endpoint
+    server.on_sse("/events", protocore_sse_connect); // register the SSE endpoint
     server.begin(80);
 }
 
@@ -104,7 +104,7 @@ void loop()
         last = millis();
         char buf[24];
         snprintf(buf, sizeof(buf), "%lu", n++);
-        server.pc_sse_broadcast("/events", buf, "tick"); // (path, data, event name)
+        server.protocore_sse_broadcast("/events", buf, "tick"); // (path, data, event name)
     }
 }
 ```

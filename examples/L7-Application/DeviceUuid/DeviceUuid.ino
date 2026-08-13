@@ -3,16 +3,16 @@
 
 /**
  * @file DeviceUuid.ino
- * @brief Stable MAC-derived device UUID (PC_ENABLE_DEVICE_ID).
+ * @brief Stable MAC-derived device UUID (PROTOCORE_ENABLE_DEVICE_ID).
  *
- * pc_device_uuid() derives a deterministic RFC 4122 v5 UUID from the chip's
+ * protocore_device_uuid() derives a deterministic RFC 4122 v5 UUID from the chip's
  * factory MAC - the same value on every boot, with no storage. Use it as a
  * stable identity for mDNS hostnames, MQTT client IDs, telemetry tags, etc.
  *
  * Flash, open Serial @ 115200 for the IP + UUID, then GET http://<ip>/id.
  */
 
-#define PC_ENABLE_DEVICE_ID 1
+#define PROTOCORE_ENABLE_DEVICE_ID 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -21,7 +21,7 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-static char g_uuid[PC_UUID_STR_LEN];
+static char g_uuid[PROTOCORE_UUID_STR_LEN];
 
 void setup()
 {
@@ -37,7 +37,7 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    pc_device_uuid(g_uuid); // stable per-chip UUID
+    protocore_device_uuid(g_uuid); // stable per-chip UUID
     Serial.printf("device UUID: %s\n", g_uuid);
 
     on_http("/id", HTTP_GET, [](uint8_t id, HttpReq *) {

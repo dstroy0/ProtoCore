@@ -3,21 +3,21 @@
 
 /**
  * @file Guardrails.ino
- * @brief Runtime heap/stack guardrails (PC_ENABLE_GUARDRAILS).
+ * @brief Runtime heap/stack guardrails (PROTOCORE_ENABLE_GUARDRAILS).
  *
  * Installs a breach callback and checks the guardrails once a second: free heap,
  * heap low-water, largest free block (fragmentation), and this task's remaining
- * stack. When any crosses its PC_GUARDRAIL_* floor the callback fires so the
+ * stack. When any crosses its PROTOCORE_GUARDRAIL_* floor the callback fires so the
  * app can shed load / drop to a safe state / reboot before exhaustion bites. The
  * live snapshot is also served as JSON at GET /health.
  *
  * NOTE: enable it for the whole build (a .ino #define does not reach the
  * separately compiled library). In platformio.ini:
- *     build_flags = -DPC_ENABLE_GUARDRAILS=1
+ *     build_flags = -DPROTOCORE_ENABLE_GUARDRAILS=1
  * (Arduino IDE: it is already set for you in the build_opt.h beside this sketch, so it builds as-is.)
  */
 
-#define PC_ENABLE_GUARDRAILS 1
+#define PROTOCORE_ENABLE_GUARDRAILS 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -27,7 +27,7 @@ static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
 
-static void on_breach(uint8_t breaches, const pc_health *h)
+static void on_breach(uint8_t breaches, const protocore_health *h)
 {
     Serial.printf("[guardrail] breach=0x%02x heap=%u frag=%u stack=%u\n", breaches, (unsigned)h->free_heap,
                   (unsigned)h->largest_free_block, (unsigned)h->stack_free);
@@ -46,13 +46,13 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    pc_guardrails_begin(on_breach);
+    protocore_guardrails_begin(on_breach);
 
     on_http("/health", HTTP_GET, [](uint8_t id, HttpReq *) {
-        pc_health h;
-        pc_guardrails_sample(&h);
+        protocore_health h;
+        protocore_guardrails_sample(&h);
         char buf[128];
-        pc_health_json(&h, buf, sizeof(buf));
+        protocore_health_json(&h, buf, sizeof(buf));
         send_text(id, 200, "application/json", buf);
     });
     begin_http(80, NULL);
@@ -64,6 +64,6 @@ void loop()
     if (millis() - last >= 1000)
     {
         last = millis();
-        pc_guardrails_check(); // fires on_breach() if any floor is crossed
+        protocore_guardrails_check(); // fires on_breach() if any floor is crossed
     }
 }

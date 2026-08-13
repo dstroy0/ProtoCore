@@ -10,12 +10,12 @@
 #include "mmgr/protoframe.h" // the one frame engine
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_SCPI
+#if PROTOCORE_ENABLE_SCPI
 
 #include <stdio.h> // snprintf (number formatting only; parsing is hand-rolled - no stdlib)
 
 // A response value is one number. 10 significant digits is the SCPI NR2/NR3 rendering.
-static const pc_field SCPI_REAL[] = {{PC_FK_G, 10, 0, NULL}, PC_END};
+static const protocore_field SCPI_REAL[] = {{PROTOCORE_FK_G, 10, 0, NULL}, PROTOCORE_END};
 
 // ── small helpers ──────────────────────────────────────────────────────────────────────────────
 
@@ -53,7 +53,7 @@ static proto_bool is_alpha(char c)
 
 // ── common commands ────────────────────────────────────────────────────────────────────────────
 
-const char *pc_scpi_common(ScpiCommon c)
+const char *protocore_scpi_common(ScpiCommon c)
 {
     switch (c)
     {
@@ -89,7 +89,7 @@ const char *pc_scpi_common(ScpiCommon c)
 
 // ── command builder ────────────────────────────────────────────────────────────────────────────
 
-size_t pc_scpi_build(char *buf, size_t cap, const char *header, const char *const *args, size_t argc)
+size_t protocore_scpi_build(char *buf, size_t cap, const char *header, const char *const *args, size_t argc)
 {
     if (!buf || !header || (argc && !args))
     {
@@ -129,7 +129,7 @@ size_t pc_scpi_build(char *buf, size_t cap, const char *header, const char *cons
     return p;
 }
 
-size_t pc_scpi_fmt_real(char *buf, size_t cap, double v)
+size_t protocore_scpi_fmt_real(char *buf, size_t cap, double v)
 {
     if (!buf || cap == 0)
     {
@@ -137,7 +137,7 @@ size_t pc_scpi_fmt_real(char *buf, size_t cap, double v)
     }
     // %g renders NR2 (fixed) or NR3 (scientific) and trims trailing zeros - exactly the SCPI forms.
     // The frame's own contract is this function's contract: bytes written, or 0 with buf emptied.
-    return frame.build(buf, cap, SCPI_REAL, (const pc_fval[]){PC_VG(v)}, 1);
+    return frame.build(buf, cap, SCPI_REAL, (const protocore_fval[]){PROTOCORE_VG(v)}, 1);
 }
 
 // ── response parsers ───────────────────────────────────────────────────────────────────────────
@@ -202,7 +202,7 @@ static double apply_scale(double v, int scale)
     return v;
 }
 
-proto_bool pc_scpi_parse_number(const char *s, size_t len, double *out)
+proto_bool protocore_scpi_parse_number(const char *s, size_t len, double *out)
 {
     if (!s || !out || len == 0)
     {
@@ -243,7 +243,7 @@ proto_bool pc_scpi_parse_number(const char *s, size_t len, double *out)
     return PROTO_TRUE;
 }
 
-proto_bool pc_scpi_parse_bool(const char *s, size_t len, proto_bool *out)
+proto_bool protocore_scpi_parse_bool(const char *s, size_t len, proto_bool *out)
 {
     if (!s || !out || len == 0)
     {
@@ -272,7 +272,7 @@ proto_bool pc_scpi_parse_bool(const char *s, size_t len, proto_bool *out)
     return PROTO_FALSE;
 }
 
-size_t pc_scpi_parse_string(const char *s, size_t len, char *out, size_t cap)
+size_t protocore_scpi_parse_string(const char *s, size_t len, char *out, size_t cap)
 {
     if (!s || !out || cap == 0 || len < 2)
     {
@@ -311,7 +311,7 @@ size_t pc_scpi_parse_string(const char *s, size_t len, char *out, size_t cap)
     return o;
 }
 
-proto_bool pc_scpi_parse_block(const uint8_t *buf, size_t len, const uint8_t **data, size_t *data_len, size_t *consumed)
+proto_bool protocore_scpi_parse_block(const uint8_t *buf, size_t len, const uint8_t **data, size_t *data_len, size_t *consumed)
 {
     if (!buf || !data || !data_len || !consumed || len < 2 || buf[0] != '#')
     {
@@ -419,7 +419,7 @@ static const ScpiStdMsg SCPI_STD[] = {
     {-440, "Query UNTERMINATED after indefinite response"},
 };
 
-const char *pc_scpi_std_error(int16_t number)
+const char *protocore_scpi_std_error(int16_t number)
 {
     for (size_t i = 0; i < sizeof(SCPI_STD) / sizeof(SCPI_STD[0]); i++)
     {
@@ -431,7 +431,7 @@ const char *pc_scpi_std_error(int16_t number)
     return "";
 }
 
-void pc_scpi_status_init(ScpiStatus *s)
+void protocore_scpi_status_init(ScpiStatus *s)
 {
     if (!s)
     {
@@ -440,7 +440,7 @@ void pc_scpi_status_init(ScpiStatus *s)
     mem.set(s, 0, sizeof(*s));
 }
 
-void pc_scpi_event(ScpiStatus *s, uint8_t esr_bits)
+void protocore_scpi_event(ScpiStatus *s, uint8_t esr_bits)
 {
     if (s)
     {
@@ -493,7 +493,7 @@ static uint8_t esr_bit_for(int16_t number)
     return 0;
 }
 
-void pc_scpi_push_error(ScpiStatus *s, int16_t number, const char *msg)
+void protocore_scpi_push_error(ScpiStatus *s, int16_t number, const char *msg)
 {
     if (!s || number == 0)
     {
@@ -501,25 +501,25 @@ void pc_scpi_push_error(ScpiStatus *s, int16_t number, const char *msg)
     }
     if (!msg)
     {
-        msg = pc_scpi_std_error(number);
+        msg = protocore_scpi_std_error(number);
     }
     s->esr |= esr_bit_for(number);
-    if (s->count >= PC_SCPI_ERR_QUEUE)
+    if (s->count >= PROTOCORE_SCPI_ERR_QUEUE)
     {
         // Overflow: the most recent entry becomes -350 "Queue overflow" (SCPI rule); latch DDE.
-        uint8_t tail = (uint8_t)((s->head + s->count - 1) % PC_SCPI_ERR_QUEUE);
+        uint8_t tail = (uint8_t)((s->head + s->count - 1) % PROTOCORE_SCPI_ERR_QUEUE);
         s->queue[tail].number = -350;
-        s->queue[tail].msg = pc_scpi_std_error(-350);
+        s->queue[tail].msg = protocore_scpi_std_error(-350);
         s->esr |= SCPI_ESR_DDE;
         return;
     }
-    uint8_t slot = (uint8_t)((s->head + s->count) % PC_SCPI_ERR_QUEUE);
+    uint8_t slot = (uint8_t)((s->head + s->count) % PROTOCORE_SCPI_ERR_QUEUE);
     s->queue[slot].number = number;
     s->queue[slot].msg = msg;
     s->count++;
 }
 
-proto_bool pc_scpi_pop_error(ScpiStatus *s, ScpiError *out)
+proto_bool protocore_scpi_pop_error(ScpiStatus *s, ScpiError *out)
 {
     if (!out)
     {
@@ -532,12 +532,12 @@ proto_bool pc_scpi_pop_error(ScpiStatus *s, ScpiError *out)
         return PROTO_FALSE;
     }
     *out = s->queue[s->head];
-    s->head = (uint8_t)((s->head + 1) % PC_SCPI_ERR_QUEUE);
+    s->head = (uint8_t)((s->head + 1) % PROTOCORE_SCPI_ERR_QUEUE);
     s->count--;
     return PROTO_TRUE;
 }
 
-uint8_t pc_scpi_stb(const ScpiStatus *s)
+uint8_t protocore_scpi_stb(const ScpiStatus *s)
 {
     if (!s)
     {
@@ -560,7 +560,7 @@ uint8_t pc_scpi_stb(const ScpiStatus *s)
     return stb;
 }
 
-void pc_scpi_cls(ScpiStatus *s)
+void protocore_scpi_cls(ScpiStatus *s)
 {
     if (!s)
     {
@@ -631,7 +631,7 @@ static proto_bool match_node(const char *i, size_t ilen, const char *p, size_t p
     return pv >= 0 && iv >= 0 && pv == iv;
 }
 
-proto_bool pc_scpi_match(const char *input, size_t input_len, const char *pattern)
+proto_bool protocore_scpi_match(const char *input, size_t input_len, const char *pattern)
 {
     if (!input || !pattern)
     {
@@ -713,4 +713,4 @@ proto_bool pc_scpi_match(const char *input, size_t input_len, const char *patter
     }
 }
 
-#endif // PC_ENABLE_SCPI
+#endif // PROTOCORE_ENABLE_SCPI

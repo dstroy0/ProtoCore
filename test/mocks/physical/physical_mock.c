@@ -5,7 +5,7 @@
  * @file physical_mock.c
  * @brief Layer 1 (Physical) - mock backend: the hot path with no silicon under it.
  *
- * PC_PHYSICAL_HAS_BACKEND is 1 here, so a test build reaches the same code a target does instead of
+ * PROTOCORE_PHYSICAL_HAS_BACKEND is 1 here, so a test build reaches the same code a target does instead of
  * the no-op stubs in physical.c. That is the point: the stubs answer every readout with an empty
  * value, so a caller that mishandles a live link is indistinguishable from one that works. This
  * backend holds a link state that can actually be up, and answers from it.
@@ -18,42 +18,42 @@
 
 #include "network_drivers/physical/physical.h"
 
-#if PC_PHYSICAL_HAS_BACKEND && !PC_VENDOR_ESP
+#if PROTOCORE_PHYSICAL_HAS_BACKEND && !PROTOCORE_VENDOR_ESP
 
 // memcpy / strnlen
 
 // IEEE 802.11-2020 9.4.2.2: an SSID element carries at most 32 octets, so this is the standard's
-// number and not a tuning choice. The +1 is the terminator pc_net_ssid() always writes.
-#define PC_PHY_MOCK_SSID_MAX 32
+// number and not a tuning choice. The +1 is the terminator protocore_net_ssid() always writes.
+#define PROTOCORE_PHY_MOCK_SSID_MAX 32
 
-// Compose a dotted quad into the network-byte-order u32 the pc_net_*_ip() contract returns. Every
+// Compose a dotted quad into the network-byte-order u32 the protocore_net_*_ip() contract returns. Every
 // target in the list is little-endian, where lwIP's ip4_addr_get_u32() puts the first octet in the
 // low byte, so this reproduces the layout a real netif hands back.
-#define PC_PHY_MOCK_IP4(a, b, c, d)                                                                                    \
+#define PROTOCORE_PHY_MOCK_IP4(a, b, c, d)                                                                             \
     (((uint32_t)(d) << 24) | ((uint32_t)(c) << 16) | ((uint32_t)(b) << 8) | (uint32_t)(a))
 
 // RFC 5737 TEST-NET-1 and RFC 3849 2001:db8::/32 are reserved for documentation, so a mock address
 // that escapes into a log or a test expectation can never be mistaken for a real one.
-#define PC_PHY_MOCK_STA_IP PC_PHY_MOCK_IP4(192, 0, 2, 10)
-#define PC_PHY_MOCK_AP_IP PC_PHY_MOCK_IP4(192, 0, 2, 1)
-#define PC_PHY_MOCK_ETH_IP PC_PHY_MOCK_IP4(192, 0, 2, 20)
+#define PROTOCORE_PHY_MOCK_STA_IP PROTOCORE_PHY_MOCK_IP4(192, 0, 2, 10)
+#define PROTOCORE_PHY_MOCK_AP_IP PROTOCORE_PHY_MOCK_IP4(192, 0, 2, 1)
+#define PROTOCORE_PHY_MOCK_ETH_IP PROTOCORE_PHY_MOCK_IP4(192, 0, 2, 20)
 
-/** @brief Every mutable the mock owns: one link state, read back by the pc_net_* / pc_phy_* calls. */
+/** @brief Every mutable the mock owns: one link state, read back by the protocore_net_* / protocore_phy_* calls. */
 typedef struct
 {
-    proto_bool sta_up;        ///< station associated and holding an IP.
-    proto_bool ap_up;         ///< softAP started.
-    proto_bool eth_up;        ///< wired link up and holding an IP.
-    proto_bool v6_up;         ///< IPv6 enabled and a global address configured.
-    proto_bool radio_up;      ///< PHY started, with or without an association.
-    proto_bool monitor_on;    ///< monitor mode active.
-    uint8_t channel;          ///< current radio channel, 0 when the radio is down.
-    int8_t rssi;              ///< station RSSI in dBm, reported only while associated.
-    int8_t tx_dbm;            ///< transmit power cap last applied.
-    pc_phy_ps ps;             ///< power-save mode last applied.
-    pc_phy_frame_fn on_frame; ///< monitor-mode sink, NULL when not capturing.
-    size_t ssid_len;          ///< bytes of ssid in use, excluding the terminator.
-    char ssid[PC_PHY_MOCK_SSID_MAX + 1];
+    proto_bool sta_up;               ///< station associated and holding an IP.
+    proto_bool ap_up;                ///< softAP started.
+    proto_bool eth_up;               ///< wired link up and holding an IP.
+    proto_bool v6_up;                ///< IPv6 enabled and a global address configured.
+    proto_bool radio_up;             ///< PHY started, with or without an association.
+    proto_bool monitor_on;           ///< monitor mode active.
+    uint8_t channel;                 ///< current radio channel, 0 when the radio is down.
+    int8_t rssi;                     ///< station RSSI in dBm, reported only while associated.
+    int8_t tx_dbm;                   ///< transmit power cap last applied.
+    protocore_phy_ps ps;             ///< power-save mode last applied.
+    protocore_phy_frame_fn on_frame; ///< monitor-mode sink, NULL when not capturing.
+    size_t ssid_len;                 ///< bytes of ssid in use, excluding the terminator.
+    char ssid[PROTOCORE_PHY_MOCK_SSID_MAX + 1];
     uint8_t sta_mac[6]; ///< 802.11 station address.
     uint8_t eth_mac[6]; ///< wired PHY address, distinct so egress_mac is checkable.
     uint8_t v6[16];     ///< global IPv6 address, valid while v6_up.
@@ -71,7 +71,7 @@ static PhysicalMockCtx s_mock = {
     .channel = 0,
     .rssi = 0,
     .tx_dbm = 0,
-    .ps = PC_PHY_PS_NONE,
+    .ps = PROTOCORE_PHY_PS_NONE,
     .on_frame = NULL,
     .ssid_len = 0,
     .ssid = {0},
@@ -80,7 +80,7 @@ static PhysicalMockCtx s_mock = {
     .v6 = {0x20, 0x01, 0x0D, 0xB8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x01},
 };
 
-// Copy an SSID in under the 802.11 cap, the same truncation pc_net_ssid() applies on the way out.
+// Copy an SSID in under the 802.11 cap, the same truncation protocore_net_ssid() applies on the way out.
 static void mock_set_ssid(const char *ssid)
 {
     if (ssid == NULL)
@@ -89,7 +89,7 @@ static void mock_set_ssid(const char *ssid)
         s_mock.ssid_len = 0;
         return;
     }
-    size_t n = strnlen(ssid, PC_PHY_MOCK_SSID_MAX);
+    size_t n = strnlen(ssid, PROTOCORE_PHY_MOCK_SSID_MAX);
     memcpy(s_mock.ssid, ssid, n);
     s_mock.ssid[n] = '\0';
     s_mock.ssid_len = n;
@@ -133,7 +133,7 @@ proto_bool init_wifi_ap_physical(const char *ssid, const char *password)
     return PROTO_TRUE;
 }
 
-#if PC_ENABLE_ETHERNET
+#if PROTOCORE_ENABLE_ETHERNET
 proto_bool init_eth_physical(void)
 {
     s_mock.eth_up = PROTO_TRUE;
@@ -154,27 +154,27 @@ proto_bool eth_ready(void)
 {
     return PROTO_FALSE;
 }
-#endif // PC_ENABLE_ETHERNET
+#endif // PROTOCORE_ENABLE_ETHERNET
 
-#if PC_ENABLE_IPV6
+#if PROTOCORE_ENABLE_IPV6
 proto_bool init_ipv6_physical(void)
 {
     s_mock.v6_up = PROTO_TRUE;
     return PROTO_TRUE;
 }
 
-proto_bool net_global_ipv6(pc_ip *out)
+proto_bool net_global_ipv6(protocore_ip *out)
 {
     if (out == NULL || !s_mock.v6_up)
     {
         return PROTO_FALSE;
     }
-    out->family = PC_IP_V6;
+    out->family = PROTOCORE_IP_V6;
     memcpy(out->bytes, s_mock.v6, sizeof(s_mock.v6));
     return PROTO_TRUE;
 }
 
-proto_bool pc_ipv6_ready(void)
+proto_bool protocore_ipv6_ready(void)
 {
     return s_mock.v6_up;
 }
@@ -184,59 +184,59 @@ proto_bool init_ipv6_physical(void)
     return PROTO_FALSE; // IPv6 compiled out
 }
 
-proto_bool net_global_ipv6(pc_ip *out)
+proto_bool net_global_ipv6(protocore_ip *out)
 {
     (void)out;
     return PROTO_FALSE;
 }
 
-proto_bool pc_ipv6_ready(void)
+proto_bool protocore_ipv6_ready(void)
 {
     return PROTO_FALSE;
 }
-#endif // PC_ENABLE_IPV6
+#endif // PROTOCORE_ENABLE_IPV6
 
-uint32_t pc_net_egress_ip(void)
+uint32_t protocore_net_egress_ip(void)
 {
     // Wired wins over wireless, which is the order a stack picks a default route in when both are up.
     if (s_mock.eth_up)
     {
-        return PC_PHY_MOCK_ETH_IP;
+        return PROTOCORE_PHY_MOCK_ETH_IP;
     }
     if (s_mock.sta_up)
     {
-        return PC_PHY_MOCK_STA_IP;
+        return PROTOCORE_PHY_MOCK_STA_IP;
     }
     if (s_mock.ap_up)
     {
-        return PC_PHY_MOCK_AP_IP;
+        return PROTOCORE_PHY_MOCK_AP_IP;
     }
     return 0;
 }
 
-pc_if_kind pc_net_egress(void)
+protocore_if_kind protocore_net_egress(void)
 {
-    uint32_t egress = pc_net_egress_ip();
+    uint32_t egress = protocore_net_egress_ip();
     if (egress == 0)
     {
-        return PC_IF_ANY;
+        return PROTOCORE_IF_ANY;
     }
-    uint32_t sta = s_mock.sta_up ? PC_PHY_MOCK_STA_IP : 0;
-    uint32_t ap = pc_net_ap_ip();
-    return pc_net_classify_ip(egress, sta, ap); // the shared classifier, same as the ESP backend
+    uint32_t sta = s_mock.sta_up ? PROTOCORE_PHY_MOCK_STA_IP : 0;
+    uint32_t ap = protocore_net_ap_ip();
+    return protocore_net_classify_ip(egress, sta, ap); // the shared classifier, same as the ESP backend
 }
 
-uint32_t pc_net_ap_ip(void)
+uint32_t protocore_net_ap_ip(void)
 {
-    return s_mock.ap_up ? PC_PHY_MOCK_AP_IP : 0;
+    return s_mock.ap_up ? PROTOCORE_PHY_MOCK_AP_IP : 0;
 }
 
-int8_t pc_net_rssi(void)
+int8_t protocore_net_rssi(void)
 {
     return s_mock.sta_up ? s_mock.rssi : 0;
 }
 
-proto_bool pc_net_mac(uint8_t out[6])
+proto_bool protocore_net_mac(uint8_t out[6])
 {
     if (out == NULL)
     {
@@ -246,10 +246,10 @@ proto_bool pc_net_mac(uint8_t out[6])
     return PROTO_TRUE;
 }
 
-proto_bool pc_net_egress_mac(uint8_t out[6])
+proto_bool protocore_net_egress_mac(uint8_t out[6])
 {
-    // The address of whichever interface carries traffic, so it tracks pc_net_egress_ip()'s choice.
-    if (out == NULL || pc_net_egress_ip() == 0)
+    // The address of whichever interface carries traffic, so it tracks protocore_net_egress_ip()'s choice.
+    if (out == NULL || protocore_net_egress_ip() == 0)
     {
         return PROTO_FALSE;
     }
@@ -262,7 +262,7 @@ proto_bool pc_net_egress_mac(uint8_t out[6])
     return PROTO_TRUE;
 }
 
-size_t pc_net_ssid(char *out, size_t cap)
+size_t protocore_net_ssid(char *out, size_t cap)
 {
     if (out == NULL || cap == 0)
     {
@@ -283,34 +283,34 @@ size_t pc_net_ssid(char *out, size_t cap)
     return n;
 }
 
-uint8_t pc_net_channel(void)
+uint8_t protocore_net_channel(void)
 {
     return s_mock.channel;
 }
 
 /* ------------------------------------------------------------------ radio control (L1 contract)
- * A radio that reports what it was told. The vendor half of pc_phy_* on silicon is unit conversion
+ * A radio that reports what it was told. The vendor half of protocore_phy_* on silicon is unit conversion
  * and a driver call; with neither, the state is the whole implementation.
  */
 
-proto_bool pc_phy_ps_set(pc_phy_ps mode)
+proto_bool protocore_phy_ps_set(protocore_phy_ps mode)
 {
     s_mock.ps = mode;
     return PROTO_TRUE;
 }
 
-pc_phy_ps pc_phy_ps_get(void)
+protocore_phy_ps protocore_phy_ps_get(void)
 {
     return s_mock.ps;
 }
 
-proto_bool pc_phy_tx_power_set(int8_t dbm)
+proto_bool protocore_phy_tx_power_set(int8_t dbm)
 {
     s_mock.tx_dbm = dbm;
     return PROTO_TRUE;
 }
 
-proto_bool pc_phy_monitor_begin(uint8_t channel, pc_phy_frame_fn cb)
+proto_bool protocore_phy_monitor_begin(uint8_t channel, protocore_phy_frame_fn cb)
 {
     if (cb == NULL)
     {
@@ -326,7 +326,7 @@ proto_bool pc_phy_monitor_begin(uint8_t channel, pc_phy_frame_fn cb)
     return PROTO_TRUE;
 }
 
-void pc_phy_monitor_set_channel(uint8_t channel)
+void protocore_phy_monitor_set_channel(uint8_t channel)
 {
     if (channel != 0)
     {
@@ -334,10 +334,10 @@ void pc_phy_monitor_set_channel(uint8_t channel)
     }
 }
 
-void pc_phy_monitor_end(void)
+void protocore_phy_monitor_end(void)
 {
     s_mock.monitor_on = PROTO_FALSE;
     s_mock.on_frame = NULL;
 }
 
-#endif // PC_PHYSICAL_HAS_BACKEND && !PC_VENDOR_ESP
+#endif // PROTOCORE_PHYSICAL_HAS_BACKEND && !PROTOCORE_VENDOR_ESP

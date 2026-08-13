@@ -26,7 +26,7 @@ struct HttpRouteCtx
 };
 static struct HttpRouteCtx *s_route;
 
-_Static_assert(sizeof(struct HttpRouteCtx) <= PC_WORK_ROUTE_TABLE, "route table outgrew PC_WORK_ROUTE_TABLE");
+_Static_assert(sizeof(struct HttpRouteCtx) <= PROTOCORE_WORK_ROUTE_TABLE, "route table outgrew PROTOCORE_WORK_ROUTE_TABLE");
 
 // Bound on first use rather than at an init the caller has to remember: a registration is the first
 // thing that touches the table, and every reader runs after one. The borrow is from the persistent
@@ -35,8 +35,8 @@ static struct HttpRouteCtx *bind_route(void)
 {
     if (s_route == NULL)
     {
-        pc_span s = pc_secure_persist_span(sizeof(struct HttpRouteCtx));
-        if (pc_span_ok(s))
+        protocore_span s = protocore_secure_persist_span(sizeof(struct HttpRouteCtx));
+        if (protocore_span_ok(s))
         {
             s_route = (struct HttpRouteCtx *)s.buf;
         }

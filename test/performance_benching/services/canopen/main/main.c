@@ -31,7 +31,7 @@ void dbench_run(void)
 
     // Pre-built frame for the EMCY parse bench (same shape as test_emcy_roundtrip).
     static CanFrame emcy_frame;
-    pc_canopen_build_emcy(&emcy_frame, 3, 0x8130, 0x11, msef);
+    protocore_canopen_build_emcy(&emcy_frame, 3, 0x8130, 0x11, msef);
 
     // COB-ID classifier bench frame: TPDO1 + node 10 (test_parse_all_function_codes).
     static CanFrame classify_frame;
@@ -60,16 +60,18 @@ void dbench_run(void)
         uint16_t code = 0;
         CanopenSdoResponse resp;
 
-        DBENCH_OP("pc_canopen_build_heartbeat", 100000,
-                  sink += (int)pc_canopen_build_heartbeat(&f, 10, CANOPEN_STATE_OPERATIONAL));
-        DBENCH_OP("pc_canopen_build_emcy", 100000, sink += (int)pc_canopen_build_emcy(&f, 3, 0x8130, 0x11, msef));
-        DBENCH_OP("pc_canopen_build_sdo_write", 100000,
-                  sink += (int)pc_canopen_build_sdo_write(&f, 5, 0x6040, 0, sdo_val, 2));
-        DBENCH_OP("pc_canopen_parse (classify)", 100000, sink += (int)pc_canopen_parse(&classify_frame, &msg));
-        DBENCH_OP("pc_canopen_parse_emcy", 100000,
-                  sink += (int)pc_canopen_parse_emcy(&emcy_frame, &node, &code, &reg, out_msef));
-        DBENCH_OP("pc_canopen_parse_sdo_response", 100000,
-                  sink += (int)pc_canopen_parse_sdo_response(&sdo_resp_frame, &resp));
+        DBENCH_OP("protocore_canopen_build_heartbeat", 100000,
+                  sink += (int)protocore_canopen_build_heartbeat(&f, 10, CANOPEN_STATE_OPERATIONAL));
+        DBENCH_OP("protocore_canopen_build_emcy", 100000,
+                  sink += (int)protocore_canopen_build_emcy(&f, 3, 0x8130, 0x11, msef));
+        DBENCH_OP("protocore_canopen_build_sdo_write", 100000,
+                  sink += (int)protocore_canopen_build_sdo_write(&f, 5, 0x6040, 0, sdo_val, 2));
+        DBENCH_OP("protocore_canopen_parse (classify)", 100000,
+                  sink += (int)protocore_canopen_parse(&classify_frame, &msg));
+        DBENCH_OP("protocore_canopen_parse_emcy", 100000,
+                  sink += (int)protocore_canopen_parse_emcy(&emcy_frame, &node, &code, &reg, out_msef));
+        DBENCH_OP("protocore_canopen_parse_sdo_response", 100000,
+                  sink += (int)protocore_canopen_parse_sdo_response(&sdo_resp_frame, &resp));
         (void)sink;
         DBENCH_DONE();
     }

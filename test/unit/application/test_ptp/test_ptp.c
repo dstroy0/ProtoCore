@@ -31,27 +31,27 @@ static void putbe16(uint8_t *p, uint16_t v)
 
 void test_timestamp_roundtrip()
 {
-    pc_ptp_timestamp ts = {0x112233445566ULL, 123456789u}, got;
-    uint8_t b[PC_PTP_TS_LEN];
-    pc_ptp_ts_write(b, &ts);
+    protocore_ptp_timestamp ts = {0x112233445566ULL, 123456789u}, got;
+    uint8_t b[PROTOCORE_PTP_TS_LEN];
+    protocore_ptp_ts_write(b, &ts);
     // 48-bit seconds are big-endian in the first 6 octets.
     TEST_ASSERT_EQUAL_HEX8(0x11, b[0]);
     TEST_ASSERT_EQUAL_HEX8(0x66, b[5]);
-    pc_ptp_ts_read(b, &got);
+    protocore_ptp_ts_read(b, &got);
     TEST_ASSERT_EQUAL_UINT64(ts.seconds, got.seconds);
     TEST_ASSERT_EQUAL_UINT32(ts.nanoseconds, got.nanoseconds);
 }
 
 void test_timestamp_ns_conversion()
 {
-    pc_ptp_timestamp ts = {5u, 250000000u};
-    TEST_ASSERT_EQUAL_INT64(5250000000LL, pc_ptp_ts_to_ns(&ts));
-    pc_ptp_timestamp back;
-    pc_ptp_ts_from_ns(5250000000LL, &back);
+    protocore_ptp_timestamp ts = {5u, 250000000u};
+    TEST_ASSERT_EQUAL_INT64(5250000000LL, protocore_ptp_ts_to_ns(&ts));
+    protocore_ptp_timestamp back;
+    protocore_ptp_ts_from_ns(5250000000LL, &back);
     TEST_ASSERT_EQUAL_UINT64(5u, back.seconds);
     TEST_ASSERT_EQUAL_UINT32(250000000u, back.nanoseconds);
     // negative clamps to zero (on-wire timestamps are unsigned).
-    pc_ptp_ts_from_ns(-1, &back);
+    protocore_ptp_ts_from_ns(-1, &back);
     TEST_ASSERT_EQUAL_UINT64(0u, back.seconds);
     TEST_ASSERT_EQUAL_UINT32(0u, back.nanoseconds);
 }
@@ -60,9 +60,9 @@ void test_timestamp_ns_conversion()
 
 void test_header_roundtrip()
 {
-    pc_ptp_header h;
+    protocore_ptp_header h;
     memset(&h, 0, sizeof(h));
-    h.message_type = PC_PTP_SYNC;
+    h.message_type = PROTOCORE_PTP_SYNC;
     h.transport_specific = 0x1;
     h.version = 2;
     h.domain = 3;
@@ -75,17 +75,17 @@ void test_header_roundtrip()
     h.log_interval = -3;
 
     uint8_t buf[64];
-    TEST_ASSERT_EQUAL_UINT(PC_PTP_HEADER_LEN, pc_ptp_build_header(buf, sizeof(buf), &h, 10));
+    TEST_ASSERT_EQUAL_UINT(PROTOCORE_PTP_HEADER_LEN, protocore_ptp_build_header(buf, sizeof(buf), &h, 10));
     // messageLength = header + body.
     TEST_ASSERT_EQUAL_HEX8(0x00, buf[2]);
     TEST_ASSERT_EQUAL_HEX8(44, buf[3]);
     // octet 0 = transportSpecific<<4 | messageType.
     TEST_ASSERT_EQUAL_HEX8(0x10, buf[0]);
 
-    pc_ptp_header g;
+    protocore_ptp_header g;
     memset(&g, 0, sizeof(g));
-    TEST_ASSERT_TRUE(pc_ptp_parse_header(buf, sizeof(buf), &g));
-    TEST_ASSERT_EQUAL_UINT8(PC_PTP_SYNC, g.message_type);
+    TEST_ASSERT_TRUE(protocore_ptp_parse_header(buf, sizeof(buf), &g));
+    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_PTP_SYNC, g.message_type);
     TEST_ASSERT_EQUAL_UINT8(0x1, g.transport_specific);
     TEST_ASSERT_EQUAL_UINT8(2, g.version);
     TEST_ASSERT_EQUAL_UINT16(44, g.message_length);
@@ -100,124 +100,124 @@ void test_header_roundtrip()
 
 void test_header_rejects()
 {
-    pc_ptp_header h;
+    protocore_ptp_header h;
     uint8_t buf[34];
-    TEST_ASSERT_EQUAL_UINT(0, pc_ptp_build_header(NULL, sizeof(buf), &h, 0));
-    TEST_ASSERT_EQUAL_UINT(0, pc_ptp_build_header(buf, 33, &h, 0)); // cap too small
-    TEST_ASSERT_FALSE(pc_ptp_parse_header(buf, 33, &h));            // short
-    TEST_ASSERT_FALSE(pc_ptp_parse_header(NULL, 34, &h));
+    TEST_ASSERT_EQUAL_UINT(0, protocore_ptp_build_header(NULL, sizeof(buf), &h, 0));
+    TEST_ASSERT_EQUAL_UINT(0, protocore_ptp_build_header(buf, 33, &h, 0)); // cap too small
+    TEST_ASSERT_FALSE(protocore_ptp_parse_header(buf, 33, &h));            // short
+    TEST_ASSERT_FALSE(protocore_ptp_parse_header(NULL, 34, &h));
 }
 
 // -- timestamp messages (Sync / Delay_Req / Follow_Up) --
 
 void test_sync_delay_req_follow_up()
 {
-    pc_ptp_header h;
+    protocore_ptp_header h;
     memset(&h, 0, sizeof(h));
     memcpy(h.clock_identity, CID, 8);
     h.port_number = 1;
     h.sequence_id = 42;
     // version left 0 -> build must default it to 2.
-    pc_ptp_timestamp ts = {1000u, 500u}, got;
+    protocore_ptp_timestamp ts = {1000u, 500u}, got;
     uint8_t buf[64];
 
-    size_t n = pc_ptp_build_sync(buf, sizeof(buf), &h, &ts);
-    TEST_ASSERT_EQUAL_UINT(PC_PTP_HEADER_LEN + PC_PTP_TS_LEN, n);
-    pc_ptp_header g;
-    TEST_ASSERT_TRUE(pc_ptp_parse_timestamp_msg(buf, n, &g, &got));
-    TEST_ASSERT_EQUAL_UINT8(PC_PTP_SYNC, g.message_type);
+    size_t n = protocore_ptp_build_sync(buf, sizeof(buf), &h, &ts);
+    TEST_ASSERT_EQUAL_UINT(PROTOCORE_PTP_HEADER_LEN + PROTOCORE_PTP_TS_LEN, n);
+    protocore_ptp_header g;
+    TEST_ASSERT_TRUE(protocore_ptp_parse_timestamp_msg(buf, n, &g, &got));
+    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_PTP_SYNC, g.message_type);
     TEST_ASSERT_EQUAL_UINT8(2, g.version); // defaulted
     TEST_ASSERT_EQUAL_HEX8(0x00, buf[32]); // control Sync = 0
     TEST_ASSERT_EQUAL_UINT64(1000u, got.seconds);
 
-    n = pc_ptp_build_delay_req(buf, sizeof(buf), &h, &ts);
-    TEST_ASSERT_TRUE(pc_ptp_parse_timestamp_msg(buf, n, &g, &got));
-    TEST_ASSERT_EQUAL_UINT8(PC_PTP_DELAY_REQ, g.message_type);
+    n = protocore_ptp_build_delay_req(buf, sizeof(buf), &h, &ts);
+    TEST_ASSERT_TRUE(protocore_ptp_parse_timestamp_msg(buf, n, &g, &got));
+    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_PTP_DELAY_REQ, g.message_type);
     TEST_ASSERT_EQUAL_HEX8(0x01, buf[32]); // control Delay_Req = 1
 
-    n = pc_ptp_build_follow_up(buf, sizeof(buf), &h, &ts);
-    TEST_ASSERT_TRUE(pc_ptp_parse_timestamp_msg(buf, n, &g, &got));
-    TEST_ASSERT_EQUAL_UINT8(PC_PTP_FOLLOW_UP, g.message_type);
+    n = protocore_ptp_build_follow_up(buf, sizeof(buf), &h, &ts);
+    TEST_ASSERT_TRUE(protocore_ptp_parse_timestamp_msg(buf, n, &g, &got));
+    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_PTP_FOLLOW_UP, g.message_type);
     TEST_ASSERT_EQUAL_HEX8(0x02, buf[32]); // control Follow_Up = 2
 
     // version already 2 -> build leaves it (covers the non-default branch).
     h.version = 2;
-    n = pc_ptp_build_sync(buf, sizeof(buf), &h, &ts);
-    TEST_ASSERT_TRUE(pc_ptp_parse_timestamp_msg(buf, n, &g, &got));
+    n = protocore_ptp_build_sync(buf, sizeof(buf), &h, &ts);
+    TEST_ASSERT_TRUE(protocore_ptp_parse_timestamp_msg(buf, n, &g, &got));
     TEST_ASSERT_EQUAL_UINT8(2, g.version);
 }
 
 void test_timestamp_msg_rejects()
 {
-    pc_ptp_header h;
+    protocore_ptp_header h;
     memset(&h, 0, sizeof(h));
-    pc_ptp_timestamp ts = {1u, 2u}, got;
+    protocore_ptp_timestamp ts = {1u, 2u}, got;
     uint8_t buf[64];
     // bad args to build
-    TEST_ASSERT_EQUAL_UINT(0, pc_ptp_build_sync(NULL, sizeof(buf), &h, &ts));
-    TEST_ASSERT_EQUAL_UINT(0, pc_ptp_build_sync(buf, 10, &h, &ts)); // cap too small
+    TEST_ASSERT_EQUAL_UINT(0, protocore_ptp_build_sync(NULL, sizeof(buf), &h, &ts));
+    TEST_ASSERT_EQUAL_UINT(0, protocore_ptp_build_sync(buf, 10, &h, &ts)); // cap too small
     // A Delay_Resp is not a timestamp message -> parse_timestamp_msg rejects it.
-    size_t n = pc_ptp_build_delay_resp(buf, sizeof(buf), &h, &ts, CID, 1);
-    TEST_ASSERT_FALSE(pc_ptp_parse_timestamp_msg(buf, n, &h, &got));
+    size_t n = protocore_ptp_build_delay_resp(buf, sizeof(buf), &h, &ts, CID, 1);
+    TEST_ASSERT_FALSE(protocore_ptp_parse_timestamp_msg(buf, n, &h, &got));
     // short frame + null out
-    n = pc_ptp_build_sync(buf, sizeof(buf), &h, &ts);
-    TEST_ASSERT_FALSE(pc_ptp_parse_timestamp_msg(buf, PC_PTP_HEADER_LEN + 5, &h, &got));
-    TEST_ASSERT_FALSE(pc_ptp_parse_timestamp_msg(buf, n, &h, NULL));
+    n = protocore_ptp_build_sync(buf, sizeof(buf), &h, &ts);
+    TEST_ASSERT_FALSE(protocore_ptp_parse_timestamp_msg(buf, PROTOCORE_PTP_HEADER_LEN + 5, &h, &got));
+    TEST_ASSERT_FALSE(protocore_ptp_parse_timestamp_msg(buf, n, &h, NULL));
 }
 
 // -- Delay_Resp --
 
 void test_delay_resp()
 {
-    pc_ptp_header h;
+    protocore_ptp_header h;
     memset(&h, 0, sizeof(h));
     memcpy(h.clock_identity, CID, 8);
     h.port_number = 1;
-    pc_ptp_timestamp t4 = {2000u, 900u};
+    protocore_ptp_timestamp t4 = {2000u, 900u};
     const uint8_t reqid[8] = {0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0x11, 0x22, 0x33};
     uint8_t buf[64];
-    size_t n = pc_ptp_build_delay_resp(buf, sizeof(buf), &h, &t4, reqid, 7);
-    TEST_ASSERT_EQUAL_UINT(PC_PTP_HEADER_LEN + PC_PTP_TS_LEN + 10, n);
+    size_t n = protocore_ptp_build_delay_resp(buf, sizeof(buf), &h, &t4, reqid, 7);
+    TEST_ASSERT_EQUAL_UINT(PROTOCORE_PTP_HEADER_LEN + PROTOCORE_PTP_TS_LEN + 10, n);
     TEST_ASSERT_EQUAL_HEX8(0x03, buf[32]); // control Delay_Resp = 3
 
-    pc_ptp_header g;
-    pc_ptp_delay_resp r;
-    TEST_ASSERT_TRUE(pc_ptp_parse_delay_resp(buf, n, &g, &r));
-    TEST_ASSERT_EQUAL_UINT8(PC_PTP_DELAY_RESP, g.message_type);
+    protocore_ptp_header g;
+    protocore_ptp_delay_resp r;
+    TEST_ASSERT_TRUE(protocore_ptp_parse_delay_resp(buf, n, &g, &r));
+    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_PTP_DELAY_RESP, g.message_type);
     TEST_ASSERT_EQUAL_UINT64(2000u, r.receive.seconds);
     TEST_ASSERT_EQUAL_UINT32(900u, r.receive.nanoseconds);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(reqid, r.req_clock_id, 8);
     TEST_ASSERT_EQUAL_UINT16(7, r.req_port);
 
     // rejects: bad args, wrong type, short, null
-    TEST_ASSERT_EQUAL_UINT(0, pc_ptp_build_delay_resp(buf, 20, &h, &t4, reqid, 7));
-    TEST_ASSERT_EQUAL_UINT(0, pc_ptp_build_delay_resp(buf, sizeof(buf), &h, &t4, NULL, 7));
+    TEST_ASSERT_EQUAL_UINT(0, protocore_ptp_build_delay_resp(buf, 20, &h, &t4, reqid, 7));
+    TEST_ASSERT_EQUAL_UINT(0, protocore_ptp_build_delay_resp(buf, sizeof(buf), &h, &t4, NULL, 7));
     uint8_t sync[44];
-    size_t sn = pc_ptp_build_sync(sync, sizeof(sync), &h, &t4);
-    TEST_ASSERT_FALSE(pc_ptp_parse_delay_resp(sync, sn, &g, &r));                    // wrong type
-    TEST_ASSERT_FALSE(pc_ptp_parse_delay_resp(buf, PC_PTP_HEADER_LEN + 12, &g, &r)); // short
-    TEST_ASSERT_FALSE(pc_ptp_parse_delay_resp(buf, n, &g, NULL));
+    size_t sn = protocore_ptp_build_sync(sync, sizeof(sync), &h, &t4);
+    TEST_ASSERT_FALSE(protocore_ptp_parse_delay_resp(sync, sn, &g, &r));                    // wrong type
+    TEST_ASSERT_FALSE(protocore_ptp_parse_delay_resp(buf, PROTOCORE_PTP_HEADER_LEN + 12, &g, &r)); // short
+    TEST_ASSERT_FALSE(protocore_ptp_parse_delay_resp(buf, n, &g, NULL));
 }
 
 // -- Announce --
 
 void test_announce()
 {
-    pc_ptp_header h;
+    protocore_ptp_header h;
     memset(&h, 0, sizeof(h));
     memcpy(h.clock_identity, CID, 8);
     h.port_number = 1;
-    h.message_type = PC_PTP_ANNOUNCE;
+    h.message_type = PROTOCORE_PTP_ANNOUNCE;
     h.control = 0x05;
     h.version = 2;
     uint8_t buf[64];
-    pc_ptp_build_header(buf, sizeof(buf), &h, 30);
+    protocore_ptp_build_header(buf, sizeof(buf), &h, 30);
 
     const uint8_t gmid[8] = {1, 2, 3, 4, 5, 6, 7, 8};
-    uint8_t *p = buf + PC_PTP_HEADER_LEN;
-    pc_ptp_timestamp origin = {0x0000AABBCCDDULL, 111u};
-    pc_ptp_ts_write(p, &origin);
-    p += PC_PTP_TS_LEN;
+    uint8_t *p = buf + PROTOCORE_PTP_HEADER_LEN;
+    protocore_ptp_timestamp origin = {0x0000AABBCCDDULL, 111u};
+    protocore_ptp_ts_write(p, &origin);
+    p += PROTOCORE_PTP_TS_LEN;
     putbe16(p, (uint16_t)37);
     p += 2;      // currentUtcOffset
     *p++ = 0;    // reserved
@@ -233,10 +233,10 @@ void test_announce()
     p += 2;    // stepsRemoved
     *p = 0x20; // timeSource = GPS
 
-    pc_ptp_header g;
-    pc_ptp_announce a;
-    TEST_ASSERT_TRUE(pc_ptp_parse_announce(buf, PC_PTP_HEADER_LEN + 30, &g, &a));
-    TEST_ASSERT_EQUAL_UINT8(PC_PTP_ANNOUNCE, g.message_type);
+    protocore_ptp_header g;
+    protocore_ptp_announce a;
+    TEST_ASSERT_TRUE(protocore_ptp_parse_announce(buf, PROTOCORE_PTP_HEADER_LEN + 30, &g, &a));
+    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_PTP_ANNOUNCE, g.message_type);
     TEST_ASSERT_EQUAL_UINT64(0x0000AABBCCDDULL, a.origin.seconds);
     TEST_ASSERT_EQUAL_INT16(37, a.utc_offset);
     TEST_ASSERT_EQUAL_UINT8(128, a.gm_priority1);
@@ -250,20 +250,20 @@ void test_announce()
 
     // rejects: wrong type, short, null
     uint8_t sync[44];
-    size_t sn = pc_ptp_build_sync(sync, sizeof(sync), &h, &origin); // message_type overwritten to SYNC
-    TEST_ASSERT_FALSE(pc_ptp_parse_announce(sync, sn, &g, &a));
-    TEST_ASSERT_FALSE(pc_ptp_parse_announce(buf, PC_PTP_HEADER_LEN + 20, &g, &a));
-    TEST_ASSERT_FALSE(pc_ptp_parse_announce(buf, PC_PTP_HEADER_LEN + 30, &g, NULL));
+    size_t sn = protocore_ptp_build_sync(sync, sizeof(sync), &h, &origin); // message_type overwritten to SYNC
+    TEST_ASSERT_FALSE(protocore_ptp_parse_announce(sync, sn, &g, &a));
+    TEST_ASSERT_FALSE(protocore_ptp_parse_announce(buf, PROTOCORE_PTP_HEADER_LEN + 20, &g, &a));
+    TEST_ASSERT_FALSE(protocore_ptp_parse_announce(buf, PROTOCORE_PTP_HEADER_LEN + 30, &g, NULL));
 }
 
 void test_build_announce()
 {
-    pc_ptp_header h;
+    protocore_ptp_header h;
     memset(&h, 0, sizeof(h));
     memcpy(h.clock_identity, CID, 8);
     h.port_number = 1;
     h.sequence_id = 9;
-    pc_ptp_announce a;
+    protocore_ptp_announce a;
     memset(&a, 0, sizeof(a));
     a.origin.seconds = 0x0000AABBCCDDULL;
     a.origin.nanoseconds = 111u;
@@ -279,14 +279,14 @@ void test_build_announce()
     a.time_source = 0x20;
 
     uint8_t buf[64];
-    size_t n = pc_ptp_build_announce(buf, sizeof(buf), &h, &a);
-    TEST_ASSERT_EQUAL_UINT(PC_PTP_HEADER_LEN + 30, n);
+    size_t n = protocore_ptp_build_announce(buf, sizeof(buf), &h, &a);
+    TEST_ASSERT_EQUAL_UINT(PROTOCORE_PTP_HEADER_LEN + 30, n);
     TEST_ASSERT_EQUAL_HEX8(0x05, buf[32]); // control Announce = 5
 
-    pc_ptp_header g;
-    pc_ptp_announce b;
-    TEST_ASSERT_TRUE(pc_ptp_parse_announce(buf, n, &g, &b));
-    TEST_ASSERT_EQUAL_UINT8(PC_PTP_ANNOUNCE, g.message_type);
+    protocore_ptp_header g;
+    protocore_ptp_announce b;
+    TEST_ASSERT_TRUE(protocore_ptp_parse_announce(buf, n, &g, &b));
+    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_PTP_ANNOUNCE, g.message_type);
     TEST_ASSERT_EQUAL_UINT64(a.origin.seconds, b.origin.seconds);
     TEST_ASSERT_EQUAL_INT16(37, b.utc_offset);
     TEST_ASSERT_EQUAL_UINT8(6, b.gm_clock_class);
@@ -295,8 +295,8 @@ void test_build_announce()
     TEST_ASSERT_EQUAL_UINT16(5, b.steps_removed);
     TEST_ASSERT_EQUAL_UINT8(0x20, b.time_source);
 
-    TEST_ASSERT_EQUAL_UINT(0, pc_ptp_build_announce(buf, 20, &h, &a)); // cap too small
-    TEST_ASSERT_EQUAL_UINT(0, pc_ptp_build_announce(buf, sizeof(buf), &h, NULL));
+    TEST_ASSERT_EQUAL_UINT(0, protocore_ptp_build_announce(buf, 20, &h, &a)); // cap too small
+    TEST_ASSERT_EQUAL_UINT(0, protocore_ptp_build_announce(buf, sizeof(buf), &h, NULL));
 }
 
 // -- slave math --
@@ -305,24 +305,24 @@ void test_compute_symmetric()
 {
     // Symmetric path delay d = 50 ns, true offset o = 25 ns:
     //   t2 = t1 + d + o ; t4 = t3 + d - o
-    pc_ptp_sync s;
-    pc_ptp_compute(0, 75, 200, 225, &s);
+    protocore_ptp_sync s;
+    protocore_ptp_compute(0, 75, 200, 225, &s);
     TEST_ASSERT_EQUAL_INT64(25, s.offset_ns);
     TEST_ASSERT_EQUAL_INT64(50, s.delay_ns);
 
     // Slave ahead of master (negative offset).
-    pc_ptp_compute(1000, 1040, 2000, 2060, &s); // ms=40, sm=60 -> offset=-10, delay=50
+    protocore_ptp_compute(1000, 1040, 2000, 2060, &s); // ms=40, sm=60 -> offset=-10, delay=50
     TEST_ASSERT_EQUAL_INT64(-10, s.offset_ns);
     TEST_ASSERT_EQUAL_INT64(50, s.delay_ns);
 
-    pc_ptp_compute(0, 0, 0, 0, NULL); // null-safe
+    protocore_ptp_compute(0, 0, 0, 0, NULL); // null-safe
 }
 
 // -- P2P peer-delay mechanism (IEEE 1588-2008 §11.4) --
 
 void test_pdelay_mechanism()
 {
-    pc_ptp_header h;
+    protocore_ptp_header h;
     memset(&h, 0, sizeof(h));
     memcpy(h.clock_identity, CID, 8);
     h.port_number = 1;
@@ -330,52 +330,52 @@ void test_pdelay_mechanism()
     uint8_t buf[64];
 
     // Pdelay_Req: originTimestamp + a zeroed 10-octet reserved tail (54 octets total).
-    pc_ptp_timestamp t1 = {100u, 5u};
-    size_t n = pc_ptp_build_pdelay_req(buf, sizeof(buf), &h, &t1);
-    TEST_ASSERT_EQUAL_UINT(PC_PTP_HEADER_LEN + PC_PTP_TS_LEN + 10, n);
+    protocore_ptp_timestamp t1 = {100u, 5u};
+    size_t n = protocore_ptp_build_pdelay_req(buf, sizeof(buf), &h, &t1);
+    TEST_ASSERT_EQUAL_UINT(PROTOCORE_PTP_HEADER_LEN + PROTOCORE_PTP_TS_LEN + 10, n);
     TEST_ASSERT_EQUAL_HEX8(0x02, buf[0] & 0x0F); // messageType Pdelay_Req = 0x2
     TEST_ASSERT_EQUAL_HEX8(0x05, buf[32]);       // control = "all others" = 5
-    for (size_t i = PC_PTP_HEADER_LEN + PC_PTP_TS_LEN; i < n; i++)
+    for (size_t i = PROTOCORE_PTP_HEADER_LEN + PROTOCORE_PTP_TS_LEN; i < n; i++)
     {
         TEST_ASSERT_EQUAL_HEX8(0x00, buf[i]); // reserved tail is zero
     }
-    pc_ptp_header g;
-    pc_ptp_timestamp got;
-    TEST_ASSERT_TRUE(pc_ptp_parse_pdelay_req(buf, n, &g, &got));
-    TEST_ASSERT_EQUAL_UINT8(PC_PTP_PDELAY_REQ, g.message_type);
+    protocore_ptp_header g;
+    protocore_ptp_timestamp got;
+    TEST_ASSERT_TRUE(protocore_ptp_parse_pdelay_req(buf, n, &g, &got));
+    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_PTP_PDELAY_REQ, g.message_type);
     TEST_ASSERT_EQUAL_UINT64(100u, got.seconds);
     TEST_ASSERT_EQUAL_UINT32(5u, got.nanoseconds);
 
     // Pdelay_Resp carries t2 (requestReceiptTimestamp) + the requesting port identity.
-    pc_ptp_timestamp t2 = {100u, 205u};
-    n = pc_ptp_build_pdelay_resp(buf, sizeof(buf), &h, &t2, reqid, 7);
-    TEST_ASSERT_EQUAL_UINT(PC_PTP_HEADER_LEN + PC_PTP_TS_LEN + 10, n);
+    protocore_ptp_timestamp t2 = {100u, 205u};
+    n = protocore_ptp_build_pdelay_resp(buf, sizeof(buf), &h, &t2, reqid, 7);
+    TEST_ASSERT_EQUAL_UINT(PROTOCORE_PTP_HEADER_LEN + PROTOCORE_PTP_TS_LEN + 10, n);
     TEST_ASSERT_EQUAL_HEX8(0x03, buf[0] & 0x0F); // Pdelay_Resp = 0x3
-    pc_ptp_pdelay_resp r;
-    TEST_ASSERT_TRUE(pc_ptp_parse_pdelay_resp(buf, n, &g, &r));
-    TEST_ASSERT_EQUAL_UINT8(PC_PTP_PDELAY_RESP, g.message_type);
+    protocore_ptp_pdelay_resp r;
+    TEST_ASSERT_TRUE(protocore_ptp_parse_pdelay_resp(buf, n, &g, &r));
+    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_PTP_PDELAY_RESP, g.message_type);
     TEST_ASSERT_EQUAL_UINT64(100u, r.timestamp.seconds);
     TEST_ASSERT_EQUAL_UINT32(205u, r.timestamp.nanoseconds);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(reqid, r.req_clock_id, 8);
     TEST_ASSERT_EQUAL_UINT16(7, r.req_port);
 
     // Pdelay_Resp_Follow_Up carries t3 (responseOriginTimestamp) + the requesting port identity.
-    pc_ptp_timestamp t3 = {100u, 305u};
-    n = pc_ptp_build_pdelay_resp_follow_up(buf, sizeof(buf), &h, &t3, reqid, 7);
+    protocore_ptp_timestamp t3 = {100u, 305u};
+    n = protocore_ptp_build_pdelay_resp_follow_up(buf, sizeof(buf), &h, &t3, reqid, 7);
     TEST_ASSERT_EQUAL_HEX8(0x0A, buf[0] & 0x0F); // Pdelay_Resp_Follow_Up = 0xA
-    TEST_ASSERT_TRUE(pc_ptp_parse_pdelay_resp_follow_up(buf, n, &g, &r));
-    TEST_ASSERT_EQUAL_UINT8(PC_PTP_PDELAY_RESP_FOLLOW_UP, g.message_type);
+    TEST_ASSERT_TRUE(protocore_ptp_parse_pdelay_resp_follow_up(buf, n, &g, &r));
+    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_PTP_PDELAY_RESP_FOLLOW_UP, g.message_type);
     TEST_ASSERT_EQUAL_UINT32(305u, r.timestamp.nanoseconds);
 
     // Parsers reject the wrong message type and each other's frames.
-    TEST_ASSERT_FALSE(pc_ptp_parse_pdelay_resp(buf, n, &g, &r)); // buf holds a Follow_Up now
+    TEST_ASSERT_FALSE(protocore_ptp_parse_pdelay_resp(buf, n, &g, &r)); // buf holds a Follow_Up now
     uint8_t req[64];
-    size_t rn = pc_ptp_build_pdelay_req(req, sizeof(req), &h, &t1);
-    TEST_ASSERT_FALSE(pc_ptp_parse_pdelay_resp(req, rn, &g, &r));
-    TEST_ASSERT_FALSE(pc_ptp_parse_pdelay_req(buf, n, &g, &got)); // Follow_Up is not a Pdelay_Req
+    size_t rn = protocore_ptp_build_pdelay_req(req, sizeof(req), &h, &t1);
+    TEST_ASSERT_FALSE(protocore_ptp_parse_pdelay_resp(req, rn, &g, &r));
+    TEST_ASSERT_FALSE(protocore_ptp_parse_pdelay_req(buf, n, &g, &got)); // Follow_Up is not a Pdelay_Req
     // Build guards: tiny buffer, null identity.
-    TEST_ASSERT_EQUAL_UINT(0, pc_ptp_build_pdelay_req(buf, 20, &h, &t1));
-    TEST_ASSERT_EQUAL_UINT(0, pc_ptp_build_pdelay_resp(buf, sizeof(buf), &h, &t2, NULL, 7));
+    TEST_ASSERT_EQUAL_UINT(0, protocore_ptp_build_pdelay_req(buf, 20, &h, &t1));
+    TEST_ASSERT_EQUAL_UINT(0, protocore_ptp_build_pdelay_resp(buf, sizeof(buf), &h, &t2, NULL, 7));
 }
 
 void test_pdelay_link_delay()
@@ -383,11 +383,11 @@ void test_pdelay_link_delay()
     // t1 = req egress, t2 = req ingress at peer, t3 = resp egress, t4 = resp ingress.
     // Symmetric link delay d = 50 ns, peer turnaround (t3 - t2) = 100 ns:
     //   t1=100, t2=100+50=150, t3=150+100=250, t4=250+50=300 -> D = ((300-100)-(250-150))/2 = 50.
-    TEST_ASSERT_EQUAL_INT64(50, pc_ptp_compute_link_delay(100, 150, 250, 300));
+    TEST_ASSERT_EQUAL_INT64(50, protocore_ptp_compute_link_delay(100, 150, 250, 300));
     // A different link: d=200, turnaround=1000. t1=0,t2=200,t3=1200,t4=1400 -> ((1400)-(1000))/2=200.
-    TEST_ASSERT_EQUAL_INT64(200, pc_ptp_compute_link_delay(0, 200, 1200, 1400));
+    TEST_ASSERT_EQUAL_INT64(200, protocore_ptp_compute_link_delay(0, 200, 1200, 1400));
     // Zero delay, immediate turnaround.
-    TEST_ASSERT_EQUAL_INT64(0, pc_ptp_compute_link_delay(500, 500, 500, 500));
+    TEST_ASSERT_EQUAL_INT64(0, protocore_ptp_compute_link_delay(500, 500, 500, 500));
 }
 
 int main()

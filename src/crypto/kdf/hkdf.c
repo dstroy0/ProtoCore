@@ -3,74 +3,74 @@
 
 /**
  * @file hkdf.c
- * @brief HKDF-SHA256 and TLS 1.3 HKDF-Expand-Label (see pc_hkdf.h).
+ * @brief HKDF-SHA256 and TLS 1.3 HKDF-Expand-Label (see protocore_hkdf.h).
  */
 
 #include "crypto/kdf/hkdf.h"
 #include "mmgr/protomem.h"
 
-#if (PC_ENABLE_HTTP3 || PC_ENABLE_DTLS || PC_TLS_SOFTWARE)
+#if (PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_TLS_SOFTWARE)
 
 #include "crypto/mac/hmac_sha256.h"
 
 // The caller's working bytes, split: the HMAC's own, the T(i) block, then the HkdfLabel.
 #define HKDF_OFF_HMAC 0u
-#define HKDF_OFF_T (HKDF_OFF_HMAC + PC_HMAC_SHA256_BORROW)
-#define HKDF_OFF_INFO (HKDF_OFF_T + PC_HKDF_HASH_LEN)
+#define HKDF_OFF_T (HKDF_OFF_HMAC + PROTOCORE_HMAC_SHA256_BORROW)
+#define HKDF_OFF_INFO (HKDF_OFF_T + PROTOCORE_HKDF_HASH_LEN)
 // uint16 length, the label's own length byte and its 255 bytes, then the context's.
 #define HKDF_INFO_CAP (2 + 1 + 255 + 1 + 255)
-static_assert(HKDF_OFF_INFO + HKDF_INFO_CAP <= PC_HKDF_BORROW,
-              "PC_HKDF_BORROW is short of the split - raise it in protocore_config.h, which every "
+static_assert(HKDF_OFF_INFO + HKDF_INFO_CAP <= PROTOCORE_HKDF_BORROW,
+              "PROTOCORE_HKDF_BORROW is short of the split - raise it in protocore_config.h, which every "
               "consumer sizes its own borrow from");
 
-void pc_hkdf_extract(uint8_t *work, const uint8_t *salt, size_t salt_len, const uint8_t *ikm, size_t ikm_len,
-                     uint8_t prk[PC_HKDF_HASH_LEN])
+void protocore_hkdf_extract(uint8_t *work, const uint8_t *salt, size_t salt_len, const uint8_t *ikm, size_t ikm_len,
+                     uint8_t prk[PROTOCORE_HKDF_HASH_LEN])
 {
-    // RFC 5869 sec 2.2: PRK = HMAC-Hash(salt, IKM). pc_hmac_sha256 pre-hashes keys > 64 bytes and
+    // RFC 5869 sec 2.2: PRK = HMAC-Hash(salt, IKM). protocore_hmac_sha256 pre-hashes keys > 64 bytes and
     // zero-pads shorter ones, which is exactly HMAC's own key handling, so the salt goes in as-is.
-    pc_hmac_sha256(work + HKDF_OFF_HMAC, salt, salt_len, ikm, ikm_len, prk);
+    protocore_hmac_sha256(work + HKDF_OFF_HMAC, salt, salt_len, ikm, ikm_len, prk);
 }
 
 // RFC 5869 sec 2.3 HKDF-Expand for the QUIC case: the info block is small and fixed and the
 // requested length never exceeds one hash block, but the general N-block loop is written out so a
 // future >32-byte caller stays correct. T(i) = HMAC(PRK, T(i-1) || info || i), i counts from 1.
-void pc_hkdf_expand(uint8_t *work, const uint8_t prk[PC_HKDF_HASH_LEN], const uint8_t *info, size_t info_len,
+void protocore_hkdf_expand(uint8_t *work, const uint8_t prk[PROTOCORE_HKDF_HASH_LEN], const uint8_t *info, size_t info_len,
                     uint8_t *out, size_t out_len)
 {
     // RFC 5869 sec 2.3 bounds L at 255*HashLen because the block counter is a single octet. Past
     // that the counter wraps and T(256) repeats T(1), so the output would silently reuse earlier
     // key material. There is no defined answer, so give none.
-    if (out_len > (size_t)255 * PC_HKDF_HASH_LEN)
+    if (out_len > (size_t)255 * PROTOCORE_HKDF_HASH_LEN)
     {
         mem.set(out, 0, out_len);
         return;
     }
     uint8_t *t = work + HKDF_OFF_T;
-    size_t t_len = 0; // 0 for T(0) (empty), PC_HKDF_HASH_LEN afterwards
+    size_t t_len = 0; // 0 for T(0) (empty), PROTOCORE_HKDF_HASH_LEN afterwards
     size_t done = 0;
     uint8_t counter = 0;
     while (done < out_len)
     {
         counter++;
-        pc_hmac_sha256_ctx ctx;
-        pc_hmac_sha256_init(&ctx, work + HKDF_OFF_HMAC, prk, PC_HKDF_HASH_LEN);
-        pc_hmac_sha256_update(&ctx, t, t_len);
-        pc_hmac_sha256_update(&ctx, info, info_len);
-        pc_hmac_sha256_update(&ctx, &counter, 1);
-        pc_hmac_sha256_final(&ctx, t);
-        t_len = PC_HKDF_HASH_LEN;
+        protocore_hmac_sha256_ctx ctx;
+        protocore_hmac_sha256_init(&ctx, work + HKDF_OFF_HMAC, prk, PROTOCORE_HKDF_HASH_LEN);
+        protocore_hmac_sha256_update(&ctx, t, t_len);
+        protocore_hmac_sha256_update(&ctx, info, info_len);
+        protocore_hmac_sha256_update(&ctx, &counter, 1);
+        protocore_hmac_sha256_final(&ctx, t);
+        t_len = PROTOCORE_HKDF_HASH_LEN;
 
         size_t take = out_len - done;
-        if (take > PC_HKDF_HASH_LEN)
+        if (take > PROTOCORE_HKDF_HASH_LEN)
         {
-            take = PC_HKDF_HASH_LEN;
+            take = PROTOCORE_HKDF_HASH_LEN;
         }
         mem.cpy(out + done, t, take);
         done += take;
     }
 }
 
-void pc_hkdf_expand_label_ctx(uint8_t *work, const uint8_t secret[PC_HKDF_HASH_LEN], const char *label,
+void protocore_hkdf_expand_label_ctx(uint8_t *work, const uint8_t secret[PROTOCORE_HKDF_HASH_LEN], const char *label,
                               const uint8_t *context, size_t context_len, uint8_t *out, size_t out_len,
                               const char *label_prefix)
 {
@@ -101,13 +101,13 @@ void pc_hkdf_expand_label_ctx(uint8_t *work, const uint8_t secret[PC_HKDF_HASH_L
         p += context_len;
     }
 
-    pc_hkdf_expand(work, secret, info, p, out, out_len);
+    protocore_hkdf_expand(work, secret, info, p, out, out_len);
 }
 
-void pc_hkdf_expand_label(uint8_t *work, const uint8_t secret[PC_HKDF_HASH_LEN], const char *label, uint8_t *out,
+void protocore_hkdf_expand_label(uint8_t *work, const uint8_t secret[PROTOCORE_HKDF_HASH_LEN], const char *label, uint8_t *out,
                           size_t out_len, const char *label_prefix)
 {
-    pc_hkdf_expand_label_ctx(work, secret, label, NULL, 0, out, out_len, label_prefix);
+    protocore_hkdf_expand_label_ctx(work, secret, label, NULL, 0, out, out_len, label_prefix);
 }
 
-#endif // PC_ENABLE_HTTP3 || PC_ENABLE_DTLS || PC_TLS_SOFTWARE
+#endif // PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_TLS_SOFTWARE

@@ -1,58 +1,16 @@
 # Documentation
 
-A multi-protocol network server for ESP32 with a fully deterministic memory footprint, RFC 7230 compliant request parsing, and an OSI-layered architecture. It serves HTTP/1.1 and HTTP/2 (with HTTP/3 over QUIC, host-tested), WebSocket, and Server-Sent Events, with optional HTTPS/TLS, SSH, Telnet, SNMP, CoAP, Modbus TCP, MQTT, and OPC UA.
-
-## Installation
-
-**PlatformIO:**
-
-```ini
-lib_deps = https://github.com/dstroy0/ProtoCore.git
-```
-
-**Arduino IDE:** Download the repository as a ZIP and use _Sketch → Include Library → Add .ZIP Library_.
-
-## Quick Start
-
-```cpp
-#include <WiFi.h>
-#include "protocore.h"
-#include "network_drivers/physical/physical.h"
-
-PC server;
-
-void handle_status(uint8_t slot_id, HttpReq *req)
-{
-    server.send(slot_id, 200, "application/json", "{\"ok\":true}");
-}
-
-void setup()
-{
-    Physical.wifi->init("SSID", "PASSWORD");
-    while (!Physical.wifi->ready()) delay(250);
-
-    server.on("/status", HTTP_GET, handle_status);
-    server.set_cors("*");
-    server.begin(80);
-}
-
-void loop()
-{
-    server.handle();
-}
-```
-
-See `examples/Foundation/Configuration/Configuration.ino` for a full reference of every configurable flag and constant.
+A vendor agnostic, multi-protocol network server with a fully deterministic memory footprint, RFC 7230 compliant request parsing, and an OSI-layered architecture. It serves HTTP/1.1 and HTTP/2 (with HTTP/3 over QUIC, host-tested), WebSocket, and Server-Sent Events, with optional HTTPS/TLS, SSH, Telnet, SNMP, CoAP, Modbus TCP, MQTT, and OPC UA.
 
 ## Features
 
-A compile-time menu grouped by the OSI layer each feature lives at, alphabetized within each layer: each cell is an optional `PC_ENABLE_*` subsystem (core HTTP/1.1, routing, middleware, JSON, templating, and chunked responses are always on). **Hover an entry for its summary; click through to [FEATURES.md](FEATURES.md) for the full description.** The tables are generated from [FEATURES.md](FEATURES.md) by `tools/ci_tooling/generate/gen_feature_tables.py`, so they never drift.
+A compile-time menu grouped by the OSI layer each feature lives at, alphabetized within each layer: each cell is an optional `PROTOCORE_ENABLE_*` subsystem (core HTTP/1.1, routing, middleware, JSON, templating, and chunked responses are always on). **Hover an entry for its summary; click through to [FEATURES.md](FEATURES.md) for the full description.** The tables are generated from [FEATURES.md](FEATURES.md) by `tools/ci_tooling/generate/gen_feature_tables.py`, so they never drift.
 
 <!-- BEGIN GENERATED FEATURE TABLES (tools/ci_tooling/generate/gen_feature_tables.py) -->
 
 <!-- prettier-ignore-start -->
 
-**256 features**, every one a compile-time `PC_ENABLE_*` flag that is off unless you ask for it. Core HTTP/1.1 parsing, routing, middleware, JSON, templating and chunked responses are always on and are not flags.
+**256 features**, every one a compile-time `PROTOCORE_ENABLE_*` flag that is off unless you ask for it. Core HTTP/1.1 parsing, routing, middleware, JSON, templating and chunked responses are always on and are not flags.
 
 <a href="https://dstroy0.github.io/ProtoCore/features.html" title="Browse every feature">
   <img alt="Feature map: the OSI stack and the feature groups on each layer" src="diagrams/features_map.svg" width="100%">
@@ -757,18 +715,18 @@ src/
 │   ├── pcap.h
 │   ├── speed_opt.h
 │   ├── time_compat.h
-│   ├── types.h
+│   ├── protocore_types.h
 │   └── utf8.h
 ├── web_assets/
 │   ├── favicons/  (288 generated files)
 │   ├── input/
-│   │   ├── PC_DASHBOARD_PAGE.html
-│   │   ├── PC_METRICS_PROM.txt
-│   │   ├── PC_PROV_FORM.html
-│   │   ├── PC_PROV_SAVED_HTML.html
-│   │   ├── PC_SERVICE_WORKER.js
-│   │   ├── PC_STATS_JSON.json
-│   │   └── PC_TERMINAL_PAGE.html
+│   │   ├── PROTOCORE_DASHBOARD_PAGE.html
+│   │   ├── PROTOCORE_METRICS_PROM.txt
+│   │   ├── PROTOCORE_PROV_FORM.html
+│   │   ├── PROTOCORE_PROV_SAVED_HTML.html
+│   │   ├── PROTOCORE_SERVICE_WORKER.js
+│   │   ├── PROTOCORE_STATS_JSON.json
+│   │   └── PROTOCORE_TERMINAL_PAGE.html
 │   ├── themes/  (112 generated files)
 │   ├── wizard/
 │   │   ├── __init__.py
@@ -1007,7 +965,7 @@ Every pool above is a fixed BSS array sized from the compile-time constants, so 
 >
 > Because PlatformIO (and standard Arduino IDE builds) compiles the library's source files (`.cpp`) independently from your sketch (`.ino` / `.cpp`), `#define` macros inside your sketch files **do not propagate** to the library's pre-compiled objects.
 >
-> Declaring configuration or feature macros like `#define PC_ENABLE_PROVISIONING 1` inside your `.ino` sketch file before the `#include` will result in configuration mismatches, linker errors (such as undefined symbols), or unstable behavior at runtime.
+> Declaring configuration or feature macros like `#define PROTOCORE_ENABLE_PROVISIONING 1` inside your `.ino` sketch file before the `#include` will result in configuration mismatches, linker errors (such as undefined symbols), or unstable behavior at runtime.
 >
 > To enable/disable features or override configuration constants, you **must** pass them as compiler build flags. For example, in PlatformIO, define them inside `platformio.ini` under `build_flags`:
 >
@@ -1017,8 +975,8 @@ Every pool above is a fixed BSS array sized from the compile-time constants, so 
 > board = esp32dev
 > framework = arduino
 > build_flags =
->     -DPC_ENABLE_PROVISIONING=1
->     -DPC_ENABLE_WEBSOCKET=0
+>     -DPROTOCORE_ENABLE_PROVISIONING=1
+>     -DPROTOCORE_ENABLE_WEBSOCKET=0
 >     -DMAX_CONNS=6
 > ```
 
@@ -1026,7 +984,7 @@ Any feature flag set to `0` strips the corresponding code and its includes from 
 
 ### Feature Flags
 
-The complete set of `PC_ENABLE_*` flags and their defaults, scraped from
+The complete set of `PROTOCORE_ENABLE_*` flags and their defaults, scraped from
 `src/protocore_config.h` by `tools/ci_tooling/generate/gen_readme_sections.py` (see
 [FEATURES.md](FEATURES.md) for the full description of each):
 
@@ -1039,254 +997,254 @@ The complete set of `PC_ENABLE_*` flags and their defaults, scraped from
 
 | Flag | Default | Description |
 | :--- | :-----: | :---------- |
-| `PC_ENABLE_ACCEPT_THROTTLE` | `0` | Opt-in global accept-rate throttle (connection-flood defense). |
-| `PC_ENABLE_AD9238` | `0` | Enable the AD9238 SPI configuration-port codec (default off). |
-| `PC_ENABLE_ADS` | `0` | Beckhoff ADS / AMS protocol codec (`services/ads`). |
-| `PC_ENABLE_ADS1115` | `0` | TI ADS1115 16-bit ADC (I2C) - a precise external analog input. |
-| `PC_ENABLE_AMQP` | `0` | AMQP 0-9-1 frame codec (`services/amqp`). |
-| `PC_ENABLE_ATC` | `0` | Opt-in ATC (Advanced Traffic Controller) field-I/O interop snapshot. |
-| `PC_ENABLE_AUDIT_LOG` | `0` | Tamper-evident audit log. |
-| `PC_ENABLE_AUTH` | `0` | HTTP Basic Authentication per-route. |
-| `PC_ENABLE_AUTH_LOCKOUT` | `0` | Opt-in per-IP brute-force lockout for HTTP auth (requires PC_ENABLE_AUTH). |
-| `PC_ENABLE_BACNET` | `0` | BACnet/IP BVLC + NPDU codec (`services/bacnet`). |
-| `PC_ENABLE_BLE_GATT` | `0` | Opt-in Bluetooth ATT protocol codec + GATT characteristic bridge. |
-| `PC_ENABLE_BUS_CAPTURE` | `0` | Wired field-bus listen-only capture. |
-| `PC_ENABLE_C37118` | `0` | IEEE C37.118.2 synchrophasor frame codec (`services/c37118`). |
-| `PC_ENABLE_CANOPEN` | `0` | CANopen (CiA 301) message codec (`services/canopen`). |
-| `PC_ENABLE_CBOR` | `0` | Zero-heap CBOR (RFC 8949) encoder for compact binary payloads. |
-| `PC_ENABLE_CC1101` | `0` | Opt-in CC1101 sub-GHz radio driver. |
-| `PC_ENABLE_CCLINK` | `0` | Opt-in CC-Link (CLPA) cyclic fieldbus frame codec. |
-| `PC_ENABLE_CIA402` | `0` | CiA 402 / IEC 61800-7-201 drive + motion profile (`services/cia402`). |
-| `PC_ENABLE_CIP` | `0` | CIP (Common Industrial Protocol) message codec (`services/cip`). |
-| `PC_ENABLE_CLOUDEVENTS` | `0` | CloudEvents v1.0 (CNCF) event envelope (structured JSON + binary headers). |
-| `PC_ENABLE_COAP` | `0` | CoAP server (RFC 7252) over UDP/5683. |
-| `PC_ENABLE_COAP_BLOCK` | `0` | CoAP block-wise transfer - RFC 7959 (requires PC_ENABLE_COAP). |
-| `PC_ENABLE_COAP_OBSERVE` | `0` | CoAP resource observation - RFC 7641 (requires PC_ENABLE_COAP). |
-| `PC_ENABLE_CONFIG_IO` | `0` | Opt-in schema-driven config export / restore. |
-| `PC_ENABLE_CONFIG_STORE` | `0` | Typed NVS configuration store (WiFi creds, IP config, ... |
-| `PC_ENABLE_CONTROL` | `0` | Closed-loop control law (`services/control`). |
-| `PC_ENABLE_COTP` | `0` | TPKT (RFC 1006) + COTP (X.224 class 0) frame codec (`services/cotp`). |
-| `PC_ENABLE_CSRF` | `0` | Opt-in CSRF protection for state-changing HTTP requests. |
-| `PC_ENABLE_DASHBOARD` | `0` | Real-time SVG dashboard (PC_ENABLE_DASHBOARD; requires PC_ENABLE_SSE). |
-| `PC_ENABLE_DBM` | `0` | Opt-in dbm: a log-structured hash key-value store on the WAL (PC_ENABLE_DBM, requires WAL). |
-| `PC_ENABLE_DDS` | `0` | Opt-in DDS / RTPS wire-protocol codec. |
-| `PC_ENABLE_DEVICENET` | `0` | DeviceNet link-adaptation codec (`services/devicenet`). |
-| `PC_ENABLE_DEVICE_ID` | `0` | Stable device UUID derived from the chip MAC (RFC 4122 v5). |
-| `PC_ENABLE_DF1` | `0` | Allen-Bradley DF1 full-duplex frame codec (`services/df1`). |
-| `PC_ENABLE_DIAG` | `0` | Expose a diagnostic JSON endpoint via diag(). |
-| `PC_ENABLE_DIFFSERV` | `0` | Enable DiffServ QoS marking (RFC 2474) on outbound traffic. |
-| `PC_ENABLE_DIRECTNET` | `0` | Opt-in AutomationDirect / Koyo DirectNET serial frame codec. |
-| `PC_ENABLE_DMA` | `0` | Enable the DMA peripheral ingest / egress primitive (default off). |
-| `PC_ENABLE_DMX` | `0` | DMX512 + RDM (ANSI E1.20) lighting codec (`services/dmx`). |
-| `PC_ENABLE_DNC` | `0` | Opt-in CNC RS-232 DNC drip-feed codec. |
-| `PC_ENABLE_DNP3` | `0` | DNP3 (IEEE 1815) data-link frame codec (`services/dnp3`). |
-| `PC_ENABLE_DNS_RESOLVER` | `0` | Opt-in DNS resolver with answer verification. |
-| `PC_ENABLE_DNS_SERVER` | `0` | Authoritative DNS server (network_drivers/network/dns/dns_server) on UDP/53. |
-| `PC_ENABLE_DOCSTORE` | `0` | Opt-in local JSON document store on the WAL (PC_ENABLE_DOCSTORE, requires DBM + WAL). |
-| `PC_ENABLE_DSHOT` | `0` | Opt-in DShot ESC throttle protocol codec. |
-| `PC_ENABLE_DTLS` | `0` | DTLS 1.3 datagram security (RFC 9147) - the record layer. |
-| `PC_ENABLE_EDGE_CACHE` | `0` | Opt-in CDN edge-cache tier (PC_ENABLE_EDGE_CACHE, requires HTTP_CACHE). |
-| `PC_ENABLE_EDGE_MESH` | `0` | Opt-in mesh (sibling-cache) distribution for the edge cache. |
-| `PC_ENABLE_EDGE_ORIGIN_TLS` | `0` |  |
-| `PC_ENABLE_ENIP` | `0` | EtherNet/IP encapsulation codec (`services/enip`). |
-| `PC_ENABLE_ENOCEAN` | `0` | Enable the EnOcean ESP3 serial codec (default off). |
-| `PC_ENABLE_ESPNOW` | `0` | ESP-NOW peer messaging. |
-| `PC_ENABLE_ETAG` | `0` | Conditional GET (ETag + Last-Modified) for served files. |
-| `PC_ENABLE_ETHERNET` | `0` | Enable wired Ethernet bring-up (init_eth_physical / eth_ready). |
-| `PC_ENABLE_EUROMAP77` | `0` | EUROMAP 77 (OPC 40077) - OPC UA for injection moulding machines (IMM <-> MES). |
-| `PC_ENABLE_EXC_DECODER` | `0` | Opt-in ESP32 panic / exception decoder for a live diagnostics panel. |
-| `PC_ENABLE_FAILSAFE` | `0` | Opt-in software watchdog: deadlock detection + fail-safe safe-state. |
-| `PC_ENABLE_FANUC_J519` | `0` | FANUC Stream Motion (option J519) UDP codec (`services/fanuc_j519`). |
-| `PC_ENABLE_FDC2214` | `0` | Opt-in FDC2114/2214 capacitance-to-digital field sensor. |
-| `PC_ENABLE_FILE_SERVING` | `0` | Static file serving via Arduino FS (LittleFS, SPIFFS, SD). |
-| `PC_ENABLE_FINS` | `0` | Omron FINS frame codec (`services/fins`). |
-| `PC_ENABLE_FLOW_EXPORT` | `0` | Flow-record export codec (`services/flow_export`). |
-| `PC_ENABLE_FOCAS` | `0` | FANUC FOCAS Ethernet protocol codec (`services/focas`). |
-| `PC_ENABLE_FORWARD` | `0` | Enable the interface forwarding plane (default off). |
-| `PC_ENABLE_FORWARDED_TRUST` | `0` | Believe a `Forwarded` / `X-Forwarded-For` client address only from a trusted upstream. |
-| `PC_ENABLE_FTP` | `0` | Opt-in FTP client wire codec. |
-| `PC_ENABLE_FTP_SESSION` | `0` | Opt-in FTP client session driver (PC_ENABLE_FTP_SESSION, requires PC_ENABLE_FTP). |
-| `PC_ENABLE_GATEWAY` | `0` | Enable the radio / wireless gateway bridge (default off). |
-| `PC_ENABLE_GOOSE` | `0` | Opt-in IEC 61850 GOOSE publisher codec. |
-| `PC_ENABLE_GPIB` | `0` | GPIB-over-LAN (Prologix-style) controller command codec (`services/gpib`). |
-| `PC_ENABLE_GPIO_MAP` | `0` | Opt-in browser GPIO pin-mapper / diagnostics endpoint. |
-| `PC_ENABLE_GRAPHQL` | `0` | GraphQL query subset. |
-| `PC_ENABLE_GRPC_WEB` | `0` | gRPC-Web message framing (`services/grpcweb`). |
-| `PC_ENABLE_GUARDRAILS` | `0` | Opt-in runtime heap/stack guardrails. |
-| `PC_ENABLE_HAAS_MDC` | `0` | Haas Machine Data Collection (MDC) Q-command codec (`services/haas_mdc`). |
-| `PC_ENABLE_HAPPY_EYEBALLS` | `0` | Opt-in dual-stack Happy Eyeballs destination selection. |
-| `PC_ENABLE_HART` | `0` | Opt-in HART / HART-IP process-instrument protocol codec. |
-| `PC_ENABLE_HISLIP` | `0` | HiSLIP (High-Speed LAN Instrument Protocol) message codec (`services/hislip`). |
-| `PC_ENABLE_HMMD` | `0` | Waveshare HMMD 24 GHz mmWave micro-motion radar codec (`services/hmmd`). |
-| `PC_ENABLE_HOSTLINK` | `0` | Omron Host Link (C-mode) frame codec (`services/hostlink`). |
-| `PC_ENABLE_HOTSWAP` | `0` | Opt-in removable-storage hot-swap safeties. |
-| `PC_ENABLE_HTTP2` | `0` | HTTP/2 (RFC 9113) over the version-agnostic request/response core. |
-| `PC_ENABLE_HTTP3` | `0` | HTTP/3 (RFC 9114) over QUIC (RFC 9000) - implemented, host-tested end-to-end (HW verification pending). |
-| `PC_ENABLE_HTTP_CACHE` | `0` | Opt-in HTTP Cache-Control directive helpers. |
-| `PC_ENABLE_HTTP_CLIENT` | `0` | Outbound HTTP(S) client (raw lwIP, optional client-side mbedTLS). |
-| `PC_ENABLE_HTTP_CLIENT_TLS` | `0` | HTTPS client support inside the HTTP client (needs PC_ENABLE_TLS). |
-| `PC_ENABLE_HTTP_DELIVERY` | `0` | Opt-in HTTP delivery optimizations. |
-| `PC_ENABLE_HW_HEALTH` | `0` | Opt-in hardware-health diagnostics. |
-| `PC_ENABLE_ICCP` | `0` | Opt-in ICCP / TASE.2 (IEC 60870-6) inter-control-center telemetry codec. |
-| `PC_ENABLE_IEC60870` | `0` | IEC 60870-5-101 / -104 telecontrol (SCADA) codec (`services/iec60870`). |
-| `PC_ENABLE_IFACE_BRIDGE` | `0` | User-defined address:port -> hardware-bus bridge (services/net/iface_bridge). |
-| `PC_ENABLE_IKEV2` | `0` | IKEv2 (RFC 7296) message + payload codec (`services/ikev2`). |
-| `PC_ENABLE_INA219` | `0` | TI INA219 high-side current / power monitor (I2C). |
-| `PC_ENABLE_INTERBUS` | `0` | Opt-in INTERBUS summation-frame fieldbus codec. |
-| `PC_ENABLE_IOLINK` | `0` | IO-Link (SDCI, IEC 61131-9) data-link message codec (`services/iolink`). |
-| `PC_ENABLE_IPV6` | `0` | Enable IPv6 on the network interface (dual-stack). |
-| `PC_ENABLE_IP_ALLOWLIST` | `0` | Opt-in source-IP allowlist (accept-time firewall, IPv4 and IPv6). |
-| `PC_ENABLE_J1939` | `0` | SAE J1939 message codec (`services/j1939`). |
-| `PC_ENABLE_J2735` | `0` | Opt-in SAE J2735 V2X codec. |
-| `PC_ENABLE_JWT` | `0` | JWT bearer-token authentication (HS256). |
-| `PC_ENABLE_KEEPALIVE` | `0` | HTTP/1.1 persistent connections (keep-alive). |
-| `PC_ENABLE_LD2410` | `0` | HLK-LD2410 24 GHz mmWave presence / motion radar (UART). |
-| `PC_ENABLE_LDC1614` | `0` | Opt-in LDC1614 inductance-to-digital field sensor. |
-| `PC_ENABLE_LINK_MANAGER` | `0` | Opt-in multi-interface egress selection / failover policy. |
-| `PC_ENABLE_LOGBUF` | `0` | Opt-in fixed-RAM rotating log buffer with severity traps. |
-| `PC_ENABLE_LONWORKS` | `0` | Opt-in LonWorks / LON-IP (ISO/IEC 14908) network-variable codec. |
-| `PC_ENABLE_LORA` | `0` | Enable the LoRa (SX127x) radio codec + driver (default off). |
-| `PC_ENABLE_LSV2` | `0` | Heidenhain LSV/2 telegram codec (`services/lsv2`). |
-| `PC_ENABLE_LWM2M` | `0` | OMA LwM2M TLV codec (`services/lwm2m`). |
-| `PC_ENABLE_MBPLUS` | `0` | Opt-in Modbus Plus HDLC token-bus frame codec. |
-| `PC_ENABLE_MBUS` | `0` | Wired M-Bus (Meter-Bus, EN 13757) frame codec (`services/mbus`). |
-| `PC_ENABLE_MDNS` | `0` | mDNS / DNS-SD advertisement: `<name>.local` plus `_http._tcp` and any service added. |
-| `PC_ENABLE_MDNS_ADAPTIVE` | `0` | Opt-in adaptive mDNS beacon scheduling. |
-| `PC_ENABLE_MELSEC` | `0` | Mitsubishi MELSEC MC protocol (binary 3E) codec (`services/melsec`). |
-| `PC_ENABLE_METRICS` | `0` | Prometheus `/metrics` endpoint (text exposition format 0.0.4). |
-| `PC_ENABLE_MMS` | `0` | Opt-in IEC 61850 MMS PDU codec. |
-| `PC_ENABLE_MNT` | `0` | Mounted storage. |
-| `PC_ENABLE_MODBUS` | `0` | Modbus TCP slave/server (Modbus Application Protocol v1.1b3) on TCP/502. |
-| `PC_ENABLE_MODBUS_MASTER` | `0` | Opt-in Modbus master codec + register scanner. |
-| `PC_ENABLE_MODBUS_RTU` | `0` | Modbus RTU framing (serial / RS-485) over the same data model + PDU dispatch. |
-| `PC_ENABLE_MPR121` | `0` | NXP MPR121 12-channel capacitive-touch controller (I2C). |
-| `PC_ENABLE_MQTT` | `0` | MQTT 3.1.1 publish/subscribe client (raw lwIP, optional MQTTS over TLS). |
-| `PC_ENABLE_MQTT_SN` | `0` | MQTT-SN v1.2 wire codec (`services/iot/mqtt/mqtt_sn`). |
-| `PC_ENABLE_MQTT_TLS` | `0` | MQTTS: run the MQTT client over client-side TLS (needs PC_ENABLE_TLS). |
-| `PC_ENABLE_MSGPACK` | `0` | Zero-heap MessagePack encoder and decoder for compact binary payloads. |
-| `PC_ENABLE_MTCONNECT` | `0` | Opt-in MTConnect agent response codec. |
-| `PC_ENABLE_MTLS` | `0` | Mutual TLS - require and verify a client certificate (mTLS). |
-| `PC_ENABLE_MULTIPART` | `0` | multipart/form-data body parser. |
-| `PC_ENABLE_NATS` | `0` | NATS client protocol codec (`services/nats`). |
-| `PC_ENABLE_NEMA_TS2` | `0` | Opt-in NEMA TS 2 traffic-cabinet SDLC frame codec. |
-| `PC_ENABLE_NETADAPT` | `0` | Opt-in network adaptation decisions. |
-| `PC_ENABLE_NMEA0183` | `0` | NMEA 0183 sentence codec (`services/nmea0183`). |
-| `PC_ENABLE_NMEA2000` | `0` | NMEA 2000 codec (`services/nmea2000`). |
-| `PC_ENABLE_NRF24` | `0` | Enable the nRF24L01+ radio driver (default off). |
-| `PC_ENABLE_NTCIP` | `0` | Opt-in NTCIP transportation-device object identifiers. |
-| `PC_ENABLE_NTP` | `0` | SNTP wall-clock time sync via the ESP-IDF SNTP client. |
-| `PC_ENABLE_NTP_SERVER` | `0` | NTP/SNTP time server (RFC 5905 / RFC 4330 server mode) on UDP/123 (services/pc_ntp_server). |
-| `PC_ENABLE_NTRIP_CASTER` | `0` | GNSS RTK base station + NTRIP caster (services/timing_position/gnss). |
-| `PC_ENABLE_NTS` | `0` | Opt-in Network Time Security (NTS, RFC 8915) wire codec. |
-| `PC_ENABLE_OAUTH2` | `0` | OAuth2 token-endpoint client. |
-| `PC_ENABLE_OBSERVABILITY` | `0` | Transport-layer observability: connection event hook + counters. |
-| `PC_ENABLE_OCIT` | `0` | Opt-in OCIT-Outstations message codec. |
-| `PC_ENABLE_OIDC` | `0` | OpenID Connect ID-token verification, RS256. |
-| `PC_ENABLE_OPCUA` | `0` | OPC UA Binary server. |
-| `PC_ENABLE_OPCUA_CLIENT` | `0` | OPC UA Binary client. |
-| `PC_ENABLE_OPENADR` | `0` | Opt-in OpenADR 3.0 (Automated Demand Response) JSON codec. |
-| `PC_ENABLE_OTA` | `0` | Authenticated OTA firmware update (streaming POST to the ESP32 Update API). |
-| `PC_ENABLE_OTA_ROLLBACK` | `0` | Opt-in OTA rollback protection / soft-brick safeguard. |
-| `PC_ENABLE_PACKML` | `0` | PackML / OMAC packaging-machine state model (`services/packml`). |
-| `PC_ENABLE_PARTITION_MONITOR` | `0` | Opt-in flash partition-map monitor endpoint. |
-| `PC_ENABLE_PCA9685` | `0` | NXP PCA9685 16-channel 12-bit PWM / servo driver (I2C). |
-| `PC_ENABLE_PER_IP_THROTTLE` | `0` | Opt-in per-IP accept-rate throttle (connection-flood defense, keyed by source IPv4). |
-| `PC_ENABLE_PMBUS` | `0` | PMBus 1.3 power-management command set over SMBus. |
-| `PC_ENABLE_PN532` | `0` | Enable the PN532 NFC frame codec (default off). |
-| `PC_ENABLE_POWERLINK` | `0` | Opt-in Ethernet POWERLINK (EPSG) basic frame codec. |
-| `PC_ENABLE_POWER_MGMT` | `0` | Opt-in SoC power governor. |
-| `PC_ENABLE_PQC_KEX` | `0` | Post-quantum hybrid key exchange: ML-KEM-768 + X25519 (FIPS 203 / RFC 9370 combiner). |
-| `PC_ENABLE_PREEMPT_QUEUE` | `0` | Enable the preempting work queue primitive (default off). |
-| `PC_ENABLE_PROFIBUS` | `0` | Opt-in PROFIBUS-DP FDL telegram codec. |
-| `PC_ENABLE_PROFINET` | `0` | Opt-in PROFINET DCP (Discovery and Configuration Protocol) frame codec. |
-| `PC_ENABLE_PROMISC` | `0` | Wi-Fi promiscuous (monitor) capture. |
-| `PC_ENABLE_PROTOBUF` | `0` | Protocol Buffers wire codec (`services/protobuf`). |
-| `PC_ENABLE_PROVISIONING` | `0` | First-boot WiFi provisioning: softAP + captive-portal credentials form. |
-| `PC_ENABLE_PROXY_PROTOCOL` | `0` | HAProxy PROXY protocol codec (`services/proxy_protocol`). |
-| `PC_ENABLE_PSRAM_POOL` | `0` | Opt-in buffer placement policy (DRAM vs PSRAM) + SPI DMA ping-pong manager. |
-| `PC_ENABLE_PTP` | `0` | PTP / IEEE 1588-2008 (PTPv2) message codec + slave clock math (`services/ptp`). |
-| `PC_ENABLE_RADIO_POWER` | `0` | Opt-in radio power controls. |
-| `PC_ENABLE_RADIO_SNIFF` | `0` | Opt-in receive-only radio channel sniffer to pcap. |
-| `PC_ENABLE_RANGE` | `0` | HTTP Range requests / 206 Partial Content (requires PC_ENABLE_FILE_SERVING or PC_ENABLE_EDGE_CACHE). |
-| `PC_ENABLE_RAWL2` | `0` | Opt-in raw Layer-2 Ethernet frame codec. |
-| `PC_ENABLE_RCWL0516` | `0` | RCWL-0516 microwave Doppler presence sensor + the shared one-GPIO presence facade (`services/rcwl0516`). |
-| `PC_ENABLE_REDIS` | `0` | Redis RESP2/RESP3 wire codec (`services/iot/redis_resp`). |
-| `PC_ENABLE_RELAY` | `0` | Opt-in TCP relay / DNAT port forwarding. |
-| `PC_ENABLE_ROAMING` | `0` | Wi-Fi roaming decision layer (`services/roaming`). |
-| `PC_ENABLE_ROBOTICS` | `0` | OPC UA for Robotics information model. |
-| `PC_ENABLE_RTC` | `0` | I2C real-time-clock driver (DS1307 / DS3231) - a battery-backed time source. |
-| `PC_ENABLE_S7COMM` | `0` | Siemens S7comm PDU codec (`services/s7comm`). |
-| `PC_ENABLE_SAFETY_SCL` | `0` | IEC 61784-3 black-channel Safety Communication Layer primitives (`services/safety_scl`). |
-| `PC_ENABLE_SCPI` | `0` | SCPI / IEEE 488.2 instrument-control codec (`services/scpi`). |
-| `PC_ENABLE_SDI12` | `0` | SDI-12 sensor-bus codec (`services/sdi12`). |
-| `PC_ENABLE_SEN0192` | `0` | DFRobot SEN0192 10.525 GHz microwave Doppler motion sensor (single digital OUT line). |
-| `PC_ENABLE_SENML` | `0` | SenML (RFC 8428) measurement-pack builder (`services/senml`). |
-| `PC_ENABLE_SEP2` | `0` | Opt-in IEEE 2030.5 (Smart Energy Profile 2.0) resource codec. |
-| `PC_ENABLE_SERCOS` | `0` | Opt-in SERCOS III motion-bus telegram codec. |
-| `PC_ENABLE_SHT3X` | `0` | Sensirion SHT3x temperature / humidity sensor (I2C). |
-| `PC_ENABLE_SIGFOX` | `0` | Enable the Sigfox AT-command codec (default off). |
-| `PC_ENABLE_SIMATIC` | `0` | Siemens SIMATIC serial point-to-point: 3964R link + RK512 telegrams (`services/simatic`). |
-| `PC_ENABLE_SLEEP_SCHED` | `0` | Opt-in dynamic sleep-cycle scheduler. |
-| `PC_ENABLE_SMB` | `0` | Opt-in SMB2 client. |
-| `PC_ENABLE_SMBUS` | `0` | SMBus 3.1 transaction shapes over the shared I2C bus. |
-| `PC_ENABLE_SMTP` | `0` | Outbound SMTP client (RFC 5321) for device email alerts (services/net/smtp). |
-| `PC_ENABLE_SMTP_TLS` | `0` | Secure SMTP: run the mail client over client-side TLS (needs PC_ENABLE_TLS). |
-| `PC_ENABLE_SNMP` | `0` | SNMP agent (v1/v2c, + v3 USM when PC_ENABLE_SNMP_V3) over lwIP UDP. |
-| `PC_ENABLE_SNMP_TRAP` | `0` | Outbound SNMP notifications - traps and informs (requires PC_ENABLE_SNMP). |
-| `PC_ENABLE_SNMP_V3` | `0` | Add SNMPv3 USM (auth via HMAC-SHA, privacy via AES-128-CFB). |
-| `PC_ENABLE_SNP` | `0` | Opt-in GE Fanuc SNP (Series Ninety Protocol) serial frame codec. |
-| `PC_ENABLE_SOCKPOOL` | `0` | Opt-in dynamic socket recycling: an LRU connection-slot pool. |
-| `PC_ENABLE_SOUTHBOUND` | `0` | Opt-in southbound protocol-driver framework. |
-| `PC_ENABLE_SPARKPLUG` | `0` | Sparkplug B payload + topic codec (`services/sparkplug`). |
-| `PC_ENABLE_SPA_ROUTER` | `0` | Opt-in single-page-app micro-routing decision. |
-| `PC_ENABLE_SQLITE` | `0` | Opt-in SQLite3 on-disk file-format reader. |
-| `PC_ENABLE_SSE` | `0` | Server-Sent Events push support. |
-| `PC_ENABLE_SSH` | `0` | SSH server support (RFC 4253/4252/4254). |
-| `PC_ENABLE_SSH_CLIENT` | `0` | Outbound SSH client + reverse tunnel (RFC 4254 §7.1 tcpip-forward, the `ssh -R` seam). |
-| `PC_ENABLE_SSH_KEYBOARD_INTERACTIVE` | `0` | SSH keyboard-interactive authentication (RFC 4256), default off. |
-| `PC_ENABLE_SSH_SCP` | `0` | SCP server over SSH (the legacy RCP protocol via `exec "scp -t/-f"`). |
-| `PC_ENABLE_SSH_SFTP` | `0` | SFTP server subsystem over SSH (SSH_FXP_* v3, draft-ietf-secsh-filexfer-02). |
-| `PC_ENABLE_SSH_SNTRUP761` | `PC_ENABLE_PQC_KEX` | Streamlined NTRU Prime sntrup761x25519-sha512@openssh.com SSH KEX (default: tracks ::PC_ENABLE_PQC_KEX). |
-| `PC_ENABLE_SSH_ZLIB` | `0` | SSH server-to-client compression (`zlib@openssh.com` / `zlib`, RFC 4253 sec 6.2). |
-| `PC_ENABLE_STATS` | `0` | Runtime stats endpoint (uptime, request/error counts, pool usage, heap). |
-| `PC_ENABLE_STATSD` | `0` | Opt-in StatsD metrics client. |
-| `PC_ENABLE_STOMP` | `0` | STOMP 1.2 frame codec (`services/stomp`). |
-| `PC_ENABLE_SUNSPEC` | `0` | SunSpec Modbus device-information-model codec (`services/sunspec`). |
-| `PC_ENABLE_SYSLOG` | `0` | Syslog client (RFC 5424 over UDP). |
-| `PC_ENABLE_TELEMETRY` | `0` | Telemetry math helpers (moving-window stats, rate-of-change, totalizer). |
-| `PC_ENABLE_TELNET` | `0` | Telnet server support (RFC 854 / IAC option negotiation). |
-| `PC_ENABLE_THEMES` | `0` | Embed the theme stylesheet library as runtime-selectable blobs (default off). |
-| `PC_ENABLE_THREAD` | `0` | Enable the Thread spinel / HDLC-lite framing codec (default off). |
-| `PC_ENABLE_TIME_SOURCE` | `0` | Multi-source time fallback (NTP / RTC / GPS / ... |
-| `PC_ENABLE_TLS` | `0` | TLS (HTTPS/WSS) via mbedTLS with a static memory pool (ESP32-only). |
-| `PC_ENABLE_TLS_POLICY` | `0` | Opt-in TLS version negotiation + pinned cipher-suite policy. |
-| `PC_ENABLE_TLS_RESUMPTION` | `0` | TLS session resumption via RFC 5077 session tickets (requires PC_ENABLE_TLS). |
-| `PC_ENABLE_TLS_RPK` | `0` | TLS Raw Public Keys (RFC 7250) - present a bare public key instead of an X.509 certificate. |
-| `PC_ENABLE_TOTP` | `0` | Opt-in TOTP two-factor auth (RFC 6238). |
-| `PC_ENABLE_TRACE_CAPTURE` | `0` | Enable the pre/post-trigger window assembler (default off). |
-| `PC_ENABLE_UBX` | `0` | u-blox UBX binary GNSS protocol codec (`services/ubx`). |
-| `PC_ENABLE_UDP_TELEMETRY` | `0` | Opt-in fire-and-forget UDP telemetry cast. |
-| `PC_ENABLE_UMATI` | `0` | umati - OPC UA for Machine Tools information model. |
-| `PC_ENABLE_UPLOAD` | `0` | Streaming file upload: POST a body straight to a file on the filesystem. |
-| `PC_ENABLE_UTMC` | `0` | Opt-in UTMC (Urban Traffic Management and Control) common-database codec. |
-| `PC_ENABLE_VL53L0X` | `0` | Opt-in VL53L0X optical time-of-flight ranging sensor. |
-| `PC_ENABLE_VXI11` | `0` | VXI-11 (TCP/IP Instrument Protocol) codec (`services/vxi11`). |
-| `PC_ENABLE_WAL` | `0` | Opt-in write-ahead store for atomic buffer-to-flash storage. |
-| `PC_ENABLE_WAMP` | `0` | WAMP messaging codec (`services/wamp`). |
-| `PC_ENABLE_WAVE` | `0` | Opt-in IEEE 1609 WAVE (WSMP + 1609.2 envelope) codec. |
-| `PC_ENABLE_WEARLEVEL` | `0` | Opt-in flash wear-leveling slot selector. |
-| `PC_ENABLE_WEBDAV` | `0` | WebDAV server (RFC 4918, class 1 + advisory locks) over the file system. |
-| `PC_ENABLE_WEBHOOK` | `0` | Opt-in outbound webhooks / IFTTT. |
-| `PC_ENABLE_WEBSOCKET` | `0` | WebSocket support (RFC 6455 framing + SHA-1/base64 handshake). |
-| `PC_ENABLE_WEB_TERMINAL` | `0` | Browser "web serial" terminal over WebSocket (src/services/web/web_terminal). |
-| `PC_ENABLE_WIFI_SNIFFER` | `0` | Opt-in 802.11 sniffer / traffic analyzer. |
-| `PC_ENABLE_WISUN` | `0` | Opt-in Wi-SUN FAN border-router connector. |
-| `PC_ENABLE_WS_CLIENT` | `0` | Outbound WebSocket client (RFC 6455 over raw lwIP, optional wss:// TLS). |
-| `PC_ENABLE_WS_CLIENT_TLS` | `0` | wss://: run the WebSocket client over client-side TLS (needs PC_ENABLE_TLS). |
-| `PC_ENABLE_WS_DEFLATE` | `0` | WebSocket permessage-deflate (RFC 7692) - bidirectional compression. |
-| `PC_ENABLE_XMPP` | `0` | Opt-in XMPP (RFC 6120) stanza codec. |
-| `PC_ENABLE_ZIGBEE` | `0` | Enable the Zigbee EZSP / ASH framing codec (default off). |
-| `PC_ENABLE_ZWAVE` | `0` | Enable the Z-Wave Serial API frame codec (default off). |
+| `PROTOCORE_ENABLE_ACCEPT_THROTTLE` | `0` | Opt-in global accept-rate throttle (connection-flood defense). |
+| `PROTOCORE_ENABLE_AD9238` | `0` | Enable the AD9238 SPI configuration-port codec (default off). |
+| `PROTOCORE_ENABLE_ADS` | `0` | Beckhoff ADS / AMS protocol codec (`services/ads`). |
+| `PROTOCORE_ENABLE_ADS1115` | `0` | TI ADS1115 16-bit ADC (I2C) - a precise external analog input. |
+| `PROTOCORE_ENABLE_AMQP` | `0` | AMQP 0-9-1 frame codec (`services/amqp`). |
+| `PROTOCORE_ENABLE_ATC` | `0` | Opt-in ATC (Advanced Traffic Controller) field-I/O interop snapshot. |
+| `PROTOCORE_ENABLE_AUDIT_LOG` | `0` | Tamper-evident audit log. |
+| `PROTOCORE_ENABLE_AUTH` | `0` | HTTP Basic Authentication per-route. |
+| `PROTOCORE_ENABLE_AUTH_LOCKOUT` | `0` | Opt-in per-IP brute-force lockout for HTTP auth (requires PROTOCORE_ENABLE_AUTH). |
+| `PROTOCORE_ENABLE_BACNET` | `0` | BACnet/IP BVLC + NPDU codec (`services/bacnet`). |
+| `PROTOCORE_ENABLE_BLE_GATT` | `0` | Opt-in Bluetooth ATT protocol codec + GATT characteristic bridge. |
+| `PROTOCORE_ENABLE_BUS_CAPTURE` | `0` | Wired field-bus listen-only capture. |
+| `PROTOCORE_ENABLE_C37118` | `0` | IEEE C37.118.2 synchrophasor frame codec (`services/c37118`). |
+| `PROTOCORE_ENABLE_CANOPEN` | `0` | CANopen (CiA 301) message codec (`services/canopen`). |
+| `PROTOCORE_ENABLE_CBOR` | `0` | Zero-heap CBOR (RFC 8949) encoder for compact binary payloads. |
+| `PROTOCORE_ENABLE_CC1101` | `0` | Opt-in CC1101 sub-GHz radio driver. |
+| `PROTOCORE_ENABLE_CCLINK` | `0` | Opt-in CC-Link (CLPA) cyclic fieldbus frame codec. |
+| `PROTOCORE_ENABLE_CIA402` | `0` | CiA 402 / IEC 61800-7-201 drive + motion profile (`services/cia402`). |
+| `PROTOCORE_ENABLE_CIP` | `0` | CIP (Common Industrial Protocol) message codec (`services/cip`). |
+| `PROTOCORE_ENABLE_CLOUDEVENTS` | `0` | CloudEvents v1.0 (CNCF) event envelope (structured JSON + binary headers). |
+| `PROTOCORE_ENABLE_COAP` | `0` | CoAP server (RFC 7252) over UDP/5683. |
+| `PROTOCORE_ENABLE_COAP_BLOCK` | `0` | CoAP block-wise transfer - RFC 7959 (requires PROTOCORE_ENABLE_COAP). |
+| `PROTOCORE_ENABLE_COAP_OBSERVE` | `0` | CoAP resource observation - RFC 7641 (requires PROTOCORE_ENABLE_COAP). |
+| `PROTOCORE_ENABLE_CONFIG_IO` | `0` | Opt-in schema-driven config export / restore. |
+| `PROTOCORE_ENABLE_CONFIG_STORE` | `0` | Typed NVS configuration store (WiFi creds, IP config, ... |
+| `PROTOCORE_ENABLE_CONTROL` | `0` | Closed-loop control law (`services/control`). |
+| `PROTOCORE_ENABLE_COTP` | `0` | TPKT (RFC 1006) + COTP (X.224 class 0) frame codec (`services/cotp`). |
+| `PROTOCORE_ENABLE_CSRF` | `0` | Opt-in CSRF protection for state-changing HTTP requests. |
+| `PROTOCORE_ENABLE_DASHBOARD` | `0` | Real-time SVG dashboard (PROTOCORE_ENABLE_DASHBOARD; requires PROTOCORE_ENABLE_SSE). |
+| `PROTOCORE_ENABLE_DBM` | `0` | Opt-in dbm: a log-structured hash key-value store on the WAL (PROTOCORE_ENABLE_DBM, requires WAL). |
+| `PROTOCORE_ENABLE_DDS` | `0` | Opt-in DDS / RTPS wire-protocol codec. |
+| `PROTOCORE_ENABLE_DEVICENET` | `0` | DeviceNet link-adaptation codec (`services/devicenet`). |
+| `PROTOCORE_ENABLE_DEVICE_ID` | `0` | Stable device UUID derived from the chip MAC (RFC 4122 v5). |
+| `PROTOCORE_ENABLE_DF1` | `0` | Allen-Bradley DF1 full-duplex frame codec (`services/df1`). |
+| `PROTOCORE_ENABLE_DIAG` | `0` | Expose a diagnostic JSON endpoint via diag(). |
+| `PROTOCORE_ENABLE_DIFFSERV` | `0` | Enable DiffServ QoS marking (RFC 2474) on outbound traffic. |
+| `PROTOCORE_ENABLE_DIRECTNET` | `0` | Opt-in AutomationDirect / Koyo DirectNET serial frame codec. |
+| `PROTOCORE_ENABLE_DMA` | `0` | Enable the DMA peripheral ingest / egress primitive (default off). |
+| `PROTOCORE_ENABLE_DMX` | `0` | DMX512 + RDM (ANSI E1.20) lighting codec (`services/dmx`). |
+| `PROTOCORE_ENABLE_DNC` | `0` | Opt-in CNC RS-232 DNC drip-feed codec. |
+| `PROTOCORE_ENABLE_DNP3` | `0` | DNP3 (IEEE 1815) data-link frame codec (`services/dnp3`). |
+| `PROTOCORE_ENABLE_DNS_RESOLVER` | `0` | Opt-in DNS resolver with answer verification. |
+| `PROTOCORE_ENABLE_DNS_SERVER` | `0` | Authoritative DNS server (network_drivers/network/dns/dns_server) on UDP/53. |
+| `PROTOCORE_ENABLE_DOCSTORE` | `0` | Opt-in local JSON document store on the WAL (PROTOCORE_ENABLE_DOCSTORE, requires DBM + WAL). |
+| `PROTOCORE_ENABLE_DSHOT` | `0` | Opt-in DShot ESC throttle protocol codec. |
+| `PROTOCORE_ENABLE_DTLS` | `0` | DTLS 1.3 datagram security (RFC 9147) - the record layer. |
+| `PROTOCORE_ENABLE_EDGE_CACHE` | `0` | Opt-in CDN edge-cache tier (PROTOCORE_ENABLE_EDGE_CACHE, requires HTTP_CACHE). |
+| `PROTOCORE_ENABLE_EDGE_MESH` | `0` | Opt-in mesh (sibling-cache) distribution for the edge cache. |
+| `PROTOCORE_ENABLE_EDGE_ORIGIN_TLS` | `0` |  |
+| `PROTOCORE_ENABLE_ENIP` | `0` | EtherNet/IP encapsulation codec (`services/enip`). |
+| `PROTOCORE_ENABLE_ENOCEAN` | `0` | Enable the EnOcean ESP3 serial codec (default off). |
+| `PROTOCORE_ENABLE_ESPNOW` | `0` | ESP-NOW peer messaging. |
+| `PROTOCORE_ENABLE_ETAG` | `0` | Conditional GET (ETag + Last-Modified) for served files. |
+| `PROTOCORE_ENABLE_ETHERNET` | `0` | Enable wired Ethernet bring-up (init_eth_physical / eth_ready). |
+| `PROTOCORE_ENABLE_EUROMAP77` | `0` | EUROMAP 77 (OPC 40077) - OPC UA for injection moulding machines (IMM <-> MES). |
+| `PROTOCORE_ENABLE_EXC_DECODER` | `0` | Opt-in ESP32 panic / exception decoder for a live diagnostics panel. |
+| `PROTOCORE_ENABLE_FAILSAFE` | `0` | Opt-in software watchdog: deadlock detection + fail-safe safe-state. |
+| `PROTOCORE_ENABLE_FANUC_J519` | `0` | FANUC Stream Motion (option J519) UDP codec (`services/fanuc_j519`). |
+| `PROTOCORE_ENABLE_FDC2214` | `0` | Opt-in FDC2114/2214 capacitance-to-digital field sensor. |
+| `PROTOCORE_ENABLE_FILE_SERVING` | `0` | Static file serving via Arduino FS (LittleFS, SPIFFS, SD). |
+| `PROTOCORE_ENABLE_FINS` | `0` | Omron FINS frame codec (`services/fins`). |
+| `PROTOCORE_ENABLE_FLOW_EXPORT` | `0` | Flow-record export codec (`services/flow_export`). |
+| `PROTOCORE_ENABLE_FOCAS` | `0` | FANUC FOCAS Ethernet protocol codec (`services/focas`). |
+| `PROTOCORE_ENABLE_FORWARD` | `0` | Enable the interface forwarding plane (default off). |
+| `PROTOCORE_ENABLE_FORWARDED_TRUST` | `0` | Believe a `Forwarded` / `X-Forwarded-For` client address only from a trusted upstream. |
+| `PROTOCORE_ENABLE_FTP` | `0` | Opt-in FTP client wire codec. |
+| `PROTOCORE_ENABLE_FTP_SESSION` | `0` | Opt-in FTP client session driver (PROTOCORE_ENABLE_FTP_SESSION, requires PROTOCORE_ENABLE_FTP). |
+| `PROTOCORE_ENABLE_GATEWAY` | `0` | Enable the radio / wireless gateway bridge (default off). |
+| `PROTOCORE_ENABLE_GOOSE` | `0` | Opt-in IEC 61850 GOOSE publisher codec. |
+| `PROTOCORE_ENABLE_GPIB` | `0` | GPIB-over-LAN (Prologix-style) controller command codec (`services/gpib`). |
+| `PROTOCORE_ENABLE_GPIO_MAP` | `0` | Opt-in browser GPIO pin-mapper / diagnostics endpoint. |
+| `PROTOCORE_ENABLE_GRAPHQL` | `0` | GraphQL query subset. |
+| `PROTOCORE_ENABLE_GRPC_WEB` | `0` | gRPC-Web message framing (`services/grpcweb`). |
+| `PROTOCORE_ENABLE_GUARDRAILS` | `0` | Opt-in runtime heap/stack guardrails. |
+| `PROTOCORE_ENABLE_HAAS_MDC` | `0` | Haas Machine Data Collection (MDC) Q-command codec (`services/haas_mdc`). |
+| `PROTOCORE_ENABLE_HAPPY_EYEBALLS` | `0` | Opt-in dual-stack Happy Eyeballs destination selection. |
+| `PROTOCORE_ENABLE_HART` | `0` | Opt-in HART / HART-IP process-instrument protocol codec. |
+| `PROTOCORE_ENABLE_HISLIP` | `0` | HiSLIP (High-Speed LAN Instrument Protocol) message codec (`services/hislip`). |
+| `PROTOCORE_ENABLE_HMMD` | `0` | Waveshare HMMD 24 GHz mmWave micro-motion radar codec (`services/hmmd`). |
+| `PROTOCORE_ENABLE_HOSTLINK` | `0` | Omron Host Link (C-mode) frame codec (`services/hostlink`). |
+| `PROTOCORE_ENABLE_HOTSWAP` | `0` | Opt-in removable-storage hot-swap safeties. |
+| `PROTOCORE_ENABLE_HTTP2` | `0` | HTTP/2 (RFC 9113) over the version-agnostic request/response core. |
+| `PROTOCORE_ENABLE_HTTP3` | `0` | HTTP/3 (RFC 9114) over QUIC (RFC 9000) - implemented, host-tested end-to-end (HW verification pending). |
+| `PROTOCORE_ENABLE_HTTP_CACHE` | `0` | Opt-in HTTP Cache-Control directive helpers. |
+| `PROTOCORE_ENABLE_HTTP_CLIENT` | `0` | Outbound HTTP(S) client (raw lwIP, optional client-side mbedTLS). |
+| `PROTOCORE_ENABLE_HTTP_CLIENT_TLS` | `0` | HTTPS client support inside the HTTP client (needs PROTOCORE_ENABLE_TLS). |
+| `PROTOCORE_ENABLE_HTTP_DELIVERY` | `0` | Opt-in HTTP delivery optimizations. |
+| `PROTOCORE_ENABLE_HW_HEALTH` | `0` | Opt-in hardware-health diagnostics. |
+| `PROTOCORE_ENABLE_ICCP` | `0` | Opt-in ICCP / TASE.2 (IEC 60870-6) inter-control-center telemetry codec. |
+| `PROTOCORE_ENABLE_IEC60870` | `0` | IEC 60870-5-101 / -104 telecontrol (SCADA) codec (`services/iec60870`). |
+| `PROTOCORE_ENABLE_IFACE_BRIDGE` | `0` | User-defined address:port -> hardware-bus bridge (services/net/iface_bridge). |
+| `PROTOCORE_ENABLE_IKEV2` | `0` | IKEv2 (RFC 7296) message + payload codec (`services/ikev2`). |
+| `PROTOCORE_ENABLE_INA219` | `0` | TI INA219 high-side current / power monitor (I2C). |
+| `PROTOCORE_ENABLE_INTERBUS` | `0` | Opt-in INTERBUS summation-frame fieldbus codec. |
+| `PROTOCORE_ENABLE_IOLINK` | `0` | IO-Link (SDCI, IEC 61131-9) data-link message codec (`services/iolink`). |
+| `PROTOCORE_ENABLE_IPV6` | `0` | Enable IPv6 on the network interface (dual-stack). |
+| `PROTOCORE_ENABLE_IP_ALLOWLIST` | `0` | Opt-in source-IP allowlist (accept-time firewall, IPv4 and IPv6). |
+| `PROTOCORE_ENABLE_J1939` | `0` | SAE J1939 message codec (`services/j1939`). |
+| `PROTOCORE_ENABLE_J2735` | `0` | Opt-in SAE J2735 V2X codec. |
+| `PROTOCORE_ENABLE_JWT` | `0` | JWT bearer-token authentication (HS256). |
+| `PROTOCORE_ENABLE_KEEPALIVE` | `0` | HTTP/1.1 persistent connections (keep-alive). |
+| `PROTOCORE_ENABLE_LD2410` | `0` | HLK-LD2410 24 GHz mmWave presence / motion radar (UART). |
+| `PROTOCORE_ENABLE_LDC1614` | `0` | Opt-in LDC1614 inductance-to-digital field sensor. |
+| `PROTOCORE_ENABLE_LINK_MANAGER` | `0` | Opt-in multi-interface egress selection / failover policy. |
+| `PROTOCORE_ENABLE_LOGBUF` | `0` | Opt-in fixed-RAM rotating log buffer with severity traps. |
+| `PROTOCORE_ENABLE_LONWORKS` | `0` | Opt-in LonWorks / LON-IP (ISO/IEC 14908) network-variable codec. |
+| `PROTOCORE_ENABLE_LORA` | `0` | Enable the LoRa (SX127x) radio codec + driver (default off). |
+| `PROTOCORE_ENABLE_LSV2` | `0` | Heidenhain LSV/2 telegram codec (`services/lsv2`). |
+| `PROTOCORE_ENABLE_LWM2M` | `0` | OMA LwM2M TLV codec (`services/lwm2m`). |
+| `PROTOCORE_ENABLE_MBPLUS` | `0` | Opt-in Modbus Plus HDLC token-bus frame codec. |
+| `PROTOCORE_ENABLE_MBUS` | `0` | Wired M-Bus (Meter-Bus, EN 13757) frame codec (`services/mbus`). |
+| `PROTOCORE_ENABLE_MDNS` | `0` | mDNS / DNS-SD advertisement: `<name>.local` plus `_http._tcp` and any service added. |
+| `PROTOCORE_ENABLE_MDNS_ADAPTIVE` | `0` | Opt-in adaptive mDNS beacon scheduling. |
+| `PROTOCORE_ENABLE_MELSEC` | `0` | Mitsubishi MELSEC MC protocol (binary 3E) codec (`services/melsec`). |
+| `PROTOCORE_ENABLE_METRICS` | `0` | Prometheus `/metrics` endpoint (text exposition format 0.0.4). |
+| `PROTOCORE_ENABLE_MMS` | `0` | Opt-in IEC 61850 MMS PDU codec. |
+| `PROTOCORE_ENABLE_MNT` | `0` | Mounted storage. |
+| `PROTOCORE_ENABLE_MODBUS` | `0` | Modbus TCP slave/server (Modbus Application Protocol v1.1b3) on TCP/502. |
+| `PROTOCORE_ENABLE_MODBUS_MASTER` | `0` | Opt-in Modbus master codec + register scanner. |
+| `PROTOCORE_ENABLE_MODBUS_RTU` | `0` | Modbus RTU framing (serial / RS-485) over the same data model + PDU dispatch. |
+| `PROTOCORE_ENABLE_MPR121` | `0` | NXP MPR121 12-channel capacitive-touch controller (I2C). |
+| `PROTOCORE_ENABLE_MQTT` | `0` | MQTT 3.1.1 publish/subscribe client (raw lwIP, optional MQTTS over TLS). |
+| `PROTOCORE_ENABLE_MQTT_SN` | `0` | MQTT-SN v1.2 wire codec (`services/iot/mqtt/mqtt_sn`). |
+| `PROTOCORE_ENABLE_MQTT_TLS` | `0` | MQTTS: run the MQTT client over client-side TLS (needs PROTOCORE_ENABLE_TLS). |
+| `PROTOCORE_ENABLE_MSGPACK` | `0` | Zero-heap MessagePack encoder and decoder for compact binary payloads. |
+| `PROTOCORE_ENABLE_MTCONNECT` | `0` | Opt-in MTConnect agent response codec. |
+| `PROTOCORE_ENABLE_MTLS` | `0` | Mutual TLS - require and verify a client certificate (mTLS). |
+| `PROTOCORE_ENABLE_MULTIPART` | `0` | multipart/form-data body parser. |
+| `PROTOCORE_ENABLE_NATS` | `0` | NATS client protocol codec (`services/nats`). |
+| `PROTOCORE_ENABLE_NEMA_TS2` | `0` | Opt-in NEMA TS 2 traffic-cabinet SDLC frame codec. |
+| `PROTOCORE_ENABLE_NETADAPT` | `0` | Opt-in network adaptation decisions. |
+| `PROTOCORE_ENABLE_NMEA0183` | `0` | NMEA 0183 sentence codec (`services/nmea0183`). |
+| `PROTOCORE_ENABLE_NMEA2000` | `0` | NMEA 2000 codec (`services/nmea2000`). |
+| `PROTOCORE_ENABLE_NRF24` | `0` | Enable the nRF24L01+ radio driver (default off). |
+| `PROTOCORE_ENABLE_NTCIP` | `0` | Opt-in NTCIP transportation-device object identifiers. |
+| `PROTOCORE_ENABLE_NTP` | `0` | SNTP wall-clock time sync via the ESP-IDF SNTP client. |
+| `PROTOCORE_ENABLE_NTP_SERVER` | `0` | NTP/SNTP time server (RFC 5905 / RFC 4330 server mode) on UDP/123 (services/protocore_ntp_server). |
+| `PROTOCORE_ENABLE_NTRIP_CASTER` | `0` | GNSS RTK base station + NTRIP caster (services/timing_position/gnss). |
+| `PROTOCORE_ENABLE_NTS` | `0` | Opt-in Network Time Security (NTS, RFC 8915) wire codec. |
+| `PROTOCORE_ENABLE_OAUTH2` | `0` | OAuth2 token-endpoint client. |
+| `PROTOCORE_ENABLE_OBSERVABILITY` | `0` | Transport-layer observability: connection event hook + counters. |
+| `PROTOCORE_ENABLE_OCIT` | `0` | Opt-in OCIT-Outstations message codec. |
+| `PROTOCORE_ENABLE_OIDC` | `0` | OpenID Connect ID-token verification, RS256. |
+| `PROTOCORE_ENABLE_OPCUA` | `0` | OPC UA Binary server. |
+| `PROTOCORE_ENABLE_OPCUA_CLIENT` | `0` | OPC UA Binary client. |
+| `PROTOCORE_ENABLE_OPENADR` | `0` | Opt-in OpenADR 3.0 (Automated Demand Response) JSON codec. |
+| `PROTOCORE_ENABLE_OTA` | `0` | Authenticated OTA firmware update (streaming POST to the ESP32 Update API). |
+| `PROTOCORE_ENABLE_OTA_ROLLBACK` | `0` | Opt-in OTA rollback protection / soft-brick safeguard. |
+| `PROTOCORE_ENABLE_PACKML` | `0` | PackML / OMAC packaging-machine state model (`services/packml`). |
+| `PROTOCORE_ENABLE_PARTITION_MONITOR` | `0` | Opt-in flash partition-map monitor endpoint. |
+| `PROTOCORE_ENABLE_PCA9685` | `0` | NXP PCA9685 16-channel 12-bit PWM / servo driver (I2C). |
+| `PROTOCORE_ENABLE_PER_IP_THROTTLE` | `0` | Opt-in per-IP accept-rate throttle (connection-flood defense, keyed by source IPv4). |
+| `PROTOCORE_ENABLE_PMBUS` | `0` | PMBus 1.3 power-management command set over SMBus. |
+| `PROTOCORE_ENABLE_PN532` | `0` | Enable the PN532 NFC frame codec (default off). |
+| `PROTOCORE_ENABLE_POWERLINK` | `0` | Opt-in Ethernet POWERLINK (EPSG) basic frame codec. |
+| `PROTOCORE_ENABLE_POWER_MGMT` | `0` | Opt-in SoC power governor. |
+| `PROTOCORE_ENABLE_PQC_KEX` | `0` | Post-quantum hybrid key exchange: ML-KEM-768 + X25519 (FIPS 203 / RFC 9370 combiner). |
+| `PROTOCORE_ENABLE_PREEMPT_QUEUE` | `0` | Enable the preempting work queue primitive (default off). |
+| `PROTOCORE_ENABLE_PROFIBUS` | `0` | Opt-in PROFIBUS-DP FDL telegram codec. |
+| `PROTOCORE_ENABLE_PROFINET` | `0` | Opt-in PROFINET DCP (Discovery and Configuration Protocol) frame codec. |
+| `PROTOCORE_ENABLE_PROMISC` | `0` | Wi-Fi promiscuous (monitor) capture. |
+| `PROTOCORE_ENABLE_PROTOBUF` | `0` | Protocol Buffers wire codec (`services/protobuf`). |
+| `PROTOCORE_ENABLE_PROVISIONING` | `0` | First-boot WiFi provisioning: softAP + captive-portal credentials form. |
+| `PROTOCORE_ENABLE_PROXY_PROTOCOL` | `0` | HAProxy PROXY protocol codec (`services/proxy_protocol`). |
+| `PROTOCORE_ENABLE_PSRAM_POOL` | `0` | Opt-in buffer placement policy (DRAM vs PSRAM) + SPI DMA ping-pong manager. |
+| `PROTOCORE_ENABLE_PTP` | `0` | PTP / IEEE 1588-2008 (PTPv2) message codec + slave clock math (`services/ptp`). |
+| `PROTOCORE_ENABLE_RADIO_POWER` | `0` | Opt-in radio power controls. |
+| `PROTOCORE_ENABLE_RADIO_SNIFF` | `0` | Opt-in receive-only radio channel sniffer to pcap. |
+| `PROTOCORE_ENABLE_RANGE` | `0` | HTTP Range requests / 206 Partial Content (requires PROTOCORE_ENABLE_FILE_SERVING or PROTOCORE_ENABLE_EDGE_CACHE). |
+| `PROTOCORE_ENABLE_RAWL2` | `0` | Opt-in raw Layer-2 Ethernet frame codec. |
+| `PROTOCORE_ENABLE_RCWL0516` | `0` | RCWL-0516 microwave Doppler presence sensor + the shared one-GPIO presence facade (`services/rcwl0516`). |
+| `PROTOCORE_ENABLE_REDIS` | `0` | Redis RESP2/RESP3 wire codec (`services/iot/redis_resp`). |
+| `PROTOCORE_ENABLE_RELAY` | `0` | Opt-in TCP relay / DNAT port forwarding. |
+| `PROTOCORE_ENABLE_ROAMING` | `0` | Wi-Fi roaming decision layer (`services/roaming`). |
+| `PROTOCORE_ENABLE_ROBOTICS` | `0` | OPC UA for Robotics information model. |
+| `PROTOCORE_ENABLE_RTC` | `0` | I2C real-time-clock driver (DS1307 / DS3231) - a battery-backed time source. |
+| `PROTOCORE_ENABLE_S7COMM` | `0` | Siemens S7comm PDU codec (`services/s7comm`). |
+| `PROTOCORE_ENABLE_SAFETY_SCL` | `0` | IEC 61784-3 black-channel Safety Communication Layer primitives (`services/safety_scl`). |
+| `PROTOCORE_ENABLE_SCPI` | `0` | SCPI / IEEE 488.2 instrument-control codec (`services/scpi`). |
+| `PROTOCORE_ENABLE_SDI12` | `0` | SDI-12 sensor-bus codec (`services/sdi12`). |
+| `PROTOCORE_ENABLE_SEN0192` | `0` | DFRobot SEN0192 10.525 GHz microwave Doppler motion sensor (single digital OUT line). |
+| `PROTOCORE_ENABLE_SENML` | `0` | SenML (RFC 8428) measurement-pack builder (`services/senml`). |
+| `PROTOCORE_ENABLE_SEP2` | `0` | Opt-in IEEE 2030.5 (Smart Energy Profile 2.0) resource codec. |
+| `PROTOCORE_ENABLE_SERCOS` | `0` | Opt-in SERCOS III motion-bus telegram codec. |
+| `PROTOCORE_ENABLE_SHT3X` | `0` | Sensirion SHT3x temperature / humidity sensor (I2C). |
+| `PROTOCORE_ENABLE_SIGFOX` | `0` | Enable the Sigfox AT-command codec (default off). |
+| `PROTOCORE_ENABLE_SIMATIC` | `0` | Siemens SIMATIC serial point-to-point: 3964R link + RK512 telegrams (`services/simatic`). |
+| `PROTOCORE_ENABLE_SLEEP_SCHED` | `0` | Opt-in dynamic sleep-cycle scheduler. |
+| `PROTOCORE_ENABLE_SMB` | `0` | Opt-in SMB2 client. |
+| `PROTOCORE_ENABLE_SMBUS` | `0` | SMBus 3.1 transaction shapes over the shared I2C bus. |
+| `PROTOCORE_ENABLE_SMTP` | `0` | Outbound SMTP client (RFC 5321) for device email alerts (services/net/smtp). |
+| `PROTOCORE_ENABLE_SMTP_TLS` | `0` | Secure SMTP: run the mail client over client-side TLS (needs PROTOCORE_ENABLE_TLS). |
+| `PROTOCORE_ENABLE_SNMP` | `0` | SNMP agent (v1/v2c, + v3 USM when PROTOCORE_ENABLE_SNMP_V3) over lwIP UDP. |
+| `PROTOCORE_ENABLE_SNMP_TRAP` | `0` | Outbound SNMP notifications - traps and informs (requires PROTOCORE_ENABLE_SNMP). |
+| `PROTOCORE_ENABLE_SNMP_V3` | `0` | Add SNMPv3 USM (auth via HMAC-SHA, privacy via AES-128-CFB). |
+| `PROTOCORE_ENABLE_SNP` | `0` | Opt-in GE Fanuc SNP (Series Ninety Protocol) serial frame codec. |
+| `PROTOCORE_ENABLE_SOCKPOOL` | `0` | Opt-in dynamic socket recycling: an LRU connection-slot pool. |
+| `PROTOCORE_ENABLE_SOUTHBOUND` | `0` | Opt-in southbound protocol-driver framework. |
+| `PROTOCORE_ENABLE_SPARKPLUG` | `0` | Sparkplug B payload + topic codec (`services/sparkplug`). |
+| `PROTOCORE_ENABLE_SPA_ROUTER` | `0` | Opt-in single-page-app micro-routing decision. |
+| `PROTOCORE_ENABLE_SQLITE` | `0` | Opt-in SQLite3 on-disk file-format reader. |
+| `PROTOCORE_ENABLE_SSE` | `0` | Server-Sent Events push support. |
+| `PROTOCORE_ENABLE_SSH` | `0` | SSH server support (RFC 4253/4252/4254). |
+| `PROTOCORE_ENABLE_SSH_CLIENT` | `0` | Outbound SSH client + reverse tunnel (RFC 4254 §7.1 tcpip-forward, the `ssh -R` seam). |
+| `PROTOCORE_ENABLE_SSH_KEYBOARD_INTERACTIVE` | `0` | SSH keyboard-interactive authentication (RFC 4256), default off. |
+| `PROTOCORE_ENABLE_SSH_SCP` | `0` | SCP server over SSH (the legacy RCP protocol via `exec "scp -t/-f"`). |
+| `PROTOCORE_ENABLE_SSH_SFTP` | `0` | SFTP server subsystem over SSH (SSH_FXP_* v3, draft-ietf-secsh-filexfer-02). |
+| `PROTOCORE_ENABLE_SSH_SNTRUP761` | `PROTOCORE_ENABLE_PQC_KEX` | Streamlined NTRU Prime sntrup761x25519-sha512@openssh.com SSH KEX (default: tracks ::PROTOCORE_ENABLE_PQC_KEX). |
+| `PROTOCORE_ENABLE_SSH_ZLIB` | `0` | SSH server-to-client compression (`zlib@openssh.com` / `zlib`, RFC 4253 sec 6.2). |
+| `PROTOCORE_ENABLE_STATS` | `0` | Runtime stats endpoint (uptime, request/error counts, pool usage, heap). |
+| `PROTOCORE_ENABLE_STATSD` | `0` | Opt-in StatsD metrics client. |
+| `PROTOCORE_ENABLE_STOMP` | `0` | STOMP 1.2 frame codec (`services/stomp`). |
+| `PROTOCORE_ENABLE_SUNSPEC` | `0` | SunSpec Modbus device-information-model codec (`services/sunspec`). |
+| `PROTOCORE_ENABLE_SYSLOG` | `0` | Syslog client (RFC 5424 over UDP). |
+| `PROTOCORE_ENABLE_TELEMETRY` | `0` | Telemetry math helpers (moving-window stats, rate-of-change, totalizer). |
+| `PROTOCORE_ENABLE_TELNET` | `0` | Telnet server support (RFC 854 / IAC option negotiation). |
+| `PROTOCORE_ENABLE_THEMES` | `0` | Embed the theme stylesheet library as runtime-selectable blobs (default off). |
+| `PROTOCORE_ENABLE_THREAD` | `0` | Enable the Thread spinel / HDLC-lite framing codec (default off). |
+| `PROTOCORE_ENABLE_TIME_SOURCE` | `0` | Multi-source time fallback (NTP / RTC / GPS / ... |
+| `PROTOCORE_ENABLE_TLS` | `0` | TLS (HTTPS/WSS) via mbedTLS with a static memory pool (ESP32-only). |
+| `PROTOCORE_ENABLE_TLS_POLICY` | `0` | Opt-in TLS version negotiation + pinned cipher-suite policy. |
+| `PROTOCORE_ENABLE_TLS_RESUMPTION` | `0` | TLS session resumption via RFC 5077 session tickets (requires PROTOCORE_ENABLE_TLS). |
+| `PROTOCORE_ENABLE_TLS_RPK` | `0` | TLS Raw Public Keys (RFC 7250) - present a bare public key instead of an X.509 certificate. |
+| `PROTOCORE_ENABLE_TOTP` | `0` | Opt-in TOTP two-factor auth (RFC 6238). |
+| `PROTOCORE_ENABLE_TRACE_CAPTURE` | `0` | Enable the pre/post-trigger window assembler (default off). |
+| `PROTOCORE_ENABLE_UBX` | `0` | u-blox UBX binary GNSS protocol codec (`services/ubx`). |
+| `PROTOCORE_ENABLE_UDP_TELEMETRY` | `0` | Opt-in fire-and-forget UDP telemetry cast. |
+| `PROTOCORE_ENABLE_UMATI` | `0` | umati - OPC UA for Machine Tools information model. |
+| `PROTOCORE_ENABLE_UPLOAD` | `0` | Streaming file upload: POST a body straight to a file on the filesystem. |
+| `PROTOCORE_ENABLE_UTMC` | `0` | Opt-in UTMC (Urban Traffic Management and Control) common-database codec. |
+| `PROTOCORE_ENABLE_VL53L0X` | `0` | Opt-in VL53L0X optical time-of-flight ranging sensor. |
+| `PROTOCORE_ENABLE_VXI11` | `0` | VXI-11 (TCP/IP Instrument Protocol) codec (`services/vxi11`). |
+| `PROTOCORE_ENABLE_WAL` | `0` | Opt-in write-ahead store for atomic buffer-to-flash storage. |
+| `PROTOCORE_ENABLE_WAMP` | `0` | WAMP messaging codec (`services/wamp`). |
+| `PROTOCORE_ENABLE_WAVE` | `0` | Opt-in IEEE 1609 WAVE (WSMP + 1609.2 envelope) codec. |
+| `PROTOCORE_ENABLE_WEARLEVEL` | `0` | Opt-in flash wear-leveling slot selector. |
+| `PROTOCORE_ENABLE_WEBDAV` | `0` | WebDAV server (RFC 4918, class 1 + advisory locks) over the file system. |
+| `PROTOCORE_ENABLE_WEBHOOK` | `0` | Opt-in outbound webhooks / IFTTT. |
+| `PROTOCORE_ENABLE_WEBSOCKET` | `0` | WebSocket support (RFC 6455 framing + SHA-1/base64 handshake). |
+| `PROTOCORE_ENABLE_WEB_TERMINAL` | `0` | Browser "web serial" terminal over WebSocket (src/services/web/web_terminal). |
+| `PROTOCORE_ENABLE_WIFI_SNIFFER` | `0` | Opt-in 802.11 sniffer / traffic analyzer. |
+| `PROTOCORE_ENABLE_WISUN` | `0` | Opt-in Wi-SUN FAN border-router connector. |
+| `PROTOCORE_ENABLE_WS_CLIENT` | `0` | Outbound WebSocket client (RFC 6455 over raw lwIP, optional wss:// TLS). |
+| `PROTOCORE_ENABLE_WS_CLIENT_TLS` | `0` | wss://: run the WebSocket client over client-side TLS (needs PROTOCORE_ENABLE_TLS). |
+| `PROTOCORE_ENABLE_WS_DEFLATE` | `0` | WebSocket permessage-deflate (RFC 7692) - bidirectional compression. |
+| `PROTOCORE_ENABLE_XMPP` | `0` | Opt-in XMPP (RFC 6120) stanza codec. |
+| `PROTOCORE_ENABLE_ZIGBEE` | `0` | Enable the Zigbee EZSP / ASH framing codec (default off). |
+| `PROTOCORE_ENABLE_ZWAVE` | `0` | Enable the Z-Wave Serial API frame codec (default off). |
 
 <!-- prettier-ignore-end -->
 
@@ -1342,263 +1300,263 @@ guards at compile time.
 | `MAX_TLS_CONNS` | `1` | Maximum simultaneous TLS connections (each holds mbedTLS record buffers). |
 | `MAX_VAL_LEN` | `48` | Maximum header field-value length. |
 | `MAX_WS_CONNS` | `2` | Maximum simultaneous WebSocket connections. |
-| `PC_ACCEPT_THROTTLE_MAX` | `20` | Max accepted connections per throttle window (see PC_ENABLE_ACCEPT_THROTTLE). |
-| `PC_ACCEPT_THROTTLE_WINDOW_MS` | `1000` | Throttle window length in milliseconds (see PC_ENABLE_ACCEPT_THROTTLE). |
-| `PC_ADS1115_DIFFERENTIAL` | `0` | ADS1115 input mode: 0 = single-ended (AINx vs GND), 1 = differential. |
-| `PC_ADS1115_I2C_ADDR` | `0x48` | I2C address of the ADS1115 (0x48 with ADDR to GND; 0x49/0x4A/0x4B for VDD/SDA/SCL). |
-| `PC_AUTH_LOCKOUT_BASE_MS` | `1000` | First lockout duration in ms; doubles on each further failure. |
-| `PC_AUTH_LOCKOUT_MAX_MS` | `300000` | Maximum lockout duration in ms (the exponential backoff cap). |
-| `PC_AUTH_LOCKOUT_SLOTS` | `16` | Number of source IPs the auth lockout tracks (BSS bucket table). |
-| `PC_AUTH_LOCKOUT_THRESHOLD` | `5` | Consecutive failed auths from one IP before it is locked out. |
-| `PC_BASE64_SWAR` | `1` | Use the SWAR base64 decoder (classify 4 characters per 32-bit word). |
-| `PC_BRIDGE_MAX_DRAIN` | `8` | Chunks a STREAM target moves per poll before yielding, bounding the UART drain loop. |
-| `PC_BRIDGE_MAX_RULES` | `8` | Max concurrent address:port -> bus rules (services/net/iface_bridge). |
-| `PC_BRIDGE_STREAM_CHUNK` | `256` | STREAM (UART) pipe chunk size (bytes) for services/net/iface_bridge - one socket<->UART hop. |
-| `PC_BRIDGE_TXN_MAX` | `256` | Max write / read payload (bytes) per TRANSACTION frame (services/net/iface_bridge). |
-| `PC_BRIDGE_UART_TXN_MS` | `50` | UART TRANSACTION read window (ms): how long a write-then-read waits for the read_len reply. |
-| `PC_CLIENT_RX_BUF` | `8192` | Per-connection wire receive ring size (bytes). |
-| `PC_CLOSING_TIMEOUT_MS` | `2000` | Upper bound (ms) a slot may dwell in CONN_CLOSING after a graceful close before the idle sweep force-aborts it. |
-| `PC_COAP_BLOCK1_MAX` | `1024` | Reassembly buffer for a block-wise (Block1) request upload, in bytes. |
-| `PC_COAP_BLOCK_SZX_MAX` | `6` | Largest block-size exponent (SZX) the server will use: block size = 2^(SZX+4) bytes, SZX 0..6 (16..1024). |
-| `PC_COAP_DEDUP_ENTRIES` | `4` | CoAP message de-duplication cache size (RFC 7252 sec 4.5). |
-| `PC_COAP_DEDUP_LIFETIME_MS` | `247000u` | How long (ms) a dedup entry stays fresh - RFC 7252 EXCHANGE_LIFETIME (~247 s) by default, past which a repeat Message-ID is treated as a new exchange. |
-| `PC_COAP_DEDUP_RESP_MAX` | `256` | Largest cached response the dedup cache retains per entry; a bigger response is not cached (a retransmission re-processes it, fine for the idempotent GET whose block-wise reply exceeds this). |
-| `PC_COAP_MAX_OBSERVERS` | `4` | Maximum simultaneous CoAP observers (one slot per observed resource per client). |
-| `PC_COAP_MAX_PATH` | `64` | Maximum reconstructed Uri-Path length, including separators and the leading '/'. |
-| `PC_COAP_MAX_PAYLOAD` | `256` | Maximum CoAP request/response payload in bytes. |
-| `PC_COAP_MAX_QUERY` | `64` | Maximum reconstructed Uri-Query length (segments joined by '&'). |
-| `PC_COAP_MAX_RESOURCES` | `8` | Maximum registered CoAP resources (the server's fixed routing table). |
-| `PC_COAP_OBSERVE_PORT` | `5683` | Default UDP port the CoAP observe transport notifies from (IANA well-known 5683). |
-| `PC_CONFIG_KEY_MAX` | `16` | Max key length incl. |
-| `PC_CONFIG_MAX_ENTRIES` | `16` | Max key/value entries in the host (test) config backend. |
-| `PC_CONFIG_VAL_MAX` | `2048` | Max value bytes per entry in the host (test) config backend. |
-| `PC_DASHBOARD_JSON_BUF` | `1024` | Stack buffer for the dashboard layout / values JSON (bytes). |
-| `PC_DASHBOARD_MAX_WIDGETS` | `16` | Maximum widgets in the dashboard table (BSS value array). |
-| `PC_DAV_MAX_DEPTH` | `8` | Deepest tree a WebDAV DELETE / COPY walks before refusing (see PC_ENABLE_WEBDAV). |
-| `PC_DEBUG_CHECKS` | `0` | Compile the library's internal debug checks (default 0 = off). |
-| `PC_DEFER_QUEUE_DEPTH` | `8` | Depth of each worker's deferred-callback queue. |
-| `PC_DELIVERY_MANIFEST_BUF` | `512` | Buffer the precache manifest JSON is built into. |
-| `PC_DELIVERY_PRECACHE_MAX` | `16` | Most asset paths a service-worker precache manifest may list. |
-| `PC_DMA_BUF_SIZE` | `256` | Bytes per DMA transfer buffer (RX is double-buffered at this size). |
-| `PC_DMA_CHANNELS` | `2` | Number of DMA channels (static-allocated; each is one peripheral link). |
-| `PC_DNC_LEADER_LEN` | `32` | Default leader/trailer runout length for the DNC encoder. |
-| `PC_DNC_LINE_MAX` | `128` | Largest G-code block (one line) the DNC decoder reassembles. |
-| `PC_DNC_XOFF_MAX_POLLS` | `200000` | Safety cap on how many times the DNC stream engine polls the reverse channel while paused by an XOFF, before giving up with an I/O error. |
-| `PC_DNS_CLIENT_PORT` | `1153` | Local UDP port the portable resolver asks from and hears the answer on. |
-| `PC_DNS_NAME_MAX` | `128` | Max length of a queried/stored DNS name (bytes, incl NUL). |
-| `PC_DNS_SERVER_MAX_RECORDS` | `8` | Max A records in the DNS server's fixed table. |
-| `PC_DNS_SERVER_TTL` | `60` | TTL (seconds) the DNS server puts on its answers. |
-| `PC_DNS_TIMEOUT_MS` | `5000` |  |
-| `PC_DTLS_PMTU_DEFAULT` | `1232` | Largest datagram a DTLS handshake flight will put on the wire, before a connection overrides it (RFC 9147 sec 4.3). |
-| `PC_EDGE_CENC_MAX` | `32` | Stored Content-Encoding to replay (e.g. |
-| `PC_EDGE_CTYPE_MAX` | `64` | Stored Content-Type to replay. |
-| `PC_EDGE_ETAG_MAX` | `64` | Stored validator (ETag, quotes included). |
-| `PC_EDGE_LASTMOD_MAX` | `40` | Stored Last-Modified (RFC 1123 date). |
-| `PC_EM77_NS` | `1` | NamespaceIndex the EUROMAP 77 IMM_MES_Interface nodes live at (default 1). |
-| `PC_ENFORCE_HOST_HEADER` | `1` | Enforce the RFC 7230 §5.4 Host-header requirement (default on). |
-| `PC_ENOCEAN_MAX_DATA` | `512` | Reject an ESP3 telegram whose declared data length exceeds this (framing sanity). |
-| `PC_ETH_W5500` | `0` |  |
-| `PC_EXC_COREDUMP_CHUNK` | `512` | Chunk the core-dump image is streamed out of flash in. |
-| `PC_FAILSAFE_MAX_LIFELINES` | `8` | Max monitored lifelines in the fail-safe registry (static, zero-heap). |
-| `PC_FILESYSTEM_PATH_MAX` | `256` | Largest absolute path the SFTP/SCP server resolves (mount root + request path). |
-| `PC_FTP_CHUNK` | `512` | Bytes staged per data-channel write when the session driver streams a payload. |
-| `PC_FTP_CMD_MAX` | `256` | Suggested FTP control-command buffer size. |
-| `PC_FTP_REPLY_BUF` | `512` | Control-reply accumulator for the FTP session driver. |
-| `PC_FTP_TIMEOUT_MS` | `8000` | Per-step timeout for the FTP session driver: connect, and each control reply. |
-| `PC_FWD_ACL_PATLEN` | `4` | Bytes an ACL entry can match (its pattern / mask length). |
-| `PC_FWD_INSPECT` | `0` | Build-time toggle for the forwarding-path inspection hook (default off, for cost + privacy). |
-| `PC_FWD_MAX_ACL` | `8` | Max ingress access-control entries (byte-pattern permit/deny; static). |
-| `PC_FWD_MAX_ROUTES` | `8` | Max policy routes (byte-pattern -> egress interface; static). |
-| `PC_FWD_MAX_RULES` | `8` | Max forwarding rules (src -> dst allow/deny + rate cap; static-allocated). |
-| `PC_GPIO_JSON_BUF` | `1024` | Stack buffer for the GPIO-map JSON (bytes). |
-| `PC_GPIO_MAX` | `40` | Maximum GPIO pins the mapper reports (BSS table). |
-| `PC_GUARDRAIL_FRAG_MIN_BLOCK` | `4096` | Largest-free-block floor (bytes); below this trips the fragmentation guardrail. |
-| `PC_GUARDRAIL_HEAP_MIN` | `8192` | Free-heap floor (bytes); below this trips the heap guardrail. |
-| `PC_GUARDRAIL_STACK_MIN` | `512` | Task remaining-stack floor (bytes); below this trips the stack guardrail. |
-| `PC_GW_MAX_PORTS` | `4` | Max southbound gateway ports (radios / buses; static-allocated). |
-| `PC_H2_HDR_BLOCK` | `4096` | Header-block reassembly buffer for HTTP/2 requests that span HEADERS + CONTINUATION frames (a single END_HEADERS frame decodes in place and needs no copy). |
-| `PC_H2_MAX_CONTINUATION` | `8` | CONTINUATION frames one header block may span (RFC 9113 sec 6.10). |
-| `PC_H2_MAX_FRAME` | `16384` | Largest HTTP/2 frame we accept, in bytes (advertised as SETTINGS_MAX_FRAME_SIZE). |
-| `PC_H2_MAX_STREAMS` | `8` | Max concurrent HTTP/2 streams per connection (advertised as MAX_CONCURRENT_STREAMS). |
-| `PC_H2_POOL_IN_PSRAM` | `0` | Place the HTTP/2 connection-engine pool in external PSRAM (ESP32). |
-| `PC_H3_CRYPTO_BUF` | `2048` | Maximum bytes of one QUIC/TLS handshake CRYPTO flight (RFC 9001). |
-| `PC_H3_MAX_STREAMS` | `8` | Maximum concurrent request streams per HTTP/3 connection. |
-| `PC_H3_QPACK_BLOCK` | `256` |  |
-| `PC_H3_QPACK_SCRATCH` | `512` |  |
-| `PC_HMMD_BAUD` | `115200` | HMMD UART baud rate (the module's factory default is 115200). |
-| `PC_HMMD_UART` | `2` | UART unit the HMMD is wired to. |
-| `PC_HOTSWAP_FAIL_THRESHOLD` | `3` | Consecutive I/O failures that declare a removable volume gone. |
-| `PC_HOTSWAP_PROBE_MS` | `2000` | Minimum gap between remount attempts while a volume is absent or faulted (ms). |
-| `PC_HPACK_MAX_ENTRIES` | `128` | Max HPACK dynamic-table entries (>= PC_HPACK_TABLE_BYTES / 32, the min entry size). |
-| `PC_HPACK_TABLE_BYTES` | `4096` | Per-connection HPACK dynamic-table size in bytes (our decoder; advertised to the peer as SETTINGS_HEADER_TABLE_SIZE). |
-| `PC_HTTP3_PORT` | `443` | UDP port the HTTP/3 (QUIC) server binds by default (used by pc_h3_cert). |
-| `PC_HTTP_CLIENT_BUF_SIZE` | `2048` | Receive buffer (and max response size) for the outbound HTTP client, bytes. |
-| `PC_HTTP_CLIENT_CT_BUF_SIZE` | `4096` | Ciphertext receive-ring size for the https:// client, bytes. |
-| `PC_HTTP_CLIENT_TIMEOUT_MS` | `8000` | Outbound HTTP client connect/response timeout in milliseconds. |
-| `PC_HTTP_EMIT_DATE` | `0` | Auto-inject a `Date` response header (RFC 7231 7.1.1.2) when a wall-clock time is available. |
-| `PC_INA219_CURRENT_LSB_UA` | `100` | Default INA219 current LSB in microamps per bit (calibration input). |
-| `PC_INA219_I2C_ADDR` | `0x40` | I2C address of the INA219 (0x40 default; the A0/A1 pins select 0x40..0x4F). |
-| `PC_INA219_SHUNT_MOHM` | `100` | Default INA219 shunt resistance in milliohms (calibration input). |
-| `PC_IP_ALLOWLIST_SLOTS` | `8` | Number of CIDR rules the source-IP allowlist can hold (BSS table). |
-| `PC_JWT_MAX_LEN` | `512` | Maximum accepted JWT length in bytes (header.payload.signature). |
-| `PC_KEEPALIVE_MAX_REQUESTS` | `100` | Maximum requests served on one keep-alive connection before it is closed. |
-| `PC_LD2410_BAUD` | `256000` | LD2410 UART baud rate (the module's fixed factory default is 256000). |
-| `PC_LD2410_UART` | `2` | UART unit the LD2410 is wired to. |
-| `PC_LOG_LINES` | `32` | Number of log lines retained in the ring. |
-| `PC_LOG_LINE_LEN` | `96` | Maximum length of one stored log line (bytes, including null). |
-| `PC_LORA_MAX_PAYLOAD` | `251` | Max LoRa payload bytes (SX127x FIFO is 256; RadioHead uses 251 + 4 header). |
-| `PC_MAX_UDP_LISTENERS` | `2` | Maximum simultaneously bound UDP ports (transport-layer UDP service). |
-| `PC_MDNS_LABEL_MAX` | `32` | Longest host label, service type or proto label the responder holds, NUL included. |
-| `PC_MDNS_MAX_SERVICES` | `4` | Services the responder advertises at once, `_http._tcp` included. |
-| `PC_MDNS_TXT_MAX` | `128` | Bytes of packed `key=value` TXT strings, each with its own length byte ahead of it. |
-| `PC_MDNS_TX_MAX` | `512` | Response datagram the responder composes. |
-| `PC_MODBUS_COILS` | `64` | Number of Modbus coils (FC 1/5/15), single-bit R/W (BSS, bit-packed). |
-| `PC_MODBUS_DISCRETE_INPUTS` | `64` | Number of Modbus discrete inputs (FC 2), single-bit read-only (BSS, bit-packed). |
-| `PC_MODBUS_HOLDING_REGS` | `64` | Number of Modbus holding registers (FC 3/6/16), 16-bit R/W (BSS). |
-| `PC_MODBUS_INPUT_REGS` | `64` | Number of Modbus input registers (FC 4), 16-bit read-only (BSS). |
-| `PC_MPR121_I2C_ADDR` | `0x5A` | I2C address of the MPR121 (0x5A default; 0x5B/0x5C/0x5D via the ADDR pin). |
-| `PC_MPR121_RELEASE_THRESHOLD` | `6` | MPR121 per-electrode release threshold (delta counts; should be below the touch threshold). |
-| `PC_MPR121_TOUCH_THRESHOLD` | `12` | MPR121 per-electrode touch threshold (delta counts from baseline; NXP AN3944 suggests ~4..12). |
-| `PC_MQTT_BUF_SIZE` | `1024` | MQTT packet buffer size in bytes (bounds one outgoing/incoming packet). |
-| `PC_MQTT_CONNECT_MS` | `8000` | What the whole MQTT connect is given, in milliseconds. |
-| `PC_MQTT_CT_BUF_SIZE` | `4096` | Ciphertext receive-ring size for MQTTS (draining ring; must exceed one TCP_MSS). |
-| `PC_MQTT_KEEPALIVE_S` | `30` | Default MQTT keep-alive interval in seconds (PINGREQ cadence / CONNECT field). |
-| `PC_MQTT_MAX_INFLIGHT` | `4` | Outbound QoS 1/2 in-flight slots (unacknowledged exchanges awaiting their acknowledgement). |
-| `PC_MQTT_MAX_TOPIC` | `128` | Maximum inbound MQTT topic length (including NUL) delivered to the callback. |
-| `PC_MQTT_RETRANSMIT_MS` | `5000` | Retransmit timeout (ms) for an unacknowledged in-flight QoS 1/2 message. |
-| `PC_MQTT_RX_QOS2_SLOTS` | `8` | Inbound QoS 2 packet-id de-duplication ring depth (PUBREC-acknowledged, awaiting PUBREL). |
-| `PC_MTLS_SUBJECT_MAX` | `128` | Maximum length of a verified mTLS peer subject DN string (incl. |
-| `PC_NEED_CLIENT` | `0` |  |
-| `PC_NEED_UDP` | `0` |  |
-| `PC_NRF24_PAYLOAD` | `32` | nRF24 fixed payload width in bytes (1..32; the chip's static payload size). |
-| `PC_NTP_CLIENT_PORT` | `1123` | Local UDP port the portable SNTP client asks from. |
-| `PC_NTP_SERVER_STRATUM` | `3` | Stratum the NTP server advertises (distance from a reference clock; 1-15). |
-| `PC_NTRIP_MAX_MOUNTS` | `2` | Max distinct mountpoints a single caster serves (each = one RTCM stream). |
-| `PC_NTRIP_MAX_ROVERS` | `4` | Max concurrent rover connections a caster serves corrections to (services/timing_position/gnss). |
-| `PC_NTRIP_MOUNT_MAX` | `32` | Max length (incl. |
-| `PC_NTRIP_REQ_MAX` | `512` | Max NTRIP client request size (bytes) the caster buffers while reading the request headers. |
-| `PC_OIDC_MAX_LEN` | `1600` | Max accepted OIDC ID-token length (also sizes the Authorization buffer). |
-| `PC_OTA_CONFIRM_WINDOW_MS` | `30000` | Confirm window (ms): a pending image not confirmed within this rolls back. |
-| `PC_PARTITION_JSON_BUF` | `1024` | Stack buffer for the partition-map JSON (bytes). |
-| `PC_PARTITION_MAX` | `16` | Maximum partitions the monitor reports (BSS table). |
-| `PC_PCA9685_FREQ` | `50` | Default PWM output frequency in Hz (50 Hz suits hobby servos). |
-| `PC_PCA9685_I2C_ADDR` | `0x40` | I2C address of the PCA9685 (0x40 default; the six address pins select 0x40..0x7F). |
-| `PC_PER_IP_THROTTLE_MAX` | `10` | Max accepted connections per window from one source IP (see PC_ENABLE_PER_IP_THROTTLE). |
-| `PC_PER_IP_THROTTLE_SLOTS` | `16` | Number of source IPv4 addresses tracked by the per-IP throttle (BSS bucket table). |
-| `PC_PER_IP_THROTTLE_WINDOW_MS` | `10000` | Per-IP throttle window length in milliseconds (see PC_ENABLE_PER_IP_THROTTLE). |
-| `PC_PHY_MAX_IFACES` | `4` | Interfaces layer 1 can carry: wifi station and softAP, ethernet, a bridged bus, a radio. |
-| `PC_PLAINTEXT_SCRATCH` | `10240` |  |
-| `PC_PN532_MAX_DATA` | `254` | Reject a PN532 normal frame whose declared length exceeds this (framing sanity). |
-| `PC_POWER_BUSY_PCT` | `40` | Load percentage at/above which the ceiling clock is used. |
-| `PC_POWER_MHZ_MAX` | `240` | CPU clock (MHz) when there is work to do. |
-| `PC_POWER_MHZ_MIN` | `80` | CPU clock (MHz) when idle, thermally throttled, or recovering from a brownout. |
-| `PC_POWER_RECOVER_MS` | `10000` | How long (ms) to hold the floor clock after a brownout reset before ramping back up. |
-| `PC_POWER_TEMP_COOL_C` | `70` | Die temperature (C) at/below which the throttle is released. |
-| `PC_POWER_TEMP_HOT_C` | `80` | Die temperature (C) at/above which the clock is throttled. |
-| `PC_PQ_DEPTH` | `16` | Capacity of the preempting queue in items (static-allocated). |
-| `PC_PQ_INTERNAL_PRIORITY` | `8` | Base FreeRTOS priority for the internal preempting lanes (DMA / forwarding / device access). |
-| `PC_PQ_ITEM_SIZE` | `32` | Bytes per preempting-queue item (the posted item must fit). |
-| `PC_PQ_STACK` | `4096` | Stack (bytes) for each preempting-queue processing task (ESP32). |
-| `PC_QUIC_MAX_CONNS` | `2` | Simultaneous HTTP/3 connections. |
-| `PC_RADIO_MAX_TX_DBM` | `0` | Max TX power cap in dBm (2..20); 0 = leave the platform default. |
-| `PC_RADIO_WIFI_PS` | `0` | WiFi modem-sleep mode: 0 = none (max perf), 1 = min modem, 2 = max modem. |
-| `PC_RELAY_BUF` | `2048` | Per-direction relay buffer size (bytes) for services/net/relay. |
-| `PC_RELAY_CONNECT_MS` | `5000` | Blocking connect timeout (ms) when the relay listener dials the origin on a new inbound. |
-| `PC_RELAY_DRAIN_MAX` | `8` | Max pc_relay_step passes per poll for the relay listener. |
-| `PC_RELAY_HOST_MAX` | `64` | Max origin hostname length (bytes, incl. |
-| `PC_RELAY_MAX_CONNS` | `4` | Max concurrent relayed connections (bridge table size) for the relay listener. |
-| `PC_RELAY_MAX_PUBLISH` | `4` | Max published relay ports (bind table size) for the relay listener. |
-| `PC_REQUEST_TIMEOUT_MS` | `10000` | Request-header read deadline in milliseconds (slow-loris defense). |
-| `PC_ROBOTICS_AXES` | `6` | Number of Axes the robotics MotionDevice exposes (default 6; must fit PC_OPCUA_REF_MAX). |
-| `PC_ROBOTICS_NS` | `1` | NamespaceIndex the robotics MotionDeviceSystem nodes live at (default 1). |
-| `PC_RTC_I2C_ADDR` | `0x68` | I2C address of the RTC (DS1307/DS3231 are fixed at 0x68). |
-| `PC_SCPI_ERR_QUEUE` | `8` | SCPI error/event queue depth (entries). |
-| `PC_SEN0192_ACTIVE_HIGH` | `1` | SEN0192 OUT polarity: 1 = the OUT line reads HIGH on motion, 0 = active-LOW. |
-| `PC_SEN0192_HOLD_MS` | `2000` | Presence is held this many ms after the last active (motion) sample before it clears. |
-| `PC_SEN0192_PIN` | `4` | GPIO the SEN0192 OUT line is wired to. |
-| `PC_SFTP_MAX_HANDLES` | `4` | Max concurrent open SFTP handles (files + dirs) per SSH connection. |
-| `PC_SFTP_MAX_READ` | `1024` | Largest PC_SSH_FXP_DATA payload returned for one READ (a short read - the client re-requests). |
-| `PC_SFTP_PKT_BUF` | `2048` | SFTP packet-assembly buffer per SFTP channel (bytes); bounds one non-streamed request/response. |
-| `PC_SHT3X_I2C_ADDR` | `0x44` | I2C address of the SHT3x (0x44 with ADDR low; 0x45 with ADDR high). |
-| `PC_SIGFOX_MAX_PAYLOAD` | `12` | Maximum Sigfox uplink payload (the network caps a message at 12 bytes). |
-| `PC_SIMATIC_BLOCK_MAX` | `256` | 3964R block-body buffer size (built/received bytes: DLE-stuffed payload + DLE ETX + BCC). |
-| `PC_SIMATIC_QVZ_MS` | `2000` | 3964R QVZ (Quittungsverzugszeit): handshake acknowledge-delay timeout, ms. |
-| `PC_SIMATIC_ZVZ_MS` | `200` | 3964R ZVZ (Zeichenverzugszeit): inter-character timeout while receiving a block, ms. |
-| `PC_SMB_BUF` | `1024` | SMB2 client work-buffer size (bytes) for smb_client's request/response framing. |
-| `PC_SMTP_CT_BUF_SIZE` | `4096` | Ciphertext receive-ring size for SMTPS, bytes (only used when the message is TLS). |
-| `PC_SMTP_LINE_MAX` | `256` | Max length of one SMTP command / address line (bytes, incl. |
-| `PC_SMTP_MSG_MAX` | `2048` | Max size of the assembled DATA payload (headers + dot-stuffed body), bytes. |
-| `PC_SMTP_REPLY_MAX` | `512` | Max size of one (possibly multi-line) server reply held while parsing, bytes. |
-| `PC_SMTP_TIMEOUT_MS` | `10000` | SMTP connect / per-reply timeout in milliseconds. |
-| `PC_SNMP_TRAP_BUF_SIZE` | `1024` | Static datagram buffer for an outbound SNMP notification, bytes. |
-| `PC_SNMP_TRAP_MAX_VARBINDS` | `8` | Maximum extra variable-bindings (beyond sysUpTime/snmpTrapOID) in one notification. |
-| `PC_SPB_METRIC_MAX` | `256` | Max serialized size of one Sparkplug B metric submessage (stack temp, bytes). |
-| `PC_SSH_ALLOW_PASSWORD` | `1` | Allow SSH password authentication (default on). |
-| `PC_SSH_CLIENT_MAX_CHANNELS` | `4` |  |
-| `PC_SSH_FWD_CHUNK` | `1024` | Max bytes moved per forward channel per poll, target -> client (<= SSH_PKT_BUF_SIZE). |
-| `PC_SSH_FWD_CONNECT_MS` | `3000` | Blocking connect timeout (ms) when opening a forward target. |
-| `PC_SSH_FWD_HOST_MAX` | `64` | Maximum forward target hostname length including null terminator. |
-| `PC_SSH_FWD_MAX` | `2` | Maximum concurrent forwarded TCP connections (must be <= PC_CLIENT_CONNS). |
-| `PC_SSH_MAX_CHANNELS` | `1` | Maximum concurrent SSH channels per connection (RFC 4254 multiplexing). |
-| `PC_SSH_PORT_FORWARD` | `0` | SSH TCP port forwarding (`direct-tcpip`, i.e. |
-| `PC_SSH_PW_CHANGE_COOLDOWN_MS` | `60000u` |  |
-| `PC_SSH_RFWD_BRIDGE_MAX` | `2` | Maximum concurrent bridged connections across all remote forwards. |
-| `PC_SSH_RFWD_MAX` | `1` | Maximum concurrent remote-forward listeners (`ssh -R` / `tcpip-forward`). |
-| `PC_SSH_ZLIB_ACK_DRAM` | `0` | Acknowledge placing the SSH compressor in internal DRAM (no PSRAM). |
-| `PC_SSH_ZLIB_IN_PSRAM` | `0` | Place the per-connection SSH compression state in external PSRAM (ESP32). |
-| `PC_SSH_ZLIB_MAX_IN` | `2048` | Largest uncompressed payload the s2c compressor accepts in one call (bytes). |
-| `PC_SSH_ZLIB_WINDOW` | `8192` | SSH s2c DEFLATE sliding-window size in bytes (max back-reference distance). |
-| `PC_STATSD_LINE_MAX` | `256` | Stack buffer for one StatsD line (bytes; caps metric name + value + tags). |
-| `PC_STATSD_PORT` | `8125` | Default StatsD collector UDP port (StatsD/Graphite standard). |
-| `PC_STOMP_MAX_HEADERS` | `16` | Max header lines parsed per STOMP frame (extras beyond this are ignored). |
-| `PC_SYSLOG_DEFAULT_PORT` | `514` | Default syslog collector UDP port (RFC 5426 well-known 514; overridable at runtime via pc_syslog_init and here for a non-standard collector). |
-| `PC_SYSLOG_FIELD_MAX` | `32` | Maximum syslog HOSTNAME / APP-NAME field length (including NUL). |
-| `PC_SYSLOG_MSG_MAX` | `256` | Maximum formatted syslog datagram length in bytes (RFC 5424 line). |
-| `PC_TCP_NODELAY` | `1` | Disable Nagle's algorithm (set TCP_NODELAY) on every accepted connection. |
-| `PC_TC_MAX_WINDOW_SAMPLES` | `4096` | Max samples a window may hold (pretrigger_samples + posttrigger_samples), static-allocated. |
-| `PC_THEMES_INCLUDE_TRADEMARKED` | `1` | Include the trademark-named themes in the embedded set (default on / open-source). |
-| `PC_THREAD_MAX_DATA` | `256` | Max spinel payload bytes carried in one HDLC-lite frame. |
-| `PC_TIME_SOURCE_MAX` | `4` | Maximum registered time sources. |
-| `PC_TLS13_KS_TERMS` | `12` |  |
-| `PC_TLS13_SECRET_LEN` | `32` |  |
-| `PC_TLS_ACK_MULTI_CONN_DRAM` | `0` | Acknowledge that a MAX_TLS_CONNS > 1 build has been sized to fit. |
-| `PC_TLS_ARENA_IN_PSRAM` | `0` | Place the TLS arena in external PSRAM instead of internal DRAM (ESP32). |
-| `PC_TLS_CONN_MSG_CAP` | `1024` |  |
-| `PC_TLS_CONN_REC_CAP` | `1024` |  |
-| `PC_TLS_CONN_STATE_CAP` | `2304` |  |
-| `PC_TLS_CONN_TERMS` | `5` |  |
-| `PC_TLS_MAX_FRAG_LEN` | `0` | Cap TLS records via the Maximum Fragment Length extension (RFC 6066). |
-| `PC_TLS_TICKET_LIFETIME_S` | `86400` | Session-ticket lifetime / key-rotation period in seconds (see PC_ENABLE_TLS_RESUMPTION). |
-| `PC_TRUSTED_PROXY_MAX` | `2` | Number of trusted-upstream CIDR rules the forwarded-client resolver holds (BSS table). |
-| `PC_UDP_RX_BUF_SIZE` | `1472` | Largest UDP datagram a bound port accepts, in bytes. |
-| `PC_UDP_RX_RING` | `2048` | Per-slot UDP receive ring, in bytes. |
-| `PC_UDP_TELEMETRY_BUF` | `256` | Stack buffer for one telemetry line (bytes). |
-| `PC_UMATI_NS` | `1` | NamespaceIndex the umati MachineTool nodes live at (default 1). |
-| `PC_WEBDAV_BUF_SIZE` | `2048` | Buffer (BSS) for a WebDAV 207 Multi-Status response, in bytes (see PC_ENABLE_WEBDAV). |
-| `PC_WEBDAV_MAX_ENTRIES` | `32` | Maximum children listed in a WebDAV Depth-1 PROPFIND (bounds the response). |
-| `PC_WEBDAV_MAX_PROPS` | `16` | Maximum properties echoed in a WebDAV PROPPATCH 207 response (bounds the response). |
-| `PC_WIFI_SNIFFER_MAX_CHANNELS` | `14` | Channels tracked by the WiFi sniffer's per-channel survey. |
-| `PC_WORKER_CORE` | `1` | Core that worker 0 pins to (ESP32). |
-| `PC_WORKER_COUNT` | `1` | Number of server worker tasks (slots partitioned i % N). |
-| `PC_WORKER_POLL_TICKS` | `1` | Idle-sweep timeout, in FreeRTOS ticks, that a worker blocks between service iterations when no events are pending. |
-| `PC_WORKER_STACK_CURVE_MIN` | `12288` | Minimum worker-task stack (bytes) required once SSH is compiled in. |
-| `PC_WORKER_STACK_PQC_MIN` | `16384` |  |
-| `PC_WORKER_STACK_RSA_MIN` | `8192` | Minimum worker-task stack (bytes) required once an RSA-2048 verifier is compiled in (OIDC / SSH). |
-| `PC_WORKER_TASK_PRIORITY` | `5` | FreeRTOS priority for each server worker task (ESP32). |
-| `PC_WORK_AES256CTR` | `384` |  |
-| `PC_WORK_AESCCM` | `448` |  |
-| `PC_WORK_BIGNUM_HW` | `1024` |  |
-| `PC_WORK_BIGNUM_SW` | `1408` |  |
-| `PC_WORK_CHACHA20` | `192` |  |
-| `PC_WORK_CHACHAPOLY` | `64` |  |
-| `PC_WORK_MD` | `96` |  |
-| `PC_WORK_POLY1305` | `80` |  |
-| `PC_WS_CLIENT_BUF_SIZE` | `1024` | WebSocket client send/receive buffer size in bytes (bounds one frame). |
-| `PC_WS_CLIENT_CT_BUF_SIZE` | `4096` | Ciphertext receive-ring size for wss:// (draining ring; must exceed one TCP_MSS). |
-| `PC_WS_FRAG_SIZE` | `0` | WebSocket outbound fragmentation size (RFC 6455 sec 5.4), in payload bytes. |
-| `PC_ZIGBEE_MAX_DATA` | `128` | Max ASH payload bytes (an EZSP frame; the ASH data field caps near 128). |
-| `PC_ZWAVE_MAX_DATA` | `64` | Reject a Z-Wave frame whose declared length exceeds this data cap (sanity). |
-| `PROTO_INDEX_BITS` | `32` | Bits in every offset, length and capacity the library declares (pc_idx). |
+| `PROTOCORE_ACCEPT_THROTTLE_MAX` | `20` | Max accepted connections per throttle window (see PROTOCORE_ENABLE_ACCEPT_THROTTLE). |
+| `PROTOCORE_ACCEPT_THROTTLE_WINDOW_MS` | `1000` | Throttle window length in milliseconds (see PROTOCORE_ENABLE_ACCEPT_THROTTLE). |
+| `PROTOCORE_ADS1115_DIFFERENTIAL` | `0` | ADS1115 input mode: 0 = single-ended (AINx vs GND), 1 = differential. |
+| `PROTOCORE_ADS1115_I2C_ADDR` | `0x48` | I2C address of the ADS1115 (0x48 with ADDR to GND; 0x49/0x4A/0x4B for VDD/SDA/SCL). |
+| `PROTOCORE_AUTH_LOCKOUT_BASE_MS` | `1000` | First lockout duration in ms; doubles on each further failure. |
+| `PROTOCORE_AUTH_LOCKOUT_MAX_MS` | `300000` | Maximum lockout duration in ms (the exponential backoff cap). |
+| `PROTOCORE_AUTH_LOCKOUT_SLOTS` | `16` | Number of source IPs the auth lockout tracks (BSS bucket table). |
+| `PROTOCORE_AUTH_LOCKOUT_THRESHOLD` | `5` | Consecutive failed auths from one IP before it is locked out. |
+| `PROTOCORE_BASE64_SWAR` | `1` | Use the SWAR base64 decoder (classify 4 characters per 32-bit word). |
+| `PROTOCORE_BRIDGE_MAX_DRAIN` | `8` | Chunks a STREAM target moves per poll before yielding, bounding the UART drain loop. |
+| `PROTOCORE_BRIDGE_MAX_RULES` | `8` | Max concurrent address:port -> bus rules (services/net/iface_bridge). |
+| `PROTOCORE_BRIDGE_STREAM_CHUNK` | `256` | STREAM (UART) pipe chunk size (bytes) for services/net/iface_bridge - one socket<->UART hop. |
+| `PROTOCORE_BRIDGE_TXN_MAX` | `256` | Max write / read payload (bytes) per TRANSACTION frame (services/net/iface_bridge). |
+| `PROTOCORE_BRIDGE_UART_TXN_MS` | `50` | UART TRANSACTION read window (ms): how long a write-then-read waits for the read_len reply. |
+| `PROTOCORE_CLIENT_RX_BUF` | `8192` | Per-connection wire receive ring size (bytes). |
+| `PROTOCORE_CLOSING_TIMEOUT_MS` | `2000` | Upper bound (ms) a slot may dwell in CONN_CLOSING after a graceful close before the idle sweep force-aborts it. |
+| `PROTOCORE_COAP_BLOCK1_MAX` | `1024` | Reassembly buffer for a block-wise (Block1) request upload, in bytes. |
+| `PROTOCORE_COAP_BLOCK_SZX_MAX` | `6` | Largest block-size exponent (SZX) the server will use: block size = 2^(SZX+4) bytes, SZX 0..6 (16..1024). |
+| `PROTOCORE_COAP_DEDUP_ENTRIES` | `4` | CoAP message de-duplication cache size (RFC 7252 sec 4.5). |
+| `PROTOCORE_COAP_DEDUP_LIFETIME_MS` | `247000u` | How long (ms) a dedup entry stays fresh - RFC 7252 EXCHANGE_LIFETIME (~247 s) by default, past which a repeat Message-ID is treated as a new exchange. |
+| `PROTOCORE_COAP_DEDUP_RESP_MAX` | `256` | Largest cached response the dedup cache retains per entry; a bigger response is not cached (a retransmission re-processes it, fine for the idempotent GET whose block-wise reply exceeds this). |
+| `PROTOCORE_COAP_MAX_OBSERVERS` | `4` | Maximum simultaneous CoAP observers (one slot per observed resource per client). |
+| `PROTOCORE_COAP_MAX_PATH` | `64` | Maximum reconstructed Uri-Path length, including separators and the leading '/'. |
+| `PROTOCORE_COAP_MAX_PAYLOAD` | `256` | Maximum CoAP request/response payload in bytes. |
+| `PROTOCORE_COAP_MAX_QUERY` | `64` | Maximum reconstructed Uri-Query length (segments joined by '&'). |
+| `PROTOCORE_COAP_MAX_RESOURCES` | `8` | Maximum registered CoAP resources (the server's fixed routing table). |
+| `PROTOCORE_COAP_OBSERVE_PORT` | `5683` | Default UDP port the CoAP observe transport notifies from (IANA well-known 5683). |
+| `PROTOCORE_CONFIG_KEY_MAX` | `16` | Max key length incl. |
+| `PROTOCORE_CONFIG_MAX_ENTRIES` | `16` | Max key/value entries in the host (test) config backend. |
+| `PROTOCORE_CONFIG_VAL_MAX` | `2048` | Max value bytes per entry in the host (test) config backend. |
+| `PROTOCORE_DASHBOARD_JSON_BUF` | `1024` | Stack buffer for the dashboard layout / values JSON (bytes). |
+| `PROTOCORE_DASHBOARD_MAX_WIDGETS` | `16` | Maximum widgets in the dashboard table (BSS value array). |
+| `PROTOCORE_DAV_MAX_DEPTH` | `8` | Deepest tree a WebDAV DELETE / COPY walks before refusing (see PROTOCORE_ENABLE_WEBDAV). |
+| `PROTOCORE_DEBUG_CHECKS` | `0` | Compile the library's internal debug checks (default 0 = off). |
+| `PROTOCORE_DEFER_QUEUE_DEPTH` | `8` | Depth of each worker's deferred-callback queue. |
+| `PROTOCORE_DELIVERY_MANIFEST_BUF` | `512` | Buffer the precache manifest JSON is built into. |
+| `PROTOCORE_DELIVERY_PRECACHE_MAX` | `16` | Most asset paths a service-worker precache manifest may list. |
+| `PROTOCORE_DMA_BUF_SIZE` | `256` | Bytes per DMA transfer buffer (RX is double-buffered at this size). |
+| `PROTOCORE_DMA_CHANNELS` | `2` | Number of DMA channels (static-allocated; each is one peripheral link). |
+| `PROTOCORE_DNC_LEADER_LEN` | `32` | Default leader/trailer runout length for the DNC encoder. |
+| `PROTOCORE_DNC_LINE_MAX` | `128` | Largest G-code block (one line) the DNC decoder reassembles. |
+| `PROTOCORE_DNC_XOFF_MAX_POLLS` | `200000` | Safety cap on how many times the DNC stream engine polls the reverse channel while paused by an XOFF, before giving up with an I/O error. |
+| `PROTOCORE_DNS_CLIENT_PORT` | `1153` | Local UDP port the portable resolver asks from and hears the answer on. |
+| `PROTOCORE_DNS_NAME_MAX` | `128` | Max length of a queried/stored DNS name (bytes, incl NUL). |
+| `PROTOCORE_DNS_SERVER_MAX_RECORDS` | `8` | Max A records in the DNS server's fixed table. |
+| `PROTOCORE_DNS_SERVER_TTL` | `60` | TTL (seconds) the DNS server puts on its answers. |
+| `PROTOCORE_DNS_TIMEOUT_MS` | `5000` |  |
+| `PROTOCORE_DTLS_PMTU_DEFAULT` | `1232` | Largest datagram a DTLS handshake flight will put on the wire, before a connection overrides it (RFC 9147 sec 4.3). |
+| `PROTOCORE_EDGE_CENC_MAX` | `32` | Stored Content-Encoding to replay (e.g. |
+| `PROTOCORE_EDGE_CTYPE_MAX` | `64` | Stored Content-Type to replay. |
+| `PROTOCORE_EDGE_ETAG_MAX` | `64` | Stored validator (ETag, quotes included). |
+| `PROTOCORE_EDGE_LASTMOD_MAX` | `40` | Stored Last-Modified (RFC 1123 date). |
+| `PROTOCORE_EM77_NS` | `1` | NamespaceIndex the EUROMAP 77 IMM_MES_Interface nodes live at (default 1). |
+| `PROTOCORE_ENFORCE_HOST_HEADER` | `1` | Enforce the RFC 7230 §5.4 Host-header requirement (default on). |
+| `PROTOCORE_ENOCEAN_MAX_DATA` | `512` | Reject an ESP3 telegram whose declared data length exceeds this (framing sanity). |
+| `PROTOCORE_ETH_W5500` | `0` |  |
+| `PROTOCORE_EXC_COREDUMP_CHUNK` | `512` | Chunk the core-dump image is streamed out of flash in. |
+| `PROTOCORE_FAILSAFE_MAX_LIFELINES` | `8` | Max monitored lifelines in the fail-safe registry (static, zero-heap). |
+| `PROTOCORE_FILESYSTEM_PATH_MAX` | `256` | Largest absolute path the SFTP/SCP server resolves (mount root + request path). |
+| `PROTOCORE_FTP_CHUNK` | `512` | Bytes staged per data-channel write when the session driver streams a payload. |
+| `PROTOCORE_FTP_CMD_MAX` | `256` | Suggested FTP control-command buffer size. |
+| `PROTOCORE_FTP_REPLY_BUF` | `512` | Control-reply accumulator for the FTP session driver. |
+| `PROTOCORE_FTP_TIMEOUT_MS` | `8000` | Per-step timeout for the FTP session driver: connect, and each control reply. |
+| `PROTOCORE_FWD_ACL_PATLEN` | `4` | Bytes an ACL entry can match (its pattern / mask length). |
+| `PROTOCORE_FWD_INSPECT` | `0` | Build-time toggle for the forwarding-path inspection hook (default off, for cost + privacy). |
+| `PROTOCORE_FWD_MAX_ACL` | `8` | Max ingress access-control entries (byte-pattern permit/deny; static). |
+| `PROTOCORE_FWD_MAX_ROUTES` | `8` | Max policy routes (byte-pattern -> egress interface; static). |
+| `PROTOCORE_FWD_MAX_RULES` | `8` | Max forwarding rules (src -> dst allow/deny + rate cap; static-allocated). |
+| `PROTOCORE_GPIO_JSON_BUF` | `1024` | Stack buffer for the GPIO-map JSON (bytes). |
+| `PROTOCORE_GPIO_MAX` | `40` | Maximum GPIO pins the mapper reports (BSS table). |
+| `PROTOCORE_GUARDRAIL_FRAG_MIN_BLOCK` | `4096` | Largest-free-block floor (bytes); below this trips the fragmentation guardrail. |
+| `PROTOCORE_GUARDRAIL_HEAP_MIN` | `8192` | Free-heap floor (bytes); below this trips the heap guardrail. |
+| `PROTOCORE_GUARDRAIL_STACK_MIN` | `512` | Task remaining-stack floor (bytes); below this trips the stack guardrail. |
+| `PROTOCORE_GW_MAX_PORTS` | `4` | Max southbound gateway ports (radios / buses; static-allocated). |
+| `PROTOCORE_H2_HDR_BLOCK` | `4096` | Header-block reassembly buffer for HTTP/2 requests that span HEADERS + CONTINUATION frames (a single END_HEADERS frame decodes in place and needs no copy). |
+| `PROTOCORE_H2_MAX_CONTINUATION` | `8` | CONTINUATION frames one header block may span (RFC 9113 sec 6.10). |
+| `PROTOCORE_H2_MAX_FRAME` | `16384` | Largest HTTP/2 frame we accept, in bytes (advertised as SETTINGS_MAX_FRAME_SIZE). |
+| `PROTOCORE_H2_MAX_STREAMS` | `8` | Max concurrent HTTP/2 streams per connection (advertised as MAX_CONCURRENT_STREAMS). |
+| `PROTOCORE_H2_POOL_IN_PSRAM` | `0` | Place the HTTP/2 connection-engine pool in external PSRAM (ESP32). |
+| `PROTOCORE_H3_CRYPTO_BUF` | `2048` | Maximum bytes of one QUIC/TLS handshake CRYPTO flight (RFC 9001). |
+| `PROTOCORE_H3_MAX_STREAMS` | `8` | Maximum concurrent request streams per HTTP/3 connection. |
+| `PROTOCORE_H3_QPACK_BLOCK` | `256` |  |
+| `PROTOCORE_H3_QPACK_SCRATCH` | `512` |  |
+| `PROTOCORE_HMMD_BAUD` | `115200` | HMMD UART baud rate (the module's factory default is 115200). |
+| `PROTOCORE_HMMD_UART` | `2` | UART unit the HMMD is wired to. |
+| `PROTOCORE_HOTSWAP_FAIL_THRESHOLD` | `3` | Consecutive I/O failures that declare a removable volume gone. |
+| `PROTOCORE_HOTSWAP_PROBE_MS` | `2000` | Minimum gap between remount attempts while a volume is absent or faulted (ms). |
+| `PROTOCORE_HPACK_MAX_ENTRIES` | `128` | Max HPACK dynamic-table entries (>= PROTOCORE_HPACK_TABLE_BYTES / 32, the min entry size). |
+| `PROTOCORE_HPACK_TABLE_BYTES` | `4096` | Per-connection HPACK dynamic-table size in bytes (our decoder; advertised to the peer as SETTINGS_HEADER_TABLE_SIZE). |
+| `PROTOCORE_HTTP3_PORT` | `443` | UDP port the HTTP/3 (QUIC) server binds by default (used by protocore_h3_cert). |
+| `PROTOCORE_HTTP_CLIENT_BUF_SIZE` | `2048` | Receive buffer (and max response size) for the outbound HTTP client, bytes. |
+| `PROTOCORE_HTTP_CLIENT_CT_BUF_SIZE` | `4096` | Ciphertext receive-ring size for the https:// client, bytes. |
+| `PROTOCORE_HTTP_CLIENT_TIMEOUT_MS` | `8000` | Outbound HTTP client connect/response timeout in milliseconds. |
+| `PROTOCORE_HTTP_EMIT_DATE` | `0` | Auto-inject a `Date` response header (RFC 7231 7.1.1.2) when a wall-clock time is available. |
+| `PROTOCORE_INA219_CURRENT_LSB_UA` | `100` | Default INA219 current LSB in microamps per bit (calibration input). |
+| `PROTOCORE_INA219_I2C_ADDR` | `0x40` | I2C address of the INA219 (0x40 default; the A0/A1 pins select 0x40..0x4F). |
+| `PROTOCORE_INA219_SHUNT_MOHM` | `100` | Default INA219 shunt resistance in milliohms (calibration input). |
+| `PROTOCORE_IP_ALLOWLIST_SLOTS` | `8` | Number of CIDR rules the source-IP allowlist can hold (BSS table). |
+| `PROTOCORE_JWT_MAX_LEN` | `512` | Maximum accepted JWT length in bytes (header.payload.signature). |
+| `PROTOCORE_KEEPALIVE_MAX_REQUESTS` | `100` | Maximum requests served on one keep-alive connection before it is closed. |
+| `PROTOCORE_LD2410_BAUD` | `256000` | LD2410 UART baud rate (the module's fixed factory default is 256000). |
+| `PROTOCORE_LD2410_UART` | `2` | UART unit the LD2410 is wired to. |
+| `PROTOCORE_LOG_LINES` | `32` | Number of log lines retained in the ring. |
+| `PROTOCORE_LOG_LINE_LEN` | `96` | Maximum length of one stored log line (bytes, including null). |
+| `PROTOCORE_LORA_MAX_PAYLOAD` | `251` | Max LoRa payload bytes (SX127x FIFO is 256; RadioHead uses 251 + 4 header). |
+| `PROTOCORE_MAX_UDP_LISTENERS` | `2` | Maximum simultaneously bound UDP ports (transport-layer UDP service). |
+| `PROTOCORE_MDNS_LABEL_MAX` | `32` | Longest host label, service type or proto label the responder holds, NUL included. |
+| `PROTOCORE_MDNS_MAX_SERVICES` | `4` | Services the responder advertises at once, `_http._tcp` included. |
+| `PROTOCORE_MDNS_TXT_MAX` | `128` | Bytes of packed `key=value` TXT strings, each with its own length byte ahead of it. |
+| `PROTOCORE_MDNS_TX_MAX` | `512` | Response datagram the responder composes. |
+| `PROTOCORE_MODBUS_COILS` | `64` | Number of Modbus coils (FC 1/5/15), single-bit R/W (BSS, bit-packed). |
+| `PROTOCORE_MODBUS_DISCRETE_INPUTS` | `64` | Number of Modbus discrete inputs (FC 2), single-bit read-only (BSS, bit-packed). |
+| `PROTOCORE_MODBUS_HOLDING_REGS` | `64` | Number of Modbus holding registers (FC 3/6/16), 16-bit R/W (BSS). |
+| `PROTOCORE_MODBUS_INPUT_REGS` | `64` | Number of Modbus input registers (FC 4), 16-bit read-only (BSS). |
+| `PROTOCORE_MPR121_I2C_ADDR` | `0x5A` | I2C address of the MPR121 (0x5A default; 0x5B/0x5C/0x5D via the ADDR pin). |
+| `PROTOCORE_MPR121_RELEASE_THRESHOLD` | `6` | MPR121 per-electrode release threshold (delta counts; should be below the touch threshold). |
+| `PROTOCORE_MPR121_TOUCH_THRESHOLD` | `12` | MPR121 per-electrode touch threshold (delta counts from baseline; NXP AN3944 suggests ~4..12). |
+| `PROTOCORE_MQTT_BUF_SIZE` | `1024` | MQTT packet buffer size in bytes (bounds one outgoing/incoming packet). |
+| `PROTOCORE_MQTT_CONNECT_MS` | `8000` | What the whole MQTT connect is given, in milliseconds. |
+| `PROTOCORE_MQTT_CT_BUF_SIZE` | `4096` | Ciphertext receive-ring size for MQTTS (draining ring; must exceed one TCP_MSS). |
+| `PROTOCORE_MQTT_KEEPALIVE_S` | `30` | Default MQTT keep-alive interval in seconds (PINGREQ cadence / CONNECT field). |
+| `PROTOCORE_MQTT_MAX_INFLIGHT` | `4` | Outbound QoS 1/2 in-flight slots (unacknowledged exchanges awaiting their acknowledgement). |
+| `PROTOCORE_MQTT_MAX_TOPIC` | `128` | Maximum inbound MQTT topic length (including NUL) delivered to the callback. |
+| `PROTOCORE_MQTT_RETRANSMIT_MS` | `5000` | Retransmit timeout (ms) for an unacknowledged in-flight QoS 1/2 message. |
+| `PROTOCORE_MQTT_RX_QOS2_SLOTS` | `8` | Inbound QoS 2 packet-id de-duplication ring depth (PUBREC-acknowledged, awaiting PUBREL). |
+| `PROTOCORE_MTLS_SUBJECT_MAX` | `128` | Maximum length of a verified mTLS peer subject DN string (incl. |
+| `PROTOCORE_NEED_CLIENT` | `0` |  |
+| `PROTOCORE_NEED_UDP` | `0` |  |
+| `PROTOCORE_NRF24_PAYLOAD` | `32` | nRF24 fixed payload width in bytes (1..32; the chip's static payload size). |
+| `PROTOCORE_NTP_CLIENT_PORT` | `1123` | Local UDP port the portable SNTP client asks from. |
+| `PROTOCORE_NTP_SERVER_STRATUM` | `3` | Stratum the NTP server advertises (distance from a reference clock; 1-15). |
+| `PROTOCORE_NTRIP_MAX_MOUNTS` | `2` | Max distinct mountpoints a single caster serves (each = one RTCM stream). |
+| `PROTOCORE_NTRIP_MAX_ROVERS` | `4` | Max concurrent rover connections a caster serves corrections to (services/timing_position/gnss). |
+| `PROTOCORE_NTRIP_MOUNT_MAX` | `32` | Max length (incl. |
+| `PROTOCORE_NTRIP_REQ_MAX` | `512` | Max NTRIP client request size (bytes) the caster buffers while reading the request headers. |
+| `PROTOCORE_OIDC_MAX_LEN` | `1600` | Max accepted OIDC ID-token length (also sizes the Authorization buffer). |
+| `PROTOCORE_OTA_CONFIRM_WINDOW_MS` | `30000` | Confirm window (ms): a pending image not confirmed within this rolls back. |
+| `PROTOCORE_PARTITION_JSON_BUF` | `1024` | Stack buffer for the partition-map JSON (bytes). |
+| `PROTOCORE_PARTITION_MAX` | `16` | Maximum partitions the monitor reports (BSS table). |
+| `PROTOCORE_PCA9685_FREQ` | `50` | Default PWM output frequency in Hz (50 Hz suits hobby servos). |
+| `PROTOCORE_PCA9685_I2C_ADDR` | `0x40` | I2C address of the PCA9685 (0x40 default; the six address pins select 0x40..0x7F). |
+| `PROTOCORE_PER_IP_THROTTLE_MAX` | `10` | Max accepted connections per window from one source IP (see PROTOCORE_ENABLE_PER_IP_THROTTLE). |
+| `PROTOCORE_PER_IP_THROTTLE_SLOTS` | `16` | Number of source IPv4 addresses tracked by the per-IP throttle (BSS bucket table). |
+| `PROTOCORE_PER_IP_THROTTLE_WINDOW_MS` | `10000` | Per-IP throttle window length in milliseconds (see PROTOCORE_ENABLE_PER_IP_THROTTLE). |
+| `PROTOCORE_PHY_MAX_IFACES` | `4` | Interfaces layer 1 can carry: wifi station and softAP, ethernet, a bridged bus, a radio. |
+| `PROTOCORE_PLAINTEXT_SCRATCH` | `10240` |  |
+| `PROTOCORE_PN532_MAX_DATA` | `254` | Reject a PN532 normal frame whose declared length exceeds this (framing sanity). |
+| `PROTOCORE_POWER_BUSY_PCT` | `40` | Load percentage at/above which the ceiling clock is used. |
+| `PROTOCORE_POWER_MHZ_MAX` | `240` | CPU clock (MHz) when there is work to do. |
+| `PROTOCORE_POWER_MHZ_MIN` | `80` | CPU clock (MHz) when idle, thermally throttled, or recovering from a brownout. |
+| `PROTOCORE_POWER_RECOVER_MS` | `10000` | How long (ms) to hold the floor clock after a brownout reset before ramping back up. |
+| `PROTOCORE_POWER_TEMP_COOL_C` | `70` | Die temperature (C) at/below which the throttle is released. |
+| `PROTOCORE_POWER_TEMP_HOT_C` | `80` | Die temperature (C) at/above which the clock is throttled. |
+| `PROTOCORE_PQ_DEPTH` | `16` | Capacity of the preempting queue in items (static-allocated). |
+| `PROTOCORE_PQ_INTERNAL_PRIORITY` | `8` | Base FreeRTOS priority for the internal preempting lanes (DMA / forwarding / device access). |
+| `PROTOCORE_PQ_ITEM_SIZE` | `32` | Bytes per preempting-queue item (the posted item must fit). |
+| `PROTOCORE_PQ_STACK` | `4096` | Stack (bytes) for each preempting-queue processing task (ESP32). |
+| `PROTOCORE_QUIC_MAX_CONNS` | `2` | Simultaneous HTTP/3 connections. |
+| `PROTOCORE_RADIO_MAX_TX_DBM` | `0` | Max TX power cap in dBm (2..20); 0 = leave the platform default. |
+| `PROTOCORE_RADIO_WIFI_PS` | `0` | WiFi modem-sleep mode: 0 = none (max perf), 1 = min modem, 2 = max modem. |
+| `PROTOCORE_RELAY_BUF` | `2048` | Per-direction relay buffer size (bytes) for services/net/relay. |
+| `PROTOCORE_RELAY_CONNECT_MS` | `5000` | Blocking connect timeout (ms) when the relay listener dials the origin on a new inbound. |
+| `PROTOCORE_RELAY_DRAIN_MAX` | `8` | Max protocore_relay_step passes per poll for the relay listener. |
+| `PROTOCORE_RELAY_HOST_MAX` | `64` | Max origin hostname length (bytes, incl. |
+| `PROTOCORE_RELAY_MAX_CONNS` | `4` | Max concurrent relayed connections (bridge table size) for the relay listener. |
+| `PROTOCORE_RELAY_MAX_PUBLISH` | `4` | Max published relay ports (bind table size) for the relay listener. |
+| `PROTOCORE_REQUEST_TIMEOUT_MS` | `10000` | Request-header read deadline in milliseconds (slow-loris defense). |
+| `PROTOCORE_ROBOTICS_AXES` | `6` | Number of Axes the robotics MotionDevice exposes (default 6; must fit PROTOCORE_OPCUA_REF_MAX). |
+| `PROTOCORE_ROBOTICS_NS` | `1` | NamespaceIndex the robotics MotionDeviceSystem nodes live at (default 1). |
+| `PROTOCORE_RTC_I2C_ADDR` | `0x68` | I2C address of the RTC (DS1307/DS3231 are fixed at 0x68). |
+| `PROTOCORE_SCPI_ERR_QUEUE` | `8` | SCPI error/event queue depth (entries). |
+| `PROTOCORE_SEN0192_ACTIVE_HIGH` | `1` | SEN0192 OUT polarity: 1 = the OUT line reads HIGH on motion, 0 = active-LOW. |
+| `PROTOCORE_SEN0192_HOLD_MS` | `2000` | Presence is held this many ms after the last active (motion) sample before it clears. |
+| `PROTOCORE_SEN0192_PIN` | `4` | GPIO the SEN0192 OUT line is wired to. |
+| `PROTOCORE_SFTP_MAX_HANDLES` | `4` | Max concurrent open SFTP handles (files + dirs) per SSH connection. |
+| `PROTOCORE_SFTP_MAX_READ` | `1024` | Largest PROTOCORE_SSH_FXP_DATA payload returned for one READ (a short read - the client re-requests). |
+| `PROTOCORE_SFTP_PKT_BUF` | `2048` | SFTP packet-assembly buffer per SFTP channel (bytes); bounds one non-streamed request/response. |
+| `PROTOCORE_SHT3X_I2C_ADDR` | `0x44` | I2C address of the SHT3x (0x44 with ADDR low; 0x45 with ADDR high). |
+| `PROTOCORE_SIGFOX_MAX_PAYLOAD` | `12` | Maximum Sigfox uplink payload (the network caps a message at 12 bytes). |
+| `PROTOCORE_SIMATIC_BLOCK_MAX` | `256` | 3964R block-body buffer size (built/received bytes: DLE-stuffed payload + DLE ETX + BCC). |
+| `PROTOCORE_SIMATIC_QVZ_MS` | `2000` | 3964R QVZ (Quittungsverzugszeit): handshake acknowledge-delay timeout, ms. |
+| `PROTOCORE_SIMATIC_ZVZ_MS` | `200` | 3964R ZVZ (Zeichenverzugszeit): inter-character timeout while receiving a block, ms. |
+| `PROTOCORE_SMB_BUF` | `1024` | SMB2 client work-buffer size (bytes) for smb_client's request/response framing. |
+| `PROTOCORE_SMTP_CT_BUF_SIZE` | `4096` | Ciphertext receive-ring size for SMTPS, bytes (only used when the message is TLS). |
+| `PROTOCORE_SMTP_LINE_MAX` | `256` | Max length of one SMTP command / address line (bytes, incl. |
+| `PROTOCORE_SMTP_MSG_MAX` | `2048` | Max size of the assembled DATA payload (headers + dot-stuffed body), bytes. |
+| `PROTOCORE_SMTP_REPLY_MAX` | `512` | Max size of one (possibly multi-line) server reply held while parsing, bytes. |
+| `PROTOCORE_SMTP_TIMEOUT_MS` | `10000` | SMTP connect / per-reply timeout in milliseconds. |
+| `PROTOCORE_SNMP_TRAP_BUF_SIZE` | `1024` | Static datagram buffer for an outbound SNMP notification, bytes. |
+| `PROTOCORE_SNMP_TRAP_MAX_VARBINDS` | `8` | Maximum extra variable-bindings (beyond sysUpTime/snmpTrapOID) in one notification. |
+| `PROTOCORE_SPB_METRIC_MAX` | `256` | Max serialized size of one Sparkplug B metric submessage (stack temp, bytes). |
+| `PROTOCORE_SSH_ALLOW_PASSWORD` | `1` | Allow SSH password authentication (default on). |
+| `PROTOCORE_SSH_CLIENT_MAX_CHANNELS` | `4` |  |
+| `PROTOCORE_SSH_FWD_CHUNK` | `1024` | Max bytes moved per forward channel per poll, target -> client (<= SSH_PKT_BUF_SIZE). |
+| `PROTOCORE_SSH_FWD_CONNECT_MS` | `3000` | Blocking connect timeout (ms) when opening a forward target. |
+| `PROTOCORE_SSH_FWD_HOST_MAX` | `64` | Maximum forward target hostname length including null terminator. |
+| `PROTOCORE_SSH_FWD_MAX` | `2` | Maximum concurrent forwarded TCP connections (must be <= PROTOCORE_CLIENT_CONNS). |
+| `PROTOCORE_SSH_MAX_CHANNELS` | `1` | Maximum concurrent SSH channels per connection (RFC 4254 multiplexing). |
+| `PROTOCORE_SSH_PORT_FORWARD` | `0` | SSH TCP port forwarding (`direct-tcpip`, i.e. |
+| `PROTOCORE_SSH_PW_CHANGE_COOLDOWN_MS` | `60000u` |  |
+| `PROTOCORE_SSH_RFWD_BRIDGE_MAX` | `2` | Maximum concurrent bridged connections across all remote forwards. |
+| `PROTOCORE_SSH_RFWD_MAX` | `1` | Maximum concurrent remote-forward listeners (`ssh -R` / `tcpip-forward`). |
+| `PROTOCORE_SSH_ZLIB_ACK_DRAM` | `0` | Acknowledge placing the SSH compressor in internal DRAM (no PSRAM). |
+| `PROTOCORE_SSH_ZLIB_IN_PSRAM` | `0` | Place the per-connection SSH compression state in external PSRAM (ESP32). |
+| `PROTOCORE_SSH_ZLIB_MAX_IN` | `2048` | Largest uncompressed payload the s2c compressor accepts in one call (bytes). |
+| `PROTOCORE_SSH_ZLIB_WINDOW` | `8192` | SSH s2c DEFLATE sliding-window size in bytes (max back-reference distance). |
+| `PROTOCORE_STATSD_LINE_MAX` | `256` | Stack buffer for one StatsD line (bytes; caps metric name + value + tags). |
+| `PROTOCORE_STATSD_PORT` | `8125` | Default StatsD collector UDP port (StatsD/Graphite standard). |
+| `PROTOCORE_STOMP_MAX_HEADERS` | `16` | Max header lines parsed per STOMP frame (extras beyond this are ignored). |
+| `PROTOCORE_SYSLOG_DEFAULT_PORT` | `514` | Default syslog collector UDP port (RFC 5426 well-known 514; overridable at runtime via protocore_syslog_init and here for a non-standard collector). |
+| `PROTOCORE_SYSLOG_FIELD_MAX` | `32` | Maximum syslog HOSTNAME / APP-NAME field length (including NUL). |
+| `PROTOCORE_SYSLOG_MSG_MAX` | `256` | Maximum formatted syslog datagram length in bytes (RFC 5424 line). |
+| `PROTOCORE_TCP_NODELAY` | `1` | Disable Nagle's algorithm (set TCP_NODELAY) on every accepted connection. |
+| `PROTOCORE_TC_MAX_WINDOW_SAMPLES` | `4096` | Max samples a window may hold (pretrigger_samples + posttrigger_samples), static-allocated. |
+| `PROTOCORE_THEMES_INCLUDE_TRADEMARKED` | `1` | Include the trademark-named themes in the embedded set (default on / open-source). |
+| `PROTOCORE_THREAD_MAX_DATA` | `256` | Max spinel payload bytes carried in one HDLC-lite frame. |
+| `PROTOCORE_TIME_SOURCE_MAX` | `4` | Maximum registered time sources. |
+| `PROTOCORE_TLS13_KS_TERMS` | `12` |  |
+| `PROTOCORE_TLS13_SECRET_LEN` | `32` |  |
+| `PROTOCORE_TLS_ACK_MULTI_CONN_DRAM` | `0` | Acknowledge that a MAX_TLS_CONNS > 1 build has been sized to fit. |
+| `PROTOCORE_TLS_ARENA_IN_PSRAM` | `0` | Place the TLS arena in external PSRAM instead of internal DRAM (ESP32). |
+| `PROTOCORE_TLS_CONN_MSG_CAP` | `1024` |  |
+| `PROTOCORE_TLS_CONN_REC_CAP` | `1024` |  |
+| `PROTOCORE_TLS_CONN_STATE_CAP` | `2304` |  |
+| `PROTOCORE_TLS_CONN_TERMS` | `5` |  |
+| `PROTOCORE_TLS_MAX_FRAG_LEN` | `0` | Cap TLS records via the Maximum Fragment Length extension (RFC 6066). |
+| `PROTOCORE_TLS_TICKET_LIFETIME_S` | `86400` | Session-ticket lifetime / key-rotation period in seconds (see PROTOCORE_ENABLE_TLS_RESUMPTION). |
+| `PROTOCORE_TRUSTED_PROXY_MAX` | `2` | Number of trusted-upstream CIDR rules the forwarded-client resolver holds (BSS table). |
+| `PROTOCORE_UDP_RX_BUF_SIZE` | `1472` | Largest UDP datagram a bound port accepts, in bytes. |
+| `PROTOCORE_UDP_RX_RING` | `2048` | Per-slot UDP receive ring, in bytes. |
+| `PROTOCORE_UDP_TELEMETRY_BUF` | `256` | Stack buffer for one telemetry line (bytes). |
+| `PROTOCORE_UMATI_NS` | `1` | NamespaceIndex the umati MachineTool nodes live at (default 1). |
+| `PROTOCORE_WEBDAV_BUF_SIZE` | `2048` | Buffer (BSS) for a WebDAV 207 Multi-Status response, in bytes (see PROTOCORE_ENABLE_WEBDAV). |
+| `PROTOCORE_WEBDAV_MAX_ENTRIES` | `32` | Maximum children listed in a WebDAV Depth-1 PROPFIND (bounds the response). |
+| `PROTOCORE_WEBDAV_MAX_PROPS` | `16` | Maximum properties echoed in a WebDAV PROPPATCH 207 response (bounds the response). |
+| `PROTOCORE_WIFI_SNIFFER_MAX_CHANNELS` | `14` | Channels tracked by the WiFi sniffer's per-channel survey. |
+| `PROTOCORE_WORKER_CORE` | `1` | Core that worker 0 pins to (ESP32). |
+| `PROTOCORE_WORKER_COUNT` | `1` | Number of server worker tasks (slots partitioned i % N). |
+| `PROTOCORE_WORKER_POLL_TICKS` | `1` | Idle-sweep timeout, in FreeRTOS ticks, that a worker blocks between service iterations when no events are pending. |
+| `PROTOCORE_WORKER_STACK_CURVE_MIN` | `12288` | Minimum worker-task stack (bytes) required once SSH is compiled in. |
+| `PROTOCORE_WORKER_STACK_PQC_MIN` | `16384` |  |
+| `PROTOCORE_WORKER_STACK_RSA_MIN` | `8192` | Minimum worker-task stack (bytes) required once an RSA-2048 verifier is compiled in (OIDC / SSH). |
+| `PROTOCORE_WORKER_TASK_PRIORITY` | `5` | FreeRTOS priority for each server worker task (ESP32). |
+| `PROTOCORE_WORK_AES256CTR` | `384` |  |
+| `PROTOCORE_WORK_AESCCM` | `448` |  |
+| `PROTOCORE_WORK_BIGNUM_HW` | `1024` |  |
+| `PROTOCORE_WORK_BIGNUM_SW` | `1408` |  |
+| `PROTOCORE_WORK_CHACHA20` | `192` |  |
+| `PROTOCORE_WORK_CHACHAPOLY` | `64` |  |
+| `PROTOCORE_WORK_MD` | `96` |  |
+| `PROTOCORE_WORK_POLY1305` | `80` |  |
+| `PROTOCORE_WS_CLIENT_BUF_SIZE` | `1024` | WebSocket client send/receive buffer size in bytes (bounds one frame). |
+| `PROTOCORE_WS_CLIENT_CT_BUF_SIZE` | `4096` | Ciphertext receive-ring size for wss:// (draining ring; must exceed one TCP_MSS). |
+| `PROTOCORE_WS_FRAG_SIZE` | `0` | WebSocket outbound fragmentation size (RFC 6455 sec 5.4), in payload bytes. |
+| `PROTOCORE_ZIGBEE_MAX_DATA` | `128` | Max ASH payload bytes (an EZSP frame; the ASH data field caps near 128). |
+| `PROTOCORE_ZWAVE_MAX_DATA` | `64` | Reject a Z-Wave frame whose declared length exceeds this data cap (sanity). |
+| `PROTO_INDEX_BITS` | `32` | Bits in every offset, length and capacity the library declares (protocore_idx). |
 | `PROTO_MAX_HANDLERS` | `12` | Size of the protocol-handler dispatch table; must exceed the largest ProtoConn id. |
 | `QUERY_KEY_LEN` | `24` | Maximum query-parameter key length. |
 | `QUERY_VAL_LEN` | `48` | Maximum query-parameter value length. |
@@ -1623,7 +1581,7 @@ guards at compile time.
 | `SSH_PKT_BUF_SIZE` | `2048` | Packet assembly buffer per SSH connection (bytes). |
 | `SSH_REKEY_TIME_MS` | `3600000u` | Elapsed-time re-key trigger in milliseconds (RFC 4253 §9: "after each hour"). |
 | `TELNET_BUF_SIZE` | `256` | Stack buffer for one Telnet I/O chunk. |
-| `TERM_TX_BUF_SIZE` | `256` | Stack scratch for pc_web_terminal_println() line building. |
+| `TERM_TX_BUF_SIZE` | `256` | Stack scratch for protocore_web_terminal_println() line building. |
 | `WS_FRAME_SIZE` | `512` | Maximum WebSocket frame payload in bytes. |
 | `WS_HDR_BUF_SIZE` | `256` | Stack buffer for the HTTP 101 Switching Protocols response sent during the WebSocket handshake. |
 
@@ -1653,7 +1611,7 @@ Pass `nullptr` (or omit) to use the compile-time default [`CONN_TIMEOUT_MS`](@re
 
 | Method                         | Description                                                                           |
 | ------------------------------ | ------------------------------------------------------------------------------------- |
-| `begin(port, cfg = nullptr)`   | Bind and listen. Returns `PC_OK` (1) on success, a negative error code on failure. |
+| `begin(port, cfg = nullptr)`   | Bind and listen. Returns `PROTOCORE_OK` (1) on success, a negative error code on failure. |
 | [`stop()`](@ref PC::stop)     | Abort all connections, close listener, reset all pools.                               |
 | `restart(cfg = nullptr)`       | `stop()` + `begin()` on the same port. Returns `-1` if called before `begin()`.       |
 | [`handle()`](@ref PC::handle) | Call every `loop()`. Runs timeout sweep, event drain, and dispatch.                   |
@@ -1663,14 +1621,14 @@ Pass `nullptr` (or omit) to use the compile-time default [`CONN_TIMEOUT_MS`](@re
 | Method                                         | Description                                                     |
 | ---------------------------------------------- | --------------------------------------------------------------- |
 | `on(path, method, handler)`                    | Register a route. Trailing `*` enables prefix matching.         |
-| `on(path, method, handler, realm, user, pass)` | Same, with Basic Auth (`PC_ENABLE_AUTH`).                    |
+| `on(path, method, handler, realm, user, pass)` | Same, with Basic Auth (`PROTOCORE_ENABLE_AUTH`).                    |
 | `on_not_found(handler)`                        | Fallback handler; default sends 404.                            |
 | `set_cors(origin)`                             | Enable CORS and answer OPTIONS with 204. Pass `""` to disable.  |
 | `send(slot_id, code, type, body)`              | Send a response with body and close the connection.             |
 | `send_empty(slot_id, code)`                    | Send a headers-only response and close the connection.          |
-| `serve_file(slot_id, fs, path, type)`          | Stream a file from an Arduino FS (`PC_ENABLE_FILE_SERVING`). |
+| `serve_file(slot_id, fs, path, type)`          | Stream a file from an Arduino FS (`PROTOCORE_ENABLE_FILE_SERVING`). |
 
-**PC - WebSocket (PC_ENABLE_WEBSOCKET)**
+**PC - WebSocket (PROTOCORE_ENABLE_WEBSOCKET)**
 
 | Method                                          | Description                                 |
 | ----------------------------------------------- | ------------------------------------------- |
@@ -1681,7 +1639,7 @@ Pass `nullptr` (or omit) to use the compile-time default [`CONN_TIMEOUT_MS`](@re
 
 In `on_message`, read the received payload from `ws_pool[ws_id].buf` (length in `ws_pool[ws_id].payload_len`).
 
-**PC - SSE (PC_ENABLE_SSE)**
+**PC - SSE (PROTOCORE_ENABLE_SSE)**
 
 | Method                                                     | Description                             |
 | ---------------------------------------------------------- | --------------------------------------- |
@@ -1689,7 +1647,7 @@ In `on_message`, read the received payload from `ws_pool[ws_id].buf` (length in 
 | `sse_send(sse_id, data, event = nullptr, id = nullptr)`    | Push an event to one client.            |
 | `sse_broadcast(path, data, event = nullptr, id = nullptr)` | Push an event to all clients on a path. |
 
-**PC - Diagnostic (PC_ENABLE_DIAG)**
+**PC - Diagnostic (PROTOCORE_ENABLE_DIAG)**
 
 | Method          | Description                                                                                          |
 | --------------- | ---------------------------------------------------------------------------------------------------- |
@@ -1701,12 +1659,12 @@ In `on_message`, read the received payload from `ws_pool[ws_id].buf` (length in 
 // HTTP
 void handler(uint8_t slot_id, HttpReq *req);
 
-// WebSocket (PC_ENABLE_WEBSOCKET)
+// WebSocket (PROTOCORE_ENABLE_WEBSOCKET)
 void ws_connect(uint8_t ws_id);
 void ws_message(uint8_t ws_id);  // payload in ws_pool[ws_id].buf
 void ws_close(uint8_t ws_id);
 
-// SSE (PC_ENABLE_SSE)
+// SSE (PROTOCORE_ENABLE_SSE)
 void sse_connect(uint8_t sse_id);
 ```
 
@@ -1756,7 +1714,7 @@ with per-direction NEWKEYS and transparent in-session re-keys. Key exchange offe
 Curve25519 ECDH (`curve25519-sha256`) and `diffie-hellman-group14-sha256`; host keys
 are Ed25519 (`ssh-ed25519`) and RSA (`rsa-sha2-256` / `ssh-rsa`). All state is static
 (BSS), the host private key never touches static scratch memory, and password auth can
-be compiled out (`PC_SSH_ALLOW_PASSWORD=0`) for publickey-only hardening.
+be compiled out (`PROTOCORE_SSH_ALLOW_PASSWORD=0`) for publickey-only hardening.
 
 See **[SSH.md](SSH.md)** for the feature summary, RFC/FIPS compliance
 table, authentication/hardening details, and memory footprint, and

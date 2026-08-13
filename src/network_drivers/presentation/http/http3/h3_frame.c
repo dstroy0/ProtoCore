@@ -9,7 +9,7 @@
 #include "network_drivers/presentation/http/http3/h3_frame.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_HTTP3
+#if PROTOCORE_ENABLE_HTTP3
 
 #include "network_drivers/presentation/http/http3/quic_varint.h"
 
@@ -177,4 +177,4 @@ size_t pc_h3_build_goaway(uint8_t *out, size_t cap, uint64_t stream_id)
     return o + a;
 }
 
-#endif // PC_ENABLE_HTTP3
+#endif // PROTOCORE_ENABLE_HTTP3

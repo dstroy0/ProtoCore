@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // On-device CCOUNT microbenchmark for the CloudEvents v1.0 envelope (services/iot/cloudevents):
-// pc_cloudevents_build_json() (the structured-JSON builder, over the JSON writer) and
-// pc_cloudevents_from_headers() (the binary-mode ce-* header reader). Both are pure - no heap,
+// protocore_cloudevents_build_json() (the structured-JSON builder, over the JSON writer) and
+// protocore_cloudevents_from_headers() (the binary-mode ce-* header reader). Both are pure - no heap,
 // no sockets - so, like performance_benching/device/modbus, every call here exercises the real production code
 // path. The binary-mode reader operates on an HttpReq already parsed by the (equally pure)
 // standalone HTTP parser; feeding the request bytes happens once outside the timed loop so the
-// benched call is pc_cloudevents_from_headers() itself, not the unrelated byte-at-a-time parser.
+// benched call is protocore_cloudevents_from_headers() itself, not the unrelated byte-at-a-time parser.
 //
 // Build/flash (JTAG-capable S3 over its USB-Serial/JTAG port):
 //   idf.py -C test/performance_benching/cloudevents -t upload --upload-port COM7
@@ -68,13 +68,14 @@ void dbench_run(void)
         DBENCH_BANNER("cloudevents");
         volatile size_t sink = 0;
         volatile bool sinkb = false;
-        DBENCH_OP("pc_cloudevents_build_json min", 50000,
-                  sink += pc_cloudevents_build_json(buf, sizeof(buf), &ce_minimal));
-        DBENCH_OP("pc_cloudevents_build_json json-data", 50000,
-                  sink += pc_cloudevents_build_json(buf, sizeof(buf), &ce_json_data));
-        DBENCH_OP("pc_cloudevents_build_json str-data", 50000,
-                  sink += pc_cloudevents_build_json(buf, sizeof(buf), &ce_str_data));
-        DBENCH_OP("pc_cloudevents_from_headers", 50000, sinkb = pc_cloudevents_from_headers(&http_pool[0], &ce_out));
+        DBENCH_OP("protocore_cloudevents_build_json min", 50000,
+                  sink += protocore_cloudevents_build_json(buf, sizeof(buf), &ce_minimal));
+        DBENCH_OP("protocore_cloudevents_build_json json-data", 50000,
+                  sink += protocore_cloudevents_build_json(buf, sizeof(buf), &ce_json_data));
+        DBENCH_OP("protocore_cloudevents_build_json str-data", 50000,
+                  sink += protocore_cloudevents_build_json(buf, sizeof(buf), &ce_str_data));
+        DBENCH_OP("protocore_cloudevents_from_headers", 50000,
+                  sinkb = protocore_cloudevents_from_headers(&http_pool[0], &ce_out));
         (void)sink;
         (void)sinkb;
         DBENCH_DONE();

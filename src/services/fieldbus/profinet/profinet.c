@@ -9,9 +9,9 @@
 #include "services/fieldbus/profinet/profinet.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_PROFINET
+#if PROTOCORE_ENABLE_PROFINET
 
-size_t pc_pn_dcp_header(uint16_t frame_id, uint8_t service_id, uint8_t service_type, uint32_t xid, uint16_t data_length,
+size_t protocore_pn_dcp_header(uint16_t frame_id, uint8_t service_id, uint8_t service_type, uint32_t xid, uint16_t data_length,
                         uint8_t *out, size_t cap)
 {
     if (!out || cap < PN_DCP_HDR_LEN)
@@ -32,7 +32,7 @@ size_t pc_pn_dcp_header(uint16_t frame_id, uint8_t service_id, uint8_t service_t
     return PN_DCP_HDR_LEN;
 }
 
-size_t pc_pn_dcp_block(uint8_t option, uint8_t suboption, const uint8_t *value, size_t value_len, uint8_t *out,
+size_t protocore_pn_dcp_block(uint8_t option, uint8_t suboption, const uint8_t *value, size_t value_len, uint8_t *out,
                        size_t cap)
 {
     if (!out || (value_len && !value) || value_len > 0xFFFF)
@@ -60,7 +60,7 @@ size_t pc_pn_dcp_block(uint8_t option, uint8_t suboption, const uint8_t *value, 
     return n;
 }
 
-proto_bool pc_pn_dcp_parse_header(const uint8_t *frame, size_t len, PnDcpHeader *out)
+proto_bool protocore_pn_dcp_parse_header(const uint8_t *frame, size_t len, PnDcpHeader *out)
 {
     if (!frame || !out || len < PN_DCP_HDR_LEN)
     {
@@ -74,7 +74,7 @@ proto_bool pc_pn_dcp_parse_header(const uint8_t *frame, size_t len, PnDcpHeader 
     return PROTO_TRUE;
 }
 
-proto_bool pc_pn_dcp_walk(const uint8_t *blocks, size_t len, pc_pn_dcp_block_cb cb, void *arg)
+proto_bool protocore_pn_dcp_walk(const uint8_t *blocks, size_t len, protocore_pn_dcp_block_cb cb, void *arg)
 {
     size_t off = 0;
     while (off + 4 <= len)
@@ -96,4 +96,4 @@ proto_bool pc_pn_dcp_walk(const uint8_t *blocks, size_t len, pc_pn_dcp_block_cb 
     return PROTO_TRUE;
 }
 
-#endif // PC_ENABLE_PROFINET
+#endif // PROTOCORE_ENABLE_PROFINET

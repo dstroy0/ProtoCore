@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // Shared on-device CCOUNT microbench macros for performance_benching/<layer>/<feature>/main/main.c.
-// Built on pc_cycles() / pc_cycles_to_ns() (server/clock/clock.h), the library's wrapper around the
+// Built on protocore_cycles() / protocore_cycles_to_ns() (server/clock/clock.h), the library's wrapper around the
 // Xtensa cycle counter (CCOUNT, JTAG-observable). Every bench includes this and prints one "DB "
 // line per benched operation over USB-Serial/JTAG; each bench loops its timing block.
 
@@ -16,7 +16,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
-/// The rig's pinned CPU clock, in MHz. A compile-time fact, not a runtime read: pc_cycles_to_ns()
+/// The rig's pinned CPU clock, in MHz. A compile-time fact, not a runtime read: protocore_cycles_to_ns()
 /// takes the frequency as a parameter, and the bench runs the part at one clock. Override with
 /// -DDBENCH_CPU_MHZ=<n> to bench at another.
 #ifndef DBENCH_CPU_MHZ
@@ -29,12 +29,12 @@
     do                                                                                                                 \
     {                                                                                                                  \
         expr; /* warm */                                                                                               \
-        uint32_t _c0 = pc_cycles();                                                                                    \
+        uint32_t _c0 = protocore_cycles();                                                                             \
         for (uint32_t _i = 0; _i < (uint32_t)(N); _i++)                                                                \
         {                                                                                                              \
             expr;                                                                                                      \
         }                                                                                                              \
-        (out_cy) = (double)(pc_cycles() - _c0) / (double)(N);                                                          \
+        (out_cy) = (double)(protocore_cycles() - _c0) / (double)(N);                                                   \
     } while (0)
 
 /// One-shot op (build/encode/decode/parse call that isn't a bulk byte stream). Warms once, runs

@@ -9,12 +9,12 @@
 #include "services/peripherals/sdi12/sdi12.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_SDI12
+#if PROTOCORE_ENABLE_SDI12
 
 #include "mmgr/protostr.h"
-#include "shared_primitives/crc.h" // PC_CRC16_ARC
+#include "shared_primitives/crc.h" // PROTOCORE_CRC16_ARC
 
-size_t pc_sdi12_build(char *buf, size_t cap, char addr, const char *body)
+size_t protocore_sdi12_build(char *buf, size_t cap, char addr, const char *body)
 {
     if (!buf || !body)
     {
@@ -33,27 +33,27 @@ size_t pc_sdi12_build(char *buf, size_t cap, char addr, const char *body)
     return n;
 }
 
-size_t pc_sdi12_build_ack(char *buf, size_t cap, char addr)
+size_t protocore_sdi12_build_ack(char *buf, size_t cap, char addr)
 {
-    return pc_sdi12_build(buf, cap, addr, "");
+    return protocore_sdi12_build(buf, cap, addr, "");
 }
 
-size_t pc_sdi12_build_identify(char *buf, size_t cap, char addr)
+size_t protocore_sdi12_build_identify(char *buf, size_t cap, char addr)
 {
-    return pc_sdi12_build(buf, cap, addr, "I");
+    return protocore_sdi12_build(buf, cap, addr, "I");
 }
 
-size_t pc_sdi12_build_measure(char *buf, size_t cap, char addr, proto_bool with_crc)
+size_t protocore_sdi12_build_measure(char *buf, size_t cap, char addr, proto_bool with_crc)
 {
-    return pc_sdi12_build(buf, cap, addr, with_crc ? "MC" : "M");
+    return protocore_sdi12_build(buf, cap, addr, with_crc ? "MC" : "M");
 }
 
-size_t pc_sdi12_build_concurrent(char *buf, size_t cap, char addr, proto_bool with_crc)
+size_t protocore_sdi12_build_concurrent(char *buf, size_t cap, char addr, proto_bool with_crc)
 {
-    return pc_sdi12_build(buf, cap, addr, with_crc ? "CC" : "C");
+    return protocore_sdi12_build(buf, cap, addr, with_crc ? "CC" : "C");
 }
 
-size_t pc_sdi12_build_measure_additional(char *buf, size_t cap, char addr, uint8_t m_index, proto_bool with_crc)
+size_t protocore_sdi12_build_measure_additional(char *buf, size_t cap, char addr, uint8_t m_index, proto_bool with_crc)
 {
     if (m_index < 1 || m_index > 9)
     {
@@ -68,10 +68,11 @@ size_t pc_sdi12_build_measure_additional(char *buf, size_t cap, char addr, uint8
     }
     body[b++] = (char)('0' + m_index);
     body[b] = '\0';
-    return pc_sdi12_build(buf, cap, addr, body);
+    return protocore_sdi12_build(buf, cap, addr, body);
 }
 
-size_t pc_sdi12_build_concurrent_additional(char *buf, size_t cap, char addr, uint8_t c_index, proto_bool with_crc)
+size_t protocore_sdi12_build_concurrent_additional(char *buf, size_t cap, char addr, uint8_t c_index,
+                                                   proto_bool with_crc)
 {
     if (c_index < 1 || c_index > 9)
     {
@@ -86,10 +87,10 @@ size_t pc_sdi12_build_concurrent_additional(char *buf, size_t cap, char addr, ui
     }
     body[b++] = (char)('0' + c_index);
     body[b] = '\0';
-    return pc_sdi12_build(buf, cap, addr, body);
+    return protocore_sdi12_build(buf, cap, addr, body);
 }
 
-size_t pc_sdi12_build_continuous(char *buf, size_t cap, char addr, uint8_t r_index, proto_bool with_crc)
+size_t protocore_sdi12_build_continuous(char *buf, size_t cap, char addr, uint8_t r_index, proto_bool with_crc)
 {
     if (r_index > 9)
     {
@@ -104,36 +105,37 @@ size_t pc_sdi12_build_continuous(char *buf, size_t cap, char addr, uint8_t r_ind
     }
     body[b++] = (char)('0' + r_index);
     body[b] = '\0';
-    return pc_sdi12_build(buf, cap, addr, body);
+    return protocore_sdi12_build(buf, cap, addr, body);
 }
 
-size_t pc_sdi12_build_verify(char *buf, size_t cap, char addr)
+size_t protocore_sdi12_build_verify(char *buf, size_t cap, char addr)
 {
-    return pc_sdi12_build(buf, cap, addr, "V");
+    return protocore_sdi12_build(buf, cap, addr, "V");
 }
 
-size_t pc_sdi12_build_data(char *buf, size_t cap, char addr, uint8_t d_index)
+size_t protocore_sdi12_build_data(char *buf, size_t cap, char addr, uint8_t d_index)
 {
     if (d_index > 9)
     {
         return 0;
     }
     char body[3] = {'D', (char)('0' + d_index), '\0'};
-    return pc_sdi12_build(buf, cap, addr, body);
+    return protocore_sdi12_build(buf, cap, addr, body);
 }
 
-size_t pc_sdi12_build_change_address(char *buf, size_t cap, char addr, char new_addr)
+size_t protocore_sdi12_build_change_address(char *buf, size_t cap, char addr, char new_addr)
 {
     char body[3] = {'A', new_addr, '\0'};
-    return pc_sdi12_build(buf, cap, addr, body);
+    return protocore_sdi12_build(buf, cap, addr, body);
 }
 
-size_t pc_sdi12_build_query_address(char *buf, size_t cap)
+size_t protocore_sdi12_build_query_address(char *buf, size_t cap)
 {
-    return pc_sdi12_build(buf, cap, '?', "");
+    return protocore_sdi12_build(buf, cap, '?', "");
 }
 
-proto_bool pc_sdi12_parse_measure(const char *resp, size_t len, char *addr, uint16_t *ready_sec, uint8_t *num_values)
+proto_bool protocore_sdi12_parse_measure(const char *resp, size_t len, char *addr, uint16_t *ready_sec,
+                                         uint8_t *num_values)
 {
     if (!resp || len < 5) // a<ttt><n> is at least 5 octets
     {
@@ -171,7 +173,7 @@ proto_bool pc_sdi12_parse_measure(const char *resp, size_t len, char *addr, uint
     return PROTO_TRUE;
 }
 
-proto_bool pc_sdi12_parse_values(const char *resp, size_t len, float *out, size_t max, size_t *n)
+proto_bool protocore_sdi12_parse_values(const char *resp, size_t len, float *out, size_t max, size_t *n)
 {
     if (!resp || !out || !n)
     {
@@ -209,7 +211,7 @@ proto_bool pc_sdi12_parse_values(const char *resp, size_t len, float *out, size_
     return PROTO_TRUE;
 }
 
-proto_bool pc_sdi12_parse_identify(const char *resp, size_t len, Sdi12Identity *out)
+proto_bool protocore_sdi12_parse_identify(const char *resp, size_t len, Sdi12Identity *out)
 {
     if (!resp || !out || len < 20) // addr(1) + version(2) + vendor(8) + model(6) + sensor version(3)
     {
@@ -227,21 +229,21 @@ proto_bool pc_sdi12_parse_identify(const char *resp, size_t len, Sdi12Identity *
     return PROTO_TRUE;
 }
 
-uint16_t pc_sdi12_crc16(const uint8_t *data, size_t len)
+uint16_t protocore_sdi12_crc16(const uint8_t *data, size_t len)
 {
     // SDI-12 v1.3 uses the reflected CRC-16 (SDI12_CRC_POLY = 0xA001 = reflect(0x8005), init 0, no final XOR)
     // - cataloged as CRC-16/ARC.
-    return (uint16_t)pc_crc(&PC_CRC16_ARC, data, len);
+    return (uint16_t)protocore_crc(&PROTOCORE_CRC16_ARC, data, len);
 }
 
-void pc_sdi12_crc_encode(uint16_t crc, char out[SDI12_CRC_CHARS])
+void protocore_sdi12_crc_encode(uint16_t crc, char out[SDI12_CRC_CHARS])
 {
     out[0] = (char)(0x40u | (crc >> 12)); // top bits
     out[1] = (char)(0x40u | ((crc >> 6) & 0x3Fu));
     out[2] = (char)(0x40u | (crc & 0x3Fu));
 }
 
-proto_bool pc_sdi12_check_crc(const char *resp, size_t len)
+proto_bool protocore_sdi12_check_crc(const char *resp, size_t len)
 {
     if (!resp)
     {
@@ -258,8 +260,8 @@ proto_bool pc_sdi12_check_crc(const char *resp, size_t len)
     }
     size_t data_len = len - SDI12_CRC_CHARS;
     char enc[SDI12_CRC_CHARS];
-    pc_sdi12_crc_encode(pc_sdi12_crc16((const uint8_t *)resp, data_len), enc);
+    protocore_sdi12_crc_encode(protocore_sdi12_crc16((const uint8_t *)resp, data_len), enc);
     return mem.cmp(enc, resp + data_len, SDI12_CRC_CHARS) == 0;
 }
 
-#endif // PC_ENABLE_SDI12
+#endif // PROTOCORE_ENABLE_SDI12

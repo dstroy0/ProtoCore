@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // RFC-compliance suite. Built with production enforcement defaults
-// (PC_ENFORCE_HOST_HEADER=1) so the strict behaviors are exercised:
+// (PROTOCORE_ENFORCE_HOST_HEADER=1) so the strict behaviors are exercised:
 //
 //   RFC 7230 §5.4 - Host header required for HTTP/1.1; at most one Host.
 //   RFC 7230 §3.3.2 - Content-Length must be 1*DIGIT; conflicting duplicates
@@ -14,8 +14,8 @@
 #include <stdio.h>
 #include <unity.h>
 
-#if PC_ENFORCE_HOST_HEADER != 1
-#error "test_compliance must be built with PC_ENFORCE_HOST_HEADER=1"
+#if PROTOCORE_ENFORCE_HOST_HEADER != 1
+#error "test_compliance must be built with PROTOCORE_ENFORCE_HOST_HEADER=1"
 #endif
 
 static void feed_request(uint8_t slot, const char *raw)

@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file pc_ntrip_caster_listener.h
- * @brief Server-side NTRIP caster listener (PC_ENABLE_NTRIP_CASTER): the ProtoConn::PROTO_NTRIP_CASTER
+ * @file protocore_ntrip_caster_listener.h
+ * @brief Server-side NTRIP caster listener (PROTOCORE_ENABLE_NTRIP_CASTER): the ProtoConn::PROTO_NTRIP_CASTER
  *        handler that answers rover requests and streams RTCM to subscribers.
  *
- * The pure codec (pc_ntrip_caster.h) parses requests and builds responses / the source table; this file owns
+ * The pure codec (protocore_ntrip_caster.h) parses requests and builds responses / the source table; this file owns
  * the connection state: it reads each rover's request off its socket, replies (stream-accept, source
  * table, error, or 401), and then fans RTCM correction bytes out to every rover subscribed to a mountpoint.
  * Layered exactly like services/net/relay - the app opens the listener, adds one or more mountpoints, then
@@ -19,11 +19,11 @@
  *   m.identifier = "Lab roof";
  *   m.format_details = "1005(1)";
  *   m.lat_deg = 37.77; m.lon_deg = -122.42;
- *   pc_ntrip_caster_add_mount((uint8_t)li, &m, nullptr);              // null = open (no auth)
+ *   protocore_ntrip_caster_add_mount((uint8_t)li, &m, nullptr);              // null = open (no auth)
  *   ...
  *   uint8_t frame[64];
- *   size_t n = pc_rtcm3_build_1005(frame, sizeof(frame), 2003, x01mm, y01mm, z01mm);
- *   pc_ntrip_caster_broadcast("BASE1", frame, n);                    // -> every subscribed rover
+ *   size_t n = protocore_rtcm3_build_1005(frame, sizeof(frame), 2003, x01mm, y01mm, z01mm);
+ *   protocore_ntrip_caster_broadcast("BASE1", frame, n);                    // -> every subscribed rover
  * @endcode
  *
  * The @c NtripMount's string fields must remain valid for the caster's lifetime (they are referenced, not
@@ -39,7 +39,7 @@
 
 #include "protocore_config.h"
 
-#if PC_ENABLE_NTRIP_CASTER
+#if PROTOCORE_ENABLE_NTRIP_CASTER
 
 #include "services/timing_position/gnss/ntrip_caster.h"
 
@@ -52,20 +52,20 @@
  *                     access. Referenced, not copied.
  * @return true; false if @p mount / its mountpoint is null or too long, or the mount table is full.
  */
-proto_bool pc_ntrip_caster_add_mount(uint8_t listener_id, const NtripMount *mount, const char *auth_b64);
+proto_bool protocore_ntrip_caster_add_mount(uint8_t listener_id, const NtripMount *mount, const char *auth_b64);
 
 /**
  * @brief Push RTCM bytes to every rover currently streaming @p mountpoint.
  * @return the number of rovers the bytes were queued to.
  */
-int pc_ntrip_caster_broadcast(const char *mountpoint, const uint8_t *data, size_t len);
+int protocore_ntrip_caster_broadcast(const char *mountpoint, const uint8_t *data, size_t len);
 
 /** @brief Number of rovers currently streaming @p mountpoint (observability). */
-int pc_ntrip_caster_subscriber_count(const char *mountpoint);
+int protocore_ntrip_caster_subscriber_count(const char *mountpoint);
 
 /** @brief Clear all mounts and drop all rover state (start from empty). */
-void pc_ntrip_caster_reset(void);
+void protocore_ntrip_caster_reset(void);
 
-#endif // PC_ENABLE_NTRIP_CASTER
+#endif // PROTOCORE_ENABLE_NTRIP_CASTER
 
 #endif // PROTOCORE_NTRIP_LISTENER_H

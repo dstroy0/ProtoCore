@@ -19,11 +19,11 @@
  * **Feature flags** - define any of these to 0 before including to strip
  * the feature from the build entirely:
  * @code
- *   #define PC_ENABLE_WEBSOCKET    0
- *   #define PC_ENABLE_SSE          0
- *   #define PC_ENABLE_MULTIPART    0
- *   #define PC_ENABLE_FILE_SERVING 0
- *   #define PC_ENABLE_AUTH         0
+ *   #define PROTOCORE_ENABLE_WEBSOCKET    0
+ *   #define PROTOCORE_ENABLE_SSE          0
+ *   #define PROTOCORE_ENABLE_MULTIPART    0
+ *   #define PROTOCORE_ENABLE_FILE_SERVING 0
+ *   #define PROTOCORE_ENABLE_AUTH         0
  *   #include <protocore.h>
  * @endcode
  *
@@ -40,15 +40,15 @@
 #ifndef PROTOCORE_H
 #define PROTOCORE_H
 
-#include "protocore_config.h" // the entry point: types.h for PROTO_BEGIN_DECLS, before anything uses it
+#include "protocore_config.h" // the entry point: protocore_types.h for PROTOCORE_BEGIN_DECLS, before anything uses it
 
 // The whole library is C and every sketch that includes this header is compiled as C++, so the
 // declarations below carry C linkage from here rather than from each header. System and vendor
 // headers state their own; an extern "C" already inside one nests harmlessly.
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
 // Ordered by layer, so a header only needs what is above it. A gate is the feature's own
-// PC_ENABLE_, never a parent's: PC_ENABLE_<A>_NEEDS_<B> already makes a child unsettable alone.
+// PROTOCORE_ENABLE_, never a parent's: PROTOCORE_ENABLE_<A>_NEEDS_<B> already makes a child unsettable alone.
 #include "shared_primitives/log.h"
 #include "shared_primitives/mime.h"
 
@@ -68,31 +68,30 @@ PROTO_BEGIN_DECLS
 
 #include "network_drivers/presentation/codec/json/json.h"
 #include "network_drivers/presentation/presentation.h"
-#if PC_ENABLE_CBOR
+#if PROTOCORE_ENABLE_CBOR
 #include "network_drivers/presentation/codec/cbor/cbor.h"
 #endif
-#if PC_ENABLE_MSGPACK
+#if PROTOCORE_ENABLE_MSGPACK
 #include "network_drivers/presentation/codec/msgpack/msgpack.h"
 #endif
-#if PC_ENABLE_MULTIPART
+#if PROTOCORE_ENABLE_MULTIPART
 #include "network_drivers/presentation/codec/multipart/multipart.h"
 #endif
-#if PC_ENABLE_WEBSOCKET
+#if PROTOCORE_ENABLE_WEBSOCKET
 #include "network_drivers/presentation/http/websocket/websocket.h"
 #endif
-#if PC_ENABLE_SSE
+#if PROTOCORE_ENABLE_SSE
 #include "network_drivers/presentation/http/sse/sse.h"
 #endif
-#if PC_ENABLE_TELNET
+#if PROTOCORE_ENABLE_TELNET
 #include "network_drivers/presentation/telnet/telnet.h"
 #endif
-#if PC_ENABLE_SSH
-#include "network_drivers/presentation/ssh/auth/ssh_auth.h"
-#include "network_drivers/presentation/ssh/connection/ssh_channel.h"
-#include "network_drivers/presentation/ssh/connection/ssh_conn.h"
-#include "network_drivers/presentation/ssh/connection/ssh_forward.h"
-#include "network_drivers/presentation/ssh/ssh_client.h"
-#include "network_drivers/presentation/ssh/transport/ssh_transport.h"
+#if PROTOCORE_ENABLE_SSH
+#include "network_drivers/presentation/ssh/app/client.h"
+#include "network_drivers/presentation/ssh/auth/auth.h"
+#include "network_drivers/presentation/ssh/connection/connection.h"
+#include "network_drivers/presentation/ssh/ssh.h"
+#include "network_drivers/presentation/ssh/transport/transport.h"
 #include "network_drivers/tls/ssh_rsa.h"
 #endif
 
@@ -105,7 +104,7 @@ PROTO_BEGIN_DECLS
 //
 // protocore.h is the one header an application includes, so every service the library offers is
 // reachable from it. A feature the build did not enable costs nothing: each service header carries
-// its own PC_ENABLE_ guard, so a disabled one contributes no declarations and no code.
+// its own PROTOCORE_ENABLE_ guard, so a disabled one contributes no declarations and no code.
 #include "mmgr/arena.h"
 #include "mmgr/dma.h"
 #include "mmgr/plaintext.h"
@@ -355,7 +354,7 @@ PROTO_BEGIN_DECLS
  * vendor filesystem, a RAM pool, an application's own - is unknowable from here, which is the whole
  * reason the seam is our type instead of a vendor one.
  */
-typedef struct pc_mnt_backend pc_mnt_backend;
+typedef struct protocore_mnt_backend protocore_mnt_backend;
 
 // ---------------------------------------------------------------------------
 // HTTP method enumeration
@@ -446,16 +445,16 @@ typedef MwResult (*Middleware)(uint8_t slot_id, HttpReq *request);
 /**
  * @brief Result codes for listen(), begin(), and restart().
  *
- * Success is a positive value (PC_OK). Failures are distinct negative codes
+ * Success is a positive value (PROTOCORE_OK). Failures are distinct negative codes
  * so a caller can tell why startup failed.
  */
 typedef enum
 {
-    PC_OK = 1,                 ///< Success.
-    PC_ERR_NO_LISTENERS = -1,  ///< proto_begin() called before any listen() / begin(port).
-    PC_ERR_LISTENER_FULL = -2, ///< listen(): listener pool (MAX_LISTENERS) is full.
-    PC_ERR_LISTEN_FAILED = -3  ///< A listener failed to open (bind/listen/lwIP error).
-} pc_result;
+    PROTOCORE_OK = 1,                 ///< Success.
+    PROTOCORE_ERR_NO_LISTENERS = -1,  ///< proto_begin() called before any listen() / begin(port).
+    PROTOCORE_ERR_LISTENER_FULL = -2, ///< listen(): listener pool (MAX_LISTENERS) is full.
+    PROTOCORE_ERR_LISTEN_FAILED = -3  ///< A listener failed to open (bind/listen/lwIP error).
+} protocore_result;
 
 // ---------------------------------------------------------------------------
 // Chunked (streaming) response writer
@@ -525,14 +524,14 @@ proto_bool rate_limit_check(uint8_t slot_id);
 /// @brief Record a response for stats + the access-log hook. Reads method/path from http_pool[slot_id].
 void note_response(uint8_t slot_id, int code, int body_len);
 
-#if PC_ENABLE_KEEPALIVE
+#if PROTOCORE_ENABLE_KEEPALIVE
 /**
  * @brief Decide whether the current response should keep the connection alive.
  *
  * Only a cleanly-parsed request (PARSE_COMPLETE) is eligible: HTTP/1.1 keeps
  * alive unless the client sent `Connection: close`; HTTP/1.0 keeps alive only
  * with `Connection: keep-alive`. On a true return the slot's request tally is
- * incremented; the PC_KEEPALIVE_MAX_REQUESTS-th request returns false so
+ * incremented; the PROTOCORE_KEEPALIVE_MAX_REQUESTS-th request returns false so
  * the connection is closed deliberately. Always false with keep-alive off.
  */
 #endif
@@ -546,7 +545,7 @@ void note_response(uint8_t slot_id, int code, int body_len);
  * @param pre_flushed the caller already emitted the final bytes with Tcp.conn->send_flush()
  *        (write+tcp_output coalesced into one marshal), so skip the redundant flush here.
  */
-void pc_resp_end(uint8_t slot_id, int code, int body_len, proto_bool keep, proto_bool pre_flushed);
+void protocore_resp_end(uint8_t slot_id, int code, int body_len, proto_bool keep, proto_bool pre_flushed);
 
 /**
  * @brief Resolve the Connection response header and report keep-alive intent.
@@ -555,7 +554,7 @@ void pc_resp_end(uint8_t slot_id, int code, int body_len, proto_bool keep, proto
  * or "Connection: close\r\n" and, via @p keep_out, whether the slot is kept
  * alive. Always reports close when keep-alive is compiled out.
  */
-const char *pc_resp_conn_hdr(uint8_t slot_id, proto_bool *keep_out);
+const char *protocore_resp_conn_hdr(uint8_t slot_id, proto_bool *keep_out);
 
 /**
  * @brief Append the shared response trailer (CORS block, custom headers, the
@@ -591,21 +590,21 @@ void chunk_send_pump(uint8_t slot_id);
 /// @return true when a response was sent (the caller stops); false to keep scanning later routes,
 ///         with @p path_matched / @p allow_buf updated for a possible 405.
 
-#if PC_ENABLE_CSRF
+#if PROTOCORE_ENABLE_CSRF
 /// @brief Built-in CSRF gate: serve the `GET /csrf` token endpoint and enforce a valid
 ///        `X-CSRF-Token` on every state-changing method. @return true if a response was sent.
 #endif
 
-#if PC_ENABLE_WEBSOCKET
+#if PROTOCORE_ENABLE_WEBSOCKET
 /// @brief Complete (or reject) a ROUTE_WS handshake per RFC 6455 §4.2.1. Always responds.
 #endif
 
-#if PC_ENABLE_AUTH
+#if PROTOCORE_ENABLE_AUTH
 /// @brief Enforce route @p r's auth (lockout gate + Digest/Basic credential check, with lockout
 ///        accounting). @return true if authorized; on failure the 401/429 is already sent.
 #endif
 
-#if PC_ENABLE_WEBSOCKET
+#if PROTOCORE_ENABLE_WEBSOCKET
 /// @brief Invoke the registered WS message handler for a completed frame on @p ws.
 void ws_dispatch_message(const WsConn *ws);
 /// @brief Invoke the registered WS close handler for @p ws.
@@ -639,7 +638,7 @@ void ws_dispatch_close(const WsConn *ws);
  * @param port  TCP port to open.
  * @param proto Application protocol; defaults to ProtoConn::PROTO_HTTP.
  * @return the listener id (a non-negative index) on success - pass it to
- *         pc_relay_publish() / pc_ssh_forward_begin(); PC_ERR_LISTENER_FULL if the pool is
+ *         protocore_relay_publish() / protocore_ssh_forward_begin(); PROTOCORE_ERR_LISTENER_FULL if the pool is
  * full.
  */
 int32_t listen(uint16_t port, ProtoConn proto);
@@ -653,8 +652,8 @@ int32_t listen(uint16_t port, ProtoConn proto);
  * case use begin(port, cfg) instead.
  *
  * @param cfg  Optional runtime configuration.  Pass NULL for defaults.
- * @return PC_OK on success; PC_ERR_NO_LISTENERS if no ports were
- *         registered; PC_ERR_LISTEN_FAILED if a listener could not open.
+ * @return PROTOCORE_OK on success; PROTOCORE_ERR_NO_LISTENERS if no ports were
+ *         registered; PROTOCORE_ERR_LISTEN_FAILED if a listener could not open.
  */
 int32_t proto_begin(const WebServerConfig *cfg);
 
@@ -666,11 +665,11 @@ int32_t proto_begin(const WebServerConfig *cfg);
  *
  * @param port TCP port to listen on (typically 80).
  * @param cfg  Optional runtime configuration.  Pass NULL for defaults.
- * @return PC_OK on success; a negative pc_result on failure.
+ * @return PROTOCORE_OK on success; a negative protocore_result on failure.
  */
 int32_t begin_http(uint16_t port, const WebServerConfig *cfg);
 
-#if PC_ENABLE_TLS
+#if PROTOCORE_ENABLE_TLS
 /**
  * @brief Load the TLS server certificate + private key (call before begin).
  *
@@ -686,7 +685,7 @@ proto_bool tls_cert(const uint8_t *cert, size_t cert_len, const uint8_t *key, si
  * @brief Register a TLS (HTTPS) HTTP listener on @p port (typically 443).
  *
  * Like listen() but connections accepted here run a TLS handshake first.
- * Call tls_cert() first, then begin(). @return PC_OK or an error code.
+ * Call tls_cert() first, then begin(). @return PROTOCORE_OK or an error code.
  */
 int32_t listen_tls(uint16_t port);
 
@@ -701,13 +700,13 @@ int32_t listen_tls(uint16_t port);
  * @param key      Server private key.
  * @param key_len  Length incl. trailing NUL for PEM.
  * @param cfg      Optional runtime config.
- * @return PC_OK on success; a negative code, or PC_ERR_LISTEN_FAILED
+ * @return PROTOCORE_OK on success; a negative code, or PROTOCORE_ERR_LISTEN_FAILED
  * if the TLS engine could not initialize.
  */
 int32_t begin_tls(uint16_t port, const uint8_t *cert, size_t cert_len, const uint8_t *key, size_t key_len,
                   const WebServerConfig *cfg);
 
-#if PC_ENABLE_MTLS
+#if PROTOCORE_ENABLE_MTLS
 /**
  * @brief Require a verified client certificate (mTLS).
  *
@@ -736,10 +735,10 @@ proto_bool tls_require_client_cert(const uint8_t *ca, size_t ca_len);
  * @return subject length written, or <0 if there is no verified client cert.
  */
 int tls_client_subject(uint8_t slot_id, char *out, size_t out_len);
-#endif // PC_ENABLE_MTLS
-#endif // PC_ENABLE_TLS
+#endif // PROTOCORE_ENABLE_MTLS
+#endif // PROTOCORE_ENABLE_TLS
 
-#if PC_ENABLE_HTTP3
+#if PROTOCORE_ENABLE_HTTP3
 /**
  * @brief Enable the HTTP/3 (QUIC) server: load its Ed25519 leaf certificate + key and choose the
  * UDP port. Call before begin(); begin() then binds the port and serves HTTP/3 through the same
@@ -748,9 +747,9 @@ int tls_client_subject(uint8_t slot_id, char *out, size_t out_len);
  *
  * Profile: TLS_AES_128_GCM_SHA256 + X25519 + Ed25519 (a client offering none of these is refused).
  */
-proto_bool pc_h3_cert(const uint8_t *cert_der, size_t cert_len, const uint8_t ed25519_seed[32], uint16_t port);
+proto_bool protocore_h3_cert(const uint8_t *cert_der, size_t cert_len, const uint8_t ed25519_seed[32], uint16_t port);
 
-#endif // PC_ENABLE_HTTP3
+#endif // PROTOCORE_ENABLE_HTTP3
 
 /**
  * @brief Gracefully stop the server.
@@ -796,8 +795,8 @@ void on_http(const char *path, HttpMethod method, Handler callback);
  * @brief Register a route that only matches on a specific network interface.
  *
  * Identical to on(path, method, callback) but the route is invisible unless
- * the request arrived on @p iface (pc_if_kind::PC_IF_WIFI_STA or pc_if_kind::PC_IF_WIFI_AP). A
- * non-matching interface falls through to other routes / 404, so you can,
+ * the request arrived on @p iface (protocore_if_kind::PROTOCORE_IF_WIFI_STA or
+ * protocore_if_kind::PROTOCORE_IF_WIFI_AP). A non-matching interface falls through to other routes / 404, so you can,
  * e.g., expose a provisioning UI only on the softAP and the app API only on
  * the station link. Requires set_ap_ip() to have been called so connections
  * can be classified.
@@ -805,9 +804,10 @@ void on_http(const char *path, HttpMethod method, Handler callback);
  * @param path     URL path pattern.
  * @param method   HTTP method.
  * @param callback Handler invoked on a match.
- * @param iface    pc_if_kind::PC_IF_WIFI_STA or pc_if_kind::PC_IF_WIFI_AP (pc_if_kind::PC_IF_ANY = no filter).
+ * @param iface    protocore_if_kind::PROTOCORE_IF_WIFI_STA or protocore_if_kind::PROTOCORE_IF_WIFI_AP
+ * (protocore_if_kind::PROTOCORE_IF_ANY = no filter).
  */
-void on_http_iface(const char *path, HttpMethod method, Handler callback, pc_if_kind iface);
+void on_http_iface(const char *path, HttpMethod method, Handler callback, protocore_if_kind iface);
 
 /**
  * @brief Register a route whose path is a regular expression.
@@ -835,16 +835,16 @@ void on_regex(const char *pattern, HttpMethod method, Handler callback);
 /**
  * @brief Tell the server the softAP IPv4 address for STA/AP route filtering.
  *
- * Each accepted connection is tagged pc_if_kind::PC_IF_WIFI_AP when its local IP equals
- * @p ap_ip, else pc_if_kind::PC_IF_WIFI_STA. Call once after starting the softAP, e.g.
+ * Each accepted connection is tagged protocore_if_kind::PROTOCORE_IF_WIFI_AP when its local IP equals
+ * @p ap_ip, else protocore_if_kind::PROTOCORE_IF_WIFI_STA. Call once after starting the softAP, e.g.
  * `server.set_ap_ip(Physical.wifi->ap_ip())` (already network byte order).
- * Without it, every connection is treated as pc_if_kind::PC_IF_WIFI_STA.
+ * Without it, every connection is treated as protocore_if_kind::PROTOCORE_IF_WIFI_STA.
  *
  * @param ap_ip softAP IPv4 address in network byte order (0 to clear).
  */
 void set_ap_ip(uint32_t ap_ip);
 
-#if PC_ENABLE_AUTH
+#if PROTOCORE_ENABLE_AUTH
 /**
  * @brief Register a route handler protected by HTTP authentication.
  *
@@ -863,11 +863,11 @@ void set_ap_ip(uint32_t ap_ip);
  */
 void on_http_auth(const char *path, HttpMethod method, Handler callback, const char *realm, const char *user,
                   const char *pass, proto_bool digest);
-#endif // PC_ENABLE_AUTH
+#endif // PROTOCORE_ENABLE_AUTH
 
 // serve_file / serve_static: file_serving.h
 
-#if PC_ENABLE_WEBDAV
+#if PROTOCORE_ENABLE_WEBDAV
 /**
  * @brief Mount a filesystem subtree as a WebDAV share (RFC 4918).
  *
@@ -878,8 +878,8 @@ void on_http_auth(const char *path, HttpMethod method, Handler callback, const c
  * mounted network drive can browse and edit files. The request path beyond
  * the prefix is appended to @p fs_root (paths containing `..` are rejected).
  *
- * Limits (see PC_ENABLE_WEBDAV): PROPFIND builds a 207 into a
- * PC_WEBDAV_BUF_SIZE buffer and lists at most PC_WEBDAV_MAX_ENTRIES
+ * Limits (see PROTOCORE_ENABLE_WEBDAV): PROPFIND builds a 207 into a
+ * PROTOCORE_WEBDAV_BUF_SIZE buffer and lists at most PROTOCORE_WEBDAV_MAX_ENTRIES
  * children; PUT buffers the body (bounded by BODY_BUF_SIZE); COPY handles
  * files (not collections); locks are advisory (issued, not enforced);
  * PROPPATCH is unsupported. Combine with per-route auth and HTTPS before
@@ -893,8 +893,8 @@ void on_http_auth(const char *path, HttpMethod method, Handler callback, const c
  * @param file_sys   Backend to serve from; NULL uses whatever is mounted (the board's).
  * @param fs_root    Subtree on that backend (persistent string).
  */
-void dav(const char *url_prefix, const pc_mnt_backend *file_sys, const char *fs_root);
-#endif // PC_ENABLE_WEBDAV
+void dav(const char *url_prefix, const protocore_mnt_backend *file_sys, const char *fs_root);
+#endif // PROTOCORE_ENABLE_WEBDAV
 
 /**
  * @brief Register a fallback handler for unmatched requests.
@@ -945,14 +945,14 @@ void use(Middleware mw);
  * chain and route matching, so it bounds work under flood. State is a few
  * per-server counters (no heap, no per-IP table) - a global throttle suited
  * to a small device behind a trusted LAN. For connection-level flood defense
- * see also `PC_ENABLE_ACCEPT_THROTTLE`.
+ * see also `PROTOCORE_ENABLE_ACCEPT_THROTTLE`.
  *
  * @param max_requests Requests allowed per window. Pass 0 to disable.
  * @param window_ms    Window length in milliseconds (must be > 0).
  */
 void enable_rate_limit(uint16_t max_requests, uint32_t window_ms);
 
-#if PC_ENABLE_STATS
+#if PROTOCORE_ENABLE_STATS
 /**
  * @brief Send a JSON runtime-stats snapshot and close the connection.
  *
@@ -967,7 +967,7 @@ void enable_rate_limit(uint16_t max_requests, uint32_t window_ms);
 void stats(uint8_t slot_id);
 #endif
 
-#if PC_ENABLE_METRICS
+#if PROTOCORE_ENABLE_METRICS
 /**
  * @brief Respond with runtime metrics in Prometheus text exposition format.
  *
@@ -1007,7 +1007,7 @@ void set_cors(const char *origin);
  */
 void set_cache_control(const char *value);
 
-#if PC_ENABLE_HTTP_DELIVERY
+#if PROTOCORE_ENABLE_HTTP_DELIVERY
 /**
  * @brief Set `Cache-Control` to an RFC 5861 stale-while-revalidate policy.
  *
@@ -1024,7 +1024,7 @@ proto_bool set_cache_control_swr(uint32_t max_age_s, uint32_t swr_s);
 /**
  * @brief Drive the server - call every Arduino `loop()` iteration.
  *
- * On ESP32 `begin()` spawns the server worker task(s) (see PC_WORKER_COUNT),
+ * On ESP32 `begin()` spawns the server worker task(s) (see PROTOCORE_WORKER_COUNT),
  * which run the pipeline on their own core; `handle()` is then a no-op and your
  * `loop()` is free for application code. On host builds (and if no worker task
  * is running) `handle()` drives one service iteration inline, so existing
@@ -1052,7 +1052,7 @@ void handle();
  *        driven by that worker's task, or by handle() when no task is running).
  *
  * Services only the connection slots owned by @p worker_id, so multiple workers
- * run disjoint slot sets in parallel. At PC_WORKER_COUNT=1 worker 0 owns
+ * run disjoint slot sets in parallel. At PROTOCORE_WORKER_COUNT=1 worker 0 owns
  * every slot. Public so the worker task can invoke it; application code should
  * call handle() rather than this directly.
  */
@@ -1070,7 +1070,7 @@ void service_once(int worker_id);
  *
  * @return false if the slot is invalid or the worker's defer queue is full.
  */
-proto_bool defer(uint8_t slot, pc_deferred_fn fn, void *arg);
+proto_bool defer(uint8_t slot, protocore_deferred_fn fn, void *arg);
 
 /**
  * @brief Send an HTTP response with a body and close the connection.
@@ -1216,20 +1216,20 @@ void clear_response_headers(uint8_t slot_id);
  */
 const char *mime_type(const char *path);
 
-#if PC_ENABLE_DIAG
+#if PROTOCORE_ENABLE_DIAG
 /**
  * @brief Send the diagnostic JSON and close the connection.
  *
  * Responds with 200 application/json containing the compile-time feature
  * flags and all capacity constants.  Only available when
- * PC_ENABLE_DIAG is set to 1 - disable before deploying to production.
+ * PROTOCORE_ENABLE_DIAG is set to 1 - disable before deploying to production.
  *
  * @param slot_id Connection slot index.
  */
 void diag(uint8_t slot_id);
 #endif
 
-#if PC_ENABLE_WEBSOCKET
+#if PROTOCORE_ENABLE_WEBSOCKET
 // -----------------------------------------------------------------------
 // WebSocket API
 // -----------------------------------------------------------------------
@@ -1277,9 +1277,9 @@ void ws_send_binary(uint8_t ws_id, const uint8_t *data, uint16_t len);
  * @param ws_id  Index into ws_pool[].
  */
 void ws_disconnect(uint8_t ws_id);
-#endif // PC_ENABLE_WEBSOCKET
+#endif // PROTOCORE_ENABLE_WEBSOCKET
 
-#if PC_ENABLE_SSE
+#if PROTOCORE_ENABLE_SSE
 // -----------------------------------------------------------------------
 // Server-Sent Events API
 // -----------------------------------------------------------------------
@@ -1289,7 +1289,7 @@ void ws_disconnect(uint8_t ws_id);
  *
  * When a GET request arrives for @p path, the library sends the SSE
  * headers and keeps the connection open.  @p on_connect fires so the
- * handler can push an initial event with pc_sse_send().
+ * handler can push an initial event with protocore_sse_send().
  *
  * @param path        URL path, e.g. `"/events"`.
  * @param on_connect  Fired when a client subscribes.  May be NULL.
@@ -1300,20 +1300,20 @@ void on_sse(const char *path, SseConnectHandler on_connect);
  * @brief Push an event to one SSE client.
  *
  * Formats and sends `event: ...\ndata: ...\nid: ...\n\n` to the client
- * on @p pc_sse_id.  Any field may be NULL to omit it from the output.
+ * on @p protocore_sse_id.  Any field may be NULL to omit it from the output.
  * The data field is required; passing NULL sends nothing.
  *
- * @param pc_sse_id  Index into pc_sse_pool[].
+ * @param protocore_sse_id  Index into protocore_sse_pool[].
  * @param data    Event data string (required).
  * @param event   Optional event name (sets the `event:` field).
  * @param id      Optional event ID (sets the `id:` field).
  */
-void pc_sse_send(uint8_t pc_sse_id, const char *data, const char *event, const char *id);
+void protocore_sse_send(uint8_t protocore_sse_id, const char *data, const char *event, const char *id);
 
 /**
  * @brief Push an event to all connected SSE clients on a given path.
  *
- * Iterates pc_sse_pool[] and calls pc_sse_send() for every active client
+ * Iterates protocore_sse_pool[] and calls protocore_sse_send() for every active client
  * whose path matches @p path.
  *
  * @param path   SSE endpoint path, e.g. `"/events"`.
@@ -1321,8 +1321,8 @@ void pc_sse_send(uint8_t pc_sse_id, const char *data, const char *event, const c
  * @param event  Optional event name.
  * @param id     Optional event ID.
  */
-void pc_sse_broadcast(const char *path, const char *data, const char *event, const char *id);
-#endif // PC_ENABLE_SSE
+void protocore_sse_broadcast(const char *path, const char *data, const char *event, const char *id);
+#endif // PROTOCORE_ENABLE_SSE
 
 // ---------------------------------------------------------------------------
 // Cross-file server API
@@ -1340,10 +1340,10 @@ void pc_sse_broadcast(const char *path, const char *data, const char *event, con
  * and the connection desynchronizes - which is why truncating is not an option and this always-
  * fitting reply goes out instead. Connection: close, because the request is not recoverable.
  */
-extern const char PC_RESP_HDR_OVERFLOW[];
+extern const char PROTOCORE_RESP_HDR_OVERFLOW[];
 
-/** @brief Length of PC_RESP_HDR_OVERFLOW, taken with sizeof where the array bound is still visible. */
-extern const size_t PC_RESP_HDR_OVERFLOW_LEN;
+/** @brief Length of PROTOCORE_RESP_HDR_OVERFLOW, taken with sizeof where the array bound is still visible. */
+extern const size_t PROTOCORE_RESP_HDR_OVERFLOW_LEN;
 
 /** @brief Initialize the common fields (path, flags) of a route-table entry from its pattern. */
 void fill_route_base(HttpRoute *r, const char *path);
@@ -1361,15 +1361,15 @@ proto_bool regex_match(const char *pattern, const char *path);
 // anywhere - the poll asks each owner whether it holds the slot rather than reading its state.
 
 /** @brief True while a chunked response is paging out on @p slot (owner: server/response.cpp). */
-proto_bool pc_resp_holds_slot(uint8_t slot);
+proto_bool protocore_resp_holds_slot(uint8_t slot);
 
 /** @brief Drop this file's per-run configuration and any in-flight chunked send. See
- *         pc_server_reset(), which is what callers use. */
-void pc_resp_reset(void);
+ *         protocore_server_reset(), which is what callers use. */
+void protocore_resp_reset(void);
 
-/** @brief Drop the middleware chain and the rate-limit window. See pc_server_reset(), which is
+/** @brief Drop the middleware chain and the rate-limit window. See protocore_server_reset(), which is
  *         what callers use. */
-void pc_middleware_reset(void);
+void protocore_middleware_reset(void);
 
 /**
  * @brief Return the server to its start-of-run state: routes, dispatch hooks, registered listeners,
@@ -1383,22 +1383,22 @@ void pc_middleware_reset(void);
  * It does NOT touch the connection pool or the parser pool: those belong to transport and the
  * presentation layer, which reset per connection.
  */
-void pc_server_reset(void);
+void protocore_server_reset(void);
 
 // The header blocks every response carries, owned by server/response.cpp.
 
 /** @brief True after a non-empty set_cors(). */
-proto_bool pc_resp_cors_enabled(void);
+proto_bool protocore_resp_cors_enabled(void);
 /** @brief The pre-built CORS header block, or "" when CORS is off. */
-const char *pc_resp_cors_header(void);
+const char *protocore_resp_cors_header(void);
 /** @brief The pre-built Cache-Control line, or "" when unset. */
-const char *pc_resp_cache_control(void);
+const char *protocore_resp_cache_control(void);
 /** @brief This slot's queued custom headers / cookies (writable: the queue is appended in place). */
-char *pc_resp_extra_hdr(uint8_t slot);
+char *protocore_resp_extra_hdr(uint8_t slot);
 
-// pc_file_holds_slot: file_serving.h
+// protocore_file_holds_slot: file_serving.h
 
-#if PC_ENABLE_WEBSOCKET
+#if PROTOCORE_ENABLE_WEBSOCKET
 /** @brief Perform the RFC 6455 101 handshake and hand the slot to the WS frame parser. */
 proto_bool ws_do_upgrade(uint8_t slot_id, HttpReq *req, WsConnectHandler on_connect);
 
@@ -1406,11 +1406,11 @@ proto_bool ws_do_upgrade(uint8_t slot_id, HttpReq *req, WsConnectHandler on_conn
 void ws_send_version_required(uint8_t slot_id);
 #endif
 
-#if PC_ENABLE_SSE
+#if PROTOCORE_ENABLE_SSE
 /** @brief Send the SSE 200 headers and promote the slot to server-sent-events mode. */
-proto_bool pc_sse_do_upgrade(uint8_t slot_id, HttpReq *req, SseConnectHandler on_connect);
+proto_bool protocore_sse_do_upgrade(uint8_t slot_id, HttpReq *req, SseConnectHandler on_connect);
 #endif
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif

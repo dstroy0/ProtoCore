@@ -4,7 +4,7 @@
 /**
  * @file SimaticSerial.ino
  * @brief Siemens SIMATIC serial (3964R + RK512) - two link stations talking to each other on one device,
- *        the full interactive handshake + an RK512 FETCH round-trip, surfaced over HTTP (PC_ENABLE_SIMATIC).
+ *        the full interactive handshake + an RK512 FETCH round-trip, surfaced over HTTP (PROTOCORE_ENABLE_SIMATIC).
  *
  * services/fieldbus/simatic is a pure 3964R link + RK512 telegram codec; the RS-232 / RS-485 UART is normally the
  * application's. To show the whole protocol self-contained (no second device, no wiring), this sketch runs
@@ -18,10 +18,10 @@
  * On a real installation A would be this device and B a Siemens PtP CP over an RS-232/RS-485 UART; here both
  * live on-device to demonstrate + self-test the codec on the hardware.
  *
- * Build flags (platformio.ini):  build_flags = -DPC_ENABLE_SIMATIC=1
+ * Build flags (platformio.ini):  build_flags = -DPROTOCORE_ENABLE_SIMATIC=1
  */
 
-#define PC_ENABLE_SIMATIC 1
+#define PROTOCORE_ENABLE_SIMATIC 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -95,11 +95,11 @@ static void b_on_rx(void *u, const uint8_t *d, size_t n)
     (void)u;
     hexstr(g_last_fetch, sizeof(g_last_fetch), d, n);
     Rk512Header h;
-    if (pc_rk512_parse_header(d, n, &h) && h.cmd == Rk512Cmd::FETCH)
+    if (protocore_rk512_parse_header(d, n, &h) && h.cmd == Rk512Cmd::FETCH)
     {
         uint8_t react[8];
-        size_t rn = pc_rk512_build_reaction(react, sizeof(react), 0x0000); // ok
-        pc_3964r_send(&sta_b, react, rn, pc_millis());
+        size_t rn = protocore_rk512_build_reaction(react, sizeof(react), 0x0000); // ok
+        protocore_3964r_send(&sta_b, react, rn, protocore_millis());
     }
 }
 
@@ -109,7 +109,7 @@ static void a_on_rx(void *u, const uint8_t *d, size_t n)
     (void)u;
     hexstr(g_last_reaction, sizeof(g_last_reaction), d, n);
     uint16_t status = 0xFFFF;
-    if (pc_rk512_parse_reaction(d, n, &status, nullptr, nullptr) && status == 0)
+    if (protocore_rk512_parse_reaction(d, n, &status, nullptr, nullptr) && status == 0)
     {
         g_round++;
     }
@@ -139,8 +139,8 @@ void setup()
                   (unsigned)((ip >> 8) & 0xFF), (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     // Both stations run the "R" (BCC) variant; A is high priority, B low (collision arbitration).
-    pc_3964r_init(&sta_a, /*high_priority=*/true, /*with_bcc=*/true, a_tx, a_on_rx, nullptr);
-    pc_3964r_init(&sta_b, /*high_priority=*/false, /*with_bcc=*/true, b_tx, b_on_rx, nullptr);
+    protocore_3964r_init(&sta_a, /*high_priority=*/true, /*with_bcc=*/true, a_tx, a_on_rx, nullptr);
+    protocore_3964r_init(&sta_b, /*high_priority=*/false, /*with_bcc=*/true, b_tx, b_on_rx, nullptr);
 
     on_http("/simatic", HTTP_GET, handle_status);
     begin_http(80, NULL);
@@ -149,28 +149,28 @@ void setup()
 void loop()
 {
     handle();
-    uint32_t now = pc_millis();
+    uint32_t now = protocore_millis();
 
     // Pump the cross-wire: bytes A sent -> B's receiver, bytes B sent -> A's receiver.
     uint8_t b;
     while (q_pop(&q_a2b, &b))
     {
-        pc_3964r_rx_byte(&sta_b, b, now);
+        protocore_3964r_rx_byte(&sta_b, b, now);
     }
     while (q_pop(&q_b2a, &b))
     {
-        pc_3964r_rx_byte(&sta_a, b, now);
+        protocore_3964r_rx_byte(&sta_a, b, now);
     }
-    pc_3964r_tick(&sta_a, now);
-    pc_3964r_tick(&sta_b, now);
+    protocore_3964r_tick(&sta_a, now);
+    protocore_3964r_tick(&sta_b, now);
 
     // Kick off a new FETCH from A once both stations are idle (previous exchange finished).
     static uint32_t last = 0;
-    if (pc_3964r_idle(&sta_a) && pc_3964r_idle(&sta_b) && now - last >= 1000)
+    if (protocore_3964r_idle(&sta_a) && protocore_3964r_idle(&sta_b) && now - last >= 1000)
     {
         last = now;
         uint8_t fetch[8];
-        size_t fn = pc_rk512_build_fetch(fetch, sizeof(fetch), Rk512Area::DB, 5, 0x0000, 2);
-        pc_3964r_send(&sta_a, fetch, fn, now);
+        size_t fn = protocore_rk512_build_fetch(fetch, sizeof(fetch), Rk512Area::DB, 5, 0x0000, 2);
+        protocore_3964r_send(&sta_a, fetch, fn, now);
     }
 }

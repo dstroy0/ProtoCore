@@ -13,18 +13,18 @@
 #include "crypto/crypto_opt.h"
 #include "mmgr/protomem.h"
 
-#if PC_HAS_HW_SHA
+#if PROTOCORE_HAS_HW_SHA
 #include "mbedtls/sha1.h" // hardware-accelerated SHA-1 on ESP32
 #else
 #include "mmgr/endian.h" // native software SHA-1
 #endif
-PC_CRYPTO_HOT
+PROTOCORE_CRYPTO_HOT
 
-#if PC_HAS_HW_SHA
+#if PROTOCORE_HAS_HW_SHA
 
 // --- HW path: mbedTLS ------------------------------------------------------
 
-void pc_sha1(const uint8_t *data, size_t len, uint8_t digest[PC_SHA1_DIGEST_LEN])
+void protocore_sha1(const uint8_t *data, size_t len, uint8_t digest[PROTOCORE_SHA1_DIGEST_LEN])
 {
     (void)mbedtls_sha1(data, len, digest);
 }
@@ -46,7 +46,7 @@ static void sha1_block(uint32_t h[5], const uint8_t block[64])
     uint32_t w[80];
     for (int i = 0; i < 16; i++)
     {
-        w[i] = pc_rd32be(block + i * 4);
+        w[i] = protocore_rd32be(block + i * 4);
     }
     for (int i = 16; i < 80; i++)
     {
@@ -101,7 +101,7 @@ static void sha1_block(uint32_t h[5], const uint8_t block[64])
     h[4] += e;
 }
 
-void pc_sha1(const uint8_t *data, size_t len, uint8_t digest[PC_SHA1_DIGEST_LEN])
+void protocore_sha1(const uint8_t *data, size_t len, uint8_t digest[PROTOCORE_SHA1_DIGEST_LEN])
 {
     uint32_t h[5] = {0x67452301u, 0xEFCDAB89u, 0x98BADCFEu, 0x10325476u, 0xC3D2E1F0u};
 
@@ -134,8 +134,8 @@ void pc_sha1(const uint8_t *data, size_t len, uint8_t digest[PC_SHA1_DIGEST_LEN]
 
     for (int i = 0; i < 5; i++)
     {
-        pc_wr32be(digest + i * 4, h[i]);
+        protocore_wr32be(digest + i * 4, h[i]);
     }
 }
 
-#endif // PC_HAS_HW_SHA
+#endif // PROTOCORE_HAS_HW_SHA

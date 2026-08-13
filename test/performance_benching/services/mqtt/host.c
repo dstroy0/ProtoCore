@@ -7,11 +7,11 @@
 // device-only, so the codec links standalone. The device number comes from the rig /bench endpoint;
 // this host ns/op + MB/s is a relative baseline. Build + run:
 //   gcc -O2 -std=c11 -I. -Isrc -Itest/mocks -Itest/support -Itest/performance_benching/common
-//   -DPC_ENABLE_MQTT=1 test/performance_benching/services/mqtt/host.c
+//   -DPROTOCORE_ENABLE_MQTT=1 test/performance_benching/services/mqtt/host.c
 //   src/services/iot/mqtt/mqtt.c src/mmgr/protomem.c src/mmgr/protostr.c -o /tmp/bm && /tmp/bm
 //   (utf8.h is header-only)
 
-#define PC_ENABLE_MQTT 1
+#define PROTOCORE_ENABLE_MQTT 1
 #include "services/iot/mqtt/mqtt.h"
 
 #include "host_bench.h"

@@ -3,7 +3,7 @@
 
 /**
  * @file graphql.h
- * @brief Zero-heap GraphQL query subset - parser + executor (PC_ENABLE_GRAPHQL).
+ * @brief Zero-heap GraphQL query subset - parser + executor (PROTOCORE_ENABLE_GRAPHQL).
  *
  * A small, deterministic GraphQL *query* engine for a constrained device: it
  * parses a query document into a fixed AST node pool (no heap), then walks the
@@ -24,7 +24,7 @@
  * mutations, subscriptions, fragments, variables, directives, aliases, lists of
  * objects. Malformed input fails closed with `{"errors":[...]}`.
  *
- * Pure and host-tested. Bounds are compile-time (PC_GQL_*); parsing and
+ * Pure and host-tested. Bounds are compile-time (PROTOCORE_GQL_*); parsing and
  * execution allocate nothing.
  *
  * @author  Douglas Quigg (dstroy0)
@@ -36,39 +36,39 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_GRAPHQL
+#if PROTOCORE_ENABLE_GRAPHQL
 
 /** @brief Scalar value kinds a resolver can return. */
 typedef enum PROTO_ENUM_PACKED
 {
-    PC_GQL_NULL = 0,
-    PC_GQL_INT,
-    PC_GQL_FLOAT,
-    PC_GQL_BOOL,
-    PC_GQL_STR, ///< s points to a NUL-terminated string stable for the call.
-} pc_gql_type;
+    PROTOCORE_GQL_NULL = 0,
+    PROTOCORE_GQL_INT,
+    PROTOCORE_GQL_FLOAT,
+    PROTOCORE_GQL_BOOL,
+    PROTOCORE_GQL_STR, ///< s points to a NUL-terminated string stable for the call.
+} protocore_gql_type;
 
 /** @brief A scalar value (resolver output, or an argument). */
 typedef struct
 {
-    pc_gql_type type; ///< the value's type.
+    protocore_gql_type type; ///< the value's type.
     long long i;
     double f;
     proto_bool b;
     const char *s;
-} pc_gql_value;
+} protocore_gql_value;
 
 /** @brief Opaque view of the arguments in scope at a resolved field. */
-struct pc_gql_args;
+struct protocore_gql_args;
 
 /** @brief Read an int argument @p name; false if absent / not an int. */
-proto_bool pc_gql_arg_int(const struct pc_gql_args *args, const char *name, long long *out);
+proto_bool protocore_gql_arg_int(const struct protocore_gql_args *args, const char *name, long long *out);
 /** @brief Read a string argument @p name; false if absent / not a string. */
-proto_bool pc_gql_arg_str(const struct pc_gql_args *args, const char *name, const char **out);
+proto_bool protocore_gql_arg_str(const struct protocore_gql_args *args, const char *name, const char **out);
 /** @brief Read a bool argument @p name; false if absent / not a bool. */
-proto_bool pc_gql_arg_bool(const struct pc_gql_args *args, const char *name, proto_bool *out);
+proto_bool protocore_gql_arg_bool(const struct protocore_gql_args *args, const char *name, proto_bool *out);
 
 /**
  * @brief Resolve the scalar leaf at dotted @p path (e.g. "device.uptime").
@@ -76,16 +76,17 @@ proto_bool pc_gql_arg_bool(const struct pc_gql_args *args, const char *name, pro
  * Fill @p out with the value and return true; return false to emit JSON null.
  * @p args exposes every argument in scope along the path.
  */
-typedef proto_bool (*pc_gql_resolver_fn)(const char *path, const struct pc_gql_args *args, pc_gql_value *out);
+typedef proto_bool (*protocore_gql_resolver_fn)(const char *path, const struct protocore_gql_args *args,
+                                                protocore_gql_value *out);
 
-/** @brief pc_graphql_execute() result codes. */
+/** @brief protocore_graphql_execute() result codes. */
 typedef enum PROTO_ENUM_PACKED
 {
-    PC_GQL_OK = 0,           ///< Executed; @p out holds `{"data":{...}}`.
-    PC_GQL_ERR_PARSE = -1,   ///< Malformed query (syntax / unsupported construct).
-    PC_GQL_ERR_LIMIT = -2,   ///< Exceeded a PC_GQL_* bound (nodes/args/depth/name).
-    PC_GQL_ERR_OVERFLOW = -3 ///< Response did not fit @p cap.
-} pc_gql_result;
+    PROTOCORE_GQL_OK = 0,           ///< Executed; @p out holds `{"data":{...}}`.
+    PROTOCORE_GQL_ERR_PARSE = -1,   ///< Malformed query (syntax / unsupported construct).
+    PROTOCORE_GQL_ERR_LIMIT = -2,   ///< Exceeded a PROTOCORE_GQL_* bound (nodes/args/depth/name).
+    PROTOCORE_GQL_ERR_OVERFLOW = -3 ///< Response did not fit @p cap.
+} protocore_gql_result;
 
 /**
  * @brief Parse and execute a GraphQL query, writing the JSON response.
@@ -97,12 +98,13 @@ typedef enum PROTO_ENUM_PACKED
  * @param query,len  the query document.
  * @param resolver   leaf resolver (may be nullptr -> every leaf is null).
  * @param out,cap    response buffer and capacity.
- * @return ::PC_GQL_OK or a negative ::pc_gql_result.
+ * @return ::PROTOCORE_GQL_OK or a negative ::protocore_gql_result.
  */
-pc_gql_result pc_graphql_execute(const char *query, size_t len, pc_gql_resolver_fn resolver, char *out, size_t cap);
+protocore_gql_result protocore_graphql_execute(const char *query, size_t len, protocore_gql_resolver_fn resolver,
+                                               char *out, size_t cap);
 
-#endif // PC_ENABLE_GRAPHQL
+#endif // PROTOCORE_ENABLE_GRAPHQL
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_GRAPHQL_H

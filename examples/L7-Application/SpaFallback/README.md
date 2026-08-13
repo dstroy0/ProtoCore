@@ -1,6 +1,6 @@
 # SpaFallback - a single-page UI that still works when the single-page UI does not
 
-**Layer:** L7 Application · **Build flags:** `PC_ENABLE_SPA_ROUTER`
+**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_SPA_ROUTER`
 
 ## What this example teaches
 
@@ -9,7 +9,7 @@ missing after a half-finished upload, the filesystem got wiped, the browser will
 the device came up degraded. On a machine you can actuate, "the page did not load" is not an
 acceptable state - an operator still has to see what is happening and be able to stop it.
 
-`pc_spa_route_ex()` routes for that:
+`protocore_spa_route_ex()` routes for that:
 
 | Path         | Action           | When                                                      |
 | ------------ | ---------------- | --------------------------------------------------------- |
@@ -30,7 +30,7 @@ Two of those rows are the whole design:
 The fallback page is a fragment table, each entry with a predicate:
 
 ```cpp
-static const pc_ui_fragment HMI_FRAGMENTS[] = {
+static const protocore_ui_fragment HMI_FRAGMENTS[] = {
     {"head",     "<!doctype html>...<h1>Device HMI</h1>", nullptr},      // always
     {"degraded", "<p><b>DEGRADED MODE</b>...</p>",        when_degraded},
     {"alarm",    "<p style=\"color:red\">ALARM ACTIVE</p>", when_alarm},
@@ -39,7 +39,7 @@ static const pc_ui_fragment HMI_FRAGMENTS[] = {
 };
 ```
 
-`pc_ui_stream_next()` emits only the fragments whose predicate holds, into a buffer of **any** size -
+`protocore_ui_stream_next()` emits only the fragments whose predicate holds, into a buffer of **any** size -
 it resumes mid-fragment, so a page far larger than the buffer streams out in pieces. Predicates run
 as the stream reaches each fragment, not all up front, so a long render reflects the state that holds
 when it gets there.
@@ -107,6 +107,6 @@ The flags must reach the library build, so pass them as build flags:
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_SPA_ROUTER=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_SPA_ROUTER=1" \
   --lib="." examples/L7-Application/SpaFallback/SpaFallback.ino
 ```

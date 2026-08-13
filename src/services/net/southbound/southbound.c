@@ -8,32 +8,32 @@
 
 #include "services/net/southbound/southbound.h"
 
-#if PC_ENABLE_SOUTHBOUND
+#if PROTOCORE_ENABLE_SOUTHBOUND
 
-#ifndef PC_SOUTHBOUND_MAX_DRIVERS
-#define PC_SOUTHBOUND_MAX_DRIVERS 8 ///< bounded registry; no heap.
+#ifndef PROTOCORE_SOUTHBOUND_MAX_DRIVERS
+#define PROTOCORE_SOUTHBOUND_MAX_DRIVERS 8 ///< bounded registry; no heap.
 #endif
 
 // All southbound-registry state, owned by one instance (internal linkage): the bounded
 // driver table and its count, grouped so it is one named owner, unreachable cross-TU.
 typedef struct
 {
-    const SouthboundDriver *drivers[PC_SOUTHBOUND_MAX_DRIVERS];
+    const SouthboundDriver *drivers[PROTOCORE_SOUTHBOUND_MAX_DRIVERS];
     size_t count;
 } SouthboundCtx;
 static SouthboundCtx s_sb;
 
-int pc_southbound_register(const SouthboundDriver *drv)
+int protocore_southbound_register(const SouthboundDriver *drv)
 {
     if (!drv || !drv->name)
     {
         return SB_ERR_ARG;
     }
-    if (pc_southbound_find(drv->name))
+    if (protocore_southbound_find(drv->name))
     {
         return SB_ERR_DUP;
     }
-    if (s_sb.count >= PC_SOUTHBOUND_MAX_DRIVERS)
+    if (s_sb.count >= PROTOCORE_SOUTHBOUND_MAX_DRIVERS)
     {
         return SB_ERR_FULL;
     }
@@ -41,21 +41,21 @@ int pc_southbound_register(const SouthboundDriver *drv)
     return SB_OK;
 }
 
-void pc_southbound_clear(void)
+void protocore_southbound_clear(void)
 {
-    for (size_t i = 0; i < PC_SOUTHBOUND_MAX_DRIVERS; i++)
+    for (size_t i = 0; i < PROTOCORE_SOUTHBOUND_MAX_DRIVERS; i++)
     {
         s_sb.drivers[i] = NULL;
     }
     s_sb.count = 0;
 }
 
-size_t pc_southbound_count(void)
+size_t protocore_southbound_count(void)
 {
     return s_sb.count;
 }
 
-const SouthboundDriver *pc_southbound_find(const char *name)
+const SouthboundDriver *protocore_southbound_find(const char *name)
 {
     if (!name)
     {
@@ -79,13 +79,13 @@ const SouthboundDriver *pc_southbound_find(const char *name)
     return NULL;
 }
 
-int pc_southbound_read(const char *name, uint32_t point, int32_t *value_out)
+int protocore_southbound_read(const char *name, uint32_t point, int32_t *value_out)
 {
     if (!value_out)
     {
         return SB_ERR_ARG;
     }
-    const SouthboundDriver *d = pc_southbound_find(name);
+    const SouthboundDriver *d = protocore_southbound_find(name);
     if (!d)
     {
         return SB_ERR_NOT_FOUND;
@@ -97,9 +97,9 @@ int pc_southbound_read(const char *name, uint32_t point, int32_t *value_out)
     return d->read(d->ctx, point, value_out);
 }
 
-int pc_southbound_write(const char *name, uint32_t point, int32_t value)
+int protocore_southbound_write(const char *name, uint32_t point, int32_t value)
 {
-    const SouthboundDriver *d = pc_southbound_find(name);
+    const SouthboundDriver *d = protocore_southbound_find(name);
     if (!d)
     {
         return SB_ERR_NOT_FOUND;
@@ -111,13 +111,13 @@ int pc_southbound_write(const char *name, uint32_t point, int32_t value)
     return d->write(d->ctx, point, value);
 }
 
-int pc_southbound_read_block(const char *name, uint32_t first, int32_t *out, size_t n)
+int protocore_southbound_read_block(const char *name, uint32_t first, int32_t *out, size_t n)
 {
     if (!out || n == 0)
     {
         return SB_ERR_ARG;
     }
-    const SouthboundDriver *d = pc_southbound_find(name);
+    const SouthboundDriver *d = protocore_southbound_find(name);
     if (!d)
     {
         return SB_ERR_NOT_FOUND;
@@ -129,13 +129,13 @@ int pc_southbound_read_block(const char *name, uint32_t first, int32_t *out, siz
     return d->read_block(d->ctx, first, out, n);
 }
 
-int pc_southbound_write_block(const char *name, uint32_t first, const int32_t *in, size_t n)
+int protocore_southbound_write_block(const char *name, uint32_t first, const int32_t *in, size_t n)
 {
     if (!in || n == 0)
     {
         return SB_ERR_ARG;
     }
-    const SouthboundDriver *d = pc_southbound_find(name);
+    const SouthboundDriver *d = protocore_southbound_find(name);
     if (!d)
     {
         return SB_ERR_NOT_FOUND;
@@ -147,4 +147,4 @@ int pc_southbound_write_block(const char *name, uint32_t first, const int32_t *i
     return d->write_block(d->ctx, first, in, n);
 }
 
-#endif // PC_ENABLE_SOUTHBOUND
+#endif // PROTOCORE_ENABLE_SOUTHBOUND

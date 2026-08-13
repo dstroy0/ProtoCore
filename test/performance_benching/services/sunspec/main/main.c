@@ -23,18 +23,18 @@ void dbench_run(void)
     {
         DBENCH_BANNER("sunspec");
         volatile uint32_t sink = 0;
-        DBENCH_OP("pc_sunspec_check_marker", 200000, sink += pc_sunspec_check_marker(regs, sizeof(regs)));
-        DBENCH_OP("pc_sunspec_u16", 200000, sink += pc_sunspec_u16(regs, 3));
-        DBENCH_OP("pc_sunspec_i16", 200000, sink += (uint32_t)pc_sunspec_i16(regs, 4));
-        DBENCH_OP("pc_sunspec_u32", 200000, sink += pc_sunspec_u32(regs, 5));
+        DBENCH_OP("protocore_sunspec_check_marker", 200000, sink += protocore_sunspec_check_marker(regs, sizeof(regs)));
+        DBENCH_OP("protocore_sunspec_u16", 200000, sink += protocore_sunspec_u16(regs, 3));
+        DBENCH_OP("protocore_sunspec_i16", 200000, sink += (uint32_t)protocore_sunspec_i16(regs, 4));
+        DBENCH_OP("protocore_sunspec_u32", 200000, sink += protocore_sunspec_u32(regs, 5));
         SunSpecWriter w;
         static uint8_t out[64];
-        DBENCH_OP("pc_sunspec writer (marker+hdr+2)", 200000, {
-            pc_sunspec_writer_init(&w, out, sizeof(out));
-            pc_sunspec_write_marker(&w);
-            pc_sunspec_write_model_header(&w, 1, 66);
-            pc_sunspec_write_u16(&w, 0x1234);
-            sink += pc_sunspec_write_i16(&w, -5) ? 1 : 0;
+        DBENCH_OP("protocore_sunspec writer (marker+hdr+2)", 200000, {
+            protocore_sunspec_writer_init(&w, out, sizeof(out));
+            protocore_sunspec_write_marker(&w);
+            protocore_sunspec_write_model_header(&w, 1, 66);
+            protocore_sunspec_write_u16(&w, 0x1234);
+            sink += protocore_sunspec_write_i16(&w, -5) ? 1 : 0;
         });
         (void)sink;
         DBENCH_DONE();

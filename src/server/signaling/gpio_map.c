@@ -7,29 +7,29 @@
  *        the digital read / write helpers.
  *
  * The serializer and the `pin=&level=` parser are pure (host-tested); the digital
- * I/O goes through the board profile's pc_platform_gpio_* where a pin seam exists
+ * I/O goes through the board profile's protocore_platform_gpio_* where a pin seam exists
  * and is a no-op where there is none. No server dependency lives here.
  */
 
 #include "server/signaling/gpio_map.h"
 #include "mmgr/protomem.h"
-#include "server/clock/clock.h" // pc_millis()
+#include "server/clock/clock.h" // protocore_millis()
 
-#if PC_ENABLE_GPIO_MAP
+#if PROTOCORE_ENABLE_GPIO_MAP
 
 #include "mmgr/protoframe.h"
 
-const char *pc_gpio_dir_name(pc_gpio_dir dir)
+const char *protocore_gpio_dir_name(protocore_gpio_dir dir)
 {
     switch (dir)
     {
-    case PC_GPIO_DIR_IN:
+    case PROTOCORE_GPIO_DIR_IN:
         return "in";
-    case PC_GPIO_DIR_IN_PULLUP:
+    case PROTOCORE_GPIO_DIR_IN_PULLUP:
         return "in_pullup";
-    case PC_GPIO_DIR_IN_PULLDOWN:
+    case PROTOCORE_GPIO_DIR_IN_PULLDOWN:
         return "in_pulldown";
-    case PC_GPIO_DIR_OUT:
+    case PROTOCORE_GPIO_DIR_OUT:
         return "out";
     default:
         return "in";
@@ -39,25 +39,25 @@ const char *pc_gpio_dir_name(pc_gpio_dir dir)
 // The document is three frames: the object that opens the array, one object per pin, and the
 // close. The separating comma is the pin frame's first field so a pin is one append either way.
 // The item index selects it; !!i is 0 or 1, so the separator is a load rather than a branch.
-static const char *const PC_JSON_SEP[2] = {"", ","};
+static const char *const PROTOCORE_JSON_SEP[2] = {"", ","};
 
-static const pc_field GPIO_OPEN[] = {{PC_FK_LIT, 0, 9, "{\"pins\":["}, PC_END};
-static const pc_field GPIO_PIN[] = {
-    PC_STR,                           // "," from the second pin on
-    {PC_FK_LIT, 0, 7, "{\"pin\":"},   //
-    PC_U32,                           // pin number
-    {PC_FK_LIT, 0, 9, ",\"label\":"}, //
-    PC_JSON,                          // label, quoted and escaped
-    {PC_FK_LIT, 0, 7, ",\"dir\":"},   //
-    PC_JSON,                          // direction name
-    {PC_FK_LIT, 0, 9, ",\"level\":"}, //
-    PC_U32,                           // 0 or 1
-    {PC_FK_LIT, 0, 1, "}"},           //
-    PC_END,
+static const protocore_field GPIO_OPEN[] = {{PROTOCORE_FK_LIT, 0, 9, "{\"pins\":["}, PROTOCORE_END};
+static const protocore_field GPIO_PIN[] = {
+    PROTOCORE_STR,                           // "," from the second pin on
+    {PROTOCORE_FK_LIT, 0, 7, "{\"pin\":"},   //
+    PROTOCORE_U32,                           // pin number
+    {PROTOCORE_FK_LIT, 0, 9, ",\"label\":"}, //
+    PROTOCORE_JSON,                          // label, quoted and escaped
+    {PROTOCORE_FK_LIT, 0, 7, ",\"dir\":"},   //
+    PROTOCORE_JSON,                          // direction name
+    {PROTOCORE_FK_LIT, 0, 9, ",\"level\":"}, //
+    PROTOCORE_U32,                           // 0 or 1
+    {PROTOCORE_FK_LIT, 0, 1, "}"},           //
+    PROTOCORE_END,
 };
-static const pc_field GPIO_CLOSE[] = {{PC_FK_LIT, 0, 2, "]}"}, PC_END};
+static const protocore_field GPIO_CLOSE[] = {{PROTOCORE_FK_LIT, 0, 2, "]}"}, PROTOCORE_END};
 
-int32_t pc_gpio_json(const pc_gpio_pin *pins, uint8_t count, char *out, uint32_t cap)
+int32_t protocore_gpio_json(const protocore_gpio_pin *pins, uint8_t count, char *out, uint32_t cap)
 {
     if (!out || cap == 0)
     {
@@ -74,10 +74,12 @@ int32_t pc_gpio_json(const pc_gpio_pin *pins, uint8_t count, char *out, uint32_t
     }
     for (uint8_t i = 0; i < count; i++)
     {
-        const pc_gpio_pin *p = &pins[i];
+        const protocore_gpio_pin *p = &pins[i];
         if (frame.append(out, cap, GPIO_PIN,
-                         (const pc_fval[]){PC_VSTR(PC_JSON_SEP[!!i]), PC_VU32((uint32_t)p->pin), PC_VJSON(p->label),
-                                           PC_VJSON(pc_gpio_dir_name(p->dir)), PC_VU32((uint32_t)(!!p->level))},
+                         (const protocore_fval[]){PROTOCORE_VSTR(PROTOCORE_JSON_SEP[!!i]),
+                                                  PROTOCORE_VU32((uint32_t)p->pin), PROTOCORE_VJSON(p->label),
+                                                  PROTOCORE_VJSON(protocore_gpio_dir_name(p->dir)),
+                                                  PROTOCORE_VU32((uint32_t)(!!p->level))},
                          5) == 0)
         {
             return 0;
@@ -114,7 +116,7 @@ static proto_bool form_field_uint(const char *body, size_t len, const char *name
     return PROTO_FALSE;
 }
 
-proto_bool pc_gpio_parse_set(const char *body, size_t len, uint8_t *pin, uint8_t *level)
+proto_bool protocore_gpio_parse_set(const char *body, size_t len, uint8_t *pin, uint8_t *level)
 {
     if (!body || !pin || !level)
     {
@@ -131,7 +133,7 @@ proto_bool pc_gpio_parse_set(const char *body, size_t len, uint8_t *pin, uint8_t
     return PROTO_TRUE;
 }
 
-proto_bool pc_gpio_is_output(const pc_gpio_pin *pins, uint8_t count, uint8_t pin)
+proto_bool protocore_gpio_is_output(const protocore_gpio_pin *pins, uint8_t count, uint8_t pin)
 {
     if (!pins)
     {
@@ -139,7 +141,7 @@ proto_bool pc_gpio_is_output(const pc_gpio_pin *pins, uint8_t count, uint8_t pin
     }
     for (uint8_t i = 0; i < count; i++)
     {
-        if (pins[i].pin == pin && pins[i].dir == PC_GPIO_DIR_OUT)
+        if (pins[i].pin == pin && pins[i].dir == PROTOCORE_GPIO_DIR_OUT)
         {
             return PROTO_TRUE;
         }
@@ -147,9 +149,9 @@ proto_bool pc_gpio_is_output(const pc_gpio_pin *pins, uint8_t count, uint8_t pin
     return PROTO_FALSE;
 }
 
-#if PC_HAS_GPIO
+#if PROTOCORE_HAS_GPIO
 
-void pc_gpio_begin_pins(const pc_gpio_pin *pins, uint8_t count)
+void protocore_gpio_begin_pins(const protocore_gpio_pin *pins, uint8_t count)
 {
     if (!pins)
     {
@@ -160,23 +162,23 @@ void pc_gpio_begin_pins(const pc_gpio_pin *pins, uint8_t count)
         // The case label is this enum; the argument is the board profile's own pin-mode number.
         switch (pins[i].dir)
         {
-        case PC_GPIO_DIR_OUT:
-            pc_platform_gpio_mode((uint8_t)(pins[i].pin), PC_GPIO_OUT);
+        case PROTOCORE_GPIO_DIR_OUT:
+            protocore_platform_gpio_mode((uint8_t)(pins[i].pin), PROTOCORE_GPIO_OUT);
             break;
-        case PC_GPIO_DIR_IN_PULLUP:
-            pc_platform_gpio_mode((uint8_t)(pins[i].pin), PC_GPIO_IN_PULLUP);
+        case PROTOCORE_GPIO_DIR_IN_PULLUP:
+            protocore_platform_gpio_mode((uint8_t)(pins[i].pin), PROTOCORE_GPIO_IN_PULLUP);
             break;
-        case PC_GPIO_DIR_IN_PULLDOWN:
-            pc_platform_gpio_mode((uint8_t)(pins[i].pin), PC_GPIO_IN_PULLDOWN);
+        case PROTOCORE_GPIO_DIR_IN_PULLDOWN:
+            protocore_platform_gpio_mode((uint8_t)(pins[i].pin), PROTOCORE_GPIO_IN_PULLDOWN);
             break;
         default:
-            pc_platform_gpio_mode((uint8_t)(pins[i].pin), PC_GPIO_IN);
+            protocore_platform_gpio_mode((uint8_t)(pins[i].pin), PROTOCORE_GPIO_IN);
             break;
         }
     }
 }
 
-void pc_gpio_read(pc_gpio_pin *pins, uint8_t count)
+void protocore_gpio_read(protocore_gpio_pin *pins, uint8_t count)
 {
     if (!pins)
     {
@@ -184,38 +186,38 @@ void pc_gpio_read(pc_gpio_pin *pins, uint8_t count)
     }
     for (uint8_t i = 0; i < count; i++)
     {
-        pins[i].level = (uint8_t)(pc_platform_gpio_read((uint8_t)(pins[i].pin)) ? 1 : 0);
+        pins[i].level = (uint8_t)(protocore_platform_gpio_read((uint8_t)(pins[i].pin)) ? 1 : 0);
     }
 }
 
 // level indexes this; !!level is 0 or 1, so the selection is a load rather than a branch.
-static const uint8_t PC_GPIO_LEVEL[2] = {PC_GPIO_LOW, PC_GPIO_HIGH};
+static const uint8_t PROTOCORE_GPIO_LEVEL[2] = {PROTOCORE_GPIO_LOW, PROTOCORE_GPIO_HIGH};
 
-void pc_gpio_write(uint8_t pin, uint8_t level)
+void protocore_gpio_write(uint8_t pin, uint8_t level)
 {
-    pc_platform_gpio_write((uint8_t)(pin), PC_GPIO_LEVEL[!!level]);
+    protocore_platform_gpio_write((uint8_t)(pin), PROTOCORE_GPIO_LEVEL[!!level]);
 }
 
 #else // no pin seam
 
-void pc_gpio_begin_pins(const pc_gpio_pin *pins, uint8_t count)
+void protocore_gpio_begin_pins(const protocore_gpio_pin *pins, uint8_t count)
 {
     (void)pins;
     (void)count;
 }
 
-void pc_gpio_read(pc_gpio_pin *pins, uint8_t count)
+void protocore_gpio_read(protocore_gpio_pin *pins, uint8_t count)
 {
     (void)pins;
     (void)count;
 }
 
-void pc_gpio_write(uint8_t pin, uint8_t level)
+void protocore_gpio_write(uint8_t pin, uint8_t level)
 {
     (void)pin;
     (void)level;
 }
 
-#endif // PC_HAS_GPIO
+#endif // PROTOCORE_HAS_GPIO
 
-#endif // PC_ENABLE_GPIO_MAP
+#endif // PROTOCORE_ENABLE_GPIO_MAP

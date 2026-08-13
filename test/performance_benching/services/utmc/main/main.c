@@ -21,11 +21,11 @@ void dbench_run(void)
         DBENCH_BANNER("utmc");
         volatile size_t sink = 0;
         static char out[256];
-        DBENCH_OP("pc_utmc_request", 200000, sink += pc_utmc_request("DET/1/1/1", out, sizeof(out)));
-        DBENCH_OP("pc_utmc_response", 200000,
-                  sink += pc_utmc_response("DET/1/1/1", "42", 1, "2026-07-23T12:00:00Z", out, sizeof(out)));
-        DBENCH_OP("pc_utmc_parse_request", 200000,
-                  sink += pc_utmc_parse_request(req_xml, sizeof(req_xml) - 1, out, sizeof(out)));
+        DBENCH_OP("protocore_utmc_request", 200000, sink += protocore_utmc_request("DET/1/1/1", out, sizeof(out)));
+        DBENCH_OP("protocore_utmc_response", 200000,
+                  sink += protocore_utmc_response("DET/1/1/1", "42", 1, "2026-07-23T12:00:00Z", out, sizeof(out)));
+        DBENCH_OP("protocore_utmc_parse_request", 200000,
+                  sink += protocore_utmc_parse_request(req_xml, sizeof(req_xml) - 1, out, sizeof(out)));
         (void)sink;
         DBENCH_DONE();
     }

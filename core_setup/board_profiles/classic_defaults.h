@@ -13,7 +13,7 @@
  *
  * The crypto-HW flags below are the classic ESP32's accelerator set (AES, SHA, RSA/MPI - no
  * ECC/ECDSA/HMAC/DS). Every chip profile that includes this file as the floor first defines its
- * OWN `PC_HW_*` flags, so these apply only to the classic-ESP32 (and, harmlessly, host) path.
+ * OWN `PROTOCORE_HW_*` flags, so these apply only to the classic-ESP32 (and, harmlessly, host) path.
  * All macros are `#ifndef`-guarded, so a -D override or a richer variant profile always wins.
  */
 
@@ -21,26 +21,26 @@
 #define PROTOCORE_CLASSIC_DEFAULTS_H
 
 // --- HW crypto accelerators (classic ESP32: AES + SHA + RSA/MPI only) ---
-#ifndef PC_HW_AES
-#define PC_HW_AES 1
+#ifndef PROTOCORE_HW_AES
+#define PROTOCORE_HW_AES 1
 #endif
-#ifndef PC_HW_SHA
-#define PC_HW_SHA 1
+#ifndef PROTOCORE_HW_SHA
+#define PROTOCORE_HW_SHA 1
 #endif
-#ifndef PC_HW_RSA
-#define PC_HW_RSA 1 // the MPI/bignum accelerator
+#ifndef PROTOCORE_HW_RSA
+#define PROTOCORE_HW_RSA 1 // the MPI/bignum accelerator
 #endif
-#ifndef PC_HW_ECC
-#define PC_HW_ECC 0
+#ifndef PROTOCORE_HW_ECC
+#define PROTOCORE_HW_ECC 0
 #endif
-#ifndef PC_HW_ECDSA
-#define PC_HW_ECDSA 0
+#ifndef PROTOCORE_HW_ECDSA
+#define PROTOCORE_HW_ECDSA 0
 #endif
-#ifndef PC_HW_HMAC
-#define PC_HW_HMAC 0
+#ifndef PROTOCORE_HW_HMAC
+#define PROTOCORE_HW_HMAC 0
 #endif
-#ifndef PC_HW_DS
-#define PC_HW_DS 0 // Digital Signature peripheral
+#ifndef PROTOCORE_HW_DS
+#define PROTOCORE_HW_DS 0 // Digital Signature peripheral
 #endif
 
 // --- Vector unit ---
@@ -48,11 +48,11 @@
 // die's LX6 has none, and neither does a host build, so the floor is off and mmgr/swar.h
 // keeps doing its lane math in a general-purpose register. A profile raising this is asserting a
 // real unit out of its own die's TRM, never inferring one from the core name.
-#ifndef PC_HW_SIMD
-#define PC_HW_SIMD 0
+#ifndef PROTOCORE_HW_SIMD
+#define PROTOCORE_HW_SIMD 0
 #endif
-#ifndef PC_HW_SIMD_BYTES
-#define PC_HW_SIMD_BYTES 0 // vector width in bytes; 0 when PC_HW_SIMD is 0
+#ifndef PROTOCORE_HW_SIMD_BYTES
+#define PROTOCORE_HW_SIMD_BYTES 0 // vector width in bytes; 0 when PROTOCORE_HW_SIMD is 0
 #endif
 
 // --- Byte order ---
@@ -62,11 +62,11 @@
 //
 // Defaulted from the toolchain because the compiler must already agree with us about byte order - a
 // build whose loads disagree is broken whatever we declare. A -D override exercises the other arm.
-#ifndef PC_HW_BIG_ENDIAN
+#ifndef PROTOCORE_HW_BIG_ENDIAN
 #if defined(__BYTE_ORDER__) && defined(__ORDER_BIG_ENDIAN__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
-#define PC_HW_BIG_ENDIAN 1
+#define PROTOCORE_HW_BIG_ENDIAN 1
 #else
-#define PC_HW_BIG_ENDIAN 0
+#define PROTOCORE_HW_BIG_ENDIAN 0
 #endif
 #endif
 
@@ -82,35 +82,35 @@
 // Anything wider is not synthesized into one operation, it is done as n+1 of them: the move ladder
 // in mmgr/protomem.h enters at this width and steps down, and a lane carrier above it
 // is refused in protocore_config.h rather than compiled into half-registers the caller cannot see.
-#ifndef PC_HW_WORD_BITS
-#define PC_HW_WORD_BITS 32
+#ifndef PROTOCORE_HW_WORD_BITS
+#define PROTOCORE_HW_WORD_BITS 32
 #endif
 
 // --- Unaligned load ---
 // Whether this die's load instruction accepts an address that is not a multiple of the access
 // width. Xtensa does not, and the compiler then synthesizes each unaligned word from byte loads plus
 // shifts and ors, which is why shared_primitives/ aligns first and steps whole words after.
-#ifndef PC_HW_UNALIGNED_LOAD
-#define PC_HW_UNALIGNED_LOAD 0
+#ifndef PROTOCORE_HW_UNALIGNED_LOAD
+#define PROTOCORE_HW_UNALIGNED_LOAD 0
 #endif
 
 // --- Edge cache (RAM-backed L1: each slot holds one cached object, ~2.6 KB) ---
-#ifndef PC_EDGE_CACHE_SLOTS
-#define PC_EDGE_CACHE_SLOTS 4 // L1 RAM entries
+#ifndef PROTOCORE_EDGE_CACHE_SLOTS
+#define PROTOCORE_EDGE_CACHE_SLOTS 4 // L1 RAM entries
 #endif
-#ifndef PC_EDGE_BODY_MAX
-#define PC_EDGE_BODY_MAX 2048 // largest cacheable body in bytes (per L1 entry)
+#ifndef PROTOCORE_EDGE_BODY_MAX
+#define PROTOCORE_EDGE_BODY_MAX 2048 // largest cacheable body in bytes (per L1 entry)
 #endif
-#ifndef PC_EDGE_FETCH_SLOTS
-#define PC_EDGE_FETCH_SLOTS 2 // concurrent in-flight origin fetches (<= PC_CLIENT_CONNS)
+#ifndef PROTOCORE_EDGE_FETCH_SLOTS
+#define PROTOCORE_EDGE_FETCH_SLOTS 2 // concurrent in-flight origin fetches (<= PROTOCORE_CLIENT_CONNS)
 #endif
 
 // --- Edge mesh (sibling-cache distribution) ---
-#ifndef PC_MESH_MAX_PEERS
-#define PC_MESH_MAX_PEERS 4 // sibling peers queried on a local miss (in series, first hit wins)
+#ifndef PROTOCORE_MESH_MAX_PEERS
+#define PROTOCORE_MESH_MAX_PEERS 4 // sibling peers queried on a local miss (in series, first hit wins)
 #endif
-#ifndef PC_MESH_MAX_CONNS
-#define PC_MESH_MAX_CONNS 1 // concurrent inbound peer-serve connections
+#ifndef PROTOCORE_MESH_MAX_CONNS
+#define PROTOCORE_MESH_MAX_CONNS 1 // concurrent inbound peer-serve connections
 #endif
 
 #endif // PROTOCORE_CLASSIC_DEFAULTS_H

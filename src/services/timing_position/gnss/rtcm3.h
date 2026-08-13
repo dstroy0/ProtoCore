@@ -3,7 +3,7 @@
 
 /**
  * @file rtcm3.h
- * @brief RTCM 3.x framing + station-reference message codec (PC_ENABLE_NTRIP_CASTER).
+ * @brief RTCM 3.x framing + station-reference message codec (PROTOCORE_ENABLE_NTRIP_CASTER).
  *
  * The pure, zero-heap, host-testable core of the GNSS RTK base / NTRIP caster: the RTCM3 transport frame
  * (0xD3 preamble, 6 reserved + 10-bit length, payload, 24-bit CRC-24Q) and the MSB-first bit I/O every
@@ -29,9 +29,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_NTRIP_CASTER
+#if PROTOCORE_ENABLE_NTRIP_CASTER
 
 #define RTCM3_PREAMBLE 0xD3u ///< frame start byte
 #define RTCM3_HDR_LEN 3      ///< preamble (1) + 6 reserved bits + 10-bit length (2)
@@ -44,7 +44,7 @@ PROTO_BEGIN_DECLS
 // ---------------------------------------------------------------------------------------------
 
 /** @brief CRC-24Q over @p len bytes of @p data (returned in the low 24 bits). */
-uint32_t pc_rtcm3_crc24q(const uint8_t *data, size_t len);
+uint32_t protocore_rtcm3_crc24q(const uint8_t *data, size_t len);
 
 // ---------------------------------------------------------------------------------------------
 // MSB-first bit I/O (RTCM3 packs fields back to back, most-significant bit first, up to 64 bits).
@@ -60,16 +60,16 @@ typedef struct
 } RtcmBitWriter;
 
 /** @brief Start a writer over @p buf (@p cap bytes). The buffer must already be zeroed. */
-void pc_rtcm_bw_init(RtcmBitWriter *w, uint8_t *buf, size_t cap);
+void protocore_rtcm_bw_init(RtcmBitWriter *w, uint8_t *buf, size_t cap);
 /** @brief Append @p nbits (1..64) of @p val, MSB-first (unsigned). */
-void pc_rtcm_bw_u(RtcmBitWriter *w, uint64_t val, uint8_t nbits);
+void protocore_rtcm_bw_u(RtcmBitWriter *w, uint64_t val, uint8_t nbits);
 /** @brief Append @p nbits (1..64) of @p val as two's-complement (signed). */
-void pc_rtcm_bw_s(RtcmBitWriter *w, int64_t val, uint8_t nbits);
+void protocore_rtcm_bw_s(RtcmBitWriter *w, int64_t val, uint8_t nbits);
 
 /** @brief Read @p nbits (1..64) unsigned, MSB-first, advancing @p pos (bit offset). */
-uint64_t pc_rtcm_br_u(const uint8_t *buf, size_t *pos, uint8_t nbits);
+uint64_t protocore_rtcm_br_u(const uint8_t *buf, size_t *pos, uint8_t nbits);
 /** @brief Read @p nbits (1..64) as a sign-extended two's-complement value, advancing @p pos. */
-int64_t pc_rtcm_br_s(const uint8_t *buf, size_t *pos, uint8_t nbits);
+int64_t protocore_rtcm_br_s(const uint8_t *buf, size_t *pos, uint8_t nbits);
 
 // ---------------------------------------------------------------------------------------------
 // Transport frame.
@@ -89,18 +89,18 @@ typedef struct
  *
  * @return the total frame length (header + payload + CRC) when a whole frame is buffered - with
  *         @p out->crc_ok reflecting the CRC check - or 0 when @p buf does not yet hold the full frame.
- *         Use pc_rtcm3_sync() first to align @p buf to a preamble in a byte stream.
+ *         Use protocore_rtcm3_sync() first to align @p buf to a preamble in a byte stream.
  */
-size_t pc_rtcm3_frame_parse(const uint8_t *buf, size_t len, Rtcm3Frame *out);
+size_t protocore_rtcm3_frame_parse(const uint8_t *buf, size_t len, Rtcm3Frame *out);
 
 /** @brief Index of the next 0xD3 preamble in @p buf, or @p len if there is none. */
-size_t pc_rtcm3_sync(const uint8_t *buf, size_t len);
+size_t protocore_rtcm3_sync(const uint8_t *buf, size_t len);
 
 /**
  * @brief Wrap @p payload (@p payload_len bytes) in a full frame: preamble + length + payload + CRC-24Q.
  * @return the total frame length written to @p out, or 0 if @p cap is too small or payload_len > 1023.
  */
-size_t pc_rtcm3_frame_build(uint8_t *out, size_t cap, const uint8_t *payload, uint16_t payload_len);
+size_t protocore_rtcm3_frame_build(uint8_t *out, size_t cap, const uint8_t *payload, uint16_t payload_len);
 
 // ---------------------------------------------------------------------------------------------
 // Message 1005 / 1006 - Stationary Antenna Reference Point. Coordinates are ECEF in 0.1 mm units.
@@ -118,21 +118,21 @@ typedef struct
 } Rtcm3StationArp;
 
 /** @brief Build a full 1005 frame (ARP, no antenna height). @return frame length or 0. */
-size_t pc_rtcm3_build_1005(uint8_t *out, size_t cap, uint16_t station_id, int64_t ecef_x_01mm, int64_t ecef_y_01mm,
-                           int64_t ecef_z_01mm);
+size_t protocore_rtcm3_build_1005(uint8_t *out, size_t cap, uint16_t station_id, int64_t ecef_x_01mm,
+                                  int64_t ecef_y_01mm, int64_t ecef_z_01mm);
 
 /** @brief Build a full 1006 frame (ARP with antenna height). @return frame length or 0. */
-size_t pc_rtcm3_build_1006(uint8_t *out, size_t cap, uint16_t station_id, int64_t ecef_x_01mm, int64_t ecef_y_01mm,
-                           int64_t ecef_z_01mm, uint16_t antenna_height_01mm);
+size_t protocore_rtcm3_build_1006(uint8_t *out, size_t cap, uint16_t station_id, int64_t ecef_x_01mm,
+                                  int64_t ecef_y_01mm, int64_t ecef_z_01mm, uint16_t antenna_height_01mm);
 
 /**
  * @brief Decode a 1005 / 1006 payload (not the framed message) into @p out.
  * @return true if @p payload is a well-formed 1005 or 1006; false otherwise.
  */
-proto_bool pc_rtcm3_parse_1005(const uint8_t *payload, uint16_t payload_len, Rtcm3StationArp *out);
+proto_bool protocore_rtcm3_parse_1005(const uint8_t *payload, uint16_t payload_len, Rtcm3StationArp *out);
 
-#endif // PC_ENABLE_NTRIP_CASTER
+#endif // PROTOCORE_ENABLE_NTRIP_CASTER
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_RTCM3_H

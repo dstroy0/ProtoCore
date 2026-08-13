@@ -5,7 +5,7 @@
 // heap-free, stdlib-free UACP framing + built-in-type codec + service builders that OPC UA Part 6
 // defines. Benched here are the six hottest pure paths a PROTO_OPCUA connection drives:
 //   - pc_opcua_parse_hello   : parse a client `HEL` (UACP header + the five negotiated sizes),
-//   - pc_opcua_build_ack     : negotiate buffer sizes down to PC_OPCUA_BUF and emit the `ACK`,
+//   - pc_opcua_build_ack     : negotiate buffer sizes down to PROTOCORE_OPCUA_BUF and emit the `ACK`,
 //   - pc_opcua_parse_open    : parse an `OPN` OpenSecureChannelRequest (SecurityPolicy None),
 //   - pc_opcua_build_open_response : build the OpenSecureChannelResponse (channel id + token),
 //   - pc_opcua_parse_read    : parse a `MSG` ReadRequest (envelope + NodesToRead),

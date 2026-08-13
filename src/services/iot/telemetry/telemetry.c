@@ -3,16 +3,16 @@
 
 /**
  * @file telemetry.c
- * @brief Telemetry math helpers implementation (PC_ENABLE_TELEMETRY).
+ * @brief Telemetry math helpers implementation (PROTOCORE_ENABLE_TELEMETRY).
  */
 
 #include "telemetry.h"
 
-#if PC_ENABLE_TELEMETRY
+#if PROTOCORE_ENABLE_TELEMETRY
 
 #include <math.h>
 
-void pc_window_init(pc_window *w, float *buf, uint16_t cap)
+void protocore_window_init(protocore_window *w, float *buf, uint16_t cap)
 {
     w->buf = buf;
     w->cap = cap;
@@ -22,7 +22,7 @@ void pc_window_init(pc_window *w, float *buf, uint16_t cap)
     w->sum_sq = 0.0;
 }
 
-void pc_window_push(pc_window *w, float sample)
+void protocore_window_push(protocore_window *w, float sample)
 {
     if (!w->buf || w->cap == 0)
     {
@@ -45,12 +45,12 @@ void pc_window_push(pc_window *w, float sample)
     w->head = (uint16_t)((w->head + 1) % w->cap);
 }
 
-uint16_t pc_window_count(const pc_window *w)
+uint16_t protocore_window_count(const protocore_window *w)
 {
     return w->count;
 }
 
-float pc_window_mean(const pc_window *w)
+float protocore_window_mean(const protocore_window *w)
 {
     if (w->count == 0)
     {
@@ -59,7 +59,7 @@ float pc_window_mean(const pc_window *w)
     return (float)(w->sum / (double)w->count);
 }
 
-float pc_window_variance(const pc_window *w)
+float protocore_window_variance(const protocore_window *w)
 {
     if (w->count == 0)
     {
@@ -70,12 +70,12 @@ float pc_window_variance(const pc_window *w)
     return var < 0.0 ? 0.0f : (float)var; // clamp tiny negatives from rounding
 }
 
-float pc_window_stddev(const pc_window *w)
+float protocore_window_stddev(const protocore_window *w)
 {
-    return sqrtf(pc_window_variance(w));
+    return sqrtf(protocore_window_variance(w));
 }
 
-float pc_window_min(const pc_window *w)
+float protocore_window_min(const protocore_window *w)
 {
     if (w->count == 0)
     {
@@ -92,7 +92,7 @@ float pc_window_min(const pc_window *w)
     return m;
 }
 
-float pc_window_max(const pc_window *w)
+float protocore_window_max(const protocore_window *w)
 {
     if (w->count == 0)
     {
@@ -109,14 +109,14 @@ float pc_window_max(const pc_window *w)
     return m;
 }
 
-void pc_rate_init(pc_rate *r)
+void protocore_rate_init(protocore_rate *r)
 {
     r->last_value = 0.0f;
     r->last_ms = 0;
     r->primed = PROTO_FALSE;
 }
 
-float pc_rate_update(pc_rate *r, float value, uint32_t now_ms)
+float protocore_rate_update(protocore_rate *r, float value, uint32_t now_ms)
 {
     if (!r->primed)
     {
@@ -136,7 +136,7 @@ float pc_rate_update(pc_rate *r, float value, uint32_t now_ms)
     return rate;
 }
 
-void pc_totalizer_init(pc_totalizer *t)
+void protocore_totalizer_init(protocore_totalizer *t)
 {
     t->total = 0.0;
     t->last_rate = 0.0f;
@@ -144,7 +144,7 @@ void pc_totalizer_init(pc_totalizer *t)
     t->primed = PROTO_FALSE;
 }
 
-double pc_totalizer_add(pc_totalizer *t, float rate, uint32_t now_ms)
+double protocore_totalizer_add(protocore_totalizer *t, float rate, uint32_t now_ms)
 {
     if (!t->primed)
     {
@@ -162,12 +162,12 @@ double pc_totalizer_add(pc_totalizer *t, float rate, uint32_t now_ms)
     return t->total;
 }
 
-double pc_totalizer_total(const pc_totalizer *t)
+double protocore_totalizer_total(const protocore_totalizer *t)
 {
     return t->total;
 }
 
-void pc_totalizer_reset(pc_totalizer *t)
+void protocore_totalizer_reset(protocore_totalizer *t)
 {
     t->total = 0.0;
     t->last_rate = 0.0f;
@@ -175,4 +175,4 @@ void pc_totalizer_reset(pc_totalizer *t)
     t->primed = PROTO_FALSE;
 }
 
-#endif // PC_ENABLE_TELEMETRY
+#endif // PROTOCORE_ENABLE_TELEMETRY

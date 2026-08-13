@@ -11,7 +11,7 @@
 #include "mmgr/rawmemcpy.h" // proto_raw_read: the exact mover, for a destination inside a buffer
 #include "protocore_config.h"
 
-#if PC_ENABLE_DNS_SERVER
+#if PROTOCORE_ENABLE_DNS_SERVER
 
 #include "network_drivers/network/dns/dns_wire.h" // the name codec both DNS halves read and write
 #include "network_drivers/transport/udp.h"        // Udp.listener: the port 53 bind and the reply
@@ -28,7 +28,7 @@ static proto_bool parse_question(const uint8_t *q, size_t qlen, char *name, size
         return PROTO_FALSE;
     }
     size_t i = 0;
-    if (!pc_dns_name_decode(q, qlen, 12, name, name_cap, &i, PROTO_FALSE))
+    if (!protocore_dns_name_decode(q, qlen, 12, name, name_cap, &i, PROTO_FALSE))
     {
         return PROTO_FALSE;
     }
@@ -65,7 +65,7 @@ static size_t build_response(const uint8_t *query, size_t qlen, uint32_t ttl, Dn
         return 12;
     }
 
-    char name[PC_DNS_NAME_MAX];
+    char name[PROTOCORE_DNS_NAME_MAX];
     uint16_t qtype = 0;
     size_t qend = 0;
     if (!parse_question(query, qlen, name, sizeof(name), &qtype, &qend))
@@ -129,10 +129,10 @@ static size_t build_response(const uint8_t *query, size_t qlen, uint32_t ttl, Dn
 // no two calls reach it at once.
 typedef struct
 {
-    char names[PC_DNS_SERVER_MAX_RECORDS][PC_DNS_NAME_MAX];
-    uint32_t ips[PC_DNS_SERVER_MAX_RECORDS];
+    char names[PROTOCORE_DNS_SERVER_MAX_RECORDS][PROTOCORE_DNS_NAME_MAX];
+    uint32_t ips[PROTOCORE_DNS_SERVER_MAX_RECORDS];
     size_t count;
-    uint8_t tx[PC_DNS_NAME_MAX + 32]; ///< header + question + one A answer
+    uint8_t tx[PROTOCORE_DNS_NAME_MAX + 32]; ///< header + question + one A answer
 } DnsSrvCtx;
 static DnsSrvCtx s_dns;
 
@@ -142,12 +142,12 @@ static proto_bool add(const char *name, uint8_t a, uint8_t b, uint8_t c, uint8_t
     {
         return PROTO_FALSE;
     }
-    size_t nlen = str.len(name, PC_DNS_NAME_MAX);
-    if (nlen >= PC_DNS_NAME_MAX)
+    size_t nlen = str.len(name, PROTOCORE_DNS_NAME_MAX);
+    if (nlen >= PROTOCORE_DNS_NAME_MAX)
     {
         return PROTO_FALSE;
     }
-    if (s_dns.count >= PC_DNS_SERVER_MAX_RECORDS)
+    if (s_dns.count >= PROTOCORE_DNS_SERVER_MAX_RECORDS)
     {
         return PROTO_FALSE;
     }
@@ -165,7 +165,7 @@ static uint32_t lookup(const char *name)
     }
     for (size_t i = 0; i < s_dns.count; i++)
     {
-        if (pc_dns_name_eq(s_dns.names[i], name))
+        if (protocore_dns_name_eq(s_dns.names[i], name))
         {
             return s_dns.ips[i];
         }
@@ -178,10 +178,10 @@ static void clear()
     s_dns.count = 0;
 }
 
-static void udp_handler(const uint8_t *data, size_t len, const struct pc_udp_peer *peer, void *ctx)
+static void udp_handler(const uint8_t *data, size_t len, const struct protocore_udp_peer *peer, void *ctx)
 {
     (void)ctx;
-    size_t n = build_response(data, len, PC_DNS_SERVER_TTL, lookup, s_dns.tx, sizeof(s_dns.tx));
+    size_t n = build_response(data, len, PROTOCORE_DNS_SERVER_TTL, lookup, s_dns.tx, sizeof(s_dns.tx));
     if (n != 0)
     {
         (void)Udp.listener->reply(peer, s_dns.tx, n);
@@ -197,4 +197,4 @@ static proto_bool begin()
 const DnsServerNs DnsServer = {
     .build_response = build_response, .add = add, .clear = clear, .begin = begin, .lookup = lookup};
 
-#endif // PC_ENABLE_DNS_SERVER
+#endif // PROTOCORE_ENABLE_DNS_SERVER

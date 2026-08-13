@@ -9,7 +9,7 @@
 #include "services/iot/stomp/stomp.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_STOMP
+#if PROTOCORE_ENABLE_STOMP
 
 // Append one octet's escaped form to buf[pos..cap); advance pos. Returns false on overflow.
 static proto_bool emit_escaped(char *buf, size_t cap, size_t *pos, char c)
@@ -60,8 +60,8 @@ static proto_bool emit_escaped_str(char *buf, size_t cap, size_t *pos, const cha
     return PROTO_TRUE;
 }
 
-size_t pc_stomp_build_frame(char *buf, size_t cap, const char *command, const char *const *header_keys,
-                            const char *const *header_vals, size_t nheaders, const char *body, size_t body_len)
+size_t protocore_stomp_build_frame(char *buf, size_t cap, const char *command, const char *const *header_keys,
+                                   const char *const *header_vals, size_t nheaders, const char *body, size_t body_len)
 {
     if (!buf || cap == 0 || !command || (nheaders && (!header_keys || !header_vals)))
     {
@@ -167,7 +167,7 @@ static size_t line_len(const char *buf, size_t start, size_t nl)
     return end - start;
 }
 
-proto_bool pc_stomp_parse_frame(const char *buf, size_t len, StompFrame *out, size_t *consumed)
+proto_bool protocore_stomp_parse_frame(const char *buf, size_t len, StompFrame *out, size_t *consumed)
 {
     if (!buf || !out || !consumed)
     {
@@ -245,7 +245,7 @@ proto_bool pc_stomp_parse_frame(const char *buf, size_t len, StompFrame *out, si
         {
             return PROTO_FALSE; // header without a colon
         }
-        if (out->header_count < PC_STOMP_MAX_HEADERS)
+        if (out->header_count < PROTOCORE_STOMP_MAX_HEADERS)
         {
             StompHeader *h = &out->headers[out->header_count++];
             h->key = buf + cur;
@@ -304,14 +304,14 @@ proto_bool pc_stomp_parse_frame(const char *buf, size_t len, StompFrame *out, si
     return PROTO_TRUE;
 }
 
-proto_bool pc_stomp_header(const StompFrame *f, const char *name, const char **val, size_t *val_len)
+proto_bool protocore_stomp_header(const StompFrame *f, const char *name, const char **val, size_t *val_len)
 {
     if (!f || !name)
     {
         return PROTO_FALSE;
     }
-#define PC_name_max 128 // STOMP header names are short; bound the needle defensively
-    size_t nlen = strnlen(name, PC_name_max);
+#define PROTOCORE_name_max 128 // STOMP header names are short; bound the needle defensively
+    size_t nlen = strnlen(name, PROTOCORE_name_max);
     for (size_t i = 0; i < f->header_count; i++)
     {
         if (f->headers[i].key_len == nlen && mem.cmp(f->headers[i].key, name, nlen) == 0)
@@ -330,7 +330,7 @@ proto_bool pc_stomp_header(const StompFrame *f, const char *name, const char **v
     return PROTO_FALSE;
 }
 
-size_t pc_stomp_unescape(char *dst, size_t cap, const char *src, size_t src_len)
+size_t protocore_stomp_unescape(char *dst, size_t cap, const char *src, size_t src_len)
 {
     if (!dst || !src)
     {
@@ -374,4 +374,4 @@ size_t pc_stomp_unescape(char *dst, size_t cap, const char *src, size_t src_len)
     return pos;
 }
 
-#endif // PC_ENABLE_STOMP
+#endif // PROTOCORE_ENABLE_STOMP

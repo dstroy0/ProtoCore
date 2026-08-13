@@ -3,7 +3,7 @@
 
 /**
  * @file southbound.h
- * @brief Southbound protocol-driver framework (PC_ENABLE_SOUTHBOUND).
+ * @brief Southbound protocol-driver framework (PROTOCORE_ENABLE_SOUTHBOUND).
  *
  * The northbound surface of this library is HTTP/WS/SNMP/etc. to a controller; the *southbound* surface
  * is the field devices it polls and drives (a Modbus slave, a BACnet controller, a raw sensor over
@@ -26,9 +26,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_SOUTHBOUND
+#if PROTOCORE_ENABLE_SOUTHBOUND
 
 // Southbound result codes. The API returns int (SB_OK / a count on success, or a negative code), so
 // the return stays int and these stay plain integer constants - callers keep their `< 0` and
@@ -63,31 +63,31 @@ typedef struct
  * @brief Register a driver (borrowed; must outlive the registry).
  * @return SB_OK, SB_ERR_ARG (null / no name), SB_ERR_DUP (name taken), or SB_ERR_FULL.
  */
-int pc_southbound_register(const SouthboundDriver *drv);
+int protocore_southbound_register(const SouthboundDriver *drv);
 
 /** @brief Drop all registrations (test / re-init helper). */
-void pc_southbound_clear(void);
+void protocore_southbound_clear(void);
 
 /** @brief Number of registered drivers. */
-size_t pc_southbound_count(void);
+size_t protocore_southbound_count(void);
 
 /** @brief Look up a driver by name, or null. */
-const SouthboundDriver *pc_southbound_find(const char *name);
+const SouthboundDriver *protocore_southbound_find(const char *name);
 
 /** @brief Read one point from a named driver. @return SB_OK / negative code. */
-int pc_southbound_read(const char *name, uint32_t point, int32_t *value_out);
+int protocore_southbound_read(const char *name, uint32_t point, int32_t *value_out);
 
 /** @brief Write one point to a named driver. @return SB_OK / negative code. */
-int pc_southbound_write(const char *name, uint32_t point, int32_t value);
+int protocore_southbound_write(const char *name, uint32_t point, int32_t value);
 
 /** @brief Atomically read @p n points starting at @p first. @return count read (>=0) / negative code. */
-int pc_southbound_read_block(const char *name, uint32_t first, int32_t *out, size_t n);
+int protocore_southbound_read_block(const char *name, uint32_t first, int32_t *out, size_t n);
 
 /** @brief Atomically write @p n points starting at @p first. @return count written (>=0) / negative code. */
-int pc_southbound_write_block(const char *name, uint32_t first, const int32_t *in, size_t n);
+int protocore_southbound_write_block(const char *name, uint32_t first, const int32_t *in, size_t n);
 
-#endif // PC_ENABLE_SOUTHBOUND
+#endif // PROTOCORE_ENABLE_SOUTHBOUND
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_SOUTHBOUND_H

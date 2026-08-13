@@ -21,11 +21,11 @@ static uint8_t tw[4096]; // test-side working bytes for the crypto entry points
 // is reproducible. sntrup761 interop does not depend on how r/keys are drawn, only that they are valid.
 static uint32_t s_rng = 0xA5A5F00Du;
 
-// KeyGen's g-draw retry hook: while > 0, pc_rand_fill returns bytes that make Small_random's ternary
+// KeyGen's g-draw retry hook: while > 0, protocore_rand_fill returns bytes that make Small_random's ternary
 // map (see sntrup761.cpp) produce coefficient 0 rather than drawing from the LCG, and decrements by
 // one per call. Left at 0 for every other test, so it is a no-op there.
 static int s_force_zero_calls = 0;
-void pc_rand_fill(uint8_t *b, size_t n)
+void protocore_rand_fill(uint8_t *b, size_t n)
 {
     if (s_force_zero_calls > 0)
     {
@@ -57,9 +57,9 @@ void tearDown()
 // dec(SK, CT) recovers the exact shared secret the OpenSSH reference produced (byte-exact conformance).
 void test_sntrup761_decaps_kat()
 {
-    uint8_t ss[PC_SNTRUP761_SS_BYTES];
-    pc_sntrup761_dec(tw, KAT_SK, KAT_CT, ss);
-    TEST_ASSERT_EQUAL_MEMORY(KAT_SS, ss, PC_SNTRUP761_SS_BYTES);
+    uint8_t ss[PROTOCORE_SNTRUP761_SS_BYTES];
+    protocore_sntrup761_dec(tw, KAT_SK, KAT_CT, ss);
+    TEST_ASSERT_EQUAL_MEMORY(KAT_SS, ss, PROTOCORE_SNTRUP761_SS_BYTES);
 }
 
 // keypair -> enc -> dec recovers the same secret across many keypairs (responder + initiator agree).
@@ -67,25 +67,25 @@ void test_sntrup761_roundtrip()
 {
     for (int t = 0; t < 20; ++t)
     {
-        uint8_t pk[PC_SNTRUP761_PK_BYTES], sk[PC_SNTRUP761_SK_BYTES];
-        uint8_t ct[PC_SNTRUP761_CT_BYTES], ss1[PC_SNTRUP761_SS_BYTES], ss2[PC_SNTRUP761_SS_BYTES];
-        pc_sntrup761_keypair(tw, pk, sk);
-        pc_sntrup761_enc(tw, pk, ct, ss1);
-        pc_sntrup761_dec(tw, sk, ct, ss2);
-        TEST_ASSERT_EQUAL_MEMORY(ss1, ss2, PC_SNTRUP761_SS_BYTES);
+        uint8_t pk[PROTOCORE_SNTRUP761_PK_BYTES], sk[PROTOCORE_SNTRUP761_SK_BYTES];
+        uint8_t ct[PROTOCORE_SNTRUP761_CT_BYTES], ss1[PROTOCORE_SNTRUP761_SS_BYTES], ss2[PROTOCORE_SNTRUP761_SS_BYTES];
+        protocore_sntrup761_keypair(tw, pk, sk);
+        protocore_sntrup761_enc(tw, pk, ct, ss1);
+        protocore_sntrup761_dec(tw, sk, ct, ss2);
+        TEST_ASSERT_EQUAL_MEMORY(ss1, ss2, PROTOCORE_SNTRUP761_SS_BYTES);
     }
 }
 
 // A tampered ciphertext implicit-rejects (FO): no crash, and a deterministic secret != the valid one.
 void test_sntrup761_implicit_reject()
 {
-    uint8_t pk[PC_SNTRUP761_PK_BYTES], sk[PC_SNTRUP761_SK_BYTES];
-    uint8_t ct[PC_SNTRUP761_CT_BYTES], good[PC_SNTRUP761_SS_BYTES], bad[PC_SNTRUP761_SS_BYTES];
-    pc_sntrup761_keypair(tw, pk, sk);
-    pc_sntrup761_enc(tw, pk, ct, good);
+    uint8_t pk[PROTOCORE_SNTRUP761_PK_BYTES], sk[PROTOCORE_SNTRUP761_SK_BYTES];
+    uint8_t ct[PROTOCORE_SNTRUP761_CT_BYTES], good[PROTOCORE_SNTRUP761_SS_BYTES], bad[PROTOCORE_SNTRUP761_SS_BYTES];
+    protocore_sntrup761_keypair(tw, pk, sk);
+    protocore_sntrup761_enc(tw, pk, ct, good);
     ct[0] = (uint8_t)(ct[0] ^ 0xff); // corrupt the ciphertext
-    pc_sntrup761_dec(tw, sk, ct, bad);
-    TEST_ASSERT_TRUE(memcmp(good, bad, PC_SNTRUP761_SS_BYTES) != 0);
+    protocore_sntrup761_dec(tw, sk, ct, bad);
+    TEST_ASSERT_TRUE(memcmp(good, bad, PROTOCORE_SNTRUP761_SS_BYTES) != 0);
 }
 
 // KeyGen draws g and retries while it is non-invertible mod 3 (R3_recip != 0). The all-zero
@@ -95,13 +95,13 @@ void test_sntrup761_implicit_reject()
 void test_sntrup761_keygen_retries_on_noninvertible_g()
 {
     s_force_zero_calls = 761; // p = 761 (see sntrup761.h): forces every g coefficient to 0
-    uint8_t pk[PC_SNTRUP761_PK_BYTES], sk[PC_SNTRUP761_SK_BYTES];
-    uint8_t ct[PC_SNTRUP761_CT_BYTES], ss1[PC_SNTRUP761_SS_BYTES], ss2[PC_SNTRUP761_SS_BYTES];
-    pc_sntrup761_keypair(tw, pk, sk);
+    uint8_t pk[PROTOCORE_SNTRUP761_PK_BYTES], sk[PROTOCORE_SNTRUP761_SK_BYTES];
+    uint8_t ct[PROTOCORE_SNTRUP761_CT_BYTES], ss1[PROTOCORE_SNTRUP761_SS_BYTES], ss2[PROTOCORE_SNTRUP761_SS_BYTES];
+    protocore_sntrup761_keypair(tw, pk, sk);
     TEST_ASSERT_EQUAL_INT(0, s_force_zero_calls); // the forced draw was actually consumed
-    pc_sntrup761_enc(tw, pk, ct, ss1);
-    pc_sntrup761_dec(tw, sk, ct, ss2);
-    TEST_ASSERT_EQUAL_MEMORY(ss1, ss2, PC_SNTRUP761_SS_BYTES);
+    protocore_sntrup761_enc(tw, pk, ct, ss1);
+    protocore_sntrup761_dec(tw, sk, ct, ss2);
+    TEST_ASSERT_EQUAL_MEMORY(ss1, ss2, PROTOCORE_SNTRUP761_SS_BYTES);
 }
 
 int main()

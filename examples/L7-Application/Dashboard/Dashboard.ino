@@ -4,25 +4,25 @@
 /**
  * @file Dashboard.ino
  * @brief Real-time SVG dashboard with live telemetry and WebSocket controls
- *        (PC_ENABLE_DASHBOARD).
+ *        (PROTOCORE_ENABLE_DASHBOARD).
  *
  * Declares a fixed compile-time widget table and serves it at /dashboard. Display
  * widgets (gauge / value / chart) update live over SSE; control widgets (toggle /
  * slider / button) send values back to the device over WebSocket, delivered to a
- * control callback. The sketch feeds readings with pc_dashboard_set(key, value)
- * and pushes a frame with pc_dashboard_publish().
+ * control callback. The sketch feeds readings with protocore_dashboard_set(key, value)
+ * and pushes a frame with protocore_dashboard_publish().
  *
  * NOTE: enable the dashboard for the whole build (a .ino #define does not reach
  * the separately compiled library). In platformio.ini:
- *     build_flags = -DPC_ENABLE_DASHBOARD=1
- * (PC_ENABLE_SSE and PC_ENABLE_WEBSOCKET are on by default; SSE is required,
+ *     build_flags = -DPROTOCORE_ENABLE_DASHBOARD=1
+ * (PROTOCORE_ENABLE_SSE and PROTOCORE_ENABLE_WEBSOCKET are on by default; SSE is required,
  * WebSocket enables the controls. Arduino IDE: it is already set for you in the build_opt.h beside this sketch, so it
  * builds as-is.)
  *
  * Flash, then open http://<ip>/dashboard.
  */
 
-#define PC_ENABLE_DASHBOARD 1
+#define PROTOCORE_ENABLE_DASHBOARD 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -38,13 +38,13 @@ static const int LED_PIN = 2; // onboard LED on many ESP32 dev boards
 
 // Compile-time widget table - the dashboard's deterministic source of truth.
 // Display widgets are fed over SSE; control widgets send values back over WS.
-static const pc_widget WIDGETS[] = {
-    {pc_widget_type::PC_WIDGET_GAUGE, "Free heap", "heap", 0, 320000, "B"},
-    {pc_widget_type::PC_WIDGET_VALUE, "Uptime", "uptime", 0, 0, "s"},
-    {pc_widget_type::PC_WIDGET_CHART, "WiFi RSSI", "rssi", -100, 0, "dBm"},
-    {pc_widget_type::PC_WIDGET_TOGGLE, "Onboard LED", "led", 0, 1, ""},
-    {pc_widget_type::PC_WIDGET_SLIDER, "Brightness", "bright", 0, 255, ""},
-    {pc_widget_type::PC_WIDGET_BUTTON, "Identify", "ident", 0, 0, ""},
+static const protocore_widget WIDGETS[] = {
+    {protocore_widget_type::PROTOCORE_WIDGET_GAUGE, "Free heap", "heap", 0, 320000, "B"},
+    {protocore_widget_type::PROTOCORE_WIDGET_VALUE, "Uptime", "uptime", 0, 0, "s"},
+    {protocore_widget_type::PROTOCORE_WIDGET_CHART, "WiFi RSSI", "rssi", -100, 0, "dBm"},
+    {protocore_widget_type::PROTOCORE_WIDGET_TOGGLE, "Onboard LED", "led", 0, 1, ""},
+    {protocore_widget_type::PROTOCORE_WIDGET_SLIDER, "Brightness", "bright", 0, 255, ""},
+    {protocore_widget_type::PROTOCORE_WIDGET_BUTTON, "Identify", "ident", 0, 0, ""},
 };
 
 // Invoked when a control widget sends a value from the browser.
@@ -77,8 +77,8 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    pc_dashboard_on_control(on_control);
-    pc_dashboard_begin("/dashboard", WIDGETS, sizeof(WIDGETS) / sizeof(WIDGETS[0]));
+    protocore_dashboard_on_control(on_control);
+    protocore_dashboard_begin("/dashboard", WIDGETS, sizeof(WIDGETS) / sizeof(WIDGETS[0]));
     begin_http(80, NULL);
 }
 
@@ -92,9 +92,9 @@ void loop()
     if (now - last_ms >= 1000)
     {
         last_ms = now;
-        pc_dashboard_set("heap", (float)ESP.getFreeHeap());
-        pc_dashboard_set("uptime", (float)(now / 1000));
-        pc_dashboard_set("rssi", (float)Physical.wifi->rssi());
-        pc_dashboard_publish();
+        protocore_dashboard_set("heap", (float)ESP.getFreeHeap());
+        protocore_dashboard_set("uptime", (float)(now / 1000));
+        protocore_dashboard_set("rssi", (float)Physical.wifi->rssi());
+        protocore_dashboard_publish();
     }
 }

@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // On-device CCOUNT microbenchmark for the pluggable monotonic clock (services/clock,
-// src/server/clock/clock.h): pc_millis() on the platform default vs. a custom-clock override divided
-// down to the internal 1000 Hz, the latency-budget bookkeeping (pc_lat_begin/pc_lat_end) that
-// services like dma/hw_health drive per-transaction, and the pc_cycles_to_ns() conversion used to
+// src/server/clock/clock.h): protocore_millis() on the platform default vs. a custom-clock override divided
+// down to the internal 1000 Hz, the latency-budget bookkeeping (protocore_lat_begin/protocore_lat_end) that
+// services like dma/hw_health drive per-transaction, and the protocore_cycles_to_ns() conversion used to
 // report every "DB ..." line in this very harness. All four are pure CPU-side math/bookkeeping -
 // clock.h is header-only (test_matrix.json's native_clock env: "Header-only, so no src to build",
-// no PC_ENABLE_CLOCK guard exists anywhere in the repo). Out of scope: the platform millis()/
+// no PROTOCORE_ENABLE_CLOCK guard exists anywhere in the repo). Out of scope: the platform millis()/
 // micros()/ESP.getCycleCount() calls themselves are on-chip counter reads (no I2C/SPI/UART/radio/
 // socket), so they are timed as-is rather than stubbed - there is no external peripheral to remove.
 //
@@ -37,29 +37,29 @@ static uint32_t fake_us_fn(void)
 
 void dbench_run(void)
 {
-    static pc_latency_stat lat;
-    pc_lat_reset(&lat);
+    static protocore_latency_stat lat;
+    protocore_lat_reset(&lat);
 
     for (;;)
     {
         DBENCH_BANNER("clock");
         volatile uint32_t sink = 0;
 
-        pc_set_clock(NULL, 0); // platform default (millis())
-        DBENCH_OP("pc_millis (platform default)", 200000, sink += pc_millis());
+        protocore_set_clock(NULL, 0); // platform default (millis())
+        DBENCH_OP("protocore_millis (platform default)", 200000, sink += protocore_millis());
 
-        pc_set_clock(fake_tick_fn, 8000); // 8 kHz source -> divided down to 1000 Hz internally
-        DBENCH_OP("pc_millis (custom clock /8kHz)", 200000, sink += pc_millis());
-        pc_set_clock(NULL, 0); // revert
+        protocore_set_clock(fake_tick_fn, 8000); // 8 kHz source -> divided down to 1000 Hz internally
+        DBENCH_OP("protocore_millis (custom clock /8kHz)", 200000, sink += protocore_millis());
+        protocore_set_clock(NULL, 0); // revert
 
-        pc_set_micros_clock(fake_us_fn, 1000000); // 1 MHz source -> 1:1 microseconds
-        DBENCH_OP("pc_lat_begin+pc_lat_end", 100000, {
-            uint32_t _t = pc_lat_begin();
-            pc_lat_end(&lat, _t, 50);
+        protocore_set_micros_clock(fake_us_fn, 1000000); // 1 MHz source -> 1:1 microseconds
+        DBENCH_OP("protocore_lat_begin+protocore_lat_end", 100000, {
+            uint32_t _t = protocore_lat_begin();
+            protocore_lat_end(&lat, _t, 50);
         });
-        pc_set_micros_clock(NULL, 0); // revert
+        protocore_set_micros_clock(NULL, 0); // revert
 
-        DBENCH_OP("pc_cycles_to_ns", 200000, sink += pc_cycles_to_ns(54321u, 240));
+        DBENCH_OP("protocore_cycles_to_ns", 200000, sink += protocore_cycles_to_ns(54321u, 240));
 
         (void)sink;
         DBENCH_DONE();

@@ -3,7 +3,7 @@
 
 /**
  * @file sercos.h
- * @brief SERCOS III motion-bus telegram + IDN codec (PC_ENABLE_SERCOS).
+ * @brief SERCOS III motion-bus telegram + IDN codec (PROTOCORE_ENABLE_SERCOS).
  *
  * SERCOS III is the real-time drive/motion bus over Ethernet (raw L2, ethertype 0x88CD, on the shipped
  * services/fieldbus/rawl2). The master cyclically sends **MDT** (Master Data Telegrams) carrying setpoints to the
@@ -24,9 +24,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_SERCOS
+#if PROTOCORE_ENABLE_SERCOS
 
 // SERCOS telegram types + header length: wire values, so integer constants in a struct.
 #define SERCOS_TEL_MDT 0x00 ///< Master Data Telegram (master -> drives).
@@ -40,10 +40,10 @@ PROTO_BEGIN_DECLS
  * @param data_block the data block number 0..4095.
  * @return the 16-bit IDN: bit15 = S/P, bits14..12 = set, bits11..0 = block.
  */
-uint16_t pc_sercos_idn(proto_bool is_product, uint8_t param_set, uint16_t data_block);
+uint16_t protocore_sercos_idn(proto_bool is_product, uint8_t param_set, uint16_t data_block);
 
 /** @brief Decode a SERCOS IDN into its parts (any out-pointer may be null). */
-void pc_sercos_idn_parse(uint16_t idn, proto_bool *is_product, uint8_t *param_set, uint16_t *data_block);
+void protocore_sercos_idn_parse(uint16_t idn, proto_bool *is_product, uint8_t *param_set, uint16_t *data_block);
 
 /**
  * @brief Build a SERCOS telegram: [type][phase][cycle:2 LE][data...].
@@ -53,8 +53,8 @@ void pc_sercos_idn_parse(uint16_t idn, proto_bool *is_product, uint8_t *param_se
  * @param data  the cyclic device data (may be null if data_len == 0).
  * @return the telegram length (4 + data_len), or 0 on overflow.
  */
-size_t pc_sercos_build(uint8_t type, uint8_t phase, uint16_t cycle, const uint8_t *data, size_t data_len, uint8_t *out,
-                       size_t cap);
+size_t protocore_sercos_build(uint8_t type, uint8_t phase, uint16_t cycle, const uint8_t *data, size_t data_len,
+                              uint8_t *out, size_t cap);
 
 /** @brief A parsed SERCOS telegram (data points into the input). */
 typedef struct
@@ -67,10 +67,10 @@ typedef struct
 } SercosTelegram;
 
 /** @brief Parse a SERCOS telegram. @return true if @p len >= 4 and the type is MDT/AT. */
-proto_bool pc_sercos_parse(const uint8_t *frame, size_t len, SercosTelegram *out);
+proto_bool protocore_sercos_parse(const uint8_t *frame, size_t len, SercosTelegram *out);
 
-#endif // PC_ENABLE_SERCOS
+#endif // PROTOCORE_ENABLE_SERCOS
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_SERCOS_H

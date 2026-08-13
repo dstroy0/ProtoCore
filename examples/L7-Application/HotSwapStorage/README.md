@@ -1,6 +1,6 @@
 # HotSwapStorage - survive an SD card being pulled mid-write
 
-**Layer:** L7 Application · **Build flags:** `PC_ENABLE_HOTSWAP`
+**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_HOTSWAP`
 
 ## What this example teaches
 
@@ -21,16 +21,16 @@ FAULTED --probe interval, remount ok---->  READY
 The contract for callers is two lines:
 
 ```cpp
-if (!pc_hotswap_ready())        // the gate: refuse rather than write into a stale mount
+if (!protocore_hotswap_ready())        // the gate: refuse rather than write into a stale mount
     return;
 bool ok = do_the_filesystem_call();
-pc_hotswap_io(ok);              // report it either way
+protocore_hotswap_io(ok);              // report it either way
 ```
 
 ## Why a run of errors, not one
 
 A single failed write is not proof a card left - it can be a transient bus error or a full volume -
-and tearing down a working mount over one error would be its own bug. So `PC_HOTSWAP_FAIL_THRESHOLD`
+and tearing down a working mount over one error would be its own bug. So `PROTOCORE_HOTSWAP_FAIL_THRESHOLD`
 (default 3) consecutive failures declare removal, and **any success resets the run**, which is what
 stops intermittent noise from slowly accumulating into a false removal.
 
@@ -97,14 +97,14 @@ Note the two numbers that prove the design rather than just the happy path: it f
 does not reproduce the _electrical_ transient of pulling a card mid-DMA-burst - that needs a hand on
 the card. If you have the board in front of you, physically pull it during a `/write` loop: the
 expected result is identical (a run of failures, then FAULTED), and reinserting should return it to
-READY within `PC_HOTSWAP_PROBE_MS`.
+READY within `PROTOCORE_HOTSWAP_PROBE_MS`.
 
 ## Tunables
 
-| Flag                        | Default | Meaning                                              |
-| --------------------------- | ------- | ---------------------------------------------------- |
-| `PC_HOTSWAP_FAIL_THRESHOLD` | 3       | consecutive I/O errors that declare the medium gone  |
-| `PC_HOTSWAP_PROBE_MS`       | 2000    | minimum gap between remount attempts while not READY |
+| Flag                               | Default | Meaning                                              |
+| ---------------------------------- | ------- | ---------------------------------------------------- |
+| `PROTOCORE_HOTSWAP_FAIL_THRESHOLD` | 3       | consecutive I/O errors that declare the medium gone  |
+| `PROTOCORE_HOTSWAP_PROBE_MS`       | 2000    | minimum gap between remount attempts while not READY |
 
 ## Build footprint
 
@@ -118,6 +118,6 @@ The flags must reach the library build, so pass them as build flags:
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_HOTSWAP=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_HOTSWAP=1" \
   --lib="." examples/L7-Application/HotSwapStorage/HotSwapStorage.ino
 ```

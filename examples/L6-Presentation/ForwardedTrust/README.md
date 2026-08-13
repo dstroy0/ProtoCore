@@ -1,6 +1,6 @@
 # ForwardedTrust - lock out the real client behind a trusted reverse proxy
 
-**Layer:** L6 Presentation · **Build flags:** `PC_ENABLE_FORWARDED_TRUST` (requires `PC_ENABLE_AUTH_LOCKOUT`, which requires `PC_ENABLE_AUTH`)
+**Layer:** L6 Presentation · **Build flags:** `PROTOCORE_ENABLE_FORWARDED_TRUST` (requires `PROTOCORE_ENABLE_AUTH_LOCKOUT`, which requires `PROTOCORE_ENABLE_AUTH`)
 
 ## What this example teaches
 
@@ -9,7 +9,7 @@ arrives from the proxy's single TCP address. A per-IP brute-force lockout keyed
 on that address is worthless: one abuser locks out **every** client at once, and
 distinct clients cannot be told apart.
 
-`PC_ENABLE_FORWARDED_TRUST` fixes this by keying the auth lockout on the
+`PROTOCORE_ENABLE_FORWARDED_TRUST` fixes this by keying the auth lockout on the
 **original client** address the proxy reports in `Forwarded` (RFC 7239) or
 `X-Forwarded-For` - but **only** when the request's real TCP peer is a proxy you
 have explicitly trusted. That header is client-spoofable, so a direct, untrusted
@@ -19,7 +19,7 @@ another address into one.
 ```cpp
 // Trust the proxy in front of you. Only requests whose real TCP peer is in this
 // CIDR have their forwarded client address believed.
-pc_forwarded_trust_add_cidr("192.0.2.0/24");
+protocore_forwarded_trust_add_cidr("192.0.2.0/24");
 ```
 
 The accept-time throttle and the IP allowlist deliberately keep using the real
@@ -41,7 +41,7 @@ TCP source (the proxy) - only the auth lockout follows the forwarded client.
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_AUTH=1 -DPC_ENABLE_AUTH_LOCKOUT=1 -DPC_ENABLE_FORWARDED_TRUST=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_AUTH=1 -DPROTOCORE_ENABLE_AUTH_LOCKOUT=1 -DPROTOCORE_ENABLE_FORWARDED_TRUST=1" \
   --lib="." examples/L6-Presentation/ForwardedTrust/ForwardedTrust.ino
 ```
 
@@ -67,12 +67,12 @@ verbatim with added explanatory comments:
 
 // Enable the lockout AND the trusted-proxy resolver for the whole build (a .ino #define does not reach
 // the separately compiled library - see build_opt.h / build_flags).
-#define PC_ENABLE_AUTH_LOCKOUT 1
-#define PC_ENABLE_FORWARDED_TRUST 1
+#define PROTOCORE_ENABLE_AUTH_LOCKOUT 1
+#define PROTOCORE_ENABLE_FORWARDED_TRUST 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
-#include "services/security/forwarded_trust/forwarded_trust.h" // pc_forwarded_trust_add_cidr()
+#include "services/security/forwarded_trust/forwarded_trust.h" // protocore_forwarded_trust_add_cidr()
 
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
@@ -87,7 +87,7 @@ void setup()
         delay(250);
 
     // Trust the reverse proxy(ies) in front of this device (set to YOUR proxy's subnet).
-    pc_forwarded_trust_add_cidr("192.0.2.0/24");
+    protocore_forwarded_trust_add_cidr("192.0.2.0/24");
 
     // Protected route. Behind a trusted proxy the lockout counts failures per ORIGINAL client, so one
     // abuser does not lock out everyone sharing the proxy's address; a direct client's spoofed header

@@ -1,6 +1,6 @@
 # PidTuning - a PID control loop + the offline tuning workflow
 
-**Layer:** L7 Application · **Build flags:** `PC_ENABLE_CONTROL`
+**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_CONTROL`
 
 ## What this example teaches
 
@@ -58,7 +58,7 @@ needs `numpy` (+ `matplotlib` for the plot, `scipy` for `--autotune`):
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_CONTROL=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_CONTROL=1" \
   --lib="." examples/L7-Application/PidTuning/PidTuning.ino
 ```
 

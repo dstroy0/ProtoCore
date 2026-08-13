@@ -15,17 +15,17 @@
 #include "mmgr/protomem.h"
 #include "network_drivers/transport/tcp.h"
 #include "protocore.h"
-#if PC_ENABLE_WEBSOCKET
+#if PROTOCORE_ENABLE_WEBSOCKET
 #include "crypto/hash/sha1.h"
 #include "network_drivers/presentation/codec/base64/base64.h"
 #include "network_drivers/presentation/http/websocket/websocket.h"
 #endif
-#if PC_ENABLE_SSE
+#if PROTOCORE_ENABLE_SSE
 #include "network_drivers/presentation/http/sse/sse.h"
 #endif
 #include <stdio.h>
 
-#if PC_ENABLE_WEBSOCKET
+#if PROTOCORE_ENABLE_WEBSOCKET
 // Magic GUID concatenated to the client key for the WS accept hash (RFC 6455 4.2.2).
 static const char WS_MAGIC[] = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 #endif
@@ -34,7 +34,7 @@ static const char WS_MAGIC[] = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 // WebSocket handshake helpers
 // ---------------------------------------------------------------------------
 
-#if PC_ENABLE_WEBSOCKET
+#if PROTOCORE_ENABLE_WEBSOCKET
 // Longest Sec-WebSocket-Key accepted, and the bound that lets the concat buffer below have a
 // compile-time size.
 #define WS_MAX_KEY_LEN 64u
@@ -66,9 +66,9 @@ static proto_bool ws_accept_key(const char *client_key, char *out)
     mem.cpy(concat, client_key, key_len);
     mem.cpy(concat + key_len, WS_MAGIC, magic_len);
 
-    uint8_t digest[PC_SHA1_DIGEST_LEN];
-    pc_sha1((const uint8_t *)concat, key_len + magic_len, digest);
-    Base64.encode(digest, PC_SHA1_DIGEST_LEN, out);
+    uint8_t digest[PROTOCORE_SHA1_DIGEST_LEN];
+    protocore_sha1((const uint8_t *)concat, key_len + magic_len, digest);
+    Base64.encode(digest, PROTOCORE_SHA1_DIGEST_LEN, out);
     return PROTO_TRUE;
 }
 
@@ -81,7 +81,7 @@ static proto_bool ws_accept_key(const char *client_key, char *out)
  */
 void ws_send_version_required(uint8_t slot_id)
 {
-    if (!pc_conn_active(slot_id))
+    if (!protocore_conn_active(slot_id))
     {
         http_reset(slot_id);
         return;
@@ -119,38 +119,38 @@ proto_bool ws_do_upgrade(uint8_t slot_id, HttpReq *req, WsConnectHandler on_conn
         return PROTO_FALSE;
     }
 
-    if (!pc_conn_active(slot_id))
+    if (!protocore_conn_active(slot_id))
     {
         return PROTO_FALSE;
     }
 
     char hdr[WS_HDR_BUF_SIZE];
     int hlen;
-#if PC_ENABLE_WS_DEFLATE
+#if PROTOCORE_ENABLE_WS_DEFLATE
     // Negotiate permessage-deflate (RFC 7692) if the client offered it. We force
     // no_context_takeover in both directions so each message decompresses
     // independently (the INFLATE window is the message buffer, not a kept window).
     const char *ws_ext = http_get_header(req, "Sec-WebSocket-Extensions");
     proto_bool pmd = ws_ext && strstr(ws_ext, "permessage-deflate");
-    pc_sb sb_hdr = {hdr, sizeof(hdr), 0, PROTO_TRUE};
-    pc_sb_put(
+    protocore_sb sb_hdr = {hdr, sizeof(hdr), 0, PROTO_TRUE};
+    protocore_sb_put(
         &sb_hdr,
         "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: ");
-    pc_sb_put(&sb_hdr, accept);
-    pc_sb_put(&sb_hdr, "\r\n");
-    pc_sb_put(&sb_hdr, pmd ? "Sec-WebSocket-Extensions: permessage-deflate; client_no_context_takeover; "
-                             "server_no_context_takeover\r\n"
-                           : "");
-    pc_sb_put(&sb_hdr, "\r\n");
-    hlen = (int)pc_sb_finish(&sb_hdr);
+    protocore_sb_put(&sb_hdr, accept);
+    protocore_sb_put(&sb_hdr, "\r\n");
+    protocore_sb_put(&sb_hdr, pmd ? "Sec-WebSocket-Extensions: permessage-deflate; client_no_context_takeover; "
+                                    "server_no_context_takeover\r\n"
+                                  : "");
+    protocore_sb_put(&sb_hdr, "\r\n");
+    hlen = (int)protocore_sb_finish(&sb_hdr);
 #else
-    pc_sb sb_hdr2 = {hdr, sizeof(hdr), 0, PROTO_TRUE};
-    pc_sb_put(
+    protocore_sb sb_hdr2 = {hdr, sizeof(hdr), 0, PROTO_TRUE};
+    protocore_sb_put(
         &sb_hdr2,
         "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: ");
-    pc_sb_put(&sb_hdr2, accept);
-    pc_sb_put(&sb_hdr2, "\r\n\r\n");
-    hlen = (int)pc_sb_finish(&sb_hdr2);
+    protocore_sb_put(&sb_hdr2, accept);
+    protocore_sb_put(&sb_hdr2, "\r\n\r\n");
+    hlen = (int)protocore_sb_finish(&sb_hdr2);
 #endif
 
     Tcp.conn->send(slot_id, hdr, (proto_u16)hlen);
@@ -167,7 +167,7 @@ proto_bool ws_do_upgrade(uint8_t slot_id, HttpReq *req, WsConnectHandler on_conn
         return PROTO_FALSE;
     }
 
-#if PC_ENABLE_WS_DEFLATE
+#if PROTOCORE_ENABLE_WS_DEFLATE
     ws->pmd = pmd;
 #endif
     if (on_connect)
@@ -177,19 +177,19 @@ proto_bool ws_do_upgrade(uint8_t slot_id, HttpReq *req, WsConnectHandler on_conn
 
     return PROTO_TRUE;
 }
-#endif // PC_ENABLE_WEBSOCKET
+#endif // PROTOCORE_ENABLE_WEBSOCKET
 
 // ---------------------------------------------------------------------------
 // SSE upgrade helper
 // ---------------------------------------------------------------------------
 
-#if PC_ENABLE_SSE
+#if PROTOCORE_ENABLE_SSE
 /**
  * @brief Send the HTTP 200 + SSE headers and promote the slot to SSE mode.
  */
-proto_bool pc_sse_do_upgrade(uint8_t slot_id, HttpReq *req, SseConnectHandler on_connect)
+proto_bool protocore_sse_do_upgrade(uint8_t slot_id, HttpReq *req, SseConnectHandler on_connect)
 {
-    if (!pc_conn_active(slot_id))
+    if (!protocore_conn_active(slot_id))
     {
         return PROTO_FALSE;
     }
@@ -204,13 +204,13 @@ proto_bool pc_sse_do_upgrade(uint8_t slot_id, HttpReq *req, SseConnectHandler on
 
     // Copy the path BEFORE resetting the parser: http_reset() zeroes the whole
     // HttpReq (including req->path), so a pointer into it would dangle. The saved
-    // path is what pc_sse_broadcast() matches against.
+    // path is what protocore_sse_broadcast() matches against.
     char path[MAX_PATH_LEN];
     strncpy(path, req->path, sizeof(path) - 1);
     path[sizeof(path) - 1] = '\0';
     http_reset(slot_id);
 
-    SseConn *sse = pc_sse_alloc(slot_id, path);
+    SseConn *sse = protocore_sse_alloc(slot_id, path);
     if (!sse)
     {
         Tcp.conn->abort_slot(slot_id); // transport owns detach + reset + RST
@@ -219,18 +219,18 @@ proto_bool pc_sse_do_upgrade(uint8_t slot_id, HttpReq *req, SseConnectHandler on
 
     if (on_connect)
     {
-        on_connect(sse->pc_sse_id);
+        on_connect(sse->protocore_sse_id);
     }
 
     return PROTO_TRUE;
 }
-#endif // PC_ENABLE_SSE
+#endif // PROTOCORE_ENABLE_SSE
 
 // ---------------------------------------------------------------------------
 // WebSocket public API
 // ---------------------------------------------------------------------------
 
-#if PC_ENABLE_WEBSOCKET
+#if PROTOCORE_ENABLE_WEBSOCKET
 void ws_send_text(uint8_t ws_id, const char *text)
 {
     if (ws_id >= MAX_WS_CONNS || !ws_pool[ws_id].active)
@@ -245,9 +245,9 @@ void ws_send_text(uint8_t ws_id, const char *text)
     uint16_t len = (uint16_t)strnlen(text, 0xFFFF);
     if (ws_send_frame(ws, WS_OP_TEXT, (const uint8_t *)text, len))
     {
-        // has itself checked pc_conn_active(), and nothing between the two can tear the slot down
+        // has itself checked protocore_conn_active(), and nothing between the two can tear the slot down
         // on a single-threaded run. It is a re-check for the marshalled (ARDUINO) send path.
-        if (pc_conn_active(ws->slot_id))
+        if (protocore_conn_active(ws->slot_id))
         {
             Tcp.conn->flush(ws->slot_id);
         }
@@ -268,7 +268,7 @@ void ws_send_binary(uint8_t ws_id, const uint8_t *data, uint16_t len)
     if (ws_send_frame(ws, WS_OP_BINARY, data, len))
     {
         // connection, so the false half of this re-check is unreachable from a host test.
-        if (pc_conn_active(ws->slot_id))
+        if (protocore_conn_active(ws->slot_id))
         {
             Tcp.conn->flush(ws->slot_id);
         }
@@ -283,57 +283,57 @@ void ws_disconnect(uint8_t ws_id)
     }
     WsConn *ws = &ws_pool[ws_id];
     ws_close(ws, WS_CLOSE_NORMAL);
-    if (pc_conn_active(ws->slot_id))
+    if (protocore_conn_active(ws->slot_id))
     {
         Tcp.conn->flush(ws->slot_id);
     }
     // handle() detects WS_CLOSED next tick and fires ws_close callback
 }
-#endif // PC_ENABLE_WEBSOCKET
+#endif // PROTOCORE_ENABLE_WEBSOCKET
 
 // ---------------------------------------------------------------------------
 // Server-Sent Events public API
 // ---------------------------------------------------------------------------
 
-#if PC_ENABLE_SSE
-void pc_sse_send(uint8_t pc_sse_id, const char *data, const char *event, const char *id)
+#if PROTOCORE_ENABLE_SSE
+void protocore_sse_send(uint8_t protocore_sse_id, const char *data, const char *event, const char *id)
 {
-    if (pc_sse_id >= MAX_SSE_CONNS || !pc_sse_pool[pc_sse_id].active)
+    if (protocore_sse_id >= MAX_SSE_CONNS || !protocore_sse_pool[protocore_sse_id].active)
     {
         return;
     }
-    SseConn *sse = &pc_sse_pool[pc_sse_id];
-    if (pc_sse_write(sse, data, event, id))
+    SseConn *sse = &protocore_sse_pool[protocore_sse_id];
+    if (protocore_sse_write(sse, data, event, id))
     {
-        // has itself checked pc_conn_active(), so the slot is still live here.
-        if (pc_conn_active(sse->slot_id))
+        // has itself checked protocore_conn_active(), so the slot is still live here.
+        if (protocore_conn_active(sse->slot_id))
         {
             Tcp.conn->flush(sse->slot_id);
         }
     }
 }
 
-void pc_sse_broadcast(const char *path, const char *data, const char *event, const char *id)
+void protocore_sse_broadcast(const char *path, const char *data, const char *event, const char *id)
 {
     for (int i = 0; i < MAX_SSE_CONNS; i++)
     {
-        if (!pc_sse_pool[i].active)
+        if (!protocore_sse_pool[i].active)
         {
             continue;
         }
-        if (strcmp(pc_sse_pool[i].path, path) != 0)
+        if (strcmp(protocore_sse_pool[i].path, path) != 0)
         {
             continue;
         }
-        SseConn *sse = &pc_sse_pool[i];
-        if (pc_sse_write(sse, data, event, id))
+        SseConn *sse = &protocore_sse_pool[i];
+        if (protocore_sse_write(sse, data, event, id))
         {
             // connection, so the false half of this re-check is unreachable from a host test.
-            if (pc_conn_active(sse->slot_id))
+            if (protocore_conn_active(sse->slot_id))
             {
                 Tcp.conn->flush(sse->slot_id);
             }
         }
     }
 }
-#endif // PC_ENABLE_SSE
+#endif // PROTOCORE_ENABLE_SSE

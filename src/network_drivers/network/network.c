@@ -22,7 +22,7 @@ static void init(void)
 // Designated, so a member's position in the struct does not decide what it binds to.
 const NetworkNs network = {.init = init,
                            .dns = &Dns,
-#if PC_ENABLE_FORWARD
+#if PROTOCORE_ENABLE_FORWARD
                            .forward = &Forward,
 #endif
                            .ip = &Ip};

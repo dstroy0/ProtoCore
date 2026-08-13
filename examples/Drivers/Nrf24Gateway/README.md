@@ -1,6 +1,6 @@
 # Nrf24Gateway - a real nRF24L01+ radio bridged to the gateway
 
-**Layer:** Foundation · **Build flags:** `PC_ENABLE_NRF24`, `PC_ENABLE_GATEWAY`
+**Layer:** Foundation · **Build flags:** `PROTOCORE_ENABLE_NRF24`, `PROTOCORE_ENABLE_GATEWAY`
 
 ## What this example teaches
 
@@ -11,7 +11,7 @@ plain register read/write, the nRF24 uses an **SPI command protocol** and a sepa
 **CE** pin, so its `nrf_bus` carries an SPI transfer plus a CE callback.
 
 ```
-nRF24 RX --SPI--> pc_nrf24_recv() -> pipe + payload -> pc_gateway_uplink(port, pipe, ...)
+nRF24 RX --SPI--> protocore_nrf24_recv() -> pipe + payload -> protocore_gateway_uplink(port, pipe, ...)
                                                            |
                                         envelope + topic  nrf24/0/<pipe>
                                                            |
@@ -20,17 +20,17 @@ nRF24 RX --SPI--> pc_nrf24_recv() -> pipe + payload -> pc_gateway_uplink(port, p
 
 The nRF24 does its own **hardware addressing**: a received frame's source is the **pipe
 number** it arrived on, so there is no in-payload header (no codec) - the pipe is the
-address handed to `pc_gateway_uplink()`. Payloads are a **static width**
-(`PC_NRF24_PAYLOAD`, default 32); a short send is zero-padded.
+address handed to `protocore_gateway_uplink()`. Payloads are a **static width**
+(`PROTOCORE_NRF24_PAYLOAD`, default 32); a short send is zero-padded.
 
 ```cpp
 nrf_config cfg = {}; cfg.address = addr5; cfg.channel = 76; cfg.data_rate = 0; cfg.tx_power = 3;
-pc_nrf24_init(&bus, &cfg);
-pc_nrf24_set_rx(&bus);
+protocore_nrf24_init(&bus, &cfg);
+protocore_nrf24_set_rx(&bus);
 
-uint8_t buf[PC_NRF24_PAYLOAD]; uint8_t pipe;
-int n = pc_nrf24_recv(&bus, buf, sizeof(buf), &pipe);   // -> a frame, or -1
-pc_gateway_uplink(0, pipe, buf, n, 0);                   // pipe = source address
+uint8_t buf[PROTOCORE_NRF24_PAYLOAD]; uint8_t pipe;
+int n = protocore_nrf24_recv(&bus, buf, sizeof(buf), &pipe);   // -> a frame, or -1
+protocore_gateway_uplink(0, pipe, buf, n, 0);                   // pipe = source address
 ```
 
 ## Wiring (ESP32 <-> nRF24L01+)
@@ -55,6 +55,6 @@ The flags must reach the library build, so pass them as build flags:
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_NRF24=1 -DPC_ENABLE_GATEWAY=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_NRF24=1 -DPROTOCORE_ENABLE_GATEWAY=1" \
   --lib="." examples/Drivers/Nrf24Gateway/Nrf24Gateway.ino
 ```

@@ -3,7 +3,7 @@
 
 /**
  * @file utmc.h
- * @brief UTMC (Urban Traffic Management and Control) common-database codec (PC_ENABLE_UTMC).
+ * @brief UTMC (Urban Traffic Management and Control) common-database codec (PROTOCORE_ENABLE_UTMC).
  *
  * UTMC is the UK/EU modular framework for sharing traffic data across heterogeneous municipal systems.
  * Its common-database exchange is an HTTP + XML message set: a client requests the value of an object
@@ -22,9 +22,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_UTMC
+#if PROTOCORE_ENABLE_UTMC
 
 /** @brief UTMC data-quality flags. */
 // UTMC value-quality codes: wire values compared, so integer constants in a namespacing struct.
@@ -35,7 +35,7 @@ PROTO_BEGIN_DECLS
 /**
  * @brief Build a UTMC request document for one object id. @return length written, or 0 on overflow.
  */
-size_t pc_utmc_request(const char *object_id, char *out, size_t cap);
+size_t protocore_utmc_request(const char *object_id, char *out, size_t cap);
 
 /**
  * @brief Build a UTMC response document for one object.
@@ -45,17 +45,17 @@ size_t pc_utmc_request(const char *object_id, char *out, size_t cap);
  * @param timestamp an ISO-8601 timestamp (escaped).
  * @return length written, or 0 on overflow.
  */
-size_t pc_utmc_response(const char *object_id, const char *value, uint8_t quality, const char *timestamp, char *out,
-                        size_t cap);
+size_t protocore_utmc_response(const char *object_id, const char *value, uint8_t quality, const char *timestamp,
+                               char *out, size_t cap);
 
 /**
  * @brief Extract the object id from a UTMC request document into @p out.
  * @return the id length, or 0 if no `<object id="..."/>` is found.
  */
-size_t pc_utmc_parse_request(const char *xml, size_t len, char *out, size_t cap);
+size_t protocore_utmc_parse_request(const char *xml, size_t len, char *out, size_t cap);
 
-#endif // PC_ENABLE_UTMC
+#endif // PROTOCORE_ENABLE_UTMC
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_UTMC_H

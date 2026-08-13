@@ -1,6 +1,6 @@
 # Robotics - OPC UA for Robotics MotionDeviceSystem model
 
-**Layer:** L7-Application · **Flags:** `PC_ENABLE_OPCUA` + `PC_ENABLE_ROBOTICS`
+**Layer:** L7-Application · **Flags:** `PROTOCORE_ENABLE_OPCUA` + `PROTOCORE_ENABLE_ROBOTICS`
 
 Turns the board into an **OPC UA for Robotics** server. **OPC 40010-1** ("OPC UA for Robotics - Part 1:
 Vertical Integration", VDMA / OPC Foundation) is the OPC UA companion specification for industrial
@@ -29,9 +29,9 @@ MotionDeviceSystem
 ```
 
 You fill a `RoboticsMotionDeviceSystem` struct and refresh its live fields each `loop()` from your robot
-I/O; the server reads straight out of it. `pc_robotics_install(&mds)` binds the struct and registers
+I/O; the server reads straight out of it. `protocore_robotics_install(&mds)` binds the struct and registers
 the OPC UA Browse + Read resolvers - that is the whole wiring. The axis count is parametric
-(`PC_ROBOTICS_AXES`, default 6): each bound axis becomes an `Axis_k` object with its four live variables.
+(`PROTOCORE_ROBOTICS_AXES`, default 6): each bound axis becomes an `Axis_k` object with its four live variables.
 
 ## What you teach
 
@@ -46,7 +46,7 @@ server from example **OpcUa**.
 2. Build with both flags set (already in `build_opt.h` for the Arduino IDE):
     ```sh
     pio ci examples/L7-Application/Robotics --board esp32dev --lib "." \
-      --project-option="build_flags=-DPC_ENABLE_OPCUA=1 -DPC_ENABLE_ROBOTICS=1"
+      --project-option="build_flags=-DPROTOCORE_ENABLE_OPCUA=1 -DPROTOCORE_ENABLE_ROBOTICS=1"
     ```
 3. Flash, open Serial @115200, note the IP.
 
@@ -75,7 +75,7 @@ open62541 browse the same tree.
 
 ## Scope
 
-A single MotionDevice / Controller / SafetyState and `PC_ROBOTICS_AXES` parametric axes are exposed (the
+A single MotionDevice / Controller / SafetyState and `PROTOCORE_ROBOTICS_AXES` parametric axes are exposed (the
 common embedded robot). The values are faithfully named per OPC 40010-1; full companion-spec
 **TypeDefinitions**, **PowerTrains**, and advertising the Robotics namespace in the server's
 `NamespaceArray` (which needs array-Variant support in the base OPC UA server) are a documented

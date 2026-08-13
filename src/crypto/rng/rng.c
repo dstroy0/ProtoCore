@@ -13,33 +13,33 @@
  * A draw takes its keystream under the current seed and replaces the seed from that same keystream
  * before returning. Block 0 supplies the replacement and the caller's bytes start at block 1, so no
  * byte is both handed out and kept, and the state that produced a value is gone by the time the
- * value is. Every PC_RAND_RESEED_BYTES the seed is redrawn from the platform instead.
+ * value is. Every PROTOCORE_RAND_RESEED_BYTES the seed is redrawn from the platform instead.
  */
 
 #include "crypto/rng/rng.h"
 
-#include "core_setup/board_profiles/pc_platform.h" // pc_platform_rand_fill: the entropy source
+#include "core_setup/board_profiles/protocore_platform.h" // protocore_platform_rand_fill: the entropy source
 #include "crypto/cipher/chacha20.h"
-#include "mmgr/arena.h" // pc_worker_self: the slot the pools index by
+#include "mmgr/arena.h" // protocore_worker_self: the slot the pools index by
 #include "mmgr/protomem.h"
 #include "mmgr/secure.h"
 
 // key || iv || next, one contiguous borrow per worker.
 #define RNG_IV_LEN 8
-#define RNG_SEEDED_LEN (PC_RAND_SEED_LEN + RNG_IV_LEN)
-#define RNG_STATE_LEN (RNG_SEEDED_LEN + PC_RAND_SEED_LEN)
+#define RNG_SEEDED_LEN (PROTOCORE_RAND_SEED_LEN + RNG_IV_LEN)
+#define RNG_STATE_LEN (RNG_SEEDED_LEN + PROTOCORE_RAND_SEED_LEN)
 
-// The pool is sized from PC_WORK_RNG, so the borrow below cannot come up short: a generator that
+// The pool is sized from PROTOCORE_WORK_RNG, so the borrow below cannot come up short: a generator that
 // could would hand a caller an unwritten buffer, which is the one failure it must not have. This is
 // the proof the sizing declaration matches what is actually taken.
-static_assert(RNG_STATE_LEN <= PC_WORK_RNG, "PC_WORK_RNG must cover the generator's seed, nonce and scratch");
+static_assert(RNG_STATE_LEN <= PROTOCORE_WORK_RNG, "PROTOCORE_WORK_RNG must cover the generator's seed, nonce and scratch");
 
 // The borrows and the budget each has spent. Only these live here; every byte of key material is in
 // the pool.
 typedef struct
 {
-    uint8_t *state[PC_SEC_POOL_SLOTS];
-    size_t drawn[PC_SEC_POOL_SLOTS];
+    uint8_t *state[PROTOCORE_SEC_POOL_SLOTS];
+    size_t drawn[PROTOCORE_SEC_POOL_SLOTS];
 } RngCtx;
 
 static RngCtx s_rng = {{NULL}, {0}};
@@ -48,10 +48,10 @@ static RngCtx s_rng = {{NULL}, {0}};
 // on the ghost rather than on worker 0.
 static int rng_slot(void)
 {
-    int w = pc_worker_self();
-    if (w < 0 || w >= PC_SEC_POOL_SLOTS)
+    int w = protocore_worker_self();
+    if (w < 0 || w >= PROTOCORE_SEC_POOL_SLOTS)
     {
-        w = PC_GHOST_WORKER_SLOT;
+        w = PROTOCORE_GHOST_WORKER_SLOT;
     }
     return w;
 }
@@ -59,7 +59,7 @@ static int rng_slot(void)
 // Redraw the seed and its nonce from the platform, and start the budget over.
 static void rng_reseed(uint8_t *st, int w)
 {
-    pc_platform_rand_fill(st, RNG_SEEDED_LEN);
+    protocore_platform_rand_fill(st, RNG_SEEDED_LEN);
     s_rng.drawn[w] = 0;
 }
 
@@ -71,8 +71,8 @@ static uint8_t *rng_state(int w)
     {
         return s_rng.state[w];
     }
-    pc_span s = secure.persist_span(RNG_STATE_LEN);
-    if (!pc_span_ok(s))
+    protocore_span s = secure.persist_span(RNG_STATE_LEN);
+    if (!protocore_span_ok(s))
     {
         return NULL;
     }
@@ -81,7 +81,7 @@ static uint8_t *rng_state(int w)
     return s.buf;
 }
 
-void pc_rand_fill(uint8_t *out, size_t len)
+void protocore_rand_fill(uint8_t *out, size_t len)
 {
     if (out == NULL || len == 0)
     {
@@ -93,15 +93,15 @@ void pc_rand_fill(uint8_t *out, size_t len)
     {
         return;
     }
-    if (s_rng.drawn[w] >= PC_RAND_RESEED_BYTES || len >= PC_RAND_RESEED_BYTES - s_rng.drawn[w])
+    if (s_rng.drawn[w] >= PROTOCORE_RAND_RESEED_BYTES || len >= PROTOCORE_RAND_RESEED_BYTES - s_rng.drawn[w])
     {
         rng_reseed(st, w);
     }
-    uint8_t *iv = st + PC_RAND_SEED_LEN;
+    uint8_t *iv = st + PROTOCORE_RAND_SEED_LEN;
     uint8_t *next = st + RNG_SEEDED_LEN;
-    pc_chacha20_xor(st, iv, 0, NULL, next, PC_RAND_SEED_LEN);
-    pc_chacha20_xor(st, iv, 1, NULL, out, len);
-    mem.cpy(st, next, PC_RAND_SEED_LEN);
-    pc_secure_wipe(next, PC_RAND_SEED_LEN);
+    protocore_chacha20_xor(st, iv, 0, NULL, next, PROTOCORE_RAND_SEED_LEN);
+    protocore_chacha20_xor(st, iv, 1, NULL, out, len);
+    mem.cpy(st, next, PROTOCORE_RAND_SEED_LEN);
+    protocore_secure_wipe(next, PROTOCORE_RAND_SEED_LEN);
     s_rng.drawn[w] += len;
 }

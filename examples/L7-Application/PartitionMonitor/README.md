@@ -1,11 +1,11 @@
 # PartitionMonitor - a flash partition-map endpoint
 
-**Layer:** L7 Application · **Build flags:** `PC_ENABLE_PARTITION_MONITOR`
+**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_PARTITION_MONITOR`
 
 ## What this example teaches
 
 The ESP32's flash is carved into partitions (factory app, OTA slots, NVS,
-LittleFS, ...). `pc_partition_monitor_begin()` serves that table as JSON at
+LittleFS, ...). `protocore_partition_monitor_begin()` serves that table as JSON at
 `/partitions`: each entry's label, kind, type/subtype, flash offset, and size, plus
 which app slot is currently running. It is a one-call diagnostics endpoint that
 pairs well with OTA dashboards, and it needs no special hardware.
@@ -13,7 +13,7 @@ pairs well with OTA dashboards, and it needs no special hardware.
 **One call mounts the endpoint:**
 
 ```cpp
-pc_partition_monitor_begin(server, "/partitions");
+protocore_partition_monitor_begin(server, "/partitions");
 ```
 
 The handler reads the partition table from the ESP-IDF API and serializes it
@@ -23,7 +23,7 @@ directly into the response (no heap).
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_PARTITION_MONITOR=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_PARTITION_MONITOR=1" \
   --lib="." examples/L7-Application/PartitionMonitor/PartitionMonitor.ino
 ```
 
@@ -40,7 +40,7 @@ reproduced verbatim with added explanatory comments:
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-#define PC_ENABLE_PARTITION_MONITOR 1
+#define PROTOCORE_ENABLE_PARTITION_MONITOR 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -66,7 +66,7 @@ void setup()
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     // Serve the flash partition table as JSON at /partitions.
-    pc_partition_monitor_begin(server, "/partitions");
+    protocore_partition_monitor_begin(server, "/partitions");
     server.begin(80);
 }
 

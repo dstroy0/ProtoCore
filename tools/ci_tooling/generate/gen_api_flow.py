@@ -102,8 +102,8 @@ INTERNAL = {
     "ws_dispatch_message",
     "ws_dispatch_close",
     "ws_send_version_required",
-    "pc_sse_do_upgrade",
-    "pc_csrf_gate",
+    "protocore_sse_do_upgrade",
+    "protocore_csrf_gate",
 }
 
 
@@ -248,9 +248,9 @@ def mermaid(detailed=False):
     out.append('  cin(["A client sends a request<br/>browser / app / curl"])')
     out.append('  listen["Accept a connection<br/>listener_accept_cb"]')
     out.append('  ring[("Hold the bytes<br/>conn_pool + rx ring")]')
-    out.append('  udprx["Receive a datagram<br/>pc_udp"]')
+    out.append('  udprx["Receive a datagram<br/>protocore_udp"]')
     out.append(f'  seam{{{{"Which protocol?<br/>ProtoHandler seam<br/>{proto_short}"}}}}')
-    out.append('  tls["Decrypt + choose version<br/>pc_tls + ALPN"]')
+    out.append('  tls["Decrypt + choose version<br/>protocore_tls + ALPN"]')
     out.append('  parser["Read HTTP/1.1<br/>http_parser"]')
     out.append('  h2["Decode HTTP/2<br/>h2_conn"]')
     out.append('  h3["Decode HTTP/3<br/>quic_conn + h3_conn"]')
@@ -263,8 +263,8 @@ def mermaid(detailed=False):
     out.append('  handler["YOUR HANDLER runs"]')
     out.append(f'  resp["{label("Build the response", api["Respond"], cap)}"]')
     out.append('  sink{{"Frame the reply per protocol<br/>resp_sink seam<br/>HTTP/1.1 / h2 / h3"}}')
-    out.append('  consend["Write bytes back<br/>pc_conn_send"]')
-    out.append('  udptx["Send a datagram<br/>pc_udp"]')
+    out.append('  consend["Write bytes back<br/>protocore_conn_send"]')
+    out.append('  udptx["Send a datagram<br/>protocore_udp"]')
     out.append('  cout(["The client gets the response"])')
     if detailed:
         # The full L6 module inventory on disk, six per line, hung off the presentation layer.

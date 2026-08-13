@@ -9,9 +9,9 @@
 #include "services/timing_position/nmea2000/nmea2000.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_NMEA2000
+#if PROTOCORE_ENABLE_NMEA2000
 
-uint8_t pc_n2k_fastpacket_num_frames(uint16_t total_len)
+uint8_t protocore_n2k_fastpacket_num_frames(uint16_t total_len)
 {
     if (total_len <= N2K_FP_F0_DATA)
     {
@@ -20,26 +20,27 @@ uint8_t pc_n2k_fastpacket_num_frames(uint16_t total_len)
     return (uint8_t)(1u + (total_len - N2K_FP_F0_DATA + (N2K_FP_FN_DATA - 1)) / N2K_FP_FN_DATA);
 }
 
-proto_bool pc_n2k_fastpacket_build_frame(CanFrame *out, uint8_t seq, uint8_t frame_idx, uint8_t priority, uint32_t pgn,
-                                         uint8_t sa, uint8_t da, const uint8_t *data, uint16_t total_len)
+proto_bool protocore_n2k_fastpacket_build_frame(CanFrame *out, uint8_t seq, uint8_t frame_idx, uint8_t priority,
+                                                uint32_t pgn, uint8_t sa, uint8_t da, const uint8_t *data,
+                                                uint16_t total_len)
 {
-    if (!out || !data || seq > 7 || total_len == 0 || total_len > PC_N2K_FP_MAX)
+    if (!out || !data || seq > 7 || total_len == 0 || total_len > PROTOCORE_N2K_FP_MAX)
     {
         return PROTO_FALSE;
     }
-    if (frame_idx >= pc_n2k_fastpacket_num_frames(total_len))
+    if (frame_idx >= protocore_n2k_fastpacket_num_frames(total_len))
     {
         return PROTO_FALSE;
     }
     uint32_t id;
-    if (!pc_j1939_encode_id(&id, priority, pgn, sa, da))
+    if (!protocore_j1939_encode_id(&id, priority, pgn, sa, da))
     {
         return PROTO_FALSE;
     }
     out->id = id;
     out->extended = PROTO_TRUE;
     out->rtr = PROTO_FALSE;
-    out->dlc = PC_CAN_MAX_DLC;                   // Fast Packet frames are full 8-octet frames
+    out->dlc = PROTOCORE_CAN_MAX_DLC;            // Fast Packet frames are full 8-octet frames
     mem.set(out->data, 0xFF, sizeof(out->data)); // pad unused octets with 0xFF
 
     out->data[0] = (uint8_t)((seq << N2K_FP_SEQ_SHIFT) | (frame_idx & N2K_FP_FRAME_MASK));
@@ -59,7 +60,7 @@ proto_bool pc_n2k_fastpacket_build_frame(CanFrame *out, uint8_t seq, uint8_t fra
     return PROTO_TRUE;
 }
 
-void pc_n2k_fastpacket_reset(N2kFastPacketRx *rx)
+void protocore_n2k_fastpacket_reset(N2kFastPacketRx *rx)
 {
     if (rx)
     {
@@ -67,14 +68,14 @@ void pc_n2k_fastpacket_reset(N2kFastPacketRx *rx)
     }
 }
 
-N2kFpResult pc_n2k_fastpacket_feed(N2kFastPacketRx *rx, const CanFrame *f)
+N2kFpResult protocore_n2k_fastpacket_feed(N2kFastPacketRx *rx, const CanFrame *f)
 {
     if (!rx || !f || !f->extended || f->dlc < 2)
     {
         return N2K_FP_IGNORED;
     }
     J1939Id id;
-    if (!pc_j1939_decode_id(f->id, &id))
+    if (!protocore_j1939_decode_id(f->id, &id))
     // out, and &id is non-null
     {
         return N2K_FP_IGNORED;
@@ -87,11 +88,11 @@ N2kFpResult pc_n2k_fastpacket_feed(N2kFastPacketRx *rx, const CanFrame *f)
     if (frame_idx == 0) // first frame: total length + first 6 data octets
     {
         uint16_t total = f->data[1];
-        if (total == 0 || total > PC_N2K_FP_MAX)
+        if (total == 0 || total > PROTOCORE_N2K_FP_MAX)
         {
             return N2K_FP_ERR;
         }
-        pc_n2k_fastpacket_reset(rx);
+        protocore_n2k_fastpacket_reset(rx);
         rx->active = PROTO_TRUE;
         rx->seq = seq;
         rx->sa = id.sa;
@@ -116,7 +117,7 @@ N2kFpResult pc_n2k_fastpacket_feed(N2kFastPacketRx *rx, const CanFrame *f)
     }
     if (frame_idx != rx->next_frame)
     {
-        pc_n2k_fastpacket_reset(rx);
+        protocore_n2k_fastpacket_reset(rx);
         return N2K_FP_ERR;
     }
     uint16_t remaining = (uint16_t)(rx->total_len - rx->received);
@@ -132,10 +133,10 @@ N2kFpResult pc_n2k_fastpacket_feed(N2kFastPacketRx *rx, const CanFrame *f)
     return N2K_FP_PROGRESS;
 }
 
-proto_bool pc_n2k_build_single(CanFrame *out, uint8_t priority, uint32_t pgn, uint8_t sa, uint8_t da,
-                               const uint8_t *data, uint8_t len)
+proto_bool protocore_n2k_build_single(CanFrame *out, uint8_t priority, uint32_t pgn, uint8_t sa, uint8_t da,
+                                      const uint8_t *data, uint8_t len)
 {
-    return pc_j1939_build_message(out, priority, pgn, sa, da, data, len);
+    return protocore_j1939_build_message(out, priority, pgn, sa, da, data, len);
 }
 
 // --- typed PGN decoders ---
@@ -157,7 +158,7 @@ static int16_t rd_i16le(const uint8_t *p)
     return (int16_t)rd_u16le(p);
 }
 
-proto_bool pc_n2k_decode_position_rapid(const uint8_t *payload, size_t len, N2kPositionRapid *out)
+proto_bool protocore_n2k_decode_position_rapid(const uint8_t *payload, size_t len, N2kPositionRapid *out)
 {
     if (!payload || !out || len < 8)
     {
@@ -171,7 +172,7 @@ proto_bool pc_n2k_decode_position_rapid(const uint8_t *payload, size_t len, N2kP
     return PROTO_TRUE;
 }
 
-proto_bool pc_n2k_decode_cog_sog_rapid(const uint8_t *payload, size_t len, N2kCogSogRapid *out)
+proto_bool protocore_n2k_decode_cog_sog_rapid(const uint8_t *payload, size_t len, N2kCogSogRapid *out)
 {
     if (!payload || !out || len < 6) // SID(1) + ref(1) + COG(2) + SOG(2)
     {
@@ -188,7 +189,7 @@ proto_bool pc_n2k_decode_cog_sog_rapid(const uint8_t *payload, size_t len, N2kCo
     return PROTO_TRUE;
 }
 
-proto_bool pc_n2k_decode_engine_rapid(const uint8_t *payload, size_t len, N2kEngineRapid *out)
+proto_bool protocore_n2k_decode_engine_rapid(const uint8_t *payload, size_t len, N2kEngineRapid *out)
 {
     if (!payload || !out || len < 6) // instance(1) + speed(2) + boost(2) + tilt(1)
     {
@@ -206,7 +207,7 @@ proto_bool pc_n2k_decode_engine_rapid(const uint8_t *payload, size_t len, N2kEng
     return PROTO_TRUE;
 }
 
-proto_bool pc_n2k_decode_temperature(const uint8_t *payload, size_t len, N2kTemperature *out)
+proto_bool protocore_n2k_decode_temperature(const uint8_t *payload, size_t len, N2kTemperature *out)
 {
     if (!payload || !out || len < 7) // sid(1) + instance(1) + source(1) + actual(2) + set(2)
     {
@@ -224,7 +225,7 @@ proto_bool pc_n2k_decode_temperature(const uint8_t *payload, size_t len, N2kTemp
     return PROTO_TRUE;
 }
 
-proto_bool pc_n2k_decode_battery_status(const uint8_t *payload, size_t len, N2kBatteryStatus *out)
+proto_bool protocore_n2k_decode_battery_status(const uint8_t *payload, size_t len, N2kBatteryStatus *out)
 {
     if (!payload || !out || len < 8) // instance(1) + voltage(2) + current(2) + temperature(2) + sid(1)
     {
@@ -244,7 +245,7 @@ proto_bool pc_n2k_decode_battery_status(const uint8_t *payload, size_t len, N2kB
     return PROTO_TRUE;
 }
 
-proto_bool pc_n2k_decode_fluid_level(const uint8_t *payload, size_t len, N2kFluidLevel *out)
+proto_bool protocore_n2k_decode_fluid_level(const uint8_t *payload, size_t len, N2kFluidLevel *out)
 {
     if (!payload || !out || len < 7) // instance/type(1) + level(2) + capacity(4)
     {
@@ -261,7 +262,7 @@ proto_bool pc_n2k_decode_fluid_level(const uint8_t *payload, size_t len, N2kFlui
     return PROTO_TRUE;
 }
 
-proto_bool pc_n2k_decode_actual_pressure(const uint8_t *payload, size_t len, N2kActualPressure *out)
+proto_bool protocore_n2k_decode_actual_pressure(const uint8_t *payload, size_t len, N2kActualPressure *out)
 {
     if (!payload || !out || len < 7) // sid(1) + instance(1) + source(1) + pressure(4)
     {
@@ -276,7 +277,7 @@ proto_bool pc_n2k_decode_actual_pressure(const uint8_t *payload, size_t len, N2k
     return PROTO_TRUE;
 }
 
-proto_bool pc_n2k_decode_rudder(const uint8_t *payload, size_t len, N2kRudder *out)
+proto_bool protocore_n2k_decode_rudder(const uint8_t *payload, size_t len, N2kRudder *out)
 {
     if (!payload || !out || len < 6) // instance(1) + direction(1) + angle order(2) + position(2)
     {
@@ -293,7 +294,7 @@ proto_bool pc_n2k_decode_rudder(const uint8_t *payload, size_t len, N2kRudder *o
     return PROTO_TRUE;
 }
 
-proto_bool pc_n2k_decode_attitude(const uint8_t *payload, size_t len, N2kAttitude *out)
+proto_bool protocore_n2k_decode_attitude(const uint8_t *payload, size_t len, N2kAttitude *out)
 {
     if (!payload || !out || len < 7) // sid(1) + yaw(2) + pitch(2) + roll(2)
     {
@@ -312,7 +313,7 @@ proto_bool pc_n2k_decode_attitude(const uint8_t *payload, size_t len, N2kAttitud
     return PROTO_TRUE;
 }
 
-proto_bool pc_n2k_decode_engine_dynamic(const uint8_t *payload, size_t len, N2kEngineDynamic *out)
+proto_bool protocore_n2k_decode_engine_dynamic(const uint8_t *payload, size_t len, N2kEngineDynamic *out)
 {
     if (!payload || !out || len < 26)
     {
@@ -353,7 +354,7 @@ proto_bool pc_n2k_decode_engine_dynamic(const uint8_t *payload, size_t len, N2kE
     return PROTO_TRUE;
 }
 
-proto_bool pc_n2k_decode_wind_data(const uint8_t *payload, size_t len, N2kWindData *out)
+proto_bool protocore_n2k_decode_wind_data(const uint8_t *payload, size_t len, N2kWindData *out)
 {
     if (!payload || !out || len < 6)
     {
@@ -370,7 +371,7 @@ proto_bool pc_n2k_decode_wind_data(const uint8_t *payload, size_t len, N2kWindDa
     return PROTO_TRUE;
 }
 
-proto_bool pc_n2k_decode_speed(const uint8_t *payload, size_t len, N2kSpeed *out)
+proto_bool protocore_n2k_decode_speed(const uint8_t *payload, size_t len, N2kSpeed *out)
 {
     if (!payload || !out || len < 6) // sid(1) + water(2) + ground(2) + type(1)
     {
@@ -387,7 +388,7 @@ proto_bool pc_n2k_decode_speed(const uint8_t *payload, size_t len, N2kSpeed *out
     return PROTO_TRUE;
 }
 
-proto_bool pc_n2k_decode_water_depth(const uint8_t *payload, size_t len, N2kWaterDepth *out)
+proto_bool protocore_n2k_decode_water_depth(const uint8_t *payload, size_t len, N2kWaterDepth *out)
 {
     if (!payload || !out || len < 7) // SID(1) + depth(4) + offset(2)
     {
@@ -401,7 +402,7 @@ proto_bool pc_n2k_decode_water_depth(const uint8_t *payload, size_t len, N2kWate
     return PROTO_TRUE;
 }
 
-proto_bool pc_n2k_decode_vessel_heading(const uint8_t *payload, size_t len, N2kVesselHeading *out)
+proto_bool protocore_n2k_decode_vessel_heading(const uint8_t *payload, size_t len, N2kVesselHeading *out)
 {
     if (!payload || !out || len < 8)
     {
@@ -417,4 +418,4 @@ proto_bool pc_n2k_decode_vessel_heading(const uint8_t *payload, size_t len, N2kV
     return PROTO_TRUE;
 }
 
-#endif // PC_ENABLE_NMEA2000
+#endif // PROTOCORE_ENABLE_NMEA2000

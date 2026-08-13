@@ -5,7 +5,7 @@
 # this rig (MAC ...:73:1c) is an OCTAL-PSRAM DevKitC-1, so PSRAM=opi; the quad board needs
 # PSRAM=enabled and giving it opi stops it booting with
 #   E (189) quad_psram: PSRAM chip is not connected, or wrong PSRAM line mode
-# Override with PC_FQBN if flashing the other board.
+# Override with PROTOCORE_FQBN if flashing the other board.
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -13,7 +13,7 @@ ROOT=$(git rev-parse --show-toplevel)
 SKETCH="$PWD/S3SwarBench"
 SHARED="$ROOT/test/penetration_testing/rig_firmware/src/main_swarbench.cpp"
 ACLI=$(command -v arduino-cli || echo "$HOME/bin/arduino-cli")
-FQBN="${PC_FQBN:-esp32:esp32:esp32s3:PSRAM=opi,FlashMode=qio,FlashSize=16M,CDCOnBoot=cdc,USBMode=hwcdc}"
+FQBN="${PROTOCORE_FQBN:-esp32:esp32:esp32s3:PSRAM=opi,FlashMode=qio,FlashSize=16M,CDCOnBoot=cdc,USBMode=hwcdc}"
 
 # src/ goes on the include path directly instead of the tree being attached as a named library. The
 # sibling benches attach it, which also compiles every other header it reaches - and while the C

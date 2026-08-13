@@ -1,6 +1,6 @@
 # ESP32-S3 test-rig firmware
 
-The **target firmware** for the network attack tool (`../pc_pentest.py`) and the JTAG
+The **target firmware** for the network attack tool (`../protocore_pentest.py`) and the JTAG
 perf-profiling harness. It brings up `PC` on a broad feature set and exposes the
 oracle endpoints the tools rely on, so attacks and benchmarks run against a real device.
 
@@ -77,9 +77,9 @@ git rev-parse HEAD            # library commit under test
 ### Firmware migration status (envs)
 
 The **slim** rigs are current with the `pc_` API rename (7.0.0) and the crypto consolidation, and build
-green on the stock core: **`rig_s3_ssh`** (SSH server; also carries the `PC_SSH_KEX_BENCH` wall-clock probe),
+green on the stock core: **`rig_s3_ssh`** (SSH server; also carries the `PROTOCORE_SSH_KEX_BENCH` wall-clock probe),
 **`rig_s3_tls`** (HTTPS), **`rig_s3_smb`** (SMB2 client). Two mains still use pre-`pc_`/pre-consolidation
-symbols and are **not migrated**: the full **`rig_s3`** (`main.cpp`, ~45 `pc_client_*`/`pc_hex_*`/`PC_`
+symbols and are **not migrated**: the full **`rig_s3`** (`main.cpp`, ~45 `protocore_client_*`/`protocore_hex_*`/`PROTOCORE_`
 call sites; also needs the PSRAM arena + a rebuilt arduino-cli core, so it does not build on the stock
 toolchain here) and **`rig_s3_cryptobench`** (`main_cryptobench.cpp`, ~8 renamed crypto symbols such as
 `quic_hkdf_*`/`mlkem768_encaps`/`dtls_*` and the moved `ssh_sha512.h`). Both are a separate, HW-verified
@@ -92,14 +92,14 @@ Do **not** `pio monitor` - RTS auto-reset wedges the S3 USB-JTAG. Use the non-re
 (one per rig) and grep its rolling log:
 
 ```sh
-pc_serial_logger.py /dev/ttyACM0 ~/serial-ttyACM0.log &
+protocore_serial_logger.py /dev/ttyACM0 ~/serial-ttyACM0.log &
 grep -a 'RIG_IP=' ~/serial-ttyACM0.log | tail -1
 ```
 
 ## Attack it
 
 ```sh
-python3 ../pc_pentest.py --host <rig-ip> --diag --intensity high --json report.json --authorized
+python3 ../protocore_pentest.py --host <rig-ip> --diag --intensity high --json report.json --authorized
 ```
 
 ## JTAG perf profiling (cycle-accurate)

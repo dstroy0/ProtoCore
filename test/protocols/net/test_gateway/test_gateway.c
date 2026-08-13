@@ -8,9 +8,9 @@
 // <prefix>/<port>/<addr>; and the port table limits hold. Pure host tests; the DMA +
 // FORWARD-lane ingest that feeds it is covered by native_dma and native_forward.
 //
-// The env sizes PC_GW_MAX_PORTS = 4.
+// The env sizes PROTOCORE_GW_MAX_PORTS = 4.
 
-#include "server/clock/clock.h" // pc_set_clock(): the one time source the rate window reads
+#include "server/clock/clock.h" // protocore_set_clock(): the one time source the rate window reads
 #include "services/net/gateway/gateway.h"
 #include <string.h>
 
@@ -25,13 +25,13 @@ typedef struct
     uint16_t len;
     int16_t rssi;
     uint8_t port_id;
-    pc_gateway_kind kind;
+    protocore_gateway_kind kind;
 } UpMsg;
 static UpMsg g_up[64];
 static size_t g_up_n;
 static proto_bool g_up_accept = PROTO_TRUE;
 
-static proto_bool cap_uplink(const pc_gateway_msg *m, void *)
+static proto_bool cap_uplink(const protocore_gateway_msg *m, void *)
 {
     if (!g_up_accept)
     {
@@ -82,24 +82,24 @@ static proto_bool cap_tx(uint8_t port, uint16_t dst, const uint8_t *d, uint16_t 
     return PROTO_TRUE;
 }
 
-static proto_bool add_port(uint8_t id, pc_gateway_kind kind, uint16_t rate, proto_bool withtx)
+static proto_bool add_port(uint8_t id, protocore_gateway_kind kind, uint16_t rate, proto_bool withtx)
 {
-    pc_gateway_port_config c = {0};
+    protocore_gateway_port_config c = {0};
     c.port_id = id;
     c.kind = kind;
     c.tx = withtx ? cap_tx : NULL;
     c.rate_cap = rate;
-    return pc_gateway_add_port(&c);
+    return protocore_gateway_add_port(&c);
 }
 
-static pc_gateway_stats stats()
+static protocore_gateway_stats stats()
 {
-    pc_gateway_stats st;
-    pc_gateway_get_stats(&st);
+    protocore_gateway_stats st;
+    protocore_gateway_get_stats(&st);
     return st;
 }
 
-// The library's one time source, driven from the test. The uplink rate window reads pc_millis()
+// The library's one time source, driven from the test. The uplink rate window reads protocore_millis()
 // like every other module, so stepping it means installing a clock, not reaching into the gateway.
 static uint32_t g_now_ms;
 static uint32_t test_clock(void)
@@ -117,25 +117,25 @@ void setUp()
     g_down_n = 0;
     g_up_accept = PROTO_TRUE;
     g_tx_accept = PROTO_TRUE;
-    pc_gateway_reset();
-    pc_set_clock(test_clock, 1000);
+    protocore_gateway_reset();
+    protocore_set_clock(test_clock, 1000);
     set_now(0);
 }
 void tearDown()
 {
-    pc_gateway_reset();
+    protocore_gateway_reset();
 }
 
 void test_uplink_envelopes_and_publishes()
 {
-    TEST_ASSERT_TRUE(add_port(0, PC_GW_LORA, 0, PROTO_FALSE));
-    pc_gateway_set_uplink_cb(cap_uplink, NULL);
+    TEST_ASSERT_TRUE(add_port(0, PROTOCORE_GW_LORA, 0, PROTO_FALSE));
+    protocore_gateway_set_uplink_cb(cap_uplink, NULL);
     const uint8_t hi[2] = {'h', 'i'};
-    TEST_ASSERT_TRUE(pc_gateway_uplink(0, 0x42, hi, 2, -50));
+    TEST_ASSERT_TRUE(protocore_gateway_uplink(0, 0x42, hi, 2, -50));
     TEST_ASSERT_EQUAL_size_t(1, g_up_n);
     TEST_ASSERT_EQUAL_UINT16(0x42, g_up[0].src_addr);
     TEST_ASSERT_EQUAL_UINT8(0, g_up[0].port_id);
-    TEST_ASSERT_EQUAL_UINT8(PC_GW_LORA, g_up[0].kind);
+    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_GW_LORA, g_up[0].kind);
     TEST_ASSERT_EQUAL_INT16(-50, g_up[0].rssi);
     TEST_ASSERT_EQUAL_UINT32(0, g_up[0].seq);
     TEST_ASSERT_EQUAL_MEMORY(hi, g_up[0].payload, 2);
@@ -144,53 +144,53 @@ void test_uplink_envelopes_and_publishes()
 
 void test_uplink_no_sink_drops()
 {
-    add_port(0, PC_GW_LORA, 0, PROTO_FALSE); // no pc_gateway_set_uplink_cb()
+    add_port(0, PROTOCORE_GW_LORA, 0, PROTO_FALSE); // no protocore_gateway_set_uplink_cb()
     const uint8_t x[1] = {1};
-    TEST_ASSERT_FALSE(pc_gateway_uplink(0, 1, x, 1, 0));
+    TEST_ASSERT_FALSE(protocore_gateway_uplink(0, 1, x, 1, 0));
     TEST_ASSERT_EQUAL_UINT32(1, stats().up_dropped);
     TEST_ASSERT_EQUAL_UINT32(0, stats().up_published);
 }
 
 void test_uplink_unknown_port_drops()
 {
-    pc_gateway_set_uplink_cb(cap_uplink, NULL);
+    protocore_gateway_set_uplink_cb(cap_uplink, NULL);
     const uint8_t x[1] = {1};
-    TEST_ASSERT_FALSE(pc_gateway_uplink(9, 1, x, 1, 0)); // port 9 never registered
+    TEST_ASSERT_FALSE(protocore_gateway_uplink(9, 1, x, 1, 0)); // port 9 never registered
     TEST_ASSERT_EQUAL_UINT32(1, stats().up_dropped);
     TEST_ASSERT_EQUAL_size_t(0, g_up_n);
 }
 
 void test_uplink_rate_cap()
 {
-    add_port(0, PC_GW_NRF24, 2, PROTO_FALSE); // 2 uplinks / second
-    pc_gateway_set_uplink_cb(cap_uplink, NULL);
+    add_port(0, PROTOCORE_GW_NRF24, 2, PROTO_FALSE); // 2 uplinks / second
+    protocore_gateway_set_uplink_cb(cap_uplink, NULL);
     const uint8_t x[1] = {7};
-    TEST_ASSERT_TRUE(pc_gateway_uplink(0, 1, x, 1, 0));
-    TEST_ASSERT_TRUE(pc_gateway_uplink(0, 1, x, 1, 0));
-    TEST_ASSERT_FALSE(pc_gateway_uplink(0, 1, x, 1, 0)); // 3rd in the window -> dropped
+    TEST_ASSERT_TRUE(protocore_gateway_uplink(0, 1, x, 1, 0));
+    TEST_ASSERT_TRUE(protocore_gateway_uplink(0, 1, x, 1, 0));
+    TEST_ASSERT_FALSE(protocore_gateway_uplink(0, 1, x, 1, 0)); // 3rd in the window -> dropped
     TEST_ASSERT_EQUAL_size_t(2, g_up_n);
     TEST_ASSERT_EQUAL_UINT32(1, stats().up_dropped);
     set_now(1000); // next window
-    TEST_ASSERT_TRUE(pc_gateway_uplink(0, 1, x, 1, 0));
+    TEST_ASSERT_TRUE(protocore_gateway_uplink(0, 1, x, 1, 0));
     TEST_ASSERT_EQUAL_size_t(3, g_up_n);
 }
 
 void test_uplink_sink_refusal_counted()
 {
-    add_port(0, PC_GW_LORA, 0, PROTO_FALSE);
-    pc_gateway_set_uplink_cb(cap_uplink, NULL);
+    add_port(0, PROTOCORE_GW_LORA, 0, PROTO_FALSE);
+    protocore_gateway_set_uplink_cb(cap_uplink, NULL);
     g_up_accept = PROTO_FALSE; // northbound stack refuses
     const uint8_t x[1] = {1};
-    TEST_ASSERT_FALSE(pc_gateway_uplink(0, 1, x, 1, 0));
+    TEST_ASSERT_FALSE(protocore_gateway_uplink(0, 1, x, 1, 0));
     TEST_ASSERT_EQUAL_UINT32(1, stats().up_dropped);
     TEST_ASSERT_EQUAL_UINT32(0, stats().up_published);
 }
 
 void test_downlink_transmits()
 {
-    add_port(0, PC_GW_LORA, 0, PROTO_TRUE); // with a tx callback
+    add_port(0, PROTOCORE_GW_LORA, 0, PROTO_TRUE); // with a tx callback
     const uint8_t cmd[3] = {'c', 'm', 'd'};
-    TEST_ASSERT_TRUE(pc_gateway_downlink(0, 0x10, cmd, 3));
+    TEST_ASSERT_TRUE(protocore_gateway_downlink(0, 0x10, cmd, 3));
     TEST_ASSERT_EQUAL_size_t(1, g_down_n);
     TEST_ASSERT_EQUAL_UINT8(0, g_down[0].port_id);
     TEST_ASSERT_EQUAL_UINT16(0x10, g_down[0].dst);
@@ -200,64 +200,64 @@ void test_downlink_transmits()
 
 void test_downlink_no_tx_or_unknown_port_drops()
 {
-    add_port(0, PC_GW_LORA, 0, PROTO_FALSE); // receive-only (null tx)
+    add_port(0, PROTOCORE_GW_LORA, 0, PROTO_FALSE); // receive-only (null tx)
     const uint8_t x[1] = {1};
-    TEST_ASSERT_FALSE(pc_gateway_downlink(0, 1, x, 1)); // no tx
-    TEST_ASSERT_FALSE(pc_gateway_downlink(9, 1, x, 1)); // unknown port
+    TEST_ASSERT_FALSE(protocore_gateway_downlink(0, 1, x, 1)); // no tx
+    TEST_ASSERT_FALSE(protocore_gateway_downlink(9, 1, x, 1)); // unknown port
     TEST_ASSERT_EQUAL_UINT32(2, stats().down_dropped);
 }
 
 void test_downlink_tx_refusal_counted()
 {
-    add_port(0, PC_GW_LORA, 0, PROTO_TRUE);
+    add_port(0, PROTOCORE_GW_LORA, 0, PROTO_TRUE);
     g_tx_accept = PROTO_FALSE; // radio refuses
     const uint8_t x[1] = {1};
-    TEST_ASSERT_FALSE(pc_gateway_downlink(0, 1, x, 1));
+    TEST_ASSERT_FALSE(protocore_gateway_downlink(0, 1, x, 1));
     TEST_ASSERT_EQUAL_UINT32(1, stats().down_dropped);
     TEST_ASSERT_EQUAL_UINT32(0, stats().down_sent);
 }
 
 void test_topic_format()
 {
-    pc_gateway_msg m = {0};
+    protocore_gateway_msg m = {0};
     m.port_id = 2;
     m.src_addr = 0x42; // 66
     char buf[32];
-    uint16_t n = pc_gateway_topic(&m, buf, sizeof(buf));
+    uint16_t n = protocore_gateway_topic(&m, buf, sizeof(buf));
     TEST_ASSERT_EQUAL_STRING("gw/2/66", buf);
     TEST_ASSERT_EQUAL_UINT16(7, n);
 
-    pc_gateway_set_topic_prefix("lora");
-    n = pc_gateway_topic(&m, buf, sizeof(buf));
+    protocore_gateway_set_topic_prefix("lora");
+    n = protocore_gateway_topic(&m, buf, sizeof(buf));
     TEST_ASSERT_EQUAL_STRING("lora/2/66", buf);
 
-    pc_gateway_set_topic_prefix(NULL); // null -> falls back to PC_GW_DEFAULT_PREFIX
-    n = pc_gateway_topic(&m, buf, sizeof(buf));
+    protocore_gateway_set_topic_prefix(NULL); // null -> falls back to PROTOCORE_GW_DEFAULT_PREFIX
+    n = protocore_gateway_topic(&m, buf, sizeof(buf));
     TEST_ASSERT_EQUAL_STRING("gw/2/66", buf);
 
     char tiny[4];
-    TEST_ASSERT_EQUAL_UINT16(0, pc_gateway_topic(&m, tiny, sizeof(tiny))); // too small -> 0
-    TEST_ASSERT_EQUAL_UINT16(0, pc_gateway_topic(&m, NULL, sizeof(buf)));  // null buf -> 0
+    TEST_ASSERT_EQUAL_UINT16(0, protocore_gateway_topic(&m, tiny, sizeof(tiny))); // too small -> 0
+    TEST_ASSERT_EQUAL_UINT16(0, protocore_gateway_topic(&m, NULL, sizeof(buf)));  // null buf -> 0
 }
 
 void test_add_port_validation_and_table_full()
 {
-    TEST_ASSERT_FALSE(pc_gateway_add_port(NULL));
-    TEST_ASSERT_TRUE(add_port(0, PC_GW_LORA, 0, PROTO_FALSE));
-    TEST_ASSERT_FALSE(add_port(0, PC_GW_LORA, 0, PROTO_FALSE)); // duplicate id
-    TEST_ASSERT_TRUE(add_port(1, PC_GW_NRF24, 0, PROTO_FALSE));
-    TEST_ASSERT_TRUE(add_port(2, PC_GW_ZIGBEE, 0, PROTO_FALSE));
-    TEST_ASSERT_TRUE(add_port(3, PC_GW_BLE, 0, PROTO_FALSE));
-    TEST_ASSERT_FALSE(add_port(4, PC_GW_LORA, 0, PROTO_FALSE)); // table full (PC_GW_MAX_PORTS = 4)
+    TEST_ASSERT_FALSE(protocore_gateway_add_port(NULL));
+    TEST_ASSERT_TRUE(add_port(0, PROTOCORE_GW_LORA, 0, PROTO_FALSE));
+    TEST_ASSERT_FALSE(add_port(0, PROTOCORE_GW_LORA, 0, PROTO_FALSE)); // duplicate id
+    TEST_ASSERT_TRUE(add_port(1, PROTOCORE_GW_NRF24, 0, PROTO_FALSE));
+    TEST_ASSERT_TRUE(add_port(2, PROTOCORE_GW_ZIGBEE, 0, PROTO_FALSE));
+    TEST_ASSERT_TRUE(add_port(3, PROTOCORE_GW_BLE, 0, PROTO_FALSE));
+    TEST_ASSERT_FALSE(add_port(4, PROTOCORE_GW_LORA, 0, PROTO_FALSE)); // table full (PROTOCORE_GW_MAX_PORTS = 4)
 }
 
 void test_seq_increments_per_uplink()
 {
-    add_port(0, PC_GW_LORA, 0, PROTO_FALSE);
-    pc_gateway_set_uplink_cb(cap_uplink, NULL);
+    add_port(0, PROTOCORE_GW_LORA, 0, PROTO_FALSE);
+    protocore_gateway_set_uplink_cb(cap_uplink, NULL);
     const uint8_t x[1] = {1};
-    pc_gateway_uplink(0, 1, x, 1, 0);
-    pc_gateway_uplink(0, 2, x, 1, 0);
+    protocore_gateway_uplink(0, 1, x, 1, 0);
+    protocore_gateway_uplink(0, 2, x, 1, 0);
     TEST_ASSERT_EQUAL_size_t(2, g_up_n);
     TEST_ASSERT_EQUAL_UINT32(0, g_up[0].seq);
     TEST_ASSERT_EQUAL_UINT32(1, g_up[1].seq);
@@ -265,28 +265,28 @@ void test_seq_increments_per_uplink()
 
 void test_topic_zero_and_overflow_steps()
 {
-    pc_gateway_reset();
-    pc_gateway_set_topic_prefix("gw");
+    protocore_gateway_reset();
+    protocore_gateway_set_topic_prefix("gw");
     char buf[64];
-    pc_gateway_msg m = {0};
+    protocore_gateway_msg m = {0};
     m.port_id = 0; // zero -> put_u32 '0' branch
     m.src_addr = 0;
-    TEST_ASSERT_TRUE(pc_gateway_topic(&m, buf, sizeof(buf)) > 0);
-    TEST_ASSERT_EQUAL_UINT16(0, pc_gateway_topic(NULL, buf, sizeof(buf))); // null msg
-    TEST_ASSERT_EQUAL_UINT16(0, pc_gateway_topic(&m, buf, 0));             // zero buflen
+    TEST_ASSERT_TRUE(protocore_gateway_topic(&m, buf, sizeof(buf)) > 0);
+    TEST_ASSERT_EQUAL_UINT16(0, protocore_gateway_topic(NULL, buf, sizeof(buf))); // null msg
+    TEST_ASSERT_EQUAL_UINT16(0, protocore_gateway_topic(&m, buf, 0));             // zero buflen
     for (uint16_t cap = 1; cap <= 6; cap++)                                // fail at successive append steps:
     {
-        TEST_ASSERT_EQUAL_UINT16(0, pc_gateway_topic(&m, buf, cap)); // prefix, both '/'s, both digits
+        TEST_ASSERT_EQUAL_UINT16(0, protocore_gateway_topic(&m, buf, cap)); // prefix, both '/'s, both digits
     }
 }
 
 void test_get_stats_null_out_is_noop()
 {
-    add_port(0, PC_GW_LORA, 0, PROTO_FALSE);
-    pc_gateway_set_uplink_cb(cap_uplink, NULL);
+    add_port(0, PROTOCORE_GW_LORA, 0, PROTO_FALSE);
+    protocore_gateway_set_uplink_cb(cap_uplink, NULL);
     const uint8_t x[1] = {1};
-    pc_gateway_uplink(0, 1, x, 1, 0);
-    pc_gateway_get_stats(NULL);                        // out == nullptr -> must not write/crash
+    protocore_gateway_uplink(0, 1, x, 1, 0);
+    protocore_gateway_get_stats(NULL);                        // out == nullptr -> must not write/crash
     TEST_ASSERT_EQUAL_UINT32(1, stats().up_published); // real stats unaffected
 }
 

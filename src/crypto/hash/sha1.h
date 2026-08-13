@@ -20,15 +20,15 @@
 #include <stdint.h>
 
 /** @brief SHA-1 digest length in bytes. */
-#define PC_SHA1_DIGEST_LEN 20
+#define PROTOCORE_SHA1_DIGEST_LEN 20
 
 /**
  * @brief Compute a SHA-1 digest over an arbitrary byte buffer.
  *
  * @param data    Input bytes.
  * @param len     Number of input bytes.
- * @param digest  Output buffer; must be at least PC_SHA1_DIGEST_LEN bytes.
+ * @param digest  Output buffer; must be at least PROTOCORE_SHA1_DIGEST_LEN bytes.
  */
-void pc_sha1(const uint8_t *data, size_t len, uint8_t digest[PC_SHA1_DIGEST_LEN]);
+void protocore_sha1(const uint8_t *data, size_t len, uint8_t digest[PROTOCORE_SHA1_DIGEST_LEN]);
 
 #endif // PROTOCORE_SHA1_H

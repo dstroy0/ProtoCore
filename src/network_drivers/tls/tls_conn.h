@@ -5,8 +5,8 @@
  * @file tls_conn.h
  * @brief TLS 1.3 handshake driver over the stream record layer (RFC 8446 sec 4).
  *
- * The TCP counterpart to pc_dtls_conn: it drives one TLS 1.3 handshake to completion over
- * pc_tls_record, wiring the shared message builders (pc_tls13_msg) and key schedule (pc_tls13_kdf)
+ * The TCP counterpart to protocore_dtls_conn: it drives one TLS 1.3 handshake to completion over
+ * protocore_tls_record, wiring the shared message builders (protocore_tls13_msg) and key schedule (protocore_tls13_kdf)
  * to a byte stream. TCP delivers in order and exactly once, so there is no flight buffer, no
  * retransmission timer and no reassembler - what remains is the transcript hash, the schedule, and
  * a phase.
@@ -22,12 +22,12 @@
  *
  * Profile: the single spec-valid suite the whole hand-rolled TLS 1.3 stack uses -
  * TLS_AES_128_GCM_SHA256, X25519 key exchange, an Ed25519 credential. Per
- * core_setup/board_profiles/pc_platform.h the portable arm authenticates by RFC 7250 raw public
+ * core_setup/board_profiles/protocore_platform.h the portable arm authenticates by RFC 7250 raw public
  * key: there is no X.509 chain building, no name matching, and no RSA or ECDSA. A peer that offers
  * none of the profile is a handshake failure.
  *
  * Nothing here blocks and nothing here owns a socket. The caller feeds received bytes and sends
- * whatever @ref TlsConnNs::process writes back, exactly as pc_dtls_conn is fed datagrams.
+ * whatever @ref TlsConnNs::process writes back, exactly as protocore_dtls_conn is fed datagrams.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -38,9 +38,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_TLS_SOFTWARE
+#if PROTOCORE_TLS_SOFTWARE
 
 #include "crypto/hash/sha256.h"
 #include "network_drivers/presentation/http/http3/tls13_msg.h"
@@ -88,7 +88,7 @@ typedef struct
  * @brief One TLS 1.3 handshake: the session state, and the three regions of one secure-pool borrow.
  *
  * The borrow is taken once by @ref TlsConnNs::init from the pool's persistent end and split by
- * offset - TX at 0, RX at PC_TLS_CONN_MSG_CAP, TERMS after it. No storage is declared here: a
+ * offset - TX at 0, RX at PROTOCORE_TLS_CONN_MSG_CAP, TERMS after it. No storage is declared here: a
  * message is built in TX and handed to the record layer, a record is opened into RX, and the four
  * 32-byte handshake terms sit in TERMS. No heap.
  */
@@ -99,21 +99,21 @@ typedef struct
     TlsRole role;
     uint8_t alert; ///< RFC 8446 sec 6 alert code when @c state is FAILED (0 otherwise)
 
-    pc_sha256_ctx transcript; ///< running Transcript-Hash over the handshake messages
-    Tls13KeySchedule ks;      ///< TLS 1.3 key schedule
-    TlsRecordKeys hs_tx;      ///< handshake traffic keys, this end writing
-    TlsRecordKeys hs_rx;      ///< handshake traffic keys, this end reading
-    TlsRecordKeys ap_tx;      ///< application traffic keys, this end writing
-    TlsRecordKeys ap_rx;      ///< application traffic keys, this end reading
-    proto_bool hs_keys_ready; ///< the handshake traffic keys are installed
-    proto_bool ap_keys_ready; ///< the application traffic keys are installed
+    protocore_sha256_ctx transcript; ///< running Transcript-Hash over the handshake messages
+    Tls13KeySchedule ks;             ///< TLS 1.3 key schedule
+    TlsRecordKeys hs_tx;             ///< handshake traffic keys, this end writing
+    TlsRecordKeys hs_rx;             ///< handshake traffic keys, this end reading
+    TlsRecordKeys ap_tx;             ///< application traffic keys, this end writing
+    TlsRecordKeys ap_rx;             ///< application traffic keys, this end reading
+    proto_bool hs_keys_ready;        ///< the handshake traffic keys are installed
+    proto_bool ap_keys_ready;        ///< the application traffic keys are installed
 
-    uint8_t *tx;             ///< PC_TLS_CONN_MSG_CAP: a message built to send, or a received record opened into it
-    uint8_t *rx;             ///< PC_TLS_CONN_REC_CAP: the record the worker filled
-    uint8_t *terms;          ///< PC_TLS_CONN_TERMS_CAP: the five 32-byte terms, at TLS_TERM_* offsets
-    uint8_t *hash_work;      ///< PC_SHA256_BORROW: the bytes @ref transcript works out of
-    uint8_t *sign_work;      ///< PC_SHA512_BORROW: the bytes the CertificateVerify signature works out of
-    uint8_t *ks_work;        ///< PC_TLS13_KS_BORROW: the bytes the key schedule works out of
+    uint8_t *tx;        ///< PROTOCORE_TLS_CONN_MSG_CAP: a message built to send, or a received record opened into it
+    uint8_t *rx;        ///< PROTOCORE_TLS_CONN_REC_CAP: the record the worker filled
+    uint8_t *terms;     ///< PROTOCORE_TLS_CONN_TERMS_CAP: the five 32-byte terms, at TLS_TERM_* offsets
+    uint8_t *hash_work; ///< PROTOCORE_SHA256_BORROW: the bytes @ref transcript works out of
+    uint8_t *sign_work; ///< PROTOCORE_SHA512_BORROW: the bytes the CertificateVerify signature works out of
+    uint8_t *ks_work;   ///< PROTOCORE_TLS13_KS_BORROW: the bytes the key schedule works out of
     Tls13ClientHello *hello; ///< the peer's parsed ClientHello
 } TlsConn;
 
@@ -146,8 +146,8 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern const TlsConnNs TlsConnection;
 
-#endif // PC_TLS_SOFTWARE
+#endif // PROTOCORE_TLS_SOFTWARE
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_TLS_CONN_H

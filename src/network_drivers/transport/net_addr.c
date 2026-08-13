@@ -3,13 +3,13 @@
 
 /**
  * @file net_addr.c
- * @brief The stack address to pc_ip mapping. See net_addr.h.
+ * @brief The stack address to protocore_ip mapping. See net_addr.h.
  */
 
 #include "network_drivers/transport/net_addr.h"
 #include "mmgr/rawmemcpy.h" // proto_raw_read: the byte reads of the stack's address words
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
 /**
  * @brief Read the stack's address into @p out, network-order bytes preserved.
@@ -18,31 +18,31 @@ PROTO_BEGIN_DECLS
  * accessor yields one word holding the four octets in network order, so the octets are read out of
  * that word's bytes rather than shifted out of its value.
  */
-static void to_ip(const pc_net_ip *a, pc_ip *out)
+static void to_ip(const protocore_net_ip *a, protocore_ip *out)
 {
     if (out == NULL)
     {
         return;
     }
-    pc_ip empty = {PC_IP_NONE, {0}};
+    protocore_ip empty = {PROTOCORE_IP_NONE, {0}};
     *out = empty;
     if (a == NULL)
     {
         return;
     }
-#if PC_NET_HAS_IPV6
-    if (pc_net_ip_is_v6(a))
+#if PROTOCORE_NET_HAS_IPV6
+    if (protocore_net_ip_is_v6(a))
     {
-        *out = pc_ip_from_v6_bytes(pc_net_ip6_bytes(a));
+        *out = protocore_ip_from_v6_bytes(protocore_net_ip6_bytes(a));
         return;
     }
 #endif
-    if (!pc_net_ip_is_v4(a))
+    if (!protocore_net_ip_is_v4(a))
     {
-        return; // a family this stack did not tag v4; out stays PC_IP_NONE
+        return; // a family this stack did not tag v4; out stays PROTOCORE_IP_NONE
     }
-    uint32_t raw = pc_net_ip4_u32(pc_net_ip_as_v4(a));
-    *out = pc_ip_from_v4_octets(0, 0, 0, 0);
+    uint32_t raw = protocore_net_ip4_u32(protocore_net_ip_as_v4(a));
+    *out = protocore_ip_from_v4_octets(0, 0, 0, 0);
     proto_raw_read(out->bytes, (const uint8_t *)&raw, 4);
 }
 
@@ -53,36 +53,36 @@ static void to_ip(const pc_net_ip *a, pc_ip *out)
  * address is tagged first and then takes its sixteen bytes, which are the four network-order words.
  * A v6 address on a stack built without v6 leaves @p out unspecified and reports false.
  */
-static proto_bool from_ip(const pc_ip *a, pc_net_ip *out)
+static proto_bool from_ip(const protocore_ip *a, protocore_net_ip *out)
 {
     if (out == NULL)
     {
         return PROTO_FALSE;
     }
-    pc_net_ip4_set(out, 0, 0, 0, 0);
+    protocore_net_ip4_set(out, 0, 0, 0, 0);
     if (a == NULL)
     {
         return PROTO_FALSE;
     }
-    if (a->family == PC_IP_V6)
+    if (a->family == PROTOCORE_IP_V6)
     {
-#if PC_NET_HAS_IPV6
-        pc_net_ip6_mark(out);
-        proto_raw_read(pc_net_ip6_wbytes(out), a->bytes, 16);
+#if PROTOCORE_NET_HAS_IPV6
+        protocore_net_ip6_mark(out);
+        proto_raw_read(protocore_net_ip6_wbytes(out), a->bytes, 16);
         return PROTO_TRUE;
 #else
         return PROTO_FALSE;
 #endif
     }
-    if (a->family != PC_IP_V4)
+    if (a->family != PROTOCORE_IP_V4)
     {
         return PROTO_FALSE;
     }
-    pc_net_ip4_set(out, a->bytes[0], a->bytes[1], a->bytes[2], a->bytes[3]);
+    protocore_net_ip4_set(out, a->bytes[0], a->bytes[1], a->bytes[2], a->bytes[3]);
     return PROTO_TRUE;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
 const NetAddrNs NetAddr = {.to_ip = to_ip, .from_ip = from_ip};
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS

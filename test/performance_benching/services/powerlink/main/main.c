@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // On-device CCOUNT microbenchmark for the Ethernet POWERLINK basic frame codec (services/fieldbus/powerlink):
-// building the four cyclic EPL messages - SoC / PReq / PRes via pc_epl_soc/preq/pres (each a thin
-// wrapper over pc_epl_build, which lays down [messageType][dest][source][payload...]) - and parsing a
-// received frame back into an EplFrame with pc_epl_parse. All pure, zero heap, no stdlib: like
+// building the four cyclic EPL messages - SoC / PReq / PRes via protocore_epl_soc/preq/pres (each a thin
+// wrapper over protocore_epl_build, which lays down [messageType][dest][source][payload...]) - and parsing a
+// received frame back into an EplFrame with protocore_epl_parse. All pure, zero heap, no stdlib: like
 // services/fieldbus/modbus this is a pure protocol codec, so every call here exercises the real production code
 // path. Deliberately out of scope: the raw-L2 (ethertype 0x88AB) transmit and the isochronous MN cycle
 // timing (the preempting-task model) - those are the transport/scheduling half, not the frame codec, and
@@ -29,7 +29,7 @@ void dbench_run(void)
 
     // A pre-built PReq (MN 240 -> CN 5, 4-byte PDO) to feed the parse bench: [PREQ][dest][src][payload].
     static uint8_t preq_frame[16];
-    size_t preq_len = pc_epl_preq(5, EPL_NODE_MN, pdo, sizeof(pdo), preq_frame, sizeof(preq_frame));
+    size_t preq_len = protocore_epl_preq(5, EPL_NODE_MN, pdo, sizeof(pdo), preq_frame, sizeof(preq_frame));
 
     for (;;)
     {
@@ -38,14 +38,14 @@ void dbench_run(void)
         volatile bool bsink = false;
 
         // SoC: MN -> broadcast, no payload (start of the isochronous cycle).
-        DBENCH_OP("pc_epl_soc", 200000, sink += pc_epl_soc(EPL_NODE_MN, out, sizeof(out)));
+        DBENCH_OP("protocore_epl_soc", 200000, sink += protocore_epl_soc(EPL_NODE_MN, out, sizeof(out)));
         // PReq: MN -> CN 5 carrying the 4-byte output PDO.
-        DBENCH_OP("pc_epl_preq x4B", 200000, sink += pc_epl_preq(5, EPL_NODE_MN, pdo, sizeof(pdo), out, sizeof(out)));
+        DBENCH_OP("protocore_epl_preq x4B", 200000, sink += protocore_epl_preq(5, EPL_NODE_MN, pdo, sizeof(pdo), out, sizeof(out)));
         // PRes: CN 5 -> broadcast carrying its 4-byte input PDO.
-        DBENCH_OP("pc_epl_pres x4B", 200000, sink += pc_epl_pres(5, pdo, sizeof(pdo), out, sizeof(out)));
+        DBENCH_OP("protocore_epl_pres x4B", 200000, sink += protocore_epl_pres(5, pdo, sizeof(pdo), out, sizeof(out)));
         // Parse the pre-built PReq back into an EplFrame.
         EplFrame f;
-        DBENCH_OP("pc_epl_parse preq", 200000, bsink |= pc_epl_parse(preq_frame, preq_len, &f));
+        DBENCH_OP("protocore_epl_parse preq", 200000, bsink |= protocore_epl_parse(preq_frame, preq_len, &f));
 
         (void)sink;
         (void)bsink;

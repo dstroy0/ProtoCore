@@ -16,7 +16,7 @@
 void dbench_run(void)
 {
     static const uint8_t v6[16] = {0xfd, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1};
-    pc_ip br = pc_ip_from_v6_bytes(v6);
+    protocore_ip br = protocore_ip_from_v6_bytes(v6);
     static WisunNode storage[8];
     static WisunFan fan;
 
@@ -26,19 +26,19 @@ void dbench_run(void)
         volatile size_t sink = 0;
         static const uint8_t body[4] = {0x01, 0x02, 0x03, 0x04};
         static uint8_t out[128];
-        DBENCH_OP("pc_wisun_build_coap (CON PUT)", 200000,
-                  sink += pc_wisun_build_coap(WISUN_COAP_CON, WISUN_COAP_PUT, 0x1234, NULL, 0, "led", body,
-                                              sizeof(body), out, sizeof(out)));
-        pc_wisun_init(&fan, &br, storage, 8);
+        DBENCH_OP("protocore_wisun_build_coap (CON PUT)", 200000,
+                  sink += protocore_wisun_build_coap(WISUN_COAP_CON, WISUN_COAP_PUT, 0x1234, NULL, 0, "led", body,
+                                                     sizeof(body), out, sizeof(out)));
+        protocore_wisun_init(&fan, &br, storage, 8);
         uint8_t na[16] = {0xfd, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2};
-        DBENCH_OP("pc_wisun_node_register", 100000, {
+        DBENCH_OP("protocore_wisun_node_register", 100000, {
             na[15] = (uint8_t)(sink & 0x7F) + 2;
-            pc_ip addr = pc_ip_from_v6_bytes(na);
-            sink += (size_t)(pc_wisun_node_register(&fan, &addr, 0) >= 0 ? 1 : 0);
+            protocore_ip addr = protocore_ip_from_v6_bytes(na);
+            sink += (size_t)(protocore_wisun_node_register(&fan, &addr, 0) >= 0 ? 1 : 0);
         });
-        pc_ip find = pc_ip_from_v6_bytes(na);
+        protocore_ip find = protocore_ip_from_v6_bytes(na);
         size_t idx;
-        DBENCH_OP("pc_wisun_node_find", 200000, sink += pc_wisun_node_find(&fan, &find, &idx));
+        DBENCH_OP("protocore_wisun_node_find", 200000, sink += protocore_wisun_node_find(&fan, &find, &idx));
         (void)sink;
         DBENCH_DONE();
     }

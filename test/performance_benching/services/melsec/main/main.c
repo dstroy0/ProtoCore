@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // On-device CCOUNT microbenchmark for the Mitsubishi MELSEC MC binary 3E codec (services/fieldbus/melsec):
-// pc_melsec_build_read() emits a QnA-compatible batch-read request (little-endian subheader 0x5000,
-// command 0x0401, 24-bit head device + device code) into a caller buffer, and pc_melsec_parse_response()
+// protocore_melsec_build_read() emits a QnA-compatible batch-read request (little-endian subheader 0x5000,
+// command 0x0401, 24-bit head device + device code) into a caller buffer, and protocore_melsec_parse_response()
 // validates a 0xD000 response subheader/length/end-code and returns a view onto the read payload - both
 // pure (no sockets, no heap). Like performance_benching/device/modbus, this is a pure protocol codec with no hardware
 // involved, so every call here exercises the real production code path; the TCP/UDP send half is the
@@ -43,12 +43,12 @@ void dbench_run(void)
 
         // Batch-read request build: read 5 words of D100 (data register), monitoring timer 0x0010 -
         // the exact args from test_melsec's test_build_read_bytes. Cheap pure builder -> large N.
-        DBENCH_OP("pc_melsec_build_read D100 x5", 200000,
-                  sink += pc_melsec_build_read(req, sizeof(req), MELSEC_DEV_D, 100, 5, 0x0010));
+        DBENCH_OP("protocore_melsec_build_read D100 x5", 200000,
+                  sink += protocore_melsec_build_read(req, sizeof(req), MELSEC_DEV_D, 100, 5, 0x0010));
 
         // Response parse + validate over the known-good 0xD000 frame. Cheap pure parser -> large N.
-        DBENCH_OP("pc_melsec_parse_response ok", 200000,
-                  sinkb ^= pc_melsec_parse_response(resp_ok, sizeof(resp_ok), &parsed));
+        DBENCH_OP("protocore_melsec_parse_response ok", 200000,
+                  sinkb ^= protocore_melsec_parse_response(resp_ok, sizeof(resp_ok), &parsed));
 
         (void)sink;
         (void)sinkb;

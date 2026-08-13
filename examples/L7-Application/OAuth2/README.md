@@ -1,6 +1,6 @@
 # OAuth2 - authorization-code exchange
 
-**Layer:** L7 Application · **Build flags:** `PC_ENABLE_OAUTH2`, `PC_ENABLE_HTTP_CLIENT`
+**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_OAUTH2`, `PROTOCORE_ENABLE_HTTP_CLIENT`
 
 ## What this example teaches
 
@@ -14,19 +14,19 @@ _obtains_ the tokens.
 
 ```cpp
 const char *code = http_get_query(req, "code");
-pc_o_auth2_tokens t;
-int st = pc_oauth2_exchange_code(TOKEN_URL, code, REDIRECT_URI, CLIENT_ID, CLIENT_SECRET, nullptr, &t);
+protocore_o_auth2_tokens t;
+int st = protocore_oauth2_exchange_code(TOKEN_URL, code, REDIRECT_URI, CLIENT_ID, CLIENT_SECRET, nullptr, &t);
 if (st != 200) { /* 502 */ }
 // t.access_token / t.id_token / t.refresh_token are now populated
 ```
 
-`pc_oauth2_exchange_code()` POSTs the code to the token endpoint through the
+`protocore_oauth2_exchange_code()` POSTs the code to the token endpoint through the
 outbound HTTP client ([HttpClient](../HttpClient)) and fills a tokens struct.
 The `nullptr` argument is the PKCE `code_verifier` - pass it (and `nullptr` for the
 client secret) for a public client using PKCE instead of a client secret.
 
 **Next steps.** Pair this with [OidcAuth](../OidcAuth) to verify the returned
-`id_token`, and call `pc_oauth2_refresh()` later with the `refresh_token` for
+`id_token`, and call `protocore_oauth2_refresh()` later with the `refresh_token` for
 fresh access tokens. In production use `https://` token URLs and set a CA or pin on
 the HTTP client.
 
@@ -34,7 +34,7 @@ the HTTP client.
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_OAUTH2=1 -DPC_ENABLE_HTTP_CLIENT=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_OAUTH2=1 -DPROTOCORE_ENABLE_HTTP_CLIENT=1" \
   --lib="." examples/L7-Application/OAuth2/OAuth2.ino
 ```
 
@@ -52,8 +52,8 @@ explanatory comments:
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-#define PC_ENABLE_OAUTH2 1
-#define PC_ENABLE_HTTP_CLIENT 1
+#define PROTOCORE_ENABLE_OAUTH2 1
+#define PROTOCORE_ENABLE_HTTP_CLIENT 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -88,8 +88,8 @@ void setup()
             server.send(id, 400, "application/json", "{\"error\":\"missing code\"}");
             return;
         }
-        pc_o_auth2_tokens t;
-        int st = pc_oauth2_exchange_code(TOKEN_URL, code, REDIRECT_URI, CLIENT_ID, CLIENT_SECRET, nullptr, &t);
+        protocore_o_auth2_tokens t;
+        int st = protocore_oauth2_exchange_code(TOKEN_URL, code, REDIRECT_URI, CLIENT_ID, CLIENT_SECRET, nullptr, &t);
         if (st != 200)
         {
             char b[48];

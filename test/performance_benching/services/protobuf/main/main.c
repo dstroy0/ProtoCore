@@ -29,13 +29,13 @@
 static size_t pb_encode_sample(uint8_t *buf, size_t cap)
 {
     PbWriter w;
-    pc_pb_writer_init(&w, buf, cap);
-    pc_pb_uint64(&w, 1, 150);
-    pc_pb_string(&w, 2, "hi");
-    pc_pb_fixed32(&w, 3, 0x01020304);
-    pc_pb_double(&w, 4, 2.5);
-    pc_pb_sint64(&w, 5, -1234567);
-    return pc_pb_writer_finish(&w);
+    protocore_pb_writer_init(&w, buf, cap);
+    protocore_pb_uint64(&w, 1, 150);
+    protocore_pb_string(&w, 2, "hi");
+    protocore_pb_fixed32(&w, 3, 0x01020304);
+    protocore_pb_double(&w, 4, 2.5);
+    protocore_pb_sint64(&w, 5, -1234567);
+    return protocore_pb_writer_finish(&w);
 }
 
 // Cursor-read every field in `buf`; returns the field count (the reader stops at end-of-buffer).
@@ -44,7 +44,7 @@ static size_t pb_decode_all(const uint8_t *buf, size_t len)
     size_t pos = 0;
     size_t count = 0;
     PbField f;
-    while (pc_pb_read_field(buf, len, &pos, &f))
+    while (protocore_pb_read_field(buf, len, &pos, &f))
     {
         count++;
     }
@@ -55,9 +55,9 @@ static size_t pb_decode_all(const uint8_t *buf, size_t len)
 static size_t pb_write_one_varint(uint8_t *buf, size_t cap, uint64_t v)
 {
     PbWriter w;
-    pc_pb_writer_init(&w, buf, cap);
-    pc_pb_write_varint(&w, v);
-    return pc_pb_writer_finish(&w);
+    protocore_pb_writer_init(&w, buf, cap);
+    protocore_pb_write_varint(&w, v);
+    return protocore_pb_writer_finish(&w);
 }
 
 // Decode a single raw varint from `buf`; returns its value (0 on malformed).
@@ -65,7 +65,7 @@ static uint64_t pb_read_one_varint(const uint8_t *buf, size_t len)
 {
     size_t pos = 0;
     uint64_t v = 0;
-    pc_pb_read_varint(buf, len, &pos, &v);
+    protocore_pb_read_varint(buf, len, &pos, &v);
     return v;
 }
 
@@ -85,13 +85,13 @@ void dbench_run(void)
         volatile uint64_t sink = 0;
 
         // Encode the whole 5-field message (writer: tag + varint + ZigZag + fixed32 + fixed64 + LEN).
-        DBENCH_BULK("pc_pb encode 5-field msg", 50000, enc_len, sink += pb_encode_sample(enc, sizeof(enc)));
+        DBENCH_BULK("protocore_pb encode 5-field msg", 50000, enc_len, sink += pb_encode_sample(enc, sizeof(enc)));
         // Cursor-parse the whole message back out (reader).
-        DBENCH_BULK("pc_pb_read_field 5-field msg", 50000, enc_len, sink += pb_decode_all(enc, enc_len));
+        DBENCH_BULK("protocore_pb_read_field 5-field msg", 50000, enc_len, sink += pb_decode_all(enc, enc_len));
         // Cheap primitives on their own.
-        DBENCH_OP("pc_pb_write_varint", 200000, sink += pb_write_one_varint(vbuf, sizeof(vbuf), 300));
-        DBENCH_OP("pc_pb_read_varint", 200000, sink += pb_read_one_varint(varint300, sizeof(varint300)));
-        DBENCH_OP("pc_pb_zigzag64", 200000, sink += (uint64_t)pc_pb_zigzag64((uint64_t)sink | 1));
+        DBENCH_OP("protocore_pb_write_varint", 200000, sink += pb_write_one_varint(vbuf, sizeof(vbuf), 300));
+        DBENCH_OP("protocore_pb_read_varint", 200000, sink += pb_read_one_varint(varint300, sizeof(varint300)));
+        DBENCH_OP("protocore_pb_zigzag64", 200000, sink += (uint64_t)protocore_pb_zigzag64((uint64_t)sink | 1));
 
         (void)sink;
         DBENCH_DONE();

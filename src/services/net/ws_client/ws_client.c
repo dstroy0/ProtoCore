@@ -8,14 +8,14 @@
  */
 
 #include "services/net/ws_client/ws_client.h"
-#include "mmgr/membuild.h" // pc_sb frame builder
+#include "mmgr/membuild.h" // protocore_sb frame builder
 #include "mmgr/protomem.h"
 #include "server/clock/clock.h" // pcdelay
 
-#if PC_ENABLE_WS_CLIENT
+#if PROTOCORE_ENABLE_WS_CLIENT
 
 #include "crypto/hash/sha1.h"
-#include "crypto/rng/rng.h" // pc_rand_fill: the frame mask and the handshake key
+#include "crypto/rng/rng.h" // protocore_rand_fill: the frame mask and the handshake key
 #include "network_drivers/presentation/codec/base64/base64.h"
 #include <stdio.h>
 
@@ -23,10 +23,10 @@
 // Pure codec (host-testable)
 // ---------------------------------------------------------------------------
 
-#if PC_HAS_NET_STACK
+#if PROTOCORE_HAS_NET_STACK
 #include "network_drivers/transport/tcp.h" // shared outbound TCP client (L4)
 #endif
-#if PC_HAS_VENDOR_TLS && PC_ENABLE_WS_CLIENT_TLS
+#if PROTOCORE_HAS_VENDOR_TLS && PROTOCORE_ENABLE_WS_CLIENT_TLS
 #include "network_drivers/tls/tls.h"
 #include <mbedtls/ssl.h>
 #endif
@@ -52,13 +52,13 @@ void ws_client_accept_for_key(const char *key_b64, char *out, size_t out_cap)
     }
     mem.cpy(concat, key_b64, klen);
     mem.cpy(concat + klen, WS_MAGIC, mlen);
-    uint8_t digest[PC_SHA1_DIGEST_LEN];
-    pc_sha1((const uint8_t *)concat, klen + mlen, digest);
+    uint8_t digest[PROTOCORE_SHA1_DIGEST_LEN];
+    protocore_sha1((const uint8_t *)concat, klen + mlen, digest);
     if (out_cap < 29) // 28 base64 chars + NUL
     {
         return;
     }
-    Base64.encode(digest, PC_SHA1_DIGEST_LEN, out);
+    Base64.encode(digest, PROTOCORE_SHA1_DIGEST_LEN, out);
 }
 
 size_t ws_client_build_handshake(uint8_t *out, size_t cap, const char *host, const char *path, const char *key_b64,
@@ -72,20 +72,20 @@ size_t ws_client_build_handshake(uint8_t *out, size_t cap, const char *host, con
     // WAMP-over-WebSocket); the server echoes the one it selected. Null/empty omits the header entirely.
     // The two forms differ only by the optional Protocol header, so one builder emits both rather
     // than two near-identical copies of the same handshake.
-    pc_sb sb = {(char *)out, cap, 0, PROTO_TRUE};
-    pc_sb_put(&sb, "GET ");
-    pc_sb_put(&sb, path);
-    pc_sb_put(&sb, " HTTP/1.1\r\nHost: ");
-    pc_sb_put(&sb, host);
-    pc_sb_put(&sb, "\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: ");
-    pc_sb_put(&sb, key_b64);
+    protocore_sb sb = {(char *)out, cap, 0, PROTO_TRUE};
+    protocore_sb_put(&sb, "GET ");
+    protocore_sb_put(&sb, path);
+    protocore_sb_put(&sb, " HTTP/1.1\r\nHost: ");
+    protocore_sb_put(&sb, host);
+    protocore_sb_put(&sb, "\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: ");
+    protocore_sb_put(&sb, key_b64);
     if (subprotocol && subprotocol[0])
     {
-        pc_sb_put(&sb, "\r\nSec-WebSocket-Protocol: ");
-        pc_sb_put(&sb, subprotocol);
+        protocore_sb_put(&sb, "\r\nSec-WebSocket-Protocol: ");
+        protocore_sb_put(&sb, subprotocol);
     }
-    pc_sb_put(&sb, "\r\nSec-WebSocket-Version: 13\r\n\r\n");
-    size_t n = pc_sb_finish(&sb);
+    protocore_sb_put(&sb, "\r\nSec-WebSocket-Version: 13\r\n\r\n");
+    size_t n = protocore_sb_finish(&sb);
     if (!sb.ok)
     {
         return 0;
@@ -270,11 +270,11 @@ proto_bool ws_client_parse_frame(const uint8_t *buf, size_t avail, uint8_t *opco
 
 // ---------------------------------------------------------------------------
 // Transport (ESP32 only): persistent raw-lwIP client + RFC 6455 framing,
-// with wss:// over a persistent client TLS session (pc_tls csess).
+// with wss:// over a persistent client TLS session (protocore_tls csess).
 // ---------------------------------------------------------------------------
-#if PC_HAS_NET_STACK
+#if PROTOCORE_HAS_NET_STACK
 
-#ifdef PC_WS_CLIENT_DEBUG
+#ifdef PROTOCORE_WS_CLIENT_DEBUG
 #define WSC_DBG(...) printf(__VA_ARGS__)
 #else
 #define WSC_DBG(...) ((void)0)
@@ -285,21 +285,21 @@ proto_bool ws_client_parse_frame(const uint8_t *buf, size_t avail, uint8_t *opco
 typedef struct
 {
     WsClientMessageCb cb;
-    int cid;                    // outbound connection id (pc_client pool)
+    int cid;                    // outbound connection id (protocore_client pool)
     volatile proto_bool closed; // peer closed / error (set when the pump sees it)
     proto_bool ws_up;
     proto_bool use_tls;
 
     // Inbound plaintext ring, fed by a pump in the loop: from Tcp.client->read for
-    // plain ws, from the TLS session (pc_tls_client_session_read) for wss.
-    uint8_t rx[PC_WS_CLIENT_BUF_SIZE];
+    // plain ws, from the TLS session (protocore_tls_client_session_read) for wss.
+    uint8_t rx[PROTOCORE_WS_CLIENT_BUF_SIZE];
     volatile size_t rx_head;
     volatile size_t rx_tail;
-    uint8_t pkt[PC_WS_CLIENT_BUF_SIZE]; // a frame copied out to parse
-    uint8_t tx[PC_WS_CLIENT_BUF_SIZE];  // outgoing frame scratch
+    uint8_t pkt[PROTOCORE_WS_CLIENT_BUF_SIZE]; // a frame copied out to parse
+    uint8_t tx[PROTOCORE_WS_CLIENT_BUF_SIZE];  // outgoing frame scratch
 
     // Fragmented-message reassembly (continuation frames -> one delivered message).
-    uint8_t msg[PC_WS_CLIENT_BUF_SIZE];
+    uint8_t msg[PROTOCORE_WS_CLIENT_BUF_SIZE];
     size_t msg_len;
     uint8_t msg_op;
 } WsClientCtx;
@@ -325,7 +325,7 @@ static void ring_copy(uint8_t *dst, size_t n)
     }
 }
 
-// --- transport over the shared outbound client (pc_client) ---
+// --- transport over the shared outbound client (protocore_client) ---
 
 static proto_bool ws_tx_plain(const uint8_t *data, size_t len)
 {
@@ -361,7 +361,7 @@ static void ws_pump_plain()
     }
 }
 
-#if PC_ENABLE_WS_CLIENT_TLS
+#if PROTOCORE_ENABLE_WS_CLIENT_TLS
 // TLS BIO over the shared client: write ciphertext through the pool, read
 // ciphertext by draining the client's wire ring.
 static int ws_tls_send(void *ctx, const unsigned char *buf, size_t len)
@@ -391,7 +391,7 @@ static void ws_pump_tls()
             break;
         }
         size_t want = freey < sizeof(tmp) ? freey : sizeof(tmp);
-        int n = pc_tls_client_session_read(tmp, want);
+        int n = protocore_tls_client_session_read(tmp, want);
         if (n <= 0)
         {
             if (n < 0)
@@ -407,15 +407,15 @@ static void ws_pump_tls()
         }
     }
 }
-#endif // PC_ENABLE_WS_CLIENT_TLS
+#endif // PROTOCORE_ENABLE_WS_CLIENT_TLS
 
 // Send already-framed bytes (plaintext or TLS-encrypted per the mode).
 static proto_bool ws_tx(const uint8_t *data, size_t len)
 {
-#if PC_ENABLE_WS_CLIENT_TLS
+#if PROTOCORE_ENABLE_WS_CLIENT_TLS
     if (s_wsc.use_tls)
     {
-        return pc_tls_client_session_write(data, len) == (int)len;
+        return protocore_tls_client_session_write(data, len) == (int)len;
     }
 #endif
     return ws_tx_plain(data, len);
@@ -429,17 +429,17 @@ static proto_bool ws_send_frame(WsClientOpcode opcode, const uint8_t *payload, s
         return PROTO_FALSE;
     }
     uint8_t mask[4];
-    pc_rand_fill(mask, 4);
+    protocore_rand_fill(mask, 4);
     size_t n = ws_client_build_frame(s_wsc.tx, sizeof(s_wsc.tx), opcode, payload, len, mask);
     return n && ws_tx(s_wsc.tx, n);
 }
 
 static void ws_close_tcp()
 {
-#if PC_ENABLE_WS_CLIENT_TLS
+#if PROTOCORE_ENABLE_WS_CLIENT_TLS
     if (s_wsc.use_tls)
     {
-        pc_tls_client_session_end();
+        protocore_tls_client_session_end();
     }
 #endif
     if (s_wsc.cid >= 0)
@@ -503,7 +503,7 @@ static void handle_frame(uint8_t op, proto_bool fin, const uint8_t *payload, siz
 
 static void process_rx()
 {
-#if PC_ENABLE_WS_CLIENT_TLS
+#if PROTOCORE_ENABLE_WS_CLIENT_TLS
     if (s_wsc.use_tls)
     {
         ws_pump_tls();
@@ -557,7 +557,7 @@ proto_bool ws_client_connect(const char *host, uint16_t port, proto_bool use_tls
     {
         return PROTO_FALSE;
     }
-#if !PC_ENABLE_WS_CLIENT_TLS
+#if !PROTOCORE_ENABLE_WS_CLIENT_TLS
     if (use_tls)
     {
         return PROTO_FALSE;
@@ -568,7 +568,7 @@ proto_bool ws_client_connect(const char *host, uint16_t port, proto_bool use_tls
     s_wsc.msg_len = 0;
     s_wsc.use_tls = use_tls;
 
-    uint32_t deadline = pc_millis() + 8000;
+    uint32_t deadline = protocore_millis() + 8000;
 
     // Open the TCP connection (DNS + connect) via the shared client transport.
     s_wsc.cid = Tcp.client->open(host, port, 8000);
@@ -578,17 +578,17 @@ proto_bool ws_client_connect(const char *host, uint16_t port, proto_bool use_tls
         return PROTO_FALSE;
     }
 
-#if PC_ENABLE_WS_CLIENT_TLS
+#if PROTOCORE_ENABLE_WS_CLIENT_TLS
     if (s_wsc.use_tls)
     {
-        if (!pc_tls_client_session_begin(host, ws_tls_send, ws_tls_recv))
+        if (!protocore_tls_client_session_begin(host, ws_tls_send, ws_tls_recv))
         {
             WSC_DBG("[wsc] csess_begin failed\n");
             ws_close_tcp();
             return PROTO_FALSE;
         }
         int h;
-        while ((h = pc_tls_client_session_handshake()) == 0 && !s_wsc.closed && (int32_t)(deadline - pc_millis()) > 0)
+        while ((h = protocore_tls_client_session_handshake()) == 0 && !s_wsc.closed && (int32_t)(deadline - protocore_millis()) > 0)
         {
             pcdelay(5);
         }
@@ -604,7 +604,7 @@ proto_bool ws_client_connect(const char *host, uint16_t port, proto_bool use_tls
 
     // Generate a random 16-byte key, base64 it, send the opening handshake.
     uint8_t keyraw[16];
-    pc_rand_fill(keyraw, sizeof(keyraw));
+    protocore_rand_fill(keyraw, sizeof(keyraw));
     char key_b64[25];
     Base64.encode(keyraw, sizeof(keyraw), key_b64);
     char expect[32];
@@ -621,9 +621,9 @@ proto_bool ws_client_connect(const char *host, uint16_t port, proto_bool use_tls
     uint8_t hs[512];
     size_t hl = 0;
     proto_bool done = PROTO_FALSE;
-    while (!done && !s_wsc.closed && (int32_t)(deadline - pc_millis()) > 0)
+    while (!done && !s_wsc.closed && (int32_t)(deadline - protocore_millis()) > 0)
     {
-#if PC_ENABLE_WS_CLIENT_TLS
+#if PROTOCORE_ENABLE_WS_CLIENT_TLS
         if (s_wsc.use_tls)
         {
             ws_pump_tls();
@@ -658,7 +658,7 @@ proto_bool ws_client_connect(const char *host, uint16_t port, proto_bool use_tls
 
 proto_bool ws_client_send_text(const char *text)
 {
-    return ws_send_frame(WSC_OP_TEXT, (const uint8_t *)text, text ? strnlen(text, PC_WS_CLIENT_BUF_SIZE) : 0);
+    return ws_send_frame(WSC_OP_TEXT, (const uint8_t *)text, text ? strnlen(text, PROTOCORE_WS_CLIENT_BUF_SIZE) : 0);
 }
 proto_bool ws_client_send_binary(const uint8_t *data, size_t len)
 {
@@ -731,6 +731,6 @@ void ws_client_close()
 {
 }
 
-#endif // PC_HAS_NET_STACK
+#endif // PROTOCORE_HAS_NET_STACK
 
-#endif // PC_ENABLE_WS_CLIENT
+#endif // PROTOCORE_ENABLE_WS_CLIENT

@@ -3,7 +3,7 @@
 
 /**
  * @file Sht3x.ino
- * @brief Measure temperature and humidity with a Sensirion SHT3x (PC_ENABLE_SHT3X).
+ * @brief Measure temperature and humidity with a Sensirion SHT3x (PROTOCORE_ENABLE_SHT3X).
  *
  * The SHT3x (SHT30/31/35) is a small, accurate temperature + humidity sensor on the I2C bus.
  * This reads it once a second and prints the values. Every reading is protected by a CRC-8 the
@@ -14,10 +14,10 @@
  * Wiring (I2C): module SDA -> GPIO 21, SCL -> GPIO 22, VCC -> 3V3, GND -> GND, ADDR -> GND
  * (address 0x44).
  *
- * Build flag (PlatformIO): `-DPC_ENABLE_SHT3X=1`
+ * Build flag (PlatformIO): `-DPROTOCORE_ENABLE_SHT3X=1`
  */
 
-#define PC_ENABLE_SHT3X 1
+#define PROTOCORE_ENABLE_SHT3X 1
 
 #include "protocore.h" // declares the library dependency (Arduino build)
 #include "services/peripherals/sht3x/sht3x.h"
@@ -25,7 +25,7 @@
 void setup()
 {
     Serial.begin(115200);
-    if (pc_sht3x_begin(0x44))
+    if (protocore_sht3x_begin(0x44))
     {
         Serial.println("SHT3x ready");
     }
@@ -38,7 +38,7 @@ void setup()
 void loop()
 {
     int32_t temp_mc = 0, rh_mpct = 0; // milli-degrees C, milli-percent RH
-    if (pc_sht3x_read(&temp_mc, &rh_mpct))
+    if (protocore_sht3x_read(&temp_mc, &rh_mpct))
     {
         // Print the milli-units as X.XXX by hand (no float formatting needed).
         long t_whole = temp_mc / 1000;

@@ -16,9 +16,9 @@
 #ifndef PROTOCORE_KDF_H
 #define PROTOCORE_KDF_H
 
-#include "protocore_config.h" // the entry point: types.h for proto_bool and the widths
+#include "protocore_config.h" // the entry point: protocore_types.h for proto_bool and the widths
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
 /**
  * @brief SP800-108 KDF in counter mode with HMAC-SHA256 as the PRF (NIST SP800-108 §5.1; r = 32-bit
@@ -36,9 +36,9 @@ PROTO_BEGIN_DECLS
  * @param out_len   number of output bytes (>= 1); the caller must encode L = out_len * 8 into @p fixed.
  * @return true on success; false on a null pointer or @p out_len == 0.
  */
-proto_bool pc_kdf_ctr_hmac_sha256(const uint8_t *ki, size_t ki_len, const uint8_t *fixed, size_t fixed_len,
-                                  uint8_t *out, size_t out_len);
+proto_bool protocore_kdf_ctr_hmac_sha256(const uint8_t *ki, size_t ki_len, const uint8_t *fixed, size_t fixed_len,
+                                         uint8_t *out, size_t out_len);
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_KDF_H

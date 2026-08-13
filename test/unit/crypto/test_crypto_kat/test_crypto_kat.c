@@ -111,16 +111,16 @@ static uint8_t tw[4096]; // test-side working bytes for the crypto entry points
 // One hex digit to its value.
 // A keyed AES-128-GCM context over one reusable work region. The context owns vendor resources on
 // some backends, so the previous one is released before the next is built.
-static uint8_t g_gcm128_ws[PC_WORK_AES128GCM] __attribute__((aligned(8)));
+static uint8_t g_gcm128_ws[PROTOCORE_WORK_AES128GCM] __attribute__((aligned(8)));
 static proto_bool g_gcm128_live = PROTO_FALSE;
-static struct pc_aes128gcm_key *gcm128(const uint8_t *key)
+static struct protocore_aes128gcm_key *gcm128(const uint8_t *key)
 {
     if (g_gcm128_live)
     {
-        pc_aes128gcm_key_wipe((struct pc_aes128gcm_key *)g_gcm128_ws);
+        protocore_aes128gcm_key_wipe((struct protocore_aes128gcm_key *)g_gcm128_ws);
     }
     g_gcm128_live = PROTO_TRUE;
-    return pc_aes128gcm_key_init(g_gcm128_ws, key);
+    return protocore_aes128gcm_key_init(g_gcm128_ws, key);
 }
 
 static int nib(char c)
@@ -167,11 +167,11 @@ static void run_hmac(const KatMac *arr, size_t n, proto_bool is512)
         size_t klen = hexdec(v->key, key), mlen = hexdec(v->msg, msg), wlen = hexdec(v->tag, want);
         if (is512)
         {
-            pc_hmac_sha512(tw, key, klen, msg, mlen, got);
+            protocore_hmac_sha512(tw, key, klen, msg, mlen, got);
         }
         else
         {
-            pc_hmac_sha256(tw, key, klen, msg, mlen, got);
+            protocore_hmac_sha256(tw, key, klen, msg, mlen, got);
         }
         size_t cmp = (size_t)v->tag_bits / 8; // truncated-tag length the vector pins
         char m[64];
@@ -221,12 +221,12 @@ static void test_aes128gcm(void)
             // tag bit, a truncated tag, a modified aad. Open must refuse it. Sealing the plaintext
             // would produce the CORRECT tag, which is not what this vector is about.
             TEST_ASSERT_FALSE_MESSAGE(
-                pc_aes128gcm_open(gcm128(key), iv, alen ? aad : NULL, alen, clen ? ct : NULL, clen, tag, opened), m);
+                protocore_aes128gcm_open(gcm128(key), iv, alen ? aad : NULL, alen, clen ? ct : NULL, clen, tag, opened), m);
             continue;
         }
 
         // seal: out == ciphertext || tag (ciphertext is empty when plaintext is)
-        pc_aes128gcm_seal(gcm128(key), iv, alen ? aad : NULL, alen, plen ? pt : NULL, plen, sealed, sealed + plen);
+        protocore_aes128gcm_seal(gcm128(key), iv, alen ? aad : NULL, alen, plen ? pt : NULL, plen, sealed, sealed + plen);
         if (clen)
         {
             TEST_ASSERT_EQUAL_HEX8_ARRAY_MESSAGE(ct, sealed, clen, m);
@@ -235,7 +235,7 @@ static void test_aes128gcm(void)
 
         // open: recovers the plaintext and authenticates
         proto_bool ok =
-            pc_aes128gcm_open(gcm128(key), iv, alen ? aad : NULL, alen, sealed, plen, sealed + plen, opened);
+            protocore_aes128gcm_open(gcm128(key), iv, alen ? aad : NULL, alen, sealed, plen, sealed + plen, opened);
         TEST_ASSERT_TRUE_MESSAGE(ok, m);
         if (plen)
         {
@@ -245,13 +245,13 @@ static void test_aes128gcm(void)
         // negative: a flipped tag byte must fail authentication
         sealed[plen + 15] ^= 0x80;
         TEST_ASSERT_FALSE_MESSAGE(
-            pc_aes128gcm_open(gcm128(key), iv, alen ? aad : NULL, alen, sealed, plen, sealed + plen, opened), m);
+            protocore_aes128gcm_open(gcm128(key), iv, alen ? aad : NULL, alen, sealed, plen, sealed + plen, opened), m);
     }
 }
 
 // ====================================================================
 // AEAD_AES_128_GCM counter carry: none of the vectors above exceed 256
-// GCTR blocks, so the GCM counter's low byte (pc_quic_aead.cpp inc32())
+// GCTR blocks, so the GCM counter's low byte (protocore_quic_aead.cpp inc32())
 // never rolls 0xff -> 0x00 and carries into the next byte. A plaintext
 // past 256*16 = 4096 bytes forces that single-byte carry through the
 // public seal()/open() API (no KAT oracle needed - this is an internal
@@ -271,16 +271,16 @@ static void test_aes128gcm_ctr_carry(void)
         pt[i] = (uint8_t)(i * 131u + 7u);
     }
 
-    pc_aes128gcm_seal(gcm128(key), iv, NULL, 0, pt, CTR_CARRY_PT_LEN, sealed, sealed + CTR_CARRY_PT_LEN);
+    protocore_aes128gcm_seal(gcm128(key), iv, NULL, 0, pt, CTR_CARRY_PT_LEN, sealed, sealed + CTR_CARRY_PT_LEN);
     proto_bool ok =
-        pc_aes128gcm_open(gcm128(key), iv, NULL, 0, sealed, CTR_CARRY_PT_LEN, sealed + CTR_CARRY_PT_LEN, opened);
+        protocore_aes128gcm_open(gcm128(key), iv, NULL, 0, sealed, CTR_CARRY_PT_LEN, sealed + CTR_CARRY_PT_LEN, opened);
     TEST_ASSERT_TRUE(ok);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(pt, opened, CTR_CARRY_PT_LEN);
 
     // negative: a flipped tag byte must still fail authentication past the carry boundary
     sealed[CTR_CARRY_PT_LEN + 15] ^= 0x80;
     TEST_ASSERT_FALSE(
-        pc_aes128gcm_open(gcm128(key), iv, NULL, 0, sealed, CTR_CARRY_PT_LEN, sealed + CTR_CARRY_PT_LEN, opened));
+        protocore_aes128gcm_open(gcm128(key), iv, NULL, 0, sealed, CTR_CARRY_PT_LEN, sealed + CTR_CARRY_PT_LEN, opened));
 }
 
 // ====================================================================
@@ -296,7 +296,7 @@ static void test_x25519(void)
         hexdec(v->pub, pub);
         hexdec(v->priv, priv);
         size_t wlen = hexdec(v->shared, want);
-        pc_x25519(got, priv, pub);
+        protocore_x25519(got, priv, pub);
         char m[48];
         snprintf(m, sizeof(m), "X25519 tcId=%d", v->tc);
         TEST_ASSERT_EQUAL_MESSAGE(32, wlen, m);
@@ -319,10 +319,10 @@ static void test_ed25519_verify(void)
         char m[48];
         snprintf(m, sizeof(m), "Ed25519 tcId=%d", v->tc);
         // The length gate every caller applies before the crypto - ssh_auth.c:593 and
-        // ssh_client.c:955 both spell it `len == 64 && pc_ed25519_verify(...)` - is applied here
+        // ssh_client.c:955 both spell it `len == 64 && protocore_ed25519_verify(...)` - is applied here
         // too, so all 150 vectors reach one assertion. Testing slen against the vector's own
         // `valid` field instead would assert the corpus JSON and never call the verifier.
-        proto_bool ok = (slen == PC_ED25519_SIG_LEN) && pc_ed25519_verify(tw, pub, msg, mlen, sig);
+        proto_bool ok = (slen == PROTOCORE_ED25519_SIG_LEN) && protocore_ed25519_verify(tw, pub, msg, mlen, sig);
         TEST_ASSERT_EQUAL_MESSAGE(v->valid ? PROTO_TRUE : PROTO_FALSE, ok, m);
     }
 }
@@ -344,9 +344,9 @@ static void test_ed25519_sign(void)
         size_t mlen = hexdec(v->msg, msg);
         char m[48];
         snprintf(m, sizeof(m), "Ed25519-sign tcId=%d", v->tc);
-        pc_ed25519_pubkey(tw, got_pub, seed);
+        protocore_ed25519_pubkey(tw, got_pub, seed);
         TEST_ASSERT_EQUAL_HEX8_ARRAY_MESSAGE(want_pub, got_pub, 32, m);
-        pc_ed25519_sign(tw, got_sig, msg, mlen, seed);
+        protocore_ed25519_sign(tw, got_sig, msg, mlen, seed);
         TEST_ASSERT_EQUAL_HEX8_ARRAY_MESSAGE(want_sig, got_sig, 64, m);
     }
 }
@@ -367,7 +367,7 @@ static void test_hkdf_extract(void)
         uint8_t salt[MAXB], ikm[MAXB], want[32], got[32];
         size_t slen = hexdec(v->salt, salt), ilen = hexdec(v->ikm, ikm);
         hexdec(v->prk, want);
-        pc_hkdf_extract(tw, slen ? salt : NULL, slen, ikm, ilen, got);
+        protocore_hkdf_extract(tw, slen ? salt : NULL, slen, ikm, ilen, got);
         char m[48];
         snprintf(m, sizeof(m), "HKDF-Extract tcId=%d", v->tc);
         TEST_ASSERT_EQUAL_HEX8_ARRAY_MESSAGE(want, got, 32, m);
@@ -384,7 +384,7 @@ static void test_hkdf_expand(void)
         size_t ilen = hexdec(v->info, info);
         size_t wlen = hexdec(v->okm, want);
         TEST_ASSERT_EQUAL_UINT32(v->l, (uint32_t)wlen);
-        pc_hkdf_expand(tw, prk, ilen ? info : NULL, ilen, got, wlen);
+        protocore_hkdf_expand(tw, prk, ilen ? info : NULL, ilen, got, wlen);
         char m[48];
         snprintf(m, sizeof(m), "HKDF-Expand tcId=%d", v->tc);
         TEST_ASSERT_EQUAL_HEX8_ARRAY_MESSAGE(want, got, wlen, m);
@@ -400,11 +400,11 @@ static void test_hkdf_expand_length_bound(void)
     hexdec(KAT_HKDF[0].prk, prk);
 
     memset(out, 0xAA, sizeof(out));
-    pc_hkdf_expand(tw, prk, NULL, 0, out, (size_t)255 * 32);
+    protocore_hkdf_expand(tw, prk, NULL, 0, out, (size_t)255 * 32);
     TEST_ASSERT_NOT_EQUAL(0xAA, out[0]); // the largest legal request is answered
 
     memset(out, 0xAA, sizeof(out));
-    pc_hkdf_expand(tw, prk, NULL, 0, out, (size_t)255 * 32 + 1);
+    protocore_hkdf_expand(tw, prk, NULL, 0, out, (size_t)255 * 32 + 1);
     for (size_t i = 0; i < (size_t)255 * 32 + 1; i++)
     {
         TEST_ASSERT_EQUAL_HEX8(0x00, out[i]);
@@ -423,7 +423,7 @@ static void test_chacha20_block(void)
         hexdec(v->key, key);
         hexdec(v->nonce, nonce);
         hexdec(v->keystream, want);
-        pc_chacha20_block_ietf(key, v->counter, nonce, got);
+        protocore_chacha20_block_ietf(key, v->counter, nonce, got);
         char m[48];
         snprintf(m, sizeof(m), "ChaCha20 tcId=%d", v->tc);
         TEST_ASSERT_EQUAL_HEX8_ARRAY_MESSAGE(want, got, 64, m);
@@ -438,7 +438,7 @@ static void test_poly1305(void)
         hexdec(v->key, key);
         size_t mlen = hexdec(v->msg, msg);
         hexdec(v->tag, want);
-        pc_poly1305(got, msg, mlen, key);
+        protocore_poly1305(got, msg, mlen, key);
         char m[48];
         snprintf(m, sizeof(m), "Poly1305 tcId=%d", v->tc);
         TEST_ASSERT_EQUAL_HEX8_ARRAY_MESSAGE(want, got, 16, m);

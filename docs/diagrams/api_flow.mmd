@@ -11,9 +11,9 @@ flowchart TB
   cin(["A client sends a request<br/>browser / app / curl"])
   listen["Accept a connection<br/>listener_accept_cb"]
   ring[("Hold the bytes<br/>conn_pool + rx ring")]
-  udprx["Receive a datagram<br/>pc_udp"]
+  udprx["Receive a datagram<br/>protocore_udp"]
   seam{{"Which protocol?<br/>ProtoHandler seam<br/>HTTP / TELNET / SSH / +2"}}
-  tls["Decrypt + choose version<br/>pc_tls + ALPN"]
+  tls["Decrypt + choose version<br/>protocore_tls + ALPN"]
   parser["Read HTTP/1.1<br/>http_parser"]
   h2["Decode HTTP/2<br/>h2_conn"]
   h3["Decode HTTP/3<br/>quic_conn + h3_conn"]
@@ -23,8 +23,8 @@ flowchart TB
   handler["YOUR HANDLER runs"]
   resp["Build the response<br/>stats() / metrics()<br/>+7 more"]
   sink{{"Frame the reply per protocol<br/>resp_sink seam<br/>HTTP/1.1 / h2 / h3"}}
-  consend["Write bytes back<br/>pc_conn_send"]
-  udptx["Send a datagram<br/>pc_udp"]
+  consend["Write bytes back<br/>protocore_conn_send"]
+  udptx["Send a datagram<br/>protocore_udp"]
   cout(["The client gets the response"])
 
   run -.->|starts| listen

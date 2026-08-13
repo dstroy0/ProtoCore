@@ -24,7 +24,7 @@
 #include "network_drivers/network/dns/dns_server.h"
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
 /**
  * @brief Name resolution.
@@ -37,15 +37,15 @@ PROTO_BEGIN_DECLS
  */
 typedef struct
 {
-#if PC_NEED_DNS_RESOLVER
+#if PROTOCORE_NEED_DNS_RESOLVER
     const ResolverNs *resolver;
 #endif
-#if PC_ENABLE_DNS_SERVER
+#if PROTOCORE_ENABLE_DNS_SERVER
     const DnsServerNs *server;
 #endif
     // A struct with no members is not valid C, so the module keeps one when both halves are gated
     // out. It states the same thing the members do: nothing here is available.
-#if !PC_NEED_DNS_RESOLVER && !PC_ENABLE_DNS_SERVER
+#if !PROTOCORE_NEED_DNS_RESOLVER && !PROTOCORE_ENABLE_DNS_SERVER
     proto_bool present;
 #endif
 } DnsNs;
@@ -53,6 +53,6 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern const DnsNs Dns;
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_DNS_H

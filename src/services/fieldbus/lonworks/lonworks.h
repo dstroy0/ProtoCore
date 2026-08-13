@@ -3,7 +3,7 @@
 
 /**
  * @file lonworks.h
- * @brief LonWorks / LON-IP (ISO/IEC 14908) network-variable codec (PC_ENABLE_LONWORKS).
+ * @brief LonWorks / LON-IP (ISO/IEC 14908) network-variable codec (PROTOCORE_ENABLE_LONWORKS).
  *
  * LonWorks is the ISO/IEC 14908 building-automation network. Devices exchange **network variables**
  * (SNVTs - Standard Network Variable Types) as LonTalk application PDUs. LON/IP (14908-4) tunnels those
@@ -24,9 +24,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_LONWORKS
+#if PROTOCORE_ENABLE_LONWORKS
 
 // LonTalk NV message codes + selector limit: wire values, so integer constants in a struct.
 #define LON_MSG_NV_UPDATE 0x80     ///< network-variable update message code (base).
@@ -41,8 +41,8 @@ PROTO_BEGIN_DECLS
  * @param value_len   value length.
  * @return the PDU length (3 + value_len), or 0 on overflow / bad args.
  */
-size_t pc_lon_build_nv(uint8_t msg_code, uint16_t selector, const uint8_t *value, size_t value_len, uint8_t *out,
-                       size_t cap);
+size_t protocore_lon_build_nv(uint8_t msg_code, uint16_t selector, const uint8_t *value, size_t value_len, uint8_t *out,
+                              size_t cap);
 
 /** @brief A parsed LonTalk NV PDU (value points into the input). */
 typedef struct
@@ -54,20 +54,20 @@ typedef struct
 } LonNv;
 
 /** @brief Parse a LonTalk NV PDU. @return true if @p len >= 3. */
-proto_bool pc_lon_parse_nv(const uint8_t *pdu, size_t len, LonNv *out);
+proto_bool protocore_lon_parse_nv(const uint8_t *pdu, size_t len, LonNv *out);
 
 /** @brief Encode a SNVT_temp value (degrees C) as the 2-byte big-endian fixed-point (0.01 K, +273.15). */
-void pc_lon_snvt_temp_encode(double celsius, uint8_t out[2]);
+void protocore_lon_snvt_temp_encode(double celsius, uint8_t out[2]);
 /** @brief Decode a SNVT_temp 2-byte value to degrees C. */
-double pc_lon_snvt_temp_decode(const uint8_t in[2]);
+double protocore_lon_snvt_temp_decode(const uint8_t in[2]);
 
 /** @brief Encode a SNVT_switch (value 0..100.5 %, state 0/1) into the 2-byte value. */
-void pc_lon_snvt_switch_encode(double percent, uint8_t state, uint8_t out[2]);
+void protocore_lon_snvt_switch_encode(double percent, uint8_t state, uint8_t out[2]);
 /** @brief Decode a SNVT_switch 2-byte value (percent out via @p percent, state via @p state). */
-void pc_lon_snvt_switch_decode(const uint8_t in[2], double *percent, uint8_t *state);
+void protocore_lon_snvt_switch_decode(const uint8_t in[2], double *percent, uint8_t *state);
 
-#endif // PC_ENABLE_LONWORKS
+#endif // PROTOCORE_ENABLE_LONWORKS
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_LONWORKS_H

@@ -1,44 +1,44 @@
 # EthernetW5500 - run the server over a W5500 SPI Ethernet module
 
-**Layer:** Foundation · **Build flags:** `PC_ENABLE_ETHERNET`, `PC_ETH_W5500`, `PC_ETH_W5500_*`
+**Layer:** Foundation · **Build flags:** `PROTOCORE_ENABLE_ETHERNET`, `PROTOCORE_ETH_W5500`, `PROTOCORE_ETH_W5500_*`
 
 ## What this example teaches
 
 The RMII path ([Ethernet](../Ethernet)) needs a chip with an on-chip Ethernet MAC. The
 **ESP32-S3 has no RMII MAC**, so a wired link there uses an **SPI Ethernet controller** - the
-WIZnet **W5500** - over the HSPI bus. With `PC_ETH_W5500=1`, `Physical.eth->init()` calls the
+WIZnet **W5500** - over the HSPI bus. With `PROTOCORE_ETH_W5500=1`, `Physical.eth->init()` calls the
 arduino-esp32 3.x ETH SPI API (`ETH.begin(ETH_PHY_W5500, ...)`); once the link has a DHCP IP the
 server accepts on it with no other change:
 
 ```cpp
-Physical.eth->init();          // ETH.begin(ETH_PHY_W5500, ...) with the PC_ETH_W5500_* pins
+Physical.eth->init();          // ETH.begin(ETH_PHY_W5500, ...) with the PROTOCORE_ETH_W5500_* pins
 while (!Physical.eth->ready()) delay(250);
 // ... server.begin(80) - now serving over W5500 Ethernet
 ```
 
 Nothing else changes: the egress reporting already classifies the wired route as
-`pc_if_kind::PC_IF_ETH`, so `Physical.link->egress()`, per-route STA/AP/ETH interface filters, and every
+`protocore_if_kind::PROTOCORE_IF_ETH`, so `Physical.link->egress()`, per-route STA/AP/ETH interface filters, and every
 protocol work over the link the moment it has an IP.
 
 ## Wiring (ESP32-S3-DevKitC, HSPI)
 
-The pins come from the `PC_ETH_W5500_*` build flags in [build_opt.h](build_opt.h):
+The pins come from the `PROTOCORE_ETH_W5500_*` build flags in [build_opt.h](build_opt.h):
 
-| Signal | GPIO | Flag                |
-| ------ | ---- | ------------------- |
-| `CS`   | `7`  | `PC_ETH_W5500_CS`   |
-| `RST`  | `6`  | `PC_ETH_W5500_RST`  |
-| `INT`  | `5`  | `PC_ETH_W5500_INT`  |
-| `SCLK` | `12` | `PC_ETH_W5500_SCK`  |
-| `MOSI` | `11` | `PC_ETH_W5500_MOSI` |
-| `MISO` | `13` | `PC_ETH_W5500_MISO` |
+| Signal | GPIO | Flag                       |
+| ------ | ---- | -------------------------- |
+| `CS`   | `7`  | `PROTOCORE_ETH_W5500_CS`   |
+| `RST`  | `6`  | `PROTOCORE_ETH_W5500_RST`  |
+| `INT`  | `5`  | `PROTOCORE_ETH_W5500_INT`  |
+| `SCLK` | `12` | `PROTOCORE_ETH_W5500_SCK`  |
+| `MOSI` | `11` | `PROTOCORE_ETH_W5500_MOSI` |
+| `MISO` | `13` | `PROTOCORE_ETH_W5500_MISO` |
 
 Plus `VCC 3V3` and `GND`. Set the flags for your own wiring; see the
 [hardware hookup guide](../../../docs/HARDWARE_HOOKUP.md) for the full pinout.
 
 ## SPI clock and throughput
 
-`PC_ETH_W5500_SPI_MHZ` sets the SPI clock (default `20`). Throughput is **SPI-bound, not
+`PROTOCORE_ETH_W5500_SPI_MHZ` sets the SPI clock (default `20`). Throughput is **SPI-bound, not
 PHY-bound**: measured on an ESP32-S3 it is ~7.2 Mbit/s at 20 MHz and ~8.2 Mbit/s at 24 MHz,
 plateauing near the W5500's internal ~8.3 Mbit/s ceiling around 30 MHz. Higher clocks need clean,
 short wiring - on breadboard jumpers, sustained transfers stay reliable to ~24 MHz and the SPI reads
@@ -58,7 +58,7 @@ The flags must reach the library build, so pass them as build flags:
 
 ```sh
 pio ci --board=esp32-s3-devkitc-1 --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_ETHERNET=1 -DPC_ETH_W5500=1 -DPC_ETH_W5500_CS=7 -DPC_ETH_W5500_RST=6 -DPC_ETH_W5500_INT=5 -DPC_ETH_W5500_SCK=12 -DPC_ETH_W5500_MISO=13 -DPC_ETH_W5500_MOSI=11" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_ETHERNET=1 -DPROTOCORE_ETH_W5500=1 -DPROTOCORE_ETH_W5500_CS=7 -DPROTOCORE_ETH_W5500_RST=6 -DPROTOCORE_ETH_W5500_INT=5 -DPROTOCORE_ETH_W5500_SCK=12 -DPROTOCORE_ETH_W5500_MISO=13 -DPROTOCORE_ETH_W5500_MOSI=11" \
   --lib="." examples/Peripherals/EthernetW5500/EthernetW5500.ino
 ```
 

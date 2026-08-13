@@ -1,4 +1,4 @@
-# DTLS 1.3 interop: pc_dtls_conn ⇄ CycloneSSL
+# DTLS 1.3 interop: protocore_dtls_conn ⇄ CycloneSSL
 
 Real-peer conformance test for the library's DTLS 1.3 server (`network_drivers/presentation/dtls`)
 against a **second, independent** reference stack: [Oryx Embedded **CycloneSSL**](https://github.com/Oryx-Embedded/CycloneSSL).
@@ -7,7 +7,7 @@ implementations both completing a handshake against our server is far stronger e
 format is correct than either alone (and stronger than any self-referential KAT).
 
 The same `dtls_interop_server` harness the wolfSSL test uses (it wraps the transport-neutral
-`pc_dtls_conn` state machine in a tiny UDP server) is driven here by a
+`protocore_dtls_conn` state machine in a tiny UDP server) is driven here by a
 [CycloneSSL DTLS 1.3 client](cyclone_dtls_client.c) built from the Oryx sources.
 
 ## Run it
@@ -48,7 +48,7 @@ Two runs:
 - **Raw Public Keys (`--rpk`)** - the client registers a RawPublicKey verify callback, so CycloneSSL
   advertises `server_certificate_type = RawPublicKey` (RFC 7250) in its ClientHello. Its callback fires
   **only** when the peer actually sends a bare `SubjectPublicKeyInfo`, so this run proves our
-  `PC_ENABLE_TLS_RPK` server credential (the 44-byte Ed25519 SPKI) interoperates with CycloneSSL.
+  `PROTOCORE_ENABLE_TLS_RPK` server credential (the 44-byte Ed25519 SPKI) interoperates with CycloneSSL.
 
 Overrides via env: `CYCLONE_SSL_VERSION` (default `v2.6.4`), `CYCLONE_INTEROP_PORT`,
 `CYCLONE_INTEROP_WORK`.
@@ -61,7 +61,7 @@ Overrides via env: `CYCLONE_SSL_VERSION` (default `v2.6.4`), `CYCLONE_INTEROP_PO
 - `tls_config.h`, `crypto_config.h`, `os_port_config.h` - the lean Cyclone build config (DTLS 1.3
   client, X25519, Ed25519 sign, AES-128-GCM/SHA-256, HKDF, HMAC-DRBG, and `TLS_RAW_PUBLIC_KEY_SUPPORT`).
 - `run_interop.sh` - clones Cyclone (GPL, into `.work/`, never committed), builds the client + the
-  `pc_dtls_conn` harness, and runs both variants.
+  `protocore_dtls_conn` harness, and runs both variants.
 
 The Oryx Cyclone sources are **not vendored** in this repo; `run_interop.sh` fetches them at run time
 (GPLv2). Only our client, config, and script are committed.

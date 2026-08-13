@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // Unit tests for the per-peer brute-force auth lockout (services/security/auth_lockout).
-// Every bucket keys on the FULL family-tagged address (pc_ip) - never a hash or a
+// Every bucket keys on the FULL family-tagged address (protocore_ip) - never a hash or a
 // uint32 flattening - so IPv4 and IPv6 peers are distinct buckets and no address can
 // share or poison another's lockout. The state machine takes the millisecond clock as
 // a parameter, so the host drives a synthetic clock - no real time, no ESP32. Uses the
@@ -12,10 +12,10 @@
 #include "shared_primitives/ip.h"
 #include <unity.h>
 
-// Build a v4 pc_ip from a host-order word (0x0A000001 -> 10.0.0.1).
-static pc_ip v4w(uint32_t host_order)
+// Build a v4 protocore_ip from a host-order word (0x0A000001 -> 10.0.0.1).
+static protocore_ip v4w(uint32_t host_order)
 {
-    return pc_ip_from_v4_octets((uint8_t)(host_order >> 24), (uint8_t)(host_order >> 16), (uint8_t)(host_order >> 8),
+    return protocore_ip_from_v4_octets((uint8_t)(host_order >> 24), (uint8_t)(host_order >> 16), (uint8_t)(host_order >> 8),
                                 (uint8_t)host_order);
 }
 
@@ -30,8 +30,8 @@ void tearDown()
 void test_below_threshold_not_locked()
 {
     auth_lockout_reset();
-    pc_ip ip = v4w(0x0A000001u);
-    for (int i = 0; i < PC_AUTH_LOCKOUT_THRESHOLD - 1; i++)
+    protocore_ip ip = v4w(0x0A000001u);
+    for (int i = 0; i < PROTOCORE_AUTH_LOCKOUT_THRESHOLD - 1; i++)
     {
         auth_lockout_fail(&ip, 0);
     }
@@ -42,62 +42,62 @@ void test_below_threshold_not_locked()
 void test_locks_at_threshold()
 {
     auth_lockout_reset();
-    pc_ip ip = v4w(0x0A000002u);
-    for (int i = 0; i < PC_AUTH_LOCKOUT_THRESHOLD; i++)
+    protocore_ip ip = v4w(0x0A000002u);
+    for (int i = 0; i < PROTOCORE_AUTH_LOCKOUT_THRESHOLD; i++)
     {
         auth_lockout_fail(&ip, 0);
     }
-    TEST_ASSERT_EQUAL_UINT32(PC_AUTH_LOCKOUT_BASE_MS, auth_lockout_remaining_ms(&ip, 0));
+    TEST_ASSERT_EQUAL_UINT32(PROTOCORE_AUTH_LOCKOUT_BASE_MS, auth_lockout_remaining_ms(&ip, 0));
 }
 
 // Each failure past the threshold doubles the lockout duration.
 void test_exponential_backoff()
 {
     auth_lockout_reset();
-    pc_ip ip = v4w(0x0A000003u);
-    for (int i = 0; i < PC_AUTH_LOCKOUT_THRESHOLD; i++)
+    protocore_ip ip = v4w(0x0A000003u);
+    for (int i = 0; i < PROTOCORE_AUTH_LOCKOUT_THRESHOLD; i++)
     {
         auth_lockout_fail(&ip, 0);
     }
-    TEST_ASSERT_EQUAL_UINT32(PC_AUTH_LOCKOUT_BASE_MS, auth_lockout_remaining_ms(&ip, 0));
+    TEST_ASSERT_EQUAL_UINT32(PROTOCORE_AUTH_LOCKOUT_BASE_MS, auth_lockout_remaining_ms(&ip, 0));
     auth_lockout_fail(&ip, 0);
-    TEST_ASSERT_EQUAL_UINT32(2u * PC_AUTH_LOCKOUT_BASE_MS, auth_lockout_remaining_ms(&ip, 0));
+    TEST_ASSERT_EQUAL_UINT32(2u * PROTOCORE_AUTH_LOCKOUT_BASE_MS, auth_lockout_remaining_ms(&ip, 0));
     auth_lockout_fail(&ip, 0);
-    TEST_ASSERT_EQUAL_UINT32(4u * PC_AUTH_LOCKOUT_BASE_MS, auth_lockout_remaining_ms(&ip, 0));
+    TEST_ASSERT_EQUAL_UINT32(4u * PROTOCORE_AUTH_LOCKOUT_BASE_MS, auth_lockout_remaining_ms(&ip, 0));
 }
 
 // The backoff is capped at the configured maximum.
 void test_caps_at_max()
 {
     auth_lockout_reset();
-    pc_ip ip = v4w(0x0A000004u);
+    protocore_ip ip = v4w(0x0A000004u);
     for (int i = 0; i < 40; i++)
     {
         auth_lockout_fail(&ip, 0);
     }
-    TEST_ASSERT_EQUAL_UINT32(PC_AUTH_LOCKOUT_MAX_MS, auth_lockout_remaining_ms(&ip, 0));
+    TEST_ASSERT_EQUAL_UINT32(PROTOCORE_AUTH_LOCKOUT_MAX_MS, auth_lockout_remaining_ms(&ip, 0));
 }
 
 // The lockout counts down and expires exactly at the window end (rollover-safe math).
 void test_expires_after_window()
 {
     auth_lockout_reset();
-    pc_ip ip = v4w(0x0A000005u);
-    for (int i = 0; i < PC_AUTH_LOCKOUT_THRESHOLD; i++)
+    protocore_ip ip = v4w(0x0A000005u);
+    for (int i = 0; i < PROTOCORE_AUTH_LOCKOUT_THRESHOLD; i++)
     {
         auth_lockout_fail(&ip, 0);
     }
-    TEST_ASSERT_EQUAL_UINT32(1, auth_lockout_remaining_ms(&ip, PC_AUTH_LOCKOUT_BASE_MS - 1));
-    TEST_ASSERT_EQUAL_UINT32(0, auth_lockout_remaining_ms(&ip, PC_AUTH_LOCKOUT_BASE_MS));
-    TEST_ASSERT_EQUAL_UINT32(0, auth_lockout_remaining_ms(&ip, PC_AUTH_LOCKOUT_BASE_MS + 100));
+    TEST_ASSERT_EQUAL_UINT32(1, auth_lockout_remaining_ms(&ip, PROTOCORE_AUTH_LOCKOUT_BASE_MS - 1));
+    TEST_ASSERT_EQUAL_UINT32(0, auth_lockout_remaining_ms(&ip, PROTOCORE_AUTH_LOCKOUT_BASE_MS));
+    TEST_ASSERT_EQUAL_UINT32(0, auth_lockout_remaining_ms(&ip, PROTOCORE_AUTH_LOCKOUT_BASE_MS + 100));
 }
 
 // A successful auth clears the failure count and lockout for that address.
 void test_success_clears()
 {
     auth_lockout_reset();
-    pc_ip ip = v4w(0x0A000006u);
-    for (int i = 0; i < PC_AUTH_LOCKOUT_THRESHOLD; i++)
+    protocore_ip ip = v4w(0x0A000006u);
+    for (int i = 0; i < PROTOCORE_AUTH_LOCKOUT_THRESHOLD; i++)
     {
         auth_lockout_fail(&ip, 0);
     }
@@ -105,7 +105,7 @@ void test_success_clears()
     auth_lockout_succeed(&ip);
     TEST_ASSERT_EQUAL_UINT32(0, auth_lockout_remaining_ms(&ip, 0));
     // The counter was reset: one short of the threshold is still not locked.
-    for (int i = 0; i < PC_AUTH_LOCKOUT_THRESHOLD - 1; i++)
+    for (int i = 0; i < PROTOCORE_AUTH_LOCKOUT_THRESHOLD - 1; i++)
     {
         auth_lockout_fail(&ip, 0);
     }
@@ -116,12 +116,12 @@ void test_success_clears()
 void test_isolates_addresses()
 {
     auth_lockout_reset();
-    pc_ip a = v4w(0x0A000007u), b = v4w(0x0A000008u);
-    for (int i = 0; i < PC_AUTH_LOCKOUT_THRESHOLD; i++)
+    protocore_ip a = v4w(0x0A000007u), b = v4w(0x0A000008u);
+    for (int i = 0; i < PROTOCORE_AUTH_LOCKOUT_THRESHOLD; i++)
     {
         auth_lockout_fail(&a, 0);
     }
-    for (int i = 0; i < PC_AUTH_LOCKOUT_THRESHOLD - 1; i++)
+    for (int i = 0; i < PROTOCORE_AUTH_LOCKOUT_THRESHOLD - 1; i++)
     {
         auth_lockout_fail(&b, 0);
     }
@@ -134,13 +134,13 @@ void test_isolates_addresses()
 void test_v6_distinct_from_v4_and_each_other()
 {
     auth_lockout_reset();
-    pc_ip v6a;
-    v6a.family = PC_IP_NONE;
-    pc_ip v6b;
-    v6b.family = PC_IP_NONE;
+    protocore_ip v6a;
+    v6a.family = PROTOCORE_IP_NONE;
+    protocore_ip v6b;
+    v6b.family = PROTOCORE_IP_NONE;
     TEST_ASSERT_TRUE(Ip.parse("2001:db8::1", &v6a));
     TEST_ASSERT_TRUE(Ip.parse("2001:db8::2", &v6b));
-    for (int i = 0; i < PC_AUTH_LOCKOUT_THRESHOLD; i++)
+    for (int i = 0; i < PROTOCORE_AUTH_LOCKOUT_THRESHOLD; i++)
     {
         auth_lockout_fail(&v6a, 0);
     }
@@ -148,7 +148,7 @@ void test_v6_distinct_from_v4_and_each_other()
     TEST_ASSERT_EQUAL_UINT32(0, auth_lockout_remaining_ms(&v6b, 0)); // a different v6 peer is not
 
     // A v4 host that "looks like" the v6 tail must not inherit the lockout.
-    pc_ip v4 = v4w(0x00000001u); // 0.0.0.1 - distinct family, distinct bucket
+    protocore_ip v4 = v4w(0x00000001u); // 0.0.0.1 - distinct family, distinct bucket
     TEST_ASSERT_EQUAL_UINT32(0, auth_lockout_remaining_ms(&v4, 0));
 }
 
@@ -156,9 +156,9 @@ void test_v6_distinct_from_v4_and_each_other()
 void test_zero_ip_never_locked()
 {
     auth_lockout_reset();
-    pc_ip none;
-    none.family = PC_IP_NONE;
-    for (int i = 0; i < PC_AUTH_LOCKOUT_THRESHOLD + 10; i++)
+    protocore_ip none;
+    none.family = PROTOCORE_IP_NONE;
+    for (int i = 0; i < PROTOCORE_AUTH_LOCKOUT_THRESHOLD + 10; i++)
     {
         auth_lockout_fail(&none, 0);
     }
@@ -170,13 +170,13 @@ void test_zero_ip_never_locked()
 void test_table_full_tracks_new_address()
 {
     auth_lockout_reset();
-    for (int i = 0; i < PC_AUTH_LOCKOUT_SLOTS; i++)
+    for (int i = 0; i < PROTOCORE_AUTH_LOCKOUT_SLOTS; i++)
     {
-        pc_ip ip = v4w(0xC0000000u + (uint32_t)i);
+        protocore_ip ip = v4w(0xC0000000u + (uint32_t)i);
         auth_lockout_fail(&ip, 0);
     }
-    pc_ip fresh = v4w(0xD0000000u);
-    for (int i = 0; i < PC_AUTH_LOCKOUT_THRESHOLD; i++)
+    protocore_ip fresh = v4w(0xD0000000u);
+    for (int i = 0; i < PROTOCORE_AUTH_LOCKOUT_THRESHOLD; i++)
     {
         auth_lockout_fail(&fresh, 0);
     }
@@ -189,15 +189,15 @@ void test_table_full_tracks_new_address()
 void test_active_lockout_survives_eviction()
 {
     auth_lockout_reset();
-    pc_ip victim = v4w(0x0A0000FFu);
-    for (int i = 0; i < PC_AUTH_LOCKOUT_THRESHOLD; i++)
+    protocore_ip victim = v4w(0x0A0000FFu);
+    for (int i = 0; i < PROTOCORE_AUTH_LOCKOUT_THRESHOLD; i++)
     {
         auth_lockout_fail(&victim, 0);
     }
     TEST_ASSERT_TRUE(auth_lockout_remaining_ms(&victim, 0) > 0);
-    for (uint32_t i = 1; i <= (uint32_t)PC_AUTH_LOCKOUT_SLOTS * 2u; i++)
+    for (uint32_t i = 1; i <= (uint32_t)PROTOCORE_AUTH_LOCKOUT_SLOTS * 2u; i++)
     {
-        pc_ip other = v4w(0xB0000000u + i);
+        protocore_ip other = v4w(0xB0000000u + i);
         auth_lockout_fail(&other, 1);
     }
     TEST_ASSERT_TRUE(auth_lockout_remaining_ms(&victim, 1) > 0);
@@ -206,21 +206,21 @@ void test_active_lockout_survives_eviction()
 void test_succeed_unspecified_and_table_full_eviction()
 {
     auth_lockout_reset();
-    pc_ip none = {0};            // unspecified (family PC_IP_NONE)
+    protocore_ip none = {0};            // unspecified (family PROTOCORE_IP_NONE)
     auth_lockout_succeed(&none); // no-op guard on an unspecified address
     // Fill every bucket with an active lockout.
-    for (int i = 0; i < PC_AUTH_LOCKOUT_SLOTS; i++)
+    for (int i = 0; i < PROTOCORE_AUTH_LOCKOUT_SLOTS; i++)
     {
-        pc_ip ip = v4w(0x0B000000u + (uint32_t)i);
+        protocore_ip ip = v4w(0x0B000000u + (uint32_t)i);
         uint32_t t = 100000u - (uint32_t)i; // decreasing so a later-indexed bucket is more stale (LRU)
-        for (int f = 0; f < PC_AUTH_LOCKOUT_THRESHOLD; f++)
+        for (int f = 0; f < PROTOCORE_AUTH_LOCKOUT_THRESHOLD; f++)
         {
             auth_lockout_fail(&ip, t);
         }
     }
     // A new distinct IP: the table is full of active lockouts, so allocation tracks LRU and evicts.
-    pc_ip extra = v4w(0x0C000001u);
-    for (int f = 0; f < PC_AUTH_LOCKOUT_THRESHOLD; f++)
+    protocore_ip extra = v4w(0x0C000001u);
+    for (int f = 0; f < PROTOCORE_AUTH_LOCKOUT_THRESHOLD; f++)
     {
         auth_lockout_fail(&extra, 100000u); // full table -> allocation tracks LRU and evicts the stalest bucket
     }
@@ -232,7 +232,7 @@ void test_succeed_unspecified_and_table_full_eviction()
 void test_succeed_unknown_address_is_noop()
 {
     auth_lockout_reset();
-    pc_ip unknown = v4w(0x0A0000BBu);
+    protocore_ip unknown = v4w(0x0A0000BBu);
     auth_lockout_succeed(&unknown); // not in the table -> NULL bucket, no-op
     TEST_ASSERT_EQUAL_UINT32(0, auth_lockout_remaining_ms(&unknown, 0));
 }
@@ -243,14 +243,14 @@ void test_succeed_unknown_address_is_noop()
 void test_fail_counter_saturates_at_uint16_max()
 {
     auth_lockout_reset();
-    pc_ip ip = v4w(0x0A0000AAu);
+    protocore_ip ip = v4w(0x0A0000AAu);
     for (uint32_t i = 0; i < 0x10000u + 4u; i++)
     {
         auth_lockout_fail(&ip, 0);
     }
     // Still locked at the configured maximum - the counter never wrapped back to 0
     // (which would have shown up here as a shorter, or zero, remaining lockout).
-    TEST_ASSERT_EQUAL_UINT32(PC_AUTH_LOCKOUT_MAX_MS, auth_lockout_remaining_ms(&ip, 0));
+    TEST_ASSERT_EQUAL_UINT32(PROTOCORE_AUTH_LOCKOUT_MAX_MS, auth_lockout_remaining_ms(&ip, 0));
 }
 
 int main()

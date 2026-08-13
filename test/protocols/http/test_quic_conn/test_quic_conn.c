@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Unit tests for the QUIC v1 server connection engine (network_drivers/presentation/http/http3/pc_quic_conn;
+// Unit tests for the QUIC v1 server connection engine (network_drivers/presentation/http/http3/protocore_quic_conn;
 // RFC 9000 / RFC 9001). The test acts as a QUIC *client*: it builds real Initial / Handshake / 1-RTT
 // packets, protects and opens them with the same crypto the engine uses, and drives a server QuicConn
 // through a full handshake and a 1-RTT request/response stream exchange - proving the engine's packet
@@ -35,8 +35,8 @@ static uint8_t tw_tctx[4096]; // tctx works out of its own bytes // test-side wo
 static void assert_ctx_match(uint8_t *a, uint8_t *b)
 {
     uint8_t n12[12] = {0}, zpt[16] = {0}, c1[16], t1[16], c2[16], t2[16];
-    (void)pc_aes128gcm_seal((struct pc_aes128gcm_key *)(a), n12, NULL, 0, zpt, sizeof zpt, c1, t1);
-    (void)pc_aes128gcm_seal((struct pc_aes128gcm_key *)(b), n12, NULL, 0, zpt, sizeof zpt, c2, t2);
+    (void)protocore_aes128gcm_seal((struct protocore_aes128gcm_key *)(a), n12, NULL, 0, zpt, sizeof zpt, c1, t1);
+    (void)protocore_aes128gcm_seal((struct protocore_aes128gcm_key *)(b), n12, NULL, 0, zpt, sizeof zpt, c2, t2);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(c1, c2, sizeof c1);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(t1, t2, sizeof t1);
 }
@@ -157,31 +157,31 @@ static void wr_pn(uint8_t *o, uint64_t pn, uint8_t pn_len)
 static size_t build_long(uint8_t *out, size_t cap, uint8_t type, const uint8_t *dcid, uint8_t dcl, const uint8_t *scid,
                          uint8_t scl, uint64_t pn, QuicPacketKeys *keys, const uint8_t *frames, size_t frame_len)
 {
-    uint8_t pn_len = pc_quic_pn_length(pn, -1);
-    size_t p = pc_quic_build_long_header(out, cap, type, QUIC_VERSION_1, dcid, dcl, scid, scl, pn_len);
+    uint8_t pn_len = protocore_quic_pn_length(pn, -1);
+    size_t p = protocore_quic_build_long_header(out, cap, type, QUIC_VERSION_1, dcid, dcl, scid, scl, pn_len);
     if (type == QUIC_LP_INITIAL)
     {
-        p += pc_quic_varint_encode(out + p, cap - p, 0);
+        p += protocore_quic_varint_encode(out + p, cap - p, 0);
     }
     uint64_t length = (uint64_t)pn_len + frame_len + 16;
-    p += pc_quic_varint_encode(out + p, cap - p, length);
+    p += protocore_quic_varint_encode(out + p, cap - p, length);
     size_t pn_off = p;
     wr_pn(out + p, pn, pn_len);
     p += pn_len;
     memcpy(out + p, frames, frame_len);
-    return pc_quic_packet_protect(out, cap, pn_off, pn_len, pn, frame_len, keys, PROTO_TRUE);
+    return protocore_quic_packet_protect(out, cap, pn_off, pn_len, pn, frame_len, keys, PROTO_TRUE);
 }
 
 static size_t build_short(uint8_t *out, size_t cap, const uint8_t *dcid, uint8_t dcl, uint64_t pn, QuicPacketKeys *keys,
                           const uint8_t *frames, size_t frame_len)
 {
-    uint8_t pn_len = pc_quic_pn_length(pn, -1);
+    uint8_t pn_len = protocore_quic_pn_length(pn, -1);
     out[0] = (uint8_t)(0x40 | (pn_len - 1));
     memcpy(out + 1, dcid, dcl);
     size_t pn_off = 1 + dcl;
     wr_pn(out + pn_off, pn, pn_len);
     memcpy(out + pn_off + pn_len, frames, frame_len);
-    return pc_quic_packet_protect(out, cap, pn_off, pn_len, pn, frame_len, keys, PROTO_FALSE);
+    return protocore_quic_packet_protect(out, cap, pn_off, pn_len, pn, frame_len, keys, PROTO_FALSE);
 }
 
 // Open a long-header packet at dg; returns plaintext length (or SIZE_MAX) and the on-wire length.
@@ -189,25 +189,25 @@ static size_t open_long(const uint8_t *dg, size_t len, QuicPacketKeys *keys, uin
                         uint8_t *type_out)
 {
     QuicLongHeader h;
-    TEST_ASSERT_TRUE(pc_quic_parse_long_header(dg, len, &h));
+    TEST_ASSERT_TRUE(protocore_quic_parse_long_header(dg, len, &h));
     *type_out = h.type;
     size_t off = h.hdr_len;
     if (h.type == QUIC_LP_INITIAL)
     {
         uint64_t tl = 0;
         size_t c = 0;
-        pc_quic_varint_decode(dg + off, len - off, &tl, &c);
+        protocore_quic_varint_decode(dg + off, len - off, &tl, &c);
         off += c + (size_t)tl;
     }
     uint64_t length = 0;
     size_t c = 0;
-    pc_quic_varint_decode(dg + off, len - off, &length, &c);
+    protocore_quic_varint_decode(dg + off, len - off, &length, &c);
     off += c;
     *wire_len = off + (size_t)length;
     static uint8_t work[2048];
     memcpy(work, dg, *wire_len);
     uint64_t pn = 0;
-    return pc_quic_packet_unprotect(work, off, (size_t)length, 0, keys, PROTO_TRUE, plain, &pn);
+    return protocore_quic_packet_unprotect(work, off, (size_t)length, 0, keys, PROTO_TRUE, plain, &pn);
 }
 
 static size_t open_short(const uint8_t *dg, size_t len, uint8_t dcl, QuicPacketKeys *keys, uint8_t *plain)
@@ -215,7 +215,7 @@ static size_t open_short(const uint8_t *dg, size_t len, uint8_t dcl, QuicPacketK
     static uint8_t work[2048];
     memcpy(work, dg, len);
     uint64_t pn = 0;
-    return pc_quic_packet_unprotect(work, 1 + dcl, len - (1 + dcl), 0, keys, PROTO_FALSE, plain, &pn);
+    return protocore_quic_packet_unprotect(work, 1 + dcl, len - (1 + dcl), 0, keys, PROTO_FALSE, plain, &pn);
 }
 
 // Scan a decrypted payload for a CRYPTO frame and copy its data out; returns bytes copied.
@@ -230,7 +230,7 @@ static size_t extract_crypto(const uint8_t *p, size_t len, uint8_t *out)
             continue;
         }
         QuicFrame f;
-        size_t n = pc_quic_frame_parse(p + off, len - off, &f);
+        size_t n = protocore_quic_frame_parse(p + off, len - off, &f);
         if (!n)
         {
             break;
@@ -256,7 +256,7 @@ static proto_bool has_frame(const uint8_t *p, size_t len, uint64_t want)
             continue;
         }
         QuicFrame f;
-        size_t n = pc_quic_frame_parse(p + off, len - off, &f);
+        size_t n = protocore_quic_frame_parse(p + off, len - off, &f);
         if (!n)
         {
             break;
@@ -278,7 +278,7 @@ static void make_cfg(QuicTlsConfig *cfg)
     memcpy(cfg->ed25519_seed, SERVER_SEED, 32);
     memcpy(cfg->ephemeral_priv, SERVER_PRIV, 32);
     memcpy(cfg->random, SERVER_RANDOM, 32);
-    pc_quic_tp_defaults(&cfg->params);
+    protocore_quic_tp_defaults(&cfg->params);
     cfg->params.initial_max_data = 1048576;
     cfg->params.initial_max_sd_bidi_remote = 262144;
     cfg->params.initial_max_streams_bidi = 8;
@@ -290,37 +290,37 @@ void test_full_handshake_and_stream()
     QuicTlsConfig cfg;
     make_cfg(&cfg);
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
-    pc_quic_conn_init(&g_qc, &cfg, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), SERVER_SCID,
+    protocore_quic_conn_init(&g_qc, &cfg, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), SERVER_SCID,
                       sizeof(SERVER_SCID), &cb);
 
     // Client Initial keys from the same DCID the server used.
     QuicInitialSecrets init;
-    pc_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
+    protocore_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
 
     // --- Client -> server: Initial(CRYPTO ClientHello), padded ---
     QuicTransportParams ctp;
-    pc_quic_tp_defaults(&ctp);
+    protocore_quic_tp_defaults(&ctp);
     ctp.initial_max_data = 524288;
     ctp.initial_max_sd_bidi_local = 131072;
     uint8_t ctp_enc[128];
-    size_t ctp_len = pc_quic_tp_encode(&ctp, ctp_enc, sizeof(ctp_enc));
+    size_t ctp_len = protocore_quic_tp_encode(&ctp, ctp_enc, sizeof(ctp_enc));
     uint8_t client_pub[32];
-    pc_x25519_base(client_pub, CLIENT_PRIV);
+    protocore_x25519_base(client_pub, CLIENT_PRIV);
     uint8_t ch[512];
     size_t ch_len = build_client_hello(ch, client_pub, ctp_enc, ctp_len);
 
     uint8_t frames[1200];
-    size_t fl = pc_quic_build_crypto(frames, sizeof(frames), 0, ch, ch_len);
+    size_t fl = protocore_quic_build_crypto(frames, sizeof(frames), 0, ch, ch_len);
     memset(frames + fl, 0, 1100 - fl); // PADDING to give the server a comfortable amp budget
     fl = 1100;
     uint8_t dg[1500];
     size_t dl = build_long(dg, sizeof(dg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
                            &init.client, frames, fl);
-    TEST_ASSERT_TRUE(pc_quic_conn_recv(&g_qc, dg, dl));
+    TEST_ASSERT_TRUE(protocore_quic_conn_recv(&g_qc, dg, dl));
 
     // --- Server -> client: Initial(SH) + Handshake(EE..Finished) ---
     uint8_t sdg[1500];
-    size_t sl = pc_quic_conn_send(&g_qc, sdg, sizeof(sdg));
+    size_t sl = protocore_quic_conn_send(&g_qc, sdg, sizeof(sdg));
     TEST_ASSERT_TRUE(sl > 0);
 
     uint8_t plain[2048], sh[512], hsflight[1024];
@@ -333,23 +333,23 @@ void test_full_handshake_and_stream()
 
     // Derive the handshake secrets (client side) and open the Handshake packet.
     uint8_t server_pub[32], ecdhe[32];
-    pc_x25519_base(server_pub, SERVER_PRIV);
-    pc_x25519(ecdhe, CLIENT_PRIV, server_pub);
-    pc_sha256_ctx t;
+    protocore_x25519_base(server_pub, SERVER_PRIV);
+    protocore_x25519(ecdhe, CLIENT_PRIV, server_pub);
+    protocore_sha256_ctx t;
     uint8_t ch_sh[32], ch_sf[32];
-    pc_sha256_init(&t, tw_t);
-    pc_sha256_update(&t, ch, ch_len);
-    pc_sha256_update(&t, sh, sh_len);
+    protocore_sha256_init(&t, tw_t);
+    protocore_sha256_update(&t, ch, ch_len);
+    protocore_sha256_update(&t, sh, sh_len);
     {
-        pc_sha256_final(&t, ch_sh);
+        protocore_sha256_final(&t, ch_sh);
     }
     Tls13KeySchedule cks;
-    static uint8_t ks_store_340[PC_TLS13_KS_BORROW];
-    pc_tls13_ks_early(&TLS13_KDF, &cks, ks_store_340);
-    pc_tls13_ks_handshake(&cks, ecdhe, ch_sh, sizeof(ecdhe));
+    static uint8_t ks_store_340[PROTOCORE_TLS13_KS_BORROW];
+    protocore_tls13_ks_early(&TLS13_KDF, &cks, ks_store_340);
+    protocore_tls13_ks_handshake(&cks, ecdhe, ch_sh, sizeof(ecdhe));
     QuicPacketKeys hs_server_keys, hs_client_keys;
-    pc_quic_keys_from_secret(tw, cks.s + TLS13_KS_SERVER_HS, &hs_server_keys);
-    pc_quic_keys_from_secret(tw, cks.s + TLS13_KS_CLIENT_HS, &hs_client_keys);
+    protocore_quic_keys_from_secret(tw, cks.s + TLS13_KS_SERVER_HS, &hs_server_keys);
+    protocore_quic_keys_from_secret(tw, cks.s + TLS13_KS_CLIENT_HS, &hs_client_keys);
 
     size_t hswire = 0;
     uint8_t hstype = 0;
@@ -359,43 +359,43 @@ void test_full_handshake_and_stream()
     TEST_ASSERT_EQUAL_UINT8(TLS_HS_ENCRYPTED_EXTENSIONS, hsflight[0]);
 
     // Full transcript -> application keys.
-    pc_sha256_update(&t, hsflight, hsflen);
-    pc_sha256_final(&t, ch_sf);
-    pc_tls13_ks_master(&cks, ch_sf);
+    protocore_sha256_update(&t, hsflight, hsflen);
+    protocore_sha256_final(&t, ch_sf);
+    protocore_tls13_ks_master(&cks, ch_sf);
     QuicPacketKeys ap_server_keys, ap_client_keys;
-    pc_quic_keys_from_secret(tw, cks.s + TLS13_KS_SERVER_AP, &ap_server_keys);
-    pc_quic_keys_from_secret(tw, cks.s + TLS13_KS_CLIENT_AP, &ap_client_keys);
+    protocore_quic_keys_from_secret(tw, cks.s + TLS13_KS_SERVER_AP, &ap_server_keys);
+    protocore_quic_keys_from_secret(tw, cks.s + TLS13_KS_CLIENT_AP, &ap_client_keys);
     // Diagnostic: the client-derived keys must equal the server's.
     assert_ctx_match(g_qc.tls.hs_server.gcm, hs_server_keys.gcm);
     assert_ctx_match(g_qc.tls.ap_server.gcm, ap_server_keys.gcm);
 
     // --- Client -> server: Initial(ACK) + Handshake(ACK + CRYPTO client Finished) ---
     uint8_t ifr[64];
-    size_t ifl = pc_quic_build_ack(ifr, sizeof(ifr), 0, 0, 0);
+    size_t ifl = protocore_quic_build_ack(ifr, sizeof(ifr), 0, 0, 0);
     uint8_t idg[256];
     size_t idl = build_long(idg, sizeof(idg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID),
                             1, &init.client, ifr, ifl);
 
     uint8_t cfin[36] = {TLS_HS_FINISHED, 0x00, 0x00, 0x20};
-    pc_tls13_finished_mac(&cks, cks.s + TLS13_KS_CLIENT_HS, ch_sf, cfin + 4);
+    protocore_tls13_finished_mac(&cks, cks.s + TLS13_KS_CLIENT_HS, ch_sf, cfin + 4);
     uint8_t hfr[64];
-    size_t hfl = pc_quic_build_ack(hfr, sizeof(hfr), 0, 0, 0);
-    hfl += pc_quic_build_crypto(hfr + hfl, sizeof(hfr) - hfl, 0, cfin, sizeof(cfin));
+    size_t hfl = protocore_quic_build_ack(hfr, sizeof(hfr), 0, 0, 0);
+    hfl += protocore_quic_build_crypto(hfr + hfl, sizeof(hfr) - hfl, 0, cfin, sizeof(cfin));
     size_t hdl = build_long(idg + idl, sizeof(idg) - idl, QUIC_LP_HANDSHAKE, ODCID, sizeof(ODCID), CLIENT_SCID,
                             sizeof(CLIENT_SCID), 0, &hs_client_keys, hfr, hfl);
-    TEST_ASSERT_TRUE(pc_quic_conn_recv(&g_qc, idg, idl + hdl));
+    TEST_ASSERT_TRUE(protocore_quic_conn_recv(&g_qc, idg, idl + hdl));
 
-    TEST_ASSERT_TRUE(pc_quic_conn_established(&g_qc));
+    TEST_ASSERT_TRUE(protocore_quic_conn_established(&g_qc));
     TEST_ASSERT_TRUE(g_hs_done);
 
     // Server's next datagram carries HANDSHAKE_DONE at 1-RTT.
-    sl = pc_quic_conn_send(&g_qc, sdg, sizeof(sdg));
+    sl = protocore_quic_conn_send(&g_qc, sdg, sizeof(sdg));
     TEST_ASSERT_TRUE(sl > 0);
     proto_bool saw_hs_done = PROTO_FALSE;
     size_t off = 0;
     while (off < sl)
     {
-        if (pc_quic_is_long_header(sdg[off]))
+        if (protocore_quic_is_long_header(sdg[off]))
         {
             size_t w = 0;
             uint8_t tp2 = 0;
@@ -417,24 +417,24 @@ void test_full_handshake_and_stream()
 
     // --- 1-RTT stream: client sends "GET" (fin) on stream 0; server echoes "OK" ---
     uint8_t sfr[64];
-    size_t sfl = pc_quic_build_stream(sfr, sizeof(sfr), 0, 0, (const uint8_t *)"GET", 3, PROTO_TRUE);
+    size_t sfl = protocore_quic_build_stream(sfr, sizeof(sfr), 0, 0, (const uint8_t *)"GET", 3, PROTO_TRUE);
     uint8_t s1[256];
     size_t s1l = build_short(s1, sizeof(s1), SERVER_SCID, sizeof(SERVER_SCID), 0, &ap_client_keys, sfr, sfl);
-    TEST_ASSERT_TRUE(pc_quic_conn_recv(&g_qc, s1, s1l));
+    TEST_ASSERT_TRUE(protocore_quic_conn_recv(&g_qc, s1, s1l));
     TEST_ASSERT_EQUAL_UINT64(0, g_stream_id);
     TEST_ASSERT_EQUAL_UINT(3, g_stream_len);
     TEST_ASSERT_EQUAL_UINT8_ARRAY("GET", g_stream_data, 3);
     TEST_ASSERT_TRUE(g_stream_fin);
 
-    pc_quic_conn_stream_send(&g_qc, 0, (const uint8_t *)"OK", 2, PROTO_TRUE);
-    sl = pc_quic_conn_send(&g_qc, sdg, sizeof(sdg));
+    protocore_quic_conn_stream_send(&g_qc, 0, (const uint8_t *)"OK", 2, PROTO_TRUE);
+    sl = protocore_quic_conn_send(&g_qc, sdg, sizeof(sdg));
     TEST_ASSERT_TRUE(sl > 0);
     // The 1-RTT packet is the last (short-header) packet in the datagram.
     off = 0;
     proto_bool got_resp = PROTO_FALSE;
     while (off < sl)
     {
-        if (pc_quic_is_long_header(sdg[off]))
+        if (protocore_quic_is_long_header(sdg[off]))
         {
             size_t w = 0;
             uint8_t tp2 = 0;
@@ -454,7 +454,7 @@ void test_full_handshake_and_stream()
                 continue;
             }
             QuicFrame f;
-            size_t n = pc_quic_frame_parse(plain + fo, p2 - fo, &f);
+            size_t n = protocore_quic_frame_parse(plain + fo, p2 - fo, &f);
             if (!n)
             {
                 break;
@@ -472,15 +472,15 @@ void test_full_handshake_and_stream()
     TEST_ASSERT_TRUE(got_resp);
 
     // --- Loss recovery: the client never ACKed the 1-RTT response, so a PTO retransmits it ---
-    pc_quic_conn_on_timeout(&g_qc, 5000);                      // arm (APP space has unacknowledged stream data)
-    pc_quic_conn_on_timeout(&g_qc, 5000 + PC_QUIC_PTO_MS + 1); // fire -> rewind the response stream
-    sl = pc_quic_conn_send(&g_qc, sdg, sizeof(sdg));
+    protocore_quic_conn_on_timeout(&g_qc, 5000);                      // arm (APP space has unacknowledged stream data)
+    protocore_quic_conn_on_timeout(&g_qc, 5000 + PROTOCORE_QUIC_PTO_MS + 1); // fire -> rewind the response stream
+    sl = protocore_quic_conn_send(&g_qc, sdg, sizeof(sdg));
     TEST_ASSERT_TRUE(sl > 0);
     proto_bool resent = PROTO_FALSE;
     off = 0;
     while (off < sl)
     {
-        if (pc_quic_is_long_header(sdg[off]))
+        if (protocore_quic_is_long_header(sdg[off]))
         {
             size_t w = 0;
             uint8_t tp2 = 0;
@@ -499,7 +499,7 @@ void test_full_handshake_and_stream()
                 continue;
             }
             QuicFrame f;
-            size_t n = pc_quic_frame_parse(plain + fo, p2 - fo, &f);
+            size_t n = protocore_quic_frame_parse(plain + fo, p2 - fo, &f);
             if (!n)
             {
                 break;
@@ -523,43 +523,43 @@ void test_pto_retransmits_flight()
     QuicTlsConfig cfg;
     make_cfg(&cfg);
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
-    pc_quic_conn_init(&g_qc, &cfg, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), SERVER_SCID,
+    protocore_quic_conn_init(&g_qc, &cfg, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), SERVER_SCID,
                       sizeof(SERVER_SCID), &cb);
 
     QuicInitialSecrets init;
-    pc_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
+    protocore_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
 
     // Client Initial(ClientHello), padded for the amplification budget.
     QuicTransportParams ctp;
-    pc_quic_tp_defaults(&ctp);
+    protocore_quic_tp_defaults(&ctp);
     uint8_t ctp_enc[128];
-    size_t ctp_len = pc_quic_tp_encode(&ctp, ctp_enc, sizeof(ctp_enc));
+    size_t ctp_len = protocore_quic_tp_encode(&ctp, ctp_enc, sizeof(ctp_enc));
     uint8_t client_pub[32];
-    pc_x25519_base(client_pub, CLIENT_PRIV);
+    protocore_x25519_base(client_pub, CLIENT_PRIV);
     uint8_t ch[512];
     size_t ch_len = build_client_hello(ch, client_pub, ctp_enc, ctp_len);
     uint8_t frames[1200];
-    size_t fl = pc_quic_build_crypto(frames, sizeof(frames), 0, ch, ch_len);
+    size_t fl = protocore_quic_build_crypto(frames, sizeof(frames), 0, ch, ch_len);
     memset(frames + fl, 0, 1100 - fl);
     fl = 1100;
     uint8_t dg[1500];
     size_t dl = build_long(dg, sizeof(dg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
                            &init.client, frames, fl);
-    TEST_ASSERT_TRUE(pc_quic_conn_recv(&g_qc, dg, dl));
+    TEST_ASSERT_TRUE(protocore_quic_conn_recv(&g_qc, dg, dl));
 
     // Server's first flight (pretend it is lost: capture it and never ACK it).
     uint8_t sdg[1500];
-    TEST_ASSERT_TRUE(pc_quic_conn_send(&g_qc, sdg, sizeof(sdg)) > 0);
+    TEST_ASSERT_TRUE(protocore_quic_conn_send(&g_qc, sdg, sizeof(sdg)) > 0);
 
     // With the flight already sent and no PTO fired, there is nothing to send.
-    TEST_ASSERT_EQUAL_UINT(0, pc_quic_conn_send(&g_qc, sdg, sizeof(sdg)));
-    pc_quic_conn_on_timeout(&g_qc, 1000);                                  // arm
-    TEST_ASSERT_EQUAL_UINT(0, pc_quic_conn_send(&g_qc, sdg, sizeof(sdg))); // still nothing (not fired)
+    TEST_ASSERT_EQUAL_UINT(0, protocore_quic_conn_send(&g_qc, sdg, sizeof(sdg)));
+    protocore_quic_conn_on_timeout(&g_qc, 1000);                                  // arm
+    TEST_ASSERT_EQUAL_UINT(0, protocore_quic_conn_send(&g_qc, sdg, sizeof(sdg))); // still nothing (not fired)
 
     // Advance past the PTO: the flight is marked for retransmission and re-sent.
-    pc_quic_conn_on_timeout(&g_qc, 1000 + PC_QUIC_PTO_MS + 1);
+    protocore_quic_conn_on_timeout(&g_qc, 1000 + PROTOCORE_QUIC_PTO_MS + 1);
     uint8_t sdg2[1500];
-    size_t sl2 = pc_quic_conn_send(&g_qc, sdg2, sizeof(sdg2));
+    size_t sl2 = protocore_quic_conn_send(&g_qc, sdg2, sizeof(sdg2));
     TEST_ASSERT_TRUE(sl2 > 0);
     uint8_t plain[2048], sh[512];
     size_t wire = 0;
@@ -574,9 +574,9 @@ void test_pto_retransmits_flight()
     // to the last packet we sent), the PTO disarms and does not retransmit again.
     g_qc.space[QUIC_ENC_INITIAL].discarded = PROTO_TRUE;
     g_qc.space[QUIC_ENC_HANDSHAKE].largest_acked = g_qc.space[QUIC_ENC_HANDSHAKE].last_ae_pn;
-    pc_quic_conn_on_timeout(&g_qc, 1000 + 10 * PC_QUIC_PTO_MS);
+    protocore_quic_conn_on_timeout(&g_qc, 1000 + 10 * PROTOCORE_QUIC_PTO_MS);
     TEST_ASSERT_FALSE(g_qc.pto_armed);
-    TEST_ASSERT_EQUAL_UINT(0, pc_quic_conn_send(&g_qc, sdg2, sizeof(sdg2)));
+    TEST_ASSERT_EQUAL_UINT(0, protocore_quic_conn_send(&g_qc, sdg2, sizeof(sdg2)));
 }
 
 // Init a server conn and feed it a padded client Initial (ClientHello); the server flight is left
@@ -586,24 +586,24 @@ static void feed_client_initial(struct QuicConn *qc, QuicConnCallbacks *cb, Quic
 {
     QuicTlsConfig cfg;
     make_cfg(&cfg);
-    pc_quic_conn_init(qc, &cfg, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), SERVER_SCID,
+    protocore_quic_conn_init(qc, &cfg, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), SERVER_SCID,
                       sizeof(SERVER_SCID), cb);
-    pc_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), init);
+    protocore_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), init);
     QuicTransportParams ctp;
-    pc_quic_tp_defaults(&ctp);
+    protocore_quic_tp_defaults(&ctp);
     uint8_t ctp_enc[128];
-    size_t ctp_len = pc_quic_tp_encode(&ctp, ctp_enc, sizeof(ctp_enc));
+    size_t ctp_len = protocore_quic_tp_encode(&ctp, ctp_enc, sizeof(ctp_enc));
     uint8_t client_pub[32];
-    pc_x25519_base(client_pub, CLIENT_PRIV);
+    protocore_x25519_base(client_pub, CLIENT_PRIV);
     *ch_len = build_client_hello(ch, client_pub, ctp_enc, ctp_len);
     uint8_t frames[1200];
-    size_t fl = pc_quic_build_crypto(frames, sizeof(frames), 0, ch, *ch_len);
+    size_t fl = protocore_quic_build_crypto(frames, sizeof(frames), 0, ch, *ch_len);
     memset(frames + fl, 0, 1100 - fl);
     fl = 1100;
     uint8_t dg[1500];
     size_t dl = build_long(dg, sizeof(dg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
                            &init->client, frames, fl);
-    TEST_ASSERT_TRUE(pc_quic_conn_recv(qc, dg, dl));
+    TEST_ASSERT_TRUE(protocore_quic_conn_recv(qc, dg, dl));
 }
 
 // The public initiate-close API queues a transport CONNECTION_CLOSE the next send emits, after which
@@ -617,11 +617,11 @@ void test_connection_close_api()
     size_t ch_len = 0;
     feed_client_initial(&g_qc, &cb, &init, ch, &ch_len);
 
-    pc_quic_conn_close(&g_qc, QUIC_ERR_NO_ERROR);
+    protocore_quic_conn_close(&g_qc, QUIC_ERR_NO_ERROR);
     uint8_t cdg[512];
-    TEST_ASSERT_TRUE(pc_quic_conn_send(&g_qc, cdg, sizeof(cdg)) > 0);
-    TEST_ASSERT_TRUE(pc_quic_conn_is_closed(&g_qc));
-    TEST_ASSERT_EQUAL_UINT(0, pc_quic_conn_send(&g_qc, cdg, sizeof(cdg))); // nothing more after the close
+    TEST_ASSERT_TRUE(protocore_quic_conn_send(&g_qc, cdg, sizeof(cdg)) > 0);
+    TEST_ASSERT_TRUE(protocore_quic_conn_is_closed(&g_qc));
+    TEST_ASSERT_EQUAL_UINT(0, protocore_quic_conn_send(&g_qc, cdg, sizeof(cdg))); // nothing more after the close
 }
 
 // A fatal transport error (an undecodable frame) makes the server report a CONNECTION_CLOSE with the
@@ -637,7 +637,7 @@ void test_connection_close_on_malformed_frame()
 
     // Capture the server flight and derive the client-side Handshake keys (to send at + read that level).
     uint8_t sdg[1500];
-    size_t sl = pc_quic_conn_send(&g_qc, sdg, sizeof(sdg));
+    size_t sl = protocore_quic_conn_send(&g_qc, sdg, sizeof(sdg));
     TEST_ASSERT_TRUE(sl > 0);
     uint8_t plain[2048], sh[512];
     size_t wire = 0;
@@ -645,21 +645,21 @@ void test_connection_close_on_malformed_frame()
     size_t pt = open_long(sdg, sl, &init.server, plain, &wire, &type);
     size_t sh_len = extract_crypto(plain, pt, sh);
     uint8_t server_pub[32], ecdhe[32];
-    pc_x25519_base(server_pub, SERVER_PRIV);
-    pc_x25519(ecdhe, CLIENT_PRIV, server_pub);
-    pc_sha256_ctx tctx;
+    protocore_x25519_base(server_pub, SERVER_PRIV);
+    protocore_x25519(ecdhe, CLIENT_PRIV, server_pub);
+    protocore_sha256_ctx tctx;
     uint8_t ch_sh[32];
-    pc_sha256_init(&tctx, tw_tctx);
-    pc_sha256_update(&tctx, ch, ch_len);
-    pc_sha256_update(&tctx, sh, sh_len);
-    pc_sha256_final(&tctx, ch_sh);
+    protocore_sha256_init(&tctx, tw_tctx);
+    protocore_sha256_update(&tctx, ch, ch_len);
+    protocore_sha256_update(&tctx, sh, sh_len);
+    protocore_sha256_final(&tctx, ch_sh);
     Tls13KeySchedule cks;
-    static uint8_t ks_store_652[PC_TLS13_KS_BORROW];
-    pc_tls13_ks_early(&TLS13_KDF, &cks, ks_store_652);
-    pc_tls13_ks_handshake(&cks, ecdhe, ch_sh, sizeof(ecdhe));
+    static uint8_t ks_store_652[PROTOCORE_TLS13_KS_BORROW];
+    protocore_tls13_ks_early(&TLS13_KDF, &cks, ks_store_652);
+    protocore_tls13_ks_handshake(&cks, ecdhe, ch_sh, sizeof(ecdhe));
     QuicPacketKeys hs_server_keys, hs_client_keys;
-    pc_quic_keys_from_secret(tw, cks.s + TLS13_KS_SERVER_HS, &hs_server_keys);
-    pc_quic_keys_from_secret(tw, cks.s + TLS13_KS_CLIENT_HS, &hs_client_keys);
+    protocore_quic_keys_from_secret(tw, cks.s + TLS13_KS_SERVER_HS, &hs_server_keys);
+    protocore_quic_keys_from_secret(tw, cks.s + TLS13_KS_CLIENT_HS, &hs_client_keys);
 
     // Client -> server: a Handshake packet whose only frame is a malformed CRYPTO (its declared length
     // dwarfs the packet), which the server cannot decode.
@@ -667,11 +667,11 @@ void test_connection_close_on_malformed_frame()
     uint8_t bdg[256];
     size_t bl = build_long(bdg, sizeof(bdg), QUIC_LP_HANDSHAKE, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID),
                            0, &hs_client_keys, bad, sizeof(bad));
-    pc_quic_conn_recv(&g_qc, bdg, bl); // fatal -> queues the close
+    protocore_quic_conn_recv(&g_qc, bdg, bl); // fatal -> queues the close
 
     // The next server datagram is a CONNECTION_CLOSE (FRAME_ENCODING) at the Handshake level.
     uint8_t cdg[512];
-    size_t cl = pc_quic_conn_send(&g_qc, cdg, sizeof(cdg));
+    size_t cl = protocore_quic_conn_send(&g_qc, cdg, sizeof(cdg));
     TEST_ASSERT_TRUE(cl > 0);
     size_t cw = 0;
     uint8_t ctype = 0;
@@ -687,7 +687,7 @@ void test_connection_close_on_malformed_frame()
             continue;
         }
         QuicFrame f;
-        size_t n = pc_quic_frame_parse(plain + fo, cpt - fo, &f);
+        size_t n = protocore_quic_frame_parse(plain + fo, cpt - fo, &f);
         if (!n)
         {
             break;
@@ -700,17 +700,17 @@ void test_connection_close_on_malformed_frame()
         }
     }
     TEST_ASSERT_TRUE(saw);
-    TEST_ASSERT_TRUE(pc_quic_conn_is_closed(&g_qc));
-    TEST_ASSERT_EQUAL_UINT(0, pc_quic_conn_send(&g_qc, cdg, sizeof(cdg))); // nothing more after the close
+    TEST_ASSERT_TRUE(protocore_quic_conn_is_closed(&g_qc));
+    TEST_ASSERT_EQUAL_UINT(0, protocore_quic_conn_send(&g_qc, cdg, sizeof(cdg))); // nothing more after the close
 }
 
 // Init a bare server conn (Initial keys ready, handshake not started). cb is owned
-// by the caller (pc_quic_conn_init keeps the pointer).
+// by the caller (protocore_quic_conn_init keeps the pointer).
 static void init_conn(struct QuicConn *qc, QuicConnCallbacks *cb)
 {
     QuicTlsConfig cfg;
     make_cfg(&cfg);
-    pc_quic_conn_init(qc, &cfg, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), SERVER_SCID,
+    protocore_quic_conn_init(qc, &cfg, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), SERVER_SCID,
                       sizeof(SERVER_SCID), cb);
 }
 
@@ -721,17 +721,17 @@ void test_quic_recv_connection_close()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     init_conn(&g_qc, &cb);
     QuicInitialSecrets init;
-    pc_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
+    protocore_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
 
     uint8_t fr[32];
-    size_t fl = pc_quic_build_connection_close(fr, sizeof(fr), PROTO_FALSE, QUIC_ERR_NO_ERROR, 0, NULL, 0);
+    size_t fl = protocore_quic_build_connection_close(fr, sizeof(fr), PROTO_FALSE, QUIC_ERR_NO_ERROR, 0, NULL, 0);
     uint8_t dg[256];
     size_t dl = build_long(dg, sizeof(dg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
                            &init.client, fr, fl);
-    pc_quic_conn_recv(&g_qc, dg, dl);
-    TEST_ASSERT_TRUE(pc_quic_conn_is_closed(&g_qc));
+    protocore_quic_conn_recv(&g_qc, dg, dl);
+    TEST_ASSERT_TRUE(protocore_quic_conn_is_closed(&g_qc));
     // A datagram arriving after the connection is closed is rejected outright.
-    TEST_ASSERT_FALSE(pc_quic_conn_recv(&g_qc, dg, dl));
+    TEST_ASSERT_FALSE(protocore_quic_conn_recv(&g_qc, dg, dl));
 }
 
 // PING and MAX_DATA are accepted with no per-frame state kept.
@@ -741,16 +741,16 @@ void test_quic_recv_ping_and_max_data()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     init_conn(&g_qc, &cb);
     QuicInitialSecrets init;
-    pc_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
+    protocore_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
 
     uint8_t fr[16];
-    size_t fl = pc_quic_build_ping(fr, sizeof(fr));
-    fl += pc_quic_build_max_data(fr + fl, sizeof(fr) - fl, 1000000);
+    size_t fl = protocore_quic_build_ping(fr, sizeof(fr));
+    fl += protocore_quic_build_max_data(fr + fl, sizeof(fr) - fl, 1000000);
     uint8_t dg[256];
     size_t dl = build_long(dg, sizeof(dg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
                            &init.client, fr, fl);
-    TEST_ASSERT_TRUE(pc_quic_conn_recv(&g_qc, dg, dl));
-    TEST_ASSERT_FALSE(pc_quic_conn_is_closed(&g_qc));
+    TEST_ASSERT_TRUE(protocore_quic_conn_recv(&g_qc, dg, dl));
+    TEST_ASSERT_FALSE(protocore_quic_conn_is_closed(&g_qc));
 }
 
 // A long header with an unknown version is dropped (Version Negotiation is a
@@ -761,13 +761,13 @@ void test_quic_recv_bad_version()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     init_conn(&g_qc, &cb);
     QuicInitialSecrets init;
-    pc_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
+    protocore_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
     uint8_t fr[8] = {QUIC_FT_PING};
     uint8_t dg[256];
     size_t dl = build_long(dg, sizeof(dg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
                            &init.client, fr, 1);
     dg[1] = dg[2] = dg[3] = dg[4] = 0xAA; // clobber the version (not header-protected)
-    TEST_ASSERT_FALSE(pc_quic_conn_recv(&g_qc, dg, dl));
+    TEST_ASSERT_FALSE(protocore_quic_conn_recv(&g_qc, dg, dl));
 }
 
 // A long header of an unsupported type (0-RTT) is dropped before decryption.
@@ -777,12 +777,12 @@ void test_quic_recv_unsupported_long_type()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     init_conn(&g_qc, &cb);
     QuicInitialSecrets init;
-    pc_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
+    protocore_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
     uint8_t fr[8] = {QUIC_FT_PING};
     uint8_t dg[256];
     size_t dl = build_long(dg, sizeof(dg), QUIC_LP_0RTT, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
                            &init.client, fr, 1);
-    TEST_ASSERT_FALSE(pc_quic_conn_recv(&g_qc, dg, dl));
+    TEST_ASSERT_FALSE(protocore_quic_conn_recv(&g_qc, dg, dl));
 }
 
 // A short-header (1-RTT) packet arriving before the app keys exist is dropped.
@@ -792,11 +792,11 @@ void test_quic_recv_short_before_app_keys()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     init_conn(&g_qc, &cb);
     QuicInitialSecrets init;
-    pc_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
+    protocore_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
     uint8_t fr[8] = {QUIC_FT_PING};
     uint8_t dg[256];
     size_t dl = build_short(dg, sizeof(dg), SERVER_SCID, sizeof(SERVER_SCID), 0, &init.client, fr, 1);
-    TEST_ASSERT_FALSE(pc_quic_conn_recv(&g_qc, dg, dl)); // open_keys(APP) is null -> dropped
+    TEST_ASSERT_FALSE(protocore_quic_conn_recv(&g_qc, dg, dl)); // open_keys(APP) is null -> dropped
 }
 
 // A short-header datagram too small to hold the DCID + a packet number is dropped.
@@ -806,7 +806,7 @@ void test_quic_recv_short_too_short()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     init_conn(&g_qc, &cb);
     uint8_t dg[1] = {0x40}; // short header, no room for DCID/PN
-    TEST_ASSERT_FALSE(pc_quic_conn_recv(&g_qc, dg, sizeof(dg)));
+    TEST_ASSERT_FALSE(protocore_quic_conn_recv(&g_qc, dg, sizeof(dg)));
 }
 
 // A packet whose AEAD tag fails to verify is consumed-and-dropped, not fatal.
@@ -816,15 +816,15 @@ void test_quic_recv_unprotect_failure()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     init_conn(&g_qc, &cb);
     QuicInitialSecrets init;
-    pc_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
+    protocore_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
     uint8_t fr[8] = {QUIC_FT_PING};
     uint8_t dg[256];
     size_t dl = build_long(dg, sizeof(dg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
                            &init.client, fr, 1);
     dg[dl - 1] ^= 0xFF; // corrupt the auth tag
-    pc_quic_conn_recv(&g_qc, dg, dl);
-    TEST_ASSERT_FALSE(pc_quic_conn_is_closed(&g_qc)); // dropped, no effect
-    TEST_ASSERT_FALSE(pc_quic_conn_established(&g_qc));
+    protocore_quic_conn_recv(&g_qc, dg, dl);
+    TEST_ASSERT_FALSE(protocore_quic_conn_is_closed(&g_qc)); // dropped, no effect
+    TEST_ASSERT_FALSE(protocore_quic_conn_established(&g_qc));
 }
 
 // A truncated long header (too short to parse) is dropped.
@@ -834,7 +834,7 @@ void test_quic_recv_truncated_long_header()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     init_conn(&g_qc, &cb);
     uint8_t dg[4] = {0xC0, 0x00, 0x00, 0x00}; // long header flag, then a truncated version
-    TEST_ASSERT_FALSE(pc_quic_conn_recv(&g_qc, dg, sizeof(dg)));
+    TEST_ASSERT_FALSE(protocore_quic_conn_recv(&g_qc, dg, sizeof(dg)));
 }
 
 // Before address validation the server sends at most 3x the bytes received; a
@@ -845,7 +845,7 @@ void test_quic_send_amplification_limited()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     init_conn(&g_qc, &cb);
     uint8_t out[256];
-    TEST_ASSERT_EQUAL_UINT(0, pc_quic_conn_send(&g_qc, out, sizeof(out)));
+    TEST_ASSERT_EQUAL_UINT(0, protocore_quic_conn_send(&g_qc, out, sizeof(out)));
 }
 
 // handle_crypto drops a CRYPTO frame beyond the reassembly window (out of order)
@@ -856,26 +856,26 @@ void test_quic_crypto_out_of_order_and_dup()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     init_conn(&g_qc, &cb);
     QuicInitialSecrets init;
-    pc_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
+    protocore_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
     uint8_t data[4] = {0x01, 0x00, 0x00, 0xFF}; // partial ClientHello header: TLS buffers, no failure
     uint8_t fr[32], dg[256];
 
     // Out of order: CRYPTO at offset 100 while want==0 -> dropped.
-    size_t fl = pc_quic_build_crypto(fr, sizeof(fr), 100, data, sizeof(data));
+    size_t fl = protocore_quic_build_crypto(fr, sizeof(fr), 100, data, sizeof(data));
     size_t dl = build_long(dg, sizeof(dg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
                            &init.client, fr, fl);
-    TEST_ASSERT_TRUE(pc_quic_conn_recv(&g_qc, dg, dl));
-    TEST_ASSERT_FALSE(pc_quic_conn_is_closed(&g_qc));
+    TEST_ASSERT_TRUE(protocore_quic_conn_recv(&g_qc, dg, dl));
+    TEST_ASSERT_FALSE(protocore_quic_conn_is_closed(&g_qc));
 
     // In-window then an identical copy: the second is a full duplicate.
-    fl = pc_quic_build_crypto(fr, sizeof(fr), 0, data, sizeof(data));
+    fl = protocore_quic_build_crypto(fr, sizeof(fr), 0, data, sizeof(data));
     dl = build_long(dg, sizeof(dg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 1,
                     &init.client, fr, fl);
-    TEST_ASSERT_TRUE(pc_quic_conn_recv(&g_qc, dg, dl));
+    TEST_ASSERT_TRUE(protocore_quic_conn_recv(&g_qc, dg, dl));
     uint8_t dg2[256];
     size_t dl2 = build_long(dg2, sizeof(dg2), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID),
                             2, &init.client, fr, fl);
-    TEST_ASSERT_TRUE(pc_quic_conn_recv(&g_qc, dg2, dl2)); // duplicate path
+    TEST_ASSERT_TRUE(protocore_quic_conn_recv(&g_qc, dg2, dl2)); // duplicate path
 }
 
 // on_timeout is a no-op once the connection is closed.
@@ -885,29 +885,29 @@ void test_quic_timeout_when_closed()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     init_conn(&g_qc, &cb);
     QuicInitialSecrets init;
-    pc_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
+    protocore_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
     uint8_t fr[32];
-    size_t fl = pc_quic_build_connection_close(fr, sizeof(fr), PROTO_FALSE, QUIC_ERR_NO_ERROR, 0, NULL, 0);
+    size_t fl = protocore_quic_build_connection_close(fr, sizeof(fr), PROTO_FALSE, QUIC_ERR_NO_ERROR, 0, NULL, 0);
     uint8_t dg[256];
     size_t dl = build_long(dg, sizeof(dg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
                            &init.client, fr, fl);
-    pc_quic_conn_recv(&g_qc, dg, dl);
-    TEST_ASSERT_TRUE(pc_quic_conn_is_closed(&g_qc));
-    pc_quic_conn_on_timeout(&g_qc, 1000); // closed -> immediate return, no effect
+    protocore_quic_conn_recv(&g_qc, dg, dl);
+    TEST_ASSERT_TRUE(protocore_quic_conn_is_closed(&g_qc));
+    protocore_quic_conn_on_timeout(&g_qc, 1000); // closed -> immediate return, no effect
 }
 
-// pc_quic_conn_stream_send refuses a new stream id once the stream table is full.
+// protocore_quic_conn_stream_send refuses a new stream id once the stream table is full.
 void test_quic_stream_send_table_full()
 {
     fill();
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     init_conn(&g_qc, &cb);
-    for (int i = 0; i < PC_QUIC_MAX_STREAMS; i++)
+    for (int i = 0; i < PROTOCORE_QUIC_MAX_STREAMS; i++)
     {
         TEST_ASSERT_EQUAL_UINT(
-            2, pc_quic_conn_stream_send(&g_qc, (uint64_t)(i * 4), (const uint8_t *)"hi", 2, PROTO_FALSE));
+            2, protocore_quic_conn_stream_send(&g_qc, (uint64_t)(i * 4), (const uint8_t *)"hi", 2, PROTO_FALSE));
     }
-    TEST_ASSERT_EQUAL_UINT(0, pc_quic_conn_stream_send(&g_qc, 999, (const uint8_t *)"x", 1, PROTO_FALSE)); // table full
+    TEST_ASSERT_EQUAL_UINT(0, protocore_quic_conn_stream_send(&g_qc, 999, (const uint8_t *)"x", 1, PROTO_FALSE)); // table full
 }
 
 // recv_packet header-parse guards: crafted Initials that fail before any decryption.
@@ -919,32 +919,32 @@ void test_quic_recv_malformed_initial_headers()
     uint8_t dg[1500];
 
     // 269: a truncated token-length varint (0xC0 announces 8 octets, none follow).
-    size_t hn = pc_quic_build_long_header(dg, sizeof dg, QUIC_LP_INITIAL, QUIC_VERSION_1, ODCID, sizeof(ODCID),
+    size_t hn = protocore_quic_build_long_header(dg, sizeof dg, QUIC_LP_INITIAL, QUIC_VERSION_1, ODCID, sizeof(ODCID),
                                           CLIENT_SCID, sizeof(CLIENT_SCID), 1);
     dg[hn] = 0xC0;
-    TEST_ASSERT_FALSE(pc_quic_conn_recv(&g_qc, dg, hn + 1));
+    TEST_ASSERT_FALSE(protocore_quic_conn_recv(&g_qc, dg, hn + 1));
 
     // 272: a token length that runs past the datagram end.
     dg[hn] = 0x40;
     dg[hn + 1] = 0xFF; // 2-octet varint = a 255-octet token
-    TEST_ASSERT_FALSE(pc_quic_conn_recv(&g_qc, dg, hn + 2));
+    TEST_ASSERT_FALSE(protocore_quic_conn_recv(&g_qc, dg, hn + 2));
 
     // 276: a truncated payload-length varint after a zero-length token.
     dg[hn] = 0x00;
     dg[hn + 1] = 0xC0; // 8-octet payload varint, none follow
-    TEST_ASSERT_FALSE(pc_quic_conn_recv(&g_qc, dg, hn + 2));
+    TEST_ASSERT_FALSE(protocore_quic_conn_recv(&g_qc, dg, hn + 2));
 
     // 281: a payload length larger than the datagram (pkt_len > len).
     dg[hn] = 0x00;
     dg[hn + 1] = 0x44;
     dg[hn + 2] = 0x00; // payload length 0x400 = 1024
-    TEST_ASSERT_FALSE(pc_quic_conn_recv(&g_qc, dg, hn + 8));
+    TEST_ASSERT_FALSE(protocore_quic_conn_recv(&g_qc, dg, hn + 8));
 
-    // 303: a packet larger than the decrypt work buffer (pkt_len > PC_QUIC_MAX_DATAGRAM), yet <= len.
+    // 303: a packet larger than the decrypt work buffer (pkt_len > PROTOCORE_QUIC_MAX_DATAGRAM), yet <= len.
     dg[hn] = 0x00;
-    size_t c = pc_quic_varint_encode(dg + hn + 1, sizeof(dg) - hn - 1, 1400);
+    size_t c = protocore_quic_varint_encode(dg + hn + 1, sizeof(dg) - hn - 1, 1400);
     memset(dg + hn + 1 + c, 0, 1450 - (hn + 1 + c));
-    TEST_ASSERT_FALSE(pc_quic_conn_recv(&g_qc, dg, 1450));
+    TEST_ASSERT_FALSE(protocore_quic_conn_recv(&g_qc, dg, 1450));
 }
 
 // A HANDSHAKE_DONE frame from a peer is ignored (server-only frame).
@@ -954,16 +954,16 @@ void test_quic_recv_handshake_done_frame()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     init_conn(&g_qc, &cb);
     QuicInitialSecrets init;
-    pc_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
+    protocore_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
     uint8_t hd[32];
-    size_t hdl = pc_quic_build_handshake_done(hd, sizeof hd);
+    size_t hdl = protocore_quic_build_handshake_done(hd, sizeof hd);
     memset(hd + hdl, 0, 20); // PADDING so the packet is long enough for header-protection sampling
     hdl += 20;
     uint8_t dg[256];
     size_t dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
                            &init.client, hd, hdl);
-    TEST_ASSERT_TRUE(pc_quic_conn_recv(&g_qc, dg, dl));
-    TEST_ASSERT_FALSE(pc_quic_conn_is_closed(&g_qc));
+    TEST_ASSERT_TRUE(protocore_quic_conn_recv(&g_qc, dg, dl));
+    TEST_ASSERT_FALSE(protocore_quic_conn_is_closed(&g_qc));
 }
 
 // handle_stream guards driven from Initial packets (process_frames does not gate frame type by level).
@@ -971,7 +971,7 @@ void test_quic_conn_stream_frames()
 {
     fill();
     QuicInitialSecrets init;
-    pc_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
+    protocore_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
     uint8_t dg[1500];
 
     // (a) Out-of-order STREAM (offset beyond the rx window) is held, not delivered.
@@ -980,10 +980,10 @@ void test_quic_conn_stream_frames()
         init_conn(&g_qc, &cb);
         uint8_t data[4] = {1, 2, 3, 4};
         uint8_t fr[32];
-        size_t fl = pc_quic_build_stream(fr, sizeof fr, 0, 100 /*offset > rx_off*/, data, 4, PROTO_FALSE);
+        size_t fl = protocore_quic_build_stream(fr, sizeof fr, 0, 100 /*offset > rx_off*/, data, 4, PROTO_FALSE);
         size_t dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, 8, CLIENT_SCID, 4, 0, &init.client, fr, fl);
         g_stream_len = 0;
-        pc_quic_conn_recv(&g_qc, dg, dl);
+        protocore_quic_conn_recv(&g_qc, dg, dl);
         TEST_ASSERT_EQUAL_UINT(0, g_stream_len);
     }
     // (b) A pure-FIN STREAM at the current offset delivers a zero-length FIN.
@@ -992,36 +992,36 @@ void test_quic_conn_stream_frames()
         init_conn(&g_qc, &cb);
         uint8_t d0 = 0;
         uint8_t fr[16];
-        size_t fl = pc_quic_build_stream(fr, sizeof fr, 0, 0, &d0, 0, PROTO_TRUE);
+        size_t fl = protocore_quic_build_stream(fr, sizeof fr, 0, 0, &d0, 0, PROTO_TRUE);
         size_t dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, 8, CLIENT_SCID, 4, 0, &init.client, fr, fl);
         g_stream_fin = PROTO_FALSE;
-        pc_quic_conn_recv(&g_qc, dg, dl);
+        protocore_quic_conn_recv(&g_qc, dg, dl);
         TEST_ASSERT_TRUE(g_stream_fin);
     }
-    // (c) The inbound stream table fills at PC_QUIC_MAX_STREAMS distinct ids; the extra is dropped.
+    // (c) The inbound stream table fills at PROTOCORE_QUIC_MAX_STREAMS distinct ids; the extra is dropped.
     {
         QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
         init_conn(&g_qc, &cb);
         uint8_t d1 = 0x55;
         uint8_t fr[512];
         size_t fl = 0;
-        for (int i = 0; i <= PC_QUIC_MAX_STREAMS; i++)
+        for (int i = 0; i <= PROTOCORE_QUIC_MAX_STREAMS; i++)
         {
-            fl += pc_quic_build_stream(fr + fl, sizeof(fr) - fl, (uint64_t)(i * 4), 0, &d1, 1, PROTO_FALSE);
+            fl += protocore_quic_build_stream(fr + fl, sizeof(fr) - fl, (uint64_t)(i * 4), 0, &d1, 1, PROTO_FALSE);
         }
         size_t dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, 8, CLIENT_SCID, 4, 0, &init.client, fr, fl);
-        TEST_ASSERT_TRUE(pc_quic_conn_recv(&g_qc, dg, dl));
+        TEST_ASSERT_TRUE(protocore_quic_conn_recv(&g_qc, dg, dl));
     }
 }
 
-// A CRYPTO reassembly window overflow is clamped (two datagrams push past PC_QUIC_CRYPTO_RX).
+// A CRYPTO reassembly window overflow is clamped (two datagrams push past PROTOCORE_QUIC_CRYPTO_RX).
 void test_quic_conn_crypto_window_clamp()
 {
     fill();
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     init_conn(&g_qc, &cb);
     QuicInitialSecrets init;
-    pc_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
+    protocore_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
     uint8_t dg[1500];
     uint8_t chunk[1200];
     chunk[0] = 0x01; // ClientHello with a huge declared length so TLS buffers it without failing
@@ -1030,14 +1030,14 @@ void test_quic_conn_crypto_window_clamp()
     chunk[3] = 0xFF;
     memset(chunk + 4, 0, sizeof(chunk) - 4);
     uint8_t fr[1300];
-    size_t fl = pc_quic_build_crypto(fr, sizeof fr, 0, chunk, sizeof chunk);
+    size_t fl = protocore_quic_build_crypto(fr, sizeof fr, 0, chunk, sizeof chunk);
     size_t dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, 8, CLIENT_SCID, 4, 0, &init.client, fr, fl);
-    TEST_ASSERT_TRUE(pc_quic_conn_recv(&g_qc, dg, dl));
-    TEST_ASSERT_FALSE(pc_quic_conn_is_closed(&g_qc));
-    fl = pc_quic_build_crypto(fr, sizeof fr, 1200, chunk, sizeof chunk); // offset 1200 -> 2400 > 2048 -> clamp
+    TEST_ASSERT_TRUE(protocore_quic_conn_recv(&g_qc, dg, dl));
+    TEST_ASSERT_FALSE(protocore_quic_conn_is_closed(&g_qc));
+    fl = protocore_quic_build_crypto(fr, sizeof fr, 1200, chunk, sizeof chunk); // offset 1200 -> 2400 > 2048 -> clamp
     dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, 8, CLIENT_SCID, 4, 1, &init.client, fr, fl);
-    pc_quic_conn_recv(&g_qc, dg, dl);
-    TEST_ASSERT_FALSE(pc_quic_conn_is_closed(&g_qc));
+    protocore_quic_conn_recv(&g_qc, dg, dl);
+    TEST_ASSERT_FALSE(protocore_quic_conn_is_closed(&g_qc));
 }
 
 // A malformed ClientHello in a CRYPTO frame fails the TLS handshake -> a QUIC CRYPTO_ERROR close.
@@ -1047,35 +1047,35 @@ void test_quic_conn_crypto_error_close()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     init_conn(&g_qc, &cb);
     QuicInitialSecrets init;
-    pc_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
+    protocore_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
     uint8_t bad_ch[6] = {0x01, 0x00, 0x00, 0x02, 0x03, 0x03}; // ClientHello, body too short
     uint8_t fr[32];
-    size_t fl = pc_quic_build_crypto(fr, sizeof fr, 0, bad_ch, sizeof bad_ch);
+    size_t fl = protocore_quic_build_crypto(fr, sizeof fr, 0, bad_ch, sizeof bad_ch);
     uint8_t dg[256];
     size_t dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, 8, CLIENT_SCID, 4, 0, &init.client, fr, fl);
-    pc_quic_conn_recv(&g_qc, dg, dl);
+    protocore_quic_conn_recv(&g_qc, dg, dl);
     // A second close request is now a no-op (a close is already queued).
-    pc_quic_conn_close(&g_qc, 0);
+    protocore_quic_conn_close(&g_qc, 0);
     uint8_t out[256];
-    TEST_ASSERT_TRUE(pc_quic_conn_send(&g_qc, out, sizeof out) > 0); // emits the CONNECTION_CLOSE
+    TEST_ASSERT_TRUE(protocore_quic_conn_send(&g_qc, out, sizeof out) > 0); // emits the CONNECTION_CLOSE
 }
 
-// pc_quic_conn_send builds nothing for a level whose keys are not ready yet (the seal-keys guard).
+// protocore_quic_conn_send builds nothing for a level whose keys are not ready yet (the seal-keys guard).
 void test_quic_conn_no_keys_build()
 {
     fill();
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     init_conn(&g_qc, &cb);
     QuicInitialSecrets init;
-    pc_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
+    protocore_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
     uint8_t fr[32] = {QUIC_FT_PING}; // ack-eliciting (+ trailing PADDING for a full-length packet)
     uint8_t dg[256];
     size_t dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, 8, CLIENT_SCID, 4, 0, &init.client, fr, sizeof fr);
-    TEST_ASSERT_TRUE(pc_quic_conn_recv(&g_qc, dg, dl));
+    TEST_ASSERT_TRUE(protocore_quic_conn_recv(&g_qc, dg, dl));
     uint8_t out[256];
     // Initial builds the ACK; Handshake and 1-RTT have no keys -> build_packet returns 0 for them.
-    (void)pc_quic_conn_send(&g_qc, out, sizeof out);
-    TEST_ASSERT_FALSE(pc_quic_conn_is_closed(&g_qc));
+    (void)protocore_quic_conn_send(&g_qc, out, sizeof out);
+    TEST_ASSERT_FALSE(protocore_quic_conn_is_closed(&g_qc));
 }
 
 // A PTO timeout before the deadline is a no-op.
@@ -1088,10 +1088,10 @@ void test_quic_conn_pto_not_yet()
     size_t ch_len = 0;
     feed_client_initial(&g_qc, &cb, &init, ch, &ch_len);
     uint8_t out[2048];
-    TEST_ASSERT_TRUE(pc_quic_conn_send(&g_qc, out, sizeof out) > 0); // ack-eliciting flight now outstanding
-    pc_quic_conn_on_timeout(&g_qc, 0);                               // arm the PTO
-    pc_quic_conn_on_timeout(&g_qc, 1);                               // still before the deadline -> no-op
-    TEST_ASSERT_FALSE(pc_quic_conn_is_closed(&g_qc));
+    TEST_ASSERT_TRUE(protocore_quic_conn_send(&g_qc, out, sizeof out) > 0); // ack-eliciting flight now outstanding
+    protocore_quic_conn_on_timeout(&g_qc, 0);                               // arm the PTO
+    protocore_quic_conn_on_timeout(&g_qc, 1);                               // still before the deadline -> no-op
+    TEST_ASSERT_FALSE(protocore_quic_conn_is_closed(&g_qc));
 }
 
 // build_packet header/length/remainder overflow guards, swept across tiny output caps.
@@ -1106,7 +1106,7 @@ void test_quic_conn_send_tiny_cap()
         size_t ch_len = 0;
         feed_client_initial(&g_qc, &cb, &init, ch, &ch_len);
         uint8_t out[64];
-        (void)pc_quic_conn_send(&g_qc, out, cap); // the pending Initial flight cannot fit -> overflow returns
+        (void)protocore_quic_conn_send(&g_qc, out, cap); // the pending Initial flight cannot fit -> overflow returns
     }
 }
 
@@ -1119,30 +1119,30 @@ static void complete_handshake(struct QuicConn *qc, QuicConnCallbacks *cb, QuicI
 {
     QuicTlsConfig cfg;
     make_cfg(&cfg);
-    pc_quic_conn_init(qc, &cfg, ODCID, sizeof(ODCID), CLIENT_SCID, peer_scid_len, SERVER_SCID, sizeof(SERVER_SCID), cb);
-    pc_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), init);
+    protocore_quic_conn_init(qc, &cfg, ODCID, sizeof(ODCID), CLIENT_SCID, peer_scid_len, SERVER_SCID, sizeof(SERVER_SCID), cb);
+    protocore_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), init);
 
     QuicTransportParams ctp;
-    pc_quic_tp_defaults(&ctp);
+    protocore_quic_tp_defaults(&ctp);
     ctp.initial_max_data = 524288;
     ctp.initial_max_sd_bidi_local = 131072;
     uint8_t ctp_enc[128];
-    size_t ctp_len = pc_quic_tp_encode(&ctp, ctp_enc, sizeof(ctp_enc));
+    size_t ctp_len = protocore_quic_tp_encode(&ctp, ctp_enc, sizeof(ctp_enc));
     uint8_t client_pub[32];
-    pc_x25519_base(client_pub, CLIENT_PRIV);
+    protocore_x25519_base(client_pub, CLIENT_PRIV);
     uint8_t ch[512];
     size_t ch_len = build_client_hello(ch, client_pub, ctp_enc, ctp_len);
     uint8_t frames[1200];
-    size_t fl = pc_quic_build_crypto(frames, sizeof(frames), 0, ch, ch_len);
+    size_t fl = protocore_quic_build_crypto(frames, sizeof(frames), 0, ch, ch_len);
     memset(frames + fl, 0, 1100 - fl);
     fl = 1100;
     uint8_t dg[1500];
     size_t dl = build_long(dg, sizeof(dg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
                            &init->client, frames, fl);
-    pc_quic_conn_recv(qc, dg, dl);
+    protocore_quic_conn_recv(qc, dg, dl);
 
     uint8_t sdg[1500];
-    size_t sl = pc_quic_conn_send(qc, sdg, sizeof(sdg));
+    size_t sl = protocore_quic_conn_send(qc, sdg, sizeof(sdg));
     uint8_t plain[2048], sh[512], hsflight[1024];
     size_t wire = 0;
     uint8_t type = 0;
@@ -1150,47 +1150,47 @@ static void complete_handshake(struct QuicConn *qc, QuicConnCallbacks *cb, QuicI
     size_t sh_len = extract_crypto(plain, pt, sh);
 
     uint8_t server_pub[32], ecdhe[32];
-    pc_x25519_base(server_pub, SERVER_PRIV);
-    pc_x25519(ecdhe, CLIENT_PRIV, server_pub);
-    pc_sha256_ctx t;
+    protocore_x25519_base(server_pub, SERVER_PRIV);
+    protocore_x25519(ecdhe, CLIENT_PRIV, server_pub);
+    protocore_sha256_ctx t;
     uint8_t ch_sh[32], ch_sf[32];
-    pc_sha256_init(&t, tw_t);
-    pc_sha256_update(&t, ch, ch_len);
-    pc_sha256_update(&t, sh, sh_len);
+    protocore_sha256_init(&t, tw_t);
+    protocore_sha256_update(&t, ch, ch_len);
+    protocore_sha256_update(&t, sh, sh_len);
     {
-        pc_sha256_final(&t, ch_sh);
+        protocore_sha256_final(&t, ch_sh);
     }
     Tls13KeySchedule cks;
-    static uint8_t ks_store_1181[PC_TLS13_KS_BORROW];
-    pc_tls13_ks_early(&TLS13_KDF, &cks, ks_store_1181);
-    pc_tls13_ks_handshake(&cks, ecdhe, ch_sh, sizeof(ecdhe));
+    static uint8_t ks_store_1181[PROTOCORE_TLS13_KS_BORROW];
+    protocore_tls13_ks_early(&TLS13_KDF, &cks, ks_store_1181);
+    protocore_tls13_ks_handshake(&cks, ecdhe, ch_sh, sizeof(ecdhe));
     QuicPacketKeys hs_server_keys, hs_client_keys;
-    pc_quic_keys_from_secret(tw, cks.s + TLS13_KS_SERVER_HS, &hs_server_keys);
-    pc_quic_keys_from_secret(tw, cks.s + TLS13_KS_CLIENT_HS, &hs_client_keys);
+    protocore_quic_keys_from_secret(tw, cks.s + TLS13_KS_SERVER_HS, &hs_server_keys);
+    protocore_quic_keys_from_secret(tw, cks.s + TLS13_KS_CLIENT_HS, &hs_client_keys);
     size_t hswire = 0;
     uint8_t hstype = 0;
     size_t hpt = open_long(sdg + wire, sl - wire, &hs_server_keys, plain, &hswire, &hstype);
     size_t hsflen = extract_crypto(plain, hpt, hsflight);
-    pc_sha256_update(&t, hsflight, hsflen);
-    pc_sha256_final(&t, ch_sf);
-    pc_tls13_ks_master(&cks, ch_sf);
-    pc_quic_keys_from_secret(tw, cks.s + TLS13_KS_CLIENT_AP, ap_client);
-    pc_quic_keys_from_secret(tw, cks.s + TLS13_KS_SERVER_AP, ap_server);
+    protocore_sha256_update(&t, hsflight, hsflen);
+    protocore_sha256_final(&t, ch_sf);
+    protocore_tls13_ks_master(&cks, ch_sf);
+    protocore_quic_keys_from_secret(tw, cks.s + TLS13_KS_CLIENT_AP, ap_client);
+    protocore_quic_keys_from_secret(tw, cks.s + TLS13_KS_SERVER_AP, ap_server);
 
     uint8_t ifr[64];
-    size_t ifl = pc_quic_build_ack(ifr, sizeof(ifr), 0, 0, 0);
+    size_t ifl = protocore_quic_build_ack(ifr, sizeof(ifr), 0, 0, 0);
     uint8_t idg[256];
     size_t idl = build_long(idg, sizeof(idg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID),
                             1, &init->client, ifr, ifl);
     uint8_t cfin[36] = {TLS_HS_FINISHED, 0x00, 0x00, 0x20};
-    pc_tls13_finished_mac(&cks, cks.s + TLS13_KS_CLIENT_HS, ch_sf, cfin + 4);
+    protocore_tls13_finished_mac(&cks, cks.s + TLS13_KS_CLIENT_HS, ch_sf, cfin + 4);
     uint8_t hfr[64];
-    size_t hfl = pc_quic_build_ack(hfr, sizeof(hfr), 0, 0, 0);
-    hfl += pc_quic_build_crypto(hfr + hfl, sizeof(hfr) - hfl, 0, cfin, sizeof(cfin));
+    size_t hfl = protocore_quic_build_ack(hfr, sizeof(hfr), 0, 0, 0);
+    hfl += protocore_quic_build_crypto(hfr + hfl, sizeof(hfr) - hfl, 0, cfin, sizeof(cfin));
     size_t hdl = build_long(idg + idl, sizeof(idg) - idl, QUIC_LP_HANDSHAKE, ODCID, sizeof(ODCID), CLIENT_SCID,
                             sizeof(CLIENT_SCID), 0, &hs_client_keys, hfr, hfl);
-    pc_quic_conn_recv(qc, idg, idl + hdl);
-    pc_quic_conn_send(qc, sdg, sizeof(sdg)); // drain HANDSHAKE_DONE so the 1-RTT send queue is clear
+    protocore_quic_conn_recv(qc, idg, idl + hdl);
+    protocore_quic_conn_send(qc, sdg, sizeof(sdg)); // drain HANDSHAKE_DONE so the 1-RTT send queue is clear
 }
 
 // build_frames' 1-RTT stream loop skips a stream with nothing left to send.
@@ -1202,10 +1202,10 @@ void test_quic_conn_stream_nothing_to_send()
     QuicPacketKeys apc, aps;
     complete_handshake(&g_qc, &cb, &init, &apc, &aps, sizeof(CLIENT_SCID));
     uint8_t out[512];
-    TEST_ASSERT_EQUAL_UINT(2, pc_quic_conn_stream_send(&g_qc, 0, (const uint8_t *)"OK", 2, PROTO_TRUE));
-    TEST_ASSERT_TRUE(pc_quic_conn_send(&g_qc, out, sizeof out) > 0); // drains the stream
-    pc_quic_conn_send(&g_qc, out, sizeof out);                       // now nothing to send -> the skip
-    TEST_ASSERT_FALSE(pc_quic_conn_is_closed(&g_qc));
+    TEST_ASSERT_EQUAL_UINT(2, protocore_quic_conn_stream_send(&g_qc, 0, (const uint8_t *)"OK", 2, PROTO_TRUE));
+    TEST_ASSERT_TRUE(protocore_quic_conn_send(&g_qc, out, sizeof out) > 0); // drains the stream
+    protocore_quic_conn_send(&g_qc, out, sizeof out);                       // now nothing to send -> the skip
+    TEST_ASSERT_FALSE(protocore_quic_conn_is_closed(&g_qc));
 }
 
 // A short-header packet whose DCID does not fit the output cap fails closed.
@@ -1216,10 +1216,10 @@ void test_quic_conn_short_header_tiny_cap()
     QuicInitialSecrets init;
     QuicPacketKeys apc, aps;
     complete_handshake(&g_qc, &cb, &init, &apc, &aps, sizeof(CLIENT_SCID));
-    pc_quic_conn_stream_send(&g_qc, 0, (const uint8_t *)"DATA", 4, PROTO_FALSE);
+    protocore_quic_conn_stream_send(&g_qc, 0, (const uint8_t *)"DATA", 4, PROTO_FALSE);
     uint8_t out[8];
-    (void)pc_quic_conn_send(&g_qc, out, 4); // 1 + dcid_len(4) > cap(4) at the 1-RTT short header
-    TEST_ASSERT_FALSE(pc_quic_conn_is_closed(&g_qc));
+    (void)protocore_quic_conn_send(&g_qc, out, 4); // 1 + dcid_len(4) > cap(4) at the 1-RTT short header
+    TEST_ASSERT_FALSE(protocore_quic_conn_is_closed(&g_qc));
 }
 
 // A CONNECTION_CLOSE queued at the (now discarded) Initial level falls back to the highest live level.
@@ -1236,10 +1236,10 @@ void test_quic_conn_close_level_fallback()
     uint8_t dg[256];
     size_t dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 5,
                            &init.client, bad, sizeof bad);
-    pc_quic_conn_recv(&g_qc, dg, dl);
+    protocore_quic_conn_recv(&g_qc, dg, dl);
     uint8_t out[256];
-    TEST_ASSERT_TRUE(pc_quic_conn_send(&g_qc, out, sizeof out) > 0); // close emitted at the fallback level
-    TEST_ASSERT_TRUE(pc_quic_conn_is_closed(&g_qc));
+    TEST_ASSERT_TRUE(protocore_quic_conn_send(&g_qc, out, sizeof out) > 0); // close emitted at the fallback level
+    TEST_ASSERT_TRUE(protocore_quic_conn_is_closed(&g_qc));
 }
 
 // A connection initialized with no callbacks runs the whole handshake and delivers stream data
@@ -1249,31 +1249,31 @@ void test_quic_conn_null_callbacks()
     fill();
     QuicTlsConfig cfg;
     make_cfg(&cfg);
-    pc_quic_conn_init(&g_qc, &cfg, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), SERVER_SCID,
+    protocore_quic_conn_init(&g_qc, &cfg, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), SERVER_SCID,
                       sizeof(SERVER_SCID), NULL); // no callbacks at all
     TEST_ASSERT_NULL(g_qc.cb.on_stream_data);
     TEST_ASSERT_NULL(g_qc.cb.on_handshake_done);
 
     QuicInitialSecrets init;
-    pc_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
+    protocore_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
 
     // A STREAM frame with data, and a pure-FIN one, at the Initial level: both take the callback
     // paths, both find a null hook, and neither disturbs the connection.
     uint8_t d[3] = {1, 2, 3};
     uint8_t fr[64];
-    size_t fl = pc_quic_build_stream(fr, sizeof fr, 0, 0, d, 3, PROTO_FALSE);
-    fl += pc_quic_build_stream(fr + fl, sizeof(fr) - fl, 0, 3, d, 0, PROTO_TRUE);
+    size_t fl = protocore_quic_build_stream(fr, sizeof fr, 0, 0, d, 3, PROTO_FALSE);
+    fl += protocore_quic_build_stream(fr + fl, sizeof(fr) - fl, 0, 3, d, 0, PROTO_TRUE);
     uint8_t dg[256];
     size_t dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, 8, CLIENT_SCID, 4, 0, &init.client, fr, fl);
-    TEST_ASSERT_TRUE(pc_quic_conn_recv(&g_qc, dg, dl));
+    TEST_ASSERT_TRUE(protocore_quic_conn_recv(&g_qc, dg, dl));
     TEST_ASSERT_EQUAL_UINT(0, g_stream_len); // the test's own callback was never registered
-    TEST_ASSERT_FALSE(pc_quic_conn_is_closed(&g_qc));
+    TEST_ASSERT_FALSE(protocore_quic_conn_is_closed(&g_qc));
 
     // A full handshake still completes and still queues HANDSHAKE_DONE with no on_handshake_done.
     QuicPacketKeys apc, aps;
     QuicInitialSecrets init2;
     complete_handshake(&g_qc2, NULL, &init2, &apc, &aps, sizeof(CLIENT_SCID));
-    TEST_ASSERT_TRUE(pc_quic_conn_established(&g_qc2));
+    TEST_ASSERT_TRUE(protocore_quic_conn_established(&g_qc2));
     TEST_ASSERT_FALSE(g_hs_done); // no hook ran
 }
 
@@ -1285,40 +1285,40 @@ void test_quic_conn_stream_duplicate_and_stale_fin()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     init_conn(&g_qc, &cb);
     QuicInitialSecrets init;
-    pc_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
+    protocore_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
     uint8_t d[4] = {0xA1, 0xA2, 0xA3, 0xA4};
     uint8_t fr[64], dg[256];
     uint64_t pn = 0;
 
     // 4 bytes at offset 0 -> delivered.
-    size_t fl = pc_quic_build_stream(fr, sizeof fr, 0, 0, d, 4, PROTO_FALSE);
+    size_t fl = protocore_quic_build_stream(fr, sizeof fr, 0, 0, d, 4, PROTO_FALSE);
     size_t dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, 8, CLIENT_SCID, 4, pn++, &init.client, fr, fl);
-    TEST_ASSERT_TRUE(pc_quic_conn_recv(&g_qc, dg, dl));
+    TEST_ASSERT_TRUE(protocore_quic_conn_recv(&g_qc, dg, dl));
     TEST_ASSERT_EQUAL_UINT(4, g_stream_len);
 
     // The identical frame again: entirely behind the window and not a FIN -> nothing delivered.
     dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, 8, CLIENT_SCID, 4, pn++, &init.client, fr, fl);
-    TEST_ASSERT_TRUE(pc_quic_conn_recv(&g_qc, dg, dl));
+    TEST_ASSERT_TRUE(protocore_quic_conn_recv(&g_qc, dg, dl));
     TEST_ASSERT_EQUAL_UINT(4, g_stream_len); // unchanged
 
     // A FIN at offset 0 length 0: in window, but its final offset (0) is not the stream's current
     // offset (4), so it is not the end-of-stream marker and is ignored.
-    fl = pc_quic_build_stream(fr, sizeof fr, 0, 0, d, 0, PROTO_TRUE);
+    fl = protocore_quic_build_stream(fr, sizeof fr, 0, 0, d, 0, PROTO_TRUE);
     dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, 8, CLIENT_SCID, 4, pn++, &init.client, fr, fl);
     g_stream_fin = PROTO_FALSE;
-    TEST_ASSERT_TRUE(pc_quic_conn_recv(&g_qc, dg, dl));
+    TEST_ASSERT_TRUE(protocore_quic_conn_recv(&g_qc, dg, dl));
     TEST_ASSERT_FALSE(g_stream_fin);
 
     // The real pure-FIN at offset 4 -> delivered as a zero-length FIN.
-    fl = pc_quic_build_stream(fr, sizeof fr, 0, 4, d, 0, PROTO_TRUE);
+    fl = protocore_quic_build_stream(fr, sizeof fr, 0, 4, d, 0, PROTO_TRUE);
     dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, 8, CLIENT_SCID, 4, pn++, &init.client, fr, fl);
-    TEST_ASSERT_TRUE(pc_quic_conn_recv(&g_qc, dg, dl));
+    TEST_ASSERT_TRUE(protocore_quic_conn_recv(&g_qc, dg, dl));
     TEST_ASSERT_TRUE(g_stream_fin);
 
     // A retransmission of that FIN: rx_fin is already set, so it is not re-delivered.
     g_stream_fin = PROTO_FALSE;
     dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, 8, CLIENT_SCID, 4, pn++, &init.client, fr, fl);
-    TEST_ASSERT_TRUE(pc_quic_conn_recv(&g_qc, dg, dl));
+    TEST_ASSERT_TRUE(protocore_quic_conn_recv(&g_qc, dg, dl));
     TEST_ASSERT_FALSE(g_stream_fin); // no second FIN callback
 }
 
@@ -1329,7 +1329,7 @@ void test_quic_conn_frame_dispatch_variants()
 {
     fill();
     QuicInitialSecrets init;
-    pc_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
+    protocore_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
     uint8_t dg[512];
 
     // (a) An ACK_ECN, then a stale ACK: the first advances largest_acked, the second does not.
@@ -1340,14 +1340,14 @@ void test_quic_conn_frame_dispatch_variants()
         const uint8_t ack_ecn[8] = {0x03, 5, 0, 0, 0, 0, 0, 0};
         size_t dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, 8, CLIENT_SCID, 4, 0, &init.client, ack_ecn,
                                sizeof ack_ecn);
-        TEST_ASSERT_TRUE(pc_quic_conn_recv(&g_qc, dg, dl));
+        TEST_ASSERT_TRUE(protocore_quic_conn_recv(&g_qc, dg, dl));
         TEST_ASSERT_EQUAL_INT64(5, g_qc.space[QUIC_ENC_INITIAL].largest_acked);
         TEST_ASSERT_FALSE(g_qc.space[QUIC_ENC_INITIAL].ack_eliciting_rx); // ACKs do not elicit
 
         uint8_t older[8];
-        size_t ol = pc_quic_build_ack(older, sizeof older, 3, 0, 0); // largest 3 < 5
+        size_t ol = protocore_quic_build_ack(older, sizeof older, 3, 0, 0); // largest 3 < 5
         dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, 8, CLIENT_SCID, 4, 1, &init.client, older, ol);
-        TEST_ASSERT_TRUE(pc_quic_conn_recv(&g_qc, dg, dl));
+        TEST_ASSERT_TRUE(protocore_quic_conn_recv(&g_qc, dg, dl));
         TEST_ASSERT_EQUAL_INT64(5, g_qc.space[QUIC_ENC_INITIAL].largest_acked); // not lowered
     }
     // (b) An application CONNECTION_CLOSE (0x1d) closes the connection and is not ack-eliciting.
@@ -1357,8 +1357,8 @@ void test_quic_conn_frame_dispatch_variants()
         const uint8_t app_close[3] = {0x1d, 0x05, 0x00}; // error 5, no reason
         size_t dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, 8, CLIENT_SCID, 4, 0, &init.client, app_close,
                                sizeof app_close);
-        TEST_ASSERT_TRUE(pc_quic_conn_recv(&g_qc, dg, dl));
-        TEST_ASSERT_TRUE(pc_quic_conn_is_closed(&g_qc));
+        TEST_ASSERT_TRUE(protocore_quic_conn_recv(&g_qc, dg, dl));
+        TEST_ASSERT_TRUE(protocore_quic_conn_is_closed(&g_qc));
         TEST_ASSERT_FALSE(g_qc.space[QUIC_ENC_INITIAL].ack_eliciting_rx);
     }
     // (c) Frame types below and above the STREAM range (0x08..0x0f) reach the dispatcher's default
@@ -1369,8 +1369,8 @@ void test_quic_conn_frame_dispatch_variants()
         const uint8_t misc[6] = {QUIC_FT_RESET_STREAM, 0x00, 0x01, 0x02, QUIC_FT_MAX_STREAMS_BIDI, 0x08};
         size_t dl =
             build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, 8, CLIENT_SCID, 4, 0, &init.client, misc, sizeof misc);
-        TEST_ASSERT_TRUE(pc_quic_conn_recv(&g_qc, dg, dl));
-        TEST_ASSERT_FALSE(pc_quic_conn_is_closed(&g_qc));
+        TEST_ASSERT_TRUE(protocore_quic_conn_recv(&g_qc, dg, dl));
+        TEST_ASSERT_FALSE(protocore_quic_conn_is_closed(&g_qc));
         TEST_ASSERT_EQUAL_UINT(0, g_stream_len); // neither was mistaken for a STREAM frame
     }
 }
@@ -1383,13 +1383,13 @@ void test_quic_recv_zero_version()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     init_conn(&g_qc, &cb);
     QuicInitialSecrets init;
-    pc_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
+    protocore_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
     uint8_t fr[8] = {QUIC_FT_PING};
     uint8_t dg[256];
     size_t dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
                            &init.client, fr, 1);
     dg[1] = dg[2] = dg[3] = dg[4] = 0x00; // version 0 (not header-protected)
-    TEST_ASSERT_FALSE(pc_quic_conn_recv(&g_qc, dg, dl));
+    TEST_ASSERT_FALSE(protocore_quic_conn_recv(&g_qc, dg, dl));
 }
 
 // A packet number at or below the largest already received does not lower largest_rx (which anchors
@@ -1400,16 +1400,16 @@ void test_quic_recv_older_packet_number()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     init_conn(&g_qc, &cb);
     QuicInitialSecrets init;
-    pc_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
+    protocore_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
     uint8_t fr[24] = {QUIC_FT_PING}; // PING + PADDING (long enough to header-protect)
     uint8_t dg[256];
 
     size_t dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, 8, CLIENT_SCID, 4, 5, &init.client, fr, sizeof fr);
-    TEST_ASSERT_TRUE(pc_quic_conn_recv(&g_qc, dg, dl));
+    TEST_ASSERT_TRUE(protocore_quic_conn_recv(&g_qc, dg, dl));
     TEST_ASSERT_EQUAL_UINT64(5, g_qc.space[QUIC_ENC_INITIAL].largest_rx);
 
     dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, 8, CLIENT_SCID, 4, 1, &init.client, fr, sizeof fr);
-    TEST_ASSERT_TRUE(pc_quic_conn_recv(&g_qc, dg, dl));
+    TEST_ASSERT_TRUE(protocore_quic_conn_recv(&g_qc, dg, dl));
     TEST_ASSERT_EQUAL_UINT64(5, g_qc.space[QUIC_ENC_INITIAL].largest_rx); // still 5
 }
 
@@ -1424,14 +1424,14 @@ void test_quic_recv_short_header_decrypt_failure()
     complete_handshake(&g_qc, &cb, &init, &apc, &aps, sizeof(CLIENT_SCID));
 
     uint8_t fr[32];
-    size_t fl = pc_quic_build_ping(fr, sizeof fr);
+    size_t fl = protocore_quic_build_ping(fr, sizeof fr);
     memset(fr + fl, 0, 20);
     fl += 20;
     uint8_t dg[256];
     size_t dl = build_short(dg, sizeof dg, SERVER_SCID, sizeof(SERVER_SCID), 0, &apc, fr, fl);
     dg[dl - 1] ^= 0xFF; // corrupt the auth tag
-    TEST_ASSERT_FALSE(pc_quic_conn_recv(&g_qc, dg, dl));
-    TEST_ASSERT_FALSE(pc_quic_conn_is_closed(&g_qc)); // dropped, not fatal
+    TEST_ASSERT_FALSE(protocore_quic_conn_recv(&g_qc, dg, dl));
+    TEST_ASSERT_FALSE(protocore_quic_conn_is_closed(&g_qc)); // dropped, not fatal
 }
 
 // The CRYPTO stream after the handshake has completed: further bytes keep the TLS state at DONE and
@@ -1457,16 +1457,16 @@ void test_quic_conn_crypto_after_handshake_done()
     uint64_t off = g_qc.space[QUIC_ENC_HANDSHAKE].crypto_rx_off;
     const uint8_t frag[2] = {0xFE, 0xFF};
     uint8_t fr[64];
-    size_t fl = pc_quic_build_crypto(fr, sizeof fr, off, frag, sizeof frag);
+    size_t fl = protocore_quic_build_crypto(fr, sizeof fr, off, frag, sizeof frag);
     memset(fr + fl, 0, 20);
     fl += 20;
     uint8_t dg[256];
     size_t dl = build_long(dg, sizeof dg, QUIC_LP_HANDSHAKE, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 7,
                            &hs_client_keys, fr, fl);
-    TEST_ASSERT_TRUE(pc_quic_conn_recv(&g_qc, dg, dl));
+    TEST_ASSERT_TRUE(protocore_quic_conn_recv(&g_qc, dg, dl));
     TEST_ASSERT_EQUAL_UINT8(QTLS_DONE, g_qc.tls.state);
     TEST_ASSERT_FALSE(g_qc.handshake_done_queued); // already sent; not re-queued
-    TEST_ASSERT_FALSE(pc_quic_conn_is_closed(&g_qc));
+    TEST_ASSERT_FALSE(protocore_quic_conn_is_closed(&g_qc));
 
     // Now with HANDSHAKE_DONE queued but not yet sent: a further CRYPTO fragment - at the offset the
     // engine is actually waiting for, so it is not dropped as a duplicate - must leave HANDSHAKE_DONE
@@ -1476,12 +1476,12 @@ void test_quic_conn_crypto_after_handshake_done()
     g_hs_done = PROTO_FALSE;
     off = g_qc.space[QUIC_ENC_HANDSHAKE].crypto_rx_off;
     TEST_ASSERT_TRUE(off > 0); // the first fragment really was consumed
-    fl = pc_quic_build_crypto(fr, sizeof fr, off, frag, sizeof frag);
+    fl = protocore_quic_build_crypto(fr, sizeof fr, off, frag, sizeof frag);
     memset(fr + fl, 0, 20);
     fl += 20;
     dl = build_long(dg, sizeof dg, QUIC_LP_HANDSHAKE, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 8,
                     &hs_client_keys, fr, fl);
-    TEST_ASSERT_TRUE(pc_quic_conn_recv(&g_qc, dg, dl));
+    TEST_ASSERT_TRUE(protocore_quic_conn_recv(&g_qc, dg, dl));
     TEST_ASSERT_EQUAL_UINT64(off + sizeof(frag), g_qc.space[QUIC_ENC_HANDSHAKE].crypto_rx_off);
     TEST_ASSERT_TRUE(g_qc.handshake_done_queued);
     TEST_ASSERT_FALSE(g_qc.handshake_done_sent); // still queued, not re-sent behind our back
@@ -1496,21 +1496,21 @@ void test_quic_conn_close_after_peer_close()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     init_conn(&g_qc, &cb);
     QuicInitialSecrets init;
-    pc_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
+    protocore_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
 
     uint8_t fr[32];
-    size_t fl = pc_quic_build_connection_close(fr, sizeof fr, PROTO_FALSE, QUIC_ERR_NO_ERROR, 0, NULL, 0);
+    size_t fl = protocore_quic_build_connection_close(fr, sizeof fr, PROTO_FALSE, QUIC_ERR_NO_ERROR, 0, NULL, 0);
     uint8_t dg[256];
     size_t dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
                            &init.client, fr, fl);
-    pc_quic_conn_recv(&g_qc, dg, dl);
+    protocore_quic_conn_recv(&g_qc, dg, dl);
     TEST_ASSERT_TRUE(g_qc.closed);
     TEST_ASSERT_TRUE(g_qc.draining);
 
-    pc_quic_conn_close(&g_qc, QUIC_ERR_FRAME_ENCODING);
+    protocore_quic_conn_close(&g_qc, QUIC_ERR_FRAME_ENCODING);
     TEST_ASSERT_FALSE(g_qc.close_queued); // already closed: the request is dropped
     uint8_t out[512];
-    TEST_ASSERT_EQUAL_UINT(0, pc_quic_conn_send(&g_qc, out, sizeof out)); // draining: nothing to send
+    TEST_ASSERT_EQUAL_UINT(0, protocore_quic_conn_send(&g_qc, out, sizeof out)); // draining: nothing to send
 }
 
 // A queued CONNECTION_CLOSE that is overtaken by the peer's own close: the close is still emitted
@@ -1527,30 +1527,30 @@ void test_quic_conn_close_queued_then_peer_close()
     // Drain the owed ACK and the whole server handshake flight first, so that once the close has gone
     // out there is genuinely nothing else queued and the "draining" send can be observed in isolation.
     g_qc.address_validated = PROTO_TRUE;
-    uint8_t out[PC_QUIC_MAX_DATAGRAM];
-    for (int i = 0; i < 8 && pc_quic_conn_send(&g_qc, out, sizeof out) > 0; i++)
+    uint8_t out[PROTOCORE_QUIC_MAX_DATAGRAM];
+    for (int i = 0; i < 8 && protocore_quic_conn_send(&g_qc, out, sizeof out) > 0; i++)
     {
     }
-    TEST_ASSERT_EQUAL_UINT(0, pc_quic_conn_send(&g_qc, out, sizeof out));
+    TEST_ASSERT_EQUAL_UINT(0, protocore_quic_conn_send(&g_qc, out, sizeof out));
 
     // Our own close is queued first (application-initiated).
-    pc_quic_conn_close(&g_qc, QUIC_ERR_NO_ERROR);
+    protocore_quic_conn_close(&g_qc, QUIC_ERR_NO_ERROR);
     TEST_ASSERT_TRUE(g_qc.close_queued);
 
     // The peer's CONNECTION_CLOSE arrives before we have sent ours: we are now draining too.
     uint8_t fr[32];
-    size_t fl = pc_quic_build_connection_close(fr, sizeof fr, PROTO_FALSE, QUIC_ERR_NO_ERROR, 0, NULL, 0);
+    size_t fl = protocore_quic_build_connection_close(fr, sizeof fr, PROTO_FALSE, QUIC_ERR_NO_ERROR, 0, NULL, 0);
     uint8_t dg[256];
     size_t dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 1,
                            &init.client, fr, fl);
-    pc_quic_conn_recv(&g_qc, dg, dl);
+    protocore_quic_conn_recv(&g_qc, dg, dl);
     TEST_ASSERT_TRUE(g_qc.draining);
 
     // The queued close still goes out exactly once...
-    TEST_ASSERT_TRUE(pc_quic_conn_send(&g_qc, out, sizeof out) > 0);
+    TEST_ASSERT_TRUE(protocore_quic_conn_send(&g_qc, out, sizeof out) > 0);
     TEST_ASSERT_TRUE(g_qc.close_sent);
     // ...and the next send, still draining with the close already sent, emits nothing.
-    TEST_ASSERT_EQUAL_UINT(0, pc_quic_conn_send(&g_qc, out, sizeof out));
+    TEST_ASSERT_EQUAL_UINT(0, protocore_quic_conn_send(&g_qc, out, sizeof out));
 }
 
 // A queued CONNECTION_CLOSE that cannot be built into the caller's buffer is NOT marked sent, so a
@@ -1564,14 +1564,14 @@ void test_quic_conn_close_send_no_room()
     size_t ch_len = 0;
     feed_client_initial(&g_qc, &cb, &init, ch, &ch_len);
 
-    pc_quic_conn_close(&g_qc, QUIC_ERR_NO_ERROR);
+    protocore_quic_conn_close(&g_qc, QUIC_ERR_NO_ERROR);
     uint8_t tiny[8];
-    TEST_ASSERT_EQUAL_UINT(0, pc_quic_conn_send(&g_qc, tiny, sizeof tiny));
+    TEST_ASSERT_EQUAL_UINT(0, protocore_quic_conn_send(&g_qc, tiny, sizeof tiny));
     TEST_ASSERT_FALSE(g_qc.close_sent);
     TEST_ASSERT_FALSE(g_qc.closed);
 
     uint8_t out[512];
-    TEST_ASSERT_TRUE(pc_quic_conn_send(&g_qc, out, sizeof out) > 0);
+    TEST_ASSERT_TRUE(protocore_quic_conn_send(&g_qc, out, sizeof out) > 0);
     TEST_ASSERT_TRUE(g_qc.close_sent);
 }
 
@@ -1586,11 +1586,11 @@ void test_quic_conn_close_level_out_of_range()
     size_t ch_len = 0;
     feed_client_initial(&g_qc, &cb, &init, ch, &ch_len);
 
-    pc_quic_conn_close(&g_qc, QUIC_ERR_NO_ERROR);
+    protocore_quic_conn_close(&g_qc, QUIC_ERR_NO_ERROR);
     g_qc.close_level = 200; // above QUIC_ENC_APP
     uint8_t out[512];
-    TEST_ASSERT_TRUE(pc_quic_conn_send(&g_qc, out, sizeof out) > 0); // emitted at the fallback level
-    TEST_ASSERT_TRUE(pc_quic_conn_is_closed(&g_qc));
+    TEST_ASSERT_TRUE(protocore_quic_conn_send(&g_qc, out, sizeof out) > 0); // emitted at the fallback level
+    TEST_ASSERT_TRUE(protocore_quic_conn_is_closed(&g_qc));
 }
 
 // With every packet-number space discarded there is no level left holding seal keys, so the close
@@ -1605,7 +1605,7 @@ void test_quic_conn_highest_sealed_level_fallback()
         g_qc.space[l].discarded = PROTO_TRUE;
     }
 
-    pc_quic_conn_close(&g_qc, QUIC_ERR_NO_ERROR);
+    protocore_quic_conn_close(&g_qc, QUIC_ERR_NO_ERROR);
     TEST_ASSERT_TRUE(g_qc.close_queued);
     TEST_ASSERT_EQUAL_UINT8(QUIC_ENC_INITIAL, g_qc.close_level); // the documented fallback
 }
@@ -1624,36 +1624,36 @@ void test_quic_conn_crypto_flight_fragmented()
     cfg.cert_len = sizeof(big_cert);
 
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
-    pc_quic_conn_init(&g_qc, &cfg, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), SERVER_SCID,
+    protocore_quic_conn_init(&g_qc, &cfg, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), SERVER_SCID,
                       sizeof(SERVER_SCID), &cb);
     QuicInitialSecrets init;
-    pc_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
+    protocore_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
 
     QuicTransportParams ctp;
-    pc_quic_tp_defaults(&ctp);
+    protocore_quic_tp_defaults(&ctp);
     uint8_t ctp_enc[128];
-    size_t ctp_len = pc_quic_tp_encode(&ctp, ctp_enc, sizeof(ctp_enc));
+    size_t ctp_len = protocore_quic_tp_encode(&ctp, ctp_enc, sizeof(ctp_enc));
     uint8_t client_pub[32];
-    pc_x25519_base(client_pub, CLIENT_PRIV);
+    protocore_x25519_base(client_pub, CLIENT_PRIV);
     uint8_t chb[512];
     size_t ch_len = build_client_hello(chb, client_pub, ctp_enc, ctp_len);
     uint8_t frames[1200];
-    size_t fl = pc_quic_build_crypto(frames, sizeof(frames), 0, chb, ch_len);
+    size_t fl = protocore_quic_build_crypto(frames, sizeof(frames), 0, chb, ch_len);
     memset(frames + fl, 0, 1100 - fl);
     fl = 1100;
     uint8_t dg[1500];
     size_t dl = build_long(dg, sizeof(dg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
                            &init.client, frames, fl);
-    TEST_ASSERT_TRUE(pc_quic_conn_recv(&g_qc, dg, dl));
+    TEST_ASSERT_TRUE(protocore_quic_conn_recv(&g_qc, dg, dl));
     TEST_ASSERT_EQUAL_UINT8(QTLS_WAIT_FINISHED, g_qc.tls.state);
 
     // The Handshake flight is larger than one datagram can carry, so it takes more than one send.
     size_t hs_flight_len = 0;
-    (void)pc_quic_tls_flight(&g_qc.tls, QUIC_ENC_HANDSHAKE, &hs_flight_len);
-    TEST_ASSERT_TRUE(hs_flight_len > PC_QUIC_MAX_DATAGRAM);
+    (void)protocore_quic_tls_flight(&g_qc.tls, QUIC_ENC_HANDSHAKE, &hs_flight_len);
+    TEST_ASSERT_TRUE(hs_flight_len > PROTOCORE_QUIC_MAX_DATAGRAM);
 
-    uint8_t out[PC_QUIC_MAX_DATAGRAM];
-    size_t first = pc_quic_conn_send(&g_qc, out, sizeof out);
+    uint8_t out[PROTOCORE_QUIC_MAX_DATAGRAM];
+    size_t first = protocore_quic_conn_send(&g_qc, out, sizeof out);
     TEST_ASSERT_TRUE(first > 0);
     uint64_t sent_after_first = g_qc.space[QUIC_ENC_HANDSHAKE].crypto_tx_off;
     TEST_ASSERT_TRUE(sent_after_first > 0);
@@ -1664,7 +1664,7 @@ void test_quic_conn_crypto_flight_fragmented()
     size_t total = sent_after_first;
     for (int i = 0; i < 8 && total < hs_flight_len; i++)
     {
-        TEST_ASSERT_TRUE(pc_quic_conn_send(&g_qc, out, sizeof out) > 0);
+        TEST_ASSERT_TRUE(protocore_quic_conn_send(&g_qc, out, sizeof out) > 0);
         total = g_qc.space[QUIC_ENC_HANDSHAKE].crypto_tx_off;
     }
     TEST_ASSERT_EQUAL_UINT64(hs_flight_len, total); // the whole flight was eventually sent
@@ -1685,21 +1685,21 @@ void test_quic_conn_stream_tx_partitioning()
     // skip it (no data, no pending FIN).
     uint8_t d[2] = {0x11, 0x22};
     uint8_t fr[64];
-    size_t fl = pc_quic_build_stream(fr, sizeof fr, 0, 0, d, 2, PROTO_FALSE);
+    size_t fl = protocore_quic_build_stream(fr, sizeof fr, 0, 0, d, 2, PROTO_FALSE);
     uint8_t sdg[256];
     size_t sl = build_short(sdg, sizeof sdg, SERVER_SCID, sizeof(SERVER_SCID), 1, &apc, fr, fl);
-    TEST_ASSERT_TRUE(pc_quic_conn_recv(&g_qc, sdg, sl));
-    uint8_t out[PC_QUIC_MAX_DATAGRAM];
-    (void)pc_quic_conn_send(&g_qc, out, sizeof out); // emits the owed ACK; stream 0 is skipped
+    TEST_ASSERT_TRUE(protocore_quic_conn_recv(&g_qc, sdg, sl));
+    uint8_t out[PROTOCORE_QUIC_MAX_DATAGRAM];
+    (void)protocore_quic_conn_send(&g_qc, out, sizeof out); // emits the owed ACK; stream 0 is skipped
 
     // A response larger than the room the frame payload has left, with a FIN: the first round takes
     // `room` rather than `remain` and does NOT set the FIN, because the final size is not reached yet.
-    static uint8_t big[PC_QUIC_STREAM_TX - 64];
+    static uint8_t big[PROTOCORE_QUIC_STREAM_TX - 64];
     memset(big, 0x5A, sizeof(big));
-    size_t queued = pc_quic_conn_stream_send(&g_qc, 0, big, sizeof(big), PROTO_TRUE);
+    size_t queued = protocore_quic_conn_stream_send(&g_qc, 0, big, sizeof(big), PROTO_TRUE);
     TEST_ASSERT_EQUAL_UINT(sizeof(big), queued);
     QuicStream *st = NULL;
-    for (size_t i = 0; i < PC_QUIC_MAX_STREAMS; i++)
+    for (size_t i = 0; i < PROTOCORE_QUIC_MAX_STREAMS; i++)
     {
         if (g_qc.streams[i].id == 0)
         {
@@ -1708,21 +1708,21 @@ void test_quic_conn_stream_tx_partitioning()
     }
     TEST_ASSERT_NOT_NULL(st);
 
-    (void)pc_quic_conn_send(&g_qc, out, sizeof out);
+    (void)protocore_quic_conn_send(&g_qc, out, sizeof out);
     TEST_ASSERT_TRUE(st->tx_sent > 0);
     TEST_ASSERT_TRUE(st->tx_sent < st->tx_have);       // split: only what fit was taken
     TEST_ASSERT_EQUAL_UINT64(st->tx_sent, st->tx_off); // the stream offset tracks what was taken
     TEST_ASSERT_FALSE(st->tx_fin_sent);                // the FIN waits for the last byte
 
     // The tail now fits in one frame, so this round takes `remain` and carries the FIN.
-    TEST_ASSERT_TRUE(pc_quic_conn_send(&g_qc, out, sizeof out) > 0);
+    TEST_ASSERT_TRUE(protocore_quic_conn_send(&g_qc, out, sizeof out) > 0);
     TEST_ASSERT_EQUAL_UINT(st->tx_have, st->tx_sent);
     TEST_ASSERT_TRUE(st->tx_fin_sent);
 
     // More data queued after the FIN was already sent still goes out, and tx_fin_sent stays latched.
-    TEST_ASSERT_EQUAL_UINT(2, pc_quic_conn_stream_send(&g_qc, 0, d, 2, PROTO_FALSE));
+    TEST_ASSERT_EQUAL_UINT(2, protocore_quic_conn_stream_send(&g_qc, 0, d, 2, PROTO_FALSE));
     size_t before = st->tx_sent;
-    TEST_ASSERT_TRUE(pc_quic_conn_send(&g_qc, out, sizeof out) > 0);
+    TEST_ASSERT_TRUE(protocore_quic_conn_send(&g_qc, out, sizeof out) > 0);
     TEST_ASSERT_EQUAL_UINT(before + 2, st->tx_sent);
     TEST_ASSERT_TRUE(st->tx_fin_sent);
 }
@@ -1737,11 +1737,11 @@ void test_quic_conn_stream_fin_only()
     QuicPacketKeys apc, aps;
     complete_handshake(&g_qc, &cb, &init, &apc, &aps, sizeof(CLIENT_SCID));
 
-    uint8_t out[PC_QUIC_MAX_DATAGRAM];
-    TEST_ASSERT_EQUAL_UINT(4, pc_quic_conn_stream_send(&g_qc, 0, (const uint8_t *)"BODY", 4, PROTO_FALSE));
-    TEST_ASSERT_TRUE(pc_quic_conn_send(&g_qc, out, sizeof out) > 0);
+    uint8_t out[PROTOCORE_QUIC_MAX_DATAGRAM];
+    TEST_ASSERT_EQUAL_UINT(4, protocore_quic_conn_stream_send(&g_qc, 0, (const uint8_t *)"BODY", 4, PROTO_FALSE));
+    TEST_ASSERT_TRUE(protocore_quic_conn_send(&g_qc, out, sizeof out) > 0);
     QuicStream *st = NULL;
-    for (size_t i = 0; i < PC_QUIC_MAX_STREAMS; i++)
+    for (size_t i = 0; i < PROTOCORE_QUIC_MAX_STREAMS; i++)
     {
         if (g_qc.streams[i].id == 0)
         {
@@ -1753,25 +1753,25 @@ void test_quic_conn_stream_fin_only()
     TEST_ASSERT_FALSE(st->tx_fin_sent);
 
     // Close the stream with no payload: nothing is "more", but the FIN is due.
-    TEST_ASSERT_EQUAL_UINT(0, pc_quic_conn_stream_send(&g_qc, 0, (const uint8_t *)"", 0, PROTO_TRUE));
+    TEST_ASSERT_EQUAL_UINT(0, protocore_quic_conn_stream_send(&g_qc, 0, (const uint8_t *)"", 0, PROTO_TRUE));
     TEST_ASSERT_TRUE(st->tx_fin);
-    size_t n = pc_quic_conn_send(&g_qc, out, sizeof out);
+    size_t n = protocore_quic_conn_send(&g_qc, out, sizeof out);
     TEST_ASSERT_TRUE(n > 0);
     TEST_ASSERT_TRUE(st->tx_fin_sent);
 
     // The empty FIN really is on the wire as a zero-length STREAM frame.
-    uint8_t plain[PC_QUIC_MAX_DATAGRAM];
+    uint8_t plain[PROTOCORE_QUIC_MAX_DATAGRAM];
     size_t pt = open_short(out, n, sizeof(CLIENT_SCID), &aps, plain);
     TEST_ASSERT_NOT_EQUAL(SIZE_MAX, pt);
     QuicFrame f;
-    size_t got = pc_quic_frame_parse(plain, pt, &f);
+    size_t got = protocore_quic_frame_parse(plain, pt, &f);
     TEST_ASSERT_TRUE(got > 0);
     TEST_ASSERT_TRUE(f.type >= QUIC_FT_STREAM);
     TEST_ASSERT_EQUAL_UINT64(0, f.stream.length);
     TEST_ASSERT_TRUE(f.stream.fin);
 
     // With the FIN sent and nothing pending the stream is skipped entirely from here on.
-    TEST_ASSERT_EQUAL_UINT(0, pc_quic_conn_send(&g_qc, out, sizeof out));
+    TEST_ASSERT_EQUAL_UINT(0, protocore_quic_conn_send(&g_qc, out, sizeof out));
 }
 
 // When several streams have more data than one frame payload can hold, the ones that no longer fit
@@ -1789,23 +1789,23 @@ void test_quic_conn_stream_tx_datagram_full()
     // of a full datagram has left.
     static uint8_t payload[500];
     memset(payload, 0x77, sizeof(payload));
-    uint64_t ids[PC_QUIC_MAX_STREAMS];
-    for (size_t i = 0; i < PC_QUIC_MAX_STREAMS; i++)
+    uint64_t ids[PROTOCORE_QUIC_MAX_STREAMS];
+    for (size_t i = 0; i < PROTOCORE_QUIC_MAX_STREAMS; i++)
     {
         ids[i] = 0x3F00000000000000ull + (uint64_t)(i * 4);
         TEST_ASSERT_EQUAL_UINT(sizeof(payload),
-                               pc_quic_conn_stream_send(&g_qc, ids[i], payload, sizeof(payload), PROTO_FALSE));
+                               protocore_quic_conn_stream_send(&g_qc, ids[i], payload, sizeof(payload), PROTO_FALSE));
     }
 
-    uint8_t out[PC_QUIC_MAX_DATAGRAM];
-    (void)pc_quic_conn_send(&g_qc, out, sizeof out);
+    uint8_t out[PROTOCORE_QUIC_MAX_DATAGRAM];
+    (void)protocore_quic_conn_send(&g_qc, out, sizeof out);
 
     // At least one stream got nothing this round - the frame payload had no room left for it - and at
     // least one was cut short mid-buffer.
     size_t untouched = 0, partial = 0;
-    for (size_t i = 0; i < PC_QUIC_MAX_STREAMS; i++)
+    for (size_t i = 0; i < PROTOCORE_QUIC_MAX_STREAMS; i++)
     {
-        for (size_t j = 0; j < PC_QUIC_MAX_STREAMS; j++)
+        for (size_t j = 0; j < PROTOCORE_QUIC_MAX_STREAMS; j++)
         {
             if (g_qc.streams[j].id == ids[i])
             {
@@ -1827,11 +1827,11 @@ void test_quic_conn_stream_tx_datagram_full()
     g_qc.address_validated = PROTO_TRUE;
     for (int round = 0; round < 20; round++)
     {
-        (void)pc_quic_conn_send(&g_qc, out, sizeof out);
+        (void)protocore_quic_conn_send(&g_qc, out, sizeof out);
     }
-    for (size_t i = 0; i < PC_QUIC_MAX_STREAMS; i++)
+    for (size_t i = 0; i < PROTOCORE_QUIC_MAX_STREAMS; i++)
     {
-        for (size_t j = 0; j < PC_QUIC_MAX_STREAMS; j++)
+        for (size_t j = 0; j < PROTOCORE_QUIC_MAX_STREAMS; j++)
         {
             if (g_qc.streams[j].id == ids[i])
             {
@@ -1839,10 +1839,10 @@ void test_quic_conn_stream_tx_datagram_full()
             }
         }
     }
-    TEST_ASSERT_EQUAL_UINT(0, pc_quic_conn_send(&g_qc, out, sizeof out)); // nothing left queued
+    TEST_ASSERT_EQUAL_UINT(0, protocore_quic_conn_send(&g_qc, out, sizeof out)); // nothing left queued
 }
 
-// pc_quic_conn_stream_send clamps to the space left in the stream's send buffer, and withholds the
+// protocore_quic_conn_stream_send clamps to the space left in the stream's send buffer, and withholds the
 // FIN when it could not take everything the caller offered (the final size is not yet known).
 void test_quic_conn_stream_send_clamped()
 {
@@ -1850,13 +1850,13 @@ void test_quic_conn_stream_send_clamped()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     init_conn(&g_qc, &cb);
 
-    static uint8_t huge[PC_QUIC_STREAM_TX + 512];
+    static uint8_t huge[PROTOCORE_QUIC_STREAM_TX + 512];
     memset(huge, 0x2B, sizeof(huge));
-    size_t took = pc_quic_conn_stream_send(&g_qc, 0, huge, sizeof(huge), PROTO_TRUE);
-    TEST_ASSERT_EQUAL_UINT(PC_QUIC_STREAM_TX, took); // clamped to the buffer
+    size_t took = protocore_quic_conn_stream_send(&g_qc, 0, huge, sizeof(huge), PROTO_TRUE);
+    TEST_ASSERT_EQUAL_UINT(PROTOCORE_QUIC_STREAM_TX, took); // clamped to the buffer
 
     QuicStream *st = NULL;
-    for (size_t i = 0; i < PC_QUIC_MAX_STREAMS; i++)
+    for (size_t i = 0; i < PROTOCORE_QUIC_MAX_STREAMS; i++)
     {
         if (g_qc.streams[i].id == 0)
         {
@@ -1864,7 +1864,7 @@ void test_quic_conn_stream_send_clamped()
         }
     }
     TEST_ASSERT_NOT_NULL(st);
-    TEST_ASSERT_EQUAL_UINT(PC_QUIC_STREAM_TX, st->tx_have);
+    TEST_ASSERT_EQUAL_UINT(PROTOCORE_QUIC_STREAM_TX, st->tx_have);
     TEST_ASSERT_FALSE(st->tx_fin); // the caller's FIN was not honoured: not all bytes were accepted
 }
 
@@ -1878,14 +1878,14 @@ void test_quic_conn_stream_send_sentinel_id()
     QuicPacketKeys apc, aps;
     complete_handshake(&g_qc, &cb, &init, &apc, &aps, sizeof(CLIENT_SCID));
 
-    TEST_ASSERT_EQUAL_UINT(2, pc_quic_conn_stream_send(&g_qc, UINT64_MAX, (const uint8_t *)"hi", 2, PROTO_TRUE));
-    for (size_t i = 0; i < PC_QUIC_MAX_STREAMS; i++)
+    TEST_ASSERT_EQUAL_UINT(2, protocore_quic_conn_stream_send(&g_qc, UINT64_MAX, (const uint8_t *)"hi", 2, PROTO_TRUE));
+    for (size_t i = 0; i < PROTOCORE_QUIC_MAX_STREAMS; i++)
     {
         TEST_ASSERT_EQUAL_UINT64(UINT64_MAX, g_qc.streams[i].id); // every slot is still free
     }
 
-    uint8_t out[PC_QUIC_MAX_DATAGRAM];
-    TEST_ASSERT_EQUAL_UINT(0, pc_quic_conn_send(&g_qc, out, sizeof out)); // nothing to send
+    uint8_t out[PROTOCORE_QUIC_MAX_DATAGRAM];
+    TEST_ASSERT_EQUAL_UINT(0, protocore_quic_conn_send(&g_qc, out, sizeof out)); // nothing to send
 }
 
 // The Probe Timeout backs off exponentially, stops doubling at its ceiling, and (once the count is
@@ -1899,16 +1899,16 @@ void test_quic_conn_pto_backoff_ceiling()
     size_t ch_len = 0;
     feed_client_initial(&g_qc, &cb, &init, ch, &ch_len);
     uint8_t out[2048];
-    TEST_ASSERT_TRUE(pc_quic_conn_send(&g_qc, out, sizeof out) > 0); // an ack-eliciting flight is outstanding
+    TEST_ASSERT_TRUE(protocore_quic_conn_send(&g_qc, out, sizeof out) > 0); // an ack-eliciting flight is outstanding
 
     uint32_t now = 1000;
-    pc_quic_conn_on_timeout(&g_qc, now); // arm
+    protocore_quic_conn_on_timeout(&g_qc, now); // arm
     TEST_ASSERT_TRUE(g_qc.pto_armed);
     // Fire it more times than the backoff counter can grow: it stops at its cap.
     for (int i = 0; i < 12; i++)
     {
         now = g_qc.pto_deadline_ms + 1;
-        pc_quic_conn_on_timeout(&g_qc, now);
+        protocore_quic_conn_on_timeout(&g_qc, now);
     }
     TEST_ASSERT_EQUAL_UINT8(8, g_qc.pto_count); // capped
 
@@ -1916,9 +1916,9 @@ void test_quic_conn_pto_backoff_ceiling()
     // overflowing the shift (RFC 9002 sec 6.2.1).
     g_qc.pto_count = 40;
     g_qc.pto_armed = PROTO_FALSE;
-    pc_quic_conn_on_timeout(&g_qc, 0); // re-arm with the saturated period
+    protocore_quic_conn_on_timeout(&g_qc, 0); // re-arm with the saturated period
     TEST_ASSERT_TRUE(g_qc.pto_armed);
-    TEST_ASSERT_EQUAL_UINT32(2097152000u, g_qc.pto_deadline_ms); // PC_QUIC_PTO_MS << 21
+    TEST_ASSERT_EQUAL_UINT32(2097152000u, g_qc.pto_deadline_ms); // PROTOCORE_QUIC_PTO_MS << 21
 }
 
 // An "ACK owed" flag on a space that has never received a packet emits no ACK: there is no largest
@@ -1930,12 +1930,12 @@ void test_quic_conn_ack_owed_without_rx()
     QuicInitialSecrets init;
     QuicPacketKeys apc, aps;
     complete_handshake(&g_qc, &cb, &init, &apc, &aps, sizeof(CLIENT_SCID));
-    uint8_t out[PC_QUIC_MAX_DATAGRAM];
-    TEST_ASSERT_EQUAL_UINT(0, pc_quic_conn_send(&g_qc, out, sizeof out)); // baseline: nothing queued
+    uint8_t out[PROTOCORE_QUIC_MAX_DATAGRAM];
+    TEST_ASSERT_EQUAL_UINT(0, protocore_quic_conn_send(&g_qc, out, sizeof out)); // baseline: nothing queued
 
     g_qc.space[QUIC_ENC_APP].ack_eliciting_rx = PROTO_TRUE;
     g_qc.space[QUIC_ENC_APP].have_rx = PROTO_FALSE;
-    TEST_ASSERT_EQUAL_UINT(0, pc_quic_conn_send(&g_qc, out, sizeof out));
+    TEST_ASSERT_EQUAL_UINT(0, protocore_quic_conn_send(&g_qc, out, sizeof out));
     TEST_ASSERT_TRUE(g_qc.space[QUIC_ENC_APP].ack_eliciting_rx); // not consumed: nothing was sent
 }
 
@@ -1947,7 +1947,7 @@ void test_quic_conn_close_level_without_keys()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     init_conn(&g_qc, &cb); // no ClientHello yet: only the Initial keys exist
     QuicInitialSecrets init;
-    pc_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
+    protocore_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
 
     // A padded Initial PING gives the connection an amplification budget without starting the TLS
     // handshake, so the Handshake and 1-RTT keys are still absent.
@@ -1955,18 +1955,18 @@ void test_quic_conn_close_level_without_keys()
     uint8_t dg[512];
     size_t dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
                            &init.client, fr, sizeof fr);
-    TEST_ASSERT_TRUE(pc_quic_conn_recv(&g_qc, dg, dl));
+    TEST_ASSERT_TRUE(protocore_quic_conn_recv(&g_qc, dg, dl));
     TEST_ASSERT_EQUAL_UINT8(QTLS_START, g_qc.tls.state);
 
-    pc_quic_conn_close(&g_qc, QUIC_ERR_NO_ERROR);
+    protocore_quic_conn_close(&g_qc, QUIC_ERR_NO_ERROR);
     TEST_ASSERT_TRUE(g_qc.close_queued);
     g_qc.close_level = QUIC_ENC_APP; // in range and not discarded, but 1-RTT keys are absent
     TEST_ASSERT_FALSE(g_qc.space[QUIC_ENC_APP].discarded);
 
     uint8_t out[512];
-    size_t n = pc_quic_conn_send(&g_qc, out, sizeof out);
+    size_t n = protocore_quic_conn_send(&g_qc, out, sizeof out);
     TEST_ASSERT_TRUE(n > 0);
-    TEST_ASSERT_TRUE(pc_quic_conn_is_closed(&g_qc));
+    TEST_ASSERT_TRUE(protocore_quic_conn_is_closed(&g_qc));
 
     // It went out at Initial - the only level with keys - so the peer can actually read it.
     uint8_t plain[512];
@@ -1985,11 +1985,11 @@ void test_quic_conn_is_closed_draining_only()
     fill();
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     init_conn(&g_qc, &cb);
-    TEST_ASSERT_FALSE(pc_quic_conn_is_closed(&g_qc)); // neither flag
+    TEST_ASSERT_FALSE(protocore_quic_conn_is_closed(&g_qc)); // neither flag
 
     g_qc.draining = PROTO_TRUE;
     TEST_ASSERT_FALSE(g_qc.closed);
-    TEST_ASSERT_TRUE(pc_quic_conn_is_closed(&g_qc)); // draining alone is enough
+    TEST_ASSERT_TRUE(protocore_quic_conn_is_closed(&g_qc)); // draining alone is enough
 }
 
 // The PTO's "is anything outstanding?" test consults every packet-number space in turn: an
@@ -2007,16 +2007,16 @@ void test_quic_conn_pto_outstanding_per_space()
         // Exactly one space has sent ack-eliciting packet 3 and had only up to 2 acknowledged.
         g_qc.space[levels[i]].last_ae_pn = 3;
         g_qc.space[levels[i]].largest_acked = 2;
-        pc_quic_conn_on_timeout(&g_qc, 1000);
+        protocore_quic_conn_on_timeout(&g_qc, 1000);
         TEST_ASSERT_TRUE(g_qc.pto_armed);
-        TEST_ASSERT_EQUAL_UINT32(1000 + PC_QUIC_PTO_MS, g_qc.pto_deadline_ms);
+        TEST_ASSERT_EQUAL_UINT32(1000 + PROTOCORE_QUIC_PTO_MS, g_qc.pto_deadline_ms);
     }
 
     // Nothing outstanding anywhere: the timer disarms and the backoff resets.
     init_conn(&g_qc, &cb);
     g_qc.pto_armed = PROTO_TRUE;
     g_qc.pto_count = 3;
-    pc_quic_conn_on_timeout(&g_qc, 1000);
+    protocore_quic_conn_on_timeout(&g_qc, 1000);
     TEST_ASSERT_FALSE(g_qc.pto_armed);
     TEST_ASSERT_EQUAL_UINT8(0, g_qc.pto_count);
 
@@ -2026,7 +2026,7 @@ void test_quic_conn_pto_outstanding_per_space()
     g_qc.space[QUIC_ENC_APP].last_ae_pn = 3;
     g_qc.space[QUIC_ENC_APP].largest_acked = 2;
     g_qc.space[QUIC_ENC_APP].discarded = PROTO_TRUE;
-    pc_quic_conn_on_timeout(&g_qc, 1000);
+    protocore_quic_conn_on_timeout(&g_qc, 1000);
     TEST_ASSERT_FALSE(g_qc.pto_armed);
 }
 
@@ -2041,22 +2041,22 @@ void test_quic_conn_pto_disarms_when_all_acked()
     complete_handshake(&g_qc, &cb, &init, &apc, &aps, sizeof(CLIENT_SCID));
 
     // The 1-RTT HANDSHAKE_DONE packet is still unacknowledged, so the PTO arms.
-    pc_quic_conn_on_timeout(&g_qc, 1000);
+    protocore_quic_conn_on_timeout(&g_qc, 1000);
     TEST_ASSERT_TRUE(g_qc.pto_armed);
 
     // The client acknowledges 1-RTT packet 0; now no space has anything outstanding.
     uint8_t fr[32];
-    size_t fl = pc_quic_build_ack(fr, sizeof fr, 0, 0, 0);
+    size_t fl = protocore_quic_build_ack(fr, sizeof fr, 0, 0, 0);
     uint8_t dg[256];
     size_t dl = build_short(dg, sizeof dg, SERVER_SCID, sizeof(SERVER_SCID), 0, &apc, fr, fl);
-    TEST_ASSERT_TRUE(pc_quic_conn_recv(&g_qc, dg, dl));
+    TEST_ASSERT_TRUE(protocore_quic_conn_recv(&g_qc, dg, dl));
     TEST_ASSERT_EQUAL_INT64(0, g_qc.space[QUIC_ENC_APP].largest_acked);
 
     g_qc.pto_armed = PROTO_TRUE; // the ACK already cleared it; re-arm so the disarm below is what clears it
-    pc_quic_conn_on_timeout(&g_qc, 2000);
+    protocore_quic_conn_on_timeout(&g_qc, 2000);
     TEST_ASSERT_FALSE(g_qc.pto_armed);
     TEST_ASSERT_EQUAL_UINT8(0, g_qc.pto_count);
-    TEST_ASSERT_FALSE(pc_quic_conn_is_closed(&g_qc));
+    TEST_ASSERT_FALSE(protocore_quic_conn_is_closed(&g_qc));
 }
 
 // A PTO that fires twice without an intervening send re-queues HANDSHAKE_DONE only once: the second
@@ -2071,13 +2071,13 @@ void test_quic_conn_pto_requeues_handshake_done_once()
     TEST_ASSERT_TRUE(g_qc.handshake_done_sent);
 
     // The client never acknowledged the 1-RTT packet, so the APP space is still outstanding.
-    pc_quic_conn_on_timeout(&g_qc, 1000); // arm
-    pc_quic_conn_on_timeout(&g_qc, 1000 + PC_QUIC_PTO_MS + 1);
+    protocore_quic_conn_on_timeout(&g_qc, 1000); // arm
+    protocore_quic_conn_on_timeout(&g_qc, 1000 + PROTOCORE_QUIC_PTO_MS + 1);
     TEST_ASSERT_TRUE(g_qc.handshake_done_queued);
     TEST_ASSERT_FALSE(g_qc.handshake_done_sent);
 
     // A second PTO without a send in between: already queued, so nothing changes.
-    pc_quic_conn_on_timeout(&g_qc, g_qc.pto_deadline_ms + 1);
+    protocore_quic_conn_on_timeout(&g_qc, g_qc.pto_deadline_ms + 1);
     TEST_ASSERT_TRUE(g_qc.handshake_done_queued);
     TEST_ASSERT_FALSE(g_qc.handshake_done_sent);
 }

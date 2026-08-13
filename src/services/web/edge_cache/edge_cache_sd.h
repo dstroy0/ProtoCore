@@ -3,7 +3,7 @@
 
 /**
  * @file edge_cache_sd.h
- * @brief CDN edge-cache tier - L2 SD persistence (PC_ENABLE_EDGE_CACHE && PC_ENABLE_DBM).
+ * @brief CDN edge-cache tier - L2 SD persistence (PROTOCORE_ENABLE_EDGE_CACHE && PROTOCORE_ENABLE_DBM).
  *
  * The persistent second tier behind the bounded L1 RAM store (edge_cache): an evicted L1 entry is
  * written back to a dbm key-value store on the WAL (services/storage/dbm, SD-card backed on device, a RAM WalDev
@@ -11,7 +11,7 @@
  * log-structured on the WAL, the cached set survives a reboot (dbm rebuilds its index by replaying the
  * log on open).
  *
- * The L2 key is the entry's 32-byte SHA-256 digest (== PC_DBM_KEY_MAX), so no key is re-derived. The
+ * The L2 key is the entry's 32-byte SHA-256 digest (== PROTOCORE_DBM_KEY_MAX), so no key is re-derived. The
  * value is a compact, versioned, little-endian serialization of the entry's response metadata + body.
  *
  * These are pure functions over a caller-owned dbm handle and a caller-owned scratch buffer (no
@@ -33,11 +33,11 @@
 
 // The entry serialize/deserialize below is the shared byte codec for an EdgeEntry (used by both the L2 SD
 // tier and the mesh sibling link), so it compiles whenever the edge cache is on; the dbm-backed put/get/purge
-// helpers further down need the persistence tier and stay gated on PC_ENABLE_DBM.
-#if PC_ENABLE_EDGE_CACHE
+// helpers further down need the persistence tier and stay gated on PROTOCORE_ENABLE_DBM.
+#if PROTOCORE_ENABLE_EDGE_CACHE
 
 #include "services/web/edge_cache/edge_cache.h"
-#if PC_ENABLE_DBM
+#if PROTOCORE_ENABLE_DBM
 #include "services/storage/dbm/dbm.h" // dbm handle type for the L2 put/get/purge helpers below
 #endif
 
@@ -45,7 +45,7 @@
  * @brief Worst-case serialized value size of one entry (every metadata string full + a max-size body).
  *
  * Size the scratch buffer with this. A serialized entry only fits in dbm when this (or the actual, often
- * smaller, size) is <= PC_DBM_VAL_MAX - otherwise the entry stays L1-only (::edge_sd_put returns false).
+ * smaller, size) is <= PROTOCORE_DBM_VAL_MAX - otherwise the entry stays L1-only (::edge_sd_put returns false).
  */
 
 /**
@@ -65,36 +65,36 @@ size_t edge_sd_serialize(const EdgeEntry *e, uint8_t *out, size_t cap);
  */
 proto_bool edge_sd_deserialize(uint8_t *work, const uint8_t *buf, size_t len, EdgeEntry *e);
 
-#if PC_ENABLE_DBM
+#if PROTOCORE_ENABLE_DBM
 
 /**
  * @brief Write @p e back to the L2 store (keyed by its digest), using @p scratch to serialize.
  * @return true if it was spilled; false if @p e carries no validator, or its serialization does not fit
- *         @p scratch / PC_DBM_VAL_MAX, or the dbm write fails (the entry simply stays L1-only).
+ *         @p scratch / PROTOCORE_DBM_VAL_MAX, or the dbm write fails (the entry simply stays L1-only).
  */
-proto_bool edge_sd_put(struct pc_dbm *db, const EdgeEntry *e, uint8_t *scratch, size_t scratch_cap);
+proto_bool edge_sd_put(struct protocore_dbm *db, const EdgeEntry *e, uint8_t *scratch, size_t scratch_cap);
 
 /**
  * @brief Promote the entry stored under @p digest from L2 into @p e (via @p scratch).
  * @return true on a hit that deserialized cleanly; false on an L2 miss or a corrupt value.
  */
-proto_bool edge_sd_get(uint8_t *work, struct pc_dbm *db, const uint8_t digest[32], EdgeEntry *e, uint8_t *scratch,
-                       size_t scratch_cap);
+proto_bool edge_sd_get(uint8_t *work, struct protocore_dbm *db, const uint8_t digest[32], EdgeEntry *e,
+                       uint8_t *scratch, size_t scratch_cap);
 
 /** @brief Drop the L2 entry stored under @p digest. @return true if one existed. */
-proto_bool edge_sd_del(struct pc_dbm *db, const uint8_t digest[32]);
+proto_bool edge_sd_del(struct protocore_dbm *db, const uint8_t digest[32]);
 
 /**
  * @brief Drop every L2 entry whose stored request path begins with @p prefix (via @p scratch to read each
  *        value's canonical key). @return the number purged.
  */
-uint32_t edge_sd_purge_prefix(struct pc_dbm *db, const char *path_prefix, uint8_t *scratch, size_t scratch_cap);
+uint32_t edge_sd_purge_prefix(struct protocore_dbm *db, const char *path_prefix, uint8_t *scratch, size_t scratch_cap);
 
 /** @brief Drop every L2 entry. @return the number purged. */
-uint32_t edge_sd_purge_all(struct pc_dbm *db);
+uint32_t edge_sd_purge_all(struct protocore_dbm *db);
 
-#endif // PC_ENABLE_DBM
+#endif // PROTOCORE_ENABLE_DBM
 
-#endif // PC_ENABLE_EDGE_CACHE
+#endif // PROTOCORE_ENABLE_EDGE_CACHE
 
 #endif // PROTOCORE_EDGE_CACHE_SD_H

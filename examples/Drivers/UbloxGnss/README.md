@@ -15,7 +15,7 @@ Every u-blox GPS streams two things at once over its serial pin:
   Compact, and the only way to **configure** the receiver or get the all-in-one **NAV-PVT** fix
   (position + velocity + time in a single frame).
 
-They are interleaved byte-by-byte on the same wire. This sketch's demultiplexer (`pc_ubx_stream_feed`)
+They are interleaved byte-by-byte on the same wire. This sketch's demultiplexer (`protocore_ubx_stream_feed`)
 untangles them: it hands complete, checksum-checked UBX frames to the UBX decoder and every other
 byte to a normal NMEA line reader.
 
@@ -101,7 +101,7 @@ The codecs live in the library, so the flags must reach the whole build:
 ```bash
 pio ci examples/Drivers/UbloxGnss \
   --board esp32dev --lib "." \
-  --project-option="build_flags=-DPC_ENABLE_NMEA0183=1 -DPC_ENABLE_UBX=1"
+  --project-option="build_flags=-DPROTOCORE_ENABLE_NMEA0183=1 -DPROTOCORE_ENABLE_UBX=1"
 ```
 
 (The Arduino IDE reads the flags from `build_opt.h` beside the sketch automatically.)
@@ -110,11 +110,11 @@ pio ci examples/Drivers/UbloxGnss \
 
 A UBX frame is two sync bytes (`B5 62`), a class + id that name the message, a little-endian payload
 length, the payload, and a two-byte **Fletcher checksum** over everything in between.
-`pc_ubx_stream_feed` is a byte-at-a-time state machine: it hunts for the sync bytes, reads the
+`protocore_ubx_stream_feed` is a byte-at-a-time state machine: it hunts for the sync bytes, reads the
 length, collects exactly that many payload bytes while running the checksum, and only emits a frame
 if the checksum matches - otherwise it resyncs. Any byte that is not part of a UBX frame is passed
 straight through, so an ordinary NMEA line assembler runs on the leftovers. Building is the reverse:
-`pc_ubx_build` frames a payload and appends the checksum; `pc_ubx_build_poll` sends the empty
+`protocore_ubx_build` frames a payload and appends the checksum; `protocore_ubx_build_poll` sends the empty
 "please send me this message" request. All of it is fixed-size, **no heap**, and unit-tested on a PC
 (`test/test_ubx`, checked against the published u-blox poll frames); only the UART read/write runs on
 the ESP32. See [`src/services/timing_position/ubx/ubx.h`](../../../src/services/timing_position/ubx/ubx.h) and

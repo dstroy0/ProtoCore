@@ -1,8 +1,8 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Layer 1 driven through a REAL backend: the env declares PC_PHYSICAL_HAS_BACKEND=1, so
-// PC_PHYSICAL_HAS_BACKEND is 1 and test/mocks/physical stands in for silicon. These are the
+// Layer 1 driven through a REAL backend: the env declares PROTOCORE_PHYSICAL_HAS_BACKEND=1, so
+// PROTOCORE_PHYSICAL_HAS_BACKEND is 1 and test/mocks/physical stands in for silicon. These are the
 // same lines a target runs, against a link state that can actually be up - not the no-op stubs.
 //
 // That is what makes the readouts checkable at all: a stub answers every one of them with an empty
@@ -19,7 +19,7 @@
 #include <string.h>
 #include <unity.h>
 
-// The dotted quad as the pc_net_*_ip() contract returns it: network byte order in a u32, which on
+// The dotted quad as the protocore_net_*_ip() contract returns it: network byte order in a u32, which on
 // every target in the list puts the first octet in the low byte. Assembled here so the expected
 // value is the test's own, not the backend's macro.
 #define IP4(a, b, c, d) (((uint32_t)(d) << 24) | ((uint32_t)(c) << 16) | ((uint32_t)(b) << 8) | (uint32_t)(a))
@@ -43,7 +43,7 @@ void tearDown(void)
 // Runs first: the backend's link state is static and only ever comes up.
 void test_a_no_link_reports_no_route()
 {
-    TEST_ASSERT_EQUAL_INT(PC_IF_ANY, Physical.link->egress());
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_IF_ANY, Physical.link->egress());
     TEST_ASSERT_EQUAL_UINT32(0, Physical.link->egress_ip());
     TEST_ASSERT_FALSE(Physical.wifi->ready());
     TEST_ASSERT_EQUAL_UINT32(0, Physical.wifi->ap_ip());
@@ -64,7 +64,7 @@ void test_b_station_bring_up_is_live()
     TEST_ASSERT_TRUE(Physical.wifi->init("protocore-net", "passphrase"));
     TEST_ASSERT_TRUE(Physical.wifi->ready()); // ready() reflects the state init() set
 
-    TEST_ASSERT_EQUAL_INT(PC_IF_WIFI_STA, Physical.link->egress());
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_IF_WIFI_STA, Physical.link->egress());
     TEST_ASSERT_EQUAL_UINT32(STA_IP, Physical.link->egress_ip());
 
     // RSSI is a signed dBm reading, negative for any real association.
@@ -137,7 +137,7 @@ void test_g_softap_has_its_own_address()
     TEST_ASSERT_TRUE(Physical.wifi->init_ap("protocore-ap", "ap-passphrase"));
     TEST_ASSERT_EQUAL_UINT32(AP_IP, Physical.wifi->ap_ip());
     // The station still carries the route: a softAP does not become the default egress.
-    TEST_ASSERT_EQUAL_INT(PC_IF_WIFI_STA, Physical.link->egress());
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_IF_WIFI_STA, Physical.link->egress());
     TEST_ASSERT_EQUAL_UINT32(STA_IP, Physical.link->egress_ip());
 }
 
@@ -151,7 +151,7 @@ void test_h_wired_wins_the_route()
     TEST_ASSERT_TRUE(Physical.eth->init());
     TEST_ASSERT_TRUE(Physical.eth->ready()); // and now it is
 
-    TEST_ASSERT_EQUAL_INT(PC_IF_ETH, Physical.link->egress());
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_IF_ETH, Physical.link->egress());
     TEST_ASSERT_EQUAL_UINT32(ETH_IP, Physical.link->egress_ip());
     TEST_ASSERT_TRUE(Physical.wifi->ready()); // the station is still associated underneath
 }
@@ -178,7 +178,7 @@ void test_i_egress_mac_tracks_the_route_and_differs_from_the_station_mac()
 // Enabling IPv6 yields a global address in the v6 family, and ready() tracks it.
 void test_j_ipv6_global_address()
 {
-    pc_ip addr;
+    protocore_ip addr;
     memset(&addr, 0, sizeof(addr));
 
     TEST_ASSERT_FALSE(Physical.ip6->ready()); // not enabled yet: ready() is not init()
@@ -186,7 +186,7 @@ void test_j_ipv6_global_address()
     TEST_ASSERT_TRUE(Physical.ip6->ready());
 
     TEST_ASSERT_TRUE(Physical.ip6->global_addr(&addr));
-    TEST_ASSERT_EQUAL_INT(PC_IP_V6, addr.family);
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_IP_V6, addr.family);
 
     // RFC 3849 reserves 2001:db8::/32 for documentation, which is what the backend answers with.
     TEST_ASSERT_EQUAL_HEX8(0x20, addr.bytes[0]);
@@ -205,14 +205,14 @@ void test_j_ipv6_global_address()
 // With a radio under it, a power-save mode set is a mode that reads back.
 void test_k_power_save_mode_round_trips()
 {
-    TEST_ASSERT_TRUE(Physical.radio->ps_set(PC_PHY_PS_MAX_MODEM));
-    TEST_ASSERT_EQUAL_UINT8(PC_PHY_PS_MAX_MODEM, Physical.radio->ps_mode());
+    TEST_ASSERT_TRUE(Physical.radio->ps_set(PROTOCORE_PHY_PS_MAX_MODEM));
+    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_PHY_PS_MAX_MODEM, Physical.radio->ps_mode());
 
-    TEST_ASSERT_TRUE(Physical.radio->ps_set(PC_PHY_PS_MIN_MODEM));
-    TEST_ASSERT_EQUAL_UINT8(PC_PHY_PS_MIN_MODEM, Physical.radio->ps_mode());
+    TEST_ASSERT_TRUE(Physical.radio->ps_set(PROTOCORE_PHY_PS_MIN_MODEM));
+    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_PHY_PS_MIN_MODEM, Physical.radio->ps_mode());
 
-    TEST_ASSERT_TRUE(Physical.radio->ps_set(PC_PHY_PS_NONE));
-    TEST_ASSERT_EQUAL_UINT8(PC_PHY_PS_NONE, Physical.radio->ps_mode());
+    TEST_ASSERT_TRUE(Physical.radio->ps_set(PROTOCORE_PHY_PS_NONE));
+    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_PHY_PS_NONE, Physical.radio->ps_mode());
 
     TEST_ASSERT_TRUE(Physical.radio->tx_power_set(11));
     TEST_ASSERT_TRUE(Physical.radio->tx_power_set(-4)); // a cap may be negative dBm
@@ -222,20 +222,20 @@ void test_k_power_save_mode_round_trips()
 // interrupted, and the matching release restores the configured mode once the count reaches zero.
 void test_l_busy_hold_refcount_gates_modem_sleep()
 {
-    TEST_ASSERT_TRUE(Physical.radio->ps_set(PC_PHY_PS_MAX_MODEM));
+    TEST_ASSERT_TRUE(Physical.radio->ps_set(PROTOCORE_PHY_PS_MAX_MODEM));
 
     Physical.radio->busy_hold();
-    TEST_ASSERT_EQUAL_UINT8(PC_PHY_PS_NONE, Physical.radio->ps_mode()); // sleep off for the transfer
+    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_PHY_PS_NONE, Physical.radio->ps_mode()); // sleep off for the transfer
 
     Physical.radio->busy_hold(); // nested: still held
     Physical.radio->busy_release();
-    TEST_ASSERT_EQUAL_UINT8(PC_PHY_PS_NONE, Physical.radio->ps_mode()); // one hold outstanding
+    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_PHY_PS_NONE, Physical.radio->ps_mode()); // one hold outstanding
 
     Physical.radio->busy_release(); // count reaches zero: the configured mode comes back
-    TEST_ASSERT_EQUAL_UINT8((uint8_t)PC_RADIO_WIFI_PS, Physical.radio->ps_mode());
+    TEST_ASSERT_EQUAL_UINT8((uint8_t)PROTOCORE_RADIO_WIFI_PS, Physical.radio->ps_mode());
 
     // An unbalanced release cannot drive the count negative or change the mode again.
-    pc_phy_ps before = Physical.radio->ps_mode();
+    protocore_phy_ps before = Physical.radio->ps_mode();
     Physical.radio->busy_release();
     TEST_ASSERT_EQUAL_UINT8((uint8_t)before, Physical.radio->ps_mode());
 }
@@ -243,9 +243,9 @@ void test_l_busy_hold_refcount_gates_modem_sleep()
 // power() applies the configured mode directly.
 void test_m_power_applies_the_configured_mode()
 {
-    TEST_ASSERT_TRUE(Physical.radio->ps_set(PC_PHY_PS_MIN_MODEM));
+    TEST_ASSERT_TRUE(Physical.radio->ps_set(PROTOCORE_PHY_PS_MIN_MODEM));
     Physical.radio->power();
-    TEST_ASSERT_EQUAL_UINT8((uint8_t)PC_RADIO_WIFI_PS, Physical.radio->ps_mode());
+    TEST_ASSERT_EQUAL_UINT8((uint8_t)PROTOCORE_RADIO_WIFI_PS, Physical.radio->ps_mode());
 }
 
 static uint16_t g_frames;
@@ -279,10 +279,10 @@ void test_n_monitor_mode_tunes_and_refuses_a_null_sink()
 // The names are the layer's own vocabulary, not a vendor's.
 void test_o_power_save_names()
 {
-    TEST_ASSERT_EQUAL_STRING("none", Physical.radio->ps_name(PC_PHY_PS_NONE));
-    TEST_ASSERT_EQUAL_STRING("min_modem", Physical.radio->ps_name(PC_PHY_PS_MIN_MODEM));
-    TEST_ASSERT_EQUAL_STRING("max_modem", Physical.radio->ps_name(PC_PHY_PS_MAX_MODEM));
-    TEST_ASSERT_EQUAL_STRING("none", Physical.radio->ps_name((pc_phy_ps)99));
+    TEST_ASSERT_EQUAL_STRING("none", Physical.radio->ps_name(PROTOCORE_PHY_PS_NONE));
+    TEST_ASSERT_EQUAL_STRING("min_modem", Physical.radio->ps_name(PROTOCORE_PHY_PS_MIN_MODEM));
+    TEST_ASSERT_EQUAL_STRING("max_modem", Physical.radio->ps_name(PROTOCORE_PHY_PS_MAX_MODEM));
+    TEST_ASSERT_EQUAL_STRING("none", Physical.radio->ps_name((protocore_phy_ps)99));
 }
 
 int main(void)

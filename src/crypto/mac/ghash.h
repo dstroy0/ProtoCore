@@ -5,7 +5,7 @@
  * @file ghash.h
  * @brief GHASH (the GF(2^128) universal hash under AES-GCM, NIST SP 800-38D sec 6.3), 4-bit table.
  *
- * Shared by pc_aesgcm (AES-256-GCM) and aes128gcm (AES-128-GCM, also DTLS 1.3). The textbook GHASH
+ * Shared by protocore_aesgcm (AES-256-GCM) and aes128gcm (AES-128-GCM, also DTLS 1.3). The textbook GHASH
  * is a 128-iteration bitwise GF(2^128) multiply per 16-byte block (~3,700 cyc/byte on an ESP32-S3),
  * which made AES-GCM ~350x slower than raw AES-CTR and is the throughput floor of every AEAD record
  * layer (measured, docs/FEATURE_PERFORMANCE.md). There is no hardware GF-multiply on the S3 (unlike
@@ -25,7 +25,7 @@
 #define PROTOCORE_GHASH_H
 
 #include "mmgr/endian.h"
-#include "protocore_config.h" // the entry point: PC_INLINE, and types.h for the widths
+#include "protocore_config.h" // the entry point: PROTOCORE_INLINE, and protocore_types.h for the widths
 
 /** @brief 4-bit GHASH table for a fixed subkey H = E(K, 0^128): M[i] = i*H as four big-endian
  *         uint32 words (M[i][0] most significant). 256 bytes. */
@@ -35,13 +35,13 @@ typedef struct
 } GhashKey;
 
 /** @brief Build the 4-bit multiplication table from the 16-byte subkey @p h. Call once per key. */
-PC_INLINE void ghash_key_init(GhashKey *t, const uint8_t h[16])
+PROTOCORE_INLINE void ghash_key_init(GhashKey *t, const uint8_t h[16])
 {
     // M[8] = H; M[4]=H/x, M[2]=H/x^2, M[1]=H/x^3 (one GF right-shift each, reducing by R=0xe1<<120).
-    uint32_t z0 = pc_rd32be(h);
-    uint32_t z1 = pc_rd32be(h + 4);
-    uint32_t z2 = pc_rd32be(h + 8);
-    uint32_t z3 = pc_rd32be(h + 12);
+    uint32_t z0 = protocore_rd32be(h);
+    uint32_t z1 = protocore_rd32be(h + 4);
+    uint32_t z2 = protocore_rd32be(h + 8);
+    uint32_t z3 = protocore_rd32be(h + 12);
     t->M[8][0] = z0;
     t->M[8][1] = z1;
     t->M[8][2] = z2;
@@ -76,7 +76,7 @@ PC_INLINE void ghash_key_init(GhashKey *t, const uint8_t h[16])
 }
 
 /** @brief acc = acc * H in GF(2^128) with the GCM reduction, using the precomputed table @p t. */
-PC_INLINE void ghash_mul(const GhashKey *t, uint8_t acc[16])
+PROTOCORE_INLINE void ghash_mul(const GhashKey *t, uint8_t acc[16])
 {
     // Reduction contribution (into the top 16 bits of word 0) of the low nibble shifted out per step.
     static const uint16_t LAST4[16] = {0x0000, 0x1c20, 0x3840, 0x2460, 0x7080, 0x6ca0, 0x48c0, 0x54e0,
@@ -112,15 +112,15 @@ PC_INLINE void ghash_mul(const GhashKey *t, uint8_t acc[16])
         z2 ^= t->M[hi][2];
         z3 ^= t->M[hi][3];
     }
-    pc_wr32be(acc, z0);
-    pc_wr32be(acc + 4, z1);
-    pc_wr32be(acc + 8, z2);
-    pc_wr32be(acc + 12, z3);
+    protocore_wr32be(acc, z0);
+    protocore_wr32be(acc + 4, z1);
+    protocore_wr32be(acc + 8, z2);
+    protocore_wr32be(acc + 12, z3);
 }
 
 /** @brief Fold @p len bytes of @p data into @p acc: acc = (acc XOR block) * H per 16 bytes, a final
  *         short block MSB-zero-padded. */
-PC_INLINE void ghash_update(const GhashKey *t, uint8_t acc[16], const uint8_t *data, size_t len)
+PROTOCORE_INLINE void ghash_update(const GhashKey *t, uint8_t acc[16], const uint8_t *data, size_t len)
 {
     size_t off = 0;
     while (off < len)

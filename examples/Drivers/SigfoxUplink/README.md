@@ -1,6 +1,6 @@
 # SigfoxUplink - send a tiny reading over the Sigfox 0G network
 
-**Layer:** Foundation · **Build flags:** `PC_ENABLE_SIGFOX`
+**Layer:** Foundation · **Build flags:** `PROTOCORE_ENABLE_SIGFOX`
 
 ## What this example teaches
 
@@ -11,8 +11,8 @@ ultra-low-power telemetry from places with no Wi-Fi. A Wisol / Murata Sigfox mod
 driven by **AT commands** over UART; the only hardware-specific code is the UART carry.
 
 ```
-reading --pc_sigfox_build_uplink()--> "AT$SF=<hex>" --UART--> modem --> Sigfox cloud
-                                                modem reply --> pc_sigfox_parse_response()
+reading --protocore_sigfox_build_uplink()--> "AT$SF=<hex>" --UART--> modem --> Sigfox cloud
+                                                modem reply --> protocore_sigfox_parse_response()
 ```
 
 `services/sigfox` is a pure AT-command codec:
@@ -20,10 +20,10 @@ reading --pc_sigfox_build_uplink()--> "AT$SF=<hex>" --UART--> modem --> Sigfox c
 ```cpp
 uint8_t payload[4] = { ... };            // your reading, <= 12 bytes
 char cmd[32];
-uint16_t n = pc_sigfox_build_uplink(payload, sizeof(payload), cmd, sizeof(cmd));
+uint16_t n = protocore_sigfox_build_uplink(payload, sizeof(payload), cmd, sizeof(cmd));
 Serial2.write(cmd, n);                    // "AT$SF=xxxxxxxx\r\n"
 // then, over the modem reply:
-pc_sigfox_result r = pc_sigfox_parse_response(buf, len);  // SIGFOX_OK / _ERROR / _PENDING
+protocore_sigfox_result r = protocore_sigfox_parse_response(buf, len);  // SIGFOX_OK / _ERROR / _PENDING
 ```
 
 The payload is hex-encoded (uppercase, two nibbles per byte), and the response is
@@ -47,6 +47,6 @@ The flag must reach the library build, so pass it as a build flag:
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_SIGFOX=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_SIGFOX=1" \
   --lib="." examples/Drivers/SigfoxUplink/SigfoxUplink.ino
 ```

@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-// pc_ct_eq is the library's one comparator for every AEAD tag, MAC, digest and signature check, and
+// protocore_ct_eq is the library's one comparator for every AEAD tag, MAC, digest and signature check, and
 // it had no test of any kind. A functional suite cannot prove the timing property - that needs a
 // cycle counter on the die, the way base64's claim is measured - but it can prove the accumulate
 // covers every byte and stops at n, which is what an early-out or a short read would break.
@@ -31,7 +31,7 @@ void test_equal_buffers_match(void)
     }
     for (size_t k = 0; k < sizeof(lens) / sizeof(lens[0]); k++)
     {
-        TEST_ASSERT_TRUE_MESSAGE(pc_ct_eq(a, b, lens[k]), "identical buffers must compare equal");
+        TEST_ASSERT_TRUE_MESSAGE(protocore_ct_eq(a, b, lens[k]), "identical buffers must compare equal");
     }
 }
 
@@ -40,7 +40,7 @@ void test_zero_length_is_equal(void)
 {
     uint8_t a[1] = {0xAA};
     uint8_t b[1] = {0x55};
-    TEST_ASSERT_TRUE(pc_ct_eq(a, b, 0));
+    TEST_ASSERT_TRUE(protocore_ct_eq(a, b, 0));
 }
 
 // The same pointer twice is equal, and must not be special-cased into a short circuit elsewhere.
@@ -48,7 +48,7 @@ void test_aliased_pointer_is_equal(void)
 {
     uint8_t a[32];
     memset(a, 0x5A, sizeof(a));
-    TEST_ASSERT_TRUE(pc_ct_eq(a, a, sizeof(a)));
+    TEST_ASSERT_TRUE(protocore_ct_eq(a, a, sizeof(a)));
 }
 
 // Every byte position is covered. An implementation that stopped early would still catch a
@@ -63,7 +63,7 @@ void test_difference_at_every_position_is_caught(void)
         memset(a, 0x3C, sizeof(a));
         memcpy(b, a, sizeof(a));
         b[pos] ^= 0xFF;
-        TEST_ASSERT_FALSE_MESSAGE(pc_ct_eq(a, b, sizeof(a)), "a differing byte must not compare equal");
+        TEST_ASSERT_FALSE_MESSAGE(protocore_ct_eq(a, b, sizeof(a)), "a differing byte must not compare equal");
     }
 }
 
@@ -78,7 +78,7 @@ void test_single_bit_difference_is_caught(void)
         memset(a, 0x00, sizeof(a));
         memcpy(b, a, sizeof(a));
         b[sizeof(b) - 1] = (uint8_t)(1u << bit);
-        TEST_ASSERT_FALSE_MESSAGE(pc_ct_eq(a, b, sizeof(a)), "a single flipped bit must not compare equal");
+        TEST_ASSERT_FALSE_MESSAGE(protocore_ct_eq(a, b, sizeof(a)), "a single flipped bit must not compare equal");
     }
 }
 
@@ -91,8 +91,8 @@ void test_difference_past_n_is_not_read(void)
     memset(a, 0x11, sizeof(a));
     memcpy(b, a, sizeof(a));
     b[16] = 0xFF; // past the length asked about
-    TEST_ASSERT_TRUE_MESSAGE(pc_ct_eq(a, b, 16), "bytes past n must not decide the result");
-    TEST_ASSERT_FALSE_MESSAGE(pc_ct_eq(a, b, 17), "the byte at n-1 must decide it");
+    TEST_ASSERT_TRUE_MESSAGE(protocore_ct_eq(a, b, 16), "bytes past n must not decide the result");
+    TEST_ASSERT_FALSE_MESSAGE(protocore_ct_eq(a, b, 17), "the byte at n-1 must decide it");
 }
 
 // Differences that XOR-cancel across positions must not cancel: the accumulate is a bitwise OR of
@@ -102,11 +102,11 @@ void test_cancelling_differences_do_not_cancel(void)
 {
     uint8_t a[4] = {0x00, 0x00, 0x00, 0x00};
     uint8_t b[4] = {0x0F, 0x0F, 0x00, 0x00};
-    TEST_ASSERT_FALSE(pc_ct_eq(a, b, sizeof(a)));
+    TEST_ASSERT_FALSE(protocore_ct_eq(a, b, sizeof(a)));
 
     uint8_t c[2] = {0xAA, 0x55};
     uint8_t d[2] = {0x55, 0xAA};
-    TEST_ASSERT_FALSE(pc_ct_eq(c, d, sizeof(c)));
+    TEST_ASSERT_FALSE(protocore_ct_eq(c, d, sizeof(c)));
 }
 
 int main(void)

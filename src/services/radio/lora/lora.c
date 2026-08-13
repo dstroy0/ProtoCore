@@ -13,7 +13,7 @@
 
 #include "services/radio/lora/lora.h"
 
-#if PC_ENABLE_LORA
+#if PROTOCORE_ENABLE_LORA
 
 // SX127x LoRa register map (SX1276 datasheet, Table 41).
 #define REG_FIFO 0x00
@@ -52,16 +52,16 @@
 
 static const uint8_t SX127X_VERSION = 0x12;
 
-static inline uint8_t rd(const pc_lora_bus *b, uint8_t reg)
+static inline uint8_t rd(const protocore_lora_bus *b, uint8_t reg)
 {
     return b->read(reg, b->ctx);
 }
-static inline void wr(const pc_lora_bus *b, uint8_t reg, uint8_t val)
+static inline void wr(const protocore_lora_bus *b, uint8_t reg, uint8_t val)
 {
     b->write(reg, val, b->ctx);
 }
 
-proto_bool pc_lora_frame_parse(const uint8_t *raw, uint16_t len, pc_lora_header *hdr, const uint8_t **payload,
+proto_bool protocore_lora_frame_parse(const uint8_t *raw, uint16_t len, protocore_lora_header *hdr, const uint8_t **payload,
                                uint16_t *payload_len)
 {
     if (!raw || !hdr || len < 4)
@@ -83,10 +83,10 @@ proto_bool pc_lora_frame_parse(const uint8_t *raw, uint16_t len, pc_lora_header 
     return PROTO_TRUE;
 }
 
-uint16_t pc_lora_frame_build(const pc_lora_header *hdr, const uint8_t *payload, uint16_t len, uint8_t *out,
+uint16_t protocore_lora_frame_build(const protocore_lora_header *hdr, const uint8_t *payload, uint16_t len, uint8_t *out,
                              uint16_t cap)
 {
-    if (!hdr || !out || len > PC_LORA_MAX_PAYLOAD || (uint32_t)len + 4 > cap)
+    if (!hdr || !out || len > PROTOCORE_LORA_MAX_PAYLOAD || (uint32_t)len + 4 > cap)
     {
         return 0;
     }
@@ -101,7 +101,7 @@ uint16_t pc_lora_frame_build(const pc_lora_header *hdr, const uint8_t *payload, 
     return (uint16_t)(len + 4);
 }
 
-proto_bool pc_lora_init(const pc_lora_bus *bus, const pc_lora_config *cfg)
+proto_bool protocore_lora_init(const protocore_lora_bus *bus, const protocore_lora_config *cfg)
 {
     if (!bus || !bus->read || !bus->write || !cfg)
     {
@@ -140,9 +140,9 @@ proto_bool pc_lora_init(const pc_lora_bus *bus, const pc_lora_config *cfg)
     return PROTO_TRUE;
 }
 
-proto_bool pc_lora_send(const pc_lora_bus *bus, const uint8_t *frame, uint8_t len)
+proto_bool protocore_lora_send(const protocore_lora_bus *bus, const uint8_t *frame, uint8_t len)
 {
-    if (!bus || !frame || len == 0 || len > PC_LORA_MAX_PAYLOAD + 4)
+    if (!bus || !frame || len == 0 || len > PROTOCORE_LORA_MAX_PAYLOAD + 4)
     {
         return PROTO_FALSE;
     }
@@ -157,7 +157,7 @@ proto_bool pc_lora_send(const pc_lora_bus *bus, const uint8_t *frame, uint8_t le
     return PROTO_TRUE;
 }
 
-proto_bool pc_lora_tx_done(const pc_lora_bus *bus)
+proto_bool protocore_lora_tx_done(const protocore_lora_bus *bus)
 {
     if (!bus)
     {
@@ -171,7 +171,7 @@ proto_bool pc_lora_tx_done(const pc_lora_bus *bus)
     return PROTO_FALSE;
 }
 
-void pc_lora_set_rx(const pc_lora_bus *bus)
+void protocore_lora_set_rx(const protocore_lora_bus *bus)
 {
     if (!bus)
     {
@@ -181,7 +181,7 @@ void pc_lora_set_rx(const pc_lora_bus *bus)
     wr(bus, REG_OP_MODE, MODE_LORA | MODE_RX_CONT);
 }
 
-int pc_lora_recv(const pc_lora_bus *bus, uint8_t *buf, uint8_t cap, int16_t *rssi)
+int protocore_lora_recv(const protocore_lora_bus *bus, uint8_t *buf, uint8_t cap, int16_t *rssi)
 {
     if (!bus || !buf)
     {
@@ -216,4 +216,4 @@ int pc_lora_recv(const pc_lora_bus *bus, uint8_t *buf, uint8_t cap, int16_t *rss
     return (int)n;
 }
 
-#endif // PC_ENABLE_LORA
+#endif // PROTOCORE_ENABLE_LORA

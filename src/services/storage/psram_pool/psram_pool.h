@@ -4,7 +4,7 @@
 /**
  * @file psram_pool.h
  * @brief Buffer placement policy (DRAM vs PSRAM) + SPI DMA ping-pong index manager
- *        (PC_ENABLE_PSRAM_POOL).
+ *        (PROTOCORE_ENABLE_PSRAM_POOL).
  *
  * An ESP32 with PSRAM has two heaps: fast internal DRAM (scarce, DMA-capable) and large external PSRAM
  * (roomy, but not DMA-capable for most peripherals and slower). Serving big web assets / net buffers well
@@ -12,8 +12,8 @@
  * always leaving an internal-DRAM reserve so the stack does not starve. That placement choice is a pure
  * policy; the actual `heap_caps_calloc(..., MALLOC_CAP_SPIRAM / MALLOC_CAP_DMA)` is the app's.
  *
- * This module is that policy (`pc_psram_place`) plus the classic SPI DMA **ping-pong** double-buffer
- * bookkeeping (`pc_pingpong_*`): while DMA drains one buffer, the CPU fills the other, and a swap
+ * This module is that policy (`protocore_psram_place`) plus the classic SPI DMA **ping-pong** double-buffer
+ * bookkeeping (`protocore_pingpong_*`): while DMA drains one buffer, the CPU fills the other, and a swap
  * exchanges their roles. Pure, no heap, no stdlib, host-testable.
  */
 
@@ -22,17 +22,17 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_PSRAM_POOL
+#if PROTOCORE_ENABLE_PSRAM_POOL
 
-/** @brief Placement verdict (the sole return of pc_psram_place). */
+/** @brief Placement verdict (the sole return of protocore_psram_place). */
 typedef enum PROTO_ENUM_PACKED
 {
     PLACE_DRAM = 0,  ///< allocate in internal DRAM.
     PLACE_PSRAM = 1, ///< allocate in external PSRAM.
     PLACE_FAIL = 2   ///< neither heap can satisfy the request.
-} pc_place;
+} protocore_place;
 
 /**
  * @brief Decide where a buffer should live.
@@ -49,8 +49,8 @@ typedef enum PROTO_ENUM_PACKED
  * @param dram_reserve   internal DRAM to keep free after a DRAM placement.
  * @return PLACE_DRAM / PLACE_PSRAM / PLACE_FAIL.
  */
-pc_place pc_psram_place(size_t size, proto_bool dma_required, size_t free_dram, size_t free_psram,
-                        size_t psram_threshold, size_t dram_reserve);
+protocore_place protocore_psram_place(size_t size, proto_bool dma_required, size_t free_dram, size_t free_psram,
+                                      size_t psram_threshold, size_t dram_reserve);
 
 /** @brief SPI DMA ping-pong double-buffer state. */
 typedef struct
@@ -59,19 +59,19 @@ typedef struct
 } PingPong;
 
 /** @brief Initialize: CPU fills buffer 0, DMA drains buffer 1. */
-void pc_pingpong_init(PingPong *pp);
+void protocore_pingpong_init(PingPong *pp);
 
 /** @brief The buffer index the CPU should fill. */
-uint8_t pc_pingpong_fill_index(const PingPong *pp);
+uint8_t protocore_pingpong_fill_index(const PingPong *pp);
 
 /** @brief The buffer index DMA should drain (the other one). */
-uint8_t pc_pingpong_drain_index(const PingPong *pp);
+uint8_t protocore_pingpong_drain_index(const PingPong *pp);
 
 /** @brief Swap roles (a filled buffer is handed to DMA; the drained one is now filled). @return new fill index. */
-uint8_t pc_pingpong_swap(PingPong *pp);
+uint8_t protocore_pingpong_swap(PingPong *pp);
 
-#endif // PC_ENABLE_PSRAM_POOL
+#endif // PROTOCORE_ENABLE_PSRAM_POOL
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_PSRAM_POOL_H

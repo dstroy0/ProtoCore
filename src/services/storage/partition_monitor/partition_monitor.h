@@ -3,7 +3,7 @@
 
 /**
  * @file partition_monitor.h
- * @brief Flash partition-map monitor (PC_ENABLE_PARTITION_MONITOR).
+ * @brief Flash partition-map monitor (PROTOCORE_ENABLE_PARTITION_MONITOR).
  *
  * Reports the device's flash partition table as JSON for diagnostics / OTA
  * dashboards: each entry's label, a human "kind" (factory / ota / nvs / spiffs /
@@ -21,9 +21,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_PARTITION_MONITOR
+#if PROTOCORE_ENABLE_PARTITION_MONITOR
 
 /** @brief One flash partition entry. */
 typedef struct
@@ -34,36 +34,36 @@ typedef struct
     uint32_t address;   ///< flash offset (bytes).
     uint32_t size;      ///< partition size (bytes).
     proto_bool running; ///< true for the currently-running app partition.
-} pc_partition_info;
+} protocore_partition_info;
 
 // ---------------------------------------------------------------------------
 // Host-testable core
 // ---------------------------------------------------------------------------
 
 /** @brief Human name for a partition type/subtype (e.g. "factory", "ota", "nvs", "littlefs"). */
-const char *pc_partition_kind(uint8_t type, uint8_t subtype);
+const char *protocore_partition_kind(uint8_t type, uint8_t subtype);
 
 /**
  * @brief Serialize a partition array as JSON `{"partitions":[...]}` into @p out.
  * @return characters written, or 0 if @p cap is too small.
  */
-int32_t pc_partition_json(const pc_partition_info *parts, uint8_t count, char *out, uint32_t cap);
+int32_t protocore_partition_json(const protocore_partition_info *parts, uint8_t count, char *out, uint32_t cap);
 
 /**
  * @brief Walk the flash partition table into @p out (ESP32; 0 on host builds).
  * @return number of partitions written (<= @p max).
  */
-uint8_t pc_partition_collect(pc_partition_info *out, uint8_t max);
+uint8_t protocore_partition_collect(protocore_partition_info *out, uint8_t max);
 
 // ---------------------------------------------------------------------------
 // Server integration
 // ---------------------------------------------------------------------------
 
 /** @brief Serve the partition map as JSON at @p path (GET). Default "/partitions". */
-void pc_partition_monitor_begin(const char *path);
+void protocore_partition_monitor_begin(const char *path);
 
-#endif // PC_ENABLE_PARTITION_MONITOR
+#endif // PROTOCORE_ENABLE_PARTITION_MONITOR
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_PARTITION_MONITOR_H

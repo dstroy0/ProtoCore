@@ -6,31 +6,31 @@
  * @brief Outbound SMTP client (RFC 5321) - implementation. See smtp.h for the model.
  *
  * smtp_run() is the pure dialogue engine (host-testable via the send/recv seam);
- * smtp_send() binds it to the real transport on Arduino (pc_client, +pc_tls csess).
+ * smtp_send() binds it to the real transport on Arduino (protocore_client, +protocore_tls csess).
  */
 
 #include "services/net/smtp/smtp.h"
-#include "mmgr/membuild.h" // pc_sb frame builder
+#include "mmgr/membuild.h" // protocore_sb frame builder
 #include "protocore_config.h"
 #include "server/clock/clock.h" // pcdelay
 
-#if PC_ENABLE_SMTP
+#if PROTOCORE_ENABLE_SMTP
 
 #include "network_drivers/presentation/codec/base64/base64.h"
 #include <stdio.h> // snprintf
                    // strlen, memcmp
 
-#if PC_HAS_NET_STACK
+#if PROTOCORE_HAS_NET_STACK
 #include "network_drivers/transport/tcp.h"
 #endif
-#if PC_HAS_VENDOR_TLS && PC_ENABLE_SMTP_TLS
+#if PROTOCORE_HAS_VENDOR_TLS && PROTOCORE_ENABLE_SMTP_TLS
 #include "network_drivers/tls/tls.h"
 #include <mbedtls/ssl.h> // MBEDTLS_ERR_SSL_WANT_* for the BIO callbacks
 #endif
 // Send an entire C string; returns true only if every byte went out.
 static proto_bool send_str(SmtpSendFn send, void *ctx, const char *s)
 {
-    size_t n = strnlen(s, PC_SMTP_LINE_MAX + 1);
+    size_t n = strnlen(s, PROTOCORE_SMTP_LINE_MAX + 1);
     // Every caller passes a CRLF-terminated command - a string literal, or a snprintf'd line with a
     // fixed non-empty prefix - so n is never 0; the check just keeps send_str total for any string.
     return n == 0 || send(ctx, (const uint8_t *)s, n) == (int)n;
@@ -122,7 +122,7 @@ static proto_bool reply_has_cap(const char *buf, size_t len, const char *want)
 // reports whether that capability appeared in the reply.
 static SmtpResult read_reply_cap(SmtpRecvFn recv, void *ctx, int *code, const char *want, proto_bool *found)
 {
-    char buf[PC_SMTP_REPLY_MAX];
+    char buf[PROTOCORE_SMTP_REPLY_MAX];
     size_t len = 0;
     for (;;)
     {
@@ -170,18 +170,18 @@ static int command(SmtpSendFn send, SmtpRecvFn recv, void *ctx, const char *line
 // AUTH LOGIN leg: send @p secret base64-encoded + CRLF, return the reply code.
 static int auth_send_b64(SmtpSendFn send, SmtpRecvFn recv, void *ctx, const char *secret)
 {
-    char line[PC_SMTP_LINE_MAX];
-    char b64[PC_SMTP_LINE_MAX];
+    char line[PROTOCORE_SMTP_LINE_MAX];
+    char b64[PROTOCORE_SMTP_LINE_MAX];
     size_t slen = strnlen(secret, sizeof(b64));
     if (((slen + 2) / 3) * 4 + 3 >= sizeof(b64)) // b64 + CRLF must fit
     {
         return (int)SMTP_ERR_OVERFLOW;
     }
     Base64.encode((const uint8_t *)secret, slen, b64);
-    pc_sb sb_line = {line, sizeof(line), 0, PROTO_TRUE};
-    pc_sb_put(&sb_line, b64);
-    pc_sb_put(&sb_line, "\r\n");
-    pc_sb_finish(&sb_line);
+    protocore_sb sb_line = {line, sizeof(line), 0, PROTO_TRUE};
+    protocore_sb_put(&sb_line, b64);
+    protocore_sb_put(&sb_line, "\r\n");
+    protocore_sb_finish(&sb_line);
     if (!sb_line.ok)
     {
         return (int)SMTP_ERR_OVERFLOW;
@@ -193,15 +193,15 @@ static int auth_send_b64(SmtpSendFn send, SmtpRecvFn recv, void *ctx, const char
 // CRLF normalization and RFC 5321 sec 4.5.2 dot-stuffing. Returns the length, or <0.
 static int build_message(char *out, size_t cap, const SmtpConfig *cfg, const SmtpMessage *msg)
 {
-    pc_sb sb_out = {out, cap, 0, PROTO_TRUE};
-    pc_sb_put(&sb_out, "From: <");
-    pc_sb_put(&sb_out, cfg->from);
-    pc_sb_put(&sb_out, ">\r\nTo: <");
-    pc_sb_put(&sb_out, msg->to);
-    pc_sb_put(&sb_out, ">\r\nSubject: ");
-    pc_sb_put(&sb_out, msg->subject ? msg->subject : "");
-    pc_sb_put(&sb_out, "\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n");
-    int hn = (int)pc_sb_finish(&sb_out);
+    protocore_sb sb_out = {out, cap, 0, PROTO_TRUE};
+    protocore_sb_put(&sb_out, "From: <");
+    protocore_sb_put(&sb_out, cfg->from);
+    protocore_sb_put(&sb_out, ">\r\nTo: <");
+    protocore_sb_put(&sb_out, msg->to);
+    protocore_sb_put(&sb_out, ">\r\nSubject: ");
+    protocore_sb_put(&sb_out, msg->subject ? msg->subject : "");
+    protocore_sb_put(&sb_out, "\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n");
+    int hn = (int)protocore_sb_finish(&sb_out);
     // hn < 0 is unreachable: snprintf only reports failure on an output/encoding error, which
     // formatting %s into a caller buffer cannot produce. The >= cap truncation check is live.
     if (!sb_out.ok)
@@ -296,11 +296,11 @@ static SmtpResult greet_ehlo(const SmtpConfig *cfg, SmtpSendFn send, SmtpRecvFn 
 
     // The capability list is only trustworthy once the channel is secure, which is why the
     // STARTTLS path reissues this command after the upgrade.
-    pc_sb sb_line2 = {line, cap, 0, PROTO_TRUE};
-    pc_sb_put(&sb_line2, "EHLO ");
-    pc_sb_put(&sb_line2, (cfg->helo && cfg->helo[0]) ? cfg->helo : "esp32");
-    pc_sb_put(&sb_line2, "\r\n");
-    int n = (int)pc_sb_finish(&sb_line2);
+    protocore_sb sb_line2 = {line, cap, 0, PROTO_TRUE};
+    protocore_sb_put(&sb_line2, "EHLO ");
+    protocore_sb_put(&sb_line2, (cfg->helo && cfg->helo[0]) ? cfg->helo : "esp32");
+    protocore_sb_put(&sb_line2, "\r\n");
+    int n = (int)protocore_sb_finish(&sb_line2);
     if (!sb_line2.ok)
     {
         return SMTP_ERR_OVERFLOW;
@@ -373,11 +373,11 @@ static SmtpResult auth_login(const SmtpConfig *cfg, SmtpSendFn send, SmtpRecvFn 
 static SmtpResult send_envelope(const SmtpConfig *cfg, const SmtpMessage *msg, SmtpSendFn send, SmtpRecvFn recv,
                                 void *ctx, char *line, size_t cap)
 {
-    pc_sb sb_line3 = {line, cap, 0, PROTO_TRUE};
-    pc_sb_put(&sb_line3, "MAIL FROM:<");
-    pc_sb_put(&sb_line3, cfg->from);
-    pc_sb_put(&sb_line3, ">\r\n");
-    int n = (int)pc_sb_finish(&sb_line3);
+    protocore_sb sb_line3 = {line, cap, 0, PROTO_TRUE};
+    protocore_sb_put(&sb_line3, "MAIL FROM:<");
+    protocore_sb_put(&sb_line3, cfg->from);
+    protocore_sb_put(&sb_line3, ">\r\n");
+    int n = (int)protocore_sb_finish(&sb_line3);
     if (!sb_line3.ok)
     {
         return SMTP_ERR_OVERFLOW;
@@ -388,11 +388,11 @@ static SmtpResult send_envelope(const SmtpConfig *cfg, const SmtpMessage *msg, S
         return r;
     }
 
-    pc_sb sb_line4 = {line, cap, 0, PROTO_TRUE};
-    pc_sb_put(&sb_line4, "RCPT TO:<");
-    pc_sb_put(&sb_line4, msg->to);
-    pc_sb_put(&sb_line4, ">\r\n");
-    n = (int)pc_sb_finish(&sb_line4);
+    protocore_sb sb_line4 = {line, cap, 0, PROTO_TRUE};
+    protocore_sb_put(&sb_line4, "RCPT TO:<");
+    protocore_sb_put(&sb_line4, msg->to);
+    protocore_sb_put(&sb_line4, ">\r\n");
+    n = (int)protocore_sb_finish(&sb_line4);
     if (!sb_line4.ok)
     {
         return SMTP_ERR_OVERFLOW;
@@ -417,7 +417,7 @@ static SmtpResult send_data(const SmtpConfig *cfg, const SmtpMessage *msg, SmtpS
     {
         return r;
     }
-    char body[PC_SMTP_MSG_MAX];
+    char body[PROTOCORE_SMTP_MSG_MAX];
     int mlen = build_message(body, sizeof(body), cfg, msg);
     if (mlen < 0)
     {
@@ -443,7 +443,7 @@ SmtpResult smtp_run(const SmtpConfig *cfg, const SmtpMessage *msg, SmtpSendFn se
         return SMTP_ERR_ARG;
     }
 
-    char line[PC_SMTP_LINE_MAX]; // holds the EHLO command, then each envelope command
+    char line[PROTOCORE_SMTP_LINE_MAX]; // holds the EHLO command, then each envelope command
     proto_bool has_starttls = PROTO_FALSE;
     SmtpResult r = greet_ehlo(cfg, send, recv, ctx, line, sizeof(line), &has_starttls);
     if (r != SMTP_OK)
@@ -487,12 +487,12 @@ SmtpResult smtp_run(const SmtpConfig *cfg, const SmtpMessage *msg, SmtpSendFn se
 }
 
 // ---------------------------------------------------------------------------
-// Real-transport binding (Arduino): pc_client, plus a pc_tls csess for SMTPS.
+// Real-transport binding (Arduino): protocore_client, plus a protocore_tls csess for SMTPS.
 // ---------------------------------------------------------------------------
 
-#if PC_HAS_NET_STACK
+#if PROTOCORE_HAS_NET_STACK
 
-/** @brief One SMTP connection: its pc_client id, its deadline, and its TLS state. */
+/** @brief One SMTP connection: its protocore_client id, its deadline, and its TLS state. */
 typedef struct
 {
     int cid;
@@ -509,7 +509,7 @@ typedef struct
 
 static SmtpTlsCtx s_smtp_tls = {NULL};
 
-// Plaintext seam over pc_client.
+// Plaintext seam over protocore_client.
 static int cl_send(void *ctx, const uint8_t *data, size_t len)
 {
     SmtpXport *x = (SmtpXport *)ctx;
@@ -532,7 +532,7 @@ static int cl_send(void *ctx, const uint8_t *data, size_t len)
 static int cl_recv(void *ctx, uint8_t *buf, size_t cap)
 {
     SmtpXport *x = (SmtpXport *)ctx;
-    while ((int32_t)(x->deadline - pc_millis()) > 0)
+    while ((int32_t)(x->deadline - protocore_millis()) > 0)
     {
         size_t n = Tcp.client->read(x->cid, buf, cap);
         if (n > 0)
@@ -548,8 +548,8 @@ static int cl_recv(void *ctx, uint8_t *buf, size_t cap)
     return -1; // timeout
 }
 
-#if PC_ENABLE_SMTP_TLS
-// TLS ciphertext BIO: the csess handshake/records read/write the wire via pc_client.
+#if PROTOCORE_ENABLE_SMTP_TLS
+// TLS ciphertext BIO: the csess handshake/records read/write the wire via protocore_client.
 static int tls_bio_send(void *ctx, const unsigned char *buf, size_t len)
 {
     (void)ctx; // not ours - see SmtpTlsCtx
@@ -579,14 +579,14 @@ static int tls_bio_recv(void *ctx, unsigned char *buf, size_t len)
 static int tls_send(void *ctx, const uint8_t *data, size_t len)
 {
     (void)ctx;
-    return pc_tls_client_session_write(data, len) == (int)len ? (int)len : -1;
+    return protocore_tls_client_session_write(data, len) == (int)len ? (int)len : -1;
 }
 static int tls_recv(void *ctx, uint8_t *buf, size_t cap)
 {
     SmtpXport *x = (SmtpXport *)ctx;
-    while ((int32_t)(x->deadline - pc_millis()) > 0)
+    while ((int32_t)(x->deadline - protocore_millis()) > 0)
     {
-        int n = pc_tls_client_session_read(buf, cap);
+        int n = protocore_tls_client_session_read(buf, cap);
         if (n > 0)
         {
             return n;
@@ -599,14 +599,14 @@ static int tls_recv(void *ctx, uint8_t *buf, size_t cap)
     }
     return -1; // timeout
 }
-#endif // PC_ENABLE_SMTP_TLS
+#endif // PROTOCORE_ENABLE_SMTP_TLS
 
 // Switching seam. The dialogue engine gets exactly one send/recv pair for the whole exchange; a
 // STARTTLS upgrade flips these underneath it, so the engine never swaps transports mid-conversation
 // and cannot accidentally keep writing plaintext after the upgrade.
 static int xp_send(void *ctx, const uint8_t *data, size_t len)
 {
-#if PC_ENABLE_SMTP_TLS
+#if PROTOCORE_ENABLE_SMTP_TLS
     if (((SmtpXport *)ctx)->tls_active)
     {
         return tls_send(ctx, data, len);
@@ -616,7 +616,7 @@ static int xp_send(void *ctx, const uint8_t *data, size_t len)
 }
 static int xp_recv(void *ctx, uint8_t *buf, size_t cap)
 {
-#if PC_ENABLE_SMTP_TLS
+#if PROTOCORE_ENABLE_SMTP_TLS
     if (((SmtpXport *)ctx)->tls_active)
     {
         return tls_recv(ctx, buf, cap);
@@ -629,23 +629,23 @@ static int xp_recv(void *ctx, uint8_t *buf, size_t cap)
 static proto_bool xp_starttls(void *ctx)
 {
     SmtpXport *x = (SmtpXport *)ctx;
-#if PC_ENABLE_SMTP_TLS
-    if (!pc_tls_client_session_begin(x->host, tls_bio_send, tls_bio_recv))
+#if PROTOCORE_ENABLE_SMTP_TLS
+    if (!protocore_tls_client_session_begin(x->host, tls_bio_send, tls_bio_recv))
     {
         return PROTO_FALSE;
     }
     // Fresh budget: the deadline carried here was set at connect time and has already funded the
     // greeting, EHLO and STARTTLS round trips. Reusing whatever is left of it can abandon the
     // handshake before the ClientHello even goes out, which the server sees as a silent hang.
-    x->deadline = pc_millis() + PC_SMTP_TIMEOUT_MS;
+    x->deadline = protocore_millis() + PROTOCORE_SMTP_TIMEOUT_MS;
     int h;
-    while ((h = pc_tls_client_session_handshake()) == 0 && (int32_t)(x->deadline - pc_millis()) > 0)
+    while ((h = protocore_tls_client_session_handshake()) == 0 && (int32_t)(x->deadline - protocore_millis()) > 0)
     {
         pcdelay(5);
     }
     if (h != 1) // 1 = established; 0 = still pending at timeout; <0 = fatal
     {
-        pc_tls_client_session_end();
+        protocore_tls_client_session_end();
         return PROTO_FALSE;
     }
     x->tls_active = PROTO_TRUE; // every later xp_send/xp_recv now goes through the session
@@ -664,40 +664,40 @@ SmtpResult smtp_send(const SmtpConfig *cfg, const SmtpMessage *msg)
     }
 
     SmtpXport x;
-    x.cid = Tcp.client->open(cfg->host, cfg->port, PC_SMTP_TIMEOUT_MS);
+    x.cid = Tcp.client->open(cfg->host, cfg->port, PROTOCORE_SMTP_TIMEOUT_MS);
     if (x.cid < 0)
     {
         return SMTP_ERR_CONNECT;
     }
-    x.deadline = pc_millis() + PC_SMTP_TIMEOUT_MS;
+    x.deadline = protocore_millis() + PROTOCORE_SMTP_TIMEOUT_MS;
     x.host = cfg->host;
     x.tls_active = PROTO_FALSE;
-#if PC_ENABLE_SMTP_TLS
+#if PROTOCORE_ENABLE_SMTP_TLS
     s_smtp_tls.xport = &x; // the BIO callbacks read this, not their ctx argument
 #endif
 
     SmtpResult rc;
     if (cfg->security == SMTP_TLS)
     {
-#if PC_ENABLE_SMTP_TLS
-        if (!pc_tls_client_session_begin(cfg->host, tls_bio_send, tls_bio_recv))
+#if PROTOCORE_ENABLE_SMTP_TLS
+        if (!protocore_tls_client_session_begin(cfg->host, tls_bio_send, tls_bio_recv))
         {
             Tcp.client->close(x.cid);
             return SMTP_ERR_TLS;
         }
         int h;
-        while ((h = pc_tls_client_session_handshake()) == 0 && (int32_t)(x.deadline - pc_millis()) > 0)
+        while ((h = protocore_tls_client_session_handshake()) == 0 && (int32_t)(x.deadline - protocore_millis()) > 0)
         {
             pcdelay(5);
         }
         if (h != 1) // 1 = established; 0 = still pending at timeout; <0 = fatal
         {
-            pc_tls_client_session_end();
+            protocore_tls_client_session_end();
             Tcp.client->close(x.cid);
             return SMTP_ERR_TLS;
         }
         rc = smtp_run(cfg, msg, tls_send, tls_recv, NULL, &x);
-        pc_tls_client_session_end();
+        protocore_tls_client_session_end();
 #else
         Tcp.client->close(x.cid);
         return SMTP_ERR_TLS; // SMTPS requested but TLS not built in
@@ -709,7 +709,7 @@ SmtpResult smtp_send(const SmtpConfig *cfg, const SmtpMessage *msg)
     }
 
     Tcp.client->close(x.cid);
-#if PC_ENABLE_SMTP_TLS
+#if PROTOCORE_ENABLE_SMTP_TLS
     s_smtp_tls.xport = NULL; // x is about to go out of scope
 #endif
     return rc;
@@ -724,6 +724,6 @@ SmtpResult smtp_send(const SmtpConfig *cfg, const SmtpMessage *msg)
     return SMTP_ERR_CONNECT;
 }
 
-#endif // PC_HAS_NET_STACK
+#endif // PROTOCORE_HAS_NET_STACK
 
-#endif // PC_ENABLE_SMTP
+#endif // PROTOCORE_ENABLE_SMTP

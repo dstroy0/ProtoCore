@@ -4,7 +4,7 @@
 // On-device CCOUNT microbenchmark for the per-IP brute-force auth lockout (services/security/auth_lockout):
 // auth_lockout_fail() / auth_lockout_remaining_ms() / auth_lockout_succeed() / auth_lockout_reset()
 // are the exponential-backoff lockout state machine over a fixed 16-slot BSS bucket table, keyed by
-// the full family-tagged pc_ip - pure (the millisecond clock is passed in by the caller), no heap, no
+// the full family-tagged protocore_ip - pure (the millisecond clock is passed in by the caller), no heap, no
 // lwIP, no Arduino I/O. Like performance_benching/device/modbus, this is a worked example of a pure protocol/state
 // codec with no hardware involved, so every call here exercises the real production code path
 // (contrast with performance_benching/device/ads1115, a peripheral driver where the bus transaction is stubbed) -
@@ -22,26 +22,26 @@
 #include <stddef.h>
 #include <stdint.h>
 
-// Build a v4 pc_ip from a host-order word (0x0A000001 -> 10.0.0.1). Mirrors the v4w() helper in
+// Build a v4 protocore_ip from a host-order word (0x0A000001 -> 10.0.0.1). Mirrors the v4w() helper in
 // test/test_auth_lockout/test_auth_lockout.cpp (already known-good).
-static pc_ip v4w(uint32_t host_order)
+static protocore_ip v4w(uint32_t host_order)
 {
-    return pc_ip_from_v4_octets((uint8_t)(host_order >> 24), (uint8_t)(host_order >> 16), (uint8_t)(host_order >> 8),
+    return protocore_ip_from_v4_octets((uint8_t)(host_order >> 24), (uint8_t)(host_order >> 16), (uint8_t)(host_order >> 8),
                                 (uint8_t)host_order);
 }
 
 void dbench_run(void)
 {
-    pc_ip attacker = v4w(0x0A000001u); // 10.0.0.1 - driven past the lockout threshold each cycle
-    pc_ip stranger = v4w(0x0A0000FFu); // 10.0.0.255 - never recorded a failure (always a table miss)
+    protocore_ip attacker = v4w(0x0A000001u); // 10.0.0.1 - driven past the lockout threshold each cycle
+    protocore_ip stranger = v4w(0x0A0000FFu); // 10.0.0.255 - never recorded a failure (always a table miss)
 
     for (;;)
     {
-        // Re-arm: reset the whole table, then drive `attacker` past PC_AUTH_LOCKOUT_THRESHOLD so
+        // Re-arm: reset the whole table, then drive `attacker` past PROTOCORE_AUTH_LOCKOUT_THRESHOLD so
         // the steady-state benches below sit in the locked (post-threshold, exponential-backoff)
         // code path - the state an active brute-force source occupies for the rest of its window.
         auth_lockout_reset();
-        for (int i = 0; i < PC_AUTH_LOCKOUT_THRESHOLD; i++)
+        for (int i = 0; i < PROTOCORE_AUTH_LOCKOUT_THRESHOLD; i++)
         {
             auth_lockout_fail(&attacker, 0);
         }

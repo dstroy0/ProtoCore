@@ -9,9 +9,9 @@
  * the transport-layer UDP service (Udp.client->sendto). Split, like the other
  * network services, into a pure host-testable formatter and an ESP32-only send:
  *
- *  - pc_syslog_format() builds one RFC 5424 line into a caller buffer (no sockets,
+ *  - protocore_syslog_format() builds one RFC 5424 line into a caller buffer (no sockets,
  *    no heap) - unit-tested on the host (env:native_syslog).
- *  - pc_syslog_log() formats into a static scratch buffer and sends it to the
+ *  - protocore_syslog_log() formats into a static scratch buffer and sends it to the
  *    configured server (a no-op stub off-target).
  *
  * Emitted line: `<PRI>1 - HOSTNAME APP-NAME - - - MSG`, where PRI = facility*8 +
@@ -25,9 +25,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_SYSLOG
+#if PROTOCORE_ENABLE_SYSLOG
 
 /** @brief RFC 5424 §6.2.1 severity levels (numerically lower = more severe). */
 typedef enum PROTO_ENUM_PACKED
@@ -61,27 +61,27 @@ typedef enum PROTO_ENUM_PACKED
  * @param appname   APP-NAME field (copied; pass NULL/"" for "-").
  * @param facility  syslog facility, e.g. SYSLOG_FAC_LOCAL0.
  */
-void pc_syslog_init(const char *server_ip, uint16_t port, const char *hostname, const char *appname,
-                    SyslogFacility facility);
+void protocore_syslog_init(const char *server_ip, uint16_t port, const char *hostname, const char *appname,
+                           SyslogFacility facility);
 
 /**
  * @brief Format one RFC 5424 line into @p out (host-testable; no sockets/heap).
  *
  * @return number of bytes written (excl. NUL), or 0 if it would not fit @p cap.
  */
-size_t pc_syslog_format(char *out, size_t cap, SyslogFacility facility, SyslogSeverity severity, const char *hostname,
-                        const char *appname, const char *msg);
+size_t protocore_syslog_format(char *out, size_t cap, SyslogFacility facility, SyslogSeverity severity,
+                               const char *hostname, const char *appname, const char *msg);
 
 /**
  * @brief Format @p msg at @p severity and send it to the configured server.
  *
  * @return true if the datagram was queued; false if not yet configured, the line
- *         overflowed PC_SYSLOG_MSG_MAX, or the send failed (host build).
+ *         overflowed PROTOCORE_SYSLOG_MSG_MAX, or the send failed (host build).
  */
-proto_bool pc_syslog_log(SyslogSeverity severity, const char *msg);
+proto_bool protocore_syslog_log(SyslogSeverity severity, const char *msg);
 
-#endif // PC_ENABLE_SYSLOG
+#endif // PROTOCORE_ENABLE_SYSLOG
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_SYSLOG_H

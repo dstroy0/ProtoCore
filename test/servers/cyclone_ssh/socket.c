@@ -18,7 +18,7 @@
 
 #include <sys/select.h>
 #include <sys/socket.h>
-#include <sys/types.h>
+#include <sys/protocore_types.h>
 #include <unistd.h>
 
 #include "core/net.h"

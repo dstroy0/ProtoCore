@@ -9,7 +9,7 @@
  * board. A ring smaller than that bound does not just waste a little RAM - it breaks the feature
  * (a handshake resets, a streamed upload deadlocks). That coupling is sizing logic, so it lives
  * here in the board-profile layer rather than inline in protocore_config.h, and it runs LAST: after
- * the chip/PSRAM/flash profiles, the base `#ifndef` defaults, and every `PC_ENABLE_*` feature
+ * the chip/PSRAM/flash profiles, the base `#ifndef` defaults, and every `PROTOCORE_ENABLE_*` feature
  * flag are resolved, so it can see the final values.
  *
  * The floor is enforced against whatever set the value - a chip profile, a `-D` build flag, or the
@@ -28,7 +28,7 @@
 // Streamed uploads need the RX ring to hold a full TCP receive window or the peer overruns it and
 // the transfer deadlocks (ack-on-consume reopens the window only as the ring drains). The window is
 // ~5.7 KB, so the ring must comfortably exceed it.
-#if PC_ENABLE_STREAM_BODY && RX_BUF_SIZE < 8192
+#if PROTOCORE_ENABLE_STREAM_BODY && RX_BUF_SIZE < 8192
 #undef RX_BUF_SIZE
 #define RX_BUF_SIZE 8192
 #endif
@@ -36,18 +36,18 @@
 // A modern SSH client's first flight (identification banner + KEXINIT) is ~1.5 KB: post-quantum /
 // curve kex names, cert host-key algs, EtM MACs, ext-info-c. The RX ring must hold it or the
 // handshake resets at key exchange.
-#if PC_ENABLE_SSH && RX_BUF_SIZE < 2048
+#if PROTOCORE_ENABLE_SSH && RX_BUF_SIZE < 2048
 #undef RX_BUF_SIZE
 #define RX_BUF_SIZE 2048
 #endif
 
 // The SSH client bridges one forwarded-tcpip channel per local TCP connection and pools
-// PC_SSH_CLIENT_MAX_CHANNELS of them, but the channels themselves come from the shared per-
+// PROTOCORE_SSH_CLIENT_MAX_CHANNELS of them, but the channels themselves come from the shared per-
 // connection table. The table has to hold as many as the client pools or the surplus bridges can
 // never be allocated a channel.
-#if PC_ENABLE_SSH_CLIENT && PC_SSH_MAX_CHANNELS < PC_SSH_CLIENT_MAX_CHANNELS
-#undef PC_SSH_MAX_CHANNELS
-#define PC_SSH_MAX_CHANNELS PC_SSH_CLIENT_MAX_CHANNELS
+#if PROTOCORE_ENABLE_SSH_CLIENT && PROTOCORE_SSH_MAX_CHANNELS < PROTOCORE_SSH_CLIENT_MAX_CHANNELS
+#undef PROTOCORE_SSH_MAX_CHANNELS
+#define PROTOCORE_SSH_MAX_CHANNELS PROTOCORE_SSH_CLIENT_MAX_CHANNELS
 #endif
 
 // A modern TLS ClientHello (TLS 1.3 key shares + cipher/sig-alg lists + the RFC 7685 padding real
@@ -56,7 +56,7 @@
 // is refused forever and the handshake stalls to an idle-timeout RST - every 1.3-leading client
 // (curl, browsers, Python) then fails to connect while a 1.2-only client squeaks in. The ring must
 // hold a full segment.
-#if PC_ENABLE_TLS && RX_BUF_SIZE < 2048
+#if PROTOCORE_ENABLE_TLS && RX_BUF_SIZE < 2048
 #undef RX_BUF_SIZE
 #define RX_BUF_SIZE 2048
 #endif

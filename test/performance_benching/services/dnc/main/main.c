@@ -3,8 +3,8 @@
 //
 // On-device CCOUNT microbenchmark for the CNC RS-232 DNC drip-feed codec (services/machine_tool/dnc):
 // EIA RS-244 <-> ISO/ASCII tape-code character translation (odd-parity EIA table), ISO even
-// parity, G-code block framing (pc_dnc_encode_block, both tape codes), the byte-at-a-time
-// block decoder (pc_dnc_decode_feed), and the full drip-feed engine (dnc_stream) that frames a
+// parity, G-code block framing (protocore_dnc_encode_block, both tape codes), the byte-at-a-time
+// block decoder (protocore_dnc_decode_feed), and the full drip-feed engine (dnc_stream) that frames a
 // whole program with the '%' start/end marker and paces it against reverse-channel XON/XOFF -
 // pure (no heap) and, aside from dnc_stream's send/recv seam, no I/O at all. Worked example for
 // performance_benching/device/<service>/: a pure protocol codec with no hardware involved, so every call here
@@ -65,11 +65,11 @@ static DncStreamResult dnc_bench_run_stream(const DncCfg *cfg, const char *prog,
 static DncDecoder g_dec;
 static int dnc_bench_decode_full(DncCode code, const uint8_t *buf, size_t len)
 {
-    pc_dnc_decode_init(&g_dec, code);
+    protocore_dnc_decode_init(&g_dec, code);
     int lines = 0;
     for (size_t i = 0; i < len; i++)
     {
-        if (pc_dnc_decode_feed(&g_dec, buf[i]) == DNC_EV_LINE)
+        if (protocore_dnc_decode_feed(&g_dec, buf[i]) == DNC_EV_LINE)
         {
             lines++;
         }
@@ -85,12 +85,12 @@ void dbench_run(void)
     // "G1 Z-1. F100" (test_roundtrip_program) framed as one ISO block (LF end-of-block).
     static const char iso_line[] = "G1 Z-1. F100";
     static uint8_t iso_block[32];
-    size_t iso_block_len = pc_dnc_encode_block(&iso_cfg, iso_line, strlen(iso_line), iso_block, sizeof(iso_block));
+    size_t iso_block_len = protocore_dnc_encode_block(&iso_cfg, iso_line, strlen(iso_line), iso_block, sizeof(iso_block));
 
     // "G01" (test_encode_block_eia) framed as one EIA block (0x80 end-of-block).
     static const char eia_line[] = "G01";
     static uint8_t eia_block[32];
-    size_t eia_block_len = pc_dnc_encode_block(&eia_cfg, eia_line, strlen(eia_line), eia_block, sizeof(eia_block));
+    size_t eia_block_len = protocore_dnc_encode_block(&eia_cfg, eia_line, strlen(eia_line), eia_block, sizeof(eia_block));
 
     // A 3-line ISO program (test_iso_roundtrip) drip-fed whole through dnc_stream.
     static const char prog[] = "N10 G0 X1 Y2\nN20 G1 X3 F100\nM30";
@@ -103,17 +103,17 @@ void dbench_run(void)
         volatile size_t sink = 0;
         volatile int sinki = 0;
 
-        DBENCH_OP("pc_dnc_iso_to_eia", 200000, sink8 += pc_dnc_iso_to_eia('W'));
+        DBENCH_OP("protocore_dnc_iso_to_eia", 200000, sink8 += protocore_dnc_iso_to_eia('W'));
 
-        DBENCH_OP("pc_dnc_eia_to_iso", 200000, sink8 += (uint8_t)pc_dnc_eia_to_iso(0x67));
+        DBENCH_OP("protocore_dnc_eia_to_iso", 200000, sink8 += (uint8_t)protocore_dnc_eia_to_iso(0x67));
 
-        DBENCH_BULK("pc_dnc_encode_block (ISO)", 50000, iso_block_len,
-                    sink += pc_dnc_encode_block(&iso_cfg, iso_line, strlen(iso_line), iso_block, sizeof(iso_block)));
+        DBENCH_BULK("protocore_dnc_encode_block (ISO)", 50000, iso_block_len,
+                    sink += protocore_dnc_encode_block(&iso_cfg, iso_line, strlen(iso_line), iso_block, sizeof(iso_block)));
 
-        DBENCH_BULK("pc_dnc_encode_block (EIA)", 50000, eia_block_len,
-                    sink += pc_dnc_encode_block(&eia_cfg, eia_line, strlen(eia_line), eia_block, sizeof(eia_block)));
+        DBENCH_BULK("protocore_dnc_encode_block (EIA)", 50000, eia_block_len,
+                    sink += protocore_dnc_encode_block(&eia_cfg, eia_line, strlen(eia_line), eia_block, sizeof(eia_block)));
 
-        DBENCH_BULK("pc_dnc_decode_feed (ISO block)", 50000, iso_block_len,
+        DBENCH_BULK("protocore_dnc_decode_feed (ISO block)", 50000, iso_block_len,
                     sinki += dnc_bench_decode_full(DNC_CODE_ISO, iso_block, iso_block_len));
 
         DBENCH_BULK("dnc_stream (ISO, 3 lines)", 5000, prog_len,

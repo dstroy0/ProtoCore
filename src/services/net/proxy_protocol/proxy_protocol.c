@@ -7,10 +7,10 @@
  */
 
 #include "services/net/proxy_protocol/proxy_protocol.h"
-#include "mmgr/membuild.h" // pc_sb frame builder
+#include "mmgr/membuild.h" // protocore_sb frame builder
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_PROXY_PROTOCOL
+#if PROTOCORE_ENABLE_PROXY_PROTOCOL
 
 #include <stdio.h> // snprintf for the v1 dotted-quad text
 
@@ -212,29 +212,29 @@ size_t proxy_v1_build(char *buf, size_t cap, uint32_t src_addr, uint32_t dst_add
     {
         return 0;
     }
-    pc_sb sb_buf = {buf, cap, 0, PROTO_TRUE};
-    pc_sb_put(&sb_buf, "PROXY TCP4 ");
-    pc_sb_u32(&sb_buf, (uint32_t)((unsigned)((src_addr >> 24) & 0xFF)));
-    pc_sb_put(&sb_buf, ".");
-    pc_sb_u32(&sb_buf, (uint32_t)((unsigned)((src_addr >> 16) & 0xFF)));
-    pc_sb_put(&sb_buf, ".");
-    pc_sb_u32(&sb_buf, (uint32_t)((unsigned)((src_addr >> 8) & 0xFF)));
-    pc_sb_put(&sb_buf, ".");
-    pc_sb_u32(&sb_buf, (uint32_t)((unsigned)(src_addr & 0xFF)));
-    pc_sb_put(&sb_buf, " ");
-    pc_sb_u32(&sb_buf, (uint32_t)((unsigned)((dst_addr >> 24) & 0xFF)));
-    pc_sb_put(&sb_buf, ".");
-    pc_sb_u32(&sb_buf, (uint32_t)((unsigned)((dst_addr >> 16) & 0xFF)));
-    pc_sb_put(&sb_buf, ".");
-    pc_sb_u32(&sb_buf, (uint32_t)((unsigned)((dst_addr >> 8) & 0xFF)));
-    pc_sb_put(&sb_buf, ".");
-    pc_sb_u32(&sb_buf, (uint32_t)((unsigned)(dst_addr & 0xFF)));
-    pc_sb_put(&sb_buf, " ");
-    pc_sb_u32(&sb_buf, (uint32_t)((unsigned)src_port));
-    pc_sb_put(&sb_buf, " ");
-    pc_sb_u32(&sb_buf, (uint32_t)((unsigned)dst_port));
-    pc_sb_put(&sb_buf, "\r\n");
-    int n = (int)pc_sb_finish(&sb_buf);
+    protocore_sb sb_buf = {buf, cap, 0, PROTO_TRUE};
+    protocore_sb_put(&sb_buf, "PROXY TCP4 ");
+    protocore_sb_u32(&sb_buf, (uint32_t)((unsigned)((src_addr >> 24) & 0xFF)));
+    protocore_sb_put(&sb_buf, ".");
+    protocore_sb_u32(&sb_buf, (uint32_t)((unsigned)((src_addr >> 16) & 0xFF)));
+    protocore_sb_put(&sb_buf, ".");
+    protocore_sb_u32(&sb_buf, (uint32_t)((unsigned)((src_addr >> 8) & 0xFF)));
+    protocore_sb_put(&sb_buf, ".");
+    protocore_sb_u32(&sb_buf, (uint32_t)((unsigned)(src_addr & 0xFF)));
+    protocore_sb_put(&sb_buf, " ");
+    protocore_sb_u32(&sb_buf, (uint32_t)((unsigned)((dst_addr >> 24) & 0xFF)));
+    protocore_sb_put(&sb_buf, ".");
+    protocore_sb_u32(&sb_buf, (uint32_t)((unsigned)((dst_addr >> 16) & 0xFF)));
+    protocore_sb_put(&sb_buf, ".");
+    protocore_sb_u32(&sb_buf, (uint32_t)((unsigned)((dst_addr >> 8) & 0xFF)));
+    protocore_sb_put(&sb_buf, ".");
+    protocore_sb_u32(&sb_buf, (uint32_t)((unsigned)(dst_addr & 0xFF)));
+    protocore_sb_put(&sb_buf, " ");
+    protocore_sb_u32(&sb_buf, (uint32_t)((unsigned)src_port));
+    protocore_sb_put(&sb_buf, " ");
+    protocore_sb_u32(&sb_buf, (uint32_t)((unsigned)dst_port));
+    protocore_sb_put(&sb_buf, "\r\n");
+    int n = (int)protocore_sb_finish(&sb_buf);
     // n < 0 is never true here: the format string uses only %u conversions (no wide/multibyte
     // specifiers), so snprintf can't fail with an encoding error for this call.
     if (n < 0 || (size_t)n >= cap)
@@ -272,4 +272,4 @@ size_t proxy_v2_build(uint8_t *buf, size_t cap, uint32_t src_addr, uint32_t dst_
     return total;
 }
 
-#endif // PC_ENABLE_PROXY_PROTOCOL
+#endif // PROTOCORE_ENABLE_PROXY_PROTOCOL

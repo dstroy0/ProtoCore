@@ -31,21 +31,21 @@
 
 #include "protocore_config.h"
 
-#if PC_ENABLE_HTTP3
+#if PROTOCORE_ENABLE_HTTP3
 
-#include "crypto/aead/aes128gcm.h" // pc_aes128gcm_key, PC_WORK_AES128GCM
-#include "crypto/kdf/hkdf.h"       // PC_HKDF_HASH_LEN
+#include "crypto/aead/aes128gcm.h" // pc_aes128gcm_key, PROTOCORE_WORK_AES128GCM
+#include "crypto/kdf/hkdf.h"       // PROTOCORE_HKDF_HASH_LEN
 
 /** @brief The client/server packet-protection secrets for one QUIC encryption level. */
 typedef struct
 {
-    _Alignas(8) uint8_t gcm[PC_WORK_AES128GCM]; ///< keyed AEAD context, built once per key.
-                                                ///< Replaces the raw key: the schedule is what the
-                                                ///< AEAD needs, so no raw key stays resident.
-    uint8_t iv[12];                             ///< AEAD nonce base (XOR'd with the padded packet number).
-    _Alignas(8) uint8_t hp[PC_WORK_AES128];     ///< Keyed header-protection context (AES-128-ECB mask).
-                                                ///< Built once: ~556 cycles per record, plus the pool
-                                                ///< borrow and wipe it also removes.
+    _Alignas(8) uint8_t gcm[PROTOCORE_WORK_AES128GCM]; ///< keyed AEAD context, built once per key.
+                                                       ///< Replaces the raw key: the schedule is what the
+                                                       ///< AEAD needs, so no raw key stays resident.
+    uint8_t iv[12];                                    ///< AEAD nonce base (XOR'd with the padded packet number).
+    _Alignas(8) uint8_t hp[PROTOCORE_WORK_AES128];     ///< Keyed header-protection context (AES-128-ECB mask).
+                                                       ///< Built once: ~556 cycles per record, plus the pool
+                                                       ///< borrow and wipe it also removes.
 } QuicPacketKeys;
 
 /** @brief Both directions' Initial secrets derived from the client's Destination Connection ID. */
@@ -71,7 +71,7 @@ void pc_quic_derive_initial_secrets(uint8_t *work, const uint8_t *dcid, size_t d
  * Initial derivation uses this internally; the Handshake and 1-RTT levels call it directly on the
  * TLS-derived handshake / application traffic secrets so every level shares one code path.
  */
-void pc_quic_keys_from_secret(uint8_t *work, const uint8_t secret[PC_HKDF_HASH_LEN], QuicPacketKeys *out);
+void pc_quic_keys_from_secret(uint8_t *work, const uint8_t secret[PROTOCORE_HKDF_HASH_LEN], QuicPacketKeys *out);
 
 /**
  * @brief Protect one QUIC packet in place: AEAD-seal the payload, then apply header protection.
@@ -133,5 +133,5 @@ size_t pc_quic_packet_unprotect(uint8_t *pkt, size_t pn_offset, size_t length, u
 void pc_quic_retry_integrity_tag(const uint8_t *odcid, size_t odcid_len, const uint8_t *retry, size_t retry_len,
                                  uint8_t tag[16]);
 
-#endif // PC_ENABLE_HTTP3
+#endif // PROTOCORE_ENABLE_HTTP3
 #endif // PROTOCORE_QUIC_CRYPTO_H

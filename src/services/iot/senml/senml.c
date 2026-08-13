@@ -3,13 +3,13 @@
 
 /**
  * @file senml.c
- * @brief SenML pack builders: JSON, plus any binary codec via pc_codec (pure, host-tested).
+ * @brief SenML pack builders: JSON, plus any binary codec via protocore_codec (pure, host-tested).
  */
 
 #include "services/iot/senml/senml.h"
-#include "mmgr/membuild.h" // pc_sb frame builder
+#include "mmgr/membuild.h" // protocore_sb frame builder
 
-#if PC_ENABLE_SENML
+#if PROTOCORE_ENABLE_SENML
 
 #include "network_drivers/presentation/codec/cbor/cbor.h"
 #include "network_drivers/presentation/codec/codec.h"
@@ -34,23 +34,23 @@ static proto_bool is_integral(double d)
 
 // Emit a SenML number into a JSON value position: an integer when integral (keeps timestamp
 // precision), otherwise a %g float.
-static void json_num(pc_json_writer *w, double d)
+static void json_num(protocore_json_writer *w, double d)
 {
     char tmp[32];
     if (is_integral(d))
     {
-        pc_sb sb_tmp = {tmp, sizeof(tmp), 0, PROTO_TRUE};
-        pc_sb_i64(&sb_tmp, (int64_t)((long long)d));
-        if (pc_sb_finish(&sb_tmp) == 0)
+        protocore_sb sb_tmp = {tmp, sizeof(tmp), 0, PROTO_TRUE};
+        protocore_sb_i64(&sb_tmp, (int64_t)((long long)d));
+        if (protocore_sb_finish(&sb_tmp) == 0)
         {
             tmp[0] = '\0';
         }
     }
     else
     {
-        pc_sb sb_tmp2 = {tmp, sizeof(tmp), 0, PROTO_TRUE};
-        pc_sb_g(&sb_tmp2, (double)(d), 6);
-        if (pc_sb_finish(&sb_tmp2) == 0)
+        protocore_sb sb_tmp2 = {tmp, sizeof(tmp), 0, PROTO_TRUE};
+        protocore_sb_g(&sb_tmp2, (double)(d), 6);
+        if (protocore_sb_finish(&sb_tmp2) == 0)
         {
             tmp[0] = '\0';
         }
@@ -58,13 +58,13 @@ static void json_num(pc_json_writer *w, double d)
     Json.put_raw(w, tmp);
 }
 
-size_t pc_senml_json_build(char *buf, size_t cap, const SenmlRecord *records, size_t count)
+size_t protocore_senml_json_build(char *buf, size_t cap, const SenmlRecord *records, size_t count)
 {
     if (!buf || (count && !records))
     {
         return 0;
     }
-    pc_json_writer w = {0};
+    protocore_json_writer w = {0};
     Json.init(&w, buf, cap);
     Json.begin_array(&w);
     for (size_t i = 0; i < count; i++)
@@ -116,11 +116,11 @@ size_t pc_senml_json_build(char *buf, size_t cap, const SenmlRecord *records, si
         Json.end_object(&w);
     }
     Json.end_array(&w);
-    return pc_json_ok(&w) ? pc_json_length(&w) : 0;
+    return protocore_json_ok(&w) ? protocore_json_length(&w) : 0;
 }
 
 // Emit a SenML number: an integer when integral (keeps timestamp precision), else a float.
-static void codec_num(const pc_codec *c, pc_span *w, double d)
+static void codec_num(const protocore_codec *c, protocore_span *w, double d)
 {
     if (is_integral(d))
     {
@@ -162,13 +162,13 @@ static size_t record_fields(const SenmlRecord *r)
     return n;
 }
 
-size_t pc_senml_build(const pc_codec *c, uint8_t *buf, size_t cap, const SenmlRecord *records, size_t count)
+size_t protocore_senml_build(const protocore_codec *c, uint8_t *buf, size_t cap, const SenmlRecord *records, size_t count)
 {
     if (!c || !buf || (count && !records))
     {
         return 0;
     }
-    pc_span w = pc_span_from(buf, cap);
+    protocore_span w = protocore_span_from(buf, cap);
     c->put_array(&w, count);
     for (size_t i = 0; i < count; i++)
     {
@@ -223,12 +223,12 @@ size_t pc_senml_build(const pc_codec *c, uint8_t *buf, size_t cap, const SenmlRe
             codec_num(c, &w, r->time);
         }
     }
-    return pc_span_ok(w) ? pc_span_len(w) : 0;
+    return protocore_span_ok(w) ? protocore_span_len(w) : 0;
 }
 
 // --- resolution (RFC 8428 §4.6) ---
 
-size_t pc_senml_resolve(const SenmlRecord *in, size_t n, SenmlResolved *out, size_t max)
+size_t protocore_senml_resolve(const SenmlRecord *in, size_t n, SenmlResolved *out, size_t max)
 {
     if (!in || !out)
     {
@@ -254,10 +254,10 @@ size_t pc_senml_resolve(const SenmlRecord *in, size_t n, SenmlResolved *out, siz
 
         SenmlResolved *o = &out[i];
         // Resolved name = active base name + record name (either part may be absent).
-        pc_sb sb_name = {o->name, sizeof(o->name), 0, PROTO_TRUE};
-        pc_sb_put(&sb_name, base_name ? base_name : "");
-        pc_sb_put(&sb_name, r->name ? r->name : "");
-        int w = (int)pc_sb_finish(&sb_name);
+        protocore_sb sb_name = {o->name, sizeof(o->name), 0, PROTO_TRUE};
+        protocore_sb_put(&sb_name, base_name ? base_name : "");
+        protocore_sb_put(&sb_name, r->name ? r->name : "");
+        int w = (int)protocore_sb_finish(&sb_name);
         if (!sb_name.ok)
         {
             o->name[0] = '\0';
@@ -276,4 +276,4 @@ size_t pc_senml_resolve(const SenmlRecord *in, size_t n, SenmlResolved *out, siz
     return count;
 }
 
-#endif // PC_ENABLE_SENML
+#endif // PROTOCORE_ENABLE_SENML

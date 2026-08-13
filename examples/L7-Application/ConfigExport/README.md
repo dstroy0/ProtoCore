@@ -1,6 +1,6 @@
 # ConfigExport - schema-driven config export / restore
 
-**Layer:** L7 Application · **Build flags:** `PC_ENABLE_CONFIG_STORE`, `PC_ENABLE_CONFIG_IO`
+**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_CONFIG_STORE`, `PROTOCORE_ENABLE_CONFIG_IO`
 
 ## What this example teaches
 
@@ -13,10 +13,10 @@ typed NVS config store - deterministic and zero-heap.
 **Declare the schema once, with field types:**
 
 ```cpp
-static const pc_cfg_field SCHEMA[] = {
-    {"hostname",  pc_cfg_type::PC_CFG_STR},
-    {"http_port", pc_cfg_type::PC_CFG_U32},
-    {"location",  pc_cfg_type::PC_CFG_STR},
+static const protocore_cfg_field SCHEMA[] = {
+    {"hostname",  protocore_cfg_type::PROTOCORE_CFG_STR},
+    {"http_port", protocore_cfg_type::PROTOCORE_CFG_U32},
+    {"location",  protocore_cfg_type::PROTOCORE_CFG_STR},
 };
 ```
 
@@ -25,8 +25,8 @@ namespace ("app") and seeded; export serializes exactly the schema fields, impor
 parses them back:
 
 ```cpp
-pc_config_export("app", SCHEMA, SCHEMA_N, buf, sizeof(buf));            // GET -> key=value lines
-int n = pc_config_import("app", SCHEMA, SCHEMA_N, req->body, req->body_len); // POST -> n fields restored
+protocore_config_export("app", SCHEMA, SCHEMA_N, buf, sizeof(buf));            // GET -> key=value lines
+int n = protocore_config_import("app", SCHEMA, SCHEMA_N, req->body, req->body_len); // POST -> n fields restored
 ```
 
 Because both sides share the schema, an unknown or mistyped key in the import body
@@ -36,7 +36,7 @@ is rejected rather than silently written.
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_CONFIG_STORE=1 -DPC_ENABLE_CONFIG_IO=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_CONFIG_STORE=1 -DPROTOCORE_ENABLE_CONFIG_IO=1" \
   --lib="." examples/L7-Application/ConfigExport/ConfigExport.ino
 ```
 
@@ -54,8 +54,8 @@ verbatim with added explanatory comments:
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-#define PC_ENABLE_CONFIG_STORE 1
-#define PC_ENABLE_CONFIG_IO 1
+#define PROTOCORE_ENABLE_CONFIG_STORE 1
+#define PROTOCORE_ENABLE_CONFIG_IO 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -68,10 +68,10 @@ static const char *PASSWORD = "YOUR_PASSWORD";
 PC server;
 
 // The persisted fields to back up / restore (shared by export and import).
-static const pc_cfg_field SCHEMA[] = {
-    {"hostname", pc_cfg_type::PC_CFG_STR},
-    {"http_port", pc_cfg_type::PC_CFG_U32},
-    {"location", pc_cfg_type::PC_CFG_STR},
+static const protocore_cfg_field SCHEMA[] = {
+    {"hostname", protocore_cfg_type::PROTOCORE_CFG_STR},
+    {"http_port", protocore_cfg_type::PROTOCORE_CFG_U32},
+    {"location", protocore_cfg_type::PROTOCORE_CFG_STR},
 };
 static const size_t SCHEMA_N = sizeof(SCHEMA) / sizeof(SCHEMA[0]);
 
@@ -87,18 +87,18 @@ void setup()
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     // Seed a couple of values (normally set at provisioning).
-    pc_config_begin("app");
-    pc_config_set_str("hostname", "sensor-01");
-    pc_config_set_u32("http_port", 80);
-    pc_config_set_str("location", "lab");
+    protocore_config_begin("app");
+    protocore_config_set_str("hostname", "sensor-01");
+    protocore_config_set_u32("http_port", 80);
+    protocore_config_set_str("location", "lab");
 
     server.on("/config", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) {
         char buf[512];
-        pc_config_export("app", SCHEMA, SCHEMA_N, buf, sizeof(buf));
+        protocore_config_export("app", SCHEMA, SCHEMA_N, buf, sizeof(buf));
         server.send(id, 200, "text/plain", buf);
     });
     server.on("/config", HttpMethod::HTTP_POST, [](uint8_t id, HttpReq *req) {
-        int n = pc_config_import("app", SCHEMA, SCHEMA_N, (const char *)req->body, req->body_len);
+        int n = protocore_config_import("app", SCHEMA, SCHEMA_N, (const char *)req->body, req->body_len);
         char msg[48];
         snprintf(msg, sizeof(msg), "imported %d field(s)\n", n);
         server.send(id, 200, "text/plain", msg);

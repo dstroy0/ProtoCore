@@ -3,7 +3,7 @@
 
 /**
  * @file Cbor.ino
- * @brief Serve telemetry as compact binary CBOR (PC_ENABLE_CBOR).
+ * @brief Serve telemetry as compact binary CBOR (PROTOCORE_ENABLE_CBOR).
  *
  * Encodes a small {heap, uptime, rssi} map with the zero-heap CBOR writer into a
  * stack buffer and streams the bytes as application/cbor (via the chunked writer,
@@ -12,13 +12,13 @@
  *
  * NOTE: enable it for the whole build (a .ino #define does not reach the
  * separately compiled library). In platformio.ini:
- *     build_flags = -DPC_ENABLE_CBOR=1
+ *     build_flags = -DPROTOCORE_ENABLE_CBOR=1
  * (Arduino IDE: it is already set for you in the build_opt.h beside this sketch, so it builds as-is.)
  *
  * Try: curl -s http://<ip>/telemetry.cbor | xxd
  */
 
-#define PC_ENABLE_CBOR 1
+#define PROTOCORE_ENABLE_CBOR 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -36,7 +36,7 @@ struct CborCtx
     uint8_t buf[64];
     size_t len, off;
 };
-static size_t pc_cbor_source(uint8_t *out, size_t cap, void *vctx)
+static size_t protocore_cbor_source(uint8_t *out, size_t cap, void *vctx)
 {
     CborCtx *c = (CborCtx *)vctx;
     if (c->off >= c->len)
@@ -69,8 +69,8 @@ void setup()
 
     on_http("/telemetry.cbor", HTTP_GET, [](uint8_t id, HttpReq *) {
         static CborCtx ctx; // static: must outlive send_chunked
-        pc_span w;
-        w = pc_span_from(ctx.buf, sizeof(ctx.buf));
+        protocore_span w;
+        w = protocore_span_from(ctx.buf, sizeof(ctx.buf));
         Cbor.put_map(&w, 3);
         Cbor.put_str(&w, "heap");
         Cbor.put_uint(&w, ESP.getFreeHeap());
@@ -78,9 +78,9 @@ void setup()
         Cbor.put_uint(&w, millis() / 1000);
         Cbor.put_str(&w, "rssi");
         Cbor.put_int(&w, Physical.wifi->rssi());
-        ctx.len = pc_span_ok(w) ? pc_span_len(w) : 0;
+        ctx.len = protocore_span_ok(w) ? protocore_span_len(w) : 0;
         ctx.off = 0;
-        send_chunked(id, 200, "application/cbor", pc_cbor_source, &ctx);
+        send_chunked(id, 200, "application/cbor", protocore_cbor_source, &ctx);
     });
     begin_http(80, NULL);
 }

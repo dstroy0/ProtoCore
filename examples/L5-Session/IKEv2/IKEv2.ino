@@ -5,7 +5,7 @@
  * @file IKEv2.ino
  * @brief IKEv2 (RFC 7296) message framing demo - build an IKE_SA_INIT initiator message, dump it, walk
  *        its payload chain, and optionally fire it at a VPN gateway on UDP 500 and parse the reply
- *        (PC_ENABLE_IKEV2).
+ *        (PROTOCORE_ENABLE_IKEV2).
  *
  * services/security/ikev2 is TIER 1 of an IKEv2 / IPsec stack: the pure wire codec. It frames the 28-octet IKE
  * header and the SA / KE / Nonce / ... payload chain and parses them back, but it does NOT do the
@@ -20,10 +20,10 @@
  * the responder's reply, and Udp.listener->sendto() sends the request FROM port 500 so the reply
  * (addressed back to :500) is delivered to our listener.
  *
- * Build flags (platformio.ini):  build_flags = -DPC_ENABLE_IKEV2=1
+ * Build flags (platformio.ini):  build_flags = -DPROTOCORE_ENABLE_IKEV2=1
  */
 
-#define PC_ENABLE_IKEV2 1
+#define PROTOCORE_ENABLE_IKEV2 1
 
 #include "protocore.h" // library entry header (pulls in Arduino + sets the src/ include root)
 #include "network_drivers/physical/physical.h"
@@ -34,7 +34,7 @@ static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
 static const char *GATEWAY_IP = ""; // e.g. "192.168.1.1"; leave "" to only build + self-parse
-static pc_ip g_gateway;                   // GATEWAY_IP, parsed once in setup()
+static protocore_ip g_gateway;                   // GATEWAY_IP, parsed once in setup()
 
 static uint8_t msg[512];
 
@@ -49,13 +49,13 @@ static size_t build_sa_init(uint8_t *buf, size_t cap)
         h.init_spi[i] = (uint8_t)(0xA0 + i); // a fixed demo SPI (a real one is random)
     }
     h.next_payload = IKE_PL_SA;
-    h.version = PC_IKE_VERSION;
+    h.version = PROTOCORE_IKE_VERSION;
     h.exchange = IKE_SA_INIT;
-    h.flags = PC_IKE_FLAG_INITIATOR;
+    h.flags = PROTOCORE_IKE_FLAG_INITIATOR;
     h.message_id = 0;
     h.length = 0; // patched below
 
-    size_t off = pc_ike_hdr_build(buf, cap, &h);
+    size_t off = protocore_ike_hdr_build(buf, cap, &h);
 
     IkeTransform tr[4] = {
         {IKE_TRANSFORM_ENCR, IKE_ENCR_AES_CBC, 256},
@@ -63,7 +63,7 @@ static size_t build_sa_init(uint8_t *buf, size_t cap)
         {IKE_TRANSFORM_INTEG, IKE_INTEG_HMAC_SHA2_256_128, -1},
         {IKE_TRANSFORM_DH, IKE_DH_MODP2048, -1},
     };
-    off += pc_ike_sa_build(buf + off, cap - off, IKE_PL_KE, 1, IKE_PROTO_IKE, nullptr, 0,
+    off += protocore_ike_sa_build(buf + off, cap - off, IKE_PL_KE, 1, IKE_PROTO_IKE, nullptr, 0,
                            tr, 4);
 
     // placeholder DH public value + nonce (a real client fills these from the crypto tier)
@@ -74,10 +74,10 @@ static size_t build_sa_init(uint8_t *buf, size_t cap)
         nonce[i] = (uint8_t)(0x5A ^ i);
     }
     off +=
-        pc_ike_ke_build(buf + off, cap - off, IKE_PL_NONCE, IKE_DH_MODP2048, ke_data, sizeof(ke_data));
-    off += pc_ike_nonce_build(buf + off, cap - off, IKE_PL_NONE, nonce, sizeof(nonce));
+        protocore_ike_ke_build(buf + off, cap - off, IKE_PL_NONCE, IKE_DH_MODP2048, ke_data, sizeof(ke_data));
+    off += protocore_ike_nonce_build(buf + off, cap - off, IKE_PL_NONE, nonce, sizeof(nonce));
 
-    pc_ike_set_length(buf, cap, (uint32_t)off);
+    protocore_ike_set_length(buf, cap, (uint32_t)off);
     return off;
 }
 
@@ -98,7 +98,7 @@ static void hexdump(const uint8_t *buf, size_t len)
 static void parse_and_print(const uint8_t *buf, size_t len, const char *what)
 {
     IkeHeader h;
-    if (!pc_ike_hdr_parse(buf, len, &h))
+    if (!protocore_ike_hdr_parse(buf, len, &h))
     {
         Serial.printf("[ike] %s: too short for a header\n", what);
         return;
@@ -107,15 +107,15 @@ static void parse_and_print(const uint8_t *buf, size_t len, const char *what)
                   (unsigned)h.message_id, (unsigned)h.length);
 
     IkePayloadIter it;
-    pc_ike_payload_iter_init(&it, h.next_payload, buf + PC_IKE_HDR_LEN, len - PC_IKE_HDR_LEN);
+    protocore_ike_payload_iter_init(&it, h.next_payload, buf + PROTOCORE_IKE_HDR_LEN, len - PROTOCORE_IKE_HDR_LEN);
     IkePayload pl;
-    while (pc_ike_payload_next(&it, &pl))
+    while (protocore_ike_payload_next(&it, &pl))
     {
         Serial.printf("[ike]   payload type=%u body=%u", (unsigned)pl.type, (unsigned)pl.body_len);
         if (pl.type == IKE_PL_SA)
         {
             IkeProposalRef prop;
-            if (pc_ike_sa_first_proposal(pl.body, pl.body_len, &prop))
+            if (protocore_ike_sa_first_proposal(pl.body, pl.body_len, &prop))
             {
                 Serial.printf("  (SA proposal %u, %u transforms)", (unsigned)prop.proposal_num,
                               (unsigned)prop.num_transforms);
@@ -126,7 +126,7 @@ static void parse_and_print(const uint8_t *buf, size_t len, const char *what)
             uint16_t group = 0;
             const uint8_t *d = nullptr;
             size_t dl = 0;
-            if (pc_ike_ke_parse(pl.body, pl.body_len, &group, &d, &dl))
+            if (protocore_ike_ke_parse(pl.body, pl.body_len, &group, &d, &dl))
             {
                 Serial.printf("  (KE group %u, %u bytes)", (unsigned)group, (unsigned)dl);
             }
@@ -138,7 +138,7 @@ static void parse_and_print(const uint8_t *buf, size_t len, const char *what)
             uint16_t type = 0;
             const uint8_t *spi = nullptr, *d = nullptr;
             size_t dl = 0;
-            if (pc_ike_notify_parse(pl.body, pl.body_len, &proto, &type, &spi, &ss, &d, &dl))
+            if (protocore_ike_notify_parse(pl.body, pl.body_len, &proto, &type, &spi, &ss, &d, &dl))
             {
                 Serial.printf("  (NOTIFY type %u)", (unsigned)type);
             }
@@ -148,7 +148,7 @@ static void parse_and_print(const uint8_t *buf, size_t len, const char *what)
 }
 
 // UDP receive callback (lwIP thread): the gateway's reply to our IKE_SA_INIT.
-static void on_ike_reply(const uint8_t *data, size_t len, const struct pc_udp_peer *peer, void *ctx)
+static void on_ike_reply(const uint8_t *data, size_t len, const struct protocore_udp_peer *peer, void *ctx)
 {
     (void)peer;
     (void)ctx;
@@ -169,17 +169,17 @@ static void run_once()
     }
 
     // Bind :500 to receive the reply, then send FROM :500 so the responder's reply reaches our listener.
-    if (!Udp.listener->listen(PC_IKEV2_PORT, on_ike_reply, nullptr))
+    if (!Udp.listener->listen(PROTOCORE_IKEV2_PORT, on_ike_reply, nullptr))
     {
         Serial.println("[ike] could not bind UDP 500");
         return;
     }
-    if (!Udp.listener->sendto(PC_IKEV2_PORT, &g_gateway, PC_IKEV2_PORT, msg, n))
+    if (!Udp.listener->sendto(PROTOCORE_IKEV2_PORT, &g_gateway, PROTOCORE_IKEV2_PORT, msg, n))
     {
         Serial.println("[ike] send failed");
         return;
     }
-    Serial.printf("[ike] sent to %s:%u - a reply prints from the UDP callback\n", GATEWAY_IP, PC_IKEV2_PORT);
+    Serial.printf("[ike] sent to %s:%u - a reply prints from the UDP callback\n", GATEWAY_IP, PROTOCORE_IKEV2_PORT);
 }
 
 void setup()

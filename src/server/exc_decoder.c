@@ -7,10 +7,10 @@
  */
 
 #include "server/exc_decoder.h"
-#include "mmgr/membuild.h"         // pc_sb frame builder
-#include "shared_primitives/hex.h" // PC_HEX_LOWER - the shared digit table
+#include "mmgr/membuild.h"         // protocore_sb frame builder
+#include "shared_primitives/hex.h" // PROTOCORE_HEX_LOWER - the shared digit table
 
-#if PC_ENABLE_EXC_DECODER
+#if PROTOCORE_ENABLE_EXC_DECODER
 
 static proto_bool hexval(char c, uint8_t *v)
 {
@@ -67,16 +67,16 @@ static const char *parse_hex(const char *p, uint32_t *out)
     return p;
 }
 
-static void put_json_str(pc_sb *b, const char *s)
+static void put_json_str(protocore_sb *b, const char *s)
 {
-    pc_sb_put(b, "\"");
+    protocore_sb_put(b, "\"");
     const char *src = s ? s : "";
     for (const char *p = src; *p; p++)
     {
         if (*p == '"' || *p == '\\')
         {
             char esc[3] = {'\\', *p, '\0'};
-            pc_sb_put(b, esc);
+            protocore_sb_put(b, esc);
         }
         else if (b->len + 1 < b->cap)
         {
@@ -87,21 +87,21 @@ static void put_json_str(pc_sb *b, const char *s)
             b->ok = PROTO_FALSE;
         }
     }
-    pc_sb_put(b, "\"");
+    protocore_sb_put(b, "\"");
 }
 
 // Emit a 32-bit value as a JSON string literal "0x........".
-static void put_hex32(pc_sb *b, uint32_t v)
+static void put_hex32(protocore_sb *b, uint32_t v)
 {
     char t[13] = "\"0x00000000\"";
     for (int i = 0; i < 8; i++)
     {
-        t[3 + i] = PC_HEX_LOWER[(v >> ((7 - i) * 4)) & 0xF];
+        t[3 + i] = PROTOCORE_HEX_LOWER[(v >> ((7 - i) * 4)) & 0xF];
     }
-    pc_sb_put(b, t);
+    protocore_sb_put(b, t);
 }
 
-static void put_int(pc_sb *b, int v)
+static void put_int(protocore_sb *b, int v)
 {
     char t[12];
     int n = 0;
@@ -123,7 +123,7 @@ static void put_int(pc_sb *b, int v)
         o[k++] = t[n - 1 - i];
     }
     o[k] = '\0';
-    pc_sb_put(b, o);
+    protocore_sb_put(b, o);
 }
 
 // Parse a run of decimal digits at @p p into a small non-negative int, clamped to avoid signed-overflow
@@ -225,7 +225,7 @@ static void parse_backtrace(const char *text, ExcInfo *out)
         return;
     }
     const char *p = bt + 10;
-    while (out->frame_count < PC_EXC_MAX_FRAMES)
+    while (out->frame_count < PROTOCORE_EXC_MAX_FRAMES)
     {
         p = skip_ws(p);
         uint32_t pc = 0;
@@ -247,7 +247,7 @@ static void parse_backtrace(const char *text, ExcInfo *out)
     }
 }
 
-proto_bool pc_exc_parse(const char *text, ExcInfo *out)
+proto_bool protocore_exc_parse(const char *text, ExcInfo *out)
 {
     if (!text || !out)
     {
@@ -274,44 +274,44 @@ proto_bool pc_exc_parse(const char *text, ExcInfo *out)
     return out->cause[0] != '\0' || out->pc != 0 || out->frame_count > 0;
 }
 
-size_t pc_exc_json(const ExcInfo *info, char *out, size_t cap)
+size_t protocore_exc_json(const ExcInfo *info, char *out, size_t cap)
 {
     if (!info || !out || cap == 0)
     {
         return 0;
     }
-    pc_sb b = {out, cap, 0, PROTO_TRUE};
-    pc_sb_put(&b, "{");
+    protocore_sb b = {out, cap, 0, PROTO_TRUE};
+    protocore_sb_put(&b, "{");
     proto_bool first = PROTO_TRUE;
     if (info->core >= 0)
     {
-        pc_sb_put(&b, "\"core\":");
+        protocore_sb_put(&b, "\"core\":");
         put_int(&b, info->core);
         first = PROTO_FALSE;
     }
     if (!first)
     {
-        pc_sb_put(&b, ",");
+        protocore_sb_put(&b, ",");
     }
-    pc_sb_put(&b, "\"cause\":");
+    protocore_sb_put(&b, "\"cause\":");
     put_json_str(&b, info->cause);
-    pc_sb_put(&b, ",\"pc\":");
+    protocore_sb_put(&b, ",\"pc\":");
     put_hex32(&b, info->pc);
     if (info->has_excvaddr)
     {
-        pc_sb_put(&b, ",\"excvaddr\":");
+        protocore_sb_put(&b, ",\"excvaddr\":");
         put_hex32(&b, info->excvaddr);
     }
-    pc_sb_put(&b, ",\"backtrace\":[");
+    protocore_sb_put(&b, ",\"backtrace\":[");
     for (size_t i = 0; i < info->frame_count; i++)
     {
         if (i)
         {
-            pc_sb_put(&b, ",");
+            protocore_sb_put(&b, ",");
         }
         put_hex32(&b, info->frames[i].pc);
     }
-    pc_sb_put(&b, "]}");
+    protocore_sb_put(&b, "]}");
     if (!b.ok)
     {
         return 0;
@@ -320,4 +320,4 @@ size_t pc_exc_json(const ExcInfo *info, char *out, size_t cap)
     return b.len;
 }
 
-#endif // PC_ENABLE_EXC_DECODER
+#endif // PROTOCORE_ENABLE_EXC_DECODER

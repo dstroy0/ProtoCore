@@ -3,22 +3,22 @@
 
 /**
  * @file SNTP.ino
- * @brief Wall-clock time via SNTP (PC_ENABLE_NTP).
+ * @brief Wall-clock time via SNTP (PROTOCORE_ENABLE_NTP).
  *
- * pc_ntp_begin(tz) starts the ESP-IDF SNTP client; the first sync lands a few
- * seconds later. pc_ntp_http_date() formats the current time as an RFC 7231
+ * protocore_ntp_begin(tz) starts the ESP-IDF SNTP client; the first sync lands a few
+ * seconds later. protocore_ntp_http_date() formats the current time as an RFC 7231
  * date string (returns 0 until synced). GET /time returns it.
  *
- * NOTE: this service is compiled into the library only when PC_ENABLE_NTP
+ * NOTE: this service is compiled into the library only when PROTOCORE_ENABLE_NTP
  * is set for the whole build (a .ino #define does not reach the separately
  * compiled library). In platformio.ini:
- *     build_flags = -DPC_ENABLE_NTP=1
+ *     build_flags = -DPROTOCORE_ENABLE_NTP=1
  * (Arduino IDE: it is already set for you in the build_opt.h beside this sketch, so it builds as-is.)
  *
  * Flash, open Serial @ 115200 for the IP, then GET http://<ip>/time.
  */
 
-#define PC_ENABLE_NTP 1
+#define PROTOCORE_ENABLE_NTP 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -32,7 +32,7 @@ void handle_time(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
     char date[40];
-    if (pc_ntp_http_date(date, sizeof(date)) == 0)
+    if (protocore_ntp_http_date(date, sizeof(date)) == 0)
     {
         send_text(slot_id, 503, "text/plain", "Time not synced yet");
         return;
@@ -57,7 +57,7 @@ void setup()
     on_http("/time", HTTP_GET, handle_time);
     begin_http(80, NULL);
 
-    pc_ntp_begin("UTC0", NULL, NULL); // POSIX TZ string; set your zone for local time
+    protocore_ntp_begin("UTC0", NULL, NULL); // POSIX TZ string; set your zone for local time
 }
 
 void loop()

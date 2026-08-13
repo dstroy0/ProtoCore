@@ -6,7 +6,7 @@
 // each hot op over a RAM-backed device, so combined with the measured SD I/O envelope (section 1) it shows
 // where the real-world cost lives (spoiler: the stores are I/O-bound, the CPU cost is tiny). Build + run:
 //   gcc -O2 -std=c11 -I. -Isrc -Itest/mocks -Itest/support -Itest/performance_benching/common
-//   -DPC_ENABLE_WAL=1 -DPC_ENABLE_DBM=1 -DPC_ENABLE_DOCSTORE=1 -DPC_ENABLE_SQLITE=1 -DPC_ENABLE_REDIS=1
+//   -DPROTOCORE_ENABLE_WAL=1 -DPROTOCORE_ENABLE_DBM=1 -DPROTOCORE_ENABLE_DOCSTORE=1 -DPROTOCORE_ENABLE_SQLITE=1 -DPROTOCORE_ENABLE_REDIS=1
 //   test/performance_benching/services/wal/host.c
 //   src/services/storage/wal/wal.c src/services/storage/wal/wal_store.c src/services/storage/dbm/dbm.c
 //   src/services/storage/docstore/docstore.c src/network_drivers/presentation/codec/json/json.c
@@ -94,12 +94,12 @@ int main(void)
         }
         volatile uint32_t sink = 0;
         double ns = 0.0;
-        HBENCH_NS(500000, sink += pc_wal_crc32(src, N), ns);
+        HBENCH_NS(500000, sink += protocore_wal_crc32(src, N), ns);
         hbench_row("wal", "crc32 (1 KiB)", ns, (double)N);
 
         uint8_t rec[256];
         double ns2 = 0.0;
-        HBENCH_NS(2000000, sink += (uint32_t)pc_wal_record_encode(rec, sizeof(rec), 1, src, 128), ns2);
+        HBENCH_NS(2000000, sink += (uint32_t)protocore_wal_record_encode(rec, sizeof(rec), 1, src, 128), ns2);
         hbench_row("wal", "record_encode (128 B)", ns2, 128.0);
         (void)sink;
     }
@@ -112,15 +112,15 @@ int main(void)
         struct RamDisk d = {disk, cap};
         WalDev dev = dev_over(&d);
         WalStore s;
-        pc_wal_store_format(&s, &dev);
+        protocore_wal_store_format(&s, &dev);
         uint8_t pay[64];
         memset(pay, 0xAB, PLEN);
         double ns = 0.0;
-        HBENCH_NS(ITERS, pc_wal_store_append(&s, pay, PLEN), ns);
+        HBENCH_NS(ITERS, protocore_wal_store_append(&s, pay, PLEN), ns);
         hbench_row("wal", "store_append (64 B)", ns, (double)PLEN);
         // checkpoint cost in isolation
         double nc = 0.0;
-        HBENCH_NS(200000, pc_wal_store_checkpoint(&s), nc);
+        HBENCH_NS(200000, protocore_wal_store_checkpoint(&s), nc);
         hbench_row("wal", "store_checkpoint", nc, 0);
         free(disk);
     }
@@ -131,9 +131,9 @@ int main(void)
         struct RamDisk d = {disk, 16u * 1024 * 1024};
         WalDev dev = dev_over(&d);
         static WalStore wal;
-        static pc_dbm db;
-        pc_wal_store_format(&wal, &dev);
-        pc_dbm_open(&db, &wal);
+        static protocore_dbm db;
+        protocore_wal_store_format(&wal, &dev);
+        protocore_dbm_open(&db, &wal);
         char keys[100][8];
         uint8_t val[64];
         memset(val, 0x5A, sizeof(val));
@@ -143,14 +143,14 @@ int main(void)
         }
         for (int k = 0; k < 100; k++)
         {
-            pc_dbm_put(&db, keys[k], (uint16_t)strlen(keys[k]), val, sizeof(val));
+            protocore_dbm_put(&db, keys[k], (uint16_t)strlen(keys[k]), val, sizeof(val));
         }
         int idx = 0;
         double nput = 0.0;
         HBENCH_NS(
             500000,
             {
-                pc_dbm_put(&db, keys[idx], (uint16_t)strlen(keys[idx]), val, sizeof(val));
+                protocore_dbm_put(&db, keys[idx], (uint16_t)strlen(keys[idx]), val, sizeof(val));
                 idx = (idx + 1) % 100;
             },
             nput);
@@ -162,7 +162,7 @@ int main(void)
         HBENCH_NS(
             2000000,
             {
-                sink += pc_dbm_get(&db, keys[idx], (uint16_t)strlen(keys[idx]), out, sizeof(out));
+                sink += protocore_dbm_get(&db, keys[idx], (uint16_t)strlen(keys[idx]), out, sizeof(out));
                 idx = (idx + 1) % 100;
             },
             nget);
@@ -177,11 +177,11 @@ int main(void)
         struct RamDisk d = {disk, 16u * 1024 * 1024};
         WalDev dev = dev_over(&d);
         static WalStore wal;
-        static pc_dbm db;
-        static pc_doc_store ds;
-        pc_wal_store_format(&wal, &dev);
-        pc_dbm_open(&db, &wal);
-        pc_docstore_open(&ds, &db);
+        static protocore_dbm db;
+        static protocore_doc_store ds;
+        protocore_wal_store_format(&wal, &dev);
+        protocore_dbm_open(&db, &wal);
+        protocore_docstore_open(&ds, &db);
         for (int k = 0; k < 100; k++)
         {
             char id[8];
@@ -189,11 +189,11 @@ int main(void)
             snprintf(id, sizeof(id), "u%05d", k);
             snprintf(doc, sizeof(doc), "{\"city\":\"%s\",\"age\":%d,\"n\":%d}", (k % 2) ? "paris" : "lyon", 20 + k % 40,
                      k);
-            pc_docstore_put(&ds, id, (uint16_t)strlen(id), (const uint8_t *)doc, (uint32_t)strlen(doc));
+            protocore_docstore_put(&ds, id, (uint16_t)strlen(id), (const uint8_t *)doc, (uint32_t)strlen(doc));
         }
         volatile uint32_t sink = 0;
         double nf = 0.0;
-        HBENCH_NS(20000, sink += pc_docstore_find_str(&ds, "city", "paris", NULL, NULL), nf);
+        HBENCH_NS(20000, sink += protocore_docstore_find_str(&ds, "city", "paris", NULL, NULL), nf);
         hbench_row("docstore", "find_str (scan 100)", nf, 0);
         hbench_row("docstore", "  -> per doc scanned", nf / 100.0, 0);
         (void)sink;
@@ -209,7 +209,7 @@ int main(void)
             5000000,
             {
                 uint64_t v;
-                s += pc_sqlite_varint_decode(vi, 2, &v);
+                s += protocore_sqlite_varint_decode(vi, 2, &v);
             },
             nv);
         hbench_row("sqlite", "varint_decode", nv, 0);
@@ -223,15 +223,15 @@ int main(void)
                 static uint8_t leaf[512];
                 static uint8_t work[512];
                 SqliteTableCursor c;
-                pc_sqlite_table_cursor_begin(&c, mem_read, &m, DB_MP_PAGE_SIZE, 0, 2, leaf, work);
+                protocore_sqlite_table_cursor_begin(&c, mem_read, &m, DB_MP_PAGE_SIZE, 0, 2, leaf, work);
                 uint64_t rid;
                 SqliteRecordCursor rec;
                 uint64_t st;
                 const uint8_t *v;
                 uint32_t vl;
-                while (pc_sqlite_table_cursor_next(&c, &rid, &rec))
+                while (protocore_sqlite_table_cursor_next(&c, &rid, &rec))
                 {
-                    while (pc_sqlite_record_next(&rec, &st, &v, &vl))
+                    while (protocore_sqlite_record_next(&rec, &st, &v, &vl))
                     {
                         s += st;
                     }
@@ -250,7 +250,7 @@ int main(void)
         const size_t lens[] = {3, 10, 17};
         volatile size_t sink = 0;
         double ne = 0.0;
-        HBENCH_NS(2000000, sink += pc_resp_encode_command(out, sizeof(out), args, lens, 3), ne);
+        HBENCH_NS(2000000, sink += protocore_resp_encode_command(out, sizeof(out), args, lens, 3), ne);
         hbench_row("resp", "encode_command (3 args)", ne, (double)(3 + 10 + 17));
 
         const uint8_t bulk[] = "$17\r\nhello-world-value\r\n";
@@ -260,7 +260,7 @@ int main(void)
             {
                 RespReply r;
                 size_t c;
-                if (pc_resp_parse(bulk, sizeof(bulk) - 1, &r, &c))
+                if (protocore_resp_parse(bulk, sizeof(bulk) - 1, &r, &c))
                 {
                     sink += r.str_len;
                 }

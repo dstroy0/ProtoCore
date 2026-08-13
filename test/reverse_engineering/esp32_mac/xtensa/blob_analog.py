@@ -178,7 +178,7 @@ def walk_section(lines):
 
 
 def main():
-    work = os.path.join(os.environ.get("TEMP", "/tmp"), "pc_blob_analog")
+    work = os.path.join(os.environ.get("TEMP", "/tmp"), "protocore_blob_analog")
     doc = [
         "# Radio blob analog RF sequences",
         "",

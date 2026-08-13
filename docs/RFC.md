@@ -36,20 +36,20 @@ Additional behaviors:
 - Leading SP/HTAB in header values stripped per OWS rules (§3.2.3)
 - Excess headers beyond [`MAX_HEADERS`](@ref MAX_HEADERS) are consumed and discarded, not rejected
 - Query string overflow silently truncates (capacity limit, not a protocol error)
-- Host enforcement is governed by [`PC_ENFORCE_HOST_HEADER`](@ref PC_ENFORCE_HOST_HEADER) (default `1`); set to
+- Host enforcement is governed by [`PROTOCORE_ENFORCE_HOST_HEADER`](@ref PROTOCORE_ENFORCE_HOST_HEADER) (default `1`); set to
   `0` to accept HTTP/1.1 requests without a Host header. The "more than one Host"
   and Content-Length rules are always active. `Host` detection is independent of
   the `MAX_HEADERS` storage cap.
 
 ## HTTP/1.1 response generation (RFC 7230 §3.3, §4.1)
 
-**HTTP keep-alive** ([`PC_ENABLE_KEEPALIVE`](@ref PC_ENABLE_KEEPALIVE), default
+**HTTP keep-alive** ([`PROTOCORE_ENABLE_KEEPALIVE`](@ref PROTOCORE_ENABLE_KEEPALIVE), default
 on) answers a cleanly-parsed request with `Connection: keep-alive` and reuses the
 connection for the next request (persistent connections, RFC 7230
 §6.3): HTTP/1.1 persists unless the client sends `Connection: close`, HTTP/1.0
 closes unless it sends `Connection: keep-alive`, and any error or non-complete
 parse (400/413/414) always closes since the next request boundary is unknown.
-Each connection serves at most [`PC_KEEPALIVE_MAX_REQUESTS`](@ref PC_KEEPALIVE_MAX_REQUESTS)
+Each connection serves at most [`PROTOCORE_KEEPALIVE_MAX_REQUESTS`](@ref PROTOCORE_KEEPALIVE_MAX_REQUESTS)
 requests (a fairness bound) and idle ones are still reclaimed by the timeout
 sweep; pipelined requests already in the buffer are drained in order.
 
@@ -114,7 +114,7 @@ may be interleaved between fragments. The reassembled message must fit in
 
 ### permessage-deflate (RFC 7692)
 
-Optional inbound message compression ([`PC_ENABLE_WS_DEFLATE`](@ref PC_ENABLE_WS_DEFLATE),
+Optional inbound message compression ([`PROTOCORE_ENABLE_WS_DEFLATE`](@ref PROTOCORE_ENABLE_WS_DEFLATE),
 default off). When the client offers `permessage-deflate`, the server accepts it
 with `client_no_context_takeover; server_no_context_takeover`, so every message
 decompresses independently. A compressed message (RSV1 set on its first frame) is
@@ -126,7 +126,7 @@ Outbound frames are sent uncompressed (§6 permits this).
 
 ## Transport security - TLS (RFC 5246 / 8446)
 
-Optional HTTPS ([`PC_ENABLE_TLS`](@ref PC_ENABLE_TLS), default off) via
+Optional HTTPS ([`PROTOCORE_ENABLE_TLS`](@ref PROTOCORE_ENABLE_TLS), default off) via
 mbedTLS on a static memory pool (no heap). TLS 1.2 (RFC 5246) is the negotiated
 minimum; TLS 1.3 (RFC 8446) is used when the client offers it. The verified
 cipher suite is `ECDHE-ECDSA-AES256-GCM-SHA384` (forward-secret ECDHE, ECDSA
@@ -135,23 +135,23 @@ authentication, AEAD AES-256-GCM). Server certificate/key are loaded via
 `wss://` and TLS Server-Sent Events run over the same TLS record layer when TLS is
 enabled: the WebSocket upgrade and every subsequent frame/event are encrypted,
 transparent to handler code. Optional **mutual TLS**
-([`PC_ENABLE_MTLS`](@ref PC_ENABLE_MTLS)) requires and verifies a client
+([`PROTOCORE_ENABLE_MTLS`](@ref PROTOCORE_ENABLE_MTLS)) requires and verifies a client
 certificate chaining to a configured CA (RFC 5246 §7.4.6 / RFC 8446 §4.4.2) and
 exposes the verified peer subject DN to handlers.
 
-Optional **session resumption** ([`PC_ENABLE_TLS_RESUMPTION`](@ref PC_ENABLE_TLS_RESUMPTION))
+Optional **session resumption** ([`PROTOCORE_ENABLE_TLS_RESUMPTION`](@ref PROTOCORE_ENABLE_TLS_RESUMPTION))
 via session tickets (RFC 5077): the TLS 1.2 server issues an encrypted ticket and
 accepts it on reconnect, so a returning client completes an abbreviated handshake
 (no certificate or ECDHE key exchange) - much less CPU and latency on a constrained
 device. It is stateless: the session is sealed into the client's ticket with a
 server-held AES-256-GCM key that rotates on the
-[`PC_TLS_TICKET_LIFETIME_S`](@ref PC_TLS_TICKET_LIFETIME_S) schedule, so no
+[`PROTOCORE_TLS_TICKET_LIFETIME_S`](@ref PROTOCORE_TLS_TICKET_LIFETIME_S) schedule, so no
 per-session cache grows in the arena. Full properties and caveats:
 [SECURITY.md](SECURITY.md) §6.
 
 ## SNMP agent (RFC 1157 / 1901 / 3416 / 2578 / 1213)
 
-Optional SNMP agent ([`PC_ENABLE_SNMP`](@ref PC_ENABLE_SNMP), default off)
+Optional SNMP agent ([`PROTOCORE_ENABLE_SNMP`](@ref PROTOCORE_ENABLE_SNMP), default off)
 on UDP port 161 (via the transport-layer UDP service), with a zero-heap ASN.1 BER codec and a
 fixed MIB table. Conformance:
 
@@ -159,7 +159,7 @@ fixed MIB table. Conformance:
   `SNMPv2c` (version 1) community-based messages: `SEQUENCE { version, community,
   PDU }`. A request whose community matches neither the read-only nor the
   read-write community is silently discarded.
-- **SNMPv3 / USM (RFC 3412 / 3414, optional `PC_ENABLE_SNMP_V3`):** the v3
+- **SNMPv3 / USM (RFC 3412 / 3414, optional `PROTOCORE_ENABLE_SNMP_V3`):** the v3
   message format (msgGlobalData + msgSecurityParameters + scopedPDU), engine
   discovery (Report `usmStatsUnknownEngineIDs`), the timeliness window
   (engineBoots / engineTime), authentication `usmHMAC192SHA256` (HMAC-SHA-256,
@@ -180,7 +180,7 @@ fixed MIB table. Conformance:
   `error-status` (`noAccess` / `notWritable` / `wrongType`) in both versions.
   `GetBulk` honors `non-repeaters` / `max-repetitions`, clamped so the response
   never exceeds `SNMP_MAX_VARBINDS`; an over-large response degrades to `tooBig`.
-- **Notifications (RFC 3416 §4.2.6, optional `PC_ENABLE_SNMP_TRAP`):** outbound
+- **Notifications (RFC 3416 §4.2.6, optional `PROTOCORE_ENABLE_SNMP_TRAP`):** outbound
   `SNMPv2-Trap` and `InformRequest` PDUs, each opening with `sysUpTime.0`
   (TimeTicks) and `snmpTrapOID.0` (the trap OID) followed by caller varbinds.
   SNMPv2c uses the community envelope; SNMPv3 traps are USM authPriv, built from
@@ -192,14 +192,14 @@ fixed MIB table. Conformance:
   private enterprise subtree. `GetNext` / `GetBulk` walk objects in lexicographic
   OID order.
 
-The decode/dispatch/encode core ([`pc_snmp_agent_process()`](@ref pc_snmp_agent_process))
+The decode/dispatch/encode core ([`protocore_snmp_agent_process()`](@ref protocore_snmp_agent_process))
 is transport-independent and host-tested; only the UDP socket is ESP32-specific.
 SNMP security properties (cleartext community strings, no v1/v2c authentication):
 [SECURITY.md](SECURITY.md).
 
 ## HTTP Range requests (RFC 7233)
 
-Optional ([`PC_ENABLE_RANGE`](@ref PC_ENABLE_RANGE), requires file serving,
+Optional ([`PROTOCORE_ENABLE_RANGE`](@ref PROTOCORE_ENABLE_RANGE), requires file serving,
 default off). Served files advertise `Accept-Ranges: bytes`. A single-range
 `Range: bytes=A-B`, `bytes=A-`, or `bytes=-N` request is answered `206 Partial
 Content` with `Content-Range: bytes A-B/size`, seeking the file and streaming only
@@ -210,7 +210,7 @@ RFC 7233 §3.1 explicitly permits, as does a malformed or absent `Range`.
 
 ## WebDAV (RFC 4918)
 
-Optional ([`PC_ENABLE_WEBDAV`](@ref PC_ENABLE_WEBDAV), requires file serving,
+Optional ([`PROTOCORE_ENABLE_WEBDAV`](@ref PROTOCORE_ENABLE_WEBDAV), requires file serving,
 default off). [`dav()`](@ref PC::dav) mounts a filesystem subtree that
 answers the WebDAV methods, extending HTTP so a client can manage files:
 
@@ -218,7 +218,7 @@ answers the WebDAV methods, extending HTTP so a client can manage files:
 - **PROPFIND** (Depth `0` or `1`) returns `207 Multi-Status` with a `<D:response>`
   per resource carrying `resourcetype` (collection or empty), `getcontentlength`,
   `getcontenttype`, and an RFC 1123 `getlastmodified`. A Depth-1 listing is bounded
-  by `PC_WEBDAV_MAX_ENTRIES`; the document is built into a `PC_WEBDAV_BUF_SIZE`
+  by `PROTOCORE_WEBDAV_MAX_ENTRIES`; the document is built into a `PROTOCORE_WEBDAV_BUF_SIZE`
   buffer. The builder + XML escaping are host-tested.
 - **GET / HEAD** stream a file (the file-serving path); **PUT** writes the request
   body (`201 Created` / `204 No Content`); **DELETE** removes a file or recursively
@@ -236,7 +236,7 @@ auth, HTTPS, and the accept throttles.
 
 ## Modbus TCP slave (Modbus Application Protocol v1.1b3)
 
-Optional ([`PC_ENABLE_MODBUS`](@ref PC_ENABLE_MODBUS), default off) Modbus
+Optional ([`PROTOCORE_ENABLE_MODBUS`](@ref PROTOCORE_ENABLE_MODBUS), default off) Modbus
 TCP server on port 502. The MBAP header (Transaction Id, Protocol Id = 0, Length,
 Unit Id) is validated and echoed; the PDU is dispatched against a fixed BSS data
 model of coils, discrete inputs, holding registers, and input registers. Supported
@@ -245,23 +245,23 @@ Registers, 0x04 Read Input Registers, 0x05 Write Single Coil, 0x06 Write Single
 Register, 0x0F Write Multiple Coils, 0x10 Write Multiple Registers. An unsupported
 function returns exception 0x01 (Illegal Function), an out-of-range address 0x02
 (Illegal Data Address), and a bad quantity/value 0x03 (Illegal Data Value). The
-codec ([`pc_modbus_process_adu()`](@ref pc_modbus_process_adu)) is transport-independent
+codec ([`protocore_modbus_process_adu()`](@ref protocore_modbus_process_adu)) is transport-independent
 and host-tested; the TCP framing (one ADU per MBAP length, pipelined out of the rx
 ring) is dispatched through the PROTO_MODBUS connection handler. The application
 reads and writes the model with the accessor functions and is notified of client
-writes via [`pc_modbus_on_write()`](@ref pc_modbus_on_write). Modbus has no
+writes via [`protocore_modbus_on_write()`](@ref protocore_modbus_on_write). Modbus has no
 authentication or encryption - run it only on a trusted control network.
 
 ## CoAP server (RFC 7252)
 
-Optional ([`PC_ENABLE_COAP`](@ref PC_ENABLE_COAP), default off) zero-heap
+Optional ([`PROTOCORE_ENABLE_COAP`](@ref PROTOCORE_ENABLE_COAP), default off) zero-heap
 Constrained Application Protocol endpoint on UDP/5683. Message layer: a
 Confirmable (CON) request is answered with a piggybacked ACK, a Non-confirmable
 (NON) request with a NON response, and a malformed or empty CON with a Reset
 (RST). The parser handles the 4-byte header + token (≤ 8 bytes), delta-encoded
 options (Uri-Path, Uri-Query, Content-Format), and the `0xFF` payload marker, then
 dispatches GET/POST/PUT/DELETE against a fixed resource table by reconstructed
-Uri-Path. The codec ([`pc_coap_server_process()`](@ref pc_coap_server_process)) is
+Uri-Path. The codec ([`protocore_coap_server_process()`](@ref protocore_coap_server_process)) is
 transport-independent and host-tested; only the UDP socket is ESP32-specific.
 
 **Resource discovery (RFC 6690):** a GET to `/.well-known/core` returns the
@@ -269,15 +269,15 @@ registered resources in CoRE Link Format (`application/link-format`, Content-For
 40), e.g. `</hello>,</time>` - paged with Block2 when large; a non-GET to it is
 `4.05 Method Not Allowed`.
 
-**Resource observation (RFC 7641, optional [`PC_ENABLE_COAP_OBSERVE`](@ref PC_ENABLE_COAP_OBSERVE)):**
+**Resource observation (RFC 7641, optional [`PROTOCORE_ENABLE_COAP_OBSERVE`](@ref PROTOCORE_ENABLE_COAP_OBSERVE)):**
 a GET carrying the Observe option (value 0) registers the client as an observer;
 the registration response and every subsequent notification carry the Observe
-option with a monotonically increasing sequence. [`pc_coap_notify()`](@ref pc_coap_notify)
+option with a monotonically increasing sequence. [`protocore_coap_notify()`](@ref protocore_coap_notify)
 re-renders the resource and pushes a NON notification to each observer from the
 server's port (so the client matches it by token + endpoint). An observer is
 removed by a GET with Observe (1), a Reset, or a failed send.
 
-**Block-wise transfer (RFC 7959, optional [`PC_ENABLE_COAP_BLOCK`](@ref PC_ENABLE_COAP_BLOCK)):**
+**Block-wise transfer (RFC 7959, optional [`PROTOCORE_ENABLE_COAP_BLOCK`](@ref PROTOCORE_ENABLE_COAP_BLOCK)):**
 the Block2 (descriptive) and Block1 (control) options carry transfers larger than
 one datagram. For a response, a representation bigger than the server's maximum
 block size, or any request bearing a Block2 option, is served one block at a time:
@@ -292,7 +292,7 @@ not emitted.
 
 ## OPC UA Binary server (IEC 62541 / OPC UA Part 4 + Part 6)
 
-Optional ([`PC_ENABLE_OPCUA`](@ref PC_ENABLE_OPCUA), default off) zero-heap OPC
+Optional ([`PROTOCORE_ENABLE_OPCUA`](@ref PROTOCORE_ENABLE_OPCUA), default off) zero-heap OPC
 UA Binary server on TCP/4840 (`listen(4840, PROTO_OPCUA)`). Transport is UA-TCP /
 UA-SecureConversation (Part 6): every message is `MessageType + chunk + MessageSize`,
 and a secure message carries `SecureChannelId + SymmetricSecurityHeader(TokenId) +
@@ -307,20 +307,20 @@ is mandatory - omitting it is rejected by compliant clients). Supported flow:
 - **Attribute / view services:** `Read` (Part 4 §5.10) and `Write` decode/encode scalar
   `Variant`/`DataValue` (Boolean, Int32, UInt32, Float, Double, String); `Browse` (Part 4
   §5.8.2) returns `ReferenceDescription`s. The application supplies the address space via
-  registered resolvers ([`pc_opcua_set_read_handler`](@ref pc_opcua_set_read_handler) /
-  [`pc_opcua_set_write_handler`](@ref pc_opcua_set_write_handler) /
-  [`pc_opcua_set_browse_handler`](@ref pc_opcua_set_browse_handler)); an unknown NodeId yields
+  registered resolvers ([`protocore_opcua_set_read_handler`](@ref protocore_opcua_set_read_handler) /
+  [`protocore_opcua_set_write_handler`](@ref protocore_opcua_set_write_handler) /
+  [`protocore_opcua_set_browse_handler`](@ref protocore_opcua_set_browse_handler)); an unknown NodeId yields
   `BadNodeIdUnknown`.
 - **Teardown / errors:** `CloseSession`, `CLO` CloseSecureChannel (closes the socket),
   and a `ServiceFault` (`BadServiceUnsupported`) for any unsupported service so a client
   never stalls.
 
 The built-in-type codec, framing, and all service request/response builders are
-transport-independent and host-tested; only [`pc_opcua_rx()`](@ref pc_opcua_rx) (the
+transport-independent and host-tested; only [`protocore_opcua_rx()`](@ref protocore_opcua_rx) (the
 PROTO_OPCUA data handler) is ESP32-specific. Interoperability is verified against a
 third-party client (Python `asyncua`): connect (handshake → secure channel → session →
 activate), browse the Objects folder, and read/write live values. An optional matching
-**client** ([`PC_ENABLE_OPCUA_CLIENT`](@ref PC_ENABLE_OPCUA_CLIENT),
+**client** ([`PROTOCORE_ENABLE_OPCUA_CLIENT`](@ref PROTOCORE_ENABLE_OPCUA_CLIENT),
 `services/fieldbus/opcua_client`) builds the requests and parses the responses, transport-agnostic.
 
 **Security properties:** SecurityPolicy is `None` - messages are neither signed nor
@@ -330,28 +330,28 @@ layer. Sign / SignAndEncrypt policies are not implemented.
 
 ## Remote logging - syslog (RFC 5424)
 
-Optional ([`PC_ENABLE_SYSLOG`](@ref PC_ENABLE_SYSLOG), default off) syslog
+Optional ([`PROTOCORE_ENABLE_SYSLOG`](@ref PROTOCORE_ENABLE_SYSLOG), default off) syslog
 client over UDP. Each line is `<PRI>1 TIMESTAMP HOSTNAME APP-NAME PROCID MSGID
 STRUCTURED-DATA MSG`, where `PRI = facility*8 + severity` and TIMESTAMP / PROCID /
 MSGID / STRUCTURED-DATA are the NILVALUE `-` (the device has no wall clock or PID).
-Fire-and-forget; the formatter ([`pc_syslog_format()`](@ref pc_syslog_format)) is
+Fire-and-forget; the formatter ([`protocore_syslog_format()`](@ref protocore_syslog_format)) is
 host-tested and the datagram is sent via the transport-layer UDP service.
 
 ## JWT bearer tokens (RFC 7519 / 7515 / 7518)
 
-Optional ([`PC_ENABLE_JWT`](@ref PC_ENABLE_JWT), default off). Verifies a
+Optional ([`PROTOCORE_ENABLE_JWT`](@ref PROTOCORE_ENABLE_JWT), default off). Verifies a
 compact-serialization JWS (RFC 7515) JSON Web Token (RFC 7519):
 `base64url(header).base64url(payload).base64url(signature)` with `alg=HS256`
 (HMAC-SHA-256, RFC 7518). The signature is recomputed over `header.payload` and
-compared in constant time ([`pc_jwt_bearer_valid()`](@ref pc_jwt_bearer_valid)); integer
-claims such as `exp` are readable via [`pc_jwt_claim_int()`](@ref pc_jwt_claim_int) for
+compared in constant time ([`protocore_jwt_bearer_valid()`](@ref protocore_jwt_bearer_valid)); integer
+claims such as `exp` are readable via [`protocore_jwt_claim_int()`](@ref protocore_jwt_claim_int) for
 the handler to enforce. The full `Authorization` header is captured (a bearer
 token exceeds the normal header-value cap). Shared-secret caveat:
 [SECURITY.md](SECURITY.md).
 
 ## MQTT 3.1.1 client (OASIS)
 
-Optional ([`PC_ENABLE_MQTT`](@ref PC_ENABLE_MQTT), default off) persistent
+Optional ([`PROTOCORE_ENABLE_MQTT`](@ref PROTOCORE_ENABLE_MQTT), default off) persistent
 publish/subscribe client. Conformance to the OASIS MQTT 3.1.1 specification:
 
 - **Packet framing (§2):** the 2-bit-flags + Remaining-Length variable-length
@@ -367,14 +367,14 @@ publish/subscribe client. Conformance to the OASIS MQTT 3.1.1 specification:
 - **Keep-alive (§3.1.2.10):** a PINGREQ is sent when the link is idle; the
   connection is dropped if no PINGRESP returns within the keep-alive window.
 - `mqtts://` runs over a persistent client-side TLS session
-  ([`PC_ENABLE_MQTT_TLS`](@ref PC_ENABLE_MQTT_TLS)) with the same optional
+  ([`PROTOCORE_ENABLE_MQTT_TLS`](@ref PROTOCORE_ENABLE_MQTT_TLS)) with the same optional
   CA / pin verification as the HTTP client. QoS 2 inbound flow uses method A
   (deliver on PUBLISH, de-dup by id until PUBREL). The packet codec is
   transport-independent and host-tested (env:native_mqtt).
 
 ## WebSocket client (RFC 6455)
 
-Optional ([`PC_ENABLE_WS_CLIENT`](@ref PC_ENABLE_WS_CLIENT), default off)
+Optional ([`PROTOCORE_ENABLE_WS_CLIENT`](@ref PROTOCORE_ENABLE_WS_CLIENT), default off)
 outbound client - the device as a WebSocket client to a remote endpoint:
 
 - **Opening handshake (§4.1-4.2):** sends an HTTP/1.1 Upgrade GET with a random
@@ -385,18 +385,18 @@ outbound client - the device as a WebSocket client to a remote endpoint:
   opcodes, 7/16/64-bit payload lengths, and continuation-frame reassembly into one
   delivered message. A Ping is answered with a Pong; a Close is echoed.
 - `wss://` runs over the shared persistent client TLS session
-  ([`PC_ENABLE_WS_CLIENT_TLS`](@ref PC_ENABLE_WS_CLIENT_TLS)) with the same
+  ([`PROTOCORE_ENABLE_WS_CLIENT_TLS`](@ref PROTOCORE_ENABLE_WS_CLIENT_TLS)) with the same
   CA / pin verification. The handshake/frame codec is host-tested
   (env:native_ws_client), including the RFC 6455 §4.2.2 accept example.
 
 ## Outbound HTTP(S) client (RFC 7230)
 
-Optional ([`PC_ENABLE_HTTP_CLIENT`](@ref PC_ENABLE_HTTP_CLIENT), default
+Optional ([`PROTOCORE_ENABLE_HTTP_CLIENT`](@ref PROTOCORE_ENABLE_HTTP_CLIENT), default
 off). Builds RFC 7230 request messages ([`http_get()`](@ref http_get) /
 [`http_post()`](@ref http_post)) and parses responses framed by `Content-Length`
 or `Transfer-Encoding: chunked` (decoded in place) or by connection close.
 `https://` runs over client-side mbedTLS
-([`PC_ENABLE_HTTP_CLIENT_TLS`](@ref PC_ENABLE_HTTP_CLIENT_TLS)); encrypt-only
+([`PROTOCORE_ENABLE_HTTP_CLIENT_TLS`](@ref PROTOCORE_ENABLE_HTTP_CLIENT_TLS)); encrypt-only
 by default, with optional server authentication via a CA trust anchor
 ([`http_client_set_ca()`](@ref http_client_set_ca)) or a SHA-256 certificate pin
 ([`http_client_set_pin()`](@ref http_client_set_pin)). See [SECURITY.md](SECURITY.md).

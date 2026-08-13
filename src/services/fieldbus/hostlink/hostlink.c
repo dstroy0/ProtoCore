@@ -9,9 +9,9 @@
 #include "services/fieldbus/hostlink/hostlink.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_HOSTLINK
+#if PROTOCORE_ENABLE_HOSTLINK
 
-uint8_t pc_hostlink_fcs(const char *data, size_t len)
+uint8_t protocore_hostlink_fcs(const char *data, size_t len)
 {
     uint8_t f = 0;
     for (size_t i = 0; i < len; i++)
@@ -44,7 +44,7 @@ static int hex_val(char c)
     return -1;
 }
 
-size_t pc_hostlink_build(char *buf, size_t cap, uint8_t node, const char *header_code, const char *text,
+size_t protocore_hostlink_build(char *buf, size_t cap, uint8_t node, const char *header_code, const char *text,
                          size_t text_len)
 {
     if (!buf || !header_code || node > 99 || (text_len && !text))
@@ -72,16 +72,16 @@ size_t pc_hostlink_build(char *buf, size_t cap, uint8_t node, const char *header
         mem.cpy(buf + p, text, text_len);
         p += text_len;
     }
-    uint8_t f = pc_hostlink_fcs(buf, p); // XOR over '@' .. end of text
+    uint8_t f = protocore_hostlink_fcs(buf, p); // XOR over '@' .. end of text
     buf[p++] = hex_digit((uint8_t)(f >> 4));
     buf[p++] = hex_digit((uint8_t)(f & 0x0F));
     buf[p++] = '*';
     buf[p++] = '\r';
-    buf[p] = '\0'; // NUL-terminate so callers may treat the ASCII frame as a string (matches pc_sdi12_build)
+    buf[p] = '\0'; // NUL-terminate so callers may treat the ASCII frame as a string (matches protocore_sdi12_build)
     return p;
 }
 
-proto_bool pc_hostlink_parse(const char *buf, size_t len, HostlinkFrame *out)
+proto_bool protocore_hostlink_parse(const char *buf, size_t len, HostlinkFrame *out)
 {
     // minimum: @ UU XX FF * CR = 1 + 2 + 2 + 2 + 1 + 1 = 9
     if (!buf || !out || len < 9)
@@ -105,7 +105,7 @@ proto_bool pc_hostlink_parse(const char *buf, size_t len, HostlinkFrame *out)
         return PROTO_FALSE;
     }
     uint8_t got = (uint8_t)((hi << 4) | lo);
-    if (pc_hostlink_fcs(buf, fcs_pos) != got) // XOR over '@' .. last text char
+    if (protocore_hostlink_fcs(buf, fcs_pos) != got) // XOR over '@' .. last text char
     {
         return PROTO_FALSE;
     }
@@ -119,7 +119,7 @@ proto_bool pc_hostlink_parse(const char *buf, size_t len, HostlinkFrame *out)
     return PROTO_TRUE;
 }
 
-proto_bool pc_hostlink_end_code(const HostlinkFrame *f, uint8_t *code)
+proto_bool protocore_hostlink_end_code(const HostlinkFrame *f, uint8_t *code)
 {
     if (!f || f->text_len < 2)
     {
@@ -138,7 +138,7 @@ proto_bool pc_hostlink_end_code(const HostlinkFrame *f, uint8_t *code)
     return PROTO_TRUE;
 }
 
-size_t pc_hostlink_build_read(char *buf, size_t cap, uint8_t node, uint16_t address, uint16_t count)
+size_t protocore_hostlink_build_read(char *buf, size_t cap, uint8_t node, uint16_t address, uint16_t count)
 {
     if (address > 9999 || count > 9999 || count == 0)
     {
@@ -153,10 +153,10 @@ size_t pc_hostlink_build_read(char *buf, size_t cap, uint8_t node, uint16_t addr
     text[5] = (char)('0' + (count / 100) % 10);
     text[6] = (char)('0' + (count / 10) % 10);
     text[7] = (char)('0' + count % 10);
-    return pc_hostlink_build(buf, cap, node, "RD", text, sizeof(text));
+    return protocore_hostlink_build(buf, cap, node, "RD", text, sizeof(text));
 }
 
-proto_bool pc_hostlink_read_word(const HostlinkFrame *f, size_t index, uint16_t *out)
+proto_bool protocore_hostlink_read_word(const HostlinkFrame *f, size_t index, uint16_t *out)
 {
     if (!f || !out)
     {
@@ -178,7 +178,7 @@ proto_bool pc_hostlink_read_word(const HostlinkFrame *f, size_t index, uint16_t 
     return PROTO_TRUE;
 }
 
-size_t pc_hostlink_build_write(char *buf, size_t cap, uint8_t node, uint16_t address, const uint16_t *words,
+size_t protocore_hostlink_build_write(char *buf, size_t cap, uint8_t node, uint16_t address, const uint16_t *words,
                                size_t word_count)
 {
     if (!buf || node > 99 || address > 9999 || word_count == 0 || !words)
@@ -214,7 +214,7 @@ size_t pc_hostlink_build_write(char *buf, size_t cap, uint8_t node, uint16_t add
         buf[p++] = hex_digit((uint8_t)((w >> 4) & 0x0F));
         buf[p++] = hex_digit((uint8_t)(w & 0x0F));
     }
-    uint8_t f = pc_hostlink_fcs(buf, p); // XOR over '@' .. last data char
+    uint8_t f = protocore_hostlink_fcs(buf, p); // XOR over '@' .. last data char
     buf[p++] = hex_digit((uint8_t)(f >> 4));
     buf[p++] = hex_digit((uint8_t)(f & 0x0F));
     buf[p++] = '*';
@@ -223,4 +223,4 @@ size_t pc_hostlink_build_write(char *buf, size_t cap, uint8_t node, uint16_t add
     return p;
 }
 
-#endif // PC_ENABLE_HOSTLINK
+#endif // PROTOCORE_ENABLE_HOSTLINK

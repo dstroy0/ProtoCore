@@ -10,7 +10,7 @@ not which of the two caused it.
 
 The whole graph is the text, so no compiler runs and no env is built. Conditional includes are
 followed rather than skipped: the preprocessor nesting is tracked line by line, so an edge that
-exists only under PC_ENABLE_X is reported carrying that guard instead of being invisible. An
+exists only under PROTOCORE_ENABLE_X is reported carrying that guard instead of being invisible. An
 edge is a violation if it exists under any configuration, because a build that turns the flag
 on gets the edge.
 

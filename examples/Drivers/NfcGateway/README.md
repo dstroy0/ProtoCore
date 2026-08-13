@@ -1,6 +1,6 @@
 # NfcGateway - a PN532 NFC reader bridged to the gateway
 
-**Layer:** Foundation · **Build flags:** `PC_ENABLE_PN532`, `PC_ENABLE_GATEWAY`
+**Layer:** Foundation · **Build flags:** `PROTOCORE_ENABLE_PN532`, `PROTOCORE_ENABLE_GATEWAY`
 
 ## What this example teaches
 
@@ -9,7 +9,7 @@ ubiquitous NXP **PN532** over I2C. Scanning a tag becomes a northbound event: th
 is enveloped and published.
 
 ```
-tag scan --PN532/I2C--> pc_pn532_parse_frame() -> UID -> pc_gateway_uplink()
+tag scan --PN532/I2C--> protocore_pn532_parse_frame() -> UID -> protocore_gateway_uplink()
                                                        |
                                     envelope + topic  nfc/0/<target>
                                                        |
@@ -21,11 +21,11 @@ build a command, verify the 6-byte ACK, parse the response - is `services/pn532`
 
 ```cpp
 uint8_t frame[32];
-uint16_t n = pc_pn532_build_frame(PN532_TFI_HOST, cmd, cmd_len, frame, sizeof(frame));
+uint16_t n = protocore_pn532_build_frame(PN532_TFI_HOST, cmd, cmd_len, frame, sizeof(frame));
 // ... write frame over I2C, read back ...
-if (pc_pn532_is_ack(ack, 6)) { /* command accepted */ }
+if (protocore_pn532_is_ack(ack, 6)) { /* command accepted */ }
 uint8_t tfi; const uint8_t *pd; uint8_t pdlen;
-if (pc_pn532_parse_frame(resp, r, &tfi, &pd, &pdlen) > 0) { /* pd = response PData */ }
+if (protocore_pn532_parse_frame(resp, r, &tfi, &pd, &pdlen) > 0) { /* pd = response PData */ }
 ```
 
 Each frame is `00 00 FF | LEN | LCS | TFI | PData | DCS | 00` with a length checksum and a
@@ -50,6 +50,6 @@ The flags must reach the library build, so pass them as build flags:
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_PN532=1 -DPC_ENABLE_GATEWAY=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_PN532=1 -DPROTOCORE_ENABLE_GATEWAY=1" \
   --lib="." examples/Drivers/NfcGateway/NfcGateway.ino
 ```

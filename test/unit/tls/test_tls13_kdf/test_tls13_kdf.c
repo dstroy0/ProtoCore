@@ -87,8 +87,8 @@ void test_early_secret()
     uint8_t exp[32];
     hx(EARLY, exp, 32);
     Tls13KeySchedule ks;
-    static uint8_t ks_store_86[PC_TLS13_KS_BORROW];
-    pc_tls13_ks_early(&TLS13_KDF, &ks, ks_store_86);
+    static uint8_t ks_store_86[PROTOCORE_TLS13_KS_BORROW];
+    protocore_tls13_ks_early(&TLS13_KDF, &ks, ks_store_86);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(exp, ks.s + TLS13_KS_EARLY, 32);
 }
 
@@ -110,9 +110,9 @@ void test_handshake_secrets_rfc8448_section5()
     hx(S5_ECDHE, ecdhe, 32);
     hx(S5_TRANSCRIPT, transcript, 32);
     Tls13KeySchedule ks;
-    static uint8_t ks_store_s5[PC_TLS13_KS_BORROW];
-    pc_tls13_ks_early(&TLS13_KDF, &ks, ks_store_s5);
-    pc_tls13_ks_handshake(&ks, ecdhe, transcript, 32);
+    static uint8_t ks_store_s5[PROTOCORE_TLS13_KS_BORROW];
+    protocore_tls13_ks_early(&TLS13_KDF, &ks, ks_store_s5);
+    protocore_tls13_ks_handshake(&ks, ecdhe, transcript, 32);
 
     uint8_t exp[32];
     hx(S5_HANDSHAKE, exp, 32);
@@ -129,9 +129,9 @@ void test_handshake_secrets()
     hx(ECDHE, ecdhe, 32);
     hx(CH_SH_HASH, ch_sh, 32);
     Tls13KeySchedule ks;
-    static uint8_t ks_store_96[PC_TLS13_KS_BORROW];
-    pc_tls13_ks_early(&TLS13_KDF, &ks, ks_store_96);
-    pc_tls13_ks_handshake(&ks, ecdhe, ch_sh, 32);
+    static uint8_t ks_store_96[PROTOCORE_TLS13_KS_BORROW];
+    protocore_tls13_ks_early(&TLS13_KDF, &ks, ks_store_96);
+    protocore_tls13_ks_handshake(&ks, ecdhe, ch_sh, 32);
 
     uint8_t exp[32];
     hx(HANDSHAKE, exp, 32);
@@ -149,10 +149,10 @@ void test_master_secrets()
     hx(CH_SH_HASH, ch_sh, 32);
     hx(CH_SFIN_HASH, ch_sfin, 32);
     Tls13KeySchedule ks;
-    static uint8_t ks_store_115[PC_TLS13_KS_BORROW];
-    pc_tls13_ks_early(&TLS13_KDF, &ks, ks_store_115);
-    pc_tls13_ks_handshake(&ks, ecdhe, ch_sh, 32);
-    pc_tls13_ks_master(&ks, ch_sfin);
+    static uint8_t ks_store_115[PROTOCORE_TLS13_KS_BORROW];
+    protocore_tls13_ks_early(&TLS13_KDF, &ks, ks_store_115);
+    protocore_tls13_ks_handshake(&ks, ecdhe, ch_sh, 32);
+    protocore_tls13_ks_master(&ks, ch_sfin);
 
     uint8_t exp[32];
     hx(MASTER, exp, 32);
@@ -170,8 +170,8 @@ void test_server_hs_write_keys()
     uint8_t s_hs[32];
     hx(S_HS, s_hs, 32);
     uint8_t key[16], iv[12], exp_key[16], exp_iv[12];
-    pc_hkdf_expand_label(tw, s_hs, "key", key, sizeof(key), PC_HKDF_LABEL_PREFIX);
-    pc_hkdf_expand_label(tw, s_hs, "iv", iv, sizeof(iv), PC_HKDF_LABEL_PREFIX);
+    protocore_hkdf_expand_label(tw, s_hs, "key", key, sizeof(key), PROTOCORE_HKDF_LABEL_PREFIX);
+    protocore_hkdf_expand_label(tw, s_hs, "iv", iv, sizeof(iv), PROTOCORE_HKDF_LABEL_PREFIX);
     hx("3fce516009c21727d0f2e4e86ee403bc", exp_key, 16);
     hx("5d313eb2671276ee13000b30", exp_iv, 12);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(exp_key, key, 16);
@@ -223,38 +223,38 @@ void test_server_finished()
         "8e 95 b8 c3 fb 0b f3 27 84 09 d3 be 15 2a 3d a5 04 3e 06 3d da 65 cd f5 ae a2 0d 53 df ac d4 2f 74 f3";
 
     uint8_t buf[512];
-    pc_sha256_ctx sha;
-    pc_sha256_init(&sha, tw_sha);
+    protocore_sha256_ctx sha;
+    protocore_sha256_init(&sha, tw_sha);
     size_t n;
     n = hx(CH, buf, sizeof(buf));
-    pc_sha256_update(&sha, buf, n);
+    protocore_sha256_update(&sha, buf, n);
     n = hx(SH, buf, sizeof(buf));
-    pc_sha256_update(&sha, buf, n);
+    protocore_sha256_update(&sha, buf, n);
     n = hx(EE, buf, sizeof(buf));
-    pc_sha256_update(&sha, buf, n);
+    protocore_sha256_update(&sha, buf, n);
     n = hx(CERT, buf, sizeof(buf));
-    pc_sha256_update(&sha, buf, n);
+    protocore_sha256_update(&sha, buf, n);
     n = hx(CV, buf, sizeof(buf));
-    pc_sha256_update(&sha, buf, n);
+    protocore_sha256_update(&sha, buf, n);
     uint8_t thash[32];
-    pc_sha256_final(&sha, thash);
+    protocore_sha256_final(&sha, thash);
 
     uint8_t s_hs[32];
     hx(S_HS, s_hs, 32);
     uint8_t verify[32], exp[32];
     Tls13KeySchedule fks;
-    static uint8_t ks_store_208[PC_TLS13_KS_BORROW];
-    pc_tls13_ks_early(&TLS13_KDF, &fks, ks_store_208);
-    pc_tls13_finished_mac(&fks, s_hs, thash, verify);
+    static uint8_t ks_store_208[PROTOCORE_TLS13_KS_BORROW];
+    protocore_tls13_ks_early(&TLS13_KDF, &fks, ks_store_208);
+    protocore_tls13_finished_mac(&fks, s_hs, thash, verify);
     hx("9b9b141d906337fbd2cbdce71df4deda4ab42c309572cb7fffee5454b78f0718", exp, 32);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(exp, verify, 32);
 }
 
-// pc_tls13_kdf_expand_label() is the KDF-variant HKDF-Expand-Label wrapper the record-key derivations
-// call (the key-schedule steps above reach the HKDF core through pc_tls13_derive_secret instead, so this
+// protocore_tls13_kdf_expand_label() is the KDF-variant HKDF-Expand-Label wrapper the record-key derivations
+// call (the key-schedule steps above reach the HKDF core through protocore_tls13_derive_secret instead, so this
 // public entry point is otherwise unexercised). RFC 8448 sec 3: HKDF-Expand-Label("tls13 " prefix,
 // server_handshake_traffic_secret, "key", 16) is the server write key - the same KAT as
-// test_server_hs_write_keys, here through the wrapper. It must equal pc_hkdf_expand_label() with the
+// test_server_hs_write_keys, here through the wrapper. It must equal protocore_hkdf_expand_label() with the
 // TLS 1.3 prefix, which is exactly what the wrapper forwards to.
 void test_kdf_expand_label_wrapper()
 {
@@ -262,12 +262,12 @@ void test_kdf_expand_label_wrapper()
     hx(S_HS, s_hs, 32);
 
     uint8_t key[16], exp_key[16];
-    pc_tls13_kdf_expand_label(&TLS13_KDF, tw, s_hs, "key", key, sizeof(key));
+    protocore_tls13_kdf_expand_label(&TLS13_KDF, tw, s_hs, "key", key, sizeof(key));
     hx("3fce516009c21727d0f2e4e86ee403bc", exp_key, 16);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(exp_key, key, 16);
 
     uint8_t via_quic[16];
-    pc_hkdf_expand_label(tw, s_hs, "key", via_quic, sizeof(via_quic), PC_HKDF_LABEL_PREFIX);
+    protocore_hkdf_expand_label(tw, s_hs, "key", via_quic, sizeof(via_quic), PROTOCORE_HKDF_LABEL_PREFIX);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(via_quic, key, 16);
 }
 
@@ -276,7 +276,7 @@ void test_kdf_expand_label_wrapper()
 // wrong Derive-Secret label would have been applied identically by both sides of every DTLS test
 // and agreed with itself.
 //
-// This builds the HkdfLabel by hand from the two RFC texts and expands it with pc_hkdf_expand,
+// This builds the HkdfLabel by hand from the two RFC texts and expands it with protocore_hkdf_expand,
 // which RFC 5869 Appendix A pins externally (test_crypto_kat). Nothing here is taken from the
 // module under test but the answer being checked.
 static void dtls_label_ref(const uint8_t secret[32], const char *label, const uint8_t *context, size_t context_len,
@@ -300,7 +300,7 @@ static void dtls_label_ref(const uint8_t secret[32], const char *label, const ui
         memcpy(info + p, context, context_len);
         p += context_len;
     }
-    pc_hkdf_expand(tw, secret, info, p, out, out_len);
+    protocore_hkdf_expand(tw, secret, info, p, out, out_len);
 }
 
 void test_dtls13_kdf_labels_against_the_rfc_structure()
@@ -322,7 +322,7 @@ void test_dtls13_kdf_labels_against_the_rfc_structure()
     {
         uint8_t want[32], got[32];
         dtls_label_ref(secret, labels[i], hash, sizeof hash, want, sizeof want);
-        pc_tls13_derive_secret(&DTLS13_KDF, tw, secret, labels[i], hash, got);
+        protocore_tls13_derive_secret(&DTLS13_KDF, tw, secret, labels[i], hash, got);
         TEST_ASSERT_EQUAL_HEX8_ARRAY(want, got, sizeof want);
     }
 
@@ -333,15 +333,15 @@ void test_dtls13_kdf_labels_against_the_rfc_structure()
     {
         uint8_t want[16], got[16];
         dtls_label_ref(secret, keys[i], NULL, 0, want, key_lens[i]);
-        pc_tls13_kdf_expand_label(&DTLS13_KDF, tw, secret, keys[i], got, key_lens[i]);
+        protocore_tls13_kdf_expand_label(&DTLS13_KDF, tw, secret, keys[i], got, key_lens[i]);
         TEST_ASSERT_EQUAL_HEX8_ARRAY(want, got, key_lens[i]);
     }
 
     // The prefix is the whole difference between the two schedules, so the same label under the
     // TLS variant must not land on the same bytes.
     uint8_t dtls_out[32], tls_out[32];
-    pc_tls13_derive_secret(&DTLS13_KDF, tw, secret, "c hs traffic", hash, dtls_out);
-    pc_tls13_derive_secret(&TLS13_KDF, tw, secret, "c hs traffic", hash, tls_out);
+    protocore_tls13_derive_secret(&DTLS13_KDF, tw, secret, "c hs traffic", hash, dtls_out);
+    protocore_tls13_derive_secret(&TLS13_KDF, tw, secret, "c hs traffic", hash, tls_out);
     TEST_ASSERT_NOT_EQUAL(0, memcmp(dtls_out, tls_out, sizeof dtls_out));
 }
 

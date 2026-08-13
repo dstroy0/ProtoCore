@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // On-device CCOUNT microbenchmark for the SSE codec (network_drivers/presentation/http/sse):
-// pc_sse_format() builds one `event:/id:/data:` frame into a caller buffer - the per-event hot op.
-// Pure; the pc_conn_send() wrapper (pc_sse_write) is out of scope. Build/flash: pio run -d
+// protocore_sse_format() builds one `event:/id:/data:` frame into a caller buffer - the per-event hot op.
+// Pure; the protocore_conn_send() wrapper (protocore_sse_write) is out of scope. Build/flash: pio run -d
 // performance_benching/network_drivers/presentation/sse -t upload
 #include "device_bench.h"
 #include "network_drivers/presentation/http/sse/sse.h"
@@ -19,8 +19,8 @@ void dbench_run(void)
         DBENCH_BANNER("sse");
         volatile int sink = 0;
         static char buf[256];
-        DBENCH_OP("pc_sse_format (data+event+id)", 200000,
-                  sink += pc_sse_format(buf, sizeof(buf), "{\"temp\":21.4,\"rh\":48}", "telemetry", "42"));
+        DBENCH_OP("protocore_sse_format (data+event+id)", 200000,
+                  sink += protocore_sse_format(buf, sizeof(buf), "{\"temp\":21.4,\"rh\":48}", "telemetry", "42"));
         (void)sink;
         DBENCH_DONE();
     }

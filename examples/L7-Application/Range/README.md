@@ -1,6 +1,6 @@
 # Range - HTTP Range / 206 Partial Content
 
-**Layer:** L7 Application · **Build flags:** `PC_ENABLE_RANGE` (with file serving)
+**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_RANGE` (with file serving)
 
 ## What this example teaches
 
@@ -28,7 +28,7 @@ range math is easy to verify with `curl -r`. Both `bytes=0-9` (first ten) and
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_RANGE=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_RANGE=1" \
   --lib="." examples/L7-Application/Range/Range.ino
 ```
 
@@ -48,7 +48,7 @@ explanatory comments:
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-#define PC_ENABLE_RANGE 1
+#define PROTOCORE_ENABLE_RANGE 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -94,7 +94,7 @@ void setup()
     Serial.printf("IP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    // serve_file() honors Range automatically when PC_ENABLE_RANGE is set.
+    // serve_file() honors Range automatically when PROTOCORE_ENABLE_RANGE is set.
     server.on("/data.bin", HttpMethod::HTTP_GET,
               [](uint8_t id, HttpReq *) { server.serve_file(id, LittleFS, "/data.bin", "application/octet-stream"); });
 

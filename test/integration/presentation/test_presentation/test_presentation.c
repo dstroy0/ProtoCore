@@ -11,7 +11,7 @@
 
 #include "network_drivers/presentation/presentation.h"
 #include "network_drivers/session/proto_handler.h" // ProtoHandler: full type needed to call ->on_poll()
-#if PC_ENABLE_WEBSOCKET
+#if PROTOCORE_ENABLE_WEBSOCKET
 #include "network_drivers/presentation/http/websocket/websocket.h" // ws_alloc(): upgraded-slot guard in http_parse()
 #endif
 #include "network_drivers/transport/tcp.h"
@@ -866,17 +866,17 @@ void test_fn_parse_out_of_range_is_nop()
     TEST_PASS();
 }
 
-#if PC_ENABLE_WEBSOCKET
+#if PROTOCORE_ENABLE_WEBSOCKET
 // Once a slot has upgraded to WebSocket, http_parse() must not touch its rx ring
 // (those bytes are WS frame data, not HTTP) - it returns immediately.
 void test_fn_parse_is_nop_on_ws_upgraded_slot()
 {
     TEST_ASSERT_NOT_NULL(ws_alloc(0));
     push(0, "GET / HTTP/1.1\r\n\r\n");
-    size_t before = pc_conn_available(0);
+    size_t before = protocore_conn_available(0);
     http_parse(0);
     TEST_ASSERT_EQUAL(PARSE_METHOD, http_pool[0].parse_state); // untouched
-    TEST_ASSERT_EQUAL(before, pc_conn_available(0));           // bytes left in the ring
+    TEST_ASSERT_EQUAL(before, protocore_conn_available(0));           // bytes left in the ring
     ws_free(0);
 }
 #endif
@@ -897,14 +897,14 @@ static void test_poll_fn(uint8_t slot)
 void test_fn_poll_trampoline_noop_before_install()
 {
     s_poll_seen_slot = 0xFF;
-    http_proto_handler()->on_poll(2);
+    http_protocore_handler()->on_poll(2);
     TEST_ASSERT_EQUAL(0xFF, s_poll_seen_slot); // nothing ran
 }
 
 void test_fn_poll_trampoline_calls_installed_fn()
 {
-    http_proto_set_poll(test_poll_fn);
-    http_proto_handler()->on_poll(3);
+    http_protocore_set_poll(test_poll_fn);
+    http_protocore_handler()->on_poll(3);
     TEST_ASSERT_EQUAL(3, s_poll_seen_slot);
 }
 
@@ -926,7 +926,7 @@ int main()
     // Function I/O: http_conn_open() / http_parse() guard clauses
     RUN_TEST(test_fn_conn_open_out_of_range_is_nop);
     RUN_TEST(test_fn_parse_out_of_range_is_nop);
-#if PC_ENABLE_WEBSOCKET
+#if PROTOCORE_ENABLE_WEBSOCKET
     RUN_TEST(test_fn_parse_is_nop_on_ws_upgraded_slot);
 #endif
 

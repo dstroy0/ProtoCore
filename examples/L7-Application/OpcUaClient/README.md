@@ -1,10 +1,10 @@
 # OpcUaClient - an OPC UA Binary client
 
-**Layer:** L7 Application · **Build flags:** `PC_ENABLE_OPCUA`, `PC_ENABLE_OPCUA_CLIENT`
+**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_OPCUA`, `PROTOCORE_ENABLE_OPCUA_CLIENT`
 
 ## What this example teaches
 
-The client counterpart to [OpcUa](../OpcUa). The `pc_opcua_client` codec builds
+The client counterpart to [OpcUa](../OpcUa). The `protocore_opcua_client` codec builds
 OPC UA requests and parses responses but is transport-agnostic, so the application
 owns the socket. To stay self-contained this sketch runs the OPC UA server on :4840
 **and**, once connected, opens a plain Arduino `WiFiClient` to its own address and
@@ -17,15 +17,15 @@ Hello/Ack -> OpenSecureChannel -> GetEndpoints -> CreateSession -> ActivateSessi
 ```
 
 **The codec is build-request / parse-response pairs.** Each step has a
-`pc_opcua_client_<step>()` that fills the request buffer and a `pc_opcua_client_on_<step>()`
+`protocore_opcua_client_<step>()` that fills the request buffer and a `protocore_opcua_client_on_<step>()`
 that parses the reply:
 
 ```cpp
-n = exchange(sock, pc_opcua_client_hello("opc.tcp://self:4840", c_req, sizeof(c_req)));
-if (!n || !pc_opcua_client_on_ack(c_resp, n, &ack)) { /* HELLO/ACK failed */ }
+n = exchange(sock, protocore_opcua_client_hello("opc.tcp://self:4840", c_req, sizeof(c_req)));
+if (!n || !protocore_opcua_client_on_ack(c_resp, n, &ack)) { /* HELLO/ACK failed */ }
 
-n = exchange(sock, pc_opcua_client_open(&c, c_req, sizeof(c_req)));
-if (!n || !pc_opcua_client_on_open(&c, c_resp, n)) { /* OpenSecureChannel failed */ }
+n = exchange(sock, protocore_opcua_client_open(&c, c_req, sizeof(c_req)));
+if (!n || !protocore_opcua_client_on_open(&c, c_resp, n)) { /* OpenSecureChannel failed */ }
 ```
 
 **The app owns framing and I/O.** Because the codec never touches the socket, you
@@ -54,7 +54,7 @@ server just makes the example self-contained. Read and write items are small str
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_OPCUA=1 -DPC_ENABLE_OPCUA_CLIENT=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_OPCUA=1 -DPROTOCORE_ENABLE_OPCUA_CLIENT=1" \
   --lib="." examples/L7-Application/OpcUaClient/OpcUaClient.ino
 ```
 
@@ -71,8 +71,8 @@ with added explanatory comments:
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-#define PC_ENABLE_OPCUA 1
-#define PC_ENABLE_OPCUA_CLIENT 1
+#define PROTOCORE_ENABLE_OPCUA 1
+#define PROTOCORE_ENABLE_OPCUA_CLIENT 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -181,33 +181,33 @@ static void run_client(uint32_t ip)
         return;
     }
     OpcUaClient c;
-    pc_opcua_client_init(&c);
+    protocore_opcua_client_init(&c);
     OpcUaAckInfo ack;
     size_t n;
 
-    n = exchange(sock, pc_opcua_client_hello("opc.tcp://self:4840", c_req, sizeof(c_req)));
-    if (!n || !pc_opcua_client_on_ack(c_resp, n, &ack))
+    n = exchange(sock, protocore_opcua_client_hello("opc.tcp://self:4840", c_req, sizeof(c_req)));
+    if (!n || !protocore_opcua_client_on_ack(c_resp, n, &ack))
     {
         Serial.println("[opcua-client] HELLO/ACK failed");
         return;
     }
-    n = exchange(sock, pc_opcua_client_open(&c, c_req, sizeof(c_req)));
-    if (!n || !pc_opcua_client_on_open(&c, c_resp, n))
+    n = exchange(sock, protocore_opcua_client_open(&c, c_req, sizeof(c_req)));
+    if (!n || !protocore_opcua_client_on_open(&c, c_resp, n))
     {
         Serial.println("[opcua-client] OpenSecureChannel failed");
         return;
     }
-    n = exchange(sock, pc_opcua_client_get_endpoints(&c, "opc.tcp://self:4840", c_req, sizeof(c_req)));
+    n = exchange(sock, protocore_opcua_client_get_endpoints(&c, "opc.tcp://self:4840", c_req, sizeof(c_req)));
     Serial.printf("[opcua-client] GetEndpoints -> %d endpoint(s)\n",
-                  n ? (int)pc_opcua_client_on_get_endpoints(c_resp, n) : -1);
-    n = exchange(sock, pc_opcua_client_create_session(&c, "esp32", "opc.tcp://self:4840", c_req, sizeof(c_req)));
-    if (!n || !pc_opcua_client_on_create_session(&c, c_resp, n))
+                  n ? (int)protocore_opcua_client_on_get_endpoints(c_resp, n) : -1);
+    n = exchange(sock, protocore_opcua_client_create_session(&c, "esp32", "opc.tcp://self:4840", c_req, sizeof(c_req)));
+    if (!n || !protocore_opcua_client_on_create_session(&c, c_resp, n))
     {
         Serial.println("[opcua-client] CreateSession failed");
         return;
     }
-    n = exchange(sock, pc_opcua_client_activate_session(&c, c_req, sizeof(c_req)));
-    if (!n || !pc_opcua_client_on_activate_session(c_resp, n))
+    n = exchange(sock, protocore_opcua_client_activate_session(&c, c_req, sizeof(c_req)));
+    if (!n || !protocore_opcua_client_on_activate_session(c_resp, n))
     {
         Serial.println("[opcua-client] ActivateSession failed");
         return;
@@ -215,19 +215,19 @@ static void run_client(uint32_t ip)
     Serial.printf("[opcua-client] session active (channel=%u token=%u)\n", c.channel_id, c.token_id);
 
     // Browse the Objects folder.
-    n = exchange(sock, pc_opcua_client_browse(&c, 0, 85, c_req, sizeof(c_req)));
+    n = exchange(sock, protocore_opcua_client_browse(&c, 0, 85, c_req, sizeof(c_req)));
     OpcUaClientRef refs[4];
-    int32_t nrefs = n ? pc_opcua_client_on_browse(c_resp, n, refs, 4) : -1;
+    int32_t nrefs = n ? protocore_opcua_client_on_browse(c_resp, n, refs, 4) : -1;
     for (int32_t i = 0; i < nrefs; i++)
         Serial.printf("[opcua-client] browse: %s -> ns%u;i=%u\n", refs[i].browse_name, refs[i].target_ns,
                       refs[i].target_id);
 
     // Read the two variables.
     OpcUaReadItem items[2] = {{1, 1, true, OPCUA_ATTR_VALUE}, {1, 2, true, OPCUA_ATTR_VALUE}};
-    n = exchange(sock, pc_opcua_client_read(&c, items, 2, c_req, sizeof(c_req)));
+    n = exchange(sock, protocore_opcua_client_read(&c, items, 2, c_req, sizeof(c_req)));
     OpcUaVariant vals[2];
     uint32_t sts[2];
-    int32_t nv = n ? pc_opcua_client_on_read(c_resp, n, vals, sts, 2) : -1;
+    int32_t nv = n ? protocore_opcua_client_on_read(c_resp, n, vals, sts, 2) : -1;
     if (nv == 2)
         Serial.printf("[opcua-client] read: Uptime=%u Temperature=%.1f\n", vals[0].u32, vals[1].f64);
 
@@ -240,19 +240,19 @@ static void run_client(uint32_t ip)
     wi[0].attribute = OPCUA_ATTR_VALUE;
     wi[0].value.type = OpcUaVariantType::OPCUA_VAR_UINT32;
     wi[0].value.u32 = 555;
-    n = exchange(sock, pc_opcua_client_write(&c, wi, 1, c_req, sizeof(c_req)));
+    n = exchange(sock, protocore_opcua_client_write(&c, wi, 1, c_req, sizeof(c_req)));
     uint32_t wres[1];
-    int32_t nw = n ? pc_opcua_client_on_write(c_resp, n, wres, 1) : -1;
+    int32_t nw = n ? protocore_opcua_client_on_write(c_resp, n, wres, 1) : -1;
     OpcUaReadItem rb[1] = {{1, 3, true, OPCUA_ATTR_VALUE}};
-    n = exchange(sock, pc_opcua_client_read(&c, rb, 1, c_req, sizeof(c_req)));
+    n = exchange(sock, protocore_opcua_client_read(&c, rb, 1, c_req, sizeof(c_req)));
     OpcUaVariant rbv[1];
     uint32_t rbs[1];
-    int32_t nrb = n ? pc_opcua_client_on_read(c_resp, n, rbv, rbs, 1) : -1;
+    int32_t nrb = n ? protocore_opcua_client_on_read(c_resp, n, rbv, rbs, 1) : -1;
     if (nw == 1 && nrb == 1)
         Serial.printf("[opcua-client] write setpoint=555 (status 0x%08X), read-back=%u\n", wres[0], rbv[0].u32);
 
-    exchange(sock, pc_opcua_client_close_session(&c, c_req, sizeof(c_req)));
-    sock.write(c_req, pc_opcua_client_close_channel(c_req, sizeof(c_req)));
+    exchange(sock, protocore_opcua_client_close_session(&c, c_req, sizeof(c_req)));
+    sock.write(c_req, protocore_opcua_client_close_channel(c_req, sizeof(c_req)));
     sock.stop();
     Serial.println("[opcua-client] done");
 }
@@ -271,10 +271,10 @@ void setup()
     static char url[48];
     snprintf(url, sizeof(url), "opc.tcp://%u.%u.%u.%u:4840", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
              (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
-    pc_opcua_set_endpoint_url(url); // advertised in GetEndpoints / CreateSession
-    pc_opcua_set_read_handler(srv_read);
-    pc_opcua_set_write_handler(srv_write);
-    pc_opcua_set_browse_handler(srv_browse);
+    protocore_opcua_set_endpoint_url(url); // advertised in GetEndpoints / CreateSession
+    protocore_opcua_set_read_handler(srv_read);
+    protocore_opcua_set_write_handler(srv_write);
+    protocore_opcua_set_browse_handler(srv_browse);
     server.on("/", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) { server.send(id, 200, "text/plain", "OPC UA client demo"); });
     server.listen(4840, ProtoConn::PROTO_OPCUA); // server endpoint, before begin()
     server.begin(80);

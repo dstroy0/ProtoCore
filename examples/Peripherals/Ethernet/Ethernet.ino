@@ -1,17 +1,17 @@
 // Ethernet - run the server over a wired Ethernet PHY instead of Wi-Fi.
 //
 // Some deployments want a wired uplink (PoE cameras, panel-mount controllers, noisy RF
-// environments). With PC_ENABLE_ETHERNET the physical layer gains Physical.eth->init()
+// environments). With PROTOCORE_ENABLE_ETHERNET the physical layer gains Physical.eth->init()
 // alongside Physical.wifi->init() - a thin wrapper over the Arduino ETH library for an RMII
 // PHY (LAN8720 / TLK110 / RTL8201 / DP83848). Once the link has an IP the server accepts on
 // it with no other change: the egress reporting already classifies a wired route as
-// pc_if_kind::PC_IF_ETH, so per-route interface filters and everything else just work.
+// protocore_if_kind::PROTOCORE_IF_ETH, so per-route interface filters and everything else just work.
 //
 // The PHY pins / type / clock come from the standard ETH_PHY_* build flags (below) - set
 // them for your board. Needs an ESP32 with an Ethernet PHY to run.
 //
 // Build flags (whole build), tuned here for a LAN8720 board:
-//   PC_ENABLE_ETHERNET=1
+//   PROTOCORE_ENABLE_ETHERNET=1
 //   ETH_PHY_TYPE=ETH_PHY_LAN8720 ETH_PHY_ADDR=1 ETH_PHY_POWER=-1
 //   ETH_PHY_MDC=23 ETH_PHY_MDIO=18 ETH_CLK_MODE=ETH_CLOCK_GPIO0_IN
 

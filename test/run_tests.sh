@@ -88,7 +88,7 @@ format_output() {
         line = $0
         clean_line = line
         gsub(/\x1b\[[0-9;?]*[a-zA-Z]/, "", clean_line)
-        
+
         # Test line: "test/unit/<group>/test_X/test_X.c:829: test_name\t[PASSED]"
         if (clean_line ~ /\[(PASSED|FAILED)\]$/) {
             match(line, /[[:space:]]+(\x1b\[[0-9;?]*[a-zA-Z])*\[(PASSED|FAILED)\](\x1b\[[0-9;?]*[a-zA-Z])*$/)
@@ -96,13 +96,13 @@ format_output() {
                 left = substr(line, 1, RSTART - 1)
                 right = substr(line, RSTART)
                 sub(/^[[:space:]]+/, "", right)
-                
+
                 clean_left = left
                 gsub(/\x1b\[[0-9;?]*[a-zA-Z]/, "", clean_left)
-                
+
                 clean_right = right
                 gsub(/\x1b\[[0-9;?]*[a-zA-Z]/, "", clean_right)
-                
+
                 pad = width - length(clean_left) - length(clean_right)
                 if (pad < 1) pad = 1
                 spaces = ""
@@ -111,14 +111,14 @@ format_output() {
                 next
             }
         }
-        
+
         # Banner line: "------------ native_ssh:test_ssh_crypto [PASSED] Took 6.70 seconds ------------"
         if (clean_line ~ /^-+ .* \[(PASSED|FAILED)\] Took .* seconds -+$/) {
             orig_msg = line
             gsub(/^-+/, "", orig_msg)
             gsub(/-+$/, "", orig_msg)
             gsub(/^[ \t]+|[ \t]+$/, "", orig_msg)
-            
+
             # Pull the [PASSED]/[FAILED] token (with any surrounding color codes) out of the message.
             match(orig_msg, /(\x1b\[[0-9;?]*[a-zA-Z])*\[(PASSED|FAILED)\](\x1b\[[0-9;?]*[a-zA-Z])*/)
             status = substr(orig_msg, RSTART, RLENGTH)
@@ -138,7 +138,7 @@ format_output() {
             print msg " " dashes " " status
             next
         }
-        
+
         # Section line: "--------------------------------------------------------------------------------"
         if (clean_line ~ /^-{20,}$/) {
             dashes = ""
@@ -146,7 +146,7 @@ format_output() {
             print dashes
             next
         }
-        
+
         print line
     }'
 }
@@ -534,7 +534,7 @@ if [[ $COVERAGE -eq 1 ]]; then
     # refuses anything less), so this measures all of src/ with nothing carried over.
     #
     # separate, not the default strict: a build-time knob can put two definitions of one function in
-    # one file (pc_base64_decode sits under #if PC_BASE64_SWAR and again in the #else), and envs that
+    # one file (protocore_base64_decode sits under #if PROTOCORE_BASE64_SWAR and again in the #else), and envs that
     # compile different arms report it at different lines. strict calls that a merge conflict and
     # aborts the whole union. separate keeps one entry per definition, so each arm carries the
     # coverage its own envs measured; the line-merging modes would fold two implementations into one

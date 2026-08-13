@@ -3,7 +3,7 @@
 
 /**
  * @file mms.h
- * @brief IEC 61850 MMS (Manufacturing Message Specification) PDU codec (PC_ENABLE_MMS).
+ * @brief IEC 61850 MMS (Manufacturing Message Specification) PDU codec (PROTOCORE_ENABLE_MMS).
  *
  * MMS (ISO 9506) is the client/server core of IEC 61850: an ACSI object model (logical devices/nodes,
  * data objects, datasets) carried as BER-encoded MMS PDUs over ISO-on-TCP (TPKT + COTP, already shipped
@@ -24,9 +24,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_MMS
+#if PROTOCORE_ENABLE_MMS
 
 /** @brief MMS PDU tags (context-specific) + the service tags used here. */
 // MMS PDU / service / BER tags: wire bytes, so integer constants in a namespacing struct.
@@ -43,7 +43,7 @@ PROTO_BEGIN_DECLS
  * @param item_name the MMS ObjectName (e.g. "LD0/GGIO1$ST$Ind1$stVal"), a VisibleString.
  * @return the PDU length written, or 0 on overflow / bad args.
  */
-size_t pc_mms_read_request(uint32_t invoke_id, const char *item_name, uint8_t *out, size_t cap);
+size_t protocore_mms_read_request(uint32_t invoke_id, const char *item_name, uint8_t *out, size_t cap);
 
 /**
  * @brief Build an MMS confirmed-response Read PDU carrying one pre-encoded AccessResult data value.
@@ -53,7 +53,7 @@ size_t pc_mms_read_request(uint32_t invoke_id, const char *item_name, uint8_t *o
  * @param data_len  its length.
  * @return the PDU length written, or 0 on overflow.
  */
-size_t pc_mms_read_response(uint32_t invoke_id, const uint8_t *data, size_t data_len, uint8_t *out, size_t cap);
+size_t protocore_mms_read_response(uint32_t invoke_id, const uint8_t *data, size_t data_len, uint8_t *out, size_t cap);
 
 /** @brief A parsed MMS confirmed PDU (top-level). */
 typedef struct
@@ -66,10 +66,10 @@ typedef struct
 } MmsPdu;
 
 /** @brief Parse an MMS confirmed PDU header (pdu tag + invokeID + service tag). @return true if well-formed. */
-proto_bool pc_mms_parse(const uint8_t *pdu, size_t len, MmsPdu *out);
+proto_bool protocore_mms_parse(const uint8_t *pdu, size_t len, MmsPdu *out);
 
-#endif // PC_ENABLE_MMS
+#endif // PROTOCORE_ENABLE_MMS
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_MMS_H

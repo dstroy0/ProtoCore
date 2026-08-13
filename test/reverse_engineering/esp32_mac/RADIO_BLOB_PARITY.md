@@ -990,7 +990,7 @@ ieee80211_phy_mode_show
 ieee80211_phy_type_get
 ieee80211_pm_tx_null_process
 ieee80211_post_hmac_tx
-ieee80211_proto_attach
+ieee80211_protocore_attach
 ieee80211_psq_cleanup
 ieee80211_psq_drop_one_pkt
 ieee80211_psq_find_max_bss

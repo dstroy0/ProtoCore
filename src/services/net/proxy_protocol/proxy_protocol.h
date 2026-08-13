@@ -3,7 +3,7 @@
 
 /**
  * @file proxy_protocol.h
- * @brief HAProxy PROXY protocol codec (PC_ENABLE_PROXY_PROTOCOL) - zero-heap parser +
+ * @brief HAProxy PROXY protocol codec (PROTOCORE_ENABLE_PROXY_PROTOCOL) - zero-heap parser +
  *        builder for the v1 (text) and v2 (binary) headers a load balancer / proxy prepends,
  *        so the server can recover the real client IPv4 when it sits behind one.
  *
@@ -27,9 +27,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_PROXY_PROTOCOL
+#if PROTOCORE_ENABLE_PROXY_PROTOCOL
 
 #define PROXY_V2_SIG_LEN 12         ///< v2 signature length
 #define PROXY_V2_VER_CMD_PROXY 0x21 ///< version 2 | PROXY command
@@ -62,8 +62,8 @@ size_t proxy_v1_build(char *buf, size_t cap, uint32_t src_addr, uint32_t dst_add
 size_t proxy_v2_build(uint8_t *buf, size_t cap, uint32_t src_addr, uint32_t dst_addr, uint16_t src_port,
                       uint16_t dst_port);
 
-#endif // PC_ENABLE_PROXY_PROTOCOL
+#endif // PROTOCORE_ENABLE_PROXY_PROTOCOL
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_PROXY_PROTOCOL_H

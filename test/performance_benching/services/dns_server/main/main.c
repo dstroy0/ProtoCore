@@ -15,7 +15,7 @@
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
 #include "network_drivers/network/dns/dns_server.h"
-#include "protocore_config.h" // PC_DNS_SERVER_MAX_RECORDS
+#include "protocore_config.h" // PROTOCORE_DNS_SERVER_MAX_RECORDS
 
 #include <stdio.h> // snprintf
 
@@ -96,7 +96,7 @@ void dbench_run(void)
         // lookup benches below always run against a full, known table before the add bench (which
         // clears it) runs last.
         DnsServer.clear();
-        for (int i = 0; i < PC_DNS_SERVER_MAX_RECORDS; i++)
+        for (int i = 0; i < PROTOCORE_DNS_SERVER_MAX_RECORDS; i++)
         {
             snprintf(nm, sizeof(nm), "h%d.lan", i);
             DnsServer.add(nm, 10, 0, 0, (uint8_t)i);

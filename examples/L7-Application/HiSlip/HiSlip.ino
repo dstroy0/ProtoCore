@@ -4,7 +4,7 @@
 /**
  * @file HiSlip.ino
  * @brief HiSLIP instrument controller - drive an instrument over the modern LXI transport on TCP
- *        4880 (PC_ENABLE_HISLIP), carrying SCPI (PC_ENABLE_SCPI).
+ *        4880 (PROTOCORE_ENABLE_HISLIP), carrying SCPI (PROTOCORE_ENABLE_SCPI).
  *
  * HiSLIP (IVI-6.1) is VXI-11's higher-throughput successor. A session uses TWO TCP connections to
  * port 4880 - a synchronous channel (the SCPI command/response stream) and an asynchronous channel
@@ -18,10 +18,10 @@
  * Point INSTRUMENT_IP at a real HiSLIP instrument or a simulator (e.g. python `pyvisa` with a
  * HiSLIP server, or the `PyHiSLIP` reference). See the README.
  *
- * Build flags (platformio.ini):  build_flags = -DPC_ENABLE_HISLIP=1
+ * Build flags (platformio.ini):  build_flags = -DPROTOCORE_ENABLE_HISLIP=1
  */
 
-#define PC_ENABLE_HISLIP 1
+#define PROTOCORE_ENABLE_HISLIP 1
 
 #include "protocore.h" // library entry header (also sets the src/ include root)
 #include "network_drivers/physical/physical.h"
@@ -42,18 +42,18 @@ static bool hislip_recv(int cid, HislipHeader *h)
 {
     size_t got = 0;
     unsigned long deadline = millis() + 3000;
-    while (got < PC_HISLIP_HEADER_LEN && millis() < deadline)
+    while (got < PROTOCORE_HISLIP_HEADER_LEN && millis() < deadline)
     {
         if (Tcp.client->available(cid))
         {
-            got += Tcp.client->read(cid, c_resp + got, PC_HISLIP_HEADER_LEN - got);
+            got += Tcp.client->read(cid, c_resp + got, PROTOCORE_HISLIP_HEADER_LEN - got);
         }
     }
-    if (got < PC_HISLIP_HEADER_LEN || !pc_hislip_parse_header(c_resp, got, h))
+    if (got < PROTOCORE_HISLIP_HEADER_LEN || !protocore_hislip_parse_header(c_resp, got, h))
     {
         return false;
     }
-    size_t total = PC_HISLIP_HEADER_LEN + (size_t)h->payload_len;
+    size_t total = PROTOCORE_HISLIP_HEADER_LEN + (size_t)h->payload_len;
     if (total > sizeof(c_resp))
     {
         return false;
@@ -70,7 +70,7 @@ static bool hislip_recv(int cid, HislipHeader *h)
 
 static void run_session(const char *host)
 {
-    int sync_cid = Tcp.client->open(host, PC_HISLIP_PORT, 8000);
+    int sync_cid = Tcp.client->open(host, PROTOCORE_HISLIP_PORT, 8000);
     if (sync_cid < 0)
     {
         Serial.println("[hislip] sync connect failed");
@@ -78,11 +78,11 @@ static void run_session(const char *host)
     }
 
     // 1) Initialize on the sync channel (offer v1.1, vendor "DW", sub-address "hislip0").
-    size_t n = pc_hislip_build_initialize(c_buf, sizeof(c_buf), PC_HISLIP_VERSION_1_1, 0x4457, "hislip0");
+    size_t n = protocore_hislip_build_initialize(c_buf, sizeof(c_buf), PROTOCORE_HISLIP_VERSION_1_1, 0x4457, "hislip0");
     Tcp.client->send(sync_cid, c_buf, n);
     HislipHeader h;
     HislipInitializeResponse ir;
-    if (!hislip_recv(sync_cid, &h) || !pc_hislip_parse_initialize_response(c_resp, PC_HISLIP_HEADER_LEN, &ir))
+    if (!hislip_recv(sync_cid, &h) || !protocore_hislip_parse_initialize_response(c_resp, PROTOCORE_HISLIP_HEADER_LEN, &ir))
     {
         Serial.println("[hislip] no InitializeResponse");
         Tcp.client->close(sync_cid);
@@ -92,22 +92,22 @@ static void run_session(const char *host)
                   ir.overlap);
 
     // 2) Bind the async channel with the negotiated SessionID.
-    int async_cid = Tcp.client->open(host, PC_HISLIP_PORT, 8000);
+    int async_cid = Tcp.client->open(host, PROTOCORE_HISLIP_PORT, 8000);
     if (async_cid >= 0)
     {
-        n = pc_hislip_build_async_initialize(c_buf, sizeof(c_buf), ir.session_id);
+        n = protocore_hislip_build_async_initialize(c_buf, sizeof(c_buf), ir.session_id);
         Tcp.client->send(async_cid, c_buf, n);
         hislip_recv(async_cid, &h); // AsyncInitializeResponse (server vendor id in h.parameter)
     }
 
     // 3) Send "*IDN?" as a DataEND on the sync channel, read the identity back.
-    uint32_t msg_id = PC_HISLIP_MESSAGE_ID_INIT;
-    n = pc_hislip_build_data(c_buf, sizeof(c_buf), true, 0, msg_id, (const uint8_t *)"*IDN?\n", 6);
+    uint32_t msg_id = PROTOCORE_HISLIP_MESSAGE_ID_INIT;
+    n = protocore_hislip_build_data(c_buf, sizeof(c_buf), true, 0, msg_id, (const uint8_t *)"*IDN?\n", 6);
     Tcp.client->send(sync_cid, c_buf, n);
-    msg_id = pc_hislip_next_message_id(msg_id);
+    msg_id = protocore_hislip_next_message_id(msg_id);
     if (hislip_recv(sync_cid, &h) && (h.type == HislipMsg::DATA_END || h.type == HislipMsg::DATA))
     {
-        Serial.printf("[hislip] *IDN? -> %.*s\n", (int)h.payload_len, (const char *)(c_resp + PC_HISLIP_HEADER_LEN));
+        Serial.printf("[hislip] *IDN? -> %.*s\n", (int)h.payload_len, (const char *)(c_resp + PROTOCORE_HISLIP_HEADER_LEN));
     }
     else
     {

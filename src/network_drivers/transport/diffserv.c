@@ -12,7 +12,7 @@
 
 #include "diffserv.h"
 
-#if PC_ENABLE_DIFFSERV
+#if PROTOCORE_ENABLE_DIFFSERV
 
 /// The single owner of all DiffServ file-scope state.
 typedef struct
@@ -44,4 +44,4 @@ static uint8_t udp_dscp(void)
 
 const DiffServNs DiffServ = {set_default, default_dscp, set_udp, udp_dscp};
 
-#endif // PC_ENABLE_DIFFSERV
+#endif // PROTOCORE_ENABLE_DIFFSERV

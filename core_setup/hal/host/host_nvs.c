@@ -5,21 +5,21 @@
  * @file host_nvs.c
  * @brief Host backend for hal/nvs.h: a fixed table, so every caller above the seam is testable.
  *
- * PC_CONFIG_MAX_ENTRIES rows of PC_CONFIG_KEY_MAX name and PC_CONFIG_VAL_MAX bytes, in BSS. An
+ * PROTOCORE_CONFIG_MAX_ENTRIES rows of PROTOCORE_CONFIG_KEY_MAX name and PROTOCORE_CONFIG_VAL_MAX bytes, in BSS. An
  * entry is addressed by namespace and key together, so two namespaces holding the same key name
  * hold two values, exactly as NVS does. Values do not survive the process, which is the one way
- * this differs from the device: a test that wants a reboot calls pc_nvs_clear().
+ * this differs from the device: a test that wants a reboot calls protocore_nvs_clear().
  */
 
 #include "core_setup/hal/nvs.h"
 
-#if !PC_VENDOR_ESP
+#if !PROTOCORE_VENDOR_ESP
 
 typedef struct
 {
-    char ns[PC_CONFIG_KEY_MAX];
-    char key[PC_CONFIG_KEY_MAX];
-    uint8_t val[PC_CONFIG_VAL_MAX];
+    char ns[PROTOCORE_CONFIG_KEY_MAX];
+    char key[PROTOCORE_CONFIG_KEY_MAX];
+    uint8_t val[PROTOCORE_CONFIG_VAL_MAX];
     size_t len;
     proto_bool used;
 } HostNvsEntry;
@@ -28,21 +28,21 @@ typedef struct
 // from any other translation unit.
 typedef struct
 {
-    HostNvsEntry tbl[PC_CONFIG_MAX_ENTRIES];
+    HostNvsEntry tbl[PROTOCORE_CONFIG_MAX_ENTRIES];
 } HostNvsCtx;
 static HostNvsCtx s_nvs;
 
-// NVS caps a name at PC_CONFIG_KEY_MAX including the terminator; a longer one is refused rather
+// NVS caps a name at PROTOCORE_CONFIG_KEY_MAX including the terminator; a longer one is refused rather
 // than truncated into a different name.
 static proto_bool name_ok(const char *name)
 {
-    return name && name[0] && strnlen(name, PC_CONFIG_KEY_MAX) < PC_CONFIG_KEY_MAX;
+    return name && name[0] && strnlen(name, PROTOCORE_CONFIG_KEY_MAX) < PROTOCORE_CONFIG_KEY_MAX;
 }
 
 // Returns a mutable entry (callers write through it), so it takes the owner by non-const pointer.
 static HostNvsEntry *find(HostNvsCtx *c, const char *ns, const char *key)
 {
-    for (int i = 0; i < PC_CONFIG_MAX_ENTRIES; i++)
+    for (int i = 0; i < PROTOCORE_CONFIG_MAX_ENTRIES; i++)
     {
         if (c->tbl[i].used && strcmp(c->tbl[i].ns, ns) == 0 && strcmp(c->tbl[i].key, key) == 0)
         {
@@ -59,15 +59,15 @@ static HostNvsEntry *find_or_alloc(HostNvsCtx *c, const char *ns, const char *ke
     {
         return e;
     }
-    for (int i = 0; i < PC_CONFIG_MAX_ENTRIES; i++)
+    for (int i = 0; i < PROTOCORE_CONFIG_MAX_ENTRIES; i++)
     {
         if (!c->tbl[i].used)
         {
             c->tbl[i].used = PROTO_TRUE;
-            strncpy(c->tbl[i].ns, ns, PC_CONFIG_KEY_MAX - 1);
-            c->tbl[i].ns[PC_CONFIG_KEY_MAX - 1] = '\0';
-            strncpy(c->tbl[i].key, key, PC_CONFIG_KEY_MAX - 1);
-            c->tbl[i].key[PC_CONFIG_KEY_MAX - 1] = '\0';
+            strncpy(c->tbl[i].ns, ns, PROTOCORE_CONFIG_KEY_MAX - 1);
+            c->tbl[i].ns[PROTOCORE_CONFIG_KEY_MAX - 1] = '\0';
+            strncpy(c->tbl[i].key, key, PROTOCORE_CONFIG_KEY_MAX - 1);
+            c->tbl[i].key[PROTOCORE_CONFIG_KEY_MAX - 1] = '\0';
             c->tbl[i].len = 0;
             return &c->tbl[i];
         }
@@ -77,7 +77,7 @@ static HostNvsEntry *find_or_alloc(HostNvsCtx *c, const char *ns, const char *ke
 
 static proto_bool store(const char *ns, const char *key, const void *data, size_t len)
 {
-    if (!name_ok(ns) || !name_ok(key) || len > PC_CONFIG_VAL_MAX)
+    if (!name_ok(ns) || !name_ok(key) || len > PROTOCORE_CONFIG_VAL_MAX)
     {
         return PROTO_FALSE;
     }
@@ -100,12 +100,12 @@ static HostNvsEntry *lookup(const char *ns, const char *key)
     return find(&s_nvs, ns, key);
 }
 
-proto_bool pc_nvs_has(const char *ns, const char *key)
+proto_bool protocore_nvs_has(const char *ns, const char *key)
 {
     return lookup(ns, key) != NULL;
 }
 
-size_t pc_nvs_get_blob(const char *ns, const char *key, void *out, size_t cap)
+size_t protocore_nvs_get_blob(const char *ns, const char *key, void *out, size_t cap)
 {
     HostNvsEntry *e = lookup(ns, key);
     if (!e || !out || cap == 0)
@@ -117,7 +117,7 @@ size_t pc_nvs_get_blob(const char *ns, const char *key, void *out, size_t cap)
     return n;
 }
 
-proto_bool pc_nvs_put_blob(const char *ns, const char *key, const void *in, size_t len)
+proto_bool protocore_nvs_put_blob(const char *ns, const char *key, const void *in, size_t len)
 {
     if (!in)
     {
@@ -126,7 +126,7 @@ proto_bool pc_nvs_put_blob(const char *ns, const char *key, const void *in, size
     return store(ns, key, in, len);
 }
 
-size_t pc_nvs_get_str(const char *ns, const char *key, char *out, size_t cap)
+size_t protocore_nvs_get_str(const char *ns, const char *key, char *out, size_t cap)
 {
     if (!out || cap == 0)
     {
@@ -150,19 +150,19 @@ size_t pc_nvs_get_str(const char *ns, const char *key, char *out, size_t cap)
     return n;
 }
 
-proto_bool pc_nvs_put_str(const char *ns, const char *key, const char *val)
+proto_bool protocore_nvs_put_str(const char *ns, const char *key, const char *val)
 {
     if (!val)
     {
         return PROTO_FALSE;
     }
-    return store(ns, key, val, strnlen(val, PC_CONFIG_VAL_MAX - 1) + 1); // the terminator is stored
+    return store(ns, key, val, strnlen(val, PROTOCORE_CONFIG_VAL_MAX - 1) + 1); // the terminator is stored
 }
 
 // The object, not a byte layout: this table never leaves the process, so the two halves below only
 // have to agree with each other. The device backend stores through NVS's own u32 and shares no
 // representation with this one either.
-uint32_t pc_nvs_get_u32(const char *ns, const char *key, uint32_t def)
+uint32_t protocore_nvs_get_u32(const char *ns, const char *key, uint32_t def)
 {
     HostNvsEntry *e = lookup(ns, key);
     if (!e || e->len != sizeof(uint32_t))
@@ -174,12 +174,12 @@ uint32_t pc_nvs_get_u32(const char *ns, const char *key, uint32_t def)
     return v;
 }
 
-proto_bool pc_nvs_put_u32(const char *ns, const char *key, uint32_t val)
+proto_bool protocore_nvs_put_u32(const char *ns, const char *key, uint32_t val)
 {
     return store(ns, key, &val, sizeof(val));
 }
 
-proto_bool pc_nvs_erase(const char *ns, const char *key)
+proto_bool protocore_nvs_erase(const char *ns, const char *key)
 {
     HostNvsEntry *e = lookup(ns, key);
     if (!e)
@@ -191,13 +191,13 @@ proto_bool pc_nvs_erase(const char *ns, const char *key)
     return PROTO_TRUE;
 }
 
-proto_bool pc_nvs_clear(const char *ns)
+proto_bool protocore_nvs_clear(const char *ns)
 {
     if (!name_ok(ns))
     {
         return PROTO_FALSE;
     }
-    for (int i = 0; i < PC_CONFIG_MAX_ENTRIES; i++)
+    for (int i = 0; i < PROTOCORE_CONFIG_MAX_ENTRIES; i++)
     {
         if (s_nvs.tbl[i].used && strcmp(s_nvs.tbl[i].ns, ns) == 0)
         {
@@ -208,4 +208,4 @@ proto_bool pc_nvs_clear(const char *ns)
     return PROTO_TRUE;
 }
 
-#endif // !PC_VENDOR_ESP
+#endif // !PROTOCORE_VENDOR_ESP

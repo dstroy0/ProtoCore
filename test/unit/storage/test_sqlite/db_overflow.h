@@ -2,8 +2,8 @@
 // PRAGMA page_size=512; CREATE TABLE big(id INTEGER, data TEXT); rows (1,'short'), (2,'A'x1000),
 // (3,'B'x3000) - the last two spill onto linked overflow pages. The table root (page 2) is interior;
 // its leaves + the overflow pages follow. Do not hand-edit.
-#ifndef PC_TEST_DB_OVERFLOW_H
-#define PC_TEST_DB_OVERFLOW_H
+#ifndef PROTOCORE_TEST_DB_OVERFLOW_H
+#define PROTOCORE_TEST_DB_OVERFLOW_H
 #include <stdint.h>
 #define OVF_PAGE_SIZE 512
 #define OVF_PAGE_COUNT 11

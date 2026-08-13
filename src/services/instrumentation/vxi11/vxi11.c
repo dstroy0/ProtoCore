@@ -9,7 +9,7 @@
 #include "services/instrumentation/vxi11/vxi11.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_VXI11
+#if PROTOCORE_ENABLE_VXI11
 
 #include "mmgr/endian.h"
 
@@ -33,7 +33,7 @@ static void xw_u32(XdrW *w, uint32_t v)
         w->ok = PROTO_FALSE;
         return;
     }
-    pc_wr32be(w->p + w->off, v);
+    protocore_wr32be(w->p + w->off, v);
     w->off += 4;
 }
 
@@ -46,7 +46,7 @@ static void xw_bytes(XdrW *w, const uint8_t *d, size_t n)
         w->ok = PROTO_FALSE;
         return;
     }
-    pc_wr32be(w->p + w->off, (uint32_t)n);
+    protocore_wr32be(w->p + w->off, (uint32_t)n);
     w->off += 4;
     if (n)
     {
@@ -74,7 +74,7 @@ static uint32_t xr_u32(XdrR *r)
         r->ok = PROTO_FALSE;
         return 0;
     }
-    uint32_t v = pc_rd32be(r->p + r->off);
+    uint32_t v = protocore_rd32be(r->p + r->off);
     r->off += 4;
     return v;
 }
@@ -107,23 +107,23 @@ static proto_bool xr_bytes(XdrR *r, const uint8_t **d, size_t *n)
 
 // ── ONC RPC framing ─────────────────────────────────────────────────────────────────────────────
 
-size_t pc_rpc_record_mark(uint8_t *buf, size_t cap, uint32_t payload_len)
+size_t protocore_rpc_record_mark(uint8_t *buf, size_t cap, uint32_t payload_len)
 {
     if (!buf || cap < 4 || (payload_len & 0x80000000u)) // the length must fit in 31 bits
     {
         return 0;
     }
-    pc_wr32be(buf, 0x80000000u | payload_len); // last-fragment flag set
+    protocore_wr32be(buf, 0x80000000u | payload_len); // last-fragment flag set
     return 4;
 }
 
-proto_bool pc_rpc_parse_record_mark(const uint8_t *buf, size_t len, proto_bool *last, uint32_t *frag_len)
+proto_bool protocore_rpc_parse_record_mark(const uint8_t *buf, size_t len, proto_bool *last, uint32_t *frag_len)
 {
     if (!buf || len < 4)
     {
         return PROTO_FALSE;
     }
-    uint32_t rm = pc_rd32be(buf);
+    uint32_t rm = protocore_rd32be(buf);
     if (last)
     {
         *last = (rm & 0x80000000u) != 0;
@@ -146,9 +146,9 @@ static XdrW begin_call(uint8_t *buf, size_t cap, uint32_t xid, uint32_t prog, ui
     xw_u32(&w, prog);
     xw_u32(&w, vers);
     xw_u32(&w, proc);
-    xw_u32(&w, PC_RPC_AUTH_NONE); // cred.flavor
+    xw_u32(&w, PROTOCORE_RPC_AUTH_NONE); // cred.flavor
     xw_u32(&w, 0);                // cred.length
-    xw_u32(&w, PC_RPC_AUTH_NONE); // verf.flavor
+    xw_u32(&w, PROTOCORE_RPC_AUTH_NONE); // verf.flavor
     xw_u32(&w, 0);                // verf.length
     return w;
 }
@@ -159,11 +159,11 @@ static size_t finish_call(XdrW *w)
     {
         return 0;
     }
-    pc_rpc_record_mark(w->p, w->cap, (uint32_t)(w->off - 4));
+    protocore_rpc_record_mark(w->p, w->cap, (uint32_t)(w->off - 4));
     return w->off;
 }
 
-proto_bool pc_rpc_parse_reply(const uint8_t *rpc, size_t len, uint32_t *xid, uint32_t *accept_stat, size_t *result_off)
+proto_bool protocore_rpc_parse_reply(const uint8_t *rpc, size_t len, uint32_t *xid, uint32_t *accept_stat, size_t *result_off)
 {
     if (!rpc)
     {
@@ -176,7 +176,7 @@ proto_bool pc_rpc_parse_reply(const uint8_t *rpc, size_t len, uint32_t *xid, uin
     xr_u32(&r);               // verf.flavor
     xr_bytes(&r, NULL, NULL); // verf.body
     uint32_t astat = xr_u32(&r);
-    if (!r.ok || mtype != RPC_MSGTYPE_REPLY || reply_stat != PC_RPC_MSG_ACCEPTED)
+    if (!r.ok || mtype != RPC_MSGTYPE_REPLY || reply_stat != PROTOCORE_RPC_MSG_ACCEPTED)
     {
         return PROTO_FALSE;
     }
@@ -200,7 +200,7 @@ static proto_bool reply_results(const uint8_t *rpc, size_t len, XdrR *r)
 {
     uint32_t astat = 0;
     size_t off = 0;
-    if (!pc_rpc_parse_reply(rpc, len, NULL, &astat, &off) || astat != PC_RPC_ACCEPT_SUCCESS)
+    if (!protocore_rpc_parse_reply(rpc, len, NULL, &astat, &off) || astat != PROTOCORE_RPC_ACCEPT_SUCCESS)
     {
         return PROTO_FALSE;
     }
@@ -213,9 +213,9 @@ static proto_bool reply_results(const uint8_t *rpc, size_t len, XdrR *r)
 
 // ── portmapper ──────────────────────────────────────────────────────────────────────────────────
 
-size_t pc_vxi11_build_getport(uint8_t *buf, size_t cap, uint32_t xid, uint32_t prog, uint32_t vers, uint32_t proto)
+size_t protocore_vxi11_build_getport(uint8_t *buf, size_t cap, uint32_t xid, uint32_t prog, uint32_t vers, uint32_t proto)
 {
-    XdrW w = begin_call(buf, cap, xid, PC_RPC_PMAP_PROG, PC_RPC_PMAP_VERS, PC_RPC_PMAP_GETPORT);
+    XdrW w = begin_call(buf, cap, xid, PROTOCORE_RPC_PMAP_PROG, PROTOCORE_RPC_PMAP_VERS, PROTOCORE_RPC_PMAP_GETPORT);
     xw_u32(&w, prog); // mapping fields in order: prog, vers, prot, then port zero
     xw_u32(&w, vers);
     xw_u32(&w, proto);
@@ -223,7 +223,7 @@ size_t pc_vxi11_build_getport(uint8_t *buf, size_t cap, uint32_t xid, uint32_t p
     return finish_call(&w);
 }
 
-proto_bool pc_vxi11_parse_getport_resp(const uint8_t *rpc, size_t len, uint32_t *port)
+proto_bool protocore_vxi11_parse_getport_resp(const uint8_t *rpc, size_t len, uint32_t *port)
 {
     XdrR r;
     if (!reply_results(rpc, len, &r))
@@ -244,10 +244,10 @@ proto_bool pc_vxi11_parse_getport_resp(const uint8_t *rpc, size_t len, uint32_t 
 
 // ── VXI-11 DEVICE_CORE ──────────────────────────────────────────────────────────────────────────
 
-size_t pc_vxi11_build_create_link(uint8_t *buf, size_t cap, uint32_t xid, int32_t client_id, proto_bool lock_device,
+size_t protocore_vxi11_build_create_link(uint8_t *buf, size_t cap, uint32_t xid, int32_t client_id, proto_bool lock_device,
                                   uint32_t lock_timeout, const char *device)
 {
-    XdrW w = begin_call(buf, cap, xid, PC_VXI11_CORE_PROG, PC_VXI11_CORE_VERS, (uint32_t)VXI11_PROC_CREATE_LINK);
+    XdrW w = begin_call(buf, cap, xid, PROTOCORE_VXI11_CORE_PROG, PROTOCORE_VXI11_CORE_VERS, (uint32_t)VXI11_PROC_CREATE_LINK);
     xw_u32(&w, (uint32_t)client_id);
     xw_u32(&w, lock_device ? 1 : 0);
     xw_u32(&w, lock_timeout);
@@ -256,7 +256,7 @@ size_t pc_vxi11_build_create_link(uint8_t *buf, size_t cap, uint32_t xid, int32_
     return finish_call(&w);
 }
 
-proto_bool pc_vxi11_parse_create_link_resp(const uint8_t *rpc, size_t len, Vxi11CreateLinkResp *out)
+proto_bool protocore_vxi11_parse_create_link_resp(const uint8_t *rpc, size_t len, Vxi11CreateLinkResp *out)
 {
     XdrR r;
     if (!out || !reply_results(rpc, len, &r))
@@ -270,14 +270,14 @@ proto_bool pc_vxi11_parse_create_link_resp(const uint8_t *rpc, size_t len, Vxi11
     return r.ok;
 }
 
-size_t pc_vxi11_build_device_write(uint8_t *buf, size_t cap, uint32_t xid, int32_t lid, uint32_t io_timeout,
+size_t protocore_vxi11_build_device_write(uint8_t *buf, size_t cap, uint32_t xid, int32_t lid, uint32_t io_timeout,
                                    uint32_t lock_timeout, uint32_t flags, const uint8_t *data, size_t data_len)
 {
     if (data_len && !data)
     {
         return 0;
     }
-    XdrW w = begin_call(buf, cap, xid, PC_VXI11_CORE_PROG, PC_VXI11_CORE_VERS, (uint32_t)VXI11_PROC_DEVICE_WRITE);
+    XdrW w = begin_call(buf, cap, xid, PROTOCORE_VXI11_CORE_PROG, PROTOCORE_VXI11_CORE_VERS, (uint32_t)VXI11_PROC_DEVICE_WRITE);
     xw_u32(&w, (uint32_t)lid);
     xw_u32(&w, io_timeout);
     xw_u32(&w, lock_timeout);
@@ -286,7 +286,7 @@ size_t pc_vxi11_build_device_write(uint8_t *buf, size_t cap, uint32_t xid, int32
     return finish_call(&w);
 }
 
-proto_bool pc_vxi11_parse_write_resp(const uint8_t *rpc, size_t len, Vxi11WriteResp *out)
+proto_bool protocore_vxi11_parse_write_resp(const uint8_t *rpc, size_t len, Vxi11WriteResp *out)
 {
     XdrR r;
     if (!out || !reply_results(rpc, len, &r))
@@ -298,10 +298,10 @@ proto_bool pc_vxi11_parse_write_resp(const uint8_t *rpc, size_t len, Vxi11WriteR
     return r.ok;
 }
 
-size_t pc_vxi11_build_device_read(uint8_t *buf, size_t cap, uint32_t xid, int32_t lid, uint32_t request_size,
+size_t protocore_vxi11_build_device_read(uint8_t *buf, size_t cap, uint32_t xid, int32_t lid, uint32_t request_size,
                                   uint32_t io_timeout, uint32_t lock_timeout, uint32_t flags, uint8_t term_char)
 {
-    XdrW w = begin_call(buf, cap, xid, PC_VXI11_CORE_PROG, PC_VXI11_CORE_VERS, (uint32_t)VXI11_PROC_DEVICE_READ);
+    XdrW w = begin_call(buf, cap, xid, PROTOCORE_VXI11_CORE_PROG, PROTOCORE_VXI11_CORE_VERS, (uint32_t)VXI11_PROC_DEVICE_READ);
     xw_u32(&w, (uint32_t)lid);
     xw_u32(&w, request_size);
     xw_u32(&w, io_timeout);
@@ -311,7 +311,7 @@ size_t pc_vxi11_build_device_read(uint8_t *buf, size_t cap, uint32_t xid, int32_
     return finish_call(&w);
 }
 
-proto_bool pc_vxi11_parse_read_resp(const uint8_t *rpc, size_t len, Vxi11ReadResp *out)
+proto_bool protocore_vxi11_parse_read_resp(const uint8_t *rpc, size_t len, Vxi11ReadResp *out)
 {
     XdrR r;
     if (!out || !reply_results(rpc, len, &r))
@@ -326,10 +326,10 @@ proto_bool pc_vxi11_parse_read_resp(const uint8_t *rpc, size_t len, Vxi11ReadRes
     return r.ok;
 }
 
-size_t pc_vxi11_build_device_readstb(uint8_t *buf, size_t cap, uint32_t xid, int32_t lid, uint32_t flags,
+size_t protocore_vxi11_build_device_readstb(uint8_t *buf, size_t cap, uint32_t xid, int32_t lid, uint32_t flags,
                                      uint32_t lock_timeout, uint32_t io_timeout)
 {
-    XdrW w = begin_call(buf, cap, xid, PC_VXI11_CORE_PROG, PC_VXI11_CORE_VERS, (uint32_t)VXI11_PROC_DEVICE_READSTB);
+    XdrW w = begin_call(buf, cap, xid, PROTOCORE_VXI11_CORE_PROG, PROTOCORE_VXI11_CORE_VERS, (uint32_t)VXI11_PROC_DEVICE_READSTB);
     xw_u32(&w, (uint32_t)lid); // Device_GenericParms fields in order: lid, flags, lock_timeout, io_timeout
     xw_u32(&w, flags);
     xw_u32(&w, lock_timeout);
@@ -337,7 +337,7 @@ size_t pc_vxi11_build_device_readstb(uint8_t *buf, size_t cap, uint32_t xid, int
     return finish_call(&w);
 }
 
-proto_bool pc_vxi11_parse_readstb_resp(const uint8_t *rpc, size_t len, Vxi11ReadStbResp *out)
+proto_bool protocore_vxi11_parse_readstb_resp(const uint8_t *rpc, size_t len, Vxi11ReadStbResp *out)
 {
     XdrR r;
     if (!out || !reply_results(rpc, len, &r))
@@ -349,10 +349,10 @@ proto_bool pc_vxi11_parse_readstb_resp(const uint8_t *rpc, size_t len, Vxi11Read
     return r.ok;
 }
 
-size_t pc_vxi11_build_device_clear(uint8_t *buf, size_t cap, uint32_t xid, int32_t lid, uint32_t flags,
+size_t protocore_vxi11_build_device_clear(uint8_t *buf, size_t cap, uint32_t xid, int32_t lid, uint32_t flags,
                                    uint32_t lock_timeout, uint32_t io_timeout)
 {
-    XdrW w = begin_call(buf, cap, xid, PC_VXI11_CORE_PROG, PC_VXI11_CORE_VERS, (uint32_t)VXI11_PROC_DEVICE_CLEAR);
+    XdrW w = begin_call(buf, cap, xid, PROTOCORE_VXI11_CORE_PROG, PROTOCORE_VXI11_CORE_VERS, (uint32_t)VXI11_PROC_DEVICE_CLEAR);
     xw_u32(&w, (uint32_t)lid); // Device_GenericParms: lid, flags, lock_timeout, io_timeout
     xw_u32(&w, flags);
     xw_u32(&w, lock_timeout);
@@ -360,10 +360,10 @@ size_t pc_vxi11_build_device_clear(uint8_t *buf, size_t cap, uint32_t xid, int32
     return finish_call(&w);
 }
 
-size_t pc_vxi11_build_device_trigger(uint8_t *buf, size_t cap, uint32_t xid, int32_t lid, uint32_t flags,
+size_t protocore_vxi11_build_device_trigger(uint8_t *buf, size_t cap, uint32_t xid, int32_t lid, uint32_t flags,
                                      uint32_t lock_timeout, uint32_t io_timeout)
 {
-    XdrW w = begin_call(buf, cap, xid, PC_VXI11_CORE_PROG, PC_VXI11_CORE_VERS, (uint32_t)VXI11_PROC_DEVICE_TRIGGER);
+    XdrW w = begin_call(buf, cap, xid, PROTOCORE_VXI11_CORE_PROG, PROTOCORE_VXI11_CORE_VERS, (uint32_t)VXI11_PROC_DEVICE_TRIGGER);
     xw_u32(&w, (uint32_t)lid); // Device_GenericParms: lid, flags, lock_timeout, io_timeout
     xw_u32(&w, flags);
     xw_u32(&w, lock_timeout);
@@ -371,14 +371,14 @@ size_t pc_vxi11_build_device_trigger(uint8_t *buf, size_t cap, uint32_t xid, int
     return finish_call(&w);
 }
 
-size_t pc_vxi11_build_destroy_link(uint8_t *buf, size_t cap, uint32_t xid, int32_t lid)
+size_t protocore_vxi11_build_destroy_link(uint8_t *buf, size_t cap, uint32_t xid, int32_t lid)
 {
-    XdrW w = begin_call(buf, cap, xid, PC_VXI11_CORE_PROG, PC_VXI11_CORE_VERS, (uint32_t)VXI11_PROC_DESTROY_LINK);
+    XdrW w = begin_call(buf, cap, xid, PROTOCORE_VXI11_CORE_PROG, PROTOCORE_VXI11_CORE_VERS, (uint32_t)VXI11_PROC_DESTROY_LINK);
     xw_u32(&w, (uint32_t)lid); // Device_Link
     return finish_call(&w);
 }
 
-proto_bool pc_vxi11_parse_error_resp(const uint8_t *rpc, size_t len, int32_t *error)
+proto_bool protocore_vxi11_parse_error_resp(const uint8_t *rpc, size_t len, int32_t *error)
 {
     XdrR r;
     if (!reply_results(rpc, len, &r))
@@ -397,19 +397,19 @@ proto_bool pc_vxi11_parse_error_resp(const uint8_t *rpc, size_t len, int32_t *er
     return PROTO_TRUE;
 }
 
-const char *pc_vxi11_error_str(int32_t error)
+const char *protocore_vxi11_error_str(int32_t error)
 {
     switch (error)
     {
-    case PC_VXI11_ERR_NONE:
+    case PROTOCORE_VXI11_ERR_NONE:
         return "no error";
-    case PC_VXI11_ERR_SYNTAX:
+    case PROTOCORE_VXI11_ERR_SYNTAX:
         return "syntax error";
-    case PC_VXI11_ERR_NOT_ACCESSIBLE:
+    case PROTOCORE_VXI11_ERR_NOT_ACCESSIBLE:
         return "device not accessible";
-    case PC_VXI11_ERR_INVALID_LINK:
+    case PROTOCORE_VXI11_ERR_INVALID_LINK:
         return "invalid link identifier";
-    case PC_VXI11_ERR_PARAMETER:
+    case PROTOCORE_VXI11_ERR_PARAMETER:
         return "parameter error";
     case 6:
         return "channel not established";
@@ -419,15 +419,15 @@ const char *pc_vxi11_error_str(int32_t error)
         return "out of resources";
     case 11:
         return "device locked by another link";
-    case PC_VXI11_ERR_NO_LOCK:
+    case PROTOCORE_VXI11_ERR_NO_LOCK:
         return "no lock held by this link";
-    case PC_VXI11_ERR_IO_TIMEOUT:
+    case PROTOCORE_VXI11_ERR_IO_TIMEOUT:
         return "I/O timeout";
-    case PC_VXI11_ERR_IO_ERROR:
+    case PROTOCORE_VXI11_ERR_IO_ERROR:
         return "I/O error";
     case 21:
         return "invalid address";
-    case PC_VXI11_ERR_ABORT:
+    case PROTOCORE_VXI11_ERR_ABORT:
         return "abort";
     case 29:
         return "channel already established";
@@ -436,4 +436,4 @@ const char *pc_vxi11_error_str(int32_t error)
     }
 }
 
-#endif // PC_ENABLE_VXI11
+#endif // PROTOCORE_ENABLE_VXI11

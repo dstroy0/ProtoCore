@@ -16,7 +16,7 @@
  *     curl http://127.0.0.1:8022/        # -> the device's web server, over the tunnel
  *
  * KEY POINT - run the tunnel in its OWN task with enough stack. The handshake's
- * field arithmetic (curve25519/ed25519, and ML-KEM if PC_ENABLE_PQC_KEX) runs
+ * field arithmetic (curve25519/ed25519, and ML-KEM if PROTOCORE_ENABLE_PQC_KEX) runs
  * in the caller's task and peaks at ~10.5 KB (classical) or ~16 KB (hybrid).
  * loop()'s default 8 KB is NOT enough - create a dedicated >= 20 KB task and call
  * begin()+poll() from it (begin() also claims a private scratch arena for that
@@ -53,13 +53,13 @@ static const uint8_t HOST_PIN[32] = {0};
 static void root(uint8_t slot, HttpReq *req)
 {
     (void)req;
-    send_text(slot, 200, PC_MIME_TEXT_PLAIN, "hello from the device behind NAT, over the reverse SSH tunnel\n");
+    send_text(slot, 200, PROTOCORE_MIME_TEXT_PLAIN, "hello from the device behind NAT, over the reverse SSH tunnel\n");
 }
 
 // Dedicated task: enough stack for the KEX, and the same task owns begin()+poll().
 static void tunnel_task(void *)
 {
-    pc_ssh_tunnel_cfg cfg = {};
+    protocore_ssh_tunnel_cfg cfg = {};
     cfg.host = RELAY_HOST;
     cfg.port = 22;
     cfg.user = RELAY_USER;
@@ -68,15 +68,15 @@ static void tunnel_task(void *)
     cfg.bind_addr = "";   // relay binds the forward on localhost (GatewayPorts no)
     cfg.bind_port = 8022; // relay listens here; connections tunnel back to us
     cfg.local_port = 80;  // bridged to our own web server
-    pc_ssh_tunnel_begin(&cfg);
+    protocore_ssh_tunnel_begin(&cfg);
     for (;;)
     {
-        pc_ssh_tunnel_poll();
+        protocore_ssh_tunnel_poll();
         // Reconnect with a backoff if the relay drops us or the pin/auth fails.
-        if (pc_ssh_tunnel_state_get() == pc_ssh_tunnel_state::PC_TUN_FAILED)
+        if (protocore_ssh_tunnel_state_get() == protocore_ssh_tunnel_state::PROTOCORE_TUN_FAILED)
         {
             delay(5000);
-            pc_ssh_tunnel_begin(&cfg);
+            protocore_ssh_tunnel_begin(&cfg);
         }
         delay(5);
     }
@@ -94,7 +94,7 @@ void setup()
 
     // Print our public key so you can add it to the relay's authorized_keys.
     uint8_t pub[32];
-    pc_ssh_tunnel_pubkey(AUTH_SEED, pub);
+    protocore_ssh_tunnel_pubkey(AUTH_SEED, pub);
     Serial.print("device ssh-ed25519 raw pubkey (add to relay authorized_keys): ");
     for (int i = 0; i < 32; i++)
     {
@@ -106,13 +106,13 @@ void setup()
     begin_http(80, NULL);
 
     // 20 KB stack covers the ML-KEM hybrid handshake; pin to core 0 (off the loop).
-    xTaskCreatePinnedToCore(tunnel_task, "pc_ssh_tun", 20480, nullptr, 5, nullptr, 0);
+    xTaskCreatePinnedToCore(tunnel_task, "protocore_ssh_tun", 20480, nullptr, 5, nullptr, 0);
 }
 
 void loop()
 {
     handle();
-    if (pc_ssh_tunnel_up())
+    if (protocore_ssh_tunnel_up())
     {
         static bool announced = false;
         if (!announced)

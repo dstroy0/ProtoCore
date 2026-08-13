@@ -7,7 +7,7 @@
  *
  * Serves an observable "/count" resource over CoAP/UDP. A client that sends a GET
  * with the Observe option is registered as an observer; every second the sketch
- * increments the counter and calls pc_coap_notify("/count"), pushing the new value to
+ * increments the counter and calls protocore_coap_notify("/count"), pushing the new value to
  * all observers (a CoAP notification from the server port with an increasing
  * Observe sequence). Try it with:
  *     coap-client -m get -s 30 coap://<ip>/count      # libcoap, -s = observe
@@ -15,12 +15,12 @@
  *
  * NOTE: optional services are gated by a compile flag the *library* sources must
  * also see; for PlatformIO enable it for the whole build, e.g.:
- *     build_flags = -DPC_ENABLE_COAP=1 -DPC_ENABLE_COAP_OBSERVE=1
+ *     build_flags = -DPROTOCORE_ENABLE_COAP=1 -DPROTOCORE_ENABLE_COAP_OBSERVE=1
  * (Arduino IDE: they are already set for you in the build_opt.h beside this sketch, so it builds as-is.)
  */
 
-#define PC_ENABLE_COAP 1
-#define PC_ENABLE_COAP_OBSERVE 1
+#define PROTOCORE_ENABLE_COAP 1
+#define PROTOCORE_ENABLE_COAP_OBSERVE 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -55,9 +55,9 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    pc_coap_server_reset();
-    pc_coap_server_add_resource("/count", COAP_ALLOW_GET, h_count);
-    pc_coap_server_begin(5683);
+    protocore_coap_server_reset();
+    protocore_coap_server_add_resource("/count", COAP_ALLOW_GET, h_count);
+    protocore_coap_server_begin(5683);
     Serial.println("CoAP server on :5683, observe coap://<ip>/count");
 }
 
@@ -68,6 +68,6 @@ void loop()
     {
         last = millis();
         g_count++;
-        pc_coap_notify("/count"); // push the new value to every observer
+        protocore_coap_notify("/count"); // push the new value to every observer
     }
 }

@@ -1,6 +1,6 @@
 # SSHHostKey - provision an SSH host key
 
-**Layer:** L5 Session · **Build flags:** `PC_ENABLE_SSH`
+**Layer:** L5 Session · **Build flags:** `PROTOCORE_ENABLE_SSH`
 
 ## What this example teaches
 
@@ -39,7 +39,7 @@ is compiled into the firmware and installed in one call:
 
 ```cpp
 #include "host_key.h"            // HOST_KEY_SEED[32], generated in step 1
-pc_ssh_hostkey_ed25519_set(HOST_KEY_SEED);
+protocore_ssh_hostkey_ed25519_set(HOST_KEY_SEED);
 ```
 
 Simplest to get running; the key ships inside the image. Good for a fleet you
@@ -57,7 +57,7 @@ Preferences p; p.begin("ssh_host_key", false);
 p.putBytes("priv_der", HOST_KEY_DER, HOST_KEY_DER_LEN);
 p.end();
 // every boot after that:
-pc_ssh_rsa_load_pubkey();           // loads only the public half
+protocore_ssh_rsa_load_pubkey();           // loads only the public half
 ```
 
 This keeps the key out of the firmware image and lets you rotate it without a
@@ -71,11 +71,11 @@ rebuild (a provisioning portal, a factory step, an OTA-delivered blob). See
 
 ## Build and run
 
-`PC_ENABLE_SSH` must reach the library build, so pass it as a build flag:
+`PROTOCORE_ENABLE_SSH` must reach the library build, so pass it as a build flag:
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_SSH=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_SSH=1" \
   --lib="." examples/L5-Session/SSHHostKey/SSHHostKey.ino
 ```
 

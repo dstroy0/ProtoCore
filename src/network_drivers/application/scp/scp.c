@@ -7,10 +7,10 @@
  */
 
 #include "network_drivers/application/scp/scp.h"
-#include "mmgr/membuild.h" // pc_sb frame builder
+#include "mmgr/membuild.h" // protocore_sb frame builder
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_SSH_SCP
+#if PROTOCORE_ENABLE_SSH_SCP
 
 #include <stdio.h>
 
@@ -31,7 +31,7 @@ static void apply_scp_flags(const char *tok, size_t tlen, ScpMode *mode)
     }
 }
 
-ScpMode pc_scp_parse_cmd(const char *cmd, size_t cmd_len, char *path_out, size_t path_cap)
+ScpMode protocore_scp_parse_cmd(const char *cmd, size_t cmd_len, char *path_out, size_t path_cap)
 {
     if (!cmd || !path_out || path_cap == 0)
     {
@@ -80,7 +80,7 @@ ScpMode pc_scp_parse_cmd(const char *cmd, size_t cmd_len, char *path_out, size_t
     return mode;
 }
 
-proto_bool pc_scp_parse_cline(const char *line, size_t len, uint32_t *mode_out, uint64_t *size_out, char *name_out,
+proto_bool protocore_scp_parse_cline(const char *line, size_t len, uint32_t *mode_out, uint64_t *size_out, char *name_out,
                               size_t name_cap)
 {
     if (!line || len < 1 || line[0] != 'C') // only plain file records (not D/E directory records)
@@ -139,17 +139,17 @@ proto_bool pc_scp_parse_cline(const char *line, size_t len, uint32_t *mode_out, 
     return PROTO_TRUE;
 }
 
-size_t pc_scp_build_cline(uint32_t mode, uint64_t size, const char *name, char *out, size_t cap)
+size_t protocore_scp_build_cline(uint32_t mode, uint64_t size, const char *name, char *out, size_t cap)
 {
-    pc_sb sb_out = {out, cap, 0, PROTO_TRUE};
-    pc_sb_put(&sb_out, "C");
-    pc_sb_uint(&sb_out, (uint64_t)((unsigned)(mode & 07777)), 8, 4);
-    pc_sb_put(&sb_out, " ");
-    pc_sb_u64(&sb_out, (uint64_t)((unsigned long long)size));
-    pc_sb_put(&sb_out, " ");
-    pc_sb_put(&sb_out, name);
-    pc_sb_put(&sb_out, "\n");
-    int n = (int)pc_sb_finish(&sb_out);
+    protocore_sb sb_out = {out, cap, 0, PROTO_TRUE};
+    protocore_sb_put(&sb_out, "C");
+    protocore_sb_uint(&sb_out, (uint64_t)((unsigned)(mode & 07777)), 8, 4);
+    protocore_sb_put(&sb_out, " ");
+    protocore_sb_u64(&sb_out, (uint64_t)((unsigned long long)size));
+    protocore_sb_put(&sb_out, " ");
+    protocore_sb_put(&sb_out, name);
+    protocore_sb_put(&sb_out, "\n");
+    int n = (int)protocore_sb_finish(&sb_out);
     // The n <= 0 arm can never be true, so this line is branch-excluded: snprintf returns the length
     // it WOULD have written (never negative here - no encoding can fail on this format), and that
     // format always emits at least "C0000 0 \n". Only the truncation arm is reachable, and it is
@@ -161,4 +161,4 @@ size_t pc_scp_build_cline(uint32_t mode, uint64_t size, const char *name, char *
     return (size_t)n;
 }
 
-#endif // PC_ENABLE_SSH_SCP
+#endif // PROTOCORE_ENABLE_SSH_SCP

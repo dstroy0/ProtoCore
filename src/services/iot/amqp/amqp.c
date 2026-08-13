@@ -9,11 +9,11 @@
 #include "services/iot/amqp/amqp.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_AMQP
+#if PROTOCORE_ENABLE_AMQP
 
 #include "mmgr/endian.h"
 
-size_t pc_amqp_protocol_header(uint8_t *buf, size_t cap)
+size_t protocore_amqp_protocol_header(uint8_t *buf, size_t cap)
 {
     static const uint8_t hdr[8] = {'A', 'M', 'Q', 'P', 0, 0, 9, 1};
     if (!buf || cap < sizeof(hdr))
@@ -29,12 +29,12 @@ static size_t write_frame_header(uint8_t *buf, uint8_t type, uint16_t channel, u
 {
     size_t p = 0;
     buf[p++] = type;
-    p += pc_wr16be(buf + p, channel);
-    p += pc_wr32be(buf + p, size);
+    p += protocore_wr16be(buf + p, channel);
+    p += protocore_wr32be(buf + p, size);
     return p; // 7
 }
 
-size_t pc_amqp_build_frame(uint8_t *buf, size_t cap, uint8_t type, uint16_t channel, const uint8_t *payload,
+size_t protocore_amqp_build_frame(uint8_t *buf, size_t cap, uint8_t type, uint16_t channel, const uint8_t *payload,
                            size_t payload_len)
 {
     if (!buf || (payload_len && !payload) || payload_len > 0xFFFFFFFFu)
@@ -56,7 +56,7 @@ size_t pc_amqp_build_frame(uint8_t *buf, size_t cap, uint8_t type, uint16_t chan
     return p;
 }
 
-size_t pc_amqp_build_method(uint8_t *buf, size_t cap, uint16_t channel, uint16_t class_id, uint16_t method_id,
+size_t protocore_amqp_build_method(uint8_t *buf, size_t cap, uint16_t channel, uint16_t class_id, uint16_t method_id,
                             const uint8_t *args, size_t args_len)
 {
     if (!buf || (args_len && !args))
@@ -71,8 +71,8 @@ size_t pc_amqp_build_method(uint8_t *buf, size_t cap, uint16_t channel, uint16_t
     }
     // Write directly into buf (no temp): header, then the method payload, then the 0xCE end.
     size_t p = write_frame_header(buf, AMQP_FRAME_METHOD, channel, (uint32_t)payload_len);
-    p += pc_wr16be(buf + p, class_id);
-    p += pc_wr16be(buf + p, method_id);
+    p += protocore_wr16be(buf + p, class_id);
+    p += protocore_wr16be(buf + p, method_id);
     if (args_len)
     {
         mem.cpy(buf + p, args, args_len);
@@ -82,7 +82,7 @@ size_t pc_amqp_build_method(uint8_t *buf, size_t cap, uint16_t channel, uint16_t
     return p;
 }
 
-size_t pc_amqp_build_content_header(uint8_t *buf, size_t cap, uint16_t channel, uint16_t class_id, uint64_t body_size,
+size_t protocore_amqp_build_content_header(uint8_t *buf, size_t cap, uint16_t channel, uint16_t class_id, uint64_t body_size,
                                     uint16_t property_flags, const uint8_t *properties, size_t properties_len)
 {
     if (!buf || (properties_len && !properties))
@@ -96,10 +96,10 @@ size_t pc_amqp_build_content_header(uint8_t *buf, size_t cap, uint16_t channel, 
         return 0;
     }
     size_t p = write_frame_header(buf, AMQP_FRAME_HEADER, channel, (uint32_t)payload_len);
-    p += pc_wr16be(buf + p, class_id);
-    p += pc_wr16be(buf + p, 0); // weight (deprecated, always 0)
-    p += pc_wr64be(buf + p, body_size);
-    p += pc_wr16be(buf + p, property_flags);
+    p += protocore_wr16be(buf + p, class_id);
+    p += protocore_wr16be(buf + p, 0); // weight (deprecated, always 0)
+    p += protocore_wr64be(buf + p, body_size);
+    p += protocore_wr16be(buf + p, property_flags);
     if (properties_len)
     {
         mem.cpy(buf + p, properties, properties_len);
@@ -109,18 +109,18 @@ size_t pc_amqp_build_content_header(uint8_t *buf, size_t cap, uint16_t channel, 
     return p;
 }
 
-size_t pc_amqp_build_heartbeat(uint8_t *buf, size_t cap)
+size_t protocore_amqp_build_heartbeat(uint8_t *buf, size_t cap)
 {
-    return pc_amqp_build_frame(buf, cap, AMQP_FRAME_HEARTBEAT, 0, NULL, 0);
+    return protocore_amqp_build_frame(buf, cap, AMQP_FRAME_HEARTBEAT, 0, NULL, 0);
 }
 
-proto_bool pc_amqp_parse_frame(const uint8_t *buf, size_t len, AmqpFrame *out, size_t *consumed)
+proto_bool protocore_amqp_parse_frame(const uint8_t *buf, size_t len, AmqpFrame *out, size_t *consumed)
 {
     if (!buf || !out || len < AMQP_FRAME_OVERHEAD)
     {
         return PROTO_FALSE;
     }
-    uint32_t size = pc_rd32be(buf + 3);
+    uint32_t size = protocore_rd32be(buf + 3);
     // Compare against the remaining capacity without adding (a 32-bit size_t would wrap if we
     // computed 8 + size first), so an attacker-controlled size can't slip past the bound.
     if (size > len - AMQP_FRAME_OVERHEAD)
@@ -133,7 +133,7 @@ proto_bool pc_amqp_parse_frame(const uint8_t *buf, size_t len, AmqpFrame *out, s
         return PROTO_FALSE; // missing / corrupt frame terminator
     }
     out->type = buf[0];
-    out->channel = pc_rd16be(buf + 1);
+    out->channel = protocore_rd16be(buf + 1);
     out->payload = buf + 7;
     out->payload_len = size;
     if (consumed)
@@ -143,7 +143,7 @@ proto_bool pc_amqp_parse_frame(const uint8_t *buf, size_t len, AmqpFrame *out, s
     return PROTO_TRUE;
 }
 
-proto_bool pc_amqp_parse_method(const uint8_t *payload, size_t payload_len, uint16_t *class_id, uint16_t *method_id,
+proto_bool protocore_amqp_parse_method(const uint8_t *payload, size_t payload_len, uint16_t *class_id, uint16_t *method_id,
                                 const uint8_t **args, size_t *args_len)
 {
     if (!payload || payload_len < 4)
@@ -152,11 +152,11 @@ proto_bool pc_amqp_parse_method(const uint8_t *payload, size_t payload_len, uint
     }
     if (class_id)
     {
-        *class_id = pc_rd16be(payload);
+        *class_id = protocore_rd16be(payload);
     }
     if (method_id)
     {
-        *method_id = pc_rd16be(payload + 2);
+        *method_id = protocore_rd16be(payload + 2);
     }
     if (args)
     {
@@ -169,4 +169,4 @@ proto_bool pc_amqp_parse_method(const uint8_t *payload, size_t payload_len, uint
     return PROTO_TRUE;
 }
 
-#endif // PC_ENABLE_AMQP
+#endif // PROTOCORE_ENABLE_AMQP

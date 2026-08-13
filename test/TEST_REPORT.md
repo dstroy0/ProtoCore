@@ -76,7 +76,7 @@ _Unit tests for the CiA 402 drive profile (services/fieldbus/cia402): the Status
 |  11 | `test_controlword_invalid_command`    |   ✅   | Controlword invalid command                                                               |
 |  12 | `test_sdo_set_velocity_torque`        |   ✅   | Sdo set velocity torque                                                                   |
 |  13 | `test_sdo_get_i32_roundtrip`          |   ✅   | Sdo get i32 roundtrip                                                                     |
-|  14 | `test_sdo_upload_reject_paths`        |   ✅   | (a) parse failure: dlc < 8 makes pc_canopen_parse_sdo_response fail.                      |
+|  14 | `test_sdo_upload_reject_paths`        |   ✅   | (a) parse failure: dlc < 8 makes protocore_canopen_parse_sdo_response fail.               |
 |  15 | `test_pdo_null_guards`                |   ✅   | Pdo null guards                                                                           |
 
 </details>
@@ -334,69 +334,69 @@ _Host tests for the CDN edge-cache async origin-fetch engine (services/web/edge_
 
 _Pure host tests for the CDN edge-cache engine (services/web/edge_cache): response header-field access,_
 
-|   # | Test                                                     | Status | Description                                                                                    |
-| --: | :------------------------------------------------------- | :----: | :--------------------------------------------------------------------------------------------- |
-|   1 | `test_header_value_found`                                |   ✅   | Header value found                                                                             |
-|   2 | `test_header_value_case_insensitive_and_ows_trim`        |   ✅   | case-insensitive name; leading + trailing OWS on the value is stripped                         |
-|   3 | `test_header_value_absent_and_too_small`                 |   ✅   | Header value absent and too small                                                              |
-|   4 | `test_http_date_all_three_formats`                       |   ✅   | RFC 9110 sec 5.6.7 worked example: all three encode 1994-11-06 08:49:37 UTC = 784111777.       |
-|   5 | `test_http_date_epoch_zero_and_invalid`                  |   ✅   | Http date epoch zero and invalid                                                               |
-|   6 | `test_freshness_lifetime_precedence`                     |   ✅   | Freshness lifetime precedence                                                                  |
-|   7 | `test_heuristic_lifetime`                                |   ✅   | Heuristic lifetime                                                                             |
-|   8 | `test_initial_and_current_age`                           |   ✅   | no wall clock (response_time_epoch < 0) -> the Age header alone                                |
-|   9 | `test_is_fresh`                                          |   ✅   | Is fresh                                                                                       |
-|  10 | `test_key_canon`                                         |   ✅   | Key canon                                                                                      |
-|  11 | `test_key_digest_deterministic_and_distinct`             |   ✅   | Key digest deterministic and distinct                                                          |
-|  12 | `test_vary_serialize_match_and_differ`                   |   ✅   | Vary serialize match and differ                                                                |
-|  13 | `test_vary_serialize_star_and_empty`                     |   ✅   | Vary serialize star and empty                                                                  |
-|  14 | `test_store_alloc_lookup`                                |   ✅   | Store alloc lookup                                                                             |
-|  15 | `test_store_lru_evict`                                   |   ✅   | Store lru evict                                                                                |
-|  16 | `test_store_ttl_sweep`                                   |   ✅   | Store ttl sweep                                                                                |
-|  17 | `test_store_purge`                                       |   ✅   | Store purge                                                                                    |
-|  18 | `test_store_free_entry`                                  |   ✅   | Store free entry                                                                               |
-|  19 | `test_store_find_vary`                                   |   ✅   | Store find vary                                                                                |
-|  20 | `test_entry_freshness_resolution`                        |   ✅   | Entry freshness resolution                                                                     |
-|  21 | `test_storeability`                                      |   ✅   | Storeability                                                                                   |
-|  22 | `test_build_conditional`                                 |   ✅   | Build conditional                                                                              |
-|  23 | `test_apply_304`                                         |   ✅   | Apply 304                                                                                      |
-|  24 | `test_range_explicit_and_open_ended`                     |   ✅   | bytes=A-B -> inclusive window.                                                                 |
-|  25 | `test_range_suffix`                                      |   ✅   | bytes=-N -> the last N bytes.                                                                  |
-|  26 | `test_range_unsatisfiable`                               |   ✅   | Range unsatisfiable                                                                            |
-|  27 | `test_range_ignored_forms`                               |   ✅   | Range ignored forms                                                                            |
-|  28 | `test_header_value_null_guards`                          |   ✅   | Header value null guards                                                                       |
-|  29 | `test_header_value_overflow_fails_whole_lookup`          |   ✅   | The name matches exactly but its value will not fit: fail the lookup outright rather than      |
-|  30 | `test_header_value_colonless_line_skipped`               |   ✅   | Header value colonless line skipped                                                            |
-|  31 | `test_header_value_lf_only_and_htab_ows`                 |   ✅   | Bare-LF line endings (no CR to strip) and HTAB as the OWS around the value.                    |
-|  32 | `test_header_value_unterminated_blocks`                  |   ✅   | A head with no newline at all: nothing follows the status line.                                |
-|  33 | `test_http_date_null_and_length_bounds`                  |   ✅   | Http date null and length bounds                                                               |
-|  34 | `test_http_date_field_failures`                          |   ✅   | Each early-out of the IMF-fixdate / RFC 850 parse in turn.                                     |
-|  35 | `test_http_date_asctime_field_failures`                  |   ✅   | Http date asctime field failures                                                               |
-|  36 | `test_http_date_field_range_checks`                      |   ✅   | Http date field range checks                                                                   |
-|  37 | `test_http_date_rfc850_year_windows`                     |   ✅   | A 2-digit year below 70 windows into the 2000s.                                                |
-|  38 | `test_http_date_pre_epoch_and_year_zero`                 |   ✅   | Http date pre epoch and year zero                                                              |
-|  39 | `test_heuristic_and_initial_age_edges`                   |   ✅   | Heuristic and initial age edges                                                                |
-|  40 | `test_key_canon_null_guards`                             |   ✅   | Key canon null guards                                                                          |
-|  41 | `test_key_canon_overflow_at_each_append`                 |   ✅   | "GET\nexample.com\n/a/b\nx=1" - a cap that stops at each piece in turn must yield 0, never a   |
-|  42 | `test_key_canon_query_requested_but_empty`               |   ✅   | include_query with nothing to include is the same key as excluding it.                         |
-|  43 | `test_vary_serialize_null_out_and_null_lookup`           |   ✅   | Vary serialize null out and null lookup                                                        |
-|  44 | `test_vary_serialize_overflow_at_each_append`            |   ✅   | Vary serialize overflow at each append                                                         |
-|  45 | `test_vary_serialize_long_name_and_separator_runs`       |   ✅   | A field name past the internal token buffer is clamped, not overflowed.                        |
-|  46 | `test_store_alloc_key_too_long`                          |   ✅   | Store alloc key too long                                                                       |
-|  47 | `test_store_alloc_null_and_oversize_vary_key`            |   ✅   | Store alloc null and oversize vary key                                                         |
-|  48 | `test_store_alloc_no_free_slot_and_empty_lru`            |   ✅   | Every slot marked used with an empty LRU list (the PC_EDGE_CACHE_SLOTS == 0 shape): alloc must |
-|  49 | `test_store_purge_prefix_key_without_a_path`             |   ✅   | A key that is not the canonical "METHOD\nhost\npath" shape has no path portion, so a prefix    |
-|  50 | `test_store_find_skips_unserializable_variant`           |   ✅   | A stored variant whose Vary names cannot be serialized (a "*" that should never have been      |
-|  51 | `test_store_free_entry_foreign_pointer`                  |   ✅   | Store free entry foreign pointer                                                               |
-|  52 | `test_storeability_null_method`                          |   ✅   | Storeability null method                                                                       |
-|  53 | `test_build_conditional_guards_and_overflow_points`      |   ✅   | Build conditional guards and overflow points                                                   |
-|  54 | `test_apply_304_date_expires_and_age`                    |   ✅   | Apply 304 date expires and age                                                                 |
-|  55 | `test_apply_304_non_numeric_age_and_oversize_validators` |   ✅   | Apply 304 non numeric age and oversize validators                                              |
-|  56 | `test_apply_304_reuses_stored_last_modified`             |   ✅   | Apply 304 reuses stored last modified                                                          |
-|  57 | `test_http_date_month_prefix_near_miss`                  |   ✅   | "Jum" shares "ju" with both June and July; the third letter rules both out.                    |
-|  58 | `test_http_date_asctime_no_space_at_all`                 |   ✅   | Http date asctime no space at all                                                              |
-|  59 | `test_header_value_all_whitespace`                       |   ✅   | The first line is the status line and is skipped, so the field under test is the second.       |
-|  60 | `test_vary_serialize_space_tab_and_empty_elements`       |   ✅   | Vary serialize space tab and empty elements                                                    |
-|  61 | `test_store_evict_hook_skips_empty_victim`               |   ✅   | Store evict hook skips empty victim                                                            |
+|   # | Test                                                     | Status | Description                                                                                           |
+| --: | :------------------------------------------------------- | :----: | :---------------------------------------------------------------------------------------------------- |
+|   1 | `test_header_value_found`                                |   ✅   | Header value found                                                                                    |
+|   2 | `test_header_value_case_insensitive_and_ows_trim`        |   ✅   | case-insensitive name; leading + trailing OWS on the value is stripped                                |
+|   3 | `test_header_value_absent_and_too_small`                 |   ✅   | Header value absent and too small                                                                     |
+|   4 | `test_http_date_all_three_formats`                       |   ✅   | RFC 9110 sec 5.6.7 worked example: all three encode 1994-11-06 08:49:37 UTC = 784111777.              |
+|   5 | `test_http_date_epoch_zero_and_invalid`                  |   ✅   | Http date epoch zero and invalid                                                                      |
+|   6 | `test_freshness_lifetime_precedence`                     |   ✅   | Freshness lifetime precedence                                                                         |
+|   7 | `test_heuristic_lifetime`                                |   ✅   | Heuristic lifetime                                                                                    |
+|   8 | `test_initial_and_current_age`                           |   ✅   | no wall clock (response_time_epoch < 0) -> the Age header alone                                       |
+|   9 | `test_is_fresh`                                          |   ✅   | Is fresh                                                                                              |
+|  10 | `test_key_canon`                                         |   ✅   | Key canon                                                                                             |
+|  11 | `test_key_digest_deterministic_and_distinct`             |   ✅   | Key digest deterministic and distinct                                                                 |
+|  12 | `test_vary_serialize_match_and_differ`                   |   ✅   | Vary serialize match and differ                                                                       |
+|  13 | `test_vary_serialize_star_and_empty`                     |   ✅   | Vary serialize star and empty                                                                         |
+|  14 | `test_store_alloc_lookup`                                |   ✅   | Store alloc lookup                                                                                    |
+|  15 | `test_store_lru_evict`                                   |   ✅   | Store lru evict                                                                                       |
+|  16 | `test_store_ttl_sweep`                                   |   ✅   | Store ttl sweep                                                                                       |
+|  17 | `test_store_purge`                                       |   ✅   | Store purge                                                                                           |
+|  18 | `test_store_free_entry`                                  |   ✅   | Store free entry                                                                                      |
+|  19 | `test_store_find_vary`                                   |   ✅   | Store find vary                                                                                       |
+|  20 | `test_entry_freshness_resolution`                        |   ✅   | Entry freshness resolution                                                                            |
+|  21 | `test_storeability`                                      |   ✅   | Storeability                                                                                          |
+|  22 | `test_build_conditional`                                 |   ✅   | Build conditional                                                                                     |
+|  23 | `test_apply_304`                                         |   ✅   | Apply 304                                                                                             |
+|  24 | `test_range_explicit_and_open_ended`                     |   ✅   | bytes=A-B -> inclusive window.                                                                        |
+|  25 | `test_range_suffix`                                      |   ✅   | bytes=-N -> the last N bytes.                                                                         |
+|  26 | `test_range_unsatisfiable`                               |   ✅   | Range unsatisfiable                                                                                   |
+|  27 | `test_range_ignored_forms`                               |   ✅   | Range ignored forms                                                                                   |
+|  28 | `test_header_value_null_guards`                          |   ✅   | Header value null guards                                                                              |
+|  29 | `test_header_value_overflow_fails_whole_lookup`          |   ✅   | The name matches exactly but its value will not fit: fail the lookup outright rather than             |
+|  30 | `test_header_value_colonless_line_skipped`               |   ✅   | Header value colonless line skipped                                                                   |
+|  31 | `test_header_value_lf_only_and_htab_ows`                 |   ✅   | Bare-LF line endings (no CR to strip) and HTAB as the OWS around the value.                           |
+|  32 | `test_header_value_unterminated_blocks`                  |   ✅   | A head with no newline at all: nothing follows the status line.                                       |
+|  33 | `test_http_date_null_and_length_bounds`                  |   ✅   | Http date null and length bounds                                                                      |
+|  34 | `test_http_date_field_failures`                          |   ✅   | Each early-out of the IMF-fixdate / RFC 850 parse in turn.                                            |
+|  35 | `test_http_date_asctime_field_failures`                  |   ✅   | Http date asctime field failures                                                                      |
+|  36 | `test_http_date_field_range_checks`                      |   ✅   | Http date field range checks                                                                          |
+|  37 | `test_http_date_rfc850_year_windows`                     |   ✅   | A 2-digit year below 70 windows into the 2000s.                                                       |
+|  38 | `test_http_date_pre_epoch_and_year_zero`                 |   ✅   | Http date pre epoch and year zero                                                                     |
+|  39 | `test_heuristic_and_initial_age_edges`                   |   ✅   | Heuristic and initial age edges                                                                       |
+|  40 | `test_key_canon_null_guards`                             |   ✅   | Key canon null guards                                                                                 |
+|  41 | `test_key_canon_overflow_at_each_append`                 |   ✅   | "GET\nexample.com\n/a/b\nx=1" - a cap that stops at each piece in turn must yield 0, never a          |
+|  42 | `test_key_canon_query_requested_but_empty`               |   ✅   | include_query with nothing to include is the same key as excluding it.                                |
+|  43 | `test_vary_serialize_null_out_and_null_lookup`           |   ✅   | Vary serialize null out and null lookup                                                               |
+|  44 | `test_vary_serialize_overflow_at_each_append`            |   ✅   | Vary serialize overflow at each append                                                                |
+|  45 | `test_vary_serialize_long_name_and_separator_runs`       |   ✅   | A field name past the internal token buffer is clamped, not overflowed.                               |
+|  46 | `test_store_alloc_key_too_long`                          |   ✅   | Store alloc key too long                                                                              |
+|  47 | `test_store_alloc_null_and_oversize_vary_key`            |   ✅   | Store alloc null and oversize vary key                                                                |
+|  48 | `test_store_alloc_no_free_slot_and_empty_lru`            |   ✅   | Every slot marked used with an empty LRU list (the PROTOCORE_EDGE_CACHE_SLOTS == 0 shape): alloc must |
+|  49 | `test_store_purge_prefix_key_without_a_path`             |   ✅   | A key that is not the canonical "METHOD\nhost\npath" shape has no path portion, so a prefix           |
+|  50 | `test_store_find_skips_unserializable_variant`           |   ✅   | A stored variant whose Vary names cannot be serialized (a "*" that should never have been             |
+|  51 | `test_store_free_entry_foreign_pointer`                  |   ✅   | Store free entry foreign pointer                                                                      |
+|  52 | `test_storeability_null_method`                          |   ✅   | Storeability null method                                                                              |
+|  53 | `test_build_conditional_guards_and_overflow_points`      |   ✅   | Build conditional guards and overflow points                                                          |
+|  54 | `test_apply_304_date_expires_and_age`                    |   ✅   | Apply 304 date expires and age                                                                        |
+|  55 | `test_apply_304_non_numeric_age_and_oversize_validators` |   ✅   | Apply 304 non numeric age and oversize validators                                                     |
+|  56 | `test_apply_304_reuses_stored_last_modified`             |   ✅   | Apply 304 reuses stored last modified                                                                 |
+|  57 | `test_http_date_month_prefix_near_miss`                  |   ✅   | "Jum" shares "ju" with both June and July; the third letter rules both out.                           |
+|  58 | `test_http_date_asctime_no_space_at_all`                 |   ✅   | Http date asctime no space at all                                                                     |
+|  59 | `test_header_value_all_whitespace`                       |   ✅   | The first line is the status line and is skipped, so the field under test is the second.              |
+|  60 | `test_vary_serialize_space_tab_and_empty_elements`       |   ✅   | Vary serialize space tab and empty elements                                                           |
+|  61 | `test_store_evict_hook_skips_empty_victim`               |   ✅   | Store evict hook skips empty victim                                                                   |
 
 </details>
 
@@ -525,7 +525,7 @@ _Unit tests for the shared no-stdlib primitives: the base-10 number parsers_
 |   8 | `test_strtol`              |   ✅   | Strtol                                                                                   |
 |   9 | `test_strtoul`             |   ✅   | Strtoul                                                                                  |
 |  10 | `test_strtof`              |   ✅   | Strtof                                                                                   |
-|  11 | `test_numparse_branches`   |   ✅   | pc_np_ws: exercise every whitespace operand (line 24) - a run of each                    |
+|  11 | `test_numparse_branches`   |   ✅   | protocore_np_ws: exercise every whitespace operand (line 24) - a run of each             |
 |  12 | `test_utf8_valid`          |   ✅   | Utf8 valid                                                                               |
 |  13 | `test_utf8_invalid`        |   ✅   | Utf8 invalid                                                                             |
 
@@ -538,12 +538,12 @@ _Unit tests for the shared no-stdlib primitives: the base-10 number parsers_
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Unit tests for the pc_ip address core (network_drivers/network/pc_ip): RFC 4291 text_
+_Unit tests for the protocore_ip address core (network_drivers/network/protocore_ip): RFC 4291 text_
 
 |   # | Test                                          | Status | Description                                                                 |
 | --: | :-------------------------------------------- | :----: | :-------------------------------------------------------------------------- |
 |   1 | `test_v4_round_trip`                          |   ✅   | V4 round trip                                                               |
-|   2 | `test_from_v6_bytes`                          |   ✅   | 2001:db8::1 as raw network-order bytes -> pc_ip -> canonical text.          |
+|   2 | `test_from_v6_bytes`                          |   ✅   | 2001:db8::1 as raw network-order bytes -> protocore_ip -> canonical text.   |
 |   3 | `test_is_unspecified`                         |   ✅   | Is unspecified                                                              |
 |   4 | `test_prefix_match`                           |   ✅   | IPv4 CIDR containment (the allowlist primitive - full address, no hashing). |
 |   5 | `test_v6_canonical_5952`                      |   ✅   | RFC 5952: lower-case, no leading zeros, longest zero run -> "::".           |
@@ -552,7 +552,7 @@ _Unit tests for the pc_ip address core (network_drivers/network/pc_ip): RFC 4291
 |   8 | `test_classify_v6`                            |   ✅   | Classify v6                                                                 |
 |   9 | `test_reject_malformed`                       |   ✅   | Reject malformed                                                            |
 |  10 | `test_equal_and_from_v4`                      |   ✅   | Equal and from v4                                                           |
-|  11 | `test_ip_classify_equal_cidr_and_parse_edges` |   ✅   | classify: null and a PC_IP_NONE address are UNSPECIFIED.                    |
+|  11 | `test_ip_classify_equal_cidr_and_parse_edges` |   ✅   | classify: null and a PROTOCORE_IP_NONE address are UNSPECIFIED.             |
 
 </details>
 
@@ -563,7 +563,7 @@ _Unit tests for the pc_ip address core (network_drivers/network/pc_ip): RFC 4291
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Unit tests for the unified double-ended arena (network_drivers/session/pc_arena):_
+_Unit tests for the unified double-ended arena (network_drivers/session/protocore_arena):_
 
 |   # | Test                                                | Status | Description                                                                              |
 | --: | :-------------------------------------------------- | :----: | :--------------------------------------------------------------------------------------- |
@@ -664,7 +664,7 @@ _Tests the SSH client-to-server resumable INFLATE (ssh_inflate) against golden v
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_pc_ct_eq is the library's one comparator for every AEAD tag, MAC, digest and signature check, and_
+_protocore_ct_eq is the library's one comparator for every AEAD tag, MAC, digest and signature check, and_
 
 |   # | Test                                          | Status | Description                            |
 | --: | :-------------------------------------------- | :----: | :------------------------------------- |
@@ -1050,29 +1050,29 @@ _Unit tests for the NMEA 0183 codec (services/timing_position/nmea0183): the XOR
 
 _Unit tests for the UBX codec (services/timing_position/ubx): the 8-bit Fletcher checksum, frame build / poll,_
 
-|   # | Test                                | Status | Description                                                             |
-| --: | :---------------------------------- | :----: | :---------------------------------------------------------------------- |
-|   1 | `test_checksum_known_vector`        |   ✅   | Checksum known vector                                                   |
-|   2 | `test_build_poll_mon_ver`           |   ✅   | Build poll mon ver                                                      |
-|   3 | `test_build_poll_cfg_prt`           |   ✅   | Build poll cfg prt                                                      |
-|   4 | `test_build_with_payload`           |   ✅   | UBX-CFG-MSG set-rate: enable UBX-NAV-PVT (01 07) at rate 1.             |
-|   5 | `test_build_rejects_bad_args`       |   ✅   | Build rejects bad args                                                  |
-|   6 | `test_parse_roundtrip`              |   ✅   | Parse roundtrip                                                         |
-|   7 | `test_parse_rejects`                |   ✅   | Parse rejects                                                           |
-|   8 | `test_ack`                          |   ✅   | ACK-ACK (05 01)                                                         |
-|   9 | `test_le_readers`                   |   ✅   | Le readers                                                              |
-|  10 | `test_stream_demux_mixed`           |   ✅   | ASCII NMEA, then a UBX frame, then more ASCII.                          |
-|  11 | `test_stream_bad_checksum_resyncs`  |   ✅   | Stream bad checksum resyncs                                             |
-|  12 | `test_stream_overflow_skips`        |   ✅   | Hand-craft a frame declaring a payload length above PC_UBX_MAX_PAYLOAD. |
-|  13 | `test_stream_false_and_double_sync` |   ✅   | Stream false and double sync                                            |
-|  14 | `test_stream_null_safe`             |   ✅   | Stream null safe                                                        |
-|  15 | `test_nav_pvt_decode`               |   ✅   | Nav pvt decode                                                          |
-|  16 | `test_nav_pvt_rejects`              |   ✅   | Wrong class/id: an ACK-ACK frame is not a NAV-PVT.                      |
-|  17 | `test_nav_sat_decode`               |   ✅   | Nav sat decode                                                          |
-|  18 | `test_nav_sat_rejects`              |   ✅   | Wrong class/id (a NAV-PVT frame is not NAV-SAT).                        |
-|  19 | `test_build_cfg_msg`                |   ✅   | Build cfg msg                                                           |
-|  20 | `test_build_cfg_rate`               |   ✅   | Build cfg rate                                                          |
-|  21 | `test_nav_timeutc_decode`           |   ✅   | Nav timeutc decode                                                      |
+|   # | Test                                | Status | Description                                                                    |
+| --: | :---------------------------------- | :----: | :----------------------------------------------------------------------------- |
+|   1 | `test_checksum_known_vector`        |   ✅   | Checksum known vector                                                          |
+|   2 | `test_build_poll_mon_ver`           |   ✅   | Build poll mon ver                                                             |
+|   3 | `test_build_poll_cfg_prt`           |   ✅   | Build poll cfg prt                                                             |
+|   4 | `test_build_with_payload`           |   ✅   | UBX-CFG-MSG set-rate: enable UBX-NAV-PVT (01 07) at rate 1.                    |
+|   5 | `test_build_rejects_bad_args`       |   ✅   | Build rejects bad args                                                         |
+|   6 | `test_parse_roundtrip`              |   ✅   | Parse roundtrip                                                                |
+|   7 | `test_parse_rejects`                |   ✅   | Parse rejects                                                                  |
+|   8 | `test_ack`                          |   ✅   | ACK-ACK (05 01)                                                                |
+|   9 | `test_le_readers`                   |   ✅   | Le readers                                                                     |
+|  10 | `test_stream_demux_mixed`           |   ✅   | ASCII NMEA, then a UBX frame, then more ASCII.                                 |
+|  11 | `test_stream_bad_checksum_resyncs`  |   ✅   | Stream bad checksum resyncs                                                    |
+|  12 | `test_stream_overflow_skips`        |   ✅   | Hand-craft a frame declaring a payload length above PROTOCORE_UBX_MAX_PAYLOAD. |
+|  13 | `test_stream_false_and_double_sync` |   ✅   | Stream false and double sync                                                   |
+|  14 | `test_stream_null_safe`             |   ✅   | Stream null safe                                                               |
+|  15 | `test_nav_pvt_decode`               |   ✅   | Nav pvt decode                                                                 |
+|  16 | `test_nav_pvt_rejects`              |   ✅   | Wrong class/id: an ACK-ACK frame is not a NAV-PVT.                             |
+|  17 | `test_nav_sat_decode`               |   ✅   | Nav sat decode                                                                 |
+|  18 | `test_nav_sat_rejects`              |   ✅   | Wrong class/id (a NAV-PVT frame is not NAV-SAT).                               |
+|  19 | `test_build_cfg_msg`                |   ✅   | Build cfg msg                                                                  |
+|  20 | `test_build_cfg_rate`               |   ✅   | Build cfg rate                                                                 |
+|  21 | `test_nav_timeutc_decode`           |   ✅   | Nav timeutc decode                                                             |
 
 </details>
 
@@ -1351,8 +1351,8 @@ _Unit, stress, and race-condition tests for Layer 5 (Session)._
 |  13 | `test_evt_error_calls_http_reset`                  |   ✅   | Evt error calls http reset                                           |
 |  14 | `test_evt_data_calls_http_parse`                   |   ✅   | Evt data calls http parse                                            |
 |  15 | `test_multiple_events_drained_in_one_tick`         |   ✅   | Slot 0: dirty state → EVT_CONNECT → reset                            |
-|  16 | `test_proto_register_out_of_range_is_nop`          |   ✅   | Proto register out of range is nop                                   |
-|  17 | `test_proto_get_out_of_range_returns_null`         |   ✅   | Proto get out of range returns null                                  |
+|  16 | `test_protocore_register_out_of_range_is_nop`      |   ✅   | Proto register out of range is nop                                   |
+|  17 | `test_protocore_get_out_of_range_returns_null`     |   ✅   | Proto get out of range returns null                                  |
 |  18 | `test_dispatch_drops_unregistered_protocol_event`  |   ✅   | Dispatch drops unregistered protocol event                           |
 |  19 | `test_dispatch_skips_null_callback_fields`         |   ✅   | Dispatch skips null callback fields                                  |
 |  20 | `test_dispatch_ignores_unknown_evt_type`           |   ✅   | Dispatch ignores unknown evt type                                    |
@@ -1392,12 +1392,12 @@ _Comprehensive unit tests for the standalone HTTP/1.1 parser._
 |  15 | `test_query_raw_string_overflow_truncated`                |   ✅   | Raw query text longer than MAX_QUERY_LEN is silently capped - a capacity limit,            |
 |  16 | `test_forwarded_htab_whitespace_trimmed`                  |   ✅   | Forwarded htab whitespace trimmed                                                          |
 |  17 | `test_forwarded_short_and_unterminated_quote_rejected`    |   ✅   | Forwarded short and unterminated quote rejected                                            |
-|  18 | `test_forwarded_bracketed_ipv6_overflow_and_unterminated` |   ✅   | Bracket content longer than the PC_IP_STR_MAX scratch buffer.                              |
+|  18 | `test_forwarded_bracketed_ipv6_overflow_and_unterminated` |   ✅   | Bracket content longer than the PROTOCORE_IP_STR_MAX scratch buffer.                       |
 |  19 | `test_forwarded_bare_colon_port_edge_cases`               |   ✅   | Token starting with ':' - the single-colon "IPv4:port" split leaves a zero-length address. |
-|  20 | `test_forwarded_proto_missing_or_in_later_element`        |   ✅   | No "proto=" substring anywhere in the header.                                              |
+|  20 | `test_forwarded_protocore_missing_or_in_later_element`    |   ✅   | No "proto=" substring anywhere in the header.                                              |
 |  21 | `test_forwarded_header_present_without_for`               |   ✅   | Forwarded header present without for                                                       |
 |  22 | `test_forwarded_empty_for_token_rejected`                 |   ✅   | Forwarded empty for token rejected                                                         |
-|  23 | `test_xff_proto_missing_or_mismatched`                    |   ✅   | X-Forwarded-For present, no X-Forwarded-Proto header at all.                               |
+|  23 | `test_xff_protocore_missing_or_mismatched`                |   ✅   | X-Forwarded-For present, no X-Forwarded-Proto header at all.                               |
 |  24 | `test_form_basic_lookup_first_middle_last`                |   ✅   | Form basic lookup first middle last                                                        |
 |  25 | `test_form_missing_or_wrong_content_type`                 |   ✅   | Form missing or wrong content type                                                         |
 |  26 | `test_form_content_type_with_charset_suffix`              |   ✅   | Form content type with charset suffix                                                      |
@@ -1611,58 +1611,58 @@ _Unit and stress tests for SHA-1, Base64, and the WebSocket frame parser._
 
 _Unit and stress tests for the Server-Sent Events connection pool (sse.h/cpp)._
 
-|   # | Test                                                | Status | Description                                                                |
-| --: | :-------------------------------------------------- | :----: | :------------------------------------------------------------------------- |
-|   1 | `test_sse_pool_size`                                |   ✅   | Sse pool size                                                              |
-|   2 | `test_sse_ids_match_indices_after_init`             |   ✅   | Sse ids match indices after init                                           |
-|   3 | `test_sse_all_inactive_after_init`                  |   ✅   | Sse all inactive after init                                                |
-|   4 | `test_sse_path_empty_after_init`                    |   ✅   | Sse path empty after init                                                  |
-|   5 | `test_sse_alloc_returns_non_null`                   |   ✅   | Sse alloc returns non null                                                 |
-|   6 | `test_sse_alloc_sets_active`                        |   ✅   | Sse alloc sets active                                                      |
-|   7 | `test_sse_alloc_sets_slot_id`                       |   ✅   | Sse alloc sets slot id                                                     |
-|   8 | `test_sse_alloc_stores_path`                        |   ✅   | Sse alloc stores path                                                      |
-|   9 | `test_sse_alloc_stores_different_paths_per_slot`    |   ✅   | Sse alloc stores different paths per slot                                  |
-|  10 | `test_sse_alloc_path_truncated_to_max`              |   ✅   | Build a path longer than MAX_PATH_LEN                                      |
-|  11 | `test_sse_alloc_pool_full_returns_null`             |   ✅   | Sse alloc pool full returns null                                           |
-|  12 | `test_sse_alloc_sse_id_is_pool_index`               |   ✅   | First free slot is 0 → pc_sse_id should be 0                               |
-|  13 | `test_sse_find_returns_correct_conn`                |   ✅   | Sse find returns correct conn                                              |
-|  14 | `test_sse_find_returns_null_when_empty`             |   ✅   | Sse find returns null when empty                                           |
-|  15 | `test_sse_find_returns_null_for_different_slot`     |   ✅   | Sse find returns null for different slot                                   |
-|  16 | `test_sse_find_after_both_slots_allocated`          |   ✅   | Sse find after both slots allocated                                        |
-|  17 | `test_sse_find_checks_slot_id_not_sse_id`           |   ✅   | pc_sse_pool[0] → slot 3; pc_sse_find(3) must return it, not pc_sse_find(0) |
-|  18 | `test_sse_free_deactivates_slot`                    |   ✅   | Sse free deactivates slot                                                  |
-|  19 | `test_sse_free_restores_sse_id`                     |   ✅   | Sse free restores sse id                                                   |
-|  20 | `test_sse_free_makes_slot_findable_as_null`         |   ✅   | Sse free makes slot findable as null                                       |
-|  21 | `test_sse_free_clears_path`                         |   ✅   | Sse free clears path                                                       |
-|  22 | `test_sse_free_nop_on_unallocated`                  |   ✅   | Sse free nop on unallocated                                                |
-|  23 | `test_sse_alloc_after_free_succeeds`                |   ✅   | Sse alloc after free succeeds                                              |
-|  24 | `test_sse_free_only_frees_matching_slot`            |   ✅   | Sse free only frees matching slot                                          |
-|  25 | `test_sse_write_null_data_returns_false`            |   ✅   | Sse write null data returns false                                          |
-|  26 | `test_sse_write_returns_false_when_conn_not_active` |   ✅   | Sse write returns false when conn not active                               |
-|  27 | `test_sse_write_returns_false_when_pcb_null`        |   ✅   | Sse write returns false when pcb null                                      |
-|  28 | `test_sse_write_data_only_returns_true`             |   ✅   | Sse write data only returns true                                           |
-|  29 | `test_sse_write_with_event_returns_true`            |   ✅   | Sse write with event returns true                                          |
-|  30 | `test_sse_write_with_id_returns_true`               |   ✅   | Sse write with id returns true                                             |
-|  31 | `test_sse_write_with_all_fields_returns_true`       |   ✅   | Sse write with all fields returns true                                     |
-|  32 | `test_sse_write_does_not_affect_other_slots`        |   ✅   | Write to slot 0 -- slot 1 state must be unchanged                          |
-|  33 | `test_http_conn_open_releases_stale_sse_binding`    |   ✅   | Http conn open releases stale sse binding                                  |
-|  34 | `test_http_conn_open_leaves_other_slot_sse_binding` |   ✅   | Http conn open leaves other slot sse binding                               |
-|  35 | `test_sse_format_data_only`                         |   ✅   | Sse format data only                                                       |
-|  36 | `test_sse_format_event_and_data`                    |   ✅   | Sse format event and data                                                  |
-|  37 | `test_sse_format_id_and_data`                       |   ✅   | Sse format id and data                                                     |
-|  38 | `test_sse_format_all_fields_ordering`               |   ✅   | Field order per WHATWG: event, then id, then data (blank line terminates). |
-|  39 | `test_sse_format_null_data_returns_zero`            |   ✅   | Sse format null data returns zero                                          |
-|  40 | `test_sse_format_overflow_returns_zero`             |   ✅   | A record that cannot fit must report 0, never a partial (truncated) frame. |
-|  41 | `test_sse_format_zero_size_returns_zero`            |   ✅   | Sse format zero size returns zero                                          |
-|  42 | `test_sse_format_event_prefix_itself_overflows`     |   ✅   | Sse format event prefix itself overflows                                   |
-|  43 | `test_sse_format_event_newline_overflows`           |   ✅   | Sse format event newline overflows                                         |
-|  44 | `test_sse_format_id_block_failure_arms`             |   ✅   | Sse format id block failure arms                                           |
-|  45 | `test_sse_format_data_block_failure_arms`           |   ✅   | Sse format data block failure arms                                         |
-|  46 | `stress_sse_alloc_free_100_cycles`                  |   ✅   | Stress - Sse alloc free 100 cycles                                         |
-|  47 | `stress_sse_alloc_free_both_slots_alternating`      |   ✅   | Stress - Sse alloc free both slots alternating                             |
-|  48 | `stress_sse_write_100_calls`                        |   ✅   | Stress - Sse write 100 calls                                               |
-|  49 | `stress_sse_find_with_full_pool`                    |   ✅   | Stress - Sse find with full pool                                           |
-|  50 | `stress_sse_write_slot_isolation`                   |   ✅   | Stress - Sse write slot isolation                                          |
+|   # | Test                                                | Status | Description                                                                                     |
+| --: | :-------------------------------------------------- | :----: | :---------------------------------------------------------------------------------------------- |
+|   1 | `test_sse_pool_size`                                |   ✅   | Sse pool size                                                                                   |
+|   2 | `test_sse_ids_match_indices_after_init`             |   ✅   | Sse ids match indices after init                                                                |
+|   3 | `test_sse_all_inactive_after_init`                  |   ✅   | Sse all inactive after init                                                                     |
+|   4 | `test_sse_path_empty_after_init`                    |   ✅   | Sse path empty after init                                                                       |
+|   5 | `test_sse_alloc_returns_non_null`                   |   ✅   | Sse alloc returns non null                                                                      |
+|   6 | `test_sse_alloc_sets_active`                        |   ✅   | Sse alloc sets active                                                                           |
+|   7 | `test_sse_alloc_sets_slot_id`                       |   ✅   | Sse alloc sets slot id                                                                          |
+|   8 | `test_sse_alloc_stores_path`                        |   ✅   | Sse alloc stores path                                                                           |
+|   9 | `test_sse_alloc_stores_different_paths_per_slot`    |   ✅   | Sse alloc stores different paths per slot                                                       |
+|  10 | `test_sse_alloc_path_truncated_to_max`              |   ✅   | Build a path longer than MAX_PATH_LEN                                                           |
+|  11 | `test_sse_alloc_pool_full_returns_null`             |   ✅   | Sse alloc pool full returns null                                                                |
+|  12 | `test_sse_alloc_sse_id_is_pool_index`               |   ✅   | First free slot is 0 → protocore_sse_id should be 0                                             |
+|  13 | `test_sse_find_returns_correct_conn`                |   ✅   | Sse find returns correct conn                                                                   |
+|  14 | `test_sse_find_returns_null_when_empty`             |   ✅   | Sse find returns null when empty                                                                |
+|  15 | `test_sse_find_returns_null_for_different_slot`     |   ✅   | Sse find returns null for different slot                                                        |
+|  16 | `test_sse_find_after_both_slots_allocated`          |   ✅   | Sse find after both slots allocated                                                             |
+|  17 | `test_sse_find_checks_slot_id_not_sse_id`           |   ✅   | protocore_sse_pool[0] → slot 3; protocore_sse_find(3) must return it, not protocore_sse_find(0) |
+|  18 | `test_sse_free_deactivates_slot`                    |   ✅   | Sse free deactivates slot                                                                       |
+|  19 | `test_sse_free_restores_sse_id`                     |   ✅   | Sse free restores sse id                                                                        |
+|  20 | `test_sse_free_makes_slot_findable_as_null`         |   ✅   | Sse free makes slot findable as null                                                            |
+|  21 | `test_sse_free_clears_path`                         |   ✅   | Sse free clears path                                                                            |
+|  22 | `test_sse_free_nop_on_unallocated`                  |   ✅   | Sse free nop on unallocated                                                                     |
+|  23 | `test_sse_alloc_after_free_succeeds`                |   ✅   | Sse alloc after free succeeds                                                                   |
+|  24 | `test_sse_free_only_frees_matching_slot`            |   ✅   | Sse free only frees matching slot                                                               |
+|  25 | `test_sse_write_null_data_returns_false`            |   ✅   | Sse write null data returns false                                                               |
+|  26 | `test_sse_write_returns_false_when_conn_not_active` |   ✅   | Sse write returns false when conn not active                                                    |
+|  27 | `test_sse_write_returns_false_when_pcb_null`        |   ✅   | Sse write returns false when pcb null                                                           |
+|  28 | `test_sse_write_data_only_returns_true`             |   ✅   | Sse write data only returns true                                                                |
+|  29 | `test_sse_write_with_event_returns_true`            |   ✅   | Sse write with event returns true                                                               |
+|  30 | `test_sse_write_with_id_returns_true`               |   ✅   | Sse write with id returns true                                                                  |
+|  31 | `test_sse_write_with_all_fields_returns_true`       |   ✅   | Sse write with all fields returns true                                                          |
+|  32 | `test_sse_write_does_not_affect_other_slots`        |   ✅   | Write to slot 0 -- slot 1 state must be unchanged                                               |
+|  33 | `test_http_conn_open_releases_stale_sse_binding`    |   ✅   | Http conn open releases stale sse binding                                                       |
+|  34 | `test_http_conn_open_leaves_other_slot_sse_binding` |   ✅   | Http conn open leaves other slot sse binding                                                    |
+|  35 | `test_sse_format_data_only`                         |   ✅   | Sse format data only                                                                            |
+|  36 | `test_sse_format_event_and_data`                    |   ✅   | Sse format event and data                                                                       |
+|  37 | `test_sse_format_id_and_data`                       |   ✅   | Sse format id and data                                                                          |
+|  38 | `test_sse_format_all_fields_ordering`               |   ✅   | Field order per WHATWG: event, then id, then data (blank line terminates).                      |
+|  39 | `test_sse_format_null_data_returns_zero`            |   ✅   | Sse format null data returns zero                                                               |
+|  40 | `test_sse_format_overflow_returns_zero`             |   ✅   | A record that cannot fit must report 0, never a partial (truncated) frame.                      |
+|  41 | `test_sse_format_zero_size_returns_zero`            |   ✅   | Sse format zero size returns zero                                                               |
+|  42 | `test_sse_format_event_prefix_itself_overflows`     |   ✅   | Sse format event prefix itself overflows                                                        |
+|  43 | `test_sse_format_event_newline_overflows`           |   ✅   | Sse format event newline overflows                                                              |
+|  44 | `test_sse_format_id_block_failure_arms`             |   ✅   | Sse format id block failure arms                                                                |
+|  45 | `test_sse_format_data_block_failure_arms`           |   ✅   | Sse format data block failure arms                                                              |
+|  46 | `stress_sse_alloc_free_100_cycles`                  |   ✅   | Stress - Sse alloc free 100 cycles                                                              |
+|  47 | `stress_sse_alloc_free_both_slots_alternating`      |   ✅   | Stress - Sse alloc free both slots alternating                                                  |
+|  48 | `stress_sse_write_100_calls`                        |   ✅   | Stress - Sse write 100 calls                                                                    |
+|  49 | `stress_sse_find_with_full_pool`                    |   ✅   | Stress - Sse find with full pool                                                                |
+|  50 | `stress_sse_write_slot_isolation`                   |   ✅   | Stress - Sse write slot isolation                                                               |
 
 </details>
 
@@ -1695,7 +1695,7 @@ _base64 codec tests, anchored on the RFC 4648 sec 10 vectors, both alphabets, an
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Transport observability (PC_ENABLE_OBSERVABILITY): the Tcp.conn->on_event_
+_Transport observability (PROTOCORE_ENABLE_OBSERVABILITY): the Tcp.conn->on_event_
 
 |   # | Test                                                          | Status | Description                                                              |
 | --: | :------------------------------------------------------------ | :----: | :----------------------------------------------------------------------- |
@@ -1754,7 +1754,7 @@ _base64 codec tests, anchored on the RFC 4648 sec 10 vectors, both alphabets, an
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_DiffServ QoS marking (PC_ENABLE_DIFFSERV) host tests: the DSCP->TOS encode, the server-wide + UDP_
+_DiffServ QoS marking (PROTOCORE_ENABLE_DIFFSERV) host tests: the DSCP->TOS encode, the server-wide + UDP_
 
 |   # | Test                                                | Status | Description                                  |
 | --: | :-------------------------------------------------- | :----: | :------------------------------------------- |
@@ -1795,7 +1795,7 @@ _Unit tests for the accept-time connection gates (network_drivers/transport/list
 |  11 | `test_ip_allowlist_family_isolation`                     |   ✅   | Ip allowlist family isolation                                             |
 |  12 | `test_ip_allowlist_host_and_zero_prefix`                 |   ✅   | Ip allowlist host and zero prefix                                         |
 |  13 | `test_ip_allowlist_rejects_bad_and_full`                 |   ✅   | Ip allowlist rejects bad and full                                         |
-|  14 | `test_proto_register_builtins_installs_http`             |   ✅   | Proto register builtins installs http                                     |
+|  14 | `test_protocore_register_builtins_installs_http`         |   ✅   | Proto register builtins installs http                                     |
 |  15 | `test_clock_default_is_platform_millis`                  |   ✅   | Clock default is platform millis                                          |
 |  16 | `test_clock_custom_and_revert`                           |   ✅   | Clock custom and revert                                                   |
 |  17 | `test_accept_cb_global_throttle_rejects_over_budget`     |   ✅   | Accept cb global throttle rejects over budget                             |
@@ -1811,7 +1811,7 @@ _Unit tests for the accept-time connection gates (network_drivers/transport/list
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Tests the parser's streaming-body hook (PC_ENABLE_OTA): a body larger than_
+_Tests the parser's streaming-body hook (PROTOCORE_ENABLE_OTA): a body larger than_
 
 |   # | Test                                                 | Status | Description                                   |
 | --: | :--------------------------------------------------- | :----: | :-------------------------------------------- |
@@ -1831,7 +1831,7 @@ _Tests the parser's streaming-body hook (PC_ENABLE_OTA): a body larger than_
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Unit tests for pc_prov_form_field(): the x-www-form-urlencoded field_
+_Unit tests for protocore_prov_form_field(): the x-www-form-urlencoded field_
 
 |   # | Test                                              | Status | Description                                                                                      |
 | --: | :------------------------------------------------ | :----: | :----------------------------------------------------------------------------------------------- |
@@ -2226,7 +2226,7 @@ _SSH keyboard-interactive authentication tests (RFC 4256): the server sends one 
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Built with PC_SSH_ALLOW_PASSWORD=0: verifies password authentication is_
+_Built with PROTOCORE_SSH_ALLOW_PASSWORD=0: verifies password authentication is_
 
 |   # | Test                                                        | Status | Description                                                            |
 | --: | :---------------------------------------------------------- | :----: | :--------------------------------------------------------------------- |
@@ -2394,7 +2394,7 @@ _Host tests for services/sftp: the SFTP protocol v3 wire codec. Covers the reade
 
 |   # | Test                                              | Status | Description                                                                                             |
 | --: | :------------------------------------------------ | :----: | :------------------------------------------------------------------------------------------------------ |
-|   1 | `test_pc_fs_resolve`                              |   ✅   | Pc fs resolve                                                                                           |
+|   1 | `test_protocore_fs_resolve`                       |   ✅   | Pc fs resolve                                                                                           |
 |   2 | `test_rw_roundtrip`                               |   ✅   | Rw roundtrip                                                                                            |
 |   3 | `test_reader_bounds`                              |   ✅   | Reader bounds                                                                                           |
 |   4 | `test_attrs_roundtrip`                            |   ✅   | Attrs roundtrip                                                                                         |
@@ -2411,7 +2411,7 @@ _Host tests for services/sftp: the SFTP protocol v3 wire codec. Covers the reade
 |  15 | `test_reader_latches_the_first_underflow`         |   ✅   | Once a read runs past the end the reader stays failed: every later read short-circuits on !ok and       |
 |  16 | `test_attrs_extended_stops_on_a_truncated_pair`   |   ✅   | The extension walk is bounded by the reader's health as well as the declared count, so a count          |
 |  17 | `test_writer_latches_overflow_at_every_primitive` |   ✅   | A writer that has overflowed stays overflowed and writes nothing more, so a caller that ignores         |
-|  18 | `test_build_attrs`                                |   ✅   | PC_SSH_FXP_ATTRS is the STAT/FSTAT reply: header, request id, then the attribute blob.                  |
+|  18 | `test_build_attrs`                                |   ✅   | PROTOCORE_SSH_FXP_ATTRS is the STAT/FSTAT reply: header, request id, then the attribute blob.           |
 |  19 | `test_wr_attrs_emits_uidgid`                      |   ✅   | UIDGID is written as a zero pair (the server has no user model) and must round-trip past the reader.    |
 |  20 | `test_patch_u32_past_the_buffer_is_ignored`       |   ✅   | The count patch is a blind poke at a remembered offset; a patch that would run off the end must         |
 |  21 | `test_build_status_without_a_message`             |   ✅   | A null message is a legal STATUS: it goes on the wire as a zero-length string, not a crash.             |
@@ -2901,7 +2901,7 @@ _Unit tests for send_chunked(, NULL) / ChunkedResponse streaming responses._
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Unit tests for the zero-heap JSON helper: pc_json_writer (serialization) and the_
+_Unit tests for the zero-heap JSON helper: protocore_json_writer (serialization) and the_
 
 |   # | Test                                                               | Status | Description                                                                    |
 | --: | :----------------------------------------------------------------- | :----: | :----------------------------------------------------------------------------- |
@@ -2964,7 +2964,7 @@ _Unit tests for the zero-heap JSON helper: pc_json_writer (serialization) and th
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Unit tests for per-route STA/AP interface filters (PC::on(..., pc_if_kind))._
+_Unit tests for per-route STA/AP interface filters (PC::on(..., protocore_if_kind))._
 
 |   # | Test                                          | Status | Description                                                               |
 | --: | :-------------------------------------------- | :----: | :------------------------------------------------------------------------ |
@@ -3023,7 +3023,7 @@ _Unit tests for bounded regex routes (PC::on_regex())._
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Unit tests for the WebSocket web-serial terminal (PC_ENABLE_WEB_TERMINAL):_
+_Unit tests for the WebSocket web-serial terminal (PROTOCORE_ENABLE_WEB_TERMINAL):_
 
 |   # | Test                                        | Status | Description                                                  |
 | --: | :------------------------------------------ | :----: | :----------------------------------------------------------- |
@@ -3071,51 +3071,51 @@ _Phase 3a: the thread-safe app->worker deferred-callback path. defer() hands the
 
 _Host tests for the WebDAV request handler's recursive filesystem operations_
 
-|   # | Test                                             | Status | Description                                                                               |
-| --: | :----------------------------------------------- | :----: | :---------------------------------------------------------------------------------------- |
-|   1 | `test_pc_fs_join_seam`                           |   ✅   | sub starts with '/': the duplicate is consumed, the root's separator is the one kept.     |
-|   2 | `test_pc_fs_resolve_traversal_and_root_edge`     |   ✅   | A ".." anywhere in sub is refused before touching pc_fs_join.                             |
-|   3 | `test_webdav_status_text_table`                  |   ✅   | Webdav status text table                                                                  |
-|   4 | `test_webdav_join_root_slash_with_empty_subpath` |   ✅   | Webdav join root slash with empty subpath                                                 |
-|   5 | `test_put_stream_error_latches_for_later_chunks` |   ✅   | The file is created and takes some of the body, then the medium refuses - leaving several |
-|   6 | `test_webdav_join_root_variants`                 |   ✅   | (a) root ending in '/': "/tsroot/" + "/f.txt" must not become "/tsroot//f.txt".           |
-|   7 | `test_webdav_dav_empty_prefix_mount`             |   ✅   | Webdav dav empty prefix mount                                                             |
-|   8 | `test_webdav_method_dispatch_edges`              |   ✅   | Webdav method dispatch edges                                                              |
-|   9 | `test_webdav_copy_header_edges`                  |   ✅   | Webdav copy header edges                                                                  |
-|  10 | `test_webdav_copy_dest_joins_to_root`            |   ✅   | Webdav copy dest joins to root                                                            |
-|  11 | `test_webdav_propfind_file_and_trailing_slash`   |   ✅   | Webdav propfind file and trailing slash                                                   |
-|  12 | `test_webdav_route_scan_skips_non_dav_routes`    |   ✅   | Webdav route scan skips non dav routes                                                    |
-|  13 | `test_webdav_stream_put_abort_without_open`      |   ✅   | Webdav stream put abort without open                                                      |
-|  14 | `test_webdav_status_on_dead_connection`          |   ✅   | Webdav status on dead connection                                                          |
-|  15 | `test_webdav_get_put_dest_edges`                 |   ✅   | Webdav get put dest edges                                                                 |
-|  16 | `test_webdav_copy_dest_path_too_long_414`        |   ✅   | 240-char fs root: a short source ("/s") still joins under 256, but root + any             |
-|  17 | `test_webdav_recursive_open_failure`             |   ✅   | DELETE: the store cannot remove the name -> 403. Unlinking is a metadata write, not an    |
-|  18 | `test_webdav_source_path_too_long_414`           |   ✅   | Webdav source path too long 414                                                           |
-|  19 | `test_webdav_dav_wildcard_and_route_full`        |   ✅   | (a) A wildcard-terminated prefix is stored as-is; a request under it still routes.        |
-|  20 | `test_webdav_error_paths`                        |   ✅   | Webdav error paths                                                                        |
-|  21 | `test_webdav_deep_tree_rejected`                 |   ✅   | Webdav deep tree rejected                                                                 |
-|  22 | `test_webdav_propfind_limit_and_proppatch`       |   ✅   | Webdav propfind limit and proppatch                                                       |
-|  23 | `test_webdav_copy_fs_table_full`                 |   ✅   | Webdav copy fs table full                                                                 |
-|  24 | `test_copy_collection_recursive`                 |   ✅   | Copy collection recursive                                                                 |
-|  25 | `test_copy_collection_depth0_shallow`            |   ✅   | Copy collection depth0 shallow                                                            |
-|  26 | `test_copy_overwrite_semantics`                  |   ✅   | Copy overwrite semantics                                                                  |
-|  27 | `test_move_collection_recursive`                 |   ✅   | Move collection recursive                                                                 |
-|  28 | `test_delete_collection_recursive`               |   ✅   | Delete collection recursive                                                               |
-|  29 | `test_propfind_depth0_collection_only`           |   ✅   | Propfind depth0 collection only                                                           |
-|  30 | `test_propfind_depth1_lists_members`             |   ✅   | Propfind depth1 lists members                                                             |
-|  31 | `test_mkcol_create_and_conflict`                 |   ✅   | Mkcol create and conflict                                                                 |
-|  32 | `test_delete_single_file`                        |   ✅   | Delete single file                                                                        |
-|  33 | `test_options_advertises_dav`                    |   ✅   | Options advertises dav                                                                    |
-|  34 | `test_get_file_through_mount`                    |   ✅   | Get file through mount                                                                    |
-|  35 | `test_put_stream_create`                         |   ✅   | Put stream create                                                                         |
-|  36 | `test_put_stream_overwrite`                      |   ✅   | Put stream overwrite                                                                      |
-|  37 | `test_put_empty_buffered`                        |   ✅   | Put empty buffered                                                                        |
-|  38 | `test_put_stream_write_fails_507`                |   ✅   | Put stream write fails 507                                                                |
-|  39 | `test_put_stream_open_fails_409`                 |   ✅   | Put stream open fails 409                                                                 |
-|  40 | `test_put_stream_traversal_403`                  |   ✅   | Put stream traversal 403                                                                  |
-|  41 | `test_put_stream_begin_declines`                 |   ✅   | Non-PUT with a body: begin sees method != PUT and declines.                               |
-|  42 | `test_put_stream_abort`                          |   ✅   | Headers + a partial body: Content-Length promises 10, only 4 arrive.                      |
-|  43 | `test_lock_enforcement`                          |   ✅   | Lock enforcement                                                                          |
+|   # | Test                                                | Status | Description                                                                               |
+| --: | :-------------------------------------------------- | :----: | :---------------------------------------------------------------------------------------- |
+|   1 | `test_protocore_fs_join_seam`                       |   ✅   | sub starts with '/': the duplicate is consumed, the root's separator is the one kept.     |
+|   2 | `test_protocore_fs_resolve_traversal_and_root_edge` |   ✅   | A ".." anywhere in sub is refused before touching protocore_fs_join.                      |
+|   3 | `test_webdav_status_text_table`                     |   ✅   | Webdav status text table                                                                  |
+|   4 | `test_webdav_join_root_slash_with_empty_subpath`    |   ✅   | Webdav join root slash with empty subpath                                                 |
+|   5 | `test_put_stream_error_latches_for_later_chunks`    |   ✅   | The file is created and takes some of the body, then the medium refuses - leaving several |
+|   6 | `test_webdav_join_root_variants`                    |   ✅   | (a) root ending in '/': "/tsroot/" + "/f.txt" must not become "/tsroot//f.txt".           |
+|   7 | `test_webdav_dav_empty_prefix_mount`                |   ✅   | Webdav dav empty prefix mount                                                             |
+|   8 | `test_webdav_method_dispatch_edges`                 |   ✅   | Webdav method dispatch edges                                                              |
+|   9 | `test_webdav_copy_header_edges`                     |   ✅   | Webdav copy header edges                                                                  |
+|  10 | `test_webdav_copy_dest_joins_to_root`               |   ✅   | Webdav copy dest joins to root                                                            |
+|  11 | `test_webdav_propfind_file_and_trailing_slash`      |   ✅   | Webdav propfind file and trailing slash                                                   |
+|  12 | `test_webdav_route_scan_skips_non_dav_routes`       |   ✅   | Webdav route scan skips non dav routes                                                    |
+|  13 | `test_webdav_stream_put_abort_without_open`         |   ✅   | Webdav stream put abort without open                                                      |
+|  14 | `test_webdav_status_on_dead_connection`             |   ✅   | Webdav status on dead connection                                                          |
+|  15 | `test_webdav_get_put_dest_edges`                    |   ✅   | Webdav get put dest edges                                                                 |
+|  16 | `test_webdav_copy_dest_path_too_long_414`           |   ✅   | 240-char fs root: a short source ("/s") still joins under 256, but root + any             |
+|  17 | `test_webdav_recursive_open_failure`                |   ✅   | DELETE: the store cannot remove the name -> 403. Unlinking is a metadata write, not an    |
+|  18 | `test_webdav_source_path_too_long_414`              |   ✅   | Webdav source path too long 414                                                           |
+|  19 | `test_webdav_dav_wildcard_and_route_full`           |   ✅   | (a) A wildcard-terminated prefix is stored as-is; a request under it still routes.        |
+|  20 | `test_webdav_error_paths`                           |   ✅   | Webdav error paths                                                                        |
+|  21 | `test_webdav_deep_tree_rejected`                    |   ✅   | Webdav deep tree rejected                                                                 |
+|  22 | `test_webdav_propfind_limit_and_proppatch`          |   ✅   | Webdav propfind limit and proppatch                                                       |
+|  23 | `test_webdav_copy_fs_table_full`                    |   ✅   | Webdav copy fs table full                                                                 |
+|  24 | `test_copy_collection_recursive`                    |   ✅   | Copy collection recursive                                                                 |
+|  25 | `test_copy_collection_depth0_shallow`               |   ✅   | Copy collection depth0 shallow                                                            |
+|  26 | `test_copy_overwrite_semantics`                     |   ✅   | Copy overwrite semantics                                                                  |
+|  27 | `test_move_collection_recursive`                    |   ✅   | Move collection recursive                                                                 |
+|  28 | `test_delete_collection_recursive`                  |   ✅   | Delete collection recursive                                                               |
+|  29 | `test_propfind_depth0_collection_only`              |   ✅   | Propfind depth0 collection only                                                           |
+|  30 | `test_propfind_depth1_lists_members`                |   ✅   | Propfind depth1 lists members                                                             |
+|  31 | `test_mkcol_create_and_conflict`                    |   ✅   | Mkcol create and conflict                                                                 |
+|  32 | `test_delete_single_file`                           |   ✅   | Delete single file                                                                        |
+|  33 | `test_options_advertises_dav`                       |   ✅   | Options advertises dav                                                                    |
+|  34 | `test_get_file_through_mount`                       |   ✅   | Get file through mount                                                                    |
+|  35 | `test_put_stream_create`                            |   ✅   | Put stream create                                                                         |
+|  36 | `test_put_stream_overwrite`                         |   ✅   | Put stream overwrite                                                                      |
+|  37 | `test_put_empty_buffered`                           |   ✅   | Put empty buffered                                                                        |
+|  38 | `test_put_stream_write_fails_507`                   |   ✅   | Put stream write fails 507                                                                |
+|  39 | `test_put_stream_open_fails_409`                    |   ✅   | Put stream open fails 409                                                                 |
+|  40 | `test_put_stream_traversal_403`                     |   ✅   | Put stream traversal 403                                                                  |
+|  41 | `test_put_stream_begin_declines`                    |   ✅   | Non-PUT with a body: begin sees method != PUT and declines.                               |
+|  42 | `test_put_stream_abort`                             |   ✅   | Headers + a partial body: Content-Length promises 10, only 4 arrive.                      |
+|  43 | `test_lock_enforcement`                             |   ✅   | Lock enforcement                                                                          |
 
 </details>
 
@@ -3126,7 +3126,7 @@ _Host tests for the WebDAV request handler's recursive filesystem operations_
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Exercises the build-flag reporter (diag() / PC_ENABLE_DIAG): the gated diag()_
+_Exercises the build-flag reporter (diag() / PROTOCORE_ENABLE_DIAG): the gated diag()_
 
 |   # | Test                               | Status | Description                 |
 | --: | :--------------------------------- | :----: | :-------------------------- |
@@ -3142,7 +3142,7 @@ _Exercises the build-flag reporter (diag() / PC_ENABLE_DIAG): the gated diag()_
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Unit tests for the SNMP v1/v2c agent core (pc_snmp_agent_process). Each test_
+_Unit tests for the SNMP v1/v2c agent core (protocore_snmp_agent_process). Each test_
 
 |   # | Test                                           | Status | Description                                                                              |
 | --: | :--------------------------------------------- | :----: | :--------------------------------------------------------------------------------------- |
@@ -3226,7 +3226,7 @@ _Unit tests for the SNMP ASN.1 BER codec. Encodings are checked against_
 |  23 | `test_enc_len_long_form`                                 |   ✅   | A value >= 128 octets forces the long-form definite length (0x81 <len>).        |
 |  24 | `test_put_oid_guards`                                    |   ✅   | Put oid guards                                                                  |
 |  25 | `test_seq_end_overflow`                                  |   ✅   | A content region larger than the 16-bit back-patched length field fails closed. |
-|  26 | `test_read_oid_rejects`                                  |   ✅   | pc_ber_read_oid on a non-OID TLV.                                               |
+|  26 | `test_read_oid_rejects`                                  |   ✅   | protocore_ber_read_oid on a non-OID TLV.                                        |
 |  27 | `test_ber_skip`                                          |   ✅   | Ber skip                                                                        |
 
 </details>
@@ -3311,7 +3311,7 @@ _Telnet server test: drives a PROTO_TELNET connection through the real_
 |  21 | `test_backspace_del_and_empty_noop`           |   ✅   | Backspace del and empty noop                                                                   |
 |  22 | `test_line_buffer_overflow_truncates`         |   ✅   | Line buffer overflow truncates                                                                 |
 |  23 | `test_print_println_null_and_printf_empty`    |   ✅   | Print println null and printf empty                                                            |
-|  24 | `test_proto_handler_accessor`                 |   ✅   | Proto handler accessor                                                                         |
+|  24 | `test_protocore_handler_accessor`             |   ✅   | Proto handler accessor                                                                         |
 
 </details>
 
@@ -3322,7 +3322,7 @@ _Telnet server test: drives a PROTO_TELNET connection through the real_
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Unit tests for the CoAP server core (pc_coap_server_process). Each test encodes a_
+_Unit tests for the CoAP server core (protocore_coap_server_process). Each test encodes a_
 
 |   # | Test                                                  | Status | Description                                                                         |
 | --: | :---------------------------------------------------- | :----: | :---------------------------------------------------------------------------------- |
@@ -3394,7 +3394,7 @@ _Unit tests for the CoAP server core (pc_coap_server_process). Each test encodes
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Unit tests for the CoAP server core (pc_coap_server_process). Each test encodes a_
+_Unit tests for the CoAP server core (protocore_coap_server_process). Each test encodes a_
 
 |   # | Test                                                  | Status | Description                                                                         |
 | --: | :---------------------------------------------------- | :----: | :---------------------------------------------------------------------------------- |
@@ -3476,55 +3476,55 @@ _Unit tests for the CoAP server core (pc_coap_server_process). Each test encodes
 
 _Unit tests for the WebDAV server core (network_drivers/application/webdav): method classification,_
 
-|   # | Test                                              | Status | Description                                                                    |
-| --: | :------------------------------------------------ | :----: | :----------------------------------------------------------------------------- |
-|   1 | `test_method_classification`                      |   ✅   | Method classification                                                          |
-|   2 | `test_webdav_builder_guards`                      |   ✅   | Webdav builder guards                                                          |
-|   3 | `test_depth_parsing`                              |   ✅   | Depth parsing                                                                  |
-|   4 | `test_xml_escape`                                 |   ✅   | Xml escape                                                                     |
-|   5 | `test_xml_escape_truncates_safely`                |   ✅   | Xml escape truncates safely                                                    |
-|   6 | `test_dest_absolute_uri`                          |   ✅   | Dest absolute uri                                                              |
-|   7 | `test_dest_percent_decoded`                       |   ✅   | Dest percent decoded                                                           |
-|   8 | `test_dest_abs_path`                              |   ✅   | Dest abs path                                                                  |
-|   9 | `test_dest_rejects_malformed`                     |   ✅   | Dest rejects malformed                                                         |
-|  10 | `test_multistatus_file_and_collection`            |   ✅   | Multistatus file and collection                                                |
-|  11 | `test_multistatus_escapes_href`                   |   ✅   | Multistatus escapes href                                                       |
-|  12 | `test_multistatus_entry_stops_when_full`          |   ✅   | Multistatus entry stops when full                                              |
-|  13 | `test_proppatch_windows_timestamp`                |   ✅   | The PROPPATCH macOS Finder / Windows Explorer send after a PUT.                |
-|  14 | `test_proppatch_multiple_and_self_closed`         |   ✅   | Proppatch multiple and self closed                                             |
-|  15 | `test_proppatch_remove_block`                     |   ✅   | Proppatch remove block                                                         |
-|  16 | `test_proppatch_escapes_href`                     |   ✅   | Proppatch escapes href                                                         |
-|  17 | `test_proppatch_empty_body_is_valid`              |   ✅   | Proppatch empty body is valid                                                  |
-|  18 | `test_proppatch_rejects_injection`                |   ✅   | A property tag carrying a stray '<' must not be echoed (no XML injection).     |
-|  19 | `test_proppatch_fuzz_bounded`                     |   ✅   | Throw random and partial-XML bytes at the scanner: it must always stay in      |
-|  20 | `test_proppatch_stops_when_full`                  |   ✅   | Proppatch stops when full                                                      |
-|  21 | `test_method_all_including_head`                  |   ✅   | Method all including head                                                      |
-|  22 | `test_depth_and_dest_path_guards`                 |   ✅   | Depth and dest path guards                                                     |
-|  23 | `test_ms_entry_content_type_overflow`             |   ✅   | Ms entry content type overflow                                                 |
-|  24 | `test_ms_entry_mtime_and_tiny_buf`                |   ✅   | Ms entry mtime and tiny buf                                                    |
-|  25 | `test_proppatch_ms_echo`                          |   ✅   | A self-closed property with trailing whitespace exercises the open-tag trim.   |
-|  26 | `test_dest_path_valid_first_hex_invalid_second`   |   ✅   | First hex digit valid, second invalid: distinct from an invalid FIRST digit    |
-|  27 | `test_ms_entry_content_type_null_and_empty`       |   ✅   | content_type == NULL: the getcontenttype block is skipped entirely.            |
-|  28 | `test_ms_entry_getcontenttype_close_overflow`     |   ✅   | Ms entry getcontenttype close overflow                                         |
-|  29 | `test_ms_entry_mtime_prefix_and_close_overflow`   |   ✅   | A large-but-fitting content_type leaves just enough of the internal 512-byte   |
-|  30 | `test_proppatch_zero_cap`                         |   ✅   | Proppatch zero cap                                                             |
-|  31 | `test_proppatch_scaffold_esc_and_closer_overflow` |   ✅   | Preamble fits but the escaped href itself overflows the output buffer.         |
-|  32 | `test_proppatch_emitted_cap_stops_scan`           |   ✅   | 20 self-closed properties, more than PC_WEBDAV_MAX_PROPS (16): the scanner     |
-|  33 | `test_proppatch_tag_name_whitespace_terminators`  |   ✅   | A tab, CR, and LF each directly terminate a property's local name (in addition |
-|  34 | `test_proppatch_self_closed_prop_wrapper`         |   ✅   | <D:prop/> as a fully self-closed, empty property set: is_prop is true but      |
-|  35 | `test_proppatch_trailing_whitespace_trim`         |   ✅   | A property whose local name is followed by tab, CR, and LF (trimmed off,       |
-|  36 | `test_proppatch_empty_after_trim`                 |   ✅   | A property whose entire span is whitespace (trimming walks all the way back    |
-|  37 | `test_proppatch_oversized_tag_name_skipped`       |   ✅   | A property whose (trimmed) tag content is >= the internal 256-byte tag[]       |
-|  38 | `test_proppatch_echo_append_boundary_failures`    |   ✅   | The scaffold ("<?xml...<D:href>/x</D:href>...<D:prop>") fits exactly at 141    |
-|  39 | `test_proppatch_embedded_lt_in_value`             |   ✅   | A property value containing a '<' that is NOT the start of its closing tag     |
-|  40 | `test_proppatch_truncated_closing_tag`            |   ✅   | The property's value is never given a proper closing tag (no '>' appears       |
-|  41 | `test_proppatch_value_scan_runs_to_body_end`      |   ✅   | The property's value contains no "</" anywhere before body_len: the            |
-|  42 | `test_lock_acquire_and_write_gate`                |   ✅   | Lock acquire and write gate                                                    |
-|  43 | `test_lock_depth_infinity_covers_subtree`         |   ✅   | Lock depth infinity covers subtree                                             |
-|  44 | `test_lock_conflicts_and_shared`                  |   ✅   | Lock conflicts and shared                                                      |
-|  45 | `test_lock_table_full_and_guards`                 |   ✅   | Lock table full and guards                                                     |
-|  46 | `test_if_header_token_extraction`                 |   ✅   | Untagged condition list.                                                       |
-|  47 | `test_lock_timeout_sweep`                         |   ✅   | Lock timeout sweep                                                             |
+|   # | Test                                              | Status | Description                                                                       |
+| --: | :------------------------------------------------ | :----: | :-------------------------------------------------------------------------------- |
+|   1 | `test_method_classification`                      |   ✅   | Method classification                                                             |
+|   2 | `test_webdav_builder_guards`                      |   ✅   | Webdav builder guards                                                             |
+|   3 | `test_depth_parsing`                              |   ✅   | Depth parsing                                                                     |
+|   4 | `test_xml_escape`                                 |   ✅   | Xml escape                                                                        |
+|   5 | `test_xml_escape_truncates_safely`                |   ✅   | Xml escape truncates safely                                                       |
+|   6 | `test_dest_absolute_uri`                          |   ✅   | Dest absolute uri                                                                 |
+|   7 | `test_dest_percent_decoded`                       |   ✅   | Dest percent decoded                                                              |
+|   8 | `test_dest_abs_path`                              |   ✅   | Dest abs path                                                                     |
+|   9 | `test_dest_rejects_malformed`                     |   ✅   | Dest rejects malformed                                                            |
+|  10 | `test_multistatus_file_and_collection`            |   ✅   | Multistatus file and collection                                                   |
+|  11 | `test_multistatus_escapes_href`                   |   ✅   | Multistatus escapes href                                                          |
+|  12 | `test_multistatus_entry_stops_when_full`          |   ✅   | Multistatus entry stops when full                                                 |
+|  13 | `test_proppatch_windows_timestamp`                |   ✅   | The PROPPATCH macOS Finder / Windows Explorer send after a PUT.                   |
+|  14 | `test_proppatch_multiple_and_self_closed`         |   ✅   | Proppatch multiple and self closed                                                |
+|  15 | `test_proppatch_remove_block`                     |   ✅   | Proppatch remove block                                                            |
+|  16 | `test_proppatch_escapes_href`                     |   ✅   | Proppatch escapes href                                                            |
+|  17 | `test_proppatch_empty_body_is_valid`              |   ✅   | Proppatch empty body is valid                                                     |
+|  18 | `test_proppatch_rejects_injection`                |   ✅   | A property tag carrying a stray '<' must not be echoed (no XML injection).        |
+|  19 | `test_proppatch_fuzz_bounded`                     |   ✅   | Throw random and partial-XML bytes at the scanner: it must always stay in         |
+|  20 | `test_proppatch_stops_when_full`                  |   ✅   | Proppatch stops when full                                                         |
+|  21 | `test_method_all_including_head`                  |   ✅   | Method all including head                                                         |
+|  22 | `test_depth_and_dest_path_guards`                 |   ✅   | Depth and dest path guards                                                        |
+|  23 | `test_ms_entry_content_type_overflow`             |   ✅   | Ms entry content type overflow                                                    |
+|  24 | `test_ms_entry_mtime_and_tiny_buf`                |   ✅   | Ms entry mtime and tiny buf                                                       |
+|  25 | `test_proppatch_ms_echo`                          |   ✅   | A self-closed property with trailing whitespace exercises the open-tag trim.      |
+|  26 | `test_dest_path_valid_first_hex_invalid_second`   |   ✅   | First hex digit valid, second invalid: distinct from an invalid FIRST digit       |
+|  27 | `test_ms_entry_content_type_null_and_empty`       |   ✅   | content_type == NULL: the getcontenttype block is skipped entirely.               |
+|  28 | `test_ms_entry_getcontenttype_close_overflow`     |   ✅   | Ms entry getcontenttype close overflow                                            |
+|  29 | `test_ms_entry_mtime_prefix_and_close_overflow`   |   ✅   | A large-but-fitting content_type leaves just enough of the internal 512-byte      |
+|  30 | `test_proppatch_zero_cap`                         |   ✅   | Proppatch zero cap                                                                |
+|  31 | `test_proppatch_scaffold_esc_and_closer_overflow` |   ✅   | Preamble fits but the escaped href itself overflows the output buffer.            |
+|  32 | `test_proppatch_emitted_cap_stops_scan`           |   ✅   | 20 self-closed properties, more than PROTOCORE_WEBDAV_MAX_PROPS (16): the scanner |
+|  33 | `test_proppatch_tag_name_whitespace_terminators`  |   ✅   | A tab, CR, and LF each directly terminate a property's local name (in addition    |
+|  34 | `test_proppatch_self_closed_prop_wrapper`         |   ✅   | <D:prop/> as a fully self-closed, empty property set: is_prop is true but         |
+|  35 | `test_proppatch_trailing_whitespace_trim`         |   ✅   | A property whose local name is followed by tab, CR, and LF (trimmed off,          |
+|  36 | `test_proppatch_empty_after_trim`                 |   ✅   | A property whose entire span is whitespace (trimming walks all the way back       |
+|  37 | `test_proppatch_oversized_tag_name_skipped`       |   ✅   | A property whose (trimmed) tag content is >= the internal 256-byte tag[]          |
+|  38 | `test_proppatch_echo_append_boundary_failures`    |   ✅   | The scaffold ("<?xml...<D:href>/x</D:href>...<D:prop>") fits exactly at 141       |
+|  39 | `test_proppatch_embedded_lt_in_value`             |   ✅   | A property value containing a '<' that is NOT the start of its closing tag        |
+|  40 | `test_proppatch_truncated_closing_tag`            |   ✅   | The property's value is never given a proper closing tag (no '>' appears          |
+|  41 | `test_proppatch_value_scan_runs_to_body_end`      |   ✅   | The property's value contains no "</" anywhere before body_len: the               |
+|  42 | `test_lock_acquire_and_write_gate`                |   ✅   | Lock acquire and write gate                                                       |
+|  43 | `test_lock_depth_infinity_covers_subtree`         |   ✅   | Lock depth infinity covers subtree                                                |
+|  44 | `test_lock_conflicts_and_shared`                  |   ✅   | Lock conflicts and shared                                                         |
+|  45 | `test_lock_table_full_and_guards`                 |   ✅   | Lock table full and guards                                                        |
+|  46 | `test_if_header_token_extraction`                 |   ✅   | Untagged condition list.                                                          |
+|  47 | `test_lock_timeout_sweep`                         |   ✅   | Lock timeout sweep                                                                |
 
 </details>
 
@@ -3822,28 +3822,28 @@ _Unit tests for the Protocol Buffers wire codec (services/iot/protobuf): the str
 
 _Unit tests for the preempting work queue (network_drivers/session/preempt_queue): a lane's FIFO_
 
-|   # | Test                                                               | Status | Description                                                                                   |
-| --: | :----------------------------------------------------------------- | :----: | :-------------------------------------------------------------------------------------------- |
-|   1 | `test_start_validates_and_runs`                                    |   ✅   | Start validates and runs                                                                      |
-|   2 | `test_fifo_order`                                                  |   ✅   | Fifo order                                                                                    |
-|   3 | `test_urgent_goes_to_front`                                        |   ✅   | Urgent goes to front                                                                          |
-|   4 | `test_fail_closed_when_full`                                       |   ✅   | The test env sizes PC_PQ_DEPTH = 4.                                                           |
-|   5 | `test_high_water_tracks_peak`                                      |   ✅   | High water tracks peak                                                                        |
-|   6 | `test_from_isr_enqueues`                                           |   ✅   | From isr enqueues                                                                             |
-|   7 | `test_drain_empties_and_reuses`                                    |   ✅   | Drain empties and reuses                                                                      |
-|   8 | `test_internal_lanes_outrank_user`                                 |   ✅   | DMA highest, then forward, then device, all above the user lane.                              |
-|   9 | `test_lanes_are_isolated`                                          |   ✅   | The USER lane is already started by setUp; start the internal DMA lane too.                   |
-|  10 | `test_lane_start_stop_running_independent`                         |   ✅   | Lane start stop running independent                                                           |
-|  11 | `test_lane_high_water_is_per_lane`                                 |   ✅   | Lane high water is per lane                                                                   |
-|  12 | `test_lane_api_urgent_and_drain`                                   |   ✅   | Lane api urgent and drain                                                                     |
-|  13 | `test_lane_guards_reject_bad_lane_and_null_item`                   |   ✅   | A bad lane (>= PC_PQ_LANE_COUNT) must fail closed / return safe defaults on every             |
-|  14 | `test_post_lane_urgent_fails_closed_when_full`                     |   ✅   | Post lane urgent fails closed when full                                                       |
-|  15 | `test_post_to_a_lane_that_was_never_started_fails_closed`          |   ✅   | FORWARD is never started in this suite, so it owns no queue. A post has nowhere to land and   |
-|  16 | `test_dma_completion_posts_to_the_lane_and_the_task_does_the_work` |   ✅   | Dma completion posts to the lane and the task does the work                                   |
-|  17 | `test_dma_ping_pong_transfers_reach_the_lane_in_order`             |   ✅   | Two buffers' worth in one feed: the engine completes one transfer per poll and flips banks,   |
-|  18 | `test_dma_tx_completion_reaches_the_lane_with_no_bytes`            |   ✅   | Dma tx completion reaches the lane with no bytes                                              |
-|  19 | `test_dma_loopback_round_trips_through_the_lane`                   |   ✅   | A loopback channel's egress arrives as its own ingress, so one submit puts two completions on |
-|  20 | `test_dma_lane_full_drops_the_completion_in_the_isr`               |   ✅   | The lane holds PC_PQ_DEPTH items. A completion past that has nowhere to go, and the callback  |
+|   # | Test                                                               | Status | Description                                                                                         |
+| --: | :----------------------------------------------------------------- | :----: | :-------------------------------------------------------------------------------------------------- |
+|   1 | `test_start_validates_and_runs`                                    |   ✅   | Start validates and runs                                                                            |
+|   2 | `test_fifo_order`                                                  |   ✅   | Fifo order                                                                                          |
+|   3 | `test_urgent_goes_to_front`                                        |   ✅   | Urgent goes to front                                                                                |
+|   4 | `test_fail_closed_when_full`                                       |   ✅   | The test env sizes PROTOCORE_PQ_DEPTH = 4.                                                          |
+|   5 | `test_high_water_tracks_peak`                                      |   ✅   | High water tracks peak                                                                              |
+|   6 | `test_from_isr_enqueues`                                           |   ✅   | From isr enqueues                                                                                   |
+|   7 | `test_drain_empties_and_reuses`                                    |   ✅   | Drain empties and reuses                                                                            |
+|   8 | `test_internal_lanes_outrank_user`                                 |   ✅   | DMA highest, then forward, then device, all above the user lane.                                    |
+|   9 | `test_lanes_are_isolated`                                          |   ✅   | The USER lane is already started by setUp; start the internal DMA lane too.                         |
+|  10 | `test_lane_start_stop_running_independent`                         |   ✅   | Lane start stop running independent                                                                 |
+|  11 | `test_lane_high_water_is_per_lane`                                 |   ✅   | Lane high water is per lane                                                                         |
+|  12 | `test_lane_api_urgent_and_drain`                                   |   ✅   | Lane api urgent and drain                                                                           |
+|  13 | `test_lane_guards_reject_bad_lane_and_null_item`                   |   ✅   | A bad lane (>= PROTOCORE_PQ_LANE_COUNT) must fail closed / return safe defaults on every            |
+|  14 | `test_post_lane_urgent_fails_closed_when_full`                     |   ✅   | Post lane urgent fails closed when full                                                             |
+|  15 | `test_post_to_a_lane_that_was_never_started_fails_closed`          |   ✅   | FORWARD is never started in this suite, so it owns no queue. A post has nowhere to land and         |
+|  16 | `test_dma_completion_posts_to_the_lane_and_the_task_does_the_work` |   ✅   | Dma completion posts to the lane and the task does the work                                         |
+|  17 | `test_dma_ping_pong_transfers_reach_the_lane_in_order`             |   ✅   | Two buffers' worth in one feed: the engine completes one transfer per poll and flips banks,         |
+|  18 | `test_dma_tx_completion_reaches_the_lane_with_no_bytes`            |   ✅   | Dma tx completion reaches the lane with no bytes                                                    |
+|  19 | `test_dma_loopback_round_trips_through_the_lane`                   |   ✅   | A loopback channel's egress arrives as its own ingress, so one submit puts two completions on       |
+|  20 | `test_dma_lane_full_drops_the_completion_in_the_isr`               |   ✅   | The lane holds PROTOCORE_PQ_DEPTH items. A completion past that has nowhere to go, and the callback |
 
 </details>
 
@@ -4072,7 +4072,7 @@ _Unit tests for the EnOcean ESP3 codec (services/radio/enocean): the CRC-8 (poly
 |   4 | `test_parse_rejects_bad_header_crc`    |   ✅   | Parse rejects bad header crc                                                                |
 |   5 | `test_parse_rejects_bad_data_crc`      |   ✅   | Parse rejects bad data crc                                                                  |
 |   6 | `test_parse_needs_more_bytes`          |   ✅   | Parse needs more bytes                                                                      |
-|   7 | `test_parse_rejects_over_length`       |   ✅   | A header claiming data_len 100 (> PC_ENOCEAN_MAX_DATA = 16) is rejected early.              |
+|   7 | `test_parse_rejects_over_length`       |   ✅   | A header claiming data_len 100 (> PROTOCORE_ENOCEAN_MAX_DATA = 16) is rejected early.       |
 |   8 | `test_parse_resynchronises_after_junk` |   ✅   | Parse resynchronises after junk                                                             |
 |   9 | `test_build_bounds`                    |   ✅   | Build bounds                                                                                |
 |  10 | `test_esp3_parse_null_guard`           |   ✅   | Esp3 parse null guard                                                                       |
@@ -4101,7 +4101,7 @@ _Unit tests for the PN532 NFC frame codec (services/peripherals/pn532): the norm
 |   5 | `test_parse_rejects_bad_lcs`                 |   ✅   | Parse rejects bad lcs                                                               |
 |   6 | `test_parse_rejects_bad_dcs`                 |   ✅   | Parse rejects bad dcs                                                               |
 |   7 | `test_parse_needs_more_bytes`                |   ✅   | Parse needs more bytes                                                              |
-|   8 | `test_parse_rejects_over_length`             |   ✅   | frame_len 20 (> PC_PN532_MAX_DATA + 1 = 9) is rejected early.                       |
+|   8 | `test_parse_rejects_over_length`             |   ✅   | frame_len 20 (> PROTOCORE_PN532_MAX_DATA + 1 = 9) is rejected early.                |
 |   9 | `test_parse_rejects_zero_length`             |   ✅   | frame_len == 0 (no TFI at all) with a matching LCS is rejected explicitly, distinct |
 |  10 | `test_parse_success_with_null_outputs`       |   ✅   | A fully valid, complete frame with every output pointer null must not dereference   |
 |  11 | `test_ack_frame`                             |   ✅   | Ack frame                                                                           |
@@ -4151,7 +4151,7 @@ _Unit tests for the Z-Wave Serial API frame codec (services/radio/zwave): the da
 |   4 | `test_parse_rejects_bad_sof`                    |   ✅   | Parse rejects bad sof                                                                      |
 |   5 | `test_parse_rejects_bad_checksum`               |   ✅   | Parse rejects bad checksum                                                                 |
 |   6 | `test_parse_needs_more_bytes`                   |   ✅   | Parse needs more bytes                                                                     |
-|   7 | `test_parse_rejects_over_length`                |   ✅   | frame_len 80 (> PC_ZWAVE_MAX_DATA + 3 = 19) is rejected early.                             |
+|   7 | `test_parse_rejects_over_length`                |   ✅   | frame_len 80 (> PROTOCORE_ZWAVE_MAX_DATA + 3 = 19) is rejected early.                      |
 |   8 | `test_control_bytes`                            |   ✅   | Control bytes                                                                              |
 |   9 | `test_build_bounds`                             |   ✅   | Build bounds                                                                               |
 |  10 | `test_build_rejects_null_out`                   |   ✅   | Build rejects null out                                                                     |
@@ -4202,46 +4202,46 @@ _Unit tests for the Zigbee EZSP / ASH framing codec (services/radio/zigbee): the
 
 _Unit tests for the Thread spinel / HDLC-lite framing codec (services/radio/thread): the FCS_
 
-|   # | Test                                         | Status | Description                                                                                |
-| --: | :------------------------------------------- | :----: | :----------------------------------------------------------------------------------------- |
-|   1 | `test_fcs_x25_check_value`                   |   ✅   | CRC-16/X-25 (poly 0x8408, init 0xFFFF, reflected, xorout 0xFFFF) of "123456789" = 0x906E.  |
-|   2 | `test_encode_decode_round_trip`              |   ✅   | A tiny spinel frame: header (flag                                                          | iid               | tid) + command (PROP_VALUE_GET) + property. |
-|   3 | `test_byte_stuffing_round_trip`              |   ✅   | Byte stuffing round trip                                                                   |
-|   4 | `test_decode_needs_more_without_flag`        |   ✅   | Decode needs more without flag                                                             |
-|   5 | `test_decode_rejects_bad_fcs`                |   ✅   | Decode rejects bad fcs                                                                     |
-|   6 | `test_decode_rejects_dangling_escape`        |   ✅   | Decode rejects dangling escape                                                             |
-|   7 | `test_decode_rejects_small_payload_buffer`   |   ✅   | Decode rejects small payload buffer                                                        |
-|   8 | `test_encode_bounds`                         |   ✅   | Encode bounds                                                                              |
-|   9 | `test_spinel_pack_uint_kats`                 |   ✅   | Spinel pack uint kats                                                                      |
-|  10 | `test_spinel_pack_unpack_round_trip`         |   ✅   | Spinel pack unpack round trip                                                              |
-|  11 | `test_spinel_unpack_needs_more_and_overflow` |   ✅   | Spinel unpack needs more and overflow                                                      |
-|  12 | `test_spinel_command_build_parse_round_trip` |   ✅   | header 0x81, CMD_PROP_VALUE_SET, a large property id (multi-byte packed), a value.         |
-|  13 | `test_spinel_command_through_hdlc`           |   ✅   | The command payload rides inside an HDLC frame: build the command, frame it, decode        |
-|  14 | `test_spinel_guards`                         |   ✅   | Spinel guards                                                                              |
-|  15 | `test_thread_more_guards`                    |   ✅   | pack/unpack null-pointer guards.                                                           |
-|  16 | `test_spinel_value_round_trip`               |   ✅   | Build a heterogeneous value with the writer, read it back with the reader.                 |
-|  17 | `test_spinel_put_bool_false`                 |   ✅   | Every other test only exercises pc_spinel_put_bool(true); cover the v == false arm of      |
-|  18 | `test_spinel_le_wire_layout`                 |   ✅   | Confirm the on-wire encoding is little-endian for the fixed-width integers.                |
-|  19 | `test_spinel_protocol_version_and_caps`      |   ✅   | PROTOCOL_VERSION is two packed uints; CAPS is a packed-uint array - decode as a real       |
-|  20 | `test_spinel_data_wlen_and_utf8`             |   ✅   | STREAM_RAW-style 'd' data (uint16 length prefix), then STREAM_DEBUG-style 'U' text.        |
-|  21 | `test_spinel_get_data_rest`                  |   ✅   | Spinel get data rest                                                                       |
-|  22 | `test_spinel_reader_bounds_latch`            |   ✅   | A too-short value latches err and every later read fails.                                  |
-|  23 | `test_spinel_writer_overflow_latch`          |   ✅   | Spinel writer overflow latch                                                               |
-|  24 | `test_spinel_header_helpers`                 |   ✅   | Spinel header helpers                                                                      |
-|  25 | `test_spinel_prop_registry`                  |   ✅   | Spinel prop registry                                                                       |
-|  26 | `test_spinel_status_names`                   |   ✅   | Spinel status names                                                                        |
-|  27 | `test_spinel_last_status_decode`             |   ✅   | A real NCP unsolicited frame: header                                                       | CMD_PROP_VALUE_IS | PROP_LAST_STATUS                            | status(i). |
-|  28 | `test_spinel_null_out_params`                |   ✅   | unpack_uint with no value out-parameter still reports the bytes consumed.                  |
-|  29 | `test_spinel_reader_init_variants`           |   ✅   | Spinel reader init variants                                                                |
-|  30 | `test_spinel_getters_null_reader`            |   ✅   | Spinel getters null reader                                                                 |
-|  31 | `test_spinel_getters_short_value`            |   ✅   | An empty value: every typed read runs off the end at its first byte.                       |
-|  32 | `test_spinel_get_uint_edges`                 |   ✅   | A packed uint whose continuation bit is set but which has no terminator.                   |
-|  33 | `test_spinel_getters_null_out_params`        |   ✅   | Build one value holding every fixed-width field, then read it back discarding each result. |
-|  34 | `test_spinel_writer_init_and_null_writer`    |   ✅   | Spinel writer init and null writer                                                         |
-|  35 | `test_spinel_put_null_args`                  |   ✅   | A null data pointer with a zero length is a legal empty 'D' field.                         |
-|  36 | `test_spinel_put_no_room_each_type`          |   ✅   | A zero-capacity writer: every field type fails at the room reservation.                    |
-|  37 | `test_spinel_frame_edges`                    |   ✅   | encode: a null output buffer, and a null payload with a positive length.                   |
-|  38 | `test_spinel_status_name_below_reset_range`  |   ✅   | Unregistered codes on either side of the 0x70..0x77 reset-cause window.                    |
+|   # | Test                                         | Status | Description                                                                                  |
+| --: | :------------------------------------------- | :----: | :------------------------------------------------------------------------------------------- |
+|   1 | `test_fcs_x25_check_value`                   |   ✅   | CRC-16/X-25 (poly 0x8408, init 0xFFFF, reflected, xorout 0xFFFF) of "123456789" = 0x906E.    |
+|   2 | `test_encode_decode_round_trip`              |   ✅   | A tiny spinel frame: header (flag                                                            | iid               | tid) + command (PROP_VALUE_GET) + property. |
+|   3 | `test_byte_stuffing_round_trip`              |   ✅   | Byte stuffing round trip                                                                     |
+|   4 | `test_decode_needs_more_without_flag`        |   ✅   | Decode needs more without flag                                                               |
+|   5 | `test_decode_rejects_bad_fcs`                |   ✅   | Decode rejects bad fcs                                                                       |
+|   6 | `test_decode_rejects_dangling_escape`        |   ✅   | Decode rejects dangling escape                                                               |
+|   7 | `test_decode_rejects_small_payload_buffer`   |   ✅   | Decode rejects small payload buffer                                                          |
+|   8 | `test_encode_bounds`                         |   ✅   | Encode bounds                                                                                |
+|   9 | `test_spinel_pack_uint_kats`                 |   ✅   | Spinel pack uint kats                                                                        |
+|  10 | `test_spinel_pack_unpack_round_trip`         |   ✅   | Spinel pack unpack round trip                                                                |
+|  11 | `test_spinel_unpack_needs_more_and_overflow` |   ✅   | Spinel unpack needs more and overflow                                                        |
+|  12 | `test_spinel_command_build_parse_round_trip` |   ✅   | header 0x81, CMD_PROP_VALUE_SET, a large property id (multi-byte packed), a value.           |
+|  13 | `test_spinel_command_through_hdlc`           |   ✅   | The command payload rides inside an HDLC frame: build the command, frame it, decode          |
+|  14 | `test_spinel_guards`                         |   ✅   | Spinel guards                                                                                |
+|  15 | `test_thread_more_guards`                    |   ✅   | pack/unpack null-pointer guards.                                                             |
+|  16 | `test_spinel_value_round_trip`               |   ✅   | Build a heterogeneous value with the writer, read it back with the reader.                   |
+|  17 | `test_spinel_put_bool_false`                 |   ✅   | Every other test only exercises protocore_spinel_put_bool(true); cover the v == false arm of |
+|  18 | `test_spinel_le_wire_layout`                 |   ✅   | Confirm the on-wire encoding is little-endian for the fixed-width integers.                  |
+|  19 | `test_spinel_protocol_version_and_caps`      |   ✅   | PROTOCOL_VERSION is two packed uints; CAPS is a packed-uint array - decode as a real         |
+|  20 | `test_spinel_data_wlen_and_utf8`             |   ✅   | STREAM_RAW-style 'd' data (uint16 length prefix), then STREAM_DEBUG-style 'U' text.          |
+|  21 | `test_spinel_get_data_rest`                  |   ✅   | Spinel get data rest                                                                         |
+|  22 | `test_spinel_reader_bounds_latch`            |   ✅   | A too-short value latches err and every later read fails.                                    |
+|  23 | `test_spinel_writer_overflow_latch`          |   ✅   | Spinel writer overflow latch                                                                 |
+|  24 | `test_spinel_header_helpers`                 |   ✅   | Spinel header helpers                                                                        |
+|  25 | `test_spinel_prop_registry`                  |   ✅   | Spinel prop registry                                                                         |
+|  26 | `test_spinel_status_names`                   |   ✅   | Spinel status names                                                                          |
+|  27 | `test_spinel_last_status_decode`             |   ✅   | A real NCP unsolicited frame: header                                                         | CMD_PROP_VALUE_IS | PROP_LAST_STATUS                            | status(i). |
+|  28 | `test_spinel_null_out_params`                |   ✅   | unpack_uint with no value out-parameter still reports the bytes consumed.                    |
+|  29 | `test_spinel_reader_init_variants`           |   ✅   | Spinel reader init variants                                                                  |
+|  30 | `test_spinel_getters_null_reader`            |   ✅   | Spinel getters null reader                                                                   |
+|  31 | `test_spinel_getters_short_value`            |   ✅   | An empty value: every typed read runs off the end at its first byte.                         |
+|  32 | `test_spinel_get_uint_edges`                 |   ✅   | A packed uint whose continuation bit is set but which has no terminator.                     |
+|  33 | `test_spinel_getters_null_out_params`        |   ✅   | Build one value holding every fixed-width field, then read it back discarding each result.   |
+|  34 | `test_spinel_writer_init_and_null_writer`    |   ✅   | Spinel writer init and null writer                                                           |
+|  35 | `test_spinel_put_null_args`                  |   ✅   | A null data pointer with a zero length is a legal empty 'D' field.                           |
+|  36 | `test_spinel_put_no_room_each_type`          |   ✅   | A zero-capacity writer: every field type fails at the room reservation.                      |
+|  37 | `test_spinel_frame_edges`                    |   ✅   | encode: a null output buffer, and a null payload with a positive length.                     |
+|  38 | `test_spinel_status_name_below_reset_range`  |   ✅   | Unregistered codes on either side of the 0x70..0x77 reset-cause window.                      |
 
 </details>
 
@@ -4307,20 +4307,20 @@ _The TCP target path, run on the host. The env declares the capabilities the sta
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Phase 2 core-partitioning invariant (built with PC_WORKER_COUNT=2): a worker_
+_Phase 2 core-partitioning invariant (built with PROTOCORE_WORKER_COUNT=2): a worker_
 
-|   # | Test                                                      | Status | Description                                                                             |
-| --: | :-------------------------------------------------------- | :----: | :-------------------------------------------------------------------------------------- |
-|   1 | `test_worker_count_is_two`                                |   ✅   | Worker count is two                                                                     |
-|   2 | `test_check_timeouts_reaps_only_owned_slots`              |   ✅   | Check timeouts reaps only owned slots                                                   |
-|   3 | `test_pool_init_defaults_owner_zero`                      |   ✅   | Pool init defaults owner zero                                                           |
-|   4 | `test_worker_self_id_roundtrip`                           |   ✅   | pc_worker_set_self binds the calling context's worker id; pc_worker_self reads it back. |
-|   5 | `test_worker_lifecycle_raises_and_lowers_the_run_flag`    |   ✅   | Worker lifecycle raises and lowers the run flag                                         |
-|   6 | `test_listener_worker_queues_init_and_lookup`             |   ✅   | Listener worker queues init and lookup                                                  |
-|   7 | `test_enqueue_routes_by_slot_owner_and_rejects_bad_owner` |   ✅   | Enqueue routes by slot owner and rejects bad owner                                      |
-|   8 | `test_accept_cb_round_robins_slot_owner`                  |   ✅   | Accept cb round robins slot owner                                                       |
-|   9 | `test_dynamic_listener_creates_worker_queues`             |   ✅   | Dynamic listener creates worker queues                                                  |
-|  10 | `test_defer_queues_and_run_deferred_runs_it`              |   ✅   | Defer queues and run deferred runs it                                                   |
+|   # | Test                                                      | Status | Description                                                                                           |
+| --: | :-------------------------------------------------------- | :----: | :---------------------------------------------------------------------------------------------------- |
+|   1 | `test_worker_count_is_two`                                |   ✅   | Worker count is two                                                                                   |
+|   2 | `test_check_timeouts_reaps_only_owned_slots`              |   ✅   | Check timeouts reaps only owned slots                                                                 |
+|   3 | `test_pool_init_defaults_owner_zero`                      |   ✅   | Pool init defaults owner zero                                                                         |
+|   4 | `test_worker_self_id_roundtrip`                           |   ✅   | protocore_worker_set_self binds the calling context's worker id; protocore_worker_self reads it back. |
+|   5 | `test_worker_lifecycle_raises_and_lowers_the_run_flag`    |   ✅   | Worker lifecycle raises and lowers the run flag                                                       |
+|   6 | `test_listener_worker_queues_init_and_lookup`             |   ✅   | Listener worker queues init and lookup                                                                |
+|   7 | `test_enqueue_routes_by_slot_owner_and_rejects_bad_owner` |   ✅   | Enqueue routes by slot owner and rejects bad owner                                                    |
+|   8 | `test_accept_cb_round_robins_slot_owner`                  |   ✅   | Accept cb round robins slot owner                                                                     |
+|   9 | `test_dynamic_listener_creates_worker_queues`             |   ✅   | Dynamic listener creates worker queues                                                                |
+|  10 | `test_defer_queues_and_run_deferred_runs_it`              |   ✅   | Defer queues and run deferred runs it                                                                 |
 
 </details>
 
@@ -4826,25 +4826,25 @@ _Unit tests for the PackML / OMAC state model (ISA-TR88.00.02): the pure transit
 
 _Unit tests for the Heidenhain LSV/2 telegram codec (services/machine_tool/lsv2): the framer (4-byte big-endian_
 
-|   # | Test                                    | Status | Description                                                                                 |
-| --: | :-------------------------------------- | :----: | :------------------------------------------------------------------------------------------ |
-|   1 | `test_build_no_payload`                 |   ✅   | R_ST with no payload -> exactly 8 bytes: 00 00 00 00 'R' '_' 'S' 'T'                        |
-|   2 | `test_build_with_payload`               |   ✅   | Build with payload                                                                          |
-|   3 | `test_build_run_info`                   |   ✅   | Build run info                                                                              |
-|   4 | `test_build_login`                      |   ✅   | login "INSPECT", no password -> payload "INSPECT\0" (8 bytes)                               |
-|   5 | `test_build_logout`                     |   ✅   | no login -> log out of everything -> empty payload, 8 bytes                                 |
-|   6 | `test_build_filename`                   |   ✅   | R_FL "PGM.H" -> payload "PGM.H\0" (6 bytes)                                                 |
-|   7 | `test_parse_ok`                         |   ✅   | Parse ok                                                                                    |
-|   8 | `test_parse_error`                      |   ✅   | T_ER with a 2-byte error-class + error-code payload                                         |
-|   9 | `test_parse_data_reply`                 |   ✅   | S_RI run-info reply carrying 3 payload bytes                                                |
-|  10 | `test_parse_incomplete`                 |   ✅   | fewer than 8 header bytes -> false, and out is cleared                                      |
-|  11 | `test_parse_stream_multi`               |   ✅   | two telegrams back-to-back: T_OK then S_RI(2 bytes)                                         |
-|  12 | `test_roundtrip`                        |   ✅   | build then parse: run-info request survives a frame/parse round trip                        |
-|  13 | `test_build_rejects_bad_args`           |   ✅   | Null destination / null mnemonic / a buffer that cannot even hold the header, a declared    |
-|  14 | `test_build_login_guards_and_overflow`  |   ✅   | Null buffer / null login / a header-only buffer are refused, and a login (or password) that |
-|  15 | `test_build_logout_and_filename_guards` |   ✅   | Build logout and filename guards                                                            |
-|  16 | `test_parse_and_is_reject_null_args`    |   ✅   | A null out struct, a null input buffer, and null arguments to the mnemonic comparison are   |
-|  17 | `test_error_payload_shape_is_enforced`  |   ✅   | pc_lsv2_error only reports on an error telegram carrying exactly the 2-byte class+code      |
+|   # | Test                                    | Status | Description                                                                                   |
+| --: | :-------------------------------------- | :----: | :-------------------------------------------------------------------------------------------- |
+|   1 | `test_build_no_payload`                 |   ✅   | R_ST with no payload -> exactly 8 bytes: 00 00 00 00 'R' '_' 'S' 'T'                          |
+|   2 | `test_build_with_payload`               |   ✅   | Build with payload                                                                            |
+|   3 | `test_build_run_info`                   |   ✅   | Build run info                                                                                |
+|   4 | `test_build_login`                      |   ✅   | login "INSPECT", no password -> payload "INSPECT\0" (8 bytes)                                 |
+|   5 | `test_build_logout`                     |   ✅   | no login -> log out of everything -> empty payload, 8 bytes                                   |
+|   6 | `test_build_filename`                   |   ✅   | R_FL "PGM.H" -> payload "PGM.H\0" (6 bytes)                                                   |
+|   7 | `test_parse_ok`                         |   ✅   | Parse ok                                                                                      |
+|   8 | `test_parse_error`                      |   ✅   | T_ER with a 2-byte error-class + error-code payload                                           |
+|   9 | `test_parse_data_reply`                 |   ✅   | S_RI run-info reply carrying 3 payload bytes                                                  |
+|  10 | `test_parse_incomplete`                 |   ✅   | fewer than 8 header bytes -> false, and out is cleared                                        |
+|  11 | `test_parse_stream_multi`               |   ✅   | two telegrams back-to-back: T_OK then S_RI(2 bytes)                                           |
+|  12 | `test_roundtrip`                        |   ✅   | build then parse: run-info request survives a frame/parse round trip                          |
+|  13 | `test_build_rejects_bad_args`           |   ✅   | Null destination / null mnemonic / a buffer that cannot even hold the header, a declared      |
+|  14 | `test_build_login_guards_and_overflow`  |   ✅   | Null buffer / null login / a header-only buffer are refused, and a login (or password) that   |
+|  15 | `test_build_logout_and_filename_guards` |   ✅   | Build logout and filename guards                                                              |
+|  16 | `test_parse_and_is_reject_null_args`    |   ✅   | A null out struct, a null input buffer, and null arguments to the mnemonic comparison are     |
+|  17 | `test_error_payload_shape_is_enforced`  |   ✅   | protocore_lsv2_error only reports on an error telegram carrying exactly the 2-byte class+code |
 
 </details>
 
@@ -4906,14 +4906,14 @@ _Unit tests for the IKEv2 (RFC 7296) message + payload codec (services/security/
 |  45 | `test_sk_aead_seal_kat`              |   ✅   | Sk aead seal kat                                                                                |
 |  46 | `test_sk_aead_open_roundtrip`        |   ✅   | open the golden ct+tag -> the plaintext.                                                        |
 |  47 | `test_sk_aead_inplace_and_guards`    |   ✅   | In-place seal then open (out aliases the plaintext buffer) round-trips.                         |
-|  48 | `test_dh_x25519_raw_kat`             |   ✅   | pc_ike_dh_compute is X25519(scalar, u) for group 31 - RFC 7748 §5.2 vector 1.                   |
+|  48 | `test_dh_x25519_raw_kat`             |   ✅   | protocore_ike_dh_compute is X25519(scalar, u) for group 31 - RFC 7748 §5.2 vector 1.            |
 |  49 | `test_dh_x25519_agreement`           |   ✅   | RFC 7748 §6.1: each side's public = X25519(priv, base), and both shared secrets agree.          |
 |  50 | `test_dh_guards`                     |   ✅   | Unsupported group (19 = P-256, not yet implemented) -> 0.                                       |
 |  51 | `test_auth_psk_kat`                  |   ✅   | Auth psk kat                                                                                    |
 |  52 | `test_auth_psk_guards`               |   ✅   | Auth psk guards                                                                                 |
 |  53 | `test_sa_init_build_parse`           |   ✅   | Sa init build parse                                                                             |
 |  54 | `test_sa_init_parse_guards`          |   ✅   | Sa init parse guards                                                                            |
-|  55 | `test_auth_msg_roundtrip`            |   ✅   | Build the inner chain IDi(next=AUTH)                                                            | AUTH(next=PC_NONE). |
+|  55 | `test_auth_msg_roundtrip`            |   ✅   | Build the inner chain IDi(next=AUTH)                                                            | AUTH(next=PROTOCORE_NONE). |
 |  56 | `test_auth_msg_tamper_and_guards`    |   ✅   | Auth msg tamper and guards                                                                      |
 |  57 | `test_signed_octets_kat`             |   ✅   | Signed octets kat                                                                               |
 |  58 | `test_auth_ecdsa_sign_verify`        |   ✅   | Auth ecdsa sign verify                                                                          |
@@ -5402,7 +5402,7 @@ _Unit tests for the RTCM 3.x pure codec (services/timing_position/gnss/rtcm3): C
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Unit tests for the GNSS survey-in core (services/timing_position/gnss/pc_gnss_survey): the WGS84 geodetic->ECEF_
+_Unit tests for the GNSS survey-in core (services/timing_position/gnss/protocore_gnss_survey): the WGS84 geodetic->ECEF_
 
 |   # | Test                                            | Status | Description                                          |
 | --: | :---------------------------------------------- | :----: | :--------------------------------------------------- |
@@ -5441,7 +5441,7 @@ _Unit tests for the GNSS survey-in core (services/timing_position/gnss/pc_gnss_s
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Unit tests for the NTRIP caster protocol codec (services/timing_position/gnss/pc_ntrip_caster): rover request parsing_
+_Unit tests for the NTRIP caster protocol codec (services/timing_position/gnss/protocore_ntrip_caster): rover request parsing_
 
 |   # | Test                                                       | Status | Description                                                                                     |
 | --: | :--------------------------------------------------------- | :----: | :---------------------------------------------------------------------------------------------- |
@@ -5671,7 +5671,7 @@ _Unit tests for the Sparkplug B codec (services/iot/sparkplug): the topic builde
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Unit tests for the Modbus master codec (services/fieldbus/modbus/pc_modbus_master): request_
+_Unit tests for the Modbus master codec (services/fieldbus/modbus/protocore_modbus_master): request_
 
 |   # | Test                                     | Status | Description                                                                     |
 | --: | :--------------------------------------- | :----: | :------------------------------------------------------------------------------ |
@@ -5734,17 +5734,17 @@ _Unit tests for the OTA rollback decision (server/update/ota_rollback). The esp_
 
 _Unit tests for TOTP (services/security/totp): the RFC 6238 Appendix B test vectors_
 
-|   # | Test                                      | Status | Description                                                                  |
-| --: | :---------------------------------------- | :----: | :--------------------------------------------------------------------------- |
-|   1 | `test_rfc6238_vectors`                    |   ✅   | RFC 6238 Appendix B (SHA-1, T0=0, step=30, digits=8).                        |
-|   2 | `test_verify_window`                      |   ✅   | Verify window                                                                |
-|   3 | `test_base32_decode`                      |   ✅   | Base32 decode                                                                |
-|   4 | `test_base32_rejects_invalid`             |   ✅   | Base32 rejects invalid                                                       |
-|   5 | `test_long_key_default_period_and_base32` |   ✅   | Long key default period and base32                                           |
-|   6 | `test_verify_period_zero_default`         |   ✅   | pc_totp_verify's period == 0 branch defaults to 30, same as pc_totp's.       |
-|   7 | `test_verify_window_skips_negative_step`  |   ✅   | At unix_time 0 (step 0) with window 1, the w=-1 candidate step is negative   |
-|   8 | `test_base32_decode_null_args`            |   ✅   | Base32 decode null args                                                      |
-|   9 | `test_base32_decode_rejects_char_above_z` |   ✅   | '~' (0x7E) is >= 'a' but > 'z', exercising the else-if's upper-bound branch. |
+|   # | Test                                      | Status | Description                                                                          |
+| --: | :---------------------------------------- | :----: | :----------------------------------------------------------------------------------- |
+|   1 | `test_rfc6238_vectors`                    |   ✅   | RFC 6238 Appendix B (SHA-1, T0=0, step=30, digits=8).                                |
+|   2 | `test_verify_window`                      |   ✅   | Verify window                                                                        |
+|   3 | `test_base32_decode`                      |   ✅   | Base32 decode                                                                        |
+|   4 | `test_base32_rejects_invalid`             |   ✅   | Base32 rejects invalid                                                               |
+|   5 | `test_long_key_default_period_and_base32` |   ✅   | Long key default period and base32                                                   |
+|   6 | `test_verify_period_zero_default`         |   ✅   | protocore_totp_verify's period == 0 branch defaults to 30, same as protocore_totp's. |
+|   7 | `test_verify_window_skips_negative_step`  |   ✅   | At unix_time 0 (step 0) with window 1, the w=-1 candidate step is negative           |
+|   8 | `test_base32_decode_null_args`            |   ✅   | Base32 decode null args                                                              |
+|   9 | `test_base32_decode_rejects_char_above_z` |   ✅   | '~' (0x7E) is >= 'a' but > 'z', exercising the else-if's upper-bound branch.         |
 
 </details>
 
@@ -6046,7 +6046,7 @@ _Unit tests for OPC UA (services/fieldbus/opcua): the Binary built-in type codec
 |   5 | `test_r_nodeid_null_namespace_uri_and_server_index_flags`        |   ✅   | R nodeid null namespace uri and server index flags                                                   |
 |   6 | `test_parsers_reject_frame_shorter_than_header`                  |   ✅   | Parsers reject frame shorter than header                                                             |
 |   7 | `test_parse_hello_rejects_consistent_but_undersized_frame`       |   ✅   | Parse hello rejects consistent but undersized frame                                                  |
-|   8 | `test_ack_negotiation_clamps_oversized_client_request`           |   ✅   | Client offers far more than PC_OPCUA_BUF on every axis -> every field clamps to the server's.        |
+|   8 | `test_ack_negotiation_clamps_oversized_client_request`           |   ✅   | Client offers far more than PROTOCORE_OPCUA_BUF on every axis -> every field clamps to the server's. |
 |   9 | `test_parse_msg_string_typeid_and_empty_extension_body`          |   ✅   | Parse msg string typeid and empty extension body                                                     |
 |  10 | `test_parse_open_rejects_non_numeric_and_wrong_namespace_typeid` |   ✅   | Parse open rejects non numeric and wrong namespace typeid                                            |
 |  11 | `test_builders_reject_null_output_buffer`                        |   ✅   | Builders reject null output buffer                                                                   |
@@ -6101,7 +6101,7 @@ _Unit tests for OPC UA (services/fieldbus/opcua): the Binary built-in type codec
 |  60 | `test_build_service_fault`                                       |   ✅   | Build service fault                                                                                  |
 |  61 | `test_datavalue_roundtrip`                                       |   ✅   | Datavalue roundtrip                                                                                  |
 |  62 | `test_parse_and_build_write`                                     |   ✅   | Build a WriteRequest writing one Int32 to ns=1;i=10 (value-only DataValue).                          |
-|  63 | `test_rx_and_proto_handler_host_stubs`                           |   ✅   | Rx and proto handler host stubs                                                                      |
+|  63 | `test_rx_and_protocore_handler_host_stubs`                       |   ✅   | Rx and proto handler host stubs                                                                      |
 |  64 | `test_parse_open_with_cert_and_nonce`                            |   ✅   | An OPEN carrying non-empty SenderCertificate + ReceiverCertificateThumbprint + ClientNonce           |
 |  65 | `test_parse_read_truncated_item_rejected`                        |   ✅   | A NodesToRead count larger than the items actually present makes the per-item NodeId read            |
 |  66 | `test_parse_browse_truncated_item_rejected`                      |   ✅   | Parse browse truncated item rejected                                                                 |
@@ -6120,7 +6120,7 @@ _Unit tests for OPC UA (services/fieldbus/opcua): the Binary built-in type codec
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Round-trip tests for the OPC UA client (services/pc_opcua_client): the client builds_
+_Round-trip tests for the OPC UA client (services/protocore_opcua_client): the client builds_
 
 |   # | Test                                          | Status | Description                                                                               |
 | --: | :-------------------------------------------- | :----: | :---------------------------------------------------------------------------------------- |
@@ -6264,7 +6264,7 @@ _Host tests for the EUROMAP 77 (OPC 40077) IMM_MES_Interface model: the Browse h
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_HTTP/1.1 keep-alive (PC_ENABLE_KEEPALIVE). Each test drives one or more_
+_HTTP/1.1 keep-alive (PROTOCORE_ENABLE_KEEPALIVE). Each test drives one or more_
 
 |   # | Test                                              | Status | Description                                                                               |
 | --: | :------------------------------------------------ | :----: | :---------------------------------------------------------------------------------------- |
@@ -6278,7 +6278,7 @@ _HTTP/1.1 keep-alive (PC_ENABLE_KEEPALIVE). Each test drives one or more_
 |   8 | `test_two_sequential_requests_same_slot`          |   ✅   | Two sequential requests same slot                                                         |
 |   9 | `test_pipelined_requests`                         |   ✅   | Two requests delivered in one shot: the proactive drain in handle() must                  |
 |  10 | `test_404_still_keeps_alive`                      |   ✅   | A well-formed request to an unknown path is a normal response, not an                     |
-|  11 | `test_max_requests_cap_closes`                    |   ✅   | PC_KEEPALIVE_MAX_REQUESTS=3: the 3rd response closes the connection.                      |
+|  11 | `test_max_requests_cap_closes`                    |   ✅   | PROTOCORE_KEEPALIVE_MAX_REQUESTS=3: the 3rd response closes the connection.               |
 |  12 | `test_fresh_connection_resets_count`              |   ✅   | Run a slot up to the cap, then re-open it (new connection) and confirm the                |
 
 </details>
@@ -6290,7 +6290,7 @@ _HTTP/1.1 keep-alive (PC_ENABLE_KEEPALIVE). Each test drives one or more_
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_HTTP Range requests / 206 Partial Content (PC_ENABLE_RANGE). Each test_
+_HTTP Range requests / 206 Partial Content (PROTOCORE_ENABLE_RANGE). Each test_
 
 |   # | Test                                               | Status | Description                                 |
 | --: | :------------------------------------------------- | :----: | :------------------------------------------ |
@@ -6325,7 +6325,7 @@ _HTTP Range requests / 206 Partial Content (PC_ENABLE_RANGE). Each test_
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Unit tests for the RFC 5424 syslog client (pc_syslog_format formatter + pc_syslog_init /_
+_Unit tests for the RFC 5424 syslog client (protocore_syslog_format formatter + protocore_syslog_init /_
 
 |   # | Test                                      | Status | Description                        |
 | --: | :---------------------------------------- | :----: | :--------------------------------- |
@@ -6661,7 +6661,7 @@ _Unit tests for the SMTP client dialogue engine (services/net/smtp/smtp_run). A 
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Unit tests for the NTP server response codec (services/pc_ntp_server_build_response): a pure_
+_Unit tests for the NTP server response codec (services/protocore_ntp_server_build_response): a pure_
 
 |   # | Test                                   | Status | Description                     |
 | --: | :------------------------------------- | :----: | :------------------------------ |
@@ -7185,7 +7185,7 @@ _Unit tests for the HPACK codec (network_drivers/presentation/http/http2/hpack) 
 |   9 | `test_hpack_decode_errors`                       |   ✅   | Hpack decode errors                                                               |
 |  10 | `test_hpack_buffer_bounds`                       |   ✅   | Hpack buffer bounds                                                               |
 |  11 | `test_hpack_resolve_dynamic_name_too_big`        |   ✅   | Hpack resolve dynamic name too big                                                |
-|  12 | `test_hpack_encode_paths`                        |   ✅   | pc_hpack_dyn_init clamps a too-large max to the table storage.                    |
+|  12 | `test_hpack_encode_paths`                        |   ✅   | protocore_hpack_dyn_init clamps a too-large max to the table storage.             |
 |  13 | `test_int_coding`                                |   ✅   | C.1.1: 10, prefix 5 -> 0x0a                                                       |
 |  14 | `test_int_decode_rejects_overflowing_prefix_int` |   ✅   | 0x7f << 28 does not fit 32 bits.                                                  |
 |  15 | `test_huffman`                                   |   ✅   | Huffman                                                                           |
@@ -7211,7 +7211,7 @@ _Unit tests for the HPACK codec (network_drivers/presentation/http/http2/hpack) 
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Unit tests for the HTTP/2 frame layer (network_drivers/presentation/http/http2/pc_h2_frame, RFC 9113):_
+_Unit tests for the HTTP/2 frame layer (network_drivers/presentation/http/http2/protocore_h2_frame, RFC 9113):_
 
 |   # | Test                                     | Status | Description                                                       |
 | --: | :--------------------------------------- | :----: | :---------------------------------------------------------------- |
@@ -7232,7 +7232,7 @@ _Unit tests for the HTTP/2 frame layer (network_drivers/presentation/http/http2/
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Unit tests for the HTTP/2 connection engine (network_drivers/presentation/http/http2/pc_h2_conn,_
+_Unit tests for the HTTP/2 connection engine (network_drivers/presentation/http/http2/protocore_h2_conn,_
 
 |   # | Test                                                    | Status | Description                                      |
 | --: | :------------------------------------------------------ | :----: | :----------------------------------------------- |
@@ -7333,7 +7333,7 @@ _Unit tests for the QUIC variable-length integer codec (network_drivers/presenta
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Unit tests for the HTTP/3 framing layer (network_drivers/presentation/http/http3/pc_h3_frame, RFC 9114_
+_Unit tests for the HTTP/3 framing layer (network_drivers/presentation/http/http3/protocore_h3_frame, RFC 9114_
 
 |   # | Test                                    | Status | Description                                                                                |
 | --: | :-------------------------------------- | :----: | :----------------------------------------------------------------------------------------- |
@@ -7402,7 +7402,7 @@ _Unit tests for the JWT HS256 verifier. The reference token below was produced_
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Streaming file upload (PC_ENABLE_UPLOAD): a POST body is streamed straight_
+_Streaming file upload (PROTOCORE_ENABLE_UPLOAD): a POST body is streamed straight_
 
 |   # | Test                                   | Status | Description                     |
 | --: | :------------------------------------- | :----: | :------------------------------ |
@@ -7818,7 +7818,7 @@ _Unit tests for the multi-source time fallback matrix (services/timing_position/
 |   6 | `test_fallback_queries_in_priority_order`       |   ✅   | Fallback queries in priority order                                                        |
 |   7 | `test_table_full_rejects`                       |   ✅   | Table full rejects                                                                        |
 |   8 | `test_null_fn_rejected`                         |   ✅   | Null fn rejected                                                                          |
-|   9 | `test_table_full_all_unavailable_exhausts_scan` |   ✅   | Fill every slot (PC_TIME_SOURCE_MAX) with sources that all report no valid                |
+|   9 | `test_table_full_all_unavailable_exhausts_scan` |   ✅   | Fill every slot (PROTOCORE_TIME_SOURCE_MAX) with sources that all report no valid         |
 |  10 | `test_reset_clears_sources`                     |   ✅   | Reset clears sources                                                                      |
 |  11 | `test_http_date_from_active_source`             |   ✅   | The HTTP Date header draws from the registry: no valid source -> nothing; a source with a |
 
@@ -7917,23 +7917,23 @@ _Unit tests for the per-peer brute-force auth lockout (services/security/auth_lo
 
 _Unit tests for the trusted-reverse-proxy forwarded-client resolver (services/security/forwarded_trust)._
 
-|   # | Test                                               | Status | Description                                                                                  |
-| --: | :------------------------------------------------- | :----: | :------------------------------------------------------------------------------------------- |
-|   1 | `test_empty_table_trusts_nothing`                  |   ✅   | Empty table trusts nothing                                                                   |
-|   2 | `test_v4_cidr_membership`                          |   ✅   | V4 cidr membership                                                                           |
-|   3 | `test_v6_cidr_and_host_route`                      |   ✅   | V6 cidr and host route                                                                       |
-|   4 | `test_add_cidr_rejects_malformed`                  |   ✅   | Add cidr rejects malformed                                                                   |
-|   5 | `test_table_full`                                  |   ✅   | Table full                                                                                   |
-|   6 | `test_trusted_peer_honors_forwarded`               |   ✅   | Trusted peer honors forwarded                                                                |
-|   7 | `test_trusted_peer_honors_v6_forwarded`            |   ✅   | Trusted peer honors v6 forwarded                                                             |
-|   8 | `test_untrusted_peer_ignores_forwarded`            |   ✅   | Untrusted peer ignores forwarded                                                             |
-|   9 | `test_trusted_peer_bad_token_falls_back`           |   ✅   | Trusted peer bad token falls back                                                            |
-|  10 | `test_null_guards`                                 |   ✅   | Null guards                                                                                  |
-|  11 | `test_add_rejects_null_network`                    |   ✅   | Add rejects null network                                                                     |
-|  12 | `test_add_rejects_bad_family_and_over_long_prefix` |   ✅   | Add rejects bad family and over long prefix                                                  |
-|  13 | `test_add_cidr_rejects_overlong_address`           |   ✅   | PC_IP_STR_MAX is 46; this address text alone is well past that, with no slash reached first. |
-|  14 | `test_add_cidr_rejects_prefix_below_digit_range`   |   ✅   | Add cidr rejects prefix below digit range                                                    |
-|  15 | `test_contains_rejects_null_peer`                  |   ✅   | Contains rejects null peer                                                                   |
+|   # | Test                                               | Status | Description                                                                                         |
+| --: | :------------------------------------------------- | :----: | :-------------------------------------------------------------------------------------------------- |
+|   1 | `test_empty_table_trusts_nothing`                  |   ✅   | Empty table trusts nothing                                                                          |
+|   2 | `test_v4_cidr_membership`                          |   ✅   | V4 cidr membership                                                                                  |
+|   3 | `test_v6_cidr_and_host_route`                      |   ✅   | V6 cidr and host route                                                                              |
+|   4 | `test_add_cidr_rejects_malformed`                  |   ✅   | Add cidr rejects malformed                                                                          |
+|   5 | `test_table_full`                                  |   ✅   | Table full                                                                                          |
+|   6 | `test_trusted_peer_honors_forwarded`               |   ✅   | Trusted peer honors forwarded                                                                       |
+|   7 | `test_trusted_peer_honors_v6_forwarded`            |   ✅   | Trusted peer honors v6 forwarded                                                                    |
+|   8 | `test_untrusted_peer_ignores_forwarded`            |   ✅   | Untrusted peer ignores forwarded                                                                    |
+|   9 | `test_trusted_peer_bad_token_falls_back`           |   ✅   | Trusted peer bad token falls back                                                                   |
+|  10 | `test_null_guards`                                 |   ✅   | Null guards                                                                                         |
+|  11 | `test_add_rejects_null_network`                    |   ✅   | Add rejects null network                                                                            |
+|  12 | `test_add_rejects_bad_family_and_over_long_prefix` |   ✅   | Add rejects bad family and over long prefix                                                         |
+|  13 | `test_add_cidr_rejects_overlong_address`           |   ✅   | PROTOCORE_IP_STR_MAX is 46; this address text alone is well past that, with no slash reached first. |
+|  14 | `test_add_cidr_rejects_prefix_below_digit_range`   |   ✅   | Add cidr rejects prefix below digit range                                                           |
+|  15 | `test_contains_rejects_null_peer`                  |   ✅   | Contains rejects null peer                                                                          |
 
 </details>
 
@@ -8031,7 +8031,7 @@ _Unit tests for the dashboard widget-table JSON serializers (services/web/dashbo
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Unit tests for per-route STA/AP interface filters (PC::on(..., pc_if_kind))._
+_Unit tests for per-route STA/AP interface filters (PC::on(..., protocore_if_kind))._
 
 |   # | Test                                          | Status | Description                            |
 | --: | :-------------------------------------------- | :----: | :------------------------------------- |
@@ -8540,15 +8540,15 @@ _Host tests for services/xmpp: the XMPP stanza builder + minimal reader._
 
 _Host tests for services/rawl2: the Ethernet II / 802.1Q frame codec + the FCS._
 
-|   # | Test                                           | Status | Description                                                                   |
-| --: | :--------------------------------------------- | :----: | :---------------------------------------------------------------------------- |
-|   1 | `test_build_ethernet_ii`                       |   ✅   | Build ethernet ii                                                             |
-|   2 | `test_build_vlan`                              |   ✅   | pcp 3, dei 0, vid 100 -> TCI 0x6064; PROFINET ethertype.                      |
-|   3 | `test_parse`                                   |   ✅   | Parse                                                                         |
-|   4 | `test_fcs_check_vector`                        |   ✅   | The canonical CRC-32 check value: CRC of "123456789" = 0xCBF43926.            |
-|   5 | `test_eth_build_parse_guards`                  |   ✅   | Eth build parse guards                                                        |
-|   6 | `test_eth_build_null_src_out_and_zero_payload` |   ✅   | pc_eth_build: null src, null out, zero-length payload (skips the copy), and a |
-|   7 | `test_eth_parse_null_guards`                   |   ✅   | Eth parse null guards                                                         |
+|   # | Test                                           | Status | Description                                                                          |
+| --: | :--------------------------------------------- | :----: | :----------------------------------------------------------------------------------- |
+|   1 | `test_build_ethernet_ii`                       |   ✅   | Build ethernet ii                                                                    |
+|   2 | `test_build_vlan`                              |   ✅   | pcp 3, dei 0, vid 100 -> TCI 0x6064; PROFINET ethertype.                             |
+|   3 | `test_parse`                                   |   ✅   | Parse                                                                                |
+|   4 | `test_fcs_check_vector`                        |   ✅   | The canonical CRC-32 check value: CRC of "123456789" = 0xCBF43926.                   |
+|   5 | `test_eth_build_parse_guards`                  |   ✅   | Eth build parse guards                                                               |
+|   6 | `test_eth_build_null_src_out_and_zero_payload` |   ✅   | protocore_eth_build: null src, null out, zero-length payload (skips the copy), and a |
+|   7 | `test_eth_parse_null_guards`                   |   ✅   | Eth parse null guards                                                                |
 
 </details>
 
@@ -8668,7 +8668,7 @@ _Host tests for services/wal: record framing + CRC32 + crash-recovery replay (th
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Host tests for services/storage/wal pc_wal_store: A/B superblock + checkpoint + mount/recover over a RAM device._
+_Host tests for services/storage/wal protocore_wal_store: A/B superblock + checkpoint + mount/recover over a RAM device._
 
 |   # | Test                                               | Status | Description                                 |
 | --: | :------------------------------------------------- | :----: | :------------------------------------------ |
@@ -8719,20 +8719,20 @@ _Host tests for services/storage/wal pc_wal_store: A/B superblock + checkpoint +
 
 _Host tests for services/j2735: the ASN.1 UPER primitive codec + the BSMcore block._
 
-|   # | Test                               | Status | Description                                                                                    |
-| --: | :--------------------------------- | :----: | :--------------------------------------------------------------------------------------------- |
-|   1 | `test_cint_bits`                   |   ✅   | Cint bits                                                                                      |
-|   2 | `test_bit_writer_pattern`          |   ✅   | Write 0b101 (3 bits) then 0b11 (2 bits): stream 10111 000 -> 0xB8.                             |
-|   3 | `test_writer_null_and_zero`        |   ✅   | A null buffer (or zero cap) leaves the writer not-ok and must not dereference it.              |
-|   4 | `test_cint_roundtrip`              |   ✅   | Cint roundtrip                                                                                 |
-|   5 | `test_bsm_core_roundtrip`          |   ✅   | Bsm core roundtrip                                                                             |
-|   6 | `test_bsm_core_bit_length`         |   ✅   | msgCnt 7 + id 32 + secMark 16 + lat 31 + long 32 + elev 16 + speed 13 + heading 15 = 162 bits  |
-|   7 | `test_spat_roundtrip`              |   ✅   | Spat roundtrip                                                                                 |
-|   8 | `test_spat_decode_too_many`        |   ✅   | Only room for 1 but 2 encoded -> false.                                                        |
-|   9 | `test_map_roundtrip`               |   ✅   | Map roundtrip                                                                                  |
-|  10 | `test_uper_overflow_and_bsm_guard` |   ✅   | Uper overflow and bsm guard                                                                    |
-|  11 | `test_j2735_guards_and_truncation` |   ✅   | pc_uper_put_cint / pc_uper_get_cint with a single-value (zero-bit) range: nothing on the wire. |
-|  12 | `test_j2735_extra_branch_coverage` |   ✅   | pc_uper_put_bits: nbits == 0 on an otherwise-ok writer is a no-op (the guard's second operand, |
+|   # | Test                               | Status | Description                                                                                                  |
+| --: | :--------------------------------- | :----: | :----------------------------------------------------------------------------------------------------------- |
+|   1 | `test_cint_bits`                   |   ✅   | Cint bits                                                                                                    |
+|   2 | `test_bit_writer_pattern`          |   ✅   | Write 0b101 (3 bits) then 0b11 (2 bits): stream 10111 000 -> 0xB8.                                           |
+|   3 | `test_writer_null_and_zero`        |   ✅   | A null buffer (or zero cap) leaves the writer not-ok and must not dereference it.                            |
+|   4 | `test_cint_roundtrip`              |   ✅   | Cint roundtrip                                                                                               |
+|   5 | `test_bsm_core_roundtrip`          |   ✅   | Bsm core roundtrip                                                                                           |
+|   6 | `test_bsm_core_bit_length`         |   ✅   | msgCnt 7 + id 32 + secMark 16 + lat 31 + long 32 + elev 16 + speed 13 + heading 15 = 162 bits                |
+|   7 | `test_spat_roundtrip`              |   ✅   | Spat roundtrip                                                                                               |
+|   8 | `test_spat_decode_too_many`        |   ✅   | Only room for 1 but 2 encoded -> false.                                                                      |
+|   9 | `test_map_roundtrip`               |   ✅   | Map roundtrip                                                                                                |
+|  10 | `test_uper_overflow_and_bsm_guard` |   ✅   | Uper overflow and bsm guard                                                                                  |
+|  11 | `test_j2735_guards_and_truncation` |   ✅   | protocore_uper_put_cint / protocore_uper_get_cint with a single-value (zero-bit) range: nothing on the wire. |
+|  12 | `test_j2735_extra_branch_coverage` |   ✅   | protocore_uper_put_bits: nbits == 0 on an otherwise-ok writer is a no-op (the guard's second operand,        |
 
 </details>
 
@@ -9132,7 +9132,7 @@ _Host tests for services/utmc: the UTMC common-database request/response codec._
 |   5 | `test_overflow`                     |   ✅   | Overflow                                                                    |
 |   6 | `test_parse_request_guards`         |   ✅   | Parse request guards                                                        |
 |   7 | `test_quality_multidigit`           |   ✅   | A quality value >= 10 forces put_u()'s do/while to loop more than once.     |
-|   8 | `test_null_out_and_zero_cap_guards` |   ✅   | pc_utmc_request: null out buffer, then zero-capacity buffer.                |
+|   8 | `test_null_out_and_zero_cap_guards` |   ✅   | protocore_utmc_request: null out buffer, then zero-capacity buffer.         |
 
 </details>
 
@@ -9145,20 +9145,20 @@ _Host tests for services/utmc: the UTMC common-database request/response codec._
 
 _Host tests for services/ocit: the OCIT-Outstations message codec._
 
-|   # | Test                                     | Status | Description                                                                         |
-| --: | :--------------------------------------- | :----: | :---------------------------------------------------------------------------------- |
-|   1 | `test_build_and_parse`                   |   ✅   | [02][01 02][00 03][04][00 00 12 34] = 10 bytes.                                     |
-|   2 | `test_set_u16_helper`                    |   ✅   | Set u16 helper                                                                      |
-|   3 | `test_get_no_value`                      |   ✅   | Get no value                                                                        |
-|   4 | `test_parse_rejects_short`               |   ✅   | Parse rejects short                                                                 |
-|   5 | `test_build_rejects_null_out`            |   ✅   | Build rejects null out                                                              |
-|   6 | `test_build_rejects_null_value_with_len` |   ✅   | Build rejects null value with len                                                   |
-|   7 | `test_build_rejects_overflow`            |   ✅   | Build rejects overflow                                                              |
-|   8 | `test_parse_rejects_null_msg`            |   ✅   | Parse rejects null msg                                                              |
-|   9 | `test_parse_rejects_null_out`            |   ✅   | Parse rejects null out                                                              |
-|  10 | `test_value_u16_rejects_null_msg`        |   ✅   | Value u16 rejects null msg                                                          |
-|  11 | `test_value_u16_rejects_wrong_type`      |   ✅   | Value u16 rejects wrong type                                                        |
-|  12 | `test_value_u16_rejects_null_value_ptr`  |   ✅   | Hand-built OcitMsg (not reachable via pc_ocit_parse) exercising the !m->value guard |
+|   # | Test                                     | Status | Description                                                                                |
+| --: | :--------------------------------------- | :----: | :----------------------------------------------------------------------------------------- |
+|   1 | `test_build_and_parse`                   |   ✅   | [02][01 02][00 03][04][00 00 12 34] = 10 bytes.                                            |
+|   2 | `test_set_u16_helper`                    |   ✅   | Set u16 helper                                                                             |
+|   3 | `test_get_no_value`                      |   ✅   | Get no value                                                                               |
+|   4 | `test_parse_rejects_short`               |   ✅   | Parse rejects short                                                                        |
+|   5 | `test_build_rejects_null_out`            |   ✅   | Build rejects null out                                                                     |
+|   6 | `test_build_rejects_null_value_with_len` |   ✅   | Build rejects null value with len                                                          |
+|   7 | `test_build_rejects_overflow`            |   ✅   | Build rejects overflow                                                                     |
+|   8 | `test_parse_rejects_null_msg`            |   ✅   | Parse rejects null msg                                                                     |
+|   9 | `test_parse_rejects_null_out`            |   ✅   | Parse rejects null out                                                                     |
+|  10 | `test_value_u16_rejects_null_msg`        |   ✅   | Value u16 rejects null msg                                                                 |
+|  11 | `test_value_u16_rejects_wrong_type`      |   ✅   | Value u16 rejects wrong type                                                               |
+|  12 | `test_value_u16_rejects_null_value_ptr`  |   ✅   | Hand-built OcitMsg (not reachable via protocore_ocit_parse) exercising the !m->value guard |
 
 </details>
 
@@ -9171,16 +9171,16 @@ _Host tests for services/ocit: the OCIT-Outstations message codec._
 
 _Host tests for services/atc: the ATC field-I/O interop snapshot._
 
-|   # | Test                                            | Status | Description                                                                           |
-| --: | :---------------------------------------------- | :----: | :------------------------------------------------------------------------------------ |
-|   1 | `test_snapshot_json`                            |   ✅   | Snapshot json                                                                         |
-|   2 | `test_set_output`                               |   ✅   | Set an output.                                                                        |
-|   3 | `test_get`                                      |   ✅   | Get                                                                                   |
-|   4 | `test_empty_and_overflow`                       |   ✅   | Empty and overflow                                                                    |
-|   5 | `test_json_escapes_and_overflow`                |   ✅   | Json escapes and overflow                                                             |
-|   6 | `test_atc_null_and_missing_args`                |   ✅   | pc_atc_snapshot_json: null io / null out / (count>0 && !points) all fail closed.      |
-|   7 | `test_atc_null_name_point_and_multidigit_value` |   ✅   | A point with a null name renders as an empty JSON string and is safely skipped (never |
-|   8 | `test_strbuf_xml_and_json_direct`               |   ✅   | pc_sb_xml: all four escapes (&,<,>,") plus literal passthrough chars, in one pass.    |
+|   # | Test                                            | Status | Description                                                                               |
+| --: | :---------------------------------------------- | :----: | :---------------------------------------------------------------------------------------- |
+|   1 | `test_snapshot_json`                            |   ✅   | Snapshot json                                                                             |
+|   2 | `test_set_output`                               |   ✅   | Set an output.                                                                            |
+|   3 | `test_get`                                      |   ✅   | Get                                                                                       |
+|   4 | `test_empty_and_overflow`                       |   ✅   | Empty and overflow                                                                        |
+|   5 | `test_json_escapes_and_overflow`                |   ✅   | Json escapes and overflow                                                                 |
+|   6 | `test_atc_null_and_missing_args`                |   ✅   | protocore_atc_snapshot_json: null io / null out / (count>0 && !points) all fail closed.   |
+|   7 | `test_atc_null_name_point_and_multidigit_value` |   ✅   | A point with a null name renders as an empty JSON string and is safely skipped (never     |
+|   8 | `test_strbuf_xml_and_json_direct`               |   ✅   | protocore_sb_xml: all four escapes (&,<,>,") plus literal passthrough chars, in one pass. |
 
 </details>
 
@@ -9193,18 +9193,18 @@ _Host tests for services/atc: the ATC field-I/O interop snapshot._
 
 _Host tests for services/southbound: the driver registry + name-dispatched read/write facade._
 
-|   # | Test                                       | Status | Description                                                                                  |
-| --: | :----------------------------------------- | :----: | :------------------------------------------------------------------------------------------- |
-|   1 | `test_register_and_find`                   |   ✅   | Register and find                                                                            |
-|   2 | `test_read_write_dispatch`                 |   ✅   | Read write dispatch                                                                          |
-|   3 | `test_block_atomic`                        |   ✅   | Block atomic                                                                                 |
-|   4 | `test_unsupported_capability`              |   ✅   | A driver that only implements single-point read.                                             |
-|   5 | `test_registry_full`                       |   ✅   | Fill the registry with distinct-named drivers, then overflow.                                |
-|   6 | `test_dispatch_not_found_guards`           |   ✅   | Dispatch not found guards                                                                    |
-|   7 | `test_find_null_name`                      |   ✅   | pc_southbound_find's own null-name guard, independent of any dispatch caller.                |
-|   8 | `test_read_missing_capability`             |   ✅   | A driver that implements write but not read, to hit pc_southbound_read's                     |
-|   9 | `test_find_skips_driver_mutated_name_null` |   ✅   | pc_southbound_find() stores a _borrowed_ pointer (const SouthboundDriver *), not a copy: the |
-|  10 | `test_block_not_found_and_arg_edges`       |   ✅   | Block not found and arg edges                                                                |
+|   # | Test                                       | Status | Description                                                                                         |
+| --: | :----------------------------------------- | :----: | :-------------------------------------------------------------------------------------------------- |
+|   1 | `test_register_and_find`                   |   ✅   | Register and find                                                                                   |
+|   2 | `test_read_write_dispatch`                 |   ✅   | Read write dispatch                                                                                 |
+|   3 | `test_block_atomic`                        |   ✅   | Block atomic                                                                                        |
+|   4 | `test_unsupported_capability`              |   ✅   | A driver that only implements single-point read.                                                    |
+|   5 | `test_registry_full`                       |   ✅   | Fill the registry with distinct-named drivers, then overflow.                                       |
+|   6 | `test_dispatch_not_found_guards`           |   ✅   | Dispatch not found guards                                                                           |
+|   7 | `test_find_null_name`                      |   ✅   | protocore_southbound_find's own null-name guard, independent of any dispatch caller.                |
+|   8 | `test_read_missing_capability`             |   ✅   | A driver that implements write but not read, to hit protocore_southbound_read's                     |
+|   9 | `test_find_skips_driver_mutated_name_null` |   ✅   | protocore_southbound_find() stores a _borrowed_ pointer (const SouthboundDriver *), not a copy: the |
+|  10 | `test_block_not_found_and_arg_edges`       |   ✅   | Block not found and arg edges                                                                       |
 
 </details>
 
@@ -9257,8 +9257,8 @@ _Host tests for services/exc_decoder: parsing a real ESP32 Guru Meditation panic
 |  10 | `test_core_field_variants`                      |   ✅   | "Core " followed by a non-digit leaves core at -1; a digit run ends at the first non-digit.         |
 |  11 | `test_multi_digit_core_in_json`                 |   ✅   | A two-digit core exercises the multi-iteration decimal emitter.                                     |
 |  12 | `test_cause_truncation`                         |   ✅   | The cause is bounded by the field width, and an unterminated cause stops at end-of-string.          |
-|  13 | `test_backtrace_frame_cap_and_separator`        |   ✅   | The frame list stops at PC_EXC_MAX_FRAMES even when more pairs follow.                              |
-|  14 | `test_parse_true_on_zero_pc_frame`              |   ✅   | A single frame whose pc is 0 still counts as a successful parse (frame_count carries it).           |
+|  13 | `test_backtrace_frame_cap_and_separator`        |   ✅   | The frame list stops at PROTOCORE_EXC_MAX_FRAMES even when more pairs follow.                       |
+|  14 | `test_parse_true_on_zero_protocore_frame`       |   ✅   | A single frame whose pc is 0 still counts as a successful parse (frame_count carries it).           |
 
 </details>
 
@@ -9370,15 +9370,15 @@ _Host tests for services/sockpool: the LRU connection-slot recycling pool._
 
 _Host tests for services/psram_pool: DRAM/PSRAM placement policy + DMA ping-pong bookkeeping._
 
-|   # | Test                             | Status | Description                                                                                |
-| --: | :------------------------------- | :----: | :----------------------------------------------------------------------------------------- |
-|   1 | `test_place_large_prefers_psram` |   ✅   | 64KB asset, threshold 4KB, plenty of both heaps, 32KB DRAM reserve.                        |
-|   2 | `test_place_small_prefers_dram`  |   ✅   | 512B hot buffer, threshold 4KB -> DRAM.                                                    |
-|   3 | `test_place_dma_forces_dram`     |   ✅   | DMA-required buffer must be DRAM even if large.                                            |
-|   4 | `test_place_edges`               |   ✅   | Place edges                                                                                |
-|   5 | `test_place_small_neither_fits`  |   ✅   | small / hot buffer: DRAM too tight (reserve dominates) AND PSRAM too small -> FAIL.        |
-|   6 | `test_pingpong`                  |   ✅   | Pingpong                                                                                   |
-|   7 | `test_pingpong_null_safety`      |   ✅   | Every pc_pingpong_* accessor guards against a null PingPong* and returns a fixed fallback. |
+|   # | Test                             | Status | Description                                                                                       |
+| --: | :------------------------------- | :----: | :------------------------------------------------------------------------------------------------ |
+|   1 | `test_place_large_prefers_psram` |   ✅   | 64KB asset, threshold 4KB, plenty of both heaps, 32KB DRAM reserve.                               |
+|   2 | `test_place_small_prefers_dram`  |   ✅   | 512B hot buffer, threshold 4KB -> DRAM.                                                           |
+|   3 | `test_place_dma_forces_dram`     |   ✅   | DMA-required buffer must be DRAM even if large.                                                   |
+|   4 | `test_place_edges`               |   ✅   | Place edges                                                                                       |
+|   5 | `test_place_small_neither_fits`  |   ✅   | small / hot buffer: DRAM too tight (reserve dominates) AND PSRAM too small -> FAIL.               |
+|   6 | `test_pingpong`                  |   ✅   | Pingpong                                                                                          |
+|   7 | `test_pingpong_null_safety`      |   ✅   | Every protocore_pingpong_* accessor guards against a null PingPong* and returns a fixed fallback. |
 
 </details>
 
@@ -9391,18 +9391,18 @@ _Host tests for services/psram_pool: DRAM/PSRAM placement policy + DMA ping-pong
 
 _Host tests for services/happy_eyeballs: RFC 6724 ordering + RFC 8305 family interleave + attempt gate._
 
-|   # | Test                                         | Status | Description                                                                                  |
-| --: | :------------------------------------------- | :----: | :------------------------------------------------------------------------------------------- |
-|   1 | `test_pref_order`                            |   ✅   | Global outranks link-local outranks loopback; within global, native v6 outranks v4.          |
-|   2 | `test_order_and_interleave`                  |   ✅   | Two global v6 + one global v4, given v4-first: sort puts v6 ahead, interleave alternates.    |
-|   3 | `test_order_single_family`                   |   ✅   | All v4: interleave is a no-op, order stays preference-sorted (global before private).        |
-|   4 | `test_attempt_due`                           |   ✅   | Attempt due                                                                                  |
-|   5 | `test_pref_scopes_and_order_edges`           |   ✅   | Exercise the multicast + unspecified scope arms of pc_he_pref (values are pc_ip-classified). |
-|   6 | `test_pref_null_and_none`                    |   ✅   | Null pointer and an empty (PC_IP_NONE) address both hit the sentinel-return arm.             |
-|   7 | `test_order_null_list_is_noop`               |   ✅   | A null list must return immediately without dereferencing it.                                |
-|   8 | `test_order_v4_mapped_treated_as_v4`         |   ✅   | ::ffff:a.b.c.d is family V6 but eff_is_v6() must treat it as V4 for interleave purposes.     |
-|   9 | `test_order_oversized_list_skips_interleave` |   ✅   | A list longer than PC_HE_MAX (16) is stable-sorted but the interleave step is skipped        |
-|  10 | `test_order_family_imbalance_drains_v6`      |   ✅   | 3 global v6 + 1 global v4, v6-first: v4 exhausts after one pick and the "preferred family    |
+|   # | Test                                         | Status | Description                                                                                                |
+| --: | :------------------------------------------- | :----: | :--------------------------------------------------------------------------------------------------------- |
+|   1 | `test_pref_order`                            |   ✅   | Global outranks link-local outranks loopback; within global, native v6 outranks v4.                        |
+|   2 | `test_order_and_interleave`                  |   ✅   | Two global v6 + one global v4, given v4-first: sort puts v6 ahead, interleave alternates.                  |
+|   3 | `test_order_single_family`                   |   ✅   | All v4: interleave is a no-op, order stays preference-sorted (global before private).                      |
+|   4 | `test_attempt_due`                           |   ✅   | Attempt due                                                                                                |
+|   5 | `test_pref_scopes_and_order_edges`           |   ✅   | Exercise the multicast + unspecified scope arms of protocore_he_pref (values are protocore_ip-classified). |
+|   6 | `test_pref_null_and_none`                    |   ✅   | Null pointer and an empty (PROTOCORE_IP_NONE) address both hit the sentinel-return arm.                    |
+|   7 | `test_order_null_list_is_noop`               |   ✅   | A null list must return immediately without dereferencing it.                                              |
+|   8 | `test_order_v4_mapped_treated_as_v4`         |   ✅   | ::ffff:a.b.c.d is family V6 but eff_is_v6() must treat it as V4 for interleave purposes.                   |
+|   9 | `test_order_oversized_list_skips_interleave` |   ✅   | A list longer than PROTOCORE_HE_MAX (16) is stable-sorted but the interleave step is skipped               |
+|  10 | `test_order_family_imbalance_drains_v6`      |   ✅   | 3 global v6 + 1 global v4, v6-first: v4 exhausts after one pick and the "preferred family                  |
 
 </details>
 
@@ -9615,21 +9615,21 @@ _Host tests for services/tls_policy: version negotiation, cipher selection, AEAD
 
 _Host tests for services/wisun: the CoAP client request builder (RFC 7252) + the FAN node registry._
 
-|   # | Test                                                 | Status | Description                                                                                   |
-| --: | :--------------------------------------------------- | :----: | :-------------------------------------------------------------------------------------------- |
-|   1 | `test_build_coap_get`                                |   ✅   | CON GET "sensors/temp", msg id 0x1234, no token.                                              |
-|   2 | `test_build_coap_put_with_token_and_payload`         |   ✅   | Header: 0x52 (ver=01, type NON=01, tkl=0010), code 0x03 (PUT), mid 0x00 0x05.                 |
-|   3 | `test_build_coap_long_segment_extended_length`       |   ✅   | A 13-char path segment forces the extended-length nibble (0xD).                               |
-|   4 | `test_build_coap_rejects_bad_args`                   |   ✅   | Build coap rejects bad args                                                                   |
-|   5 | `test_node_registry`                                 |   ✅   | Node registry                                                                                 |
-|   6 | `test_registry_full_and_misses`                      |   ✅   | Registry full and misses                                                                      |
-|   7 | `test_coap_length_ext`                               |   ✅   | A Uri-Path segment >= 269 bytes drives the 2-byte length-extension encoding.                  |
-|   8 | `test_coap_overflow_and_emit_fail`                   |   ✅   | Header fits (cap == 4) but no room for even the first option header -> emit fails -> build 0. |
-|   9 | `test_coap_arg_guards`                               |   ✅   | Coap arg guards                                                                               |
-|  10 | `test_wisun_null_guards`                             |   ✅   | Wisun null guards                                                                             |
-|  11 | `test_node_register_null_fan_and_addr`               |   ✅   | Cover the individual OR-arms of pc_wisun_node_register's guard that the other tests           |
-|  12 | `test_node_find_partial_null_and_found_idx_null`     |   ✅   | pc_wisun_node_find's guard is the same 3-arm OR; test_wisun_null_guards only covers a         |
-|  13 | `test_joined_count_and_json_unjoined_and_null_nodes` |   ✅   | pc_wisun_joined_count's guard needs "fan valid, nodes null" (the other tests only cover       |
+|   # | Test                                                 | Status | Description                                                                                    |
+| --: | :--------------------------------------------------- | :----: | :--------------------------------------------------------------------------------------------- |
+|   1 | `test_build_coap_get`                                |   ✅   | CON GET "sensors/temp", msg id 0x1234, no token.                                               |
+|   2 | `test_build_coap_put_with_token_and_payload`         |   ✅   | Header: 0x52 (ver=01, type NON=01, tkl=0010), code 0x03 (PUT), mid 0x00 0x05.                  |
+|   3 | `test_build_coap_long_segment_extended_length`       |   ✅   | A 13-char path segment forces the extended-length nibble (0xD).                                |
+|   4 | `test_build_coap_rejects_bad_args`                   |   ✅   | Build coap rejects bad args                                                                    |
+|   5 | `test_node_registry`                                 |   ✅   | Node registry                                                                                  |
+|   6 | `test_registry_full_and_misses`                      |   ✅   | Registry full and misses                                                                       |
+|   7 | `test_coap_length_ext`                               |   ✅   | A Uri-Path segment >= 269 bytes drives the 2-byte length-extension encoding.                   |
+|   8 | `test_coap_overflow_and_emit_fail`                   |   ✅   | Header fits (cap == 4) but no room for even the first option header -> emit fails -> build 0.  |
+|   9 | `test_coap_arg_guards`                               |   ✅   | Coap arg guards                                                                                |
+|  10 | `test_wisun_null_guards`                             |   ✅   | Wisun null guards                                                                              |
+|  11 | `test_node_register_null_fan_and_addr`               |   ✅   | Cover the individual OR-arms of protocore_wisun_node_register's guard that the other tests     |
+|  12 | `test_node_find_partial_null_and_found_idx_null`     |   ✅   | protocore_wisun_node_find's guard is the same 3-arm OR; test_wisun_null_guards only covers a   |
+|  13 | `test_joined_count_and_json_unjoined_and_null_nodes` |   ✅   | protocore_wisun_joined_count's guard needs "fan valid, nodes null" (the other tests only cover |
 
 </details>
 
@@ -9732,7 +9732,7 @@ _Unit tests for the removable-storage state machine (services/storage/hotswap): 
 |  28 | `test_binding_without_card_detect_lets_the_mount_decide`      |   ✅   | A NULL present callback means "assume a card is there"; an unmountable volume                        |
 |  29 | `test_binding_without_a_mount_callback_never_becomes_ready`   |   ✅   | No way to mount anything means no storage: it must stay fail-closed rather than                      |
 |  30 | `test_binding_event_callback_is_optional`                     |   ✅   | Clearing the event callback must not stop the machine from running.                                  |
-|  31 | `test_binding_poll_reads_the_library_clock`                   |   ✅   | poll() is poll_at(pc_millis()), so the same rate limit applies to the loop-driven                    |
+|  31 | `test_binding_poll_reads_the_library_clock`                   |   ✅   | poll() is poll_at(protocore_millis()), so the same rate limit applies to the loop-driven             |
 
 </details>
 
@@ -9745,23 +9745,23 @@ _Unit tests for the removable-storage state machine (services/storage/hotswap): 
 
 _Unit tests for the abstract logging layer (shared_primitives/log.h). Built at_
 
-|   # | Test                                                  | Status | Description                                                                                   |
-| --: | :---------------------------------------------------- | :----: | :-------------------------------------------------------------------------------------------- |
-|   1 | `test_debug_is_below_the_floor_and_emits_nothing`     |   ✅   | Debug is below the floor and emits nothing                                                    |
-|   2 | `test_discarded_call_does_not_evaluate_its_arguments` |   ✅   | The whole point of a preprocessor filter rather than a runtime `if`: a discarded log must not |
-|   3 | `test_info_and_above_emit`                            |   ✅   | Info and above emit                                                                           |
-|   4 | `test_enabled_call_does_evaluate_its_arguments`       |   ✅   | Enabled call does evaluate its arguments                                                      |
-|   5 | `test_emitted_line_also_reaches_the_logbuf_ring`      |   ✅   | Emitted line also reaches the logbuf ring                                                     |
-|   6 | `test_levels_match_the_logbuf_letters`                |   ✅   | The PC_LOG_LEVEL_* preprocessor values and pc_log_level's constexprs are two spellings of one |
-|   7 | `test_no_sink_is_not_a_crash`                         |   ✅   | No sink is not a crash                                                                        |
-|   8 | `test_line_that_does_not_fit_is_refused`              |   ✅   | Line that does not fit is refused                                                             |
-|   9 | `test_null_spec_is_ignored`                           |   ✅   | Null spec is ignored                                                                          |
-|  10 | `test_empty_message_is_still_a_line`                  |   ✅   | Empty message is still a line                                                                 |
-|  11 | `test_ring_read_byte_and_available`                   |   ✅   | Ring read byte and available                                                                  |
-|  12 | `test_ring_read_bulk_stops_at_head_and_maxn`          |   ✅   | Ring read bulk stops at head and maxn                                                         |
-|  13 | `test_ring_peek_and_consume_wrap`                     |   ✅   | Ring peek and consume wrap                                                                    |
-|  14 | `test_ring_free_reserves_one_slot`                    |   ✅   | Ring free reserves one slot                                                                   |
-|  15 | `test_ring_write_span_wraps`                          |   ✅   | Ring write span wraps                                                                         |
+|   # | Test                                                  | Status | Description                                                                                                 |
+| --: | :---------------------------------------------------- | :----: | :---------------------------------------------------------------------------------------------------------- |
+|   1 | `test_debug_is_below_the_floor_and_emits_nothing`     |   ✅   | Debug is below the floor and emits nothing                                                                  |
+|   2 | `test_discarded_call_does_not_evaluate_its_arguments` |   ✅   | The whole point of a preprocessor filter rather than a runtime `if`: a discarded log must not               |
+|   3 | `test_info_and_above_emit`                            |   ✅   | Info and above emit                                                                                         |
+|   4 | `test_enabled_call_does_evaluate_its_arguments`       |   ✅   | Enabled call does evaluate its arguments                                                                    |
+|   5 | `test_emitted_line_also_reaches_the_logbuf_ring`      |   ✅   | Emitted line also reaches the logbuf ring                                                                   |
+|   6 | `test_levels_match_the_logbuf_letters`                |   ✅   | The PROTOCORE_LOG_LEVEL_* preprocessor values and protocore_log_level's constexprs are two spellings of one |
+|   7 | `test_no_sink_is_not_a_crash`                         |   ✅   | No sink is not a crash                                                                                      |
+|   8 | `test_line_that_does_not_fit_is_refused`              |   ✅   | Line that does not fit is refused                                                                           |
+|   9 | `test_null_spec_is_ignored`                           |   ✅   | Null spec is ignored                                                                                        |
+|  10 | `test_empty_message_is_still_a_line`                  |   ✅   | Empty message is still a line                                                                               |
+|  11 | `test_ring_read_byte_and_available`                   |   ✅   | Ring read byte and available                                                                                |
+|  12 | `test_ring_read_bulk_stops_at_head_and_maxn`          |   ✅   | Ring read bulk stops at head and maxn                                                                       |
+|  13 | `test_ring_peek_and_consume_wrap`                     |   ✅   | Ring peek and consume wrap                                                                                  |
+|  14 | `test_ring_free_reserves_one_slot`                    |   ✅   | Ring free reserves one slot                                                                                 |
+|  15 | `test_ring_write_span_wraps`                          |   ✅   | Ring write span wraps                                                                                       |
 
 </details>
 
@@ -9774,18 +9774,18 @@ _Unit tests for the abstract logging layer (shared_primitives/log.h). Built at_
 
 _Unit tests for schema-driven config export/restore (services/storage/config_io) over_
 
-|   # | Test                                                      | Status | Description                                                                     |
-| --: | :-------------------------------------------------------- | :----: | :------------------------------------------------------------------------------ |
-|   1 | `test_export_format`                                      |   ✅   | Export format                                                                   |
-|   2 | `test_round_trip`                                         |   ✅   | Round trip                                                                      |
-|   3 | `test_import_skips_unknown_keys`                          |   ✅   | Import skips unknown keys                                                       |
-|   4 | `test_export_overflow_fails_closed`                       |   ✅   | Export overflow fails closed                                                    |
-|   5 | `test_export_import_null_guards`                          |   ✅   | Export import null guards                                                       |
-|   6 | `test_export_zero_cap_fails_closed`                       |   ✅   | Export zero cap fails closed                                                    |
-|   7 | `test_field_type_skips_null_key_entries`                  |   ✅   | A malformed schema entry (null key) must be skipped by field_type's lookup, not |
-|   8 | `test_config_apply_field_rejects_unknown_type`            |   ✅   | A field whose type is neither PC_CFG_STR nor PC_CFG_U32 (a malformed schema     |
-|   9 | `test_import_line_without_equals_and_no_trailing_newline` |   ✅   | "bogus" has no '=' (exercises the "no '=' on this line" skip path), and the     |
-|  10 | `test_import_key_and_value_length_boundaries`             |   ✅   | Three malformed lines, one per length guard on the key=val split:               |
+|   # | Test                                                      | Status | Description                                                                               |
+| --: | :-------------------------------------------------------- | :----: | :---------------------------------------------------------------------------------------- |
+|   1 | `test_export_format`                                      |   ✅   | Export format                                                                             |
+|   2 | `test_round_trip`                                         |   ✅   | Round trip                                                                                |
+|   3 | `test_import_skips_unknown_keys`                          |   ✅   | Import skips unknown keys                                                                 |
+|   4 | `test_export_overflow_fails_closed`                       |   ✅   | Export overflow fails closed                                                              |
+|   5 | `test_export_import_null_guards`                          |   ✅   | Export import null guards                                                                 |
+|   6 | `test_export_zero_cap_fails_closed`                       |   ✅   | Export zero cap fails closed                                                              |
+|   7 | `test_field_type_skips_null_key_entries`                  |   ✅   | A malformed schema entry (null key) must be skipped by field_type's lookup, not           |
+|   8 | `test_config_apply_field_rejects_unknown_type`            |   ✅   | A field whose type is neither PROTOCORE_CFG_STR nor PROTOCORE_CFG_U32 (a malformed schema |
+|   9 | `test_import_line_without_equals_and_no_trailing_newline` |   ✅   | "bogus" has no '=' (exercises the "no '=' on this line" skip path), and the               |
+|  10 | `test_import_key_and_value_length_boundaries`             |   ✅   | Three malformed lines, one per length guard on the key=val split:                         |
 
 </details>
 
@@ -9796,20 +9796,20 @@ _Unit tests for schema-driven config export/restore (services/storage/config_io)
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Phase 2 core-partitioning invariant (built with PC_WORKER_COUNT=2): a worker_
+_Phase 2 core-partitioning invariant (built with PROTOCORE_WORKER_COUNT=2): a worker_
 
-|   # | Test                                                      | Status | Description                                                                             |
-| --: | :-------------------------------------------------------- | :----: | :-------------------------------------------------------------------------------------- |
-|   1 | `test_worker_count_is_two`                                |   ✅   | Worker count is two                                                                     |
-|   2 | `test_check_timeouts_reaps_only_owned_slots`              |   ✅   | Check timeouts reaps only owned slots                                                   |
-|   3 | `test_pool_init_defaults_owner_zero`                      |   ✅   | Pool init defaults owner zero                                                           |
-|   4 | `test_worker_self_id_roundtrip`                           |   ✅   | pc_worker_set_self binds the calling context's worker id; pc_worker_self reads it back. |
-|   5 | `test_worker_lifecycle_raises_and_lowers_the_run_flag`    |   ✅   | Worker lifecycle raises and lowers the run flag                                         |
-|   6 | `test_listener_worker_queues_init_and_lookup`             |   ✅   | Listener worker queues init and lookup                                                  |
-|   7 | `test_enqueue_routes_by_slot_owner_and_rejects_bad_owner` |   ✅   | Enqueue routes by slot owner and rejects bad owner                                      |
-|   8 | `test_accept_cb_round_robins_slot_owner`                  |   ✅   | Accept cb round robins slot owner                                                       |
-|   9 | `test_dynamic_listener_creates_worker_queues`             |   ✅   | Dynamic listener creates worker queues                                                  |
-|  10 | `test_defer_queues_and_run_deferred_runs_it`              |   ✅   | Defer queues and run deferred runs it                                                   |
+|   # | Test                                                      | Status | Description                                                                                           |
+| --: | :-------------------------------------------------------- | :----: | :---------------------------------------------------------------------------------------------------- |
+|   1 | `test_worker_count_is_two`                                |   ✅   | Worker count is two                                                                                   |
+|   2 | `test_check_timeouts_reaps_only_owned_slots`              |   ✅   | Check timeouts reaps only owned slots                                                                 |
+|   3 | `test_pool_init_defaults_owner_zero`                      |   ✅   | Pool init defaults owner zero                                                                         |
+|   4 | `test_worker_self_id_roundtrip`                           |   ✅   | protocore_worker_set_self binds the calling context's worker id; protocore_worker_self reads it back. |
+|   5 | `test_worker_lifecycle_raises_and_lowers_the_run_flag`    |   ✅   | Worker lifecycle raises and lowers the run flag                                                       |
+|   6 | `test_listener_worker_queues_init_and_lookup`             |   ✅   | Listener worker queues init and lookup                                                                |
+|   7 | `test_enqueue_routes_by_slot_owner_and_rejects_bad_owner` |   ✅   | Enqueue routes by slot owner and rejects bad owner                                                    |
+|   8 | `test_accept_cb_round_robins_slot_owner`                  |   ✅   | Accept cb round robins slot owner                                                                     |
+|   9 | `test_dynamic_listener_creates_worker_queues`             |   ✅   | Dynamic listener creates worker queues                                                                |
+|  10 | `test_defer_queues_and_run_deferred_runs_it`              |   ✅   | Defer queues and run deferred runs it                                                                 |
 
 </details>
 
@@ -9820,7 +9820,7 @@ _Phase 2 core-partitioning invariant (built with PC_WORKER_COUNT=2): a worker_
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Unit tests for the pluggable monotonic clock (services/pc_clock): the platform_
+_Unit tests for the pluggable monotonic clock (services/protocore_clock): the platform_
 
 |   # | Test                                    | Status | Description                      |
 | --: | :-------------------------------------- | :----: | :------------------------------- |
@@ -9841,7 +9841,7 @@ _Unit tests for the pluggable monotonic clock (services/pc_clock): the platform_
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Concurrency proof for the cross-thread slot fields (pc_atomic state / rx_head /_
+_Concurrency proof for the cross-thread slot fields (protocore_atomic state / rx_head /_
 
 |   # | Test                         | Status | Description           |
 | --: | :--------------------------- | :----: | :-------------------- |
@@ -9857,7 +9857,7 @@ _Concurrency proof for the cross-thread slot fields (pc_atomic state / rx_head /
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Concurrency proof for the cross-thread slot fields (pc_atomic state / rx_head /_
+_Concurrency proof for the cross-thread slot fields (protocore_atomic state / rx_head /_
 
 |   # | Test                         | Status | Description           |
 | --: | :--------------------------- | :----: | :-------------------- |
@@ -9923,7 +9923,7 @@ _Unit tests for the QUIC packet header + packet-number codec (network_drivers/pr
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Unit tests for the QUIC frame codec (network_drivers/presentation/http/http3/pc_quic_frame, RFC 9000_
+_Unit tests for the QUIC frame codec (network_drivers/presentation/http/http3/protocore_quic_frame, RFC 9000_
 
 |   # | Test                              | Status | Description                                                                                          |
 | --: | :-------------------------------- | :----: | :--------------------------------------------------------------------------------------------------- |
@@ -9951,7 +9951,7 @@ _Unit tests for the QUIC frame codec (network_drivers/presentation/http/http3/pc
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Unit tests for QUIC Initial packet crypto (network_drivers/presentation/http/http3/pc_hkdf,_
+_Unit tests for QUIC Initial packet crypto (network_drivers/presentation/http/http3/protocore_hkdf,_
 
 |   # | Test                                      | Status | Description                                                                                    |
 | --: | :---------------------------------------- | :----: | :--------------------------------------------------------------------------------------------- |
@@ -10085,7 +10085,7 @@ _DTLS 1.3 handshake framing + reliability tests (RFC 9147 §5, §7): the 12-byte
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_TLS 1.3 messages the DTLS 1.3 handshake adds to pc_tls13_msg (RFC 8446 §4.1.4 / §4.4.1): the_
+_TLS 1.3 messages the DTLS 1.3 handshake adds to protocore_tls13_msg (RFC 8446 §4.1.4 / §4.4.1): the_
 
 |   # | Test                                    | Status | Description                                                                                         |
 | --: | :-------------------------------------- | :----: | :-------------------------------------------------------------------------------------------------- |
@@ -10262,7 +10262,7 @@ _Unit tests for the TLS 1.3 key schedule (network_drivers/tls/tls13_kdf; RFC 844
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Unit tests for the QUIC transport-parameters codec (network_drivers/presentation/http/http3/pc_quic_tp;_
+_Unit tests for the QUIC transport-parameters codec (network_drivers/presentation/http/http3/protocore_quic_tp;_
 
 |   # | Test                                       | Status | Description                                                                                  |
 | --: | :----------------------------------------- | :----: | :------------------------------------------------------------------------------------------- |
@@ -10289,7 +10289,7 @@ _Unit tests for the QUIC transport-parameters codec (network_drivers/presentatio
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Unit tests for the TLS 1.3 handshake messages (network_drivers/presentation/http/http3/pc_tls13_msg;_
+_Unit tests for the TLS 1.3 handshake messages (network_drivers/presentation/http/http3/protocore_tls13_msg;_
 
 |   # | Test                                           | Status | Description                                                                                     |
 | --: | :--------------------------------------------- | :----: | :---------------------------------------------------------------------------------------------- |
@@ -10385,7 +10385,7 @@ _Unit tests for the TLS 1.3 server handshake state machine (network_drivers/pres
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Unit tests for the QUIC v1 server connection engine (network_drivers/presentation/http/http3/pc_quic_conn;_
+_Unit tests for the QUIC v1 server connection engine (network_drivers/presentation/http/http3/protocore_quic_conn;_
 
 |   # | Test                                              | Status | Description                                |
 | --: | :------------------------------------------------ | :----: | :----------------------------------------- |
@@ -10451,7 +10451,7 @@ _Unit tests for the QUIC v1 server connection engine (network_drivers/presentati
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Unit tests for the HTTP/3 application engine (network_drivers/presentation/http/http3/pc_h3_conn; RFC_
+_Unit tests for the HTTP/3 application engine (network_drivers/presentation/http/http3/protocore_h3_conn; RFC_
 
 |   # | Test                                                    | Status | Description                                      |
 | --: | :------------------------------------------------------ | :----: | :----------------------------------------------- |
@@ -10567,13 +10567,13 @@ _Unit tests for the chacha20-poly1305@openssh.com cipher and its primitives:_
 
 _Unit tests for the AES-256-GCM AEAD used by aes256-gcm@openssh.com (RFC 5647):_
 
-|   # | Test                                      | Status | Description                                                                                      |
-| --: | :---------------------------------------- | :----: | :----------------------------------------------------------------------------------------------- |
-|   1 | `test_aesgcm_nist_tc16_seal`              |   ✅   | Aesgcm nist tc16 seal                                                                            |
-|   2 | `test_aesgcm_nist_tc16_open`              |   ✅   | Aesgcm nist tc16 open                                                                            |
-|   3 | `test_aesgcm_invocation_counter_advances` |   ✅   | Aesgcm invocation counter advances                                                               |
-|   4 | `test_aesgcm_iv_counter_carries`          |   ✅   | The invocation-counter advance is now the caller's job (pc_aesgcm_iv_increment); this checks the |
-|   5 | `test_aesgcm_gctr_counter_byte_carry`     |   ✅   | Aesgcm gctr counter byte carry                                                                   |
+|   # | Test                                      | Status | Description                                                                                             |
+| --: | :---------------------------------------- | :----: | :------------------------------------------------------------------------------------------------------ |
+|   1 | `test_aesgcm_nist_tc16_seal`              |   ✅   | Aesgcm nist tc16 seal                                                                                   |
+|   2 | `test_aesgcm_nist_tc16_open`              |   ✅   | Aesgcm nist tc16 open                                                                                   |
+|   3 | `test_aesgcm_invocation_counter_advances` |   ✅   | Aesgcm invocation counter advances                                                                      |
+|   4 | `test_aesgcm_iv_counter_carries`          |   ✅   | The invocation-counter advance is now the caller's job (protocore_aesgcm_iv_increment); this checks the |
+|   5 | `test_aesgcm_gctr_counter_byte_carry`     |   ✅   | Aesgcm gctr counter byte carry                                                                          |
 
 </details>
 
@@ -10647,7 +10647,7 @@ _Unit tests for the declarative frame builder (mmgr/protoframe.h)._
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Layer 1 driven through a REAL backend: the env declares PC_PHYSICAL_HAS_BACKEND=1, so_
+_Layer 1 driven through a REAL backend: the env declares PROTOCORE_PHYSICAL_HAS_BACKEND=1, so_
 
 |   # | Test                                                                  | Status | Description                                                    |
 | --: | :-------------------------------------------------------------------- | :----: | :------------------------------------------------------------- |
@@ -10836,7 +10836,7 @@ _mmgr/endian.h: a fixed width moved between an integer and the bytes at a pointe
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_mmgr/bytes.h: append into a pc_span, take out of a pc_cspan, and the offset-passing reads a_
+_mmgr/bytes.h: append into a protocore_span, take out of a protocore_cspan, and the offset-passing reads a_
 
 |   # | Test                                                   | Status | Description                                     |
 | --: | :----------------------------------------------------- | :----: | :---------------------------------------------- |
@@ -10934,7 +10934,7 @@ _mmgr/rawmemcpy.h: the scalar rungs, the aligned rungs, and the ladder proto_raw
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_pc_span: the run length must be bound in BOTH directions._
+_protocore_span: the run length must be bound in BOTH directions._
 
 |   # | Test                                                 | Status | Description                                   |
 | --: | :--------------------------------------------------- | :----: | :-------------------------------------------- |
@@ -11137,7 +11137,7 @@ _Unit tests for the lane math (mmgr/swar.h)._
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_The littlefs-backed pc_mnt_backend, checked through the seam rather than through lfs__ directly:*
+_The littlefs-backed protocore_mnt_backend, checked through the seam rather than through lfs__ directly:*
 
 |   # | Test                                                            | Status | Description                                                                               |
 | --: | :-------------------------------------------------------------- | :----: | :---------------------------------------------------------------------------------------- |

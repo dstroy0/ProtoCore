@@ -24,18 +24,18 @@ void dbench_run(void)
     {
         DBENCH_BANNER("sockpool");
         volatile uint32_t sink = 0;
-        pc_sockpool_init(&pool, slots, POOL_N);
+        protocore_sockpool_init(&pool, slots, POOL_N);
         uint32_t id = 1, now = 0;
         // A churn of acquires: fills, then steadily recycles the LRU slot.
-        DBENCH_OP("pc_sockpool_acquire (LRU)", 200000, {
+        DBENCH_OP("protocore_sockpool_acquire (LRU)", 200000, {
             size_t idx = 0;
             uint32_t evicted = 0;
-            sink += (uint32_t)pc_sockpool_acquire(&pool, id++, now++, &idx, &evicted);
+            sink += (uint32_t)protocore_sockpool_acquire(&pool, id++, now++, &idx, &evicted);
         });
         size_t fidx = 0;
-        DBENCH_OP("pc_sockpool_find", 200000, sink += pc_sockpool_find(&pool, id - 4, &fidx));
-        DBENCH_OP("pc_sockpool_touch", 200000, {
-            pc_sockpool_touch(&pool, 0, now++);
+        DBENCH_OP("protocore_sockpool_find", 200000, sink += protocore_sockpool_find(&pool, id - 4, &fidx));
+        DBENCH_OP("protocore_sockpool_touch", 200000, {
+            protocore_sockpool_touch(&pool, 0, now++);
             sink += now;
         });
         (void)sink;

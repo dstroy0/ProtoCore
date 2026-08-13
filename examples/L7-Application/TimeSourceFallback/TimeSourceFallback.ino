@@ -3,7 +3,7 @@
 
 /**
  * @file TimeSourceFallback.ino
- * @brief Multi-source time fallback (PC_ENABLE_TIME_SOURCE).
+ * @brief Multi-source time fallback (PROTOCORE_ENABLE_TIME_SOURCE).
  *
  * Registers two time sources with priorities and lets the library fall back
  * automatically:
@@ -18,8 +18,8 @@
  * Flash, open Serial @ 115200 for the IP, then GET http://<ip>/time.
  */
 
-#define PC_ENABLE_NTP 1
-#define PC_ENABLE_TIME_SOURCE 1
+#define PROTOCORE_ENABLE_NTP 1
+#define PROTOCORE_ENABLE_TIME_SOURCE 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -33,7 +33,7 @@ static const char *PASSWORD = "YOUR_PASSWORD";
 // Priority 0: NTP - valid only once SNTP has synced (else 0 -> fall through).
 static uint32_t src_ntp()
 {
-    return pc_ntp_synced() ? (uint32_t)pc_ntp_epoch() : 0;
+    return protocore_ntp_synced() ? (uint32_t)protocore_ntp_epoch() : 0;
 }
 
 // Priority 1: a coarse battery-RTC stand-in. A real device reads a DS3231/PCF8523
@@ -59,14 +59,14 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    pc_ntp_begin(NULL, NULL, NULL);        // start SNTP (GMT, pool.ntp.org)
-    pc_time_source_add("ntp", 0, src_ntp); // preferred
-    pc_time_source_add("rtc", 1, src_rtc); // fallback
+    protocore_ntp_begin(NULL, NULL, NULL);        // start SNTP (GMT, pool.ntp.org)
+    protocore_time_source_add("ntp", 0, src_ntp); // preferred
+    protocore_time_source_add("rtc", 1, src_rtc); // fallback
 
     on_http("/time", HTTP_GET, [](uint8_t id, HttpReq *) {
         char body[96];
-        uint32_t epoch = pc_time_now();
-        const char *src = pc_time_source_active();
+        uint32_t epoch = protocore_time_now();
+        const char *src = protocore_time_source_active();
         snprintf(body, sizeof(body), "{\"epoch\":%u,\"source\":\"%s\"}", (unsigned)epoch, src ? src : "none");
         send_text(id, 200, "application/json", body);
     });

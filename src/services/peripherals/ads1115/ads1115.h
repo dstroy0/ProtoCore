@@ -3,7 +3,7 @@
 
 /**
  * @file ads1115.h
- * @brief TI ADS1115 16-bit ADC codec (PC_ENABLE_ADS1115).
+ * @brief TI ADS1115 16-bit ADC codec (PROTOCORE_ENABLE_ADS1115).
  *
  * The ADS1115 is a 4-channel 16-bit analog-to-digital converter on the I2C bus with a
  * programmable-gain amplifier - far more resolution and range control than the ESP32's own ADC.
@@ -11,8 +11,8 @@
  * by a 16-bit read of the conversion register; the signed result scales to a voltage by the
  * selected gain's full-scale range.
  *
- * This codec is pure and host-tested: ::pc_ads1115_config_single builds the config word for a
- * single-shot single-ended reading, and ::pc_ads1115_raw_to_uv converts the signed sample to
+ * This codec is pure and host-tested: ::protocore_ads1115_config_single builds the config word for a
+ * single-shot single-ended reading, and ::protocore_ads1115_raw_to_uv converts the signed sample to
  * microvolts. On an ESP32 the binding writes the config, waits for the conversion, and reads it
  * back over I2C (Wire); only that touches hardware.
  *
@@ -26,11 +26,11 @@
 #ifndef PROTOCORE_ADS1115_H
 #define PROTOCORE_ADS1115_H
 
-#include "protocore_config.h" // the entry point: types.h for the widths and PC_INLINE
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths and PROTOCORE_INLINE
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_ADS1115
+#if PROTOCORE_ENABLE_ADS1115
 
 #define ADS1115_REG_CONVERSION 0x00 ///< conversion result register
 #define ADS1115_REG_CONFIG 0x01     ///< configuration register
@@ -59,24 +59,24 @@ PROTO_BEGIN_DECLS
  * (0..3) at gain @p gain and data rate @p dr (comparator disabled). Out-of-range fields fall
  * back to channel 0 / gain +/-2.048 V / 128 SPS.
  */
-uint16_t pc_ads1115_config_single(uint8_t channel, uint8_t gain, uint8_t dr);
+uint16_t protocore_ads1115_config_single(uint8_t channel, uint8_t gain, uint8_t dr);
 
 /** @brief Convert a signed 16-bit sample to microvolts for @p gain's full-scale range. */
-int32_t pc_ads1115_raw_to_uv(int16_t raw, uint8_t gain);
+int32_t protocore_ads1115_raw_to_uv(int16_t raw, uint8_t gain);
 
 // --- ESP32 binding (I2C via Wire) ------------------------------------
 
 /** @brief Initialize the I2C bus for the ADS1115 at @p addr. @return true on ESP32. */
-proto_bool pc_ads1115_begin(uint8_t addr);
+proto_bool protocore_ads1115_begin(uint8_t addr);
 
 /** @brief Single-shot read of @p channel (0..3) at @p gain into @p raw. @return false on error. */
-proto_bool pc_ads1115_read_raw(uint8_t channel, uint8_t gain, int16_t *raw);
+proto_bool protocore_ads1115_read_raw(uint8_t channel, uint8_t gain, int16_t *raw);
 
 /** @brief Single-shot read of @p channel at @p gain, converted to microvolts in @p microvolts. */
-proto_bool pc_ads1115_read_uv(uint8_t channel, uint8_t gain, int32_t *microvolts);
+proto_bool protocore_ads1115_read_uv(uint8_t channel, uint8_t gain, int32_t *microvolts);
 
-#endif // PC_ENABLE_ADS1115
+#endif // PROTOCORE_ENABLE_ADS1115
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ADS1115_H

@@ -3,7 +3,7 @@
 
 /**
  * @file poly1305.c
- * @brief Poly1305 (RFC 8439) - implementation. See pc_poly1305.h.
+ * @brief Poly1305 (RFC 8439) - implementation. See protocore_poly1305.h.
  *
  * poly1305-donna 32-bit: the accumulator h and key part r are held as five 26-bit limbs; each
  * 16-byte block adds the message limb (with the 2^128 high bit), multiplies by r, and reduces
@@ -19,8 +19,8 @@
 // Poly1305 is a hot, pure-integer MAC (the other half of chacha20-poly1305). Like ChaCha it has no vector
 // path on the S3 and runs materially faster than the framework -Os; it is constant-time by structure
 // (the final reduction is branchless), so a higher level for this TU is side-channel safe. Byte-exact.
-// See the caveats in crypto_opt.h and the ChaCha note in pc_chacha20.cpp.
-PC_CRYPTO_HOT
+// See the caveats in crypto_opt.h and the ChaCha note in protocore_chacha20.cpp.
+PROTOCORE_CRYPTO_HOT
 
 static uint32_t rd_le32(const uint8_t *p)
 {
@@ -86,22 +86,22 @@ typedef struct
     uint32_t h[5];
     uint8_t buf[16];
 } Poly1305Work;
-static_assert(sizeof(Poly1305Work) <= PC_WORK_POLY1305,
-              "Poly1305Work outgrew PC_WORK_POLY1305 - raise it in protocore_config.h, which derives "
-              "PC_SECURE_ARENA_SIZE from it");
+static_assert(sizeof(Poly1305Work) <= PROTOCORE_WORK_POLY1305,
+              "Poly1305Work outgrew PROTOCORE_WORK_POLY1305 - raise it in protocore_config.h, which derives "
+              "PROTOCORE_SECURE_ARENA_SIZE from it");
 
-void pc_poly1305(uint8_t tag[PC_POLY1305_TAG_LEN], const uint8_t *msg, size_t len,
-                 const uint8_t key[PC_POLY1305_KEY_LEN])
+void protocore_poly1305(uint8_t tag[PROTOCORE_POLY1305_TAG_LEN], const uint8_t *msg, size_t len,
+                 const uint8_t key[PROTOCORE_POLY1305_KEY_LEN])
 {
     // Working limbs + the partial-block buffer are borrowed from the secure pool, never the stack.
     // No hand-assigned region: poly1305 runs nested under chachapoly, whose own borrow is still live,
     // so the pool hands this one a different address by construction. SecureScope wipes it on every
     // exit path, not just the one that falls off the end.
-    size_t mark = pc_secure_mark();
-    pc_span work = pc_secure_span(sizeof(Poly1305Work), _Alignof(Poly1305Work));
-    if (!pc_span_ok(work))
+    size_t mark = protocore_secure_mark();
+    protocore_span work = protocore_secure_span(sizeof(Poly1305Work), _Alignof(Poly1305Work));
+    if (!protocore_span_ok(work))
     {
-        pc_secure_release(mark);
+        protocore_secure_release(mark);
         return; // pool exhausted: fail closed rather than tag with a half-built state
     }
     Poly1305Work *w = (Poly1305Work *)work.buf;
@@ -210,5 +210,5 @@ void pc_poly1305(uint8_t tag[PC_POLY1305_TAG_LEN], const uint8_t *msg, size_t le
     wr_le32(tag + 4, f1);
     wr_le32(tag + 8, f2);
     wr_le32(tag + 12, f3);
-    pc_secure_release(mark);
+    protocore_secure_release(mark);
 }

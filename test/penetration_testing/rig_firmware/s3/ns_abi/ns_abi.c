@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // Does a namespace struct cost anything in C? Built twice from this one file (see
-// ../build_s3_nsabi.sh): PC_NS_FORM=0 calls three of twenty-four leaves by name, PC_NS_FORM=1 calls
+// ../build_s3_nsabi.sh): PROTOCORE_NS_FORM=0 calls three of twenty-four leaves by name, PROTOCORE_NS_FORM=1 calls
 // the same three through Network.auth.login / Network.tls.handshake / Server.signaling.peek, each
 // group's opaque context a member of its own namespace struct.
 //
@@ -13,8 +13,8 @@
 
 #include <stdint.h>
 
-#ifndef PC_NS_FORM
-#define PC_NS_FORM 0
+#ifndef PROTOCORE_NS_FORM
+#define PROTOCORE_NS_FORM 0
 #endif
 
 volatile uint32_t sink = 0;
@@ -54,7 +54,7 @@ LEAF(21)
 LEAF(22)
 LEAF(23)
 
-#if PC_NS_FORM
+#if PROTOCORE_NS_FORM
 
 // The owned context each concern already has (SRCBANNED #12), reached as a member of its namespace
 // struct rather than as a file-scope name.
@@ -134,12 +134,12 @@ static const ServerNs Server = {
     {&s_signal, f16, f17, f18, f19, f20, f21, f22, f23},
 };
 
-#endif // PC_NS_FORM
+#endif // PROTOCORE_NS_FORM
 
 void app_main(void);
 void app_main(void)
 {
-#if PC_NS_FORM
+#if PROTOCORE_NS_FORM
     Network.auth.login(1);
     Network.tls.handshake(2);
     Server.signaling.peek(3);

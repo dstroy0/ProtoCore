@@ -1,6 +1,6 @@
 # HiSlip - drive an instrument over HiSLIP (the modern LXI transport)
 
-**Layer:** L7 Application · **Build flags:** `PC_ENABLE_HISLIP`
+**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_HISLIP`
 
 ## What this example teaches
 
@@ -17,25 +17,25 @@ MessageParameter + 64-bit PayloadLength, all big-endian) optionally followed by 
 
 ```cpp
 // Initialize the session (sync channel): offer v1.1, a vendor id, sub-address "hislip0"
-size_t n = pc_hislip_build_initialize(buf, sizeof(buf), PC_HISLIP_VERSION_1_1, 0x4457, "hislip0");
+size_t n = protocore_hislip_build_initialize(buf, sizeof(buf), PROTOCORE_HISLIP_VERSION_1_1, 0x4457, "hislip0");
 // ...write, read the reply, parse it...
 HislipInitializeResponse ir;
-pc_hislip_parse_initialize_response(resp, PC_HISLIP_HEADER_LEN, &ir);   // ir.session_id
+protocore_hislip_parse_initialize_response(resp, PROTOCORE_HISLIP_HEADER_LEN, &ir);   // ir.session_id
 ```
 
 The second channel binds to the same session, then SCPI flows as Data / DataEND messages
 keyed by a MessageID:
 
 ```cpp
-pc_hislip_build_async_initialize(buf, sizeof(buf), ir.session_id);        // bind async channel
-uint32_t id = PC_HISLIP_MESSAGE_ID_INIT;                                  // 0xFFFFFF00
-pc_hislip_build_data(buf, sizeof(buf), /*is_end=*/true, 0, id, (const uint8_t *)"*IDN?\n", 6);
-id = pc_hislip_next_message_id(id);                                       // += 2
+protocore_hislip_build_async_initialize(buf, sizeof(buf), ir.session_id);        // bind async channel
+uint32_t id = PROTOCORE_HISLIP_MESSAGE_ID_INIT;                                  // 0xFFFFFF00
+protocore_hislip_build_data(buf, sizeof(buf), /*is_end=*/true, 0, id, (const uint8_t *)"*IDN?\n", 6);
+id = protocore_hislip_next_message_id(id);                                       // += 2
 ```
 
 The full `HislipMsg` message-type enum (0-38, including the HiSLIP 2.0 TLS / SASL types),
 the header byte layout, and the MessageID rule are verified against IVI-6.1. Pair with
-`PC_ENABLE_SCPI` to build / parse the SCPI payloads themselves (see the `Scpi` example).
+`PROTOCORE_ENABLE_SCPI` to build / parse the SCPI payloads themselves (see the `Scpi` example).
 
 ## Prerequisites (an instrument or a simulator)
 
@@ -47,7 +47,7 @@ reference server for a dry run.
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_HISLIP=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_HISLIP=1" \
   --lib="." examples/L7-Application/HiSlip/HiSlip.ino
 ```
 

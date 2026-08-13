@@ -3,7 +3,7 @@
 
 /**
  * @file ftp.h
- * @brief FTP client wire codec (RFC 959 + RFC 2428 + RFC 3659), PC_ENABLE_FTP.
+ * @brief FTP client wire codec (RFC 959 + RFC 2428 + RFC 3659), PROTOCORE_ENABLE_FTP.
  *
  * The pure protocol layer of an FTP client: build control-channel commands, parse the
  * (possibly multiline) 3-digit reply, and decode the PASV / EPSV data-channel address the
@@ -27,9 +27,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_FTP
+#if PROTOCORE_ENABLE_FTP
 
 /**
  * @brief Build a control command line: `VERB<CRLF>` or `VERB<SP>ARG<CRLF>`.
@@ -41,13 +41,13 @@ PROTO_BEGIN_DECLS
  * @param arg the argument, or nullptr / "" for a bare verb (no trailing space).
  * @return bytes written (excluding the NUL terminator), or 0 on overflow / bad input.
  */
-size_t pc_ftp_build_command(char *buf, size_t cap, const char *verb, const char *arg);
+size_t protocore_ftp_build_command(char *buf, size_t cap, const char *verb, const char *arg);
 
 /**
  * @brief Build an active-mode `PORT h1,h2,h3,h4,p1,p2<CRLF>` from an IPv4 address + port.
  * @return bytes written (excluding NUL), or 0 on overflow.
  */
-size_t pc_ftp_build_port(char *buf, size_t cap, const uint8_t ip[4], uint16_t port);
+size_t protocore_ftp_build_port(char *buf, size_t cap, const uint8_t ip[4], uint16_t port);
 
 /**
  * @brief Build an extended active-mode `EPRT<SP>|net-prt|net-addr|port|<CRLF>` (RFC 2428).
@@ -55,7 +55,7 @@ size_t pc_ftp_build_port(char *buf, size_t cap, const uint8_t ip[4], uint16_t po
  * @param ipv6   false => net-prt 1 (IPv4), true => net-prt 2 (IPv6).
  * @return bytes written (excluding NUL), or 0 on overflow.
  */
-size_t pc_ftp_build_eprt(char *buf, size_t cap, const char *ip_str, proto_bool ipv6, uint16_t port);
+size_t protocore_ftp_build_eprt(char *buf, size_t cap, const char *ip_str, proto_bool ipv6, uint16_t port);
 
 /**
  * @brief Detect and measure a complete control-channel reply at the head of @p buf.
@@ -67,7 +67,7 @@ size_t pc_ftp_build_eprt(char *buf, size_t cap, const char *ip_str, proto_bool i
  * @return true if a complete reply is present; false if the buffer holds only a partial reply
  *         (need more bytes) or a malformed head (then @p code / @p consumed are unspecified).
  */
-proto_bool pc_ftp_parse_reply(const char *buf, size_t len, int *code, size_t *consumed);
+proto_bool protocore_ftp_parse_reply(const char *buf, size_t len, int *code, size_t *consumed);
 
 /**
  * @brief Decode the data address from a `227` passive-mode reply.
@@ -77,7 +77,7 @@ proto_bool pc_ftp_parse_reply(const char *buf, size_t len, int *code, size_t *co
  *
  * @return true on a well-formed tuple, false otherwise (then @p ip / @p port are unspecified).
  */
-proto_bool pc_ftp_parse_pasv(const char *buf, size_t len, uint8_t ip[4], uint16_t *port);
+proto_bool protocore_ftp_parse_pasv(const char *buf, size_t len, uint8_t ip[4], uint16_t *port);
 
 /**
  * @brief Decode the port from a `229` extended-passive reply `(<d><d><d>port<d>)` (RFC 2428).
@@ -86,22 +86,22 @@ proto_bool pc_ftp_parse_pasv(const char *buf, size_t len, uint8_t ip[4], uint16_
  *
  * @return true on a well-formed reply, false otherwise (then @p port is unspecified).
  */
-proto_bool pc_ftp_parse_epsv(const char *buf, size_t len, uint16_t *port);
+proto_bool protocore_ftp_parse_epsv(const char *buf, size_t len, uint16_t *port);
 
 /** @brief First digit of a reply code (1 preliminary, 2 complete, 3 intermediate, 4/5 error), or 0. */
-static inline int pc_ftp_reply_class(int code)
+static inline int protocore_ftp_reply_class(int code)
 {
     return (code >= 100 && code <= 599) ? code / 100 : 0;
 }
 
 /** @brief A 2xx positive-completion reply. */
-static inline proto_bool pc_ftp_reply_ok(int code)
+static inline proto_bool protocore_ftp_reply_ok(int code)
 {
-    return pc_ftp_reply_class(code) == 2;
+    return protocore_ftp_reply_class(code) == 2;
 }
 
-#endif // PC_ENABLE_FTP
+#endif // PROTOCORE_ENABLE_FTP
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_FTP_H

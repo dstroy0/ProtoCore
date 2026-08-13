@@ -1,6 +1,6 @@
 # CoapBlock - CoAP block-wise transfer (large responses and uploads)
 
-**Layer:** L7 Application · **Build flags:** `PC_ENABLE_COAP`, `PC_ENABLE_COAP_BLOCK`, `PC_COAP_MAX_PAYLOAD`
+**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_COAP`, `PROTOCORE_ENABLE_COAP_BLOCK`, `PROTOCORE_COAP_MAX_PAYLOAD`
 
 ## What this example teaches
 
@@ -42,14 +42,14 @@ void h_upload(const CoapRequest *req, CoapResponse *resp) {
 }
 ```
 
-`PC_COAP_MAX_PAYLOAD` sizes the static reassembly buffer; set it to the largest
+`PROTOCORE_COAP_MAX_PAYLOAD` sizes the static reassembly buffer; set it to the largest
 representation/upload you need (here 1024).
 
 ## Build and run
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_COAP=1 -DPC_ENABLE_COAP_BLOCK=1 -DPC_COAP_MAX_PAYLOAD=1024" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_COAP=1 -DPROTOCORE_ENABLE_COAP_BLOCK=1 -DPROTOCORE_COAP_MAX_PAYLOAD=1024" \
   --lib="." examples/L7-Application/CoapBlock/CoapBlock.ino
 ```
 
@@ -67,9 +67,9 @@ with added explanatory comments:
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-#define PC_ENABLE_COAP 1
-#define PC_ENABLE_COAP_BLOCK 1
-#define PC_COAP_MAX_PAYLOAD 1024 // room for a multi-block representation
+#define PROTOCORE_ENABLE_COAP 1
+#define PROTOCORE_ENABLE_COAP_BLOCK 1
+#define PROTOCORE_COAP_MAX_PAYLOAD 1024 // room for a multi-block representation
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -118,10 +118,10 @@ void setup()
     Serial.printf("IP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    pc_coap_server_reset();
-    pc_coap_server_add_resource("/big", CoapMethodMask::COAP_ALLOW_GET, h_big);
-    pc_coap_server_add_resource("/upload", CoapMethodMask::COAP_ALLOW_PUT, h_upload);
-    pc_coap_server_begin(5683);
+    protocore_coap_server_reset();
+    protocore_coap_server_add_resource("/big", CoapMethodMask::COAP_ALLOW_GET, h_big);
+    protocore_coap_server_add_resource("/upload", CoapMethodMask::COAP_ALLOW_PUT, h_upload);
+    protocore_coap_server_begin(5683);
     Serial.println("CoAP server on :5683");
     Serial.println("  GET coap://<ip>/big      (block-wise responses)");
     Serial.println("  PUT coap://<ip>/upload   (block-wise uploads)");

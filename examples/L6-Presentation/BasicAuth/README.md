@@ -1,6 +1,6 @@
 # BasicAuth - per-route HTTP Basic authentication
 
-**Layer:** L6 Presentation · **Build flags:** `PC_ENABLE_AUTH` (on by default)
+**Layer:** L6 Presentation · **Build flags:** `PROTOCORE_ENABLE_AUTH` (on by default)
 
 ## What this example teaches
 
@@ -28,14 +28,14 @@ The handler body is reached only after a valid `Authorization: Basic` header.
 > networks. For a scheme where the password never crosses the wire, pass
 > `digest=true` - see [DigestAuth](../DigestAuth).
 
-`PC_ENABLE_AUTH` is on by default; you only need to set it (to 0) to compile
+`PROTOCORE_ENABLE_AUTH` is on by default; you only need to set it (to 0) to compile
 auth out.
 
 ## Build and run
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_AUTH=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_AUTH=1" \
   --lib="." examples/L6-Presentation/BasicAuth/BasicAuth.ino
 ```
 

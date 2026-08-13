@@ -34,19 +34,19 @@
 
 #include "protocore_config.h"
 
-#if PC_ENABLE_HTTP3
+#if PROTOCORE_ENABLE_HTTP3
 
 #include "network_drivers/presentation/http/http3/quic_crypto.h"
 #include "network_drivers/presentation/http/http3/quic_tls.h"
 
-#ifndef PC_QUIC_MAX_DATAGRAM
-#define PC_QUIC_MAX_DATAGRAM 1350 ///< largest UDP payload we send/accept (conservative < 1500 MTU)
+#ifndef PROTOCORE_QUIC_MAX_DATAGRAM
+#define PROTOCORE_QUIC_MAX_DATAGRAM 1350 ///< largest UDP payload we send/accept (conservative < 1500 MTU)
 #endif
-#ifndef PC_QUIC_STREAM_RX
-#define PC_QUIC_STREAM_RX 2048 ///< largest run of new in-order stream bytes delivered in one call
+#ifndef PROTOCORE_QUIC_STREAM_RX
+#define PROTOCORE_QUIC_STREAM_RX 2048 ///< largest run of new in-order stream bytes delivered in one call
 #endif
-#ifndef PC_QUIC_PTO_MS
-#define PC_QUIC_PTO_MS 1000 ///< base Probe Timeout for retransmitting the handshake flight (RFC 9002)
+#ifndef PROTOCORE_QUIC_PTO_MS
+#define PROTOCORE_QUIC_PTO_MS 1000 ///< base Probe Timeout for retransmitting the handshake flight (RFC 9002)
 #endif
 
 /** @brief Per-connection stream state (client-initiated + server-initiated). */
@@ -58,7 +58,7 @@ typedef struct
     proto_bool rx_fin;      ///< a FIN was received (final size known)
     proto_bool tx_fin;      ///< a FIN should be sent after the buffered tx bytes
     proto_bool tx_fin_sent; ///< the FIN has been sent
-    uint8_t *tx;            ///< PC_QUIC_STREAM_TX bytes of the connection's borrow
+    uint8_t *tx;            ///< PROTOCORE_QUIC_STREAM_TX bytes of the connection's borrow
     size_t tx_have;         ///< bytes buffered to send
     size_t tx_sent;         ///< bytes of tx already put on the wire
 } QuicStream;
@@ -87,7 +87,7 @@ typedef struct
     proto_bool ack_eliciting_rx; ///< an ack-eliciting packet is unacknowledged (we owe an ACK)
     proto_bool discarded;        ///< this space's keys have been dropped (nothing more sent/received)
     uint64_t crypto_rx_off;      ///< in-order CRYPTO bytes already delivered to pc_quic_tls
-    uint8_t *crypto_rx;          ///< PC_QUIC_CRYPTO_RX bytes of the connection's borrow
+    uint8_t *crypto_rx;          ///< PROTOCORE_QUIC_CRYPTO_RX bytes of the connection's borrow
     size_t crypto_rx_have;       ///< contiguous CRYPTO bytes buffered at crypto_rx_off
     uint64_t crypto_tx_off;      ///< CRYPTO flight bytes already sent from this level
 } QuicPnSpace;
@@ -96,11 +96,12 @@ typedef struct
  * @brief This module's draw on the plaintext pool, declared here and asserted in quic_conn.c.
  *
  * One borrow per connection from the pool's persistent end, grouped by field so every stride is a
- * power of two: PC_QUIC_MAX_STREAMS outbound stream buffers, then one CRYPTO reassembly window per
+ * power of two: PROTOCORE_QUIC_MAX_STREAMS outbound stream buffers, then one CRYPTO reassembly window per
  * packet-number space. Both carry what the peer sent us and what we owe it, which is the
  * connection's working set for its life.
  */
-#define PC_QUIC_CONN_BORROW (((size_t)PC_QUIC_MAX_STREAMS * PC_QUIC_STREAM_TX) + (3u * (size_t)PC_QUIC_CRYPTO_RX))
+#define PROTOCORE_QUIC_CONN_BORROW                                                                                     \
+    (((size_t)PROTOCORE_QUIC_MAX_STREAMS * PROTOCORE_QUIC_STREAM_TX) + (3u * (size_t)PROTOCORE_QUIC_CRYPTO_RX))
 
 /** @brief One QUIC connection's engine state (fixed storage, no heap). */
 typedef struct QuicConn
@@ -117,7 +118,7 @@ typedef struct QuicConn
 
     QuicPnSpace space[3]; ///< indexed by QUIC_ENC_*
 
-    QuicStream streams[PC_QUIC_MAX_STREAMS];
+    QuicStream streams[PROTOCORE_QUIC_MAX_STREAMS];
 
     QuicConnCallbacks cb;
 
@@ -210,5 +211,5 @@ proto_bool pc_quic_conn_established(const struct QuicConn *qc);
 /** @brief True if the connection is closed or draining. */
 proto_bool pc_quic_conn_is_closed(const struct QuicConn *qc);
 
-#endif // PC_ENABLE_HTTP3
+#endif // PROTOCORE_ENABLE_HTTP3
 #endif // PROTOCORE_QUIC_CONN_H

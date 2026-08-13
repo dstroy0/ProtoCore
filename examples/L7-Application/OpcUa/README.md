@@ -1,6 +1,6 @@
 # OpcUa - an OPC UA Binary server
 
-**Layer:** L7 Application · **Build flags:** `PC_ENABLE_OPCUA`
+**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_OPCUA`
 
 ## What this example teaches
 
@@ -17,7 +17,7 @@ just another protocol on its own port, sharing the HTTP server's pool and event 
 for a node id (false -> `BadNodeIdUnknown`):
 
 ```cpp
-static bool pc_opcua_read(uint16_t ns, uint32_t id, uint32_t attribute, OpcUaVariant *out) {
+static bool protocore_opcua_read(uint16_t ns, uint32_t id, uint32_t attribute, OpcUaVariant *out) {
     if (ns != 1 || attribute != OPCUA_ATTR_VALUE) return false;
     switch (id) {
     case 1:  out->type = OpcUaVariantType::OPCUA_VAR_UINT32; out->u32 = millis() / 1000;    return true; // Uptime
@@ -32,7 +32,7 @@ Write returns an OPC UA StatusCode - `0` (Good) on success, or a Bad code the cl
 surfaces:
 
 ```cpp
-static uint32_t pc_opcua_write(uint16_t ns, uint32_t id, uint32_t attribute, const OpcUaVariant *value) {
+static uint32_t protocore_opcua_write(uint16_t ns, uint32_t id, uint32_t attribute, const OpcUaVariant *value) {
     if (ns == 1 && id == 10 && attribute == OPCUA_ATTR_VALUE && value->type == OpcUaVariantType::OPCUA_VAR_UINT32) {
         setpoint = value->u32; return 0; // Good
     }
@@ -46,9 +46,9 @@ variables show up in a client's address-space tree.
 **Register the handlers, then listen before `begin()`:**
 
 ```cpp
-pc_opcua_set_read_handler(pc_opcua_read);
-pc_opcua_set_write_handler(pc_opcua_write);
-pc_opcua_set_browse_handler(pc_opcua_browse);
+protocore_opcua_set_read_handler(protocore_opcua_read);
+protocore_opcua_set_write_handler(protocore_opcua_write);
+protocore_opcua_set_browse_handler(protocore_opcua_browse);
 server.listen(4840, ProtoConn::PROTO_OPCUA); // before begin() - it activates the listeners
 server.begin(80);
 ```
@@ -57,7 +57,7 @@ server.begin(80);
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_OPCUA=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_OPCUA=1" \
   --lib="." examples/L7-Application/OpcUa/OpcUa.ino
 ```
 
@@ -74,7 +74,7 @@ explanatory comments:
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-#define PC_ENABLE_OPCUA 1
+#define PROTOCORE_ENABLE_OPCUA 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -90,7 +90,7 @@ static uint32_t setpoint = 100; // a writable variable, exposed at ns=1;i=10
 // Read resolver: map a tiny address space (namespace 1) onto live values. A client
 // Reads node ns=1;i=1 (uptime), i=2 (free heap), i=3 (a Double) or i=10 (the writable
 // setpoint). Return false for anything else and the server answers BadNodeIdUnknown.
-static bool pc_opcua_read(uint16_t ns, uint32_t id, uint32_t attribute, OpcUaVariant *out)
+static bool protocore_opcua_read(uint16_t ns, uint32_t id, uint32_t attribute, OpcUaVariant *out)
 {
     if (ns != 1 || attribute != OPCUA_ATTR_VALUE)
         return false;
@@ -119,7 +119,7 @@ static bool pc_opcua_read(uint16_t ns, uint32_t id, uint32_t attribute, OpcUaVar
 
 // Write resolver: only ns=1;i=10 (the setpoint) is writable. Returns a StatusCode -
 // Good (0) on success, or a Bad code the client surfaces as the write result.
-static uint32_t pc_opcua_write(uint16_t ns, uint32_t id, uint32_t attribute, const OpcUaVariant *value)
+static uint32_t protocore_opcua_write(uint16_t ns, uint32_t id, uint32_t attribute, const OpcUaVariant *value)
 {
     if (ns == 1 && id == 10 && attribute == OPCUA_ATTR_VALUE && value->type == OpcUaVariantType::OPCUA_VAR_UINT32)
     {
@@ -131,7 +131,7 @@ static uint32_t pc_opcua_write(uint16_t ns, uint32_t id, uint32_t attribute, con
 
 // Browse resolver: the standard Objects folder (ns=0;i=85) organizes our three
 // variables (ns=1;i=1..3). Browsing anything else is BadNodeIdUnknown.
-static int32_t pc_opcua_browse(uint16_t ns, uint32_t id, OpcUaReference *out, uint32_t max)
+static int32_t protocore_opcua_browse(uint16_t ns, uint32_t id, OpcUaReference *out, uint32_t max)
 {
     if (ns != 0 || id != 85) // i=85 == Objects folder
         return -1;
@@ -164,9 +164,9 @@ void setup()
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     server.on("/", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) { server.send(id, 200, "text/plain", "OPC UA on :4840"); });
-    pc_opcua_set_read_handler(pc_opcua_read);     // serve Reads for ns=1;i=1..3,10
-    pc_opcua_set_write_handler(pc_opcua_write);   // accept Writes to ns=1;i=10 (the setpoint)
-    pc_opcua_set_browse_handler(pc_opcua_browse); // list those under the Objects folder
+    protocore_opcua_set_read_handler(protocore_opcua_read);     // serve Reads for ns=1;i=1..3,10
+    protocore_opcua_set_write_handler(protocore_opcua_write);   // accept Writes to ns=1;i=10 (the setpoint)
+    protocore_opcua_set_browse_handler(protocore_opcua_browse); // list those under the Objects folder
     server.listen(4840, ProtoConn::PROTO_OPCUA);       // OPC UA Binary endpoint - before begin() (it activates listeners)
     server.begin(80);
     Serial.println("OPC UA endpoint: opc.tcp://<ip>:4840 (handshake + SecureChannel + Session + Read/Write + Browse)");

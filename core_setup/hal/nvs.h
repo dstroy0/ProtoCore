@@ -10,11 +10,11 @@
  * to keep, no pool to size, and no open namespace whose lifetime can outlast its caller.
  *
  * Two backends, selected by the vendor: hal/esp/esp_nvs.cpp over the Arduino `Preferences` NVS
- * wrapper, and hal/host/host_nvs.c over a fixed table sized by PC_CONFIG_MAX_ENTRIES,
- * PC_CONFIG_KEY_MAX and PC_CONFIG_VAL_MAX. The host table is what makes every caller above this
+ * wrapper, and hal/host/host_nvs.c over a fixed table sized by PROTOCORE_CONFIG_MAX_ENTRIES,
+ * PROTOCORE_CONFIG_KEY_MAX and PROTOCORE_CONFIG_VAL_MAX. The host table is what makes every caller above this
  * seam testable on the host.
  *
- * NVS caps a key at 15 characters plus the terminator (PC_CONFIG_KEY_MAX); a longer key is
+ * NVS caps a key at 15 characters plus the terminator (PROTOCORE_CONFIG_KEY_MAX); a longer key is
  * refused rather than truncated.
  *
  * @author  Douglas Quigg (dstroy0)
@@ -24,21 +24,21 @@
 #ifndef PROTOCORE_NVS_H
 #define PROTOCORE_NVS_H
 
-#include "protocore_config.h" // the entry point: proto_bool, size_t, the PC_CONFIG_* table sizes
+#include "protocore_config.h" // the entry point: proto_bool, size_t, the PROTOCORE_CONFIG_* table sizes
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
 /** @brief True if @p key exists in @p ns. */
-proto_bool pc_nvs_has(const char *ns, const char *key);
+proto_bool protocore_nvs_has(const char *ns, const char *key);
 
 /**
  * @brief Copy the bytes stored at @p ns / @p key into @p out.
  * @return the byte count written, or 0 if the key is absent, @p out is null, or @p cap is 0.
  */
-size_t pc_nvs_get_blob(const char *ns, const char *key, void *out, size_t cap);
+size_t protocore_nvs_get_blob(const char *ns, const char *key, void *out, size_t cap);
 
 /** @brief Store @p len bytes at @p ns / @p key, replacing any current value. */
-proto_bool pc_nvs_put_blob(const char *ns, const char *key, const void *in, size_t len);
+proto_bool protocore_nvs_put_blob(const char *ns, const char *key, const void *in, size_t len);
 
 /**
  * @brief Copy the string stored at @p ns / @p key into @p out, always null-terminated.
@@ -47,23 +47,23 @@ proto_bool pc_nvs_put_blob(const char *ns, const char *key, const void *in, size
  *
  * @return the character count written excluding the terminator, or 0 if the key is absent.
  */
-size_t pc_nvs_get_str(const char *ns, const char *key, char *out, size_t cap);
+size_t protocore_nvs_get_str(const char *ns, const char *key, char *out, size_t cap);
 
 /** @brief Store the null-terminated @p val at @p ns / @p key. */
-proto_bool pc_nvs_put_str(const char *ns, const char *key, const char *val);
+proto_bool protocore_nvs_put_str(const char *ns, const char *key, const char *val);
 
 /** @brief Read the 32-bit value at @p ns / @p key, or @p def when the key is absent. */
-uint32_t pc_nvs_get_u32(const char *ns, const char *key, uint32_t def);
+uint32_t protocore_nvs_get_u32(const char *ns, const char *key, uint32_t def);
 
 /** @brief Store @p val at @p ns / @p key. */
-proto_bool pc_nvs_put_u32(const char *ns, const char *key, uint32_t val);
+proto_bool protocore_nvs_put_u32(const char *ns, const char *key, uint32_t val);
 
 /** @brief Drop @p key from @p ns. False if it was not there. */
-proto_bool pc_nvs_erase(const char *ns, const char *key);
+proto_bool protocore_nvs_erase(const char *ns, const char *key);
 
 /** @brief Drop every key in @p ns. */
-proto_bool pc_nvs_clear(const char *ns);
+proto_bool protocore_nvs_clear(const char *ns);
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_NVS_H

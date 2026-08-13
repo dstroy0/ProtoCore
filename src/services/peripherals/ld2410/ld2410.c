@@ -7,7 +7,7 @@
  *
  * Frame layout (little-endian lengths / distances), per the Hi-Link serial protocol:
  *   report:  F4 F3 F2 F1 | len(2) | type | AA | state | mv_cm(2) mv_e | st_cm(2) st_e |
- *            pc_cm(2) | [engineering: maxMvGate maxStGate mvE[9] stE[9] light out] |
+ *            protocore_cm(2) | [engineering: maxMvGate maxStGate mvE[9] stE[9] light out] |
  *            55 | check | F8 F7 F6 F5     (len = 0x0D basic, 0x23 engineering)
  *   command: FD FC FB FA | len(2) | word(2) | [value] | 04 03 02 01
  */
@@ -16,9 +16,9 @@
 #include "mmgr/protomem.h"
 #include "protocore_config.h"
 
-#if PC_ENABLE_LD2410
+#if PROTOCORE_ENABLE_LD2410
 
-#if PC_HAS_BUS
+#if PROTOCORE_HAS_BUS
 #include "services/peripherals/uart.h" // the shared UART owner
 #endif
 static const uint8_t HDR[4] = {0xF4, 0xF3, 0xF2, 0xF1};
@@ -63,7 +63,7 @@ static size_t cmd_frame(uint8_t *buf, size_t cap, uint16_t word, const uint8_t *
     return i;
 }
 
-proto_bool pc_ld2410_parse_report(const uint8_t *f, size_t len, Ld2410Report *out)
+proto_bool protocore_ld2410_parse_report(const uint8_t *f, size_t len, Ld2410Report *out)
 {
     if (!f || !out || len < (size_t)(6 + LEN_BASIC + 4))
     {
@@ -145,7 +145,7 @@ proto_bool pc_ld2410_parse_report(const uint8_t *f, size_t len, Ld2410Report *ou
     return PROTO_TRUE;
 }
 
-void pc_ld2410_stream_reset(Ld2410Stream *s)
+void protocore_ld2410_stream_reset(Ld2410Stream *s)
 {
     s->pos = 0;
     s->total = 0;
@@ -153,7 +153,7 @@ void pc_ld2410_stream_reset(Ld2410Stream *s)
     s->phase = 0;
 }
 
-proto_bool pc_ld2410_stream_push(Ld2410Stream *s, uint8_t b, Ld2410Report *out)
+proto_bool protocore_ld2410_stream_push(Ld2410Stream *s, uint8_t b, Ld2410Report *out)
 {
     switch (s->phase)
     {
@@ -184,7 +184,7 @@ proto_bool pc_ld2410_stream_push(Ld2410Stream *s, uint8_t b, Ld2410Report *out)
             uint32_t total = 6u + (uint32_t)rd16(s->buf + 4) + 4u;
             if (total > LD2410_FRAME_MAX)
             {
-                pc_ld2410_stream_reset(s); // absurd length: drop and resync
+                protocore_ld2410_stream_reset(s); // absurd length: drop and resync
                 return PROTO_FALSE;
             }
             s->total = (uint16_t)total;
@@ -195,20 +195,20 @@ proto_bool pc_ld2410_stream_push(Ld2410Stream *s, uint8_t b, Ld2410Report *out)
         s->buf[s->pos++] = b;
         if (s->pos >= s->total)
         {
-            proto_bool ok = pc_ld2410_parse_report(s->buf, s->total, out);
-            pc_ld2410_stream_reset(s);
+            proto_bool ok = protocore_ld2410_parse_report(s->buf, s->total, out);
+            protocore_ld2410_stream_reset(s);
             return ok;
         }
         return PROTO_FALSE;
     }
 }
 
-proto_bool pc_ld2410_present(const Ld2410Report *r)
+proto_bool protocore_ld2410_present(const Ld2410Report *r)
 {
     return r && r->state != LD2410_STATE_NONE;
 }
 
-uint16_t pc_ld2410_distance_cm(const Ld2410Report *r)
+uint16_t protocore_ld2410_distance_cm(const Ld2410Report *r)
 {
     if (!r)
     {
@@ -225,38 +225,38 @@ uint16_t pc_ld2410_distance_cm(const Ld2410Report *r)
     return 0;
 }
 
-size_t pc_ld2410_cmd_config_enable(uint8_t *buf, size_t cap)
+size_t protocore_ld2410_cmd_config_enable(uint8_t *buf, size_t cap)
 {
     static const uint8_t v[2] = {0x01, 0x00}; // value 0x0001
     return cmd_frame(buf, cap, 0x00FF, v, 2);
 }
-size_t pc_ld2410_cmd_config_end(uint8_t *buf, size_t cap)
+size_t protocore_ld2410_cmd_config_end(uint8_t *buf, size_t cap)
 {
     return cmd_frame(buf, cap, 0x00FE, NULL, 0);
 }
-size_t pc_ld2410_cmd_engineering(uint8_t *buf, size_t cap, proto_bool on)
+size_t protocore_ld2410_cmd_engineering(uint8_t *buf, size_t cap, proto_bool on)
 {
     return cmd_frame(buf, cap, on ? 0x0062 : 0x0063, NULL, 0);
 }
-size_t pc_ld2410_cmd_restart(uint8_t *buf, size_t cap)
+size_t protocore_ld2410_cmd_restart(uint8_t *buf, size_t cap)
 {
     return cmd_frame(buf, cap, 0x00A3, NULL, 0);
 }
 
 // --- LD2410B-only ----------------------------------------------------------
-size_t pc_ld2410_cmd_bluetooth(uint8_t *buf, size_t cap, proto_bool on)
+size_t protocore_ld2410_cmd_bluetooth(uint8_t *buf, size_t cap, proto_bool on)
 {
     const uint8_t v[2] = {(uint8_t)(on ? 0x01 : 0x00), 0x00}; // value 0x0001 on / 0x0000 off
     return cmd_frame(buf, cap, 0x00A4, v, 2);
 }
 
-size_t pc_ld2410_cmd_get_mac(uint8_t *buf, size_t cap)
+size_t protocore_ld2410_cmd_get_mac(uint8_t *buf, size_t cap)
 {
     static const uint8_t v[2] = {0x01, 0x00}; // value 0x0001
     return cmd_frame(buf, cap, 0x00A5, v, 2);
 }
 
-size_t pc_ld2410_cmd_set_bt_password(uint8_t *buf, size_t cap, const char password[6])
+size_t protocore_ld2410_cmd_set_bt_password(uint8_t *buf, size_t cap, const char password[6])
 {
     if (!password)
     {
@@ -269,7 +269,7 @@ size_t pc_ld2410_cmd_set_bt_password(uint8_t *buf, size_t cap, const char passwo
 }
 
 // --- command-ACK decoding --------------------------------------------------
-proto_bool pc_ld2410_parse_ack(const uint8_t *f, size_t len, Ld2410Ack *out)
+proto_bool protocore_ld2410_parse_ack(const uint8_t *f, size_t len, Ld2410Ack *out)
 {
     // layout: four header bytes, two length bytes, two command-word bytes, two status bytes, optional data, four footer
     // bytes
@@ -303,12 +303,12 @@ proto_bool pc_ld2410_parse_ack(const uint8_t *f, size_t len, Ld2410Ack *out)
     return PROTO_TRUE;
 }
 
-proto_bool pc_ld2410_ack_ok(const Ld2410Ack *ack)
+proto_bool protocore_ld2410_ack_ok(const Ld2410Ack *ack)
 {
     return ack && ack->status == 0;
 }
 
-proto_bool pc_ld2410_ack_mac(const Ld2410Ack *ack, uint8_t mac[6])
+proto_bool protocore_ld2410_ack_mac(const Ld2410Ack *ack, uint8_t mac[6])
 {
     if (!ack || !mac || ack->command != 0x01A5 || ack->status != 0 || ack->payload_len < 6 || !ack->payload)
     {
@@ -325,7 +325,7 @@ proto_bool pc_ld2410_ack_mac(const Ld2410Ack *ack, uint8_t mac[6])
 // UART binding
 // ---------------------------------------------------------------------------
 
-#if PC_HAS_BUS
+#if PROTOCORE_HAS_BUS
 
 // Bytes taken from the UART per poll. A report frame is far shorter, so one poll carries at least
 // a whole frame and the read stays bounded (SRC_LAW rule 5).
@@ -348,21 +348,21 @@ typedef struct
 } Ld2410Ctx;
 static Ld2410Ctx s_ld;
 
-proto_bool pc_ld2410_begin(int rx_pin, int tx_pin)
+proto_bool protocore_ld2410_begin(int rx_pin, int tx_pin)
 {
-    pc_ld2410_stream_reset(&s_ld.stream);
+    protocore_ld2410_stream_reset(&s_ld.stream);
     s_ld.have = PROTO_FALSE;
-    return pc_uart_begin((uint8_t)PC_LD2410_UART, PC_LD2410_BAUD, rx_pin, tx_pin);
+    return protocore_uart_begin((uint8_t)PROTOCORE_LD2410_UART, PROTOCORE_LD2410_BAUD, rx_pin, tx_pin);
 }
 
-proto_bool pc_ld2410_poll(void)
+proto_bool protocore_ld2410_poll(void)
 {
     proto_bool fresh = PROTO_FALSE;
-    size_t n = pc_uart_read((uint8_t)PC_LD2410_UART, s_ld.rx, sizeof(s_ld.rx), 0);
+    size_t n = protocore_uart_read((uint8_t)PROTOCORE_LD2410_UART, s_ld.rx, sizeof(s_ld.rx), 0);
     for (size_t i = 0; i < n; i++)
     {
         Ld2410Report r;
-        if (pc_ld2410_stream_push(&s_ld.stream, s_ld.rx[i], &r))
+        if (protocore_ld2410_stream_push(&s_ld.stream, s_ld.rx[i], &r))
         {
             s_ld.last = r;
             s_ld.have = PROTO_TRUE;
@@ -372,7 +372,7 @@ proto_bool pc_ld2410_poll(void)
     return fresh;
 }
 
-const Ld2410Report *pc_ld2410_last(void)
+const Ld2410Report *protocore_ld2410_last(void)
 {
     return s_ld.have ? &s_ld.last : NULL;
 }
@@ -381,51 +381,51 @@ const Ld2410Report *pc_ld2410_last(void)
 // Each is built into the owned command buffer and put on the wire before the next is built.
 static proto_bool send_cmd(size_t n)
 {
-    return n > 0 && pc_uart_write((uint8_t)PC_LD2410_UART, s_ld.cmd, n);
+    return n > 0 && protocore_uart_write((uint8_t)PROTOCORE_LD2410_UART, s_ld.cmd, n);
 }
 
-proto_bool pc_ld2410_set_engineering(proto_bool on)
+proto_bool protocore_ld2410_set_engineering(proto_bool on)
 {
-    proto_bool ok = send_cmd(pc_ld2410_cmd_config_enable(s_ld.cmd, sizeof(s_ld.cmd)));
-    ok &= send_cmd(pc_ld2410_cmd_engineering(s_ld.cmd, sizeof(s_ld.cmd), on));
-    ok &= send_cmd(pc_ld2410_cmd_config_end(s_ld.cmd, sizeof(s_ld.cmd)));
+    proto_bool ok = send_cmd(protocore_ld2410_cmd_config_enable(s_ld.cmd, sizeof(s_ld.cmd)));
+    ok &= send_cmd(protocore_ld2410_cmd_engineering(s_ld.cmd, sizeof(s_ld.cmd), on));
+    ok &= send_cmd(protocore_ld2410_cmd_config_end(s_ld.cmd, sizeof(s_ld.cmd)));
     return ok;
 }
 
-proto_bool pc_ld2410_restart(void)
+proto_bool protocore_ld2410_restart(void)
 {
-    proto_bool ok = send_cmd(pc_ld2410_cmd_config_enable(s_ld.cmd, sizeof(s_ld.cmd)));
-    ok &= send_cmd(pc_ld2410_cmd_restart(s_ld.cmd, sizeof(s_ld.cmd)));
-    ok &= send_cmd(pc_ld2410_cmd_config_end(s_ld.cmd, sizeof(s_ld.cmd)));
+    proto_bool ok = send_cmd(protocore_ld2410_cmd_config_enable(s_ld.cmd, sizeof(s_ld.cmd)));
+    ok &= send_cmd(protocore_ld2410_cmd_restart(s_ld.cmd, sizeof(s_ld.cmd)));
+    ok &= send_cmd(protocore_ld2410_cmd_config_end(s_ld.cmd, sizeof(s_ld.cmd)));
     return ok;
 }
 
 #else // no bus seam. The codec above is host-tested.
 
-proto_bool pc_ld2410_begin(int rx_pin, int tx_pin)
+proto_bool protocore_ld2410_begin(int rx_pin, int tx_pin)
 {
     (void)rx_pin;
     (void)tx_pin;
     return PROTO_FALSE;
 }
-proto_bool pc_ld2410_poll(void)
+proto_bool protocore_ld2410_poll(void)
 {
     return PROTO_FALSE;
 }
-const Ld2410Report *pc_ld2410_last(void)
+const Ld2410Report *protocore_ld2410_last(void)
 {
     return NULL;
 }
-proto_bool pc_ld2410_set_engineering(proto_bool on)
+proto_bool protocore_ld2410_set_engineering(proto_bool on)
 {
     (void)on;
     return PROTO_FALSE;
 }
-proto_bool pc_ld2410_restart(void)
+proto_bool protocore_ld2410_restart(void)
 {
     return PROTO_FALSE;
 }
 
-#endif // PC_HAS_BUS
+#endif // PROTOCORE_HAS_BUS
 
-#endif // PC_ENABLE_LD2410
+#endif // PROTOCORE_ENABLE_LD2410

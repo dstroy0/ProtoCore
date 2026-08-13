@@ -3,7 +3,7 @@
 
 /**
  * @file iface_bridge_hw.h
- * @brief Bus glue for the interface bridge (PC_ENABLE_IFACE_BRIDGE): the PROTO_BRIDGE listener that
+ * @brief Bus glue for the interface bridge (PROTOCORE_ENABLE_IFACE_BRIDGE): the PROTO_BRIDGE listener that
  *        wires an accepted connection to a UART / SPI / I2C endpoint, plus the bus I/O.
  *
  * The pure core (iface_bridge.h) owns the rule table and the transaction frame codec; this file owns the
@@ -13,11 +13,11 @@
  * @code
  *   int32_t li = server.listen(2323, ProtoConn::PROTO_BRIDGE);          // front port 2323
  *   BridgeTarget uart = {BRIDGE_BUS_UART, BRIDGE_MODE_STREAM, 1, 0, 115200, 0, 0};
- *   pc_iface_bridge_publish((uint8_t)li, 2323, BRIDGE_PROTO_TCP, &uart);     // -> UART1 raw passthrough
+ *   protocore_iface_bridge_publish((uint8_t)li, 2323, BRIDGE_PROTO_TCP, &uart);     // -> UART1 raw passthrough
  *
  *   int32_t ls = server.listen(2324, ProtoConn::PROTO_BRIDGE);
  *   BridgeTarget spi = {BRIDGE_BUS_SPI, BRIDGE_MODE_TRANSACTION, 0, 5, 1000000, 0, 0}; // 5 = CS gpio
- *   pc_iface_bridge_publish((uint8_t)ls, 2324, BRIDGE_PROTO_TCP, &spi);      // -> SPI write-then-read frames
+ *   protocore_iface_bridge_publish((uint8_t)ls, 2324, BRIDGE_PROTO_TCP, &spi);      // -> SPI write-then-read frames
  * @endcode
  *
  * Security: a published port is a direct pipe to the bus. Only expose it on a trusted interface / behind
@@ -32,14 +32,14 @@
 
 #include "protocore_config.h"
 
-#if PC_ENABLE_IFACE_BRIDGE
+#if PROTOCORE_ENABLE_IFACE_BRIDGE
 
 #include "services/net/iface_bridge/iface_bridge.h"
 
 /**
  * @brief Bind a PROTO_BRIDGE listener to a hardware target and install the handler (first call).
  *
- * Registers the rule in the pure table (pc_iface_bridge_map), records the listener_id -> rule binding used to
+ * Registers the rule in the pure table (protocore_iface_bridge_map), records the listener_id -> rule binding used to
  * dispatch accepted connections, and brings up the bus (UART open / SPI CS pin / I2C).
  *
  * @param listener_id  the id returned by `server.listen(port, ProtoConn::PROTO_BRIDGE)`.
@@ -48,11 +48,12 @@
  * @param target       the UART / SPI / I2C endpoint (copied into the rule).
  * @return true; false if @p target is null, the rule table is full, or the port+proto is already bound.
  */
-proto_bool pc_iface_bridge_publish(uint8_t listener_id, uint16_t port, BridgeProto proto, const BridgeTarget *target);
+proto_bool protocore_iface_bridge_publish(uint8_t listener_id, uint16_t port, BridgeProto proto,
+                                          const BridgeTarget *target);
 
 /** @brief Clear all listener bindings and rules (start from empty). */
-void pc_iface_bridge_listener_reset(void);
+void protocore_iface_bridge_listener_reset(void);
 
-#endif // PC_ENABLE_IFACE_BRIDGE
+#endif // PROTOCORE_ENABLE_IFACE_BRIDGE
 
 #endif // PROTOCORE_IFACE_BRIDGE_HW_H

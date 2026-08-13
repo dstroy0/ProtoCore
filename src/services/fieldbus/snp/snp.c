@@ -9,9 +9,9 @@
 #include "services/fieldbus/snp/snp.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_SNP
+#if PROTOCORE_ENABLE_SNP
 
-uint8_t pc_snp_bcc(const uint8_t *bytes, size_t len)
+uint8_t protocore_snp_bcc(const uint8_t *bytes, size_t len)
 {
     uint8_t sum = 0;
     for (size_t i = 0; i < len; i++)
@@ -21,7 +21,7 @@ uint8_t pc_snp_bcc(const uint8_t *bytes, size_t len)
     return sum;
 }
 
-size_t pc_snp_build(uint8_t control, const uint8_t *data, size_t data_len, uint8_t *out, size_t cap)
+size_t protocore_snp_build(uint8_t control, const uint8_t *data, size_t data_len, uint8_t *out, size_t cap)
 {
     if (!out || (data_len && !data) || data_len > 255)
     {
@@ -38,11 +38,11 @@ size_t pc_snp_build(uint8_t control, const uint8_t *data, size_t data_len, uint8
     {
         mem.cpy(out + 2, data, data_len);
     }
-    out[2 + data_len] = pc_snp_bcc(out, 2 + data_len); // BCC over control..last data
+    out[2 + data_len] = protocore_snp_bcc(out, 2 + data_len); // BCC over control..last data
     return n;
 }
 
-proto_bool pc_snp_parse(const uint8_t *frame, size_t len, SnpFrame *out)
+proto_bool protocore_snp_parse(const uint8_t *frame, size_t len, SnpFrame *out)
 {
     if (!frame || !out || len < 3) // control + length + BCC
     {
@@ -54,7 +54,7 @@ proto_bool pc_snp_parse(const uint8_t *frame, size_t len, SnpFrame *out)
     {
         return PROTO_FALSE;
     }
-    if (pc_snp_bcc(frame, 2 + data_len) != frame[2 + data_len])
+    if (protocore_snp_bcc(frame, 2 + data_len) != frame[2 + data_len])
     {
         return PROTO_FALSE;
     }
@@ -64,4 +64,4 @@ proto_bool pc_snp_parse(const uint8_t *frame, size_t len, SnpFrame *out)
     return PROTO_TRUE;
 }
 
-#endif // PC_ENABLE_SNP
+#endif // PROTOCORE_ENABLE_SNP

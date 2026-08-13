@@ -3,7 +3,7 @@
 //
 // On-device CCOUNT microbenchmark for the Siemens 3964R codec (services/fieldbus/simatic): the BCC checksum
 // and the DLE-stuffed block build/parse (the pure framing under the stateful 3964R engine). The
-// stateful RX/TX engine (pc_3964r_send/rx_byte/tick) drives a UART and is out of scope; only the
+// stateful RX/TX engine (protocore_3964r_send/rx_byte/tick) drives a UART and is out of scope; only the
 // deterministic per-block codec is benched.
 //
 // Build/flash:  idf.py -C test/performance_benching/simatic -t upload --upload-port COM7
@@ -20,20 +20,20 @@ void dbench_run(void)
                                      0x66, 0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF, 0x01,
                                      0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B};
     static uint8_t block[80];
-    size_t blen = pc_3964r_build_block(block, sizeof(block), data, sizeof(data), true);
+    size_t blen = protocore_3964r_build_block(block, sizeof(block), data, sizeof(data), true);
 
     for (;;)
     {
         DBENCH_BANNER("simatic");
         volatile size_t sink = 0;
-        DBENCH_BULK("pc_3964r_bcc", 200000, sizeof(data), sink += pc_3964r_bcc(data, sizeof(data)));
+        DBENCH_BULK("protocore_3964r_bcc", 200000, sizeof(data), sink += protocore_3964r_bcc(data, sizeof(data)));
         static uint8_t out[80];
-        DBENCH_OP("pc_3964r_build_block (BCC)", 200000,
-                  sink += pc_3964r_build_block(out, sizeof(out), data, sizeof(data), true));
-        DBENCH_OP("pc_3964r_parse_block", 200000, {
+        DBENCH_OP("protocore_3964r_build_block (BCC)", 200000,
+                  sink += protocore_3964r_build_block(out, sizeof(out), data, sizeof(data), true));
+        DBENCH_OP("protocore_3964r_parse_block", 200000, {
             uint8_t p[64];
             size_t plen = 0;
-            sink += pc_3964r_parse_block(block, blen, true, p, sizeof(p), &plen) ? plen : 0;
+            sink += protocore_3964r_parse_block(block, blen, true, p, sizeof(p), &plen) ? plen : 0;
         });
         (void)sink;
         DBENCH_DONE();

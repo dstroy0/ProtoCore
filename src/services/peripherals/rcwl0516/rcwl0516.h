@@ -4,7 +4,7 @@
 /**
  * @file rcwl0516.h
  * @brief RCWL-0516 microwave Doppler presence sensor, and the shared one-GPIO presence facade
- *        (PC_ENABLE_RCWL0516).
+ *        (PROTOCORE_ENABLE_RCWL0516).
  *
  * The RCWL-0516 (RCWL-9196 controller + MMBR941M RF amp, ~3.18 GHz Doppler) has no data protocol at
  * all: a single 3.3 V **OUT** pin that latches HIGH when a moving reflector is detected and returns
@@ -29,7 +29,7 @@
  *
  * @ref PresenceCore is deliberately sensor-agnostic: it is a debounced, hold-extended view of one
  * active-high presence pin. The RCWL-0516 is simply its first user, via the
- * @ref pc_rcwl0516_core_init defaults - the HMMD's OUT pin, a PIR, or an HB100 can reuse the same
+ * @ref protocore_rcwl0516_core_init defaults - the HMMD's OUT pin, a PIR, or an HB100 can reuse the same
  * core by supplying their own two constants.
  *
  * Fail-safe start: a freshly initialized core reports *absent* and treats the pin as idle, so
@@ -45,9 +45,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_RCWL0516
+#if PROTOCORE_ENABLE_RCWL0516
 
 /**
  * @brief Default hold time (ms) for the RCWL-0516.
@@ -55,13 +55,13 @@ PROTO_BEGIN_DECLS
  * The module's own retrigger window is ~2 s, so holding for at least that long bridges the gap
  * between retriggers while a target is still present.
  */
-#ifndef PC_RCWL0516_HOLD_MS
-#define PC_RCWL0516_HOLD_MS 2000
+#ifndef PROTOCORE_RCWL0516_HOLD_MS
+#define PROTOCORE_RCWL0516_HOLD_MS 2000
 #endif
 
 /** @brief Default debounce (ms) for the RCWL-0516 - long enough to swallow comparator chatter. */
-#ifndef PC_RCWL0516_DEBOUNCE_MS
-#define PC_RCWL0516_DEBOUNCE_MS 50
+#ifndef PROTOCORE_RCWL0516_DEBOUNCE_MS
+#define PROTOCORE_RCWL0516_DEBOUNCE_MS 50
 #endif
 
 // ---------------------------------------------------------------------------
@@ -78,7 +78,7 @@ typedef struct
     uint8_t raw;           ///< last raw pin level as sampled (0/1).
     uint8_t stable;        ///< believed level, after debouncing (0/1).
     uint8_t present;       ///< presence output (0/1) - @ref stable, extended by @ref hold_ms.
-    uint8_t changed;       ///< set when @ref present flipped; cleared by @ref pc_presence_take_event.
+    uint8_t changed;       ///< set when @ref present flipped; cleared by @ref protocore_presence_take_event.
 } PresenceCore;
 
 /**
@@ -90,7 +90,7 @@ typedef struct
  * @param debounce_ms 0 disables debouncing (every sample is believed immediately).
  * @param hold_ms     0 disables the hold (presence follows the debounced level exactly).
  */
-void pc_presence_core_init(PresenceCore *c, uint32_t debounce_ms, uint32_t hold_ms, uint32_t now);
+void protocore_presence_core_init(PresenceCore *c, uint32_t debounce_ms, uint32_t hold_ms, uint32_t now);
 
 /**
  * @brief Feed one sample of the presence pin.
@@ -100,40 +100,40 @@ void pc_presence_core_init(PresenceCore *c, uint32_t debounce_ms, uint32_t hold_
  *
  * @return the presence state after this sample (also in @ref PresenceCore::present).
  */
-proto_bool pc_presence_core_update(PresenceCore *c, proto_bool pin_high, uint32_t now);
+proto_bool protocore_presence_core_update(PresenceCore *c, proto_bool pin_high, uint32_t now);
 
 /** @brief Current presence, without sampling. */
-proto_bool pc_presence_core_get(const PresenceCore *c);
+proto_bool protocore_presence_core_get(const PresenceCore *c);
 
 /**
  * @brief Consume the presence-changed event.
  * @return true exactly once per transition, so a caller can publish an event per edge rather than
  *         re-publishing a level every poll. Clears the flag.
  */
-proto_bool pc_presence_take_event(PresenceCore *c);
+proto_bool protocore_presence_take_event(PresenceCore *c);
 
 // ---------------------------------------------------------------------------
 // RCWL-0516 convenience
 // ---------------------------------------------------------------------------
 
-/** @brief Initialize @p c with the RCWL-0516 defaults (@ref PC_RCWL0516_DEBOUNCE_MS / _HOLD_MS). */
-void pc_rcwl0516_core_init(PresenceCore *c, uint32_t now);
+/** @brief Initialize @p c with the RCWL-0516 defaults (@ref PROTOCORE_RCWL0516_DEBOUNCE_MS / _HOLD_MS). */
+void protocore_rcwl0516_core_init(PresenceCore *c, uint32_t now);
 
 // ---------------------------------------------------------------------------
 // Binding (no-ops with no pin seam)
 // ---------------------------------------------------------------------------
 
 /** @brief Configure @p out_pin as an input and start the core. @return true where the pin was configured. */
-proto_bool pc_rcwl0516_begin(int out_pin);
+proto_bool protocore_rcwl0516_begin(int out_pin);
 
 /** @brief Sample the pin at the current time. @return true if presence changed on this poll. */
-proto_bool pc_rcwl0516_poll();
+proto_bool protocore_rcwl0516_poll();
 
 /** @brief Latest debounced, hold-extended presence. */
-proto_bool pc_rcwl0516_present();
+proto_bool protocore_rcwl0516_present();
 
-#endif // PC_ENABLE_RCWL0516
+#endif // PROTOCORE_ENABLE_RCWL0516
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_RCWL0516_H

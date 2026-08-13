@@ -35,16 +35,16 @@ void tearDown(void)
 // deposited into, never cleared), so every assertion here is a delta across the call under test.
 void test_put_response_counts_by_class(void)
 {
-    pc_signal_snapshot before;
-    pc_signal_know(&before);
+    protocore_signal_snapshot before;
+    protocore_signal_know(&before);
 
-    pc_signal_put_response(200);
-    pc_signal_put_response(201);
-    pc_signal_put_response(404);
-    pc_signal_put_response(500);
+    protocore_signal_put_response(200);
+    protocore_signal_put_response(201);
+    protocore_signal_put_response(404);
+    protocore_signal_put_response(500);
 
-    pc_signal_snapshot after;
-    pc_signal_know(&after);
+    protocore_signal_snapshot after;
+    protocore_signal_know(&after);
 
     TEST_ASSERT_EQUAL_UINT32(4, after.requests_total - before.requests_total);
     TEST_ASSERT_EQUAL_UINT32(2, after.responses_2xx - before.responses_2xx);
@@ -56,15 +56,15 @@ void test_put_response_counts_by_class(void)
 // it gets a test rather than a comment.
 void test_put_response_1xx_3xx_total_only(void)
 {
-    pc_signal_snapshot before;
-    pc_signal_know(&before);
+    protocore_signal_snapshot before;
+    protocore_signal_know(&before);
 
-    pc_signal_put_response(100);
-    pc_signal_put_response(301);
-    pc_signal_put_response(304);
+    protocore_signal_put_response(100);
+    protocore_signal_put_response(301);
+    protocore_signal_put_response(304);
 
-    pc_signal_snapshot after;
-    pc_signal_know(&after);
+    protocore_signal_snapshot after;
+    protocore_signal_know(&after);
 
     TEST_ASSERT_EQUAL_UINT32(3, after.requests_total - before.requests_total);
     TEST_ASSERT_EQUAL_UINT32(0, after.responses_2xx - before.responses_2xx);
@@ -75,16 +75,16 @@ void test_put_response_1xx_3xx_total_only(void)
 // The tick fields are absolute stores, not tallies, so the last deposit is what a reader sees.
 void test_put_tick_stores_verbatim(void)
 {
-    pc_signal_put_tick(1234u, 0x0Bu, 0x05u);
+    protocore_signal_put_tick(1234u, 0x0Bu, 0x05u);
 
-    pc_signal_snapshot s;
-    pc_signal_know(&s);
+    protocore_signal_snapshot s;
+    protocore_signal_know(&s);
     TEST_ASSERT_EQUAL_UINT32(1234u, s.uptime_ms);
     TEST_ASSERT_EQUAL_UINT32(0x0Bu, s.conns_active);
     TEST_ASSERT_EQUAL_UINT32(0x05u, s.listeners_up);
 
-    pc_signal_put_tick(9999u, 0u, 0u);
-    pc_signal_know(&s);
+    protocore_signal_put_tick(9999u, 0u, 0u);
+    protocore_signal_know(&s);
     TEST_ASSERT_EQUAL_UINT32(9999u, s.uptime_ms);
     TEST_ASSERT_EQUAL_UINT32(0u, s.conns_active);
     TEST_ASSERT_EQUAL_UINT32(0u, s.listeners_up);
@@ -94,10 +94,10 @@ void test_put_tick_stores_verbatim(void)
 // recoverable only from the mask.
 void test_masks_carry_identity_not_just_count(void)
 {
-    pc_signal_put_tick(0u, 0b10010011u, 0b101u);
+    protocore_signal_put_tick(0u, 0b10010011u, 0b101u);
 
-    pc_signal_snapshot s;
-    pc_signal_know(&s);
+    protocore_signal_snapshot s;
+    protocore_signal_know(&s);
 
     TEST_ASSERT_EQUAL_INT(4, __builtin_popcount(s.conns_active));
     TEST_ASSERT_EQUAL_INT(2, __builtin_popcount(s.listeners_up));
@@ -117,13 +117,13 @@ void test_masks_carry_identity_not_just_count(void)
 // underneath it, which is the whole reason it is not a pointer into the bucket.
 void test_know_is_a_copy_not_a_window(void)
 {
-    pc_signal_put_tick(7u, 1u, 1u);
+    protocore_signal_put_tick(7u, 1u, 1u);
 
-    pc_signal_snapshot taken;
-    pc_signal_know(&taken);
+    protocore_signal_snapshot taken;
+    protocore_signal_know(&taken);
 
-    pc_signal_put_tick(8888u, 0xFFu, 0x7u);
-    pc_signal_put_response(200);
+    protocore_signal_put_tick(8888u, 0xFFu, 0x7u);
+    protocore_signal_put_response(200);
 
     TEST_ASSERT_EQUAL_UINT32(7u, taken.uptime_ms);
     TEST_ASSERT_EQUAL_UINT32(1u, taken.conns_active);
@@ -132,18 +132,18 @@ void test_know_is_a_copy_not_a_window(void)
 
 void test_know_null_is_safe(void)
 {
-    pc_signal_know(NULL); // must not fault
+    protocore_signal_know(NULL); // must not fault
     TEST_ASSERT_TRUE(PROTO_TRUE);
 }
 
 // Kill is a forward: the transport gets the slot, once, unchanged.
 void test_kill_forwards_the_slot(void)
 {
-    pc_signal_kill(3);
+    protocore_signal_kill(3);
     TEST_ASSERT_EQUAL_INT(1, g_close_calls);
     TEST_ASSERT_EQUAL_UINT8(3, g_close_slot);
 
-    pc_signal_kill(0);
+    protocore_signal_kill(0);
     TEST_ASSERT_EQUAL_INT(2, g_close_calls);
     TEST_ASSERT_EQUAL_UINT8(0, g_close_slot);
 }
@@ -152,7 +152,7 @@ void test_kill_forwards_the_slot(void)
 // signaling does not test liveness and must not start filtering.
 void test_kill_does_not_filter(void)
 {
-    pc_signal_kill(200); // not a real slot; still forwarded, transport decides
+    protocore_signal_kill(200); // not a real slot; still forwarded, transport decides
     TEST_ASSERT_EQUAL_INT(1, g_close_calls);
     TEST_ASSERT_EQUAL_UINT8(200, g_close_slot);
 }

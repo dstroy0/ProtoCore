@@ -6,12 +6,12 @@
 // Ethernet egress streams each frame as a libpcap SocketCAN record over UDP to a collector, which
 // Wireshark opens as DLT_CAN_SOCKETCAN.
 //
-// Data path:  CAN bus --bus_capture_poll--> sink --pc_forward_ingress--> ETH send cb --UDP--> collector
+// Data path:  CAN bus --bus_capture_poll--> sink --protocore_forward_ingress--> ETH send cb --UDP--> collector
 //
 // Wire a 3.3 V CAN transceiver (e.g. SN65HVD230) to the TX/RX GPIOs below and onto the bus.
 //
 // Build flags (whole build), Ethernet tuned here for a LAN8720 board:
-//   PC_ENABLE_BUS_CAPTURE=1 PC_ENABLE_FORWARD=1 PC_ENABLE_ETHERNET=1
+//   PROTOCORE_ENABLE_BUS_CAPTURE=1 PROTOCORE_ENABLE_FORWARD=1 PROTOCORE_ENABLE_ETHERNET=1
 //   ETH_PHY_TYPE=ETH_PHY_LAN8720 ETH_PHY_ADDR=1 ETH_PHY_POWER=-1
 //   ETH_PHY_MDC=23 ETH_PHY_MDIO=18 ETH_CLK_MODE=ETH_CLOCK_GPIO0_IN
 
@@ -37,15 +37,15 @@ enum
 // Ethernet egress: wrap the SocketCAN frame in a libpcap record and UDP it to the collector.
 static bool eth_send(uint8_t, const uint8_t *frame, uint16_t len, void *)
 {
-    uint8_t buf[PC_PCAP_REC_HDR_LEN + PC_SOCKETCAN_FRAME_LEN];
-    if (len > PC_SOCKETCAN_FRAME_LEN)
+    uint8_t buf[PROTOCORE_PCAP_REC_HDR_LEN + PROTOCORE_SOCKETCAN_FRAME_LEN];
+    if (len > PROTOCORE_SOCKETCAN_FRAME_LEN)
     {
-        len = PC_SOCKETCAN_FRAME_LEN;
+        len = PROTOCORE_SOCKETCAN_FRAME_LEN;
     }
     uint32_t us = (uint32_t)micros();
-    pc_pcap_record_header(buf, sizeof(buf), us / 1000000u, us % 1000000u, len, len);
-    memcpy(buf + PC_PCAP_REC_HDR_LEN, frame, len);
-    return Udp.client->sendto(COLLECTOR_IP, COLLECTOR_PORT, buf, PC_PCAP_REC_HDR_LEN + len);
+    protocore_pcap_record_header(buf, sizeof(buf), us / 1000000u, us % 1000000u, len, len);
+    memcpy(buf + PROTOCORE_PCAP_REC_HDR_LEN, frame, len);
+    return Udp.client->sendto(COLLECTOR_IP, COLLECTOR_PORT, buf, PROTOCORE_PCAP_REC_HDR_LEN + len);
 }
 
 // CAN is a source only - no rule forwards *to* it, so this is never called.
@@ -57,10 +57,10 @@ static bool can_send(uint8_t, const uint8_t *, uint16_t, void *)
 // Capture sink: format the decoded CAN frame as SocketCAN and hand it to the forwarding plane.
 static void on_can(const CanFrame *f)
 {
-    uint8_t sc[PC_SOCKETCAN_FRAME_LEN];
+    uint8_t sc[PROTOCORE_SOCKETCAN_FRAME_LEN];
     if (can_to_socketcan(f, sc, sizeof(sc)))
     {
-        pc_forward_ingress(IF_CAN, sc, PC_SOCKETCAN_FRAME_LEN);
+        protocore_forward_ingress(IF_CAN, sc, PROTOCORE_SOCKETCAN_FRAME_LEN);
     }
 }
 
@@ -81,10 +81,10 @@ void setup()
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     // Forwarding plane: CAN -> Ethernet.
-    pc_forward_reset();
-    pc_forward_add_if(IF_CAN, pc_if_kind::PC_IF_BUS, can_send, nullptr);
-    pc_forward_add_if(IF_ETH, pc_if_kind::PC_IF_ETH, eth_send, nullptr);
-    pc_forward_add_rule(IF_CAN, IF_ETH, pc_fwd_action::PC_FWD_ALLOW, 0); // CAN tops out ~a few k frames/s
+    protocore_forward_reset();
+    protocore_forward_add_if(IF_CAN, protocore_if_kind::PROTOCORE_IF_BUS, can_send, nullptr);
+    protocore_forward_add_if(IF_ETH, protocore_if_kind::PROTOCORE_IF_ETH, eth_send, nullptr);
+    protocore_forward_add_rule(IF_CAN, IF_ETH, protocore_fwd_action::PROTOCORE_FWD_ALLOW, 0); // CAN tops out ~a few k frames/s
 
     if (!bus_capture_begin(CAN_TX_PIN, CAN_RX_PIN, CAN_BITRATE, on_can))
     {
@@ -103,8 +103,8 @@ void loop()
     if (millis() - last > 5000)
     {
         last = millis();
-        pc_forward_stats s;
-        pc_forward_get_stats(&s);
+        protocore_forward_stats s;
+        protocore_forward_get_stats(&s);
         Serial.printf("captured %lu, forwarded %lu, send-fail %lu\n", (unsigned long)s.frames_in,
                       (unsigned long)s.forwarded, (unsigned long)s.send_fail);
     }

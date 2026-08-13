@@ -22,9 +22,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_AUTH
+#if PROTOCORE_ENABLE_AUTH
 
 // Named, not defined: the request is the parser's and the route is the table's, and this module only
 // reads them. Declaring them here rather than including their headers is what keeps auth.h includable
@@ -32,13 +32,13 @@ PROTO_BEGIN_DECLS
 struct HttpReq;
 
 /** @brief The id a route carries when it needs no credentials. */
-#define PC_AUTH_NONE 0xFFu
+#define PROTOCORE_AUTH_NONE 0xFFu
 
 /**
  * @brief The authentication module.
  *
  * @var AuthNs::add
- * Record one credential set and return the id that names it, or @ref PC_AUTH_NONE when the table is
+ * Record one credential set and return the id that names it, or @ref PROTOCORE_AUTH_NONE when the table is
  * full. A route stores that id; it never stores the credential, so no route slot carries key
  * material and the same set can serve several routes.
  *
@@ -75,7 +75,7 @@ struct HttpReq;
  * @var AuthNs::reset
  * Empty the credential table. An id names a row by index and a route holds that id, so the table
  * empties with the routes it is indexed from: pc_server_reset() calls both. A table that kept its
- * rows across a reset would reach @ref PC_AUTH_NONE after MAX_ROUTES registrations and hand every
+ * rows across a reset would reach @ref PROTOCORE_AUTH_NONE after MAX_ROUTES registrations and hand every
  * later route an id that guards nothing.
  *
  * The keying secret is the module's own storage and is not a member: it is written at
@@ -96,8 +96,8 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern const AuthNs Auth;
 
-#endif // PC_ENABLE_AUTH
+#endif // PROTOCORE_ENABLE_AUTH
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_AUTH_H

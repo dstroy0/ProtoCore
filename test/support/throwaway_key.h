@@ -8,7 +8,7 @@
 //
 // This borrows the discipline from fuzzing rather than fixed-fixture unit tests:
 // the seed is fresh-random per run BUT is logged and can be pinned via the
-// PC_TEST_KEY_SEED environment variable (64 hex chars), so any failure
+// PROTOCORE_TEST_KEY_SEED environment variable (64 hex chars), so any failure
 // reproduces exactly - which keeps a randomized input honest in a suite that is
 // otherwise deterministic. Known-answer vectors (test_crypto_kat, RFC vectors)
 // stay fixed and must never use this.
@@ -16,7 +16,7 @@
 // Ed25519 only: a seed is 32 random bytes, which a test can draw for itself. The RSA-2048 half of
 // the same pairing is generated at build time instead, into
 // test/fixtures/ssh_test_host_key/ssh_test_keys.h by tools/crypto/gen_ssh_test_keys.py -
-// PC_SSH_THROWAWAY_KEY_* new per run beside PC_SSH_BASELINE_KEY_* from the committed fixture.
+// PROTOCORE_SSH_THROWAWAY_KEY_* new per run beside PROTOCORE_SSH_BASELINE_KEY_* from the committed fixture.
 
 #ifndef PROTOCORE_TEST_THROWAWAY_KEY_H
 #define PROTOCORE_TEST_THROWAWAY_KEY_H
@@ -43,12 +43,12 @@ static inline int throwaway_nib(char c)
     return -1;
 }
 
-// Fill out[32] with a throwaway Ed25519 seed. If PC_TEST_KEY_SEED holds 64 hex
+// Fill out[32] with a throwaway Ed25519 seed. If PROTOCORE_TEST_KEY_SEED holds 64 hex
 // chars it is used verbatim (reproduce a run); otherwise a fresh random seed is
 // drawn. Either way the seed is logged with the exact re-pin command.
 static inline void throwaway_ed25519_seed(uint8_t out[32])
 {
-    const char *pin = getenv("PC_TEST_KEY_SEED");
+    const char *pin = getenv("PROTOCORE_TEST_KEY_SEED");
     proto_bool pinned = PROTO_FALSE;
     if (pin && strlen(pin) >= 64)
     {
@@ -75,7 +75,7 @@ static inline void throwaway_ed25519_seed(uint8_t out[32])
     {
         // Reproduced from the caller-supplied seed - it is already known to them, so do not echo it
         // back (echoing getenv-sourced bytes to stdout is what a taint scan flags, and adds nothing).
-        printf("[throwaway-key] ed25519 seed pinned via PC_TEST_KEY_SEED\n");
+        printf("[throwaway-key] ed25519 seed pinned via PROTOCORE_TEST_KEY_SEED\n");
         return;
     }
 
@@ -101,7 +101,7 @@ static inline void throwaway_ed25519_seed(uint8_t out[32])
         hex[2 * i + 1] = H[out[i] & 0x0f];
     }
     hex[64] = '\0';
-    printf("[throwaway-key] ed25519 seed=%s (re-pin: PC_TEST_KEY_SEED=%s)\n", hex, hex);
+    printf("[throwaway-key] ed25519 seed=%s (re-pin: PROTOCORE_TEST_KEY_SEED=%s)\n", hex, hex);
 }
 
 #endif // PROTOCORE_TEST_THROWAWAY_KEY_H

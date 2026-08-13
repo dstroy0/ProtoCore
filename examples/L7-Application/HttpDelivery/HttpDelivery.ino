@@ -9,17 +9,17 @@
 //   * A service worker - /sw.js precaches the shell listed in /precache.json and serves it
 //     stale-while-revalidate client-side, so a repeat visit paints with the device untouched (and
 //     still works while it is offline or asleep).
-//   * RFC 7233 byte ranges - already handled by the file server (PC_ENABLE_RANGE): a client can
+//   * RFC 7233 byte ranges - already handled by the file server (PROTOCORE_ENABLE_RANGE): a client can
 //     fetch just the new tail of a growing log with `Range: bytes=N-` and get a 206.
 //
 // Files are served from SD, so the shell is real content rather than flash strings.
 //
-// Build flags (whole build): PC_ENABLE_HTTP_DELIVERY=1 PC_ENABLE_FILE_SERVING=1 PC_ENABLE_RANGE=1
+// Build flags (whole build): PROTOCORE_ENABLE_HTTP_DELIVERY=1 PROTOCORE_ENABLE_FILE_SERVING=1 PROTOCORE_ENABLE_RANGE=1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
 #include "services/file_transfer/http_delivery/http_delivery.h"
-#include "shared_primitives/mime.h" // PC_MIME_TEXT_HTML
+#include "shared_primitives/mime.h" // PROTOCORE_MIME_TEXT_HTML
 #include <SD_MMC.h>
 
 static const char *WIFI_SSID = "your-ssid";
@@ -35,7 +35,7 @@ static void root_handler(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
     // Registers the worker, then shows what it cached.
-    send_text(slot_id, 200, PC_MIME_TEXT_HTML,
+    send_text(slot_id, 200, PROTOCORE_MIME_TEXT_HTML,
                 "<!doctype html><meta charset=utf-8><title>PC delivery</title>"
                 "<h1>PC delivery</h1><p id=s>registering...</p>"
                 "<script>navigator.serviceWorker.register('/sw.js').then(function(){"
@@ -58,7 +58,7 @@ void setup()
     }
     else
     {
-        serve_static("/files/", SD_MMC, "/"); // Range/206 comes free with PC_ENABLE_RANGE
+        serve_static("/files/", SD_MMC, "/"); // Range/206 comes free with PROTOCORE_ENABLE_RANGE
     }
 
     // Every served file carries the SWR policy: fresh for 60 s, then usable-while-revalidating for
@@ -67,7 +67,7 @@ void setup()
 
     on_http("/", HTTP_GET, root_handler);
     // Serves /sw.js + /precache.json.
-    if (!pc_delivery_serve_sw(server, SHELL, sizeof(SHELL) / sizeof(SHELL[0]), SHELL_VERSION))
+    if (!protocore_delivery_serve_sw(server, SHELL, sizeof(SHELL) / sizeof(SHELL[0]), SHELL_VERSION))
     {
         Serial.println("service-worker routes failed to register");
     }

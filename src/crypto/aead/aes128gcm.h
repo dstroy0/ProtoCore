@@ -25,26 +25,26 @@
 #include "protocore_config.h"
 
 // Shared by the HTTP/3 (QUIC) packet protection and the DTLS 1.3 record layer.
-#if (PC_ENABLE_HTTP3 || PC_ENABLE_DTLS || PC_ENABLE_SMB || PC_TLS_SOFTWARE)
+#if (PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_ENABLE_SMB || PROTOCORE_TLS_SOFTWARE)
 
-#include "mmgr/span.h" // pc_cspan: what the seal produced (empty == it did not)
+#include "mmgr/span.h" // protocore_cspan: what the seal produced (empty == it did not)
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
 /** @brief AEAD_AES_128_GCM key length in bytes. */
-#define PC_AES128GCM_KEY_LEN 16
+#define PROTOCORE_AES128GCM_KEY_LEN 16
 /** @brief AEAD_AES_128_GCM nonce length in bytes. */
-#define PC_AES128GCM_IV_LEN 12
+#define PROTOCORE_AES128GCM_IV_LEN 12
 /** @brief AEAD_AES_128_GCM authentication tag length in bytes. */
-#define PC_AES128GCM_TAG_LEN 16
+#define PROTOCORE_AES128GCM_TAG_LEN 16
 
 // ---------------------------------------------------------------------------
 // AES-128 single-block primitive (used by GCM and by header protection)
 // ---------------------------------------------------------------------------
 
 // Opaque: the definition is private to the backend under core_setup/ that this build selected -
-// consumers know only the symbol and hold it via struct pc_aes128*. No vendor type is named here.
-struct pc_aes128;
+// consumers know only the symbol and hold it via struct protocore_aes128*. No vendor type is named here.
+struct protocore_aes128;
 
 /**
  * @brief Storage this module wants for one AES-128 context.
@@ -53,18 +53,18 @@ struct pc_aes128;
  * owns the allocation. Call inside a SecureScope: the scope is how the caller states how long it
  * needs the resource, and the pool wipes the key schedule when that scope ends.
  *
- * @return a context to pass to pc_aes128_init(), or nullptr if the pool could not satisfy it.
+ * @return a context to pass to protocore_aes128_init(), or nullptr if the pool could not satisfy it.
  */
-struct pc_aes128 *pc_aes128_wants(void);
+struct protocore_aes128 *protocore_aes128_wants(void);
 
 /** @brief Load a 128-bit key and expand the encryption key schedule. */
-void pc_aes128_init(struct pc_aes128 *ctx, const uint8_t key[16]);
+void protocore_aes128_init(struct protocore_aes128 *ctx, const uint8_t key[16]);
 
 /** @brief Encrypt one 16-byte block (ECB). @p in and @p out may alias. */
-void pc_aes128_encrypt_block(struct pc_aes128 *ctx, const uint8_t in[16], uint8_t out[16]);
+void protocore_aes128_encrypt_block(struct protocore_aes128 *ctx, const uint8_t in[16], uint8_t out[16]);
 
 /** @brief Wipe the key schedule (and release mbedtls state on Arduino). */
-void pc_aes128_wipe(struct pc_aes128 *ctx);
+void protocore_aes128_wipe(struct protocore_aes128 *ctx);
 
 // ---------------------------------------------------------------------------
 // AEAD_AES_128_GCM (96-bit nonce, 128-bit tag) - keyed
@@ -72,7 +72,7 @@ void pc_aes128_wipe(struct pc_aes128 *ctx);
 
 /**
  * @brief Opaque keyed AEAD_AES_128_GCM context. Forward-declared only: the definition belongs to the
- * backend, so consumers hold it by pointer and size its storage with PC_WORK_AES128GCM.
+ * backend, so consumers hold it by pointer and size its storage with PROTOCORE_WORK_AES128GCM.
  *
  * This api is keyed, and there is deliberately no raw-key one-shot. A key protects a whole connection's
  * worth of records, but building a cipher context and tearing it down costs ~9,200 cycles on an
@@ -83,20 +83,21 @@ void pc_aes128_wipe(struct pc_aes128 *ctx);
  * The context holds an expanded key schedule for as long as the caller holds it, so it belongs in the
  * caller's secure storage and must be wiped on rekey and on close.
  */
-struct pc_aes128gcm_key;
+struct protocore_aes128gcm_key;
 
 /**
  * @brief Bind @p storage as a context keyed with @p key.
  *
- * @param storage secure, PC_WORK_AES128GCM bytes, 8-aligned. Declare it as that macro and it cannot be
+ * @param storage secure, PROTOCORE_WORK_AES128GCM bytes, 8-aligned. Declare it as that macro and it cannot be
  *                wrong - the backend static_asserts its context fits, so the size is settled at compile
  *                time and there is nothing to check here.
  * @return the context, or nullptr if the vendor rejected the key.
  */
-struct pc_aes128gcm_key *pc_aes128gcm_key_init(void *storage, const uint8_t key[PC_AES128GCM_KEY_LEN]);
+struct protocore_aes128gcm_key *protocore_aes128gcm_key_init(void *storage,
+                                                             const uint8_t key[PROTOCORE_AES128GCM_KEY_LEN]);
 
 /** @brief Wipe the expanded schedule. Call on rekey and on close; the storage stays the caller's. */
-void pc_aes128gcm_key_wipe(struct pc_aes128gcm_key *k);
+void protocore_aes128gcm_key_wipe(struct protocore_aes128gcm_key *k);
 
 /**
  * @brief Seal one record: encrypt @p pt and authenticate it together with @p aad.
@@ -107,9 +108,10 @@ void pc_aes128gcm_key_wipe(struct pc_aes128gcm_key *k);
  * DTLS) is not a different operation - pass `ct_out + pt_len` as @p tag_out and it is written in place.
  * That is why there is no second "attached" pair of entry points.
  */
-pc_cspan pc_aes128gcm_seal(struct pc_aes128gcm_key *k, const uint8_t nonce[PC_AES128GCM_IV_LEN], const uint8_t *aad,
-                           size_t aad_len, const uint8_t *pt, size_t pt_len, uint8_t *ct_out,
-                           uint8_t tag_out[PC_AES128GCM_TAG_LEN]);
+protocore_cspan protocore_aes128gcm_seal(struct protocore_aes128gcm_key *k,
+                                         const uint8_t nonce[PROTOCORE_AES128GCM_IV_LEN], const uint8_t *aad,
+                                         size_t aad_len, const uint8_t *pt, size_t pt_len, uint8_t *ct_out,
+                                         uint8_t tag_out[PROTOCORE_AES128GCM_TAG_LEN]);
 
 /**
  * @brief Open one record: verify @p tag over @p aad || @p ct in constant time, then (only on success)
@@ -118,12 +120,12 @@ pc_cspan pc_aes128gcm_seal(struct pc_aes128gcm_key *k, const uint8_t nonce[PC_AE
  * @p ct_len is the ciphertext length, NOT including the tag.
  * @return true iff the tag is valid; on mismatch nothing is written.
  */
-proto_bool pc_aes128gcm_open(struct pc_aes128gcm_key *k, const uint8_t nonce[PC_AES128GCM_IV_LEN], const uint8_t *aad,
-                             size_t aad_len, const uint8_t *ct, size_t ct_len, const uint8_t tag[PC_AES128GCM_TAG_LEN],
-                             uint8_t *out);
+proto_bool protocore_aes128gcm_open(struct protocore_aes128gcm_key *k, const uint8_t nonce[PROTOCORE_AES128GCM_IV_LEN],
+                                    const uint8_t *aad, size_t aad_len, const uint8_t *ct, size_t ct_len,
+                                    const uint8_t tag[PROTOCORE_AES128GCM_TAG_LEN], uint8_t *out);
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
-#endif // PC_ENABLE_HTTP3 || PC_ENABLE_DTLS || PC_ENABLE_SMB || PC_TLS_SOFTWARE
+#endif // PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_ENABLE_SMB || PROTOCORE_TLS_SOFTWARE
 
 #endif // PROTOCORE_AES128GCM_H

@@ -10,8 +10,8 @@
  * is a controller index, 0 upward; which pins it runs on is a board fact, so the caller names
  * them and -1 leaves a pin at the unit's default.
  *
- * A driver reads what has arrived rather than blocking on a byte count: ::pc_uart_available
- * reports the depth of the driver's receive ring, and ::pc_uart_read takes what is there up to
+ * A driver reads what has arrived rather than blocking on a byte count: ::protocore_uart_available
+ * reports the depth of the driver's receive ring, and ::protocore_uart_read takes what is there up to
  * its timeout. Nothing here waits without a bound (SRC_LAW rule 5).
  *
  * The bodies compile wherever the platform states a bus.
@@ -23,55 +23,55 @@
 #ifndef PROTOCORE_UART_H
 #define PROTOCORE_UART_H
 
-#include "core_setup/board_profiles/pc_platform.h"
+#include "core_setup/board_profiles/protocore_platform.h"
 #include "protocore_config.h"
 
 /** @brief Read timeout in milliseconds, for a driver that takes whatever has arrived. */
-#ifndef PC_UART_TIMEOUT_MS
-#define PC_UART_TIMEOUT_MS 20u
+#ifndef PROTOCORE_UART_TIMEOUT_MS
+#define PROTOCORE_UART_TIMEOUT_MS 20u
 #endif
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_HAS_BUS
+#if PROTOCORE_HAS_BUS
 
 /** @brief Bring up @p unit at @p baud, 8N1, on @p rx_pin / @p tx_pin (-1 = the unit's default). */
-PC_INLINE proto_bool pc_uart_begin(uint8_t unit, uint32_t baud, int rx_pin, int tx_pin)
+PROTOCORE_INLINE proto_bool protocore_uart_begin(uint8_t unit, uint32_t baud, int rx_pin, int tx_pin)
 {
-    return pc_platform_uart_begin(unit, baud, rx_pin, tx_pin) != 0;
+    return protocore_platform_uart_begin(unit, baud, rx_pin, tx_pin) != 0;
 }
 
 /** @brief Write @p len bytes to @p unit. @return true if the driver took all of them. */
-PC_INLINE proto_bool pc_uart_write(uint8_t unit, const uint8_t *buf, size_t len)
+PROTOCORE_INLINE proto_bool protocore_uart_write(uint8_t unit, const uint8_t *buf, size_t len)
 {
-    return pc_platform_uart_write(unit, buf, (int)len) == (int)len;
+    return protocore_platform_uart_write(unit, buf, (int)len) == (int)len;
 }
 
 /**
  * @brief Take up to @p len bytes from @p unit's receive ring, waiting at most @p ms for them.
  * @return how many bytes were written into @p buf.
  */
-PC_INLINE size_t pc_uart_read(uint8_t unit, uint8_t *buf, size_t len, uint32_t ms)
+PROTOCORE_INLINE size_t protocore_uart_read(uint8_t unit, uint8_t *buf, size_t len, uint32_t ms)
 {
-    int n = pc_platform_uart_read(unit, buf, (uint32_t)len, ms);
+    int n = protocore_platform_uart_read(unit, buf, (uint32_t)len, ms);
     return n > 0 ? (size_t)n : 0u;
 }
 
 /** @brief Bytes sitting in @p unit's receive ring. */
-PC_INLINE size_t pc_uart_available(uint8_t unit)
+PROTOCORE_INLINE size_t protocore_uart_available(uint8_t unit)
 {
-    return (size_t)pc_platform_uart_available(unit);
+    return (size_t)protocore_platform_uart_available(unit);
 }
 
 /** @brief Take one byte from @p unit. @return true if one was there. */
-PC_INLINE proto_bool pc_uart_read_byte(uint8_t unit, uint8_t *out)
+PROTOCORE_INLINE proto_bool protocore_uart_read_byte(uint8_t unit, uint8_t *out)
 {
-    return pc_uart_read(unit, out, 1, PC_UART_TIMEOUT_MS) == 1u;
+    return protocore_uart_read(unit, out, 1, PROTOCORE_UART_TIMEOUT_MS) == 1u;
 }
 
 #else // no bus seam on this build
 
-PC_INLINE proto_bool pc_uart_begin(uint8_t unit, uint32_t baud, int rx_pin, int tx_pin)
+PROTOCORE_INLINE proto_bool protocore_uart_begin(uint8_t unit, uint32_t baud, int rx_pin, int tx_pin)
 {
     (void)unit;
     (void)baud;
@@ -80,7 +80,7 @@ PC_INLINE proto_bool pc_uart_begin(uint8_t unit, uint32_t baud, int rx_pin, int 
     return PROTO_TRUE;
 }
 
-PC_INLINE proto_bool pc_uart_write(uint8_t unit, const uint8_t *buf, size_t len)
+PROTOCORE_INLINE proto_bool protocore_uart_write(uint8_t unit, const uint8_t *buf, size_t len)
 {
     (void)unit;
     (void)buf;
@@ -88,7 +88,7 @@ PC_INLINE proto_bool pc_uart_write(uint8_t unit, const uint8_t *buf, size_t len)
     return PROTO_FALSE;
 }
 
-PC_INLINE size_t pc_uart_read(uint8_t unit, uint8_t *buf, size_t len, uint32_t ms)
+PROTOCORE_INLINE size_t protocore_uart_read(uint8_t unit, uint8_t *buf, size_t len, uint32_t ms)
 {
     (void)unit;
     (void)buf;
@@ -97,19 +97,19 @@ PC_INLINE size_t pc_uart_read(uint8_t unit, uint8_t *buf, size_t len, uint32_t m
     return 0u;
 }
 
-PC_INLINE size_t pc_uart_available(uint8_t unit)
+PROTOCORE_INLINE size_t protocore_uart_available(uint8_t unit)
 {
     (void)unit;
     return 0u;
 }
 
-PC_INLINE proto_bool pc_uart_read_byte(uint8_t unit, uint8_t *out)
+PROTOCORE_INLINE proto_bool protocore_uart_read_byte(uint8_t unit, uint8_t *out)
 {
-    return pc_uart_read(unit, out, 1, PC_UART_TIMEOUT_MS) == 1u;
+    return protocore_uart_read(unit, out, 1, PROTOCORE_UART_TIMEOUT_MS) == 1u;
 }
 
-#endif // PC_HAS_BUS
+#endif // PROTOCORE_HAS_BUS
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_UART_H

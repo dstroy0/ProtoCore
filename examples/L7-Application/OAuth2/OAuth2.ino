@@ -3,7 +3,7 @@
 
 /**
  * @file OAuth2.ino
- * @brief OAuth2 authorization-code exchange (PC_ENABLE_OAUTH2).
+ * @brief OAuth2 authorization-code exchange (PROTOCORE_ENABLE_OAUTH2).
  *
  * The redirect-callback half of an OAuth/OIDC login: after the user authorizes at
  * the provider, the browser is redirected back with `?code=...`; this handler
@@ -13,16 +13,16 @@
  *     -> exchanges the code, returns {"expires_in":3600,...}
  *
  * Pair it with services/security/oidc to verify the returned id_token, and call
- * pc_oauth2_refresh() later with the refresh_token to get fresh access tokens.
- * Needs the HTTP(S) client (PC_ENABLE_HTTP_CLIENT); use https:// token URLs in
+ * protocore_oauth2_refresh() later with the refresh_token to get fresh access tokens.
+ * Needs the HTTP(S) client (PROTOCORE_ENABLE_HTTP_CLIENT); use https:// token URLs in
  * production and set a CA / pin on the client.
  *
  * NOTE: enable it (and the HTTP client) for the whole build. In platformio.ini:
- *     build_flags = -DPC_ENABLE_OAUTH2=1 -DPC_ENABLE_HTTP_CLIENT=1
+ *     build_flags = -DPROTOCORE_ENABLE_OAUTH2=1 -DPROTOCORE_ENABLE_HTTP_CLIENT=1
  */
 
-#define PC_ENABLE_OAUTH2 1
-#define PC_ENABLE_HTTP_CLIENT 1
+#define PROTOCORE_ENABLE_OAUTH2 1
+#define PROTOCORE_ENABLE_HTTP_CLIENT 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -57,8 +57,8 @@ void setup()
             send_text(id, 400, "application/json", "{\"error\":\"missing code\"}");
             return;
         }
-        pc_o_auth2_tokens t;
-        int st = pc_oauth2_exchange_code(TOKEN_URL, code, REDIRECT_URI, CLIENT_ID, CLIENT_SECRET, nullptr, &t);
+        protocore_o_auth2_tokens t;
+        int st = protocore_oauth2_exchange_code(TOKEN_URL, code, REDIRECT_URI, CLIENT_ID, CLIENT_SECRET, nullptr, &t);
         if (st != 200)
         {
             char b[48];

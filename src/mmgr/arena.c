@@ -14,23 +14,23 @@
 // ---------------------------------------------------------------------------
 //
 // Per-task worker id, for a genuine multi-worker build. Default 0: the user loop(), the lwIP
-// thread, and unit tests all read worker 0. With PC_WORKER_COUNT == 1 pc_worker_self() answers 0
+// thread, and unit tests all read worker 0. With PROTOCORE_WORKER_COUNT == 1 protocore_worker_self() answers 0
 // inline (see arena.h) and this TLS slot is never read on the hot path.
 static _Thread_local int t_worker_id = 0;
 
-int pc_worker_count(void)
+int protocore_worker_count(void)
 {
-    return PC_WORKER_COUNT;
+    return PROTOCORE_WORKER_COUNT;
 }
 
-#if PC_WORKER_COUNT != 1
-int pc_worker_self(void)
+#if PROTOCORE_WORKER_COUNT != 1
+int protocore_worker_self(void)
 {
     return t_worker_id;
 }
 #endif
 
-void pc_worker_set_self(int id)
+void protocore_worker_set_self(int id)
 {
     t_worker_id = id;
 }
@@ -43,22 +43,22 @@ typedef struct
 } ABlk;
 
 // Header size, rounded up to the arena alignment so payloads stay aligned.
-static const size_t AHDR = (sizeof(ABlk) + (PC_ARENA_ALIGN - 1)) & ~(size_t)(PC_ARENA_ALIGN - 1);
+static const size_t AHDR = (sizeof(ABlk) + (PROTOCORE_ARENA_ALIGN - 1)) & ~(size_t)(PROTOCORE_ARENA_ALIGN - 1);
 
-static inline size_t align_up(size_t n) // persist path only; the scratch path uses pc_arena_align_up
+static inline size_t align_up(size_t n) // persist path only; the scratch path uses protocore_arena_align_up
 {
-    return (n + (PC_ARENA_ALIGN - 1)) & ~(size_t)(PC_ARENA_ALIGN - 1);
+    return (n + (PROTOCORE_ARENA_ALIGN - 1)) & ~(size_t)(PROTOCORE_ARENA_ALIGN - 1);
 }
 
-void pc_arena_init(pc_arena *a, void *base, size_t size)
+void protocore_arena_init(protocore_arena *a, void *base, size_t size)
 {
     // Align the base up to the strongest supported alignment and the size down, so a
-    // scratch borrow up to PC_ARENA_MAX_ALIGN is met by aligning its offset alone.
+    // scratch borrow up to PROTOCORE_ARENA_MAX_ALIGN is met by aligning its offset alone.
     uintptr_t b = (uintptr_t)base;
-    uintptr_t ab = (b + (PC_ARENA_MAX_ALIGN - 1)) & ~(uintptr_t)(PC_ARENA_MAX_ALIGN - 1);
+    uintptr_t ab = (b + (PROTOCORE_ARENA_MAX_ALIGN - 1)) & ~(uintptr_t)(PROTOCORE_ARENA_MAX_ALIGN - 1);
     size_t adj = (size_t)(ab - b);
     a->base = (uint8_t *)ab;
-    a->size = (size > adj) ? ((size - adj) & ~(size_t)(PC_ARENA_ALIGN - 1)) : 0;
+    a->size = (size > adj) ? ((size - adj) & ~(size_t)(PROTOCORE_ARENA_ALIGN - 1)) : 0;
     a->persist_end = 0;
     a->scratch_top = a->size;
     a->persist_used = 0;
@@ -70,9 +70,9 @@ void pc_arena_init(pc_arena *a, void *base, size_t size)
 // Persistent end (first-fit, grows up from the bottom)
 // ---------------------------------------------------------------------------
 
-void *pc_arena_persist_alloc(pc_arena *a, size_t n)
+void *protocore_arena_persist_alloc(protocore_arena *a, size_t n)
 {
-    n = align_up(n ? n : PC_ARENA_ALIGN);
+    n = align_up(n ? n : PROTOCORE_ARENA_ALIGN);
 
     // First-fit over the existing block chain.
     size_t off = 0;
@@ -82,7 +82,7 @@ void *pc_arena_persist_alloc(pc_arena *a, size_t n)
         if (!b->used && b->size >= n)
         {
             // Split if the remainder can hold another header + a minimum payload.
-            if (b->size >= n + AHDR + PC_ARENA_ALIGN)
+            if (b->size >= n + AHDR + PROTOCORE_ARENA_ALIGN)
             {
                 ABlk *nb = (ABlk *)(a->base + off + AHDR + n);
                 nb->size = b->size - n - AHDR;
@@ -119,7 +119,7 @@ void *pc_arena_persist_alloc(pc_arena *a, size_t n)
     return NULL; // fail closed
 }
 
-void pc_arena_persist_free(pc_arena *a, void *p)
+void protocore_arena_persist_free(protocore_arena *a, void *p)
 {
     if (!p)
     {
@@ -174,22 +174,22 @@ void pc_arena_persist_free(pc_arena *a, void *p)
 // Scratch end (bump, grows down from the top)
 // ---------------------------------------------------------------------------
 
-void *pc_arena_scratch_alloc(pc_arena *a, size_t n)
+void *protocore_arena_scratch_alloc(protocore_arena *a, size_t n)
 {
-    return pc_arena_scratch_alloc_aligned(a, n, PC_ARENA_ALIGN);
+    return protocore_arena_scratch_alloc_aligned(a, n, PROTOCORE_ARENA_ALIGN);
 }
 
 // ---------------------------------------------------------------------------
 // Observability
 // ---------------------------------------------------------------------------
 
-size_t pc_arena_free_bytes(const pc_arena *a)
+size_t protocore_arena_free_bytes(const protocore_arena *a)
 {
     size_t mid = (a->scratch_top > a->persist_end) ? a->scratch_top - a->persist_end : 0;
     return mid > AHDR ? mid - AHDR : 0; // usable payload of one new persistent block
 }
 
-size_t pc_arena_persist_used(const pc_arena *a)
+size_t protocore_arena_persist_used(const protocore_arena *a)
 {
     return a->persist_used;
 }
@@ -198,20 +198,20 @@ size_t pc_arena_persist_used(const pc_arena *a)
 // Multi-region set (DRAM base + PSRAM extension)
 // ===========================================================================
 
-void pc_arena_set_init(pc_arena_set *s)
+void protocore_arena_set_init(protocore_arena_set *s)
 {
     s->count = 0;
 }
 
-proto_bool pc_arena_set_add(pc_arena_set *s, void *base, size_t size)
+proto_bool protocore_arena_set_add(protocore_arena_set *s, void *base, size_t size)
 {
-    if (s->count >= PC_ARENA_MAX_REGIONS)
+    if (s->count >= PROTOCORE_ARENA_MAX_REGIONS)
     {
         return PROTO_FALSE;
     }
-    pc_arena *r = &s->region[s->count];
-    pc_arena_init(r, base, size);
-    if (r->size < AHDR + PC_ARENA_ALIGN)
+    protocore_arena *r = &s->region[s->count];
+    protocore_arena_init(r, base, size);
+    if (r->size < AHDR + PROTOCORE_ARENA_ALIGN)
     {
         return PROTO_FALSE; // too small to hold even one block
     }
@@ -219,11 +219,11 @@ proto_bool pc_arena_set_add(pc_arena_set *s, void *base, size_t size)
     return PROTO_TRUE;
 }
 
-void *pc_arena_set_persist_alloc(pc_arena_set *s, size_t n)
+void *protocore_arena_set_persist_alloc(protocore_arena_set *s, size_t n)
 {
     for (size_t i = 0; i < s->count; i++)
     {
-        void *p = pc_arena_persist_alloc(&s->region[i], n);
+        void *p = protocore_arena_persist_alloc(&s->region[i], n);
         if (p)
         {
             return p;
@@ -232,7 +232,7 @@ void *pc_arena_set_persist_alloc(pc_arena_set *s, size_t n)
     return NULL; // fail closed
 }
 
-void pc_arena_set_persist_free(pc_arena_set *s, void *p)
+void protocore_arena_set_persist_free(protocore_arena_set *s, void *p)
 {
     if (!p)
     {
@@ -241,20 +241,20 @@ void pc_arena_set_persist_free(pc_arena_set *s, void *p)
     uint8_t *b = (uint8_t *)p;
     for (size_t i = 0; i < s->count; i++)
     {
-        pc_arena *r = &s->region[i];
+        protocore_arena *r = &s->region[i];
         if (b >= r->base && b < r->base + r->size)
         {
-            pc_arena_persist_free(r, p);
+            protocore_arena_persist_free(r, p);
             return;
         }
     }
 }
 
-void *pc_arena_set_scratch_alloc_aligned(pc_arena_set *s, size_t n, size_t align)
+void *protocore_arena_set_scratch_alloc_aligned(protocore_arena_set *s, size_t n, size_t align)
 {
     for (size_t i = 0; i < s->count; i++)
     {
-        void *p = pc_arena_scratch_alloc_aligned(&s->region[i], n, align);
+        void *p = protocore_arena_scratch_alloc_aligned(&s->region[i], n, align);
         if (p)
         {
             return p;
@@ -263,14 +263,14 @@ void *pc_arena_set_scratch_alloc_aligned(pc_arena_set *s, size_t n, size_t align
     return NULL; // fail closed
 }
 
-void *pc_arena_set_scratch_alloc(pc_arena_set *s, size_t n)
+void *protocore_arena_set_scratch_alloc(protocore_arena_set *s, size_t n)
 {
-    return pc_arena_set_scratch_alloc_aligned(s, n, PC_ARENA_ALIGN);
+    return protocore_arena_set_scratch_alloc_aligned(s, n, PROTOCORE_ARENA_ALIGN);
 }
 
-pc_arena_mark pc_arena_set_scratch_mark(const pc_arena_set *s)
+protocore_arena_mark protocore_arena_set_scratch_mark(const protocore_arena_set *s)
 {
-    pc_arena_mark m;
+    protocore_arena_mark m;
     m.count = s->count;
     for (size_t i = 0; i < s->count; i++)
     {
@@ -279,49 +279,49 @@ pc_arena_mark pc_arena_set_scratch_mark(const pc_arena_set *s)
     return m;
 }
 
-void pc_arena_set_scratch_release(pc_arena_set *s, const pc_arena_mark *m)
+void protocore_arena_set_scratch_release(protocore_arena_set *s, const protocore_arena_mark *m)
 {
     size_t n = m->count < s->count ? m->count : s->count;
     for (size_t i = 0; i < n; i++)
     {
-        pc_arena_scratch_release(&s->region[i], m->top[i]);
+        protocore_arena_scratch_release(&s->region[i], m->top[i]);
     }
 }
 
-void pc_arena_set_scratch_reset(pc_arena_set *s)
+void protocore_arena_set_scratch_reset(protocore_arena_set *s)
 {
     for (size_t i = 0; i < s->count; i++)
     {
-        pc_arena_scratch_reset(&s->region[i]);
+        protocore_arena_scratch_reset(&s->region[i]);
     }
 }
 
-size_t pc_arena_set_free_bytes(const pc_arena_set *s)
+size_t protocore_arena_set_free_bytes(const protocore_arena_set *s)
 {
     size_t t = 0;
     for (size_t i = 0; i < s->count; i++)
     {
-        t += pc_arena_free_bytes(&s->region[i]);
+        t += protocore_arena_free_bytes(&s->region[i]);
     }
     return t;
 }
 
-size_t pc_arena_set_persist_used(const pc_arena_set *s)
+size_t protocore_arena_set_persist_used(const protocore_arena_set *s)
 {
     size_t t = 0;
     for (size_t i = 0; i < s->count; i++)
     {
-        t += pc_arena_persist_used(&s->region[i]);
+        t += protocore_arena_persist_used(&s->region[i]);
     }
     return t;
 }
 
-size_t pc_arena_set_scratch_used(const pc_arena_set *s)
+size_t protocore_arena_set_scratch_used(const protocore_arena_set *s)
 {
     size_t t = 0;
     for (size_t i = 0; i < s->count; i++)
     {
-        t += pc_arena_scratch_used(&s->region[i]);
+        t += protocore_arena_scratch_used(&s->region[i]);
     }
     return t;
 }

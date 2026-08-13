@@ -1,11 +1,11 @@
 # WebSocketCompression - permessage-deflate
 
-**Layer:** L6 Presentation · **Build flags:** `PC_ENABLE_WS_DEFLATE` (requires `PC_ENABLE_WEBSOCKET`)
+**Layer:** L6 Presentation · **Build flags:** `PROTOCORE_ENABLE_WS_DEFLATE` (requires `PROTOCORE_ENABLE_WEBSOCKET`)
 
 ## What this example teaches
 
 This is the [WebSocket echo](../WebSocket) with one flag added:
-`PC_ENABLE_WS_DEFLATE` turns on permessage-deflate (RFC 7692), transparent
+`PROTOCORE_ENABLE_WS_DEFLATE` turns on permessage-deflate (RFC 7692), transparent
 two-way compression. The handler code is unchanged - it still reads plaintext -
 but frames travel compressed on the wire.
 
@@ -42,7 +42,7 @@ compressed length.
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_WS_DEFLATE=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_WS_DEFLATE=1" \
   --lib="." examples/L6-Presentation/WebSocketCompression/WebSocketCompression.ino
 ```
 
@@ -58,7 +58,7 @@ reproduced verbatim with added explanatory comments:
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 // Enable WebSocket permessage-deflate for this sketch (overrides default-off).
-#define PC_ENABLE_WS_DEFLATE 1
+#define PROTOCORE_ENABLE_WS_DEFLATE 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"

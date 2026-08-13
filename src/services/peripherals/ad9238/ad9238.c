@@ -8,9 +8,9 @@
 
 #include "services/peripherals/ad9238/ad9238.h"
 
-#if PC_ENABLE_AD9238
+#if PROTOCORE_ENABLE_AD9238
 
-proto_bool pc_ad9238_build_instruction(proto_bool read, uint16_t reg_addr, uint8_t nbytes, uint8_t out2[2])
+proto_bool protocore_ad9238_build_instruction(proto_bool read, uint16_t reg_addr, uint8_t nbytes, uint8_t out2[2])
 {
     if (!out2 || nbytes == 0 || nbytes > 4 || reg_addr > 0x1FFF)
     {
@@ -23,14 +23,14 @@ proto_bool pc_ad9238_build_instruction(proto_bool read, uint16_t reg_addr, uint8
     return PROTO_TRUE;
 }
 
-size_t pc_ad9238_build_write(uint16_t reg_addr, uint8_t value, uint8_t *out, size_t cap)
+size_t protocore_ad9238_build_write(uint16_t reg_addr, uint8_t value, uint8_t *out, size_t cap)
 {
     if (!out || cap < 3)
     {
         return 0;
     }
     uint8_t hdr[2];
-    if (!pc_ad9238_build_instruction(PROTO_FALSE, reg_addr, 1, hdr))
+    if (!protocore_ad9238_build_instruction(PROTO_FALSE, reg_addr, 1, hdr))
     {
         return 0;
     }
@@ -40,14 +40,14 @@ size_t pc_ad9238_build_write(uint16_t reg_addr, uint8_t value, uint8_t *out, siz
     return 3;
 }
 
-size_t pc_ad9238_build_read(uint16_t reg_addr, uint8_t *out, size_t cap)
+size_t protocore_ad9238_build_read(uint16_t reg_addr, uint8_t *out, size_t cap)
 {
     if (!out || cap < 2)
     {
         return 0;
     }
     uint8_t hdr[2];
-    if (!pc_ad9238_build_instruction(PROTO_TRUE, reg_addr, 1, hdr))
+    if (!protocore_ad9238_build_instruction(PROTO_TRUE, reg_addr, 1, hdr))
     {
         return 0;
     }
@@ -56,9 +56,9 @@ size_t pc_ad9238_build_read(uint16_t reg_addr, uint8_t *out, size_t cap)
     return 2;
 }
 
-size_t pc_ad9238_build_transfer(uint8_t *out, size_t cap)
+size_t protocore_ad9238_build_transfer(uint8_t *out, size_t cap)
 {
-    return pc_ad9238_build_write((uint16_t)AD9238_REG_DEVICE_UPDATE, 0x01, out, cap);
+    return protocore_ad9238_build_write((uint16_t)AD9238_REG_DEVICE_UPDATE, 0x01, out, cap);
 }
 
-#endif // PC_ENABLE_AD9238
+#endif // PROTOCORE_ENABLE_AD9238

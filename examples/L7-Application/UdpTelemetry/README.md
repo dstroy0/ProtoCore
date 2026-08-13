@@ -1,6 +1,6 @@
 # UdpTelemetry - fire-and-forget UDP telemetry
 
-**Layer:** L7 Application · **Build flags:** `PC_ENABLE_UDP_TELEMETRY`
+**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_UDP_TELEMETRY`
 
 ## What this example teaches
 
@@ -12,21 +12,21 @@ listener (or just `nc -u -l 8094` to watch the packets).
 **Set the destination once:**
 
 ```cpp
-pc_udp_telemetry_begin(COLLECTOR_IP, COLLECTOR_PORT);
+protocore_udp_telemetry_begin(COLLECTOR_IP, COLLECTOR_PORT);
 ```
 
-**Build a line into a caller-owned buffer, then cast it.** `pc_line_*` appends
+**Build a line into a caller-owned buffer, then cast it.** `protocore_line_*` appends
 typed fields (the `i` suffix InfluxDB uses for integers comes from the `_int`/`_uint`
-helpers); `pc_udp_telemetry_cast()` sends one datagram:
+helpers); `protocore_udp_telemetry_cast()` sends one datagram:
 
 ```cpp
-char buf[PC_UDP_TELEMETRY_BUF];
-pc_line line;
-pc_line_init(&line, buf, sizeof(buf), "esp32");        // measurement name
-pc_line_add_uint(&line, "heap", ESP.getFreeHeap());
-pc_line_add_int(&line, "rssi", Physical.wifi->rssi());
-pc_line_add_float(&line, "temp", temperatureRead(), 1); // 1 decimal place
-pc_udp_telemetry_cast(&line);                           // -> "esp32 heap=...i,rssi=...i,temp=..."
+char buf[PROTOCORE_UDP_TELEMETRY_BUF];
+protocore_line line;
+protocore_line_init(&line, buf, sizeof(buf), "esp32");        // measurement name
+protocore_line_add_uint(&line, "heap", ESP.getFreeHeap());
+protocore_line_add_int(&line, "rssi", Physical.wifi->rssi());
+protocore_line_add_float(&line, "temp", temperatureRead(), 1); // 1 decimal place
+protocore_udp_telemetry_cast(&line);                           // -> "esp32 heap=...i,rssi=...i,temp=..."
 ```
 
 There is no server here - the device is purely a telemetry source - so `loop()`
@@ -36,7 +36,7 @@ just casts on a timer.
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_UDP_TELEMETRY=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_UDP_TELEMETRY=1" \
   --lib="." examples/L7-Application/UdpTelemetry/UdpTelemetry.ino
 ```
 
@@ -53,7 +53,7 @@ verbatim with added explanatory comments:
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-#define PC_ENABLE_UDP_TELEMETRY 1
+#define PROTOCORE_ENABLE_UDP_TELEMETRY 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -80,7 +80,7 @@ void setup()
     Serial.printf("IP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    pc_udp_telemetry_begin(COLLECTOR_IP, COLLECTOR_PORT);
+    protocore_udp_telemetry_begin(COLLECTOR_IP, COLLECTOR_PORT);
 }
 
 void loop()
@@ -89,13 +89,13 @@ void loop()
     if (millis() - last >= 1000)
     {
         last = millis();
-        char buf[PC_UDP_TELEMETRY_BUF];
-        pc_line line;
-        pc_line_init(&line, buf, sizeof(buf), "esp32");
-        pc_line_add_uint(&line, "heap", ESP.getFreeHeap());
-        pc_line_add_int(&line, "rssi", Physical.wifi->rssi());
-        pc_line_add_float(&line, "temp", temperatureRead(), 1);
-        if (pc_udp_telemetry_cast(&line))
+        char buf[PROTOCORE_UDP_TELEMETRY_BUF];
+        protocore_line line;
+        protocore_line_init(&line, buf, sizeof(buf), "esp32");
+        protocore_line_add_uint(&line, "heap", ESP.getFreeHeap());
+        protocore_line_add_int(&line, "rssi", Physical.wifi->rssi());
+        protocore_line_add_float(&line, "temp", temperatureRead(), 1);
+        if (protocore_udp_telemetry_cast(&line))
             Serial.printf("cast: %s\n", buf);
     }
 }

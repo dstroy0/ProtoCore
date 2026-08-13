@@ -11,7 +11,7 @@ worse than none - it sends you to build a bench that already exists.
 Counted from:
   interop peers  test/servers/peers/*_peer.py
   benches        performance_benching/**/platformio.ini  (one per benchable unit)
-  attacks        @attack(...) decorators in penetration_testing/pc_pentest.py
+  attacks        @attack(...) decorators in penetration_testing/protocore_pentest.py
   fuzz           RUN_TEST count in test/unit/fieldbus/test_pentest/test_pentest.c
   services       src/services/<group>/<module>/
 
@@ -42,10 +42,10 @@ def main() -> int:
 
     # Adversarial coverage has TWO halves and they are not interchangeable:
     #   attacks - targeted, protocol-aware exploits fired at a LIVE rig over the network
-    #             (penetration_testing/pc_pentest.py, @attack decorators)
+    #             (penetration_testing/protocore_pentest.py, @attack decorators)
     #   fuzz    - host-level adversarial input in the native_pentest env, run separately
     #             from the main suite because it is heavy
-    pentest = os.path.join(ROOT, "penetration_testing/pc_pentest.py")
+    pentest = os.path.join(ROOT, "penetration_testing/protocore_pentest.py")
     attacks = 0
     if os.path.exists(pentest):
         attacks = len(re.findall(r"^@attack\(", open(pentest, encoding="utf-8", errors="replace").read(), re.M))
@@ -62,7 +62,7 @@ def main() -> int:
         "| -------------------- | ----: | ------------------------------------------------ |",
         f"| Interop peers        | {len(peers):>5} | `test/servers/peers/*_peer.py`                   |",
         f"| Throughput benches   | {len(benches):>5} | `performance_benching/**/platformio.ini`         |",
-        f"| Advanced attacks     | {attacks:>5} | `@attack(...)` in `penetration_testing/pc_pentest.py`     |",
+        f"| Advanced attacks     | {attacks:>5} | `@attack(...)` in `penetration_testing/protocore_pentest.py`     |",
         f"| Adversarial fuzz     | {fuzz:>5} | `native_pentest` (`test/unit/fieldbus/test_pentest/`)          |",
         f"| Service modules      | {len(modules):>5} | `src/services/<group>/<module>/`                 |",
         "",

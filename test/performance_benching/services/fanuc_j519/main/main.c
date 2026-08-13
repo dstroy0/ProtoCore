@@ -37,7 +37,7 @@ void dbench_run(void)
     cmd.write_io_index = 0x0506;
     cmd.write_io_mask = 0x0708;
     cmd.write_io_value = 0x090A;
-    for (int i = 0; i < PC_J519_AXES; i++)
+    for (int i = 0; i < PROTOCORE_J519_AXES; i++)
     {
         cmd.joint_data[i] = (float)i;
     }
@@ -55,7 +55,7 @@ void dbench_run(void)
     st.read_io_mask = 0x1314;
     st.read_io_value = 0x1516;
     st.time_stamp = 0x99AABBCC;
-    for (int i = 0; i < PC_J519_AXES; i++)
+    for (int i = 0; i < PROTOCORE_J519_AXES; i++)
     {
         st.cartesian_pose[i] = (float)(100 + i);
         st.joint_pose[i] = (float)(200 + i);
@@ -71,18 +71,18 @@ void dbench_run(void)
     ack.threshold_type = (uint32_t)J519_THR_JERK;
     ack.max_cart_speed = 2000;
     ack.unknown0 = 0xDEADBEEF;
-    for (int i = 0; i < PC_J519_THRESHOLDS; i++)
+    for (int i = 0; i < PROTOCORE_J519_THRESHOLDS; i++)
     {
         ack.threshold_no_load[i] = (float)i;
         ack.threshold_max_load[i] = (float)(1000 + i);
     }
 
-    static uint8_t motion_buf[PC_J519_LEN_MOTION];
-    static uint8_t status_buf[PC_J519_LEN_STATUS];
-    static uint8_t ack_buf[PC_J519_LEN_ACK];
-    pc_j519_build_motion(motion_buf, sizeof(motion_buf), &cmd);
-    pc_j519_build_status(status_buf, sizeof(status_buf), &st);
-    pc_j519_build_ack(ack_buf, sizeof(ack_buf), &ack);
+    static uint8_t motion_buf[PROTOCORE_J519_LEN_MOTION];
+    static uint8_t status_buf[PROTOCORE_J519_LEN_STATUS];
+    static uint8_t ack_buf[PROTOCORE_J519_LEN_ACK];
+    protocore_j519_build_motion(motion_buf, sizeof(motion_buf), &cmd);
+    protocore_j519_build_status(status_buf, sizeof(status_buf), &st);
+    protocore_j519_build_ack(ack_buf, sizeof(ack_buf), &ack);
 
     static J519MotionCommand got_cmd;
     static J519RobotStatus got_st;
@@ -94,12 +94,12 @@ void dbench_run(void)
         volatile size_t sink = 0;
         volatile bool ok = false;
 
-        DBENCH_OP("pc_j519_build_motion", 100000, sink += pc_j519_build_motion(motion_buf, sizeof(motion_buf), &cmd));
-        DBENCH_OP("pc_j519_parse_motion", 100000, ok = pc_j519_parse_motion(motion_buf, sizeof(motion_buf), &got_cmd));
-        DBENCH_OP("pc_j519_build_status", 50000, sink += pc_j519_build_status(status_buf, sizeof(status_buf), &st));
-        DBENCH_OP("pc_j519_parse_status", 50000, ok = pc_j519_parse_status(status_buf, sizeof(status_buf), &got_st));
-        DBENCH_OP("pc_j519_build_ack", 20000, sink += pc_j519_build_ack(ack_buf, sizeof(ack_buf), &ack));
-        DBENCH_OP("pc_j519_parse_ack", 20000, ok = pc_j519_parse_ack(ack_buf, sizeof(ack_buf), &got_ack));
+        DBENCH_OP("protocore_j519_build_motion", 100000, sink += protocore_j519_build_motion(motion_buf, sizeof(motion_buf), &cmd));
+        DBENCH_OP("protocore_j519_parse_motion", 100000, ok = protocore_j519_parse_motion(motion_buf, sizeof(motion_buf), &got_cmd));
+        DBENCH_OP("protocore_j519_build_status", 50000, sink += protocore_j519_build_status(status_buf, sizeof(status_buf), &st));
+        DBENCH_OP("protocore_j519_parse_status", 50000, ok = protocore_j519_parse_status(status_buf, sizeof(status_buf), &got_st));
+        DBENCH_OP("protocore_j519_build_ack", 20000, sink += protocore_j519_build_ack(ack_buf, sizeof(ack_buf), &ack));
+        DBENCH_OP("protocore_j519_parse_ack", 20000, ok = protocore_j519_parse_ack(ack_buf, sizeof(ack_buf), &got_ack));
 
         (void)sink;
         (void)ok;

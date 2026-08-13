@@ -3,7 +3,7 @@
 
 /**
  * @file ws_client.h
- * @brief Zero-heap outbound WebSocket client, RFC 6455 (PC_ENABLE_WS_CLIENT).
+ * @brief Zero-heap outbound WebSocket client, RFC 6455 (PROTOCORE_ENABLE_WS_CLIENT).
  *
  * Connects to a remote WebSocket endpoint (ws://, or wss:// over client-side
  * mbedTLS) and exchanges text/binary messages - the device as a WebSocket client
@@ -18,7 +18,7 @@
  *    session). No heap; one connection at a time.
  *
  * Client frames are always masked (RFC 6455 §5.3); server frames are not. Only
- * unfragmented messages that fit PC_WS_CLIENT_BUF_SIZE are delivered.
+ * unfragmented messages that fit PROTOCORE_WS_CLIENT_BUF_SIZE are delivered.
  */
 
 #ifndef PROTOCORE_WS_CLIENT_H
@@ -26,9 +26,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_WS_CLIENT
+#if PROTOCORE_ENABLE_WS_CLIENT
 
 /** @brief WebSocket opcodes (RFC 6455 §5.2). */
 typedef enum PROTO_ENUM_PACKED
@@ -121,8 +121,8 @@ proto_bool ws_client_connected();
 /** @brief Send a Close frame and drop the connection. */
 void ws_client_close();
 
-#endif // PC_ENABLE_WS_CLIENT
+#endif // PROTOCORE_ENABLE_WS_CLIENT
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_WS_CLIENT_H

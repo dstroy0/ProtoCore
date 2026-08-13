@@ -6,7 +6,7 @@
 // The cookie wire format is pinned byte-for-byte to an INDEPENDENT HMAC-SHA256 (Python stdlib
 // hmac/hashlib) so the field layout and the address binding are proven, not just self-consistent.
 
-#include "crypto/mac/hmac_sha256.h" // PC_HMAC_SHA256_LEN (cookie MAC size)
+#include "crypto/mac/hmac_sha256.h" // PROTOCORE_HMAC_SHA256_LEN (cookie MAC size)
 #include "network_drivers/presentation/security/dtls/dtls_handshake.h"
 #include <stdint.h>
 #include <string.h>
@@ -37,7 +37,7 @@ static void test_hs_header_roundtrip(void)
     uint8_t out[64];
     // msg_type=1 (client_hello), msg_seq=7, full length 100, this fragment covers [40,70).
     size_t n = DtlsHandshake.frag_build(1, 7, 100, 40, frag, sizeof(frag), out, sizeof(out));
-    TEST_ASSERT_EQUAL_size_t(PC_DTLS_HS_HDR_LEN + sizeof(frag), n);
+    TEST_ASSERT_EQUAL_size_t(PROTOCORE_DTLS_HS_HDR_LEN + sizeof(frag), n);
 
     // Explicit big-endian layout: type | uint24 length | uint16 msg_seq | uint24 off | uint24 len.
     TEST_ASSERT_EQUAL_UINT8(1, out[0]);
@@ -78,7 +78,7 @@ static void test_hs_header_parse_rejects(void)
     buf[0] = 1;
     buf[3] = 40;  // length = 40
     buf[11] = 20; // fragment_length = 20 but only 4 bytes follow the header
-    TEST_ASSERT_EQUAL_size_t(0, DtlsHandshake.header_parse(buf, PC_DTLS_HS_HDR_LEN + 4, &h));
+    TEST_ASSERT_EQUAL_size_t(0, DtlsHandshake.header_parse(buf, PROTOCORE_DTLS_HS_HDR_LEN + 4, &h));
 }
 
 // ---------------------------------------------------------------------------
@@ -233,7 +233,7 @@ static void test_hs_reasm_rejects(void)
         DtlsHandshake.reasm_init(&r, 0, buf, sizeof(buf));
         int rc = 0;
         // Single-byte fragments at even offsets stay disjoint (a gap at each odd byte).
-        for (uint32_t off = 0; off <= 2u * PC_DTLS_HS_REASM_MAX_RANGES; off += 2)
+        for (uint32_t off = 0; off <= 2u * PROTOCORE_DTLS_HS_REASM_MAX_RANGES; off += 2)
         {
             rc = feed(&r, 1, 0, 100, off, body, 1);
         }
@@ -317,7 +317,7 @@ static const uint8_t COOKIE_WIRE[77] = {0x01, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66
 
 static void test_cookie_kat(void)
 {
-    uint8_t out[PC_DTLS_COOKIE_MAX];
+    uint8_t out[PROTOCORE_DTLS_COOKIE_MAX];
     size_t n = DtlsHandshake.cookie_make(tw, COOKIE_KEY, COOKIE_TS, COOKIE_PAYLOAD, sizeof(COOKIE_PAYLOAD), COOKIE_ADDR,
                                          sizeof(COOKIE_ADDR), out, sizeof(out));
     TEST_ASSERT_EQUAL_size_t(sizeof(COOKIE_WIRE), n);
@@ -359,7 +359,7 @@ static void test_cookie_verify_rejects(void)
 
 static void test_cookie_freshness(void)
 {
-    uint8_t cookie[PC_DTLS_COOKIE_MAX];
+    uint8_t cookie[PROTOCORE_DTLS_COOKIE_MAX];
     const uint8_t payload[8] = {1, 2, 3, 4, 5, 6, 7, 8};
     size_t n = DtlsHandshake.cookie_make(tw, COOKIE_KEY, 1000, payload, sizeof(payload), COOKIE_ADDR,
                                          sizeof(COOKIE_ADDR), cookie, sizeof(cookie));
@@ -394,10 +394,10 @@ static void test_hs_frag_build_rejects(void)
     TEST_ASSERT_EQUAL_size_t(0, DtlsHandshake.frag_build(1, 0, 10, 8, body, 5, out, sizeof(out)));
 
     // The 12-byte header plus the fragment does not fit the output buffer.
-    TEST_ASSERT_EQUAL_size_t(0, DtlsHandshake.frag_build(1, 0, 8, 0, body, 8, out, PC_DTLS_HS_HDR_LEN + 7));
+    TEST_ASSERT_EQUAL_size_t(0, DtlsHandshake.frag_build(1, 0, 8, 0, body, 8, out, PROTOCORE_DTLS_HS_HDR_LEN + 7));
     // One more byte of room is enough.
-    TEST_ASSERT_EQUAL_size_t(PC_DTLS_HS_HDR_LEN + 8,
-                             DtlsHandshake.frag_build(1, 0, 8, 0, body, 8, out, PC_DTLS_HS_HDR_LEN + 8));
+    TEST_ASSERT_EQUAL_size_t(PROTOCORE_DTLS_HS_HDR_LEN + 8,
+                             DtlsHandshake.frag_build(1, 0, 8, 0, body, 8, out, PROTOCORE_DTLS_HS_HDR_LEN + 8));
 }
 
 // Reassembly guards reached only with a hand-built header (DtlsHandshake.header_parse would have
@@ -443,7 +443,7 @@ static void test_ack_build_rejects(void)
 }
 
 // DtlsHandshake.cookie_make's bounds: a payload larger than the 16-bit length field, a cookie that does
-// not fit the caller's buffer, and one that would exceed PC_DTLS_COOKIE_MAX even with room to spare.
+// not fit the caller's buffer, and one that would exceed PROTOCORE_DTLS_COOKIE_MAX even with room to spare.
 static void test_cookie_make_rejects(void)
 {
     uint8_t out[256];
@@ -455,7 +455,7 @@ static void test_cookie_make_rejects(void)
     // total = 11 + payload + 32 = 51 > out_cap.
     TEST_ASSERT_EQUAL_size_t(0, DtlsHandshake.cookie_make(tw, COOKIE_KEY, 1, payload, sizeof(payload), COOKIE_ADDR,
                                                           sizeof(COOKIE_ADDR), out, 20));
-    // Room in the caller's buffer, but the cookie would exceed PC_DTLS_COOKIE_MAX.
+    // Room in the caller's buffer, but the cookie would exceed PROTOCORE_DTLS_COOKIE_MAX.
     uint8_t big[128];
     memset(big, 0x5A, sizeof(big));
     TEST_ASSERT_EQUAL_size_t(0, DtlsHandshake.cookie_make(tw, COOKIE_KEY, 1, big, sizeof(big), COOKIE_ADDR,
@@ -466,10 +466,10 @@ static void test_cookie_make_rejects(void)
 // 43-byte form and verify reports a zero-length payload without touching the payload buffer.
 static void test_cookie_empty_payload_roundtrip(void)
 {
-    uint8_t cookie[PC_DTLS_COOKIE_MAX];
+    uint8_t cookie[PROTOCORE_DTLS_COOKIE_MAX];
     size_t n = DtlsHandshake.cookie_make(tw, COOKIE_KEY, 4242, NULL, 0, COOKIE_ADDR, sizeof(COOKIE_ADDR), cookie,
                                          sizeof(cookie));
-    TEST_ASSERT_EQUAL_size_t(1 + 8 + 2 + PC_HMAC_SHA256_LEN, n);
+    TEST_ASSERT_EQUAL_size_t(1 + 8 + 2 + PROTOCORE_HMAC_SHA256_LEN, n);
 
     uint8_t payload[4];
     memset(payload, 0xEE, sizeof(payload));

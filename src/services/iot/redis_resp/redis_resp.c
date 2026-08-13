@@ -9,7 +9,7 @@
 #include "services/iot/redis_resp/redis_resp.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_REDIS
+#if PROTOCORE_ENABLE_REDIS
 
 // Write a "<tag><decimal>\r\n" length prefix into buf at *pos, advancing it. A hand-rolled decimal is
 // several times faster than snprintf on the ESP32-S3, where this was the dominant cost of encoding a
@@ -41,7 +41,7 @@ static proto_bool put_len_prefix(char *buf, size_t cap, size_t *pos, char tag, s
     return PROTO_TRUE;
 }
 
-size_t pc_resp_encode_command(char *buf, size_t cap, const char *const *args, const size_t *arg_lens, size_t argc)
+size_t protocore_resp_encode_command(char *buf, size_t cap, const char *const *args, const size_t *arg_lens, size_t argc)
 {
     if (!buf || cap == 0 || !args || argc == 0)
     {
@@ -356,7 +356,7 @@ static proto_bool parse_aggregate(const uint8_t *buf, uint8_t type, size_t heade
     return PROTO_TRUE;
 }
 
-proto_bool pc_resp_parse(const uint8_t *buf, size_t len, RespReply *out, size_t *consumed)
+proto_bool protocore_resp_parse(const uint8_t *buf, size_t len, RespReply *out, size_t *consumed)
 {
     if (!buf || len < 3 || !out || !consumed) // shortest value is "+\r\n" style; need a type + CRLF
     {
@@ -461,4 +461,4 @@ proto_bool pc_resp_parse(const uint8_t *buf, size_t len, RespReply *out, size_t 
     }
 }
 
-#endif // PC_ENABLE_REDIS
+#endif // PROTOCORE_ENABLE_REDIS

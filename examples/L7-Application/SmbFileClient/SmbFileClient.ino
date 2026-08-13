@@ -3,7 +3,7 @@
 
 /**
  * @file SmbFileClient.ino
- * @brief Read a file off a Windows / Samba share with the SMB2 client (PC_ENABLE_SMB).
+ * @brief Read a file off a Windows / Samba share with the SMB2 client (PROTOCORE_ENABLE_SMB).
  *
  * At boot the board joins WiFi, connects to an SMB server on port 445, authenticates with
  * NTLMv2, opens a file on a share, prints the first chunk to Serial, and closes it. This is
@@ -13,16 +13,16 @@
  *
  * `smb_client` is written against a send/recv seam, so this sketch shows the one piece of glue
  * a real device needs: `cl_send` / `cl_recv` that move bytes over the shared outbound TCP
- * transport (`pc_client`). Any transport works the same way.
+ * transport (`protocore_client`). Any transport works the same way.
  *
  * Edit the lines marked "CHANGE ME" below, flash, and open Serial @ 115200.
  *
  * NOTE (PlatformIO): SMB is compiled into the *library*, so the flag must reach the whole
- * build: `build_flags = -DPC_ENABLE_SMB=1`. In the Arduino IDE it is already set for you in
+ * build: `build_flags = -DPROTOCORE_ENABLE_SMB=1`. In the Arduino IDE it is already set for you in
  * build_opt.h beside this sketch.
  */
 
-#define PC_ENABLE_SMB 1
+#define PROTOCORE_ENABLE_SMB 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -44,7 +44,7 @@ static const char *SMB_DOMAIN = "";                          // empty for a loca
 static const char *SMB_SHARE = "\\\\192.168.1.50\\programs"; // the UNC path to the share
 static const char *SMB_PATH = "PART001.NC";                  // the file on the share to read
 
-// The SMB engine's transport seam, bound to pc_client. `deadline` bounds each recv wait.
+// The SMB engine's transport seam, bound to protocore_client. `deadline` bounds each recv wait.
 struct SmbXport
 {
     int cid;

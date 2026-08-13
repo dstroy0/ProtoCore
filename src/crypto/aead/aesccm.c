@@ -17,35 +17,35 @@
 #include "mmgr/protomem.h"
 #include "mmgr/secure.h"
 
-#if PC_ENABLE_SMB
+#if PROTOCORE_ENABLE_SMB
 
 #include "crypto/crypto_opt.h"
-#include "crypto/ct_eq.h" // pc_ct_eq
+#include "crypto/ct_eq.h" // protocore_ct_eq
 
-#if !PC_HAS_HW_AES
+#if !PROTOCORE_HAS_HW_AES
 #include "crypto/cipher/aes_block.h" // native software AES-128/256 (mbedtls path uses its own on the hot path)
 #endif
-PC_CRYPTO_HOT
+PROTOCORE_CRYPTO_HOT
 
-#if PC_HAS_HW_AES
+#if PROTOCORE_HAS_HW_AES
 // ===========================================================================
 // Hardware path: mbedtls_ccm -> ESP32 AES peripheral. Detached tag is native. The mbedtls context (AES
 // key schedule) lives in the shared crypto scratch, never on the stack.
 // ===========================================================================
 
-proto_bool pc_aesccm_seal_tag(const uint8_t *key, size_t key_len, const uint8_t *nonce, size_t nonce_len,
+proto_bool protocore_aesccm_seal_tag(const uint8_t *key, size_t key_len, const uint8_t *nonce, size_t nonce_len,
                               const uint8_t *aad, size_t aad_len, const uint8_t *pt, size_t pt_len, uint8_t *ct_out,
-                              uint8_t tag_out[PC_AESCCM_TAG_LEN])
+                              uint8_t tag_out[PROTOCORE_AESCCM_TAG_LEN])
 {
     if (!key || !nonce || !ct_out || !tag_out || (key_len != 16 && key_len != 32))
     {
         return PROTO_FALSE;
     }
-    size_t mark = pc_secure_mark();
-    pc_span ws = pc_secure_span(sizeof(mbedtls_ccm_context), _Alignof(mbedtls_ccm_context));
-    if (!pc_span_ok(ws))
+    size_t mark = protocore_secure_mark();
+    protocore_span ws = protocore_secure_span(sizeof(mbedtls_ccm_context), _Alignof(mbedtls_ccm_context));
+    if (!protocore_span_ok(ws))
     {
-        pc_secure_release(mark);
+        protocore_secure_release(mark);
         return PROTO_FALSE;
     }
     mbedtls_ccm_context *c = (mbedtls_ccm_context *)ws.buf;
@@ -53,29 +53,29 @@ proto_bool pc_aesccm_seal_tag(const uint8_t *key, size_t key_len, const uint8_t 
     if (mbedtls_ccm_setkey(c, MBEDTLS_CIPHER_ID_AES, key, (unsigned)(key_len * 8)) != 0)
     {
         mbedtls_ccm_free(c);
-        pc_secure_release(mark);
+        protocore_secure_release(mark);
         return PROTO_FALSE;
     }
     int rc =
-        mbedtls_ccm_encrypt_and_tag(c, pt_len, nonce, nonce_len, aad, aad_len, pt, ct_out, tag_out, PC_AESCCM_TAG_LEN);
+        mbedtls_ccm_encrypt_and_tag(c, pt_len, nonce, nonce_len, aad, aad_len, pt, ct_out, tag_out, PROTOCORE_AESCCM_TAG_LEN);
     mbedtls_ccm_free(c);
-    pc_secure_release(mark);
+    protocore_secure_release(mark);
     return rc == 0;
 }
 
-proto_bool pc_aesccm_open_tag(const uint8_t *key, size_t key_len, const uint8_t *nonce, size_t nonce_len,
+proto_bool protocore_aesccm_open_tag(const uint8_t *key, size_t key_len, const uint8_t *nonce, size_t nonce_len,
                               const uint8_t *aad, size_t aad_len, const uint8_t *ct, size_t ct_len,
-                              const uint8_t tag[PC_AESCCM_TAG_LEN], uint8_t *out)
+                              const uint8_t tag[PROTOCORE_AESCCM_TAG_LEN], uint8_t *out)
 {
     if (!key || !nonce || !ct || !out || !tag || (key_len != 16 && key_len != 32))
     {
         return PROTO_FALSE;
     }
-    size_t mark = pc_secure_mark();
-    pc_span ws = pc_secure_span(sizeof(mbedtls_ccm_context), _Alignof(mbedtls_ccm_context));
-    if (!pc_span_ok(ws))
+    size_t mark = protocore_secure_mark();
+    protocore_span ws = protocore_secure_span(sizeof(mbedtls_ccm_context), _Alignof(mbedtls_ccm_context));
+    if (!protocore_span_ok(ws))
     {
-        pc_secure_release(mark);
+        protocore_secure_release(mark);
         return PROTO_FALSE;
     }
     mbedtls_ccm_context *c = (mbedtls_ccm_context *)ws.buf;
@@ -83,13 +83,13 @@ proto_bool pc_aesccm_open_tag(const uint8_t *key, size_t key_len, const uint8_t 
     if (mbedtls_ccm_setkey(c, MBEDTLS_CIPHER_ID_AES, key, (unsigned)(key_len * 8)) != 0)
     {
         mbedtls_ccm_free(c);
-        pc_secure_release(mark);
+        protocore_secure_release(mark);
         return PROTO_FALSE;
     }
     // mbedtls verifies the tag in constant time and only then keeps the plaintext; non-zero => bad tag.
-    int rc = mbedtls_ccm_auth_decrypt(c, ct_len, nonce, nonce_len, aad, aad_len, ct, out, tag, PC_AESCCM_TAG_LEN);
+    int rc = mbedtls_ccm_auth_decrypt(c, ct_len, nonce, nonce_len, aad, aad_len, ct, out, tag, PROTOCORE_AESCCM_TAG_LEN);
     mbedtls_ccm_free(c);
-    pc_secure_release(mark);
+    protocore_secure_release(mark);
     if (rc != 0)
     {
         mem.set(out, 0, ct_len);
@@ -116,26 +116,26 @@ typedef struct
     uint8_t S[16];   ///< keystream / ECB output.
 } CcmWork;
 static_assert(
-    sizeof(CcmWork) <= PC_WORK_AESCCM,
-    "CcmWork outgrew PC_WORK_AESCCM - raise it in protocore_config.h, which derives PC_SECURE_ARENA_SIZE from it");
+    sizeof(CcmWork) <= PROTOCORE_WORK_AESCCM,
+    "CcmWork outgrew PROTOCORE_WORK_AESCCM - raise it in protocore_config.h, which derives PROTOCORE_SECURE_ARENA_SIZE from it");
 
 static inline void ccm_key_init(CcmWork *w, const uint8_t *key, size_t key_len)
 {
     if (key_len == 32)
     {
-        pc_aes_key_expand(key, 8, w->rk);
+        protocore_aes_key_expand(key, 8, w->rk);
         w->nr = 14;
     }
     else
     {
-        pc_aes_key_expand(key, 4, w->rk);
+        protocore_aes_key_expand(key, 4, w->rk);
         w->nr = 10;
     }
 }
 
 static inline void ecb(const CcmWork *w, const uint8_t in[16], uint8_t out[16])
 {
-    pc_aes_encrypt_block(w->rk, w->nr, in, out);
+    protocore_aes_encrypt_block(w->rk, w->nr, in, out);
 }
 
 // Build the counter block A_i = flags(L-1) || nonce || [i]_L (SP 800-38C Appendix A, the CTR formatting).
@@ -160,7 +160,7 @@ static void cbc_mac(CcmWork *w, const uint8_t *nonce, size_t nonce_len, const ui
 
     // B0: flags = 64*Adata + 8*((M-2)/2) + (L-1); then nonce; then Q = pt_len big-endian in L bytes.
     mem.set(w->blk, 0, 16);
-    w->blk[0] = (uint8_t)((aad_len > 0 ? 0x40 : 0x00) | (((PC_AESCCM_TAG_LEN - 2) / 2) << 3) | (L - 1));
+    w->blk[0] = (uint8_t)((aad_len > 0 ? 0x40 : 0x00) | (((PROTOCORE_AESCCM_TAG_LEN - 2) / 2) << 3) | (L - 1));
     mem.cpy(w->blk + 1, nonce, nonce_len);
     for (size_t j = 0; j < L; j++)
     {
@@ -247,29 +247,29 @@ static void ctr_crypt(CcmWork *w, const uint8_t *nonce, size_t nonce_len, size_t
 
 // Encrypted tag = T XOR AES(A0) (the counter block for i = 0 protects the MAC). Reads the MAC from w->X,
 // uses w->A/w->S, writes @p out_tag.
-static void tag_encrypt(CcmWork *w, const uint8_t *nonce, size_t nonce_len, uint8_t out_tag[PC_AESCCM_TAG_LEN])
+static void tag_encrypt(CcmWork *w, const uint8_t *nonce, size_t nonce_len, uint8_t out_tag[PROTOCORE_AESCCM_TAG_LEN])
 {
     ctr_block(w->A, nonce, nonce_len, 0);
     ecb(w, w->A, w->S);
-    for (int i = 0; i < PC_AESCCM_TAG_LEN; i++)
+    for (int i = 0; i < PROTOCORE_AESCCM_TAG_LEN; i++)
     {
         out_tag[i] = (uint8_t)(w->X[i] ^ w->S[i]);
     }
 }
 
-proto_bool pc_aesccm_seal_tag(const uint8_t *key, size_t key_len, const uint8_t *nonce, size_t nonce_len,
+proto_bool protocore_aesccm_seal_tag(const uint8_t *key, size_t key_len, const uint8_t *nonce, size_t nonce_len,
                               const uint8_t *aad, size_t aad_len, const uint8_t *pt, size_t pt_len, uint8_t *ct_out,
-                              uint8_t tag_out[PC_AESCCM_TAG_LEN])
+                              uint8_t tag_out[PROTOCORE_AESCCM_TAG_LEN])
 {
     if (!key || !nonce || !ct_out || !tag_out || (key_len != 16 && key_len != 32) || nonce_len < 7 || nonce_len > 13)
     {
         return PROTO_FALSE;
     }
-    size_t mark = pc_secure_mark();
-    pc_span ws = pc_secure_span(sizeof(CcmWork), _Alignof(CcmWork));
-    if (!pc_span_ok(ws))
+    size_t mark = protocore_secure_mark();
+    protocore_span ws = protocore_secure_span(sizeof(CcmWork), _Alignof(CcmWork));
+    if (!protocore_span_ok(ws))
     {
-        pc_secure_release(mark);
+        protocore_secure_release(mark);
         return PROTO_FALSE;
     }
     CcmWork *w = (CcmWork *)ws.buf;
@@ -277,23 +277,23 @@ proto_bool pc_aesccm_seal_tag(const uint8_t *key, size_t key_len, const uint8_t 
     cbc_mac(w, nonce, nonce_len, aad, aad_len, pt, pt_len); // MAC -> w->X
     ctr_crypt(w, nonce, nonce_len, 1, pt, pt_len, ct_out);  // payload from A1
     tag_encrypt(w, nonce, nonce_len, tag_out);              // MAC protected by A0
-    pc_secure_release(mark);
+    protocore_secure_release(mark);
     return PROTO_TRUE;
 }
 
-proto_bool pc_aesccm_open_tag(const uint8_t *key, size_t key_len, const uint8_t *nonce, size_t nonce_len,
+proto_bool protocore_aesccm_open_tag(const uint8_t *key, size_t key_len, const uint8_t *nonce, size_t nonce_len,
                               const uint8_t *aad, size_t aad_len, const uint8_t *ct, size_t ct_len,
-                              const uint8_t tag[PC_AESCCM_TAG_LEN], uint8_t *out)
+                              const uint8_t tag[PROTOCORE_AESCCM_TAG_LEN], uint8_t *out)
 {
     if (!key || !nonce || !ct || !out || !tag || (key_len != 16 && key_len != 32) || nonce_len < 7 || nonce_len > 13)
     {
         return PROTO_FALSE;
     }
-    size_t mark = pc_secure_mark();
-    pc_span ws = pc_secure_span(sizeof(CcmWork), _Alignof(CcmWork));
-    if (!pc_span_ok(ws))
+    size_t mark = protocore_secure_mark();
+    protocore_span ws = protocore_secure_span(sizeof(CcmWork), _Alignof(CcmWork));
+    if (!protocore_span_ok(ws))
     {
-        pc_secure_release(mark);
+        protocore_secure_release(mark);
         return PROTO_FALSE;
     }
     CcmWork *w = (CcmWork *)ws.buf;
@@ -302,8 +302,8 @@ proto_bool pc_aesccm_open_tag(const uint8_t *key, size_t key_len, const uint8_t 
     cbc_mac(w, nonce, nonce_len, aad, aad_len, out, ct_len); // MAC over the recovered plaintext -> w->X
     tag_encrypt(w, nonce, nonce_len, w->blk);                // computed tag into w->blk (free after cbc_mac)
     // Compare before releasing: the release wipes w->blk, which holds the computed tag.
-    proto_bool ok = pc_ct_eq(w->blk, tag, PC_AESCCM_TAG_LEN);
-    pc_secure_release(mark);
+    proto_bool ok = protocore_ct_eq(w->blk, tag, PROTOCORE_AESCCM_TAG_LEN);
+    protocore_secure_release(mark);
     if (!ok)
     {
         mem.set(out, 0, ct_len); // fail closed: no unauthenticated plaintext escapes
@@ -312,5 +312,5 @@ proto_bool pc_aesccm_open_tag(const uint8_t *key, size_t key_len, const uint8_t 
     return PROTO_TRUE;
 }
 
-#endif // PC_HAS_HW_AES
-#endif // PC_ENABLE_SMB
+#endif // PROTOCORE_HAS_HW_AES
+#endif // PROTOCORE_ENABLE_SMB

@@ -3,7 +3,7 @@
 
 /**
  * @file bytes.h
- * @brief The byte verbs - append into a pc_span, take out of a pc_cspan.
+ * @brief The byte verbs - append into a protocore_span, take out of a protocore_cspan.
  *
  * A bounded byte region is one thing with two accessors. span.h is the region: where the storage
  * came from, how big it is, how much has been produced, and whether anything overran. This file is
@@ -14,7 +14,7 @@
  * keep counting `pos` past `cap` on overflow so the caller can size the buffer, sticky fault flags,
  * and network (big-endian) byte order.
  *
- * These take pc_span / pc_cspan directly rather than being written per codec, so one concrete pair
+ * These take protocore_span / protocore_cspan directly rather than being written per codec, so one concrete pair
  * serves every codec and the field names are fixed rather than restated.
  *
  * @author  Douglas Quigg (dstroy0)
@@ -24,15 +24,15 @@
 #ifndef PROTOCORE_BYTES_H
 #define PROTOCORE_BYTES_H
 
-#include "mmgr/endian.h"   // pc_rd32be - the fixed-width serializers live there
+#include "mmgr/endian.h"   // protocore_rd32be - the fixed-width serializers live there
 #include "mmgr/protomem.h" // mem.set / mem.cpy - the byte movers
 #include "mmgr/protostr.h" // str.len - the bounded run length
-#include "mmgr/span.h"     // pc_span / pc_cspan - the region these verbs act on
+#include "mmgr/span.h"     // protocore_span / protocore_cspan - the region these verbs act on
 
-// --- append into a pc_span ---
+// --- append into a protocore_span ---
 
 /** @brief Append one byte; on overflow set the flag but keep counting @p pos. */
-PC_INLINE void pc_bw_put(pc_span *w, uint8_t b)
+PROTOCORE_INLINE void protocore_bw_put(protocore_span *w, uint8_t b)
 {
     if (w->pos < w->cap)
     {
@@ -42,20 +42,20 @@ PC_INLINE void pc_bw_put(pc_span *w, uint8_t b)
     {
         w->overflow = PROTO_TRUE;
     }
-    w->pos++; // keep counting so pc_span_len() reports the size the payload needs
+    w->pos++; // keep counting so protocore_span_len() reports the size the payload needs
 }
 
 /** @brief Append the low @p nbytes of @p val, big-endian (network order). */
-PC_INLINE void pc_bw_put_be(pc_span *w, uint64_t val, int32_t nbytes)
+PROTOCORE_INLINE void protocore_bw_put_be(protocore_span *w, uint64_t val, int32_t nbytes)
 {
     for (int32_t s = (nbytes - 1) * 8; s >= 0; s -= 8)
     {
-        pc_bw_put(w, (uint8_t)(val >> s));
+        protocore_bw_put(w, (uint8_t)(val >> s));
     }
 }
 
 /** @brief Append @p n raw bytes from @p src; on overflow set the flag but keep counting @p pos. */
-PC_INLINE void pc_bw_bytes(pc_span *w, const void *src, size_t n)
+PROTOCORE_INLINE void protocore_bw_bytes(protocore_span *w, const void *src, size_t n)
 {
     if (w->buf != NULL && w->pos <= w->cap && w->cap - w->pos >= n)
     {
@@ -65,10 +65,10 @@ PC_INLINE void pc_bw_bytes(pc_span *w, const void *src, size_t n)
     {
         w->overflow = PROTO_TRUE;
     }
-    w->pos += n; // keep counting so pc_span_len() reports the size the payload needs
+    w->pos += n; // keep counting so protocore_span_len() reports the size the payload needs
 }
 
-// --- take out of a pc_cspan ---
+// --- take out of a protocore_cspan ---
 
 /**
  * @brief Read @p nbytes big-endian at the cursor, advancing past them.
@@ -79,7 +79,7 @@ PC_INLINE void pc_bw_bytes(pc_span *w, const void *src, size_t n)
  * tag - CBOR's head byte, MessagePack's format byte - advances past it itself, which keeps this a
  * plain big-endian read any caller can spell.
  */
-PC_INLINE proto_bool pc_br_take_be(pc_cspan *r, size_t nbytes, uint64_t *out)
+PROTOCORE_INLINE proto_bool protocore_br_take_be(protocore_cspan *r, size_t nbytes, uint64_t *out)
 {
     if (r->pos > r->len || r->len - r->pos < nbytes)
     {
@@ -109,13 +109,13 @@ PC_INLINE proto_bool pc_br_take_be(pc_cspan *r, size_t nbytes, uint64_t *out)
 // Subtracting cannot wrap once *off <= len is established, which each check does first.
 
 /** @brief Read a big-endian u32 at @p *off, advancing it by 4. False if it would run past @p len. */
-PC_INLINE proto_bool pc_rd_u32(const uint8_t *p, size_t len, size_t *off, uint32_t *out)
+PROTOCORE_INLINE proto_bool protocore_rd_u32(const uint8_t *p, size_t len, size_t *off, uint32_t *out)
 {
     if (*off > len || len - *off < 4)
     {
         return PROTO_FALSE;
     }
-    *out = pc_rd32be(p + *off);
+    *out = protocore_rd32be(p + *off);
     *off += 4;
     return PROTO_TRUE;
 }
@@ -126,15 +126,16 @@ PC_INLINE proto_bool pc_rd_u32(const uint8_t *p, size_t len, size_t *off, uint32
  * Nothing is copied, so the result must not outlive @p p. On a length that would run past the end,
  * @p *off is left where it started so the caller can report which field failed.
  */
-PC_INLINE proto_bool pc_rd_str(const uint8_t *p, size_t len, size_t *off, const uint8_t **out, uint32_t *slen)
+PROTOCORE_INLINE proto_bool protocore_rd_str(const uint8_t *p, size_t len, size_t *off, const uint8_t **out,
+                                             uint32_t *slen)
 {
     size_t start = *off;
     uint32_t n = 0;
-    if (!pc_rd_u32(p, len, off, &n))
+    if (!protocore_rd_u32(p, len, off, &n))
     {
         return PROTO_FALSE;
     }
-    if (n > len - *off) // pc_rd_u32 succeeding established *off <= len, so this cannot wrap
+    if (n > len - *off) // protocore_rd_u32 succeeding established *off <= len, so this cannot wrap
     {
         *off = start;
         return PROTO_FALSE;
@@ -149,7 +150,7 @@ PC_INLINE proto_bool pc_rd_str(const uint8_t *p, size_t len, size_t *off, const 
  * @brief Strip an mpint's leading zero bytes and right-align the rest into @p out[@p outlen].
  * @return false if the magnitude is wider than @p outlen.
  */
-PC_INLINE proto_bool pc_mpint_to_fixed(const uint8_t *m, uint32_t mlen, uint8_t *out, size_t outlen)
+PROTOCORE_INLINE proto_bool protocore_mpint_to_fixed(const uint8_t *m, uint32_t mlen, uint8_t *out, size_t outlen)
 {
     uint32_t off = 0;
     while (off < mlen && m[off] == 0)

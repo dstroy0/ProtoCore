@@ -2,15 +2,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file pc_ntrip_caster.c
- * @brief NTRIP caster protocol codec - request parse + response / source-table build. See pc_ntrip_caster.h.
+ * @file protocore_ntrip_caster.c
+ * @brief NTRIP caster protocol codec - request parse + response / source-table build. See protocore_ntrip_caster.h.
  */
 
 #include "services/timing_position/gnss/ntrip_caster.h"
-#include "mmgr/membuild.h" // pc_sb frame builder
+#include "mmgr/membuild.h" // protocore_sb frame builder
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_NTRIP_CASTER
+#if PROTOCORE_ENABLE_NTRIP_CASTER
 
 #include <stdio.h>
 
@@ -55,12 +55,12 @@ static void fmt_deg2(char *out, size_t cap, double v)
         frac = -frac;
     }
     const char *sign = (v < 0.0 && whole == 0) ? "-" : ""; // preserve "-0.xx"
-    pc_sb sb_out = {out, cap, 0, PROTO_TRUE};
-    pc_sb_put(&sb_out, sign);
-    pc_sb_i64(&sb_out, (int64_t)(whole));
-    pc_sb_put(&sb_out, ".");
-    pc_sb_u32w(&sb_out, (uint32_t)(frac), 2);
-    if (pc_sb_finish(&sb_out) == 0)
+    protocore_sb sb_out = {out, cap, 0, PROTO_TRUE};
+    protocore_sb_put(&sb_out, sign);
+    protocore_sb_i64(&sb_out, (int64_t)(whole));
+    protocore_sb_put(&sb_out, ".");
+    protocore_sb_u32w(&sb_out, (uint32_t)(frac), 2);
+    if (protocore_sb_finish(&sb_out) == 0)
     {
         out[0] = '\0';
     }
@@ -132,7 +132,7 @@ static void scan_headers(const char *buf, const char *end, NtripRequest *out)
     }
 }
 
-proto_bool pc_ntrip_request_parse(const char *buf, size_t len, NtripRequest *out)
+proto_bool protocore_ntrip_request_parse(const char *buf, size_t len, NtripRequest *out)
 {
     mem.set(out, 0, sizeof(*out));
     out->version = NTRIP_V1;
@@ -191,16 +191,16 @@ proto_bool pc_ntrip_request_parse(const char *buf, size_t len, NtripRequest *out
     return PROTO_TRUE;
 }
 
-size_t pc_ntrip_build_stream_response(char *out, size_t cap, NtripVersion version)
+size_t protocore_ntrip_build_stream_response(char *out, size_t cap, NtripVersion version)
 {
     // One builder, branching only on which response line goes in it: the version picks the text,
     // not a separate copy of the build-and-check.
-    pc_sb sb_out = {out, cap, 0, PROTO_TRUE};
-    pc_sb_put(&sb_out, (version == NTRIP_V2)
+    protocore_sb sb_out = {out, cap, 0, PROTO_TRUE};
+    protocore_sb_put(&sb_out, (version == NTRIP_V2)
                            ? "HTTP/1.1 200 OK\r\nNtrip-Version: Ntrip/2.0\r\nServer: PC\r\nContent-Type: "
                              "gnss/data\r\nConnection: close\r\n\r\n"
                            : "ICY 200 OK\r\n\r\n");
-    size_t n = pc_sb_finish(&sb_out);
+    size_t n = protocore_sb_finish(&sb_out);
     if (!sb_out.ok)
     {
         return 0;
@@ -208,20 +208,20 @@ size_t pc_ntrip_build_stream_response(char *out, size_t cap, NtripVersion versio
     return n;
 }
 
-size_t pc_ntrip_build_error_response(char *out, size_t cap, NtripVersion version)
+size_t protocore_ntrip_build_error_response(char *out, size_t cap, NtripVersion version)
 {
     int n;
     if (version == NTRIP_V2)
     {
-        pc_sb sb_out4 = {out, cap, 0, PROTO_TRUE};
-        pc_sb_put(&sb_out4, "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
-        n = (int)pc_sb_finish(&sb_out4);
+        protocore_sb sb_out4 = {out, cap, 0, PROTO_TRUE};
+        protocore_sb_put(&sb_out4, "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
+        n = (int)protocore_sb_finish(&sb_out4);
     }
     else
     {
-        pc_sb sb_out5 = {out, cap, 0, PROTO_TRUE};
-        pc_sb_put(&sb_out5, "ERROR - Bad Request\r\n");
-        n = (int)pc_sb_finish(&sb_out5);
+        protocore_sb sb_out5 = {out, cap, 0, PROTO_TRUE};
+        protocore_sb_put(&sb_out5, "ERROR - Bad Request\r\n");
+        n = (int)protocore_sb_finish(&sb_out5);
     }
     if (n == 0) // the frame is a fixed literal, so a zero length can only mean it did not fit
     {
@@ -230,21 +230,21 @@ size_t pc_ntrip_build_error_response(char *out, size_t cap, NtripVersion version
     return (size_t)n;
 }
 
-size_t pc_ntrip_build_unauthorized_response(char *out, size_t cap, NtripVersion version)
+size_t protocore_ntrip_build_unauthorized_response(char *out, size_t cap, NtripVersion version)
 {
     int n;
     if (version == NTRIP_V2)
     {
-        pc_sb sb_out6 = {out, cap, 0, PROTO_TRUE};
-        pc_sb_put(&sb_out6, "HTTP/1.1 401 Unauthorized\r\nWWW-Authenticate: Basic realm=\"NTRIP\"\r\nContent-Length: "
+        protocore_sb sb_out6 = {out, cap, 0, PROTO_TRUE};
+        protocore_sb_put(&sb_out6, "HTTP/1.1 401 Unauthorized\r\nWWW-Authenticate: Basic realm=\"NTRIP\"\r\nContent-Length: "
                             "0\r\nConnection: close\r\n\r\n");
-        n = (int)pc_sb_finish(&sb_out6);
+        n = (int)protocore_sb_finish(&sb_out6);
     }
     else
     {
-        pc_sb sb_out7 = {out, cap, 0, PROTO_TRUE};
-        pc_sb_put(&sb_out7, "ERROR - Bad Password\r\n");
-        n = (int)pc_sb_finish(&sb_out7);
+        protocore_sb sb_out7 = {out, cap, 0, PROTO_TRUE};
+        protocore_sb_put(&sb_out7, "ERROR - Bad Password\r\n");
+        n = (int)protocore_sb_finish(&sb_out7);
     }
     if (n == 0) // the frame is a fixed literal, so a zero length can only mean it did not fit
     {
@@ -253,7 +253,7 @@ size_t pc_ntrip_build_unauthorized_response(char *out, size_t cap, NtripVersion 
     return (size_t)n;
 }
 
-size_t pc_ntrip_build_str_record(char *out, size_t cap, const NtripMount *m)
+size_t protocore_ntrip_build_str_record(char *out, size_t cap, const NtripMount *m)
 {
     if (!m || !m->mountpoint)
     {
@@ -270,27 +270,27 @@ size_t pc_ntrip_build_str_record(char *out, size_t cap, const NtripMount *m)
     const char *gen = m->generator ? m->generator : "PC";
     // STR;mount;identifier;format;format-details;carrier;nav;network;country;lat;lon;nmea;solution;
     //     generator;compr;auth;fee;bitrate;misc   (carrier 0 = station reference only, no observations)
-    pc_sb sb_out8 = {out, cap, 0, PROTO_TRUE};
-    pc_sb_put(&sb_out8, "STR;");
-    pc_sb_put(&sb_out8, m->mountpoint);
-    pc_sb_put(&sb_out8, ";");
-    pc_sb_put(&sb_out8, ident);
-    pc_sb_put(&sb_out8, ";RTCM 3.3;");
-    pc_sb_put(&sb_out8, fmtd);
-    pc_sb_put(&sb_out8, ";0;");
-    pc_sb_put(&sb_out8, nav);
-    pc_sb_put(&sb_out8, ";none;");
-    pc_sb_put(&sb_out8, ctry);
-    pc_sb_put(&sb_out8, ";");
-    pc_sb_put(&sb_out8, lat);
-    pc_sb_put(&sb_out8, ";");
-    pc_sb_put(&sb_out8, lon);
-    pc_sb_put(&sb_out8, ";");
-    pc_sb_i64(&sb_out8, (int64_t)(m->nmea_required ? 1 : 0));
-    pc_sb_put(&sb_out8, ";0;");
-    pc_sb_put(&sb_out8, gen);
-    pc_sb_put(&sb_out8, ";none;N;N;9600;");
-    int n = (int)pc_sb_finish(&sb_out8);
+    protocore_sb sb_out8 = {out, cap, 0, PROTO_TRUE};
+    protocore_sb_put(&sb_out8, "STR;");
+    protocore_sb_put(&sb_out8, m->mountpoint);
+    protocore_sb_put(&sb_out8, ";");
+    protocore_sb_put(&sb_out8, ident);
+    protocore_sb_put(&sb_out8, ";RTCM 3.3;");
+    protocore_sb_put(&sb_out8, fmtd);
+    protocore_sb_put(&sb_out8, ";0;");
+    protocore_sb_put(&sb_out8, nav);
+    protocore_sb_put(&sb_out8, ";none;");
+    protocore_sb_put(&sb_out8, ctry);
+    protocore_sb_put(&sb_out8, ";");
+    protocore_sb_put(&sb_out8, lat);
+    protocore_sb_put(&sb_out8, ";");
+    protocore_sb_put(&sb_out8, lon);
+    protocore_sb_put(&sb_out8, ";");
+    protocore_sb_i64(&sb_out8, (int64_t)(m->nmea_required ? 1 : 0));
+    protocore_sb_put(&sb_out8, ";0;");
+    protocore_sb_put(&sb_out8, gen);
+    protocore_sb_put(&sb_out8, ";none;N;N;9600;");
+    int n = (int)protocore_sb_finish(&sb_out8);
     if (!sb_out8.ok)
     {
         return 0;
@@ -298,7 +298,7 @@ size_t pc_ntrip_build_str_record(char *out, size_t cap, const NtripMount *m)
     return (size_t)n;
 }
 
-size_t pc_ntrip_build_sourcetable(char *out, size_t cap, NtripVersion version, const NtripMount *mounts,
+size_t protocore_ntrip_build_sourcetable(char *out, size_t cap, NtripVersion version, const NtripMount *mounts,
                                   size_t mount_count)
 {
     static const char ENDLINE[] = "ENDSOURCETABLE\r\n";
@@ -308,7 +308,7 @@ size_t pc_ntrip_build_sourcetable(char *out, size_t cap, NtripVersion version, c
     char rec[192];
     for (size_t i = 0; i < mount_count; i++)
     {
-        size_t rn = pc_ntrip_build_str_record(rec, sizeof(rec), &mounts[i]);
+        size_t rn = protocore_ntrip_build_str_record(rec, sizeof(rec), &mounts[i]);
         if (rn == 0)
         {
             return 0;
@@ -321,20 +321,20 @@ size_t pc_ntrip_build_sourcetable(char *out, size_t cap, NtripVersion version, c
     int hn;
     if (version == NTRIP_V2)
     {
-        pc_sb sb_out9 = {out, cap, 0, PROTO_TRUE};
-        pc_sb_put(&sb_out9, "HTTP/1.1 200 OK\r\nNtrip-Version: Ntrip/2.0\r\nServer: PC\r\nContent-Type: "
+        protocore_sb sb_out9 = {out, cap, 0, PROTO_TRUE};
+        protocore_sb_put(&sb_out9, "HTTP/1.1 200 OK\r\nNtrip-Version: Ntrip/2.0\r\nServer: PC\r\nContent-Type: "
                             "gnss/sourcetable\r\nContent-Length: ");
-        pc_sb_u32(&sb_out9, (uint32_t)((unsigned)body_len));
-        pc_sb_put(&sb_out9, "\r\nConnection: close\r\n\r\n");
-        hn = (int)pc_sb_finish(&sb_out9);
+        protocore_sb_u32(&sb_out9, (uint32_t)((unsigned)body_len));
+        protocore_sb_put(&sb_out9, "\r\nConnection: close\r\n\r\n");
+        hn = (int)protocore_sb_finish(&sb_out9);
     }
     else
     {
-        pc_sb sb_out10 = {out, cap, 0, PROTO_TRUE};
-        pc_sb_put(&sb_out10, "SOURCETABLE 200 OK\r\nServer: PC\r\nContent-Type: text/plain\r\nContent-Length: ");
-        pc_sb_u32(&sb_out10, (uint32_t)((unsigned)body_len));
-        pc_sb_put(&sb_out10, "\r\n\r\n");
-        hn = (int)pc_sb_finish(&sb_out10);
+        protocore_sb sb_out10 = {out, cap, 0, PROTO_TRUE};
+        protocore_sb_put(&sb_out10, "SOURCETABLE 200 OK\r\nServer: PC\r\nContent-Type: text/plain\r\nContent-Length: ");
+        protocore_sb_u32(&sb_out10, (uint32_t)((unsigned)body_len));
+        protocore_sb_put(&sb_out10, "\r\n\r\n");
+        hn = (int)protocore_sb_finish(&sb_out10);
     }
     if (hn == 0) // the frame always has a literal prefix, so a zero length means it did not fit
     {
@@ -344,7 +344,7 @@ size_t pc_ntrip_build_sourcetable(char *out, size_t cap, NtripVersion version, c
     size_t pos = (size_t)hn;
     for (size_t i = 0; i < mount_count; i++)
     {
-        size_t rn = pc_ntrip_build_str_record(out + pos, cap - pos, &mounts[i]);
+        size_t rn = protocore_ntrip_build_str_record(out + pos, cap - pos, &mounts[i]);
         if (rn == 0 || pos + rn + 2 >= cap)
         {
             return 0;
@@ -363,4 +363,4 @@ size_t pc_ntrip_build_sourcetable(char *out, size_t cap, NtripVersion version, c
     return pos;
 }
 
-#endif // PC_ENABLE_NTRIP_CASTER
+#endif // PROTOCORE_ENABLE_NTRIP_CASTER

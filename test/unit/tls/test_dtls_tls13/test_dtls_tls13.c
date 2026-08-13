@@ -1,9 +1,9 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// TLS 1.3 messages the DTLS 1.3 handshake adds to pc_tls13_msg (RFC 8446 §4.1.4 / §4.4.1): the
+// TLS 1.3 messages the DTLS 1.3 handshake adds to protocore_tls13_msg (RFC 8446 §4.1.4 / §4.4.1): the
 // HelloRetryRequest builder, the cookie extension parse, the empty EncryptedExtensions, and the
-// message_hash transcript wrapper. Compiled with PC_ENABLE_DTLS (not HTTP/3) to prove the module
+// message_hash transcript wrapper. Compiled with PROTOCORE_ENABLE_DTLS (not HTTP/3) to prove the module
 // builds and works for the DTLS path. The HelloRetryRequest is pinned byte-for-byte, anchored on the
 // RFC 8446 §4.1.3 magic random.
 
@@ -47,14 +47,15 @@ static const uint8_t HRR_WIRE[66] = {0x02, 0x00, 0x00, 0x3e,                    
 static void test_hrr_magic_symbol(void)
 {
     // The builder and the RFC constant agree.
-    TEST_ASSERT_EQUAL_MEMORY(HRR_MAGIC, pc_tls13_hrr_random, 32);
+    TEST_ASSERT_EQUAL_MEMORY(HRR_MAGIC, protocore_tls13_hrr_random, 32);
 }
 
 static void test_hrr_build_kat(void)
 {
     const uint8_t cookie[4] = {0xAA, 0xBB, 0xCC, 0xDD};
     uint8_t out[128];
-    size_t n = pc_tls13_build_hello_retry_request(out, sizeof(out), NULL, 0, TLS_GROUP_X25519, cookie, sizeof(cookie),
+    size_t n =
+        protocore_tls13_build_hello_retry_request(out, sizeof(out), NULL, 0, TLS_GROUP_X25519, cookie, sizeof(cookie),
                                                   /*dtls=*/PROTO_TRUE);
     TEST_ASSERT_EQUAL_size_t(sizeof(HRR_WIRE), n);
     TEST_ASSERT_EQUAL_MEMORY(HRR_WIRE, out, sizeof(HRR_WIRE));
@@ -67,8 +68,8 @@ static void test_hrr_echoes_session_id(void)
     const uint8_t sid[4] = {0xDE, 0xAD, 0xBE, 0xEF};
     const uint8_t cookie[2] = {0x01, 0x02};
     uint8_t out[128];
-    size_t n = pc_tls13_build_hello_retry_request(out, sizeof(out), sid, sizeof(sid), TLS_GROUP_X25519, cookie,
-                                                  sizeof(cookie), /*dtls=*/PROTO_TRUE);
+    size_t n = protocore_tls13_build_hello_retry_request(out, sizeof(out), sid, sizeof(sid), TLS_GROUP_X25519, cookie,
+                                                         sizeof(cookie), /*dtls=*/PROTO_TRUE);
     TEST_ASSERT_TRUE(n > 0);
     TEST_ASSERT_EQUAL_UINT8(sizeof(sid), out[38]);        // legacy_session_id_echo length
     TEST_ASSERT_EQUAL_MEMORY(sid, out + 39, sizeof(sid)); // echoed verbatim
@@ -82,7 +83,7 @@ static void test_message_hash(void)
         h[i] = (uint8_t)(0x80 + i);
     }
     uint8_t out[40];
-    size_t n = pc_tls13_build_message_hash(out, sizeof(out), h);
+    size_t n = protocore_tls13_build_message_hash(out, sizeof(out), h);
     TEST_ASSERT_EQUAL_size_t(36, n);
     // message_hash(254) || uint24(32) || Hash(CH1)
     TEST_ASSERT_EQUAL_UINT8(254, out[0]);
@@ -95,7 +96,7 @@ static void test_message_hash(void)
 static void test_empty_encrypted_extensions(void)
 {
     uint8_t out[16];
-    size_t n = pc_tls13_build_encrypted_extensions_empty(out, sizeof(out), /*rpk_server_cert=*/PROTO_FALSE);
+    size_t n = protocore_tls13_build_encrypted_extensions_empty(out, sizeof(out), /*rpk_server_cert=*/PROTO_FALSE);
     const uint8_t want[6] = {0x08, 0x00, 0x00, 0x02, 0x00, 0x00}; // EE, len 2, extensions length 0
     TEST_ASSERT_EQUAL_size_t(sizeof(want), n);
     TEST_ASSERT_EQUAL_MEMORY(want, out, sizeof(want));
@@ -145,14 +146,14 @@ static void test_client_hello_cookie_parse(void)
     ch[body_len_at + 2] = (uint8_t)body_len;
 
     Tls13ClientHello hello;
-    TEST_ASSERT_TRUE(pc_tls13_parse_client_hello(ch, p, &hello, /*dtls=*/PROTO_FALSE));
+    TEST_ASSERT_TRUE(protocore_tls13_parse_client_hello(ch, p, &hello, /*dtls=*/PROTO_FALSE));
     TEST_ASSERT_NOT_NULL(hello.cookie);
     TEST_ASSERT_EQUAL_size_t(sizeof(cookie), hello.cookie_len);
     TEST_ASSERT_EQUAL_MEMORY(cookie, hello.cookie, sizeof(cookie));
 }
 
 // ---------------------------------------------------------------------------
-// RFC 7250 Raw Public Keys (PC_ENABLE_TLS_RPK)
+// RFC 7250 Raw Public Keys (PROTOCORE_ENABLE_TLS_RPK)
 // ---------------------------------------------------------------------------
 
 // The fixed 12-byte DER prefix of an Ed25519 SubjectPublicKeyInfo (RFC 8410 §4): SEQUENCE {
@@ -166,14 +167,14 @@ static void test_ed25519_spki(void)
     {
         pub[i] = (uint8_t)(0xA0 + i);
     }
-    uint8_t spki[PC_TLS13_ED25519_SPKI_LEN];
-    size_t n = pc_tls13_ed25519_spki(spki, sizeof(spki), pub);
+    uint8_t spki[PROTOCORE_TLS13_ED25519_SPKI_LEN];
+    size_t n = protocore_tls13_ed25519_spki(spki, sizeof(spki), pub);
     TEST_ASSERT_EQUAL_size_t(44, n);
     TEST_ASSERT_EQUAL_MEMORY(SPKI_PREFIX, spki, sizeof(SPKI_PREFIX)); // fixed AlgorithmIdentifier + BIT STRING head
     TEST_ASSERT_EQUAL_MEMORY(pub, spki + 12, 32);                     // then the raw 32-byte key
     // Too small a buffer fails cleanly.
     uint8_t small[43];
-    TEST_ASSERT_EQUAL_size_t(0, pc_tls13_ed25519_spki(small, sizeof(small), pub));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_tls13_ed25519_spki(small, sizeof(small), pub));
 }
 
 // RFC 8410 sec 4 publishes a complete Ed25519 SubjectPublicKeyInfo, base64 "MCowBQYDK2VwAyEAGb9E...".
@@ -190,8 +191,8 @@ static void test_ed25519_spki_rfc8410_vector(void)
                                              0xba, 0xc1, 0x67, 0xdc, 0x3b, 0x96, 0xc8, 0x50, 0x86, 0xaa, 0x30,
                                              0xb6, 0xb6, 0xcb, 0x0c, 0x5c, 0x38, 0xad, 0x70, 0x31, 0x66, 0xe1};
 
-    uint8_t spki[PC_TLS13_ED25519_SPKI_LEN];
-    size_t n = pc_tls13_ed25519_spki(spki, sizeof(spki), RFC8410_PUB);
+    uint8_t spki[PROTOCORE_TLS13_ED25519_SPKI_LEN];
+    size_t n = protocore_tls13_ed25519_spki(spki, sizeof(spki), RFC8410_PUB);
     TEST_ASSERT_EQUAL_size_t(sizeof(RFC8410_SPKI), n);
     TEST_ASSERT_EQUAL_MEMORY(RFC8410_SPKI, spki, sizeof(RFC8410_SPKI));
 }
@@ -205,10 +206,10 @@ static void test_build_certificate_rpk(void)
         seed[i] = (uint8_t)(i * 7 + 1);
     }
     uint8_t pub[32];
-    pc_ed25519_pubkey(tw, pub, seed);
+    protocore_ed25519_pubkey(tw, pub, seed);
 
     uint8_t out[80];
-    size_t n = pc_tls13_build_certificate_rpk(out, sizeof(out), pub);
+    size_t n = protocore_tls13_build_certificate_rpk(out, sizeof(out), pub);
     // Certificate: type(11) len24 | ctx_len(0) | list_len24 | entry_len24(44) | SPKI(44) | entry_ext(0000)
     TEST_ASSERT_EQUAL_size_t(4 + 1 + 3 + 3 + 44 + 2, n);
     TEST_ASSERT_EQUAL_UINT8(0x0b, out[0]); // TLS_HS_CERTIFICATE
@@ -224,14 +225,14 @@ static void test_ee_rpk_extension(void)
 {
     // The empty (DTLS-profile) EncryptedExtensions with RPK selected carries server_certificate_type.
     uint8_t out[32];
-    size_t n = pc_tls13_build_encrypted_extensions_empty(out, sizeof(out), /*rpk_server_cert=*/PROTO_TRUE);
+    size_t n = protocore_tls13_build_encrypted_extensions_empty(out, sizeof(out), /*rpk_server_cert=*/PROTO_TRUE);
     const uint8_t want[11] = {0x08, 0x00, 0x00, 0x07,        // EncryptedExtensions, length 7
                               0x00, 0x05,                    // extensions length 5
                               0x00, 0x14, 0x00, 0x01, 0x02}; // server_certificate_type(20) -> RawPublicKey(2)
     TEST_ASSERT_EQUAL_size_t(sizeof(want), n);
     TEST_ASSERT_EQUAL_MEMORY(want, out, sizeof(want));
     // Default (no RPK) stays byte-identical to the historical empty EE.
-    n = pc_tls13_build_encrypted_extensions_empty(out, sizeof(out), /*rpk_server_cert=*/PROTO_FALSE);
+    n = protocore_tls13_build_encrypted_extensions_empty(out, sizeof(out), /*rpk_server_cert=*/PROTO_FALSE);
     const uint8_t empty[6] = {0x08, 0x00, 0x00, 0x02, 0x00, 0x00};
     TEST_ASSERT_EQUAL_size_t(sizeof(empty), n);
     TEST_ASSERT_EQUAL_MEMORY(empty, out, sizeof(empty));
@@ -282,7 +283,7 @@ static void test_parse_server_cert_type_rpk(void)
     uint8_t ch[128];
     size_t n = build_ch_one_ext(ch, 0x0014, ebody, sizeof(ebody));
     Tls13ClientHello hello;
-    TEST_ASSERT_TRUE(pc_tls13_parse_client_hello(ch, n, &hello, /*dtls=*/PROTO_FALSE));
+    TEST_ASSERT_TRUE(protocore_tls13_parse_client_hello(ch, n, &hello, /*dtls=*/PROTO_FALSE));
     TEST_ASSERT_TRUE(hello.offers_rpk_server_cert);
 }
 
@@ -293,12 +294,12 @@ static void test_parse_server_cert_type_x509_only(void)
     uint8_t ch[128];
     size_t n = build_ch_one_ext(ch, 0x0014, ebody, sizeof(ebody));
     Tls13ClientHello hello;
-    TEST_ASSERT_TRUE(pc_tls13_parse_client_hello(ch, n, &hello, /*dtls=*/PROTO_FALSE));
+    TEST_ASSERT_TRUE(protocore_tls13_parse_client_hello(ch, n, &hello, /*dtls=*/PROTO_FALSE));
     TEST_ASSERT_FALSE(hello.offers_rpk_server_cert);
     // A ClientHello with no server_certificate_type at all also leaves the flag clear.
     const uint8_t cookie[1] = {0x00};
     n = build_ch_one_ext(ch, 0x002c, cookie, sizeof(cookie));
-    TEST_ASSERT_TRUE(pc_tls13_parse_client_hello(ch, n, &hello, /*dtls=*/PROTO_FALSE));
+    TEST_ASSERT_TRUE(protocore_tls13_parse_client_hello(ch, n, &hello, /*dtls=*/PROTO_FALSE));
     TEST_ASSERT_FALSE(hello.offers_rpk_server_cert);
 }
 
@@ -311,13 +312,13 @@ static void test_parse_server_cert_type_malformed(void)
 
     // Empty extension body: there is not even a list-length byte.
     size_t n = build_ch_one_ext(ch, 0x0014, NULL, 0);
-    TEST_ASSERT_TRUE(pc_tls13_parse_client_hello(ch, n, &hello, /*dtls=*/PROTO_FALSE));
+    TEST_ASSERT_TRUE(protocore_tls13_parse_client_hello(ch, n, &hello, /*dtls=*/PROTO_FALSE));
     TEST_ASSERT_FALSE(hello.offers_rpk_server_cert);
 
     // The declared list length runs past the extension body.
     const uint8_t overrun[1] = {0x05}; // list length 5, but no entries follow
     n = build_ch_one_ext(ch, 0x0014, overrun, sizeof(overrun));
-    TEST_ASSERT_TRUE(pc_tls13_parse_client_hello(ch, n, &hello, /*dtls=*/PROTO_FALSE));
+    TEST_ASSERT_TRUE(protocore_tls13_parse_client_hello(ch, n, &hello, /*dtls=*/PROTO_FALSE));
     TEST_ASSERT_FALSE(hello.offers_rpk_server_cert);
 }
 
@@ -328,8 +329,8 @@ static void test_quic_encrypted_extensions_rpk(void)
 {
     const uint8_t tp[3] = {0x04, 0x01, 0x20};
     uint8_t plain[64], rpk[64];
-    size_t pn = pc_tls13_build_encrypted_extensions(plain, sizeof(plain), tp, sizeof(tp), /*rpk=*/PROTO_FALSE);
-    size_t rn = pc_tls13_build_encrypted_extensions(rpk, sizeof(rpk), tp, sizeof(tp), /*rpk=*/PROTO_TRUE);
+    size_t pn = protocore_tls13_build_encrypted_extensions(plain, sizeof(plain), tp, sizeof(tp), /*rpk=*/PROTO_FALSE);
+    size_t rn = protocore_tls13_build_encrypted_extensions(rpk, sizeof(rpk), tp, sizeof(tp), /*rpk=*/PROTO_TRUE);
     TEST_ASSERT_TRUE(pn > 0);
     TEST_ASSERT_EQUAL_size_t(pn + 5, rn); // ext type(2) + length(2) + CertificateType(1)
 
@@ -371,12 +372,12 @@ static void test_parse_every_extension_arm(void)
     for (size_t i = 0; i < sizeof(exts) / sizeof(exts[0]); i++)
     {
         size_t n = build_ch_one_ext(ch, exts[i].type, exts[i].body, exts[i].len);
-        TEST_ASSERT_TRUE(pc_tls13_parse_client_hello(ch, n, &hello, /*dtls=*/PROTO_FALSE));
+        TEST_ASSERT_TRUE(protocore_tls13_parse_client_hello(ch, n, &hello, /*dtls=*/PROTO_FALSE));
     }
     // The last one (an unknown type) is ignored outright, leaving every flag clear.
     TEST_ASSERT_FALSE(hello.offers_tls13);
     TEST_ASSERT_FALSE(hello.has_conn_id);
-    TEST_ASSERT_NULL(hello.pc_quic_tp);
+    TEST_ASSERT_NULL(hello.protocore_quic_tp);
 }
 
 int main(void)

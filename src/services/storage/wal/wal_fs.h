@@ -3,28 +3,28 @@
 
 /**
  * @file wal_fs.h
- * @brief Bind the WAL store's ::WalDev block-device seam to a file on a mounted store (PC_ENABLE_WAL).
+ * @brief Bind the WAL store's ::WalDev block-device seam to a file on a mounted store (PROTOCORE_ENABLE_WAL).
  *
  * The store in wal_store.h does all I/O through three function pointers so its logic stays pure and
  * host-testable; this header is the thin adapter that points those pointers at a preallocated file on any
- * ::pc_mnt_backend. Random access is the backend's `seek`, and the durability barrier is its `sync`.
+ * ::protocore_mnt_backend. Random access is the backend's `seek`, and the durability barrier is its `sync`.
  *
  * Usage:
  * @code
- *   const pc_mnt_backend *store = pc_mnt_active();
- *   pc_wal_fs_prealloc(store, "/wal.bin", 256 * 1024);   // once: fixed-size, zero-filled backing file
- *   pc_wal_fs_ctx c;
+ *   const protocore_mnt_backend *store = protocore_mnt_active();
+ *   protocore_wal_fs_prealloc(store, "/wal.bin", 256 * 1024);   // once: fixed-size, zero-filled backing file
+ *   protocore_wal_fs_ctx c;
  *   WalDev dev;
- *   if (pc_wal_fs_open(&c, &dev, store, "/wal.bin", 256 * 1024))
+ *   if (protocore_wal_fs_open(&c, &dev, store, "/wal.bin", 256 * 1024))
  *   {
  *       WalStore s;
- *       pc_wal_store_mount(&s, &dev) || pc_wal_store_format(&s, &dev);  // recover, or initialize
+ *       protocore_wal_store_mount(&s, &dev) || protocore_wal_store_format(&s, &dev);  // recover, or initialize
  *   }
  * @endcode
  *
  * The backing file is preallocated to a fixed size so every store offset lands inside it and seek+write
  * overwrites in place, rather than depending on past-EOF behavior that differs between FAT and littlefs.
- * The ::pc_wal_fs_ctx must outlive any ::WalDev bound to it.
+ * The ::protocore_wal_fs_ctx must outlive any ::WalDev bound to it.
  *
  * A backend with no `sync` is refused at open. The WAL's checkpoint is an ordering guarantee built on that
  * barrier, so a store that cannot promise it cannot carry a power-loss-safe log, and saying so at mount is
@@ -36,21 +36,21 @@
 
 #include "mmgr/protomem.h"
 #include "protocore_config.h"
-#include "server/filesystem/mnt.h" // pc_mnt_backend - the store the log lives on
+#include "server/filesystem/mnt.h" // protocore_mnt_backend - the store the log lives on
 #include "services/storage/wal/wal_store.h"
 
-#if PC_ENABLE_WAL
+#if PROTOCORE_ENABLE_WAL
 
 /** @brief What the adapter needs to reach one open file: the store and the handle it returned. */
 typedef struct
 {
-    const pc_mnt_backend *fs;
+    const protocore_mnt_backend *fs;
     int handle;
-} pc_wal_fs_ctx;
+} protocore_wal_fs_ctx;
 
-PC_INLINE size_t pc_wal_fs_read(void *ctx, uint64_t off, uint8_t *buf, size_t len)
+PROTOCORE_INLINE size_t protocore_wal_fs_read(void *ctx, uint64_t off, uint8_t *buf, size_t len)
 {
-    pc_wal_fs_ctx *c = (pc_wal_fs_ctx *)ctx;
+    protocore_wal_fs_ctx *c = (protocore_wal_fs_ctx *)ctx;
     if (!c->fs->seek(c->handle, off))
     {
         return 0;
@@ -59,9 +59,9 @@ PC_INLINE size_t pc_wal_fs_read(void *ctx, uint64_t off, uint8_t *buf, size_t le
     return n < 0 ? 0 : (size_t)n;
 }
 
-PC_INLINE size_t pc_wal_fs_write(void *ctx, uint64_t off, const uint8_t *buf, size_t len)
+PROTOCORE_INLINE size_t protocore_wal_fs_write(void *ctx, uint64_t off, const uint8_t *buf, size_t len)
 {
-    pc_wal_fs_ctx *c = (pc_wal_fs_ctx *)ctx;
+    protocore_wal_fs_ctx *c = (protocore_wal_fs_ctx *)ctx;
     if (!c->fs->seek(c->handle, off))
     {
         return 0;
@@ -70,9 +70,9 @@ PC_INLINE size_t pc_wal_fs_write(void *ctx, uint64_t off, const uint8_t *buf, si
     return n < 0 ? 0 : (size_t)n;
 }
 
-PC_INLINE proto_bool pc_wal_fs_sync(void *ctx)
+PROTOCORE_INLINE proto_bool protocore_wal_fs_sync(void *ctx)
 {
-    pc_wal_fs_ctx *c = (pc_wal_fs_ctx *)ctx;
+    protocore_wal_fs_ctx *c = (protocore_wal_fs_ctx *)ctx;
     return c->fs->sync(c->handle);
 }
 
@@ -80,7 +80,7 @@ PC_INLINE proto_bool pc_wal_fs_sync(void *ctx)
  * @brief Ensure @p path on @p fs exists and is at least @p size bytes (created zero-filled if missing/short).
  * @return true on success. Call once before opening the file for the store.
  */
-PC_INLINE proto_bool pc_wal_fs_prealloc(const pc_mnt_backend *fs, const char *path, uint64_t size)
+PROTOCORE_INLINE proto_bool protocore_wal_fs_prealloc(const protocore_mnt_backend *fs, const char *path, uint64_t size)
 {
     if (!fs || !path)
     {
@@ -90,7 +90,7 @@ PC_INLINE proto_bool pc_wal_fs_prealloc(const pc_mnt_backend *fs, const char *pa
     {
         return PROTO_TRUE;
     }
-    int h = fs->open(path, PC_MNT_WRITE); // create / truncate
+    int h = fs->open(path, PROTOCORE_MNT_WRITE); // create / truncate
     if (h < 0)
     {
         return PROTO_FALSE;
@@ -125,30 +125,30 @@ PC_INLINE proto_bool pc_wal_fs_prealloc(const pc_mnt_backend *fs, const char *pa
  * @return false if @p fs has no durability barrier, or the file will not open. On false, nothing is
  *         left open and @p dev is not usable.
  */
-PC_INLINE proto_bool pc_wal_fs_open(pc_wal_fs_ctx *c, WalDev *dev, const pc_mnt_backend *fs, const char *path,
-                                    uint64_t size)
+PROTOCORE_INLINE proto_bool protocore_wal_fs_open(protocore_wal_fs_ctx *c, WalDev *dev, const protocore_mnt_backend *fs,
+                                                  const char *path, uint64_t size)
 {
     if (!c || !dev || !fs || !path || !fs->sync)
     {
         return PROTO_FALSE;
     }
-    int h = fs->open(path, PC_MNT_RDWR); // random read+write over the preallocated extent, no truncation
+    int h = fs->open(path, PROTOCORE_MNT_RDWR); // random read+write over the preallocated extent, no truncation
     if (h < 0)
     {
         return PROTO_FALSE;
     }
     c->fs = fs;
     c->handle = h;
-    dev->read = pc_wal_fs_read;
-    dev->write = pc_wal_fs_write;
-    dev->sync = pc_wal_fs_sync;
+    dev->read = protocore_wal_fs_read;
+    dev->write = protocore_wal_fs_write;
+    dev->sync = protocore_wal_fs_sync;
     dev->ctx = c;
     dev->size = size;
     return PROTO_TRUE;
 }
 
-/** @brief Close the file a ::pc_wal_fs_ctx holds. The ::WalDev built over it is dead after this. */
-PC_INLINE void pc_wal_fs_close(pc_wal_fs_ctx *c)
+/** @brief Close the file a ::protocore_wal_fs_ctx holds. The ::WalDev built over it is dead after this. */
+PROTOCORE_INLINE void protocore_wal_fs_close(protocore_wal_fs_ctx *c)
 {
     if (c && c->fs)
     {
@@ -158,5 +158,5 @@ PC_INLINE void pc_wal_fs_close(pc_wal_fs_ctx *c)
     }
 }
 
-#endif // PC_ENABLE_WAL
+#endif // PROTOCORE_ENABLE_WAL
 #endif // PROTOCORE_WAL_FS_H

@@ -3,13 +3,13 @@
 
 /**
  * @file edge_fetch.h
- * @brief CDN edge-cache tier - async origin-fetch engine (PC_ENABLE_EDGE_CACHE).
+ * @brief CDN edge-cache tier - async origin-fetch engine (PROTOCORE_ENABLE_EDGE_CACHE).
  *
  * A non-blocking origin fetch: open + send a request over a transport seam, accumulate the response
  * across poll loops into a bounded buffer, detect completion (Content-Length / chunked / connection
  * close), then parse it with the proven http_client codec. Pumped from the server poll loop so a miss
- * or revalidation never stalls the worker; the transport seam is pc_client on the device and a mock in
- * host tests. Zero heap; the buffer is fixed (`PC_EDGE_FETCH_BUF`).
+ * or revalidation never stalls the worker; the transport seam is protocore_client on the device and a mock in
+ * host tests. Zero heap; the buffer is fixed (`PROTOCORE_EDGE_FETCH_BUF`).
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -20,11 +20,11 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_EDGE_CACHE
+#if PROTOCORE_ENABLE_EDGE_CACHE
 
-/** @brief The origin transport, bound to pc_client on the device and a mock in host tests. */
+/** @brief The origin transport, bound to protocore_client on the device and a mock in host tests. */
 typedef struct
 {
     int (*open)(void *ctx, const char *host, uint16_t port, uint32_t timeout_ms); ///< cid >= 0, or < 0 on failure
@@ -58,7 +58,7 @@ typedef struct
     size_t head_len;
     size_t body_off;
     size_t body_len;
-    uint8_t buf[PC_EDGE_FETCH_BUF];
+    uint8_t buf[PROTOCORE_EDGE_FETCH_BUF];
 } EdgeFetch;
 
 /**
@@ -74,7 +74,7 @@ void edge_fetch_begin(EdgeFetch *f, const EdgeFetchTransport *t, const char *hos
 
 /**
  * @brief Drain available bytes and advance. On DONE the response is parsed (chunked bodies decoded in
- *        place); honors `PC_EDGE_FETCH_TIMEOUT_MS`. @return the current status.
+ *        place); honors `PROTOCORE_EDGE_FETCH_TIMEOUT_MS`. @return the current status.
  */
 EdgeFetchStatus edge_fetch_pump(EdgeFetch *f, const EdgeFetchTransport *t, uint32_t now_ms);
 
@@ -88,8 +88,8 @@ void edge_fetch_end(EdgeFetch *f, const EdgeFetchTransport *t);
  */
 proto_bool edge_resp_complete(const uint8_t *buf, size_t len, proto_bool conn_closed, size_t *head_len);
 
-#endif // PC_ENABLE_EDGE_CACHE
+#endif // PROTOCORE_ENABLE_EDGE_CACHE
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_EDGE_FETCH_H

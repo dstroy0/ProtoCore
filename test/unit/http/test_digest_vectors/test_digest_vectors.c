@@ -3,13 +3,13 @@
 //
 // Independent-oracle regression test for the Digest-auth math (RFC 7616,
 // SHA-256, qop="auth"). test_digest_auth performs the handshake but computes the
-// expected response with the SAME pc_sha256 the server uses, so it cannot catch
+// expected response with the SAME protocore_sha256 the server uses, so it cannot catch
 // a non-standard hash or a wrong digest string format. This suite pins both
 // against values produced OUTSIDE the codebase:
 //   - FIPS 180-4 SHA-256 known-answer tests, and
 //   - HA1 / HA2 / response hex computed with `openssl dgst -sha256`
 // for a fixed scenario (user=admin, realm=demo, pass=s3cret, GET /secret).
-// If pc_sha256 or the RFC 7616 string construction ever drifts, these fail even
+// If protocore_sha256 or the RFC 7616 string construction ever drifts, these fail even
 // if the self-referential handshake test still passes.
 
 #include "crypto/hash/sha256.h"
@@ -40,10 +40,10 @@ static const char *kResponse = "5d0e32a20ddf4a97877315a523756d9c150506a4c73cbb27
 
 static void sha256_hex(const char *s, char out[65])
 {
-    uint8_t d[PC_SHA256_DIGEST_LEN];
-    pc_sha256(tw, (const uint8_t *)s, strlen(s), d);
+    uint8_t d[PROTOCORE_SHA256_DIGEST_LEN];
+    protocore_sha256(tw, (const uint8_t *)s, strlen(s), d);
     static const char *hx = "0123456789abcdef";
-    for (int i = 0; i < PC_SHA256_DIGEST_LEN; i++)
+    for (int i = 0; i < PROTOCORE_SHA256_DIGEST_LEN; i++)
     {
         out[i * 2] = hx[d[i] >> 4];
         out[i * 2 + 1] = hx[d[i] & 0x0f];
@@ -62,7 +62,7 @@ void tearDown()
 // TESTS
 // ====================================================================
 
-// Ground pc_sha256 itself against the FIPS 180-4 published vectors so the
+// Ground protocore_sha256 itself against the FIPS 180-4 published vectors so the
 // digest checks below rest on a verified standard hash, not a circular one.
 void test_sha256_fips_kats()
 {

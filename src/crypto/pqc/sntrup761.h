@@ -16,7 +16,7 @@
  * the ring Z_q[x]/(x^761 - x - 1). The algorithm and the byte encodings match OpenSSH's embedded
  * sntrup761 reference (public domain; D. J. Bernstein et al.) so the ciphertext this produces
  * decapsulates byte-for-byte on a real OpenSSH peer. Zero heap; SHA-512 via the SSH sha512 seam,
- * randomness via pc_rand_fill() (crypto/rng).
+ * randomness via protocore_rand_fill() (crypto/rng).
  */
 
 #ifndef PROTOCORE_SNTRUP761_H
@@ -24,44 +24,45 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_SSH_SNTRUP761
+#if PROTOCORE_ENABLE_SSH_SNTRUP761
 
-#define PC_SNTRUP761_PK_BYTES 1158 ///< public key (Rq-encoded h)
-#define PC_SNTRUP761_SK_BYTES 1763 ///< secret key (f, 1/g, pk, rho, cache)
-#define PC_SNTRUP761_CT_BYTES 1039 ///< ciphertext (Rounded-encoded c || 32-byte Confirm)
-#define PC_SNTRUP761_SS_BYTES 32   ///< shared secret (session key)
-#define PC_SNTRUP761_SK_PK_OFFSET                                                                                      \
+#define PROTOCORE_SNTRUP761_PK_BYTES 1158 ///< public key (Rq-encoded h)
+#define PROTOCORE_SNTRUP761_SK_BYTES 1763 ///< secret key (f, 1/g, pk, rho, cache)
+#define PROTOCORE_SNTRUP761_CT_BYTES 1039 ///< ciphertext (Rounded-encoded c || 32-byte Confirm)
+#define PROTOCORE_SNTRUP761_SS_BYTES 32   ///< shared secret (session key)
+#define PROTOCORE_SNTRUP761_SK_PK_OFFSET                                                                               \
     382 ///< the public key is embedded in sk at this offset (2*Small_bytes); the KEM initiator reconstructs
         ///< its C_INIT and the exchange hash from sk rather than storing pk twice
 
 /**
  * @brief sntrup761 key generation (initiator). Produces a public/secret keypair; the caller sends
- *        @p pk and holds @p sk until the peer's ciphertext arrives (then pc_sntrup761_dec).
+ *        @p pk and holds @p sk until the peer's ciphertext arrives (then protocore_sntrup761_dec).
  */
-void pc_sntrup761_keypair(uint8_t *work, uint8_t pk[PC_SNTRUP761_PK_BYTES], uint8_t sk[PC_SNTRUP761_SK_BYTES]);
+void protocore_sntrup761_keypair(uint8_t *work, uint8_t pk[PROTOCORE_SNTRUP761_PK_BYTES],
+                                 uint8_t sk[PROTOCORE_SNTRUP761_SK_BYTES]);
 
 /**
- * @brief sntrup761 Encapsulation (responder). Draws a fresh short polynomial via pc_rand_fill(),
+ * @brief sntrup761 Encapsulation (responder). Draws a fresh short polynomial via protocore_rand_fill(),
  *        encrypts it under @p pk, and derives the session key.
- * @param pk  the peer's public key (PC_SNTRUP761_PK_BYTES).
- * @param ct  out: the ciphertext (PC_SNTRUP761_CT_BYTES).
- * @param ss  out: the shared secret (PC_SNTRUP761_SS_BYTES).
+ * @param pk  the peer's public key (PROTOCORE_SNTRUP761_PK_BYTES).
+ * @param ct  out: the ciphertext (PROTOCORE_SNTRUP761_CT_BYTES).
+ * @param ss  out: the shared secret (PROTOCORE_SNTRUP761_SS_BYTES).
  */
-void pc_sntrup761_enc(uint8_t *work, const uint8_t pk[PC_SNTRUP761_PK_BYTES], uint8_t ct[PC_SNTRUP761_CT_BYTES],
-                      uint8_t ss[PC_SNTRUP761_SS_BYTES]);
+void protocore_sntrup761_enc(uint8_t *work, const uint8_t pk[PROTOCORE_SNTRUP761_PK_BYTES],
+                             uint8_t ct[PROTOCORE_SNTRUP761_CT_BYTES], uint8_t ss[PROTOCORE_SNTRUP761_SS_BYTES]);
 
 /**
  * @brief sntrup761 Decapsulation (initiator). Recovers the shared secret from the peer's ciphertext
- *        using the secret key from pc_sntrup761_keypair. Implicit-rejection (FO): on a bad
+ *        using the secret key from protocore_sntrup761_keypair. Implicit-rejection (FO): on a bad
  *        ciphertext it returns a deterministic pseudo-random secret rather than failing.
  */
-void pc_sntrup761_dec(uint8_t *work, const uint8_t sk[PC_SNTRUP761_SK_BYTES], const uint8_t ct[PC_SNTRUP761_CT_BYTES],
-                      uint8_t ss[PC_SNTRUP761_SS_BYTES]);
+void protocore_sntrup761_dec(uint8_t *work, const uint8_t sk[PROTOCORE_SNTRUP761_SK_BYTES],
+                             const uint8_t ct[PROTOCORE_SNTRUP761_CT_BYTES], uint8_t ss[PROTOCORE_SNTRUP761_SS_BYTES]);
 
-#endif // PC_ENABLE_SSH_SNTRUP761
+#endif // PROTOCORE_ENABLE_SSH_SNTRUP761
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_SNTRUP761_H

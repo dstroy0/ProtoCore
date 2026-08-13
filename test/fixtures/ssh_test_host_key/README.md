@@ -16,11 +16,11 @@ output - see the [`SSHHostKey`](../../../examples/L5-Session/SSHHostKey/) exampl
 
 ## Files
 
-| File                    | What it is                                                                                                                          |
-| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `ssh_test_host_key.h`   | The private key as PKCS#8 DER, as a C byte array (`PC_SSH_TEST_HOST_KEY_DER` + `..._LEN`) for the one-time NVS provisioning sketch. |
-| `ssh_test_host_key.pub` | The matching public key, for a client's `known_hosts`.                                                                              |
-| `ssh_test_keys.h`       | **Generated, gitignored.** Both keys the host suites use - see below.                                                               |
+| File                    | What it is                                                                                                                                 |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `ssh_test_host_key.h`   | The private key as PKCS#8 DER, as a C byte array (`PROTOCORE_SSH_TEST_HOST_KEY_DER` + `..._LEN`) for the one-time NVS provisioning sketch. |
+| `ssh_test_host_key.pub` | The matching public key, for a client's `known_hosts`.                                                                                     |
+| `ssh_test_keys.h`       | **Generated, gitignored.** Both keys the host suites use - see below.                                                                      |
 
 The raw `.pem` / `.der` are intentionally **not** committed (PEM private keys trip
 GitHub push protection); the byte array carries the same key material in C form.
@@ -31,18 +31,18 @@ GitHub push protection); the byte array carries the same key material in C form.
 the same fixed-plus-fresh pairing `test/support/baseline_keys.h` and
 `test/support/throwaway_key.h` make for Ed25519:
 
-| Symbol prefix           | Key                                                                                |
-| ----------------------- | ---------------------------------------------------------------------------------- |
-| `PC_SSH_BASELINE_KEY_`  | The committed key above, so a failure reproduces byte for byte.                    |
-| `PC_SSH_THROWAWAY_KEY_` | A new key on every `test/run_tests.sh`, so nothing passes by matching one modulus. |
+| Symbol prefix                  | Key                                                                                |
+| ------------------------------ | ---------------------------------------------------------------------------------- |
+| `PROTOCORE_SSH_BASELINE_KEY_`  | The committed key above, so a failure reproduces byte for byte.                    |
+| `PROTOCORE_SSH_THROWAWAY_KEY_` | A new key on every `test/run_tests.sh`, so nothing passes by matching one modulus. |
 
 Each carries `_DER` + `_DER_LEN` (what a test writes to NVS) and `_N` / `_E` / `_D`
 (the fixture's own copy, so a test builds its expected blob without reading back
 what the library parsed). A suite provisions a key exactly the way a board is:
 
 ```c
-pc_nvs_put_blob(PC_SSH_HOST_KEY_NS, PC_SSH_HOST_KEY_ITEM, PC_SSH_BASELINE_KEY_DER, PC_SSH_BASELINE_KEY_DER_LEN);
-pc_ssh_rsa_load_pubkey();
+protocore_nvs_put_blob(PROTOCORE_SSH_HOST_KEY_NS, PROTOCORE_SSH_HOST_KEY_ITEM, PROTOCORE_SSH_BASELINE_KEY_DER, PROTOCORE_SSH_BASELINE_KEY_DER_LEN);
+protocore_ssh_rsa_load_pubkey();
 ```
 
 `test/run_tests.sh` regenerates the file before the run; a per-env pre-build hook
@@ -61,7 +61,7 @@ own fixed keys and must never use the throwaway.
 void setup() {
   Preferences p;
   p.begin("ssh_host_key", false);   // namespace MUST be "ssh_host_key"
-  p.putBytes("priv_der", PC_SSH_TEST_HOST_KEY_DER, PC_SSH_TEST_HOST_KEY_DER_LEN);
+  p.putBytes("priv_der", PROTOCORE_SSH_TEST_HOST_KEY_DER, PROTOCORE_SSH_TEST_HOST_KEY_DER_LEN);
   p.end();                          // key name MUST be "priv_der"
 }
 ```

@@ -308,7 +308,7 @@ def main():
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ProtoCore - Feature index</title>
-<meta name="description" content="Every compile-time feature in ProtoCore, by OSI layer, with its PC_ENABLE_* flag.">
+<meta name="description" content="Every compile-time feature in ProtoCore, by OSI layer, with its PROTOCORE_ENABLE_* flag.">
 <style>{CSS}</style>
 </head>
 <body>
@@ -335,7 +335,7 @@ def main():
   </div>
 
   <footer>
-    Every feature is a compile-time <code>PC_ENABLE_*</code> flag, default off unless marked
+    Every feature is a compile-time <code>PROTOCORE_ENABLE_*</code> flag, default off unless marked
     <span style="color:#3ecf7a">always on</span>. Prose comes from
     <a href="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md">docs/FEATURES.md</a>;
     this page and the README tables are generated from it, so they cannot disagree.

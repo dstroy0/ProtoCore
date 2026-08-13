@@ -28,7 +28,7 @@ void test_header_round_trip()
     memcpy(h.sender_context, ctx, 8);
     const uint8_t data[] = {0xAA, 0xBB};
     uint8_t buf[32];
-    size_t n = pc_eip_build(buf, sizeof(buf), &h, data, sizeof(data));
+    size_t n = protocore_eip_build(buf, sizeof(buf), &h, data, sizeof(data));
     TEST_ASSERT_EQUAL_size_t(EIP_HEADER_SIZE + 2, n);
     // command + length, little-endian.
     TEST_ASSERT_EQUAL_HEX8(0x65, buf[0]);
@@ -40,7 +40,7 @@ void test_header_round_trip()
     EipHeader p;
     const uint8_t *d;
     size_t dlen;
-    TEST_ASSERT_TRUE(pc_eip_parse(buf, n, &p, &d, &dlen));
+    TEST_ASSERT_TRUE(protocore_eip_parse(buf, n, &p, &d, &dlen));
     TEST_ASSERT_EQUAL_HEX16(EIP_CMD_REGISTER_SESSION, p.command);
     TEST_ASSERT_EQUAL_HEX32(0x12345678, p.session_handle);
     TEST_ASSERT_EQUAL_MEMORY(ctx, p.sender_context, 8);
@@ -51,7 +51,7 @@ void test_header_round_trip()
 void test_register_session()
 {
     uint8_t buf[32];
-    size_t n = pc_eip_build_register_session(buf, sizeof(buf), NULL);
+    size_t n = protocore_eip_build_register_session(buf, sizeof(buf), NULL);
     TEST_ASSERT_EQUAL_size_t(EIP_HEADER_SIZE + 4, n);
     TEST_ASSERT_EQUAL_HEX8(0x65, buf[0]); // RegisterSession
     TEST_ASSERT_EQUAL_HEX8(0x04, buf[2]); // length 4
@@ -66,7 +66,7 @@ void test_unregister_session()
 {
     uint8_t buf[32];
     const uint8_t ctx[8] = {1, 2, 3, 4, 5, 6, 7, 8};
-    size_t n = pc_eip_build_unregister_session(buf, sizeof(buf), 0x12345678u, ctx);
+    size_t n = protocore_eip_build_unregister_session(buf, sizeof(buf), 0x12345678u, ctx);
     TEST_ASSERT_EQUAL_size_t(EIP_HEADER_SIZE, n); // header only, no command-specific data
     TEST_ASSERT_EQUAL_HEX8(0x66, buf[0]);         // UnRegisterSession (LE)
     TEST_ASSERT_EQUAL_HEX8(0x00, buf[1]);
@@ -76,25 +76,25 @@ void test_unregister_session()
     EipHeader h;
     const uint8_t *data;
     size_t dlen;
-    TEST_ASSERT_TRUE(pc_eip_parse(buf, n, &h, &data, &dlen));
+    TEST_ASSERT_TRUE(protocore_eip_parse(buf, n, &h, &data, &dlen));
     TEST_ASSERT_EQUAL_HEX16(EIP_CMD_UNREGISTER_SESSION, h.command);
     TEST_ASSERT_EQUAL_HEX32(0x12345678u, h.session_handle);
     TEST_ASSERT_EQUAL_size_t(0, dlen);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(ctx, h.sender_context, 8);
 
     // A null sender_context zeros the field; a too-small buffer fails closed.
-    n = pc_eip_build_unregister_session(buf, sizeof(buf), 0x1u, NULL);
-    TEST_ASSERT_TRUE(pc_eip_parse(buf, n, &h, &data, &dlen));
+    n = protocore_eip_build_unregister_session(buf, sizeof(buf), 0x1u, NULL);
+    TEST_ASSERT_TRUE(protocore_eip_parse(buf, n, &h, &data, &dlen));
     const uint8_t zero[8] = {0};
     TEST_ASSERT_EQUAL_HEX8_ARRAY(zero, h.sender_context, 8);
-    TEST_ASSERT_EQUAL_size_t(0, pc_eip_build_unregister_session(buf, 16, 0x1u, NULL)); // needs 24
+    TEST_ASSERT_EQUAL_size_t(0, protocore_eip_build_unregister_session(buf, 16, 0x1u, NULL)); // needs 24
 }
 
 void test_send_rr_data_bytes()
 {
     const uint8_t cip[] = {0x4C, 0x02}; // a (stub) CIP request
     uint8_t buf[64];
-    size_t n = pc_eip_build_send_rr_data(buf, sizeof(buf), 0x12345678, NULL, 10, cip, sizeof(cip));
+    size_t n = protocore_eip_build_send_rr_data(buf, sizeof(buf), 0x12345678, NULL, 10, cip, sizeof(cip));
     TEST_ASSERT_EQUAL_size_t(EIP_HEADER_SIZE + 18, n); // data = 6 + 2 + 4(null) + 4(hdr) + 2(cip) = 18
     TEST_ASSERT_EQUAL_HEX8(0x6F, buf[0]);              // SendRRData
     TEST_ASSERT_EQUAL_HEX8(0x12, buf[2]);              // length 18 (0x0012) LSB
@@ -114,17 +114,17 @@ void test_send_rr_data_round_trip()
 {
     const uint8_t cip[] = {0x4C, 0x20, 0x01, 0x24, 0x01};
     uint8_t buf[64];
-    size_t n = pc_eip_build_send_rr_data(buf, sizeof(buf), 0x01, NULL, 5, cip, sizeof(cip));
+    size_t n = protocore_eip_build_send_rr_data(buf, sizeof(buf), 0x01, NULL, 5, cip, sizeof(cip));
 
     EipHeader p;
     const uint8_t *d;
     size_t dlen;
-    TEST_ASSERT_TRUE(pc_eip_parse(buf, n, &p, &d, &dlen));
+    TEST_ASSERT_TRUE(protocore_eip_parse(buf, n, &p, &d, &dlen));
     TEST_ASSERT_EQUAL_HEX16(EIP_CMD_SEND_RR_DATA, p.command);
 
     const uint8_t *out_cip;
     size_t out_len;
-    TEST_ASSERT_TRUE(pc_eip_parse_send_rr_data(d, dlen, &out_cip, &out_len));
+    TEST_ASSERT_TRUE(protocore_eip_parse_send_rr_data(d, dlen, &out_cip, &out_len));
     TEST_ASSERT_EQUAL_size_t(sizeof(cip), out_len);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(cip, out_cip, sizeof(cip));
 }
@@ -133,13 +133,13 @@ void test_list_identity()
 {
     // Request: a header-only ListIdentity (command 0x0063, length 0).
     uint8_t buf[32];
-    size_t n = pc_eip_build_list_identity(buf, sizeof(buf), NULL);
+    size_t n = protocore_eip_build_list_identity(buf, sizeof(buf), NULL);
     TEST_ASSERT_EQUAL_size_t(EIP_HEADER_SIZE, n);
     TEST_ASSERT_EQUAL_HEX8(0x63, buf[0]); // ListIdentity
     TEST_ASSERT_EQUAL_HEX8(0x00, buf[1]);
     TEST_ASSERT_EQUAL_HEX8(0x00, buf[2]); // length 0
     TEST_ASSERT_EQUAL_HEX8(0x00, buf[3]);
-    TEST_ASSERT_EQUAL_size_t(0, pc_eip_build_list_identity(buf, 16, NULL)); // needs 24
+    TEST_ASSERT_EQUAL_size_t(0, protocore_eip_build_list_identity(buf, 16, NULL)); // needs 24
 
     // Response command-data block: item count 1, one List Identity item (0x000C, length 0x27 = 39).
     const uint8_t resp[] = {
@@ -159,7 +159,7 @@ void test_list_identity()
         0x03                         // state 3
     };
     EipIdentity id;
-    TEST_ASSERT_TRUE(pc_eip_parse_list_identity(resp, sizeof(resp), &id));
+    TEST_ASSERT_TRUE(protocore_eip_parse_list_identity(resp, sizeof(resp), &id));
     TEST_ASSERT_EQUAL_UINT16(1, id.protocol_version);
     TEST_ASSERT_EQUAL_HEX16(0x001D, id.vendor_id);
     TEST_ASSERT_EQUAL_HEX16(0x000C, id.device_type);
@@ -174,12 +174,12 @@ void test_list_identity()
 
     // Guards: too short for the item count, a non-identity item, a truncated identity item, and null args.
     EipIdentity id2;
-    TEST_ASSERT_FALSE(pc_eip_parse_list_identity(resp, 1, &id2)); // < 2 octets
+    TEST_ASSERT_FALSE(protocore_eip_parse_list_identity(resp, 1, &id2)); // < 2 octets
     const uint8_t other[] = {0x01, 0x00, 0xB2, 0x00, 0x00, 0x00}; // one unconnected-data item, not 0x000C
-    TEST_ASSERT_FALSE(pc_eip_parse_list_identity(other, sizeof(other), &id2));
+    TEST_ASSERT_FALSE(protocore_eip_parse_list_identity(other, sizeof(other), &id2));
     const uint8_t trunc[] = {0x01, 0x00, 0x0C, 0x00, 0x05, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00}; // item len 5 < 33
-    TEST_ASSERT_FALSE(pc_eip_parse_list_identity(trunc, sizeof(trunc), &id2));
-    TEST_ASSERT_FALSE(pc_eip_parse_list_identity(NULL, 10, &id2));
+    TEST_ASSERT_FALSE(protocore_eip_parse_list_identity(trunc, sizeof(trunc), &id2));
+    TEST_ASSERT_FALSE(protocore_eip_parse_list_identity(NULL, 10, &id2));
 }
 
 void test_parse_rejects_bad()
@@ -188,27 +188,27 @@ void test_parse_rejects_bad()
     const uint8_t *d;
     size_t dlen;
     const uint8_t short_hdr[] = {0x65, 0x00, 0x00, 0x00}; // < 24 octets
-    TEST_ASSERT_FALSE(pc_eip_parse(short_hdr, sizeof(short_hdr), &p, &d, &dlen));
+    TEST_ASSERT_FALSE(protocore_eip_parse(short_hdr, sizeof(short_hdr), &p, &d, &dlen));
 
     // A 24-octet header that declares 8 data octets but has none.
     uint8_t hdr[EIP_HEADER_SIZE] = {0};
     hdr[0] = 0x6F;
     hdr[2] = 0x08; // length 8
-    TEST_ASSERT_FALSE(pc_eip_parse(hdr, sizeof(hdr), &p, &d, &dlen));
+    TEST_ASSERT_FALSE(protocore_eip_parse(hdr, sizeof(hdr), &p, &d, &dlen));
 
     // A SendRRData block with no unconnected-data item.
     const uint8_t no_item[] = {0, 0, 0, 0, 0, 0, 0x00, 0x00}; // interface + timeout + item count 0
     const uint8_t *cip;
     size_t clen;
-    TEST_ASSERT_FALSE(pc_eip_parse_send_rr_data(no_item, sizeof(no_item), &cip, &clen));
+    TEST_ASSERT_FALSE(protocore_eip_parse_send_rr_data(no_item, sizeof(no_item), &cip, &clen));
 }
 
 void test_build_overflow_fails_closed()
 {
     const uint8_t cip[] = {0x4C, 0x02};
     uint8_t small[24]; // room for the header but not the CPF data
-    TEST_ASSERT_EQUAL_size_t(0, pc_eip_build_send_rr_data(small, sizeof(small), 1, NULL, 1, cip, sizeof(cip)));
-    TEST_ASSERT_EQUAL_size_t(0, pc_eip_build_register_session(small, 16, NULL));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_eip_build_send_rr_data(small, sizeof(small), 1, NULL, 1, cip, sizeof(cip)));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_eip_build_register_session(small, 16, NULL));
 }
 
 // Builder null/oversize guards, the sender-context copy path in both convenience
@@ -220,74 +220,74 @@ void test_build_and_parse_guards()
     memset(&h, 0, sizeof(h));
     const uint8_t data[] = {0xAA, 0xBB};
 
-    TEST_ASSERT_EQUAL_size_t(0, pc_eip_build(NULL, sizeof(buf), &h, data, 2));      // null buf
-    TEST_ASSERT_EQUAL_size_t(0, pc_eip_build(buf, sizeof(buf), NULL, data, 2));     // null header
-    TEST_ASSERT_EQUAL_size_t(0, pc_eip_build(buf, sizeof(buf), &h, data, 0x10000)); // data_len > 0xFFFF
+    TEST_ASSERT_EQUAL_size_t(0, protocore_eip_build(NULL, sizeof(buf), &h, data, 2));      // null buf
+    TEST_ASSERT_EQUAL_size_t(0, protocore_eip_build(buf, sizeof(buf), NULL, data, 2));     // null header
+    TEST_ASSERT_EQUAL_size_t(0, protocore_eip_build(buf, sizeof(buf), &h, data, 0x10000)); // data_len > 0xFFFF
 
     // Passing a sender context exercises the memcpy in each convenience builder.
     const uint8_t ctx[8] = {1, 2, 3, 4, 5, 6, 7, 8};
-    size_t n = pc_eip_build_register_session(buf, sizeof(buf), ctx);
+    size_t n = protocore_eip_build_register_session(buf, sizeof(buf), ctx);
     TEST_ASSERT_TRUE(n > 0);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(ctx, buf + 12, 8); // sender context at offset 12
-    n = pc_eip_build_send_rr_data(buf, sizeof(buf), 0x01, ctx, 5, data, 2);
+    n = protocore_eip_build_send_rr_data(buf, sizeof(buf), 0x01, ctx, 5, data, 2);
     TEST_ASSERT_TRUE(n > 0);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(ctx, buf + 12, 8);
 
-    TEST_ASSERT_EQUAL_size_t(0, pc_eip_build_send_rr_data(NULL, sizeof(buf), 1, NULL, 5, data, 2)); // null buf
-    TEST_ASSERT_EQUAL_size_t(0, pc_eip_build_send_rr_data(buf, sizeof(buf), 1, NULL, 5, NULL, 2)); // pc_cip_len && !cip
+    TEST_ASSERT_EQUAL_size_t(0, protocore_eip_build_send_rr_data(NULL, sizeof(buf), 1, NULL, 5, data, 2)); // null buf
+    TEST_ASSERT_EQUAL_size_t(0, protocore_eip_build_send_rr_data(buf, sizeof(buf), 1, NULL, 5, NULL, 2)); // protocore_cip_len && !cip
 
     const uint8_t *cip;
     size_t clen;
-    TEST_ASSERT_FALSE(pc_eip_parse_send_rr_data(NULL, 8, &cip, &clen)); // null data
+    TEST_ASSERT_FALSE(protocore_eip_parse_send_rr_data(NULL, 8, &cip, &clen)); // null data
     const uint8_t tooshort[7] = {0};
-    TEST_ASSERT_FALSE(pc_eip_parse_send_rr_data(tooshort, sizeof(tooshort), &cip, &clen)); // data_len < 8
+    TEST_ASSERT_FALSE(protocore_eip_parse_send_rr_data(tooshort, sizeof(tooshort), &cip, &clen)); // data_len < 8
     const uint8_t trunc_item[8] = {0, 0, 0, 0, 0, 0, 0x01, 0x00};                          // count 1 but no item octets
-    TEST_ASSERT_FALSE(pc_eip_parse_send_rr_data(trunc_item, sizeof(trunc_item), &cip, &clen));
+    TEST_ASSERT_FALSE(protocore_eip_parse_send_rr_data(trunc_item, sizeof(trunc_item), &cip, &clen));
     const uint8_t over_item[12] = {0, 0, 0, 0, 0, 0, 0x01, 0x00, 0xB2, 0x00, 0x10, 0x00}; // item len 16 > buffer
-    TEST_ASSERT_FALSE(pc_eip_parse_send_rr_data(over_item, sizeof(over_item), &cip, &clen));
+    TEST_ASSERT_FALSE(protocore_eip_parse_send_rr_data(over_item, sizeof(over_item), &cip, &clen));
 }
 
 // Remaining branch-coverage gaps not hit by the tests above:
-//  - pc_eip_build's `(data_len && !data)` true side, called directly (the convenience
+//  - protocore_eip_build's `(data_len && !data)` true side, called directly (the convenience
 //    builders only ever pass data_len==0 with a null data pointer, never data_len>0 with one).
-//  - pc_eip_parse's null-buf and null-out guards, and its two output slice pointers (data,
+//  - protocore_eip_parse's null-buf and null-out guards, and its two output slice pointers (data,
 //    data_len) both being optional (NULL).
-//  - pc_eip_build_send_rr_data's pc_cip_len==0 path (cip may be null), which is also the
-//    only case that takes the "skip memcpy" side of `if (pc_cip_len)`.
-//  - pc_eip_build_send_rr_data rejecting pc_cip_len > 0xFFFF outright, and separately
-//    rejecting a pc_cip_len that itself fits in 16 bits but whose CPF-wrapped data_len does
+//  - protocore_eip_build_send_rr_data's protocore_cip_len==0 path (cip may be null), which is also the
+//    only case that takes the "skip memcpy" side of `if (protocore_cip_len)`.
+//  - protocore_eip_build_send_rr_data rejecting protocore_cip_len > 0xFFFF outright, and separately
+//    rejecting a protocore_cip_len that itself fits in 16 bits but whose CPF-wrapped data_len does
 //    not (a generously large `cap` proves the reject is on data_len's own merits, not the cap
 //    check; the function returns before writing anything, so `buf` need not really be that big).
-//  - pc_eip_parse_send_rr_data's two output pointers (cip, pc_cip_len) both being optional.
+//  - protocore_eip_parse_send_rr_data's two output pointers (cip, protocore_cip_len) both being optional.
 void test_more_branch_coverage()
 {
     EipHeader h;
     memset(&h, 0, sizeof(h));
     uint8_t buf[64];
 
-    TEST_ASSERT_EQUAL_size_t(0, pc_eip_build(buf, sizeof(buf), &h, NULL, 5)); // data_len && !data
+    TEST_ASSERT_EQUAL_size_t(0, protocore_eip_build(buf, sizeof(buf), &h, NULL, 5)); // data_len && !data
 
     EipHeader p;
     const uint8_t *d;
     size_t dlen;
-    TEST_ASSERT_FALSE(pc_eip_parse(NULL, sizeof(buf), &p, &d, &dlen));  // null buf
-    TEST_ASSERT_FALSE(pc_eip_parse(buf, sizeof(buf), NULL, &d, &dlen)); // null out
+    TEST_ASSERT_FALSE(protocore_eip_parse(NULL, sizeof(buf), &p, &d, &dlen));  // null buf
+    TEST_ASSERT_FALSE(protocore_eip_parse(buf, sizeof(buf), NULL, &d, &dlen)); // null out
 
-    size_t n = pc_eip_build_register_session(buf, sizeof(buf), NULL);
-    TEST_ASSERT_TRUE(pc_eip_parse(buf, n, &p, NULL, NULL)); // both output slices optional
+    size_t n = protocore_eip_build_register_session(buf, sizeof(buf), NULL);
+    TEST_ASSERT_TRUE(protocore_eip_parse(buf, n, &p, NULL, NULL)); // both output slices optional
 
-    // pc_cip_len == 0 (cip may be null); also exercises the memcpy-skip side of `if (pc_cip_len)`.
-    size_t rr = pc_eip_build_send_rr_data(buf, sizeof(buf), 1, NULL, 5, NULL, 0);
+    // protocore_cip_len == 0 (cip may be null); also exercises the memcpy-skip side of `if (protocore_cip_len)`.
+    size_t rr = protocore_eip_build_send_rr_data(buf, sizeof(buf), 1, NULL, 5, NULL, 0);
     TEST_ASSERT_EQUAL_size_t(EIP_HEADER_SIZE + 16, rr);
 
     uint8_t dummy_cip[1] = {0};
     TEST_ASSERT_EQUAL_size_t(
-        0, pc_eip_build_send_rr_data(buf, sizeof(buf), 1, NULL, 5, dummy_cip, 0x10000)); // pc_cip_len > 0xFFFF
+        0, protocore_eip_build_send_rr_data(buf, sizeof(buf), 1, NULL, 5, dummy_cip, 0x10000)); // protocore_cip_len > 0xFFFF
     TEST_ASSERT_EQUAL_size_t(
-        0, pc_eip_build_send_rr_data(buf, 100000, 1, NULL, 5, dummy_cip, 0xFFF0)); // data_len > 0xFFFF
+        0, protocore_eip_build_send_rr_data(buf, 100000, 1, NULL, 5, dummy_cip, 0xFFF0)); // data_len > 0xFFFF
 
     const uint8_t item[] = {0, 0, 0, 0, 0, 0, 0x01, 0x00, 0xB2, 0x00, 0x02, 0x00, 0xAB, 0xCD};
-    TEST_ASSERT_TRUE(pc_eip_parse_send_rr_data(item, sizeof(item), NULL, NULL)); // both outputs optional
+    TEST_ASSERT_TRUE(protocore_eip_parse_send_rr_data(item, sizeof(item), NULL, NULL)); // both outputs optional
 }
 
 int main()

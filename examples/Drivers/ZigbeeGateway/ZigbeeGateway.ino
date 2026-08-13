@@ -5,7 +5,7 @@
 // the ASH frames it sends; a DATA frame carrying an EZSP callback (e.g. an incoming Zigbee
 // message) is bridged northbound.
 //
-//   Zigbee NCP --UART--> pc_ash_frame_decode() --> EZSP payload -> pc_gateway_uplink()
+//   Zigbee NCP --UART--> protocore_ash_frame_decode() --> EZSP payload -> protocore_gateway_uplink()
 //                                                                     |
 //                                              envelope + topic  zigbee/0/<node>
 //                                                                     |
@@ -16,7 +16,7 @@
 // sequence numbers, the incomingMessageHandler fields) is application work; this sketch
 // bridges the raw EZSP payload to show the transport path.
 //
-// Build flags (whole build): PC_ENABLE_ZIGBEE=1 PC_ENABLE_GATEWAY=1
+// Build flags (whole build): PROTOCORE_ENABLE_ZIGBEE=1 PROTOCORE_ENABLE_GATEWAY=1
 
 #include "protocore.h" // discovers the library (adds src/ to the include path)
 #include "services/net/gateway/gateway.h"
@@ -28,10 +28,10 @@ static const int PIN_RX = 16, PIN_TX = 17; // UART2 to the Zigbee NCP
 static uint8_t g_buf[512];
 static uint16_t g_len = 0;
 
-static bool northbound_publish(const pc_gateway_msg *m, void *)
+static bool northbound_publish(const protocore_gateway_msg *m, void *)
 {
     char topic[48];
-    pc_gateway_topic(m, topic, sizeof(topic));
+    protocore_gateway_topic(m, topic, sizeof(topic));
     Serial.printf("PUBLISH %s  (%u bytes)\n", topic, m->len);
     return true;
 }
@@ -48,16 +48,16 @@ void setup()
     Serial2.begin(115200, SERIAL_8N1, PIN_RX, PIN_TX);
     delay(300);
 
-    pc_gateway_reset();
-    pc_gateway_port_config p = {};
+    protocore_gateway_reset();
+    protocore_gateway_port_config p = {};
     p.port_id = RADIO_PORT;
-    p.kind = pc_gateway_kind::PC_GW_ZIGBEE;
-    pc_gateway_add_port(&p);
-    pc_gateway_set_uplink_cb(northbound_publish, nullptr);
-    pc_gateway_set_topic_prefix("zigbee");
+    p.kind = protocore_gateway_kind::PROTOCORE_GW_ZIGBEE;
+    protocore_gateway_add_port(&p);
+    protocore_gateway_set_uplink_cb(northbound_publish, nullptr);
+    protocore_gateway_set_topic_prefix("zigbee");
 
     uint8_t rst[8];
-    uint16_t n = pc_ash_frame_encode(ASH_RST, nullptr, 0, rst, sizeof(rst)); // reset the NCP
+    uint16_t n = protocore_ash_frame_encode(ASH_RST, nullptr, 0, rst, sizeof(rst)); // reset the NCP
     Serial2.write(rst, n);
     Serial.println("Zigbee gateway: EZSP/ASH -> codec -> publish (zigbee/0/<node>)");
 }
@@ -75,9 +75,9 @@ void loop()
         {
             break;
         }
-        uint8_t control = 0, payload[PC_ZIGBEE_MAX_DATA];
+        uint8_t control = 0, payload[PROTOCORE_ZIGBEE_MAX_DATA];
         uint16_t plen = 0;
-        int n = pc_ash_frame_decode(g_buf, g_len, &control, payload, sizeof(payload), &plen);
+        int n = protocore_ash_frame_decode(g_buf, g_len, &control, payload, sizeof(payload), &plen);
         if (n == 0)
         {
             break; // need more
@@ -92,7 +92,7 @@ void loop()
         if ((control & 0x80) == 0 && plen > 0)
         {
             uint16_t node = plen >= 2 ? (uint16_t)((payload[0] << 8) | payload[1]) : payload[0];
-            pc_gateway_uplink(RADIO_PORT, node, payload, plen, 0);
+            protocore_gateway_uplink(RADIO_PORT, node, payload, plen, 0);
         }
         drop_front((uint16_t)n);
     }

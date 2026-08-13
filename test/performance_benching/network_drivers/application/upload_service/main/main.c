@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // On-device CCOUNT microbenchmark for services/upload_service. NOTE: upload_service is a thin
-// *server + filesystem binding* - pc_upload_begin() registers a route that streams an HTTP multipart
+// *server + filesystem binding* - protocore_upload_begin() registers a route that streams an HTTP multipart
 // upload straight to a file. The actual per-byte parsing work is done by the multipart presentation
 // codec (benched at performance_benching/host_microbench / the multipart path) and the streaming body hook; this
 // service adds only the route wiring and a byte counter. There is no standalone pure hot-path to
@@ -23,7 +23,7 @@ void dbench_run(void)
     {
         DBENCH_BANNER("upload_service");
         volatile size_t sink = 0;
-        DBENCH_OP("pc_upload_last_size (getter)", 200000, sink += pc_upload_last_size());
+        DBENCH_OP("protocore_upload_last_size (getter)", 200000, sink += protocore_upload_last_size());
         (void)sink;
         DBENCH_DONE();
     }

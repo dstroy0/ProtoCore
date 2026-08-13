@@ -9,7 +9,7 @@
 #include "services/fieldbus/mbus/mbus.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_MBUS
+#if PROTOCORE_ENABLE_MBUS
 
 // The M-Bus checksum is the 8-bit arithmetic sum of the covered octets.
 static uint8_t checksum(const uint8_t *p, size_t n)
@@ -22,7 +22,7 @@ static uint8_t checksum(const uint8_t *p, size_t n)
     return s;
 }
 
-size_t pc_mbus_build_ack(uint8_t *buf, size_t cap)
+size_t protocore_mbus_build_ack(uint8_t *buf, size_t cap)
 {
     if (!buf || cap < 1)
     {
@@ -32,7 +32,7 @@ size_t pc_mbus_build_ack(uint8_t *buf, size_t cap)
     return 1;
 }
 
-size_t pc_mbus_build_short(uint8_t *buf, size_t cap, uint8_t c, uint8_t a)
+size_t protocore_mbus_build_short(uint8_t *buf, size_t cap, uint8_t c, uint8_t a)
 {
     if (!buf || cap < 5)
     {
@@ -46,7 +46,7 @@ size_t pc_mbus_build_short(uint8_t *buf, size_t cap, uint8_t c, uint8_t a)
     return 5;
 }
 
-size_t pc_mbus_build_long(uint8_t *buf, size_t cap, uint8_t c, uint8_t a, uint8_t ci, const uint8_t *data,
+size_t protocore_mbus_build_long(uint8_t *buf, size_t cap, uint8_t c, uint8_t a, uint8_t ci, const uint8_t *data,
                           uint8_t data_len)
 {
     if (!buf || data_len > MBUS_MAX_DATA || (data_len && !data))
@@ -75,22 +75,22 @@ size_t pc_mbus_build_long(uint8_t *buf, size_t cap, uint8_t c, uint8_t a, uint8_
     return total;
 }
 
-size_t pc_mbus_build_snd_nke(uint8_t *buf, size_t cap, uint8_t a)
+size_t protocore_mbus_build_snd_nke(uint8_t *buf, size_t cap, uint8_t a)
 {
-    return pc_mbus_build_short(buf, cap, MBUS_C_SND_NKE, a);
+    return protocore_mbus_build_short(buf, cap, MBUS_C_SND_NKE, a);
 }
 
-size_t pc_mbus_build_req_ud2(uint8_t *buf, size_t cap, uint8_t a, proto_bool fcb)
+size_t protocore_mbus_build_req_ud2(uint8_t *buf, size_t cap, uint8_t a, proto_bool fcb)
 {
-    return pc_mbus_build_short(buf, cap, (uint8_t)(fcb ? 0x7Bu : MBUS_C_REQ_UD2), a);
+    return protocore_mbus_build_short(buf, cap, (uint8_t)(fcb ? 0x7Bu : MBUS_C_REQ_UD2), a);
 }
 
-size_t pc_mbus_build_req_ud1(uint8_t *buf, size_t cap, uint8_t a, proto_bool fcb)
+size_t protocore_mbus_build_req_ud1(uint8_t *buf, size_t cap, uint8_t a, proto_bool fcb)
 {
-    return pc_mbus_build_short(buf, cap, (uint8_t)(fcb ? 0x7Au : MBUS_C_REQ_UD1), a);
+    return protocore_mbus_build_short(buf, cap, (uint8_t)(fcb ? 0x7Au : MBUS_C_REQ_UD1), a);
 }
 
-proto_bool pc_mbus_parse(const uint8_t *buf, size_t len, MbusFrame *out, size_t *consumed)
+proto_bool protocore_mbus_parse(const uint8_t *buf, size_t len, MbusFrame *out, size_t *consumed)
 {
     if (!buf || !out || len < 1)
     {
@@ -164,7 +164,7 @@ proto_bool pc_mbus_parse(const uint8_t *buf, size_t len, MbusFrame *out, size_t 
     return PROTO_FALSE;
 }
 
-uint8_t pc_mbus_dif_data_len(uint8_t coding)
+uint8_t protocore_mbus_dif_data_len(uint8_t coding)
 {
     switch ((MbusDifCoding)(coding & 0x0Fu))
     {
@@ -203,7 +203,7 @@ uint8_t pc_mbus_dif_data_len(uint8_t coding)
     }
 }
 
-proto_bool pc_mbus_record_next(const uint8_t *body, size_t len, size_t *pos, MbusRecord *out)
+proto_bool protocore_mbus_record_next(const uint8_t *body, size_t len, size_t *pos, MbusRecord *out)
 {
     if (!body || !pos || !out || *pos >= len)
     {
@@ -268,7 +268,7 @@ proto_bool pc_mbus_record_next(const uint8_t *body, size_t len, size_t *pos, Mbu
     }
     else
     {
-        dlen = pc_mbus_dif_data_len(coding);
+        dlen = protocore_mbus_dif_data_len(coding);
     }
 
     if (p + dlen > len)
@@ -332,7 +332,7 @@ static proto_bool mbus_decode_bcd(const uint8_t *d, uint8_t n, int64_t *out)
     return PROTO_TRUE;
 }
 
-proto_bool pc_mbus_record_value_int(const MbusRecord *r, int64_t *out)
+proto_bool protocore_mbus_record_value_int(const MbusRecord *r, int64_t *out)
 {
     if (!r || !out || !r->data)
     {
@@ -360,7 +360,7 @@ proto_bool pc_mbus_record_value_int(const MbusRecord *r, int64_t *out)
     }
 }
 
-proto_bool pc_mbus_record_value_real(const MbusRecord *r, float *out)
+proto_bool protocore_mbus_record_value_real(const MbusRecord *r, float *out)
 {
     if (!r || !out || !r->data || (MbusDifCoding)r->coding != MBUS_DIF_REAL32 || r->data_len < 4)
     {
@@ -372,7 +372,7 @@ proto_bool pc_mbus_record_value_real(const MbusRecord *r, float *out)
     return PROTO_TRUE;
 }
 
-proto_bool pc_mbus_vif_decode(uint8_t vif, MbusUnit *unit, int8_t *exp10)
+proto_bool protocore_mbus_vif_decode(uint8_t vif, MbusUnit *unit, int8_t *exp10)
 {
     MbusUnit u = MBUS_UNIT_UNKNOWN;
     int8_t e = 0;
@@ -440,7 +440,7 @@ proto_bool pc_mbus_vif_decode(uint8_t vif, MbusUnit *unit, int8_t *exp10)
     return u != MBUS_UNIT_UNKNOWN;
 }
 
-proto_bool pc_mbus_parse_var_header(const uint8_t *body, size_t len, MbusVarHeader *out)
+proto_bool protocore_mbus_parse_var_header(const uint8_t *body, size_t len, MbusVarHeader *out)
 {
     if (!body || !out || len < MBUS_VAR_HEADER_LEN)
     {
@@ -474,4 +474,4 @@ proto_bool pc_mbus_parse_var_header(const uint8_t *body, size_t len, MbusVarHead
     return PROTO_TRUE;
 }
 
-#endif // PC_ENABLE_MBUS
+#endif // PROTOCORE_ENABLE_MBUS

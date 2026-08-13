@@ -9,9 +9,9 @@
 #include "services/fieldbus/cclink/cclink.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_CCLINK
+#if PROTOCORE_ENABLE_CCLINK
 
-uint8_t pc_cclink_sum(const uint8_t *bytes, size_t len)
+uint8_t protocore_cclink_sum(const uint8_t *bytes, size_t len)
 {
     uint8_t sum = 0;
     for (size_t i = 0; i < len; i++)
@@ -21,7 +21,7 @@ uint8_t pc_cclink_sum(const uint8_t *bytes, size_t len)
     return sum;
 }
 
-size_t pc_cclink_build(uint8_t station, uint8_t command, const uint8_t *bits, size_t bit_len, const uint8_t *words,
+size_t protocore_cclink_build(uint8_t station, uint8_t command, const uint8_t *bits, size_t bit_len, const uint8_t *words,
                        size_t word_len, uint8_t *out, size_t cap)
 {
     if (!out || (bit_len && !bits) || (word_len && !words) || station > 63)
@@ -46,19 +46,19 @@ size_t pc_cclink_build(uint8_t station, uint8_t command, const uint8_t *bits, si
         mem.cpy(out + i, words, word_len);
         i += word_len;
     }
-    out[i] = pc_cclink_sum(out, i); // checksum over station..last data
+    out[i] = protocore_cclink_sum(out, i); // checksum over station..last data
     i++;
     return i;
 }
 
-proto_bool pc_cclink_parse(const uint8_t *frame, size_t len, CcLinkFrame *out)
+proto_bool protocore_cclink_parse(const uint8_t *frame, size_t len, CcLinkFrame *out)
 {
     if (!frame || !out || len < 3) // station + command + checksum
     {
         return PROTO_FALSE;
     }
     size_t body = len - 1;
-    if (pc_cclink_sum(frame, body) != frame[body])
+    if (protocore_cclink_sum(frame, body) != frame[body])
     {
         return PROTO_FALSE;
     }
@@ -69,7 +69,7 @@ proto_bool pc_cclink_parse(const uint8_t *frame, size_t len, CcLinkFrame *out)
     return PROTO_TRUE;
 }
 
-proto_bool pc_cclink_get_bit(const uint8_t *bits, size_t bit_len, size_t index)
+proto_bool protocore_cclink_get_bit(const uint8_t *bits, size_t bit_len, size_t index)
 {
     if (!bits || index / 8 >= bit_len)
     {
@@ -78,7 +78,7 @@ proto_bool pc_cclink_get_bit(const uint8_t *bits, size_t bit_len, size_t index)
     return (bits[index / 8] >> (index % 8)) & 1u;
 }
 
-void pc_cclink_set_bit(uint8_t *bits, size_t bit_len, size_t index, proto_bool value)
+void protocore_cclink_set_bit(uint8_t *bits, size_t bit_len, size_t index, proto_bool value)
 {
     if (!bits || index / 8 >= bit_len)
     {
@@ -95,7 +95,7 @@ void pc_cclink_set_bit(uint8_t *bits, size_t bit_len, size_t index, proto_bool v
     }
 }
 
-uint16_t pc_cclink_get_word(const uint8_t *words, size_t word_len, size_t index)
+uint16_t protocore_cclink_get_word(const uint8_t *words, size_t word_len, size_t index)
 {
     size_t off = index * 2;
     if (!words || off + 1 >= word_len)
@@ -105,4 +105,4 @@ uint16_t pc_cclink_get_word(const uint8_t *words, size_t word_len, size_t index)
     return (uint16_t)(words[off] | (words[off + 1] << 8)); // little-endian
 }
 
-#endif // PC_ENABLE_CCLINK
+#endif // PROTOCORE_ENABLE_CCLINK

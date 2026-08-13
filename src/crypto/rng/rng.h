@@ -28,7 +28,7 @@
  * After every draw the seed is replaced with 32 fresh keystream bytes, so the state that produced a
  * value is gone before the value is returned and a later disclosure does not recover an earlier
  * draw. Independently of that ratchet, the seed is redrawn from the platform once the draw budget
- * @ref PC_RAND_RESEED_BYTES is spent.
+ * @ref PROTOCORE_RAND_RESEED_BYTES is spent.
  *
  * The seed is per worker: a persistent borrow from that worker's secure pool, so two workers never
  * share a generator and the draw path takes no lock.
@@ -42,10 +42,10 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
 /** @brief The seed: a ChaCha20 key. */
-#define PC_RAND_SEED_LEN 32
+#define PROTOCORE_RAND_SEED_LEN 32
 
 /**
  * @brief Write @p len bytes to @p out.
@@ -56,8 +56,8 @@ PROTO_BEGIN_DECLS
  * @param out  destination; untouched when @p out is NULL or @p len is 0.
  * @param len  bytes to write. Any length: the block counter carries across 64-byte boundaries.
  */
-void pc_rand_fill(uint8_t *out, size_t len);
+void protocore_rand_fill(uint8_t *out, size_t len);
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_RNG_H

@@ -275,7 +275,7 @@ static void build_router_table()
 static void swar_bench_task(void *)
 {
     g_mhz = (double)getCpuFrequencyMhz();
-    Serial.printf("CB swarbench  lanes=%u bytes  cpu=%.0f MHz\n", (unsigned)PC_SWAR_BYTES, g_mhz);
+    Serial.printf("CB swarbench  lanes=%u bytes  cpu=%.0f MHz\n", (unsigned)PROTOCORE_SWAR_BYTES, g_mhz);
 
     stage();
     build_dist();
@@ -297,7 +297,7 @@ static void swar_bench_task(void *)
     // zeros) and no popcount, so the arithmetic identity that is cheapest on paper is a libcall
     // here. What ships is the ctzll form, which is a 64-bit count on a 32-bit register file.
     Serial.println("CB --- lane index: five spellings of one question ---");
-    BENCH("lane/zero_lane (ships)", 4000, g_sink += (uint32_t)pc_swar_zero_lane(g_masks[g_i++ & (NM - 1u)]));
+    BENCH("lane/zero_lane (ships)", 4000, g_sink += (uint32_t)protocore_swar_zero_lane(g_masks[g_i++ & (NM - 1u)]));
     BENCH("lane/ctz32", 4000, g_sink += (uint32_t)(__builtin_ctz(g_masks[g_i++ & (NM - 1u)]) >> 3));
     BENCH("lane/clz32", 4000, g_sink += (uint32_t)((31u - (uint32_t)__builtin_clz(g_masks[g_i++ & (NM - 1u)])) >> 3));
     BENCH("lane/popcount", 4000, {
@@ -334,7 +334,7 @@ static void swar_bench_task(void *)
     BENCH("strchr 1byte long", 400, g_sink += (uint32_t)(uintptr_t)strchr(longhay + (g_i++ & 15), '?'));
 
     // 6 bytes: one carrier word plus 2, so the needle is settled by two overlapping whole loads
-    // rather than one load and a 2-byte walk. "boundary=" at 9 exceeds 2*PC_SWAR_BYTES and does not.
+    // rather than one load and a 2-byte walk. "boundary=" at 9 exceeds 2*PROTOCORE_SWAR_BYTES and does not.
     BENCH("find 6B long", 400,
           g_sink +=
           (uint32_t)(uintptr_t)str.find(longhay + (g_i++ & 15), 512, "ndary=", sizeof("ndary="), PROTO_FALSE));
@@ -366,27 +366,31 @@ static void swar_bench_task(void *)
         const char *_s = routes[g_i++ % NR];                                                                           \
         for (uint32_t _k = 0; _k + 8u <= BCAP; _k += 4u)                                                               \
         {                                                                                                              \
-            uint32_t _w0 = pc_swar_load_al(_s + _k);                                                                   \
-            uint32_t _w1 = pc_swar_load_al(_s + _k + 4u);                                                              \
+            uint32_t _w0 = protocore_swar_load_al(_s + _k);                                                            \
+            uint32_t _w1 = protocore_swar_load_al(_s + _k + 4u);                                                       \
             uint32_t _f1 = (_w0 >> 8) | (_w1 << 24);                                                                   \
             body;                                                                                                      \
         }                                                                                                              \
         g_sink += _h;                                                                                                  \
     }
     // What ships: two 8-column equalities ANDed, all four start positions per step.
-    BENCH("sieve eq", 4000, SIEVE(_h += pc_swar_eq(_w0, '/') & pc_swar_eq(_f1, ':')));
+    BENCH("sieve eq", 4000, SIEVE(_h += protocore_swar_eq(_w0, '/') & protocore_swar_eq(_f1, ':')));
     // The same, with the byte test generalized to a masked bit pattern. M=FF is identical in meaning,
     // so this row is purely the price of the extra AND per pattern byte.
-    BENCH("sieve masked M=FF", 4000,
-          SIEVE(_h += pc_swar_has_zero((_w0 ^ (PC_SWAR_ONES * (uint32_t)'/')) & (PC_SWAR_ONES * 0xFFu)) &
-                      pc_swar_has_zero((_f1 ^ (PC_SWAR_ONES * (uint32_t)':')) & (PC_SWAR_ONES * 0xFFu))));
+    BENCH(
+        "sieve masked M=FF", 4000,
+        SIEVE(_h +=
+              protocore_swar_has_zero((_w0 ^ (PROTOCORE_SWAR_ONES * (uint32_t)'/')) & (PROTOCORE_SWAR_ONES * 0xFFu)) &
+              protocore_swar_has_zero((_f1 ^ (PROTOCORE_SWAR_ONES * (uint32_t)':')) & (PROTOCORE_SWAR_ONES * 0xFFu))));
     // Bit 5 dropped from the pattern: the same search, case-insensitive, no fold and no second path.
-    BENCH("sieve masked ci", 4000,
-          SIEVE(_h += pc_swar_has_zero((_w0 ^ (PC_SWAR_ONES * (uint32_t)'/')) & (PC_SWAR_ONES * 0xDFu)) &
-                      pc_swar_has_zero((_f1 ^ (PC_SWAR_ONES * (uint32_t)':')) & (PC_SWAR_ONES * 0xDFu))));
+    BENCH(
+        "sieve masked ci", 4000,
+        SIEVE(_h +=
+              protocore_swar_has_zero((_w0 ^ (PROTOCORE_SWAR_ONES * (uint32_t)'/')) & (PROTOCORE_SWAR_ONES * 0xDFu)) &
+              protocore_swar_has_zero((_f1 ^ (PROTOCORE_SWAR_ONES * (uint32_t)':')) & (PROTOCORE_SWAR_ONES * 0xDFu))));
 
     // Case-insensitive against case-sensitive, same dispatch, same corpus, one needle length apart.
-    // The ci arms differ only in the byte test, so these pairs price pc_swar_eq_ci against pc_swar_eq
+    // The ci arms differ only in the byte test, so these pairs price protocore_swar_eq_ci against protocore_swar_eq
     // inside each arm rather than in isolation.
     Serial.println("CB --- case-insensitive find: same dispatch, folded byte test ---");
     BENCH("find    /: (len2)", 4000,
@@ -410,7 +414,7 @@ static void swar_bench_task(void *)
     // The fold costs more than a single pair, so it only pays from the second query on.
     // The routing delimiter set: / ? & = # %. Three ways to ask "where is the next structural byte",
     // over the same route corpus.
-    //   ored     six pc_swar_eq masks ORed, which is what the primitive's own doc describes
+    //   ored     six protocore_swar_eq masks ORed, which is what the primitive's own doc describes
     //   prefilt  every one of the six is in 0x20..0x3F, a 32-byte aligned block, so one mask test
     //            rejects a whole word before any of the six run
     //   table    one indexed load per byte, the routing-flags table shape
@@ -420,9 +424,9 @@ static void swar_bench_task(void *)
         const char *_s = routes[g_i++ % NR];
         for (uint32_t _k = 0; _k + 4u <= BCAP; _k += 4u)
         {
-            uint32_t _w = pc_swar_load_al(_s + _k);
-            _a += pc_swar_eq(_w, '/') | pc_swar_eq(_w, '?') | pc_swar_eq(_w, '&') | pc_swar_eq(_w, '=') |
-                  pc_swar_eq(_w, '#') | pc_swar_eq(_w, '%');
+            uint32_t _w = protocore_swar_load_al(_s + _k);
+            _a += protocore_swar_eq(_w, '/') | protocore_swar_eq(_w, '?') | protocore_swar_eq(_w, '&') |
+                  protocore_swar_eq(_w, '=') | protocore_swar_eq(_w, '#') | protocore_swar_eq(_w, '%');
         }
         g_sink += _a;
     });
@@ -431,12 +435,13 @@ static void swar_bench_task(void *)
         const char *_s = routes[g_i++ % NR];
         for (uint32_t _k = 0; _k + 4u <= BCAP; _k += 4u)
         {
-            uint32_t _w = pc_swar_load_al(_s + _k);
-            uint32_t _blk = pc_swar_has_zero((_w & (PC_SWAR_ONES * 0xE0u)) ^ (PC_SWAR_ONES * 0x20u));
+            uint32_t _w = protocore_swar_load_al(_s + _k);
+            uint32_t _blk =
+                protocore_swar_has_zero((_w & (PROTOCORE_SWAR_ONES * 0xE0u)) ^ (PROTOCORE_SWAR_ONES * 0x20u));
             if (_blk != 0)
             {
-                _a += pc_swar_eq(_w, '/') | pc_swar_eq(_w, '?') | pc_swar_eq(_w, '&') | pc_swar_eq(_w, '=') |
-                      pc_swar_eq(_w, '#') | pc_swar_eq(_w, '%');
+                _a += protocore_swar_eq(_w, '/') | protocore_swar_eq(_w, '?') | protocore_swar_eq(_w, '&') |
+                      protocore_swar_eq(_w, '=') | protocore_swar_eq(_w, '#') | protocore_swar_eq(_w, '%');
             }
         }
         g_sink += _a;
@@ -456,8 +461,8 @@ static void swar_bench_task(void *)
         uint32_t _a = 0;
         for (int _k = 0; _k + 4 <= 256; _k += 4)
         {
-            uint32_t _w = pc_swar_load_al(dbuf[4] + _k);
-            _a += pc_swar_ge(_w, 'A') & pc_swar_le(_w, 'Z');
+            uint32_t _w = protocore_swar_load_al(dbuf[4] + _k);
+            _a += protocore_swar_ge(_w, 'A') & protocore_swar_le(_w, 'Z');
         }
         g_sink += _a;
     });
@@ -465,10 +470,10 @@ static void swar_bench_task(void *)
         uint32_t _a = 0;
         for (int _k = 0; _k + 4 <= 256; _k += 4)
         {
-            uint32_t _w = pc_swar_load_al(dbuf[4] + _k);
-            uint32_t _lo = _w | (PC_SWAR_ONES * 0x20u);
-            uint32_t _al = pc_swar_ge(_lo, 'a') & pc_swar_le(_lo, 'z') & ~_lo;
-            _a += _al & ~((_w << 2) & PC_SWAR_HIGH);
+            uint32_t _w = protocore_swar_load_al(dbuf[4] + _k);
+            uint32_t _lo = _w | (PROTOCORE_SWAR_ONES * 0x20u);
+            uint32_t _al = protocore_swar_ge(_lo, 'a') & protocore_swar_le(_lo, 'z') & ~_lo;
+            _a += _al & ~((_w << 2) & PROTOCORE_SWAR_HIGH);
         }
         g_sink += _a;
     });
@@ -476,9 +481,9 @@ static void swar_bench_task(void *)
         uint32_t _a = 0;
         for (int _k = 0; _k + 4 <= 256; _k += 4)
         {
-            uint32_t _w = pc_swar_load_al(dbuf[4] + _k);
-            _a += pc_swar_ge(_w, 'A') & pc_swar_le(_w, 'Z');
-            _a += pc_swar_ge(_w, 'a') & pc_swar_le(_w, 'z');
+            uint32_t _w = protocore_swar_load_al(dbuf[4] + _k);
+            _a += protocore_swar_ge(_w, 'A') & protocore_swar_le(_w, 'Z');
+            _a += protocore_swar_ge(_w, 'a') & protocore_swar_le(_w, 'z');
         }
         g_sink += _a;
     });
@@ -486,10 +491,10 @@ static void swar_bench_task(void *)
         uint32_t _a = 0;
         for (int _k = 0; _k + 4 <= 256; _k += 4)
         {
-            uint32_t _w = pc_swar_load_al(dbuf[4] + _k);
-            uint32_t _lo = _w | (PC_SWAR_ONES * 0x20u);
-            uint32_t _al = pc_swar_ge(_lo, 'a') & pc_swar_le(_lo, 'z') & ~_lo;
-            uint32_t _cs = (_w << 2) & PC_SWAR_HIGH;
+            uint32_t _w = protocore_swar_load_al(dbuf[4] + _k);
+            uint32_t _lo = _w | (PROTOCORE_SWAR_ONES * 0x20u);
+            uint32_t _al = protocore_swar_ge(_lo, 'a') & protocore_swar_le(_lo, 'z') & ~_lo;
+            uint32_t _cs = (_w << 2) & PROTOCORE_SWAR_HIGH;
             _a += _al & ~_cs;
             _a += _al & _cs;
         }

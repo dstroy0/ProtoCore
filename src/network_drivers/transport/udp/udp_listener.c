@@ -5,7 +5,7 @@
  * @file udp_listener.c
  * @brief Layer 4 UDP receiving side. See udp_listener.h.
  *
- * One body. A port is bound, and a datagram leaves, through the stack surface pc_platform.h
+ * One body. A port is bound, and a datagram leaves, through the stack surface protocore_platform.h
  * names; a build with no vendor gets that surface from the host driver on its include path, so
  * this file compiles and runs the same way on both.
  */
@@ -13,11 +13,11 @@
 #include "network_drivers/transport/udp/udp_listener.h"
 #include "network_drivers/transport/udp/udp_datagram.h" // the wire layout the receive ring carries
 
-#include "core_setup/board_profiles/pc_platform.h" // the stack's UDP, under our names
+#include "core_setup/board_profiles/protocore_platform.h" // the stack's UDP, under our names
 #include "network_drivers/transport/diffserv.h"    // DSCP marking; compiles out when off
-#include "network_drivers/transport/net_addr.h"    // NetAddr: the stack's address as a pc_ip
+#include "network_drivers/transport/net_addr.h"    // NetAddr: the stack's address as a protocore_ip
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
 // ---------------------------------------------------------------------------
 // One bound port
@@ -34,20 +34,20 @@ PROTO_BEGIN_DECLS
 typedef struct
 {
     uint16_t port;          ///< Bound port, 0 when the slot is free.
-    pc_udp_handler handler; ///< Called once per received datagram by poll().
+    protocore_udp_handler handler; ///< Called once per received datagram by poll().
     void *ctx;              ///< Opaque context handed back to the handler.
-    pc_ip group;            ///< Multicast group this slot joined; meaningful only when mcast is set.
+    protocore_ip group;            ///< Multicast group this slot joined; meaningful only when mcast is set.
     proto_bool mcast;       ///< The slot joined a group and must leave it on teardown.
 
-    uint8_t rx[PC_UDP_RX_RING];
+    uint8_t rx[PROTOCORE_UDP_RX_RING];
     _Atomic size_t rx_head; ///< Producer: the stack's trampoline.
     _Atomic size_t rx_tail; ///< Consumer: poll().
 
-    pc_udp_pcb *pcb; ///< The stack's control block; NULL when the slot is free.
+    protocore_udp_pcb *pcb; ///< The stack's control block; NULL when the slot is free.
 } UdpBind;
 
-static_assert(PC_RING_POW2(PC_UDP_RX_RING), "PC_UDP_RX_RING must be a power of two: a ring index wraps with a mask");
-static_assert(PC_MAX_UDP_LISTENERS <= PC_RING_SLOTS_MAX,
+static_assert(PROTOCORE_RING_POW2(PROTOCORE_UDP_RX_RING), "PROTOCORE_UDP_RX_RING must be a power of two: a ring index wraps with a mask");
+static_assert(PROTOCORE_MAX_UDP_LISTENERS <= PROTOCORE_RING_SLOTS_MAX,
               "the bound-slot bitmask (UdpListenerCtx::bound) is a uint32; raise it or fall back to a scan");
 
 /**
@@ -59,11 +59,11 @@ static_assert(PC_MAX_UDP_LISTENERS <= PC_RING_SLOTS_MAX,
  */
 typedef struct
 {
-    UdpBind bind[PC_MAX_UDP_LISTENERS];
-    uint8_t rx_stage[PC_UDP_RX_BUF_SIZE]; ///< Contiguous payload handed to the handler.
-    uint8_t rx_whdr[PC_UDP_DGRAM_HDR];    ///< Header staged by the receive ring's producer.
-    uint8_t rx_rhdr[PC_UDP_DGRAM_HDR];    ///< Header staged by the receive ring's consumer.
-    char group_text[PC_IP_STR_MAX];       ///< Where joined_group() formats the group it reports.
+    UdpBind bind[PROTOCORE_MAX_UDP_LISTENERS];
+    uint8_t rx_stage[PROTOCORE_UDP_RX_BUF_SIZE]; ///< Contiguous payload handed to the handler.
+    uint8_t rx_whdr[PROTOCORE_UDP_DGRAM_HDR];    ///< Header staged by the receive ring's producer.
+    uint8_t rx_rhdr[PROTOCORE_UDP_DGRAM_HDR];    ///< Header staged by the receive ring's consumer.
+    char group_text[PROTOCORE_IP_STR_MAX];       ///< Where joined_group() formats the group it reports.
     _Atomic uint32_t bound;               ///< Bit i set = bind[i] is bound. One ctz instead of a scan.
     proto_bool polling;                   ///< Set for the duration of poll(); a reentrant call returns.
 } UdpListenerCtx;
@@ -71,21 +71,21 @@ typedef struct
 static UdpListenerCtx s_lst;
 
 /** @brief The reply token a handler is given: the sender, and the slot the datagram arrived on. */
-typedef struct pc_udp_peer
+typedef struct protocore_udp_peer
 {
-    pc_ip addr;
+    protocore_ip addr;
     uint16_t port;
     UdpBind *bind;
-} pc_udp_peer;
+} protocore_udp_peer;
 
 /** @brief True when @p a is an IPv4 multicast group (224.0.0.0/4), the only kind IGMP joins. */
-static proto_bool addr_is_group(const pc_ip *a)
+static proto_bool addr_is_group(const protocore_ip *a)
 {
-    if (a->family != PC_IP_V4)
+    if (a->family != PROTOCORE_IP_V4)
     {
         return PROTO_FALSE;
     }
-    return Ip.classify(a) == PC_IP_SCOPE_MULTICAST;
+    return Ip.classify(a) == PROTOCORE_IP_SCOPE_MULTICAST;
 }
 
 /** @brief The slot index @p b sits at. */
@@ -97,21 +97,21 @@ static size_t bind_idx(const UdpBind *b)
 /** @brief True when slot @p idx is bound. */
 static proto_bool bind_used(size_t idx)
 {
-    return (PROTO_ATOMIC_LOAD(&s_lst.bound) & pc_slot_bit(idx)) != 0u;
+    return (PROTO_ATOMIC_LOAD(&s_lst.bound) & protocore_slot_bit(idx)) != 0u;
 }
 
 /** @brief The bound slot for @p port, or NULL. */
 static UdpBind *find_bind(uint16_t port)
 {
-    uint32_t m = PROTO_ATOMIC_LOAD(&s_lst.bound) & pc_slot_all(PC_MAX_UDP_LISTENERS);
+    uint32_t m = PROTO_ATOMIC_LOAD(&s_lst.bound) & protocore_slot_all(PROTOCORE_MAX_UDP_LISTENERS);
     while (m != 0u)
     {
-        int32_t i = pc_slot_next(m);
+        int32_t i = protocore_slot_next(m);
         if (s_lst.bind[i].port == port)
         {
             return &s_lst.bind[i];
         }
-        m &= ~pc_slot_bit((size_t)i);
+        m &= ~protocore_slot_bit((size_t)i);
     }
     return NULL;
 }
@@ -119,8 +119,8 @@ static UdpBind *find_bind(uint16_t port)
 /** @brief The first free slot, or NULL when the pool is full. */
 static UdpBind *free_bind(void)
 {
-    uint32_t free_slots = ~PROTO_ATOMIC_LOAD(&s_lst.bound) & pc_slot_all(PC_MAX_UDP_LISTENERS);
-    int32_t i = pc_slot_next(free_slots);
+    uint32_t free_slots = ~PROTO_ATOMIC_LOAD(&s_lst.bound) & protocore_slot_all(PROTOCORE_MAX_UDP_LISTENERS);
+    int32_t i = protocore_slot_next(free_slots);
     if (i < 0)
     {
         return NULL;
@@ -131,13 +131,13 @@ static UdpBind *free_bind(void)
 /** @brief Reset a slot's ring and handler state, leaving it free. */
 static void bind_clear(UdpBind *b)
 {
-    pc_ip empty = {PC_IP_NONE, {0}};
+    protocore_ip empty = {PROTOCORE_IP_NONE, {0}};
     b->port = 0;
     b->handler = NULL;
     b->ctx = NULL;
     b->group = empty;
     b->mcast = PROTO_FALSE;
-    pc_slot_clear(&s_lst.bound, bind_idx(b));
+    protocore_slot_clear(&s_lst.bound, bind_idx(b));
     PROTO_ATOMIC_STORE(&b->rx_head, 0);
     PROTO_ATOMIC_STORE(&b->rx_tail, 0);
 }
@@ -146,34 +146,34 @@ static void bind_clear(UdpBind *b)
 // The stack: binding a port and putting a datagram on the wire
 // ---------------------------------------------------------------------------
 
-/** @brief Ops that must run in the stack's thread, reached through pc_net_call_marshal. */
+/** @brief Ops that must run in the stack's thread, reached through protocore_net_call_marshal. */
 typedef enum PROTO_ENUM_PACKED
 {
     UDP_OP_BIND,        ///< new + bind + arm recv on a slot
     UDP_OP_BIND_MCAST,  ///< as BIND, plus SO_REUSEADDR + IGMP join
     UDP_OP_LEAVE_MCAST, ///< IGMP leave + remove
     UDP_OP_UNBIND       ///< remove
-} pc_udp_op;
+} protocore_udp_op;
 
 typedef struct
 {
-    pc_net_call base;
-    pc_udp_op op;
+    protocore_net_call base;
+    protocore_udp_op op;
     UdpBind *b;
     uint16_t port;
-    pc_ip group;
+    protocore_ip group;
     proto_bool result;
-} pc_udp_call;
+} protocore_udp_call;
 
 // Stamp a control block with the configured UDP DSCP, applied per send so a DiffServ.set_udp()
 // change reaches the next datagram.
-static void apply_dscp(pc_udp_pcb *pcb)
+static void apply_dscp(protocore_udp_pcb *pcb)
 {
-#if PC_ENABLE_DIFFSERV
+#if PROTOCORE_ENABLE_DIFFSERV
     uint8_t dscp = DiffServ.udp_dscp();
     if (pcb != NULL && dscp != 0)
     {
-        pcb->tos = pc_dscp_to_tos(dscp);
+        pcb->tos = protocore_dscp_to_tos(dscp);
     }
 #else
     (void)pcb;
@@ -181,22 +181,22 @@ static void apply_dscp(pc_udp_pcb *pcb)
 }
 
 // Allocate, copy, send, free. Runs in the stack's thread only.
-static proto_bool wire_send(pc_udp_pcb *pcb, const pc_ip *a, uint16_t port, const uint8_t *data, size_t len)
+static proto_bool wire_send(protocore_udp_pcb *pcb, const protocore_ip *a, uint16_t port, const uint8_t *data, size_t len)
 {
-    pc_net_ip dst;
+    protocore_net_ip dst;
     if (!NetAddr.from_ip(a, &dst))
     {
         return PROTO_FALSE; // a family this stack cannot send to, refused before a pbuf is taken
     }
-    pc_pbuf *p = pc_net_pbuf_alloc(PC_NET_PBUF_TRANSPORT, (proto_u16)len, PC_NET_PBUF_RAM);
+    protocore_pbuf *p = protocore_net_pbuf_alloc(PROTOCORE_NET_PBUF_TRANSPORT, (proto_u16)len, PROTOCORE_NET_PBUF_RAM);
     if (p == NULL)
     {
         return PROTO_FALSE;
     }
     proto_raw_read((uint8_t *)p->payload, data, len);
-    pc_net_err e = pc_net_udp_sendto(pcb, p, &dst, port);
-    pc_net_pbuf_free(p);
-    return e == PC_NET_OK;
+    protocore_net_err e = protocore_net_udp_sendto(pcb, p, &dst, port);
+    protocore_net_pbuf_free(p);
+    return e == PROTOCORE_NET_OK;
 }
 
 /**
@@ -206,7 +206,7 @@ static proto_bool wire_send(pc_udp_pcb *pcb, const pc_ip *a, uint16_t port, cons
  * poll() calls it in the task that drains. The payload arrives as a chain, so the header is written
  * first and each segment follows it, all against a local head that is published once.
  */
-static void udp_trampoline(void *arg, pc_udp_pcb *pcb, pc_pbuf *p, const pc_net_ip *addr, proto_u16 port)
+static void udp_trampoline(void *arg, protocore_udp_pcb *pcb, protocore_pbuf *p, const protocore_net_ip *addr, proto_u16 port)
 {
     (void)pcb;
     UdpBind *b = (UdpBind *)arg;
@@ -216,114 +216,114 @@ static void udp_trampoline(void *arg, pc_udp_pcb *pcb, pc_pbuf *p, const pc_net_
     }
     if (b == NULL)
     {
-        pc_net_pbuf_free(p);
+        protocore_net_pbuf_free(p);
         return;
     }
     proto_u16 n = p->tot_len;
-    if (n > PC_UDP_RX_BUF_SIZE)
+    if (n > PROTOCORE_UDP_RX_BUF_SIZE)
     {
-        n = (proto_u16)PC_UDP_RX_BUF_SIZE; // a longer datagram is truncated to the staged length
+        n = (proto_u16)PROTOCORE_UDP_RX_BUF_SIZE; // a longer datagram is truncated to the staged length
     }
-    pc_udp_dgram d = {{PC_IP_NONE, {0}}, 0, 0};
+    protocore_udp_dgram d = {{PROTOCORE_IP_NONE, {0}}, 0, 0};
     NetAddr.to_ip(addr, &d.addr);
     d.port = port;
     d.len = n;
-    if ((PC_UDP_DGRAM_HDR + (size_t)n) > pc_ring_free(&b->rx_head, &b->rx_tail, PC_UDP_RX_RING))
+    if ((PROTOCORE_UDP_DGRAM_HDR + (size_t)n) > protocore_ring_free(&b->rx_head, &b->rx_tail, PROTOCORE_UDP_RX_RING))
     {
-        pc_net_pbuf_free(p); // ring full: drop, which is what UDP already means
+        protocore_net_pbuf_free(p); // ring full: drop, which is what UDP already means
         return;
     }
-    pc_span w = pc_span_from(s_lst.rx_whdr, sizeof(s_lst.rx_whdr));
-    pc_udp_dgram_encode(&w, &d);
-    if (!pc_span_ok(w))
+    protocore_span w = protocore_span_from(s_lst.rx_whdr, sizeof(s_lst.rx_whdr));
+    protocore_udp_dgram_encode(&w, &d);
+    if (!protocore_span_ok(w))
     {
-        pc_net_pbuf_free(p);
+        protocore_net_pbuf_free(p);
         return;
     }
     size_t h = PROTO_ATOMIC_LOAD(&b->rx_head);
-    h = pc_ring_write_span(b->rx, PC_UDP_RX_RING, h, s_lst.rx_whdr, PC_UDP_DGRAM_HDR);
+    h = protocore_ring_write_span(b->rx, PROTOCORE_UDP_RX_RING, h, s_lst.rx_whdr, PROTOCORE_UDP_DGRAM_HDR);
     size_t left = n;
-    for (pc_pbuf *q = p; q != NULL && left > 0; q = q->next)
+    for (protocore_pbuf *q = p; q != NULL && left > 0; q = q->next)
     {
         size_t take = q->len;
         if (take > left)
         {
             take = left;
         }
-        h = pc_ring_write_span(b->rx, PC_UDP_RX_RING, h, (const uint8_t *)q->payload, take);
+        h = protocore_ring_write_span(b->rx, PROTOCORE_UDP_RX_RING, h, (const uint8_t *)q->payload, take);
         left -= take;
     }
     PROTO_ATOMIC_STORE(&b->rx_head, h); // one release store publishes the whole entry
-    pc_net_pbuf_free(p);
+    protocore_net_pbuf_free(p);
 }
 
-static pc_net_err udp_do(pc_net_call *c)
+static protocore_net_err udp_do(protocore_net_call *c)
 {
-    pc_udp_call *k = (pc_udp_call *)c;
+    protocore_udp_call *k = (protocore_udp_call *)c;
     k->result = PROTO_FALSE;
     switch (k->op)
     {
     case UDP_OP_BIND: {
-        pc_udp_pcb *pcb = pc_net_udp_new();
+        protocore_udp_pcb *pcb = protocore_net_udp_new();
         if (pcb != NULL)
         {
-            if (pc_net_udp_bind(pcb, PC_NET_ADDR_ANY, k->port) == PC_NET_OK)
+            if (protocore_net_udp_bind(pcb, PROTOCORE_NET_ADDR_ANY, k->port) == PROTOCORE_NET_OK)
             {
                 k->b->pcb = pcb;
                 apply_dscp(pcb);
-                pc_net_udp_recv(pcb, udp_trampoline, k->b);
+                protocore_net_udp_recv(pcb, udp_trampoline, k->b);
                 k->result = PROTO_TRUE;
             }
             else
             {
-                pc_net_udp_remove(pcb);
+                protocore_net_udp_remove(pcb);
             }
         }
         break;
     }
     case UDP_OP_BIND_MCAST: {
-#if PC_NET_HAS_IGMP
-        pc_net_ip grp;
+#if PROTOCORE_NET_HAS_IGMP
+        protocore_net_ip grp;
         if (!NetAddr.from_ip(&k->group, &grp))
         {
             break;
         }
-        pc_udp_pcb *pcb = pc_net_udp_new();
+        protocore_udp_pcb *pcb = protocore_net_udp_new();
         if (pcb != NULL)
         {
             // A well-known multicast port is normally already bound by whoever implements that
             // protocol, so co-bind. Bind IPv4-only rather than ANY: a dual-stack ANY control block
             // also matches the IPv4 datagrams the other responder is waiting on, and the stack hands
             // each datagram to the first match.
-            pc_net_opt_set(pcb, PC_NET_OPT_REUSEADDR);
-            if (pc_net_udp_bind(pcb, PC_NET_ADDR_ANY4, k->port) == PC_NET_OK &&
-                pc_net_igmp_join(PC_NET_ADDR_ANY4_P, pc_net_ip_as_v4(&grp)) == PC_NET_OK)
+            protocore_net_opt_set(pcb, PROTOCORE_NET_OPT_REUSEADDR);
+            if (protocore_net_udp_bind(pcb, PROTOCORE_NET_ADDR_ANY4, k->port) == PROTOCORE_NET_OK &&
+                protocore_net_igmp_join(PROTOCORE_NET_ADDR_ANY4_P, protocore_net_ip_as_v4(&grp)) == PROTOCORE_NET_OK)
             {
                 k->b->pcb = pcb;
                 k->b->group = k->group;
                 k->b->mcast = PROTO_TRUE;
                 apply_dscp(pcb);
-                pc_net_udp_recv(pcb, udp_trampoline, k->b);
+                protocore_net_udp_recv(pcb, udp_trampoline, k->b);
                 k->result = PROTO_TRUE;
             }
             else
             {
-                pc_net_udp_remove(pcb);
+                protocore_net_udp_remove(pcb);
             }
         }
 #endif
         break;
     }
     case UDP_OP_LEAVE_MCAST: {
-#if PC_NET_HAS_IGMP
-        pc_net_ip grp;
+#if PROTOCORE_NET_HAS_IGMP
+        protocore_net_ip grp;
         if (NetAddr.from_ip(&k->b->group, &grp))
         {
-            pc_net_igmp_leave(PC_NET_ADDR_ANY4_P, pc_net_ip_as_v4(&grp));
+            protocore_net_igmp_leave(PROTOCORE_NET_ADDR_ANY4_P, protocore_net_ip_as_v4(&grp));
         }
         if (k->b->pcb != NULL)
         {
-            pc_net_udp_remove(k->b->pcb);
+            protocore_net_udp_remove(k->b->pcb);
         }
         k->b->pcb = NULL;
         k->result = PROTO_TRUE;
@@ -333,19 +333,19 @@ static pc_net_err udp_do(pc_net_call *c)
     case UDP_OP_UNBIND:
         if (k->b->pcb != NULL)
         {
-            pc_net_udp_remove(k->b->pcb);
+            protocore_net_udp_remove(k->b->pcb);
         }
         k->b->pcb = NULL;
         k->result = PROTO_TRUE;
         break;
     }
-    return PC_NET_OK;
+    return PROTOCORE_NET_OK;
 }
 
 // Run one marshaled op and report what it set.
-static proto_bool marshal_op(pc_udp_op op, UdpBind *b, uint16_t port, const pc_ip *group)
+static proto_bool marshal_op(protocore_udp_op op, UdpBind *b, uint16_t port, const protocore_ip *group)
 {
-    pc_udp_call k = {{0}, UDP_OP_BIND, NULL, 0, {PC_IP_NONE, {0}}, PROTO_FALSE};
+    protocore_udp_call k = {{0}, UDP_OP_BIND, NULL, 0, {PROTOCORE_IP_NONE, {0}}, PROTO_FALSE};
     k.op = op;
     k.b = b;
     k.port = port;
@@ -353,7 +353,7 @@ static proto_bool marshal_op(pc_udp_op op, UdpBind *b, uint16_t port, const pc_i
     {
         k.group = *group;
     }
-    pc_net_call_marshal(udp_do, &k.base);
+    protocore_net_call_marshal(udp_do, &k.base);
     return k.result;
 }
 
@@ -362,7 +362,7 @@ static proto_bool bind_port(UdpBind *b, uint16_t port)
     return marshal_op(UDP_OP_BIND, b, port, NULL);
 }
 
-static proto_bool bind_group(UdpBind *b, uint16_t port, const pc_ip *group)
+static proto_bool bind_group(UdpBind *b, uint16_t port, const protocore_ip *group)
 {
     return marshal_op(UDP_OP_BIND_MCAST, b, port, group);
 }
@@ -381,39 +381,39 @@ static void unbind_port(UdpBind *b)
 // so nothing is copied into this and it holds no storage of its own.
 typedef struct
 {
-    pc_net_call base;
+    protocore_net_call base;
     UdpBind *b;
-    const pc_ip *dst;
+    const protocore_ip *dst;
     const uint8_t *data;
     size_t len;
     uint16_t port;
     proto_bool ok;
-} pc_udp_send_call;
+} protocore_udp_send_call;
 
 // The send, on the stack's thread, from the slot's bound control block so the peer sees the port it
 // is answering.
-static pc_net_err send_do(pc_net_call *c)
+static protocore_net_err send_do(protocore_net_call *c)
 {
-    pc_udp_send_call *k = (pc_udp_send_call *)c;
+    protocore_udp_send_call *k = (protocore_udp_send_call *)c;
     if (k->b->pcb == NULL)
     {
-        return PC_NET_OK; // unbound: k->ok stays false and the caller still holds its bytes
+        return PROTOCORE_NET_OK; // unbound: k->ok stays false and the caller still holds its bytes
     }
     apply_dscp(k->b->pcb);
     k->ok = wire_send(k->b->pcb, k->dst, k->port, k->data, k->len);
-    return PC_NET_OK;
+    return PROTOCORE_NET_OK;
 }
 
 // Send one datagram out of slot @p b, from where the caller's bytes already are.
-static proto_bool send_now(UdpBind *b, const pc_ip *a, uint16_t port, const uint8_t *data, size_t len)
+static proto_bool send_now(UdpBind *b, const protocore_ip *a, uint16_t port, const uint8_t *data, size_t len)
 {
-    if (b == NULL || a == NULL || data == NULL || len == 0 || len > PC_UDP_RX_BUF_SIZE)
+    if (b == NULL || a == NULL || data == NULL || len == 0 || len > PROTOCORE_UDP_RX_BUF_SIZE)
     {
         return PROTO_FALSE;
     }
     // The marshal is synchronous, so this outlives the call and carries its answer back.
-    pc_udp_send_call k = {{0}, b, a, data, len, port, PROTO_FALSE};
-    (void)pc_net_call_marshal(send_do, &k.base);
+    protocore_udp_send_call k = {{0}, b, a, data, len, port, PROTO_FALSE};
+    (void)protocore_net_call_marshal(send_do, &k.base);
     return k.ok;
 }
 
@@ -421,7 +421,7 @@ static proto_bool send_now(UdpBind *b, const pc_ip *a, uint16_t port, const uint
 // The bodies behind the table
 // ---------------------------------------------------------------------------
 
-static proto_bool listen_on(uint16_t port, pc_udp_handler handler, void *ctx)
+static proto_bool listen_on(uint16_t port, protocore_udp_handler handler, void *ctx)
 {
     // A port already bound rebinds its own slot: a second slot on one port is one find_bind() can
     // never reach, and it spends a slot the pool has two of.
@@ -447,13 +447,13 @@ static proto_bool listen_on(uint16_t port, pc_udp_handler handler, void *ctx)
         b->handler = NULL;
         return PROTO_FALSE;
     }
-    pc_slot_mark(&s_lst.bound, bind_idx(b));
+    protocore_slot_mark(&s_lst.bound, bind_idx(b));
     return PROTO_TRUE;
 }
 
-static proto_bool listen_group(const char *group_ip, uint16_t port, pc_udp_handler handler, void *ctx)
+static proto_bool listen_group(const char *group_ip, uint16_t port, protocore_udp_handler handler, void *ctx)
 {
-    pc_ip group = {PC_IP_NONE, {0}};
+    protocore_ip group = {PROTOCORE_IP_NONE, {0}};
     if (!Ip.parse(group_ip, &group))
     {
         return PROTO_FALSE;
@@ -476,7 +476,7 @@ static proto_bool listen_group(const char *group_ip, uint16_t port, pc_udp_handl
         b->handler = NULL;
         return PROTO_FALSE;
     }
-    pc_slot_mark(&s_lst.bound, bind_idx(b));
+    protocore_slot_mark(&s_lst.bound, bind_idx(b));
     return PROTO_TRUE;
 }
 
@@ -499,18 +499,18 @@ static void poll_all(void)
         return; // a handler called back into poll(); the stage is already in use
     }
     s_lst.polling = PROTO_TRUE;
-    for (int i = 0; i < PC_MAX_UDP_LISTENERS; i++)
+    for (int i = 0; i < PROTOCORE_MAX_UDP_LISTENERS; i++)
     {
         UdpBind *b = &s_lst.bind[i];
         if (bind_used((size_t)i))
         {
-            pc_udp_dgram d = {{PC_IP_NONE, {0}}, 0, 0};
-            while (pc_udp_dgram_take(b->rx, PC_UDP_RX_RING, &b->rx_head, &b->rx_tail, s_lst.rx_rhdr, &d, s_lst.rx_stage,
+            protocore_udp_dgram d = {{PROTOCORE_IP_NONE, {0}}, 0, 0};
+            while (protocore_udp_dgram_take(b->rx, PROTOCORE_UDP_RX_RING, &b->rx_head, &b->rx_tail, s_lst.rx_rhdr, &d, s_lst.rx_stage,
                                      sizeof(s_lst.rx_stage)))
             {
                 if (b->handler != NULL)
                 {
-                    pc_udp_peer peer = {d.addr, d.port, b};
+                    protocore_udp_peer peer = {d.addr, d.port, b};
                     b->handler(s_lst.rx_stage, d.len, &peer, b->ctx);
                 }
             }
@@ -519,7 +519,7 @@ static void poll_all(void)
     s_lst.polling = PROTO_FALSE;
 }
 
-static proto_bool reply_to(const struct pc_udp_peer *peer, const uint8_t *data, size_t len)
+static proto_bool reply_to(const struct protocore_udp_peer *peer, const uint8_t *data, size_t len)
 {
     if (peer == NULL)
     {
@@ -528,7 +528,7 @@ static proto_bool reply_to(const struct pc_udp_peer *peer, const uint8_t *data, 
     return send_now(peer->bind, &peer->addr, peer->port, data, len);
 }
 
-static proto_bool peer_addr_of(const struct pc_udp_peer *peer, char *ip_out, size_t ip_cap, uint16_t *port_out)
+static proto_bool peer_addr_of(const struct protocore_udp_peer *peer, char *ip_out, size_t ip_cap, uint16_t *port_out)
 {
     if (peer == NULL || ip_out == NULL || ip_cap < 8u)
     {
@@ -545,10 +545,10 @@ static proto_bool peer_addr_of(const struct pc_udp_peer *peer, char *ip_out, siz
     return PROTO_TRUE;
 }
 
-static proto_bool send_from(uint16_t listen_port, const pc_ip *dst, uint16_t dst_port, const uint8_t *data, size_t len)
+static proto_bool send_from(uint16_t listen_port, const protocore_ip *dst, uint16_t dst_port, const uint8_t *data, size_t len)
 {
     UdpBind *b = find_bind(listen_port);
-    if (b == NULL || dst == NULL || dst->family == PC_IP_NONE)
+    if (b == NULL || dst == NULL || dst->family == PROTOCORE_IP_NONE)
     {
         return PROTO_FALSE;
     }
@@ -596,4 +596,4 @@ const UdpListenerNs UdpListener = {
     .joined_group = group_on,
 };
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS

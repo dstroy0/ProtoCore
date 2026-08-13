@@ -12,7 +12,7 @@
 #include "crypto/mac/aes_cmac.h"
 #include "crypto/mac/hmac_sha256.h"
 #include "mmgr/secure.h"
-#include "network_drivers/application/smb/smb2.h" // pc_smb3_derive_signing_key
+#include "network_drivers/application/smb/smb2.h" // protocore_smb3_derive_signing_key
 #include <string.h>
 
 #include <unity.h>
@@ -42,7 +42,7 @@ static void check_md5(const char *msg, const char *expect)
 {
     uint8_t d[16];
     char hex[33];
-    pc_md5((const uint8_t *)msg, strlen(msg), d);
+    protocore_md5((const uint8_t *)msg, strlen(msg), d);
     to_hex(d, hex);
     TEST_ASSERT_EQUAL_STRING(expect, hex);
 }
@@ -50,7 +50,7 @@ static void check_md4(const char *msg, const char *expect)
 {
     uint8_t d[16];
     char hex[33];
-    pc_md4((const uint8_t *)msg, strlen(msg), d);
+    protocore_md4((const uint8_t *)msg, strlen(msg), d);
     to_hex(d, hex);
     TEST_ASSERT_EQUAL_STRING(expect, hex);
 }
@@ -82,25 +82,26 @@ void test_hmac_md5_vectors()
 
     uint8_t k1[16];
     memset(k1, 0x0b, sizeof(k1));
-    pc_hmac_md5(k1, sizeof(k1), (const uint8_t *)"Hi There", 8, d);
+    protocore_hmac_md5(k1, sizeof(k1), (const uint8_t *)"Hi There", 8, d);
     to_hex(d, hex);
     TEST_ASSERT_EQUAL_STRING("9294727a3638bb1c13f48ef8158bfc9d", hex); // RFC 2104 case 1
 
-    pc_hmac_md5((const uint8_t *)"Jefe", 4, (const uint8_t *)"what do ya want for nothing?", 28, d);
+    protocore_hmac_md5((const uint8_t *)"Jefe", 4, (const uint8_t *)"what do ya want for nothing?", 28, d);
     to_hex(d, hex);
     TEST_ASSERT_EQUAL_STRING("750c783e6ab0b503eaa86e310a5db738", hex);
 
     uint8_t k3[16], m3[50];
     memset(k3, 0xaa, sizeof(k3));
     memset(m3, 0xdd, sizeof(m3));
-    pc_hmac_md5(k3, sizeof(k3), m3, sizeof(m3), d);
+    protocore_hmac_md5(k3, sizeof(k3), m3, sizeof(m3), d);
     to_hex(d, hex);
     TEST_ASSERT_EQUAL_STRING("56be34521d144c88dbb8c733f0e8b3f6", hex);
 
     // a key longer than the 64-byte block is hashed down first (RFC 2104)
     uint8_t klong[80];
     memset(klong, 0xaa, sizeof(klong));
-    pc_hmac_md5(klong, sizeof(klong), (const uint8_t *)"Test Using Larger Than Block-Size Key - Hash Key First", 54, d);
+    protocore_hmac_md5(klong, sizeof(klong), (const uint8_t *)"Test Using Larger Than Block-Size Key - Hash Key First",
+                       54, d);
     to_hex(d, hex);
     TEST_ASSERT_EQUAL_STRING("6b1ab7fe4bd7bf8f0b62e6ce61b9d0cd", hex); // RFC 2202 case 6
 }
@@ -109,13 +110,13 @@ void test_hmac_md5_vectors()
 void test_sha256_vectors()
 {
     uint8_t d[32];
-    pc_sha256(tw, (const uint8_t *)"", 0, d);
+    protocore_sha256(tw, (const uint8_t *)"", 0, d);
     const uint8_t empty[32] = {0xe3, 0xb0, 0xc4, 0x42, 0x98, 0xfc, 0x1c, 0x14, 0x9a, 0xfb, 0xf4,
                                0xc8, 0x99, 0x6f, 0xb9, 0x24, 0x27, 0xae, 0x41, 0xe4, 0x64, 0x9b,
                                0x93, 0x4c, 0xa4, 0x95, 0x99, 0x1b, 0x78, 0x52, 0xb8, 0x55};
     TEST_ASSERT_EQUAL_HEX8_ARRAY(empty, d, 32);
 
-    pc_sha256(tw, (const uint8_t *)"abc", 3, d);
+    protocore_sha256(tw, (const uint8_t *)"abc", 3, d);
     const uint8_t abc[32] = {0xba, 0x78, 0x16, 0xbf, 0x8f, 0x01, 0xcf, 0xea, 0x41, 0x41, 0x40,
                              0xde, 0x5d, 0xae, 0x22, 0x23, 0xb0, 0x03, 0x61, 0xa3, 0x96, 0x17,
                              0x7a, 0x9c, 0xb4, 0x10, 0xff, 0x61, 0xf2, 0x00, 0x15, 0xad};
@@ -123,7 +124,7 @@ void test_sha256_vectors()
 
     // 56-byte message: crosses the padding boundary into a second block (FIPS 180-4 two-block example).
     const char *two = "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq";
-    pc_sha256(tw, (const uint8_t *)two, 56, d);
+    protocore_sha256(tw, (const uint8_t *)two, 56, d);
     const uint8_t twob[32] = {0x24, 0x8d, 0x6a, 0x61, 0xd2, 0x06, 0x38, 0xb8, 0xe5, 0xc0, 0x26,
                               0x93, 0x0c, 0x3e, 0x60, 0x39, 0xa3, 0x3c, 0xe4, 0x59, 0x64, 0xff,
                               0x21, 0x67, 0xf6, 0xec, 0xed, 0xd4, 0x19, 0xdb, 0x06, 0xc1};
@@ -137,7 +138,7 @@ void test_hmac_sha256_vectors()
 
     uint8_t k1[20];
     memset(k1, 0x0b, sizeof(k1));
-    pc_hmac_sha256(tw, k1, sizeof(k1), (const uint8_t *)"Hi There", 8, d);
+    protocore_hmac_sha256(tw, k1, sizeof(k1), (const uint8_t *)"Hi There", 8, d);
     const uint8_t tc1[32] = {0xb0, 0x34, 0x4c, 0x61, 0xd8, 0xdb, 0x38, 0x53, 0x5c, 0xa8, 0xaf,
                              0xce, 0xaf, 0x0b, 0xf1, 0x2b, 0x88, 0x1d, 0xc2, 0x00, 0xc9, 0x83,
                              0x3d, 0xa7, 0x26, 0xe9, 0x37, 0x6c, 0x2e, 0x32, 0xcf, 0xf7};
@@ -146,8 +147,8 @@ void test_hmac_sha256_vectors()
     // A key longer than the 64-byte block is hashed to 32 octets first (RFC 4231 test case 6).
     uint8_t k6[131];
     memset(k6, 0xaa, sizeof(k6));
-    pc_hmac_sha256(tw, k6, sizeof(k6), (const uint8_t *)"Test Using Larger Than Block-Size Key - Hash Key First", 54,
-                   d);
+    protocore_hmac_sha256(tw, k6, sizeof(k6), (const uint8_t *)"Test Using Larger Than Block-Size Key - Hash Key First",
+                          54, d);
     const uint8_t tc6[32] = {0x60, 0xe4, 0x31, 0x59, 0x1e, 0xe0, 0xb6, 0x7f, 0x0d, 0x8a, 0x26,
                              0xaa, 0xcb, 0xf5, 0xb7, 0x7f, 0x8e, 0x0b, 0xc6, 0x21, 0x37, 0x28,
                              0xc5, 0x14, 0x05, 0x46, 0x04, 0x0f, 0x0e, 0xe3, 0x7f, 0x54};
@@ -160,17 +161,17 @@ void test_streaming_equals_oneshot()
     const char *s = "The quick brown fox jumps over the lazy dog";
     size_t n = strlen(s);
     uint8_t one[16], strm[16];
-    pc_md5((const uint8_t *)s, n, one);
-    size_t mark = pc_secure_mark();
-    struct MdCtx *c = pc_md_wants(); // the owner of the opaque type supplies the storage
+    protocore_md5((const uint8_t *)s, n, one);
+    size_t mark = protocore_secure_mark();
+    struct MdCtx *c = protocore_md_wants(); // the owner of the opaque type supplies the storage
     TEST_ASSERT_NOT_NULL(c);
-    pc_md5_init(c);
-    pc_md5_update(c, (const uint8_t *)s, 10);
-    pc_md5_update(c, (const uint8_t *)s + 10, 1); // odd split across the buffer boundary
-    pc_md5_update(c, (const uint8_t *)s + 11, n - 11);
-    pc_md5_final(c, strm);
+    protocore_md5_init(c);
+    protocore_md5_update(c, (const uint8_t *)s, 10);
+    protocore_md5_update(c, (const uint8_t *)s + 10, 1); // odd split across the buffer boundary
+    protocore_md5_update(c, (const uint8_t *)s + 11, n - 11);
+    protocore_md5_final(c, strm);
     TEST_ASSERT_EQUAL_MEMORY(one, strm, 16);
-    pc_secure_release(mark);
+    protocore_secure_release(mark);
 }
 
 // The NT hash: MD4 of the UTF-16LE password (MS-NLMP). Spot-check "password".
@@ -185,7 +186,7 @@ void test_nt_hash()
     }
     uint8_t nt[16];
     char hex[33];
-    pc_md4(utf16, sizeof(utf16), nt);
+    protocore_md4(utf16, sizeof(utf16), nt);
     to_hex(nt, hex);
     TEST_ASSERT_EQUAL_STRING("8846f7eaee8fb117ad06bdd830b7586c", hex); // the well-known NT hash of "password"
 }
@@ -205,7 +206,7 @@ void test_kdf_ctr_hmac_sha256_nist()
     const uint8_t ko1[16] = {0x10, 0x62, 0x13, 0x42, 0xbf, 0xb0, 0xfd, 0x40,
                              0x04, 0x6c, 0x0e, 0x29, 0xf2, 0xcf, 0xdb, 0xf0};
     uint8_t out1[16] = {0};
-    TEST_ASSERT_TRUE(pc_kdf_ctr_hmac_sha256(ki1, sizeof(ki1), fix1, sizeof(fix1), out1, sizeof(out1)));
+    TEST_ASSERT_TRUE(protocore_kdf_ctr_hmac_sha256(ki1, sizeof(ki1), fix1, sizeof(fix1), out1, sizeof(out1)));
     TEST_ASSERT_EQUAL_MEMORY(ko1, out1, 16);
 
     // NIST CAVP KDFCTR COUNT=30, L=320 (40 bytes: two HMAC blocks, exercises the counter loop + truncation).
@@ -220,21 +221,21 @@ void test_kdf_ctr_hmac_sha256_nist()
                              0x42, 0xab, 0x81, 0x4d, 0x9e, 0x8c, 0xc2, 0x2f, 0x43, 0x26, 0x69, 0x52, 0x39, 0xf9,
                              0x6b, 0x06, 0x93, 0xf1, 0x2d, 0x0d, 0xd1, 0x15, 0x2c, 0xf4, 0x44, 0x30};
     uint8_t out2[40] = {0};
-    TEST_ASSERT_TRUE(pc_kdf_ctr_hmac_sha256(ki2, sizeof(ki2), fix2, sizeof(fix2), out2, sizeof(out2)));
+    TEST_ASSERT_TRUE(protocore_kdf_ctr_hmac_sha256(ki2, sizeof(ki2), fix2, sizeof(fix2), out2, sizeof(out2)));
     TEST_ASSERT_EQUAL_MEMORY(ko2, out2, 40);
 
     // fail-closed on bad args
     uint8_t tmp[16] = {0};
-    TEST_ASSERT_FALSE(pc_kdf_ctr_hmac_sha256(NULL, 32, fix1, sizeof(fix1), tmp, sizeof(tmp)));
-    TEST_ASSERT_FALSE(pc_kdf_ctr_hmac_sha256(ki1, sizeof(ki1), NULL, 0, tmp, sizeof(tmp)));
-    TEST_ASSERT_FALSE(pc_kdf_ctr_hmac_sha256(ki1, sizeof(ki1), fix1, sizeof(fix1), tmp, 0));
+    TEST_ASSERT_FALSE(protocore_kdf_ctr_hmac_sha256(NULL, 32, fix1, sizeof(fix1), tmp, sizeof(tmp)));
+    TEST_ASSERT_FALSE(protocore_kdf_ctr_hmac_sha256(ki1, sizeof(ki1), NULL, 0, tmp, sizeof(tmp)));
+    TEST_ASSERT_FALSE(protocore_kdf_ctr_hmac_sha256(ki1, sizeof(ki1), fix1, sizeof(fix1), tmp, 0));
 }
 
 // SHA-512 known-answer vectors (FIPS 180-4), including the 112-byte two-block example.
 void test_sha512_vectors()
 {
     uint8_t d[64];
-    pc_sha512(tw, (const uint8_t *)"", 0, d);
+    protocore_sha512(tw, (const uint8_t *)"", 0, d);
     const uint8_t empty[64] = {0xcf, 0x83, 0xe1, 0x35, 0x7e, 0xef, 0xb8, 0xbd, 0xf1, 0x54, 0x28, 0x50, 0xd6,
                                0x6d, 0x80, 0x07, 0xd6, 0x20, 0xe4, 0x05, 0x0b, 0x57, 0x15, 0xdc, 0x83, 0xf4,
                                0xa9, 0x21, 0xd3, 0x6c, 0xe9, 0xce, 0x47, 0xd0, 0xd1, 0x3c, 0x5d, 0x85, 0xf2,
@@ -242,7 +243,7 @@ void test_sha512_vectors()
                                0x47, 0x41, 0x7a, 0x81, 0xa5, 0x38, 0x32, 0x7a, 0xf9, 0x27, 0xda, 0x3e};
     TEST_ASSERT_EQUAL_HEX8_ARRAY(empty, d, 64);
 
-    pc_sha512(tw, (const uint8_t *)"abc", 3, d);
+    protocore_sha512(tw, (const uint8_t *)"abc", 3, d);
     const uint8_t abc[64] = {0xdd, 0xaf, 0x35, 0xa1, 0x93, 0x61, 0x7a, 0xba, 0xcc, 0x41, 0x73, 0x49, 0xae,
                              0x20, 0x41, 0x31, 0x12, 0xe6, 0xfa, 0x4e, 0x89, 0xa9, 0x7e, 0xa2, 0x0a, 0x9e,
                              0xee, 0xe6, 0x4b, 0x55, 0xd3, 0x9a, 0x21, 0x92, 0x99, 0x2a, 0x27, 0x4f, 0xc1,
@@ -253,7 +254,7 @@ void test_sha512_vectors()
     // 112-byte message: spans two 128-byte blocks (FIPS 180-4 two-block example).
     const char *two = "abcdefghbcdefghicdefghijdefghijkefghijklfghijklmghijklmnhijklmno"
                       "ijklmnopjklmnopqklmnopqrlmnopqrsmnopqrstnopqrstu";
-    pc_sha512(tw, (const uint8_t *)two, 112, d);
+    protocore_sha512(tw, (const uint8_t *)two, 112, d);
     const uint8_t twob[64] = {0x8e, 0x95, 0x9b, 0x75, 0xda, 0xe3, 0x13, 0xda, 0x8c, 0xf4, 0xf7, 0x28, 0x14,
                               0xfc, 0x14, 0x3f, 0x8f, 0x77, 0x79, 0xc6, 0xeb, 0x9f, 0x7f, 0xa1, 0x72, 0x99,
                               0xae, 0xad, 0xb6, 0x88, 0x90, 0x18, 0x50, 0x1d, 0x28, 0x9e, 0x49, 0x00, 0xf7,
@@ -267,17 +268,17 @@ void test_sha512_vectors()
     {
         big[i] = (uint8_t)(i * 7 + 3);
     }
-    pc_sha512(tw, big, 128, d);
+    protocore_sha512(tw, big, 128, d);
     const uint8_t b128[64] = {0x99, 0xb1, 0x6f, 0x17, 0xaa, 0x0b, 0x96, 0x9a, 0x5b, 0x8f, 0x08, 0xf3, 0x67,
                               0x71, 0x9d, 0x51, 0x6e, 0x33, 0x0c, 0xcd, 0x26, 0x60, 0xb6, 0xf0, 0x68, 0x8e,
                               0xc0, 0x31, 0xdb, 0xc7, 0x83, 0xde, 0x50, 0xa1, 0xcd, 0x18, 0x5a, 0x25, 0x68,
                               0xdb, 0xa7, 0x50, 0x70, 0xa2, 0x40, 0x3d, 0x17, 0xd4, 0x74, 0x1d, 0x16, 0x35,
                               0x78, 0x51, 0x5d, 0xfd, 0x2f, 0xf7, 0x56, 0xdd, 0xfe, 0x4d, 0x47, 0xb1};
     TEST_ASSERT_EQUAL_HEX8_ARRAY(b128, d, 64);
-    pc_sha512(tw, big, 136, d); // 136 = 128 + 8: one full block in update, then 8 bytes into the final block
+    protocore_sha512(tw, big, 136, d); // 136 = 128 + 8: one full block in update, then 8 bytes into the final block
     const uint8_t b136[8] = {0xfe, 0xda, 0x01, 0x51, 0x00, 0x00, 0x00, 0x00};
     TEST_ASSERT_EQUAL_HEX8_ARRAY(b136, d, 4);
-    pc_sha512(tw, big, 200, d);
+    protocore_sha512(tw, big, 200, d);
     const uint8_t b200[64] = {0xcc, 0xa3, 0xc0, 0x27, 0x60, 0x46, 0xef, 0x9f, 0x28, 0x97, 0xbd, 0xfc, 0x3e,
                               0xc3, 0x30, 0xf7, 0x7f, 0x49, 0x59, 0x91, 0x4b, 0x14, 0x62, 0xbd, 0x58, 0x1b,
                               0x23, 0x2d, 0xdb, 0x3e, 0x9a, 0xa9, 0x8a, 0xcf, 0x5f, 0x5a, 0x2b, 0x21, 0xc7,
@@ -286,13 +287,13 @@ void test_sha512_vectors()
     TEST_ASSERT_EQUAL_HEX8_ARRAY(b200, d, 64);
 
     // streaming (odd chunk splits) must equal the one-shot
-    pc_sha512_ctx sc;
+    protocore_sha512_ctx sc;
     uint8_t strm[64];
-    pc_sha512_init(&sc, tw_sc);
-    pc_sha512_update(&sc, (const uint8_t *)two, 5);
-    pc_sha512_update(&sc, (const uint8_t *)two + 5, 100);
-    pc_sha512_update(&sc, (const uint8_t *)two + 105, 7);
-    pc_sha512_final(&sc, strm);
+    protocore_sha512_init(&sc, tw_sc);
+    protocore_sha512_update(&sc, (const uint8_t *)two, 5);
+    protocore_sha512_update(&sc, (const uint8_t *)two + 5, 100);
+    protocore_sha512_update(&sc, (const uint8_t *)two + 105, 7);
+    protocore_sha512_final(&sc, strm);
     TEST_ASSERT_EQUAL_MEMORY(twob, strm, 64);
 
     // Two separate update() calls (64 then 72) that straddle the 128-byte block boundary - the exact
@@ -311,10 +312,10 @@ void test_sha512_vectors()
                             0x4f, 0x1e, 0x0b, 0xcf, 0xaf, 0xe6, 0x76, 0x84, 0x9d, 0x63, 0xcc, 0xbb, 0x38,
                             0x40, 0x69, 0x2b, 0xa6, 0xec, 0x03, 0x79, 0xb7, 0xde, 0x3c, 0xe0, 0x2a, 0x30,
                             0x76, 0x8f, 0x50, 0xc1, 0x14, 0xd8, 0x00, 0x0c, 0x04, 0x11, 0x73, 0x65};
-    pc_sha512_init(&sc, tw_sc);
-    pc_sha512_update(&sc, A, 64);
-    pc_sha512_update(&sc, B, 72);
-    pc_sha512_final(&sc, strm);
+    protocore_sha512_init(&sc, tw_sc);
+    protocore_sha512_update(&sc, A, 64);
+    protocore_sha512_update(&sc, B, 72);
+    protocore_sha512_final(&sc, strm);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(ab, strm, 64);
 }
 
@@ -335,31 +336,31 @@ void test_aes_cmac_rfc4493()
     // Example 1: len 0 (M_last uses K2 over the 10*-padded empty block).
     const uint8_t e0[16] = {0xbb, 0x1d, 0x69, 0x29, 0xe9, 0x59, 0x37, 0x28,
                             0x7f, 0xa3, 0x7d, 0x12, 0x9b, 0x75, 0x67, 0x46};
-    pc_aes_cmac(key, NULL, 0, mac);
+    protocore_aes_cmac(key, NULL, 0, mac);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(e0, mac, 16);
 
     // Example 2: len 16 (one complete block -> M_last uses K1).
     const uint8_t e16[16] = {0x07, 0x0a, 0x16, 0xb4, 0x6b, 0x4d, 0x41, 0x44,
                              0xf7, 0x9b, 0xdd, 0x9d, 0xd0, 0x4a, 0x28, 0x7c};
-    pc_aes_cmac(key, msg, 16, mac);
+    protocore_aes_cmac(key, msg, 16, mac);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(e16, mac, 16);
 
     // Example 3: len 40 (not a block multiple -> 10*-padded last block uses K2).
     const uint8_t e40[16] = {0xdf, 0xa6, 0x67, 0x47, 0xde, 0x9a, 0xe6, 0x30,
                              0x30, 0xca, 0x32, 0x61, 0x14, 0x97, 0xc8, 0x27};
-    pc_aes_cmac(key, msg, 40, mac);
+    protocore_aes_cmac(key, msg, 40, mac);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(e40, mac, 16);
 
     // Example 4: len 64 (four complete blocks -> M_last uses K1).
     const uint8_t e64[16] = {0x51, 0xf0, 0xbe, 0xbf, 0x7e, 0x3b, 0x9d, 0x92,
                              0xfc, 0x49, 0x74, 0x17, 0x79, 0x36, 0x3c, 0xfe};
-    pc_aes_cmac(key, msg, 64, mac);
+    protocore_aes_cmac(key, msg, 64, mac);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(e64, mac, 16);
 
     // A 15-byte (sub-block) message also drives the pad-with-K2 branch with a non-zero remainder.
-    pc_aes_cmac(key, msg, 15, mac);
+    protocore_aes_cmac(key, msg, 15, mac);
     uint8_t mac2[16];
-    pc_aes_cmac(key, msg, 15, mac2);
+    protocore_aes_cmac(key, msg, 15, mac2);
     TEST_ASSERT_EQUAL_MEMORY(mac, mac2, 16); // deterministic
 }
 
@@ -380,24 +381,24 @@ void test_smb3_derive_signing_key()
     const uint8_t k30[16] = {0x62, 0x34, 0x81, 0x4c, 0xbb, 0x8e, 0xa9, 0x22,
                              0x74, 0x40, 0xeb, 0xfe, 0xb5, 0xea, 0xcb, 0xe1};
     uint8_t out[16] = {0};
-    TEST_ASSERT_TRUE(pc_smb3_derive_signing_key(session_key, (uint16_t)SMB2_DIALECT_0300, NULL, out));
+    TEST_ASSERT_TRUE(protocore_smb3_derive_signing_key(session_key, (uint16_t)SMB2_DIALECT_0300, NULL, out));
     TEST_ASSERT_EQUAL_HEX8_ARRAY(k30, out, 16);
     // 3.0.2 derives identically (pre-3.1.1 path); the preauth hash is ignored there.
     memset(out, 0, 16);
-    TEST_ASSERT_TRUE(pc_smb3_derive_signing_key(session_key, (uint16_t)SMB2_DIALECT_0302, preauth, out));
+    TEST_ASSERT_TRUE(protocore_smb3_derive_signing_key(session_key, (uint16_t)SMB2_DIALECT_0302, preauth, out));
     TEST_ASSERT_EQUAL_HEX8_ARRAY(k30, out, 16);
 
     // SMB 3.1.1: KDF(SessionKey, "SMBSigningKey\0", PreauthIntegrityHashValue).
     const uint8_t k311[16] = {0x0d, 0x73, 0x97, 0xf0, 0x4f, 0x5b, 0x71, 0x66,
                               0x9d, 0xe0, 0x88, 0x40, 0x38, 0x1d, 0x59, 0xb1};
     memset(out, 0, 16);
-    TEST_ASSERT_TRUE(pc_smb3_derive_signing_key(session_key, (uint16_t)SMB2_DIALECT_0311, preauth, out));
+    TEST_ASSERT_TRUE(protocore_smb3_derive_signing_key(session_key, (uint16_t)SMB2_DIALECT_0311, preauth, out));
     TEST_ASSERT_EQUAL_HEX8_ARRAY(k311, out, 16);
 
     // fail-closed: null pointers, and a 3.1.1 request with no preauth hash.
-    TEST_ASSERT_FALSE(pc_smb3_derive_signing_key(NULL, (uint16_t)SMB2_DIALECT_0300, NULL, out));
-    TEST_ASSERT_FALSE(pc_smb3_derive_signing_key(session_key, (uint16_t)SMB2_DIALECT_0300, NULL, NULL));
-    TEST_ASSERT_FALSE(pc_smb3_derive_signing_key(session_key, (uint16_t)SMB2_DIALECT_0311, NULL, out));
+    TEST_ASSERT_FALSE(protocore_smb3_derive_signing_key(NULL, (uint16_t)SMB2_DIALECT_0300, NULL, out));
+    TEST_ASSERT_FALSE(protocore_smb3_derive_signing_key(session_key, (uint16_t)SMB2_DIALECT_0300, NULL, NULL));
+    TEST_ASSERT_FALSE(protocore_smb3_derive_signing_key(session_key, (uint16_t)SMB2_DIALECT_0311, NULL, out));
 }
 
 int main()

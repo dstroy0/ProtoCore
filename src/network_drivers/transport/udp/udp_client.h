@@ -24,9 +24,9 @@
 #define PROTOCORE_UDP_CLIENT_H
 
 #include "protocore_config.h"
-#include "shared_primitives/ip.h" // pc_ip: the destination, already an address
+#include "shared_primitives/ip.h" // protocore_ip: the destination, already an address
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
 /**
  * @brief The sending side of UDP.
@@ -40,12 +40,12 @@ PROTO_BEGIN_DECLS
  */
 typedef struct
 {
-    proto_bool (*sendto)(const pc_ip *dst, uint16_t dst_port, const uint8_t *data, size_t len);
+    proto_bool (*sendto)(const protocore_ip *dst, uint16_t dst_port, const uint8_t *data, size_t len);
 } UdpClientNs;
 
 /** @brief The one symbol this module exports. */
 extern const UdpClientNs UdpClient;
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_UDP_CLIENT_H

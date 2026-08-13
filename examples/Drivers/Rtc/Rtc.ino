@@ -3,11 +3,11 @@
 
 /**
  * @file Rtc.ino
- * @brief Keep accurate time with a DS3231/DS1307 RTC module (PC_ENABLE_RTC).
+ * @brief Keep accurate time with a DS3231/DS1307 RTC module (PROTOCORE_ENABLE_RTC).
  *
  * A real-time-clock chip has its own coin-cell battery, so it keeps time even when the ESP32
  * is unplugged - and needs no network. This reads it over I2C and plugs it into the
- * time-source chain, so `pc_time_now()` has the correct time the instant the board boots,
+ * time-source chain, so `protocore_time_now()` has the correct time the instant the board boots,
  * offline. It also self-initializes: the first time the board reaches the internet it sets the
  * RTC from NTP, so from then on the RTC is the source of truth even with no network.
  *
@@ -18,12 +18,12 @@
  * Wiring (I2C): module SDA -> GPIO 21, SCL -> GPIO 22, VCC -> 3V3, GND -> GND (ESP32 default
  * I2C pins; change with Wire.begin(sda, scl) if yours differ).
  *
- * Build flags (PlatformIO): `-DPC_ENABLE_RTC=1 -DPC_ENABLE_TIME_SOURCE=1 -DPC_ENABLE_NTP=1`
+ * Build flags (PlatformIO): `-DPROTOCORE_ENABLE_RTC=1 -DPROTOCORE_ENABLE_TIME_SOURCE=1 -DPROTOCORE_ENABLE_NTP=1`
  */
 
-#define PC_ENABLE_RTC 1
-#define PC_ENABLE_TIME_SOURCE 1
-#define PC_ENABLE_NTP 1
+#define PROTOCORE_ENABLE_RTC 1
+#define PROTOCORE_ENABLE_TIME_SOURCE 1
+#define PROTOCORE_ENABLE_NTP 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -35,18 +35,18 @@ static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
 // Fallback used only to *set* the RTC the first time we reach the internet.
-static uint32_t pc_ntp_source()
+static uint32_t protocore_ntp_source()
 {
-    return pc_ntp_synced() ? (uint32_t)pc_ntp_epoch() : 0;
+    return protocore_ntp_synced() ? (uint32_t)protocore_ntp_epoch() : 0;
 }
 
 void setup()
 {
     Serial.begin(115200);
-    pc_rtc_begin();
+    protocore_rtc_begin();
 
     // The RTC gives us time immediately - before WiFi, before anything - if it is set.
-    uint32_t boot = pc_rtc_read_epoch();
+    uint32_t boot = protocore_rtc_read_epoch();
     Serial.printf("RTC at boot: %lu %s\n", (unsigned long)boot, boot ? "(battery-backed time!)" : "(not set yet)");
 
     Physical.wifi->init(SSID, PASSWORD);
@@ -61,34 +61,34 @@ void setup()
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     // The RTC is the primary source; upstream NTP is only for setting it.
-    pc_time_source_add("rtc", 1, pc_rtc_time_source);
-    pc_time_source_add("ntp", 2, pc_ntp_source);
-    pc_ntp_begin(NULL, NULL, NULL);
+    protocore_time_source_add("rtc", 1, protocore_rtc_time_source);
+    protocore_time_source_add("ntp", 2, protocore_ntp_source);
+    protocore_ntp_begin(NULL, NULL, NULL);
 }
 
 void loop()
 {
     // Self-initialize: once we have accurate internet time and the RTC is unset/wrong, write it.
-    static bool pc_rtc_set = false;
-    if (!pc_rtc_set && pc_ntp_synced())
+    static bool protocore_rtc_set = false;
+    if (!protocore_rtc_set && protocore_ntp_synced())
     {
-        uint32_t pc_rtc_now = pc_rtc_read_epoch();
-        uint32_t pc_ntp_now = (uint32_t)pc_ntp_epoch();
-        if (pc_rtc_now == 0 || (pc_ntp_now > pc_rtc_now ? pc_ntp_now - pc_rtc_now : pc_rtc_now - pc_ntp_now) > 5)
+        uint32_t protocore_rtc_now = protocore_rtc_read_epoch();
+        uint32_t protocore_ntp_now = (uint32_t)protocore_ntp_epoch();
+        if (protocore_rtc_now == 0 || (protocore_ntp_now > protocore_rtc_now ? protocore_ntp_now - protocore_rtc_now : protocore_rtc_now - protocore_ntp_now) > 5)
         {
-            if (pc_rtc_set_epoch(pc_ntp_now))
+            if (protocore_rtc_set_epoch(protocore_ntp_now))
             {
-                Serial.printf("RTC set from NTP: %lu\n", (unsigned long)pc_ntp_now);
+                Serial.printf("RTC set from NTP: %lu\n", (unsigned long)protocore_ntp_now);
             }
         }
-        pc_rtc_set = true;
+        protocore_rtc_set = true;
     }
 
     static uint32_t last = 0;
     if (millis() - last > 5000)
     {
         last = millis();
-        Serial.printf("[time] now=%lu source=%s\n", (unsigned long)pc_time_now(),
-                      pc_time_source_active() ? pc_time_source_active() : "none");
+        Serial.printf("[time] now=%lu source=%s\n", (unsigned long)protocore_time_now(),
+                      protocore_time_source_active() ? protocore_time_source_active() : "none");
     }
 }

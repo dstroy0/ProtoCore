@@ -14,12 +14,12 @@
 
 #include "services/machine_tool/euromap77/euromap77.h"
 
-#if PC_ENABLE_EUROMAP77
+#if PROTOCORE_ENABLE_EUROMAP77
 
 // strnlen (string.h is allowed; the no-stdlib rule is about stdlib.h/malloc)
 
 // ---------------------------------------------------------------------------
-// Node identifiers (namespace PC_EM77_NS). Objects end in 0; their variables count up from it.
+// Node identifiers (namespace PROTOCORE_EM77_NS). Objects end in 0; their variables count up from it.
 // ---------------------------------------------------------------------------
 static enum : uint32_t // NOSONAR(cpp:S3642): anonymous table of OPC-UA node ids used as bare uint32_t (arithmetic +
                        // wire compares); enum class would force a cast at every use
@@ -62,7 +62,7 @@ static enum : uint32_t // NOSONAR(cpp:S3642): anonymous table of OPC-UA node ids
 };
 
 // All EUROMAP 77 model state, owned by one instance (internal linkage): the bound IMM pointer the
-// resolvers read from. Null until pc_em77_bind(); a Read/Browse before binding is a clean miss
+// resolvers read from. Null until protocore_em77_bind(); a Read/Browse before binding is a clean miss
 // (BadNodeIdUnknown), so the server never dereferences a null model.
 typedef struct
 {
@@ -116,9 +116,9 @@ static int32_t add_ref(OpcUaReference *out, int32_t n, uint32_t max, uint32_t ta
     OpcUaReference *r = &out[n];
     r->ref_type_id = organizes ? OPCUA_REFTYPE_ORGANIZES : OPCUA_REFTYPE_HAS_COMPONENT;
     r->is_forward = PROTO_TRUE;
-    r->target_ns = PC_EM77_NS;
+    r->target_ns = PROTOCORE_EM77_NS;
     r->target_id = target_id;
-    r->browse_name_ns = PC_EM77_NS;
+    r->browse_name_ns = PROTOCORE_EM77_NS;
     r->browse_name = name;
     r->display_name = name;
     r->node_class = node_class;
@@ -138,15 +138,15 @@ static int32_t add_var(OpcUaReference *out, int32_t n, uint32_t max, uint32_t id
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
-void pc_em77_bind(const EmImm *imm)
+void protocore_em77_bind(const EmImm *imm)
 {
     s_em77.imm = imm;
 }
 
-proto_bool pc_em77_read(uint16_t ns, uint32_t id, uint32_t attribute, OpcUaVariant *out)
+proto_bool protocore_em77_read(uint16_t ns, uint32_t id, uint32_t attribute, OpcUaVariant *out)
 {
     const EmImm *imm = s_em77.imm;
-    if (!imm || ns != PC_EM77_NS || attribute != OPCUA_ATTR_VALUE)
+    if (!imm || ns != PROTOCORE_EM77_NS || attribute != OPCUA_ATTR_VALUE)
     {
         return PROTO_FALSE;
     }
@@ -239,7 +239,7 @@ proto_bool pc_em77_read(uint16_t ns, uint32_t id, uint32_t attribute, OpcUaVaria
     }
 }
 
-int32_t pc_em77_browse(uint16_t ns, uint32_t id, OpcUaReference *out, uint32_t max)
+int32_t protocore_em77_browse(uint16_t ns, uint32_t id, OpcUaReference *out, uint32_t max)
 {
     const EmImm *imm = s_em77.imm;
     if (!imm)
@@ -254,7 +254,7 @@ int32_t pc_em77_browse(uint16_t ns, uint32_t id, OpcUaReference *out, uint32_t m
                        OPCUA_NODECLASS_OBJECT, /*organizes=*/PROTO_TRUE);
     }
 
-    if (ns != PC_EM77_NS)
+    if (ns != PROTOCORE_EM77_NS)
     {
         return -1;
     }
@@ -310,11 +310,11 @@ int32_t pc_em77_browse(uint16_t ns, uint32_t id, OpcUaReference *out, uint32_t m
     }
 }
 
-void pc_em77_install(const EmImm *imm)
+void protocore_em77_install(const EmImm *imm)
 {
-    pc_em77_bind(imm);
-    pc_opcua_set_read_handler(pc_em77_read);
-    pc_opcua_set_browse_handler(pc_em77_browse);
+    protocore_em77_bind(imm);
+    protocore_opcua_set_read_handler(protocore_em77_read);
+    protocore_opcua_set_browse_handler(protocore_em77_browse);
 }
 
-#endif // PC_ENABLE_EUROMAP77
+#endif // PROTOCORE_ENABLE_EUROMAP77

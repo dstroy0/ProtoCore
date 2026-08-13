@@ -3,11 +3,11 @@
 
 /**
  * @file sleep_sched.h
- * @brief Dynamic sleep-cycle scheduler (PC_ENABLE_SLEEP_SCHED).
+ * @brief Dynamic sleep-cycle scheduler (PROTOCORE_ENABLE_SLEEP_SCHED).
  *
  * Decides, from the time since the last activity, whether a low-power device should sleep between
  * requests and for how long - so a battery / solar node idles most of the time yet still serves. It is
- * a pure decision core (`pc_sleep_next`): given `now`, the last-activity timestamp, and a config, it
+ * a pure decision core (`protocore_sleep_next`): given `now`, the last-activity timestamp, and a config, it
  * returns the number of milliseconds to sleep (0 = stay awake). The device stays awake until it has
  * been idle for `idle_ms`, then sleeps in windows that ramp from `min_ms` up to `max_ms` the longer the
  * idle streak runs (so a briefly-idle device wakes often and responsively, a long-idle one sleeps deep).
@@ -23,9 +23,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_SLEEP_SCHED
+#if PROTOCORE_ENABLE_SLEEP_SCHED
 
 /** @brief Scheduler configuration (all times in ms). */
 typedef struct
@@ -34,12 +34,12 @@ typedef struct
     uint32_t min_ms;  ///< first sleep window once idle (also the floor).
     uint32_t max_ms;  ///< longest single sleep window (the ceiling as the idle streak grows).
     uint32_t ramp_ms; ///< every additional `ramp_ms` of idle doubles the window (0 => jump to max_ms).
-} pc_sleep_cfg;
+} protocore_sleep_cfg;
 
 /**
  * @brief Milliseconds to sleep given the idle duration, or 0 to stay awake.
  *
- * @param now             current time (pc_millis units).
+ * @param now             current time (protocore_millis units).
  * @param last_active_ms  timestamp of the last activity (a request, a send, app work).
  * @param cfg             thresholds.
  *
@@ -48,10 +48,10 @@ typedef struct
  * streak (doubling every `cfg.ramp_ms`, or straight to `max_ms` when `ramp_ms` is 0). If `max_ms` <
  * `min_ms` the result is clamped to `min_ms`.
  */
-uint32_t pc_sleep_next(uint32_t now, uint32_t last_active_ms, const pc_sleep_cfg *cfg);
+uint32_t protocore_sleep_next(uint32_t now, uint32_t last_active_ms, const protocore_sleep_cfg *cfg);
 
-#endif // PC_ENABLE_SLEEP_SCHED
+#endif // PROTOCORE_ENABLE_SLEEP_SCHED
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_SLEEP_SCHED_H

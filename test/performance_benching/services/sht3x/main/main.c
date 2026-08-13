@@ -22,11 +22,11 @@ void dbench_run(void)
     {
         DBENCH_BANNER("sht3x");
         volatile int32_t sink = 0;
-        DBENCH_OP("pc_sht3x_crc8 (2 bytes)", 200000, sink += pc_sht3x_crc8(resp, 2));
-        DBENCH_OP("pc_sht3x_temp_mc", 200000, sink += pc_sht3x_temp_mc(0x613D));
-        DBENCH_OP("pc_sht3x_rh_mpct", 200000, sink += pc_sht3x_rh_mpct(0x425C));
+        DBENCH_OP("protocore_sht3x_crc8 (2 bytes)", 200000, sink += protocore_sht3x_crc8(resp, 2));
+        DBENCH_OP("protocore_sht3x_temp_mc", 200000, sink += protocore_sht3x_temp_mc(0x613D));
+        DBENCH_OP("protocore_sht3x_rh_mpct", 200000, sink += protocore_sht3x_rh_mpct(0x425C));
         int32_t t, rh;
-        DBENCH_OP("pc_sht3x_parse (6B resp)", 200000, { sink += pc_sht3x_parse(resp, &t, &rh) ? t : 0; });
+        DBENCH_OP("protocore_sht3x_parse (6B resp)", 200000, { sink += protocore_sht3x_parse(resp, &t, &rh) ? t : 0; });
         (void)sink;
         DBENCH_DONE();
     }

@@ -8,7 +8,7 @@ cmake_minimum_required(VERSION 3.16)
 # This bench's feature switches, applied to the whole build so they reach the separately-compiled
 # library and not just this translation unit. Must precede project().
 add_compile_definitions(
-    PC_ENFORCE_HOST_HEADER=0
+    PROTOCORE_ENFORCE_HOST_HEADER=0
 )
 
 include("${CMAKE_CURRENT_LIST_DIR}/../../../common/bench_project.cmake")

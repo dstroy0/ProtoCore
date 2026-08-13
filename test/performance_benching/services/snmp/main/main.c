@@ -19,29 +19,29 @@
 static size_t build_req(uint8_t *buf, size_t cap, uint8_t pdu, long reqid, const uint32_t *oid, size_t oidn)
 {
     BerEnc e;
-    pc_ber_enc_init(&e, buf, cap);
-    size_t msg = pc_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
-    pc_ber_put_integer(&e, 1); // v2c
-    pc_ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, (const uint8_t *)"public", 6);
-    size_t pdus = pc_ber_seq_begin(&e, pdu);
-    pc_ber_put_integer(&e, reqid);
-    pc_ber_put_integer(&e, 0);
-    pc_ber_put_integer(&e, 0);
-    size_t vbl = pc_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
-    size_t vb = pc_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
-    pc_ber_put_oid(&e, oid, oidn);
-    pc_ber_put_null(&e);
-    pc_ber_seq_end(&e, vb);
-    pc_ber_seq_end(&e, vbl);
-    pc_ber_seq_end(&e, pdus);
-    pc_ber_seq_end(&e, msg);
+    protocore_ber_enc_init(&e, buf, cap);
+    size_t msg = protocore_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
+    protocore_ber_put_integer(&e, 1); // v2c
+    protocore_ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, (const uint8_t *)"public", 6);
+    size_t pdus = protocore_ber_seq_begin(&e, pdu);
+    protocore_ber_put_integer(&e, reqid);
+    protocore_ber_put_integer(&e, 0);
+    protocore_ber_put_integer(&e, 0);
+    size_t vbl = protocore_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
+    size_t vb = protocore_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
+    protocore_ber_put_oid(&e, oid, oidn);
+    protocore_ber_put_null(&e);
+    protocore_ber_seq_end(&e, vb);
+    protocore_ber_seq_end(&e, vbl);
+    protocore_ber_seq_end(&e, pdus);
+    protocore_ber_seq_end(&e, msg);
     return e.ok ? e.len : 0;
 }
 
 void dbench_run(void)
 {
-    pc_snmp_agent_init("public");
-    pc_snmp_agent_set_system("ProtoCore SNMP agent bench", "admin@pc", "esp32-pc", "lab", 72);
+    protocore_snmp_agent_init("public");
+    protocore_snmp_agent_set_system("ProtoCore SNMP agent bench", "admin@pc", "esp32-pc", "lab", 72);
 
     static const uint32_t OID_SYSDESCR[] = {1, 3, 6, 1, 2, 1, 1, 1, 0}; // sysDescr.0
     static const uint32_t OID_SYSTEM[] = {1, 3, 6, 1, 2, 1, 1};         // system group (GetNext root)
@@ -53,9 +53,9 @@ void dbench_run(void)
     {
         DBENCH_BANNER("snmp");
         volatile size_t sink = 0;
-        DBENCH_OP("pc_snmp_agent_process GET", 100000, sink += pc_snmp_agent_process(reqget, nget, resp, sizeof(resp)));
-        DBENCH_OP("pc_snmp_agent_process GETNEXT", 100000,
-                  sink += pc_snmp_agent_process(reqnext, nnext, resp, sizeof(resp)));
+        DBENCH_OP("protocore_snmp_agent_process GET", 100000, sink += protocore_snmp_agent_process(reqget, nget, resp, sizeof(resp)));
+        DBENCH_OP("protocore_snmp_agent_process GETNEXT", 100000,
+                  sink += protocore_snmp_agent_process(reqnext, nnext, resp, sizeof(resp)));
         (void)sink;
         DBENCH_DONE();
     }

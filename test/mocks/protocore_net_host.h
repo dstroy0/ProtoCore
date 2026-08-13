@@ -3,14 +3,14 @@
 //
 // Host pcb driver: the target's scheduler + TCP/UDP surface, implemented for the test build.
 //
-// src/core_setup/board_profiles/pc_platform.h aliases that surface onto the vendor's calls on
+// src/core_setup/board_profiles/protocore_platform.h aliases that surface onto the vendor's calls on
 // the hot path. On the test build there is no vendor, so this file supplies the same names, the
 // same shapes, and the same member layout the core reads. That is what lets a transport TU be
 // compiled and driven on the host instead of only on silicon.
 //
 // Pcbs come from a fixed table, sends are captured, and callbacks are
 // stored so a test can fire them. Nothing here talks to a socket. A test that wants behavior
-// drives it through the pc_net_host_* entry points at the bottom.
+// drives it through the protocore_net_host_* entry points at the bottom.
 //
 // Every mutable global below carries external linkage through a weak definition rather than
 // `static`. A `static` in a header is one object PER TRANSLATION UNIT, so the core wrote its own
@@ -20,8 +20,8 @@
 //
 // test/ is exempt from the src/ style rules, so this reads as plain host C.
 
-#ifndef PROTOCORE_PC_NET_HOST_H
-#define PROTOCORE_PC_NET_HOST_H
+#ifndef PROTOCORE_PROTOCORE_NET_HOST_H
+#define PROTOCORE_PROTOCORE_NET_HOST_H
 
 #include <Arduino.h> // the virtual clock the host time base reads: millis() / set_millis()
 #include <setjmp.h>  // how a task entry that never returns is unwound; see the task table below
@@ -39,32 +39,32 @@
 // preload what a read should return. That makes the bridge's framing and transaction logic
 // exercisable on the host instead of only on a wired rig.
 
-#define PC_UART_UNITS 3
+#define PROTOCORE_UART_UNITS 3
 
-#ifndef PC_BUS_HOST_CAP
-#define PC_BUS_HOST_CAP 1024
+#ifndef PROTOCORE_BUS_HOST_CAP
+#define PROTOCORE_BUS_HOST_CAP 1024
 #endif
 
-__attribute__((weak)) uint8_t pc_bus_host_tx[PC_BUS_HOST_CAP];
-__attribute__((weak)) uint32_t pc_bus_host_tx_len;
-__attribute__((weak)) uint8_t pc_bus_host_rx[PC_BUS_HOST_CAP];
-__attribute__((weak)) uint32_t pc_bus_host_rx_len;
-__attribute__((weak)) uint32_t pc_bus_host_rx_pos;
+__attribute__((weak)) uint8_t protocore_bus_host_tx[PROTOCORE_BUS_HOST_CAP];
+__attribute__((weak)) uint32_t protocore_bus_host_tx_len;
+__attribute__((weak)) uint8_t protocore_bus_host_rx[PROTOCORE_BUS_HOST_CAP];
+__attribute__((weak)) uint32_t protocore_bus_host_rx_len;
+__attribute__((weak)) uint32_t protocore_bus_host_rx_pos;
 
-static inline void pc_bus_host_capture(const void *buf, uint32_t len)
+static inline void protocore_bus_host_capture(const void *buf, uint32_t len)
 {
     const uint8_t *b = (const uint8_t *)buf;
-    while (len-- && pc_bus_host_tx_len < PC_BUS_HOST_CAP)
+    while (len-- && protocore_bus_host_tx_len < PROTOCORE_BUS_HOST_CAP)
     {
-        pc_bus_host_tx[pc_bus_host_tx_len++] = *b++;
+        protocore_bus_host_tx[protocore_bus_host_tx_len++] = *b++;
     }
 }
-static inline uint32_t pc_bus_host_drain(uint8_t *buf, uint32_t len)
+static inline uint32_t protocore_bus_host_drain(uint8_t *buf, uint32_t len)
 {
     uint32_t n = 0;
-    while (n < len && pc_bus_host_rx_pos < pc_bus_host_rx_len)
+    while (n < len && protocore_bus_host_rx_pos < protocore_bus_host_rx_len)
     {
-        buf[n++] = pc_bus_host_rx[pc_bus_host_rx_pos++];
+        buf[n++] = protocore_bus_host_rx[protocore_bus_host_rx_pos++];
     }
     return n;
 }
@@ -73,138 +73,138 @@ static inline uint32_t pc_bus_host_drain(uint8_t *buf, uint32_t len)
 // transfer ended and the next began, which bus ran it, and which device it addressed. A driver
 // that splits a frame across two transfers, or addresses the wrong part, is only visible here.
 
-#define PC_BUS_HOST_I2C 0
-#define PC_BUS_HOST_SPI 1
-#define PC_BUS_HOST_UART 2
+#define PROTOCORE_BUS_HOST_I2C 0
+#define PROTOCORE_BUS_HOST_SPI 1
+#define PROTOCORE_BUS_HOST_UART 2
 
-#ifndef PC_BUS_HOST_MAX_TXN
-#define PC_BUS_HOST_MAX_TXN 192
+#ifndef PROTOCORE_BUS_HOST_MAX_TXN
+#define PROTOCORE_BUS_HOST_MAX_TXN 192
 #endif
 
 typedef struct
 {
-    uint8_t kind;    /**< PC_BUS_HOST_I2C / _SPI / _UART */
+    uint8_t kind;    /**< PROTOCORE_BUS_HOST_I2C / _SPI / _UART */
     uint16_t target; /**< I2C address, SPI host, or UART unit */
     uint32_t woff;   /**< where this transfer's bytes start in the write stream */
     uint32_t wlen;
     uint32_t rlen;
     uint32_t t_us; /**< when it ran, so the gap to the next one is assertable */
-} pc_bus_host_rec;
+} protocore_bus_host_rec;
 
-__attribute__((weak)) pc_bus_host_rec pc_bus_host_log[PC_BUS_HOST_MAX_TXN];
-__attribute__((weak)) uint32_t pc_bus_host_log_len;
-__attribute__((weak)) uint32_t pc_bus_host_fail;
+__attribute__((weak)) protocore_bus_host_rec protocore_bus_host_log[PROTOCORE_BUS_HOST_MAX_TXN];
+__attribute__((weak)) uint32_t protocore_bus_host_log_len;
+__attribute__((weak)) uint32_t protocore_bus_host_fail;
 
 /* Defined with the time base further down; the log stamps every transfer with it. */
-static inline uint32_t pc_platform_micros(void);
+static inline uint32_t protocore_platform_micros(void);
 
 /** @brief Record one transfer and capture its write span. 0 when a test asked it to fail. */
-static inline int pc_bus_host_record(uint8_t kind, uint16_t target, const void *w, uint32_t wlen, uint32_t rlen)
+static inline int protocore_bus_host_record(uint8_t kind, uint16_t target, const void *w, uint32_t wlen, uint32_t rlen)
 {
-    if (pc_bus_host_fail > 0)
+    if (protocore_bus_host_fail > 0)
     {
-        pc_bus_host_fail--;
+        protocore_bus_host_fail--;
         return 0;
     }
-    if (pc_bus_host_log_len < PC_BUS_HOST_MAX_TXN)
+    if (protocore_bus_host_log_len < PROTOCORE_BUS_HOST_MAX_TXN)
     {
-        pc_bus_host_rec *t = &pc_bus_host_log[pc_bus_host_log_len++];
+        protocore_bus_host_rec *t = &protocore_bus_host_log[protocore_bus_host_log_len++];
         t->kind = kind;
         t->target = target;
-        t->woff = pc_bus_host_tx_len; /* before the capture below moves it */
+        t->woff = protocore_bus_host_tx_len; /* before the capture below moves it */
         t->wlen = wlen;
         t->rlen = rlen;
-        t->t_us = pc_platform_micros();
+        t->t_us = protocore_platform_micros();
     }
     if (w && wlen)
     {
-        pc_bus_host_capture(w, wlen);
+        protocore_bus_host_capture(w, wlen);
     }
     return 1;
 }
 
 /** @brief Microseconds between transfer @p a and transfer @p b, for a settle-time assertion. */
-static inline uint32_t pc_bus_host_gap_us(uint32_t a, uint32_t b)
+static inline uint32_t protocore_bus_host_gap_us(uint32_t a, uint32_t b)
 {
-    if (a >= pc_bus_host_log_len || b >= pc_bus_host_log_len)
+    if (a >= protocore_bus_host_log_len || b >= protocore_bus_host_log_len)
     {
         return 0;
     }
-    return pc_bus_host_log[b].t_us - pc_bus_host_log[a].t_us;
+    return protocore_bus_host_log[b].t_us - protocore_bus_host_log[a].t_us;
 }
 
 /** @brief How many transfers ran since the last reset. */
-static inline uint32_t pc_bus_host_count(void)
+static inline uint32_t protocore_bus_host_count(void)
 {
-    return pc_bus_host_log_len;
+    return protocore_bus_host_log_len;
 }
 
 /** @brief Transfer @p i, or NULL past the end. */
-static inline const pc_bus_host_rec *pc_bus_host_txn_at(uint32_t i)
+static inline const protocore_bus_host_rec *protocore_bus_host_txn_at(uint32_t i)
 {
-    return (i < pc_bus_host_log_len) ? &pc_bus_host_log[i] : (const pc_bus_host_rec *)0;
+    return (i < protocore_bus_host_log_len) ? &protocore_bus_host_log[i] : (const protocore_bus_host_rec *)0;
 }
 
 /** @brief The bytes transfer @p i wrote, or NULL past the end. */
-static inline const uint8_t *pc_bus_host_txn_bytes(uint32_t i, uint32_t *len)
+static inline const uint8_t *protocore_bus_host_txn_bytes(uint32_t i, uint32_t *len)
 {
-    if (i >= pc_bus_host_log_len)
+    if (i >= protocore_bus_host_log_len)
     {
         return (const uint8_t *)0;
     }
     if (len)
     {
-        *len = pc_bus_host_log[i].wlen;
+        *len = protocore_bus_host_log[i].wlen;
     }
-    return &pc_bus_host_tx[pc_bus_host_log[i].woff];
+    return &protocore_bus_host_tx[protocore_bus_host_log[i].woff];
 }
 
 /** @brief Make the next @p n transfers fail, as a device that does not acknowledge would. */
-static inline void pc_bus_host_fail_next(uint32_t n)
+static inline void protocore_bus_host_fail_next(uint32_t n)
 {
-    pc_bus_host_fail = n;
+    protocore_bus_host_fail = n;
 }
 
 // Tells the bus owners a seam exists, so their host arm drives it and the capture below sees what
 // a driver actually composed rather than the owner refusing before the driver got that far.
-#define PC_PLATFORM_HAS_BUS 1
+#define PROTOCORE_PLATFORM_HAS_BUS 1
 
-static inline int pc_platform_uart_begin(uint8_t unit, uint32_t baud, int rx, int tx)
+static inline int protocore_platform_uart_begin(uint8_t unit, uint32_t baud, int rx, int tx)
 {
     (void)baud;
     (void)rx;
     (void)tx;
-    return (unit < PC_UART_UNITS) ? 1 : 0;
+    return (unit < PROTOCORE_UART_UNITS) ? 1 : 0;
 }
-static inline int pc_platform_uart_write(uint8_t unit, const void *buf, uint32_t len)
+static inline int protocore_platform_uart_write(uint8_t unit, const void *buf, uint32_t len)
 {
-    return pc_bus_host_record(PC_BUS_HOST_UART, unit, buf, len, 0) ? (int)len : 0;
+    return protocore_bus_host_record(PROTOCORE_BUS_HOST_UART, unit, buf, len, 0) ? (int)len : 0;
 }
-static inline int pc_platform_uart_read(uint8_t unit, void *buf, uint32_t len, uint32_t ms)
+static inline int protocore_platform_uart_read(uint8_t unit, void *buf, uint32_t len, uint32_t ms)
 {
     (void)ms;
-    if (!pc_bus_host_record(PC_BUS_HOST_UART, unit, 0, 0, len))
+    if (!protocore_bus_host_record(PROTOCORE_BUS_HOST_UART, unit, 0, 0, len))
     {
         return 0;
     }
-    return (int)pc_bus_host_drain((uint8_t *)buf, len);
+    return (int)protocore_bus_host_drain((uint8_t *)buf, len);
 }
-static inline uint32_t pc_platform_uart_available(uint8_t unit)
+static inline uint32_t protocore_platform_uart_available(uint8_t unit)
 {
     (void)unit;
-    return pc_bus_host_rx_len - pc_bus_host_rx_pos;
+    return protocore_bus_host_rx_len - protocore_bus_host_rx_pos;
 }
 
-#define PC_SPI_MSBFIRST 0
-#define PC_SPI_LSBFIRST 1
+#define PROTOCORE_SPI_MSBFIRST 0
+#define PROTOCORE_SPI_LSBFIRST 1
 
-#define PC_SPI_LANES_1 1
-#define PC_SPI_LANES_2 2
-#define PC_SPI_LANES_4 4
+#define PROTOCORE_SPI_LANES_1 1
+#define PROTOCORE_SPI_LANES_2 2
+#define PROTOCORE_SPI_LANES_4 4
 
-__attribute__((weak)) int pc_spi_host_up;
+__attribute__((weak)) int protocore_spi_host_up;
 
-static inline int pc_platform_spi_begin(uint8_t host, int mosi, int miso, int sclk, int quadwp, int quadhd)
+static inline int protocore_platform_spi_begin(uint8_t host, int mosi, int miso, int sclk, int quadwp, int quadhd)
 {
     (void)host;
     (void)mosi;
@@ -212,27 +212,27 @@ static inline int pc_platform_spi_begin(uint8_t host, int mosi, int miso, int sc
     (void)sclk;
     (void)quadwp;
     (void)quadhd;
-    pc_spi_host_up = 1;
+    protocore_spi_host_up = 1;
     return 1;
 }
-static inline int pc_platform_spi_txn(uint8_t host, uint32_t hz, uint8_t bit_order, uint8_t mode, const uint8_t *tx,
-                                      uint8_t *rx, uint32_t len)
+static inline int protocore_platform_spi_txn(uint8_t host, uint32_t hz, uint8_t bit_order, uint8_t mode,
+                                             const uint8_t *tx, uint8_t *rx, uint32_t len)
 {
     (void)host;
     (void)hz;
     (void)bit_order;
     (void)mode;
-    if (!pc_spi_host_up)
+    if (!protocore_spi_host_up)
     {
         return 0;
     }
-    if (!pc_bus_host_record(PC_BUS_HOST_SPI, host, tx, tx ? len : 0u, rx ? len : 0u))
+    if (!protocore_bus_host_record(PROTOCORE_BUS_HOST_SPI, host, tx, tx ? len : 0u, rx ? len : 0u))
     {
         return 0;
     }
     if (rx)
     {
-        uint32_t got = pc_bus_host_drain(rx, len);
+        uint32_t got = protocore_bus_host_drain(rx, len);
         while (got < len)
         {
             rx[got++] = 0;
@@ -240,9 +240,10 @@ static inline int pc_platform_spi_txn(uint8_t host, uint32_t hz, uint8_t bit_ord
     }
     return 1;
 }
-static inline int pc_platform_spi_txn_ext(uint8_t host, uint32_t hz, uint8_t bit_order, uint8_t mode, uint16_t cmd,
-                                          uint8_t cmd_bits, uint32_t addr, uint8_t addr_bits, uint8_t dummy_bits,
-                                          uint8_t lanes, const uint8_t *tx, uint8_t *rx, uint32_t len)
+static inline int protocore_platform_spi_txn_ext(uint8_t host, uint32_t hz, uint8_t bit_order, uint8_t mode,
+                                                 uint16_t cmd, uint8_t cmd_bits, uint32_t addr, uint8_t addr_bits,
+                                                 uint8_t dummy_bits, uint8_t lanes, const uint8_t *tx, uint8_t *rx,
+                                                 uint32_t len)
 {
     (void)cmd;
     (void)cmd_bits;
@@ -250,68 +251,69 @@ static inline int pc_platform_spi_txn_ext(uint8_t host, uint32_t hz, uint8_t bit
     (void)addr_bits;
     (void)dummy_bits;
     (void)lanes;
-    return pc_platform_spi_txn(host, hz, bit_order, mode, tx, rx, len);
+    return protocore_platform_spi_txn(host, hz, bit_order, mode, tx, rx, len);
 }
 
 // I2C. The address a transfer went to is recorded ahead of its payload, so a suite can tell one
 // device's traffic from another's on a shared bus.
-#define PC_I2C_ADDR_10BIT 0x8000u
-#define PC_I2C_ADDR_MASK 0x03FFu
-#define PC_I2C_GENERAL_CALL 0x00u
+#define PROTOCORE_I2C_ADDR_10BIT 0x8000u
+#define PROTOCORE_I2C_ADDR_MASK 0x03FFu
+#define PROTOCORE_I2C_GENERAL_CALL 0x00u
 
-__attribute__((weak)) int pc_i2c_host_up;
-__attribute__((weak)) uint16_t pc_bus_host_last_addr;
+__attribute__((weak)) int protocore_i2c_host_up;
+__attribute__((weak)) uint16_t protocore_bus_host_last_addr;
 
-static inline int pc_platform_i2c_begin(uint8_t bus, int sda, int scl, uint32_t hz)
+static inline int protocore_platform_i2c_begin(uint8_t bus, int sda, int scl, uint32_t hz)
 {
     (void)bus;
     (void)sda;
     (void)scl;
     (void)hz;
-    pc_i2c_host_up = 1;
+    protocore_i2c_host_up = 1;
     return 1;
 }
-static inline int pc_platform_i2c_write(uint8_t bus, uint16_t addr, const uint8_t *buf, uint32_t len, uint32_t ms)
+static inline int protocore_platform_i2c_write(uint8_t bus, uint16_t addr, const uint8_t *buf, uint32_t len,
+                                               uint32_t ms)
 {
     (void)bus;
     (void)ms;
-    pc_bus_host_last_addr = addr;
-    return pc_bus_host_record(PC_BUS_HOST_I2C, addr, buf, len, 0);
+    protocore_bus_host_last_addr = addr;
+    return protocore_bus_host_record(PROTOCORE_BUS_HOST_I2C, addr, buf, len, 0);
 }
-static inline int pc_platform_i2c_read(uint8_t bus, uint16_t addr, uint8_t *buf, uint32_t len, uint32_t ms)
+static inline int protocore_platform_i2c_read(uint8_t bus, uint16_t addr, uint8_t *buf, uint32_t len, uint32_t ms)
 {
     (void)bus;
     (void)ms;
-    pc_bus_host_last_addr = addr;
-    if (!pc_bus_host_record(PC_BUS_HOST_I2C, addr, 0, 0, len))
+    protocore_bus_host_last_addr = addr;
+    if (!protocore_bus_host_record(PROTOCORE_BUS_HOST_I2C, addr, 0, 0, len))
     {
         return 0;
     }
-    uint32_t got = pc_bus_host_drain(buf, len);
+    uint32_t got = protocore_bus_host_drain(buf, len);
     while (got < len)
     {
         buf[got++] = 0;
     }
     return 1;
 }
-static inline int pc_platform_i2c_write_read(uint8_t bus, uint16_t addr, const uint8_t *w, uint32_t wlen, uint8_t *r,
-                                             uint32_t rlen, uint32_t ms)
+static inline int protocore_platform_i2c_write_read(uint8_t bus, uint16_t addr, const uint8_t *w, uint32_t wlen,
+                                                    uint8_t *r, uint32_t rlen, uint32_t ms)
 {
     (void)bus;
     (void)ms;
-    pc_bus_host_last_addr = addr;
-    if (!pc_bus_host_record(PC_BUS_HOST_I2C, addr, w, wlen, rlen))
+    protocore_bus_host_last_addr = addr;
+    if (!protocore_bus_host_record(PROTOCORE_BUS_HOST_I2C, addr, w, wlen, rlen))
     {
         return 0;
     }
-    uint32_t got = pc_bus_host_drain(r, rlen);
+    uint32_t got = protocore_bus_host_drain(r, rlen);
     while (got < rlen)
     {
         r[got++] = 0;
     }
     return 1;
 }
-static inline int pc_platform_i2c_set_clock(uint8_t bus, uint32_t hz)
+static inline int protocore_platform_i2c_set_clock(uint8_t bus, uint32_t hz)
 {
     (void)bus;
     (void)hz;
@@ -319,15 +321,15 @@ static inline int pc_platform_i2c_set_clock(uint8_t bus, uint32_t hz)
 }
 // A probe is an address cycle with no payload. Nothing answers on the host, so a scan finds
 // nothing unless a suite drives the addresses itself.
-static inline int pc_platform_i2c_probe(uint8_t bus, uint16_t addr, uint32_t ms)
+static inline int protocore_platform_i2c_probe(uint8_t bus, uint16_t addr, uint32_t ms)
 {
     (void)bus;
     (void)ms;
-    pc_bus_host_last_addr = addr;
-    (void)pc_bus_host_record(PC_BUS_HOST_I2C, addr, 0, 0, 0);
+    protocore_bus_host_last_addr = addr;
+    (void)protocore_bus_host_record(PROTOCORE_BUS_HOST_I2C, addr, 0, 0, 0);
     return 0; /* nothing answers on a host bus */
 }
-static inline int pc_platform_i2c_recover(uint8_t bus, int sda, int scl)
+static inline int protocore_platform_i2c_recover(uint8_t bus, int sda, int scl)
 {
     (void)bus;
     (void)sda;
@@ -336,32 +338,32 @@ static inline int pc_platform_i2c_recover(uint8_t bus, int sda, int scl)
 }
 
 /** @brief Bytes the core has driven onto any bus since the last reset. */
-static inline const uint8_t *pc_bus_host_written(uint32_t *len)
+static inline const uint8_t *protocore_bus_host_written(uint32_t *len)
 {
     if (len)
     {
-        *len = pc_bus_host_tx_len;
+        *len = protocore_bus_host_tx_len;
     }
-    return pc_bus_host_tx;
+    return protocore_bus_host_tx;
 }
 /** @brief Preload what the next bus reads return. */
-static inline void pc_bus_host_preload(const uint8_t *data, uint32_t len)
+static inline void protocore_bus_host_preload(const uint8_t *data, uint32_t len)
 {
-    pc_bus_host_rx_len = (len > PC_BUS_HOST_CAP) ? PC_BUS_HOST_CAP : len;
-    pc_bus_host_rx_pos = 0;
-    for (uint32_t i = 0; i < pc_bus_host_rx_len; i++)
+    protocore_bus_host_rx_len = (len > PROTOCORE_BUS_HOST_CAP) ? PROTOCORE_BUS_HOST_CAP : len;
+    protocore_bus_host_rx_pos = 0;
+    for (uint32_t i = 0; i < protocore_bus_host_rx_len; i++)
     {
-        pc_bus_host_rx[i] = data[i];
+        protocore_bus_host_rx[i] = data[i];
     }
 }
 /** @brief Drop both directions so each test starts clean. */
-static inline void pc_bus_host_reset(void)
+static inline void protocore_bus_host_reset(void)
 {
-    pc_bus_host_tx_len = 0;
-    pc_bus_host_rx_len = 0;
-    pc_bus_host_rx_pos = 0;
-    pc_bus_host_log_len = 0;
-    pc_bus_host_fail = 0;
+    protocore_bus_host_tx_len = 0;
+    protocore_bus_host_rx_len = 0;
+    protocore_bus_host_rx_pos = 0;
+    protocore_bus_host_log_len = 0;
+    protocore_bus_host_fail = 0;
 }
 
 // ---------------------------------------------------------------------------
@@ -373,25 +375,25 @@ static inline void pc_bus_host_reset(void)
 // reproduces exactly. Nothing built on this host build is secret, and no key produced here
 // should ever leave a test.
 //
-// pc_rand_host_seed() makes a run repeatable from a chosen point.
+// protocore_rand_host_seed() makes a run repeatable from a chosen point.
 
-__attribute__((weak)) uint32_t pc_rand_host_state = 0x2545F491u;
+__attribute__((weak)) uint32_t protocore_rand_host_state = 0x2545F491u;
 
-static inline uint32_t pc_platform_rand_u32(void)
+static inline uint32_t protocore_platform_rand_u32(void)
 {
-    uint32_t x = pc_rand_host_state;
+    uint32_t x = protocore_rand_host_state;
     x ^= x << 13;
     x ^= x >> 17;
     x ^= x << 5;
-    pc_rand_host_state = x;
+    protocore_rand_host_state = x;
     return x;
 }
-static inline void pc_platform_rand_fill(void *buf, size_t len)
+static inline void protocore_platform_rand_fill(void *buf, size_t len)
 {
     uint8_t *b = (uint8_t *)buf;
     while (len >= 4)
     {
-        uint32_t v = pc_platform_rand_u32();
+        uint32_t v = protocore_platform_rand_u32();
         b[0] = (uint8_t)v;
         b[1] = (uint8_t)(v >> 8);
         b[2] = (uint8_t)(v >> 16);
@@ -399,7 +401,7 @@ static inline void pc_platform_rand_fill(void *buf, size_t len)
         b += 4;
         len -= 4;
     }
-    uint32_t v = pc_platform_rand_u32();
+    uint32_t v = protocore_platform_rand_u32();
     while (len--)
     {
         *b++ = (uint8_t)v;
@@ -408,75 +410,75 @@ static inline void pc_platform_rand_fill(void *buf, size_t len)
 }
 
 /** @brief Restart the host generator from @p seed so a run reproduces. */
-static inline void pc_rand_host_seed(uint32_t seed)
+static inline void protocore_rand_host_seed(uint32_t seed)
 {
-    pc_rand_host_state = seed ? seed : 0x2545F491u;
+    protocore_rand_host_state = seed ? seed : 0x2545F491u;
 }
 
 // ---------------------------------------------------------------------------
 // GPIO
 // ---------------------------------------------------------------------------
 //
-// A pin table rather than a no-op: a test sets an input level with pc_gpio_host_set() and reads
-// back what the core drove with pc_gpio_host_level(), so pin logic is exercised on the host.
+// A pin table rather than a no-op: a test sets an input level with protocore_gpio_host_set() and reads
+// back what the core drove with protocore_gpio_host_level(), so pin logic is exercised on the host.
 
-// Tells the pin drivers a seam exists, the same way PC_PLATFORM_HAS_BUS does for the bus owners.
-#define PC_PLATFORM_HAS_GPIO 1
+// Tells the pin drivers a seam exists, the same way PROTOCORE_PLATFORM_HAS_BUS does for the bus owners.
+#define PROTOCORE_PLATFORM_HAS_GPIO 1
 
-#define PC_GPIO_IN 0
-#define PC_GPIO_OUT 1
-#define PC_GPIO_IN_PULLUP 2
-#define PC_GPIO_IN_PULLDOWN 3
-#define PC_GPIO_LOW 0
-#define PC_GPIO_HIGH 1
+#define PROTOCORE_GPIO_IN 0
+#define PROTOCORE_GPIO_OUT 1
+#define PROTOCORE_GPIO_IN_PULLUP 2
+#define PROTOCORE_GPIO_IN_PULLDOWN 3
+#define PROTOCORE_GPIO_LOW 0
+#define PROTOCORE_GPIO_HIGH 1
 
-#ifndef PC_GPIO_HOST_PINS
-#define PC_GPIO_HOST_PINS 64
+#ifndef PROTOCORE_GPIO_HOST_PINS
+#define PROTOCORE_GPIO_HOST_PINS 64
 #endif
-__attribute__((weak)) uint8_t pc_gpio_host_mode_tbl[PC_GPIO_HOST_PINS];
-__attribute__((weak)) uint8_t pc_gpio_host_level_tbl[PC_GPIO_HOST_PINS];
+__attribute__((weak)) uint8_t protocore_gpio_host_mode_tbl[PROTOCORE_GPIO_HOST_PINS];
+__attribute__((weak)) uint8_t protocore_gpio_host_level_tbl[PROTOCORE_GPIO_HOST_PINS];
 
-static inline void pc_platform_gpio_mode(uint8_t pin, uint8_t mode)
+static inline void protocore_platform_gpio_mode(uint8_t pin, uint8_t mode)
 {
-    if (pin < PC_GPIO_HOST_PINS)
+    if (pin < PROTOCORE_GPIO_HOST_PINS)
     {
-        pc_gpio_host_mode_tbl[pin] = mode;
-        if (mode == PC_GPIO_IN_PULLUP)
+        protocore_gpio_host_mode_tbl[pin] = mode;
+        if (mode == PROTOCORE_GPIO_IN_PULLUP)
         {
-            pc_gpio_host_level_tbl[pin] = 1;
+            protocore_gpio_host_level_tbl[pin] = 1;
         }
-        else if (mode == PC_GPIO_IN_PULLDOWN)
+        else if (mode == PROTOCORE_GPIO_IN_PULLDOWN)
         {
-            pc_gpio_host_level_tbl[pin] = 0;
+            protocore_gpio_host_level_tbl[pin] = 0;
         }
     }
 }
-static inline void pc_platform_gpio_write(uint8_t pin, uint8_t level)
+static inline void protocore_platform_gpio_write(uint8_t pin, uint8_t level)
 {
-    if (pin < PC_GPIO_HOST_PINS)
+    if (pin < PROTOCORE_GPIO_HOST_PINS)
     {
-        pc_gpio_host_level_tbl[pin] = level ? 1 : 0;
+        protocore_gpio_host_level_tbl[pin] = level ? 1 : 0;
     }
 }
-static inline uint8_t pc_platform_gpio_read(uint8_t pin)
+static inline uint8_t protocore_platform_gpio_read(uint8_t pin)
 {
-    return (pin < PC_GPIO_HOST_PINS) ? pc_gpio_host_level_tbl[pin] : 0;
+    return (pin < PROTOCORE_GPIO_HOST_PINS) ? protocore_gpio_host_level_tbl[pin] : 0;
 }
 
 /** @brief Drive an input pin from a test. */
-static inline void pc_gpio_host_set(uint8_t pin, uint8_t level)
+static inline void protocore_gpio_host_set(uint8_t pin, uint8_t level)
 {
-    pc_platform_gpio_write(pin, level);
+    protocore_platform_gpio_write(pin, level);
 }
 /** @brief What the core last drove (or a test last set) on @p pin. */
-static inline uint8_t pc_gpio_host_level(uint8_t pin)
+static inline uint8_t protocore_gpio_host_level(uint8_t pin)
 {
-    return pc_platform_gpio_read(pin);
+    return protocore_platform_gpio_read(pin);
 }
 /** @brief The direction the core configured for @p pin. */
-static inline uint8_t pc_gpio_host_mode(uint8_t pin)
+static inline uint8_t protocore_gpio_host_mode(uint8_t pin)
 {
-    return (pin < PC_GPIO_HOST_PINS) ? pc_gpio_host_mode_tbl[pin] : 0;
+    return (pin < PROTOCORE_GPIO_HOST_PINS) ? protocore_gpio_host_mode_tbl[pin] : 0;
 }
 
 // ---------------------------------------------------------------------------
@@ -485,94 +487,94 @@ static inline uint8_t pc_gpio_host_mode(uint8_t pin)
 //
 // The host has no tick timer, so the platform default is the virtual clock in the Arduino mock:
 // set_millis() moves it and nothing else does. That makes the default path deterministic, which
-// is what a timeout test drives when it reverts an override with pc_set_clock(NULL, 0).
+// is what a timeout test drives when it reverts an override with protocore_set_clock(NULL, 0).
 
-static inline uint32_t pc_platform_millis(void)
+static inline uint32_t protocore_platform_millis(void)
 {
     return millis();
 }
 
 // Microseconds advance one per read on top of the millisecond base. The host has no timer below a
-// millisecond, so a sub-millisecond spin (a part's settle time, pc_delay_us) would never see the
+// millisecond, so a sub-millisecond spin (a part's settle time, protocore_delay_us) would never see the
 // counter move and would not terminate. Advancing per read makes such a wait finish in bounded
 // time and makes the elapsed value deterministic, which is what a jitter assertion needs.
-__attribute__((weak)) uint32_t pc_host_us_tick;
+__attribute__((weak)) uint32_t protocore_host_us_tick;
 
-static inline uint32_t pc_platform_micros(void)
+static inline uint32_t protocore_platform_micros(void)
 {
-    pc_host_us_tick++;
-    return millis() * 1000u + pc_host_us_tick;
+    protocore_host_us_tick++;
+    return millis() * 1000u + protocore_host_us_tick;
 }
 // No cycle counter on the host; deltas only, so a micros-derived stand-in is honest enough.
-static inline uint32_t pc_platform_cycles(void)
+static inline uint32_t protocore_platform_cycles(void)
 {
-    return pc_platform_micros() * 240u;
+    return protocore_platform_micros() * 240u;
 }
 
 // ---------------------------------------------------------------------------
 // Scheduler surface
 // ---------------------------------------------------------------------------
 
-typedef void *pc_platform_queue;
+typedef void *protocore_platform_queue;
 typedef struct
 {
     uint8_t opaque[8];
-} pc_platform_queue_ctrl;
-typedef void *pc_platform_task;
-typedef void (*pc_platform_task_fn)(void *);
-typedef int pc_platform_status;
-typedef uint32_t pc_platform_ticks;
+} protocore_platform_queue_ctrl;
+typedef void *protocore_platform_task;
+typedef void (*protocore_platform_task_fn)(void *);
+typedef int protocore_platform_status;
+typedef uint32_t protocore_platform_ticks;
 
-#define PC_PLATFORM_OK 1
-#define PC_PLATFORM_PASS 1
-#define PC_PLATFORM_FALSE 0
-#define PC_PLATFORM_WAIT_FOREVER 0xFFFFFFFFu
-#define PC_PLATFORM_CORES 1
+#define PROTOCORE_PLATFORM_OK 1
+#define PROTOCORE_PLATFORM_PASS 1
+#define PROTOCORE_PLATFORM_FALSE 0
+#define PROTOCORE_PLATFORM_WAIT_FOREVER 0xFFFFFFFFu
+#define PROTOCORE_PLATFORM_CORES 1
 
 // Where a task entry is unwound to. A task entry does not return: it loops until the kernel deletes
 // it while it is blocked. Deleting a task abandons its frame, so the host does the same with
-// longjmp - the entry runs until it would block and control resumes in pc_platform_host_task_run.
+// longjmp - the entry runs until it would block and control resumes in protocore_platform_host_task_run.
 // The depth is 0 outside a run, so a blocking call made by ordinary code cannot unwind.
-__attribute__((weak)) jmp_buf pc_task_host_jmp;
-__attribute__((weak)) int pc_task_host_depth;
-__attribute__((weak)) int pc_task_host_budget;
+__attribute__((weak)) jmp_buf protocore_task_host_jmp;
+__attribute__((weak)) int protocore_task_host_depth;
+__attribute__((weak)) int protocore_task_host_budget;
 
 // How many timed waits one run allows before it unwinds. A task that waits on a timeout rather than
 // forever would spin, since nothing else runs here to make its condition true.
-#ifndef PC_TASK_HOST_WAITS
-#define PC_TASK_HOST_WAITS 1
+#ifndef PROTOCORE_TASK_HOST_WAITS
+#define PROTOCORE_TASK_HOST_WAITS 1
 #endif
 
-static inline void pc_task_host_yield(void)
+static inline void protocore_task_host_yield(void)
 {
-    if (pc_task_host_depth > 0)
+    if (protocore_task_host_depth > 0)
     {
-        longjmp(pc_task_host_jmp, 1);
+        longjmp(protocore_task_host_jmp, 1);
     }
 }
 
 // Keyed by the handle create hands back, so an enqueue is observable at its consumer and
 // per-worker routing is checkable here rather than only on hardware.
-#define PC_QUEUE_MAX 24
-#define PC_QUEUE_DEPTH 32
-#define PC_QUEUE_ITEM 64
+#define PROTOCORE_QUEUE_MAX 24
+#define PROTOCORE_QUEUE_DEPTH 32
+#define PROTOCORE_QUEUE_ITEM 64
 
 typedef struct
 {
-    void *handle[PC_QUEUE_MAX];
-    size_t item[PC_QUEUE_MAX];
-    size_t depth[PC_QUEUE_MAX]; // what create asked for, so a full queue fills where the core says
-    size_t head[PC_QUEUE_MAX];
-    size_t tail[PC_QUEUE_MAX];
-    uint8_t buf[PC_QUEUE_MAX][PC_QUEUE_DEPTH * PC_QUEUE_ITEM];
+    void *handle[PROTOCORE_QUEUE_MAX];
+    size_t item[PROTOCORE_QUEUE_MAX];
+    size_t depth[PROTOCORE_QUEUE_MAX]; // what create asked for, so a full queue fills where the core says
+    size_t head[PROTOCORE_QUEUE_MAX];
+    size_t tail[PROTOCORE_QUEUE_MAX];
+    uint8_t buf[PROTOCORE_QUEUE_MAX][PROTOCORE_QUEUE_DEPTH * PROTOCORE_QUEUE_ITEM];
 } PcQueueTable;
-__attribute__((weak)) PcQueueTable g_pc_queues;
+__attribute__((weak)) PcQueueTable g_protocore_queues;
 
-static inline int pc_queue_slot(pc_platform_queue q)
+static inline int protocore_queue_slot(protocore_platform_queue q)
 {
-    for (int i = 0; i < PC_QUEUE_MAX; i++)
+    for (int i = 0; i < PROTOCORE_QUEUE_MAX; i++)
     {
-        if (g_pc_queues.handle[i] == q)
+        if (g_protocore_queues.handle[i] == q)
         {
             return i;
         }
@@ -582,192 +584,196 @@ static inline int pc_queue_slot(pc_platform_queue q)
 
 // One-shot creation failure: the next queue create reports no room, the way a kernel out of
 // queue objects does, so the caller has to unwind the listener it was building.
-__attribute__((weak)) int pc_platform_queue_create_fail_once;
+__attribute__((weak)) int protocore_platform_queue_create_fail_once;
 
 static inline void mock_queue_create_fail_once(void)
 {
-    pc_platform_queue_create_fail_once = 1;
+    protocore_platform_queue_create_fail_once = 1;
 }
 
-static inline pc_platform_queue pc_platform_queue_create(size_t depth, size_t item, void *storage, void *ctrl)
+static inline protocore_platform_queue protocore_platform_queue_create(size_t depth, size_t item, void *storage,
+                                                                       void *ctrl)
 {
     (void)depth;
     (void)ctrl;
-    if (pc_platform_queue_create_fail_once)
+    if (protocore_platform_queue_create_fail_once)
     {
-        pc_platform_queue_create_fail_once = 0;
+        protocore_platform_queue_create_fail_once = 0;
         return NULL;
     }
-    pc_platform_queue h = storage;
+    protocore_platform_queue h = storage;
     if (h == NULL)
     {
         h = (void *)1;
     }
     size_t sz = item;
-    if (sz > PC_QUEUE_ITEM)
+    if (sz > PROTOCORE_QUEUE_ITEM)
     {
-        sz = PC_QUEUE_ITEM;
+        sz = PROTOCORE_QUEUE_ITEM;
     }
     size_t d = depth;
-    if (d == 0 || d > PC_QUEUE_DEPTH)
+    if (d == 0 || d > PROTOCORE_QUEUE_DEPTH)
     {
-        d = PC_QUEUE_DEPTH;
+        d = PROTOCORE_QUEUE_DEPTH;
     }
-    int slot = pc_queue_slot(h);
+    int slot = protocore_queue_slot(h);
     if (slot < 0)
     {
-        slot = pc_queue_slot(NULL);
+        slot = protocore_queue_slot(NULL);
     }
     if (slot >= 0)
     {
-        g_pc_queues.handle[slot] = h;
-        g_pc_queues.item[slot] = sz;
-        g_pc_queues.depth[slot] = d;
-        g_pc_queues.head[slot] = 0;
-        g_pc_queues.tail[slot] = 0;
+        g_protocore_queues.handle[slot] = h;
+        g_protocore_queues.item[slot] = sz;
+        g_protocore_queues.depth[slot] = d;
+        g_protocore_queues.head[slot] = 0;
+        g_protocore_queues.tail[slot] = 0;
     }
     return h;
 }
-// One-shot send failure: the next pc_platform_queue_send() reports a full queue and clears the
+// One-shot send failure: the next protocore_platform_queue_send() reports a full queue and clears the
 // latch. Lets a test drive the enqueue path's rejection branch.
-__attribute__((weak)) int pc_platform_queue_send_fail_once = 0;
+__attribute__((weak)) int protocore_platform_queue_send_fail_once = 0;
 
 static inline void mock_queue_send_fail_once(void)
 {
-    pc_platform_queue_send_fail_once = 1;
+    protocore_platform_queue_send_fail_once = 1;
 }
 
 // The two send entry points differ only in which end they write, so the bounds and the copy live here.
-static inline int pc_queue_push(pc_platform_queue q, const void *item, size_t at)
+static inline int protocore_queue_push(protocore_platform_queue q, const void *item, size_t at)
 {
-    int slot = pc_queue_slot(q);
+    int slot = protocore_queue_slot(q);
     if (slot < 0 || item == NULL)
     {
-        return PC_PLATFORM_FALSE;
+        return PROTOCORE_PLATFORM_FALSE;
     }
-    if ((g_pc_queues.head[slot] - g_pc_queues.tail[slot]) >= g_pc_queues.depth[slot])
+    if ((g_protocore_queues.head[slot] - g_protocore_queues.tail[slot]) >= g_protocore_queues.depth[slot])
     {
-        return PC_PLATFORM_FALSE; // full at the depth create asked for, the way a kernel queue refuses
+        return PROTOCORE_PLATFORM_FALSE; // full at the depth create asked for, the way a kernel queue refuses
     }
-    memcpy(&g_pc_queues.buf[slot][(at % PC_QUEUE_DEPTH) * PC_QUEUE_ITEM], item, g_pc_queues.item[slot]);
-    return PC_PLATFORM_OK;
+    memcpy(&g_protocore_queues.buf[slot][(at % PROTOCORE_QUEUE_DEPTH) * PROTOCORE_QUEUE_ITEM], item,
+           g_protocore_queues.item[slot]);
+    return PROTOCORE_PLATFORM_OK;
 }
 
-static inline int pc_platform_queue_send(pc_platform_queue q, const void *item, uint32_t ticks)
+static inline int protocore_platform_queue_send(protocore_platform_queue q, const void *item, uint32_t ticks)
 {
     (void)ticks;
-    if (pc_platform_queue_send_fail_once)
+    if (protocore_platform_queue_send_fail_once)
     {
-        pc_platform_queue_send_fail_once = 0;
-        return PC_PLATFORM_FALSE;
+        protocore_platform_queue_send_fail_once = 0;
+        return PROTOCORE_PLATFORM_FALSE;
     }
-    int slot = pc_queue_slot(q);
+    int slot = protocore_queue_slot(q);
     if (slot < 0)
     {
-        return PC_PLATFORM_FALSE;
+        return PROTOCORE_PLATFORM_FALSE;
     }
-    int ok = pc_queue_push(q, item, g_pc_queues.head[slot]);
-    if (ok == PC_PLATFORM_OK)
+    int ok = protocore_queue_push(q, item, g_protocore_queues.head[slot]);
+    if (ok == PROTOCORE_PLATFORM_OK)
     {
-        g_pc_queues.head[slot]++;
+        g_protocore_queues.head[slot]++;
     }
     return ok;
 }
 
-static inline int pc_platform_queue_send_front(pc_platform_queue q, const void *item, uint32_t ticks)
+static inline int protocore_platform_queue_send_front(protocore_platform_queue q, const void *item, uint32_t ticks)
 {
     (void)ticks;
-    int slot = pc_queue_slot(q);
+    int slot = protocore_queue_slot(q);
     if (slot < 0)
     {
-        return PC_PLATFORM_FALSE;
+        return PROTOCORE_PLATFORM_FALSE;
     }
-    int ok = pc_queue_push(q, item, g_pc_queues.tail[slot] - 1);
-    if (ok == PC_PLATFORM_OK)
+    int ok = protocore_queue_push(q, item, g_protocore_queues.tail[slot] - 1);
+    if (ok == PROTOCORE_PLATFORM_OK)
     {
-        g_pc_queues.tail[slot]--;
+        g_protocore_queues.tail[slot]--;
     }
     return ok;
 }
 
-static inline int pc_platform_queue_send_isr(pc_platform_queue q, const void *item, int *woke)
+static inline int protocore_platform_queue_send_isr(protocore_platform_queue q, const void *item, int *woke)
 {
     if (woke)
     {
         *woke = 0;
     }
-    return pc_platform_queue_send(q, item, 0);
+    return protocore_platform_queue_send(q, item, 0);
 }
 
 // Called from setUp so one case cannot inherit another's backlog.
 static inline void queue_stage_reset(void)
 {
-    for (int i = 0; i < PC_QUEUE_MAX; i++)
+    for (int i = 0; i < PROTOCORE_QUEUE_MAX; i++)
     {
-        g_pc_queues.head[i] = 0;
-        g_pc_queues.tail[i] = 0;
+        g_protocore_queues.head[i] = 0;
+        g_protocore_queues.tail[i] = 0;
     }
 }
 
-static inline int pc_platform_queue_recv(pc_platform_queue q, void *item, uint32_t ticks)
+static inline int protocore_platform_queue_recv(protocore_platform_queue q, void *item, uint32_t ticks)
 {
-    int slot = pc_queue_slot(q);
-    if (slot < 0 || item == NULL || g_pc_queues.head[slot] == g_pc_queues.tail[slot])
+    int slot = protocore_queue_slot(q);
+    if (slot < 0 || item == NULL || g_protocore_queues.head[slot] == g_protocore_queues.tail[slot])
     {
         // A wait-forever on an empty queue is where a task parks. Nothing else runs here to fill
         // it, so the entry unwinds instead; a timed or polling receive just reports empty.
-        if (ticks == PC_PLATFORM_WAIT_FOREVER)
+        if (ticks == PROTOCORE_PLATFORM_WAIT_FOREVER)
         {
-            pc_task_host_yield();
+            protocore_task_host_yield();
         }
         return 0;
     }
-    memcpy(item, &g_pc_queues.buf[slot][(g_pc_queues.tail[slot] % PC_QUEUE_DEPTH) * PC_QUEUE_ITEM],
-           g_pc_queues.item[slot]);
-    g_pc_queues.tail[slot]++;
-    return PC_PLATFORM_OK;
+    memcpy(
+        item,
+        &g_protocore_queues.buf[slot][(g_protocore_queues.tail[slot] % PROTOCORE_QUEUE_DEPTH) * PROTOCORE_QUEUE_ITEM],
+        g_protocore_queues.item[slot]);
+    g_protocore_queues.tail[slot]++;
+    return PROTOCORE_PLATFORM_OK;
 }
-static inline size_t pc_platform_queue_waiting(pc_platform_queue q)
+static inline size_t protocore_platform_queue_waiting(protocore_platform_queue q)
 {
-    int slot = pc_queue_slot(q);
+    int slot = protocore_queue_slot(q);
     if (slot < 0)
     {
         return 0;
     }
-    return g_pc_queues.head[slot] - g_pc_queues.tail[slot];
+    return g_protocore_queues.head[slot] - g_protocore_queues.tail[slot];
 }
-static inline size_t pc_platform_queue_waiting_isr(pc_platform_queue q)
+static inline size_t protocore_platform_queue_waiting_isr(protocore_platform_queue q)
 {
-    return pc_platform_queue_waiting(q);
+    return protocore_platform_queue_waiting(q);
 }
-static inline void pc_platform_queue_delete(pc_platform_queue q)
+static inline void protocore_platform_queue_delete(protocore_platform_queue q)
 {
-    int slot = pc_queue_slot(q);
+    int slot = protocore_queue_slot(q);
     if (slot >= 0)
     {
-        g_pc_queues.handle[slot] = NULL;
+        g_protocore_queues.handle[slot] = NULL;
     }
 }
 
 // The started tasks, keyed by the handle create hands back, the same way the queue table above is.
 // Nothing here runs on its own: the entry function is kept, and a test runs it when it chooses.
-#define PC_TASK_MAX 16
+#define PROTOCORE_TASK_MAX 16
 
 typedef struct
 {
-    pc_platform_task_fn fn[PC_TASK_MAX];
-    void *arg[PC_TASK_MAX];
-    void *handle[PC_TASK_MAX];
-    const char *name[PC_TASK_MAX]; // what start was given, so one task can be run by itself
-    int started[PC_TASK_MAX];
+    protocore_platform_task_fn fn[PROTOCORE_TASK_MAX];
+    void *arg[PROTOCORE_TASK_MAX];
+    void *handle[PROTOCORE_TASK_MAX];
+    const char *name[PROTOCORE_TASK_MAX]; // what start was given, so one task can be run by itself
+    int started[PROTOCORE_TASK_MAX];
 } PcTaskTable;
-__attribute__((weak)) PcTaskTable g_pc_tasks;
+__attribute__((weak)) PcTaskTable g_protocore_tasks;
 
-static inline int pc_task_slot(pc_platform_task t)
+static inline int protocore_task_slot(protocore_platform_task t)
 {
-    for (int i = 0; i < PC_TASK_MAX; i++)
+    for (int i = 0; i < PROTOCORE_TASK_MAX; i++)
     {
-        if (g_pc_tasks.started[i] && g_pc_tasks.handle[i] == t)
+        if (g_protocore_tasks.started[i] && g_protocore_tasks.handle[i] == t)
         {
             return i;
         }
@@ -775,53 +781,53 @@ static inline int pc_task_slot(pc_platform_task t)
     return -1;
 }
 
-// One-shot start failure: the next pc_platform_task_start reports no room, the way a kernel out of
+// One-shot start failure: the next protocore_platform_task_start reports no room, the way a kernel out of
 // task control blocks does, so the caller has to unwind what it was bringing up.
-__attribute__((weak)) int pc_platform_task_start_fail_once;
+__attribute__((weak)) int protocore_platform_task_start_fail_once;
 
 static inline void mock_task_start_fail_once(void)
 {
-    pc_platform_task_start_fail_once = 1;
+    protocore_platform_task_start_fail_once = 1;
 }
 
-static inline int pc_platform_task_start(pc_platform_task_fn fn, const char *name, uint32_t stack, void *arg, int prio,
-                                         pc_platform_task *out, int core)
+static inline int protocore_platform_task_start(protocore_platform_task_fn fn, const char *name, uint32_t stack,
+                                                void *arg, int prio, protocore_platform_task *out, int core)
 {
     (void)name;
     (void)stack;
     (void)prio;
     (void)core;
-    if (pc_platform_task_start_fail_once)
+    if (protocore_platform_task_start_fail_once)
     {
-        pc_platform_task_start_fail_once = 0;
-        return PC_PLATFORM_FALSE;
+        protocore_platform_task_start_fail_once = 0;
+        return PROTOCORE_PLATFORM_FALSE;
     }
-    for (int i = 0; i < PC_TASK_MAX; i++)
+    for (int i = 0; i < PROTOCORE_TASK_MAX; i++)
     {
-        if (!g_pc_tasks.started[i])
+        if (!g_protocore_tasks.started[i])
         {
-            g_pc_tasks.fn[i] = fn;
-            g_pc_tasks.arg[i] = arg;
-            g_pc_tasks.name[i] = name;
+            g_protocore_tasks.fn[i] = fn;
+            g_protocore_tasks.arg[i] = arg;
+            g_protocore_tasks.name[i] = name;
             // The handle is the slot, offset so it is never NULL: the core tests a task handle
             // against NULL to decide there is one.
-            g_pc_tasks.handle[i] = (void *)(uintptr_t)(i + 1);
-            g_pc_tasks.started[i] = 1;
+            g_protocore_tasks.handle[i] = (void *)(uintptr_t)(i + 1);
+            g_protocore_tasks.started[i] = 1;
             if (out)
             {
-                *out = g_pc_tasks.handle[i];
+                *out = g_protocore_tasks.handle[i];
             }
-            return PC_PLATFORM_PASS;
+            return PROTOCORE_PLATFORM_PASS;
         }
     }
-    return PC_PLATFORM_FALSE;
+    return PROTOCORE_PLATFORM_FALSE;
 }
-static inline void pc_platform_task_stop(pc_platform_task t)
+static inline void protocore_platform_task_stop(protocore_platform_task t)
 {
-    int slot = pc_task_slot(t);
+    int slot = protocore_task_slot(t);
     if (slot >= 0)
     {
-        g_pc_tasks.started[slot] = 0;
+        g_protocore_tasks.started[slot] = 0;
     }
 }
 
@@ -831,74 +837,74 @@ static inline void pc_platform_task_stop(pc_platform_task t)
  * The entry runs until it waits on an empty queue forever, spends its timed-wait budget, or
  * returns. Returns 0 when no such task is started.
  */
-static inline int pc_platform_host_task_run(pc_platform_task t)
+static inline int protocore_platform_host_task_run(protocore_platform_task t)
 {
-    int slot = pc_task_slot(t);
-    if (slot < 0 || !g_pc_tasks.fn[slot])
+    int slot = protocore_task_slot(t);
+    if (slot < 0 || !g_protocore_tasks.fn[slot])
     {
         return 0;
     }
-    pc_task_host_budget = PC_TASK_HOST_WAITS;
-    pc_task_host_depth++;
-    if (setjmp(pc_task_host_jmp) == 0)
+    protocore_task_host_budget = PROTOCORE_TASK_HOST_WAITS;
+    protocore_task_host_depth++;
+    if (setjmp(protocore_task_host_jmp) == 0)
     {
-        g_pc_tasks.fn[slot](g_pc_tasks.arg[slot]);
+        g_protocore_tasks.fn[slot](g_protocore_tasks.arg[slot]);
     }
-    pc_task_host_depth--;
+    protocore_task_host_depth--;
     return 1;
 }
 
 /** @brief Run the started task that start was given @p name for. 0 when there is none. */
-static inline int pc_platform_host_task_run_named(const char *name)
+static inline int protocore_platform_host_task_run_named(const char *name)
 {
     if (name == NULL)
     {
         return 0;
     }
-    for (int i = 0; i < PC_TASK_MAX; i++)
+    for (int i = 0; i < PROTOCORE_TASK_MAX; i++)
     {
-        if (g_pc_tasks.started[i] && g_pc_tasks.name[i] && strcmp(g_pc_tasks.name[i], name) == 0)
+        if (g_protocore_tasks.started[i] && g_protocore_tasks.name[i] && strcmp(g_protocore_tasks.name[i], name) == 0)
         {
-            return pc_platform_host_task_run(g_pc_tasks.handle[i]);
+            return protocore_platform_host_task_run(g_protocore_tasks.handle[i]);
         }
     }
     return 0;
 }
 
 /** @brief Run every started task's entry function once, lowest slot first. */
-static inline int pc_platform_host_tasks_run_all(void)
+static inline int protocore_platform_host_tasks_run_all(void)
 {
     int ran = 0;
-    for (int i = 0; i < PC_TASK_MAX; i++)
+    for (int i = 0; i < PROTOCORE_TASK_MAX; i++)
     {
-        if (g_pc_tasks.started[i] && g_pc_tasks.fn[i])
+        if (g_protocore_tasks.started[i] && g_protocore_tasks.fn[i])
         {
-            ran += pc_platform_host_task_run(g_pc_tasks.handle[i]);
+            ran += protocore_platform_host_task_run(g_protocore_tasks.handle[i]);
         }
     }
     return ran;
 }
 
 /** @brief Forget every started task, so one case does not inherit another's. */
-static inline void pc_platform_host_tasks_reset(void)
+static inline void protocore_platform_host_tasks_reset(void)
 {
-    memset(&g_pc_tasks, 0, sizeof(g_pc_tasks));
-    pc_platform_task_start_fail_once = 0;
+    memset(&g_protocore_tasks, 0, sizeof(g_protocore_tasks));
+    protocore_platform_task_start_fail_once = 0;
 }
-static inline void pc_platform_task_notify(pc_platform_task t)
+static inline void protocore_platform_task_notify(protocore_platform_task t)
 {
     (void)t;
 }
-static inline uint32_t pc_platform_task_wait(int clear, uint32_t ticks)
+static inline uint32_t protocore_platform_task_wait(int clear, uint32_t ticks)
 {
     (void)clear;
     (void)ticks;
     // A timed wait returns on the target when its timeout expires, so it reports here too. Nothing
     // else runs to notify it, so a task looping on one spends its budget and unwinds.
-    pc_task_host_budget--;
-    if (pc_task_host_budget < 0)
+    protocore_task_host_budget--;
+    if (protocore_task_host_budget < 0)
     {
-        pc_task_host_yield();
+        protocore_task_host_yield();
     }
     return 0;
 }
@@ -906,18 +912,18 @@ static inline uint32_t pc_platform_task_wait(int clear, uint32_t ticks)
 // off here is what moves time forward; leaving this inert made any driver's pcdelay spin on a
 // millisecond count that never changed. A test that drives the clock itself with set_millis is
 // unaffected, since nothing calls this unless code under test is waiting.
-static inline void pc_platform_task_delay(uint32_t ticks)
+static inline void protocore_platform_task_delay(uint32_t ticks)
 {
     if (ticks)
     {
         set_millis(millis() + ticks);
     }
 }
-static inline void pc_platform_task_yield_from_isr(int woke)
+static inline void protocore_platform_task_yield_from_isr(int woke)
 {
     (void)woke;
 }
-static inline pc_platform_task pc_platform_task_self(void)
+static inline protocore_platform_task protocore_platform_task_self(void)
 {
     return (void *)1;
 }
@@ -926,42 +932,42 @@ static inline pc_platform_task pc_platform_task_self(void)
 // Address
 // ---------------------------------------------------------------------------
 
-#define PC_NET_TYPE_ANY 0
-#define PC_NET_TYPE_V4 4
-#define PC_NET_TYPE_V6 6
+#define PROTOCORE_NET_TYPE_ANY 0
+#define PROTOCORE_NET_TYPE_V4 4
+#define PROTOCORE_NET_TYPE_V6 6
 
 typedef struct
 {
-    uint8_t type;      // PC_NET_TYPE_*
+    uint8_t type;      // PROTOCORE_NET_TYPE_*
     uint8_t bytes[16]; // network order; v4 in the first 4
-} pc_net_ip;
+} protocore_net_ip;
 
 // Behind a function rather than a file-scope object: this header reaches every translation unit,
 // and a static variable most of them never name warns in each one.
-static inline pc_net_ip *pc_net_host_any(void)
+static inline protocore_net_ip *protocore_net_host_any(void)
 {
-    static pc_net_ip any;
+    static protocore_net_ip any;
     return &any;
 }
-#define PC_NET_ADDR_ANY pc_net_host_any()
-#define PC_NET_ADDR_ANY4 pc_net_host_any()
-#define PC_NET_ADDR_ANY4_P pc_net_host_any()
+#define PROTOCORE_NET_ADDR_ANY protocore_net_host_any()
+#define PROTOCORE_NET_ADDR_ANY4 protocore_net_host_any()
+#define PROTOCORE_NET_ADDR_ANY4_P protocore_net_host_any()
 
-#define pc_net_ip_is_v4(a) ((a) && (a)->type == PC_NET_TYPE_V4)
-#define pc_net_ip_is_v6(a) ((a) && (a)->type == PC_NET_TYPE_V6)
-#define pc_net_ip_as_v4(a) (a)
-#define pc_net_ip_as_v6(a) (a)
+#define protocore_net_ip_is_v4(a) ((a) && (a)->type == PROTOCORE_NET_TYPE_V4)
+#define protocore_net_ip_is_v6(a) ((a) && (a)->type == PROTOCORE_NET_TYPE_V6)
+#define protocore_net_ip_as_v4(a) (a)
+#define protocore_net_ip_as_v6(a) (a)
 
 // The v6 address as bytes, and the v6 tag: lwIP keeps four network-order words, this keeps the
 // sixteen bytes those words hold, so both answer the same question.
-#define pc_net_ip6_bytes(a) ((const uint8_t *)(a)->bytes)
-#define pc_net_ip6_wbytes(a) ((uint8_t *)(a)->bytes)
-#define pc_net_ip6_mark(a) ((a)->type = PC_NET_TYPE_V6)
+#define protocore_net_ip6_bytes(a) ((const uint8_t *)(a)->bytes)
+#define protocore_net_ip6_wbytes(a) ((uint8_t *)(a)->bytes)
+#define protocore_net_ip6_mark(a) ((a)->type = PROTOCORE_NET_TYPE_V6)
 
 // The four octets as a word, the way lwIP's ip4_addr_get_u32 hands them back: the word's memory
 // bytes are the address in network order. Composing the value arithmetically instead would byte
 // reverse it on a little-endian host, and every caller here reads it as lwIP's.
-static inline uint32_t pc_net_ip4_u32(const pc_net_ip *a)
+static inline uint32_t protocore_net_ip4_u32(const protocore_net_ip *a)
 {
     uint32_t v = 0;
     if (!a)
@@ -971,25 +977,25 @@ static inline uint32_t pc_net_ip4_u32(const pc_net_ip *a)
     memcpy(&v, a->bytes, 4);
     return v;
 }
-static inline void pc_net_ip4_set(pc_net_ip *a, uint8_t b0, uint8_t b1, uint8_t b2, uint8_t b3)
+static inline void protocore_net_ip4_set(protocore_net_ip *a, uint8_t b0, uint8_t b1, uint8_t b2, uint8_t b3)
 {
     if (!a)
     {
         return;
     }
     memset(a, 0, sizeof(*a));
-    a->type = PC_NET_TYPE_V4;
+    a->type = PROTOCORE_NET_TYPE_V4;
     a->bytes[0] = b0;
     a->bytes[1] = b1;
     a->bytes[2] = b2;
     a->bytes[3] = b3;
 }
-static inline int pc_net_ip4_is_multicast(const pc_net_ip *a)
+static inline int protocore_net_ip4_is_multicast(const protocore_net_ip *a)
 {
-    return a && a->type == PC_NET_TYPE_V4 && (a->bytes[0] & 0xF0u) == 0xE0u;
+    return a && a->type == PROTOCORE_NET_TYPE_V4 && (a->bytes[0] & 0xF0u) == 0xE0u;
 }
 // Dotted-quad only; the core's own RFC 4291 parser (network/ip.c) is what tests actually exercise.
-static inline int pc_net_ip_parse(const char *s, pc_net_ip *out)
+static inline int protocore_net_ip_parse(const char *s, protocore_net_ip *out)
 {
     if (!s || !out)
     {
@@ -1027,10 +1033,10 @@ static inline int pc_net_ip_parse(const char *s, pc_net_ip *out)
     {
         return 0;
     }
-    pc_net_ip4_set(out, (uint8_t)v[0], (uint8_t)v[1], (uint8_t)v[2], (uint8_t)v[3]);
+    protocore_net_ip4_set(out, (uint8_t)v[0], (uint8_t)v[1], (uint8_t)v[2], (uint8_t)v[3]);
     return 1;
 }
-static inline char *pc_net_ip_print(const pc_net_ip *a, char *buf, int cap)
+static inline char *protocore_net_ip_print(const protocore_net_ip *a, char *buf, int cap)
 {
     if (!buf || cap <= 0)
     {
@@ -1070,188 +1076,190 @@ static inline char *pc_net_ip_print(const pc_net_ip *a, char *buf, int cap)
 // Packet buffer
 // ---------------------------------------------------------------------------
 
-#define PC_NET_PBUF_TRANSPORT 0
-#define PC_NET_PBUF_RAM 0
+#define PROTOCORE_NET_PBUF_TRANSPORT 0
+#define PROTOCORE_NET_PBUF_RAM 0
 
-typedef struct pc_pbuf
+typedef struct protocore_pbuf
 {
-    struct pc_pbuf *next;
+    struct protocore_pbuf *next;
     void *payload;
     uint16_t tot_len;
     uint16_t len;
-} pc_pbuf;
+} protocore_pbuf;
 
 // ---------------------------------------------------------------------------
 // Result codes
 // ---------------------------------------------------------------------------
 
-typedef int8_t pc_net_err;
+typedef int8_t protocore_net_err;
 
-#define PC_NET_OK 0
-#define PC_NET_ERR_MEM (-1)
-#define PC_NET_ERR_BUF (-2)
-#define PC_NET_ERR_VAL (-6)
-#define PC_NET_ERR_ARG (-16)
-#define PC_NET_ERR_USE (-8)
-#define PC_NET_ERR_CONN (-11)
-#define PC_NET_ERR_CLSD (-15)
-#define PC_NET_ERR_RST (-14)
-#define PC_NET_ERR_ABRT (-13)
+#define PROTOCORE_NET_OK 0
+#define PROTOCORE_NET_ERR_MEM (-1)
+#define PROTOCORE_NET_ERR_BUF (-2)
+#define PROTOCORE_NET_ERR_VAL (-6)
+#define PROTOCORE_NET_ERR_ARG (-16)
+#define PROTOCORE_NET_ERR_USE (-8)
+#define PROTOCORE_NET_ERR_CONN (-11)
+#define PROTOCORE_NET_ERR_CLSD (-15)
+#define PROTOCORE_NET_ERR_RST (-14)
+#define PROTOCORE_NET_ERR_ABRT (-13)
 
-#define PC_NET_WRITE_COPY 0x01
-#define PC_NET_OPT_REUSEADDR 0x04
+#define PROTOCORE_NET_WRITE_COPY 0x01
+#define PROTOCORE_NET_OPT_REUSEADDR 0x04
 
 // ---------------------------------------------------------------------------
 // Control blocks
 // ---------------------------------------------------------------------------
 
-typedef struct pc_pcb pc_pcb;
-typedef struct pc_udp_pcb pc_udp_pcb;
+typedef struct protocore_pcb protocore_pcb;
+typedef struct protocore_udp_pcb protocore_udp_pcb;
 
-typedef pc_net_err (*pc_net_recv_fn)(void *, pc_pcb *, pc_pbuf *, pc_net_err);
-typedef pc_net_err (*pc_net_sent_fn)(void *, pc_pcb *, uint16_t);
-typedef pc_net_err (*pc_net_accept_fn)(void *, pc_pcb *, pc_net_err);
-typedef pc_net_err (*pc_net_connect_fn)(void *, pc_pcb *, pc_net_err);
-typedef void (*pc_net_err_fn)(void *, pc_net_err);
-typedef void (*pc_net_udp_recv_fn)(void *, pc_udp_pcb *, pc_pbuf *, const pc_net_ip *, uint16_t);
+typedef protocore_net_err (*protocore_net_recv_fn)(void *, protocore_pcb *, protocore_pbuf *, protocore_net_err);
+typedef protocore_net_err (*protocore_net_sent_fn)(void *, protocore_pcb *, uint16_t);
+typedef protocore_net_err (*protocore_net_accept_fn)(void *, protocore_pcb *, protocore_net_err);
+typedef protocore_net_err (*protocore_net_connect_fn)(void *, protocore_pcb *, protocore_net_err);
+typedef void (*protocore_net_err_fn)(void *, protocore_net_err);
+typedef void (*protocore_net_udp_recv_fn)(void *, protocore_udp_pcb *, protocore_pbuf *, const protocore_net_ip *,
+                                          uint16_t);
 
-struct pc_pcb
+struct protocore_pcb
 {
     uint8_t tos;
     uint8_t state;
     uint16_t local_port;
     uint16_t remote_port;
-    pc_net_ip local_ip;
-    pc_net_ip remote_ip;
+    protocore_net_ip local_ip;
+    protocore_net_ip remote_ip;
     uint32_t so_options;
     uint16_t snd_queuelen; // segments still unacknowledged; the core waits for this to drain
     void *arg;
-    pc_net_recv_fn on_recv;
-    pc_net_sent_fn on_sent;
-    pc_net_accept_fn on_accept;
-    pc_net_err_fn on_err;
+    protocore_net_recv_fn on_recv;
+    protocore_net_sent_fn on_sent;
+    protocore_net_accept_fn on_accept;
+    protocore_net_err_fn on_err;
     int in_use;
 };
 
-struct pc_udp_pcb
+struct protocore_udp_pcb
 {
     uint8_t tos;
     uint16_t local_port;
     void *arg;
-    pc_net_udp_recv_fn on_recv;
+    protocore_net_udp_recv_fn on_recv;
     uint32_t so_options;
     int in_use;
 };
 
 // Fixed pools: no allocation, and a test can walk them to see what the core opened.
-#ifndef PC_NET_HOST_PCBS
-#define PC_NET_HOST_PCBS 16
+#ifndef PROTOCORE_NET_HOST_PCBS
+#define PROTOCORE_NET_HOST_PCBS 16
 #endif
-__attribute__((weak)) pc_pcb pc_net_host_pcbs[PC_NET_HOST_PCBS];
-__attribute__((weak)) pc_udp_pcb pc_net_host_udp_pcbs[PC_NET_HOST_PCBS];
+__attribute__((weak)) protocore_pcb protocore_net_host_pcbs[PROTOCORE_NET_HOST_PCBS];
+__attribute__((weak)) protocore_udp_pcb protocore_net_host_udp_pcbs[PROTOCORE_NET_HOST_PCBS];
 
 /**
  * @brief A stable pcb a test can bind a slot to, when what it needs is only "this slot has one".
  *
  * Slot state that is set up by hand rather than by an accept still has to carry a non-null pcb,
  * because the core reads it to decide a connection is live. The last entry is reserved for that:
- * pc_net_new() hands out from the front, so a test holding this one never collides with a pcb the
+ * protocore_net_new() hands out from the front, so a test holding this one never collides with a pcb the
  * code under test allocated.
  */
-static inline pc_pcb *pc_net_host_pcb(void)
+static inline protocore_pcb *protocore_net_host_pcb(void)
 {
-    return &pc_net_host_pcbs[PC_NET_HOST_PCBS - 1];
+    return &protocore_net_host_pcbs[PROTOCORE_NET_HOST_PCBS - 1];
 }
 
-// One-shot allocation failure: the next pc_net_new() reports the control-block pool spent.
-__attribute__((weak)) int pc_net_host_new_fail_once;
+// One-shot allocation failure: the next protocore_net_new() reports the control-block pool spent.
+__attribute__((weak)) int protocore_net_host_new_fail_once;
 
 static inline void mock_new_pcb_fail_once(void)
 {
-    pc_net_host_new_fail_once = 1;
+    protocore_net_host_new_fail_once = 1;
 }
 
-static inline pc_pcb *pc_net_new(int type)
+static inline protocore_pcb *protocore_net_new(int type)
 {
     (void)type;
-    if (pc_net_host_new_fail_once)
+    if (protocore_net_host_new_fail_once)
     {
-        pc_net_host_new_fail_once = 0;
+        protocore_net_host_new_fail_once = 0;
         return NULL;
     }
-    for (int i = 0; i < PC_NET_HOST_PCBS; i++)
+    for (int i = 0; i < PROTOCORE_NET_HOST_PCBS; i++)
     {
-        if (!pc_net_host_pcbs[i].in_use)
+        if (!protocore_net_host_pcbs[i].in_use)
         {
-            memset(&pc_net_host_pcbs[i], 0, sizeof(pc_pcb));
-            pc_net_host_pcbs[i].in_use = 1;
-            return &pc_net_host_pcbs[i];
+            memset(&protocore_net_host_pcbs[i], 0, sizeof(protocore_pcb));
+            protocore_net_host_pcbs[i].in_use = 1;
+            return &protocore_net_host_pcbs[i];
         }
     }
     return NULL;
 }
 // One-shot bind failure: the next bind reports the address already in use.
-__attribute__((weak)) int pc_net_host_bind_fail_once;
+__attribute__((weak)) int protocore_net_host_bind_fail_once;
 
 static inline void mock_bind_fail_once(void)
 {
-    pc_net_host_bind_fail_once = 1;
+    protocore_net_host_bind_fail_once = 1;
 }
 
-static inline pc_net_err pc_net_bind(pc_pcb *p, const pc_net_ip *a, uint16_t port)
+static inline protocore_net_err protocore_net_bind(protocore_pcb *p, const protocore_net_ip *a, uint16_t port)
 {
     (void)a;
-    if (pc_net_host_bind_fail_once)
+    if (protocore_net_host_bind_fail_once)
     {
-        pc_net_host_bind_fail_once = 0;
-        return PC_NET_ERR_USE;
+        protocore_net_host_bind_fail_once = 0;
+        return PROTOCORE_NET_ERR_USE;
     }
     if (!p)
     {
-        return PC_NET_ERR_ARG;
+        return PROTOCORE_NET_ERR_ARG;
     }
     p->local_port = port;
-    return PC_NET_OK;
+    return PROTOCORE_NET_OK;
 }
 // One-shot listen failure: the next listen reports no memory for the listen block.
-__attribute__((weak)) int pc_net_host_listen_fail_once;
+__attribute__((weak)) int protocore_net_host_listen_fail_once;
 
 static inline void mock_listen_fail_once(void)
 {
-    pc_net_host_listen_fail_once = 1;
+    protocore_net_host_listen_fail_once = 1;
 }
 
-static inline pc_pcb *pc_net_listen(pc_pcb *p, uint8_t backlog)
+static inline protocore_pcb *protocore_net_listen(protocore_pcb *p, uint8_t backlog)
 {
     (void)backlog;
-    if (pc_net_host_listen_fail_once)
+    if (protocore_net_host_listen_fail_once)
     {
-        pc_net_host_listen_fail_once = 0;
+        protocore_net_host_listen_fail_once = 0;
         return NULL;
     }
     return p;
 }
-// One-shot connect refusal: the next pc_net_connect() reports the peer unreachable and never
+// One-shot connect refusal: the next protocore_net_connect() reports the peer unreachable and never
 // completes, the way a RST to the SYN does.
-__attribute__((weak)) int pc_net_host_connect_fail_once;
+__attribute__((weak)) int protocore_net_host_connect_fail_once;
 
 static inline void mock_connect_fail_once(void)
 {
-    pc_net_host_connect_fail_once = 1;
+    protocore_net_host_connect_fail_once = 1;
 }
 
-// The connect completes inline, the way pc_net_call_marshal runs an op inline: the caller's
+// The connect completes inline, the way protocore_net_call_marshal runs an op inline: the caller's
 // callback fires before this returns, so a blocking open sees its flag on the first poll.
-static inline pc_net_err pc_net_connect(pc_pcb *p, const pc_net_ip *a, uint16_t port, pc_net_connect_fn cb)
+static inline protocore_net_err protocore_net_connect(protocore_pcb *p, const protocore_net_ip *a, uint16_t port,
+                                                      protocore_net_connect_fn cb)
 {
     if (!p)
     {
-        return PC_NET_ERR_ARG;
+        return PROTOCORE_NET_ERR_ARG;
     }
-    if (pc_net_host_connect_fail_once)
+    if (protocore_net_host_connect_fail_once)
     {
-        pc_net_host_connect_fail_once = 0;
-        return PC_NET_ERR_CONN;
+        protocore_net_host_connect_fail_once = 0;
+        return PROTOCORE_NET_ERR_CONN;
     }
     if (a)
     {
@@ -1260,83 +1268,83 @@ static inline pc_net_err pc_net_connect(pc_pcb *p, const pc_net_ip *a, uint16_t 
     p->remote_port = port;
     if (cb)
     {
-        cb(p->arg, p, PC_NET_OK);
+        cb(p->arg, p, PROTOCORE_NET_OK);
     }
-    return PC_NET_OK;
+    return PROTOCORE_NET_OK;
 }
-// One-shot close failure: the next pc_net_close() reports no memory and leaves the pcb open, the
+// One-shot close failure: the next protocore_net_close() reports no memory and leaves the pcb open, the
 // way a stack that cannot queue the FIN does. The caller has to keep the slot draining, not drop it.
-__attribute__((weak)) int pc_net_host_close_fail_once;
+__attribute__((weak)) int protocore_net_host_close_fail_once;
 
 static inline void mock_close_fail_once(void)
 {
-    pc_net_host_close_fail_once = 1;
+    protocore_net_host_close_fail_once = 1;
 }
 
-static inline pc_net_err pc_net_close(pc_pcb *p)
+static inline protocore_net_err protocore_net_close(protocore_pcb *p)
 {
-    if (pc_net_host_close_fail_once)
+    if (protocore_net_host_close_fail_once)
     {
-        pc_net_host_close_fail_once = 0;
-        return PC_NET_ERR_MEM;
+        protocore_net_host_close_fail_once = 0;
+        return PROTOCORE_NET_ERR_MEM;
     }
     if (p)
     {
         p->in_use = 0;
     }
-    return PC_NET_OK;
+    return PROTOCORE_NET_OK;
 }
 // How many aborts the code under test has issued. A slot reaped by an accept gate or a timeout
 // sweep is only distinguishable from one closed cleanly by whether the stack was told to abort.
-__attribute__((weak)) int pc_net_host_abort_calls;
+__attribute__((weak)) int protocore_net_host_abort_calls;
 
 static inline int mock_abort_call_count(void)
 {
-    return pc_net_host_abort_calls;
+    return protocore_net_host_abort_calls;
 }
 
 static inline void mock_abort_call_reset(void)
 {
-    pc_net_host_abort_calls = 0;
+    protocore_net_host_abort_calls = 0;
 }
 
-static inline void pc_net_abort(pc_pcb *p)
+static inline void protocore_net_abort(protocore_pcb *p)
 {
-    pc_net_host_abort_calls++;
+    protocore_net_host_abort_calls++;
     if (p)
     {
         p->in_use = 0;
     }
 }
-static inline void pc_net_arg(pc_pcb *p, void *arg)
+static inline void protocore_net_arg(protocore_pcb *p, void *arg)
 {
     if (p)
     {
         p->arg = arg;
     }
 }
-static inline void pc_net_on_recv(pc_pcb *p, pc_net_recv_fn fn)
+static inline void protocore_net_on_recv(protocore_pcb *p, protocore_net_recv_fn fn)
 {
     if (p)
     {
         p->on_recv = fn;
     }
 }
-static inline void pc_net_on_sent(pc_pcb *p, pc_net_sent_fn fn)
+static inline void protocore_net_on_sent(protocore_pcb *p, protocore_net_sent_fn fn)
 {
     if (p)
     {
         p->on_sent = fn;
     }
 }
-static inline void pc_net_on_accept(pc_pcb *p, pc_net_accept_fn fn)
+static inline void protocore_net_on_accept(protocore_pcb *p, protocore_net_accept_fn fn)
 {
     if (p)
     {
         p->on_accept = fn;
     }
 }
-static inline void pc_net_on_err(pc_pcb *p, pc_net_err_fn fn)
+static inline void protocore_net_on_err(protocore_pcb *p, protocore_net_err_fn fn)
 {
     if (p)
     {
@@ -1344,54 +1352,54 @@ static inline void pc_net_on_err(pc_pcb *p, pc_net_err_fn fn)
     }
 }
 
-// Sends are captured, not transmitted; pc_net_host_sent() is what a test asserts on.
+// Sends are captured, not transmitted; protocore_net_host_sent() is what a test asserts on.
 // Large enough to hold a multi-window file response whole: a test asserts on the body it sent, and
 // a capture that stops at one window would report a truncation the transport never made.
-#ifndef PC_NET_HOST_TXCAP
-#define PC_NET_HOST_TXCAP 65536
+#ifndef PROTOCORE_NET_HOST_TXCAP
+#define PROTOCORE_NET_HOST_TXCAP 65536
 #endif
-__attribute__((weak)) uint8_t pc_net_host_tx[PC_NET_HOST_TXCAP];
-__attribute__((weak)) size_t pc_net_host_tx_len;
+__attribute__((weak)) uint8_t protocore_net_host_tx[PROTOCORE_NET_HOST_TXCAP];
+__attribute__((weak)) size_t protocore_net_host_tx_len;
 
-// After this many successful writes the next pc_net_write reports a full send buffer and queues
+// After this many successful writes the next protocore_net_write reports a full send buffer and queues
 // nothing, so a send pump takes its un-read-and-retry path. -1 never fails.
-__attribute__((weak)) int pc_net_host_write_fail_after = -1;
+__attribute__((weak)) int protocore_net_host_write_fail_after = -1;
 
 static inline void mock_send_fail_after(int n)
 {
-    pc_net_host_write_fail_after = n;
+    protocore_net_host_write_fail_after = n;
 }
 
-static inline pc_net_err pc_net_write(pc_pcb *p, const void *data, uint16_t len, uint8_t flags)
+static inline protocore_net_err protocore_net_write(protocore_pcb *p, const void *data, uint16_t len, uint8_t flags)
 {
     (void)p;
     (void)flags;
     if (!data)
     {
-        return PC_NET_ERR_ARG;
+        return PROTOCORE_NET_ERR_ARG;
     }
-    if (pc_net_host_write_fail_after == 0)
+    if (protocore_net_host_write_fail_after == 0)
     {
-        return PC_NET_ERR_MEM;
+        return PROTOCORE_NET_ERR_MEM;
     }
-    if (pc_net_host_write_fail_after > 0)
+    if (protocore_net_host_write_fail_after > 0)
     {
-        pc_net_host_write_fail_after--;
+        protocore_net_host_write_fail_after--;
     }
-    if (pc_net_host_tx_len + len > sizeof(pc_net_host_tx))
+    if (protocore_net_host_tx_len + len > sizeof(protocore_net_host_tx))
     {
-        return PC_NET_ERR_MEM;
+        return PROTOCORE_NET_ERR_MEM;
     }
-    memcpy(pc_net_host_tx + pc_net_host_tx_len, data, len);
-    pc_net_host_tx_len += len;
-    return PC_NET_OK;
+    memcpy(protocore_net_host_tx + protocore_net_host_tx_len, data, len);
+    protocore_net_host_tx_len += len;
+    return PROTOCORE_NET_OK;
 }
-static inline pc_net_err pc_net_output(pc_pcb *p)
+static inline protocore_net_err protocore_net_output(protocore_pcb *p)
 {
     (void)p;
-    return PC_NET_OK;
+    return PROTOCORE_NET_OK;
 }
-static inline void pc_net_recved(pc_pcb *p, uint16_t len)
+static inline void protocore_net_recved(protocore_pcb *p, uint16_t len)
 {
     (void)p;
     (void)len;
@@ -1400,28 +1408,28 @@ static inline void pc_net_recved(pc_pcb *p, uint16_t len)
 // backpressure-and-resume path, where a response has to page out across several worker loops
 // instead of fitting one send.
 #define MOCK_SNDBUF_DEFAULT 5744 /* a typical lwIP TCP_SND_BUF */
-__attribute__((weak)) uint16_t pc_net_host_sndbuf_val = MOCK_SNDBUF_DEFAULT;
+__attribute__((weak)) uint16_t protocore_net_host_sndbuf_val = MOCK_SNDBUF_DEFAULT;
 
 static inline void mock_sndbuf_set(uint16_t v)
 {
-    pc_net_host_sndbuf_val = v;
+    protocore_net_host_sndbuf_val = v;
 }
 
-static inline uint16_t pc_net_sndbuf(pc_pcb *p)
+static inline uint16_t protocore_net_sndbuf(protocore_pcb *p)
 {
     (void)p;
-    return pc_net_host_sndbuf_val;
+    return protocore_net_host_sndbuf_val;
 }
-static inline void pc_net_nagle_disable(pc_pcb *p)
+static inline void protocore_net_nagle_disable(protocore_pcb *p)
 {
     (void)p;
 }
-static inline void pc_net_rcv_wnd_update(pc_pcb *p, uint16_t len)
+static inline void protocore_net_rcv_wnd_update(protocore_pcb *p, uint16_t len)
 {
     (void)p;
     (void)len;
 }
-static inline void pc_net_opt_set(void *p, uint32_t opt)
+static inline void protocore_net_opt_set(void *p, uint32_t opt)
 {
     (void)p;
     (void)opt;
@@ -1431,70 +1439,70 @@ static inline void pc_net_opt_set(void *p, uint32_t opt)
 // Packet buffers and the UDP send capture
 // ---------------------------------------------------------------------------
 //
-// pc_net_udp_sendto is where a datagram leaves the core, so it is the only place a test can see
+// protocore_net_udp_sendto is where a datagram leaves the core, so it is the only place a test can see
 // what the wire would have carried. It records the destination, the ports and the payload; the
-// renderer in pc_net_pcap.h turns that log into a .pcap the test parses and Wireshark opens.
+// renderer in protocore_net_pcap.h turns that log into a .pcap the test parses and Wireshark opens.
 //
 // The log holds the fields rather than the pcap bytes because this header is parsed from inside
-// protocore_config.h, before shared_primitives/types.h supplies PC_INLINE - so pcap.h cannot be
+// protocore_config.h, before shared_primitives/protocore_types.h supplies PROTOCORE_INLINE - so pcap.h cannot be
 // included here.
 
-#ifndef PC_NET_HOST_PBUFS
-#define PC_NET_HOST_PBUFS 8
+#ifndef PROTOCORE_NET_HOST_PBUFS
+#define PROTOCORE_NET_HOST_PBUFS 8
 #endif
-#ifndef PC_NET_HOST_DGRAM_LEN
-#define PC_NET_HOST_DGRAM_LEN 1472 // an Ethernet MTU less the IPv4 and UDP headers
+#ifndef PROTOCORE_NET_HOST_DGRAM_LEN
+#define PROTOCORE_NET_HOST_DGRAM_LEN 1472 // an Ethernet MTU less the IPv4 and UDP headers
 #endif
-#ifndef PC_NET_HOST_DGRAMS
-#define PC_NET_HOST_DGRAMS 64
+#ifndef PROTOCORE_NET_HOST_DGRAMS
+#define PROTOCORE_NET_HOST_DGRAMS 64
 #endif
 
 typedef struct
 {
-    pc_pbuf p;
-    uint8_t data[PC_NET_HOST_DGRAM_LEN];
+    protocore_pbuf p;
+    uint8_t data[PROTOCORE_NET_HOST_DGRAM_LEN];
     int in_use;
-} pc_net_host_pbuf_slot;
+} protocore_net_host_pbuf_slot;
 
-__attribute__((weak)) pc_net_host_pbuf_slot pc_net_host_pbuf_pool[PC_NET_HOST_PBUFS];
-__attribute__((weak)) int pc_net_host_pbuf_fail_once;
+__attribute__((weak)) protocore_net_host_pbuf_slot protocore_net_host_pbuf_pool[PROTOCORE_NET_HOST_PBUFS];
+__attribute__((weak)) int protocore_net_host_pbuf_fail_once;
 
 /** @brief One datagram the core handed to the stack. */
 typedef struct
 {
-    uint8_t type;     // PC_NET_TYPE_V4 / PC_NET_TYPE_V6
+    uint8_t type;     // PROTOCORE_NET_TYPE_V4 / PROTOCORE_NET_TYPE_V6
     uint8_t addr[16]; // destination, network order; v4 in the first four
     uint16_t src_port;
     uint16_t dst_port;
     uint8_t tos;
     uint32_t ms; // virtual-clock millisecond the send happened, the pcap record timestamp
     uint16_t len;
-    uint8_t data[PC_NET_HOST_DGRAM_LEN];
-} pc_net_host_dgram;
+    uint8_t data[PROTOCORE_NET_HOST_DGRAM_LEN];
+} protocore_net_host_dgram;
 
-__attribute__((weak)) pc_net_host_dgram pc_net_host_dgrams[PC_NET_HOST_DGRAMS];
-__attribute__((weak)) size_t pc_net_host_dgram_n;    // records kept
-__attribute__((weak)) size_t pc_net_host_dgram_sent; // sends seen, kept or not
+__attribute__((weak)) protocore_net_host_dgram protocore_net_host_dgrams[PROTOCORE_NET_HOST_DGRAMS];
+__attribute__((weak)) size_t protocore_net_host_dgram_n;    // records kept
+__attribute__((weak)) size_t protocore_net_host_dgram_sent; // sends seen, kept or not
 
-// The next pc_net_pbuf_alloc() reports the pool spent, so the send path's refuse branch is reachable.
+// The next protocore_net_pbuf_alloc() reports the pool spent, so the send path's refuse branch is reachable.
 static inline void mock_pbuf_fail_once(void)
 {
-    pc_net_host_pbuf_fail_once = 1;
+    protocore_net_host_pbuf_fail_once = 1;
 }
 
 // A pbuf a test built on the stack is not in the pool, so it is left alone.
-static inline void pc_net_pbuf_free(pc_pbuf *p)
+static inline void protocore_net_pbuf_free(protocore_pbuf *p)
 {
-    for (int i = 0; i < PC_NET_HOST_PBUFS; i++)
+    for (int i = 0; i < PROTOCORE_NET_HOST_PBUFS; i++)
     {
-        if (&pc_net_host_pbuf_pool[i].p == p)
+        if (&protocore_net_host_pbuf_pool[i].p == p)
         {
-            pc_net_host_pbuf_pool[i].in_use = 0;
+            protocore_net_host_pbuf_pool[i].in_use = 0;
             return;
         }
     }
 }
-static inline uint16_t pc_net_pbuf_copy(const pc_pbuf *p, void *dst, uint16_t len, uint16_t off)
+static inline uint16_t protocore_net_pbuf_copy(const protocore_pbuf *p, void *dst, uint16_t len, uint16_t off)
 {
     if (!p || !dst || !p->payload)
     {
@@ -1505,69 +1513,70 @@ static inline uint16_t pc_net_pbuf_copy(const pc_pbuf *p, void *dst, uint16_t le
     memcpy(dst, (const uint8_t *)p->payload + off, n);
     return n;
 }
-static inline pc_pbuf *pc_net_pbuf_alloc(int layer, uint16_t len, int type)
+static inline protocore_pbuf *protocore_net_pbuf_alloc(int layer, uint16_t len, int type)
 {
     (void)layer;
     (void)type;
-    if (pc_net_host_pbuf_fail_once)
+    if (protocore_net_host_pbuf_fail_once)
     {
-        pc_net_host_pbuf_fail_once = 0;
+        protocore_net_host_pbuf_fail_once = 0;
         return NULL;
     }
-    if (len > PC_NET_HOST_DGRAM_LEN)
+    if (len > PROTOCORE_NET_HOST_DGRAM_LEN)
     {
         return NULL;
     }
-    for (int i = 0; i < PC_NET_HOST_PBUFS; i++)
+    for (int i = 0; i < PROTOCORE_NET_HOST_PBUFS; i++)
     {
-        if (!pc_net_host_pbuf_pool[i].in_use)
+        if (!protocore_net_host_pbuf_pool[i].in_use)
         {
-            pc_net_host_pbuf_pool[i].in_use = 1;
-            pc_net_host_pbuf_pool[i].p.next = NULL;
-            pc_net_host_pbuf_pool[i].p.payload = pc_net_host_pbuf_pool[i].data;
-            pc_net_host_pbuf_pool[i].p.len = len;
-            pc_net_host_pbuf_pool[i].p.tot_len = len;
-            return &pc_net_host_pbuf_pool[i].p;
+            protocore_net_host_pbuf_pool[i].in_use = 1;
+            protocore_net_host_pbuf_pool[i].p.next = NULL;
+            protocore_net_host_pbuf_pool[i].p.payload = protocore_net_host_pbuf_pool[i].data;
+            protocore_net_host_pbuf_pool[i].p.len = len;
+            protocore_net_host_pbuf_pool[i].p.tot_len = len;
+            return &protocore_net_host_pbuf_pool[i].p;
         }
     }
     return NULL;
 }
 
 // First member of the core's call record; fn casts back to that record. lwIP puts a semaphore here.
-typedef struct pc_net_call
+typedef struct protocore_net_call
 {
     int sem;
-} pc_net_call;
+} protocore_net_call;
 
-static inline pc_net_err pc_net_call_marshal(pc_net_err (*fn)(pc_net_call *), pc_net_call *c)
+static inline protocore_net_err protocore_net_call_marshal(protocore_net_err (*fn)(protocore_net_call *),
+                                                           protocore_net_call *c)
 {
-    return fn ? fn(c) : PC_NET_OK;
+    return fn ? fn(c) : PROTOCORE_NET_OK;
 }
 
-static inline pc_udp_pcb *pc_net_udp_new(void)
+static inline protocore_udp_pcb *protocore_net_udp_new(void)
 {
-    for (int i = 0; i < PC_NET_HOST_PCBS; i++)
+    for (int i = 0; i < PROTOCORE_NET_HOST_PCBS; i++)
     {
-        if (!pc_net_host_udp_pcbs[i].in_use)
+        if (!protocore_net_host_udp_pcbs[i].in_use)
         {
-            memset(&pc_net_host_udp_pcbs[i], 0, sizeof(pc_udp_pcb));
-            pc_net_host_udp_pcbs[i].in_use = 1;
-            return &pc_net_host_udp_pcbs[i];
+            memset(&protocore_net_host_udp_pcbs[i], 0, sizeof(protocore_udp_pcb));
+            protocore_net_host_udp_pcbs[i].in_use = 1;
+            return &protocore_net_host_udp_pcbs[i];
         }
     }
     return NULL;
 }
-static inline pc_net_err pc_net_udp_bind(pc_udp_pcb *p, const pc_net_ip *a, uint16_t port)
+static inline protocore_net_err protocore_net_udp_bind(protocore_udp_pcb *p, const protocore_net_ip *a, uint16_t port)
 {
     (void)a;
     if (!p)
     {
-        return PC_NET_ERR_ARG;
+        return PROTOCORE_NET_ERR_ARG;
     }
     p->local_port = port;
-    return PC_NET_OK;
+    return PROTOCORE_NET_OK;
 }
-static inline void pc_net_udp_recv(pc_udp_pcb *p, pc_net_udp_recv_fn fn, void *arg)
+static inline void protocore_net_udp_recv(protocore_udp_pcb *p, protocore_net_udp_recv_fn fn, void *arg)
 {
     if (p)
     {
@@ -1575,35 +1584,36 @@ static inline void pc_net_udp_recv(pc_udp_pcb *p, pc_net_udp_recv_fn fn, void *a
         p->arg = arg;
     }
 }
-// After this many successful datagrams the next pc_net_udp_sendto refuses and records nothing, the
+// After this many successful datagrams the next protocore_net_udp_sendto refuses and records nothing, the
 // way a stack with no route to the destination does. -1 never fails.
-__attribute__((weak)) int pc_net_host_udp_fail_after = -1;
+__attribute__((weak)) int protocore_net_host_udp_fail_after = -1;
 
 static inline void mock_udp_send_fail_after(int n)
 {
-    pc_net_host_udp_fail_after = n;
+    protocore_net_host_udp_fail_after = n;
 }
 
 // Record the datagram. The count keeps rising past the log so a test can tell "sent more than the
 // log holds" from "stopped sending".
-static inline pc_net_err pc_net_udp_sendto(pc_udp_pcb *p, pc_pbuf *b, const pc_net_ip *a, uint16_t port)
+static inline protocore_net_err protocore_net_udp_sendto(protocore_udp_pcb *p, protocore_pbuf *b,
+                                                         const protocore_net_ip *a, uint16_t port)
 {
     if (!p || !b || !a)
     {
-        return PC_NET_ERR_ARG;
+        return PROTOCORE_NET_ERR_ARG;
     }
-    if (pc_net_host_udp_fail_after == 0)
+    if (protocore_net_host_udp_fail_after == 0)
     {
-        return PC_NET_ERR_RST;
+        return PROTOCORE_NET_ERR_RST;
     }
-    if (pc_net_host_udp_fail_after > 0)
+    if (protocore_net_host_udp_fail_after > 0)
     {
-        pc_net_host_udp_fail_after--;
+        protocore_net_host_udp_fail_after--;
     }
-    pc_net_host_dgram_sent++;
-    if (pc_net_host_dgram_n < PC_NET_HOST_DGRAMS)
+    protocore_net_host_dgram_sent++;
+    if (protocore_net_host_dgram_n < PROTOCORE_NET_HOST_DGRAMS)
     {
-        pc_net_host_dgram *d = &pc_net_host_dgrams[pc_net_host_dgram_n];
+        protocore_net_host_dgram *d = &protocore_net_host_dgrams[protocore_net_host_dgram_n];
         memset(d, 0, sizeof(*d));
         d->type = a->type;
         memcpy(d->addr, a->bytes, sizeof(d->addr));
@@ -1611,32 +1621,32 @@ static inline pc_net_err pc_net_udp_sendto(pc_udp_pcb *p, pc_pbuf *b, const pc_n
         d->dst_port = port;
         d->tos = p->tos;
         d->ms = (uint32_t)millis();
-        d->len = pc_net_pbuf_copy(b, d->data, (uint16_t)sizeof(d->data), 0);
-        pc_net_host_dgram_n++;
+        d->len = protocore_net_pbuf_copy(b, d->data, (uint16_t)sizeof(d->data), 0);
+        protocore_net_host_dgram_n++;
     }
-    return PC_NET_OK;
+    return PROTOCORE_NET_OK;
 }
-static inline void pc_net_udp_remove(pc_udp_pcb *p)
+static inline void protocore_net_udp_remove(protocore_udp_pcb *p)
 {
     if (p)
     {
         p->in_use = 0;
     }
 }
-#define PC_NET_HAS_IGMP 1
-#define PC_NET_HAS_IPV6 1
+#define PROTOCORE_NET_HAS_IGMP 1
+#define PROTOCORE_NET_HAS_IPV6 1
 
-static inline pc_net_err pc_net_igmp_join(const pc_net_ip *nif, const pc_net_ip *grp)
+static inline protocore_net_err protocore_net_igmp_join(const protocore_net_ip *nif, const protocore_net_ip *grp)
 {
     (void)nif;
     (void)grp;
-    return PC_NET_OK;
+    return PROTOCORE_NET_OK;
 }
-static inline pc_net_err pc_net_igmp_leave(const pc_net_ip *nif, const pc_net_ip *grp)
+static inline protocore_net_err protocore_net_igmp_leave(const protocore_net_ip *nif, const protocore_net_ip *grp)
 {
     (void)nif;
     (void)grp;
-    return PC_NET_OK;
+    return PROTOCORE_NET_OK;
 }
 
 // ---------------------------------------------------------------------------
@@ -1644,54 +1654,54 @@ static inline pc_net_err pc_net_igmp_leave(const pc_net_ip *nif, const pc_net_ip
 // ---------------------------------------------------------------------------
 
 /** @brief Bytes the core has written since the last reset, and how many. */
-static inline const uint8_t *pc_net_host_sent(size_t *len)
+static inline const uint8_t *protocore_net_host_sent(size_t *len)
 {
     if (len)
     {
-        *len = pc_net_host_tx_len;
+        *len = protocore_net_host_tx_len;
     }
-    return pc_net_host_tx;
+    return protocore_net_host_tx;
 }
 
 /** @brief Datagrams held in the log. */
-static inline size_t pc_net_host_udp_count(void)
+static inline size_t protocore_net_host_udp_count(void)
 {
-    return pc_net_host_dgram_n;
+    return protocore_net_host_dgram_n;
 }
 
 /** @brief Datagrams the core handed to the stack, whether or not the log had room. */
-static inline size_t pc_net_host_udp_sent(void)
+static inline size_t protocore_net_host_udp_sent(void)
 {
-    return pc_net_host_dgram_sent;
+    return protocore_net_host_dgram_sent;
 }
 
 /** @brief Datagram @p i, or NULL past the end of the log. */
-static inline const pc_net_host_dgram *pc_net_host_udp_at(size_t i)
+static inline const protocore_net_host_dgram *protocore_net_host_udp_at(size_t i)
 {
-    if (i >= pc_net_host_dgram_n)
+    if (i >= protocore_net_host_dgram_n)
     {
         return NULL;
     }
-    return &pc_net_host_dgrams[i];
+    return &protocore_net_host_dgrams[i];
 }
 
 /** @brief Drop the datagram log and release every pbuf. */
-static inline void pc_net_host_udp_reset(void)
+static inline void protocore_net_host_udp_reset(void)
 {
-    pc_net_host_dgram_n = 0;
-    pc_net_host_dgram_sent = 0;
-    pc_net_host_pbuf_fail_once = 0;
-    pc_net_host_udp_fail_after = -1;
-    memset(pc_net_host_pbuf_pool, 0, sizeof(pc_net_host_pbuf_pool));
+    protocore_net_host_dgram_n = 0;
+    protocore_net_host_dgram_sent = 0;
+    protocore_net_host_pbuf_fail_once = 0;
+    protocore_net_host_udp_fail_after = -1;
+    memset(protocore_net_host_pbuf_pool, 0, sizeof(protocore_net_host_pbuf_pool));
 }
 
 /** @brief Drop the capture and every pcb, so each test starts from a known state. */
-static inline void pc_net_host_reset(void)
+static inline void protocore_net_host_reset(void)
 {
-    pc_net_host_tx_len = 0;
-    memset(pc_net_host_pcbs, 0, sizeof(pc_net_host_pcbs));
-    memset(pc_net_host_udp_pcbs, 0, sizeof(pc_net_host_udp_pcbs));
-    pc_net_host_udp_reset();
+    protocore_net_host_tx_len = 0;
+    memset(protocore_net_host_pcbs, 0, sizeof(protocore_net_host_pcbs));
+    memset(protocore_net_host_udp_pcbs, 0, sizeof(protocore_net_host_udp_pcbs));
+    protocore_net_host_udp_reset();
 }
 
 // The same capture read as text. A response is a string for most of the suite - it asserts on a
@@ -1699,9 +1709,9 @@ static inline void pc_net_host_reset(void)
 // path bounds the length against the buffer, so there is always a byte left for the terminator.
 static inline void tcp_capture_reset(void)
 {
-    pc_net_host_tx_len = 0;
-    pc_net_host_tx[0] = '\0';
-    pc_net_host_write_fail_after = -1; // clear a send failure a prior test armed
+    protocore_net_host_tx_len = 0;
+    protocore_net_host_tx[0] = '\0';
+    protocore_net_host_write_fail_after = -1; // clear a send failure a prior test armed
 }
 
 // The host always captures, so there is no capture to switch off. What a caller wants here is to
@@ -1712,49 +1722,50 @@ static inline void tcp_capture_disable(void)
 
 static inline const char *tcp_captured(void)
 {
-    size_t n = pc_net_host_tx_len < sizeof(pc_net_host_tx) ? pc_net_host_tx_len : sizeof(pc_net_host_tx) - 1;
-    pc_net_host_tx[n] = '\0';
-    return (const char *)pc_net_host_tx;
+    size_t n = protocore_net_host_tx_len < sizeof(protocore_net_host_tx) ? protocore_net_host_tx_len
+                                                                         : sizeof(protocore_net_host_tx) - 1;
+    protocore_net_host_tx[n] = '\0';
+    return (const char *)protocore_net_host_tx;
 }
 
 static inline size_t tcp_captured_len(void)
 {
-    return pc_net_host_tx_len;
+    return protocore_net_host_tx_len;
 }
 
 /** @brief Deliver @p n bytes to @p p's recv callback as one segment. */
-static inline pc_net_err pc_net_host_deliver(pc_pcb *p, void *data, uint16_t n)
+static inline protocore_net_err protocore_net_host_deliver(protocore_pcb *p, void *data, uint16_t n)
 {
     if (!p || !p->on_recv)
     {
-        return PC_NET_ERR_ARG;
+        return PROTOCORE_NET_ERR_ARG;
     }
-    pc_pbuf b;
+    protocore_pbuf b;
     memset(&b, 0, sizeof(b));
     b.payload = data;
     b.len = n;
     b.tot_len = n;
-    return p->on_recv(p->arg, p, &b, PC_NET_OK);
+    return p->on_recv(p->arg, p, &b, PROTOCORE_NET_OK);
 }
 
 /** @brief Deliver a peer FIN (a null pbuf) to @p p's recv callback. */
-static inline pc_net_err pc_net_host_close_peer(pc_pcb *p)
+static inline protocore_net_err protocore_net_host_close_peer(protocore_pcb *p)
 {
     if (!p || !p->on_recv)
     {
-        return PC_NET_ERR_ARG;
+        return PROTOCORE_NET_ERR_ARG;
     }
-    return p->on_recv(p->arg, p, NULL, PC_NET_OK);
+    return p->on_recv(p->arg, p, NULL, PROTOCORE_NET_OK);
 }
 
 /** @brief The UDP pcb bound to @p port, or NULL when nothing bound it. */
-static inline pc_udp_pcb *pc_net_host_udp_pcb(uint16_t port)
+static inline protocore_udp_pcb *protocore_net_host_udp_pcb(uint16_t port)
 {
-    for (int i = 0; i < PC_NET_HOST_PCBS; i++)
+    for (int i = 0; i < PROTOCORE_NET_HOST_PCBS; i++)
     {
-        if (pc_net_host_udp_pcbs[i].in_use && pc_net_host_udp_pcbs[i].local_port == port)
+        if (protocore_net_host_udp_pcbs[i].in_use && protocore_net_host_udp_pcbs[i].local_port == port)
         {
-            return &pc_net_host_udp_pcbs[i];
+            return &protocore_net_host_udp_pcbs[i];
         }
     }
     return NULL;
@@ -1767,20 +1778,21 @@ static inline pc_udp_pcb *pc_net_host_udp_pcb(uint16_t port)
  * receive path the target runs. Returns 0 when no pcb is bound to that port. The payload reaches
  * the handler on the next poll(), which drains the ring the callback filled.
  */
-static inline int pc_net_host_udp_deliver(uint16_t port, const char *src_ip, uint16_t src_port, void *data, uint16_t n)
+static inline int protocore_net_host_udp_deliver(uint16_t port, const char *src_ip, uint16_t src_port, void *data,
+                                                 uint16_t n)
 {
-    pc_udp_pcb *p = pc_net_host_udp_pcb(port);
+    protocore_udp_pcb *p = protocore_net_host_udp_pcb(port);
     if (!p || !p->on_recv)
     {
         return 0;
     }
-    pc_net_ip src;
+    protocore_net_ip src;
     memset(&src, 0, sizeof(src));
     if (src_ip)
     {
-        pc_net_ip_parse(src_ip, &src);
+        protocore_net_ip_parse(src_ip, &src);
     }
-    pc_pbuf b;
+    protocore_pbuf b;
     memset(&b, 0, sizeof(b));
     b.payload = data;
     b.len = n;
@@ -1789,4 +1801,4 @@ static inline int pc_net_host_udp_deliver(uint16_t port, const char *src_ip, uin
     return 1;
 }
 
-#endif // PROTOCORE_PC_NET_HOST_H
+#endif // PROTOCORE_PROTOCORE_NET_HOST_H

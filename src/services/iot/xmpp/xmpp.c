@@ -9,7 +9,7 @@
 #include "services/iot/xmpp/xmpp.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_XMPP
+#if PROTOCORE_ENABLE_XMPP
 
 // Append a literal to out[*n], bounded. Returns false on overflow.
 static proto_bool put(char *out, size_t cap, size_t *n, const char *s)
@@ -90,7 +90,7 @@ static size_t finish(char *out, size_t n, proto_bool ok)
     return n;
 }
 
-size_t pc_xmpp_escape(const char *in, size_t in_len, char *out, size_t cap)
+size_t protocore_xmpp_escape(const char *in, size_t in_len, char *out, size_t cap)
 {
     if (!in || !out)
     {
@@ -108,7 +108,7 @@ size_t pc_xmpp_escape(const char *in, size_t in_len, char *out, size_t cap)
     return finish(out, n, PROTO_TRUE);
 }
 
-size_t pc_xmpp_stream_open(const char *from, const char *to, char *out, size_t cap)
+size_t protocore_xmpp_stream_open(const char *from, const char *to, char *out, size_t cap)
 {
     size_t n = 0;
     proto_bool ok =
@@ -118,7 +118,7 @@ size_t pc_xmpp_stream_open(const char *from, const char *to, char *out, size_t c
     return finish(out, n, ok);
 }
 
-size_t pc_xmpp_message(const char *to, const char *from, const char *type, const char *body, char *out, size_t cap)
+size_t protocore_xmpp_message(const char *to, const char *from, const char *type, const char *body, char *out, size_t cap)
 {
     size_t n = 0;
     proto_bool ok = put(out, cap, &n, "<message") && put_attr(out, cap, &n, "to", to) &&
@@ -132,14 +132,14 @@ size_t pc_xmpp_message(const char *to, const char *from, const char *type, const
     return finish(out, n, ok);
 }
 
-size_t pc_xmpp_presence(const char *type, char *out, size_t cap)
+size_t protocore_xmpp_presence(const char *type, char *out, size_t cap)
 {
     size_t n = 0;
     proto_bool ok = put(out, cap, &n, "<presence") && put_attr(out, cap, &n, "type", type) && put(out, cap, &n, "/>");
     return finish(out, n, ok);
 }
 
-size_t pc_xmpp_iq(const char *type, const char *id, const char *child_xml, char *out, size_t cap)
+size_t protocore_xmpp_iq(const char *type, const char *id, const char *child_xml, char *out, size_t cap)
 {
     size_t n = 0;
     proto_bool ok = put(out, cap, &n, "<iq") && put_attr(out, cap, &n, "type", type) &&
@@ -152,7 +152,7 @@ size_t pc_xmpp_iq(const char *type, const char *id, const char *child_xml, char 
     return finish(out, n, ok);
 }
 
-size_t pc_xmpp_stanza_name(const char *xml, size_t len, char *out, size_t cap)
+size_t protocore_xmpp_stanza_name(const char *xml, size_t len, char *out, size_t cap)
 {
     if (!xml || !out || cap == 0)
     {
@@ -184,7 +184,7 @@ size_t pc_xmpp_stanza_name(const char *xml, size_t len, char *out, size_t cap)
     return 0;
 }
 
-size_t pc_xmpp_attr(const char *xml, size_t len, const char *attr, char *out, size_t cap)
+size_t protocore_xmpp_attr(const char *xml, size_t len, const char *attr, char *out, size_t cap)
 {
     if (!xml || !attr || !out || cap == 0)
     {
@@ -224,4 +224,4 @@ size_t pc_xmpp_attr(const char *xml, size_t len, const char *attr, char *out, si
     return 0;
 }
 
-#endif // PC_ENABLE_XMPP
+#endif // PROTOCORE_ENABLE_XMPP

@@ -3,12 +3,12 @@
 
 /**
  * @file devicenet.h
- * @brief DeviceNet link-adaptation codec (PC_ENABLE_DEVICENET) - the CAN-specific layer of
+ * @brief DeviceNet link-adaptation codec (PROTOCORE_ENABLE_DEVICENET) - the CAN-specific layer of
  *        "CIP over CAN".
  *
  * DeviceNet (ODVA) carries CIP over classic CAN. The CIP application layer (services, EPATH,
  * data) is the same one the EtherNet/IP codec uses, so build the message body with the
- * existing `pc_cip_*` functions (`PC_ENABLE_CIP`); this module supplies the DeviceNet-specific
+ * existing `protocore_cip_*` functions (`PROTOCORE_ENABLE_CIP`); this module supplies the DeviceNet-specific
  * link adaptation that is NOT part of CIP:
  *
  *  - The 11-bit CAN **identifier** as a Message Group (1..4) + Message ID + MAC ID, per the
@@ -35,7 +35,7 @@
 
 #include "protocore_config.h"
 
-#if PC_ENABLE_DEVICENET
+#if PROTOCORE_ENABLE_DEVICENET
 
 #include "shared_primitives/can.h"
 
@@ -95,35 +95,35 @@ typedef enum PROTO_ENUM_PACKED
 typedef struct
 {
     proto_bool active;
-    uint8_t next_count;                ///< next expected modulo-64 fragment count
-    uint16_t len;                      ///< octets stored so far
-    uint8_t buf[PC_DEVICENET_MSG_MAX]; ///< reassembled body (excludes the fragmentation octets)
+    uint8_t next_count;                       ///< next expected modulo-64 fragment count
+    uint16_t len;                             ///< octets stored so far
+    uint8_t buf[PROTOCORE_DEVICENET_MSG_MAX]; ///< reassembled body (excludes the fragmentation octets)
 } DeviceNetFragRx;
 
 // --- identifier ---
 
 /** @brief Encode a DeviceNet 11-bit CAN id. @p mac_id is ignored for Group 4. */
-proto_bool pc_devicenet_encode_id(uint32_t *id, DeviceNetGroup group, uint8_t msg_id, uint8_t mac_id);
+proto_bool protocore_devicenet_encode_id(uint32_t *id, DeviceNetGroup group, uint8_t msg_id, uint8_t mac_id);
 
 /** @brief Decode an 11-bit CAN id into its DeviceNet group / message id / MAC id. */
-proto_bool pc_devicenet_decode_id(uint32_t can_id, DeviceNetId *out);
+proto_bool protocore_devicenet_decode_id(uint32_t can_id, DeviceNetId *out);
 
 // --- explicit-message header + fragmentation octets ---
 
 /** @brief Compose the explicit-message header octet (FRAG / XID / MAC id). */
-uint8_t pc_devicenet_msg_header(proto_bool frag, proto_bool xid, uint8_t mac_id);
+uint8_t protocore_devicenet_msg_header(proto_bool frag, proto_bool xid, uint8_t mac_id);
 
 /** @brief Compose a fragmentation octet from a type (DEVICENET_FRAG_*) and a count. */
-uint8_t pc_devicenet_frag_octet(uint8_t type, uint8_t count);
+uint8_t protocore_devicenet_frag_octet(uint8_t type, uint8_t count);
 
 // --- non-fragmented explicit message in one frame ---
 
 /**
  * @brief Build a single-frame explicit message: [header octet][body...] at the group/msg id.
- * @p body is typically a CIP request built with `pc_cip_*`. Fails if it does not fit in 8 octets.
+ * @p body is typically a CIP request built with `protocore_cip_*`. Fails if it does not fit in 8 octets.
  */
-proto_bool pc_devicenet_build_explicit(CanFrame *out, DeviceNetGroup group, uint8_t msg_id, uint8_t mac_id,
-                                       const uint8_t *body, uint8_t body_len);
+proto_bool protocore_devicenet_build_explicit(CanFrame *out, DeviceNetGroup group, uint8_t msg_id, uint8_t mac_id,
+                                              const uint8_t *body, uint8_t body_len);
 
 // --- fragmentation (messages longer than one frame) ---
 
@@ -136,21 +136,21 @@ proto_bool pc_devicenet_build_explicit(CanFrame *out, DeviceNetGroup group, uint
  * @return true on success; false on a null @p out, @p data_len > 6, a null @p data with a nonzero length, a
  *         @p frag_type outside its 2-bit field, a @p frag_count > 63, or a bad group / mac id.
  */
-proto_bool pc_devicenet_build_fragment(CanFrame *out, DeviceNetGroup group, uint8_t msg_id, uint8_t mac_id,
-                                       proto_bool xid, uint8_t frag_type, uint8_t frag_count, const uint8_t *data,
-                                       uint8_t data_len);
+proto_bool protocore_devicenet_build_fragment(CanFrame *out, DeviceNetGroup group, uint8_t msg_id, uint8_t mac_id,
+                                              proto_bool xid, uint8_t frag_type, uint8_t frag_count,
+                                              const uint8_t *data, uint8_t data_len);
 
 // --- fragmentation reassembly (messages longer than one frame) ---
 
 /** @brief Reset a reassembly context to idle. */
-void pc_devicenet_frag_reset(DeviceNetFragRx *rx);
+void protocore_devicenet_frag_reset(DeviceNetFragRx *rx);
 
 /**
  * @brief Feed a received frame's body (the octets after the CAN id) to the reassembler.
  * @p body points at the explicit-message body starting with the header octet; the
  * fragmentation octet (when DEVICENET_HDR_FRAG is set) is the second octet.
  */
-DeviceNetFragResult pc_devicenet_frag_feed(DeviceNetFragRx *rx, const uint8_t *body, uint8_t body_len);
+DeviceNetFragResult protocore_devicenet_frag_feed(DeviceNetFragRx *rx, const uint8_t *body, uint8_t body_len);
 
-#endif // PC_ENABLE_DEVICENET
+#endif // PROTOCORE_ENABLE_DEVICENET
 #endif // PROTOCORE_DEVICENET_H

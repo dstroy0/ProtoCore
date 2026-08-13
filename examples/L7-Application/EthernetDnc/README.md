@@ -23,7 +23,7 @@ marker, each line of your program as a block, the `%` end marker, and the
 trailer - pausing whenever the controller sends XOFF and resuming on XON. It is
 **transport-agnostic**: it moves bytes only through a send/recv seam, so the same
 engine works over TCP (this example) or a UART (classic RS-232). This sketch
-supplies the glue - `cl_send` / `cl_recv` over `pc_client`, the library's shared
+supplies the glue - `cl_send` / `cl_recv` over `protocore_client`, the library's shared
 outbound TCP transport.
 
 Two "tape codes" are supported, matching what the controller expects:
@@ -102,11 +102,11 @@ N40 M30
 
 The sketch prints `DncStreamResult` codes.
 
-| Code | Name                    | Likely cause                                                                                                                              |
-| ---- | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `-1` | `DNC_STREAM_ERR_ARG`    | a null argument - check `PROGRAM` is set                                                                                                  |
-| `-2` | `DNC_STREAM_ERR_IO`     | the connection dropped, or the controller held XOFF too long                                                                              |
-| `-3` | `DNC_STREAM_ERR_ENCODE` | a character can't be sent in the chosen tape code (e.g. a lowercase letter in `DNC_CODE_EIA`), or a line is longer than `PC_DNC_LINE_MAX` |
+| Code | Name                    | Likely cause                                                                                                                                     |
+| ---- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `-1` | `DNC_STREAM_ERR_ARG`    | a null argument - check `PROGRAM` is set                                                                                                         |
+| `-2` | `DNC_STREAM_ERR_IO`     | the connection dropped, or the controller held XOFF too long                                                                                     |
+| `-3` | `DNC_STREAM_ERR_ENCODE` | a character can't be sent in the chosen tape code (e.g. a lowercase letter in `DNC_CODE_EIA`), or a line is longer than `PROTOCORE_DNC_LINE_MAX` |
 
 "connect failed" (before any result code) means the TCP connection never opened -
 the host/port is wrong or the listener/controller is not accepting connections.
@@ -118,7 +118,7 @@ the host/port is wrong or the listener/controller is not accepting connections.
 - **EIA controllers.** Set `cfg.code = DNC_CODE_EIA` - the engine translates every
   character to the EIA RS-244 tape code on the fly.
 - **Slow controllers.** If a controller holds XOFF for a long time, raise
-  `PC_DNC_XOFF_MAX_POLLS` in `protocore_config.h`.
+  `PROTOCORE_DNC_XOFF_MAX_POLLS` in `protocore_config.h`.
 
 ## Build and run (PlatformIO)
 
@@ -128,7 +128,7 @@ DNC lives inside the library, so the flag must reach the whole build:
 pio ci examples/L7-Application/EthernetDnc \
   --board esp32dev \
   --lib "." \
-  --project-option="build_flags=-DPC_ENABLE_DNC=1"
+  --project-option="build_flags=-DPROTOCORE_ENABLE_DNC=1"
 ```
 
 (The Arduino IDE reads the flag from `build_opt.h` beside the sketch automatically.)

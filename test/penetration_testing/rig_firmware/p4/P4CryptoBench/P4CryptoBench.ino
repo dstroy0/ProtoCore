@@ -7,7 +7,7 @@
 // sketch dir before compiling with arduino-cli (the P4 needs the arduino-esp32 3.x core). This .ino is only
 // the sketch anchor arduino-cli requires - it defines nothing; setup()/loop() come from main_cryptobench.cpp.
 //
-// Purpose: HW-verify the per-variant PC_FE25519_MPI_HW / PC_ECDSA_MPI_HW MODMULT field accel on the P4's
+// Purpose: HW-verify the per-variant PROTOCORE_FE25519_MPI_HW / PROTOCORE_ECDSA_MPI_HW MODMULT field accel on the P4's
 // RSA accelerator (hw_ver3 registers) - the KAT lines prove byte-exactness, the CB lines the speedup.
 //
 // The include below is a ROOT library header (src/protocore.h): arduino-cli's dependency finder only indexes a

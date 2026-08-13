@@ -3,23 +3,23 @@
 
 /**
  * @file OtaRollback.ino
- * @brief OTA rollback protection / soft-brick safeguard (PC_ENABLE_OTA_ROLLBACK).
+ * @brief OTA rollback protection / soft-brick safeguard (PROTOCORE_ENABLE_OTA_ROLLBACK).
  *
  * After an OTA update the new image boots PENDING_VERIFY. Each loop this runs a
  * self-test (here: WiFi up + healthy heap) and ticks the rollback service: a
  * passing self-test commits the image, a failing one (or no confirm within
- * PC_OTA_CONFIRM_WINDOW_MS) rolls back to the previous image - so a bad update
+ * PROTOCORE_OTA_CONFIRM_WINDOW_MS) rolls back to the previous image - so a bad update
  * self-heals instead of soft-bricking. GET /ota-state shows the current state.
  *
  * Requires the bootloader's app-rollback support
  * (CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE) to actually roll back.
  *
  * NOTE: enable it for the whole build. In platformio.ini:
- *     build_flags = -DPC_ENABLE_OTA_ROLLBACK=1
+ *     build_flags = -DPROTOCORE_ENABLE_OTA_ROLLBACK=1
  * (Arduino IDE: it is already set for you in the build_opt.h beside this sketch, so it builds as-is.)
  */
 
-#define PC_ENABLE_OTA_ROLLBACK 1
+#define PROTOCORE_ENABLE_OTA_ROLLBACK 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -48,7 +48,7 @@ void setup()
 
     on_http("/ota-state", HTTP_GET, [](uint8_t id, HttpReq *) {
         char b[48];
-        snprintf(b, sizeof(b), "{\"img_state\":%u}", pc_ota_img_state());
+        snprintf(b, sizeof(b), "{\"img_state\":%u}", protocore_ota_img_state());
         send_text(id, 200, "application/json", b);
     });
     begin_http(80, NULL);
@@ -61,8 +61,8 @@ void loop()
     static bool done = false;
     if (!done)
     {
-        pc_ota_action a = pc_ota_rollback_tick(self_test());
-        if (a == pc_ota_action::PC_OTA_COMMIT)
+        protocore_ota_action a = protocore_ota_rollback_tick(self_test());
+        if (a == protocore_ota_action::PROTOCORE_OTA_COMMIT)
         {
             Serial.println("[ota] image committed");
             done = true;

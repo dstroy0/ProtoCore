@@ -9,7 +9,7 @@
 // the real production code path.
 //
 // Deliberately out of scope: the ESP32 HTTP(S) exchange convenience layer
-// (pc_oauth2_exchange_code / pc_oauth2_refresh) is guarded by PC_ENABLE_HTTP_CLIENT, which is NOT
+// (pc_oauth2_exchange_code / pc_oauth2_refresh) is guarded by PROTOCORE_ENABLE_HTTP_CLIENT, which is NOT
 // enabled here - it POSTs over a real HTTP client (network I/O), which this rig cannot do, so only
 // the deterministic CPU-side codec is benched (no transport is compiled in, hence nothing to stub).
 //

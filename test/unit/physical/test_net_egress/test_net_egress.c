@@ -18,34 +18,34 @@ void tearDown()
 // Egress IP matching the station IP -> WiFi station.
 void test_classify_sta()
 {
-    TEST_ASSERT_EQUAL_INT(PC_IF_WIFI_STA, Physical.link->classify_ip(0x0A000005u, 0x0A000005u, 0xC0A80401u));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_IF_WIFI_STA, Physical.link->classify_ip(0x0A000005u, 0x0A000005u, 0xC0A80401u));
 }
 
 // Egress IP matching the softAP IP -> softAP.
 void test_classify_ap()
 {
-    TEST_ASSERT_EQUAL_INT(PC_IF_WIFI_AP, Physical.link->classify_ip(0xC0A80401u, 0x0A000005u, 0xC0A80401u));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_IF_WIFI_AP, Physical.link->classify_ip(0xC0A80401u, 0x0A000005u, 0xC0A80401u));
 }
 
 // A live egress IP that is neither WiFi IP -> wired (Ethernet).
 void test_classify_eth()
 {
-    TEST_ASSERT_EQUAL_INT(PC_IF_ETH, Physical.link->classify_ip(0xC0A80105u, 0x0A000005u, 0));
-    TEST_ASSERT_EQUAL_INT(PC_IF_ETH, Physical.link->classify_ip(0xC0A80105u, 0, 0)); // ETH only, no WiFi
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_IF_ETH, Physical.link->classify_ip(0xC0A80105u, 0x0A000005u, 0));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_IF_ETH, Physical.link->classify_ip(0xC0A80105u, 0, 0)); // ETH only, no WiFi
     // softAP is up (ap_ip != 0) but the egress IP matches neither WiFi IP -> still wired.
-    TEST_ASSERT_EQUAL_INT(PC_IF_ETH, Physical.link->classify_ip(0xC0A80105u, 0x0A000005u, 0xC0A80402u));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_IF_ETH, Physical.link->classify_ip(0xC0A80105u, 0x0A000005u, 0xC0A80402u));
 }
 
 // No route -> ANY, regardless of the WiFi IPs.
 void test_classify_none()
 {
-    TEST_ASSERT_EQUAL_INT(PC_IF_ANY, Physical.link->classify_ip(0, 0x0A000005u, 0xC0A80401u));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_IF_ANY, Physical.link->classify_ip(0, 0x0A000005u, 0xC0A80401u));
 }
 
 // On a host build there is no default route, so egress reports ANY / 0.
 void test_egress_host_stub()
 {
-    TEST_ASSERT_EQUAL_INT(PC_IF_ANY, Physical.link->egress());
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_IF_ANY, Physical.link->egress());
     TEST_ASSERT_EQUAL_UINT32(0, Physical.link->egress_ip());
 }
 
@@ -69,7 +69,7 @@ void test_wifi_bringup_host_stub()
 // IPv6 is ESP32-only; on host (and when disabled) it reports not-ready / no address.
 void test_ipv6_host_stub()
 {
-    pc_ip addr;
+    protocore_ip addr;
     TEST_ASSERT_FALSE(Physical.ip6->init());
     TEST_ASSERT_FALSE(Physical.ip6->global_addr(&addr));
     TEST_ASSERT_FALSE(Physical.ip6->ready());
@@ -120,17 +120,17 @@ void test_radio_control_host_stub()
 {
     // The L1 entry points themselves, not the Radio table that wraps them: RadioNs is incomplete
     // here by design, so this file reaches physical.c's own stubs directly.
-    TEST_ASSERT_FALSE(pc_phy_ps_set(PC_PHY_PS_MAX_MODEM));
-    TEST_ASSERT_EQUAL_UINT8(PC_PHY_PS_NONE, pc_phy_ps_get()); // the set did not take
-    TEST_ASSERT_FALSE(pc_phy_ps_set(PC_PHY_PS_MIN_MODEM));
-    TEST_ASSERT_EQUAL_UINT8(PC_PHY_PS_NONE, pc_phy_ps_get());
-    TEST_ASSERT_FALSE(pc_phy_tx_power_set(11));
-    TEST_ASSERT_FALSE(pc_phy_tx_power_set(-1));
-    TEST_ASSERT_FALSE(pc_phy_monitor_begin(6, NULL));
+    TEST_ASSERT_FALSE(protocore_phy_ps_set(PROTOCORE_PHY_PS_MAX_MODEM));
+    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_PHY_PS_NONE, protocore_phy_ps_get()); // the set did not take
+    TEST_ASSERT_FALSE(protocore_phy_ps_set(PROTOCORE_PHY_PS_MIN_MODEM));
+    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_PHY_PS_NONE, protocore_phy_ps_get());
+    TEST_ASSERT_FALSE(protocore_phy_tx_power_set(11));
+    TEST_ASSERT_FALSE(protocore_phy_tx_power_set(-1));
+    TEST_ASSERT_FALSE(protocore_phy_monitor_begin(6, NULL));
 
-    pc_phy_monitor_set_channel(11); // no-ops, and must not crash
-    pc_phy_monitor_end();
-    TEST_ASSERT_EQUAL_UINT8(PC_PHY_PS_NONE, pc_phy_ps_get());
+    protocore_phy_monitor_set_channel(11); // no-ops, and must not crash
+    protocore_phy_monitor_end();
+    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_PHY_PS_NONE, protocore_phy_ps_get());
 }
 
 // The layer handle carries every child. A child is a pointer, so a missing one is a null deref at
@@ -150,18 +150,18 @@ void test_layer_handle_carries_every_child()
 void test_classify_is_bound_to_the_classifier()
 {
     // Each arm returns a different kind, so no other member could stand in for this one.
-    TEST_ASSERT_EQUAL_INT(PC_IF_ANY, Physical.link->classify_ip(0, 0, 0));
-    TEST_ASSERT_EQUAL_INT(PC_IF_WIFI_STA, Physical.link->classify_ip(7u, 7u, 9u));
-    TEST_ASSERT_EQUAL_INT(PC_IF_WIFI_AP, Physical.link->classify_ip(9u, 7u, 9u));
-    TEST_ASSERT_EQUAL_INT(PC_IF_ETH, Physical.link->classify_ip(5u, 7u, 9u));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_IF_ANY, Physical.link->classify_ip(0, 0, 0));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_IF_WIFI_STA, Physical.link->classify_ip(7u, 7u, 9u));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_IF_WIFI_AP, Physical.link->classify_ip(9u, 7u, 9u));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_IF_ETH, Physical.link->classify_ip(5u, 7u, 9u));
 
     // A zero station or softAP IP never matches, so an interface that is down cannot claim the
     // route by comparing equal to a zero egress that was already ruled out.
-    TEST_ASSERT_EQUAL_INT(PC_IF_ETH, Physical.link->classify_ip(5u, 0, 0));
-    TEST_ASSERT_EQUAL_INT(PC_IF_ANY, Physical.link->classify_ip(0, 0, 0));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_IF_ETH, Physical.link->classify_ip(5u, 0, 0));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_IF_ANY, Physical.link->classify_ip(0, 0, 0));
 
     // The station is tested before the softAP, so a shared IP reads as the station.
-    TEST_ASSERT_EQUAL_INT(PC_IF_WIFI_STA, Physical.link->classify_ip(7u, 7u, 7u));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_IF_WIFI_STA, Physical.link->classify_ip(7u, 7u, 7u));
 }
 
 int main()

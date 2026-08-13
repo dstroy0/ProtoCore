@@ -21,7 +21,7 @@ void tearDown()
 void test_build_open()
 {
     uint8_t buf[32];
-    size_t n = pc_focas_build_open(buf, sizeof(buf));
+    size_t n = protocore_focas_build_open(buf, sizeof(buf));
     const uint8_t expect[] = {0xA0, 0xA0, 0xA0, 0xA0, 0x00, 0x01, 0x01, 0x01, 0x00, 0x02, 0x00, 0x02};
     TEST_ASSERT_EQUAL_size_t(sizeof(expect), n);
     TEST_ASSERT_EQUAL_size_t(12, n);
@@ -32,7 +32,7 @@ void test_build_open()
 void test_build_close()
 {
     uint8_t buf[32];
-    size_t n = pc_focas_build_close(buf, sizeof(buf));
+    size_t n = protocore_focas_build_close(buf, sizeof(buf));
     const uint8_t expect[] = {0xA0, 0xA0, 0xA0, 0xA0, 0x00, 0x01, 0x02, 0x01, 0x00, 0x00};
     TEST_ASSERT_EQUAL_size_t(sizeof(expect), n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(expect, buf, n);
@@ -42,7 +42,7 @@ void test_build_close()
 void test_build_sysinfo()
 {
     uint8_t buf[64];
-    size_t n = pc_focas_build_sysinfo(buf, sizeof(buf));
+    size_t n = protocore_focas_build_sysinfo(buf, sizeof(buf));
     const uint8_t expect[] = {
         0xA0, 0xA0, 0xA0, 0xA0,             // magic
         0x00, 0x01,                         // version 1
@@ -64,7 +64,7 @@ void test_build_sysinfo()
 void test_build_read_position()
 {
     uint8_t buf[64];
-    size_t n = pc_focas_build_read_position(buf, sizeof(buf), FOCAS_POS_ABSOLUTE, 0);
+    size_t n = protocore_focas_build_read_position(buf, sizeof(buf), FOCAS_POS_ABSOLUTE, 0);
     TEST_ASSERT_EQUAL_size_t(36, n);
     TEST_ASSERT_EQUAL_HEX8(0x21, buf[6]);  // command frame
     TEST_ASSERT_EQUAL_HEX8(0x26, buf[15]); // c3 = 0x26
@@ -79,7 +79,7 @@ void test_build_read_position()
 void test_build_read_param()
 {
     uint8_t buf[64];
-    size_t n = pc_focas_build_read_param(buf, sizeof(buf), 6510, 6510, 1);
+    size_t n = protocore_focas_build_read_param(buf, sizeof(buf), 6510, 6510, 1);
     TEST_ASSERT_EQUAL_size_t(36, n);
     TEST_ASSERT_EQUAL_HEX8(0x0E, buf[15]); // c3 = 0x0e
     // v1 = 6510 = 0x0000196E at buf offset 16.
@@ -99,7 +99,7 @@ void test_build_request_extra()
 {
     uint8_t buf[64];
     const uint8_t extra[] = {0xAA, 0xBB, 0xCC};
-    size_t n = pc_focas_build_request(buf, sizeof(buf), FOCAS_CMD_SET_MACRO, 500, 0, 0, 0, 0, extra, sizeof(extra));
+    size_t n = protocore_focas_build_request(buf, sizeof(buf), FOCAS_CMD_SET_MACRO, 500, 0, 0, 0, 0, extra, sizeof(extra));
     TEST_ASSERT_EQUAL_size_t(10 + 26 + 3, n);
     // payload length field = 26 + 3 = 29.
     TEST_ASSERT_EQUAL_HEX8(0x00, buf[8]);
@@ -128,7 +128,7 @@ void test_parse_sysinfo_response()
         0x30, 0x33                          // axes "03"
     };
     FocasResponse resp;
-    TEST_ASSERT_TRUE(pc_focas_parse_command_frame(frame, sizeof(frame), &resp));
+    TEST_ASSERT_TRUE(protocore_focas_parse_command_frame(frame, sizeof(frame), &resp));
     TEST_ASSERT_EQUAL_UINT16(1, resp.c1);
     TEST_ASSERT_EQUAL_UINT16(1, resp.c2);
     TEST_ASSERT_EQUAL_UINT16(0x18, resp.c3);
@@ -136,7 +136,7 @@ void test_parse_sysinfo_response()
     TEST_ASSERT_EQUAL_UINT16(18, resp.data_len);
 
     FocasSysInfo si;
-    TEST_ASSERT_TRUE(pc_focas_parse_sysinfo(resp.data, resp.data_len, &si));
+    TEST_ASSERT_TRUE(protocore_focas_parse_sysinfo(resp.data, resp.data_len, &si));
     TEST_ASSERT_EQUAL_UINT16(0, si.add_info);
     TEST_ASSERT_EQUAL_UINT16(8, si.max_axis);
     TEST_ASSERT_EQUAL_STRING("30", si.cnc_type);
@@ -157,12 +157,12 @@ void test_parse_alarm_and_status()
         0x00, 0x00, 0x00, 0x10                                      // alarm bitmask, bit 4
     };
     FocasResponse resp;
-    TEST_ASSERT_TRUE(pc_focas_parse_command_frame(frame, sizeof(frame), &resp));
+    TEST_ASSERT_TRUE(protocore_focas_parse_command_frame(frame, sizeof(frame), &resp));
     TEST_ASSERT_EQUAL_UINT16(0x1A, resp.c3);
     TEST_ASSERT_EQUAL_INT16(-10, resp.status); // signed return code
 
     uint32_t alarm = 0;
-    TEST_ASSERT_TRUE(pc_focas_parse_alarm(resp.data, resp.data_len, &alarm));
+    TEST_ASSERT_TRUE(protocore_focas_parse_alarm(resp.data, resp.data_len, &alarm));
     TEST_ASSERT_EQUAL_HEX32(0x00000010, alarm);
 }
 
@@ -172,82 +172,82 @@ void test_decode8_value()
     // 123.456 mm = 123456 / 10^3.
     const uint8_t v[] = {0x00, 0x01, 0xE2, 0x40, 0x00, 0x0A, 0x00, 0x03};
     FocasValue fv;
-    TEST_ASSERT_TRUE(pc_focas_decode8(v, sizeof(v), &fv));
+    TEST_ASSERT_TRUE(protocore_focas_decode8(v, sizeof(v), &fv));
     TEST_ASSERT_TRUE(fv.valid);
     TEST_ASSERT_EQUAL_INT32(123456, fv.data);
     TEST_ASSERT_EQUAL_UINT8(10, fv.base);
     TEST_ASSERT_EQUAL_UINT8(3, fv.exp);
-    TEST_ASSERT_FLOAT_WITHIN(0.0005f, 123.456f, pc_focas_value_f(&fv));
+    TEST_ASSERT_FLOAT_WITHIN(0.0005f, 123.456f, protocore_focas_value_f(&fv));
 
     // Negative: -5.00 = -500 / 10^2.
     const uint8_t neg[] = {0xFF, 0xFF, 0xFE, 0x0C, 0x00, 0x0A, 0x00, 0x02};
     FocasValue nv;
-    TEST_ASSERT_TRUE(pc_focas_decode8(neg, sizeof(neg), &nv));
+    TEST_ASSERT_TRUE(protocore_focas_decode8(neg, sizeof(neg), &nv));
     TEST_ASSERT_EQUAL_INT32(-500, nv.data);
-    TEST_ASSERT_FLOAT_WITHIN(0.0005f, -5.0f, pc_focas_value_f(&nv));
+    TEST_ASSERT_FLOAT_WITHIN(0.0005f, -5.0f, protocore_focas_value_f(&nv));
 
     // 0xFFFF sentinel in octets 6-7 -> no value.
     const uint8_t none[] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x0A, 0xFF, 0xFF};
     FocasValue none_v;
-    TEST_ASSERT_FALSE(pc_focas_decode8(none, sizeof(none), &none_v));
+    TEST_ASSERT_FALSE(protocore_focas_decode8(none, sizeof(none), &none_v));
     TEST_ASSERT_FALSE(none_v.valid);
-    TEST_ASSERT_EQUAL_FLOAT(0.0f, pc_focas_value_f(&none_v));
+    TEST_ASSERT_EQUAL_FLOAT(0.0f, protocore_focas_value_f(&none_v));
 }
 
 void test_build_overflow_fails_closed()
 {
     uint8_t tiny[8]; // open needs 12
-    TEST_ASSERT_EQUAL_size_t(0, pc_focas_build_open(tiny, sizeof(tiny)));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_focas_build_open(tiny, sizeof(tiny)));
     uint8_t small[20]; // sysinfo needs 36
-    TEST_ASSERT_EQUAL_size_t(0, pc_focas_build_sysinfo(small, sizeof(small)));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_focas_build_sysinfo(small, sizeof(small)));
 }
 
 void test_parse_guards()
 {
     FocasFrame f;
-    TEST_ASSERT_FALSE(pc_focas_parse_frame(NULL, 32, &f));
+    TEST_ASSERT_FALSE(protocore_focas_parse_frame(NULL, 32, &f));
     const uint8_t shortbuf[6] = {0xA0, 0xA0, 0xA0, 0xA0, 0x00, 0x01};
-    TEST_ASSERT_FALSE(pc_focas_parse_frame(shortbuf, sizeof(shortbuf), &f)); // < 10
+    TEST_ASSERT_FALSE(protocore_focas_parse_frame(shortbuf, sizeof(shortbuf), &f)); // < 10
 
     // Bad magic.
     uint8_t badmagic[FOCAS_FRAME_HDR_LEN] = {0};
     badmagic[0] = 0xA1;
-    TEST_ASSERT_FALSE(pc_focas_parse_frame(badmagic, sizeof(badmagic), &f));
+    TEST_ASSERT_FALSE(protocore_focas_parse_frame(badmagic, sizeof(badmagic), &f));
 
     // Envelope length promises more payload than the buffer holds.
     const uint8_t liar[] = {0xA0, 0xA0, 0xA0, 0xA0, 0x00, 0x01, 0x21, 0x02, 0x00, 0xFF};
-    TEST_ASSERT_FALSE(pc_focas_parse_frame(liar, sizeof(liar), &f));
+    TEST_ASSERT_FALSE(protocore_focas_parse_frame(liar, sizeof(liar), &f));
 
     // A valid frame of the wrong type is rejected by the command-frame convenience parser.
     uint8_t openresp[] = {0xA0, 0xA0, 0xA0, 0xA0, 0x00, 0x01, 0x01, 0x02, 0x00, 0x00};
     FocasResponse r;
-    TEST_ASSERT_TRUE(pc_focas_parse_frame(openresp, sizeof(openresp), &f));
+    TEST_ASSERT_TRUE(protocore_focas_parse_frame(openresp, sizeof(openresp), &f));
     TEST_ASSERT_TRUE(f.type == FOCAS_FRAME_TYPE_OPEN_RESP);
-    TEST_ASSERT_FALSE(pc_focas_parse_command_frame(openresp, sizeof(openresp), &r));
+    TEST_ASSERT_FALSE(protocore_focas_parse_command_frame(openresp, sizeof(openresp), &r));
 
     // Response claims more data than the payload carries.
     const uint8_t badlen[] = {0x00, 0x01, 0x00, 0x01, 0x00, 0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x40, 0xAA};
     FocasResponse r2;
-    TEST_ASSERT_FALSE(pc_focas_parse_response(badlen, sizeof(badlen), &r2)); // says 0x40, 1 follows
+    TEST_ASSERT_FALSE(protocore_focas_parse_response(badlen, sizeof(badlen), &r2)); // says 0x40, 1 follows
 }
 
 // The remaining typed builders share the generic request path; each pins its own selector.
 void test_build_remaining_selectors()
 {
     uint8_t buf[64];
-    TEST_ASSERT_EQUAL_size_t(36, pc_focas_build_read_alarm(buf, sizeof(buf)));
+    TEST_ASSERT_EQUAL_size_t(36, protocore_focas_build_read_alarm(buf, sizeof(buf)));
     TEST_ASSERT_EQUAL_HEX8(0x1A, buf[15]); // read_alarm c3 = 0x1a
     TEST_ASSERT_EQUAL_HEX8(0x21, buf[6]);  // command frame
 
-    TEST_ASSERT_EQUAL_size_t(36, pc_focas_build_read_macro(buf, sizeof(buf), 100, 199));
+    TEST_ASSERT_EQUAL_size_t(36, protocore_focas_build_read_macro(buf, sizeof(buf), 100, 199));
     TEST_ASSERT_EQUAL_HEX8(0x15, buf[15]); // read_macro c3 = 0x15
     TEST_ASSERT_EQUAL_HEX8(0x64, buf[19]); // v1 = first = 100
     TEST_ASSERT_EQUAL_HEX8(0xC7, buf[23]); // v2 = last = 199
 
-    TEST_ASSERT_EQUAL_size_t(36, pc_focas_build_read_feedrate(buf, sizeof(buf)));
+    TEST_ASSERT_EQUAL_size_t(36, protocore_focas_build_read_feedrate(buf, sizeof(buf)));
     TEST_ASSERT_EQUAL_HEX8(0x24, buf[15]); // read_feedrate c3 = 0x24
 
-    TEST_ASSERT_EQUAL_size_t(36, pc_focas_build_read_spindle(buf, sizeof(buf)));
+    TEST_ASSERT_EQUAL_size_t(36, protocore_focas_build_read_spindle(buf, sizeof(buf)));
     TEST_ASSERT_EQUAL_HEX8(0x25, buf[15]); // read_spindle c3 = 0x25
 }
 
@@ -256,13 +256,13 @@ void test_build_request_guards()
     uint8_t buf[64];
     const uint8_t extra[] = {0xAA};
     // a declared extra length with no extra pointer
-    TEST_ASSERT_EQUAL_size_t(0, pc_focas_build_request(buf, sizeof(buf), FOCAS_CMD_SET_MACRO, 0, 0, 0, 0, 0, NULL, 1));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_focas_build_request(buf, sizeof(buf), FOCAS_CMD_SET_MACRO, 0, 0, 0, 0, 0, NULL, 1));
     // extra so long that the 16-bit payload-length field could not hold body + extra
-    TEST_ASSERT_EQUAL_size_t(0, pc_focas_build_request(buf, sizeof(buf), FOCAS_CMD_SET_MACRO, 0, 0, 0, 0, 0, extra,
+    TEST_ASSERT_EQUAL_size_t(0, protocore_focas_build_request(buf, sizeof(buf), FOCAS_CMD_SET_MACRO, 0, 0, 0, 0, 0, extra,
                                                        (size_t)0xFFFF - FOCAS_REQ_BODY_LEN + 1));
     // null destination
-    TEST_ASSERT_EQUAL_size_t(0, pc_focas_build_open(NULL, 32));
-    TEST_ASSERT_EQUAL_size_t(0, pc_focas_build_close(NULL, 32));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_focas_build_open(NULL, 32));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_focas_build_close(NULL, 32));
 }
 
 void test_parse_frame_rejects_each_magic_octet()
@@ -270,21 +270,21 @@ void test_parse_frame_rejects_each_magic_octet()
     // All four magic octets are checked independently.
     FocasFrame f;
     uint8_t frame[FOCAS_FRAME_HDR_LEN] = {0xA0, 0xA0, 0xA0, 0xA0, 0x00, 0x01, 0x21, 0x02, 0x00, 0x00};
-    TEST_ASSERT_TRUE(pc_focas_parse_frame(frame, sizeof(frame), &f)); // control: intact magic
+    TEST_ASSERT_TRUE(protocore_focas_parse_frame(frame, sizeof(frame), &f)); // control: intact magic
     for (int i = 0; i < 4; i++)
     {
         uint8_t bad[FOCAS_FRAME_HDR_LEN];
         memcpy(bad, frame, sizeof(frame));
         bad[i] = 0x00;
-        TEST_ASSERT_FALSE(pc_focas_parse_frame(bad, sizeof(bad), &f));
+        TEST_ASSERT_FALSE(protocore_focas_parse_frame(bad, sizeof(bad), &f));
     }
-    TEST_ASSERT_FALSE(pc_focas_parse_frame(frame, sizeof(frame), NULL)); // null out
+    TEST_ASSERT_FALSE(protocore_focas_parse_frame(frame, sizeof(frame), NULL)); // null out
     // a malformed envelope also fails the command-frame convenience wrapper
     FocasResponse r;
     uint8_t badmagic[FOCAS_FRAME_HDR_LEN];
     memcpy(badmagic, frame, sizeof(frame));
     badmagic[0] = 0x00;
-    TEST_ASSERT_FALSE(pc_focas_parse_command_frame(badmagic, sizeof(badmagic), &r));
+    TEST_ASSERT_FALSE(protocore_focas_parse_command_frame(badmagic, sizeof(badmagic), &r));
 }
 
 void test_parser_null_and_short_guards()
@@ -292,26 +292,26 @@ void test_parser_null_and_short_guards()
     // Every parser refuses a null input, a null out, and a buffer shorter than its fixed record.
     const uint8_t bytes[32] = {0};
     FocasResponse r;
-    TEST_ASSERT_FALSE(pc_focas_parse_response(NULL, FOCAS_RESP_HDR_LEN, &r));
-    TEST_ASSERT_FALSE(pc_focas_parse_response(bytes, FOCAS_RESP_HDR_LEN, NULL));
-    TEST_ASSERT_FALSE(pc_focas_parse_response(bytes, FOCAS_RESP_HDR_LEN - 1, &r));
-    TEST_ASSERT_TRUE(pc_focas_parse_response(bytes, FOCAS_RESP_HDR_LEN, &r)); // exact fit is enough
+    TEST_ASSERT_FALSE(protocore_focas_parse_response(NULL, FOCAS_RESP_HDR_LEN, &r));
+    TEST_ASSERT_FALSE(protocore_focas_parse_response(bytes, FOCAS_RESP_HDR_LEN, NULL));
+    TEST_ASSERT_FALSE(protocore_focas_parse_response(bytes, FOCAS_RESP_HDR_LEN - 1, &r));
+    TEST_ASSERT_TRUE(protocore_focas_parse_response(bytes, FOCAS_RESP_HDR_LEN, &r)); // exact fit is enough
 
     FocasSysInfo si;
-    TEST_ASSERT_FALSE(pc_focas_parse_sysinfo(NULL, FOCAS_SYSINFO_LEN, &si));
-    TEST_ASSERT_FALSE(pc_focas_parse_sysinfo(bytes, FOCAS_SYSINFO_LEN, NULL));
-    TEST_ASSERT_FALSE(pc_focas_parse_sysinfo(bytes, FOCAS_SYSINFO_LEN - 1, &si));
+    TEST_ASSERT_FALSE(protocore_focas_parse_sysinfo(NULL, FOCAS_SYSINFO_LEN, &si));
+    TEST_ASSERT_FALSE(protocore_focas_parse_sysinfo(bytes, FOCAS_SYSINFO_LEN, NULL));
+    TEST_ASSERT_FALSE(protocore_focas_parse_sysinfo(bytes, FOCAS_SYSINFO_LEN - 1, &si));
 
     uint32_t alarm = 0xDEAD;
-    TEST_ASSERT_FALSE(pc_focas_parse_alarm(NULL, 4, &alarm));
-    TEST_ASSERT_FALSE(pc_focas_parse_alarm(bytes, 4, NULL));
-    TEST_ASSERT_FALSE(pc_focas_parse_alarm(bytes, 3, &alarm));
+    TEST_ASSERT_FALSE(protocore_focas_parse_alarm(NULL, 4, &alarm));
+    TEST_ASSERT_FALSE(protocore_focas_parse_alarm(bytes, 4, NULL));
+    TEST_ASSERT_FALSE(protocore_focas_parse_alarm(bytes, 3, &alarm));
     TEST_ASSERT_EQUAL_HEX32(0xDEAD, alarm); // untouched by the rejected calls
 
     FocasValue fv;
-    TEST_ASSERT_FALSE(pc_focas_decode8(NULL, FOCAS_VALUE_LEN, &fv));
-    TEST_ASSERT_FALSE(pc_focas_decode8(bytes, FOCAS_VALUE_LEN, NULL));
-    TEST_ASSERT_FALSE(pc_focas_decode8(bytes, FOCAS_VALUE_LEN - 1, &fv));
+    TEST_ASSERT_FALSE(protocore_focas_decode8(NULL, FOCAS_VALUE_LEN, &fv));
+    TEST_ASSERT_FALSE(protocore_focas_decode8(bytes, FOCAS_VALUE_LEN, NULL));
+    TEST_ASSERT_FALSE(protocore_focas_decode8(bytes, FOCAS_VALUE_LEN - 1, &fv));
 }
 
 void test_decode8_base_and_sentinel_edges()
@@ -320,21 +320,21 @@ void test_decode8_base_and_sentinel_edges()
     // 6 and 7 to be 0xFF.
     FocasValue fv;
     const uint8_t base2[] = {0x00, 0x00, 0x00, 0x0C, 0x00, 0x02, 0x00, 0x02}; // 12 / 2^2
-    TEST_ASSERT_TRUE(pc_focas_decode8(base2, sizeof(base2), &fv));
+    TEST_ASSERT_TRUE(protocore_focas_decode8(base2, sizeof(base2), &fv));
     TEST_ASSERT_EQUAL_UINT8(2, fv.base);
-    TEST_ASSERT_FLOAT_WITHIN(0.0005f, 3.0f, pc_focas_value_f(&fv));
+    TEST_ASSERT_FLOAT_WITHIN(0.0005f, 3.0f, protocore_focas_value_f(&fv));
 
     const uint8_t base16[] = {0x00, 0x00, 0x00, 0x0C, 0x00, 0x10, 0x00, 0x02}; // base 16: unsupported
-    TEST_ASSERT_FALSE(pc_focas_decode8(base16, sizeof(base16), &fv));
+    TEST_ASSERT_FALSE(protocore_focas_decode8(base16, sizeof(base16), &fv));
     TEST_ASSERT_FALSE(fv.valid);
 
     // octet 6 is 0xFF but octet 7 is not -> not the sentinel, still a real value
     const uint8_t not_sentinel[] = {0x00, 0x00, 0x00, 0x64, 0x00, 0x0A, 0xFF, 0x01};
-    TEST_ASSERT_TRUE(pc_focas_decode8(not_sentinel, sizeof(not_sentinel), &fv));
+    TEST_ASSERT_TRUE(protocore_focas_decode8(not_sentinel, sizeof(not_sentinel), &fv));
     TEST_ASSERT_EQUAL_UINT8(1, fv.exp);
-    TEST_ASSERT_FLOAT_WITHIN(0.0005f, 10.0f, pc_focas_value_f(&fv));
+    TEST_ASSERT_FLOAT_WITHIN(0.0005f, 10.0f, protocore_focas_value_f(&fv));
 
-    TEST_ASSERT_EQUAL_FLOAT(0.0f, pc_focas_value_f(NULL)); // no value at all
+    TEST_ASSERT_EQUAL_FLOAT(0.0f, protocore_focas_value_f(NULL)); // no value at all
 }
 
 int main()

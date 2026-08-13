@@ -46,15 +46,15 @@ static const uint8_t GV_FULL[] = {
 static size_t ike_sa_parse_tree(const uint8_t *body, size_t body_len)
 {
     IkeProposalRef prop;
-    if (!pc_ike_sa_first_proposal(body, body_len, &prop))
+    if (!protocore_ike_sa_first_proposal(body, body_len, &prop))
     {
         return 0;
     }
     IkeTransformIter it;
     IkeTransformRef t;
-    pc_ike_transform_iter_init(&it, &prop);
+    protocore_ike_transform_iter_init(&it, &prop);
     size_t acc = prop.num_transforms;
-    while (pc_ike_transform_next(&it, &t))
+    while (protocore_ike_transform_next(&it, &t))
     {
         acc += (size_t)t.id + (size_t)(t.key_length + 1);
     }
@@ -65,15 +65,15 @@ static size_t ike_sa_parse_tree(const uint8_t *body, size_t body_len)
 static size_t ike_chain_walk(const uint8_t *msg, size_t len)
 {
     IkeHeader h;
-    if (!pc_ike_hdr_parse(msg, len, &h))
+    if (!protocore_ike_hdr_parse(msg, len, &h))
     {
         return 0;
     }
     IkePayloadIter it;
-    pc_ike_payload_iter_init(&it, h.next_payload, msg + PC_IKE_HDR_LEN, len - PC_IKE_HDR_LEN);
+    protocore_ike_payload_iter_init(&it, h.next_payload, msg + PROTOCORE_IKE_HDR_LEN, len - PROTOCORE_IKE_HDR_LEN);
     IkePayload pl;
     size_t acc = 0;
-    while (pc_ike_payload_next(&it, &pl))
+    while (protocore_ike_payload_next(&it, &pl))
     {
         acc += pl.body_len + (size_t)pl.type;
     }
@@ -85,16 +85,16 @@ void dbench_run(void)
     // A header to build (mirrors GV_HDR: init SPI 0x11..0x88, IKE_SA_INIT, Initiator).
     IkeHeader hdr;
     memset(&hdr, 0, sizeof(hdr));
-    for (int i = 0; i < PC_IKE_SPI_LEN; i++)
+    for (int i = 0; i < PROTOCORE_IKE_SPI_LEN; i++)
     {
         hdr.init_spi[i] = (uint8_t)((i + 1) * 0x11);
     }
     hdr.next_payload = IKE_PL_NONE;
-    hdr.version = PC_IKE_VERSION;
+    hdr.version = PROTOCORE_IKE_VERSION;
     hdr.exchange = IKE_SA_INIT;
-    hdr.flags = PC_IKE_FLAG_INITIATOR;
+    hdr.flags = PROTOCORE_IKE_FLAG_INITIATOR;
     hdr.message_id = 0;
-    hdr.length = PC_IKE_HDR_LEN;
+    hdr.length = PROTOCORE_IKE_HDR_LEN;
 
     // One IKE proposal, ENCR AES-CBC (256-bit key) + PRF HMAC-SHA2-256 - the GV_SA_KEYLEN tree.
     static const IkeTransform tr[2] = {{IKE_TRANSFORM_ENCR, IKE_ENCR_AES_CBC, 256},
@@ -108,13 +108,13 @@ void dbench_run(void)
     {
         DBENCH_BANNER("ikev2");
         volatile size_t sink = 0;
-        DBENCH_OP("pc_ike_hdr_build", 200000, sink += pc_ike_hdr_build(hbuf, sizeof(hbuf), &hdr));
-        DBENCH_OP("pc_ike_hdr_parse", 200000, sink += pc_ike_hdr_parse(GV_HDR, sizeof(GV_HDR), &hdr_out));
-        DBENCH_OP("pc_ike_sa_build (2 tx, keylen)", 100000,
-                  sink += pc_ike_sa_build(sabuf, sizeof(sabuf), IKE_PL_KE, 1, IKE_PROTO_IKE, NULL, 0, tr, 2));
-        DBENCH_OP("pc_ike_sa_parse (prop+tx tree)", 100000,
+        DBENCH_OP("protocore_ike_hdr_build", 200000, sink += protocore_ike_hdr_build(hbuf, sizeof(hbuf), &hdr));
+        DBENCH_OP("protocore_ike_hdr_parse", 200000, sink += protocore_ike_hdr_parse(GV_HDR, sizeof(GV_HDR), &hdr_out));
+        DBENCH_OP("protocore_ike_sa_build (2 tx, keylen)", 100000,
+                  sink += protocore_ike_sa_build(sabuf, sizeof(sabuf), IKE_PL_KE, 1, IKE_PROTO_IKE, NULL, 0, tr, 2));
+        DBENCH_OP("protocore_ike_sa_parse (prop+tx tree)", 100000,
                   sink += ike_sa_parse_tree(GV_SA_KEYLEN + 4, sizeof(GV_SA_KEYLEN) - 4));
-        DBENCH_BULK("pc_ike chain walk (SA_INIT)", 50000, sizeof(GV_FULL),
+        DBENCH_BULK("protocore_ike chain walk (SA_INIT)", 50000, sizeof(GV_FULL),
                     sink += ike_chain_walk(GV_FULL, sizeof(GV_FULL)));
         (void)sink;
         DBENCH_DONE();

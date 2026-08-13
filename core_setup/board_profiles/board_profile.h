@@ -3,7 +3,7 @@
 
 /**
  * @file board_profile.h
- * @brief Per-variant default sizing: pick sane PC_* defaults for the target board.
+ * @brief Per-variant default sizing: pick sane PROTOCORE_* defaults for the target board.
  *
  * The library's sizing defaults used to be a single flat set tuned to fit the smallest
  * classic-ESP32 DRAM ceiling, so a board with far more RAM/flash silently inherited the
@@ -23,7 +23,7 @@
  * Chip is auto-detected from the SoC target macro. PSRAM/flash size can't be read reliably
  * from the Arduino core, so set them for your board (they default to "none / smallest"):
  * @code
- *   build_flags = -DPC_PSRAM_MB=8 -DPC_FLASH_MB=16
+ *   build_flags = -DPROTOCORE_PSRAM_MB=8 -DPROTOCORE_FLASH_MB=16
  * @endcode
  * ESP-IDF builds auto-fill both from the sdkconfig below.
  */
@@ -45,66 +45,66 @@
 #endif
 #endif
 
-// The one vendor/die selector: derives PC_VENDOR_ESP / _STM / _RP / _TI / _HOST from the toolchain target
-// macros so the per-vendor partitioning keys off PC_VENDOR_* instead of re-testing CONFIG_IDF_TARGET_* here.
-#include "pc_platform.h"
+// The one vendor/die selector: derives PROTOCORE_VENDOR_ESP / _STM / _RP / _TI / _HOST from the toolchain target
+// macros so the per-vendor partitioning keys off PROTOCORE_VENDOR_* instead of re-testing CONFIG_IDF_TARGET_* here.
+#include "protocore_platform.h"
 
-// --- flash size (MB): honor an explicit -DPC_FLASH_MB, else read the ESP-IDF sdkconfig ---
-#if !defined(PC_FLASH_MB)
+// --- flash size (MB): honor an explicit -DPROTOCORE_FLASH_MB, else read the ESP-IDF sdkconfig ---
+#if !defined(PROTOCORE_FLASH_MB)
 #if defined(CONFIG_ESPTOOLPY_FLASHSIZE_32MB)
-#define PC_FLASH_MB 32
+#define PROTOCORE_FLASH_MB 32
 #elif defined(CONFIG_ESPTOOLPY_FLASHSIZE_16MB)
-#define PC_FLASH_MB 16
+#define PROTOCORE_FLASH_MB 16
 #elif defined(CONFIG_ESPTOOLPY_FLASHSIZE_8MB)
-#define PC_FLASH_MB 8
+#define PROTOCORE_FLASH_MB 8
 #elif defined(CONFIG_ESPTOOLPY_FLASHSIZE_4MB)
-#define PC_FLASH_MB 4
+#define PROTOCORE_FLASH_MB 4
 #elif defined(CONFIG_ESPTOOLPY_FLASHSIZE_2MB)
-#define PC_FLASH_MB 2
+#define PROTOCORE_FLASH_MB 2
 #endif
 #endif
 
-// --- PSRAM size (MB): honor an explicit -DPC_PSRAM_MB, else read the ESP-IDF sdkconfig ---
-#if !defined(PC_PSRAM_MB) && defined(CONFIG_SPIRAM_SIZE)
+// --- PSRAM size (MB): honor an explicit -DPROTOCORE_PSRAM_MB, else read the ESP-IDF sdkconfig ---
+#if !defined(PROTOCORE_PSRAM_MB) && defined(CONFIG_SPIRAM_SIZE)
 #if CONFIG_SPIRAM_SIZE >= (32 * 1024 * 1024)
-#define PC_PSRAM_MB 32
+#define PROTOCORE_PSRAM_MB 32
 #elif CONFIG_SPIRAM_SIZE >= (16 * 1024 * 1024)
-#define PC_PSRAM_MB 16
+#define PROTOCORE_PSRAM_MB 16
 #elif CONFIG_SPIRAM_SIZE >= (8 * 1024 * 1024)
-#define PC_PSRAM_MB 8
+#define PROTOCORE_PSRAM_MB 8
 #elif CONFIG_SPIRAM_SIZE >= (4 * 1024 * 1024)
-#define PC_PSRAM_MB 4
+#define PROTOCORE_PSRAM_MB 4
 #elif CONFIG_SPIRAM_SIZE >= (2 * 1024 * 1024)
-#define PC_PSRAM_MB 2
+#define PROTOCORE_PSRAM_MB 2
 #endif
 #endif
 
 // --- PSRAM-size profile (most specific: RAM-backed buffers scale with available PSRAM) ---
-#if defined(PC_PSRAM_MB)
-#if PC_PSRAM_MB >= 32
+#if defined(PROTOCORE_PSRAM_MB)
+#if PROTOCORE_PSRAM_MB >= 32
 #include "esp/32mbpsram.h"
-#elif PC_PSRAM_MB >= 16
+#elif PROTOCORE_PSRAM_MB >= 16
 #include "esp/16mbpsram.h"
-#elif PC_PSRAM_MB >= 8
+#elif PROTOCORE_PSRAM_MB >= 8
 #include "esp/8mbpsram.h"
-#elif PC_PSRAM_MB >= 4
+#elif PROTOCORE_PSRAM_MB >= 4
 #include "esp/4mbpsram.h"
-#elif PC_PSRAM_MB >= 2
+#elif PROTOCORE_PSRAM_MB >= 2
 #include "esp/2mbpsram.h"
 #endif
 #endif
 
 // --- flash-size profile (flash-backed sizing scales with available flash) ---
-#if defined(PC_FLASH_MB)
-#if PC_FLASH_MB >= 32
+#if defined(PROTOCORE_FLASH_MB)
+#if PROTOCORE_FLASH_MB >= 32
 #include "esp/32mbflash.h"
-#elif PC_FLASH_MB >= 16
+#elif PROTOCORE_FLASH_MB >= 16
 #include "esp/16mbflash.h"
-#elif PC_FLASH_MB >= 8
+#elif PROTOCORE_FLASH_MB >= 8
 #include "esp/8mbflash.h"
-#elif PC_FLASH_MB >= 4
+#elif PROTOCORE_FLASH_MB >= 4
 #include "esp/4mbflash.h"
-#elif PC_FLASH_MB >= 2
+#elif PROTOCORE_FLASH_MB >= 2
 #include "esp/2mbflash.h"
 #endif
 #endif
@@ -113,7 +113,7 @@
 //     last as the universal sizing floor). Every macro name is uppercase with no hyphen/underscore
 //     in the suffix (e.g. ...ESP32C61), verified against ESP-IDF's components/soc/<target>/.
 //     S31/H4/H21 are preview targets (in ESP-IDF master, not a stable release yet). ---
-#if PC_VENDOR_ESP
+#if PROTOCORE_VENDOR_ESP
 #if defined(CONFIG_IDF_TARGET_ESP32P4)
 #include "esp/p4_defaults.h"
 #elif defined(CONFIG_IDF_TARGET_ESP32S31)

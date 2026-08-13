@@ -8,7 +8,7 @@
 
 #include "services/peripherals/dshot/dshot.h"
 
-#if PC_ENABLE_DSHOT
+#if PROTOCORE_ENABLE_DSHOT
 
 // The DShot CRC: xor of the three 4-bit nibbles of the 12-bit (value<<1 | telemetry) word.
 static uint8_t dshot_crc(uint16_t v12, proto_bool bidirectional)
@@ -21,7 +21,7 @@ static uint8_t dshot_crc(uint16_t v12, proto_bool bidirectional)
     return crc;
 }
 
-uint16_t pc_dshot_encode(uint16_t value11, proto_bool telemetry, proto_bool bidirectional)
+uint16_t protocore_dshot_encode(uint16_t value11, proto_bool telemetry, proto_bool bidirectional)
 {
     value11 &= 0x07FF; // 11-bit value field
     uint16_t v12 = (uint16_t)((value11 << 1) | (telemetry ? 1 : 0));
@@ -29,7 +29,7 @@ uint16_t pc_dshot_encode(uint16_t value11, proto_bool telemetry, proto_bool bidi
     return (uint16_t)((v12 << 4) | crc);
 }
 
-proto_bool pc_dshot_decode(uint16_t frame, uint16_t *value11, proto_bool *telemetry, proto_bool bidirectional)
+proto_bool protocore_dshot_decode(uint16_t frame, uint16_t *value11, proto_bool *telemetry, proto_bool bidirectional)
 {
     uint16_t v12 = (uint16_t)(frame >> 4);
     uint8_t got = (uint8_t)(frame & 0x0F);
@@ -48,7 +48,7 @@ proto_bool pc_dshot_decode(uint16_t frame, uint16_t *value11, proto_bool *teleme
     return PROTO_TRUE;
 }
 
-uint32_t pc_dshot_bit_ns(uint16_t rate_kbit, proto_bool bit)
+uint32_t protocore_dshot_bit_ns(uint16_t rate_kbit, proto_bool bit)
 {
     uint32_t period_ns; // one bit-period, in ns, at rate_kbit kbit/s
     switch (rate_kbit)
@@ -72,25 +72,25 @@ uint32_t pc_dshot_bit_ns(uint16_t rate_kbit, proto_bool bit)
     return bit ? (period_ns * 3 / 4) : (period_ns * 3 / 8);
 }
 
-uint32_t pc_esc_pwm_ns(uint16_t throttle_1000, pc_esc_pwm mode)
+uint32_t protocore_esc_pwm_ns(uint16_t throttle_1000, protocore_esc_pwm mode)
 {
     uint32_t lo;
     uint32_t hi; // pulse width range in ns
     switch (mode)
     {
-    case PC_ESC_ONESHOT125:
+    case PROTOCORE_ESC_ONESHOT125:
         lo = 125000;
         hi = 250000;
         break;
-    case PC_ESC_ONESHOT42:
+    case PROTOCORE_ESC_ONESHOT42:
         lo = 42000;
         hi = 84000;
         break;
-    case PC_ESC_MULTISHOT:
+    case PROTOCORE_ESC_MULTISHOT:
         lo = 5000;
         hi = 25000;
         break;
-    case PC_ESC_PWM:
+    case PROTOCORE_ESC_PWM:
     default:
         lo = 1000000;
         hi = 2000000;
@@ -104,4 +104,4 @@ uint32_t pc_esc_pwm_ns(uint16_t throttle_1000, pc_esc_pwm mode)
     return lo + (uint32_t)(((uint64_t)(hi - lo) * throttle_1000) / 1000);
 }
 
-#endif // PC_ENABLE_DSHOT
+#endif // PROTOCORE_ENABLE_DSHOT

@@ -3,7 +3,7 @@
 
 /**
  * @file s7comm.h
- * @brief Siemens S7comm PDU codec (PC_ENABLE_S7COMM) - zero-heap builder + parser for the
+ * @brief Siemens S7comm PDU codec (PROTOCORE_ENABLE_S7COMM) - zero-heap builder + parser for the
  *        S7-300/400 communication PDUs, carried inside a COTP Data TPDU (services/fieldbus/cotp) over
  *        ISO-on-TCP (port 102).
  *
@@ -20,7 +20,7 @@
  * is padded to an even length except the last.
  *
  * Constants and the length rule are verified against the Wireshark S7comm dissector. This
- * codec produces / consumes the S7 PDU; wrap it with `pc_cotp_build_dt` + `pc_tpkt_build`.
+ * codec produces / consumes the S7 PDU; wrap it with `protocore_cotp_build_dt` + `protocore_tpkt_build`.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -31,9 +31,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_S7COMM
+#if PROTOCORE_ENABLE_S7COMM
 
 #define S7_PROTOCOL_ID 0x32 ///< constant first octet of every S7comm PDU
 
@@ -79,8 +79,8 @@ PROTO_BEGIN_DECLS
 #define S7_RET_OK 0xFF       ///< data item return code: success
 
 /** @brief Build a Setup Communication job. Returns the PDU length, or 0 on overflow. */
-size_t pc_s7_build_setup(uint8_t *buf, size_t cap, uint16_t pdu_ref, uint16_t max_amq_calling, uint16_t max_amq_called,
-                         uint16_t pdu_size);
+size_t protocore_s7_build_setup(uint8_t *buf, size_t cap, uint16_t pdu_ref, uint16_t max_amq_calling,
+                                uint16_t max_amq_called, uint16_t pdu_size);
 
 /** @brief One Read Var item (an S7-ANY pointer). */
 typedef struct
@@ -93,7 +93,7 @@ typedef struct
 } S7ReadItem;
 
 /** @brief Build a Read Var job for @p n items. Returns the PDU length, or 0 on overflow. */
-size_t pc_s7_build_read_request(uint8_t *buf, size_t cap, uint16_t pdu_ref, const S7ReadItem *items, size_t n);
+size_t protocore_s7_build_read_request(uint8_t *buf, size_t cap, uint16_t pdu_ref, const S7ReadItem *items, size_t n);
 
 /** @brief One Write Var item: an S7-ANY pointer (as for a read) plus the value bytes to write. */
 typedef struct
@@ -113,9 +113,9 @@ typedef struct
  *        12-octet S7-ANY item specs) and appends a data section: per item a return code (0x00) + data
  *        transport size + a 2-octet length + the value bytes, each item padded to an even length except the
  *        last. The length field is in BITS for the bit/byte/int data transport sizes (3/4/5) and in BYTES
- *        otherwise, matching pc_s7_read_next_item. @return the PDU length, or 0 on overflow / bad input.
+ *        otherwise, matching protocore_s7_read_next_item. @return the PDU length, or 0 on overflow / bad input.
  */
-size_t pc_s7_build_write_request(uint8_t *buf, size_t cap, uint16_t pdu_ref, const S7WriteItem *items, size_t n);
+size_t protocore_s7_build_write_request(uint8_t *buf, size_t cap, uint16_t pdu_ref, const S7WriteItem *items, size_t n);
 
 /** @brief A parsed S7comm header. @ref param / @ref data point INTO the source buffer. */
 typedef struct
@@ -132,7 +132,7 @@ typedef struct
 } S7Header;
 
 /** @brief Parse + validate an S7comm header (protocol id, lengths). */
-proto_bool pc_s7_parse_header(const uint8_t *buf, size_t len, S7Header *out);
+proto_bool protocore_s7_parse_header(const uint8_t *buf, size_t len, S7Header *out);
 
 /** @brief One Read Var response data item. @ref data points INTO the source buffer. */
 typedef struct
@@ -149,10 +149,10 @@ typedef struct
  * @param offset   in/out cursor, start at 0; advanced past the item (and its even-pad).
  * @return true on a complete item; false at end-of-section or on truncation.
  */
-proto_bool pc_s7_read_next_item(const uint8_t *data, size_t data_len, size_t *offset, S7DataItem *out);
+proto_bool protocore_s7_read_next_item(const uint8_t *data, size_t data_len, size_t *offset, S7DataItem *out);
 
-#endif // PC_ENABLE_S7COMM
+#endif // PROTOCORE_ENABLE_S7COMM
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_S7COMM_H

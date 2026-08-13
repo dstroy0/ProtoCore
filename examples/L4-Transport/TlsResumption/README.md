@@ -1,6 +1,6 @@
 # TlsResumption - cheap repeat handshakes via session tickets
 
-**Layer:** L4 Transport · **Build flags:** `PC_ENABLE_TLS`, `PC_ENABLE_TLS_RESUMPTION`
+**Layer:** L4 Transport · **Build flags:** `PROTOCORE_ENABLE_TLS`, `PROTOCORE_ENABLE_TLS_RESUMPTION`
 
 ## What this example teaches
 
@@ -27,7 +27,7 @@ the session; look for `Reused` on the later ones:
 openssl s_client -connect <ip>:443 -tls1_2 -reconnect
 ```
 
-**Build dependency.** `PC_ENABLE_TLS_RESUMPTION` requires `PC_ENABLE_TLS`
+**Build dependency.** `PROTOCORE_ENABLE_TLS_RESUMPTION` requires `PROTOCORE_ENABLE_TLS`
 (enforced by a compile-time `#error`), and the platform's mbedTLS build must
 provide the session-ticket support; pass both flags to the library build.
 
@@ -38,7 +38,7 @@ provide the session-ticket support; pass both flags to the library build.
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_TLS=1 -DPC_ENABLE_TLS_RESUMPTION=1 -DMAX_CONNS=4 -DPC_TLS_ARENA_SIZE=32768" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_TLS=1 -DPROTOCORE_ENABLE_TLS_RESUMPTION=1 -DMAX_CONNS=4 -DPROTOCORE_TLS_ARENA_SIZE=32768" \
   --lib="." examples/L4-Transport/TlsResumption/TlsResumption.ino
 ```
 
@@ -51,8 +51,8 @@ cert/key are elided here (see the `.ino`); the C++ is verbatim with comments.
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-#define PC_ENABLE_TLS 1
-#define PC_ENABLE_TLS_RESUMPTION 1
+#define PROTOCORE_ENABLE_TLS 1
+#define PROTOCORE_ENABLE_TLS_RESUMPTION 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -91,7 +91,7 @@ void setup()
               [](uint8_t id, HttpReq *) { server.send(id, 200, "text/plain", "hello over resumable TLS\n"); });
 
     // Same begin_tls() as plain HTTPS; tickets are issued/accepted automatically
-    // because PC_ENABLE_TLS_RESUMPTION is compiled in.
+    // because PROTOCORE_ENABLE_TLS_RESUMPTION is compiled in.
     int32_t r =
         server.begin_tls(443, (const uint8_t *)CERT_PEM, sizeof(CERT_PEM), (const uint8_t *)KEY_PEM, sizeof(KEY_PEM));
     if (r < 0)

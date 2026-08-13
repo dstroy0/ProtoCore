@@ -3,7 +3,7 @@
 
 /**
  * @file web_terminal.h
- * @brief Browser "web serial" terminal over WebSocket (PC_ENABLE_WEB_TERMINAL).
+ * @brief Browser "web serial" terminal over WebSocket (PROTOCORE_ENABLE_WEB_TERMINAL).
  *
  * A zero-heap equivalent of the WebSerial-style remote serial monitor: it serves
  * a self-contained terminal web page and a WebSocket endpoint on the same path.
@@ -13,25 +13,25 @@
  * auto-selects ws:// or wss:// from the page's own scheme.
  *
  * A line is built with the frame engine and handed over as text, so the shape is a
- * `static const pc_field[]` in rodata rather than a format string parsed per call.
+ * `static const protocore_field[]` in rodata rather than a format string parsed per call.
  *
  * @code
- *   static const pc_field SAID[] = {{PC_FK_LIT, 0, 10, "you said: "}, PC_STR,
- *                                   {PC_FK_LIT, 0, 1, "\n"}, PC_END};
+ *   static const protocore_field SAID[] = {{PROTOCORE_FK_LIT, 0, 10, "you said: "}, PROTOCORE_STR,
+ *                                   {PROTOCORE_FK_LIT, 0, 1, "\n"}, PROTOCORE_END};
  *   void on_cmd(const char *line, uint8_t client) {
  *     char out[64];
- *     frame.build(out, sizeof(out), SAID, (const pc_fval[]){PC_VSTR(line)}, 1);
- *     pc_web_terminal_print(out);
+ *     frame.build(out, sizeof(out), SAID, (const protocore_fval[]){PROTOCORE_VSTR(line)}, 1);
+ *     protocore_web_terminal_print(out);
  *   }
  *   void setup() {
  *     // ... wifi + on_http(...) ...
- *     pc_web_terminal_begin("/terminal");
- *     pc_web_terminal_on_command(on_cmd);
+ *     protocore_web_terminal_begin("/terminal");
+ *     protocore_web_terminal_on_command(on_cmd);
  *     begin_http(80);
  *   }
  * @endcode
  *
- * No-op stubs when PC_ENABLE_WEB_TERMINAL is 0.
+ * No-op stubs when PROTOCORE_ENABLE_WEB_TERMINAL is 0.
  */
 
 #ifndef PROTOCORE_WEB_TERMINAL_H
@@ -39,7 +39,7 @@
 
 #include <stdint.h>
 
-#if PC_ENABLE_WEB_TERMINAL
+#if PROTOCORE_ENABLE_WEB_TERMINAL
 
 /**
  * @brief Callback for a line typed in a connected browser terminal.
@@ -56,44 +56,44 @@ typedef void (*TermCommandCb)(const char *line, uint8_t client_id);
  *
  * @param path URL path for the page.
  */
-void pc_web_terminal_begin(const char *path);
+void protocore_web_terminal_begin(const char *path);
 
 /** @brief Install the command callback (browser -> device). Pass NULL to clear. */
-void pc_web_terminal_on_command(TermCommandCb cb);
+void protocore_web_terminal_on_command(TermCommandCb cb);
 
 /** @brief Broadcast text to every connected terminal browser (device -> browsers). */
-void pc_web_terminal_print(const char *s);
+void protocore_web_terminal_print(const char *s);
 
 /** @brief Like print() but appends a newline. */
-void pc_web_terminal_println(const char *s);
+void protocore_web_terminal_println(const char *s);
 
 /** @brief Number of browsers currently connected to the terminal. */
-uint8_t pc_web_terminal_client_count(void);
+uint8_t protocore_web_terminal_client_count(void);
 
-#else // PC_ENABLE_WEB_TERMINAL == 0  -> no-op stubs
+#else // PROTOCORE_ENABLE_WEB_TERMINAL == 0  -> no-op stubs
 
 typedef void (*TermCommandCb)(const char *line, uint8_t client_id);
-static inline void pc_web_terminal_begin(const char *path)
+static inline void protocore_web_terminal_begin(const char *path)
 {
     (void)path;
 }
-static inline void pc_web_terminal_on_command(TermCommandCb cb)
+static inline void protocore_web_terminal_on_command(TermCommandCb cb)
 {
     (void)cb;
 }
-static inline void pc_web_terminal_print(const char *s)
+static inline void protocore_web_terminal_print(const char *s)
 {
     (void)s;
 }
-static inline void pc_web_terminal_println(const char *s)
+static inline void protocore_web_terminal_println(const char *s)
 {
     (void)s;
 }
-static inline uint8_t pc_web_terminal_client_count(void)
+static inline uint8_t protocore_web_terminal_client_count(void)
 {
     return 0;
 }
 
-#endif // PC_ENABLE_WEB_TERMINAL
+#endif // PROTOCORE_ENABLE_WEB_TERMINAL
 
 #endif // PROTOCORE_WEB_TERMINAL_H

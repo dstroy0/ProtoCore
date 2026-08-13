@@ -11,17 +11,17 @@
 
 #include "network_drivers/transport/udp/udp_client.h"
 
-#include "core_setup/board_profiles/pc_platform.h" // the stack's UDP, under our names
+#include "core_setup/board_profiles/protocore_platform.h" // the stack's UDP, under our names
 #include "mmgr/rawmemcpy.h"                        // proto_raw_read: the caller's bytes into the pbuf
 #include "network_drivers/transport/diffserv.h"    // DSCP marking; compiles out when off
-#include "network_drivers/transport/net_addr.h"    // NetAddr: the stack's address as a pc_ip
+#include "network_drivers/transport/net_addr.h"    // NetAddr: the stack's address as a protocore_ip
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
 /** @brief All sending-side UDP state: the shared control block every datagram leaves through. */
 typedef struct
 {
-    pc_udp_pcb *out;
+    protocore_udp_pcb *out;
 } UdpClientCtx;
 static UdpClientCtx s_cli;
 
@@ -29,23 +29,23 @@ static UdpClientCtx s_cli;
 // so nothing is copied into this and it holds no storage of its own.
 typedef struct
 {
-    pc_net_call base;
-    const pc_ip *dst;
+    protocore_net_call base;
+    const protocore_ip *dst;
     const uint8_t *data;
     size_t len;
     uint16_t port;
     proto_bool ok;
-} pc_udp_send_call;
+} protocore_udp_send_call;
 
 // Stamp the control block with the configured UDP DSCP, applied per send so a DiffServ.set_udp()
 // change reaches the next datagram.
-static void apply_dscp(pc_udp_pcb *pcb)
+static void apply_dscp(protocore_udp_pcb *pcb)
 {
-#if PC_ENABLE_DIFFSERV
+#if PROTOCORE_ENABLE_DIFFSERV
     uint8_t dscp = DiffServ.udp_dscp();
     if (pcb != NULL && dscp != 0)
     {
-        pcb->tos = pc_dscp_to_tos(dscp);
+        pcb->tos = protocore_dscp_to_tos(dscp);
     }
 #else
     (void)pcb;
@@ -53,59 +53,59 @@ static void apply_dscp(pc_udp_pcb *pcb)
 }
 
 // Take a pbuf, hand the bytes over, release it. Runs in the stack's thread only.
-static proto_bool wire_send(pc_udp_pcb *pcb, const pc_ip *a, uint16_t port, const uint8_t *data, size_t len)
+static proto_bool wire_send(protocore_udp_pcb *pcb, const protocore_ip *a, uint16_t port, const uint8_t *data, size_t len)
 {
-    pc_net_ip dst;
+    protocore_net_ip dst;
     if (!NetAddr.from_ip(a, &dst))
     {
         return PROTO_FALSE; // a family this stack cannot send to, refused before a pbuf is taken
     }
-    pc_pbuf *p = pc_net_pbuf_alloc(PC_NET_PBUF_TRANSPORT, (proto_u16)len, PC_NET_PBUF_RAM);
+    protocore_pbuf *p = protocore_net_pbuf_alloc(PROTOCORE_NET_PBUF_TRANSPORT, (proto_u16)len, PROTOCORE_NET_PBUF_RAM);
     if (p == NULL)
     {
         return PROTO_FALSE;
     }
     proto_raw_read((uint8_t *)p->payload, data, len);
-    pc_net_err e = pc_net_udp_sendto(pcb, p, &dst, port);
-    pc_net_pbuf_free(p);
-    return e == PC_NET_OK;
+    protocore_net_err e = protocore_net_udp_sendto(pcb, p, &dst, port);
+    protocore_net_pbuf_free(p);
+    return e == PROTOCORE_NET_OK;
 }
 
 // The send, on the stack's thread. The control block is created here on first use, in the thread
 // that owns it.
-static pc_net_err send_do(pc_net_call *c)
+static protocore_net_err send_do(protocore_net_call *c)
 {
-    pc_udp_send_call *k = (pc_udp_send_call *)c;
+    protocore_udp_send_call *k = (protocore_udp_send_call *)c;
     if (s_cli.out == NULL)
     {
-        s_cli.out = pc_net_udp_new();
+        s_cli.out = protocore_net_udp_new();
     }
     if (s_cli.out == NULL)
     {
-        return PC_NET_OK; // no control block: k->ok stays false and the caller still holds its bytes
+        return PROTOCORE_NET_OK; // no control block: k->ok stays false and the caller still holds its bytes
     }
     apply_dscp(s_cli.out);
     k->ok = wire_send(s_cli.out, k->dst, k->port, k->data, k->len);
-    return PC_NET_OK;
+    return PROTOCORE_NET_OK;
 }
 
 // ---------------------------------------------------------------------------
 // The bodies behind the table
 // ---------------------------------------------------------------------------
 
-static proto_bool send_to(const pc_ip *dst, uint16_t dst_port, const uint8_t *data, size_t len)
+static proto_bool send_to(const protocore_ip *dst, uint16_t dst_port, const uint8_t *data, size_t len)
 {
-    if (data == NULL || len == 0 || len > PC_UDP_RX_BUF_SIZE || dst == NULL || dst->family == PC_IP_NONE)
+    if (data == NULL || len == 0 || len > PROTOCORE_UDP_RX_BUF_SIZE || dst == NULL || dst->family == PROTOCORE_IP_NONE)
     {
         return PROTO_FALSE;
     }
     // The marshal is synchronous, so this outlives the call and carries its answer back.
-    pc_udp_send_call k = {{0}, dst, data, len, dst_port, PROTO_FALSE};
-    (void)pc_net_call_marshal(send_do, &k.base);
+    protocore_udp_send_call k = {{0}, dst, data, len, dst_port, PROTO_FALSE};
+    (void)protocore_net_call_marshal(send_do, &k.base);
     return k.ok;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
 const UdpClientNs UdpClient = {.sendto = send_to};
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS

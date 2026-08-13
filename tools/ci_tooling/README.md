@@ -129,7 +129,7 @@ so the new floor is recorded. Do not add to a baseline to make a build pass - th
 silencing an alarm with extra steps.
 
 Writing this checker is also what disproved the rule it enforces: implementing
-`PC_<PATH>_H` showed 283 of 373 headers could not satisfy it alongside the
+`PROTOCORE_<PATH>_H` showed 283 of 373 headers could not satisfy it alongside the
 31-character limit, and SYMBOLS.md s4 was amended to `PROTOCORE_<FILE>_H` as a result.
 A law worth enforcing is worth testing against the tree before trusting it.
 

@@ -11,9 +11,9 @@
  */
 
 #include "services/radio/thread/thread.h"
-#include "shared_primitives/crc.h" // PC_CRC16_X25
+#include "shared_primitives/crc.h" // PROTOCORE_CRC16_X25
 
-#if PC_ENABLE_THREAD
+#if PROTOCORE_ENABLE_THREAD
 
 static proto_bool is_reserved(uint8_t b)
 {
@@ -43,7 +43,7 @@ static proto_bool put_stuffed(uint8_t *out, uint16_t *p, uint16_t cap, uint8_t b
     return PROTO_TRUE;
 }
 
-uint8_t pc_spinel_pack_uint(uint32_t value, uint8_t *out, uint8_t cap)
+uint8_t protocore_spinel_pack_uint(uint32_t value, uint8_t *out, uint8_t cap)
 {
     if (!out)
     {
@@ -67,7 +67,7 @@ uint8_t pc_spinel_pack_uint(uint32_t value, uint8_t *out, uint8_t cap)
     return n;
 }
 
-int pc_spinel_unpack_uint(const uint8_t *raw, uint8_t len, uint32_t *value)
+int protocore_spinel_unpack_uint(const uint8_t *raw, uint8_t len, uint32_t *value)
 {
     if (!raw)
     {
@@ -96,7 +96,7 @@ int pc_spinel_unpack_uint(const uint8_t *raw, uint8_t len, uint32_t *value)
     return 0; // truncated - need more bytes
 }
 
-uint16_t pc_spinel_command_build(uint8_t header, uint32_t cmd, uint32_t prop, const uint8_t *value, uint16_t value_len,
+uint16_t protocore_spinel_command_build(uint8_t header, uint32_t cmd, uint32_t prop, const uint8_t *value, uint16_t value_len,
                                  uint8_t *out, uint16_t cap)
 {
     if (!out || cap < 1 || (value == NULL && value_len > 0))
@@ -105,13 +105,13 @@ uint16_t pc_spinel_command_build(uint8_t header, uint32_t cmd, uint32_t prop, co
     }
     uint16_t p = 0;
     out[p++] = header;
-    uint8_t n = pc_spinel_pack_uint(cmd, out + p, (uint8_t)(cap - p));
+    uint8_t n = protocore_spinel_pack_uint(cmd, out + p, (uint8_t)(cap - p));
     if (n == 0)
     {
         return 0;
     }
     p += n;
-    n = pc_spinel_pack_uint(prop, out + p, (uint8_t)(cap > p ? cap - p : 0));
+    n = protocore_spinel_pack_uint(prop, out + p, (uint8_t)(cap > p ? cap - p : 0));
     if (n == 0)
     {
         return 0;
@@ -128,7 +128,7 @@ uint16_t pc_spinel_command_build(uint8_t header, uint32_t cmd, uint32_t prop, co
     return (uint16_t)(p + value_len);
 }
 
-int pc_spinel_command_parse(const uint8_t *payload, uint16_t len, uint8_t *header, uint32_t *cmd, uint32_t *prop,
+int protocore_spinel_command_parse(const uint8_t *payload, uint16_t len, uint8_t *header, uint32_t *cmd, uint32_t *prop,
                             const uint8_t **value, uint16_t *value_len)
 {
     if (!payload || len < 1)
@@ -139,13 +139,13 @@ int pc_spinel_command_parse(const uint8_t *payload, uint16_t len, uint8_t *heade
     uint8_t h = payload[p++];
     uint32_t c = 0;
     uint32_t pr = 0;
-    int n = pc_spinel_unpack_uint(payload + p, (uint8_t)((len - p) > 255 ? 255 : (len - p)), &c);
+    int n = protocore_spinel_unpack_uint(payload + p, (uint8_t)((len - p) > 255 ? 255 : (len - p)), &c);
     if (n <= 0)
     {
         return -1;
     }
     p += (uint16_t)n;
-    n = pc_spinel_unpack_uint(payload + p, (uint8_t)((len - p) > 255 ? 255 : (len - p)), &pr);
+    n = protocore_spinel_unpack_uint(payload + p, (uint8_t)((len - p) > 255 ? 255 : (len - p)), &pr);
     if (n <= 0)
     {
         return -1;
@@ -176,7 +176,7 @@ int pc_spinel_command_parse(const uint8_t *payload, uint16_t len, uint8_t *heade
 
 // --- Spinel value semantics -------------------------------------------------------------
 
-void pc_spinel_reader_init(SpinelReader *r, const uint8_t *value, uint16_t len)
+void protocore_spinel_reader_init(SpinelReader *r, const uint8_t *value, uint16_t len)
 {
     if (!r)
     {
@@ -204,7 +204,7 @@ static const uint8_t *take(SpinelReader *r, uint16_t n)
     return at;
 }
 
-proto_bool pc_spinel_get_bool(SpinelReader *r, proto_bool *out)
+proto_bool protocore_spinel_get_bool(SpinelReader *r, proto_bool *out)
 {
     const uint8_t *b = take(r, 1);
     if (!b)
@@ -218,7 +218,7 @@ proto_bool pc_spinel_get_bool(SpinelReader *r, proto_bool *out)
     return PROTO_TRUE;
 }
 
-proto_bool pc_spinel_get_u8(SpinelReader *r, uint8_t *out)
+proto_bool protocore_spinel_get_u8(SpinelReader *r, uint8_t *out)
 {
     const uint8_t *b = take(r, 1);
     if (!b)
@@ -232,7 +232,7 @@ proto_bool pc_spinel_get_u8(SpinelReader *r, uint8_t *out)
     return PROTO_TRUE;
 }
 
-proto_bool pc_spinel_get_i8(SpinelReader *r, int8_t *out)
+proto_bool protocore_spinel_get_i8(SpinelReader *r, int8_t *out)
 {
     const uint8_t *b = take(r, 1);
     if (!b)
@@ -246,7 +246,7 @@ proto_bool pc_spinel_get_i8(SpinelReader *r, int8_t *out)
     return PROTO_TRUE;
 }
 
-proto_bool pc_spinel_get_u16(SpinelReader *r, uint16_t *out)
+proto_bool protocore_spinel_get_u16(SpinelReader *r, uint16_t *out)
 {
     const uint8_t *b = take(r, 2);
     if (!b)
@@ -260,10 +260,10 @@ proto_bool pc_spinel_get_u16(SpinelReader *r, uint16_t *out)
     return PROTO_TRUE;
 }
 
-proto_bool pc_spinel_get_i16(SpinelReader *r, int16_t *out)
+proto_bool protocore_spinel_get_i16(SpinelReader *r, int16_t *out)
 {
     uint16_t v = 0;
-    if (!pc_spinel_get_u16(r, &v))
+    if (!protocore_spinel_get_u16(r, &v))
     {
         return PROTO_FALSE;
     }
@@ -274,7 +274,7 @@ proto_bool pc_spinel_get_i16(SpinelReader *r, int16_t *out)
     return PROTO_TRUE;
 }
 
-proto_bool pc_spinel_get_u32(SpinelReader *r, uint32_t *out)
+proto_bool protocore_spinel_get_u32(SpinelReader *r, uint32_t *out)
 {
     const uint8_t *b = take(r, 4);
     if (!b)
@@ -288,10 +288,10 @@ proto_bool pc_spinel_get_u32(SpinelReader *r, uint32_t *out)
     return PROTO_TRUE;
 }
 
-proto_bool pc_spinel_get_i32(SpinelReader *r, int32_t *out)
+proto_bool protocore_spinel_get_i32(SpinelReader *r, int32_t *out)
 {
     uint32_t v = 0;
-    if (!pc_spinel_get_u32(r, &v))
+    if (!protocore_spinel_get_u32(r, &v))
     {
         return PROTO_FALSE;
     }
@@ -302,14 +302,14 @@ proto_bool pc_spinel_get_i32(SpinelReader *r, int32_t *out)
     return PROTO_TRUE;
 }
 
-proto_bool pc_spinel_get_uint(SpinelReader *r, uint32_t *out)
+proto_bool protocore_spinel_get_uint(SpinelReader *r, uint32_t *out)
 {
     if (!r || r->err)
     {
         return PROTO_FALSE;
     }
     uint32_t v = 0;
-    int n = pc_spinel_unpack_uint(r->buf + r->off, (uint8_t)((r->len - r->off) > 255 ? 255 : (r->len - r->off)), &v);
+    int n = protocore_spinel_unpack_uint(r->buf + r->off, (uint8_t)((r->len - r->off) > 255 ? 255 : (r->len - r->off)), &v);
     if (n <= 0)
     {
         r->err = PROTO_TRUE;
@@ -323,7 +323,7 @@ proto_bool pc_spinel_get_uint(SpinelReader *r, uint32_t *out)
     return PROTO_TRUE;
 }
 
-proto_bool pc_spinel_get_eui64(SpinelReader *r, const uint8_t **out8)
+proto_bool protocore_spinel_get_eui64(SpinelReader *r, const uint8_t **out8)
 {
     const uint8_t *b = take(r, 8);
     if (!b)
@@ -337,7 +337,7 @@ proto_bool pc_spinel_get_eui64(SpinelReader *r, const uint8_t **out8)
     return PROTO_TRUE;
 }
 
-proto_bool pc_spinel_get_ipv6(SpinelReader *r, const uint8_t **out16)
+proto_bool protocore_spinel_get_ipv6(SpinelReader *r, const uint8_t **out16)
 {
     const uint8_t *b = take(r, 16);
     if (!b)
@@ -351,7 +351,7 @@ proto_bool pc_spinel_get_ipv6(SpinelReader *r, const uint8_t **out16)
     return PROTO_TRUE;
 }
 
-proto_bool pc_spinel_get_utf8(SpinelReader *r, const char **out, uint16_t *out_len)
+proto_bool protocore_spinel_get_utf8(SpinelReader *r, const char **out, uint16_t *out_len)
 {
     if (!r || r->err)
     {
@@ -379,7 +379,7 @@ proto_bool pc_spinel_get_utf8(SpinelReader *r, const char **out, uint16_t *out_l
     return PROTO_TRUE;
 }
 
-proto_bool pc_spinel_get_data(SpinelReader *r, const uint8_t **out, uint16_t *out_len)
+proto_bool protocore_spinel_get_data(SpinelReader *r, const uint8_t **out, uint16_t *out_len)
 {
     if (!r || r->err)
     {
@@ -397,10 +397,10 @@ proto_bool pc_spinel_get_data(SpinelReader *r, const uint8_t **out, uint16_t *ou
     return PROTO_TRUE;
 }
 
-proto_bool pc_spinel_get_data_wlen(SpinelReader *r, const uint8_t **out, uint16_t *out_len)
+proto_bool protocore_spinel_get_data_wlen(SpinelReader *r, const uint8_t **out, uint16_t *out_len)
 {
     uint16_t n = 0;
-    if (!pc_spinel_get_u16(r, &n))
+    if (!protocore_spinel_get_u16(r, &n))
     {
         return PROTO_FALSE;
     }
@@ -420,12 +420,12 @@ proto_bool pc_spinel_get_data_wlen(SpinelReader *r, const uint8_t **out, uint16_
     return PROTO_TRUE;
 }
 
-proto_bool pc_spinel_reader_ok(const SpinelReader *r)
+proto_bool protocore_spinel_reader_ok(const SpinelReader *r)
 {
     return r && !r->err;
 }
 
-void pc_spinel_writer_init(SpinelWriter *w, uint8_t *out, uint16_t cap)
+void protocore_spinel_writer_init(SpinelWriter *w, uint8_t *out, uint16_t cap)
 {
     if (!w)
     {
@@ -453,7 +453,7 @@ static uint8_t *room(SpinelWriter *w, uint16_t n)
     return at;
 }
 
-proto_bool pc_spinel_put_bool(SpinelWriter *w, proto_bool v)
+proto_bool protocore_spinel_put_bool(SpinelWriter *w, proto_bool v)
 {
     uint8_t *b = room(w, 1);
     if (!b)
@@ -464,7 +464,7 @@ proto_bool pc_spinel_put_bool(SpinelWriter *w, proto_bool v)
     return PROTO_TRUE;
 }
 
-proto_bool pc_spinel_put_u8(SpinelWriter *w, uint8_t v)
+proto_bool protocore_spinel_put_u8(SpinelWriter *w, uint8_t v)
 {
     uint8_t *b = room(w, 1);
     if (!b)
@@ -475,12 +475,12 @@ proto_bool pc_spinel_put_u8(SpinelWriter *w, uint8_t v)
     return PROTO_TRUE;
 }
 
-proto_bool pc_spinel_put_i8(SpinelWriter *w, int8_t v)
+proto_bool protocore_spinel_put_i8(SpinelWriter *w, int8_t v)
 {
-    return pc_spinel_put_u8(w, (uint8_t)v);
+    return protocore_spinel_put_u8(w, (uint8_t)v);
 }
 
-proto_bool pc_spinel_put_u16(SpinelWriter *w, uint16_t v)
+proto_bool protocore_spinel_put_u16(SpinelWriter *w, uint16_t v)
 {
     uint8_t *b = room(w, 2);
     if (!b)
@@ -492,12 +492,12 @@ proto_bool pc_spinel_put_u16(SpinelWriter *w, uint16_t v)
     return PROTO_TRUE;
 }
 
-proto_bool pc_spinel_put_i16(SpinelWriter *w, int16_t v)
+proto_bool protocore_spinel_put_i16(SpinelWriter *w, int16_t v)
 {
-    return pc_spinel_put_u16(w, (uint16_t)v);
+    return protocore_spinel_put_u16(w, (uint16_t)v);
 }
 
-proto_bool pc_spinel_put_u32(SpinelWriter *w, uint32_t v)
+proto_bool protocore_spinel_put_u32(SpinelWriter *w, uint32_t v)
 {
     uint8_t *b = room(w, 4);
     if (!b)
@@ -511,19 +511,19 @@ proto_bool pc_spinel_put_u32(SpinelWriter *w, uint32_t v)
     return PROTO_TRUE;
 }
 
-proto_bool pc_spinel_put_i32(SpinelWriter *w, int32_t v)
+proto_bool protocore_spinel_put_i32(SpinelWriter *w, int32_t v)
 {
-    return pc_spinel_put_u32(w, (uint32_t)v);
+    return protocore_spinel_put_u32(w, (uint32_t)v);
 }
 
-proto_bool pc_spinel_put_uint(SpinelWriter *w, uint32_t v)
+proto_bool protocore_spinel_put_uint(SpinelWriter *w, uint32_t v)
 {
     if (!w || w->err)
     {
         return PROTO_FALSE;
     }
     uint8_t tmp[5];
-    uint8_t n = pc_spinel_pack_uint(v, tmp, sizeof(tmp));
+    uint8_t n = protocore_spinel_pack_uint(v, tmp, sizeof(tmp));
     if (n == 0)
     {
         w->err = PROTO_TRUE;
@@ -541,7 +541,7 @@ proto_bool pc_spinel_put_uint(SpinelWriter *w, uint32_t v)
     return PROTO_TRUE;
 }
 
-proto_bool pc_spinel_put_eui64(SpinelWriter *w, const uint8_t *v8)
+proto_bool protocore_spinel_put_eui64(SpinelWriter *w, const uint8_t *v8)
 {
     if (!v8)
     {
@@ -563,7 +563,7 @@ proto_bool pc_spinel_put_eui64(SpinelWriter *w, const uint8_t *v8)
     return PROTO_TRUE;
 }
 
-proto_bool pc_spinel_put_ipv6(SpinelWriter *w, const uint8_t *v16)
+proto_bool protocore_spinel_put_ipv6(SpinelWriter *w, const uint8_t *v16)
 {
     if (!v16)
     {
@@ -585,7 +585,7 @@ proto_bool pc_spinel_put_ipv6(SpinelWriter *w, const uint8_t *v16)
     return PROTO_TRUE;
 }
 
-proto_bool pc_spinel_put_utf8(SpinelWriter *w, const char *s)
+proto_bool protocore_spinel_put_utf8(SpinelWriter *w, const char *s)
 {
     if (!s)
     {
@@ -612,7 +612,7 @@ proto_bool pc_spinel_put_utf8(SpinelWriter *w, const char *s)
     return PROTO_TRUE;
 }
 
-proto_bool pc_spinel_put_data(SpinelWriter *w, const uint8_t *d, uint16_t n)
+proto_bool protocore_spinel_put_data(SpinelWriter *w, const uint8_t *d, uint16_t n)
 {
     if (d == NULL && n > 0)
     {
@@ -634,16 +634,16 @@ proto_bool pc_spinel_put_data(SpinelWriter *w, const uint8_t *d, uint16_t n)
     return PROTO_TRUE;
 }
 
-proto_bool pc_spinel_put_data_wlen(SpinelWriter *w, const uint8_t *d, uint16_t n)
+proto_bool protocore_spinel_put_data_wlen(SpinelWriter *w, const uint8_t *d, uint16_t n)
 {
-    if (!pc_spinel_put_u16(w, n))
+    if (!protocore_spinel_put_u16(w, n))
     {
         return PROTO_FALSE;
     }
-    return pc_spinel_put_data(w, d, n);
+    return protocore_spinel_put_data(w, d, n);
 }
 
-uint16_t pc_spinel_writer_len(const SpinelWriter *w)
+uint16_t protocore_spinel_writer_len(const SpinelWriter *w)
 {
     if (!w || w->err)
     {
@@ -714,7 +714,7 @@ static const StatusName k_status[] = {
     {SPINEL_STATUS_EMPTY, "EMPTY"},
 };
 
-const SpinelPropInfo *pc_spinel_prop_lookup(uint32_t id)
+const SpinelPropInfo *protocore_spinel_prop_lookup(uint32_t id)
 {
     for (uint16_t i = 0; i < sizeof(k_props) / sizeof(k_props[0]); i++)
     {
@@ -726,13 +726,13 @@ const SpinelPropInfo *pc_spinel_prop_lookup(uint32_t id)
     return NULL;
 }
 
-const char *pc_spinel_prop_name(uint32_t id)
+const char *protocore_spinel_prop_name(uint32_t id)
 {
-    const SpinelPropInfo *e = pc_spinel_prop_lookup(id);
+    const SpinelPropInfo *e = protocore_spinel_prop_lookup(id);
     return e ? e->name : "UNKNOWN";
 }
 
-const char *pc_spinel_status_name(uint32_t status)
+const char *protocore_spinel_status_name(uint32_t status)
 {
     for (uint16_t i = 0; i < sizeof(k_status) / sizeof(k_status[0]); i++)
     {
@@ -748,19 +748,19 @@ const char *pc_spinel_status_name(uint32_t status)
     return "UNKNOWN";
 }
 
-uint16_t pc_spinel_fcs(const uint8_t *buf, uint16_t len)
+uint16_t protocore_spinel_fcs(const uint8_t *buf, uint16_t len)
 {
     // The HDLC-lite FCS is CRC-16/X-25 (reflected poly 0x8408, init 0xFFFF, xorout 0xFFFF).
-    return (uint16_t)pc_crc(&PC_CRC16_X25, buf, len);
+    return (uint16_t)protocore_crc(&PROTOCORE_CRC16_X25, buf, len);
 }
 
-uint16_t pc_spinel_frame_encode(const uint8_t *payload, uint16_t len, uint8_t *out, uint16_t cap)
+uint16_t protocore_spinel_frame_encode(const uint8_t *payload, uint16_t len, uint8_t *out, uint16_t cap)
 {
-    if (!out || len > PC_THREAD_MAX_DATA || (payload == NULL && len > 0))
+    if (!out || len > PROTOCORE_THREAD_MAX_DATA || (payload == NULL && len > 0))
     {
         return 0;
     }
-    uint16_t fcs = pc_spinel_fcs(payload, len);
+    uint16_t fcs = protocore_spinel_fcs(payload, len);
     uint16_t p = 0;
     for (uint16_t i = 0; i < len; i++)
     {
@@ -782,7 +782,7 @@ uint16_t pc_spinel_frame_encode(const uint8_t *payload, uint16_t len, uint8_t *o
     return p;
 }
 
-int pc_spinel_frame_decode(const uint8_t *raw, uint16_t len, uint8_t *payload, uint16_t pay_cap, uint16_t *pay_len)
+int protocore_spinel_frame_decode(const uint8_t *raw, uint16_t len, uint8_t *payload, uint16_t pay_cap, uint16_t *pay_len)
 {
     if (!raw)
     {
@@ -799,7 +799,7 @@ int pc_spinel_frame_decode(const uint8_t *raw, uint16_t len, uint8_t *payload, u
     }
 
     // Remove the byte-stuffing from raw[0, flag) into a scratch: payload + FCS(2).
-    uint8_t un[PC_THREAD_MAX_DATA + 2];
+    uint8_t un[PROTOCORE_THREAD_MAX_DATA + 2];
     uint16_t n = 0;
     for (uint16_t i = 0; i < flag; i++)
     {
@@ -823,7 +823,7 @@ int pc_spinel_frame_decode(const uint8_t *raw, uint16_t len, uint8_t *payload, u
         return -1; // need at least the FCS
     }
     uint16_t plen = (uint16_t)(n - 2);
-    uint16_t fcs = pc_spinel_fcs(un, plen);
+    uint16_t fcs = protocore_spinel_fcs(un, plen);
     if ((uint16_t)(un[plen] | (un[plen + 1] << 8)) != fcs)
     {
         return -1; // FCS mismatch (transmitted low byte first)
@@ -843,4 +843,4 @@ int pc_spinel_frame_decode(const uint8_t *raw, uint16_t len, uint8_t *payload, u
     return (int)(flag + 1);
 }
 
-#endif // PC_ENABLE_THREAD
+#endif // PROTOCORE_ENABLE_THREAD

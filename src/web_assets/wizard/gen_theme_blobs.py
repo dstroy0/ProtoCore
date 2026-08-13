@@ -6,7 +6,7 @@
 The themes under src/web_assets/themes/{,generated/} are normally injected into a page at build time. This
 generator instead embeds them - minified - as `const char[]` blobs in a registry so the firmware can
 serve or switch a theme at runtime (e.g. a `/themes/<name>.css` route, or a picker that remembers the
-user's choice). The whole subsystem is behind `PC_ENABLE_THEMES`, so a build that does not want
+user's choice). The whole subsystem is behind `PROTOCORE_ENABLE_THEMES`, so a build that does not want
 runtime theming links none of it; enabling it embeds the set (each theme is ~1 KB of DROM/flash).
 
 Output: src/network_drivers/application/binary_asset_blobs.{h,c} (generated + committed, so the
@@ -69,7 +69,7 @@ def escape_segments(text, width=110):
 
 
 def c_ident(name):
-    return "PC_THEME_" + re.sub(r"[^A-Za-z0-9]", "_", name).upper()
+    return "PROTOCORE_THEME_" + re.sub(r"[^A-Za-z0-9]", "_", name).upper()
 
 
 def load_themes():
@@ -94,10 +94,10 @@ def render_header(themes):
         "",
         "/**",
         " * @file binary_asset_blobs.h",
-        " * @brief Layer 7 - toggleable embedded theme stylesheets (PC_ENABLE_THEMES).",
+        " * @brief Layer 7 - toggleable embedded theme stylesheets (PROTOCORE_ENABLE_THEMES).",
         " *",
         " * A registry of minified CSS themes in flash (DROM), for serving/switching a theme at runtime.",
-        " * Behind PC_ENABLE_THEMES so a build that does not want it links nothing.",
+        " * Behind PROTOCORE_ENABLE_THEMES so a build that does not want it links nothing.",
         " */",
         "",
         "#ifndef " + guard,
@@ -105,28 +105,28 @@ def render_header(themes):
         "",
         '#include "protocore_config.h"',
         "",
-        "#if PC_ENABLE_THEMES",
+        "#if PROTOCORE_ENABLE_THEMES",
         "",
         "#include <stddef.h>",
         "",
         "/** @brief One embedded theme: its name and its minified CSS (NUL-terminated flash string). */",
-        "struct pc_theme_blob",
+        "struct protocore_theme_blob",
         "{",
         "    const char *name;",
         "    const char *css;",
         "};",
         "",
         "/** @brief The embedded theme registry (sorted by name) and its count. */",
-        "extern const pc_theme_blob PC_THEME_BLOBS[];",
-        "extern const size_t PC_THEME_BLOB_COUNT;",
+        "extern const protocore_theme_blob PROTOCORE_THEME_BLOBS[];",
+        "extern const size_t PROTOCORE_THEME_BLOB_COUNT;",
         "",
         "/**",
         " * @brief Look up a theme's CSS by name (exact match).",
         " * @return the NUL-terminated minified CSS, or nullptr if no theme by that name is embedded.",
         " */",
-        "const char *pc_theme_css(const char *name);",
+        "const char *protocore_theme_css(const char *name);",
         "",
-        "#endif // PC_ENABLE_THEMES",
+        "#endif // PROTOCORE_ENABLE_THEMES",
         "#endif // " + guard,
     ]
     return "\n".join(lines) + "\n"
@@ -138,7 +138,7 @@ def render_source(themes):
         "",
         '#include "network_drivers/application/binary_asset_blobs.h"',
         "",
-        "#if PC_ENABLE_THEMES",
+        "#if PROTOCORE_ENABLE_THEMES",
         "",
         "",
         "",
@@ -147,41 +147,43 @@ def render_source(themes):
         segs = escape_segments(css)
         restricted = name in RESTRICTED
         if restricted:  # a trademark-named theme: keep it in OSS, drop it from a commercial build
-            lines.append("#if PC_THEMES_INCLUDE_TRADEMARKED")
+            lines.append("#if PROTOCORE_THEMES_INCLUDE_TRADEMARKED")
         lines.append("static const char %s[] =" % c_ident(name))
         lines.append('    "' + '"\n    "'.join(segs) + '";')
         if restricted:
             lines.append("#endif")
         lines.append("")
-    lines.append("const pc_theme_blob PC_THEME_BLOBS[] = {")
+    lines.append("const protocore_theme_blob PROTOCORE_THEME_BLOBS[] = {")
     for name, _ in themes:
         if name in RESTRICTED:
-            lines.append("#if PC_THEMES_INCLUDE_TRADEMARKED")
+            lines.append("#if PROTOCORE_THEMES_INCLUDE_TRADEMARKED")
             lines.append('    {"%s", %s},' % (name, c_ident(name)))
             lines.append("#endif")
         else:
             lines.append('    {"%s", %s},' % (name, c_ident(name)))
     lines.append("};")
     # sizeof so the count stays correct whether or not the trademark-gated entries are compiled in.
-    lines.append("const size_t PC_THEME_BLOB_COUNT = sizeof(PC_THEME_BLOBS) / sizeof(PC_THEME_BLOBS[0]);")
+    lines.append(
+        "const size_t PROTOCORE_THEME_BLOB_COUNT = sizeof(PROTOCORE_THEME_BLOBS) / sizeof(PROTOCORE_THEME_BLOBS[0]);"
+    )
     lines.append("")
-    lines.append("const char *pc_theme_css(const char *name)")
+    lines.append("const char *protocore_theme_css(const char *name)")
     lines.append("{")
     lines.append("    if (!name)")
     lines.append("    {")
     lines.append("        return NULL;")
     lines.append("    }")
-    lines.append("    for (size_t i = 0; i < PC_THEME_BLOB_COUNT; i++)")
+    lines.append("    for (size_t i = 0; i < PROTOCORE_THEME_BLOB_COUNT; i++)")
     lines.append("    {")
-    lines.append("        if (strcmp(PC_THEME_BLOBS[i].name, name) == 0)")
+    lines.append("        if (strcmp(PROTOCORE_THEME_BLOBS[i].name, name) == 0)")
     lines.append("        {")
-    lines.append("            return PC_THEME_BLOBS[i].css;")
+    lines.append("            return PROTOCORE_THEME_BLOBS[i].css;")
     lines.append("        }")
     lines.append("    }")
     lines.append("    return NULL;")
     lines.append("}")
     lines.append("")
-    lines.append("#endif // PC_ENABLE_THEMES")
+    lines.append("#endif // PROTOCORE_ENABLE_THEMES")
     return "\n".join(lines) + "\n"
 
 

@@ -1,7 +1,7 @@
 // Auto-generated fixture: a real multi-page SQLite DB (page_size=512, 40 rows, interior root).
 // sqlite3 3.46.1: CREATE TABLE t(a INTEGER, b TEXT); rows a=1..40, b=printf('row%04d-abcdefghijklmnopqrstuvwxyz', a).
-#ifndef PC_TEST_SQLITE_DB_MULTIPAGE_H
-#define PC_TEST_SQLITE_DB_MULTIPAGE_H
+#ifndef PROTOCORE_TEST_SQLITE_DB_MULTIPAGE_H
+#define PROTOCORE_TEST_SQLITE_DB_MULTIPAGE_H
 #include <stdint.h>
 static const uint32_t DB_MP_PAGE_SIZE = 512;
 static const uint32_t DB_MP_ROWS = 40;

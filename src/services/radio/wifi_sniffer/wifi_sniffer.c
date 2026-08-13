@@ -9,14 +9,14 @@
 #include "services/radio/wifi_sniffer/wifi_sniffer.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_WIFI_SNIFFER
+#if PROTOCORE_ENABLE_WIFI_SNIFFER
 
-#if PC_ENABLE_PROMISC
-#include "server/clock/clock.h"             // pc_millis - the monotonic source
+#if PROTOCORE_ENABLE_PROMISC
+#include "server/clock/clock.h"             // protocore_millis - the monotonic source
 #include "services/radio/promisc/promisc.h" // the promiscuous-capture owner
 #endif
 
-proto_bool pc_wifi_parse(const uint8_t *frame, size_t len, WifiFrame *out)
+proto_bool protocore_wifi_parse(const uint8_t *frame, size_t len, WifiFrame *out)
 {
     if (!frame || !out || len < 10) // FrameControl(2) + Duration(2) + Address1(6)
     {
@@ -51,7 +51,7 @@ proto_bool pc_wifi_parse(const uint8_t *frame, size_t len, WifiFrame *out)
     return PROTO_TRUE;
 }
 
-void pc_wifi_stats_reset(WifiStats *s)
+void protocore_wifi_stats_reset(WifiStats *s)
 {
     if (s)
     {
@@ -59,7 +59,7 @@ void pc_wifi_stats_reset(WifiStats *s)
     }
 }
 
-void pc_wifi_stats_add(WifiStats *s, const WifiFrame *f)
+void protocore_wifi_stats_add(WifiStats *s, const WifiFrame *f)
 {
     if (!s || !f)
     {
@@ -83,7 +83,7 @@ void pc_wifi_stats_add(WifiStats *s, const WifiFrame *f)
     s->total++;
 }
 
-proto_bool pc_wifi_should_roam(int8_t cur_rssi, int8_t cand_rssi, uint8_t hysteresis_db)
+proto_bool protocore_wifi_should_roam(int8_t cur_rssi, int8_t cand_rssi, uint8_t hysteresis_db)
 {
     // Both are negative dBm (stronger = closer to 0). Roam only if the candidate clears the current
     // by more than the hysteresis, computed in a wide signed type to avoid int8 overflow.
@@ -106,7 +106,7 @@ static uint8_t clamp_channel(uint8_t c)
     return c;
 }
 
-void pc_wifi_scan_init(WifiScan *s, uint8_t first, uint8_t last, uint16_t dwell_ms, uint32_t now_ms)
+void protocore_wifi_scan_init(WifiScan *s, uint8_t first, uint8_t last, uint16_t dwell_ms, uint32_t now_ms)
 {
     if (!s)
     {
@@ -124,7 +124,7 @@ void pc_wifi_scan_init(WifiScan *s, uint8_t first, uint8_t last, uint16_t dwell_
     s->sweeps = 0;
 }
 
-proto_bool pc_wifi_scan_due(const WifiScan *s, uint32_t now_ms)
+proto_bool protocore_wifi_scan_due(const WifiScan *s, uint32_t now_ms)
 {
     if (!s)
     {
@@ -134,7 +134,7 @@ proto_bool pc_wifi_scan_due(const WifiScan *s, uint32_t now_ms)
     return (now_ms - s->last_hop_ms) >= s->dwell_ms;
 }
 
-uint8_t pc_wifi_scan_next(WifiScan *s, uint32_t now_ms)
+uint8_t protocore_wifi_scan_next(WifiScan *s, uint32_t now_ms)
 {
     if (!s)
     {
@@ -155,7 +155,7 @@ uint8_t pc_wifi_scan_next(WifiScan *s, uint32_t now_ms)
 
 // --- Per-channel RSSI survey ------------------------------------------------------------
 
-void pc_wifi_survey_reset(WifiSurvey *s, uint8_t first, uint8_t count)
+void protocore_wifi_survey_reset(WifiSurvey *s, uint8_t first, uint8_t count)
 {
     if (!s)
     {
@@ -163,10 +163,10 @@ void pc_wifi_survey_reset(WifiSurvey *s, uint8_t first, uint8_t count)
     }
     mem.set(s, 0, sizeof(*s));
     s->first = clamp_channel(first);
-    s->count = (count > PC_WIFI_SNIFFER_MAX_CHANNELS) ? (uint8_t)PC_WIFI_SNIFFER_MAX_CHANNELS : count;
-    for (uint8_t i = 0; i < PC_WIFI_SNIFFER_MAX_CHANNELS; i++)
+    s->count = (count > PROTOCORE_WIFI_SNIFFER_MAX_CHANNELS) ? (uint8_t)PROTOCORE_WIFI_SNIFFER_MAX_CHANNELS : count;
+    for (uint8_t i = 0; i < PROTOCORE_WIFI_SNIFFER_MAX_CHANNELS; i++)
     {
-        s->ch[i].best_rssi = PC_WIFI_RSSI_NONE;
+        s->ch[i].best_rssi = PROTOCORE_WIFI_RSSI_NONE;
     }
 }
 
@@ -185,7 +185,7 @@ static int survey_index(const WifiSurvey *s, uint8_t channel)
     return idx;
 }
 
-void pc_wifi_survey_add(WifiSurvey *s, uint8_t channel, int8_t rssi, const WifiFrame *f)
+void protocore_wifi_survey_add(WifiSurvey *s, uint8_t channel, int8_t rssi, const WifiFrame *f)
 {
     int idx = survey_index(s, channel);
     if (idx < 0)
@@ -194,7 +194,7 @@ void pc_wifi_survey_add(WifiSurvey *s, uint8_t channel, int8_t rssi, const WifiF
     }
     WifiChannelSurvey *e = &s->ch[idx];
     e->frames++;
-    if (e->best_rssi == PC_WIFI_RSSI_NONE || rssi > e->best_rssi)
+    if (e->best_rssi == PROTOCORE_WIFI_RSSI_NONE || rssi > e->best_rssi)
     {
         e->best_rssi = rssi;
         // The transmitter address is the AP for a beacon; only present once addr2 was decoded.
@@ -205,13 +205,13 @@ void pc_wifi_survey_add(WifiSurvey *s, uint8_t channel, int8_t rssi, const WifiF
     }
 }
 
-const WifiChannelSurvey *pc_wifi_survey_get(const WifiSurvey *s, uint8_t channel)
+const WifiChannelSurvey *protocore_wifi_survey_get(const WifiSurvey *s, uint8_t channel)
 {
     int idx = survey_index(s, channel);
     return (idx < 0) ? NULL : &s->ch[idx];
 }
 
-proto_bool pc_wifi_survey_best(const WifiSurvey *s, uint8_t exclude_channel, uint8_t *out_channel, int8_t *out_rssi)
+proto_bool protocore_wifi_survey_best(const WifiSurvey *s, uint8_t exclude_channel, uint8_t *out_channel, int8_t *out_rssi)
 {
     if (!s)
     {
@@ -219,11 +219,11 @@ proto_bool pc_wifi_survey_best(const WifiSurvey *s, uint8_t exclude_channel, uin
     }
     proto_bool found = PROTO_FALSE;
     uint8_t best_ch = 0;
-    int8_t best = PC_WIFI_RSSI_NONE;
+    int8_t best = PROTOCORE_WIFI_RSSI_NONE;
     for (uint8_t i = 0; i < s->count; i++)
     {
         uint8_t ch = (uint8_t)(s->first + i);
-        if (ch == exclude_channel || s->ch[i].best_rssi == PC_WIFI_RSSI_NONE)
+        if (ch == exclude_channel || s->ch[i].best_rssi == PROTOCORE_WIFI_RSSI_NONE)
         {
             continue;
         }
@@ -248,7 +248,7 @@ proto_bool pc_wifi_survey_best(const WifiSurvey *s, uint8_t exclude_channel, uin
     return found;
 }
 
-#if PC_ENABLE_PROMISC
+#if PROTOCORE_ENABLE_PROMISC
 
 /** @brief Owned state for the live channel-hopping sniff. */
 typedef struct
@@ -266,64 +266,64 @@ static WifiSnifferCtx s_sniffer = {};
 static void sniffer_sink(const uint8_t *frame, uint16_t len, int8_t rssi, uint8_t channel)
 {
     WifiFrame f;
-    if (!pc_wifi_parse(frame, len, &f))
+    if (!protocore_wifi_parse(frame, len, &f))
     {
         return;
     }
-    pc_wifi_stats_add(&s_sniffer.stats, &f);
-    pc_wifi_survey_add(&s_sniffer.survey, channel, rssi, &f);
+    protocore_wifi_stats_add(&s_sniffer.stats, &f);
+    protocore_wifi_survey_add(&s_sniffer.survey, channel, rssi, &f);
 }
 
-proto_bool pc_wifi_sniffer_begin(uint8_t first_chan, uint8_t last_chan, uint16_t dwell_ms)
+proto_bool protocore_wifi_sniffer_begin(uint8_t first_chan, uint8_t last_chan, uint16_t dwell_ms)
 {
-    uint32_t now = pc_millis();
-    pc_wifi_stats_reset(&s_sniffer.stats);
-    pc_wifi_scan_init(&s_sniffer.scan, first_chan, last_chan, dwell_ms, now);
-    pc_wifi_survey_reset(&s_sniffer.survey, s_sniffer.scan.chan_first,
+    uint32_t now = protocore_millis();
+    protocore_wifi_stats_reset(&s_sniffer.stats);
+    protocore_wifi_scan_init(&s_sniffer.scan, first_chan, last_chan, dwell_ms, now);
+    protocore_wifi_survey_reset(&s_sniffer.survey, s_sniffer.scan.chan_first,
                          (uint8_t)(s_sniffer.scan.chan_last - s_sniffer.scan.chan_first + 1));
-    s_sniffer.running = pc_promisc_begin(s_sniffer.scan.channel, sniffer_sink);
+    s_sniffer.running = protocore_promisc_begin(s_sniffer.scan.channel, sniffer_sink);
     return s_sniffer.running;
 }
 
-void pc_wifi_sniffer_tick(void)
+void protocore_wifi_sniffer_tick(void)
 {
     if (!s_sniffer.running)
     {
         return;
     }
-    uint32_t now = pc_millis();
-    if (!pc_wifi_scan_due(&s_sniffer.scan, now))
+    uint32_t now = protocore_millis();
+    if (!protocore_wifi_scan_due(&s_sniffer.scan, now))
     {
         return;
     }
-    pc_promisc_set_channel(pc_wifi_scan_next(&s_sniffer.scan, now));
+    protocore_promisc_set_channel(protocore_wifi_scan_next(&s_sniffer.scan, now));
 }
 
-void pc_wifi_sniffer_end(void)
+void protocore_wifi_sniffer_end(void)
 {
     if (!s_sniffer.running)
     {
         return;
     }
-    pc_promisc_end();
+    protocore_promisc_end();
     s_sniffer.running = PROTO_FALSE;
 }
 
-const WifiStats *pc_wifi_sniffer_stats(void)
+const WifiStats *protocore_wifi_sniffer_stats(void)
 {
     return &s_sniffer.stats;
 }
 
-const WifiSurvey *pc_wifi_sniffer_survey(void)
+const WifiSurvey *protocore_wifi_sniffer_survey(void)
 {
     return &s_sniffer.survey;
 }
 
-const WifiScan *pc_wifi_sniffer_scan(void)
+const WifiScan *protocore_wifi_sniffer_scan(void)
 {
     return &s_sniffer.scan;
 }
 
-#endif // PC_ENABLE_PROMISC
+#endif // PROTOCORE_ENABLE_PROMISC
 
-#endif // PC_ENABLE_WIFI_SNIFFER
+#endif // PROTOCORE_ENABLE_WIFI_SNIFFER

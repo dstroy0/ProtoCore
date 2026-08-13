@@ -15,18 +15,17 @@
  * TCP connection to the scope's SCPI-RAW socket (port 5025, nearly universal across modern
  * benches - Keysight/Rigol/Siglent all speak it; a Tektronix uses very similar `:WFMOutpre`
  * mnemonics, swap the SCPI_* command macros below) via services/network_drivers/transport's
- * pc_client_*, and drives it with services/instrumentation/scpi's codec (pc_scpi_build / pc_scpi_parse_block
- * / pc_scpi_parse_number) - all of it already shipped in this library for exactly this
- * "device drives a bench instrument" role. No local capture buffer is needed: the scope
- * already did its own pre/post-trigger acquisition, so a pulled record is handed straight
- * to the network egress.
+ * protocore_client_*, and drives it with services/instrumentation/scpi's codec (protocore_scpi_build /
+ * protocore_scpi_parse_block / protocore_scpi_parse_number) - all of it already shipped in this library for exactly
+ * this "device drives a bench instrument" role. No local capture buffer is needed: the scope already did its own
+ * pre/post-trigger acquisition, so a pulled record is handed straight to the network egress.
  *
  * **DAQ_FRONTEND_ADC_DMA** (build env `daq_adc_dma`). The bare-metal case for a bench with
  * no scope: an external high-speed ADC (AD9226 - 12-bit/65 MSPS single, or AD9238 - 12-bit/
  * 20-65 MSPS dual) behind an FPGA/CPLD burst-capture front end (its 12-bit parallel output
  * bus is far beyond an ESP32's reach directly - see services/peripherals/ad9238/ad9238.h) drains a
- * triggered burst into this node over SPI or UART DMA (mmgr/dma, PC_DMA_SPI /
- * PC_DMA_UART), handed off ISR-safe through the preempting work queue's DMA lane
+ * triggered burst into this node over SPI or UART DMA (mmgr/dma, PROTOCORE_DMA_SPI /
+ * PROTOCORE_DMA_UART), handed off ISR-safe through the preempting work queue's DMA lane
  * (services/system/preempt_queue) to server/signaling/trace_capture, which assembles the pre/post-trigger
  * window and fires the same network egress. AD9238's SPI *configuration* port (power-down,
  * output format, test pattern - not the sample data path) is set up over the real Arduino
@@ -62,9 +61,9 @@
 #define DAQ_FRONTEND DAQ_FRONTEND_SCPI_SCOPE
 #endif
 
-#include "network_drivers/application/ntp_service/ntp_service.h" // pc_ntp_* - wall-clock sync (see wall_clock_us_now())
-#include "network_drivers/transport/tcp/tcp_client.h"            // pc_client_*
-#include "server/clock/clock.h"                                  // pc_millis(), pcdelay(), pc_cycles_to_ns()
+#include "network_drivers/application/ntp_service/ntp_service.h" // protocore_ntp_* - wall-clock sync (see wall_clock_us_now())
+#include "network_drivers/transport/tcp/tcp_client.h"            // protocore_client_*
+#include "server/clock/clock.h" // protocore_millis(), pcdelay(), protocore_cycles_to_ns()
 #include <Arduino.h>
 #include <WiFi.h>
 #include <math.h>
@@ -121,7 +120,7 @@ static void wifi_connect()
     if (WiFi.status() == WL_CONNECTED)
     {
         Serial.printf("[+] WiFi up, IP=%s\n", WiFi.localIP().toString().c_str());
-        pc_ntp_begin(); // async - pc_ntp_synced() flips true once the first reply lands
+        protocore_ntp_begin(); // async - protocore_ntp_synced() flips true once the first reply lands
     }
     else
     {
@@ -131,19 +130,18 @@ static void wifi_connect()
 
 // ── Wall-clock timestamping: NTP now, GNSS-upgradeable later ──────────────────────────────
 //
-// pc_ntp_epoch() (network_drivers/application/ntp_service) only resolves whole seconds; pc_micros() gives a
-// free-running microsecond counter with no absolute meaning of its own. Combining them - an
-// anchor pair (epoch, micros) re-taken every time the epoch ticks over - gives every window a
-// real Unix-epoch-microsecond timestamp, not just a relative trace_id/assembly_ns: the actual
-// point of it is correlating this node's captures against an INDEPENDENT clock - another DAQ
-// node on a different probe/channel, or an external log the target itself writes. Accuracy is
-// bounded by SNTP's usual few-ms-to-tens-of-ms over WiFi, not sample-precise.
+// protocore_ntp_epoch() (network_drivers/application/ntp_service) only resolves whole seconds; protocore_micros() gives
+// a free-running microsecond counter with no absolute meaning of its own. Combining them - an anchor pair (epoch,
+// micros) re-taken every time the epoch ticks over - gives every window a real Unix-epoch-microsecond timestamp, not
+// just a relative trace_id/assembly_ns: the actual point of it is correlating this node's captures against an
+// INDEPENDENT clock - another DAQ node on a different probe/channel, or an external log the target itself writes.
+// Accuracy is bounded by SNTP's usual few-ms-to-tens-of-ms over WiFi, not sample-precise.
 //
 // A GNSS module upgrades this same anchor scheme to sub-microsecond precision with no firmware
 // changes here: this repository ships GNSS position-survey (services/timing_position/gnss) and generic NMEA
 // framing (services/timing_position/nmea0183) primitives, but not yet a ready-made "parse $GPRMC's UTC field"
 // time source - wire one (feed a GPS module's NMEA sentence through the existing framing codec,
-// pull its UTC field, call wall_clock_anchor() with it instead of pc_ntp_epoch()) and, for the
+// pull its UTC field, call wall_clock_anchor() with it instead of protocore_ntp_epoch()) and, for the
 // real precision win, route the module's PPS output into the SAME external GPIO trigger ISR
 // this firmware already has (on_trigger_isr) to timestamp the anchor at a hardware edge instead
 // of a polled epoch tick - multiple nodes sharing one PPS line then agree to within nanoseconds.
@@ -152,15 +150,15 @@ static uint32_t g_wall_clock_anchor_micros = 0;
 
 static void wall_clock_maybe_anchor()
 {
-    if (!pc_ntp_synced())
+    if (!protocore_ntp_synced())
     {
         return;
     }
-    uint32_t epoch = (uint32_t)pc_ntp_epoch();
+    uint32_t epoch = (uint32_t)protocore_ntp_epoch();
     if (epoch != g_wall_clock_anchor_epoch)
     {
         g_wall_clock_anchor_epoch = epoch;
-        g_wall_clock_anchor_micros = pc_micros();
+        g_wall_clock_anchor_micros = protocore_micros();
     }
 }
 
@@ -172,7 +170,7 @@ static uint64_t wall_clock_us_now()
     {
         return 0;
     }
-    uint32_t delta_us = pc_micros() - g_wall_clock_anchor_micros; // wrap-safe unsigned delta
+    uint32_t delta_us = protocore_micros() - g_wall_clock_anchor_micros; // wrap-safe unsigned delta
     return (uint64_t)g_wall_clock_anchor_epoch * 1000000ULL + delta_us;
 }
 
@@ -180,14 +178,14 @@ static bool ensure_analysis_link()
 {
     if (g_analysis_cid >= 0)
     {
-        if (pc_client_connected(g_analysis_cid) && !pc_client_is_closed(g_analysis_cid))
+        if (protocore_client_connected(g_analysis_cid) && !protocore_client_is_closed(g_analysis_cid))
         {
             return true;
         }
-        pc_client_close(g_analysis_cid);
+        protocore_client_close(g_analysis_cid);
         g_analysis_cid = -1;
     }
-    g_analysis_cid = pc_client_open(ANALYSIS_HOST, ANALYSIS_PORT, 2000);
+    g_analysis_cid = protocore_client_open(ANALYSIS_HOST, ANALYSIS_PORT, 2000);
     return g_analysis_cid >= 0;
 }
 
@@ -233,9 +231,9 @@ static void send_window(uint8_t frontend, uint32_t trace_id, const uint8_t *samp
     uint16_t payload_crc = daq_crc16(samples, hdr.payload_len);
     uint8_t trailer[2] = {(uint8_t)(payload_crc & 0xFF), (uint8_t)(payload_crc >> 8)};
 
-    pc_client_send(g_analysis_cid, &hdr, sizeof(hdr));
-    pc_client_send(g_analysis_cid, samples, hdr.payload_len);
-    pc_client_send(g_analysis_cid, trailer, sizeof(trailer));
+    protocore_client_send(g_analysis_cid, &hdr, sizeof(hdr));
+    protocore_client_send(g_analysis_cid, samples, hdr.payload_len);
+    protocore_client_send(g_analysis_cid, trailer, sizeof(trailer));
 }
 
 #if DAQ_FRONTEND == DAQ_FRONTEND_SCPI_SCOPE
@@ -247,7 +245,7 @@ static void send_window(uint8_t frontend, uint32_t trace_id, const uint8_t *samp
 #define SCOPE_HOST "192.168.1.60"
 #endif
 #ifndef SCOPE_PORT
-#define SCOPE_PORT PC_SCPI_PORT
+#define SCOPE_PORT PROTOCORE_SCPI_PORT
 #endif
 /** @brief Arm a single triggered acquisition and wait for it before pulling :WAV:DATA? (1),
  *         or free-run - pull whatever is currently on screen every loop (0). Matches "the
@@ -274,41 +272,41 @@ static bool scope_link()
 {
     if (g_scope_cid >= 0)
     {
-        if (pc_client_connected(g_scope_cid) && !pc_client_is_closed(g_scope_cid))
+        if (protocore_client_connected(g_scope_cid) && !protocore_client_is_closed(g_scope_cid))
         {
             return true;
         }
-        pc_client_close(g_scope_cid);
+        protocore_client_close(g_scope_cid);
         g_scope_cid = -1;
     }
-    g_scope_cid = pc_client_open(SCOPE_HOST, SCOPE_PORT, 3000);
+    g_scope_cid = protocore_client_open(SCOPE_HOST, SCOPE_PORT, 3000);
     return g_scope_cid >= 0;
 }
 
 static bool scpi_send(const char *header, const char *const *args, size_t argc)
 {
     char line[128];
-    size_t n = pc_scpi_build(line, sizeof(line), header, args, argc);
+    size_t n = protocore_scpi_build(line, sizeof(line), header, args, argc);
     if (!n)
     {
         return false;
     }
-    return pc_client_send(g_scope_cid, line, n);
+    return protocore_client_send(g_scope_cid, line, n);
 }
 
 /** @brief Read up to a trailing '\n' into buf (NUL-terminated). Bounded by timeout_ms. */
 static size_t scpi_read_line(char *buf, size_t cap, uint32_t timeout_ms)
 {
     size_t total = 0;
-    uint32_t start = pc_millis();
-    while (pc_millis() - start < timeout_ms && total + 1 < cap)
+    uint32_t start = protocore_millis();
+    while (protocore_millis() - start < timeout_ms && total + 1 < cap)
     {
-        if (pc_client_available(g_scope_cid) == 0)
+        if (protocore_client_available(g_scope_cid) == 0)
         {
             pcdelay(2);
             continue;
         }
-        size_t n = pc_client_read(g_scope_cid, (uint8_t *)buf + total, cap - 1 - total);
+        size_t n = protocore_client_read(g_scope_cid, (uint8_t *)buf + total, cap - 1 - total);
         total += n;
         if (n && buf[total - 1] == '\n')
         {
@@ -323,17 +321,17 @@ static size_t scpi_read_line(char *buf, size_t cap, uint32_t timeout_ms)
 static bool scpi_read_block(uint8_t *buf, size_t cap, const uint8_t **data, size_t *data_len, uint32_t timeout_ms)
 {
     size_t total = 0;
-    uint32_t start = pc_millis();
-    while (pc_millis() - start < timeout_ms && total < cap)
+    uint32_t start = protocore_millis();
+    while (protocore_millis() - start < timeout_ms && total < cap)
     {
-        if (pc_client_available(g_scope_cid) == 0)
+        if (protocore_client_available(g_scope_cid) == 0)
         {
             pcdelay(2);
             continue;
         }
-        total += pc_client_read(g_scope_cid, buf + total, cap - total);
+        total += protocore_client_read(g_scope_cid, buf + total, cap - total);
         size_t consumed = 0;
-        if (pc_scpi_parse_block(buf, total, data, data_len, &consumed))
+        if (protocore_scpi_parse_block(buf, total, data, data_len, &consumed))
         {
             return true;
         }
@@ -349,15 +347,15 @@ static bool scpi_query_number(const char *header, double *out)
     }
     char line[64];
     size_t n = scpi_read_line(line, sizeof(line), 2000);
-    return n && pc_scpi_parse_number(line, n, out);
+    return n && protocore_scpi_parse_number(line, n, out);
 }
 
 /** @brief Block up to timeout_ms polling *OPC? for the scope to finish an armed acquisition. */
 static bool scpi_wait_opc(uint32_t timeout_ms)
 {
-    const char *opc = pc_scpi_common(ScpiCommon::SCPI_OPC_Q);
-    uint32_t start = pc_millis();
-    while (pc_millis() - start < timeout_ms)
+    const char *opc = protocore_scpi_common(ScpiCommon::SCPI_OPC_Q);
+    uint32_t start = protocore_millis();
+    while (protocore_millis() - start < timeout_ms)
     {
         if (!scpi_send(opc, nullptr, 0))
         {
@@ -366,7 +364,7 @@ static bool scpi_wait_opc(uint32_t timeout_ms)
         char line[16];
         size_t n = scpi_read_line(line, sizeof(line), 500);
         bool v = false;
-        if (n && pc_scpi_parse_bool(line, n, &v) && v)
+        if (n && protocore_scpi_parse_bool(line, n, &v) && v)
         {
             return true;
         }
@@ -427,8 +425,8 @@ void setup()
     if (scope_link())
     {
         char idn[96];
-        pc_scpi_build(idn, sizeof(idn), pc_scpi_common(ScpiCommon::SCPI_IDN_Q), nullptr, 0);
-        pc_client_send(g_scope_cid, idn, strlen(idn));
+        protocore_scpi_build(idn, sizeof(idn), protocore_scpi_common(ScpiCommon::SCPI_IDN_Q), nullptr, 0);
+        protocore_client_send(g_scope_cid, idn, strlen(idn));
         char reply[96];
         scpi_read_line(reply, sizeof(reply), 2000);
         Serial.printf("[+] Scope *IDN?: %s\n", reply);
@@ -461,7 +459,7 @@ void loop()
 // runs at once fed: either a decimated/subsampled tap off the ADC (a common front-end
 // feature) or a genuinely lower-rate serial DAQ source. If your front end instead captures
 // the whole burst upstream and just drains it to the ESP32, skip trace_capture's ring role
-// entirely - call pc_tc_trigger() once, then pc_tc_feed() the drained burst as it arrives
+// entirely - call protocore_tc_trigger() once, then protocore_tc_feed() the drained burst as it arrives
 // (posttrigger_samples = the burst length, pretrigger_samples = 0); the API supports both.
 
 #include "adc_profiles.h"
@@ -500,14 +498,14 @@ void loop()
 static const float Y_INCREMENT =
     (DAQ_VREF_VOLTS / (float)DAQ_ADC_FULL_SCALE_CODES) / FRONTEND_GAIN_LINEAR; // volts/code
 
-static_assert((uint32_t)DAQ_PRETRIGGER_SAMPLES + (uint32_t)DAQ_POSTTRIGGER_SAMPLES <= PC_TC_MAX_WINDOW_SAMPLES,
-              "DAQ_PRETRIGGER_MS + DAQ_POSTTRIGGER_MS at DAQ_SAMPLE_RATE_HZ must fit PC_TC_MAX_WINDOW_SAMPLES "
-              "(raise PC_TC_MAX_WINDOW_SAMPLES, or shrink the ms window / sample rate)");
+static_assert((uint32_t)DAQ_PRETRIGGER_SAMPLES + (uint32_t)DAQ_POSTTRIGGER_SAMPLES <= PROTOCORE_TC_MAX_WINDOW_SAMPLES,
+              "DAQ_PRETRIGGER_MS + DAQ_POSTTRIGGER_MS at DAQ_SAMPLE_RATE_HZ must fit PROTOCORE_TC_MAX_WINDOW_SAMPLES "
+              "(raise PROTOCORE_TC_MAX_WINDOW_SAMPLES, or shrink the ms window / sample rate)");
 
-static void on_window(const pc_tc_window *w, void *)
+static void on_window(const protocore_tc_window *w, void *)
 {
     uint32_t cpu_mhz = getCpuFrequencyMhz();
-    uint32_t ns = pc_cycles_to_ns(w->assembly_cycles, cpu_mhz);
+    uint32_t ns = protocore_cycles_to_ns(w->assembly_cycles, cpu_mhz);
     send_window(DAQ_FRONTEND_ADC_DMA, w->trace_id, (const uint8_t *)w->samples, w->n_samples, w->pretrigger_samples,
                 /*sample_bytes=*/2, /*channel_count=*/1, /*x_increment_s=*/0.0f, DAQ_SAMPLE_RATE_HZ, Y_INCREMENT,
                 /*y_origin=*/0.0f, ns);
@@ -516,39 +514,39 @@ static void on_window(const pc_tc_window *w, void *)
 #if !DAQ_ADC_INTERNAL_POLLED
 // ── DMA-drained ingest (AD9226/AD9238-class front end over SPI/UART DMA) ──────────────────
 
-// dma_msg must fit PC_PQ_ITEM_SIZE (platformio.ini keeps the two in sync): the DMA-complete
+// dma_msg must fit PROTOCORE_PQ_ITEM_SIZE (platformio.ini keeps the two in sync): the DMA-complete
 // ISR copies the just-filled ping-pong buffer's bytes here (see dma.h - a deferred consumer
 // cannot keep the event's pointer, so this copy has to happen in the ISR callback itself).
 struct dma_msg
 {
     uint16_t len;
-    uint8_t bytes[PC_DMA_BUF_SIZE];
+    uint8_t bytes[PROTOCORE_DMA_BUF_SIZE];
 };
 union pq_item {
     dma_msg msg;
-    uint8_t raw[PC_PQ_ITEM_SIZE];
+    uint8_t raw[PROTOCORE_PQ_ITEM_SIZE];
 };
-static_assert(sizeof(pq_item) <= PC_PQ_ITEM_SIZE, "dma_msg must fit PC_PQ_ITEM_SIZE");
+static_assert(sizeof(pq_item) <= PROTOCORE_PQ_ITEM_SIZE, "dma_msg must fit PROTOCORE_PQ_ITEM_SIZE");
 
 // Runs in the DMA lane's high-priority task (not the ISR) - safe to do the samples_be16 ->
-// uint16 unpack + feed() here. pc_tc_feed() is O(n) bounded and itself ISR-safe, so it would
+// uint16 unpack + feed() here. protocore_tc_feed() is O(n) bounded and itself ISR-safe, so it would
 // also be legal to call straight from on_dma_complete(); routing it through the preempting
 // queue keeps the ISR itself down to the tiny memcpy the library's own docs call for.
 static void on_dma_frame(const void *item, void *)
 {
     const dma_msg *m = &((const pq_item *)item)->msg;
-    uint16_t samples[PC_DMA_BUF_SIZE / 2];
+    uint16_t samples[PROTOCORE_DMA_BUF_SIZE / 2];
     uint16_t n = m->len / 2;
     for (uint16_t i = 0; i < n; i++)
     {
         samples[i] = (uint16_t)(m->bytes[2 * i] | (m->bytes[2 * i + 1] << 8)); // little-endian 12-bit-in-16 codes
     }
-    pc_tc_feed(samples, n);
+    protocore_tc_feed(samples, n);
 }
 
-static void on_dma_complete(const pc_dma_event *ev, void *)
+static void on_dma_complete(const protocore_dma_event *ev, void *)
 {
-    if (ev->dir != pc_dma_dir::PC_DMA_RX)
+    if (ev->dir != protocore_dma_dir::PROTOCORE_DMA_RX)
     {
         return;
     }
@@ -557,19 +555,19 @@ static void on_dma_complete(const pc_dma_event *ev, void *)
     uint16_t n = (ev->len < sizeof(item.msg.bytes)) ? ev->len : sizeof(item.msg.bytes);
     item.msg.len = n;
     memcpy(item.msg.bytes, ev->data, n); // must copy now - ev->data is only valid until the next completion
-    pc_pq_post_lane_from_isr(pc_pq_lane::PC_PQ_LANE_DMA, &item);
+    protocore_pq_post_lane_from_isr(protocore_pq_lane::PROTOCORE_PQ_LANE_DMA, &item);
 }
 
 void IRAM_ATTR on_trigger_isr()
 {
-    pc_tc_trigger();
+    protocore_tc_trigger();
 }
 
 #else // DAQ_ADC_INTERNAL_POLLED
 // ── Internal-ADC polled ingest (no external chip - a $1-2 piezo/electret mic on one pin) ──
 //
 // No DMA peripheral to drive - analogRead() is a blocking, single-shot conversion, so a
-// dedicated task just paces itself to DAQ_SAMPLE_RATE_HZ and calls pc_tc_feed() one sample
+// dedicated task just paces itself to DAQ_SAMPLE_RATE_HZ and calls protocore_tc_feed() one sample
 // at a time. Alongside (or instead of) the external GPIO trigger, a rolling-RMS amplitude
 // trigger arms the capture the instant the input gets louder than the ambient noise floor -
 // "capture what happens right when you make a sound" needs no external hardware trigger line
@@ -590,7 +588,7 @@ void IRAM_ATTR on_trigger_isr()
 
 void IRAM_ATTR on_trigger_isr()
 {
-    pc_tc_trigger();
+    protocore_tc_trigger();
 }
 
 static void audio_poll_task(void *)
@@ -607,7 +605,7 @@ static void audio_poll_task(void *)
     for (;;)
     {
         uint16_t code = (uint16_t)analogRead(AUDIO_ADC_PIN); // 0..4095 on the ESP32's 12-bit ADC
-        pc_tc_feed(&code, 1);
+        protocore_tc_feed(&code, 1);
 
 #if AUDIO_AUTO_TRIGGER
         float centered = (float)code - (DAQ_ADC_FULL_SCALE_CODES / 2.0f);
@@ -623,11 +621,11 @@ static void audio_poll_task(void *)
                 rms_floor = rms;
                 floor_seeded = true;
             }
-            else if (rms > rms_floor + AUDIO_TRIGGER_MARGIN_CODES && !pc_tc_capturing())
+            else if (rms > rms_floor + AUDIO_TRIGGER_MARGIN_CODES && !protocore_tc_capturing())
             {
-                pc_tc_trigger();
+                protocore_tc_trigger();
             }
-            else if (!pc_tc_capturing())
+            else if (!protocore_tc_capturing())
             {
                 rms_floor = 0.98f * rms_floor + 0.02f * rms; // track slow ambient drift, not the event itself
             }
@@ -648,7 +646,7 @@ static void audio_poll_task(void *)
 /** @brief Configure the AD9238's SPI control port: power up, offset binary, no test pattern -
  *         then read back the power-down register to confirm the SPI link actually works. This
  *         is real SPI I/O (the Arduino SPI library), unlike the bulk DMA sample path below,
- *         which stays on the shipped ingress/egress simulator until a real pc_dma_hw_*
+ *         which stays on the shipped ingress/egress simulator until a real protocore_dma_hw_*
  *         backend is written and hardware-verified (docs/KNOWN_LIMITATIONS.md). */
 static bool ad9238_bringup()
 {
@@ -673,21 +671,21 @@ static bool ad9238_bringup()
     };
 
     uint8_t buf[3];
-    pc_ad9238_build_write((uint16_t)Ad9238Reg::AD9238_REG_POWER_DOWN, 0x00, buf, sizeof(buf)); // 0 = powered up
+    protocore_ad9238_build_write((uint16_t)Ad9238Reg::AD9238_REG_POWER_DOWN, 0x00, buf, sizeof(buf)); // 0 = powered up
     xfer(buf, sizeof(buf), nullptr);
-    pc_ad9238_build_write((uint16_t)Ad9238Reg::AD9238_REG_OUTPUT_MODE,
-                          (uint8_t)Ad9238OutputFormat::AD9238_FORMAT_OFFSET_BINARY, buf, sizeof(buf));
+    protocore_ad9238_build_write((uint16_t)Ad9238Reg::AD9238_REG_OUTPUT_MODE,
+                                 (uint8_t)Ad9238OutputFormat::AD9238_FORMAT_OFFSET_BINARY, buf, sizeof(buf));
     xfer(buf, sizeof(buf), nullptr);
-    pc_ad9238_build_write((uint16_t)Ad9238Reg::AD9238_REG_TEST_IO, (uint8_t)Ad9238TestPattern::AD9238_TEST_OFF, buf,
-                          sizeof(buf));
+    protocore_ad9238_build_write((uint16_t)Ad9238Reg::AD9238_REG_TEST_IO, (uint8_t)Ad9238TestPattern::AD9238_TEST_OFF,
+                                 buf, sizeof(buf));
     xfer(buf, sizeof(buf), nullptr);
     uint8_t xfer_buf[3];
-    pc_ad9238_build_transfer(xfer_buf, sizeof(xfer_buf)); // latch the shadowed writes above
+    protocore_ad9238_build_transfer(xfer_buf, sizeof(xfer_buf)); // latch the shadowed writes above
     xfer(xfer_buf, sizeof(xfer_buf), nullptr);
 
     uint8_t rd[3] = {0, 0, 0};
     uint8_t rd_hdr[2];
-    pc_ad9238_build_read((uint16_t)Ad9238Reg::AD9238_REG_POWER_DOWN, rd_hdr, sizeof(rd_hdr));
+    protocore_ad9238_build_read((uint16_t)Ad9238Reg::AD9238_REG_POWER_DOWN, rd_hdr, sizeof(rd_hdr));
     uint8_t tx3[3] = {rd_hdr[0], rd_hdr[1], 0x00};
     xfer(tx3, 3, rd);
     return rd[2] == 0x00; // read back what we wrote (powered up)
@@ -721,34 +719,34 @@ void setup()
                   DAQ_ADC_MAX_SAMPLE_RATE_HZ / 1e6);
     Serial.println("    front end should shift its trigger index back by this much before draining.");
 
-    pc_tc_config tc = {};
+    protocore_tc_config tc = {};
     tc.pretrigger_samples = DAQ_PRETRIGGER_SAMPLES;
     tc.posttrigger_samples = DAQ_POSTTRIGGER_SAMPLES;
     tc.sink = on_window;
-    if (!pc_tc_begin(&tc))
+    if (!protocore_tc_begin(&tc))
     {
-        Serial.println("[-] trace_capture begin() failed - check PC_TC_MAX_WINDOW_SAMPLES sizing");
+        Serial.println("[-] trace_capture begin() failed - check PROTOCORE_TC_MAX_WINDOW_SAMPLES sizing");
         return;
     }
 
 #if !DAQ_ADC_INTERNAL_POLLED
-    pc_pq_config pq = {};
+    protocore_pq_config pq = {};
     pq.handler = on_dma_frame;
     pq.priority = 0; // lane default (DMA lane ranks above the user lane)
     pq.core = 1;
     pq.name = "daq_rx";
-    if (!pc_pq_start_lane(pc_pq_lane::PC_PQ_LANE_DMA, &pq))
+    if (!protocore_pq_start_lane(protocore_pq_lane::PROTOCORE_PQ_LANE_DMA, &pq))
     {
         Serial.println("[-] preempt queue DMA lane failed to start");
         return;
     }
 
-    pc_dma_config ch = {};
+    protocore_dma_config ch = {};
     ch.channel = 0;
-    ch.periph = pc_dma_periph::PC_DMA_SPI; // swap to PC_DMA_UART for a serial-streaming DAQ source
+    ch.periph = protocore_dma_periph::PROTOCORE_DMA_SPI; // swap to PROTOCORE_DMA_UART for a serial-streaming DAQ source
     ch.loopback = false;
     ch.on_complete = on_dma_complete;
-    if (!pc_dma_open(&ch))
+    if (!protocore_dma_open(&ch))
     {
         Serial.println("[-] dma channel failed to open");
         return;
@@ -758,8 +756,8 @@ void setup()
     attachInterrupt(digitalPinToInterrupt(TRIGGER_PIN), on_trigger_isr, RISING);
 
     Serial.println("[*] armed: DMA ingest -> preempt queue -> trace_capture -> network egress");
-#if PC_DMA_SIMULATE
-    Serial.println("[*] PC_DMA_SIMULATE=1 (the shipped, tested backend) - wire pc_dma_hw_* for real");
+#if PROTOCORE_DMA_SIMULATE
+    Serial.println("[*] PROTOCORE_DMA_SIMULATE=1 (the shipped, tested backend) - wire protocore_dma_hw_* for real");
     Serial.println("    silicon once bench-verified; see docs/KNOWN_LIMITATIONS.md.");
 #endif
 #else // DAQ_ADC_INTERNAL_POLLED
@@ -779,15 +777,15 @@ void setup()
 void loop()
 {
 #if !DAQ_ADC_INTERNAL_POLLED
-    pc_dma_poll(); // no-op on real silicon (ISRs drive it there); steps the simulator otherwise
+    protocore_dma_poll(); // no-op on real silicon (ISRs drive it there); steps the simulator otherwise
 #endif
 
     static uint32_t last_stats = 0;
-    if (pc_millis() - last_stats > 5000)
+    if (protocore_millis() - last_stats > 5000)
     {
-        last_stats = pc_millis();
-        pc_tc_stats st;
-        pc_tc_get_stats(&st);
+        last_stats = protocore_millis();
+        protocore_tc_stats st;
+        protocore_tc_get_stats(&st);
         g_windows_dropped_total = st.triggers_dropped + st.samples_dropped;
         Serial.printf("[stats] windows=%u triggers_dropped=%u samples_dropped=%u\n", (unsigned)st.windows_completed,
                       (unsigned)st.triggers_dropped, (unsigned)st.samples_dropped);

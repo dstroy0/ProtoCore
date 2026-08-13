@@ -3,7 +3,7 @@
 
 /**
  * @file NtpServer.ino
- * @brief Turn the ESP32 into a local NTP time server (PC_ENABLE_NTP_SERVER).
+ * @brief Turn the ESP32 into a local NTP time server (PROTOCORE_ENABLE_NTP_SERVER).
  *
  * The device answers NTP requests on UDP/123 so every gadget on your LAN can sync to it -
  * even with no internet. Its own time comes from a fallback chain (a "time source" list
@@ -19,14 +19,14 @@
  * throughout. Test it from any computer:  `sntp -d <device-ip>`  or  `w32tm /stripchart
  * /computer:<device-ip>`  (Windows)  or  `chronyc -a 'burst 1/1'` against it.
  *
- * Build flags (PlatformIO): `-DPC_ENABLE_NTP_SERVER=1 -DPC_ENABLE_TIME_SOURCE=1
- *                            -DPC_ENABLE_NMEA0183=1 -DPC_ENABLE_NTP=1`
+ * Build flags (PlatformIO): `-DPROTOCORE_ENABLE_NTP_SERVER=1 -DPROTOCORE_ENABLE_TIME_SOURCE=1
+ *                            -DPROTOCORE_ENABLE_NMEA0183=1 -DPROTOCORE_ENABLE_NTP=1`
  */
 
-#define PC_ENABLE_NTP_SERVER 1
-#define PC_ENABLE_TIME_SOURCE 1
-#define PC_ENABLE_NMEA0183 1
-#define PC_ENABLE_NTP 1
+#define PROTOCORE_ENABLE_NTP_SERVER 1
+#define PROTOCORE_ENABLE_TIME_SOURCE 1
+#define PROTOCORE_ENABLE_NMEA0183 1
+#define PROTOCORE_ENABLE_NTP 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -66,7 +66,7 @@ static int two(const char *p)
 static void gps_feed_sentence(const char *line, size_t len)
 {
     Nmea0183 s;
-    if (!pc_nmea0183_parse(line, len, &s))
+    if (!protocore_nmea0183_parse(line, len, &s))
     {
         return;
     }
@@ -118,7 +118,7 @@ static void gps_poll()
     }
 }
 
-// --- Time sources (queried best-first by pc_time_now()) ---
+// --- Time sources (queried best-first by protocore_time_now()) ---
 static uint32_t gps_time_source()
 {
     if (g_gps_epoch == 0)
@@ -132,9 +132,9 @@ static uint32_t gps_time_source()
     }
     return g_gps_epoch + age;
 }
-static uint32_t pc_ntp_upstream_source()
+static uint32_t protocore_ntp_upstream_source()
 {
-    return pc_ntp_synced() ? (uint32_t)pc_ntp_epoch() : 0;
+    return protocore_ntp_synced() ? (uint32_t)protocore_ntp_epoch() : 0;
 }
 
 void setup()
@@ -154,11 +154,11 @@ void setup()
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     // GPS is the primary (stratum 1); the public NTP pool is the fallback.
-    pc_time_source_add("gps", 1, gps_time_source);
-    pc_time_source_add("ntp", 2, pc_ntp_upstream_source);
-    pc_ntp_begin(NULL, NULL, NULL); // start the upstream SNTP client for the fallback
+    protocore_time_source_add("gps", 1, gps_time_source);
+    protocore_time_source_add("ntp", 2, protocore_ntp_upstream_source);
+    protocore_ntp_begin(NULL, NULL, NULL); // start the upstream SNTP client for the fallback
 
-    if (pc_ntp_server_begin(1, NTP_REFID_GPS))
+    if (protocore_ntp_server_begin(1, NTP_REFID_GPS))
     {
         Serial.println("NTP server listening on UDP/123 (point your devices at this IP)");
     }
@@ -176,8 +176,8 @@ void loop()
     if (millis() - last > 5000)
     {
         last = millis();
-        uint32_t now = pc_time_now();
-        const char *src = pc_time_source_active();
+        uint32_t now = protocore_time_now();
+        const char *src = protocore_time_source_active();
         Serial.printf("[ntp] epoch=%lu source=%s\n", (unsigned long)now, src ? src : "none-yet");
     }
 }

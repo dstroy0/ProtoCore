@@ -18,18 +18,18 @@
 
 // Compiles only when a client transport is enabled (HTTP client / MQTT / WS client). A server-only
 // build leaves DNS_RESOLVER off, so the resolver symbols this unit calls would not be declared -
-// see PC_NEED_CLIENT in protocore_config.h.
-#if PC_NEED_CLIENT
+// see PROTOCORE_NEED_CLIENT in protocore_config.h.
+#if PROTOCORE_NEED_CLIENT
 
 #include "../diffserv.h" // DiffServ DSCP marking for outbound client connections (compiles out when off)
-#include "core_setup/board_profiles/pc_platform.h" // the stack's TCP, under our names
+#include "core_setup/board_profiles/protocore_platform.h" // the stack's TCP, under our names
 #include "mmgr/ring.h" // PROTO_ATOMIC_LOAD/STORE + SPSC ring drain (same primitive as the server)
 #include "network_drivers/network/dns/dns_resolver.h" // shared host->IP resolve (one DNS owner)
-#include "server/clock/clock.h"                       // pc_millis()
+#include "server/clock/clock.h"                       // protocore_millis()
 
 typedef struct
 {
-    pc_pcb *pcb;
+    protocore_pcb *pcb;
     // Written by the stack's callbacks in its own thread, read by the caller's task. Atomic for the
     // same reason the ring indices below are: volatile orders nothing and publishes nothing.
     _Atomic proto_bool in_use;
@@ -40,72 +40,72 @@ typedef struct
     uint32_t timer;      // millis the open started at
     uint32_t timeout_ms; // what the whole open, resolve included, is given
     proto_bool resolving;
-    uint8_t rx[PC_CLIENT_RX_BUF];
+    uint8_t rx[PROTOCORE_CLIENT_RX_BUF];
     _Atomic size_t head; // producer (stack recv cb); acquire/release SPSC, same as the server ring
     _Atomic size_t tail; // consumer (caller)
 } ClientConn;
 
-static_assert(PC_RING_POW2(PC_CLIENT_RX_BUF),
-              "PC_CLIENT_RX_BUF must be a power of two: a ring index wraps with a mask");
+static_assert(PROTOCORE_RING_POW2(PROTOCORE_CLIENT_RX_BUF),
+              "PROTOCORE_CLIENT_RX_BUF must be a power of two: a ring index wraps with a mask");
 
 // Outbound client connection pool, owned by one instance (internal linkage): the per-slot
 // ClientConn state. One named owner, unreachable from any other translation unit.
 typedef struct
 {
-    ClientConn cc[PC_CLIENT_CONNS];
-} pc_client_ctx;
-static pc_client_ctx s_client;
+    ClientConn cc[PROTOCORE_CLIENT_CONNS];
+} protocore_client_ctx;
+static protocore_client_ctx s_client;
 
 // Hostname resolution goes through network.dns->resolver.
 
 // Called by the open paths above its definition, to unwind a slot whose connect did not complete.
-static void pc_client_close(int cid);
+static void protocore_client_close(int cid);
 
 // --- lwIP callbacks (tcpip_thread); arg = the owning ClientConn* -------------
 
-static pc_net_err cc_recv(void *arg, pc_pcb *tpcb, pc_pbuf *p, pc_net_err err)
+static protocore_net_err cc_recv(void *arg, protocore_pcb *tpcb, protocore_pbuf *p, protocore_net_err err)
 {
     (void)err;
     ClientConn *c = (ClientConn *)arg;
     if (!c)
     {
-        return PC_NET_OK;
+        return PROTOCORE_NET_OK;
     }
     if (p == NULL)
     {
         c->closed = PROTO_TRUE; // peer closed
-        return PC_NET_OK;
+        return PROTOCORE_NET_OK;
     }
     // Wire bytes -> ring via the shared producer primitive (same as the server): if
     // the whole segment will not fit, refuse it (the stack retains + redelivers); else
     // move each span and publish head once.
     (void)tpcb;
-    if (p->tot_len > pc_ring_free(&c->head, &c->tail, PC_CLIENT_RX_BUF))
+    if (p->tot_len > protocore_ring_free(&c->head, &c->tail, PROTOCORE_CLIENT_RX_BUF))
     {
-        return PC_NET_ERR_MEM;
+        return PROTOCORE_NET_ERR_MEM;
     }
     size_t h = PROTO_ATOMIC_LOAD(&c->head); // sole producer of head; advance a local and publish once
-    for (pc_pbuf *q = p; q != NULL; q = q->next)
+    for (protocore_pbuf *q = p; q != NULL; q = q->next)
     {
-        h = pc_ring_write_span(c->rx, PC_CLIENT_RX_BUF, h, (const uint8_t *)q->payload, q->len);
+        h = protocore_ring_write_span(c->rx, PROTOCORE_CLIENT_RX_BUF, h, (const uint8_t *)q->payload, q->len);
     }
     PROTO_ATOMIC_STORE(&c->head, h); // one release store publishes the whole segment
-    // Do NOT tcp_recved() here. The window is reopened by pc_client_read() as the
+    // Do NOT tcp_recved() here. The window is reopened by protocore_client_read() as the
     // caller drains (ack-on-consume), so it tracks ring occupancy and the peer can
     // never overflow the ring - same model as the server transport. ACKing on copy
     // would decouple the window from drainage and deadlock a large inbound transfer
-    // once PC_CLIENT_RX_BUF < TCP_WND.
-    pc_net_pbuf_free(p);
-    return PC_NET_OK;
+    // once PROTOCORE_CLIENT_RX_BUF < TCP_WND.
+    protocore_net_pbuf_free(p);
+    return PROTOCORE_NET_OK;
 }
 
-static pc_net_err cc_connected(void *arg, pc_pcb *tpcb, pc_net_err err)
+static protocore_net_err cc_connected(void *arg, protocore_pcb *tpcb, protocore_net_err err)
 {
     (void)tpcb;
     ClientConn *c = (ClientConn *)arg;
     if (c)
     {
-        if (err == PC_NET_OK)
+        if (err == PROTOCORE_NET_OK)
         {
             c->connected = PROTO_TRUE;
         }
@@ -114,10 +114,10 @@ static pc_net_err cc_connected(void *arg, pc_pcb *tpcb, pc_net_err err)
             c->closed = PROTO_TRUE;
         }
     }
-    return PC_NET_OK;
+    return PROTOCORE_NET_OK;
 }
 
-static void cc_err(void *arg, pc_net_err err)
+static void cc_err(void *arg, protocore_net_err err)
 {
     (void)err;
     ClientConn *c = (ClientConn *)arg;
@@ -132,98 +132,98 @@ static void cc_err(void *arg, pc_net_err err)
 
 typedef struct
 {
-    pc_net_call base;
+    protocore_net_call base;
     ClientConn *c;
-    pc_net_ip addr;
+    protocore_net_ip addr;
     uint16_t port;
-    pc_net_err result;
+    protocore_net_err result;
 } CcConnCall;
 typedef struct
 {
-    pc_net_call base;
+    protocore_net_call base;
     ClientConn *c;
     const void *data;
     proto_u16 len;
-    pc_net_err result;
+    protocore_net_err result;
 } CcSendCall;
 typedef struct
 {
-    pc_net_call base;
+    protocore_net_call base;
     ClientConn *c;
     proto_u16 len;
 } CcRecvedCall;
 
-static pc_net_err cc_do_connect(pc_net_call *cd)
+static protocore_net_err cc_do_connect(protocore_net_call *cd)
 {
     CcConnCall *k = (CcConnCall *)cd;
     ClientConn *c = k->c;
-    c->pcb = pc_net_new(PC_NET_TYPE_V4);
+    c->pcb = protocore_net_new(PROTOCORE_NET_TYPE_V4);
     if (!c->pcb)
     {
-        k->result = PC_NET_ERR_MEM;
-        return PC_NET_OK;
+        k->result = PROTOCORE_NET_ERR_MEM;
+        return PROTOCORE_NET_OK;
     }
-    pc_net_arg(c->pcb, c);
-    pc_net_on_recv(c->pcb, cc_recv);
-    pc_net_on_err(c->pcb, cc_err);
-#if PC_ENABLE_DIFFSERV
+    protocore_net_arg(c->pcb, c);
+    protocore_net_on_recv(c->pcb, cc_recv);
+    protocore_net_on_err(c->pcb, cc_err);
+#if PROTOCORE_ENABLE_DIFFSERV
     {
         // Mark the outbound connection with the server-wide default DSCP (the SYN onward). Runs in
         // tcpip_thread (this is the marshalled connect op), so touching the pcb is race-free.
         uint8_t dscp = DiffServ.default_dscp();
         if (dscp)
         {
-            c->pcb->tos = pc_dscp_to_tos(dscp);
+            c->pcb->tos = protocore_dscp_to_tos(dscp);
         }
     }
 #endif
-    k->result = pc_net_connect(c->pcb, &k->addr, k->port, cc_connected);
-    return PC_NET_OK;
+    k->result = protocore_net_connect(c->pcb, &k->addr, k->port, cc_connected);
+    return PROTOCORE_NET_OK;
 }
 
-static pc_net_err cc_do_send(pc_net_call *cd)
+static protocore_net_err cc_do_send(protocore_net_call *cd)
 {
     CcSendCall *k = (CcSendCall *)cd;
     ClientConn *c = k->c;
     if (!c->pcb)
     {
-        k->result = PC_NET_ERR_CONN;
-        return PC_NET_OK;
+        k->result = PROTOCORE_NET_ERR_CONN;
+        return PROTOCORE_NET_OK;
     }
-    k->result = pc_net_write(c->pcb, k->data, k->len, PC_NET_WRITE_COPY);
-    if (k->result == PC_NET_OK)
+    k->result = protocore_net_write(c->pcb, k->data, k->len, PROTOCORE_NET_WRITE_COPY);
+    if (k->result == PROTOCORE_NET_OK)
     {
-        pc_net_output(c->pcb);
+        protocore_net_output(c->pcb);
     }
-    return PC_NET_OK;
+    return PROTOCORE_NET_OK;
 }
 
-static pc_net_err cc_do_close(pc_net_call *cd)
+static protocore_net_err cc_do_close(protocore_net_call *cd)
 {
     CcSendCall *k = (CcSendCall *)cd;
     ClientConn *c = k->c;
     if (c->pcb)
     {
-        pc_net_arg(c->pcb, NULL);
-        pc_net_on_recv(c->pcb, NULL);
-        pc_net_on_err(c->pcb, NULL);
-        if (pc_net_close(c->pcb) != PC_NET_OK)
+        protocore_net_arg(c->pcb, NULL);
+        protocore_net_on_recv(c->pcb, NULL);
+        protocore_net_on_err(c->pcb, NULL);
+        if (protocore_net_close(c->pcb) != PROTOCORE_NET_OK)
         {
-            pc_net_abort(c->pcb);
+            protocore_net_abort(c->pcb);
         }
         c->pcb = NULL;
     }
-    return PC_NET_OK;
+    return PROTOCORE_NET_OK;
 }
 
-static pc_net_err cc_do_recved(pc_net_call *cd)
+static protocore_net_err cc_do_recved(protocore_net_call *cd)
 {
     CcRecvedCall *k = (CcRecvedCall *)cd;
     if (k->c->pcb)
     {
-        pc_net_recved(k->c->pcb, k->len); // reopen the window by the consumed bytes
+        protocore_net_recved(k->c->pcb, k->len); // reopen the window by the consumed bytes
     }
-    return PC_NET_OK;
+    return PROTOCORE_NET_OK;
 }
 
 // --- public API --------------------------------------------------------------
@@ -237,7 +237,7 @@ static void cc_pump(ClientConn *c)
     {
         return;
     }
-    if ((uint32_t)(pc_millis() - c->timer) >= c->timeout_ms)
+    if ((uint32_t)(protocore_millis() - c->timer) >= c->timeout_ms)
     {
         c->closed = PROTO_TRUE; // out of time, whether it was still resolving or already connecting
         return;
@@ -249,12 +249,12 @@ static void cc_pump(ClientConn *c)
 
     // Resolve through the shared DNS owner, which reports busy until its own answer lands.
     uint32_t ip = 0;
-    pc_dns_state s = network.dns->resolver->resolve(c->host, &ip);
-    if (s == PC_DNS_BUSY)
+    protocore_dns_state s = network.dns->resolver->resolve(c->host, &ip);
+    if (s == PROTOCORE_DNS_BUSY)
     {
         return;
     }
-    if (s == PC_DNS_FAILED)
+    if (s == PROTOCORE_DNS_FAILED)
     {
         c->closed = PROTO_TRUE;
         return;
@@ -264,23 +264,23 @@ static void cc_pump(ClientConn *c)
     CcConnCall k;
     mem.set(&k, 0, sizeof(k));
     k.c = c;
-    pc_net_ip4_set(&k.addr, (uint8_t)(ip >> 24), (uint8_t)(ip >> 16), (uint8_t)(ip >> 8), (uint8_t)ip);
+    protocore_net_ip4_set(&k.addr, (uint8_t)(ip >> 24), (uint8_t)(ip >> 16), (uint8_t)(ip >> 8), (uint8_t)ip);
     k.port = c->port;
-    pc_net_call_marshal(cc_do_connect, &k.base);
-    if (k.result != PC_NET_OK)
+    protocore_net_call_marshal(cc_do_connect, &k.base);
+    if (k.result != PROTOCORE_NET_OK)
     {
         c->closed = PROTO_TRUE;
     }
 }
 
-static int pc_client_open(const char *host, uint16_t port, uint32_t timeout_ms)
+static int protocore_client_open(const char *host, uint16_t port, uint32_t timeout_ms)
 {
     if (host == NULL)
     {
         return -2;
     }
     int cid = -1;
-    for (int i = 0; i < PC_CLIENT_CONNS; i++)
+    for (int i = 0; i < PROTOCORE_CLIENT_CONNS; i++)
     {
         if (!s_client.cc[i].in_use)
         {
@@ -302,16 +302,16 @@ static int pc_client_open(const char *host, uint16_t port, uint32_t timeout_ms)
     c->host = host;
     c->port = port;
     c->timeout_ms = timeout_ms;
-    c->timer = pc_millis();
+    c->timer = protocore_millis();
     c->resolving = PROTO_TRUE;
     c->in_use = PROTO_TRUE;
     cc_pump(c); // a name that needs no query connects here, in the opening call
     return cid;
 }
 
-static proto_bool pc_client_connected(int cid)
+static proto_bool protocore_client_connected(int cid)
 {
-    if (cid < 0 || cid >= PC_CLIENT_CONNS || !s_client.cc[cid].in_use)
+    if (cid < 0 || cid >= PROTOCORE_CLIENT_CONNS || !s_client.cc[cid].in_use)
     {
         return PROTO_FALSE;
     }
@@ -319,9 +319,9 @@ static proto_bool pc_client_connected(int cid)
     return s_client.cc[cid].connected && !s_client.cc[cid].closed;
 }
 
-static proto_bool pc_client_is_closed(int cid)
+static proto_bool protocore_client_is_closed(int cid)
 {
-    if (cid < 0 || cid >= PC_CLIENT_CONNS)
+    if (cid < 0 || cid >= PROTOCORE_CLIENT_CONNS)
     {
         return PROTO_TRUE;
     }
@@ -329,9 +329,9 @@ static proto_bool pc_client_is_closed(int cid)
     return s_client.cc[cid].closed;
 }
 
-static proto_bool pc_client_send(int cid, const void *data, size_t len)
+static proto_bool protocore_client_send(int cid, const void *data, size_t len)
 {
-    if (cid < 0 || cid >= PC_CLIENT_CONNS || !s_client.cc[cid].in_use)
+    if (cid < 0 || cid >= PROTOCORE_CLIENT_CONNS || !s_client.cc[cid].in_use)
     {
         return PROTO_FALSE;
     }
@@ -340,13 +340,13 @@ static proto_bool pc_client_send(int cid, const void *data, size_t len)
     k.c = &s_client.cc[cid];
     k.data = data;
     k.len = (proto_u16)(len > 0xFFFF ? 0xFFFF : len);
-    pc_net_call_marshal(cc_do_send, &k.base);
-    return k.result == PC_NET_OK;
+    protocore_net_call_marshal(cc_do_send, &k.base);
+    return k.result == PROTOCORE_NET_OK;
 }
 
-static size_t pc_client_available(int cid)
+static size_t protocore_client_available(int cid)
 {
-    if (cid < 0 || cid >= PC_CLIENT_CONNS)
+    if (cid < 0 || cid >= PROTOCORE_CLIENT_CONNS)
     {
         return 0;
     }
@@ -355,18 +355,18 @@ static size_t pc_client_available(int cid)
     // asking what has arrived would otherwise never advance a connect that has not come up, and sit
     // on an empty ring until its own timer expired.
     cc_pump(c);
-    return pc_ring_available(&c->head, &c->tail, PC_CLIENT_RX_BUF);
+    return protocore_ring_available(&c->head, &c->tail, PROTOCORE_CLIENT_RX_BUF);
 }
 
-static size_t pc_client_read(int cid, uint8_t *buf, size_t cap)
+static size_t protocore_client_read(int cid, uint8_t *buf, size_t cap)
 {
-    if (cid < 0 || cid >= PC_CLIENT_CONNS)
+    if (cid < 0 || cid >= PROTOCORE_CLIENT_CONNS)
     {
         return 0;
     }
     ClientConn *c = &s_client.cc[cid];
     cc_pump(c); // as in available(): a caller that only ever reads still steps its open along
-    size_t n = pc_ring_read(c->rx, PC_CLIENT_RX_BUF, &c->head, &c->tail, buf, cap);
+    size_t n = protocore_ring_read(c->rx, PROTOCORE_CLIENT_RX_BUF, &c->head, &c->tail, buf, cap);
     if (n > 0 && c->pcb)
     {
         // Ack-on-consume: reopen the receive window by exactly what we just drained.
@@ -374,31 +374,31 @@ static size_t pc_client_read(int cid, uint8_t *buf, size_t cap)
         mem.set(&k, 0, sizeof(k));
         k.c = c;
         k.len = (proto_u16)n;
-        pc_net_call_marshal(cc_do_recved, &k.base);
+        protocore_net_call_marshal(cc_do_recved, &k.base);
     }
     return n;
 }
 
-static void pc_client_close(int cid)
+static void protocore_client_close(int cid)
 {
-    if (cid < 0 || cid >= PC_CLIENT_CONNS || !s_client.cc[cid].in_use)
+    if (cid < 0 || cid >= PROTOCORE_CLIENT_CONNS || !s_client.cc[cid].in_use)
     {
         return;
     }
     CcSendCall k;
     mem.set(&k, 0, sizeof(k));
     k.c = &s_client.cc[cid];
-    pc_net_call_marshal(cc_do_close, &k.base);
+    protocore_net_call_marshal(cc_do_close, &k.base);
     s_client.cc[cid].in_use = PROTO_FALSE;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-const TcpClientNs TcpClient = {.open = pc_client_open,
-                               .connected = pc_client_connected,
-                               .is_closed = pc_client_is_closed,
-                               .send = pc_client_send,
-                               .available = pc_client_available,
-                               .read = pc_client_read,
-                               .close = pc_client_close};
+const TcpClientNs TcpClient = {.open = protocore_client_open,
+                               .connected = protocore_client_connected,
+                               .is_closed = protocore_client_is_closed,
+                               .send = protocore_client_send,
+                               .available = protocore_client_available,
+                               .read = protocore_client_read,
+                               .close = protocore_client_close};
 
-#endif // PC_NEED_CLIENT
+#endif // PROTOCORE_NEED_CLIENT

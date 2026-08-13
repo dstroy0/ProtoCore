@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // DTLS 1.3 server handshake (RFC 9147 §5-6). A self-consistent proof: the test plays a minimal DTLS
-// 1.3 client against pc_dtls_conn - it builds a ClientHello, drives the server, then runs the SAME TLS
+// 1.3 client against protocore_dtls_conn - it builds a ClientHello, drives the server, then runs the SAME TLS
 // 1.3 key schedule to deprotect the server flight, VERIFIES the server's CertificateVerify signature
 // and Finished MAC over the real transcript, sends its own Finished, and confirms both sides install
 // identical application-traffic keys. If any transcript byte, epoch, nonce, or key were wrong the
@@ -33,8 +33,8 @@ static uint8_t tw_tr[4096]; // tr works out of its own bytes // test-side workin
 static void assert_ctx_match(uint8_t *a, uint8_t *b)
 {
     uint8_t n12[12] = {0}, zpt[16] = {0}, c1[16], t1[16], c2[16], t2[16];
-    pc_aes128gcm_seal((struct pc_aes128gcm_key *)(a), n12, NULL, 0, zpt, sizeof zpt, c1, t1);
-    pc_aes128gcm_seal((struct pc_aes128gcm_key *)(b), n12, NULL, 0, zpt, sizeof zpt, c2, t2);
+    protocore_aes128gcm_seal((struct protocore_aes128gcm_key *)(a), n12, NULL, 0, zpt, sizeof zpt, c1, t1);
+    protocore_aes128gcm_seal((struct protocore_aes128gcm_key *)(b), n12, NULL, 0, zpt, sizeof zpt, c2, t2);
     TEST_ASSERT_EQUAL_MEMORY(c1, c2, sizeof c1);
     TEST_ASSERT_EQUAL_MEMORY(t1, t2, sizeof t1);
 }
@@ -49,7 +49,7 @@ static uint32_t test_clock()
 void setUp()
 {
     g_ms = 0;
-    pc_set_clock(test_clock, 1000); // 1000 ticks/s -> pc_millis() == g_ms
+    protocore_set_clock(test_clock, 1000); // 1000 ticks/s -> protocore_millis() == g_ms
 }
 void tearDown()
 {
@@ -366,18 +366,18 @@ static uint8_t tw_cfl[4096]; // the private transcript this helper runs on
 static DtlsConn g_dtls;
 static DtlsConn g_dtls2;
 
-static void complete_handshake_from_flight(DtlsConn *conn, pc_sha256_ctx tr_in, uint16_t cfin_msg_seq,
+static void complete_handshake_from_flight(DtlsConn *conn, protocore_sha256_ctx tr_in, uint16_t cfin_msg_seq,
                                            const uint8_t *flight, size_t fl, const uint8_t *client_cid,
                                            size_t client_cid_len, proto_bool expect_rpk)
 {
     // The context holds pointers into the caller's bytes, so the by-value parameter aliases them.
-    // pc_sha256_init lays rx, tx and the state copy out contiguously from the work pointer, so
+    // protocore_sha256_init lays rx, tx and the state copy out contiguously from the work pointer, so
     // copying that span and rebinding gives this helper a transcript the caller cannot see.
-    pc_sha256_ctx tr = tr_in;
-    memcpy(tw_cfl, tr_in.rx, PC_SHA256_BORROW);
+    protocore_sha256_ctx tr = tr_in;
+    memcpy(tw_cfl, tr_in.rx, PROTOCORE_SHA256_BORROW);
     tr.rx = tw_cfl;
-    tr.tx = tw_cfl + PC_SHA256_BLOCK_LEN;
-    tr.fs = (uint32_t *)(tw_cfl + 2 * PC_SHA256_BLOCK_LEN);
+    tr.tx = tw_cfl + PROTOCORE_SHA256_BLOCK_LEN;
+    tr.fs = (uint32_t *)(tw_cfl + 2 * PROTOCORE_SHA256_BLOCK_LEN);
 
     size_t off = 0;
     // record 0: ServerHello (DTLSPlaintext, epoch 0)
@@ -388,7 +388,7 @@ static void complete_handshake_from_flight(DtlsConn *conn, pc_sha256_ctx tr_in, 
     uint8_t sh[512];
     size_t sh_len = frag_to_tls(pt.fragment, pt.frag_len, sh);
     TEST_ASSERT_TRUE(sh_len > 0);
-    pc_sha256_update(&tr, sh, sh_len);
+    protocore_sha256_update(&tr, sh, sh_len);
 
     uint8_t server_pub[32];
     TEST_ASSERT_TRUE(sh_keyshare(sh, sh_len, server_pub));
@@ -396,7 +396,7 @@ static void complete_handshake_from_flight(DtlsConn *conn, pc_sha256_ctx tr_in, 
     // Connection ids (RFC 9146 / RFC 9147 §9): when we offered a CID, the ServerHello carries the
     // server's CID (which we place in records we send), and every protected record the server sends us
     // carries our CID (@p client_cid). scid = the server's CID; empty when CID was not negotiated.
-    uint8_t scid[PC_DTLS_CID_MAX];
+    uint8_t scid[PROTOCORE_DTLS_CID_MAX];
     size_t scid_len = client_cid_len ? sh_conn_id(sh, sh_len, scid) : 0;
     if (client_cid_len)
     {
@@ -405,13 +405,13 @@ static void complete_handshake_from_flight(DtlsConn *conn, pc_sha256_ctx tr_in, 
 
     // client handshake key schedule from Transcript-Hash(..SH)
     uint8_t ecdhe[32];
-    pc_x25519(ecdhe, CLIENT_X25519_PRIV, server_pub);
+    protocore_x25519(ecdhe, CLIENT_X25519_PRIV, server_pub);
     Tls13KeySchedule cks;
     uint8_t h[32];
-    pc_sha256_final(&tr, h);
-    static uint8_t ks_store_392[PC_TLS13_KS_BORROW];
-    pc_tls13_ks_early(&DTLS13_KDF, &cks, ks_store_392);
-    pc_tls13_ks_handshake(&cks, ecdhe, h, 32);
+    protocore_sha256_final(&tr, h);
+    static uint8_t ks_store_392[PROTOCORE_TLS13_KS_BORROW];
+    protocore_tls13_ks_early(&DTLS13_KDF, &cks, ks_store_392);
+    protocore_tls13_ks_handshake(&cks, ecdhe, h, 32);
 
     DtlsRecordKeys srv_read; // client reads the server's epoch-2 records
     DtlsRecord.keys_derive(&srv_read, DTLS_CIPHER_AES_128_GCM_SHA256, 2, cks.s + TLS13_KS_SERVER_HS);
@@ -431,7 +431,7 @@ static void complete_handshake_from_flight(DtlsConn *conn, pc_sha256_ctx tr_in, 
                                               client_cid, client_cid_len));
         exp_seq = info.seq + 1;
         off += crl;
-        TEST_ASSERT_EQUAL_UINT8(PC_DTLS_CT_HANDSHAKE, info.content_type);
+        TEST_ASSERT_EQUAL_UINT8(PROTOCORE_DTLS_CT_HANDSHAKE, info.content_type);
 
         uint8_t msg[512];
         size_t mlen = frag_to_tls(inner, info.pt_len, msg);
@@ -441,19 +441,19 @@ static void complete_handshake_from_flight(DtlsConn *conn, pc_sha256_ctx tr_in, 
         {
             TEST_ASSERT_TRUE(have_cert);
             uint8_t h_ch_cert[32];
-            pc_sha256_final(&tr, h_ch_cert);
+            protocore_sha256_final(&tr, h_ch_cert);
             uint8_t content[160]; // 64*0x20 + 33-byte context + 0x00 + 32-byte hash = 130
-            size_t clen = pc_tls13_cert_verify_content(content, sizeof(content), h_ch_cert, PROTO_TRUE);
+            size_t clen = protocore_tls13_cert_verify_content(content, sizeof(content), h_ch_cert, PROTO_TRUE);
             TEST_ASSERT_TRUE(clen > 0);
             const uint8_t *sig = msg + 4 + 2 + 2; // algorithm(2) + signature length(2)
-            TEST_ASSERT_TRUE(pc_ed25519_verify(tw, cert_pub, content, clen, sig));
+            TEST_ASSERT_TRUE(protocore_ed25519_verify(tw, cert_pub, content, clen, sig));
         }
         if (msg[0] == 20) // server Finished: verify over H(..CertificateVerify)
         {
             uint8_t hcv[32];
-            pc_sha256_final(&tr, hcv);
+            protocore_sha256_final(&tr, hcv);
             uint8_t expect[32];
-            pc_tls13_finished_mac(&cks, cks.s + TLS13_KS_SERVER_HS, hcv, expect);
+            protocore_tls13_finished_mac(&cks, cks.s + TLS13_KS_SERVER_HS, hcv, expect);
             TEST_ASSERT_EQUAL_MEMORY(expect, msg + 4, 32);
             seen_fin = 1;
         }
@@ -463,7 +463,7 @@ static void complete_handshake_from_flight(DtlsConn *conn, pc_sha256_ctx tr_in, 
             TEST_ASSERT_EQUAL(expect_rpk, ee_has_rpk(msg, mlen));
         }
 
-        pc_sha256_update(&tr, msg, mlen);
+        protocore_sha256_update(&tr, msg, mlen);
 
         if (msg[0] == 11) // Certificate: raw Ed25519 pubkey, or (RFC 7250) an Ed25519 SubjectPublicKeyInfo
         {
@@ -487,13 +487,13 @@ static void complete_handshake_from_flight(DtlsConn *conn, pc_sha256_ctx tr_in, 
 
     // --- client Finished over Transcript-Hash(..server Finished) ---
     uint8_t h_sfin[32];
-    pc_sha256_final(&tr, h_sfin);
-    pc_tls13_ks_master(&cks, h_sfin);
+    protocore_sha256_final(&tr, h_sfin);
+    protocore_tls13_ks_master(&cks, h_sfin);
 
     uint8_t cfin_verify[32];
-    pc_tls13_finished_mac(&cks, cks.s + TLS13_KS_CLIENT_HS, h_sfin, cfin_verify);
+    protocore_tls13_finished_mac(&cks, cks.s + TLS13_KS_CLIENT_HS, h_sfin, cfin_verify);
     uint8_t cfin[64];
-    size_t cfin_len = pc_tls13_build_finished(cfin, sizeof(cfin), cfin_verify);
+    size_t cfin_len = protocore_tls13_build_finished(cfin, sizeof(cfin), cfin_verify);
 
     DtlsRecordKeys cli_write; // client writes its epoch-2 Finished
     DtlsRecord.keys_derive(&cli_write, DTLS_CIPHER_AES_128_GCM_SHA256, 2, cks.s + TLS13_KS_CLIENT_HS);
@@ -502,7 +502,7 @@ static void complete_handshake_from_flight(DtlsConn *conn, pc_sha256_ctx tr_in, 
     size_t cff = DtlsHandshake.frag_build(cfin[0], cfin_msg_seq, (uint32_t)(cfin_len - 4), 0, cfin + 4,
                                           (uint32_t)(cfin_len - 4), cfin_frag, sizeof(cfin_frag));
     uint8_t cfin_rec[128];
-    size_t cfr = DtlsRecord.protect(&cli_write, 0, PC_DTLS_CT_HANDSHAKE, cfin_frag, cff, cfin_rec, sizeof(cfin_rec),
+    size_t cfr = DtlsRecord.protect(&cli_write, 0, PROTOCORE_DTLS_CT_HANDSHAKE, cfin_frag, cff, cfin_rec, sizeof(cfin_rec),
                                     scid_len ? scid : NULL, scid_len);
 
     uint8_t out2[64];
@@ -521,7 +521,7 @@ static void complete_handshake_from_flight(DtlsConn *conn, pc_sha256_ctx tr_in, 
     DtlsCiphertext ackinfo;
     TEST_ASSERT_TRUE(DtlsRecord.unprotect(&cli_app_read, 0, out2, (size_t)r2, ack_pt, sizeof(ack_pt), &ackinfo,
                                           client_cid, client_cid_len));
-    TEST_ASSERT_EQUAL_UINT8(PC_DTLS_CT_ACK, ackinfo.content_type);
+    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_DTLS_CT_ACK, ackinfo.content_type);
 
     DtlsRecordKeys *const srv_app_write = DtlsServer.app_write_keys(conn); // server->client
     DtlsRecordKeys *const srv_app_read = DtlsServer.app_read_keys(conn);   // client->server
@@ -537,7 +537,7 @@ static void complete_handshake_from_flight(DtlsConn *conn, pc_sha256_ctx tr_in, 
     // A retransmitted client Finished (its ACK was lost) must draw a fresh ACK, not a fatal error
     // (RFC 9147 §5.8.3): re-send the same Finished in a new record and expect another ACK.
     uint8_t cfin_rec2[128];
-    size_t cfr2 = DtlsRecord.protect(&cli_write, 1, PC_DTLS_CT_HANDSHAKE, cfin_frag, cff, cfin_rec2, sizeof(cfin_rec2),
+    size_t cfr2 = DtlsRecord.protect(&cli_write, 1, PROTOCORE_DTLS_CT_HANDSHAKE, cfin_frag, cff, cfin_rec2, sizeof(cfin_rec2),
                                      scid_len ? scid : NULL, scid_len);
     uint8_t out3[64];
     int r3 = DtlsServer.process(conn, cfin_rec2, cfr2, out3, sizeof(out3));
@@ -547,7 +547,7 @@ static void complete_handshake_from_flight(DtlsConn *conn, pc_sha256_ctx tr_in, 
     DtlsCiphertext ackinfo3;
     TEST_ASSERT_TRUE(DtlsRecord.unprotect(&cli_app_read, 1, out3, (size_t)r3, ack_pt3, sizeof(ack_pt3), &ackinfo3,
                                           client_cid, client_cid_len));
-    TEST_ASSERT_EQUAL_UINT8(PC_DTLS_CT_ACK, ackinfo3.content_type);
+    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_DTLS_CT_ACK, ackinfo3.content_type);
 }
 
 static void server_cfg(DtlsServerConfig *cfg, const uint8_t server_ed_pub[32])
@@ -565,9 +565,9 @@ static void server_cfg(DtlsServerConfig *cfg, const uint8_t server_ed_pub[32])
 static void test_full_handshake(void)
 {
     uint8_t client_pub[32];
-    pc_x25519_base(client_pub, CLIENT_X25519_PRIV);
+    protocore_x25519_base(client_pub, CLIENT_X25519_PRIV);
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
+    protocore_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
 
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
@@ -577,15 +577,15 @@ static void test_full_handshake(void)
     uint8_t ch[256];
     size_t ch_len = build_client_hello(ch, client_pub);
 
-    pc_sha256_ctx tr; // client transcript
-    pc_sha256_init(&tr, tw_tr);
-    pc_sha256_update(&tr, ch, ch_len);
+    protocore_sha256_ctx tr; // client transcript
+    protocore_sha256_init(&tr, tw_tr);
+    protocore_sha256_update(&tr, ch, ch_len);
 
     uint8_t ch_frag[300];
     size_t ch_fl = DtlsHandshake.frag_build(ch[0], 0, (uint32_t)(ch_len - 4), 0, ch + 4, (uint32_t)(ch_len - 4),
                                             ch_frag, sizeof(ch_frag));
     uint8_t ch_rec[320];
-    size_t ch_rl = DtlsRecord.plaintext_build(PC_DTLS_CT_HANDSHAKE, 0, 0, ch_frag, ch_fl, ch_rec, sizeof(ch_rec));
+    size_t ch_rl = DtlsRecord.plaintext_build(PROTOCORE_DTLS_CT_HANDSHAKE, 0, 0, ch_frag, ch_fl, ch_rec, sizeof(ch_rec));
 
     uint8_t flight[2048];
     int fl = DtlsServer.process(&g_dtls, ch_rec, ch_rl, flight, sizeof(flight));
@@ -602,9 +602,9 @@ static void test_full_handshake(void)
 static void test_full_handshake_rpk(void)
 {
     uint8_t client_pub[32];
-    pc_x25519_base(client_pub, CLIENT_X25519_PRIV);
+    protocore_x25519_base(client_pub, CLIENT_X25519_PRIV);
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
+    protocore_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
 
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
@@ -614,15 +614,15 @@ static void test_full_handshake_rpk(void)
     size_t ch_len = build_client_hello_ex(ch, client_pub, /*with_keyshare=*/PROTO_TRUE, NULL, 0, NULL, 0,
                                           /*offer_rpk=*/PROTO_TRUE, TLS_GROUP_X25519, TLS_SIG_ED25519);
 
-    pc_sha256_ctx tr;
-    pc_sha256_init(&tr, tw_tr);
-    pc_sha256_update(&tr, ch, ch_len);
+    protocore_sha256_ctx tr;
+    protocore_sha256_init(&tr, tw_tr);
+    protocore_sha256_update(&tr, ch, ch_len);
 
     uint8_t ch_frag[300];
     size_t ch_fl = DtlsHandshake.frag_build(ch[0], 0, (uint32_t)(ch_len - 4), 0, ch + 4, (uint32_t)(ch_len - 4),
                                             ch_frag, sizeof(ch_frag));
     uint8_t ch_rec[320];
-    size_t ch_rl = DtlsRecord.plaintext_build(PC_DTLS_CT_HANDSHAKE, 0, 0, ch_frag, ch_fl, ch_rec, sizeof(ch_rec));
+    size_t ch_rl = DtlsRecord.plaintext_build(PROTOCORE_DTLS_CT_HANDSHAKE, 0, 0, ch_frag, ch_fl, ch_rec, sizeof(ch_rec));
 
     uint8_t flight[2048];
     int fl = DtlsServer.process(&g_dtls, ch_rec, ch_rl, flight, sizeof(flight));
@@ -638,9 +638,9 @@ static void test_full_handshake_rpk(void)
 static void test_cid_handshake(void)
 {
     uint8_t client_pub[32];
-    pc_x25519_base(client_pub, CLIENT_X25519_PRIV);
+    protocore_x25519_base(client_pub, CLIENT_X25519_PRIV);
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
+    protocore_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
 
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
@@ -651,15 +651,15 @@ static void test_cid_handshake(void)
     uint8_t ch[256];
     size_t ch_len = build_client_hello_ex(ch, client_pub, /*with_keyshare=*/PROTO_TRUE, NULL, 0, client_cid,
                                           sizeof(client_cid), PROTO_FALSE, TLS_GROUP_X25519, TLS_SIG_ED25519);
-    pc_sha256_ctx tr;
-    pc_sha256_init(&tr, tw_tr);
-    pc_sha256_update(&tr, ch, ch_len);
+    protocore_sha256_ctx tr;
+    protocore_sha256_init(&tr, tw_tr);
+    protocore_sha256_update(&tr, ch, ch_len);
 
     uint8_t ch_frag[300];
     size_t ch_fl = DtlsHandshake.frag_build(ch[0], 0, (uint32_t)(ch_len - 4), 0, ch + 4, (uint32_t)(ch_len - 4),
                                             ch_frag, sizeof(ch_frag));
     uint8_t ch_rec[320];
-    size_t ch_rl = DtlsRecord.plaintext_build(PC_DTLS_CT_HANDSHAKE, 0, 0, ch_frag, ch_fl, ch_rec, sizeof(ch_rec));
+    size_t ch_rl = DtlsRecord.plaintext_build(PROTOCORE_DTLS_CT_HANDSHAKE, 0, 0, ch_frag, ch_fl, ch_rec, sizeof(ch_rec));
 
     uint8_t flight[2048];
     int fl = DtlsServer.process(&g_dtls, ch_rec, ch_rl, flight, sizeof(flight));
@@ -685,9 +685,9 @@ static void test_cid_handshake(void)
 static void test_hrr_group_renegotiation(void)
 {
     uint8_t client_pub[32];
-    pc_x25519_base(client_pub, CLIENT_X25519_PRIV);
+    protocore_x25519_base(client_pub, CLIENT_X25519_PRIV);
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
+    protocore_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
 
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
@@ -701,7 +701,7 @@ static void test_hrr_group_renegotiation(void)
     size_t f1l = DtlsHandshake.frag_build(ch1[0], 0, (uint32_t)(ch1_len - 4), 0, ch1 + 4, (uint32_t)(ch1_len - 4), f1,
                                           sizeof(f1));
     uint8_t r1[320];
-    size_t r1l = DtlsRecord.plaintext_build(PC_DTLS_CT_HANDSHAKE, 0, 0, f1, f1l, r1, sizeof(r1));
+    size_t r1l = DtlsRecord.plaintext_build(PROTOCORE_DTLS_CT_HANDSHAKE, 0, 0, f1, f1l, r1, sizeof(r1));
 
     uint8_t hrr_flight[512];
     int hf = DtlsServer.process(&g_dtls, r1, r1l, hrr_flight, sizeof(hrr_flight));
@@ -716,38 +716,38 @@ static void test_hrr_group_renegotiation(void)
     size_t hrr_len = frag_to_tls(pt.fragment, pt.frag_len, hrr);
     TEST_ASSERT_TRUE(hrr_len > 0);
     TEST_ASSERT_EQUAL_UINT8(0x02, hrr[0]);                          // ServerHello handshake type
-    TEST_ASSERT_EQUAL_MEMORY(pc_tls13_hrr_random, hrr + 4 + 2, 32); // the HRR magic random marks it an HRR
-    uint8_t cookie[PC_DTLS_COOKIE_MAX];
+    TEST_ASSERT_EQUAL_MEMORY(protocore_tls13_hrr_random, hrr + 4 + 2, 32); // the HRR magic random marks it an HRR
+    uint8_t cookie[PROTOCORE_DTLS_COOKIE_MAX];
     size_t cookie_len = 0;
     TEST_ASSERT_TRUE(hrr_cookie(hrr, hrr_len, cookie, &cookie_len));
     TEST_ASSERT_TRUE(cookie_len > 0);
 
     // --- client transcript for the HRR path: message_hash(Hash(CH1)) || HRR || CH2 (RFC 8446 §4.4.1) ---
     uint8_t ch1_hash[32];
-    pc_sha256_ctx h1;
-    pc_sha256_init(&h1, tw_h1);
-    pc_sha256_update(&h1, ch1, ch1_len);
-    pc_sha256_final(&h1, ch1_hash);
+    protocore_sha256_ctx h1;
+    protocore_sha256_init(&h1, tw_h1);
+    protocore_sha256_update(&h1, ch1, ch1_len);
+    protocore_sha256_final(&h1, ch1_hash);
 
-    pc_sha256_ctx tr;
-    pc_sha256_init(&tr, tw_tr);
+    protocore_sha256_ctx tr;
+    protocore_sha256_init(&tr, tw_tr);
     uint8_t mh[36];
-    size_t mhl = pc_tls13_build_message_hash(mh, sizeof(mh), ch1_hash);
+    size_t mhl = protocore_tls13_build_message_hash(mh, sizeof(mh), ch1_hash);
     TEST_ASSERT_TRUE(mhl > 0);
-    pc_sha256_update(&tr, mh, mhl);
-    pc_sha256_update(&tr, hrr, hrr_len);
+    protocore_sha256_update(&tr, mh, mhl);
+    protocore_sha256_update(&tr, hrr, hrr_len);
 
     // --- client flight 2: ClientHello with the X25519 share and the echoed cookie (message_seq 1) ---
     uint8_t ch2[320];
     size_t ch2_len = build_client_hello_ex(ch2, client_pub, /*with_keyshare=*/PROTO_TRUE, cookie, cookie_len, NULL, 0,
                                            PROTO_FALSE, TLS_GROUP_X25519, TLS_SIG_ED25519);
-    pc_sha256_update(&tr, ch2, ch2_len);
+    protocore_sha256_update(&tr, ch2, ch2_len);
 
     uint8_t f2[380];
     size_t f2l = DtlsHandshake.frag_build(ch2[0], 1, (uint32_t)(ch2_len - 4), 0, ch2 + 4, (uint32_t)(ch2_len - 4), f2,
                                           sizeof(f2));
     uint8_t r2[420];
-    size_t r2l = DtlsRecord.plaintext_build(PC_DTLS_CT_HANDSHAKE, 0, 1, f2, f2l, r2, sizeof(r2));
+    size_t r2l = DtlsRecord.plaintext_build(PROTOCORE_DTLS_CT_HANDSHAKE, 0, 1, f2, f2l, r2, sizeof(r2));
 
     uint8_t flight[2048];
     int fl = DtlsServer.process(&g_dtls, r2, r2l, flight, sizeof(flight));
@@ -761,9 +761,9 @@ static void test_hrr_group_renegotiation(void)
 static void test_hrr_retry_without_cookie_rejected(void)
 {
     uint8_t client_pub[32];
-    pc_x25519_base(client_pub, CLIENT_X25519_PRIV);
+    protocore_x25519_base(client_pub, CLIENT_X25519_PRIV);
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
+    protocore_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
 
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
@@ -777,7 +777,7 @@ static void test_hrr_retry_without_cookie_rejected(void)
     size_t f1l = DtlsHandshake.frag_build(ch1[0], 0, (uint32_t)(ch1_len - 4), 0, ch1 + 4, (uint32_t)(ch1_len - 4), f1,
                                           sizeof(f1));
     uint8_t r1[320];
-    size_t r1l = DtlsRecord.plaintext_build(PC_DTLS_CT_HANDSHAKE, 0, 0, f1, f1l, r1, sizeof(r1));
+    size_t r1l = DtlsRecord.plaintext_build(PROTOCORE_DTLS_CT_HANDSHAKE, 0, 0, f1, f1l, r1, sizeof(r1));
     uint8_t hrr_flight[512];
     TEST_ASSERT_TRUE(DtlsServer.process(&g_dtls, r1, r1l, hrr_flight, sizeof(hrr_flight)) > 0);
 
@@ -789,7 +789,7 @@ static void test_hrr_retry_without_cookie_rejected(void)
     size_t f2l = DtlsHandshake.frag_build(ch2[0], 1, (uint32_t)(ch2_len - 4), 0, ch2 + 4, (uint32_t)(ch2_len - 4), f2,
                                           sizeof(f2));
     uint8_t r2[420];
-    size_t r2l = DtlsRecord.plaintext_build(PC_DTLS_CT_HANDSHAKE, 0, 1, f2, f2l, r2, sizeof(r2));
+    size_t r2l = DtlsRecord.plaintext_build(PROTOCORE_DTLS_CT_HANDSHAKE, 0, 1, f2, f2l, r2, sizeof(r2));
     uint8_t out[2048];
     TEST_ASSERT_EQUAL_INT(-1, DtlsServer.process(&g_dtls, r2, r2l, out, sizeof(out)));
     TEST_ASSERT_EQUAL_UINT8(47, DtlsServer.alert(&g_dtls)); // illegal_parameter (RFC 9147 sec 5.1)
@@ -799,9 +799,9 @@ static void test_hrr_retry_without_cookie_rejected(void)
 static void test_reject_no_tls13(void)
 {
     uint8_t client_pub[32];
-    pc_x25519_base(client_pub, CLIENT_X25519_PRIV);
+    protocore_x25519_base(client_pub, CLIENT_X25519_PRIV);
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
+    protocore_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     DtlsServer.init(&g_dtls, &cfg, NULL, 0);
@@ -820,28 +820,28 @@ static void test_reject_no_tls13(void)
     uint8_t frag[300], rec[320], out[1024];
     size_t fl = DtlsHandshake.frag_build(ch[0], 0, (uint32_t)(ch_len - 4), 0, ch + 4, (uint32_t)(ch_len - 4), frag,
                                          sizeof(frag));
-    size_t rl = DtlsRecord.plaintext_build(PC_DTLS_CT_HANDSHAKE, 0, 0, frag, fl, rec, sizeof(rec));
+    size_t rl = DtlsRecord.plaintext_build(PROTOCORE_DTLS_CT_HANDSHAKE, 0, 0, frag, fl, rec, sizeof(rec));
     TEST_ASSERT_EQUAL_INT(-1, DtlsServer.process(&g_dtls, rec, rl, out, sizeof(out)));
     TEST_ASSERT_EQUAL_UINT8(70, DtlsServer.alert(&g_dtls)); // protocol_version
 }
 
 // Drive a fresh connection from ClientHello to WAIT_FINISHED; return the server flight and seed the
 // client transcript @p tr through the ClientHello. Shared by the retransmission-timer tests.
-static int drive_server_flight(DtlsConn *conn, DtlsServerConfig *cfg, pc_sha256_ctx *tr, uint8_t *flight,
+static int drive_server_flight(DtlsConn *conn, DtlsServerConfig *cfg, protocore_sha256_ctx *tr, uint8_t *flight,
                                size_t flight_cap)
 {
     uint8_t client_pub[32];
-    pc_x25519_base(client_pub, CLIENT_X25519_PRIV);
+    protocore_x25519_base(client_pub, CLIENT_X25519_PRIV);
     DtlsServer.init(conn, cfg, NULL, 0);
     uint8_t ch[256];
     size_t ch_len = build_client_hello(ch, client_pub);
-    pc_sha256_init(tr, tw);
-    pc_sha256_update(tr, ch, ch_len);
+    protocore_sha256_init(tr, tw);
+    protocore_sha256_update(tr, ch, ch_len);
     uint8_t ch_frag[300];
     size_t ch_fl = DtlsHandshake.frag_build(ch[0], 0, (uint32_t)(ch_len - 4), 0, ch + 4, (uint32_t)(ch_len - 4),
                                             ch_frag, sizeof(ch_frag));
     uint8_t ch_rec[320];
-    size_t ch_rl = DtlsRecord.plaintext_build(PC_DTLS_CT_HANDSHAKE, 0, 0, ch_frag, ch_fl, ch_rec, sizeof(ch_rec));
+    size_t ch_rl = DtlsRecord.plaintext_build(PROTOCORE_DTLS_CT_HANDSHAKE, 0, 0, ch_frag, ch_fl, ch_rec, sizeof(ch_rec));
     return DtlsServer.process(conn, ch_rec, ch_rl, flight, flight_cap);
 }
 
@@ -851,23 +851,23 @@ static int drive_server_flight(DtlsConn *conn, DtlsServerConfig *cfg, pc_sha256_
 static void test_pto_retransmit_and_recovery(void)
 {
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
+    protocore_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
-    pc_sha256_ctx tr;
+    protocore_sha256_ctx tr;
     uint8_t flight[2048];
     int fl = drive_server_flight(&g_dtls, &cfg, &tr, flight, sizeof(flight));
     TEST_ASSERT_TRUE(fl > 0);
 
-    TEST_ASSERT_EQUAL_INT((int)PC_DTLS_PTO_INITIAL_MS, DtlsServer.timeout_ms(&g_dtls)); // armed at the initial PTO
+    TEST_ASSERT_EQUAL_INT((int)PROTOCORE_DTLS_PTO_INITIAL_MS, DtlsServer.timeout_ms(&g_dtls)); // armed at the initial PTO
 
     uint8_t rflight[2048];
     TEST_ASSERT_EQUAL_INT(0, DtlsServer.on_timeout(&g_dtls, rflight, sizeof(rflight))); // not due yet -> no-op
 
-    g_ms += PC_DTLS_PTO_INITIAL_MS;
+    g_ms += PROTOCORE_DTLS_PTO_INITIAL_MS;
     int rfl = DtlsServer.on_timeout(&g_dtls, rflight, sizeof(rflight));
     TEST_ASSERT_TRUE(rfl > 0); // whole flight retransmitted
-    TEST_ASSERT_EQUAL_INT((int)(PC_DTLS_PTO_INITIAL_MS * 2), DtlsServer.timeout_ms(&g_dtls)); // backed off to 2x
+    TEST_ASSERT_EQUAL_INT((int)(PROTOCORE_DTLS_PTO_INITIAL_MS * 2), DtlsServer.timeout_ms(&g_dtls)); // backed off to 2x
 
     // The retransmission is a valid, completable server flight (fresh record seqs); completing it also
     // disarms the timer.
@@ -880,25 +880,25 @@ static void test_pto_retransmit_and_recovery(void)
 static void test_pto_backoff_and_giveup(void)
 {
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
+    protocore_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
-    pc_sha256_ctx tr;
+    protocore_sha256_ctx tr;
     uint8_t flight[2048], rflight[2048];
     TEST_ASSERT_TRUE(drive_server_flight(&g_dtls, &cfg, &tr, flight, sizeof(flight)) > 0);
 
     // RFC 9147 sec 5.8.2 fixes the shape: 1 s initial, doubling, capped at 60 s. Spelled out rather
     // than recomputed with the implementation's own expression, which agreed with itself whatever
     // the rule or the macros became.
-    static const int PTO_MS[PC_DTLS_MAX_RETRANSMITS] = {2000, 4000, 8000, 16000, 32000, 60000, 60000, 60000};
+    static const int PTO_MS[PROTOCORE_DTLS_MAX_RETRANSMITS] = {2000, 4000, 8000, 16000, 32000, 60000, 60000, 60000};
     TEST_ASSERT_EQUAL_INT(1000, DtlsServer.timeout_ms(&g_dtls));
-    for (int i = 0; i < PC_DTLS_MAX_RETRANSMITS; i++)
+    for (int i = 0; i < PROTOCORE_DTLS_MAX_RETRANSMITS; i++)
     {
-        g_ms += PC_DTLS_PTO_MAX_MS + 1000; // well past any PTO
+        g_ms += PROTOCORE_DTLS_PTO_MAX_MS + 1000; // well past any PTO
         TEST_ASSERT_TRUE(DtlsServer.on_timeout(&g_dtls, rflight, sizeof(rflight)) > 0);
         TEST_ASSERT_EQUAL_INT(PTO_MS[i], DtlsServer.timeout_ms(&g_dtls));
     }
-    g_ms += PC_DTLS_PTO_MAX_MS + 1000;
+    g_ms += PROTOCORE_DTLS_PTO_MAX_MS + 1000;
     TEST_ASSERT_EQUAL_INT(-1, DtlsServer.on_timeout(&g_dtls, rflight, sizeof(rflight)));          // ceiling: give up
     TEST_ASSERT_EQUAL_INT(-1, DtlsServer.timeout_ms(&g_dtls));                                    // FAILED: no timer
     TEST_ASSERT_EQUAL_INT(-1, DtlsServer.process(&g_dtls, rflight, 1, rflight, sizeof(rflight))); // and rejects input
@@ -908,12 +908,12 @@ static void test_pto_backoff_and_giveup(void)
 static void test_pto_ack_cancels_retransmit(void)
 {
     uint8_t client_pub[32];
-    pc_x25519_base(client_pub, CLIENT_X25519_PRIV);
+    protocore_x25519_base(client_pub, CLIENT_X25519_PRIV);
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
+    protocore_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
-    pc_sha256_ctx tr;
+    protocore_sha256_ctx tr;
     uint8_t flight[2048];
     int fl = drive_server_flight(&g_dtls, &cfg, &tr, flight, sizeof(flight));
     TEST_ASSERT_TRUE(fl > 0);
@@ -929,18 +929,18 @@ static void test_pto_ack_cancels_retransmit(void)
     TEST_ASSERT_TRUE(sh_keyshare(sh, sh_len, server_pub));
     uint8_t ch[256];
     size_t ch_len = build_client_hello(ch, client_pub);
-    pc_sha256_ctx t;
-    pc_sha256_init(&t, tw_t);
-    pc_sha256_update(&t, ch, ch_len);
-    pc_sha256_update(&t, sh, sh_len);
+    protocore_sha256_ctx t;
+    protocore_sha256_init(&t, tw_t);
+    protocore_sha256_update(&t, ch, ch_len);
+    protocore_sha256_update(&t, sh, sh_len);
     uint8_t h[32];
-    pc_sha256_final(&t, h);
+    protocore_sha256_final(&t, h);
     uint8_t ecdhe[32];
-    pc_x25519(ecdhe, CLIENT_X25519_PRIV, server_pub);
+    protocore_x25519(ecdhe, CLIENT_X25519_PRIV, server_pub);
     Tls13KeySchedule cks;
-    static uint8_t ks_store_929[PC_TLS13_KS_BORROW];
-    pc_tls13_ks_early(&DTLS13_KDF, &cks, ks_store_929);
-    pc_tls13_ks_handshake(&cks, ecdhe, h, 32);
+    static uint8_t ks_store_929[PROTOCORE_TLS13_KS_BORROW];
+    protocore_tls13_ks_early(&DTLS13_KDF, &cks, ks_store_929);
+    protocore_tls13_ks_handshake(&cks, ecdhe, h, 32);
     DtlsRecordKeys cli_write;
     DtlsRecord.keys_derive(&cli_write, DTLS_CIPHER_AES_128_GCM_SHA256, 2, cks.s + TLS13_KS_CLIENT_HS);
 
@@ -950,7 +950,7 @@ static void test_pto_ack_cancels_retransmit(void)
     size_t bl = DtlsHandshake.ack_build(rns, 5, ack_body, sizeof(ack_body));
     TEST_ASSERT_TRUE(bl > 0);
     uint8_t ack_rec[160];
-    size_t ar = DtlsRecord.protect(&cli_write, 0, PC_DTLS_CT_ACK, ack_body, bl, ack_rec, sizeof(ack_rec), NULL, 0);
+    size_t ar = DtlsRecord.protect(&cli_write, 0, PROTOCORE_DTLS_CT_ACK, ack_body, bl, ack_rec, sizeof(ack_rec), NULL, 0);
     TEST_ASSERT_TRUE(ar > 0);
 
     uint8_t out[64];
@@ -974,7 +974,7 @@ static size_t plain_hs_record(uint8_t *out, size_t out_cap, const uint8_t *tls_m
     {
         return 0;
     }
-    return DtlsRecord.plaintext_build(PC_DTLS_CT_HANDSHAKE, 0, rec_seq, frag, fl, out, out_cap);
+    return DtlsRecord.plaintext_build(PROTOCORE_DTLS_CT_HANDSHAKE, 0, rec_seq, frag, fl, out, out_cap);
 }
 
 // Everything the minimal test client holds after the server flight: the epoch-2 and epoch-3 record
@@ -997,14 +997,14 @@ typedef struct
 static proto_bool run_to_finished(DtlsConn *conn, DtlsServerConfig *cfg, ClientSession *st)
 {
     uint8_t client_pub[32];
-    pc_x25519_base(client_pub, CLIENT_X25519_PRIV);
+    protocore_x25519_base(client_pub, CLIENT_X25519_PRIV);
     DtlsServer.init(conn, cfg, NULL, 0);
 
     uint8_t ch[256];
     size_t ch_len = build_client_hello(ch, client_pub);
-    pc_sha256_ctx tr;
-    pc_sha256_init(&tr, tw_tr);
-    pc_sha256_update(&tr, ch, ch_len);
+    protocore_sha256_ctx tr;
+    protocore_sha256_init(&tr, tw_tr);
+    protocore_sha256_update(&tr, ch, ch_len);
 
     uint8_t rec[320];
     size_t rl = plain_hs_record(rec, sizeof(rec), ch, ch_len, 0, 0);
@@ -1031,7 +1031,7 @@ static proto_bool run_to_finished(DtlsConn *conn, DtlsServerConfig *cfg, ClientS
     {
         return PROTO_FALSE;
     }
-    pc_sha256_update(&tr, sh, sh_len);
+    protocore_sha256_update(&tr, sh, sh_len);
     uint8_t server_pub[32];
     if (!sh_keyshare(sh, sh_len, server_pub))
     {
@@ -1039,12 +1039,12 @@ static proto_bool run_to_finished(DtlsConn *conn, DtlsServerConfig *cfg, ClientS
     }
 
     uint8_t ecdhe[32];
-    pc_x25519(ecdhe, CLIENT_X25519_PRIV, server_pub);
+    protocore_x25519(ecdhe, CLIENT_X25519_PRIV, server_pub);
     uint8_t h[32];
-    pc_sha256_final(&tr, h);
-    static uint8_t ks_store_1033[PC_TLS13_KS_BORROW];
-    pc_tls13_ks_early(&DTLS13_KDF, &st->cks, ks_store_1033);
-    pc_tls13_ks_handshake(&st->cks, ecdhe, h, 32);
+    protocore_sha256_final(&tr, h);
+    static uint8_t ks_store_1033[PROTOCORE_TLS13_KS_BORROW];
+    protocore_tls13_ks_early(&DTLS13_KDF, &st->cks, ks_store_1033);
+    protocore_tls13_ks_handshake(&st->cks, ecdhe, h, 32);
     DtlsRecord.keys_derive(&st->srv_hs_read, DTLS_CIPHER_AES_128_GCM_SHA256, 2, st->cks.s + TLS13_KS_SERVER_HS);
     DtlsRecord.keys_derive(&st->cli_hs_write, DTLS_CIPHER_AES_128_GCM_SHA256, 2, st->cks.s + TLS13_KS_CLIENT_HS);
 
@@ -1070,19 +1070,19 @@ static proto_bool run_to_finished(DtlsConn *conn, DtlsServerConfig *cfg, ClientS
         {
             return PROTO_FALSE;
         }
-        pc_sha256_update(&tr, msg, mlen);
+        protocore_sha256_update(&tr, msg, mlen);
     }
 
     uint8_t h_sfin[32];
-    pc_sha256_final(&tr, h_sfin);
-    pc_tls13_ks_master(&st->cks, h_sfin);
+    protocore_sha256_final(&tr, h_sfin);
+    protocore_tls13_ks_master(&st->cks, h_sfin);
     DtlsRecord.keys_derive(&st->cli_app_write, DTLS_CIPHER_AES_128_GCM_SHA256, 3, st->cks.s + TLS13_KS_CLIENT_AP);
     DtlsRecord.keys_derive(&st->cli_app_read, DTLS_CIPHER_AES_128_GCM_SHA256, 3, st->cks.s + TLS13_KS_SERVER_AP);
 
     uint8_t verify[32];
-    pc_tls13_finished_mac(&st->cks, st->cks.s + TLS13_KS_CLIENT_HS, h_sfin, verify);
+    protocore_tls13_finished_mac(&st->cks, st->cks.s + TLS13_KS_CLIENT_HS, h_sfin, verify);
     uint8_t cfin[64];
-    size_t cfin_len = pc_tls13_build_finished(cfin, sizeof(cfin), verify);
+    size_t cfin_len = protocore_tls13_build_finished(cfin, sizeof(cfin), verify);
     if (cfin_len < 4)
     {
         return PROTO_FALSE;
@@ -1096,7 +1096,7 @@ static proto_bool run_to_finished(DtlsConn *conn, DtlsServerConfig *cfg, ClientS
 static int feed_client_finished(DtlsConn *conn, ClientSession *st, uint64_t seq, uint8_t *out, size_t out_cap)
 {
     uint8_t rec[128];
-    size_t rl = DtlsRecord.protect(&st->cli_hs_write, seq, PC_DTLS_CT_HANDSHAKE, st->cfin_frag, st->cfin_frag_len, rec,
+    size_t rl = DtlsRecord.protect(&st->cli_hs_write, seq, PROTOCORE_DTLS_CT_HANDSHAKE, st->cfin_frag, st->cfin_frag_len, rec,
                                    sizeof(rec), NULL, 0);
     if (!rl)
     {
@@ -1118,7 +1118,7 @@ static int feed_epoch2_msg(DtlsConn *conn, ClientSession *st, uint64_t seq, uint
         return -2;
     }
     uint8_t rec[192];
-    size_t rl = DtlsRecord.protect(&st->cli_hs_write, seq, PC_DTLS_CT_HANDSHAKE, frag, fl, rec, sizeof(rec), NULL, 0);
+    size_t rl = DtlsRecord.protect(&st->cli_hs_write, seq, PROTOCORE_DTLS_CT_HANDSHAKE, frag, fl, rec, sizeof(rec), NULL, 0);
     if (!rl)
     {
         return -2;
@@ -1131,7 +1131,7 @@ static int feed_epoch2_ack(DtlsConn *conn, ClientSession *st, uint64_t seq, cons
                            uint8_t *out, size_t out_cap)
 {
     uint8_t rec[192];
-    size_t rl = DtlsRecord.protect(&st->cli_hs_write, seq, PC_DTLS_CT_ACK, body, blen, rec, sizeof(rec), NULL, 0);
+    size_t rl = DtlsRecord.protect(&st->cli_hs_write, seq, PROTOCORE_DTLS_CT_ACK, body, blen, rec, sizeof(rec), NULL, 0);
     if (!rl)
     {
         return -2;
@@ -1144,7 +1144,7 @@ static int feed_epoch2_ack(DtlsConn *conn, ClientSession *st, uint64_t seq, cons
 static void test_ciphertext_truncated_header_stops_walk(void)
 {
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
+    protocore_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     uint8_t out[64];
@@ -1173,7 +1173,7 @@ static void test_ciphertext_truncated_header_stops_walk(void)
 static void test_ciphertext_before_keys_is_discarded(void)
 {
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
+    protocore_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     uint8_t out[64];
@@ -1195,16 +1195,16 @@ static void test_ciphertext_before_keys_is_discarded(void)
 static void test_plaintext_non_handshake_record_ignored(void)
 {
     uint8_t client_pub[32];
-    pc_x25519_base(client_pub, CLIENT_X25519_PRIV);
+    protocore_x25519_base(client_pub, CLIENT_X25519_PRIV);
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
+    protocore_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     DtlsServer.init(&g_dtls, &cfg, NULL, 0);
 
     const uint8_t alert_body[2] = {0x01, 0x00}; // warning, close_notify
     uint8_t rec[32];
-    size_t rl = DtlsRecord.plaintext_build(PC_DTLS_CT_ALERT, 0, 0, alert_body, sizeof(alert_body), rec, sizeof(rec));
+    size_t rl = DtlsRecord.plaintext_build(PROTOCORE_DTLS_CT_ALERT, 0, 0, alert_body, sizeof(alert_body), rec, sizeof(rec));
     TEST_ASSERT_TRUE(rl > 0);
     uint8_t out[2048];
     TEST_ASSERT_EQUAL_INT(0, DtlsServer.process(&g_dtls, rec, rl, out, sizeof(out)));
@@ -1223,14 +1223,14 @@ static void test_plaintext_non_handshake_record_ignored(void)
 static void test_truncated_handshake_fragment_ignored(void)
 {
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
+    protocore_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     DtlsServer.init(&g_dtls, &cfg, NULL, 0);
 
     const uint8_t stub[5] = {0x01, 0x00, 0x00, 0x20, 0x00}; // first 5 bytes of a handshake header
     uint8_t rec[32];
-    size_t rl = DtlsRecord.plaintext_build(PC_DTLS_CT_HANDSHAKE, 0, 0, stub, sizeof(stub), rec, sizeof(rec));
+    size_t rl = DtlsRecord.plaintext_build(PROTOCORE_DTLS_CT_HANDSHAKE, 0, 0, stub, sizeof(stub), rec, sizeof(rec));
     TEST_ASSERT_TRUE(rl > 0);
     uint8_t out[64];
     TEST_ASSERT_EQUAL_INT(0, DtlsServer.process(&g_dtls, rec, rl, out, sizeof(out)));
@@ -1242,9 +1242,9 @@ static void test_truncated_handshake_fragment_ignored(void)
 static void test_fragment_for_other_msg_seq_ignored(void)
 {
     uint8_t client_pub[32];
-    pc_x25519_base(client_pub, CLIENT_X25519_PRIV);
+    protocore_x25519_base(client_pub, CLIENT_X25519_PRIV);
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
+    protocore_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     DtlsServer.init(&g_dtls, &cfg, NULL, 0);
@@ -1268,18 +1268,18 @@ static void test_fragment_for_other_msg_seq_ignored(void)
 static void test_oversize_handshake_message_rejected(void)
 {
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
+    protocore_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     DtlsServer.init(&g_dtls, &cfg, NULL, 0);
 
     const uint8_t body[8] = {0};
     uint8_t frag[32];
-    size_t fl = DtlsHandshake.frag_build(TLS_HS_CLIENT_HELLO, 0, (uint32_t)(PC_DTLS_CONN_REASM_CAP + 1), 0, body,
+    size_t fl = DtlsHandshake.frag_build(TLS_HS_CLIENT_HELLO, 0, (uint32_t)(PROTOCORE_DTLS_CONN_REASM_CAP + 1), 0, body,
                                          sizeof(body), frag, sizeof(frag));
     TEST_ASSERT_TRUE(fl > 0);
     uint8_t rec[64];
-    size_t rl = DtlsRecord.plaintext_build(PC_DTLS_CT_HANDSHAKE, 0, 0, frag, fl, rec, sizeof(rec));
+    size_t rl = DtlsRecord.plaintext_build(PROTOCORE_DTLS_CT_HANDSHAKE, 0, 0, frag, fl, rec, sizeof(rec));
     TEST_ASSERT_TRUE(rl > 0);
     uint8_t out[64];
     TEST_ASSERT_EQUAL_INT(-1, DtlsServer.process(&g_dtls, rec, rl, out, sizeof(out)));
@@ -1290,7 +1290,7 @@ static void test_oversize_handshake_message_rejected(void)
 static void test_unexpected_message_in_start_rejected(void)
 {
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
+    protocore_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     DtlsServer.init(&g_dtls, &cfg, NULL, 0);
@@ -1314,9 +1314,9 @@ static void test_unexpected_message_in_start_rejected(void)
 static void test_client_hello_missing_algorithms_rejected(void)
 {
     uint8_t client_pub[32];
-    pc_x25519_base(client_pub, CLIENT_X25519_PRIV);
+    protocore_x25519_base(client_pub, CLIENT_X25519_PRIV);
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
+    protocore_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     uint8_t rec[320];
@@ -1348,10 +1348,10 @@ static void test_client_hello_missing_algorithms_rejected(void)
 static void test_oversize_certificate_is_internal_error(void)
 {
     uint8_t client_pub[32];
-    pc_x25519_base(client_pub, CLIENT_X25519_PRIV);
+    protocore_x25519_base(client_pub, CLIENT_X25519_PRIV);
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
-    static uint8_t big_cert[PC_DTLS_CONN_MSG_CAP + 200];
+    protocore_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
+    static uint8_t big_cert[PROTOCORE_DTLS_CONN_MSG_CAP + 200];
     memset(big_cert, 0xAB, sizeof(big_cert));
 
     DtlsServerConfig cfg;
@@ -1375,9 +1375,9 @@ static void test_oversize_certificate_is_internal_error(void)
 static void test_flight_out_cap_too_small_is_internal_error(void)
 {
     uint8_t client_pub[32];
-    pc_x25519_base(client_pub, CLIENT_X25519_PRIV);
+    protocore_x25519_base(client_pub, CLIENT_X25519_PRIV);
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
+    protocore_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     uint8_t rec[320];
@@ -1407,14 +1407,14 @@ static void test_flight_out_cap_too_small_is_internal_error(void)
 static void test_retransmit_out_cap_too_small(void)
 {
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
+    protocore_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
-    pc_sha256_ctx tr;
+    protocore_sha256_ctx tr;
     uint8_t flight[2048];
     TEST_ASSERT_TRUE(drive_server_flight(&g_dtls, &cfg, &tr, flight, sizeof(flight)) > 0);
 
-    g_ms += PC_DTLS_PTO_INITIAL_MS;
+    g_ms += PROTOCORE_DTLS_PTO_INITIAL_MS;
     uint8_t tiny[32];
     TEST_ASSERT_EQUAL_INT(-1, DtlsServer.on_timeout(&g_dtls, tiny, sizeof(tiny)));
 }
@@ -1424,9 +1424,9 @@ static void test_retransmit_out_cap_too_small(void)
 static void test_timer_idle_when_done_or_failed(void)
 {
     uint8_t client_pub[32];
-    pc_x25519_base(client_pub, CLIENT_X25519_PRIV);
+    protocore_x25519_base(client_pub, CLIENT_X25519_PRIV);
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
+    protocore_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     uint8_t out[256];
@@ -1435,13 +1435,13 @@ static void test_timer_idle_when_done_or_failed(void)
     TEST_ASSERT_TRUE(run_to_finished(&g_dtls, &cfg, &st));
     TEST_ASSERT_TRUE(feed_client_finished(&g_dtls, &st, 0, out, sizeof(out)) > 0);
     TEST_ASSERT_TRUE(DtlsServer.established(&g_dtls));
-    g_ms += PC_DTLS_PTO_MAX_MS;
+    g_ms += PROTOCORE_DTLS_PTO_MAX_MS;
     TEST_ASSERT_EQUAL_INT(-1, DtlsServer.timeout_ms(&g_dtls));
     TEST_ASSERT_EQUAL_INT(0, DtlsServer.on_timeout(&g_dtls, out, sizeof(out)));
 
     // A connection that failed while its flight was still outstanding: awaiting_reply is still set,
     // so only the FAILED state stops the timer.
-    pc_sha256_ctx tr;
+    protocore_sha256_ctx tr;
     uint8_t flight[2048];
     TEST_ASSERT_TRUE(drive_server_flight(&g_dtls2, &cfg, &tr, flight, sizeof(flight)) > 0);
     TEST_ASSERT_TRUE(DtlsServer.timeout_ms(&g_dtls2) >= 0); // armed
@@ -1461,7 +1461,7 @@ static void test_timer_idle_when_done_or_failed(void)
 static void test_client_finished_error_paths(void)
 {
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
+    protocore_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     uint8_t out[256];
@@ -1508,19 +1508,19 @@ static void test_client_finished_error_paths(void)
 static void test_ack_malformed_and_partial_keep_timer(void)
 {
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
+    protocore_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     ClientSession st;
     TEST_ASSERT_TRUE(run_to_finished(&g_dtls, &cfg, &st));
-    TEST_ASSERT_EQUAL_INT((int)PC_DTLS_PTO_INITIAL_MS, DtlsServer.timeout_ms(&g_dtls));
+    TEST_ASSERT_EQUAL_INT((int)PROTOCORE_DTLS_PTO_INITIAL_MS, DtlsServer.timeout_ms(&g_dtls));
     uint8_t out[64];
 
     // The ACK's list length claims one record number that is not there.
     const uint8_t malformed[2] = {0x00, 0x10};
     TEST_ASSERT_EQUAL_INT(0, feed_epoch2_ack(&g_dtls, &st, 0, malformed, sizeof(malformed), out, sizeof(out)));
     TEST_ASSERT_EQUAL_UINT8(0, DtlsServer.alert(&g_dtls));
-    TEST_ASSERT_EQUAL_INT((int)PC_DTLS_PTO_INITIAL_MS, DtlsServer.timeout_ms(&g_dtls)); // still armed
+    TEST_ASSERT_EQUAL_INT((int)PROTOCORE_DTLS_PTO_INITIAL_MS, DtlsServer.timeout_ms(&g_dtls)); // still armed
 
     // A partial ACK: only the epoch-0 ServerHello record, not the four epoch-2 messages.
     DtlsRecordNumber one = {0, 0};
@@ -1528,7 +1528,7 @@ static void test_ack_malformed_and_partial_keep_timer(void)
     size_t bl = DtlsHandshake.ack_build(&one, 1, body, sizeof(body));
     TEST_ASSERT_TRUE(bl > 0);
     TEST_ASSERT_EQUAL_INT(0, feed_epoch2_ack(&g_dtls, &st, 1, body, bl, out, sizeof(out)));
-    TEST_ASSERT_EQUAL_INT((int)PC_DTLS_PTO_INITIAL_MS, DtlsServer.timeout_ms(&g_dtls)); // still armed
+    TEST_ASSERT_EQUAL_INT((int)PROTOCORE_DTLS_PTO_INITIAL_MS, DtlsServer.timeout_ms(&g_dtls)); // still armed
 }
 
 // After a complete ACK disarms the timer, a replay of that record is dropped by the anti-replay
@@ -1536,7 +1536,7 @@ static void test_ack_malformed_and_partial_keep_timer(void)
 static void test_ack_replay_and_late_ack_ignored(void)
 {
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
+    protocore_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     ClientSession st;
@@ -1549,7 +1549,7 @@ static void test_ack_replay_and_late_ack_ignored(void)
     size_t bl = DtlsHandshake.ack_build(rns, 5, body, sizeof(body));
     TEST_ASSERT_TRUE(bl > 0);
     uint8_t rec[192];
-    size_t rl = DtlsRecord.protect(&st.cli_hs_write, 0, PC_DTLS_CT_ACK, body, bl, rec, sizeof(rec), NULL, 0);
+    size_t rl = DtlsRecord.protect(&st.cli_hs_write, 0, PROTOCORE_DTLS_CT_ACK, body, bl, rec, sizeof(rec), NULL, 0);
     TEST_ASSERT_TRUE(rl > 0);
     TEST_ASSERT_EQUAL_INT(0, DtlsServer.process(&g_dtls, rec, rl, out, sizeof(out)));
     TEST_ASSERT_EQUAL_INT(-1, DtlsServer.timeout_ms(&g_dtls)); // disarmed
@@ -1573,7 +1573,7 @@ static void test_ack_replay_and_late_ack_ignored(void)
 static void test_completion_ack_deferred_when_out_full(void)
 {
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
+    protocore_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     ClientSession st;
@@ -1590,7 +1590,7 @@ static void test_completion_ack_deferred_when_out_full(void)
     uint8_t pt[64];
     DtlsCiphertext info;
     TEST_ASSERT_TRUE(DtlsRecord.unprotect(&st.cli_app_read, 0, out, (size_t)n, pt, sizeof(pt), &info, NULL, 0));
-    TEST_ASSERT_EQUAL_UINT8(PC_DTLS_CT_ACK, info.content_type);
+    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_DTLS_CT_ACK, info.content_type);
 }
 
 // The epoch-3 application record paths: nothing is available before the handshake completes, and once
@@ -1603,7 +1603,7 @@ static void test_completion_ack_deferred_when_out_full(void)
 static void test_forged_record_does_not_end_the_association(void)
 {
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
+    protocore_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
 
@@ -1626,7 +1626,7 @@ static void test_forged_record_does_not_end_the_association(void)
     // And genuine application data still opens afterwards.
     const uint8_t payload[5] = {'h', 'e', 'l', 'l', 'o'};
     uint8_t apprec[64];
-    size_t pl = DtlsRecord.protect(&st.cli_app_write, 0, PC_DTLS_CT_APPLICATION_DATA, payload, sizeof(payload), apprec,
+    size_t pl = DtlsRecord.protect(&st.cli_app_write, 0, PROTOCORE_DTLS_CT_APPLICATION_DATA, payload, sizeof(payload), apprec,
                                    sizeof(apprec), NULL, 0);
     TEST_ASSERT_TRUE(pl > 0);
     uint8_t plain[64];
@@ -1639,7 +1639,7 @@ static void test_forged_record_does_not_end_the_association(void)
 static void test_app_records_before_and_after_established(void)
 {
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
+    protocore_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     const uint8_t payload[5] = {'h', 'e', 'l', 'l', 'o'};
@@ -1654,7 +1654,7 @@ static void test_app_records_before_and_after_established(void)
     TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)sealed);
     TEST_ASSERT_NULL(DtlsServer.app_write_keys(&g_dtls));
     TEST_ASSERT_NULL(DtlsServer.app_read_keys(&g_dtls));
-    uint8_t cid_out[PC_DTLS_CID_MAX];
+    uint8_t cid_out[PROTOCORE_DTLS_CID_MAX];
     TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)DtlsServer.local_cid(&g_dtls, cid_out));
 
     ClientSession st;
@@ -1675,14 +1675,14 @@ static void test_app_records_before_and_after_established(void)
 
     // A record that opens cleanly but whose inner content type is not application_data.
     uint8_t ackrec[64];
-    size_t al = DtlsRecord.protect(&st.cli_app_write, 0, PC_DTLS_CT_ACK, payload, sizeof(payload), ackrec,
+    size_t al = DtlsRecord.protect(&st.cli_app_write, 0, PROTOCORE_DTLS_CT_ACK, payload, sizeof(payload), ackrec,
                                    sizeof(ackrec), NULL, 0);
     TEST_ASSERT_TRUE(al > 0);
     TEST_ASSERT_FALSE(DtlsServer.open_app(&g_dtls2, ackrec, al, plain, sizeof(plain), &plen));
 
     // Genuine application data opens once, and its replay is refused.
     uint8_t apprec[64];
-    size_t pl = DtlsRecord.protect(&st.cli_app_write, 1, PC_DTLS_CT_APPLICATION_DATA, payload, sizeof(payload), apprec,
+    size_t pl = DtlsRecord.protect(&st.cli_app_write, 1, PROTOCORE_DTLS_CT_APPLICATION_DATA, payload, sizeof(payload), apprec,
                                    sizeof(apprec), NULL, 0);
     TEST_ASSERT_TRUE(pl > 0);
     TEST_ASSERT_TRUE(DtlsServer.open_app(&g_dtls2, apprec, pl, plain, sizeof(plain), &plen));
@@ -1697,7 +1697,7 @@ static void test_app_records_before_and_after_established(void)
     TEST_ASSERT_TRUE(sl > 0);
     DtlsCiphertext info;
     TEST_ASSERT_TRUE(DtlsRecord.unprotect(&st.cli_app_read, 1, srec, sl, plain, sizeof(plain), &info, NULL, 0));
-    TEST_ASSERT_EQUAL_UINT8(PC_DTLS_CT_APPLICATION_DATA, info.content_type);
+    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_DTLS_CT_APPLICATION_DATA, info.content_type);
     TEST_ASSERT_EQUAL_UINT32(sizeof(payload), (uint32_t)info.pt_len);
     TEST_ASSERT_EQUAL_MEMORY(payload, plain, sizeof(payload));
 }
@@ -1708,17 +1708,17 @@ static void test_app_records_before_and_after_established(void)
 static void test_conn_id_edge_cases(void)
 {
     uint8_t client_pub[32];
-    pc_x25519_base(client_pub, CLIENT_X25519_PRIV);
+    protocore_x25519_base(client_pub, CLIENT_X25519_PRIV);
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
+    protocore_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     uint8_t rec[320];
     uint8_t flight[2048];
-    uint8_t cid_out[PC_DTLS_CID_MAX];
+    uint8_t cid_out[PROTOCORE_DTLS_CID_MAX];
 
     // An over-long connection id: the extension is ignored, so no CID is negotiated.
-    uint8_t big_cid[PC_DTLS_CID_MAX + 1];
+    uint8_t big_cid[PROTOCORE_DTLS_CID_MAX + 1];
     memset(big_cid, 0xD1, sizeof(big_cid));
     DtlsServer.init(&g_dtls, &cfg, NULL, 0);
     uint8_t ch_a[256];
@@ -1744,8 +1744,8 @@ static void test_conn_id_edge_cases(void)
     TEST_ASSERT_TRUE(rb > 0);
     int fb = DtlsServer.process(&g_dtls2, rec, rb, flight, sizeof(flight));
     TEST_ASSERT_TRUE(fb > 0);
-    TEST_ASSERT_EQUAL_UINT32((uint32_t)PC_DTLS_CONN_LOCAL_CID_LEN, (uint32_t)DtlsServer.local_cid(&g_dtls2, cid_out));
-    TEST_ASSERT_EQUAL_MEMORY(SERVER_RANDOM, cid_out, PC_DTLS_CONN_LOCAL_CID_LEN); // taken from the ServerHello random
+    TEST_ASSERT_EQUAL_UINT32((uint32_t)PROTOCORE_DTLS_CONN_LOCAL_CID_LEN, (uint32_t)DtlsServer.local_cid(&g_dtls2, cid_out));
+    TEST_ASSERT_EQUAL_MEMORY(SERVER_RANDOM, cid_out, PROTOCORE_DTLS_CONN_LOCAL_CID_LEN); // taken from the ServerHello random
     size_t shl_b = DtlsRecord.plaintext_parse(flight, (size_t)fb, &pt);
     TEST_ASSERT_TRUE(shl_b > 0);
     TEST_ASSERT_TRUE((flight[shl_b] & 0x10) == 0); // the client's CID is empty, so no C bit
@@ -1756,9 +1756,9 @@ static void test_conn_id_edge_cases(void)
 static proto_bool hrr_roundtrip_accepted(const uint8_t *addr, size_t addr_len)
 {
     uint8_t client_pub[32];
-    pc_x25519_base(client_pub, CLIENT_X25519_PRIV);
+    protocore_x25519_base(client_pub, CLIENT_X25519_PRIV);
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
+    protocore_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     DtlsServer.init(&g_dtls, &cfg, addr, addr_len);
@@ -1786,7 +1786,7 @@ static proto_bool hrr_roundtrip_accepted(const uint8_t *addr, size_t addr_len)
     }
     uint8_t hrr[512];
     size_t hrr_len = frag_to_tls(pt.fragment, pt.frag_len, hrr);
-    uint8_t cookie[PC_DTLS_COOKIE_MAX];
+    uint8_t cookie[PROTOCORE_DTLS_COOKIE_MAX];
     size_t cookie_len = 0;
     if (!hrr_len || !hrr_cookie(hrr, hrr_len, cookie, &cookie_len))
     {
@@ -1806,7 +1806,7 @@ static proto_bool hrr_roundtrip_accepted(const uint8_t *addr, size_t addr_len)
 }
 
 // The bound peer address is optional and is clamped: a non-NULL address of length 0 binds nothing,
-// and an over-long address keeps only its first PC_DTLS_PEER_ADDR_MAX bytes. Either way the cookie the
+// and an over-long address keeps only its first PROTOCORE_DTLS_PEER_ADDR_MAX bytes. Either way the cookie the
 // server mints verifies against what it kept, so the retry is accepted.
 // RFC 9147 sec 4.3: a handshake message longer than the path's datagram is sent as several
 // fragments. flight_add used to emit one fragment covering the whole message whatever the path was,
@@ -1814,12 +1814,12 @@ static proto_bool hrr_roundtrip_accepted(const uint8_t *addr, size_t addr_len)
 static void test_flight_fragments_to_the_pmtu(void)
 {
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
+    protocore_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     cfg.pmtu = 96; // a body budget of 55 bytes: the ServerHello and CertificateVerify both split
 
-    pc_sha256_ctx tr;
+    protocore_sha256_ctx tr;
     uint8_t flight[2048];
     int fl = drive_server_flight(&g_dtls, &cfg, &tr, flight, sizeof(flight));
     TEST_ASSERT_TRUE(fl > 0);
@@ -1830,13 +1830,13 @@ static void test_flight_fragments_to_the_pmtu(void)
     // Each buffered fragment still fits one datagram once its record is wrapped around it.
     for (uint8_t i = 0; i < g_dtls.flight_count; i++)
     {
-        TEST_ASSERT_TRUE(g_dtls.flight_msgs[i].len + PC_DTLS_REC_OVERHEAD_MAX <= cfg.pmtu);
+        TEST_ASSERT_TRUE(g_dtls.flight_msgs[i].len + PROTOCORE_DTLS_REC_OVERHEAD_MAX <= cfg.pmtu);
     }
 
     // The default path takes the same flight in fewer, larger fragments.
     DtlsServerConfig wide;
     server_cfg(&wide, server_ed_pub);
-    pc_sha256_ctx tr2;
+    protocore_sha256_ctx tr2;
     uint8_t flight2[2048];
     TEST_ASSERT_TRUE(drive_server_flight(&g_dtls2, &wide, &tr2, flight2, sizeof(flight2)) > 0);
     TEST_ASSERT_TRUE(g_dtls2.flight_count < g_dtls.flight_count);
@@ -1850,9 +1850,9 @@ static void test_cookie_is_worthless_to_another_peer(void)
     static const uint8_t OTHER_ADDR[] = {10, 0, 0, 9, 0x30, 0x39};
 
     uint8_t client_pub[32];
-    pc_x25519_base(client_pub, CLIENT_X25519_PRIV);
+    protocore_x25519_base(client_pub, CLIENT_X25519_PRIV);
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
+    protocore_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
 
@@ -1873,7 +1873,7 @@ static void test_cookie_is_worthless_to_another_peer(void)
     uint8_t hrr[512];
     size_t hrr_len = frag_to_tls(pt.fragment, pt.frag_len, hrr);
     TEST_ASSERT_TRUE(hrr_len > 0);
-    uint8_t cookie[PC_DTLS_COOKIE_MAX];
+    uint8_t cookie[PROTOCORE_DTLS_COOKIE_MAX];
     size_t cookie_len = 0;
     TEST_ASSERT_TRUE(hrr_cookie(hrr, hrr_len, cookie, &cookie_len));
 
@@ -1907,7 +1907,7 @@ static void test_peer_addr_zero_length_and_clamped(void)
     // With no address there is nothing to bind to, so this shows the cookie survives a round trip,
     // not that it is bound. The binding itself is the test above.
     TEST_ASSERT_TRUE(hrr_roundtrip_accepted(TEST_PEER_ADDR, 0));
-    uint8_t big_addr[PC_DTLS_PEER_ADDR_MAX + 14];
+    uint8_t big_addr[PROTOCORE_DTLS_PEER_ADDR_MAX + 14];
     for (size_t i = 0; i < sizeof(big_addr); i++)
     {
         big_addr[i] = (uint8_t)(0x40 + i);
@@ -1920,9 +1920,9 @@ static void test_peer_addr_zero_length_and_clamped(void)
 static void test_hrr_retry_without_keyshare_rejected(void)
 {
     uint8_t client_pub[32];
-    pc_x25519_base(client_pub, CLIENT_X25519_PRIV);
+    protocore_x25519_base(client_pub, CLIENT_X25519_PRIV);
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
+    protocore_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     DtlsServer.init(&g_dtls, &cfg, TEST_PEER_ADDR, sizeof(TEST_PEER_ADDR));
@@ -1947,9 +1947,9 @@ static void test_hrr_retry_without_keyshare_rejected(void)
 static void test_hrr_retry_with_corrupt_cookie_rejected(void)
 {
     uint8_t client_pub[32];
-    pc_x25519_base(client_pub, CLIENT_X25519_PRIV);
+    protocore_x25519_base(client_pub, CLIENT_X25519_PRIV);
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
+    protocore_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     DtlsServer.init(&g_dtls, &cfg, TEST_PEER_ADDR, sizeof(TEST_PEER_ADDR));
@@ -1969,7 +1969,7 @@ static void test_hrr_retry_with_corrupt_cookie_rejected(void)
     uint8_t hrr[512];
     size_t hrr_len = frag_to_tls(pt.fragment, pt.frag_len, hrr);
     TEST_ASSERT_TRUE(hrr_len > 0);
-    uint8_t cookie[PC_DTLS_COOKIE_MAX];
+    uint8_t cookie[PROTOCORE_DTLS_COOKIE_MAX];
     size_t cookie_len = 0;
     TEST_ASSERT_TRUE(hrr_cookie(hrr, hrr_len, cookie, &cookie_len));
     TEST_ASSERT_TRUE(cookie_len > 0);
@@ -1991,7 +1991,7 @@ static void test_hrr_retry_with_corrupt_cookie_rejected(void)
 static void test_non_finished_message_after_done_rejected(void)
 {
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
+    protocore_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     ClientSession st;
@@ -2017,7 +2017,7 @@ static void test_non_finished_message_after_done_rejected(void)
 static void test_epoch2_other_content_type_ignored(void)
 {
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
+    protocore_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     ClientSession st;
@@ -2027,14 +2027,14 @@ static void test_epoch2_other_content_type_ignored(void)
     // and dropped, leaving the connection healthy and still awaiting the Finished.
     const uint8_t payload[4] = {0xDE, 0xAD, 0xBE, 0xEF};
     uint8_t rec[128];
-    size_t rl = DtlsRecord.protect(&st.cli_hs_write, 0, PC_DTLS_CT_APPLICATION_DATA, payload, sizeof(payload), rec,
+    size_t rl = DtlsRecord.protect(&st.cli_hs_write, 0, PROTOCORE_DTLS_CT_APPLICATION_DATA, payload, sizeof(payload), rec,
                                    sizeof(rec), NULL, 0);
     TEST_ASSERT_TRUE(rl > 0);
     uint8_t out[128];
     TEST_ASSERT_EQUAL_INT(0, DtlsServer.process(&g_dtls, rec, rl, out, sizeof(out)));
     TEST_ASSERT_EQUAL_UINT8(0, DtlsServer.alert(&g_dtls));
     TEST_ASSERT_FALSE(DtlsServer.established(&g_dtls));
-    TEST_ASSERT_EQUAL_INT((int)PC_DTLS_PTO_INITIAL_MS, DtlsServer.timeout_ms(&g_dtls)); // still armed
+    TEST_ASSERT_EQUAL_INT((int)PROTOCORE_DTLS_PTO_INITIAL_MS, DtlsServer.timeout_ms(&g_dtls)); // still armed
 
     // The Finished that follows still completes the handshake and is acknowledged.
     TEST_ASSERT_TRUE(feed_client_finished(&g_dtls, &st, 1, out, sizeof(out)) > 0);
@@ -2046,7 +2046,7 @@ static void test_epoch2_other_content_type_ignored(void)
 static void test_timer_stopped_by_done_state(void)
 {
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
+    protocore_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     ClientSession st;
@@ -2057,7 +2057,7 @@ static void test_timer_stopped_by_done_state(void)
 
     // Re-arm the timer behind the state machine's back: DONE must still veto the retransmission.
     g_dtls.awaiting_reply = PROTO_TRUE;
-    g_ms += PC_DTLS_PTO_MAX_MS;
+    g_ms += PROTOCORE_DTLS_PTO_MAX_MS;
     TEST_ASSERT_EQUAL_INT(-1, DtlsServer.timeout_ms(&g_dtls));
     TEST_ASSERT_EQUAL_INT(0, DtlsServer.on_timeout(&g_dtls, out, sizeof(out)));
     TEST_ASSERT_EQUAL_UINT8(0, DtlsServer.alert(&g_dtls)); // nothing was disturbed
@@ -2068,7 +2068,7 @@ static void test_timer_stopped_by_done_state(void)
 static void test_established_requires_app_keys(void)
 {
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
+    protocore_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     ClientSession st;
@@ -2092,9 +2092,9 @@ static void test_established_requires_app_keys(void)
 static void test_local_cid_requires_nonempty_id(void)
 {
     uint8_t client_pub[32];
-    pc_x25519_base(client_pub, CLIENT_X25519_PRIV);
+    protocore_x25519_base(client_pub, CLIENT_X25519_PRIV);
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
+    protocore_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
 
@@ -2110,8 +2110,8 @@ static void test_local_cid_requires_nonempty_id(void)
     TEST_ASSERT_TRUE(DtlsServer.process(&g_dtls, rec, rl, flight, sizeof(flight)) > 0);
     TEST_ASSERT_TRUE(g_dtls.cid_negotiated);
 
-    uint8_t cid_out[PC_DTLS_CID_MAX];
-    TEST_ASSERT_EQUAL_UINT32((uint32_t)PC_DTLS_CONN_LOCAL_CID_LEN, (uint32_t)DtlsServer.local_cid(&g_dtls, cid_out));
+    uint8_t cid_out[PROTOCORE_DTLS_CID_MAX];
+    TEST_ASSERT_EQUAL_UINT32((uint32_t)PROTOCORE_DTLS_CONN_LOCAL_CID_LEN, (uint32_t)DtlsServer.local_cid(&g_dtls, cid_out));
 
     // Negotiated, but with an empty local id: nothing is reported and nothing is written out.
     g_dtls.local_cid_len = 0;
@@ -2127,7 +2127,7 @@ static void test_local_cid_requires_nonempty_id(void)
 static void low_order_share_is_refused(const uint8_t client_pub[32], const char *what)
 {
     uint8_t server_ed_pub[32];
-    pc_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
+    protocore_ed25519_pubkey(tw, server_ed_pub, SERVER_ED_SEED);
 
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
@@ -2140,7 +2140,7 @@ static void low_order_share_is_refused(const uint8_t client_pub[32], const char 
     size_t ch_fl = DtlsHandshake.frag_build(ch[0], 0, (uint32_t)(ch_len - 4), 0, ch + 4, (uint32_t)(ch_len - 4),
                                             ch_frag, sizeof(ch_frag));
     uint8_t ch_rec[320];
-    size_t ch_rl = DtlsRecord.plaintext_build(PC_DTLS_CT_HANDSHAKE, 0, 0, ch_frag, ch_fl, ch_rec, sizeof(ch_rec));
+    size_t ch_rl = DtlsRecord.plaintext_build(PROTOCORE_DTLS_CT_HANDSHAKE, 0, 0, ch_frag, ch_fl, ch_rec, sizeof(ch_rec));
 
     uint8_t out[2048];
     int rc = DtlsServer.process(&g_dtls, ch_rec, ch_rl, out, sizeof(out));

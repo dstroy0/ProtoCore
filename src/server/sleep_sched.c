@@ -8,9 +8,9 @@
 
 #include "server/sleep_sched.h"
 
-#if PC_ENABLE_SLEEP_SCHED
+#if PROTOCORE_ENABLE_SLEEP_SCHED
 
-uint32_t pc_sleep_next(uint32_t now, uint32_t last_active_ms, const pc_sleep_cfg *cfg)
+uint32_t protocore_sleep_next(uint32_t now, uint32_t last_active_ms, const protocore_sleep_cfg *cfg)
 {
     if (!cfg)
     {
@@ -53,4 +53,4 @@ uint32_t pc_sleep_next(uint32_t now, uint32_t last_active_ms, const pc_sleep_cfg
     return window;
 }
 
-#endif // PC_ENABLE_SLEEP_SCHED
+#endif // PROTOCORE_ENABLE_SLEEP_SCHED

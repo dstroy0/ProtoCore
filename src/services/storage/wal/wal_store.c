@@ -3,13 +3,13 @@
 
 /**
  * @file wal_store.c
- * @brief A/B superblock + checkpoint + mount/recover over a block-device seam (see pc_wal_store.h).
+ * @brief A/B superblock + checkpoint + mount/recover over a block-device seam (see protocore_wal_store.h).
  */
 
 #include "services/storage/wal/wal_store.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_WAL
+#if PROTOCORE_ENABLE_WAL
 
 #include "mmgr/endian.h"
 
@@ -31,11 +31,11 @@ static proto_bool write_super(WalStore *s, int ab, uint64_t gen, uint64_t head, 
 {
     uint8_t sb[WAL_SUPER_SIZE];
     mem.set(sb, 0, sizeof(sb));
-    pc_wr32le(sb + 0, WAL_SUPER_MAGIC);
-    pc_wr64le(sb + 4, gen);
-    pc_wr64le(sb + 12, head);
-    pc_wr64le(sb + 20, seq);
-    pc_wr32le(sb + 28, pc_wal_crc32(sb, SUPER_USED));
+    protocore_wr32le(sb + 0, WAL_SUPER_MAGIC);
+    protocore_wr64le(sb + 4, gen);
+    protocore_wr64le(sb + 12, head);
+    protocore_wr64le(sb + 20, seq);
+    protocore_wr32le(sb + 28, protocore_wal_crc32(sb, SUPER_USED));
     return dev_write(&s->dev, (uint64_t)ab * WAL_SUPER_SIZE, sb, sizeof(sb));
 }
 
@@ -47,17 +47,17 @@ static proto_bool read_super(const WalStore *s, int ab, uint64_t *gen, uint64_t 
     {
         return PROTO_FALSE;
     }
-    if (pc_rd32le(sb + 0) != WAL_SUPER_MAGIC)
+    if (protocore_rd32le(sb + 0) != WAL_SUPER_MAGIC)
     {
         return PROTO_FALSE;
     }
-    if (pc_rd32le(sb + 28) != pc_wal_crc32(sb, SUPER_USED))
+    if (protocore_rd32le(sb + 28) != protocore_wal_crc32(sb, SUPER_USED))
     {
         return PROTO_FALSE;
     }
-    *gen = pc_rd64le(sb + 4);
-    *head = pc_rd64le(sb + 12);
-    *seq = pc_rd64le(sb + 20);
+    *gen = protocore_rd64le(sb + 4);
+    *head = protocore_rd64le(sb + 12);
+    *seq = protocore_rd64le(sb + 20);
     // A head past the data region is corruption a matching CRC cannot happen for, but guard anyway.
     if (*head > s->data_cap)
     {
@@ -68,7 +68,7 @@ static proto_bool read_super(const WalStore *s, int ab, uint64_t *gen, uint64_t 
 
 // Replay records appended after the committed head: each is CRC self-validating, so recover them one by
 // one and stop at the first torn / short / non-record. Advances s->head and s->next_seq.
-static void pc_wal_replay_tail(WalStore *s)
+static void protocore_wal_replay_tail(WalStore *s)
 {
     uint8_t hdr[WAL_RECORD_HEADER];
     uint8_t chunk[256];
@@ -83,19 +83,19 @@ static void pc_wal_replay_tail(WalStore *s)
         {
             break;
         }
-        if (pc_rd32le(hdr + 0) != WAL_MAGIC)
+        if (protocore_rd32le(hdr + 0) != WAL_MAGIC)
         {
             break;
         }
-        uint64_t seq = pc_rd64le(hdr + 4);
-        uint32_t plen = pc_rd32le(hdr + 12);
-        uint32_t crc_stored = pc_rd32le(hdr + 16);
+        uint64_t seq = protocore_rd64le(hdr + 4);
+        uint32_t plen = protocore_rd32le(hdr + 12);
+        uint32_t crc_stored = protocore_rd32le(hdr + 16);
         if (off + (uint64_t)WAL_RECORD_HEADER + plen > s->data_cap)
         {
             break; // truncated tail
         }
         // CRC over the 16 header bytes then the payload, streamed in small chunks.
-        uint32_t crc = pc_wal_crc32_update(pc_wal_crc32_init(), hdr, 16);
+        uint32_t crc = protocore_wal_crc32_update(protocore_wal_crc32_init(), hdr, 16);
         uint64_t pos = s->data_off + off + WAL_RECORD_HEADER;
         uint32_t left = plen;
         proto_bool read_ok = PROTO_TRUE;
@@ -107,11 +107,11 @@ static void pc_wal_replay_tail(WalStore *s)
                 read_ok = PROTO_FALSE;
                 break;
             }
-            crc = pc_wal_crc32_update(crc, chunk, n);
+            crc = protocore_wal_crc32_update(crc, chunk, n);
             pos += n;
             left -= (uint32_t)n;
         }
-        if (!read_ok || pc_wal_crc32_final(crc) != crc_stored)
+        if (!read_ok || protocore_wal_crc32_final(crc) != crc_stored)
         {
             break; // torn / corrupt record - this is the durable end
         }
@@ -123,7 +123,7 @@ static void pc_wal_replay_tail(WalStore *s)
     }
 }
 
-proto_bool pc_wal_store_format(WalStore *s, const WalDev *dev)
+proto_bool protocore_wal_store_format(WalStore *s, const WalDev *dev)
 {
     if (!dev || dev->size <= WAL_DATA_OFFSET)
     {
@@ -152,7 +152,7 @@ proto_bool pc_wal_store_format(WalStore *s, const WalDev *dev)
     return s->dev.sync ? s->dev.sync(s->dev.ctx) : PROTO_TRUE;
 }
 
-proto_bool pc_wal_store_mount(WalStore *s, const WalDev *dev)
+proto_bool protocore_wal_store_mount(WalStore *s, const WalDev *dev)
 {
     if (!dev || dev->size <= WAL_DATA_OFFSET)
     {
@@ -194,11 +194,11 @@ proto_bool pc_wal_store_mount(WalStore *s, const WalDev *dev)
     s->head = s->committed;
 
     // Recover any records appended after the committed head (each CRC self-validating).
-    pc_wal_replay_tail(s);
+    protocore_wal_replay_tail(s);
     return PROTO_TRUE;
 }
 
-proto_bool pc_wal_store_append(WalStore *s, const uint8_t *payload, uint32_t len)
+proto_bool protocore_wal_store_append(WalStore *s, const uint8_t *payload, uint32_t len)
 {
     uint64_t need = (uint64_t)WAL_RECORD_HEADER + len;
     if (s->head + need > s->data_cap)
@@ -207,12 +207,12 @@ proto_bool pc_wal_store_append(WalStore *s, const uint8_t *payload, uint32_t len
     }
     // Assemble the 20-byte header (magic+seq+len+crc); CRC covers header + payload without buffering both.
     uint8_t hdr[WAL_RECORD_HEADER];
-    pc_wr32le(hdr + 0, WAL_MAGIC);
-    pc_wr64le(hdr + 4, s->next_seq);
-    pc_wr32le(hdr + 12, len);
-    uint32_t crc = pc_wal_crc32_update(pc_wal_crc32_init(), hdr, 16);
-    crc = pc_wal_crc32_update(crc, payload, len);
-    pc_wr32le(hdr + 16, pc_wal_crc32_final(crc));
+    protocore_wr32le(hdr + 0, WAL_MAGIC);
+    protocore_wr64le(hdr + 4, s->next_seq);
+    protocore_wr32le(hdr + 12, len);
+    uint32_t crc = protocore_wal_crc32_update(protocore_wal_crc32_init(), hdr, 16);
+    crc = protocore_wal_crc32_update(crc, payload, len);
+    protocore_wr32le(hdr + 16, protocore_wal_crc32_final(crc));
 
     uint64_t at = s->data_off + s->head;
     if (!dev_write(&s->dev, at, hdr, WAL_RECORD_HEADER))
@@ -228,7 +228,7 @@ proto_bool pc_wal_store_append(WalStore *s, const uint8_t *payload, uint32_t len
     return PROTO_TRUE;
 }
 
-proto_bool pc_wal_store_checkpoint(WalStore *s)
+proto_bool protocore_wal_store_checkpoint(WalStore *s)
 {
     // Data first: the appended records must be durable before the pointer that commits them advances.
     if (s->dev.sync && !s->dev.sync(s->dev.ctx))
@@ -252,7 +252,7 @@ proto_bool pc_wal_store_checkpoint(WalStore *s)
     return PROTO_TRUE;
 }
 
-size_t pc_wal_store_scan(WalStore *s, WalStoreRecordCb cb, void *ctx, uint8_t *scratch, size_t scratch_len)
+size_t protocore_wal_store_scan(WalStore *s, WalStoreRecordCb cb, void *ctx, uint8_t *scratch, size_t scratch_len)
 {
     if (scratch_len < WAL_RECORD_HEADER)
     {
@@ -266,11 +266,11 @@ size_t pc_wal_store_scan(WalStore *s, WalStoreRecordCb cb, void *ctx, uint8_t *s
         {
             break;
         }
-        if (pc_rd32le(scratch) != WAL_MAGIC)
+        if (protocore_rd32le(scratch) != WAL_MAGIC)
         {
             break;
         }
-        uint32_t plen = pc_rd32le(scratch + 12);
+        uint32_t plen = protocore_rd32le(scratch + 12);
         size_t total = (size_t)WAL_RECORD_HEADER + plen;
         if (off + total > s->head || total > scratch_len)
         {
@@ -280,15 +280,15 @@ size_t pc_wal_store_scan(WalStore *s, WalStoreRecordCb cb, void *ctx, uint8_t *s
         {
             break;
         }
-        uint32_t crc = pc_wal_crc32_update(pc_wal_crc32_init(), scratch, 16);
-        crc = pc_wal_crc32_update(crc, scratch + WAL_RECORD_HEADER, plen);
-        if (pc_wal_crc32_final(crc) != pc_rd32le(scratch + 16))
+        uint32_t crc = protocore_wal_crc32_update(protocore_wal_crc32_init(), scratch, 16);
+        crc = protocore_wal_crc32_update(crc, scratch + WAL_RECORD_HEADER, plen);
+        if (protocore_wal_crc32_final(crc) != protocore_rd32le(scratch + 16))
         {
             break;
         }
         if (cb)
         {
-            cb(pc_rd64le(scratch + 4), off, scratch + WAL_RECORD_HEADER, plen, ctx);
+            cb(protocore_rd64le(scratch + 4), off, scratch + WAL_RECORD_HEADER, plen, ctx);
         }
         count++;
         off += total;
@@ -296,7 +296,7 @@ size_t pc_wal_store_scan(WalStore *s, WalStoreRecordCb cb, void *ctx, uint8_t *s
     return count;
 }
 
-proto_bool pc_wal_store_pread(WalStore *s, uint64_t off, uint8_t *buf, size_t len)
+proto_bool protocore_wal_store_pread(WalStore *s, uint64_t off, uint8_t *buf, size_t len)
 {
     if (off + len > s->data_cap)
     {
@@ -305,4 +305,4 @@ proto_bool pc_wal_store_pread(WalStore *s, uint64_t off, uint8_t *buf, size_t le
     return dev_read(&s->dev, s->data_off + off, buf, len);
 }
 
-#endif // PC_ENABLE_WAL
+#endif // PROTOCORE_ENABLE_WAL

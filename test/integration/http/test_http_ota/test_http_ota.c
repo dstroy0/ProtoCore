@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Tests the parser's streaming-body hook (PC_ENABLE_OTA): a body larger than
+// Tests the parser's streaming-body hook (PROTOCORE_ENABLE_OTA): a body larger than
 // BODY_BUF_SIZE is streamed to a sink in chunks and reaches PARSE_COMPLETE
 // (bypassing the 413 cap), while the default 413 behavior is preserved when no
 // hook matches. Uses a mock sink (no ESP32 Update dependency).
@@ -12,7 +12,7 @@
 // edge case's own coverage must be demonstrated for this build.
 
 #include "network_drivers/presentation/http/http_parser/http_parser.h"
-#include "shared_primitives/ip.h" // PC_IP_STR_MAX for the bracketed-IPv6 overflow case
+#include "shared_primitives/ip.h" // PROTOCORE_IP_STR_MAX for the bracketed-IPv6 overflow case
 #include <stdio.h>
 #include <string.h>
 
@@ -152,17 +152,17 @@ void test_nonmatching_path_not_streamed()
     TEST_ASSERT_EQUAL_UINT(0, (unsigned)g_total);
 }
 
-// fwd_extract_client()'s bracketed-IPv6 scratch buffer (tok[PC_IP_STR_MAX]) overflow guard
+// fwd_extract_client()'s bracketed-IPv6 scratch buffer (tok[PROTOCORE_IP_STR_MAX]) overflow guard
 // is unreachable via "Forwarded: for=[...]" - the "for=" prefix eats 4 of the header value's
 // MAX_VAL_LEN-1 (47) budget bytes, capping bracket content at 43 bytes, short of the 46 needed
 // to trip the guard. But fwd_extract_client() is also called directly on X-Forwarded-For with
 // no "for=" prefix stealing budget, so the full 47 bytes are available: '[' + 46 non-']' bytes
-// drives tlen to PC_IP_STR_MAX-1 (45) and trips the guard on the 46th content byte.
+// drives tlen to PROTOCORE_IP_STR_MAX-1 (45) and trips the guard on the 46th content byte.
 void test_xff_bracketed_ipv6_overflow()
 {
     char req[128];
     int off = snprintf(req, sizeof(req), "GET / HTTP/1.1\r\nX-Forwarded-For: [");
-    for (int i = 0; i < PC_IP_STR_MAX; i++) // 46 non-']' bytes: exactly enough to trip the guard
+    for (int i = 0; i < PROTOCORE_IP_STR_MAX; i++) // 46 non-']' bytes: exactly enough to trip the guard
     {
         req[off++] = 'f';
     }
@@ -174,7 +174,7 @@ void test_xff_bracketed_ipv6_overflow()
     http_parser_reset(&r);
     feed(&r, req);
 
-    char ip[PC_IP_STR_MAX];
+    char ip[PROTOCORE_IP_STR_MAX];
     TEST_ASSERT_FALSE(http_forwarded_client(&r, ip, sizeof(ip), NULL));
 
     // Same call path, ordinary short bracketed IPv6: the guard's other arm (no overflow).

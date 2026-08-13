@@ -23,7 +23,7 @@ void tearDown()
 
 void test_build_code_request_minimal()
 {
-    int n = pc_oauth2_build_code_request("auth-code-123", "https://app.example/cb", "client-42", NULL, NULL, out,
+    int n = protocore_oauth2_build_code_request("auth-code-123", "https://app.example/cb", "client-42", NULL, NULL, out,
                                          sizeof(out));
     TEST_ASSERT_TRUE(n > 0);
     TEST_ASSERT_EQUAL_STRING("grant_type=authorization_code&code=auth-code-123"
@@ -33,7 +33,7 @@ void test_build_code_request_minimal()
 
 void test_build_code_request_with_secret_encodes_specials()
 {
-    int n = pc_oauth2_build_code_request("c d", "u", "id", "s3cr!t", NULL, out, sizeof(out));
+    int n = protocore_oauth2_build_code_request("c d", "u", "id", "s3cr!t", NULL, out, sizeof(out));
     TEST_ASSERT_TRUE(n > 0);
     // space -> %20, '!' -> %21
     TEST_ASSERT_EQUAL_STRING("grant_type=authorization_code&code=c%20d&redirect_uri=u"
@@ -43,14 +43,14 @@ void test_build_code_request_with_secret_encodes_specials()
 
 void test_build_code_request_pkce()
 {
-    pc_oauth2_build_code_request("abc", "u", "id", NULL, "verifier_xyz-123", out, sizeof(out));
+    protocore_oauth2_build_code_request("abc", "u", "id", NULL, "verifier_xyz-123", out, sizeof(out));
     TEST_ASSERT_NOT_NULL(strstr(out, "&code_verifier=verifier_xyz-123"));
     TEST_ASSERT_NULL(strstr(out, "client_secret")); // PKCE public client: no secret
 }
 
 void test_build_refresh_request()
 {
-    int n = pc_oauth2_build_refresh_request("rt-token", "client-42", "secret", out, sizeof(out));
+    int n = protocore_oauth2_build_refresh_request("rt-token", "client-42", "secret", out, sizeof(out));
     TEST_ASSERT_TRUE(n > 0);
     TEST_ASSERT_EQUAL_STRING("grant_type=refresh_token&refresh_token=rt-token"
                              "&client_id=client-42&client_secret=secret",
@@ -60,15 +60,15 @@ void test_build_refresh_request()
 void test_build_overflows_fail_closed()
 {
     char tiny[10];
-    TEST_ASSERT_EQUAL_INT(0, pc_oauth2_build_code_request("code", "uri", "id", NULL, NULL, tiny, sizeof(tiny)));
+    TEST_ASSERT_EQUAL_INT(0, protocore_oauth2_build_code_request("code", "uri", "id", NULL, NULL, tiny, sizeof(tiny)));
 }
 
 void test_parse_token_response()
 {
     const char *json = "{\"access_token\":\"AT123\",\"token_type\":\"Bearer\",\"expires_in\":3600,"
                        "\"refresh_token\":\"RT456\",\"id_token\":\"eyJ.x.y\"}";
-    pc_o_auth2_tokens t;
-    TEST_ASSERT_TRUE(pc_oauth2_parse_token_response(json, &t));
+    protocore_o_auth2_tokens t;
+    TEST_ASSERT_TRUE(protocore_oauth2_parse_token_response(json, &t));
     TEST_ASSERT_EQUAL_STRING("AT123", t.access_token);
     TEST_ASSERT_EQUAL_STRING("Bearer", t.token_type);
     TEST_ASSERT_EQUAL_INT32(3600, t.expires_in);
@@ -79,8 +79,8 @@ void test_parse_token_response()
 void test_parse_minimal_response()
 {
     // Only access_token present: still valid; optional fields stay empty/0.
-    pc_o_auth2_tokens t;
-    TEST_ASSERT_TRUE(pc_oauth2_parse_token_response("{\"access_token\":\"only\"}", &t));
+    protocore_o_auth2_tokens t;
+    TEST_ASSERT_TRUE(protocore_oauth2_parse_token_response("{\"access_token\":\"only\"}", &t));
     TEST_ASSERT_EQUAL_STRING("only", t.access_token);
     TEST_ASSERT_EQUAL_STRING("", t.refresh_token);
     TEST_ASSERT_EQUAL_INT32(0, t.expires_in);
@@ -89,27 +89,27 @@ void test_parse_minimal_response()
 void test_parse_error_response_fails()
 {
     const char *err = "{\"error\":\"invalid_grant\",\"error_description\":\"bad code\"}";
-    pc_o_auth2_tokens t;
-    TEST_ASSERT_FALSE(pc_oauth2_parse_token_response(err, &t));
+    protocore_o_auth2_tokens t;
+    TEST_ASSERT_FALSE(protocore_oauth2_parse_token_response(err, &t));
 }
 
 void test_oauth2_build_parse_guards()
 {
     char out[256];
     TEST_ASSERT_EQUAL_INT(
-        0, pc_oauth2_build_code_request(NULL, "uri", "cid", "sec", "ver", out, sizeof(out)));        // null code
-    TEST_ASSERT_EQUAL_INT(0, pc_oauth2_build_refresh_request(NULL, "cid", "sec", out, sizeof(out))); // null refresh
-    pc_o_auth2_tokens tok;
-    TEST_ASSERT_FALSE(pc_oauth2_parse_token_response(NULL, &tok)); // null json
+        0, protocore_oauth2_build_code_request(NULL, "uri", "cid", "sec", "ver", out, sizeof(out)));        // null code
+    TEST_ASSERT_EQUAL_INT(0, protocore_oauth2_build_refresh_request(NULL, "cid", "sec", out, sizeof(out))); // null refresh
+    protocore_o_auth2_tokens tok;
+    TEST_ASSERT_FALSE(protocore_oauth2_parse_token_response(NULL, &tok)); // null json
     // A value needing percent-encoding into a tiny buffer overflows (b.ok=false).
-    TEST_ASSERT_EQUAL_INT(0, pc_oauth2_build_code_request("a b&c", "uri", "cid", "sec", "ver", out, 8));
+    TEST_ASSERT_EQUAL_INT(0, protocore_oauth2_build_code_request("a b&c", "uri", "cid", "sec", "ver", out, 8));
 }
 
 void test_unreserved_uppercase_and_tilde_pass_through()
 {
     // Uppercase letters and '~' are both in the unreserved set (RFC 3986) and must
     // be copied verbatim, not percent-encoded.
-    int n = pc_oauth2_build_code_request("AB~cd", "u", "id", NULL, NULL, out, sizeof(out));
+    int n = protocore_oauth2_build_code_request("AB~cd", "u", "id", NULL, NULL, out, sizeof(out));
     TEST_ASSERT_TRUE(n > 0);
     TEST_ASSERT_NOT_NULL(strstr(out, "code=AB~cd"));
 }
@@ -117,26 +117,26 @@ void test_unreserved_uppercase_and_tilde_pass_through()
 void test_build_code_request_individual_null_guards()
 {
     char buf[64];
-    TEST_ASSERT_EQUAL_INT(0, pc_oauth2_build_code_request("code", NULL, "id", NULL, NULL, buf,
+    TEST_ASSERT_EQUAL_INT(0, protocore_oauth2_build_code_request("code", NULL, "id", NULL, NULL, buf,
                                                           sizeof(buf))); // null redirect_uri
     TEST_ASSERT_EQUAL_INT(
-        0, pc_oauth2_build_code_request("code", "uri", NULL, NULL, NULL, buf, sizeof(buf))); // null client_id
+        0, protocore_oauth2_build_code_request("code", "uri", NULL, NULL, NULL, buf, sizeof(buf))); // null client_id
     TEST_ASSERT_EQUAL_INT(0,
-                          pc_oauth2_build_code_request("code", "uri", "id", NULL, NULL, NULL, sizeof(buf))); // null out
-    TEST_ASSERT_EQUAL_INT(0, pc_oauth2_build_code_request("code", "uri", "id", NULL, NULL, buf, 0));         // cap == 0
+                          protocore_oauth2_build_code_request("code", "uri", "id", NULL, NULL, NULL, sizeof(buf))); // null out
+    TEST_ASSERT_EQUAL_INT(0, protocore_oauth2_build_code_request("code", "uri", "id", NULL, NULL, buf, 0));         // cap == 0
 }
 
 void test_build_refresh_request_individual_null_guards()
 {
     char buf[64];
-    TEST_ASSERT_EQUAL_INT(0, pc_oauth2_build_refresh_request("rt", NULL, NULL, buf, sizeof(buf)));  // null client_id
-    TEST_ASSERT_EQUAL_INT(0, pc_oauth2_build_refresh_request("rt", "id", NULL, NULL, sizeof(buf))); // null out
-    TEST_ASSERT_EQUAL_INT(0, pc_oauth2_build_refresh_request("rt", "id", NULL, buf, 0));            // cap == 0
+    TEST_ASSERT_EQUAL_INT(0, protocore_oauth2_build_refresh_request("rt", NULL, NULL, buf, sizeof(buf)));  // null client_id
+    TEST_ASSERT_EQUAL_INT(0, protocore_oauth2_build_refresh_request("rt", "id", NULL, NULL, sizeof(buf))); // null out
+    TEST_ASSERT_EQUAL_INT(0, protocore_oauth2_build_refresh_request("rt", "id", NULL, buf, 0));            // cap == 0
 }
 
 void test_build_refresh_request_without_secret()
 {
-    int n = pc_oauth2_build_refresh_request("rt-token", "client-42", NULL, out, sizeof(out));
+    int n = protocore_oauth2_build_refresh_request("rt-token", "client-42", NULL, out, sizeof(out));
     TEST_ASSERT_TRUE(n > 0);
     TEST_ASSERT_EQUAL_STRING("grant_type=refresh_token&refresh_token=rt-token&client_id=client-42", out);
     TEST_ASSERT_NULL(strstr(out, "client_secret"));
@@ -149,12 +149,12 @@ void test_refresh_request_percent_encode_overflow()
     // for put_enc's plain-byte guard but not its 3-byte %XX escape guard, so encoding
     // the first (non-unreserved) char of the token trips put_enc's overflow path.
     char tiny[41];
-    TEST_ASSERT_EQUAL_INT(0, pc_oauth2_build_refresh_request("!x", "cid", NULL, tiny, sizeof(tiny)));
+    TEST_ASSERT_EQUAL_INT(0, protocore_oauth2_build_refresh_request("!x", "cid", NULL, tiny, sizeof(tiny)));
 }
 
 void test_parse_token_response_null_out()
 {
-    TEST_ASSERT_FALSE(pc_oauth2_parse_token_response("{\"access_token\":\"x\"}", NULL));
+    TEST_ASSERT_FALSE(protocore_oauth2_parse_token_response("{\"access_token\":\"x\"}", NULL));
 }
 
 int main()

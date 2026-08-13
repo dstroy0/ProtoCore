@@ -25,7 +25,7 @@ void tearDown()
 typedef struct
 {
     DncDecoder dec;
-    char lines[16][PC_DNC_LINE_MAX + 1];
+    char lines[16][PROTOCORE_DNC_LINE_MAX + 1];
     int nlines;
     int prog_start, prog_end;
     size_t bytes_sent;
@@ -46,7 +46,7 @@ typedef struct
 static void mock_init(MockCtrl *m, DncCode code)
 {
     memset(m, 0, sizeof(*m));
-    pc_dnc_decode_init(&m->dec, code);
+    protocore_dnc_decode_init(&m->dec, code);
 }
 
 static int mock_send(void *c, const uint8_t *d, size_t len)
@@ -60,7 +60,7 @@ static int mock_send(void *c, const uint8_t *d, size_t len)
     m->bytes_sent += len;
     for (size_t k = 0; k < len; k++)
     {
-        DncEvent ev = pc_dnc_decode_feed(&m->dec, d[k]);
+        DncEvent ev = protocore_dnc_decode_feed(&m->dec, d[k]);
         if (ev == DNC_EV_LINE && m->nlines < 16)
         {
             strcpy(m->lines[m->nlines], m->dec.line);
@@ -267,7 +267,7 @@ void test_xoff_never_released_gives_up()
     DncCfg cfg = iso_cfg();
     TEST_ASSERT_EQUAL_INT(DNC_STREAM_ERR_IO, dnc_stream(&cfg, "M30", 3, mock_send, mock_recv, &m));
     TEST_ASSERT_TRUE(m.paused_seen);
-    TEST_ASSERT_TRUE(m.recv_calls > PC_DNC_XOFF_MAX_POLLS); // it really did poll to the bound
+    TEST_ASSERT_TRUE(m.recv_calls > PROTOCORE_DNC_XOFF_MAX_POLLS); // it really did poll to the bound
 }
 
 void test_reverse_channel_error_while_paused()
@@ -282,7 +282,7 @@ void test_reverse_channel_error_while_paused()
     DncCfg cfg = iso_cfg();
     TEST_ASSERT_EQUAL_INT(DNC_STREAM_ERR_IO, dnc_stream(&cfg, "M30", 3, mock_send, mock_recv, &m));
     TEST_ASSERT_TRUE(m.paused_seen);
-    TEST_ASSERT_TRUE(m.recv_calls < PC_DNC_XOFF_MAX_POLLS); // it bailed on the error, not on the poll bound
+    TEST_ASSERT_TRUE(m.recv_calls < PROTOCORE_DNC_XOFF_MAX_POLLS); // it bailed on the error, not on the poll bound
 }
 
 void test_send_failure_at_each_stage()

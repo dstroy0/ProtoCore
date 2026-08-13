@@ -1,6 +1,6 @@
 # DigestAuth - HTTP Digest authentication (password never on the wire)
 
-**Layer:** L6 Presentation · **Build flags:** `PC_ENABLE_AUTH` (on by default)
+**Layer:** L6 Presentation · **Build flags:** `PROTOCORE_ENABLE_AUTH` (on by default)
 
 ## What this example teaches
 
@@ -32,7 +32,7 @@ password in the clear.
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_AUTH=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_AUTH=1" \
   --lib="." examples/L6-Presentation/DigestAuth/DigestAuth.ino
 ```
 

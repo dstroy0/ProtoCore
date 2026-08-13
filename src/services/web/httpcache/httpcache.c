@@ -9,11 +9,11 @@
 #include "httpcache.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_HTTP_CACHE
+#if PROTOCORE_ENABLE_HTTP_CACHE
 
 static const size_t CC_SENT = (size_t)-1; // overflow sentinel threaded through the emitters
 
-void cache_control_init(pc_cache_control *cc)
+void cache_control_init(protocore_cache_control *cc)
 {
     cc->cc_public = PROTO_FALSE;
     cc->cc_private = PROTO_FALSE;
@@ -97,7 +97,7 @@ static size_t cc_kv(char *buf, size_t cap, size_t n, proto_bool *first, const ch
     return cc_emit_uint(buf, cap, n, (unsigned)v);
 }
 
-size_t cache_control_build(char *buf, size_t cap, const pc_cache_control *cc)
+size_t cache_control_build(char *buf, size_t cap, const protocore_cache_control *cc)
 {
     if (!buf || !cc || cap == 0)
     {
@@ -239,7 +239,7 @@ static int32_t cc_parse_delta(const char *v, size_t vlen)
     return any ? (int32_t)val : -1;
 }
 
-static proto_bool cc_match(pc_cache_control *cc, const char *name, size_t nlen, const char *val, size_t vlen)
+static proto_bool cc_match(protocore_cache_control *cc, const char *name, size_t nlen, const char *val, size_t vlen)
 {
     if (cc_ci_eq(name, nlen, "public"))
     {
@@ -314,7 +314,7 @@ static proto_bool cc_match(pc_cache_control *cc, const char *name, size_t nlen, 
 
 // Parse one comma-separated directive starting at *i (advancing past it) and apply it; returns true
 // if a known directive matched.
-static proto_bool cache_parse_one_directive(const char *s, size_t len, size_t *i, pc_cache_control *cc)
+static proto_bool cache_parse_one_directive(const char *s, size_t len, size_t *i, protocore_cache_control *cc)
 {
     while (*i < len && (s[*i] == ',' || s[*i] == ' ' || s[*i] == '\t'))
     {
@@ -353,7 +353,7 @@ static proto_bool cache_parse_one_directive(const char *s, size_t len, size_t *i
     return nlen && cc_match(cc, s + start, nlen, val, vlen);
 }
 
-proto_bool cache_control_parse(const char *s, size_t len, pc_cache_control *cc)
+proto_bool cache_control_parse(const char *s, size_t len, protocore_cache_control *cc)
 {
     cache_control_init(cc);
     if (!s)
@@ -374,7 +374,7 @@ proto_bool cache_control_parse(const char *s, size_t len, pc_cache_control *cc)
 
 // --- presets + freshness ---------------------------------------------------
 
-void cache_immutable_asset(pc_cache_control *cc, uint32_t max_age)
+void cache_immutable_asset(protocore_cache_control *cc, uint32_t max_age)
 {
     cache_control_init(cc);
     cc->cc_public = PROTO_TRUE;
@@ -382,7 +382,7 @@ void cache_immutable_asset(pc_cache_control *cc, uint32_t max_age)
     cc->cc_immutable = PROTO_TRUE;
 }
 
-void cache_revalidatable(pc_cache_control *cc, uint32_t max_age, int32_t stale_while_revalidate)
+void cache_revalidatable(protocore_cache_control *cc, uint32_t max_age, int32_t stale_while_revalidate)
 {
     cache_control_init(cc);
     cc->cc_public = PROTO_TRUE;
@@ -393,13 +393,13 @@ void cache_revalidatable(pc_cache_control *cc, uint32_t max_age, int32_t stale_w
     }
 }
 
-void cache_no_store(pc_cache_control *cc)
+void cache_no_store(protocore_cache_control *cc)
 {
     cache_control_init(cc);
     cc->no_store = PROTO_TRUE;
 }
 
-void cache_shared(pc_cache_control *cc, uint32_t max_age, uint32_t s_maxage)
+void cache_shared(protocore_cache_control *cc, uint32_t max_age, uint32_t s_maxage)
 {
     cache_control_init(cc);
     cc->cc_public = PROTO_TRUE;
@@ -407,7 +407,7 @@ void cache_shared(pc_cache_control *cc, uint32_t max_age, uint32_t s_maxage)
     cc->s_maxage = (int32_t)(s_maxage > 2147483647u ? 2147483647u : s_maxage);
 }
 
-long cache_freshness_lifetime(const pc_cache_control *cc, proto_bool shared, long expires_minus_date)
+long cache_freshness_lifetime(const protocore_cache_control *cc, proto_bool shared, long expires_minus_date)
 {
     if (shared && cc->s_maxage >= 0)
     {
@@ -424,4 +424,4 @@ long cache_freshness_lifetime(const pc_cache_control *cc, proto_bool shared, lon
     return -1; // no explicit expiration - the caller applies a heuristic
 }
 
-#endif // PC_ENABLE_HTTP_CACHE
+#endif // PROTOCORE_ENABLE_HTTP_CACHE

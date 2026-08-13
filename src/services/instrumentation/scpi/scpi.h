@@ -3,23 +3,23 @@
 
 /**
  * @file scpi.h
- * @brief SCPI / IEEE 488.2 instrument-control codec (PC_ENABLE_SCPI) - a zero-heap codec for the
+ * @brief SCPI / IEEE 488.2 instrument-control codec (PROTOCORE_ENABLE_SCPI) - a zero-heap codec for the
  *        text command language nearly every modern bench instrument speaks (DMMs, oscilloscopes,
  *        power supplies, function/arbitrary generators, SMUs, spectrum/network analyzers, loads)
  *        over a raw TCP socket on port 5025 (also USBTMC / VXI-11 / HiSLIP / serial).
  *
  * The codec is symmetric - it serves both roles:
  *  - **Controller** (device drives an instrument): build command lines with a `:`-hierarchy header
- *    and comma-separated parameters (@ref pc_scpi_build), and parse the instrument's replies -
- *    numeric NR1/NR2/NR3 (@ref pc_scpi_parse_number), boolean (@ref pc_scpi_parse_bool), quoted
- *    string (@ref pc_scpi_parse_string), and the IEEE 488.2 arbitrary block `#<n><len><data>` used
- *    for waveform captures (@ref pc_scpi_parse_block).
+ *    and comma-separated parameters (@ref protocore_scpi_build), and parse the instrument's replies -
+ *    numeric NR1/NR2/NR3 (@ref protocore_scpi_parse_number), boolean (@ref protocore_scpi_parse_bool), quoted
+ *    string (@ref protocore_scpi_parse_string), and the IEEE 488.2 arbitrary block `#<n><len><data>` used
+ *    for waveform captures (@ref protocore_scpi_parse_block).
  *  - **Instrument** (device answers a controller): the IEEE 488.2 status model - the Status Byte,
  *    Standard Event Status Register + its enable mask, the Service Request Enable mask, and the SCPI
  *    error/event queue (@ref ScpiStatus) - plus a SCPI short/long-form header matcher
- *    (@ref pc_scpi_match) to dispatch an incoming command against a pattern like `"SYSTem:ERRor?"`.
+ *    (@ref protocore_scpi_match) to dispatch an incoming command against a pattern like `"SYSTem:ERRor?"`.
  *
- * Common commands (@ref pc_scpi_common) return the IEEE 488.2 mnemonics (`*IDN?`, `*RST`, `*CLS`,
+ * Common commands (@ref protocore_scpi_common) return the IEEE 488.2 mnemonics (`*IDN?`, `*RST`, `*CLS`,
  * `*ESR?`, `*STB?`, ...). Pure codec, host-tested; the TCP/USB/serial transport is the app's.
  *
  * References:
@@ -35,12 +35,12 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_SCPI
+#if PROTOCORE_ENABLE_SCPI
 
 /** @brief The default raw-socket ("SCPI-RAW") TCP port instruments listen on. */
-#define PC_SCPI_PORT 5025
+#define PROTOCORE_SCPI_PORT 5025
 
 // ── Standard Event Status Register (ESR) bits - read/cleared by *ESR? ──────────────────────────
 #define SCPI_ESR_OPC 0x01 ///< bit 0: Operation Complete
@@ -60,7 +60,7 @@ PROTO_BEGIN_DECLS
 #define SCPI_STB_MSS 0x40 ///< bit 6: Master Summary Status (RQS in a serial poll)
 #define SCPI_STB_OSB 0x80 ///< bit 7: OPERation status summary
 
-/** @brief The mandatory IEEE 488.2 common commands (`pc_scpi_common` renders each). */
+/** @brief The mandatory IEEE 488.2 common commands (`protocore_scpi_common` renders each). */
 typedef enum PROTO_ENUM_PACKED
 {
     SCPI_CLS,   ///< "*CLS"  clear status
@@ -79,45 +79,45 @@ typedef enum PROTO_ENUM_PACKED
 } ScpiCommon;
 
 /** @brief Render an IEEE 488.2 common command mnemonic (a static string, never null). */
-const char *pc_scpi_common(ScpiCommon c);
+const char *protocore_scpi_common(ScpiCommon c);
 
 /**
  * @brief Build a SCPI command line: `header` + ' ' + comma-joined `args` + '\n'.
  *
  * With @p argc 0 the line is just `header` + '\n' (e.g. `"*RST\n"`, `"MEAS:VOLT:DC?\n"`).
  * @param header a full `:`-hierarchy header or a common command, e.g. `"SOURce:VOLTage"`, `"*IDN?"`.
- * @param args   already-formatted parameter strings (see @ref pc_scpi_fmt_real to format a number).
+ * @param args   already-formatted parameter strings (see @ref protocore_scpi_fmt_real to format a number).
  * @return characters written (excluding the NUL terminator), or 0 on overflow / bad input.
  * @note  The line is NUL-terminated so callers may treat @p buf as a C-string.
  */
-size_t pc_scpi_build(char *buf, size_t cap, const char *header, const char *const *args, size_t argc);
+size_t protocore_scpi_build(char *buf, size_t cap, const char *header, const char *const *args, size_t argc);
 
 /**
  * @brief Format a real number as a SCPI parameter (NR2 fixed, or NR3 scientific for large/small
- *        magnitudes), trailing zeros trimmed. Handy for @ref pc_scpi_build args.
+ *        magnitudes), trailing zeros trimmed. Handy for @ref protocore_scpi_build args.
  * @return characters written (excluding NUL), or 0 on overflow.
  */
-size_t pc_scpi_fmt_real(char *buf, size_t cap, double v);
+size_t protocore_scpi_fmt_real(char *buf, size_t cap, double v);
 
 /**
  * @brief Parse a SCPI numeric response (NR1 integer / NR2 fixed / NR3 scientific), hand-rolled
  *        (no stdlib). Recognizes the special values `9.9E37` (INFinity), `-9.9E37`, `9.91E37` (NaN).
  * @return true on a fully-consumed numeric field; false on malformed input.
  */
-proto_bool pc_scpi_parse_number(const char *s, size_t len, double *out);
+proto_bool protocore_scpi_parse_number(const char *s, size_t len, double *out);
 
 /**
  * @brief Parse a SCPI boolean response: `1`/`0` or `ON`/`OFF` (case-insensitive).
  * @return true on a recognized boolean; false otherwise.
  */
-proto_bool pc_scpi_parse_bool(const char *s, size_t len, proto_bool *out);
+proto_bool protocore_scpi_parse_bool(const char *s, size_t len, proto_bool *out);
 
 /**
  * @brief Parse a SCPI string response: strip the surrounding single or double quotes and collapse a
  *        doubled quote (`""` or `''`) to one. Copies into @p out (NUL-terminated).
  * @return the unquoted length (excluding NUL), or 0 on a missing/mismatched quote or overflow.
  */
-size_t pc_scpi_parse_string(const char *s, size_t len, char *out, size_t cap);
+size_t protocore_scpi_parse_string(const char *s, size_t len, char *out, size_t cap);
 
 /**
  * @brief Parse an IEEE 488.2 arbitrary block: definite `#<n><n-length-digits><data>` or indefinite
@@ -127,8 +127,8 @@ size_t pc_scpi_parse_string(const char *s, size_t len, char *out, size_t cap);
  * @param consumed  receives the total bytes the block occupied (header + data [+ the indefinite NL]).
  * @return true on a complete block; false if truncated or malformed.
  */
-proto_bool pc_scpi_parse_block(const uint8_t *buf, size_t len, const uint8_t **data, size_t *data_len,
-                               size_t *consumed);
+proto_bool protocore_scpi_parse_block(const uint8_t *buf, size_t len, const uint8_t **data, size_t *data_len,
+                                      size_t *consumed);
 
 // ── IEEE 488.2 / SCPI status model (instrument side) ───────────────────────────────────────────
 
@@ -142,43 +142,43 @@ typedef struct
 /** @brief The IEEE 488.2 status registers + the SCPI error/event queue (one owned block). */
 typedef struct
 {
-    uint8_t esr;                        ///< Standard Event Status Register (latched events)
-    uint8_t ese;                        ///< Standard Event Status Enable mask (ESR -> ESB)
-    uint8_t sre;                        ///< Service Request Enable mask (STB -> MSS)
-    uint8_t summary;                    ///< app-set STB summary bits (QSB/MAV/OSB); merged into *STB?
-    ScpiError queue[PC_SCPI_ERR_QUEUE]; ///< the error/event queue (FIFO ring)
-    uint8_t head;                       ///< ring read index
-    uint8_t count;                      ///< entries currently queued
+    uint8_t esr;                               ///< Standard Event Status Register (latched events)
+    uint8_t ese;                               ///< Standard Event Status Enable mask (ESR -> ESB)
+    uint8_t sre;                               ///< Service Request Enable mask (STB -> MSS)
+    uint8_t summary;                           ///< app-set STB summary bits (QSB/MAV/OSB); merged into *STB?
+    ScpiError queue[PROTOCORE_SCPI_ERR_QUEUE]; ///< the error/event queue (FIFO ring)
+    uint8_t head;                              ///< ring read index
+    uint8_t count;                             ///< entries currently queued
 } ScpiStatus;
 
 /** @brief Clear every register + the queue (power-on state). */
-void pc_scpi_status_init(ScpiStatus *s);
+void protocore_scpi_status_init(ScpiStatus *s);
 
 /** @brief Latch one or more ESR event bits (e.g. @ref SCPI_ESR_OPC). */
-void pc_scpi_event(ScpiStatus *s, uint8_t esr_bits);
+void protocore_scpi_event(ScpiStatus *s, uint8_t esr_bits);
 
 /**
  * @brief Enqueue an error/event and latch its ESR class bit (CME/EXE/DDE/QYE from the -1xx/-2xx/
  *        -3xx/-4xx number range). On overflow the tail entry becomes -350 "Queue overflow".
  * @param msg  the description; pass nullptr to use the standard text for a standard number.
  */
-void pc_scpi_push_error(ScpiStatus *s, int16_t number, const char *msg);
+void protocore_scpi_push_error(ScpiStatus *s, int16_t number, const char *msg);
 
 /**
  * @brief Pop the head error (the `SYSTem:ERRor?` action). When the queue is empty @p out becomes
  *        `0,"No error"`.
  * @return true if an error was dequeued; false if the queue was empty (out = the no-error entry).
  */
-proto_bool pc_scpi_pop_error(ScpiStatus *s, ScpiError *out);
+proto_bool protocore_scpi_pop_error(ScpiStatus *s, ScpiError *out);
 
 /** @brief Compute the Status Byte: EAV (queue), ESB (esr & ese), the app summary bits, and MSS. */
-uint8_t pc_scpi_stb(const ScpiStatus *s);
+uint8_t protocore_scpi_stb(const ScpiStatus *s);
 
 /** @brief The `*CLS` action: clear the ESR and empty the error/event queue (enables untouched). */
-void pc_scpi_cls(ScpiStatus *s);
+void protocore_scpi_cls(ScpiStatus *s);
 
 /** @brief The standard SCPI message for a standard (negative) error number, or "" if unknown. */
-const char *pc_scpi_std_error(int16_t number);
+const char *protocore_scpi_std_error(int16_t number);
 
 /**
  * @brief Match an incoming command header against a SCPI short/long-form pattern.
@@ -192,10 +192,10 @@ const char *pc_scpi_std_error(int16_t number);
  *
  * @return true if @p input (its header, up to the first space) matches @p pattern.
  */
-proto_bool pc_scpi_match(const char *input, size_t input_len, const char *pattern);
+proto_bool protocore_scpi_match(const char *input, size_t input_len, const char *pattern);
 
-#endif // PC_ENABLE_SCPI
+#endif // PROTOCORE_ENABLE_SCPI
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_SCPI_H

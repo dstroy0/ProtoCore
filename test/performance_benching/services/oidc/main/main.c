@@ -63,7 +63,7 @@ void dbench_run(void)
     bool key_ok = pc_oidc_jwks_find(K_JWKS, "test-key-1", &key);
 
     const size_t tok_len = strlen(K_TOK_VALID);
-    char kid[PC_OIDC_KID_LEN];
+    char kid[PROTOCORE_OIDC_KID_LEN];
 
     for (;;)
     {

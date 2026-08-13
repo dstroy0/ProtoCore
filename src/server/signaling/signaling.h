@@ -11,7 +11,7 @@
  *
  * **Signaling owns no state, and it never gathers any.** It originates nothing. The active function
  * in the server loop already knows each fact at the instant it becomes true, so it deposits it here
- * then, and only when there is something to deposit. ::pc_signal_know hands the bucket back; it does
+ * then, and only when there is something to deposit. ::protocore_signal_know hands the bucket back; it does
  * not compose, poll, or ask an owner for anything.
  *
  * Both halves of that matter. A bucket that gathered on read would recompute what the loop had
@@ -20,8 +20,8 @@
  * changed without telling it. Depositing at the point of truth is neither: the fact is written once,
  * by the code that had it.
  *
- * The problem it solves is that the state had no single place to be read from. pc_stats(),
- * pc_metrics(), and pc_diag() each walk a different set of owners and assemble their own picture, so
+ * The problem it solves is that the state had no single place to be read from. protocore_stats(),
+ * protocore_metrics(), and protocore_diag() each walk a different set of owners and assemble their own picture, so
  * the same question already has three answers, and a fourth reader would write a fourth.
  *
  * **Kill, for applications that do not talk transport.** An application at this layer has no
@@ -50,7 +50,7 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
 /**
  * @brief The server's state, as the loop deposited it.
@@ -69,27 +69,27 @@ typedef struct
     // Masks, not counts. Which slot and which listener is the fact the pools already hold, and a
     // count throws it away: __builtin_popcount recovers the tally from the mask in one instruction,
     // while nothing recovers the identity from a tally. It is the shape the pools are allocated with
-    // (pc_conn_alloc_free in tcp.c, the SFTP handle table), so a reader comparing the bucket against
+    // (protocore_conn_alloc_free in tcp.c, the SFTP handle table), so a reader comparing the bucket against
     // the pool is comparing like with like.
     uint32_t conns_active; ///< One bit per connection slot in use.
     uint32_t listeners_up; ///< One bit per bound listener.
-} pc_signal_snapshot;
+} protocore_signal_snapshot;
 
-static_assert(CONN_POOL_SLOTS <= 32, "pc_signal_snapshot::conns_active is one 32-bit word, one bit per slot");
-static_assert(MAX_LISTENERS <= 32, "pc_signal_snapshot::listeners_up is one 32-bit word, one bit per listener");
+static_assert(CONN_POOL_SLOTS <= 32, "protocore_signal_snapshot::conns_active is one 32-bit word, one bit per slot");
+static_assert(MAX_LISTENERS <= 32, "protocore_signal_snapshot::listeners_up is one 32-bit word, one bit per listener");
 
 /** @brief Hand back the bucket. No gathering: this is what the loop last deposited. */
-void pc_signal_know(pc_signal_snapshot *out);
+void protocore_signal_know(protocore_signal_snapshot *out);
 
-/** @brief Empty the bucket. See pc_server_reset(), which is what callers use. */
-void pc_signal_reset(void);
+/** @brief Empty the bucket. See protocore_server_reset(), which is what callers use. */
+void protocore_signal_reset(void);
 
 /**
  * @brief Deposit a response, from the send path, at the point the status went out.
  *
  * @param code the status that was sent, which is what selects the class tally.
  */
-void pc_signal_put_response(int code);
+void protocore_signal_put_response(int code);
 
 /**
  * @brief Deposit what the loop iteration already established.
@@ -100,7 +100,7 @@ void pc_signal_put_response(int code);
  * opens). Every value here is in hand at the moment of the call, so the deposit costs the stores and
  * nothing else. Splitting it would carry the same facts across the boundary three times.
  */
-void pc_signal_put_tick(uint32_t uptime_ms, uint32_t conns_active, uint32_t listeners_up);
+void protocore_signal_put_tick(uint32_t uptime_ms, uint32_t conns_active, uint32_t listeners_up);
 
 /**
  * @brief End connection @p slot, for an application that does not talk transport.
@@ -108,8 +108,8 @@ void pc_signal_put_tick(uint32_t uptime_ms, uint32_t conns_active, uint32_t list
  * Resolves to the transport's teardown, so an application states the decision without taking on an
  * L4 dependency to carry it out. A remote reaches this on the slot its own request arrived on.
  */
-void pc_signal_kill(uint8_t slot);
+void protocore_signal_kill(uint8_t slot);
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_SIGNALING_H

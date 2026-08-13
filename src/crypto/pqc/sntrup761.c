@@ -26,24 +26,24 @@
 #include "crypto/pqc/sntrup761.h"
 #include "mmgr/protomem.h"
 
-#include "crypto/rng/rng.h" // pc_rand_fill
+#include "crypto/rng/rng.h" // protocore_rand_fill
 
-#if PC_ENABLE_SSH_SNTRUP761
+#if PROTOCORE_ENABLE_SSH_SNTRUP761
 
 #include "crypto/hash/sha512.h"
 
 // --- parameters (sntrup761) ---
 // The spec names these p, q, w. Spelled out here because a bare `#define P`
 // rewrites the token P in every header this TU includes.
-#define PC_SNTRUP_P 761                // spec: p
-#define PC_SNTRUP_Q 4591               // spec: q
-#define PC_SNTRUP_W 286                // spec: w
-#define PC_Q12 ((PC_SNTRUP_Q - 1) / 2) // 2295
-#define PC_HASH_BYTES 32
-#define PC_SMALL_BYTES ((PC_SNTRUP_P + 3) / 4) // 191
-#define PC_CONFIRM_BYTES 32
-#define PC_CT_BYTES PC_SNTRUP761_CT_BYTES // 1039
-#define PC_PK_BYTES PC_SNTRUP761_PK_BYTES // 1158
+#define PROTOCORE_SNTRUP_P 761                       // spec: p
+#define PROTOCORE_SNTRUP_Q 4591                      // spec: q
+#define PROTOCORE_SNTRUP_W 286                       // spec: w
+#define PROTOCORE_Q12 ((PROTOCORE_SNTRUP_Q - 1) / 2) // 2295
+#define PROTOCORE_HASH_BYTES 32
+#define PROTOCORE_SMALL_BYTES ((PROTOCORE_SNTRUP_P + 3) / 4) // 191
+#define PROTOCORE_CONFIRM_BYTES 32
+#define PROTOCORE_CT_BYTES PROTOCORE_SNTRUP761_CT_BYTES // 1039
+#define PROTOCORE_PK_BYTES PROTOCORE_SNTRUP761_PK_BYTES // 1158
 
 typedef int8_t small_t;
 typedef int16_t Fq;
@@ -51,8 +51,8 @@ typedef int16_t Fq;
 // Scratch arena for the sntrup761_encode/sntrup761_decode recursion (sum over levels of (len_i+1)/2 = 764;
 // sntrup761_decode carves 3 uint16 arrays + 1 uint32 array per level, sntrup761_encode 2 uint16 arrays - both fit
 // these).
-#define PC_SCR16 2304
-#define PC_SCR32 768
+#define PROTOCORE_SCR16 2304
+#define PROTOCORE_SCR32 768
 
 static small_t F3_freeze(int16_t x)
 {
@@ -61,12 +61,12 @@ static small_t F3_freeze(int16_t x)
 
 static Fq Fq_freeze(int32_t x)
 {
-    const int32_t q16 = (0x10000 + PC_SNTRUP_Q / 2) / PC_SNTRUP_Q;
-    const int32_t q20 = (0x100000 + PC_SNTRUP_Q / 2) / PC_SNTRUP_Q;
-    const int32_t q28 = (0x10000000 + PC_SNTRUP_Q / 2) / PC_SNTRUP_Q;
-    x -= PC_SNTRUP_Q * ((q16 * x) >> 16);
-    x -= PC_SNTRUP_Q * ((q20 * x) >> 20);
-    return (Fq)(x - PC_SNTRUP_Q * ((q28 * x + 0x8000000) >> 28));
+    const int32_t q16 = (0x10000 + PROTOCORE_SNTRUP_Q / 2) / PROTOCORE_SNTRUP_Q;
+    const int32_t q20 = (0x100000 + PROTOCORE_SNTRUP_Q / 2) / PROTOCORE_SNTRUP_Q;
+    const int32_t q28 = (0x10000000 + PROTOCORE_SNTRUP_Q / 2) / PROTOCORE_SNTRUP_Q;
+    x -= PROTOCORE_SNTRUP_Q * ((q16 * x) >> 16);
+    x -= PROTOCORE_SNTRUP_Q * ((q20 * x) >> 20);
+    return (Fq)(x - PROTOCORE_SNTRUP_Q * ((q28 * x + 0x8000000) >> 28));
 }
 
 // sign bit of x broadcast to all 32 bits (portable, constant-time).
@@ -220,28 +220,28 @@ static void sntrup761_decode(uint16_t *out, const uint8_t *S, const uint16_t *M,
 // h = f * g in Rq (g small), mod x^p - x - 1.
 static void Rq_mult_small(Fq *h, const Fq *f, const small_t *g)
 {
-    int32_t fg[PC_SNTRUP_P + PC_SNTRUP_P - 1];
+    int32_t fg[PROTOCORE_SNTRUP_P + PROTOCORE_SNTRUP_P - 1];
     int i, j;
-    for (i = 0; i < PC_SNTRUP_P + PC_SNTRUP_P - 1; ++i)
+    for (i = 0; i < PROTOCORE_SNTRUP_P + PROTOCORE_SNTRUP_P - 1; ++i)
     {
         fg[i] = 0;
     }
-    for (i = 0; i < PC_SNTRUP_P; ++i)
+    for (i = 0; i < PROTOCORE_SNTRUP_P; ++i)
     {
-        for (j = 0; j < PC_SNTRUP_P; ++j)
+        for (j = 0; j < PROTOCORE_SNTRUP_P; ++j)
         {
             fg[i + j] += f[i] * (int32_t)g[j];
         }
     }
-    for (i = PC_SNTRUP_P; i < PC_SNTRUP_P + PC_SNTRUP_P - 1; ++i)
+    for (i = PROTOCORE_SNTRUP_P; i < PROTOCORE_SNTRUP_P + PROTOCORE_SNTRUP_P - 1; ++i)
     {
-        fg[i - PC_SNTRUP_P] += fg[i];
+        fg[i - PROTOCORE_SNTRUP_P] += fg[i];
     }
-    for (i = PC_SNTRUP_P; i < PC_SNTRUP_P + PC_SNTRUP_P - 1; ++i)
+    for (i = PROTOCORE_SNTRUP_P; i < PROTOCORE_SNTRUP_P + PROTOCORE_SNTRUP_P - 1; ++i)
     {
-        fg[i - PC_SNTRUP_P + 1] += fg[i];
+        fg[i - PROTOCORE_SNTRUP_P + 1] += fg[i];
     }
-    for (i = 0; i < PC_SNTRUP_P; ++i)
+    for (i = 0; i < PROTOCORE_SNTRUP_P; ++i)
     {
         h[i] = Fq_freeze(fg[i]);
     }
@@ -249,7 +249,7 @@ static void Rq_mult_small(Fq *h, const Fq *f, const small_t *g)
 
 static void Round(Fq *out, const Fq *a)
 {
-    for (int i = 0; i < PC_SNTRUP_P; ++i)
+    for (int i = 0; i < PROTOCORE_SNTRUP_P; ++i)
     {
         out[i] = (Fq)(a[i] - F3_freeze(a[i]));
     }
@@ -372,18 +372,18 @@ static void crypto_sort_uint32(uint32_t *x, long long n)
 
 static void Short_fromlist(small_t *out, const uint32_t *in)
 {
-    uint32_t L[PC_SNTRUP_P];
+    uint32_t L[PROTOCORE_SNTRUP_P];
     int i;
-    for (i = 0; i < PC_SNTRUP_W; ++i)
+    for (i = 0; i < PROTOCORE_SNTRUP_W; ++i)
     {
         L[i] = in[i] & (uint32_t)-2;
     }
-    for (i = PC_SNTRUP_W; i < PC_SNTRUP_P; ++i)
+    for (i = PROTOCORE_SNTRUP_W; i < PROTOCORE_SNTRUP_P; ++i)
     {
         L[i] = (in[i] & (uint32_t)-3) | 1;
     }
-    crypto_sort_uint32(L, PC_SNTRUP_P);
-    for (i = 0; i < PC_SNTRUP_P; ++i)
+    crypto_sort_uint32(L, PROTOCORE_SNTRUP_P);
+    for (i = 0; i < PROTOCORE_SNTRUP_P; ++i)
     {
         out[i] = (small_t)((L[i] & 3) - 1);
     }
@@ -391,11 +391,11 @@ static void Short_fromlist(small_t *out, const uint32_t *in)
 
 static void Short_random(small_t *out)
 {
-    uint32_t L[PC_SNTRUP_P];
+    uint32_t L[PROTOCORE_SNTRUP_P];
     uint8_t rb[4];
-    for (int i = 0; i < PC_SNTRUP_P; ++i)
+    for (int i = 0; i < PROTOCORE_SNTRUP_P; ++i)
     {
-        pc_rand_fill(rb, 4);
+        protocore_rand_fill(rb, 4);
         L[i] = (uint32_t)rb[0] | ((uint32_t)rb[1] << 8) | ((uint32_t)rb[2] << 16) | ((uint32_t)rb[3] << 24);
     }
     Short_fromlist(out, L);
@@ -404,19 +404,19 @@ static void Short_random(small_t *out)
 // out = SHA512(b || in)[0:32].
 static void Hash_prefix(uint8_t *work, uint8_t *out, int b, const uint8_t *in, size_t inlen)
 {
-    pc_sha512_ctx ctx;
-    uint8_t h[PC_SHA512_DIGEST_LEN];
+    protocore_sha512_ctx ctx;
+    uint8_t h[PROTOCORE_SHA512_DIGEST_LEN];
     uint8_t bb = (uint8_t)b;
-    pc_sha512_init(&ctx, work);
-    pc_sha512_update(&ctx, &bb, 1);
-    pc_sha512_update(&ctx, in, inlen);
-    pc_sha512_final(&ctx, h);
-    mem.cpy(out, h, PC_HASH_BYTES);
+    protocore_sha512_init(&ctx, work);
+    protocore_sha512_update(&ctx, &bb, 1);
+    protocore_sha512_update(&ctx, in, inlen);
+    protocore_sha512_final(&ctx, h);
+    mem.cpy(out, h, PROTOCORE_HASH_BYTES);
 }
 
 static void Small_encode(uint8_t *s, const small_t *f)
 {
-    for (int i = 0; i < PC_SNTRUP_P / 4; ++i)
+    for (int i = 0; i < PROTOCORE_SNTRUP_P / 4; ++i)
     {
         small_t x = 0;
         for (int j = 0; j < 4; ++j)
@@ -430,45 +430,45 @@ static void Small_encode(uint8_t *s, const small_t *f)
 
 static void Rq_decode(Fq *r, const uint8_t *s, uint16_t *scr, uint32_t *scr32)
 {
-    uint16_t Rr[PC_SNTRUP_P], M[PC_SNTRUP_P];
-    for (int i = 0; i < PC_SNTRUP_P; ++i)
+    uint16_t Rr[PROTOCORE_SNTRUP_P], M[PROTOCORE_SNTRUP_P];
+    for (int i = 0; i < PROTOCORE_SNTRUP_P; ++i)
     {
-        M[i] = PC_SNTRUP_Q;
+        M[i] = PROTOCORE_SNTRUP_Q;
     }
-    sntrup761_decode(Rr, s, M, PC_SNTRUP_P, scr, scr32);
-    for (int i = 0; i < PC_SNTRUP_P; ++i)
+    sntrup761_decode(Rr, s, M, PROTOCORE_SNTRUP_P, scr, scr32);
+    for (int i = 0; i < PROTOCORE_SNTRUP_P; ++i)
     {
-        r[i] = (Fq)(((Fq)Rr[i]) - PC_Q12);
+        r[i] = (Fq)(((Fq)Rr[i]) - PROTOCORE_Q12);
     }
 }
 
 static void Rounded_encode(uint8_t *s, const Fq *r, uint16_t *scr)
 {
-    uint16_t Rr[PC_SNTRUP_P], M[PC_SNTRUP_P];
-    for (int i = 0; i < PC_SNTRUP_P; ++i)
+    uint16_t Rr[PROTOCORE_SNTRUP_P], M[PROTOCORE_SNTRUP_P];
+    for (int i = 0; i < PROTOCORE_SNTRUP_P; ++i)
     {
-        Rr[i] = (uint16_t)(((r[i] + PC_Q12) * 10923) >> 15);
+        Rr[i] = (uint16_t)(((r[i] + PROTOCORE_Q12) * 10923) >> 15);
     }
-    for (int i = 0; i < PC_SNTRUP_P; ++i)
+    for (int i = 0; i < PROTOCORE_SNTRUP_P; ++i)
     {
-        M[i] = (PC_SNTRUP_Q + 2) / 3;
+        M[i] = (PROTOCORE_SNTRUP_Q + 2) / 3;
     }
-    sntrup761_encode(s, Rr, M, PC_SNTRUP_P, scr);
+    sntrup761_encode(s, Rr, M, PROTOCORE_SNTRUP_P, scr);
 }
 
 static void HashConfirm(uint8_t *work, uint8_t *h, const uint8_t *r_enc, const uint8_t *cache)
 {
-    uint8_t x[PC_HASH_BYTES * 2];
-    Hash_prefix(work, x, 3, r_enc, PC_SMALL_BYTES);
-    mem.cpy(x + PC_HASH_BYTES, cache, PC_HASH_BYTES);
+    uint8_t x[PROTOCORE_HASH_BYTES * 2];
+    Hash_prefix(work, x, 3, r_enc, PROTOCORE_SMALL_BYTES);
+    mem.cpy(x + PROTOCORE_HASH_BYTES, cache, PROTOCORE_HASH_BYTES);
     Hash_prefix(work, h, 2, x, sizeof x);
 }
 
 static void HashSession(uint8_t *work, uint8_t *k, int b, const uint8_t *r_enc, const uint8_t *c)
 {
-    uint8_t x[PC_HASH_BYTES + PC_CT_BYTES];
-    Hash_prefix(work, x, 3, r_enc, PC_SMALL_BYTES);
-    mem.cpy(x + PC_HASH_BYTES, c, PC_CT_BYTES);
+    uint8_t x[PROTOCORE_HASH_BYTES + PROTOCORE_CT_BYTES];
+    Hash_prefix(work, x, 3, r_enc, PROTOCORE_SMALL_BYTES);
+    mem.cpy(x + PROTOCORE_HASH_BYTES, c, PROTOCORE_CT_BYTES);
     Hash_prefix(work, k, b, x, sizeof x);
 }
 
@@ -477,12 +477,12 @@ static void Hide(uint8_t *work, uint8_t *c, uint8_t *r_enc, const small_t *r, co
                  uint16_t *scr, uint32_t *scr32)
 {
     Small_encode(r_enc, r);
-    Fq h[PC_SNTRUP_P], cp[PC_SNTRUP_P];
+    Fq h[PROTOCORE_SNTRUP_P], cp[PROTOCORE_SNTRUP_P];
     Rq_decode(h, pk, scr, scr32);
     Rq_mult_small(cp, h, r); // c = Round(h * r)
     Round(cp, cp);
     Rounded_encode(c, cp, scr);
-    HashConfirm(work, c + PC_CT_BYTES - PC_CONFIRM_BYTES, r_enc, cache);
+    HashConfirm(work, c + PROTOCORE_CT_BYTES - PROTOCORE_CONFIRM_BYTES, r_enc, cache);
 }
 
 // ===========================================================================
@@ -502,7 +502,7 @@ static inline int negative_mask16(int16_t x)
 
 static void R3_fromRq(small_t *out, const Fq *r)
 {
-    for (int i = 0; i < PC_SNTRUP_P; ++i)
+    for (int i = 0; i < PROTOCORE_SNTRUP_P; ++i)
     {
         out[i] = F3_freeze(r[i]);
     }
@@ -510,28 +510,28 @@ static void R3_fromRq(small_t *out, const Fq *r)
 
 static void R3_mult(small_t *h, const small_t *f, const small_t *g)
 {
-    int16_t fg[PC_SNTRUP_P + PC_SNTRUP_P - 1];
+    int16_t fg[PROTOCORE_SNTRUP_P + PROTOCORE_SNTRUP_P - 1];
     int i, j;
-    for (i = 0; i < PC_SNTRUP_P + PC_SNTRUP_P - 1; ++i)
+    for (i = 0; i < PROTOCORE_SNTRUP_P + PROTOCORE_SNTRUP_P - 1; ++i)
     {
         fg[i] = 0;
     }
-    for (i = 0; i < PC_SNTRUP_P; ++i)
+    for (i = 0; i < PROTOCORE_SNTRUP_P; ++i)
     {
-        for (j = 0; j < PC_SNTRUP_P; ++j)
+        for (j = 0; j < PROTOCORE_SNTRUP_P; ++j)
         {
             fg[i + j] = (int16_t)(fg[i + j] + f[i] * (int16_t)g[j]);
         }
     }
-    for (i = PC_SNTRUP_P; i < PC_SNTRUP_P + PC_SNTRUP_P - 1; ++i)
+    for (i = PROTOCORE_SNTRUP_P; i < PROTOCORE_SNTRUP_P + PROTOCORE_SNTRUP_P - 1; ++i)
     {
-        fg[i - PC_SNTRUP_P] = (int16_t)(fg[i - PC_SNTRUP_P] + fg[i]);
+        fg[i - PROTOCORE_SNTRUP_P] = (int16_t)(fg[i - PROTOCORE_SNTRUP_P] + fg[i]);
     }
-    for (i = PC_SNTRUP_P; i < PC_SNTRUP_P + PC_SNTRUP_P - 1; ++i)
+    for (i = PROTOCORE_SNTRUP_P; i < PROTOCORE_SNTRUP_P + PROTOCORE_SNTRUP_P - 1; ++i)
     {
-        fg[i - PC_SNTRUP_P + 1] = (int16_t)(fg[i - PC_SNTRUP_P + 1] + fg[i]);
+        fg[i - PROTOCORE_SNTRUP_P + 1] = (int16_t)(fg[i - PROTOCORE_SNTRUP_P + 1] + fg[i]);
     }
-    for (i = 0; i < PC_SNTRUP_P; ++i)
+    for (i = 0; i < PROTOCORE_SNTRUP_P; ++i)
     {
         h[i] = F3_freeze(fg[i]);
     }
@@ -540,31 +540,31 @@ static void R3_mult(small_t *h, const small_t *f, const small_t *g)
 // 1/in in R3 (mod 3); returns 0 on success (in invertible), -1 otherwise. Constant-time GCD.
 static int R3_recip(small_t *out, const small_t *in)
 {
-    small_t f[PC_SNTRUP_P + 1], g[PC_SNTRUP_P + 1], v[PC_SNTRUP_P + 1], r[PC_SNTRUP_P + 1];
+    small_t f[PROTOCORE_SNTRUP_P + 1], g[PROTOCORE_SNTRUP_P + 1], v[PROTOCORE_SNTRUP_P + 1], r[PROTOCORE_SNTRUP_P + 1];
     int sign, swap, t, i, loop, delta = 1;
-    for (i = 0; i < PC_SNTRUP_P + 1; ++i)
+    for (i = 0; i < PROTOCORE_SNTRUP_P + 1; ++i)
     {
         v[i] = 0;
     }
-    for (i = 0; i < PC_SNTRUP_P + 1; ++i)
+    for (i = 0; i < PROTOCORE_SNTRUP_P + 1; ++i)
     {
         r[i] = 0;
     }
     r[0] = 1;
-    for (i = 0; i < PC_SNTRUP_P; ++i)
+    for (i = 0; i < PROTOCORE_SNTRUP_P; ++i)
     {
         f[i] = 0;
     }
     f[0] = 1;
-    f[PC_SNTRUP_P - 1] = f[PC_SNTRUP_P] = -1;
-    for (i = 0; i < PC_SNTRUP_P; ++i)
+    f[PROTOCORE_SNTRUP_P - 1] = f[PROTOCORE_SNTRUP_P] = -1;
+    for (i = 0; i < PROTOCORE_SNTRUP_P; ++i)
     {
-        g[PC_SNTRUP_P - 1 - i] = in[i];
+        g[PROTOCORE_SNTRUP_P - 1 - i] = in[i];
     }
-    g[PC_SNTRUP_P] = 0;
-    for (loop = 0; loop < 2 * PC_SNTRUP_P - 1; ++loop)
+    g[PROTOCORE_SNTRUP_P] = 0;
+    for (loop = 0; loop < 2 * PROTOCORE_SNTRUP_P - 1; ++loop)
     {
-        for (i = PC_SNTRUP_P; i > 0; --i)
+        for (i = PROTOCORE_SNTRUP_P; i > 0; --i)
         {
             v[i] = v[i - 1];
         }
@@ -573,7 +573,7 @@ static int R3_recip(small_t *out, const small_t *in)
         swap = negative_mask16((int16_t)-delta) & nonzero_mask16(g[0]);
         delta ^= swap & (delta ^ -delta);
         delta += 1;
-        for (i = 0; i < PC_SNTRUP_P + 1; ++i)
+        for (i = 0; i < PROTOCORE_SNTRUP_P + 1; ++i)
         {
             t = swap & (f[i] ^ g[i]);
             f[i] = (small_t)(f[i] ^ t);
@@ -582,31 +582,31 @@ static int R3_recip(small_t *out, const small_t *in)
             v[i] = (small_t)(v[i] ^ t);
             r[i] = (small_t)(r[i] ^ t);
         }
-        for (i = 0; i < PC_SNTRUP_P + 1; ++i)
+        for (i = 0; i < PROTOCORE_SNTRUP_P + 1; ++i)
         {
             g[i] = F3_freeze((int16_t)(g[i] + sign * f[i]));
         }
-        for (i = 0; i < PC_SNTRUP_P + 1; ++i)
+        for (i = 0; i < PROTOCORE_SNTRUP_P + 1; ++i)
         {
             r[i] = F3_freeze((int16_t)(r[i] + sign * v[i]));
         }
-        for (i = 0; i < PC_SNTRUP_P; ++i)
+        for (i = 0; i < PROTOCORE_SNTRUP_P; ++i)
         {
             g[i] = g[i + 1];
         }
-        g[PC_SNTRUP_P] = 0;
+        g[PROTOCORE_SNTRUP_P] = 0;
     }
     sign = f[0];
-    for (i = 0; i < PC_SNTRUP_P; ++i)
+    for (i = 0; i < PROTOCORE_SNTRUP_P; ++i)
     {
-        out[i] = (small_t)(sign * v[PC_SNTRUP_P - 1 - i]);
+        out[i] = (small_t)(sign * v[PROTOCORE_SNTRUP_P - 1 - i]);
     }
     return nonzero_mask16((int16_t)delta);
 }
 
 static void Rq_mult3(Fq *h, const Fq *f)
 {
-    for (int i = 0; i < PC_SNTRUP_P; ++i)
+    for (int i = 0; i < PROTOCORE_SNTRUP_P; ++i)
     {
         h[i] = Fq_freeze(3 * f[i]);
     }
@@ -616,7 +616,7 @@ static Fq Fq_recip(Fq a1)
 {
     int i = 1;
     Fq ai = a1;
-    while (i < PC_SNTRUP_Q - 2)
+    while (i < PROTOCORE_SNTRUP_Q - 2)
     {
         ai = Fq_freeze(a1 * (int32_t)ai);
         i += 1;
@@ -627,32 +627,33 @@ static Fq Fq_recip(Fq a1)
 // out = 1/(3*in) in Rq (used by KeyGen). Constant-time GCD over Fq.
 static int Rq_recip3(Fq *out, const small_t *in)
 {
-    Fq f[PC_SNTRUP_P + 1], g[PC_SNTRUP_P + 1], v[PC_SNTRUP_P + 1], r[PC_SNTRUP_P + 1], scale;
+    Fq f[PROTOCORE_SNTRUP_P + 1], g[PROTOCORE_SNTRUP_P + 1], v[PROTOCORE_SNTRUP_P + 1], r[PROTOCORE_SNTRUP_P + 1],
+        scale;
     int swap, i, loop, delta = 1;
     int32_t f0, g0;
-    for (i = 0; i < PC_SNTRUP_P + 1; ++i)
+    for (i = 0; i < PROTOCORE_SNTRUP_P + 1; ++i)
     {
         v[i] = 0;
     }
-    for (i = 0; i < PC_SNTRUP_P + 1; ++i)
+    for (i = 0; i < PROTOCORE_SNTRUP_P + 1; ++i)
     {
         r[i] = 0;
     }
     r[0] = Fq_recip(3);
-    for (i = 0; i < PC_SNTRUP_P; ++i)
+    for (i = 0; i < PROTOCORE_SNTRUP_P; ++i)
     {
         f[i] = 0;
     }
     f[0] = 1;
-    f[PC_SNTRUP_P - 1] = f[PC_SNTRUP_P] = -1;
-    for (i = 0; i < PC_SNTRUP_P; ++i)
+    f[PROTOCORE_SNTRUP_P - 1] = f[PROTOCORE_SNTRUP_P] = -1;
+    for (i = 0; i < PROTOCORE_SNTRUP_P; ++i)
     {
-        g[PC_SNTRUP_P - 1 - i] = in[i];
+        g[PROTOCORE_SNTRUP_P - 1 - i] = in[i];
     }
-    g[PC_SNTRUP_P] = 0;
-    for (loop = 0; loop < 2 * PC_SNTRUP_P - 1; ++loop)
+    g[PROTOCORE_SNTRUP_P] = 0;
+    for (loop = 0; loop < 2 * PROTOCORE_SNTRUP_P - 1; ++loop)
     {
-        for (i = PC_SNTRUP_P; i > 0; --i)
+        for (i = PROTOCORE_SNTRUP_P; i > 0; --i)
         {
             v[i] = v[i - 1];
         }
@@ -661,7 +662,7 @@ static int Rq_recip3(Fq *out, const small_t *in)
         delta ^= swap & (delta ^ -delta);
         delta += 1;
         Fq tmp;
-        for (i = 0; i < PC_SNTRUP_P + 1; ++i)
+        for (i = 0; i < PROTOCORE_SNTRUP_P + 1; ++i)
         {
             tmp = (Fq)(swap & (f[i] ^ g[i]));
             f[i] ^= tmp;
@@ -672,24 +673,24 @@ static int Rq_recip3(Fq *out, const small_t *in)
         }
         f0 = f[0];
         g0 = g[0];
-        for (i = 0; i < PC_SNTRUP_P + 1; ++i)
+        for (i = 0; i < PROTOCORE_SNTRUP_P + 1; ++i)
         {
             g[i] = Fq_freeze(f0 * g[i] - g0 * f[i]);
         }
-        for (i = 0; i < PC_SNTRUP_P + 1; ++i)
+        for (i = 0; i < PROTOCORE_SNTRUP_P + 1; ++i)
         {
             r[i] = Fq_freeze(f0 * r[i] - g0 * v[i]);
         }
-        for (i = 0; i < PC_SNTRUP_P; ++i)
+        for (i = 0; i < PROTOCORE_SNTRUP_P; ++i)
         {
             g[i] = g[i + 1];
         }
-        g[PC_SNTRUP_P] = 0;
+        g[PROTOCORE_SNTRUP_P] = 0;
     }
     scale = Fq_recip(f[0]);
-    for (i = 0; i < PC_SNTRUP_P; ++i)
+    for (i = 0; i < PROTOCORE_SNTRUP_P; ++i)
     {
-        out[i] = Fq_freeze(scale * (int32_t)v[PC_SNTRUP_P - 1 - i]);
+        out[i] = Fq_freeze(scale * (int32_t)v[PROTOCORE_SNTRUP_P - 1 - i]);
     }
     return nonzero_mask16((int16_t)delta);
 }
@@ -697,19 +698,19 @@ static int Rq_recip3(Fq *out, const small_t *in)
 static int Weightw_mask(const small_t *r)
 {
     int weight = 0;
-    for (int i = 0; i < PC_SNTRUP_P; ++i)
+    for (int i = 0; i < PROTOCORE_SNTRUP_P; ++i)
     {
         weight += (r[i] & 1);
     }
-    return nonzero_mask16((int16_t)(weight - PC_SNTRUP_W));
+    return nonzero_mask16((int16_t)(weight - PROTOCORE_SNTRUP_W));
 }
 
 static void Small_random(small_t *out)
 {
     uint8_t rb[4];
-    for (int i = 0; i < PC_SNTRUP_P; ++i)
+    for (int i = 0; i < PROTOCORE_SNTRUP_P; ++i)
     {
-        pc_rand_fill(rb, 4);
+        protocore_rand_fill(rb, 4);
         uint32_t u = (uint32_t)rb[0] | ((uint32_t)rb[1] << 8) | ((uint32_t)rb[2] << 16) | ((uint32_t)rb[3] << 24);
         out[i] = (small_t)((((u & 0x3fffffff) * 3) >> 30) - 1);
     }
@@ -717,8 +718,8 @@ static void Small_random(small_t *out)
 
 static void KeyGen(Fq *h, small_t *f, small_t *ginv)
 {
-    small_t g[PC_SNTRUP_P];
-    Fq finv[PC_SNTRUP_P];
+    small_t g[PROTOCORE_SNTRUP_P];
+    Fq finv[PROTOCORE_SNTRUP_P];
     for (;;)
     {
         Small_random(g);
@@ -734,7 +735,7 @@ static void KeyGen(Fq *h, small_t *f, small_t *ginv)
 
 static void Small_decode(small_t *f, const uint8_t *s)
 {
-    for (int i = 0; i < PC_SNTRUP_P / 4; ++i)
+    for (int i = 0; i < PROTOCORE_SNTRUP_P / 4; ++i)
     {
         uint8_t x = *s++;
         for (int j = 0; j < 4; ++j)
@@ -747,47 +748,47 @@ static void Small_decode(small_t *f, const uint8_t *s)
 
 static void Rounded_decode(Fq *r, const uint8_t *s, uint16_t *scr, uint32_t *scr32)
 {
-    uint16_t Rr[PC_SNTRUP_P], M[PC_SNTRUP_P];
-    for (int i = 0; i < PC_SNTRUP_P; ++i)
+    uint16_t Rr[PROTOCORE_SNTRUP_P], M[PROTOCORE_SNTRUP_P];
+    for (int i = 0; i < PROTOCORE_SNTRUP_P; ++i)
     {
-        M[i] = (PC_SNTRUP_Q + 2) / 3;
+        M[i] = (PROTOCORE_SNTRUP_Q + 2) / 3;
     }
-    sntrup761_decode(Rr, s, M, PC_SNTRUP_P, scr, scr32);
-    for (int i = 0; i < PC_SNTRUP_P; ++i)
+    sntrup761_decode(Rr, s, M, PROTOCORE_SNTRUP_P, scr, scr32);
+    for (int i = 0; i < PROTOCORE_SNTRUP_P; ++i)
     {
-        r[i] = (Fq)(Rr[i] * 3 - PC_Q12);
+        r[i] = (Fq)(Rr[i] * 3 - PROTOCORE_Q12);
     }
 }
 
 static void Rq_encode(uint8_t *s, const Fq *r, uint16_t *scr)
 {
-    uint16_t Rr[PC_SNTRUP_P], M[PC_SNTRUP_P];
-    for (int i = 0; i < PC_SNTRUP_P; ++i)
+    uint16_t Rr[PROTOCORE_SNTRUP_P], M[PROTOCORE_SNTRUP_P];
+    for (int i = 0; i < PROTOCORE_SNTRUP_P; ++i)
     {
-        Rr[i] = (uint16_t)(r[i] + PC_Q12);
+        Rr[i] = (uint16_t)(r[i] + PROTOCORE_Q12);
     }
-    for (int i = 0; i < PC_SNTRUP_P; ++i)
+    for (int i = 0; i < PROTOCORE_SNTRUP_P; ++i)
     {
-        M[i] = PC_SNTRUP_Q;
+        M[i] = PROTOCORE_SNTRUP_Q;
     }
-    sntrup761_encode(s, Rr, M, PC_SNTRUP_P, scr);
+    sntrup761_encode(s, Rr, M, PROTOCORE_SNTRUP_P, scr);
 }
 
 static void Decrypt(small_t *r, const Fq *c, const small_t *f, const small_t *ginv)
 {
-    Fq cf[PC_SNTRUP_P], cf3[PC_SNTRUP_P];
-    small_t e[PC_SNTRUP_P], ev[PC_SNTRUP_P];
+    Fq cf[PROTOCORE_SNTRUP_P], cf3[PROTOCORE_SNTRUP_P];
+    small_t e[PROTOCORE_SNTRUP_P], ev[PROTOCORE_SNTRUP_P];
     int mask, i;
     Rq_mult_small(cf, c, f);
     Rq_mult3(cf3, cf);
     R3_fromRq(e, cf3);
     R3_mult(ev, e, ginv);
     mask = Weightw_mask(ev);
-    for (i = 0; i < PC_SNTRUP_W; ++i)
+    for (i = 0; i < PROTOCORE_SNTRUP_W; ++i)
     {
         r[i] = (small_t)(((ev[i] ^ 1) & ~mask) ^ 1);
     }
-    for (i = PC_SNTRUP_W; i < PC_SNTRUP_P; ++i)
+    for (i = PROTOCORE_SNTRUP_W; i < PROTOCORE_SNTRUP_P; ++i)
     {
         r[i] = (small_t)(ev[i] & ~mask);
     }
@@ -797,7 +798,7 @@ static void Decrypt(small_t *r, const Fq *c, const small_t *f, const small_t *gi
 static int Ciphertexts_diff_mask(const uint8_t *c, const uint8_t *c2)
 {
     uint16_t differentbits = 0;
-    for (int i = 0; i < PC_CT_BYTES; ++i)
+    for (int i = 0; i < PROTOCORE_CT_BYTES; ++i)
     {
         differentbits |= (uint16_t)(c[i] ^ c2[i]);
     }
@@ -806,65 +807,66 @@ static int Ciphertexts_diff_mask(const uint8_t *c, const uint8_t *c2)
     return ((((uint16_t)(differentbits - 1)) >> 8) & 1) - 1;
 }
 
-void pc_sntrup761_enc(uint8_t *work, const uint8_t pk[PC_SNTRUP761_PK_BYTES], uint8_t ct[PC_SNTRUP761_CT_BYTES],
-                      uint8_t ss[PC_SNTRUP761_SS_BYTES])
+void protocore_sntrup761_enc(uint8_t *work, const uint8_t pk[PROTOCORE_SNTRUP761_PK_BYTES],
+                             uint8_t ct[PROTOCORE_SNTRUP761_CT_BYTES], uint8_t ss[PROTOCORE_SNTRUP761_SS_BYTES])
 {
-    uint16_t scr16[PC_SCR16];
-    uint32_t scr32[PC_SCR32];
-    small_t r[PC_SNTRUP_P];
-    uint8_t r_enc[PC_SMALL_BYTES];
-    uint8_t cache[PC_HASH_BYTES];
+    uint16_t scr16[PROTOCORE_SCR16];
+    uint32_t scr32[PROTOCORE_SCR32];
+    small_t r[PROTOCORE_SNTRUP_P];
+    uint8_t r_enc[PROTOCORE_SMALL_BYTES];
+    uint8_t cache[PROTOCORE_HASH_BYTES];
 
-    Hash_prefix(work, cache, 4, pk, PC_PK_BYTES);
+    Hash_prefix(work, cache, 4, pk, PROTOCORE_PK_BYTES);
     Short_random(r);
     Hide(work, ct, r_enc, r, pk, cache, scr16, scr32);
     HashSession(work, ss, 1, r_enc, ct);
 }
 
-void pc_sntrup761_keypair(uint8_t *work, uint8_t pk[PC_SNTRUP761_PK_BYTES], uint8_t sk[PC_SNTRUP761_SK_BYTES])
+void protocore_sntrup761_keypair(uint8_t *work, uint8_t pk[PROTOCORE_SNTRUP761_PK_BYTES],
+                                 uint8_t sk[PROTOCORE_SNTRUP761_SK_BYTES])
 {
-    uint16_t scr16[PC_SCR16];
-    Fq h[PC_SNTRUP_P];
-    small_t f[PC_SNTRUP_P];
-    small_t ginv[PC_SNTRUP_P];
+    uint16_t scr16[PROTOCORE_SCR16];
+    Fq h[PROTOCORE_SNTRUP_P];
+    small_t f[PROTOCORE_SNTRUP_P];
+    small_t ginv[PROTOCORE_SNTRUP_P];
 
     KeyGen(h, f, ginv);
     Rq_encode(pk, h, scr16);
     Small_encode(sk, f);
-    Small_encode(sk + PC_SMALL_BYTES, ginv);
+    Small_encode(sk + PROTOCORE_SMALL_BYTES, ginv);
     // ...then the pk copy, a random rho for implicit reject, and the cached H(4||pk).
-    uint8_t *tail = sk + 2 * PC_SMALL_BYTES; // SecretKeys_bytes = 2 * Small_bytes
-    mem.cpy(tail, pk, PC_PK_BYTES);
-    pc_rand_fill(tail + PC_PK_BYTES, PC_SMALL_BYTES);
-    Hash_prefix(work, tail + PC_PK_BYTES + PC_SMALL_BYTES, 4, pk, PC_PK_BYTES);
+    uint8_t *tail = sk + 2 * PROTOCORE_SMALL_BYTES; // SecretKeys_bytes = 2 * Small_bytes
+    mem.cpy(tail, pk, PROTOCORE_PK_BYTES);
+    protocore_rand_fill(tail + PROTOCORE_PK_BYTES, PROTOCORE_SMALL_BYTES);
+    Hash_prefix(work, tail + PROTOCORE_PK_BYTES + PROTOCORE_SMALL_BYTES, 4, pk, PROTOCORE_PK_BYTES);
 }
 
-void pc_sntrup761_dec(uint8_t *work, const uint8_t sk[PC_SNTRUP761_SK_BYTES], const uint8_t ct[PC_SNTRUP761_CT_BYTES],
-                      uint8_t ss[PC_SNTRUP761_SS_BYTES])
+void protocore_sntrup761_dec(uint8_t *work, const uint8_t sk[PROTOCORE_SNTRUP761_SK_BYTES],
+                             const uint8_t ct[PROTOCORE_SNTRUP761_CT_BYTES], uint8_t ss[PROTOCORE_SNTRUP761_SS_BYTES])
 {
-    uint16_t scr16[PC_SCR16];
-    uint32_t scr32[PC_SCR32];
-    const uint8_t *pk = sk + 2 * PC_SMALL_BYTES;
-    const uint8_t *rho = pk + PC_PK_BYTES;
-    const uint8_t *cache = rho + PC_SMALL_BYTES;
-    small_t f[PC_SNTRUP_P];
-    small_t ginv[PC_SNTRUP_P];
-    small_t r[PC_SNTRUP_P];
-    Fq cp[PC_SNTRUP_P];
-    uint8_t r_enc[PC_SMALL_BYTES];
-    uint8_t cnew[PC_CT_BYTES];
+    uint16_t scr16[PROTOCORE_SCR16];
+    uint32_t scr32[PROTOCORE_SCR32];
+    const uint8_t *pk = sk + 2 * PROTOCORE_SMALL_BYTES;
+    const uint8_t *rho = pk + PROTOCORE_PK_BYTES;
+    const uint8_t *cache = rho + PROTOCORE_SMALL_BYTES;
+    small_t f[PROTOCORE_SNTRUP_P];
+    small_t ginv[PROTOCORE_SNTRUP_P];
+    small_t r[PROTOCORE_SNTRUP_P];
+    Fq cp[PROTOCORE_SNTRUP_P];
+    uint8_t r_enc[PROTOCORE_SMALL_BYTES];
+    uint8_t cnew[PROTOCORE_CT_BYTES];
 
     Small_decode(f, sk);
-    Small_decode(ginv, sk + PC_SMALL_BYTES);
+    Small_decode(ginv, sk + PROTOCORE_SMALL_BYTES);
     Rounded_decode(cp, ct, scr16, scr32);
     Decrypt(r, cp, f, ginv);
     Hide(work, cnew, r_enc, r, pk, cache, scr16, scr32); // re-encrypt: FO check
     int mask = Ciphertexts_diff_mask(ct, cnew);
-    for (int i = 0; i < PC_SMALL_BYTES; ++i)
+    for (int i = 0; i < PROTOCORE_SMALL_BYTES; ++i)
     {
         r_enc[i] = (uint8_t)(r_enc[i] ^ (mask & (r_enc[i] ^ rho[i]))); // implicit reject -> rho
     }
     HashSession(work, ss, 1 + mask, r_enc, ct);
 }
 
-#endif // PC_ENABLE_SSH_SNTRUP761
+#endif // PROTOCORE_ENABLE_SSH_SNTRUP761

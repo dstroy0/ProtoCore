@@ -12,7 +12,7 @@
 // The allocator mechanics themselves belong to test_arena; duplicating them here would be testing
 // the same code twice.
 
-#include "mmgr/arena.h" // pc_worker_set_self()
+#include "mmgr/arena.h" // protocore_worker_set_self()
 #include "mmgr/plaintext.h"
 #include "mmgr/secure.h"
 
@@ -21,11 +21,11 @@
 
 void setUp(void)
 {
-    pc_secure_reset();
+    protocore_secure_reset();
 }
 void tearDown(void)
 {
-    pc_secure_reset();
+    protocore_secure_reset();
 }
 
 // --- the control that defines this pool: reclaiming wipes ---
@@ -33,16 +33,16 @@ void tearDown(void)
 static void test_release_wipes_the_reclaimed_region(void)
 {
     uint8_t *key = NULL;
-    size_t mark = pc_secure_mark();
+    size_t mark = protocore_secure_mark();
     {
-        pc_span s = pc_secure_span(32, 8);
-        TEST_ASSERT_TRUE(pc_span_ok(s));
+        protocore_span s = protocore_secure_span(32, 8);
+        TEST_ASSERT_TRUE(protocore_span_ok(s));
         memset(s.buf, 0xA5, s.cap);
         key = s.buf;
         TEST_ASSERT_EQUAL_UINT8(0xA5, key[0]);
         TEST_ASSERT_EQUAL_UINT8(0xA5, key[31]);
     }
-    pc_secure_release(mark);
+    protocore_secure_release(mark);
 
     // The bytes are zero the moment they are reclaimed - not merely marked free.
     for (size_t i = 0; i < 32; i++)
@@ -54,14 +54,14 @@ static void test_release_wipes_the_reclaimed_region(void)
 // The regression that matters: the NEXT borrow must never see the previous tenant's key material.
 static void test_a_later_borrow_never_sees_the_previous_secret(void)
 {
-    size_t mark = pc_secure_mark();
-    pc_span first = pc_secure_span(64, 8);
-    TEST_ASSERT_TRUE(pc_span_ok(first));
+    size_t mark = protocore_secure_mark();
+    protocore_span first = protocore_secure_span(64, 8);
+    TEST_ASSERT_TRUE(protocore_span_ok(first));
     memset(first.buf, 0x5C, first.cap);
-    pc_secure_release(mark);
+    protocore_secure_release(mark);
 
-    pc_span second = pc_secure_span(64, 8);
-    TEST_ASSERT_TRUE(pc_span_ok(second));
+    protocore_span second = protocore_secure_span(64, 8);
+    TEST_ASSERT_TRUE(protocore_span_ok(second));
     TEST_ASSERT_EQUAL_PTR(first.buf, second.buf); // same bytes handed back out
     for (size_t i = 0; i < second.cap; i++)
     {
@@ -71,23 +71,23 @@ static void test_a_later_borrow_never_sees_the_previous_secret(void)
 
 static void test_reset_wipes_everything_live(void)
 {
-    pc_span a = pc_secure_span(48, 8);
-    pc_span b = pc_secure_span(48, 8);
-    TEST_ASSERT_TRUE(pc_span_ok(a));
-    TEST_ASSERT_TRUE(pc_span_ok(b));
+    protocore_span a = protocore_secure_span(48, 8);
+    protocore_span b = protocore_secure_span(48, 8);
+    TEST_ASSERT_TRUE(protocore_span_ok(a));
+    TEST_ASSERT_TRUE(protocore_span_ok(b));
     memset(a.buf, 0x11, a.cap);
     memset(b.buf, 0x22, b.cap);
     uint8_t *pa = a.buf;
     uint8_t *pb = b.buf;
 
-    pc_secure_reset();
+    protocore_secure_reset();
 
     for (size_t i = 0; i < 48; i++)
     {
         TEST_ASSERT_EQUAL_UINT8(0, pa[i]);
         TEST_ASSERT_EQUAL_UINT8(0, pb[i]);
     }
-    TEST_ASSERT_EQUAL_size_t(0, pc_secure_used());
+    TEST_ASSERT_EQUAL_size_t(0, protocore_secure_used());
 }
 
 // Release wipes, and it has to happen on the early-exit paths too - the ones a hand-written wipe
@@ -98,17 +98,17 @@ static void test_scope_guard_wipes_on_every_exit(void)
     uint8_t *seen = NULL;
     for (int trip = 0; trip < 2; trip++)
     {
-        size_t scope = pc_secure_mark();
-        pc_span s = pc_secure_span(16, 8);
-        TEST_ASSERT_TRUE(pc_span_ok(s));
+        size_t scope = protocore_secure_mark();
+        protocore_span s = protocore_secure_span(16, 8);
+        TEST_ASSERT_TRUE(protocore_span_ok(s));
         memset(s.buf, 0xEE, s.cap);
         seen = s.buf;
         if (trip == 0)
         {
-            pc_secure_release(scope); // the "peer sent something malformed" shape
+            protocore_secure_release(scope); // the "peer sent something malformed" shape
             continue;
         }
-        pc_secure_release(scope);
+        protocore_secure_release(scope);
     }
     for (size_t i = 0; i < 16; i++)
     {
@@ -118,40 +118,40 @@ static void test_scope_guard_wipes_on_every_exit(void)
 
 static void test_nested_scopes_release_lifo(void)
 {
-    size_t outer = pc_secure_mark();
-    pc_span a = pc_secure_span(32, 8);
-    TEST_ASSERT_TRUE(pc_span_ok(a));
-    size_t after_a = pc_secure_used();
+    size_t outer = protocore_secure_mark();
+    protocore_span a = protocore_secure_span(32, 8);
+    TEST_ASSERT_TRUE(protocore_span_ok(a));
+    size_t after_a = protocore_secure_used();
     {
-        size_t inner = pc_secure_mark();
-        pc_span b = pc_secure_span(32, 8);
-        TEST_ASSERT_TRUE(pc_span_ok(b));
-        TEST_ASSERT_TRUE(pc_secure_used() > after_a);
-        pc_secure_release(inner);
+        size_t inner = protocore_secure_mark();
+        protocore_span b = protocore_secure_span(32, 8);
+        TEST_ASSERT_TRUE(protocore_span_ok(b));
+        TEST_ASSERT_TRUE(protocore_secure_used() > after_a);
+        protocore_secure_release(inner);
     }
-    TEST_ASSERT_EQUAL_size_t(after_a, pc_secure_used()); // inner reclaimed, outer intact
-    TEST_ASSERT_TRUE(pc_span_ok(a));
-    pc_secure_release(outer);
+    TEST_ASSERT_EQUAL_size_t(after_a, protocore_secure_used()); // inner reclaimed, outer intact
+    TEST_ASSERT_TRUE(protocore_span_ok(a));
+    protocore_secure_release(outer);
 }
 
 // --- the other half of the control: the pools are disjoint regions ---
 
 static void test_a_secure_pointer_is_not_a_plaintext_one(void)
 {
-    pc_span s = pc_secure_span(32, 8);
-    TEST_ASSERT_TRUE(pc_span_ok(s));
-    TEST_ASSERT_TRUE(pc_secure_owns(s.buf));
-    TEST_ASSERT_FALSE(pc_plaintext_owns(s.buf)); // cannot be mistaken for plaintext
+    protocore_span s = protocore_secure_span(32, 8);
+    TEST_ASSERT_TRUE(protocore_span_ok(s));
+    TEST_ASSERT_TRUE(protocore_secure_owns(s.buf));
+    TEST_ASSERT_FALSE(protocore_plaintext_owns(s.buf)); // cannot be mistaken for plaintext
 }
 
 static void test_a_plaintext_pointer_is_not_a_secure_one(void)
 {
-    size_t scope = pc_plaintext_mark();
-    pc_span s = pc_plaintext_span(32, 8);
-    TEST_ASSERT_TRUE(pc_span_ok(s));
-    TEST_ASSERT_TRUE(pc_plaintext_owns(s.buf));
-    TEST_ASSERT_FALSE(pc_secure_owns(s.buf)); // cannot be mistaken for secure
-    pc_plaintext_release(scope);              // setUp resets the secure pool only, so hand this back
+    size_t scope = protocore_plaintext_mark();
+    protocore_span s = protocore_plaintext_span(32, 8);
+    TEST_ASSERT_TRUE(protocore_span_ok(s));
+    TEST_ASSERT_TRUE(protocore_plaintext_owns(s.buf));
+    TEST_ASSERT_FALSE(protocore_secure_owns(s.buf)); // cannot be mistaken for secure
+    protocore_plaintext_release(scope);              // setUp resets the secure pool only, so hand this back
 }
 
 // Storage outside both pools, aligned the way every borrow is. The probe is not a stack array: a
@@ -162,60 +162,60 @@ static uint8_t g_outside[32] __attribute__((aligned(32)));
 // A pointer from neither pool - other BSS, a code address, null - belongs to neither.
 static void test_foreign_pointers_belong_to_neither_pool(void)
 {
-    TEST_ASSERT_FALSE(pc_secure_owns(g_outside));
-    TEST_ASSERT_FALSE(pc_plaintext_owns(g_outside));
-    TEST_ASSERT_EQUAL_INT(-1, pc_secure_slot_of(g_outside));
-    TEST_ASSERT_EQUAL_INT(-1, pc_plaintext_slot_of(g_outside));
+    TEST_ASSERT_FALSE(protocore_secure_owns(g_outside));
+    TEST_ASSERT_FALSE(protocore_plaintext_owns(g_outside));
+    TEST_ASSERT_EQUAL_INT(-1, protocore_secure_slot_of(g_outside));
+    TEST_ASSERT_EQUAL_INT(-1, protocore_plaintext_slot_of(g_outside));
 
     // A code address is aligned by construction and cannot be in either arena.
-    const void *code = (const void *)&pc_secure_reset;
-    TEST_ASSERT_FALSE(pc_secure_owns(code));
-    TEST_ASSERT_FALSE(pc_plaintext_owns(code));
+    const void *code = (const void *)&protocore_secure_reset;
+    TEST_ASSERT_FALSE(protocore_secure_owns(code));
+    TEST_ASSERT_FALSE(protocore_plaintext_owns(code));
 
-    TEST_ASSERT_FALSE(pc_secure_owns(NULL));
-    TEST_ASSERT_FALSE(pc_plaintext_owns(NULL));
-    TEST_ASSERT_EQUAL_INT(-1, pc_secure_slot_of(NULL));
-    TEST_ASSERT_EQUAL_INT(-1, pc_plaintext_slot_of(NULL));
+    TEST_ASSERT_FALSE(protocore_secure_owns(NULL));
+    TEST_ASSERT_FALSE(protocore_plaintext_owns(NULL));
+    TEST_ASSERT_EQUAL_INT(-1, protocore_secure_slot_of(NULL));
+    TEST_ASSERT_EQUAL_INT(-1, protocore_plaintext_slot_of(NULL));
 }
 
 // An address one past the end of a borrow's pool must not read as still-inside: that is what makes
 // the range test a usable overrun check rather than a coincidence.
 static void test_one_past_the_pool_is_not_owned(void)
 {
-    pc_span s = pc_secure_span(16, 8);
-    TEST_ASSERT_TRUE(pc_span_ok(s));
-    const uint8_t *end = s.buf + (PC_SECURE_ARENA_SIZE * PC_SEC_POOL_SLOTS);
-    TEST_ASSERT_FALSE(pc_secure_owns(end));
-    TEST_ASSERT_EQUAL_INT(-1, pc_secure_slot_of(end));
+    protocore_span s = protocore_secure_span(16, 8);
+    TEST_ASSERT_TRUE(protocore_span_ok(s));
+    const uint8_t *end = s.buf + (PROTOCORE_SECURE_ARENA_SIZE * PROTOCORE_SEC_POOL_SLOTS);
+    TEST_ASSERT_FALSE(protocore_secure_owns(end));
+    TEST_ASSERT_EQUAL_INT(-1, protocore_secure_slot_of(end));
 }
 
 // The secure pool resolves the borrowing slot the same way the plaintext one does, and it is a
 // second copy of that decision, so it is asserted here too rather than assumed to match.
 //
-// Which slot the caller gets is only observable at PC_WORKER_COUNT > 1 (native_pool_workers):
-// below that pc_worker_self() is an inline compile-time 0 (worker.h) and every borrow is slot 0
+// Which slot the caller gets is only observable at PROTOCORE_WORKER_COUNT > 1 (native_pool_workers):
+// below that protocore_worker_self() is an inline compile-time 0 (worker.h) and every borrow is slot 0
 // whatever the accessor decides.
 static void test_slot_of_reports_the_borrowing_slot(void)
 {
-    pc_span s = pc_secure_span(16, 8);
-    TEST_ASSERT_TRUE(pc_span_ok(s));
-    TEST_ASSERT_EQUAL_INT(0, pc_secure_slot_of(s.buf));
+    protocore_span s = protocore_secure_span(16, 8);
+    TEST_ASSERT_TRUE(protocore_span_ok(s));
+    TEST_ASSERT_EQUAL_INT(0, protocore_secure_slot_of(s.buf));
 
-#if PC_WORKER_COUNT > 1
-    pc_secure_reset();
-    pc_worker_set_self(1);
-    pc_span own = pc_secure_span(16, 8);
-    TEST_ASSERT_TRUE(pc_span_ok(own));
-    TEST_ASSERT_EQUAL_INT(1, pc_secure_slot_of(own.buf)); // its own slot, not worker 0's
-    pc_secure_reset();                                    // while still bound to 1: reset is per-slot
+#if PROTOCORE_WORKER_COUNT > 1
+    protocore_secure_reset();
+    protocore_worker_set_self(1);
+    protocore_span own = protocore_secure_span(16, 8);
+    TEST_ASSERT_TRUE(protocore_span_ok(own));
+    TEST_ASSERT_EQUAL_INT(1, protocore_secure_slot_of(own.buf)); // its own slot, not worker 0's
+    protocore_secure_reset();                                    // while still bound to 1: reset is per-slot
 
-    pc_worker_set_self(PC_SEC_POOL_SLOTS); // not a server worker
-    pc_span ghost = pc_secure_span(16, 8);
-    TEST_ASSERT_TRUE(pc_span_ok(ghost));
-    TEST_ASSERT_EQUAL_INT(PC_GHOST_WORKER_SLOT, pc_secure_slot_of(ghost.buf));
-    pc_secure_reset(); // empties the ghost before the identity goes back to 0
+    protocore_worker_set_self(PROTOCORE_SEC_POOL_SLOTS); // not a server worker
+    protocore_span ghost = protocore_secure_span(16, 8);
+    TEST_ASSERT_TRUE(protocore_span_ok(ghost));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_GHOST_WORKER_SLOT, protocore_secure_slot_of(ghost.buf));
+    protocore_secure_reset(); // empties the ghost before the identity goes back to 0
 
-    pc_worker_set_self(0); // restore identity for every later test
+    protocore_worker_set_self(0); // restore identity for every later test
 #endif
 }
 
@@ -223,19 +223,19 @@ static void test_slot_of_reports_the_borrowing_slot(void)
 
 static void test_high_water_reports_peak_demand(void)
 {
-    pc_secure_reset();
-    size_t mark = pc_secure_mark();
-    pc_span s = pc_secure_span(128, 8);
-    TEST_ASSERT_TRUE(pc_span_ok(s));
-    TEST_ASSERT_TRUE(pc_secure_high_water() >= 128);
-    pc_secure_release(mark);
-    TEST_ASSERT_TRUE(pc_secure_high_water() >= 128); // peak survives the reclaim
+    protocore_secure_reset();
+    size_t mark = protocore_secure_mark();
+    protocore_span s = protocore_secure_span(128, 8);
+    TEST_ASSERT_TRUE(protocore_span_ok(s));
+    TEST_ASSERT_TRUE(protocore_secure_high_water() >= 128);
+    protocore_secure_release(mark);
+    TEST_ASSERT_TRUE(protocore_secure_high_water() >= 128); // peak survives the reclaim
 }
 
 static void test_over_budget_fails_closed(void)
 {
-    pc_span s = pc_secure_span(PC_SECURE_ARENA_SIZE * 4, 8);
-    TEST_ASSERT_FALSE(pc_span_ok(s));
+    protocore_span s = protocore_secure_span(PROTOCORE_SECURE_ARENA_SIZE * 4, 8);
+    TEST_ASSERT_FALSE(protocore_span_ok(s));
     TEST_ASSERT_NULL(s.buf);
     TEST_ASSERT_EQUAL_UINT32(0, s.cap); // not a null with a live capacity
 }
@@ -248,16 +248,16 @@ static void test_over_budget_fails_closed(void)
 // name every member and anchor alloc -> bind -> the backing bytes.
 static void test_secure_table_is_wired_to_the_named_functions(void)
 {
-    TEST_ASSERT_EQUAL_PTR(pc_secure_alloc, secure.alloc);
-    TEST_ASSERT_EQUAL_PTR(pc_secure_span, secure.span);
-    TEST_ASSERT_EQUAL_PTR(pc_secure_reset, secure.reset);
-    TEST_ASSERT_EQUAL_PTR(pc_secure_mark, secure.mark);
-    TEST_ASSERT_EQUAL_PTR(pc_secure_release, secure.release);
-    TEST_ASSERT_EQUAL_PTR(pc_secure_used, secure.used);
-    TEST_ASSERT_EQUAL_PTR(pc_secure_high_water, secure.high_water);
-    TEST_ASSERT_EQUAL_PTR(pc_secure_capacity, secure.capacity);
-    TEST_ASSERT_EQUAL_PTR(pc_secure_owns, secure.owns);
-    TEST_ASSERT_EQUAL_PTR(pc_secure_slot_of, secure.slot_of);
+    TEST_ASSERT_EQUAL_PTR(protocore_secure_alloc, secure.alloc);
+    TEST_ASSERT_EQUAL_PTR(protocore_secure_span, secure.span);
+    TEST_ASSERT_EQUAL_PTR(protocore_secure_reset, secure.reset);
+    TEST_ASSERT_EQUAL_PTR(protocore_secure_mark, secure.mark);
+    TEST_ASSERT_EQUAL_PTR(protocore_secure_release, secure.release);
+    TEST_ASSERT_EQUAL_PTR(protocore_secure_used, secure.used);
+    TEST_ASSERT_EQUAL_PTR(protocore_secure_high_water, secure.high_water);
+    TEST_ASSERT_EQUAL_PTR(protocore_secure_capacity, secure.capacity);
+    TEST_ASSERT_EQUAL_PTR(protocore_secure_owns, secure.owns);
+    TEST_ASSERT_EQUAL_PTR(protocore_secure_slot_of, secure.slot_of);
 }
 
 // The pool reached through the table rather than around it, and the one control
@@ -266,23 +266,23 @@ static void test_secure_table_round_trip(void)
 {
     secure.reset();
     TEST_ASSERT_EQUAL_size_t(0, secure.used());
-    TEST_ASSERT_EQUAL_size_t(PC_SECURE_ARENA_SIZE, secure.capacity());
+    TEST_ASSERT_EQUAL_size_t(PROTOCORE_SECURE_ARENA_SIZE, secure.capacity());
 
     const size_t mark = secure.mark();
-    pc_span s = secure.span(32, 8);
-    TEST_ASSERT_TRUE(pc_span_ok(s));
+    protocore_span s = secure.span(32, 8);
+    TEST_ASSERT_TRUE(protocore_span_ok(s));
     TEST_ASSERT_EQUAL_size_t(32, s.cap);
     TEST_ASSERT_EQUAL_size_t(0, (uintptr_t)s.buf % 8);
     TEST_ASSERT_TRUE(secure.owns(s.buf));
-    TEST_ASSERT_TRUE(secure.slot_of(s.buf) >= 0 && secure.slot_of(s.buf) < PC_SEC_POOL_SLOTS);
+    TEST_ASSERT_TRUE(secure.slot_of(s.buf) >= 0 && secure.slot_of(s.buf) < PROTOCORE_SEC_POOL_SLOTS);
 
     // A secret is never a plaintext borrow, and the reverse - disjoint regions.
-    TEST_ASSERT_FALSE(pc_plaintext_owns(s.buf));
-    const pc_span open = pc_plaintext_span(32, 8);
-    TEST_ASSERT_TRUE(pc_span_ok(open));
+    TEST_ASSERT_FALSE(protocore_plaintext_owns(s.buf));
+    const protocore_span open = protocore_plaintext_span(32, 8);
+    TEST_ASSERT_TRUE(protocore_span_ok(open));
     TEST_ASSERT_FALSE(secure.owns(open.buf));
     TEST_ASSERT_EQUAL_INT(-1, secure.slot_of(open.buf));
-    pc_plaintext_reset();
+    protocore_plaintext_reset();
 
     uint8_t *key = s.buf;
     memset(key, 0xC7, 32);
@@ -301,8 +301,8 @@ static void test_secure_table_round_trip(void)
     const size_t before = secure.used();
     TEST_ASSERT_NULL(secure.alloc(secure.capacity() * 4u, 8));
     TEST_ASSERT_EQUAL_size_t(before, secure.used());
-    const pc_span too_big = secure.span(secure.capacity() * 4u, 8);
-    TEST_ASSERT_FALSE(pc_span_ok(too_big));
+    const protocore_span too_big = secure.span(secure.capacity() * 4u, 8);
+    TEST_ASSERT_FALSE(protocore_span_ok(too_big));
     TEST_ASSERT_NULL(too_big.buf);
     TEST_ASSERT_EQUAL_size_t(0, too_big.cap);
 

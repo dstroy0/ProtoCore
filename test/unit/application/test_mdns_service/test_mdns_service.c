@@ -8,7 +8,7 @@
 
 #include "network_drivers/application/mdns_service/mdns_service.h"
 #include "network_drivers/transport/udp.h"
-#include "pc_net_host.h"
+#include "protocore_net_host.h"
 #include <string.h>
 
 #include <unity.h>
@@ -17,7 +17,7 @@
 
 void setUp()
 {
-    pc_net_host_reset();
+    protocore_net_host_reset();
 }
 void tearDown()
 {
@@ -119,8 +119,8 @@ static void ask(const char *name, uint16_t qtype)
 {
     uint8_t q[256];
     size_t n = make_query(q, name, qtype);
-    pc_net_host_udp_reset();
-    TEST_ASSERT_TRUE(pc_net_host_udp_deliver(MDNS_PORT, "192.0.2.7", 5353, q, (uint16_t)n));
+    protocore_net_host_udp_reset();
+    TEST_ASSERT_TRUE(protocore_net_host_udp_deliver(MDNS_PORT, "192.0.2.7", 5353, q, (uint16_t)n));
     Udp.listener->poll();
 }
 
@@ -136,7 +136,7 @@ typedef struct
 } Rec;
 
 // Decode answer i of the captured response. Returns false when there is no such record.
-static proto_bool answer_at(const pc_net_host_dgram *d, int want, Rec *r)
+static proto_bool answer_at(const protocore_net_host_dgram *d, int want, Rec *r)
 {
     uint16_t an = (uint16_t)((d->data[6] << 8) | d->data[7]);
     if (want >= (int)an)
@@ -162,10 +162,10 @@ static proto_bool answer_at(const pc_net_host_dgram *d, int want, Rec *r)
 }
 
 // The one datagram the responder sent, checked as an mDNS response to the group.
-static const pc_net_host_dgram *response(void)
+static const protocore_net_host_dgram *response(void)
 {
-    TEST_ASSERT_EQUAL_INT(1, (int)pc_net_host_udp_count());
-    const pc_net_host_dgram *d = pc_net_host_udp_at(0);
+    TEST_ASSERT_EQUAL_INT(1, (int)protocore_net_host_udp_count());
+    const protocore_net_host_dgram *d = protocore_net_host_udp_at(0);
     TEST_ASSERT_EQUAL_UINT8(224, d->addr[0]); // answered to 224.0.0.251, not to the asker
     TEST_ASSERT_EQUAL_UINT8(251, d->addr[3]);
     TEST_ASSERT_EQUAL_UINT16(MDNS_PORT, d->dst_port);
@@ -178,25 +178,25 @@ static const pc_net_host_dgram *response(void)
 
 void test_begin_joins_the_group()
 {
-    TEST_ASSERT_TRUE(pc_mdns_begin("myhost", 80));
-    TEST_ASSERT_NOT_NULL(pc_net_host_udp_pcb(MDNS_PORT));
+    TEST_ASSERT_TRUE(protocore_mdns_begin("myhost", 80));
+    TEST_ASSERT_NOT_NULL(protocore_net_host_udp_pcb(MDNS_PORT));
     TEST_ASSERT_EQUAL_STRING("224.0.0.251", Udp.listener->joined_group(MDNS_PORT));
 }
 
 void test_begin_rejects_a_bad_hostname()
 {
-    TEST_ASSERT_FALSE(pc_mdns_begin(NULL, 80));
-    TEST_ASSERT_FALSE(pc_mdns_begin("", 80));
+    TEST_ASSERT_FALSE(protocore_mdns_begin(NULL, 80));
+    TEST_ASSERT_FALSE(protocore_mdns_begin("", 80));
 }
 
 // A browser walks _services._dns-sd._udp.local to find what types the host offers; begin()
 // registered _http._tcp, so that is what comes back.
 void test_service_enumeration_lists_the_http_type()
 {
-    TEST_ASSERT_TRUE(pc_mdns_begin("myhost", 80));
+    TEST_ASSERT_TRUE(protocore_mdns_begin("myhost", 80));
     ask("_services._dns-sd._udp.local", 12); // PTR
 
-    const pc_net_host_dgram *d = response();
+    const protocore_net_host_dgram *d = response();
     Rec r;
     TEST_ASSERT_TRUE(answer_at(d, 0, &r));
     TEST_ASSERT_EQUAL_STRING("_services._dns-sd._udp.local", r.owner);
@@ -210,10 +210,10 @@ void test_service_enumeration_lists_the_http_type()
 // Asking the service type yields the instance that offers it.
 void test_service_type_points_at_the_instance()
 {
-    TEST_ASSERT_TRUE(pc_mdns_begin("myhost", 80));
+    TEST_ASSERT_TRUE(protocore_mdns_begin("myhost", 80));
     ask("_http._tcp.local", 12);
 
-    const pc_net_host_dgram *d = response();
+    const protocore_net_host_dgram *d = response();
     Rec r;
     TEST_ASSERT_TRUE(answer_at(d, 0, &r));
     TEST_ASSERT_EQUAL_STRING("_http._tcp.local", r.owner);
@@ -225,10 +225,10 @@ void test_service_type_points_at_the_instance()
 // SRV carries the port begin() was given and targets the host's own name.
 void test_instance_srv_carries_port_and_target()
 {
-    TEST_ASSERT_TRUE(pc_mdns_begin("myhost", 8080));
+    TEST_ASSERT_TRUE(protocore_mdns_begin("myhost", 8080));
     ask("myhost._http._tcp.local", 33); // SRV
 
-    const pc_net_host_dgram *d = response();
+    const protocore_net_host_dgram *d = response();
     Rec r;
     TEST_ASSERT_TRUE(answer_at(d, 0, &r));
     TEST_ASSERT_EQUAL_UINT16(33, r.type);
@@ -244,10 +244,10 @@ void test_instance_srv_carries_port_and_target()
 // TXT with nothing added is one empty string, never zero-length (RFC 6763 sec 6.1).
 void test_instance_txt_is_never_empty()
 {
-    TEST_ASSERT_TRUE(pc_mdns_begin("myhost", 80));
+    TEST_ASSERT_TRUE(protocore_mdns_begin("myhost", 80));
     ask("myhost._http._tcp.local", 16); // TXT
 
-    const pc_net_host_dgram *d = response();
+    const protocore_net_host_dgram *d = response();
     Rec r;
     TEST_ASSERT_TRUE(answer_at(d, 0, &r));
     TEST_ASSERT_EQUAL_UINT16(16, r.type);
@@ -258,12 +258,12 @@ void test_instance_txt_is_never_empty()
 // Each key=value is one length-prefixed string in the TXT rdata.
 void test_txt_records_are_length_prefixed()
 {
-    TEST_ASSERT_TRUE(pc_mdns_begin("myhost", 80));
-    TEST_ASSERT_TRUE(pc_mdns_txt("path", "/"));
-    TEST_ASSERT_TRUE(pc_mdns_txt("fw", "1.2.3"));
+    TEST_ASSERT_TRUE(protocore_mdns_begin("myhost", 80));
+    TEST_ASSERT_TRUE(protocore_mdns_txt("path", "/"));
+    TEST_ASSERT_TRUE(protocore_mdns_txt("fw", "1.2.3"));
     ask("myhost._http._tcp.local", 16);
 
-    const pc_net_host_dgram *d = response();
+    const protocore_net_host_dgram *d = response();
     Rec r;
     TEST_ASSERT_TRUE(answer_at(d, 0, &r));
     TEST_ASSERT_EQUAL_UINT8(6, r.rdata[0]);
@@ -276,10 +276,10 @@ void test_txt_records_are_length_prefixed()
 // QTYPE ANY on an instance answers with everything the instance owns.
 void test_any_on_an_instance_answers_srv_and_txt()
 {
-    TEST_ASSERT_TRUE(pc_mdns_begin("myhost", 80));
+    TEST_ASSERT_TRUE(protocore_mdns_begin("myhost", 80));
     ask("myhost._http._tcp.local", 255);
 
-    const pc_net_host_dgram *d = response();
+    const protocore_net_host_dgram *d = response();
     TEST_ASSERT_EQUAL_UINT16(2, (uint16_t)((d->data[6] << 8) | d->data[7]));
     Rec a, b;
     TEST_ASSERT_TRUE(answer_at(d, 0, &a));
@@ -291,11 +291,11 @@ void test_any_on_an_instance_answers_srv_and_txt()
 // An added service is advertised alongside the _http._tcp one begin() registers.
 void test_added_service_is_advertised()
 {
-    TEST_ASSERT_TRUE(pc_mdns_begin("myhost", 80));
-    TEST_ASSERT_TRUE(pc_mdns_add_service("_https", "_tcp", 443));
+    TEST_ASSERT_TRUE(protocore_mdns_begin("myhost", 80));
+    TEST_ASSERT_TRUE(protocore_mdns_add_service("_https", "_tcp", 443));
     ask("_https._tcp.local", 12);
 
-    const pc_net_host_dgram *d = response();
+    const protocore_net_host_dgram *d = response();
     Rec r;
     TEST_ASSERT_TRUE(answer_at(d, 0, &r));
     TEST_ASSERT_EQUAL_STRING("_https._tcp.local", r.owner);
@@ -308,53 +308,53 @@ void test_added_service_is_advertised()
 // answering NXDOMAIN the way unicast DNS does (RFC 6762 sec 6).
 void test_unknown_name_is_answered_with_silence()
 {
-    TEST_ASSERT_TRUE(pc_mdns_begin("myhost", 80));
+    TEST_ASSERT_TRUE(protocore_mdns_begin("myhost", 80));
     ask("someoneelse.local", 1);
-    TEST_ASSERT_EQUAL_INT(0, (int)pc_net_host_udp_sent());
+    TEST_ASSERT_EQUAL_INT(0, (int)protocore_net_host_udp_sent());
 }
 
 // A response arriving on the group is not a query, so it draws no reply and cannot start a storm.
 void test_a_response_is_not_answered()
 {
-    TEST_ASSERT_TRUE(pc_mdns_begin("myhost", 80));
+    TEST_ASSERT_TRUE(protocore_mdns_begin("myhost", 80));
     uint8_t q[256];
     size_t n = make_query(q, "_http._tcp.local", 12);
     q[2] = 0x84; // QR + AA: this is somebody's answer
-    pc_net_host_udp_reset();
-    TEST_ASSERT_TRUE(pc_net_host_udp_deliver(MDNS_PORT, "192.0.2.7", 5353, q, (uint16_t)n));
+    protocore_net_host_udp_reset();
+    TEST_ASSERT_TRUE(protocore_net_host_udp_deliver(MDNS_PORT, "192.0.2.7", 5353, q, (uint16_t)n));
     Udp.listener->poll();
-    TEST_ASSERT_EQUAL_INT(0, (int)pc_net_host_udp_sent());
+    TEST_ASSERT_EQUAL_INT(0, (int)protocore_net_host_udp_sent());
 }
 
 // A query whose question is truncated is dropped rather than half-answered.
 void test_malformed_query_is_dropped()
 {
-    TEST_ASSERT_TRUE(pc_mdns_begin("myhost", 80));
+    TEST_ASSERT_TRUE(protocore_mdns_begin("myhost", 80));
     uint8_t q[16] = {0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 5, 'l', 'o', 'c'}; // label runs off the end
-    pc_net_host_udp_reset();
-    TEST_ASSERT_TRUE(pc_net_host_udp_deliver(MDNS_PORT, "192.0.2.7", 5353, q, sizeof(q)));
+    protocore_net_host_udp_reset();
+    TEST_ASSERT_TRUE(protocore_net_host_udp_deliver(MDNS_PORT, "192.0.2.7", 5353, q, sizeof(q)));
     Udp.listener->poll();
-    TEST_ASSERT_EQUAL_INT(0, (int)pc_net_host_udp_sent());
+    TEST_ASSERT_EQUAL_INT(0, (int)protocore_net_host_udp_sent());
 }
 
 // The service table is fixed, so the one past it is refused rather than overwriting a neighbour.
 void test_service_table_fills_and_refuses()
 {
-    TEST_ASSERT_TRUE(pc_mdns_begin("myhost", 80)); // takes the first slot
-    for (int i = 1; i < PC_MDNS_MAX_SERVICES; i++)
+    TEST_ASSERT_TRUE(protocore_mdns_begin("myhost", 80)); // takes the first slot
+    for (int i = 1; i < PROTOCORE_MDNS_MAX_SERVICES; i++)
     {
-        TEST_ASSERT_TRUE(pc_mdns_add_service("_svc", "_tcp", (uint16_t)(1000 + i)));
+        TEST_ASSERT_TRUE(protocore_mdns_add_service("_svc", "_tcp", (uint16_t)(1000 + i)));
     }
-    TEST_ASSERT_FALSE(pc_mdns_add_service("_over", "_tcp", 9999));
+    TEST_ASSERT_FALSE(protocore_mdns_add_service("_over", "_tcp", 9999));
 }
 
 void test_txt_and_add_service_reject_null()
 {
-    TEST_ASSERT_TRUE(pc_mdns_begin("myhost", 80));
-    TEST_ASSERT_FALSE(pc_mdns_txt(NULL, "v"));
-    TEST_ASSERT_FALSE(pc_mdns_txt("k", NULL));
-    TEST_ASSERT_FALSE(pc_mdns_add_service(NULL, "_tcp", 1));
-    TEST_ASSERT_FALSE(pc_mdns_add_service("_x", NULL, 1));
+    TEST_ASSERT_TRUE(protocore_mdns_begin("myhost", 80));
+    TEST_ASSERT_FALSE(protocore_mdns_txt(NULL, "v"));
+    TEST_ASSERT_FALSE(protocore_mdns_txt("k", NULL));
+    TEST_ASSERT_FALSE(protocore_mdns_add_service(NULL, "_tcp", 1));
+    TEST_ASSERT_FALSE(protocore_mdns_add_service("_x", NULL, 1));
 }
 
 int main(void)

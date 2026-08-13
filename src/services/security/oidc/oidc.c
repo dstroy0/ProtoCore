@@ -7,15 +7,15 @@
  *
  * The shared base64url decoder (base64 module), small bounded JSON field scanners
  * (no full parser, no heap), and the RS256 signature check delegated to
- * pc_rsa_verify() (real RSA modexp; mbedTLS on ESP32). Claims are read only
+ * protocore_rsa_verify() (real RSA modexp; mbedTLS on ESP32). Claims are read only
  * after the signature verifies.
  */
 
 #include "services/security/oidc/oidc.h"
-#include "mmgr/membuild.h" // pc_sb frame builder
+#include "mmgr/membuild.h" // protocore_sb frame builder
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_OIDC
+#if PROTOCORE_ENABLE_OIDC
 
 #include "crypto/asymmetric/rsa.h"
 #include "mmgr/plaintext.h" // per-dispatch arena (keeps the decode buffers off the worker stack)
@@ -57,11 +57,11 @@ static proto_bool find_field(const char *s, const char *e, const char *name, con
     *vlen = 0;
     *type = '\0';
     char needle[96];
-    pc_sb sb_needle = {needle, sizeof(needle), 0, PROTO_TRUE};
-    pc_sb_put(&sb_needle, "\"");
-    pc_sb_put(&sb_needle, name);
-    pc_sb_put(&sb_needle, "\"");
-    int nn = (int)pc_sb_finish(&sb_needle);
+    protocore_sb sb_needle = {needle, sizeof(needle), 0, PROTO_TRUE};
+    protocore_sb_put(&sb_needle, "\"");
+    protocore_sb_put(&sb_needle, name);
+    protocore_sb_put(&sb_needle, "\"");
+    int nn = (int)protocore_sb_finish(&sb_needle);
     // Every internal caller passes a short fixed field name (alg/iss/aud/exp/nbf/sub/email/n/e/kid), so the
     // 96-byte needle never overflows, and snprintf of one %s into memory cannot report an error.
     if (nn <= 0 || nn >= (int)sizeof(needle))
@@ -300,16 +300,16 @@ static proto_bool right_align(const uint8_t *src, size_t len, uint8_t *dst, size
     return PROTO_TRUE;
 }
 
-static proto_bool parse_rsa_jwk(const char *s, const char *e, pc_oidc_key *key)
+static proto_bool parse_rsa_jwk(const char *s, const char *e, protocore_oidc_key *key)
 {
     char b64[400];
     if (!get_str(s, e, "n", b64, sizeof(b64)))
     {
         return PROTO_FALSE;
     }
-    uint8_t tmp[PC_OIDC_RSA_BYTES + 8];
+    uint8_t tmp[PROTOCORE_OIDC_RSA_BYTES + 8];
     size_t nlen = Base64.url_decode(b64, strnlen(b64, sizeof(b64)), tmp, sizeof(tmp));
-    if (nlen == 0 || !right_align(tmp, nlen, key->n, PC_OIDC_RSA_BYTES))
+    if (nlen == 0 || !right_align(tmp, nlen, key->n, PROTOCORE_OIDC_RSA_BYTES))
     {
         return PROTO_FALSE;
     }
@@ -328,7 +328,7 @@ static proto_bool parse_rsa_jwk(const char *s, const char *e, pc_oidc_key *key)
     return PROTO_TRUE;
 }
 
-proto_bool pc_oidc_token_kid(const char *token, size_t token_len, char *kid_out, size_t kid_cap)
+proto_bool protocore_oidc_token_kid(const char *token, size_t token_len, char *kid_out, size_t kid_cap)
 {
     if (!token || !kid_out || kid_cap == 0)
     {
@@ -350,20 +350,20 @@ proto_bool pc_oidc_token_kid(const char *token, size_t token_len, char *kid_out,
     return get_str((const char *)hdr, (const char *)hdr + hn, "kid", kid_out, kid_cap);
 }
 
-proto_bool pc_oidc_jwks_find(const char *jwks_json, const char *kid, pc_oidc_key *key)
+proto_bool protocore_oidc_jwks_find(const char *jwks_json, const char *kid, protocore_oidc_key *key)
 {
-    size_t scratch = pc_plaintext_mark();
+    size_t scratch = protocore_plaintext_mark();
     if (!jwks_json || !key)
     {
-        pc_plaintext_release(scratch);
+        protocore_plaintext_release(scratch);
         return PROTO_FALSE;
     }
-    const char *all_end = jwks_json + strnlen(jwks_json, PC_OIDC_JWKS_MAX);
+    const char *all_end = jwks_json + strnlen(jwks_json, PROTOCORE_OIDC_JWKS_MAX);
     const char *p = mem_find(jwks_json, all_end, "\"keys\"");
     p = p ? (const char *)memchr(p, '[', (size_t)(all_end - p)) : NULL;
     if (!p)
     {
-        pc_plaintext_release(scratch);
+        protocore_plaintext_release(scratch);
         return PROTO_FALSE;
     }
     p++;
@@ -383,7 +383,7 @@ proto_bool pc_oidc_jwks_find(const char *jwks_json, const char *kid, pc_oidc_key
         end++; // include '}'
 
         proto_bool want;
-        char this_kid[PC_OIDC_KID_LEN];
+        char this_kid[PROTOCORE_OIDC_KID_LEN];
         proto_bool has_kid = get_str(obj, end, "kid", this_kid, sizeof(this_kid));
         if (kid && *kid)
         {
@@ -396,12 +396,12 @@ proto_bool pc_oidc_jwks_find(const char *jwks_json, const char *kid, pc_oidc_key
 
         if (want && parse_rsa_jwk(obj, end, key))
         {
-            pc_plaintext_release(scratch);
+            protocore_plaintext_release(scratch);
             return PROTO_TRUE;
         }
         if (want && kid && *kid)
         {
-            pc_plaintext_release(scratch);
+            protocore_plaintext_release(scratch);
             return PROTO_FALSE; // kid matched but the key was unusable
         }
         p = end;
@@ -409,86 +409,86 @@ proto_bool pc_oidc_jwks_find(const char *jwks_json, const char *kid, pc_oidc_key
     return PROTO_FALSE;
 }
 
-pc_oidc_result pc_oidc_verify_with_key(const char *token, size_t token_len, const pc_oidc_key *key,
-                                       const char *expected_iss, const char *expected_aud, uint32_t now_unix,
-                                       pc_oidc_claims *claims)
+protocore_oidc_result protocore_oidc_verify_with_key(const char *token, size_t token_len, const protocore_oidc_key *key,
+                                                     const char *expected_iss, const char *expected_aud,
+                                                     uint32_t now_unix, protocore_oidc_claims *claims)
 {
-    if (!token || !key || !key->loaded || token_len == 0 || token_len > PC_OIDC_MAX_LEN)
+    if (!token || !key || !key->loaded || token_len == 0 || token_len > PROTOCORE_OIDC_MAX_LEN)
     {
-        return PC_OIDC_ERR_FORMAT;
+        return PROTOCORE_OIDC_ERR_FORMAT;
     }
 
     const char *seg[3];
     size_t seglen[3];
     if (!split3(token, token_len, seg, seglen))
     {
-        return PC_OIDC_ERR_FORMAT;
+        return PROTOCORE_OIDC_ERR_FORMAT;
     }
 
     // Borrow the large decode buffers from the per-dispatch scratch arena rather than the worker
     // stack. The mark below is released on every return path, so a verify gives back what it took
-    // whatever it decides. The four are live together, so PC_PLAINTEXT_WORK_OIDC is their sum and
+    // whatever it decides. The four are live together, so PROTOCORE_PLAINTEXT_WORK_OIDC is their sum and
     // the arena is sized to hold it.
-    static_assert(PC_PLAINTEXT_WORK_OIDC <= PC_PLAINTEXT_ARENA_SIZE, "OIDC scratch exceeds the arena");
-    size_t scope = pc_plaintext_mark();
-    uint8_t *hdr = (uint8_t *)pc_plaintext_alloc(PC_OIDC_HDR_LEN, 1);
-    uint8_t *sig = (uint8_t *)pc_plaintext_alloc(PC_OIDC_RSA_BYTES, 1);
-    uint8_t *pl = (uint8_t *)pc_plaintext_alloc(PC_OIDC_MAX_LEN, 1);
-    char *iss = (char *)pc_plaintext_alloc(PC_OIDC_ISS_LEN, 1);
+    static_assert(PROTOCORE_PLAINTEXT_WORK_OIDC <= PROTOCORE_PLAINTEXT_ARENA_SIZE, "OIDC scratch exceeds the arena");
+    size_t scope = protocore_plaintext_mark();
+    uint8_t *hdr = (uint8_t *)protocore_plaintext_alloc(PROTOCORE_OIDC_HDR_LEN, 1);
+    uint8_t *sig = (uint8_t *)protocore_plaintext_alloc(PROTOCORE_OIDC_RSA_BYTES, 1);
+    uint8_t *pl = (uint8_t *)protocore_plaintext_alloc(PROTOCORE_OIDC_MAX_LEN, 1);
+    char *iss = (char *)protocore_plaintext_alloc(PROTOCORE_OIDC_ISS_LEN, 1);
     if (!hdr || !sig || !pl || !iss)
     {
-        pc_plaintext_release(scope);
-        return PC_OIDC_ERR_FORMAT; // scratch exhausted: fail closed
+        protocore_plaintext_release(scope);
+        return PROTOCORE_OIDC_ERR_FORMAT; // scratch exhausted: fail closed
     }
 
     // Header: require alg == RS256 (rejects alg:none / HS256 confusion).
-    size_t hn = Base64.url_decode(seg[0], seglen[0], hdr, PC_OIDC_HDR_LEN - 1);
+    size_t hn = Base64.url_decode(seg[0], seglen[0], hdr, PROTOCORE_OIDC_HDR_LEN - 1);
     if (hn == 0)
     {
-        pc_plaintext_release(scope);
-        return PC_OIDC_ERR_FORMAT;
+        protocore_plaintext_release(scope);
+        return PROTOCORE_OIDC_ERR_FORMAT;
     }
     hdr[hn] = '\0';
     char alg[16];
     if (!get_str((const char *)hdr, (const char *)hdr + hn, "alg", alg, sizeof(alg)) || strcmp(alg, "RS256") != 0)
     {
-        pc_plaintext_release(scope);
-        return PC_OIDC_ERR_ALG;
+        protocore_plaintext_release(scope);
+        return PROTOCORE_OIDC_ERR_ALG;
     }
 
     // Signature: RSA-2048 -> exactly 256 bytes.
-    if (Base64.url_decode(seg[2], seglen[2], sig, PC_OIDC_RSA_BYTES) != PC_OIDC_RSA_BYTES)
+    if (Base64.url_decode(seg[2], seglen[2], sig, PROTOCORE_OIDC_RSA_BYTES) != PROTOCORE_OIDC_RSA_BYTES)
     {
-        pc_plaintext_release(scope);
-        return PC_OIDC_ERR_FORMAT;
+        protocore_plaintext_release(scope);
+        return PROTOCORE_OIDC_ERR_FORMAT;
     }
 
-    // Verify over the signing input "header.payload" (pc_rsa_verify hashes it). RS256 = SHA-256.
+    // Verify over the signing input "header.payload" (protocore_rsa_verify hashes it). RS256 = SHA-256.
     // One borrow for that digest, returned either way before the claims are read.
     size_t signing_len = (size_t)(seg[1] + seglen[1] - token);
-    size_t vmark = pc_secure_mark();
-    pc_span vws = pc_secure_span(PC_SHA256_BORROW, _Alignof(uint32_t));
-    if (!pc_span_ok(vws))
+    size_t vmark = protocore_secure_mark();
+    protocore_span vws = protocore_secure_span(PROTOCORE_SHA256_BORROW, _Alignof(uint32_t));
+    if (!protocore_span_ok(vws))
     {
-        pc_secure_release(vmark);
-        pc_plaintext_release(scope);
-        return PC_OIDC_ERR_SIGNATURE; // pool exhausted: fail closed
+        protocore_secure_release(vmark);
+        protocore_plaintext_release(scope);
+        return PROTOCORE_OIDC_ERR_SIGNATURE; // pool exhausted: fail closed
     }
-    int vrc = pc_rsa_verify(key->n, key->e, vws.buf, (const uint8_t *)token, signing_len, sig, PC_OIDC_RSA_BYTES,
-                            PC_RSA_HASH_SHA256);
-    pc_secure_release(vmark);
+    int vrc = protocore_rsa_verify(key->n, key->e, vws.buf, (const uint8_t *)token, signing_len, sig,
+                                   PROTOCORE_OIDC_RSA_BYTES, PROTOCORE_RSA_HASH_SHA256);
+    protocore_secure_release(vmark);
     if (vrc != 0)
     {
-        pc_plaintext_release(scope);
-        return PC_OIDC_ERR_SIGNATURE;
+        protocore_plaintext_release(scope);
+        return PROTOCORE_OIDC_ERR_SIGNATURE;
     }
 
     // Claims (trusted only now that the signature is valid).
-    size_t pn = Base64.url_decode(seg[1], seglen[1], pl, PC_OIDC_MAX_LEN - 1);
+    size_t pn = Base64.url_decode(seg[1], seglen[1], pl, PROTOCORE_OIDC_MAX_LEN - 1);
     if (pn == 0)
     {
-        pc_plaintext_release(scope);
-        return PC_OIDC_ERR_FORMAT;
+        protocore_plaintext_release(scope);
+        return PROTOCORE_OIDC_ERR_FORMAT;
     }
     pl[pn] = '\0';
     const char *ps = (const char *)pl;
@@ -496,32 +496,32 @@ pc_oidc_result pc_oidc_verify_with_key(const char *token, size_t token_len, cons
 
     if (expected_iss && *expected_iss)
     {
-        if (!get_str(ps, pe, "iss", iss, PC_OIDC_ISS_LEN) || strcmp(iss, expected_iss) != 0)
+        if (!get_str(ps, pe, "iss", iss, PROTOCORE_OIDC_ISS_LEN) || strcmp(iss, expected_iss) != 0)
         {
-            pc_plaintext_release(scope);
-            return PC_OIDC_ERR_ISS;
+            protocore_plaintext_release(scope);
+            return PROTOCORE_OIDC_ERR_ISS;
         }
     }
     if (expected_aud && *expected_aud)
     {
         if (!aud_contains(ps, pe, expected_aud))
         {
-            pc_plaintext_release(scope);
-            return PC_OIDC_ERR_AUD;
+            protocore_plaintext_release(scope);
+            return PROTOCORE_OIDC_ERR_AUD;
         }
     }
 
     int64_t exp = 0;
     if (!get_int64(ps, pe, "exp", &exp) || (int64_t)now_unix >= exp)
     {
-        pc_plaintext_release(scope);
-        return PC_OIDC_ERR_EXPIRED;
+        protocore_plaintext_release(scope);
+        return PROTOCORE_OIDC_ERR_EXPIRED;
     }
     int64_t nbf = 0;
     if (get_int64(ps, pe, "nbf", &nbf) && (int64_t)now_unix < nbf)
     {
-        pc_plaintext_release(scope);
-        return PC_OIDC_ERR_NOT_YET;
+        protocore_plaintext_release(scope);
+        return PROTOCORE_OIDC_ERR_NOT_YET;
     }
 
     if (claims)
@@ -534,25 +534,26 @@ pc_oidc_result pc_oidc_verify_with_key(const char *token, size_t token_len, cons
         get_str(ps, pe, "email", claims->email, sizeof(claims->email));
         get_int64(ps, pe, "iat", &claims->iat);
     }
-    pc_plaintext_release(scope);
-    return PC_OIDC_OK;
+    protocore_plaintext_release(scope);
+    return PROTOCORE_OIDC_OK;
 }
 
-pc_oidc_result pc_oidc_verify(const char *token, size_t token_len, const char *jwks_json, const char *expected_iss,
-                              const char *expected_aud, uint32_t now_unix, pc_oidc_claims *claims)
+protocore_oidc_result protocore_oidc_verify(const char *token, size_t token_len, const char *jwks_json,
+                                            const char *expected_iss, const char *expected_aud, uint32_t now_unix,
+                                            protocore_oidc_claims *claims)
 {
-    char kid[PC_OIDC_KID_LEN];
-    if (!pc_oidc_token_kid(token, token_len, kid, sizeof(kid)))
+    char kid[PROTOCORE_OIDC_KID_LEN];
+    if (!protocore_oidc_token_kid(token, token_len, kid, sizeof(kid)))
     {
         kid[0] = '\0'; // no kid -> let jwks_find pick the sole key
     }
-    pc_oidc_key key;
+    protocore_oidc_key key;
     key.loaded = PROTO_FALSE;
-    if (!pc_oidc_jwks_find(jwks_json, kid[0] ? kid : NULL, &key))
+    if (!protocore_oidc_jwks_find(jwks_json, kid[0] ? kid : NULL, &key))
     {
-        return PC_OIDC_ERR_KEY;
+        return PROTOCORE_OIDC_ERR_KEY;
     }
-    return pc_oidc_verify_with_key(token, token_len, &key, expected_iss, expected_aud, now_unix, claims);
+    return protocore_oidc_verify_with_key(token, token_len, &key, expected_iss, expected_aud, now_unix, claims);
 }
 
-#endif // PC_ENABLE_OIDC
+#endif // PROTOCORE_ENABLE_OIDC

@@ -12,8 +12,8 @@
 //   - Empty file → 200 with Content-Length: 0
 
 #include "mnt_mock.h"
-#include "protocore.h"             // pc_file_holds_slot: does the file pump hold this slot
-#include "server/filesystem/mnt.h" // pc_mnt_mount: the fixture is the mounted store
+#include "protocore.h"             // protocore_file_holds_slot: does the file pump hold this slot
+#include "server/filesystem/mnt.h" // protocore_mnt_mount: the fixture is the mounted store
 #include <stdio.h>
 #include <string.h>
 
@@ -21,14 +21,14 @@
 #include "rx_feed.h"
 #include <unity.h>
 
-static const pc_mnt_backend *g_fs; // the mock store the serve_static mounts read through
+static const protocore_mnt_backend *g_fs; // the mock store the serve_static mounts read through
 static proto_bool handler_called = PROTO_FALSE;
 
 static void handle_html(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
     handler_called = PROTO_TRUE;
-    const pc_mnt_backend *fs = mock_mnt();
+    const protocore_mnt_backend *fs = mock_mnt();
     serve_file(slot_id, fs, "/index.html", "text/html");
 }
 
@@ -36,7 +36,7 @@ static void handle_js(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
     handler_called = PROTO_TRUE;
-    const pc_mnt_backend *fs = mock_mnt();
+    const protocore_mnt_backend *fs = mock_mnt();
     serve_file(slot_id, fs, "/app.js", "application/javascript");
 }
 
@@ -44,13 +44,13 @@ static void handle_missing(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
     handler_called = PROTO_TRUE;
-    const pc_mnt_backend *fs = mock_mnt();
+    const protocore_mnt_backend *fs = mock_mnt();
     serve_file(slot_id, fs, "/missing.txt", "text/plain");
 }
 
 void setUp()
 {
-    pc_server_reset();
+    protocore_server_reset();
     handler_called = PROTO_FALSE;
 
     for (int i = 0; i < MAX_CONNS; i++)
@@ -59,16 +59,16 @@ void setUp()
         conn_pool[i].id = (uint8_t)i;
         conn_pool[i].state = CONN_ACTIVE;
         conn_pool[i].proto = PROTO_HTTP; // dispatch requires an explicit protocol
-        conn_pool[i].pcb = pc_net_host_pcb();
+        conn_pool[i].pcb = protocore_net_host_pcb();
         http_reset(i);
     }
     ws_init();
-    pc_sse_init();
+    protocore_sse_init();
 
     mock_mnt_reset();
     // serve_file_internal resolves through the accessor, not through the backend handed to
     // serve_file(), so the fixture has to be the mounted store rather than just a pointer passed in.
-    pc_mnt_mount(mock_mnt());
+    protocore_mnt_mount(mock_mnt());
     tcp_capture_reset();
 }
 
@@ -158,14 +158,14 @@ static const char *cur_path = NULL;
 static void h_empty(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
-    const pc_mnt_backend *fs = mock_mnt();
+    const protocore_mnt_backend *fs = mock_mnt();
     serve_file(slot_id, fs, "/empty.txt", "text/plain");
 }
 
 static void h_big(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
-    const pc_mnt_backend *fs = mock_mnt();
+    const protocore_mnt_backend *fs = mock_mnt();
     serve_file(slot_id, fs, "/big.bin", "application/octet-stream");
 }
 
@@ -179,14 +179,14 @@ static void h_other(uint8_t slot_id, HttpReq *req)
 static void h_case(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
-    const pc_mnt_backend *fs = mock_mnt();
+    const protocore_mnt_backend *fs = mock_mnt();
     serve_file(slot_id, fs, cur_path, cur_ctype);
 }
 
 static void h_f(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
-    const pc_mnt_backend *fs = mock_mnt();
+    const protocore_mnt_backend *fs = mock_mnt();
     serve_file(slot_id, fs, "/f.txt", "text/plain");
 }
 
@@ -205,7 +205,7 @@ void test_large_file_body_fully_sent()
 {
     // A body far larger than one send-buffer window: the cross-loop file pump must
     // deliver every byte, not truncate at the window. Backpressure is drivable here with
-    // pc_net_host_write_fail_after() and MOCK_SNDBUF.
+    // protocore_net_host_write_fail_after() and MOCK_SNDBUF.
 #define BIG_N 16000
     static uint8_t big[BIG_N];
     for (size_t i = 0; i < BIG_N; i++)
@@ -266,12 +266,12 @@ void test_multiple_content_types()
         cur_ctype = cases[i].ctype;
         cur_path = cases[i].path;
 
-        pc_server_reset();
+        protocore_server_reset();
         conn_pool[0] = (TcpConn){0};
         conn_pool[0].id = 0;
         conn_pool[0].state = CONN_ACTIVE;
         conn_pool[0].proto = PROTO_HTTP; // dispatch requires an explicit protocol
-        conn_pool[0].pcb = pc_net_host_pcb();
+        conn_pool[0].pcb = protocore_net_host_pcb();
         http_reset(0);
         tcp_capture_reset();
 
@@ -298,7 +298,7 @@ static void rearm(uint8_t slot)
     conn_pool[slot].id = slot;
     conn_pool[slot].state = CONN_ACTIVE;
     conn_pool[slot].proto = PROTO_HTTP;
-    conn_pool[slot].pcb = pc_net_host_pcb();
+    conn_pool[slot].pcb = protocore_net_host_pcb();
     http_reset(slot);
     tcp_capture_reset();
 }
@@ -471,11 +471,11 @@ void test_file_send_pump_connection_lost_midtransfer()
     mock_sndbuf_set(0); // no window: the headers queue, then the body transfer parks
     feed_and_handle(0, "GET /big.bin HTTP/1.1\r\nHost: x\r\n\r\n");
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "200 OK"));
-    TEST_ASSERT_TRUE(pc_file_holds_slot(0)); // parked, waiting for the window to reopen
+    TEST_ASSERT_TRUE(protocore_file_holds_slot(0)); // parked, waiting for the window to reopen
 
     conn_pool[0].pcb = NULL; // peer went away mid-transfer
     handle();
-    TEST_ASSERT_FALSE(pc_file_holds_slot(0));         // continuation dropped
+    TEST_ASSERT_FALSE(protocore_file_holds_slot(0));  // continuation dropped
     TEST_ASSERT_NULL(strstr(tcp_captured(), "ZZZZ")); // no body bytes were ever written
 
     mock_sndbuf_set(MOCK_SNDBUF_DEFAULT); // restore the window for the remaining tests
@@ -499,7 +499,7 @@ void stress_serve_file_50_requests()
         conn_pool[slot].id = slot;
         conn_pool[slot].state = CONN_ACTIVE;
         conn_pool[slot].proto = PROTO_HTTP; // dispatch requires an explicit protocol
-        conn_pool[slot].pcb = pc_net_host_pcb();
+        conn_pool[slot].pcb = protocore_net_host_pcb();
         http_reset(slot);
         tcp_capture_reset();
         handler_called = PROTO_FALSE;
@@ -525,7 +525,7 @@ void stress_alternate_missing_and_found()
         conn_pool[slot].id = slot;
         conn_pool[slot].state = CONN_ACTIVE;
         conn_pool[slot].proto = PROTO_HTTP; // dispatch requires an explicit protocol
-        conn_pool[slot].pcb = pc_net_host_pcb();
+        conn_pool[slot].pcb = protocore_net_host_pcb();
         http_reset(slot);
         tcp_capture_reset();
 

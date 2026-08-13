@@ -17,21 +17,22 @@ void dbench_run(void)
     static const uint8_t payload[16] = {0x00, 0x00, 0x00, 0x02, 0x11, 0x22, 0x33, 0x44,
                                         0x55, 0x66, 0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC};
     static uint8_t frame[64];
-    uint16_t flen = pc_ash_frame_encode(0x25, payload, sizeof(payload), frame, sizeof(frame));
+    uint16_t flen = protocore_ash_frame_encode(0x25, payload, sizeof(payload), frame, sizeof(frame));
 
     for (;;)
     {
         DBENCH_BANNER("zigbee");
         volatile uint32_t sink = 0;
-        DBENCH_BULK("pc_ash_crc16 (16B)", 200000, sizeof(payload), sink += pc_ash_crc16(payload, sizeof(payload)));
+        DBENCH_BULK("protocore_ash_crc16 (16B)", 200000, sizeof(payload),
+                    sink += protocore_ash_crc16(payload, sizeof(payload)));
         static uint8_t out[64];
-        DBENCH_OP("pc_ash_frame_encode", 200000,
-                  sink += pc_ash_frame_encode(0x25, payload, sizeof(payload), out, sizeof(out)));
-        DBENCH_OP("pc_ash_frame_decode", 200000, {
+        DBENCH_OP("protocore_ash_frame_encode", 200000,
+                  sink += protocore_ash_frame_encode(0x25, payload, sizeof(payload), out, sizeof(out)));
+        DBENCH_OP("protocore_ash_frame_decode", 200000, {
             uint8_t ctl;
             uint8_t pay[64];
             uint16_t plen = 0;
-            sink += pc_ash_frame_decode(frame, flen, &ctl, pay, sizeof(pay), &plen) >= 0 ? plen : 0;
+            sink += protocore_ash_frame_decode(frame, flen, &ctl, pay, sizeof(pay), &plen) >= 0 ? plen : 0;
         });
         (void)sink;
         DBENCH_DONE();

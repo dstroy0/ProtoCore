@@ -68,7 +68,7 @@ static inline void dispatch_event(const TcpEvt *evt)
     // runs with the whole arena available, and any scratch it borrows is
     // reclaimed before the next event - the backstop that stops a forgotten
     // release from accumulating across events.
-    pc_plaintext_reset();
+    protocore_plaintext_reset();
 
     // HttpRoute to the slot's protocol handler. PROTO_NONE and any unregistered
     // protocol have no handler, so the event is dropped.
@@ -93,8 +93,20 @@ static inline void dispatch_event(const TcpEvt *evt)
         }
         break;
     case EVT_DISCONNECT:
-    case EVT_ERROR:
         if (h->on_close)
+        {
+            h->on_close(evt->slot_id);
+        }
+        break;
+    case EVT_ERROR:
+        // RFC 9293 sec 3.6 MUST-12: the application is told whether the connection closed normally
+        // or was aborted, so an abort routes to its own handler. A protocol that has not installed
+        // one falls back to on_close and keeps the pre-existing behaviour.
+        if (h->on_abort)
+        {
+            h->on_abort(evt->slot_id);
+        }
+        else if (h->on_close)
         {
             h->on_close(evt->slot_id);
         }
@@ -113,7 +125,7 @@ static void server_tick(int worker_id)
      */
     Tcp.conn->check_timeouts(worker_id);
 
-#if PC_NEED_UDP
+#if PROTOCORE_NEED_UDP
     // One set of datagram rings serves the whole server rather than one per worker, so worker 0
     // drains them: the receive side runs each bound port's handler, the send side moves queued
     // frames to the wire.
@@ -123,15 +135,15 @@ static void server_tick(int worker_id)
     }
 #endif
 
-#if PC_WORKER_COUNT > 1
+#if PROTOCORE_WORKER_COUNT > 1
     // Drain only this worker's queue: it is the sole consumer of its slots.
-    pc_platform_queue q = Tcp.listener->worker_queue(worker_id);
+    protocore_platform_queue q = Tcp.listener->worker_queue(worker_id);
     if (!q)
     {
         return;
     }
     TcpEvt evt;
-    while (pc_platform_queue_recv(q, &evt, 0) == PC_PLATFORM_OK)
+    while (protocore_platform_queue_recv(q, &evt, 0) == PROTOCORE_PLATFORM_OK)
     {
         dispatch_event(&evt);
     }
@@ -146,7 +158,7 @@ static void server_tick(int worker_id)
         }
 
         TcpEvt evt;
-        while (pc_platform_queue_recv(lst->queue, &evt, 0) == PC_PLATFORM_OK)
+        while (protocore_platform_queue_recv(lst->queue, &evt, 0) == PROTOCORE_PLATFORM_OK)
         {
             dispatch_event(&evt);
         }

@@ -2,28 +2,28 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file pc_snmp_agent.c
+ * @file protocore_snmp_agent.c
  * @brief SNMP v1/v2c agent: MIB table, PDU dispatch, and the UDP binding.
  */
 
 #include "services/net/snmp/snmp_agent.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_SNMP
+#if PROTOCORE_ENABLE_SNMP
 
-#if PC_ENABLE_SNMP_V3
+#if PROTOCORE_ENABLE_SNMP_V3
 #include "services/net/snmp/snmp_v3.h"
 #endif
 
 #include "network_drivers/transport/udp.h"
-#if PC_HAS_NET_STACK
-#include "server/clock/clock.h" // pc_millis() - the library's clock seam (ban 5: never bare millis)
-static uint32_t pc_snmp_uptime_cs()
+#if PROTOCORE_HAS_NET_STACK
+#include "server/clock/clock.h" // protocore_millis() - the library's clock seam (ban 5: never bare millis)
+static uint32_t protocore_snmp_uptime_cs()
 {
-    return (uint32_t)(pc_millis() / 10ULL); // hundredths of a second since boot
+    return (uint32_t)(protocore_millis() / 10ULL); // hundredths of a second since boot
 }
 #else
-static uint32_t pc_snmp_uptime_cs()
+static uint32_t protocore_snmp_uptime_cs()
 {
     return 0; // no clock in this build; tests assert type, not value
 }
@@ -57,14 +57,14 @@ typedef struct
 
 // The read-only community is the one field that does not start at zero; static storage zeroes the
 // MIB, its count, the read-write community and rw_set.
-static SnmpAgentCtx s_agent = {.ro = PC_SNMP_DEFAULT_RO_COMMUNITY};
+static SnmpAgentCtx s_agent = {.ro = PROTOCORE_SNMP_DEFAULT_RO_COMMUNITY};
 
 // community_eq()'s stored[0] != '\0' guard can only be a no-op if the read-only community is
-// never empty. It is seeded from PC_SNMP_DEFAULT_RO_COMMUNITY (an overridable macro) and
-// pc_snmp_agent_init() falls back to that same macro for a null/empty argument, so pin the
+// never empty. It is seeded from PROTOCORE_SNMP_DEFAULT_RO_COMMUNITY (an overridable macro) and
+// protocore_snmp_agent_init() falls back to that same macro for a null/empty argument, so pin the
 // macro non-empty here rather than let an override silently make an empty community matchable.
-_Static_assert(sizeof(PC_SNMP_DEFAULT_RO_COMMUNITY) > 1,
-               "PC_SNMP_DEFAULT_RO_COMMUNITY must be a non-empty string literal");
+_Static_assert(sizeof(PROTOCORE_SNMP_DEFAULT_RO_COMMUNITY) > 1,
+               "PROTOCORE_SNMP_DEFAULT_RO_COMMUNITY must be a non-empty string literal");
 
 // sysObjectID value (private enterprise placeholder: 1.3.6.1.4.1.49374).
 static const uint32_t g_sys_object_id[] = {1, 3, 6, 1, 4, 1, 49374};
@@ -176,17 +176,17 @@ static SnmpMibEntry *mib_alloc(SnmpAgentCtx *c, const uint32_t *oid, size_t n)
     return e;
 }
 
-void pc_snmp_agent_init(const char *ro_community)
+void protocore_snmp_agent_init(const char *ro_community)
 {
     s_agent.mib_count = 0;
     s_agent.rw_set = PROTO_FALSE;
     s_agent.rw[0] = '\0';
-    const char *ro = (ro_community && ro_community[0]) ? ro_community : PC_SNMP_DEFAULT_RO_COMMUNITY;
+    const char *ro = (ro_community && ro_community[0]) ? ro_community : PROTOCORE_SNMP_DEFAULT_RO_COMMUNITY;
     strncpy(s_agent.ro, ro, sizeof(s_agent.ro) - 1);
     s_agent.ro[sizeof(s_agent.ro) - 1] = '\0';
 }
 
-void pc_snmp_agent_set_rw_community(const char *rw_community)
+void protocore_snmp_agent_set_rw_community(const char *rw_community)
 {
     if (!rw_community || !rw_community[0])
     {
@@ -199,7 +199,7 @@ void pc_snmp_agent_set_rw_community(const char *rw_community)
     s_agent.rw_set = PROTO_TRUE;
 }
 
-proto_bool pc_snmp_agent_add_string(const uint32_t *oid, size_t oid_len, const char *value, SnmpSetFn setter)
+proto_bool protocore_snmp_agent_add_string(const uint32_t *oid, size_t oid_len, const char *value, SnmpSetFn setter)
 {
     SnmpMibEntry *e = mib_alloc(&s_agent, oid, oid_len);
     if (!e)
@@ -213,7 +213,7 @@ proto_bool pc_snmp_agent_add_string(const uint32_t *oid, size_t oid_len, const c
     return PROTO_TRUE;
 }
 
-proto_bool pc_snmp_agent_add_integer(const uint32_t *oid, size_t oid_len, long value, SnmpSetFn setter)
+proto_bool protocore_snmp_agent_add_integer(const uint32_t *oid, size_t oid_len, long value, SnmpSetFn setter)
 {
     SnmpMibEntry *e = mib_alloc(&s_agent, oid, oid_len);
     if (!e)
@@ -226,7 +226,7 @@ proto_bool pc_snmp_agent_add_integer(const uint32_t *oid, size_t oid_len, long v
     return PROTO_TRUE;
 }
 
-proto_bool pc_snmp_agent_add_dynamic(const uint32_t *oid, size_t oid_len, uint8_t type, SnmpGetFn getter)
+proto_bool protocore_snmp_agent_add_dynamic(const uint32_t *oid, size_t oid_len, uint8_t type, SnmpGetFn getter)
 {
     SnmpMibEntry *e = mib_alloc(&s_agent, oid, oid_len);
     if (!e)
@@ -241,11 +241,11 @@ proto_bool pc_snmp_agent_add_dynamic(const uint32_t *oid, size_t oid_len, uint8_
 static proto_bool sys_uptime_get(SnmpValue *out)
 {
     out->type = (uint8_t)SNMP_TAG_SNMP_TIMETICKS;
-    out->uval = pc_snmp_uptime_cs();
+    out->uval = protocore_snmp_uptime_cs();
     return PROTO_TRUE;
 }
 
-void pc_snmp_agent_set_system(const char *descr, const char *contact, const char *name, const char *location,
+void protocore_snmp_agent_set_system(const char *descr, const char *contact, const char *name, const char *location,
                               long services)
 {
     static const uint32_t o_descr[] = {1, 3, 6, 1, 2, 1, 1, 1, 0};
@@ -256,7 +256,7 @@ void pc_snmp_agent_set_system(const char *descr, const char *contact, const char
     static const uint32_t o_loc[] = {1, 3, 6, 1, 2, 1, 1, 6, 0};
     static const uint32_t o_svc[] = {1, 3, 6, 1, 2, 1, 1, 7, 0};
 
-    pc_snmp_agent_add_string(o_descr, 9, descr, NULL);
+    protocore_snmp_agent_add_string(o_descr, 9, descr, NULL);
 
     SnmpMibEntry *e = mib_alloc(&s_agent, o_oid, 9);
     if (e)
@@ -266,11 +266,11 @@ void pc_snmp_agent_set_system(const char *descr, const char *contact, const char
         e->val.oid_len = sizeof(g_sys_object_id) / sizeof(g_sys_object_id[0]);
     }
 
-    pc_snmp_agent_add_dynamic(o_uptime, 9, (uint8_t)SNMP_TAG_SNMP_TIMETICKS, sys_uptime_get);
-    pc_snmp_agent_add_string(o_contact, 9, contact, NULL);
-    pc_snmp_agent_add_string(o_name, 9, name, NULL);
-    pc_snmp_agent_add_string(o_loc, 9, location, NULL);
-    pc_snmp_agent_add_integer(o_svc, 9, services, NULL);
+    protocore_snmp_agent_add_dynamic(o_uptime, 9, (uint8_t)SNMP_TAG_SNMP_TIMETICKS, sys_uptime_get);
+    protocore_snmp_agent_add_string(o_contact, 9, contact, NULL);
+    protocore_snmp_agent_add_string(o_name, 9, name, NULL);
+    protocore_snmp_agent_add_string(o_loc, 9, location, NULL);
+    protocore_snmp_agent_add_integer(o_svc, 9, services, NULL);
 }
 
 // ---------------------------------------------------------------------------
@@ -282,33 +282,33 @@ static void enc_value(BerEnc *e, const SnmpValue *v)
     switch (v->type)
     {
     case (uint8_t)SNMP_TAG_BER_INTEGER:
-        pc_ber_put_integer(e, v->ival);
+        protocore_ber_put_integer(e, v->ival);
         break;
     case (uint8_t)SNMP_TAG_BER_OCTET_STRING:
     case (uint8_t)SNMP_TAG_SNMP_OPAQUE:
-        pc_ber_put_octet_string(e, v->type, (const uint8_t *)v->str, v->str_len);
+        protocore_ber_put_octet_string(e, v->type, (const uint8_t *)v->str, v->str_len);
         break;
     case (uint8_t)SNMP_TAG_BER_OID:
-        pc_ber_put_oid(e, v->oid, v->oid_len);
+        protocore_ber_put_oid(e, v->oid, v->oid_len);
         break;
     case (uint8_t)SNMP_TAG_SNMP_TIMETICKS:
     case (uint8_t)SNMP_TAG_SNMP_COUNTER32:
     case (uint8_t)SNMP_TAG_SNMP_GAUGE32:
-        pc_ber_put_uint(e, v->type, v->uval);
+        protocore_ber_put_uint(e, v->type, v->uval);
         break;
     case (uint8_t)SNMP_TAG_SNMP_IPADDRESS: {
         uint8_t ip[4] = {(uint8_t)(v->uval >> 24), (uint8_t)(v->uval >> 16), (uint8_t)(v->uval >> 8),
                          (uint8_t)(v->uval)};
-        pc_ber_put_octet_string(e, (uint8_t)SNMP_TAG_SNMP_IPADDRESS, ip, 4);
+        protocore_ber_put_octet_string(e, (uint8_t)SNMP_TAG_SNMP_IPADDRESS, ip, 4);
         break;
     }
     case (uint8_t)SNMP_TAG_BER_NULL:
-        pc_ber_put_null(e);
+        protocore_ber_put_null(e);
         break;
     default:
         // Exception markers (noSuchObject / noSuchInstance / endOfMibView): the
         // tag with a zero-length, no-value encoding.
-        pc_ber_put_tlv(e, v->type, NULL, 0);
+        protocore_ber_put_tlv(e, v->type, NULL, 0);
         break;
     }
 }
@@ -321,7 +321,7 @@ static proto_bool dec_value(BerDec *d, SnmpValue *v, uint32_t *oidbuf)
     size_t save = d->pos;
     uint8_t tag;
     size_t len;
-    if (!pc_ber_read_header(d, &tag, &len))
+    if (!protocore_ber_read_header(d, &tag, &len))
     {
         return PROTO_FALSE;
     }
@@ -330,7 +330,7 @@ static proto_bool dec_value(BerDec *d, SnmpValue *v, uint32_t *oidbuf)
     {
     case (uint8_t)SNMP_TAG_BER_INTEGER:
         d->pos = save;
-        return pc_ber_read_integer(d, &v->ival);
+        return protocore_ber_read_integer(d, &v->ival);
     case (uint8_t)SNMP_TAG_SNMP_TIMETICKS:
     case (uint8_t)SNMP_TAG_SNMP_COUNTER32:
     case (uint8_t)SNMP_TAG_SNMP_GAUGE32:
@@ -352,7 +352,7 @@ static proto_bool dec_value(BerDec *d, SnmpValue *v, uint32_t *oidbuf)
         return PROTO_TRUE;
     case (uint8_t)SNMP_TAG_BER_OID:
         d->pos = save;
-        if (!pc_ber_read_oid(d, oidbuf, SNMP_MAX_OID_LEN, &v->oid_len))
+        if (!protocore_ber_read_oid(d, oidbuf, SNMP_MAX_OID_LEN, &v->oid_len))
         {
             return PROTO_FALSE;
         }
@@ -397,7 +397,7 @@ static SnmpReqCtx s_req;
 // SnmpErr and the 1-based varbind index into the err_status and err_index outputs (left unchanged if
 // all succeed; v2c selects the v2c error variant). Extracted so the per-varbind guards are not nested
 // 4 deep (S134).
-static void pc_snmp_apply_set_all(size_t nvb, proto_bool v2c, long *err_status, long *err_index)
+static void protocore_snmp_apply_set_all(size_t nvb, proto_bool v2c, long *err_status, long *err_index)
 {
     for (size_t i = 0; i < nvb; i++)
     {
@@ -427,9 +427,9 @@ static void pc_snmp_apply_set_all(size_t nvb, proto_bool v2c, long *err_status, 
 
 static proto_bool community_eq(const char *stored, const char *p, size_t len)
 {
-    // The two call sites pass s_agent.ro (always non-empty: pc_snmp_agent_init() falls back to the
+    // The two call sites pass s_agent.ro (always non-empty: protocore_snmp_agent_init() falls back to the
     // static_assert'd non-empty default) and s_agent.rw (only reached when rw_set, which
-    // pc_snmp_agent_set_rw_community() sets only for a non-empty string), so stored is never empty.
+    // protocore_snmp_agent_set_rw_community() sets only for a non-empty string), so stored is never empty.
     return stored[0] != '\0' && strnlen(stored, len + 1) == len && mem.cmp(stored, p, len) == 0;
 }
 
@@ -437,21 +437,21 @@ static size_t encode_pdu(long request_id, long err_status, long err_index, const
                          size_t cap)
 {
     BerEnc e;
-    pc_ber_enc_init(&e, buf, cap);
-    size_t pdu = pc_ber_seq_begin(&e, (uint8_t)SNMP_TAG_SNMP_PDU_RESPONSE);
-    pc_ber_put_integer(&e, request_id);
-    pc_ber_put_integer(&e, err_status);
-    pc_ber_put_integer(&e, err_index);
-    size_t vbl = pc_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
+    protocore_ber_enc_init(&e, buf, cap);
+    size_t pdu = protocore_ber_seq_begin(&e, (uint8_t)SNMP_TAG_SNMP_PDU_RESPONSE);
+    protocore_ber_put_integer(&e, request_id);
+    protocore_ber_put_integer(&e, err_status);
+    protocore_ber_put_integer(&e, err_index);
+    size_t vbl = protocore_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
     for (size_t i = 0; i < nout; i++)
     {
-        size_t vb = pc_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
-        pc_ber_put_oid(&e, out[i].oid, out[i].oid_len);
+        size_t vb = protocore_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
+        protocore_ber_put_oid(&e, out[i].oid, out[i].oid_len);
         enc_value(&e, &out[i].val);
-        pc_ber_seq_end(&e, vb);
+        protocore_ber_seq_end(&e, vb);
     }
-    pc_ber_seq_end(&e, vbl);
-    pc_ber_seq_end(&e, pdu);
+    protocore_ber_seq_end(&e, vbl);
+    protocore_ber_seq_end(&e, pdu);
     return e.ok ? e.len : 0;
 }
 
@@ -459,15 +459,15 @@ static size_t encode_pdu(long request_id, long err_status, long err_index, const
 // emit one GetResponse PDU. Shared by the v1/v2c community framing and the v3
 // USM layer. @p v2c selects v2c-style per-varbind exceptions over v1
 // error-status; @p allow_write authorizes Set.
-size_t pc_snmp_dispatch_pdu(const uint8_t *pdu, size_t pdu_len, proto_bool allow_write, proto_bool v2c, uint8_t *out,
+size_t protocore_snmp_dispatch_pdu(const uint8_t *pdu, size_t pdu_len, proto_bool allow_write, proto_bool v2c, uint8_t *out,
                             size_t out_cap)
 {
     BerDec d;
-    pc_ber_dec_init(&d, pdu, pdu_len);
+    protocore_ber_dec_init(&d, pdu, pdu_len);
 
     uint8_t pdu_tag;
     size_t pdu_clen;
-    if (!pc_ber_read_header(&d, &pdu_tag, &pdu_clen))
+    if (!protocore_ber_read_header(&d, &pdu_tag, &pdu_clen))
     {
         return 0;
     }
@@ -475,14 +475,14 @@ size_t pc_snmp_dispatch_pdu(const uint8_t *pdu, size_t pdu_len, proto_bool allow
     long request_id;
     long field2;
     long field3;
-    if (!pc_ber_read_integer(&d, &request_id) || !pc_ber_read_integer(&d, &field2) || !pc_ber_read_integer(&d, &field3))
+    if (!protocore_ber_read_integer(&d, &request_id) || !protocore_ber_read_integer(&d, &field2) || !protocore_ber_read_integer(&d, &field3))
     {
         return 0;
     }
 
     uint8_t vbl_tag;
     size_t vbl_len;
-    if (!pc_ber_read_header(&d, &vbl_tag, &vbl_len) || vbl_tag != (uint8_t)SNMP_TAG_BER_SEQUENCE)
+    if (!protocore_ber_read_header(&d, &vbl_tag, &vbl_len) || vbl_tag != (uint8_t)SNMP_TAG_BER_SEQUENCE)
     {
         return 0;
     }
@@ -500,11 +500,11 @@ size_t pc_snmp_dispatch_pdu(const uint8_t *pdu, size_t pdu_len, proto_bool allow
         }
         uint8_t vt;
         size_t vlen;
-        if (!pc_ber_read_header(&d, &vt, &vlen) || vt != (uint8_t)SNMP_TAG_BER_SEQUENCE)
+        if (!protocore_ber_read_header(&d, &vt, &vlen) || vt != (uint8_t)SNMP_TAG_BER_SEQUENCE)
         {
             return 0;
         }
-        if (!pc_ber_read_oid(&d, s_req.in[nvb].oid, SNMP_MAX_OID_LEN, &s_req.in[nvb].oid_len))
+        if (!protocore_ber_read_oid(&d, s_req.in[nvb].oid, SNMP_MAX_OID_LEN, &s_req.in[nvb].oid_len))
         {
             return 0;
         }
@@ -673,7 +673,7 @@ size_t pc_snmp_dispatch_pdu(const uint8_t *pdu, size_t pdu_len, proto_bool allow
         }
         else
         {
-            pc_snmp_apply_set_all(nvb, v2c, &err_status, &err_index);
+            protocore_snmp_apply_set_all(nvb, v2c, &err_status, &err_index);
         }
     }
     else
@@ -694,30 +694,30 @@ size_t pc_snmp_dispatch_pdu(const uint8_t *pdu, size_t pdu_len, proto_bool allow
 // Message wrapper: v1/v2c community framing (v3 delegates to the USM layer)
 // ---------------------------------------------------------------------------
 
-size_t pc_snmp_agent_process(const uint8_t *req, size_t req_len, uint8_t *resp, size_t pc_resp_cap)
+size_t protocore_snmp_agent_process(const uint8_t *req, size_t req_len, uint8_t *resp, size_t protocore_resp_cap)
 {
     BerDec d;
-    pc_ber_dec_init(&d, req, req_len);
+    protocore_ber_dec_init(&d, req, req_len);
 
     uint8_t tag;
     size_t len;
-    if (!pc_ber_read_header(&d, &tag, &len) || tag != (uint8_t)SNMP_TAG_BER_SEQUENCE) // message wrapper
+    if (!protocore_ber_read_header(&d, &tag, &len) || tag != (uint8_t)SNMP_TAG_BER_SEQUENCE) // message wrapper
     {
         return 0;
     }
 
     long version;
-    if (!pc_ber_read_integer(&d, &version))
+    if (!protocore_ber_read_integer(&d, &version))
     {
         return 0;
     }
 
     if (version == (int)SNMP_V3)
     {
-#if PC_ENABLE_SNMP_V3
-        return pc_snmp_v3_process(req, req_len, resp, pc_resp_cap);
+#if PROTOCORE_ENABLE_SNMP_V3
+        return protocore_snmp_v3_process(req, req_len, resp, protocore_resp_cap);
 #else
-        return 0; // v3 needs the gated USM layer (PC_ENABLE_SNMP_V3)
+        return 0; // v3 needs the gated USM layer (PROTOCORE_ENABLE_SNMP_V3)
 #endif
     }
     if (version != (int)SNMP_V1 && version != (int)SNMP_V2C)
@@ -727,7 +727,7 @@ size_t pc_snmp_agent_process(const uint8_t *req, size_t req_len, uint8_t *resp, 
 
     uint8_t ctag;
     size_t clen;
-    if (!pc_ber_read_header(&d, &ctag, &clen) || ctag != (uint8_t)SNMP_TAG_BER_OCTET_STRING)
+    if (!protocore_ber_read_header(&d, &ctag, &clen) || ctag != (uint8_t)SNMP_TAG_BER_OCTET_STRING)
     {
         return 0;
     }
@@ -745,19 +745,19 @@ size_t pc_snmp_agent_process(const uint8_t *req, size_t req_len, uint8_t *resp, 
     // The PDU is the remaining bytes of the datagram; dispatch and re-wrap.
     static uint8_t pdubuf[SNMP_MSG_BUF_SIZE];
     size_t pn =
-        pc_snmp_dispatch_pdu(req + d.pos, req_len - d.pos, is_rw, version == (int)SNMP_V2C, pdubuf, sizeof(pdubuf));
+        protocore_snmp_dispatch_pdu(req + d.pos, req_len - d.pos, is_rw, version == (int)SNMP_V2C, pdubuf, sizeof(pdubuf));
     if (pn == 0)
     {
         return 0;
     }
 
     BerEnc e;
-    pc_ber_enc_init(&e, resp, pc_resp_cap);
-    size_t msg = pc_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
-    pc_ber_put_integer(&e, version);
-    pc_ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, (const uint8_t *)community, community_len);
-    pc_ber_put_raw(&e, pdubuf, pn);
-    pc_ber_seq_end(&e, msg);
+    protocore_ber_enc_init(&e, resp, protocore_resp_cap);
+    size_t msg = protocore_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
+    protocore_ber_put_integer(&e, version);
+    protocore_ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, (const uint8_t *)community, community_len);
+    protocore_ber_put_raw(&e, pdubuf, pn);
+    protocore_ber_seq_end(&e, msg);
     return e.ok ? e.len : 0;
 }
 
@@ -773,19 +773,19 @@ typedef struct
 } SnmpUdpCtx;
 static SnmpUdpCtx s_snmp_udp;
 
-static void pc_snmp_udp_handler(const uint8_t *data, size_t len, const struct pc_udp_peer *peer, void *ctx)
+static void protocore_snmp_udp_handler(const uint8_t *data, size_t len, const struct protocore_udp_peer *peer, void *ctx)
 {
     (void)ctx;
-    size_t rn = pc_snmp_agent_process(data, len, s_snmp_udp.tx, sizeof(s_snmp_udp.tx));
+    size_t rn = protocore_snmp_agent_process(data, len, s_snmp_udp.tx, sizeof(s_snmp_udp.tx));
     if (rn)
     {
         Udp.listener->reply(peer, s_snmp_udp.tx, rn);
     }
 }
 
-void pc_snmp_agent_begin_udp(uint16_t port)
+void protocore_snmp_agent_begin_udp(uint16_t port)
 {
-    Udp.listener->listen(port, pc_snmp_udp_handler, NULL);
+    Udp.listener->listen(port, protocore_snmp_udp_handler, NULL);
 }
 
-#endif // PC_ENABLE_SNMP
+#endif // PROTOCORE_ENABLE_SNMP

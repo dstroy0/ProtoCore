@@ -3,7 +3,7 @@
 
 /**
  * @file MsgPack.ino
- * @brief Encode and decode compact binary MessagePack (PC_ENABLE_MSGPACK).
+ * @brief Encode and decode compact binary MessagePack (PROTOCORE_ENABLE_MSGPACK).
  *
  * GET /telemetry.msgpack encodes a small {heap, uptime, rssi} map with the
  * zero-heap MessagePack writer into a stack buffer and streams the bytes as
@@ -16,14 +16,14 @@
  *
  * NOTE: enable it for the whole build (a .ino #define does not reach the
  * separately compiled library). In platformio.ini:
- *     build_flags = -DPC_ENABLE_MSGPACK=1
+ *     build_flags = -DPROTOCORE_ENABLE_MSGPACK=1
  * (Arduino IDE: it is already set for you in the build_opt.h beside this sketch, so it builds as-is.)
  *
  * Try: curl -s http://<ip>/telemetry.msgpack | xxd
  *      printf '\x81\xa3led\x01' | curl -s --data-binary @- http://<ip>/decode
  */
 
-#define PC_ENABLE_MSGPACK 1
+#define PROTOCORE_ENABLE_MSGPACK 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -41,7 +41,7 @@ struct MpCtx
     uint8_t buf[64];
     size_t len, off;
 };
-static size_t pc_msgpack_source(uint8_t *out, size_t cap, void *vctx)
+static size_t protocore_msgpack_source(uint8_t *out, size_t cap, void *vctx)
 {
     MpCtx *c = (MpCtx *)vctx;
     if (c->off >= c->len)
@@ -60,11 +60,11 @@ static size_t pc_msgpack_source(uint8_t *out, size_t cap, void *vctx)
 
 // Decodes a posted MessagePack map of {string: integer} and echoes each parsed
 // field as "key=value" text. Shows the cursor decoder: read the map header, then
-// each key (str) and value (int), checking pc_cspan_ok() at the end.
+// each key (str) and value (int), checking protocore_cspan_ok() at the end.
 static void on_decode(uint8_t id, HttpReq *req)
 {
-    pc_cspan r;
-    r = pc_cspan_from(req->body, req->body_len);
+    protocore_cspan r;
+    r = protocore_cspan_from(req->body, req->body_len);
     size_t count;
     if (!MsgPack.get_map(&r, &count))
     {
@@ -73,7 +73,7 @@ static void on_decode(uint8_t id, HttpReq *req)
     }
     char out[160];
     size_t o = 0;
-    for (size_t i = 0; i < count && pc_cspan_ok(r); i++)
+    for (size_t i = 0; i < count && protocore_cspan_ok(r); i++)
     {
         const char *key;
         size_t klen;
@@ -84,7 +84,7 @@ static void on_decode(uint8_t id, HttpReq *req)
         }
         o += snprintf(out + o, sizeof(out) - o, "%.*s=%lld\n", (int)klen, key, (long long)val);
     }
-    if (!pc_cspan_ok(r))
+    if (!protocore_cspan_ok(r))
     {
         send_text(id, 400, "text/plain", "malformed MessagePack");
         return;
@@ -108,8 +108,8 @@ void setup()
 
     on_http("/telemetry.msgpack", HTTP_GET, [](uint8_t id, HttpReq *) {
         static MpCtx ctx; // static: must outlive send_chunked
-        pc_span w;
-        w = pc_span_from(ctx.buf, sizeof(ctx.buf));
+        protocore_span w;
+        w = protocore_span_from(ctx.buf, sizeof(ctx.buf));
         MsgPack.put_map(&w, 3);
         MsgPack.put_str(&w, "heap");
         MsgPack.put_uint(&w, ESP.getFreeHeap());
@@ -117,9 +117,9 @@ void setup()
         MsgPack.put_uint(&w, millis() / 1000);
         MsgPack.put_str(&w, "rssi");
         MsgPack.put_int(&w, Physical.wifi->rssi());
-        ctx.len = pc_span_ok(w) ? pc_span_len(w) : 0;
+        ctx.len = protocore_span_ok(w) ? protocore_span_len(w) : 0;
         ctx.off = 0;
-        send_chunked(id, 200, "application/msgpack", pc_msgpack_source, &ctx);
+        send_chunked(id, 200, "application/msgpack", protocore_msgpack_source, &ctx);
     });
     on_http("/decode", HTTP_POST, on_decode);
     begin_http(80, NULL);

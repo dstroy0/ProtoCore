@@ -4,7 +4,7 @@
 /**
  * @file edge_mesh.h
  * @brief CDN edge-cache tier - mesh (sibling-cache) wire codec + async peer-query engine
- *        (PC_ENABLE_EDGE_MESH).
+ *        (PROTOCORE_ENABLE_EDGE_MESH).
  *
  * Lets a fleet of edge nodes share one warm cache. On a full local miss a node queries its sibling peers
  * (over a plaintext ProtoConn::PROTO_MESH TCP link) with a content-addressed request and pulls a fresh copy
@@ -14,7 +14,7 @@
  *
  * This file is the pure, host-testable half: the request/response frame codec, the freshness-carrying entry
  * frame (the shared ::edge_sd_serialize body plus a fixed timing trailer), and the async requester engine
- * over the same EdgeFetchTransport seam the origin fetch uses (pc_client on device, a mock in host tests).
+ * over the same EdgeFetchTransport seam the origin fetch uses (protocore_client on device, a mock in host tests).
  * The server glue (the peer table, the pre-origin query phase, and the PROTO_MESH serving listener) lives in
  * edge_cache_proxy. Zero heap; fixed buffers.
  *
@@ -33,21 +33,21 @@
 
 #include "protocore_config.h"
 
-#if PC_ENABLE_EDGE_MESH
+#if PROTOCORE_ENABLE_EDGE_MESH
 
 #include "services/web/edge_cache/edge_cache.h"    // EdgeEntry
-#include "services/web/edge_cache/edge_cache_sd.h" // PC_EDGE_SD_VALUE_MAX + the shared entry serializer
+#include "services/web/edge_cache/edge_cache_sd.h" // PROTOCORE_EDGE_SD_VALUE_MAX + the shared entry serializer
 #include "services/web/edge_cache/edge_fetch.h"    // EdgeFetchTransport (reused transport seam)
 
-#define PC_EDGE_MESH_MAGIC0 ('E')
-#define PC_EDGE_MESH_MAGIC1 ('M')
-#define PC_EDGE_MESH_VERSION 1
-#define PC_EDGE_MESH_OP_GET 1 ///< the only request opcode: fetch by content address
+#define PROTOCORE_EDGE_MESH_MAGIC0 ('E')
+#define PROTOCORE_EDGE_MESH_MAGIC1 ('M')
+#define PROTOCORE_EDGE_MESH_VERSION 1
+#define PROTOCORE_EDGE_MESH_OP_GET 1 ///< the only request opcode: fetch by content address
 
 /** @brief The fixed timing trailer prepended to an entry frame (age propagation). */
 /** @brief Worst-case entry frame (trailer + a full ::edge_sd_serialize body). */
 /** @brief Worst-case request frame (the third field is a bounded request-header snapshot for Vary matching). */
-#define PC_EDGE_MESH_REQ_MAX (2 + 1 + 1 + 32 + 2 + PC_EDGE_KEY_MAX + 2 + PC_MESH_HDRS_MAX)
+#define PROTOCORE_EDGE_MESH_REQ_MAX (2 + 1 + 1 + 32 + 2 + PROTOCORE_EDGE_KEY_MAX + 2 + PROTOCORE_MESH_HDRS_MAX)
 /** @brief Worst-case response frame (header + entry on a HIT). */
 
 /** @brief Tri-state parse result for the length-delimited frames (partial reads accumulate to complete). */
@@ -116,7 +116,7 @@ typedef enum PROTO_ENUM_PACKED
 
 /**
  * @brief One in-flight peer query (zero-heap). The response accumulates into a caller-owned @c buf (>=
- *        PC_EDGE_MESH_RESP_MAX) supplied at begin - a fetch slot reuses its origin buffer, since the mesh and
+ *        PROTOCORE_EDGE_MESH_RESP_MAX) supplied at begin - a fetch slot reuses its origin buffer, since the mesh and
  *        origin phases never run at once.
  */
 typedef struct
@@ -128,22 +128,22 @@ typedef struct
     size_t entry_off; ///< offset of the entry frame within buf (valid on HIT)
     size_t entry_len; ///< length of the entry frame (valid on HIT)
     uint8_t *buf;     ///< caller-owned accumulation buffer
-    size_t cap;       ///< its capacity (must be >= PC_EDGE_MESH_RESP_MAX)
+    size_t cap;       ///< its capacity (must be >= PROTOCORE_EDGE_MESH_RESP_MAX)
 } EdgeMeshFetch;
 
 /**
- * @brief Dial @p host:@p port, send @p request, begin receiving into @p buf (@p cap >= PC_EDGE_MESH_RESP_MAX).
+ * @brief Dial @p host:@p port, send @p request, begin receiving into @p buf (@p cap >= PROTOCORE_EDGE_MESH_RESP_MAX).
  *        Sets st to PENDING, or FAILED on error.
  */
 void edge_mesh_fetch_begin(EdgeMeshFetch *m, const EdgeFetchTransport *t, const char *host, uint16_t port,
                            const uint8_t *request, size_t req_len, uint8_t *buf, size_t cap, uint32_t now_ms);
 
-/** @brief Drain available bytes and advance; honors PC_MESH_QUERY_MS. @return the current status. */
+/** @brief Drain available bytes and advance; honors PROTOCORE_MESH_QUERY_MS. @return the current status. */
 EdgeMeshStatus edge_mesh_fetch_pump(EdgeMeshFetch *m, const EdgeFetchTransport *t, uint32_t now_ms);
 
 /** @brief Release the peer connection (idempotent). */
 void edge_mesh_fetch_end(EdgeMeshFetch *m, const EdgeFetchTransport *t);
 
-#endif // PC_ENABLE_EDGE_MESH
+#endif // PROTOCORE_ENABLE_EDGE_MESH
 
 #endif // PROTOCORE_EDGE_MESH_H

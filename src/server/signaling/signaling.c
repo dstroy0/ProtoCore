@@ -17,11 +17,11 @@
 // answers an idle server rather than garbage.
 typedef struct
 {
-    pc_signal_snapshot state;
+    protocore_signal_snapshot state;
 } SignalingCtx;
 static SignalingCtx s_sig;
 
-void pc_signal_put_response(int code)
+void protocore_signal_put_response(int code)
 {
     s_sig.state.requests_total++;
 
@@ -45,14 +45,14 @@ void pc_signal_put_response(int code)
     // and a counter nobody reads is state that can only be wrong.
 }
 
-void pc_signal_put_tick(uint32_t uptime_ms, uint32_t conns_active, uint32_t listeners_up)
+void protocore_signal_put_tick(uint32_t uptime_ms, uint32_t conns_active, uint32_t listeners_up)
 {
     s_sig.state.uptime_ms = uptime_ms;
     s_sig.state.conns_active = conns_active;
     s_sig.state.listeners_up = listeners_up;
 }
 
-void pc_signal_know(pc_signal_snapshot *out)
+void protocore_signal_know(protocore_signal_snapshot *out)
 {
     if (out == NULL)
     {
@@ -63,7 +63,7 @@ void pc_signal_know(pc_signal_snapshot *out)
     *out = s_sig.state;
 }
 
-void pc_signal_reset(void)
+void protocore_signal_reset(void)
 {
     // The tallies are per-run: a server that has started over has answered no requests. Zero is the
     // bucket's initial state, so the reset is the same store the static initialization performs.
@@ -71,7 +71,7 @@ void pc_signal_reset(void)
     s_sig = blank;
 }
 
-void pc_signal_kill(uint8_t slot)
+void protocore_signal_kill(uint8_t slot)
 {
     // A plain forward: no liveness test, no result. Transport owns the slot's lifetime and its idle
     // sweep reaps a stale one regardless, so a check here would answer a question transport has

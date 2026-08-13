@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // On-device CCOUNT microbenchmark for the EnOcean ESP3 serial codec (services/radio/enocean):
-// pc_esp3_build() assembles a telegram (header + data + optional data + two CRC-8s),
-// pc_esp3_parse() frames one back out of a byte stream, and pc_esp3_crc8() is the CRC-8
+// protocore_esp3_build() assembles a telegram (header + data + optional data + two CRC-8s),
+// protocore_esp3_parse() frames one back out of a byte stream, and protocore_esp3_crc8() is the CRC-8
 // (poly 0x07) both of those lean on. All three are pure (no UART, no radio) - this rig has no
 // EnOcean TCM/USB gateway attached, so the transport side (reading bytes off a real serial
 // port, driving a radio module) is out of scope everywhere; only the deterministic CPU-side
@@ -32,19 +32,19 @@ void dbench_run(void)
     static uint8_t build_out[64];
     static uint8_t telegram[64];
 
-    uint16_t tg_len = pc_esp3_build(ESP3_RADIO_ERP1, data, sizeof(data), opt, sizeof(opt), telegram, sizeof(telegram));
+    uint16_t tg_len = protocore_esp3_build(ESP3_RADIO_ERP1, data, sizeof(data), opt, sizeof(opt), telegram, sizeof(telegram));
 
     for (;;)
     {
         DBENCH_BANNER("enocean");
         volatile size_t sink = 0;
-        pc_esp3_packet pkt = {};
+        protocore_esp3_packet pkt = {};
 
-        DBENCH_OP("pc_esp3_build", 20000,
+        DBENCH_OP("protocore_esp3_build", 20000,
                   sink +=
-                  pc_esp3_build(ESP3_RADIO_ERP1, data, sizeof(data), opt, sizeof(opt), build_out, sizeof(build_out)));
-        DBENCH_OP("pc_esp3_parse", 20000, sink += (size_t)pc_esp3_parse(telegram, tg_len, &pkt));
-        DBENCH_BULK("pc_esp3_crc8", 20000, tg_len, sink += pc_esp3_crc8(telegram, tg_len));
+                  protocore_esp3_build(ESP3_RADIO_ERP1, data, sizeof(data), opt, sizeof(opt), build_out, sizeof(build_out)));
+        DBENCH_OP("protocore_esp3_parse", 20000, sink += (size_t)protocore_esp3_parse(telegram, tg_len, &pkt));
+        DBENCH_BULK("protocore_esp3_crc8", 20000, tg_len, sink += protocore_esp3_crc8(telegram, tg_len));
 
         (void)sink;
         DBENCH_DONE();

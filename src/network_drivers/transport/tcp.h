@@ -29,7 +29,7 @@
 #include "network_drivers/transport/tcp/tcp_listener.h"
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
 /**
  * @brief The connection oriented transport.
@@ -42,7 +42,7 @@ typedef struct
 {
     const ConnPoolNs *conn;
     const TcpListenerNs *listener;
-#if PC_NEED_CLIENT
+#if PROTOCORE_NEED_CLIENT
     const TcpClientNs *client;
 #endif
 } TcpNs;
@@ -50,6 +50,6 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern const TcpNs Tcp;
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_TCP_H

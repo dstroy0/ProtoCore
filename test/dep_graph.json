@@ -5045,7 +5045,7 @@
 "native_zigbee",
 "native_zwave"
 ],
-"core_setup/board_profiles/pc_platform.h": [
+"core_setup/board_profiles/protocore_platform.h": [
 "native_accept_gate",
 "native_ad9238",
 "native_ads",
@@ -21486,7 +21486,7 @@
 "native_web_terminal",
 "native_webdav_handler"
 ],
-"src/shared_primitives/types.h": [
+"src/shared_primitives/protocore_types.h": [
 "native_accept_gate",
 "native_ad9238",
 "native_ads",
@@ -22203,7 +22203,7 @@
 "native_zigbee",
 "native_zwave"
 ],
-"test/mocks/pc_net_host.h": [
+"test/mocks/protocore_net_host.h": [
 "native_accept_gate",
 "native_ad9238",
 "native_ads",

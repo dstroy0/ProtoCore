@@ -1,13 +1,13 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Unit tests for the NTP server response codec (services/pc_ntp_server_build_response): a pure
+// Unit tests for the NTP server response codec (services/protocore_ntp_server_build_response): a pure
 // RFC 5905 server-mode reply builder - version echo, mode/LI/stratum, origin-timestamp copy,
 // reference/receive/transmit stamps, big-endian encoding, and the length guards.
 
 #include "network_drivers/application/ntp_server/ntp_server.h"
 #include "network_drivers/transport/udp.h"
-#include "pc_net_host.h"
+#include "protocore_net_host.h"
 #include "services/timing_position/time_source/time_source.h"
 #include <stdint.h>
 #include <string.h>
@@ -22,7 +22,7 @@ static uint32_t rd_be32(const uint8_t *p)
 // Build a plausible client request: LI=0, VN, Mode=3 (client), a poll, and a transmit stamp.
 static void make_request(uint8_t *req, uint8_t vn, uint8_t poll, uint32_t xmit_s, uint32_t xmit_f)
 {
-    memset(req, 0, PC_NTP_PACKET_LEN);
+    memset(req, 0, PROTOCORE_NTP_PACKET_LEN);
     req[0] = (uint8_t)((0u << 6) | (vn << 3) | 3u);
     req[2] = poll;
     req[40] = (uint8_t)(xmit_s >> 24);
@@ -44,18 +44,18 @@ void tearDown()
 
 void test_happy_path_fields()
 {
-    uint8_t req[PC_NTP_PACKET_LEN], out[PC_NTP_PACKET_LEN];
+    uint8_t req[PROTOCORE_NTP_PACKET_LEN], out[PROTOCORE_NTP_PACKET_LEN];
     make_request(req, 4, 6, 0xDEADBEEFu, 0x12345678u);
     uint32_t secs = 0xE6C50000u, frac = 0x80000000u; // arbitrary NTP time, half-second fraction
 
-    size_t n = pc_ntp_server_build_response(req, sizeof(req), 3, PC_NTP_REFID_LOCL, secs, frac, out, sizeof(out));
-    TEST_ASSERT_EQUAL_UINT(PC_NTP_PACKET_LEN, n);
+    size_t n = protocore_ntp_server_build_response(req, sizeof(req), 3, PROTOCORE_NTP_REFID_LOCL, secs, frac, out, sizeof(out));
+    TEST_ASSERT_EQUAL_UINT(PROTOCORE_NTP_PACKET_LEN, n);
 
     TEST_ASSERT_EQUAL_UINT8(0, out[0] >> 6);         // LI = 0 (in sync)
     TEST_ASSERT_EQUAL_UINT8(4, (out[0] >> 3) & 0x7); // VN echoed from the request
     TEST_ASSERT_EQUAL_UINT8(4, out[0] & 0x7);        // Mode = 4 (server)
     TEST_ASSERT_EQUAL_UINT8(3, out[1]);              // stratum
-    TEST_ASSERT_EQUAL_UINT32(PC_NTP_REFID_LOCL, rd_be32(out + 12));
+    TEST_ASSERT_EQUAL_UINT32(PROTOCORE_NTP_REFID_LOCL, rd_be32(out + 12));
     TEST_ASSERT_EQUAL_UINT32(secs, rd_be32(out + 16)); // reference timestamp
     TEST_ASSERT_EQUAL_UINT32(frac, rd_be32(out + 20));
     TEST_ASSERT_EQUAL_UINT32(secs, rd_be32(out + 32)); // receive timestamp
@@ -66,9 +66,9 @@ void test_happy_path_fields()
 
 void test_origin_is_client_transmit()
 {
-    uint8_t req[PC_NTP_PACKET_LEN], out[PC_NTP_PACKET_LEN];
+    uint8_t req[PROTOCORE_NTP_PACKET_LEN], out[PROTOCORE_NTP_PACKET_LEN];
     make_request(req, 4, 6, 0xCAFEF00Du, 0x0000FFFFu);
-    pc_ntp_server_build_response(req, sizeof(req), 3, PC_NTP_REFID_LOCL, 1, 2, out, sizeof(out));
+    protocore_ntp_server_build_response(req, sizeof(req), 3, PROTOCORE_NTP_REFID_LOCL, 1, 2, out, sizeof(out));
     // Origin timestamp (bytes 24..31) must be a byte-exact copy of the request's transmit stamp.
     TEST_ASSERT_EQUAL_UINT8_ARRAY(req + 40, out + 24, 8);
     TEST_ASSERT_EQUAL_UINT32(0xCAFEF00Du, rd_be32(out + 24));
@@ -77,11 +77,11 @@ void test_origin_is_client_transmit()
 
 void test_version_echo()
 {
-    uint8_t req[PC_NTP_PACKET_LEN], out[PC_NTP_PACKET_LEN];
+    uint8_t req[PROTOCORE_NTP_PACKET_LEN], out[PROTOCORE_NTP_PACKET_LEN];
     for (uint8_t vn = 1; vn <= 4; vn++)
     {
         make_request(req, vn, 6, 1, 1);
-        pc_ntp_server_build_response(req, sizeof(req), 3, PC_NTP_REFID_LOCL, 1, 1, out, sizeof(out));
+        protocore_ntp_server_build_response(req, sizeof(req), 3, PROTOCORE_NTP_REFID_LOCL, 1, 1, out, sizeof(out));
         TEST_ASSERT_EQUAL_UINT8(vn, (out[0] >> 3) & 0x7);
         TEST_ASSERT_EQUAL_UINT8(4, out[0] & 0x7); // always answers as server
     }
@@ -89,28 +89,28 @@ void test_version_echo()
 
 void test_poll_echo_and_default()
 {
-    uint8_t req[PC_NTP_PACKET_LEN], out[PC_NTP_PACKET_LEN];
+    uint8_t req[PROTOCORE_NTP_PACKET_LEN], out[PROTOCORE_NTP_PACKET_LEN];
     make_request(req, 4, 10, 1, 1);
-    pc_ntp_server_build_response(req, sizeof(req), 3, PC_NTP_REFID_LOCL, 1, 1, out, sizeof(out));
+    protocore_ntp_server_build_response(req, sizeof(req), 3, PROTOCORE_NTP_REFID_LOCL, 1, 1, out, sizeof(out));
     TEST_ASSERT_EQUAL_UINT8(10, out[2]); // echoes the client's poll
     make_request(req, 4, 0, 1, 1);
-    pc_ntp_server_build_response(req, sizeof(req), 3, PC_NTP_REFID_LOCL, 1, 1, out, sizeof(out));
+    protocore_ntp_server_build_response(req, sizeof(req), 3, PROTOCORE_NTP_REFID_LOCL, 1, 1, out, sizeof(out));
     TEST_ASSERT_EQUAL_UINT8(6, out[2]); // default when the client sent 0
 }
 
 void test_stratum_passthrough()
 {
-    uint8_t req[PC_NTP_PACKET_LEN], out[PC_NTP_PACKET_LEN];
+    uint8_t req[PROTOCORE_NTP_PACKET_LEN], out[PROTOCORE_NTP_PACKET_LEN];
     make_request(req, 4, 6, 1, 1);
-    pc_ntp_server_build_response(req, sizeof(req), 7, PC_NTP_REFID_LOCL, 1, 1, out, sizeof(out));
+    protocore_ntp_server_build_response(req, sizeof(req), 7, PROTOCORE_NTP_REFID_LOCL, 1, 1, out, sizeof(out));
     TEST_ASSERT_EQUAL_UINT8(7, out[1]);
 }
 
 void test_big_endian_encoding()
 {
-    uint8_t req[PC_NTP_PACKET_LEN], out[PC_NTP_PACKET_LEN];
+    uint8_t req[PROTOCORE_NTP_PACKET_LEN], out[PROTOCORE_NTP_PACKET_LEN];
     make_request(req, 4, 6, 1, 1);
-    pc_ntp_server_build_response(req, sizeof(req), 3, PC_NTP_REFID_LOCL, 0x01020304u, 0x0A0B0C0Du, out, sizeof(out));
+    protocore_ntp_server_build_response(req, sizeof(req), 3, PROTOCORE_NTP_REFID_LOCL, 0x01020304u, 0x0A0B0C0Du, out, sizeof(out));
     // Transmit seconds, big-endian.
     TEST_ASSERT_EQUAL_UINT8(0x01, out[40]);
     TEST_ASSERT_EQUAL_UINT8(0x02, out[41]);
@@ -122,19 +122,19 @@ void test_big_endian_encoding()
 
 void test_length_guards()
 {
-    uint8_t req[PC_NTP_PACKET_LEN], out[PC_NTP_PACKET_LEN];
+    uint8_t req[PROTOCORE_NTP_PACKET_LEN], out[PROTOCORE_NTP_PACKET_LEN];
     make_request(req, 4, 6, 1, 1);
-    TEST_ASSERT_EQUAL_UINT(0, pc_ntp_server_build_response(req, 47, 3, PC_NTP_REFID_LOCL, 1, 1, out, sizeof(out)));
-    TEST_ASSERT_EQUAL_UINT(0, pc_ntp_server_build_response(req, sizeof(req), 3, PC_NTP_REFID_LOCL, 1, 1, out, 47));
-    TEST_ASSERT_EQUAL_UINT(0, pc_ntp_server_build_response(NULL, 48, 3, PC_NTP_REFID_LOCL, 1, 1, out, sizeof(out)));
-    TEST_ASSERT_EQUAL_UINT(0, pc_ntp_server_build_response(req, sizeof(req), 3, PC_NTP_REFID_LOCL, 1, 1, NULL, 48));
+    TEST_ASSERT_EQUAL_UINT(0, protocore_ntp_server_build_response(req, 47, 3, PROTOCORE_NTP_REFID_LOCL, 1, 1, out, sizeof(out)));
+    TEST_ASSERT_EQUAL_UINT(0, protocore_ntp_server_build_response(req, sizeof(req), 3, PROTOCORE_NTP_REFID_LOCL, 1, 1, out, 47));
+    TEST_ASSERT_EQUAL_UINT(0, protocore_ntp_server_build_response(NULL, 48, 3, PROTOCORE_NTP_REFID_LOCL, 1, 1, out, sizeof(out)));
+    TEST_ASSERT_EQUAL_UINT(0, protocore_ntp_server_build_response(req, sizeof(req), 3, PROTOCORE_NTP_REFID_LOCL, 1, 1, NULL, 48));
 }
 
 void test_root_dispersion_advertised()
 {
-    uint8_t req[PC_NTP_PACKET_LEN], out[PC_NTP_PACKET_LEN];
+    uint8_t req[PROTOCORE_NTP_PACKET_LEN], out[PROTOCORE_NTP_PACKET_LEN];
     make_request(req, 4, 6, 1, 1);
-    pc_ntp_server_build_response(req, sizeof(req), 3, PC_NTP_REFID_LOCL, 1, 1, out, sizeof(out));
+    protocore_ntp_server_build_response(req, sizeof(req), 3, PROTOCORE_NTP_REFID_LOCL, 1, 1, out, sizeof(out));
     TEST_ASSERT_EQUAL_UINT32(0x00010000u, rd_be32(out + 8)); // ~1 s dispersion (coarse clock)
     TEST_ASSERT_EQUAL_UINT32(0u, rd_be32(out + 4));          // root delay 0
 }
@@ -152,16 +152,16 @@ static uint32_t fake_clock(void)
 // runs the handler, and the handler's reply leaves inside that call.
 static void serve(const uint8_t *req, const char *from_ip, uint16_t from_port)
 {
-    pc_net_host_udp_reset();
-    TEST_ASSERT_TRUE(pc_net_host_udp_deliver(123, from_ip, from_port, (void *)req, PC_NTP_PACKET_LEN));
+    protocore_net_host_udp_reset();
+    TEST_ASSERT_TRUE(protocore_net_host_udp_deliver(123, from_ip, from_port, (void *)req, PROTOCORE_NTP_PACKET_LEN));
     Udp.listener->poll();
 }
 
 void test_begin_binds_udp_123()
 {
-    pc_net_host_reset();
-    TEST_ASSERT_TRUE(pc_ntp_server_begin(3, PC_NTP_REFID_LOCL));
-    TEST_ASSERT_NOT_NULL(pc_net_host_udp_pcb(123));
+    protocore_net_host_reset();
+    TEST_ASSERT_TRUE(protocore_ntp_server_begin(3, PROTOCORE_NTP_REFID_LOCL));
+    TEST_ASSERT_NOT_NULL(protocore_net_host_udp_pcb(123));
     TEST_ASSERT_TRUE(Udp.listener->close(123));
 }
 
@@ -169,26 +169,26 @@ void test_begin_binds_udp_123()
 // stratum and refid begin() was given, mode 4, and the client's transmit stamp echoed as the origin.
 void test_request_is_answered_on_the_wire()
 {
-    pc_net_host_reset();
-    pc_time_source_reset();
+    protocore_net_host_reset();
+    protocore_time_source_reset();
     g_epoch = 1700000000u;
-    TEST_ASSERT_TRUE(pc_time_source_add("test", 0, fake_clock));
-    TEST_ASSERT_TRUE(pc_ntp_server_begin(7, PC_NTP_REFID_GPS));
+    TEST_ASSERT_TRUE(protocore_time_source_add("test", 0, fake_clock));
+    TEST_ASSERT_TRUE(protocore_ntp_server_begin(7, PROTOCORE_NTP_REFID_GPS));
 
-    uint8_t req[PC_NTP_PACKET_LEN];
+    uint8_t req[PROTOCORE_NTP_PACKET_LEN];
     make_request(req, 4, 6, 0xCAFEF00Du, 0x0000FFFFu);
     serve(req, "192.0.2.5", 40000);
 
-    TEST_ASSERT_EQUAL_INT(1, (int)pc_net_host_udp_count());
-    const pc_net_host_dgram *d = pc_net_host_udp_at(0);
-    TEST_ASSERT_EQUAL_UINT16(PC_NTP_PACKET_LEN, d->len);
+    TEST_ASSERT_EQUAL_INT(1, (int)protocore_net_host_udp_count());
+    const protocore_net_host_dgram *d = protocore_net_host_udp_at(0);
+    TEST_ASSERT_EQUAL_UINT16(PROTOCORE_NTP_PACKET_LEN, d->len);
     TEST_ASSERT_EQUAL_UINT16(123, d->src_port);   // answered from the bound port
     TEST_ASSERT_EQUAL_UINT16(40000, d->dst_port); // back to the client that asked
     TEST_ASSERT_EQUAL_UINT8(4, d->data[0] & 0x7); // mode 4 (server)
     TEST_ASSERT_EQUAL_UINT8(7, d->data[1]);       // the stratum begin() was given
-    TEST_ASSERT_EQUAL_UINT32(PC_NTP_REFID_GPS, rd_be32(d->data + 12));
+    TEST_ASSERT_EQUAL_UINT32(PROTOCORE_NTP_REFID_GPS, rd_be32(d->data + 12));
     TEST_ASSERT_EQUAL_UINT32(0xCAFEF00Du, rd_be32(d->data + 24)); // origin = client transmit
-    TEST_ASSERT_EQUAL_UINT32(g_epoch + PC_NTP_UNIX_OFFSET, rd_be32(d->data + 40));
+    TEST_ASSERT_EQUAL_UINT32(g_epoch + PROTOCORE_NTP_UNIX_OFFSET, rd_be32(d->data + 40));
 
     TEST_ASSERT_TRUE(Udp.listener->close(123));
 }
@@ -197,17 +197,17 @@ void test_request_is_answered_on_the_wire()
 // returns before building anything and nothing goes out.
 void test_no_clock_serves_nothing()
 {
-    pc_net_host_reset();
-    pc_time_source_reset();
+    protocore_net_host_reset();
+    protocore_time_source_reset();
     g_epoch = 0;
-    TEST_ASSERT_TRUE(pc_time_source_add("test", 0, fake_clock));
-    TEST_ASSERT_TRUE(pc_ntp_server_begin(3, PC_NTP_REFID_LOCL));
+    TEST_ASSERT_TRUE(protocore_time_source_add("test", 0, fake_clock));
+    TEST_ASSERT_TRUE(protocore_ntp_server_begin(3, PROTOCORE_NTP_REFID_LOCL));
 
-    uint8_t req[PC_NTP_PACKET_LEN];
+    uint8_t req[PROTOCORE_NTP_PACKET_LEN];
     make_request(req, 4, 6, 1, 1);
     serve(req, "192.0.2.5", 40000);
 
-    TEST_ASSERT_EQUAL_INT(0, (int)pc_net_host_udp_sent());
+    TEST_ASSERT_EQUAL_INT(0, (int)protocore_net_host_udp_sent());
 
     TEST_ASSERT_TRUE(Udp.listener->close(123));
 }
@@ -216,17 +216,17 @@ void test_no_clock_serves_nothing()
 // builds nothing and the port stays silent.
 void test_short_request_is_dropped()
 {
-    pc_net_host_reset();
-    pc_time_source_reset();
+    protocore_net_host_reset();
+    protocore_time_source_reset();
     g_epoch = 1700000000u;
-    TEST_ASSERT_TRUE(pc_time_source_add("test", 0, fake_clock));
-    TEST_ASSERT_TRUE(pc_ntp_server_begin(3, PC_NTP_REFID_LOCL));
+    TEST_ASSERT_TRUE(protocore_time_source_add("test", 0, fake_clock));
+    TEST_ASSERT_TRUE(protocore_ntp_server_begin(3, PROTOCORE_NTP_REFID_LOCL));
 
     uint8_t runt[8] = {0x23, 0, 6, 0, 0, 0, 0, 0};
-    pc_net_host_udp_reset();
-    TEST_ASSERT_TRUE(pc_net_host_udp_deliver(123, "192.0.2.5", 40000, runt, sizeof(runt)));
+    protocore_net_host_udp_reset();
+    TEST_ASSERT_TRUE(protocore_net_host_udp_deliver(123, "192.0.2.5", 40000, runt, sizeof(runt)));
     Udp.listener->poll();
-    TEST_ASSERT_EQUAL_INT(0, (int)pc_net_host_udp_sent());
+    TEST_ASSERT_EQUAL_INT(0, (int)protocore_net_host_udp_sent());
 
     TEST_ASSERT_TRUE(Udp.listener->close(123));
 }

@@ -4,7 +4,7 @@
 /**
  * @file safety_scl.h
  * @brief IEC 61784-3 black-channel Safety Communication Layer - the shared primitives
- *        (PC_ENABLE_SAFETY_SCL).
+ *        (PROTOCORE_ENABLE_SAFETY_SCL).
  *
  * The functional-safety profiles (PROFIsafe / IEC 61784-3-3, CIP Safety / -3-2, FSoE / -3-12,
  * IO-Link Safety) all work the same way: they treat the underlying fieldbus as an untrusted "black
@@ -30,7 +30,7 @@
  * which genuinely is profile-independent.
  *
  * **Fail-safe latches.** Once any check fails the connection enters @ref SCL_STATE_FAILSAFE and stays
- * there until an explicit @ref pc_scl_reset. A safety layer must never silently reheal: recovering
+ * there until an explicit @ref protocore_scl_reset. A safety layer must never silently reheal: recovering
  * on its own would let an intermittent fault present as a working connection, which is precisely the
  * failure a SIL rating is meant to exclude. Re-establishing is an operator/application decision.
  *
@@ -47,25 +47,25 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_SAFETY_SCL
+#if PROTOCORE_ENABLE_SAFETY_SCL
 
 /** @brief Where a safety connection stands. */
 typedef enum PROTO_ENUM_PACKED
 {
     SCL_STATE_INIT = 0,     ///< initialized, no valid frame accepted yet.
     SCL_STATE_RUNNING = 1,  ///< at least one frame accepted and no fault since.
-    SCL_STATE_FAILSAFE = 2, ///< a check failed; latched until pc_scl_reset().
+    SCL_STATE_FAILSAFE = 2, ///< a check failed; latched until protocore_scl_reset().
 } SclState;
 
 /** @brief Why a connection went fail-safe. */
 typedef enum PROTO_ENUM_PACKED
 {
-    SCL_FAULT_PC_NONE = 0,   ///< no fault.
-    SCL_FAULT_SIGNATURE = 1, ///< the caller's CRC check rejected the frame (corruption).
-    SCL_FAULT_COUNTER = 2,   ///< the monitoring counter was not the expected next value.
-    SCL_FAULT_TIMEOUT = 3,   ///< no valid frame arrived within the watchdog.
+    SCL_FAULT_PROTOCORE_NONE = 0, ///< no fault.
+    SCL_FAULT_SIGNATURE = 1,      ///< the caller's CRC check rejected the frame (corruption).
+    SCL_FAULT_COUNTER = 2,        ///< the monitoring counter was not the expected next value.
+    SCL_FAULT_TIMEOUT = 3,        ///< no valid frame arrived within the watchdog.
 } SclFault;
 
 /**
@@ -78,7 +78,7 @@ typedef enum PROTO_ENUM_PACKED
 typedef struct
 {
     SclState state;       ///< current state.
-    SclFault fault;       ///< why it went fail-safe (PC_NONE unless FAILSAFE).
+    SclFault fault;       ///< why it went fail-safe (PROTOCORE_NONE unless FAILSAFE).
     uint32_t expected;    ///< monitoring counter value the next frame must carry.
     uint32_t counter_mod; ///< counter wrap modulus (0 = full 32-bit range).
     uint32_t watchdog_ms; ///< maximum gap between accepted frames (0 disables the watchdog).
@@ -94,7 +94,7 @@ typedef struct
  * @param counter_mod   counter wrap modulus; 0 for the full 32-bit range.
  * @param watchdog_ms   maximum gap between accepted frames; 0 disables the watchdog.
  */
-void pc_scl_init(SclConn *c, uint32_t first_counter, uint32_t counter_mod, uint32_t watchdog_ms, uint32_t now);
+void protocore_scl_init(SclConn *c, uint32_t first_counter, uint32_t counter_mod, uint32_t watchdog_ms, uint32_t now);
 
 /**
  * @brief Offer one received frame to the connection.
@@ -114,7 +114,7 @@ void pc_scl_init(SclConn *c, uint32_t first_counter, uint32_t counter_mod, uint3
  *
  * @return true if the frame was accepted (its safety payload may be used).
  */
-proto_bool pc_scl_on_frame(SclConn *c, proto_bool signature_ok, uint32_t counter, uint32_t now);
+proto_bool protocore_scl_on_frame(SclConn *c, proto_bool signature_ok, uint32_t counter, uint32_t now);
 
 /**
  * @brief Check the receive watchdog at @p now. Call it every cycle, including cycles with no frame -
@@ -125,7 +125,7 @@ proto_bool pc_scl_on_frame(SclConn *c, proto_bool signature_ok, uint32_t counter
  *
  * @return true if the connection is still usable (not fail-safe).
  */
-proto_bool pc_scl_poll(SclConn *c, uint32_t now);
+proto_bool protocore_scl_poll(SclConn *c, uint32_t now);
 
 /**
  * @brief Re-establish a fail-safe connection, arming it for @p first_counter at @p now.
@@ -133,16 +133,16 @@ proto_bool pc_scl_poll(SclConn *c, uint32_t now);
  * Deliberately explicit: see the file comment on why the layer never rehabilitates itself.
  * Counters are preserved so the accepted/rejected tallies span the whole session.
  */
-void pc_scl_reset(SclConn *c, uint32_t first_counter, uint32_t now);
+void protocore_scl_reset(SclConn *c, uint32_t first_counter, uint32_t now);
 
 /** @brief True while the connection may be used (not fail-safe). */
-proto_bool pc_scl_ok(const SclConn *c);
+proto_bool protocore_scl_ok(const SclConn *c);
 
 /** @brief The connection's state. */
-SclState pc_scl_state(const SclConn *c);
+SclState protocore_scl_state(const SclConn *c);
 
-/** @brief Why the connection went fail-safe (@ref SCL_FAULT_PC_NONE unless it did). */
-SclFault pc_scl_fault(const SclConn *c);
+/** @brief Why the connection went fail-safe (@ref SCL_FAULT_PROTOCORE_NONE unless it did). */
+SclFault protocore_scl_fault(const SclConn *c);
 
 /**
  * @brief Advance a *sender's* monitoring counter, honouring the same wrap modulus.
@@ -152,10 +152,10 @@ SclFault pc_scl_fault(const SclConn *c);
  *
  * @return the next counter value to put on the wire.
  */
-uint32_t pc_scl_next_counter(uint32_t counter, uint32_t counter_mod);
+uint32_t protocore_scl_next_counter(uint32_t counter, uint32_t counter_mod);
 
-#endif // PC_ENABLE_SAFETY_SCL
+#endif // PROTOCORE_ENABLE_SAFETY_SCL
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_SAFETY_SCL_H

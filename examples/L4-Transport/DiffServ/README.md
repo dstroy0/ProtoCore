@@ -1,6 +1,6 @@
 # DiffServ - QoS marking (RFC 2474) on outbound traffic
 
-**Layer:** L4 Transport · **Build flags:** `PC_ENABLE_DIFFSERV`
+**Layer:** L4 Transport · **Build flags:** `PROTOCORE_ENABLE_DIFFSERV`
 
 ## What this example teaches
 
@@ -10,21 +10,21 @@ or Wi-Fi AP reads that class and prioritizes the packet - real-time / safety tra
 marked **Expedited Forwarding** (EF, DSCP 46) jumps ahead of best-effort, and the
 Wi-Fi driver maps it into the top 802.11e WMM access categories.
 
-With `PC_ENABLE_DIFFSERV` the transport writes the DSCP into the pcb's TOS field
+With `PROTOCORE_ENABLE_DIFFSERV` the transport writes the DSCP into the pcb's TOS field
 as each connection is accepted / connected, so nothing is added to the send hot
 path. Three levels of control, coarse to fine:
 
 ```cpp
 #include "network_drivers/transport/diffserv.h"
 
-pc_set_default_dscp(PC_DSCP_EF);       // every outbound TCP connection (accepted + client)
-pc_listen_set_dscp(80, PC_DSCP_AF41);  // override for one listener's connections
-pc_conn_set_dscp(slot, PC_DSCP_CS6);   // re-tag ONE live connection with any class
-pc_udp_set_dscp(PC_DSCP_EF);           // outbound UDP datagrams
+protocore_set_default_dscp(PROTOCORE_DSCP_EF);       // every outbound TCP connection (accepted + client)
+protocore_listen_set_dscp(80, PROTOCORE_DSCP_AF41);  // override for one listener's connections
+protocore_conn_set_dscp(slot, PROTOCORE_DSCP_CS6);   // re-tag ONE live connection with any class
+protocore_udp_set_dscp(PROTOCORE_DSCP_EF);           // outbound UDP datagrams
 ```
 
 A DSCP of `0` means best-effort (no marking). Convenience code points are defined
-(`PC_DSCP_EF` 46, `PC_DSCP_CS6` 48, `PC_DSCP_AF41` 34, `PC_DSCP_AF31` 26); any
+(`PROTOCORE_DSCP_EF` 46, `PROTOCORE_DSCP_CS6` 48, `PROTOCORE_DSCP_AF41` 34, `PROTOCORE_DSCP_AF31` 26); any
 `0-63` value is accepted - handy for **arbitrarily tagging traffic in network
 testing**, not just standards-defined classes.
 
@@ -35,7 +35,7 @@ connection to CS6 to show the per-flow override.
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_DIFFSERV=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_DIFFSERV=1" \
   --lib="." examples/L4-Transport/DiffServ/DiffServ.ino
 ```
 
@@ -74,7 +74,7 @@ void handle_root(uint8_t slot, HttpReq *req)
 // GET /tag - re-tag THIS connection to CS6 before responding, overriding the default.
 void handle_tag(uint8_t slot, HttpReq *req)
 {
-    pc_conn_set_dscp(slot, PC_DSCP_CS6);
+    protocore_conn_set_dscp(slot, PROTOCORE_DSCP_CS6);
     server.send(slot, 200, "text/plain", "re-tagged CS6 (DSCP 48)\n");
 }
 
@@ -82,8 +82,8 @@ void setup()
 {
     // ... bring up Wi-Fi (Physical.wifi->init / Physical.wifi->ready) ...
 
-    pc_set_default_dscp(PC_DSCP_EF); // mark every outbound connection EF
-    pc_udp_set_dscp(PC_DSCP_EF);     // and outbound UDP datagrams
+    protocore_set_default_dscp(PROTOCORE_DSCP_EF); // mark every outbound connection EF
+    protocore_udp_set_dscp(PROTOCORE_DSCP_EF);     // and outbound UDP datagrams
 
     server.on("/", HttpMethod::HTTP_GET, handle_root);
     server.on("/tag", HttpMethod::HTTP_GET, handle_tag);

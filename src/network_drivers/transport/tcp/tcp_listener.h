@@ -31,11 +31,11 @@
 #define PROTOCORE_TCP_LISTENER_H
 
 #include "../tcp_evt.h" // TcpEvt: what a listener's queue holds. The slots themselves are tcp.h's.
-#include "core_setup/board_profiles/pc_platform.h" // the target's queues and TCP, under our names
+#include "core_setup/board_profiles/protocore_platform.h" // the target's queues and TCP, under our names
 #include "protocore_config.h"
-#include "shared_primitives/ip.h" // pc_ip: the peer address an allowlist matches
+#include "shared_primitives/ip.h" // protocore_ip: the peer address an allowlist matches
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
 // ---------------------------------------------------------------------------
 // Listener pool entry
@@ -48,21 +48,21 @@ PROTO_BEGIN_DECLS
  * lives in BSS - no heap allocation anywhere in the listener layer.
  *
  * A single `Listener` instance consumes:
- *   sizeof(tcp_pcb*) + sizeof(pc_platform_queue_ctrl) + EVT_QUEUE_DEPTH*sizeof(TcpEvt)
- *   + sizeof(pc_platform_queue) + 3 bytes overhead (port, proto, active).
+ *   sizeof(tcp_pcb*) + sizeof(protocore_platform_queue_ctrl) + EVT_QUEUE_DEPTH*sizeof(TcpEvt)
+ *   + sizeof(protocore_platform_queue) + 3 bytes overhead (port, proto, active).
  */
 typedef struct
 {
-    uint16_t port;                        ///< TCP port this listener binds.
-    ProtoConn proto;                      ///< Application protocol for all connections accepted here.
-    pc_pcb *listen_pcb;                   ///< lwIP listen PCB; NULL when inactive.
-    pc_platform_queue_ctrl _queue_struct; ///< Static queue descriptor.
+    uint16_t port;                               ///< TCP port this listener binds.
+    ProtoConn proto;                             ///< Application protocol for all connections accepted here.
+    protocore_pcb *listen_pcb;                   ///< lwIP listen PCB; NULL when inactive.
+    protocore_platform_queue_ctrl _queue_struct; ///< Static queue descriptor.
     uint8_t _queue_storage[EVT_QUEUE_DEPTH * sizeof(TcpEvt)]; ///< Queue backing store.
-    pc_platform_queue queue;                                  ///< Handle returned by pc_platform_queue_create().
+    protocore_platform_queue queue;                           ///< Handle returned by protocore_platform_queue_create().
     proto_bool active; ///< True after listener_add(), false after listener_stop().
     proto_bool tls;    ///< True when connections accepted here begin a TLS handshake.
-#if PC_ENABLE_DIFFSERV
-    uint8_t dscp; ///< Per-listener DiffServ DSCP for accepted connections; PC_DSCP_UNSET = use the default.
+#if PROTOCORE_ENABLE_DIFFSERV
+    uint8_t dscp; ///< Per-listener DiffServ DSCP for accepted connections; PROTOCORE_DSCP_UNSET = use the default.
 #endif
 } Listener;
 
@@ -76,13 +76,13 @@ extern Listener listener_pool[MAX_LISTENERS];
  * convention tcp.c uses for lowlevel_recv_cb / lowlevel_sent_cb / lowlevel_err_cb - production
  * code never calls this directly, it is wired in via tcp_arg()+tcp_accept() in listener_add().
  */
-pc_net_err listener_accept_cb(void *arg, pc_pcb *newpcb, pc_net_err err);
+protocore_net_err listener_accept_cb(void *arg, protocore_pcb *newpcb, protocore_net_err err);
 
 // ---------------------------------------------------------------------------
 // Listener management API
 // ---------------------------------------------------------------------------
 
-#if PC_WORKER_COUNT > 1
+#if PROTOCORE_WORKER_COUNT > 1
 
 #endif
 
@@ -119,27 +119,27 @@ typedef struct
     int32_t (*add)(uint8_t idx, uint16_t port, ProtoConn proto, proto_bool tls);
     int32_t (*add_dynamic)(uint8_t idx, uint16_t port, ProtoConn proto);
     proto_bool (*enqueue)(uint8_t listener_id, const TcpEvt *evt);
-#if PC_ENABLE_DIFFSERV
+#if PROTOCORE_ENABLE_DIFFSERV
     proto_bool (*set_dscp)(uint16_t port, uint8_t dscp);
 #endif
-#if PC_WORKER_COUNT > 1
+#if PROTOCORE_WORKER_COUNT > 1
     // One worker owns every slot at N=1, so there are no per-worker queues to name.
     void (*worker_queues_init)(void);
-    pc_platform_queue (*worker_queue)(int worker_id);
+    protocore_platform_queue (*worker_queue)(int worker_id);
 #endif
     proto_bool (*accept_allowed)(uint32_t now_ms);
     void (*accept_throttle_reset)(void);
-    proto_bool (*accept_allowed_ip)(const pc_ip *ip, uint32_t now_ms);
+    proto_bool (*accept_allowed_ip)(const protocore_ip *ip, uint32_t now_ms);
     void (*per_ip_throttle_reset)(void);
-    proto_bool (*ip_allow_add)(const pc_ip *network, uint8_t prefix_len);
+    proto_bool (*ip_allow_add)(const protocore_ip *network, uint8_t prefix_len);
     proto_bool (*ip_allow_add_cidr)(const char *cidr);
-    proto_bool (*ip_allowed)(const pc_ip *ip);
+    proto_bool (*ip_allowed)(const protocore_ip *ip);
     void (*ip_allowlist_reset)(void);
 } TcpListenerNs;
 
 /** @brief The one symbol this module exports. */
 extern const TcpListenerNs TcpListener;
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif

@@ -3,7 +3,7 @@
 
 /**
  * @file iolink.h
- * @brief IO-Link (SDCI, IEC 61131-9) data-link message codec (PC_ENABLE_IOLINK).
+ * @brief IO-Link (SDCI, IEC 61131-9) data-link message codec (PROTOCORE_ENABLE_IOLINK).
  *
  * IO-Link is the point-to-point 3-wire serial link to smart sensors / actuators. This codec
  * implements the data-link **message layer**: the M-sequence Control octet (MC), the
@@ -13,8 +13,8 @@
  * The checksum is the part everyone gets wrong, so it is implemented straight from the spec
  * (IO-Link Interface and System Specification v1.1.4, Annex A.1.6): a 0x52 seed XORed octet
  * by octet across the message (the check octet included with its checksum bits 0), then the
- * 8-to-6-bit compression of equation (A.1). `pc_iol_finalize` writes it into the check octet and
- * `pc_iol_verify` checks it.
+ * 8-to-6-bit compression of equation (A.1). `protocore_iol_finalize` writes it into the check octet and
+ * `protocore_iol_verify` checks it.
  *
  * Scope: the message / DL layer. The per-type M-sequence octet layout (process + on-request
  * data widths) is the device's profile, and the ISDU on-request service framing layers on top;
@@ -31,9 +31,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_IOLINK
+#if PROTOCORE_ENABLE_IOLINK
 
 #define IOL_CHECKSUM_SEED 0x52u ///< checksum seed XORed with the first octet (spec A.1.6)
 
@@ -60,22 +60,22 @@ PROTO_BEGIN_DECLS
 // --- control-octet builders / decoders ---
 
 /** @brief Build the M-sequence Control octet from access / channel / address (5-bit). */
-uint8_t pc_iol_mc(proto_bool read, uint8_t channel, uint8_t address);
+uint8_t protocore_iol_mc(proto_bool read, uint8_t channel, uint8_t address);
 
 /** @brief True if the MC octet requests a read. */
-proto_bool pc_iol_mc_is_read(uint8_t mc);
+proto_bool protocore_iol_mc_is_read(uint8_t mc);
 
 /** @brief Communication channel from an MC octet (IOL_CH_*). */
-uint8_t pc_iol_mc_channel(uint8_t mc);
+uint8_t protocore_iol_mc_channel(uint8_t mc);
 
 /** @brief Address (5-bit) from an MC octet. */
-uint8_t pc_iol_mc_address(uint8_t mc);
+uint8_t protocore_iol_mc_address(uint8_t mc);
 
 /** @brief Build a CKT octet from an M-sequence type and a 6-bit checksum (use 0 before finalize). */
-uint8_t pc_iol_ckt(uint8_t mseq_type, uint8_t checksum6);
+uint8_t protocore_iol_ckt(uint8_t mseq_type, uint8_t checksum6);
 
 /** @brief Build a CKS octet from the Event / PD-invalid flags and a 6-bit checksum. */
-uint8_t pc_iol_cks(proto_bool event, proto_bool pd_invalid, uint8_t checksum6);
+uint8_t protocore_iol_cks(proto_bool event, proto_bool pd_invalid, uint8_t checksum6);
 
 // --- checksum (spec A.1.6) ---
 
@@ -83,23 +83,23 @@ uint8_t pc_iol_cks(proto_bool event, proto_bool pd_invalid, uint8_t checksum6);
  * @brief The compressed 6-bit SDCI checksum over @p msg (the check octet must already have its
  * low 6 bits set to 0). Seed 0x52, XOR every octet, then compress 8->6 per equation (A.1).
  */
-uint8_t pc_iol_checksum6(const uint8_t *msg, size_t len);
+uint8_t protocore_iol_checksum6(const uint8_t *msg, size_t len);
 
 /**
  * @brief Finalize a message in place: compute the checksum over @p msg (treating the check octet
  * at @p check_idx with checksum bits 0) and OR it into that octet, preserving its type / status
  * bits. Returns the finalized check octet.
  */
-uint8_t pc_iol_finalize(uint8_t *msg, size_t len, size_t check_idx);
+uint8_t protocore_iol_finalize(uint8_t *msg, size_t len, size_t check_idx);
 
 /**
  * @brief Verify a received message: recompute the checksum (masking off the check octet's
  * checksum bits) and compare it to the 6-bit checksum carried in the check octet at @p check_idx.
  */
-proto_bool pc_iol_verify(const uint8_t *msg, size_t len, size_t check_idx);
+proto_bool protocore_iol_verify(const uint8_t *msg, size_t len, size_t check_idx);
 
-#endif // PC_ENABLE_IOLINK
+#endif // PROTOCORE_ENABLE_IOLINK
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_IOLINK_H

@@ -3,19 +3,19 @@
 
 /**
  * @file RadioPower.ino
- * @brief WiFi radio power controls (PC_ENABLE_RADIO_POWER).
+ * @brief WiFi radio power controls (PROTOCORE_ENABLE_RADIO_POWER).
  *
  * Applies a WiFi modem-sleep mode (and an optional max-TX cap) after the link is
  * up, to lower average power on a battery device at the cost of some latency.
  * GET /radio reports the mode read back from the radio.
  *
  * NOTE: set the mode via build flags so it reaches the separately-compiled library:
- *     build_flags = -DPC_ENABLE_RADIO_POWER=1 -DPC_RADIO_WIFI_PS=1
- *   (0 = none, 1 = min modem, 2 = max modem; + optional -DPC_RADIO_MAX_TX_DBM=11)
+ *     build_flags = -DPROTOCORE_ENABLE_RADIO_POWER=1 -DPROTOCORE_RADIO_WIFI_PS=1
+ *   (0 = none, 1 = min modem, 2 = max modem; + optional -DPROTOCORE_RADIO_MAX_TX_DBM=11)
  * (Arduino IDE: they are already set for you in the build_opt.h beside this sketch, so it builds as-is.)
  */
 
-#define PC_ENABLE_RADIO_POWER 1
+#define PROTOCORE_ENABLE_RADIO_POWER 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"

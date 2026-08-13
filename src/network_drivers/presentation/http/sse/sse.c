@@ -11,7 +11,7 @@
 #include "network_drivers/transport/tcp.h"
 #include <stdio.h>
 
-SseConn pc_sse_pool[MAX_SSE_CONNS];
+SseConn protocore_sse_pool[MAX_SSE_CONNS];
 
 // One route's subscribe handler. It belongs here rather than in the route table: a route decides
 // where a request goes, and what runs once a client subscribes is this module's business. A route
@@ -23,17 +23,17 @@ typedef struct
 } SseRouteCtx;
 static SseRouteCtx s_sse_route;
 
-uint8_t pc_sse_route_add(SseConnectHandler on_connect)
+uint8_t protocore_sse_route_add(SseConnectHandler on_connect)
 {
     if (s_sse_route.count >= MAX_ROUTES)
     {
-        return PC_SSE_NONE;
+        return PROTOCORE_SSE_NONE;
     }
     s_sse_route.on_connect[s_sse_route.count] = on_connect;
     return s_sse_route.count++;
 }
 
-SseConnectHandler pc_sse_route_connect(uint8_t id)
+SseConnectHandler protocore_sse_route_connect(uint8_t id)
 {
     if (id >= s_sse_route.count)
     {
@@ -42,53 +42,53 @@ SseConnectHandler pc_sse_route_connect(uint8_t id)
     return s_sse_route.on_connect[id];
 }
 
-void pc_sse_init()
+void protocore_sse_init()
 {
     for (int i = 0; i < MAX_SSE_CONNS; i++)
     {
-        pc_sse_pool[i] = (SseConn){0};
-        pc_sse_pool[i].pc_sse_id = (uint8_t)i;
+        protocore_sse_pool[i] = (SseConn){0};
+        protocore_sse_pool[i].protocore_sse_id = (uint8_t)i;
     }
 }
 
-SseConn *pc_sse_alloc(uint8_t slot_id, const char *path)
+SseConn *protocore_sse_alloc(uint8_t slot_id, const char *path)
 {
     for (int i = 0; i < MAX_SSE_CONNS; i++)
     {
-        if (!pc_sse_pool[i].active)
+        if (!protocore_sse_pool[i].active)
         {
-            pc_sse_pool[i] = (SseConn){0};
-            pc_sse_pool[i].pc_sse_id = (uint8_t)i;
-            pc_sse_pool[i].slot_id = slot_id;
-            pc_sse_pool[i].active = PROTO_TRUE;
-            strncpy(pc_sse_pool[i].path, path, MAX_PATH_LEN - 1);
-            pc_sse_pool[i].path[MAX_PATH_LEN - 1] = '\0';
-            return &pc_sse_pool[i];
+            protocore_sse_pool[i] = (SseConn){0};
+            protocore_sse_pool[i].protocore_sse_id = (uint8_t)i;
+            protocore_sse_pool[i].slot_id = slot_id;
+            protocore_sse_pool[i].active = PROTO_TRUE;
+            strncpy(protocore_sse_pool[i].path, path, MAX_PATH_LEN - 1);
+            protocore_sse_pool[i].path[MAX_PATH_LEN - 1] = '\0';
+            return &protocore_sse_pool[i];
         }
     }
     return NULL;
 }
 
-SseConn *pc_sse_find(uint8_t slot_id)
+SseConn *protocore_sse_find(uint8_t slot_id)
 {
     for (int i = 0; i < MAX_SSE_CONNS; i++)
     {
-        if (pc_sse_pool[i].active && pc_sse_pool[i].slot_id == slot_id)
+        if (protocore_sse_pool[i].active && protocore_sse_pool[i].slot_id == slot_id)
         {
-            return &pc_sse_pool[i];
+            return &protocore_sse_pool[i];
         }
     }
     return NULL;
 }
 
-void pc_sse_free(uint8_t slot_id)
+void protocore_sse_free(uint8_t slot_id)
 {
     for (int i = 0; i < MAX_SSE_CONNS; i++)
     {
-        if (pc_sse_pool[i].active && pc_sse_pool[i].slot_id == slot_id)
+        if (protocore_sse_pool[i].active && protocore_sse_pool[i].slot_id == slot_id)
         {
-            pc_sse_pool[i] = (SseConn){0};
-            pc_sse_pool[i].pc_sse_id = (uint8_t)i;
+            protocore_sse_pool[i] = (SseConn){0};
+            protocore_sse_pool[i].protocore_sse_id = (uint8_t)i;
             return;
         }
     }
@@ -108,7 +108,7 @@ static inline proto_bool sse_append(char *buf, size_t n, size_t *pos, const char
     return PROTO_TRUE;
 }
 
-int pc_sse_format(char *buf, size_t n, const char *data, const char *event, const char *id)
+int protocore_sse_format(char *buf, size_t n, const char *data, const char *event, const char *id)
 {
     if (!data || n == 0)
     {
@@ -142,15 +142,15 @@ int pc_sse_format(char *buf, size_t n, const char *data, const char *event, cons
     return (int)pos;
 }
 
-proto_bool pc_sse_write(SseConn *sse, const char *data, const char *event, const char *id)
+proto_bool protocore_sse_write(SseConn *sse, const char *data, const char *event, const char *id)
 {
-    if (!pc_conn_active(sse->slot_id))
+    if (!protocore_conn_active(sse->slot_id))
     {
         return PROTO_FALSE;
     }
 
     char buf[SSE_BUF_SIZE];
-    int pos = pc_sse_format(buf, sizeof(buf), data, event, id);
+    int pos = protocore_sse_format(buf, sizeof(buf), data, event, id);
     if (pos <= 0)
     {
         return PROTO_FALSE;

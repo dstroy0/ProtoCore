@@ -637,17 +637,17 @@ void test_digit_classifies_the_ten()
 // One byte of the agreement test: keep going, settled yes, or settled no.
 void test_step_byte_settles_or_continues()
 {
-    TEST_ASSERT_EQUAL_INT(PC_SWAR_GO, str.step_byte('a', 'a', PROTO_FALSE, 0));
-    TEST_ASSERT_EQUAL_INT(PC_SWAR_NO, str.step_byte('a', 'b', PROTO_FALSE, 0));
-    TEST_ASSERT_EQUAL_INT(PC_SWAR_YES, str.step_byte('\0', '\0', PROTO_FALSE, 0));
-    TEST_ASSERT_EQUAL_INT(PC_SWAR_GO, str.step_byte('A', 'a', PROTO_TRUE, 0));
-    TEST_ASSERT_EQUAL_INT(PC_SWAR_NO, str.step_byte('A', 'a', PROTO_FALSE, 0));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_SWAR_GO, str.step_byte('a', 'a', PROTO_FALSE, 0));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_SWAR_NO, str.step_byte('a', 'b', PROTO_FALSE, 0));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_SWAR_YES, str.step_byte('\0', '\0', PROTO_FALSE, 0));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_SWAR_GO, str.step_byte('A', 'a', PROTO_TRUE, 0));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_SWAR_NO, str.step_byte('A', 'a', PROTO_FALSE, 0));
     // end_wins turns on the FIRST operand ending: that one is the pattern, and a prefix test wants
     // the pattern running out to be a match whatever the subject does next.
-    TEST_ASSERT_EQUAL_INT(PC_SWAR_YES, str.step_byte('\0', 'x', PROTO_FALSE, 1));
-    TEST_ASSERT_EQUAL_INT(PC_SWAR_NO, str.step_byte('\0', 'x', PROTO_FALSE, 0));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_SWAR_YES, str.step_byte('\0', 'x', PROTO_FALSE, 1));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_SWAR_NO, str.step_byte('\0', 'x', PROTO_FALSE, 0));
     // The subject running out first is a mismatch either way: only the pattern's end is a tie.
-    TEST_ASSERT_EQUAL_INT(PC_SWAR_NO, str.step_byte('x', '\0', PROTO_FALSE, 1));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_SWAR_NO, str.step_byte('x', '\0', PROTO_FALSE, 1));
 }
 
 // ---- the table ------------------------------------------------------------
@@ -666,7 +666,7 @@ void test_each_member_is_the_walk_it_names()
     TEST_ASSERT_NOT_NULL(str.find(hay_of("abcdef"), sizeof(s_hay), "cd", sizeof("cd"), PROTO_FALSE));
     TEST_ASSERT_TRUE(str.has(hay_of("abcdef"), sizeof(s_hay), "cd", sizeof("cd"), PROTO_FALSE));
     TEST_ASSERT_EQUAL_size_t(3, str.copy(dst, "abc", sizeof(dst)));
-    TEST_ASSERT_EQUAL_INT(PC_SWAR_GO, str.step_byte('a', 'a', PROTO_FALSE, 0));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_SWAR_GO, str.step_byte('a', 'a', PROTO_FALSE, 0));
     TEST_ASSERT_TRUE(str.ws(' '));
     TEST_ASSERT_TRUE(str.digit('7'));
     TEST_ASSERT_EQUAL_INT(-42, str.to_long("-42", &endp));

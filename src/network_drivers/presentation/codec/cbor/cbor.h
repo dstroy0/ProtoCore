@@ -25,9 +25,9 @@
 #include "network_drivers/presentation/codec/codec.h" // pc_codec_type - one item vocabulary
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_NEED_CBOR
+#if PROTOCORE_NEED_CBOR
 
 // The encoder writes into a pc_span and the decoder reads from a pc_cspan. There is no CBOR-specific
 // cursor type: this codec declared one field-identical to pc_span, MessagePack declared another, and
@@ -42,8 +42,8 @@ PROTO_BEGIN_DECLS
  */
 extern const pc_codec Cbor;
 
-#endif // PC_NEED_CBOR
+#endif // PROTOCORE_NEED_CBOR
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_CBOR_H

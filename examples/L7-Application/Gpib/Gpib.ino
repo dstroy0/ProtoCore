@@ -4,7 +4,7 @@
 /**
  * @file Gpib.ino
  * @brief GPIB-over-LAN controller - drive a legacy IEEE-488 instrument through a Prologix
- *        GPIB-Ethernet adapter (PC_ENABLE_GPIB), carrying SCPI.
+ *        GPIB-Ethernet adapter (PROTOCORE_ENABLE_GPIB), carrying SCPI.
  *
  * services/instrumentation/gpib is a pure codec for the Prologix `++` command set; the sketch owns the socket to
  * the adapter (raw TCP 1234). A line starting with `++` is a controller command; anything else is
@@ -17,10 +17,10 @@
  *
  * Point ADAPTER_IP at a Prologix GPIB-Ethernet controller (or an AR488-Ethernet build). See README.
  *
- * Build flags (platformio.ini):  build_flags = -DPC_ENABLE_GPIB=1
+ * Build flags (platformio.ini):  build_flags = -DPROTOCORE_ENABLE_GPIB=1
  */
 
-#define PC_ENABLE_GPIB 1
+#define PROTOCORE_ENABLE_GPIB 1
 
 #include "protocore.h" // library entry header (also sets the src/ include root)
 #include "network_drivers/physical/physical.h"
@@ -67,7 +67,7 @@ static size_t read_line(int cid, char *out, size_t cap)
 
 static void run_session(const char *host)
 {
-    int cid = Tcp.client->open(host, PC_GPIB_PORT, 8000);
+    int cid = Tcp.client->open(host, PROTOCORE_GPIB_PORT, 8000);
     if (cid < 0)
     {
         Serial.println("[gpib] connect failed");
@@ -75,15 +75,15 @@ static void run_session(const char *host)
     }
 
     // Configure the adapter as the controller-in-charge, targeting the instrument.
-    Tcp.client->send(cid, c_cmd, pc_gpib_command(c_cmd, sizeof(c_cmd), "mode 1"));
-    Tcp.client->send(cid, c_cmd, pc_gpib_addr(c_cmd, sizeof(c_cmd), INSTRUMENT_ADDR, -1));
-    Tcp.client->send(cid, c_cmd, pc_gpib_eos(c_cmd, sizeof(c_cmd), GpibEos::LF));
-    Tcp.client->send(cid, c_cmd, pc_gpib_command(c_cmd, sizeof(c_cmd), "eoi 1"));
-    Tcp.client->send(cid, c_cmd, pc_gpib_command(c_cmd, sizeof(c_cmd), "auto 0"));
+    Tcp.client->send(cid, c_cmd, protocore_gpib_command(c_cmd, sizeof(c_cmd), "mode 1"));
+    Tcp.client->send(cid, c_cmd, protocore_gpib_addr(c_cmd, sizeof(c_cmd), INSTRUMENT_ADDR, -1));
+    Tcp.client->send(cid, c_cmd, protocore_gpib_eos(c_cmd, sizeof(c_cmd), GpibEos::LF));
+    Tcp.client->send(cid, c_cmd, protocore_gpib_command(c_cmd, sizeof(c_cmd), "eoi 1"));
+    Tcp.client->send(cid, c_cmd, protocore_gpib_command(c_cmd, sizeof(c_cmd), "auto 0"));
 
     // Send "*IDN?" as (escaped) data, then request a read until EOI.
-    Tcp.client->send(cid, c_data, pc_gpib_build_data(c_data, sizeof(c_data), (const uint8_t *)"*IDN?", 5));
-    Tcp.client->send(cid, c_cmd, pc_gpib_read(c_cmd, sizeof(c_cmd), UNTIL_EOI, 0));
+    Tcp.client->send(cid, c_data, protocore_gpib_build_data(c_data, sizeof(c_data), (const uint8_t *)"*IDN?", 5));
+    Tcp.client->send(cid, c_cmd, protocore_gpib_read(c_cmd, sizeof(c_cmd), UNTIL_EOI, 0));
 
     char resp[160];
     size_t r = read_line(cid, resp, sizeof(resp));
@@ -97,11 +97,11 @@ static void run_session(const char *host)
     }
 
     // Query the adapter's own version.
-    Tcp.client->send(cid, c_cmd, pc_gpib_command(c_cmd, sizeof(c_cmd), "ver"));
+    Tcp.client->send(cid, c_cmd, protocore_gpib_command(c_cmd, sizeof(c_cmd), "ver"));
     r = read_line(cid, resp, sizeof(resp));
     const char *ver = nullptr;
     size_t vlen = 0;
-    if (pc_gpib_parse_version(resp, r, &ver, &vlen))
+    if (protocore_gpib_parse_version(resp, r, &ver, &vlen))
     {
         Serial.printf("[gpib] adapter version %.*s\n", (int)vlen, ver);
     }

@@ -17,7 +17,7 @@
 #ifndef PROTOCORE_UTF8_H
 #define PROTOCORE_UTF8_H
 
-#include "protocore_config.h" // the entry point: types.h for the widths and PC_INLINE
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths and PROTOCORE_INLINE
 
 /**
  * @brief True if [s, s+n) is well-formed UTF-8.
@@ -25,7 +25,7 @@
  * Rejects overlong encodings, surrogate code points (U+D800..U+DFFF), values
  * above U+10FFFF, bad continuation bytes, and truncated multi-byte sequences.
  */
-PC_INLINE proto_bool pc_utf8_valid(const uint8_t *s, size_t n)
+PROTOCORE_INLINE proto_bool protocore_utf8_valid(const uint8_t *s, size_t n)
 {
     size_t i = 0;
     while (i < n)

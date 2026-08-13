@@ -21,15 +21,15 @@ static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
 
-static const char *iface_name(pc_if_kind i)
+static const char *iface_name(protocore_if_kind i)
 {
     switch (i)
     {
-    case pc_if_kind::PC_IF_ETH:
+    case protocore_if_kind::PROTOCORE_IF_ETH:
         return "ethernet";
-    case pc_if_kind::PC_IF_WIFI_AP:
+    case protocore_if_kind::PROTOCORE_IF_WIFI_AP:
         return "softap";
-    case pc_if_kind::PC_IF_WIFI_STA:
+    case protocore_if_kind::PROTOCORE_IF_WIFI_STA:
         return "wifi-sta";
     default:
         return "none";

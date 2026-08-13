@@ -3,7 +3,7 @@
 
 /**
  * @file link_manager.h
- * @brief Multi-interface egress selection + graceful escalation/failover (PC_ENABLE_LINK_MANAGER).
+ * @brief Multi-interface egress selection + graceful escalation/failover (PROTOCORE_ENABLE_LINK_MANAGER).
  *
  * Once a device has more than one network interface (a wired Ethernet PHY brought up alongside WiFi STA,
  * plus maybe a softAP), something has to decide which one carries traffic and when to switch: escalate to
@@ -21,9 +21,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_LINK_MANAGER
+#if PROTOCORE_ENABLE_LINK_MANAGER
 
 /** @brief Interface kind (informational; selection is by priority). Stored in a uint8_t field and
  *  compared, so integer constants in a namespacing struct - cast-free. */
@@ -49,13 +49,13 @@ typedef struct
 } LinkManager;
 
 /** @brief Initialize over caller storage and compute the initial active egress. */
-void pc_link_init(LinkManager *m, LinkIface *ifaces, size_t n);
+void protocore_link_init(LinkManager *m, LinkIface *ifaces, size_t n);
 
 /** @brief Best interface that is up (highest priority, lower index breaks ties). @return index or -1. */
-int pc_link_select(const LinkManager *m);
+int protocore_link_select(const LinkManager *m);
 
 /** @brief The current active egress index (-1 if none). */
-int pc_link_active(const LinkManager *m);
+int protocore_link_active(const LinkManager *m);
 
 /**
  * @brief Set an interface's up/down state and recompute the active egress.
@@ -63,10 +63,10 @@ int pc_link_active(const LinkManager *m);
  * @param to   (may be null) the new active index.
  * @return true if the active egress changed (escalation or failover happened).
  */
-proto_bool pc_link_set(LinkManager *m, size_t idx, proto_bool up, int *from, int *to);
+proto_bool protocore_link_set(LinkManager *m, size_t idx, proto_bool up, int *from, int *to);
 
-#endif // PC_ENABLE_LINK_MANAGER
+#endif // PROTOCORE_ENABLE_LINK_MANAGER
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_LINK_MANAGER_H

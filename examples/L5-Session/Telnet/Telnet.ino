@@ -3,7 +3,7 @@
 
 /**
  * @file Telnet.ino
- * @brief Line-oriented Telnet console (RFC 854) on port 23 (PC_ENABLE_TELNET).
+ * @brief Line-oriented Telnet console (RFC 854) on port 23 (PROTOCORE_ENABLE_TELNET).
  *
  * Opens a Telnet listener via listen(23, ProtoConn::PROTO_TELNET). The server
  * negotiates echo + character mode, edits the line for you (backspace works),
@@ -13,16 +13,16 @@
  * Telnet is PLAINTEXT - no auth, no encryption. Use only on a trusted LAN;
  * prefer SSH (SSH) or the WebSocket terminal (WebTerminal) otherwise.
  *
- * NOTE: this feature is compiled into the library only when PC_ENABLE_TELNET
+ * NOTE: this feature is compiled into the library only when PROTOCORE_ENABLE_TELNET
  * is set for the whole build (a .ino #define does not reach the separately
  * compiled library). In platformio.ini:
- *     build_flags = -DPC_ENABLE_TELNET=1
+ *     build_flags = -DPROTOCORE_ENABLE_TELNET=1
  * (Arduino IDE: it is already set for you in the build_opt.h beside this sketch, so it builds as-is.)
  *
  * Flash, open Serial @ 115200 for the IP, then: telnet <ip> 23  (type "help").
  */
 
-#define PC_ENABLE_TELNET 1
+#define PROTOCORE_ENABLE_TELNET 1
 
 #include "protocore.h"
 #include "mmgr/protoframe.h"
@@ -36,10 +36,10 @@ static const char *PASSWORD = "YOUR_PASSWORD";
 // Each reply's shape is a table, declared once. The library builds it by walking the table, so
 // nothing parses a format string at runtime and no line can come out half-written.
 // The fields are {kind, width, literal length, literal}; a valued field takes one argument below.
-static const pc_field REPLY_HEAP[] = {
-    {PC_FK_LIT, 0, 11, "free heap: "}, PC_U32, {PC_FK_LIT, 0, 8, " bytes\r\n"}, PC_END};
-static const pc_field REPLY_UPTIME[] = {{PC_FK_LIT, 0, 8, "uptime: "}, PC_U32, {PC_FK_LIT, 0, 5, " ms\r\n"}, PC_END};
-static const pc_field REPLY_ECHO[] = {{PC_FK_LIT, 0, 6, "echo: "}, PC_STR, {PC_FK_LIT, 0, 2, "\r\n"}, PC_END};
+static const protocore_field REPLY_HEAP[] = {
+    {PROTOCORE_FK_LIT, 0, 11, "free heap: "}, PROTOCORE_U32, {PROTOCORE_FK_LIT, 0, 8, " bytes\r\n"}, PROTOCORE_END};
+static const protocore_field REPLY_UPTIME[] = {{PROTOCORE_FK_LIT, 0, 8, "uptime: "}, PROTOCORE_U32, {PROTOCORE_FK_LIT, 0, 5, " ms\r\n"}, PROTOCORE_END};
+static const protocore_field REPLY_ECHO[] = {{PROTOCORE_FK_LIT, 0, 6, "echo: "}, PROTOCORE_STR, {PROTOCORE_FK_LIT, 0, 2, "\r\n"}, PROTOCORE_END};
 
 void on_command(const char *line, uint8_t conn_id)
 {
@@ -50,15 +50,15 @@ void on_command(const char *line, uint8_t conn_id)
     }
     else if (strcmp(line, "heap") == 0)
     {
-        Telnet.frame(REPLY_HEAP, (const pc_fval[]){PC_VU32((uint32_t)ESP.getFreeHeap())}, 1);
+        Telnet.frame(REPLY_HEAP, (const protocore_fval[]){PROTOCORE_VU32((uint32_t)ESP.getFreeHeap())}, 1);
     }
     else if (strcmp(line, "uptime") == 0)
     {
-        Telnet.frame(REPLY_UPTIME, (const pc_fval[]){PC_VU32((uint32_t)millis())}, 1);
+        Telnet.frame(REPLY_UPTIME, (const protocore_fval[]){PROTOCORE_VU32((uint32_t)millis())}, 1);
     }
     else if (line[0])
     {
-        Telnet.frame(REPLY_ECHO, (const pc_fval[]){PC_VSTR(line)}, 1);
+        Telnet.frame(REPLY_ECHO, (const protocore_fval[]){PROTOCORE_VSTR(line)}, 1);
     }
 }
 

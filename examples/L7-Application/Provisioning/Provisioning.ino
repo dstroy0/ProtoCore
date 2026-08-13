@@ -3,7 +3,7 @@
 
 /**
  * @file Provisioning.ino
- * @brief First-boot WiFi provisioning via a captive portal (PC_ENABLE_PROVISIONING).
+ * @brief First-boot WiFi provisioning via a captive portal (PROTOCORE_ENABLE_PROVISIONING).
  *
  * On first boot (no stored credentials) the device starts a softAP
  * "PC-Setup" and a catch-all DNS responder (raw lwIP UDP - no add-on
@@ -11,10 +11,10 @@
  * persist to NVS and the device reboots into station mode and serves normally.
  *
  * No external libraries: only WiFi (softAP), lwIP UDP, and Preferences (NVS).
- * To re-provision, call pc_provisioning_clear() (e.g. from a button handler).
+ * To re-provision, call protocore_provisioning_clear() (e.g. from a button handler).
  */
 
-#define PC_ENABLE_PROVISIONING 1
+#define PROTOCORE_ENABLE_PROVISIONING 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -33,7 +33,7 @@ void setup()
 
     char ssid[33];
     char psk[64];
-    if (pc_provisioning_load(ssid, sizeof(ssid), psk, sizeof(psk)))
+    if (protocore_provisioning_load(ssid, sizeof(ssid), psk, sizeof(psk)))
     {
         // Credentials present: connect as a normal station.
         Physical.wifi->init(ssid, psk);
@@ -55,7 +55,7 @@ void setup()
     {
         // No credentials: bring up the captive portal.
         begin_http(80, NULL);
-        pc_provisioning_begin("PC-Setup");
+        protocore_provisioning_begin("PC-Setup");
         Serial.println("Provisioning: join WiFi 'PC-Setup' and open any page");
     }
 }

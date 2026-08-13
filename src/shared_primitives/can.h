@@ -16,7 +16,7 @@
  * That keeps these codecs pure and host-testable, exactly like the serial / TCP codecs.
  *
  * Header-only, not feature-gated: each CAN codec includes it behind its own
- * `PC_ENABLE_*` guard.
+ * `PROTOCORE_ENABLE_*` guard.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -25,11 +25,11 @@
 #ifndef PROTOCORE_CAN_H
 #define PROTOCORE_CAN_H
 
-#include "protocore_config.h" // the entry point: types.h for the widths and PC_INLINE
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths and PROTOCORE_INLINE
 
-#define PC_CAN_MAX_DLC 8               ///< classic CAN carries at most 8 data octets.
-#define PC_CAN_STD_ID_MASK 0x7FFu      ///< 11-bit standard identifier.
-#define PC_CAN_EXT_ID_MASK 0x1FFFFFFFu ///< 29-bit extended identifier.
+#define PROTOCORE_CAN_MAX_DLC 8               ///< classic CAN carries at most 8 data octets.
+#define PROTOCORE_CAN_STD_ID_MASK 0x7FFu      ///< 11-bit standard identifier.
+#define PROTOCORE_CAN_EXT_ID_MASK 0x1FFFFFFFu ///< 29-bit extended identifier.
 
 /**
  * @brief One classic CAN 2.0 frame.
@@ -46,7 +46,7 @@ typedef struct
     proto_bool extended;
     proto_bool rtr;
     uint8_t dlc;
-    uint8_t data[PC_CAN_MAX_DLC];
+    uint8_t data[PROTOCORE_CAN_MAX_DLC];
 } CanFrame;
 
 #endif // PROTOCORE_CAN_H

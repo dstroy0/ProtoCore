@@ -16,7 +16,7 @@
 
 HttpReq http_pool[CONN_POOL_SLOTS];
 
-#if PC_ENABLE_STREAM_BODY
+#if PROTOCORE_ENABLE_STREAM_BODY
 // Streaming-body hooks (OTA / file upload), owned by one instance (internal linkage): null
 // unless the application installs them. One named owner, unreachable cross-TU. (The http_pool[]
 // request table is the shared cross-TU substrate.)
@@ -34,7 +34,7 @@ void http_parser_set_stream_hooks(HttpStreamBeginCb begin, HttpStreamDataCb data
     s_hp.stream_data = data;
     s_hp.stream_abort = abort;
 }
-#endif // PC_ENABLE_STREAM_BODY
+#endif // PROTOCORE_ENABLE_STREAM_BODY
 
 // ---------------------------------------------------------------------------
 // FNV-1a hash constants for HTTP version validation
@@ -44,14 +44,14 @@ void http_parser_set_stream_hooks(HttpStreamBeginCb begin, HttpStreamDataCb data
 // version field.
 //
 // Both tokens are fixed by RFC 7230, so their hashes are constants and are written as
-// constants. The fold is h = (h ^ byte) * PC_FNV_PRIME over the 8 bytes, seeded with
-// PC_FNV_OFFSET, which is the same fold the accumulator below runs per byte.
+// constants. The fold is h = (h ^ byte) * PROTOCORE_FNV_PRIME over the 8 bytes, seeded with
+// PROTOCORE_FNV_OFFSET, which is the same fold the accumulator below runs per byte.
 
-#define PC_FNV_OFFSET 2166136261u
-#define PC_FNV_PRIME 16777619u
+#define PROTOCORE_FNV_OFFSET 2166136261u
+#define PROTOCORE_FNV_PRIME 16777619u
 
-#define PC_HASH_HTTP10 0xF69731FBu ///< FNV-1a of "HTTP/1.0"
-#define PC_HASH_HTTP11 0xF5973068u ///< FNV-1a of "HTTP/1.1"
+#define PROTOCORE_HASH_HTTP10 0xF69731FBu ///< FNV-1a of "HTTP/1.0"
+#define PROTOCORE_HASH_HTTP11 0xF5973068u ///< FNV-1a of "HTTP/1.1"
 
 // ---------------------------------------------------------------------------
 // RFC 7230 character-class table (hot path)
@@ -65,9 +65,9 @@ void http_parser_set_stream_hooks(HttpStreamBeginCb begin, HttpStreamDataCb data
 //   0x02 vchar       - request-target path/query bytes (RFC 5234 VCHAR = %x21-7E)
 //   0x04 field-value - header field-value bytes (RFC 7230 §3.2: VCHAR/SP/HTAB/obs-text)
 
-#define PC_CC_TCHAR 0x01
-#define PC_CC_VCHAR 0x02
-#define PC_CC_FIELD_VALUE 0x04
+#define PROTOCORE_CC_TCHAR 0x01
+#define PROTOCORE_CC_VCHAR 0x02
+#define PROTOCORE_CC_FIELD_VALUE 0x04
 
 // The 256-entry class table, one const byte per input octet (lands in flash .rodata). Written out as a
 // literal, so it is data the compiler places rather than code it has to fold.
@@ -92,15 +92,15 @@ static const uint8_t kCharClass[256] = {
 
 static inline proto_bool is_tchar(uint8_t b)
 {
-    return (kCharClass[b] & PC_CC_TCHAR) != 0;
+    return (kCharClass[b] & PROTOCORE_CC_TCHAR) != 0;
 }
 static inline proto_bool is_vchar(uint8_t b)
 {
-    return (kCharClass[b] & PC_CC_VCHAR) != 0;
+    return (kCharClass[b] & PROTOCORE_CC_VCHAR) != 0;
 }
 static inline proto_bool is_field_value_char(uint8_t b)
 {
-    return (kCharClass[b] & PC_CC_FIELD_VALUE) != 0;
+    return (kCharClass[b] & PROTOCORE_CC_FIELD_VALUE) != 0;
 }
 
 /**
@@ -155,7 +155,7 @@ static void parse_query_params(HttpReq *req)
 void http_parser_reset(HttpReq *req)
 {
     uint8_t id = req->slot_id;
-#if PC_ENABLE_STREAM_BODY
+#if PROTOCORE_ENABLE_STREAM_BODY
     // A streamed body that never reached PARSE_COMPLETE is being torn down (peer
     // reset / timeout / error): let the sink release its resource before we wipe
     // the state. The normal-completion reset runs while parse_state==PARSE_COMPLETE
@@ -168,7 +168,7 @@ void http_parser_reset(HttpReq *req)
     *req = (HttpReq){0}; // zero all fields
     req->slot_id = id;   // restore slot identity
     req->parse_state = PARSE_METHOD;
-    req->_version_hash = PC_FNV_OFFSET; // seed the FNV-1a accumulator
+    req->_version_hash = PROTOCORE_FNV_OFFSET; // seed the FNV-1a accumulator
 }
 
 void http_parser_feed(HttpReq *p, uint8_t byte)
@@ -246,11 +246,11 @@ void http_parser_feed(HttpReq *p, uint8_t byte)
     case PARSE_VERSION:
         if (c == '\r')
         {
-            if (p->_version_hash == PC_HASH_HTTP11)
+            if (p->_version_hash == PROTOCORE_HASH_HTTP11)
             {
                 p->version = HTTP_11;
             }
-            else if (p->_version_hash == PC_HASH_HTTP10)
+            else if (p->_version_hash == PROTOCORE_HASH_HTTP10)
             {
                 p->version = HTTP_10;
             }
@@ -262,7 +262,7 @@ void http_parser_feed(HttpReq *p, uint8_t byte)
         }
         else
         {
-            p->_version_hash = (p->_version_hash ^ byte) * PC_FNV_PRIME;
+            p->_version_hash = (p->_version_hash ^ byte) * PROTOCORE_FNV_PRIME;
         }
         break;
 
@@ -300,7 +300,7 @@ void http_parser_feed(HttpReq *p, uint8_t byte)
             p->cur_key[k] = '\0';
             p->parse_state = PARSE_HEADER_VAL;
             p->current_token_idx = 0;
-#if PC_CAPTURE_AUTH_HEADER
+#if PROTOCORE_CAPTURE_AUTH_HEADER
             // The Authorization value (Digest / JWT bearer) exceeds MAX_VAL_LEN,
             // so capture it whole into a dedicated buffer independent of scratch.
             p->cur_is_auth = (strcasecmp(p->cur_key, "Authorization") == 0);
@@ -350,7 +350,7 @@ void http_parser_feed(HttpReq *p, uint8_t byte)
             // Terminate the scratch value so detection sees a clean C string.
             size_t vlen = p->current_token_idx < MAX_VAL_LEN ? p->current_token_idx : MAX_VAL_LEN - 1;
             p->cur_val[vlen] = '\0';
-#if PC_CAPTURE_AUTH_HEADER
+#if PROTOCORE_CAPTURE_AUTH_HEADER
             if (p->cur_is_auth)
             {
                 p->authorization[p->auth_idx] = '\0';
@@ -418,9 +418,9 @@ void http_parser_feed(HttpReq *p, uint8_t byte)
         }
         else
         {
-#if PC_CAPTURE_AUTH_HEADER
+#if PROTOCORE_CAPTURE_AUTH_HEADER
             // Capture the full Authorization value (Digest / JWT) past MAX_VAL_LEN.
-            if (p->cur_is_auth && p->auth_idx < PC_AUTH_HDR_CAP - 1)
+            if (p->cur_is_auth && p->auth_idx < PROTOCORE_AUTH_HDR_CAP - 1)
             {
                 p->authorization[p->auth_idx++] = c;
             }
@@ -453,9 +453,9 @@ void http_parser_feed(HttpReq *p, uint8_t byte)
         {
             // RFC 7230 §5.4: a request MUST NOT carry more than one Host header
             // (always enforced); an HTTP/1.1 request MUST carry exactly one Host
-            // header (enforced only when PC_ENFORCE_HOST_HEADER is set).
+            // header (enforced only when PROTOCORE_ENFORCE_HOST_HEADER is set).
             proto_bool host_violation = (p->host_count > 1);
-#if PC_ENFORCE_HOST_HEADER
+#if PROTOCORE_ENFORCE_HOST_HEADER
             if (p->version == HTTP_11 && p->host_count == 0)
             {
                 host_violation = PROTO_TRUE;
@@ -465,7 +465,7 @@ void http_parser_feed(HttpReq *p, uint8_t byte)
             {
                 p->parse_state = PARSE_ERROR;
             }
-#if PC_ENABLE_STREAM_BODY
+#if PROTOCORE_ENABLE_STREAM_BODY
             // Streaming sink (OTA / upload): all headers are parsed here, so the
             // hook can match method/path/Authorization and begin a sink (Update
             // or a file). If it accepts, the body streams in chunks and the size
@@ -498,7 +498,7 @@ void http_parser_feed(HttpReq *p, uint8_t byte)
 
     case PARSE_BODY:
         // Body is opaque data - no character validation.
-#if PC_ENABLE_STREAM_BODY
+#if PROTOCORE_ENABLE_STREAM_BODY
         if (p->body_streaming)
         {
             // Reuse body[] as a flush buffer: fill it, then hand whole chunks to
@@ -631,7 +631,7 @@ proto_bool http_get_cookie(const HttpReq *req, const char *name, char *out, size
 // Extract and validate a Forwarded / X-Forwarded-For client-address token from
 // [s, s+n) into out (canonical text). Accepts IPv4 with an optional ":port", a
 // bracketed IPv6 "[2001:db8::1]:port" (RFC 7239 §6), and a bare IPv6 (the de-facto
-// X-Forwarded-For form). The candidate is confirmed with pc_ip_parse, so "unknown",
+// X-Forwarded-For form). The candidate is confirmed with protocore_ip_parse, so "unknown",
 // an obfuscated "_id" identifier (RFC 7239 §6.3), or any malformed token returns
 // false. Returns true and writes the RFC 5952 canonical address on success.
 static proto_bool fwd_extract_client(const char *s, size_t n, char *out, size_t cap)
@@ -656,7 +656,7 @@ static proto_bool fwd_extract_client(const char *s, size_t n, char *out, size_t 
         return PROTO_FALSE;
     }
 
-    char tok[PC_IP_STR_MAX];
+    char tok[PROTOCORE_IP_STR_MAX];
     size_t tlen = 0;
     if (s[0] == '[')
     {
@@ -715,7 +715,7 @@ static proto_bool fwd_extract_client(const char *s, size_t n, char *out, size_t 
     }
     tok[tlen] = '\0';
 
-    pc_ip ip;
+    protocore_ip ip;
     if (!Ip.parse(tok, &ip)) // rejects "unknown" / "_obf" / malformed
     {
         return PROTO_FALSE;

@@ -13,7 +13,7 @@
 #include "config_store.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_CONFIG_STORE
+#if PROTOCORE_ENABLE_CONFIG_STORE
 
 #include "core_setup/hal/nvs.h"
 
@@ -21,34 +21,34 @@
 // names a namespace per operation, so the one this store was opened on is what it holds.
 typedef struct
 {
-    char ns[PC_CONFIG_KEY_MAX];
+    char ns[PROTOCORE_CONFIG_KEY_MAX];
 } ConfigStoreCtx;
 static ConfigStoreCtx s_cfg;
 
-proto_bool pc_config_begin(const char *ns)
+proto_bool protocore_config_begin(const char *ns)
 {
-    if (!ns || !ns[0] || strnlen(ns, PC_CONFIG_KEY_MAX) >= PC_CONFIG_KEY_MAX)
+    if (!ns || !ns[0] || strnlen(ns, PROTOCORE_CONFIG_KEY_MAX) >= PROTOCORE_CONFIG_KEY_MAX)
     {
         s_cfg.ns[0] = '\0';
         return PROTO_FALSE;
     }
-    strncpy(s_cfg.ns, ns, PC_CONFIG_KEY_MAX - 1);
-    s_cfg.ns[PC_CONFIG_KEY_MAX - 1] = '\0';
+    strncpy(s_cfg.ns, ns, PROTOCORE_CONFIG_KEY_MAX - 1);
+    s_cfg.ns[PROTOCORE_CONFIG_KEY_MAX - 1] = '\0';
     return PROTO_TRUE;
 }
 
-proto_bool pc_config_set_str(const char *key, const char *val)
+proto_bool protocore_config_set_str(const char *key, const char *val)
 {
-    return pc_nvs_put_str(s_cfg.ns, key, val);
+    return protocore_nvs_put_str(s_cfg.ns, key, val);
 }
 
-size_t pc_config_get_str(const char *key, char *out, size_t out_cap, const char *def)
+size_t protocore_config_get_str(const char *key, char *out, size_t out_cap, const char *def)
 {
     if (!out || out_cap == 0)
     {
         return 0;
     }
-    size_t n = pc_nvs_get_str(s_cfg.ns, key, out, out_cap);
+    size_t n = protocore_nvs_get_str(s_cfg.ns, key, out, out_cap);
     if (n > 0)
     {
         return n;
@@ -67,34 +67,34 @@ size_t pc_config_get_str(const char *key, char *out, size_t out_cap, const char 
     return n;
 }
 
-proto_bool pc_config_set_u32(const char *key, uint32_t val)
+proto_bool protocore_config_set_u32(const char *key, uint32_t val)
 {
-    return pc_nvs_put_u32(s_cfg.ns, key, val);
+    return protocore_nvs_put_u32(s_cfg.ns, key, val);
 }
 
-uint32_t pc_config_get_u32(const char *key, uint32_t def)
+uint32_t protocore_config_get_u32(const char *key, uint32_t def)
 {
-    return pc_nvs_get_u32(s_cfg.ns, key, def);
+    return protocore_nvs_get_u32(s_cfg.ns, key, def);
 }
 
-proto_bool pc_config_set_blob(const char *key, const void *data, size_t len)
+proto_bool protocore_config_set_blob(const char *key, const void *data, size_t len)
 {
-    return pc_nvs_put_blob(s_cfg.ns, key, data, len);
+    return protocore_nvs_put_blob(s_cfg.ns, key, data, len);
 }
 
-size_t pc_config_get_blob(const char *key, void *out, size_t out_cap)
+size_t protocore_config_get_blob(const char *key, void *out, size_t out_cap)
 {
-    return pc_nvs_get_blob(s_cfg.ns, key, out, out_cap);
+    return protocore_nvs_get_blob(s_cfg.ns, key, out, out_cap);
 }
 
-proto_bool pc_config_erase(const char *key)
+proto_bool protocore_config_erase(const char *key)
 {
-    return pc_nvs_erase(s_cfg.ns, key);
+    return protocore_nvs_erase(s_cfg.ns, key);
 }
 
-proto_bool pc_config_clear(void)
+proto_bool protocore_config_clear(void)
 {
-    return pc_nvs_clear(s_cfg.ns);
+    return protocore_nvs_clear(s_cfg.ns);
 }
 
-#endif // PC_ENABLE_CONFIG_STORE
+#endif // PROTOCORE_ENABLE_CONFIG_STORE

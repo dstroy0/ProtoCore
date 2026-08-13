@@ -9,7 +9,7 @@
 #include "services/system/esp/esp.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_IKEV2
+#if PROTOCORE_ENABLE_IKEV2
 
 #include "crypto/aead/aesgcm.h"
 #include "mmgr/secure.h" // the per-call GCM context borrow
@@ -25,16 +25,16 @@ static uint32_t get32be(const uint8_t *p)
 {
     return ((uint32_t)p[0] << 24) | ((uint32_t)p[1] << 16) | ((uint32_t)p[2] << 8) | (uint32_t)p[3];
 }
-static void esp_nonce(uint8_t nonce[PC_AESGCM_IV_LEN], const uint8_t *salt, const uint8_t *iv)
+static void esp_nonce(uint8_t nonce[PROTOCORE_AESGCM_IV_LEN], const uint8_t *salt, const uint8_t *iv)
 {
-    mem.cpy(nonce, salt, PC_ESP_SALT_LEN);
-    mem.cpy(nonce + PC_ESP_SALT_LEN, iv, PC_ESP_IV_LEN);
+    mem.cpy(nonce, salt, PROTOCORE_ESP_SALT_LEN);
+    mem.cpy(nonce + PROTOCORE_ESP_SALT_LEN, iv, PROTOCORE_ESP_IV_LEN);
 }
 // Bytes the ESP header + IV occupy before the ciphertext (also the AAD length = SPI|Seq).
-#define PC_ESP_CT_OFF (PC_ESP_HDR_LEN + PC_ESP_IV_LEN)
+#define PROTOCORE_ESP_CT_OFF (PROTOCORE_ESP_HDR_LEN + PROTOCORE_ESP_IV_LEN)
 
-size_t pc_esp_gcm_encapsulate(uint32_t spi, uint32_t seq, const uint8_t key[PC_ESP_KEY_LEN],
-                              const uint8_t salt[PC_ESP_SALT_LEN], const uint8_t iv[PC_ESP_IV_LEN], uint8_t next_header,
+size_t protocore_esp_gcm_encapsulate(uint32_t spi, uint32_t seq, const uint8_t key[PROTOCORE_ESP_KEY_LEN],
+                              const uint8_t salt[PROTOCORE_ESP_SALT_LEN], const uint8_t iv[PROTOCORE_ESP_IV_LEN], uint8_t next_header,
                               const uint8_t *payload, size_t payload_len, uint8_t *out, size_t out_cap)
 {
     if (!key || !salt || !iv || !out || (payload_len && !payload))
@@ -46,7 +46,7 @@ size_t pc_esp_gcm_encapsulate(uint32_t spi, uint32_t seq, const uint8_t key[PC_E
     // 2-octet trailer) land on a 4-octet boundary (RFC 4303 §2.4).
     size_t padn = (4 - (payload_len + 2) % 4) % 4;
     size_t pt_len = payload_len + padn + 2;
-    size_t total = PC_ESP_CT_OFF + pt_len + PC_ESP_ICV_LEN;
+    size_t total = PROTOCORE_ESP_CT_OFF + pt_len + PROTOCORE_ESP_ICV_LEN;
     if (out_cap < total)
     {
         return 0;
@@ -54,9 +54,9 @@ size_t pc_esp_gcm_encapsulate(uint32_t spi, uint32_t seq, const uint8_t key[PC_E
 
     put32be(out, spi);
     put32be(out + 4, seq);
-    mem.cpy(out + PC_ESP_HDR_LEN, iv, PC_ESP_IV_LEN);
+    mem.cpy(out + PROTOCORE_ESP_HDR_LEN, iv, PROTOCORE_ESP_IV_LEN);
 
-    uint8_t *pt = out + PC_ESP_CT_OFF;
+    uint8_t *pt = out + PROTOCORE_ESP_CT_OFF;
     if (payload_len)
     {
         mem.cpy(pt, payload, payload_len);
@@ -68,23 +68,23 @@ size_t pc_esp_gcm_encapsulate(uint32_t spi, uint32_t seq, const uint8_t key[PC_E
     pt[payload_len + padn] = (uint8_t)padn;   // Pad Length
     pt[payload_len + padn + 1] = next_header; // Next Header
 
-    // Encrypt in place: AAD = SPI | Seq (the first 8 octets), plaintext -> ciphertext || ICV at PC_ESP_CT_OFF.
-    uint8_t nonce[PC_AESGCM_IV_LEN];
+    // Encrypt in place: AAD = SPI | Seq (the first 8 octets), plaintext -> ciphertext || ICV at PROTOCORE_ESP_CT_OFF.
+    uint8_t nonce[PROTOCORE_AESGCM_IV_LEN];
     esp_nonce(nonce, salt, iv);
     {
         // Per-call context: this path is not hot enough to justify a per-session one. The cost is the
         // ~9,200-cycle lifecycle documented in aesgcm.h - hoist the context into session state if it
         // ever shows up in a profile.
-        size_t mark = pc_secure_mark();
-        struct pc_aesgcm_key *gcm = pc_aesgcm_key_init(pc_secure_span(PC_WORK_AESGCM, 8).buf, key);
-        pc_aesgcm_seal(gcm, nonce, out, PC_ESP_HDR_LEN, pt, pt_len, pt, pt + pt_len);
-        pc_aesgcm_key_wipe(gcm);
-        pc_secure_release(mark);
+        size_t mark = protocore_secure_mark();
+        struct protocore_aesgcm_key *gcm = protocore_aesgcm_key_init(protocore_secure_span(PROTOCORE_WORK_AESGCM, 8).buf, key);
+        protocore_aesgcm_seal(gcm, nonce, out, PROTOCORE_ESP_HDR_LEN, pt, pt_len, pt, pt + pt_len);
+        protocore_aesgcm_key_wipe(gcm);
+        protocore_secure_release(mark);
     }
     return total;
 }
 
-proto_bool pc_esp_gcm_decapsulate(const uint8_t key[PC_ESP_KEY_LEN], const uint8_t salt[PC_ESP_SALT_LEN],
+proto_bool protocore_esp_gcm_decapsulate(const uint8_t key[PROTOCORE_ESP_KEY_LEN], const uint8_t salt[PROTOCORE_ESP_SALT_LEN],
                                   uint8_t *packet, size_t len, uint32_t *spi_out, uint32_t *seq_out,
                                   uint8_t *next_header_out, const uint8_t **payload_out, size_t *payload_len_out)
 {
@@ -93,28 +93,28 @@ proto_bool pc_esp_gcm_decapsulate(const uint8_t key[PC_ESP_KEY_LEN], const uint8
         return PROTO_FALSE;
     }
     // Minimum: header + IV + at least the 2-octet trailer (Pad Length + Next Header) + ICV.
-    if (len < PC_ESP_CT_OFF + 2 + PC_ESP_ICV_LEN)
+    if (len < PROTOCORE_ESP_CT_OFF + 2 + PROTOCORE_ESP_ICV_LEN)
     {
         return PROTO_FALSE;
     }
 
-    const uint8_t *iv = packet + PC_ESP_HDR_LEN;
-    uint8_t *ct = packet + PC_ESP_CT_OFF;
-    size_t ct_len = len - PC_ESP_CT_OFF - PC_ESP_ICV_LEN;
+    const uint8_t *iv = packet + PROTOCORE_ESP_HDR_LEN;
+    uint8_t *ct = packet + PROTOCORE_ESP_CT_OFF;
+    size_t ct_len = len - PROTOCORE_ESP_CT_OFF - PROTOCORE_ESP_ICV_LEN;
     const uint8_t *tag = ct + ct_len;
 
-    uint8_t nonce[PC_AESGCM_IV_LEN];
+    uint8_t nonce[PROTOCORE_AESGCM_IV_LEN];
     esp_nonce(nonce, salt, iv);
     proto_bool ok = PROTO_FALSE;
     {
         // Per-call context: this path is not hot enough to justify a per-session one. The cost is the
         // ~9,200-cycle lifecycle documented in aesgcm.h - hoist the context into session state if it
         // ever shows up in a profile.
-        size_t mark = pc_secure_mark();
-        struct pc_aesgcm_key *gcm = pc_aesgcm_key_init(pc_secure_span(PC_WORK_AESGCM, 8).buf, key);
-        ok = pc_aesgcm_open(gcm, nonce, packet, PC_ESP_HDR_LEN, ct, ct_len, tag, ct); // AAD = SPI | Seq
-        pc_aesgcm_key_wipe(gcm);
-        pc_secure_release(mark);
+        size_t mark = protocore_secure_mark();
+        struct protocore_aesgcm_key *gcm = protocore_aesgcm_key_init(protocore_secure_span(PROTOCORE_WORK_AESGCM, 8).buf, key);
+        ok = protocore_aesgcm_open(gcm, nonce, packet, PROTOCORE_ESP_HDR_LEN, ct, ct_len, tag, ct); // AAD = SPI | Seq
+        protocore_aesgcm_key_wipe(gcm);
+        protocore_secure_release(mark);
     }
     if (!ok)
     {
@@ -148,7 +148,7 @@ proto_bool pc_esp_gcm_decapsulate(const uint8_t key[PC_ESP_KEY_LEN], const uint8
 
 // ── ESP anti-replay window (RFC 4303 §3.4.3) ───────────────────────────────────────────────────
 
-void pc_esp_replay_init(EspReplay *r)
+void protocore_esp_replay_init(EspReplay *r)
 {
     if (!r)
     {
@@ -159,7 +159,7 @@ void pc_esp_replay_init(EspReplay *r)
     r->seen_any = PROTO_FALSE;
 }
 
-proto_bool pc_esp_replay_check(EspReplay *r, uint32_t seq)
+proto_bool protocore_esp_replay_check(EspReplay *r, uint32_t seq)
 {
     if (!r || seq == 0) // sequence 0 is never valid (ESP counts from 1)
     {
@@ -178,14 +178,14 @@ proto_bool pc_esp_replay_check(EspReplay *r, uint32_t seq)
     {
         // A new highest: slide the window up, then mark the new top bit. A jump >= the window clears it.
         uint32_t shift = seq - r->highest;
-        r->bitmap = (shift >= PC_ESP_REPLAY_WINDOW) ? 0u : (r->bitmap << shift);
+        r->bitmap = (shift >= PROTOCORE_ESP_REPLAY_WINDOW) ? 0u : (r->bitmap << shift);
         r->bitmap |= 1u;
         r->highest = seq;
         return PROTO_TRUE;
     }
 
     uint32_t offset = r->highest - seq;
-    if (offset >= PC_ESP_REPLAY_WINDOW) // left of the window -> too old
+    if (offset >= PROTOCORE_ESP_REPLAY_WINDOW) // left of the window -> too old
     {
         return PROTO_FALSE;
     }
@@ -198,4 +198,4 @@ proto_bool pc_esp_replay_check(EspReplay *r, uint32_t seq)
     return PROTO_TRUE;
 }
 
-#endif // PC_ENABLE_IKEV2
+#endif // PROTOCORE_ENABLE_IKEV2

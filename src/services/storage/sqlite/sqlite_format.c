@@ -2,14 +2,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file pc_sqlite_format.c
- * @brief SQLite3 on-disk file-format parsers (see pc_sqlite_format.h).
+ * @file protocore_sqlite_format.c
+ * @brief SQLite3 on-disk file-format parsers (see protocore_sqlite_format.h).
  */
 
 #include "services/storage/sqlite/sqlite_format.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_SQLITE
+#if PROTOCORE_ENABLE_SQLITE
 
 static uint16_t be16(const uint8_t *p)
 {
@@ -27,7 +27,7 @@ static proto_bool is_pow2(uint32_t v)
     return v && (v & (v - 1)) == 0;
 }
 
-size_t pc_sqlite_varint_decode(const uint8_t *buf, size_t len, uint64_t *out)
+size_t protocore_sqlite_varint_decode(const uint8_t *buf, size_t len, uint64_t *out)
 {
     uint64_t v = 0;
     for (size_t i = 0; i < 8; i++)
@@ -52,7 +52,7 @@ size_t pc_sqlite_varint_decode(const uint8_t *buf, size_t len, uint64_t *out)
     return 9;
 }
 
-uint64_t pc_sqlite_serial_type_size(uint64_t t)
+uint64_t protocore_sqlite_serial_type_size(uint64_t t)
 {
     switch (t)
     {
@@ -86,7 +86,7 @@ uint64_t pc_sqlite_serial_type_size(uint64_t t)
     }
 }
 
-proto_bool pc_sqlite_parse_db_header(const uint8_t *buf, size_t len, SqliteDbHeader *out)
+proto_bool protocore_sqlite_parse_db_header(const uint8_t *buf, size_t len, SqliteDbHeader *out)
 {
     if (len < 100 || mem.cmp(buf, SQLITE_MAGIC, 16) != 0)
     {
@@ -114,11 +114,12 @@ proto_bool pc_sqlite_parse_db_header(const uint8_t *buf, size_t len, SqliteDbHea
     out->text_encoding = be32(buf + 56);
     out->user_version = be32(buf + 60);
     out->application_id = be32(buf + 68);
-    out->pc_sqlite_version = be32(buf + 96);
+    out->protocore_sqlite_version = be32(buf + 96);
     return PROTO_TRUE;
 }
 
-proto_bool pc_sqlite_parse_btree_header(const uint8_t *page, size_t page_len, size_t offset, SqliteBtreeHeader *out)
+proto_bool protocore_sqlite_parse_btree_header(const uint8_t *page, size_t page_len, size_t offset,
+                                               SqliteBtreeHeader *out)
 {
     if (offset + 8 > page_len)
     {
@@ -149,8 +150,8 @@ proto_bool pc_sqlite_parse_btree_header(const uint8_t *page, size_t page_len, si
     return PROTO_TRUE;
 }
 
-uint32_t pc_sqlite_cell_pointer(const uint8_t *page, size_t page_len, const SqliteBtreeHeader *bh, size_t page_offset,
-                                uint16_t i)
+uint32_t protocore_sqlite_cell_pointer(const uint8_t *page, size_t page_len, const SqliteBtreeHeader *bh,
+                                       size_t page_offset, uint16_t i)
 {
     if (i >= bh->cell_count)
     {
@@ -164,8 +165,8 @@ uint32_t pc_sqlite_cell_pointer(const uint8_t *page, size_t page_len, const Sqli
     return be16(page + at); // cell pointers are offsets from the start of the page
 }
 
-proto_bool pc_sqlite_parse_table_leaf_cell(const uint8_t *page, size_t page_len, uint32_t page_size, uint8_t reserved,
-                                           uint32_t cell_off, SqliteTableLeafCell *out)
+proto_bool protocore_sqlite_parse_table_leaf_cell(const uint8_t *page, size_t page_len, uint32_t page_size,
+                                                  uint8_t reserved, uint32_t cell_off, SqliteTableLeafCell *out)
 {
     if (cell_off >= page_len)
     {
@@ -173,12 +174,12 @@ proto_bool pc_sqlite_parse_table_leaf_cell(const uint8_t *page, size_t page_len,
     }
     uint64_t payload_len = 0;
     uint64_t rowid = 0;
-    size_t n1 = pc_sqlite_varint_decode(page + cell_off, page_len - cell_off, &payload_len);
+    size_t n1 = protocore_sqlite_varint_decode(page + cell_off, page_len - cell_off, &payload_len);
     if (n1 == 0)
     {
         return PROTO_FALSE;
     }
-    size_t n2 = pc_sqlite_varint_decode(page + cell_off + n1, page_len - cell_off - n1, &rowid);
+    size_t n2 = protocore_sqlite_varint_decode(page + cell_off + n1, page_len - cell_off - n1, &rowid);
     if (n2 == 0)
     {
         return PROTO_FALSE;
@@ -211,9 +212,9 @@ proto_bool pc_sqlite_parse_table_leaf_cell(const uint8_t *page, size_t page_len,
     return PROTO_TRUE;
 }
 
-proto_bool pc_sqlite_read_payload(SqlitePageReader read, void *ctx, uint32_t page_size, uint8_t reserved,
-                                  const uint8_t *leaf_page, const SqliteTableLeafCell *cell, uint8_t *out,
-                                  uint32_t out_cap, uint8_t *work_page)
+proto_bool protocore_sqlite_read_payload(SqlitePageReader read, void *ctx, uint32_t page_size, uint8_t reserved,
+                                         const uint8_t *leaf_page, const SqliteTableLeafCell *cell, uint8_t *out,
+                                         uint32_t out_cap, uint8_t *work_page)
 {
     if (cell->payload_len > out_cap)
     {
@@ -280,10 +281,10 @@ proto_bool pc_sqlite_read_payload(SqlitePageReader read, void *ctx, uint32_t pag
     return got == cell->payload_len;
 }
 
-proto_bool pc_sqlite_record_begin(SqliteRecordCursor *c, const uint8_t *rec, uint32_t rec_len)
+proto_bool protocore_sqlite_record_begin(SqliteRecordCursor *c, const uint8_t *rec, uint32_t rec_len)
 {
     uint64_t hdr_len = 0;
-    size_t n = pc_sqlite_varint_decode(rec, rec_len, &hdr_len);
+    size_t n = protocore_sqlite_varint_decode(rec, rec_len, &hdr_len);
     if (n == 0 || hdr_len > rec_len || hdr_len < n)
     {
         return PROTO_FALSE;
@@ -296,19 +297,20 @@ proto_bool pc_sqlite_record_begin(SqliteRecordCursor *c, const uint8_t *rec, uin
     return PROTO_TRUE;
 }
 
-proto_bool pc_sqlite_record_next(SqliteRecordCursor *c, uint64_t *serial_type, const uint8_t **val, uint32_t *val_len)
+proto_bool protocore_sqlite_record_next(SqliteRecordCursor *c, uint64_t *serial_type, const uint8_t **val,
+                                        uint32_t *val_len)
 {
     if (c->hdr_pos >= c->hdr_end)
     {
         return PROTO_FALSE;
     }
     uint64_t st = 0;
-    size_t n = pc_sqlite_varint_decode(c->rec + c->hdr_pos, c->hdr_end - c->hdr_pos, &st);
+    size_t n = protocore_sqlite_varint_decode(c->rec + c->hdr_pos, c->hdr_end - c->hdr_pos, &st);
     if (n == 0)
     {
         return PROTO_FALSE;
     }
-    uint32_t sz = (uint32_t)pc_sqlite_serial_type_size(st);
+    uint32_t sz = (uint32_t)protocore_sqlite_serial_type_size(st);
     if (c->val_pos + sz > c->rec_len)
     {
         return PROTO_FALSE; // value runs past the record (a truncated / overflowing row)
@@ -321,7 +323,7 @@ proto_bool pc_sqlite_record_next(SqliteRecordCursor *c, uint64_t *serial_type, c
     return PROTO_TRUE;
 }
 
-int64_t pc_sqlite_column_int(uint64_t serial_type, const uint8_t *val, uint32_t val_len)
+int64_t protocore_sqlite_column_int(uint64_t serial_type, const uint8_t *val, uint32_t val_len)
 {
     if (serial_type == 8)
     {
@@ -335,7 +337,7 @@ int64_t pc_sqlite_column_int(uint64_t serial_type, const uint8_t *val, uint32_t 
     {
         return 0;
     }
-    size_t nbytes = (size_t)pc_sqlite_serial_type_size(serial_type);
+    size_t nbytes = (size_t)protocore_sqlite_serial_type_size(serial_type);
     if (val_len < nbytes)
     {
         return 0;
@@ -353,7 +355,7 @@ int64_t pc_sqlite_column_int(uint64_t serial_type, const uint8_t *val, uint32_t 
     return (int64_t)u;
 }
 
-double pc_sqlite_column_float(const uint8_t *val, uint32_t val_len)
+double protocore_sqlite_column_float(const uint8_t *val, uint32_t val_len)
 {
     if (val_len < 8)
     {
@@ -383,7 +385,7 @@ static uint32_t interior_child(const uint8_t *page, size_t page_len, const Sqlit
     {
         return h->right_most_page;
     }
-    uint32_t cp = pc_sqlite_cell_pointer(page, page_len, h, off, i);
+    uint32_t cp = protocore_sqlite_cell_pointer(page, page_len, h, off, i);
     if (cp == 0 || (size_t)cp + 4 > page_len)
     {
         return 0;
@@ -402,7 +404,7 @@ static proto_bool cursor_descend(SqliteTableCursor *c, uint32_t pgno)
         }
         size_t off = page_hdr_off(pgno);
         SqliteBtreeHeader h;
-        if (!pc_sqlite_parse_btree_header(c->work, c->page_size, off, &h))
+        if (!protocore_sqlite_parse_btree_header(c->work, c->page_size, off, &h))
         {
             return PROTO_FALSE;
         }
@@ -436,8 +438,9 @@ static proto_bool cursor_descend(SqliteTableCursor *c, uint32_t pgno)
     }
 }
 
-proto_bool pc_sqlite_table_cursor_begin(SqliteTableCursor *c, SqlitePageReader read, void *ctx, uint32_t page_size,
-                                        uint8_t reserved, uint32_t rootpage, uint8_t *leaf_buf, uint8_t *work_buf)
+proto_bool protocore_sqlite_table_cursor_begin(SqliteTableCursor *c, SqlitePageReader read, void *ctx,
+                                               uint32_t page_size, uint8_t reserved, uint32_t rootpage,
+                                               uint8_t *leaf_buf, uint8_t *work_buf)
 {
     c->read = read;
     c->ctx = ctx;
@@ -453,7 +456,7 @@ proto_bool pc_sqlite_table_cursor_begin(SqliteTableCursor *c, SqlitePageReader r
     return cursor_descend(c, rootpage);
 }
 
-void pc_sqlite_table_cursor_set_overflow_buf(SqliteTableCursor *c, uint8_t *buf, uint32_t cap)
+void protocore_sqlite_table_cursor_set_overflow_buf(SqliteTableCursor *c, uint8_t *buf, uint32_t cap)
 {
     c->ovf_buf = buf;
     c->ovf_cap = cap;
@@ -461,40 +464,40 @@ void pc_sqlite_table_cursor_set_overflow_buf(SqliteTableCursor *c, uint8_t *buf,
 
 // Begin reading a row record from one leaf cell: straight from the leaf page, or (for an overflowing
 // cell) reassembled into the caller's overflow buffer first. Extracted to keep the cursor loop flat.
-static proto_bool pc_sqlite_cursor_begin_row(SqliteTableCursor *c, const SqliteTableLeafCell *cell,
-                                             SqliteRecordCursor *row)
+static proto_bool protocore_sqlite_cursor_begin_row(SqliteTableCursor *c, const SqliteTableLeafCell *cell,
+                                                    SqliteRecordCursor *row)
 {
     if (!cell->has_overflow || !c->ovf_buf)
     {
-        return pc_sqlite_record_begin(row, c->leaf + cell->local_off, cell->local_len);
+        return protocore_sqlite_record_begin(row, c->leaf + cell->local_off, cell->local_len);
     }
     // c->work is free here (we are at a leaf, not descending), so it serves as the scratch page.
-    if (!pc_sqlite_read_payload(c->read, c->ctx, c->page_size, c->reserved, c->leaf, cell, c->ovf_buf, c->ovf_cap,
-                                c->work))
+    if (!protocore_sqlite_read_payload(c->read, c->ctx, c->page_size, c->reserved, c->leaf, cell, c->ovf_buf,
+                                       c->ovf_cap, c->work))
     {
         return PROTO_FALSE;
     }
-    return pc_sqlite_record_begin(row, c->ovf_buf, cell->payload_len);
+    return protocore_sqlite_record_begin(row, c->ovf_buf, cell->payload_len);
 }
 
-proto_bool pc_sqlite_table_cursor_next(SqliteTableCursor *c, uint64_t *rowid, SqliteRecordCursor *row)
+proto_bool protocore_sqlite_table_cursor_next(SqliteTableCursor *c, uint64_t *rowid, SqliteRecordCursor *row)
 {
     for (;;)
     {
         if (c->leaf_cell < c->leaf_count)
         {
-            uint32_t cp = pc_sqlite_cell_pointer(c->leaf, c->page_size, &c->leaf_hdr, c->leaf_off, c->leaf_cell);
+            uint32_t cp = protocore_sqlite_cell_pointer(c->leaf, c->page_size, &c->leaf_hdr, c->leaf_off, c->leaf_cell);
             c->leaf_cell++;
             if (cp == 0)
             {
                 continue;
             }
             SqliteTableLeafCell cell;
-            if (!pc_sqlite_parse_table_leaf_cell(c->leaf, c->page_size, c->page_size, c->reserved, cp, &cell))
+            if (!protocore_sqlite_parse_table_leaf_cell(c->leaf, c->page_size, c->page_size, c->reserved, cp, &cell))
             {
                 continue;
             }
-            if (!pc_sqlite_cursor_begin_row(c, &cell, row))
+            if (!protocore_sqlite_cursor_begin_row(c, &cell, row))
             {
                 continue;
             }
@@ -513,7 +516,7 @@ proto_bool pc_sqlite_table_cursor_next(SqliteTableCursor *c, uint64_t *rowid, Sq
         }
         size_t off = page_hdr_off(c->stack_pg[top]);
         SqliteBtreeHeader h;
-        if (!pc_sqlite_parse_btree_header(c->work, c->page_size, off, &h))
+        if (!protocore_sqlite_parse_btree_header(c->work, c->page_size, off, &h))
         {
             return PROTO_FALSE;
         }
@@ -550,7 +553,7 @@ static void wr_be32(uint8_t *p, uint32_t v)
     p[3] = (uint8_t)v;
 }
 
-// Number of bytes a varint of value v occupies (mirror of pc_sqlite_varint_encode's length).
+// Number of bytes a varint of value v occupies (mirror of protocore_sqlite_varint_encode's length).
 static size_t varint_len(uint64_t v)
 {
     if (v <= 0x7fULL)
@@ -765,11 +768,11 @@ static proto_bool write_leaf_page(uint8_t *page, uint32_t page_size, uint32_t hd
         uint32_t cell_len = (uint32_t)varint_len(rl) + (uint32_t)varint_len(rows[r].rowid) + rl;
         off -= cell_len;
         uint8_t *cp = page + off;
-        size_t k = pc_sqlite_varint_encode(rl, cp, cell_len);
-        k += pc_sqlite_varint_encode(rows[r].rowid, cp + k, cell_len - k);
-        uint32_t w = pc_sqlite_encode_record(rows[r].cols, rows[r].ncols, cp + k, cell_len - (uint32_t)k);
+        size_t k = protocore_sqlite_varint_encode(rl, cp, cell_len);
+        k += protocore_sqlite_varint_encode(rows[r].rowid, cp + k, cell_len - k);
+        uint32_t w = protocore_sqlite_encode_record(rows[r].cols, rows[r].ncols, cp + k, cell_len - (uint32_t)k);
         // Unreachable: cp+k was given exactly `rl` bytes of capacity (cell_len - k, where cell_len was
-        // sized from this same `rl`). Inside pc_sqlite_encode_record(), the header-size varint, the
+        // sized from this same `rl`). Inside protocore_sqlite_encode_record(), the header-size varint, the
         // per-column serial-type varints, and the per-column value bytes are each derived from the
         // identical deterministic value_serial() calls (same cols/n, no mutation in between) that
         // record_len() used to compute `rl`, so their lengths sum to exactly `rl` - the same budget the
@@ -784,7 +787,7 @@ static proto_bool write_leaf_page(uint8_t *page, uint32_t page_size, uint32_t hd
     return PROTO_TRUE;
 }
 
-size_t pc_sqlite_varint_encode(uint64_t v, uint8_t *out, size_t cap)
+size_t protocore_sqlite_varint_encode(uint64_t v, uint8_t *out, size_t cap)
 {
     size_t n = varint_len(v);
     if (n > cap)
@@ -810,10 +813,10 @@ size_t pc_sqlite_varint_encode(uint64_t v, uint8_t *out, size_t cap)
     return n;
 }
 
-uint32_t pc_sqlite_encode_record(const SqliteValue *cols, uint32_t n, uint8_t *out, uint32_t out_cap)
+uint32_t protocore_sqlite_encode_record(const SqliteValue *cols, uint32_t n, uint8_t *out, uint32_t out_cap)
 {
     uint32_t total = record_len(cols, n);
-    // record_len() >= 2 whenever n != 0 (see pc_sqlite_encode_page), so total == 0 implies n == 0.
+    // record_len() >= 2 whenever n != 0 (see protocore_sqlite_encode_page), so total == 0 implies n == 0.
     if (total == 0 && n != 0)
     {
         return 0;
@@ -844,14 +847,14 @@ uint32_t pc_sqlite_encode_record(const SqliteValue *cols, uint32_t n, uint8_t *o
     }
     uint32_t header_size = (uint32_t)hs_varlen + st_len;
 
-    uint32_t pos = (uint32_t)pc_sqlite_varint_encode(header_size, out, out_cap);
+    uint32_t pos = (uint32_t)protocore_sqlite_varint_encode(header_size, out, out_cap);
     // Serial-type varints (the header body).
     for (uint32_t c = 0; c < n; c++)
     {
         uint64_t st = 0;
         uint32_t vl = 0;
         value_serial(&cols[c], &st, &vl);
-        pos += (uint32_t)pc_sqlite_varint_encode(st, out + pos, out_cap - pos);
+        pos += (uint32_t)protocore_sqlite_varint_encode(st, out + pos, out_cap - pos);
     }
     // Value bytes, in column order.
     for (uint32_t c = 0; c < n; c++)
@@ -864,8 +867,8 @@ uint32_t pc_sqlite_encode_record(const SqliteValue *cols, uint32_t n, uint8_t *o
     return pos;
 }
 
-uint32_t pc_sqlite_build_table_db(uint32_t page_size, const char *table_name, const char *create_sql,
-                                  const SqliteRow *rows, uint32_t nrows, uint8_t *out, uint32_t out_cap)
+uint32_t protocore_sqlite_build_table_db(uint32_t page_size, const char *table_name, const char *create_sql,
+                                         const SqliteRow *rows, uint32_t nrows, uint8_t *out, uint32_t out_cap)
 {
     if (page_size < 512 || page_size > 65536 || !is_pow2(page_size))
     {
@@ -895,7 +898,7 @@ uint32_t pc_sqlite_build_table_db(uint32_t page_size, const char *table_name, co
     wr_be32(out + 92, 1);       // version-valid-for (== file change counter)
     wr_be32(out + 96, 3046001); // SQLITE_VERSION_NUMBER that wrote the file
 
-    // --- Page 1: the pc_sqlite_schema row for our table (type,name,tbl_name,rootpage,sql) ---
+    // --- Page 1: the protocore_sqlite_schema row for our table (type,name,tbl_name,rootpage,sql) ---
     uint32_t name_len = (uint32_t)strnlen(table_name, out_cap);
     uint32_t sql_len = (uint32_t)strnlen(create_sql, out_cap);
     SqliteValue master[5];
@@ -919,4 +922,4 @@ uint32_t pc_sqlite_build_table_db(uint32_t page_size, const char *table_name, co
     return page_size * 2;
 }
 
-#endif // PC_ENABLE_SQLITE
+#endif // PROTOCORE_ENABLE_SQLITE

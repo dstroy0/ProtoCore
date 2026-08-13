@@ -17,8 +17,8 @@
  *     21      len    payload
  *
  * Every field is written and read at a stated width in network byte order, so the bytes in the ring
- * are the same bytes on every target. The header is built through a pc_span and read through a
- * pc_cspan, which carry the bound and latch an overrun.
+ * are the same bytes on every target. The header is built through a protocore_span and read through a
+ * protocore_cspan, which carry the bound and latch an overrun.
  *
  * The layout is the contract, so it is published rather than opaque. Internal to transport/udp: no
  * table, no exported symbol.
@@ -30,31 +30,31 @@
 #ifndef PROTOCORE_UDP_DATAGRAM_H
 #define PROTOCORE_UDP_DATAGRAM_H
 
-#include "mmgr/bytes.h"           // pc_bw_put / pc_bw_put_be / pc_br_take_be over a span
+#include "mmgr/bytes.h"           // protocore_bw_put / protocore_bw_put_be / protocore_br_take_be over a span
 #include "mmgr/ring.h"            // the SPSC ring the datagrams sit in
-#include "shared_primitives/ip.h" // pc_ip: the address a datagram carries, network order
+#include "shared_primitives/ip.h" // protocore_ip: the address a datagram carries, network order
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
 /** @brief Bytes a queued datagram spends on its header, ahead of the payload. */
-#define PC_UDP_DGRAM_HDR 21u
+#define PROTOCORE_UDP_DGRAM_HDR 21u
 
 /** @brief Who a queued datagram is from or to, and how long its payload is. */
 typedef struct
 {
-    pc_ip addr;    ///< peer address, network order
-    uint16_t port; ///< peer port
-    uint16_t len;  ///< payload bytes following the header
-} pc_udp_dgram;
+    protocore_ip addr; ///< peer address, network order
+    uint16_t port;     ///< peer port
+    uint16_t len;      ///< payload bytes following the header
+} protocore_udp_dgram;
 
 /** @brief Write the header of @p d into @p w at its cursor. */
-PC_INLINE void pc_udp_dgram_encode(pc_span *w, const pc_udp_dgram *d)
+PROTOCORE_INLINE void protocore_udp_dgram_encode(protocore_span *w, const protocore_udp_dgram *d)
 {
-    pc_bw_put(w, (uint8_t)d->addr.family);
-    pc_bw_put_be(w, d->port, 2);
-    pc_bw_put_be(w, d->len, 2);
-    pc_bw_put_be(w, pc_rd64be(d->addr.bytes), 8);
-    pc_bw_put_be(w, pc_rd64be(d->addr.bytes + 8), 8);
+    protocore_bw_put(w, (uint8_t)d->addr.family);
+    protocore_bw_put_be(w, d->port, 2);
+    protocore_bw_put_be(w, d->len, 2);
+    protocore_bw_put_be(w, protocore_rd64be(d->addr.bytes), 8);
+    protocore_bw_put_be(w, protocore_rd64be(d->addr.bytes + 8), 8);
 }
 
 /**
@@ -63,29 +63,29 @@ PC_INLINE void pc_udp_dgram_encode(pc_span *w, const pc_udp_dgram *d)
  * A family byte that is neither 4 nor 6 leaves the address empty, so a caller cannot route on a
  * value the parser did not recognize.
  */
-PC_INLINE proto_bool pc_udp_dgram_decode(pc_cspan *r, pc_udp_dgram *d)
+PROTOCORE_INLINE proto_bool protocore_udp_dgram_decode(protocore_cspan *r, protocore_udp_dgram *d)
 {
     uint64_t family = 0;
     uint64_t port = 0;
     uint64_t len = 0;
     uint64_t hi = 0;
     uint64_t lo = 0;
-    if (!pc_br_take_be(r, 1, &family) || !pc_br_take_be(r, 2, &port) || !pc_br_take_be(r, 2, &len) ||
-        !pc_br_take_be(r, 8, &hi) || !pc_br_take_be(r, 8, &lo))
+    if (!protocore_br_take_be(r, 1, &family) || !protocore_br_take_be(r, 2, &port) ||
+        !protocore_br_take_be(r, 2, &len) || !protocore_br_take_be(r, 8, &hi) || !protocore_br_take_be(r, 8, &lo))
     {
         return PROTO_FALSE;
     }
-    d->addr.family = PC_IP_NONE;
-    if (family == (uint64_t)PC_IP_V4)
+    d->addr.family = PROTOCORE_IP_NONE;
+    if (family == (uint64_t)PROTOCORE_IP_V4)
     {
-        d->addr.family = PC_IP_V4;
+        d->addr.family = PROTOCORE_IP_V4;
     }
-    else if (family == (uint64_t)PC_IP_V6)
+    else if (family == (uint64_t)PROTOCORE_IP_V6)
     {
-        d->addr.family = PC_IP_V6;
+        d->addr.family = PROTOCORE_IP_V6;
     }
-    (void)pc_wr64be(d->addr.bytes, hi);
-    (void)pc_wr64be(d->addr.bytes + 8, lo);
+    (void)protocore_wr64be(d->addr.bytes, hi);
+    (void)protocore_wr64be(d->addr.bytes + 8, lo);
     d->port = (uint16_t)port;
     d->len = (uint16_t)len;
     return PROTO_TRUE;
@@ -94,20 +94,21 @@ PC_INLINE proto_bool pc_udp_dgram_decode(pc_cspan *r, pc_udp_dgram *d)
 /**
  * @brief Dequeue one datagram: @p d takes the header, @p stage takes the payload.
  *
- * @p hdr is caller-owned staging of at least ::PC_UDP_DGRAM_HDR bytes, written only by the consumer.
+ * @p hdr is caller-owned staging of at least ::PROTOCORE_UDP_DGRAM_HDR bytes, written only by the consumer.
  * Peeks the header, consumes it, then reads exactly its payload length, so the tail always lands on
  * the next entry boundary. Reports false when the ring holds no whole entry.
  */
-PC_INLINE proto_bool pc_udp_dgram_take(uint8_t *ring, size_t cap, _Atomic size_t *head, _Atomic size_t *tail,
-                                       uint8_t *hdr, pc_udp_dgram *d, uint8_t *stage, size_t stage_cap)
+PROTOCORE_INLINE proto_bool protocore_udp_dgram_take(uint8_t *ring, size_t cap, _Atomic size_t *head,
+                                                     _Atomic size_t *tail, uint8_t *hdr, protocore_udp_dgram *d,
+                                                     uint8_t *stage, size_t stage_cap)
 {
-    if (pc_ring_available(head, tail, cap) < PC_UDP_DGRAM_HDR)
+    if (protocore_ring_available(head, tail, cap) < PROTOCORE_UDP_DGRAM_HDR)
     {
         return PROTO_FALSE;
     }
-    pc_ring_peek(ring, cap, tail, 0, hdr, PC_UDP_DGRAM_HDR);
-    pc_cspan r = pc_cspan_from(hdr, PC_UDP_DGRAM_HDR);
-    if (!pc_udp_dgram_decode(&r, d))
+    protocore_ring_peek(ring, cap, tail, 0, hdr, PROTOCORE_UDP_DGRAM_HDR);
+    protocore_cspan r = protocore_cspan_from(hdr, PROTOCORE_UDP_DGRAM_HDR);
+    if (!protocore_udp_dgram_decode(&r, d))
     {
         return PROTO_FALSE;
     }
@@ -118,15 +119,15 @@ PC_INLINE proto_bool pc_udp_dgram_take(uint8_t *ring, size_t cap, _Atomic size_t
         PROTO_ATOMIC_STORE(tail, PROTO_ATOMIC_LOAD(head));
         return PROTO_FALSE;
     }
-    if (pc_ring_available(head, tail, cap) < (PC_UDP_DGRAM_HDR + (size_t)d->len))
+    if (protocore_ring_available(head, tail, cap) < (PROTOCORE_UDP_DGRAM_HDR + (size_t)d->len))
     {
         return PROTO_FALSE;
     }
-    pc_ring_consume(tail, cap, PC_UDP_DGRAM_HDR);
-    (void)pc_ring_read(ring, cap, head, tail, stage, d->len);
+    protocore_ring_consume(tail, cap, PROTOCORE_UDP_DGRAM_HDR);
+    (void)protocore_ring_read(ring, cap, head, tail, stage, d->len);
     return PROTO_TRUE;
 }
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_UDP_DATAGRAM_H

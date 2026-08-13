@@ -10,13 +10,13 @@
  * ═══════════════════════════════════════════════════════════════════════════
  *
  * ESP32-S3 (Arduino): a self-contained P-256 whose every 256-bit field / scalar multiply is one
- *   modular multiply on the RSA/MPI hardware accelerator (the same engine pc_fe25519.h drives for
+ *   modular multiply on the RSA/MPI hardware accelerator (the same engine protocore_fe25519.h drives for
  *   X25519 / Ed25519) - the MODMULT is modulus-generic, so it serves both the field domain (mod p)
  *   and the scalar domain (mod n) by swapping the {M, m', R^2} constants. Point arithmetic uses the
  *   exception-free complete formulas (Renes-Costello-Batina 2016, EFD add/dbl-2015-rcb, a = -3) driven by
  *   a constant-time 4-bit fixed-window scalar multiply (uniform op sequence, full-table masked select, no
  *   input-dependent branches). Signing is RFC 6979 deterministic, so the on-device output is byte-exact to
- *   the published vectors (same KATs as native). This is the production path (PC_ECDSA_MPI_HW); sign /
+ *   the published vectors (same KATs as native). This is the production path (PROTOCORE_ECDSA_MPI_HW); sign /
  *   verify / ecdh run ~2.7-2.9x faster than the mbedTLS ECP path it replaces on non-S3 targets.
  *
  * Native: the identical complete-formula / RFC 6979 code, but each field multiply is a software
@@ -42,29 +42,29 @@
 
 #include "crypto/asymmetric/ecdsa.h"
 #include "crypto/hash/sha256.h"
-#include "crypto/rng/rng.h" // pc_rand_fill: the mbedtls RNG callback
+#include "crypto/rng/rng.h" // protocore_rand_fill: the mbedtls RNG callback
 #include "mmgr/protomem.h"
 
-#if PC_HAS_HW_ECC
+#if PROTOCORE_HAS_HW_ECC
 #include "sdkconfig.h" // CONFIG_IDF_TARGET_ESP32S3 - selects the MODMULT field layer
 #endif
 
 // The S3 field/scalar layer drives the RSA peripheral through mbedTLS's port (esp_mpi_*), which only
 // exists in the on-device toolchain and whose MODMULT register map is an S3 specialization.
-#if PC_HAS_HW_ECC && defined(CONFIG_IDF_TARGET_ESP32S3) && CONFIG_IDF_TARGET_ESP32S3
-#define PC_ECDSA_MPI_HW 1
+#if PROTOCORE_HAS_HW_ECC && defined(CONFIG_IDF_TARGET_ESP32S3) && CONFIG_IDF_TARGET_ESP32S3
+#define PROTOCORE_ECDSA_MPI_HW 1
 #endif
 
 // Platform-conditional headers, hoisted here so no #include follows code (no mid-file includes -
 // ci_tooling/check/check_src_banned.py enforces it). The implementation branches below use the same guards.
-#if PC_HAS_HW_ECC && !defined(PC_ECDSA_MPI_HW)
+#if PROTOCORE_HAS_HW_ECC && !defined(PROTOCORE_ECDSA_MPI_HW)
 #include <mbedtls/ecdh.h>
 #include <mbedtls/ecdsa.h>
 #include <mbedtls/ecp.h>
 #else
 #include "crypto/mac/hmac_sha256.h" // RFC 6979 HMAC-DRBG for the deterministic-nonce complete-formula path
-#ifdef PC_ECDSA_MPI_HW
-#include "core_setup/hal/esp/esp_crypto_hal.h" // pc_rsa_modmul + pc_rsa_hw_acquire/release (RSA-accelerator HAL)
+#ifdef PROTOCORE_ECDSA_MPI_HW
+#include "core_setup/hal/esp/esp_crypto_hal.h" // protocore_rsa_modmul + protocore_rsa_hw_acquire/release (RSA-accelerator HAL)
 #endif
 #endif
 
@@ -73,26 +73,26 @@
 // and take the crypto_opt per-die default (P4 -O3, else -O2). sdkconfig is included above.
 #include "crypto/crypto_opt.h"
 #if defined(CONFIG_IDF_TARGET_ESP32S3) && CONFIG_IDF_TARGET_ESP32S3
-PC_CRYPTO_HOT_PEEL
+PROTOCORE_CRYPTO_HOT_PEEL
 #else
-PC_CRYPTO_HOT
+PROTOCORE_CRYPTO_HOT
 #endif
 
 // ---------------------------------------------------------------------------
 // HW path without MPI modmult - mbedTLS
 // ---------------------------------------------------------------------------
 
-#if PC_HAS_HW_ECC && !defined(PC_ECDSA_MPI_HW)
+#if PROTOCORE_HAS_HW_ECC && !defined(PROTOCORE_ECDSA_MPI_HW)
 
 // RNG callback backed by the ESP32 hardware RNG.
 static int ecdsa_rng(void *ctx, unsigned char *buf, size_t len)
 {
     (void)ctx;
-    pc_rand_fill(buf, len);
+    protocore_rand_fill(buf, len);
     return 0;
 }
 
-proto_bool pc_ecdsa_p256_pubkey(uint8_t pub[PC_ECDSA_P256_PUB_LEN], const uint8_t priv[PC_ECDSA_P256_PRIV_LEN])
+proto_bool protocore_ecdsa_p256_pubkey(uint8_t pub[PROTOCORE_ECDSA_P256_PUB_LEN], const uint8_t priv[PROTOCORE_ECDSA_P256_PRIV_LEN])
 {
     mbedtls_ecp_group grp;
     mbedtls_ecp_point Q;
@@ -103,13 +103,13 @@ proto_bool pc_ecdsa_p256_pubkey(uint8_t pub[PC_ECDSA_P256_PUB_LEN], const uint8_
 
     proto_bool ok = PROTO_FALSE;
     if (mbedtls_ecp_group_load(&grp, MBEDTLS_ECP_DP_SECP256R1) == 0 &&
-        mbedtls_mpi_read_binary(&d, priv, PC_ECDSA_P256_PRIV_LEN) == 0 &&
+        mbedtls_mpi_read_binary(&d, priv, PROTOCORE_ECDSA_P256_PRIV_LEN) == 0 &&
         mbedtls_ecp_mul(&grp, &Q, &d, &grp.G, ecdsa_rng, NULL) == 0)
     {
         size_t olen = 0;
-        if (mbedtls_ecp_point_write_binary(&grp, &Q, MBEDTLS_ECP_PF_UNCOMPRESSED, &olen, pub, PC_ECDSA_P256_PUB_LEN) ==
+        if (mbedtls_ecp_point_write_binary(&grp, &Q, MBEDTLS_ECP_PF_UNCOMPRESSED, &olen, pub, PROTOCORE_ECDSA_P256_PUB_LEN) ==
                 0 &&
-            olen == PC_ECDSA_P256_PUB_LEN)
+            olen == PROTOCORE_ECDSA_P256_PUB_LEN)
         {
             ok = PROTO_TRUE;
         }
@@ -121,11 +121,11 @@ proto_bool pc_ecdsa_p256_pubkey(uint8_t pub[PC_ECDSA_P256_PUB_LEN], const uint8_
     return ok;
 }
 
-proto_bool pc_ecdsa_p256_sign(uint8_t sig[PC_ECDSA_P256_SIG_LEN], uint8_t *work, const uint8_t *msg, size_t mlen,
-                              const uint8_t priv[PC_ECDSA_P256_PRIV_LEN])
+proto_bool protocore_ecdsa_p256_sign(uint8_t sig[PROTOCORE_ECDSA_P256_SIG_LEN], uint8_t *work, const uint8_t *msg, size_t mlen,
+                              const uint8_t priv[PROTOCORE_ECDSA_P256_PRIV_LEN])
 {
-    uint8_t h[PC_SHA256_DIGEST_LEN];
-    pc_sha256(work + ECDSA_OFF_HASH, msg, mlen, h);
+    uint8_t h[PROTOCORE_SHA256_DIGEST_LEN];
+    protocore_sha256(work + ECDSA_OFF_HASH, msg, mlen, h);
 
     mbedtls_ecp_group grp;
     mbedtls_mpi d;
@@ -138,10 +138,10 @@ proto_bool pc_ecdsa_p256_sign(uint8_t sig[PC_ECDSA_P256_SIG_LEN], uint8_t *work,
 
     proto_bool ok = PROTO_FALSE;
     if (mbedtls_ecp_group_load(&grp, MBEDTLS_ECP_DP_SECP256R1) == 0 &&
-        mbedtls_mpi_read_binary(&d, priv, PC_ECDSA_P256_PRIV_LEN) == 0 &&
-        mbedtls_ecdsa_sign(&grp, &r, &s, &d, h, PC_SHA256_DIGEST_LEN, ecdsa_rng, NULL) == 0 &&
-        mbedtls_mpi_write_binary(&r, sig, PC_ECDSA_P256_COORD_LEN) == 0 &&
-        mbedtls_mpi_write_binary(&s, sig + PC_ECDSA_P256_COORD_LEN, PC_ECDSA_P256_COORD_LEN) == 0)
+        mbedtls_mpi_read_binary(&d, priv, PROTOCORE_ECDSA_P256_PRIV_LEN) == 0 &&
+        mbedtls_ecdsa_sign(&grp, &r, &s, &d, h, PROTOCORE_SHA256_DIGEST_LEN, ecdsa_rng, NULL) == 0 &&
+        mbedtls_mpi_write_binary(&r, sig, PROTOCORE_ECDSA_P256_COORD_LEN) == 0 &&
+        mbedtls_mpi_write_binary(&s, sig + PROTOCORE_ECDSA_P256_COORD_LEN, PROTOCORE_ECDSA_P256_COORD_LEN) == 0)
     {
         ok = PROTO_TRUE;
     }
@@ -153,11 +153,11 @@ proto_bool pc_ecdsa_p256_sign(uint8_t sig[PC_ECDSA_P256_SIG_LEN], uint8_t *work,
     return ok;
 }
 
-proto_bool pc_ecdsa_p256_verify(const uint8_t pub[PC_ECDSA_P256_PUB_LEN], uint8_t *work, const uint8_t *msg,
-                                size_t mlen, const uint8_t sig[PC_ECDSA_P256_SIG_LEN])
+proto_bool protocore_ecdsa_p256_verify(const uint8_t pub[PROTOCORE_ECDSA_P256_PUB_LEN], uint8_t *work, const uint8_t *msg,
+                                size_t mlen, const uint8_t sig[PROTOCORE_ECDSA_P256_SIG_LEN])
 {
-    uint8_t h[PC_SHA256_DIGEST_LEN];
-    pc_sha256(work + ECDSA_OFF_HASH, msg, mlen, h);
+    uint8_t h[PROTOCORE_SHA256_DIGEST_LEN];
+    protocore_sha256(work + ECDSA_OFF_HASH, msg, mlen, h);
 
     mbedtls_ecp_group grp;
     mbedtls_ecp_point Q;
@@ -170,10 +170,10 @@ proto_bool pc_ecdsa_p256_verify(const uint8_t pub[PC_ECDSA_P256_PUB_LEN], uint8_
 
     proto_bool ok = PROTO_FALSE;
     if (mbedtls_ecp_group_load(&grp, MBEDTLS_ECP_DP_SECP256R1) == 0 &&
-        mbedtls_ecp_point_read_binary(&grp, &Q, pub, PC_ECDSA_P256_PUB_LEN) == 0 &&
-        mbedtls_ecp_check_pubkey(&grp, &Q) == 0 && mbedtls_mpi_read_binary(&r, sig, PC_ECDSA_P256_COORD_LEN) == 0 &&
-        mbedtls_mpi_read_binary(&s, sig + PC_ECDSA_P256_COORD_LEN, PC_ECDSA_P256_COORD_LEN) == 0 &&
-        mbedtls_ecdsa_verify(&grp, h, PC_SHA256_DIGEST_LEN, &Q, &r, &s) == 0)
+        mbedtls_ecp_point_read_binary(&grp, &Q, pub, PROTOCORE_ECDSA_P256_PUB_LEN) == 0 &&
+        mbedtls_ecp_check_pubkey(&grp, &Q) == 0 && mbedtls_mpi_read_binary(&r, sig, PROTOCORE_ECDSA_P256_COORD_LEN) == 0 &&
+        mbedtls_mpi_read_binary(&s, sig + PROTOCORE_ECDSA_P256_COORD_LEN, PROTOCORE_ECDSA_P256_COORD_LEN) == 0 &&
+        mbedtls_ecdsa_verify(&grp, h, PROTOCORE_SHA256_DIGEST_LEN, &Q, &r, &s) == 0)
     {
         ok = PROTO_TRUE;
     }
@@ -185,8 +185,8 @@ proto_bool pc_ecdsa_p256_verify(const uint8_t pub[PC_ECDSA_P256_PUB_LEN], uint8_
     return ok;
 }
 
-proto_bool pc_ecdsa_p256_ecdh(uint8_t shared_x[PC_ECDSA_P256_COORD_LEN], const uint8_t peer_pub[PC_ECDSA_P256_PUB_LEN],
-                              const uint8_t priv[PC_ECDSA_P256_PRIV_LEN])
+proto_bool protocore_ecdsa_p256_ecdh(uint8_t shared_x[PROTOCORE_ECDSA_P256_COORD_LEN], const uint8_t peer_pub[PROTOCORE_ECDSA_P256_PUB_LEN],
+                              const uint8_t priv[PROTOCORE_ECDSA_P256_PRIV_LEN])
 {
     mbedtls_ecp_group grp;
     mbedtls_ecp_point Q;
@@ -199,10 +199,10 @@ proto_bool pc_ecdsa_p256_ecdh(uint8_t shared_x[PC_ECDSA_P256_COORD_LEN], const u
 
     proto_bool ok = PROTO_FALSE;
     if (mbedtls_ecp_group_load(&grp, MBEDTLS_ECP_DP_SECP256R1) == 0 &&
-        mbedtls_ecp_point_read_binary(&grp, &Q, peer_pub, PC_ECDSA_P256_PUB_LEN) == 0 &&
-        mbedtls_ecp_check_pubkey(&grp, &Q) == 0 && mbedtls_mpi_read_binary(&d, priv, PC_ECDSA_P256_PRIV_LEN) == 0 &&
+        mbedtls_ecp_point_read_binary(&grp, &Q, peer_pub, PROTOCORE_ECDSA_P256_PUB_LEN) == 0 &&
+        mbedtls_ecp_check_pubkey(&grp, &Q) == 0 && mbedtls_mpi_read_binary(&d, priv, PROTOCORE_ECDSA_P256_PRIV_LEN) == 0 &&
         mbedtls_ecdh_compute_shared(&grp, &z, &Q, &d, ecdsa_rng, NULL) == 0 &&
-        mbedtls_mpi_write_binary(&z, shared_x, PC_ECDSA_P256_COORD_LEN) == 0)
+        mbedtls_mpi_write_binary(&z, shared_x, PROTOCORE_ECDSA_P256_COORD_LEN) == 0)
     {
         ok = PROTO_TRUE;
     }
@@ -346,22 +346,22 @@ static void fp_reduce_once(uint32_t r[8], const uint32_t a[8], const uint32_t m[
     }
 }
 
-#ifdef PC_ECDSA_MPI_HW
+#ifdef PROTOCORE_ECDSA_MPI_HW
 // z = x*y mod F->m on the S3 RSA accelerator. Requires ecdsa_hw_on() first. Preloading R^2 into the result
 // block makes MODMULT return the plain residue (the esp_mpi_mul_mpi_mod convention). Output canonical (< m).
 static void fp_mul(uint32_t z[8], const uint32_t x[8], const uint32_t y[8], const Fp *F) // safe if z aliases x/y
 {
     // Same 256-bit RSA MODMULT the 25519 field layer uses, parameterized by the domain (mod p or mod n): the
     // HAL owns the register access; here we only pass this domain's {m, m', R^2 mod m}. Output canonical (< m).
-    pc_rsa_modmul(z, x, y, F->m, F->mprime, F->r2, 8);
+    protocore_rsa_modmul(z, x, y, F->m, F->mprime, F->r2, 8);
 }
 static void ecdsa_hw_on()
 {
-    pc_rsa_hw_acquire();
+    protocore_rsa_hw_acquire();
 }
 static void ecdsa_hw_off()
 {
-    pc_rsa_hw_release();
+    protocore_rsa_hw_release();
 }
 #else
 // acc[0..7] >= m[0..7]? Compares the low 8 limbs from the most significant down.
@@ -746,14 +746,14 @@ static proto_bool on_curve(const uint32_t x[8], const uint32_t y[8])
 // The caller's working bytes, split: the message hash, then the DRBG's MAC. The hash is finished
 // before the DRBG starts, so the two never overlap in use.
 #define ECDSA_OFF_HASH 0u
-#define ECDSA_OFF_HMAC (ECDSA_OFF_HASH + PC_SHA256_BORROW)
-static_assert(ECDSA_OFF_HMAC + PC_HMAC_SHA256_BORROW <= PC_ECDSA_BORROW,
-              "PC_ECDSA_BORROW is short of the split - raise it in protocore_config.h, which every "
+#define ECDSA_OFF_HMAC (ECDSA_OFF_HASH + PROTOCORE_SHA256_BORROW)
+static_assert(ECDSA_OFF_HMAC + PROTOCORE_HMAC_SHA256_BORROW <= PROTOCORE_ECDSA_BORROW,
+              "PROTOCORE_ECDSA_BORROW is short of the split - raise it in protocore_config.h, which every "
               "consumer sizes its own borrow from");
 
 // out = HMAC-SHA256(key, V || (tag>=0 ? tag||x||e : nothing)), the MAC working out of the caller's
 // bytes at ECDSA_OFF_HMAC.
-static void pc_hmac_cat(uint8_t *work, uint8_t out[32], const uint8_t key[32], const uint8_t *v, size_t vlen,
+static void protocore_hmac_cat(uint8_t *work, uint8_t out[32], const uint8_t key[32], const uint8_t *v, size_t vlen,
                         const int tag, const uint8_t *x, const uint8_t *e)
 {
     uint8_t buf[97]; // 32 (V) + 1 (tag) + 32 (x) + 32 (e)
@@ -768,7 +768,7 @@ static void pc_hmac_cat(uint8_t *work, uint8_t out[32], const uint8_t key[32], c
         mem.cpy(buf + n, e, 32);
         n += 32;
     }
-    pc_hmac_sha256(work + ECDSA_OFF_HMAC, key, 32, buf, n, out);
+    protocore_hmac_sha256(work + ECDSA_OFF_HMAC, key, 32, buf, n, out);
 }
 
 // One RFC 6979 candidate k: if it yields a valid r and s, write the 64-byte signature and return true.
@@ -837,16 +837,16 @@ static proto_bool ecdsa_sign_core(uint8_t *work, uint8_t sig[64], const uint8_t 
     uint8_t K[32];
     mem.set(V, 0x01, 32);
     mem.set(K, 0x00, 32);
-    pc_hmac_cat(work, K, K, V, 32, 0x00, x_oct, h_oct);
-    pc_hmac_cat(work, V, K, V, 32, -1, NULL, NULL);
-    pc_hmac_cat(work, K, K, V, 32, 0x01, x_oct, h_oct);
-    pc_hmac_cat(work, V, K, V, 32, -1, NULL, NULL);
+    protocore_hmac_cat(work, K, K, V, 32, 0x00, x_oct, h_oct);
+    protocore_hmac_cat(work, V, K, V, 32, -1, NULL, NULL);
+    protocore_hmac_cat(work, K, K, V, 32, 0x01, x_oct, h_oct);
+    protocore_hmac_cat(work, V, K, V, 32, -1, NULL, NULL);
 
     for (int guard = 0; guard < 64; guard++)
     // practice (see its comment), so the first candidate
     // always succeeds and the loop never reaches guard==64
     {
-        pc_hmac_cat(work, V, K, V, 32, -1, NULL, NULL); // T = HMAC_K(V), one block
+        protocore_hmac_cat(work, V, K, V, 32, -1, NULL, NULL); // T = HMAC_K(V), one block
         uint32_t k[8];
         load_be(k, V); // bits2int(T)
         if (ecdsa_try_sign(k, d, e, sig))
@@ -856,13 +856,13 @@ static proto_bool ecdsa_sign_core(uint8_t *work, uint8_t sig[64], const uint8_t 
         uint8_t buf[33]; // retry: K = HMAC_K(V || 0x00); V = HMAC_K(V)
         mem.cpy(buf, V, 32);
         buf[32] = 0x00;
-        pc_hmac_sha256(work + ECDSA_OFF_HMAC, K, 32, buf, 33, K);
-        pc_hmac_cat(work, V, K, V, 32, -1, NULL, NULL);
+        protocore_hmac_sha256(work + ECDSA_OFF_HMAC, K, 32, buf, 33, K);
+        protocore_hmac_cat(work, V, K, V, 32, -1, NULL, NULL);
     }
     return PROTO_FALSE;
 }
 
-proto_bool pc_ecdsa_p256_pubkey(uint8_t pub[PC_ECDSA_P256_PUB_LEN], const uint8_t priv[PC_ECDSA_P256_PRIV_LEN])
+proto_bool protocore_ecdsa_p256_pubkey(uint8_t pub[PROTOCORE_ECDSA_P256_PUB_LEN], const uint8_t priv[PROTOCORE_ECDSA_P256_PRIV_LEN])
 {
     uint32_t d[8];
     load_be(d, priv);
@@ -890,8 +890,8 @@ proto_bool pc_ecdsa_p256_pubkey(uint8_t pub[PC_ECDSA_P256_PUB_LEN], const uint8_
     return ok;
 }
 
-proto_bool pc_ecdsa_p256_sign(uint8_t sig[PC_ECDSA_P256_SIG_LEN], uint8_t *work, const uint8_t *msg, size_t mlen,
-                              const uint8_t priv[PC_ECDSA_P256_PRIV_LEN])
+proto_bool protocore_ecdsa_p256_sign(uint8_t sig[PROTOCORE_ECDSA_P256_SIG_LEN], uint8_t *work, const uint8_t *msg, size_t mlen,
+                              const uint8_t priv[PROTOCORE_ECDSA_P256_PRIV_LEN])
 {
     uint32_t d[8];
     load_be(d, priv);
@@ -899,8 +899,8 @@ proto_bool pc_ecdsa_p256_sign(uint8_t sig[PC_ECDSA_P256_SIG_LEN], uint8_t *work,
     {
         return PROTO_FALSE;
     }
-    uint8_t h1[PC_SHA256_DIGEST_LEN];
-    pc_sha256(work + ECDSA_OFF_HASH, msg, mlen, h1);
+    uint8_t h1[PROTOCORE_SHA256_DIGEST_LEN];
+    protocore_sha256(work + ECDSA_OFF_HASH, msg, mlen, h1);
 
     ecdsa_hw_on();
     proto_bool ok = ecdsa_sign_core(work, sig, h1, d);
@@ -908,8 +908,8 @@ proto_bool pc_ecdsa_p256_sign(uint8_t sig[PC_ECDSA_P256_SIG_LEN], uint8_t *work,
     return ok;
 }
 
-proto_bool pc_ecdsa_p256_verify(const uint8_t pub[PC_ECDSA_P256_PUB_LEN], uint8_t *work, const uint8_t *msg,
-                                size_t mlen, const uint8_t sig[PC_ECDSA_P256_SIG_LEN])
+proto_bool protocore_ecdsa_p256_verify(const uint8_t pub[PROTOCORE_ECDSA_P256_PUB_LEN], uint8_t *work, const uint8_t *msg,
+                                size_t mlen, const uint8_t sig[PROTOCORE_ECDSA_P256_SIG_LEN])
 {
     if (pub[0] != 0x04)
     {
@@ -929,8 +929,8 @@ proto_bool pc_ecdsa_p256_verify(const uint8_t pub[PC_ECDSA_P256_PUB_LEN], uint8_
         return PROTO_FALSE;
     }
 
-    uint8_t h1[PC_SHA256_DIGEST_LEN];
-    pc_sha256(work + ECDSA_OFF_HASH, msg, mlen, h1);
+    uint8_t h1[PROTOCORE_SHA256_DIGEST_LEN];
+    protocore_sha256(work + ECDSA_OFF_HASH, msg, mlen, h1);
     uint32_t e[8];
     uint32_t etmp[8];
     load_be(etmp, h1);
@@ -973,8 +973,8 @@ proto_bool pc_ecdsa_p256_verify(const uint8_t pub[PC_ECDSA_P256_PUB_LEN], uint8_
     return ok;
 }
 
-proto_bool pc_ecdsa_p256_ecdh(uint8_t shared_x[PC_ECDSA_P256_COORD_LEN], const uint8_t peer_pub[PC_ECDSA_P256_PUB_LEN],
-                              const uint8_t priv[PC_ECDSA_P256_PRIV_LEN])
+proto_bool protocore_ecdsa_p256_ecdh(uint8_t shared_x[PROTOCORE_ECDSA_P256_COORD_LEN], const uint8_t peer_pub[PROTOCORE_ECDSA_P256_PUB_LEN],
+                              const uint8_t priv[PROTOCORE_ECDSA_P256_PRIV_LEN])
 {
     if (peer_pub[0] != 0x04)
     {
@@ -1018,4 +1018,4 @@ proto_bool pc_ecdsa_p256_ecdh(uint8_t shared_x[PC_ECDSA_P256_COORD_LEN], const u
     return ok;
 }
 
-#endif // PC_HAS_HW_ECC path selection
+#endif // PROTOCORE_HAS_HW_ECC path selection

@@ -13,7 +13,7 @@
 #include "network_drivers/presentation/http/http3/qpack.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_HTTP3
+#if PROTOCORE_ENABLE_HTTP3
 
 #include "network_drivers/presentation/codec/hpack_prim/hpack_prim.h" // shared prefix-int + Huffman
 
@@ -330,4 +330,4 @@ proto_bool pc_qpack_decode(const uint8_t *block, size_t len, char *scratch, size
     return PROTO_TRUE;
 }
 
-#endif // PC_ENABLE_HTTP3
+#endif // PROTOCORE_ENABLE_HTTP3

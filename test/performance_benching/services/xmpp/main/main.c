@@ -19,12 +19,14 @@ void dbench_run(void)
         DBENCH_BANNER("xmpp");
         volatile size_t sink = 0;
         static char out[512];
-        DBENCH_OP("pc_xmpp_escape", 200000, sink += pc_xmpp_escape("a<b>&\"c'd", 9, out, sizeof(out)));
-        DBENCH_OP("pc_xmpp_stream_open", 200000, sink += pc_xmpp_stream_open("rig@pc", "pc.example", out, sizeof(out)));
-        DBENCH_OP("pc_xmpp_message", 200000,
-                  sink += pc_xmpp_message("ops@pc", "rig@pc", "chat", "temp 84C over threshold", out, sizeof(out)));
-        DBENCH_OP("pc_xmpp_iq", 200000,
-                  sink += pc_xmpp_iq("get", "q1", "<ping xmlns='urn:xmpp:ping'/>", out, sizeof(out)));
+        DBENCH_OP("protocore_xmpp_escape", 200000, sink += protocore_xmpp_escape("a<b>&\"c'd", 9, out, sizeof(out)));
+        DBENCH_OP("protocore_xmpp_stream_open", 200000,
+                  sink += protocore_xmpp_stream_open("rig@pc", "pc.example", out, sizeof(out)));
+        DBENCH_OP("protocore_xmpp_message", 200000,
+                  sink +=
+                  protocore_xmpp_message("ops@pc", "rig@pc", "chat", "temp 84C over threshold", out, sizeof(out)));
+        DBENCH_OP("protocore_xmpp_iq", 200000,
+                  sink += protocore_xmpp_iq("get", "q1", "<ping xmlns='urn:xmpp:ping'/>", out, sizeof(out)));
         (void)sink;
         DBENCH_DONE();
     }

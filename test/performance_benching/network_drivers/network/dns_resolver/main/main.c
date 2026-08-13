@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // On-device CCOUNT microbenchmark for the DNS answer classifier/verifier (network_drivers/network/dns_resolver):
-// pc_dns_resolver_classify() buckets a host-order IPv4 word into an RFC special-purpose-range
-// category, and pc_dns_resolver_verify() uses it to reject spoof / DNS-rebinding indicators
+// protocore_dns_resolver_classify() buckets a host-order IPv4 word into an RFC special-purpose-range
+// category, and protocore_dns_resolver_verify() uses it to reject spoof / DNS-rebinding indicators
 // (unspecified / broadcast / loopback / multicast) - both pure, branch-heavy, no lwIP involved.
-// Out of scope: pc_dns_resolver_resolve() (and therefore pc_dns_resolver_resolve_verified(),
+// Out of scope: protocore_dns_resolver_resolve() (and therefore protocore_dns_resolver_resolve_verified(),
 // which calls it) - on ARDUINO builds that is the real lwIP dns_gethostbyname() marshalled to
 // tcpip_thread, a blocking DNS query over the network. This rig has no network association to
-// resolve against and no host-side test hook exists on-device (pc_dns_resolver_test_set_resolve()
+// resolve against and no host-side test hook exists on-device (protocore_dns_resolver_test_set_resolve()
 // is compiled only "#if !defined(ARDUINO)"), so only the deterministic CPU-side classifier/verifier
 // is ever benched here.
 //
@@ -39,11 +39,11 @@ void dbench_run(void)
         DBENCH_BANNER("dns_resolver");
         volatile uint8_t sink8 = 0;
         volatile bool sinkb = false;
-        DBENCH_OP("pc_dns_resolver_classify (public)", 200000, sink8 += (uint8_t)pc_dns_resolver_classify(ip_public));
-        DBENCH_OP("pc_dns_resolver_classify (private)", 200000, sink8 += (uint8_t)pc_dns_resolver_classify(ip_private));
-        DBENCH_OP("pc_dns_resolver_verify (accept public)", 200000, sinkb ^= pc_dns_resolver_verify(ip_public));
-        DBENCH_OP("pc_dns_resolver_verify (reject loopback)", 200000, sinkb ^= pc_dns_resolver_verify(ip_loopback));
-        DBENCH_OP("pc_dns_resolver_verify (reject multicast)", 200000, sinkb ^= pc_dns_resolver_verify(ip_multicast));
+        DBENCH_OP("protocore_dns_resolver_classify (public)", 200000, sink8 += (uint8_t)protocore_dns_resolver_classify(ip_public));
+        DBENCH_OP("protocore_dns_resolver_classify (private)", 200000, sink8 += (uint8_t)protocore_dns_resolver_classify(ip_private));
+        DBENCH_OP("protocore_dns_resolver_verify (accept public)", 200000, sinkb ^= protocore_dns_resolver_verify(ip_public));
+        DBENCH_OP("protocore_dns_resolver_verify (reject loopback)", 200000, sinkb ^= protocore_dns_resolver_verify(ip_loopback));
+        DBENCH_OP("protocore_dns_resolver_verify (reject multicast)", 200000, sinkb ^= protocore_dns_resolver_verify(ip_multicast));
         (void)sink8;
         (void)sinkb;
         DBENCH_DONE();

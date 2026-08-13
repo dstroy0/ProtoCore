@@ -17,32 +17,32 @@ void tearDown()
 
 void test_kind_app()
 {
-    TEST_ASSERT_EQUAL_STRING("factory", pc_partition_kind(0, 0x00));
-    TEST_ASSERT_EQUAL_STRING("ota", pc_partition_kind(0, 0x10));
-    TEST_ASSERT_EQUAL_STRING("ota", pc_partition_kind(0, 0x11));
-    TEST_ASSERT_EQUAL_STRING("test", pc_partition_kind(0, 0x20));
-    TEST_ASSERT_EQUAL_STRING("app", pc_partition_kind(0, 0x05)); // app, not a known subtype
+    TEST_ASSERT_EQUAL_STRING("factory", protocore_partition_kind(0, 0x00));
+    TEST_ASSERT_EQUAL_STRING("ota", protocore_partition_kind(0, 0x10));
+    TEST_ASSERT_EQUAL_STRING("ota", protocore_partition_kind(0, 0x11));
+    TEST_ASSERT_EQUAL_STRING("test", protocore_partition_kind(0, 0x20));
+    TEST_ASSERT_EQUAL_STRING("app", protocore_partition_kind(0, 0x05)); // app, not a known subtype
 }
 
 void test_kind_data()
 {
-    TEST_ASSERT_EQUAL_STRING("otadata", pc_partition_kind(1, 0x00));
-    TEST_ASSERT_EQUAL_STRING("phy", pc_partition_kind(1, 0x01));
-    TEST_ASSERT_EQUAL_STRING("nvs", pc_partition_kind(1, 0x02));
-    TEST_ASSERT_EQUAL_STRING("coredump", pc_partition_kind(1, 0x03));
-    TEST_ASSERT_EQUAL_STRING("littlefs", pc_partition_kind(1, 0x83));
-    TEST_ASSERT_EQUAL_STRING("spiffs", pc_partition_kind(1, 0x82));
-    TEST_ASSERT_EQUAL_STRING("data", pc_partition_kind(1, 0x77)); // unknown data subtype
+    TEST_ASSERT_EQUAL_STRING("otadata", protocore_partition_kind(1, 0x00));
+    TEST_ASSERT_EQUAL_STRING("phy", protocore_partition_kind(1, 0x01));
+    TEST_ASSERT_EQUAL_STRING("nvs", protocore_partition_kind(1, 0x02));
+    TEST_ASSERT_EQUAL_STRING("coredump", protocore_partition_kind(1, 0x03));
+    TEST_ASSERT_EQUAL_STRING("littlefs", protocore_partition_kind(1, 0x83));
+    TEST_ASSERT_EQUAL_STRING("spiffs", protocore_partition_kind(1, 0x82));
+    TEST_ASSERT_EQUAL_STRING("data", protocore_partition_kind(1, 0x77)); // unknown data subtype
 }
 
 void test_json()
 {
-    pc_partition_info p[2] = {
+    protocore_partition_info p[2] = {
         {"nvs", 1, 0x02, 0x9000, 0x6000, PROTO_FALSE},
         {"app0", 0, 0x10, 0x10000, 0x140000, PROTO_TRUE},
     };
     char buf[512];
-    int n = pc_partition_json(p, 2, buf, sizeof(buf));
+    int n = protocore_partition_json(p, 2, buf, sizeof(buf));
     TEST_ASSERT_TRUE(n > 0);
     TEST_ASSERT_EQUAL_STRING(
         "{\"partitions\":[{\"label\":\"nvs\",\"kind\":\"nvs\",\"type\":1,\"subtype\":2,\"addr\":36864,\"size\":24576,"
@@ -54,58 +54,58 @@ void test_json()
 
 void test_json_small_buffer_fails_closed()
 {
-    pc_partition_info p[1] = {{"nvs", 1, 0x02, 0x9000, 0x6000, PROTO_FALSE}};
+    protocore_partition_info p[1] = {{"nvs", 1, 0x02, 0x9000, 0x6000, PROTO_FALSE}};
     char buf[8];
-    TEST_ASSERT_EQUAL_INT(0, pc_partition_json(p, 1, buf, sizeof(buf)));
+    TEST_ASSERT_EQUAL_INT(0, protocore_partition_json(p, 1, buf, sizeof(buf)));
 }
 
 void test_collect_host_stub()
 {
-    pc_partition_info p[4];
-    TEST_ASSERT_EQUAL_UINT8(0, pc_partition_collect(p, 4));
+    protocore_partition_info p[4];
+    TEST_ASSERT_EQUAL_UINT8(0, protocore_partition_collect(p, 4));
 }
 
 void test_partition_kind_data_subtypes()
 {
-    TEST_ASSERT_EQUAL_STRING("nvs_keys", pc_partition_kind(0x01, 0x04));
-    TEST_ASSERT_EQUAL_STRING("fat", pc_partition_kind(0x01, 0x81));
+    TEST_ASSERT_EQUAL_STRING("nvs_keys", protocore_partition_kind(0x01, 0x04));
+    TEST_ASSERT_EQUAL_STRING("fat", protocore_partition_kind(0x01, 0x81));
 }
 
 void test_json_null_out_and_zero_cap()
 {
-    pc_partition_info p[1] = {{"nvs", 1, 0x02, 0x9000, 0x6000, PROTO_FALSE}};
+    protocore_partition_info p[1] = {{"nvs", 1, 0x02, 0x9000, 0x6000, PROTO_FALSE}};
     // out == NULL fails closed before touching the buffer.
-    TEST_ASSERT_EQUAL_INT(0, pc_partition_json(p, 1, NULL, 16));
+    TEST_ASSERT_EQUAL_INT(0, protocore_partition_json(p, 1, NULL, 16));
     // cap == 0 also fails closed, independent of the out == NULL check.
     char buf[16];
-    TEST_ASSERT_EQUAL_INT(0, pc_partition_json(p, 1, buf, 0));
+    TEST_ASSERT_EQUAL_INT(0, protocore_partition_json(p, 1, buf, 0));
 }
 
 void test_json_null_parts()
 {
     char buf[16] = "stale";
-    TEST_ASSERT_EQUAL_INT(0, pc_partition_json(NULL, 1, buf, sizeof(buf)));
+    TEST_ASSERT_EQUAL_INT(0, protocore_partition_json(NULL, 1, buf, sizeof(buf)));
     // out[0] is cleared before the parts == NULL check runs.
     TEST_ASSERT_EQUAL_STRING("", buf);
 }
 
 void test_json_entry_overflow_fails_closed()
 {
-    pc_partition_info p[1] = {{"nvs", 1, 0x02, 0x9000, 0x6000, PROTO_FALSE}};
+    protocore_partition_info p[1] = {{"nvs", 1, 0x02, 0x9000, 0x6000, PROTO_FALSE}};
     // 20 bytes fits the opening `{"partitions":[` (15 chars) but not the first
     // entry, so the per-entry append fails and the call fails closed.
     char buf[20];
-    TEST_ASSERT_EQUAL_INT(0, pc_partition_json(p, 1, buf, sizeof(buf)));
+    TEST_ASSERT_EQUAL_INT(0, protocore_partition_json(p, 1, buf, sizeof(buf)));
 }
 
 void test_json_closing_bracket_overflow_fails_closed()
 {
-    pc_partition_info p[1] = {{"nvs", 1, 0x02, 0x9000, 0x6000, PROTO_FALSE}};
+    protocore_partition_info p[1] = {{"nvs", 1, 0x02, 0x9000, 0x6000, PROTO_FALSE}};
     // 107 bytes fits the opening bracket + the one entry (106 bytes total) but
     // not the closing `]}`, so that final append fails and the call fails
     // closed.
     char buf[107];
-    TEST_ASSERT_EQUAL_INT(0, pc_partition_json(p, 1, buf, sizeof(buf)));
+    TEST_ASSERT_EQUAL_INT(0, protocore_partition_json(p, 1, buf, sizeof(buf)));
 }
 
 int main()

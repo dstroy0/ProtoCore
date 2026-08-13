@@ -11,7 +11,7 @@
 #include "mmgr/plaintext.h" // HTTP is plaintext; its frames borrow from that arena
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_HTTP2
+#if PROTOCORE_ENABLE_HTTP2
 
 #include <stdio.h>
 
@@ -30,15 +30,15 @@ static void wr(H2Conn *c, const uint8_t *data, size_t len)
 
 // The plaintext-pool term this file declares: one borrow per HTTP/2 connection, taken from the
 // persistent end on first use and held for the connection's life.
-static_assert(PC_WORK_H2_CONN >= (size_t)MAX_CONNS * PC_H2_CONN_BORROW,
-              "PC_WORK_H2_CONN must cover one frame + header-block + HPACK-scratch borrow per HTTP/2 "
+static_assert(PROTOCORE_WORK_H2_CONN >= (size_t)MAX_CONNS * PROTOCORE_H2_CONN_BORROW,
+              "PROTOCORE_WORK_H2_CONN must cover one frame + header-block + HPACK-scratch borrow per HTTP/2 "
               "connection: raise it in protocore_config.h");
 
 // Offsets into the one borrow. Each region is a power of two, so each offset is a multiple of one.
 #define H2_OFF_FBUF 0u
-#define H2_OFF_HBLOCK (H2_OFF_FBUF + PC_H2_MAX_FRAME)
-#define H2_OFF_HSCRATCH (H2_OFF_HBLOCK + PC_H2_HDR_BLOCK)
-#define H2_OFF_FHDR (H2_OFF_HSCRATCH + PC_H2_HDR_BLOCK)
+#define H2_OFF_HBLOCK (H2_OFF_FBUF + PROTOCORE_H2_MAX_FRAME)
+#define H2_OFF_HSCRATCH (H2_OFF_HBLOCK + PROTOCORE_H2_HDR_BLOCK)
+#define H2_OFF_FHDR (H2_OFF_HSCRATCH + PROTOCORE_H2_HDR_BLOCK)
 
 // The connection's bytes, split by offset. Idempotent: a connection initialised again keeps the
 // borrow it already holds, because the persistent end is never given back.
@@ -47,7 +47,7 @@ static proto_bool h2_conn_slot_storage(H2Conn *c)
     uint8_t *base = c->fbuf; // H2_OFF_FBUF is 0, so the borrow is recoverable from the first field
     if (base == NULL)
     {
-        pc_span b = pc_plaintext_persist_span(PC_H2_CONN_BORROW);
+        pc_span b = pc_plaintext_persist_span(PROTOCORE_H2_CONN_BORROW);
         if (!pc_span_ok(b))
         {
             return PROTO_FALSE;
@@ -63,7 +63,7 @@ static proto_bool h2_conn_slot_storage(H2Conn *c)
 
 static H2Stream *find_stream(H2Conn *c, uint32_t id)
 {
-    for (int i = 0; i < PC_H2_MAX_STREAMS; i++)
+    for (int i = 0; i < PROTOCORE_H2_MAX_STREAMS; i++)
     {
         if (c->streams[i].id == id && id != 0)
         {
@@ -75,7 +75,7 @@ static H2Stream *find_stream(H2Conn *c, uint32_t id)
 
 static H2Stream *alloc_stream(H2Conn *c, uint32_t id)
 {
-    for (int i = 0; i < PC_H2_MAX_STREAMS; i++)
+    for (int i = 0; i < PROTOCORE_H2_MAX_STREAMS; i++)
     {
         if (c->streams[i].id == 0)
         {
@@ -93,7 +93,7 @@ static void send_our_settings(H2Conn *c)
 {
     static const uint16_t ids[4] = {H2_SETTINGS_ENABLE_PUSH, H2_SETTINGS_MAX_CONCURRENT_STREAMS,
                                     H2_SETTINGS_INITIAL_WINDOW_SIZE, H2_SETTINGS_MAX_FRAME_SIZE};
-    static const uint32_t vals[4] = {0, PC_H2_MAX_STREAMS, 65535, PC_H2_MAX_FRAME};
+    static const uint32_t vals[4] = {0, PROTOCORE_H2_MAX_STREAMS, 65535, PROTOCORE_H2_MAX_FRAME};
     uint8_t buf[H2_FRAME_HEADER_LEN + 4 * 6];
     size_t n = pc_h2_build_settings(buf, sizeof buf, ids, vals, 4);
     wr(c, buf, n);
@@ -233,7 +233,7 @@ static proto_bool emit_header(void *ctx, const char *name, size_t nl, const char
 static proto_bool decode_block(H2Block *b, const uint8_t *block, size_t len)
 {
     H2Conn *c = b->c;
-    if (!pc_hpack_decode(&c->hdec, block, len, c->hscratch, PC_H2_HDR_BLOCK, emit_header, b))
+    if (!pc_hpack_decode(&c->hdec, block, len, c->hscratch, PROTOCORE_H2_HDR_BLOCK, emit_header, b))
     {
         return PROTO_FALSE; // COMPRESSION_ERROR
     }
@@ -340,7 +340,7 @@ static proto_bool handle_headers(H2Conn *c, const H2FrameHeader *h, const uint8_
         return decode_block(&b, p, plen);
     }
     // Spans CONTINUATION frames: buffer the fragment.
-    if (plen > PC_H2_HDR_BLOCK)
+    if (plen > PROTOCORE_H2_HDR_BLOCK)
     {
         return PROTO_FALSE;
     }
@@ -361,11 +361,11 @@ static proto_bool handle_continuation(H2Conn *c, const H2FrameHeader *h, const u
         return PROTO_FALSE;
     }
     c->hblock_frames++;
-    if (c->hblock_frames > PC_H2_MAX_CONTINUATION)
+    if (c->hblock_frames > PROTOCORE_H2_MAX_CONTINUATION)
     {
         return PROTO_FALSE; // sec 6.10: an empty CONTINUATION adds no bytes, so cap the count too
     }
-    if (c->hblock_len + h->length > PC_H2_HDR_BLOCK)
+    if (c->hblock_len + h->length > PROTOCORE_H2_HDR_BLOCK)
     {
         return PROTO_FALSE;
     }
@@ -621,7 +621,7 @@ void pc_h2_conn_init(H2Conn *c, const H2Callbacks *cb)
     c->phase = 0;
     pc_h2_settings_defaults(&c->peer);
     c->conn_send_window = 65535;
-    pc_hpack_dyn_init(&c->hdec, PC_HPACK_TABLE_BYTES);
+    pc_hpack_dyn_init(&c->hdec, PROTOCORE_HPACK_TABLE_BYTES);
     send_our_settings(c);
 }
 
@@ -668,7 +668,7 @@ proto_bool pc_h2_conn_recv(H2Conn *c, const uint8_t *data, size_t len)
             }
         }
         uint32_t plen = ((uint32_t)c->fhdr[0] << 16) | ((uint32_t)c->fhdr[1] << 8) | c->fhdr[2];
-        if (plen > PC_H2_MAX_FRAME)
+        if (plen > PROTOCORE_H2_MAX_FRAME)
         {
             return PROTO_FALSE; // FRAME_SIZE_ERROR
         }
@@ -785,4 +785,4 @@ void pc_h2_conn_goaway(H2Conn *c, uint32_t error)
     c->phase = 2;
 }
 
-#endif // PC_ENABLE_HTTP2
+#endif // PROTOCORE_ENABLE_HTTP2

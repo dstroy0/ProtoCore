@@ -3,7 +3,7 @@
 
 /**
  * @file csrf.h
- * @brief Stateless HMAC-signed CSRF token (PC_ENABLE_CSRF).
+ * @brief Stateless HMAC-signed CSRF token (PROTOCORE_ENABLE_CSRF).
  *
  * A CSRF token is `<nonce_hex>.<sig_hex>` where sig = the first CSRF_SIG_BYTES of
  * HMAC-SHA256(secret, nonce). The secret is seeded once from the hardware RNG at
@@ -13,7 +13,7 @@
  *
  * The token is sized to fit a single MAX_VAL_LEN header value and a `csrf=`
  * cookie. These functions are pure (no Arduino dependency) so they unit-test on
- * the host (with PC_ENABLE_CSRF set) using a fixed secret.
+ * the host (with PROTOCORE_ENABLE_CSRF set) using a fixed secret.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -24,9 +24,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_CSRF
+#if PROTOCORE_ENABLE_CSRF
 
 /** @brief Nonce length in bytes (hex-encoded in the token). */
 #define CSRF_NONCE_BYTES 6
@@ -41,7 +41,7 @@ PROTO_BEGIN_DECLS
  * @param secret  Secret key bytes.
  * @param len     Length in bytes; capped at 32 (longer keys are truncated).
  */
-void pc_csrf_set_secret(const uint8_t *secret, size_t len);
+void protocore_csrf_set_secret(const uint8_t *secret, size_t len);
 
 /**
  * @brief Issue a fresh signed token into @p out.
@@ -50,7 +50,7 @@ void pc_csrf_set_secret(const uint8_t *secret, size_t len);
  * @param cap  Size of @p out.
  * @return Token length in characters, or 0 if no secret is set or @p cap is too small.
  */
-int pc_csrf_issue(char *out, size_t cap);
+int protocore_csrf_issue(char *out, size_t cap);
 
 /**
  * @brief Verify a token's signature against the current secret.
@@ -58,13 +58,13 @@ int pc_csrf_issue(char *out, size_t cap);
  * @return true if @p token is well-formed and its HMAC signature is valid;
  *         false otherwise (or if no secret is set).
  */
-proto_bool pc_csrf_verify(const char *token);
+proto_bool protocore_csrf_verify(const char *token);
 
 /** @brief Clear the secret and nonce counter (e.g. between tests). */
-void pc_csrf_reset(void);
+void protocore_csrf_reset(void);
 
-#endif // PC_ENABLE_CSRF
+#endif // PROTOCORE_ENABLE_CSRF
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_CSRF_H

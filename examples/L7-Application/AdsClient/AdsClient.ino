@@ -3,11 +3,11 @@
 
 /**
  * @file AdsClient.ino
- * @brief Beckhoff ADS client - read a TwinCAT PLC over AMS/TCP (PC_ENABLE_ADS).
+ * @brief Beckhoff ADS client - read a TwinCAT PLC over AMS/TCP (PROTOCORE_ENABLE_ADS).
  *
  * services/fieldbus/ads builds ADS/AMS requests and parses the responses; it is transport-
  * agnostic, so the app owns the socket. This sketch opens the library's outbound TCP client
- * (pc_client) to a TwinCAT router on TCP 48898 and runs a small ADS sequence against it:
+ * (protocore_client) to a TwinCAT router on TCP 48898 and runs a small ADS sequence against it:
  *
  *   ReadDeviceInfo  -> the runtime name + version
  *   ReadState       -> RUN / STOP / CONFIG
@@ -20,10 +20,10 @@
  * an AMS route on the PLC back to this device's AMSNetId (below) or the router will
  * reject the connection - see the README.
  *
- * Build flag (platformio.ini):  build_flags = -DPC_ENABLE_ADS=1
+ * Build flag (platformio.ini):  build_flags = -DPROTOCORE_ENABLE_ADS=1
  */
 
-#define PC_ENABLE_ADS 1
+#define PROTOCORE_ENABLE_ADS 1
 
 #include "protocore.h" // library entry header (also sets the src/ include root)
 #include "network_drivers/physical/physical.h"
@@ -124,9 +124,9 @@ static void run_client(const char *host)
 
     // 1) ReadDeviceInfo.
     r = next_request();
-    n = exchange(cid, pc_ads_build_read_device_info(c_req, sizeof(c_req), &r));
+    n = exchange(cid, protocore_ads_build_read_device_info(c_req, sizeof(c_req), &r));
     AdsDeviceInfo di;
-    if (n && pc_ads_parse_ams_header(c_resp, n, &h) && pc_ads_parse_read_device_info(h.data, h.data_len, &di) &&
+    if (n && protocore_ads_parse_ams_header(c_resp, n, &h) && protocore_ads_parse_read_device_info(h.data, h.data_len, &di) &&
         di.result == 0)
     {
         Serial.printf("[ads] device: %s v%u.%u build %u\n", di.device_name, di.version_major, di.version_minor,
@@ -139,16 +139,16 @@ static void run_client(const char *host)
 
     // 2) ReadState.
     r = next_request();
-    n = exchange(cid, pc_ads_build_read_state(c_req, sizeof(c_req), &r));
+    n = exchange(cid, protocore_ads_build_read_state(c_req, sizeof(c_req), &r));
     AdsReadStateResult st;
-    if (n && pc_ads_parse_ams_header(c_resp, n, &h) && pc_ads_parse_read_state(h.data, h.data_len, &st) &&
+    if (n && protocore_ads_parse_ams_header(c_resp, n, &h) && protocore_ads_parse_read_state(h.data, h.data_len, &st) &&
         st.result == 0)
     {
-        const char *name = st.pc_ads_state == (uint16_t)AdsState::run      ? "RUN"
-                           : st.pc_ads_state == (uint16_t)AdsState::stop   ? "STOP"
-                           : st.pc_ads_state == (uint16_t)AdsState::config ? "CONFIG"
+        const char *name = st.protocore_ads_state == (uint16_t)AdsState::run      ? "RUN"
+                           : st.protocore_ads_state == (uint16_t)AdsState::stop   ? "STOP"
+                           : st.protocore_ads_state == (uint16_t)AdsState::config ? "CONFIG"
                                                                            : "?";
-        Serial.printf("[ads] state: %s (%u)\n", name, st.pc_ads_state);
+        Serial.printf("[ads] state: %s (%u)\n", name, st.protocore_ads_state);
     }
     else
     {
@@ -157,10 +157,10 @@ static void run_client(const char *host)
 
     // 3) ReadWrite: resolve the symbol name to a handle.
     r = next_request();
-    n = exchange(cid, pc_ads_build_read_write(c_req, sizeof(c_req), &r, ADS_IGRP_SYM_HND_BY_NAME, 0, 4,
+    n = exchange(cid, protocore_ads_build_read_write(c_req, sizeof(c_req), &r, ADS_IGRP_SYM_HND_BY_NAME, 0, 4,
                                               (const uint8_t *)SYMBOL, (uint32_t)strlen(SYMBOL)));
     AdsReadResult rr;
-    if (!n || !pc_ads_parse_ams_header(c_resp, n, &h) || !pc_ads_parse_read(h.data, h.data_len, &rr) ||
+    if (!n || !protocore_ads_parse_ams_header(c_resp, n, &h) || !protocore_ads_parse_read(h.data, h.data_len, &rr) ||
         rr.result != 0 || rr.len < 4)
     {
         Serial.printf("[ads] handle for '%s' failed\n", SYMBOL);
@@ -172,8 +172,8 @@ static void run_client(const char *host)
 
     // 4) Read the symbol value (INT32) by handle.
     r = next_request();
-    n = exchange(cid, pc_ads_build_read(c_req, sizeof(c_req), &r, ADS_IGRP_SYM_VAL_BY_HANDLE, handle, 4));
-    if (n && pc_ads_parse_ams_header(c_resp, n, &h) && pc_ads_parse_read(h.data, h.data_len, &rr) && rr.result == 0 &&
+    n = exchange(cid, protocore_ads_build_read(c_req, sizeof(c_req), &r, ADS_IGRP_SYM_VAL_BY_HANDLE, handle, 4));
+    if (n && protocore_ads_parse_ams_header(c_resp, n, &h) && protocore_ads_parse_read(h.data, h.data_len, &rr) && rr.result == 0 &&
         rr.len >= 4)
     {
         int32_t val = (int32_t)((uint32_t)rr.data[0] | ((uint32_t)rr.data[1] << 8) | ((uint32_t)rr.data[2] << 16) |
@@ -188,7 +188,7 @@ static void run_client(const char *host)
     // 5) Release the handle (Write the 4-octet handle to index group 0xF006).
     r = next_request();
     uint8_t hb[4] = {(uint8_t)handle, (uint8_t)(handle >> 8), (uint8_t)(handle >> 16), (uint8_t)(handle >> 24)};
-    exchange(cid, pc_ads_build_write(c_req, sizeof(c_req), &r, ADS_IGRP_SYM_RELEASE_HANDLE, 0, hb, 4));
+    exchange(cid, protocore_ads_build_write(c_req, sizeof(c_req), &r, ADS_IGRP_SYM_RELEASE_HANDLE, 0, hb, 4));
 
     Tcp.client->close(cid);
     Serial.println("[ads] done");

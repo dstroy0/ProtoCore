@@ -3,14 +3,14 @@
 // A panic prints a Guru Meditation dump to a console nobody is watching, then reboots. ESP-IDF also
 // writes a core dump to a flash partition, and that survives. So on the next boot this device can:
 //
-//   1. notice a dump is waiting        pc_exc_coredump_present()
-//   2. say what crashed                pc_exc_coredump_summary()  -> the same ExcInfo/JSON the
+//   1. notice a dump is waiting        protocore_exc_coredump_present()
+//   2. say what crashed                protocore_exc_coredump_summary()  -> the same ExcInfo/JSON the
 //                                      live /exception panel already renders
-//   3. put it somewhere durable        pc_exc_coredump_save(SD, "/crash.bin")  (a filesystem)
-//                                      pc_ftp_store(...)                       (off the device)
-//   4. clear the partition             pc_exc_coredump_erase()    so the next crash has room
+//   3. put it somewhere durable        protocore_exc_coredump_save(SD, "/crash.bin")  (a filesystem)
+//                                      protocore_ftp_store(...)                       (off the device)
+//   4. clear the partition             protocore_exc_coredump_erase()    so the next crash has room
 //
-// Step 3 shows both offload transports. They share one seam: pc_exc_coredump_read() pulls the
+// Step 3 shows both offload transports. They share one seam: protocore_exc_coredump_read() pulls the
 // image in chunks, so the FTP uploader streams straight out of flash and neither owner knows about
 // the other. A dump that only ever reaches the device's own SD card is still lost with the device;
 // FTP is what gets it to a machine you can run esp-coredump on.
@@ -27,7 +27,7 @@
 // GET /crash      -> triggers a null dereference, so you can watch the whole cycle
 //
 // Requires a `coredump` partition (the default Arduino partition tables have one).
-// Build flags (whole build): PC_ENABLE_EXC_DECODER=1 PC_ENABLE_FTP=1
+// Build flags (whole build): PROTOCORE_ENABLE_EXC_DECODER=1 PROTOCORE_ENABLE_FTP=1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -51,7 +51,7 @@ static char g_last_json[512] = "{}"; // the recovered crash, rendered once at bo
 static bool g_saved = false;
 static bool g_uploaded = false;
 
-// Send the library's own log lines to the console. Build with -DPC_LOG_LEVEL=PC_LOG_LEVEL_DEBUG
+// Send the library's own log lines to the console. Build with -DPROTOCORE_LOG_LEVEL=PROTOCORE_LOG_LEVEL_DEBUG
 // to watch the FTP conversation step by step; at the default level these lines are not in the
 // binary at all, so leaving the sink registered costs nothing.
 static void serial_log_sink(uint8_t level, const char *line)
@@ -65,20 +65,20 @@ static void serial_log_sink(uint8_t level, const char *line)
 static size_t coredump_source(void *ctx, size_t offset, uint8_t *buf, size_t cap)
 {
     (void)ctx;
-    return pc_exc_coredump_read(offset, buf, cap) ? cap : 0;
+    return protocore_exc_coredump_read(offset, buf, cap) ? cap : 0;
 }
 
 static void exception_handler(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
-    send_text(slot_id, 200, PC_MIME_JSON, g_last_json);
+    send_text(slot_id, 200, PROTOCORE_MIME_JSON, g_last_json);
 }
 
 // Deliberately crash so the cycle can be observed end to end.
 static void crash_handler(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
-    send_text(slot_id, 200, PC_MIME_TEXT_PLAIN, "crashing now - reconnect after the reboot\n");
+    send_text(slot_id, 200, PROTOCORE_MIME_TEXT_PLAIN, "crashing now - reconnect after the reboot\n");
     delay(200); // let the response flush before the panic
     volatile int *p = (int *)0;
     *p = 42;
@@ -88,7 +88,7 @@ void setup()
 {
     Serial.begin(115200);
     delay(300);
-    pc_log_set_sink(serial_log_sink);
+    protocore_log_set_sink(serial_log_sink);
 
     bool sd = SD_MMC.begin();
     Serial.printf("SD: %s\n", sd ? "mounted" : "FAILED");
@@ -96,21 +96,21 @@ void setup()
     // Recover anything the previous boot left behind, before doing anything else. Decoding and the
     // SD copy need no network, so they happen first - a dump survives even if the radio never joins.
     ExcCoreDump img;
-    bool have_dump = pc_exc_coredump_present(&img);
+    bool have_dump = protocore_exc_coredump_present(&img);
     if (have_dump)
     {
         Serial.printf("core dump present: %u bytes @ 0x%08X\n", (unsigned)img.size, (unsigned)img.addr);
 
         ExcInfo info;
-        if (pc_exc_coredump_summary(&info))
+        if (protocore_exc_coredump_summary(&info))
         {
-            pc_exc_json(&info, g_last_json, sizeof(g_last_json));
+            protocore_exc_json(&info, g_last_json, sizeof(g_last_json));
             Serial.printf("crash: %s\n", g_last_json);
         }
 
         if (sd)
         {
-            g_saved = pc_exc_coredump_save(SD_MMC, DUMP_PATH);
+            g_saved = protocore_exc_coredump_save(SD_MMC, DUMP_PATH);
             Serial.printf("SD copy: %s\n", g_saved ? DUMP_PATH : "FAILED");
         }
     }
@@ -129,7 +129,7 @@ void setup()
     if (have_dump && FTP_HOST[0] != '\0')
     {
         FtpTarget target = {FTP_HOST, FTP_PORT, FTP_USER, FTP_PASS};
-        g_uploaded = pc_ftp_store(&target, DUMP_PATH, img.size, coredump_source, nullptr);
+        g_uploaded = protocore_ftp_store(&target, DUMP_PATH, img.size, coredump_source, nullptr);
         Serial.printf("FTP offload: %s\n", g_uploaded ? "ok" : "FAILED");
     }
 
@@ -137,7 +137,7 @@ void setup()
     // stays in flash so the next boot can try again rather than losing the crash for good.
     if (have_dump && (g_saved || g_uploaded))
     {
-        pc_exc_coredump_erase();
+        protocore_exc_coredump_erase();
         Serial.println("core-dump partition erased");
     }
     else if (have_dump)

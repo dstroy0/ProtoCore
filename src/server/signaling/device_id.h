@@ -3,13 +3,13 @@
 
 /**
  * @file device_id.h
- * @brief Stable device UUID derived from the chip MAC (PC_ENABLE_DEVICE_ID).
+ * @brief Stable device UUID derived from the chip MAC (PROTOCORE_ENABLE_DEVICE_ID).
  *
- * pc_uuid_from_mac() computes a deterministic RFC 4122 version-5 UUID from a
+ * protocore_uuid_from_mac() computes a deterministic RFC 4122 version-5 UUID from a
  * 6-byte MAC: namespace = the RFC 4122 DNS namespace, name = the lowercase MAC
  * hex, hashed with the library's SHA-1. The same MAC always yields the same
  * UUID, so it is a stable device identity (mDNS hostname, MQTT client ID, ...)
- * that needs no storage. pc_device_uuid() reads the ESP32 factory MAC and
+ * that needs no storage. protocore_device_uuid() reads the ESP32 factory MAC and
  * formats it (ESP32 only). Pure, host-testable core; no heap.
  *
  * @author  Douglas Quigg (dstroy0)
@@ -21,32 +21,32 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_DEVICE_ID
+#if PROTOCORE_ENABLE_DEVICE_ID
 
 /** @brief Length of a formatted UUID string including the null terminator. */
-#define PC_UUID_STR_LEN 37
+#define PROTOCORE_UUID_STR_LEN 37
 
 /**
  * @brief Format a deterministic RFC 4122 v5 UUID from a 6-byte MAC.
  *
  * @param mac  six MAC bytes.
- * @param out  buffer of at least PC_UUID_STR_LEN bytes; receives
+ * @param out  buffer of at least PROTOCORE_UUID_STR_LEN bytes; receives
  *             "xxxxxxxx-xxxx-5xxx-yxxx-xxxxxxxxxxxx" (lowercase, null-terminated).
  */
-void pc_uuid_from_mac(const uint8_t mac[6], char out[PC_UUID_STR_LEN]);
+void protocore_uuid_from_mac(const uint8_t mac[6], char out[PROTOCORE_UUID_STR_LEN]);
 
-#if PC_HAS_VENDOR_MAC
+#if PROTOCORE_HAS_VENDOR_MAC
 /**
  * @brief Format this device's UUID from its ESP32 factory (WiFi STA) MAC.
- * @param out  buffer of at least PC_UUID_STR_LEN bytes.
+ * @param out  buffer of at least PROTOCORE_UUID_STR_LEN bytes.
  */
-void pc_device_uuid(char out[PC_UUID_STR_LEN]);
+void protocore_device_uuid(char out[PROTOCORE_UUID_STR_LEN]);
 #endif
 
-#endif // PC_ENABLE_DEVICE_ID
+#endif // PROTOCORE_ENABLE_DEVICE_ID
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_DEVICE_ID_H

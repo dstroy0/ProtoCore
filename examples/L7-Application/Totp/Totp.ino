@@ -3,7 +3,7 @@
 
 /**
  * @file Totp.ino
- * @brief TOTP two-factor auth (RFC 6238) (PC_ENABLE_TOTP).
+ * @brief TOTP two-factor auth (RFC 6238) (PROTOCORE_ENABLE_TOTP).
  *
  * Decodes a base32 shared secret (the kind Google Authenticator / Authy import),
  * computes the current 6-digit code, and verifies a submitted one within a +/-1
@@ -15,11 +15,11 @@
  * (NTP); this example uses a fixed RTC base so it is self-contained.
  *
  * NOTE: enable it for the whole build. In platformio.ini:
- *     build_flags = -DPC_ENABLE_TOTP=1
+ *     build_flags = -DPROTOCORE_ENABLE_TOTP=1
  * (Arduino IDE: it is already set for you in the build_opt.h beside this sketch, so it builds as-is.)
  */
 
-#define PC_ENABLE_TOTP 1
+#define PROTOCORE_ENABLE_TOTP 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -52,11 +52,11 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    int n = pc_base32_decode(SECRET_B32, g_secret, sizeof(g_secret));
+    int n = protocore_base32_decode(SECRET_B32, g_secret, sizeof(g_secret));
     g_secret_len = (n > 0) ? (size_t)n : 0;
 
     on_http("/totp", HTTP_GET, [](uint8_t id, HttpReq *) {
-        uint32_t code = pc_totp(g_secret, g_secret_len, now_unix(), 30, 6);
+        uint32_t code = protocore_totp(g_secret, g_secret_len, now_unix(), 30, 6);
         char b[16];
         snprintf(b, sizeof(b), "%06u", code); // zero-pad to 6 digits
         send_text(id, 200, "text/plain", b);
@@ -64,7 +64,7 @@ void setup()
     on_http("/totp/verify", HTTP_GET, [](uint8_t id, HttpReq *req) {
         const char *code_s = http_get_query(req, "code");
         uint32_t code = code_s ? (uint32_t)strtoul(code_s, nullptr, 10) : 0;
-        bool ok = pc_totp_verify(g_secret, g_secret_len, now_unix(), code, 30, 6, 1);
+        bool ok = protocore_totp_verify(g_secret, g_secret_len, now_unix(), code, 30, 6, 1);
         send_text(id, 200, "application/json", ok ? "{\"ok\":true}" : "{\"ok\":false}");
     });
     begin_http(80, NULL);

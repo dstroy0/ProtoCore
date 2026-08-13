@@ -15,12 +15,12 @@
 
 #include "services/machine_tool/robotics/robotics.h"
 
-#if PC_ENABLE_ROBOTICS
+#if PROTOCORE_ENABLE_ROBOTICS
 
 // strnlen (string.h is allowed; the no-stdlib rule is about stdlib.h/malloc)
 
 // ---------------------------------------------------------------------------
-// Node identifiers (namespace PC_ROBOTICS_NS). Objects end in 0; their variables count up from it.
+// Node identifiers (namespace PROTOCORE_ROBOTICS_NS). Objects end in 0; their variables count up from it.
 // ---------------------------------------------------------------------------
 static enum : uint32_t // NOSONAR(cpp:S3642): anonymous table of OPC-UA node ids used as bare uint32_t (arithmetic +
                        // wire compares); enum class would force a cast at every use
@@ -75,19 +75,19 @@ static enum : uint32_t // NOSONAR(cpp:S3642): anonymous table of OPC-UA sub-ids 
 
 // All robotics model state, owned by one instance (internal linkage): the bound system pointer the
 // resolvers read from, plus the per-axis BrowseName strings (filled at bind, referenced by Browse).
-// Null until pc_robotics_bind(); a Read/Browse before binding is a clean miss (BadNodeIdUnknown), so
+// Null until protocore_robotics_bind(); a Read/Browse before binding is a clean miss (BadNodeIdUnknown), so
 // the server never dereferences a null model.
 typedef struct
 {
     const RoboticsMotionDeviceSystem *mds;
-    char axis_name[PC_ROBOTICS_AXES][12]; // "Axis_" + up to 2 digits + null
+    char axis_name[PROTOCORE_ROBOTICS_AXES][12]; // "Axis_" + up to 2 digits + null
 } RoboticsCtx;
 static RoboticsCtx s_robotics = {NULL, {{0}}};
 
-// Fill "Axis_k" (k = 1..PC_ROBOTICS_AXES) into the owned name table (no snprintf: a tiny fixed render).
+// Fill "Axis_k" (k = 1..PROTOCORE_ROBOTICS_AXES) into the owned name table (no snprintf: a tiny fixed render).
 static void build_axis_names(RoboticsCtx *c)
 {
-    for (uint32_t k = 0; k < PC_ROBOTICS_AXES; k++)
+    for (uint32_t k = 0; k < PROTOCORE_ROBOTICS_AXES; k++)
     {
         char *b = c->axis_name[k];
         uint32_t idx = k + 1; // 1-based BrowseName index
@@ -164,9 +164,9 @@ static int32_t add_ref(OpcUaReference *out, int32_t n, uint32_t max, uint32_t ta
     OpcUaReference *r = &out[n];
     r->ref_type_id = organizes ? OPCUA_REFTYPE_ORGANIZES : OPCUA_REFTYPE_HAS_COMPONENT;
     r->is_forward = PROTO_TRUE;
-    r->target_ns = PC_ROBOTICS_NS;
+    r->target_ns = PROTOCORE_ROBOTICS_NS;
     r->target_id = target_id;
-    r->browse_name_ns = PC_ROBOTICS_NS;
+    r->browse_name_ns = PROTOCORE_ROBOTICS_NS;
     r->browse_name = name;
     r->display_name = name;
     r->node_class = node_class;
@@ -190,16 +190,16 @@ static int32_t add_var(OpcUaReference *out, int32_t n, uint32_t max, uint32_t id
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
-void pc_robotics_bind(const RoboticsMotionDeviceSystem *mds)
+void protocore_robotics_bind(const RoboticsMotionDeviceSystem *mds)
 {
     s_robotics.mds = mds;
     build_axis_names(&s_robotics);
 }
 
-proto_bool pc_robotics_read(uint16_t ns, uint32_t id, uint32_t attribute, OpcUaVariant *out)
+proto_bool protocore_robotics_read(uint16_t ns, uint32_t id, uint32_t attribute, OpcUaVariant *out)
 {
     const RoboticsMotionDeviceSystem *mds = s_robotics.mds;
-    if (!mds || ns != PC_ROBOTICS_NS || attribute != OPCUA_ATTR_VALUE)
+    if (!mds || ns != PROTOCORE_ROBOTICS_NS || attribute != OPCUA_ATTR_VALUE)
     {
         return PROTO_FALSE;
     }
@@ -296,7 +296,7 @@ proto_bool pc_robotics_read(uint16_t ns, uint32_t id, uint32_t attribute, OpcUaV
     }
 }
 
-int32_t pc_robotics_browse(uint16_t ns, uint32_t id, OpcUaReference *out, uint32_t max)
+int32_t protocore_robotics_browse(uint16_t ns, uint32_t id, OpcUaReference *out, uint32_t max)
 {
     const RoboticsMotionDeviceSystem *mds = s_robotics.mds;
     if (!mds)
@@ -310,7 +310,7 @@ int32_t pc_robotics_browse(uint16_t ns, uint32_t id, OpcUaReference *out, uint32
         return add_folder_member(out, 0, max, MOTIONDEVICESYSTEM, mds->name ? mds->name : "MotionDeviceSystem");
     }
 
-    if (ns != PC_ROBOTICS_NS)
+    if (ns != PROTOCORE_ROBOTICS_NS)
     {
         return -1;
     }
@@ -354,7 +354,7 @@ int32_t pc_robotics_browse(uint16_t ns, uint32_t id, OpcUaReference *out, uint32
         n = add_var(out, n, max, MDP_SPEEDOVERRIDE, "SpeedOverride");
         return n;
     case MD_AXES:
-        for (uint32_t a = 1; a <= mds->device.axis_count && a <= PC_ROBOTICS_AXES; a++)
+        for (uint32_t a = 1; a <= mds->device.axis_count && a <= PROTOCORE_ROBOTICS_AXES; a++)
         {
             n = add_folder_member(out, n, max, AXIS_BASE + a * 10, s_robotics.axis_name[a - 1]);
         }
@@ -387,11 +387,11 @@ int32_t pc_robotics_browse(uint16_t ns, uint32_t id, OpcUaReference *out, uint32
     }
 }
 
-void pc_robotics_install(const RoboticsMotionDeviceSystem *mds)
+void protocore_robotics_install(const RoboticsMotionDeviceSystem *mds)
 {
-    pc_robotics_bind(mds);
-    pc_opcua_set_read_handler(pc_robotics_read);
-    pc_opcua_set_browse_handler(pc_robotics_browse);
+    protocore_robotics_bind(mds);
+    protocore_opcua_set_read_handler(protocore_robotics_read);
+    protocore_opcua_set_browse_handler(protocore_robotics_browse);
 }
 
-#endif // PC_ENABLE_ROBOTICS
+#endif // PROTOCORE_ENABLE_ROBOTICS

@@ -9,7 +9,7 @@
 #include "msgpack.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_MSGPACK
+#if PROTOCORE_ENABLE_MSGPACK
 
 #include "mmgr/bytes.h"
 
@@ -222,67 +222,67 @@ static pc_codec_type pc_msgpack_peek(pc_cspan *r)
 {
     if (r->err || r->pos >= r->len)
     {
-        return PC_CODEC_INVALID;
+        return PROTOCORE_CODEC_INVALID;
     }
     uint8_t b = r->buf[r->pos];
     if (b <= 0x7f)
     {
-        return PC_CODEC_UINT; // positive fixint
+        return PROTOCORE_CODEC_UINT; // positive fixint
     }
     if (b >= 0xe0)
     {
-        return PC_CODEC_INT; // negative fixint
+        return PROTOCORE_CODEC_INT; // negative fixint
     }
     // b is now in [0x80, 0xdf]; each fix* range's lower bound is already
     // established by the preceding checks, so test only the ascending upper bound.
     if (b <= 0x8f)
     {
-        return PC_CODEC_MAP; // fixmap   (0x80-0x8f)
+        return PROTOCORE_CODEC_MAP; // fixmap   (0x80-0x8f)
     }
     if (b <= 0x9f)
     {
-        return PC_CODEC_ARRAY; // fixarray (0x90-0x9f)
+        return PROTOCORE_CODEC_ARRAY; // fixarray (0x90-0x9f)
     }
     if (b <= 0xbf)
     {
-        return PC_CODEC_STR; // fixstr   (0xa0-0xbf)
+        return PROTOCORE_CODEC_STR; // fixstr   (0xa0-0xbf)
     }
     switch (b)
     {
     case 0xc0:
-        return PC_CODEC_NULL;
+        return PROTOCORE_CODEC_NULL;
     case 0xc2:
     case 0xc3:
-        return PC_CODEC_BOOL;
+        return PROTOCORE_CODEC_BOOL;
     case 0xc4:
     case 0xc5:
     case 0xc6:
-        return PC_CODEC_BYTES;
+        return PROTOCORE_CODEC_BYTES;
     case 0xca:
     case 0xcb:
-        return PC_CODEC_FLOAT;
+        return PROTOCORE_CODEC_FLOAT;
     case 0xcc:
     case 0xcd:
     case 0xce:
     case 0xcf:
-        return PC_CODEC_UINT;
+        return PROTOCORE_CODEC_UINT;
     case 0xd0:
     case 0xd1:
     case 0xd2:
     case 0xd3:
-        return PC_CODEC_INT;
+        return PROTOCORE_CODEC_INT;
     case 0xd9:
     case 0xda:
     case 0xdb:
-        return PC_CODEC_STR;
+        return PROTOCORE_CODEC_STR;
     case 0xdc:
     case 0xdd:
-        return PC_CODEC_ARRAY;
+        return PROTOCORE_CODEC_ARRAY;
     case 0xde:
     case 0xdf:
-        return PC_CODEC_MAP;
+        return PROTOCORE_CODEC_MAP;
     default:
-        return PC_CODEC_INVALID; // 0xc1, ext (0xc7-0xc9, 0xd4-0xd8)
+        return PROTOCORE_CODEC_INVALID; // 0xc1, ext (0xc7-0xc9, 0xd4-0xd8)
     }
 }
 
@@ -622,4 +622,4 @@ const pc_codec MsgPack = {
     pc_msgpack_read_float,
 };
 
-#endif // PC_ENABLE_MSGPACK
+#endif // PROTOCORE_ENABLE_MSGPACK

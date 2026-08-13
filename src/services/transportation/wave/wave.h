@@ -3,7 +3,7 @@
 
 /**
  * @file wave.h
- * @brief IEEE 1609 WAVE (WSMP + 1609.2 security envelope) codec (PC_ENABLE_WAVE).
+ * @brief IEEE 1609 WAVE (WSMP + 1609.2 security envelope) codec (PROTOCORE_ENABLE_WAVE).
  *
  * IEEE 1609 (WAVE - Wireless Access in Vehicular Environments) is the radio stack that carries the
  * J2735 V2X messages (services/transportation/j2735). This codec provides the two framing layers below J2735:
@@ -23,9 +23,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_WAVE
+#if PROTOCORE_ENABLE_WAVE
 
 // WSMP / 1609.2 versions + content types + PSIDs: wire values, so integer constants in a struct.
 #define WSMP_VERSION 0x03         ///< WSMP version (in the low nibble of byte 0).
@@ -43,10 +43,10 @@ PROTO_BEGIN_DECLS
  * The PSID length is signalled by the top bits of the first octet: 1 octet if < 0x80, 2 if < 0x4000,
  * 3 if < 0x200000, 4 otherwise. @return octets written (1..4), or 0 if it will not fit.
  */
-size_t pc_wave_encode_psid(uint32_t psid, uint8_t *out, size_t cap);
+size_t protocore_wave_encode_psid(uint32_t psid, uint8_t *out, size_t cap);
 
 /** @brief Decode a P-encoded PSID. @return octets consumed (1..4), or 0 if malformed; sets @p psid. */
-size_t pc_wave_decode_psid(const uint8_t *in, size_t len, uint32_t *psid);
+size_t protocore_wave_decode_psid(const uint8_t *in, size_t len, uint32_t *psid);
 
 /**
  * @brief Build a WSMP data frame: WSMP header (version + PSID + a 1-byte length) then the payload.
@@ -55,7 +55,7 @@ size_t pc_wave_decode_psid(const uint8_t *in, size_t len, uint32_t *psid);
  * @param payload_len 0..255.
  * @return the frame length, or 0 on overflow / bad args.
  */
-size_t pc_wsmp_build(uint32_t psid, const uint8_t *payload, size_t payload_len, uint8_t *out, size_t cap);
+size_t protocore_wsmp_build(uint32_t psid, const uint8_t *payload, size_t payload_len, uint8_t *out, size_t cap);
 
 /** @brief A parsed WSMP frame (payload points into the input). */
 typedef struct
@@ -66,18 +66,18 @@ typedef struct
 } WsmpFrame;
 
 /** @brief Parse a WSMP data frame. @return true if well-formed. */
-proto_bool pc_wsmp_parse(const uint8_t *frame, size_t len, WsmpFrame *out);
+proto_bool protocore_wsmp_parse(const uint8_t *frame, size_t len, WsmpFrame *out);
 
 /**
  * @brief Build a 1609.2 secured-message envelope header + payload: [version][contentType][payload...].
  * @param content_type WAVE_16092_UNSECURED / WAVE_16092_SIGNED.
  * @return the length written (2 + payload_len), or 0 on overflow.
  */
-size_t pc_wave_1609dot2_wrap(uint8_t content_type, const uint8_t *payload, size_t payload_len, uint8_t *out,
-                             size_t cap);
+size_t protocore_wave_1609dot2_wrap(uint8_t content_type, const uint8_t *payload, size_t payload_len, uint8_t *out,
+                                    size_t cap);
 
-#endif // PC_ENABLE_WAVE
+#endif // PROTOCORE_ENABLE_WAVE
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_WAVE_H

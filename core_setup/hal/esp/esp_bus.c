@@ -3,7 +3,7 @@
 
 /**
  * @file esp_bus.c
- * @brief SPI and I2C backends for the platform bus seam (pc_platform.h), on the IDF drivers.
+ * @brief SPI and I2C backends for the platform bus seam (protocore_platform.h), on the IDF drivers.
  *
  * UART is a set of direct aliases in the header because its IDF calls take no handle. SPI and I2C
  * do: a bus is installed once and transfers run against it, so the state lives here rather than in
@@ -22,25 +22,25 @@
 
 #include "protocore_config.h"
 
-#if PC_VENDOR_ESP
+#if PROTOCORE_VENDOR_ESP
 
 #include "driver/i2c.h"
 #include "driver/spi_master.h"
 #include "esp_rom_sys.h" // esp_rom_delay_us: the bit-banged recovery clock
 
-#ifndef PC_SPI_MAX_TXN
-#define PC_SPI_MAX_TXN 4096 // bytes per transfer the DMA descriptor is sized for
+#ifndef PROTOCORE_SPI_MAX_TXN
+#define PROTOCORE_SPI_MAX_TXN 4096 // bytes per transfer the DMA descriptor is sized for
 #endif
 
 /** @brief SPI controllers this seam carries. */
-#define PC_SPI_HOSTS 2
+#define PROTOCORE_SPI_HOSTS 2
 
 /** @brief I2C controllers this seam carries. */
-#define PC_I2C_BUSES 2
+#define PROTOCORE_I2C_BUSES 2
 
 // Commands one link holds: start, address (two bytes at 10 bits), a write span, a repeated start,
 // the second address, a read span, a final NACKed byte, stop. Twelve covers the longest shape.
-#define PC_I2C_LINK_CMDS 12
+#define PROTOCORE_I2C_LINK_CMDS 12
 
 // The SPI bus + device handles, owned by one instance (internal linkage): whether the host is up,
 // the pins it was brought up on, and the device the transactions run against. One named owner.
@@ -65,13 +65,13 @@ typedef struct
     int sda;
     int scl;
     uint32_t hz;
-    uint8_t link[I2C_LINK_RECOMMENDED_SIZE(PC_I2C_LINK_CMDS)];
+    uint8_t link[I2C_LINK_RECOMMENDED_SIZE(PROTOCORE_I2C_LINK_CMDS)];
 } EspI2cBus;
 
 typedef struct
 {
-    EspSpiHost spi[PC_SPI_HOSTS];
-    EspI2cBus i2c[PC_I2C_BUSES];
+    EspSpiHost spi[PROTOCORE_SPI_HOSTS];
+    EspI2cBus i2c[PROTOCORE_I2C_BUSES];
 } EspBusCtx;
 static EspBusCtx s_bus;
 
@@ -91,9 +91,9 @@ static spi_host_device_t spi_host_id(uint8_t host)
 #endif
 }
 
-int pc_platform_spi_begin(uint8_t host, int mosi, int miso, int sclk, int quadwp, int quadhd)
+int protocore_platform_spi_begin(uint8_t host, int mosi, int miso, int sclk, int quadwp, int quadhd)
 {
-    if (host >= PC_SPI_HOSTS)
+    if (host >= PROTOCORE_SPI_HOSTS)
     {
         return 0;
     }
@@ -110,7 +110,7 @@ int pc_platform_spi_begin(uint8_t host, int mosi, int miso, int sclk, int quadwp
     b.sclk_io_num = sclk;
     b.quadwp_io_num = quadwp;
     b.quadhd_io_num = quadhd;
-    b.max_transfer_sz = PC_SPI_MAX_TXN;
+    b.max_transfer_sz = PROTOCORE_SPI_MAX_TXN;
     if (spi_bus_initialize(spi_host_id(host), &b, SPI_DMA_CH_AUTO) != ESP_OK)
     {
         return 0;
@@ -141,7 +141,7 @@ static proto_bool spi_device_for(EspSpiHost *h, uint8_t host, uint32_t hz, uint8
     d.mode = mode & 0x3u;
     d.spics_io_num = -1;
     d.queue_size = 1;
-    d.flags = (bit_order == PC_SPI_LSBFIRST) ? (SPI_DEVICE_BIT_LSBFIRST | SPI_DEVICE_TXBIT_LSBFIRST) : 0;
+    d.flags = (bit_order == PROTOCORE_SPI_LSBFIRST) ? (SPI_DEVICE_BIT_LSBFIRST | SPI_DEVICE_TXBIT_LSBFIRST) : 0;
     if (half_duplex)
     {
         d.flags |= SPI_DEVICE_HALFDUPLEX;
@@ -158,10 +158,10 @@ static proto_bool spi_device_for(EspSpiHost *h, uint8_t host, uint32_t hz, uint8
     return PROTO_TRUE;
 }
 
-int pc_platform_spi_txn(uint8_t host, uint32_t hz, uint8_t bit_order, uint8_t mode, const uint8_t *tx, uint8_t *rx,
-                        uint32_t len)
+int protocore_platform_spi_txn(uint8_t host, uint32_t hz, uint8_t bit_order, uint8_t mode, const uint8_t *tx,
+                               uint8_t *rx, uint32_t len)
 {
-    if (host >= PC_SPI_HOSTS)
+    if (host >= PROTOCORE_SPI_HOSTS)
     {
         return 0;
     }
@@ -177,11 +177,11 @@ int pc_platform_spi_txn(uint8_t host, uint32_t hz, uint8_t bit_order, uint8_t mo
     return spi_device_polling_transmit(h->dev, &t) == ESP_OK ? 1 : 0;
 }
 
-int pc_platform_spi_txn_ext(uint8_t host, uint32_t hz, uint8_t bit_order, uint8_t mode, uint16_t cmd, uint8_t cmd_bits,
-                            uint32_t addr, uint8_t addr_bits, uint8_t dummy_bits, uint8_t lanes, const uint8_t *tx,
-                            uint8_t *rx, uint32_t len)
+int protocore_platform_spi_txn_ext(uint8_t host, uint32_t hz, uint8_t bit_order, uint8_t mode, uint16_t cmd,
+                                   uint8_t cmd_bits, uint32_t addr, uint8_t addr_bits, uint8_t dummy_bits,
+                                   uint8_t lanes, const uint8_t *tx, uint8_t *rx, uint32_t len)
 {
-    if (host >= PC_SPI_HOSTS)
+    if (host >= PROTOCORE_SPI_HOSTS)
     {
         return 0;
     }
@@ -189,18 +189,18 @@ int pc_platform_spi_txn_ext(uint8_t host, uint32_t hz, uint8_t bit_order, uint8_
     // Two and four lanes share one set of pins between the directions, so the device runs half
     // duplex. A dummy phase also has no meaning to a full-duplex device, which clocks both ways at
     // once, so it selects half duplex as well.
-    proto_bool half = (lanes > PC_SPI_LANES_1 || dummy_bits > 0) ? PROTO_TRUE : PROTO_FALSE;
+    proto_bool half = (lanes > PROTOCORE_SPI_LANES_1 || dummy_bits > 0) ? PROTO_TRUE : PROTO_FALSE;
     if (!h->up || !spi_device_for(h, host, hz, bit_order, mode, half))
     {
         return 0;
     }
     spi_transaction_ext_t t = {0};
     t.base.flags = SPI_TRANS_VARIABLE_CMD | SPI_TRANS_VARIABLE_ADDR | SPI_TRANS_VARIABLE_DUMMY;
-    if (lanes == PC_SPI_LANES_2)
+    if (lanes == PROTOCORE_SPI_LANES_2)
     {
         t.base.flags |= SPI_TRANS_MODE_DIO;
     }
-    else if (lanes == PC_SPI_LANES_4)
+    else if (lanes == PROTOCORE_SPI_LANES_4)
     {
         t.base.flags |= SPI_TRANS_MODE_QIO;
     }
@@ -239,9 +239,9 @@ static i2c_port_t i2c_port_id(uint8_t bus)
 // prefix byte holding bits 9:8 followed by the low eight for a 10-bit one.
 static esp_err_t i2c_addr_w(i2c_cmd_handle_t cmd, uint16_t addr)
 {
-    if ((addr & PC_I2C_ADDR_10BIT) != 0)
+    if ((addr & PROTOCORE_I2C_ADDR_10BIT) != 0)
     {
-        uint16_t a = (uint16_t)(addr & PC_I2C_ADDR_MASK);
+        uint16_t a = (uint16_t)(addr & PROTOCORE_I2C_ADDR_MASK);
         esp_err_t e = i2c_master_write_byte(cmd, (uint8_t)(0xF0u | ((a >> 7) & 0x06u)), PROTO_TRUE);
         if (e != ESP_OK)
         {
@@ -256,17 +256,17 @@ static esp_err_t i2c_addr_w(i2c_cmd_handle_t cmd, uint16_t addr)
 // the low eight having been sent in the write phase that precedes it.
 static esp_err_t i2c_addr_r(i2c_cmd_handle_t cmd, uint16_t addr)
 {
-    if ((addr & PC_I2C_ADDR_10BIT) != 0)
+    if ((addr & PROTOCORE_I2C_ADDR_10BIT) != 0)
     {
-        uint16_t a = (uint16_t)(addr & PC_I2C_ADDR_MASK);
+        uint16_t a = (uint16_t)(addr & PROTOCORE_I2C_ADDR_MASK);
         return i2c_master_write_byte(cmd, (uint8_t)(0xF0u | ((a >> 7) & 0x06u) | 1u), PROTO_TRUE);
     }
     return i2c_master_write_byte(cmd, (uint8_t)(((addr & 0x7Fu) << 1) | 1u), PROTO_TRUE);
 }
 
-int pc_platform_i2c_begin(uint8_t bus, int sda, int scl, uint32_t hz)
+int protocore_platform_i2c_begin(uint8_t bus, int sda, int scl, uint32_t hz)
 {
-    if (bus >= PC_I2C_BUSES)
+    if (bus >= PROTOCORE_I2C_BUSES)
     {
         return 0;
     }
@@ -302,9 +302,9 @@ int pc_platform_i2c_begin(uint8_t bus, int sda, int scl, uint32_t hz)
     return 1;
 }
 
-int pc_platform_i2c_set_clock(uint8_t bus, uint32_t hz)
+int protocore_platform_i2c_set_clock(uint8_t bus, uint32_t hz)
 {
-    if (bus >= PC_I2C_BUSES || hz == 0)
+    if (bus >= PROTOCORE_I2C_BUSES || hz == 0)
     {
         return 0;
     }
@@ -332,9 +332,9 @@ int pc_platform_i2c_set_clock(uint8_t bus, uint32_t hz)
     return 1;
 }
 
-int pc_platform_i2c_write(uint8_t bus, uint16_t addr, const uint8_t *buf, uint32_t len, uint32_t ms)
+int protocore_platform_i2c_write(uint8_t bus, uint16_t addr, const uint8_t *buf, uint32_t len, uint32_t ms)
 {
-    if (bus >= PC_I2C_BUSES || buf == NULL || len == 0)
+    if (bus >= PROTOCORE_I2C_BUSES || buf == NULL || len == 0)
     {
         return 0;
     }
@@ -369,9 +369,9 @@ int pc_platform_i2c_write(uint8_t bus, uint16_t addr, const uint8_t *buf, uint32
     return e == ESP_OK ? 1 : 0;
 }
 
-int pc_platform_i2c_read(uint8_t bus, uint16_t addr, uint8_t *buf, uint32_t len, uint32_t ms)
+int protocore_platform_i2c_read(uint8_t bus, uint16_t addr, uint8_t *buf, uint32_t len, uint32_t ms)
 {
-    if (bus >= PC_I2C_BUSES || buf == NULL || len == 0)
+    if (bus >= PROTOCORE_I2C_BUSES || buf == NULL || len == 0)
     {
         return 0;
     }
@@ -388,7 +388,7 @@ int pc_platform_i2c_read(uint8_t bus, uint16_t addr, uint8_t *buf, uint32_t len,
     esp_err_t e = i2c_master_start(cmd);
     // A 10-bit read names the full address in the write direction first, then turns the bus around
     // and repeats the prefix byte with the read bit set.
-    if (e == ESP_OK && (addr & PC_I2C_ADDR_10BIT) != 0)
+    if (e == ESP_OK && (addr & PROTOCORE_I2C_ADDR_10BIT) != 0)
     {
         e = i2c_addr_w(cmd, addr);
         if (e == ESP_OK)
@@ -416,10 +416,10 @@ int pc_platform_i2c_read(uint8_t bus, uint16_t addr, uint8_t *buf, uint32_t len,
     return e == ESP_OK ? 1 : 0;
 }
 
-int pc_platform_i2c_write_read(uint8_t bus, uint16_t addr, const uint8_t *w, uint32_t wlen, uint8_t *r, uint32_t rlen,
-                               uint32_t ms)
+int protocore_platform_i2c_write_read(uint8_t bus, uint16_t addr, const uint8_t *w, uint32_t wlen, uint8_t *r,
+                                      uint32_t rlen, uint32_t ms)
 {
-    if (bus >= PC_I2C_BUSES || w == NULL || wlen == 0 || r == NULL || rlen == 0)
+    if (bus >= PROTOCORE_I2C_BUSES || w == NULL || wlen == 0 || r == NULL || rlen == 0)
     {
         return 0;
     }
@@ -468,9 +468,9 @@ int pc_platform_i2c_write_read(uint8_t bus, uint16_t addr, const uint8_t *w, uin
     return e == ESP_OK ? 1 : 0;
 }
 
-int pc_platform_i2c_probe(uint8_t bus, uint16_t addr, uint32_t ms)
+int protocore_platform_i2c_probe(uint8_t bus, uint16_t addr, uint32_t ms)
 {
-    if (bus >= PC_I2C_BUSES)
+    if (bus >= PROTOCORE_I2C_BUSES)
     {
         return 0;
     }
@@ -502,15 +502,15 @@ int pc_platform_i2c_probe(uint8_t bus, uint16_t addr, uint32_t ms)
 }
 
 // Half a bit period at 100 kHz, the rate the recovery sequence is clocked at.
-#define PC_I2C_RECOVER_HALF_US 5u
+#define PROTOCORE_I2C_RECOVER_HALF_US 5u
 
 // Clocks the bus can be pulsed before the device is declared stuck: a device mid-byte releases
 // SDA within one byte plus its ACK.
-#define PC_I2C_RECOVER_CLOCKS 9u
+#define PROTOCORE_I2C_RECOVER_CLOCKS 9u
 
-int pc_platform_i2c_recover(uint8_t bus, int sda, int scl)
+int protocore_platform_i2c_recover(uint8_t bus, int sda, int scl)
 {
-    if (bus >= PC_I2C_BUSES || sda < 0 || scl < 0)
+    if (bus >= PROTOCORE_I2C_BUSES || sda < 0 || scl < 0)
     {
         return 0;
     }
@@ -523,27 +523,27 @@ int pc_platform_i2c_recover(uint8_t bus, int sda, int scl)
     }
     // Drive SCL and let SDA float: a device holding the line low is the only thing pulling it down,
     // so it reads high the moment that device lets go.
-    pc_platform_gpio_mode((uint8_t)scl, PC_GPIO_OUT);
-    pc_platform_gpio_mode((uint8_t)sda, PC_GPIO_IN_PULLUP);
-    pc_platform_gpio_write((uint8_t)scl, PC_GPIO_HIGH);
-    esp_rom_delay_us(PC_I2C_RECOVER_HALF_US);
-    for (uint32_t i = 0; i < PC_I2C_RECOVER_CLOCKS && pc_platform_gpio_read((uint8_t)sda) == 0; i++)
+    protocore_platform_gpio_mode((uint8_t)scl, PROTOCORE_GPIO_OUT);
+    protocore_platform_gpio_mode((uint8_t)sda, PROTOCORE_GPIO_IN_PULLUP);
+    protocore_platform_gpio_write((uint8_t)scl, PROTOCORE_GPIO_HIGH);
+    esp_rom_delay_us(PROTOCORE_I2C_RECOVER_HALF_US);
+    for (uint32_t i = 0; i < PROTOCORE_I2C_RECOVER_CLOCKS && protocore_platform_gpio_read((uint8_t)sda) == 0; i++)
     {
-        pc_platform_gpio_write((uint8_t)scl, PC_GPIO_LOW);
-        esp_rom_delay_us(PC_I2C_RECOVER_HALF_US);
-        pc_platform_gpio_write((uint8_t)scl, PC_GPIO_HIGH);
-        esp_rom_delay_us(PC_I2C_RECOVER_HALF_US);
+        protocore_platform_gpio_write((uint8_t)scl, PROTOCORE_GPIO_LOW);
+        esp_rom_delay_us(PROTOCORE_I2C_RECOVER_HALF_US);
+        protocore_platform_gpio_write((uint8_t)scl, PROTOCORE_GPIO_HIGH);
+        esp_rom_delay_us(PROTOCORE_I2C_RECOVER_HALF_US);
     }
     // A stop is SDA rising while SCL is high, which returns every device to its idle state.
-    pc_platform_gpio_mode((uint8_t)sda, PC_GPIO_OUT);
-    pc_platform_gpio_write((uint8_t)sda, PC_GPIO_LOW);
-    esp_rom_delay_us(PC_I2C_RECOVER_HALF_US);
-    pc_platform_gpio_write((uint8_t)scl, PC_GPIO_HIGH);
-    esp_rom_delay_us(PC_I2C_RECOVER_HALF_US);
-    pc_platform_gpio_mode((uint8_t)sda, PC_GPIO_IN_PULLUP);
-    esp_rom_delay_us(PC_I2C_RECOVER_HALF_US);
-    proto_bool freed = pc_platform_gpio_read((uint8_t)sda) != 0;
-    return (pc_platform_i2c_begin(bus, sda, scl, hz) != 0 && freed) ? 1 : 0;
+    protocore_platform_gpio_mode((uint8_t)sda, PROTOCORE_GPIO_OUT);
+    protocore_platform_gpio_write((uint8_t)sda, PROTOCORE_GPIO_LOW);
+    esp_rom_delay_us(PROTOCORE_I2C_RECOVER_HALF_US);
+    protocore_platform_gpio_write((uint8_t)scl, PROTOCORE_GPIO_HIGH);
+    esp_rom_delay_us(PROTOCORE_I2C_RECOVER_HALF_US);
+    protocore_platform_gpio_mode((uint8_t)sda, PROTOCORE_GPIO_IN_PULLUP);
+    esp_rom_delay_us(PROTOCORE_I2C_RECOVER_HALF_US);
+    proto_bool freed = protocore_platform_gpio_read((uint8_t)sda) != 0;
+    return (protocore_platform_i2c_begin(bus, sda, scl, hz) != 0 && freed) ? 1 : 0;
 }
 
-#endif // PC_VENDOR_ESP
+#endif // PROTOCORE_VENDOR_ESP

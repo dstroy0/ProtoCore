@@ -9,9 +9,9 @@
 #include "services/fieldbus/cotp/cotp.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_COTP
+#if PROTOCORE_ENABLE_COTP
 
-size_t pc_tpkt_build(uint8_t *buf, size_t cap, const uint8_t *payload, size_t payload_len)
+size_t protocore_tpkt_build(uint8_t *buf, size_t cap, const uint8_t *payload, size_t payload_len)
 {
     if (!buf || (payload_len && !payload))
     {
@@ -33,7 +33,7 @@ size_t pc_tpkt_build(uint8_t *buf, size_t cap, const uint8_t *payload, size_t pa
     return total;
 }
 
-proto_bool pc_tpkt_parse(const uint8_t *buf, size_t len, const uint8_t **payload, size_t *payload_len, size_t *consumed)
+proto_bool protocore_tpkt_parse(const uint8_t *buf, size_t len, const uint8_t **payload, size_t *payload_len, size_t *consumed)
 {
     if (!buf || len < TPKT_HEADER_SIZE)
     {
@@ -63,7 +63,7 @@ proto_bool pc_tpkt_parse(const uint8_t *buf, size_t len, const uint8_t **payload
     return PROTO_TRUE;
 }
 
-size_t pc_cotp_build_dt(uint8_t *buf, size_t cap, const uint8_t *data, size_t data_len, proto_bool eot)
+size_t protocore_cotp_build_dt(uint8_t *buf, size_t cap, const uint8_t *data, size_t data_len, proto_bool eot)
 {
     if (!buf || (data_len && !data))
     {
@@ -84,7 +84,7 @@ size_t pc_cotp_build_dt(uint8_t *buf, size_t cap, const uint8_t *data, size_t da
     return total;
 }
 
-size_t pc_cotp_build_cr(uint8_t *buf, size_t cap, uint16_t src_ref, uint8_t tpdu_size_code, const uint8_t *extra_params,
+size_t protocore_cotp_build_cr(uint8_t *buf, size_t cap, uint16_t src_ref, uint8_t tpdu_size_code, const uint8_t *extra_params,
                         size_t extra_len)
 {
     if (!buf || (extra_len && !extra_params))
@@ -118,7 +118,7 @@ size_t pc_cotp_build_cr(uint8_t *buf, size_t cap, uint16_t src_ref, uint8_t tpdu
     return p;
 }
 
-size_t pc_cotp_build_cc(uint8_t *buf, size_t cap, uint16_t dst_ref, uint16_t src_ref, uint8_t tpdu_size_code,
+size_t protocore_cotp_build_cc(uint8_t *buf, size_t cap, uint16_t dst_ref, uint16_t src_ref, uint8_t tpdu_size_code,
                         const uint8_t *extra_params, size_t extra_len)
 {
     if (!buf || (extra_len && !extra_params))
@@ -152,7 +152,7 @@ size_t pc_cotp_build_cc(uint8_t *buf, size_t cap, uint16_t dst_ref, uint16_t src
     return p;
 }
 
-proto_bool pc_cotp_parse(const uint8_t *buf, size_t len, CotpHeader *out)
+proto_bool protocore_cotp_parse(const uint8_t *buf, size_t len, CotpHeader *out)
 {
     if (!buf || !out || len < 2)
     {
@@ -197,4 +197,4 @@ proto_bool pc_cotp_parse(const uint8_t *buf, size_t len, CotpHeader *out)
     return PROTO_TRUE;
 }
 
-#endif // PC_ENABLE_COTP
+#endif // PROTOCORE_ENABLE_COTP

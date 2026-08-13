@@ -18,44 +18,44 @@
 // library's own rate. One named owner, unreachable from any other translation unit.
 typedef struct
 {
-    pc_clock_fn ms_fn;
+    protocore_clock_fn ms_fn;
     uint32_t ms_div;
-    pc_clock_fn us_fn;
+    protocore_clock_fn us_fn;
     uint32_t us_div;
 } ClockCtx;
 static ClockCtx s_clock = {NULL, 1u, NULL, 1u};
 
-void pc_set_clock(pc_clock_fn fn, uint32_t ticks_per_second)
+void protocore_set_clock(protocore_clock_fn fn, uint32_t ticks_per_second)
 {
     s_clock.ms_fn = fn;
     s_clock.ms_div = (ticks_per_second >= 1000u) ? (ticks_per_second / 1000u) : 1u;
 }
 
-uint32_t pc_millis(void)
+uint32_t protocore_millis(void)
 {
     if (s_clock.ms_fn)
     {
         return s_clock.ms_fn() / s_clock.ms_div;
     }
-    return pc_platform_millis();
+    return protocore_platform_millis();
 }
 
-void pc_set_micros_clock(pc_clock_fn fn, uint32_t ticks_per_second)
+void protocore_set_micros_clock(protocore_clock_fn fn, uint32_t ticks_per_second)
 {
     s_clock.us_fn = fn;
     s_clock.us_div = (ticks_per_second >= 1000000u) ? (ticks_per_second / 1000000u) : 1u;
 }
 
-uint32_t pc_micros(void)
+uint32_t protocore_micros(void)
 {
     if (s_clock.us_fn)
     {
         return s_clock.us_fn() / s_clock.us_div;
     }
-    return pc_platform_micros();
+    return protocore_platform_micros();
 }
 
-uint32_t pc_cycles(void)
+uint32_t protocore_cycles(void)
 {
-    return pc_platform_cycles();
+    return protocore_platform_cycles();
 }

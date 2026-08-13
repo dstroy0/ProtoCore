@@ -3,7 +3,7 @@
 
 /**
  * @file cip.h
- * @brief CIP (Common Industrial Protocol) message codec (PC_ENABLE_CIP) - zero-heap
+ * @brief CIP (Common Industrial Protocol) message codec (PROTOCORE_ENABLE_CIP) - zero-heap
  *        request builder + response parser for the message that rides inside an EtherNet/IP
  *        Unconnected Data item (services/fieldbus/enip). Together they form a working CIP read path.
  *
@@ -18,7 +18,7 @@
  * GeneralStatus(1)  AdditionalStatusSize(1, words)  [additional status]  ServiceData`.
  *
  * Service codes + the logical-segment encoding are verified against the Wireshark CIP
- * dissector. This codec is the CIP message; wrap it with `pc_eip_build_send_rr_data`.
+ * dissector. This codec is the CIP message; wrap it with `protocore_eip_build_send_rr_data`.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -29,9 +29,9 @@
 
 #include "protocore_config.h"
 
-PROTO_BEGIN_DECLS
+PROTOCORE_BEGIN_DECLS
 
-#if PC_ENABLE_CIP
+#if PROTOCORE_ENABLE_CIP
 
 // Common service codes.
 #define CIP_SC_GET_ATTR_ALL 0x01
@@ -56,31 +56,31 @@ PROTO_BEGIN_DECLS
  * @param with_attribute include the attribute segment.
  * @return EPATH length in octets (always even / word-aligned), or 0 on overflow.
  */
-size_t pc_cip_build_epath(uint8_t *buf, size_t cap, uint16_t class_id, uint16_t instance_id, uint16_t attribute_id,
-                          proto_bool with_attribute);
+size_t protocore_cip_build_epath(uint8_t *buf, size_t cap, uint16_t class_id, uint16_t instance_id,
+                                 uint16_t attribute_id, proto_bool with_attribute);
 
 /** @brief Build a CIP request: service + path size (words) + EPATH + service data. */
-size_t pc_cip_build_request(uint8_t *buf, size_t cap, uint8_t service, const uint8_t *epath, size_t epath_len,
-                            const uint8_t *data, size_t data_len);
+size_t protocore_cip_build_request(uint8_t *buf, size_t cap, uint8_t service, const uint8_t *epath, size_t epath_len,
+                                   const uint8_t *data, size_t data_len);
 
 /** @brief Build a Get_Attribute_Single request for class/instance/attribute. */
-size_t pc_cip_build_get_attr_single(uint8_t *buf, size_t cap, uint16_t class_id, uint16_t instance_id,
-                                    uint16_t attribute_id);
+size_t protocore_cip_build_get_attr_single(uint8_t *buf, size_t cap, uint16_t class_id, uint16_t instance_id,
+                                           uint16_t attribute_id);
 
 /**
  * @brief Build a Get_Attributes_All request for class/instance: service 0x01 over a class/instance EPATH with
  *        no attribute segment and no service data - reads every attribute of the object at once (e.g. the
  *        whole Identity object). @return the request length, or 0 on overflow.
  */
-size_t pc_cip_build_get_attr_all(uint8_t *buf, size_t cap, uint16_t class_id, uint16_t instance_id);
+size_t protocore_cip_build_get_attr_all(uint8_t *buf, size_t cap, uint16_t class_id, uint16_t instance_id);
 
 /**
  * @brief Build a Set_Attribute_Single request for class/instance/attribute carrying @p value_len octets of
  *        attribute data (the value to write).
  * @return the request length, or 0 on a null value with a nonzero length, or an overflow.
  */
-size_t pc_cip_build_set_attr_single(uint8_t *buf, size_t cap, uint16_t class_id, uint16_t instance_id,
-                                    uint16_t attribute_id, const uint8_t *value, size_t value_len);
+size_t protocore_cip_build_set_attr_single(uint8_t *buf, size_t cap, uint16_t class_id, uint16_t instance_id,
+                                           uint16_t attribute_id, const uint8_t *value, size_t value_len);
 
 /** @brief A parsed CIP response. @ref data points INTO the source buffer. */
 typedef struct
@@ -92,10 +92,10 @@ typedef struct
 } CipResponse;
 
 /** @brief Parse a CIP response (service + status + additional status + data). */
-proto_bool pc_cip_parse_response(const uint8_t *buf, size_t len, CipResponse *out);
+proto_bool protocore_cip_parse_response(const uint8_t *buf, size_t len, CipResponse *out);
 
-#endif // PC_ENABLE_CIP
+#endif // PROTOCORE_ENABLE_CIP
 
-PROTO_END_DECLS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_CIP_H

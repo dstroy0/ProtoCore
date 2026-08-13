@@ -8,22 +8,22 @@
 
 #include "network_drivers/application/mdns_adaptive/mdns_adaptive.h"
 
-#if PC_ENABLE_MDNS_ADAPTIVE
+#if PROTOCORE_ENABLE_MDNS_ADAPTIVE
 
-#if PC_HAS_VENDOR_WIFI && PC_ENABLE_MDNS && PC_ENABLE_PROMISC
-#include "network_drivers/application/mdns_service/mdns_service.h" // pc_mdns_txt
-#include "network_drivers/physical/physical.h"                     // pc_net_channel
-#include "server/clock/clock.h"                                    // pc_millis
-#include "services/radio/promisc/promisc.h"                        // pc_promisc_*
+#if PROTOCORE_HAS_VENDOR_WIFI && PROTOCORE_ENABLE_MDNS && PROTOCORE_ENABLE_PROMISC
+#include "network_drivers/application/mdns_service/mdns_service.h" // protocore_mdns_txt
+#include "network_drivers/physical/physical.h"                     // protocore_net_channel
+#include "server/clock/clock.h"                                    // protocore_millis
+#include "services/radio/promisc/promisc.h"                        // protocore_promisc_*
 #endif
-uint32_t pc_mdns_refresh_interval(uint32_t ttl_s)
+uint32_t protocore_mdns_refresh_interval(uint32_t ttl_s)
 {
     // Half the TTL, in ms; guard the *1000 against overflow.
     uint64_t half_ms = (uint64_t)ttl_s * 1000 / 2;
     return half_ms > 0xFFFFFFFFu ? 0xFFFFFFFFu : (uint32_t)half_ms;
 }
 
-void pc_mdns_beacon_init(MdnsBeacon *b, uint32_t base_ms, uint32_t max_ms, uint16_t hi_thresh)
+void protocore_mdns_beacon_init(MdnsBeacon *b, uint32_t base_ms, uint32_t max_ms, uint16_t hi_thresh)
 {
     if (!b)
     {
@@ -35,7 +35,7 @@ void pc_mdns_beacon_init(MdnsBeacon *b, uint32_t base_ms, uint32_t max_ms, uint1
     b->hi_thresh = hi_thresh ? hi_thresh : 1;
 }
 
-uint32_t pc_mdns_beacon_adapt(MdnsBeacon *b, uint16_t contention)
+uint32_t protocore_mdns_beacon_adapt(MdnsBeacon *b, uint16_t contention)
 {
     if (!b)
     {
@@ -62,7 +62,7 @@ uint32_t pc_mdns_beacon_adapt(MdnsBeacon *b, uint16_t contention)
     return b->cur_ms;
 }
 
-proto_bool pc_mdns_beacon_due(const MdnsBeacon *b, uint32_t last_ms, uint32_t now_ms)
+proto_bool protocore_mdns_beacon_due(const MdnsBeacon *b, uint32_t last_ms, uint32_t now_ms)
 {
     if (!b)
     {
@@ -72,7 +72,7 @@ proto_bool pc_mdns_beacon_due(const MdnsBeacon *b, uint32_t last_ms, uint32_t no
     return elapsed >= b->cur_ms;
 }
 
-proto_bool pc_mdns_beacon_presleep_due(const MdnsBeacon *b, uint32_t last_ms, uint32_t now_ms, uint32_t sleep_ms)
+proto_bool protocore_mdns_beacon_presleep_due(const MdnsBeacon *b, uint32_t last_ms, uint32_t now_ms, uint32_t sleep_ms)
 {
     if (!b)
     {
@@ -88,7 +88,7 @@ proto_bool pc_mdns_beacon_presleep_due(const MdnsBeacon *b, uint32_t last_ms, ui
 // Contention sampling
 // ---------------------------------------------------------------------------
 
-void pc_mdns_contention_init(MdnsContentionWindow *w, uint32_t window_ms, uint32_t frames_now, uint32_t now_ms)
+void protocore_mdns_contention_init(MdnsContentionWindow *w, uint32_t window_ms, uint32_t frames_now, uint32_t now_ms)
 {
     if (!w)
     {
@@ -99,7 +99,8 @@ void pc_mdns_contention_init(MdnsContentionWindow *w, uint32_t window_ms, uint32
     w->window_ms = window_ms ? window_ms : 1000;
 }
 
-proto_bool pc_mdns_contention_sample(MdnsContentionWindow *w, uint32_t frames_now, uint32_t now_ms, uint16_t *out)
+proto_bool protocore_mdns_contention_sample(MdnsContentionWindow *w, uint32_t frames_now, uint32_t now_ms,
+                                            uint16_t *out)
 {
     if (!w || !out)
     {
@@ -123,7 +124,7 @@ proto_bool pc_mdns_contention_sample(MdnsContentionWindow *w, uint32_t frames_no
 // Device binding
 // ---------------------------------------------------------------------------
 
-#if PC_HAS_VENDOR_WIFI && PC_ENABLE_MDNS && PC_ENABLE_PROMISC
+#if PROTOCORE_HAS_VENDOR_WIFI && PROTOCORE_ENABLE_MDNS && PROTOCORE_ENABLE_PROMISC
 
 /** @brief Owned state for the live adaptive announcer. */
 typedef struct
@@ -151,7 +152,7 @@ static void adaptive_sink(const uint8_t *frame, uint16_t len, int8_t rssi, uint8
     s_ad.frames++;
 }
 
-proto_bool pc_mdns_adaptive_begin(const MdnsAdaptiveCfg *cfg)
+proto_bool protocore_mdns_adaptive_begin(const MdnsAdaptiveCfg *cfg)
 {
     if (!cfg || s_ad.running)
     {
@@ -164,8 +165,8 @@ proto_bool pc_mdns_adaptive_begin(const MdnsAdaptiveCfg *cfg)
     }
 
     s_ad.cfg = *cfg;
-    uint32_t now = pc_millis();
-    uint32_t base = pc_mdns_refresh_interval(cfg->ttl_s);
+    uint32_t now = protocore_millis();
+    uint32_t base = protocore_mdns_refresh_interval(cfg->ttl_s);
 
     // Never let the backoff push the refresh past the TTL: a cache evicts the record at its TTL, so
     // announcing slower than that makes the device silently undiscoverable - the opposite of the
@@ -174,78 +175,78 @@ proto_bool pc_mdns_adaptive_begin(const MdnsAdaptiveCfg *cfg)
     uint64_t ttl_ms = (uint64_t)cfg->ttl_s * 1000;
     uint32_t safe_ceiling = (uint32_t)(ttl_ms - ttl_ms / 8 > 0xFFFFFFFFu ? 0xFFFFFFFFu : ttl_ms - ttl_ms / 8);
     uint32_t ceiling = cfg->max_interval_ms < safe_ceiling ? cfg->max_interval_ms : safe_ceiling;
-    pc_mdns_beacon_init(&s_ad.beacon, base, ceiling, cfg->hi_contention);
+    protocore_mdns_beacon_init(&s_ad.beacon, base, ceiling, cfg->hi_contention);
     s_ad.frames = 0;
-    pc_mdns_contention_init(&s_ad.window, cfg->window_ms, 0, now);
+    protocore_mdns_contention_init(&s_ad.window, cfg->window_ms, 0, now);
     s_ad.last_announce_ms = now;
     s_ad.last_contention = 0;
     s_ad.announces = 0;
     s_ad.channel = ch;
 
     // Pin capture to the station's OWN channel and never hop, or the association drops.
-    s_ad.running = pc_promisc_begin(ch, adaptive_sink);
+    s_ad.running = protocore_promisc_begin(ch, adaptive_sink);
     return s_ad.running;
 }
 
-void pc_mdns_adaptive_tick(void)
+void protocore_mdns_adaptive_tick(void)
 {
     if (!s_ad.running)
     {
         return;
     }
-    uint32_t now = pc_millis();
+    uint32_t now = protocore_millis();
 
     // Follow the station if it roamed to another channel, so capture stays on the live link.
     uint8_t ch = Physical.wifi->channel();
     if (ch != 0 && ch != s_ad.channel)
     {
-        pc_promisc_set_channel(ch);
+        protocore_promisc_set_channel(ch);
         s_ad.channel = ch;
     }
 
     // Close a contention window if one elapsed, and let it move the interval.
     uint16_t c;
-    if (pc_mdns_contention_sample(&s_ad.window, s_ad.frames, now, &c))
+    if (protocore_mdns_contention_sample(&s_ad.window, s_ad.frames, now, &c))
     {
         s_ad.last_contention = c;
-        pc_mdns_beacon_adapt(&s_ad.beacon, c);
+        protocore_mdns_beacon_adapt(&s_ad.beacon, c);
     }
 
     // Re-announce when the (adaptive) interval has elapsed. Re-applying the TXT at its current value
     // re-announces on every PCB with no goodbye - a refresh, not an evict.
-    if (pc_mdns_beacon_due(&s_ad.beacon, s_ad.last_announce_ms, now))
+    if (protocore_mdns_beacon_due(&s_ad.beacon, s_ad.last_announce_ms, now))
     {
-        pc_mdns_txt(s_ad.cfg.key, s_ad.cfg.value);
+        protocore_mdns_txt(s_ad.cfg.key, s_ad.cfg.value);
         s_ad.last_announce_ms = now;
         s_ad.announces++;
     }
 }
 
-void pc_mdns_adaptive_end(void)
+void protocore_mdns_adaptive_end(void)
 {
     if (!s_ad.running)
     {
         return;
     }
-    pc_promisc_end();
+    protocore_promisc_end();
     s_ad.running = PROTO_FALSE;
 }
 
-uint32_t pc_mdns_adaptive_interval_ms(void)
+uint32_t protocore_mdns_adaptive_interval_ms(void)
 {
     return s_ad.beacon.cur_ms;
 }
 
-uint16_t pc_mdns_adaptive_contention(void)
+uint16_t protocore_mdns_adaptive_contention(void)
 {
     return s_ad.last_contention;
 }
 
-uint32_t pc_mdns_adaptive_announces(void)
+uint32_t protocore_mdns_adaptive_announces(void)
 {
     return s_ad.announces;
 }
 
-#endif // PC_HAS_VENDOR_WIFI && PC_ENABLE_MDNS && PC_ENABLE_PROMISC
+#endif // PROTOCORE_HAS_VENDOR_WIFI && PROTOCORE_ENABLE_MDNS && PROTOCORE_ENABLE_PROMISC
 
-#endif // PC_ENABLE_MDNS_ADAPTIVE
+#endif // PROTOCORE_ENABLE_MDNS_ADAPTIVE

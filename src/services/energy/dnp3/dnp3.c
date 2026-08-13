@@ -7,29 +7,29 @@
  */
 
 #include "services/energy/dnp3/dnp3.h"
-#include "mmgr/endian.h" // pc_rd16le / pc_rd32le
+#include "mmgr/endian.h" // protocore_rd16le / protocore_rd32le
 #include "mmgr/protomem.h"
-#include "shared_primitives/crc.h" // PC_CRC16_DNP
+#include "shared_primitives/crc.h" // PROTOCORE_CRC16_DNP
 
-#if PC_ENABLE_DNP3
+#if PROTOCORE_ENABLE_DNP3
 
-uint16_t pc_dnp3_crc(const uint8_t *data, size_t len)
+uint16_t protocore_dnp3_crc(const uint8_t *data, size_t len)
 {
     // The DNP3 link-layer block check: reflected poly 0xA6BC = reflect(0x3D65), init 0, final XOR 0xFFFF -
     // cataloged as CRC-16/DNP.
-    return (uint16_t)pc_crc(&PC_CRC16_DNP, data, len);
+    return (uint16_t)protocore_crc(&PROTOCORE_CRC16_DNP, data, len);
 }
 
 // Append a CRC over [data, data+n) low octet first.
 static size_t put_crc(uint8_t *p, const uint8_t *data, size_t n)
 {
-    uint16_t crc = pc_dnp3_crc(data, n);
+    uint16_t crc = protocore_dnp3_crc(data, n);
     p[0] = (uint8_t)(crc & 0xFF);
     p[1] = (uint8_t)(crc >> 8);
     return DNP3_CRC_LEN;
 }
 
-size_t pc_dnp3_build_frame(uint8_t *buf, size_t cap, uint8_t control, uint16_t dest, uint16_t src,
+size_t protocore_dnp3_build_frame(uint8_t *buf, size_t cap, uint8_t control, uint16_t dest, uint16_t src,
                            const uint8_t *user_data, size_t user_data_len)
 {
     if (!buf || (user_data_len && !user_data) || user_data_len > DNP3_MAX_USER_DATA)
@@ -70,7 +70,7 @@ size_t pc_dnp3_build_frame(uint8_t *buf, size_t cap, uint8_t control, uint16_t d
     return total;
 }
 
-proto_bool pc_dnp3_parse_frame(const uint8_t *buf, size_t len, Dnp3Frame *out, uint8_t *out_user, size_t out_cap,
+proto_bool protocore_dnp3_parse_frame(const uint8_t *buf, size_t len, Dnp3Frame *out, uint8_t *out_user, size_t out_cap,
                                size_t *out_user_len)
 {
     if (!buf || !out || len < DNP3_HEADER_BLOCK_LEN)
@@ -98,7 +98,7 @@ proto_bool pc_dnp3_parse_frame(const uint8_t *buf, size_t len, Dnp3Frame *out, u
         // DNP3_MAX_USER_DATA given length's uint8_t domain plus the line-76 lower-bound guard
     }
 
-    uint16_t hcrc = pc_dnp3_crc(buf, DNP3_HEADER_LEN);
+    uint16_t hcrc = protocore_dnp3_crc(buf, DNP3_HEADER_LEN);
     if ((uint16_t)(buf[DNP3_HEADER_LEN] | (buf[DNP3_HEADER_LEN + 1] << 8)) != hcrc)
     {
         return PROTO_FALSE; // header CRC mismatch
@@ -125,7 +125,7 @@ proto_bool pc_dnp3_parse_frame(const uint8_t *buf, size_t len, Dnp3Frame *out, u
         {
             blk = DNP3_BLOCK_LEN;
         }
-        uint16_t bcrc = pc_dnp3_crc(buf + p, blk);
+        uint16_t bcrc = protocore_dnp3_crc(buf + p, blk);
         if ((uint16_t)(buf[p + blk] | (buf[p + blk + 1] << 8)) != bcrc)
         {
             return PROTO_FALSE; // block CRC mismatch
@@ -148,12 +148,12 @@ proto_bool pc_dnp3_parse_frame(const uint8_t *buf, size_t len, Dnp3Frame *out, u
 
 // --- transport function (IEEE 1815 §8.2) ---
 
-uint8_t pc_dnp3_transport_header(proto_bool fir, proto_bool fin, uint8_t seq)
+uint8_t protocore_dnp3_transport_header(proto_bool fir, proto_bool fin, uint8_t seq)
 {
     return (uint8_t)((fin ? DNP3_TR_FIN : 0u) | (fir ? DNP3_TR_FIR : 0u) | (seq & DNP3_TR_SEQ_MASK));
 }
 
-size_t pc_dnp3_build_transport_segment(uint8_t *out, size_t cap, proto_bool fir, proto_bool fin, uint8_t seq,
+size_t protocore_dnp3_build_transport_segment(uint8_t *out, size_t cap, proto_bool fir, proto_bool fin, uint8_t seq,
                                        const uint8_t *app_data, size_t app_len)
 {
     if (!out || (app_len && !app_data) || app_len > DNP3_TR_MAX_APP)
@@ -164,7 +164,7 @@ size_t pc_dnp3_build_transport_segment(uint8_t *out, size_t cap, proto_bool fir,
     {
         return 0;
     }
-    out[0] = pc_dnp3_transport_header(fir, fin, seq);
+    out[0] = protocore_dnp3_transport_header(fir, fin, seq);
     if (app_len)
     {
         mem.cpy(out + 1, app_data, app_len);
@@ -172,7 +172,7 @@ size_t pc_dnp3_build_transport_segment(uint8_t *out, size_t cap, proto_bool fir,
     return 1 + app_len;
 }
 
-void pc_dnp3_transport_rx_init(Dnp3TransportRx *r, uint8_t *buf, size_t cap)
+void protocore_dnp3_transport_rx_init(Dnp3TransportRx *r, uint8_t *buf, size_t cap)
 {
     if (!r)
     {
@@ -186,7 +186,7 @@ void pc_dnp3_transport_rx_init(Dnp3TransportRx *r, uint8_t *buf, size_t cap)
     r->done = PROTO_FALSE;
 }
 
-int pc_dnp3_transport_feed(Dnp3TransportRx *r, const uint8_t *user, size_t user_len)
+int protocore_dnp3_transport_feed(Dnp3TransportRx *r, const uint8_t *user, size_t user_len)
 {
     if (!r || !r->buf || !user || user_len < 1)
     {
@@ -239,13 +239,13 @@ int pc_dnp3_transport_feed(Dnp3TransportRx *r, const uint8_t *user, size_t user_
     return DNP3_TR_PROGRESS;
 }
 
-uint8_t pc_dnp3_app_control(proto_bool fir, proto_bool fin, proto_bool con, proto_bool uns, uint8_t seq)
+uint8_t protocore_dnp3_app_control(proto_bool fir, proto_bool fin, proto_bool con, proto_bool uns, uint8_t seq)
 {
     return (uint8_t)((fir ? DNP3_AC_FIR : 0u) | (fin ? DNP3_AC_FIN : 0u) | (con ? DNP3_AC_CON : 0u) |
                      (uns ? DNP3_AC_UNS : 0u) | (seq & DNP3_AC_SEQ_MASK));
 }
 
-size_t pc_dnp3_build_app_request(uint8_t *out, size_t cap, uint8_t app_control, uint8_t fc, const uint8_t *objects,
+size_t protocore_dnp3_build_app_request(uint8_t *out, size_t cap, uint8_t app_control, uint8_t fc, const uint8_t *objects,
                                  size_t obj_len)
 {
     if (!out || (obj_len && !objects) || cap < 2 + obj_len)
@@ -261,7 +261,7 @@ size_t pc_dnp3_build_app_request(uint8_t *out, size_t cap, uint8_t app_control, 
     return 2 + obj_len;
 }
 
-size_t pc_dnp3_build_app_response(uint8_t *out, size_t cap, uint8_t app_control, uint8_t fc, uint16_t iin,
+size_t protocore_dnp3_build_app_response(uint8_t *out, size_t cap, uint8_t app_control, uint8_t fc, uint16_t iin,
                                   const uint8_t *objects, size_t obj_len)
 {
     if (!out || (obj_len && !objects) || cap < 4 + obj_len)
@@ -279,7 +279,7 @@ size_t pc_dnp3_build_app_response(uint8_t *out, size_t cap, uint8_t app_control,
     return 4 + obj_len;
 }
 
-proto_bool pc_dnp3_parse_app_header(const uint8_t *frag, size_t len, Dnp3AppHeader *out)
+proto_bool protocore_dnp3_parse_app_header(const uint8_t *frag, size_t len, Dnp3AppHeader *out)
 {
     if (!frag || !out || len < 2)
     {
@@ -307,7 +307,7 @@ proto_bool pc_dnp3_parse_app_header(const uint8_t *frag, size_t len, Dnp3AppHead
     return PROTO_TRUE;
 }
 
-size_t pc_dnp3_build_object_header_range(uint8_t *buf, size_t cap, uint8_t group, uint8_t variation, uint32_t start,
+size_t protocore_dnp3_build_object_header_range(uint8_t *buf, size_t cap, uint8_t group, uint8_t variation, uint32_t start,
                                          uint32_t stop)
 {
     if (!buf || stop < start)
@@ -346,18 +346,18 @@ size_t pc_dnp3_build_object_header_range(uint8_t *buf, size_t cap, uint8_t group
     }
     else if (range_code == DNP3_RANGE_START_STOP_2)
     {
-        pc_wr16le(buf + 3, (uint16_t)start);
-        pc_wr16le(buf + 5, (uint16_t)stop);
+        protocore_wr16le(buf + 3, (uint16_t)start);
+        protocore_wr16le(buf + 5, (uint16_t)stop);
     }
     else
     {
-        pc_wr32le(buf + 3, start);
-        pc_wr32le(buf + 7, stop);
+        protocore_wr32le(buf + 3, start);
+        protocore_wr32le(buf + 7, stop);
     }
     return total;
 }
 
-size_t pc_dnp3_build_object_header_all(uint8_t *buf, size_t cap, uint8_t group, uint8_t variation)
+size_t protocore_dnp3_build_object_header_all(uint8_t *buf, size_t cap, uint8_t group, uint8_t variation)
 {
     if (!buf || cap < 3)
     {
@@ -369,7 +369,7 @@ size_t pc_dnp3_build_object_header_all(uint8_t *buf, size_t cap, uint8_t group, 
     return 3;
 }
 
-size_t pc_dnp3_build_crob(uint8_t *buf, size_t cap, uint8_t op_type, uint8_t tcc, proto_bool clear, uint8_t count,
+size_t protocore_dnp3_build_crob(uint8_t *buf, size_t cap, uint8_t op_type, uint8_t tcc, proto_bool clear, uint8_t count,
                           uint32_t on_time_ms, uint32_t off_time_ms)
 {
     if (!buf || op_type > 0x0Fu || tcc > 0x03u || cap < DNP3_CROB_LEN)
@@ -379,24 +379,24 @@ size_t pc_dnp3_build_crob(uint8_t *buf, size_t cap, uint8_t op_type, uint8_t tcc
     // Control code: op-type (bits 0-3) | clear (bit 5) | trip-close (bits 6-7). The queue bit (0x10) is obsolete.
     buf[0] = (uint8_t)((op_type & 0x0Fu) | (clear ? 0x20u : 0x00u) | (uint8_t)((tcc & 0x03u) << 6));
     buf[1] = count;
-    pc_wr32le(buf + 2, on_time_ms);
-    pc_wr32le(buf + 6, off_time_ms);
+    protocore_wr32le(buf + 2, on_time_ms);
+    protocore_wr32le(buf + 6, off_time_ms);
     buf[10] = 0x00; // status: 0 in a request (the outstation reports the result in its response)
     return DNP3_CROB_LEN;
 }
 
-size_t pc_dnp3_build_aob32(uint8_t *buf, size_t cap, int32_t value)
+size_t protocore_dnp3_build_aob32(uint8_t *buf, size_t cap, int32_t value)
 {
     if (!buf || cap < DNP3_AOB_LEN)
     {
         return 0;
     }
-    pc_wr32le(buf, (uint32_t)value); // 32-bit signed setpoint, little-endian (two's complement)
+    protocore_wr32le(buf, (uint32_t)value); // 32-bit signed setpoint, little-endian (two's complement)
     buf[4] = 0x00;                   // control status: 0 in a request (the outstation reports the result)
     return DNP3_AOB_LEN;
 }
 
-size_t pc_dnp3_build_aob_float(uint8_t *buf, size_t cap, float value)
+size_t protocore_dnp3_build_aob_float(uint8_t *buf, size_t cap, float value)
 {
     if (!buf || cap < DNP3_AOB_LEN)
     {
@@ -404,12 +404,12 @@ size_t pc_dnp3_build_aob_float(uint8_t *buf, size_t cap, float value)
     }
     uint32_t bits;
     mem.cpy(&bits, &value, 4); // the IEEE-754 bit pattern, written little-endian (endian-safe)
-    pc_wr32le(buf, bits);
+    protocore_wr32le(buf, bits);
     buf[4] = 0x00; // control status: 0 in a request
     return DNP3_AOB_LEN;
 }
 
-proto_bool pc_dnp3_parse_object_header(const uint8_t *buf, size_t len, Dnp3ObjectHeader *out)
+proto_bool protocore_dnp3_parse_object_header(const uint8_t *buf, size_t len, Dnp3ObjectHeader *out)
 {
     if (!buf || !out || len < 3) // group + variation + qualifier
     {
@@ -438,8 +438,8 @@ proto_bool pc_dnp3_parse_object_header(const uint8_t *buf, size_t len, Dnp3Objec
         {
             return PROTO_FALSE;
         }
-        start = pc_rd16le(buf + p);
-        stop = pc_rd16le(buf + p + 2);
+        start = protocore_rd16le(buf + p);
+        stop = protocore_rd16le(buf + p + 2);
         p += 4;
         count = stop - start + 1;
         break;
@@ -448,8 +448,8 @@ proto_bool pc_dnp3_parse_object_header(const uint8_t *buf, size_t len, Dnp3Objec
         {
             return PROTO_FALSE;
         }
-        start = pc_rd32le(buf + p);
-        stop = pc_rd32le(buf + p + 4);
+        start = protocore_rd32le(buf + p);
+        stop = protocore_rd32le(buf + p + 4);
         p += 8;
         count = stop - start + 1;
         break;
@@ -469,7 +469,7 @@ proto_bool pc_dnp3_parse_object_header(const uint8_t *buf, size_t len, Dnp3Objec
         {
             return PROTO_FALSE;
         }
-        count = pc_rd16le(buf + p);
+        count = protocore_rd16le(buf + p);
         p += 2;
         is_count = PROTO_TRUE;
         break;
@@ -478,7 +478,7 @@ proto_bool pc_dnp3_parse_object_header(const uint8_t *buf, size_t len, Dnp3Objec
         {
             return PROTO_FALSE;
         }
-        count = pc_rd32le(buf + p);
+        count = protocore_rd32le(buf + p);
         p += 4;
         is_count = PROTO_TRUE;
         break;
@@ -499,4 +499,4 @@ proto_bool pc_dnp3_parse_object_header(const uint8_t *buf, size_t len, Dnp3Objec
     return PROTO_TRUE;
 }
 
-#endif // PC_ENABLE_DNP3
+#endif // PROTOCORE_ENABLE_DNP3

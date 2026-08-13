@@ -35,7 +35,7 @@ void test_build_minimal()
     ce.source = "/devices/esp32-1";
     ce.type = "com.example.sensor.reading";
     char buf[256];
-    size_t n = pc_cloudevents_build_json(buf, sizeof(buf), &ce);
+    size_t n = protocore_cloudevents_build_json(buf, sizeof(buf), &ce);
     TEST_ASSERT_GREATER_THAN(0, (int)n);
     TEST_ASSERT_NOT_NULL(strstr(buf, "\"specversion\":\"1.0\""));
     TEST_ASSERT_NOT_NULL(strstr(buf, "\"id\":\"1001\""));
@@ -51,15 +51,15 @@ void test_build_requires_id_source_type()
     CloudEvent a = {0};
     a.source = "/s";
     a.type = "t"; // no id
-    TEST_ASSERT_EQUAL_size_t(0, pc_cloudevents_build_json(buf, sizeof(buf), &a));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_cloudevents_build_json(buf, sizeof(buf), &a));
     CloudEvent b = {0};
     b.id = "1";
     b.type = "t"; // no source
-    TEST_ASSERT_EQUAL_size_t(0, pc_cloudevents_build_json(buf, sizeof(buf), &b));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_cloudevents_build_json(buf, sizeof(buf), &b));
     CloudEvent c = {0};
     c.id = "1";
     c.source = "/s"; // no type
-    TEST_ASSERT_EQUAL_size_t(0, pc_cloudevents_build_json(buf, sizeof(buf), &c));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_cloudevents_build_json(buf, sizeof(buf), &c));
 }
 
 // data_json is emitted verbatim (a JSON value), with datacontenttype defaulting.
@@ -72,7 +72,7 @@ void test_build_with_json_data()
     ce.subject = "temp";
     ce.data_json = "{\"celsius\":23.5}";
     char buf[256];
-    size_t n = pc_cloudevents_build_json(buf, sizeof(buf), &ce);
+    size_t n = protocore_cloudevents_build_json(buf, sizeof(buf), &ce);
     TEST_ASSERT_GREATER_THAN(0, (int)n);
     TEST_ASSERT_NOT_NULL(strstr(buf, "\"subject\":\"temp\""));
     TEST_ASSERT_NOT_NULL(strstr(buf, "\"datacontenttype\":\"application/json\""));
@@ -89,7 +89,7 @@ void test_build_with_string_data()
     ce.datacontenttype = "text/plain";
     ce.data_str = "hi \"there\"";
     char buf[256];
-    TEST_ASSERT_GREATER_THAN(0, (int)pc_cloudevents_build_json(buf, sizeof(buf), &ce));
+    TEST_ASSERT_GREATER_THAN(0, (int)protocore_cloudevents_build_json(buf, sizeof(buf), &ce));
     TEST_ASSERT_NOT_NULL(strstr(buf, "\"datacontenttype\":\"text/plain\""));
     TEST_ASSERT_NOT_NULL(strstr(buf, "\"data\":\"hi \\\"there\\\"\"")); // quoted + escaped
 }
@@ -102,7 +102,7 @@ void test_build_overflow_fails_closed()
     ce.source = "/s";
     ce.type = "t";
     char buf[16]; // far too small for the envelope
-    TEST_ASSERT_EQUAL_size_t(0, pc_cloudevents_build_json(buf, sizeof(buf), &ce));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_cloudevents_build_json(buf, sizeof(buf), &ce));
 }
 
 // Binary mode: read an inbound event's ce-* headers.
@@ -112,7 +112,7 @@ void test_from_headers_binary_mode()
                     "ce-id: abc-1\r\nce-source: /producer\r\nce-type: com.example.test\r\n"
                     "ce-subject: s1\r\nContent-Type: application/json\r\nContent-Length: 2\r\n\r\n{}");
     CloudEvent ce;
-    TEST_ASSERT_TRUE(pc_cloudevents_from_headers(&http_pool[0], &ce));
+    TEST_ASSERT_TRUE(protocore_cloudevents_from_headers(&http_pool[0], &ce));
     TEST_ASSERT_EQUAL_STRING("abc-1", ce.id);
     TEST_ASSERT_EQUAL_STRING("/producer", ce.source);
     TEST_ASSERT_EQUAL_STRING("com.example.test", ce.type);
@@ -125,7 +125,7 @@ void test_from_headers_missing_required()
 {
     feed_request(0, "POST /events HTTP/1.1\r\nHost: x\r\nce-id: abc-1\r\nce-source: /p\r\n\r\n"); // no ce-type
     CloudEvent ce;
-    TEST_ASSERT_FALSE(pc_cloudevents_from_headers(&http_pool[0], &ce));
+    TEST_ASSERT_FALSE(protocore_cloudevents_from_headers(&http_pool[0], &ce));
 }
 
 // build_json argument guards, the datacontenttype-without-data branch, and the
@@ -137,19 +137,19 @@ void test_guards_and_datacontenttype_only()
     ce.id = "1";
     ce.source = "/s";
     ce.type = "t";
-    TEST_ASSERT_EQUAL_size_t(0, pc_cloudevents_build_json(NULL, sizeof(buf), &ce)); // null buf
-    TEST_ASSERT_EQUAL_size_t(0, pc_cloudevents_build_json(buf, 0, &ce));            // zero cap
-    TEST_ASSERT_EQUAL_size_t(0, pc_cloudevents_build_json(buf, sizeof(buf), NULL)); // null event
+    TEST_ASSERT_EQUAL_size_t(0, protocore_cloudevents_build_json(NULL, sizeof(buf), &ce)); // null buf
+    TEST_ASSERT_EQUAL_size_t(0, protocore_cloudevents_build_json(buf, 0, &ce));            // zero cap
+    TEST_ASSERT_EQUAL_size_t(0, protocore_cloudevents_build_json(buf, sizeof(buf), NULL)); // null event
 
     // datacontenttype set but no data_json/data_str -> the third data branch emits only the type.
     ce.datacontenttype = "application/json";
-    size_t n = pc_cloudevents_build_json(buf, sizeof(buf), &ce);
+    size_t n = protocore_cloudevents_build_json(buf, sizeof(buf), &ce);
     TEST_ASSERT_GREATER_THAN(0, (int)n);
     TEST_ASSERT_NOT_NULL(strstr(buf, "\"datacontenttype\":\"application/json\""));
     TEST_ASSERT_NULL(strstr(buf, "\"data\":")); // no data value emitted
 
     CloudEvent out;
-    TEST_ASSERT_FALSE(pc_cloudevents_from_headers(NULL, &out)); // null request
+    TEST_ASSERT_FALSE(protocore_cloudevents_from_headers(NULL, &out)); // null request
 }
 
 // ce_present() must treat a non-null but empty string as absent, not just a null
@@ -162,7 +162,7 @@ void test_present_empty_string_is_absent()
     ce.type = "t";
     ce.subject = ""; // present pointer, empty content -> must NOT be emitted
     char buf[256];
-    size_t n = pc_cloudevents_build_json(buf, sizeof(buf), &ce);
+    size_t n = protocore_cloudevents_build_json(buf, sizeof(buf), &ce);
     TEST_ASSERT_GREATER_THAN(0, (int)n);
     TEST_ASSERT_NULL(strstr(buf, "\"subject\""));
 }
@@ -178,7 +178,7 @@ void test_data_json_empty_string_falls_through()
     ce.data_json = ""; // non-null, empty
     ce.data_str = "fallback";
     char buf[256];
-    size_t n = pc_cloudevents_build_json(buf, sizeof(buf), &ce);
+    size_t n = protocore_cloudevents_build_json(buf, sizeof(buf), &ce);
     TEST_ASSERT_GREATER_THAN(0, (int)n);
     TEST_ASSERT_NOT_NULL(strstr(buf, "\"data\":\"fallback\""));
 }
@@ -194,7 +194,7 @@ void test_data_json_explicit_datacontenttype()
     ce.data_json = "{\"x\":1}";
     ce.datacontenttype = "application/cloudevents+json";
     char buf[256];
-    size_t n = pc_cloudevents_build_json(buf, sizeof(buf), &ce);
+    size_t n = protocore_cloudevents_build_json(buf, sizeof(buf), &ce);
     TEST_ASSERT_GREATER_THAN(0, (int)n);
     TEST_ASSERT_NOT_NULL(strstr(buf, "\"datacontenttype\":\"application/cloudevents+json\""));
     TEST_ASSERT_NULL(strstr(buf, "\"datacontenttype\":\"application/json\""));
@@ -209,7 +209,7 @@ void test_data_str_without_datacontenttype()
     ce.type = "t";
     ce.data_str = "plain";
     char buf[256];
-    size_t n = pc_cloudevents_build_json(buf, sizeof(buf), &ce);
+    size_t n = protocore_cloudevents_build_json(buf, sizeof(buf), &ce);
     TEST_ASSERT_GREATER_THAN(0, (int)n);
     TEST_ASSERT_NOT_NULL(strstr(buf, "\"data\":\"plain\""));
     TEST_ASSERT_NULL(strstr(buf, "\"datacontenttype\""));
@@ -219,7 +219,7 @@ void test_data_str_without_datacontenttype()
 void test_from_headers_null_out()
 {
     feed_request(0, "POST /events HTTP/1.1\r\nHost: x\r\nce-id: a\r\nce-source: /p\r\nce-type: t\r\n\r\n");
-    TEST_ASSERT_FALSE(pc_cloudevents_from_headers(&http_pool[0], NULL));
+    TEST_ASSERT_FALSE(protocore_cloudevents_from_headers(&http_pool[0], NULL));
 }
 
 // from_headers with id and (separately) source individually missing, exercising both
@@ -228,11 +228,11 @@ void test_from_headers_missing_id_then_missing_source()
 {
     feed_request(0, "POST /events HTTP/1.1\r\nHost: x\r\nce-source: /p\r\nce-type: t\r\n\r\n"); // no ce-id
     CloudEvent a;
-    TEST_ASSERT_FALSE(pc_cloudevents_from_headers(&http_pool[0], &a));
+    TEST_ASSERT_FALSE(protocore_cloudevents_from_headers(&http_pool[0], &a));
 
     feed_request(1, "POST /events HTTP/1.1\r\nHost: x\r\nce-id: i\r\nce-type: t\r\n\r\n"); // no ce-source
     CloudEvent b;
-    TEST_ASSERT_FALSE(pc_cloudevents_from_headers(&http_pool[1], &b));
+    TEST_ASSERT_FALSE(protocore_cloudevents_from_headers(&http_pool[1], &b));
 }
 
 // str.ws / str.digit: every whitespace class plus a non-matching fallthrough,

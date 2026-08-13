@@ -25,12 +25,12 @@
  * NOTE: optional services are gated by a compile flag the *library* sources must
  * also see. The `#define` below documents intent, but for PlatformIO you must
  * enable it for the whole build, e.g. in platformio.ini:
- *     build_flags = -DPC_ENABLE_COAP=1
+ *     build_flags = -DPROTOCORE_ENABLE_COAP=1
  * (Arduino IDE: it is already set for you in the build_opt.h beside this sketch, so it builds as-is.) A define in the
  * sketch alone does not reach the separately-compiled library .cpp.
  */
 
-#define PC_ENABLE_COAP 1
+#define PROTOCORE_ENABLE_COAP 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -111,11 +111,11 @@ void setup()
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     // Build the resource table, then bind the server to UDP/5683.
-    pc_coap_server_reset();
-    pc_coap_server_add_resource("/info", COAP_ALLOW_GET, coap_info);
-    pc_coap_server_add_resource("/led", COAP_ALLOW_GET | COAP_ALLOW_PUT, coap_led);
-    pc_coap_server_add_resource("/hello", COAP_ALLOW_GET, coap_hello);
-    pc_coap_server_begin(5683);
+    protocore_coap_server_reset();
+    protocore_coap_server_add_resource("/info", COAP_ALLOW_GET, coap_info);
+    protocore_coap_server_add_resource("/led", COAP_ALLOW_GET | COAP_ALLOW_PUT, coap_led);
+    protocore_coap_server_add_resource("/hello", COAP_ALLOW_GET, coap_hello);
+    protocore_coap_server_begin(5683);
     Serial.println("CoAP server listening on UDP/5683 (try: coap-client -m get coap://<ip>/info)");
 
     int32_t result = begin_http(80, NULL);

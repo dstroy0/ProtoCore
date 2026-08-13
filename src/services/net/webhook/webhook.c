@@ -7,16 +7,16 @@
  */
 
 #include "services/net/webhook/webhook.h"
-#include "mmgr/membuild.h" // pc_sb frame builder
+#include "mmgr/membuild.h" // protocore_sb frame builder
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_WEBHOOK
+#if PROTOCORE_ENABLE_WEBHOOK
 
 #include "shared_primitives/mime.h"
 
 #include <stdio.h>
 
-#if PC_ENABLE_HTTP_CLIENT
+#if PROTOCORE_ENABLE_HTTP_CLIENT
 #include "services/net/http_client/http_client.h"
 #endif
 static proto_bool put(char *out, size_t cap, size_t *pos, const char *s)
@@ -60,7 +60,7 @@ static proto_bool put_escaped(char *out, size_t cap, size_t *pos, const char *s)
     return PROTO_TRUE;
 }
 
-int pc_ifttt_url(const char *event, const char *key, char *out, size_t cap)
+int protocore_ifttt_url(const char *event, const char *key, char *out, size_t cap)
 {
     if (!out || cap == 0 || !event || !key)
     {
@@ -70,12 +70,12 @@ int pc_ifttt_url(const char *event, const char *key, char *out, size_t cap)
         }
         return 0;
     }
-    pc_sb sb_out = {out, cap, 0, PROTO_TRUE};
-    pc_sb_put(&sb_out, "https://maker.ifttt.com/trigger/");
-    pc_sb_put(&sb_out, event);
-    pc_sb_put(&sb_out, "/with/key/");
-    pc_sb_put(&sb_out, key);
-    int w = (int)pc_sb_finish(&sb_out);
+    protocore_sb sb_out = {out, cap, 0, PROTO_TRUE};
+    protocore_sb_put(&sb_out, "https://maker.ifttt.com/trigger/");
+    protocore_sb_put(&sb_out, event);
+    protocore_sb_put(&sb_out, "/with/key/");
+    protocore_sb_put(&sb_out, key);
+    int w = (int)protocore_sb_finish(&sb_out);
     // The builder is the overflow signal: it refuses the frame rather than truncating, so there is
     // no would-be length to compare against cap.
     if (!sb_out.ok)
@@ -86,7 +86,7 @@ int pc_ifttt_url(const char *event, const char *key, char *out, size_t cap)
     return w;
 }
 
-int pc_ifttt_payload(const char *v1, const char *v2, const char *v3, char *out, size_t cap)
+int protocore_ifttt_payload(const char *v1, const char *v2, const char *v3, char *out, size_t cap)
 {
     if (!out || cap == 0)
     {
@@ -126,42 +126,42 @@ int pc_ifttt_payload(const char *v1, const char *v2, const char *v3, char *out, 
     return (int)pos;
 }
 
-#if PC_ENABLE_HTTP_CLIENT
+#if PROTOCORE_ENABLE_HTTP_CLIENT
 
-int pc_webhook_post(const char *url, const char *json)
+int protocore_webhook_post(const char *url, const char *json)
 {
     if (!url || !json)
     {
         return (int)HTTP_CLIENT_ERR_URL;
     }
     HttpClientResult r;
-    return http_post(url, PC_MIME_JSON, (const uint8_t *)json, strnlen(json, PC_HTTP_CLIENT_BUF_SIZE), &r);
+    return http_post(url, PROTOCORE_MIME_JSON, (const uint8_t *)json, strnlen(json, PROTOCORE_HTTP_CLIENT_BUF_SIZE), &r);
 }
 
 #else // http_client not enabled in this build
 
-int pc_webhook_post(const char *url, const char *json)
+int protocore_webhook_post(const char *url, const char *json)
 {
     (void)url;
     (void)json;
     return -1;
 }
 
-#endif // PC_ENABLE_HTTP_CLIENT
+#endif // PROTOCORE_ENABLE_HTTP_CLIENT
 
-int pc_ifttt_trigger(const char *event, const char *key, const char *v1, const char *v2, const char *v3)
+int protocore_ifttt_trigger(const char *event, const char *key, const char *v1, const char *v2, const char *v3)
 {
     char url[160];
     char body[256];
-    if (pc_ifttt_url(event, key, url, sizeof(url)) == 0)
+    if (protocore_ifttt_url(event, key, url, sizeof(url)) == 0)
     {
         return -1;
     }
-    if (pc_ifttt_payload(v1, v2, v3, body, sizeof(body)) == 0)
+    if (protocore_ifttt_payload(v1, v2, v3, body, sizeof(body)) == 0)
     {
         return -1;
     }
-    return pc_webhook_post(url, body);
+    return protocore_webhook_post(url, body);
 }
 
-#endif // PC_ENABLE_WEBHOOK
+#endif // PROTOCORE_ENABLE_WEBHOOK

@@ -1,6 +1,6 @@
 # ZWaveGateway - a Z-Wave mesh bridged to the gateway
 
-**Layer:** Foundation · **Build flags:** `PC_ENABLE_ZWAVE`, `PC_ENABLE_GATEWAY`
+**Layer:** Foundation · **Build flags:** `PROTOCORE_ENABLE_ZWAVE`, `PROTOCORE_ENABLE_GATEWAY`
 
 ## What this example teaches
 
@@ -9,7 +9,7 @@ Silicon Labs 500 / 700-series controller speaking its **Serial API** over UART. 
 reports, we pull the source node id + payload and publish it northbound.
 
 ```
-Z-Wave mesh --UART--> pc_zwave_parse_frame() --> node + payload -> pc_gateway_uplink()
+Z-Wave mesh --UART--> protocore_zwave_parse_frame() --> node + payload -> protocore_gateway_uplink()
                                                                      |
                                               envelope + topic  zwave/0/<node>
                                                                      |
@@ -22,15 +22,15 @@ them:
 
 ```cpp
 uint8_t type, cmd, pdlen; const uint8_t *pd;
-int n = pc_zwave_parse_frame(buf, len, &type, &cmd, &pd, &pdlen);  // >0 / need-more / -1
+int n = protocore_zwave_parse_frame(buf, len, &type, &cmd, &pd, &pdlen);  // >0 / need-more / -1
 if (n > 0) {
     Serial2.write((uint8_t)ZWAVE_ACK);              // acknowledge the frame
     if (cmd == 0x04 /* ApplicationCommandHandler */)
-        pc_gateway_uplink(0, pd[1] /* node */, &pd[3], pdlen - 3, 0);
+        protocore_gateway_uplink(0, pd[1] /* node */, &pd[3], pdlen - 3, 0);
 }
 ```
 
-`pc_zwave_build_frame()` assembles a command the same way (this sketch sends GetVersion at
+`protocore_zwave_build_frame()` assembles a command the same way (this sketch sends GetVersion at
 boot). The checksum is `0xFF` XOR-folded over LEN..last-data. The codec is host-tested
 against the documented GetVersion frame (`01 03 00 15 E9`) in `test/test_zwave`.
 
@@ -51,6 +51,6 @@ The flags must reach the library build, so pass them as build flags:
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_ZWAVE=1 -DPC_ENABLE_GATEWAY=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_ZWAVE=1 -DPROTOCORE_ENABLE_GATEWAY=1" \
   --lib="." examples/Drivers/ZWaveGateway/ZWaveGateway.ino
 ```

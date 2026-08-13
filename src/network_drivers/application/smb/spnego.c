@@ -10,7 +10,7 @@
 #include "spnego.h"
 #include "mmgr/protomem.h"
 
-#if PC_ENABLE_SMB
+#if PROTOCORE_ENABLE_SMB
 
 // OID TLVs (tag + length + content).
 static const uint8_t SPNEGO_OID[] = {0x06, 0x06, 0x2b, 0x06, 0x01, 0x05, 0x05, 0x02}; // 1.3.6.1.5.5.2
@@ -87,13 +87,13 @@ static proto_bool der_read(const uint8_t *buf, size_t len, size_t *pos, uint8_t 
     return PROTO_TRUE;
 }
 
-size_t pc_spnego_wrap_negotiate(const uint8_t *ntlm, size_t pc_ntlm_len, uint8_t *out, size_t cap)
+size_t protocore_spnego_wrap_negotiate(const uint8_t *ntlm, size_t protocore_ntlm_len, uint8_t *out, size_t cap)
 {
     if (!ntlm)
     {
         return 0;
     }
-    size_t octet = tlv_size(pc_ntlm_len);      // OCTET STRING(mechToken)
+    size_t octet = tlv_size(protocore_ntlm_len);      // OCTET STRING(mechToken)
     size_t mt = tlv_size(octet);               // [2] mechToken
     size_t seqof = tlv_size(sizeof(NTLM_OID)); // SEQUENCE OF { NTLM OID }
     size_t mtypes = tlv_size(seqof);           // [0] mechTypes
@@ -117,19 +117,19 @@ size_t pc_spnego_wrap_negotiate(const uint8_t *ntlm, size_t pc_ntlm_len, uint8_t
     mem.cpy(out + p, NTLM_OID, sizeof(NTLM_OID));
     p += sizeof(NTLM_OID);
     wr_tag_len(out, &p, 0xa2, octet); // [2] mechToken
-    wr_tag_len(out, &p, 0x04, pc_ntlm_len);
-    mem.cpy(out + p, ntlm, pc_ntlm_len);
-    p += pc_ntlm_len;
+    wr_tag_len(out, &p, 0x04, protocore_ntlm_len);
+    mem.cpy(out + p, ntlm, protocore_ntlm_len);
+    p += protocore_ntlm_len;
     return p;
 }
 
-size_t pc_spnego_wrap_authenticate(const uint8_t *ntlm, size_t pc_ntlm_len, uint8_t *out, size_t cap)
+size_t protocore_spnego_wrap_authenticate(const uint8_t *ntlm, size_t protocore_ntlm_len, uint8_t *out, size_t cap)
 {
     if (!ntlm)
     {
         return 0;
     }
-    size_t octet = tlv_size(pc_ntlm_len); // OCTET STRING(responseToken)
+    size_t octet = tlv_size(protocore_ntlm_len); // OCTET STRING(responseToken)
     size_t rt = tlv_size(octet);          // [2] responseToken
     size_t seq = tlv_size(rt);            // SEQUENCE
     size_t total = tlv_size(seq);         // [1] NegTokenResp
@@ -142,15 +142,15 @@ size_t pc_spnego_wrap_authenticate(const uint8_t *ntlm, size_t pc_ntlm_len, uint
     wr_tag_len(out, &p, 0xa1, seq);   // [1] NegTokenResp
     wr_tag_len(out, &p, 0x30, rt);    // SEQUENCE
     wr_tag_len(out, &p, 0xa2, octet); // [2] responseToken
-    wr_tag_len(out, &p, 0x04, pc_ntlm_len);
-    mem.cpy(out + p, ntlm, pc_ntlm_len);
-    p += pc_ntlm_len;
+    wr_tag_len(out, &p, 0x04, protocore_ntlm_len);
+    mem.cpy(out + p, ntlm, protocore_ntlm_len);
+    p += protocore_ntlm_len;
     return p;
 }
 
-proto_bool pc_spnego_parse_response(const uint8_t *blob, size_t len, const uint8_t **pc_resp_token, size_t *pc_resp_len)
+proto_bool protocore_spnego_parse_response(const uint8_t *blob, size_t len, const uint8_t **protocore_resp_token, size_t *protocore_resp_len)
 {
-    if (!blob || !pc_resp_token || !pc_resp_len)
+    if (!blob || !protocore_resp_token || !protocore_resp_len)
     {
         return PROTO_FALSE;
     }
@@ -189,12 +189,12 @@ proto_bool pc_spnego_parse_response(const uint8_t *blob, size_t len, const uint8
             {
                 return PROTO_FALSE;
             }
-            *pc_resp_token = blob + cs2;
-            *pc_resp_len = cl2;
+            *protocore_resp_token = blob + cs2;
+            *protocore_resp_len = cl2;
             return PROTO_TRUE;
         }
     }
     return PROTO_FALSE;
 }
 
-#endif // PC_ENABLE_SMB
+#endif // PROTOCORE_ENABLE_SMB

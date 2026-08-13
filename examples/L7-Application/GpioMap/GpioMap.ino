@@ -3,7 +3,7 @@
 
 /**
  * @file GpioMap.ino
- * @brief Browser GPIO pin-mapper / diagnostics panel (PC_ENABLE_GPIO_MAP).
+ * @brief Browser GPIO pin-mapper / diagnostics panel (PROTOCORE_ENABLE_GPIO_MAP).
  *
  * Declares a compile-time table of GPIO pins (number, label, direction) and serves
  * them at GET /gpio as JSON with live levels; POST /gpio (body `pin=<n>&level=0|1`)
@@ -14,11 +14,11 @@
  *
  * NOTE: enable it for the whole build (a .ino #define does not reach the
  * separately compiled library). In platformio.ini:
- *     build_flags = -DPC_ENABLE_GPIO_MAP=1
+ *     build_flags = -DPROTOCORE_ENABLE_GPIO_MAP=1
  * (Arduino IDE: it is already set for you in the build_opt.h beside this sketch, so it builds as-is.)
  */
 
-#define PC_ENABLE_GPIO_MAP 1
+#define PROTOCORE_ENABLE_GPIO_MAP 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
@@ -29,12 +29,12 @@ static const char *PASSWORD = "YOUR_PASSWORD";
 
 
 // The pins to expose. Caller-owned and must outlive the server. Mark a pin
-// PC_GPIO_DIR_OUT to make it drivable from the panel.
-static pc_gpio_pin gpio_pins[] = {
-    {2, "Onboard LED", PC_GPIO_DIR_OUT, 0},
-    {0, "BOOT button", PC_GPIO_DIR_IN_PULLUP, 0},
-    {4, "Relay", PC_GPIO_DIR_OUT, 0},
-    {34, "ADC sense", PC_GPIO_DIR_IN, 0},
+// PROTOCORE_GPIO_DIR_OUT to make it drivable from the panel.
+static protocore_gpio_pin gpio_pins[] = {
+    {2, "Onboard LED", PROTOCORE_GPIO_DIR_OUT, 0},
+    {0, "BOOT button", PROTOCORE_GPIO_DIR_IN_PULLUP, 0},
+    {4, "Relay", PROTOCORE_GPIO_DIR_OUT, 0},
+    {34, "ADC sense", PROTOCORE_GPIO_DIR_IN, 0},
 };
 static const uint8_t gpio_count = sizeof(gpio_pins) / sizeof(gpio_pins[0]);
 
@@ -75,7 +75,7 @@ void setup()
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     // GET /gpio (JSON) + POST /gpio (drive an output); pinMode is applied here.
-    pc_gpio_map_begin("/gpio", gpio_pins, gpio_count);
+    protocore_gpio_map_begin("/gpio", gpio_pins, gpio_count);
 
     on_http("/", HTTP_GET, [](uint8_t id, HttpReq *) { send_text(id, 200, "text/html", DIAG_PAGE); });
     begin_http(80, NULL);

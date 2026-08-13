@@ -13,11 +13,11 @@ flashing. Compile one for an ESP32 board with `pio ci`:
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_WEBSOCKET=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_WEBSOCKET=1" \
   --lib="." examples/L6-Presentation/WebSocket/WebSocket.ino
 ```
 
-> **The build_flags gotcha.** A sketch's `#define PC_ENABLE_X 1` only affects
+> **The build_flags gotcha.** A sketch's `#define PROTOCORE_ENABLE_X 1` only affects
 > the sketch's own translation unit; the library is compiled separately and will
 > not see it, producing link errors like `undefined reference to begin_tls`. When
 > building with `pio ci`, pass each feature's flag as `build_flags` (the `-D...`
