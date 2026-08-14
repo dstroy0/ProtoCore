@@ -120,8 +120,9 @@ extern struct PlainInternal protocore_plaintext_internal;
  *
  * @param n     bytes requested (0 yields a valid non-null pointer when space
  *              remains).
- * @param align required alignment in bytes, a power of two (0 selects the
- *              platform default).
+ * @param align required alignment in bytes, a power of two, clamped to
+ *              `[PROTOCORE_ARENA_ALIGN, PROTOCORE_ARENA_MAX_ALIGN]` by the arena
+ *              underneath (0 selects the platform default).
  * @return pointer to @p n writable bytes, or NULL if it does not fit.
  */
 void *protocore_plaintext_alloc(size_t n, size_t align);

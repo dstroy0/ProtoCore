@@ -57,6 +57,18 @@ static uint64_t seq_decode(uint64_t expected, uint64_t truncated, unsigned bits)
     return candidate;
 }
 
+// HKDF-Expand-Label of a traffic secret under the "dtls13" prefix (RFC 9147 §5.9), into out.
+static void expand_label(uint8_t *work, const uint8_t *secret, const char *label, uint8_t *out, size_t out_len)
+{
+    Tls13Ks.bind.kdf = &DTLS13_KDF;
+    Tls13Ks.derive_args.work = work;
+    Tls13Ks.derive_args.secret = secret;
+    Tls13Ks.derive_args.label = label;
+    Tls13Ks.derive_args.out = out;
+    Tls13Ks.derive_args.out_len = out_len;
+    Tls13Ks.expand_label(Tls13Ks.internal);
+}
+
 static void protocore_dtls_record_keys_derive(DtlsRecordKeys *out, DtlsCipher cipher, uint16_t epoch, const uint8_t secret[32])
 {
     out->cipher = cipher;
@@ -75,10 +87,10 @@ static void protocore_dtls_record_keys_derive(DtlsRecordKeys *out, DtlsCipher ci
         mem.zero(out->iv, sizeof(out->iv));
         return; // unkeyed: every protect/unprotect over these keys refuses
     }
-    protocore_tls13_kdf_expand_label(&DTLS13_KDF, ws.buf, secret, "key", k.buf, PROTOCORE_AES128GCM_KEY_LEN);
+    expand_label(ws.buf, secret, "key", k.buf, PROTOCORE_AES128GCM_KEY_LEN);
     protocore_aes128gcm_key_init(out->gcm, k.buf);
-    protocore_tls13_kdf_expand_label(&DTLS13_KDF, ws.buf, secret, "iv", out->iv, sizeof(out->iv));
-    protocore_tls13_kdf_expand_label(&DTLS13_KDF, ws.buf, secret, "sn", snk.buf, PROTOCORE_AES128GCM_KEY_LEN);
+    expand_label(ws.buf, secret, "iv", out->iv, sizeof(out->iv));
+    expand_label(ws.buf, secret, "sn", snk.buf, PROTOCORE_AES128GCM_KEY_LEN);
     protocore_aes128_init((struct protocore_aes128 *)(out->sn_key), snk.buf);
     protocore_secure_release(mark);
 }

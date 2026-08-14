@@ -33,12 +33,29 @@ typedef struct
 } LockoutCtx;
 LockoutCtx s_lock;
 
+// Whether @p a and @p b are the same family and address.
+static proto_bool ip_same(const protocore_ip *a, const protocore_ip *b)
+{
+    Ip.args.ip = a;
+    Ip.args.b = b;
+    Ip.equal(Ip.internal);
+    return Ip.ok;
+}
+
+// Whether @p ip names nothing: no family, or the all-zero address.
+static proto_bool ip_none(const protocore_ip *ip)
+{
+    Ip.args.ip = ip;
+    Ip.is_unspecified(Ip.internal);
+    return Ip.ok;
+}
+
 // Returns a mutable bucket (callers mutate it), so it takes the owner by non-const reference.
 LockoutBucket *find_bucket(LockoutCtx *c, const protocore_ip *ip)
 {
     for (int i = 0; i < PROTOCORE_AUTH_LOCKOUT_SLOTS; i++)
     {
-        if (c->buckets[i].addr.family != PROTOCORE_IP_NONE && Ip.equal(&c->buckets[i].addr, ip))
+        if (c->buckets[i].addr.family != PROTOCORE_IP_NONE && ip_same(&c->buckets[i].addr, ip))
         {
             return &c->buckets[i];
         }
@@ -54,7 +71,7 @@ proto_bool bucket_locked(const LockoutBucket *b, uint32_t now_ms)
 
 uint32_t auth_lockout_remaining_ms(const protocore_ip *ip, uint32_t now_ms)
 {
-    if (Ip.is_unspecified(ip))
+    if (ip_none(ip))
     {
         return 0; // untrackable source -> never reported as locked
     }
@@ -73,7 +90,7 @@ uint32_t auth_lockout_remaining_ms(const protocore_ip *ip, uint32_t now_ms)
 
 void auth_lockout_fail(const protocore_ip *ip, uint32_t now_ms)
 {
-    if (Ip.is_unspecified(ip))
+    if (ip_none(ip))
     {
         return; // untrackable source
     }
@@ -149,7 +166,7 @@ void auth_lockout_fail(const protocore_ip *ip, uint32_t now_ms)
 
 void auth_lockout_succeed(const protocore_ip *ip)
 {
-    if (Ip.is_unspecified(ip))
+    if (ip_none(ip))
     {
         return;
     }

@@ -215,15 +215,20 @@ typedef struct
  * @var SshTransportNs::newkeys_complete sec 7.3 our inbound switches when the peer's arrives
  * @var SshTransportNs::rekey_due        sec 9 the volume and time budget since the last exchange
  * @var SshTransportNs::begin_rekey      sec 9 start a re-exchange, when not already doing one
+ *
+ * A caller sets the members a call takes, invokes it through ::SshTransport, and reads the outcome
+ * off the same handle.
+ *
+ * @var SshTransportNs::slot             the SSH slot a call acts on
+ * @var SshTransportNs::pkt              sec 6 the bytes one message occupies
+ * @var SshTransportNs::out_args         where a build or a send writes
+ * @var SshTransportNs::kexhash          sec 8 the terms the exchange hash H is taken over
+ * @var SshTransportNs::rekey            sec 9 the volume and time budget since the last exchange
+ * @var SshTransportNs::ok               a call's true/false outcome
+ * @var SshTransportNs::i32              a call's signed outcome
+ * @var SshTransportNs::internal         the machine's state and the calls that reach it
  */
-*A caller sets the members a call takes, invokes it through ::SshTransport,
-    and reads the outcome *off the same handle.**@var SshTransportNs::slot the SSH slot a call acts on *@var
-            SshTransportNs::pkt sec 6 the bytes one message occupies *@var SshTransportNs::out_args where a build or
-        a send writes *@var SshTransportNs::kexhash sec 8 the terms the exchange hash H is
-                taken over *@var SshTransportNs::rekey sec 9 the volume and time budget since the
-                    last exchange *@var SshTransportNs::ok a call's true/false outcome *@var SshTransportNs::i32 a call's signed outcome
-                        *@var SshTransportNs::internal the machine's state and the calls that reach it * /
-            struct SshTransportInternal;
+struct SshTransportInternal;
 
 typedef struct
 {
@@ -742,20 +747,6 @@ static inline void ssh_dh_wipe(uint8_t i)
         protocore_secure_wipe(ssh_sess[i].ecdh_sk, SSH_ECDH_PAIR_LEN);
     }
 }
-
-/**
- * @brief Emit one outbound SSH message payload for slot @p slot.
- *
- * The integration wraps this with ssh_pkt_send() (which frames, encrypts, and
- * MACs the payload once keys are active) and writes the result to the socket.
- */
-typedef void (*SshEmitCb)(uint8_t slot, const uint8_t *payload, size_t len);
-
-/** @brief Install the outbound-message callback. */
-void ssh_set_emit_cb(SshEmitCb cb);
-
-/** @brief Frame one payload for slot @p i through the installed callback. */
-void ssh_emit(uint8_t i, const uint8_t *p, size_t n);
 
 /** @brief Send DISCONNECT with the no-more-auth-methods reason, then drop. */
 /**

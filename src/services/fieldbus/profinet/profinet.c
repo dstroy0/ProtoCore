@@ -11,8 +11,8 @@
 
 #if PROTOCORE_ENABLE_PROFINET
 
-size_t protocore_pn_dcp_header(uint16_t frame_id, uint8_t service_id, uint8_t service_type, uint32_t xid, uint16_t data_length,
-                        uint8_t *out, size_t cap)
+size_t protocore_pn_dcp_header(uint16_t frame_id, uint8_t service_id, uint8_t service_type, uint32_t xid,
+                        uint16_t response_delay, uint16_t data_length, uint8_t *out, size_t cap)
 {
     if (!out || cap < PN_DCP_HDR_LEN)
     {
@@ -26,9 +26,10 @@ size_t protocore_pn_dcp_header(uint16_t frame_id, uint8_t service_id, uint8_t se
     out[5] = (uint8_t)(xid >> 16);
     out[6] = (uint8_t)(xid >> 8);
     out[7] = (uint8_t)xid;
-    // octets 8..9 carry dataLength (the responseDelay of an Identify request shares this field slot).
-    out[8] = (uint8_t)(data_length >> 8);
-    out[9] = (uint8_t)data_length;
+    out[8] = (uint8_t)(response_delay >> 8);
+    out[9] = (uint8_t)response_delay;
+    out[10] = (uint8_t)(data_length >> 8);
+    out[11] = (uint8_t)data_length;
     return PN_DCP_HDR_LEN;
 }
 
@@ -70,7 +71,8 @@ proto_bool protocore_pn_dcp_parse_header(const uint8_t *frame, size_t len, PnDcp
     out->service_id = frame[2];
     out->service_type = frame[3];
     out->xid = ((uint32_t)frame[4] << 24) | ((uint32_t)frame[5] << 16) | ((uint32_t)frame[6] << 8) | frame[7];
-    out->data_length = (uint16_t)((frame[8] << 8) | frame[9]);
+    out->response_delay = (uint16_t)((frame[8] << 8) | frame[9]);
+    out->data_length = (uint16_t)((frame[10] << 8) | frame[11]);
     return PROTO_TRUE;
 }
 

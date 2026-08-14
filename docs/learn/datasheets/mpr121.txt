@@ -1,0 +1,1534 @@
+Freescale Semiconductor                                                            Document Number: MPR121
+Data Sheet: Technical Data                                                                          Rev. 4, 02/2013
+
+An Energy Efficient Solution by Freescale
+
+Proximity Capacitive Touch                                                                   MPR121
+
+Sensor Controller                                                                             Bottom View
+
+The MPR121 is the second generation sensor controller following the                           20-PIN QFN
+initial release of the MPR03x series of devices. The MPR121 features an                      CASE 2059-01
+increased internal intelligence plus Freescale's second generation
+capacitance detection engine. Some major enhancements include an                               Top View
+increased electrode count, a hardware configurable I2C address, an
+expanded filtering system with debounce, and completely independent
+electrodes with built-in autoconfiguration. The device also features a 13th
+simulated electrode which represents the simultaneous charging of all the
+electrodes connected together. When used with a touch panel or touch
+screen array, the 13th simulated electrode allows a greater near proximity
+detection distance and an increased sensing area.
+
+Features                                                                                     VDD
+                                                                                                   ELE11
+· 1.71V to 3.6V operation                                                                                ELE10
+· 29 A typical run current at 16 ms sampling interval                                                          ELE9
+· 3 A in scan stop mode current                                                                                      ELE8
+· 12 electrodes/capacitance sensing inputs in which 8 are
+                                                                                             20 19 18 17 16
+    multifunctional for LED driving and GPIO
+· Integrated independent autocalibration for each electrode input                     IRQ 1                                15 ELE7
+· Autoconfiguration of charge current and charge time for each                       SCL 2                                 14 ELE6
+                                                                                     SDA 3                                 13 ELE5
+    electrode input                                                                ADDR 4                                  12 ELE4
+· Separate touch and release trip thresholds for each electrode,                    VREG 5                                 11 ELE3
+
+    providing hysteresis and electrode independence                                          6 7 8 9 10
+· I2C interface, with IRQ Interrupt output to advise electrode status
+                                                                                             VSS
+    changes                                                                                        REXT
+· 3 mm x 3 mm x 0.65 mm 20 lead QFN package                                                              ELE0
+· -40°C to +85°C operating temperature range                                                                   ELE1
+                                                                                                                     ELE2
+Implementations
+                                                                                             Pin Connections
+· General Purpose Capacitance Detection
+· Switch Replacements
+· Touch Pads, Touch Wheel, Touch Slide Bar, Touch Screen Panel
+· Capacitance Near Proximity Detection
+
+Typical Applications
+
+· PC Peripherals
+· MP3 Players
+· Remote Controls
+· Mobile Phones
+· Lighting Controls
+
+                                           ORDERING INFORMATION
+
+Device Name           Temperature Range    Case Number                 Touch Pads  I2C Address   Shipping
+MPR121QR2                -40°C to +85°C                                            0x5A - 0x5D  Tape & Reel
+                                           2059 (20-Pin QFN)           12-pads
+
+© 2009-2011, 2013 Freescale Semiconductor, Inc. All rights reserved.
+1       Pin Descriptions
+
+Table 1. Pin Descriptions
+
+Pin No. Pin Name                                                   Description
+
+   1    IRQ       Open Collector Interrupt Output Pin, active low
+
+   2    SCL       I2C Clock
+
+   3    SDA       I2C Data
+
+   4    ADDR      I2C Address Select Input Pin. Connect the ADDR pin to the VSS, VDD, SDA or SCL line, the resulting I2C addresses
+
+                  are 0x5A, 0x5B, 0x5C and 0x5D respectively
+
+   5    VREG Internal Regulator Node ­ Connect a 0.1 F bypass cap to VSS
+
+   6    VSS Ground
+
+   7    REXT External Resistor ­ Connect a 75 k 1% resistor to VSS to set internal reference current
+
+   8    ELE0 Electrode 0
+
+   9    ELE1 Electrode 1
+
+   10   ELE2 Electrode 2
+
+   11   ELE3 Electrode 3
+
+   12   ELE4 Electrode 4
+
+   13   ELE5 Electrode 5
+
+   14   ELE6 Electrode 6
+
+   15   ELE7 Electrode 7
+
+   16   ELE8 Electrode 8
+
+   17   ELE9 Electrode 9
+
+   18   ELE10 Electrode 10
+
+   19   ELE11 Electrode 11
+
+   20   VDD Connect a 0.1 F bypass cap to VSS
+
+MPR121                                                                                                       Sensors
+2                                                                               Freescale Semiconductor, Inc.
+2       Schematic Drawings and Implementation
+
+         VDD              0.1 F
+   1.71V to 2.75V  GND
+
+                                          20                              19
+                                                VDD   ELE11/LED7
+
+                                           6                              18
+                                                VSS   ELE10/LED6
+
+                                           5           ELE9/LED5 17
+                                                VREG
+                                                                          16
+                                           1           ELE8/LED4
+                                                IRQ
+                                                                          15
+                                           2           ELE7/LED3
+                                                SCL
+                                                                          14
+                                           3           ELE6/LED2
+                                                SDA
+                                                                          13
+                                           4           ELE5/LED1
+                                                ADDR
+                                                                          12
+                                           7           ELE4/LED0
+                                                REXT
+                                                                          11
+                                 75 k 1%                        ELE3
+
+                                                                          10
+                                                                ELE2
+
+                                                                          9
+                                                                ELE1
+                                                                ELE0 8
+
+                                 GND                       MPR121Q
+                                                      TOUCH SENSOR
+
+                   Figure 1. Power Configuration 1: MPR121 runs from a 1.71V to 2.75V supply.
+
+        VDD
+   2.0V to 3.6V
+
+                        0.1 F                                             19
+                                                      ELE11/LED7
+                        0.1 F            20
+                                               VDD                        18
+                                                      ELE10/LED6
+                                           6
+                                               VSS                        17
+                                                       ELE9/LED5
+                                           5
+                                               VREG                       16
+                                                       ELE8/LED4
+                                           1
+                                               IRQ                        15
+                                                       ELE7/LED3
+                                           2
+                                               SCL                        14
+                                                       ELE6/LED2
+                                           3
+                                               SDA                        13
+                                                       ELE5/LED1
+                                           4
+                                               ADDR                       12
+                                                       ELE4/LED0
+                                           7
+                                               REXT                       11
+                                                                ELE3
+                                 75 k 1%                        ELE2 10
+                                                                ELE1 9
+                   GND                                          ELE0 8
+
+                        GND      GND
+
+                                                          MPR121Q
+                                                     TOUCH SENSOR
+
+                   Figure 2. Power Configuration 2: MPR121 runs from a 2.0V to 3.6V supply.
+
+MPR121                                                                                           Sensors
+3                                                                   Freescale Semiconductor, Inc.
+3       Device Operation Overview
+
+Power Supply
+
+The VDD pin is the main power supply input to the MPR121 and is always decoupled with a 0.1 F ceramic capacitor to the VSS.
+Excessive noise on the VDD should be avoided.
+
+The VDD pin has an operational voltage range specification between 1.71V to 3.6V. The internal voltage regulator, which
+generates current to internal circuitry, operates with an input range from 2.0V to 3.6V. To work with a power supply below 2.0V
+and to avoid the unnecessary voltage drop, the internal voltage regulator can be bypassed, refer to Figure 1 and Figure 2.
+
+When a power supply is in the range of 1.71V to 2.75V, the VDD and VREG pins can be connected together (Figure 1) so that
+internal voltage regulator is bypassed. In this configuration, the supply voltage cannot be higher than 2.75V as this is the
+maximum voltage limit for VREG pin.
+
+When a power supply is higher than 2.75V, it must be connected to the VDD, i.e. configuration as in Figure 2. In this configuration,
+a separate 0.1 F decoupling ceramic capacitor on VREG to VSS is applied as a bypass cap for internal circuitry. This
+configuration can work with a VDD supply voltage down to 2.0V. For a typical two dry cell 1.5V batteries application, this
+configuration covers the entire expected working voltage range from 2.0V to 3.0V.
+
+Capacitance Sensing
+
+The MPR121 uses a constant DC current capacitance sensing scheme. It can measure capacitances ranging from 10 pF to over
+2000 pF with a resolution up to 0.01 pF. The device does this by varying the amount of charge current and charge time applied
+to the sensing inputs.
+
+The 12 electrodes are controlled independently; this allows for a great deal of flexibility in electrode pattern design. An automatic
+configuration system is integrated as part of the device, this greatly simplifies the individual register setup. Please refer to the
+Freescale application note, AN3889, for more details.
+
+The voltage measured on the input sensing node is inversely proportional to the capacitance. At the end of each charge circle,
+this voltage is sampled by an internal 10-bit ADC. The sampled data is then processed through several stages of digital filtering.
+The digital filtering process allows for good noise immunity in different environments. For more information on the filtering system,
+refer to application note AN3890.
+
+Touch Sensing
+
+Once the electrode capacitance data is acquired, the electrode touch/release status is determined comparing it to the
+capacitance baseline value. The capacitance baseline is tracked by MPR121 automatically based on the background
+capacitance variation.
+
+The baseline value is compared with the current immediate electrode data to determine if a touch or release has occurred. A
+designer has the ability to set the touch/release thresholds, as well as a touch/release debounce time. This is to eliminate jitter
+and false touches due to noise. Additional information on baseline capacitance system is covered in application notes AN3891
+and AN3892.
+
+Proximity Sensing
+
+One new feature of the MPR121 is the near proximity sensing system. This means that all of the system's electrodes can be
+summed together to create a single large electrode. The major advantage of the large electrode is that is can cover a much larger
+sensing area. The near proximity sensing system can be used while at the same time having separate electrodes by using touch
+button sensing.
+
+Proximity detection is read as an independent channel and has configuration registers similar to the other 12 channels. When
+proximity detection is enabled, this "13th" measurement channel will be included at the beginning of a normal detection cycle.
+This system is described in application note AN3893.
+
+LED Driver
+
+Among the 12 electrode inputs, 8 inputs are designed as multifunctional pins. When these pins are not configured as electrodes,
+they may be used to drive LEDs or used for general purpose input or output. For more details on this feature, please refer to
+application note AN3894.
+
+Serial Communication
+
+The MPR121 is an Inter-Integrated Circuit (I2C) compliant device with an interrupt IRQ pin. This pin is triggered any time a touch
+or release is detected. The device has a configurable I2C address by connecting the ADDR pin to the VSS, VDD, SDA or SCL
+lines This results in I2C addresses of 0x5A, 0x5B, 0x5C and 0x5D. The specific details of this system are described in AN3895.
+
+For reference, the register map of the MPR121 is included in Table 2.
+
+MPR121                                                          Sensors
+4                                  Freescale Semiconductor, Inc.
+Table 2. Register Map
+
+REGISTER                                                           Fields                                     Register Initial     Auto-
+                                                                                                              Address Value     Increment
+                                                                                                                                 Address
+
+ELE0 - ELE7 Touch Status               ELE7    ELE6    ELE5  ELE4          ELE3        ELE2     ELE1    ELE0  0x00  0x00
+ELE8 - ELE11, ELEPROX Touch Status    OVCF           E5_OOR                                     ELE9    ELE8  0x01  0x00
+ELE0-7 OOR Status                    E7_OOR  E6_OOR          ELEPROX ELE11             ELE10  E1_OOR  E0_OOR  0x02  0x00
+ELE8-11, ELEPROX OOR Status            ACFF    ARFF                                           E9_OOR  E8_OOR  0x03  0x00
+ELE0 Electrode Filtered Data LSB                             E4_OOR E3_OOR E2_OOR                             0x04  0x00
+ELE0 Electrode Filtered Data MSB                                                                              0x05  0x00
+ELE1 Electrode Filtered Data LSB                             PROX_OOR E11_OOR E10_OOR                         0x06  0x00
+ELE1 Electrode Filtered Data MSB                                                                              0x07  0x00
+ELE2 Electrode Filtered Data LSB                             EFD0LB                                           0x08  0x00
+ELE2 Electrode Filtered Data MSB                                                                              0x09  0x00
+ELE3 Electrode Filtered Data LSB                                                              EFD0HB          0x0A  0x00
+ELE3 Electrode Filtered Data MSB                                                                              0x0B  0x00
+ELE4 Electrode Filtered Data LSB                             EFD1LB                                           0x0C  0x00
+ELE4 Electrode Filtered Data MSB                                                                              0x0D  0x00
+ELE5 Electrode Filtered Data LSB                                                              EFD1HB          0x0E  0x00
+ELE5 Electrode Filtered Data MSB                                                                              0x0F  0x00
+ELE6 Electrode Filtered Data LSB                             EFD2LB                                           0x10  0x00
+ELE6 Electrode Filtered Data MSB                                                                              0x11  0x00
+ELE7 Electrode Filtered Data LSB                                                              EFD2HB          0x12  0x00
+ELE7 Electrode Filtered Data MSB                                                                              0x13  0x00
+ELE8 Electrode Filtered Data LSB                             EFD3LB                                           0x14  0x00
+ELE8 Electrode Filtered Data MSB                                                                              0x15  0x00
+ELE9 Electrode Filtered Data LSB                                                              EFD3HB          0x16  0x00
+ELE9 Electrode Filtered Data MSB                                                                              0x17  0x00
+ELE10 Electrode Filtered Data LSB                            EFD4LB                                           0x18  0x00
+ELE10 Electrode Filtered Data MSB                                                                             0x19  0x00
+ELE11 Electrode Filtered Data LSB                                                             EFD4HB          0x1A  0x00
+ELE11 Electrode Filtered Data MSB                                                                             0x1B  0x00
+ELEPROX Electrode Filtered Data LSB                          EFD5LB                                           0x1C  0x00
+ELEPROX Electrode Filtered Data MSB                                                                           0x1D  0x00
+ELE0 Baseline Value                                                                           EFD5HB          0x1E  0x00
+ELE1 Baseline Value                                                                                           0x1F  0x00
+ELE2 Baseline Value                                          EFD6LB                                           0x20  0x00
+ELE3 Baseline Value                                                                                           0x21  0x00
+ELE4 Baseline Value                                                                           EFD6HB          0x22  0x00
+ELE5 Baseline Value                                                                                           0x23  0x00
+ELE6 Baseline Value                                          EFD7LB                                           0x24  0x00
+ELE7 Baseline Value                                                                                           0x25  0x00
+ELE8 Baseline Value                                                                           EFD7HB          0x26  0x00
+ELE9 Baseline Value                                                                                           0x27  0x00
+ELE10 Baseline Value                                         EFD8LB                                           0x28  0x00
+ELE11 Baseline Value                                                                                          0x29  0x00
+ELEPROX Baseline Value                                                                        EFD8HB          0x2A  0x00
+MHD Rising                                                                                                    0x2B  0x00
+NHD Amount Rising                                            EFD9LB                                           0x2C  0x00
+NCL Rising                                                                                                    0x2D  0x00
+FDL Rising                                                                                    EFD9HB          0x2E  0x00
+MHD Falling                                                                                                   0x2F  0x00
+NHD Amount Falling                                           EFD10LB                                          0x30  0x00          Register
+                                                                                                                                Address + 1
+
+                                                                                              EFD10HB
+
+                                                             EFD11LB
+
+                                                                                              EFD11HB
+
+                                                             EFDPROXLB
+
+                                                                                              EFDPROXHB
+
+                                                                E0BV             MHDR
+                                                                E1BV             NHDR
+                                                                E2BV
+                                                                E3BV             MHDF
+                                                                E4BV             NHDF
+                                                                E5BV
+                                                                E6BV
+                                                                E7BV
+                                                                E8BV
+                                                                E9BV
+                                                               E10BV
+                                                               E11BV
+                                                             EPROXBV
+
+                                                                NCLR
+                                                                FDLR
+
+Sensors                                                                                                                         MPR121
+Freescale Semiconductor, Inc.                                                                                                            5
+Table 2. Register Map                                      Fields                           Register Initial     Auto-
+                                                                                            Address Value     Increment
+                     REGISTER                                                                                  Address
+
+ NCL Falling                                               NCLF                             0x31  0x00
+ FDL Falling                                                                                0x32  0x00
+ NHD Amount Touched                                        FDLF                             0x33  0x00
+ NCL Touched                                                                                0x34  0x00
+ FDL Touched                                                         NHDT                   0x35  0x00
+ ELEPROX MHD Rising                                                                         0x36  0x00
+ ELEPROX NHD Amount Rising                                 NCLT                             0x37  0x00
+ ELEPROX NCL Rising                                                                         0x38  0x00
+ ELEPROX FDL Rising                                        FDLT                             0x39  0x00
+ ELEPROX MHD Falling                                                                        0x3A  0x00
+ ELEPROX NHD Amount Falling                                          MHDPROXR               0x3B  0x00
+ ELEPROX NCL Falling                                                                        0x3C  0x00
+ ELEPROX FDL Falling                                                 NHDPROXR               0x3D  0x00
+ ELEPROX NHD Amount Touched                                                                 0x3E  0x00
+ ELEPROX NCL Touched                               NCLPROXR                                 0x3F  0x00
+ ELEPROX FDL Touched                                                                        0x40  0x00
+ ELE0 Touch Threshold                                      FDLPROXR                         0x41  0x00
+ ELE0 Release Threshold                                                                     0x42  0x00
+ ELE1 Touch Threshold                                                MHDPROXF               0x43  0x00
+ ELE1 Release Threshold                                                                     0x44  0x00
+ ELE2 Touch Threshold                                                NHDPROXF               0x45  0x00
+ ELE2 Release Threshold                                                                     0x46  0x00
+ ELE3 Touch Threshold                                      NCLPROXF                         0x47  0x00
+ ELE3 Release Threshold                                                                     0x48  0x00
+ ELE4 Touch Threshold                                      FDLPROXF                         0x49  0x00
+ ELE4 Release Threshold                                                                     0x4A  0x00
+ ELE5 Touch Threshold                                                NHDPROXT               0x4B  0x00
+ ELE5 Release Threshold                                                                     0x4C  0x00
+ ELE6 Touch Threshold                                      NCLPROXT                         0x4D  0x00
+ ELE6 Release Threshold                                                                     0x4E  0x00
+ ELE7 Touch Threshold                                      FDLPROXT                         0x4F  0x00
+ ELE7 Release Threshold                                                                     0x50  0x00
+ ELE8 Touch Threshold                                      E0TTH                            0x51  0x00
+ ELE8 Release Threshold                                                                     0x52  0x00
+ ELE9 Touch Threshold                                      E0RTH                            0x53  0x00
+ ELE9 Release Threshold                                                                     0x54  0x00
+ ELE10 Touch Threshold                                     E1TTH                            0x55  0x00
+ ELE10 Release Threshold                                                                    0x56  0x00
+ ELE11 Touch Threshold                                     E1RTH                            0x57  0x00
+ ELE11 Release Threshold                                                                    0x58  0x00
+ ELEPROX Touch Threshold                                   E2TTH                            0x59  0x00
+ ELEPROX Release Threshold                                                                  0x5A  0x00
+ Debounce Touch & Release                                  E2RTH                            0x5B  0x00
+ Filter/Global CDC Configuration                                                            0x5C  0x10
+ Filter/Global CDT Configuration                           E3TTH                            0x5D  0x24
+ Electrode Configuration                                                                    0x5E  0x00
+ ELE0 Electrode Current                                    E3RTH                            0x5F  0x00
+ ELE1 Electrode Current                                                                     0x60  0x00
+ ELE2 Electrode Current                                    E4TTH                            0x61  0x00          Register
+                                                                                                              Address + 1
+MPR121
+                                                           E4RTH
+6
+                                                           E5TTH
+
+                                                           E5RTH
+
+                                                           E6TTH
+
+                                                           E6RTH
+
+                                                           E7TTH
+
+                                                           E7RTH
+
+                                                           E8TTH
+
+                                                           E8RTH
+
+                                                           E9TTH
+
+                                                           E9RTH
+
+                                                           E10TTH
+
+                                                           E10RTH
+
+                                                           E11TTH
+
+                                                           E11RTH
+
+                                                           EPROXTTH
+
+                                                   EPROXRTH
+
+                                               DR                                      DT
+
+                                  FFI                                CDC
+                                          CDT
+                                                           SFI                         ESI
+                                  CL
+                                               ELEPROX_EN                      ELE_EN
+
+                                                                     CDC0
+
+                                                                     CDC1
+
+                                                                     CDC2
+
+                                                                                                                         Sensors
+                                                                                            Freescale Semiconductor, Inc.
+Table 2. Register Map                                                     Fields                                   Register Initial     Auto-
+                                                                                                                   Address Value     Increment
+                    REGISTER                                                                CDC4                                      Address
+                                                                                            CDC5
+ ELE3 Electrode Current                                CDC3                                 CDC6                   0x62   0x00
+ ELE4 Electrode Current                                                                     CDC7                   0x63   0x00
+ ELE5 Electrode Current                                CDT1                                 CDC8                   0x64   0x00
+ ELE6 Electrode Current                                CDT3                                 CDC9                   0x65   0x00
+ ELE7 Electrode Current                                CDT5                                CDC10                   0x66   0x00
+ ELE8 Electrode Current                                CDT7                                CDC11                   0x67   0x00
+ ELE9 Electrode Current                                CDT9                              CDCPROX                   0x68   0x00
+ ELE10 Electrode Current                               CDT11                                                       0x69   0x00
+ ELE11 Electrode Current                                                                              CDT0         0x6A   0x00         Register
+ ELEPROX Electrode Current          CTL011 CTL010      CTL09  CTL08             CTL07       CTL06     CDT2  CTL04  0x6B   0x00       Address + 1
+ ELE0, ELE1 Charge Time                                                                               CDT4  CTL14  0x6C   0x00
+ ELE2, ELE3 Charge Time             CTL111 CTL110      CTL19  CTL18             CTL17       CTL16     CDT6  DAT4   0x6D   0x00           0x00
+ ELE4, ELE5 Charge Time                                                                               CDT8   DIR4  0x6E   0x00
+ ELE6, ELE7 Charge Time             DAT11       DAT10  DAT9         DAT8        DAT7        DAT6     CDT10         0x6F   0x00
+ ELE8, ELE9 Charge Time                                                                            CDTPROX   EN4   0x70   0x00
+ ELE10, ELE11 Charge Time           DIR11       DIR10  DIR9         DIR8        DIR7        DIR6     CTL05  SET4   0x71   0x00
+ ELEPROX Charge Time                                                                                 CTL15  CLR4   0x72   0x00
+ GPIO Control Register 0            EN11        EN10   EN9          EN8         EN7         EN6       DAT5  TOG4   0x73   0x00
+ GPIO Control Register 1                                                                              DIR5   ACE   0x74   0x00
+ GPIO Data Register                 SET11       SET10  SET9         SET8        SET7        SET6       EN5  ACFIE  30x75  0x00
+ GPIO Direction Register                                                                              SET5         0x76   0x00
+ GPIO Enable Register               CLR11       CLR10  CLR9         CLR8        CLR7        CLR6      CLR5         0x77   0x00
+ GPIO Data Set Register                                                                               TOG5         0x78   0x00
+ GPIO Data Clear Register           TOG11       TOG10  TOG9   TOG8              TOG7        TOG6       ARE         0x79   0x00
+ GPIO Data Toggle Register                                                                           ARFIE         0x7A   0x00
+ AUTO-CONFIG Control Register 0            FFI               RETRY                     BVA                         0x7B   0x00
+ AUTO-CONFIG Control Register 1                                                                                    0x7C   0x00
+ AUTO-CONFIG USL Register           SCTS                                                    OORIE                  0x7D   0x00
+ AUTO-CONFIG LSL Register                                                                                          0x7E   0x00
+ AUTO-CONFIG Target Level Register                                        USL                                      0x7F   0x00
+ Soft Reset Register                                                                                               0x80
+                                                                          LSL
+
+                                                                          TL
+
+                                                                          SRST
+
+Sensors                                                                                                                              MPR121
+Freescale Semiconductor, Inc.                                                                                                                 7
+4       Electrical Characteristics
+
+4.1 Absolute Maximum Ratings
+
+Absolute maximum ratings are stress ratings only and functional operation at the maxima is not guaranteed. Stress beyond the
+limits specified in Table 3 may affect device reliability or cause permanent damage to the device. For functional operating
+conditions, refer to the remaining tables in this section. This device contains circuitry protecting against damage due to high-static
+voltage or electrical fields; however, it is advised that normal precautions be taken to avoid application of any voltages higher
+than maximum-rated voltages to this high-impedance circuit.
+
+Table 3. Absolute Maximum Ratings - Voltage (with respect to VSS)
+
+        Rating                             Symbol                  Value                   Unit
+
+Supply Voltage                             VDD                     -0.3 to +3.6            V
+Supply Voltage
+Input Voltage                              VREG                    -0.3 to +2.75           V
+
+   SCL, SDA, IRQ                           VIN                     VSS - 0.3 to VDD + 0.3  V
+
+Operating Temperature Range                TO                      -40 to +85              °C
+GPIO Source Current per Pin
+GPIO Sink Current per Pin                  iGPIO                   12                      mA
+Storage Temperature Range
+                                           iGPIO                   1.2                     mA
+
+                                           TS                      -40 to +125             °C
+
+4.2 ESD and Latch-up Protection Characteristics
+
+Normal handling precautions should be used to avoid exposure to static discharge.
+
+Qualification tests are performed to ensure that these devices can withstand exposure to reasonable levels of static without
+suffering any permanent damage. During the device qualification, ESD stresses were performed for the Human Body Model
+(HBM), the Machine Model (MM) and the Charge Device Model (CDM).
+
+A device is defined as a failure if after exposure to ESD pulses, the device no longer meets the device specification. Complete
+DC parametric and functional testing is performed per the applicable device specification at room temperature followed by hot
+temperature, unless specified otherwise in the device specification.
+
+Table 4. ESD and Latch-up Test Conditions
+
+        Rating                                    Symbol           Value                   Unit
+
+Human Body Model (HBM)                             VESD            ±2000                   V
+Machine Model (MM)
+Charge Device Model (CDM)                          VESD            ±200                    V
+Latch-up current at TA = 85°C
+                                                   VESD            ±500                    V
+
+                                                   ILATCH          ±100                    mA
+
+MPR121                                                                                                         Sensors
+8                                                                                 Freescale Semiconductor, Inc.
+4.3 DC Characteristics
+
+This section includes information about power supply requirements and I/O pin characteristics.
+
+Table 5. DC Characteristics
+(Typical Operating Circuit, VDD and VREG = 1.8V, TA = 25°C, unless otherwise noted.)
+
+Parameter                       Symbol            Conditions                          Min         Typ      Max     Units
+                                                                                                  3.3       3.6      V
+High Supply Voltage              VDD           Run Mode @ 1 ms sample period              2.0     1.8      2.75      V
+Low Supply Voltage              VREG           Run Mode @ 2 ms sample period             1.71     393               A
+                                               Run Mode @ 4 ms sample period                      199       15      A
+Average Supply Current(1)        IDD           Run Mode @ 8 ms sample period          0.7 x VDD   102   0.3 x VDD   A
+                                              Run Mode @ 16 ms sample period                       54               A
+Measurement Supply Current       IDD          Run Mode @ 32 ms sample period          VDD - 0.5    29        1      A
+Idle Supply Current              IDD          Run Mode @ 64 ms sample period             1.08      17        7      A
+Input Leakage Current ELE_      IIH, IIL      Run Mode @ 128 ms sample period            0.88      11      0.5V     A
+Input Self-Capacitance on ELE_   VIH            Peak of measurement duty cycle                     8                A
+Input High Voltage SDA, SCL      VIL                                                               1        0.5     mA
+Input Low Voltage SDA, SCL      IIH, IIL                      Stop Mode                            3       1.62     A
+Input Leakage Current                                                                            0.025     1.42     A
+SDA, SCL                           VOL                          IOL = 6mA                                            pF
+Input Capacitance                                                                                0.025               V
+SDA, SCL                        VOHGPIO       VDD = 2.7V to 3.6V: IOHGPIO = -10 mA                                   V
+Output Low Voltage                            VDD = 2.3V to 2.7V: IOHGPIO = -6 mA                1.35
+SDA, IRQ                        VOLGPIO       VDD = 1.8V to 2.3V: IOHGPIO = -3 mA                1.15               A
+Output High Voltage               VTLH
+ELE4 - ELE11 (GPIO mode)          VTHL                      IOLGPIOD = 1 mA                                          pF
+Output Low Voltage
+ELE4 - ELE11 (GPIO mode)                                        VDD rising                                           V
+Power On Reset                                                  VDD falling
+                                                                                                                     V
+
+                                                                                                                     V
+
+                                                                                                                     V
+                                                                                                                     V
+
+1.: ECR set to 0x2C and all 12 channels plus one proximity channel activated. Measurement current CDC is set at maximum of 0x3F.
+
+4.4 AC Characteristics
+
+Table 6. AC Characteristics
+(Typical Operating Circuit, VDD and VREG = 1.8V, TA = 25°C, unless otherwise noted.)
+
+Parameter                                 Symbol  Conditions                          Min        Typ    Max        Units
+
+8 MHz Internal Oscillator                 fH                                          7.44       8      8.56       MHz
+
+1 kHz Internal Oscillator                 fL                                          0.65       1      1.35       kHz
+
+Sensors                                                                                                            MPR121
+Freescale Semiconductor, Inc.                                                                                               9
+4.5     I2C AC Characteristics
+
+Table 7. I2C AC Characteristics
+(Typical Operating Circuit, VDD and VREG = 1.8V, TA = 25°C, unless otherwise noted.)
+
+        Parameter                                   Symbol    Conditions              Min  Typ  Max Units
+
+Serial Clock Frequency                                fSCL                                      400      kHz
+Bus Free Time Between a STOP and a START Condition    tBUF
+Hold Time, (Repeated) START Condition               tHD, STA                          1.3                s
+Repeated START Condition Setup Time                 tSU, STA
+STOP Condition Setup Time                           tSU, STO                          0.6                s
+Data Hold Time                                      tHD, DAT
+Data Setup Time                                     tSU, DAT                          0.6                s
+SCL Clock Low Period                                  tLOW
+SCL Clock High Period                                tHIGH                            0.6                s
+Rise Time of Both SDA and SCL Signals, Receiving
+Fall Time of Both SDA and SCL Signals, Receiving       tR                                       0.9      s
+Fall Time of SDA Transmitting                           tF
+Pulse Width of Spike Suppressed                       tF.TX                           100                ns
+Capacitive Load for Each Bus Line                      tSP
+                                                       Cb                             1.3                s
+
+                                                                                      0.7                s
+
+                                                                                           20+0.1Cb 300  ns
+
+                                                                                           20+0.1Cb 300  ns
+
+                                                                                           20+0.1Cb 250  ns
+
+                                                                                           25            ns
+
+                                                                                                400      pF
+
+MPR121                                                                                                                  Sensors
+10                                                                                         Freescale Semiconductor, Inc.
+5         Register Operation Descriptions
+
+5.1 Register Read/Write Operations and Measurement Run/Stop Mode
+
+After power on reset (POR) or soft reset by command, all registers are in reset default initial value (see Table 2). All the registers,
+except registers 0x5C (default 0x10) and 0x5D (default 0x24), are cleared.
+
+Registers 0x2B ~ 0x7F are control and configuration registers which need to be correctly configured before any capacitance
+measurement and touch detection.
+
+Registers 0x00 ~ 0x2A are output registers updating periodically by the MPR121 in Run Mode. Among these output registers,
+Baseline Value Registers 0x1D ~ 0x2A are also writable, this is sometimes useful when user specific baseline values are desired.
+
+The MPR121's Run Mode and Stop Mode are controlled by control bits in Electrode Configuration Register (ECR, 0x5E). When
+all ELEPROX_EN and ELE_EN bits are zeros, the MPR121 is in Stop Mode. While in Stop Mode, there are no capacitance or
+touch detection measurement on any of the 13 channels. When any of the ELEPROX_EN and ELE_EN bits are set to `1', the
+MPR121 is in Run Mode. The MPR121 will continue to run on its own until it is set again to Stop Mode by the user.
+
+The MPR121 registers read operation can be done at any time, either in Run Mode or in Stop Mode. However, the register write
+operation can only be done in Stop Mode. The ECR (0x5E) and GPIO/LED control registers (0x73~0x7A) can be written at
+anytime.
+
+5.2 Touch Status Registers (0x00~0x01)
+
+ELE0-ELE7 Touch Status (0x00)
+
+   Bit    D7                   D6       D5    D4       D3     D2     D1    D0
+
+   Read   ELE7                 ELE6     ELE5  ELE4     ELE3   ELE4   ELE1  ELE0
+
+   Write  --                   --       --    --       --     --     --    --
+
+ELE8-ELE11 ELEPROX Touch Status (0x01)
+
+   Bit    D7                   D6       D5    D4       D3     D2     D1    D0
+
+   Read   OVCF                 --       --    ELEPROX  ELE11  ELE10  ELE9  ELE8
+
+   Write  --                   --       --    --       --     --     --    --
+
+These two registers indicate the detected touch/release status of all of the 13 sensing input channels. ELEPROX is the status for
+the 13th proximity detection channel. The update rate of these status bits will be {ESI x SFI}.
+
+ELEx, ELEPROX: Touch or Release status bit of each respective channel (read only).
+        1, the respective channel is currently deemed as touched.
+        0, the respective channel is deemed as released.
+
+Note: When an input is not configured as an electrode and enabled as GPIO input port, the corresponding status bit shows the
+input level, but these GPIO status changes will not cause any IRQ interrupt. This feature is for ELE4~ELE11 only.
+
+OVCF: Over Current Flag (read and write)
+        1, over current was detected on REXT pin.
+        0, normal condition.
+
+When over current is detected, the OVCF is set to `1' and the MPR121 goes to Stop Mode. All other bits in status registers
+0x00~0x03, output registers 0x04~0x2A, and bits D5~D0 in ECR (0x5E) will also be cleared. When the bit is set at `1', the write
+to the ECR register to enter Run Mode will be discarded. The write to '1'of the OVCF will clear this bit and the MPR121 fault
+condition will be cleared. The MPR121 can then be configured to return to the Run Mode again.
+
+Sensors                                                                    MPR121
+Freescale Semiconductor, Inc.                                                     11
+5.3 Electrode Filtered Data Register (0x04~0x1D)
+
+Electrode Filtered Data Low Byte (0x04,0x06,...,0x1C)
+
+Bit     D7     D6                     D5                D4     D3     D2     D1     D0
+
+Read    Bit 7  Bit 6                  Bit 5             Bit 4  Bit 3  Bit 2  Bit 1  Bit 0
+
+Write   --     --                     --                --     --     --     --     --
+
+Electrode Filtered Data High Byte (0x05,0x07,...,0x1D)
+
+Bit     D7     D6                     D5                D4     D3     D2     D1     D0
+
+Read    --     --                     --                --     --     --     Bit 9  Bit 8
+
+Write   --     --                     --                --     --     --     --     --
+
+The MPR121 provides filtered electrode output data for all 13 channels. The output data is 10-bit and comes from the internal
+2nd stage filter output. The data range is 0~1024 or 0x000~0x400 in Hex. Bit 0~7 of the 10-bit data are stored in the low byte and
+bit 9 and bit 8 are stored in the high byte. The data is the measured voltage on each channel and inversely proportional to the
+capacitance on that channel.
+
+These registers are read only and are updated every {ESI x SFI}. A multibyte read operation to read both LSB and MSB is
+recommended to keep the data coherency (i.e, LSB and MSB matching). A multibyte reading of 0x00~0x2A returns results of a
+single moment without mixing up old and new data.
+
+5.4 Baseline Value Register (0x1E~0x2A)
+
+Electrode Baseline Value (0x1E~0x2A)
+
+Bit     D7     D6                     D5                D4     D3     D2     D1     D0
+
+Read    Bit 9  Bit 8                  Bit 7             Bit 6  Bit 5  Bit 4  Bit 3  Bit 2
+Write
+
+Along with the 10-bit electrode filtered data output, each channel also has a 10-bit baseline value. The update rate of these
+registers is {ESI x SFI} if baseline tracking operation is enabled. These values are the output of the internal baseline filter
+operation tracking the slow-voltage variation of the background capacitance change. Touch/release detection is made based on
+the comparison between the 10-bit electrode filtered data and the 10-bit baseline value.
+
+Note: Although internally the baseline value is 10-bit, users can only access the 8 MSB of the 10-bit baseline value through the
+baseline value registers. The read out from the baseline register must be left shift two bits before comparing it with the 10-bit
+electrode data.
+
+The Baseline Value register is writable in Stop Mode. Note: when the user writes into the baseline value register, the lower two
+bits of the 10-bit baseline value are automatically cleared internally upon write operation. The Write to Baseline Value Register
+by specific values can be sometimes useful if user wants to manipulate the touch/release status. For example, manually setting
+the target channel from a touch locked state into a touch released state is easily done by setting the baseline value above the
+signal data.
+
+Refer to the Electrode Configuration Register (ECR, 0x5E) on how to control the on/off operation of baseline tracking and further
+details on how the initial baseline data is loaded into Run Mode. Refer to Baseline Filtering Control registers(0x2B~0x2A) on how
+to control the filtering of the baseline value.
+
+5.5 Baseline Filtering Control Register (0x2B~0x40)
+
+All12 of the electrode baseline values are controlled by the same set of filtering control registers, 0x2B ~ 0x35. The 13th channel
+ELEPROX is controlled by registers 0x36 ~ 0x40. Both sets of registers have the same structure using three different scenarios;
+rising, falling, and touched.
+
+Rising is defined as when the electrode data is greater than the baseline value. Falling is defined as when the electrode data is
+less than the baseline value. Touched is when the electrode is in touched status. For each scenario, the filtering characteristic is
+further defined by four parameters: the maximum half delta (MHD), noise half delta (NHD), noise count limit (NCL) and filter delay
+count limit (FDL). Note: there is no maximum half delta for the touched scenario.
+
+Maximum Half Delta (MHD): Determines the largest magnitude of variation to pass through the baseline filter. The range of the
+effective value is 1~63.
+
+Noise Half Delta (NHD): Determines the incremental change when non-noise drift is detected. The range of the effective value
+is 1~63.
+
+MPR121                                                                                                    Sensors
+12                                                                           Freescale Semiconductor, Inc.
+Noise Count Limit (NCL): Determines the number of samples consecutively greater than the Max Half Delta value. This is
+necessary to determine that it is not noise. The range of the effective value is 0~255.
+
+Filter Delay Count Limit (FDL): Determines the operation rate of the filter. A larger count limit means the filter delay is operating
+more slowly. The range of the effective value is 0~255.
+
+The setting of the filter is depended on the actual application. For more information on these registers, refer to application note
+AN3891.
+
+5.6 Touch / Release Threshold (0x41~0x5A)
+
+ELEx, ELEProx Touch Threshold (0x41,0x43,...,0x59)
+
+Bit    D7                      D6  D5                 D4         D3  D2  D1  D0
+
+Read                                                      ExTTH
+Write
+
+ELEx, ELEProx Release Threshold (0x42,0x44,...,0x5A)
+
+Bit    D7                      D6  D5                 D4         D3  D2  D1  D0
+
+Read                                                      ExRTH
+Write
+
+ExTTH: Electrode touch threshold, in range of 0~0xFF.
+
+ExRTH: Electrode release threshold, in range of 0~0xFF.
+
+Each of the 13 channels can be set with its own set of touch and release thresholds. Touch and release are detected by
+comparing the electrode filtered data to the baseline value. The amount of deviation from the baseline value represents a
+immediate capacitance change detected by possible a touch/release action.
+
+        Touch condition: Baseline - Electrode filtered data > Touch threshold
+        Release condition: Baseline - Electrode filtered data < Release threshold
+
+Threshold settings are dependant on the touch/release signal strength, system sensitivity and noise immunity requirements. In
+a typical touch detection application, threshold is typically in the range 0x04~0x10. The touch threshold is several counts larger
+than the release threshold. This is to provide hysteresis and to prevent noise and jitter. For more information, refer to the
+application note AN3892 and the MPR121 design guidelines.
+
+5.7 Debounce Register (0x5B)
+
+Debounce Register (0x5B)
+
+Bit    D7                      D6  D5                 D4         D3  D2  D1  D0
+
+Read
+
+       --                          DR                            --      DT
+
+Write
+
+DT: Debounce number for touch. The value range is 0~7.
+
+DR: Debounce number for release. The value range is 0~7.
+
+All 13 channels use the same set of touch and release debounce numbers. The status bits in Status Register 0x00 and 0x01 will
+only take place after the number of consecutive touch or release detection meets the debounce number setting. The debounce
+setting can be very useful in avoiding possible noise glitches. Using the debounce setting, the status bit change will have a delay
+of {ESI x SFI x DR (or DT)}.
+
+Sensors                                                                      MPR121
+Freescale Semiconductor, Inc.                                                       13
+5.8 Filter and Global CDC CDT Configuration (0x5C, 0x5D)
+
+Filter/Global CDC Configuration Register (0x5C)
+
+Bit     D7                            D6   D5    D4           D3       D2  D1                                      D0
+
+Read                                                              CDC
+                                 FFI
+
+Write
+
+Filter/Global CDT Configuration Register (0x5D)
+
+Bit     D7                            D6   D5    D4           D3       D2  D1                                      D0
+
+Read
+
+                                      CDT            SFI                   ESI
+
+Write
+
+        Table 8. Bit Descriptions
+
+        Field                                    Description
+
+         FFI   First Filter Iterations - The first filter iterations field selects the number of samples taken as
+        CDC    input to the first level of filtering.
+        CDT    00 Encoding 0 - Sets samples taken to 6 (Default)
+        SFI    01 Encoding 1 - Sets samples taken to 10
+        ESI    10 Encoding 2 - Sets samples taken to 18
+               11 Encoding 3 - Sets samples taken to 34
+               Charge Discharge Current - Selects the global value of charge discharge current applied to
+               electrode. The maximum is 63 A, 1 A step.
+               000000 Encoding 0 - Disable Electrode Charging
+               000001 Encoding 1 - Sets the current to 1 A
+               ~
+               010000 Encoding 16 - Sets the current to 16 A (Default)
+               ~
+               111111 Encoding 63 - Sets the current to 63 A
+               Charge Discharge Time - Selects the global value of charge time applied to electrode.
+               The maximum is 32 s, programmable as 2 ^(n-2) s.
+               000 Encoding 0 - Disables Electrode Charging
+               001 Encoding 1 - Time is set to 0.5 s (Default)
+               010 Encoding 2 - Time is set to 1 s
+               ~
+               111 Encoding 7 - Time is set to 32 s
+               Second Filter Iterations - Selects the number of samples taken for the second level filter
+               00 Encoding 0 - Number of samples is set to 4 (Default)
+               01 Encoding 1 - Number of samples is set to 6
+               10 Encoding 2 - Number of samples is set to 10
+               11 Encoding 3 - Number of samples is set to 18
+               Electrode Sample Interval - Selects the period between samples used for the second level
+               of filtering. The maximum is 128ms, Programmable to 2^n ms
+               000 Encoding 0 - Period set to 1 ms
+               001 Encoding 1 - Period set to 2 ms
+               ~
+               100 Encoding 4 - Period set to 16 ms (Default)
+               ~
+               111 Encoding 7 - Period set to 128 ms
+
+MPR121                                                                                                  Sensors
+14                                                                         Freescale Semiconductor, Inc.
+These two registers set the global AFE settings. This includes global electrode charge/discharge current CDC, global charge/
+discharge time CDT, as well as a common filtering setting (FFI, SFI, ESI) for all 13 channels, including the 13th Eleprox channel.
+
+The register 0x5C holds the global CDC and the first level filter configuration for all 13 channels. For each enabled channel, the
+global CDC will be used for that channel if the respective charge discharge current CDCx setting in 0x5F~0x6B for that channel
+is zero. If it is not zero, the individual CDCx value will be used in place of the global CDC value. If the MPR121's auto-configuration
+feature is enabled, CDCx will be automatically set up during system start stage and used for the actual measurement.
+
+The register 0x5D holds the global CDT and the second level filter configuration for all 13 channels. For each enabled channel,
+the global CDT will be used for that channel if the respective charge discharge time CDTx setting in 0x6C~0x72 for that channel
+is zero. If it is not zero, the individual CDTx value will be used in place of the global CDT value. If the SCTS bit (Skip Charge Time
+Search) in the MPR121's autoconfiguration is set, then the current global CDT and CDTx will be used for each channel
+measurements. If not, then the individual CDTx will be automatically set up during the system start stage and used for the actual
+measurement.
+
+Using only the global CDC and/or global CDT is acceptable where the capacitance values from all 13 channels are similar. If the
+electrode pattern, size, or even overlay and base material type changes from one channel to another, then using individual CDCx
+(and CDTx) will have a better result on sensing sensitivity as each electrode is charged up to a point closing to the supply voltage
+rail so that the highest sensing field is built for each channel.
+
+The settings for the FFI, SFI, and ESI must be selected according to the system design noise filtering requirement. These settings
+must also balance the need for power consumption and response time.
+
+When the total time required by scanning and charging/discharge all the enabled channels is longer than the ESI setting, then
+the actual time will override the ESI setting. For example if the ESI = 4 (16 mS), when FFI = 3 (34 samples), CDT = 7 (32 S),
+with all 13 channels enabled, the scan time needed is 34 x (32 S + 32 S) x 13 = 28 mS. This 28 mS will be the actual sampling
+interval instead of ESI (16 mS).
+
+5.9 Electrode Charge Current Register (0x5F~0x6B)
+
+Electrode Charge Current (0x5F~0x6B)
+
+Bit    D7                      D6     D5      D4  D3        D2  D1    D0
+
+Read   --                      --
+
+                                                      CDCx
+
+Write  --                      --
+
+CDCx: Sets the charge current applied to each channel. Similar to global CDC value, the range is 0~63 A, from 0x00~0x3F in
+1 A step. When the CDCx is zero, the global CDC value will be used for that channel.
+
+The individual CDCx bit can either be set manually or automatically (if autoconfiguration is enabled). When the autoconfiguration
+is enabled, during the first transition from Stop Mode to Run Mode, the system will automatically run a trial search for the
+appropriate CDCx (and CDTx if SCTS = 0). The individual CDCx will be automatically updated by the MPR121 into the respective
+registers once autoconfiguration is finished. CDCx is used in the following capacitance measurement and touch detection.
+
+5.10 Electrode Charge Time Register (0x6C~0x72)
+
+Electrode Charge Time (0x6C~0x72)
+
+Bit    D7                      D6     D5      D4  D3        D2  D1    D0
+
+Read   --                                         --
+
+                                      CDTx+1                    CDTx
+
+Write  --                                         --
+
+CDTx: Sets the charge time applied to each channel. Similar to the global CDT value, the range is 0~32 S, from 2b000~2b111.
+When the CDTx is zero, the global CDT value is used for that channel.
+
+The individual CDTx bit can be set manually or automatically (if autoconfiguration is enabled). When autoconfiguration is enabled,
+during the first transition from Stop Mode to Run Mode, the system will automatically run a trial search for the appropriate CDCx
+(and CDTx if SCST = 0). This means the autoconfiguration will include a search on the CDTx. The individual CDTx will be
+automatically updated by the MPR121 into the respective registers once the autoconfiguration is finished. This data is used in
+the following capacitance measurement and touch detection. If SCTS bit is 1, the search on CDTx will be skipped.
+
+Sensors                                                               MPR121
+Freescale Semiconductor, Inc.                                                15
+5.11 Electrode Configuration Register (ECR, 0x5E)
+
+Electrode Configuration Register (0x5E)
+
+Bit     D7                           D6  D5                              D4            D3             D2            D1                   D0
+
+Read                                     ELEPROX_EN                                                         ELE_EN
+                                 CL
+
+Write
+
+        Table 9. Bit Descriptions
+
+        Field                                                                Description
+
+                                     Calibration Lock - Controls the baseline tracking and how the baseline initial value is loaded
+
+                                     00 - Baseline tracking enabled, initial baseline value is current value in baseline value register
+                                     (Default)
+
+        CL                           01 - Baseline tracking is disabled
+
+                                     10 - Baseline tracking enabled, initial baseline value is loaded with the 5 high bits of the first
+
+                                     10-bit electrode data value
+
+                                     11 - Baseline tracking enabled, initial baseline value is loaded with all 10 bits of the first
+                                     electrode data value
+
+                                     Proximity Enable - Controls the operation of 13th Proximity Detection
+
+                                     00 - Proximity Detection is disabled (Default)
+
+        ELEPROX_EN 01 - Run Mode with ELE0~ELE1 combined for proximity detection enabled
+
+                                     10 - Run Mode with ELE0~ELE3 combined for proximity detection enabled
+
+                                     11 - Run Mode with ELE0~ELE11combined for proximity detection enabled
+
+                                     Electrode Enable - Controls the operation of 12 electrodes detection
+
+                                     0000 - Electrode detection is disabled (Default)
+
+                                     0001 - Run Mode with ELE0 for electrode detection enabled
+
+                                     0010 - Run Mode with ELE0~ ELE1 for electrode detection enabled
+
+                                     0011 - Run Mode with ELE0~ ELE2 for electrode detection enabled
+
+                                     0100 - Run Mode with ELE0~ ELE3 for electrode detection enabled
+
+        ELE_EN                       0101 - Run Mode with ELE0~ ELE4 for electrode detection enabled
+                                     0110 - Run Mode with ELE0~ ELE5 for electrode detection enabled
+
+                                     0111 - Run Mode with ELE0~ ELE6 for electrode detection enabled
+
+                                     1000 - Run Mode with ELE0~ ELE7 for electrode detection enabled
+
+                                     1001 - Run Mode with ELE0~ ELE8 for electrode detection enabled
+
+                                     1010 - Run Mode with ELE0~ ELE9 for electrode detection enabled
+
+                                     1011 - Run Mode with ELE0~ ELE10 for electrode detection enabled
+
+                                     11xx - Run Mode with ELE0~ ELE11 for electrode detection enabled
+
+The Electrode Configuration Register (ECR) determines if the MPR121 is in Run Mode or Stop Mode, controls the baseline
+tracking operation and specifies the input configurations of the 13 channels.
+
+The ECR reset default value is 0x00, which means MPR121 is in Stop Mode without capacitance measurement on all
+13 channels. Setting ELEPROX_EN and/or ELE_EN control bits to non-zero data will put the MPR121 into Run Mode. This will
+cause the MPR121 to operate immediately on its own. Clearing the ELEPROX_EN and ELE_EN all to zeros will set the MPR121
+into Stop Mode (which is its lowest power state). The MPR121 can be switched between Stop Mode and Run Mode at anytime
+by configuring the ECR.
+
+If all channels including the13th proximity detection channel are enabled, the proximity sensing channel is scanned first, followed
+by ELE0, ELE1..., and ELE11 respectively. The scan runs periodically at the sampling rate specified by the ESI in the Filter/CDT
+Configuration Register (0x5D). Refer to the table above for configuration of the different channels. Enabling specific channels will
+save the scan time and sensing field power spent on the unused channels.
+
+In a typical touch detection application, baseline tracking is enabled. This is to compensate for the environment and background
+induced slow capacitance change to the input sensing channels. The CL bits can enable/disable the baseline tracking and specify
+how to load the baseline initial values. Since the baseline tracking filtering system has a very large time constant and the initial
+
+MPR121                                                                                                                                   Sensors
+16                                                                                                          Freescale Semiconductor, Inc.
+baseline value starts from zero, it will require a very long time for the baseline to ramp up. This results in a short period of no
+response to touch after the MPR121 is first set to Run Mode. Setting the CL = 2b10 will command the MPR121 to load the initial
+baseline value at the beginning of the Run Mode. This shortens the initial baseline ramp-up time so that user will not notice any
+delay on touch detection. The MPR121 uses the five high bits of the first measured 10 bit electrode data.
+
+Auto-Configuration Registers (0x7B~0x7F)
+
+For each enabled channel, both the charge time and charge current must be set properly. This is so that a specified amount of
+charge field can be built on the sensing pad and that the capacitance can be measured using the internal ADC. When all 13
+channels are used, there are total 13 CDCx and 13 CDTx values which need to be configured.
+
+The MPR121 provides an auto-configuration function which is able to automatically search and set the charging parameters.
+When autoconfiguration is run, specific CDCx and CDTx combinations for the enabled channels can be obtained automatically.
+This eliminates test trials on the prototype device and for further verification on final products. A key task for the design engineer
+is to verify if the parameter settings generated by the MPR121 are acceptable. This verification ensures that the settings are
+optimized each time MPR121 powers on and that the equipment can operate in many different environments.
+
+The autoconfiguration finds the optimized CDCx and CDTx combination for each channel so that the charge level
+(I x T = V) on the each channel is as close as possible to the target setting specified by the designer. An upper and lower setting
+limit are used to provide the boundaries necessary to verify if the system is setup to operate correctly. If the autoconfiguration
+can not find the proper CDCx and CDTx value, an Out Of Range (OOR) status will be set for that channel.
+
+Autoconfiguration operates each time the MPR121 transitions from Stop Mode to Run Mode. After autoconfiguration is
+completed, a set of CDCx and CDTx values for each channel are calculated and automatically loaded into the corresponding
+register fields.
+
+If autoconfiguration fails, the MPR121 has an auto-reconfiguration function. Autoreconfiguration runs at each sampling interval
+if a channel has OOR status from a failed autoconfiguration. Autoreconfiguration will run until the OOR status is cleared or until
+it is disabled.
+
+There are five registers used to control the MPR121 auto-configuration feature. Registers 0x7B and 0x7C are used as the control
+registers and registers 0x07D to 0x7F are used to hold the configuration target settings. Refer to application note AN3889 for
+more information.
+
+Auto-Configure Control Register 0 (0x7B)
+
+Bit    D7                             D6  D5         D4  D3       D2     D1     D0
+
+Read                                          RETRY          BVA         ARE    ACE
+                                 FFI
+
+Write
+
+Auto-Configure Control Register 1 (0x7C)
+
+Bit    D7                             D6  D5         D4  D3       D2     D1     D0
+
+Read                                  --  --         --  --
+
+       SCTS                                                       OORIE  ARFIE  ACFIE
+
+Write                                 --  --         --  --
+
+FFI: The FFI bits are the same as the FFI bits in register 0x5C for correct auto-configuration and reconfiguration operations.
+
+ACE: Auto-Configuration Enable. 1: Enable, 0: Disable. When Enabled, the autoconfiguration will operate once at the beginning
+of the transition from Stop Mode to Run Mode. This includes search and update of the CDCx and CDTx for each enabled channel
+(if SCTS = 0).
+
+ARE: Auto-Reconfiguration Enable. 1: Enable, 0: Disable. When enabled, if the OOR is set for a channel after autoconfiguration,
+autoreconfiguration will operate on that channel on each sampling interval until the OOR is cleared.
+
+BVA: Fill the BVA bits same as the CL bits in ECR (0x5E) register.
+
+RETRY: Specifies the number of retries for autoconfiguration and autoreconfiguration if the configuration fails before setting
+OOR.
+
+       00 - No retry
+       01 - retry 2 times
+       10 - retry 4 times
+       11 - retry 8 times
+
+Sensors                                                                         MPR121
+Freescale Semiconductor, Inc.                                                          17
+SCTS: Skip Charge Time Search.
+        1: Skip CDTx search and update when autoconfiguration or autoreconfiguration, and current global CDT or CDTx are used
+        for respective channels. CDT or CDTx needs to be specified by the designer manually before operation. Setting the SCTS
+        to "1" results in a shorter time to complete autoconfiguration. This is useful for when the designer has obtained the correct
+        CDTx / CDT, and is confident that the current CDT and CDTx settings work in all conditions.
+        0: Both CDTx and CDCx will be searched and set by autoconfiguration and/or autoreconfiguration.
+
+ACFIE: Auto-configuration fail interrupt enable. 1: Enable, 0: Disable
+
+ARFIE: Auto-reconfiguration fail interrupt enable. 1: Enable, 0: Disable
+
+OORIE: Out-of-range interrupt enable. 1: Enable, 0: Disable
+
+Up-Side Limit Register (0x7D)
+
+Bit     D7                      D6  D5  D4                                                           D3  D2  D1  D0
+
+Read
+                                                                                                USL
+
+Write
+
+Low-Side Limit Register (0x7E)
+
+Bit     D7                      D6  D5  D4                                                           D3  D2  D1  D0
+
+Read
+                                                                                                LSL
+
+Write
+
+Target Level Register (0x7F)
+
+Bit     D7                      D6  D5  D4                                                           D3  D2  D1  D0
+
+Read
+                                                                                                 TL
+
+Write
+
+USL: Up-Side Limit. This value sets the electrode data level up limit for the boundary check in autoconfiguration and
+autoreconfiguration operation.
+
+LSL: Low-Side Limit. This value sets the electrode data level low limit for the boundary check in autoconfiguration and
+autoreconfiguration operation.
+
+TL: Target Level. This value is the expected target electrode data level for autoconfiguration and autoreconfiguration, that is, after
+successful autoconfiguration and autoreconfiguration, the measured electrode data level when untouched shall be close to the
+TL value. TL shall be in between of USL and LSL.
+
+The three parameters, USL, LSL and TL, are in the format similar to the baseline value; only the eight high bits are accessible
+by user and the two low bits are set to zero automatically. The USL/LSL/TL data needs to be shifted left two bits before comparing
+with the electrode data or the 10-bit baseline value.
+
+In order to have a valid auto-configuration result, USL/LSL/TL values should follow the relation that 255 > USL > TL > LSL > 0.
+For example, USL = 200, TL = USL*0.9 = 180, LSL = USL*0.5 = 100.
+
+It is possible that in a end user environment, the channel differences may be significant. This is because the same set of USL/
+LS/TL data is being used for all channels. It is important that the parameters not be set too close together. This makes it difficult
+for the autoconfiguration to find a suitable charge setting for a specific channel. In this case, the electrode data might easily go
+out of USL and LSL setting limits. Since the data is out-of-range, the channel status becomes OOR. If the channel is still OOR
+after the autoconfiguration has been run, it may indicate that the settings for this channel have not yet been optimized. One
+solution to this problem is to manually review the USL/LSL/TL settings. Another possible reason why the channel status could
+be OOR is a problem with the channel itself. This could be caused by a short to ground, short to the power rail, or short to the
+pad of the other channel.
+
+For the TL setting, a good practice is to try to set it close to the USL. This so the charge field can be set to detect a weak touch.
+On the other hand, the TL should not be set too close to the USL so that it is constantly exceeding the limit. For example, the
+electrode data from the end user's environment might have a much wider variance of readings. Some of the readings might
+exceed the USL, causing the auto-configuration to fail. For this reason, if the amount of capacitance change in the end user
+environment is significant, it is suggested that the USL and TL be set low enough to give some headroom for possible capacitance
+variations.
+
+MPR121                                                                                                                                    Sensors
+18                                                                                                           Freescale Semiconductor, Inc.
+With above mentioned, one possible example setting is given out below using equation 1~3, with the assumption that setting TL
+at 90% of USL, and LSL at 65% of USL would cover most of the application case. It may need further adjustment in some cases
+but will be a very good start.
+
+                                       USL = (VDD - 0.7)/VDD x 256                                      Eqn. 1
+
+                                       TL = USL x 0.9 = (VDD - 0.7)/VDD x 256 x 0.9                     Eqn. 2
+
+                                   LSL = USL x 0.65 = (VDD-0.7) / VDD x 256 x 0.65                      Eqn. 3
+
+                               Cin = I x T / V = CDC x CDT / (ADC counts x VDD/1024)                    Eqn. 4
+
+It may not necessary to set the USL at the level of VDD - 0.7 but it is beneficial to keep the applied constant charge current as
+accurate as that specified in the data sheet. This so the capacitance value on the input can be calculated with high accuracy
+using ADC conversion Equation 4. Using VDD-0.7 as USL level allows some headroom for applications where the supply varies
+over a certain range. For a system where the supply changes over a range, the lowest VDD point is considered for
+autoconfiguration so that a relative lower charge field can be used to avoid clipping the electrode data to VDD when it drops.
+
+5.12 Out-Of-Range Status Registers (0x02, 0x03)
+
+ELE0~ELE7 OOR Status (0x02)
+
+Bit                  D7            D6      D5      D4           D3                       D2        D1       D0
+                                       E5_OOR  E4_OOR       E3_OOR                   E2_OOR    E1_OOR   E0_OOR
+Read   E7_OOR                  E6_OOR
+                                           --      --           --                       --        --       --
+Write                --            --
+
+ELE8~ELEPROX OOR Status (0x03)
+
+Bit                  D7            D6      D5           D4           D3               D2       D1       D0
+
+Read                 ACFF      ARFF        --  EPROX_OOR E11_OOR E10_OOR                       E9_OOR   E8_OOR
+
+Write                --            --      --           --           --               --       --       --
+
+Ex_OOR, EPROX_OOR: Out-Of-Range Status bits for the 13 channels. This bit set indicates that a corresponding channel has
+failed autoconfiguration and autoreconfiguration for range check. Those bits are cleared when they pass the auto-configuration
+and auto-reconfiguration range check. These bits are user read only.
+
+ACFF: Auto-Configuration Fail Flag. When autoconfiguration fails, this bit is set. This bit is user read only.
+
+ARFF: Auto-Reconfiguration Fail Flag. When autoreconfiguration fails, this is bit set. This bit is user read only.
+
+When autoconfiguration and/or autoreconfiguration are enabled, MPR121 checks the electrode data after each auto-
+configuration, auto-reconfiguration operation to see if it is still in the range set by USL and LSL. When electrode data goes out of
+the range, corresponding Ex_OORx bit becomes "1" to indicate the failed channels. One example of triggering OOR error is
+shorting the measurement sensing pad to power rails, or shorting it with other channels.
+
+5.13 Soft Rest Register (0x80)
+
+Write 0x80 with 0x63 asserts soft reset. The soft reset does not effect the I2C module, but all others reset the same as POR.
+
+5.14 GPIO Registers (0x73~0x7A)
+
+GPIO Registers (0x73~0x7A)
+
+GPIO Registers                 D7      D6          D5           D4       D3               D2       D1       D0
+                                               GTL0_E9      GTL0_E8  GTL0_E7          GTL0_E6  GTL0_E5  GTL0_E4
+Control Register 0(0x73) GTL0_E11 GTL0_E10     GTL1_E9      GTL1_E8  GTL1_E7          GTL1_E6  GTL1_E5  GTL1_E4
+                                               DAT_E9       DAT_E8   DAT_E7           DAT_E6   DAT_E5   DAT_E4
+Control Register 1(0x74) GTL1_E11 GTL1_E10
+
+Data Register(0x75)        DAT_E11 DAT_E10
+
+Sensors                                                                                                 MPR121
+Freescale Semiconductor, Inc.                                                                                  19
+GPIO Registers (0x73~0x7A)
+
+Direction Register(0x76)  DIR_E11 DIR_E10 DIR_E9    DIR_E8                  DIR_E7             DIR_E6  DIR_E5         DIR_E4
+
+Enable Register(0x77)     EN_E11  EN_E10     EN_E9  EN_E8                   EN_E7              EN_E6   EN_E5          EN_E4
+
+Data Set Register(0x78)   SET_E11 SET_E10 SET_E9    SET_E8                  SET_E7             SET_E6  SET_E5         SET_E4
+
+Data Clear Register(0x79) CLR_E11 CLR_E10 CLR_E9 CLR_E8 CLR_E7 CLR_E6 CLR_E5 CLR_E4
+
+Data Toggle Register(0x7A) TOG_E11 TOG_E10 TOG_E11 TOG_E8 TOG_E7 TOG_E6 TOG_E5 TOG_E4
+
+These registers control GPIO and LED driver functions. D7~D0 bits correspond to GPIO and LED functions on ELE11~ ELE4
+inputs respectively. When any of these ports are not used for electrode sensing, it can be used for GPIO or LED driver. The GPIO
+control registers can be write at anytime regardless Stop Mode or Run mode. The configuration of the LED driver and GPIO
+system is described with more detail in application note AN3894.
+
+Note: The number of touch sensing electrodes, and therefore the number of GPIO ports left available is configured by the ECR
+(0x5E) and GPIO Enable Register (0x77). ECR has higher priority and overrides the GPIO enabled in 0x77, that is when a pin is
+enabled as GPIO but is also selected as electrode by ECR, the GPIO function is disabled immediately and it becomes an
+electrode during Run Mode.
+
+In the Stop Mode just after power-on reset, all electrodes and GPIO ports are in high impedance as all the GPIO ports are default
+disabled and the electrodes are not enabled.
+
+EN, DIR, CTL0, CTL1: GPIO enable and configuration bits, the functions are in description table below.
+
+        EN                DIR     CTL0:CTL1                Function Description
+
+        0                 X       XX         GPIO function is disabled. Port is high-z state.
+
+        1                 0       00         GPIO port becomes input port.
+
+        1                 0       10         GPIO port becomes input port with internal pulldown.
+
+        1                 0       11         GPIO port becomes input port with internal pullup.
+
+        1                 0       01         Not defined yet (as same as CTL = 00).
+
+        1                 1       00         GPIO port becomes CMOS output port.
+
+        1                 1       11         GPIO port becomes high side only open drain output port for LED driver.
+
+        1                 1       10         GPIO port becomes low side only open drain output port.
+
+        1                 1       01         Not defined yet (as same as CTL = 00).
+
+When the EN bit is set, the corresponding GPIO pin is enabled and the GPIO function is configured by CTL0, CTL1 and DIR bits.
+When the port is used as an input, it can be configured as a normal logic input with high impedance (CTL0CTL1 = 2b00), input
+with internal pull-down (CTL0CTL1 = 2b10) or pullup (CTL0CTL1 = 2b11). Note: the former may result in an unstable logic input
+state if opened without fixed logic level input.
+
+The GPIO output configuration can be configured as either push pull (CTL0CTL1 = 2b00) or open drain. When the GPIO is used
+for LED drivers, the GPIO is set to high side only open drain (CTL0CTL1 = 2b11), which is can source up to 12 mA current into
+the LED.
+
+DAT: GPIO Data Register bits.
+
+When a GPIO is enabled as an output, the GPIO port outputs the corresponding DAT bit level from GPIO Data Register (0x075).
+The output level toggle remains on during any electrode charging. The level transition will occur after the ADC conversion takes
+place. It is important to note that reading this register returns the content of the GPIO Data Register, (not a level of the port). When
+a GPIO is configured as input, reading this register returns the latched input level of the corresponding port (not contents of the
+GPIO Data Register). Writing to the DAT changes content of the register, but does not effect the input function.
+
+SET: Writing a "1" to this bit will set the corresponding bit in the Data Register.
+
+CLR: Writing a "1" to this bit will clear the corresponding bit in the Data Register.
+
+TOG: Writing a "1" to this bit will toggle the corresponding bit in the Data Register
+
+Writing "1" into the corresponding bits of GPIO Data Set Register, GPIO Data Clear Register, and GPIO Data Toggle Register will
+set/clear/toggle contents of the corresponding DAT bit in Data Register. Writing "0" has no meaning. These registers allow any
+individual port(s) to be set, cleared, or toggled individually without effecting other ports. It is important to note that reading these
+registers returns the contents of the GPIO Data Register reading.
+
+MPR121                                                                                                                        Sensors
+20                                                                                               Freescale Semiconductor, Inc.
+6    MPR121 Serial Communication
+
+6.1  I2C Serial Communications
+
+The MPR121 uses an I2C Serial Interface.The MPR121 operates as a slave that sends and receives data through an I2C two-
+
+wire interface. The interface uses a Serial Data Line (SDA) and a Serial Clock Line (SCL) to achieve bidirectional communication
+
+between master(s) and slave(s). A master (typically a microcontroller) initiates all data transfers to and from the MPR121, and it
+
+generates the SCL clock that synchronizes the data transfer.
+
+The MPR121 SDA line operates as both an input and an open-drain output. A pullup resistor, typically 4.7 k, is required on SDA.
+The MPR121 SCL line operates only as an input. A pullup resistor, typically 4.7 k, is required on SCL if there are multiple
+masters on the two-wire interface, or if the master in a single-master system has an open-drain SCL output.
+
+Each transmission consists of a START condition (Figure 3) sent by a master, followed by the MPR121's 7-bit slave address plus
+R/W bit, a register address byte, one or more data bytes, and finally a STOP condition.
+
+     SDA
+
+                                                                                                tBUF
+
+                                   tSU DAT                 tSU STA  tHD STA
+                                            tHD DAT
+                 tLOW                                                            tSU STO
+                            tHIGH
+     SCL
+                               tR  tF
+     tHD STA
+
+        ST ART                                                REPEAT ED ST ART            STOP        ST ART
+     CONDIT ION                                                    CONDIT ION
+                                                                                       CONDIT ION CONDIT ION
+
+                                   Figure 3. Two-Wire Serial Interface Timing Details
+
+6.2 Slave Address
+
+The MPR121 has selectable slave addresses listed by different ADDR pin connections. This also makes it possible for multiple
+MPR121 devices to be used together for channel expansions in a single system.
+
+                                                             Table 10. MPR121 Slave Address
+
+                                   ADDR Pin Connection              I2C Address
+
+                                            VSS                     0x5A
+
+                                            VDD                     0x5B
+                                            SDA                     0x5C
+
+                                            SCL                     0x5D
+
+6.3 Operation with Multiple Master
+
+When operating with multiple masters, bus confusion between I2C masters is sometimes a problem. One way to prevent this is
+to avoid using repeated starts to the MPR121. On a I2C bus, once a master issues a start/repeated start condition, that master
+
+owns the bus until a stop condition occurs. If a master that does not own the bus attempts to take control of that bus, then
+improper addressing may occur. An address may always be rewritten to fix this problem. Follow I2C protocol for multiple master
+
+configurations.
+
+Sensors                                                                                               MPR121
+Freescale Semiconductor, Inc.                                                                                21
+6.4 Read and Write Operation Format
+
+< Single Byte Read >
+
+Master  ST Device Address[6:0] W                  Register Address[7:0]      SR Device Address[6:0] R                NAK SP
+
+Slave                             AK                                     AK                            AK Data[7:0]
+
+< Multiple Byte Read >
+
+Master  ST Device Address[6:0] W                  Register Address[7:0]      SR Device Address[6:0] R                AK
+
+Slave                             AK                                     AK                            AK Data[7:0]
+
+Master                  AK                        AK                         NAK SP
+
+Slave   Data[7:0]             Data[7:0]               Data[7:0]
+
+< Single Byte Write >
+
+Master  ST Device Address[6:0] W                  Register Address[7:0]      Data[7:0]  SP
+
+Slave                             AK                             AK                       AK
+                                                                                        W: Write = 0
+Legend                        SP: Stop Condition      NAK: No Acknowledge
+ST: Start Condition           AK: Acknowledge         R: Read = 1
+SR: Repeated Start Condition
+
+MPR121                                                                                                               Sensors
+22                                                                                      Freescale Semiconductor, Inc.
+                               PACKAGE DIMENSIONS
+
+Sensors                                            PAGE 1 OF 3
+Freescale Semiconductor, Inc.
+                                                                     MPR121
+                                                                             23
+MPR121     PAGE 2 OF 3
+24
+                                     Sensors
+        Freescale Semiconductor, Inc.
+Sensors                        PAGE 3 OF 3
+Freescale Semiconductor, Inc.
+                                                      MPR121
+                                                             25
+Table 11. Revision history
+
+Revision  Revision                                    Description of changes
+number       date
+
+                    · On Page 1, Under Features: Changed 3 mA shutdown current to 3 mA in scan stop mode current, changed
+
+                            12 electrodes to 12 electrodes/capacitance sensing inputs in which 8 are multifunctional for LED driving and
+
+                            GPIO, added two new bullets: Integrated independent autocalibration for each electrode input and
+
+                            Autoconfiguration of charge current and charge time for each electrode input, Under Implementations: added
+
+                            three bullets
+
+                    · Updated Table 1 Pin Descriptions, modified pin descriptions for Pins 4, 5, 7
+3         12/2011 · In Section 3, added Power Supply paragraph, modified remaining paragraphs
+
+                    · In Table 2, changed ELEPROX to PROX_OOR, changed Register Names from: AFE Configuration and Filter
+
+                            Configuration to: Filter/Global CDC Configuration and Filter/Global CDT Configuration, added new register for
+
+                            Soft Reset Register
+
+                    · Removed AN3889, AN3890, AN3891, AN3892, AN3893, AN3894, AN3895, and AN3944 documents
+
+                    · Added Sections 5.0 through 6.4
+
+4         02/2013 · Global change to Table 5, renamed all instances Run1 to Run. Added footnote in table
+
+MPR121                                                                                                     Sensors
+26                                                                            Freescale Semiconductor, Inc.
+How to Reach Us:         Information in this document is provided solely to enable system and software
+                         implementers to use Freescale products. There are no express or implied copyright
+Home Page:               licenses granted hereunder to design or fabricate any integrated circuits based on the
+freescale.com            information in this document.
+
+Web Support:             Freescale reserves the right to make changes without further notice to any products
+freescale.com/support    herein. Freescale makes no warranty, representation, or guarantee regarding the
+                         suitability of its products for any particular purpose, nor does Freescale assume any
+                         liability arising out of the application or use of any product or circuit, and specifically
+                         disclaims any and all liability, including without limitation consequential or incidental
+                         damages. "Typical" parameters that may be provided in Freescale data sheets and/or
+                         specifications can and do vary in different applications, and actual performance may
+                         vary over time. All operating parameters, including "typicals," must be validated for each
+                         customer application by customer's technical experts. Freescale does not convey any
+                         license under its patent rights nor the rights of others. Freescale sells products pursuant
+                         to standard terms and conditions of sale, which can be found at the following address:
+                         freescale.com/salestermsandconditions.
+
+                         Freescale, the Freescale logo, AltiVec, C-5, CodeTest, CodeWarrior, ColdFire, C-Ware,
+                         Energy Efficient Solutions logo, Kinetis, mobileGT, PowerQUICC, Processor Expert,
+                         QorIQ, Qorivva, StarCore, Symphony, and VortiQa are trademarks of Freescale
+                         Semiconductor, Inc., Reg. U.S. Pat. & Tm. Off. Airfast, BeeKit, BeeStack, ColdFire+,
+                         CoreNet, Flexis, MagniV, MXC, Platform in a Package, QorIQ Qonverge, QUICC
+                         Engine, Ready Play, SafeAssure, SMARTMOS, TurboLink, Vybrid, and Xtrinsic are
+                         trademarks of Freescale Semiconductor, Inc. All other product or service names are
+                         the property of their respective owners.
+                         © 2013 Freescale Semiconductor, Inc.
+
+Document Number: MPR121
+Rev. 4
+02/2013
+

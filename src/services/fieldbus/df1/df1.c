@@ -22,18 +22,31 @@ uint8_t protocore_df1_bcc(const uint8_t *data, size_t len)
 }
 
 // DF1's block check is the reflected CRC-16 (poly 0xA001 = reflect(0x8005), init 0, no final XOR), cataloged
-// as CRC-16/ARC.
+// as CRC-16/ARC. The data and the ETX are two runs, folded into one register.
 static uint16_t df1_crc_data_plus_etx(const uint8_t *data, size_t len, uint8_t etx)
 {
-    uint32_t c = protocore_crc_begin(&PROTOCORE_CRC16_ARC);
-    c = protocore_crc_update(&PROTOCORE_CRC16_ARC, c, data, len);
-    c = protocore_crc_update(&PROTOCORE_CRC16_ARC, c, &etx, 1);
-    return (uint16_t)protocore_crc_final(&PROTOCORE_CRC16_ARC, c);
+    Crc.args.params = &PROTOCORE_CRC16_ARC;
+    Crc.begin(Crc.internal);
+    Crc.args.crc = Crc.value;
+    Crc.args.data = data;
+    Crc.args.len = len;
+    Crc.update(Crc.internal);
+    Crc.args.crc = Crc.value;
+    Crc.args.data = &etx;
+    Crc.args.len = 1;
+    Crc.update(Crc.internal);
+    Crc.args.crc = Crc.value;
+    Crc.final(Crc.internal);
+    return (uint16_t)Crc.value;
 }
 
 uint16_t protocore_df1_crc(const uint8_t *data, size_t len)
 {
-    return (uint16_t)protocore_crc(&PROTOCORE_CRC16_ARC, data, len);
+    Crc.args.params = &PROTOCORE_CRC16_ARC;
+    Crc.args.data = data;
+    Crc.args.len = len;
+    Crc.compute(Crc.internal);
+    return (uint16_t)Crc.value;
 }
 
 size_t protocore_df1_build_frame(uint8_t *buf, size_t cap, const uint8_t *data, size_t data_len, Df1Check check)

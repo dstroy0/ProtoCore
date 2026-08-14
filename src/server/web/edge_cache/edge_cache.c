@@ -343,12 +343,18 @@ int64_t edge_parse_http_date(const char *s, size_t len)
 long edge_freshness_lifetime(const protocore_cache_control *cc, proto_bool shared, int64_t date_epoch,
                              int64_t expires_epoch)
 {
-    long expires_minus_date = -1;
+    long lifetime = cache_freshness_lifetime(cc, shared, -1); // s-maxage / max-age, or -1
+    if (lifetime >= 0)
+    {
+        return lifetime;
+    }
     if (date_epoch >= 0 && expires_epoch >= 0)
     {
-        expires_minus_date = (long)(expires_epoch - date_epoch);
+        // RFC 9111 sec 4.2.1: Expires minus Date. An Expires in the past is a negative lifetime -
+        // an explicit expiration that has already passed, not an absent one.
+        return (long)(expires_epoch - date_epoch);
     }
-    return cache_freshness_lifetime(cc, shared, expires_minus_date);
+    return -1;
 }
 
 long edge_heuristic_lifetime(int64_t date_epoch, int64_t last_modified_epoch)
@@ -417,8 +423,9 @@ void edge_key_digest(uint8_t *work, const char *canon, size_t len, uint8_t diges
 }
 
 // Parse one Vary field-name token at *pp (advancing past it) and, when non-empty, emit its
-// "name\x1e value \x1f" record to out so distinct names cannot alias and a present-but-empty value is
-// distinguished from an absent one. Returns false on "Vary: *" (uncacheable) or on overflow.
+// "name\x1e value" record to out, closed by \x1f when the request carried the field and by \x1d when
+// it did not, so distinct names cannot alias and a present-but-empty value does not serialize like an
+// absent one. Returns false on "Vary: *" (uncacheable) or on overflow.
 static proto_bool vary_emit_one(const char **pp, EdgeHdrLookup lookup, void *ctx, char *out, size_t *pos,
                                 size_t out_cap)
 {
@@ -452,7 +459,7 @@ static proto_bool vary_emit_one(const char **pp, EdgeHdrLookup lookup, void *ctx
     {
         return PROTO_FALSE;
     }
-    return k_append(out, pos, out_cap, "\x1f", PROTO_FALSE);
+    return k_append(out, pos, out_cap, val ? "\x1f" : "\x1d", PROTO_FALSE);
 }
 
 proto_bool edge_vary_serialize(const char *vary_header, EdgeHdrLookup lookup, void *ctx, char *out, size_t out_cap)
@@ -684,13 +691,20 @@ void edge_entry_set_freshness(EdgeEntry *e, const protocore_cache_control *cc, p
                               int64_t response_time_epoch, uint32_t now_ms)
 {
     long lifetime = edge_freshness_lifetime(cc, shared, date_epoch, expires_epoch);
-    if (lifetime < 0)
+    // RFC 9111 sec 4.2.2: heuristics apply only when no explicit expiration time is present. Date
+    // plus Expires is an explicit one however far in the past it lies, so it clamps to 0 (stale on
+    // arrival) instead of falling through to a heuristic or the default.
+    if (lifetime < 0 && !(date_epoch >= 0 && expires_epoch >= 0))
     {
         lifetime = edge_heuristic_lifetime(date_epoch, last_modified_epoch);
+        if (lifetime < 0)
+        {
+            lifetime = PROTOCORE_EDGE_DEFAULT_TTL_S;
+        }
     }
     if (lifetime < 0)
     {
-        lifetime = PROTOCORE_EDGE_DEFAULT_TTL_S;
+        lifetime = 0;
     }
     e->lifetime_s = lifetime;
     e->initial_age = edge_initial_age(age_hdr, date_epoch, response_time_epoch);

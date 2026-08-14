@@ -31,28 +31,28 @@ struct GpioMapInternal
 
 static struct GpioMapInternal s_gpio = {.ns = &GpioMap};
 
-static void gpio_dir_name(struct GpioMapInternal *restrict ctx)
+// The wire name for a direction, so the serializer names one without going through the handle it is
+// itself being called on.
+static const char *dir_name_of(protocore_gpio_dir dir)
 {
-    const protocore_gpio_dir dir = ctx->ns->args.dir;
-
     switch (dir)
     {
     case PROTOCORE_GPIO_DIR_IN:
-        ctx->ns->text = "in";
-        return;
+        return "in";
     case PROTOCORE_GPIO_DIR_IN_PULLUP:
-        ctx->ns->text = "in_pullup";
-        return;
+        return "in_pullup";
     case PROTOCORE_GPIO_DIR_IN_PULLDOWN:
-        ctx->ns->text = "in_pulldown";
-        return;
+        return "in_pulldown";
     case PROTOCORE_GPIO_DIR_OUT:
-        ctx->ns->text = "out";
-        return;
+        return "out";
     default:
-        ctx->ns->text = "in";
-        return;
+        return "in";
     }
+}
+
+static void gpio_dir_name(struct GpioMapInternal *restrict ctx)
+{
+    ctx->ns->text = dir_name_of(ctx->ns->args.dir);
 }
 
 // The document is three frames: the object that opens the array, one object per pin, and the
@@ -105,7 +105,7 @@ static void gpio_json(struct GpioMapInternal *restrict ctx)
         if (frame.append(out, cap, GPIO_PIN,
                          (const protocore_fval[]){PROTOCORE_VSTR(PROTOCORE_JSON_SEP[!!i]),
                                                   PROTOCORE_VU32((uint32_t)p->pin), PROTOCORE_VJSON(p->label),
-                                                  PROTOCORE_VJSON(protocore_gpio_dir_name(p->dir)),
+                                                  PROTOCORE_VJSON(dir_name_of(p->dir)),
                                                   PROTOCORE_VU32((uint32_t)(!!p->level))},
                          5) == 0)
         {
@@ -280,8 +280,13 @@ static void gpio_write(struct GpioMapInternal *restrict ctx)
 #endif // PROTOCORE_HAS_GPIO
 
 // The route installer lives in gpio_map_routes.c, the arm that has an HTTP surface to install on;
-// it is bound here so the whole surface is one initializer rather than a runtime install.
-void protocore_gpio_route_begin(struct GpioMapInternal *restrict ctx);
+// it is bound here so the whole surface is one initializer rather than a runtime install. Weak, so
+// the pin core links on its own - the serializer and the parser are host-tested without the server,
+// and gpio_map_routes.c overrides this the moment it is in the build.
+__attribute__((weak)) void protocore_gpio_route_begin(struct GpioMapInternal *restrict ctx)
+{
+    (void)ctx;
+}
 
 // Designated, so a member's position in the struct does not decide what it binds to.
 GpioMapNs GpioMap = {.begin = protocore_gpio_route_begin,

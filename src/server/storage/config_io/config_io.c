@@ -17,7 +17,6 @@
 
 #include "mmgr/protostr.h"
 #include "server/storage/config_store/config_store.h"
-#include <stdio.h>
 
 // An exported u32 field is one number.
 static const protocore_field CFG_U32[] = {PROTOCORE_U32, PROTOCORE_END};

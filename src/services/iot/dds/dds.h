@@ -3,21 +3,32 @@
 
 /**
  * @file dds.h
- * @brief DDS / RTPS wire-protocol codec (PROTOCORE_ENABLE_DDS).
+ * @brief The DDSI-RTPS Message framing codec (PROTOCORE_ENABLE_DDS).
  *
- * DDS (OMG Data Distribution Service) publishes on the wire as **RTPS** (DDSI-RTPS, the Real-Time
- * Publish-Subscribe protocol), normally over UDP multicast. An RTPS **message** is a 20-octet header
- * followed by a sequence of **submessages**:
+ * Governing standard: OMG "The Real-time Publish-Subscribe Protocol DDS Interoperability Wire
+ * Protocol (DDSI-RTPS) Specification" version 2.5, OMG document formal/2022-04-01. DDS and its
+ * wire protocol are OMG specifications, not IETF ones, so no RFC governs them and none is cited.
  *
- *   Header (20): "RTPS" | protocol version (2) | vendorId (2) | guidPrefix (12)
- *   Submessage:  submessageId (1) | flags (1) | octetsToNextHeader (2, endian per the E flag) | body
+ * DDSI-RTPS sec 8.3.3: a Message is a fixed-size leading Header followed by a variable number of
+ * Submessages, and each Submessage is a SubmessageHeader followed by SubmessageElements.
  *
- * This is the message + submessage framing codec: `protocore_rtps_header` / `protocore_rtps_submessage` build
- * them and `protocore_rtps_parse` validates the header (magic + version) and walks the submessages,
- * surfacing each via a callback. The per-submessage bodies (DATA serialized-payload/CDR, HEARTBEAT
- * sequence-number sets, the discovery SPDP/SEDP topics) layer on top of this framing.
+ *     Header, 20 octets (sec 9.4.4)      'R' 'T' 'P' 'S' | version 2 | vendorId 2 | guidPrefix 12
+ *     SubmessageHeader, 4 (sec 9.4.5.1)  submessageId 1 | flags 1 | octetsToNextHeader 2
  *
- * Pure, zero heap, no stdlib, host-testable.
+ * sec 9.4.5.1 maps the EndiannessFlag onto the least-significant bit of flags, E = flags & 0x01,
+ * with E=0 big-endian and E=1 little-endian, and octetsToNextHeader is a CDR ushort in that order.
+ *
+ * sec 9.4.1: a Message carries no length of its own, the transport supplies it. Over UDP that
+ * length is the UDP payload length.
+ *
+ * This module is the Message and SubmessageHeader framing. The Submessage contents (a Data
+ * Submessage's serializedPayload, a Heartbeat's SequenceNumber set, the SPDP and SEDP discovery
+ * topics) layer on top of it.
+ *
+ * The module exports one symbol, @ref Rtps. Everything in dds.c has internal linkage.
+ *
+ * @author  Douglas Quigg (dstroy0)
+ * @date    2026
  */
 
 #ifndef PROTOCORE_DDS_H
@@ -29,9 +40,7 @@ PROTOCORE_BEGIN_DECLS
 
 #if PROTOCORE_ENABLE_DDS
 
-/** @brief RTPS submessage kinds (DDSI-RTPS 8.3.7) + the flag bit for little-endian. */
-// RTPS submessage kinds + the little-endian flag bit + fixed lengths: wire values (the flag is OR'd),
-// so integer constants in a namespacing struct.
+/** @brief DDSI-RTPS sec 9.4.5.1 SubmessageKind: the submessageId octet of a SubmessageHeader. */
 #define RTPS_SM_PAD 0x01
 #define RTPS_SM_ACKNACK 0x06
 #define RTPS_SM_HEARTBEAT 0x07
@@ -43,41 +52,105 @@ PROTOCORE_BEGIN_DECLS
 #define RTPS_SM_INFO_REPLY 0x0f
 #define RTPS_SM_DATA 0x15
 #define RTPS_SM_DATA_FRAG 0x16
-#define RTPS_FLAG_ENDIAN 0x01 ///< E flag: submessage (and header) fields are little-endian.
-#define RTPS_HEADER_LEN 20
-#define RTPS_GUIDPREFIX_LEN 12
-
-/** @brief RTPS protocol version carried in the header (major, minor). */
-extern const uint8_t RTPS_VERSION[2]; ///< {2, 4}.
+#define RTPS_FLAG_ENDIAN 0x01   ///< EndiannessFlag 'E', flags bit 0: E=1 little-endian (sec 9.4.5.1).
+#define RTPS_HEADER_LEN 20      ///< Header: magic 4 + version 2 + vendorId 2 + guidPrefix 12 (sec 9.4.4).
+#define RTPS_GUIDPREFIX_LEN 12  ///< GuidPrefix_t is 12 octets (sec 9.3.1.1).
 
 /**
- * @brief Build the 20-octet RTPS message header.
- * @param guid_prefix 12-byte participant GUID prefix.
- * @param vendor_id   2-byte vendor id (0x0000 = unknown).
- * @return 20, or 0 if @p cap < 20 or a pointer is null.
+ * @brief One Submessage a parse surfaces: its SubmessageHeader fields and its contents.
+ *
+ * @param submessage_id  the SubmessageKind octet (sec 9.4.5.1)
+ * @param flags          the 8 SubmessageFlags, bit 0 the EndiannessFlag
+ * @param contents       the Submessage contents, NULL when there are none
+ * @param contents_len   how many octets they run
+ * @param arg            the caller's pointer, handed back untouched
  */
-size_t protocore_rtps_header(const uint8_t *guid_prefix, const uint8_t *vendor_id, uint8_t *out, size_t cap);
+typedef void (*protocore_rtps_submessage_cb)(uint8_t submessage_id, uint8_t flags, const uint8_t *contents,
+                                             size_t contents_len, void *arg);
+
+/** @brief sec 8.3.3.1 Table 8.14: the Header fields a build stamps, less the protocol and version. */
+typedef struct
+{
+    const uint8_t *guid_prefix; ///< guidPrefix, the 12-octet default GUID prefix for the Message
+    const uint8_t *vendor_id;   ///< vendorId, 2 octets; VENDORID_UNKNOWN is {0, 0} (sec 9.3.2.1)
+} RtpsHeaderArgs;
+
+/** @brief sec 8.3.3.3 Table 8.16: one Submessage, its SubmessageHeader fields and its contents. */
+typedef struct
+{
+    const uint8_t *contents; ///< the Submessage contents, NULL only when contents_len is 0
+    uint16_t contents_len;   ///< their length, written as octetsToNextHeader (sec 9.4.5.1)
+    uint8_t submessage_id;   ///< the SubmessageKind octet, one of RTPS_SM_*
+    uint8_t flags;           ///< the 8 SubmessageFlags; OR RTPS_FLAG_ENDIAN for little-endian
+} RtpsSubmessageArgs;
+
+/** @brief Where a build lays its octets down. */
+typedef struct
+{
+    uint8_t *buf; ///< the buffer a build writes into
+    size_t cap;   ///< how much room it has
+} RtpsOutArgs;
+
+/** @brief The Message a parse walks, its length supplied by the transport (sec 9.4.1). */
+typedef struct
+{
+    const uint8_t *msg; ///< the whole Message, Header first
+    size_t len;         ///< its octet count, over UDP the payload length
+} RtpsMessageArgs;
+
+/** @brief Where a parse surfaces each Submessage it walks. */
+typedef struct
+{
+    protocore_rtps_submessage_cb on_submessage; ///< called once per Submessage, NULL to only validate
+    void *arg;                                  ///< handed back to it untouched
+} RtpsSinkArgs;
+
+/** @brief The codec's own state and the calls that reach it, described only in dds.c. */
+struct RtpsInternal;
 
 /**
- * @brief Build one RTPS submessage `[id][flags][octetsToNextHeader][body]`.
- * @param id       RTPS_SM_*.
- * @param flags    submessage flags (bit 0 = little-endian; set RTPS_FLAG_ENDIAN for LE bodies).
- * @param body     submessage contents (may be null when body_len == 0).
- * @param body_len contents length (the octetsToNextHeader value).
- * @return 4 + body_len bytes written, or 0 if it won't fit.
+ * @brief The DDSI-RTPS Message framing codec.
+ *
+ * A caller sets the members a call takes, invokes it through ::Rtps, and reads the outcome off the
+ * same handle.
+ *
+ * No slot member: the codec keeps no rows, so no call names one.
+ *
+ * @var RtpsNs::hdr         the Header fields a header stamps (sec 8.3.3.1)
+ * @var RtpsNs::sub         the SubmessageHeader fields and contents a submessage writes (sec 8.3.3.3)
+ * @var RtpsNs::out         the buffer a header or a submessage writes into
+ * @var RtpsNs::msg         the Message a parse walks (sec 9.4.1)
+ * @var RtpsNs::sink        where a parse surfaces each Submessage
+ * @var RtpsNs::ok          a parse's verdict: the Header is valid and every Submessage fits
+ * @var RtpsNs::n           the octets a header or a submessage wrote, 0 when it did not fit
+ * @var RtpsNs::header      build the 20-octet Header into @c out (sec 9.4.4)
+ * @var RtpsNs::submessage  build one SubmessageHeader and its contents into @c out (sec 9.4.5.1)
+ * @var RtpsNs::parse       validate the Header and walk the Submessages, surfacing each to @c sink
+ * @var RtpsNs::internal    the codec's state and the calls that reach it
  */
-size_t protocore_rtps_submessage(uint8_t id, uint8_t flags, const uint8_t *body, uint16_t body_len, uint8_t *out,
-                                 size_t cap);
+typedef struct
+{
+    RtpsHeaderArgs hdr;     ///< what a Header stamps
+    RtpsSubmessageArgs sub; ///< what one Submessage says
+    RtpsOutArgs out;        ///< where a build lands
+    RtpsMessageArgs msg;    ///< what a parse walks
+    RtpsSinkArgs sink;      ///< where a parse reports
 
-/** @brief One submessage surfaced by protocore_rtps_parse. */
-typedef void (*protocore_rtps_cb)(uint8_t id, uint8_t flags, const uint8_t *body, size_t body_len, void *arg);
+    proto_bool ok;
+    size_t n;
 
-/**
- * @brief Validate an RTPS message header and walk its submessages.
- * @return true if the header is a well-formed RTPS message (magic + version <= ours) and every
- *         submessage fits. An octetsToNextHeader of 0 on the last submessage means "to end of message".
- */
-proto_bool protocore_rtps_parse(const uint8_t *msg, size_t len, protocore_rtps_cb cb, void *arg);
+    void (*header)(struct RtpsInternal *ctx);
+    void (*submessage)(struct RtpsInternal *ctx);
+    void (*parse)(struct RtpsInternal *ctx);
+
+    struct RtpsInternal *internal;
+} RtpsNs;
+
+/** @brief The protocol version a built Header stamps, major then minor (sec 8.3.3.1). */
+extern const uint8_t RTPS_VERSION[2];
+
+/** @brief The one symbol this module exports. */
+extern RtpsNs Rtps;
 
 #endif // PROTOCORE_ENABLE_DDS
 

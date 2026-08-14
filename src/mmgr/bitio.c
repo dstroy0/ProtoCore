@@ -21,7 +21,10 @@ void protocore_bitw_put(protocore_bit_writer *w, uint32_t bits, int n)
     {
         return; // latched: nbits is no longer a shift distance this can use
     }
-    w->acc |= bits << w->nbits;
+    // Only the low n bits enter the accumulator; anything above them is dropped rather than ORed
+    // into the bits that follow.
+    uint32_t low = (n >= 32) ? bits : (bits & ((1u << n) - 1u));
+    w->acc |= low << w->nbits;
     w->nbits += n;
     while (w->nbits >= 8)
     {

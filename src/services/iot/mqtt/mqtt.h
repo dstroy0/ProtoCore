@@ -3,24 +3,34 @@
 
 /**
  * @file mqtt.h
- * @brief Zero-heap MQTT 3.1.1 publish/subscribe client (PROTOCORE_ENABLE_MQTT).
+ * @brief The MQTT Client (PROTOCORE_ENABLE_MQTT).
  *
- * A full, persistent outbound client for IoT messaging: connect to a broker with
- * an optional Last-Will and credentials, PUBLISH and SUBSCRIBE / UNSUBSCRIBE at
- * QoS 0, 1, or 2 (complete acknowledgement flows in both directions, with bounded
- * in-flight retransmit), receive messages via a callback, and keep the session
- * alive. Split, like the other services, into a pure host-testable codec and an
- * ESP32-only transport:
+ * The governing document is "MQTT Version 3.1.1", an **OASIS Standard** dated 29 October 2014,
+ * amended by "MQTT Version 3.1.1 Plus Errata 01" (OASIS Standard Incorporating Approved Errata 01,
+ * 10 December 2015). MQTT is not an IETF protocol and carries no RFC number; every section cited
+ * below is a section of that OASIS document. The same text is published as ISO/IEC 20922:2016.
  *
- *  - mqtt_build_* / mqtt_parse_* / mqtt_*_remlen are pure packet functions,
- *    unit-tested on the host (env:native_mqtt).
- *  - protocore_mqtt_connect() / protocore_mqtt_publish() / protocore_mqtt_subscribe() / protocore_mqtt_loop() resolve
- * the broker (DNS), open a raw lwIP TCP connection (mqtts:// via client-side mbedTLS over the shared static arena), and
- * drive the session. No heap; one broker connection at a time.
+ * The Client and the Server exchange MQTT Control Packets over a Network Connection (sec 4.2). Each
+ * packet is a fixed header (sec 2.2) carrying the Control Packet type (sec 2.2.1), four type-specific
+ * flag bits (sec 2.2.2) and a Remaining Length (sec 2.2.3), then an optional variable header and
+ * payload.
  *
- * QoS 2 uses the four-packet PUBLISH/PUBREC/PUBREL/PUBCOMP exchange; outbound
- * QoS 1/2 messages are held in a fixed in-flight pool and retransmitted (DUP) on
- * timeout until acknowledged. Inbound QoS 2 is de-duplicated by packet id.
+ * Two halves behind one handle:
+ *
+ *  - The codec builds and reads packet octets in the caller's buffers and holds nothing, so it is
+ *    unit-tested on the host.
+ *  - The transport drives one Network Connection over the outbound TCP client, and `mqtts://` over
+ *    the shared persistent client TLS session. No heap; one Server at a time.
+ *
+ * QoS 2 runs the four-packet PUBLISH / PUBREC / PUBREL / PUBCOMP exchange (sec 4.3.3). Outbound
+ * QoS 1 and QoS 2 messages sit in a fixed in-flight pool and are re-delivered with DUP set
+ * (sec 3.3.1.1) until acknowledged. An inbound QoS 2 Packet Identifier is held from PUBREC until
+ * PUBCOMP so a repeat delivers the Application Message once (sec 4.3.3).
+ *
+ * The module exports one symbol, @ref Mqtt. Everything in mqtt.c has internal linkage.
+ *
+ * @author  Douglas Quigg (dstroy0)
+ * @date    2026
  */
 
 #ifndef PROTOCORE_MQTT_H
@@ -32,190 +42,275 @@ PROTOCORE_BEGIN_DECLS
 
 #if PROTOCORE_ENABLE_MQTT
 
-/** @brief MQTT control packet types (high nibble of byte 0), MQTT 3.1.1 §2.2.1. */
+// ---------------------------------------------------------------------------
+// Literals
+// ---------------------------------------------------------------------------
+
+/** @brief The largest Remaining Length a four-octet field encodes (MQTT 3.1.1 sec 2.2.3). */
+#define PROTOCORE_MQTT_REMAINING_LENGTH_MAX 268435455u
+
+/** @brief The Protocol Level a 3.1.1 CONNECT carries (MQTT 3.1.1 sec 3.1.2.2). */
+#define PROTOCORE_MQTT_PROTOCOL_LEVEL 0x04
+
+/** @brief The SUBACK return code that reports a failed subscription (MQTT 3.1.1 sec 3.9.3). */
+#define PROTOCORE_MQTT_SUBACK_FAILURE 0x80
+
+// ---------------------------------------------------------------------------
+// Typedefs
+// ---------------------------------------------------------------------------
+
+/** @brief MQTT Control Packet type, byte 1 bits 7-4 (MQTT 3.1.1 sec 2.2.1, Table 2.1). */
 typedef enum PROTO_ENUM_PACKED
 {
-    MQTT_CONNECT = 1,
-    MQTT_CONNACK = 2,
-    MQTT_PUBLISH = 3,
-    MQTT_PUBACK = 4,
-    MQTT_PUBREC = 5,
-    MQTT_PUBREL = 6,
-    MQTT_PUBCOMP = 7,
-    MQTT_SUBSCRIBE = 8,
-    MQTT_SUBACK = 9,
-    MQTT_UNSUBSCRIBE = 10,
-    MQTT_UNSUBACK = 11,
-    MQTT_PINGREQ = 12,
-    MQTT_PINGRESP = 13,
-    MQTT_DISCONNECT = 14,
+    MQTT_CONNECT = 1,      ///< Client request to connect to a Server
+    MQTT_CONNACK = 2,      ///< Connect acknowledgment
+    MQTT_PUBLISH = 3,      ///< Publish message
+    MQTT_PUBACK = 4,       ///< Publish acknowledgment
+    MQTT_PUBREC = 5,       ///< Publish received (QoS 2 publish received, part 1)
+    MQTT_PUBREL = 6,       ///< Publish release (QoS 2 publish received, part 2)
+    MQTT_PUBCOMP = 7,      ///< Publish complete (QoS 2 publish received, part 3)
+    MQTT_SUBSCRIBE = 8,    ///< Client subscribe request
+    MQTT_SUBACK = 9,       ///< Subscribe acknowledgment
+    MQTT_UNSUBSCRIBE = 10, ///< Unsubscribe request
+    MQTT_UNSUBACK = 11,    ///< Unsubscribe acknowledgment
+    MQTT_PINGREQ = 12,     ///< PING request
+    MQTT_PINGRESP = 13,    ///< PING response
+    MQTT_DISCONNECT = 14,  ///< Client is disconnecting
 } MqttType;
 
-/** @brief CONNECT options (credentials, keep-alive, clean session, Last-Will). */
+/** @brief Where an inbound PUBLISH's Topic Name and Payload are delivered (MQTT 3.1.1 sec 3.3). */
+typedef void (*MqttMessageCb)(const char *topic_name, const uint8_t *payload, size_t payload_len);
+
+/** @brief MQTT 3.1.1 sec 4.2: the Network Connection this Client opens to a Server. */
 typedef struct
 {
-    const char *client_id;    ///< Client identifier (required; may be "" for a broker-assigned id).
-    const char *user;         ///< Username, or nullptr for none.
-    const char *pass;         ///< Password, or nullptr for none.
-    uint16_t keepalive_s;     ///< Keep-alive seconds (0 disables).
-    proto_bool clean_session; ///< Clean Session flag.
-    const char *will_topic;   ///< Last-Will topic, or nullptr for no will.
-    const uint8_t *will_msg;  ///< Last-Will payload (may be nullptr when will_len is 0).
-    size_t will_len;          ///< Last-Will payload length.
-    uint8_t will_qos;         ///< Last-Will QoS (0-2).
-    proto_bool will_retain;   ///< Last-Will retain flag.
-} MqttConnectOpts;
-
-// ---------------------------------------------------------------------------
-// Pure codec (host-testable; no sockets, no heap)
-// ---------------------------------------------------------------------------
+    const char *host;   ///< the Server's name; read on every connect step, so it outlives the call
+    uint16_t port;      ///< its TCP port
+    proto_bool use_tls; ///< the Network Connection runs over TLS (`mqtts://`)
+} MqttServerArgs;
 
 /**
- * @brief Encode an MQTT Remaining Length field (variable-length, 1-4 bytes).
- * @return number of bytes written to @p out (1-4), or 0 if @p len exceeds the
- *         268,435,455 maximum.
- */
-size_t protocore_mqtt_encode_remlen(uint8_t *out, uint32_t len);
-
-/**
- * @brief Decode a Remaining Length field from @p buf (up to @p avail bytes).
- * @param value  receives the decoded length.
- * @param used   receives the number of bytes consumed (1-4).
- * @return true on success; false if the field is incomplete or malformed (>4 bytes).
- */
-proto_bool protocore_mqtt_decode_remlen(const uint8_t *buf, size_t avail, uint32_t *value, size_t *used);
-
-/**
- * @brief Build a CONNECT packet from @p opts.
+ * @brief MQTT 3.1.1 sec 3.1: the CONNECT variable header and payload, less the Will.
  *
- * @p body (@p body_cap bytes) is where the variable header and payload are assembled before the
- * fixed header's length is known and the whole thing is composed into @p out. The builders declare
- * no storage of their own, so the caller borrows it: plaintext for `mqtt://`, secure for `mqtts://`,
- * whose CONNECT carries credentials.
+ * A null @c user_name clears the User Name flag (sec 3.1.2.8) and a null @c password clears the
+ * Password flag (sec 3.1.2.9), so neither field is written into the payload.
+ */
+typedef struct
+{
+    const char *client_id;    ///< Client Identifier (sec 3.1.3.1); "" asks the Server to assign one
+    const char *user_name;    ///< User Name (sec 3.1.3.4), or null for none
+    const char *password;     ///< Password (sec 3.1.3.5), or null for none
+    uint16_t keep_alive;      ///< Keep Alive seconds (sec 3.1.2.10); 0 turns the mechanism off
+    proto_bool clean_session; ///< Clean Session (sec 3.1.2.4)
+} MqttSessionArgs;
+
+/**
+ * @brief MQTT 3.1.1 sec 3.1.2.5 - sec 3.1.2.7, sec 3.1.3.2, sec 3.1.3.3: the Will a CONNECT carries.
  *
- * @return total packet length written to @p out, or 0 if it would not fit @p cap or @p body_cap.
+ * A null @c topic clears the Will Flag, and with it Will QoS and Will Retain (sec 3.1.2.5).
  */
-size_t protocore_mqtt_build_connect(uint8_t *out, size_t cap, const MqttConnectOpts *opts, uint8_t *body,
-                                    size_t body_cap);
+typedef struct
+{
+    const char *topic;      ///< Will Topic (sec 3.1.3.2), or null for no Will
+    const uint8_t *message; ///< Will Message (sec 3.1.3.3); may be null when @c message_len is 0
+    size_t message_len;     ///< its octet count
+    uint8_t qos;            ///< Will QoS, 0 to 2 (sec 3.1.2.6)
+    proto_bool retain;      ///< Will Retain (sec 3.1.2.7)
+} MqttWillArgs;
 
 /**
- * @brief Build a PUBLISH packet (@p qos 0/1/2; @p packet_id used only when qos>0;
- *        set @p dup for a retransmission). @p body as in ::protocore_mqtt_build_connect.
- * @return total packet length, or 0 if it would not fit @p cap or @p body_cap.
- */
-size_t protocore_mqtt_build_publish(uint8_t *out, size_t cap, const char *topic, const uint8_t *payload,
-                                    size_t payload_len, uint8_t qos, uint16_t packet_id, proto_bool retain,
-                                    proto_bool dup, uint8_t *body, size_t body_cap);
-
-/** @brief Build a SUBSCRIBE packet for a single topic filter at @p qos. @p body as above. */
-size_t protocore_mqtt_build_subscribe(uint8_t *out, size_t cap, uint16_t packet_id, const char *topic, uint8_t qos,
-                                      uint8_t *body, size_t body_cap);
-
-/** @brief Build an UNSUBSCRIBE packet for a single topic filter. @p body as above. */
-size_t protocore_mqtt_build_unsubscribe(uint8_t *out, size_t cap, uint16_t packet_id, const char *topic, uint8_t *body,
-                                        size_t body_cap);
-
-/**
- * @brief Build a 4-byte acknowledgement packet (PUBACK / PUBREC / PUBREL / PUBCOMP)
- *        carrying @p packet_id. (PUBREL sets the required flags 0x62.)
- */
-size_t protocore_mqtt_build_ack(uint8_t *out, size_t cap, MqttType type, uint16_t packet_id);
-
-/** @brief Build a 2-byte PINGREQ. */
-size_t protocore_mqtt_build_pingreq(uint8_t *out, size_t cap);
-
-/** @brief Build a 2-byte DISCONNECT. */
-size_t protocore_mqtt_build_disconnect(uint8_t *out, size_t cap);
-
-/**
- * @brief Parse a fixed header at @p buf (type/flags + Remaining Length).
- * @param header_len  receives the fixed-header size (1 + remlen-field bytes).
- * @return true if a complete fixed header is present in @p avail bytes.
- */
-proto_bool protocore_mqtt_parse_fixed_header(const uint8_t *buf, size_t avail, uint8_t *type, uint8_t *flags,
-                                             uint32_t *remaining_len, size_t *header_len);
-
-/**
- * @brief Parse a PUBLISH variable header + payload (the @p remaining_len bytes
- *        that follow the fixed header), copying the topic into @p topic_out.
+ * @brief MQTT 3.1.1 sec 3.3: a PUBLISH's Topic Name, Payload and fixed-header flags.
  *
- * @param flags        the fixed-header flags (low nibble); bits 1-2 carry QoS.
- * @param payload      receives a pointer into @p buf at the payload start.
- * @param packet_id    receives the packet id (QoS>0 only; 0 for QoS 0).
- * @return true on success; false if malformed or the topic overflows @p topic_cap.
+ * @c topic_name is what a build writes; @c topic_out is where a parse copies the Topic Name it read,
+ * NUL terminated, with @c topic_len reporting its octet count.
  */
-proto_bool protocore_mqtt_parse_publish(const uint8_t *buf, uint32_t remaining_len, uint8_t flags, char *topic_out,
-                                        size_t topic_cap, size_t *topic_len, const uint8_t **payload,
-                                        size_t *payload_len, uint16_t *packet_id);
+typedef struct
+{
+    const char *topic_name; ///< Topic Name a build writes (sec 3.3.2.1); no wildcards (MQTT-3.3.2-2)
+    char *topic_out;        ///< where a parse copies the Topic Name it read
+    size_t topic_cap;       ///< its room, the NUL included
+    size_t topic_len;       ///< the Topic Name octets a parse copied
+    const uint8_t *payload; ///< Payload a build writes, or where a parse found it inside @c in (sec 3.3.3)
+    size_t payload_len;     ///< its octet count
+    uint8_t qos;            ///< QoS level, 0 to 2 (sec 3.3.1.2)
+    proto_bool retain;      ///< RETAIN (sec 3.3.1.3)
+    proto_bool dup;         ///< DUP, set on a re-delivery (sec 3.3.1.1)
+} MqttPublishArgs;
+
+/** @brief MQTT 3.1.1 sec 3.8.3, sec 3.10.3: the Topic Filter a SUBSCRIBE or UNSUBSCRIBE names. */
+typedef struct
+{
+    const char *topic_filter; ///< Topic Filter (sec 4.7); wildcards are allowed here
+    uint8_t qos;              ///< Requested QoS, 0 to 2 (sec 3.8.3.1)
+} MqttFilterArgs;
+
+/** @brief MQTT 3.1.1 sec 2.2, sec 2.3.1: the fixed header a build stamps or a parse reads. */
+typedef struct
+{
+    MqttType type;             ///< MQTT Control Packet type (sec 2.2.1)
+    uint8_t flags;             ///< the type-specific flags, byte 1 bits 3-0 (sec 2.2.2)
+    uint32_t remaining_length; ///< Remaining Length (sec 2.2.3)
+    uint16_t packet_id;        ///< Packet Identifier (sec 2.3.1); never 0 on the wire
+} MqttPacketArgs;
 
 /**
- * @brief Read the 2-byte packet id from a PUBACK/PUBREC/PUBREL/PUBCOMP/UNSUBACK
- *        body (the @p remaining_len bytes after the fixed header).
- * @return the packet id, or 0 if malformed (a real id is never 0).
- */
-uint16_t protocore_mqtt_parse_ack(const uint8_t *buf, uint32_t remaining_len);
-
-/**
- * @brief Read a CONNACK from its @p remaining_len bytes.
- * @param session_present  receives the Session Present flag (may be nullptr).
- * @return the return code (0 = Connection Accepted), or -1 if malformed.
- */
-int protocore_mqtt_parse_connack(const uint8_t *buf, uint32_t remaining_len, proto_bool *session_present);
-
-/**
- * @brief Read a SUBACK from its @p remaining_len bytes.
- * @param packet_id    receives the packet id.
- * @param return_code  receives the first granted-QoS / failure (0x80) byte.
- * @return true on success.
- */
-proto_bool protocore_mqtt_parse_suback(const uint8_t *buf, uint32_t remaining_len, uint16_t *packet_id,
-                                       uint8_t *return_code);
-
-// ---------------------------------------------------------------------------
-// Transport (needs a client transport)
-// ---------------------------------------------------------------------------
-
-/** @brief Callback for an inbound PUBLISH delivered to a subscription. */
-typedef void (*MqttMessageCb)(const char *topic, const uint8_t *payload, size_t len);
-
-/** @brief Register the inbound-message callback (call before protocore_mqtt_connect). */
-void protocore_mqtt_set_message_cb(MqttMessageCb cb);
-
-/**
- * @brief Start connecting to a broker. Returns immediately.
+ * @brief The octets a codec call writes or reads.
  *
- * Takes a transport slot for @p host, binds the TLS session when @p use_tls and PROTOCORE_ENABLE_MQTT_TLS,
- * and builds CONNECT from @p opts. Nothing waits here: protocore_mqtt_loop() steps the link one stage per
- * call - transport up, then handshake, then CONNACK - and gives it up if the whole thing takes
- * longer than 8 s. Poll protocore_mqtt_connected() to learn when the broker has accepted.
- *
- * @p opts is read only during this call. @return true if the connect was started.
+ * A build assembles the variable header and payload in @c body, because the fixed header's Remaining
+ * Length is not known until that part is finished, then composes the whole Control Packet into
+ * @c out. The codec declares no storage, so the caller lends both.
  */
-proto_bool protocore_mqtt_connect(const char *host, uint16_t port, proto_bool use_tls, const MqttConnectOpts *opts);
+typedef struct
+{
+    uint8_t *out;      ///< where a build writes the whole Control Packet
+    size_t cap;        ///< its room
+    uint8_t *body;     ///< scratch the variable header and payload assemble in
+    size_t body_cap;   ///< its room
+    const uint8_t *in; ///< the octets a parse reads
+    size_t avail;      ///< how many are readable there
+} MqttBufArgs;
 
-/** @brief Publish @p payload to @p topic at @p qos (0/1/2). @return true if accepted. */
-proto_bool protocore_mqtt_publish(const char *topic, const uint8_t *payload, size_t len, uint8_t qos,
-                                  proto_bool retain);
+/** @brief Where the Client hands an inbound Application Message on (MQTT 3.1.1 sec 3.3). */
+typedef struct
+{
+    MqttMessageCb on_message; ///< the Topic Name and Payload sink; null delivers nowhere
+} MqttDeliveryArgs;
 
-/** @brief Subscribe to @p topic at @p qos (0/1/2). @return true if the SUBSCRIBE was sent. */
-proto_bool protocore_mqtt_subscribe(const char *topic, uint8_t qos);
-
-/** @brief Unsubscribe from @p topic. @return true if the UNSUBSCRIBE was sent. */
-proto_bool protocore_mqtt_unsubscribe(const char *topic);
+/** @brief The Client's own state and the calls that reach it, described only in mqtt.c. */
+struct MqttInternal;
 
 /**
- * @brief Pump the connection: read inbound packets (dispatching PUBLISH to the
- *        callback and running the QoS 1/2 acknowledgement flows), retransmit
- *        unacked outbound QoS 1/2 messages, and send a keep-alive PINGREQ when
- *        due. Call once per loop(). @return false if the connection has dropped.
+ * @brief The MQTT Client (OASIS MQTT Version 3.1.1).
+ *
+ * A caller sets the members a call takes, invokes it through ::Mqtt, and reads the outcome off the
+ * same handle. The session, its in-flight window and its buffers are behind @ref internal.
+ *
+ * No slot member: this Client holds one Network Connection at a time (sec 4.2), so no call names a
+ * row.
+ *
+ * @var MqttNs::server    the Network Connection this Client opens (sec 4.2)
+ * @var MqttNs::session   the CONNECT variable header and payload (sec 3.1)
+ * @var MqttNs::will      the Will a CONNECT carries (sec 3.1.2.5, sec 3.1.3.2, sec 3.1.3.3)
+ * @var MqttNs::message   a PUBLISH's Topic Name, Payload and flags (sec 3.3)
+ * @var MqttNs::filter    the Topic Filter a SUBSCRIBE or UNSUBSCRIBE names (sec 4.7)
+ * @var MqttNs::packet    the fixed header a build stamps or a parse reads (sec 2.2, sec 2.3.1)
+ * @var MqttNs::buf       the octets a codec call writes or reads
+ * @var MqttNs::delivery  where an inbound Application Message is handed on (sec 3.3)
+ * @var MqttNs::ok        a call's true/false outcome
+ * @var MqttNs::n
+ * An octet count: the Control Packet a build wrote, the fixed header a parse read, or the Remaining
+ * Length field an encode or decode covered. 0 when a build did not fit @c cap or @c body_cap.
+ * @var MqttNs::i32       the Connect Return code a CONNACK carried (sec 3.2.2.3), or -1 if malformed
+ * @var MqttNs::u8        the first return code a SUBACK carried (sec 3.9.3)
+ * @var MqttNs::session_present  the Session Present flag a CONNACK carried (sec 3.2.2.2)
+ * @var MqttNs::encode_remaining_length
+ * Write @c packet.remaining_length into @c out as a Remaining Length field of 1 to 4 octets
+ * (sec 2.2.3). @c n reports the octets written, 0 above ::PROTOCORE_MQTT_REMAINING_LENGTH_MAX or
+ * when the field would not fit @c cap.
+ * @var MqttNs::decode_remaining_length
+ * Read a Remaining Length field from @c in into @c packet.remaining_length, @c n reporting the octets
+ * it consumed. False when the field is incomplete or runs past four octets (sec 2.2.3).
+ * @var MqttNs::build_connect
+ * Build a CONNECT from @c session and @c will: Protocol Name "MQTT", Protocol Level 4, Connect Flags,
+ * Keep Alive, then the payload's Client Identifier, Will Topic, Will Message, User Name and Password
+ * (sec 3.1).
+ * @var MqttNs::build_publish
+ * Build a PUBLISH from @c message, its Packet Identifier taken from @c packet.packet_id when
+ * @c message.qos is above 0 (sec 3.3). A Topic Name holding `+` or `#` is refused (MQTT-3.3.2-2).
+ * @var MqttNs::build_subscribe
+ * Build a SUBSCRIBE carrying @c packet.packet_id and one Topic Filter at @c filter.qos, with the
+ * fixed-header flags the spec reserves as 0,0,1,0 (sec 3.8.1, sec 3.8.3).
+ * @var MqttNs::build_unsubscribe
+ * Build an UNSUBSCRIBE carrying @c packet.packet_id and one Topic Filter, with the fixed-header flags
+ * the spec reserves as 0,0,1,0 (sec 3.10.1, sec 3.10.3).
+ * @var MqttNs::build_ack
+ * Build the four-octet PUBACK, PUBREC, PUBREL or PUBCOMP named by @c packet.type carrying
+ * @c packet.packet_id (sec 3.4 - sec 3.7). PUBREL takes the reserved flags 0,0,1,0 (sec 3.6.1).
+ * @var MqttNs::build_pingreq     build the two-octet PINGREQ (sec 3.12)
+ * @var MqttNs::build_disconnect  build the two-octet DISCONNECT (sec 3.14)
+ * @var MqttNs::parse_fixed_header
+ * Read the fixed header at @c in into @c packet.type, @c packet.flags and @c packet.remaining_length,
+ * @c n reporting its size (sec 2.2). False until @c avail holds the whole header.
+ * @var MqttNs::parse_publish
+ * Read the @c packet.remaining_length octets after a PUBLISH fixed header: copy the Topic Name into
+ * @c message.topic_out, point @c message.payload at the Payload, and take the Packet Identifier into
+ * @c packet.packet_id when @c packet.flags carries a QoS above 0 (sec 3.3). False on a malformed
+ * Topic Name (sec 1.5.3) or on both QoS bits set (MQTT-3.3.1-4).
+ * @var MqttNs::parse_ack
+ * Read the Packet Identifier from a PUBACK, PUBREC, PUBREL, PUBCOMP or UNSUBACK body into
+ * @c packet.packet_id (sec 2.3.1). 0 reports a malformed body, since no real identifier is 0.
+ * @var MqttNs::parse_connack
+ * Read a CONNACK body into @c session_present (sec 3.2.2.2) and @c i32, the Connect Return code
+ * (sec 3.2.2.3). @c i32 is -1 when the body is malformed.
+ * @var MqttNs::parse_suback
+ * Read a SUBACK body into @c packet.packet_id and @c u8, the first return code of the payload list
+ * (sec 3.9.2, sec 3.9.3). ::PROTOCORE_MQTT_SUBACK_FAILURE there is a refused subscription.
+ * @var MqttNs::on_message  record @c delivery.on_message; call it before @ref MqttNs::connect
+ * @var MqttNs::connect
+ * Open the Network Connection to @c server and frame the CONNECT built from @c session and @c will.
+ * Returns straight away: @ref MqttNs::loop steps the transport, then the handshake, then the CONNACK,
+ * and gives the whole thing up past ::PROTOCORE_MQTT_CONNECT_MS. @c session and @c will are read only
+ * during this call.
+ * @var MqttNs::publish
+ * Send @c message as a PUBLISH (sec 3.3). QoS 0 goes out and is forgotten; QoS 1 and QoS 2 take an
+ * in-flight slot and are re-delivered with DUP until acknowledged (sec 4.3.2, sec 4.3.3).
+ * @var MqttNs::subscribe    send a SUBSCRIBE for @c filter (sec 3.8)
+ * @var MqttNs::unsubscribe  send an UNSUBSCRIBE for @c filter.topic_filter (sec 3.10)
+ * @var MqttNs::loop
+ * Pump the Network Connection: read inbound Control Packets, deliver PUBLISH to
+ * @c delivery.on_message and run the QoS 1 and QoS 2 acknowledgement flows, re-deliver unacknowledged
+ * in-flight messages, and send PINGREQ when Keep Alive is due (sec 3.1.2.10). Call once per loop().
+ * False once the Network Connection is gone.
+ * @var MqttNs::connected  true while the Server has accepted the CONNECT
+ * @var MqttNs::disconnect
+ * Send DISCONNECT and close the Network Connection (sec 3.14).
+ * @var MqttNs::internal   the Client's state and the calls that reach it
  */
-proto_bool protocore_mqtt_loop();
+typedef struct
+{
+    MqttServerArgs server;     ///< the Network Connection this Client opens
+    MqttSessionArgs session;   ///< what a CONNECT states about the session
+    MqttWillArgs will;         ///< the Will a CONNECT carries
+    MqttPublishArgs message;   ///< a PUBLISH's Topic Name, Payload and flags
+    MqttFilterArgs filter;     ///< the Topic Filter a SUBSCRIBE or UNSUBSCRIBE names
+    MqttPacketArgs packet;     ///< the fixed header a build stamps or a parse reads
+    MqttBufArgs buf;           ///< the octets a codec call moves
+    MqttDeliveryArgs delivery; ///< where an inbound Application Message is handed on
 
-/** @brief True while connected to the broker. */
-proto_bool protocore_mqtt_connected();
+    proto_bool ok;
+    size_t n;
+    int32_t i32;
+    uint8_t u8;
+    proto_bool session_present;
 
-/** @brief Send DISCONNECT and close the connection. */
-void protocore_mqtt_disconnect();
+    void (*encode_remaining_length)(struct MqttInternal *ctx);
+    void (*decode_remaining_length)(struct MqttInternal *ctx);
+    void (*build_connect)(struct MqttInternal *ctx);
+    void (*build_publish)(struct MqttInternal *ctx);
+    void (*build_subscribe)(struct MqttInternal *ctx);
+    void (*build_unsubscribe)(struct MqttInternal *ctx);
+    void (*build_ack)(struct MqttInternal *ctx);
+    void (*build_pingreq)(struct MqttInternal *ctx);
+    void (*build_disconnect)(struct MqttInternal *ctx);
+    void (*parse_fixed_header)(struct MqttInternal *ctx);
+    void (*parse_publish)(struct MqttInternal *ctx);
+    void (*parse_ack)(struct MqttInternal *ctx);
+    void (*parse_connack)(struct MqttInternal *ctx);
+    void (*parse_suback)(struct MqttInternal *ctx);
+    void (*on_message)(struct MqttInternal *ctx);
+    void (*connect)(struct MqttInternal *ctx);
+    void (*publish)(struct MqttInternal *ctx);
+    void (*subscribe)(struct MqttInternal *ctx);
+    void (*unsubscribe)(struct MqttInternal *ctx);
+    void (*loop)(struct MqttInternal *ctx);
+    void (*connected)(struct MqttInternal *ctx);
+    void (*disconnect)(struct MqttInternal *ctx);
+
+    struct MqttInternal *internal;
+} MqttNs;
+
+/** @brief The one symbol this module exports. */
+extern MqttNs Mqtt;
 
 #endif // PROTOCORE_ENABLE_MQTT
 

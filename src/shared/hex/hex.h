@@ -21,6 +21,21 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
+/**
+ * @brief The two digit tables: the only thing this module owns.
+ *
+ * One definition for the whole library rather than a copy per translation unit. Immutable, so a
+ * site that only needs a digit indexes it directly instead of going through a call.
+ */
+typedef struct
+{
+    const char *lower; ///< the 16 hex digits, lowercase
+    const char *upper; ///< the 16 hex digits, uppercase - for the protocols that specify capitals
+} HexStorage;
+
+/** @brief The digit tables every hex site reads. */
+extern const HexStorage PROTOCORE_HEX;
+
 /** @brief What a digit conversion names: one nibble, or one character. */
 typedef struct
 {

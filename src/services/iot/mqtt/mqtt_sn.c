@@ -3,60 +3,86 @@
 
 /**
  * @file mqtt_sn.c
- * @brief MQTT-SN v1.2 message builder + parser (pure, host-tested).
+ * @brief The MQTT-SN v1.2 wire codec: the Length and MsgType header (sec 5.2) and the Message
+ *        Variable Part of each message (sec 5.3, sec 5.4).
+ *
+ * Every call works in the buffer the caller lends and holds nothing between calls, so the whole file
+ * is host-testable.
  */
 
 #include "services/iot/mqtt/mqtt_sn.h"
-#include "mmgr/protomem.h"
 
 #if PROTOCORE_ENABLE_MQTT_SN
 
-uint8_t protocore_mqttsn_make_flags(proto_bool dup, uint8_t qos, proto_bool retain, proto_bool will, proto_bool clean,
-                             uint8_t topic_id_type)
+#include "mmgr/protomem.h" // mem.cpy: the ClientId, TopicName and Data spans
+#include "mmgr/protostr.h" // str.len: their bounded lengths
+
+// ---------------------------------------------------------------------------
+// Literals
+// ---------------------------------------------------------------------------
+
+#define MQTTSN_LEN1_MAX 255   // the 1-octet Length form reaches this total (sec 5.2.1)
+#define MQTTSN_LEN3_OCTETS 3  // the 3-octet Length form: the prefix and a big-endian uint16
+#define MQTTSN_LEN_MAX 0xFFFF // what the 3-octet form can encode (sec 5.2.1)
+
+#define MQTTSN_ID_OCTETS 2 // TopicId, MsgId and Duration are two octets each (sec 5.3)
+
+// ---------------------------------------------------------------------------
+// Typedefs
+// ---------------------------------------------------------------------------
+
+/**
+ * @brief The codec's calls - what MqttsnNs points at.
+ *
+ * @var MqttsnInternal::ns  the handle a caller sets a call's members on
+ *
+ * No storage member: the codec works in the caller's buffer and holds nothing between calls.
+ */
+struct MqttsnInternal
 {
-    uint8_t f = 0;
-    if (dup)
-    {
-        f |= MQTTSN_FLAG_DUP;
-    }
-    f |= (uint8_t)((qos & 0x03) << MQTTSN_FLAG_QOS_SHIFT) & MQTTSN_FLAG_QOS_MASK;
-    if (retain)
-    {
-        f |= MQTTSN_FLAG_RETAIN;
-    }
-    if (will)
-    {
-        f |= MQTTSN_FLAG_WILL;
-    }
-    if (clean)
-    {
-        f |= MQTTSN_FLAG_CLEAN;
-    }
-    f |= (uint8_t)(topic_id_type & MQTTSN_FLAG_TOPICIDTYPE_MASK);
-    return f;
+    MqttsnNs *ns;
+};
+
+static struct MqttsnInternal s_mqttsn = {.ns = &Mqttsn};
+
+// ---------------------------------------------------------------------------
+// The octet moves every message is made of (pure)
+// ---------------------------------------------------------------------------
+
+// Write v as the two-octet big-endian integer the wire uses (sec 5.3).
+static void wr16(uint8_t *p, uint16_t v)
+{
+    p[0] = (uint8_t)(v >> 8);
+    p[1] = (uint8_t)(v & 0xFF);
 }
 
-// Write the [Length][MsgType] header for a message carrying @p body_len body octets.
-// Returns the body-start offset (always >= 2) and sets *total to the full message length,
-// or 0 on overflow / a body too large for the 16-bit Length field. The Length field value
-// is the whole message length including the Length field itself (per spec); it is 1 octet
-// when that total is <= 255, otherwise 0x01 + a big-endian uint16.
+// Read that same two-octet big-endian integer.
+static uint16_t rd16(const uint8_t *p)
+{
+    return (uint16_t)(((uint16_t)p[0] << 8) | p[1]);
+}
+
+// Write the Length and MsgType header for a message carrying body_len octets of Message Variable
+// Part. Returns the offset the body starts at (always at least 2) and sets *total to the whole
+// message length, or 0 on overflow or a body past the 16-bit Length field. The Length value counts
+// the Length field itself: one octet while that total is at most 255, otherwise the prefix and a
+// big-endian uint16 (sec 5.2.1).
 static size_t frame_header(uint8_t *buf, size_t cap, uint8_t msg_type, size_t body_len, size_t *total)
 {
-    size_t core = 1 + body_len; // MsgType + body
+    size_t core = 1 + body_len; // MsgType plus the Message Variable Part
     size_t lenfield;
     size_t t;
-    if (1 + core <= 255)
+    if (1 + core <= MQTTSN_LEN1_MAX)
     {
         lenfield = 1;
         t = 1 + core;
     }
     else
     {
-        lenfield = 3;
-        t = 3 + core;
+        lenfield = MQTTSN_LEN3_OCTETS;
+        t = MQTTSN_LEN3_OCTETS + core;
     }
-    if (t > 0xFFFF || t > cap)
+    if (t > MQTTSN_LEN_MAX || t > cap)
     {
         return 0;
     }
@@ -76,366 +102,448 @@ static size_t frame_header(uint8_t *buf, size_t cap, uint8_t msg_type, size_t bo
     return pos;
 }
 
-static void wr16(uint8_t *p, uint16_t v)
-{
-    p[0] = (uint8_t)(v >> 8);
-    p[1] = (uint8_t)(v & 0xFF);
-}
+// ---------------------------------------------------------------------------
+// Flags
+// ---------------------------------------------------------------------------
 
-static uint16_t rd16(const uint8_t *p)
+static void mqttsn_make_flags(struct MqttsnInternal *restrict ctx)
 {
-    return (uint16_t)(((uint16_t)p[0] << 8) | p[1]);
-}
-
-size_t protocore_mqttsn_build_connect(uint8_t *buf, size_t cap, uint8_t flags, uint16_t duration, const char *client_id)
-{
-    if (!buf || !client_id)
+    uint8_t f = 0;
+    if (ctx->ns->flags.dup)
     {
-        return 0;
+        f |= MQTTSN_FLAG_DUP;
     }
-    size_t idlen = strnlen(client_id, cap);
-    size_t total, p = frame_header(buf, cap, MQTTSN_CONNECT, 1 + 1 + 2 + idlen, &total);
+    f |= (uint8_t)((ctx->ns->flags.qos << MQTTSN_FLAG_QOS_SHIFT) & MQTTSN_FLAG_QOS_MASK);
+    if (ctx->ns->flags.retain)
+    {
+        f |= MQTTSN_FLAG_RETAIN;
+    }
+    if (ctx->ns->flags.will)
+    {
+        f |= MQTTSN_FLAG_WILL;
+    }
+    if (ctx->ns->flags.clean_session)
+    {
+        f |= MQTTSN_FLAG_CLEAN;
+    }
+    f |= (uint8_t)(ctx->ns->flags.topic_id_type & MQTTSN_FLAG_TOPICIDTYPE_MASK);
+    ctx->ns->flags.octet = f;
+    ctx->ns->ok = PROTO_TRUE;
+}
+
+// ---------------------------------------------------------------------------
+// Builders
+// ---------------------------------------------------------------------------
+
+// CONNECT: Flags, ProtocolId, Duration, ClientId (sec 5.4.4).
+static void mqttsn_build_connect(struct MqttsnInternal *restrict ctx)
+{
+    ctx->ns->n = 0;
+    ctx->ns->ok = PROTO_FALSE;
+    uint8_t *buf = ctx->ns->buf.out;
+    const size_t cap = ctx->ns->buf.cap;
+    if (!buf || !ctx->ns->field.client_id)
+    {
+        return;
+    }
+    size_t idlen = str.len(ctx->ns->field.client_id, cap);
+    size_t total = 0;
+    size_t p = frame_header(buf, cap, MQTTSN_CONNECT, 1 + 1 + MQTTSN_ID_OCTETS + idlen, &total);
     if (!p)
     {
-        return 0;
+        return;
     }
-    buf[p++] = flags;
+    buf[p++] = ctx->ns->flags.octet;
     buf[p++] = MQTTSN_PROTOCOL_ID;
-    wr16(buf + p, duration);
-    p += 2;
-    mem.cpy(buf + p, client_id, idlen);
-    return total;
+    wr16(buf + p, ctx->ns->field.duration);
+    p += MQTTSN_ID_OCTETS;
+    mem.cpy(buf + p, ctx->ns->field.client_id, idlen);
+    ctx->ns->n = total;
+    ctx->ns->ok = PROTO_TRUE;
 }
 
-size_t protocore_mqttsn_build_register(uint8_t *buf, size_t cap, uint16_t topic_id, uint16_t msg_id, const char *topic_name)
+// REGISTER: TopicId, MsgId, TopicName (sec 5.4.10).
+static void mqttsn_build_register(struct MqttsnInternal *restrict ctx)
 {
-    if (!buf || !topic_name)
+    ctx->ns->n = 0;
+    ctx->ns->ok = PROTO_FALSE;
+    uint8_t *buf = ctx->ns->buf.out;
+    const size_t cap = ctx->ns->buf.cap;
+    if (!buf || !ctx->ns->topic.topic_name)
     {
-        return 0;
+        return;
     }
-    size_t nlen = strnlen(topic_name, cap);
-    size_t total, p = frame_header(buf, cap, MQTTSN_REGISTER, 2 + 2 + nlen, &total);
+    size_t nlen = str.len(ctx->ns->topic.topic_name, cap);
+    size_t total = 0;
+    size_t p = frame_header(buf, cap, MQTTSN_REGISTER, MQTTSN_ID_OCTETS + MQTTSN_ID_OCTETS + nlen, &total);
     if (!p)
     {
-        return 0;
+        return;
     }
-    wr16(buf + p, topic_id);
-    p += 2;
-    wr16(buf + p, msg_id);
-    p += 2;
-    mem.cpy(buf + p, topic_name, nlen);
-    return total;
+    wr16(buf + p, ctx->ns->topic.topic_id);
+    p += MQTTSN_ID_OCTETS;
+    wr16(buf + p, ctx->ns->field.msg_id);
+    p += MQTTSN_ID_OCTETS;
+    mem.cpy(buf + p, ctx->ns->topic.topic_name, nlen);
+    ctx->ns->n = total;
+    ctx->ns->ok = PROTO_TRUE;
 }
 
-size_t protocore_mqttsn_build_regack(uint8_t *buf, size_t cap, uint16_t topic_id, uint16_t msg_id, uint8_t ret_code)
+// REGACK: TopicId, MsgId, ReturnCode (sec 5.4.11).
+static void mqttsn_build_regack(struct MqttsnInternal *restrict ctx)
 {
+    ctx->ns->n = 0;
+    ctx->ns->ok = PROTO_FALSE;
+    uint8_t *buf = ctx->ns->buf.out;
     if (!buf)
     {
-        return 0;
+        return;
     }
-    size_t total, p = frame_header(buf, cap, MQTTSN_REGACK, 2 + 2 + 1, &total);
+    size_t total = 0;
+    size_t p = frame_header(buf, ctx->ns->buf.cap, MQTTSN_REGACK, MQTTSN_ID_OCTETS + MQTTSN_ID_OCTETS + 1, &total);
     if (!p)
     {
-        return 0;
+        return;
     }
-    wr16(buf + p, topic_id);
-    p += 2;
-    wr16(buf + p, msg_id);
-    p += 2;
-    buf[p] = ret_code;
-    return total;
+    wr16(buf + p, ctx->ns->topic.topic_id);
+    p += MQTTSN_ID_OCTETS;
+    wr16(buf + p, ctx->ns->field.msg_id);
+    p += MQTTSN_ID_OCTETS;
+    buf[p] = ctx->ns->field.return_code;
+    ctx->ns->n = total;
+    ctx->ns->ok = PROTO_TRUE;
 }
 
-size_t protocore_mqttsn_build_publish(uint8_t *buf, size_t cap, uint8_t flags, uint16_t topic_id, uint16_t msg_id,
-                               const uint8_t *data, size_t data_len)
+// PUBLISH: Flags, TopicId, MsgId, Data (sec 5.4.12).
+static void mqttsn_build_publish(struct MqttsnInternal *restrict ctx)
 {
-    if (!buf || (data_len && !data))
+    ctx->ns->n = 0;
+    ctx->ns->ok = PROTO_FALSE;
+    uint8_t *buf = ctx->ns->buf.out;
+    const size_t data_len = ctx->ns->data.data_len;
+    if (!buf || (data_len && !ctx->ns->data.data))
     {
-        return 0;
+        return;
     }
-    size_t total, p = frame_header(buf, cap, MQTTSN_PUBLISH, 1 + 2 + 2 + data_len, &total);
+    size_t total = 0;
+    size_t p =
+        frame_header(buf, ctx->ns->buf.cap, MQTTSN_PUBLISH, 1 + MQTTSN_ID_OCTETS + MQTTSN_ID_OCTETS + data_len, &total);
     if (!p)
     {
-        return 0;
+        return;
     }
-    buf[p++] = flags;
-    wr16(buf + p, topic_id);
-    p += 2;
-    wr16(buf + p, msg_id);
-    p += 2;
+    buf[p++] = ctx->ns->flags.octet;
+    wr16(buf + p, ctx->ns->topic.topic_id);
+    p += MQTTSN_ID_OCTETS;
+    wr16(buf + p, ctx->ns->field.msg_id);
+    p += MQTTSN_ID_OCTETS;
     if (data_len)
     {
-        mem.cpy(buf + p, data, data_len);
+        mem.cpy(buf + p, ctx->ns->data.data, data_len);
     }
-    return total;
+    ctx->ns->n = total;
+    ctx->ns->ok = PROTO_TRUE;
 }
 
-size_t protocore_mqttsn_build_puback(uint8_t *buf, size_t cap, uint16_t topic_id, uint16_t msg_id, uint8_t ret_code)
+// PUBACK: TopicId, MsgId, ReturnCode (sec 5.4.13).
+static void mqttsn_build_puback(struct MqttsnInternal *restrict ctx)
 {
+    ctx->ns->n = 0;
+    ctx->ns->ok = PROTO_FALSE;
+    uint8_t *buf = ctx->ns->buf.out;
     if (!buf)
     {
-        return 0;
+        return;
     }
-    size_t total, p = frame_header(buf, cap, MQTTSN_PUBACK, 2 + 2 + 1, &total);
+    size_t total = 0;
+    size_t p = frame_header(buf, ctx->ns->buf.cap, MQTTSN_PUBACK, MQTTSN_ID_OCTETS + MQTTSN_ID_OCTETS + 1, &total);
     if (!p)
     {
-        return 0;
+        return;
     }
-    wr16(buf + p, topic_id);
-    p += 2;
-    wr16(buf + p, msg_id);
-    p += 2;
-    buf[p] = ret_code;
-    return total;
+    wr16(buf + p, ctx->ns->topic.topic_id);
+    p += MQTTSN_ID_OCTETS;
+    wr16(buf + p, ctx->ns->field.msg_id);
+    p += MQTTSN_ID_OCTETS;
+    buf[p] = ctx->ns->field.return_code;
+    ctx->ns->n = total;
+    ctx->ns->ok = PROTO_TRUE;
 }
 
-size_t protocore_mqttsn_build_subscribe_name(uint8_t *buf, size_t cap, uint8_t flags, uint16_t msg_id, const char *topic_name)
+// SUBSCRIBE naming a TopicName: Flags, MsgId, TopicName (sec 5.4.15).
+static void mqttsn_build_subscribe_name(struct MqttsnInternal *restrict ctx)
 {
-    if (!buf || !topic_name)
+    ctx->ns->n = 0;
+    ctx->ns->ok = PROTO_FALSE;
+    uint8_t *buf = ctx->ns->buf.out;
+    const size_t cap = ctx->ns->buf.cap;
+    if (!buf || !ctx->ns->topic.topic_name)
     {
-        return 0;
+        return;
     }
-    size_t nlen = strnlen(topic_name, cap);
-    size_t total, p = frame_header(buf, cap, MQTTSN_SUBSCRIBE, 1 + 2 + nlen, &total);
+    size_t nlen = str.len(ctx->ns->topic.topic_name, cap);
+    size_t total = 0;
+    size_t p = frame_header(buf, cap, MQTTSN_SUBSCRIBE, 1 + MQTTSN_ID_OCTETS + nlen, &total);
     if (!p)
     {
-        return 0;
+        return;
     }
-    buf[p++] = flags;
-    wr16(buf + p, msg_id);
-    p += 2;
-    mem.cpy(buf + p, topic_name, nlen);
-    return total;
+    buf[p++] = ctx->ns->flags.octet;
+    wr16(buf + p, ctx->ns->field.msg_id);
+    p += MQTTSN_ID_OCTETS;
+    mem.cpy(buf + p, ctx->ns->topic.topic_name, nlen);
+    ctx->ns->n = total;
+    ctx->ns->ok = PROTO_TRUE;
 }
 
-size_t protocore_mqttsn_build_subscribe_id(uint8_t *buf, size_t cap, uint8_t flags, uint16_t msg_id, uint16_t topic_id)
+// SUBSCRIBE naming a pre-defined TopicId: Flags, MsgId, TopicId (sec 5.4.15).
+static void mqttsn_build_subscribe_id(struct MqttsnInternal *restrict ctx)
 {
+    ctx->ns->n = 0;
+    ctx->ns->ok = PROTO_FALSE;
+    uint8_t *buf = ctx->ns->buf.out;
     if (!buf)
     {
-        return 0;
+        return;
     }
-    size_t total, p = frame_header(buf, cap, MQTTSN_SUBSCRIBE, 1 + 2 + 2, &total);
+    size_t total = 0;
+    size_t p = frame_header(buf, ctx->ns->buf.cap, MQTTSN_SUBSCRIBE, 1 + MQTTSN_ID_OCTETS + MQTTSN_ID_OCTETS, &total);
     if (!p)
     {
-        return 0;
+        return;
     }
-    buf[p++] = flags;
-    wr16(buf + p, msg_id);
-    p += 2;
-    wr16(buf + p, topic_id);
-    return total;
+    buf[p++] = ctx->ns->flags.octet;
+    wr16(buf + p, ctx->ns->field.msg_id);
+    p += MQTTSN_ID_OCTETS;
+    wr16(buf + p, ctx->ns->topic.topic_id);
+    ctx->ns->n = total;
+    ctx->ns->ok = PROTO_TRUE;
 }
 
-size_t protocore_mqttsn_build_pingreq(uint8_t *buf, size_t cap, const char *client_id)
+// PINGREQ, with the optional ClientId a woken sleeping client includes (sec 5.4.19, sec 6.14).
+static void mqttsn_build_pingreq(struct MqttsnInternal *restrict ctx)
 {
+    ctx->ns->n = 0;
+    ctx->ns->ok = PROTO_FALSE;
+    uint8_t *buf = ctx->ns->buf.out;
+    const size_t cap = ctx->ns->buf.cap;
     if (!buf)
     {
-        return 0;
+        return;
     }
-    size_t idlen = client_id ? strnlen(client_id, cap) : 0;
-    size_t total, p = frame_header(buf, cap, MQTTSN_PINGREQ, idlen, &total);
+    size_t idlen = ctx->ns->field.client_id ? str.len(ctx->ns->field.client_id, cap) : 0;
+    size_t total = 0;
+    size_t p = frame_header(buf, cap, MQTTSN_PINGREQ, idlen, &total);
     if (!p)
     {
-        return 0;
+        return;
     }
     if (idlen)
     {
-        mem.cpy(buf + p, client_id, idlen);
+        mem.cpy(buf + p, ctx->ns->field.client_id, idlen);
     }
-    return total;
+    ctx->ns->n = total;
+    ctx->ns->ok = PROTO_TRUE;
 }
 
-size_t protocore_mqttsn_build_disconnect(uint8_t *buf, size_t cap, proto_bool with_duration, uint16_t duration)
+// DISCONNECT, carrying the sleep Duration when asked (sec 5.4.21, sec 6.14).
+static void mqttsn_build_disconnect(struct MqttsnInternal *restrict ctx)
 {
+    ctx->ns->n = 0;
+    ctx->ns->ok = PROTO_FALSE;
+    uint8_t *buf = ctx->ns->buf.out;
     if (!buf)
     {
-        return 0;
+        return;
     }
-    size_t total, p = frame_header(buf, cap, MQTTSN_DISCONNECT, with_duration ? 2 : 0, &total);
+    size_t total = 0;
+    size_t p = frame_header(buf, ctx->ns->buf.cap, MQTTSN_DISCONNECT,
+                            ctx->ns->field.with_duration ? MQTTSN_ID_OCTETS : 0, &total);
     if (!p)
     {
-        return 0;
+        return;
     }
-    if (with_duration)
+    if (ctx->ns->field.with_duration)
     {
-        wr16(buf + p, duration);
+        wr16(buf + p, ctx->ns->field.duration);
     }
-    return total;
+    ctx->ns->n = total;
+    ctx->ns->ok = PROTO_TRUE;
 }
 
-size_t protocore_mqttsn_build_searchgw(uint8_t *buf, size_t cap, uint8_t radius)
+// SEARCHGW: Radius (sec 5.4.2).
+static void mqttsn_build_searchgw(struct MqttsnInternal *restrict ctx)
 {
+    ctx->ns->n = 0;
+    ctx->ns->ok = PROTO_FALSE;
+    uint8_t *buf = ctx->ns->buf.out;
     if (!buf)
     {
-        return 0;
+        return;
     }
-    size_t total, p = frame_header(buf, cap, MQTTSN_SEARCHGW, 1, &total);
+    size_t total = 0;
+    size_t p = frame_header(buf, ctx->ns->buf.cap, MQTTSN_SEARCHGW, 1, &total);
     if (!p)
     {
-        return 0;
+        return;
     }
-    buf[p] = radius;
-    return total;
+    buf[p] = ctx->ns->field.radius;
+    ctx->ns->n = total;
+    ctx->ns->ok = PROTO_TRUE;
 }
 
-proto_bool protocore_mqttsn_parse_header(const uint8_t *buf, size_t len, MqttsnHeader *out, size_t *consumed)
+// ---------------------------------------------------------------------------
+// Parsers
+// ---------------------------------------------------------------------------
+
+// The Length and MsgType at the head of the buffer, and the Message Variable Part behind them
+// (sec 5.2). n reports the whole message length so the caller can advance.
+static void mqttsn_parse_header(struct MqttsnInternal *restrict ctx)
 {
-    if (!buf || !out || !consumed || len < 2)
+    ctx->ns->n = 0;
+    ctx->ns->ok = PROTO_FALSE;
+    const uint8_t *buf = ctx->ns->buf.in;
+    const size_t len = ctx->ns->buf.avail;
+    if (!buf || len < 2)
     {
-        return PROTO_FALSE;
+        return;
     }
     size_t lenfield;
     size_t total;
     if (buf[0] == MQTTSN_LEN3_PREFIX)
     {
-        if (len < 3)
+        if (len < MQTTSN_LEN3_OCTETS)
         {
-            return PROTO_FALSE;
+            return;
         }
         total = ((size_t)buf[1] << 8) | buf[2];
-        lenfield = 3;
+        lenfield = MQTTSN_LEN3_OCTETS;
     }
     else
     {
         total = buf[0];
         lenfield = 1;
     }
-    if (total < lenfield + 1) // must hold the Length field + a MsgType octet
+    if (total < lenfield + 1)
     {
-        return PROTO_FALSE;
+        return; // the Length must cover itself and a MsgType octet
     }
-    if (total > len) // message not fully buffered yet
+    if (total > len)
     {
-        return PROTO_FALSE;
+        return; // the message is not fully buffered yet
     }
-    out->msg_type = buf[lenfield];
-    out->payload = buf + lenfield + 1;
-    out->payload_len = total - lenfield - 1;
-    *consumed = total;
-    return PROTO_TRUE;
+    ctx->ns->header.msg_type = buf[lenfield];
+    ctx->ns->header.variable = buf + lenfield + 1;
+    ctx->ns->header.variable_len = total - lenfield - 1;
+    ctx->ns->n = total;
+    ctx->ns->ok = PROTO_TRUE;
 }
 
-proto_bool protocore_mqttsn_parse_connack(const uint8_t *payload, size_t len, uint8_t *ret_code)
+// CONNACK: ReturnCode (sec 5.4.5).
+static void mqttsn_parse_connack(struct MqttsnInternal *restrict ctx)
 {
-    if (!payload || len < 1)
+    ctx->ns->ok = PROTO_FALSE;
+    if (!ctx->ns->buf.in || ctx->ns->buf.avail < 1)
     {
-        return PROTO_FALSE;
+        return;
     }
-    if (ret_code)
-    {
-        *ret_code = payload[0];
-    }
-    return PROTO_TRUE;
+    ctx->ns->field.return_code = ctx->ns->buf.in[0];
+    ctx->ns->ok = PROTO_TRUE;
 }
 
-proto_bool protocore_mqttsn_parse_regack(const uint8_t *payload, size_t len, uint16_t *topic_id, uint16_t *msg_id,
-                                  uint8_t *ret_code)
+// REGACK: TopicId, MsgId, ReturnCode (sec 5.4.11).
+static void mqttsn_parse_regack(struct MqttsnInternal *restrict ctx)
 {
-    if (!payload || len < 5)
+    ctx->ns->ok = PROTO_FALSE;
+    const uint8_t *p = ctx->ns->buf.in;
+    if (!p || ctx->ns->buf.avail < MQTTSN_ID_OCTETS + MQTTSN_ID_OCTETS + 1)
     {
-        return PROTO_FALSE;
+        return;
     }
-    if (topic_id)
-    {
-        *topic_id = rd16(payload);
-    }
-    if (msg_id)
-    {
-        *msg_id = rd16(payload + 2);
-    }
-    if (ret_code)
-    {
-        *ret_code = payload[4];
-    }
-    return PROTO_TRUE;
+    ctx->ns->topic.topic_id = rd16(p);
+    ctx->ns->field.msg_id = rd16(p + MQTTSN_ID_OCTETS);
+    ctx->ns->field.return_code = p[MQTTSN_ID_OCTETS + MQTTSN_ID_OCTETS];
+    ctx->ns->ok = PROTO_TRUE;
 }
 
-proto_bool protocore_mqttsn_parse_puback(const uint8_t *payload, size_t len, uint16_t *topic_id, uint16_t *msg_id,
-                                  uint8_t *ret_code)
+// PUBACK, whose Message Variable Part has REGACK's layout (sec 5.4.13).
+static void mqttsn_parse_puback(struct MqttsnInternal *restrict ctx)
 {
-    return protocore_mqttsn_parse_regack(payload, len, topic_id, msg_id, ret_code); // identical layout
+    mqttsn_parse_regack(ctx);
 }
 
-proto_bool protocore_mqttsn_parse_suback(const uint8_t *payload, size_t len, uint8_t *flags, uint16_t *topic_id,
-                                  uint16_t *msg_id, uint8_t *ret_code)
+// SUBACK: Flags, TopicId, MsgId, ReturnCode (sec 5.4.16).
+static void mqttsn_parse_suback(struct MqttsnInternal *restrict ctx)
 {
-    if (!payload || len < 6)
+    ctx->ns->ok = PROTO_FALSE;
+    const uint8_t *p = ctx->ns->buf.in;
+    if (!p || ctx->ns->buf.avail < 1 + MQTTSN_ID_OCTETS + MQTTSN_ID_OCTETS + 1)
     {
-        return PROTO_FALSE;
+        return;
     }
-    if (flags)
-    {
-        *flags = payload[0];
-    }
-    if (topic_id)
-    {
-        *topic_id = rd16(payload + 1);
-    }
-    if (msg_id)
-    {
-        *msg_id = rd16(payload + 3);
-    }
-    if (ret_code)
-    {
-        *ret_code = payload[5];
-    }
-    return PROTO_TRUE;
+    ctx->ns->flags.octet = p[0];
+    ctx->ns->topic.topic_id = rd16(p + 1);
+    ctx->ns->field.msg_id = rd16(p + 1 + MQTTSN_ID_OCTETS);
+    ctx->ns->field.return_code = p[1 + MQTTSN_ID_OCTETS + MQTTSN_ID_OCTETS];
+    ctx->ns->ok = PROTO_TRUE;
 }
 
-proto_bool protocore_mqttsn_parse_publish(const uint8_t *payload, size_t len, uint8_t *flags, uint16_t *topic_id,
-                                   uint16_t *msg_id, const uint8_t **data, size_t *data_len)
+// PUBLISH: Flags, TopicId, MsgId, then the Data that fills the rest (sec 5.4.12).
+static void mqttsn_parse_publish(struct MqttsnInternal *restrict ctx)
 {
-    if (!payload || len < 5)
+    ctx->ns->ok = PROTO_FALSE;
+    const uint8_t *p = ctx->ns->buf.in;
+    const size_t len = ctx->ns->buf.avail;
+    const size_t head = 1 + MQTTSN_ID_OCTETS + MQTTSN_ID_OCTETS;
+    if (!p || len < head)
     {
-        return PROTO_FALSE;
+        return;
     }
-    if (flags)
-    {
-        *flags = payload[0];
-    }
-    if (topic_id)
-    {
-        *topic_id = rd16(payload + 1);
-    }
-    if (msg_id)
-    {
-        *msg_id = rd16(payload + 3);
-    }
-    if (data)
-    {
-        *data = payload + 5;
-    }
-    if (data_len)
-    {
-        *data_len = len - 5;
-    }
-    return PROTO_TRUE;
+    ctx->ns->flags.octet = p[0];
+    ctx->ns->topic.topic_id = rd16(p + 1);
+    ctx->ns->field.msg_id = rd16(p + 1 + MQTTSN_ID_OCTETS);
+    ctx->ns->data.data = p + head;
+    ctx->ns->data.data_len = len - head;
+    ctx->ns->ok = PROTO_TRUE;
 }
 
-proto_bool protocore_mqttsn_parse_register(const uint8_t *payload, size_t len, uint16_t *topic_id, uint16_t *msg_id,
-                                    const char **topic_name, size_t *topic_name_len)
+// REGISTER: TopicId, MsgId, then the TopicName that fills the rest (sec 5.4.10).
+static void mqttsn_parse_register(struct MqttsnInternal *restrict ctx)
 {
-    if (!payload || len < 4)
+    ctx->ns->ok = PROTO_FALSE;
+    const uint8_t *p = ctx->ns->buf.in;
+    const size_t len = ctx->ns->buf.avail;
+    const size_t head = MQTTSN_ID_OCTETS + MQTTSN_ID_OCTETS;
+    if (!p || len < head)
     {
-        return PROTO_FALSE;
+        return;
     }
-    if (topic_id)
-    {
-        *topic_id = rd16(payload);
-    }
-    if (msg_id)
-    {
-        *msg_id = rd16(payload + 2);
-    }
-    if (topic_name)
-    {
-        *topic_name = (const char *)(payload + 4);
-    }
-    if (topic_name_len)
-    {
-        *topic_name_len = len - 4;
-    }
-    return PROTO_TRUE;
+    ctx->ns->topic.topic_id = rd16(p);
+    ctx->ns->field.msg_id = rd16(p + MQTTSN_ID_OCTETS);
+    ctx->ns->topic.topic_name = (const char *)(p + head);
+    ctx->ns->topic.topic_name_len = len - head;
+    ctx->ns->ok = PROTO_TRUE;
 }
+
+// Designated, so a member's position in the struct does not decide what it binds to.
+MqttsnNs Mqttsn = {.make_flags = mqttsn_make_flags,
+                   .build_connect = mqttsn_build_connect,
+                   .build_register = mqttsn_build_register,
+                   .build_regack = mqttsn_build_regack,
+                   .build_publish = mqttsn_build_publish,
+                   .build_puback = mqttsn_build_puback,
+                   .build_subscribe_name = mqttsn_build_subscribe_name,
+                   .build_subscribe_id = mqttsn_build_subscribe_id,
+                   .build_pingreq = mqttsn_build_pingreq,
+                   .build_disconnect = mqttsn_build_disconnect,
+                   .build_searchgw = mqttsn_build_searchgw,
+                   .parse_header = mqttsn_parse_header,
+                   .parse_connack = mqttsn_parse_connack,
+                   .parse_regack = mqttsn_parse_regack,
+                   .parse_puback = mqttsn_parse_puback,
+                   .parse_suback = mqttsn_parse_suback,
+                   .parse_publish = mqttsn_parse_publish,
+                   .parse_register = mqttsn_parse_register,
+                   .internal = &s_mqttsn};
 
 #endif // PROTOCORE_ENABLE_MQTT_SN

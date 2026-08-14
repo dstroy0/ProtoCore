@@ -37,7 +37,12 @@ proto_bool protocore_prov_form_field(const char *body, const char *key, char *ou
         return PROTO_FALSE;
     }
 
-    size_t klen = strnlen(key, cap); // a form field name longer than the value buffer cannot yield a value
+    size_t blen = 0;
+    while (body[blen] != '\0')
+    {
+        blen++;
+    }
+    size_t klen = strnlen(key, blen); // a name longer than the body cannot occur in it
     const char *val = NULL;
     for (const char *p = body; *p; p++)
     {
@@ -63,8 +68,16 @@ proto_bool protocore_prov_form_field(const char *body, const char *key, char *ou
         }
         else if (c == '%')
         {
-            int h = protocore_hex_val(q[1]);
-            int l = (h >= 0) ? protocore_hex_val(q[2]) : -1;
+            Hex.args.ch = q[1];
+            Hex.val(Hex.internal);
+            int h = Hex.i8;
+            int l = -1;
+            if (h >= 0)
+            {
+                Hex.args.ch = q[2];
+                Hex.val(Hex.internal);
+                l = Hex.i8;
+            }
             if (h >= 0 && l >= 0)
             {
                 c = (char)((h << 4) | l);

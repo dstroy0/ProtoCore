@@ -1564,10 +1564,10 @@ from halves and is slower than the width it decomposes into"
 /**
  * @brief CloudEvents v1.0 (CNCF) event envelope (structured JSON + binary headers).
  *
- * Default off. Adds `services/cloudevents`: `protocore_cloudevents_build_json()` emits a
+ * Default off. Adds `services/cloudevents`: `CloudEvents.build_structured()` emits a
  * structured `application/cloudevents+json` envelope (required `id`/`source`/`type`
  * + optional `subject`/`datacontenttype`/`data`) via the JSON writer, and
- * `protocore_cloudevents_from_headers()` reads an inbound binary-mode event's `ce-*` headers.
+ * `CloudEvents.read_binary()` reads an inbound binary-mode event's `ce-*` headers.
  * Makes the device's events interoperable with serverless / event-mesh consumers.
  */
 #ifndef PROTOCORE_ENABLE_CLOUDEVENTS
@@ -1591,11 +1591,11 @@ from halves and is slower than the width it decomposes into"
 /**
  * @brief STOMP 1.2 frame codec (`services/stomp`).
  *
- * Default off. A zero-heap frame builder (`protocore_stomp_build_frame`, command + escaped
- * headers + NUL-terminated body) + a non-mutating parser (`protocore_stomp_parse_frame`,
- * command / header slices / body, honoring `content-length`) so the device can talk
- * to a STOMP broker (ActiveMQ / RabbitMQ / Artemis) over the shipped outbound client
- * transport, or STOMP-over-WebSocket via the WS client. Pure codec, host-tested.
+ * Default off. A zero-heap frame builder (`Stomp.build`, command + escaped headers +
+ * NUL-terminated body) + a non-mutating parser (`Stomp.parse`, command / header slices /
+ * body, honoring `content-length`) so the device can talk to a STOMP message broker over
+ * the shipped outbound client transport, or STOMP-over-WebSocket via the WS client. Pure
+ * codec, host-tested.
  */
 #ifndef PROTOCORE_ENABLE_STOMP
 #define PROTOCORE_ENABLE_STOMP 0
@@ -1640,7 +1640,7 @@ from halves and is slower than the width it decomposes into"
  * Default off. A zero-heap streaming Protobuf encoder + cursor reader over caller buffers
  * (the same shape as the CBOR / MessagePack codecs): varint / ZigZag / fixed32 / fixed64 /
  * length-delimited fields, with embedded messages built into a sub-buffer and added via
- * `protocore_pb_bytes`. Pure codec, host-tested against the spec vectors. This is the standalone
+ * `Protobuf.write_bytes`. Pure codec, host-tested against the spec vectors. This is the standalone
  * Protobuf deliverable; gRPC (framed Protobuf over HTTP/2) is gated on the HTTP/2 item.
  */
 #ifndef PROTOCORE_ENABLE_PROTOBUF
@@ -1936,9 +1936,9 @@ from halves and is slower than the width it decomposes into"
  * @brief gRPC-Web message framing (`services/grpcweb`).
  *
  * Default off. A zero-heap length-prefixed frame builder + parser for gRPC-Web, the
- * HTTP/1.1-reachable subset of gRPC (gRPC proper needs HTTP/2). `protocore_grpcweb_frame_message`
- * wraps a Protobuf message in the 5-octet `[flags][len BE32]` prefix, `protocore_grpcweb_frame_trailer`
- * emits the 0x80 trailers frame (`grpc-status` / `grpc-message`), and `protocore_grpcweb_parse` reads
+ * HTTP/1.1-reachable subset of gRPC (gRPC proper needs HTTP/2). `GrpcWeb.frame_message`
+ * wraps a Protobuf message in the 5-octet `[flags][len BE32]` prefix, `GrpcWeb.frame_trailers`
+ * emits the 0x80 trailers frame (`grpc-status` / `grpc-message`), and `GrpcWeb.parse` reads
  * one frame back. Wraps the Protobuf codec (`PROTOCORE_ENABLE_PROTOBUF`) over the shipped
  * HTTP/1.1 server/client. Pure codec, host-tested.
  */
@@ -2123,9 +2123,9 @@ from halves and is slower than the width it decomposes into"
  * Default off; implies PROTOCORE_ENABLE_CBOR (the SenML-CBOR form uses the CBOR writer). A
  * zero-heap SenML-JSON + SenML-CBOR encoder over the shipped JSON / CBOR codecs: the caller
  * fills a `SenmlRecord` array (base name/time, name, unit, one value, time) and
- * `protocore_senml_json_build` / `protocore_senml_build` (any protocore_codec) emit the whole pack. Numbers are emitted
- * as integers when integral (so timestamps keep precision), else floats. The standard measurement format for CoAP /
- * LwM2M / HTTP telemetry. Pure codec, host-tested.
+ * `Senml.json_build` / `Senml.binary_build` (any protocore_codec) emit the whole Pack. Numbers are
+ * emitted as integers when integral (so timestamps keep precision), else floats. The standard
+ * measurement format for CoAP / LwM2M / HTTP telemetry. Pure codec, host-tested.
  */
 #ifndef PROTOCORE_ENABLE_SENML
 #define PROTOCORE_ENABLE_SENML 0
@@ -2300,11 +2300,11 @@ from halves and is slower than the width it decomposes into"
 /**
  * @brief AMQP 0-9-1 frame codec (`services/amqp`).
  *
- * Default off. A zero-heap frame builder + parser for the RabbitMQ wire protocol so a device
- * can be an AMQP client: `protocore_amqp_protocol_header` (the `"AMQP" 0 0 9 1` preamble),
- * `protocore_amqp_build_frame` / `protocore_amqp_parse_frame` (type + channel + size + payload + the 0xCE
- * frame-end), `protocore_amqp_build_method` / `protocore_amqp_parse_method` (a METHOD frame's class-id /
- * method-id / arguments), and `protocore_amqp_build_heartbeat`. Pure codec, host-tested; the method
+ * Default off. A zero-heap frame builder + parser for AMQP 0-9-1, the AMQP Working Group's
+ * wire protocol, so a device can be an AMQP client: `Amqp.protocol_header` (the
+ * `"AMQP" 0 0 9 1` preamble), `Amqp.build_frame` / `Amqp.parse_frame` (type + channel + size +
+ * payload + the 0xCE frame-end), `Amqp.build_method` / `Amqp.parse_method` (a METHOD frame's
+ * class-id / method-id / arguments), and `Amqp.build_heartbeat`. Pure codec, host-tested; the method
  * arguments and the connection are the application's. Rides the outbound client transport.
  */
 #ifndef PROTOCORE_ENABLE_AMQP
@@ -2329,10 +2329,10 @@ from halves and is slower than the width it decomposes into"
  * @brief NATS client protocol codec (`services/nats`).
  *
  * Default off. A zero-heap builder + parser for the text-based NATS pub/sub protocol so a
- * device can be a NATS client: `protocore_nats_build_connect` / `protocore_nats_build_pub` / `protocore_nats_build_sub`
- * / `protocore_nats_build_unsub` / `protocore_nats_build_ping` / `protocore_nats_build_pong`, and
- * `protocore_nats_parse` which decodes an inbound MSG / INFO / PING / PONG / +OK / -ERR (MSG yields subject / sid /
- * reply-to / payload). Line-oriented (CRLF), space-delimited; only PUB and MSG carry a payload. Pure codec,
+ * device can be a NATS client: `Nats.connect` / `Nats.pub` / `Nats.hpub` / `Nats.sub` /
+ * `Nats.unsub` / `Nats.ping` / `Nats.pong`, and `Nats.parse` which decodes an inbound
+ * MSG / INFO / PING / PONG / +OK / -ERR (MSG yields subject / sid / reply-to / payload).
+ * Line-oriented (CRLF), space-delimited; only PUB and MSG carry a payload. Pure codec,
  * host-tested; rides the outbound client transport.
  */
 #ifndef PROTOCORE_ENABLE_NATS
@@ -2357,10 +2357,10 @@ from halves and is slower than the width it decomposes into"
  * @brief Sparkplug B payload + topic codec (`services/sparkplug`).
  *
  * Default off; implies PROTOCORE_ENABLE_PROTOBUF (the payload is a Protobuf message). A zero-heap
- * builder for the Eclipse Sparkplug B industrial-IoT MQTT payload (`protocore_spb_build_payload` /
- * `protocore_spb_build_metric`, over the protobuf codec) and its topic namespace (`protocore_spb_build_topic`,
- * `spBv1.0/group/type/node[/device]`). Field numbers + datatype codes verified against the
- * Eclipse Tahu sparkplug_b.proto. Pure codec, host-tested; publish it with the MQTT client.
+ * builder for the Eclipse Sparkplug B industrial-IoT MQTT payload (`Sparkplug.build_payload` /
+ * `Sparkplug.build_metric`, over the protobuf codec) and its topic namespace
+ * (`Sparkplug.build_topic`, `spBv1.0/group/type/node[/device]`). Field numbers + datatype codes
+ * verified against Sparkplug 3.0.0 sec 6.4.1. Pure codec, host-tested; publish it with the MQTT client.
  */
 #ifndef PROTOCORE_ENABLE_SPARKPLUG
 #define PROTOCORE_ENABLE_SPARKPLUG 0
@@ -2596,7 +2596,7 @@ from halves and is slower than the width it decomposes into"
  * @brief CoAP resource observation - RFC 7641 (requires PROTOCORE_ENABLE_COAP).
  *
  * Default off. When set, a client GET with the Observe option registers as an
- * observer of a resource; the application calls protocore_coap_notify(path) to push the
+ * observer of a resource; the application sets Coap.observe.path and calls Coap.notify to push the
  * resource's current representation to every observer (a CoAP notification from
  * the server port with an increasing Observe sequence). Observers are dropped on
  * a deregister GET, a client RST, or send failure.
@@ -3736,8 +3736,8 @@ from halves and is slower than the width it decomposes into"
  *
  * When set, services/iot/dds provides the RTPS (DDSI-RTPS) message + submessage framing: the 20-octet
  * header (magic / version / vendor / guidPrefix) and the typed submessages (INFO_TS, DATA, HEARTBEAT,
- * ACKNACK, ...) with the endianness flag, built by protocore_rtps_header / _submessage and walked by
- * protocore_rtps_parse. Pure framing (CDR payloads + SPDP/SEDP discovery layer on top). Default off.
+ * ACKNACK, ...) with the endianness flag, built by Rtps.header / Rtps.submessage and walked by
+ * Rtps.parse. Pure framing (CDR payloads + SPDP/SEDP discovery layer on top). Default off.
  */
 #ifndef PROTOCORE_ENABLE_DDS
 #define PROTOCORE_ENABLE_DDS 0
@@ -5507,9 +5507,9 @@ from halves and is slower than the width it decomposes into"
 /**
  * @brief What the whole MQTT connect is given, in milliseconds.
  *
- * Covers the transport coming up, the TLS handshake for mqtts, and the CONNACK: protocore_mqtt_connect()
- * returns immediately and protocore_mqtt_loop() gives the link up once this passes. One budget rather than
- * one per stage, because a broker slow in any of them is slow to the caller either way.
+ * Covers the transport coming up, the TLS handshake for mqtts, and the CONNACK: Mqtt.connect
+ * returns immediately and Mqtt.loop gives the Network Connection up once this passes. One budget
+ * rather than one per stage, because a Server slow in any of them is slow to the caller either way.
  */
 #ifndef PROTOCORE_MQTT_CONNECT_MS
 #define PROTOCORE_MQTT_CONNECT_MS 8000

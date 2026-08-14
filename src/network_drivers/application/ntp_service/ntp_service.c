@@ -18,8 +18,8 @@
 #include "mmgr/endian.h"                         // endian.rd32be / endian.wr32be: the timestamp fields
 #include "mmgr/secure.h"                         // protocore_secure_persist_span: this module's storage
 #include "network_drivers/application/ntp/ntp.h" // the packet this role asks with
-#include "network_drivers/transport/udp/udp.h"   // Udp.listener: the client port and the ask
-#include "server/clock/clock.h"                  // protocore_millis: how the epoch advances between syncs
+#include "network_drivers/transport/udp/server/server.h" // UdpListener: the client port and the ask
+#include "server/clock/clock.h"                  // Clock.millis: how the epoch advances between syncs
 #include "shared/ip/ip.h"                        // Ip.parse: a server given as a literal address
 
 // A successful sync moves the clock well past this sentinel (2021-01-01 UTC);
@@ -88,8 +88,9 @@ static void ntp_reply(const uint8_t *data, size_t len, const struct protocore_ud
     {
         return; // a server that answers with a pre-2021 clock is not one to follow
     }
+    Clock.millis(Clock.internal);
     s_ntp_svc.epoch = epoch;
-    s_ntp_svc.sync_ms = protocore_millis();
+    s_ntp_svc.sync_ms = Clock.ms;
 }
 
 proto_bool protocore_ntp_begin(const char *tz, const char *server1, const char *server2)
@@ -102,20 +103,33 @@ proto_bool protocore_ntp_begin(const char *tz, const char *server1, const char *
         host = server1;
     }
     protocore_ip dst = {PROTOCORE_IP_NONE, {0}};
-    if (!ntp_mem_bind() || !Ip.parse(host, &dst))
+    if (!ntp_mem_bind())
     {
-        return PROTO_FALSE; // no storage, or a name and this client has no resolver of its own
+        return PROTO_FALSE; // no storage
+    }
+    Ip.args.text = host;
+    Ip.args.out = &dst;
+    Ip.parse(Ip.internal);
+    if (!Ip.ok)
+    {
+        return PROTO_FALSE; // a name, and this client has no resolver of its own
     }
     // Bind every time rather than remembering: the listener rebinds a port it already holds, and a
     // port closed underneath this client is exactly the case a remembered flag would send a datagram
     // from a slot that no longer exists.
-    if (!Udp.listener->listen(PROTOCORE_NTP_CLIENT_PORT, ntp_reply, NULL))
+    UdpListener.port = PROTOCORE_NTP_CLIENT_PORT;
+    UdpListener.bind.handler = ntp_reply;
+    UdpListener.bind.handler_ctx = NULL;
+    UdpListener.bind.group_ip = NULL;
+    UdpListener.listen(UdpListener.internal);
+    if (!UdpListener.ok)
     {
         return PROTO_FALSE;
     }
     // The transmit stamp doubles as the cookie the reply has to echo. Ticks, not a clock: this runs
     // before there is one.
-    s_ntp_svc.cookie = protocore_millis() | 1u;
+    Clock.millis(Clock.internal);
+    s_ntp_svc.cookie = Clock.ms | 1u;
     uint8_t *req = s_ntp_svc.req.buf;
     for (size_t i = 0; i < PROTOCORE_NTP_PACKET_LEN; i++)
     {
@@ -123,7 +137,12 @@ proto_bool protocore_ntp_begin(const char *tz, const char *server1, const char *
     }
     req[0] = PROTOCORE_NTP_LI_VN_MODE(PROTOCORE_NTP_LI_NONE, PROTOCORE_NTP_VERSION, PROTOCORE_NTP_MODE_CLIENT);
     endian.wr32be(req + PROTOCORE_NTP_OFF_TX_SEC, s_ntp_svc.cookie);
-    return Udp.listener->sendto(PROTOCORE_NTP_CLIENT_PORT, &dst, PROTOCORE_NTP_PORT, req, PROTOCORE_NTP_PACKET_LEN);
+    UdpListener.send_args.dst = &dst;
+    UdpListener.send_args.dst_port = PROTOCORE_NTP_PORT;
+    UdpListener.send_args.data = req;
+    UdpListener.send_args.len = PROTOCORE_NTP_PACKET_LEN;
+    UdpListener.sendto(UdpListener.internal);
+    return UdpListener.ok;
 }
 
 proto_bool protocore_ntp_synced(void)
@@ -138,26 +157,36 @@ time_t protocore_ntp_epoch(void)
         return 0;
     }
     // The reply fixed one instant; the monotonic clock carries it forward from there.
-    uint32_t elapsed = protocore_millis() - s_ntp_svc.sync_ms;
+    Clock.millis(Clock.internal);
+    uint32_t elapsed = Clock.ms - s_ntp_svc.sync_ms;
     return s_ntp_svc.epoch + (time_t)(elapsed / 1000u);
 }
 
 void protocore_ntp_set_test_epoch(time_t epoch)
 {
+    Clock.millis(Clock.internal);
     s_ntp_svc.epoch = epoch;
-    s_ntp_svc.sync_ms = protocore_millis();
+    s_ntp_svc.sync_ms = Clock.ms;
 }
 
 size_t protocore_ntp_http_date(char *out, size_t out_cap)
 {
-    return protocore_http_date(protocore_ntp_epoch(), out, out_cap);
+    HttpDate.args.epoch = protocore_ntp_epoch();
+    HttpDate.args.out = out;
+    HttpDate.args.out_cap = (uint32_t)out_cap;
+    HttpDate.format(HttpDate.internal);
+    return HttpDate.n;
 }
 
 #else // PROTOCORE_ENABLE_NTP == 0
 
 size_t protocore_ntp_http_date(char *out, size_t out_cap)
 {
-    return protocore_http_date(0, out, out_cap);
+    HttpDate.args.epoch = 0;
+    HttpDate.args.out = out;
+    HttpDate.args.out_cap = out_cap;
+    HttpDate.format(HttpDate.internal);
+    return HttpDate.n;
 }
 
 #endif // PROTOCORE_ENABLE_NTP

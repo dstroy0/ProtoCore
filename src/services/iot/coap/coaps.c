@@ -3,46 +3,87 @@
 
 /**
  * @file coaps.c
- * @brief CoAP over DTLS (CoAPs, RFC 7252 §9). See coaps.h.
+ * @brief CoAP over DTLS (RFC 7252 sec 9): the bridge and its one owner. See coaps.h.
  */
 
 #include "services/iot/coap/coaps.h"
 
 #if PROTOCORE_ENABLE_DTLS && PROTOCORE_ENABLE_COAP
 
-#include "services/iot/coap/coap.h"
+#include "services/iot/coap/coap.h" // Coap.process: the CoAP message inside an application record
 
-// Largest CoAP request/response carried in one DTLS application record. CoAP messages are expected to
-// fit a single datagram (RFC 7252 §4.6); anything larger is dropped rather than fragmented here.
+// The largest CoAP message carried in one DTLS application record. RFC 7252 sec 4.6 puts a good
+// upper bound at 1152 octets for the message where nothing is known about the headers, so a larger
+// record is dropped rather than fragmented here.
 #define PROTOCORE_COAPS_MSG_CAP 1152
 
-int protocore_coaps_process(DtlsConn *c, const uint8_t *dgram, size_t len, uint8_t *out, size_t out_cap)
+// RFC 9147 sec 4 Figure 3, the DTLSCiphertext unified header's first byte.
+#define COAPS_UHDR_FIXED_MASK 0xE0u ///< the three high bits
+#define COAPS_UHDR_FIXED 0x20u      ///< which are set to 001
+#define COAPS_UHDR_EPOCH_MASK 0x03u ///< the two low bits, the low-order bits of the epoch
+#define COAPS_EPOCH_APP 3u          ///< the epoch application data travels in
+
+/**
+ * @brief The bridge's calls - what CoapsNs points at.
+ *
+ * @var CoapsInternal::ns  the handle a caller sets a call's members on
+ */
+struct CoapsInternal
 {
-    if (!DtlsServer.established(c))
+    CoapsNs *ns;
+};
+
+static struct CoapsInternal s_coaps = {.ns = &Coaps};
+
+// Turn one datagram for the connection in ns->conn.
+static void coaps_process(struct CoapsInternal *restrict ctx)
+{
+    DtlsConn *c = ctx->ns->conn;
+    const uint8_t *dgram = ctx->ns->dgram.data;
+    const size_t len = ctx->ns->dgram.len;
+    uint8_t *out = ctx->ns->dgram.out;
+    const size_t out_cap = ctx->ns->dgram.out_cap;
+
+    ctx->ns->i32 = 0;
+    if (!c || !dgram || !out)
     {
-        return DtlsServer.process(c, dgram, len, out, out_cap); // still handshaking (or -1 on fatal error)
+        return;
     }
 
-    // Established. A DTLSCiphertext unified header is 0b001CSLEE; the low two bits are the epoch mod 4,
-    // so epoch 3 (application data) is 0b001xxx11. HttpRoute application data through CoAP; route anything
-    // else (a retransmitted epoch-2 client Finished) back to the state machine to be re-acknowledged.
-    if (len >= 1 && (dgram[0] & 0xE0) == 0x20 && (dgram[0] & 0x03) == 3)
+    if (!DtlsServer.established(c))
+    {
+        ctx->ns->i32 = DtlsServer.process(c, dgram, len, out, out_cap); // still handshaking, or -1 fatal
+        return;
+    }
+
+    // Established. Application data is an epoch-3 DTLSCiphertext record (RFC 9147 sec 4); anything
+    // else is a handshake record and goes back to the state machine to be re-acknowledged.
+    if (len >= 1 && (dgram[0] & COAPS_UHDR_FIXED_MASK) == COAPS_UHDR_FIXED &&
+        (dgram[0] & COAPS_UHDR_EPOCH_MASK) == COAPS_EPOCH_APP)
     {
         uint8_t req[PROTOCORE_COAPS_MSG_CAP];
         size_t req_len = 0;
         if (!DtlsServer.open_app(c, dgram, len, req, sizeof(req), &req_len))
         {
-            return 0; // replay, truncated, or not application data
+            return; // replayed, truncated, or not application data
         }
         uint8_t resp[PROTOCORE_COAPS_MSG_CAP];
-        size_t protocore_resp_len = protocore_coap_server_process(req, req_len, resp, sizeof(resp));
-        if (!protocore_resp_len)
+        Coap.msg.req = req;
+        Coap.msg.req_len = req_len;
+        Coap.msg.resp = resp;
+        Coap.msg.resp_cap = sizeof(resp);
+        Coap.process(Coap.internal);
+        if (Coap.n == 0)
         {
-            return 0; // no response (e.g. a Non-confirmable message with no resource match)
+            return; // nothing to send, as for a Non-confirmable message the server does not answer
         }
-        return (int)DtlsServer.seal_app(c, resp, protocore_resp_len, out, out_cap);
+        ctx->ns->i32 = (int32_t)DtlsServer.seal_app(c, resp, Coap.n, out, out_cap);
+        return;
     }
-    return DtlsServer.process(c, dgram, len, out, out_cap);
+    ctx->ns->i32 = DtlsServer.process(c, dgram, len, out, out_cap);
 }
+
+// Designated, so a member's position in the struct does not decide what it binds to.
+CoapsNs Coaps = {.process = coaps_process, .internal = &s_coaps};
 
 #endif // PROTOCORE_ENABLE_DTLS && PROTOCORE_ENABLE_COAP

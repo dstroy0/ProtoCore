@@ -13,6 +13,7 @@
  */
 
 #include "network_drivers/application/file_serving/file_serving.h"
+#include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the slot a response is written on
 #include "network_drivers/presentation/http/http.h"
 
 #include "mmgr/membuild.h"                          // protocore_sb frame builder
@@ -40,7 +41,7 @@
 // A file larger than the TCP send window cannot go out in one dispatch: tcp_write returns ERR_MEM
 // once the window fills and the remainder would be dropped. serve_file_internal sends the headers,
 // opens the file and hands it to this per-slot state; file_send_pump pages out at most
-// Tcp.conn->sndbuf() bytes per worker loop and resumes as the window drains. One transfer per slot.
+// ConnPool.sndbuf() bytes per worker loop and resumes as the window drains. One transfer per slot.
 // Nothing outside this file can name the state: the poll asks protocore_file_holds_slot().
 
 // Per-slot file-send continuation: the open file and how much of it is left.
@@ -322,7 +323,10 @@ void serve_file_internal(uint8_t slot_id, proto_bool head, const protocore_mnt_b
         Sb.put(&sb_h304, cl);
         Sb.put(&sb_h304, "\r\n");
         int n304 = (int)Sb.finish(&sb_h304);
-        Tcp.conn->send_flush(slot_id, h304, (proto_u16)n304); // header-only reply: write and flush in one marshal
+        ConnPool.slot = slot_id;
+        ConnPool.io.data = h304;
+        ConnPool.io.len = (proto_u16)n304;
+        ConnPool.send_flush(ConnPool.internal); // header-only reply: write and flush in one marshal
         protocore_resp_end(slot_id, 304, 0, keep, /*pre_flushed=*/PROTO_TRUE);
         return;
     }
@@ -366,7 +370,10 @@ void serve_file_internal(uint8_t slot_id, proto_bool head, const protocore_mnt_b
         Sb.put(&sb_h416, cl);
         Sb.put(&sb_h416, "\r\n");
         int n416 = (int)Sb.finish(&sb_h416);
-        Tcp.conn->send_flush(slot_id, h416, (proto_u16)n416);
+        ConnPool.slot = slot_id;
+        ConnPool.io.data = h416;
+        ConnPool.io.len = (proto_u16)n416;
+        ConnPool.send_flush(ConnPool.internal);
         protocore_resp_end(slot_id, 416, 0, keep, /*pre_flushed=*/PROTO_TRUE);
         return;
     }
@@ -406,7 +413,9 @@ void serve_file_internal(uint8_t slot_id, proto_bool head, const protocore_mnt_b
     Sb.put(&sb_header, "HTTP/1.1 ");
     Sb.i64(&sb_header, (int64_t)(status));
     Sb.put(&sb_header, " ");
-    Sb.put(&sb_header, Http.status_text(status));
+    Http.code = status;
+    Http.status_text(Http.internal);
+    Sb.put(&sb_header, Http.text);
     Sb.put(&sb_header, "\r\nContent-Type: ");
     Sb.put(&sb_header, content_type);
     Sb.put(&sb_header, "\r\nContent-Length: ");
@@ -427,7 +436,10 @@ void serve_file_internal(uint8_t slot_id, proto_bool head, const protocore_mnt_b
         header[0] = '\0';
     }
 
-    Tcp.conn->send(slot_id, header, (proto_u16)hlen);
+    ConnPool.slot = slot_id;
+    ConnPool.io.data = header;
+    ConnPool.io.len = (proto_u16)hlen;
+    ConnPool.send(ConnPool.internal);
 
     // HEAD or empty body: headers only, finish now.
     if (head || body_len == 0)
@@ -452,7 +464,7 @@ void serve_file_internal(uint8_t slot_id, proto_bool head, const protocore_mnt_b
     file_send_pump(slot_id);
 }
 
-// Page out a pending file response across worker loops: send up to Tcp.conn->sndbuf()
+// Page out a pending file response across worker loops: send up to ConnPool.sndbuf()
 // bytes now and return; the next loop resumes (woken by the sent callback) until the
 // whole body has been queued, then finish the response. Bounded per loop, never
 // truncates, never blocks the worker.
@@ -474,15 +486,19 @@ void file_send_pump(uint8_t slot_id)
 
     // A file body still being paged out is active, not idle: keep the CONN_TIMEOUT_MS idle sweep
     // off it so a transient send stall on a large file cannot reap the slot mid-transfer.
-    Tcp.conn->touch_active(slot_id);
+    ConnPool.slot = slot_id;
+    ConnPool.touch_active(ConnPool.internal);
 
     uint8_t chunk[FILE_CHUNK_SIZE];
     while (s->remaining > 0)
     {
-        proto_u16 avail = Tcp.conn->sndbuf(slot_id);
+        ConnPool.slot = slot_id;
+        ConnPool.sndbuf(ConnPool.internal);
+        proto_u16 avail = ConnPool.u16;
         if (avail == 0)
         {
-            Tcp.conn->flush(slot_id); // push what is queued; resume on a later loop
+            ConnPool.slot = slot_id;
+            ConnPool.flush(ConnPool.internal); // push what is queued; resume on a later loop
             return;
         }
         size_t want = s->remaining < sizeof(chunk) ? s->remaining : sizeof(chunk);
@@ -498,7 +514,11 @@ void file_send_pump(uint8_t slot_id)
             s->remaining = 0; // read error / short file: stop (response will be short)
             break;
         }
-        if (!Tcp.conn->send(slot_id, chunk, (proto_u16)n))
+        ConnPool.slot = slot_id;
+        ConnPool.io.data = chunk;
+        ConnPool.io.len = (proto_u16)n;
+        ConnPool.send(ConnPool.internal);
+        if (!ConnPool.ok)
         {
             // Un-read the bytes that did not go out so the next loop resends them. A backend that
             // cannot rewind would resume at the wrong offset, so the transfer ends there instead.
@@ -508,7 +528,8 @@ void file_send_pump(uint8_t slot_id)
                 s->active = PROTO_FALSE;
                 s->remaining = 0;
             }
-            Tcp.conn->flush(slot_id);
+            ConnPool.slot = slot_id;
+            ConnPool.flush(ConnPool.internal);
             return;
         }
         s->off += (size_t)(n);
@@ -518,13 +539,16 @@ void file_send_pump(uint8_t slot_id)
     // Whole body queued: finish the response (flush, keep-alive/close, log, reset).
     protocore_fs_close(s->fh);
     s->active = PROTO_FALSE;
-    Tcp.conn->flush(slot_id);
+    ConnPool.slot = slot_id;
+    ConnPool.flush(ConnPool.internal);
     protocore_resp_end(slot_id, s->status, s->total, s->keep, /*pre_flushed=*/PROTO_FALSE);
 }
 
 void serve_file(uint8_t slot_id, const protocore_mnt_backend *file_sys, const char *fs_path, const char *content_type)
 {
-    serve_file_internal(slot_id, Http.req_is_head(slot_id), file_sys, fs_path, content_type, NULL);
+    Http.slot = slot_id;
+    Http.req_is_head(Http.internal);
+    serve_file_internal(slot_id, Http.ok, file_sys, fs_path, content_type, NULL);
 }
 
 void serve_static(const char *url_prefix, const protocore_mnt_backend *file_sys, const char *fs_root)
@@ -616,7 +640,9 @@ void serve_static_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
     }
 
     const char *ctype = mime_type(fs_path);
-    proto_bool head = Http.req_is_head(slot_id);
+    Http.slot = slot_id;
+    Http.req_is_head(Http.internal);
+    proto_bool head = Http.ok;
 
     // Pre-compressed variant: serve <path>.gz if the client accepts gzip and it
     // exists. Content-Type stays that of the original (uncompressed) resource.

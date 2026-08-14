@@ -3,24 +3,33 @@
 
 /**
  * @file mqtt_sn.h
- * @brief MQTT-SN v1.2 wire codec (PROTOCORE_ENABLE_MQTT_SN) - zero-heap message builder +
- *        parser for MQTT for Sensor Networks, the UDP / non-TCP MQTT variant for
- *        constrained, lossy links (topic IDs instead of strings, gateway discovery,
- *        sleeping-client keep-alive).
+ * @brief The MQTT-SN v1.2 wire codec (PROTOCORE_ENABLE_MQTT_SN).
  *
- * Spec: MQTT-SN v1.2 (OASIS contribution). Each message is:
+ * The governing document is "MQTT For Sensor Networks (MQTT-SN) Protocol Specification Version 1.2",
+ * by Andy Stanford-Clark and Hong Linh Truong, published by IBM on 14 November 2013. **It is not an
+ * OASIS Standard and it is not an IETF protocol: it carries neither a standard number nor an RFC
+ * number.** OASIS hosts the document for its MQTT Technical Committee's MQTT-SN Subcommittee, whose
+ * own MQTT-SN Version 2.0 work is a separate specification. Every section, table and message name
+ * cited here is from that v1.2 document.
+ *
+ * MQTT-SN carries publish/subscribe over a datagram link for constrained, lossy networks: numeric
+ * topic ids instead of topic names, gateway discovery, and a keep-alive that supports sleeping
+ * clients (sec 2, sec 3). A message is:
  * @code
- *   [Length][MsgType][message body...]
+ *   [Length][MsgType][Message Variable Part]
  * @endcode
- *  - Length is 1 octet when the total message length (the Length field included) is
- *    <= 255; otherwise it is 3 octets: `0x01` then a big-endian uint16 total length.
- *  - All multi-byte integers (TopicId, MsgId, Duration) are big-endian (MSB first).
- *  - TopicId / MsgId are 2 octets; topics may be a registered numeric TopicId, a
- *    pre-defined TopicId, or a 2-character short topic name (per the Flags TopicIdType).
+ *  - Length is 1 octet when the whole message, the Length field included, is at most 255 octets;
+ *    otherwise it is 3 octets: ::MQTTSN_LEN3_PREFIX then a big-endian uint16 of that same total
+ *    (sec 5.2.1). The 3-octet form reaches 65535 octets.
+ *  - MsgType is one octet, from Table 3 (sec 5.2.2).
+ *  - TopicId, MsgId and Duration are 2 octets, most significant octet first (sec 5.3.3, sec 5.3.7,
+ *    sec 5.3.11). A topic is named by a registered TopicId, a pre-defined TopicId, or a 2-character
+ *    short topic name, as the Flags TopicIdType states (sec 5.3.4).
  *
- * Verified against the Eclipse Paho MQTT-SN reference (message-type enum + length
- * encoding) and the v1.2 spec. This is the wire codec only; the gateway connection,
- * topic registry, and retransmission/sleep state are the application's.
+ * This is the wire codec only. The gateway connection, the topic registry, and the retransmission
+ * and sleep state (sec 6.13, sec 6.14) belong to the application.
+ *
+ * The module exports one symbol, @ref Mqttsn. Everything in mqtt_sn.c has internal linkage.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -35,9 +44,15 @@ PROTOCORE_BEGIN_DECLS
 
 #if PROTOCORE_ENABLE_MQTT_SN
 
-#define MQTTSN_LEN3_PREFIX 0x01 ///< a first Length octet of 0x01 signals the 3-octet length form
+// ---------------------------------------------------------------------------
+// Literals
+// ---------------------------------------------------------------------------
 
-// Message types (MQTT-SN v1.2 Table 5).
+#define MQTTSN_LEN3_PREFIX 0x01 ///< a first Length octet of 0x01 signals the 3-octet form (sec 5.2.1)
+
+// MsgType values (MQTT-SN v1.2 sec 5.2.2, Table 3). The types this codec neither builds nor parses -
+// WILLTOPICUPD 0x1A, WILLTOPICRESP 0x1B, WILLMSGUPD 0x1C, WILLMSGRESP 0x1D, and the encapsulated
+// message 0xFE - are named by the table but not listed here.
 #define MQTTSN_ADVERTISE 0x00
 #define MQTTSN_SEARCHGW 0x01
 #define MQTTSN_GWINFO 0x02
@@ -62,97 +77,194 @@ PROTOCORE_BEGIN_DECLS
 #define MQTTSN_PINGRESP 0x17
 #define MQTTSN_DISCONNECT 0x18
 
-// Flags octet bit layout (MQTT-SN v1.2 sec 5.3.4).
-#define MQTTSN_FLAG_DUP 0x80
-#define MQTTSN_FLAG_QOS_MASK 0x60
-#define MQTTSN_FLAG_QOS_SHIFT 5
-#define MQTTSN_FLAG_RETAIN 0x10
-#define MQTTSN_FLAG_WILL 0x08
-#define MQTTSN_FLAG_CLEAN 0x04
-#define MQTTSN_FLAG_TOPICIDTYPE_MASK 0x03
+// Flags octet bit layout (MQTT-SN v1.2 sec 5.3.4, Table 4).
+#define MQTTSN_FLAG_DUP 0x80              ///< DUP, bit 7
+#define MQTTSN_FLAG_QOS_MASK 0x60         ///< QoS, bits 6-5
+#define MQTTSN_FLAG_QOS_SHIFT 5           ///< how far QoS sits from bit 0
+#define MQTTSN_FLAG_RETAIN 0x10           ///< Retain, bit 4
+#define MQTTSN_FLAG_WILL 0x08             ///< Will, bit 3
+#define MQTTSN_FLAG_CLEAN 0x04            ///< CleanSession, bit 2
+#define MQTTSN_FLAG_TOPICIDTYPE_MASK 0x03 ///< TopicIdType, bits 1-0
 
-// TopicIdType values (low 2 bits of Flags).
-#define MQTTSN_TOPIC_NORMAL 0x00     ///< registered numeric topic id (REGISTER)
-#define MQTTSN_TOPIC_PREDEFINED 0x01 ///< pre-defined numeric topic id
-#define MQTTSN_TOPIC_SHORT 0x02      ///< 2-character short topic name
+// TopicIdType values, the low two bits of Flags (MQTT-SN v1.2 sec 5.3.4).
+#define MQTTSN_TOPIC_NORMAL 0x00     ///< a registered numeric topic id (REGISTER, sec 6.5)
+#define MQTTSN_TOPIC_PREDEFINED 0x01 ///< a pre-defined numeric topic id (sec 6.7)
+#define MQTTSN_TOPIC_SHORT 0x02      ///< a 2-character short topic name (sec 6.7)
 
-// Return codes (MQTT-SN v1.2 sec 5.3.5).
+// ReturnCode values (MQTT-SN v1.2 sec 5.3.10, Table 5).
 #define MQTTSN_RC_ACCEPTED 0x00
 #define MQTTSN_RC_CONGESTION 0x01
 #define MQTTSN_RC_INVALID_TOPIC_ID 0x02
 #define MQTTSN_RC_NOT_SUPPORTED 0x03
 
-#define MQTTSN_PROTOCOL_ID 0x01 ///< CONNECT ProtocolId octet
+#define MQTTSN_PROTOCOL_ID 0x01 ///< the CONNECT ProtocolId octet; all other values are reserved (sec 5.3.8)
 
-/** @brief Compose a Flags octet. @p qos is 0..3 (3 = QoS -1); @p topic_id_type is MQTTSN_TOPIC_*. */
-uint8_t protocore_mqttsn_make_flags(proto_bool dup, uint8_t qos, proto_bool retain, proto_bool will, proto_bool clean,
-                                    uint8_t topic_id_type);
+// ---------------------------------------------------------------------------
+// Typedefs
+// ---------------------------------------------------------------------------
 
-// ---- builders (return total bytes written, or 0 on overflow / bad input) ----
-
-/** @brief CONNECT: Flags, ProtocolId(=1), Duration, ClientId. */
-size_t protocore_mqttsn_build_connect(uint8_t *buf, size_t cap, uint8_t flags, uint16_t duration,
-                                      const char *client_id);
-
-/** @brief REGISTER: TopicId (0x0000 from a client), MsgId, TopicName. */
-size_t protocore_mqttsn_build_register(uint8_t *buf, size_t cap, uint16_t topic_id, uint16_t msg_id,
-                                       const char *topic_name);
-
-/** @brief REGACK: TopicId, MsgId, ReturnCode. */
-size_t protocore_mqttsn_build_regack(uint8_t *buf, size_t cap, uint16_t topic_id, uint16_t msg_id, uint8_t ret_code);
-
-/** @brief PUBLISH: Flags, TopicId, MsgId, Data. */
-size_t protocore_mqttsn_build_publish(uint8_t *buf, size_t cap, uint8_t flags, uint16_t topic_id, uint16_t msg_id,
-                                      const uint8_t *data, size_t data_len);
-
-/** @brief PUBACK: TopicId, MsgId, ReturnCode. */
-size_t protocore_mqttsn_build_puback(uint8_t *buf, size_t cap, uint16_t topic_id, uint16_t msg_id, uint8_t ret_code);
-
-/** @brief SUBSCRIBE by topic name: Flags, MsgId, TopicName (set TopicIdType normal/short in @p flags). */
-size_t protocore_mqttsn_build_subscribe_name(uint8_t *buf, size_t cap, uint8_t flags, uint16_t msg_id,
-                                             const char *topic_name);
-
-/** @brief SUBSCRIBE by pre-defined topic id: Flags, MsgId, TopicId (TopicIdType predefined). */
-size_t protocore_mqttsn_build_subscribe_id(uint8_t *buf, size_t cap, uint8_t flags, uint16_t msg_id, uint16_t topic_id);
-
-/** @brief PINGREQ: optional ClientId (nullptr for an empty keep-alive ping). */
-size_t protocore_mqttsn_build_pingreq(uint8_t *buf, size_t cap, const char *client_id);
-
-/** @brief DISCONNECT: optional sleep Duration (pass with_duration=false for a plain disconnect). */
-size_t protocore_mqttsn_build_disconnect(uint8_t *buf, size_t cap, proto_bool with_duration, uint16_t duration);
-
-/** @brief SEARCHGW: broadcast Radius. */
-size_t protocore_mqttsn_build_searchgw(uint8_t *buf, size_t cap, uint8_t radius);
-
-// ---- parsing ----
-
-/** @brief A decoded message header: type + a slice of the body (past the MsgType octet). */
+/** @brief MQTT-SN v1.2 sec 5.3.4: the six fields the Flags octet packs. */
 typedef struct
 {
-    uint8_t msg_type;
-    const uint8_t *payload; ///< message body (points INTO the source buffer)
-    size_t payload_len;
-} MqttsnHeader;
+    proto_bool dup;           ///< DUP: the message is a retransmission
+    uint8_t qos;              ///< QoS: 0, 1, 2, or 3 for QoS level -1 (sec 6.8)
+    proto_bool retain;        ///< Retain
+    proto_bool will;          ///< Will: the client asks for Will prompting (CONNECT, sec 5.4.4)
+    proto_bool clean_session; ///< CleanSession (sec 6.3)
+    uint8_t topic_id_type;    ///< TopicIdType: MQTTSN_TOPIC_NORMAL, _PREDEFINED or _SHORT
+    uint8_t octet;            ///< the packed Flags octet a compose writes and a parse reports
+} MqttsnFlagsArgs;
+
+/** @brief MQTT-SN v1.2 sec 5.3.11, sec 5.3.12: how a message names its topic. */
+typedef struct
+{
+    uint16_t topic_id;      ///< TopicId; 0x0000 and 0xFFFF are reserved (sec 5.3.11)
+    const char *topic_name; ///< TopicName a build writes, or where a parse found it (sec 5.3.12)
+    size_t topic_name_len;  ///< its octet count as a parse reports it
+} MqttsnTopicArgs;
+
+/** @brief MQTT-SN v1.2 sec 5.3.1, sec 5.3.3, sec 5.3.7, sec 5.3.9, sec 5.3.10: the scalar fields. */
+typedef struct
+{
+    const char *client_id;    ///< ClientId, 1 to 23 characters (sec 5.3.1)
+    uint16_t duration;        ///< Duration in seconds (sec 5.3.3)
+    proto_bool with_duration; ///< a DISCONNECT carries the sleep Duration (sec 5.4.21, sec 6.14)
+    uint16_t msg_id;          ///< MsgId, matching a message to its acknowledgment (sec 5.3.7)
+    uint8_t radius;           ///< Radius; 0x00 broadcasts to all nodes (sec 5.3.9)
+    uint8_t return_code;      ///< ReturnCode (sec 5.3.10)
+} MqttsnFieldArgs;
+
+/** @brief MQTT-SN v1.2 sec 5.3.2: the Data a PUBLISH carries. */
+typedef struct
+{
+    const uint8_t *data; ///< the application data a build writes, or where a parse found it
+    size_t data_len;     ///< its octet count
+} MqttsnDataArgs;
+
+/** @brief MQTT-SN v1.2 sec 5.2: the Length and MsgType header, and the Variable Part behind it. */
+typedef struct
+{
+    uint8_t msg_type;        ///< MsgType (sec 5.2.2)
+    const uint8_t *variable; ///< the Message Variable Part, pointing into @c in (sec 5.3)
+    size_t variable_len;     ///< its octet count
+} MqttsnHeaderArgs;
 
 /**
- * @brief Parse the Length + MsgType header at the head of [buf, buf+len).
- * @param consumed receives the full message length (so the caller can advance).
- * @return true on a complete, self-consistent message; false if incomplete / malformed.
+ * @brief The octets a build writes or a parse reads.
+ *
+ * A header parse reads a whole message from @c in; every typed parse below reads the Message
+ * Variable Part the header parse pointed @c header.variable at.
  */
-proto_bool protocore_mqttsn_parse_header(const uint8_t *buf, size_t len, MqttsnHeader *out, size_t *consumed);
+typedef struct
+{
+    uint8_t *out;      ///< where a build writes the whole message
+    size_t cap;        ///< its room
+    const uint8_t *in; ///< the octets a parse reads
+    size_t avail;      ///< how many are readable there
+} MqttsnBufArgs;
 
-// The typed parsers below take the @ref MqttsnHeader payload/payload_len.
-proto_bool protocore_mqttsn_parse_connack(const uint8_t *payload, size_t len, uint8_t *ret_code);
-proto_bool protocore_mqttsn_parse_regack(const uint8_t *payload, size_t len, uint16_t *topic_id, uint16_t *msg_id,
-                                         uint8_t *ret_code);
-proto_bool protocore_mqttsn_parse_puback(const uint8_t *payload, size_t len, uint16_t *topic_id, uint16_t *msg_id,
-                                         uint8_t *ret_code);
-proto_bool protocore_mqttsn_parse_suback(const uint8_t *payload, size_t len, uint8_t *flags, uint16_t *topic_id,
-                                         uint16_t *msg_id, uint8_t *ret_code);
-proto_bool protocore_mqttsn_parse_publish(const uint8_t *payload, size_t len, uint8_t *flags, uint16_t *topic_id,
-                                          uint16_t *msg_id, const uint8_t **data, size_t *data_len);
-proto_bool protocore_mqttsn_parse_register(const uint8_t *payload, size_t len, uint16_t *topic_id, uint16_t *msg_id,
-                                           const char **topic_name, size_t *topic_name_len);
+/** @brief The codec's own calls, described only in mqtt_sn.c. */
+struct MqttsnInternal;
+
+/**
+ * @brief The MQTT-SN v1.2 wire codec.
+ *
+ * A caller sets the members a call takes, invokes it through ::Mqttsn, and reads the outcome off the
+ * same handle.
+ *
+ * No slot member: every call works on the buffer the caller lends, so no call names a row.
+ *
+ * @var MqttsnNs::flags   the six fields the Flags octet packs (sec 5.3.4)
+ * @var MqttsnNs::topic   how a message names its topic (sec 5.3.11, sec 5.3.12)
+ * @var MqttsnNs::field   ClientId, Duration, MsgId, Radius and ReturnCode (sec 5.3)
+ * @var MqttsnNs::data    the Data a PUBLISH carries (sec 5.3.2)
+ * @var MqttsnNs::header  the Length and MsgType header a parse read (sec 5.2)
+ * @var MqttsnNs::buf     the octets a build writes or a parse reads
+ * @var MqttsnNs::ok      a call's true/false outcome
+ * @var MqttsnNs::n
+ * The whole message length: what a build wrote, or what a header parse consumed so the caller can
+ * advance. 0 when a build did not fit @c cap or the message would exceed the 16-bit Length field.
+ * @var MqttsnNs::make_flags
+ * Pack @c flags.dup, @c flags.qos, @c flags.retain, @c flags.will, @c flags.clean_session and
+ * @c flags.topic_id_type into @c flags.octet (sec 5.3.4).
+ * @var MqttsnNs::build_connect
+ * CONNECT: Flags, ProtocolId, Duration, ClientId (sec 5.4.4).
+ * @var MqttsnNs::build_register
+ * REGISTER: TopicId, MsgId, TopicName. A client codes TopicId 0x0000 (sec 5.4.10).
+ * @var MqttsnNs::build_regack
+ * REGACK: TopicId, MsgId, ReturnCode (sec 5.4.11).
+ * @var MqttsnNs::build_publish
+ * PUBLISH: Flags, TopicId, MsgId, Data (sec 5.4.12).
+ * @var MqttsnNs::build_puback
+ * PUBACK: TopicId, MsgId, ReturnCode (sec 5.4.13).
+ * @var MqttsnNs::build_subscribe_name
+ * SUBSCRIBE naming a TopicName: Flags, MsgId, TopicName. @c flags.octet states TopicIdType normal or
+ * short (sec 5.4.15).
+ * @var MqttsnNs::build_subscribe_id
+ * SUBSCRIBE naming a pre-defined TopicId: Flags, MsgId, TopicId (sec 5.4.15).
+ * @var MqttsnNs::build_pingreq
+ * PINGREQ, with the optional ClientId a sleeping client includes when it wakes; a null
+ * @c field.client_id builds the plain keep-alive form (sec 5.4.19, sec 6.14).
+ * @var MqttsnNs::build_disconnect
+ * DISCONNECT, carrying the sleep Duration when @c field.with_duration is set (sec 5.4.21, sec 6.14).
+ * @var MqttsnNs::build_searchgw
+ * SEARCHGW: Radius (sec 5.4.2).
+ * @var MqttsnNs::parse_header
+ * Read the Length and MsgType at the head of @c in into @c header, with @c n reporting the whole
+ * message length so the caller can advance (sec 5.2). False on an incomplete or self-inconsistent
+ * message.
+ * @var MqttsnNs::parse_connack   CONNACK: ReturnCode into @c field.return_code (sec 5.4.5)
+ * @var MqttsnNs::parse_regack
+ * REGACK: TopicId, MsgId and ReturnCode into @c topic and @c field (sec 5.4.11).
+ * @var MqttsnNs::parse_puback
+ * PUBACK: the same three fields, which share REGACK's layout (sec 5.4.13).
+ * @var MqttsnNs::parse_suback
+ * SUBACK: Flags, TopicId, MsgId and ReturnCode; the granted QoS is in @c flags.octet (sec 5.4.16).
+ * @var MqttsnNs::parse_publish
+ * PUBLISH: Flags, TopicId, MsgId, and the Data slice into @c data (sec 5.4.12).
+ * @var MqttsnNs::parse_register
+ * REGISTER: TopicId, MsgId, and the TopicName slice into @c topic (sec 5.4.10).
+ * @var MqttsnNs::internal  the calls that walk the caller's buffer
+ *
+ * No storage member: every call works in the buffer the caller lends and holds nothing between
+ * calls.
+ */
+typedef struct
+{
+    MqttsnFlagsArgs flags;   ///< the Flags octet's six fields
+    MqttsnTopicArgs topic;   ///< how a message names its topic
+    MqttsnFieldArgs field;   ///< the scalar fields of the Message Variable Part
+    MqttsnDataArgs data;     ///< the Data a PUBLISH carries
+    MqttsnHeaderArgs header; ///< the Length and MsgType header a parse read
+    MqttsnBufArgs buf;       ///< the octets a call moves
+
+    proto_bool ok;
+    size_t n;
+
+    void (*make_flags)(struct MqttsnInternal *ctx);
+    void (*build_connect)(struct MqttsnInternal *ctx);
+    void (*build_register)(struct MqttsnInternal *ctx);
+    void (*build_regack)(struct MqttsnInternal *ctx);
+    void (*build_publish)(struct MqttsnInternal *ctx);
+    void (*build_puback)(struct MqttsnInternal *ctx);
+    void (*build_subscribe_name)(struct MqttsnInternal *ctx);
+    void (*build_subscribe_id)(struct MqttsnInternal *ctx);
+    void (*build_pingreq)(struct MqttsnInternal *ctx);
+    void (*build_disconnect)(struct MqttsnInternal *ctx);
+    void (*build_searchgw)(struct MqttsnInternal *ctx);
+    void (*parse_header)(struct MqttsnInternal *ctx);
+    void (*parse_connack)(struct MqttsnInternal *ctx);
+    void (*parse_regack)(struct MqttsnInternal *ctx);
+    void (*parse_puback)(struct MqttsnInternal *ctx);
+    void (*parse_suback)(struct MqttsnInternal *ctx);
+    void (*parse_publish)(struct MqttsnInternal *ctx);
+    void (*parse_register)(struct MqttsnInternal *ctx);
+
+    struct MqttsnInternal *internal;
+} MqttsnNs;
+
+/** @brief The one symbol this module exports. */
+extern MqttsnNs Mqttsn;
 
 #endif // PROTOCORE_ENABLE_MQTT_SN
 

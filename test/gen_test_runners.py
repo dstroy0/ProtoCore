@@ -15,6 +15,7 @@
 # The generated file lands in the suite directory as unity_runner.c (gitignored) because PlatformIO
 # compiles every source in the test directory it is running.
 
+import glob
 import os
 import shutil
 import subprocess
@@ -27,21 +28,28 @@ sys.path.insert(0, PROJECT_DIR)
 
 GENERATED = "unity_runner.c"
 
+# Where an installer puts ruby. Globbed rather than version-pinned: chocolatey lands it in
+# C:\tools\ruby<major><minor>, RubyInstaller in C:\Ruby<major><minor>-x64, and both bump the
+# directory name on every release.
+RUBY_GLOBS = (
+    r"C:\tools\ruby*\bin\ruby.exe",
+    r"C:\Ruby*\bin\ruby.exe",
+    r"C:\Program Files\Ruby*\bin\ruby.exe",
+    "/usr/bin/ruby",
+    "/usr/local/bin/ruby",
+    "/opt/homebrew/bin/ruby",
+)
+
 
 def find_ruby():
     """Ruby runs the generator. A missing one is an error, never a silent skip."""
     found = shutil.which("ruby")
     if found:
         return found
-    for guess in (
-        r"C:\Ruby34-x64\bin\ruby.exe",
-        r"C:\Ruby33-x64\bin\ruby.exe",
-        r"C:\Ruby32-x64\bin\ruby.exe",
-        "/usr/bin/ruby",
-        "/usr/local/bin/ruby",
-    ):
-        if os.path.isfile(guess):
-            return guess
+    for pattern in RUBY_GLOBS:
+        for hit in sorted(glob.glob(pattern), reverse=True):  # newest install first
+            if os.path.isfile(hit):
+                return hit
     return None
 
 
@@ -82,15 +90,28 @@ def main():
     if not sources:
         return
 
+    # The generator takes one input file and emits one main(), so a suite whose cases are spread
+    # across several sources cannot be registered from any single one of them. Refused here rather
+    # than generating from the first and dropping the rest, which is the silent drift this exists
+    # to stop: move the cases into one file, or split the suite into one directory per file.
+    if len(sources) > 1:
+        raise SystemExit(
+            "gen_test_runners: %s holds test cases in %d sources (%s).\n"
+            "  Unity's generator registers one source per runner, so the rest would never run.\n"
+            "  Put the cases in one file, or give each file its own suite directory."
+            % (os.path.relpath(d, PROJECT_DIR), len(sources), ", ".join(sources))
+        )
+
     ruby = find_ruby()
     generator = find_generator()
     if not ruby:
-        raise SystemExit("gen_test_runners: ruby not found - install it (winget install RubyInstallerTeam.Ruby.3.4)")
+        raise SystemExit(
+            "gen_test_runners: ruby not found on PATH or in %s - install it "
+            "(choco install ruby, or winget install RubyInstallerTeam.Ruby.3.4)" % ", ".join(RUBY_GLOBS[:3])
+        )
     if not generator:
         raise SystemExit("gen_test_runners: Unity's generate_test_runner.rb not found under PROJECT_LIBDEPS_DIR")
 
-    # One runner per suite. A suite with several sources gets one runner per source, concatenated by
-    # PlatformIO's own compile of the directory, so only the first is allowed to own main().
     src = os.path.join(d, sources[0])
     out = os.path.join(d, GENERATED)
     subprocess.run([ruby, generator, src, out], check=True)

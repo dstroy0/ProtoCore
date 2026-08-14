@@ -9,7 +9,7 @@
 #include "services/radio/ble_gatt/ble_gatt.h"
 #include "mmgr/membuild.h" // protocore_sb frame builder
 #include "mmgr/protomem.h"
-#include "shared/hex/hex.h" // PROTOCORE_HEX_LOWER - the shared digit table
+#include "shared/hex/hex.h" // PROTOCORE_HEX: the shared digit tables
 
 #if PROTOCORE_ENABLE_BLE_GATT
 
@@ -142,7 +142,7 @@ static void put_hex16(protocore_sb *b, uint16_t v)
     char t[7] = "0x0000";
     for (int i = 0; i < 4; i++)
     {
-        t[2 + i] = PROTOCORE_HEX_LOWER[(v >> ((3 - i) * 4)) & 0xF];
+        t[2 + i] = PROTOCORE_HEX.lower[(v >> ((3 - i) * 4)) & 0xF];
     }
     Sb.put(b, t);
 }

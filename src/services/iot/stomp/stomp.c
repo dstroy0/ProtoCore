@@ -3,15 +3,45 @@
 
 /**
  * @file stomp.c
- * @brief STOMP 1.2 frame builder + parser (pure, host-tested).
+ * @brief The STOMP 1.2 frame codec: the sec 9 grammar over caller buffers. See stomp.h.
+ *
+ * STOMP 1.2 is a community specification published at stomp.github.io, not an IETF document.
+ *
+ * build() writes `command EOL *( header EOL ) EOL *OCTET NULL` (sec 9), escaping every
+ * header-name and header-value per sec 4.1. parse() walks the same grammar in place and slices the
+ * command, the header entries and the body out of the caller's buffer. Pure: nothing is held
+ * between calls, so there is no storage member.
  */
 
 #include "services/iot/stomp/stomp.h"
-#include "mmgr/protomem.h"
 
 #if PROTOCORE_ENABLE_STOMP
 
-// Append one octet's escaped form to buf[pos..cap); advance pos. Returns false on overflow.
+#include "mmgr/protomem.h" // mem.cpy / mem.cmp: the spans a frame is assembled from and matched over
+#include "mmgr/protostr.h" // str.len: the bounded length of a header-name needle
+
+/** @brief Octets a lookup reads from its header-name needle. Sec 4.5 leaves every size limit open. */
+#define PROTOCORE_STOMP_HEADER_NAME_MAX 128
+
+/** @brief The header-name whose value is the body octet count (sec 4.3.1). */
+#define PROTOCORE_STOMP_CONTENT_LENGTH "content-length"
+
+/** @brief Its octet count. */
+#define PROTOCORE_STOMP_CONTENT_LENGTH_LEN 14
+
+/**
+ * @brief The codec's call state - what StompNs points at.
+ *
+ * @var StompInternal::ns  the handle a caller sets a call's members on
+ */
+struct StompInternal
+{
+    StompNs *ns;
+};
+
+static struct StompInternal s_stomp = {.ns = &Stomp};
+
+// Append one octet's sec 4.1 form to buf[pos..cap) and advance pos. False on overflow.
 static proto_bool emit_escaped(char *buf, size_t cap, size_t *pos, char c)
 {
     char e0 = '\\';
@@ -30,7 +60,7 @@ static proto_bool emit_escaped(char *buf, size_t cap, size_t *pos, char c)
     case '\\':
         e1 = '\\';
         break;
-    default: // not special: one raw octet
+    default: // one raw octet
         if (*pos + 1 > cap)
         {
             return PROTO_FALSE;
@@ -47,7 +77,7 @@ static proto_bool emit_escaped(char *buf, size_t cap, size_t *pos, char c)
     return PROTO_TRUE;
 }
 
-// Append the escaped form of a NUL-terminated string. Returns false on overflow.
+// Append the sec 4.1 form of a NUL-terminated string. False on overflow.
 static proto_bool emit_escaped_str(char *buf, size_t cap, size_t *pos, const char *s)
 {
     for (; *s; s++)
@@ -60,79 +90,8 @@ static proto_bool emit_escaped_str(char *buf, size_t cap, size_t *pos, const cha
     return PROTO_TRUE;
 }
 
-size_t protocore_stomp_build_frame(char *buf, size_t cap, const char *command, const char *const *header_keys,
-                                   const char *const *header_vals, size_t nheaders, const char *body, size_t body_len)
-{
-    if (!buf || cap == 0 || !command || (nheaders && (!header_keys || !header_vals)))
-    {
-        return 0;
-    }
-
-    size_t pos = 0;
-
-    // Command line (a command verb has no special octets, but escape defensively).
-    if (!emit_escaped_str(buf, cap, &pos, command))
-    {
-        return 0;
-    }
-    if (pos + 1 > cap)
-    {
-        return 0;
-    }
-    buf[pos++] = '\n';
-
-    // Header lines: key:value\n, both escaped.
-    for (size_t i = 0; i < nheaders; i++)
-    {
-        if (!header_keys[i] || !header_vals[i])
-        {
-            return 0;
-        }
-        if (!emit_escaped_str(buf, cap, &pos, header_keys[i]))
-        {
-            return 0;
-        }
-        if (pos + 1 > cap)
-        {
-            return 0;
-        }
-        buf[pos++] = ':';
-        if (!emit_escaped_str(buf, cap, &pos, header_vals[i]))
-        {
-            return 0;
-        }
-        if (pos + 1 > cap)
-        {
-            return 0;
-        }
-        buf[pos++] = '\n';
-    }
-
-    // Blank line, raw body, terminating NUL.
-    if (pos + 1 > cap)
-    {
-        return 0;
-    }
-    buf[pos++] = '\n';
-    if (body_len)
-    {
-        if (!body || pos + body_len > cap)
-        {
-            return 0;
-        }
-        mem.cpy(buf + pos, body, body_len);
-        pos += body_len;
-    }
-    if (pos + 1 > cap)
-    {
-        return 0;
-    }
-    buf[pos++] = '\0';
-    return pos;
-}
-
-// Parse an unsigned base-10 length from [s, s+len). Returns false on empty / non-digit /
-// overflow (a content-length larger than size_t can never be satisfied by the buffer).
+// Take an unsigned base-10 count from [s, s+len). False on empty, on a non-digit, or when the next
+// digit would carry the accumulator past SIZE_MAX.
 static proto_bool parse_len(const char *s, size_t len, size_t *out)
 {
     if (len == 0)
@@ -146,7 +105,7 @@ static proto_bool parse_len(const char *s, size_t len, size_t *out)
         {
             return PROTO_FALSE;
         }
-        if (v > (SIZE_MAX - 9) / 10) // would overflow on the next digit
+        if (v > (SIZE_MAX - 9) / 10)
         {
             return PROTO_FALSE;
         }
@@ -156,7 +115,8 @@ static proto_bool parse_len(const char *s, size_t len, size_t *out)
     return PROTO_TRUE;
 }
 
-// Length of a header line ending at the '\n' at index nl, trimming a trailing '\r'.
+// Octets of the line starting at start and ending at the LF at index nl, a trailing CR trimmed
+// (sec 9: EOL = [CR] LF).
 static size_t line_len(const char *buf, size_t start, size_t nl)
 {
     size_t end = nl;
@@ -167,14 +127,101 @@ static size_t line_len(const char *buf, size_t start, size_t nl)
     return end - start;
 }
 
-proto_bool protocore_stomp_parse_frame(const char *buf, size_t len, StompFrame *out, size_t *consumed)
+// Write one frame (sec 9) into ns->buf.out and report its octet count in ns->n.
+static void stomp_build(struct StompInternal *restrict ctx)
 {
-    if (!buf || !out || !consumed)
+    char *out = ctx->ns->buf.out;
+    const size_t cap = ctx->ns->buf.cap;
+    const StompBuildArgs *a = &ctx->ns->build_args;
+
+    ctx->ns->ok = PROTO_FALSE;
+    ctx->ns->n = 0;
+    if (!out || cap == 0 || !a->command || (a->header_count && (!a->header_names || !a->header_values)))
     {
-        return PROTO_FALSE;
+        return;
     }
 
-    // Skip leading EOL octets (heart-beats / inter-frame newlines).
+    size_t pos = 0;
+
+    // command EOL, the EOL a bare LF.
+    if (!emit_escaped_str(out, cap, &pos, a->command))
+    {
+        return;
+    }
+    if (pos + 1 > cap)
+    {
+        return;
+    }
+    out[pos++] = '\n';
+
+    // *( header EOL ): header-name ":" header-value, both escaped (sec 4.1).
+    for (size_t i = 0; i < a->header_count; i++)
+    {
+        if (!a->header_names[i] || !a->header_values[i])
+        {
+            return;
+        }
+        if (!emit_escaped_str(out, cap, &pos, a->header_names[i]))
+        {
+            return;
+        }
+        if (pos + 1 > cap)
+        {
+            return;
+        }
+        out[pos++] = ':';
+        if (!emit_escaped_str(out, cap, &pos, a->header_values[i]))
+        {
+            return;
+        }
+        if (pos + 1 > cap)
+        {
+            return;
+        }
+        out[pos++] = '\n';
+    }
+
+    // EOL *OCTET NULL: the blank line, the raw body, the terminating NULL.
+    if (pos + 1 > cap)
+    {
+        return;
+    }
+    out[pos++] = '\n';
+    if (a->body_len)
+    {
+        // pos <= cap here, so cap - pos is the room left and never wraps.
+        if (!a->body || a->body_len > cap - pos)
+        {
+            return;
+        }
+        mem.cpy(out + pos, a->body, a->body_len);
+        pos += a->body_len;
+    }
+    if (pos + 1 > cap)
+    {
+        return;
+    }
+    out[pos++] = '\0';
+    ctx->ns->n = pos;
+    ctx->ns->ok = PROTO_TRUE;
+}
+
+// Take one frame from the head of ns->buf.in into *ns->frame (sec 9), reporting the octets it
+// occupied in ns->consumed.
+static void stomp_parse(struct StompInternal *restrict ctx)
+{
+    const char *buf = ctx->ns->buf.in;
+    const size_t len = ctx->ns->buf.len;
+    StompFrame *f = ctx->ns->frame;
+
+    ctx->ns->ok = PROTO_FALSE;
+    ctx->ns->consumed = 0;
+    if (!buf || !f)
+    {
+        return;
+    }
+
+    // Step over the EOL a heart-beat sends (sec 5.4) and the *( EOL ) a frame trails (sec 9).
     size_t i = 0;
     while (i < len && (buf[i] == '\r' || buf[i] == '\n'))
     {
@@ -182,16 +229,16 @@ proto_bool protocore_stomp_parse_frame(const char *buf, size_t len, StompFrame *
     }
     if (i >= len)
     {
-        return PROTO_FALSE; // nothing but newlines so far
+        return;
     }
 
-    out->command = NULL;
-    out->command_len = 0;
-    out->header_count = 0;
-    out->body = NULL;
-    out->body_len = 0;
+    f->command = NULL;
+    f->command_len = 0;
+    f->header_count = 0;
+    f->body = NULL;
+    f->body_len = 0;
 
-    // Command line.
+    // command EOL.
     size_t nl = i;
     while (nl < len && buf[nl] != '\n')
     {
@@ -199,22 +246,17 @@ proto_bool protocore_stomp_parse_frame(const char *buf, size_t len, StompFrame *
     }
     if (nl >= len)
     {
-        return PROTO_FALSE; // command line incomplete
+        return; // command line incomplete
     }
-    out->command = buf + i;
-    out->command_len = line_len(buf, i, nl);
-    if (out->command_len == 0)
-    // guarantees buf[i] is neither '\r' nor '\n', so the search for nl (the
-    // next '\n' at or after i) always advances past i, giving nl>=i+1. If
-    // line_len trims a trailing '\r' the trimmed length is only 0 when that
-    // '\r' is buf[i] itself (nl==i+1), which cannot happen since buf[i]!='\r'
-    // is already established => command_len>=1 in every case
+    f->command = buf + i;
+    f->command_len = line_len(buf, i, nl);
+    if (f->command_len == 0)
     {
-        return PROTO_FALSE;
+        return;
     }
     size_t cur = nl + 1;
 
-    // Header lines until a blank line.
+    // *( header EOL ) up to the blank line that ends them.
     size_t content_length = 0;
     proto_bool have_content_length = PROTO_FALSE;
     while (cur < len)
@@ -226,15 +268,15 @@ proto_bool protocore_stomp_parse_frame(const char *buf, size_t len, StompFrame *
         }
         if (nl >= len)
         {
-            return PROTO_FALSE; // header line incomplete
+            return; // header entry incomplete
         }
         size_t ll = line_len(buf, cur, nl);
         if (ll == 0)
         {
-            cur = nl + 1; // blank line: body starts here
+            cur = nl + 1; // the blank line: the body starts here
             break;
         }
-        // Split at the first ':'.
+        // header = header-name ":" header-value, split at the first colon (sec 9).
         size_t colon = cur;
         size_t line_end = cur + ll;
         while (colon < line_end && buf[colon] != ':')
@@ -243,52 +285,50 @@ proto_bool protocore_stomp_parse_frame(const char *buf, size_t len, StompFrame *
         }
         if (colon >= line_end)
         {
-            return PROTO_FALSE; // header without a colon
+            return; // header entry with no colon
         }
-        if (out->header_count < PROTOCORE_STOMP_MAX_HEADERS)
+        if (f->header_count < PROTOCORE_STOMP_MAX_HEADERS)
         {
-            StompHeader *h = &out->headers[out->header_count++];
-            h->key = buf + cur;
-            h->key_len = colon - cur;
-            h->val = buf + colon + 1;
-            h->val_len = line_end - (colon + 1);
-            // content-length drives the body length (only the first occurrence is used). A
-            // present-but-unparseable / overflowing value is a malformed frame, not a fall-back
-            // to NUL-delimited parsing.
-            if (!have_content_length && h->key_len == 14 && mem.cmp(h->key, "content-length", 14) == 0)
+            StompHeader *h = &f->headers[f->header_count++];
+            h->name = buf + cur;
+            h->name_len = colon - cur;
+            h->value = buf + colon + 1;
+            h->value_len = line_end - (colon + 1);
+            // The first content-length entry sizes the body (sec 4.3.1, sec 4.4). A value that is
+            // not a count of digits, or one wider than size_t, fails the frame.
+            if (!have_content_length && h->name_len == PROTOCORE_STOMP_CONTENT_LENGTH_LEN &&
+                mem.cmp(h->name, PROTOCORE_STOMP_CONTENT_LENGTH, PROTOCORE_STOMP_CONTENT_LENGTH_LEN) == 0)
             {
-                if (!parse_len(h->val, h->val_len, &content_length))
+                if (!parse_len(h->value, h->value_len, &content_length))
                 {
-                    return PROTO_FALSE;
+                    return;
                 }
                 have_content_length = PROTO_TRUE;
             }
         }
         cur = nl + 1;
-        if (cur > len)
-        // nl<len, so cur=nl+1<=len
-        {
-            return PROTO_FALSE;
-        }
     }
 
-    // Body.
+    // *OCTET NULL.
     if (have_content_length)
     {
-        if (cur + content_length >= len) // need body + the terminating NUL
+        // cur <= len here, so len - cur is the room left and never wraps. Sec 4.3.1 reads exactly
+        // content_length octets, then the NULL that ends the frame.
+        if (content_length >= len - cur)
         {
-            return PROTO_FALSE;
+            return;
         }
         if (buf[cur + content_length] != '\0')
         {
-            return PROTO_FALSE; // declared length does not land on the NUL terminator
+            return; // the stated count does not land on the NULL
         }
-        out->body = buf + cur;
-        out->body_len = content_length;
-        *consumed = cur + content_length + 1;
-        return PROTO_TRUE;
+        f->body = buf + cur;
+        f->body_len = content_length;
+        ctx->ns->consumed = cur + content_length + 1;
+        ctx->ns->ok = PROTO_TRUE;
+        return;
     }
-    // No content-length: body runs to the first NUL.
+    // No content-length: the body runs to the first NULL.
     size_t b = cur;
     while (b < len && buf[b] != '\0')
     {
@@ -296,45 +336,55 @@ proto_bool protocore_stomp_parse_frame(const char *buf, size_t len, StompFrame *
     }
     if (b >= len)
     {
-        return PROTO_FALSE; // NUL terminator not yet buffered
+        return; // the NULL is not buffered yet
     }
-    out->body = buf + cur;
-    out->body_len = b - cur;
-    *consumed = b + 1;
-    return PROTO_TRUE;
+    f->body = buf + cur;
+    f->body_len = b - cur;
+    ctx->ns->consumed = b + 1;
+    ctx->ns->ok = PROTO_TRUE;
 }
 
-proto_bool protocore_stomp_header(const StompFrame *f, const char *name, const char **val, size_t *val_len)
+// Find ns->lookup.name among the frame's header entries and report its raw header-value. The walk
+// runs in wire order and stops at the first match (sec 4.4).
+static void stomp_header(struct StompInternal *restrict ctx)
 {
+    const StompFrame *f = ctx->ns->frame;
+    const char *name = ctx->ns->lookup.name;
+
+    ctx->ns->ok = PROTO_FALSE;
+    ctx->ns->value = NULL;
+    ctx->ns->value_len = 0;
     if (!f || !name)
     {
-        return PROTO_FALSE;
+        return;
     }
-#define PROTOCORE_name_max 128 // STOMP header names are short; bound the needle defensively
-    size_t nlen = strnlen(name, PROTOCORE_name_max);
+    const size_t nlen = str.len(name, PROTOCORE_STOMP_HEADER_NAME_MAX);
     for (size_t i = 0; i < f->header_count; i++)
     {
-        if (f->headers[i].key_len == nlen && mem.cmp(f->headers[i].key, name, nlen) == 0)
+        if (f->headers[i].name_len == nlen && mem.cmp(f->headers[i].name, name, nlen) == 0)
         {
-            if (val)
-            {
-                *val = f->headers[i].val;
-            }
-            if (val_len)
-            {
-                *val_len = f->headers[i].val_len;
-            }
-            return PROTO_TRUE;
+            ctx->ns->value = f->headers[i].value;
+            ctx->ns->value_len = f->headers[i].value_len;
+            ctx->ns->ok = PROTO_TRUE;
+            return;
         }
     }
-    return PROTO_FALSE;
 }
 
-size_t protocore_stomp_unescape(char *dst, size_t cap, const char *src, size_t src_len)
+// Decode the sec 4.1 escapes in ns->buf.in into ns->buf.out and report the decoded octet count in
+// ns->n.
+static void stomp_unescape(struct StompInternal *restrict ctx)
 {
+    char *dst = ctx->ns->buf.out;
+    const size_t cap = ctx->ns->buf.cap;
+    const char *src = ctx->ns->buf.in;
+    const size_t src_len = ctx->ns->buf.len;
+
+    ctx->ns->ok = PROTO_FALSE;
+    ctx->ns->n = 0;
     if (!dst || !src)
     {
-        return 0;
+        return;
     }
     size_t pos = 0;
     for (size_t i = 0; i < src_len; i++)
@@ -344,10 +394,10 @@ size_t protocore_stomp_unescape(char *dst, size_t cap, const char *src, size_t s
         {
             if (i + 1 >= src_len)
             {
-                return 0; // dangling escape
+                return; // an escape with no second octet
             }
-            char n = src[++i];
-            switch (n)
+            char e = src[++i];
+            switch (e)
             {
             case 'r':
                 c = '\r';
@@ -362,16 +412,24 @@ size_t protocore_stomp_unescape(char *dst, size_t cap, const char *src, size_t s
                 c = '\\';
                 break;
             default:
-                return 0; // invalid escape sequence
+                return; // sec 4.1: an undefined escape sequence is a fatal protocol error
             }
         }
         if (pos + 1 > cap)
         {
-            return 0; // overflow
+            return;
         }
         dst[pos++] = c;
     }
-    return pos;
+    ctx->ns->n = pos;
+    ctx->ns->ok = PROTO_TRUE;
 }
+
+// Designated, so a member's position in the struct does not decide what it binds to.
+StompNs Stomp = {.build = stomp_build,
+                 .parse = stomp_parse,
+                 .header = stomp_header,
+                 .unescape = stomp_unescape,
+                 .internal = &s_stomp};
 
 #endif // PROTOCORE_ENABLE_STOMP

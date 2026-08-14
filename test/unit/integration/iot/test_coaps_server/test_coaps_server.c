@@ -1,0 +1,844 @@
+// Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+// SPDX-License-Identifier: AGPL-3.0-or-later
+//
+#include "crypto/asymmetric/curve25519.h"
+#include "crypto/asymmetric/ed25519.h"
+#include "crypto/hash/sha256.h"
+#include "network_drivers/presentation/http/http3/tls13_msg.h"
+#include "network_drivers/presentation/security/dtls/dtls_conn.h"
+#include "network_drivers/presentation/security/dtls/dtls_handshake.h"
+#include "network_drivers/presentation/security/dtls/dtls_record.h"
+#include "network_drivers/tls/key_schedule/key_schedule.h"
+#include "server/clock/clock.h"
+#include "services/iot/coap/coap.h"
+#include "services/iot/coap/coaps_server.h"
+#include <stdint.h>
+#include <string.h>
+
+#include <unity.h>
+
+static uint8_t tw[4096];
+static uint8_t tw_tr[4096];
+
+static const uint8_t SERVER_ED_SEED[32] = {1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15, 16,
+                                           17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32};
+static const uint8_t CLIENT_X25519_PRIV[32] = {0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22,
+                                               0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22,
+                                               0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22};
+static const uint8_t SERVER_COOKIE_KEY[32] = {0x5c, 0x5d, 0x5e, 0x5f, 0x60, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66,
+                                              0x67, 0x68, 0x69, 0x6a, 0x6b, 0x6c, 0x6d, 0x6e, 0x6f, 0x70, 0x71,
+                                              0x72, 0x73, 0x74, 0x75, 0x76, 0x77, 0x78, 0x79, 0x7a, 0x7b};
+
+static void h_temp(const CoapRequest *req, CoapResponse *resp)
+{
+    (void)req;
+    resp->code = (uint8_t)COAP_RSP_CONTENT;
+    memcpy(resp->payload, "hi", 2);
+    resp->payload_len = 2;
+    resp->content_format = COAP_CF_TEXT;
+}
+
+static uint32_t g_ms = 0;
+static uint32_t test_clock()
+{
+    return g_ms;
+}
+
+static uint8_t g_rng_ctr = 0;
+static void test_rng(uint8_t *out, size_t len)
+{
+    for (size_t i = 0; i < len; i++)
+    {
+        out[i] = g_rng_ctr++;
+    }
+}
+
+typedef struct
+{
+    uint8_t buf[2048];
+    size_t len;
+    char ip[16];
+    uint16_t port;
+} OutDg;
+static OutDg g_out[16];
+static int g_out_n = 0;
+static void out_reset()
+{
+    g_out_n = 0;
+}
+static void out_sink(void *, const uint8_t *dg, size_t len, const char *ip, uint16_t port)
+{
+    if (g_out_n >= (int)(sizeof g_out / sizeof g_out[0]) || len > sizeof g_out[0].buf)
+    {
+        return;
+    }
+    OutDg *o = &g_out[g_out_n++];
+    memcpy(o->buf, dg, len);
+    o->len = len;
+    size_t k = 0;
+    while (ip[k] && k < sizeof o->ip - 1)
+    {
+        o->ip[k] = ip[k];
+        k++;
+    }
+    o->ip[k] = 0;
+    o->port = port;
+}
+
+static proto_bool take_out_for(const char *ip, uint16_t port, OutDg *dst)
+{
+    for (int i = 0; i < g_out_n; i++)
+    {
+        if (g_out[i].port == port && strcmp(g_out[i].ip, ip) == 0)
+        {
+            *dst = g_out[i];
+            for (int j = i; j + 1 < g_out_n; j++)
+            {
+                g_out[j] = g_out[j + 1];
+            }
+            g_out_n--;
+            return PROTO_TRUE;
+        }
+    }
+    return PROTO_FALSE;
+}
+
+static uint8_t g_server_cert[32];
+
+void setUp()
+{
+    protocore_coap_server_reset();
+    protocore_coap_server_add_resource("/temp", COAP_ALLOW_GET, h_temp);
+    protocore_set_clock(test_clock, 1000);
+    g_ms = 0;
+    g_rng_ctr = 0;
+    out_reset();
+
+    protocore_ed25519_pubkey(tw, g_server_cert, SERVER_ED_SEED);
+    CoapsServerConfig cfg;
+    memset(&cfg, 0, sizeof cfg);
+    cfg.cert_der = g_server_cert;
+    cfg.cert_len = 32;
+    memcpy(cfg.ed25519_seed, SERVER_ED_SEED, 32);
+    memcpy(cfg.cookie_key, SERVER_COOKIE_KEY, 32);
+    cfg.rng = test_rng;
+    TEST_ASSERT_TRUE(protocore_coaps_server_begin(PROTOCORE_COAPS_PORT, &cfg));
+    protocore_coaps_server_set_out_sink_cb(out_sink, NULL);
+}
+void tearDown()
+{
+    protocore_coaps_server_stop();
+    protocore_set_clock(NULL, 0);
+}
+
+typedef struct
+{
+    uint8_t *p;
+    size_t n;
+} Buf;
+static void b8(Buf *b, uint8_t v)
+{
+    b->p[b->n++] = v;
+}
+static void b16(Buf *b, uint16_t v)
+{
+    b8(b, (uint8_t)(v >> 8));
+    b8(b, (uint8_t)v);
+}
+static void bmem(Buf *b, const uint8_t *m, size_t k)
+{
+    memcpy(b->p + b->n, m, k);
+    b->n += k;
+}
+
+static size_t build_client_hello(uint8_t *out, const uint8_t client_pub[32], const uint8_t *cid, size_t cid_len)
+{
+    Buf b = {out, 0};
+    b8(&b, 0x01);
+    size_t len_at = b.n;
+    b8(&b, 0);
+    b8(&b, 0);
+    b8(&b, 0);
+    b16(&b, 0x0303);
+    for (int i = 0; i < 32; i++)
+    {
+        b8(&b, (uint8_t)(0x30 + i));
+    }
+    b8(&b, 0x00);
+    b8(&b, 0x00);
+    b16(&b, 0x0002);
+    b16(&b, 0x1301);
+    b8(&b, 0x01);
+    b8(&b, 0x00);
+    size_t ext_len_at = b.n;
+    b16(&b, 0);
+    b16(&b, 0x002b);
+    b16(&b, 0x0003);
+    b8(&b, 0x02);
+    b16(&b, 0xFEFC);
+    b16(&b, 0x000a);
+    b16(&b, 0x0004);
+    b16(&b, 0x0002);
+    b16(&b, 0x001d);
+    b16(&b, 0x000d);
+    b16(&b, 0x0004);
+    b16(&b, 0x0002);
+    b16(&b, 0x0807);
+    b16(&b, 0x0033);
+    b16(&b, 0x0026);
+    b16(&b, 0x0024);
+    b16(&b, 0x001d);
+    b16(&b, 0x0020);
+    bmem(&b, client_pub, 32);
+    if (cid)
+    {
+        b16(&b, 0x0036);
+        b16(&b, (uint16_t)(1 + cid_len));
+        b8(&b, (uint8_t)cid_len);
+        bmem(&b, cid, cid_len);
+    }
+    uint16_t ext_len = (uint16_t)(b.n - ext_len_at - 2);
+    out[ext_len_at] = (uint8_t)(ext_len >> 8);
+    out[ext_len_at + 1] = (uint8_t)ext_len;
+    uint32_t body = (uint32_t)(b.n - len_at - 3);
+    out[len_at] = (uint8_t)(body >> 16);
+    out[len_at + 1] = (uint8_t)(body >> 8);
+    out[len_at + 2] = (uint8_t)body;
+    return b.n;
+}
+
+static proto_bool sh_keyshare(const uint8_t *sh, size_t len, uint8_t pub[32])
+{
+    if (len < 44)
+    {
+        return PROTO_FALSE;
+    }
+    size_t o = 4 + 2 + 32;
+    uint8_t sid = sh[o++];
+    o += sid;
+    o += 2 + 1;
+    if (o + 2 > len)
+    {
+        return PROTO_FALSE;
+    }
+    size_t ext_end = o + 2 + ((sh[o] << 8) | sh[o + 1]);
+    o += 2;
+    while (o + 4 <= ext_end && ext_end <= len)
+    {
+        uint16_t et = (uint16_t)((sh[o] << 8) | sh[o + 1]);
+        uint16_t el = (uint16_t)((sh[o + 2] << 8) | sh[o + 3]);
+        o += 4;
+        if (et == 0x0033 && el >= 4 + 32)
+        {
+            memcpy(pub, sh + o + 4, 32);
+            return PROTO_TRUE;
+        }
+        o += el;
+    }
+    return PROTO_FALSE;
+}
+
+static size_t frag_to_tls(const uint8_t *payload, size_t plen, uint8_t *tls_out)
+{
+    DtlsHsHeader hh;
+    if (!DtlsHandshake.header_parse(payload, plen, &hh) || hh.frag_offset != 0 || hh.frag_length != hh.length)
+    {
+        return 0;
+    }
+    tls_out[0] = hh.msg_type;
+    tls_out[1] = (uint8_t)(hh.length >> 16);
+    tls_out[2] = (uint8_t)(hh.length >> 8);
+    tls_out[3] = (uint8_t)hh.length;
+    memcpy(tls_out + 4, hh.fragment, hh.length);
+    return 4 + hh.length;
+}
+
+static size_t ct_record_len(const uint8_t *rec, size_t avail, size_t cid_len)
+{
+    size_t pre = 1 + ((rec[0] & 0x10) ? cid_len : 0);
+    size_t seq_len = (rec[0] & 0x08) ? 2 : 1;
+    size_t len_off = pre + seq_len;
+    size_t o = len_off + 2;
+    size_t enc = ((size_t)rec[len_off] << 8) | rec[len_off + 1];
+    return (o + enc <= avail) ? o + enc : 0;
+}
+
+static size_t sh_conn_id(const uint8_t *sh, size_t len, uint8_t *cid_out)
+{
+    if (len < 44)
+    {
+        return 0;
+    }
+    size_t o = 4 + 2 + 32;
+    uint8_t sid = sh[o++];
+    o += sid;
+    o += 2 + 1;
+    if (o + 2 > len)
+    {
+        return 0;
+    }
+    size_t ext_end = o + 2 + ((sh[o] << 8) | sh[o + 1]);
+    o += 2;
+    while (o + 4 <= ext_end && ext_end <= len)
+    {
+        uint16_t et = (uint16_t)((sh[o] << 8) | sh[o + 1]);
+        uint16_t el = (uint16_t)((sh[o + 2] << 8) | sh[o + 3]);
+        o += 4;
+        if (et == 0x0036 && el >= 1)
+        {
+            size_t cl = sh[o];
+            if (1 + cl > el || o + 1 + cl > len)
+            {
+                return 0;
+            }
+            memcpy(cid_out, sh + o + 1, cl);
+            return cl;
+        }
+        o += el;
+    }
+    return 0;
+}
+
+static void client_handshake(const char *ip, uint16_t port, DtlsRecordKeys *cli_app_write, DtlsRecordKeys *cli_app_read,
+                             const uint8_t *client_cid, size_t client_cid_len, uint8_t *scid_out, size_t *scid_len_out)
+{
+    uint8_t client_pub[32];
+    protocore_x25519_base(client_pub, CLIENT_X25519_PRIV);
+
+    uint8_t ch[256];
+    size_t ch_len = build_client_hello(ch, client_pub, client_cid, client_cid_len);
+    protocore_sha256_ctx tr;
+    protocore_sha256_init(&tr, tw_tr);
+    protocore_sha256_update(&tr, ch, ch_len);
+    uint8_t ch_frag[300];
+    size_t ch_fl = DtlsHandshake.frag_build(ch[0], 0, (uint32_t)(ch_len - 4), 0, ch + 4, (uint32_t)(ch_len - 4),
+                                            ch_frag, sizeof(ch_frag));
+    uint8_t ch_rec[320];
+    size_t ch_rl = DtlsRecord.plaintext_build(PROTOCORE_DTLS_CT_HANDSHAKE, 0, 0, ch_frag, ch_fl, ch_rec, sizeof(ch_rec));
+    TEST_ASSERT_TRUE(protocore_coaps_server_ingest(ch_rec, ch_rl, ip, port));
+    protocore_coaps_server_poll();
+
+    OutDg fldg;
+    TEST_ASSERT_TRUE(take_out_for(ip, port, &fldg));
+    const uint8_t *flight = fldg.buf;
+    size_t fl = fldg.len;
+
+    size_t off = 0;
+    DtlsPlaintext pt;
+    size_t rl = DtlsRecord.plaintext_parse(flight, fl, &pt);
+    TEST_ASSERT_TRUE(rl > 0);
+    off += rl;
+    uint8_t sh[512];
+    size_t sh_len = frag_to_tls(pt.fragment, pt.frag_len, sh);
+    TEST_ASSERT_TRUE(sh_len > 0);
+    protocore_sha256_update(&tr, sh, sh_len);
+    uint8_t server_pub[32];
+    TEST_ASSERT_TRUE(sh_keyshare(sh, sh_len, server_pub));
+
+    uint8_t scid[PROTOCORE_DTLS_CID_MAX];
+    size_t scid_len = client_cid_len ? sh_conn_id(sh, sh_len, scid) : 0;
+    if (client_cid_len)
+    {
+        TEST_ASSERT_TRUE(scid_len > 0);
+    }
+    if (scid_out && scid_len_out)
+    {
+        memcpy(scid_out, scid, scid_len);
+        *scid_len_out = scid_len;
+    }
+
+    uint8_t ecdhe[32];
+    protocore_x25519(ecdhe, CLIENT_X25519_PRIV, server_pub);
+    Tls13KeySchedule cks;
+    uint8_t hh[32];
+    protocore_sha256_final(&tr, hh);
+    static uint8_t ks_store_372[PROTOCORE_TLS13_KS_BORROW];
+    protocore_tls13_ks_early(&DTLS13_KDF, &cks, ks_store_372);
+    protocore_tls13_ks_handshake(&cks, ecdhe, hh, 32);
+    DtlsRecordKeys srv_read;
+    DtlsRecord.keys_derive(&srv_read, DTLS_CIPHER_AES_128_GCM_SHA256, 2, cks.s + TLS13_KS_SERVER_HS);
+
+    uint64_t exp_seq = 0;
+    while (off < fl)
+    {
+        size_t crl = ct_record_len(flight + off, fl - off, client_cid_len);
+        TEST_ASSERT_TRUE(crl > 0);
+        uint8_t inner[512];
+        DtlsCiphertext info;
+        TEST_ASSERT_TRUE(DtlsRecord.unprotect(&srv_read, exp_seq, flight + off, crl, inner, sizeof(inner), &info,
+                                              client_cid, client_cid_len));
+        exp_seq = info.seq + 1;
+        off += crl;
+        uint8_t msg[512];
+        size_t mlen = frag_to_tls(inner, info.pt_len, msg);
+        TEST_ASSERT_TRUE(mlen > 0);
+        protocore_sha256_update(&tr, msg, mlen);
+    }
+
+    uint8_t h_sfin[32];
+    protocore_sha256_final(&tr, h_sfin);
+    protocore_tls13_ks_master(&cks, h_sfin);
+    uint8_t cfin_verify[32];
+    protocore_tls13_finished_mac(&cks, cks.s + TLS13_KS_CLIENT_HS, h_sfin, cfin_verify);
+    uint8_t cfin[64];
+    size_t cfin_len = protocore_tls13_build_finished(cfin, sizeof(cfin), cfin_verify);
+    DtlsRecordKeys cli_write;
+    DtlsRecord.keys_derive(&cli_write, DTLS_CIPHER_AES_128_GCM_SHA256, 2, cks.s + TLS13_KS_CLIENT_HS);
+    uint8_t cfin_frag[80];
+    size_t cff = DtlsHandshake.frag_build(cfin[0], 1, (uint32_t)(cfin_len - 4), 0, cfin + 4, (uint32_t)(cfin_len - 4),
+                                          cfin_frag, sizeof(cfin_frag));
+    uint8_t cfin_rec[128];
+    size_t cfr = DtlsRecord.protect(&cli_write, 0, PROTOCORE_DTLS_CT_HANDSHAKE, cfin_frag, cff, cfin_rec, sizeof(cfin_rec),
+                                    scid_len ? scid : NULL, scid_len);
+    TEST_ASSERT_TRUE(protocore_coaps_server_ingest(cfin_rec, cfr, ip, port));
+    protocore_coaps_server_poll();
+
+    OutDg ackdg;
+    take_out_for(ip, port, &ackdg);
+
+    DtlsRecord.keys_derive(cli_app_read, DTLS_CIPHER_AES_128_GCM_SHA256, 3, cks.s + TLS13_KS_SERVER_AP);
+    DtlsRecord.keys_derive(cli_app_write, DTLS_CIPHER_AES_128_GCM_SHA256, 3, cks.s + TLS13_KS_CLIENT_AP);
+}
+
+static size_t client_get_temp(DtlsRecordKeys *w, uint64_t cseq, uint8_t *out, size_t cap, const uint8_t *cid,
+                              size_t cid_len)
+{
+    const uint8_t coap_get[] = {0x40, 0x01, 0x12, 0x34, 0xB4, 't', 'e', 'm', 'p'};
+    return DtlsRecord.protect(w, cseq, PROTOCORE_DTLS_CT_APPLICATION_DATA, coap_get, sizeof(coap_get), out, cap, cid, cid_len);
+}
+
+static void assert_coap_205(DtlsRecordKeys *r, const OutDg *dg, const uint8_t *cid, size_t cid_len)
+{
+    uint8_t coap_resp[256];
+    DtlsCiphertext info;
+    TEST_ASSERT_TRUE(DtlsRecord.unprotect(r, 1, dg->buf, dg->len, coap_resp, sizeof(coap_resp), &info, cid, cid_len));
+    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_DTLS_CT_APPLICATION_DATA, info.content_type);
+    TEST_ASSERT_TRUE(info.pt_len >= 6);
+    TEST_ASSERT_EQUAL_UINT8(0x60, coap_resp[0] & 0xF0);
+    TEST_ASSERT_EQUAL_UINT8(0x45, coap_resp[1]);
+    TEST_ASSERT_EQUAL_UINT8(0x12, coap_resp[2]);
+    TEST_ASSERT_EQUAL_UINT8(0x34, coap_resp[3]);
+    TEST_ASSERT_EQUAL_MEMORY("hi", coap_resp + info.pt_len - 2, 2);
+}
+
+static void test_server_single_peer(void)
+{
+    DtlsRecordKeys w, r;
+    client_handshake("10.0.0.5", 40001, &w, &r, NULL, 0, NULL, NULL);
+    TEST_ASSERT_EQUAL_UINT8(1, protocore_coaps_server_active_conns());
+
+    uint8_t rec[128];
+    size_t n = client_get_temp(&w, 0, rec, sizeof(rec), NULL, 0);
+    TEST_ASSERT_TRUE(protocore_coaps_server_ingest(rec, n, "10.0.0.5", 40001));
+    protocore_coaps_server_poll();
+
+    OutDg dg;
+    TEST_ASSERT_TRUE(take_out_for("10.0.0.5", 40001, &dg));
+    assert_coap_205(&r, &dg, NULL, 0);
+}
+
+static void test_two_peers_routing(void)
+{
+    DtlsRecordKeys wA, rA, wB, rB;
+    client_handshake("10.0.0.5", 40001, &wA, &rA, NULL, 0, NULL, NULL);
+    client_handshake("10.0.0.6", 40002, &wB, &rB, NULL, 0, NULL, NULL);
+    TEST_ASSERT_EQUAL_UINT8(2, protocore_coaps_server_active_conns());
+
+    uint8_t recA[128], recB[128];
+    size_t nA = client_get_temp(&wA, 0, recA, sizeof(recA), NULL, 0);
+    size_t nB = client_get_temp(&wB, 0, recB, sizeof(recB), NULL, 0);
+    TEST_ASSERT_TRUE(protocore_coaps_server_ingest(recB, nB, "10.0.0.6", 40002));
+    TEST_ASSERT_TRUE(protocore_coaps_server_ingest(recA, nA, "10.0.0.5", 40001));
+    protocore_coaps_server_poll();
+
+    OutDg dgA, dgB;
+    TEST_ASSERT_TRUE(take_out_for("10.0.0.5", 40001, &dgA));
+    TEST_ASSERT_TRUE(take_out_for("10.0.0.6", 40002, &dgB));
+    assert_coap_205(&rA, &dgA, NULL, 0);
+    assert_coap_205(&rB, &dgB, NULL, 0);
+}
+
+static void test_idle_reap(void)
+{
+    DtlsRecordKeys w, r;
+    client_handshake("10.0.0.5", 40001, &w, &r, NULL, 0, NULL, NULL);
+    TEST_ASSERT_EQUAL_UINT8(1, protocore_coaps_server_active_conns());
+
+    g_ms += PROTOCORE_COAPS_IDLE_MS + 1;
+    protocore_coaps_server_poll();
+    TEST_ASSERT_EQUAL_UINT8(0, protocore_coaps_server_active_conns());
+}
+
+static void test_pto_retransmit_driven_by_poll(void)
+{
+    uint8_t client_pub[32];
+    protocore_x25519_base(client_pub, CLIENT_X25519_PRIV);
+    uint8_t ch[256];
+    size_t ch_len = build_client_hello(ch, client_pub, NULL, 0);
+    uint8_t ch_frag[300];
+    size_t ch_fl = DtlsHandshake.frag_build(ch[0], 0, (uint32_t)(ch_len - 4), 0, ch + 4, (uint32_t)(ch_len - 4),
+                                            ch_frag, sizeof(ch_frag));
+    uint8_t ch_rec[320];
+    size_t ch_rl = DtlsRecord.plaintext_build(PROTOCORE_DTLS_CT_HANDSHAKE, 0, 0, ch_frag, ch_fl, ch_rec, sizeof(ch_rec));
+    TEST_ASSERT_TRUE(protocore_coaps_server_ingest(ch_rec, ch_rl, "10.0.0.7", 40003));
+    protocore_coaps_server_poll();
+
+    OutDg f1;
+    TEST_ASSERT_TRUE(take_out_for("10.0.0.7", 40003, &f1));
+
+    g_ms += PROTOCORE_DTLS_PTO_INITIAL_MS - 1;
+    protocore_coaps_server_poll();
+    OutDg none;
+    TEST_ASSERT_FALSE(take_out_for("10.0.0.7", 40003, &none));
+
+    g_ms += 1;
+    protocore_coaps_server_poll();
+    OutDg f2;
+    TEST_ASSERT_TRUE(take_out_for("10.0.0.7", 40003, &f2));
+    TEST_ASSERT_TRUE(f2.len > 0);
+    TEST_ASSERT_EQUAL_UINT8(1, protocore_coaps_server_active_conns());
+}
+
+static void test_cid_address_migration(void)
+{
+    const uint8_t client_cid[3] = {0xC1, 0xC2, 0xC3};
+    uint8_t scid[PROTOCORE_DTLS_CID_MAX];
+    size_t scid_len = 0;
+    DtlsRecordKeys w, r;
+    client_handshake("10.0.0.5", 40001, &w, &r, client_cid, sizeof(client_cid), scid, &scid_len);
+    TEST_ASSERT_TRUE(scid_len > 0);
+    TEST_ASSERT_EQUAL_UINT8(1, protocore_coaps_server_active_conns());
+
+    uint8_t rec[128];
+    size_t n = client_get_temp(&w, 0, rec, sizeof(rec), scid, scid_len);
+    TEST_ASSERT_TRUE(protocore_coaps_server_ingest(rec, n, "10.9.9.9", 55555));
+    protocore_coaps_server_poll();
+
+    OutDg dg;
+    TEST_ASSERT_TRUE(take_out_for("10.9.9.9", 55555, &dg));
+    OutDg stale;
+    TEST_ASSERT_FALSE(take_out_for("10.0.0.5", 40001, &stale));
+    assert_coap_205(&r, &dg, client_cid, sizeof(client_cid));
+    TEST_ASSERT_EQUAL_UINT8(1, protocore_coaps_server_active_conns());
+}
+
+static void ingest_real_client_hello(const char *ip, uint16_t port)
+{
+    uint8_t client_pub[32];
+    protocore_x25519_base(client_pub, CLIENT_X25519_PRIV);
+    uint8_t ch[256];
+    size_t ch_len = build_client_hello(ch, client_pub, NULL, 0);
+    uint8_t ch_frag[300];
+    size_t ch_fl = DtlsHandshake.frag_build(ch[0], 0, (uint32_t)(ch_len - 4), 0, ch + 4, (uint32_t)(ch_len - 4),
+                                            ch_frag, sizeof(ch_frag));
+    uint8_t ch_rec[320];
+    size_t ch_rl = DtlsRecord.plaintext_build(PROTOCORE_DTLS_CT_HANDSHAKE, 0, 0, ch_frag, ch_fl, ch_rec, sizeof(ch_rec));
+    TEST_ASSERT_TRUE(protocore_coaps_server_ingest(ch_rec, ch_rl, ip, port));
+}
+
+static void ingest_bad_client_hello(const char *ip, uint16_t port)
+{
+    uint8_t garbage[8] = {0};
+    uint8_t frag[64];
+    size_t fl = DtlsHandshake.frag_build(0x01, 0, (uint32_t)sizeof(garbage), 0, garbage, (uint32_t)sizeof(garbage),
+                                         frag, sizeof(frag));
+    uint8_t rec[128];
+    size_t rl = DtlsRecord.plaintext_build(PROTOCORE_DTLS_CT_HANDSHAKE, 0, 0, frag, fl, rec, sizeof(rec));
+    protocore_coaps_server_ingest(rec, rl, ip, port);
+}
+
+static void ingest_noop(const char *ip, uint16_t port)
+{
+    uint8_t junk[1] = {0x16};
+    protocore_coaps_server_ingest(junk, sizeof(junk), ip, port);
+}
+
+static void test_begin_rejects_invalid_cfg(void)
+{
+    CoapsServerConfig c;
+    TEST_ASSERT_FALSE(protocore_coaps_server_begin(PROTOCORE_COAPS_PORT, NULL));
+
+    memset(&c, 0, sizeof c);
+    c.cert_der = g_server_cert;
+    c.cert_len = 32;
+    c.rng = NULL;
+    TEST_ASSERT_FALSE(protocore_coaps_server_begin(PROTOCORE_COAPS_PORT, &c));
+
+    memset(&c, 0, sizeof c);
+    c.rng = test_rng;
+    c.cert_der = NULL;
+    c.cert_len = 32;
+    TEST_ASSERT_FALSE(protocore_coaps_server_begin(PROTOCORE_COAPS_PORT, &c));
+
+    memset(&c, 0, sizeof c);
+    c.rng = test_rng;
+    c.cert_der = g_server_cert;
+    c.cert_len = 0;
+    TEST_ASSERT_FALSE(protocore_coaps_server_begin(PROTOCORE_COAPS_PORT, &c));
+
+    memset(&c, 0, sizeof c);
+    c.cert_der = g_server_cert;
+    c.cert_len = 32;
+    c.rng = test_rng;
+    memcpy(c.ed25519_seed, SERVER_ED_SEED, 32);
+    memcpy(c.cookie_key, SERVER_COOKIE_KEY, 32);
+    TEST_ASSERT_TRUE(protocore_coaps_server_begin(0, &c));
+}
+
+static void test_poll_when_stopped(void)
+{
+    protocore_coaps_server_stop();
+    protocore_coaps_server_poll();
+    TEST_ASSERT_EQUAL_UINT8(0, protocore_coaps_server_active_conns());
+}
+
+static void test_ingest_rejects_bad_len(void)
+{
+    uint8_t d[8] = {0};
+    TEST_ASSERT_FALSE(protocore_coaps_server_ingest(d, 0, "10.0.0.5", 1));
+    static uint8_t big[2000];
+    memset(big, 0, sizeof big);
+    TEST_ASSERT_FALSE(protocore_coaps_server_ingest(big, sizeof big, "10.0.0.5", 1));
+}
+
+static void test_ingest_ring_full(void)
+{
+    uint8_t d[8] = {0x16, 0, 0, 0, 0, 0, 0, 0};
+    int pushed = 0;
+    for (int i = 0; i < PROTOCORE_COAPS_INGEST_RING + 3; i++)
+    {
+        if (protocore_coaps_server_ingest(d, sizeof d, "10.0.0.5", 1))
+        {
+            pushed++;
+        }
+    }
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_COAPS_INGEST_RING - 1, pushed);
+}
+
+static void test_ingest_addr_copy_edges(void)
+{
+    uint8_t d[8] = {0x16, 0, 0, 0, 0, 0, 0, 0};
+    TEST_ASSERT_TRUE(protocore_coaps_server_ingest(d, sizeof d, NULL, 1));
+    TEST_ASSERT_TRUE(protocore_coaps_server_ingest(d, sizeof d, "111.111.111.111.111.111", 2));
+}
+
+static void test_malformed_peer_addr(void)
+{
+    const char *bad[] = {
+        "999.0.0.1",
+        "10..0.1",
+        "10.0.x.1",
+        "1.2.3",
+        "0001.0.0.1",
+    };
+    for (unsigned i = 0; i < sizeof(bad) / sizeof(bad[0]); i++)
+    {
+        ingest_bad_client_hello(bad[i], (uint16_t)(50000 + i));
+        protocore_coaps_server_poll();
+        TEST_ASSERT_EQUAL_UINT8(0, protocore_coaps_server_active_conns());
+    }
+}
+
+static void test_fatal_handshake_frees_slot(void)
+{
+    ingest_bad_client_hello("10.0.0.5", 40001);
+    protocore_coaps_server_poll();
+    TEST_ASSERT_EQUAL_UINT8(0, protocore_coaps_server_active_conns());
+    OutDg dg;
+    TEST_ASSERT_FALSE(take_out_for("10.0.0.5", 40001, &dg));
+}
+
+static void test_pool_full_rejects_new_peer(void)
+{
+    for (uint8_t i = 0; i < PROTOCORE_COAPS_MAX_CONNS; i++)
+    {
+        char ip[16] = "10.0.1.0";
+        ip[7] = (char)('1' + i);
+        ingest_real_client_hello(ip, (uint16_t)(1000 + i));
+        protocore_coaps_server_poll();
+    }
+    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_COAPS_MAX_CONNS, protocore_coaps_server_active_conns());
+
+    out_reset();
+    ingest_real_client_hello("10.0.1.9", 1099);
+    protocore_coaps_server_poll();
+    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_COAPS_MAX_CONNS, protocore_coaps_server_active_conns());
+    OutDg dg;
+    TEST_ASSERT_FALSE(take_out_for("10.0.1.9", 1099, &dg));
+}
+
+static void test_pto_ceiling_frees_slot(void)
+{
+    ingest_real_client_hello("10.0.0.7", 40003);
+    protocore_coaps_server_poll();
+    TEST_ASSERT_EQUAL_UINT8(1, protocore_coaps_server_active_conns());
+
+    for (uint8_t i = 0; i < PROTOCORE_DTLS_MAX_RETRANSMITS; i++)
+    {
+        g_ms += PROTOCORE_DTLS_PTO_MAX_MS + 1;
+        out_reset();
+        ingest_noop("10.0.0.7", 40003);
+        protocore_coaps_server_poll();
+        TEST_ASSERT_EQUAL_UINT8(1, protocore_coaps_server_active_conns());
+    }
+
+    g_ms += PROTOCORE_DTLS_PTO_MAX_MS + 1;
+    out_reset();
+    ingest_noop("10.0.0.7", 40003);
+    protocore_coaps_server_poll();
+    TEST_ASSERT_EQUAL_UINT8(0, protocore_coaps_server_active_conns());
+}
+
+static void test_unknown_cid_dropped(void)
+{
+    const uint8_t client_cid[3] = {0xC1, 0xC2, 0xC3};
+    uint8_t scid[PROTOCORE_DTLS_CID_MAX];
+    size_t scid_len = 0;
+    DtlsRecordKeys w, r;
+    client_handshake("10.0.0.5", 40001, &w, &r, client_cid, sizeof(client_cid), scid, &scid_len);
+    TEST_ASSERT_TRUE(scid_len > 0);
+    TEST_ASSERT_EQUAL_UINT8(1, protocore_coaps_server_active_conns());
+
+    uint8_t unknown[PROTOCORE_DTLS_CID_MAX];
+    memcpy(unknown, scid, scid_len);
+    unknown[0] = (uint8_t)(unknown[0] ^ 0xFF);
+    uint8_t rec[128];
+    size_t n = client_get_temp(&w, 0, rec, sizeof(rec), unknown, scid_len);
+    TEST_ASSERT_TRUE(n > 0);
+
+    out_reset();
+    TEST_ASSERT_TRUE(protocore_coaps_server_ingest(rec, n, "10.9.9.9", 55555));
+    protocore_coaps_server_poll();
+    OutDg dg;
+    TEST_ASSERT_FALSE(take_out_for("10.9.9.9", 55555, &dg));
+    TEST_ASSERT_EQUAL_UINT8(1, protocore_coaps_server_active_conns());
+}
+
+static void test_server_send_without_sink(void)
+{
+    protocore_coaps_server_set_out_sink_cb(NULL, NULL);
+    ingest_real_client_hello("10.0.0.5", 40001);
+    protocore_coaps_server_poll();
+    TEST_ASSERT_EQUAL_UINT8(1, protocore_coaps_server_active_conns());
+    OutDg dg;
+    TEST_ASSERT_FALSE(take_out_for("10.0.0.5", 40001, &dg));
+}
+
+static void test_slot_lookup_same_port_different_ip(void)
+{
+    DtlsRecordKeys wA, rA, wB, rB;
+    client_handshake("10.0.2.5", 41000, &wA, &rA, NULL, 0, NULL, NULL);
+    client_handshake("10.0.2.6", 41000, &wB, &rB, NULL, 0, NULL, NULL);
+    TEST_ASSERT_EQUAL_UINT8(2, protocore_coaps_server_active_conns());
+
+    uint8_t recA[128], recB[128];
+    size_t nA = client_get_temp(&wA, 0, recA, sizeof(recA), NULL, 0);
+    size_t nB = client_get_temp(&wB, 0, recB, sizeof(recB), NULL, 0);
+    TEST_ASSERT_TRUE(protocore_coaps_server_ingest(recA, nA, "10.0.2.5", 41000));
+    TEST_ASSERT_TRUE(protocore_coaps_server_ingest(recB, nB, "10.0.2.6", 41000));
+    protocore_coaps_server_poll();
+
+    OutDg dgA, dgB;
+    TEST_ASSERT_TRUE(take_out_for("10.0.2.5", 41000, &dgA));
+    TEST_ASSERT_TRUE(take_out_for("10.0.2.6", 41000, &dgB));
+    assert_coap_205(&rA, &dgA, NULL, 0);
+    assert_coap_205(&rB, &dgB, NULL, 0);
+}
+
+static void test_slot_by_cid_skips_and_bounds(void)
+{
+
+    DtlsRecordKeys wPlain, rPlain;
+    client_handshake("10.0.3.1", 42001, &wPlain, &rPlain, NULL, 0, NULL, NULL);
+
+    const uint8_t client_cid[3] = {0xA1, 0xA2, 0xA3};
+    uint8_t scid[PROTOCORE_DTLS_CID_MAX];
+    size_t scid_len = 0;
+    DtlsRecordKeys w, r;
+    client_handshake("10.0.3.2", 42002, &w, &r, client_cid, sizeof(client_cid), scid, &scid_len);
+    TEST_ASSERT_TRUE(scid_len > 0);
+    TEST_ASSERT_EQUAL_UINT8(2, protocore_coaps_server_active_conns());
+
+    uint8_t rec[128];
+    size_t n = client_get_temp(&w, 0, rec, sizeof(rec), scid, scid_len);
+    TEST_ASSERT_TRUE(protocore_coaps_server_ingest(rec, n, "10.0.3.2", 42002));
+    protocore_coaps_server_poll();
+    OutDg dg;
+    TEST_ASSERT_TRUE(take_out_for("10.0.3.2", 42002, &dg));
+    assert_coap_205(&r, &dg, client_cid, sizeof(client_cid));
+
+    uint8_t tiny[1] = {0x30};
+    out_reset();
+    TEST_ASSERT_TRUE(protocore_coaps_server_ingest(tiny, sizeof(tiny), "10.9.9.8", 60000));
+    protocore_coaps_server_poll();
+    OutDg none;
+    TEST_ASSERT_FALSE(take_out_for("10.9.9.8", 60000, &none));
+    TEST_ASSERT_EQUAL_UINT8(2, protocore_coaps_server_active_conns());
+}
+
+static void test_cid_no_migration_when_address_unchanged(void)
+{
+    const uint8_t client_cid[3] = {0xB1, 0xB2, 0xB3};
+    uint8_t scid[PROTOCORE_DTLS_CID_MAX];
+    size_t scid_len = 0;
+    DtlsRecordKeys w, r;
+    client_handshake("10.0.4.1", 43001, &w, &r, client_cid, sizeof(client_cid), scid, &scid_len);
+    TEST_ASSERT_TRUE(scid_len > 0);
+
+    uint8_t rec1[128];
+    size_t n1 = client_get_temp(&w, 0, rec1, sizeof(rec1), scid, scid_len);
+    TEST_ASSERT_TRUE(protocore_coaps_server_ingest(rec1, n1, "10.0.4.1", 43001));
+    protocore_coaps_server_poll();
+    OutDg dg1;
+    TEST_ASSERT_TRUE(take_out_for("10.0.4.1", 43001, &dg1));
+    assert_coap_205(&r, &dg1, client_cid, sizeof(client_cid));
+    TEST_ASSERT_EQUAL_UINT8(1, protocore_coaps_server_active_conns());
+}
+
+static void test_cid_migration_same_port_different_ip(void)
+{
+    const uint8_t client_cid[3] = {0xD1, 0xD2, 0xD3};
+    uint8_t scid[PROTOCORE_DTLS_CID_MAX];
+    size_t scid_len = 0;
+    DtlsRecordKeys w, r;
+    client_handshake("10.0.5.1", 44001, &w, &r, client_cid, sizeof(client_cid), scid, &scid_len);
+    TEST_ASSERT_TRUE(scid_len > 0);
+
+    uint8_t rec[128];
+    size_t n = client_get_temp(&w, 0, rec, sizeof(rec), scid, scid_len);
+    TEST_ASSERT_TRUE(protocore_coaps_server_ingest(rec, n, "10.0.5.2", 44001));
+    protocore_coaps_server_poll();
+
+    OutDg dg;
+    TEST_ASSERT_TRUE(take_out_for("10.0.5.2", 44001, &dg));
+    OutDg stale;
+    TEST_ASSERT_FALSE(take_out_for("10.0.5.1", 44001, &stale));
+    assert_coap_205(&r, &dg, client_cid, sizeof(client_cid));
+    TEST_ASSERT_EQUAL_UINT8(1, protocore_coaps_server_active_conns());
+}
+
+int main(void)
+{
+    UNITY_BEGIN();
+    RUN_TEST(test_server_single_peer);
+    RUN_TEST(test_two_peers_routing);
+    RUN_TEST(test_idle_reap);
+    RUN_TEST(test_pto_retransmit_driven_by_poll);
+    RUN_TEST(test_cid_address_migration);
+    RUN_TEST(test_begin_rejects_invalid_cfg);
+    RUN_TEST(test_poll_when_stopped);
+    RUN_TEST(test_ingest_rejects_bad_len);
+    RUN_TEST(test_ingest_ring_full);
+    RUN_TEST(test_ingest_addr_copy_edges);
+    RUN_TEST(test_malformed_peer_addr);
+    RUN_TEST(test_fatal_handshake_frees_slot);
+    RUN_TEST(test_pool_full_rejects_new_peer);
+    RUN_TEST(test_pto_ceiling_frees_slot);
+    RUN_TEST(test_unknown_cid_dropped);
+    RUN_TEST(test_server_send_without_sink);
+    RUN_TEST(test_slot_lookup_same_port_different_ip);
+    RUN_TEST(test_slot_by_cid_skips_and_bounds);
+    RUN_TEST(test_cid_no_migration_when_address_unchanged);
+    RUN_TEST(test_cid_migration_same_port_different_ip);
+    return UNITY_END();
+}

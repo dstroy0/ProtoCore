@@ -14,8 +14,12 @@
 
 uint16_t protocore_mbplus_crc(const uint8_t *bytes, size_t len)
 {
-    // CRC-16/X-25: reflected poly 0x8408, init 0xFFFF, xorout 0xFFFF.
-    return (uint16_t)protocore_crc(&PROTOCORE_CRC16_X25, bytes, len);
+    // CRC-16/X-25: poly 0x1021 reflected, init 0xFFFF, xorout 0xFFFF - cataloged as CRC-16/IBM-SDLC.
+    Crc.args.params = &PROTOCORE_CRC16_X25;
+    Crc.args.data = bytes;
+    Crc.args.len = len;
+    Crc.compute(Crc.internal);
+    return (uint16_t)Crc.value;
 }
 
 size_t protocore_mbplus_build(uint8_t address, uint8_t control, const uint8_t *payload, size_t payload_len, uint8_t *out,

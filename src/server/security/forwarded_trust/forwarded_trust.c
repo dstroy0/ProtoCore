@@ -20,6 +20,33 @@ typedef struct
 } protocore_forwarded_trust_ctx;
 static protocore_forwarded_trust_ctx s_trust;
 
+// Read @p text as an address into @p out.
+static proto_bool ip_parse(const char *text, protocore_ip *out)
+{
+    Ip.args.text = text;
+    Ip.args.out = out;
+    Ip.parse(Ip.internal);
+    return Ip.ok;
+}
+
+// Whether @p addr falls inside @p net at @p prefix_len bits.
+static proto_bool ip_in_prefix(const protocore_ip *addr, const protocore_ip *net, uint8_t prefix_len)
+{
+    Ip.args.ip = addr;
+    Ip.args.b = net;
+    Ip.args.prefix_len = prefix_len;
+    Ip.prefix_match(Ip.internal);
+    return Ip.ok;
+}
+
+// Whether @p ip names nothing: no family, or the all-zero address.
+static proto_bool ip_none(const protocore_ip *ip)
+{
+    Ip.args.ip = ip;
+    Ip.is_unspecified(Ip.internal);
+    return Ip.ok;
+}
+
 void protocore_forwarded_trust_reset(void)
 {
     s_trust.count = 0;
@@ -83,7 +110,7 @@ proto_bool protocore_forwarded_trust_add_cidr(const char *cidr)
 
     protocore_ip net;
     net.family = PROTOCORE_IP_NONE;
-    if (!Ip.parse(addr, &net))
+    if (!ip_parse(addr, &net))
     {
         return PROTO_FALSE;
     }
@@ -125,7 +152,7 @@ proto_bool protocore_forwarded_trust_contains(const protocore_ip *peer)
     }
     for (uint8_t i = 0; i < s_trust.count; i++)
     {
-        if (Ip.prefix_match(peer, &s_trust.rules[i].network, s_trust.rules[i].prefix_len))
+        if (ip_in_prefix(peer, &s_trust.rules[i].network, s_trust.rules[i].prefix_len))
         {
             return PROTO_TRUE;
         }
@@ -159,7 +186,7 @@ proto_bool protocore_forwarded_effective_ip(const protocore_ip *peer, const char
 
     protocore_ip fip;
     fip.family = PROTOCORE_IP_NONE;
-    if (!Ip.parse(fwd_ip_str, &fip) || Ip.is_unspecified(&fip))
+    if (!ip_parse(fwd_ip_str, &fip) || ip_none(&fip))
     {
         return PROTO_FALSE; // malformed / obfuscated / unspecified -> keep the proxy's address
     }

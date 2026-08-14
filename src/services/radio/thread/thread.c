@@ -741,7 +741,7 @@ const char *protocore_spinel_status_name(uint32_t status)
             return k_status[i].name;
         }
     }
-    if (status >= SPINEL_STATUS_RESET_POWER_ON && status <= SPINEL_STATUS_RESET_POWER_ON + 7)
+    if (status >= SPINEL_STATUS_RESET_POWER_ON && status < SPINEL_STATUS_RESET_END)
     {
         return "RESET";
     }
@@ -751,7 +751,11 @@ const char *protocore_spinel_status_name(uint32_t status)
 uint16_t protocore_spinel_fcs(const uint8_t *buf, uint16_t len)
 {
     // The HDLC-lite FCS is CRC-16/X-25 (reflected poly 0x8408, init 0xFFFF, xorout 0xFFFF).
-    return (uint16_t)protocore_crc(&PROTOCORE_CRC16_X25, buf, len);
+    Crc.args.params = &PROTOCORE_CRC16_X25;
+    Crc.args.data = buf;
+    Crc.args.len = len;
+    Crc.compute(Crc.internal);
+    return (uint16_t)Crc.value;
 }
 
 uint16_t protocore_spinel_frame_encode(const uint8_t *payload, uint16_t len, uint8_t *out, uint16_t cap)

@@ -131,8 +131,11 @@ int32_t protocore_dashboard_layout_json(char *out, uint32_t cap)
     {
         return 0;
     }
+    // Each arm empties the buffer before reporting 0: a frame that did not fit leaves the document
+    // open, and a caller measuring the buffer instead of reading the count would ship the fragment.
     if (frame.append(out, cap, DASH_ARRAY_OPEN, NULL, 0) == 0)
     {
+        out[0] = '\0';
         return 0;
     }
     for (uint8_t i = 0; i < s_dash.count; i++)
@@ -145,10 +148,16 @@ int32_t protocore_dashboard_layout_json(char *out, uint32_t cap)
                                                   PROTOCORE_VG((double)w->max), PROTOCORE_VJSON(w->unit)},
                          7) == 0)
         {
+            out[0] = '\0';
             return 0;
         }
     }
-    return (int32_t)frame.append(out, cap, DASH_ARRAY_CLOSE, NULL, 0);
+    size_t n = frame.append(out, cap, DASH_ARRAY_CLOSE, NULL, 0);
+    if (n == 0)
+    {
+        out[0] = '\0';
+    }
+    return (int32_t)n;
 }
 
 int32_t protocore_dashboard_values_json(char *out, uint32_t cap)
@@ -164,6 +173,7 @@ int32_t protocore_dashboard_values_json(char *out, uint32_t cap)
     }
     if (frame.append(out, cap, DASH_OBJECT_OPEN, NULL, 0) == 0)
     {
+        out[0] = '\0';
         return 0;
     }
     for (uint8_t i = 0; i < s_dash.count; i++)
@@ -174,10 +184,16 @@ int32_t protocore_dashboard_values_json(char *out, uint32_t cap)
                                                   PROTOCORE_VG((double)s_dash.values[i])},
                          3) == 0)
         {
+            out[0] = '\0';
             return 0;
         }
     }
-    return (int32_t)frame.append(out, cap, DASH_OBJECT_CLOSE, NULL, 0);
+    size_t n = frame.append(out, cap, DASH_OBJECT_CLOSE, NULL, 0);
+    if (n == 0)
+    {
+        out[0] = '\0';
+    }
+    return (int32_t)n;
 }
 
 // ---------------------------------------------------------------------------

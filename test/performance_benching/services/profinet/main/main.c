@@ -44,7 +44,7 @@ void dbench_run(void)
                                 sizeof(body) - body_len);
 
     // A known-good Identify-request header (from test/test_profinet test_header_roundtrip) to parse.
-    static const uint8_t ident_hdr[] = {0xFE, 0xFE, 0x05, 0x00, 0x11, 0x22, 0x33, 0x44, 0x00, 0x08};
+    static const uint8_t ident_hdr[] = {0xFE, 0xFE, 0x05, 0x00, 0x11, 0x22, 0x33, 0x44, 0x00, 0x00, 0x00, 0x08};
 
     static uint8_t hdr_out[16];
     static uint8_t blk_out[16];
@@ -57,7 +57,7 @@ void dbench_run(void)
 
         DBENCH_OP("protocore_pn_dcp_header (Identify)", 200000,
                   sink += protocore_pn_dcp_header(PN_FRAMEID_DCP_IDENT_REQ, PN_DCP_SERVICE_IDENTIFY, PN_DCP_TYPE_REQUEST,
-                                           0x11223344, 8, hdr_out, sizeof(hdr_out)));
+                                           0x11223344, 0, 8, hdr_out, sizeof(hdr_out)));
         DBENCH_OP("protocore_pn_dcp_block (NameOfStation)", 200000,
                   sink += protocore_pn_dcp_block(PN_DCP_OPT_DEVICE, PN_DCP_SUB_DEV_NAME_OF_STATION, (const uint8_t *)"plc", 3,
                                           blk_out, sizeof(blk_out)));

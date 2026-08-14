@@ -46,7 +46,9 @@
 #include "server/core/proto_handler.h"
 #include "server/core/worker.h"
 #include "network_drivers/tls/tls.h"
-#include "network_drivers/transport/tcp/tcp.h" // TcpConn, conn_pool, protocore_ap_ip: the slots this drives
+#include "network_drivers/transport/tcp/common.h"            // TcpConn, conn_pool: the slots this drives
+#include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool.init: the pool this brings up
+#include "network_drivers/transport/tcp/tcp.h"
 #include "server/clock/clock.h"            // protocore_millis(): the QUIC poll stamp and the request timeout
 #include "shared/hex/hex.h"
 #include "shared/mime/mime.h"
@@ -66,7 +68,6 @@
 #if PROTOCORE_ENABLE_WEBDAV
 #include "network_drivers/application/webdav/webdav.h"
 #include "server/io/webdav_handler.h" // try_serve_dav()
-#include <time.h>                  // RFC 1123 Last-Modified formatting
 #endif
 #if PROTOCORE_ENABLE_METRICS || PROTOCORE_ENABLE_STATS
 #include "network_drivers/application/web_assets.h" // PROTOCORE_METRICS_PROM / PROTOCORE_STATS_JSON (generated)
@@ -124,16 +125,16 @@ void protocore_server_reset(void)
     static const ServerCtx blank = {0};
     s_inst = blank;
     HttpRoutes.reset();
-    Http.reset(); // the not-found handler, which answers instead of the built-in 404 while it is set
+    Http.reset(Http.internal); // the not-found handler, which answers instead of the built-in 404 while it is set
 #if PROTOCORE_ENABLE_AUTH
     // A credential id names a row by index and a route holds that id, so the two tables empty
     // together: routes left behind rows the table has no way to reach, and the table is bounded.
     Auth.reset();
 #endif
-    protocore_mnt_point_reset(); // the same, for the mount id a static or DAV route holds
+    Mnt.reset(Mnt.internal); // the same, for the mount id a static or DAV route holds
     protocore_resp_reset();
     protocore_middleware_reset();
-    protocore_signal_reset();
+    Signal.reset(Signal.internal);
 }
 
 void on_request_log(RequestLogCb cb)
@@ -149,7 +150,8 @@ void note_response(uint8_t slot_id, int code, int body_len)
     // Deposited, not tallied here. The loop knows the status at the instant it goes out, and
     // signaling is where a reader finds it; counting it here as well would be a second tally beside
     // the one every reader already consults.
-    protocore_signal_put_response(code);
+    Signal.put.code = code;
+    Signal.put_response(Signal.internal);
     if (s_inst.log_cb)
     {
         const HttpReq *r = &http_pool[slot_id];
@@ -205,7 +207,8 @@ int32_t proto_begin(const WebServerConfig *cfg)
     {
         return (int32_t)PROTOCORE_ERR_NO_LISTENERS;
     }
-    Tcp.conn->init(cfg);
+    ConnPool.life.cfg = cfg;
+    ConnPool.init(ConnPool.internal);
 #if PROTOCORE_ENABLE_AUTH
     {
         // Fresh server keying secret per begin(): one borrow for the hash behind it, returned here.
@@ -229,7 +232,8 @@ int32_t proto_begin(const WebServerConfig *cfg)
 #endif
     for (uint8_t i = 0; i < MAX_CONNS; i++)
     {
-        http_reset(i);
+        HttpConn.slot = i;
+        HttpConn.reset(HttpConn.internal);
     }
 #if PROTOCORE_ENABLE_WEBSOCKET
     ws_init();
@@ -239,7 +243,12 @@ int32_t proto_begin(const WebServerConfig *cfg)
 #endif
     for (uint8_t i = 0; i < s_inst.listener_count; i++)
     {
-        if (Tcp.listener->add(i, s_inst.listen_ports[i], s_inst.listen_protos[i], s_inst.listen_tls[i]) < 0)
+        TcpListener.idx = i;
+        TcpListener.bind.port = s_inst.listen_ports[i];
+        TcpListener.bind.proto = s_inst.listen_protos[i];
+        TcpListener.bind.tls = s_inst.listen_tls[i];
+        TcpListener.add(TcpListener.internal);
+        if (TcpListener.i32 < 0)
         {
             return (int32_t)PROTOCORE_ERR_LISTEN_FAILED;
         }
@@ -357,11 +366,12 @@ void stop(void)
     // Stop the worker task(s) before tearing down the slots they service.
     Session.workers->stop();
 #endif
-    Tcp.listener->stop_all();
-    Tcp.conn->stop();
+    TcpListener.stop_all(TcpListener.internal);
+    ConnPool.stop(ConnPool.internal);
     for (uint8_t i = 0; i < MAX_CONNS; i++)
     {
-        http_reset(i);
+        HttpConn.slot = i;
+        HttpConn.reset(HttpConn.internal);
     }
 #if PROTOCORE_ENABLE_WEBSOCKET
     ws_init();
@@ -513,7 +523,8 @@ void on_sse(const char *path, SseConnectHandler on_connect)
 
 void on_not_found(Handler callback)
 {
-    Http.set_not_found(callback);
+    Http.cb = callback;
+    Http.set_not_found(Http.internal);
 }
 
 // set_cors() / set_cache_control() live in server/response.cpp, with the buffers they fill.
@@ -594,11 +605,17 @@ void handle(void)
 
 void service_once(int worker_id)
 {
+    // The iteration's stamp. One read of the source per pass, before anything reads the time, so
+    // every step of the pass measures against the same instant. A caller that needs the live value
+    // - a latency measurement, an elapsed time - calls Clock.millis() again and reads the delta.
+    Clock.millis(Clock.internal);
+
     // Install HTTP's poll so the dispatch loop below pumps it through the uniform
     // ProtoHandler.on_poll seam (see http_poll_slot). Done here rather than only in begin() so a
     // caller that drives service_once() directly still gets it. One pointer store; negligible at
     // poll cadence.
-    http_protocore_set_poll(protocore_http_on_poll);
+    HttpConn.poll = protocore_http_on_poll;
+    HttpConn.set_poll(HttpConn.internal);
 
     Session.tick(worker_id);
 
@@ -607,7 +624,7 @@ void service_once(int worker_id)
     // through the route table), flush replies. One worker owns it, so requests stay single-threaded.
     if (worker_id == 0)
     {
-        protocore_quic_server_poll(protocore_millis());
+        protocore_quic_server_poll(Clock.ms);
     }
 #endif
 
@@ -622,13 +639,16 @@ void service_once(int worker_id)
         // Ack-on-consume: reopen the TCP receive window by whatever any consumer
         // (HTTP/WS/TLS/service) drained from this slot's ring on the previous pass.
         // Transport owns the window math; we just nudge it once per slot per loop.
-        Tcp.conn->ack_consumed(i);
+        ConnPool.slot = i;
+        ConnPool.ack_consumed(ConnPool.internal);
 
         // Every protocol - HTTP included - is pumped through the one uniform ProtoHandler.on_poll
         // seam, so there is no per-protocol branch here. HTTP reaches it via http_protocore_set_poll()
         // -> http_poll_slot(); the singleton pollers (SSH etc.) gate on CONN_ACTIVE
         // inside their own on_poll.
-        const ProtoHandler *ph = Session.proto->get(conn_pool[i].proto);
+        Session.proto->proto = conn_pool[i].proto;
+        Session.proto->get(Session.proto->internal);
+        const ProtoHandler *ph = Session.proto->handler;
         if (ph && ph->on_poll)
         {
             ph->on_poll(i);
@@ -647,7 +667,11 @@ proto_bool defer(uint8_t slot, protocore_deferred_fn fn, void *arg)
     }
     // HttpRoute to the worker that owns the slot so the callback runs single-threaded
     // alongside that slot's own processing.
-    return Session.workers->defer(conn_pool[slot].owner, fn, arg);
+    Session.workers->worker_id = conn_pool[slot].owner;
+    Session.workers->defer_args.fn = fn;
+    Session.workers->defer_args.arg = arg;
+    Session.workers->defer(Session.workers->internal);
+    return Session.workers->ok;
 }
 
 // ---------------------------------------------------------------------------

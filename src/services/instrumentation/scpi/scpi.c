@@ -12,7 +12,6 @@
 
 #if PROTOCORE_ENABLE_SCPI
 
-#include <stdio.h> // snprintf (number formatting only; parsing is hand-rolled - no stdlib)
 
 // A response value is one number. 10 significant digits is the SCPI NR2/NR3 rendering.
 static const protocore_field SCPI_REAL[] = {{PROTOCORE_FK_G, 10, 0, NULL}, PROTOCORE_END};

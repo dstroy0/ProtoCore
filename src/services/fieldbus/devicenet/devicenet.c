@@ -34,7 +34,7 @@ proto_bool protocore_devicenet_encode_id(uint32_t *id, DeviceNetGroup group, uin
         *id = DEVICENET_G2_BASE | ((uint32_t)mac_id << 3) | msg_id;
         return PROTO_TRUE;
     case DEVICENET_GROUP_3:
-        if (msg_id > 0x07u)
+        if (msg_id > 0x06u) // msg id 7 puts the identifier at 0x7C0+, which is Group 4's range
         {
             return PROTO_FALSE;
         }

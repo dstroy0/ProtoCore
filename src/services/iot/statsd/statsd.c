@@ -3,22 +3,70 @@
 
 /**
  * @file statsd.c
- * @brief StatsD metrics client - implementation. See statsd.h.
+ * @brief The StatsD metrics client: the line framer and the send. See statsd.h.
  *
- * The value and sample-rate are rendered by hand (no printf %lld/%f, which need extra
- * newlib support on some targets), then protocore_statsd_format assembles the line and the transport
- * UDP service sends it.
+ * format() builds `<metricname>:<value>|<type>[|@<rate>][|#<tags>]` into the caller's buffer and
+ * touches no socket. Every other metric call renders its value into the client's scratch, formats
+ * into the client's line storage, and hands those octets to the UDP sending side as one datagram.
+ *
+ * The value and the sample rate are rendered digit by digit, so nothing here needs the C runtime's
+ * 64-bit or floating-point conversion.
  */
 
 #include "services/iot/statsd/statsd.h"
-#include "mmgr/protomem.h"
-#include "protocore_config.h"
 
 #if PROTOCORE_ENABLE_STATSD
 
-#include "network_drivers/transport/udp/udp.h"
+#include "mmgr/protomem.h"                               // mem.cpy: the spans a line is assembled from
+#include "mmgr/protostr.h"                               // str.copy / str.len: the bounded field moves
+#include "network_drivers/transport/udp/client/client.h" // UdpClient.sendto: one metric, one datagram
+#include "shared/ip/ip.h"                                // Ip.parse: the daemon address, once
 
-// Unsigned -> decimal (not NUL-terminated); returns the digit count.
+/** @brief Bytes the stored DogStatsD tag list occupies, the NUL included. */
+#ifndef PROTOCORE_STATSD_TAGS_MAX
+#define PROTOCORE_STATSD_TAGS_MAX 96
+#endif
+
+/** @brief Bytes one rendered value occupies: 20 digits, a sign, and the NUL. */
+#ifndef PROTOCORE_STATSD_VALUE_MAX
+#define PROTOCORE_STATSD_VALUE_MAX 24
+#endif
+
+/** @brief Bytes one rendered sample rate occupies: "0." and three digits, and the NUL. */
+#define PROTOCORE_STATSD_RATE_MAX 8
+
+/**
+ * @brief The client's compile-time storage: the daemon, the stored tags, and the two scratches.
+ *
+ * All of it BSS, so a metric costs no heap.
+ */
+struct StatsdStorage
+{
+    protocore_ip server;                  ///< the daemon address, parsed by an init
+    uint16_t port;                        ///< its UDP port
+    char tags[PROTOCORE_STATSD_TAGS_MAX]; ///< the DogStatsD list every metric carries
+    proto_bool ready;                     ///< the daemon address parsed; every send is gated on it
+    char val[PROTOCORE_STATSD_VALUE_MAX]; ///< the value a metric call renders
+    char buf[PROTOCORE_STATSD_LINE_MAX];  ///< the line a metric call builds
+};
+
+/**
+ * @brief The client's state and the calls that reach it - what StatsdNs points at.
+ *
+ * @var StatsdInternal::store  the daemon, the stored tags, and the value and line scratches
+ * @var StatsdInternal::ns     the handle a caller sets a call's members on
+ */
+struct StatsdInternal
+{
+    struct StatsdStorage *store;
+    StatsdNs *ns;
+};
+
+static struct StatsdStorage s_store = {.port = PROTOCORE_STATSD_PORT};
+
+static struct StatsdInternal s_statsd = {.store = &s_store, .ns = &Statsd};
+
+// Unsigned to decimal, most significant digit first, no terminator. Returns the digit count.
 static size_t u64_str(char *b, uint64_t v)
 {
     if (v == 0)
@@ -40,7 +88,7 @@ static size_t u64_str(char *b, uint64_t v)
     return n;
 }
 
-// Signed -> decimal (handles INT64_MIN via -(v+1)+1); returns length.
+// Signed to decimal. The most negative value negates through -(v+1)+1, which stays in range.
 static size_t i64_str(char *b, int64_t v)
 {
     if (v < 0)
@@ -51,7 +99,7 @@ static size_t i64_str(char *b, int64_t v)
     return u64_str(b, (uint64_t)v);
 }
 
-// Signed -> "+N" / "-N" for a StatsD gauge delta.
+// Signed to "+N" or "-N", the signed gauge value that adjusts rather than assigns.
 static size_t i64_delta_str(char *b, int64_t v)
 {
     if (v >= 0)
@@ -62,14 +110,14 @@ static size_t i64_delta_str(char *b, int64_t v)
     return i64_str(b, v); // already carries the '-'
 }
 
-// Sample rate in (0,1) -> "0.xxx" (<= 3 decimals, trailing zeros trimmed). >= 1 -> no text.
+// A rate in (0,1) to "0.xxx", thousandths, trailing zeros dropped. 0 or >= 1 renders nothing.
 static size_t rate_str(char *b, float r)
 {
     if (r >= 1.0f || r <= 0.0f)
     {
         return 0;
     }
-    int m = (int)(r * 1000.0f + 0.5f); // thousandths
+    int m = (int)(r * 1000.0f + 0.5f);
     if (m <= 0)
     {
         m = 1;
@@ -86,163 +134,190 @@ static size_t rate_str(char *b, float r)
     size_t len = 5;
     while (len > 3 && b[len - 1] == '0')
     {
-        len--; // trim trailing zeros ("0.100" -> "0.1")
+        len--; // "0.100" to "0.1"
     }
     return len;
 }
 
-// Bounded append into out[*pos]; false (and leaves *pos) if it would not fit with room for NUL.
-static proto_bool app(char *out, size_t cap, size_t *pos, const char *s, size_t n)
+// Append len bytes at *pos while the line still leaves room for a trailing NUL. False the moment it
+// would not fit, so an over-long line reports 0 rather than a truncated metric.
+static inline proto_bool line_append(char *out, size_t cap, size_t *pos, const char *src, size_t len)
 {
-    if (*pos + n >= cap)
+    if (*pos + len >= cap)
     {
         return PROTO_FALSE;
     }
-    mem.cpy(out + *pos, s, n);
-    *pos += n;
+    mem.cpy(out + *pos, src, len);
+    *pos += len;
     return PROTO_TRUE;
 }
 
-size_t protocore_statsd_format(char *out, size_t cap, const char *name, const char *value, StatsdType type, float rate,
-                               const char *tags)
+// Parse the daemon address and store the port and the tag list every later line carries.
+static void statsd_init(struct StatsdInternal *restrict ctx)
 {
-    if (!out || cap == 0 || !name || !name[0] || !value)
+    ctx->store->ready = PROTO_FALSE;
+    ctx->ns->ok = PROTO_FALSE;
+    ctx->store->port = ctx->ns->server.port ? ctx->ns->server.port : PROTOCORE_STATSD_PORT;
+    if (ctx->ns->tags.global && ctx->ns->tags.global[0])
     {
-        return 0;
-    }
-    if (type != STATSD_COUNTER && type != STATSD_GAUGE && type != STATSD_TIMING && type != STATSD_SET)
-    {
-        return 0;
-    }
-
-    size_t pos = 0;
-    char t = (char)type;
-    if (!app(out, cap, &pos, name, strnlen(name, cap)) || !app(out, cap, &pos, ":", 1) ||
-        !app(out, cap, &pos, value, strnlen(value, cap)) || !app(out, cap, &pos, "|", 1))
-    {
-        return 0;
-    }
-    if (type == STATSD_TIMING)
-    {
-        if (!app(out, cap, &pos, "ms", 2))
-        {
-            return 0;
-        }
-    }
-    else if (!app(out, cap, &pos, &t, 1))
-    {
-        return 0;
-    }
-
-    char rbuf[8];
-    size_t rn = rate_str(rbuf, rate);
-    if (rn && (!app(out, cap, &pos, "|@", 2) || !app(out, cap, &pos, rbuf, rn)))
-    {
-        return 0;
-    }
-    if (tags && tags[0] && (!app(out, cap, &pos, "|#", 2) || !app(out, cap, &pos, tags, strnlen(tags, cap))))
-    {
-        return 0;
-    }
-
-    out[pos] = '\0';
-    return pos;
-}
-
-// ---------------------------------------------------------------------------
-// Emit helpers: render the value, then send via the transport UDP service. Host builds
-// send through Udp.client->sendto's stub + capture seam, so these are host-testable too.
-// ---------------------------------------------------------------------------
-
-// All StatsD client state, owned by one instance (internal linkage): destination address/port,
-// global tags, and the ready flag, grouped so it is one named owner, unreachable cross-TU.
-// The destination is an address, resolved at begin(): a metric call is a format and a queue.
-typedef struct
-{
-    protocore_ip dst;
-    uint16_t port;
-    char tags[96];
-    proto_bool ready;
-} StatsdCtx;
-static StatsdCtx s_statsd = {.port = PROTOCORE_STATSD_PORT};
-
-static void emit(const StatsdCtx *c, const char *name, const char *value, StatsdType type, float rate)
-{
-    if (!c->ready)
-    {
-        return;
-    }
-    char line[PROTOCORE_STATSD_LINE_MAX];
-    size_t n = protocore_statsd_format(line, sizeof(line), name, value, type, rate, c->tags[0] ? c->tags : NULL);
-    if (n)
-    {
-        Udp.client->sendto(&c->dst, c->port, (const uint8_t *)line, n);
-    }
-}
-
-void protocore_statsd_begin(const char *host, uint16_t port, const char *global_tags)
-{
-    if (!host)
-    {
-        s_statsd.ready = PROTO_FALSE;
-        return;
-    }
-    if (!Ip.parse(host, &s_statsd.dst))
-    {
-        s_statsd.ready = PROTO_FALSE;
-        return;
-    }
-    s_statsd.port = port ? port : PROTOCORE_STATSD_PORT;
-    if (global_tags)
-    {
-        strncpy(s_statsd.tags, global_tags, sizeof(s_statsd.tags) - 1);
-        s_statsd.tags[sizeof(s_statsd.tags) - 1] = '\0';
+        (void)str.copy(ctx->store->tags, ctx->ns->tags.global, sizeof(ctx->store->tags));
     }
     else
     {
-        s_statsd.tags[0] = '\0';
+        ctx->store->tags[0] = '\0';
     }
-    s_statsd.ready = PROTO_TRUE;
+    if (!ctx->ns->server.addr)
+    {
+        return;
+    }
+    Ip.args.text = ctx->ns->server.addr;
+    Ip.args.out = &ctx->store->server;
+    Ip.parse(Ip.internal);
+    ctx->store->ready = Ip.ok;
+    ctx->ns->ok = Ip.ok;
 }
 
-void protocore_statsd_count(const char *name, int64_t delta)
+// Build one metric line into ns->line, and report its length in ns->n.
+static void statsd_format(struct StatsdInternal *restrict ctx)
 {
-    char v[24];
-    v[i64_str(v, delta)] = '\0';
-    emit(&s_statsd, name, v, STATSD_COUNTER, 1.0f);
+    char *out = ctx->ns->line.out;
+    const size_t cap = ctx->ns->line.cap;
+    const char *name = ctx->ns->metric.name;
+    const char *value = ctx->ns->value.text;
+    const StatsdType type = ctx->ns->metric.type;
+    const char *tags = ctx->ns->tags.metric;
+    ctx->ns->n = 0;
+    ctx->ns->ok = PROTO_FALSE;
+    if (!out || cap == 0 || !name || !name[0] || !value)
+    {
+        return;
+    }
+    if (type != STATSD_COUNTER && type != STATSD_GAUGE && type != STATSD_TIMING && type != STATSD_SET)
+    {
+        return;
+    }
+
+    // `<metricname>:<value>|`, then the type token: a timing writes "ms", the other three write the
+    // one character their selector holds.
+    const char t = (char)type;
+    size_t pos = 0;
+    if (!line_append(out, cap, &pos, name, str.len(name, cap)) || !line_append(out, cap, &pos, ":", 1) ||
+        !line_append(out, cap, &pos, value, str.len(value, cap)) || !line_append(out, cap, &pos, "|", 1))
+    {
+        return;
+    }
+    if (type == STATSD_TIMING)
+    {
+        if (!line_append(out, cap, &pos, "ms", 2))
+        {
+            return;
+        }
+    }
+    else if (!line_append(out, cap, &pos, &t, 1))
+    {
+        return;
+    }
+
+    // `|@<rate>` then `|#<tags>`, each written only when it renders to something.
+    char rbuf[PROTOCORE_STATSD_RATE_MAX];
+    const size_t rn = rate_str(rbuf, ctx->ns->metric.rate);
+    if (rn && (!line_append(out, cap, &pos, "|@", 2) || !line_append(out, cap, &pos, rbuf, rn)))
+    {
+        return;
+    }
+    if (tags && tags[0] &&
+        (!line_append(out, cap, &pos, "|#", 2) || !line_append(out, cap, &pos, tags, str.len(tags, cap))))
+    {
+        return;
+    }
+
+    out[pos] = '\0'; // pos <= cap-1 by construction
+    ctx->ns->n = pos;
+    ctx->ns->ok = PROTO_TRUE;
 }
 
-void protocore_statsd_count_sampled(const char *name, int64_t delta, float rate)
+// Stamp the stored tag list, format into the client's line storage, and send it as one datagram.
+static void statsd_emit(struct StatsdInternal *restrict ctx)
 {
-    char v[24];
-    v[i64_str(v, delta)] = '\0';
-    emit(&s_statsd, name, v, STATSD_COUNTER, rate);
+    ctx->ns->ok = PROTO_FALSE;
+    ctx->ns->n = 0;
+    if (!ctx->store->ready)
+    {
+        return;
+    }
+    ctx->ns->tags.metric = ctx->store->tags[0] ? ctx->store->tags : NULL;
+    ctx->ns->line.out = ctx->store->buf;
+    ctx->ns->line.cap = sizeof(ctx->store->buf);
+    statsd_format(ctx);
+    if (ctx->ns->n == 0)
+    {
+        return;
+    }
+    // Nothing acknowledges a datagram, so ok reports only that the stack took the octets.
+    UdpClient.dst = &ctx->store->server;
+    UdpClient.dst_port = ctx->store->port;
+    UdpClient.data = (const uint8_t *)ctx->store->buf;
+    UdpClient.len = ctx->ns->n;
+    UdpClient.sendto(UdpClient.internal);
+    ctx->ns->ok = UdpClient.ok;
 }
 
-void protocore_statsd_gauge(const char *name, int64_t value)
+// Add value.i64 to the bucket, annotated with metric.rate.
+static void statsd_count(struct StatsdInternal *restrict ctx)
 {
-    char v[24];
-    v[i64_str(v, value)] = '\0';
-    emit(&s_statsd, name, v, STATSD_GAUGE, 1.0f);
+    ctx->store->val[i64_str(ctx->store->val, ctx->ns->value.i64)] = '\0';
+    ctx->ns->value.text = ctx->store->val;
+    ctx->ns->metric.type = STATSD_COUNTER;
+    statsd_emit(ctx);
 }
 
-void protocore_statsd_gauge_delta(const char *name, int64_t delta)
+// Assign value.i64 to the bucket.
+static void statsd_gauge(struct StatsdInternal *restrict ctx)
 {
-    char v[24];
-    v[i64_delta_str(v, delta)] = '\0';
-    emit(&s_statsd, name, v, STATSD_GAUGE, 1.0f);
+    ctx->store->val[i64_str(ctx->store->val, ctx->ns->value.i64)] = '\0';
+    ctx->ns->value.text = ctx->store->val;
+    ctx->ns->metric.type = STATSD_GAUGE;
+    ctx->ns->metric.rate = 1.0f;
+    statsd_emit(ctx);
 }
 
-void protocore_statsd_timing(const char *name, uint32_t ms)
+// Adjust the bucket by value.i64, the sign written so the daemon adds rather than assigns.
+static void statsd_gauge_delta(struct StatsdInternal *restrict ctx)
 {
-    char v[16];
-    v[u64_str(v, ms)] = '\0';
-    emit(&s_statsd, name, v, STATSD_TIMING, 1.0f);
+    ctx->store->val[i64_delta_str(ctx->store->val, ctx->ns->value.i64)] = '\0';
+    ctx->ns->value.text = ctx->store->val;
+    ctx->ns->metric.type = STATSD_GAUGE;
+    ctx->ns->metric.rate = 1.0f;
+    statsd_emit(ctx);
 }
 
-void protocore_statsd_set(const char *name, const char *member)
+// Record value.ms milliseconds.
+static void statsd_timing(struct StatsdInternal *restrict ctx)
 {
-    emit(&s_statsd, name, member ? member : "", STATSD_SET, 1.0f);
+    ctx->store->val[u64_str(ctx->store->val, ctx->ns->value.ms)] = '\0';
+    ctx->ns->value.text = ctx->store->val;
+    ctx->ns->metric.type = STATSD_TIMING;
+    ctx->ns->metric.rate = 1.0f;
+    statsd_emit(ctx);
 }
+
+// Count value.member as one unique occurrence. The member is sent where it lies, not copied.
+static void statsd_set(struct StatsdInternal *restrict ctx)
+{
+    ctx->ns->value.text = ctx->ns->value.member ? ctx->ns->value.member : "";
+    ctx->ns->metric.type = STATSD_SET;
+    ctx->ns->metric.rate = 1.0f;
+    statsd_emit(ctx);
+}
+
+// Designated, so a member's position in the struct does not decide what it binds to.
+StatsdNs Statsd = {.init = statsd_init,
+                   .format = statsd_format,
+                   .count = statsd_count,
+                   .gauge = statsd_gauge,
+                   .gauge_delta = statsd_gauge_delta,
+                   .timing = statsd_timing,
+                   .set = statsd_set,
+                   .internal = &s_statsd};
 
 #endif // PROTOCORE_ENABLE_STATSD

@@ -57,6 +57,13 @@ typedef struct
     ExcInfo *info;    ///< where a parse or a summary lands the decoded panic
 } ExcParseArgs;
 
+/** @brief Where a stored crash image sits, and how much of it there is. */
+typedef struct
+{
+    uint32_t addr; ///< absolute flash address of the image
+    size_t size;   ///< image size in bytes
+} ExcCoreDump;
+
 /** @brief The stored crash image: the span a call names, and where its bytes land. */
 typedef struct
 {

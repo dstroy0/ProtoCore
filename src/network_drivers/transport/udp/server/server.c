@@ -103,7 +103,9 @@ static proto_bool addr_is_group(const protocore_ip *a)
     {
         return PROTO_FALSE;
     }
-    return Ip.classify(a) == PROTOCORE_IP_SCOPE_MULTICAST;
+    Ip.args.ip = a;
+    Ip.classify(Ip.internal);
+    return Ip.scope == PROTOCORE_IP_SCOPE_MULTICAST;
 }
 
 /** @brief The slot index ctx->bind sits at. */
@@ -466,7 +468,10 @@ static void listen_group(struct UdpListenerInternal *restrict ctx)
 {
     protocore_ip group = {PROTOCORE_IP_NONE, {0}};
     ctx->ns->ok = PROTO_FALSE;
-    if (!Ip.parse(ctx->ns->bind.group_ip, &group))
+    Ip.args.text = ctx->ns->bind.group_ip;
+    Ip.args.out = &group;
+    Ip.parse(Ip.internal);
+    if (!Ip.ok)
     {
         return;
     }
@@ -551,7 +556,11 @@ static void peer_addr_of(struct UdpListenerInternal *restrict ctx)
     {
         return;
     }
-    if (Ip.format(&ctx->ns->peer_args.peer->addr, ctx->ns->peer_args.ip_out, ctx->ns->peer_args.ip_cap) == 0)
+    Ip.args.ip = &ctx->ns->peer_args.peer->addr;
+    Ip.args.buf = ctx->ns->peer_args.ip_out;
+    Ip.args.cap = ctx->ns->peer_args.ip_cap;
+    Ip.format(Ip.internal);
+    if (Ip.n == 0)
     {
         return;
     }
@@ -596,7 +605,11 @@ static void group_on(struct UdpListenerInternal *restrict ctx)
     {
         return;
     }
-    if (Ip.format(&ctx->bind->group, ctx->store->group_text, sizeof(ctx->store->group_text)) == 0)
+    Ip.args.ip = &ctx->bind->group;
+    Ip.args.buf = ctx->store->group_text;
+    Ip.args.cap = sizeof(ctx->store->group_text);
+    Ip.format(Ip.internal);
+    if (Ip.n == 0)
     {
         return;
     }

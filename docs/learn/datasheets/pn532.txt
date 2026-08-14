@@ -1,0 +1,1353 @@
+PN532/C1                   Short form data sheet
+
+NFC controller
+
+Rev. 1.2 -- 31 March 2011
+
+1. Introduction
+
+                              This document describes the NFC controller PN532. This document is a short form
+                              version; for full specification refer to the product data sheet.
+
+2. General description
+
+                              The PN532 is a highly integrated transmission module for contactless communication at
+                              13.56 MHZ including micro-controller functionality based on an 80C51 core. The
+                              transmission module utilises an outstanding modulation and demodulation concept
+                              completely integrated for different kinds of passive contactless communication methods
+                              and protocols at 13.56 MHZ.
+
+                              The PN532 support 4 different operating modes:
+
+                           · Reader/writer mode supporting ISO 14443A / MIFARE® and FeliCaTM scheme
+                           · ISO 14443B in reader/writer mode only.
+                           · Card interface mode supporting ISO 14443A / MIFARE® and FeliCaTM scheme
+                           · NFCIP-1 mode
+
+                              Enabled in reader/ writer mode for ISO reader 14443A / MIFARE® and reader/writer mode
+                              for ISO 14443B, the PN532's internal transmitter part is able to drive a reader/writer
+                              antenna designed to communicate with ISO14443A /MIFARE® and ISO14443B cards and
+                              transponders without additional active circuitry.
+
+                              The receiver part provides a robust and efficient implementation of a demodulation and
+                              decoding circuitry for signals from ISO 14443A / MIFARE® and ISO 14443B compatible
+                              cards and transponders. The digital part handles the complete ISO14443A framing and
+                              error detection (Parity & CRC).
+
+                              The PN532 supports MIFARE" Classic (e.g. MIFARE® Standard) products. The PN532
+                              supports contactless communication using MIFARE® Higher Baudrates up to 424kBaud in
+                              both directions.
+
+                              Enabled in the reader/ writer mode for FeliCaTM, the PN532 transmission module supports
+                              the FeliCaTM communication scheme. The receiver part provides a robust and efficient
+                              implementation of the demodulation and decoding circuitry for FeliCaTM coded signals.
+                              The digital part handles the FeliCaTM framing and error detection like CRC. The PN532
+                              supports contactless communication using FeliCaTM Higher Baudrates up to 424 kbaud in
+                              both directions.
+Philips Semiconductors                             PN532/C1
+
+                                                         NFC controller
+
+                       Enabled in card mode the PN532 transmission module is able to answer to a reader/writer
+                       command either acoording to FeliCaTM or ISO14443 A / MIFARE® card interface mode.
+                       The PN532 generates the digital load-modulated signals and in addition with an external
+                       circuit the answers can be send back to the reader/writer. A complete card functionality is
+                       only possible in combination with a secure memory IC.
+
+                       Additionally, the PN532 transmission module offers the possibility to communicate directly
+                       to a second NFCIP-1 device in the NFCIP-1 mode. The NFCIP-1 mode offers different
+                       communication transfer speeds up to 424 kbit/s according to the ECMA 340 NFCIP-1
+                       Standard. The digital part handles the complete NFCIP-1 framing and error detection.
+                       Transfer speeds on the RF interface above 424 kbit/s are supported by the digital part of
+                       the PN532 module. The modulation to transmit and the demodulation to receive data at
+                       transfer speeds has than to be done by an external circuit.
+
+                       To make information exchange to the host systems several interfaces are implemented:
+
+                        · SPI interface
+                        · I2C interface
+                        · Serial UART (similar to RS232 with 0 and PVDD voltage levels)
+
+                       The PN532 embeds a low dropout voltage regulator allowing the device to be connected
+                       directly to a battery as well as a medium power switch to supply and control the power of
+                       the companion secure chip.
+
+3. Features
+
+                               80C51 micro controller core with 40 kbyte ROM and 1 kbyte RAM
+                               Highly integrated analog circuitry to demodulate and decode responses
+                               Buffered output drivers to connect an antenna with minimum number of external
+
+                                  components
+                               Integrated RF Level detector
+                               Integrated data mode detector
+                               Supports ISO 14443A / MIFARE®
+
+                                  Supports ISO 14443B in reader/writer mode only
+                               Typical operating distance in reader/writer mode for communication to a
+
+                                  ISO14443A/MIFARE®, ISO14443B or FeliCaTM card up to 50 mm depending on the
+                                  antenna size and tuning
+                               Typical operating distance in NFCIP-1 mode up to 50 mm depending on the antenna
+                                  size and tuning and power supply
+                               Typical operating distance in ISO14443A / MIFARE® card or FeliCaTM card interface
+                                  mode of about 100 mm depending on the antenna size and tuning and the external
+                                  field strength
+                               Supports MIFARE® Classic encryption in reader/writer mode and MIFARE® higher
+                                  transfer speed communication at 212 kbit/s and 424 kbit/s
+                               Supports contactless communication according to the FeliCaTM scheme at 212 kbaud
+                                  and 424 kbaud
+                               Integrated RF interface for NFCIP-1 up to 424 kBaud
+                               Possibility to communicate on the RF interface above 424 kbaud using external
+                                  analog circuitry
+
+9397 750 XXXXX          Rev. 1.2 -- 31 March 2011  © Koninklijke Philips Electronics N.V. 2006. All rights reserved.
+
+Short form data sheet                                                                        2 of 25
+Philips Semiconductors                                                                   PN532/C1
+
+                                                                                               NFC controller
+
+                        Supported host interfaces
+                             SPI interface
+                             I2C interface
+                             High Speed Serial UART (similar to RS232 with 0 and PVDD voltage levels)
+
+                        Flexible interrupt using IRQ pin
+                        Hard reset with low power function
+                        Power down mode per embedded firmware
+
+                           Automatic wake up on the I2C, HSU and SPI interfaces when device is in power down
+                           mode
+                        Programmable timer
+                        Internal oscillator to connect 27.12 MHz crystal
+                        2.7 to 5.4V power supply
+                        Power Switch for external secure companion chip.
+                        Specific IO ports for external devices control
+
+                           Embedded test of absence of antenna and/or antenna tuning components by detection
+                           of significant load impedance deviation resulting in high power consumption increase.
+
+4. Applications
+
+                               Mobile and portable devices
+                               PC world
+                               Consumer application
+
+5. Quick reference data
+
+                       Table 1: Quick reference data
+
+                       Symbol Parameter                     Conditions       Min Typ Max Unit
+
+                       VBAT    Battery Supply Voltage                        2.7          5.4 V
+                       ICVDD
+                               LDO output voltage           VSS = 0V        [1] 2.7  3.0  3.3  V
+
+                                                            VBAT > 3.3V
+
+                       PVDD    Supply Voltage for host      VSS = 0V        [2] 1.6       3.6 V
+                               interface
+                                                            PVDD < VBAT
+
+                       SVDD    Supply Voltage for SAM       VSS = 0V         2.7 3.0 3.3 V
+                               interface                    VBAT > 3.3V
+                                                            (SVDD Switch
+                                                            Enabled)
+
+                       IHPD    Hard Power Down Current VBAT=5V, RF                        2    A
+
+                                                            level detector
+
+                                                            off
+
+                       ISPD    Soft Power down Current VBAT=5V, RF                        10   A
+
+                                                            level detector
+
+                                                            on
+
+                       IICVDD  Digital Supply Current       VBAT=5V, RF [1]          25        mA
+
+                                                            level detector
+
+                                                            on, SVDD
+
+                                                            switch off
+
+9397 750 XXXXX                 Rev. 1.2 -- 31 March 2011                     © Koninklijke Philips Electronics N.V. 2006. All rights reserved.
+
+Short form data sheet                                                                                                  3 of 25
+Philips Semiconductors                                                                    PN532/C1
+
+                                                                                                NFC controller
+
+                       Table 1: Quick reference data ...continued
+
+                       Symbol Parameter                   Conditions             Min Typ Max Unit
+
+                       ISVDD    SVDD Supply Current       VBAT=5V,                                                      30  mA
+                                                          SVDD switch
+                                                          on
+
+                       IAVDD    Analog Supply Current     IVBAT=5V, RF [1]            6                                     mA
+
+                                                          level detector
+
+                                                          on
+
+                       ITVDD    Transmitter (TX) Supply   During RF         [1]       60                                100 mA
+                                Current
+                                                          VBAT=5V, 40
+
+                                                          typical TX Zload
+                                                          (min. tbd)
+
+                       IVBAT    continuous total current  Tamb = -30 to + [3]         91                                140 mA
+                                consumption               85 °C, 40
+                                                          typical TX Zload
+                                                          (min tbd),
+                                                          excluding the
+                                                          secure
+                                                          companion chip
+
+                       Tamb     operating ambient                                -30                                    +85 °C
+                                temperature
+
+                       [1] DVDD, AVDD and TVDD shall always be connected together.
+                       [2] It is not allowed to have PVDD above VBAT
+                       [3] The total current consumption depends also on the firmware version (different internal IC clock speed)
+
+6. Ordering information
+
+Table 2: Ordering information
+
+Type number            Package
+
+                       Name     Description                                                                                 Version
+                                                                                                                            SOT618-1
+PN5320A3HN/C101 [1] HVQFN40 plastic, heatsink very thin quad flat package; no leads; 40terminals;
+                                                  body 6x 6x 0.85mm                                                         SOT618-1
+
+PN5321A3HN/C101 [2] HVQFN40 plastic, heatsink very thin quad flat package; no leads; 40terminals;
+                                                  body 6x 6x 0.85mm. Type B SW is enable.
+
+                       [1] 01 is the reference of the romcode version.
+                       [2] A purchaser of this Philips IC has to take care for appropriate third party patent license.
+
+9397 750 XXXXX                  Rev. 1.2 -- 31 March 2011                        © Koninklijke Philips Electronics N.V. 2006. All rights reserved.
+
+Short form data sheet                                                                                                      4 of 25
+Philips Semiconductors                                                                   PN532/C1
+
+7. Block diagram                                                                               NFC controller
+
+                                  DVDD                                                  PN532
+
+                                                     RSTPDN
+
+VBAT                   REGULATOR                                             SVDDswitch                  SVDD
+
+                                                               POR
+
+                               Ports                 Xramif        sam_switch_en                         SIGOUT SIGIN
+                                I2C wake-up                        sam_switch_overload
+                                         monitoring
+                                UART                                            RAM
+
+        HSU                                   80C51     ROMif                 ROM                        P34
+                                                     Timer0/1
+MINT         SPI                                     Timer2                                         TCB
+                                                                                         CL UART
+          FIFO                                           Intc
+       Manager                                                                            FiFO
+                                                                                         TIMER
+          RAM                                                                  Mifare Classic Unit
+                                                                             Framing Gen. & Check
+                               Hostif       SFRif                              Signal Processing
+
+PVDD
+
+                                       PCR
+
+                                                     VMID BG Sensor          ADC        Transmit
+                                                                                        Control
+
+Osc27                                                Clock
+                                                        Generator
+                                                                      RF     Demod      Antenna
+                                                                ClockDetector            Driver
+                                                                   Recovery
+                                            AVDD
+                                                                                                                                          TVDD
+
+Fig 1. Block diagram of PN532
+
+9397 750 XXXXX                          Rev. 1.2 -- 31 March 2011            © Koninklijke Philips Electronics N.V. 2006. All rights reserved.
+
+Short form data sheet                                                                                                  5 of 25
+Philips Semiconductors                                        PN532/C1
+
+                                                                    NFC controller
+
+8. Pinning information
+
+         8.1 Pin description
+
+Table 3: PN532 Pin description
+
+Symbol   Pin Type Pad Ref          Description
+                          Voltage
+                                   Digital Ground
+DVSS     1 PWR                     Load Modulation output provides digital signal for FeliCaTM and MIFARE®
+                                   card operating mode
+LOADMOD  2 O DVDD                  Transmitter Ground: supplies the output stage of TX1 and TX2
+                                   Transmitter 1: delivers the modulated 13.56 MHZ energy carrier
+TVSS1    3 PWR                     Internal Transmitter power supply: supplies the output stage of TX1 and TX2
+TX1                                Transmitter 2: delivers the modulated 13.56 MHZ energy carrier
+TVDD     4 O TVDD                  Transmitter Ground: supplies the output stage of TX1 and TX2
+TX2                                Internal Analog Power Supply
+TVSS2    5 PWR                     Internal Reference Voltage: This pin delivers the internal reference voltage.
+AVDD                               Receiver Input: Input pin for the reception signal, which is the load modulated
+VMID     6 O TVDD                  13.56 MHZ energy carrier from the antenna circuit.
+RX                                 Analog Ground
+         7 PWR                     Auxiliary Output: This pin delivers analog and digital test signals.
+                                   Auxiliary Output: This pin delivers analog and digital test signals.
+         8 PWR                     Crystal Oscillator Input: input to the inverting amplifier of the oscillator.This
+                                   pin is also the input for an externally generated clock (fosc = 27.12 MHZ).
+         9 O AVDD                  Crystal Oscillator output: Output of the inverting amplifier of the oscillator.
+                                   General purpose IO signal
+         10 I          AVDD        Can be used by the embedded firware to select the used host interface.
+                                   General purpose IO signal
+AVSS     11 PWR                    Can be used by the embedded firware to select the used host interface.
+AUX1                               Test enable pin:
+AUX2     12 O AVDD                 When set to 1 enable the test mode.
+OSCIN                              When set to 0 reset the TCB and disable the access to the test mode.
+         13 O AVDD                 General purpose IO signal
+
+         14 I          AVDD
+
+OSCOUT   15 O          AVDD
+I0       16 I          DVDD
+
+I1       17 I          DVDD
+
+TESTEN   18 I          DVDD
+
+P35      19 IO DVDD                Pad power supply
+NC       20                        General purpose IO signal. Can be configured to act either as RX line of the
+NC       21                        second serial interface or general purpose IO.
+NC       22                        In test mode this signal is used as input and output test signal.
+PVDD     23 PWR                    Interrupt request: Output to signal an interrupt event to the host (Port 7 bit 0)
+P30      24 IO PVDD                Output reset signal. When Low it indicates that the circuit is in reset state.
+                                   Not Slave Select .
+IRQ      25 O          PVDD        Master Out Slave In.
+RSTOUTN  26 IO         PVDD        Master In Slave Out .
+NSS      27 IO         PVDD
+MOSI     28 IO         PVDD
+MISO     29 IO         PVDD
+SCK      30 IO         PVDD
+
+9397 750 XXXXX                     Rev. 1.2 -- 31 March 2011  © Koninklijke Philips Electronics N.V. 2006. All rights reserved.
+
+Short form data sheet                                                                                   6 of 25
+Philips Semiconductors                                                                   PN532/C1
+
+                                                                                               NFC controller
+
+Table 3: PN532 Pin description ...continued
+
+Symbol    Pin Type Pad Ref          Description
+                           Voltage
+
+P31       31 IO PVDD                General purpose IO signal.Can be configured to act either as TX line of the
+
+                                    second serial interface or general purpose IO.
+
+                                    In test mode this signal is used as input and output test signal.
+
+P32_INT0  32 IO PVDD                General purpose IO signal. Can be used to generate an HZ state on the
+                                    output of the selected interface for the Host communication and to enter
+                                    PN532 into powerdown mode without reseting the internal state of PN532.
+                                    In test mode this signal is used as input and output test signal.
+
+P33_INT1  33 IO PVDD                General purpose IO signal. Can also be used as an interrupt source
+                                    In test mode this signal is used as input and output test signal.
+
+P34       34 IO SVDD                General purpose IO signal or clk signal for the SAM
+
+SIGOUT    35 O SVDD                 Contactless communication interface output: delivers a serial data stream
+                                    according to NFCIP-1 and output signal for the SAM.
+                                    In test mode this signal is used as test signal output.
+
+SIGIN     36 I         SVDD         Contactless communication interface input: accepts a digital, serial data
+                                    stream according to NFCIP-1 and input signal from the SAM.
+                                    In test mode this signal is used as test signal input.
+
+SVDD      37 O                      Output power for SAM power supply. Switched on by Firmware with an
+                                    overload detection. Used as a reference voltage for SAM communication.
+
+RSTPDN    38 I         PVDD         Reset and Power Down: When Low, internal current sources are switched off,
+                                    the oscillator is inhibited, and the input pads are disconnected from the
+                                    outside world.
+                                    With a negative edge on this pin the internal reset phase starts.
+
+DVDD      39 PWR                    Internal Digital Power Supply
+
+VBAT      40 PWR                    Main external power supply.
+
+9397 750 XXXXX                               Rev. 1.2 -- 31 March 2011  © Koninklijke Philips Electronics N.V. 2006. All rights reserved.
+
+Short form data sheet                                                                                             7 of 25
+Philips Semiconductors                             PN532/C1
+
+                                                         NFC controller
+
+9. Functional description
+
+                  9.1 CONTACT LESS MODULE
+
+                              The PN532 includes a highly integrated transmission/reception module for contactless
+                              communication at 13.56 MHz. This transmission/reception contact less (CL) module
+                              utilises an outstanding modulation and demodulation concept completely integrated for
+                              different kinds of contactless communication methods and protocols at 13.56 MHz.
+
+                              The CL module support 4 different operating modes
+
+                           · reader / writer mode supporting ISO 14443A / MIFARE® and FeliCaTM scheme
+                           · reader / writer mode supporting ISO 14443B
+                           · card operation mode supporting ISO 14443A / MIFARE® and FeliCaTM scheme
+                           · NFCIP-1 mode
+
+                              Enabled in reader / writer mode for ISO 14443A / MIFARE®, the CL module transmitter
+                              part is able to drive a reader / writer antenna designed to communicate with ISO 14443A /
+                              MIFARE® cards and transponders without additional active circuitry. The CL module
+                              receiver part provides a robust and efficient implementation of a demodulation and
+                              decoding circuitry for signals from ISO 14443A / MIFARE® compatible cards and
+                              transponders. The CL module handles the complete ISO 14443A framing and error
+                              detection (Parity & CRC).The CL module supports MIFARE® Classic (e.g. MIFARE®
+                              Standard) products. The CL module supports contactless communication using MIFARE®
+                              Higher transfer speeds up to 424 kbit/s in both directions.
+
+                              Enabled in reader / writer mode for FeliCaTM, the CL module supports the FeliCaTM
+                              communication scheme. The CL module receiver part provides a robust and efficient
+                              implementation of the demodulation and decoding circuitry for FeliCaTM coded signals.
+                              The CL module digital part handles the FeliCaTM framing and error detection like CRC.
+                              The CL module supports contactless communication using FeliCaTM Higher transfer
+                              speeds up to 424 kbit/s in both directions.
+
+                              The CL module supports all layers of the ISO/IEC 14443 B reader / writer communication
+                              scheme, given correct implementation of additional components, like oscillator, power
+                              supply, coil etc. and provided that standardised protocols, e.g. like ISO/IEC 14443-4
+                              and/or ISO/IEC 14443 B anticollision are correctly implemented. The use of this Philips IC
+                              according to ISO/IEC 14443 B might infringe third party patent rights. A purchaser of this
+                              Philips IC has to take care for appropriate third party patent licenses.
+
+                              In card operation mode, the CL module is able to answer to a reader / writer command
+                              either according to the FeliCaTM or ISO 14443A / MIFARE® card interface scheme. The
+                              CL module generates the digital load modulated signals and in addition with an external
+                              circuit the answer can be sent back to the reader / writer. A complete card functionality is
+                              only possible in combination with a secure core IC using the S2C interface.
+
+                              Additionally, the CL module offers the possibility to communicate directly to an NFCIP-1
+                              device in the NFCIP-1 mode. The NFCIP-1 mode offers different communication modes
+                              and transfer speeds up to 424kbit/s according to the Ecma 340 NFCIP-1 Standard. The
+                              CL module digital part handles the complete NFCIP-1 framing and error detection.
+
+9397 750 XXXXX          Rev. 1.2 -- 31 March 2011  © Koninklijke Philips Electronics N.V. 2006. All rights reserved.
+
+Short form data sheet                                                                        8 of 25
+Philips Semiconductors                            PN532/C1
+
+                  9.1.1 Simplify block diagram          NFC controller
+
+             Fig 2. Memory manager shift register management.
+
+          The Analog interface handles the modulation and demodulation of the analog signals
+          according to the card receiving mode, reader / writer mode and NFCIP-1 mode
+          communication scheme.
+
+          The RF level detector detects the presence of an external RF-field delivered by the
+          antenna to the RX pin.
+
+          The data mode detector detects a MIFARE®, FeliCaTM or NFCIP-1 mode in order to
+          prepare the internal receiver to demodulate signals, which are sent to the PN512.
+
+          The communication (S2C) interface provides digital signals to support communication for
+          transfer speeds above 424 kbit/s and digital signals to communicate to a secure core IC.
+
+          The contactless UART handles the protocol requirements for the communication schemes
+          in co-operation with the host. The comfortable FIFO buffer allows a fast and convenient
+          data transfer from the host to the contactless UART and vice versa.
+
+9.1.2 Feature list
+
+          · Close communication link to the analog circuitry to demodulate and decode card's
+
+               response
+
+          · Typical MOVX access to non critical registers
+          · SFR register map for high frequency register access (16 Registers)
+          · Integrated data mode detector
+          · Supports ISO 14443A / MIFARE®
+          · Supports ISO 14443 B reader / writer functionality
+          · Adjustable parameters to optimize the reception according to the antenna
+
+               configuration
+
+          · Adjustable parameters to optimize the transmisssion according to the antenna
+
+               configuration and characteristics.
+
+          · typical operating distance in reader / writer mode for communication to a ISO 14443A/
+
+               MIFARE® or FeliCaTM card up to 50 mm depending on the antenna size, tuning and
+               power supply
+
+9397 750 XXXXX         Rev. 1.2 -- 31 March 2011  © Koninklijke Philips Electronics N.V. 2006. All rights reserved.
+
+Short form data sheet                                                                       9 of 25
+Philips Semiconductors                             PN532/C1
+
+                                                         NFC controller
+
+          · typical operating distance in NFCIP-1 mode up to 50 mm depending on the antenna
+
+               size and tuning and power supply
+
+          · typical operating distance in ISO 14443A / MIFARE® card or FeliCaTM card operation
+
+               mode of about 100 mm depending on the antenna size and tuning and the external
+               field strength
+
+          · Supports MIFARE® Classic encryption in reader / writer mode
+          · Supports ISO 14443A higher transfer speed communication at 212 kbit/s and
+
+               424 kbit/s
+
+          · Supports contactless communication according to the FeliCaTM scheme at 212 kbit/s
+
+               and 424 kbit/s
+
+          · Integrated RF interface for NFCIP-1 up to 424 kbit/s
+          · Possibility to communicate on the RF interface above 424 kbit/s using external analog
+
+               circuitry
+
+          · Support of the S2C interface
+          · 64 byte send and receive FIFO-buffer
+          · Programmable timer
+          · CRC Co-processor
+          · internal self test
+          · 2 interrupt sources
+          · Integrated RF Level detector
+          · Integrated RF interface for NFCIP-1 up to 424 kbit/s
+
+9.1.3 Operating Modes
+
+          The CL module support the following operating modes:
+
+          · Reader/writer mode supporting ISO14443A / MIFARE®, FelicaTM and ISO14443B
+
+               schemes.
+
+          · Card operation mode supporting ISO14443A / MIFARE® and FelicaTM schemes
+          · NFCIP-1 mode
+
+          The modes support different transfer speeds and modulation schemes. The following
+          chapters will explain the different modes more in detail.
+
+          Note: All indicated modulation indexes and modes in this chapter are system parameters.
+          This means that beside the IC settings a suitable antenna tuning is required to achieve the
+          optimal performance.
+
+9397 750 XXXXX          Rev. 1.2 -- 31 March 2011  © Koninklijke Philips Electronics N.V. 2006. All rights reserved.
+
+Short form data sheet                                                                      10 of 25
+Philips Semiconductors                                                                                      PN532/C1
+
+                                                                                                                  NFC controller
+
+9.1.3.1 Reader / Writer mode
+
+            Generally 3 reader/writer-operating modes are supported. The PN532 can act as a reader
+            / writer for ISO14443A / MIFARE®, FeliCaTM and ISO14443B cards.
+
+                                   Battery              PN532                                               ISO 14443A/B or
+                                    HOST                                                                        Felica Card
+
+                                                                                                            Contactless Card
+
+                                           Reader/Writer
+
+                       Fig 3. Reader/Writer Mode.
+
+9.1.3.2 ISO14443A Reader / Writer Functionality
+
+            The ISO14443A / MIFARE® reader / writer mode is the general reader / writer to card
+            communication scheme according to the ISO14443A / MIFARE® specification. The
+            following diagram describes the communication on a physical level.
+
+                                   ISO14443A            1. PCD to PICC 100 % ASK,                           ISO 14443A
+                                   Reader (PCD)         Miller Coded,                                       Card (PICC)
+                                                        Transfer speed 106 to 424 kbit/s
+                                                 PN532
+
+                                                               2. PICC to PCD, Subcarrier Load modulation,
+                                                               Manchester Coded or BPSK,
+                                                               Transfer speed 106 to 424 kbit/s
+
+                       Fig 4. ISO14443A / MIFARE® reader/writer communication diagram.
+
+Table 4: Communication overview for ISO14443A / MIFARE® reader/writer
+
+Communication                                MIFARE® / ISO14443A                   MIFARE® Higher transfer speed
+direction                                    106kbaud
+                       Baudrate                                                    212 Kbaud                424kBaud
+
+PN532  card            Modulation on reader  100 % ASK                             100 % ASK                100 % ASK
+                       side
+
+                       bit coding            Modified Miller coding                Modified                 Modified Miller coding
+                                                                                   Miller coding
+
+                       Bitlength             128/13.56 = 9.44 s                    64/13.56 = 9.44s/2       32/13.56 = 9.44s/4
+
+Card  PN532            Modulation on card side Subcarrier load modulation subcarrier load                   subcarrier load
+                                                                                                modulation  modulation
+
+                       Subcarrier frequency  13.56MHz/16                           13.56MHz/16              13.56MHz/16
+
+                       bit coding            Manchester coding                     BPSK                     BPSK
+
+                       The contactless UART, in cooperation with the internal micro-controller of PN532 and the
+                       external host handle the complete MIFARE® / ISO14443 A protocol.
+
+                       The internal CRC coprocessor calculates the CRC value according to the definitions given
+                       in the ISO 14443A part 3.
+
+9397 750 XXXXX                                          Rev. 1.2 -- 31 March 2011                 © Koninklijke Philips Electronics N.V. 2006. All rights reserved.
+
+Short form data sheet                                                                                                                     11 of 25
+Philips Semiconductors                                                                   PN532/C1
+
+                                                                                               NFC controller
+
+9.1.3.3 FeliCaTM Reader/Writer Functionality
+
+            The FeliCaTM mode is the general reader / writer to card communication scheme
+            according to the FeliCaTM specification. The following diagram describes the
+            communication on a physical level.
+
+                       FELICA                  1. PCD to PICC 8 - 14% ASK,          FELICA
+                       Reader (PCD)            Manchester Coded,                 Card (PICC)
+                                               Baudrate 212 to 424 Kbaud
+
+                                     PN532
+
+                                                            2. PICC to PCD, >12% ASK loadmodulation,
+                                                            Manchester Coded,
+                                                            Baudrate 212 to 424 Kbaud
+
+                       Fig 5. FeliCaTM reader / writer communication Diagram.
+
+                       Table 5: Communication Overview for FeliCaTM reader/writer functionality
+
+                       Communication                         FeliCaTM            FeliCaTM Higher
+                       direction                                                 Baudrate
+
+                                      Baudrate               212 Kbaud           424kBaud
+
+                       PN532 ->card   Modulation on reader   8 - 14 % ASK        8 - 14 % ASK
+                                      side
+
+                                      bit coding             Manchester coding Manchester coding
+
+                                      Bitlength              64/13.56 = 9.44s/2  32/13.56 = 9.44s/4
+                                                                                 >12% ASK
+                       Card->PN532    Modulation on card side >12% ASK
+
+                                      bit coding             Manchester coding Manchester coding
+
+                       The internal contactless UART, the internal µC of PN532 and the external host handle the
+                       FeliCaTM protocol.
+
+                       The Framing and coding of the FeliCaTM should be according the following table:
+
+                       Table 6: FeliCaTM Framing and Coding
+
+                                     Preamble               Sync Len             n-Data                 CRC
+
+                       00 00 00 00 00 00 B2 4D
+
+                       To enable the FeliCaTM communication a 6 bytes long preamble and 2 bytes Sync bytes
+                       are sent in order to synchronise the internal receiver. The Len byte is an indicator for the
+                       length of the sent data bytes plus the n-data bytes. The CRC calculation is done according
+                       to the FeliCaTM definitions with the MSB first.
+
+                       To transmit data on the RF interface, the host has to send the Preamble-, Syn-, Len- and
+                       data- bytes to the PN532. Only the internal CRC calculation is made and added internally
+                       of the PN532
+
+                       The starting value for the CRC Polynomial is 2 null bytes: (0x00), (0x00)
+
+                       Example of frame sent to the field:
+
+                       Table 7: FeliCaTM Framing and Coding     Sync           Len 2 Data Bytes         CRC
+                                              Preamble       B2 4D
+                                                                               03 AB CD 90 35
+                          00 00 00 00 00 00
+
+9397 750 XXXXX                                 Rev. 1.2 -- 31 March 2011         © Koninklijke Philips Electronics N.V. 2006. All rights reserved.
+
+Short form data sheet                                                                                                    12 of 25
+Philips Semiconductors                                            PN532/C1
+
+                                                                        NFC controller
+
+9.1.4 NFCIP-1 MODE
+
+          The NFCIP-1 communication differentiates between an active and a passive
+          communication mode.
+
+          · Active Communication Mode means both the initiator and the target are using their
+
+               own RF field to transmit data
+
+          · Passive Communication Mode means that the target answers to an initiator command
+
+               in a load modulation scheme. The initiator is active in terms of generating the RF field.
+
+          · Initiator: generates RF field @ 13.56 MHz and starts the NFCIP
+          · Target: responds to initiator command either in a load modulation scheme for passive
+
+               communication mode or using a self generated and self modulated RF field for active
+               communication mode.
+
+          In order to fully support the NFCIP-1 standard the PN532 supports the active and passive
+          communication mode at the transfer speeds 106 kbit/s, 212 kbit/s and 424 kbit/s as
+          defined in the NFCIP-1 standard
+
+                       Battery  PN532                      PN532  Battery
+                        HOST                                      HOST
+
+                                       Initiator: Active   target: Passive or Active
+
+                       Fig 6. NFCIP-1 Mode.
+
+9397 750 XXXXX                  Rev. 1.2 -- 31 March 2011  © Koninklijke Philips Electronics N.V. 2006. All rights reserved.
+
+Short form data sheet                                                                              13 of 25
+Philips Semiconductors                                                                    PN532/C1
+
+                                                                                                NFC controller
+
+      9.1.4.1 ACTIVE Communication mode
+
+                  Active Communication Mode means both the initiator and the target are using their own
+                  RF field to enable the communication.
+
+Host  PN532              1. Initiator starts the communication                   PN532    Host
+                         at selected transfer speed                           NFC Target
+      NFC Initiator
+
+                     Power to generate                                        Powered for Digital
+                     the field                                                  Communication
+
+Host  PN532                               2. Target answer                       PN532    Host
+                                          at the same transfer speed          NFC Target
+      NFC Initiator
+
+                     Powered for Digital                                                  Power to generate
+                       Communication                                                      the field
+
+Fig 7. Active NFC Mode.
+
+                       The following table gives an overview of the active communication modes:
+
+Table 8: Communication Overview for active NFC
+
+Communication          106 kbit/s         212 kbit/s            424 kbit/s    848 kbit/s  1.69 Mbit/s
+     direction                                                                            3.39 Mbit/s
+
+Initiator -> Target    According to       According to          According to       digital capability to handle this
+                       ISO14443A                                              communication according to the NFC
+                       100% ASK,          FeliCaTM,             FeliCaTM,
+                       Miller Coded                                                                mode
+                                          8-30 %ASK             8-30 %ASK
+
+                                          Manchester Coded Manchester Coded
+
+Target -> Initiator    According to       According to          According to      digital capability to handle this
+                       ISO14443A                                              communication according to the NFC
+                       100% ASK,          FeliCaTM,             FeliCaTM,
+                       Miller Coded                                                                mode
+                                          8-30 %ASK             8-30 %ASK
+
+                                          Manchester Coded Manchester Coded
+
+                       Note: Transfer speed above 424 kbit/s are not defined in the NFCIP-1. The PN532
+                       supports these transfer speeds only with dedicated external circuitry.
+
+9397 750 XXXXX                            Rev. 1.2 -- 31 March 2011           © Koninklijke Philips Electronics N.V. 2006. All rights reserved.
+
+Short form data sheet                                                                                                 14 of 25
+Philips Semiconductors                                                                                      PN532/C1
+
+                                                                                                                  NFC controller
+
+      9.1.4.2 PASSIVE Communication mode
+
+                  Passive Communication Mode means that the target answers to an initiator command in a
+                  load modulation scheme. The initiator is active meaning generating the RF field.
+
+Host  PN532            1. Initiator starts communication                                           PN532    Host
+                       at selected transfer speed                                               NFC Target
+      NFC Initiator
+
+                       Power to generate                                                        Power for digital
+                       the field                                                                processing
+
+Host  PN532                                        2. Targets answer using load modulated data     PN532    Host
+                                                   at the same transfer speed                   NFC Target
+      NFC Initiator
+
+                                Power to generate                                               Power for digital
+                                the field                                                       processing
+
+Fig 8. Passive NFC Mode.
+
+                       The following table gives an overview of the active communication modes:
+
+Table 9: Communication Overview for passive NFC
+
+Communication          106 kbit/s                  212 kbit/s    424 kbit/s                     848 kbit/s  1.69 Mbit/s
+     direction                                                                                              3.39 Mbit/s
+
+Initiator -> Target    According to                According to  According to              digital capability to handle this
+                       ISO14443A                                                      communication according to the NFC
+                       100% ASK,                   FeliCaTM,     FeliCaTM,
+                       Miller Coded                                                                        mode
+                                                   8-30 %ASK     8-30 %ASK
+
+                                                   Manchester Coded Manchester Coded
+
+Target -> Initiator    according to                according to  according to             digital capability to handle this
+                                                                                      communication according to the NFC
+                       ISO14443 A                  FeliCaTM,     FeliCaTM,
+                                                                                                           mode
+                       subcarrier load             >12 % ASK,    >12 % ASK,
+
+                       modulation, Manchester Coded Manchester Coded
+
+                       Manchester Coded
+
+                       Note: Transfer speed above 424 kbit/s are not defined in the NFCIP-1. The PN532
+                       supports these transfer speeds only with dedicated external circuitry.
+
+9397 750 XXXXX                                     Rev. 1.2 -- 31 March 2011                    © Koninklijke Philips Electronics N.V. 2006. All rights reserved.
+
+Short form data sheet                                                                                                                   15 of 25
+Philips Semiconductors                                                                      PN532/C1
+
+                                                                                                  NFC controller
+
+9.1.4.3 NFC FRAMING AND CODING
+
+            The NFCIP-1 framing and coding in active and passive communication modes are defined
+            in the NFCIP-1 standard.
+
+                       Table 10: NFC Framing and Coding Overview
+
+                       Baudrate   Framing and Coding
+
+                       106 kbaud  According to the ISO 14443A / MIFARE® scheme
+
+                       212 kbaud  According to the FeliCaTM scheme
+
+                       424 kbaud or higher According to the FeliCaTM scheme
+
+9.1.4.4 NFC Protocol Support
+
+            The NFCIP-1 protocol is not completely described in this document. For detailed
+            explanation of the protocol refer to the NCFCIP-1 standard. However the datalink layer is
+            according to the following policy:
+
+           · Speed shall not be changed while continuum data exchange in a transaction.
+           · More than one transaction at a time in the same operation field is prohibited.
+           · Transaction includes initialisation and anticollision methods and data exchange (in
+
+                 continuous way, meaning no interruption by another transaction).
+
+            In order not to disturb current infrastructure based on 13.56 MHZ general rules to start
+            NFC communication are defined in the following way.
+
+           · Per default NFCIP-1 device is in target mode, meaning its RF field is switched off.
+           · The RF level detector is active
+           · Only if application requires the NFC device shall switch to initiator mode
+           · Initiator shall only switch on RF if no external RF field is detected by RF Level detector
+
+                 during a time of TIDT.
+
+           · The initiator performs initialisation according to the selected mode.
+
+9.1.5 Card operation mode
+
+          The PN532 can be addressed like a FeliCaTM or ISO 14443A / MIFARE® card. This means
+          that the PN532 can generate an answer in a load modulation scheme according to the
+          ISO 14443A / MIFARE® or FeliCaTM interface description.
+
+          Remark: The PN532 does not support a complete card protocol. This has to be handled
+          by a dedicated card SAM or a micro-controller. The SAM is optional.
+
+                          Reader/Writer for                                          PN532   Battery
+                          Felica or MIFARE
+                                                                                              HOST
+                        Generate RF field                                                   and SAM
+
+                                                                                     Answers in Loadmodulation scheme
+
+9397 750 XXXXX         Fig 9. CARD Operating Mode.                                   © Koninklijke Philips Electronics N.V. 2006. All rights reserved.
+
+Short form data sheet                                     Rev. 1.2 -- 31 March 2011                                          16 of 25
+Philips Semiconductors                                                                         PN532/C1
+
+                                                                                                     NFC controller
+
+9.1.5.1 MIFARE® card interface mode
+
+Table 11: MIFARE® CARD operating mode
+
+Communication                                MIFARE® / ISO14443A        MIFARE® Higher Baudrates
+direction                                    106kbit/s
+                       Transfer speed                                   212 kbit/s             424 kbit/s
+
+PN532 receiving        Modulation on reader  100 % ASK                  100 % ASK              100 % ASK
+data from the          side                  Modified Miller coding                            Modified Miller coding
+reader / writer                                                         Modified
+                       bit coding                                       Miller coding
+
+                       Bitlength             128/13.56 = 9.44 s         64/13.56 = 9.44s/2     32/13.56 = 9.44s/4
+                       Modulation on PN532                                                     subcarrier load
+PN532 sending          side                  Subcarrier load modulation subcarrier load        modulation
+data back to the       Subcarrier frequency                                        modulation  13.56MHz/16
+reader / writer        bit coding                                                              BPSK
+                                             13.56MHz/16                13.56MHz/16
+
+                                             Manchester coding          BPSK
+
+9.1.5.2 FeliCaTM card interface mode
+
+Table 12: FeliCaTM CARD operating mode
+
+Communication          Baudrate                           FeliCaTM                             FeliCaTM Higher Baudrates
+direction                                                 212kbaud                             424kBaud
+                                                          8-14 % ASK                           8-14 % ASK
+PN532 receiving data Modulation on reader side            Manchester Coding                    Manchester Coding
+from the reader / writer bit coding                       64/13.56s                            32/13.56s
+                                                          >12% ASK, loadmodulation             >12% ASK, load modulation
+                       Bitlength                          Manchester coding                    Manchester coding
+
+PN532 sending data     Modulation on PN532 side
+back to the reader /   bit coding
+writer
+
+9397 750 XXXXX                               Rev. 1.2 -- 31 March 2011                 © Koninklijke Philips Electronics N.V. 2006. All rights reserved.
+
+Short form data sheet                                                                                                          17 of 25
+Philips Semiconductors                                                                                    PN532/C1
+
+                                                                                                                NFC controller
+
+10. Limiting values
+
+Table 13: Limiting values
+In accordance with the Absolute Maximum Rating System (IEC 60134).
+
+Symbol Parameter                               Conditions                         Min                         Max Unit
+
+PVDD    Supply Voltage                                                            -0.5                        4    V
+
+VBAT    Battery Supply Voltage                                                    -0.5                        6.0  V
+
+Ptot    Total power dissipation                                                                               tbd  mW
+
+ITX1    Maximum current in transmitter TX1                                        -100 100                         mA
+
+ITX2    Maximum current in transmitter TX2                                        -100 100                         mA
+
+Tstg    Storage temperature                                                       -55                         150  °C
+
+Tj      Junction temperature                                                                                  100  °C
+
+Table 14: ESD Characteristics
+
+Symbol Parameter                               Conditions                         Specification                    Value
+                                                                                  JESD22-A114-B                    2 KV
+ESDH    ESD Susceptibility (Human Body model) 1500 Ohm, 100pF                     JESD22-A114-A                    200 V
+                                                                                  JESC22-C101-A                    1 KV
+ESDM    ESD Susceptibility (Machine model)     0.75 H, 200 pF
+
+ESDC    ESD Susceptibility (Charge Device model) Field induced model
+
+11. Recommended operating conditions
+
+Table 15: Operating conditions
+
+Symbol Parameter                   Conditions                                Min  Typ                     Max      Unit
+                                                                             -30  +25                     +85      °C
+Tamb    Ambiant Temperature                                         [1], [2] 2.7  5                       5.4      V
+
+VBAT    Battery Supply             VSS = 0V                                  1.6  1.8-3.3                 3.6      V
+        Voltage
+
+PVDD    Supply voltage from VSS=0V
+        host interface
+
+[1] VSS represents DVSS, TVSS1, TVSS2, AVSS.
+[2] Supply voltage of VBAT below 3.3 V reduces the performance (e.g. the achievable operating distance).
+
+12. Thermal characteristics
+
+Table 16: Thermal characteristics
+
+Symbol Parameter                               Conditions                                                 Typ      Unit
+
+Rthj-a  thermal resistance from junction to    in free air with exposed pad soldered                      35       K/W
+        ambient (for HVQFN40 package)
+                                               on a 4 layer Jedec PCB-0.5
+
+9397 750 XXXXX                                 Rev. 1.2 -- 31 March 2011          © Koninklijke Philips Electronics N.V. 2006. All rights reserved.
+
+Short form data sheet                                                                                                     18 of 25
+Philips Semiconductors                                                          PN532/C1
+
+                                                                                      NFC controller
+
+13. Characteristics
+
+Table 17: Current Consumption
+
+Symbol Parameter                 Conditions                           Min  Typ  Max       Unit
+
+Ihpd   Hard Power Down Current PVDD=3V, RF level       [5]                      10        mA
+
+                                 detector off
+
+ISPD   Soft Power down Current PVDD=3V,                [5]                      35        mA
+
+                                 RF level detector on
+
+IAVDD  Analog Supply Current     VBAT = 5V                                 tbd  6         mA
+                                 PVDD=3V, RF level
+                                 detector on
+
+IAVDDrcvo Analog Supply Current  VBAT = 5V                                 3    5         mA
+ff                               PVDD=3V, RF level
+                                 detector off
+
+IPVDD  Pad Supply Current                              [2]                      tbd       mA
+
+ISVDD  Output Supply Current for sam_switch_en         [3]                      30        mA
+
+       SAM                       set to 1
+
+ITVDD1,4 Transmitter Supply Current Continuous Wave, VBAT [1] [4]               602 100   mA
+                                                       = 5V
+
+IVBAT  Total Supply Current      Continuous Wave, VBAT [1] [4]                  76,5 tbd  mA
+                                 = 5V
+
+[1] ITVDD depends on TVDD and the external circuitry connected to Tx1 and Tx2.
+[2] IPVDD depends on the overall load at the digital pins.
+[3] ISVDD depends on the overall load on SVDD pad.
+[4] During operation with a typical circuitry the overall current is below 100 mA.
+[5] ISPD and IHPD are the total currents over all supplies.
+[6] Typical value using a complementary driver configuration and an antenna matched to 40 Ohm between TX1 and TX2 at 13.56 MHZ.
+
+9397 750 XXXXX                             Rev. 1.2 -- 31 March 2011       © Koninklijke Philips Electronics N.V. 2006. All rights reserved.
+
+Short form data sheet                                                                                              19 of 25
+Philips Semiconductors                                                                   PN532/C1
+
+14. Application information                                                                    NFC controller
+
+Battery
+
+PMU                          VBAT           SVDD                                         Secure
+   4.7uF                     DVDD         SIGOUT                                          Core
+
+                                            SIGIN
+                                               P34
+
+                      100nF                               CRx                     100nF
+                  100nF                                       1nF
+                              PN532                 RX
+                                                 VMID     R1                R2
+                             AVDD                         1k                2.7k
+
+                           TVDD                            Cvmid            C1 and C2 are matching cap (10 to 300pF)
+4.7uF 100nF                                               100nF             Rq are the damping resistor, few ohms
+
+                                                            560nH           C1    RQ
+                                                              L0
+
+                       100nF                         TX1  220pF
+                                  PVDD
+                                  RTSPDN         TVSS1        C0            C2
+                                                 TVSS2
+                  Host Interface                                                         Antenna
+                                                     TX2
+                                  IRQ                         C0            C2
+
+                                                          220pF
+
+Host - Processor                                          L0                C1    RQ
+
+                                                          560nH
+
+                             DVSS                AVSS
+
+                             OSCIN OSCOUT
+
+                             22pF         27,12  22pF
+                                          MHZ
+
+Fig 10. Application diagram of PN532
+
+                       In the example the 27.12MHz quartz is a TAS-3225A, SMD
+
+9397 750 XXXXX                                   Rev. 1.2 -- 31 March 2011        © Koninklijke Philips Electronics N.V. 2006. All rights reserved.
+
+Short form data sheet                                                                                                     20 of 25
+Philips Semiconductors                                                                                                   PN532/C1
+
+15. Package outline                                                                                                            NFC controller
+
+HVQFN40: plastic thermal enhanced very thin quad flat package; no leads;                                                            SOT618-1
+40 terminals; body 6 x 6 x 0.85 mm
+
+                                               D                     BA
+
+         terminal 1
+         index area
+
+                                                                                E             A    A1
+
+                                                                                                                            c
+
+                                                                                                          detail X
+
+                                               e1                                                                     C
+
+                                       e           1/2 e b                      vMC A B            y1 C                  y
+
+                              11                                20              wM C
+
+              L
+
+                       10                                            21
+
+                                                                          e
+
+              Eh                                                                e2
+
+                                                                         1/2 e
+
+                       1                                             30
+
+         terminal 1           40
+
+         index area                                         31
+
+                                               Dh                                                                     X
+
+                                                   0                 2.5                5 mm
+
+DIMENSIONS (mm are the original dimensions)                         scale
+
+UNIT  A(1)    A1           b      c D(1) Dh E(1) Eh             e          e1 e2 L            v        w  y y1
+      max.
+
+mm    1       0.05 0.30           0.2     6.1  4.25 6.1  4.25   0.5       4.5      4.5  0.5   0.1      0.05 0.05 0.1
+              0.00 0.18                   5.9  3.95 5.9  3.95                           0.3
+
+Note
+1. Plastic or metal protrusions of 0.075 mm maximum per side are not included.
+
+    OUTLINE                                           REFERENCES                                           EUROPEAN         ISSUE DATE
+                                                                                                          PROJECTION
+VERSION                           IEC             JEDEC             JEITA                                                      01-08-08
+                                                                                                                               02-10-22
+    SOT618-1                      ---          MO-220                ---
+
+Fig 11. Package outline HVQFN40 (SOT618-1)
+
+9397 750 XXXXX                                           Rev. 1.2 -- 31 March 2011                        © Koninklijke Philips Electronics N.V. 2006. All rights reserved.
+
+Short form data sheet                                                                                                                             21 of 25
+Philips Semiconductors                                                          PN532/C1
+
+                                                                                      NFC controller
+
+16. Abbreviations
+
+                       Table 18: Abbreviations
+
+                       Acronym      Description
+
+                       ASK          Amplitude Shift keying
+
+                       PCD          Proximity Coupling Device. Definition for a Card Reader/ Writer according to the
+                                    ISO 14443 Specification
+
+                       PICC         Proximity Cards. Definition for a contactless Smart Card according to the
+                                    ISO14443 specification
+
+                       PCD -> PICC  Communication flow between a PCD and a PICC according to the ISO14443A/
+                                    MIFARE®
+
+                       PICC -> PCD  Communication flow between a PICC and a PCD according to the ISO14443A/
+                                    MIFARE®
+
+                       Initiator    Generates RF field @ 13.56 MHZ and starts the NFCIP-1 communication.
+
+                       Modulation Index The modulation index is defined as the voltage ratio (Vmax - Vmin) / (Vmax +
+                                                Vmin).
+
+                       Loadmodulation The load modulation index is defined as the card's voltage ratio (Vmax - Vmin) /
+
+                       Index        (Vmax + Vmin) measured at the card's coil.
+
+                       Target       Responds to initiator command either using load modulation scheme (RF field
+                                    generated by Initiator) or using modulation of self generated RF field (no RF
+                                    field generated by initiator).
+
+9397 750 XXXXX                      Rev. 1.2 -- 31 March 2011                   © Koninklijke Philips Electronics N.V. 2006. All rights reserved.
+
+Short form data sheet                                                                                                   22 of 25
+Philips Semiconductors                                                                          PN532/C1
+
+                                                                                                      NFC controller
+
+17. Revision history
+
+Table 19: Revision history
+
+Document ID            Release date  Data sheet status      Change notice Doc. number           Supersedes
+                                     short form data sheet                           Draft 1.2  Initial version
+                       2006.01.08
+
+9397 750 XXXXX                       Rev. 1.2 -- 31 March 2011  © Koninklijke Philips Electronics N.V. 2006. All rights reserved.
+
+Short form data sheet                                                                                   23 of 25
+Philips Semiconductors                                                          PN532/C1
+
+                                                                                      NFC controller
+
+18. Data sheet status
+
+Level Data sheet status [1]  Product status [2] [3]  Definition
+                             Development
+I    Objective data          Qualification           This data sheet contains data from the objective specification for product development. Philips
+                                                     Semiconductors reserves the right to change the specification in any manner without notice.
+II   Preliminary data        Production
+                                                     This data sheet contains data from the preliminary specification. Supplementary data will be published
+III  Product data                                    at a later date. Philips Semiconductors reserves the right to change the specification without notice, in
+                                                     order to improve the design and supply the best possible product.
+
+                                                     This data sheet contains data from the product specification. Philips Semiconductors reserves the
+                                                     right to make changes at any time in order to improve the design, manufacturing and supply. Relevant
+                                                     changes will be communicated via a Customer Product/Process Change Notification (CPCN).
+
+[1] Please consult the most recently issued data sheet before initiating or completing a design.
+
+[2] The product status of the device(s) described in this data sheet may have changed since this data sheet was published. The latest information is available on the Internet at
+        URL http://www.semiconductors.philips.com.
+
+[3] For data sheets describing multiple type numbers, the highest-level product status determines the data sheet status.
+
+19. Definitions                                                                 Change Notification (CPCN). Philips Semiconductors assumes no
+                                                                                responsibility or liability for the use of any of these products, conveys no
+Short-form specification -- The data in a short-form specification is           license or title under any patent, copyright, or mask work right to these
+extracted from a full data sheet with the same type number and title. For       products, and makes no representations or warranties that these products are
+detailed information see the relevant data sheet or data handbook.              free from patent, copyright, or mask work right infringement, unless otherwise
+                                                                                specified.
+Limiting values definition -- Limiting values given are in accordance with
+the Absolute Maximum Rating System (IEC 60134). Stress above one or             21. Licenses
+more of the limiting values may cause permanent damage to the device.
+These are stress ratings only and operation of the device at these or at any    Purchase of Philips I2C-bus components
+other conditions above those given in the Characteristics sections of the                                   Purchase of Philips I2C-bus components conveys a
+specification is not implied. Exposure to limiting values for extended periods                              license under the Philips' I2C-bus patent to use the
+may affect device reliability.                                                                              components in the I2C-bus system provided the system
+                                                                                                            conforms to the I2C-bus specification defined by
+Application information -- Applications that are described herein for any                                   Koninklijke Philips Electronics N.V. This specification
+of these products are for illustrative purposes only. Philips Semiconductors                                can be ordered using the code 9398 393 40011.
+make no representation or warranty that such applications will be suitable for
+the specified use without further testing or modification.                      Purchase of Philips RC5 components
+                                                                                       Purchase of Philips RC5 components conveys a license under the
+20. Disclaimers                                                                        Philips RC5 patent to use the components in RC5 system products
+                                                                                       conforming to the RC5 standard UATM-5000 for allocation of remote
+Life support -- These products are not designed for use in life support                control commands defined by Koninklijke Philips Electronics N.V.
+appliances, devices, or systems where malfunction of these products can
+reasonably be expected to result in personal injury. Philips Semiconductors     Purchase of NXP ICs with NFC technology
+customers using or selling these products for use in such applications do so    Purchase of an NXP Semiconductors IC that complies with one of the Near
+at their own risk and agree to fully indemnify Philips Semiconductors for any   Field Communication (NFC) standards ISO/IEC 18092 and ISO/IEC 21481
+damages resulting from such application.                                        does not convey an implied license under any patent right infringed by
+                                                                                implementation of any of those standards. A license for the patents portfolio
+Right to make changes -- Philips Semiconductors reserves the right to           of NXP B.V. for the NFC standards needs to be obtained at Via Licensing,
+make changes in the products - including circuits, standard cells, and/or       the pool agent of the NFC Patent Pool, e-mail: info@vialicensing.com.
+software - described or contained herein in order to improve design and/or
+performance. When the product is in full production (status `Production'),
+relevant changes will be communicated via a Customer Product/Process
+
+22. Contact information
+
+For additional information, please visit: http://www.semiconductors.philips.com
+For sales office addresses, send an email to: sales.addresses@www.semiconductors.philips.com
+
+9397 750 XXXXX                                       Rev. 1.2 -- 31 March 2011  © Koninklijke Philips Electronics N.V. 2006. All rights reserved.
+
+Short form data sheet                                                                                                   24 of 25
+Philips Semiconductors                                                           PN532/C1
+
+                                                                                       NFC controller
+
+23. Contents
+
+1      Introduction . . . . . . . . . . . . . . . . . . . . . . . . . . . . 1
+2      General description . . . . . . . . . . . . . . . . . . . . . . 1
+3      Features . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 2
+4      Applications . . . . . . . . . . . . . . . . . . . . . . . . . . . . 3
+5      Quick reference data . . . . . . . . . . . . . . . . . . . . . 3
+6      Ordering information . . . . . . . . . . . . . . . . . . . . . 4
+7      Block diagram . . . . . . . . . . . . . . . . . . . . . . . . . . 5
+8      Pinning information . . . . . . . . . . . . . . . . . . . . . . 6
+8.1
+9        Pin description . . . . . . . . . . . . . . . . . . . . . . . . . 6
+9.1    Functional description . . . . . . . . . . . . . . . . . . . 8
+9.1.1
+9.1.2    CONTACT LESS MODULE . . . . . . . . . . . . . . . 8
+9.1.3    Simplify block diagram . . . . . . . . . . . . . . . . . . . 9
+9.1.4    Feature list . . . . . . . . . . . . . . . . . . . . . . . . . . . . 9
+9.1.5    Operating Modes . . . . . . . . . . . . . . . . . . . . . . 10
+10       NFCIP-1 MODE . . . . . . . . . . . . . . . . . . . . . . . 13
+11       Card operation mode . . . . . . . . . . . . . . . . . . . 16
+12     Limiting values. . . . . . . . . . . . . . . . . . . . . . . . . 18
+13     Recommended operating conditions. . . . . . . 18
+14     Thermal characteristics. . . . . . . . . . . . . . . . . . 18
+15     Characteristics . . . . . . . . . . . . . . . . . . . . . . . . . 19
+16     Application information. . . . . . . . . . . . . . . . . . 20
+17     Package outline . . . . . . . . . . . . . . . . . . . . . . . . 21
+18     Abbreviations . . . . . . . . . . . . . . . . . . . . . . . . . . 22
+19     Revision history . . . . . . . . . . . . . . . . . . . . . . . . 23
+20     Data sheet status . . . . . . . . . . . . . . . . . . . . . . . 24
+21     Definitions . . . . . . . . . . . . . . . . . . . . . . . . . . . . 24
+22     Disclaimers. . . . . . . . . . . . . . . . . . . . . . . . . . . . 24
+       Licenses . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 24
+       Contact information . . . . . . . . . . . . . . . . . . . . 24
+
+9397 750 XXXXX          Rev. 1.2 -- 31 March 2011                                © Koninklijke Philips Electronics N.V. 2006. All rights reserved.
+
+Short form data sheet                                                                                                    25 of 25
+

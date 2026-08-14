@@ -299,9 +299,10 @@ static void verify_nonce(struct AuthInternal *restrict ctx)
     {
         return PROTO_FALSE; // not a nonce this server minted
     }
-    uint32_t age = protocore_millis() - issue; // unsigned: tolerant of the 32-bit millis wrap
-    *expired = (age > PROTOCORE_DIGEST_NONCE_LIFETIME_MS);
-    return PROTO_TRUE;
+    Clock.millis(Clock.internal);
+    uint32_t age = Clock.ms - issue; // unsigned: tolerant of the 32-bit millis wrap
+    ctx->ns->expired = (age > PROTOCORE_DIGEST_NONCE_LIFETIME_MS);
+    ctx->ns->ok = PROTO_TRUE;
 }
 
 static void challenge(struct AuthInternal *restrict ctx)
@@ -478,8 +479,11 @@ static proto_bool check_digest(uint8_t *work, uint8_t slot_id, HttpReq *req, con
     // The nonce must be one this server minted (authentic MAC). A stale (expired)
     // nonce is still authentic - we finish the credential check below and let the
     // caller reissue with stale=true rather than rejecting outright (RFC 7616 3.3).
-    proto_bool nonce_expired = PROTO_FALSE;
-    if (!verify_nonce(work, nonce, &nonce_expired))
+    s_auth.ns->work = work;
+    s_auth.ns->nonce_args.nonce = nonce;
+    verify_nonce(&s_auth);
+    const proto_bool nonce_expired = s_auth.ns->expired;
+    if (!s_auth.ns->ok)
     {
         return PROTO_FALSE;
     }

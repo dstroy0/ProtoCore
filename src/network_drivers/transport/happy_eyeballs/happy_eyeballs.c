@@ -18,7 +18,9 @@ static proto_bool eff_is_v6(const protocore_ip *ip)
 
 static int scope_rank(const protocore_ip *ip)
 {
-    switch (Ip.classify(ip))
+    Ip.args.ip = ip;
+    Ip.classify(Ip.internal);
+    switch (Ip.scope)
     {
     case PROTOCORE_IP_SCOPE_GLOBAL:
         return 5;

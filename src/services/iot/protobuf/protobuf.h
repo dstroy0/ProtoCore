@@ -3,22 +3,46 @@
 
 /**
  * @file protobuf.h
- * @brief Protocol Buffers wire codec (PROTOCORE_ENABLE_PROTOBUF) - zero-heap streaming writer
- *        + cursor reader over caller buffers, the same shape as the shipped CBOR /
- *        MessagePack codecs. This is the standalone Protobuf deliverable; gRPC (framed
- *        Protobuf over HTTP/2) is gated on the HTTP/2 roadmap item.
+ * @brief The Protocol Buffers wire format (PROTOCORE_ENABLE_PROTOBUF): a streaming encoder and a
+ *        cursor decoder over caller buffers, zero heap.
  *
- * Wire format (https://protobuf.dev/programming-guides/encoding/):
- *  - A field is a tag varint `(field_number << 3) | wire_type` then the value.
- *  - Varints are little-endian base-128 with the high bit as a continuation flag.
- *  - Wire types: 0 VARINT (int/uint/sint/bool/enum), 1 I64 (fixed64/double, 8 bytes LE),
- *    2 LEN (string/bytes/embedded message), 5 I32 (fixed32/float, 4 bytes LE). Groups
- *    (3/4) are deprecated and rejected by the reader.
- *  - sint32/sint64 use ZigZag: `(n << 1) ^ (n >> 31|63)`.
+ * The governing specification is Google's Protocol Buffers "Encoding" document
+ * (https://protobuf.dev/programming-guides/encoding/). It is not an IETF document and no RFC
+ * number applies to it. Every normative term below is that document's.
  *
- * The writer encodes one field at a time into a caller buffer (fail-closed on overflow);
- * embedded messages are built into a separate buffer and added with @ref protocore_pb_bytes. The
- * reader is a cursor: it decodes the field at the buffer head and reports bytes consumed.
+ * "Message Structure": a message is a sequence of records, and each record is "the field number, a
+ * wire type and a payload". The tag "is encoded as a varint formed from the field number and the
+ * wire type via the formula `(field_number << 3) | wire_type`".
+ *
+ * "Base 128 Varints": "Each byte in the varint has a continuation bit that indicates if the byte
+ * that follows it is part of the varint. This is the most significant bit (MSB) of the byte." The
+ * lower seven bits are payload, appended in little-endian order, and an unsigned 64-bit value takes
+ * "anywhere between one and ten bytes".
+ *
+ * The wire types, from the same document's table:
+ *
+ *     ID  Name    Used For
+ *     0   VARINT  int32, int64, uint32, uint64, sint32, sint64, bool, enum
+ *     1   I64     fixed64, sfixed64, double
+ *     2   LEN     string, bytes, embedded messages, packed repeated fields
+ *     3   SGROUP  group start (deprecated)
+ *     4   EGROUP  group end (deprecated)
+ *     5   I32     fixed32, sfixed32, float
+ *
+ * "Length-Delimited Records": "The LEN wire type has a dynamic length, specified by a varint
+ * immediately after the tag, which is followed by the payload as usual."
+ *
+ * "Groups": "Groups are a deprecated feature that should not be used." SGROUP and EGROUP records
+ * are rejected by the decoder here, as are the two IDs the table does not name.
+ *
+ * sint32 and sint64 carry ZigZag: `(n << 1) ^ (n >> 31)` and `(n << 1) ^ (n >> 63)`.
+ *
+ * An encoder row appends one record at a time into a caller buffer and fails closed on overflow;
+ * an embedded message is encoded into a second row's buffer and added with @ref ProtobufNs::write_bytes.
+ * A decoder row is a cursor: it decodes the record at its own offset and reports where that offset
+ * landed. Rows nest, which is what an embedded message needs, so @ref ProtobufNs::slot names one.
+ *
+ * The module exports one symbol, @ref Protobuf. Everything in protobuf.c has internal linkage.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -33,71 +57,158 @@ PROTOCORE_BEGIN_DECLS
 
 #if PROTOCORE_NEED_PROTOBUF
 
-// Wire types.
-#define PB_WT_VARINT 0
-#define PB_WT_I64 1
-#define PB_WT_LEN 2
-#define PB_WT_I32 5
+// Wire type IDs, from the "Encoding" document's wire type table.
+#define PROTOCORE_PROTOBUF_WT_VARINT 0 ///< int32, int64, uint32, uint64, sint32, sint64, bool, enum
+#define PROTOCORE_PROTOBUF_WT_I64 1    ///< fixed64, sfixed64, double
+#define PROTOCORE_PROTOBUF_WT_LEN 2    ///< string, bytes, embedded messages, packed repeated fields
+#define PROTOCORE_PROTOBUF_WT_SGROUP 3 ///< group start, deprecated, rejected by a decode
+#define PROTOCORE_PROTOBUF_WT_EGROUP 4 ///< group end, deprecated, rejected by a decode
+#define PROTOCORE_PROTOBUF_WT_I32 5    ///< fixed32, sfixed32, float
 
-// ---- writer ----
+/** @brief One varint holds at most ten octets, the width an unsigned 64-bit value reaches. */
+#define PROTOCORE_PROTOBUF_VARINT_MAX 10
 
-/** @brief Streaming encoder over a caller buffer. Treat the fields as opaque. */
+#ifndef PROTOCORE_PROTOBUF_SLOTS
+/** @brief Encoder rows and decoder rows, each. An embedded message holds a second row open. */
+#define PROTOCORE_PROTOBUF_SLOTS 4
+#endif
+
+/** @brief The caller buffer one encoder row appends into. */
 typedef struct
 {
-    uint8_t *buf;
-    size_t cap;
-    size_t pos;
-    proto_bool error; ///< sticky overflow flag
-} PbWriter;
+    uint8_t *buf; ///< the octets an encode writes over
+    size_t cap;   ///< how many of them there are
+} ProtobufWriterArgs;
 
-void protocore_pb_writer_init(PbWriter *w, uint8_t *buf, size_t cap);
-
-/** @brief Write a raw varint (no tag). */
-proto_bool protocore_pb_write_varint(PbWriter *w, uint64_t v);
-
-/** @brief Write a field tag `(field << 3) | wire_type`. */
-proto_bool protocore_pb_write_tag(PbWriter *w, uint32_t field, uint8_t wire_type);
-
-proto_bool protocore_pb_uint64(PbWriter *w, uint32_t field, uint64_t v); ///< varint (uint32/uint64/enum)
-proto_bool protocore_pb_int64(PbWriter *w, uint32_t field, int64_t v);   ///< varint, two's complement (int32/int64)
-proto_bool protocore_pb_sint64(PbWriter *w, uint32_t field, int64_t v);  ///< ZigZag varint (sint32/sint64)
-proto_bool protocore_pb_bool(PbWriter *w, uint32_t field, proto_bool v);
-proto_bool protocore_pb_fixed32(PbWriter *w, uint32_t field, uint32_t v); ///< wire type 5
-proto_bool protocore_pb_fixed64(PbWriter *w, uint32_t field, uint64_t v); ///< wire type 1
-proto_bool protocore_pb_float(PbWriter *w, uint32_t field, float v);
-proto_bool protocore_pb_double(PbWriter *w, uint32_t field, double v);
-proto_bool protocore_pb_bytes(PbWriter *w, uint32_t field, const uint8_t *data, size_t len); ///< wire type 2
-proto_bool protocore_pb_string(PbWriter *w, uint32_t field, const char *s);
-
-/** @brief Finish: returns the encoded byte count, or 0 if any write overflowed. */
-size_t protocore_pb_writer_finish(PbWriter *w);
-
-// ---- reader ----
-
-/** @brief One decoded field. For LEN, @ref data / @ref len point INTO the source buffer. */
+/** @brief The tag an encode stamps: `(field_number << 3) | wire_type`. */
 typedef struct
 {
-    uint32_t field_number;
-    uint8_t wire_type;
-    uint64_t value;      ///< VARINT value, or the raw LE bits for I32 / I64
-    const uint8_t *data; ///< LEN payload (not copied)
-    size_t len;          ///< LEN length
-} PbField;
+    uint32_t field_number; ///< the record's field number, the tag's high bits
+    uint8_t wire_type;     ///< the record's wire type, the tag's low three bits
+} ProtobufTagArgs;
 
-/** @brief Read a raw varint at [buf+*pos]; advances *pos. False on truncation / overlong (>10 bytes). */
-proto_bool protocore_pb_read_varint(const uint8_t *buf, size_t len, size_t *pos, uint64_t *out);
+/** @brief The payload a record carries, one member per wire type the encoders and decoders take. */
+typedef struct
+{
+    uint64_t u64;        ///< VARINT payload, I64 bits, or the ZigZag source a decode converts
+    int64_t i64;         ///< signed VARINT payload: two's complement for int64, the ZigZag source for sint64
+    uint32_t u32;        ///< I32 bits: a fixed32 payload, or the bits a decode converts
+    float f32;           ///< float payload, encoded as I32
+    double f64;          ///< double payload, encoded as I64
+    proto_bool flag;     ///< bool payload, encoded as the VARINT 0 or 1
+    const uint8_t *data; ///< LEN payload octets
+    size_t len;          ///< how many of them there are
+    const char *text;    ///< NUL-terminated LEN payload, bounded by the row's capacity
+} ProtobufValueArgs;
+
+/** @brief The encoded octets one decoder row walks. */
+typedef struct
+{
+    const uint8_t *buf; ///< the message octets
+    size_t len;         ///< how many are buffered
+    size_t pos;         ///< the offset an open seats the cursor at, clamped to @c len
+} ProtobufSourceArgs;
+
+/** @brief One decoded record. For LEN, @c data points INTO the source octets and nothing is copied. */
+typedef struct
+{
+    uint32_t field_number; ///< the tag's high bits
+    uint8_t wire_type;     ///< the tag's low three bits
+    uint64_t value;        ///< the VARINT payload, or the raw little-endian bits of an I32 / I64 payload
+    const uint8_t *data;   ///< the LEN payload
+    size_t len;            ///< the length prefix that preceded it
+} ProtobufRecord;
+
+/** @brief The codec's own rows and the calls that reach them, described only in protobuf.c. */
+struct ProtobufInternal;
 
 /**
- * @brief Read one field at [buf+*pos]; advances *pos past it.
- * @return true on a complete field; false at end-of-buffer or on a malformed / group field.
+ * @brief The Protocol Buffers wire format: the record encoder and the record decoder.
+ *
+ * A caller sets the members a call takes, invokes it through ::Protobuf, and reads the outcome off
+ * the same handle.
+ *
+ * @var ProtobufNs::slot          the row a call acts on; a @c write_ names an encoder row, a @c read_ a decoder row
+ * @var ProtobufNs::writer        the caller buffer an encoder row appends into
+ * @var ProtobufNs::tag           the field number and wire type a tag carries
+ * @var ProtobufNs::value         the payload one record carries
+ * @var ProtobufNs::source        the encoded octets a decoder row walks
+ * @var ProtobufNs::ok            a call's true/false outcome
+ * @var ProtobufNs::n             the encoded octet count a finish reports, or the offset a decode left its cursor at
+ * @var ProtobufNs::u64           the varint a read decoded
+ * @var ProtobufNs::i64           the sint64 a ZigZag decode produced
+ * @var ProtobufNs::i32           the sint32 a ZigZag decode produced
+ * @var ProtobufNs::f32           the float an I32 bit pattern names
+ * @var ProtobufNs::f64           the double an I64 bit pattern names
+ * @var ProtobufNs::record        the record a read decoded
+ * @var ProtobufNs::writer_open   seat an encoder row on @c writer and empty it
+ * @var ProtobufNs::write_varint  append @c value.u64 as a Base 128 varint, no tag
+ * @var ProtobufNs::write_tag     append the tag `(tag.field_number << 3) | tag.wire_type`
+ * @var ProtobufNs::write_uint64  append a VARINT record carrying @c value.u64
+ * @var ProtobufNs::write_int64   append a VARINT record carrying @c value.i64 in two's complement
+ * @var ProtobufNs::write_sint64  append a VARINT record carrying @c value.i64 in ZigZag
+ * @var ProtobufNs::write_bool    append a VARINT record carrying @c value.flag as 0 or 1
+ * @var ProtobufNs::write_fixed32 append an I32 record carrying @c value.u32
+ * @var ProtobufNs::write_fixed64 append an I64 record carrying @c value.u64
+ * @var ProtobufNs::write_float   append an I32 record carrying the bits of @c value.f32
+ * @var ProtobufNs::write_double  append an I64 record carrying the bits of @c value.f64
+ * @var ProtobufNs::write_bytes   append a LEN record carrying @c value.data for @c value.len
+ * @var ProtobufNs::write_string  append a LEN record carrying @c value.text up to its NUL
+ * @var ProtobufNs::writer_finish report the encoded octet count in @c n, or 0 if any append overflowed
+ * @var ProtobufNs::reader_open   seat a decoder row on @c source at @c source.pos
+ * @var ProtobufNs::read_varint   decode the Base 128 varint at the cursor into @c u64 and advance it
+ * @var ProtobufNs::read_record   decode the record at the cursor into @c record and advance past it
+ * @var ProtobufNs::zigzag64      convert the ZigZag varint @c value.u64 to the sint64 @c i64
+ * @var ProtobufNs::zigzag32      convert the ZigZag varint @c value.u32 to the sint32 @c i32
+ * @var ProtobufNs::float_bits    convert the I32 bit pattern @c value.u32 to the float @c f32
+ * @var ProtobufNs::double_bits   convert the I64 bit pattern @c value.u64 to the double @c f64
+ * @var ProtobufNs::internal      the codec's rows and the calls that reach them
  */
-proto_bool protocore_pb_read_field(const uint8_t *buf, size_t len, size_t *pos, PbField *out);
+typedef struct
+{
+    uint8_t slot; ///< the encoder or decoder row every call names
 
-// Value decoders.
-int64_t protocore_pb_zigzag64(uint64_t v);
-int32_t protocore_pb_zigzag32(uint32_t v);
-float protocore_pb_float_bits(uint32_t bits);
-double protocore_pb_double_bits(uint64_t bits);
+    ProtobufWriterArgs writer; ///< where an encode lands
+    ProtobufTagArgs tag;       ///< what a tag says
+    ProtobufValueArgs value;   ///< what a payload carries
+    ProtobufSourceArgs source; ///< what a decode walks
+
+    proto_bool ok;
+    size_t n;
+    uint64_t u64;
+    int64_t i64;
+    int32_t i32;
+    float f32;
+    double f64;
+    ProtobufRecord record;
+
+    void (*writer_open)(struct ProtobufInternal *ctx);
+    void (*write_varint)(struct ProtobufInternal *ctx);
+    void (*write_tag)(struct ProtobufInternal *ctx);
+    void (*write_uint64)(struct ProtobufInternal *ctx);
+    void (*write_int64)(struct ProtobufInternal *ctx);
+    void (*write_sint64)(struct ProtobufInternal *ctx);
+    void (*write_bool)(struct ProtobufInternal *ctx);
+    void (*write_fixed32)(struct ProtobufInternal *ctx);
+    void (*write_fixed64)(struct ProtobufInternal *ctx);
+    void (*write_float)(struct ProtobufInternal *ctx);
+    void (*write_double)(struct ProtobufInternal *ctx);
+    void (*write_bytes)(struct ProtobufInternal *ctx);
+    void (*write_string)(struct ProtobufInternal *ctx);
+    void (*writer_finish)(struct ProtobufInternal *ctx);
+    void (*reader_open)(struct ProtobufInternal *ctx);
+    void (*read_varint)(struct ProtobufInternal *ctx);
+    void (*read_record)(struct ProtobufInternal *ctx);
+    void (*zigzag64)(struct ProtobufInternal *ctx);
+    void (*zigzag32)(struct ProtobufInternal *ctx);
+    void (*float_bits)(struct ProtobufInternal *ctx);
+    void (*double_bits)(struct ProtobufInternal *ctx);
+
+    struct ProtobufInternal *internal;
+} ProtobufNs;
+
+/** @brief The one symbol this module exports. */
+extern ProtobufNs Protobuf;
 
 #endif // PROTOCORE_NEED_PROTOBUF
 

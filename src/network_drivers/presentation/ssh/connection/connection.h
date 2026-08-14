@@ -233,20 +233,22 @@ typedef int (*SshRemoteForwardCancelCb)(uint8_t slot, const char *bind_addr, siz
 typedef void (*SshForwardConfirmCb)(uint8_t slot, uint32_t channel, proto_bool ok);
 /** @brief Install the forwarded-tcpip open-confirmation callback (opt-in, ssh -R). */
 
-#if PROTOCORE_ENABLE_SSH_SFTP
 /** @brief A `subsystem "sftp"` request was accepted on @p channel; the binding starts an SFTP session. */
 typedef void (*SshSftpOpenCb)(uint8_t slot, uint32_t channel);
 /** @brief Inbound bytes on an SFTP channel (the raw SSH_FXP_* stream) - kept out of the session data cb. */
 typedef void (*SshSftpDataCb)(uint8_t slot, uint32_t channel, const uint8_t *data, size_t len);
+
+#if PROTOCORE_ENABLE_SSH_SFTP
 /** @brief The registered sftp-open callback, or null; fired when sec 6.5 names the subsystem. */
 SshSftpOpenCb protocore_ssh_channel_sftp_open_cb(void);
 #endif
 
-#if PROTOCORE_ENABLE_SSH_SCP
 /** @brief An `exec "scp …"` request was accepted on @p channel (@p cmd is @p cmd_len bytes, not NUL-terminated). */
 typedef void (*SshScpOpenCb)(uint8_t slot, uint32_t channel, const char *cmd, size_t cmd_len);
 /** @brief Inbound bytes on an SCP channel (the RCP protocol stream). */
 typedef void (*SshScpDataCb)(uint8_t slot, uint32_t channel, const uint8_t *data, size_t len);
+
+#if PROTOCORE_ENABLE_SSH_SCP
 /** @brief The registered scp-open callback, or null; fired when sec 6.5 names an scp command. */
 SshScpOpenCb protocore_ssh_channel_scp_open_cb(void);
 #endif
@@ -514,8 +516,6 @@ typedef void (*SshWindowChangeCb)(uint8_t i, uint32_t channel, uint32_t width_ch
 // RFC 4254 sec 7 - TCP/IP port forwarding
 // ---------------------------------------------------------------------------
 
-#if PROTOCORE_SSH_PORT_FORWARD
-
 /**
  * @brief Allow/deny policy for a forward target. Return true to permit the connect.
  *
@@ -524,6 +524,8 @@ typedef void (*SshWindowChangeCb)(uint8_t i, uint32_t channel, uint32_t width_ch
  * restrict the reachable host:port set.
  */
 typedef proto_bool (*SshForwardPolicyCb)(const char *host, uint16_t port);
+
+#if PROTOCORE_SSH_PORT_FORWARD
 
 /** @brief Install the forward-target policy (optional; default permits all). */
 

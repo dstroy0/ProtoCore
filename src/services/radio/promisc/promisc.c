@@ -100,8 +100,8 @@ proto_bool wifi_frame_parse(const uint8_t *frame, uint16_t len, WifiFrameInfo *o
     return PROTO_TRUE;
 }
 
-// libpcap framing (protocore_pcap_global_header / protocore_pcap_record_header) is in
-// shared/pcap/pcap.h - shared with the other capture features.
+// libpcap framing (Pcap.global_header / Pcap.record_header) is in shared/pcap/pcap.h - shared with
+// the other capture features.
 
 // --- radio binding -----------------------------------------------------------------------
 #if PROTOCORE_HAS_VENDOR_WIFI

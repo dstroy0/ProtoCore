@@ -12,7 +12,6 @@
 #if PROTOCORE_ENABLE_HOTSWAP
 
 #include "server/clock/clock.h" // protocore_millis
-#include <stdio.h>
 
 // ---------------------------------------------------------------------------
 // Pure core

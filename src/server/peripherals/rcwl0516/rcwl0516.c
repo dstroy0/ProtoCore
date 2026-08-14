@@ -8,16 +8,16 @@
  * Three steps per sample: track how long the raw level has been steady, promote it to the believed
  * level once it outlasts the debounce, then extend presence for the hold past the last believed
  * HIGH. Every elapsed-time test is an unsigned difference (`now - stamp >= limit`), which is exactly
- * what makes it wrap-safe: at a protocore_millis() rollover the subtraction wraps with it and still yields the
+ * what makes it wrap-safe: at a Clock.ms rollover the subtraction wraps with it and still yields the
  * true elapsed interval.
  */
 
 #include "server/peripherals/rcwl0516/rcwl0516.h"
-#include "server/clock/clock.h" // protocore_millis()
+#include "server/clock/clock.h" // Clock.millis
 
 #if PROTOCORE_ENABLE_RCWL0516
 
-// Elapsed-time test, wrap-safe across a protocore_millis() rollover (unsigned arithmetic is modulo 2^32).
+// Elapsed-time test, wrap-safe across a Clock.ms rollover (unsigned arithmetic is modulo 2^32).
 // A limit of 0 is always satisfied, which is what disables debounce / hold.
 static inline proto_bool elapsed(uint32_t now, uint32_t since, uint32_t limit)
 {
@@ -120,7 +120,8 @@ proto_bool protocore_rcwl0516_begin(int out_pin)
     s_rcwl.pin = out_pin;
     protocore_platform_gpio_mode((uint8_t)(out_pin),
                                  PROTOCORE_GPIO_IN); // the module drives OUT actively; no pull needed
-    protocore_rcwl0516_core_init(&s_rcwl.core, (uint32_t)protocore_millis());
+    Clock.millis(Clock.internal);
+    protocore_rcwl0516_core_init(&s_rcwl.core, Clock.ms);
     return PROTO_TRUE;
 }
 
@@ -130,9 +131,9 @@ proto_bool protocore_rcwl0516_poll()
     {
         return PROTO_FALSE;
     }
+    Clock.millis(Clock.internal);
     protocore_presence_core_update(&s_rcwl.core,
-                                   protocore_platform_gpio_read((uint8_t)(s_rcwl.pin)) == PROTOCORE_GPIO_HIGH,
-                                   (uint32_t)protocore_millis());
+                                   protocore_platform_gpio_read((uint8_t)(s_rcwl.pin)) == PROTOCORE_GPIO_HIGH, Clock.ms);
     return protocore_presence_take_event(&s_rcwl.core);
 }
 

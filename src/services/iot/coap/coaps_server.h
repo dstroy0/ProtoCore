@@ -3,27 +3,27 @@
 
 /**
  * @file coaps_server.h
- * @brief CoAP-over-DTLS server front-end - binds a UDP port to a pool of DtlsConn + the CoAPs bridge.
+ * @brief The CoAP-over-DTLS server: a bound UDP port, a pool of DTLS connections, and the bridge.
  *
- * The socket / per-peer glue on top of protocore_coaps_process(): it owns a fixed pool of @ref DtlsConn
- * handshake engines, binds the CoAPs UDP port (5684, coaps://) through the transport layer (protocore_udp),
- * routes each inbound datagram to the connection for its peer address (a new peer opens a pool slot),
- * drives the DTLS 1.3 handshake and its retransmission timer, and hands established application records
- * to protocore_coap_server_process() through protocore_coaps_process(). CoAP resources are registered with the existing
- * protocore_coap_server_add_resource() API; this module only carries them over DTLS, so a plaintext CoAP server
- * (protocore_coap_server_begin on :5683) and this secured one can run side by side over the same resources.
+ * The socket half of @ref Coaps. It owns a fixed pool of DTLS 1.3 connections, binds the secured
+ * CoAP port (RFC 7252 sec 12.7 registers 5684 and the service name "coaps"; sec 6.2 gives it the
+ * "coaps" URI scheme), routes each inbound datagram to the connection for its peer, drives the
+ * handshake and its retransmission timer (RFC 9147 sec 5.8), and hands established application
+ * records to @ref Coaps. Resources are registered once through @ref Coap, so a plaintext server on
+ * 5683 and this secured one serve the same table.
  *
- * Threading (ESP32): protocore_udp delivers datagrams on the lwIP thread, but the handshake engines must run
- * on the server loop, so the UDP handler only copies each datagram into a lock-free ingest ring;
- * protocore_coaps_server_poll() (called from the loop) drains the ring, runs protocore_coaps_process(), fires the PTO
- * retransmission timer, and reaps idle or failed connections. The engines therefore only ever run in
- * one context. On host builds there is no UDP; datagrams are injected with protocore_coaps_server_ingest() and
- * replies captured through an output sink, so the whole server is host-testable by shuttling byte
- * buffers to an in-test DTLS client, exactly like protocore_dtls_conn and protocore_coaps_process themselves.
+ * The receive side and the connections run in different contexts: the transport delivers datagrams
+ * as they arrive, so the receive path only copies each into a single-producer ingest ring, and the
+ * poll drains that ring, runs the bridge, fires the retransmission timer, and reclaims connections
+ * that failed or went quiet. The handshake engines therefore only ever run where the poll runs.
+ * Where the build has no network stack there is no receive path: datagrams go in through @c ingest
+ * and replies come out through the sink, which is what makes the whole server host-testable by
+ * shuttling buffers to an in-test DTLS client.
  *
- * Constrained-friendly: unlike the HTTP/3 pool this is not PSRAM-gated - a small DtlsConn pool fits
- * internal DRAM, which is the whole point of CoAP. Raise PROTOCORE_COAPS_MAX_CONNS for more simultaneous
- * peers (each slot is one DtlsConn handshake engine plus its per-connection key material).
+ * Raise @ref PROTOCORE_COAPS_MAX_CONNS for more simultaneous peers; each slot is one handshake
+ * engine plus its per-connection key material.
+ *
+ * The module exports one symbol, @ref CoapsServer. Everything in coaps_server.c has internal linkage.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -39,77 +39,116 @@ PROTOCORE_BEGIN_DECLS
 #if PROTOCORE_ENABLE_DTLS && PROTOCORE_ENABLE_COAP
 
 #ifndef PROTOCORE_COAPS_MAX_CONNS
-#define PROTOCORE_COAPS_MAX_CONNS 2 ///< simultaneous CoAPs (DTLS) connections; each slot is one DtlsConn engine
+#define PROTOCORE_COAPS_MAX_CONNS 2 ///< simultaneous connections; each slot is one handshake engine
 #endif
 #ifndef PROTOCORE_COAPS_INGEST_RING
-#define PROTOCORE_COAPS_INGEST_RING                                                                                    \
-    6 ///< datagrams buffered from the lwIP thread until protocore_coaps_server_poll() drains them
+#define PROTOCORE_COAPS_INGEST_RING 6 ///< datagrams buffered from the receive path until a poll drains them
 #endif
 #ifndef PROTOCORE_COAPS_PORT
-#define PROTOCORE_COAPS_PORT 5684 ///< default UDP port the CoAPs server binds (coaps://, RFC 7252 §12.8)
+#define PROTOCORE_COAPS_PORT 5684 ///< the port a bind takes by default (RFC 7252 sec 12.7)
 #endif
 #ifndef PROTOCORE_COAPS_IDLE_MS
-#define PROTOCORE_COAPS_IDLE_MS 60000 ///< reclaim a connection with no inbound datagram for this long (§idle-reaping)
+#define PROTOCORE_COAPS_IDLE_MS 60000 ///< a connection with no inbound datagram for this long is reclaimed
 #endif
 
 /**
- * @brief The server's long-lived identity plus a randomness source for the DTLS 1.3 handshakes.
+ * @brief The server's long-lived identity and the randomness each handshake draws from.
  *
- * @c cert_der / @c ed25519_seed are the server's certificate and matching signing key. @c cookie_key
- * is the server-wide secret that keys the HelloRetryRequest cookie MAC (RFC 9147 §5.1). @c rng must be
- * a CSPRNG; the server calls it per handshake for the X25519 ephemeral private key and the ServerHello
- * random. The certificate bytes are referenced by pointer and must outlive the server; the seeds are
- * copied in.
+ * @c cert_der and @c ed25519_seed are the certificate and the signing key that matches it.
+ * @c cookie_key is the server-wide secret keying the HelloRetryRequest cookie's MAC (RFC 9147
+ * sec 5.1). @c rng must be a CSPRNG: it is called per handshake for the X25519 ephemeral private key
+ * and the ServerHello random. The certificate octets are referenced by pointer and must outlive the
+ * server; the seeds are copied into storage.
  */
 typedef struct
 {
-    const uint8_t *cert_der; ///< Ed25519 leaf certificate, DER (referenced by pointer, must outlive the server)
-    size_t cert_len;
-    uint8_t ed25519_seed[32];              ///< 32-byte Ed25519 signing seed (matches @c cert_der)
-    uint8_t cookie_key[32];                ///< 32-byte HelloRetryRequest cookie secret
-    void (*rng)(uint8_t *out, size_t len); ///< CSPRNG: per-handshake X25519 ephemeral + ServerHello random
-} CoapsServerConfig;
+    const uint8_t *cert_der;               ///< the leaf certificate, DER, referenced and not copied
+    size_t cert_len;                       ///< its length
+    uint8_t ed25519_seed[32];              ///< the signing seed that matches @c cert_der
+    uint8_t cookie_key[32];                ///< the HelloRetryRequest cookie secret (RFC 9147 sec 5.1)
+    void (*rng)(uint8_t *out, size_t len); ///< the CSPRNG each handshake draws its ephemeral and random from
+} CoapsServerIdentityArgs;
 
-/**
- * @brief Start the CoAPs server: install @p cfg, bind @p port over UDP, and route datagrams into the
- * DtlsConn pool. Register CoAP resources first with protocore_coap_server_add_resource().
- *
- * @param port UDP port to bind, or 0 for @ref PROTOCORE_COAPS_PORT (5684).
- * @return false if @p cfg is invalid, or (Arduino) the UDP bind fails; on host builds it always
- *         returns true and is driven through protocore_coaps_server_ingest() / the output sink.
- */
-proto_bool protocore_coaps_server_begin(uint16_t port, const CoapsServerConfig *cfg);
+/** @brief The UDP endpoint the server receives on (RFC 7252 sec 12.7: port 5684, service "coaps"). */
+typedef struct
+{
+    uint16_t port; ///< the port a begin binds, or 0 for @ref PROTOCORE_COAPS_PORT
+} CoapsServerBindArgs;
 
-/**
- * @brief Drive the server once: drain queued datagrams into their connections (running the handshake,
- * or decrypting a CoAP request and answering it), fire the DTLS retransmission timer for any
- * outstanding flight (RFC 9147 §5.8), and reap closed or idle (@ref PROTOCORE_COAPS_IDLE_MS) connections.
- * Call every loop iteration. The monotonic clock is @ref protocore_millis (no @c now_ms argument).
- */
-void protocore_coaps_server_poll();
-
-/** @brief Number of pool slots currently in use (open connections). For diagnostics / tests. */
-uint8_t protocore_coaps_server_active_conns();
-
-/** @brief Stop the server: close the UDP binding and release every pool slot. */
-void protocore_coaps_server_stop();
-
-// ---------------------------------------------------------------------------
-// Host / test seam (no UDP on host builds)
-// ---------------------------------------------------------------------------
 #if !PROTOCORE_HAS_NET_STACK
-/** @brief Sink invoked for every outbound datagram (host builds route sends here instead of UDP). */
+/** @brief Where an outbound datagram goes where the build has no network stack. */
 typedef void (*CoapsServerOutFn)(void *ctx, const uint8_t *datagram, size_t len, const char *ip, uint16_t port);
 
-/** @brief Register the outbound-datagram sink used on host builds. */
-void protocore_coaps_server_set_out_sink_cb(CoapsServerOutFn fn, void *ctx);
+/** @brief The outbound sink and the context it is handed back. */
+typedef struct
+{
+    CoapsServerOutFn fn; ///< what every outbound datagram is given to
+    void *ctx;           ///< the opaque context that sink is given back
+} CoapsServerSinkArgs;
+
+/** @brief One datagram injected in place of a receive, and the peer it is attributed to. */
+typedef struct
+{
+    const uint8_t *data; ///< the datagram's octets
+    size_t len;          ///< how many
+    const char *ip;      ///< the peer's address, as text
+    uint16_t port;       ///< its port
+} CoapsServerIngestArgs;
+#endif
+
+/** @brief The server's own state and the calls that reach it, described only in coaps_server.c. */
+struct CoapsServerInternal;
 
 /**
- * @brief Inject a received datagram from @p ip:@p port (the host-build stand-in for the UDP handler).
- * protocore_coaps_server_poll() then processes it exactly as a real datagram. @return false if the ring is full.
+ * @brief The CoAP-over-DTLS server.
+ *
+ * A caller sets the members a call takes, invokes it through ::CoapsServer, and reads the outcome off
+ * the same handle.
+ *
+ * No slot member: one server owns the pool, and a call that names an endpoint names it inside its own
+ * argument group rather than at the top.
+ *
+ * @var CoapsServerNs::identity  the certificate, keys and CSPRNG a begin installs
+ * @var CoapsServerNs::bind      the port a begin binds
+ * @var CoapsServerNs::sink      where an outbound datagram goes with no network stack
+ * @var CoapsServerNs::dgram     one datagram injected in place of a receive
+ * @var CoapsServerNs::ok        a call's true/false outcome
+ * @var CoapsServerNs::u8        the pool slots in use
+ * @var CoapsServerNs::begin         install @c identity, bind @c bind.port, and route its datagrams into the pool
+ * @var CoapsServerNs::poll          drain the ingest ring through the bridge, fire the retransmission timer
+ *                                   (RFC 9147 sec 5.8), and reclaim failed or quiet connections
+ * @var CoapsServerNs::active_conns  report the pool slots in use
+ * @var CoapsServerNs::stop          stop polling, release every slot, and empty the ingest ring
+ * @var CoapsServerNs::set_out_sink  install @c sink
+ * @var CoapsServerNs::ingest        queue @c dgram as though it had been received
+ * @var CoapsServerNs::internal      the server's state and the calls that reach it
  */
-proto_bool protocore_coaps_server_ingest(const uint8_t *datagram, size_t len, const char *ip, uint16_t port);
+typedef struct
+{
+    CoapsServerIdentityArgs identity; ///< what the handshakes are run with
+    CoapsServerBindArgs bind;         ///< what binding the receive port takes
+#if !PROTOCORE_HAS_NET_STACK
+    CoapsServerSinkArgs sink;    ///< where the replies go
+    CoapsServerIngestArgs dgram; ///< what an injected datagram carries
 #endif
+
+    proto_bool ok;
+    uint8_t u8;
+
+    void (*begin)(struct CoapsServerInternal *ctx);
+    void (*poll)(struct CoapsServerInternal *ctx);
+    void (*active_conns)(struct CoapsServerInternal *ctx);
+    void (*stop)(struct CoapsServerInternal *ctx);
+#if !PROTOCORE_HAS_NET_STACK
+    void (*set_out_sink)(struct CoapsServerInternal *ctx);
+    void (*ingest)(struct CoapsServerInternal *ctx);
+#endif
+
+    struct CoapsServerInternal *internal;
+} CoapsServerNs;
+
+/** @brief The one symbol this module exports. */
+extern CoapsServerNs CoapsServer;
 
 #endif // PROTOCORE_ENABLE_DTLS && PROTOCORE_ENABLE_COAP
 

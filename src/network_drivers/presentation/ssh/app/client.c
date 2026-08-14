@@ -63,6 +63,31 @@ static void pubkey(struct SshAppClientInternal *restrict ctx)
     protocore_ed25519_pubkey(work, pub, seed);
 }
 
+#else
+
+/** @brief The application face - what SshAppClientNs points at, with no client to ask about. */
+struct SshAppClientInternal
+{
+    SshAppClientNs *ns;
+};
+
+static struct SshAppClientInternal s_app = {.ns = &SshAppClient};
+
+static void state_get(struct SshAppClientInternal *restrict ctx)
+{
+    ctx->ns->state = PROTOCORE_SSH_CLIENT_IDLE;
+}
+
+static void up(struct SshAppClientInternal *restrict ctx)
+{
+    ctx->ns->ok = PROTO_FALSE;
+}
+
+static void pubkey(struct SshAppClientInternal *restrict ctx)
+{
+    mem.zero(ctx->ns->pub, 32);
+}
+
 #endif // PROTOCORE_ENABLE_SSH_CLIENT
 
 // Designated, so a member's position in the struct does not decide what it binds to.

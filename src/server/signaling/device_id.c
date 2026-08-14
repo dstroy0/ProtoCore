@@ -30,6 +30,15 @@ struct DeviceIdInternal
 
 static struct DeviceIdInternal s_devid = {.ns = &DeviceId};
 
+// The lowercase hex character for one nibble.
+static char hex_digit(uint8_t nibble)
+{
+    Hex.args.nibble = nibble;
+    Hex.args.upper = PROTO_FALSE;
+    Hex.digit(Hex.internal);
+    return Hex.ch;
+}
+
 static void devid_from_mac(struct DeviceIdInternal *restrict ctx)
 {
     const uint8_t *mac = ctx->ns->args.mac;
@@ -43,8 +52,8 @@ static void devid_from_mac(struct DeviceIdInternal *restrict ctx)
     }
     for (int i = 0; i < 6; i++)
     {
-        input[16 + i * 2] = (uint8_t)protocore_hex_digit((uint8_t)(mac[i] >> 4), PROTO_FALSE);
-        input[16 + i * 2 + 1] = (uint8_t)protocore_hex_digit((uint8_t)(mac[i] & 0x0F), PROTO_FALSE);
+        input[16 + i * 2] = (uint8_t)hex_digit((uint8_t)(mac[i] >> 4));
+        input[16 + i * 2 + 1] = (uint8_t)hex_digit((uint8_t)(mac[i] & 0x0F));
     }
 
     uint8_t h[PROTOCORE_SHA1_DIGEST_LEN];
@@ -64,8 +73,8 @@ static void devid_from_mac(struct DeviceIdInternal *restrict ctx)
         }
         for (int b = 0; b < groups[g]; b++)
         {
-            out[oi++] = protocore_hex_digit((uint8_t)(h[hi] >> 4), PROTO_FALSE);
-            out[oi++] = protocore_hex_digit((uint8_t)(h[hi] & 0x0F), PROTO_FALSE);
+            out[oi++] = hex_digit((uint8_t)(h[hi] >> 4));
+            out[oi++] = hex_digit((uint8_t)(h[hi] & 0x0F));
             hi++;
         }
     }

@@ -27,6 +27,7 @@
 #include "../evt.h"                                       // ConnState, TcpEvt, and the observability hook
 #include "core_setup/board_profiles/protocore_platform.h" // protocore_pcb, protocore_net_err: the types a call names
 #include "protocore_config.h"
+#include "shared/ip/ip.h" // protocore_ip: where a peer address is written
 
 PROTOCORE_BEGIN_DECLS
 

@@ -10,8 +10,9 @@
  *
  *     [SOH-or-other-control][data...][checksum]
  *
- * SNP frames the payload with an ASCII/binary control byte, a length, the data, and an arithmetic-sum
- * BCC (the low byte of the sum of every framed byte). This builds/validates that frame so a device can
+ * SNP frames the payload with an ASCII/binary control byte, a length, the data, and the Block Check
+ * Code of GE Fanuc GFK-0582D p. 7-62 (seed zero; per byte, XOR then rotate the accumulator left one
+ * bit). This builds/validates that frame so a device can
  * read/write registers on a Series 90 PLC; the RS-485 UART transport (and the SNP-X session setup) is
  * the remaining device step. Pure, zero heap, no stdlib, host-testable.
  */
@@ -33,7 +34,12 @@ PROTOCORE_BEGIN_DECLS
 #define SNP_SOH 0x01 ///< start of header (a request/response frame).
 #define SNP_EOT 0x04 ///< end of transmission.
 
-/** @brief Arithmetic-sum BCC: the low 8 bits of the sum of @p len bytes. */
+/**
+ * @brief Block Check Code over @p len bytes (GFK-0582D p. 7-62).
+ *
+ * Seeded at zero; each byte is exclusive-ORed into the accumulator, which is then rotated left one
+ * bit with the top bit wrapping into the bottom.
+ */
 uint8_t protocore_snp_bcc(const uint8_t *bytes, size_t len);
 
 /**

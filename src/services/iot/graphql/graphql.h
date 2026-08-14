@@ -3,29 +3,42 @@
 
 /**
  * @file graphql.h
- * @brief Zero-heap GraphQL query subset - parser + executor (PROTOCORE_ENABLE_GRAPHQL).
+ * @brief Zero-heap GraphQL executor over a query subset (PROTOCORE_ENABLE_GRAPHQL).
  *
- * A small, deterministic GraphQL *query* engine for a constrained device: it
- * parses a query document into a fixed AST node pool (no heap), then walks the
- * selection set emitting a `{"data":{...}}` response that mirrors exactly the
- * fields requested - the core GraphQL property (the client picks the shape).
+ * **The governing standard is not IETF.** GraphQL is specified by the GraphQL Foundation and
+ * published at spec.graphql.org, released by date. Every section cited in this module is the
+ * **October 2021** release. There is no RFC for GraphQL.
  *
- * **Schema-free model.** There is no separate schema: a field that carries a
- * sub-selection (`obj { a b }`) is an object - the engine recurses and emits the
- * nested object - and a field with no sub-selection is a leaf scalar, for which
- * the engine calls your single resolver. Arguments encountered along the path
- * (`sensor(id: 2) { value }`) are collected and handed to the leaf resolver, so a
- * resolver for `sensor.value` can read `id`. The app implements one function: "the
- * value of the scalar at this dotted path, given these args."
+ * The document source text is parsed into fixed pools (no heap) by the sec 2 grammar, the operation
+ * is executed by the sec 6 algorithms, and the result is serialized as the sec 7.1 response map in
+ * the sec 7.2.1 JSON form. The client picks the shape: sec 2.4 says an operation "selects the set of
+ * information it needs, and will receive exactly that information and nothing more".
  *
- * Supported: a single query operation (bare `{...}` or `query [Name] {...}`),
- * nested selection sets, field arguments (int / float / string / bool / null),
- * and insignificant commas. Out of scope (keeps it bounded + deterministic):
- * mutations, subscriptions, fragments, variables, directives, aliases, lists of
- * objects. Malformed input fails closed with `{"errors":[...]}`.
+ * **Schema-free model.** There is no type system (sec 3). A Field carrying a SelectionSet
+ * (`obj { a b }`, sec 2.5) is completed by executing that selection set; a Field with none is a
+ * scalar leaf, completed by calling the resolver (ResolveFieldValue, sec 6.4.2). Arguments met along
+ * the path (sec 2.6) stay in scope, so a resolver for `sensor.value` reads `id` from
+ * `sensor(id: 2) { value }`. The application implements one function: the value of the scalar at
+ * this dotted path, given the arguments in scope.
  *
- * Pure and host-tested. Bounds are compile-time (PROTOCORE_GQL_*); parsing and
- * execution allocate nothing.
+ * Supported: one operation, either the sec 2.3 query shorthand (`{...}`) or `query [Name] {...}`;
+ * nested selection sets (sec 2.4); field arguments (sec 2.6) taking Int, Float, String, Boolean and
+ * Null values (sec 2.9.1 to sec 2.9.5); comments (sec 2.1.4) and insignificant commas (sec 2.1.5).
+ * Out of scope: mutations and subscriptions (sec 2.3), fragments (sec 2.8), variables (sec 2.10),
+ * directives (sec 2.12), aliases (sec 2.7), list values (sec 2.9.7), input objects (sec 2.9.8),
+ * block strings and `\uXXXX` escapes (sec 2.9.4), and lists of objects (sec 3.11). Each parses as a
+ * request error.
+ *
+ * Two deviations from the released spec, both stated rather than hidden: Int is carried as a 64-bit
+ * value where sec 3.5.1 defines a signed 32-bit scalar, and a leaf that fails to resolve completes
+ * as null with no `errors` entry, where sec 7.1.2 says a field error should be listed.
+ *
+ * A malformed document raises a request error (sec 7.1.2): execution does not begin and the response
+ * map carries `errors` and no `data`.
+ *
+ * Bounds are compile-time (PROTOCORE_GQL_*); parsing and execution allocate nothing.
+ *
+ * The module exports one symbol, @ref GraphQL. Everything in graphql.c has internal linkage.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -40,68 +53,123 @@ PROTOCORE_BEGIN_DECLS
 
 #if PROTOCORE_ENABLE_GRAPHQL
 
-/** @brief Scalar value kinds a resolver can return. */
+/** @brief The scalar kinds a resolved leaf or an argument carries (GraphQL spec sec 3.5). */
 typedef enum PROTO_ENUM_PACKED
 {
-    PROTOCORE_GQL_NULL = 0,
-    PROTOCORE_GQL_INT,
-    PROTOCORE_GQL_FLOAT,
-    PROTOCORE_GQL_BOOL,
-    PROTOCORE_GQL_STR, ///< s points to a NUL-terminated string stable for the call.
+    PROTOCORE_GQL_NULL = 0, ///< the Null value (sec 2.9.5).
+    PROTOCORE_GQL_INT,      ///< Int (sec 3.5.1), read from @c i.
+    PROTOCORE_GQL_FLOAT,    ///< Float (sec 3.5.2), read from @c f.
+    PROTOCORE_GQL_BOOL,     ///< Boolean (sec 3.5.4), read from @c b.
+    PROTOCORE_GQL_STR,      ///< String (sec 3.5.3), read from @c s, NUL-terminated and stable for the call.
 } protocore_gql_type;
 
-/** @brief A scalar value (resolver output, or an argument). */
+/** @brief One scalar: a resolved field value, or an argument's Value (spec sec 2.9). */
 typedef struct
 {
-    protocore_gql_type type; ///< the value's type.
-    long long i;
-    double f;
-    proto_bool b;
-    const char *s;
+    protocore_gql_type type; ///< which member below holds the value.
+    long long i;             ///< the Int.
+    double f;                ///< the Float.
+    proto_bool b;            ///< the Boolean.
+    const char *s;           ///< the String.
 } protocore_gql_value;
 
-/** @brief Opaque view of the arguments in scope at a resolved field. */
+/** @brief The argument values in scope at a resolved field (spec sec 6.4.1 coercedValues). */
 struct protocore_gql_args;
 
-/** @brief Read an int argument @p name; false if absent / not an int. */
-proto_bool protocore_gql_arg_int(const struct protocore_gql_args *args, const char *name, long long *out);
-/** @brief Read a string argument @p name; false if absent / not a string. */
-proto_bool protocore_gql_arg_str(const struct protocore_gql_args *args, const char *name, const char **out);
-/** @brief Read a bool argument @p name; false if absent / not a bool. */
-proto_bool protocore_gql_arg_bool(const struct protocore_gql_args *args, const char *name, proto_bool *out);
-
 /**
- * @brief Resolve the scalar leaf at dotted @p path (e.g. "device.uptime").
+ * @brief ResolveFieldValue (spec sec 6.4.2): the scalar at dotted @p path, e.g. "device.uptime".
  *
- * Fill @p out with the value and return true; return false to emit JSON null.
- * @p args exposes every argument in scope along the path.
+ * Fills @p out and returns true, or returns false to complete the field as null (sec 6.4.3).
+ * @p args names the argument values in scope, read back through ::GraphQLNs::arg_int,
+ * ::GraphQLNs::arg_str and ::GraphQLNs::arg_bool.
  */
 typedef proto_bool (*protocore_gql_resolver_fn)(const char *path, const struct protocore_gql_args *args,
                                                 protocore_gql_value *out);
 
-/** @brief protocore_graphql_execute() result codes. */
+/** @brief What one execute reports. */
 typedef enum PROTO_ENUM_PACKED
 {
-    PROTOCORE_GQL_OK = 0,           ///< Executed; @p out holds `{"data":{...}}`.
-    PROTOCORE_GQL_ERR_PARSE = -1,   ///< Malformed query (syntax / unsupported construct).
-    PROTOCORE_GQL_ERR_LIMIT = -2,   ///< Exceeded a PROTOCORE_GQL_* bound (nodes/args/depth/name).
-    PROTOCORE_GQL_ERR_OVERFLOW = -3 ///< Response did not fit @p cap.
+    PROTOCORE_GQL_OK = 0,           ///< Executed; the response map holds `data` (spec sec 7.1.1).
+    PROTOCORE_GQL_ERR_PARSE = -1,   ///< Request error (sec 7.1.2): the document does not parse.
+    PROTOCORE_GQL_ERR_LIMIT = -2,   ///< Request error (sec 7.1.2): a PROTOCORE_GQL_* bound was exceeded.
+    PROTOCORE_GQL_ERR_OVERFLOW = -3 ///< The serialized response did not fit the buffer.
 } protocore_gql_result;
 
+/** @brief ExecuteRequest (spec sec 6.1): the document to run and the resolver its leaves call. */
+typedef struct
+{
+    const char *document;               ///< the ExecutableDocument source text (sec 2.2)
+    size_t len;                         ///< how many octets of it there are
+    protocore_gql_resolver_fn resolver; ///< ResolveFieldValue (sec 6.4.2); NULL completes every leaf as null
+} GraphQLRequestArgs;
+
+/** @brief Where the response map is serialized (spec sec 7.1, in the sec 7.2.1 JSON form). */
+typedef struct
+{
+    char *out;  ///< the buffer the response is written into
+    size_t cap; ///< how much room it has, the NUL included
+} GraphQLResponseArgs;
+
+/** @brief One Argument read by name out of the values in scope (spec sec 2.6). */
+typedef struct
+{
+    const struct protocore_gql_args *values; ///< the argument values a resolver was handed (sec 6.4.1)
+    const char *name;                        ///< the argument's Name, matched case-sensitively (sec 2.1.9)
+} GraphQLArgumentArgs;
+
+/** @brief The executor's own state and the calls that reach it, described only in graphql.c. */
+struct GraphQLInternal;
+
 /**
- * @brief Parse and execute a GraphQL query, writing the JSON response.
+ * @brief The GraphQL executor (GraphQL spec, October 2021 release; not an IETF standard).
  *
- * On success writes `{"data":{...}}`; on a parse/limit error writes
- * `{"errors":[{"message":"..."}]}` (and still returns the negative code) when it
- * fits, else nothing.
+ * A caller sets the members a call takes, invokes it through ::GraphQL, and reads the outcome off
+ * the same handle. A resolver running inside an execute sets @c argument and reads @c ok with
+ * @c i64, @c text or @c b.
  *
- * @param query,len  the query document.
- * @param resolver   leaf resolver (may be nullptr -> every leaf is null).
- * @param out,cap    response buffer and capacity.
- * @return ::PROTOCORE_GQL_OK or a negative ::protocore_gql_result.
+ * No slot member: one document executes at a time, so no call names a row.
+ *
+ * @var GraphQLNs::request   the document an execute runs and the resolver its leaves call (sec 6.1)
+ * @var GraphQLNs::response  where an execute serializes the response map (sec 7.1)
+ * @var GraphQLNs::argument  the argument an accessor reads, and the values it reads from (sec 2.6)
+ * @var GraphQLNs::ok        a call's true/false outcome: an execute succeeded, or an argument was
+ *                           present with the type the accessor asked for
+ * @var GraphQLNs::n         octets an execute wrote to @c response.out, excluding the NUL, 0 if
+ *                           nothing was emitted
+ * @var GraphQLNs::result    an execute's outcome code
+ * @var GraphQLNs::i64       the Int an arg_int read (sec 3.5.1), 0 when @c ok is false
+ * @var GraphQLNs::text      the String an arg_str read (sec 3.5.3), NULL when @c ok is false
+ * @var GraphQLNs::b         the Boolean an arg_bool read (sec 3.5.4), false when @c ok is false
+ * @var GraphQLNs::execute   parse @c request, execute its operation, and serialize the response map
+ *                           into @c response (sec 6.1)
+ * @var GraphQLNs::arg_int   read @c argument as an Int
+ * @var GraphQLNs::arg_str   read @c argument as a String
+ * @var GraphQLNs::arg_bool  read @c argument as a Boolean
+ * @var GraphQLNs::internal  the executor's state and the calls that reach it
  */
-protocore_gql_result protocore_graphql_execute(const char *query, size_t len, protocore_gql_resolver_fn resolver,
-                                               char *out, size_t cap);
+typedef struct
+{
+    GraphQLRequestArgs request;   ///< what an execute runs
+    GraphQLResponseArgs response; ///< where its response lands
+    GraphQLArgumentArgs argument; ///< what an accessor reads
+
+    proto_bool ok;
+    size_t n;
+    protocore_gql_result result;
+    long long i64;
+    const char *text;
+    proto_bool b;
+
+    void (*execute)(struct GraphQLInternal *ctx);
+    void (*arg_int)(struct GraphQLInternal *ctx);
+    void (*arg_str)(struct GraphQLInternal *ctx);
+    void (*arg_bool)(struct GraphQLInternal *ctx);
+
+    struct GraphQLInternal *internal;
+} GraphQLNs;
+
+/** @brief The one symbol this module exports. */
+extern GraphQLNs GraphQL;
 
 #endif // PROTOCORE_ENABLE_GRAPHQL
 

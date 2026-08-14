@@ -11,33 +11,6 @@
 
 #if PROTOCORE_ENABLE_OPENADR
 
-static void put_json_str(protocore_sb *b, const char *s)
-{
-    Sb.put(b, "\"");
-    for (const char *p = s ? s : ""; *p; p++)
-    {
-        if (*p == '"' || *p == '\\')
-        {
-            char esc[3] = {'\\', *p, '\0'};
-            Sb.put(b, esc);
-        }
-        else if (*p == '\n')
-        {
-            Sb.put(b, "\\n");
-        }
-        else
-        {
-            if (b->len + 1 >= b->cap)
-            {
-                b->ok = PROTO_FALSE;
-                return;
-            }
-            b->p[b->len++] = *p;
-        }
-    }
-    Sb.put(b, "\"");
-}
-
 static void put_u64(protocore_sb *b, uint64_t v)
 {
     char tmp[21];
@@ -84,9 +57,9 @@ size_t protocore_openadr_event(const char *program_id, const char *event_name, c
     }
     protocore_sb b = {out, cap, 0, cap > 0};
     Sb.put(&b, "{\"objectType\":\"EVENT\",\"programID\":");
-    put_json_str(&b, program_id);
+    Sb.json(&b, program_id);
     Sb.put(&b, ",\"eventName\":");
-    put_json_str(&b, event_name);
+    Sb.json(&b, event_name);
     Sb.put(&b, ",\"intervals\":[");
     for (size_t i = 0; i < count; i++)
     {
@@ -101,7 +74,7 @@ size_t protocore_openadr_event(const char *program_id, const char *event_name, c
         Sb.put(&b, ",\"duration\":");
         put_u64(&b, intervals[i].duration);
         Sb.put(&b, "},\"payloads\":[{\"type\":");
-        put_json_str(&b, intervals[i].type);
+        Sb.json(&b, intervals[i].type);
         Sb.put(&b, ",\"values\":[");
         put_double(&b, intervals[i].value);
         Sb.put(&b, "]}]}");
@@ -119,11 +92,11 @@ size_t protocore_openadr_report(const char *program_id, const char *event_id, co
     }
     protocore_sb b2 = {out, cap, 0, cap > 0};
     Sb.put(&b2, "{\"objectType\":\"REPORT\",\"programID\":");
-    put_json_str(&b2, program_id);
+    Sb.json(&b2, program_id);
     Sb.put(&b2, ",\"eventID\":");
-    put_json_str(&b2, event_id);
+    Sb.json(&b2, event_id);
     Sb.put(&b2, ",\"resources\":[{\"resourceName\":");
-    put_json_str(&b2, resource_name);
+    Sb.json(&b2, resource_name);
     Sb.put(&b2, ",\"intervals\":[{\"interval\":{\"start\":");
     put_u64(&b2, timestamp);
     Sb.put(&b2, "},\"payloads\":[{\"type\":\"READING\",\"values\":[");

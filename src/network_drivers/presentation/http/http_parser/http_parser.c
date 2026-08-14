@@ -347,12 +347,27 @@ void http_parser_feed(HttpReq *p, uint8_t byte)
         {
             uint8_t h = p->header_count;
 
-            // Terminate the scratch value so detection sees a clean C string.
+            // Terminate the scratch value so detection sees a clean C string. RFC 9112 §5.1:
+            // field-line = field-name ":" OWS field-value OWS, and the OWS after the last
+            // non-whitespace octet is excluded from the value. The leading OWS is dropped above.
             size_t vlen = p->current_token_idx < MAX_VAL_LEN ? p->current_token_idx : MAX_VAL_LEN - 1;
+            while (vlen > 0 && (p->cur_val[vlen - 1] == ' ' || p->cur_val[vlen - 1] == '\t'))
+            {
+                vlen--;
+            }
             p->cur_val[vlen] = '\0';
+            if (h < MAX_HEADERS)
+            {
+                p->headers[h].val[vlen] = '\0';
+            }
 #if PROTOCORE_CAPTURE_AUTH_HEADER
             if (p->cur_is_auth)
             {
+                while (p->auth_idx > 0 &&
+                       (p->authorization[p->auth_idx - 1] == ' ' || p->authorization[p->auth_idx - 1] == '\t'))
+                {
+                    p->auth_idx--;
+                }
                 p->authorization[p->auth_idx] = '\0';
                 p->cur_is_auth = PROTO_FALSE;
             }
@@ -716,11 +731,33 @@ static proto_bool fwd_extract_client(const char *s, size_t n, char *out, size_t 
     tok[tlen] = '\0';
 
     protocore_ip ip;
-    if (!Ip.parse(tok, &ip)) // rejects "unknown" / "_obf" / malformed
+    Ip.args.text = tok;
+    Ip.args.out = &ip;
+    Ip.parse(Ip.internal); // rejects "unknown" / "_obf" / malformed
+    if (!Ip.ok)
     {
         return PROTO_FALSE;
     }
-    return Ip.format(&ip, out, cap) > 0; // false if out is too small for the canonical text
+    Ip.args.ip = &ip;
+    Ip.args.buf = out;
+    Ip.args.cap = cap;
+    Ip.format(Ip.internal);
+    return Ip.n > 0; // false if out is too small for the canonical text
+}
+
+// First case-insensitive occurrence of @p needle in the NUL-terminated @p hay, or NULL. RFC 7239
+// §4: "The parameter names are case-insensitive", and its own examples spell one "For=".
+static const char *fwd_find_param(const char *hay, const char *needle)
+{
+    size_t n = strnlen(needle, MAX_VAL_LEN);
+    for (const char *p = hay; *p; p++)
+    {
+        if (strncasecmp(p, needle, n) == 0)
+        {
+            return p;
+        }
+    }
+    return NULL;
 }
 
 proto_bool http_forwarded_client(const HttpReq *req, char *ip_out, size_t ip_cap, proto_bool *is_https)
@@ -747,14 +784,14 @@ proto_bool http_forwarded_client(const HttpReq *req, char *ip_out, size_t ip_cap
         if (is_https)
         {
             // Only the first element's proto= matters, so this is a single check.
-            const char *hit = strstr(fwd, "proto=");
+            const char *hit = fwd_find_param(fwd, "proto=");
             if (hit && (size_t)(hit - fwd) < elen)
             {
                 *is_https = (strncasecmp(hit + 6, "https", 5) == 0);
             }
         }
         // for=
-        const char *f = strstr(fwd, "for=");
+        const char *f = fwd_find_param(fwd, "for=");
         if (f && (size_t)(f - fwd) < elen)
         {
             const char *fv = f + 4;

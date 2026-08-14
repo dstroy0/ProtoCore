@@ -34,24 +34,25 @@ int main(void)
                                   strlen(name), blocks, sizeof(blocks));
     uint8_t hdr[16];
     size_t hlen = protocore_pn_dcp_header(PN_FRAMEID_DCP_IDENT_RES, PN_DCP_SERVICE_IDENTIFY, PN_DCP_TYPE_RESPONSE_SUCCESS,
-                                   0x12345678u, (uint16_t)blen, hdr, sizeof(hdr));
+                                   0x12345678u, 0, (uint16_t)blen, hdr, sizeof(hdr));
 
     hbench_header();
 
-    // protocore_pn_dcp_header: build the 10-octet DCP header (frameID / service / xid / dataLength) - transmit op.
+    // protocore_pn_dcp_header: build the DCP header (frameID / service / xid / delay / dataLength) - transmit op.
     {
         uint8_t buf[16];
         volatile size_t sink = 0;
         double ns = 0.0;
         HBENCH_NS(5000000,
                   sink += protocore_pn_dcp_header(PN_FRAMEID_DCP_IDENT_RES, PN_DCP_SERVICE_IDENTIFY,
-                                           PN_DCP_TYPE_RESPONSE_SUCCESS, 0x12345678u, (uint16_t)blen, buf, sizeof(buf)),
+                                           PN_DCP_TYPE_RESPONSE_SUCCESS, 0x12345678u, 0, (uint16_t)blen, buf,
+                                           sizeof(buf)),
                   ns);
         hbench_row("profinet", "dcp_header (build)", ns, (double)hlen);
         (void)sink;
     }
 
-    // protocore_pn_dcp_parse_header: validate + decode the 10-octet header (receive op).
+    // protocore_pn_dcp_parse_header: validate + decode the header (receive op).
     {
         volatile size_t sink = 0;
         double ns = 0.0;

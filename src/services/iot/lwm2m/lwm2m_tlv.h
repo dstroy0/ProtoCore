@@ -2,23 +2,44 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file protocore_lwm2m_tlv.h
- * @brief OMA LwM2M TLV codec (PROTOCORE_ENABLE_LWM2M) - zero-heap writer + cursor reader for the
- *        `application/vnd.oma.lwm2m+tlv` resource encoding, carried over the shipped CoAP
- *        service for LwM2M device management.
+ * @file lwm2m_tlv.h
+ * @brief The OMA LightweightM2M TLV data format (PROTOCORE_ENABLE_LWM2M): a zero-heap writer and
+ *        reader for `application/vnd.oma.lwm2m+tlv`.
  *
- * Each TLV is `Type(1) Identifier(1-2) Length(0-3) Value(n)`:
- *  - Type bits 7-6: identifier kind - 00 Object Instance, 01 Resource Instance, 10 Multiple
- *    Resource, 11 Resource with Value.
- *  - Type bit 5: identifier width (0 = 8-bit, 1 = 16-bit).
- *  - Type bits 4-3: length kind - 00 inline in bits 2-0, 01 = 8-bit, 10 = 16-bit, 11 = 24-bit.
- *  - Type bits 2-0: the value length when the length kind is inline (0..7).
- *  Identifiers and lengths are big-endian. Resource values are big-endian: integers are the
- *  shortest of 1/2/4/8 octets (two's complement), booleans one octet, strings UTF-8.
+ * TLV is not an IETF format. It is specified by the Open Mobile Alliance in
+ * OMA-TS-LightweightM2M_Core-V1_2-20201110-A sec 7.4.5. The octets travel as a CoAP payload
+ * (RFC 7252), tagged by the Content-Format Option (RFC 7252 sec 5.10.3); LwM2M Core sec 7.4
+ * Table 7.4.-1 pairs the media type `application/vnd.oma.lwm2m+tlv` with the numeric
+ * Content-Format 11542.
  *
- * The writer emits TLVs into a caller buffer (fail-closed on overflow); the reader is a
- * cursor that decodes one TLV at the buffer head. Type-byte layout verified against the
- * OMA LwM2M spec.
+ * LwM2M Core sec 7.4.5 Table 7.4.5.-1 lays one entry out as
+ * `Type(1) Identifier(1-2) Length(0-3) Value(n)`:
+ *  - Type bits 7-6 indicate the type of Identifier: 00 Object Instance, whose Value holds one or
+ *    more Resource TLVs; 01 Resource Instance with Value, for use within a multiple Resource TLV;
+ *    10 multiple Resource, whose Value holds one or more Resource Instance TLVs; 11 Resource with
+ *    Value.
+ *  - Type bit 5 indicates the Length of the Identifier: 0 is 8 bits, 1 is 16 bits.
+ *  - Type bits 4-3 indicate the type of Length: 00 is no Length field and the Value is the length
+ *    bits 2-0 give, 01 an 8-bit Length field, 10 a 16-bit one, 11 a 24-bit one, and in those three
+ *    "Bits 2-0 MUST be ignored".
+ *  - Type bits 2-0 are a 3-bit unsigned integer holding the Length of the Value.
+ *  Identifier and Length are unsigned integers in network byte order, so the maximum Value is
+ *  16.7 MB.
+ *
+ * LwM2M Core Appendix C Table C.-2 gives the Value forms: Integer is a binary signed integer in
+ * network byte order and two's complement representation, 1, 2, 4 or 8 octets; Float is binary32
+ * or binary64, and this writer emits binary64; Boolean is an 8-bit unsigned integer 0 or 1 whose
+ * "Length of a Boolean value MUST always be 1 byte"; String is UTF-8 of Length octets; Opaque is
+ * Length octets as they stand.
+ *
+ * The writer emits entries into a caller buffer and fails closed: the first entry that does not fit
+ * poisons the cursor, so a finish reports 0 rather than a truncated payload. The reader is a cursor
+ * over a caller buffer that decodes the entry at its head and advances past it, pointing at the
+ * Value where it lies rather than copying it.
+ *
+ * No slot member: the module keeps one writer cursor and one reader cursor, so no call names a row.
+ *
+ * The module exports one symbol, @ref Lwm2mTlv. Everything in lwm2m_tlv.c has internal linkage.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -33,66 +54,108 @@ PROTOCORE_BEGIN_DECLS
 
 #if PROTOCORE_ENABLE_LWM2M
 
-// Identifier kinds (Type byte bits 7-6).
-#define LWM2M_TLV_OBJECT_INSTANCE 0x00
-#define LWM2M_TLV_RESOURCE_INSTANCE 0x40
-#define LWM2M_TLV_MULTIPLE_RESOURCE 0x80
-#define LWM2M_TLV_RESOURCE 0xC0
+// Type byte bit-fields (LwM2M Core sec 7.4.5 Table 7.4.5.-1).
+#define LWM2M_TLV_IDTYPE_MASK 0xC0     ///< bits 7-6: the type of Identifier
+#define LWM2M_TLV_ID16_FLAG 0x20       ///< bit 5: the Identifier field is 16 bits, else 8
+#define LWM2M_TLV_LENTYPE_SHIFT 3      ///< bits 4-3: the type of Length, at this position
+#define LWM2M_TLV_LENTYPE_MASK 0x03    ///< its value: 0 none, 1 8-bit, 2 16-bit, 3 24-bit
+#define LWM2M_TLV_INLINE_LEN_MASK 0x07 ///< bits 2-0: the Length of the Value when there is no Length field
 
-// Type-byte bit-field layout (Type byte = idkind | id16 | lentype | inline-len).
-#define LWM2M_TLV_IDKIND_MASK 0xC0     ///< bits 7-6: identifier kind (the LWM2M_TLV_* above)
-#define LWM2M_TLV_ID16_FLAG 0x20       ///< bit 5: identifier is 16-bit (else 8-bit)
-#define LWM2M_TLV_LENTYPE_SHIFT 3      ///< bits 4-3: length-type field position
-#define LWM2M_TLV_LENTYPE_MASK 0x03    ///< 0 = inline, 1 = 8-bit, 2 = 16-bit, 3 = 24-bit length
-#define LWM2M_TLV_INLINE_LEN_MASK 0x07 ///< bits 2-0: the value length when length-type == 0
+/** @brief LwM2M Core sec 7.4.5 Table 7.4.5.-1, Type bits 7-6: what the Identifier names. */
+typedef enum PROTO_ENUM_PACKED
+{
+    LWM2M_TLV_OBJECT_INSTANCE = 0x00,     ///< 00: the Value contains one or more Resource TLVs
+    LWM2M_TLV_RESOURCE_INSTANCE = 0x40,   ///< 01: Resource Instance with Value, within a multiple Resource TLV
+    LWM2M_TLV_MULTIPLE_RESOURCE = 0x80,   ///< 10: the Value contains one or more Resource Instance TLVs
+    LWM2M_TLV_RESOURCE_WITH_VALUE = 0xC0, ///< 11: Resource with Value
+} Lwm2mTlvIdType;
 
-/** @brief Cursor for building a TLV payload. Treat the fields as opaque. */
+/** @brief Where a writer's octets land. */
 typedef struct
 {
-    uint8_t *buf;
-    size_t cap;
-    size_t pos;
-    proto_bool error;
-} Lwm2mTlvWriter;
+    uint8_t *buf; ///< the caller buffer every entry is emitted into
+    size_t cap;   ///< how many octets it holds
+} Lwm2mTlvSinkArgs;
 
-void protocore_lwm2m_tlv_init(Lwm2mTlvWriter *w, uint8_t *buf, size_t cap);
-
-/** @brief Write a TLV with raw value bytes. @p id_type is one of LWM2M_TLV_*. */
-proto_bool protocore_lwm2m_tlv_write(Lwm2mTlvWriter *w, uint8_t id_type, uint16_t id, const uint8_t *value,
-                                     size_t value_len);
-
-/** @brief Write a Resource integer (shortest of 1/2/4/8 octets, big-endian two's complement). */
-proto_bool protocore_lwm2m_tlv_write_int(Lwm2mTlvWriter *w, uint16_t id, int64_t v);
-
-/** @brief Write a Resource boolean (one octet, 0/1). */
-proto_bool protocore_lwm2m_tlv_write_bool(Lwm2mTlvWriter *w, uint16_t id, proto_bool v);
-
-/** @brief Write a Resource UTF-8 string. */
-proto_bool protocore_lwm2m_tlv_write_string(Lwm2mTlvWriter *w, uint16_t id, const char *s);
-
-/** @brief Write a Resource float (8-octet IEEE-754, big-endian). */
-proto_bool protocore_lwm2m_tlv_write_float(Lwm2mTlvWriter *w, uint16_t id, double v);
-
-/** @brief Bytes written so far, or 0 if any write overflowed. */
-size_t protocore_lwm2m_tlv_finish(Lwm2mTlvWriter *w);
-
-/** @brief One decoded TLV; @ref value points INTO the source buffer. */
+/** @brief The octets a reader walks. */
 typedef struct
 {
-    uint8_t id_type; ///< LWM2M_TLV_* (Type bits 7-6)
-    uint16_t id;
-    const uint8_t *value;
-    size_t value_len;
-} Lwm2mTlv;
+    const uint8_t *buf; ///< the TLV array a read decodes, left where it lies
+    size_t len;         ///< how many octets of it are readable
+} Lwm2mTlvSourceArgs;
+
+/** @brief The Type and Identifier fields of one entry (LwM2M Core sec 7.4.5 Table 7.4.5.-1). */
+typedef struct
+{
+    Lwm2mTlvIdType id_type; ///< Type bits 7-6: the type of Identifier
+    uint16_t id;            ///< the Identifier field: the Object Instance, Resource or Resource Instance ID
+} Lwm2mTlvHeaderArgs;
+
+/** @brief The Value field of one entry, in the forms LwM2M Core Appendix C Table C.-2 gives. */
+typedef struct
+{
+    const uint8_t *opaque;    ///< Opaque: the Value octets as they stand, and where a read points
+    size_t len;               ///< the Length field: how many octets the Value is
+    int64_t integer_value;    ///< Integer: staged into 1, 2, 4 or 8 octets, two's complement
+    double float_value;       ///< Float: staged as binary64, 8 octets
+    proto_bool boolean_value; ///< Boolean: staged as one octet, 0 for False and 1 for True
+    const char *string_value; ///< String: UTF-8, measured to its NUL within the sink's capacity
+} Lwm2mTlvValueArgs;
+
+/** @brief The codec's own cursors and the calls that reach them, described only in lwm2m_tlv.c. */
+struct Lwm2mTlvInternal;
 
 /**
- * @brief Read one TLV at [buf+*pos]; advances *pos past it.
- * @return true on a complete TLV; false at end-of-buffer or on truncation.
+ * @brief The OMA LwM2M TLV codec.
+ *
+ * A caller sets the members a call takes, invokes it through ::Lwm2mTlv, and reads the outcome off
+ * the same handle. @c hdr and @c val are what a write emits and what a read fills, so an entry
+ * decoded from one buffer is re-emitted into another with no field moved by hand.
+ *
+ * @var Lwm2mTlvNs::sink           the buffer a writer emits into, taken by an open
+ * @var Lwm2mTlvNs::source         the buffer a reader walks, taken by a parse
+ * @var Lwm2mTlvNs::hdr            the Type and Identifier fields: set for a write, filled by a next
+ * @var Lwm2mTlvNs::val            the Value field: set for a write, filled by a next
+ * @var Lwm2mTlvNs::ok             a call's true/false outcome
+ * @var Lwm2mTlvNs::n              the octets a finish counts, 0 if any write did not fit
+ * @var Lwm2mTlvNs::open           bind @c sink and clear the writer cursor
+ * @var Lwm2mTlvNs::write          emit one entry carrying @c val.opaque for @c val.len octets
+ * @var Lwm2mTlvNs::write_integer  stage @c val.integer_value as 1/2/4/8 octets and emit it
+ * @var Lwm2mTlvNs::write_boolean  stage @c val.boolean_value as one octet and emit it
+ * @var Lwm2mTlvNs::write_string   measure @c val.string_value and emit its UTF-8 octets
+ * @var Lwm2mTlvNs::write_float    stage @c val.float_value as binary64 and emit it
+ * @var Lwm2mTlvNs::finish         count the octets emitted into @c n
+ * @var Lwm2mTlvNs::parse          bind @c source and clear the reader cursor
+ * @var Lwm2mTlvNs::next           decode the entry at the cursor into @c hdr and @c val, and advance past it
+ * @var Lwm2mTlvNs::value_integer  decode @c val.opaque for @c val.len octets into @c val.integer_value
+ * @var Lwm2mTlvNs::internal       the codec's cursors and the calls that reach them
  */
-proto_bool protocore_lwm2m_tlv_read(const uint8_t *buf, size_t len, size_t *pos, Lwm2mTlv *out);
+typedef struct
+{
+    Lwm2mTlvSinkArgs sink;     ///< where a writer's octets land
+    Lwm2mTlvSourceArgs source; ///< the octets a reader walks
+    Lwm2mTlvHeaderArgs hdr;    ///< one entry's Type and Identifier fields
+    Lwm2mTlvValueArgs val;     ///< its Value field
 
-/** @brief Decode a TLV integer value (1/2/4/8 octets, big-endian two's complement). */
-proto_bool protocore_lwm2m_tlv_value_int(const uint8_t *value, size_t len, int64_t *out);
+    proto_bool ok;
+    size_t n;
+
+    void (*open)(struct Lwm2mTlvInternal *ctx);
+    void (*write)(struct Lwm2mTlvInternal *ctx);
+    void (*write_integer)(struct Lwm2mTlvInternal *ctx);
+    void (*write_boolean)(struct Lwm2mTlvInternal *ctx);
+    void (*write_string)(struct Lwm2mTlvInternal *ctx);
+    void (*write_float)(struct Lwm2mTlvInternal *ctx);
+    void (*finish)(struct Lwm2mTlvInternal *ctx);
+    void (*parse)(struct Lwm2mTlvInternal *ctx);
+    void (*next)(struct Lwm2mTlvInternal *ctx);
+    void (*value_integer)(struct Lwm2mTlvInternal *ctx);
+
+    struct Lwm2mTlvInternal *internal;
+} Lwm2mTlvNs;
+
+/** @brief The one symbol this module exports. */
+extern Lwm2mTlvNs Lwm2mTlv;
 
 #endif // PROTOCORE_ENABLE_LWM2M
 

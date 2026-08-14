@@ -9,7 +9,7 @@
  * It rides raw L2 (ethertype 0x8892, PROFINET RT; see services/fieldbus/rawl2) with a fixed 10-octet frame header
  * followed by DCP blocks:
  *
- *   Header:  frameID(2) serviceID(1) serviceType(1) xid(4) responseDelay/reserved(2) dataLength(2)
+ *   Header:  frameID(2) serviceID(1) serviceType(1) xid(4) responseDelayFactor(2) dataLength(2)
  *   Block:   option(1) suboption(1) blockLength(2) [blockInfo(2) for Set/Get responses] value...
  *
  * FrameIDs: 0xFEFE Identify-request (multicast), 0xFEFF Identify-response, 0xFEFD Get/Set. This builds
@@ -43,14 +43,16 @@ PROTOCORE_BEGIN_DECLS
 #define PN_DCP_SUB_DEV_ID 0x03
 #define PN_DCP_OPT_ALL 0xFF
 #define PN_DCP_SUB_ALL 0xFF
-#define PN_DCP_HDR_LEN 10
+#define PN_DCP_HDR_LEN 12 ///< frameID(2) + the 10-octet DCP header
 
 /**
- * @brief Build a DCP frame header into @p out (>= 10 bytes). @return 10, or 0 if it will not fit.
+ * @brief Build a DCP frame header into @p out (>= PN_DCP_HDR_LEN bytes). @return 12, or 0 if it will not fit.
+ * @param response_delay ResponseDelayFactor: the window a device randomizes its Identify response over,
+ *                       in units of 10 ms; 0 on every unicast PDU and on every response.
  * @param data_length the total length of the DCP blocks that follow (filled into the header).
  */
 size_t protocore_pn_dcp_header(uint16_t frame_id, uint8_t service_id, uint8_t service_type, uint32_t xid,
-                               uint16_t data_length, uint8_t *out, size_t cap);
+                               uint16_t response_delay, uint16_t data_length, uint8_t *out, size_t cap);
 
 /**
  * @brief Append a DCP block `[option][suboption][blockLength][value...]` (no blockInfo).
@@ -68,10 +70,11 @@ typedef struct
     uint8_t service_id;
     uint8_t service_type;
     uint32_t xid;
+    uint16_t response_delay;
     uint16_t data_length;
 } PnDcpHeader;
 
-/** @brief Parse the 10-octet DCP header. @return true if @p len >= 10. */
+/** @brief Parse the DCP header. @return true if @p len >= PN_DCP_HDR_LEN. */
 proto_bool protocore_pn_dcp_parse_header(const uint8_t *frame, size_t len, PnDcpHeader *out);
 
 /** @brief One DCP block surfaced by protocore_pn_dcp_walk. */

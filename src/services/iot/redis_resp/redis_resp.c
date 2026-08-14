@@ -3,18 +3,38 @@
 
 /**
  * @file redis_resp.c
- * @brief Redis RESP2 command encoder + reply parser (pure, host-tested).
+ * @brief The RESP command encoder and the RESP cursor parser.
+ *
+ * encode_command writes the array of bulk strings of "Sending commands to a Redis server" into the
+ * caller's buffer. parse_reply decodes the one value at the head of the buffered octets, leaves it
+ * in ns->reply, and reports the octets it occupied in ns->n.
  */
 
 #include "services/iot/redis_resp/redis_resp.h"
-#include "mmgr/protomem.h"
 
 #if PROTOCORE_ENABLE_REDIS
 
-// Write a "<tag><decimal>\r\n" length prefix into buf at *pos, advancing it. A hand-rolled decimal is
-// several times faster than snprintf on the ESP32-S3, where this was the dominant cost of encoding a
-// command (docs/FEATURE_PERFORMANCE.md section 4). Reserves a trailing byte for the final NUL, as before.
-static proto_bool put_len_prefix(char *buf, size_t cap, size_t *pos, char tag, size_t n)
+#include "mmgr/protomem.h" // mem.cpy: the argument octets an encode moves
+#include "mmgr/protostr.h" // str.len: the bounded length of a NUL-terminated argument
+
+/**
+ * @brief The codec's state and the calls that reach it - what RespNs points at.
+ *
+ * No storage member: the codec keeps nothing between calls. An encode writes into the caller's
+ * buffer, and every string a parse decodes points into the caller's buffer.
+ *
+ * @var RespInternal::ns  the handle a caller sets a call's members on
+ */
+struct RespInternal
+{
+    RespNs *ns;
+};
+
+static struct RespInternal s_resp = {.ns = &Resp};
+
+// Write "<first_byte><decimal n>\r\n" into buf at *pos and advance it. The digits fall out low first
+// into tmp and are emitted reversed. False when the prefix would reach cap with the NUL reserved.
+static proto_bool put_len_prefix(char *buf, size_t cap, size_t *pos, char first_byte, size_t n)
 {
     char tmp[20];
     int t = 0;
@@ -31,54 +51,18 @@ static proto_bool put_len_prefix(char *buf, size_t cap, size_t *pos, char tag, s
     {
         return PROTO_FALSE;
     }
-    buf[(*pos)++] = tag;
+    buf[(*pos)++] = first_byte;
     while (t)
     {
-        buf[(*pos)++] = tmp[--t]; // reverse the digits
+        buf[(*pos)++] = tmp[--t];
     }
     buf[(*pos)++] = '\r';
     buf[(*pos)++] = '\n';
     return PROTO_TRUE;
 }
 
-size_t protocore_resp_encode_command(char *buf, size_t cap, const char *const *args, const size_t *arg_lens, size_t argc)
-{
-    if (!buf || cap == 0 || !args || argc == 0)
-    {
-        return 0;
-    }
-    size_t pos = 0;
-    if (!put_len_prefix(buf, cap, &pos, '*', argc))
-    {
-        return 0;
-    }
-
-    for (size_t i = 0; i < argc; i++)
-    {
-        if (!args[i])
-        {
-            return 0;
-        }
-        size_t alen = arg_lens ? arg_lens[i] : strnlen(args[i], cap);
-        if (!put_len_prefix(buf, cap, &pos, '$', alen))
-        {
-            return 0;
-        }
-        if (pos + alen + 2 >= cap) // arg body + trailing CRLF (reserve NUL room)
-        {
-            return 0;
-        }
-        mem.cpy(buf + pos, args[i], alen);
-        pos += alen;
-        buf[pos++] = '\r';
-        buf[pos++] = '\n';
-    }
-    buf[pos] = '\0';
-    return pos;
-}
-
-// Find the CRLF that ends the line starting at buf[from]; returns the index of the
-// '\r', or len if not found (incomplete line).
+// Index of the '\r' of the CRLF terminator that ends the line starting at buf[from], or len when no
+// CRLF is buffered.
 static size_t find_crlf(const uint8_t *buf, size_t len, size_t from)
 {
     for (size_t i = from; i + 1 < len; i++)
@@ -91,7 +75,7 @@ static size_t find_crlf(const uint8_t *buf, size_t len, size_t from)
     return len;
 }
 
-// Parse a base-10 (optionally negative) integer from [buf+from, buf+end).
+// Read a base-10 integer, an optional leading '-' included, from [buf+from, buf+end).
 static proto_bool parse_int(const uint8_t *buf, size_t from, size_t end, int64_t *out)
 {
     if (from >= end)
@@ -109,7 +93,7 @@ static proto_bool parse_int(const uint8_t *buf, size_t from, size_t end, int64_t
     {
         return PROTO_FALSE;
     }
-    uint64_t v = 0; // accumulate unsigned: signed overflow (a huge digit run) is UB
+    uint64_t v = 0; // accumulated unsigned, so a digit run past the signed maximum still wraps defined
     for (; i < end; i++)
     {
         if (buf[i] < '0' || buf[i] > '9')
@@ -118,11 +102,11 @@ static proto_bool parse_int(const uint8_t *buf, size_t from, size_t end, int64_t
         }
         v = v * 10u + (uint64_t)(buf[i] - '0');
     }
-    *out = neg ? (int64_t)(0ULL - v) : (int64_t)v; // two's-complement reinterpret, no negation UB
+    *out = neg ? (int64_t)(0ULL - v) : (int64_t)v; // negated in two's complement, then reinterpreted
     return PROTO_TRUE;
 }
 
-// Case-insensitively compare the slice [buf+from, buf+end) to the C string s.
+// Compare the slice [buf+from, buf+end) to the NUL-terminated s, folding ASCII letters to lower case.
 static proto_bool slice_ieq(const uint8_t *buf, size_t from, size_t end, const char *s)
 {
     for (size_t i = from; i < end; i++, s++)
@@ -140,8 +124,6 @@ static proto_bool slice_ieq(const uint8_t *buf, size_t from, size_t end, const c
         if (b >= 'A' && b <= 'Z')
         {
             b = (char)(b + 32);
-            // this upper->lower fold of the pattern side never fires; slice_ieq is static
-            // (file-local) with no other caller, so no host test can reach it either.
         }
         if (a != (uint8_t)b)
         {
@@ -151,13 +133,13 @@ static proto_bool slice_ieq(const uint8_t *buf, size_t from, size_t end, const c
     return *s == '\0';
 }
 
-// RESP3 double special forms: inf / +inf / -inf / nan. Returns true (setting *out) if [from,end) is one,
-// else false with *out untouched.
+// The Doubles special forms `,inf\r\n`, `,-inf\r\n` and `,nan\r\n`, the leading '+' accepted. True with
+// *out set when [from,end) is one of them, false with *out untouched otherwise.
 static proto_bool parse_double_special(const uint8_t *buf, size_t from, size_t end, double *out)
 {
     if (slice_ieq(buf, from, end, "inf") || slice_ieq(buf, from, end, "+inf"))
     {
-        *out = 1e308 * 10.0;
+        *out = 1e308 * 10.0; // overflows to +infinity
         return PROTO_TRUE;
     }
     if (slice_ieq(buf, from, end, "-inf"))
@@ -167,15 +149,15 @@ static proto_bool parse_double_special(const uint8_t *buf, size_t from, size_t e
     }
     if (slice_ieq(buf, from, end, "nan"))
     {
-        double inf = 1e308 * 10.0; // +infinity by overflow (this file avoids <math.h>, cf. -inf above)
-        *out = inf * 0.0;          // infinity * 0 = NaN, without an identical-operand division
+        double inf = 1e308 * 10.0;
+        *out = inf * 0.0; // infinity times zero is NaN
         return PROTO_TRUE;
     }
     return PROTO_FALSE;
 }
 
-// Parse an optional [ (e|E) [sign] digits ] exponent at *i (advancing it). A missing exponent leaves
-// *exp = 0 and returns true; an 'e' with no following digits returns false.
+// Read the optional [(E|e) [sign] digits] exponent at *i, advancing it. No exponent leaves *exp at 0
+// and returns true; an 'E' with no digits after it returns false.
 static proto_bool parse_exponent(const uint8_t *buf, size_t *i, size_t end, int *exp)
 {
     *exp = 0;
@@ -193,7 +175,7 @@ static proto_bool parse_exponent(const uint8_t *buf, size_t *i, size_t end, int 
     proto_bool edig = PROTO_FALSE;
     while (*i < end && buf[*i] >= '0' && buf[*i] <= '9')
     {
-        if (*exp < 1000000) // clamp: a larger exponent saturates the double to inf/0 anyway
+        if (*exp < 1000000) // clamped: anything larger saturates the double to infinity or zero
         {
             *exp = *exp * 10 + (buf[*i] - '0');
         }
@@ -211,8 +193,8 @@ static proto_bool parse_exponent(const uint8_t *buf, size_t *i, size_t end, int 
     return PROTO_TRUE;
 }
 
-// Best-effort decimal-to-double for a RESP3 double line: inf / -inf / nan, or
-// [sign] int [.frac] [(e|E)[sign]exp]. The raw text stays authoritative in str.
+// Decode a Doubles line, `,[<+|->]<integral>[.<fractional>][<E|e>[sign]<exponent>]\r\n` or one of the
+// special forms, into a double. The raw text stays authoritative in str.
 static proto_bool parse_double(const uint8_t *buf, size_t from, size_t end, double *out)
 {
     if (parse_double_special(buf, from, end, out))
@@ -256,7 +238,7 @@ static proto_bool parse_double(const uint8_t *buf, size_t from, size_t end, doub
     }
     if (i != end)
     {
-        return PROTO_FALSE; // trailing garbage
+        return PROTO_FALSE; // octets left over after the number
     }
     double scale = 1.0;
     int e = exp < 0 ? -exp : exp;
@@ -269,196 +251,268 @@ static proto_bool parse_double(const uint8_t *buf, size_t from, size_t end, doub
     return PROTO_TRUE;
 }
 
-// Length-prefixed body: bulk string ($), bulk error (!), verbatim string (=). Validates the declared
-// length against the buffer and its trailing CRLF; $-1 decodes to nil. type is buf[0].
-static proto_bool parse_bulk_body(const uint8_t *buf, size_t len, uint8_t type, size_t header_from, size_t header_to,
-                                  size_t after_header, RespReply *out, size_t *consumed)
+// The length-prefixed bodies: Bulk strings ($), Bulk errors (!), Verbatim strings (=). Checks the
+// declared length and its trailing CRLF against the buffered octets; `$-1` is the Null bulk string.
+static proto_bool parse_bulk_body(struct RespInternal *restrict ctx, uint8_t first_byte, size_t header_from,
+                                  size_t header_to, size_t after_header)
 {
+    const uint8_t *buf = ctx->ns->wire.buf;
+    const size_t len = ctx->ns->wire.len;
     int64_t blen;
     if (!parse_int(buf, header_from, header_to, &blen))
     {
         return PROTO_FALSE;
     }
-    if (type == '$' && blen < 0) // $-1 = nil
+    // The Null bulk string is the length -1 exactly ("Null bulk strings"); no other negative length
+    // has an encoding, so it is a malformed reply rather than another spelling of null.
+    if (first_byte == '$' && blen == -1)
     {
-        out->type = RESP_NIL;
-        *consumed = after_header;
+        ctx->ns->reply.type = RESP_NULL;
+        ctx->ns->n = after_header;
         return PROTO_TRUE;
     }
     if (blen < 0)
     {
         return PROTO_FALSE;
     }
-    // Bound the length against the remaining capacity without adding it (a 32-bit
-    // size_t would wrap if we computed after_header + blen + 2 first).
+    // Compares the declared length against what remains, never forming after_header + blen + 2,
+    // which wraps a 32-bit size_t.
     if (after_header + 2 > len || (uint64_t)blen > (uint64_t)(len - after_header - 2))
     {
-        return PROTO_FALSE; // body + trailing CRLF not fully buffered
+        return PROTO_FALSE; // the body and its CRLF are not fully buffered
     }
-    size_t need = after_header + (size_t)blen + 2; // body + trailing CRLF
     if (buf[after_header + (size_t)blen] != '\r' || buf[after_header + (size_t)blen + 1] != '\n')
     {
-        return PROTO_FALSE; // malformed terminator
+        return PROTO_FALSE; // the terminator is not where the length puts it
     }
-    if (type == '$')
+    if (first_byte == '$')
     {
-        out->type = RESP_BULK;
+        ctx->ns->reply.type = RESP_BULK_STRING;
     }
-    else if (type == '!')
+    else if (first_byte == '!')
     {
-        out->type = RESP_BULK_ERROR;
+        ctx->ns->reply.type = RESP_BULK_ERROR;
     }
     else
     {
-        out->type = RESP_VERBATIM;
+        ctx->ns->reply.type = RESP_VERBATIM_STRING;
     }
-    out->str = (const char *)(buf + after_header);
-    out->str_len = (size_t)blen;
-    *consumed = need;
+    ctx->ns->reply.str = (const char *)(buf + after_header);
+    ctx->ns->reply.str_len = (size_t)blen;
+    ctx->ns->n = after_header + (size_t)blen + 2; // the body and its trailing CRLF
     return PROTO_TRUE;
 }
 
-// Aggregate header whose children follow: array (*), set (~), push (>). Only the count is read here; the
-// caller parses each element next. *-1 decodes to nil. type is buf[0].
-static proto_bool parse_aggregate(const uint8_t *buf, uint8_t type, size_t header_from, size_t header_to,
-                                  size_t after_header, RespReply *out, size_t *consumed)
+// The aggregate headers whose children follow: Arrays (*), Sets (~), Pushes (>). Only the count is
+// read here, and the caller parses each element next; `*-1` is the Null array.
+static proto_bool parse_aggregate(struct RespInternal *restrict ctx, uint8_t first_byte, size_t header_from,
+                                  size_t header_to, size_t after_header)
 {
-    int64_t n;
-    if (!parse_int(buf, header_from, header_to, &n))
+    const uint8_t *buf = ctx->ns->wire.buf;
+    int64_t elements;
+    if (!parse_int(buf, header_from, header_to, &elements))
     {
         return PROTO_FALSE;
     }
-    if (type == '*' && n < 0) // *-1 = nil array
+    // The Null array is the length -1 exactly ("Null arrays"), as for the Null bulk string above.
+    if (first_byte == '*' && elements == -1)
     {
-        out->type = RESP_NIL;
-        *consumed = after_header;
+        ctx->ns->reply.type = RESP_NULL;
+        ctx->ns->n = after_header;
         return PROTO_TRUE;
     }
-    if (n < 0)
+    if (elements < 0)
     {
         return PROTO_FALSE;
     }
-    if (type == '*')
+    if (first_byte == '*')
     {
-        out->type = RESP_ARRAY;
+        ctx->ns->reply.type = RESP_ARRAY;
     }
-    else if (type == '~')
+    else if (first_byte == '~')
     {
-        out->type = RESP_SET;
+        ctx->ns->reply.type = RESP_SET;
     }
     else
     {
-        out->type = RESP_PUSH;
+        ctx->ns->reply.type = RESP_PUSH;
     }
-    out->ival = n;
-    out->count = n;
-    *consumed = after_header; // header only; the caller parses each element next
+    ctx->ns->reply.ival = elements;
+    ctx->ns->reply.count = elements;
+    ctx->ns->n = after_header; // the header alone
     return PROTO_TRUE;
 }
 
-proto_bool protocore_resp_parse(const uint8_t *buf, size_t len, RespReply *out, size_t *consumed)
+// Build the array of bulk strings a client sends ("Sending commands to a Redis server") from
+// ns->command into ns->out, NUL-terminate it, and report its length in ns->n.
+static void resp_encode_command(struct RespInternal *restrict ctx)
 {
-    if (!buf || len < 3 || !out || !consumed) // shortest value is "+\r\n" style; need a type + CRLF
+    char *buf = ctx->ns->out.buf;
+    const size_t cap = ctx->ns->out.cap;
+    const char *const *argv = ctx->ns->command.argv;
+    const size_t *argv_len = ctx->ns->command.argv_len;
+    const size_t argc = ctx->ns->command.argc;
+
+    ctx->ns->ok = PROTO_FALSE;
+    ctx->ns->n = 0;
+    if (!buf || cap == 0 || !argv || argc == 0)
     {
-        return PROTO_FALSE;
+        return;
+    }
+    size_t pos = 0;
+    if (!put_len_prefix(buf, cap, &pos, '*', argc))
+    {
+        return;
+    }
+    for (size_t i = 0; i < argc; i++)
+    {
+        if (!argv[i])
+        {
+            return;
+        }
+        const size_t alen = argv_len ? argv_len[i] : str.len(argv[i], cap);
+        if (!put_len_prefix(buf, cap, &pos, '$', alen))
+        {
+            return;
+        }
+        if (pos + alen + 2 >= cap) // the octets and their CRLF, the NUL still reserved
+        {
+            return;
+        }
+        mem.cpy(buf + pos, argv[i], alen);
+        pos += alen;
+        buf[pos++] = '\r';
+        buf[pos++] = '\n';
+    }
+    buf[pos] = '\0';
+    ctx->ns->n = pos;
+    ctx->ns->ok = PROTO_TRUE;
+}
+
+// Decode the value at the head of ns->wire into ns->reply, and report the octets it occupied in
+// ns->n. An aggregate header reports the header alone and its child count.
+static void resp_parse_reply(struct RespInternal *restrict ctx)
+{
+    const uint8_t *buf = ctx->ns->wire.buf;
+    const size_t len = ctx->ns->wire.len;
+
+    ctx->ns->ok = PROTO_FALSE;
+    ctx->ns->n = 0;
+    if (!buf || len < 3) // the shortest value is a first byte and its CRLF
+    {
+        return;
     }
 
-    size_t crlf = find_crlf(buf, len, 1);
+    const size_t crlf = find_crlf(buf, len, 1);
     if (crlf == len)
     {
-        return PROTO_FALSE; // header line incomplete
+        return; // the header line is not fully buffered
     }
-    size_t header_from = 1;
-    size_t header_to = crlf;
-    size_t after_header = crlf + 2; // past \r\n
+    const size_t header_from = 1;
+    const size_t header_to = crlf;
+    const size_t after_header = crlf + 2; // past the CRLF terminator
 
-    out->str = NULL;
-    out->str_len = 0;
-    out->ival = 0;
-    out->dval = 0;
-    out->count = 0;
+    ctx->ns->reply.str = NULL;
+    ctx->ns->reply.str_len = 0;
+    ctx->ns->reply.ival = 0;
+    ctx->ns->reply.dval = 0;
+    ctx->ns->reply.count = 0;
 
     switch (buf[0])
     {
+    // Simple strings (+) and Simple errors (-): the line itself, CRLF excluded.
     case '+':
     case '-':
-        out->type = (buf[0] == '+') ? RESP_SIMPLE : RESP_ERROR;
-        out->str = (const char *)(buf + header_from);
-        out->str_len = header_to - header_from;
-        *consumed = after_header;
-        return PROTO_TRUE;
+        ctx->ns->reply.type = (buf[0] == '+') ? RESP_SIMPLE_STRING : RESP_SIMPLE_ERROR;
+        ctx->ns->reply.str = (const char *)(buf + header_from);
+        ctx->ns->reply.str_len = header_to - header_from;
+        ctx->ns->n = after_header;
+        ctx->ns->ok = PROTO_TRUE;
+        return;
 
-    case ':': {
+    case ':': { // Integers: a signed, base-10, 64-bit value
         int64_t v;
         if (!parse_int(buf, header_from, header_to, &v))
         {
-            return PROTO_FALSE;
+            return;
         }
-        out->type = RESP_INTEGER;
-        out->ival = v;
-        *consumed = after_header;
-        return PROTO_TRUE;
+        ctx->ns->reply.type = RESP_INTEGER;
+        ctx->ns->reply.ival = v;
+        ctx->ns->n = after_header;
+        ctx->ns->ok = PROTO_TRUE;
+        return;
     }
 
-    // Length-prefixed bodies: bulk string ($), bulk error (!), verbatim string (=).
+    // The length-prefixed bodies: Bulk strings ($), Bulk errors (!), Verbatim strings (=).
     case '$':
     case '!':
     case '=':
-        return parse_bulk_body(buf, len, buf[0], header_from, header_to, after_header, out, consumed);
+        ctx->ns->ok = parse_bulk_body(ctx, buf[0], header_from, header_to, after_header);
+        return;
 
-    // Aggregates whose children follow: array (*), set (~), push (>).
+    // The aggregates whose children follow: Arrays (*), Sets (~), Pushes (>).
     case '*':
     case '~':
     case '>':
-        return parse_aggregate(buf, buf[0], header_from, header_to, after_header, out, consumed);
+        ctx->ns->ok = parse_aggregate(ctx, buf[0], header_from, header_to, after_header);
+        return;
 
-    case '%': { // map: N pairs -> 2N following child values
-        int64_t n;
-        if (!parse_int(buf, header_from, header_to, &n) || n < 0)
+    case '%': { // Maps: N entries, so 2N children follow, one per key and one per value
+        int64_t entries;
+        if (!parse_int(buf, header_from, header_to, &entries) || entries < 0)
         {
-            return PROTO_FALSE;
+            return;
         }
-        out->type = RESP_MAP;
-        out->ival = n * 2;
-        out->count = n * 2;
-        *consumed = after_header;
-        return PROTO_TRUE;
+        const int64_t children = (int64_t)((uint64_t)entries * 2u); // doubled unsigned, then reinterpreted
+        ctx->ns->reply.type = RESP_MAP;
+        ctx->ns->reply.ival = children;
+        ctx->ns->reply.count = children;
+        ctx->ns->n = after_header;
+        ctx->ns->ok = PROTO_TRUE;
+        return;
     }
 
-    case '_': // RESP3 null
-        out->type = RESP_NIL;
-        *consumed = after_header;
-        return PROTO_TRUE;
+    case '_': // Nulls
+        ctx->ns->reply.type = RESP_NULL;
+        ctx->ns->n = after_header;
+        ctx->ns->ok = PROTO_TRUE;
+        return;
 
-    case '#': { // boolean
+    case '#': { // Booleans: exactly one octet, 't' or 'f'
         if (header_to - header_from != 1 || (buf[header_from] != 't' && buf[header_from] != 'f'))
         {
-            return PROTO_FALSE;
+            return;
         }
-        out->type = RESP_BOOL;
-        out->ival = (buf[header_from] == 't') ? 1 : 0;
-        *consumed = after_header;
-        return PROTO_TRUE;
+        ctx->ns->reply.type = RESP_BOOLEAN;
+        ctx->ns->reply.ival = (buf[header_from] == 't') ? 1 : 0;
+        ctx->ns->n = after_header;
+        ctx->ns->ok = PROTO_TRUE;
+        return;
     }
 
-    case ',': // double (text authoritative; dval best-effort)
-        out->type = RESP_DOUBLE;
-        out->str = (const char *)(buf + header_from);
-        out->str_len = header_to - header_from;
-        parse_double(buf, header_from, header_to, &out->dval);
-        *consumed = after_header;
-        return PROTO_TRUE;
+    case ',': // Doubles: the text is authoritative, dval is decoded from it
+        ctx->ns->reply.type = RESP_DOUBLE;
+        ctx->ns->reply.str = (const char *)(buf + header_from);
+        ctx->ns->reply.str_len = header_to - header_from;
+        parse_double(buf, header_from, header_to, &ctx->ns->reply.dval);
+        ctx->ns->n = after_header;
+        ctx->ns->ok = PROTO_TRUE;
+        return;
 
-    case '(': // big number (digits kept as text)
-        out->type = RESP_BIG_NUMBER;
-        out->str = (const char *)(buf + header_from);
-        out->str_len = header_to - header_from;
-        *consumed = after_header;
-        return PROTO_TRUE;
+    case '(': // Big numbers: the digits stay text
+        ctx->ns->reply.type = RESP_BIG_NUMBER;
+        ctx->ns->reply.str = (const char *)(buf + header_from);
+        ctx->ns->reply.str_len = header_to - header_from;
+        ctx->ns->n = after_header;
+        ctx->ns->ok = PROTO_TRUE;
+        return;
 
-    default:
-        return PROTO_FALSE; // unknown type byte
+    default: // no RESP type claims this first byte
+        return;
     }
 }
+
+// Designated, so a member's position in the struct does not decide what it binds to.
+RespNs Resp = {.encode_command = resp_encode_command, .parse_reply = resp_parse_reply, .internal = &s_resp};
 
 #endif // PROTOCORE_ENABLE_REDIS

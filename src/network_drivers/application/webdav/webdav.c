@@ -195,8 +195,16 @@ proto_bool protocore_webdav_dest_path(const char *destination, char *out, size_t
         char c = *p;
         if (c == '%')
         {
-            int hi = protocore_hex_val(p[1]);
-            int lo = (hi >= 0) ? protocore_hex_val(p[2]) : -1;
+            Hex.args.ch = p[1];
+            Hex.val(Hex.internal);
+            const int hi = Hex.i8;
+            int lo = -1;
+            if (hi >= 0)
+            {
+                Hex.args.ch = p[2];
+                Hex.val(Hex.internal);
+                lo = Hex.i8;
+            }
             if (hi < 0 || lo < 0)
             {
                 return PROTO_FALSE; // malformed escape

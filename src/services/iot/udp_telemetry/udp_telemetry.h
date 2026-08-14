@@ -3,15 +3,34 @@
 
 /**
  * @file udp_telemetry.h
- * @brief Fire-and-forget UDP telemetry cast (PROTOCORE_ENABLE_UDP_TELEMETRY).
+ * @brief One point in line protocol, cast to a collector as one UDP datagram
+ *        (PROTOCORE_ENABLE_UDP_TELEMETRY).
  *
- * Builds a metric line in InfluxDB line protocol -
- * `measurement,tag=v field=val,field2=val2 timestamp` (optional tags + trailing
- * timestamp; integer fields carry the `i` suffix, unsigned `u`, floats are plain)
- * - into a caller buffer, then casts it to a configured
- * collector over UDP (Udp.client->sendto), zero-heap and fire-and-forget (no ACK, no
- * retry). The line builder is pure and host-tested; only the send touches the
- * network (ESP32; a no-op on host builds).
+ * The payload is line protocol, the text format InfluxData specifies for a point. That is a vendor
+ * specification, published as "Line protocol" in the InfluxData documentation (InfluxDB v2,
+ * reference/syntax/line-protocol; InfluxDB v1, write_protocols/line_protocol_reference). No IETF
+ * document governs it and it carries no RFC number.
+ *
+ * The syntax that reference gives is
+ *
+ *     <measurement>[,<tag_key>=<tag_value>...] <field_key>=<field_value>[,...] [<timestamp>]
+ *
+ * and it names four elements: measurement (required), tag set (optional), field set (required, at
+ * least one entry) and timestamp (optional, Unix nanoseconds by default). A field value carries its
+ * type in its suffix: `i` signed integer, `u` unsigned integer, no suffix float. Tag keys and tag
+ * values escape comma, equals and space with a backslash ("Special characters").
+ *
+ * The transport is UDP, RFC 768. Its "User Interface" section names the send: "an operation that
+ * allows a datagram to be sent, specifying the data, source and destination ports and addresses to
+ * be sent". RFC 768 also states "delivery and duplicate protection are not guaranteed", so a write
+ * reports only that the stack took the octets: nothing is acknowledged and nothing is retried.
+ *
+ * A line is built into a buffer the caller owns, one element per call, and this module holds the
+ * position in it. That buffer has to outlive the calls between a measurement and its write. Nothing
+ * here allocates. A build with no network stack builds lines and refuses every send.
+ *
+ * The module exports one symbol, @ref UdpTelemetry. Everything in udp_telemetry.c has internal
+ * linkage.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -26,65 +45,113 @@ PROTOCORE_BEGIN_DECLS
 
 #if PROTOCORE_ENABLE_UDP_TELEMETRY
 
-// ---------------------------------------------------------------------------
-// Host-testable line builder (InfluxDB line protocol)
-// ---------------------------------------------------------------------------
-
-/** @brief Builder for one telemetry line over a caller buffer. */
+/** @brief RFC 768 "User Interface": the destination address and port every datagram carries. */
 typedef struct
 {
-    char *buf;              ///< destination buffer.
-    size_t cap;             ///< buffer capacity in bytes.
-    size_t pos;             ///< bytes written so far (excludes the null terminator).
-    proto_bool overflow;    ///< true once a write did not fit (line is then unusable).
-    proto_bool have_fields; ///< true once at least one field is present (comma control).
-} protocore_line;
+    const char *addr; ///< the collector's address as text, v4 or v6, parsed once by a begin
+    uint16_t port;    ///< its UDP port
+} UdpTelemetryCollectorArgs;
 
-/** @brief Start a line for @p measurement (bound to @p buf / @p cap). */
-void protocore_line_init(protocore_line *l, char *buf, size_t cap, const char *measurement);
+/** @brief Where one line is built, and the measurement it opens with (line protocol element 1). */
+typedef struct
+{
+    char *buf;               ///< the caller's buffer; it outlives the calls that build into it
+    size_t cap;              ///< how much room it has, the NUL included
+    const char *measurement; ///< the measurement name; NULL opens the line with nothing
+} UdpTelemetryLineArgs;
+
+/** @brief One tag set entry, `,tag_key=tag_value` (line protocol element 2). */
+typedef struct
+{
+    const char *key;   ///< the tag key; comma, equals and space are escaped
+    const char *value; ///< its tag value, escaped the same way; NULL writes nothing after the equals
+} UdpTelemetryTagArgs;
+
+/** @brief One field set entry, `field_key=field_value` (line protocol element 3). */
+typedef struct
+{
+    const char *key;  ///< the field key
+    int64_t i64;      ///< the value a field_int writes, suffixed `i`
+    uint64_t u64;     ///< the value a field_uint writes, suffixed `u`
+    float f32;        ///< the value a field_float writes, unsuffixed
+    uint8_t decimals; ///< digits after the point a field_float writes
+} UdpTelemetryFieldArgs;
+
+/** @brief The trailing timestamp (line protocol element 4). */
+typedef struct
+{
+    int64_t unix_ns; ///< the point's time in Unix nanoseconds, the default precision
+} UdpTelemetryTimestampArgs;
+
+/** @brief The octets one datagram carries. */
+typedef struct
+{
+    const char *data; ///< the bytes a send hands the stack
+    size_t len;       ///< how many
+} UdpTelemetryPayloadArgs;
+
+/** @brief The caster's own state and the calls that reach it, described only in udp_telemetry.c. */
+struct UdpTelemetryInternal;
 
 /**
- * @brief Append a `,key=value` tag (InfluxDB tag set, part of the series key).
+ * @brief The line protocol caster.
  *
- * Tags MUST be added before any field (they sit between the measurement and the
- * fields); adding one after a field fails the line closed. Key and value are
- * escaped per line protocol (comma / equals / space backslash-escaped).
+ * A caller sets the members a call takes, invokes it through ::UdpTelemetry, and reads the outcome
+ * off the same handle. A measurement opens a line, tag and field_* append its elements in that
+ * order, and a write sends the whole line as one datagram.
+ *
+ * No slot member: one collector, one line at a time, so no call names a row.
+ *
+ * @var UdpTelemetryNs::collector    where the datagrams go (RFC 768 "User Interface")
+ * @var UdpTelemetryNs::line         the buffer a line is built in and the measurement it opens with
+ * @var UdpTelemetryNs::tags         one tag set entry
+ * @var UdpTelemetryNs::fields       one field set entry, in the width the call takes
+ * @var UdpTelemetryNs::time         the trailing timestamp
+ * @var UdpTelemetryNs::payload      the octets a send hands the stack
+ * @var UdpTelemetryNs::ok           a call's true/false outcome; on a build call, the line is a
+ *                                   complete point so far
+ * @var UdpTelemetryNs::overflow     an append did not fit; every later append is a no-op
+ * @var UdpTelemetryNs::n            octets the line holds, the NUL excluded
+ * @var UdpTelemetryNs::begin        parse the collector address and store it with its port
+ * @var UdpTelemetryNs::measurement  bind @c line and open it with the measurement
+ * @var UdpTelemetryNs::tag          append one tag set entry, before any field
+ * @var UdpTelemetryNs::field_int    append `field_key=<i64>i`
+ * @var UdpTelemetryNs::field_uint   append `field_key=<u64>u`
+ * @var UdpTelemetryNs::field_float  append `field_key=<f32>` to @c decimals places
+ * @var UdpTelemetryNs::timestamp    append the trailing timestamp, after the field set
+ * @var UdpTelemetryNs::send         send @c payload to the collector as one datagram
+ * @var UdpTelemetryNs::write        send the built line as one datagram; an incomplete line sends
+ *                                   nothing
+ * @var UdpTelemetryNs::internal     the caster's state and the calls that reach it
  */
-void protocore_line_add_tag(protocore_line *l, const char *key, const char *val);
+typedef struct
+{
+    UdpTelemetryCollectorArgs collector; ///< where the datagrams go
+    UdpTelemetryLineArgs line;           ///< where a line is built
+    UdpTelemetryTagArgs tags;            ///< one tag set entry
+    UdpTelemetryFieldArgs fields;        ///< one field set entry
+    UdpTelemetryTimestampArgs time;      ///< the trailing timestamp
+    UdpTelemetryPayloadArgs payload;     ///< what a send carries
 
-/**
- * @brief Append the trailing ` <timestamp>` (line protocol; nanoseconds by default
- *        on InfluxDB). Call after all fields; a line with no field fails closed.
- */
-void protocore_line_set_timestamp(protocore_line *l, int64_t timestamp);
+    proto_bool ok;
+    proto_bool overflow;
+    size_t n;
 
-/** @brief Append `field=<v>i` (integer field). */
-void protocore_line_add_int(protocore_line *l, const char *field, int64_t v);
+    void (*begin)(struct UdpTelemetryInternal *ctx);
+    void (*measurement)(struct UdpTelemetryInternal *ctx);
+    void (*tag)(struct UdpTelemetryInternal *ctx);
+    void (*field_int)(struct UdpTelemetryInternal *ctx);
+    void (*field_uint)(struct UdpTelemetryInternal *ctx);
+    void (*field_float)(struct UdpTelemetryInternal *ctx);
+    void (*timestamp)(struct UdpTelemetryInternal *ctx);
+    void (*send)(struct UdpTelemetryInternal *ctx);
+    void (*write)(struct UdpTelemetryInternal *ctx);
 
-/** @brief Append `field=<v>i` (unsigned integer field). */
-void protocore_line_add_uint(protocore_line *l, const char *field, uint64_t v);
+    struct UdpTelemetryInternal *internal;
+} UdpTelemetryNs;
 
-/** @brief Append `field=<v>` (float field, @p decimals places). */
-void protocore_line_add_float(protocore_line *l, const char *field, float v, uint8_t decimals);
-
-/** @brief Encoded length (bytes), excluding the null terminator. */
-size_t protocore_line_len(const protocore_line *l);
-
-/** @brief True if every field fit and the line has at least one field. */
-proto_bool protocore_line_ok(const protocore_line *l);
-
-// ---------------------------------------------------------------------------
-// Cast (ESP32; no-op on host)
-// ---------------------------------------------------------------------------
-
-/** @brief Set the collector endpoint (dotted-quad IPv4 + UDP port). */
-void protocore_udp_telemetry_begin(const char *collector_ip, uint16_t port);
-
-/** @brief Cast @p len raw bytes to the collector. @return false if not begun / host. */
-proto_bool protocore_udp_telemetry_send(const char *data, size_t len);
-
-/** @brief Cast a built line to the collector (no-op if the line overflowed). */
-proto_bool protocore_udp_telemetry_cast(const protocore_line *l);
+/** @brief The one symbol this module exports. */
+extern UdpTelemetryNs UdpTelemetry;
 
 #endif // PROTOCORE_ENABLE_UDP_TELEMETRY
 

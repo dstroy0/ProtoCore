@@ -2,13 +2,16 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 // Feed bytes into a connection's rx ring, the way the wire would.
-// Include after the header that declares conn_pool / TcpConn / RX_BUF_SIZE.
 
 #ifndef PROTOCORE_TEST_RX_FEED_H
 #define PROTOCORE_TEST_RX_FEED_H
 
 #include <stddef.h>
 #include <stdint.h>
+
+// TcpConn, conn_pool and RX_BUF_SIZE, named here rather than left to the includer: a suite that
+// pulled them in through some other header broke the moment they moved to common.h.
+#include "network_drivers/transport/tcp/common.h"
 
 // Append @p len bytes to slot @p slot's rx ring.
 static void push_bytes(uint8_t slot, const uint8_t *b, size_t len)

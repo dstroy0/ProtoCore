@@ -191,7 +191,9 @@ static protocore_net_err protocore_tcp_do(struct TcpLowerInternal *restrict ctx)
         protocore_net_arg(ctx->ns->pcb, NULL);
         break;
     case PROTOCORE_OP_CLOSE_CHECK:
-        protocore_conn_closing_check(ctx->ns->slot, ctx->ns->pcb); // safe pcb access: we are in tcpip_thread
+        ConnPool.slot = ctx->ns->slot;
+        ConnPool.pcb = ctx->ns->pcb;
+        ConnPool.closing_check(ConnPool.internal); // safe pcb access: we are in tcpip_thread
         break;
     case PROTOCORE_OP_RECVED:
         // Same O(1) liveness guard as SEND/OUTPUT: the worker captured the pcb when it acked consumed

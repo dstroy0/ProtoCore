@@ -224,7 +224,7 @@ static void net_write_msg(struct SshNetworkInternal *restrict ctx)
         ctx->ns->i32 = -1;
         return;
     }
-    return stream_write(ssh_slot, wire, wlen) ? 0 : -1;
+    ctx->ns->i32 = stream_write(ssh_slot, wire, wlen) ? 0 : -1;
 }
 
 // The span a message may be built in so the framer wraps it without moving it. Null when the slot
@@ -273,7 +273,7 @@ static void net_write_msg_at(struct SshNetworkInternal *restrict ctx)
         return;
     }
     // ssh_pkt_send_at has already advanced the sequence number and the cipher for this packet.
-    return stream_write(ssh_slot, wire, wlen) ? 0 : -1;
+    ctx->ns->i32 = stream_write(ssh_slot, wire, wlen) ? 0 : -1;
 }
 
 
@@ -330,7 +330,7 @@ static void net_owns(struct SshNetworkInternal *restrict ctx)
     const uint8_t ssh_slot = ctx->ns->ssh_slot;
     const uint8_t conn_slot = ctx->ns->conn_slot;
     ensure_init();
-    return ssh_slot < MAX_SSH_CONNS && s_store.conn_for_ssh[ssh_slot] == conn_slot;
+    ctx->ns->ok = ssh_slot < MAX_SSH_CONNS && s_store.conn_for_ssh[ssh_slot] == conn_slot;
 }
 
 // ---------------------------------------------------------------------------
@@ -352,7 +352,12 @@ void ssh_net_version_exchange_send(uint8_t i, uint8_t conn_slot)
     size_t ilen = 0;
     ConnPool.slot = conn_slot;
     ConnPool.active(ConnPool.internal);
-    if (SSH_TRANSPORT->send_ident(i, ident, &ilen, SSH_WIRE_CAP) == 0 && ConnPool.ok)
+    SshTransport.slot = i;
+    SshTransport.out_args.out = ident;
+    SshTransport.out_args.cap = SSH_WIRE_CAP;
+    SshTransport.send_ident(SshTransport.internal);
+    ilen = SshTransport.out_args.out_len;
+    if (SshTransport.i32 == 0 && ConnPool.ok)
     {
         ConnPool.io.data = ident;
         ConnPool.io.len = (proto_u16)ilen;

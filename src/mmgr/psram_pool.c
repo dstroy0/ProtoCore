@@ -10,10 +10,11 @@
 
 #if PROTOCORE_ENABLE_PSRAM_POOL
 
-// Does `size` fit in DRAM while still leaving `reserve` free? Overflow-safe (64-bit sum).
+// Does `size` fit in DRAM while still leaving `reserve` free? Subtracts instead of summing, so no
+// width of size_t can wrap the comparison.
 static proto_bool dram_fits(size_t size, size_t free_dram, size_t reserve)
 {
-    return (uint64_t)size + reserve <= (uint64_t)free_dram;
+    return size <= free_dram && (free_dram - size) >= reserve;
 }
 
 protocore_place protocore_psram_place(size_t size, proto_bool dma_required, size_t free_dram, size_t free_psram,

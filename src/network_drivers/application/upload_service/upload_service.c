@@ -15,7 +15,6 @@
 #include "protocore.h"
 #include "server/storage/mnt.h" // the storage seam: protocore_mnt_active()
 #include "shared/mime/mime.h"
-#include <stdio.h>
 
 static const protocore_field UPLOAD_OK[] = {
     {PROTOCORE_FK_LIT, 0, 3, "OK "}, PROTOCORE_U32, {PROTOCORE_FK_LIT, 0, 6, " bytes"}, PROTOCORE_END};

@@ -14,7 +14,6 @@
 
 #if PROTOCORE_ENABLE_SSH_SFTP
 
-#include <stdio.h>
 
 #include <time.h>
 
@@ -340,10 +339,11 @@ size_t protocore_sftp_format_longname(proto_bool is_dir, uint32_t perms, uint64_
     }
     mode[10] = '\0';
 
-    time_t t = (time_t)mtime;
     struct tm tmv;
     mem.set(&tmv, 0, sizeof(tmv));
-    protocore_gmtime_r(&t, &tmv); // reentrant; mtime==0 -> epoch, a harmless placeholder date
+    TimeCompat.args.epoch = (time_t)mtime; // mtime==0 -> epoch, a harmless placeholder date
+    TimeCompat.args.out = &tmv;
+    TimeCompat.gmtime(TimeCompat.internal);
     // mtime is a uint32_t, so t is always inside the range every gmtime implementation accepts and the
     // conversion yields tm_mon in [0,11] by definition; tmv is zeroed above, so even a failed conversion
     // leaves month 0. The range test is purely a bounds guard on the kMonths[] index below.

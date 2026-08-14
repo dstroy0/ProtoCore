@@ -536,7 +536,8 @@ static void begin_close(struct ConnPoolInternal *restrict ctx)
         return;
     }
     protocore_pcb *pcb = c->pcb;
-    c->last_activity_ms = protocore_millis();     // start the dwell clock
+    Clock.millis(Clock.internal);
+    c->last_activity_ms = Clock.ms;     // start the dwell clock
     protocore_conn_set_state(c->id, CONN_CLOSING); // release store: the callbacks now see CLOSING
     PROTOCORE_OBS_TRANSITION(ctx->ns->slot, CONN_ACTIVE, CONN_CLOSING, PROTOCORE_CONN_R_CLOSE_LOCAL);
     // Finalize immediately if the response already drained, else dwell until the sent callback or
@@ -751,13 +752,15 @@ static void touch_active(struct ConnPoolInternal *restrict ctx)
     TcpConn *c = &conn_pool[ctx->ns->slot];
     if (PROTO_ATOMIC_LOAD(&c->state) == CONN_ACTIVE)
     {
-        c->last_activity_ms = protocore_millis();
+        Clock.millis(Clock.internal);
+        c->last_activity_ms = Clock.ms;
     }
 }
 
 static void check_timeouts(struct ConnPoolInternal *restrict ctx)
 {
-    uint32_t now = protocore_millis();
+    Clock.millis(Clock.internal);
+    uint32_t now = Clock.ms;
     for (int i = 0; i < MAX_CONNS; i++)
     {
         TcpConn *slot = &conn_pool[i];
@@ -914,7 +917,8 @@ protocore_net_err lowlevel_recv_cb(void *arg, protocore_pcb *tpcb, protocore_pbu
         return PROTOCORE_NET_ERR_MEM; // do NOT free the segment: the stack keeps it and redelivers
     }
 
-    slot->last_activity_ms = protocore_millis(); // accepted data is progress: refresh the idle timer
+    Clock.millis(Clock.internal);
+    slot->last_activity_ms = Clock.ms; // accepted data is progress: refresh the idle timer
 
     // Move the segment into the ring a contiguous span per chain link, two across the wrap,
     // advancing a local head and publishing it once at the end. The free-space check above
@@ -949,7 +953,8 @@ protocore_net_err lowlevel_sent_cb(void *arg, protocore_pcb *tpcb, proto_u16 len
     TcpConn *slot = (TcpConn *)arg;
     if (slot != NULL)
     {
-        slot->last_activity_ms = protocore_millis();
+        Clock.millis(Clock.internal);
+        slot->last_activity_ms = Clock.ms;
         if (PROTO_ATOMIC_LOAD(&slot->state) == CONN_CLOSING)
         {
             protocore_conn_closing_check(slot->id, tpcb); // drained? tear down and free the slot

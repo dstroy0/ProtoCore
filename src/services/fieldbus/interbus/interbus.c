@@ -15,7 +15,11 @@
 uint16_t protocore_interbus_fcs(const uint8_t *bytes, size_t len)
 {
     // CRC-16/CCITT-FALSE: poly 0x1021, init 0xFFFF, no reflection, xorout 0 - cataloged as CRC-16/IBM-3740.
-    return (uint16_t)protocore_crc(&PROTOCORE_CRC16_IBM_3740, bytes, len);
+    Crc.args.params = &PROTOCORE_CRC16_IBM_3740;
+    Crc.args.data = bytes;
+    Crc.args.len = len;
+    Crc.compute(Crc.internal);
+    return (uint16_t)Crc.value;
 }
 
 size_t protocore_interbus_build(const uint16_t *words, size_t word_count, uint8_t *out, size_t cap)

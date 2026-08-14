@@ -41,7 +41,8 @@ PROTOCORE_BEGIN_DECLS
  * @brief Encode a PSID as a P-encoded (variable-length) integer.
  *
  * The PSID length is signalled by the top bits of the first octet: 1 octet if < 0x80, 2 if < 0x4000,
- * 3 if < 0x200000, 4 otherwise. @return octets written (1..4), or 0 if it will not fit.
+ * 3 if < 0x200000, 4 up to 0x0FFFFFFF. The 4-octet form's tag takes the top four bits, so a PSID
+ * above that has no encoding. @return octets written (1..4), or 0 if it will not fit.
  */
 size_t protocore_wave_encode_psid(uint32_t psid, uint8_t *out, size_t cap);
 
