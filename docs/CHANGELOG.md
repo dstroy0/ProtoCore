@@ -119,6 +119,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`849ff74`](https://github.com/dstroy0/ProtoCore/commit/849ff741e9ec8e97f611dc976d77f0449672f8ed))
 - update CHANGELOG.md [skip ci] ([`4381344`](https://github.com/dstroy0/ProtoCore/commit/4381344ab533cd6c9cd5fc14839667dc9f899ede))
 - update CHANGELOG.md [skip ci] ([`864d5d3`](https://github.com/dstroy0/ProtoCore/commit/864d5d38686e6a751556d83f8489aeb7827205f0))
 - update CHANGELOG.md [skip ci] ([`99c1bbf`](https://github.com/dstroy0/ProtoCore/commit/99c1bbfc60d28285bfa5820fc31e2c6f9127f354))
@@ -363,6 +364,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- (housekeeping): move dirs, renames, pimpl as I work through ([`25917ca`](https://github.com/dstroy0/ProtoCore/commit/25917cae67a15411f1ddd90dd5ff915735a0bfa7))
 - Merge branch 'main' of https://github.com/dstroy0/ProtoCore ([`deb8198`](https://github.com/dstroy0/ProtoCore/commit/deb8198bb3eee891641f935c84c179c73b3654b8))
 - (housekeeping): move dirs, renames, pimpl as I work through ([`9b84203`](https://github.com/dstroy0/ProtoCore/commit/9b84203df2c5ef73123cd41020528eb39f455c9b))
 - Merge branch 'main' of https://github.com/dstroy0/ProtoCore ([`6cda996`](https://github.com/dstroy0/ProtoCore/commit/6cda99639dbfe5295a469a986ce1b56419a5fd0b))
@@ -420,6 +422,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`775c0d9`](https://github.com/dstroy0/ProtoCore/commit/775c0d9bac9f739395edd2547045b228f3bd5f57))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`198daea`](https://github.com/dstroy0/ProtoCore/commit/198daeaccbdb64118294665ced8c8ebb9e9de37b))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`f729fa7`](https://github.com/dstroy0/ProtoCore/commit/f729fa718a5bac891c57656d7c90ae59c107d61e))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`49e6c0a`](https://github.com/dstroy0/ProtoCore/commit/49e6c0a7215518c1743fef47a4fd19fa4274fe49))
