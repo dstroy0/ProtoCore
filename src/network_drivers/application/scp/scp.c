@@ -12,7 +12,6 @@
 
 #if PROTOCORE_ENABLE_SSH_SCP
 
-
 // Apply one scp flag token (e.g. "-t", "-rf"): -t selects the sink role, -f the source; other letters
 // (-v/-r/-p/-d and combinations) are accepted and ignored.
 static void apply_scp_flags(const char *tok, size_t tlen, ScpMode *mode)

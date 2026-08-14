@@ -38,14 +38,14 @@ void tearDown(void)
 void test_read_request_ber_nesting(void)
 {
     static const uint8_t WANT[18] = {
-        0xA0, 0x10,             //
-        0x02, 0x01, 0x01,       //
-        0xA4, 0x0B,             //
-        0xA1, 0x09,             //
-        0xA0, 0x07,             //
-        0x30, 0x05,             //
-        0xA0, 0x03,             //
-        0x1A, 0x01, 0x41,       //
+        0xA0, 0x10,       //
+        0x02, 0x01, 0x01, //
+        0xA4, 0x0B,       //
+        0xA1, 0x09,       //
+        0xA0, 0x07,       //
+        0x30, 0x05,       //
+        0xA0, 0x03,       //
+        0x1A, 0x01, 0x41, //
     };
     uint8_t out[64];
     size_t n = protocore_mms_read_request(1u, "A", out, sizeof(out));
@@ -91,7 +91,7 @@ void test_invoke_id_integer_is_minimal_and_positive(void)
         {0u, 1, {0x00, 0, 0, 0, 0}},
         {1u, 1, {0x01, 0, 0, 0, 0}},
         {127u, 1, {0x7F, 0, 0, 0, 0}},
-        {128u, 2, {0x00, 0x80, 0, 0, 0}},            // 0x80 alone would read as negative
+        {128u, 2, {0x00, 0x80, 0, 0, 0}}, // 0x80 alone would read as negative
         {0x1234u, 2, {0x12, 0x34, 0, 0, 0}},
         {0xFFFFu, 3, {0x00, 0xFF, 0xFF, 0, 0}},
         {0xFFFFFFFFu, 5, {0x00, 0xFF, 0xFF, 0xFF, 0xFF}}, // the widest Unsigned32

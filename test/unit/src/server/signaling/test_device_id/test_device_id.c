@@ -14,8 +14,8 @@
 // Every other expectation is then the module's own name rule measured against that reference: the
 // name is the six MAC octets as twelve lowercase hex characters with no separators.
 
-#include "server/signaling/device_id.h"
 #include "crypto/hash/sha1.h"
+#include "server/signaling/device_id.h"
 #include <string.h>
 
 #include <unity.h>

@@ -72,8 +72,8 @@ int protocore_esp3_parse(const uint8_t *raw, uint16_t len, protocore_esp3_packet
     return (int)total;
 }
 
-uint16_t protocore_esp3_build(protocore_esp3_type type, const uint8_t *data, uint16_t data_len, const uint8_t *opt, uint8_t opt_len,
-                       uint8_t *out, uint16_t cap)
+uint16_t protocore_esp3_build(protocore_esp3_type type, const uint8_t *data, uint16_t data_len, const uint8_t *opt,
+                              uint8_t opt_len, uint8_t *out, uint16_t cap)
 {
     if (!out || data_len > PROTOCORE_ENOCEAN_MAX_DATA)
     {
@@ -119,7 +119,7 @@ proto_bool protocore_erp1_parse(const uint8_t *data, uint16_t len, protocore_erp
 }
 
 uint16_t protocore_erp1_build(uint8_t *out, uint16_t cap, uint8_t rorg, const uint8_t *payload, uint8_t payload_len,
-                       uint32_t sender_id, uint8_t status)
+                              uint32_t sender_id, uint8_t status)
 {
     if (!out || (payload_len && !payload))
     {

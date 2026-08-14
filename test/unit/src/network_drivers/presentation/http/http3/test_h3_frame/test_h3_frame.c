@@ -226,9 +226,9 @@ void test_rfc9114_goaway_builder(void)
 void test_truncated_header_is_refused(void)
 {
     H3Frame f;
-    static const uint8_t TYPE_ONLY[1] = {0x00};                // a type with no length
-    static const uint8_t SHORT_LEN[2] = {0x00, 0x40};          // length announces 2 octets, 1 present
-    static const uint8_t SHORT_TYPE[1] = {0x9d};               // type announces 4 octets, 1 present
+    static const uint8_t TYPE_ONLY[1] = {0x00};       // a type with no length
+    static const uint8_t SHORT_LEN[2] = {0x00, 0x40}; // length announces 2 octets, 1 present
+    static const uint8_t SHORT_TYPE[1] = {0x9d};      // type announces 4 octets, 1 present
     TEST_ASSERT_FALSE(protocore_h3_frame_parse(TYPE_ONLY, sizeof(TYPE_ONLY), &f));
     TEST_ASSERT_FALSE(protocore_h3_frame_parse(SHORT_LEN, sizeof(SHORT_LEN), &f));
     TEST_ASSERT_FALSE(protocore_h3_frame_parse(SHORT_TYPE, sizeof(SHORT_TYPE), &f));

@@ -53,7 +53,8 @@ void dbench_run(void)
     {
         DBENCH_BANNER("snmp");
         volatile size_t sink = 0;
-        DBENCH_OP("protocore_snmp_agent_process GET", 100000, sink += protocore_snmp_agent_process(reqget, nget, resp, sizeof(resp)));
+        DBENCH_OP("protocore_snmp_agent_process GET", 100000,
+                  sink += protocore_snmp_agent_process(reqget, nget, resp, sizeof(resp)));
         DBENCH_OP("protocore_snmp_agent_process GETNEXT", 100000,
                   sink += protocore_snmp_agent_process(reqnext, nnext, resp, sizeof(resp)));
         (void)sink;

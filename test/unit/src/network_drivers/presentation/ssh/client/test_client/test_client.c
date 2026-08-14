@@ -117,8 +117,12 @@ int main(void)
 
 #else // PROTOCORE_ENABLE_SSH_CLIENT
 
-void setUp(void) {}
-void tearDown(void) {}
+void setUp(void)
+{
+}
+void tearDown(void)
+{
+}
 
 static void test_this_configuration_does_not_build_it(void)
 {

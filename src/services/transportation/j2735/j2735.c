@@ -194,7 +194,7 @@ size_t protocore_j2735_spat_encode(const J2735MovementState *states, size_t coun
 }
 
 proto_bool protocore_j2735_spat_decode(const uint8_t *in, size_t len, J2735MovementState *out_states, size_t max_states,
-                                size_t *out_count)
+                                       size_t *out_count)
 {
     if (!in || !out_states || !out_count)
     {
@@ -223,7 +223,7 @@ proto_bool protocore_j2735_spat_decode(const uint8_t *in, size_t len, J2735Movem
 }
 
 size_t protocore_j2735_map_encode(const J2735MapIntersection *isect, const J2735Lane *lanes, size_t count, uint8_t *out,
-                           size_t cap)
+                                  size_t cap)
 {
     if (!isect || !out || (count && !lanes) || count > 31)
     {
@@ -246,7 +246,7 @@ size_t protocore_j2735_map_encode(const J2735MapIntersection *isect, const J2735
 }
 
 proto_bool protocore_j2735_map_decode(const uint8_t *in, size_t len, J2735MapIntersection *isect, J2735Lane *out_lanes,
-                               size_t max_lanes, size_t *out_count)
+                                      size_t max_lanes, size_t *out_count)
 {
     if (!in || !isect || !out_lanes || !out_count)
     {

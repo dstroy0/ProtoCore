@@ -81,16 +81,16 @@ static void put_nodeid(uint16_t ns, uint16_t id)
 // The RequestHeader every service request opens with (Part 4 sec 7.28).
 static void put_request_header(uint32_t handle)
 {
-    put_u8(0x00);   // AuthenticationToken: Two Byte NodeId i=0
+    put_u8(0x00); // AuthenticationToken: Two Byte NodeId i=0
     put_u8(0x00);
-    put_u64(0);     // Timestamp
+    put_u64(0); // Timestamp
     put_u32(handle);
-    put_u32(0);     // ReturnDiagnostics
-    put_str(NULL);  // AuditEntryId
-    put_u32(0);     // TimeoutHint
-    put_u8(0x00);   // AdditionalHeader: null NodeId ...
+    put_u32(0);    // ReturnDiagnostics
+    put_str(NULL); // AuditEntryId
+    put_u32(0);    // TimeoutHint
+    put_u8(0x00);  // AdditionalHeader: null NodeId ...
     put_u8(0x00);
-    put_u8(0x00);   // ... + ExtensionObject encoding byte "no body"
+    put_u8(0x00); // ... + ExtensionObject encoding byte "no body"
 }
 // Start a UACP message; the MessageSize is patched by finish().
 static void start(const char *type)
@@ -309,8 +309,7 @@ void test_nodeid_non_numeric_forms_are_skipped(void)
     TEST_ASSERT_EQUAL_HEX8(0xAA, STR_ID[r.off]); // stopped exactly after the identifier
 
     // Guid form: 04, ns, 16 octets
-    static const uint8_t GUID_ID[] = {0x04, 0x02, 0x00, 1, 2,  3,  4,  5,  6,  7, 8,
-                                      9,    10,   11,   12, 13, 14, 15, 16, 0xBB};
+    static const uint8_t GUID_ID[] = {0x04, 0x02, 0x00, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 0xBB};
     UaReader r2 = {GUID_ID, sizeof(GUID_ID), 0, PROTO_FALSE};
     TEST_ASSERT_TRUE(protocore_ua_r_nodeid(&r2, &n));
     TEST_ASSERT_FALSE(n.numeric);
@@ -384,11 +383,11 @@ void test_uacp_header(void)
 void test_hello_parse(void)
 {
     start("HEL");
-    put_u32(0);       // ProtocolVersion
-    put_u32(65536);   // ReceiveBufferSize
-    put_u32(65536);   // SendBufferSize
-    put_u32(16777216);// MaxMessageSize
-    put_u32(5000);    // MaxChunkCount
+    put_u32(0);        // ProtocolVersion
+    put_u32(65536);    // ReceiveBufferSize
+    put_u32(65536);    // SendBufferSize
+    put_u32(16777216); // MaxMessageSize
+    put_u32(5000);     // MaxChunkCount
     put_str("opc.tcp://192.168.1.85:4840");
     size_t n = finish();
 
@@ -436,7 +435,7 @@ void test_ack_negotiation(void)
     TEST_ASSERT_EQUAL_UINT32((uint32_t)n, h.size); // MessageSize includes the header
 
     UaReader r = {out + 8, n - 8, 0, PROTO_FALSE};
-    TEST_ASSERT_EQUAL_UINT32(0u, protocore_ua_r_u32(&r)); // ProtocolVersion
+    TEST_ASSERT_EQUAL_UINT32(0u, protocore_ua_r_u32(&r));                  // ProtocolVersion
     TEST_ASSERT_EQUAL_UINT32(PROTOCORE_OPCUA_BUF, protocore_ua_r_u32(&r)); // ReceiveBufferSize, capped
     TEST_ASSERT_EQUAL_UINT32(PROTOCORE_OPCUA_BUF, protocore_ua_r_u32(&r)); // SendBufferSize, capped
     TEST_ASSERT_EQUAL_UINT32(PROTOCORE_OPCUA_BUF, protocore_ua_r_u32(&r)); // MaxMessageSize
@@ -563,8 +562,8 @@ void test_open_secure_channel(void)
     TEST_ASSERT_EQUAL_UINT32(3600000u, req.requested_lifetime);
 
     uint8_t out[512];
-    size_t rn = protocore_opcua_build_open_response(&req, 0x1234, 0x5678, 1, 116444736010000000LL, 600000, out,
-                                                    sizeof(out));
+    size_t rn =
+        protocore_opcua_build_open_response(&req, 0x1234, 0x5678, 1, 116444736010000000LL, 600000, out, sizeof(out));
     TEST_ASSERT_TRUE(rn > 8);
     TEST_ASSERT_EQUAL_HEX8('O', out[0]);
     TEST_ASSERT_EQUAL_HEX8('P', out[1]);
@@ -579,10 +578,10 @@ void test_open_secure_channel(void)
     int32_t ul = 0;
     TEST_ASSERT_TRUE(protocore_ua_r_string(&r, uri, sizeof(uri), &ul));
     TEST_ASSERT_EQUAL_STRING(OPCUA_POLICY_NONE_URI, uri);
-    TEST_ASSERT_EQUAL_INT32(-1, protocore_ua_r_i32(&r)); // SenderCertificate: null
-    TEST_ASSERT_EQUAL_INT32(-1, protocore_ua_r_i32(&r)); // ReceiverCertificateThumbprint: null
-    TEST_ASSERT_EQUAL_UINT32(1u, protocore_ua_r_u32(&r));       // SequenceNumber
-    TEST_ASSERT_EQUAL_UINT32(1u, protocore_ua_r_u32(&r));       // RequestId echoed
+    TEST_ASSERT_EQUAL_INT32(-1, protocore_ua_r_i32(&r));  // SenderCertificate: null
+    TEST_ASSERT_EQUAL_INT32(-1, protocore_ua_r_i32(&r));  // ReceiverCertificateThumbprint: null
+    TEST_ASSERT_EQUAL_UINT32(1u, protocore_ua_r_u32(&r)); // SequenceNumber
+    TEST_ASSERT_EQUAL_UINT32(1u, protocore_ua_r_u32(&r)); // RequestId echoed
     UaNodeId tid;
     TEST_ASSERT_TRUE(protocore_ua_r_nodeid(&r, &tid));
     TEST_ASSERT_EQUAL_UINT32((uint32_t)OPCUA_ID_OPEN_RESP, tid.id);
@@ -668,7 +667,7 @@ void test_msg_envelope(void)
 // the request, its own SequenceNumber, then the response TypeId and a ResponseHeader whose
 // RequestHandle is the request's.
 static void check_msg_response(const uint8_t *out, size_t n, const OpcUaMsg *req, uint32_t seq, uint32_t want_type,
-                              uint32_t want_result)
+                               uint32_t want_result)
 {
     TEST_ASSERT_TRUE(n > 8);
     TEST_ASSERT_EQUAL_HEX8('M', out[0]);
@@ -841,11 +840,11 @@ void test_datavalue_mask(void)
 
     // the timestamp fields are consumed when their bits are set, so the reader lands past them
     static const uint8_t WITH_STAMPS[] = {
-        0x0F,                                            // Value + StatusCode + Source + ServerTimestamp
-        0x06, 0x2A, 0x00, 0x00, 0x00,                    // Int32 42
-        0x00, 0x00, 0x34, 0x80,                          // StatusCode
-        0, 0, 0, 0, 0, 0, 0, 0,                          // SourceTimestamp
-        0, 0, 0, 0, 0, 0, 0, 0,                          // ServerTimestamp
+        0x0F,                                  // Value + StatusCode + Source + ServerTimestamp
+        0x06, 0x2A, 0x00, 0x00, 0x00,          // Int32 42
+        0x00, 0x00, 0x34, 0x80,                // StatusCode
+        0,    0,    0,    0,    0,    0, 0, 0, // SourceTimestamp
+        0,    0,    0,    0,    0,    0, 0, 0, // ServerTimestamp
     };
     UaReader r3 = {WITH_STAMPS, sizeof(WITH_STAMPS), 0, PROTO_FALSE};
     TEST_ASSERT_TRUE(protocore_ua_r_datavalue(&r3, &got, &status));
@@ -865,8 +864,8 @@ static size_t build_read_request(int32_t count)
     put_u32(4);
     put_nodeid(0, OPCUA_ID_READ_REQ);
     put_request_header(77);
-    put_u64(0);              // MaxAge (Double)
-    put_u32(0);              // TimestampsToReturn
+    put_u64(0); // MaxAge (Double)
+    put_u32(0); // TimestampsToReturn
     put_u32((uint32_t)count);
     for (int32_t i = 0; i < count; i++)
     {
@@ -920,8 +919,8 @@ void test_read_request_and_response(void)
     (void)protocore_ua_r_u8(&r);  // ServiceDiagnostics
     (void)protocore_ua_r_i32(&r); // StringTable
     UaNodeId ah;
-    TEST_ASSERT_TRUE(protocore_ua_r_nodeid(&r, &ah)); // AdditionalHeader NodeId
-    (void)protocore_ua_r_u8(&r);                      // ... ExtensionObject encoding byte
+    TEST_ASSERT_TRUE(protocore_ua_r_nodeid(&r, &ah));   // AdditionalHeader NodeId
+    (void)protocore_ua_r_u8(&r);                        // ... ExtensionObject encoding byte
     TEST_ASSERT_EQUAL_INT32(2, protocore_ua_r_i32(&r)); // Results array length
 
     OpcUaVariant got;
@@ -960,9 +959,9 @@ static size_t build_browse_request(int32_t count)
     put_request_header(88);
     put_u8(0x00); // ViewDescription.ViewId: Two Byte NodeId i=0
     put_u8(0x00);
-    put_u64(0);   // View.Timestamp
-    put_u32(0);   // View.ViewVersion
-    put_u32(10);  // RequestedMaxReferencesPerNode
+    put_u64(0);  // View.Timestamp
+    put_u32(0);  // View.ViewVersion
+    put_u32(10); // RequestedMaxReferencesPerNode
     put_u32((uint32_t)count);
     for (int32_t i = 0; i < count; i++)
     {
@@ -1041,10 +1040,10 @@ void test_write_request_and_response(void)
     {
         put_nodeid(1, (uint16_t)(200 + i));
         put_u32(OPCUA_ATTR_VALUE);
-        put_str(NULL);                  // IndexRange
-        put_u8(0x01);                   // DataValue mask: Value present
-        put_u8(OPCUA_VAR_INT32);        // Variant encoding byte
-        put_u32((uint32_t)(1000 + i));  // Int32 value
+        put_str(NULL);                 // IndexRange
+        put_u8(0x01);                  // DataValue mask: Value present
+        put_u8(OPCUA_VAR_INT32);       // Variant encoding byte
+        put_u32((uint32_t)(1000 + i)); // Int32 value
     }
     size_t n = finish();
 
@@ -1063,9 +1062,9 @@ void test_write_request_and_response(void)
     check_msg_response(out, rn, &req.msg, 13, OPCUA_ID_WRITE_RESP, OPCUA_STATUS_GOOD);
 
     // the two StatusCodes are the last eight octets before the empty DiagnosticInfos array
-    TEST_ASSERT_EQUAL_HEX32(OPCUA_STATUS_BAD_NOT_WRITABLE,
-                            (uint32_t)out[rn - 8] | ((uint32_t)out[rn - 7] << 8) | ((uint32_t)out[rn - 6] << 16) |
-                                ((uint32_t)out[rn - 5] << 24));
+    TEST_ASSERT_EQUAL_HEX32(OPCUA_STATUS_BAD_NOT_WRITABLE, (uint32_t)out[rn - 8] | ((uint32_t)out[rn - 7] << 8) |
+                                                               ((uint32_t)out[rn - 6] << 16) |
+                                                               ((uint32_t)out[rn - 5] << 24));
 
     // a null results array means every write succeeded
     rn = protocore_opcua_build_write_response(&req, NULL, 14, 0, out, sizeof(out));

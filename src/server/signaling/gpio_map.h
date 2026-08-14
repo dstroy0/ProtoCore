@@ -72,17 +72,17 @@ typedef struct
 /** @brief The request body a set parses, and where its two fields land. */
 typedef struct
 {
-    const char *body;  ///< the submitted body
-    size_t len;        ///< its length
-    uint8_t *pin_out;  ///< where the parsed pin lands
+    const char *body;   ///< the submitted body
+    size_t len;         ///< its length
+    uint8_t *pin_out;   ///< where the parsed pin lands
     uint8_t *level_out; ///< where the parsed level lands
 } GpioParseArgs;
 
 /** @brief Where a report is written. */
 typedef struct
 {
-    char *out;     ///< where the JSON lands
-    uint32_t cap;  ///< how much room it has
+    char *out;    ///< where the JSON lands
+    uint32_t cap; ///< how much room it has
 } GpioOutArgs;
 
 /** @brief The map's own calls, described only in gpio_map.c. */

@@ -164,7 +164,8 @@ void protocore_gateway_set_topic_prefix(const char *prefix)
     s_gw.prefix = prefix ? prefix : PROTOCORE_GW_DEFAULT_PREFIX;
 }
 
-proto_bool protocore_gateway_uplink(uint8_t port_id, uint16_t src_addr, const uint8_t *payload, uint16_t len, int16_t rssi)
+proto_bool protocore_gateway_uplink(uint8_t port_id, uint16_t src_addr, const uint8_t *payload, uint16_t len,
+                                    int16_t rssi)
 {
     s_gw.stats.up_in++;
     port *p = find_port(&s_gw, port_id);

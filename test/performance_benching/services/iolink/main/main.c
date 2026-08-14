@@ -51,11 +51,13 @@ void dbench_run(void)
         DBENCH_OP("protocore_iol_cks build", 200000, sink8 += protocore_iol_cks(true, false, 0x0A));
 
         // SDCI checksum over the 4-octet frame (seed 0x52 + 8->6 compression); bulk reports MB/s.
-        DBENCH_BULK("protocore_iol_checksum6 x4B", 100000, sizeof(frame), sink8 += protocore_iol_checksum6(frame, sizeof(frame)));
+        DBENCH_BULK("protocore_iol_checksum6 x4B", 100000, sizeof(frame),
+                    sink8 += protocore_iol_checksum6(frame, sizeof(frame)));
 
         // Finalize-in-place (zero checksum field, recompute, OR in) - idempotent, so re-running
         // on the same buffer stays valid.
-        DBENCH_OP("protocore_iol_finalize x4B", 100000, sink8 += protocore_iol_finalize(frame, sizeof(frame), check_idx));
+        DBENCH_OP("protocore_iol_finalize x4B", 100000,
+                  sink8 += protocore_iol_finalize(frame, sizeof(frame), check_idx));
 
         // Verify a known-good frame (recompute + compare the 6-bit field).
         DBENCH_OP("protocore_iol_verify x4B", 100000, sinkb = protocore_iol_verify(vframe, sizeof(vframe), check_idx));

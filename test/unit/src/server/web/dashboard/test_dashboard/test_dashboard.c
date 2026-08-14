@@ -121,24 +121,16 @@ void test_rebinding_the_table_clears_the_readings(void)
 void test_every_widget_style_has_a_name(void)
 {
     static const protocore_widget ALL[] = {
-        {PROTOCORE_WIDGET_VALUE, "a", "a", 0.0f, 1.0f, ""},
-        {PROTOCORE_WIDGET_GAUGE, "b", "b", 0.0f, 1.0f, ""},
-        {PROTOCORE_WIDGET_BAR, "c", "c", 0.0f, 1.0f, ""},
-        {PROTOCORE_WIDGET_SPARKLINE, "d", "d", 0.0f, 1.0f, ""},
-        {PROTOCORE_WIDGET_CHART, "e", "e", 0.0f, 1.0f, ""},
-        {PROTOCORE_WIDGET_BUTTON, "f", "f", 0.0f, 1.0f, ""},
-        {PROTOCORE_WIDGET_TOGGLE, "g", "g", 0.0f, 1.0f, ""},
-        {PROTOCORE_WIDGET_SLIDER, "h", "h", 0.0f, 1.0f, ""},
+        {PROTOCORE_WIDGET_VALUE, "a", "a", 0.0f, 1.0f, ""},    {PROTOCORE_WIDGET_GAUGE, "b", "b", 0.0f, 1.0f, ""},
+        {PROTOCORE_WIDGET_BAR, "c", "c", 0.0f, 1.0f, ""},      {PROTOCORE_WIDGET_SPARKLINE, "d", "d", 0.0f, 1.0f, ""},
+        {PROTOCORE_WIDGET_CHART, "e", "e", 0.0f, 1.0f, ""},    {PROTOCORE_WIDGET_BUTTON, "f", "f", 0.0f, 1.0f, ""},
+        {PROTOCORE_WIDGET_TOGGLE, "g", "g", 0.0f, 1.0f, ""},   {PROTOCORE_WIDGET_SLIDER, "h", "h", 0.0f, 1.0f, ""},
         {(protocore_widget_type)99, "i", "i", 0.0f, 1.0f, ""},
     };
-    static const char *const NAMES[] = {"\"type\":\"value\",\"label\":\"a\"",
-                                        "\"type\":\"gauge\",\"label\":\"b\"",
-                                        "\"type\":\"bar\",\"label\":\"c\"",
-                                        "\"type\":\"sparkline\",\"label\":\"d\"",
-                                        "\"type\":\"chart\",\"label\":\"e\"",
-                                        "\"type\":\"button\",\"label\":\"f\"",
-                                        "\"type\":\"toggle\",\"label\":\"g\"",
-                                        "\"type\":\"slider\",\"label\":\"h\"",
+    static const char *const NAMES[] = {"\"type\":\"value\",\"label\":\"a\"",  "\"type\":\"gauge\",\"label\":\"b\"",
+                                        "\"type\":\"bar\",\"label\":\"c\"",    "\"type\":\"sparkline\",\"label\":\"d\"",
+                                        "\"type\":\"chart\",\"label\":\"e\"",  "\"type\":\"button\",\"label\":\"f\"",
+                                        "\"type\":\"toggle\",\"label\":\"g\"", "\"type\":\"slider\",\"label\":\"h\"",
                                         "\"type\":\"value\",\"label\":\"i\""};
 
     protocore_dashboard_configure(ALL, (uint8_t)(sizeof(ALL) / sizeof(ALL[0])));

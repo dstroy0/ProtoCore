@@ -89,7 +89,7 @@ uint8_t protocore_iface_bridge_count()
 }
 
 size_t protocore_iface_bridge_txn_parse(const uint8_t *buf, size_t len, uint16_t *write_len, uint16_t *read_len,
-                                 const uint8_t **write_data)
+                                        const uint8_t **write_data)
 {
     if (!buf || len < (size_t)PROTOCORE_BRIDGE_TXN_HDR)
     {
@@ -117,7 +117,7 @@ size_t protocore_iface_bridge_txn_parse(const uint8_t *buf, size_t len, uint16_t
 }
 
 size_t protocore_iface_bridge_txn_build(uint8_t *out, size_t cap, const uint8_t *write_data, uint16_t write_len,
-                                 uint16_t read_len)
+                                        uint16_t read_len)
 {
     size_t need = (size_t)PROTOCORE_BRIDGE_TXN_HDR + write_len;
     if (!out || cap < need)

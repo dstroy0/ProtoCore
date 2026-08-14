@@ -13,8 +13,8 @@
 #include "server/core/worker.h"
 
 #include "core_setup/board_profiles/protocore_platform.h" // the target's queues and tasks, under our names
-#include "mmgr/arena.h"                            // protocore_worker_set_self: identity lives with the pools it indexes
-#include "mmgr/ring.h"                             // PROTO_ATOMIC_LOAD/STORE: the run flag crosses tasks
+#include "mmgr/arena.h" // protocore_worker_set_self: identity lives with the pools it indexes
+#include "mmgr/ring.h"  // PROTO_ATOMIC_LOAD/STORE: the run flag crosses tasks
 
 // ---------------------------------------------------------------------------
 // Worker tasks
@@ -38,9 +38,9 @@ typedef struct
  */
 struct WorkerStorage
 {
-    protocore_platform_task tasks[PROTOCORE_WORKER_COUNT]; ///< one task handle per worker
-    protocore_platform_queue dq[PROTOCORE_WORKER_COUNT];   ///< the deferred-callback queue handles
-    protocore_platform_queue_ctrl dq_struct[PROTOCORE_WORKER_COUNT];               ///< their descriptors
+    protocore_platform_task tasks[PROTOCORE_WORKER_COUNT];           ///< one task handle per worker
+    protocore_platform_queue dq[PROTOCORE_WORKER_COUNT];             ///< the deferred-callback queue handles
+    protocore_platform_queue_ctrl dq_struct[PROTOCORE_WORKER_COUNT]; ///< their descriptors
     uint8_t dq_storage[PROTOCORE_WORKER_COUNT][PROTOCORE_DEFER_QUEUE_DEPTH * sizeof(DeferCmd)]; ///< their backing store
 };
 
@@ -82,7 +82,8 @@ static void worker_task(void *arg)
         {
             s_worker.pump(id);
         }
-        protocore_platform_task_wait(PROTOCORE_PLATFORM_OK, PROTOCORE_WORKER_POLL_TICKS); // wake on event, else idle-sweep timeout
+        protocore_platform_task_wait(PROTOCORE_PLATFORM_OK,
+                                     PROTOCORE_WORKER_POLL_TICKS); // wake on event, else idle-sweep timeout
     }
     s_worker.store->tasks[id] = NULL;
     protocore_platform_task_stop(NULL);
@@ -100,7 +101,7 @@ static void start(struct WorkerInternal *restrict ctx)
         if (!ctx->store->dq[i])
         {
             ctx->store->dq[i] = protocore_platform_queue_create(PROTOCORE_DEFER_QUEUE_DEPTH, sizeof(DeferCmd),
-                                                               ctx->store->dq_storage[i], &ctx->store->dq_struct[i]);
+                                                                ctx->store->dq_storage[i], &ctx->store->dq_struct[i]);
         }
     }
     PROTO_ATOMIC_STORE(&ctx->run, PROTO_TRUE);
@@ -147,8 +148,7 @@ static void wake(struct WorkerInternal *restrict ctx)
 
 static void run_deferred(struct WorkerInternal *restrict ctx)
 {
-    if (ctx->ns->worker_id < 0 || ctx->ns->worker_id >= PROTOCORE_WORKER_COUNT ||
-        !ctx->store->dq[ctx->ns->worker_id])
+    if (ctx->ns->worker_id < 0 || ctx->ns->worker_id >= PROTOCORE_WORKER_COUNT || !ctx->store->dq[ctx->ns->worker_id])
     {
         return;
     }

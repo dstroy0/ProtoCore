@@ -183,7 +183,8 @@ proto_bool protocore_ftp_parse_reply(const char *buf, size_t len, int *code, siz
     }
     while (pos < len)
     {
-        if (len - pos >= 4 && protocore_ftp_is_3digit(buf + pos) && protocore_ftp_code3(buf + pos) == first && buf[pos + 3] == ' ')
+        if (len - pos >= 4 && protocore_ftp_is_3digit(buf + pos) && protocore_ftp_code3(buf + pos) == first &&
+            buf[pos + 3] == ' ')
         {
             size_t eol = protocore_ftp_line_end(buf, len, pos);
             if (!eol)

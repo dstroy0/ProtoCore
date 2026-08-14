@@ -50,10 +50,10 @@ void test_a_frame_interleaves_its_literals_and_values(void)
 {
     static const char WANT[] = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 21\r\n";
     char out[128];
-    size_t n = frame.build(
-        out, sizeof(out), RESP,
-        (const protocore_fval[]){PROTOCORE_VU32(200u), PROTOCORE_VSTR("OK"), PROTOCORE_VSTR("text/plain"), PROTOCORE_VU32(21u)},
-        4);
+    size_t n = frame.build(out, sizeof(out), RESP,
+                           (const protocore_fval[]){PROTOCORE_VU32(200u), PROTOCORE_VSTR("OK"),
+                                                    PROTOCORE_VSTR("text/plain"), PROTOCORE_VU32(21u)},
+                           4);
     TEST_ASSERT_EQUAL_STRING(WANT, out);
     TEST_ASSERT_EQUAL_size_t(sizeof(WANT) - 1u, n);
 }
@@ -125,9 +125,10 @@ void test_every_field_kind_renders_its_conversion(void)
                                           PROTOCORE_END};
     char out[160];
     frame.build(out, sizeof(out), ALL,
-                (const protocore_fval[]){PROTOCORE_VHEX(0xbeefu), PROTOCORE_VDEC(7u), PROTOCORE_VI64(-5), PROTOCORE_VU64(12u),
-                                         PROTOCORE_VG(3.14159265), PROTOCORE_VFIX(2.5), PROTOCORE_VCH('x'),
-                                         PROTOCORE_VJSON("a\"b"), PROTOCORE_VXML("a<b"), PROTOCORE_VOCT(8u)},
+                (const protocore_fval[]){PROTOCORE_VHEX(0xbeefu), PROTOCORE_VDEC(7u), PROTOCORE_VI64(-5),
+                                         PROTOCORE_VU64(12u), PROTOCORE_VG(3.14159265), PROTOCORE_VFIX(2.5),
+                                         PROTOCORE_VCH('x'), PROTOCORE_VJSON("a\"b"), PROTOCORE_VXML("a<b"),
+                                         PROTOCORE_VOCT(8u)},
                 10);
     TEST_ASSERT_EQUAL_STRING("0000beef|007|-5|12|3.14159|2.50|x|\"a\\\"b\"|a&lt;b|0010", out);
 }
@@ -200,11 +201,10 @@ void test_a_frame_that_does_not_fit_writes_an_empty_string(void)
 {
     char tiny[8];
     memset(tiny, 'Z', sizeof(tiny));
-    TEST_ASSERT_EQUAL_size_t(
-        0, frame.build(tiny, sizeof(tiny), RESP,
-                       (const protocore_fval[]){PROTOCORE_VU32(200u), PROTOCORE_VSTR("OK"), PROTOCORE_VSTR("text/plain"),
-                                                PROTOCORE_VU32(21u)},
-                       4));
+    TEST_ASSERT_EQUAL_size_t(0, frame.build(tiny, sizeof(tiny), RESP,
+                                            (const protocore_fval[]){PROTOCORE_VU32(200u), PROTOCORE_VSTR("OK"),
+                                                                     PROTOCORE_VSTR("text/plain"), PROTOCORE_VU32(21u)},
+                                            4));
     TEST_ASSERT_EQUAL_STRING("", tiny);
 }
 
@@ -298,10 +298,10 @@ void test_append_accumulates_onto_the_existing_contents(void)
 {
     char acc[64];
     acc[0] = '\0';
-    TEST_ASSERT_EQUAL_size_t(
-        8, frame.append(acc, sizeof(acc), HDR, (const protocore_fval[]){PROTOCORE_VSTR("X-A"), PROTOCORE_VSTR("1")}, 2));
-    TEST_ASSERT_EQUAL_size_t(
-        16, frame.append(acc, sizeof(acc), HDR, (const protocore_fval[]){PROTOCORE_VSTR("X-B"), PROTOCORE_VSTR("2")}, 2));
+    TEST_ASSERT_EQUAL_size_t(8, frame.append(acc, sizeof(acc), HDR,
+                                             (const protocore_fval[]){PROTOCORE_VSTR("X-A"), PROTOCORE_VSTR("1")}, 2));
+    TEST_ASSERT_EQUAL_size_t(16, frame.append(acc, sizeof(acc), HDR,
+                                              (const protocore_fval[]){PROTOCORE_VSTR("X-B"), PROTOCORE_VSTR("2")}, 2));
     TEST_ASSERT_EQUAL_STRING("X-A: 1\r\nX-B: 2\r\n", acc);
 }
 
@@ -313,8 +313,8 @@ void test_append_rewinds_the_whole_frame_on_overflow(void)
     small[0] = '\0';
     frame.append(small, sizeof(small), HDR, (const protocore_fval[]){PROTOCORE_VSTR("X-A"), PROTOCORE_VSTR("1")}, 2);
     TEST_ASSERT_EQUAL_size_t(
-        0,
-        frame.append(small, sizeof(small), HDR, (const protocore_fval[]){PROTOCORE_VSTR("X-VeryLong"), PROTOCORE_VSTR("2")}, 2));
+        0, frame.append(small, sizeof(small), HDR,
+                        (const protocore_fval[]){PROTOCORE_VSTR("X-VeryLong"), PROTOCORE_VSTR("2")}, 2));
     TEST_ASSERT_EQUAL_STRING("X-A: 1\r\n", small);
 }
 
@@ -324,7 +324,7 @@ void test_append_to_a_full_buffer_changes_nothing(void)
     char full[8];
     memset(full, 'a', sizeof(full) - 1u);
     full[sizeof(full) - 1u] = '\0';
-    TEST_ASSERT_EQUAL_size_t(
-        0, frame.append(full, sizeof(full), HDR, (const protocore_fval[]){PROTOCORE_VSTR("X"), PROTOCORE_VSTR("1")}, 2));
+    TEST_ASSERT_EQUAL_size_t(0, frame.append(full, sizeof(full), HDR,
+                                             (const protocore_fval[]){PROTOCORE_VSTR("X"), PROTOCORE_VSTR("1")}, 2));
     TEST_ASSERT_EQUAL_STRING("aaaaaaa", full);
 }

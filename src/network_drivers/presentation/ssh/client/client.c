@@ -24,11 +24,11 @@
 #include "network_drivers/presentation/ssh/connection/connection.h"
 #include "network_drivers/presentation/ssh/network/network.h"
 #include "network_drivers/presentation/ssh/ssh.h"
-#include "network_drivers/presentation/ssh/transport/transport.h"
 #include "network_drivers/presentation/ssh/transport/ssh_kexhash.h" // SshKexHash (SHA-256/SHA-512 by method)
 #include "network_drivers/presentation/ssh/transport/ssh_rsa.h"     // rsa-sha2-256/512 host-key verify
-#include "network_drivers/transport/tcp/tcp.h"   // protocore_client_*
-#include "server/clock/clock.h"              // protocore_millis, pcdelay
+#include "network_drivers/presentation/ssh/transport/transport.h"
+#include "network_drivers/transport/tcp/tcp.h" // protocore_client_*
+#include "server/clock/clock.h"                // protocore_millis, pcdelay
 #include "shared/log/log.h"
 #if PROTOCORE_ENABLE_PQC_KEX
 #include "crypto/pqc/mlkem.h" // mlkem768x25519-sha256 hybrid (client: KeyGen + Decaps)
@@ -44,8 +44,7 @@
 // ---------------------------------------------------------------------------
 
 // Log frames: each message's shape is fixed here, so nothing is parsed when one is emitted.
-static const protocore_field LOG_FWD_FAIL[] = {
-    {PROTOCORE_FK_LIT, 0, 9, "ssh-fwd: "}, PROTOCORE_STR, PROTOCORE_END};
+static const protocore_field LOG_FWD_FAIL[] = {{PROTOCORE_FK_LIT, 0, 9, "ssh-fwd: "}, PROTOCORE_STR, PROTOCORE_END};
 static const protocore_field LOG_FWD_OPEN[] = {
     {PROTOCORE_FK_LIT, 0, 46, "ssh-fwd: forwarded-tcpip open, local connect(:"},
     PROTOCORE_U32,
@@ -113,7 +112,6 @@ static SshClientStorage s_store;
 
 static struct SshClientInternal s_cli = {.store = &s_store, .ns = &SshClient};
 
-
 // The client engine is one translation unit; these are defined below in dependency order.
 static void cli_send(struct SshClientInternal *restrict ctx);
 static void cli_crypto_work(struct SshClientInternal *restrict ctx);
@@ -136,7 +134,7 @@ static proto_bool send_service_request(void)
     protocore_span w = span.from(out, sizeof(out));
     bytes.put(&w, SSH_MSG_SERVICE_REQUEST);
     protocore_ssh_wr_cstr(&w, "ssh-userauth");
-    return span.ok(w) && (SshClient.payload = out, SshClient.len = w.pos, cli_send(\&s_cli), SshClient.ok);
+    return span.ok(w) && (SshClient.payload = out, SshClient.len = w.pos, cli_send(\& s_cli), SshClient.ok);
 }
 
 // ---------------------------------------------------------------------------
@@ -151,7 +149,10 @@ static proto_bool send_service_request(void)
 // RFC 4253 sec 8: K comes from the transport, which owns the method switch for both roles.
 static proto_bool compute_k(const uint8_t *srv_pub, uint32_t srv_pub_len, uint8_t k_be[256])
 {
-    SshKexEphemeral e = {.alg = s_store.kex, .priv = s_store.kex_priv, .hybrid_sk = NULL, .work = (cli_crypto_work(&s_cli), SshClient.work)};
+    SshKexEphemeral e = {.alg = s_store.kex,
+                         .priv = s_store.kex_priv,
+                         .hybrid_sk = NULL,
+                         .work = (cli_crypto_work(&s_cli), SshClient.work)};
 #if PROTOCORE_ENABLE_PQC_KEX
     if (s_store.kex == SSH_KEX_MLKEM768_X25519)
     {
@@ -235,7 +236,8 @@ static proto_bool handle_kexdh_reply(const uint8_t *p, size_t len)
     uint8_t H[SSH_KEXHASH_MAX_LEN];
     size_t h_len = 0;
     if (SSH_TRANSPORT->exchange_hash(SSH_CLI_SLOT, pub_is_string, hs->cpub, hs->cpub_len, srv_pub, sp_len, k_hash,
-                                     k_hash_len, ks, ks_len, H, &h_len, k_is_string, ssh_kex_is_sha512(s_store.kex)) != 0)
+                                     k_hash_len, ks, ks_len, H, &h_len, k_is_string,
+                                     ssh_kex_is_sha512(s_store.kex)) != 0)
     {
         protocore_secure_wipe(k_be, sizeof(k_be));
         return PROTO_FALSE;
@@ -281,7 +283,7 @@ static proto_bool handle_kexdh_reply(const uint8_t *p, size_t len)
 #endif
 
     uint8_t nk = SSH_MSG_NEWKEYS;
-    if (!(SshClient.payload = &nk, SshClient.len = 1, cli_send(\&s_cli), SshClient.ok))
+    if (!(SshClient.payload = &nk, SshClient.len = 1, cli_send(\& s_cli), SshClient.ok))
     {
         return PROTO_FALSE;
     }
@@ -312,7 +314,7 @@ static proto_bool build_kexinit(void)
     {
         return PROTO_FALSE;
     }
-    return (SshClient.payload = out, SshClient.len = n, cli_send(\&s_cli), SshClient.ok);
+    return (SshClient.payload = out, SshClient.len = n, cli_send(\& s_cli), SshClient.ok);
 }
 
 // Generate our KEX ephemeral for the negotiated method and build Q_C / e into s_store.qc.
@@ -437,7 +439,8 @@ static proto_bool handle_server_kexinit(const uint8_t *p, size_t len)
         bytes.put(&w, SSH_MSG_KEXDH_INIT);
         bytes.put_be(&w, (uint32_t)clen, 4);
         bytes.raw(&w, hs->cpub, clen);
-        proto_bool ok = span.ok(w) && (SshClient.payload = out, SshClient.len = w.pos, cli_send(\&s_cli), SshClient.ok);
+        proto_bool ok =
+            span.ok(w) && (SshClient.payload = out, SshClient.len = w.pos, cli_send(\& s_cli), SshClient.ok);
         protocore_plaintext_release(mark);
         return ok;
     }
@@ -465,7 +468,8 @@ static proto_bool handle_server_kexinit(const uint8_t *p, size_t len)
         bytes.put(&w, SSH_MSG_KEXDH_INIT);
         bytes.put_be(&w, (uint32_t)clen, 4);
         bytes.raw(&w, hs->cpub, clen);
-        proto_bool ok = span.ok(w) && (SshClient.payload = out, SshClient.len = w.pos, cli_send(\&s_cli), SshClient.ok);
+        proto_bool ok =
+            span.ok(w) && (SshClient.payload = out, SshClient.len = w.pos, cli_send(\& s_cli), SshClient.ok);
         protocore_plaintext_release(mark);
         return ok;
     }
@@ -501,7 +505,7 @@ static proto_bool handle_server_kexinit(const uint8_t *p, size_t len)
     {
         protocore_ssh_wr_str(&w, s_store.qc, s_store.qc_len);
     }
-    return span.ok(w) && (SshClient.payload = out, SshClient.len = w.pos, cli_send(\&s_cli), SshClient.ok);
+    return span.ok(w) && (SshClient.payload = out, SshClient.len = w.pos, cli_send(\& s_cli), SshClient.ok);
 }
 
 // ---------------------------------------------------------------------------
@@ -579,7 +583,7 @@ static proto_bool send_tcpip_forward(void)
     bytes.put(&w, 1); // want reply
     protocore_ssh_wr_cstr(&w, s_store.cfg.bind_addr ? s_store.cfg.bind_addr : "");
     bytes.put_be(&w, s_store.cfg.bind_port, 4);
-    return span.ok(w) && (SshClient.payload = out, SshClient.len = w.pos, cli_send(\&s_cli), SshClient.ok);
+    return span.ok(w) && (SshClient.payload = out, SshClient.len = w.pos, cli_send(\& s_cli), SshClient.ok);
 }
 // ---------------------------------------------------------------------------
 // RFC 4252 sec 7 - the outbound role's publickey request
@@ -617,8 +621,7 @@ static proto_bool send_userauth_publickey(void)
     }
     uint8_t signed_data[256 + SSH_KEXHASH_MAX_LEN];
     protocore_span sd = span.from(signed_data, sizeof(signed_data));
-    protocore_ssh_auth_write_publickey_request(&sd, sid, sid_len, user, "ssh-connection", NAME_ED25519, pkblob,
-                                               pw.pos);
+    protocore_ssh_auth_write_publickey_request(&sd, sid, sid_len, user, "ssh-connection", NAME_ED25519, pkblob, pw.pos);
     if (!span.ok(sd))
     {
         return PROTO_FALSE;
@@ -651,7 +654,6 @@ static proto_bool send_userauth_publickey(void)
     SshClient.send(SshClient.internal);
     return SshClient.ok;
 }
-
 
 // ---------------------------------------------------------------------------
 // Inbound message dispatch (called by ssh_pkt_recv per verified packet)
@@ -791,7 +793,8 @@ static void cli_msg_handler(uint8_t slot, uint8_t type, const uint8_t *payload, 
             {
                 handled = PROTO_TRUE;
                 s_store.state = PROTOCORE_SSH_CLIENT_UP;
-                PROTOCORE_LOGI(LOG_FWD_UP, ((const protocore_fval[]){PROTOCORE_VU32((uint32_t)s_store.cfg.bind_port)}), 1);
+                PROTOCORE_LOGI(LOG_FWD_UP, ((const protocore_fval[]){PROTOCORE_VU32((uint32_t)s_store.cfg.bind_port)}),
+                               1);
             }
             else if (type == SSH_MSG_REQUEST_FAILURE)
             {
@@ -817,7 +820,7 @@ static void cli_msg_handler(uint8_t slot, uint8_t type, const uint8_t *payload, 
         size_t n = 0;
         if (ssh_pkt_unimplemented(SSH_CLI_SLOT, out, &n, sizeof(out)) == 0)
         {
-            (void)(SshClient.payload = out, SshClient.len = n, cli_send(\&s_cli), SshClient.ok);
+            (void)(SshClient.payload = out, SshClient.len = n, cli_send(\& s_cli), SshClient.ok);
         }
     }
 }

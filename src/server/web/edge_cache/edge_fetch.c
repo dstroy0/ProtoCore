@@ -13,8 +13,8 @@
 #if PROTOCORE_ENABLE_EDGE_CACHE
 
 #include "mmgr/rawmemcpy.h"                       // raw.read: the request into this fetch's buffer
+#include "server/web/edge_cache/edge_cache.h"     // edge_header_value
 #include "services/net/http_client/http_client.h" // HttpClient.parse_response
-#include "server/web/edge_cache/edge_cache.h"   // edge_header_value
 
 // Offset just past the CRLFCRLF header terminator, or 0 if the header block is not complete.
 static size_t head_end(const uint8_t *b, size_t n)

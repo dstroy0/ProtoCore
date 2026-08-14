@@ -20,8 +20,8 @@
 // performance_benching/device/ads1115 - where the I2C transaction is stubbed but a deterministic config-word /
 // conversion codec remains to bench - ota_service has no such codec to isolate, so the honest result
 // is an empty benchmark (same call as performance_benching/device/i2c and performance_benching/device/mdns_service). We
-// still #include the header and take (never call) the address of protocore_ota_begin() so the compiler/linker prove the real
-// production symbol is valid in this context.
+// still #include the header and take (never call) the address of protocore_ota_begin() so the compiler/linker prove the
+// real production symbol is valid in this context.
 //
 // Build/flash (JTAG-capable S3 over its USB-Serial/JTAG port):
 //   idf.py -C test/performance_benching/ota_service -t upload --upload-port COM7

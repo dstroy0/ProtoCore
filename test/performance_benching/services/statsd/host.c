@@ -23,7 +23,8 @@
 int main(void)
 {
     char out[256];
-    size_t len = protocore_statsd_format(out, sizeof(out), "api.requests", "1", STATSD_COUNTER, 0.1f, "env:prod,host:pc-rig");
+    size_t len =
+        protocore_statsd_format(out, sizeof(out), "api.requests", "1", STATSD_COUNTER, 0.1f, "env:prod,host:pc-rig");
 
     hbench_header();
 
@@ -31,8 +32,8 @@ int main(void)
     volatile size_t sink = 0;
     double ns = 0.0;
     HBENCH_NS(3000000,
-              sink +=
-              protocore_statsd_format(out, sizeof(out), "api.requests", "1", STATSD_COUNTER, 0.1f, "env:prod,host:pc-rig"),
+              sink += protocore_statsd_format(out, sizeof(out), "api.requests", "1", STATSD_COUNTER, 0.1f,
+                                              "env:prod,host:pc-rig"),
               ns);
     hbench_row("statsd", "protocore_statsd_format (counter)", ns, (double)len);
     (void)sink;

@@ -17,8 +17,8 @@
 #include "mmgr/secure.h"
 #include "network_drivers/presentation/ssh/connection/connection.h" // ssh_connection_dispatch()
 #include "network_drivers/presentation/ssh/network/network.h"       // SshNetwork.emit()
+#include "network_drivers/presentation/ssh/transport/ssh_rsa.h"     // protocore_rsa_verify(), PROTOCORE_RSA_KEY_BYTES
 #include "network_drivers/presentation/ssh/transport/transport.h"   // ssh_sess[], SshPhase
-#include "network_drivers/presentation/ssh/transport/ssh_rsa.h"                             // protocore_rsa_verify(), PROTOCORE_RSA_KEY_BYTES
 #include "server/clock/clock.h" // protocore_millis(): the password-change cooldown clock
 #if PROTOCORE_ENABLE_SSH_ZLIB
 #include "network_drivers/presentation/ssh/transport/comp.h" // ssh_comp_on_auth_success()
@@ -596,10 +596,10 @@ void protocore_ssh_auth_handle_request(struct SshAuthInternal *restrict ctx)
         if (!s_auth.pw_cb) // no verifier installed -> cannot challenge
         {
             ctx->ns->out_args.out = out;
-    ctx->ns->out_args.cap = cap;
-    ctx->ns->partial = PROTO_FALSE;
-    protocore_ssh_auth_build_failure(ctx);
-    *out_len = ctx->ns->out_args.out_len;
+            ctx->ns->out_args.cap = cap;
+            ctx->ns->partial = PROTO_FALSE;
+            protocore_ssh_auth_build_failure(ctx);
+            *out_len = ctx->ns->out_args.out_len;
             return;
         }
         s_store.ki[i].pending = PROTO_TRUE;
@@ -637,10 +637,10 @@ void protocore_ssh_auth_handle_request(struct SshAuthInternal *restrict ctx)
         protocore_secure_wipe(req.password, sizeof(req.password));
         protocore_secure_wipe(req.new_password, sizeof(req.new_password));
         ctx->ns->out_args.out = out;
-    ctx->ns->out_args.cap = cap;
-    ctx->ns->partial = PROTO_FALSE;
-    protocore_ssh_auth_build_failure(ctx);
-    *out_len = ctx->ns->out_args.out_len;
+        ctx->ns->out_args.cap = cap;
+        ctx->ns->partial = PROTO_FALSE;
+        protocore_ssh_auth_build_failure(ctx);
+        *out_len = ctx->ns->out_args.out_len;
         return;
     }
 
@@ -661,9 +661,9 @@ void protocore_ssh_auth_handle_request(struct SshAuthInternal *restrict ctx)
     {
         ssh_phase_auth_done(i);
         ctx->ns->out_args.out = out;
-    ctx->ns->out_args.cap = cap;
-    protocore_ssh_auth_build_success(ctx);
-    *out_len = ctx->ns->out_args.out_len;
+        ctx->ns->out_args.cap = cap;
+        protocore_ssh_auth_build_success(ctx);
+        *out_len = ctx->ns->out_args.out_len;
         return;
     }
     ctx->ns->out_args.out = out;
@@ -770,9 +770,9 @@ void protocore_ssh_auth_handle_info_response(struct SshAuthInternal *restrict ct
     {
         ssh_phase_auth_done(i);
         ctx->ns->out_args.out = out;
-    ctx->ns->out_args.cap = cap;
-    protocore_ssh_auth_build_success(ctx);
-    *out_len = ctx->ns->out_args.out_len;
+        ctx->ns->out_args.cap = cap;
+        protocore_ssh_auth_build_success(ctx);
+        *out_len = ctx->ns->out_args.out_len;
         return;
     }
     ctx->ns->out_args.out = out;
@@ -829,13 +829,13 @@ void ssh_auth_dispatch(struct SshAuthInternal *restrict ctx)
             return;
         }
         ctx->ns->slot = i;
-    ctx->ns->msg.payload = payload;
-    ctx->ns->msg.len = len;
-    ctx->ns->out_args.out = reply.buf;
-    ctx->ns->out_args.cap = reply.cap;
-    protocore_ssh_auth_handle_request(ctx);
-    n = ctx->ns->out_args.out_len;
-    if (ctx->ns->i32 != 0)
+        ctx->ns->msg.payload = payload;
+        ctx->ns->msg.len = len;
+        ctx->ns->out_args.out = reply.buf;
+        ctx->ns->out_args.cap = reply.cap;
+        protocore_ssh_auth_handle_request(ctx);
+        n = ctx->ns->out_args.out_len;
+        if (ctx->ns->i32 != 0)
         {
             protocore_plaintext_release(mark);
             ctx->ns->i32 = -1;
@@ -962,7 +962,6 @@ void ssh_auth_dispatch(struct SshAuthInternal *restrict ctx)
     ctx->ns->i32 = 0;
     return;
 }
-
 
 // ---------------------------------------------------------------------------
 // Password change reply (RFC 4252 sec 8)

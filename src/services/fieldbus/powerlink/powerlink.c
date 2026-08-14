@@ -12,7 +12,7 @@
 #if PROTOCORE_ENABLE_POWERLINK
 
 size_t protocore_epl_build(uint8_t msg_type, uint8_t dest, uint8_t source, const uint8_t *payload, size_t payload_len,
-                    uint8_t *out, size_t cap)
+                           uint8_t *out, size_t cap)
 {
     if (!out || (payload_len && !payload))
     {
@@ -53,7 +53,8 @@ size_t protocore_epl_soa(uint8_t source, const uint8_t *payload, size_t payload_
     return protocore_epl_build(EPL_MSG_SOA, EPL_NODE_BROADCAST, source, payload, payload_len, out, cap);
 }
 
-size_t protocore_epl_asnd(uint8_t dest, uint8_t source, const uint8_t *payload, size_t payload_len, uint8_t *out, size_t cap)
+size_t protocore_epl_asnd(uint8_t dest, uint8_t source, const uint8_t *payload, size_t payload_len, uint8_t *out,
+                          size_t cap)
 {
     return protocore_epl_build(EPL_MSG_ASND, dest, source, payload, payload_len, out, cap);
 }

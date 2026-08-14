@@ -24,15 +24,15 @@ void tearDown(void)
 
 // MBDOC48 chapter 6.3.3, "Example for a RSP_UD with variable data structure answer (mode 1)".
 static const uint8_t RSP_UD[] = {
-    0x68, 0x1F, 0x1F, 0x68,                         // start, L, L, start
-    0x08, 0x02, 0x72,                               // C = RSP_UD, address 2, CI = 72h (variable data)
-    0x78, 0x56, 0x34, 0x12,                         // identification number 12345678
-    0x24, 0x40, 0x01, 0x07,                         // manufacturer 4024h (PAD), generation 1, water
-    0x55, 0x00, 0x00, 0x00,                         // access no 55h, status 00h, signature 0000h
-    0x03, 0x13, 0x15, 0x31, 0x00,                   // record 1: volume, 12565 l (24-bit integer)
-    0xDA, 0x02, 0x3B, 0x13, 0x01,                   // record 2: max volume flow, 113 l/h (4-digit BCD)
-    0x8B, 0x60, 0x04, 0x37, 0x18, 0x02,             // record 3: energy, 218.37 kWh (6-digit BCD)
-    0x18, 0x16,                                     // checksum, stop
+    0x68, 0x1F, 0x1F, 0x68,             // start, L, L, start
+    0x08, 0x02, 0x72,                   // C = RSP_UD, address 2, CI = 72h (variable data)
+    0x78, 0x56, 0x34, 0x12,             // identification number 12345678
+    0x24, 0x40, 0x01, 0x07,             // manufacturer 4024h (PAD), generation 1, water
+    0x55, 0x00, 0x00, 0x00,             // access no 55h, status 00h, signature 0000h
+    0x03, 0x13, 0x15, 0x31, 0x00,       // record 1: volume, 12565 l (24-bit integer)
+    0xDA, 0x02, 0x3B, 0x13, 0x01,       // record 2: max volume flow, 113 l/h (4-digit BCD)
+    0x8B, 0x60, 0x04, 0x37, 0x18, 0x02, // record 3: energy, 218.37 kWh (6-digit BCD)
+    0x18, 0x16,                         // checksum, stop
 };
 
 // The whole published telegram: framing, fixed header, and all three records.
@@ -255,27 +255,19 @@ void test_vif_unit_table(void)
         MbusUnit unit;
         int8_t exp10;
     } static const CASES[] = {
-        {0x00, MBUS_UNIT_WH, -3},       // E000 0nnn energy 10^(nnn-3) Wh, nnn = 0
-        {0x07, MBUS_UNIT_WH, 4},        // nnn = 7
-        {0x08, MBUS_UNIT_J, 0},         // E000 1nnn energy 10^(nnn) J
-        {0x0F, MBUS_UNIT_J, 7},
-        {0x10, MBUS_UNIT_M3, -6},       // E001 0nnn volume 10^(nnn-6) m3
-        {0x17, MBUS_UNIT_M3, 1},
-        {0x18, MBUS_UNIT_KG, -3},       // E001 1nnn mass 10^(nnn-3) kg
-        {0x1F, MBUS_UNIT_KG, 4},
-        {0x28, MBUS_UNIT_W, -3},        // E010 1nnn power 10^(nnn-3) W
-        {0x2F, MBUS_UNIT_W, 4},
-        {0x30, MBUS_UNIT_J_PER_H, 0},   // E011 0nnn power 10^(nnn) J/h
-        {0x37, MBUS_UNIT_J_PER_H, 7},
-        {0x38, MBUS_UNIT_M3_PER_H, -6}, // E011 1nnn volume flow 10^(nnn-6) m3/h
-        {0x3F, MBUS_UNIT_M3_PER_H, 1},
-        {0x58, MBUS_UNIT_CELSIUS, -3},  // E101 10nn flow temperature 10^(nn-3) C
-        {0x5B, MBUS_UNIT_CELSIUS, 0},
-        {0x5C, MBUS_UNIT_CELSIUS, -3},  // E101 11nn return temperature, same scale
-        {0x60, MBUS_UNIT_K, -3},        // E110 00nn temperature difference 10^(nn-3) K
-        {0x63, MBUS_UNIT_K, 0},
-        {0x64, MBUS_UNIT_CELSIUS, -3},  // E110 01nn external temperature 10^(nn-3) C
-        {0x68, MBUS_UNIT_BAR, -3},      // E110 10nn pressure 10^(nn-3) bar
+        {0x00, MBUS_UNIT_WH, -3},                                      // E000 0nnn energy 10^(nnn-3) Wh, nnn = 0
+        {0x07, MBUS_UNIT_WH, 4},                                       // nnn = 7
+        {0x08, MBUS_UNIT_J, 0},                                        // E000 1nnn energy 10^(nnn) J
+        {0x0F, MBUS_UNIT_J, 7},        {0x10, MBUS_UNIT_M3, -6},       // E001 0nnn volume 10^(nnn-6) m3
+        {0x17, MBUS_UNIT_M3, 1},       {0x18, MBUS_UNIT_KG, -3},       // E001 1nnn mass 10^(nnn-3) kg
+        {0x1F, MBUS_UNIT_KG, 4},       {0x28, MBUS_UNIT_W, -3},        // E010 1nnn power 10^(nnn-3) W
+        {0x2F, MBUS_UNIT_W, 4},        {0x30, MBUS_UNIT_J_PER_H, 0},   // E011 0nnn power 10^(nnn) J/h
+        {0x37, MBUS_UNIT_J_PER_H, 7},  {0x38, MBUS_UNIT_M3_PER_H, -6}, // E011 1nnn volume flow 10^(nnn-6) m3/h
+        {0x3F, MBUS_UNIT_M3_PER_H, 1}, {0x58, MBUS_UNIT_CELSIUS, -3},  // E101 10nn flow temperature 10^(nn-3) C
+        {0x5B, MBUS_UNIT_CELSIUS, 0},  {0x5C, MBUS_UNIT_CELSIUS, -3},  // E101 11nn return temperature, same scale
+        {0x60, MBUS_UNIT_K, -3},                                       // E110 00nn temperature difference 10^(nn-3) K
+        {0x63, MBUS_UNIT_K, 0},        {0x64, MBUS_UNIT_CELSIUS, -3},  // E110 01nn external temperature 10^(nn-3) C
+        {0x68, MBUS_UNIT_BAR, -3},                                     // E110 10nn pressure 10^(nn-3) bar
         {0x6B, MBUS_UNIT_BAR, 0},
     };
     for (size_t i = 0; i < sizeof(CASES) / sizeof(CASES[0]); i++)

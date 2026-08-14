@@ -81,8 +81,8 @@ double proto_dbl_from_bits(proto_u64 bits);
  *
  * `unused` because this header is included by files that take none of it.
  */
-static const DblNs dbl __attribute__((unused)) = {proto_dbl_sign, proto_dbl_exp, proto_dbl_mant, proto_dbl_merge,
-                                                  proto_dbl_from_bits};
+static const DblNs dbl
+    __attribute__((unused)) = {proto_dbl_sign, proto_dbl_exp, proto_dbl_mant, proto_dbl_merge, proto_dbl_from_bits};
 
 PROTOCORE_END_DECLS
 

@@ -146,8 +146,8 @@ void test_rfc9000_stream_frame_type_bits(void)
 
     // LEN only: 0x08 | 0x02 = 0x0a, then id, length, data
     static const uint8_t LEN_ONLY[5] = {0x0a, 0x04, 0x02, 'h', 'i'};
-    TEST_ASSERT_EQUAL_UINT(5u, protocore_quic_build_stream(g_out, sizeof(g_out), 4u, 0u, (const uint8_t *)"hi", 2,
-                                                           PROTO_FALSE));
+    TEST_ASSERT_EQUAL_UINT(
+        5u, protocore_quic_build_stream(g_out, sizeof(g_out), 4u, 0u, (const uint8_t *)"hi", 2, PROTO_FALSE));
     TEST_ASSERT_EQUAL_MEMORY(LEN_ONLY, g_out, 5);
     TEST_ASSERT_EQUAL_UINT(5u, protocore_quic_frame_parse(LEN_ONLY, sizeof(LEN_ONLY), &f));
     TEST_ASSERT_EQUAL_HEX64(0x0au, f.type);
@@ -160,8 +160,8 @@ void test_rfc9000_stream_frame_type_bits(void)
     // OFF | LEN | FIN = 0x08 | 0x04 | 0x02 | 0x01 = 0x0f, so the Offset varint sits between id and
     // length
     static const uint8_t ALL_BITS[6] = {0x0f, 0x04, 0x08, 0x02, 'h', 'i'};
-    TEST_ASSERT_EQUAL_UINT(6u, protocore_quic_build_stream(g_out, sizeof(g_out), 4u, 8u, (const uint8_t *)"hi", 2,
-                                                           PROTO_TRUE));
+    TEST_ASSERT_EQUAL_UINT(
+        6u, protocore_quic_build_stream(g_out, sizeof(g_out), 4u, 8u, (const uint8_t *)"hi", 2, PROTO_TRUE));
     TEST_ASSERT_EQUAL_MEMORY(ALL_BITS, g_out, 6);
     TEST_ASSERT_EQUAL_UINT(6u, protocore_quic_frame_parse(ALL_BITS, sizeof(ALL_BITS), &f));
     TEST_ASSERT_EQUAL_HEX64(0x0fu, f.type);
@@ -208,9 +208,9 @@ void test_rfc9000_connection_close_variants(void)
 
     // transport variant: 0x1c, error PROTOCOL_VIOLATION (0x0a), triggering frame type CRYPTO (0x06)
     static const uint8_t TRANSPORT[6] = {0x1c, 0x0a, 0x06, 0x02, 'n', 'o'};
-    TEST_ASSERT_EQUAL_UINT(6u, protocore_quic_build_connection_close(g_out, sizeof(g_out), PROTO_FALSE,
-                                                                     QUIC_ERR_PROTOCOL_VIOLATION, QUIC_FT_CRYPTO,
-                                                                     "no", 2));
+    TEST_ASSERT_EQUAL_UINT(6u,
+                           protocore_quic_build_connection_close(g_out, sizeof(g_out), PROTO_FALSE,
+                                                                 QUIC_ERR_PROTOCOL_VIOLATION, QUIC_FT_CRYPTO, "no", 2));
     TEST_ASSERT_EQUAL_MEMORY(TRANSPORT, g_out, 6);
     TEST_ASSERT_EQUAL_UINT(6u, protocore_quic_frame_parse(TRANSPORT, sizeof(TRANSPORT), &f));
     TEST_ASSERT_EQUAL_HEX64(QUIC_FT_CONNECTION_CLOSE, f.type);
@@ -223,8 +223,8 @@ void test_rfc9000_connection_close_variants(void)
     // application variant: 0x1d with an application error code. 0x0100 needs the 14-bit varint
     // form, whose first byte carries the 0b01 prefix: 0x41 0x00. No Frame Type follows it.
     static const uint8_t APP[4] = {0x1d, 0x41, 0x00, 0x00};
-    TEST_ASSERT_EQUAL_UINT(4u, protocore_quic_build_connection_close(g_out, sizeof(g_out), PROTO_TRUE, 0x0100u,
-                                                                     QUIC_FT_CRYPTO, NULL, 0));
+    TEST_ASSERT_EQUAL_UINT(
+        4u, protocore_quic_build_connection_close(g_out, sizeof(g_out), PROTO_TRUE, 0x0100u, QUIC_FT_CRYPTO, NULL, 0));
     TEST_ASSERT_EQUAL_MEMORY(APP, g_out, 4);
     TEST_ASSERT_EQUAL_UINT(4u, protocore_quic_frame_parse(APP, sizeof(APP), &f));
     TEST_ASSERT_EQUAL_HEX64(QUIC_FT_CONNECTION_CLOSE_APP, f.type);
@@ -352,6 +352,5 @@ void test_builders_refuse_a_short_destination(void)
     TEST_ASSERT_EQUAL_UINT(0u, protocore_quic_build_crypto(g_out, 4, 0, DATA, sizeof(DATA)));
     TEST_ASSERT_EQUAL_UINT(0u, protocore_quic_build_stream(g_out, 4, 4u, 0, DATA, sizeof(DATA), PROTO_FALSE));
     TEST_ASSERT_EQUAL_UINT(0u, protocore_quic_build_max_data(g_out, 1, 1048576u));
-    TEST_ASSERT_EQUAL_UINT(0u,
-                           protocore_quic_build_connection_close(g_out, 3, PROTO_FALSE, 0, 0, "reason", 6));
+    TEST_ASSERT_EQUAL_UINT(0u, protocore_quic_build_connection_close(g_out, 3, PROTO_FALSE, 0, 0, "reason", 6));
 }

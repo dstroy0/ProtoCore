@@ -676,8 +676,24 @@ static proto_bool json_get_bool(const char *json, const char *key, proto_bool *o
     return PROTO_FALSE;
 }
 
-const JsonNs Json = {protocore_json_init,    protocore_json_begin_object, protocore_json_end_object, protocore_json_begin_array, protocore_json_end_array,
-                     protocore_json_key,     protocore_json_str,          protocore_json_int,        protocore_json_uint,        protocore_json_bool,
-                     protocore_json_null,    protocore_json_raw,          protocore_json_kv_str,     protocore_json_kv_int,      protocore_json_kv_uint,
-                     protocore_json_kv_bool, protocore_json_kv_null,      protocore_json_kv_raw,     json_get_str,        json_get_int,
+const JsonNs Json = {protocore_json_init,
+                     protocore_json_begin_object,
+                     protocore_json_end_object,
+                     protocore_json_begin_array,
+                     protocore_json_end_array,
+                     protocore_json_key,
+                     protocore_json_str,
+                     protocore_json_int,
+                     protocore_json_uint,
+                     protocore_json_bool,
+                     protocore_json_null,
+                     protocore_json_raw,
+                     protocore_json_kv_str,
+                     protocore_json_kv_int,
+                     protocore_json_kv_uint,
+                     protocore_json_kv_bool,
+                     protocore_json_kv_null,
+                     protocore_json_kv_raw,
+                     json_get_str,
+                     json_get_int,
                      json_get_bool};

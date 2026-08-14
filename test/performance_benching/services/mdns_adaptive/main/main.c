@@ -52,11 +52,13 @@ void dbench_run(void)
         // Wrap-safe announce-due check (evaluated every tick in production).
         DBENCH_OP("protocore_mdns_beacon_due", 200000, sinkb += protocore_mdns_beacon_due(&b, 1000, 1000 + 60000));
         // Auto-sleep beacon: would the record lapse mid-sleep? (64-bit sum, no overflow).
-        DBENCH_OP("protocore_mdns_beacon_presleep_due", 200000, sinkb += protocore_mdns_beacon_presleep_due(&b, 0, 10000, 60000));
+        DBENCH_OP("protocore_mdns_beacon_presleep_due", 200000,
+                  sinkb += protocore_mdns_beacon_presleep_due(&b, 0, 10000, 60000));
         // Frame-counter -> per-window contention (re-arm the window each call so the full wrap-safe
         // delta + uint16 saturation path is measured, not the every-tick "window not up yet" early-out).
         DBENCH_OP("protocore_mdns_contention_sample", 200000,
-                  sink16 += (protocore_mdns_contention_init(&w, 1000, 0, 0), protocore_mdns_contention_sample(&w, 500, 100000, &c)));
+                  sink16 += (protocore_mdns_contention_init(&w, 1000, 0, 0),
+                             protocore_mdns_contention_sample(&w, 500, 100000, &c)));
 
         (void)sink32;
         (void)sinkb;

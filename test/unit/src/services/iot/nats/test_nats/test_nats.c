@@ -326,13 +326,13 @@ void test_parse_waits_for_the_whole_operation(void)
 void test_malformed_control_lines_are_refused(void)
 {
     static const char *const BAD[] = {
-        "MSG FOO.BAR 9\r\n",                  // no #bytes field
-        "MSG FOO.BAR\r\n",                    // no sid and no #bytes
-        "MSG FOO.BAR 9 x\r\n",                // #bytes is not a decimal run
-        "MSG FOO.BAR 9 a b 11\r\nHello\r\n",  // one field too many
-        "HMSG FOO.BAR 9 34\r\n",              // one length field short
-        "HMSG FOO.BAR 9 45 34\r\nxx\r\n",     // #header bytes above #total bytes
-        "MSG FOO.BAR 9 99\r\nshort\r\n",      // #bytes past what is buffered
+        "MSG FOO.BAR 9\r\n",                 // no #bytes field
+        "MSG FOO.BAR\r\n",                   // no sid and no #bytes
+        "MSG FOO.BAR 9 x\r\n",               // #bytes is not a decimal run
+        "MSG FOO.BAR 9 a b 11\r\nHello\r\n", // one field too many
+        "HMSG FOO.BAR 9 34\r\n",             // one length field short
+        "HMSG FOO.BAR 9 45 34\r\nxx\r\n",    // #header bytes above #total bytes
+        "MSG FOO.BAR 9 99\r\nshort\r\n",     // #bytes past what is buffered
     };
     for (size_t i = 0; i < sizeof(BAD) / sizeof(BAD[0]); i++)
     {

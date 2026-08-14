@@ -38,8 +38,8 @@ void dbench_run(void)
 
     // Wrap the record body in a real RSP_UD long frame once; parse benches this exact buffer.
     static uint8_t frame[64];
-    size_t frame_len = protocore_mbus_build_long(frame, sizeof(frame), MBUS_C_RSP_UD, 0x01, MBUS_CI_RSP_VARIABLE, record_body,
-                                          (uint8_t)sizeof(record_body));
+    size_t frame_len = protocore_mbus_build_long(frame, sizeof(frame), MBUS_C_RSP_UD, 0x01, MBUS_CI_RSP_VARIABLE,
+                                                 record_body, (uint8_t)sizeof(record_body));
     static uint8_t out[16];
 
     for (;;)
@@ -55,10 +55,11 @@ void dbench_run(void)
         // Long-frame builder: framing + 8-bit sum checksum over the 23-octet record body.
         DBENCH_OP("protocore_mbus_build_long", 50000,
                   sink += protocore_mbus_build_long(frame, sizeof(frame), MBUS_C_RSP_UD, 0x01, MBUS_CI_RSP_VARIABLE,
-                                             record_body, (uint8_t)sizeof(record_body)));
+                                                    record_body, (uint8_t)sizeof(record_body)));
 
         // Parser: validates start/stop, doubled length, and re-sums the checksum. Bulk => MB/s too.
-        DBENCH_BULK("protocore_mbus_parse (long)", 50000, frame_len, sink += protocore_mbus_parse(frame, frame_len, &f, &consumed));
+        DBENCH_BULK("protocore_mbus_parse (long)", 50000, frame_len,
+                    sink += protocore_mbus_parse(frame, frame_len, &f, &consumed));
 
         // Variable-data record walker: one full pass over all 4 records (DIFE/VIFE + LVAR).
         DBENCH_OP(

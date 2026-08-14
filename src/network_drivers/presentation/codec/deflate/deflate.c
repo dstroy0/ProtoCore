@@ -40,10 +40,10 @@ typedef struct
 {
     uint16_t head[PROTOCORE_HASH_SIZE]; // most-recent position for each 3-byte hash
     uint16_t prev[PROTOCORE_WINDOW];    // previous position with the same hash (chain)
-    uint16_t ll_code[288];       // fixed lit/length Huffman codes (bit-reversed)
-    uint8_t ll_len[288];         // their lengths in bits
-    uint16_t d_code[30];         // fixed distance Huffman codes (bit-reversed)
-    uint8_t d_len[30];           // their lengths in bits (all 5)
+    uint16_t ll_code[288];              // fixed lit/length Huffman codes (bit-reversed)
+    uint8_t ll_len[288];                // their lengths in bits
+    uint16_t d_code[30];                // fixed distance Huffman codes (bit-reversed)
+    uint8_t d_len[30];                  // their lengths in bits (all 5)
 } Tables;
 static_assert(sizeof(Tables) <= DEFLATE_SCRATCH_SIZE, "bump DEFLATE_SCRATCH_SIZE");
 

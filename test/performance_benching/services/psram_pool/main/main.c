@@ -53,7 +53,8 @@ void dbench_run(void)
                   sink += (int)protocore_psram_place(8192, true, free_dram, free_psram, threshold, reserve));
         // Ping-pong role flip: swap + read the new fill/drain indices (one DMA swap's worth of work).
         DBENCH_OP("protocore_pingpong_swap+index", 200000,
-                  sink += protocore_pingpong_swap(&pp) + protocore_pingpong_fill_index(&pp) + protocore_pingpong_drain_index(&pp));
+                  sink += protocore_pingpong_swap(&pp) + protocore_pingpong_fill_index(&pp) +
+                          protocore_pingpong_drain_index(&pp));
         (void)sink;
         DBENCH_DONE();
     }

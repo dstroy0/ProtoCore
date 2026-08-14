@@ -11,8 +11,8 @@
 
 #if PROTOCORE_ENABLE_OCIT
 
-size_t protocore_ocit_build(uint8_t msg_type, uint16_t object_type, uint16_t instance, uint8_t data_type, const uint8_t *value,
-                     size_t value_len, uint8_t *out, size_t cap)
+size_t protocore_ocit_build(uint8_t msg_type, uint16_t object_type, uint16_t instance, uint8_t data_type,
+                            const uint8_t *value, size_t value_len, uint8_t *out, size_t cap)
 {
     if (!out || (value_len && !value))
     {

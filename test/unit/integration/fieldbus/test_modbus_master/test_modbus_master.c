@@ -346,20 +346,16 @@ void test_bit_build_and_parse_guards()
 {
     uint8_t adu[16];
 
-    TEST_ASSERT_EQUAL_size_t(
-        0, protocore_modbus_build_read_bits(0x03, 1, 1, 0, 8, adu, sizeof(adu)));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_modbus_build_read_bits(0x03, 1, 1, 0, 8, adu, sizeof(adu)));
     TEST_ASSERT_EQUAL_size_t(0, protocore_modbus_build_read_bits(0x01, 1, 1, 0, 0, adu, sizeof(adu)));
-    TEST_ASSERT_EQUAL_size_t(0,
-                             protocore_modbus_build_read_bits(0x01, 1, 1, 0, 2001, adu, sizeof(adu)));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_modbus_build_read_bits(0x01, 1, 1, 0, 2001, adu, sizeof(adu)));
     TEST_ASSERT_EQUAL_size_t(0, protocore_modbus_build_read_bits(0x01, 1, 1, 0, 8, NULL, 16));
 
     TEST_ASSERT_EQUAL_size_t(0, protocore_modbus_build_write_single_coil(1, 1, 0, PROTO_TRUE, NULL, 16));
     const uint8_t bits[4] = {1, 0, 1, 1};
     TEST_ASSERT_EQUAL_size_t(0, protocore_modbus_build_write_multiple_coils(1, 1, 0, NULL, 4, adu, sizeof(adu)));
-    TEST_ASSERT_EQUAL_size_t(
-        0, protocore_modbus_build_write_multiple_coils(1, 1, 0, bits, 0, adu, sizeof(adu)));
-    TEST_ASSERT_EQUAL_size_t(
-        0, protocore_modbus_build_write_multiple_coils(1, 1, 0, bits, 1969, adu, sizeof(adu)));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_modbus_build_write_multiple_coils(1, 1, 0, bits, 0, adu, sizeof(adu)));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_modbus_build_write_multiple_coils(1, 1, 0, bits, 1969, adu, sizeof(adu)));
 
     uint8_t resp[16] = {0, 7, 0, 0, 0, 4, 1, 0x01, 2, 0x05, 0x00};
     uint8_t out[8];
@@ -400,8 +396,7 @@ void test_round_trip_read_write_multiple()
 
     const uint16_t wvals[2] = {0xAAAA, 0xBBBB};
     uint8_t req[32];
-    size_t rn =
-        protocore_modbus_build_read_write_multiple(9, 1,  20, 2,  20, wvals, 2, req, sizeof(req));
+    size_t rn = protocore_modbus_build_read_write_multiple(9, 1, 20, 2, 20, wvals, 2, req, sizeof(req));
     TEST_ASSERT_EQUAL_size_t(7 + 10 + 4, rn);
     TEST_ASSERT_EQUAL_HEX8(0x17, req[7]);
 
@@ -426,14 +421,10 @@ void test_fc16_17_guards()
     TEST_ASSERT_EQUAL_size_t(0, protocore_modbus_build_mask_write(1, 1, 0, 0, 0, adu, 8));
 
     TEST_ASSERT_EQUAL_size_t(0, protocore_modbus_build_read_write_multiple(1, 1, 0, 2, 0, NULL, 2, adu, sizeof(adu)));
-    TEST_ASSERT_EQUAL_size_t(
-        0, protocore_modbus_build_read_write_multiple(1, 1, 0, 0, 0, vals, 2, adu, sizeof(adu)));
-    TEST_ASSERT_EQUAL_size_t(
-        0, protocore_modbus_build_read_write_multiple(1, 1, 0, 126, 0, vals, 2, adu, sizeof(adu)));
-    TEST_ASSERT_EQUAL_size_t(
-        0, protocore_modbus_build_read_write_multiple(1, 1, 0, 2, 0, vals, 0, adu, sizeof(adu)));
-    TEST_ASSERT_EQUAL_size_t(
-        0, protocore_modbus_build_read_write_multiple(1, 1, 0, 2, 0, vals, 122, adu, sizeof(adu)));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_modbus_build_read_write_multiple(1, 1, 0, 0, 0, vals, 2, adu, sizeof(adu)));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_modbus_build_read_write_multiple(1, 1, 0, 126, 0, vals, 2, adu, sizeof(adu)));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_modbus_build_read_write_multiple(1, 1, 0, 2, 0, vals, 0, adu, sizeof(adu)));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_modbus_build_read_write_multiple(1, 1, 0, 2, 0, vals, 122, adu, sizeof(adu)));
 
     uint8_t req[16];
     size_t rn = protocore_modbus_build_mask_write(1, 1, 60000, 0xFFFF, 0, req, sizeof(req));

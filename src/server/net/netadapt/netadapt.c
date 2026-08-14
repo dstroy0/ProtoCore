@@ -31,7 +31,8 @@ uint32_t protocore_netadapt_window(uint32_t free_heap, uint32_t reserve, uint32_
     return win;
 }
 
-proto_bool protocore_netadapt_dhcp_fallback(uint32_t elapsed_ms, uint32_t attempts, uint32_t timeout_ms, uint32_t max_attempts)
+proto_bool protocore_netadapt_dhcp_fallback(uint32_t elapsed_ms, uint32_t attempts, uint32_t timeout_ms,
+                                            uint32_t max_attempts)
 {
     if (elapsed_ms >= timeout_ms)
     {

@@ -14,7 +14,7 @@
 #include "mmgr/endian.h"
 
 size_t protocore_melsec_build_read(uint8_t *buf, size_t cap, uint8_t device_code, uint32_t head_device, uint16_t points,
-                            uint16_t monitoring_timer)
+                                   uint16_t monitoring_timer)
 {
     if (!buf || cap < MELSEC_3E_READ_REQ_LEN)
     {
@@ -41,8 +41,8 @@ size_t protocore_melsec_build_read(uint8_t *buf, size_t cap, uint8_t device_code
     return p; // == MELSEC_3E_READ_REQ_LEN
 }
 
-size_t protocore_melsec_build_write(uint8_t *buf, size_t cap, uint8_t device_code, uint32_t head_device, uint16_t points,
-                             uint16_t monitoring_timer, const uint8_t *data, size_t data_len)
+size_t protocore_melsec_build_write(uint8_t *buf, size_t cap, uint8_t device_code, uint32_t head_device,
+                                    uint16_t points, uint16_t monitoring_timer, const uint8_t *data, size_t data_len)
 {
     if (!buf || (data_len && !data))
     {

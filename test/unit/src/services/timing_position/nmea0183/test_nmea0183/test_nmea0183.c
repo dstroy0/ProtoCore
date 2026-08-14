@@ -178,10 +178,10 @@ void test_empty_fields_are_counted(void)
 void test_framing_is_enforced(void)
 {
     Nmea0183 m;
-    TEST_ASSERT_FALSE(parse("GNGGA,001043.00*47", &m));    // no start delimiter
-    TEST_ASSERT_FALSE(parse("$INDPT,2.3,0.0", &m));        // no checksum
-    TEST_ASSERT_FALSE(parse("$INDPT,2.3,0.0*4", &m));      // one checksum digit
-    TEST_ASSERT_FALSE(parse("$INDPT,2.3,0.0*4G", &m));     // not hex
+    TEST_ASSERT_FALSE(parse("GNGGA,001043.00*47", &m)); // no start delimiter
+    TEST_ASSERT_FALSE(parse("$INDPT,2.3,0.0", &m));     // no checksum
+    TEST_ASSERT_FALSE(parse("$INDPT,2.3,0.0*4", &m));   // one checksum digit
+    TEST_ASSERT_FALSE(parse("$INDPT,2.3,0.0*4G", &m));  // not hex
     TEST_ASSERT_FALSE(parse("$", &m));
     TEST_ASSERT_FALSE(parse("", &m));
     TEST_ASSERT_FALSE(protocore_nmea0183_parse(DPT, strlen(DPT), NULL));
@@ -348,8 +348,8 @@ void test_dpt_decodes_the_published_depth(void)
     TEST_ASSERT_FALSE(d.has_range);
 
     char with_range[64];
-    TEST_ASSERT_GREATER_THAN_UINT32(0, (uint32_t)protocore_nmea0183_build(with_range, sizeof(with_range),
-                                                                          "INDPT,12.5,-0.5,200.0"));
+    TEST_ASSERT_GREATER_THAN_UINT32(
+        0, (uint32_t)protocore_nmea0183_build(with_range, sizeof(with_range), "INDPT,12.5,-0.5,200.0"));
     TEST_ASSERT_TRUE(protocore_nmea0183_parse(with_range, strlen(with_range), &m));
     TEST_ASSERT_TRUE(protocore_nmea0183_parse_dpt(&m, &d));
     f_close(12.5f, d.depth_m);
@@ -388,8 +388,8 @@ void test_instrument_sentences_round_trip(void)
     f_close(-3.5f, h.variation_deg);
 
     // VHW: heading true / magnetic, then speed in knots and km/h.
-    TEST_ASSERT_GREATER_THAN_UINT32(0, (uint32_t)protocore_nmea0183_build(buf, sizeof(buf),
-                                                                          "VWVHW,100.0,T,102.0,M,5.5,N,10.2,K"));
+    TEST_ASSERT_GREATER_THAN_UINT32(
+        0, (uint32_t)protocore_nmea0183_build(buf, sizeof(buf), "VWVHW,100.0,T,102.0,M,5.5,N,10.2,K"));
     TEST_ASSERT_TRUE(protocore_nmea0183_parse(buf, strlen(buf), &m));
     protocore_nmea_vhw v;
     TEST_ASSERT_TRUE(protocore_nmea0183_parse_vhw(&m, &v));
@@ -439,7 +439,8 @@ void test_typed_decoders_check_the_sentence_type(void)
 
     // A GGA truncated before its altitude no longer has the fields the decoder needs.
     char shortgga[64];
-    TEST_ASSERT_GREATER_THAN_UINT32(0, (uint32_t)protocore_nmea0183_build(shortgga, sizeof(shortgga), "GNGGA,001043.00"));
+    TEST_ASSERT_GREATER_THAN_UINT32(0,
+                                    (uint32_t)protocore_nmea0183_build(shortgga, sizeof(shortgga), "GNGGA,001043.00"));
     TEST_ASSERT_TRUE(protocore_nmea0183_parse(shortgga, strlen(shortgga), &m));
     TEST_ASSERT_FALSE(protocore_nmea0183_parse_gga(&m, &gga));
 }
@@ -452,18 +453,20 @@ void test_hemisphere_letters_set_the_sign(void)
     Nmea0183 m;
     protocore_nmea_gga g;
 
-    TEST_ASSERT_GREATER_THAN_UINT32(0, (uint32_t)protocore_nmea0183_build(
-                                            buf, sizeof(buf), "GPGGA,123519,4807.038,S,01131.000,E,1,08,0.9,545.4,M,,M,,"));
+    TEST_ASSERT_GREATER_THAN_UINT32(
+        0, (uint32_t)protocore_nmea0183_build(buf, sizeof(buf),
+                                              "GPGGA,123519,4807.038,S,01131.000,E,1,08,0.9,545.4,M,,M,,"));
     TEST_ASSERT_TRUE(protocore_nmea0183_parse(buf, strlen(buf), &m));
     TEST_ASSERT_TRUE(protocore_nmea0183_parse_gga(&m, &g));
-    deg_close(-48.1173000, g.lat_deg);  // -(48 + 7.038/60)
-    deg_close(11.5166667, g.lon_deg);   // 11 + 31.000/60
+    deg_close(-48.1173000, g.lat_deg); // -(48 + 7.038/60)
+    deg_close(11.5166667, g.lon_deg);  // 11 + 31.000/60
     TEST_ASSERT_EQUAL_UINT8(12, g.hour);
     TEST_ASSERT_EQUAL_UINT8(35, g.minute);
     f_close(19.0f, g.second);
 
-    TEST_ASSERT_GREATER_THAN_UINT32(0, (uint32_t)protocore_nmea0183_build(
-                                            buf, sizeof(buf), "GPGGA,123519,4807.038,N,01131.000,W,1,08,0.9,545.4,M,,M,,"));
+    TEST_ASSERT_GREATER_THAN_UINT32(
+        0, (uint32_t)protocore_nmea0183_build(buf, sizeof(buf),
+                                              "GPGGA,123519,4807.038,N,01131.000,W,1,08,0.9,545.4,M,,M,,"));
     TEST_ASSERT_TRUE(protocore_nmea0183_parse(buf, strlen(buf), &m));
     TEST_ASSERT_TRUE(protocore_nmea0183_parse_gga(&m, &g));
     deg_close(48.1173000, g.lat_deg);

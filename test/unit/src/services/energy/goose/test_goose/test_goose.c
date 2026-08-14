@@ -68,19 +68,19 @@ static protocore_goose sample(void)
 void test_pdu_is_ber_encoded_in_tag_order(void)
 {
     static const uint8_t WANT[] = {
-        0x61, 0x2D,                                     //
-        0x80, 0x01, 0x41,                               //
-        0x81, 0x02, 0x03, 0xE8,                         //
-        0x82, 0x01, 0x42,                               //
-        0x83, 0x01, 0x43,                               //
-        0x84, 0x08, 0, 0, 0, 0, 0, 0, 0, 0,             //
-        0x85, 0x01, 0x01,                               //
-        0x86, 0x01, 0x02,                               //
-        0x87, 0x01, 0x00,                               //
-        0x88, 0x01, 0x01,                               //
-        0x89, 0x01, 0x00,                               //
-        0x8A, 0x01, 0x00,                               //
-        0xAB, 0x02, 0x83, 0x00,                         //
+        0x61, 0x2D,                               //
+        0x80, 0x01, 0x41,                         //
+        0x81, 0x02, 0x03, 0xE8,                   //
+        0x82, 0x01, 0x42,                         //
+        0x83, 0x01, 0x43,                         //
+        0x84, 0x08, 0,    0,    0, 0, 0, 0, 0, 0, //
+        0x85, 0x01, 0x01,                         //
+        0x86, 0x01, 0x02,                         //
+        0x87, 0x01, 0x00,                         //
+        0x88, 0x01, 0x01,                         //
+        0x89, 0x01, 0x00,                         //
+        0x8A, 0x01, 0x00,                         //
+        0xAB, 0x02, 0x83, 0x00,                   //
     };
     uint8_t out[128];
     protocore_goose g = sample();
@@ -258,16 +258,16 @@ void test_unknown_pdu_tags_are_skipped(void)
 {
     // 22 octets of Ethernet + GOOSE header, then 61 0A { 80 01 41, 8F 02 AA BB, 85 01 07 }.
     static const uint8_t FRAME[34] = {
-        0x01, 0x0C, 0xCD, 0x01, 0x00, 0x01,             // destination
-        0x00, 0x11, 0x22, 0x33, 0x44, 0x55,             // source
-        0x88, 0xB8,                                     // ethertype
-        0x40, 0x01,                                     // APPID
-        0x00, 0x14,                                     // length: 8 header + 12 APDU
-        0x00, 0x00, 0x00, 0x00,                         // reserved
-        0x61, 0x0A,                                     // IECGoosePdu, 10 content octets
-        0x80, 0x01, 0x41,                               // gocbRef "A"
-        0x8F, 0x02, 0xAA, 0xBB,                         // an unassigned context tag
-        0x85, 0x01, 0x07,                               // stNum 7
+        0x01, 0x0C, 0xCD, 0x01, 0x00, 0x01, // destination
+        0x00, 0x11, 0x22, 0x33, 0x44, 0x55, // source
+        0x88, 0xB8,                         // ethertype
+        0x40, 0x01,                         // APPID
+        0x00, 0x14,                         // length: 8 header + 12 APDU
+        0x00, 0x00, 0x00, 0x00,             // reserved
+        0x61, 0x0A,                         // IECGoosePdu, 10 content octets
+        0x80, 0x01, 0x41,                   // gocbRef "A"
+        0x8F, 0x02, 0xAA, 0xBB,             // an unassigned context tag
+        0x85, 0x01, 0x07,                   // stNum 7
     };
     protocore_goose_rx rx;
     TEST_ASSERT_TRUE(protocore_goose_parse_frame(FRAME, sizeof(FRAME), &rx));

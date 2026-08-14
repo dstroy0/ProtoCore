@@ -87,12 +87,12 @@ void test_above_max_code_point_is_refused(void)
 // A continuation octet cannot start a sequence, and a lead octet needs its full tail.
 void test_stray_and_truncated_sequences_are_refused(void)
 {
-    TEST_ASSERT_FALSE(ok_of("\x80", 1));             // continuation with no lead
+    TEST_ASSERT_FALSE(ok_of("\x80", 1)); // continuation with no lead
     TEST_ASSERT_FALSE(ok_of("\xBF", 1));
-    TEST_ASSERT_FALSE(ok_of("\xC2", 1));             // lead promising one more octet
-    TEST_ASSERT_FALSE(ok_of("\xE0\xA0", 2));         // three-octet lead, one short
-    TEST_ASSERT_FALSE(ok_of("\xF0\x90\x80", 3));     // four-octet lead, one short
-    TEST_ASSERT_FALSE(ok_of("\xC2\x41", 2));         // tail is not a continuation
+    TEST_ASSERT_FALSE(ok_of("\xC2", 1));         // lead promising one more octet
+    TEST_ASSERT_FALSE(ok_of("\xE0\xA0", 2));     // three-octet lead, one short
+    TEST_ASSERT_FALSE(ok_of("\xF0\x90\x80", 3)); // four-octet lead, one short
+    TEST_ASSERT_FALSE(ok_of("\xC2\x41", 2));     // tail is not a continuation
 }
 
 // Mixed ASCII and multi-byte text, the ordinary case.

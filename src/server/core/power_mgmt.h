@@ -63,12 +63,12 @@ typedef struct
 /** @brief What the pure plan reads. */
 typedef struct
 {
-    const PowerCfg *cfg;        ///< the thresholds
-    uint8_t load_pct;           ///< how busy the loop has been
-    int16_t temp_c;             ///< the die temperature, or INT16_MIN when there is no sensor
-    proto_bool brownout_boot;   ///< this boot followed a brownout
-    uint32_t since_boot_ms;     ///< how long it has been running
-    proto_bool was_throttled;   ///< the plan's own previous output, which is what gives it hysteresis
+    const PowerCfg *cfg;      ///< the thresholds
+    uint8_t load_pct;         ///< how busy the loop has been
+    int16_t temp_c;           ///< the die temperature, or INT16_MIN when there is no sensor
+    proto_bool brownout_boot; ///< this boot followed a brownout
+    uint32_t since_boot_ms;   ///< how long it has been running
+    proto_bool was_throttled; ///< the plan's own previous output, which is what gives it hysteresis
 } PowerPlanArgs;
 
 /** @brief The plan a call acts on, and where a report is written. */

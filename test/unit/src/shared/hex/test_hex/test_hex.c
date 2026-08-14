@@ -67,8 +67,7 @@ void test_digit_masks_to_four_bits(void)
 void test_val_of_character(void)
 {
     static const char OK[] = "0123456789abcdefABCDEF";
-    static const int8_t WANT[] = {0, 1, 2,  3,  4,  5,  6,  7,  8,  9,  10,
-                                  11, 12, 13, 14, 15, 10, 11, 12, 13, 14, 15};
+    static const int8_t WANT[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 10, 11, 12, 13, 14, 15};
     for (size_t i = 0; i < sizeof(OK) - 1; i++)
     {
         Hex.args.ch = OK[i];

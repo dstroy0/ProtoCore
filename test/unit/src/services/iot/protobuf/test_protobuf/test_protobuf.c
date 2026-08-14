@@ -145,12 +145,12 @@ void test_base_128_varint(void)
     } static const CASES[] = {
         {0u, 1, {0x00}},
         {1u, 1, {0x01}},
-        {127u, 1, {0x7F}},                                                    // the widest one-octet value
-        {128u, 2, {0x80, 0x01}},                                              // 128 = 0*1 + 1*128
-        {150u, 2, {0x96, 0x01}},                                              // the document's own example
-        {300u, 2, {0xAC, 0x02}},                                              // 300 = 44 + 2*128
-        {16383u, 2, {0xFF, 0x7F}},                                            // the widest two-octet value
-        {16384u, 3, {0x80, 0x80, 0x01}},                                      // the first three-octet value
+        {127u, 1, {0x7F}},                                                              // the widest one-octet value
+        {128u, 2, {0x80, 0x01}},                                                        // 128 = 0*1 + 1*128
+        {150u, 2, {0x96, 0x01}},                                                        // the document's own example
+        {300u, 2, {0xAC, 0x02}},                                                        // 300 = 44 + 2*128
+        {16383u, 2, {0xFF, 0x7F}},                                                      // the widest two-octet value
+        {16384u, 3, {0x80, 0x80, 0x01}},                                                // the first three-octet value
         {UINT64_MAX, 10, {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x01}}, // ten octets
     };
     for (size_t i = 0; i < sizeof(CASES) / sizeof(CASES[0]); i++)
@@ -191,11 +191,11 @@ void test_tag_formula_and_wire_type_ids(void)
         size_t len;
         uint8_t octets[3];
     } static const CASES[] = {
-        {1, PROTOCORE_PROTOBUF_WT_VARINT, 1, {0x08}}, // (1 << 3) | 0
-        {2, PROTOCORE_PROTOBUF_WT_LEN, 1, {0x12}},    // (2 << 3) | 2
-        {3, PROTOCORE_PROTOBUF_WT_LEN, 1, {0x1a}},    // (3 << 3) | 2
-        {1, PROTOCORE_PROTOBUF_WT_I64, 1, {0x09}},    // (1 << 3) | 1
-        {1, PROTOCORE_PROTOBUF_WT_I32, 1, {0x0d}},    // (1 << 3) | 5
+        {1, PROTOCORE_PROTOBUF_WT_VARINT, 1, {0x08}},       // (1 << 3) | 0
+        {2, PROTOCORE_PROTOBUF_WT_LEN, 1, {0x12}},          // (2 << 3) | 2
+        {3, PROTOCORE_PROTOBUF_WT_LEN, 1, {0x1a}},          // (3 << 3) | 2
+        {1, PROTOCORE_PROTOBUF_WT_I64, 1, {0x09}},          // (1 << 3) | 1
+        {1, PROTOCORE_PROTOBUF_WT_I32, 1, {0x0d}},          // (1 << 3) | 5
         {15, PROTOCORE_PROTOBUF_WT_VARINT, 1, {0x78}},      // the widest one-octet tag
         {16, PROTOCORE_PROTOBUF_WT_VARINT, 2, {0x80, 0x01}} // (16 << 3) = 128, so two octets
     };

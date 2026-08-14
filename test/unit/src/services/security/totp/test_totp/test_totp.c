@@ -52,8 +52,7 @@ static uint32_t totp_of(uint64_t unix_time, uint64_t t0, uint32_t x, uint8_t dig
 // The load-bearing case: RFC 4226 Appendix D Table 2, the HOTP column for counts 0 through 9.
 void test_rfc4226_hotp_test_values(void)
 {
-    static const uint32_t HOTP[10] = {755224, 287082, 359152, 969429, 338314,
-                                      254676, 287922, 162583, 399871, 520489};
+    static const uint32_t HOTP[10] = {755224, 287082, 359152, 969429, 338314, 254676, 287922, 162583, 399871, 520489};
     for (uint64_t c = 0; c < 10; c++)
     {
         TEST_ASSERT_EQUAL_UINT32(HOTP[c], hotp_of(c, 6));
@@ -105,7 +104,7 @@ void test_rfc6238_totp_test_vectors(void)
         uint64_t seconds;
         uint32_t totp;
     } CASES[] = {
-        {59ull, 94287082u},        {1111111109ull, 7081804u},  {1111111111ull, 14050471u},
+        {59ull, 94287082u},         {1111111109ull, 7081804u},  {1111111111ull, 14050471u},
         {1234567890ull, 89005924u}, {2000000000ull, 69279037u}, {20000000000ull, 65353130u},
     };
     for (unsigned i = 0; i < sizeof(CASES) / sizeof(CASES[0]); i++)

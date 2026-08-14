@@ -45,7 +45,8 @@ void dbench_run(void)
         volatile size_t sinksz = 0;
         DBENCH_OP("protocore_fdc2214_data", 200000, sink32 += protocore_fdc2214_data(msb_reg, lsb_reg));
         DBENCH_OP("protocore_fdc2214_error", 200000, sink8 += protocore_fdc2214_error(msb_reg));
-        DBENCH_OP("protocore_fdc2214_sensor_freq_hz", 200000, sink64 += protocore_fdc2214_sensor_freq_hz(data28, fref_hz));
+        DBENCH_OP("protocore_fdc2214_sensor_freq_hz", 200000,
+                  sink64 += protocore_fdc2214_sensor_freq_hz(data28, fref_hz));
         DBENCH_BULK("protocore_fdc2214_build_config", 50000, FDC2214_CONFIG_MAX,
                     sinksz += protocore_fdc2214_build_config(cfg, sizeof(cfg), rcount, settlecount));
         (void)sink32;

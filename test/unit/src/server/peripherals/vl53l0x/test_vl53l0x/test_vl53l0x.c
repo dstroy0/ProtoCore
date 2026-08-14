@@ -171,10 +171,10 @@ void test_read_takes_the_distance_from_offset_ten(void)
     protocore_bus_host_reset();
     // interrupt status, then RESULT_RANGE_STATUS[0..11]: 0x0000 = 1234 mm at +10 / +11
     static const uint8_t reply[13] = {
-        0x04,            // RESULT_INTERRUPT_STATUS: a data-ready bit
-        11u << 3,        // RESULT_RANGE_STATUS + 0: DeviceRangeStatus 11
-        0, 0, 0, 0, 0, 0, 0, 0, 0, // + 1 .. + 9
-        0x04, 0xD2,      // + 10 / + 11: 1234 mm
+        0x04,                                // RESULT_INTERRUPT_STATUS: a data-ready bit
+        11u << 3,                            // RESULT_RANGE_STATUS + 0: DeviceRangeStatus 11
+        0,        0,    0, 0, 0, 0, 0, 0, 0, // + 1 .. + 9
+        0x04,     0xD2,                      // + 10 / + 11: 1234 mm
     };
     protocore_bus_host_preload(reply, sizeof(reply));
 
@@ -197,9 +197,9 @@ void test_read_refuses_an_invalid_status(void)
 {
     protocore_bus_host_reset();
     static const uint8_t reply[13] = {
-        0x04,      // ready
-        4u << 3,   // DeviceRangeStatus 4: signal fail
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0x04, 0xD2,
+        0x04,    // ready
+        4u << 3, // DeviceRangeStatus 4: signal fail
+        0,       0, 0, 0, 0, 0, 0, 0, 0, 0x04, 0xD2,
     };
     protocore_bus_host_preload(reply, sizeof(reply));
 

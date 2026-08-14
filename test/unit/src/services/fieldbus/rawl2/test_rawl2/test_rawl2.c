@@ -35,8 +35,8 @@ void test_ethertype_registry(void)
     TEST_ASSERT_EQUAL_HEX16(0x88B8, ETHERTYPE_GOOSE);     // IEC TC57, IEC 61850
     TEST_ASSERT_EQUAL_HEX16(0x88AB, ETHERTYPE_POWERLINK); // B&R Industrial Automation, ETHERNET Powerlink
 
-    TEST_ASSERT_EQUAL_INT(6, ETH_ALEN);        // RFC 894: the Ethernet 48-bit address
-    TEST_ASSERT_EQUAL_INT(14, ETH_HDR_LEN);    // dst(6) + src(6) + type(2)
+    TEST_ASSERT_EQUAL_INT(6, ETH_ALEN);          // RFC 894: the Ethernet 48-bit address
+    TEST_ASSERT_EQUAL_INT(14, ETH_HDR_LEN);      // dst(6) + src(6) + type(2)
     TEST_ASSERT_EQUAL_INT(18, ETH_VLAN_HDR_LEN); // ... + the 4-octet 802.1Q tag
 }
 
@@ -100,9 +100,8 @@ void test_vlan_tci_field_widths(void)
 
     for (uint8_t pcp = 0; pcp < 8; pcp++)
     {
-        TEST_ASSERT_EQUAL_UINT(ETH_VLAN_HDR_LEN,
-                               protocore_eth_build_vlan(DST, SRC, pcp, PROTO_FALSE, 0x0FFF, ETHERTYPE_IPV4, NULL, 0,
-                                                        out, sizeof(out)));
+        TEST_ASSERT_EQUAL_UINT(ETH_VLAN_HDR_LEN, protocore_eth_build_vlan(DST, SRC, pcp, PROTO_FALSE, 0x0FFF,
+                                                                          ETHERTYPE_IPV4, NULL, 0, out, sizeof(out)));
         TEST_ASSERT_TRUE(protocore_eth_parse(out, ETH_VLAN_HDR_LEN, &f));
         TEST_ASSERT_EQUAL_UINT8(pcp, f.pcp);
         TEST_ASSERT_EQUAL_UINT16(0x0FFF, f.vid);
@@ -111,18 +110,16 @@ void test_vlan_tci_field_widths(void)
     static const uint16_t VIDS[5] = {0, 1, 100, 4094, 4095};
     for (size_t i = 0; i < 5; i++)
     {
-        TEST_ASSERT_EQUAL_UINT(ETH_VLAN_HDR_LEN,
-                               protocore_eth_build_vlan(DST, SRC, 0, PROTO_FALSE, VIDS[i], ETHERTYPE_IPV4, NULL, 0, out,
-                                                        sizeof(out)));
+        TEST_ASSERT_EQUAL_UINT(ETH_VLAN_HDR_LEN, protocore_eth_build_vlan(DST, SRC, 0, PROTO_FALSE, VIDS[i],
+                                                                          ETHERTYPE_IPV4, NULL, 0, out, sizeof(out)));
         TEST_ASSERT_TRUE(protocore_eth_parse(out, ETH_VLAN_HDR_LEN, &f));
         TEST_ASSERT_EQUAL_UINT16(VIDS[i], f.vid);
         TEST_ASSERT_EQUAL_UINT8(0, f.pcp);
     }
 
     // the DEI is bit 12 of the TCI and belongs to neither the PCP nor the VID
-    TEST_ASSERT_EQUAL_UINT(ETH_VLAN_HDR_LEN,
-                           protocore_eth_build_vlan(DST, SRC, 0, PROTO_TRUE, 0, ETHERTYPE_IPV4, NULL, 0, out,
-                                                    sizeof(out)));
+    TEST_ASSERT_EQUAL_UINT(ETH_VLAN_HDR_LEN, protocore_eth_build_vlan(DST, SRC, 0, PROTO_TRUE, 0, ETHERTYPE_IPV4, NULL,
+                                                                      0, out, sizeof(out)));
     TEST_ASSERT_EQUAL_HEX8(0x10, out[14]);
     TEST_ASSERT_EQUAL_HEX8(0x00, out[15]);
 }
@@ -221,12 +218,10 @@ void test_build_refuses_bad_arguments(void)
     TEST_ASSERT_EQUAL_UINT(0u, protocore_eth_build(DST, NULL, ETHERTYPE_IPV4, NULL, 0, out, sizeof(out)));
     TEST_ASSERT_EQUAL_UINT(0u, protocore_eth_build(DST, SRC, ETHERTYPE_IPV4, NULL, 0, NULL, sizeof(out)));
     TEST_ASSERT_EQUAL_UINT(0u, protocore_eth_build(DST, SRC, ETHERTYPE_IPV4, NULL, 4, out, sizeof(out)));
-    TEST_ASSERT_EQUAL_UINT(0u,
-                           protocore_eth_build_vlan(NULL, SRC, 0, PROTO_FALSE, 1, ETHERTYPE_IPV4, NULL, 0, out,
-                                                    sizeof(out)));
-    TEST_ASSERT_EQUAL_UINT(0u,
-                           protocore_eth_build_vlan(DST, SRC, 0, PROTO_FALSE, 1, ETHERTYPE_IPV4, NULL, 4, out,
-                                                    sizeof(out)));
+    TEST_ASSERT_EQUAL_UINT(
+        0u, protocore_eth_build_vlan(NULL, SRC, 0, PROTO_FALSE, 1, ETHERTYPE_IPV4, NULL, 0, out, sizeof(out)));
+    TEST_ASSERT_EQUAL_UINT(
+        0u, protocore_eth_build_vlan(DST, SRC, 0, PROTO_FALSE, 1, ETHERTYPE_IPV4, NULL, 4, out, sizeof(out)));
 }
 
 // A payload of any length up to the buffer comes back byte for byte, tagged or not.

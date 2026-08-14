@@ -297,8 +297,8 @@ size_t protocore_quic_build_crypto(uint8_t *out, size_t cap, uint64_t offset, co
     return pos + len;
 }
 
-size_t protocore_quic_build_stream(uint8_t *out, size_t cap, uint64_t id, uint64_t offset, const uint8_t *data, size_t len,
-                            proto_bool fin)
+size_t protocore_quic_build_stream(uint8_t *out, size_t cap, uint64_t id, uint64_t offset, const uint8_t *data,
+                                   size_t len, proto_bool fin)
 {
     uint64_t type = QUIC_FT_STREAM | QUIC_STREAM_LEN | (offset ? QUIC_STREAM_OFF : 0) | (fin ? QUIC_STREAM_FIN : 0);
     size_t pos = 0;
@@ -336,7 +336,7 @@ size_t protocore_quic_build_max_data(uint8_t *out, size_t cap, uint64_t max)
 }
 
 size_t protocore_quic_build_connection_close(uint8_t *out, size_t cap, proto_bool app, uint64_t error_code,
-                                      uint64_t frame_type, const char *reason, size_t reason_len)
+                                             uint64_t frame_type, const char *reason, size_t reason_len)
 {
     size_t pos = 0;
     // RFC 9000 sec 19.19: the application variant (0x1d) carries error codes from the application

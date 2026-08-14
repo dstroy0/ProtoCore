@@ -48,10 +48,10 @@ static int ssh_mbedtls_rng(void *ctx, unsigned char *buf, size_t len)
 // blinding values per operation. Loaded once at startup by protocore_ssh_rsa_load_pubkey().
 typedef struct
 {
-    mbedtls_pk_context pk;             ///< parsed host key + cached blinding state
+    mbedtls_pk_context pk;                    ///< parsed host key + cached blinding state
     protocore_platform_mutex lock;            ///< serializes signs on the shared context
     protocore_platform_mutex_ctrl lock_store; ///< the mutex object itself, in BSS
-    proto_bool ready;                  ///< pk holds a valid parsed key
+    proto_bool ready;                         ///< pk holds a valid parsed key
 } SshRsaCtx;
 static SshRsaCtx s_rsa;
 
@@ -114,7 +114,8 @@ int protocore_ssh_rsa_load_pubkey(void)
     return 0;
 }
 
-int ssh_rsa_sign(uint8_t *work, const uint8_t *msg, size_t msg_len, protocore_rsa_hash hash, uint8_t sig[PROTOCORE_RSA_SIG_BYTES])
+int ssh_rsa_sign(uint8_t *work, const uint8_t *msg, size_t msg_len, protocore_rsa_hash hash,
+                 uint8_t sig[PROTOCORE_RSA_SIG_BYTES])
 {
     // Reuse the key parsed once at startup; lazy-load as a fallback if the sketch never did.
     if (!s_rsa.ready && protocore_ssh_rsa_load_pubkey() != 0)
@@ -144,7 +145,8 @@ int ssh_rsa_sign(uint8_t *work, const uint8_t *msg, size_t msg_len, protocore_rs
     }
     size_t sig_len = 0;
 #if MBEDTLS_VERSION_MAJOR >= 3
-    int rc = mbedtls_pk_sign(&s_rsa.pk, md, digest, dlen, sig, PROTOCORE_RSA_SIG_BYTES, &sig_len, ssh_mbedtls_rng, NULL);
+    int rc =
+        mbedtls_pk_sign(&s_rsa.pk, md, digest, dlen, sig, PROTOCORE_RSA_SIG_BYTES, &sig_len, ssh_mbedtls_rng, NULL);
 #else
     int rc = mbedtls_pk_sign(&s_rsa.pk, md, digest, dlen, sig, &sig_len, ssh_mbedtls_rng, NULL);
 #endif
@@ -169,7 +171,7 @@ int ssh_rsa_sign(uint8_t *work, const uint8_t *msg, size_t msg_len, protocore_rs
 // arm gives its parsed mbedtls context.
 typedef struct
 {
-    protocore_span d;        ///< private exponent, PROTOCORE_RSA_KEY_BYTES big-endian
+    protocore_span d; ///< private exponent, PROTOCORE_RSA_KEY_BYTES big-endian
     proto_bool ready; ///< d holds a parsed key
 } SshRsaCtx;
 static SshRsaCtx s_rsa;
@@ -324,7 +326,8 @@ int protocore_ssh_rsa_load_pubkey(void)
         protocore_secure_release(mark);
         return -1;
     }
-    const size_t der_len = protocore_nvs_get_blob(PROTOCORE_SSH_HOST_KEY_NS, PROTOCORE_SSH_HOST_KEY_ITEM, der.buf, der.cap);
+    const size_t der_len =
+        protocore_nvs_get_blob(PROTOCORE_SSH_HOST_KEY_NS, PROTOCORE_SSH_HOST_KEY_ITEM, der.buf, der.cap);
     if (der_len != 0 && rsa_key_parse(der.buf, der_len, s_rsa.d.buf))
     {
         s_rsa.ready = PROTO_TRUE;
@@ -338,7 +341,8 @@ int protocore_ssh_rsa_load_pubkey(void)
     return 0;
 }
 
-int ssh_rsa_sign(uint8_t *work, const uint8_t *msg, size_t msg_len, protocore_rsa_hash hash, uint8_t sig[PROTOCORE_RSA_SIG_BYTES])
+int ssh_rsa_sign(uint8_t *work, const uint8_t *msg, size_t msg_len, protocore_rsa_hash hash,
+                 uint8_t sig[PROTOCORE_RSA_SIG_BYTES])
 {
     // Reuse the key parsed once at startup; lazy-load as a fallback if the sketch never did.
     if (!s_rsa.ready && protocore_ssh_rsa_load_pubkey() != 0)

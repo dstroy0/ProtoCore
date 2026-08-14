@@ -156,8 +156,4 @@ static void crc_compute(struct CrcInternal *restrict ctx)
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-CrcNs Crc = {.begin = crc_begin,
-             .update = crc_update,
-             .final = crc_final,
-             .compute = crc_compute,
-             .internal = &s_crc};
+CrcNs Crc = {.begin = crc_begin, .update = crc_update, .final = crc_final, .compute = crc_compute, .internal = &s_crc};

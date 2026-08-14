@@ -152,8 +152,7 @@ static void cloudevents_read_binary(struct CloudEventsInternal *restrict ctx)
     // present in the message" (HTTP Protocol Binding 1.0.2 sec 3.1.1).
     ctx->ns->attr.datacontenttype = http_get_header(ctx->ns->msg.req, CE_HDR_CONTENT_TYPE);
 
-    ctx->ns->ok =
-        ce_present(ctx->ns->attr.id) && ce_present(ctx->ns->attr.source) && ce_present(ctx->ns->attr.type);
+    ctx->ns->ok = ce_present(ctx->ns->attr.id) && ce_present(ctx->ns->attr.source) && ce_present(ctx->ns->attr.type);
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.

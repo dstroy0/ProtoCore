@@ -40,7 +40,8 @@ void dbench_run(void)
         // SoC: MN -> broadcast, no payload (start of the isochronous cycle).
         DBENCH_OP("protocore_epl_soc", 200000, sink += protocore_epl_soc(EPL_NODE_MN, out, sizeof(out)));
         // PReq: MN -> CN 5 carrying the 4-byte output PDO.
-        DBENCH_OP("protocore_epl_preq x4B", 200000, sink += protocore_epl_preq(5, EPL_NODE_MN, pdo, sizeof(pdo), out, sizeof(out)));
+        DBENCH_OP("protocore_epl_preq x4B", 200000,
+                  sink += protocore_epl_preq(5, EPL_NODE_MN, pdo, sizeof(pdo), out, sizeof(out)));
         // PRes: CN 5 -> broadcast carrying its 4-byte input PDO.
         DBENCH_OP("protocore_epl_pres x4B", 200000, sink += protocore_epl_pres(5, pdo, sizeof(pdo), out, sizeof(out)));
         // Parse the pre-built PReq back into an EplFrame.

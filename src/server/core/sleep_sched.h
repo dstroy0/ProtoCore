@@ -39,9 +39,9 @@ typedef struct
 /** @brief What the decision reads: where the clock stands against the last activity. */
 typedef struct
 {
-    uint32_t now;                     ///< current time (protocore_millis units)
-    uint32_t last_active_ms;          ///< timestamp of the last activity (a request, a send, app work)
-    const protocore_sleep_cfg *cfg;   ///< the thresholds
+    uint32_t now;                   ///< current time (protocore_millis units)
+    uint32_t last_active_ms;        ///< timestamp of the last activity (a request, a send, app work)
+    const protocore_sleep_cfg *cfg; ///< the thresholds
 } SleepAskArgs;
 
 /** @brief The scheduler's own call, described only in sleep_sched.c. */

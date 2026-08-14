@@ -175,16 +175,11 @@ void test_fileformat_varint_length_boundaries(void)
         uint64_t value;
         size_t len;
     } CASES[] = {
-        {0ull, 1},
-        {(1ull << 7) - 1, 1},   {1ull << 7, 2},
-        {(1ull << 14) - 1, 2},  {1ull << 14, 3},
-        {(1ull << 21) - 1, 3},  {1ull << 21, 4},
-        {(1ull << 28) - 1, 4},  {1ull << 28, 5},
-        {(1ull << 35) - 1, 5},  {1ull << 35, 6},
-        {(1ull << 42) - 1, 6},  {1ull << 42, 7},
-        {(1ull << 49) - 1, 7},  {1ull << 49, 8},
-        {(1ull << 56) - 1, 8},  {1ull << 56, 9},
-        {0xFFFFFFFFFFFFFFFFull, 9},
+        {0ull, 1},       {(1ull << 7) - 1, 1},       {1ull << 7, 2},  {(1ull << 14) - 1, 2},
+        {1ull << 14, 3}, {(1ull << 21) - 1, 3},      {1ull << 21, 4}, {(1ull << 28) - 1, 4},
+        {1ull << 28, 5}, {(1ull << 35) - 1, 5},      {1ull << 35, 6}, {(1ull << 42) - 1, 6},
+        {1ull << 42, 7}, {(1ull << 49) - 1, 7},      {1ull << 49, 8}, {(1ull << 56) - 1, 8},
+        {1ull << 56, 9}, {0xFFFFFFFFFFFFFFFFull, 9},
     };
     for (unsigned i = 0; i < sizeof(CASES) / sizeof(CASES[0]); i++)
     {
@@ -339,7 +334,7 @@ static uint32_t schema_rootpage(const uint8_t *page1, uint32_t page_size, const 
         TEST_ASSERT_EQUAL_MEMORY(want_name, val, vlen);
         TEST_ASSERT_TRUE(protocore_sqlite_record_next(&row, &st, &val, &vlen)); // rootpage
         int64_t root = protocore_sqlite_column_int(st, val, vlen);
-        TEST_ASSERT_GREATER_THAN_INT64(1, root); // page 1 is the schema itself
+        TEST_ASSERT_GREATER_THAN_INT64(1, root);                                // page 1 is the schema itself
         TEST_ASSERT_TRUE(protocore_sqlite_record_next(&row, &st, &val, &vlen)); // sql
         TEST_ASSERT_TRUE(st >= 13 && (st % 2) == 1);
         TEST_ASSERT_EQUAL_MEMORY("CREATE TABLE ", val, 13);
@@ -478,7 +473,8 @@ void test_overflow_chain_reassembly(void)
     uint8_t work[OVF_PAGE_SIZE];
     uint8_t big[OVF_ROW3_LEN + 64];
     SqliteTableCursor c;
-    TEST_ASSERT_TRUE(protocore_sqlite_table_cursor_begin(&c, ovf_read, NULL, OVF_PAGE_SIZE, 0, OVF_ROOTPAGE, leaf, work));
+    TEST_ASSERT_TRUE(
+        protocore_sqlite_table_cursor_begin(&c, ovf_read, NULL, OVF_PAGE_SIZE, 0, OVF_ROOTPAGE, leaf, work));
     protocore_sqlite_table_cursor_set_overflow_buf(&c, big, sizeof(big));
 
     static const struct
@@ -527,7 +523,8 @@ void test_overflow_without_a_buffer_yields_the_prefix(void)
     uint8_t leaf[OVF_PAGE_SIZE];
     uint8_t work[OVF_PAGE_SIZE];
     SqliteTableCursor c;
-    TEST_ASSERT_TRUE(protocore_sqlite_table_cursor_begin(&c, ovf_read, NULL, OVF_PAGE_SIZE, 0, OVF_ROOTPAGE, leaf, work));
+    TEST_ASSERT_TRUE(
+        protocore_sqlite_table_cursor_begin(&c, ovf_read, NULL, OVF_PAGE_SIZE, 0, OVF_ROOTPAGE, leaf, work));
 
     uint64_t rowid = 0;
     SqliteRecordCursor row;
@@ -660,11 +657,26 @@ void test_encode_record_picks_the_narrowest_integer_type(void)
         int64_t v;
         uint64_t st;
     } CASES[] = {
-        {0, 8},        {1, 9},          {2, 1},          {-1, 1},        {127, 1},
-        {-128, 1},     {128, 2},        {-129, 2},       {32767, 2},     {-32768, 2},
-        {32768, 3},    {8388607, 3},    {-8388608, 3},   {8388608, 4},   {2147483647, 4},
-        {-2147483648LL, 4}, {2147483648LL, 5}, {140737488355327LL, 5},
-        {140737488355328LL, 6}, {-9223372036854775807LL - 1, 6},
+        {0, 8},
+        {1, 9},
+        {2, 1},
+        {-1, 1},
+        {127, 1},
+        {-128, 1},
+        {128, 2},
+        {-129, 2},
+        {32767, 2},
+        {-32768, 2},
+        {32768, 3},
+        {8388607, 3},
+        {-8388608, 3},
+        {8388608, 4},
+        {2147483647, 4},
+        {-2147483648LL, 4},
+        {2147483648LL, 5},
+        {140737488355327LL, 5},
+        {140737488355328LL, 6},
+        {-9223372036854775807LL - 1, 6},
     };
     for (unsigned i = 0; i < sizeof(CASES) / sizeof(CASES[0]); i++)
     {
@@ -763,10 +775,10 @@ void test_build_table_db_fails_closed(void)
     static uint8_t image[4096];
 
     TEST_ASSERT_EQUAL_UINT32(0, protocore_sqlite_build_table_db(512, "t", "CREATE TABLE t(a)", &row, 1, image, 1023));
-    TEST_ASSERT_EQUAL_UINT32(0, protocore_sqlite_build_table_db(500, "t", "CREATE TABLE t(a)", &row, 1, image,
-                                                                sizeof(image)));
-    TEST_ASSERT_EQUAL_UINT32(0, protocore_sqlite_build_table_db(512, NULL, "CREATE TABLE t(a)", &row, 1, image,
-                                                                sizeof(image)));
+    TEST_ASSERT_EQUAL_UINT32(
+        0, protocore_sqlite_build_table_db(500, "t", "CREATE TABLE t(a)", &row, 1, image, sizeof(image)));
+    TEST_ASSERT_EQUAL_UINT32(
+        0, protocore_sqlite_build_table_db(512, NULL, "CREATE TABLE t(a)", &row, 1, image, sizeof(image)));
     TEST_ASSERT_EQUAL_UINT32(0, protocore_sqlite_build_table_db(512, "t", NULL, &row, 1, image, sizeof(image)));
 
     // One 512-byte leaf page cannot hold a row far larger than itself.
@@ -777,12 +789,12 @@ void test_build_table_db_fails_closed(void)
     big.data = huge;
     big.len = sizeof(huge);
     SqliteRow bigrow = {1, &big, 1};
-    TEST_ASSERT_EQUAL_UINT32(0, protocore_sqlite_build_table_db(512, "t", "CREATE TABLE t(a)", &bigrow, 1, image,
-                                                                sizeof(image)));
+    TEST_ASSERT_EQUAL_UINT32(
+        0, protocore_sqlite_build_table_db(512, "t", "CREATE TABLE t(a)", &bigrow, 1, image, sizeof(image)));
 
     // An empty table is legal.
-    TEST_ASSERT_EQUAL_UINT32(1024u, protocore_sqlite_build_table_db(512, "t", "CREATE TABLE t(a)", NULL, 0, image,
-                                                                    sizeof(image)));
+    TEST_ASSERT_EQUAL_UINT32(
+        1024u, protocore_sqlite_build_table_db(512, "t", "CREATE TABLE t(a)", NULL, 0, image, sizeof(image)));
 }
 
 // A record whose header size varint points past the record, or whose columns run past its end, is

@@ -205,9 +205,9 @@ void test_aes128gcm(void)
 
         if (!v->valid)
         {
-            TEST_ASSERT_FALSE_MESSAGE(protocore_aes128gcm_open(gcm(key), iv, alen ? aad : NULL, alen,
-                                                               clen ? ct : NULL, clen, tag, opened),
-                                      v->tag);
+            TEST_ASSERT_FALSE_MESSAGE(
+                protocore_aes128gcm_open(gcm(key), iv, alen ? aad : NULL, alen, clen ? ct : NULL, clen, tag, opened),
+                v->tag);
             continue;
         }
 

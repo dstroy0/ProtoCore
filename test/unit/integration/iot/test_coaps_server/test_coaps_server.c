@@ -314,7 +314,8 @@ static void client_handshake(const char *ip, uint16_t port, DtlsRecordKeys *cli_
     size_t ch_fl = DtlsHandshake.frag_build(ch[0], 0, (uint32_t)(ch_len - 4), 0, ch + 4, (uint32_t)(ch_len - 4),
                                             ch_frag, sizeof(ch_frag));
     uint8_t ch_rec[320];
-    size_t ch_rl = DtlsRecord.plaintext_build(PROTOCORE_DTLS_CT_HANDSHAKE, 0, 0, ch_frag, ch_fl, ch_rec, sizeof(ch_rec));
+    size_t ch_rl =
+        DtlsRecord.plaintext_build(PROTOCORE_DTLS_CT_HANDSHAKE, 0, 0, ch_frag, ch_fl, ch_rec, sizeof(ch_rec));
     TEST_ASSERT_TRUE(protocore_coaps_server_ingest(ch_rec, ch_rl, ip, port));
     protocore_coaps_server_poll();
 
@@ -388,8 +389,8 @@ static void client_handshake(const char *ip, uint16_t port, DtlsRecordKeys *cli_
     size_t cff = DtlsHandshake.frag_build(cfin[0], 1, (uint32_t)(cfin_len - 4), 0, cfin + 4, (uint32_t)(cfin_len - 4),
                                           cfin_frag, sizeof(cfin_frag));
     uint8_t cfin_rec[128];
-    size_t cfr = DtlsRecord.protect(&cli_write, 0, PROTOCORE_DTLS_CT_HANDSHAKE, cfin_frag, cff, cfin_rec, sizeof(cfin_rec),
-                                    scid_len ? scid : NULL, scid_len);
+    size_t cfr = DtlsRecord.protect(&cli_write, 0, PROTOCORE_DTLS_CT_HANDSHAKE, cfin_frag, cff, cfin_rec,
+                                    sizeof(cfin_rec), scid_len ? scid : NULL, scid_len);
     TEST_ASSERT_TRUE(protocore_coaps_server_ingest(cfin_rec, cfr, ip, port));
     protocore_coaps_server_poll();
 
@@ -404,7 +405,8 @@ static size_t client_get_temp(DtlsRecordKeys *w, uint64_t cseq, uint8_t *out, si
                               size_t cid_len)
 {
     const uint8_t coap_get[] = {0x40, 0x01, 0x12, 0x34, 0xB4, 't', 'e', 'm', 'p'};
-    return DtlsRecord.protect(w, cseq, PROTOCORE_DTLS_CT_APPLICATION_DATA, coap_get, sizeof(coap_get), out, cap, cid, cid_len);
+    return DtlsRecord.protect(w, cseq, PROTOCORE_DTLS_CT_APPLICATION_DATA, coap_get, sizeof(coap_get), out, cap, cid,
+                              cid_len);
 }
 
 static void assert_coap_205(DtlsRecordKeys *r, const OutDg *dg, const uint8_t *cid, size_t cid_len)
@@ -479,7 +481,8 @@ static void test_pto_retransmit_driven_by_poll(void)
     size_t ch_fl = DtlsHandshake.frag_build(ch[0], 0, (uint32_t)(ch_len - 4), 0, ch + 4, (uint32_t)(ch_len - 4),
                                             ch_frag, sizeof(ch_frag));
     uint8_t ch_rec[320];
-    size_t ch_rl = DtlsRecord.plaintext_build(PROTOCORE_DTLS_CT_HANDSHAKE, 0, 0, ch_frag, ch_fl, ch_rec, sizeof(ch_rec));
+    size_t ch_rl =
+        DtlsRecord.plaintext_build(PROTOCORE_DTLS_CT_HANDSHAKE, 0, 0, ch_frag, ch_fl, ch_rec, sizeof(ch_rec));
     TEST_ASSERT_TRUE(protocore_coaps_server_ingest(ch_rec, ch_rl, "10.0.0.7", 40003));
     protocore_coaps_server_poll();
 
@@ -532,7 +535,8 @@ static void ingest_real_client_hello(const char *ip, uint16_t port)
     size_t ch_fl = DtlsHandshake.frag_build(ch[0], 0, (uint32_t)(ch_len - 4), 0, ch + 4, (uint32_t)(ch_len - 4),
                                             ch_frag, sizeof(ch_frag));
     uint8_t ch_rec[320];
-    size_t ch_rl = DtlsRecord.plaintext_build(PROTOCORE_DTLS_CT_HANDSHAKE, 0, 0, ch_frag, ch_fl, ch_rec, sizeof(ch_rec));
+    size_t ch_rl =
+        DtlsRecord.plaintext_build(PROTOCORE_DTLS_CT_HANDSHAKE, 0, 0, ch_frag, ch_fl, ch_rec, sizeof(ch_rec));
     TEST_ASSERT_TRUE(protocore_coaps_server_ingest(ch_rec, ch_rl, ip, port));
 }
 
@@ -625,11 +629,7 @@ static void test_ingest_addr_copy_edges(void)
 static void test_malformed_peer_addr(void)
 {
     const char *bad[] = {
-        "999.0.0.1",
-        "10..0.1",
-        "10.0.x.1",
-        "1.2.3",
-        "0001.0.0.1",
+        "999.0.0.1", "10..0.1", "10.0.x.1", "1.2.3", "0001.0.0.1",
     };
     for (unsigned i = 0; i < sizeof(bad) / sizeof(bad[0]); i++)
     {

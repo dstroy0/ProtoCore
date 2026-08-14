@@ -56,10 +56,10 @@ void dbench_run(void)
 {
     // Membership/resolve fixtures lifted straight out of test_v4_cidr_membership /
     // test_trusted_peer_honors_forwarded / test_untrusted_peer_ignores_forwarded.
-    protocore_ip v4_in = v4(10, 4, 4, 1);                // inside 10.0.0.0/8
-    protocore_ip v4_out = v4(11, 0, 0, 1);               // outside 10.0.0.0/8
-    protocore_ip trusted_proxy = v4(10, 1, 2, 3);        // trusted upstream, forwards a valid client
-    protocore_ip attacker = v4(203, 0, 113, 66);         // NOT in the trusted range
+    protocore_ip v4_in = v4(10, 4, 4, 1);         // inside 10.0.0.0/8
+    protocore_ip v4_out = v4(11, 0, 0, 1);        // outside 10.0.0.0/8
+    protocore_ip trusted_proxy = v4(10, 1, 2, 3); // trusted upstream, forwards a valid client
+    protocore_ip attacker = v4(203, 0, 113, 66);  // NOT in the trusted range
     const char *fwd_client_str = "198.51.100.42"; // client the trusted proxy forwards
     const char *fwd_spoof_str = "198.51.100.1";   // victim address the attacker tries to spoof in
 
@@ -79,8 +79,10 @@ void dbench_run(void)
         protocore_forwarded_trust_add_cidr("2001:db8::/32");
 
         // Hot path: the per-request trusted-upstream membership test (hit and miss).
-        DBENCH_OP("protocore_forwarded_trust_contains (v4 hit)", 200000, sinkb ^= protocore_forwarded_trust_contains(&v4_in));
-        DBENCH_OP("protocore_forwarded_trust_contains (v4 miss)", 200000, sinkb ^= protocore_forwarded_trust_contains(&v4_out));
+        DBENCH_OP("protocore_forwarded_trust_contains (v4 hit)", 200000,
+                  sinkb ^= protocore_forwarded_trust_contains(&v4_in));
+        DBENCH_OP("protocore_forwarded_trust_contains (v4 miss)", 200000,
+                  sinkb ^= protocore_forwarded_trust_contains(&v4_out));
 
         protocore_ip out;
         // Hot path: a trusted proxy's valid forwarded client is honored.

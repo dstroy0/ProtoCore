@@ -314,7 +314,8 @@ void edge_mesh_fetch_begin(EdgeMeshFetch *m, const EdgeFetchTransport *t, const 
         m->st = EDGE_MESH_STATUS_FAILED;
         return;
     }
-    int cid = t->open(t->ctx, host, port, PROTOCORE_MESH_QUERY_MS); // blocking connect (LAN sibling), bounded by the timeout
+    int cid =
+        t->open(t->ctx, host, port, PROTOCORE_MESH_QUERY_MS); // blocking connect (LAN sibling), bounded by the timeout
     if (cid < 0)
     {
         m->st = EDGE_MESH_STATUS_FAILED;

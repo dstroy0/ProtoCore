@@ -43,8 +43,8 @@ static void put_i64(protocore_sb *b, int64_t v)
 static const char *NS = " xmlns=\"urn:ieee:std:2030.5:ns\"";
 static const char *DECL = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>";
 
-size_t protocore_sep2_device_capability(uint32_t poll_rate, const char *edev_list_href, const char *derp_list_href, char *out,
-                                 size_t cap)
+size_t protocore_sep2_device_capability(uint32_t poll_rate, const char *edev_list_href, const char *derp_list_href,
+                                        char *out, size_t cap)
 {
     protocore_sb b = {out, cap, 0, out != NULL && cap > 0};
     Sb.put(&b, DECL);
@@ -79,8 +79,8 @@ size_t protocore_sep2_end_device(uint64_t sfdi, const char *lfdi, const char *hr
     return Sb.finish(&b2);
 }
 
-size_t protocore_sep2_der_control(const char *mrid, uint32_t start, uint32_t duration, int32_t opmod_target_w, char *out,
-                           size_t cap)
+size_t protocore_sep2_der_control(const char *mrid, uint32_t start, uint32_t duration, int32_t opmod_target_w,
+                                  char *out, size_t cap)
 {
     protocore_sb b3 = {out, cap, 0, out != NULL && cap > 0};
     Sb.put(&b3, DECL);

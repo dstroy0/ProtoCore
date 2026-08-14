@@ -117,9 +117,5 @@ static void hex_decode(struct HexInternal *restrict ctx)
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-HexNs Hex = {.digit = hex_digit,
-             .val = hex_val,
-             .u32 = hex_u32,
-             .encode = hex_encode,
-             .decode = hex_decode,
-             .internal = &s_hex};
+HexNs Hex = {
+    .digit = hex_digit, .val = hex_val, .u32 = hex_u32, .encode = hex_encode, .decode = hex_decode, .internal = &s_hex};

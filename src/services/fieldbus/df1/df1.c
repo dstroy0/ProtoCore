@@ -98,7 +98,7 @@ size_t protocore_df1_build_frame(uint8_t *buf, size_t cap, const uint8_t *data, 
 }
 
 proto_bool protocore_df1_parse_frame(const uint8_t *buf, size_t len, Df1Check check, uint8_t *out, size_t out_cap,
-                              size_t *out_len)
+                                     size_t *out_len)
 {
     size_t checklen = (check == DF1_CHECK_CRC) ? 2 : 1;
     if (!buf || !out || len < 4 + checklen) // DLE STX DLE ETX + check

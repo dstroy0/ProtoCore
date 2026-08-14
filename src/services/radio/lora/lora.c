@@ -61,8 +61,8 @@ static inline void wr(const protocore_lora_bus *b, uint8_t reg, uint8_t val)
     b->write(reg, val, b->ctx);
 }
 
-proto_bool protocore_lora_frame_parse(const uint8_t *raw, uint16_t len, protocore_lora_header *hdr, const uint8_t **payload,
-                               uint16_t *payload_len)
+proto_bool protocore_lora_frame_parse(const uint8_t *raw, uint16_t len, protocore_lora_header *hdr,
+                                      const uint8_t **payload, uint16_t *payload_len)
 {
     if (!raw || !hdr || len < 4)
     {
@@ -83,8 +83,8 @@ proto_bool protocore_lora_frame_parse(const uint8_t *raw, uint16_t len, protocor
     return PROTO_TRUE;
 }
 
-uint16_t protocore_lora_frame_build(const protocore_lora_header *hdr, const uint8_t *payload, uint16_t len, uint8_t *out,
-                             uint16_t cap)
+uint16_t protocore_lora_frame_build(const protocore_lora_header *hdr, const uint8_t *payload, uint16_t len,
+                                    uint8_t *out, uint16_t cap)
 {
     if (!hdr || !out || len > PROTOCORE_LORA_MAX_PAYLOAD || (uint32_t)len + 4 > cap)
     {

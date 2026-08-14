@@ -101,12 +101,12 @@ void test_v9_packet_header(void)
     FlowExport.message_finish(FlowExport.internal);
     TEST_ASSERT_TRUE(FlowExport.ok);
 
-    static const uint8_t WANT[20] = {0x00, 0x09,                         // Version 9
-                                     0x00, 0x01,                         // Count = the one Template Record
-                                     0x11, 0x22, 0x33, 0x44,             // sysUpTime
-                                     0x55, 0x66, 0x77, 0x88,             // UNIX Secs
-                                     0x99, 0xAA, 0xBB, 0xCC,             // Sequence Number
-                                     0x00, 0x00, 0x00, 0x2A};            // Source ID
+    static const uint8_t WANT[20] = {0x00, 0x09,              // Version 9
+                                     0x00, 0x01,              // Count = the one Template Record
+                                     0x11, 0x22, 0x33, 0x44,  // sysUpTime
+                                     0x55, 0x66, 0x77, 0x88,  // UNIX Secs
+                                     0x99, 0xAA, 0xBB, 0xCC,  // Sequence Number
+                                     0x00, 0x00, 0x00, 0x2A}; // Source ID
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, g_buf, sizeof(WANT));
     TEST_ASSERT_EQUAL_size_t(20u + 28u, FlowExport.n);
 }
@@ -120,14 +120,14 @@ void test_rfc3954_template_flowset_example(void)
     FlowExport.message_finish(FlowExport.internal);
     TEST_ASSERT_TRUE(FlowExport.ok);
 
-    static const uint8_t WANT[28] = {0x00, 0x00,             // FlowSet ID = 0
-                                     0x00, 0x1C,             // Length = 28 bytes
-                                     0x01, 0x00,             // Template ID 256
-                                     0x00, 0x05,             // Field Count = 5
-                                     0x00, 0x08, 0x00, 0x04, // IP_SRC_ADDR = 8, length 4
-                                     0x00, 0x0C, 0x00, 0x04, // IP_DST_ADDR = 12, length 4
-                                     0x00, 0x0F, 0x00, 0x04, // IP_NEXT_HOP = 15, length 4
-                                     0x00, 0x02, 0x00, 0x04, // IN_PKTS = 2, length 4
+    static const uint8_t WANT[28] = {0x00, 0x00,              // FlowSet ID = 0
+                                     0x00, 0x1C,              // Length = 28 bytes
+                                     0x01, 0x00,              // Template ID 256
+                                     0x00, 0x05,              // Field Count = 5
+                                     0x00, 0x08, 0x00, 0x04,  // IP_SRC_ADDR = 8, length 4
+                                     0x00, 0x0C, 0x00, 0x04,  // IP_DST_ADDR = 12, length 4
+                                     0x00, 0x0F, 0x00, 0x04,  // IP_NEXT_HOP = 15, length 4
+                                     0x00, 0x02, 0x00, 0x04,  // IN_PKTS = 2, length 4
                                      0x00, 0x01, 0x00, 0x04}; // IN_BYTES = 1, length 4
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, g_buf + 20, sizeof(WANT));
 }
@@ -173,10 +173,10 @@ void test_ipfix_message_header_and_template_set_id(void)
 
     // 16-octet Message Header, then the 28-octet Template Set
     TEST_ASSERT_EQUAL_size_t(16u + 28u, FlowExport.n);
-    static const uint8_t WANT[16] = {0x00, 0x0A,             // Version 0x000a
-                                     0x00, 0x2C,             // Length = 44 = 16 + 28
-                                     0x55, 0x66, 0x77, 0x88, // Export Time
-                                     0x99, 0xAA, 0xBB, 0xCC, // Sequence Number
+    static const uint8_t WANT[16] = {0x00, 0x0A,              // Version 0x000a
+                                     0x00, 0x2C,              // Length = 44 = 16 + 28
+                                     0x55, 0x66, 0x77, 0x88,  // Export Time
+                                     0x99, 0xAA, 0xBB, 0xCC,  // Sequence Number
                                      0x00, 0x00, 0x00, 0x2A}; // Observation Domain ID
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, g_buf, sizeof(WANT));
     TEST_ASSERT_EQUAL_HEX8(0x00, g_buf[16]); // Set ID 2
@@ -224,10 +224,10 @@ void test_v9_data_set_is_padded_to_a_four_octet_boundary(void)
     TEST_ASSERT_TRUE(FlowExport.ok);
 
     TEST_ASSERT_EQUAL_size_t(20u + 8u, FlowExport.n);
-    static const uint8_t WANT[8] = {0x01, 0x00,             // FlowSet ID 256
-                                    0x00, 0x08,             // Length 8: header + 3 + 1 pad
-                                    0xDE, 0xAD, 0xBE,       // the record
-                                    0x00};                  // RFC 7011 sec 3.3.1: padding is zero
+    static const uint8_t WANT[8] = {0x01, 0x00,       // FlowSet ID 256
+                                    0x00, 0x08,       // Length 8: header + 3 + 1 pad
+                                    0xDE, 0xAD, 0xBE, // the record
+                                    0x00};            // RFC 7011 sec 3.3.1: padding is zero
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, g_buf + 20, sizeof(WANT));
 
     // an already-aligned Set gets no padding
@@ -361,16 +361,15 @@ void test_v5_header_is_twenty_four_octets(void)
     TEST_ASSERT_TRUE(FlowExport.ok);
     TEST_ASSERT_EQUAL_size_t((size_t)FLOW_V5_HEADER_SIZE, FlowExport.n);
 
-    static const uint8_t WANT[FLOW_V5_HEADER_SIZE] = {
-        0x00, 0x05,             // Version 5
-        0x00, 0x02,             // count
-        0x11, 0x22, 0x33, 0x44, // sys_uptime
-        0x55, 0x66, 0x77, 0x88, // unix_secs
-        0x99, 0xAA, 0xBB, 0xCC, // unix_nsecs
-        0xDD, 0xEE, 0xFF, 0x00, // flow_sequence
-        0x01,                   // engine_type
-        0x02,                   // engine_id
-        0x03, 0x04};            // sampling_interval
+    static const uint8_t WANT[FLOW_V5_HEADER_SIZE] = {0x00, 0x05,             // Version 5
+                                                      0x00, 0x02,             // count
+                                                      0x11, 0x22, 0x33, 0x44, // sys_uptime
+                                                      0x55, 0x66, 0x77, 0x88, // unix_secs
+                                                      0x99, 0xAA, 0xBB, 0xCC, // unix_nsecs
+                                                      0xDD, 0xEE, 0xFF, 0x00, // flow_sequence
+                                                      0x01,                   // engine_type
+                                                      0x02,                   // engine_id
+                                                      0x03, 0x04};            // sampling_interval
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, g_buf, sizeof(WANT));
     TEST_ASSERT_EQUAL_HEX8(0xAA, g_buf[FLOW_V5_HEADER_SIZE]); // nothing past the header
 }
@@ -404,27 +403,26 @@ void test_v5_record_is_forty_eight_octets(void)
     TEST_ASSERT_TRUE(FlowExport.ok);
     TEST_ASSERT_EQUAL_size_t((size_t)FLOW_V5_RECORD_SIZE, FlowExport.n);
 
-    static const uint8_t WANT[FLOW_V5_RECORD_SIZE] = {
-        0xC0, 0xA8, 0x01, 0x0C, // src_addr 192.168.1.12
-        0x0A, 0x05, 0x0C, 0xFE, // dst_addr 10.5.12.254
-        0xC0, 0xA8, 0x01, 0x01, // next_hop 192.168.1.1
-        0x00, 0x01,             // input
-        0x00, 0x02,             // output
-        0x00, 0x00, 0x13, 0x91, // d_pkts 5009
-        0x00, 0x51, 0x8C, 0x81, // d_octets 5344385
-        0x00, 0x00, 0x00, 0x64, // first 100
-        0x00, 0x00, 0x00, 0xC8, // last 200
-        0x00, 0x50,             // src_port 80
-        0xC0, 0x00,             // dst_port 49152
-        0x00,                   // pad1
-        0x1B,                   // tcp_flags
-        0x06,                   // prot TCP
-        0x00,                   // tos
-        0x00, 0x01,             // src_as
-        0x00, 0x02,             // dst_as
-        0x18,                   // src_mask 24
-        0x18,                   // dst_mask 24
-        0x00, 0x00};            // pad2
+    static const uint8_t WANT[FLOW_V5_RECORD_SIZE] = {0xC0, 0xA8, 0x01, 0x0C, // src_addr 192.168.1.12
+                                                      0x0A, 0x05, 0x0C, 0xFE, // dst_addr 10.5.12.254
+                                                      0xC0, 0xA8, 0x01, 0x01, // next_hop 192.168.1.1
+                                                      0x00, 0x01,             // input
+                                                      0x00, 0x02,             // output
+                                                      0x00, 0x00, 0x13, 0x91, // d_pkts 5009
+                                                      0x00, 0x51, 0x8C, 0x81, // d_octets 5344385
+                                                      0x00, 0x00, 0x00, 0x64, // first 100
+                                                      0x00, 0x00, 0x00, 0xC8, // last 200
+                                                      0x00, 0x50,             // src_port 80
+                                                      0xC0, 0x00,             // dst_port 49152
+                                                      0x00,                   // pad1
+                                                      0x1B,                   // tcp_flags
+                                                      0x06,                   // prot TCP
+                                                      0x00,                   // tos
+                                                      0x00, 0x01,             // src_as
+                                                      0x00, 0x02,             // dst_as
+                                                      0x18,                   // src_mask 24
+                                                      0x18,                   // dst_mask 24
+                                                      0x00, 0x00};            // pad2
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, g_buf, sizeof(WANT));
     TEST_ASSERT_EQUAL_HEX8(0xAA, g_buf[FLOW_V5_RECORD_SIZE]);
 }

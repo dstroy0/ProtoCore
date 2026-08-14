@@ -56,11 +56,14 @@ void dbench_run(void)
         volatile int sinki = 0;
 
         DBENCH_OP("protocore_dashboard_set", 100000, sinkb = protocore_dashboard_set("temp", 23.5f));
-        DBENCH_OP("protocore_dashboard_layout_json", 20000, sinki += protocore_dashboard_layout_json(layout_buf, sizeof(layout_buf)));
-        DBENCH_OP("protocore_dashboard_values_json", 50000, sinki += protocore_dashboard_values_json(values_buf, sizeof(values_buf)));
+        DBENCH_OP("protocore_dashboard_layout_json", 20000,
+                  sinki += protocore_dashboard_layout_json(layout_buf, sizeof(layout_buf)));
+        DBENCH_OP("protocore_dashboard_values_json", 50000,
+                  sinki += protocore_dashboard_values_json(values_buf, sizeof(values_buf)));
         DBENCH_OP("protocore_dashboard_parse_control", 50000,
                   sinkb = protocore_dashboard_parse_control(kControlMsg, key_out, sizeof(key_out), &parsed_value));
-        DBENCH_OP("protocore_dashboard_dispatch_control", 50000, sinkb = protocore_dashboard_dispatch_control(kControlMsg));
+        DBENCH_OP("protocore_dashboard_dispatch_control", 50000,
+                  sinkb = protocore_dashboard_dispatch_control(kControlMsg));
 
         (void)sinkb;
         (void)sinki;

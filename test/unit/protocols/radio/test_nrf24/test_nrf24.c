@@ -70,7 +70,6 @@ static void mock_spi(const uint8_t *tx, uint8_t *rx, uint8_t len, void *)
             rx[i] = g.rx_payload[i - 1];
         }
     }
-
 }
 static void mock_ce(proto_bool level, void *)
 {

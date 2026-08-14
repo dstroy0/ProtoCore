@@ -46,17 +46,20 @@ void dbench_run(void)
         DeviceNetFragRx rx;
 
         DBENCH_OP("protocore_devicenet_encode_id", 100000,
-                  sinkb |= protocore_devicenet_encode_id(&id, DEVICENET_GROUP_2, DEVICENET_G2_UNCONNECTED_EXPLICIT_REQ, 0x21));
+                  sinkb |=
+                  protocore_devicenet_encode_id(&id, DEVICENET_GROUP_2, DEVICENET_G2_UNCONNECTED_EXPLICIT_REQ, 0x21));
         DBENCH_OP("protocore_devicenet_decode_id", 100000, sinkb |= protocore_devicenet_decode_id(decode_test_id, &d));
         DBENCH_OP("protocore_devicenet_msg_header", 200000, sink8 += protocore_devicenet_msg_header(true, false, 0x21));
-        DBENCH_OP("protocore_devicenet_frag_octet", 200000, sink8 += protocore_devicenet_frag_octet(DEVICENET_FRAG_LAST, 5));
+        DBENCH_OP("protocore_devicenet_frag_octet", 200000,
+                  sink8 += protocore_devicenet_frag_octet(DEVICENET_FRAG_LAST, 5));
         DBENCH_OP("protocore_devicenet_build_explicit", 100000,
-                  sinkb |= protocore_devicenet_build_explicit(&frame, DEVICENET_GROUP_2, DEVICENET_G2_UNCONNECTED_EXPLICIT_REQ,
-                                                       0x21, cip, 3));
+                  sinkb |= protocore_devicenet_build_explicit(&frame, DEVICENET_GROUP_2,
+                                                              DEVICENET_G2_UNCONNECTED_EXPLICIT_REQ, 0x21, cip, 3));
         // 3-frame reassembly per iteration: reset + FIRST + MIDDLE + LAST, 14 octets of payload data.
         DBENCH_BULK("protocore_devicenet_frag_feed (3-frame reasm)", 50000, 14,
                     (protocore_devicenet_frag_reset(&rx), protocore_devicenet_frag_feed(&rx, f0, sizeof(f0)),
-                     protocore_devicenet_frag_feed(&rx, f1, sizeof(f1)), protocore_devicenet_frag_feed(&rx, f2, sizeof(f2))));
+                     protocore_devicenet_frag_feed(&rx, f1, sizeof(f1)),
+                     protocore_devicenet_frag_feed(&rx, f2, sizeof(f2))));
 
         (void)sinkb;
         (void)sink8;

@@ -50,17 +50,16 @@ void test_first_token_is_an_rfc2743_initial_context_token(void)
     size_t n = protocore_spnego_wrap_negotiate(NTLM, sizeof(NTLM), out, sizeof(out));
     TEST_ASSERT_EQUAL_size_t(38, n);
 
-    static const uint8_t WANT[38] = {
-        0x60, 0x24,                                                       // [APPLICATION 0], 36 octets
-        0x06, 0x06, 0x2b, 0x06, 0x01, 0x05, 0x05, 0x02,                   // thisMech = SPNEGO OID
-        0xa0, 0x1a,                                                       // [0] negTokenInit, 26 octets
-        0x30, 0x18,                                                       // SEQUENCE, 24 octets
-        0xa0, 0x0e,                                                       // [0] mechTypes, 14 octets
-        0x30, 0x0c,                                                       // SEQUENCE OF, 12 octets
-        0x06, 0x0a, 0x2b, 0x06, 0x01, 0x04, 0x01, 0x82, 0x37, 0x02, 0x02, 0x0a, // NTLM OID
-        0xa2, 0x06,                                                       // [2] mechToken, 6 octets
-        0x04, 0x04,                                                       // OCTET STRING, 4 octets
-        0xDE, 0xAD, 0xBE, 0xEF};
+    static const uint8_t WANT[38] = {0x60, 0x24,                                     // [APPLICATION 0], 36 octets
+                                     0x06, 0x06, 0x2b, 0x06, 0x01, 0x05, 0x05, 0x02, // thisMech = SPNEGO OID
+                                     0xa0, 0x1a,                                     // [0] negTokenInit, 26 octets
+                                     0x30, 0x18,                                     // SEQUENCE, 24 octets
+                                     0xa0, 0x0e,                                     // [0] mechTypes, 14 octets
+                                     0x30, 0x0c,                                     // SEQUENCE OF, 12 octets
+                                     0x06, 0x0a, 0x2b, 0x06, 0x01, 0x04, 0x01, 0x82, 0x37, 0x02, 0x02, 0x0a, // NTLM OID
+                                     0xa2, 0x06, // [2] mechToken, 6 octets
+                                     0x04, 0x04, // OCTET STRING, 4 octets
+                                     0xDE, 0xAD, 0xBE, 0xEF};
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, out, sizeof(WANT));
 }
 
@@ -91,12 +90,12 @@ void test_response_token_is_found_after_negstate_and_supportedmech(void)
     static const uint8_t NTLM[6] = {'N', 'T', 'L', 'M', 0x02, 0x00};
     // SEQUENCE content: [0] negState 5 + [1] supportedMech 14 + [2] responseToken 10 = 29 octets,
     // so the SEQUENCE is 31 octets and the [1] NegTokenResp wrapping it is 33.
-    static const uint8_t BLOB[33] = {
-        0xa1, 0x1f,                                                                         // [1] NegTokenResp, 31
-        0x30, 0x1d,                                                                         // SEQUENCE, 29
-        0xa0, 0x03, 0x0a, 0x01, 0x01,                                                       // [0] ENUMERATED 1
-        0xa1, 0x0c, 0x06, 0x0a, 0x2b, 0x06, 0x01, 0x04, 0x01, 0x82, 0x37, 0x02, 0x02, 0x0a, // [1] NTLM OID
-        0xa2, 0x08, 0x04, 0x06, 'N', 'T', 'L', 'M', 0x02, 0x00};                            // [2] responseToken
+    static const uint8_t BLOB[33] = {0xa1, 0x1f,                   // [1] NegTokenResp, 31
+                                     0x30, 0x1d,                   // SEQUENCE, 29
+                                     0xa0, 0x03, 0x0a, 0x01, 0x01, // [0] ENUMERATED 1
+                                     0xa1, 0x0c, 0x06, 0x0a, 0x2b, 0x06, 0x01, 0x04, 0x01, 0x82,
+                                     0x37, 0x02, 0x02, 0x0a,                                      // [1] NTLM OID
+                                     0xa2, 0x08, 0x04, 0x06, 'N',  'T',  'L',  'M',  0x02, 0x00}; // [2] responseToken
 
     const uint8_t *tok = NULL;
     size_t tok_len = 0;

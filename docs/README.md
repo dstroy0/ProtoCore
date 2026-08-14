@@ -153,36 +153,20 @@ src/
 │   ├── rng/  (rng.h, rng.c)
 │   ├── crypto_opt.h
 │   └── ct_eq.h
-├── idemIP/
-│   ├── arp/
-│   │   └── arp.h
-│   ├── ethernet/
-│   │   ├── ethernet.h
-│   │   ├── mii.h
-│   │   ├── phy.c
-│   │   └── phy.h
-│   ├── icmp/
-│   │   ├── icmp.h
-│   │   └── icmpv6.h
-│   ├── ip/
-│   │   ├── ipv4.h
-│   │   └── ipv6.h
-│   ├── tcp/
-│   │   └── tcp.h
-│   ├── udp/
-│   │   └── udp.h
-│   ├── checksum.h
-│   ├── common.h
-│   └── endian.h
 ├── mmgr/
 │   ├── arena.c
 │   ├── arena.h
+│   ├── bitio.c
 │   ├── bitio.h
+│   ├── bytes.c
 │   ├── bytes.h
 │   ├── dma.c
 │   ├── dma.h
+│   ├── endian.c
 │   ├── endian.h
+│   ├── float_bits.c
 │   ├── float_bits.h
+│   ├── membuild.c
 │   ├── membuild.h
 │   ├── plaintext.c
 │   ├── plaintext.h
@@ -192,11 +176,16 @@ src/
 │   ├── protomem.h
 │   ├── protostr.c
 │   ├── protostr.h
+│   ├── psram_pool.c
+│   ├── psram_pool.h
+│   ├── rawmemcpy.c
 │   ├── rawmemcpy.h
 │   ├── ring.h
 │   ├── secure.c
 │   ├── secure.h
+│   ├── span.c
 │   ├── span.h
+│   ├── swar.c
 │   └── swar.h
 ├── network_drivers/
 │   ├── application/
@@ -315,6 +304,7 @@ src/
 │   │   │   │   ├── tls13_msg.c
 │   │   │   │   └── tls13_msg.h
 │   │   │   ├── http_parser/  (http_parser.h, http_parser.c)
+│   │   │   ├── httpcache/  (httpcache.h, httpcache.c)
 │   │   │   ├── route/  (http_route.h, http_route.c)
 │   │   │   ├── sse/  (sse.h, sse.c)
 │   │   │   ├── websocket/  (websocket.h, websocket.c)
@@ -348,6 +338,9 @@ src/
 │   │   │   │   ├── inflate.h
 │   │   │   │   ├── phase_machine.c
 │   │   │   │   ├── phase_machine.h
+│   │   │   │   ├── ssh_kexhash.h
+│   │   │   │   ├── ssh_rsa.c
+│   │   │   │   ├── ssh_rsa.h
 │   │   │   │   ├── transport.c
 │   │   │   │   ├── transport.h
 │   │   │   │   ├── zlib.c
@@ -358,65 +351,105 @@ src/
 │   │   ├── telnet/  (telnet.h, telnet.c)
 │   │   ├── presentation.c
 │   │   └── presentation.h
-│   ├── session/
-│   │   ├── preempt_queue.c
-│   │   ├── preempt_queue.h
-│   │   ├── proto_handler.h
-│   │   ├── session.c
-│   │   ├── session.h
-│   │   ├── worker.c
-│   │   └── worker.h
+│   ├── session/  (session.h, session.c)
 │   ├── tls/
-│   │   ├── ssh_kexhash.h
-│   │   ├── ssh_rsa.c
-│   │   ├── ssh_rsa.h
-│   │   ├── tls.c
-│   │   ├── tls.h
-│   │   ├── tls13_kdf.c
-│   │   ├── tls13_kdf.h
-│   │   ├── tls_conn.c
-│   │   ├── tls_conn.h
-│   │   ├── tls_record.c
-│   │   └── tls_record.h
+│   │   ├── handshake/  (handshake.h, handshake.c)
+│   │   ├── key_schedule/  (key_schedule.h, key_schedule.c)
+│   │   ├── record/  (record.h, record.c)
+│   │   └── tls.h
 │   └── transport/
+│       ├── diffserv/  (diffserv.h, diffserv.c)
+│       ├── happy_eyeballs/  (happy_eyeballs.h, happy_eyeballs.c)
+│       ├── net_addr/  (net_addr.h, net_addr.c)
+│       ├── proxy_protocol/  (proxy_protocol.h, proxy_protocol.c)
 │       ├── tcp/
-│       │   ├── client/
-│       │   │   ├── client.c
-│       │   │   └── client.h
-│       │   ├── lower/
-│       │   │   ├── lower.c
-│       │   │   └── lower.h
-│       │   ├── protocol/
-│       │   │   ├── protocol.c
-│       │   │   └── protocol.h
-│       │   ├── server/
-│       │   │   ├── server.c
-│       │   │   └── server.h
+│       │   ├── client/  (client.h, client.c)
+│       │   ├── lower/  (lower.h, lower.c)
+│       │   ├── protocol/  (protocol.h, protocol.c)
+│       │   ├── server/  (server.h, server.c)
 │       │   ├── common.h
 │       │   ├── evt.h
 │       │   ├── tcp.c
 │       │   └── tcp.h
-│       ├── udp/
-│       │   ├── udp_client.c
-│       │   ├── udp_client.h
-│       │   ├── udp_datagram.h
-│       │   ├── udp_listener.c
-│       │   └── udp_listener.h
-│       ├── diffserv.c
-│       ├── diffserv.h
-│       ├── net_addr.c
-│       ├── net_addr.h
-│       ├── udp.c
-│       └── udp.h
+│       └── udp/
+│           ├── client/  (client.h, client.c)
+│           ├── server/  (server.h, server.c)
+│           ├── common.h
+│           ├── udp.c
+│           └── udp.h
 ├── server/
 │   ├── clock/  (clock.h, clock.c)
-│   ├── filesystem/
-│   │   ├── filesystem.c
-│   │   ├── filesystem.h
-│   │   ├── mnt.c
-│   │   ├── mnt.h
-│   │   ├── wearlevel.c
-│   │   └── wearlevel.h
+│   ├── core/
+│   │   ├── guardrails/  (guardrails.h, guardrails.c)
+│   │   ├── provisioning_service/  (provisioning_service.h, provisioning_service.c)
+│   │   ├── exc_coredump.c
+│   │   ├── exc_decoder.c
+│   │   ├── exc_decoder.h
+│   │   ├── failsafe.c
+│   │   ├── failsafe.h
+│   │   ├── logbuf.c
+│   │   ├── logbuf.h
+│   │   ├── power_mgmt.c
+│   │   ├── power_mgmt.h
+│   │   ├── preempt_queue.c
+│   │   ├── preempt_queue.h
+│   │   ├── proto_handler.h
+│   │   ├── sleep_sched.c
+│   │   ├── sleep_sched.h
+│   │   ├── worker.c
+│   │   └── worker.h
+│   ├── io/
+│   │   ├── middleware.c
+│   │   ├── response.c
+│   │   ├── webdav_handler.c
+│   │   ├── webdav_handler.h
+│   │   └── websocket_sse.c
+│   ├── net/
+│   │   ├── gateway/  (gateway.h, gateway.c)
+│   │   ├── iface_bridge/
+│   │   │   ├── iface_bridge.c
+│   │   │   ├── iface_bridge.h
+│   │   │   ├── iface_bridge_hw.c
+│   │   │   └── iface_bridge_hw.h
+│   │   ├── netadapt/  (netadapt.h, netadapt.c)
+│   │   ├── relay/
+│   │   │   ├── relay.c
+│   │   │   ├── relay.h
+│   │   │   ├── relay_listener.c
+│   │   │   └── relay_listener.h
+│   │   └── sockpool/  (sockpool.h, sockpool.c)
+│   ├── peripherals/
+│   │   ├── ad9238/  (ad9238.h, ad9238.c)
+│   │   ├── ads1115/  (ads1115.h, ads1115.c)
+│   │   ├── dmx/  (dmx.h, dmx.c)
+│   │   ├── dshot/  (dshot.h, dshot.c)
+│   │   ├── fdc2214/  (fdc2214.h, fdc2214.c)
+│   │   ├── hmmd/  (hmmd.h, hmmd.c)
+│   │   ├── ina219/  (ina219.h, ina219.c)
+│   │   ├── ld2410/  (ld2410.h, ld2410.c)
+│   │   ├── ldc1614/  (ldc1614.h, ldc1614.c)
+│   │   ├── mpr121/  (mpr121.h, mpr121.c)
+│   │   ├── pca9685/  (pca9685.h, pca9685.c)
+│   │   ├── pn532/  (pn532.h, pn532.c)
+│   │   ├── rcwl0516/  (rcwl0516.h, rcwl0516.c)
+│   │   ├── rtc/  (rtc.h, rtc.c)
+│   │   ├── sdi12/  (sdi12.h, sdi12.c)
+│   │   ├── sen0192/  (sen0192.h, sen0192.c)
+│   │   ├── sht3x/  (sht3x.h, sht3x.c)
+│   │   ├── vl53l0x/  (vl53l0x.h, vl53l0x.c)
+│   │   ├── i2c.h
+│   │   ├── pmbus.c
+│   │   ├── pmbus.h
+│   │   ├── smbus.c
+│   │   ├── smbus.h
+│   │   ├── spi.h
+│   │   └── uart.h
+│   ├── security/
+│   │   ├── audit_log/  (audit_log.h, audit_log.c)
+│   │   ├── auth_lockout/  (auth_lockout.h, auth_lockout.c)
+│   │   ├── csrf/  (csrf.h, csrf.c)
+│   │   ├── forwarded_trust/  (forwarded_trust.h, forwarded_trust.c)
+│   │   └── tls_policy/  (tls_policy.h, tls_policy.c)
 │   ├── signaling/
 │   │   ├── bus_capture.c
 │   │   ├── bus_capture.h
@@ -433,29 +466,45 @@ src/
 │   │   ├── signaling.h
 │   │   ├── trace_capture.c
 │   │   └── trace_capture.h
+│   ├── storage/
+│   │   ├── config_io/  (config_io.h, config_io.c)
+│   │   ├── config_store/  (config_store.h, config_store.c)
+│   │   ├── hotswap/  (hotswap.h, hotswap.c)
+│   │   ├── partition_monitor/
+│   │   │   ├── partition_monitor.c
+│   │   │   ├── partition_monitor.h
+│   │   │   └── partition_monitor_routes.c
+│   │   ├── filesystem.c
+│   │   ├── filesystem.h
+│   │   ├── mnt.c
+│   │   ├── mnt.h
+│   │   ├── wearlevel.c
+│   │   └── wearlevel.h
 │   ├── update/
 │   │   ├── ota_rollback.c
 │   │   ├── ota_rollback.h
 │   │   ├── ota_service.c
 │   │   └── ota_service.h
-│   ├── exc_coredump.c
-│   ├── exc_decoder.c
-│   ├── exc_decoder.h
-│   ├── failsafe.c
-│   ├── failsafe.h
-│   ├── logbuf.c
-│   ├── logbuf.h
-│   ├── middleware.c
-│   ├── power_mgmt.c
-│   ├── power_mgmt.h
-│   ├── proto_builtins.c
-│   ├── regex.c
-│   ├── response.c
-│   ├── sleep_sched.c
-│   ├── sleep_sched.h
-│   ├── webdav_handler.c
-│   ├── webdav_handler.h
-│   └── websocket_sse.c
+│   ├── web/
+│   │   ├── dashboard/
+│   │   │   ├── dashboard.c
+│   │   │   ├── dashboard.h
+│   │   │   └── dashboard_routes.c
+│   │   ├── edge_cache/
+│   │   │   ├── edge_cache.c
+│   │   │   ├── edge_cache.h
+│   │   │   ├── edge_cache_proxy.c
+│   │   │   ├── edge_cache_proxy.h
+│   │   │   ├── edge_cache_sd.c
+│   │   │   ├── edge_cache_sd.h
+│   │   │   ├── edge_fetch.c
+│   │   │   ├── edge_fetch.h
+│   │   │   ├── edge_mesh.c
+│   │   │   └── edge_mesh.h
+│   │   ├── spa_router/  (spa_router.h, spa_router.c)
+│   │   └── web_terminal/  (web_terminal.h, web_terminal.c)
+│   ├── protocore_builtins.c
+│   └── regex.c
 ├── services/
 │   ├── energy/
 │   │   ├── c37118/  (c37118.h, c37118.c)
@@ -568,21 +617,7 @@ src/
 │   │   └── umati/  (umati.h, umati.c)
 │   ├── net/
 │   │   ├── flow_export/  (flow_export.h, flow_export.c)
-│   │   ├── gateway/  (gateway.h, gateway.c)
-│   │   ├── happy_eyeballs/  (happy_eyeballs.h, happy_eyeballs.c)
 │   │   ├── http_client/  (http_client.h, http_client.c)
-│   │   ├── iface_bridge/
-│   │   │   ├── iface_bridge.c
-│   │   │   ├── iface_bridge.h
-│   │   │   ├── iface_bridge_hw.c
-│   │   │   └── iface_bridge_hw.h
-│   │   ├── netadapt/  (netadapt.h, netadapt.c)
-│   │   ├── proxy_protocol/  (proxy_protocol.h, proxy_protocol.c)
-│   │   ├── relay/
-│   │   │   ├── relay.c
-│   │   │   ├── relay.h
-│   │   │   ├── relay_listener.c
-│   │   │   └── relay_listener.h
 │   │   ├── smtp/  (smtp.h, smtp.c)
 │   │   ├── snmp/
 │   │   │   ├── snmp_agent.c
@@ -595,41 +630,9 @@ src/
 │   │   │   ├── snmp_notify.h
 │   │   │   ├── snmp_v3.c
 │   │   │   └── snmp_v3.h
-│   │   ├── sockpool/  (sockpool.h, sockpool.c)
-│   │   ├── southbound/
-│   │   │   ├── sb_modbus.c
-│   │   │   ├── sb_modbus.h
-│   │   │   ├── southbound.c
-│   │   │   └── southbound.h
 │   │   ├── syslog/  (syslog.h, syslog.c)
 │   │   ├── webhook/  (webhook.h, webhook.c)
 │   │   └── ws_client/  (ws_client.h, ws_client.c)
-│   ├── peripherals/
-│   │   ├── ad9238/  (ad9238.h, ad9238.c)
-│   │   ├── ads1115/  (ads1115.h, ads1115.c)
-│   │   ├── dmx/  (dmx.h, dmx.c)
-│   │   ├── dshot/  (dshot.h, dshot.c)
-│   │   ├── fdc2214/  (fdc2214.h, fdc2214.c)
-│   │   ├── hmmd/  (hmmd.h, hmmd.c)
-│   │   ├── ina219/  (ina219.h, ina219.c)
-│   │   ├── ld2410/  (ld2410.h, ld2410.c)
-│   │   ├── ldc1614/  (ldc1614.h, ldc1614.c)
-│   │   ├── mpr121/  (mpr121.h, mpr121.c)
-│   │   ├── pca9685/  (pca9685.h, pca9685.c)
-│   │   ├── pn532/  (pn532.h, pn532.c)
-│   │   ├── rcwl0516/  (rcwl0516.h, rcwl0516.c)
-│   │   ├── rtc/  (rtc.h, rtc.c)
-│   │   ├── sdi12/  (sdi12.h, sdi12.c)
-│   │   ├── sen0192/  (sen0192.h, sen0192.c)
-│   │   ├── sht3x/  (sht3x.h, sht3x.c)
-│   │   ├── vl53l0x/  (vl53l0x.h, vl53l0x.c)
-│   │   ├── i2c.h
-│   │   ├── pmbus.c
-│   │   ├── pmbus.h
-│   │   ├── smbus.c
-│   │   ├── smbus.h
-│   │   ├── spi.h
-│   │   └── uart.h
 │   ├── radio/
 │   │   ├── ble_gatt/  (ble_gatt.h, ble_gatt.c)
 │   │   ├── cc1101/  (cc1101.h, cc1101.c)
@@ -646,11 +649,6 @@ src/
 │   │   ├── zigbee/  (zigbee.h, zigbee.c)
 │   │   └── zwave/  (zwave.h, zwave.c)
 │   ├── security/
-│   │   ├── audit_log/  (audit_log.h, audit_log.c)
-│   │   ├── auth_lockout/  (auth_lockout.h, auth_lockout.c)
-│   │   ├── csrf/  (csrf.h, csrf.c)
-│   │   ├── forwarded_trust/  (forwarded_trust.h, forwarded_trust.c)
-│   │   ├── guardrails/  (guardrails.h, guardrails.c)
 │   │   ├── ikev2/
 │   │   │   ├── ikev2.c
 │   │   │   ├── ikev2.h
@@ -659,19 +657,15 @@ src/
 │   │   ├── jwt/  (jwt.h, jwt.c)
 │   │   ├── oauth2/  (oauth2.h, oauth2.c)
 │   │   ├── oidc/  (oidc.h, oidc.c)
-│   │   ├── tls_policy/  (tls_policy.h, tls_policy.c)
 │   │   └── totp/  (totp.h, totp.c)
+│   ├── southbound/
+│   │   ├── sb_modbus.c
+│   │   ├── sb_modbus.h
+│   │   ├── southbound.c
+│   │   └── southbound.h
 │   ├── storage/
-│   │   ├── config_io/  (config_io.h, config_io.c)
-│   │   ├── config_store/  (config_store.h, config_store.c)
 │   │   ├── dbm/  (dbm.h, dbm.c)
 │   │   ├── docstore/  (docstore.h, docstore.c)
-│   │   ├── hotswap/  (hotswap.h, hotswap.c)
-│   │   ├── partition_monitor/
-│   │   │   ├── partition_monitor.c
-│   │   │   ├── partition_monitor.h
-│   │   │   └── partition_monitor_routes.c
-│   │   ├── psram_pool/  (psram_pool.h, psram_pool.c)
 │   │   ├── sqlite/  (sqlite_format.h, sqlite_format.c)
 │   │   └── wal/
 │   │       ├── wal.c
@@ -681,12 +675,11 @@ src/
 │   │       └── wal_store.h
 │   ├── system/
 │   │   ├── control/  (control.h, control.c)
-│   │   ├── esp/
-│   │   │   ├── esp.c
-│   │   │   ├── esp.h
-│   │   │   ├── ipsec_db.c
-│   │   │   └── ipsec_db.h
-│   │   └── provisioning_service/  (provisioning_service.h, provisioning_service.c)
+│   │   └── esp/
+│   │       ├── esp.c
+│   │       ├── esp.h
+│   │       ├── ipsec_db.c
+│   │       └── ipsec_db.h
 │   ├── timing_position/
 │   │   ├── gnss/
 │   │   │   ├── gnss_survey.c
@@ -701,47 +694,31 @@ src/
 │   │   ├── nmea2000/  (nmea2000.h, nmea2000.c)
 │   │   ├── time_source/  (time_source.h, time_source.c)
 │   │   └── ubx/  (ubx.h, ubx.c)
-│   ├── transportation/
-│   │   ├── j2735/  (j2735.h, j2735.c)
-│   │   ├── nema_ts2/  (nema_ts2.h, nema_ts2.c)
-│   │   ├── ntcip/  (ntcip.h, ntcip.c)
-│   │   ├── ocit/  (ocit.h, ocit.c)
-│   │   ├── utmc/  (utmc.h, utmc.c)
-│   │   └── wave/  (wave.h, wave.c)
-│   └── web/
-│       ├── dashboard/
-│       │   ├── dashboard.c
-│       │   ├── dashboard.h
-│       │   └── dashboard_routes.c
-│       ├── edge_cache/
-│       │   ├── edge_cache.c
-│       │   ├── edge_cache.h
-│       │   ├── edge_cache_proxy.c
-│       │   ├── edge_cache_proxy.h
-│       │   ├── edge_cache_sd.c
-│       │   ├── edge_cache_sd.h
-│       │   ├── edge_fetch.c
-│       │   ├── edge_fetch.h
-│       │   ├── edge_mesh.c
-│       │   └── edge_mesh.h
-│       ├── httpcache/  (httpcache.h, httpcache.c)
-│       ├── spa_router/  (spa_router.h, spa_router.c)
-│       └── web_terminal/  (web_terminal.h, web_terminal.c)
+│   └── transportation/
+│       ├── j2735/  (j2735.h, j2735.c)
+│       ├── nema_ts2/  (nema_ts2.h, nema_ts2.c)
+│       ├── ntcip/  (ntcip.h, ntcip.c)
+│       ├── ocit/  (ocit.h, ocit.c)
+│       ├── utmc/  (utmc.h, utmc.c)
+│       └── wave/  (wave.h, wave.c)
 ├── shared/
-│   ├── can.h
-│   ├── crc.h
-│   ├── hex.h
-│   ├── http_date.h
-│   ├── ip.c
-│   ├── ip.h
-│   ├── log.c
-│   ├── log.h
-│   ├── mime.h
-│   ├── pcap.h
-│   ├── speed_opt.h
-│   ├── time_compat.h
-│   └── utf8.h
+│   ├── can/
+│   │   └── can.h
+│   ├── crc/  (crc.h, crc.c)
+│   ├── hex/  (hex.h, hex.c)
+│   ├── http_date/  (http_date.h, http_date.c)
+│   ├── ip/  (ip.h, ip.c)
+│   ├── log/  (log.h, log.c)
+│   ├── mime/
+│   │   └── mime.h
+│   ├── pcap/  (pcap.h, pcap.c)
+│   ├── speed_opt/
+│   │   └── speed_opt.h
+│   ├── time_compat/  (time_compat.h, time_compat.c)
+│   └── utf8/  (utf8.h, utf8.c)
 ├── web_assets/
+│   ├── __pycache__/
+│   │   └── __init__.cpython-311.pyc
 │   ├── favicons/  (288 generated files)
 │   ├── input/
 │   │   ├── PC_DASHBOARD_PAGE.html
@@ -753,6 +730,12 @@ src/
 │   │   └── PC_TERMINAL_PAGE.html
 │   ├── themes/  (112 generated files)
 │   ├── wizard/
+│   │   ├── __pycache__/
+│   │   │   ├── __init__.cpython-311.pyc
+│   │   │   ├── build_assets.cpython-311.pyc
+│   │   │   ├── gen_favicons.cpython-311.pyc
+│   │   │   ├── gen_theme_blobs.cpython-311.pyc
+│   │   │   └── gen_themes.cpython-311.pyc
 │   │   ├── __init__.py
 │   │   ├── build_assets.py
 │   │   ├── gen_favicons.py
@@ -761,7 +744,6 @@ src/
 │   ├── __init__.py
 │   └── README.md
 ├── protocore.c
-├── protocore.h
 ├── protocore_config.h
 └── protocore_types.h
 ```
@@ -1075,7 +1057,7 @@ The complete set of `PROTOCORE_ENABLE_*` flags and their defaults, scraped from
 | `PROTOCORE_ENABLE_ENOCEAN` | `0` | Enable the EnOcean ESP3 serial codec (default off). |
 | `PROTOCORE_ENABLE_ESPNOW` | `0` | ESP-NOW peer messaging. |
 | `PROTOCORE_ENABLE_ETAG` | `0` | Conditional GET (ETag + Last-Modified) for served files. |
-| `PROTOCORE_ENABLE_ETHERNET` | `0` | Enable wired Ethernet bring-up (init_eth_physical / eth_ready). |
+| `PROTOCORE_ENABLE_ETHERNET` | `0` | Enable wired Ethernet bring-up (Physical.eth_init / Physical.eth_ready). |
 | `PROTOCORE_ENABLE_EUROMAP77` | `0` | EUROMAP 77 (OPC 40077) - OPC UA for injection moulding machines (IMM <-> MES). |
 | `PROTOCORE_ENABLE_EXC_DECODER` | `0` | Opt-in ESP32 panic / exception decoder for a live diagnostics panel. |
 | `PROTOCORE_ENABLE_FAILSAFE` | `0` | Opt-in software watchdog: deadlock detection + fail-safe safe-state. |
@@ -1535,7 +1517,7 @@ guards at compile time.
 | `PROTOCORE_STATSD_LINE_MAX` | `256` | Stack buffer for one StatsD line (bytes; caps metric name + value + tags). |
 | `PROTOCORE_STATSD_PORT` | `8125` | Default StatsD collector UDP port (StatsD/Graphite standard). |
 | `PROTOCORE_STOMP_MAX_HEADERS` | `16` | Max header lines parsed per STOMP frame (extras beyond this are ignored). |
-| `PROTOCORE_SYSLOG_DEFAULT_PORT` | `514` | Default syslog collector UDP port (RFC 5426 well-known 514; overridable at runtime via protocore_syslog_init and here for a non-standard collector). |
+| `PROTOCORE_SYSLOG_DEFAULT_PORT` | `514` | Default syslog collector UDP port (RFC 5426 well-known 514; overridable at runtime via Syslog.collector.port + Syslog.init and here for a non-standard collector). |
 | `PROTOCORE_SYSLOG_FIELD_MAX` | `32` | Maximum syslog HOSTNAME / APP-NAME field length (including NUL). |
 | `PROTOCORE_SYSLOG_MSG_MAX` | `256` | Maximum formatted syslog datagram length in bytes (RFC 5424 line). |
 | `PROTOCORE_TCP_NODELAY` | `1` | Disable Nagle's algorithm (set TCP_NODELAY) on every accepted connection. |

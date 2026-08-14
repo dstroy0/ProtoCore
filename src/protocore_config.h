@@ -4184,14 +4184,14 @@ from halves and is slower than the width it decomposes into"
 /**
  * @brief Opt-in CDN edge-cache tier (PROTOCORE_ENABLE_EDGE_CACHE, requires HTTP_CACHE).
  *
- * server/web/edge_cache is the caching reverse-proxy edge that network_drivers/presentation/http/httpcache is the origin-side
- * groundwork for: a device sits in front of a remote upstream origin, fetches a response once, and
- * serves subsequent hits from a bounded local store - honoring `Cache-Control` / `Expires` / `ETag` /
- * `Last-Modified`, revalidating stale entries with conditional requests (`If-None-Match` /
- * `If-Modified-Since` -> 304), and serving `Range` / `206` straight from the cache. A two-tier store:
- * bounded RAM (L1, hot) plus an optional dbm/WAL-backed SD tier (L2, persistent, when PROTOCORE_ENABLE_DBM
- * is set). Misses/revalidations fetch the origin asynchronously (the client request is suspended and
- * resumed from the poll loop, never stalling the worker) and always fail open. Zero heap. Default off.
+ * server/web/edge_cache is the caching reverse-proxy edge that network_drivers/presentation/http/httpcache is the
+ * origin-side groundwork for: a device sits in front of a remote upstream origin, fetches a response once, and serves
+ * subsequent hits from a bounded local store - honoring `Cache-Control` / `Expires` / `ETag` / `Last-Modified`,
+ * revalidating stale entries with conditional requests (`If-None-Match` / `If-Modified-Since` -> 304), and serving
+ * `Range` / `206` straight from the cache. A two-tier store: bounded RAM (L1, hot) plus an optional dbm/WAL-backed SD
+ * tier (L2, persistent, when PROTOCORE_ENABLE_DBM is set). Misses/revalidations fetch the origin asynchronously (the
+ * client request is suspended and resumed from the poll loop, never stalling the worker) and always fail open. Zero
+ * heap. Default off.
  */
 #ifndef PROTOCORE_ENABLE_EDGE_CACHE
 #define PROTOCORE_ENABLE_EDGE_CACHE 0

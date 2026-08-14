@@ -34,8 +34,8 @@ PROTOCORE_CRYPTO_HOT
 // ===========================================================================
 
 proto_bool protocore_aesccm_seal_tag(const uint8_t *key, size_t key_len, const uint8_t *nonce, size_t nonce_len,
-                              const uint8_t *aad, size_t aad_len, const uint8_t *pt, size_t pt_len, uint8_t *ct_out,
-                              uint8_t tag_out[PROTOCORE_AESCCM_TAG_LEN])
+                                     const uint8_t *aad, size_t aad_len, const uint8_t *pt, size_t pt_len,
+                                     uint8_t *ct_out, uint8_t tag_out[PROTOCORE_AESCCM_TAG_LEN])
 {
     if (!key || !nonce || !ct_out || !tag_out || (key_len != 16 && key_len != 32))
     {
@@ -56,16 +56,16 @@ proto_bool protocore_aesccm_seal_tag(const uint8_t *key, size_t key_len, const u
         protocore_secure_release(mark);
         return PROTO_FALSE;
     }
-    int rc =
-        mbedtls_ccm_encrypt_and_tag(c, pt_len, nonce, nonce_len, aad, aad_len, pt, ct_out, tag_out, PROTOCORE_AESCCM_TAG_LEN);
+    int rc = mbedtls_ccm_encrypt_and_tag(c, pt_len, nonce, nonce_len, aad, aad_len, pt, ct_out, tag_out,
+                                         PROTOCORE_AESCCM_TAG_LEN);
     mbedtls_ccm_free(c);
     protocore_secure_release(mark);
     return rc == 0;
 }
 
 proto_bool protocore_aesccm_open_tag(const uint8_t *key, size_t key_len, const uint8_t *nonce, size_t nonce_len,
-                              const uint8_t *aad, size_t aad_len, const uint8_t *ct, size_t ct_len,
-                              const uint8_t tag[PROTOCORE_AESCCM_TAG_LEN], uint8_t *out)
+                                     const uint8_t *aad, size_t aad_len, const uint8_t *ct, size_t ct_len,
+                                     const uint8_t tag[PROTOCORE_AESCCM_TAG_LEN], uint8_t *out)
 {
     if (!key || !nonce || !ct || !out || !tag || (key_len != 16 && key_len != 32))
     {
@@ -87,7 +87,8 @@ proto_bool protocore_aesccm_open_tag(const uint8_t *key, size_t key_len, const u
         return PROTO_FALSE;
     }
     // mbedtls verifies the tag in constant time and only then keeps the plaintext; non-zero => bad tag.
-    int rc = mbedtls_ccm_auth_decrypt(c, ct_len, nonce, nonce_len, aad, aad_len, ct, out, tag, PROTOCORE_AESCCM_TAG_LEN);
+    int rc =
+        mbedtls_ccm_auth_decrypt(c, ct_len, nonce, nonce_len, aad, aad_len, ct, out, tag, PROTOCORE_AESCCM_TAG_LEN);
     mbedtls_ccm_free(c);
     protocore_secure_release(mark);
     if (rc != 0)
@@ -115,9 +116,9 @@ typedef struct
     uint8_t A[16];   ///< CTR counter block.
     uint8_t S[16];   ///< keystream / ECB output.
 } CcmWork;
-static_assert(
-    sizeof(CcmWork) <= PROTOCORE_WORK_AESCCM,
-    "CcmWork outgrew PROTOCORE_WORK_AESCCM - raise it in protocore_config.h, which derives PROTOCORE_SECURE_ARENA_SIZE from it");
+static_assert(sizeof(CcmWork) <= PROTOCORE_WORK_AESCCM,
+              "CcmWork outgrew PROTOCORE_WORK_AESCCM - raise it in protocore_config.h, which derives "
+              "PROTOCORE_SECURE_ARENA_SIZE from it");
 
 static inline void ccm_key_init(CcmWork *w, const uint8_t *key, size_t key_len)
 {
@@ -258,8 +259,8 @@ static void tag_encrypt(CcmWork *w, const uint8_t *nonce, size_t nonce_len, uint
 }
 
 proto_bool protocore_aesccm_seal_tag(const uint8_t *key, size_t key_len, const uint8_t *nonce, size_t nonce_len,
-                              const uint8_t *aad, size_t aad_len, const uint8_t *pt, size_t pt_len, uint8_t *ct_out,
-                              uint8_t tag_out[PROTOCORE_AESCCM_TAG_LEN])
+                                     const uint8_t *aad, size_t aad_len, const uint8_t *pt, size_t pt_len,
+                                     uint8_t *ct_out, uint8_t tag_out[PROTOCORE_AESCCM_TAG_LEN])
 {
     if (!key || !nonce || !ct_out || !tag_out || (key_len != 16 && key_len != 32) || nonce_len < 7 || nonce_len > 13)
     {
@@ -282,8 +283,8 @@ proto_bool protocore_aesccm_seal_tag(const uint8_t *key, size_t key_len, const u
 }
 
 proto_bool protocore_aesccm_open_tag(const uint8_t *key, size_t key_len, const uint8_t *nonce, size_t nonce_len,
-                              const uint8_t *aad, size_t aad_len, const uint8_t *ct, size_t ct_len,
-                              const uint8_t tag[PROTOCORE_AESCCM_TAG_LEN], uint8_t *out)
+                                     const uint8_t *aad, size_t aad_len, const uint8_t *ct, size_t ct_len,
+                                     const uint8_t tag[PROTOCORE_AESCCM_TAG_LEN], uint8_t *out)
 {
     if (!key || !nonce || !ct || !out || !tag || (key_len != 16 && key_len != 32) || nonce_len < 7 || nonce_len > 13)
     {

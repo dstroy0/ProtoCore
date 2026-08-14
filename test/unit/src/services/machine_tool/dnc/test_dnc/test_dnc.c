@@ -414,7 +414,8 @@ void test_program_round_trip(void)
         n += protocore_dnc_encode_marker(&cfg, tape + n, sizeof(tape) - n);
         for (size_t i = 0; i < 4; i++)
         {
-            const size_t w = protocore_dnc_encode_block(&cfg, PROGRAM[i], strlen(PROGRAM[i]), tape + n, sizeof(tape) - n);
+            const size_t w =
+                protocore_dnc_encode_block(&cfg, PROGRAM[i], strlen(PROGRAM[i]), tape + n, sizeof(tape) - n);
             TEST_ASSERT_TRUE_MESSAGE(w > 0, PROGRAM[i]);
             n += w;
         }

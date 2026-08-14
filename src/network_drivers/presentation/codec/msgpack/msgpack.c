@@ -615,10 +615,11 @@ static proto_bool protocore_msgpack_read_map(protocore_cspan *r, size_t *count)
 
 /** @brief MessagePack as an instance of the codec interface. */
 const protocore_codec MsgPack = {
-    protocore_msgpack_uint,       protocore_msgpack_int,        protocore_msgpack_bytes,     protocore_msgpack_str,       protocore_msgpack_str_n,
-    protocore_msgpack_bool,       protocore_msgpack_null,       protocore_msgpack_float,     protocore_msgpack_array,     protocore_msgpack_map,
-    protocore_msgpack_label,      protocore_msgpack_peek,       protocore_msgpack_read_uint, protocore_msgpack_read_int,  protocore_msgpack_read_bytes,
-    protocore_msgpack_read_str,   protocore_msgpack_read_array, protocore_msgpack_read_map,  protocore_msgpack_read_bool, protocore_msgpack_read_null,
+    protocore_msgpack_uint,       protocore_msgpack_int,      protocore_msgpack_bytes,      protocore_msgpack_str,
+    protocore_msgpack_str_n,      protocore_msgpack_bool,     protocore_msgpack_null,       protocore_msgpack_float,
+    protocore_msgpack_array,      protocore_msgpack_map,      protocore_msgpack_label,      protocore_msgpack_peek,
+    protocore_msgpack_read_uint,  protocore_msgpack_read_int, protocore_msgpack_read_bytes, protocore_msgpack_read_str,
+    protocore_msgpack_read_array, protocore_msgpack_read_map, protocore_msgpack_read_bool,  protocore_msgpack_read_null,
     protocore_msgpack_read_float,
 };
 

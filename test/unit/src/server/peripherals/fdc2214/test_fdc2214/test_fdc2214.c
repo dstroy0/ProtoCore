@@ -110,8 +110,12 @@ void test_config_sequence_register_order_and_addresses(void)
     TEST_ASSERT_EQUAL_size_t(7u * 3u, n);
 
     static const uint8_t WANT_REG[7] = {
-        FDC2214_REG_RCOUNT_CH0,      FDC2214_REG_SETTLECOUNT_CH0, FDC2214_REG_CLOCK_DIVIDERS_CH0,
-        FDC2214_REG_DRIVE_CURRENT_CH0, FDC2214_REG_ERROR_CONFIG,  FDC2214_REG_MUX_CONFIG,
+        FDC2214_REG_RCOUNT_CH0,
+        FDC2214_REG_SETTLECOUNT_CH0,
+        FDC2214_REG_CLOCK_DIVIDERS_CH0,
+        FDC2214_REG_DRIVE_CURRENT_CH0,
+        FDC2214_REG_ERROR_CONFIG,
+        FDC2214_REG_MUX_CONFIG,
         FDC2214_REG_CONFIG,
     };
     for (size_t i = 0; i < 7u; i++)

@@ -51,7 +51,8 @@ void dbench_run(void)
 
         DBENCH_OP("protocore_csrf_issue", 20000, sinki += protocore_csrf_issue(token, sizeof(token)));
         DBENCH_OP("protocore_csrf_verify", 20000, sinkb = protocore_csrf_verify(token));
-        DBENCH_OP("protocore_hex_encode (6B nonce)", 50000, protocore_hex_encode(raw6, sizeof(raw6), hex_out, PROTO_FALSE));
+        DBENCH_OP("protocore_hex_encode (6B nonce)", 50000,
+                  protocore_hex_encode(raw6, sizeof(raw6), hex_out, PROTO_FALSE));
         DBENCH_OP("protocore_hex_decode (6B nonce)", 50000,
                   sinki += protocore_hex_decode(hex_out, sizeof(hex_out) - 1, bin_out, sizeof(bin_out)));
 

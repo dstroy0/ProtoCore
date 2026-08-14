@@ -25,7 +25,7 @@
 // exactly one translation unit. Unity's runner generator copies every line matching "#include" at
 // the start of a line into the runner; the space after the '#' keeps this one out of that copy and
 // out of a duplicate-definition link error.
-#  include "protocore_dma_host.h"
+#include "protocore_dma_host.h"
 #include <string.h>
 
 #include <unity.h>
@@ -292,7 +292,7 @@ void test_the_high_water_mark_is_the_peak(void)
     TEST_ASSERT_TRUE(post_user(3));
     TEST_ASSERT_EQUAL_size_t(3u, lane_high_water(PROTOCORE_PQ_LANE_USER));
     pump("test_pq");
-    TEST_ASSERT_EQUAL_size_t(3u, lane_high_water(PROTOCORE_PQ_LANE_USER)); // the peak outlives the drain
+    TEST_ASSERT_EQUAL_size_t(3u, lane_high_water(PROTOCORE_PQ_LANE_USER));   // the peak outlives the drain
     TEST_ASSERT_EQUAL_size_t(0u, lane_high_water(PROTOCORE_PQ_LANE_DEVICE)); // an untouched lane has none
 }
 

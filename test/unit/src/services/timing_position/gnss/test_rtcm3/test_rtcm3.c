@@ -96,8 +96,8 @@ void test_frame_header_layout(void)
     memset(big, 0, sizeof(big));
     TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)protocore_rtcm3_frame_build(out, sizeof(out), big, RTCM3_MAX_PAYLOAD + 1));
     // A buffer one octet short of the frame writes nothing.
-    TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)protocore_rtcm3_frame_build(out, RTCM3_HDR_LEN + 19 + RTCM3_CRC_LEN - 1, big,
-                                                                      19));
+    TEST_ASSERT_EQUAL_UINT32(
+        0, (uint32_t)protocore_rtcm3_frame_build(out, RTCM3_HDR_LEN + 19 + RTCM3_CRC_LEN - 1, big, 19));
 }
 
 // Parsing reports the frame length, the message number from the first twelve payload bits, and
@@ -279,7 +279,7 @@ void test_message_1005_field_offsets(void)
     TEST_ASSERT_EQUAL_UINT16(19, f.payload_len); // 152 bits
 
     size_t pos = 0;
-    TEST_ASSERT_EQUAL_UINT64(1005u, protocore_rtcm_br_u(f.payload, &pos, 12)); // DF002
+    TEST_ASSERT_EQUAL_UINT64(1005u, protocore_rtcm_br_u(f.payload, &pos, 12));   // DF002
     TEST_ASSERT_EQUAL_UINT64(station, protocore_rtcm_br_u(f.payload, &pos, 12)); // DF003
     pos = 34;
     TEST_ASSERT_EQUAL_INT64(x, protocore_rtcm_br_s(f.payload, &pos, 38)); // DF025

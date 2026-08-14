@@ -416,8 +416,8 @@ static void jwks_find(struct OidcInternal *restrict ctx)
         {
             // The compare reads the wanted `kid` and its terminator, which is why one that fills the
             // capture buffer matches nothing.
-            want = has_kid && want_len < PROTOCORE_OIDC_KID_LEN &&
-                   str.eq(this_kid, want_kid, want_len + 1u, PROTO_FALSE);
+            want =
+                has_kid && want_len < PROTOCORE_OIDC_KID_LEN && str.eq(this_kid, want_kid, want_len + 1u, PROTO_FALSE);
         }
         else
         {

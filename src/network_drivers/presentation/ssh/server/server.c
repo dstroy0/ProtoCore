@@ -14,11 +14,11 @@
 #include "network_drivers/presentation/ssh/network/network.h"
 #include "network_drivers/presentation/ssh/ssh.h"
 #include "network_drivers/presentation/ssh/transport/transport.h"
-#include "server/core/proto_handler.h"
-#include "network_drivers/transport/tcp/common.h" // TcpConn, conn_pool: the slots a session runs on
+#include "network_drivers/transport/tcp/common.h"            // TcpConn, conn_pool: the slots a session runs on
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the slot a session closes
 #include "network_drivers/transport/tcp/tcp.h"
 #include "server/clock/clock.h"
+#include "server/core/proto_handler.h"
 #if PROTOCORE_ENABLE_SSH_ZLIB
 #include "network_drivers/presentation/ssh/transport/comp.h"
 #endif
@@ -277,8 +277,8 @@ static void rfwd_on_accept(uint8_t conn_slot)
     }
     // Open the forwarded-tcpip channel back to the client, echoing the requested bind
     // address as the "address that was connected".
-    int ch = protocore_ssh_channel_send_open_forwarded(ssh_slot, bind_addr[0] ? bind_addr : "0.0.0.0", bind_port,
-                                                       orig, 0);
+    int ch =
+        protocore_ssh_channel_send_open_forwarded(ssh_slot, bind_addr[0] ? bind_addr : "0.0.0.0", bind_port, orig, 0);
     if (ch < 0)
     {
         Tcp.conn->close(conn_slot); // SSH connection gone or channel pool full

@@ -68,10 +68,10 @@ static size_t reply_head(uint8_t *p, uint32_t xid, uint32_t accept_stat)
 // 48 octets total, 44 after the mark.
 void test_destroy_link_call_is_byte_exact(void)
 {
-    static const uint8_t WANT[48] = {
-        0x80, 0x00, 0x00, 0x2C, 0xDE, 0xAD, 0xBE, 0xEF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02,
-        0x00, 0x06, 0x07, 0xAF, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x17, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07};
+    static const uint8_t WANT[48] = {0x80, 0x00, 0x00, 0x2C, 0xDE, 0xAD, 0xBE, 0xEF, 0x00, 0x00, 0x00, 0x00,
+                                     0x00, 0x00, 0x00, 0x02, 0x00, 0x06, 0x07, 0xAF, 0x00, 0x00, 0x00, 0x01,
+                                     0x00, 0x00, 0x00, 0x17, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07};
     uint8_t buf[64];
     size_t n = protocore_vxi11_build_destroy_link(buf, sizeof(buf), 0xDEADBEEFu, 7);
     TEST_ASSERT_EQUAL_UINT(sizeof(WANT), n);
@@ -85,14 +85,14 @@ void test_destroy_link_call_is_byte_exact(void)
 // the four mapping words, so 60 octets with 56 after the mark (0x38).
 void test_rfc1833_getport_call_is_byte_exact(void)
 {
-    static const uint8_t WANT[60] = {
-        0x80, 0x00, 0x00, 0x38, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02,
-        0x00, 0x01, 0x86, 0xA0, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x07, 0xAF,
-        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00};
+    static const uint8_t WANT[60] = {0x80, 0x00, 0x00, 0x38, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00,
+                                     0x00, 0x00, 0x00, 0x02, 0x00, 0x01, 0x86, 0xA0, 0x00, 0x00, 0x00, 0x02,
+                                     0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x07, 0xAF,
+                                     0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00};
     uint8_t buf[80];
-    size_t n = protocore_vxi11_build_getport(buf, sizeof(buf), 1, PROTOCORE_VXI11_CORE_PROG,
-                                             PROTOCORE_VXI11_CORE_VERS, PROTOCORE_RPC_PROTO_TCP);
+    size_t n = protocore_vxi11_build_getport(buf, sizeof(buf), 1, PROTOCORE_VXI11_CORE_PROG, PROTOCORE_VXI11_CORE_VERS,
+                                             PROTOCORE_RPC_PROTO_TCP);
     TEST_ASSERT_EQUAL_UINT(sizeof(WANT), n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, buf, sizeof(WANT));
 
@@ -147,13 +147,13 @@ void test_rfc5531_record_marking(void)
 void test_create_link_call_pads_the_device_string(void)
 {
     static const uint8_t WANT[68] = {
-        0x80, 0x00, 0x00, 0x40, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02,
-        0x00, 0x06, 0x07, 0xAF, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x0A, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // header, proc 10
-        0x00, 0x00, 0x04, 0xD2,                                                 // clientId 1234
-        0x00, 0x00, 0x00, 0x00,                                                 // lockDevice false
-        0x00, 0x00, 0x27, 0x10,                                                 // lock_timeout 10000
-        0x00, 0x00, 0x00, 0x05, 'i', 'n', 's', 't', '0', 0x00, 0x00, 0x00};     // "inst0" + 3 pad
+        0x80, 0x00, 0x00, 0x40, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x02, 0x00, 0x06, 0x07, 0xAF, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x0A, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // header, proc 10
+        0x00, 0x00, 0x04, 0xD2,                                                             // clientId 1234
+        0x00, 0x00, 0x00, 0x00,                                                             // lockDevice false
+        0x00, 0x00, 0x27, 0x10,                                                             // lock_timeout 10000
+        0x00, 0x00, 0x00, 0x05, 'i',  'n',  's',  't',  '0',  0x00, 0x00, 0x00};            // "inst0" + 3 pad
     uint8_t buf[96];
     size_t n = protocore_vxi11_build_create_link(buf, sizeof(buf), 2, 1234, PROTO_FALSE, 10000, "inst0");
     TEST_ASSERT_EQUAL_UINT(sizeof(WANT), n);
@@ -166,8 +166,8 @@ void test_device_write_parameter_order(void)
 {
     static const uint8_t SCPI[] = {'*', 'I', 'D', 'N', '?', '\n'};
     uint8_t buf[96];
-    size_t n = protocore_vxi11_build_device_write(buf, sizeof(buf), 3, 7, 2000, 10000,
-                                                  PROTOCORE_VXI11_FLAG_END, SCPI, sizeof(SCPI));
+    size_t n = protocore_vxi11_build_device_write(buf, sizeof(buf), 3, 7, 2000, 10000, PROTOCORE_VXI11_FLAG_END, SCPI,
+                                                  sizeof(SCPI));
     TEST_ASSERT_EQUAL_UINT(72u, n);
 
     size_t o = 44;
@@ -198,12 +198,12 @@ void test_device_read_parameter_order(void)
                                                  PROTOCORE_VXI11_FLAG_TERMCHRSET, '\n');
     TEST_ASSERT_EQUAL_UINT(44u + 24u, n);
 
-    static const uint8_t PARAMS[24] = {0,    0, 0, 7,       // lid
-                                       0,    0, 0x10, 0x00, // requestSize 4096
-                                       0,    0, 0x07, 0xD0, // io_timeout 2000
-                                       0,    0, 0x27, 0x10, // lock_timeout 10000
-                                       0,    0, 0,    0x80, // flags TERMCHRSET
-                                       0,    0, 0,    0x0A}; // termChar, one full XDR word
+    static const uint8_t PARAMS[24] = {0, 0, 0,    7,     // lid
+                                       0, 0, 0x10, 0x00,  // requestSize 4096
+                                       0, 0, 0x07, 0xD0,  // io_timeout 2000
+                                       0, 0, 0x27, 0x10,  // lock_timeout 10000
+                                       0, 0, 0,    0x80,  // flags TERMCHRSET
+                                       0, 0, 0,    0x0A}; // termChar, one full XDR word
     TEST_ASSERT_EQUAL_HEX8_ARRAY(PARAMS, buf + 44, 24);
     static const uint8_t PROC[4] = {0, 0, 0, 12};
     TEST_ASSERT_EQUAL_HEX8_ARRAY(PROC, buf + 24, 4);
@@ -214,9 +214,9 @@ void test_device_read_parameter_order(void)
 // 14 and 15.
 void test_generic_parms_calls_share_a_layout(void)
 {
-    static const uint8_t PARAMS[16] = {0, 0, 0, 7,       // lid
-                                       0, 0, 0, 0x01,    // flags WAITLOCK
-                                       0, 0, 0x27, 0x10, // lock_timeout 10000
+    static const uint8_t PARAMS[16] = {0, 0, 0,    7,     // lid
+                                       0, 0, 0,    0x01,  // flags WAITLOCK
+                                       0, 0, 0x27, 0x10,  // lock_timeout 10000
                                        0, 0, 0x07, 0xD0}; // io_timeout 2000
     static const struct
     {
@@ -406,11 +406,10 @@ void test_bare_device_error_reply(void)
 // module's; the numbers are the VXI-11 specification's Device_ErrorCode table.
 void test_error_codes_have_distinct_descriptions(void)
 {
-    static const int32_t CODES[] = {PROTOCORE_VXI11_ERR_NONE,      PROTOCORE_VXI11_ERR_SYNTAX,
-                                    PROTOCORE_VXI11_ERR_NOT_ACCESSIBLE, PROTOCORE_VXI11_ERR_INVALID_LINK,
-                                    PROTOCORE_VXI11_ERR_PARAMETER, PROTOCORE_VXI11_ERR_NO_LOCK,
-                                    PROTOCORE_VXI11_ERR_IO_TIMEOUT, PROTOCORE_VXI11_ERR_IO_ERROR,
-                                    PROTOCORE_VXI11_ERR_ABORT};
+    static const int32_t CODES[] = {
+        PROTOCORE_VXI11_ERR_NONE,         PROTOCORE_VXI11_ERR_SYNTAX,    PROTOCORE_VXI11_ERR_NOT_ACCESSIBLE,
+        PROTOCORE_VXI11_ERR_INVALID_LINK, PROTOCORE_VXI11_ERR_PARAMETER, PROTOCORE_VXI11_ERR_NO_LOCK,
+        PROTOCORE_VXI11_ERR_IO_TIMEOUT,   PROTOCORE_VXI11_ERR_IO_ERROR,  PROTOCORE_VXI11_ERR_ABORT};
     TEST_ASSERT_EQUAL_INT32(0, PROTOCORE_VXI11_ERR_NONE);
     TEST_ASSERT_EQUAL_INT32(1, PROTOCORE_VXI11_ERR_SYNTAX);
     TEST_ASSERT_EQUAL_INT32(3, PROTOCORE_VXI11_ERR_NOT_ACCESSIBLE);

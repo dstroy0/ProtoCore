@@ -119,8 +119,8 @@ static proto_bool send_hello_retry(QuicTls *qt, const uint8_t *msg, size_t msg_l
 
     qt->flight_initial_len = 0;
     size_t n = protocore_tls13_build_hello_retry_request(qt->flight_initial, sizeof(qt->flight_initial), ch->session_id,
-                                                  ch->session_id_len, TLS_GROUP_X25519MLKEM768, NULL, 0,
-                                                  /*dtls=*/PROTO_FALSE);
+                                                         ch->session_id_len, TLS_GROUP_X25519MLKEM768, NULL, 0,
+                                                         /*dtls=*/PROTO_FALSE);
     if (!emit(qt, qt->flight_initial, sizeof(qt->flight_initial), &qt->flight_initial_len, n))
     {
         return PROTO_FALSE;
@@ -236,9 +236,9 @@ static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t m
     // HelloRetryRequest the ServerHello is appended after the HRR already in flight_initial - build at the
     // current offset (0 on the happy path, the HRR's end on a retry) and do not reset the length.
     size_t n = protocore_tls13_build_server_hello(qt->flight_initial + qt->flight_initial_len,
-                                           sizeof(qt->flight_initial) - qt->flight_initial_len, qt->cfg.random,
-                                           ch.session_id, ch.session_id_len, server_share, share_len, group,
-                                           /*dtls=*/PROTO_FALSE, /*conn_id=*/NULL, /*conn_id_len=*/0);
+                                                  sizeof(qt->flight_initial) - qt->flight_initial_len, qt->cfg.random,
+                                                  ch.session_id, ch.session_id_len, server_share, share_len, group,
+                                                  /*dtls=*/PROTO_FALSE, /*conn_id=*/NULL, /*conn_id_len=*/0);
     if (!emit(qt, qt->flight_initial, sizeof(qt->flight_initial), &qt->flight_initial_len, n))
     {
         return PROTO_FALSE;
@@ -264,8 +264,8 @@ static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t m
     size_t tp_len = protocore_quic_tp_encode(&qt->cfg.params, tp_enc, sizeof(tp_enc));
 
     n = protocore_tls13_build_encrypted_extensions(qt->flight_hs + qt->flight_hs_len,
-                                            sizeof(qt->flight_hs) - qt->flight_hs_len, tp_enc, tp_len,
-                                            /*rpk_server_cert=*/PROTO_FALSE);
+                                                   sizeof(qt->flight_hs) - qt->flight_hs_len, tp_enc, tp_len,
+                                                   /*rpk_server_cert=*/PROTO_FALSE);
     if (!emit(qt, qt->flight_hs, sizeof(qt->flight_hs), &qt->flight_hs_len, n))
     {
         return PROTO_FALSE;
@@ -273,7 +273,7 @@ static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t m
     }
 
     n = protocore_tls13_build_certificate(qt->flight_hs + qt->flight_hs_len, sizeof(qt->flight_hs) - qt->flight_hs_len,
-                                   qt->cfg.cert_der, qt->cfg.cert_len);
+                                          qt->cfg.cert_der, qt->cfg.cert_len);
     if (!emit(qt, qt->flight_hs, sizeof(qt->flight_hs), &qt->flight_hs_len, n))
     {
         return PROTO_FALSE;
@@ -282,7 +282,7 @@ static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t m
     // CertificateVerify signs Transcript-Hash(ClientHello..Certificate).
     snapshot_hash(&qt->transcript, hash);
     n = protocore_tls13_build_cert_verify(qt->sign_work, qt->flight_hs + qt->flight_hs_len,
-                                   sizeof(qt->flight_hs) - qt->flight_hs_len, hash, qt->cfg.ed25519_seed);
+                                          sizeof(qt->flight_hs) - qt->flight_hs_len, hash, qt->cfg.ed25519_seed);
     if (!emit(qt, qt->flight_hs, sizeof(qt->flight_hs), &qt->flight_hs_len, n))
     {
         return PROTO_FALSE;
@@ -292,7 +292,8 @@ static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t m
     snapshot_hash(&qt->transcript, hash);
     uint8_t verify[32];
     ks_finished(qt, qt->ks.s + TLS13_KS_SERVER_HS, hash, verify);
-    n = protocore_tls13_build_finished(qt->flight_hs + qt->flight_hs_len, sizeof(qt->flight_hs) - qt->flight_hs_len, verify);
+    n = protocore_tls13_build_finished(qt->flight_hs + qt->flight_hs_len, sizeof(qt->flight_hs) - qt->flight_hs_len,
+                                       verify);
     if (!emit(qt, qt->flight_hs, sizeof(qt->flight_hs), &qt->flight_hs_len, n))
     {
         return PROTO_FALSE;

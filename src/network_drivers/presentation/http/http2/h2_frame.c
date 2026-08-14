@@ -37,7 +37,8 @@ proto_bool protocore_h2_parse_header(const uint8_t *buf, size_t len, H2FrameHead
     return PROTO_TRUE;
 }
 
-size_t protocore_h2_write_header(uint8_t *out, size_t cap, uint32_t length, uint8_t type, uint8_t flags, uint32_t stream_id)
+size_t protocore_h2_write_header(uint8_t *out, size_t cap, uint32_t length, uint8_t type, uint8_t flags,
+                                 uint32_t stream_id)
 {
     if (cap < H2_FRAME_HEADER_LEN || length > 0xFFFFFF)
     {
@@ -184,7 +185,7 @@ size_t protocore_h2_build_ping_ack(uint8_t *out, size_t cap, const uint8_t opaqu
 }
 
 size_t protocore_h2_build_headers(uint8_t *out, size_t cap, uint32_t stream_id, const uint8_t *block, size_t block_len,
-                           proto_bool end_stream)
+                                  proto_bool end_stream)
 {
     if (cap < H2_FRAME_HEADER_LEN + block_len)
     {
@@ -197,7 +198,7 @@ size_t protocore_h2_build_headers(uint8_t *out, size_t cap, uint32_t stream_id, 
 }
 
 size_t protocore_h2_build_data(uint8_t *out, size_t cap, uint32_t stream_id, const uint8_t *data, size_t data_len,
-                        proto_bool end_stream)
+                               proto_bool end_stream)
 {
     if (cap < H2_FRAME_HEADER_LEN + data_len)
     {

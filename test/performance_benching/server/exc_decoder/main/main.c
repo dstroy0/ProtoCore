@@ -56,11 +56,13 @@ void dbench_run(void)
         volatile bool sinkb = false;
         volatile size_t sinksz = 0;
 
-        DBENCH_BULK("protocore_exc_parse (full dump)", 20000, PANIC_LEN, sinkb ^= protocore_exc_parse(PANIC, &info_full));
+        DBENCH_BULK("protocore_exc_parse (full dump)", 20000, PANIC_LEN,
+                    sinkb ^= protocore_exc_parse(PANIC, &info_full));
 
         DBENCH_OP("protocore_exc_parse (backtrace-only)", 20000, sinkb ^= protocore_exc_parse(BT_ONLY, &info_full));
 
-        DBENCH_OP("protocore_exc_json (full dump)", 20000, sinksz += protocore_exc_json(&info_full, json_buf, sizeof(json_buf)));
+        DBENCH_OP("protocore_exc_json (full dump)", 20000,
+                  sinksz += protocore_exc_json(&info_full, json_buf, sizeof(json_buf)));
 
         (void)sinkb;
         (void)sinksz;

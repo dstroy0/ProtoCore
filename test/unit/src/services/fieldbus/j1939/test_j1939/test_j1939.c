@@ -185,10 +185,10 @@ void test_bam_announce(void)
     CanFrame f;
     TEST_ASSERT_TRUE(protocore_j1939_build_bam_cm(&f, 0x20, J1939_PGN_DM1, 16));
     static const uint8_t WANT[8] = {
-        0x20,       // BAM
-        0x10, 0x00, // 16 octets, little-endian
-        0x03,       // ceil(16 / 7)
-        0xFF,       // reserved
+        0x20,             // BAM
+        0x10, 0x00,       // 16 octets, little-endian
+        0x03,             // ceil(16 / 7)
+        0xFF,             // reserved
         0xCA, 0xFE, 0x00, // PGN 0x00FECA, little-endian
     };
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, f.data, sizeof(WANT));

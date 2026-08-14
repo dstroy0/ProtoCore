@@ -48,7 +48,7 @@ size_t protocore_radiosniff_global(uint8_t *out, size_t cap)
 }
 
 size_t protocore_radiosniff_tap_record(uint8_t *out, size_t cap, const uint8_t *frame, size_t flen, int32_t rssi_dbm,
-                                uint16_t channel, uint32_t ts_sec, uint32_t ts_usec)
+                                       uint16_t channel, uint32_t ts_sec, uint32_t ts_usec)
 {
     if (!out || !frame || flen == 0)
     {

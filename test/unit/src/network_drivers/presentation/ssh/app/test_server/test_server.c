@@ -152,8 +152,7 @@ static void test_sec6_5_subsystem_without_its_argument_is_not_accepted(void)
     uint8_t payload[4] = {0, 0, 0, 8}; // claims eight bytes that are not there
     size_t off = 0;
     proto_bool accept = PROTO_FALSE;
-    ssh_classify_file_transfer_request(0, ch, (const uint8_t *)"subsystem", 9, payload, sizeof(payload), &off,
-                                       &accept);
+    ssh_classify_file_transfer_request(0, ch, (const uint8_t *)"subsystem", 9, payload, sizeof(payload), &off, &accept);
     TEST_ASSERT_FALSE(accept);
     TEST_ASSERT_EQUAL_INT(0, s_sftp_opens);
 }
@@ -264,8 +263,12 @@ int main(void)
 
 #else // PROTOCORE_ENABLE_SSH_SFTP || PROTOCORE_ENABLE_SSH_SCP
 
-void setUp(void) {}
-void tearDown(void) {}
+void setUp(void)
+{
+}
+void tearDown(void)
+{
+}
 
 static void test_file_transfer_is_not_built(void)
 {

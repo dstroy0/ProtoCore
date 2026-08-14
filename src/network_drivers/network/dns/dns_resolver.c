@@ -19,10 +19,10 @@
 #if PROTOCORE_HAS_VENDOR_DNS_RESOLVER
 #include "core_setup/board_profiles/protocore_platform.h" // the platform's own resolver, under our names
 #else
-#include "mmgr/protostr.h"                              // str: the bounded-run walks
-#include "mmgr/rawmemcpy.h"                             // raw.read: the server address moves whole
+#include "mmgr/protostr.h"                               // str: the bounded-run walks
+#include "mmgr/rawmemcpy.h"                              // raw.read: the server address moves whole
 #include "network_drivers/transport/udp/server/server.h" // UdpListener: the query port and the ask
-#include "shared/ip/ip.h"                               // Ip.parse: the server, and the dotted-quad fast path
+#include "shared/ip/ip.h"                                // Ip.parse: the server, and the dotted-quad fast path
 #endif
 
 // ---------------------------------------------------------------------------

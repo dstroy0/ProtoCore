@@ -72,7 +72,6 @@ static struct WsStorage s_store;
 
 static struct WsInternal s_ws = {.store = &s_store, .ns = &Ws, .frag_size = PROTOCORE_WS_FRAG_SIZE};
 
-
 static void init(struct WsInternal *restrict ctx)
 {
     (void)ctx;
@@ -271,7 +270,8 @@ static void send_frame(struct WsInternal *restrict ctx)
     // PROTOCORE_WS_DEFLATE_MAX bounds what the compressor accepts, so the borrow below has a compile-time
     // worst case and cannot fail. A longer message is sent uncompressed, which the per-message RSV1
     // flag makes legal.
-    static_assert(PROTOCORE_PLAINTEXT_WORK_WS_SEND <= PROTOCORE_PLAINTEXT_ARENA_SIZE, "WS deflate scratch exceeds the arena");
+    static_assert(PROTOCORE_PLAINTEXT_WORK_WS_SEND <= PROTOCORE_PLAINTEXT_ARENA_SIZE,
+                  "WS deflate scratch exceeds the arena");
     // The compressed buffer is handed to `payload` below and read by the emit calls at the end of
     // this function, so the borrow spans the whole function and is released at each exit.
     size_t pt_mark = protocore_plaintext_mark();
@@ -427,7 +427,8 @@ static void ws_finish_frame(struct WsInternal *restrict ctx, WsConn *ws)
         {
             // The parser closes 1009 before msg_len passes WS_FRAME_SIZE, so all three borrows are
             // bounded and cannot fail.
-            static_assert(PROTOCORE_PLAINTEXT_WORK_WS_RECV <= PROTOCORE_PLAINTEXT_ARENA_SIZE, "WS inflate scratch exceeds the arena");
+            static_assert(PROTOCORE_PLAINTEXT_WORK_WS_RECV <= PROTOCORE_PLAINTEXT_ARENA_SIZE,
+                          "WS inflate scratch exceeds the arena");
             size_t pt_mark = protocore_plaintext_mark();
             size_t comp_len = ws->msg_len;
             uint8_t *in = (uint8_t *)protocore_plaintext_alloc(comp_len + 4, 1);
@@ -483,8 +484,8 @@ static void ws_finish_frame(struct WsInternal *restrict ctx, WsConn *ws)
         if (ws->msg_opcode == WS_OP_TEXT && !Utf8.ok)
         {
             ctx->ns->conn = ws;
-                ctx->ns->frame.code = WS_CLOSE_INVALID_PAYLOAD;
-                close_socket(ctx);
+            ctx->ns->frame.code = WS_CLOSE_INVALID_PAYLOAD;
+            close_socket(ctx);
             ws->parse_state = WS_ERROR;
             return;
         }
@@ -582,8 +583,8 @@ static void feed_byte(struct WsInternal *restrict ctx)
                     if (!ws->fragmenting)
                     {
                         ctx->ns->conn = ws;
-                ctx->ns->frame.code = WS_CLOSE_PROTOCOL;
-                close_socket(ctx);
+                        ctx->ns->frame.code = WS_CLOSE_PROTOCOL;
+                        close_socket(ctx);
                         ws->parse_state = WS_ERROR;
                         return;
                     }
@@ -595,8 +596,8 @@ static void feed_byte(struct WsInternal *restrict ctx)
                     if (ws->fragmenting)
                     {
                         ctx->ns->conn = ws;
-                ctx->ns->frame.code = WS_CLOSE_PROTOCOL;
-                close_socket(ctx);
+                        ctx->ns->frame.code = WS_CLOSE_PROTOCOL;
+                        close_socket(ctx);
                         ws->parse_state = WS_ERROR;
                         return;
                     }
@@ -618,8 +619,8 @@ static void feed_byte(struct WsInternal *restrict ctx)
                 if ((rsv & 0x30) || ((rsv & 0x40) && !(ws->pmd && new_data)))
                 {
                     ctx->ns->conn = ws;
-                ctx->ns->frame.code = WS_CLOSE_PROTOCOL;
-                close_socket(ctx);
+                    ctx->ns->frame.code = WS_CLOSE_PROTOCOL;
+                    close_socket(ctx);
                     ws->parse_state = WS_ERROR;
                     return;
                 }
@@ -655,8 +656,8 @@ static void feed_byte(struct WsInternal *restrict ctx)
                 if (ws_is_control(ws->opcode) && len7 > 125)
                 {
                     ctx->ns->conn = ws;
-                ctx->ns->frame.code = WS_CLOSE_PROTOCOL;
-                close_socket(ctx);
+                    ctx->ns->frame.code = WS_CLOSE_PROTOCOL;
+                    close_socket(ctx);
                     ws->parse_state = WS_ERROR;
                     return;
                 }
@@ -669,8 +670,8 @@ static void feed_byte(struct WsInternal *restrict ctx)
                     if (!ws_is_control(ws->opcode) && ws->msg_len + ws->payload_len > WS_FRAME_SIZE)
                     {
                         ctx->ns->conn = ws;
-                ctx->ns->frame.code = WS_CLOSE_TOO_BIG;
-                close_socket(ctx);
+                        ctx->ns->frame.code = WS_CLOSE_TOO_BIG;
+                        close_socket(ctx);
                         ws->parse_state = WS_ERROR;
                         return;
                     }

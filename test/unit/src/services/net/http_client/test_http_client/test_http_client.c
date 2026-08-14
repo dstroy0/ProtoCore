@@ -309,14 +309,14 @@ void test_status_line(void)
 void test_malformed_responses_are_refused(void)
 {
     static const char *const BAD[] = {
-        "",                                     // nothing
-        "HTTP/1.1",                             // shorter than a status-line can be
-        "NOTHTTP/1.1 200 OK\r\n\r\n",           // not an HTTP-version
-        "HTTP/1.1 20 OK\r\n\r\n",               // status-code is 3DIGIT
-        "HTTP/1.1 2xx OK\r\n\r\n",              // not digits
-        "HTTP/1.1 099 X\r\n\r\n",               // below 100
-        "HTTP/1.1 600 X\r\n\r\n",               // above 599
-        "HTTP/1.1 200 OK\r\nX: 1\r\n",          // the field section never ends
+        "",                            // nothing
+        "HTTP/1.1",                    // shorter than a status-line can be
+        "NOTHTTP/1.1 200 OK\r\n\r\n",  // not an HTTP-version
+        "HTTP/1.1 20 OK\r\n\r\n",      // status-code is 3DIGIT
+        "HTTP/1.1 2xx OK\r\n\r\n",     // not digits
+        "HTTP/1.1 099 X\r\n\r\n",      // below 100
+        "HTTP/1.1 600 X\r\n\r\n",      // above 599
+        "HTTP/1.1 200 OK\r\nX: 1\r\n", // the field section never ends
     };
     for (size_t i = 0; i < sizeof(BAD) / sizeof(BAD[0]); i++)
     {

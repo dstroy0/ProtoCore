@@ -24,7 +24,8 @@ void dbench_run(void)
         volatile size_t sink = 0;
         static char out[256];
         DBENCH_OP("protocore_syslog_format (RFC 5424)", 200000,
-                  sink += protocore_syslog_format(out, sizeof(out), SYSLOG_FAC_LOCAL0, SYSLOG_INFO, "pc-rig", "rig-app", msg));
+                  sink +=
+                  protocore_syslog_format(out, sizeof(out), SYSLOG_FAC_LOCAL0, SYSLOG_INFO, "pc-rig", "rig-app", msg));
         (void)sink;
         DBENCH_DONE();
     }

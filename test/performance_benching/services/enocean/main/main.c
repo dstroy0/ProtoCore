@@ -32,7 +32,8 @@ void dbench_run(void)
     static uint8_t build_out[64];
     static uint8_t telegram[64];
 
-    uint16_t tg_len = protocore_esp3_build(ESP3_RADIO_ERP1, data, sizeof(data), opt, sizeof(opt), telegram, sizeof(telegram));
+    uint16_t tg_len =
+        protocore_esp3_build(ESP3_RADIO_ERP1, data, sizeof(data), opt, sizeof(opt), telegram, sizeof(telegram));
 
     for (;;)
     {
@@ -41,8 +42,8 @@ void dbench_run(void)
         protocore_esp3_packet pkt = {};
 
         DBENCH_OP("protocore_esp3_build", 20000,
-                  sink +=
-                  protocore_esp3_build(ESP3_RADIO_ERP1, data, sizeof(data), opt, sizeof(opt), build_out, sizeof(build_out)));
+                  sink += protocore_esp3_build(ESP3_RADIO_ERP1, data, sizeof(data), opt, sizeof(opt), build_out,
+                                               sizeof(build_out)));
         DBENCH_OP("protocore_esp3_parse", 20000, sink += (size_t)protocore_esp3_parse(telegram, tg_len, &pkt));
         DBENCH_BULK("protocore_esp3_crc8", 20000, tg_len, sink += protocore_esp3_crc8(telegram, tg_len));
 

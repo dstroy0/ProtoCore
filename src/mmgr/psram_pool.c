@@ -18,7 +18,7 @@ static proto_bool dram_fits(size_t size, size_t free_dram, size_t reserve)
 }
 
 protocore_place protocore_psram_place(size_t size, proto_bool dma_required, size_t free_dram, size_t free_psram,
-                        size_t psram_threshold, size_t dram_reserve)
+                                      size_t psram_threshold, size_t dram_reserve)
 {
     if (size == 0)
     {

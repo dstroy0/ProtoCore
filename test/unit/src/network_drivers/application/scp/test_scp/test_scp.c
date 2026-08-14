@@ -256,7 +256,7 @@ void test_command_without_a_role_is_invalid(void)
     TEST_ASSERT_EQUAL_INT(SCP_MODE_INVALID, parse_cmd("scp -v /x", path, sizeof(path)));
     TEST_ASSERT_EQUAL_INT(SCP_MODE_INVALID, parse_cmd("", path, sizeof(path)));
     TEST_ASSERT_EQUAL_INT(SCP_MODE_INVALID, parse_cmd("   ", path, sizeof(path)));
-    TEST_ASSERT_EQUAL_INT(SCP_MODE_INVALID, parse_cmd("-t", path, sizeof(path)));  // role but no token
+    TEST_ASSERT_EQUAL_INT(SCP_MODE_INVALID, parse_cmd("-t", path, sizeof(path))); // role but no token
     TEST_ASSERT_EQUAL_INT(SCP_MODE_INVALID, parse_cmd("-f -v -r", path, sizeof(path)));
 }
 

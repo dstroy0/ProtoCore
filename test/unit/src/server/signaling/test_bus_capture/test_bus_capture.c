@@ -201,8 +201,7 @@ void test_a_short_buffer_writes_nothing(void)
             TEST_ASSERT_EQUAL_HEX8(0xEE, out[i]);
         }
     }
-    TEST_ASSERT_EQUAL_UINT(PROTOCORE_SOCKETCAN_FRAME_LEN,
-                           can_to_socketcan(&f, out, PROTOCORE_SOCKETCAN_FRAME_LEN));
+    TEST_ASSERT_EQUAL_UINT(PROTOCORE_SOCKETCAN_FRAME_LEN, can_to_socketcan(&f, out, PROTOCORE_SOCKETCAN_FRAME_LEN));
 }
 
 // A null frame or a null destination produces nothing rather than a dereference.

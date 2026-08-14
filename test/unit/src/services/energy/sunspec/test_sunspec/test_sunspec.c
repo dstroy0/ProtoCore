@@ -56,16 +56,16 @@ void test_begin_positions_past_the_two_marker_registers(void)
 // a second model (ID 103), then the end model. Each field is written here as the big-endian octet
 // pair the spec calls for, so the walker is checked against the layout and not against the writer.
 static const uint8_t MAP[] = {
-    'S',  'u',  'n',  'S',  // identifier, 2 registers
-    0x00, 0x01,             // model ID 1 (common)
-    0x00, 0x02,             // length 2 (body registers after the length point)
-    0x12, 0x34,             // body register 0
-    0xFF, 0xFE,             // body register 1
-    0x00, 0x67,             // model ID 103 = 0x67 (inverter, three phase)
-    0x00, 0x01,             // length 1
-    0xAB, 0xCD,             // body register 0
-    0xFF, 0xFF,             // end model
-    0x00, 0x00,             // end model length 0
+    'S',  'u',  'n', 'S', // identifier, 2 registers
+    0x00, 0x01,           // model ID 1 (common)
+    0x00, 0x02,           // length 2 (body registers after the length point)
+    0x12, 0x34,           // body register 0
+    0xFF, 0xFE,           // body register 1
+    0x00, 0x67,           // model ID 103 = 0x67 (inverter, three phase)
+    0x00, 0x01,           // length 1
+    0xAB, 0xCD,           // body register 0
+    0xFF, 0xFF,           // end model
+    0x00, 0x00,           // end model length 0
 };
 
 void test_walks_the_model_chain_to_the_end_model(void)

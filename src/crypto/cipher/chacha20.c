@@ -96,8 +96,8 @@ static const uint32_t SIGMA1 = 0x3320646e;
 static const uint32_t SIGMA2 = 0x79622d32;
 static const uint32_t SIGMA3 = 0x6b206574;
 
-void protocore_chacha20_xor(const uint8_t key[PROTOCORE_CHACHA20_KEY_LEN], const uint8_t iv[8], uint64_t counter, const uint8_t *in,
-                     uint8_t *out, size_t len)
+void protocore_chacha20_xor(const uint8_t key[PROTOCORE_CHACHA20_KEY_LEN], const uint8_t iv[8], uint64_t counter,
+                            const uint8_t *in, uint8_t *out, size_t len)
 {
     size_t mark = protocore_secure_mark();
     protocore_span ws = protocore_secure_span(sizeof(Chacha20Work), _Alignof(Chacha20Work));
@@ -134,8 +134,8 @@ void protocore_chacha20_xor(const uint8_t key[PROTOCORE_CHACHA20_KEY_LEN], const
     protocore_secure_release(mark);
 }
 
-void protocore_chacha20_block_ietf(const uint8_t key[PROTOCORE_CHACHA20_KEY_LEN], uint32_t counter, const uint8_t nonce[12],
-                            uint8_t out[PROTOCORE_CHACHA20_BLOCK_LEN])
+void protocore_chacha20_block_ietf(const uint8_t key[PROTOCORE_CHACHA20_KEY_LEN], uint32_t counter,
+                                   const uint8_t nonce[12], uint8_t out[PROTOCORE_CHACHA20_BLOCK_LEN])
 {
     size_t mark = protocore_secure_mark();
     protocore_span ws = protocore_secure_span(sizeof(Chacha20Work), _Alignof(Chacha20Work));

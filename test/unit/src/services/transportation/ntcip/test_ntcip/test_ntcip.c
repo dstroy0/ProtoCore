@@ -93,7 +93,8 @@ void test_every_root_is_distinct(void)
 void test_oid_builder_appends_the_instance(void)
 {
     uint32_t out[24];
-    size_t n = protocore_ntcip_oid(NTCIP_1202_PHASE_MIN_GREEN, NTCIP_1202_PHASE_MIN_GREEN_LEN, 4, out, sizeof(out) / sizeof(out[0]));
+    size_t n = protocore_ntcip_oid(NTCIP_1202_PHASE_MIN_GREEN, NTCIP_1202_PHASE_MIN_GREEN_LEN, 4, out,
+                                   sizeof(out) / sizeof(out[0]));
 
     TEST_ASSERT_EQUAL_UINT(NTCIP_1202_PHASE_MIN_GREEN_LEN + 1u, n);
     for (size_t i = 0; i < NTCIP_1202_PHASE_MIN_GREEN_LEN; i++)
@@ -107,7 +108,8 @@ void test_oid_builder_appends_the_instance(void)
 void test_oid_builder_scalar_takes_zero(void)
 {
     uint32_t out[24];
-    size_t n = protocore_ntcip_oid(NTCIP_1202_MAX_PHASES, NTCIP_1202_MAX_PHASES_LEN, 0, out, sizeof(out) / sizeof(out[0]));
+    size_t n =
+        protocore_ntcip_oid(NTCIP_1202_MAX_PHASES, NTCIP_1202_MAX_PHASES_LEN, 0, out, sizeof(out) / sizeof(out[0]));
 
     TEST_ASSERT_EQUAL_UINT(NTCIP_1202_MAX_PHASES_LEN + 1u, n);
     TEST_ASSERT_EQUAL_UINT32(0u, out[n - 1]);
@@ -127,12 +129,12 @@ void test_oid_builder_refuses_a_short_buffer(void)
     const size_t need = NTCIP_1203_DMS_MESSAGE_MULTI_LEN + 1u;
 
     out[0] = 0xDEADBEEFu;
-    TEST_ASSERT_EQUAL_UINT(0u, protocore_ntcip_oid(NTCIP_1203_DMS_MESSAGE_MULTI, NTCIP_1203_DMS_MESSAGE_MULTI_LEN, 1,
-                                                   out, need - 1u));
+    TEST_ASSERT_EQUAL_UINT(
+        0u, protocore_ntcip_oid(NTCIP_1203_DMS_MESSAGE_MULTI, NTCIP_1203_DMS_MESSAGE_MULTI_LEN, 1, out, need - 1u));
     TEST_ASSERT_EQUAL_HEX32(0xDEADBEEFu, out[0]);
 
-    TEST_ASSERT_EQUAL_UINT(need, protocore_ntcip_oid(NTCIP_1203_DMS_MESSAGE_MULTI, NTCIP_1203_DMS_MESSAGE_MULTI_LEN, 1,
-                                                     out, need));
+    TEST_ASSERT_EQUAL_UINT(
+        need, protocore_ntcip_oid(NTCIP_1203_DMS_MESSAGE_MULTI, NTCIP_1203_DMS_MESSAGE_MULTI_LEN, 1, out, need));
 }
 
 // Null pointers and an empty root are refused rather than dereferenced.

@@ -192,8 +192,8 @@ void test_hartip_header_octets(void)
         0x00, 0x0D, // byte count: 8 header + 5 payload = 13
     };
     uint8_t out[16];
-    TEST_ASSERT_EQUAL_size_t(8u, protocore_hartip_build_header(HARTIP_MSG_REQUEST, HARTIP_ID_TOKEN_PDU, 0, 0x1234, 13,
-                                                               out, sizeof(out)));
+    TEST_ASSERT_EQUAL_size_t(
+        8u, protocore_hartip_build_header(HARTIP_MSG_REQUEST, HARTIP_ID_TOKEN_PDU, 0, 0x1234, 13, out, sizeof(out)));
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, out, sizeof(WANT));
     TEST_ASSERT_EQUAL_size_t(0u, protocore_hartip_build_header(0, 0, 0, 0, 8, out, 7));
     TEST_ASSERT_EQUAL_size_t(0u, protocore_hartip_build_header(0, 0, 0, 0, 8, NULL, sizeof(out)));
@@ -205,7 +205,7 @@ void test_hartip_payload_slice(void)
     static const uint8_t PDU[5] = {0x02, 0x80, 0x00, 0x00, 0x82}; // the command-0 frame
     uint8_t msg[16];
     TEST_ASSERT_EQUAL_size_t(8u, protocore_hartip_build_header(HARTIP_MSG_REQUEST, HARTIP_ID_TOKEN_PDU, 0, 1,
-                                                              (uint16_t)(8 + sizeof(PDU)), msg, sizeof(msg)));
+                                                               (uint16_t)(8 + sizeof(PDU)), msg, sizeof(msg)));
     memcpy(msg + 8, PDU, sizeof(PDU));
 
     HartIpHeader h;

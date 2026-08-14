@@ -276,7 +276,7 @@ void test_full_handshake_and_stream()
     make_cfg(&cfg);
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     protocore_quic_conn_init(&g_qc, &cfg, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), SERVER_SCID,
-                      sizeof(SERVER_SCID), &cb);
+                             sizeof(SERVER_SCID), &cb);
 
     QuicInitialSecrets init;
     protocore_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
@@ -499,7 +499,7 @@ void test_pto_retransmits_flight()
     make_cfg(&cfg);
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     protocore_quic_conn_init(&g_qc, &cfg, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), SERVER_SCID,
-                      sizeof(SERVER_SCID), &cb);
+                             sizeof(SERVER_SCID), &cb);
 
     QuicInitialSecrets init;
     protocore_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
@@ -554,7 +554,7 @@ static void feed_client_initial(struct QuicConn *qc, QuicConnCallbacks *cb, Quic
     QuicTlsConfig cfg;
     make_cfg(&cfg);
     protocore_quic_conn_init(qc, &cfg, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), SERVER_SCID,
-                      sizeof(SERVER_SCID), cb);
+                             sizeof(SERVER_SCID), cb);
     protocore_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), init);
     QuicTransportParams ctp;
     protocore_quic_tp_defaults(&ctp);
@@ -668,7 +668,7 @@ static void init_conn(struct QuicConn *qc, QuicConnCallbacks *cb)
     QuicTlsConfig cfg;
     make_cfg(&cfg);
     protocore_quic_conn_init(qc, &cfg, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), SERVER_SCID,
-                      sizeof(SERVER_SCID), cb);
+                             sizeof(SERVER_SCID), cb);
 }
 
 void test_quic_recv_connection_close()
@@ -858,7 +858,7 @@ void test_quic_recv_malformed_initial_headers()
     uint8_t dg[1500];
 
     size_t hn = protocore_quic_build_long_header(dg, sizeof dg, QUIC_LP_INITIAL, QUIC_VERSION_1, ODCID, sizeof(ODCID),
-                                          CLIENT_SCID, sizeof(CLIENT_SCID), 1);
+                                                 CLIENT_SCID, sizeof(CLIENT_SCID), 1);
     dg[hn] = 0xC0;
     TEST_ASSERT_FALSE(protocore_quic_conn_recv(&g_qc, dg, hn + 1));
 
@@ -911,7 +911,7 @@ void test_quic_conn_stream_frames()
         init_conn(&g_qc, &cb);
         uint8_t data[4] = {1, 2, 3, 4};
         uint8_t fr[32];
-        size_t fl = protocore_quic_build_stream(fr, sizeof fr, 0, 100 , data, 4, PROTO_FALSE);
+        size_t fl = protocore_quic_build_stream(fr, sizeof fr, 0, 100, data, 4, PROTO_FALSE);
         size_t dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, 8, CLIENT_SCID, 4, 0, &init.client, fr, fl);
         g_stream_len = 0;
         protocore_quic_conn_recv(&g_qc, dg, dl);
@@ -1041,7 +1041,8 @@ static void complete_handshake(struct QuicConn *qc, QuicConnCallbacks *cb, QuicI
 {
     QuicTlsConfig cfg;
     make_cfg(&cfg);
-    protocore_quic_conn_init(qc, &cfg, ODCID, sizeof(ODCID), CLIENT_SCID, peer_scid_len, SERVER_SCID, sizeof(SERVER_SCID), cb);
+    protocore_quic_conn_init(qc, &cfg, ODCID, sizeof(ODCID), CLIENT_SCID, peer_scid_len, SERVER_SCID,
+                             sizeof(SERVER_SCID), cb);
     protocore_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), init);
 
     QuicTransportParams ctp;
@@ -1166,7 +1167,7 @@ void test_quic_conn_null_callbacks()
     QuicTlsConfig cfg;
     make_cfg(&cfg);
     protocore_quic_conn_init(&g_qc, &cfg, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), SERVER_SCID,
-                      sizeof(SERVER_SCID), NULL);
+                             sizeof(SERVER_SCID), NULL);
     TEST_ASSERT_NULL(g_qc.cb.on_stream_data);
     TEST_ASSERT_NULL(g_qc.cb.on_handshake_done);
 
@@ -1493,7 +1494,7 @@ void test_quic_conn_crypto_flight_fragmented()
 
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     protocore_quic_conn_init(&g_qc, &cfg, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), SERVER_SCID,
-                      sizeof(SERVER_SCID), &cb);
+                             sizeof(SERVER_SCID), &cb);
     QuicInitialSecrets init;
     protocore_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
 

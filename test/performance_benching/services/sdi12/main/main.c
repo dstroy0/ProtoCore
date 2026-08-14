@@ -27,7 +27,8 @@ void dbench_run(void)
         DBENCH_BANNER("sdi12");
         volatile size_t sink = 0;
         static char buf[32];
-        DBENCH_OP("protocore_sdi12_build_measure (CRC)", 200000, sink += protocore_sdi12_build_measure(buf, sizeof(buf), '3', true));
+        DBENCH_OP("protocore_sdi12_build_measure (CRC)", 200000,
+                  sink += protocore_sdi12_build_measure(buf, sizeof(buf), '3', true));
         char addr;
         uint16_t ready;
         uint8_t nval;

@@ -73,7 +73,8 @@ void dbench_run(void)
         DBENCH_OP("protocore_failsafe_check_at", 50000, sinkm += protocore_failsafe_check_at(100000));
 
         // /health-style JSON serialization of the whole registry.
-        DBENCH_BULK("protocore_failsafe_json_at", 20000, json_len, sinkj += protocore_failsafe_json_at(5000, json, sizeof(json)));
+        DBENCH_BULK("protocore_failsafe_json_at", 20000, json_len,
+                    sinkj += protocore_failsafe_json_at(5000, json, sizeof(json)));
 
         (void)sinkb;
         (void)sinkf;

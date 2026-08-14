@@ -30,8 +30,8 @@
 #ifndef PROTOCORE_UDP_COMMON_H
 #define PROTOCORE_UDP_COMMON_H
 
-#include "mmgr/bytes.h"           // bytes.put / bytes.put_be / bytes.take_be over a span
-#include "mmgr/ring.h"            // the SPSC ring the datagrams sit in
+#include "mmgr/bytes.h"   // bytes.put / bytes.put_be / bytes.take_be over a span
+#include "mmgr/ring.h"    // the SPSC ring the datagrams sit in
 #include "shared/ip/ip.h" // protocore_ip: the address a datagram carries, network order
 
 PROTOCORE_BEGIN_DECLS

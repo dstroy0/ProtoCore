@@ -250,13 +250,13 @@ void test_framing_refusals(void)
 
     // A DLE followed by something that is neither DLE nor ETX is an unexpected control symbol.
     static const uint8_t BAD_ESCAPE[7] = {0x10, 0x02, 0x41, 0x10, 0x06, 0x10, 0x03};
-    TEST_ASSERT_FALSE(protocore_df1_parse_frame(BAD_ESCAPE, sizeof(BAD_ESCAPE), DF1_CHECK_BCC, out, sizeof(out),
-                                                &out_len));
+    TEST_ASSERT_FALSE(
+        protocore_df1_parse_frame(BAD_ESCAPE, sizeof(BAD_ESCAPE), DF1_CHECK_BCC, out, sizeof(out), &out_len));
 
     // A DLE as the very last octet has no partner.
     static const uint8_t TRAILING_DLE[5] = {0x10, 0x02, 0x41, 0x42, 0x10};
-    TEST_ASSERT_FALSE(protocore_df1_parse_frame(TRAILING_DLE, sizeof(TRAILING_DLE), DF1_CHECK_BCC, out, sizeof(out),
-                                                &out_len));
+    TEST_ASSERT_FALSE(
+        protocore_df1_parse_frame(TRAILING_DLE, sizeof(TRAILING_DLE), DF1_CHECK_BCC, out, sizeof(out), &out_len));
 
     // Shorter than DLE STX DLE ETX plus a check.
     static const uint8_t STUB[4] = {0x10, 0x02, 0x10, 0x03};

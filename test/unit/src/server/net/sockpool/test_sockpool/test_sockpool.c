@@ -36,9 +36,8 @@ static void fill(uint32_t first_id, uint32_t first_tick)
     for (size_t i = 0; i < POOL_N; i++)
     {
         size_t idx = (size_t)-1;
-        TEST_ASSERT_EQUAL_INT(SOCK_ACQ_FREE,
-                              protocore_sockpool_acquire(&g_pool, first_id + (uint32_t)i, first_tick + (uint32_t)i,
-                                                         &idx, NULL));
+        TEST_ASSERT_EQUAL_INT(SOCK_ACQ_FREE, protocore_sockpool_acquire(&g_pool, first_id + (uint32_t)i,
+                                                                        first_tick + (uint32_t)i, &idx, NULL));
     }
 }
 
@@ -137,7 +136,7 @@ void test_touch_refreshes_the_lru_position(void)
     size_t idx = (size_t)-1;
     uint32_t evicted = 0u;
     TEST_ASSERT_EQUAL_INT(SOCK_ACQ_RECYCLED, protocore_sockpool_acquire(&g_pool, 900u, 51u, &idx, &evicted));
-    TEST_ASSERT_EQUAL_size_t(1u, idx);      // slot 1, tick 11, is now the oldest
+    TEST_ASSERT_EQUAL_size_t(1u, idx); // slot 1, tick 11, is now the oldest
     TEST_ASSERT_EQUAL_UINT32(101u, evicted);
 }
 

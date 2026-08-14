@@ -98,8 +98,8 @@ void test_published_cfg_frames(void)
     TEST_ASSERT_EQUAL_UINT(14u, protocore_ubx_build_cfg_rate(buf, sizeof(buf), 1000, 1, PROTOCORE_UBX_TIME_REF_GPS));
     TEST_ASSERT_EQUAL_HEX8_ARRAY(CFG_RATE_1HZ, buf, sizeof(CFG_RATE_1HZ));
 
-    TEST_ASSERT_EQUAL_UINT(11u, protocore_ubx_build_cfg_msg(buf, sizeof(buf), PROTOCORE_UBX_CLASS_NAV,
-                                                            PROTOCORE_UBX_NAV_PVT, 1));
+    TEST_ASSERT_EQUAL_UINT(
+        11u, protocore_ubx_build_cfg_msg(buf, sizeof(buf), PROTOCORE_UBX_CLASS_NAV, PROTOCORE_UBX_NAV_PVT, 1));
     TEST_ASSERT_EQUAL_HEX8_ARRAY(CFG_MSG_PVT, buf, sizeof(CFG_MSG_PVT));
 }
 
@@ -248,7 +248,7 @@ void test_nav_pvt_published_field_offsets(void)
     pl[21] = PROTOCORE_UBX_PVT_FIX_OK;
     pl[23] = 11;
     put_u32(pl, 24, (uint32_t)(int32_t)(-1224194000)); // lon -122.4194 deg in 1e-7
-    put_u32(pl, 28, (uint32_t)377749000);             // lat  37.7749 deg in 1e-7
+    put_u32(pl, 28, (uint32_t)377749000);              // lat  37.7749 deg in 1e-7
     put_u32(pl, 32, (uint32_t)(int32_t)(-12345));
     put_u32(pl, 36, (uint32_t)16000);
     put_u32(pl, 40, 3500u);
@@ -417,8 +417,7 @@ void test_stream_separates_nmea_from_ubx(void)
     for (size_t i = 0; i < sizeof(NMEA) - 1; i++)
     {
         pass = 0;
-        TEST_ASSERT_EQUAL_INT(PROTOCORE_UBX_PASSTHROUGH,
-                              protocore_ubx_stream_feed(&st, (uint8_t)NMEA[i], &out, &pass));
+        TEST_ASSERT_EQUAL_INT(PROTOCORE_UBX_PASSTHROUGH, protocore_ubx_stream_feed(&st, (uint8_t)NMEA[i], &out, &pass));
         TEST_ASSERT_EQUAL_HEX8((uint8_t)NMEA[i], pass);
     }
 

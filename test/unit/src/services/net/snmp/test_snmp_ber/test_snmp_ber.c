@@ -307,8 +307,7 @@ void test_x690_long_form_length(void)
 //   SEQUENCE header                  30 82 00 0B                 4 octets
 void test_rfc3417_definite_long_sequence(void)
 {
-    static const uint8_t WANT[] = {0x30, 0x82, 0x00, 0x0B, 0x02, 0x01, 0x01, 0x04,
-                                   0x06, 'p',  'u',  'b',  'l',  'i',  'c'};
+    static const uint8_t WANT[] = {0x30, 0x82, 0x00, 0x0B, 0x02, 0x01, 0x01, 0x04, 0x06, 'p', 'u', 'b', 'l', 'i', 'c'};
     uint8_t buf[64];
     enc_open(buf, sizeof(buf));
     const size_t seq = seq_begin((uint8_t)SNMP_TAG_BER_SEQUENCE);

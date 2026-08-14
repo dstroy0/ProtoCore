@@ -32,7 +32,8 @@ void dbench_run(void)
         DBENCH_OP("protocore_fs_write_file (256B)", 50000,
                   sink += protocore_fs_write_file(root, "", "cfg.bin", data, sizeof(data)) ? 1 : 0);
         static uint8_t rd[256];
-        DBENCH_OP("protocore_fs_read_file (256B)", 50000, sink += protocore_fs_read_file(root, "", "cfg.bin", rd, sizeof(rd)));
+        DBENCH_OP("protocore_fs_read_file (256B)", 50000,
+                  sink += protocore_fs_read_file(root, "", "cfg.bin", rd, sizeof(rd)));
         DBENCH_OP("protocore_fs_exists", 200000, sink += protocore_fs_exists(root, "", "cfg.bin") ? 1 : 0);
         (void)sink;
         DBENCH_DONE();

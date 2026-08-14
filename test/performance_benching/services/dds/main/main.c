@@ -46,20 +46,24 @@ void dbench_run(void)
     static uint8_t msg[64];
     size_t msg_len = protocore_rtps_header(GUID, VENDOR, msg, sizeof(msg));
     uint8_t ts_body[8] = {0};
-    msg_len += protocore_rtps_submessage(RTPS_SM_INFO_TS, RTPS_FLAG_ENDIAN, ts_body, 8, msg + msg_len, sizeof(msg) - msg_len);
+    msg_len +=
+        protocore_rtps_submessage(RTPS_SM_INFO_TS, RTPS_FLAG_ENDIAN, ts_body, 8, msg + msg_len, sizeof(msg) - msg_len);
     uint8_t data_body[4] = {0xDE, 0xAD, 0xBE, 0xEF};
-    msg_len += protocore_rtps_submessage(RTPS_SM_DATA, RTPS_FLAG_ENDIAN, data_body, 4, msg + msg_len, sizeof(msg) - msg_len);
+    msg_len +=
+        protocore_rtps_submessage(RTPS_SM_DATA, RTPS_FLAG_ENDIAN, data_body, 4, msg + msg_len, sizeof(msg) - msg_len);
 
     for (;;)
     {
         DBENCH_BANNER("dds");
         volatile size_t sink = 0;
-        DBENCH_OP("protocore_rtps_header", 100000, sink += protocore_rtps_header(GUID, VENDOR, hdr_out, sizeof(hdr_out)));
+        DBENCH_OP("protocore_rtps_header", 100000,
+                  sink += protocore_rtps_header(GUID, VENDOR, hdr_out, sizeof(hdr_out)));
         DBENCH_OP("protocore_rtps_submessage LE", 100000,
                   sink += protocore_rtps_submessage(RTPS_SM_INFO_TS, RTPS_FLAG_ENDIAN, sm_body, sizeof(sm_body), sm_out,
-                                             sizeof(sm_out)));
+                                                    sizeof(sm_out)));
         DBENCH_OP("protocore_rtps_submessage BE", 100000,
-                  sink += protocore_rtps_submessage(RTPS_SM_DATA, 0x00, sm_body, sizeof(sm_body), sm_out, sizeof(sm_out)));
+                  sink +=
+                  protocore_rtps_submessage(RTPS_SM_DATA, 0x00, sm_body, sizeof(sm_body), sm_out, sizeof(sm_out)));
         DBENCH_BULK("protocore_rtps_parse", 50000, msg_len,
                     sink += protocore_rtps_parse(msg, msg_len, count_submessage, NULL) ? 1 : 0);
         (void)sink;

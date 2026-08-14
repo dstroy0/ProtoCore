@@ -94,10 +94,14 @@ void dbench_run(void)
         volatile size_t sink = 0;
         volatile bool ok = false;
 
-        DBENCH_OP("protocore_j519_build_motion", 100000, sink += protocore_j519_build_motion(motion_buf, sizeof(motion_buf), &cmd));
-        DBENCH_OP("protocore_j519_parse_motion", 100000, ok = protocore_j519_parse_motion(motion_buf, sizeof(motion_buf), &got_cmd));
-        DBENCH_OP("protocore_j519_build_status", 50000, sink += protocore_j519_build_status(status_buf, sizeof(status_buf), &st));
-        DBENCH_OP("protocore_j519_parse_status", 50000, ok = protocore_j519_parse_status(status_buf, sizeof(status_buf), &got_st));
+        DBENCH_OP("protocore_j519_build_motion", 100000,
+                  sink += protocore_j519_build_motion(motion_buf, sizeof(motion_buf), &cmd));
+        DBENCH_OP("protocore_j519_parse_motion", 100000,
+                  ok = protocore_j519_parse_motion(motion_buf, sizeof(motion_buf), &got_cmd));
+        DBENCH_OP("protocore_j519_build_status", 50000,
+                  sink += protocore_j519_build_status(status_buf, sizeof(status_buf), &st));
+        DBENCH_OP("protocore_j519_parse_status", 50000,
+                  ok = protocore_j519_parse_status(status_buf, sizeof(status_buf), &got_st));
         DBENCH_OP("protocore_j519_build_ack", 20000, sink += protocore_j519_build_ack(ack_buf, sizeof(ack_buf), &ack));
         DBENCH_OP("protocore_j519_parse_ack", 20000, ok = protocore_j519_parse_ack(ack_buf, sizeof(ack_buf), &got_ack));
 

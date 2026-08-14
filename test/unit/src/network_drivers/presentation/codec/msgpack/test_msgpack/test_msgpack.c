@@ -31,7 +31,7 @@ static uint8_t g_buf[128];
     {                                                                                                                  \
         protocore_span w_ = span.from(g_buf, sizeof(g_buf));                                                           \
         call;                                                                                                          \
-        TEST_ASSERT_TRUE(span.ok(w_));                                                                                  \
+        TEST_ASSERT_TRUE(span.ok(w_));                                                                                 \
         TEST_ASSERT_EQUAL_UINT(sizeof(want) - 1, span.len(w_));                                                        \
         TEST_ASSERT_EQUAL_MEMORY(want, g_buf, sizeof(want) - 1);                                                       \
     } while (0)
@@ -63,8 +63,8 @@ void test_spec_first_byte_table(void)
     // negative fixint 111YYYYY is an 8-bit signed integer, so 0xe0 is -32 and 0xff is -1
     ENC(MsgPack.put_int(&w_, -1), "\xff");
     ENC(MsgPack.put_int(&w_, -32), "\xe0");
-    ENC(MsgPack.put_int(&w_, -33), "\xd0\xdf");   // -33 as an int 8 is 0x100 - 33 = 0xdf
-    ENC(MsgPack.put_int(&w_, -128), "\xd0\x80");  // int 8 low bound
+    ENC(MsgPack.put_int(&w_, -33), "\xd0\xdf");  // -33 as an int 8 is 0x100 - 33 = 0xdf
+    ENC(MsgPack.put_int(&w_, -128), "\xd0\x80"); // int 8 low bound
     ENC(MsgPack.put_int(&w_, -129), "\xd1\xff\x7f");
     ENC(MsgPack.put_int(&w_, -32768), "\xd1\x80\x00");
     ENC(MsgPack.put_int(&w_, -32769), "\xd2\xff\xff\x7f\xff");
@@ -76,10 +76,10 @@ void test_spec_first_byte_table(void)
     // fixstr 101XXXXX carries a 5-bit length, so 31 is its last
     ENC(MsgPack.put_str(&w_, ""), "\xa0");
     ENC(MsgPack.put_str(&w_, "a"), "\xa1\x61");
-    ENC(MsgPack.put_str_n(&w_, "0123456789012345678901234567890", 31),
-        "\xbf" "0123456789012345678901234567890");
-    ENC(MsgPack.put_str_n(&w_, "01234567890123456789012345678901", 32),
-        "\xd9\x20" "01234567890123456789012345678901");
+    ENC(MsgPack.put_str_n(&w_, "0123456789012345678901234567890", 31), "\xbf"
+                                                                       "0123456789012345678901234567890");
+    ENC(MsgPack.put_str_n(&w_, "01234567890123456789012345678901", 32), "\xd9\x20"
+                                                                        "01234567890123456789012345678901");
 
     // bin 8 carries an 8-bit length; bin has no fix form
     ENC(MsgPack.put_bytes(&w_, (const uint8_t *)"", 0), "\xc4\x00");

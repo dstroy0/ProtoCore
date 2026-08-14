@@ -55,7 +55,8 @@ void dbench_run(void)
         DBENCH_BANNER("config_io");
         volatile size_t sink = 0;
         // Reopens NVS + 3 reads per call; small N bounds real flash latency, not just CPU cycles.
-        DBENCH_OP("protocore_config_export", 50, sink += protocore_config_export("bench", SCHEMA, N_FIELDS, buf, sizeof(buf)));
+        DBENCH_OP("protocore_config_export", 50,
+                  sink += protocore_config_export("bench", SCHEMA, N_FIELDS, buf, sizeof(buf)));
         // Reopens NVS + 3 writes per call (real flash commits); smaller N than export.
         DBENCH_OP("protocore_config_import", 20,
                   sink += protocore_config_import("bench", SCHEMA, N_FIELDS, IMPORT_BLOB, sizeof(IMPORT_BLOB) - 1));

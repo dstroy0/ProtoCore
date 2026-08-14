@@ -14,7 +14,7 @@
 #include "mmgr/endian.h"
 
 size_t protocore_hislip_build_header(uint8_t *buf, size_t cap, HislipMsg type, uint8_t control, uint32_t parameter,
-                              uint64_t payload_len)
+                                     uint64_t payload_len)
 {
     if (!buf || cap < PROTOCORE_HISLIP_HEADER_LEN)
     {
@@ -64,7 +64,7 @@ static size_t build_with_payload(uint8_t *buf, size_t cap, HislipMsg type, uint8
 }
 
 size_t protocore_hislip_build_initialize(uint8_t *buf, size_t cap, uint16_t protocol_version, uint16_t vendor_id,
-                                  const char *sub_address)
+                                         const char *sub_address)
 {
     size_t sub_len = sub_address ? strnlen(sub_address, cap) : 0;
     uint32_t parameter = ((uint32_t)protocol_version << 16) | vendor_id;
@@ -72,7 +72,7 @@ size_t protocore_hislip_build_initialize(uint8_t *buf, size_t cap, uint16_t prot
 }
 
 size_t protocore_hislip_build_initialize_response(uint8_t *buf, size_t cap, uint8_t control, uint16_t protocol_version,
-                                           uint16_t session_id)
+                                                  uint16_t session_id)
 {
     uint32_t parameter = ((uint32_t)protocol_version << 16) | session_id;
     return protocore_hislip_build_header(buf, cap, HISLIP_MSG_INITIALIZE_RESPONSE, control, parameter, 0);
@@ -83,13 +83,14 @@ size_t protocore_hislip_build_async_initialize(uint8_t *buf, size_t cap, uint16_
     return protocore_hislip_build_header(buf, cap, HISLIP_MSG_ASYNC_INITIALIZE, 0, session_id, 0);
 }
 
-size_t protocore_hislip_build_async_initialize_response(uint8_t *buf, size_t cap, uint8_t control, uint16_t server_vendor_id)
+size_t protocore_hislip_build_async_initialize_response(uint8_t *buf, size_t cap, uint8_t control,
+                                                        uint16_t server_vendor_id)
 {
     return protocore_hislip_build_header(buf, cap, HISLIP_MSG_ASYNC_INITIALIZE_RESPONSE, control, server_vendor_id, 0);
 }
 
 size_t protocore_hislip_build_data(uint8_t *buf, size_t cap, proto_bool is_end, uint8_t control, uint32_t message_id,
-                            const uint8_t *payload, size_t payload_len)
+                                   const uint8_t *payload, size_t payload_len)
 {
     HislipMsg type = is_end ? HISLIP_MSG_DATA_END : HISLIP_MSG_DATA;
     return build_with_payload(buf, cap, type, control, message_id, payload, payload_len);

@@ -14,11 +14,11 @@
 #if PROTOCORE_ENABLE_SSH_ZLIB
 #include "network_drivers/presentation/ssh/transport/comp.h"
 #endif
+#include "network_drivers/transport/tcp/client/client.h"     // TcpClient: a dialled stream
+#include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: an accepted stream
+#include "server/clock/clock.h"                              // protocore_millis() for the re-key timer
 #include "server/core/proto_handler.h"
 #include "server/core/worker.h" // Workers.wake(): the owner drains the flagged packet
-#include "network_drivers/transport/tcp/client/client.h"   // TcpClient: a dialled stream
-#include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: an accepted stream
-#include "server/clock/clock.h" // protocore_millis() for the re-key timer
 
 // The network layer's state, owned by one instance (internal linkage): the SSH-slot -> socket-slot
 // mapping (0xFF = free) and the one-time init flag. The bytes a connection uses are ssh.c's, and
@@ -246,7 +246,7 @@ static void net_payload_region(struct SshNetworkInternal *restrict ctx)
     }
     *cap = SSH_WIRE_CAP - SSH_WIRE_PAYLOAD_OFF;
     ctx->ns->region = slot + SSH_OFF_WIRE + SSH_WIRE_PAYLOAD_OFF;
-        return;
+    return;
 }
 
 // Frame the @p plen bytes already sitting in the region above and write them, no copy.
@@ -276,7 +276,6 @@ static void net_write_msg_at(struct SshNetworkInternal *restrict ctx)
     ctx->ns->i32 = stream_write(ssh_slot, wire, wlen) ? 0 : -1;
 }
 
-
 static void net_claim(struct SshNetworkInternal *restrict ctx)
 {
     const uint8_t ssh_slot = ctx->ns->ssh_slot;
@@ -292,7 +291,7 @@ static void net_claim(struct SshNetworkInternal *restrict ctx)
     s_store.conn_for_ssh[ssh_slot] = (uint8_t)handle;
     s_store.kind[ssh_slot] = kind;
     ctx->ns->i32 = 0;
-        return;
+    return;
 }
 
 static void net_release(struct SshNetworkInternal *restrict ctx)
@@ -316,11 +315,11 @@ static void net_slot_free(struct SshNetworkInternal *restrict ctx)
         if (s_store.conn_for_ssh[j] == 0xFF)
         {
             ctx->ns->u8 = j;
-        return;
+            return;
         }
     }
     ctx->ns->u8 = 0xFF;
-        return;
+    return;
 }
 
 // True when the pair is still the one claim() recorded: a slot whose socket has been recycled under
@@ -428,7 +427,7 @@ static void net_chan_adopt(struct SshNetworkInternal *restrict ctx)
     }
     *slot = cid;
     ctx->ns->i32 = 0;
-        return;
+    return;
 }
 
 // The channel a socket is bridged to. The transport's callbacks arrive keyed by socket, and this is
@@ -453,12 +452,12 @@ static void net_chan_by_cid(struct SshNetworkInternal *restrict ctx)
                 *ssh_slot = j;
                 *channel = k;
                 ctx->ns->ok = PROTO_TRUE;
-        return;
+                return;
             }
         }
     }
     ctx->ns->ok = PROTO_FALSE;
-        return;
+    return;
 }
 
 static void net_chan_write(struct SshNetworkInternal *restrict ctx)
@@ -497,7 +496,7 @@ static void net_chan_read(struct SshNetworkInternal *restrict ctx)
     TcpClient.io.cap = cap;
     TcpClient.read(TcpClient.internal);
     ctx->ns->n = TcpClient.n;
-        return;
+    return;
 }
 
 // True once the bridged socket has closed and every byte it held has been read.
@@ -531,7 +530,7 @@ static void net_chan_avail(struct SshNetworkInternal *restrict ctx)
     TcpClient.cid = *slot;
     TcpClient.available(TcpClient.internal);
     ctx->ns->n = TcpClient.n;
-        return;
+    return;
 }
 
 static void net_chan_close(struct SshNetworkInternal *restrict ctx)
@@ -564,23 +563,23 @@ static void net_chan_close_all(struct SshNetworkInternal *restrict ctx)
 #endif // PROTOCORE_NEED_CLIENT
 
 SshNetworkNs SshNetwork = {.claim = net_claim,
-                                 .release = net_release,
-                                 .slot_free = net_slot_free,
-                                 .owns = net_owns,
-                                 .tx_drain = tx_drain,
-                                 .emit = emit,
-                                 .write_msg = net_write_msg,
-                                 .payload_region = net_payload_region,
-                                 .write_msg_at = net_write_msg_at,
+                           .release = net_release,
+                           .slot_free = net_slot_free,
+                           .owns = net_owns,
+                           .tx_drain = tx_drain,
+                           .emit = emit,
+                           .write_msg = net_write_msg,
+                           .payload_region = net_payload_region,
+                           .write_msg_at = net_write_msg_at,
 #if PROTOCORE_NEED_CLIENT
-                                 .chan_open = net_chan_open,
-                                 .chan_adopt = net_chan_adopt,
-                                 .chan_by_cid = net_chan_by_cid,
-                                 .chan_write = net_chan_write,
-                                 .chan_read = net_chan_read,
-                                 .chan_avail = net_chan_avail,
-                                 .chan_drained = net_chan_drained,
-                                 .chan_close = net_chan_close,
-                                 .chan_close_all = net_chan_close_all,
+                           .chan_open = net_chan_open,
+                           .chan_adopt = net_chan_adopt,
+                           .chan_by_cid = net_chan_by_cid,
+                           .chan_write = net_chan_write,
+                           .chan_read = net_chan_read,
+                           .chan_avail = net_chan_avail,
+                           .chan_drained = net_chan_drained,
+                           .chan_close = net_chan_close,
+                           .chan_close_all = net_chan_close_all,
 #endif // PROTOCORE_NEED_CLIENT
-                                 .internal = &s_net};
+                           .internal = &s_net};

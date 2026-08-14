@@ -124,7 +124,8 @@ void test_txn_partial_and_readonly()
     uint16_t wl = 9;
     uint16_t rl = 0;
     const uint8_t *wd = NULL;
-    TEST_ASSERT_EQUAL_size_t(PROTOCORE_BRIDGE_TXN_HDR, protocore_iface_bridge_txn_parse(readonly, sizeof(readonly), &wl, &rl, &wd));
+    TEST_ASSERT_EQUAL_size_t(PROTOCORE_BRIDGE_TXN_HDR,
+                             protocore_iface_bridge_txn_parse(readonly, sizeof(readonly), &wl, &rl, &wd));
     TEST_ASSERT_EQUAL_UINT16(0, wl);
     TEST_ASSERT_EQUAL_UINT16(8, rl);
 }

@@ -118,19 +118,19 @@ void test_real_q_integer_is_minimal_twos_complement(void)
         size_t len;
         uint8_t bytes[4];
     } static const CASES[] = {
-        {0, 1, {0x00, 0, 0, 0}},                    // 0 is one zero octet, never none
-        {1, 1, {0x01, 0, 0, 0}},                    //
-        {127, 1, {0x7F, 0, 0, 0}},                  // the widest positive value in one octet
-        {128, 2, {0x00, 0x80, 0, 0}},               // 0x80 alone would read as -128, so a 0x00 pad
-        {255, 2, {0x00, 0xFF, 0, 0}},               //
-        {-1, 1, {0xFF, 0, 0, 0}},                   // all-ones octets collapse to one
-        {-128, 1, {0x80, 0, 0, 0}},                 // the narrowest negative value in one octet
-        {-129, 2, {0xFF, 0x7F, 0, 0}},              // 0x7F alone would read as +127, so a 0xFF pad
-        {32767, 2, {0x7F, 0xFF, 0, 0}},             //
-        {-32768, 2, {0x80, 0x00, 0, 0}},            //
-        {8388607, 3, {0x7F, 0xFF, 0xFF, 0}},        // 2^23 - 1
-        {2147483647, 4, {0x7F, 0xFF, 0xFF, 0xFF}},  // INT32_MAX
-        {-2147483647 - 1, 4, {0x80, 0, 0, 0}},      // INT32_MIN
+        {0, 1, {0x00, 0, 0, 0}},                   // 0 is one zero octet, never none
+        {1, 1, {0x01, 0, 0, 0}},                   //
+        {127, 1, {0x7F, 0, 0, 0}},                 // the widest positive value in one octet
+        {128, 2, {0x00, 0x80, 0, 0}},              // 0x80 alone would read as -128, so a 0x00 pad
+        {255, 2, {0x00, 0xFF, 0, 0}},              //
+        {-1, 1, {0xFF, 0, 0, 0}},                  // all-ones octets collapse to one
+        {-128, 1, {0x80, 0, 0, 0}},                // the narrowest negative value in one octet
+        {-129, 2, {0xFF, 0x7F, 0, 0}},             // 0x7F alone would read as +127, so a 0xFF pad
+        {32767, 2, {0x7F, 0xFF, 0, 0}},            //
+        {-32768, 2, {0x80, 0x00, 0, 0}},           //
+        {8388607, 3, {0x7F, 0xFF, 0xFF, 0}},       // 2^23 - 1
+        {2147483647, 4, {0x7F, 0xFF, 0xFF, 0xFF}}, // INT32_MAX
+        {-2147483647 - 1, 4, {0x80, 0, 0, 0}},     // INT32_MIN
     };
     for (size_t i = 0; i < sizeof(CASES) / sizeof(CASES[0]); i++)
     {

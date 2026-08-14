@@ -103,7 +103,7 @@ typedef struct
     int worker_id;                 ///< the worker every call names
     protocore_worker_pump_fn pump; ///< what a started worker runs each time it wakes
 
-    WorkerDeferArgs defer_args;    ///< the call handed to a worker to run in its own context
+    WorkerDeferArgs defer_args; ///< the call handed to a worker to run in its own context
 
     proto_bool ok;
 

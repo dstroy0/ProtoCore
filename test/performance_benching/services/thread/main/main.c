@@ -28,8 +28,8 @@ void dbench_run(void)
         DBENCH_OP("protocore_spinel_unpack_uint", 200000, sink += protocore_spinel_unpack_uint(pk, sizeof(pk), &uv));
         static uint8_t out[64];
         DBENCH_OP("protocore_spinel_command_build", 200000,
-                  sink += protocore_spinel_command_build(0x81, 0x02 /*PROP_VALUE_SET*/, 0x24 /*PROP_MAC_15_4_PANID*/, val,
-                                                  sizeof(val), out, sizeof(out)));
+                  sink += protocore_spinel_command_build(0x81, 0x02 /*PROP_VALUE_SET*/, 0x24 /*PROP_MAC_15_4_PANID*/,
+                                                         val, sizeof(val), out, sizeof(out)));
         (void)sink;
         DBENCH_DONE();
     }

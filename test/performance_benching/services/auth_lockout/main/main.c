@@ -26,8 +26,8 @@
 // test/test_auth_lockout/test_auth_lockout.cpp (already known-good).
 static protocore_ip v4w(uint32_t host_order)
 {
-    return protocore_ip_from_v4_octets((uint8_t)(host_order >> 24), (uint8_t)(host_order >> 16), (uint8_t)(host_order >> 8),
-                                (uint8_t)host_order);
+    return protocore_ip_from_v4_octets((uint8_t)(host_order >> 24), (uint8_t)(host_order >> 16),
+                                       (uint8_t)(host_order >> 8), (uint8_t)host_order);
 }
 
 void dbench_run(void)

@@ -409,8 +409,8 @@ void protocore_h3_conn_init(H3Conn *h3, struct QuicConn *qc, H3RequestFn on_requ
     qc->cb = cb;
 }
 
-proto_bool protocore_h3_conn_respond(H3Conn *h3, uint64_t stream_id, int status, const char *content_type, const uint8_t *body,
-                              size_t body_len)
+proto_bool protocore_h3_conn_respond(H3Conn *h3, uint64_t stream_id, int status, const char *content_type,
+                                     const uint8_t *body, size_t body_len)
 {
     H3Stream *st = protocore_h3_stream_get(h3, stream_id, PROTO_FALSE);
     if (st)
@@ -445,7 +445,7 @@ proto_bool protocore_h3_conn_respond(H3Conn *h3, uint64_t stream_id, int status,
         // 5-bit/char (~PROTOCORE_H3_QPACK_BLOCK * 8/5), so an over-long value trips the encode's reject
         // below instead of being truncated into a fittable length (see the matching protocore_h2_conn note).
         bp += protocore_qpack_encode_header(block + bp, PROTOCORE_H3_QPACK_BLOCK - bp, "content-type", 12, content_type,
-                                     strnlen(content_type, (size_t)PROTOCORE_H3_QPACK_BLOCK * 2));
+                                            strnlen(content_type, (size_t)PROTOCORE_H3_QPACK_BLOCK * 2));
     }
     char clen[16];
     size_t cl = 0;

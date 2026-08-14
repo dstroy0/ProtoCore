@@ -122,7 +122,8 @@ static int sb_modbus_write(void *vctx, uint32_t point, int32_t value)
         return SB_ERR_ARG;
     }
     uint8_t req[12];
-    size_t rn = protocore_modbus_build_write_single(c->txid++, c->unit, (uint16_t)point, (uint16_t)value, req, sizeof(req));
+    size_t rn =
+        protocore_modbus_build_write_single(c->txid++, c->unit, (uint16_t)point, (uint16_t)value, req, sizeof(req));
     if (rn == 0)
     {
         return SB_ERR_ARG;

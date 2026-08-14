@@ -93,7 +93,7 @@ static void radio_busy_release(struct RadioInternal *restrict ctx)
     }
 }
 
-#else // no radio backend
+#else  // no radio backend
 
 static void radio_power(struct RadioInternal *restrict ctx)
 {

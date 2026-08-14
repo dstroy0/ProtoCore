@@ -34,7 +34,7 @@ static size_t put_crc(uint8_t *p, const uint8_t *data, size_t n)
 }
 
 size_t protocore_dnp3_build_frame(uint8_t *buf, size_t cap, uint8_t control, uint16_t dest, uint16_t src,
-                           const uint8_t *user_data, size_t user_data_len)
+                                  const uint8_t *user_data, size_t user_data_len)
 {
     if (!buf || (user_data_len && !user_data) || user_data_len > DNP3_MAX_USER_DATA)
     {
@@ -75,7 +75,7 @@ size_t protocore_dnp3_build_frame(uint8_t *buf, size_t cap, uint8_t control, uin
 }
 
 proto_bool protocore_dnp3_parse_frame(const uint8_t *buf, size_t len, Dnp3Frame *out, uint8_t *out_user, size_t out_cap,
-                               size_t *out_user_len)
+                                      size_t *out_user_len)
 {
     if (!buf || !out || len < DNP3_HEADER_BLOCK_LEN)
     {
@@ -158,7 +158,7 @@ uint8_t protocore_dnp3_transport_header(proto_bool fir, proto_bool fin, uint8_t 
 }
 
 size_t protocore_dnp3_build_transport_segment(uint8_t *out, size_t cap, proto_bool fir, proto_bool fin, uint8_t seq,
-                                       const uint8_t *app_data, size_t app_len)
+                                              const uint8_t *app_data, size_t app_len)
 {
     if (!out || (app_len && !app_data) || app_len > DNP3_TR_MAX_APP)
     {
@@ -249,8 +249,8 @@ uint8_t protocore_dnp3_app_control(proto_bool fir, proto_bool fin, proto_bool co
                      (uns ? DNP3_AC_UNS : 0u) | (seq & DNP3_AC_SEQ_MASK));
 }
 
-size_t protocore_dnp3_build_app_request(uint8_t *out, size_t cap, uint8_t app_control, uint8_t fc, const uint8_t *objects,
-                                 size_t obj_len)
+size_t protocore_dnp3_build_app_request(uint8_t *out, size_t cap, uint8_t app_control, uint8_t fc,
+                                        const uint8_t *objects, size_t obj_len)
 {
     if (!out || (obj_len && !objects) || cap < 2 + obj_len)
     {
@@ -266,7 +266,7 @@ size_t protocore_dnp3_build_app_request(uint8_t *out, size_t cap, uint8_t app_co
 }
 
 size_t protocore_dnp3_build_app_response(uint8_t *out, size_t cap, uint8_t app_control, uint8_t fc, uint16_t iin,
-                                  const uint8_t *objects, size_t obj_len)
+                                         const uint8_t *objects, size_t obj_len)
 {
     if (!out || (obj_len && !objects) || cap < 4 + obj_len)
     {
@@ -311,8 +311,8 @@ proto_bool protocore_dnp3_parse_app_header(const uint8_t *frag, size_t len, Dnp3
     return PROTO_TRUE;
 }
 
-size_t protocore_dnp3_build_object_header_range(uint8_t *buf, size_t cap, uint8_t group, uint8_t variation, uint32_t start,
-                                         uint32_t stop)
+size_t protocore_dnp3_build_object_header_range(uint8_t *buf, size_t cap, uint8_t group, uint8_t variation,
+                                                uint32_t start, uint32_t stop)
 {
     if (!buf || stop < start)
     {
@@ -373,8 +373,8 @@ size_t protocore_dnp3_build_object_header_all(uint8_t *buf, size_t cap, uint8_t 
     return 3;
 }
 
-size_t protocore_dnp3_build_crob(uint8_t *buf, size_t cap, uint8_t op_type, uint8_t tcc, proto_bool clear, uint8_t count,
-                          uint32_t on_time_ms, uint32_t off_time_ms)
+size_t protocore_dnp3_build_crob(uint8_t *buf, size_t cap, uint8_t op_type, uint8_t tcc, proto_bool clear,
+                                 uint8_t count, uint32_t on_time_ms, uint32_t off_time_ms)
 {
     if (!buf || op_type > 0x0Fu || tcc > 0x03u || cap < DNP3_CROB_LEN)
     {
@@ -396,7 +396,7 @@ size_t protocore_dnp3_build_aob32(uint8_t *buf, size_t cap, int32_t value)
         return 0;
     }
     endian.wr32le(buf, (uint32_t)value); // 32-bit signed setpoint, little-endian (two's complement)
-    buf[4] = 0x00;                   // control status: 0 in a request (the outstation reports the result)
+    buf[4] = 0x00;                       // control status: 0 in a request (the outstation reports the result)
     return DNP3_AOB_LEN;
 }
 

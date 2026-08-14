@@ -24,7 +24,7 @@ static uint16_t get_u16(const uint8_t *p)
 }
 
 size_t protocore_nts_ke_record(proto_bool critical, uint16_t type, const uint8_t *body, size_t body_len, uint8_t *out,
-                        size_t cap)
+                               size_t cap)
 {
     if (!out || (body_len && !body) || body_len > 0xFFFF)
     {

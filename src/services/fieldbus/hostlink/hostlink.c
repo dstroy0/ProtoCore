@@ -45,7 +45,7 @@ static int hex_val(char c)
 }
 
 size_t protocore_hostlink_build(char *buf, size_t cap, uint8_t node, const char *header_code, const char *text,
-                         size_t text_len)
+                                size_t text_len)
 {
     if (!buf || !header_code || node > 99 || (text_len && !text))
     {
@@ -179,7 +179,7 @@ proto_bool protocore_hostlink_read_word(const HostlinkFrame *f, size_t index, ui
 }
 
 size_t protocore_hostlink_build_write(char *buf, size_t cap, uint8_t node, uint16_t address, const uint16_t *words,
-                               size_t word_count)
+                                      size_t word_count)
 {
     if (!buf || node > 99 || address > 9999 || word_count == 0 || !words)
     {

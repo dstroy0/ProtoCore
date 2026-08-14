@@ -53,7 +53,8 @@ void dbench_run(void)
 
         DBENCH_OP("protocore_ftp_build_command", 100000,
                   sinkz += protocore_ftp_build_command(cmdbuf, sizeof(cmdbuf), "RETR", "/programs/O1234.nc"));
-        DBENCH_OP("protocore_ftp_build_port", 100000, sinkz += protocore_ftp_build_port(portbuf, sizeof(portbuf), ip, 40000));
+        DBENCH_OP("protocore_ftp_build_port", 100000,
+                  sinkz += protocore_ftp_build_port(portbuf, sizeof(portbuf), ip, 40000));
         DBENCH_OP("protocore_ftp_build_eprt", 100000,
                   sinkz += protocore_ftp_build_eprt(eprtbuf, sizeof(eprtbuf), "132.235.1.2", false, 6275));
         DBENCH_OP("protocore_ftp_parse_reply multiline", 50000,

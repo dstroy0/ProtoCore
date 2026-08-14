@@ -47,7 +47,8 @@ size_t protocore_interbus_build(const uint16_t *words, size_t word_count, uint8_
     return i;
 }
 
-proto_bool protocore_interbus_parse(const uint8_t *frame, size_t len, uint16_t *out_words, size_t max_words, size_t *out_count)
+proto_bool protocore_interbus_parse(const uint8_t *frame, size_t len, uint16_t *out_words, size_t max_words,
+                                    size_t *out_count)
 {
     if (!frame || !out_words || !out_count || len < 4) // loopback + FCS minimum
     {

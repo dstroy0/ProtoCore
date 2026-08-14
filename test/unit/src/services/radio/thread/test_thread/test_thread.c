@@ -254,8 +254,8 @@ void test_spinel_command_build_and_parse(void)
 
     // A property id past 127 needs two packed octets, so the value offset moves out by one: 0x100
     // is 0b1_0000000, low seven bits 0 with the continuation bit, then 1 -> 80 02.
-    const uint16_t k = protocore_spinel_command_build(0x83, SPINEL_CMD_PROP_VALUE_IS, 0x100u, (const uint8_t *)"\xAA", 1,
-                                                      out, sizeof(out));
+    const uint16_t k = protocore_spinel_command_build(0x83, SPINEL_CMD_PROP_VALUE_IS, 0x100u, (const uint8_t *)"\xAA",
+                                                      1, out, sizeof(out));
     TEST_ASSERT_EQUAL_UINT16(5, k); // header + cmd(1) + prop(2) + value(1)
     TEST_ASSERT_EQUAL_HEX8(0x80, out[2]);
     TEST_ASSERT_EQUAL_HEX8(0x02, out[3]);

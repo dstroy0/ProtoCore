@@ -107,8 +107,8 @@ static proto_bool bcc_ok(const uint8_t *buf, size_t i, size_t len, proto_bool wi
     return protocore_3964r_bcc(buf, i) == buf[i];
 }
 
-proto_bool protocore_3964r_parse_block(const uint8_t *buf, size_t len, proto_bool with_bcc, uint8_t *out, size_t out_cap,
-                                size_t *out_len)
+proto_bool protocore_3964r_parse_block(const uint8_t *buf, size_t len, proto_bool with_bcc, uint8_t *out,
+                                       size_t out_cap, size_t *out_len)
 {
     if (!buf || !out || !out_len)
     {
@@ -197,7 +197,7 @@ static void begin_receive(Simatic3964Ctx *ctx, uint32_t now_ms)
 }
 
 void protocore_3964r_init(Simatic3964Ctx *ctx, proto_bool high_priority, proto_bool with_bcc, Simatic3964TxFn tx,
-                   Simatic3964RxFn rx, void *user)
+                          Simatic3964RxFn rx, void *user)
 {
     mem.set(ctx, 0, sizeof(*ctx));
     ctx->state = SIMATIC3964_STATE_IDLE;
@@ -406,8 +406,8 @@ proto_bool protocore_3964r_idle(const Simatic3964Ctx *ctx)
 // Request header: [cmd, coord=0, area, dbnr, addr_hi, addr_lo, count_hi, count_lo]  (8 bytes)
 #define RK512_HDR_LEN 8
 
-size_t protocore_rk512_build_send(uint8_t *buf, size_t cap, Rk512Area area, uint8_t dbnr, uint16_t addr, const uint16_t *words,
-                           uint16_t wcount)
+size_t protocore_rk512_build_send(uint8_t *buf, size_t cap, Rk512Area area, uint8_t dbnr, uint16_t addr,
+                                  const uint16_t *words, uint16_t wcount)
 {
     if (!buf || (!words && wcount))
     {
@@ -431,7 +431,8 @@ size_t protocore_rk512_build_send(uint8_t *buf, size_t cap, Rk512Area area, uint
     return need;
 }
 
-size_t protocore_rk512_build_fetch(uint8_t *buf, size_t cap, Rk512Area area, uint8_t dbnr, uint16_t addr, uint16_t wcount)
+size_t protocore_rk512_build_fetch(uint8_t *buf, size_t cap, Rk512Area area, uint8_t dbnr, uint16_t addr,
+                                   uint16_t wcount)
 {
     if (!buf || cap < RK512_HDR_LEN)
     {
@@ -486,7 +487,8 @@ proto_bool protocore_rk512_parse_header(const uint8_t *buf, size_t len, Rk512Hea
     return PROTO_TRUE;
 }
 
-proto_bool protocore_rk512_parse_reaction(const uint8_t *buf, size_t len, uint16_t *status, const uint8_t **data, size_t *dlen)
+proto_bool protocore_rk512_parse_reaction(const uint8_t *buf, size_t len, uint16_t *status, const uint8_t **data,
+                                          size_t *dlen)
 {
     if (!buf || !status || len < 3)
     {

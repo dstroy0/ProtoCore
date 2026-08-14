@@ -47,7 +47,8 @@ void dbench_run(void)
         uint16_t val = 0;
         bool tel = false;
         DBENCH_OP("protocore_dshot_decode std", 200000, sinkb |= protocore_dshot_decode(kFrameStd, &val, &tel, false));
-        DBENCH_OP("protocore_dshot_decode bidir", 200000, sinkb |= protocore_dshot_decode(kFrameBidir, &val, &tel, true));
+        DBENCH_OP("protocore_dshot_decode bidir", 200000,
+                  sinkb |= protocore_dshot_decode(kFrameBidir, &val, &tel, true));
 
         DBENCH_OP("protocore_dshot_bit_ns", 200000, sink32 += protocore_dshot_bit_ns(600, true));
         DBENCH_OP("protocore_esc_pwm_ns", 200000, sink32 += protocore_esc_pwm_ns(500, PROTOCORE_ESC_ONESHOT125));

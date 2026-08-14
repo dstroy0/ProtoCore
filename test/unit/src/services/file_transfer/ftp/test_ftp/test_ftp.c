@@ -83,10 +83,10 @@ void test_single_line_reply_and_pipelining(void)
 void test_malformed_reply_heads_are_refused(void)
 {
     static const char *const BAD[] = {
-        "20 Too short\r\n",     // two digits
-        "2x0 Not a digit\r\n",  // non-digit in the code
+        "20 Too short\r\n",       // two digits
+        "2x0 Not a digit\r\n",    // non-digit in the code
         "220\tTab separator\r\n", // separator is neither SP nor '-'
-        "220",                  // no separator at all
+        "220",                    // no separator at all
         "abc def\r\n",
         "",
     };
@@ -216,10 +216,8 @@ void test_epsv_accepts_any_legal_delimiter(void)
 void test_epsv_refuses_malformed_replies(void)
 {
     static const char *const BAD[] = {
-        "229 Entering Extended Passive Mode (|||65536|)\r\n",
-        "229 Entering Extended Passive Mode (||6446|)\r\n",
-        "229 Entering Extended Passive Mode (|||xyz|)\r\n",
-        "229 Entering Extended Passive Mode |||6446|\r\n",
+        "229 Entering Extended Passive Mode (|||65536|)\r\n", "229 Entering Extended Passive Mode (||6446|)\r\n",
+        "229 Entering Extended Passive Mode (|||xyz|)\r\n",   "229 Entering Extended Passive Mode |||6446|\r\n",
         "229 Entering Extended Passive Mode (\r\n",
     };
     for (size_t i = 0; i < sizeof(BAD) / sizeof(BAD[0]); i++)

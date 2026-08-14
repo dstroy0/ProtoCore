@@ -35,8 +35,8 @@ static_assert(HMAC512_OFF_HASH + PROTOCORE_SHA512_BORROW <= PROTOCORE_HMAC_SHA51
 
 // One 128-byte HMAC key block into @p block: keys > 128 bytes are pre-hashed (RFC 2104), else
 // zero-padded, using @p kpad to hold the padded key and @p hw for the pre-hash.
-static void build_key_block(const uint8_t *key, size_t key_len, uint8_t block[PROTOCORE_SHA512_BLOCK_LEN], uint8_t pad_byte,
-                            uint8_t kpad[PROTOCORE_SHA512_BLOCK_LEN], uint8_t *hw)
+static void build_key_block(const uint8_t *key, size_t key_len, uint8_t block[PROTOCORE_SHA512_BLOCK_LEN],
+                            uint8_t pad_byte, uint8_t kpad[PROTOCORE_SHA512_BLOCK_LEN], uint8_t *hw)
 {
     mem.set(kpad, 0, PROTOCORE_SHA512_BLOCK_LEN);
     if (key_len > PROTOCORE_SHA512_BLOCK_LEN)
@@ -80,7 +80,7 @@ void protocore_hmac_sha512_final(protocore_hmac_sha512_ctx *ctx, uint8_t mac[PRO
 }
 
 void protocore_hmac_sha512(uint8_t *work, const uint8_t *key, size_t key_len, const uint8_t *data, size_t len,
-                    uint8_t mac[PROTOCORE_HMAC_SHA512_LEN])
+                           uint8_t mac[PROTOCORE_HMAC_SHA512_LEN])
 {
     protocore_hmac_sha512_ctx ctx = {0};
     protocore_hmac_sha512_init(&ctx, work, key, key_len);

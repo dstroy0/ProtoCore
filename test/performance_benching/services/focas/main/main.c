@@ -63,7 +63,8 @@ void dbench_run(void)
                   sinkb = protocore_focas_parse_command_frame(sysinfo_frame, sizeof(sysinfo_frame), &resp));
 
         FocasSysInfo si;
-        DBENCH_OP("protocore_focas_parse_sysinfo", 50000, sinkb = protocore_focas_parse_sysinfo(resp.data, resp.data_len, &si));
+        DBENCH_OP("protocore_focas_parse_sysinfo", 50000,
+                  sinkb = protocore_focas_parse_sysinfo(resp.data, resp.data_len, &si));
 
         FocasValue fv;
         DBENCH_OP("protocore_focas_decode8", 50000, sinkb = protocore_focas_decode8(value8, sizeof(value8), &fv));

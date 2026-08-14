@@ -32,11 +32,11 @@ static const char RFC7515_A1[] = "eyJ0eXAiOiJKV1QiLA0KICJhbGciOiJIUzI1NiJ9"
 
 // The same appendix's JWK: {"kty":"oct","k":"AyM1SysPpbyDfgZld3umj1qzKObwVMkoqQ-EstJQLr_T-1qS0gZH75
 // aKtMN3Yj0iPS4hcgUuTwjAzZr1Z9CAow"}. These are that `k` value base64url-decoded, 64 octets.
-static const uint8_t RFC7515_A1_KEY[64] = {
-    0x03, 0x23, 0x35, 0x4B, 0x2B, 0x0F, 0xA5, 0xBC, 0x83, 0x7E, 0x06, 0x65, 0x77, 0x7B, 0xA6, 0x8F,
-    0x5A, 0xB3, 0x28, 0xE6, 0xF0, 0x54, 0xC9, 0x28, 0xA9, 0x0F, 0x84, 0xB2, 0xD2, 0x50, 0x2E, 0xBF,
-    0xD3, 0xFB, 0x5A, 0x92, 0xD2, 0x06, 0x47, 0xEF, 0x96, 0x8A, 0xB4, 0xC3, 0x77, 0x62, 0x3D, 0x22,
-    0x3D, 0x2E, 0x21, 0x72, 0x05, 0x2E, 0x4F, 0x08, 0xC0, 0xCD, 0x9A, 0xF5, 0x67, 0xD0, 0x80, 0xA3};
+static const uint8_t RFC7515_A1_KEY[64] = {0x03, 0x23, 0x35, 0x4B, 0x2B, 0x0F, 0xA5, 0xBC, 0x83, 0x7E, 0x06, 0x65, 0x77,
+                                           0x7B, 0xA6, 0x8F, 0x5A, 0xB3, 0x28, 0xE6, 0xF0, 0x54, 0xC9, 0x28, 0xA9, 0x0F,
+                                           0x84, 0xB2, 0xD2, 0x50, 0x2E, 0xBF, 0xD3, 0xFB, 0x5A, 0x92, 0xD2, 0x06, 0x47,
+                                           0xEF, 0x96, 0x8A, 0xB4, 0xC3, 0x77, 0x62, 0x3D, 0x22, 0x3D, 0x2E, 0x21, 0x72,
+                                           0x05, 0x2E, 0x4F, 0x08, 0xC0, 0xCD, 0x9A, 0xF5, 0x67, 0xD0, 0x80, 0xA3};
 
 static proto_bool verify(const char *jws, const uint8_t *key, size_t key_len)
 {
@@ -90,10 +90,10 @@ void test_any_altered_character_is_refused(void)
 void test_alg_must_name_hs256(void)
 {
     static const char *const HEADERS[] = {
-        "eyJhbGciOiJub25lIn0",       // {"alg":"none"}
-        "eyJhbGciOiJSUzI1NiJ9",      // {"alg":"RS256"}, the header of RFC 7515 Appendix A.2
-        "eyJhbGciOiJIUzM4NCJ9",      // {"alg":"HS384"}
-        "eyJ0eXAiOiJKV1QifQ",        // {"typ":"JWT"}, no alg at all
+        "eyJhbGciOiJub25lIn0",  // {"alg":"none"}
+        "eyJhbGciOiJSUzI1NiJ9", // {"alg":"RS256"}, the header of RFC 7515 Appendix A.2
+        "eyJhbGciOiJIUzM4NCJ9", // {"alg":"HS384"}
+        "eyJ0eXAiOiJKV1QifQ",   // {"typ":"JWT"}, no alg at all
     };
     const char *rest = strchr(RFC7515_A1, '.');
     for (size_t i = 0; i < sizeof(HEADERS) / sizeof(HEADERS[0]); i++)
@@ -112,7 +112,7 @@ void test_malformed_serializations_are_refused(void)
         "",
         ".",
         "..",
-        "eyJ0eXAiOiJKV1QiLA0KICJhbGciOiJIUzI1NiJ9", // one segment
+        "eyJ0eXAiOiJKV1QiLA0KICJhbGciOiJIUzI1NiJ9",                    // one segment
         "eyJ0eXAiOiJKV1QiLA0KICJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJqb2UifQ", // two segments
     };
     for (size_t i = 0; i < sizeof(BAD) / sizeof(BAD[0]); i++)
@@ -343,13 +343,13 @@ void test_scope_matches_whole_tokens(void)
         {"read write admin", "read", PROTO_TRUE},
         {"read write admin", "write", PROTO_TRUE},
         {"read write admin", "admin", PROTO_TRUE},
-        {"read write admin", "rea", PROTO_FALSE},   // a prefix of a token
-        {"read write admin", "ead", PROTO_FALSE},   // a suffix of a token
-        {"read write admin", "READ", PROTO_FALSE},  // case sensitive
+        {"read write admin", "rea", PROTO_FALSE},  // a prefix of a token
+        {"read write admin", "ead", PROTO_FALSE},  // a suffix of a token
+        {"read write admin", "READ", PROTO_FALSE}, // case sensitive
         {"read write admin", "read write", PROTO_FALSE},
         {"readonly", "read", PROTO_FALSE},
         {"read", "read", PROTO_TRUE},
-        {"  read   write  ", "write", PROTO_TRUE},  // runs of spaces are still delimiters
+        {"  read   write  ", "write", PROTO_TRUE}, // runs of spaces are still delimiters
         {"", "read", PROTO_FALSE},
         {"read", "", PROTO_FALSE},
     };

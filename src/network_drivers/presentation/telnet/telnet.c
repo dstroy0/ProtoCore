@@ -12,8 +12,8 @@
 
 #if PROTOCORE_ENABLE_TELNET
 
-#include "server/core/proto_handler.h"
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the slot a call acts on
+#include "server/core/proto_handler.h"
 #include <stdarg.h>
 
 // Telnet protocol bytes (RFC 854 / 858 / 857).

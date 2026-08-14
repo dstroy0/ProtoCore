@@ -26,17 +26,18 @@ void tearDown(void)
 }
 
 // The ESP-IDF "Fatal Errors" guide's own IllegalInstruction example, reproduced verbatim.
-static const char *const PANIC = "Guru Meditation Error: Core 0 panic'ed (IllegalInstruction). Exception was unhandled.\n"
-                                 "\n"
-                                 "Core 0 register dump:\n"
-                                 "PC      : 0x400e14ed  PS      : 0x00060030  A0      : 0x800d0805  A1      : 0x3ffb5030\n"
-                                 "A2      : 0x00000000  A3      : 0x00000001  A4      : 0x00000001  A5      : 0x3ffb50dc\n"
-                                 "A6      : 0x00000000  A7      : 0x00000001  A8      : 0x00000000  A9      : 0x3ffb5000\n"
-                                 "A10     : 0x00000000  A11     : 0x3ffb2bac  A12     : 0x40082d1c  A13     : 0x06ff1ff8\n"
-                                 "A14     : 0x3ffb7078  A15     : 0x00000000  SAR     : 0x00000014  EXCCAUSE: 0x0000001d\n"
-                                 "EXCVADDR: 0x00000000  LBEG    : 0x4000c46c  LEND    : 0x4000c477  LCOUNT  : 0xffffffff\n"
-                                 "\n"
-                                 "Backtrace: 0x400e14ed:0x3ffb5030 0x400d0802:0x3ffb5050\n";
+static const char *const PANIC =
+    "Guru Meditation Error: Core 0 panic'ed (IllegalInstruction). Exception was unhandled.\n"
+    "\n"
+    "Core 0 register dump:\n"
+    "PC      : 0x400e14ed  PS      : 0x00060030  A0      : 0x800d0805  A1      : 0x3ffb5030\n"
+    "A2      : 0x00000000  A3      : 0x00000001  A4      : 0x00000001  A5      : 0x3ffb50dc\n"
+    "A6      : 0x00000000  A7      : 0x00000001  A8      : 0x00000000  A9      : 0x3ffb5000\n"
+    "A10     : 0x00000000  A11     : 0x3ffb2bac  A12     : 0x40082d1c  A13     : 0x06ff1ff8\n"
+    "A14     : 0x3ffb7078  A15     : 0x00000000  SAR     : 0x00000014  EXCCAUSE: 0x0000001d\n"
+    "EXCVADDR: 0x00000000  LBEG    : 0x4000c46c  LEND    : 0x4000c477  LCOUNT  : 0xffffffff\n"
+    "\n"
+    "Backtrace: 0x400e14ed:0x3ffb5030 0x400d0802:0x3ffb5050\n";
 
 static ExcInfo g_info;
 static char g_json[1024];

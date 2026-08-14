@@ -352,4 +352,5 @@ size_t protocore_base64url_decode(const char *src, size_t src_len, uint8_t *dst,
     return o;
 }
 
-const Base64Ns Base64 = {protocore_base64_encode, protocore_base64_decode, protocore_base64url_encode, protocore_base64url_decode};
+const Base64Ns Base64 = {protocore_base64_encode, protocore_base64_decode, protocore_base64url_encode,
+                         protocore_base64url_decode};

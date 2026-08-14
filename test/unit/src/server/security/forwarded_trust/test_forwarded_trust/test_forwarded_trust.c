@@ -116,11 +116,11 @@ void test_malformed_cidr_text_is_refused(void)
         "",
         "/8",
         "10.0.0.0/",
-        "10.0.0.0/33",  // over the v4 width
+        "10.0.0.0/33", // over the v4 width
         "10.0.0.0/999",
-        "10.0.0.0/8x",  // a non-digit in the prefix
+        "10.0.0.0/8x", // a non-digit in the prefix
         "10.0.0.0/-1",
-        "999.0.0.0/8",  // not an address
+        "999.0.0.0/8", // not an address
         "not-an-address",
         "2001:db8::/129", // over the v6 width
         "1::2::3/64",     // two zero runs
@@ -233,14 +233,14 @@ void test_a_trusted_upstream_with_no_usable_client_falls_back(void)
     const protocore_ip proxy = parsed("10.0.0.1");
 
     static const char *const UNUSABLE[] = {
-        NULL,        // no header at all
-        "",          // an empty value
-        "_hidden",   // RFC 7239 sec 6.3 obfuscated identifier
-        "unknown",   // RFC 7239 sec 6.3 unknown identifier
-        "0.0.0.0",   // unspecified, so it names no client
-        "::",        //
-        "garbage",   //
-        "1.2.3",     // truncated dotted quad
+        NULL,               // no header at all
+        "",                 // an empty value
+        "_hidden",          // RFC 7239 sec 6.3 obfuscated identifier
+        "unknown",          // RFC 7239 sec 6.3 unknown identifier
+        "0.0.0.0",          // unspecified, so it names no client
+        "::",               //
+        "garbage",          //
+        "1.2.3",            // truncated dotted quad
         "203.0.113.9:8080", // an address with a port is not an address
     };
     for (size_t i = 0; i < sizeof(UNUSABLE) / sizeof(UNUSABLE[0]); i++)

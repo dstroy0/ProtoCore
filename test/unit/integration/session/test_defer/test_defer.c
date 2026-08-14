@@ -1,12 +1,12 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-#include "server/core/worker.h"
 #include "network_drivers/session/session.h"
 #include "network_drivers/transport/tcp/common.h"
 #include "network_drivers/transport/tcp/protocol/protocol.h"
 #include "network_drivers/transport/tcp/tcp.h"
 #include "protocore.h"
+#include "server/core/worker.h"
 #include <unity.h>
 
 static int g_ran = 0;

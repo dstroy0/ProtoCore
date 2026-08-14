@@ -181,9 +181,9 @@ void test_quantity_bounds(void)
     struct
     {
         uint8_t fc;
-        uint16_t hi_ok;   // the largest quantity the spec allows
-        uint16_t hi_bad;  // one past it
-        uint16_t limit;   // how many of that item this build's data model holds
+        uint16_t hi_ok;  // the largest quantity the spec allows
+        uint16_t hi_bad; // one past it
+        uint16_t limit;  // how many of that item this build's data model holds
     } static const CASES[] = {
         {MODBUS_FC_READ_COILS, 2000, 2001, PROTOCORE_MODBUS_COILS},
         {MODBUS_FC_READ_DISCRETE_INPUTS, 2000, 2001, PROTOCORE_MODBUS_DISCRETE_INPUTS},
@@ -321,8 +321,7 @@ void test_read_write_multiple_registers(void)
     }
     static const uint8_t REQ[16] = {0x17, 0x00, 0x03, 0x00, 0x06, 0x00, 0x0E, 0x00,
                                     0x03, 0x06, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF};
-    static const uint8_t RSP[14] = {0x17, 0x0C, 0x00, 0xFE, 0x0A, 0xCD, 0x00,
-                                    0x01, 0x00, 0x03, 0x00, 0x0D, 0x00, 0xFF};
+    static const uint8_t RSP[14] = {0x17, 0x0C, 0x00, 0xFE, 0x0A, 0xCD, 0x00, 0x01, 0x00, 0x03, 0x00, 0x0D, 0x00, 0xFF};
     TEST_ASSERT_EQUAL_UINT(sizeof(RSP), run_pdu(REQ, sizeof(REQ), &rsp));
     TEST_ASSERT_EQUAL_HEX8_ARRAY(RSP, rsp, sizeof(RSP));
     for (uint16_t i = 0; i < 3; i++)

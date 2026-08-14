@@ -39,8 +39,8 @@ static int pump_refill(protocore_relay_end *src, protocore_relay_end *dst, uint8
 // Pump one direction (src -> dst) one non-blocking pass: flush pending bytes, then read more.
 // @param dst_shut_sent  the "shutdown already called" flag for @p dst (the peer that stops receiving
 //                       once this direction finishes). Returns -1 on a seam error, else 0.
-static int pump(protocore_relay_end *src, protocore_relay_end *dst, uint8_t *buf, uint16_t *len, uint16_t *off, proto_bool *src_eof,
-                proto_bool *dir_done, proto_bool *dst_shut_sent, uint32_t *counter)
+static int pump(protocore_relay_end *src, protocore_relay_end *dst, uint8_t *buf, uint16_t *len, uint16_t *off,
+                proto_bool *src_eof, proto_bool *dir_done, proto_bool *dst_shut_sent, uint32_t *counter)
 {
     if (*dir_done)
     {

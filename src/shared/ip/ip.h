@@ -109,13 +109,13 @@ uint32_t protocore_ip_to_v4_be(const protocore_ip *ip);
 /** @brief The address, or pair of addresses, one call acts on. */
 typedef struct
 {
-    const char *text;    ///< the textual address a parse reads
-    const protocore_ip *ip;  ///< the address a call reads
-    const protocore_ip *b;   ///< the second address a compare or a prefix test reads
-    protocore_ip *out;   ///< where a parse lands its result
-    char *buf;           ///< where a format writes
-    size_t cap;          ///< how much room that has
-    uint8_t prefix_len;  ///< the prefix length a match tests to
+    const char *text;       ///< the textual address a parse reads
+    const protocore_ip *ip; ///< the address a call reads
+    const protocore_ip *b;  ///< the second address a compare or a prefix test reads
+    protocore_ip *out;      ///< where a parse lands its result
+    char *buf;              ///< where a format writes
+    size_t cap;             ///< how much room that has
+    uint8_t prefix_len;     ///< the prefix length a match tests to
 } IpArgs;
 
 /** @brief The address calls, described only in ip.c. */

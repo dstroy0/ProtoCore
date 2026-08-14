@@ -162,15 +162,11 @@ void test_format_append_chain_overflow_points()
 {
     char out[64];
     TEST_ASSERT_EQUAL_size_t(0, protocore_statsd_format(out, 2, "a", "1", STATSD_COUNTER, 1.0f, NULL));
-    TEST_ASSERT_EQUAL_size_t(0,
-                             protocore_statsd_format(out, 3, "a", "1", STATSD_COUNTER, 1.0f, NULL));
-    TEST_ASSERT_EQUAL_size_t(0, protocore_statsd_format(out, 5, "a", "1", STATSD_COUNTER, 1.0f,
-                                                 NULL));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_statsd_format(out, 3, "a", "1", STATSD_COUNTER, 1.0f, NULL));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_statsd_format(out, 5, "a", "1", STATSD_COUNTER, 1.0f, NULL));
     TEST_ASSERT_EQUAL_size_t(0, protocore_statsd_format(out, 6, "a", "1", STATSD_TIMING, 1.0f, NULL));
-    TEST_ASSERT_EQUAL_size_t(0, protocore_statsd_format(out, 8, "a", "1", STATSD_COUNTER, 0.5f,
-                                                 NULL));
-    TEST_ASSERT_EQUAL_size_t(0, protocore_statsd_format(out, 8, "a", "1", STATSD_COUNTER, 1.0f,
-                                                 "tg"));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_statsd_format(out, 8, "a", "1", STATSD_COUNTER, 0.5f, NULL));
+    TEST_ASSERT_EQUAL_size_t(0, protocore_statsd_format(out, 8, "a", "1", STATSD_COUNTER, 1.0f, "tg"));
 }
 
 void test_format_rate_zero_and_empty_tags()

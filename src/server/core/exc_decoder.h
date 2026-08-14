@@ -67,12 +67,12 @@ typedef struct
 /** @brief The stored crash image: the span a call names, and where its bytes land. */
 typedef struct
 {
-    ExcCoreDump *img;                    ///< where a presence check reports the image it found
-    size_t offset;                       ///< where in the image a read starts
-    void *buf;                           ///< where those bytes land
-    size_t len;                          ///< how many
+    ExcCoreDump *img;                      ///< where a presence check reports the image it found
+    size_t offset;                         ///< where in the image a read starts
+    void *buf;                             ///< where those bytes land
+    size_t len;                            ///< how many
     const protocore_mnt_backend *file_sys; ///< the filesystem a save writes through
-    const char *path;                    ///< the file it writes
+    const char *path;                      ///< the file it writes
 } ExcDumpArgs;
 
 /** @brief Where a report is written. */

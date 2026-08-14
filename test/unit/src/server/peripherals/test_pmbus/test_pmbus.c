@@ -192,10 +192,10 @@ void test_status_byte_bits(void)
     TEST_ASSERT_EQUAL_HEX8(0x80, PROTOCORE_PMBUS_ST_BUSY);
 
     // the eight are distinct single bits covering the byte
-    const uint8_t all = (uint8_t)(PROTOCORE_PMBUS_ST_NONE_ABOVE | PROTOCORE_PMBUS_ST_CML |
-                                  PROTOCORE_PMBUS_ST_TEMPERATURE | PROTOCORE_PMBUS_ST_VIN_UV |
-                                  PROTOCORE_PMBUS_ST_IOUT_OC | PROTOCORE_PMBUS_ST_VOUT_OV | PROTOCORE_PMBUS_ST_OFF |
-                                  PROTOCORE_PMBUS_ST_BUSY);
+    const uint8_t all =
+        (uint8_t)(PROTOCORE_PMBUS_ST_NONE_ABOVE | PROTOCORE_PMBUS_ST_CML | PROTOCORE_PMBUS_ST_TEMPERATURE |
+                  PROTOCORE_PMBUS_ST_VIN_UV | PROTOCORE_PMBUS_ST_IOUT_OC | PROTOCORE_PMBUS_ST_VOUT_OV |
+                  PROTOCORE_PMBUS_ST_OFF | PROTOCORE_PMBUS_ST_BUSY);
     TEST_ASSERT_EQUAL_HEX8(0xFF, all);
 }
 

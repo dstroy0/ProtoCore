@@ -13,9 +13,9 @@
  */
 
 #include "presentation.h"
-#include "mmgr/protostr.h"                         // str: the bounded-run walks
-#include "server/core/proto_handler.h" // ProtoHandler (the L5 dispatch seam this registers into)
+#include "mmgr/protostr.h"                                   // str: the bounded-run walks
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the slot a handler is dispatched on
+#include "server/core/proto_handler.h"                       // ProtoHandler (the L5 dispatch seam this registers into)
 #if PROTOCORE_ENABLE_WEBSOCKET
 #include "network_drivers/presentation/http/websocket/websocket.h" // Ws.find/Ws.free: a WS-upgraded slot must never be HTTP-parsed
 #endif

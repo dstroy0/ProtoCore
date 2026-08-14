@@ -186,7 +186,7 @@ void test_selector_ranges_are_inclusive(void)
 
     f.ip_protocol = 17; // UDP against a TCP-only selector
     TEST_ASSERT_FALSE(protocore_ipsec_selector_match(&s, &f));
-    s.ip_protocol = 0;  // "any" matches every protocol
+    s.ip_protocol = 0; // "any" matches every protocol
     TEST_ASSERT_TRUE(protocore_ipsec_selector_match(&s, &f));
 }
 

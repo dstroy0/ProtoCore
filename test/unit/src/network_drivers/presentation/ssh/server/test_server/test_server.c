@@ -15,8 +15,12 @@
 
 #include <unity.h>
 
-void setUp(void) {}
-void tearDown(void) {}
+void setUp(void)
+{
+}
+void tearDown(void)
+{
+}
 
 // ---------------------------------------------------------------------------
 // sec 4.1  the handler the session loop installs

@@ -357,12 +357,11 @@ void test_io_error_at_each_step(void)
     TEST_ASSERT_EQUAL_INT(SMTP_ERR_IO, DIALOGUE(c, msg, "220 x\r\n"));
     TEST_ASSERT_EQUAL_INT(SMTP_ERR_IO, DIALOGUE(c, msg, "220 x\r\n", "250 OK\r\n"));
     TEST_ASSERT_EQUAL_INT(SMTP_ERR_IO, DIALOGUE(cu, msg, "220 x\r\n", "250 OK\r\n"));
-    TEST_ASSERT_EQUAL_INT(SMTP_ERR_IO,
-                          DIALOGUE(cu, msg, "220 x\r\n", "250 OK\r\n", "334 a\r\n", "334 b\r\n"));
+    TEST_ASSERT_EQUAL_INT(SMTP_ERR_IO, DIALOGUE(cu, msg, "220 x\r\n", "250 OK\r\n", "334 a\r\n", "334 b\r\n"));
     TEST_ASSERT_EQUAL_INT(SMTP_ERR_IO, DIALOGUE(c, msg, "220 x\r\n", "250 OK\r\n", "250 Ok\r\n"));
     TEST_ASSERT_EQUAL_INT(SMTP_ERR_IO, DIALOGUE(c, msg, "220 x\r\n", "250 OK\r\n", "250 Ok\r\n", "250 Ok\r\n"));
-    TEST_ASSERT_EQUAL_INT(
-        SMTP_ERR_IO, DIALOGUE(c, msg, "220 x\r\n", "250 OK\r\n", "250 Ok\r\n", "250 Ok\r\n", "354 go\r\n"));
+    TEST_ASSERT_EQUAL_INT(SMTP_ERR_IO,
+                          DIALOGUE(c, msg, "220 x\r\n", "250 OK\r\n", "250 Ok\r\n", "250 Ok\r\n", "354 go\r\n"));
 }
 
 void test_protocol_error_at_each_step(void)
@@ -373,15 +372,11 @@ void test_protocol_error_at_each_step(void)
     cu.pass = "pass";
     SmtpMessage msg = base_msg();
     TEST_ASSERT_EQUAL_INT(SMTP_ERR_PROTOCOL, DIALOGUE(c, msg, "220 x\r\n", "500 no ehlo\r\n"));
-    TEST_ASSERT_EQUAL_INT(SMTP_ERR_AUTH,
-                          DIALOGUE(cu, msg, "220 x\r\n", "250 OK\r\n", "500 no auth\r\n"));
-    TEST_ASSERT_EQUAL_INT(SMTP_ERR_AUTH,
-                          DIALOGUE(cu, msg, "220 x\r\n", "250 OK\r\n", "334 a\r\n", "500 bad user\r\n"));
-    TEST_ASSERT_EQUAL_INT(SMTP_ERR_PROTOCOL,
-                          DIALOGUE(c, msg, "220 x\r\n", "250 OK\r\n", "550 denied\r\n"));
-    TEST_ASSERT_EQUAL_INT(
-        SMTP_ERR_PROTOCOL,
-        DIALOGUE(c, msg, "220 x\r\n", "250 OK\r\n", "250 Ok\r\n", "250 Ok\r\n", "354 go\r\n", "451 rejected\r\n"));
+    TEST_ASSERT_EQUAL_INT(SMTP_ERR_AUTH, DIALOGUE(cu, msg, "220 x\r\n", "250 OK\r\n", "500 no auth\r\n"));
+    TEST_ASSERT_EQUAL_INT(SMTP_ERR_AUTH, DIALOGUE(cu, msg, "220 x\r\n", "250 OK\r\n", "334 a\r\n", "500 bad user\r\n"));
+    TEST_ASSERT_EQUAL_INT(SMTP_ERR_PROTOCOL, DIALOGUE(c, msg, "220 x\r\n", "250 OK\r\n", "550 denied\r\n"));
+    TEST_ASSERT_EQUAL_INT(SMTP_ERR_PROTOCOL, DIALOGUE(c, msg, "220 x\r\n", "250 OK\r\n", "250 Ok\r\n", "250 Ok\r\n",
+                                                      "354 go\r\n", "451 rejected\r\n"));
 }
 
 void test_command_line_overflows(void)
@@ -400,8 +395,7 @@ void test_command_line_overflows(void)
 
     SmtpMessage mt = base_msg();
     mt.to = big;
-    TEST_ASSERT_EQUAL_INT(SMTP_ERR_OVERFLOW,
-                          DIALOGUE(base_cfg(), mt, "220 x\r\n", "250 OK\r\n", "250 Ok\r\n"));
+    TEST_ASSERT_EQUAL_INT(SMTP_ERR_OVERFLOW, DIALOGUE(base_cfg(), mt, "220 x\r\n", "250 OK\r\n", "250 Ok\r\n"));
 }
 
 void test_message_header_overflow(void)
@@ -461,16 +455,15 @@ void test_host_smtp_send_stub(void)
     TEST_ASSERT_EQUAL_INT(SMTP_ERR_CONNECT, smtp_send(&c, &msg));
 }
 
-static const char *const STARTTLS_SCRIPT[] = {
-    "220 mail.example.net ESMTP\r\n",
-    "250-mail.example.net\r\n250-STARTTLS\r\n250 OK\r\n",
-    "220 2.0.0 Ready to start TLS\r\n",
-    "250-mail.example.net\r\n250 OK\r\n",
-    "250 2.1.0 Ok\r\n",
-    "250 2.1.5 Ok\r\n",
-    "354 End data with <CR><LF>.<CR><LF>\r\n",
-    "250 2.0.0 Ok: queued\r\n",
-    "221 2.0.0 Bye\r\n"};
+static const char *const STARTTLS_SCRIPT[] = {"220 mail.example.net ESMTP\r\n",
+                                              "250-mail.example.net\r\n250-STARTTLS\r\n250 OK\r\n",
+                                              "220 2.0.0 Ready to start TLS\r\n",
+                                              "250-mail.example.net\r\n250 OK\r\n",
+                                              "250 2.1.0 Ok\r\n",
+                                              "250 2.1.5 Ok\r\n",
+                                              "354 End data with <CR><LF>.<CR><LF>\r\n",
+                                              "250 2.0.0 Ok: queued\r\n",
+                                              "221 2.0.0 Bye\r\n"};
 
 static void starttls_mock(Mock *m)
 {
@@ -500,8 +493,7 @@ void test_starttls_upgrades_and_reissues_ehlo(void)
 void test_starttls_not_advertised_fails_before_auth(void)
 {
 
-    static const char *const r[] = {"220 mail.example.net ESMTP\r\n",
-                                    "250-mail.example.net\r\n250 OK\r\n",
+    static const char *const r[] = {"220 mail.example.net ESMTP\r\n", "250-mail.example.net\r\n250 OK\r\n",
                                     "221 2.0.0 Bye\r\n"};
     Mock m;
     mock_init(&m);
@@ -608,14 +600,7 @@ void test_plain_ignores_an_advertised_starttls(void)
 void test_reply_parser_skips_malformed_lines(void)
 {
     static const char *const junk[] = {
-        "ab\r\n",
-        "+ab\r\n",
-        "Zab\r\n",
-        "2 b\r\n",
-        "2Zb\r\n",
-        "22 \r\n",
-        "22Z\r\n",
-        "22\rx\r\n",
+        "ab\r\n", "+ab\r\n", "Zab\r\n", "2 b\r\n", "2Zb\r\n", "22 \r\n", "22Z\r\n", "22\rx\r\n",
     };
     for (unsigned i = 0; i < sizeof junk / sizeof junk[0]; i++)
     {

@@ -69,7 +69,7 @@ int protocore_platform_reset_was_brownout(void)
 
 int16_t protocore_platform_die_temp_c(void)
 {
-#if defined(SOC_TEMP_SENSOR_SUPPORTED) || defined(CONFIG_IDF_TARGET_ESP32S2) || defined(CONFIG_IDF_TARGET_ESP32S3) || \
+#if defined(SOC_TEMP_SENSOR_SUPPORTED) || defined(CONFIG_IDF_TARGET_ESP32S2) || defined(CONFIG_IDF_TARGET_ESP32S3) ||  \
     defined(CONFIG_IDF_TARGET_ESP32C3) || defined(CONFIG_IDF_TARGET_ESP32C6) || defined(CONFIG_IDF_TARGET_ESP32P4)
     float t = temperatureRead();
     // The driver reports a sentinel far outside any real die temperature when the sensor is not up.

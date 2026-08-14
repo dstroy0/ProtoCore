@@ -61,8 +61,8 @@ void test_build_parse_round_trip(void)
     uint8_t out[16];
     OcitMsg m;
 
-    size_t n = protocore_ocit_build(OCIT_MSG_REPORT, 0xFFFF, 0x8001, OCIT_TYPE_UINT32, VAL, sizeof(VAL), out,
-                                    sizeof(out));
+    size_t n =
+        protocore_ocit_build(OCIT_MSG_REPORT, 0xFFFF, 0x8001, OCIT_TYPE_UINT32, VAL, sizeof(VAL), out, sizeof(out));
     TEST_ASSERT_EQUAL_UINT(10u, n);
     TEST_ASSERT_TRUE(protocore_ocit_parse(out, n, &m));
     TEST_ASSERT_EQUAL_HEX8(OCIT_MSG_REPORT, m.msg_type);
@@ -147,8 +147,8 @@ void test_octet_string_value_takes_the_remainder(void)
 
     for (size_t len = 0; len <= sizeof(val); len++)
     {
-        size_t n = protocore_ocit_build(OCIT_MSG_REPORT, 5, 6, OCIT_TYPE_OCTETS, len ? val : NULL, len, out,
-                                        sizeof(out));
+        size_t n =
+            protocore_ocit_build(OCIT_MSG_REPORT, 5, 6, OCIT_TYPE_OCTETS, len ? val : NULL, len, out, sizeof(out));
         TEST_ASSERT_EQUAL_UINT(6u + len, n);
         TEST_ASSERT_TRUE(protocore_ocit_parse(out, n, &m));
         TEST_ASSERT_EQUAL_UINT(len, m.value_len);

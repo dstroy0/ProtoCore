@@ -74,8 +74,8 @@ void test_amqp091_frame_constants(void)
 void test_amqp091_frame_layout(void)
 {
     static const uint8_t PAYLOAD[] = {0xAA, 0xBB, 0xCC};
-    static const uint8_t WANT[] = {AMQP_FRAME_BODY, 0x01, 0x02, 0x00, 0x00, 0x00, 0x03,
-                                   0xAA, 0xBB, 0xCC, AMQP_FRAME_END};
+    static const uint8_t WANT[] = {AMQP_FRAME_BODY, 0x01, 0x02, 0x00, 0x00, 0x00, 0x03, 0xAA, 0xBB, 0xCC,
+                                   AMQP_FRAME_END};
     uint8_t buf[32];
 
     Amqp.out.buf = buf;
@@ -215,8 +215,8 @@ void test_partial_frame_is_not_parsed(void)
 void test_amqp091_method_frame_layout(void)
 {
     static const uint8_t ARGS[] = {0x00, 0x09}; // version-major 0, version-minor 9
-    static const uint8_t WANT[] = {AMQP_FRAME_METHOD, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06,
-                                   0x00, 0x0A, 0x00, 0x0A, 0x00, 0x09, AMQP_FRAME_END};
+    static const uint8_t WANT[] = {
+        AMQP_FRAME_METHOD, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x00, 0x0A, 0x00, 0x0A, 0x00, 0x09, AMQP_FRAME_END};
     uint8_t buf[32];
 
     Amqp.out.buf = buf;
@@ -242,17 +242,17 @@ void test_method_round_trip_over_the_class_table(void)
         uint16_t method_id;
         uint16_t channel;
     } CASES[] = {
-        {10, 10, 0},  // connection.start
-        {10, 11, 0},  // connection.start-ok
-        {10, 40, 0},  // connection.open
-        {10, 50, 0},  // connection.close
-        {20, 10, 1},  // channel.open
-        {40, 10, 1},  // exchange.declare
-        {50, 10, 1},  // queue.declare
-        {50, 20, 1},  // queue.bind
-        {60, 40, 1},  // basic.publish
-        {60, 60, 1},  // basic.deliver
-        {90, 10, 1},  // tx.select
+        {10, 10, 0}, // connection.start
+        {10, 11, 0}, // connection.start-ok
+        {10, 40, 0}, // connection.open
+        {10, 50, 0}, // connection.close
+        {20, 10, 1}, // channel.open
+        {40, 10, 1}, // exchange.declare
+        {50, 10, 1}, // queue.declare
+        {50, 20, 1}, // queue.bind
+        {60, 40, 1}, // basic.publish
+        {60, 60, 1}, // basic.deliver
+        {90, 10, 1}, // tx.select
     };
     static const uint8_t ARGS[] = {0x11, 0x22, 0x33};
     for (size_t i = 0; i < sizeof(CASES) / sizeof(CASES[0]); i++)

@@ -33,7 +33,8 @@ size_t protocore_tpkt_build(uint8_t *buf, size_t cap, const uint8_t *payload, si
     return total;
 }
 
-proto_bool protocore_tpkt_parse(const uint8_t *buf, size_t len, const uint8_t **payload, size_t *payload_len, size_t *consumed)
+proto_bool protocore_tpkt_parse(const uint8_t *buf, size_t len, const uint8_t **payload, size_t *payload_len,
+                                size_t *consumed)
 {
     if (!buf || len < TPKT_HEADER_SIZE)
     {
@@ -84,8 +85,8 @@ size_t protocore_cotp_build_dt(uint8_t *buf, size_t cap, const uint8_t *data, si
     return total;
 }
 
-size_t protocore_cotp_build_cr(uint8_t *buf, size_t cap, uint16_t src_ref, uint8_t tpdu_size_code, const uint8_t *extra_params,
-                        size_t extra_len)
+size_t protocore_cotp_build_cr(uint8_t *buf, size_t cap, uint16_t src_ref, uint8_t tpdu_size_code,
+                               const uint8_t *extra_params, size_t extra_len)
 {
     if (!buf || (extra_len && !extra_params))
     {
@@ -119,7 +120,7 @@ size_t protocore_cotp_build_cr(uint8_t *buf, size_t cap, uint16_t src_ref, uint8
 }
 
 size_t protocore_cotp_build_cc(uint8_t *buf, size_t cap, uint16_t dst_ref, uint16_t src_ref, uint8_t tpdu_size_code,
-                        const uint8_t *extra_params, size_t extra_len)
+                               const uint8_t *extra_params, size_t extra_len)
 {
     if (!buf || (extra_len && !extra_params))
     {

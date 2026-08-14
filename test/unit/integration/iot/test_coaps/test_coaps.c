@@ -206,7 +206,8 @@ static void handshake(DtlsConn *conn, DtlsRecordKeys *cli_app_write, DtlsRecordK
     size_t ch_fl = DtlsHandshake.frag_build(ch[0], 0, (uint32_t)(ch_len - 4), 0, ch + 4, (uint32_t)(ch_len - 4),
                                             ch_frag, sizeof(ch_frag));
     uint8_t ch_rec[320];
-    size_t ch_rl = DtlsRecord.plaintext_build(PROTOCORE_DTLS_CT_HANDSHAKE, 0, 0, ch_frag, ch_fl, ch_rec, sizeof(ch_rec));
+    size_t ch_rl =
+        DtlsRecord.plaintext_build(PROTOCORE_DTLS_CT_HANDSHAKE, 0, 0, ch_frag, ch_fl, ch_rec, sizeof(ch_rec));
 
     uint8_t flight[2048];
     int fl = DtlsServer.process(conn, ch_rec, ch_rl, flight, sizeof(flight));
@@ -265,8 +266,8 @@ static void handshake(DtlsConn *conn, DtlsRecordKeys *cli_app_write, DtlsRecordK
     size_t cff = DtlsHandshake.frag_build(cfin[0], 1, (uint32_t)(cfin_len - 4), 0, cfin + 4, (uint32_t)(cfin_len - 4),
                                           cfin_frag, sizeof(cfin_frag));
     uint8_t cfin_rec[128];
-    size_t cfr =
-        DtlsRecord.protect(&cli_write, 0, PROTOCORE_DTLS_CT_HANDSHAKE, cfin_frag, cff, cfin_rec, sizeof(cfin_rec), NULL, 0);
+    size_t cfr = DtlsRecord.protect(&cli_write, 0, PROTOCORE_DTLS_CT_HANDSHAKE, cfin_frag, cff, cfin_rec,
+                                    sizeof(cfin_rec), NULL, 0);
     uint8_t out2[64];
     TEST_ASSERT_TRUE(DtlsServer.process(conn, cfin_rec, cfr, out2, sizeof(out2)) > 0);
     TEST_ASSERT_TRUE(DtlsServer.established(conn));
@@ -282,8 +283,8 @@ static void test_coap_over_dtls(void)
 
     const uint8_t coap_get[] = {0x40, 0x01, 0x12, 0x34, 0xB4, 't', 'e', 'm', 'p'};
     uint8_t app_rec[128];
-    size_t ar = DtlsRecord.protect(&cli_app_write, 0, PROTOCORE_DTLS_CT_APPLICATION_DATA, coap_get, sizeof(coap_get), app_rec,
-                                   sizeof(app_rec), NULL, 0);
+    size_t ar = DtlsRecord.protect(&cli_app_write, 0, PROTOCORE_DTLS_CT_APPLICATION_DATA, coap_get, sizeof(coap_get),
+                                   app_rec, sizeof(app_rec), NULL, 0);
     TEST_ASSERT_TRUE(ar > 0);
 
     uint8_t out[256];
@@ -312,8 +313,8 @@ static void test_coap_over_dtls_replay_dropped(void)
 
     const uint8_t coap_get[] = {0x40, 0x01, 0x12, 0x34, 0xB4, 't', 'e', 'm', 'p'};
     uint8_t app_rec[128];
-    size_t ar = DtlsRecord.protect(&cli_app_write, 0, PROTOCORE_DTLS_CT_APPLICATION_DATA, coap_get, sizeof(coap_get), app_rec,
-                                   sizeof(app_rec), NULL, 0);
+    size_t ar = DtlsRecord.protect(&cli_app_write, 0, PROTOCORE_DTLS_CT_APPLICATION_DATA, coap_get, sizeof(coap_get),
+                                   app_rec, sizeof(app_rec), NULL, 0);
     uint8_t out[256];
     TEST_ASSERT_TRUE(protocore_coaps_process(&g_dtls, app_rec, ar, out, sizeof(out)) > 0);
     TEST_ASSERT_EQUAL_INT(0, protocore_coaps_process(&g_dtls, app_rec, ar, out, sizeof(out)));
@@ -326,8 +327,8 @@ static void test_coaps_no_coap_response(void)
 
     const uint8_t coap_ack[] = {0x60, 0x00, 0x12, 0x34};
     uint8_t app_rec[128];
-    size_t ar = DtlsRecord.protect(&cli_app_write, 0, PROTOCORE_DTLS_CT_APPLICATION_DATA, coap_ack, sizeof(coap_ack), app_rec,
-                                   sizeof(app_rec), NULL, 0);
+    size_t ar = DtlsRecord.protect(&cli_app_write, 0, PROTOCORE_DTLS_CT_APPLICATION_DATA, coap_ack, sizeof(coap_ack),
+                                   app_rec, sizeof(app_rec), NULL, 0);
     TEST_ASSERT_TRUE(ar > 0);
 
     uint8_t out[256];
@@ -382,7 +383,8 @@ static void test_coaps_forwards_handshake(void)
     size_t ch_fl = DtlsHandshake.frag_build(ch[0], 0, (uint32_t)(ch_len - 4), 0, ch + 4, (uint32_t)(ch_len - 4),
                                             ch_frag, sizeof(ch_frag));
     uint8_t ch_rec[320];
-    size_t ch_rl = DtlsRecord.plaintext_build(PROTOCORE_DTLS_CT_HANDSHAKE, 0, 0, ch_frag, ch_fl, ch_rec, sizeof(ch_rec));
+    size_t ch_rl =
+        DtlsRecord.plaintext_build(PROTOCORE_DTLS_CT_HANDSHAKE, 0, 0, ch_frag, ch_fl, ch_rec, sizeof(ch_rec));
 
     TEST_ASSERT_FALSE(DtlsServer.established(&g_dtls));
     uint8_t flight[2048];

@@ -17,8 +17,8 @@
 // the wire to a line controller, so a state whose number is off by one is not a local naming
 // mistake, it is a machine reporting a different state than the one it is in.
 
-#include "services/machine_tool/packml/packml.h"
 #include "server/clock/clock.h"
+#include "services/machine_tool/packml/packml.h"
 #include <string.h>
 
 #include <unity.h>
@@ -165,9 +165,8 @@ void test_stop_is_legal_everywhere_but_the_stop_and_abort_branches(void)
     for (int v = PACK_ML_STATE_CLEARING; v <= PACK_ML_STATE_COMPLETE; v++)
     {
         PackMlState s = (PackMlState)v;
-        proto_bool exempt = (s == PACK_ML_STATE_ABORTING || s == PACK_ML_STATE_ABORTED ||
-                             s == PACK_ML_STATE_STOPPING || s == PACK_ML_STATE_STOPPED ||
-                             s == PACK_ML_STATE_CLEARING);
+        proto_bool exempt = (s == PACK_ML_STATE_ABORTING || s == PACK_ML_STATE_ABORTED || s == PACK_ML_STATE_STOPPING ||
+                             s == PACK_ML_STATE_STOPPED || s == PACK_ML_STATE_CLEARING);
         PackMlState want = exempt ? s : PACK_ML_STATE_STOPPING;
         TEST_ASSERT_EQUAL_INT_MESSAGE(want, protocore_packml_command(s, PACK_ML_COMMAND_STOP),
                                       protocore_packml_state_name(s));
@@ -184,9 +183,9 @@ void test_clear_and_reset_are_state_specific(void)
         proto_bool want_clear = (s == PACK_ML_STATE_ABORTED);
         proto_bool want_reset = (s == PACK_ML_STATE_STOPPED || s == PACK_ML_STATE_COMPLETE);
         TEST_ASSERT_EQUAL_INT_MESSAGE(want_clear, protocore_packml_command_valid(s, PACK_ML_COMMAND_CLEAR),
-                                  protocore_packml_state_name(s));
+                                      protocore_packml_state_name(s));
         TEST_ASSERT_EQUAL_INT_MESSAGE(want_reset, protocore_packml_command_valid(s, PACK_ML_COMMAND_RESET),
-                                  protocore_packml_state_name(s));
+                                      protocore_packml_state_name(s));
     }
 }
 
@@ -202,7 +201,7 @@ void test_illegal_commands_leave_the_state_unchanged(void)
             PackMlState got = protocore_packml_command(s, cmd);
             proto_bool changed = (got != s);
             TEST_ASSERT_EQUAL_INT_MESSAGE(changed, protocore_packml_command_valid(s, cmd),
-                                      protocore_packml_command_name(cmd));
+                                          protocore_packml_command_name(cmd));
         }
     }
     // the null command never moves anything

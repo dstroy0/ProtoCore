@@ -33,7 +33,8 @@ void dbench_run(void)
         DBENCH_OP("protocore_spb_build_topic", 200000,
                   sink += protocore_spb_build_topic(topic, sizeof(topic), "Group1", "NDATA", "edge1", "dev1"));
         static uint8_t buf[256];
-        DBENCH_OP("protocore_spb_build_metric", 200000, sink += protocore_spb_build_metric(buf, sizeof(buf), &metrics[0]));
+        DBENCH_OP("protocore_spb_build_metric", 200000,
+                  sink += protocore_spb_build_metric(buf, sizeof(buf), &metrics[0]));
         DBENCH_OP("protocore_spb_build_payload (3 metrics)", 200000,
                   sink += protocore_spb_build_payload(buf, sizeof(buf), 1720700000000ull, 1, metrics, 3));
         (void)sink;

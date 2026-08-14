@@ -49,18 +49,18 @@ void test_dtls_hello_retry_request_bytes(void)
 {
     static const uint8_t COOKIE[4] = {0xAA, 0xBB, 0xCC, 0xDD};
     static const uint8_t WANT[66] = {
-        0x02, 0x00, 0x00, 0x3E,                         // server_hello, 62 body octets
-        0xFE, 0xFD,                                     // legacy_version = DTLS 1.2
-        0xCF, 0x21, 0xAD, 0x74, 0xE5, 0x9A, 0x61, 0x11, // the HelloRetryRequest random
-        0xBE, 0x1D, 0x8C, 0x02, 0x1E, 0x65, 0xB8, 0x91, //
-        0xC2, 0xA2, 0x11, 0x16, 0x7A, 0xBB, 0x8C, 0x5E, //
-        0x07, 0x9E, 0x09, 0xE2, 0xC8, 0xA8, 0x33, 0x9C, //
-        0x00,                                           // legacy_session_id_echo: empty
-        0x13, 0x01,                                     // cipher_suite TLS_AES_128_GCM_SHA256
-        0x00,                                           // legacy_compression_method
-        0x00, 0x16,                                     // extensions: 22 octets
-        0x00, 0x2B, 0x00, 0x02, 0xFE, 0xFC,             // supported_versions -> DTLS 1.3
-        0x00, 0x33, 0x00, 0x02, 0x00, 0x1D,             // key_share -> selected_group x25519
+        0x02, 0x00, 0x00, 0x3E,                                     // server_hello, 62 body octets
+        0xFE, 0xFD,                                                 // legacy_version = DTLS 1.2
+        0xCF, 0x21, 0xAD, 0x74, 0xE5, 0x9A, 0x61, 0x11,             // the HelloRetryRequest random
+        0xBE, 0x1D, 0x8C, 0x02, 0x1E, 0x65, 0xB8, 0x91,             //
+        0xC2, 0xA2, 0x11, 0x16, 0x7A, 0xBB, 0x8C, 0x5E,             //
+        0x07, 0x9E, 0x09, 0xE2, 0xC8, 0xA8, 0x33, 0x9C,             //
+        0x00,                                                       // legacy_session_id_echo: empty
+        0x13, 0x01,                                                 // cipher_suite TLS_AES_128_GCM_SHA256
+        0x00,                                                       // legacy_compression_method
+        0x00, 0x16,                                                 // extensions: 22 octets
+        0x00, 0x2B, 0x00, 0x02, 0xFE, 0xFC,                         // supported_versions -> DTLS 1.3
+        0x00, 0x33, 0x00, 0x02, 0x00, 0x1D,                         // key_share -> selected_group x25519
         0x00, 0x2C, 0x00, 0x06, 0x00, 0x04, 0xAA, 0xBB, 0xCC, 0xDD, // cookie
     };
     size_t n = protocore_tls13_build_hello_retry_request(g_out, sizeof(g_out), NULL, 0, TLS_GROUP_X25519, COOKIE,
@@ -260,7 +260,7 @@ void test_builders_refuse_a_short_destination(void)
     uint8_t ch1[32];
     memset(ch1, 0, sizeof(ch1));
     TEST_ASSERT_EQUAL_UINT(0u, protocore_tls13_build_hello_retry_request(g_out, 65, NULL, 0, TLS_GROUP_X25519, COOKIE,
-                                                                        sizeof(COOKIE), PROTO_TRUE));
+                                                                         sizeof(COOKIE), PROTO_TRUE));
     TEST_ASSERT_EQUAL_UINT(0u, protocore_tls13_build_encrypted_extensions_empty(g_out, 5, PROTO_FALSE));
     TEST_ASSERT_EQUAL_UINT(0u, protocore_tls13_build_message_hash(g_out, 35, ch1));
     TEST_ASSERT_EQUAL_UINT(0u, protocore_tls13_build_certificate_rpk(g_out, 56, ch1));

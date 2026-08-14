@@ -45,7 +45,9 @@ void setUp(void)
     ssh_deflate_init(&s_def, s_work, s_head, s_prev, s_ll_code, s_ll_len, s_d_code, s_d_len);
     ssh_inflate_init(&s_inf, s_window);
 }
-void tearDown(void) {}
+void tearDown(void)
+{
+}
 
 static void test_sec6_2_one_packet_round_trips(void)
 {
@@ -190,8 +192,12 @@ int main(void)
 
 #else // PROTOCORE_ENABLE_SSH_ZLIB
 
-void setUp(void) {}
-void tearDown(void) {}
+void setUp(void)
+{
+}
+void tearDown(void)
+{
+}
 
 static void test_this_configuration_does_not_build_it(void)
 {

@@ -123,9 +123,9 @@ void test_rfc9204_indexed_field_line(void)
         const char *value;
         uint8_t first;
     } static const CASES[] = {
-        {":authority", "", 0xC0}, // index 0
-        {":path", "/", 0xC1},     // index 1
-        {":method", "GET", 0xD1}, // index 17
+        {":authority", "", 0xC0},   // index 0
+        {":path", "/", 0xC1},       // index 1
+        {":method", "GET", 0xD1},   // index 17
         {":scheme", "https", 0xD7}, // index 23
         {":status", "200", 0xD9},   // index 25
     };

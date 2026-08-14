@@ -43,13 +43,13 @@
 #include "network_drivers/presentation/http/http.h"
 #include "network_drivers/presentation/http/route/http_route.h"
 #include "network_drivers/presentation/presentation.h" // http_protocore_set_poll (install the instance-bound HTTP poll)
-#include "server/core/proto_handler.h"
-#include "server/core/worker.h"
 #include "network_drivers/tls/tls.h"
 #include "network_drivers/transport/tcp/common.h"            // TcpConn, conn_pool: the slots this drives
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool.init: the pool this brings up
 #include "network_drivers/transport/tcp/tcp.h"
-#include "server/clock/clock.h"            // protocore_millis(): the QUIC poll stamp and the request timeout
+#include "server/clock/clock.h" // protocore_millis(): the QUIC poll stamp and the request timeout
+#include "server/core/proto_handler.h"
+#include "server/core/worker.h"
 #include "shared/hex/hex.h"
 #include "shared/mime/mime.h"
 #if PROTOCORE_ENABLE_HTTP2

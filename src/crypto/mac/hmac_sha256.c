@@ -34,10 +34,10 @@ PROTOCORE_CRYPTO_HOT
 // two 64-byte key blocks double as key-padding scratch for build_key_block.
 typedef struct
 {
-    uint8_t opad[64];                           ///< one-shot opad block (persists inner->outer); else key-pad scratch
-    uint8_t ipad[64];                           ///< ipad block; also key-pad scratch once its ipad is consumed
+    uint8_t opad[64]; ///< one-shot opad block (persists inner->outer); else key-pad scratch
+    uint8_t ipad[64]; ///< ipad block; also key-pad scratch once its ipad is consumed
     uint8_t inner_digest[PROTOCORE_SHA256_DIGEST_LEN]; ///< H((K XOR ipad) || m)
-    protocore_sha256_ctx hash;                         ///< transient hash: one-shot inner then outer; streaming final outer
+    protocore_sha256_ctx hash; ///< transient hash: one-shot inner then outer; streaming final outer
 } HmacWork;
 
 // The caller's working bytes, split: the inner hash's own, the outer key block, the transient set, and
@@ -58,7 +58,8 @@ static void build_key_block(const uint8_t *key, size_t key_len, uint8_t block[64
     mem.set(scratch, 0, 64);
     if (key_len > 64)
     {
-        protocore_sha256(hash_work, key, key_len, scratch); // keys longer than the block are replaced by their SHA-256 hash
+        protocore_sha256(hash_work, key, key_len,
+                         scratch); // keys longer than the block are replaced by their SHA-256 hash
     }
     else
     {
@@ -103,7 +104,7 @@ void protocore_hmac_sha256_final(protocore_hmac_sha256_ctx *ctx, uint8_t mac[PRO
 }
 
 void protocore_hmac_sha256(uint8_t *work, const uint8_t *key, size_t key_len, const uint8_t *data, size_t len,
-                    uint8_t mac[PROTOCORE_HMAC_SHA256_LEN])
+                           uint8_t mac[PROTOCORE_HMAC_SHA256_LEN])
 {
     // Self-contained (does not build a caller-facing context): ipad block first, fold it into the inner hash,
     // then reuse its slot as the opad key-padding scratch - so no key block ever lands on the stack.

@@ -82,7 +82,7 @@ typedef _Bool proto_bool;
  * src/ is C.
  */
 #ifdef __cplusplus
-#define PROTOCORE_BEGIN_DECLS                                                                                              \
+#define PROTOCORE_BEGIN_DECLS                                                                                          \
     extern "C"                                                                                                         \
     {
 #define PROTOCORE_END_DECLS }

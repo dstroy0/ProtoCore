@@ -120,14 +120,14 @@ typedef struct
     proto_bool has_alias;
     uint64_t alias; ///< alias, field 2
     proto_bool has_timestamp;
-    uint64_t timestamp;    ///< timestamp, field 3, milliseconds since epoch in UTC
-    uint32_t datatype;     ///< datatype, field 4, an SPB_DT_* code
-    SpbMetricKind kind;    ///< which value oneof member below is written
-    uint32_t int_value;    ///< int_value, field 10
-    uint64_t long_value;   ///< long_value, field 11
-    float float_value;     ///< float_value, field 12
-    double double_value;   ///< double_value, field 13
-    proto_bool bool_value; ///< boolean_value, field 14
+    uint64_t timestamp;       ///< timestamp, field 3, milliseconds since epoch in UTC
+    uint32_t datatype;        ///< datatype, field 4, an SPB_DT_* code
+    SpbMetricKind kind;       ///< which value oneof member below is written
+    uint32_t int_value;       ///< int_value, field 10
+    uint64_t long_value;      ///< long_value, field 11
+    float float_value;        ///< float_value, field 12
+    double double_value;      ///< double_value, field 13
+    proto_bool bool_value;    ///< boolean_value, field 14
     const char *string_value; ///< string_value, field 15
 } SpbMetric;
 
@@ -239,12 +239,12 @@ struct SparkplugInternal;
  */
 typedef struct
 {
-    SpbTopicArgs topic;         ///< what a topic says
-    SpbTopicOutArgs topic_out;  ///< where that topic lands
-    SpbOutArgs out;             ///< where encoded octets land
-    SpbPayloadArgs payload;     ///< what a Payload header says
-    SpbMetricsArgs metrics;     ///< what a build serializes
-    SpbSourceArgs source;       ///< what a decode reads
+    SpbTopicArgs topic;        ///< what a topic says
+    SpbTopicOutArgs topic_out; ///< where that topic lands
+    SpbOutArgs out;            ///< where encoded octets land
+    SpbPayloadArgs payload;    ///< what a Payload header says
+    SpbMetricsArgs metrics;    ///< what a build serializes
+    SpbSourceArgs source;      ///< what a decode reads
 
     proto_bool ok;
     size_t n;

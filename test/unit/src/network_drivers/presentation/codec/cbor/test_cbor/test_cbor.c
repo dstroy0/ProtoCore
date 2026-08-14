@@ -330,8 +330,8 @@ void test_put_label_writes_the_cbor_label_number(void)
 // back at the same width they were written.
 void test_head_forms_round_trip(void)
 {
-    static const uint64_t VALUES[] = {0, 23, 24, 255, 256, 65535, 65536, 0xFFFFFFFFULL, 0x100000000ULL,
-                                      18446744073709551615ULL};
+    static const uint64_t VALUES[] = {
+        0, 23, 24, 255, 256, 65535, 65536, 0xFFFFFFFFULL, 0x100000000ULL, 18446744073709551615ULL};
     for (size_t i = 0; i < sizeof(VALUES) / sizeof(VALUES[0]); i++)
     {
         span.reset(&g_w);

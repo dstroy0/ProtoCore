@@ -101,7 +101,7 @@ const IpsecPolicy *protocore_ipsec_spd_lookup(const IpsecSpd *spd, const IpsecFl
 }
 
 proto_bool protocore_ipsec_selector_from_ts(IpsecSelector *out, const IkeTrafficSelector *ts_src,
-                                     const IkeTrafficSelector *ts_dst)
+                                            const IkeTrafficSelector *ts_dst)
 {
     if (!out || !ts_src || !ts_dst)
     {
@@ -156,8 +156,8 @@ void protocore_ipsec_sad_init(IpsecSad *sad)
 }
 
 IpsecSaEntry *protocore_ipsec_sad_add(IpsecSad *sad, uint32_t spi, const uint8_t *dst, uint8_t addr_len,
-                               const uint8_t key[PROTOCORE_ESP_KEY_LEN], const uint8_t salt[PROTOCORE_ESP_SALT_LEN],
-                               proto_bool inbound)
+                                      const uint8_t key[PROTOCORE_ESP_KEY_LEN],
+                                      const uint8_t salt[PROTOCORE_ESP_SALT_LEN], proto_bool inbound)
 {
     if (!sad || !dst || !key || !salt || (addr_len != 4 && addr_len != 16))
     {

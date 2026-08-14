@@ -25,9 +25,9 @@
 // really does own: how much window it reopens and when, whether a close drains before it releases,
 // and which signal the layer above gets for a normal close versus an abort.
 
-#include "network_drivers/transport/tcp/tcp.h"
 #include "network_drivers/transport/tcp/protocol/protocol.h"
 #include "network_drivers/transport/tcp/server/server.h"
+#include "network_drivers/transport/tcp/tcp.h"
 #include <string.h>
 
 #include <unity.h>
@@ -965,7 +965,6 @@ void test_a_refused_segment_still_wakes_the_reader(void)
     TEST_ASSERT_EQUAL(EVT_DATA, evts[0].type);
     TEST_ASSERT_EQUAL_UINT(0, evts[0].data_len); // a nudge, not a delivery
 }
-
 
 // The runner is generated: Unity's auto/generate_test_runner.rb scans this file for
 // void test_*(void) and emits main() with every case registered, stamped with the line each test

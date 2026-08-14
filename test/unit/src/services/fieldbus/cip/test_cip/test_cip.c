@@ -111,8 +111,8 @@ void test_epath_is_always_word_aligned(void)
     {
         for (uint32_t instance = 0x00FEu; instance <= 0x0101u; instance++)
         {
-            size_t n = protocore_cip_build_epath(epath, sizeof(epath), (uint16_t)class_id, (uint16_t)instance, 5,
-                                                 PROTO_TRUE);
+            size_t n =
+                protocore_cip_build_epath(epath, sizeof(epath), (uint16_t)class_id, (uint16_t)instance, 5, PROTO_TRUE);
             TEST_ASSERT_TRUE(n != 0u);
             TEST_ASSERT_EQUAL_size_t(0u, n % 2u);
 
@@ -208,12 +208,16 @@ void test_request_refuses_a_misaligned_or_oversized_path(void)
     static const uint8_t EPATH[6] = {0x20, 0x01, 0x24, 0x01, 0x30, 0x01};
     uint8_t buf[32];
 
-    TEST_ASSERT_EQUAL_size_t(8u, protocore_cip_build_request(buf, sizeof(buf), CIP_SC_GET_ATTR_SINGLE, EPATH, 6, NULL, 0));
-    TEST_ASSERT_EQUAL_size_t(0u, protocore_cip_build_request(buf, sizeof(buf), CIP_SC_GET_ATTR_SINGLE, EPATH, 5, NULL, 0));
-    TEST_ASSERT_EQUAL_size_t(0u, protocore_cip_build_request(buf, sizeof(buf), CIP_SC_GET_ATTR_SINGLE, NULL, 6, NULL, 0));
+    TEST_ASSERT_EQUAL_size_t(8u,
+                             protocore_cip_build_request(buf, sizeof(buf), CIP_SC_GET_ATTR_SINGLE, EPATH, 6, NULL, 0));
+    TEST_ASSERT_EQUAL_size_t(0u,
+                             protocore_cip_build_request(buf, sizeof(buf), CIP_SC_GET_ATTR_SINGLE, EPATH, 5, NULL, 0));
+    TEST_ASSERT_EQUAL_size_t(0u,
+                             protocore_cip_build_request(buf, sizeof(buf), CIP_SC_GET_ATTR_SINGLE, NULL, 6, NULL, 0));
     TEST_ASSERT_EQUAL_size_t(0u,
                              protocore_cip_build_request(NULL, sizeof(buf), CIP_SC_GET_ATTR_SINGLE, EPATH, 6, NULL, 0));
-    TEST_ASSERT_EQUAL_size_t(0u, protocore_cip_build_request(buf, sizeof(buf), CIP_SC_GET_ATTR_SINGLE, EPATH, 6, NULL, 4));
+    TEST_ASSERT_EQUAL_size_t(0u,
+                             protocore_cip_build_request(buf, sizeof(buf), CIP_SC_GET_ATTR_SINGLE, EPATH, 6, NULL, 4));
     // 7 octets of capacity cannot hold the 8-octet request.
     TEST_ASSERT_EQUAL_size_t(0u, protocore_cip_build_request(buf, 7, CIP_SC_GET_ATTR_SINGLE, EPATH, 6, NULL, 0));
 }
@@ -222,9 +226,9 @@ void test_request_refuses_a_misaligned_or_oversized_path(void)
 void test_epath_refuses_a_short_buffer(void)
 {
     uint8_t epath[16];
-    TEST_ASSERT_EQUAL_size_t(0u, protocore_cip_build_epath(epath, 1, 1, 1, 1, PROTO_FALSE));  // class needs 2
-    TEST_ASSERT_EQUAL_size_t(0u, protocore_cip_build_epath(epath, 3, 1, 1, 1, PROTO_TRUE));   // instance needs 2 more
-    TEST_ASSERT_EQUAL_size_t(0u, protocore_cip_build_epath(epath, 5, 1, 1, 1, PROTO_TRUE));   // attribute needs 2 more
+    TEST_ASSERT_EQUAL_size_t(0u, protocore_cip_build_epath(epath, 1, 1, 1, 1, PROTO_FALSE)); // class needs 2
+    TEST_ASSERT_EQUAL_size_t(0u, protocore_cip_build_epath(epath, 3, 1, 1, 1, PROTO_TRUE));  // instance needs 2 more
+    TEST_ASSERT_EQUAL_size_t(0u, protocore_cip_build_epath(epath, 5, 1, 1, 1, PROTO_TRUE));  // attribute needs 2 more
     TEST_ASSERT_EQUAL_size_t(6u, protocore_cip_build_epath(epath, 6, 1, 1, 1, PROTO_TRUE));
     TEST_ASSERT_EQUAL_size_t(0u, protocore_cip_build_epath(epath, 3, 0x0100u, 1, 1, PROTO_FALSE)); // wide needs 4
     TEST_ASSERT_EQUAL_size_t(0u, protocore_cip_build_epath(NULL, sizeof(epath), 1, 1, 1, PROTO_TRUE));

@@ -13,8 +13,8 @@
  */
 
 #include "network_drivers/application/file_serving/file_serving.h"
-#include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the slot a response is written on
 #include "network_drivers/presentation/http/http.h"
+#include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the slot a response is written on
 
 #include "mmgr/membuild.h"                          // protocore_sb frame builder
 #include "mmgr/protostr.h"                          // str.find / str.has: the month table, traversal and gzip markers
@@ -22,7 +22,7 @@
 #include "network_drivers/presentation/http/route/http_route.h"
 #include "network_drivers/transport/tcp/tcp.h" // conn_pool, protocore_conn_*, TcpConn/ConnState
 #include "protocore.h"
-#include "server/storage/filesystem.h"   // protocore_fs_* - the accessor owns the root, the join, and the .. guard
+#include "server/storage/filesystem.h"      // protocore_fs_* - the accessor owns the root, the join, and the .. guard
 #include "shared/mime/mime.h"               // mime_type, PROTOCORE_MIME_*
 #include "shared/time_compat/time_compat.h" // protocore_gmtime_r (portable reentrant UTC)
 #include <stdio.h>                          // snprintf, sscanf

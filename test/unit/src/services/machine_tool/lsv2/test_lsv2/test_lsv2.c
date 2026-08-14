@@ -75,8 +75,7 @@ void test_login_payload_is_a_nul_terminated_group(void)
 {
     uint8_t buf[32];
     size_t n = protocore_lsv2_build_login(buf, sizeof(buf), PROTOCORE_LSV2_LOGIN_INSPECT, NULL);
-    static const uint8_t WANT[] = {0x00, 0x00, 0x00, 0x08, 'A', '_', 'L', 'G',
-                                   'I',  'N',  'S',  'P',  'E', 'C', 'T', 0x00};
+    static const uint8_t WANT[] = {0x00, 0x00, 0x00, 0x08, 'A', '_', 'L', 'G', 'I', 'N', 'S', 'P', 'E', 'C', 'T', 0x00};
     TEST_ASSERT_EQUAL_size_t(sizeof(WANT), n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, buf, n);
 }
@@ -87,7 +86,7 @@ void test_login_appends_the_password_as_a_second_string(void)
     uint8_t buf[64];
     size_t n = protocore_lsv2_build_login(buf, sizeof(buf), PROTOCORE_LSV2_LOGIN_PLCDEBUG, "807667");
     // payload = 9 ("PLCDEBUG" + NUL) + 7 ("807667" + NUL) = 16 = 0x10
-    static const uint8_t WANT[] = {0x00, 0x00, 0x00, 0x10, 'A', '_',  'L', 'G', 'P', 'L', 'C', 'D',
+    static const uint8_t WANT[] = {0x00, 0x00, 0x00, 0x10, 'A',  '_', 'L', 'G', 'P', 'L', 'C', 'D',
                                    'E',  'B',  'U',  'G',  0x00, '8', '0', '7', '6', '6', '7', 0x00};
     TEST_ASSERT_EQUAL_size_t(sizeof(WANT), n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, buf, n);
@@ -115,8 +114,8 @@ void test_filename_command_frames_the_name(void)
 {
     uint8_t buf[64];
     size_t n = protocore_lsv2_build_filename(buf, sizeof(buf), PROTOCORE_LSV2_CMD_FILE_LOAD, "TNC:\\test.H");
-    static const uint8_t WANT[] = {0x00, 0x00, 0x00, 0x0C, 'R', '_',  'F', 'L', 'T', 'N',
-                                   'C',  ':',  '\\', 't',  'e', 's',  't', '.', 'H', 0x00};
+    static const uint8_t WANT[] = {0x00, 0x00, 0x00, 0x0C, 'R', '_', 'F', 'L', 'T', 'N',
+                                   'C',  ':',  '\\', 't',  'e', 's', 't', '.', 'H', 0x00};
     TEST_ASSERT_EQUAL_size_t(sizeof(WANT), n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, buf, n);
 }
@@ -238,7 +237,8 @@ void test_builders_refuse_a_short_buffer(void)
     static const uint8_t PAYLOAD[] = {1, 2, 3, 4};
     memset(buf, 0x5A, sizeof(buf));
 
-    TEST_ASSERT_EQUAL_size_t(0u, protocore_lsv2_build(buf, PROTOCORE_LSV2_HEADER_LEN - 1, PROTOCORE_LSV2_RSP_OK, NULL, 0));
+    TEST_ASSERT_EQUAL_size_t(0u,
+                             protocore_lsv2_build(buf, PROTOCORE_LSV2_HEADER_LEN - 1, PROTOCORE_LSV2_RSP_OK, NULL, 0));
     TEST_ASSERT_EQUAL_size_t(0u, protocore_lsv2_build(buf, PROTOCORE_LSV2_HEADER_LEN + 3, PROTOCORE_LSV2_CMD_STATUS,
                                                       PAYLOAD, sizeof(PAYLOAD)));
     TEST_ASSERT_EQUAL_size_t(0u, protocore_lsv2_build(NULL, sizeof(buf), PROTOCORE_LSV2_RSP_OK, NULL, 0));

@@ -151,17 +151,16 @@ void test_values_wider_than_eleven_bits_are_masked(void)
 void test_published_command_and_throttle_domains(void)
 {
     static const uint16_t CMD[] = {
-        DSHOT_CMD_MOTOR_STOP,        DSHOT_CMD_BEACON1,       DSHOT_CMD_BEACON5,
-        DSHOT_CMD_ESC_INFO,          DSHOT_CMD_SPIN_DIRECTION_1, DSHOT_CMD_SPIN_DIRECTION_2,
-        DSHOT_CMD_3D_MODE_OFF,       DSHOT_CMD_3D_MODE_ON,    DSHOT_CMD_SETTINGS_REQUEST,
-        DSHOT_CMD_SAVE_SETTINGS,
+        DSHOT_CMD_MOTOR_STOP,       DSHOT_CMD_BEACON1,          DSHOT_CMD_BEACON5,     DSHOT_CMD_ESC_INFO,
+        DSHOT_CMD_SPIN_DIRECTION_1, DSHOT_CMD_SPIN_DIRECTION_2, DSHOT_CMD_3D_MODE_OFF, DSHOT_CMD_3D_MODE_ON,
+        DSHOT_CMD_SETTINGS_REQUEST, DSHOT_CMD_SAVE_SETTINGS,
     };
     for (size_t i = 0; i < sizeof(CMD) / sizeof(CMD[0]); i++)
     {
         TEST_ASSERT_TRUE(CMD[i] < DSHOT_THROTTLE_MIN);
         uint16_t got = 0xFFFFu;
-        TEST_ASSERT_TRUE(protocore_dshot_decode(protocore_dshot_encode(CMD[i], PROTO_FALSE, PROTO_FALSE), &got, NULL,
-                                                PROTO_FALSE));
+        TEST_ASSERT_TRUE(
+            protocore_dshot_decode(protocore_dshot_encode(CMD[i], PROTO_FALSE, PROTO_FALSE), &got, NULL, PROTO_FALSE));
         TEST_ASSERT_EQUAL_HEX16(CMD[i], got);
     }
     TEST_ASSERT_EQUAL_UINT16(48u, DSHOT_THROTTLE_MIN);

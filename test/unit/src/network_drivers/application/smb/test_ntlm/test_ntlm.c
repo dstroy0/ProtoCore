@@ -39,9 +39,9 @@ static const uint8_t ZERO_TIME[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 
 // MS-NLMP 4.2.4.3, the TargetInfo carried inside the AUTHENTICATE_MESSAGE's NtChallengeResponse
 // (offsets 0xB0..0xD3): MsvAvNbDomainName "Domain", MsvAvNbComputerName "Server", MsvAvEOL.
-static const uint8_t TARGET_INFO[36] = {
-    0x02, 0x00, 0x0c, 0x00, 0x44, 0x00, 0x6f, 0x00, 0x6d, 0x00, 0x61, 0x00, 0x69, 0x00, 0x6e, 0x00, 0x01, 0x00,
-    0x0c, 0x00, 0x53, 0x00, 0x65, 0x00, 0x72, 0x00, 0x76, 0x00, 0x65, 0x00, 0x72, 0x00, 0x00, 0x00, 0x00, 0x00};
+static const uint8_t TARGET_INFO[36] = {0x02, 0x00, 0x0c, 0x00, 0x44, 0x00, 0x6f, 0x00, 0x6d, 0x00, 0x61, 0x00,
+                                        0x69, 0x00, 0x6e, 0x00, 0x01, 0x00, 0x0c, 0x00, 0x53, 0x00, 0x65, 0x00,
+                                        0x72, 0x00, 0x76, 0x00, 0x65, 0x00, 0x72, 0x00, 0x00, 0x00, 0x00, 0x00};
 
 // MS-NLMP 4.2.4.1.1: "NTOWFv2(\"Password\", \"User\", \"Domain\") is
 //   0c 86 8a 40 3b fd 7a 93 a3 00 1e f2 2e f0 2e 3f"
@@ -201,9 +201,9 @@ void test_timestamp_is_carried_and_bound_in(void)
                                                             sizeof(TARGET_INFO), out, sizeof(out), NULL));
     TEST_ASSERT_EQUAL_HEX8_ARRAY(TIME, out + 24, 8); // 16 NTProofStr + 2 + 6 zeros
 
-    TEST_ASSERT_EQUAL_size_t(84, protocore_ntlm_v2_response(owf, SERVER_CHALLENGE, CLIENT_CHALLENGE, ZERO_TIME,
-                                                            TARGET_INFO, sizeof(TARGET_INFO), other, sizeof(other),
-                                                            NULL));
+    TEST_ASSERT_EQUAL_size_t(84,
+                             protocore_ntlm_v2_response(owf, SERVER_CHALLENGE, CLIENT_CHALLENGE, ZERO_TIME, TARGET_INFO,
+                                                        sizeof(TARGET_INFO), other, sizeof(other), NULL));
     TEST_ASSERT_TRUE(memcmp(out, other, 16) != 0);
 }
 
@@ -223,7 +223,7 @@ void test_server_challenge_is_bound_into_the_proof(void)
                                sizeof(a), NULL);
     protocore_ntlm_v2_response(owf, OTHER_CHALLENGE, CLIENT_CHALLENGE, ZERO_TIME, TARGET_INFO, sizeof(TARGET_INFO), b,
                                sizeof(b), NULL);
-    TEST_ASSERT_TRUE(memcmp(a, b, 16) != 0);   // the proof strings differ
+    TEST_ASSERT_TRUE(memcmp(a, b, 16) != 0);          // the proof strings differ
     TEST_ASSERT_EQUAL_HEX8_ARRAY(a + 16, b + 16, 68); // temp is identical: only the proof moved
 }
 

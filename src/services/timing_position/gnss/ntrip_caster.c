@@ -12,7 +12,6 @@
 
 #if PROTOCORE_ENABLE_NTRIP_CASTER
 
-
 static char lower(char c)
 {
     return (c >= 'A' && c <= 'Z') ? (char)(c - 'A' + 'a') : c;
@@ -196,9 +195,9 @@ size_t protocore_ntrip_build_stream_response(char *out, size_t cap, NtripVersion
     // not a separate copy of the build-and-check.
     protocore_sb sb_out = {out, cap, 0, PROTO_TRUE};
     Sb.put(&sb_out, (version == NTRIP_V2)
-                           ? "HTTP/1.1 200 OK\r\nNtrip-Version: Ntrip/2.0\r\nServer: PC\r\nContent-Type: "
-                             "gnss/data\r\nConnection: close\r\n\r\n"
-                           : "ICY 200 OK\r\n\r\n");
+                        ? "HTTP/1.1 200 OK\r\nNtrip-Version: Ntrip/2.0\r\nServer: PC\r\nContent-Type: "
+                          "gnss/data\r\nConnection: close\r\n\r\n"
+                        : "ICY 200 OK\r\n\r\n");
     size_t n = Sb.finish(&sb_out);
     if (!sb_out.ok)
     {
@@ -237,7 +236,7 @@ size_t protocore_ntrip_build_unauthorized_response(char *out, size_t cap, NtripV
     {
         protocore_sb sb_out6 = {out, cap, 0, PROTO_TRUE};
         Sb.put(&sb_out6, "HTTP/1.1 401 Unauthorized\r\nWWW-Authenticate: Basic realm=\"NTRIP\"\r\nContent-Length: "
-                            "0\r\nConnection: close\r\n\r\n");
+                         "0\r\nConnection: close\r\n\r\n");
         n = (int)Sb.finish(&sb_out6);
     }
     else
@@ -299,7 +298,7 @@ size_t protocore_ntrip_build_str_record(char *out, size_t cap, const NtripMount 
 }
 
 size_t protocore_ntrip_build_sourcetable(char *out, size_t cap, NtripVersion version, const NtripMount *mounts,
-                                  size_t mount_count)
+                                         size_t mount_count)
 {
     static const char ENDLINE[] = "ENDSOURCETABLE\r\n";
 
@@ -323,7 +322,7 @@ size_t protocore_ntrip_build_sourcetable(char *out, size_t cap, NtripVersion ver
     {
         protocore_sb sb_out9 = {out, cap, 0, PROTO_TRUE};
         Sb.put(&sb_out9, "HTTP/1.1 200 OK\r\nNtrip-Version: Ntrip/2.0\r\nServer: PC\r\nContent-Type: "
-                            "gnss/sourcetable\r\nContent-Length: ");
+                         "gnss/sourcetable\r\nContent-Length: ");
         Sb.u32(&sb_out9, (uint32_t)((unsigned)body_len));
         Sb.put(&sb_out9, "\r\nConnection: close\r\n\r\n");
         hn = (int)Sb.finish(&sb_out9);

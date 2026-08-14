@@ -41,7 +41,7 @@ static void read_header(const uint8_t *buf, FinsHeader *h)
 }
 
 size_t protocore_fins_build_command(uint8_t *buf, size_t cap, const FinsHeader *h, uint8_t mrc, uint8_t src,
-                             const uint8_t *params, size_t params_len)
+                                    const uint8_t *params, size_t params_len)
 {
     if (!buf || !h || (params_len && !params))
     {
@@ -63,8 +63,8 @@ size_t protocore_fins_build_command(uint8_t *buf, size_t cap, const FinsHeader *
     return p;
 }
 
-size_t protocore_fins_build_memory_area_read(uint8_t *buf, size_t cap, const FinsHeader *h, uint8_t area, uint16_t address,
-                                      uint8_t bit, uint16_t count)
+size_t protocore_fins_build_memory_area_read(uint8_t *buf, size_t cap, const FinsHeader *h, uint8_t area,
+                                             uint16_t address, uint8_t bit, uint16_t count)
 {
     uint8_t params[6];
     params[0] = area;
@@ -73,11 +73,13 @@ size_t protocore_fins_build_memory_area_read(uint8_t *buf, size_t cap, const Fin
     params[3] = bit;
     params[4] = (uint8_t)(count >> 8);
     params[5] = (uint8_t)(count & 0xFF);
-    return protocore_fins_build_command(buf, cap, h, FINS_MRC_MEMORY_AREA, FINS_SRC_MEMORY_AREA_READ, params, sizeof(params));
+    return protocore_fins_build_command(buf, cap, h, FINS_MRC_MEMORY_AREA, FINS_SRC_MEMORY_AREA_READ, params,
+                                        sizeof(params));
 }
 
-size_t protocore_fins_build_memory_area_write(uint8_t *buf, size_t cap, const FinsHeader *h, uint8_t area, uint16_t address,
-                                       uint8_t bit, uint16_t count, const uint8_t *data, size_t data_len)
+size_t protocore_fins_build_memory_area_write(uint8_t *buf, size_t cap, const FinsHeader *h, uint8_t area,
+                                              uint16_t address, uint8_t bit, uint16_t count, const uint8_t *data,
+                                              size_t data_len)
 {
     if (data_len && !data)
     {
@@ -91,8 +93,8 @@ size_t protocore_fins_build_memory_area_write(uint8_t *buf, size_t cap, const Fi
     prefix[4] = (uint8_t)(count >> 8);
     prefix[5] = (uint8_t)(count & 0xFF);
     // The command builder lays down header + MRC + SRC + the 6-octet prefix; the write data follows it.
-    size_t n =
-        protocore_fins_build_command(buf, cap, h, FINS_MRC_MEMORY_AREA, FINS_SRC_MEMORY_AREA_WRITE, prefix, sizeof(prefix));
+    size_t n = protocore_fins_build_command(buf, cap, h, FINS_MRC_MEMORY_AREA, FINS_SRC_MEMORY_AREA_WRITE, prefix,
+                                            sizeof(prefix));
     if (!n)
     {
         return 0; // header + prefix did not fit

@@ -88,8 +88,8 @@ void test_selection_is_total_order_over_priority_then_index(void)
     TEST_ASSERT_EQUAL_INT(0, active(&m));
 
     // Three at the same priority still picks the first.
-    LinkIface all_tied[3] = {{LINK_KIND_ETH, 7, PROTO_TRUE}, {LINK_KIND_WIFI_STA, 7, PROTO_TRUE},
-                             {LINK_KIND_WIFI_AP, 7, PROTO_TRUE}};
+    LinkIface all_tied[3] = {
+        {LINK_KIND_ETH, 7, PROTO_TRUE}, {LINK_KIND_WIFI_STA, 7, PROTO_TRUE}, {LINK_KIND_WIFI_AP, 7, PROTO_TRUE}};
     bind(&m, all_tied, 3);
     TEST_ASSERT_EQUAL_INT(0, active(&m));
 }

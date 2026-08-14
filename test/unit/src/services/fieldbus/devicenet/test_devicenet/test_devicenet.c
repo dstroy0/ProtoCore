@@ -64,9 +64,8 @@ void test_group_ranges_match_the_identifier_allocation(void)
         uint8_t mac_id;
         uint32_t id;
     } static const EDGES[] = {
-        {DEVICENET_GROUP_1, 0, 0, 0x000u},  {DEVICENET_GROUP_1, 15, 63, 0x3FFu},
-        {DEVICENET_GROUP_2, 0, 0, 0x400u},  {DEVICENET_GROUP_2, 7, 63, 0x5FFu},
-        {DEVICENET_GROUP_3, 0, 0, 0x600u},  {DEVICENET_GROUP_3, 6, 63, 0x7BFu},
+        {DEVICENET_GROUP_1, 0, 0, 0x000u},  {DEVICENET_GROUP_1, 15, 63, 0x3FFu},  {DEVICENET_GROUP_2, 0, 0, 0x400u},
+        {DEVICENET_GROUP_2, 7, 63, 0x5FFu}, {DEVICENET_GROUP_3, 0, 0, 0x600u},    {DEVICENET_GROUP_3, 6, 63, 0x7BFu},
         {DEVICENET_GROUP_4, 0, 0, 0x7C0u},  {DEVICENET_GROUP_4, 0x2F, 0, 0x7EFu},
     };
     for (size_t i = 0; i < sizeof(EDGES) / sizeof(EDGES[0]); i++)
@@ -187,9 +186,9 @@ void test_invalid_identifiers_and_fields(void)
 
     uint32_t id;
     TEST_ASSERT_FALSE(protocore_devicenet_encode_id(NULL, DEVICENET_GROUP_1, 0, 0));
-    TEST_ASSERT_FALSE(protocore_devicenet_encode_id(&id, DEVICENET_GROUP_1, 0, 64));   // MAC is 6 bits
-    TEST_ASSERT_FALSE(protocore_devicenet_encode_id(&id, DEVICENET_GROUP_1, 16, 0));   // Group 1 msg id is 4 bits
-    TEST_ASSERT_FALSE(protocore_devicenet_encode_id(&id, DEVICENET_GROUP_2, 8, 0));    // Group 2 msg id is 3 bits
+    TEST_ASSERT_FALSE(protocore_devicenet_encode_id(&id, DEVICENET_GROUP_1, 0, 64));    // MAC is 6 bits
+    TEST_ASSERT_FALSE(protocore_devicenet_encode_id(&id, DEVICENET_GROUP_1, 16, 0));    // Group 1 msg id is 4 bits
+    TEST_ASSERT_FALSE(protocore_devicenet_encode_id(&id, DEVICENET_GROUP_2, 8, 0));     // Group 2 msg id is 3 bits
     TEST_ASSERT_FALSE(protocore_devicenet_encode_id(&id, DEVICENET_GROUP_4, 0x30u, 0)); // Group 4 tops out at 0x2F
     TEST_ASSERT_FALSE(protocore_devicenet_encode_id(&id, (DeviceNetGroup)0, 0, 0));
     TEST_ASSERT_FALSE(protocore_devicenet_encode_id(&id, (DeviceNetGroup)5, 0, 0));
@@ -231,7 +230,7 @@ void test_single_frame_explicit_message(void)
     TEST_ASSERT_EQUAL_HEX32(0x42Cu, f.id);
     TEST_ASSERT_FALSE(f.extended);
     TEST_ASSERT_FALSE(f.rtr);
-    TEST_ASSERT_EQUAL_UINT8(7u, f.dlc); // 1 header octet + 6 body octets
+    TEST_ASSERT_EQUAL_UINT8(7u, f.dlc);       // 1 header octet + 6 body octets
     TEST_ASSERT_EQUAL_HEX8(0x05u, f.data[0]); // FRAG clear, XID clear, MAC 5
     TEST_ASSERT_EQUAL_HEX8_ARRAY(CIP, f.data + 1, 6);
 
@@ -263,24 +262,24 @@ void test_fragment_frame_layout(void)
     TEST_ASSERT_EQUAL_HEX8(0x00u, f.data[1]); // FIRST, count 0
     TEST_ASSERT_EQUAL_HEX8_ARRAY(SIX, f.data + 2, 6);
 
-    TEST_ASSERT_TRUE(protocore_devicenet_build_fragment(&f, DEVICENET_GROUP_2, 4, 5, PROTO_FALSE,
-                                                        DEVICENET_FRAG_LAST, 3, SIX, 2));
+    TEST_ASSERT_TRUE(
+        protocore_devicenet_build_fragment(&f, DEVICENET_GROUP_2, 4, 5, PROTO_FALSE, DEVICENET_FRAG_LAST, 3, SIX, 2));
     TEST_ASSERT_EQUAL_UINT8(4u, f.dlc);
     TEST_ASSERT_EQUAL_HEX8(0x85u, f.data[0]); // FRAG set, XID clear
     TEST_ASSERT_EQUAL_HEX8(0x83u, f.data[1]); // LAST, count 3
 
     static const uint8_t SEVEN[7] = {1, 2, 3, 4, 5, 6, 7};
-    TEST_ASSERT_FALSE(protocore_devicenet_build_fragment(&f, DEVICENET_GROUP_2, 4, 5, PROTO_FALSE,
-                                                         DEVICENET_FRAG_FIRST, 0, SEVEN, 7));
+    TEST_ASSERT_FALSE(protocore_devicenet_build_fragment(&f, DEVICENET_GROUP_2, 4, 5, PROTO_FALSE, DEVICENET_FRAG_FIRST,
+                                                         0, SEVEN, 7));
     TEST_ASSERT_FALSE(protocore_devicenet_build_fragment(&f, DEVICENET_GROUP_2, 4, 5, PROTO_FALSE, 0x10u, 0, SIX, 6));
-    TEST_ASSERT_FALSE(protocore_devicenet_build_fragment(&f, DEVICENET_GROUP_2, 4, 5, PROTO_FALSE,
-                                                         DEVICENET_FRAG_FIRST, 64, SIX, 6));
-    TEST_ASSERT_FALSE(protocore_devicenet_build_fragment(&f, DEVICENET_GROUP_2, 4, 5, PROTO_FALSE,
-                                                         DEVICENET_FRAG_FIRST, 0, NULL, 4));
     TEST_ASSERT_FALSE(
-        protocore_devicenet_build_fragment(NULL, DEVICENET_GROUP_2, 4, 5, PROTO_FALSE, DEVICENET_FRAG_FIRST, 0, SIX, 6));
-    TEST_ASSERT_FALSE(protocore_devicenet_build_fragment(&f, DEVICENET_GROUP_2, 8, 5, PROTO_FALSE,
+        protocore_devicenet_build_fragment(&f, DEVICENET_GROUP_2, 4, 5, PROTO_FALSE, DEVICENET_FRAG_FIRST, 64, SIX, 6));
+    TEST_ASSERT_FALSE(
+        protocore_devicenet_build_fragment(&f, DEVICENET_GROUP_2, 4, 5, PROTO_FALSE, DEVICENET_FRAG_FIRST, 0, NULL, 4));
+    TEST_ASSERT_FALSE(protocore_devicenet_build_fragment(NULL, DEVICENET_GROUP_2, 4, 5, PROTO_FALSE,
                                                          DEVICENET_FRAG_FIRST, 0, SIX, 6));
+    TEST_ASSERT_FALSE(
+        protocore_devicenet_build_fragment(&f, DEVICENET_GROUP_2, 8, 5, PROTO_FALSE, DEVICENET_FRAG_FIRST, 0, SIX, 6));
 }
 
 // A message with FRAG clear is complete in one frame, and the reassembled body excludes the header
@@ -310,20 +309,19 @@ void test_unfragmented_message_completes_immediately(void)
 // reassembler must rejoin.
 void test_fragmented_message_reassembly(void)
 {
-    static const uint8_t SRC[14] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
-                                    0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D};
+    static const uint8_t SRC[14] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D};
     CanFrame f;
     DeviceNetFragRx rx;
     protocore_devicenet_frag_reset(&rx);
 
-    TEST_ASSERT_TRUE(protocore_devicenet_build_fragment(&f, DEVICENET_GROUP_2, 4, 5, PROTO_FALSE,
-                                                        DEVICENET_FRAG_FIRST, 0, SRC, 6));
+    TEST_ASSERT_TRUE(
+        protocore_devicenet_build_fragment(&f, DEVICENET_GROUP_2, 4, 5, PROTO_FALSE, DEVICENET_FRAG_FIRST, 0, SRC, 6));
     TEST_ASSERT_EQUAL_INT(DEVICENET_FRAG_STARTED, protocore_devicenet_frag_feed(&rx, f.data, f.dlc));
     TEST_ASSERT_TRUE(rx.active);
     TEST_ASSERT_EQUAL_UINT8(1u, rx.next_count);
 
-    TEST_ASSERT_TRUE(protocore_devicenet_build_fragment(&f, DEVICENET_GROUP_2, 4, 5, PROTO_FALSE,
-                                                        DEVICENET_FRAG_MIDDLE, 1, SRC + 6, 6));
+    TEST_ASSERT_TRUE(protocore_devicenet_build_fragment(&f, DEVICENET_GROUP_2, 4, 5, PROTO_FALSE, DEVICENET_FRAG_MIDDLE,
+                                                        1, SRC + 6, 6));
     TEST_ASSERT_EQUAL_INT(DEVICENET_FRAG_PROGRESS, protocore_devicenet_frag_feed(&rx, f.data, f.dlc));
     TEST_ASSERT_EQUAL_UINT8(2u, rx.next_count);
 

@@ -28,7 +28,7 @@ void tearDown(void)
 
 static const uint8_t SPI_I[8] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08};
 static const uint8_t SPI_R[8] = {0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18};
-static const uint8_t IP4[4] = {192, 0, 2, 1};    // RFC 5737 TEST-NET-1
+static const uint8_t IP4[4] = {192, 0, 2, 1}; // RFC 5737 TEST-NET-1
 static const uint8_t IP6[16] = {0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x01};
 
 static size_t digest_of(const uint8_t *spi_i, const uint8_t *spi_r, const uint8_t *ip, size_t ip_len, uint16_t port,

@@ -13,7 +13,8 @@
 
 // --- -104 APCI ---
 
-size_t protocore_iec104_build_i(uint8_t *buf, size_t cap, uint16_t ns, uint16_t nr, const uint8_t *asdu, size_t asdu_len)
+size_t protocore_iec104_build_i(uint8_t *buf, size_t cap, uint16_t ns, uint16_t nr, const uint8_t *asdu,
+                                size_t asdu_len)
 {
     if (!buf || (asdu_len && !asdu) || asdu_len > 249) // APDU length octet maxes at 253 (= 4 + 249)
     {
@@ -437,7 +438,7 @@ size_t protocore_iec_io_build_dc(uint8_t *buf, size_t cap, uint32_t ioa, uint8_t
 }
 
 proto_bool protocore_iec_io_parse_dc(const uint8_t *buf, size_t len, uint32_t *ioa, uint8_t *dcs, uint8_t *qu,
-                              proto_bool *select)
+                                     proto_bool *select)
 {
     if (!buf || len < 4)
     {
@@ -489,7 +490,7 @@ size_t protocore_iec101_build_fixed(uint8_t *buf, size_t cap, uint8_t control, u
 }
 
 size_t protocore_iec101_build_variable(uint8_t *buf, size_t cap, uint8_t control, uint8_t addr, const uint8_t *asdu,
-                                uint8_t asdu_len)
+                                       uint8_t asdu_len)
 {
     if (!buf || (asdu_len && !asdu) || asdu_len > 253)
     {

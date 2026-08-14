@@ -51,21 +51,25 @@ void dbench_run(void)
         // Build a full 1005 frame: pack the ARP fields MSB-first, then CRC-24Q the header+payload.
         DBENCH_OP("rtcm3_build_1005", 20000, sink += protocore_rtcm3_build_1005(frame, sizeof(frame), SID, EX, EY, EZ));
         // Build a full 1006 frame (adds the 16-bit antenna-height field).
-        DBENCH_OP("rtcm3_build_1006", 20000, sink += protocore_rtcm3_build_1006(frame, sizeof(frame), SID, EX, EY, EZ, AH));
+        DBENCH_OP("rtcm3_build_1006", 20000,
+                  sink += protocore_rtcm3_build_1006(frame, sizeof(frame), SID, EX, EY, EZ, AH));
         // Parse a framed 1005: length probe + CRC-24Q verify + read the 12-bit message number.
         {
             Rtcm3Frame f;
-            DBENCH_OP("rtcm3_frame_parse", 20000, sink += protocore_rtcm3_frame_parse(FRAME_1005, sizeof(FRAME_1005), &f));
+            DBENCH_OP("rtcm3_frame_parse", 20000,
+                      sink += protocore_rtcm3_frame_parse(FRAME_1005, sizeof(FRAME_1005), &f));
         }
         // Decode the 1005 payload into the station ARP struct (MSB-first bit unpack of every DF field).
         {
             const uint8_t *payload = FRAME_1005 + RTCM3_HDR_LEN;
             Rtcm3StationArp arp;
             DBENCH_OP("rtcm3_parse_1005", 20000,
-                      bsink ^= protocore_rtcm3_parse_1005(payload, sizeof(FRAME_1005) - RTCM3_HDR_LEN - RTCM3_CRC_LEN, &arp));
+                      bsink ^=
+                      protocore_rtcm3_parse_1005(payload, sizeof(FRAME_1005) - RTCM3_HDR_LEN - RTCM3_CRC_LEN, &arp));
         }
         // CRC-24Q kernel over the full frame body (the RTCM3 / Qualcomm CRC).
-        DBENCH_BULK("rtcm3_crc24q", 20000, sizeof(FRAME_1005), sink += protocore_rtcm3_crc24q(FRAME_1005, sizeof(FRAME_1005)));
+        DBENCH_BULK("rtcm3_crc24q", 20000, sizeof(FRAME_1005),
+                    sink += protocore_rtcm3_crc24q(FRAME_1005, sizeof(FRAME_1005)));
 
         // --- GNSS survey-in geodesy math ---
         // WGS84 geodetic -> ECEF (closed form; sin/cos/sqrt per call).

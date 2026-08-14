@@ -53,8 +53,8 @@ static size_t round_trip(const uint8_t *src, size_t src_len)
     g_comp[clen + 3] = 0xff;
 
     size_t plen = 0;
-    TEST_ASSERT_EQUAL_INT(INFLATE_OK, Inflate.raw(g_comp, clen + 4, g_plain, sizeof(g_plain), &plen, g_iscratch,
-                                                  sizeof(g_iscratch)));
+    TEST_ASSERT_EQUAL_INT(
+        INFLATE_OK, Inflate.raw(g_comp, clen + 4, g_plain, sizeof(g_plain), &plen, g_iscratch, sizeof(g_iscratch)));
     TEST_ASSERT_EQUAL_size_t(src_len, plen);
     if (src_len)
     {

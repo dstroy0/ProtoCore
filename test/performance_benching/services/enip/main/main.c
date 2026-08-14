@@ -32,7 +32,8 @@ void dbench_run(void)
     static uint8_t rr_buf[64];
 
     // Pre-build a SendRRData block once so parse/extract bench a real, valid wire capture.
-    size_t rr_len = protocore_eip_build_send_rr_data(rr_buf, sizeof(rr_buf), 0x12345678, sender_context, 5, cip, sizeof(cip));
+    size_t rr_len =
+        protocore_eip_build_send_rr_data(rr_buf, sizeof(rr_buf), 0x12345678, sender_context, 5, cip, sizeof(cip));
 
     for (;;)
     {
@@ -43,8 +44,8 @@ void dbench_run(void)
                   sink += protocore_eip_build_register_session(reg_buf, sizeof(reg_buf), sender_context));
 
         DBENCH_OP("protocore_eip_build_send_rr_data", 50000,
-                  sink +=
-                  protocore_eip_build_send_rr_data(rr_buf, sizeof(rr_buf), 0x12345678, sender_context, 5, cip, sizeof(cip)));
+                  sink += protocore_eip_build_send_rr_data(rr_buf, sizeof(rr_buf), 0x12345678, sender_context, 5, cip,
+                                                           sizeof(cip)));
 
         DBENCH_OP("protocore_eip_parse", 100000, {
             EipHeader h;

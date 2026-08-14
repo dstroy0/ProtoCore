@@ -2,8 +2,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #include "crypto/asymmetric/curve25519.h"
-#include "network_drivers/transport/tcp/common.h"
-#include "network_drivers/transport/udp/server/server.h"
 #include "crypto/hash/sha256.h"
 #include "network_drivers/presentation/http/http3/h3_frame.h"
 #include "network_drivers/presentation/http/http3/h3_server.h"
@@ -16,6 +14,8 @@
 #include "network_drivers/presentation/http/http3/quic_varint.h"
 #include "network_drivers/presentation/http/http3/tls13_msg.h"
 #include "network_drivers/tls/key_schedule/key_schedule.h"
+#include "network_drivers/transport/tcp/common.h"
+#include "network_drivers/transport/udp/server/server.h"
 #include "protocore.h"
 #include <string.h>
 

@@ -147,9 +147,9 @@ static void pq_start(struct PreemptQueueInternal *restrict ctx)
     ctx->store->pq.high_water[(size_t)lane] = 0;
     if (!ctx->store->qq.q[(size_t)lane])
     {
-        ctx->store->qq.q[(size_t)lane] =
-            protocore_platform_queue_create(PROTOCORE_PQ_DEPTH, PROTOCORE_PQ_ITEM_SIZE,
-                                            ctx->store->qq.q_storage[(size_t)lane], &ctx->store->qq.q_struct[(size_t)lane]);
+        ctx->store->qq.q[(size_t)lane] = protocore_platform_queue_create(PROTOCORE_PQ_DEPTH, PROTOCORE_PQ_ITEM_SIZE,
+                                                                         ctx->store->qq.q_storage[(size_t)lane],
+                                                                         &ctx->store->qq.q_struct[(size_t)lane]);
     }
     if (!ctx->store->qq.q[(size_t)lane])
     {
@@ -178,7 +178,8 @@ static void pq_post(struct PreemptQueueInternal *restrict ctx)
         return;
     }
     if (protocore_platform_queue_send(ctx->store->qq.q[(size_t)lane], ctx->ns->post_args.item,
-                                      (protocore_platform_ticks)ctx->ns->post_args.timeout_ticks) != PROTOCORE_PLATFORM_OK)
+                                      (protocore_platform_ticks)ctx->ns->post_args.timeout_ticks) !=
+        PROTOCORE_PLATFORM_OK)
     {
         return;
     }

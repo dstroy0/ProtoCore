@@ -115,8 +115,8 @@ static proto_bool reply_complete(const char *buf, size_t len, int *code)
             continue;
         }
         size_t line_len = i - start; // excludes the CRLF
-        if (line_len >= 3 && buf[start] >= '0' && buf[start] <= '9' && buf[start + 1] >= '0' &&
-            buf[start + 1] <= '9' && buf[start + 2] >= '0' && buf[start + 2] <= '9')
+        if (line_len >= 3 && buf[start] >= '0' && buf[start] <= '9' && buf[start + 1] >= '0' && buf[start + 1] <= '9' &&
+            buf[start + 2] >= '0' && buf[start + 2] <= '9')
         {
             proto_bool final_line = (line_len == 3) || buf[start + 3] == ' ';
             if (final_line)

@@ -14,8 +14,8 @@
 #include "network_drivers/transport/udp/common.h" // the wire layout the receive ring carries
 
 #include "core_setup/board_profiles/protocore_platform.h" // the stack's UDP, under our names
-#include "network_drivers/transport/diffserv/diffserv.h"    // DSCP marking; compiles out when off
-#include "network_drivers/transport/net_addr/net_addr.h"    // NetAddr: the stack's address as a protocore_ip
+#include "network_drivers/transport/diffserv/diffserv.h"  // DSCP marking; compiles out when off
+#include "network_drivers/transport/net_addr/net_addr.h"  // NetAddr: the stack's address as a protocore_ip
 
 PROTOCORE_BEGIN_DECLS
 
@@ -33,11 +33,11 @@ PROTOCORE_BEGIN_DECLS
  */
 typedef struct
 {
-    uint16_t port;          ///< Bound port, 0 when the slot is free.
+    uint16_t port;                 ///< Bound port, 0 when the slot is free.
     protocore_udp_handler handler; ///< Called once per received datagram by poll().
-    void *ctx;              ///< Opaque context handed back to the handler.
+    void *ctx;                     ///< Opaque context handed back to the handler.
     protocore_ip group;            ///< Multicast group this slot joined; meaningful only when mcast is set.
-    proto_bool mcast;       ///< The slot joined a group and must leave it on teardown.
+    proto_bool mcast;              ///< The slot joined a group and must leave it on teardown.
 
     uint8_t rx[PROTOCORE_UDP_RX_RING];
     _Atomic size_t rx_head; ///< Producer: the stack's trampoline.
@@ -46,7 +46,8 @@ typedef struct
     protocore_udp_pcb *pcb; ///< The stack's control block; NULL when the slot is free.
 } UdpBind;
 
-static_assert(PROTOCORE_RING_POW2(PROTOCORE_UDP_RX_RING), "PROTOCORE_UDP_RX_RING must be a power of two: a ring index wraps with a mask");
+static_assert(PROTOCORE_RING_POW2(PROTOCORE_UDP_RX_RING),
+              "PROTOCORE_UDP_RX_RING must be a power of two: a ring index wraps with a mask");
 static_assert(PROTOCORE_MAX_UDP_LISTENERS <= PROTOCORE_RING_SLOTS_MAX,
               "the bound-slot bitmask (UdpListenerInternal::bound) is a uint32; raise it or fall back to a scan");
 
@@ -198,7 +199,8 @@ static void apply_dscp(protocore_udp_pcb *pcb)
 }
 
 // Allocate, copy, send, free. Runs in the stack's thread only.
-static proto_bool wire_send(protocore_udp_pcb *pcb, const protocore_ip *a, uint16_t port, const uint8_t *data, size_t len)
+static proto_bool wire_send(protocore_udp_pcb *pcb, const protocore_ip *a, uint16_t port, const uint8_t *data,
+                            size_t len)
 {
     protocore_net_ip dst;
     if (!protocore_net_addr_from_ip(a, &dst))
@@ -223,7 +225,8 @@ static proto_bool wire_send(protocore_udp_pcb *pcb, const protocore_ip *a, uint1
  * poll() calls it in the task that drains. The payload arrives as a chain, so the header is written
  * first and each segment follows it, all against a local head that is published once.
  */
-static void udp_trampoline(void *arg, protocore_udp_pcb *pcb, protocore_pbuf *p, const protocore_net_ip *addr, proto_u16 port)
+static void udp_trampoline(void *arg, protocore_udp_pcb *pcb, protocore_pbuf *p, const protocore_net_ip *addr,
+                           proto_u16 port)
 {
     (void)pcb;
     UdpBind *b = (UdpBind *)arg;
@@ -523,9 +526,8 @@ static void poll_all(struct UdpListenerInternal *restrict ctx)
         if (bind_used(ctx, (size_t)i))
         {
             protocore_udp_dgram d = {{PROTOCORE_IP_NONE, {0}}, 0, 0};
-            while (protocore_udp_dgram_take(b->rx, PROTOCORE_UDP_RX_RING, &b->rx_head, &b->rx_tail,
-                                            ctx->store->rx_rhdr, &d, ctx->store->rx_stage,
-                                            sizeof(ctx->store->rx_stage)))
+            while (protocore_udp_dgram_take(b->rx, PROTOCORE_UDP_RX_RING, &b->rx_head, &b->rx_tail, ctx->store->rx_rhdr,
+                                            &d, ctx->store->rx_stage, sizeof(ctx->store->rx_stage)))
             {
                 if (b->handler != NULL)
                 {

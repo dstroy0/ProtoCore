@@ -38,7 +38,7 @@ const char *protocore_tls_version_name(uint16_t version)
 }
 
 uint16_t protocore_tls_select_cipher(const uint16_t *client_offered, size_t n_client, const uint16_t *server_pinned,
-                              size_t n_server)
+                                     size_t n_server)
 {
     if (!client_offered || !server_pinned)
     {

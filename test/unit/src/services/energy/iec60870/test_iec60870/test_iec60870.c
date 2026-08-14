@@ -263,7 +263,8 @@ void test_single_point_object(void)
     proto_bool on = PROTO_FALSE;
     uint8_t q = 0;
 
-    TEST_ASSERT_EQUAL_UINT(4u, protocore_iec_io_build_sp(buf, sizeof(buf), 100u, PROTO_TRUE, IEC_QUAL_NT | IEC_QUAL_IV));
+    TEST_ASSERT_EQUAL_UINT(4u,
+                           protocore_iec_io_build_sp(buf, sizeof(buf), 100u, PROTO_TRUE, IEC_QUAL_NT | IEC_QUAL_IV));
     TEST_ASSERT_EQUAL_HEX8(0x64u, buf[0]);
     TEST_ASSERT_EQUAL_HEX8(0xC1u, buf[3]); // NT | IV | SPI
     TEST_ASSERT_TRUE(protocore_iec_io_parse_sp(buf, 4u, &ioa, &on, &q));
@@ -350,8 +351,8 @@ void test_scaled_measured_value(void)
         uint8_t lo;
         uint8_t hi;
     } static const CASES[] = {
-        {0, 0x00, 0x00}, {1, 0x01, 0x00}, {-1, 0xFF, 0xFF}, {256, 0x00, 0x01},
-        {32767, 0xFF, 0x7F}, {-32768, 0x00, 0x80},
+        {0, 0x00, 0x00},   {1, 0x01, 0x00},     {-1, 0xFF, 0xFF},
+        {256, 0x00, 0x01}, {32767, 0xFF, 0x7F}, {-32768, 0x00, 0x80},
     };
     for (size_t i = 0; i < sizeof(CASES) / sizeof(CASES[0]); i++)
     {

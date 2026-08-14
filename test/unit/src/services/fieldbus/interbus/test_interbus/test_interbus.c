@@ -147,8 +147,8 @@ void test_parse_refuses_malformed_lengths(void)
 
     uint16_t got[4];
     size_t count = 0;
-    TEST_ASSERT_FALSE(protocore_interbus_parse(frame, 7, got, 4, &count)); // odd word region
-    TEST_ASSERT_FALSE(protocore_interbus_parse(frame, 3, got, 4, &count)); // shorter than loopback + FCS
+    TEST_ASSERT_FALSE(protocore_interbus_parse(frame, 7, got, 4, &count));   // odd word region
+    TEST_ASSERT_FALSE(protocore_interbus_parse(frame, 3, got, 4, &count));   // shorter than loopback + FCS
     TEST_ASSERT_FALSE(protocore_interbus_parse(frame, len, got, 1, &count)); // 2 words, room for 1
     TEST_ASSERT_TRUE(protocore_interbus_parse(frame, len, got, 2, &count));  // exactly enough room
 

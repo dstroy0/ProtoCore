@@ -101,7 +101,7 @@ uint8_t protocore_devicenet_frag_octet(uint8_t type, uint8_t count)
 }
 
 proto_bool protocore_devicenet_build_explicit(CanFrame *out, DeviceNetGroup group, uint8_t msg_id, uint8_t mac_id,
-                                       const uint8_t *body, uint8_t body_len)
+                                              const uint8_t *body, uint8_t body_len)
 {
     if (!out || body_len > 7 || (body_len && !body)) // 1 header octet + up to 7 body octets
     {
@@ -126,8 +126,8 @@ proto_bool protocore_devicenet_build_explicit(CanFrame *out, DeviceNetGroup grou
 }
 
 proto_bool protocore_devicenet_build_fragment(CanFrame *out, DeviceNetGroup group, uint8_t msg_id, uint8_t mac_id,
-                                       proto_bool xid, uint8_t frag_type, uint8_t frag_count, const uint8_t *data,
-                                       uint8_t data_len)
+                                              proto_bool xid, uint8_t frag_type, uint8_t frag_count,
+                                              const uint8_t *data, uint8_t data_len)
 {
     // 1 header octet + 1 fragmentation octet + up to 6 data octets fill the 8-octet CAN frame.
     if (!out || data_len > 6 || (data_len && !data) || (frag_type & (uint8_t)~DEVICENET_FRAG_TYPE_MASK) ||

@@ -165,7 +165,8 @@ proto_bool protocore_wsmp_parse(const uint8_t *frame, size_t len, WsmpFrame *out
     return PROTO_TRUE;
 }
 
-size_t protocore_wave_1609dot2_wrap(uint8_t content_type, const uint8_t *payload, size_t payload_len, uint8_t *out, size_t cap)
+size_t protocore_wave_1609dot2_wrap(uint8_t content_type, const uint8_t *payload, size_t payload_len, uint8_t *out,
+                                    size_t cap)
 {
     if (!out || (payload_len && !payload))
     {

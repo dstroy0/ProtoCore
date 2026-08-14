@@ -32,8 +32,8 @@ void protocore_sercos_idn_parse(uint16_t idn, proto_bool *is_product, uint8_t *p
     }
 }
 
-size_t protocore_sercos_build(uint8_t type, uint8_t phase, uint16_t cycle, const uint8_t *data, size_t data_len, uint8_t *out,
-                       size_t cap)
+size_t protocore_sercos_build(uint8_t type, uint8_t phase, uint16_t cycle, const uint8_t *data, size_t data_len,
+                              uint8_t *out, size_t cap)
 {
     if (!out || (data_len && !data) || (type != SERCOS_TEL_MDT && type != SERCOS_TEL_AT))
     {

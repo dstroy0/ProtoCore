@@ -105,19 +105,23 @@ void dbench_run(void)
         DBENCH_BANNER("graphql");
         volatile int32_t sink = 0;
         DBENCH_OP("protocore_graphql_execute flat", 20000,
-                  sink += (int32_t)protocore_graphql_execute(q_flat, sizeof(q_flat) - 1, gql_resolver, resp, sizeof(resp)));
+                  sink +=
+                  (int32_t)protocore_graphql_execute(q_flat, sizeof(q_flat) - 1, gql_resolver, resp, sizeof(resp)));
         DBENCH_OP("protocore_graphql_execute nested", 20000,
                   sink +=
                   (int32_t)protocore_graphql_execute(q_nested, sizeof(q_nested) - 1, gql_resolver, resp, sizeof(resp)));
         DBENCH_OP("protocore_graphql_execute args", 20000,
-                  sink += (int32_t)protocore_graphql_execute(q_args, sizeof(q_args) - 1, gql_resolver, resp, sizeof(resp)));
+                  sink +=
+                  (int32_t)protocore_graphql_execute(q_args, sizeof(q_args) - 1, gql_resolver, resp, sizeof(resp)));
         DBENCH_OP("protocore_graphql_execute strarg", 20000,
                   sink +=
                   (int32_t)protocore_graphql_execute(q_strarg, sizeof(q_strarg) - 1, gql_resolver, resp, sizeof(resp)));
         DBENCH_OP("protocore_graphql_execute parse_err", 20000,
-                  sink += (int32_t)protocore_graphql_execute(q_err, sizeof(q_err) - 1, gql_resolver, resp, sizeof(resp)));
+                  sink +=
+                  (int32_t)protocore_graphql_execute(q_err, sizeof(q_err) - 1, gql_resolver, resp, sizeof(resp)));
         DBENCH_BULK("protocore_graphql_execute bulk", 20000, sizeof(q_bulk) - 1,
-                    sink += (int32_t)protocore_graphql_execute(q_bulk, sizeof(q_bulk) - 1, gql_resolver, resp, sizeof(resp)));
+                    sink +=
+                    (int32_t)protocore_graphql_execute(q_bulk, sizeof(q_bulk) - 1, gql_resolver, resp, sizeof(resp)));
         (void)sink;
         DBENCH_DONE();
     }

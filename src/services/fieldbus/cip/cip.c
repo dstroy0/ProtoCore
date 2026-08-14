@@ -37,8 +37,8 @@ static size_t write_segment(uint8_t *p, size_t cap, uint8_t logical_type, uint16
     return 4;
 }
 
-size_t protocore_cip_build_epath(uint8_t *buf, size_t cap, uint16_t class_id, uint16_t instance_id, uint16_t attribute_id,
-                          proto_bool with_attribute)
+size_t protocore_cip_build_epath(uint8_t *buf, size_t cap, uint16_t class_id, uint16_t instance_id,
+                                 uint16_t attribute_id, proto_bool with_attribute)
 {
     if (!buf)
     {
@@ -70,7 +70,7 @@ size_t protocore_cip_build_epath(uint8_t *buf, size_t cap, uint16_t class_id, ui
 }
 
 size_t protocore_cip_build_request(uint8_t *buf, size_t cap, uint8_t service, const uint8_t *epath, size_t epath_len,
-                            const uint8_t *data, size_t data_len)
+                                   const uint8_t *data, size_t data_len)
 {
     // EPATH must be whole 16-bit words and fit the 1-octet word count.
     if (!buf || !epath || (epath_len & 1) || (epath_len / 2) > 0xFF || (data_len && !data))
@@ -96,7 +96,7 @@ size_t protocore_cip_build_request(uint8_t *buf, size_t cap, uint8_t service, co
 }
 
 size_t protocore_cip_build_get_attr_single(uint8_t *buf, size_t cap, uint16_t class_id, uint16_t instance_id,
-                                    uint16_t attribute_id)
+                                           uint16_t attribute_id)
 {
     uint8_t epath[12];
     size_t elen = protocore_cip_build_epath(epath, sizeof(epath), class_id, instance_id, attribute_id, PROTO_TRUE);
@@ -119,7 +119,7 @@ size_t protocore_cip_build_get_attr_all(uint8_t *buf, size_t cap, uint16_t class
 }
 
 size_t protocore_cip_build_set_attr_single(uint8_t *buf, size_t cap, uint16_t class_id, uint16_t instance_id,
-                                    uint16_t attribute_id, const uint8_t *value, size_t value_len)
+                                           uint16_t attribute_id, const uint8_t *value, size_t value_len)
 {
     uint8_t epath[12];
     size_t elen = protocore_cip_build_epath(epath, sizeof(epath), class_id, instance_id, attribute_id, PROTO_TRUE);

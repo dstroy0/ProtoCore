@@ -53,8 +53,9 @@ const uint8_t protocore_pkcs1_sha512_digestinfo[PROTOCORE_PKCS1_SHA512_DIGESTINF
 // HW path - mbedtls verify
 // ---------------------------------------------------------------------------
 
-int protocore_rsa_verify(const uint8_t n_be[PROTOCORE_RSA_KEY_BYTES], const uint8_t e_be4[4], uint8_t *work, const uint8_t *msg,
-                  size_t msg_len, const uint8_t *sig, size_t sig_len, protocore_rsa_hash hash)
+int protocore_rsa_verify(const uint8_t n_be[PROTOCORE_RSA_KEY_BYTES], const uint8_t e_be4[4], uint8_t *work,
+                         const uint8_t *msg, size_t msg_len, const uint8_t *sig, size_t sig_len,
+                         protocore_rsa_hash hash)
 {
     if (sig_len != PROTOCORE_RSA_KEY_BYTES)
     {
@@ -117,7 +118,8 @@ int protocore_rsa_verify(const uint8_t n_be[PROTOCORE_RSA_KEY_BYTES], const uint
 // Hash msg with the selected algorithm and return the matching DigestInfo.
 //   digest must be >= PROTOCORE_SHA512_DIGEST_LEN bytes.
 static void rsa_digest(uint8_t *work, const uint8_t *msg, size_t msg_len, protocore_rsa_hash hash,
-                       uint8_t digest[PROTOCORE_SHA512_DIGEST_LEN], size_t *digest_len, const uint8_t **di, size_t *di_len)
+                       uint8_t digest[PROTOCORE_SHA512_DIGEST_LEN], size_t *digest_len, const uint8_t **di,
+                       size_t *di_len)
 {
     if (hash == PROTOCORE_RSA_HASH_SHA512)
     {
@@ -156,7 +158,8 @@ static void pkcs1v15_encode(const uint8_t *digest, size_t digest_len, const uint
 // ---------------------------------------------------------------------------
 
 // Full 128-limb product of two 64-limb little-endian integers.
-static void bn_mul_full(const uint32_t a[PROTOCORE_BN_LIMBS], const uint32_t b[PROTOCORE_BN_LIMBS], uint32_t p[2 * PROTOCORE_BN_LIMBS])
+static void bn_mul_full(const uint32_t a[PROTOCORE_BN_LIMBS], const uint32_t b[PROTOCORE_BN_LIMBS],
+                        uint32_t p[2 * PROTOCORE_BN_LIMBS])
 {
     for (int k = 0; k < 2 * PROTOCORE_BN_LIMBS; k++)
     {
@@ -174,7 +177,8 @@ static void bn_mul_full(const uint32_t a[PROTOCORE_BN_LIMBS], const uint32_t b[P
         int k = i + PROTOCORE_BN_LIMBS;
         // a and b are both PROTOCORE_BN_LIMBS (64) limbs, so their full product is bounded by 2*PROTOCORE_BN_LIMBS
         // (128) limbs; carry propagation out of the top half can never still be pending when k reaches
-        // 2*PROTOCORE_BN_LIMBS. The "k < 2*PROTOCORE_BN_LIMBS" half of this guard is defensive and provably unreachable.
+        // 2*PROTOCORE_BN_LIMBS. The "k < 2*PROTOCORE_BN_LIMBS" half of this guard is defensive and provably
+        // unreachable.
         while (carry && k < 2 * PROTOCORE_BN_LIMBS)
         {
             uint64_t cur = (uint64_t)p[k] + carry;
@@ -186,7 +190,8 @@ static void bn_mul_full(const uint32_t a[PROTOCORE_BN_LIMBS], const uint32_t b[P
 }
 
 // Reduce a 128-limb value mod a 64-limb modulus, bit-serial. out = p mod m.
-static void bn_reduce_full(const uint32_t p[2 * PROTOCORE_BN_LIMBS], const uint32_t m[PROTOCORE_BN_LIMBS], uint32_t out[PROTOCORE_BN_LIMBS])
+static void bn_reduce_full(const uint32_t p[2 * PROTOCORE_BN_LIMBS], const uint32_t m[PROTOCORE_BN_LIMBS],
+                           uint32_t out[PROTOCORE_BN_LIMBS])
 {
     uint32_t r[PROTOCORE_BN_LIMBS + 1];
     for (int k = 0; k <= PROTOCORE_BN_LIMBS; k++)
@@ -272,7 +277,8 @@ static void bn_modexp_pub(const protocore_bignum *base, uint32_t e, const protoc
 }
 
 // out = base^exp mod n, exp a full-width 2048-bit private exponent.
-static void bn_modexp_full(const protocore_bignum *base, const protocore_bignum *exp, const protocore_bignum *n, protocore_bignum *out)
+static void bn_modexp_full(const protocore_bignum *base, const protocore_bignum *exp, const protocore_bignum *n,
+                           protocore_bignum *out)
 {
     uint32_t prod[2 * PROTOCORE_BN_LIMBS];
 
@@ -323,8 +329,9 @@ static void bn_modexp_full(const protocore_bignum *base, const protocore_bignum 
     *out = r;
 }
 
-int protocore_rsa_sign_sw(const uint8_t n_be[PROTOCORE_RSA_KEY_BYTES], const uint8_t d_be[PROTOCORE_RSA_KEY_BYTES], uint8_t *work,
-                   const uint8_t *msg, size_t msg_len, protocore_rsa_hash hash, uint8_t sig[PROTOCORE_RSA_SIG_BYTES])
+int protocore_rsa_sign_sw(const uint8_t n_be[PROTOCORE_RSA_KEY_BYTES], const uint8_t d_be[PROTOCORE_RSA_KEY_BYTES],
+                          uint8_t *work, const uint8_t *msg, size_t msg_len, protocore_rsa_hash hash,
+                          uint8_t sig[PROTOCORE_RSA_SIG_BYTES])
 {
     // 1. SHA-256/512 digest of the message + matching DigestInfo.
     uint8_t digest[PROTOCORE_SHA512_DIGEST_LEN];
@@ -359,8 +366,9 @@ int protocore_rsa_sign_sw(const uint8_t n_be[PROTOCORE_RSA_KEY_BYTES], const uin
     return 0;
 }
 
-int protocore_rsa_verify(const uint8_t n_be[PROTOCORE_RSA_KEY_BYTES], const uint8_t e_be4[4], uint8_t *work, const uint8_t *msg,
-                  size_t msg_len, const uint8_t *sig, size_t sig_len, protocore_rsa_hash hash)
+int protocore_rsa_verify(const uint8_t n_be[PROTOCORE_RSA_KEY_BYTES], const uint8_t e_be4[4], uint8_t *work,
+                         const uint8_t *msg, size_t msg_len, const uint8_t *sig, size_t sig_len,
+                         protocore_rsa_hash hash)
 {
     if (sig_len != PROTOCORE_RSA_KEY_BYTES)
     {

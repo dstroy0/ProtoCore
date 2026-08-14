@@ -85,12 +85,14 @@ void dbench_run(void)
     // "G1 Z-1. F100" (test_roundtrip_program) framed as one ISO block (LF end-of-block).
     static const char iso_line[] = "G1 Z-1. F100";
     static uint8_t iso_block[32];
-    size_t iso_block_len = protocore_dnc_encode_block(&iso_cfg, iso_line, strlen(iso_line), iso_block, sizeof(iso_block));
+    size_t iso_block_len =
+        protocore_dnc_encode_block(&iso_cfg, iso_line, strlen(iso_line), iso_block, sizeof(iso_block));
 
     // "G01" (test_encode_block_eia) framed as one EIA block (0x80 end-of-block).
     static const char eia_line[] = "G01";
     static uint8_t eia_block[32];
-    size_t eia_block_len = protocore_dnc_encode_block(&eia_cfg, eia_line, strlen(eia_line), eia_block, sizeof(eia_block));
+    size_t eia_block_len =
+        protocore_dnc_encode_block(&eia_cfg, eia_line, strlen(eia_line), eia_block, sizeof(eia_block));
 
     // A 3-line ISO program (test_iso_roundtrip) drip-fed whole through dnc_stream.
     static const char prog[] = "N10 G0 X1 Y2\nN20 G1 X3 F100\nM30";
@@ -108,10 +110,12 @@ void dbench_run(void)
         DBENCH_OP("protocore_dnc_eia_to_iso", 200000, sink8 += (uint8_t)protocore_dnc_eia_to_iso(0x67));
 
         DBENCH_BULK("protocore_dnc_encode_block (ISO)", 50000, iso_block_len,
-                    sink += protocore_dnc_encode_block(&iso_cfg, iso_line, strlen(iso_line), iso_block, sizeof(iso_block)));
+                    sink +=
+                    protocore_dnc_encode_block(&iso_cfg, iso_line, strlen(iso_line), iso_block, sizeof(iso_block)));
 
         DBENCH_BULK("protocore_dnc_encode_block (EIA)", 50000, eia_block_len,
-                    sink += protocore_dnc_encode_block(&eia_cfg, eia_line, strlen(eia_line), eia_block, sizeof(eia_block)));
+                    sink +=
+                    protocore_dnc_encode_block(&eia_cfg, eia_line, strlen(eia_line), eia_block, sizeof(eia_block)));
 
         DBENCH_BULK("protocore_dnc_decode_feed (ISO block)", 50000, iso_block_len,
                     sinki += dnc_bench_decode_full(DNC_CODE_ISO, iso_block, iso_block_len));

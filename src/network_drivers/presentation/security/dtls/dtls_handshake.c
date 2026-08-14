@@ -108,7 +108,7 @@ static size_t protocore_dtls_hs_header_parse(const uint8_t *p, size_t len, DtlsH
 }
 
 static size_t protocore_dtls_hs_frag_build(uint8_t msg_type, uint16_t msg_seq, uint32_t full_len, uint32_t frag_offset,
-                                    const uint8_t *frag, uint32_t frag_len, uint8_t *out, size_t out_cap)
+                                           const uint8_t *frag, uint32_t frag_len, uint8_t *out, size_t out_cap)
 {
     if (full_len > 0xFFFFFF || frag_offset > 0xFFFFFF || frag_len > 0xFFFFFF)
     {
@@ -255,7 +255,7 @@ static size_t protocore_dtls_ack_build(const DtlsRecordNumber *nums, size_t coun
 }
 
 static proto_bool protocore_dtls_ack_parse(const uint8_t *body, size_t len, DtlsRecordNumber *out, size_t out_cap,
-                                    size_t *out_count)
+                                           size_t *out_count)
 {
     if (len < 2)
     {
@@ -287,8 +287,8 @@ static proto_bool protocore_dtls_ack_parse(const uint8_t *body, size_t len, Dtls
 // ---------------------------------------------------------------------------
 
 static size_t protocore_dtls_cookie_make(uint8_t *work, const uint8_t protocore_hmac_key[32], uint64_t timestamp,
-                                  const uint8_t *payload, size_t payload_len, const uint8_t *client_addr,
-                                  size_t addr_len, uint8_t *out, size_t out_cap)
+                                         const uint8_t *payload, size_t payload_len, const uint8_t *client_addr,
+                                         size_t addr_len, uint8_t *out, size_t out_cap)
 {
     if (payload_len > 0xFFFF)
     {
@@ -319,10 +319,10 @@ static size_t protocore_dtls_cookie_make(uint8_t *work, const uint8_t protocore_
     return total;
 }
 
-static proto_bool protocore_dtls_cookie_verify(uint8_t *work, const uint8_t protocore_hmac_key[32], uint64_t now, uint64_t max_age,
-                                        const uint8_t *client_addr, size_t addr_len, const uint8_t *cookie,
-                                        size_t cookie_len, uint8_t *payload_out, size_t payload_cap,
-                                        size_t *payload_len_out)
+static proto_bool protocore_dtls_cookie_verify(uint8_t *work, const uint8_t protocore_hmac_key[32], uint64_t now,
+                                               uint64_t max_age, const uint8_t *client_addr, size_t addr_len,
+                                               const uint8_t *cookie, size_t cookie_len, uint8_t *payload_out,
+                                               size_t payload_cap, size_t *payload_len_out)
 {
     if (cookie_len < 1 + 8 + 2 + PROTOCORE_HMAC_SHA256_LEN || cookie[0] != 1)
     {
@@ -365,7 +365,8 @@ static proto_bool protocore_dtls_cookie_verify(uint8_t *work, const uint8_t prot
     return PROTO_TRUE;
 }
 
-const DtlsHandshakeNs DtlsHandshake = {protocore_dtls_hs_header_parse, protocore_dtls_hs_frag_build, protocore_dtls_hs_reasm_init,
-                                       protocore_dtls_hs_reasm_add,    protocore_dtls_ack_build,     protocore_dtls_ack_parse,
+const DtlsHandshakeNs DtlsHandshake = {protocore_dtls_hs_header_parse, protocore_dtls_hs_frag_build,
+                                       protocore_dtls_hs_reasm_init,   protocore_dtls_hs_reasm_add,
+                                       protocore_dtls_ack_build,       protocore_dtls_ack_parse,
                                        protocore_dtls_cookie_make,     protocore_dtls_cookie_verify};
 #endif // PROTOCORE_ENABLE_DTLS

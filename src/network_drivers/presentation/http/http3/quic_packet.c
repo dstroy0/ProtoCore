@@ -66,7 +66,7 @@ proto_bool protocore_quic_parse_long_header(const uint8_t *buf, size_t len, Quic
 }
 
 size_t protocore_quic_build_long_header(uint8_t *out, size_t cap, uint8_t type, uint32_t version, const uint8_t *dcid,
-                                 uint8_t dcid_len, const uint8_t *scid, uint8_t scid_len, uint8_t pn_len)
+                                        uint8_t dcid_len, const uint8_t *scid, uint8_t scid_len, uint8_t pn_len)
 {
     if (dcid_len > QUIC_MAX_CID_LEN || scid_len > QUIC_MAX_CID_LEN || pn_len < 1 || pn_len > 4)
     {
@@ -109,8 +109,8 @@ proto_bool protocore_quic_parse_short_header(const uint8_t *buf, size_t len, uin
 }
 
 size_t protocore_quic_build_version_negotiation(uint8_t *out, size_t cap, const uint8_t *dcid, uint8_t dcid_len,
-                                         const uint8_t *scid, uint8_t scid_len, const uint32_t *versions,
-                                         size_t nversions)
+                                                const uint8_t *scid, uint8_t scid_len, const uint32_t *versions,
+                                                size_t nversions)
 {
     if (dcid_len > QUIC_MAX_CID_LEN || scid_len > QUIC_MAX_CID_LEN)
     {

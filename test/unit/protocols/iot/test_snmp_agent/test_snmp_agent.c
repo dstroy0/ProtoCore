@@ -1,8 +1,8 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-#include "network_drivers/transport/udp/udp.h"
 #include "network_drivers/transport/udp/server/server.h"
+#include "network_drivers/transport/udp/udp.h"
 #include "services/net/snmp/snmp_agent.h"
 #include "services/net/snmp/snmp_ber.h"
 #include <string.h>
@@ -115,8 +115,7 @@ static size_t build_pdu(uint8_t *buf, size_t cap, int knob)
     protocore_ber_put_integer(&e, 0);
     if (knob == VB_BAD_VBL_TAG)
     {
-        protocore_ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, (const uint8_t *)"x",
-                                       1);
+        protocore_ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, (const uint8_t *)"x", 1);
     }
     else
     {
@@ -133,8 +132,7 @@ static size_t build_pdu(uint8_t *buf, size_t cap, int knob)
         }
         else if (knob == VB_BAD_VB_TAG)
         {
-            protocore_ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, (const uint8_t *)"x",
-                                           1);
+            protocore_ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, (const uint8_t *)"x", 1);
         }
         else if (knob == VB_BAD_OID)
         {
@@ -147,13 +145,11 @@ static size_t build_pdu(uint8_t *buf, size_t cap, int knob)
         {
             size_t vb = protocore_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
             protocore_ber_put_oid(&e, OID_SYSDESCR, 9);
-            uint8_t badv[2] = {(uint8_t)SNMP_TAG_BER_OCTET_STRING,
-                               0x7F};
+            uint8_t badv[2] = {(uint8_t)SNMP_TAG_BER_OCTET_STRING, 0x7F};
             protocore_ber_put_raw(&e, badv, sizeof(badv));
             protocore_ber_seq_end(&e, vb);
         }
-        else if (knob ==
-                 VB_OID_VALUE)
+        else if (knob == VB_OID_VALUE)
         {
             size_t vb = protocore_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
             protocore_ber_put_oid(&e, OID_SYSDESCR, 9);
@@ -164,8 +160,7 @@ static size_t build_pdu(uint8_t *buf, size_t cap, int knob)
         {
             size_t vb = protocore_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
             protocore_ber_put_oid(&e, OID_SYSDESCR, 9);
-            uint8_t empty_oid[2] = {(uint8_t)SNMP_TAG_BER_OID,
-                                    0x00};
+            uint8_t empty_oid[2] = {(uint8_t)SNMP_TAG_BER_OID, 0x00};
             protocore_ber_put_raw(&e, empty_oid, sizeof(empty_oid));
             protocore_ber_seq_end(&e, vb);
         }
@@ -752,8 +747,7 @@ void test_snmp_dispatch_varbind_guards()
     }
     size_t n = build_pdu(pdu, sizeof(pdu), VB_OID_VALUE);
     TEST_ASSERT_TRUE(n > 0);
-    TEST_ASSERT_TRUE(protocore_snmp_dispatch_pdu(pdu, n, PROTO_FALSE, PROTO_TRUE, resp, sizeof(resp)) >
-                     0);
+    TEST_ASSERT_TRUE(protocore_snmp_dispatch_pdu(pdu, n, PROTO_FALSE, PROTO_TRUE, resp, sizeof(resp)) > 0);
 
     n = build_pdu(pdu, sizeof(pdu), VB_VALID);
     uint8_t tiny[24];

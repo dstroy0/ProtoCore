@@ -38,13 +38,13 @@ void test_scpi99_exact_short_or_long_form_only(void)
     }
 
     static const char *const REJECT[] = {
-        "SY:ERR?",       // shorter than the short form
-        "SYS:ERR?",      // one character short of the short form
-        "SYSTE:ERR?",    // between the short and the long form
-        "SYSTEMS:ERR?",  // past the long form
-        "SYST:ER?",      // the second node truncated below its short form
-        "SYST:ERRO?",    // the second node between its forms
-        "SYST:ERRORS?",  // past the second node's long form
+        "SY:ERR?",      // shorter than the short form
+        "SYS:ERR?",     // one character short of the short form
+        "SYSTE:ERR?",   // between the short and the long form
+        "SYSTEMS:ERR?", // past the long form
+        "SYST:ER?",     // the second node truncated below its short form
+        "SYST:ERRO?",   // the second node between its forms
+        "SYST:ERRORS?", // past the second node's long form
     };
     for (size_t i = 0; i < sizeof(REJECT) / sizeof(REJECT[0]); i++)
     {
@@ -60,7 +60,7 @@ void test_query_marker_and_depth_must_agree(void)
     TEST_ASSERT_FALSE(protocore_scpi_match("SYST:ERR?", 9, "SYSTem:ERRor"));
     TEST_ASSERT_TRUE(protocore_scpi_match("SOUR:VOLT", 9, "SOURce:VOLTage"));
 
-    TEST_ASSERT_FALSE(protocore_scpi_match("SOUR", 4, "SOURce:VOLTage"));          // too shallow
+    TEST_ASSERT_FALSE(protocore_scpi_match("SOUR", 4, "SOURce:VOLTage"));           // too shallow
     TEST_ASSERT_FALSE(protocore_scpi_match("SOUR:VOLT:LEV", 13, "SOURce:VOLTage")); // too deep
     TEST_ASSERT_TRUE(protocore_scpi_match("SOUR:VOLT:LEV:IMM:AMPL", 22, "SOURce:VOLTage:LEVel:IMMediate:AMPLitude"));
 }
@@ -155,10 +155,10 @@ void test_numeric_response_forms(void)
         const char *s;
         double want;
     } CASES[] = {
-        {"0", 0.0},          {"1", 1.0},        {"-1", -1.0},       {"+1", 1.0},
-        {"1234567", 1234567.0}, {"1.5", 1.5},   {"-1.5", -1.5},     {"0.001", 0.001},
-        {".5", 0.5},         {"1.", 1.0},       {"1E3", 1000.0},    {"1e3", 1000.0},
-        {"1.5E3", 1500.0},   {"1.5E+3", 1500.0}, {"1.5E-3", 0.0015}, {"-2.5E2", -250.0},
+        {"0", 0.0},         {"1", 1.0},      {"-1", -1.0},      {"+1", 1.0},        {"1234567", 1234567.0},
+        {"1.5", 1.5},       {"-1.5", -1.5},  {"0.001", 0.001},  {".5", 0.5},        {"1.", 1.0},
+        {"1E3", 1000.0},    {"1e3", 1000.0}, {"1.5E3", 1500.0}, {"1.5E+3", 1500.0}, {"1.5E-3", 0.0015},
+        {"-2.5E2", -250.0},
     };
     for (size_t i = 0; i < sizeof(CASES) / sizeof(CASES[0]); i++)
     {
@@ -267,11 +267,11 @@ void test_string_responses(void)
     TEST_ASSERT_EQUAL_STRING("", out);
 
     static const char *const BAD[] = {
-        "HELLO",     // unquoted
-        "\"HELLO",   // unterminated
-        "HELLO\"",   // no opening quote
-        "\"HELLO'",  // mismatched quote characters
-        "\"",        // one octet
+        "HELLO",    // unquoted
+        "\"HELLO",  // unterminated
+        "HELLO\"",  // no opening quote
+        "\"HELLO'", // mismatched quote characters
+        "\"",       // one octet
     };
     for (size_t i = 0; i < sizeof(BAD) / sizeof(BAD[0]); i++)
     {
@@ -351,8 +351,8 @@ void test_block_refuses_malformed_and_truncated(void)
     }
 
     static const uint8_t *const BAD[] = {
-        (const uint8_t *)"210ABCDEFGHIJ", // no '#'
-        (const uint8_t *)"#X10AB",        // the width digit is not a digit
+        (const uint8_t *)"210ABCDEFGHIJ",  // no '#'
+        (const uint8_t *)"#X10AB",         // the width digit is not a digit
         (const uint8_t *)"#2XYABCDEFGHIJ", // the length digits are not digits
     };
     static const size_t BAD_LEN[] = {13, 6, 14};
@@ -399,11 +399,9 @@ void test_scpi99_error_class_sets_its_esr_bit(void)
         int16_t number;
         uint8_t bit;
     } CASES[] = {
-        {-100, SCPI_ESR_CME}, {-113, SCPI_ESR_CME}, {-199, SCPI_ESR_CME},
-        {-200, SCPI_ESR_EXE}, {-222, SCPI_ESR_EXE}, {-299, SCPI_ESR_EXE},
-        {-300, SCPI_ESR_DDE}, {-350, SCPI_ESR_DDE}, {-399, SCPI_ESR_DDE},
-        {-400, SCPI_ESR_QYE}, {-420, SCPI_ESR_QYE}, {-499, SCPI_ESR_QYE},
-        {1, SCPI_ESR_DDE},    {32767, SCPI_ESR_DDE},
+        {-100, SCPI_ESR_CME}, {-113, SCPI_ESR_CME}, {-199, SCPI_ESR_CME}, {-200, SCPI_ESR_EXE},  {-222, SCPI_ESR_EXE},
+        {-299, SCPI_ESR_EXE}, {-300, SCPI_ESR_DDE}, {-350, SCPI_ESR_DDE}, {-399, SCPI_ESR_DDE},  {-400, SCPI_ESR_QYE},
+        {-420, SCPI_ESR_QYE}, {-499, SCPI_ESR_QYE}, {1, SCPI_ESR_DDE},    {32767, SCPI_ESR_DDE},
     };
     for (size_t i = 0; i < sizeof(CASES) / sizeof(CASES[0]); i++)
     {

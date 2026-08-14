@@ -111,7 +111,8 @@ void test_rfc9000_long_packet_types(void)
     for (size_t i = 0; i < 4; i++)
     {
         QuicLongHeader h;
-        size_t n = protocore_quic_build_long_header(g_out, sizeof(g_out), TYPES[i], QUIC_VERSION_1, NONE, 0, NONE, 0, 1);
+        size_t n =
+            protocore_quic_build_long_header(g_out, sizeof(g_out), TYPES[i], QUIC_VERSION_1, NONE, 0, NONE, 0, 1);
         TEST_ASSERT_EQUAL_UINT(7u, n);
         TEST_ASSERT_EQUAL_HEX8((uint8_t)(0xC0 | (TYPES[i] << 4)), g_out[0]);
         TEST_ASSERT_TRUE(protocore_quic_parse_long_header(g_out, n, &h));
@@ -214,8 +215,8 @@ void test_rfc9000_a2_packet_number_length(void)
     // "if largest_acked is None: num_unacked = full_pn + 1" - packet 0 with nothing acked needs one
     // octet, and the width grows with the count of unacknowledged numbers, not with the value
     TEST_ASSERT_EQUAL_UINT8(1, protocore_quic_pn_length(0u, -1));
-    TEST_ASSERT_EQUAL_UINT8(1, protocore_quic_pn_length(126u, -1));  // 2 * 127 = 254 fits in 8 bits
-    TEST_ASSERT_EQUAL_UINT8(2, protocore_quic_pn_length(128u, -1));  // 2 * 129 = 258 does not
+    TEST_ASSERT_EQUAL_UINT8(1, protocore_quic_pn_length(126u, -1)); // 2 * 127 = 254 fits in 8 bits
+    TEST_ASSERT_EQUAL_UINT8(2, protocore_quic_pn_length(128u, -1)); // 2 * 129 = 258 does not
     TEST_ASSERT_EQUAL_UINT8(4, protocore_quic_pn_length(1u << 24, -1));
     TEST_ASSERT_EQUAL_UINT(0u, protocore_quic_pn_encode(g_out, 1, 0xac5c02u, (int64_t)0xabe8b3));
 }
@@ -257,13 +258,14 @@ void test_connection_id_bounds(void)
                                                                 NONE, 0, NONE, 0, 0));
     TEST_ASSERT_EQUAL_UINT(0u, protocore_quic_build_long_header(g_out, sizeof(g_out), QUIC_LP_INITIAL, QUIC_VERSION_1,
                                                                 NONE, 0, NONE, 0, 5));
-    TEST_ASSERT_EQUAL_UINT(0u,
-                           protocore_quic_build_long_header(g_out, 6, QUIC_LP_INITIAL, QUIC_VERSION_1, NONE, 0, NONE, 0, 1));
+    TEST_ASSERT_EQUAL_UINT(
+        0u, protocore_quic_build_long_header(g_out, 6, QUIC_LP_INITIAL, QUIC_VERSION_1, NONE, 0, NONE, 0, 1));
 
     static const uint8_t OVERLONG_DCID[7] = {0xC0, 0x00, 0x00, 0x00, 0x01, 21, 0x00};
     TEST_ASSERT_FALSE(protocore_quic_parse_long_header(OVERLONG_DCID, sizeof(OVERLONG_DCID), &h));
 
-    TEST_ASSERT_EQUAL_UINT(0u, protocore_quic_build_version_negotiation(g_out, sizeof(g_out), big, 21, NONE, 0, NULL, 0));
+    TEST_ASSERT_EQUAL_UINT(0u,
+                           protocore_quic_build_version_negotiation(g_out, sizeof(g_out), big, 21, NONE, 0, NULL, 0));
     TEST_ASSERT_EQUAL_UINT(0u, protocore_quic_build_version_negotiation(g_out, 6, NONE, 0, NONE, 0, NULL, 0));
 }
 

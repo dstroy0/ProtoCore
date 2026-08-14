@@ -179,11 +179,11 @@ void test_npdu_with_a_destination_address(void)
 void test_hop_count_follows_the_source_fields(void)
 {
     static const uint8_t NPDU[14] = {
-        0x01, 0x28,             // version, control: destination + source present
-        0x00, 0x05, 0x01, 0x0A, // DNET 5, DLEN 1, DADR 0x0A
+        0x01, 0x28,                   // version, control: destination + source present
+        0x00, 0x05, 0x01, 0x0A,       // DNET 5, DLEN 1, DADR 0x0A
         0x00, 0x03, 0x02, 0xAA, 0xBB, // SNET 3, SLEN 2, SADR AA BB
-        0xFE,                   // hop count
-        0x10, 0x08,             // APDU
+        0xFE,                         // hop count
+        0x10, 0x08,                   // APDU
     };
     NpduInfo info;
     TEST_ASSERT_TRUE(protocore_npdu_parse(NPDU, sizeof(NPDU), &info));
@@ -222,8 +222,8 @@ void test_npdu_refusals(void)
     uint8_t out[4];
     static const uint8_t APDU[2] = {0x10, 0x08};
     TEST_ASSERT_EQUAL_size_t(0u, protocore_npdu_build(out, 3, PROTO_FALSE, 0, PROTO_FALSE, 0, NULL, 0, 0, APDU, 2));
-    TEST_ASSERT_EQUAL_size_t(0u,
-                             protocore_npdu_build(out, sizeof(out), PROTO_FALSE, 0, PROTO_FALSE, 0, NULL, 0, 0, NULL, 2));
+    TEST_ASSERT_EQUAL_size_t(
+        0u, protocore_npdu_build(out, sizeof(out), PROTO_FALSE, 0, PROTO_FALSE, 0, NULL, 0, 0, NULL, 2));
 }
 
 // A network-layer NSDU sets the top NPCI bit, and the parser must report it rather than handing the
@@ -272,11 +272,11 @@ void test_i_am_object_identifier_packs_type_and_instance(void)
     uint8_t buf[32];
     size_t n = protocore_apdu_build_i_am(buf, sizeof(buf), 260, 1476, 0, 260);
     static const uint8_t WANT[15] = {
-        0x10, 0x00,                         // unconfirmed request, service choice 0 = I-Am
-        0xC4, 0x02, 0x00, 0x01, 0x04,       // application tag 12, length 4, object id
-        0x22, 0x05, 0xC4,                   // application tag 2 (unsigned), length 2, 1476 = 0x05C4
-        0x91, 0x00,                         // application tag 9 (enumerated), length 1, segmented-both
-        0x22, 0x01, 0x04,                   // application tag 2, length 2, vendor 260 = 0x0104
+        0x10, 0x00,                   // unconfirmed request, service choice 0 = I-Am
+        0xC4, 0x02, 0x00, 0x01, 0x04, // application tag 12, length 4, object id
+        0x22, 0x05, 0xC4,             // application tag 2 (unsigned), length 2, 1476 = 0x05C4
+        0x91, 0x00,                   // application tag 9 (enumerated), length 1, segmented-both
+        0x22, 0x01, 0x04,             // application tag 2, length 2, vendor 260 = 0x0104
     };
     TEST_ASSERT_EQUAL_size_t(15u, n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, buf, 15);
@@ -318,8 +318,8 @@ void test_read_property_request(void)
     TEST_ASSERT_EQUAL_size_t(11u, n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(TOP, buf, 11);
 
-    TEST_ASSERT_EQUAL_size_t(0u, protocore_apdu_build_read_property(buf, sizeof(buf), 1, 0, 0,
-                                                                    BACNET_MAX_INSTANCE + 1, 85));
+    TEST_ASSERT_EQUAL_size_t(
+        0u, protocore_apdu_build_read_property(buf, sizeof(buf), 1, 0, 0, BACNET_MAX_INSTANCE + 1, 85));
     TEST_ASSERT_EQUAL_size_t(0u, protocore_apdu_build_read_property(buf, sizeof(buf), 1, 0, 0x400u, 5, 85));
     TEST_ASSERT_EQUAL_size_t(0u, protocore_apdu_build_read_property(buf, 10, 1, 0, 0, 5, 85));
     TEST_ASSERT_EQUAL_size_t(0u, protocore_apdu_build_read_property(NULL, sizeof(buf), 1, 0, 0, 5, 85));

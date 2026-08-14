@@ -7,8 +7,8 @@
  */
 
 #include "server/core/exc_decoder.h"
-#include "mmgr/membuild.h"         // protocore_sb frame builder
-#include "mmgr/protostr.h"         // str.find: each field's marker inside the panic dump
+#include "mmgr/membuild.h"  // protocore_sb frame builder
+#include "mmgr/protostr.h"  // str.find: each field's marker inside the panic dump
 #include "shared/hex/hex.h" // PROTOCORE_HEX: the shared digit tables
 
 #if PROTOCORE_ENABLE_EXC_DECODER
@@ -200,8 +200,9 @@ static void parse_excvaddr(const char *text, ExcInfo *out)
 // Register-dump PC: a line that starts with "PC" (not "EPC..."). Anchor to a line break.
 static void parse_pc(const char *text, ExcInfo *out)
 {
-    const char *pcl =
-        (strncmp(text, "PC", 2) == 0) ? text : str.find(text, str.len(text, 0xFFFF) + 1u, "\nPC", sizeof("\nPC"), PROTO_FALSE);
+    const char *pcl = (strncmp(text, "PC", 2) == 0)
+                          ? text
+                          : str.find(text, str.len(text, 0xFFFF) + 1u, "\nPC", sizeof("\nPC"), PROTO_FALSE);
     if (!pcl)
     {
         return;

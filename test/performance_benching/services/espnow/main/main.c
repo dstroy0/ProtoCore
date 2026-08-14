@@ -28,7 +28,8 @@ void dbench_run(void)
     // Small envelope, mirrors test_espnow.cpp's roundtrip fixture.
     static const uint8_t payload_small[] = {1, 2, 3, 4, 5};
     static uint8_t frame_small[PROTOCORE_ESPNOW_HDR + sizeof(payload_small)];
-    size_t n_small = protocore_espnow_encode(42, payload_small, sizeof(payload_small), frame_small, sizeof(frame_small));
+    size_t n_small =
+        protocore_espnow_encode(42, payload_small, sizeof(payload_small), frame_small, sizeof(frame_small));
 
     // Max-size envelope (radio MTU minus header) for the bulk/throughput numbers.
     static uint8_t payload_max[PROTOCORE_ESPNOW_MAX_PAYLOAD];
@@ -54,7 +55,8 @@ void dbench_run(void)
         volatile bool bsink = false;
 
         DBENCH_OP("protocore_espnow_encode", 100000,
-                  sink += protocore_espnow_encode(42, payload_small, sizeof(payload_small), frame_small, sizeof(frame_small)));
+                  sink +=
+                  protocore_espnow_encode(42, payload_small, sizeof(payload_small), frame_small, sizeof(frame_small)));
         DBENCH_OP("protocore_espnow_decode", 100000,
                   bsink = protocore_espnow_decode(frame_small, n_small, &g_type_out, &g_payload_out, &g_plen_out));
         DBENCH_BULK("protocore_espnow_encode_max", 20000, PROTOCORE_ESPNOW_MAX_PAYLOAD,

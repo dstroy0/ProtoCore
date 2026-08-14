@@ -22,8 +22,8 @@ uint16_t protocore_mbplus_crc(const uint8_t *bytes, size_t len)
     return (uint16_t)Crc.value;
 }
 
-size_t protocore_mbplus_build(uint8_t address, uint8_t control, const uint8_t *payload, size_t payload_len, uint8_t *out,
-                       size_t cap)
+size_t protocore_mbplus_build(uint8_t address, uint8_t control, const uint8_t *payload, size_t payload_len,
+                              uint8_t *out, size_t cap)
 {
     if (!out || (payload_len && !payload) || address < 1 || address > MBPLUS_MAX_STATION)
     {
@@ -45,7 +45,7 @@ size_t protocore_mbplus_build(uint8_t address, uint8_t control, const uint8_t *p
         i += payload_len;
     }
     uint16_t crc = protocore_mbplus_crc(out + body, (i - body)); // over addr..last payload
-    out[i++] = (uint8_t)crc;                              // CRC low byte first
+    out[i++] = (uint8_t)crc;                                     // CRC low byte first
     out[i++] = (uint8_t)(crc >> 8);
     out[i++] = MBPLUS_FLAG;
     return i;

@@ -65,7 +65,8 @@ void dbench_run(void)
 
         // Serialize a plan to the {"cpu_mhz":...} JSON object (snprintf-backed, so a touch heavier).
         PowerPlan p = protocore_power_plan(&cfg, 90, 41, false, 60000, false);
-        DBENCH_OP("protocore_power_json serialize", 20000, sink_len += protocore_power_json(&p, 41, json, sizeof(json)));
+        DBENCH_OP("protocore_power_json serialize", 20000,
+                  sink_len += protocore_power_json(&p, 41, json, sizeof(json)));
 
         (void)sink_mhz;
         (void)sink_flags;

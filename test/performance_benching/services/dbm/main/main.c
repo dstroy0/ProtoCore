@@ -116,7 +116,8 @@ void dbench_run(void)
 
         // Read path: index lookup + a pread of the value back out of the WAL data region. Does not
         // append, so it is free to run at a much larger N.
-        DBENCH_OP("protocore_dbm_get (existing key)", 50000, sinkl = protocore_dbm_get(&g_db, "alpha", 5, getbuf, sizeof(getbuf)));
+        DBENCH_OP("protocore_dbm_get (existing key)", 50000,
+                  sinkl = protocore_dbm_get(&g_db, "alpha", 5, getbuf, sizeof(getbuf)));
 
         // Existence check: same probe as get, without the value read.
         DBENCH_OP("protocore_dbm_contains", 50000, sinkb = protocore_dbm_contains(&g_db, "alpha", 5));

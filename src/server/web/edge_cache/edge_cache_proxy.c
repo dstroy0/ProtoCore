@@ -14,8 +14,8 @@
 
 #include "network_drivers/presentation/http/http.h"                    // Http.set_edge_poll
 #include "network_drivers/presentation/http/http_parser/http_parser.h" // HttpReq, http_get_header, http_pool
-#include "network_drivers/transport/tcp/tcp.h"                             // protocore_client_*
-#include "network_drivers/transport/tcp/tcp.h"                             // protocore_conn_active
+#include "network_drivers/transport/tcp/tcp.h"                         // protocore_client_*
+#include "network_drivers/transport/tcp/tcp.h"                         // protocore_conn_active
 #include "protocore.h"                                                 // PC, Middleware, MwResult, ChunkSource
 #include "server/clock/clock.h"                                        // protocore_millis
 #include "server/web/edge_cache/edge_fetch.h"
@@ -24,13 +24,13 @@
 #endif
 #include "network_drivers/application/http_range.h" // http_parse_byte_range (Range/206 support)
 #include "services/net/http_client/http_client.h"   // HttpClient.parse_target_uri
-#include "shared/mime/mime.h"                 // PROTOCORE_MIME_TEXT_PLAIN
+#include "shared/mime/mime.h"                       // PROTOCORE_MIME_TEXT_PLAIN
 #if PROTOCORE_ENABLE_EDGE_ORIGIN_TLS
 #include "network_drivers/tls/tls.h" // protocore_tls_client_session_* (TLS upstream origin fetch)
 #endif
 #if PROTOCORE_ENABLE_EDGE_MESH
-#include "server/core/proto_handler.h" // ProtoHandler / Session.proto->add(PROTO_MESH serving)
-#include "server/web/edge_cache/edge_mesh.h"     // mesh sibling-cache codec + peer-query engine
+#include "server/core/proto_handler.h"       // ProtoHandler / Session.proto->add(PROTO_MESH serving)
+#include "server/web/edge_cache/edge_mesh.h" // mesh sibling-cache codec + peer-query engine
 #endif
 
 typedef struct

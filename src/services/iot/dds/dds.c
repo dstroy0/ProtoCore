@@ -40,8 +40,7 @@ static struct RtpsInternal s_rtps = {.ns = &Rtps};
 static void rtps_header(struct RtpsInternal *restrict ctx)
 {
     ctx->ns->n = 0;
-    if (!ctx->ns->hdr.guid_prefix || !ctx->ns->hdr.vendor_id || !ctx->ns->out.buf ||
-        ctx->ns->out.cap < RTPS_HEADER_LEN)
+    if (!ctx->ns->hdr.guid_prefix || !ctx->ns->hdr.vendor_id || !ctx->ns->out.buf || ctx->ns->out.cap < RTPS_HEADER_LEN)
     {
         return;
     }
@@ -143,8 +142,8 @@ static void rtps_parse(struct RtpsInternal *restrict ctx)
         }
         if (ctx->ns->sink.on_submessage)
         {
-            ctx->ns->sink.on_submessage(submessage_id, flags, contents_len ? (msg + contents_off) : NULL,
-                                        contents_len, ctx->ns->sink.arg);
+            ctx->ns->sink.on_submessage(submessage_id, flags, contents_len ? (msg + contents_off) : NULL, contents_len,
+                                        ctx->ns->sink.arg);
         }
         // A run to the end of the Message lands off at len, which fails the loop test.
         off = contents_off + contents_len;

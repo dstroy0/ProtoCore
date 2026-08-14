@@ -15,8 +15,8 @@
  */
 
 #include "protocol.h"
-#include "../common.h"               // TcpConn, conn_pool: the slots this engine drives
 #include "../../net_addr/net_addr.h" // protocore_net_addr_to_ip(): the stack's address as a protocore_ip
+#include "../common.h"               // TcpConn, conn_pool: the slots this engine drives
 #include "../lower/lower.h"          // every call into the stack below goes through the seam
 #include "../server/server.h"        // TcpListener.enqueue: the owning listener posts the event
 #include "core_setup/board_profiles/protocore_platform.h"
@@ -273,7 +273,8 @@ static void protocore_conn_set_state(uint8_t slot, ConnState st)
 // slot whose bytes the wire has not finished with is not available, however free its state says.
 static void alloc_free(struct ConnPoolInternal *restrict ctx)
 {
-    ctx->ns->i32 = protocore_slot_next(protocore_slot_ready(&protocore_conn_bits.free, &protocore_conn_bits.held, MAX_CONNS));
+    ctx->ns->i32 =
+        protocore_slot_next(protocore_slot_ready(&protocore_conn_bits.free, &protocore_conn_bits.held, MAX_CONNS));
 }
 
 static int32_t protocore_conn_alloc_free(void)
@@ -537,7 +538,7 @@ static void begin_close(struct ConnPoolInternal *restrict ctx)
     }
     protocore_pcb *pcb = c->pcb;
     Clock.millis(Clock.internal);
-    c->last_activity_ms = Clock.ms;     // start the dwell clock
+    c->last_activity_ms = Clock.ms;                // start the dwell clock
     protocore_conn_set_state(c->id, CONN_CLOSING); // release store: the callbacks now see CLOSING
     PROTOCORE_OBS_TRANSITION(ctx->ns->slot, CONN_ACTIVE, CONN_CLOSING, PROTOCORE_CONN_R_CLOSE_LOCAL);
     // Finalize immediately if the response already drained, else dwell until the sent callback or

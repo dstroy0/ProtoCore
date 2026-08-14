@@ -98,4 +98,3 @@ SignalingNs Signal = {.know = signal_know,
                       .put_tick = signal_put_tick,
                       .kill = signal_kill,
                       .internal = &s_sig};
-

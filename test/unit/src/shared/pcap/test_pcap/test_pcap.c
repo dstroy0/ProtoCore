@@ -83,7 +83,7 @@ void test_magic_octet_order_declares_little_endian(void)
 void test_linktype_reaches_the_file(void)
 {
     static const uint32_t DLT[] = {
-        PROTOCORE_DLT_ETHERNET, PROTOCORE_DLT_IEEE802_11, PROTOCORE_DLT_CAN_SOCKETCAN,
+        PROTOCORE_DLT_ETHERNET,           PROTOCORE_DLT_IEEE802_11,       PROTOCORE_DLT_CAN_SOCKETCAN,
         PROTOCORE_DLT_IEEE802_15_4_NOFCS, PROTOCORE_DLT_IEEE802_15_4_TAP, PROTOCORE_DLT_RAW,
     };
     for (size_t i = 0; i < sizeof(DLT) / sizeof(DLT[0]); i++)

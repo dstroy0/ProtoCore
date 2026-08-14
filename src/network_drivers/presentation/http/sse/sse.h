@@ -95,7 +95,6 @@ struct SseInternal;
 // SSE pool API
 // ---------------------------------------------------------------------------
 
-
 /** @brief The id a route carries when it serves no SSE stream. */
 #define PROTOCORE_SSE_NONE 0xFFu
 

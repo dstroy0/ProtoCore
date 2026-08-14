@@ -202,14 +202,14 @@ static size_t build_arp(uint8_t *out, size_t cap, uint16_t msg, uint16_t station
     return protocore_rtcm3_frame_build(out, cap, payload, body_bytes);
 }
 
-size_t protocore_rtcm3_build_1005(uint8_t *out, size_t cap, uint16_t station_id, int64_t ecef_x_01mm, int64_t ecef_y_01mm,
-                           int64_t ecef_z_01mm)
+size_t protocore_rtcm3_build_1005(uint8_t *out, size_t cap, uint16_t station_id, int64_t ecef_x_01mm,
+                                  int64_t ecef_y_01mm, int64_t ecef_z_01mm)
 {
     return build_arp(out, cap, 1005, station_id, ecef_x_01mm, ecef_y_01mm, ecef_z_01mm, PROTO_FALSE, 0);
 }
 
-size_t protocore_rtcm3_build_1006(uint8_t *out, size_t cap, uint16_t station_id, int64_t ecef_x_01mm, int64_t ecef_y_01mm,
-                           int64_t ecef_z_01mm, uint16_t antenna_height_01mm)
+size_t protocore_rtcm3_build_1006(uint8_t *out, size_t cap, uint16_t station_id, int64_t ecef_x_01mm,
+                                  int64_t ecef_y_01mm, int64_t ecef_z_01mm, uint16_t antenna_height_01mm)
 {
     return build_arp(out, cap, 1006, station_id, ecef_x_01mm, ecef_y_01mm, ecef_z_01mm, PROTO_TRUE,
                      antenna_height_01mm);

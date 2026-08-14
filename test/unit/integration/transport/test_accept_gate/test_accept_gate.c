@@ -1,13 +1,13 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-#include "server/core/proto_handler.h"
+#include "network_drivers/session/session.h"
 #include "network_drivers/transport/tcp/common.h"
 #include "network_drivers/transport/tcp/protocol/protocol.h"
 #include "network_drivers/transport/tcp/server/server.h"
-#include "network_drivers/session/session.h"
 #include "network_drivers/transport/tcp/tcp.h"
 #include "server/clock/clock.h"
+#include "server/core/proto_handler.h"
 #include "shared/ip/ip.h"
 #include <unity.h>
 

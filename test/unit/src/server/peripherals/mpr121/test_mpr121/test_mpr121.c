@@ -145,10 +145,10 @@ void test_ecr_encodes_the_datasheet_fields(void)
         const size_t n = protocore_mpr121_build_init(buf, sizeof(buf), COUNTS[i], 12, 6);
         TEST_ASSERT_TRUE(n > 0);
         const uint8_t ecr = buf[n - 1];
-        TEST_ASSERT_EQUAL_UINT8(0x02, (ecr >> 6) & 0x03u);  // CL = b10
-        TEST_ASSERT_EQUAL_UINT8(0x00, (ecr >> 4) & 0x03u);  // ELEPROX_EN = b00
-        TEST_ASSERT_EQUAL_UINT8(COUNTS[i], ecr & 0x0Fu);    // ELE_EN
-        TEST_ASSERT_TRUE((ecr & 0x3Fu) != 0);               // non-zero, so it is Run Mode
+        TEST_ASSERT_EQUAL_UINT8(0x02, (ecr >> 6) & 0x03u); // CL = b10
+        TEST_ASSERT_EQUAL_UINT8(0x00, (ecr >> 4) & 0x03u); // ELEPROX_EN = b00
+        TEST_ASSERT_EQUAL_UINT8(COUNTS[i], ecr & 0x0Fu);   // ELE_EN
+        TEST_ASSERT_TRUE((ecr & 0x3Fu) != 0);              // non-zero, so it is Run Mode
     }
 }
 

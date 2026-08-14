@@ -41,7 +41,8 @@ static size_t pad_for(size_t payload_len)
 // RFC 4303 sec 2: SPI(4) | Seq(4) | IV(8) | ciphertext | ICV(16).
 static size_t packet_len_for(size_t payload_len)
 {
-    return PROTOCORE_ESP_HDR_LEN + PROTOCORE_ESP_IV_LEN + payload_len + pad_for(payload_len) + 2 + PROTOCORE_ESP_ICV_LEN;
+    return PROTOCORE_ESP_HDR_LEN + PROTOCORE_ESP_IV_LEN + payload_len + pad_for(payload_len) + 2 +
+           PROTOCORE_ESP_ICV_LEN;
 }
 
 static uint32_t be32(const uint8_t *p)
@@ -64,8 +65,8 @@ void test_rfc4303_packet_layout(void)
         }
 
         uint8_t packet[192];
-        size_t n = protocore_esp_gcm_encapsulate(0x11223344u, 0x00000001u, KEY, SALT, IV, 4, plen ? payload : NULL, plen,
-                                                 packet, sizeof(packet));
+        size_t n = protocore_esp_gcm_encapsulate(0x11223344u, 0x00000001u, KEY, SALT, IV, 4, plen ? payload : NULL,
+                                                 plen, packet, sizeof(packet));
         TEST_ASSERT_EQUAL_UINT32((uint32_t)packet_len_for(plen), (uint32_t)n);
 
         // sec 2.1 SPI and sec 2.2 Sequence Number are on the wire in network byte order.
@@ -143,8 +144,8 @@ void test_every_bit_is_authenticated(void)
 {
     static const uint8_t PAYLOAD[8] = {0xde, 0xad, 0xbe, 0xef, 0xfe, 0xed, 0xfa, 0xce};
     uint8_t good[128];
-    size_t n = protocore_esp_gcm_encapsulate(0x0a0b0c0du, 7u, KEY, SALT, IV, 4, PAYLOAD, sizeof(PAYLOAD), good,
-                                             sizeof(good));
+    size_t n =
+        protocore_esp_gcm_encapsulate(0x0a0b0c0du, 7u, KEY, SALT, IV, 4, PAYLOAD, sizeof(PAYLOAD), good, sizeof(good));
     TEST_ASSERT_GREATER_THAN_UINT32(0, (uint32_t)n);
 
     for (size_t byte = 0; byte < n; byte++)
@@ -171,7 +172,8 @@ void test_a_different_key_or_salt_cannot_open_the_packet(void)
     static const uint8_t PAYLOAD[4] = {1, 2, 3, 4};
     uint8_t packet[128];
     uint8_t scratch[128];
-    size_t n = protocore_esp_gcm_encapsulate(1u, 1u, KEY, SALT, IV, 4, PAYLOAD, sizeof(PAYLOAD), packet, sizeof(packet));
+    size_t n =
+        protocore_esp_gcm_encapsulate(1u, 1u, KEY, SALT, IV, 4, PAYLOAD, sizeof(PAYLOAD), packet, sizeof(packet));
 
     uint8_t other_key[PROTOCORE_ESP_KEY_LEN];
     memcpy(other_key, KEY, sizeof(other_key));
@@ -213,9 +215,9 @@ void test_the_iv_selects_the_nonce(void)
 
     // The same IV under the same key and sequence number is deterministic.
     uint8_t again[128];
-    TEST_ASSERT_EQUAL_UINT32((uint32_t)na, (uint32_t)protocore_esp_gcm_encapsulate(1u, 1u, KEY, SALT, IV, 4, PAYLOAD,
-                                                                                   sizeof(PAYLOAD), again,
-                                                                                   sizeof(again)));
+    TEST_ASSERT_EQUAL_UINT32((uint32_t)na,
+                             (uint32_t)protocore_esp_gcm_encapsulate(1u, 1u, KEY, SALT, IV, 4, PAYLOAD, sizeof(PAYLOAD),
+                                                                     again, sizeof(again)));
     TEST_ASSERT_EQUAL_HEX8_ARRAY(a, again, na);
 }
 
