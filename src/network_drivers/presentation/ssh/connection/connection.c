@@ -2098,7 +2098,10 @@ void protocore_ssh_forward_pump(struct SshConnectionInternal *restrict ctx)
             {
                 avail = sizeof(buf);
             }
-            uint32_t budget = protocore_ssh_flow_send_cap(&c->flow, (uint32_t)avail);
+            ctx->ns->flow.f = &c->flow;
+            ctx->ns->flow.want = (uint32_t)avail;
+            protocore_ssh_flow_send_cap(ctx);
+            uint32_t budget = ctx->ns->u32;
             if (budget == 0)
             {
                 break;
@@ -2113,7 +2116,12 @@ void protocore_ssh_forward_pump(struct SshConnectionInternal *restrict ctx)
             {
                 break;
             }
-            if (protocore_ssh_channel_send_data(ssh_slot, ch, buf, n) < 0)
+            ctx->ns->chan.slot = ssh_slot;
+            ctx->ns->chan.channel = ch;
+            ctx->ns->chan.data = buf;
+            ctx->ns->chan.len = n;
+            protocore_ssh_channel_send_data(ctx);
+            if (ctx->ns->i32 < 0)
             {
                 break; // sized to the window, so this should send; retry next poll
             }
@@ -2126,7 +2134,9 @@ void protocore_ssh_forward_pump(struct SshConnectionInternal *restrict ctx)
         SshNetwork.chan_drained(SshNetwork.internal);
         if (SshNetwork.ok && !c->eof_sent)
         {
-            protocore_ssh_channel_send_eof(ssh_slot, ch);
+            ctx->ns->chan.slot = ssh_slot;
+            ctx->ns->chan.channel = ch;
+            protocore_ssh_channel_send_eof(ctx);
         }
 
         // Both directions have signaled EOF: terminate the channel and drop the socket, once.
@@ -2134,7 +2144,9 @@ void protocore_ssh_forward_pump(struct SshConnectionInternal *restrict ctx)
         {
             // The socket goes now; the channel number stays taken until the peer's CLOSE answers
             // ours (sec 5.3), which build_close_chan settles.
-            protocore_ssh_channel_send_close(ssh_slot, ch);
+            ctx->ns->chan.slot = ssh_slot;
+            ctx->ns->chan.channel = ch;
+            protocore_ssh_channel_send_close(ctx);
             SshNetwork.ssh_slot = ssh_slot;
             SshNetwork.stream.channel = ch;
             SshNetwork.chan_close(SshNetwork.internal);
@@ -2155,7 +2167,8 @@ void protocore_ssh_forward_reset(struct SshConnectionInternal *restrict ctx)
     {
         if (s_store.rbind[i].active && s_store.rbind[i].ssh_slot == ssh_slot)
         {
-            ssh_rfwd_listener_close(s_store.rbind[i].listener_idx);
+            SshServer.handle = s_store.rbind[i].listener_idx;
+            SshServer.rfwd_listener_close(SshServer.internal);
             s_store.rbind[i].active = PROTO_FALSE;
         }
     }

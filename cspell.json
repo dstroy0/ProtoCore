@@ -3,8 +3,6 @@
   "language": "en",
   "ignoreRegExpList": ["/\\b[0-9a-f]{7,40}\\b/g"],
   "words": [
-    "aabbccddeeff",
-    "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq",
     "ABRT",
     "abspath",
     "ACCX",
