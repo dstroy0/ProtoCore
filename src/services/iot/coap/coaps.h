@@ -3,15 +3,22 @@
 
 /**
  * @file coaps.h
- * @brief CoAP over DTLS (CoAPs, RFC 7252 §9) - the bridge between the DTLS 1.3 server and the CoAP
- *        request handler.
+ * @brief CoAP over DTLS (RFC 7252 sec 9): the bridge between one DTLS connection and the CoAP server.
  *
- * CoAP secured with DTLS is the standard way to run CoAP over the open Internet (coaps://, UDP port
- * 5684). This is the transport-neutral glue: it drives one @ref DtlsConn through its handshake and,
- * once established, unwraps each encrypted application record, hands the CoAP request to
- * protocore_coap_server_process(), and re-wraps the response. The socket / per-peer routing lives in a thin
- * front-end (protocore_dtls_server) on top; this file has no sockets, so it is host-testable with an in-test
- * DTLS client, exactly like protocore_dtls_conn itself.
+ * RFC 7252 sec 9.1 binds CoAP to DTLS, and sec 6.2 gives that binding the "coaps" URI scheme; sec
+ * 12.7 registers its port, 5684. This is the transport-neutral half: it drives one @ref DtlsConn
+ * through its handshake and, once the connection is established, opens each protected application
+ * record, answers the CoAP message inside it through @ref Coap, and seals the response back into one
+ * record. The socket and the per-peer routing sit above it in coaps_server.h, so nothing here binds a
+ * port and the whole path is host-testable against an in-test DTLS client.
+ *
+ * The record layer is RFC 9147 (DTLS 1.3). Its sec 4 Figure 3 gives the DTLSCiphertext unified
+ * header: the three high bits of the first byte are 001, the C bit (0x10) marks a Connection ID, and
+ * the two low bits (0x03) carry the low-order bits of the epoch. Epoch 3 is application data;
+ * anything else is a handshake record and goes back to the state machine, which is what re-answers a
+ * retransmitted client Finished whose acknowledgement was lost (RFC 9147 sec 5.8.3).
+ *
+ * The module exports one symbol, @ref Coaps. Everything in coaps.c has internal linkage.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -20,25 +27,60 @@
 #ifndef PROTOCORE_COAPS_H
 #define PROTOCORE_COAPS_H
 
+#include "network_drivers/presentation/security/dtls/dtls_conn.h" // DtlsConn: the connection a call drives
 #include "protocore_config.h"
+
+PROTOCORE_BEGIN_DECLS
 
 #if PROTOCORE_ENABLE_DTLS && PROTOCORE_ENABLE_COAP
 
-#include "network_drivers/presentation/security/dtls/dtls_conn.h"
+/** @brief One inbound datagram and the buffer whatever it owes is written into. */
+typedef struct
+{
+    const uint8_t *data; ///< the received datagram's octets
+    size_t len;          ///< how many
+    uint8_t *out;        ///< where the outbound datagram is written
+    size_t out_cap;      ///< how much room that has
+} CoapsBridgeArgs;
+
+/** @brief The bridge's calls, described only in coaps.c. */
+struct CoapsInternal;
 
 /**
- * @brief Process one inbound DTLS datagram for a CoAP-over-DTLS connection @p c.
+ * @brief CoAP carried over one DTLS connection.
  *
- * While the handshake is in progress the datagram is driven through @ref DtlsServer.process. Once the
- * connection is established, an epoch-3 application record is decrypted, its CoAP request is answered
- * by protocore_coap_server_process(), and the response is sealed as an epoch-3 record. A handshake record that
- * arrives after establishment (a retransmitted client Finished whose ACK was lost) is routed back to
- * the state machine so it is re-acknowledged (RFC 9147 §5.8.3).
+ * A caller sets the members a call takes, invokes it through ::Coaps, and reads the outcome off the
+ * same handle.
  *
- * @return bytes written to @p out (0 if there is nothing to send), or -1 on a fatal handshake error
- *         (then @p c is FAILED and @ref DtlsServer.alert gives the reason).
+ * No storage member: the connection is the caller's @ref DtlsConn and the plaintext scratch lives for
+ * one call, so the bridge holds nothing between calls.
+ *
+ * @var CoapsNs::conn      the DTLS connection every call acts on
+ * @var CoapsNs::dgram     the datagram a call reads and the buffer it writes
+ * @var CoapsNs::i32       octets written to @c dgram.out, 0 when there is nothing to send, or -1 when
+ *                         the handshake failed and @c conn is FAILED
+ * @var CoapsNs::process   turn one received datagram: drive the handshake, or answer the CoAP message
+ *                         inside an epoch-3 application record and seal the response
+ * @var CoapsNs::internal  the calls that reach the connection
  */
-int protocore_coaps_process(DtlsConn *c, const uint8_t *dgram, size_t len, uint8_t *out, size_t out_cap);
+typedef struct
+{
+    DtlsConn *conn; ///< the connection every call names
+
+    CoapsBridgeArgs dgram; ///< what turning one datagram takes
+
+    int32_t i32;
+
+    void (*process)(struct CoapsInternal *ctx);
+
+    struct CoapsInternal *internal;
+} CoapsNs;
+
+/** @brief The one symbol this module exports. */
+extern CoapsNs Coaps;
 
 #endif // PROTOCORE_ENABLE_DTLS && PROTOCORE_ENABLE_COAP
+
+PROTOCORE_END_DECLS
+
 #endif // PROTOCORE_COAPS_H

@@ -13,7 +13,12 @@
 
 size_t protocore_wave_encode_psid(uint32_t psid, uint8_t *out, size_t cap)
 {
-    // P-encoding: the number of leading 1 bits in the first octet gives the length.
+    // P-encoding: the number of leading 1 bits in the first octet gives the length. The 4-octet form
+    // spends its top four bits on that tag, so it carries 28 value bits and no more.
+    if (psid > 0x0FFFFFFFu)
+    {
+        return 0;
+    }
     if (psid < 0x80)
     {
         if (cap < 1)

@@ -526,7 +526,8 @@ Each item has a working piece in the tree and an explicit _Remaining_ note.
   and the UART transport. Fixed BSS, no heap.
 - [~] **SNP** (M, GE Fanuc Series Ninety Protocol) _(frame codec shipped)_ - `PROTOCORE_ENABLE_SNP`
   (`services/snp`): the SNP master-slave serial frame - `protocore_snp_build` / `_parse` for
-  `[control][length][data][arithmetic-sum BCC]` with the control-byte constants, for register
+  `[control][length][data][BCC]` (GFK-0582D p. 7-62: XOR then rotate left one bit, per byte, seeded
+  at zero) with the control-byte constants, for register
   read/write on a GE Fanuc Series 90 (90-30/90-70) PLC over RS-485; host-tested (`native_snp`).
   _Remaining:_ the SNP-X session setup + the per-command register-access encoders, and the UART
   transport. Fixed BSS, no heap.

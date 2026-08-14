@@ -1,0 +1,2088 @@
+           Product  Sample &           Technical             Tools &   Support &
+           Folder   Buy                Documents             Software  Community
+
+                                                                                                                               INA219
+
+                                                                                                                    SBOS448G ­ AUGUST 2008 ­ REVISED DECEMBER 2015
+
+INA219 Zerø-Drift, Bidirectional Current/Power Monitor With I2C Interface
+
+1 Features                                3 Description
+
+·1 Senses Bus Voltages from 0 to 26 V     The INA219 is a current shunt and power monitor
+· Reports Current, Voltage, and Power     with an I2C- or SMBUS-compatible interface. The
+· 16 Programmable Addresses               device monitors both shunt voltage drop and bus
+· High Accuracy: 0.5% (Maximum) Over      supply voltage, with programmable conversion times
+                                          and filtering. A programmable calibration value,
+    Temperature (INA219B)                 combined with an internal multiplier, enables direct
+· Filtering Options                       readouts of current in amperes. An additional
+· Calibration Registers                   multiplying register calculates power in watts. The
+· SOT23-8 and SOIC-8 Packages             I2C- or SMBUS-compatible interface features 16
+                                          programmable addresses.
+2 Applications
+                                          The INA219 is available in two grades: A and B. The
+· Servers                                 B grade version has higher accuracy and higher
+· Telecom Equipment                       precision specifications.
+· Notebook Computers
+· Power Management                        The INA219 senses across shunts on buses that can
+· Battery Chargers                        vary from 0 to 26 V. The device uses a single 3- to
+· Welding Equipment                       5.5-V supply, drawing a maximum of 1 mA of supply
+· Power Supplies                          current. The INA219 operates from ­40°C to 125°C.
+· Test Equipment
+                                                                       Device Information(1)
+
+                                                  PART NUMBER          PACKAGE       BODY SIZE (NOM)
+
+                                          INA219                       SOIC (8)      3.91 mm × 4.90 mm
+                                                                       SOT-23 (8)    1.63 mm × 2.90 mm
+
+                                          (1) For all available packages, see the orderable addendum at
+                                               the end of the data sheet.
+
+VIN+ VIN-                              Simplified Schematic
+
+                                                    VS
+                                           (Supply Voltage)
+
+           INA219
+
+                                       ´          Power Register                              Data
+                                                                                              CLK
+                                          Current Register             I2C-/SMBUS-            A0
+                                                                        Compatible            A1
+
+                                                                          Interface
+
+           PGA      ADC
+
+                                          Voltage Register
+
+GND
+
+1
+
+         An IMPORTANT NOTICE at the end of this data sheet addresses availability, warranty, changes, use in safety-critical applications,
+         intellectual property matters and other important disclaimers. PRODUCTION DATA.
+INA219                                                                                          www.ti.com
+
+SBOS448G ­ AUGUST 2008 ­ REVISED DECEMBER 2015
+
+                                                Table of Contents
+
+   1 Features .................................................................. 1                   8.3 Feature Description................................................... 9
+   2 Applications ........................................................... 1                      8.4 Device Functional Modes........................................ 11
+   3 Description ............................................................. 1                     8.5 Programming........................................................... 12
+   4 Revision History..................................................... 2                         8.6 Register Maps ........................................................ 18
+   5 Related Products ................................................... 3                   9 Application and Implementation ........................ 25
+   6 Pin Configuration and Functions ......................... 3                                     9.1 Application Information............................................ 25
+   7 Specifications......................................................... 4                       9.2 Typical Application ................................................. 25
+                                                                                              10 Power Supply Recommendations ..................... 27
+          7.1 Absolute Maximum Ratings ...................................... 4               11 Layout................................................................... 27
+          7.2 ESD Ratings.............................................................. 4            11.1 Layout Guidelines ................................................. 27
+          7.3 Recommended Operating Conditions....................... 4                              11.2 Layout Example .................................................... 27
+          7.4 Thermal Information .................................................. 4        12 Device and Documentation Support ................. 28
+          7.5 Electrical Characteristics:.......................................... 5                12.1 Community Resources.......................................... 28
+          7.6 Bus Timing Diagram Definitions................................ 6                       12.2 Trademarks ........................................................... 28
+          7.7 Typical Characteristics .............................................. 7               12.3 Electrostatic Discharge Caution ............................ 28
+   8 Detailed Description .............................................. 9                           12.4 Glossary ................................................................ 28
+          8.1 Overview ................................................................... 9  13 Mechanical, Packaging, and Orderable
+          8.2 Functional Block Diagram ......................................... 9                 Information ........................................................... 28
+
+4 Revision History
+
+NOTE: Page numbers for previous revisions may differ from page numbers in the current version.
+
+Changes from Revision F (September 2011) to Revision G                                          Page
+
+· Added ESD Ratings table, Feature Description section, Device Functional Modes, Application and Implementation
+     section, Power Supply Recommendations section, Layout section, Device and Documentation Support section, and
+     Mechanical, Packaging, and Orderable Information section ................................................................................................. 1
+
+· Updated Bus Timing Diagram Definitions table. I2C timing table values were previously based on simulation and not
+     characterized .......................................................................................................................................................................... 6
+
+Changes from Revision E (September 2010) to Revision F                                          Page
+
+· Changed step 5 and step 6 values in Table 8...................................................................................................................... 26
+
+Changes from Revision D (September 2010) to Revision E                                          Page
+
+· Updated Packaging Information table .................................................................................................................................... 3
+
+2  Submit Documentation Feedback                                                              Copyright © 2008­2015, Texas Instruments Incorporated
+
+                                                Product Folder Links: INA219
+www.ti.com                                                                                                                                INA219
+
+5 Related Products                                                                                          SBOS448G ­ AUGUST 2008 ­ REVISED DECEMBER 2015
+
+                                   DEVICE                                                                     DESCRIPTION
+                                    INA209             Current/power monitor with watchdog, peak-hold, and fast comparator functions
+            INA210, INA211, INA212, INA213, INA214     Zerø-drift, low-cost, analog current shunt monitor series in small package
+
+6 Pin Configuration and Functions
+
+                       DCN Package                                                           D Package
+                       8-Pin SOT-23                                                          8-Pin SOIC
+                                                                                              Top View
+                          Top View
+
+         IN+ 1                        8 A1                                             A1 1              8 IN+
+         IN­ 2                        7 A0                                             A0 2              7 IN­
+        GND 3                         6 SDA                                          SDA 3               6 GND
+           VS 4                       5 SCL                                          SCL 4               5 VS
+
+                                                       Pin Functions
+
+                  PIN  SOIC  I/O                                      DESCRIPTION
+NAME SOT-23              8
+
+IN+  1                       Analog   Positive differential shunt voltage. Connect to positive side of shunt resistor.
+                              Input   Negative differential shunt voltage. Connect to negative side of shunt resistor. Bus voltage is
+IN­  2                 7              measured from this pin to ground.
+                             Analog   Ground
+GND  3                 6      Input   Power supply, 3 to 5.5 V
+                                      Serial bus clock line
+VS   4                 5     Analog
+                                      Serial bus data line
+SCL  5                 4     Analog
+                                      Address pin. Table 1 shows pin settings and corresponding addresses.
+SDA  6                 3     Digital
+                              Input   Address pin. Table 1 shows pin settings and corresponding addresses.
+A0   7                 2
+                             Digital
+A1   8                 1       I/O
+
+                             Digital
+                              Input
+
+                             Digital
+                              Input
+
+Copyright © 2008­2015, Texas Instruments Incorporated                                        Submit Documentation Feedback             3
+
+                                                       Product Folder Links: INA219
+INA219                                                                                                                        www.ti.com
+
+SBOS448G ­ AUGUST 2008 ­ REVISED DECEMBER 2015
+
+7 Specifications
+
+7.1 Absolute Maximum Ratings
+
+over operating free-air temperature range (unless otherwise noted)(1)
+
+VS             Supply voltage                                              MIN                              MAX               UNIT
+Analog Inputs  Differential (VIN+ ­ VIN­)(2)                                                                  6                 V
+IN+, IN­       Common-mode(VIN+ + VIN­) / 2                                ­26                               26                 V
+                                                                           -0.3                              26                 V
+SDA                                                                    GND ­ 0.3                              6                 V
+                                                                       GND ­ 0.3                                                V
+SCL                                                                                                       VS + 0.3             mA
+                                                                           ­40                                5                mA
+Input current into any pin                                                                                   10                °C
+                                                                           ­65                                                 °C
+Open-drain digital output current                                                                            125               °C
+                                                                                                             150
+Operating temperature                                                                                        150
+
+TJ             Junction temperature
+
+Tstg           Storage temperature
+
+(1) Stresses beyond those listed under Absolute Maximum Ratings may cause permanent damage to the device. These are stress ratings
+      only, which do not imply functional operation of the device at these or any other conditions beyond those indicated under Recommended
+      Operating Conditions. Exposure to absolute-maximum-rated conditions for extended periods may affect device reliability.
+
+(2) VIN+ and VIN­ may have a differential voltage of ­26 to 26 V; however, the voltage at these pins must not exceed the range ­0.3 to 26 V.
+
+7.2 ESD Ratings
+
+V(ESD)    Electrostatic     Human body model (HBM), per ANSI/ESDA/JEDEC JS-001, all pins(1)                            VALUE  UNIT
+          discharge         Charged device model (CDM), per JEDEC specification JESD22-C101, all pins(2)               ±4000    V
+                            Machine Model (MM)                                                                          ±750
+                                                                                                                        ±200
+
+(1) JEDEC document JEP155 states that 500-V HBM allows safe manufacturing with a standard ESD control process.
+(2) JEDEC document JEP157 states that 250-V CDM allows safe manufacturing with a standard ESD control process.
+
+7.3 Recommended Operating Conditions                                          MIN       NOM                            MAX UNIT
+
+over operating free-air temperature range (unless otherwise noted)                                        12                  V
+
+ VCM                                                                                                      3.3                 V
+ VS
+ TA                                                                           ­25                                      85     ºC
+
+7.4 Thermal Information
+
+                                                                                        INA219
+
+                            THERMAL METRIC(1)                                 D (SOIC)                    DCN (SOT)           UNIT
+
+                                                                              8 PINS                           8 PINS
+
+RJA       Junction-to-ambient thermal resistance                              111.3                            135.4          °C/W
+RJC(top)  Junction-to-case (top) thermal resistance                           55.9                             68.1           °C/W
+RJB       Junction-to-board thermal resistance                                  52                             48.9           °C/W
+JT        Junction-to-top characterization parameter                          10.7                              9.9           °C/W
+JB        Junction-to-board characterization parameter                        51.5                             48.4           °C/W
+RJC(bot)  Junction-to-case (bottom) thermal resistance                         N/A                              N/A           °C/W
+
+(1) For more information about traditional and new thermal metrics, see the Semiconductor and IC Package Thermal Metrics application
+      report, SPRA953.
+
+4       Submit Documentation Feedback                                         Copyright © 2008­2015, Texas Instruments Incorporated
+
+                                                Product Folder Links: INA219
+www.ti.com                                                                                                                                         INA219
+
+                                                                                                     SBOS448G ­ AUGUST 2008 ­ REVISED DECEMBER 2015
+
+7.5 Electrical Characteristics:
+
+At TA = 25°C, VS = 3.3 V, VIN+ = 12V, VSHUNT = (VIN+ ­ VIN­) = 32 mV, PGA = /1, and BRNG(1) = 1, unless otherwise noted.
+
+             PARAMETER                                TEST CONDITIONS                                INA219A                       INA219B                UNIT
+                                                                                                                                               MAX
+                                                                          MIN                        TYP           MAX       MIN   TYP
+
+INPUT
+
+                                                      PGA = /1            0                                        ±40       0                 ±40 mV
+
+VSHUNT  Full-scale current sense (input) voltage      PGA = /2            0                                        ±80       0                 ±80 mV
+        range                                         PGA = /4
+                                                                          0                                        ±160      0                 ±160 mV
+
+                                                      PGA = /8            0                                        ±320      0                 ±320 mV
+
+        Bus voltage (input voltage) range(2)          BRNG = 1            0                                        32        0                 32 V
+                                                                                                                                               16 V
+                                                      BRNG = 0            0                                        16        0
+
+CMRR Common-mode rejection                            VIN+ = 0 to 26 V    100                        120                     100   120                       dB
+               Offset voltage, RTI(3)                 PGA = /1
+                                                      PGA = /2                                       ±10           ±100            ±10 ±50(4) V
+VOS                                                   PGA = /4
+                                                      PGA = /8                                       ±20           ±125            ±20 ±75(4) V
+
+                                                                                                     ±30           ±150            ±30 ±75(4) V
+
+                                                                                                     ±40           ±200            ±40 ±100(4) V
+
+             vs Temperature                           TA = ­25°C to 85°C                                      0.1                  0.1                       V/°C
+
+PSRR vs Power Supply                                  VS = 3 to 5.5 V                                         10                   10                        V/V
+
+        Current sense gain error                                                                     ±40                           ±40                       m%
+
+             vs Temperature                           TA = ­25°C to 85°C                                      1                    1                         m%/°C
+
+        IN+ pin input bias current                    Active mode                                             20                   20                        A
+
+        IN­ pin input bias current || VIN­ pin input  Active mode                                    20 || 320                     20 || 320             A ||
+        impedance                                                                                                                                         k
+                                                      Power-down mode                                         0.1  ±0.5                   0.1
+        IN+ pin input leakage(5)                      Power-down mode                                                                     0.1  ±0.5 A
+                                                                                                              0.1  ±0.5
+        IN­ pin input leakage(5)                                                                                                               ±0.5 A
+
+DC ACCURACY
+
+        ADC basic resolution                                                                                  12                   12                        bits
+
+        Shunt voltage, 1 LSB step size                                                                        10                   10                        V
+
+        Bus voltage, 1 LSB step size                                                                          4                    4                         mV
+
+        Current measurement error                                                                    ±0.2% ±0.5%                   ±0.2%       ±0.3% (
+
+                                                                                                                                                         4)
+
+             over Temperature                         TA = ­25°C to 85°C                                           ±1%                         ±0.5% (
+
+                                                                                                                                                         4)
+
+               Bus voltage measurement error                                                         ±0.2%         ±0.5%           ±0.2% ±0.5%
+                            over Temperature                                                           ±0.1          ±1%
+                                                      TA = ­25°C to 85°C                                                                       ±1%
+               Differential nonlinearity
+ADC TIMING                                            12 bit                                                                       ±0.1                      LSB
+                                                      11 bit
+               ADC conversion time                    10 bit                                         532           586             532         586 s
+                                                      9 bit
+               Minimum convert input low time                                                        276           304             276         304 s
+SMBus                                                                                             4
+SMBus timeout(6)                                                                                     148           163             148         163 s
+DIGITAL INPUTS (SDA as Input, SCL, A0, A1)
+                                                                                                              84   93              84          93 s
+               Input capacitance
+               Leakage input current                                                                                         4                               s
+               VIH input logic level
+               VIL input logic level                                                                          28   35              28          35 ms
+
+                                                                                                              3                    3                         pF
+
+                                                      0  VIN  VS                                              0.1  1               0.1         1 A
+
+                                                                          0.7 (VS)                                 6 0.7 (VS)                  6V
+                                                                              ­0.3
+                                                                                                                   0.3 (VS)  ­0.3              0.3 (VS) V
+
+(1) BRNG is bit 13 of the Configuration register 00h in Figure 19.
+(2) This parameter only expresses the full-scale range of the ADC scaling. In no event should more than 26 V be applied to this device.
+(3) Referred-to-input (RTI)
+(4) Indicates improved specifications of the INA219B.
+(5) Input leakage is positive (current flowing into the pin) for the conditions shown at the top of the table. Negative leakage currents can
+
+      occur under different input conditions.
+(6) SMBus timeout in the INA219 resets the interface any time SCL or SDA is low for over 28 ms.
+
+Copyright © 2008­2015, Texas Instruments Incorporated                                                              Submit Documentation Feedback                   5
+
+                                                       Product Folder Links: INA219
+INA219                                                                                                                                         www.ti.com
+
+SBOS448G ­ AUGUST 2008 ­ REVISED DECEMBER 2015
+
+Electrical Characteristics: (continued)
+
+At TA = 25°C, VS = 3.3 V, VIN+ = 12V, VSHUNT = (VIN+ ­ VIN­) = 32 mV, PGA = /1, and BRNG(1) = 1, unless otherwise noted.
+
+                PARAMETER                               TEST CONDITIONS                     INA219A                                   INA219B             UNIT
+                                                                                                                                               MAX
+                                                                            MIN             TYP                        MAX  MIN       TYP
+
+          Hysteresis                                                                        500                                       500                  mV
+
+OPEN-DRAIN DIGITAL OUTPUTS (SDA)
+
+               Logic 0 output level                     ISINK = 3 mA                        0.15                       0.4            0.15     0.4 V
+               High-level output leakage current        VOUT = VS
+POWER SUPPLY                                                                                         0.1               1              0.1      1 A
+
+          Operating supply range                                                         3                             5.5         3           5.5 V
+
+          Quiescent current                                                                          0.7               1              0.7      1 mA
+
+          Quiescent current, power-down mode                                                                 6         15               6      15 A
+
+          Power-on reset threshold                                                                           2                          2                  V
+
+7.6 Bus Timing Diagram Definitions(1)
+
+                                                                            FAST MODE                                  HIGH-SPEED MODE         UNIT
+
+                                                                            MIN             MAX                             MIN       MAX
+
+(SCL)        SCL operating frequency                                        0.001           0.4                             0.001     2.56     MHz
+t(BUF)                                                                      1300
+             Bus free time between STOP and START                                                                           160                ns
+             condition
+
+t(HDSTA)     Hold time after repeated START condition.                      600                                             160                ns
+             After this period, the first clock is generated.
+
+t(SUSTA)     Repeated START condition setup time                            600                                             160                ns
+t(SUSTO)     STOP condition setup time
+t(HDDAT)     Data hold time                                                 600                                             160                ns
+t(SUDAT)     Data setup time
+t(LOW)       SCL clock LOW period                                           0               900                             0           90     ns
+t(HIGH)      SCL clock HIGH period
+tF DA        Data fall time                                                 100                                             10                 ns
+tFCL         Clock fall time
+tRCL         Clock rise time                                                1300                                            250                ns
+tRCL         Clock rise time for SCLK  100kHz
+                                                                            600                                             60                 ns
+
+                                                                                            300                                         150    ns
+
+                                                                                            300                                         40     ns
+
+                                                                                            300                                         40     ns
+
+                                                                                            1000                                               ns
+
+(1) Values based on a statistical analysis of a one-time sample of devices. Minimum and maximum values are not ensured and not
+      production tested.
+
+                                    t(LOW)                            tF                                     t(HDSTA)
+                                                    tR
+
+        SCL
+
+                                    t(HDSTA)                       t(HIGH)  t(SUSTA)                                                             t(SUSTO)
+                                                        t(HDDAT)               t(SUDAT)                                                 P
+
+        SDA
+
+                      t(BUF)
+
+             P                S                                                                           S
+
+                                                        Figure 1. Bus Timing Diagram
+
+6         Submit Documentation Feedback                                                                      Copyright © 2008­2015, Texas Instruments Incorporated
+
+                                                        Product Folder Links: INA219
+www.ti.com                                                                                                                                                INA219
+
+                                                                                                            SBOS448G ­ AUGUST 2008 ­ REVISED DECEMBER 2015
+
+7.7 Typical Characteristics
+
+At TA = 25°C, VS = 3.3 V, VIN+ = 12 V, VSHUNT = (VIN+ ­ VIN­) = 32 mV, PGA = /1, and BRNG = 1, unless otherwise noted.
+
+                      0                                                                              100
+                  -10
+                  -20                                                                                80
+                  -30                                                                                                                  320mV Range
+                  -40
+                  -50                                                                                60
+                  -60                                                                                         160mV Range
+                  -70
+                  -80                                                                                40
+                  -90
+Gain (dB)        -100                                                                   Offset (mV)  20
+
+                        10                                                                           0
+
+                                                                                                     -20
+                                                                                                                  80mV Range 40mV Range
+
+                                                                                                     -40
+
+                                                                                                     -60
+
+                                                                                                     -80
+
+                                                                                                     -100
+
+                                100  1k      10k                              100k  1M                     -40 -25  0  25         50                75  100 125
+
+                                     Input Frequency (Hz)                                                              Temperature (°C)
+
+                                Figure 2. Frequency Response                                                Figure 3. ADC Shunt Offset vs Temperature
+
+                 100                                                                                 50
+
+                 80                                                                                  45
+
+                 60                                                                                  40
+
+Gain Error (m%)  40                                                                                  35
+
+                 20                                                                     Offset (mV)  30
+                                      320mV Range 160mV Range
+                                                                                                     25
+                  0
+
+                 -20                                                                                 20                32V Range      16V Range
+
+                 -40                     80mV Range 40mV Range                                       15
+
+                 -60                                                                                 10
+
+                 -80                                                                                 5
+
+                 -100                                                                                0
+
+                       -40 -25  0    25  50                               75  100 125                    -40 -25    0  25         50                75  100 125
+
+                                     Temperature (°C)                                                                  Temperature (°C)
+
+                       Figure 4. ADC Shunt Gain Error vs Temperature                                    Figure 5. ADC Bus Voltage Offset vs Temperature
+
+                 100                                                                                 20
+
+                 80                                                                                  15
+
+                 60                                                                                  10
+
+Gain Error (m%)  40                      16V
+
+                 20                                                                     INL (mV)     5
+
+                 0                                                                                   0
+
+                 -20                                                                                 -5
+                                                                     32V
+                                                                                                     -10
+                 -40
+
+                 -60
+
+                 -80                                                                                 -15
+
+                 -100                                                                                -20
+                                                                                                         -0.4 -0.3 -0.2 -0.1 0
+                       -40 -25  0    25  50                               75  100 125                                                 0.1 0.2 0.3 0.4
+
+                                     Temperature (°C)                                                                  Input Voltage (V)
+
+                       Figure 6. ADC Bus Gain Error vs Temperature                                         Figure 7. Integral Nonlinearity vs Input Voltage
+
+Copyright © 2008­2015, Texas Instruments Incorporated                                                                  Submit Documentation Feedback             7
+
+                                                                              Product Folder Links: INA219
+INA219                                                                                                                                                                          www.ti.com
+
+SBOS448G ­ AUGUST 2008 ­ REVISED DECEMBER 2015
+
+Typical Characteristics (continued)
+
+At TA = 25°C, VS = 3.3 V, VIN+ = 12 V, VSHUNT = (VIN+ ­ VIN­) = 32 mV, PGA = /1, and BRNG = 1, unless otherwise noted.
+
+                        2.0       VS+ = 5V                                                               1.2
+
+                        1.5                                                                              1.0
+
+   Input Currents (mA)  1.0                                                                                                                           VS = 5V
+                                                                                                         0.8
+                         0.5      VS+ = 3V                                                      IQ (mA)
+                            0     VS+ = 3V                                                               0.6
+                                                                                                                                                VS = 3V
+                        -0.5
+                                                                                                         0.4
+
+                        -1.0                                                                             0.2
+
+                                  VS+ = 5V                                                                 0
+                                                                                                             -40 -25
+                        -1.5
+
+                               0     5         10      15            20            25       30                                                0       25  50            75      100 125
+
+                                                   VIN- Voltage (V)                                                                                   Temperature (°C)
+
+                             Figure 8. Input Currents With Large Differential                            1.0          Figure 9. Active IQ vs Temperature
+                                    Voltages(VIN+ at 12 V, Sweep Of VIN­)                                0.9
+                                                                                                         0.8                                                    VS = 5V
+                        16                                                                               0.7                                                              VS = 3V
+                                                                                                         0.6
+                        14                                                                               0.5
+                                                                                                         0.4
+                        12                                                                               0.3
+                                                                                                         0.2
+   IQ (mA)              10                                                                      IQ (mA)  0.1
+                                                                          VS = 5V
+                                                                                                           0
+                         8                                                                                    1k
+
+                        6
+                                                                        VS = 3V
+
+                        4
+
+                        2
+
+                        0
+
+                            -40 -25         0      25  50                75        100 125                                                    10k         100k              1M     10M
+
+                                               Temperature (°C)                                                                                    SCL Frequency (Hz)
+
+                                  Figure 10. Shutdown IQ vs Temperature                                           Figure 11. Active IQ vs I2C Clock Frequency
+
+                                                                           300
+
+                                                                    250
+                                                                                                                                     VS = 5V
+
+                                                                    200
+
+                                                           IQ (mA)  150
+
+                                                                    100
+
+                                                                    50                                            VS = 3V
+
+                                                                     0                 10k      100k              1M                             10M
+                                                                        1k
+
+                                                                                            SCL Frequency (Hz)
+
+                                                                                   Figure 12. Shutdown IQ vs I2C Clock Frequency
+
+8                       Submit Documentation Feedback                                                                 Copyright © 2008­2015, Texas Instruments Incorporated
+
+                                                                                   Product Folder Links: INA219
+www.ti.com                                                                                                                         INA219
+
+8 Detailed Description                                                               SBOS448G ­ AUGUST 2008 ­ REVISED DECEMBER 2015
+
+8.1 Overview
+
+The INA219 is a digital current sense amplifier with an I2C- and SMBus-compatible interface. It provides digital
+current, voltage, and power readings necessary for accurate decision-making in precisely-controlled systems.
+Programmable registers allow flexible configuration for measurement resolution as well as continuous-versus-
+triggered operation. Detailed register information appears at the end of this data sheet, beginning with Table 2.
+See the Functional Block Diagram section for a block diagram of the INA219 device.
+
+8.2 Functional Block Diagram
+
+                                                            Power(1)
+
+Shunt Voltage                                          ADC        Bus Voltage(1)
+       Channel
+                                                                                              ´
+  Bus Voltage
+       Channel                                                       Current(1)
+
+                                                            Full-Scale Calibration(2)
+
+                                                                                              ´
+
+                                                                Shunt Voltage(1)
+
+NOTES:                                                                    PGA
+(1) Read-only                                               (In Configuration Register)
+(2) Read/write
+                                                                   Data Registers
+
+8.3 Feature Description
+
+8.3.1 Basic ADC Functions
+
+The two analog inputs to the INA219, IN+ and IN­, connect to a shunt resistor in the bus of interest. The INA219
+is typically powered by a separate supply from 3 to 5.5 V. The bus being sensed can vary from 0 to
+26 V. There are no special considerations for power-supply sequencing (for example, a bus voltage can be
+present with the supply voltage off, and vice-versa). The INA219 senses the small drop across the shunt for
+shunt voltage, and senses the voltage with respect to ground from IN­ for the bus voltage. Figure 13 shows this
+operation.
+
+When the INA219 is in the normal operating mode (that is, MODE bits of the Configuration register are set to
+111), it continuously converts the shunt voltage up to the number set in the shunt voltage averaging function
+(Configuration register, SADC bits). The device then converts the bus voltage up to the number set in the bus
+voltage averaging (Configuration register, BADC bits). The Mode control in the Configuration register also
+permits selecting modes to convert only voltage or current, either continuously or in response to an event
+(triggered).
+
+All current and power calculations are performed in the background and do not contribute to conversion time;
+conversion times shown in the Electrical Characteristics: can be used to determine the actual conversion time.
+
+Power-Down mode reduces the quiescent current and turns off current into the INA219 inputs, avoiding any
+supply drain. Full recovery from Power-Down requires 40 s. ADC Off mode (set by the Configuration register,
+MODE bits) stops all conversions.
+
+Writing any of the triggered convert modes into the Configuration register (even if the desired mode is already
+programmed into the register) triggers a single-shot conversion. Table 6 lists the triggered convert mode settings.
+
+Copyright © 2008­2015, Texas Instruments Incorporated                                    Submit Documentation Feedback  9
+
+                                                       Product Folder Links: INA219
+INA219                                                                                                                       www.ti.com
+
+SBOS448G ­ AUGUST 2008 ­ REVISED DECEMBER 2015                                                                                     3.3V Supply
+                                                                                                                                   Data (SDA)
+Feature Description (continued)                                                                                                    Clock (SCL)
+
+                                 VSHUNT = VIN+ - VIN-
+                                  Typically < 50mV
+
+                                 +       -
+
+                                 RSHUNT
+
+                         Supply                        Load  INA219 Power-Supply Voltage
+                                                             3V to 5.5V
+
+                                 VIN+       VIN-             VS                                             INA219
+
+                                                                      ´                   Power Register
+
+     VBUS = VIN- - GND                                                                    Current Register  I2C-/SMBUS-
+
+  Range of 0V to 26V                                                                                        Compatible   A0
+Typical Application 12V                                                                                      Interface
+                                                       PGA       ADC
+
+                                                                                          Voltage Register               A1
+
+                                                               GND
+
+                        Figure 13. INA219 Configured for Shunt and Bus Voltage Measurement
+
+Although the INA219 can be read at any time, and the data from the last conversion remain available, the
+conversion ready bit (Status register, CNVR bit) is provided to help coordinate one-shot or triggered conversions.
+The conversion ready bit is set after all conversions, averaging, and multiplication operations are complete.
+
+The conversion ready bit clears under any of these conditions:
+· Writing to the Configuration register, except when configuring the MODE bits for power down or ADC off
+
+    (disable) modes
+· Reading the Status register
+· Triggering a single-shot conversion with the convert pin
+
+8.3.1.1 Power Measurement
+
+Current and bus voltage are converted at different points in time, depending on the resolution and averaging
+mode settings. For instance, when configured for 12-bit and 128 sample averaging, up to 68 ms in time between
+sampling these two values is possible. Again, these calculations are performed in the background and do not add
+to the overall conversion time.
+
+8.3.1.2 PGA Function
+
+If larger full-scale shunt voltages are desired, the INA219 provides a PGA function that increases the full-scale
+range up to 2, 4, or 8 times (320 mV). Additionally, the bus voltage measurement has two full-scale ranges: 16 or
+32 V.
+
+8.3.1.3 Compatibility With TI Hot Swap Controllers
+
+The INA219 is designed for compatibility with hot swap controllers such the TI TPS2490. The TPS2490 uses a
+high-side shunt with a limit at 50 mV; the INA219 full-scale range of 40 mV enables the use of the same shunt for
+current sensing below this limit. When sensing is required at (or through) the 50-mV sense point of the TPS2490,
+the PGA of the INA219 can be set to /2 to provide an 80-mV full-scale range.
+
+10  Submit Documentation Feedback                                                                           Copyright © 2008­2015, Texas Instruments Incorporated
+
+                                                                 Product Folder Links: INA219
+www.ti.com                                                                                                                               INA219
+
+                                                                                           SBOS448G ­ AUGUST 2008 ­ REVISED DECEMBER 2015
+
+8.4 Device Functional Modes
+
+8.4.1 Filtering and Input Considerations
+
+Measuring current is often noisy, and such noise can be difficult to define. The INA219 offers several options for
+filtering by choosing resolution and averaging in the Configuration register. These filtering options can be set
+independently for either voltage or current measurement.
+
+The internal ADC is based on a delta-sigma () front-end with a 500-kHz (±30%) typical sampling rate. This
+architecture has good inherent noise rejection; however, transients that occur at or very close to the sampling
+rate harmonics can cause problems. Because these signals are at 1 MHz and higher, they can be dealt with by
+incorporating filtering at the input of the INA219. The high frequency enables the use of low-value series resistors
+on the filter for negligible effects on measurement accuracy. In general, filtering the INA219 input is only
+necessary if there are transients at exact harmonics of the 500-kHz (±30%) sampling rate (>1 MHz). Filter using
+the lowest possible series resistance and ceramic capacitor. Recommended values are 0.1 to 1 F. Figure 14
+shows the INA219 with an additional filter added at the input.
+
+                     RSHUNT
+
+Supply                          Load
+
+RFILTER 10W                     RFILTER 10W  Supply Voltage
+                                                        VS
+       0.1mF to 1mF                                                                                               3.3V Supply
+Ceramic Capacitor
+                                                                                                                  Data (SDA)
+                     VIN+ VIN-                                                                        INA219      Clock (SCL)
+
+                                                             ´  Power Register
+
+                                                                Current Register           I2C-/SMBUS-
+
+                                                                                           Compatible
+
+                                                                                           Interface          A0
+
+                                PGA          ADC
+
+                                                                Voltage Register                              A1
+
+                                           GND
+
+                                                Figure 14. INA219 With Input Filtering
+
+Overload conditions are another consideration for the INA219 inputs. The INA219 inputs are specified to tolerate
+26 V across the inputs. A large differential scenario might be a short to ground on the load side of the shunt. This
+type of event can result in full power-supply voltage across the shunt (as long the power supply or energy
+storage capacitors support it). It must be remembered that removing a short to ground can result in inductive
+kickbacks that could exceed the 26-V differential and common-mode rating of the INA219. Inductive kickback
+voltages are best dealt with by zener-type transient-absorbing devices combined with sufficient energy storage
+capacitance.
+
+In applications that do not have large energy storage electrolytics on one or both sides of the shunt, an input
+overstress condition may result from an excessive dV/dt of the voltage applied to the input. A hard physical short
+is the most likely cause of this event, particularly in applications with no large electrolytics present. This problem
+occurs because an excessive dV/dt can activate the ESD protection in the INA219 in systems where large
+currents are available. Testing has demonstrated that the addition of 10- resistors in series with each input of
+the INA219 sufficiently protects the inputs against dV/dt failure up to the 26-V rating of the INA219. These
+resistors have no significant effect on accuracy.
+
+Copyright © 2008­2015, Texas Instruments Incorporated                                      Submit Documentation Feedback  11
+
+                                                             Product Folder Links: INA219
+INA219                                                                                  www.ti.com
+
+SBOS448G ­ AUGUST 2008 ­ REVISED DECEMBER 2015
+
+8.5 Programming
+
+An important aspect of the INA219 device is that it measure current or power if it is programmed based on the
+system. The device measures both the differential voltage applied between the IN+ and IN- input pins and the
+voltage at IN- pin. In order for the device to report both current and power values, the user must program the
+resolution of the Current Register (04h) and the value of the shunt resistor (RSHUNT) present in the application to
+develop the differential voltage applied between the input pins. Both the Current_LSB and shunt resistor value
+are used in the calculation of the Calibration Register value that the device uses to calculate the corresponding
+current and power values based on the measured shunt and bus voltages.
+
+After programming the Calibration Register, the Current Register (04h) and Power Register (03h) update
+accordingly based on the corresponding shunt voltage and bus voltage measurements. Until the Calibration
+Register is programmed, the Current Register (04h) and Power Register (03h) remain at zero.
+
+8.5.1 Programming the Calibration Register
+
+The Calibration Register is calculated based on Equation 1. This equation includes the term Current_LSB, which
+is the programmed value for the LSB for the Current Register (04h). The user uses this value to convert the
+value in the Current Register (04h) to the actual current in amperes. The highest resolution for the Current
+Register (04h) can be obtained by using the smallest allowable Current_LSB based on the maximum expected
+current as shown in Equation 2. While this value yields the highest resolution, it is common to select a value for
+the Current_LSB to the nearest round number above this value to simplify the conversion of the Current Register
+(04h) and Power Register (03h) to amperes and watts respectively. The RSHUNT term is the value of the external
+shunt used to develop the differential voltage across the input pins. The Power Register (03h) is internally set to
+be 20 times the programmed Current_LSB see Equation 3.
+
+                                  0.04096
+       Cal = trunc Current_LSB ´ RSHUNT
+
+    where
+
+    · 0.04096 is an internal fixed value used to ensure scaling is maintained properly  (1)
+
+    Current_LSB  =  Maximum  Expected  Current
+                               215
+                                                                                        (2)
+
+    Power_LSB = 20 Current_LSB                                                          (3)
+
+Shunt voltage is calculated by multiplying the Shunt Voltage Register contents with the Shunt Voltage LSB of 10
+µV.
+
+The Bus Voltage register bits are not right-aligned. In order to compute the value of the Bus Voltage, Bus Voltage
+Register contents must be shifted right by three bits. This shift puts the BD0 bit in the LSB position so that the
+contents can be multiplied by the Bus Voltage LSB of 4-mV to compute the bus voltage measured by the device.
+
+After programming the Calibration Register, the value expected in the Current Register (04h) can be calculated
+by multiplying the Shunt Voltage register contents by the Calibration Register and then dividing by 4096 as
+shown in Equation 4. To obtain a value in amperes the Current register value is multiplied by the programmed
+Current_LSB.
+
+    Current Register = Shunt Voltage Re gister ´ Calibration Re gister
+                                                4096                                    (4)
+
+The value expected in the Power register (03h) can be calculated by multiplying the Current register value by the
+Bus Voltage register value and then dividing by 5000 as shown in Equation 5. Power Register content is
+
+multiplied by Power LSB which is 20 times the Current_LSB for a power value in watts.
+
+    Power Register = Current Re gister ´ Bus Voltage Re gister                          (5)
+                                                    5000
+
+12  Submit Documentation Feedback                                             Copyright © 2008­2015, Texas Instruments Incorporated
+
+                                                Product Folder Links: INA219
+www.ti.com                                                                                                                         INA219
+
+                                                                                     SBOS448G ­ AUGUST 2008 ­ REVISED DECEMBER 2015
+
+Programming (continued)
+8.5.2 Programming the Power Measurement Engine
+
+8.5.2.1 Calibration Register and Scaling
+
+The Calibration Register enables the user to scale the Current Register (04h) and Power Register (03h) to the
+most useful value for a given application. For example, set the Calibration Register such that the largest possible
+number is generated in the Current Register (04h) or Power Register (03h) at the expected full-scale point. This
+approach yields the highest resolution using the previously calculated minimum Current_LSB in the equation for
+the Calibration Register. The Calibration Register can also be selected to provide values in the Current Register
+(04h) and Power Register (03h) that either provide direct decimal equivalents of the values being measured, or
+yield a round LSB value for each corresponding register. After these choices have been made, the Calibration
+Register also offers possibilities for end user system-level calibration. After determining the exact current by
+using an external ammeter, the value of the Calibration Register can then be adjusted based on the measured
+current result of the INA219 to cancel the total system error as shown in Equation 6.
+
+Corrected_Full_Scale_Cal = trunc                       Cal ´ MeasShuntCurrent
+                                                            INA219_Current
+
+                                                                                                                    (6)
+
+8.5.3 Simple Current Shunt Monitor Usage (No Programming Necessary)
+
+The INA219 can be used without any programming if it is only necessary to read a shunt voltage drop and bus
+voltage with the default 12-bit resolution, 320-mV shunt full-scale range (PGA = /8), 32-V bus full-scale range,
+and continuous conversion of shunt and bus voltage.
+
+Without programming, current is measured by reading the shunt voltage. The Current register and Power register
+are only available if the Calibration register contains a programmed value.
+
+8.5.4 Default Settings
+
+The default power-up states of the registers are shown in the Register Details section of this data sheet. These
+registers are volatile, and if programmed to other than default values, must be re-programmed at every device
+power-up. Detailed information on programming the Calibration register specifically is given in the section,
+Programming the Calibration Register.
+
+8.5.5 Bus Overview
+
+The INA219 offers compatibility with both I2C and SMBus interfaces. The I2C and SMBus protocols are
+essentially compatible with one another.
+
+The I2C interface is used throughout this data sheet as the primary example, with SMBus protocol specified only
+when a difference between the two systems is being addressed. Two bidirectional lines, SCL and SDA, connect
+the INA219 to the bus. Both SCL and SDA are open-drain connections.
+
+The device that initiates the transfer is called a master, and the devices controlled by the master are slaves. The
+bus must be controlled by a master device that generates the serial clock (SCL), controls the bus access, and
+generates START and STOP conditions.
+
+To address a specific device, the master initiates a START condition by pulling the data signal line (SDA) from a
+HIGH to a LOW logic level while SCL is HIGH. All slaves on the bus shift in the slave address byte on the rising
+edge of SCL, with the last bit indicating whether a read or write operation is intended. During the ninth clock
+pulse, the slave being addressed responds to the master by generating an Acknowledge and pulling SDA LOW.
+
+Data transfer is then initiated and eight bits of data are sent, followed by an Acknowledge bit. During data
+transfer, SDA must remain stable while SCL is HIGH. Any change in SDA while SCL is HIGH is interpreted as a
+START or STOP condition.
+
+Once all data have been transferred, the master generates a STOP condition, indicated by pulling SDA from
+LOW to HIGH while SCL is HIGH. The INA219 includes a 28-ms timeout on its interface to prevent locking up an
+SMBus.
+
+Copyright © 2008­2015, Texas Instruments Incorporated                                Submit Documentation Feedback  13
+
+                                                       Product Folder Links: INA219
+INA219                                                                        www.ti.com
+
+SBOS448G ­ AUGUST 2008 ­ REVISED DECEMBER 2015
+
+Programming (continued)
+
+8.5.5.1 Serial Bus Address
+
+To communicate with the INA219, the master must first address slave devices through a slave address byte. The
+slave address byte consists of seven address bits, and a direction bit indicating the intent of executing a read or
+write operation.
+
+The INA219 has two address pins, A0 and A1. Table 1 describes the pin logic levels for each of the 16 possible
+addresses. The state of pins A0 and A1 is sampled on every bus communication and should be set before any
+activity on the interface occurs. The address pins are read at the start of each communication event.
+
+    Table 1. INA219 Address Pins and Slave Addresses
+
+     A1                                          A0  SLAVE ADDRESS
+    GND                                         GND         1000000
+    GND                                         VS+         1000001
+    GND                                         SDA         1000010
+    GND                                         SCL         1000011
+    VS+                                         GND         1000100
+    VS+                                         VS+         1000101
+    VS+                                         SDA         1000110
+    VS+                                         SCL         1000111
+    SDA                                         GND         1001000
+    SDA                                         VS+         1001001
+    SDA                                         SDA         1001010
+    SDA                                         SCL         1001011
+    SCL                                         GND         1001100
+    SCL                                         VS+         1001101
+    SCL                                         SDA         1001110
+    SCL                                         SCL         1001111
+
+8.5.5.2 Serial Interface
+
+The INA219 operates only as a slave device on the I2C bus and SMBus. Connections to the bus are made
+through the open-drain I/O lines SDA and SCL. The SDA and SCL pins feature integrated spike suppression
+filters and Schmitt triggers to minimize the effects of input spikes and bus noise. The INA219 supports the
+transmission protocol for fast (1- to 400-kHz) and high-speed (1-kHz to 2.56-MHz) modes. All data bytes are
+transmitted most significant byte first.
+
+8.5.6 Writing to and Reading from the INA219
+
+Accessing a particular register on the INA219 is accomplished by writing the appropriate value to the register
+pointer. Refer to Table 2 for a complete list of registers and corresponding addresses. The value for the register
+pointer as shown in Figure 18 is the first byte transferred after the slave address byte with the R/W bit LOW.
+Every write operation to the INA219 requires a value for the register pointer.
+
+Writing to a register begins with the first byte transmitted by the master. This byte is the slave address, with the
+R/W bit LOW. The INA219 then acknowledges receipt of a valid address. The next byte transmitted by the
+master is the address of the register to which data will be written. This register address value updates the
+register pointer to the desired register. The next two bytes are written to the register addressed by the register
+pointer. The INA219 acknowledges receipt of each data byte. The master may terminate data transfer by
+generating a START or STOP condition.
+
+When reading from the INA219, the last value stored in the register pointer by a write operation determines
+which register is read during a read operation. To change the register pointer for a read operation, a new value
+must be written to the register pointer. This write is accomplished by issuing a slave address byte with the R/W
+bit LOW, followed by the register pointer byte. No additional data are required. The master then generates a
+START condition and sends the slave address byte with the R/W bit HIGH to initiate the read command. The
+next byte is transmitted by the slave and is the most significant byte of the register indicated by the register
+
+14  Submit Documentation Feedback                                             Copyright © 2008­2015, Texas Instruments Incorporated
+
+                                                Product Folder Links: INA219
+www.ti.com                                                                                                                         INA219
+
+                                                                                     SBOS448G ­ AUGUST 2008 ­ REVISED DECEMBER 2015
+
+pointer. This byte is followed by an Acknowledge from the master; then the slave transmits the least significant
+byte. The master acknowledges receipt of the data byte. The master may terminate data transfer by generating a
+Not-Acknowledge after receiving any data byte, or generating a START or STOP condition. If repeated reads
+from the same register are desired, it is not necessary to continually send the register pointer bytes; the INA219
+retains the register pointer value until it is changed by the next write operation.
+
+Figure 15 and Figure 16 show write and read operation timing diagrams, respectively. Note that register bytes
+are sent most-significant byte first, followed by the least significant byte. Figure 17 shows the timing diagram for
+the SMBus Alert response operation. Figure 18 shows a typical register pointer configuration.
+
+Copyright © 2008­2015, Texas Instruments Incorporated                                Submit Documentation Feedback  15
+
+                                                       Product Folder Links: INA219
+INA219                                                                                                                                                                                                                                                                                             www.ti.com
+
+SBOS448G ­ AUGUST 2008 ­ REVISED DECEMBER 2015                                                                                                                                                                                                                                  9
+
+                         1                                          91                                                                     91                                                    91
+    SCL
+
+    SDA            1 0 0 A3 A2 A1 A0 R/W                                    P7 P6 P5 P4 P3 P2 P1 P0                                                D15 D14 D13 D12 D11 D10 D9 D8                                                   D7 D6 D5 D4 D3 D2 D1 D0
+
+         Start By                                                   ACK By                                                                 ACK By                                                                         ACK By                                                ACK By  Stop By
+         Master                                                     INA219                                                                 INA219                                                                          INA219                                               INA219  Master
+
+                            Frame 1 Two-Wire Slave Address Byte(1)                                          Frame 2 Register Pointer Byte                                                Frame 3 Data MSByte                       Frame 4 Data LSByte
+
+         NOTE (1): The value of the Slave Address Byte is determined by the settings of the A0 and A1 pins. Refer to Table 1.
+
+                                                         Figure 15. Timing Diagram for Write Word Format
+
+                            1                                                                               91                                                                           91                                                                                     9
+
+    SCL
+
+    SDA                     1  0 0 A3 A2 A1 A0 R/W                                                                  D15 D14 D13 D12 D11 D10 D9 D8                                        D7 D6                                     D5 D4 D3 D2 D1 D0
+
+         Start By                                                                                           ACK By                                              From                     ACK By                                           From                                                      (3)
+         Master                                                                                             INA219                                             INA219                    Master                                          INA219
+                                                                                                                                                                                                                                                                                NoACK By Stop
+                                                                                                                                                                                    (2)                                                                                    (2)     Master
+
+                                                                                                       (1)                                 Frame 2 Data MSByte                                                                     Frame 3 Data LSByte
+
+                               Frame 1 Two-Wire Slave Address Byte
+
+                               NOTES: (1) The value of the Slave Address Byte is determined by the settings of the A0 and A1 pins.
+                                                Refer to Table 1.
+
+                                           (2) Read data is from the last register pointer location. If a new register is desired, the register
+                                                pointer must be updated. See Figure 19.
+
+                                           (3) ACK by Master can also be sent.
+
+                                                                   Figure 16. Timing Diagram for Read Word Format
+
+16  Submit Documentation Feedback                                                                                                                                                                                                  Copyright © 2008­2015, Texas Instruments Incorporated
+
+                                                                                                                    Product Folder Links: INA219
+www.ti.com                                                                                                                                    INA219
+
+             ALERT                                                                              SBOS448G ­ AUGUST 2008 ­ REVISED DECEMBER 2015
+                                       1
+                                                                                  91                                                                      9
+                SCL
+
+SDA                     0 0 0 1 1 0 0 R/W                                                       1 0 0 A3 A2 A1 A0 0
+
+     Start By                                                                           ACK By                           From                             NACK By  Stop By
+     Master                                                                             INA219                          INA219                             Master  Master
+
+                        Frame 1 SMBus ALERT Response Address Byte                                                                                    (1)
+
+                                                                                                Frame 2 Slave Address Byte
+
+NOTE (1): The value of the Slave Address Byte is determined by the settings of the A0 and A1 pins. Refer to Table 1.
+
+                                     Figure 17. Timing Diagram for SMBus Alert
+
+                     1                                                            91                                                                      9
+SCL
+                                                                                                                                                               ¼
+
+SDA            1                          0 0 A3 A2 A1 A0 R/W                                   P7 P6 P5 P4 P3 P2 P1 P0                                            Stop
+
+     Start By                                                                     ACK By                                                                  ACK By
+     Master                                                                       INA219                                                                  INA219
+
+                                          Frame 1 Two-Wire Slave Address Byte(1)                Frame 2 Register Pointer Byte
+
+                NOTE (1): The value of the Slave Address Byte is determined by the settings of the A0 and A1 pins. Refer to Table 1.
+
+                                                Figure 18. Typical Register Pointer Set
+
+8.5.6.1 High-Speed I2C Mode
+
+When the bus is idle, both the SDA and SCL lines are pulled high by the pull-up devices. The master generates
+a start condition followed by a valid serial byte containing high-speed (HS) master code 00001XXX. This
+transmission is made in fast (400 kbps) or standard (100 kbps) (F/S) mode at no more than 400 kbps. The
+INA219 does not acknowledge the HS master code, but does recognize it and switches its internal filters to
+support 2.56 Mbps operation.
+
+The master then generates a repeated start condition (a repeated start condition has the same timing as the start
+condition). After this repeated start condition, the protocol is the same as F/S mode, except that transmission
+speeds up to 2.56 Mbps are allowed. Instead of using a stop condition, repeated start conditions should be used
+to secure the bus in HS-mode. A stop condition ends the HS-mode and switches all the internal filters of the
+INA219 to support the F/S mode. For bus timing, see Bus Timing Diagram Definitions(1) and Figure 1.
+
+8.5.6.2 Power-Up Conditions
+Power-up conditions apply to a software reset through the RST bit (bit 15) in the Configuration register, or the I2C
+bus General Call Reset.
+
+(1) Values based on a statistical analysis of a one-time sample of devices. Minimum and maximum values are not ensured and not
+      production tested.
+
+Copyright © 2008­2015, Texas Instruments Incorporated                                           Submit Documentation Feedback                                               17
+
+                                                       Product Folder Links: INA219
+INA219                                                                                                 www.ti.com
+
+SBOS448G ­ AUGUST 2008 ­ REVISED DECEMBER 2015
+
+8.6 Register Maps
+
+8.6.1 Register Information
+
+The INA219 uses a bank of registers for holding configuration settings, measurement results, maximum/minimum
+limits, and status information. Table 2 summarizes the INA219 registers; Functional Block Diagram shows
+registers.
+
+Register contents are updated 4 s after completion of the write command. Therefore, a 4-s delay is required
+between completion of a write to a given register and a subsequent read of that register (without changing the
+pointer) when using SCL frequencies in excess of 1 MHz.
+
+                                   Table 2. Summary of Register Set
+
+POINTER  REGISTER NAME                                FUNCTION                POWER-ON RESET           TYPE (1)
+ADDRESS
+            Configuration          All-register reset, settings for bus       BINARY             HEX     R/W
+    HEX     Shunt voltage          voltage range, PGA Gain, ADC                                            R
+             Bus voltage           resolution/averaging.                      00111001 10011111  399F      R
+     00                            Shunt voltage measurement data.                                         R
+               Power (2)           Bus voltage measurement data.                  Shunt voltage   --       R
+     01        Current (2)         Power measurement data.                         Bus voltage    --
+     02                            Contains the value of the current flowing  00000000 00000000  0000    R/W
+     03       Calibration          through the shunt resistor.
+     04                            Sets full-scale range and LSB of current   00000000 00000000  0000
+                                   and power measurements. Overall
+     05                            system calibration.                        00000000 00000000  0000
+
+(1) Type: R = Read only, R/W = Read/Write.
+(2) The Power register and Current register default to 0 because the Calibration register defaults to 0, yielding a zero current value until the
+
+      Calibration register is programmed.
+
+18  Submit Documentation Feedback                                             Copyright © 2008­2015, Texas Instruments Incorporated
+
+                                                Product Folder Links: INA219
+www.ti.com                                                                                                                         INA219
+
+                                                                                     SBOS448G ­ AUGUST 2008 ­ REVISED DECEMBER 2015
+
+8.6.2 Register Details
+All INA219 16-bit registers are actually two 8-bit bytes through the I2C interface.
+
+8.6.2.1 Configuration Register (address = 00h) [reset = 399Fh]
+
+                                     Figure 19. Configuration Register
+
+15           14  13  12         11   10                9  8         7      6            5      4      3      2      1              0
+
+RST          --  BRNG PG1       PG0  BADC BADC BADC              BADC   SADC         SADC   SADC   SADC   MODE   MODE           MODE
+                                                                    1      4            3      2      1      3      2              1
+                                     4                 3  2
+                                                                 R/W-1  R/W-0        R/W-0  R/W-1  R/W-1  R/W-1  R/W-1          R/W-1
+R/W-0 R/W-0 R/W-1 R/W-1 R/W-1 R/W-0 R/W-0 R/W-1
+
+LEGEND: R/W = Read/Write; R = Read only; -n = value after reset
+
+                                                       Table 3. Bit Descriptions
+
+RST:                 Reset Bit
+Bit 15
+                     Setting this bit to '1' generates a system reset that is the same as power-on reset. Resets all registers to default
+BRNG:                values; this bit self-clears.
+Bit 13
+                     Bus Voltage Range
+PG:
+Bits 11, 12          0 = 16V FSR
+                     1 = 32V FSR (default value)
+
+                     PGA (Shunt Voltage Only)
+
+                     Sets PGA gain and range. Note that the PGA defaults to ÷8 (320mV range). Table 4 shows the gain and range for
+                     the various product gain settings.
+
+                PG1             PG0                    Table 4. PG Bit Settings(1)                  Range
+                  0               0                                                                ±40 mV
+                  0               1                                      GAIN                      ±80 mV
+                  1               0                                        1                       ±160 mV
+                  1               1                                        /2                      ±320 mV
+                                                                           /4
+(1) Shaded values are default.                                             /8
+
+BADC:                BADC Bus ADC Resolution/Averaging
+Bits 7­10
+                     These bits adjust the Bus ADC resolution (9-, 10-, 11-, or 12-bit) or set the number of samples used when
+                     averaging results for the Bus Voltage Register (02h).
+
+Copyright © 2008­2015, Texas Instruments Incorporated                                       Submit Documentation Feedback                  19
+
+                                                       Product Folder Links: INA219
+INA219                                                                                                   www.ti.com
+
+SBOS448G ­ AUGUST 2008 ­ REVISED DECEMBER 2015
+
+SADC:     SADC Shunt ADC Resolution/Averaging
+Bits 3­6
+          These bits adjust the Shunt ADC resolution (9-, 10-, 11-, or 12-bit) or set the number of samples used when
+          averaging results for the Shunt Voltage Register (01h).
+          BADC (Bus) and SADC (Shunt) ADC resolution/averaging and conversion time settings are shown in Table 5.
+
+                                                Table 5. ADC Settings(1)
+
+    ADC4  ADC3                     ADC2         ADC1  Mode/Samples            Conversion Time
+       0   X (2)                      0            0         9 bit                    84 s
+       0   X (2)                      0            1        10 bit                   148 s
+       0   X (2)                      1            0        11 bit                   276 s
+       0   X (2)                      1            1        12 bit                   532 s
+       1     0                        0            0        12 bit                   532 s
+       1     0                        0            1           2
+       1     0                        1            0           4                    1.06 ms
+       1     0                        1            1           8                    2.13 ms
+       1     1                        0            0          16                    4.26 ms
+       1     1                        0            1          32                    8.51 ms
+       1     1                        1            0          64                    17.02 ms
+       1     1                        1            1          128                   34.05 ms
+                                                                                    68.10 ms
+
+(1) Shaded values are default.
+(2) X = Don't care
+
+MODE:     Operating Mode
+Bits 0­2
+          Selects continuous, triggered, or power-down mode of operation. These bits default to continuous shunt and bus
+          measurement mode. The mode settings are shown in Table 6.
+
+             MODE3              MODE2           Table 6. Mode Settings(1)                  MODE
+                  0                 0                                                  Power-down
+                  0                 0                          MODE1           Shunt voltage, triggered
+                  0                 1                               0            Bus voltage, triggered
+                  0                 1                               1          Shunt and bus, triggered
+                  1                 0                               0              ADC off (disabled)
+                  1                 0                               1         Shunt voltage, continuous
+                  1                 1                               0          Bus voltage, continuous
+                  1                 1                               1         Shunt and bus, continuous
+                                                                    0
+(1) Shaded values are default.                                      1
+
+8.6.3 Data Output Registers
+
+8.6.3.1 Shunt Voltage Register (address = 01h)
+
+The Shunt Voltage register stores the current shunt voltage reading, VSHUNT. Shunt Voltage register bits are
+shifted according to the PGA setting selected in the Configuration register (00h). When multiple sign bits are
+present, they will all be the same value. Negative numbers are represented in 2's complement format. Generate
+the 2's complement of a negative number by complementing the absolute value binary number and adding 1.
+Extend the sign, denoting a negative number by setting the MSB = 1. Extend the sign to any additional sign bits
+to form the 16-bit word.
+
+Example: For a value of VSHUNT = ­320 mV:
+1. Take the absolute value (include accuracy to 0.01 mV)  320.00
+
+2. Translate this number to a whole decimal number  32000
+
+3. Convert it to binary  111 1101 0000 0000
+
+20  Submit Documentation Feedback                                             Copyright © 2008­2015, Texas Instruments Incorporated
+
+                                                Product Folder Links: INA219
+www.ti.com                                                                                                                         INA219
+
+                                                                                     SBOS448G ­ AUGUST 2008 ­ REVISED DECEMBER 2015
+
+4. Complement the binary result : 000 0010 1111 1111
+5. Add 1 to the Complement to create the Two's Complement formatted result  000 0011 0000 0000
+6. Extend the sign and create the 16-bit word: 1000 0011 0000 0000 = 8300h (Remember to extend the sign to
+
+     all sign-bits, as necessary based on the PGA setting.)
+
+At PGA = /8, full-scale range = ±320 mV (decimal = 32000). For VSHUNT = +320 mV, Value = 7D00h; For VSHUNT
+= ­320 mV, Value = 8300h; and LSB = 10µV.
+
+                              Figure 20. Shunt Voltage Register at PGA = /8
+
+15          14  13     12     11     10                9      8      7      6        5      4      3      2      1         0
+
+SIGN  SD14_     SD13_  SD12_  SD11_  SD10_             SD9_8  SD8_8  SD7_8  SD6_8    SD5_8  SD4_8  SD3_8  SD2_8  SD1_8     SD0_8
+         8         8      8      8      8
+
+At PGA = /4, full-scale range = ±160 mV (decimal = 16000). For VSHUNT = +160 mV, Value = 3E80h; For VSHUNT
+= ­160 mV, Value = C180h; and LSB = 10µV.
+
+                              Figure 21. Shunt Voltage Register at PGA = /4
+
+  15        14  13     12     11     10                9      8      7      6        5      4      3      2      1         0
+SIGN
+      SIGN      SD13_  SD12_  SD11_  SD10_             SD9_4  SD8_4  SD7_4  SD6_4    SD5_4  SD4_4  SD3_4  SD2_4  SD1_4     SD0_4
+                   4      4      4      4
+
+At PGA = /2, full-scale range = ±80 mV (decimal = 8000). For VSHUNT = +80 mV, Value = 1F40h; For VSHUNT =
+­80 mV; Value = E0C0h; and LSB = 10µV.
+
+                              Figure 22. Shunt Voltage Register at PGA = /2
+
+  15    14      13     12     11     10                9      8      7      6        5      4      3      2      1         0
+SIGN  SIGN
+                SIGN   SD12_  SD11_  SD10_             SD9_2  SD8_2  SD7_2  SD6_2    SD5_2  SD4_2  SD3_2  SD2_2  SD1_2     SD0_2
+                          2      2      2
+
+At PGA = /1, full-scale range = ±40 mV (decimal = 4000). For VSHUNT = +40 mV, Value = 0FA0h; For VSHUNT =
+­40 mV, Value = F060h; and LSB = 10µV.
+
+                              Figure 23. Shunt Voltage Register at PGA = /1
+
+  15    14        13   12     11     10                9      8      7      6        5      4      3      2      1         0
+SIGN  SIGN      SIGN
+                       SIGN   SD11_  SD10_             SD9_1  SD8_1  SD7_1  SD6_1    SD5_1  SD4_1  SD3_1  SD2_1  SD1_1     SD0_1
+                                 1      1
+
+Copyright © 2008­2015, Texas Instruments Incorporated                                       Submit Documentation Feedback     21
+
+                                                       Product Folder Links: INA219
+INA219                                                                                                                 www.ti.com
+
+SBOS448G ­ AUGUST 2008 ­ REVISED DECEMBER 2015                                                                 PGA = /1
+                                                                                                               (D15:D0)
+                                      Table 7. Shunt Voltage Register Format(1)                        0000 1111 1010 0000
+                                                                                                       0000 1111 1010 0000
+     VSHUNT   Decimal          PGA = /8                     PGA = /4                      PGA = /2     0000 1111 1010 0000
+Reading (mV)   Value           (D15:D0)                     (D15:D0)                      (D15:D0)     0000 1111 1010 0000
+               32002   0111 1101 0000 0000          0011 1110 1000 0000           0001 1111 0100 0000  0000 1111 1010 0000
+     320.02    32001   0111 1101 0000 0000          0011 1110 1000 0000           0001 1111 0100 0000
+     320.01    32000   0111 1101 0000 0000          0011 1110 1000 0000           0001 1111 0100 0000
+     320.00    31999   0111 1100 1111 1111          0011 1110 1000 0000           0001 1111 0100 0000
+     319.99    31998   0111 1100 1111 1110          0011 1110 1000 0000           0001 1111 0100 0000
+     319.98
+
+    160.02    16002    0011 1110 1000 0010          0011 1110 1000 0000           0001 1111 0100 0000  0000 1111 1010 0000
+    160.01    16001    0011 1110 1000 0001          0011 1110 1000 0000           0001 1111 0100 0000  0000 1111 1010 0000
+    160.00    16000    0011 1110 1000 0000          0011 1110 1000 0000           0001 1111 0100 0000  0000 1111 1010 0000
+    159.99    15999    0011 1110 0111 1111          0011 1110 0111 1111           0001 1111 0100 0000  0000 1111 1010 0000
+    159.98    15998    0011 1110 0111 1110          0011 1110 0111 1110           0001 1111 0100 0000  0000 1111 1010 0000
+
+    80.02     8002     0001 1111 0100 0010          0001 1111 0100 0010           0001 1111 0100 0000  0000 1111 1010 0000
+    80.01     8001     0001 1111 0100 0001          0001 1111 0100 0001           0001 1111 0100 0000  0000 1111 1010 0000
+    80.00     8000     0001 1111 0100 0000          0001 1111 0100 0000           0001 1111 0100 0000  0000 1111 1010 0000
+    79.99     7999     0001 1111 0011 1111          0001 1111 0011 1111           0001 1111 0011 1111  0000 1111 1010 0000
+    79.98     7998     0001 1111 0011 1110          0001 1111 0011 1110           0001 1111 0011 1110  0000 1111 1010 0000
+
+    40.02     4002     0000 1111 1010 0010          0000 1111 1010 0010           0000 1111 1010 0010  0000 1111 1010 0000
+    40.01     4001     0000 1111 1010 0001          0000 1111 1010 0001           0000 1111 1010 0001  0000 1111 1010 0000
+    40.00     4000     0000 1111 1010 0000          0000 1111 1010 0000           0000 1111 1010 0000  0000 1111 1010 0000
+    39.99     3999     0000 1111 1001 1111          0000 1111 1001 1111           0000 1111 1001 1111  0000 1111 1001 1111
+    39.98     3998     0000 1111 1001 1110          0000 1111 1001 1110           0000 1111 1001 1110  0000 1111 1001 1110
+
+    0.02      2        0000 0000 0000 0010          0000 0000 0000 0010           0000 0000 0000 0010  0000 0000 0000 0010
+                       0000 0000 0000 0001          0000 0000 0000 0001           0000 0000 0000 0001  0000 0000 0000 0001
+    0.01      1        0000 0000 0000 0000          0000 0000 0000 0000           0000 0000 0000 0000  0000 0000 0000 0000
+                       1111 1111 1111 1111          1111 1111 1111 1111           1111 1111 1111 1111  1111 1111 1111 1111
+    0         0        1111 1111 1111 1110          1111 1111 1111 1110           1111 1111 1111 1110  1111 1111 1111 1110
+
+    ­0.01     ­1
+
+    ­0.02     ­2
+
+    ­39.98    ­3998    1111 0000 0110 0010          1111 0000 0110 0010           1111 0000 0110 0010  1111 0000 0110 0010
+    ­39.99    ­3999    1111 0000 0110 0001          1111 0000 0110 0001           1111 0000 0110 0001  1111 0000 0110 0001
+    ­40.00    ­4000    1111 0000 0110 0000          1111 0000 0110 0000           1111 0000 0110 0000  1111 0000 0110 0000
+    ­40.01    ­4001    1111 0000 0101 1111          1111 0000 0101 1111           1111 0000 0101 1111  1111 0000 0110 0000
+    ­40.02    ­4002    1111 0000 0101 1110          1111 0000 0101 1110           1111 0000 0101 1110  1111 0000 0110 0000
+
+    ­79.98    ­7998    1110 0000 1100 0010          1110 0000 1100 0010           1110 0000 1100 0010  1111 0000 0110 0000
+    ­79.99    ­7999    1110 0000 1100 0001          1110 0000 1100 0001           1110 0000 1100 0001  1111 0000 0110 0000
+    ­80.00    ­8000    1110 0000 1100 0000          1110 0000 1100 0000           1110 0000 1100 0000  1111 0000 0110 0000
+    ­80.01    ­8001    1110 0000 1011 1111          1110 0000 1011 1111           1110 0000 1100 0000  1111 0000 0110 0000
+    ­80.02    ­8002    1110 0000 1011 1110          1110 0000 1011 1110           1110 0000 1100 0000  1111 0000 0110 0000
+
+    ­159.98   ­15998   1100 0001 1000 0010          1100 0001 1000 0010           1110 0000 1100 0000  1111 0000 0110 0000
+    ­159.99   ­15999   1100 0001 1000 0001          1100 0001 1000 0001           1110 0000 1100 0000  1111 0000 0110 0000
+    ­160.00   ­16000   1100 0001 1000 0000          1100 0001 1000 0000           1110 0000 1100 0000  1111 0000 0110 0000
+    ­160.01   ­16001   1100 0001 0111 1111          1100 0001 1000 0000           1110 0000 1100 0000  1111 0000 0110 0000
+    ­160.02   ­16002   1100 0001 0111 1110          1100 0001 1000 0000           1110 0000 1100 0000  1111 0000 0110 0000
+
+    ­319.98   ­31998   1000 0011 0000 0010          1100 0001 1000 0000           1110 0000 1100 0000  1111 0000 0110 0000
+    ­319.99   ­31999   1000 0011 0000 0001          1100 0001 1000 0000           1110 0000 1100 0000  1111 0000 0110 0000
+    ­320.00   ­32000   1000 0011 0000 0000          1100 0001 1000 0000           1110 0000 1100 0000  1111 0000 0110 0000
+    ­320.01   ­32001   1000 0011 0000 0000          1100 0001 1000 0000           1110 0000 1100 0000  1111 0000 0110 0000
+    ­320.02   ­32002   1000 0011 0000 0000          1100 0001 1000 0000           1110 0000 1100 0000  1111 0000 0110 0000
+
+(1) Out-of-range values are shown in gray shading.
+
+22     Submit Documentation Feedback                                              Copyright © 2008­2015, Texas Instruments Incorporated
+
+                                                    Product Folder Links: INA219
+www.ti.com                                                                                                                         INA219
+
+                                                                                     SBOS448G ­ AUGUST 2008 ­ REVISED DECEMBER 2015
+
+8.6.3.2 Bus Voltage Register (address = 02h)
+The Bus Voltage register stores the most recent bus voltage reading, VBUS.
+At full-scale range = 32 V (decimal = 8000, hex = 1F40), and LSB = 4 mV.
+
+                                Figure 24. Bus Voltage Register
+
+15          14  13  12      11  10                     9  8      7    6              5    4    3    2    1                          0
+
+BD12 BD11 BD10 BD9 BD8 BD7 BD6 BD5 BD4 BD3 BD2 BD1 BD0                                              -- CNVR OVF
+
+At full-scale range = 16 V (decimal = 4000, hex = 0FA0), and LSB = 4 mV.
+
+CNVR:               Conversion Ready
+Bit 1
+                    Although the data from the last conversion can be read at any time, the INA219 Conversion Ready bit (CNVR)
+                    indicates when data from a conversion is available in the data output registers. The CNVR bit is set after all
+                    conversions, averaging, and multiplications are complete. CNVR will clear under the following conditions:
+
+                    1.) Writing a new mode into the Operating Mode bits in the Configuration Register (except for Power-Down or
+                    Disable)
+
+                    2.) Reading the Power Register
+
+OVF:                Math Overflow Flag
+Bit 0
+                    The Math Overflow Flag (OVF) is set when the Power or Current calculations are out of range. It indicates that
+                    current and power data may be meaningless.
+
+8.6.3.3 Power Register (address = 03h) [reset = 00h]
+Full-scale range and LSB are set by the Calibration register. See the Programming the Calibration Register.
+
+                                                       Figure 25. Power Register
+
+15          14  13  12      11  10                     9  8      7    6              5    4    3    2    1                          0
+
+PD15 PD14 PD13 PD12 PD11 PD10 PD9 PD8 PD7 PD6 PD5 PD4 PD3 PD2 PD1 PD0
+
+R-0 R-0 R-0 R-0 R-0 R-0 R-0 R-0 R-0 R-0 R-0 R-0 R-0 R-0 R-0 R-0
+
+LEGEND: R/W = Read/Write; R = Read only; -n = value after reset
+
+The Power register records power in watts by multiplying the values of the current with the value of the bus
+voltage according to the equation Equation 5:
+
+8.6.3.4 Current Register (address = 04h) [reset = 00h]
+
+Full-scale range and LSB depend on the value entered in the Calibration register. See Programming the
+Calibration Register for more information. Negative values are stored in 2's complement format.
+
+                                                       Figure 26. Current Register
+
+15          14  13  12      11  10                     9  8        7    6              5    4    3    2    1               0
+                                                                 CD7  CD6            CD5  CD4  CD3  CD2  CD1             CD0
+CSIGN CD14 CD13 CD12 CD11 CD10 CD9 CD8                           R-0  R-0            R-0  R-0  R-0  R-0  R-0             R-0
+
+R-0 R-0 R-0 R-0 R-0 R-0 R-0 R-0
+
+LEGEND: R/W = Read/Write; R = Read only; -n = value after reset
+
+The value of the Current register is calculated by multiplying the value in the Shunt Voltage register with the
+value in the Calibration register according to the Equation 4:
+
+8.6.4 Calibration Register
+
+8.6.4.1 Calibration Register (address = 05h) [reset = 00h]
+
+Current and power calibration are set by bits FS15 to FS1 of the Calibration register. Note that bit FS0 is not
+used in the calculation. This register sets the current that corresponds to a full-scale drop across the shunt. Full-
+scale range and the LSB of the current and power measurement depend on the value entered in this register.
+See the Programming the Calibration Register. This register is suitable for use in overall system calibration. Note
+that the 0 POR values are all default.
+
+Copyright © 2008­2015, Texas Instruments Incorporated                                     Submit Documentation Feedback                23
+
+                                                       Product Folder Links: INA219
+INA219                                                                                                                            www.ti.com
+
+SBOS448G ­ AUGUST 2008 ­ REVISED DECEMBER 2015
+
+                                       Figure 27. Calibration Register(1)
+
+    15  14  13  12  11                 10       9  8             7  6         5  4  3  2  1                                       0
+
+FS15 FS14 FS13 FS12 FS11 FS10 FS9 FS8 FS7 FS6 FS5 FS4 FS3 FS2 FS1 FS0
+
+R/W-0 R/W-0 R/W-0 R/W-0 R/W-0 R/W-0 R/W-0 R/W-0 R/W-0 R/W-0 R/W-0 R/W-0 R/W-0 R/W-0 R/W-0 R-0
+
+LEGEND: R/W = Read/Write; R = Read only; -n = value after reset
+
+(1) FS0 is a void bit and will always be 0. It is not possible to write a 1 to FS0. CALIBRATION is the value stored in FS15:FS1.
+
+24      Submit Documentation Feedback                                         Copyright © 2008­2015, Texas Instruments Incorporated
+
+                                                Product Folder Links: INA219
+www.ti.com                                                                                                                            INA219
+
+9 Application and Implementation                                                        SBOS448G ­ AUGUST 2008 ­ REVISED DECEMBER 2015
+
+                                                                                NOTE
+                        Information in the following applications sections is not part of the TI component
+                        specification, and TI does not warrant its accuracy or completeness. TI's customers are
+                        responsible for determining suitability of components for their purposes. Customers should
+                        validate and test their design implementation to confirm system functionality.
+
+9.1 Application Information
+
+The INA219 is a current shunt and power monitor with an I2C- and SMBus-compatible interface. The device
+monitors both a shunt voltage drop and bus supply voltage. Programmable calibration value, combined with an
+internal multiplier, enable readouts of current and power.
+
+9.2 Typical Application
+
+Figure 28 shows a typical application circuit for the INA219. Use a 0.1-F ceramic capacitor for power-supply
+bypassing, placed as closely as possible to the supply and ground pins.
+
+The input filter circuit consisting of RF1, RF2, and CF is not necessary in most applications. If the need for filtering
+is unknown, reserve board space for the components and install 0- resistors for RF1 and RF2 and leave CF
+unpopulated, unless a filter is needed (see Filtering and Input Considerations).
+
+The pull-up resistors shown on the SDA and SCL lines are not needed if there are pullup resistors on these
+same lines elsewhere in the system. Resistor values shown are typical: consult either the I2C or SMBus
+specification to determine the acceptable minimum or maximum values and also refer to the Specifications for
+Output Current Limitations.
+
+Power Bus               RSHUNT           Load            Supply Voltage
+(0V to 26V)                CF         RF2                (INA219 Power Supply Range is
+                                                         3V to 5.5V)
+             RF1
+                                                                            CBYPASS
+                                                                            0.1mF
+                                                                            (typical)
+
+                  VIN+          VIN-                                                                       RPULLUP    RPULLUP
+                                                                                                            3.3kW      3.3kW
+                                                                                                   INA219  (typical)  (typical)
+
+                                                         ´  Power Register                                 SDA                            Data (SDA)
+                                                                                                           SCL                            Clock (SCL)
+                                                                                           I2C             A0
+                                                            Current Register            Interface          A1
+
+                                               PGA  ADC
+
+                                                            Voltage Register
+
+                                GND
+
+                                                         Figure 28. Typical Application Circuit
+
+9.2.1 Design Requirements
+
+The INA219 measures the voltage across a current-sensing resistor (RSHUNT) when current passes through the
+resistor. The device also measures the bus supply voltage, and calculates power when calibrated. This section
+goes through the steps to program the device for power measurements, and shows the register results Table 8.
+
+The Conditions for the example circuit is: Maximum expected load current = 15 A, Nominal load current = 10 A,
+VCM = 12 V, RSHUNT = 2 m, VSHUNT FSR = 40 mV (PGA = /1), and BRNG = 0 (VBUS range = 16 V).
+
+9.2.2 Detailed Design Procedure
+
+Figure 29 shows a nominal 10-A load that creates a differential voltage of 20 mV across a 2-m shunt resistor.
+The common mode is at 12 volts and the voltage present at the IN­ pin is equal to the common-mode voltage
+minus the differential drop across the resistor.
+
+Copyright © 2008­2015, Texas Instruments Incorporated                                                      Submit Documentation Feedback  25
+
+                                                         Product Folder Links: INA219
+INA219                                                                                                             www.ti.com
+
+SBOS448G ­ AUGUST 2008 ­ REVISED DECEMBER 2015
+
+Typical Application (continued)
+
+For this example, the minimum-current LSB is calculated to be 457.78 µA/bit, assuming a maximum expected
+current of 15 A using Equation 2. This value is rounded up to 1 mA/bit and is chosen for the current LSB. Setting
+the current LSB to this value allows for sufficient precision while serving to simplify the math as well. Using
+Equation 1 results in a calibration value of 20480 (5000h). This value is then programmed into the Calibration
+register.
+
+                                                                                 +3.3V to +5V
+
+    +12V              RSHUNT       10A                            10µF           0.1µF
+    VCM                2mW         Load                                                       VS (Supply Voltage)
+
+                                                            ´  Power Register        I2C-/     SDA
+                                                                                  SMBUS-
+                              VIN+           V                 Current Register  Compatible    SCL
+                              VIN-                                                Interface    A0
+                                              I                                                A1
+                                         GND                   Voltage Register
+
+                                   Figure 29. Example Circuit Configuration
+
+The bus voltage is internally measured at the IN­ pin to calculate the voltage level delivered to the load. The Bus
+Voltage register bits are not right-aligned; therefore, they must be shifted right by three bits. Multiply the shifted
+contents by the 4-mV LSB to compute the bus voltage measured by the device in volts. The shifted value of the
+Bus Voltage register contents is equal to BB3h, the decimal equivalent of 2995. This value of 2995 is multiplied
+by the 4-mV LSB, and results in a value of 11.98 V. As shown, the voltage at the IN­ pin is 11.98 V. For a 40-
+mV, full-scale range, this small difference is not a significant deviation from the 12-V common-mode voltage.
+However, at larger full-scale ranges, this deviation can be much larger.
+
+The Current register content is internally calculated using Equation 4, and the result of 10000 (2710h) is
+automatically loaded into the register. Current in amperes is equal to 1 mA/bit times 10000, and results in a 10-A
+load current.
+
+The Power register content is internally calculated using Equation 5 and the result of 5990 (1766h) is
+automatically loaded into the register. Multiplying this result by the Power register LSB 20 × 10­3(20 times 1 ×
+10­3 current LSB using Equation 3), results in a power calculation of 5990 × 20 mW/bit, and equals 119.8 W.
+This result matches what is expected for this register. A calculation for the power delivered to the load uses
+11.98 V (12 VCM ­ 20-mV shunt drop) multiplied by the load current of 10 A to give a 119.8-W result.
+
+9.2.2.1 Register Results for the Example Circuit
+Table 8 shows the register readings for the Calibration example.
+
+                                                Table 8. Register Results(1)
+
+    REGISTER NAME     ADDRESS                    CONTENTS         ADJ             DEC           LSB                VALUE
+       Configuration      00h                        019Fh        0BB3
+            Shunt         01h                       07D0h                        2000          10 µV                20 mV
+              Bus         02h                       5D98h                        2995           4 mV               11.98 V
+         Calibration      05h                        5000h                       20480
+           Current        04h                        2710h                       10000          1 mA                10.0 A
+            Power         03h                        1766h                       5990          20 mW               119.8 W
+
+(1) Conditions: load = 10 A, VCM = 12 V, RSHUNT = 2 m, VSHUNT FSR = 40 mV, and VBUS = VIN-, BRNG = 0 (VBUS range = 16 V).
+
+26  Submit Documentation Feedback                                              Copyright © 2008­2015, Texas Instruments Incorporated
+
+                                                 Product Folder Links: INA219
+www.ti.com                                                                                                                         INA219
+
+                                                                                     SBOS448G ­ AUGUST 2008 ­ REVISED DECEMBER 2015
+
+10 Power Supply Recommendations
+
+The input circuitry of the device can accurately measure signals on common-mode voltages beyond its power
+supply voltage, VS. For example, the voltage applied to the VS power supply terminal can be 5 V, whereas the
+load power-supply voltage being monitored (the common-mode voltage) can be as high as 26 V. Note also that
+the device can withstand the full 0-V to 26-V range at the input terminals, regardless of whether the device has
+power applied or not.
+
+Place the required power-supply bypass capacitors as close as possible to the supply and ground terminals of
+the device to ensure stability. A typical value for this supply bypass capacitor is 0.1 F. Applications with noisy or
+high-impedance power supplies may require additional decoupling capacitors to reject power-supply noise.
+
+11 Layout
+
+11.1 Layout Guidelines
+
+Connect the input pins (IN+ and IN­) to the sensing resistor using a Kelvin connection or a 4-wire connection.
+These connection techniques ensure that only the current-sensing resistor impedance is detected between the
+input pins. Poor routing of the current-sensing resistor commonly results in additional resistance present between
+the input pins. Given the very low ohmic value of the current-sensing resistor, any additional high-current carrying
+impedance causes significant measurement errors. Place the power-supply bypass capacitor as close as
+possible to the supply and ground pins.
+
+11.2 Layout Example
+
+               I2C - /                                 A1    IN+                                             Sense/Shunt
+             SMBUS -                                   A0    IN±                                                 Resistor
+            compatible                                 SDA  GND
+             interface                                 SCL    VS                     Supply bypass
+                                                                                        capacitor
+
+                                                                               Via to Ground Plane
+                                                                                Via to Power Plane
+
+                        Figure 30. Recommended Layout
+
+Copyright © 2008­2015, Texas Instruments Incorporated                                Submit Documentation Feedback         27
+
+                                                       Product Folder Links: INA219
+INA219                                                                   www.ti.com
+
+SBOS448G ­ AUGUST 2008 ­ REVISED DECEMBER 2015
+
+12 Device and Documentation Support
+
+12.1 Community Resources
+
+The following links connect to TI community resources. Linked contents are provided "AS IS" by the respective
+contributors. They do not constitute TI specifications and do not necessarily reflect TI's views; see TI's Terms of
+Use.
+
+TI E2ETM Online Community TI's Engineer-to-Engineer (E2E) Community. Created to foster collaboration
+                  among engineers. At e2e.ti.com, you can ask questions, share knowledge, explore ideas and help
+                  solve problems with fellow engineers.
+
+Design Support TI's Design Support Quickly find helpful E2E forums along with design support tools and
+                  contact information for technical support.
+
+12.2 Trademarks
+E2E is a trademark of Texas Instruments.
+All other trademarks are the property of their respective owners.
+
+12.3 Electrostatic Discharge Caution
+
+             These devices have limited built-in ESD protection. The leads should be shorted together or the device placed in conductive foam
+             during storage or handling to prevent electrostatic damage to the MOS gates.
+
+12.4 Glossary
+
+SLYZ022 -- TI Glossary.
+     This glossary lists and explains terms, acronyms, and definitions.
+
+13 Mechanical, Packaging, and Orderable Information
+
+The following pages include mechanical, packaging, and orderable information. This information is the most
+current data available for the designated devices. This data is subject to change without notice and revision of
+this document. For browser-based versions of this data sheet, refer to the left-hand navigation.
+
+28  Submit Documentation Feedback                                        Copyright © 2008­2015, Texas Instruments Incorporated
+
+                                   Product Folder Links: INA219
+www.ti.com                                                                                                   PACKAGE OPTION ADDENDUM
+
+                                                                                                                                                                              5-Mar-2026
+
+PACKAGING INFORMATION
+
+Orderable part number  Status Material type  Package | Pins    Package qty | Carrier  RoHS    Lead finish/         MSL rating/      Op temp (°C)  Part marking
+                                                                                              Ball material        Peak reflow
+                       (1)       (2)                                                     (3)                                          -40 to 125            (6)
+                                                                                                        (4)                    (5)    -40 to 125
+       INA219AID       Obsolete  Production     SOIC (D) | 8               -             -                                            -40 to 125       I219A
+    INA219AIDCNR        Active   Production  SOT-23 (DCN) | 8  3000 | LARGE T&R        Yes        Call TI              Call TI        -40 to 125       A219
+  INA219AIDCNR.A        Active   Production  SOT-23 (DCN) | 8  3000 | LARGE T&R        Yes       NIPDAU      Level-2-260C-1 YEAR      -40 to 125       A219
+  INA219AIDCNR.B        Active   Production  SOT-23 (DCN) | 8  3000 | LARGE T&R        Yes       NIPDAU      Level-2-260C-1 YEAR      -40 to 125       A219
+ INA219AIDCNR1G4        Active   Production  SOT-23 (DCN) | 8  3000 | LARGE T&R        Yes       NIPDAU      Level-2-260C-1 YEAR      -40 to 125       A219
+INA219AIDCNR1G4.A       Active   Production  SOT-23 (DCN) | 8  3000 | LARGE T&R        Yes       NIPDAU      Level-2-260C-1 YEAR      -40 to 125       A219
+INA219AIDCNR1G4.B       Active   Production  SOT-23 (DCN) | 8  3000 | LARGE T&R        Yes       NIPDAU      Level-2-260C-1 YEAR      -40 to 125       A219
+    INA219AIDCNT        Active   Production  SOT-23 (DCN) | 8   250 | SMALL T&R        Yes       NIPDAU      Level-2-260C-1 YEAR      -40 to 125       A219
+   INA219AIDCNT.A       Active   Production  SOT-23 (DCN) | 8   250 | SMALL T&R        Yes       NIPDAU      Level-2-260C-1 YEAR      -40 to 125       A219
+   INA219AIDCNT.B       Active   Production  SOT-23 (DCN) | 8   250 | SMALL T&R        Yes       NIPDAU      Level-2-260C-1 YEAR      -40 to 125       A219
+                        Active   Production                    2500 | LARGE T&R        Yes       NIPDAU      Level-2-260C-1 YEAR      -40 to 125       I219A
+      INA219AIDR        Active   Production     SOIC (D) | 8   2500 | LARGE T&R        Yes       NIPDAU      Level-1-260C-UNLIM       -40 to 125       I219A
+     INA219AIDR.A       Active   Production     SOIC (D) | 8   2500 | LARGE T&R        Yes       NIPDAU      Level-1-260C-UNLIM       -40 to 125       I219A
+     INA219AIDR.B       Active   Production     SOIC (D) | 8   2500 | LARGE T&R        Yes       NIPDAU      Level-1-260C-UNLIM       -40 to 125       I219A
+    INA219AIDRG4        Active   Production     SOIC (D) | 8   2500 | LARGE T&R        Yes       NIPDAU      Level-1-260C-UNLIM       -40 to 125       I219A
+   INA219AIDRG4.A       Active   Production     SOIC (D) | 8   2500 | LARGE T&R        Yes       NIPDAU      Level-1-260C-UNLIM       -40 to 125       I219A
+   INA219AIDRG4.B                Production     SOIC (D) | 8                                     NIPDAU      Level-1-260C-UNLIM       -40 to 125       I219B
+                       Obsolete  Production     SOIC (D) | 8               -             -        Call TI                             -40 to 125       B219
+       INA219BID        Active   Production  SOT-23 (DCN) | 8  3000 | LARGE T&R        Yes       NIPDAU                Call TI        -40 to 125       B219
+    INA219BIDCNR        Active   Production  SOT-23 (DCN) | 8  3000 | LARGE T&R        Yes       NIPDAU      Level-2-260C-1 YEAR      -40 to 125       B219
+  INA219BIDCNR.A        Active   Production  SOT-23 (DCN) | 8  3000 | LARGE T&R        Yes       NIPDAU      Level-2-260C-1 YEAR      -40 to 125       B219
+  INA219BIDCNR.B        Active   Production  SOT-23 (DCN) | 8  3000 | LARGE T&R        Yes       NIPDAU      Level-2-260C-1 YEAR      -40 to 125       B219
+  INA219BIDCNRG4        Active   Production  SOT-23 (DCN) | 8  3000 | LARGE T&R        Yes       NIPDAU      Level-2-260C-1 YEAR      -40 to 125       B219
+INA219BIDCNRG4.A        Active   Production  SOT-23 (DCN) | 8  3000 | LARGE T&R        Yes       NIPDAU      Level-2-260C-1 YEAR      -40 to 125       B219
+INA219BIDCNRG4.B        Active   Production  SOT-23 (DCN) | 8   250 | SMALL T&R        Yes       NIPDAU      Level-2-260C-1 YEAR      -40 to 125       B219
+    INA219BIDCNT        Active   Production  SOT-23 (DCN) | 8   250 | SMALL T&R        Yes       NIPDAU      Level-2-260C-1 YEAR      -40 to 125       B219
+   INA219BIDCNT.A       Active   Production  SOT-23 (DCN) | 8   250 | SMALL T&R        Yes       NIPDAU      Level-2-260C-1 YEAR      -40 to 125       I219B
+   INA219BIDCNT.B       Active   Production     SOIC (D) | 8   2500 | LARGE T&R        Yes       NIPDAU      Level-2-260C-1 YEAR                       I219B
+                        Active   Production     SOIC (D) | 8   2500 | LARGE T&R        Yes       NIPDAU      Level-1-260C-UNLIM                        I219B
+      INA219BIDR        Active                  SOIC (D) | 8   2500 | LARGE T&R        Yes       NIPDAU      Level-1-260C-UNLIM
+     INA219BIDR.A                                                                                            Level-1-260C-UNLIM
+     INA219BIDR.B
+
+                                                               Addendum-Page 1
+www.ti.com                   PACKAGE OPTION ADDENDUM
+
+                                                                                              5-Mar-2026
+
+(1) Status: For more details on status, see our product life cycle.
+
+(2) Material type: When designated, preproduction parts are prototypes/experimental devices, and are not yet approved or released for full production. Testing and final process, including without limitation quality assurance,
+reliability performance testing, and/or process qualification, may not yet be complete, and this item is subject to further changes or possible discontinuation. If available for ordering, purchases will be subject to an additional
+waiver at checkout, and are intended for early internal evaluation purposes only. These items are sold without warranties of any kind.
+
+(3) RoHS values: Yes, No, RoHS Exempt. See the TI RoHS Statement for additional information and value definition.
+
+(4) Lead finish/Ball material: Parts may have multiple material finish options. Finish options are separated by a vertical ruled line. Lead finish/Ball material values may wrap to two lines if the finish value exceeds the maximum
+column width.
+
+(5) MSL rating/Peak reflow: The moisture sensitivity level ratings and peak solder (reflow) temperatures. In the event that a part has multiple moisture sensitivity ratings, only the lowest level per JEDEC standards is shown.
+Refer to the shipping label for the actual reflow temperature that will be used to mount the part to the printed circuit board.
+
+(6) Part marking: There may be an additional marking, which relates to the logo, the lot trace code information, or the environmental category of the part.
+
+Multiple part markings will be inside parentheses. Only one part marking contained in parentheses and separated by a "~" will appear on a part. If a line is indented then it is a continuation of the previous line and the two
+combined represent the entire part marking for that device.
+
+Important Information and Disclaimer:The information provided on this page represents TI's knowledge and belief as of the date that it is provided. TI bases its knowledge and belief on information provided by third parties, and
+makes no representation or warranty as to the accuracy of such information. Efforts are underway to better integrate information from third parties. TI has taken and continues to take reasonable steps to provide representative
+and accurate information but may not have conducted destructive testing or chemical analysis on incoming materials and chemicals. TI and TI suppliers consider certain information to be proprietary, and thus CAS numbers
+and other limited information may not be available for release.
+
+In no event shall TI's liability arising out of such information exceed the total purchase price of the TI part(s) at issue in this document sold by TI to Customer on an annual basis.
+
+            Addendum-Page 2
+                                                                     PACKAGE MATERIALS INFORMATION
+
+www.ti.com                                                                                                                               1-Jan-2026
+
+TAPE AND REEL INFORMATION                                               TAPE DIMENSIONS
+                                                                     K0 P1
+         REEL DIMENSIONS
+
+                                                                                                                             B0 W
+
+                                      Reel
+                                   Diameter
+
+                                                                     Cavity  A0
+
+                                                    A0 Dimension designed to accommodate the component width
+                                                    B0 Dimension designed to accommodate the component length
+                                                    K0 Dimension designed to accommodate the component thickness
+                                                    W Overall width of the carrier tape
+                                                    P1 Pitch between successive cavity centers
+
+                                          Reel Width (W1)
+                             QUADRANT ASSIGNMENTS FOR PIN 1 ORIENTATION IN TAPE
+
+                                                                                                             Sprocket Holes
+
+                                             Q1 Q2        Q1 Q2              User Direction of Feed
+                                             Q3 Q4        Q3 Q4
+
+                                                   Pocket Quadrants
+
+*All dimensions are nominal
+
+Device                       Package Package Pins   SPQ   Reel Reel A0 B0 K0 P1 W                                                  Pin1
+                               Type Drawing
+                                                    3000  Diameter Width (mm) (mm) (mm) (mm) (mm) Quadrant
+                                                    3000
+                                                    3000  (mm) W1 (mm)
+                                                    250
+INA219AIDCNR                 SOT-23 DCN 8           250   180.0      8.4     3.2 3.2 1.4 4.0 8.0                                   Q3
+                                                    2500
+INA219AIDCNR                 SOT-23 DCN 8           2500  179.0      8.4     3.2 3.2 1.4 4.0 8.0                                   Q3
+                                                    3000
+INA219AIDCNR1G4 SOT-23 DCN 8                        3000  180.0      8.4     3.2 3.2 1.4 4.0 8.0                                   Q3
+                                                    3000
+INA219AIDCNT                 SOT-23 DCN 8           250   180.0      8.4     3.2 3.2 1.4 4.0 8.0                                   Q3
+                                                    2500
+INA219AIDCNT                 SOT-23 DCN 8                 179.0      8.4     3.2 3.2 1.4 4.0 8.0                                   Q3
+
+INA219AIDR                   SOIC  D         8            330.0 12.5 6.4 5.2 2.1 8.0 12.0                                          Q1
+
+INA219AIDRG4                 SOIC  D         8            330.0 12.5 6.4 5.2 2.1 8.0 12.0                                          Q1
+
+INA219BIDCNR                 SOT-23 DCN 8                 179.0      8.4     3.2 3.2 1.4 4.0 8.0                                   Q3
+
+INA219BIDCNR                 SOT-23 DCN 8                 180.0      8.4     3.2 3.2 1.4 4.0 8.0                                   Q3
+
+INA219BIDCNRG4 SOT-23 DCN 8                               180.0      8.4     3.2 3.2 1.4 4.0 8.0                                   Q3
+
+INA219BIDCNT                 SOT-23 DCN 8                 180.0      8.4     3.2 3.2 1.4 4.0 8.0                                   Q3
+
+INA219BIDR                   SOIC  D         8            330.0 12.5 6.4 5.2 2.1 8.0 12.0                                          Q1
+
+                                                    Pack Materials-Page 1
+www.ti.com                                         PACKAGE MATERIALS INFORMATION
+ TAPE AND REEL BOX DIMENSIONS
+                                                                                                                                                   1-Jan-2026
+
+                                                   Width (mm)
+
+                                                                      H
+
+W                                               L
+
+*All dimensions are nominal  Package Type  Package Drawing Pins  SPQ     Length (mm)  Width (mm)  Height (mm)
+              Device             SOT-23                          3000         210.0       185.0        35.0
+                                 SOT-23    DCN     8             3000         213.0       191.0        35.0
+        INA219AIDCNR             SOT-23                          3000         210.0       185.0        35.0
+        INA219AIDCNR             SOT-23    DCN     8             250          210.0       185.0        35.0
+     INA219AIDCNR1G4             SOT-23                          250          213.0       191.0        35.0
+        INA219AIDCNT               SOIC    DCN     8             2500         353.0       353.0        32.0
+        INA219AIDCNT               SOIC                          2500         353.0       353.0        32.0
+                                 SOT-23    DCN     8             3000         213.0       191.0        35.0
+          INA219AIDR             SOT-23                          3000         210.0       185.0        35.0
+        INA219AIDRG4             SOT-23    DCN     8             3000         210.0       185.0        35.0
+        INA219BIDCNR             SOT-23                          250          210.0       185.0        35.0
+        INA219BIDCNR               SOIC    D       8             2500         353.0       353.0        32.0
+      INA219BIDCNRG4
+        INA219BIDCNT                       D       8
+
+          INA219BIDR                       DCN     8
+
+                                           DCN     8
+
+                                           DCN     8
+
+                                           DCN     8
+
+                                           D       8
+
+                                                Pack Materials-Page 2
+D0008A                                                            PACKAGE OUTLINE
+
+             A                                                     SOIC - 1.75 mm max height
+                        1
+                                            SCALE 2.800
+       .189-.197
+       [4.81-5.00]                                                                 SMALL OUTLINE INTEGRATED CIRCUIT
+
+        NOTE 3                 .228-.244 TYP                                                                                          C
+                        4      [5.80-6.19]                                                                  SEATING PLANE
+                            B
+                                           PIN 1 ID AREA                                                             .004 [0.1] C
+                                                                                      6X .050
+                                                                                            [1.27]
+
+                                                                          8
+
+                               .150-.157                2X                                                  .069 MAX
+                               [3.81-3.98]            .150                                                  [1.75]
+                                                      [3.81]
+                                NOTE 4
+                                                                                 4X (0 -15 )
+
+                                            5
+                                                      8X .012-.020
+                                                          [0.31-0.51]
+                                                     .010 [0.25] C A B
+
+                         4X (0 -15 )             .005-.010 TYP
+SEE DETAIL A                                     [0.13-0.25]
+
+                                            .010
+                                            [0.25]
+
+                                            0 -8                                                                             .004-.010
+                                                                                                                             [0.11-0.25]
+                                                  .016-.050
+                                                  [0.41-1.27]                                               DETAIL A
+
+                                                                                                    (.041)   TYPICAL
+                                                                                                    [1.04]
+
+                                                                                                                                                                  4214825/C 02/2019
+
+NOTES:
+
+1. Linear dimensions are in inches [millimeters]. Dimensions in parenthesis are for reference only. Controlling dimensions are in inches.
+   Dimensioning and tolerancing per ASME Y14.5M.
+
+2. This drawing is subject to change without notice.
+3. This dimension does not include mold flash, protrusions, or gate burrs. Mold flash, protrusions, or gate burrs shall not
+
+   exceed .006 [0.15] per side.
+4. This dimension does not include interlead flash.
+5. Reference JEDEC registration MS-012, variation AA.
+
+                                            www.ti.com
+D0008A                                                        EXAMPLE BOARD LAYOUT
+
+                                                                      SOIC - 1.75 mm max height
+
+                                                                               SMALL OUTLINE INTEGRATED CIRCUIT
+
+                  8X (.061 )                      SYMM                     SEE
+                        [1.55]                                             DETAILS
+                                  1                                     8
+
+               8X (.024)                                                     SYMM
+                    [0.6]
+
+                                                                           (R.002 ) TYP
+
+                                                                        5  [0.05]
+
+           6X (.050 )   4
+                [1.27]
+                                                        (.213)
+                                                         [5.4]
+
+                                     LAND PATTERN EXAMPLE
+
+                                         EXPOSED METAL SHOWN
+                                                     SCALE:8X
+
+        METAL                        SOLDER MASK        SOLDER MASK                                 METAL UNDER
+                                     OPENING                   OPENING                              SOLDER MASK
+
+EXPOSED                                                    EXPOSED
+    METAL                                                      METAL
+
+                     .0028 MAX       SOLDER MASK DETAILS                        .0028 MIN
+                     [0.07]                                                     [0.07]
+                     ALL AROUND                                                 ALL AROUND
+
+           NON SOLDER MASK                                                 SOLDER MASK
+                   DEFINED                                                     DEFINED
+
+                                                                                                    4214825/C 02/2019
+
+NOTES: (continued)
+
+6. Publication IPC-7351 may have alternate designs.
+7. Solder mask tolerances between and around signal pads can vary based on board fabrication site.
+
+                                                  www.ti.com
+D0008A                                 EXAMPLE STENCIL DESIGN
+
+                                                SOIC - 1.75 mm max height
+
+                                                          SMALL OUTLINE INTEGRATED CIRCUIT
+
+           8X (.061 )          SYMM
+                 [1.55]
+                            1          8
+                                            SYMM
+        8X (.024)
+             [0.6]
+
+                                                                  (R.002 ) TYP
+
+                                       5                          [0.05]
+
+        6X (.050 )   4
+             [1.27]
+
+                               (.213)
+                                [5.4]
+
+                              SOLDER PASTE EXAMPLE
+
+                     BASED ON .005 INCH [0.125 MM] THICK STENCIL
+                                                SCALE:8X
+
+                                                                                                                                                                  4214825/C 02/2019
+NOTES: (continued)
+8. Laser cutting apertures with trapezoidal walls and rounded corners may offer better paste release. IPC-7525 may have alternate
+
+   design recommendations.
+9. Board assembly site may have different recommendations for stencil design.
+
+                                                                                 www.ti.com
+                                 IMPORTANT NOTICE AND DISCLAIMER
+
+TI PROVIDES TECHNICAL AND RELIABILITY DATA (INCLUDING DATASHEETS), DESIGN RESOURCES (INCLUDING REFERENCE
+DESIGNS), APPLICATION OR OTHER DESIGN ADVICE, WEB TOOLS, SAFETY INFORMATION, AND OTHER RESOURCES "AS IS"
+AND WITH ALL FAULTS, AND DISCLAIMS ALL WARRANTIES, EXPRESS AND IMPLIED, INCLUDING WITHOUT LIMITATION ANY
+IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR NON-INFRINGEMENT OF THIRD
+PARTY INTELLECTUAL PROPERTY RIGHTS.
+
+These resources are intended for skilled developers designing with TI products. You are solely responsible for (1) selecting the appropriate
+TI products for your application, (2) designing, validating and testing your application, and (3) ensuring your application meets applicable
+standards, and any other safety, security, regulatory or other requirements.
+
+These resources are subject to change without notice. TI grants you permission to use these resources only for development of an
+application that uses the TI products described in the resource. Other reproduction and display of these resources is prohibited. No license
+is granted to any other TI intellectual property right or to any third party intellectual property right. TI disclaims responsibility for, and you fully
+indemnify TI and its representatives against any claims, damages, costs, losses, and liabilities arising out of your use of these resources.
+
+TI's products are provided subject to TI's Terms of Sale, TI's General Quality Guidelines, or other applicable terms available either on
+ti.com or provided in conjunction with such TI products. TI's provision of these resources does not expand or otherwise alter TI's applicable
+warranties or warranty disclaimers for TI products. Unless TI explicitly designates a product as custom or customer-specified, TI products
+are standard, catalog, general purpose devices.
+
+TI objects to and rejects any additional or different terms you may propose.
+
+IMPORTANT NOTICE
+
+                                                           Copyright © 2026, Texas Instruments Incorporated
+
+                                                                               Last updated 10/2025
+

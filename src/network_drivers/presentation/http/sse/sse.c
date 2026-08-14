@@ -9,7 +9,6 @@
 #include "sse.h"
 #include "mmgr/protomem.h"
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the slot a stream sends on
-#include <stdio.h>
 
 SseConn protocore_sse_pool[MAX_SSE_CONNS];
 

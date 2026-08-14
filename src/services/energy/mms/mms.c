@@ -270,8 +270,15 @@ proto_bool protocore_mms_parse(const uint8_t *pdu, size_t len, MmsPdu *out)
     {
         return PROTO_FALSE;
     }
+    // An invokeID is an Unsigned32, and BER INTEGER contents are signed, so a value at or above
+    // 0x80000000 carries a leading 0x00 sign octet and spans 5. X.690 sec 8.3.1 forbids an empty
+    // contents field, and a 5th octet that is not that sign pad does not fit an Unsigned32.
     size_t idlen = pdu[off + 1];
-    if (idlen > 4 || off + 2 + idlen > len)
+    if (idlen == 0 || idlen > 5 || off + 2 + idlen > len)
+    {
+        return PROTO_FALSE;
+    }
+    if (idlen == 5 && pdu[off + 2] != 0x00)
     {
         return PROTO_FALSE;
     }

@@ -111,7 +111,8 @@ PROTOCORE_BEGIN_DECLS
 #define SPINEL_STATUS_PROP_NOT_FOUND 13
 #define SPINEL_STATUS_DROPPED 14
 #define SPINEL_STATUS_EMPTY 15
-#define SPINEL_STATUS_RESET_POWER_ON 112 ///< 0x70..0x77 are reset causes
+#define SPINEL_STATUS_RESET_POWER_ON 112 ///< first of the reset-cause block
+#define SPINEL_STATUS_RESET_END 128      ///< one past the block: 112..127 are all reset causes
 
 // --- Header byte (bit7 = flag, bits6-4 = interface id, bits3-0 = transaction id) --------
 

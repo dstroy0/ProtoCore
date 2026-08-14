@@ -12,7 +12,7 @@
  *   0x32 ROSCTR  redundancy(2)  pdu-ref(2)  param-len(2)  data-len(2)  [err-class err-code]
  *   <parameter ...>  <data ...>
  * @endcode
- * The header is 10 octets, or 12 for an Ack_Data response (which adds a 2-octet error code).
+ * The header is 10 octets, or 12 for a response ROSCTR (Ack or Ack_Data), which adds a 2-octet error code.
  * A Read Var job (function 0x04) carries one or more S7-ANY request items (area / DB / byte
  * address / element count); the Ack_Data response carries, per item, a return code + a data
  * transport size + a length + the value bytes. Per the protocol, the response length is in
@@ -124,8 +124,8 @@ typedef struct
     uint16_t pdu_ref;
     uint16_t param_len;
     uint16_t data_len;
-    uint8_t error_class; ///< Ack_Data only
-    uint8_t error_code;  ///< Ack_Data only
+    uint8_t error_class; ///< Ack / Ack_Data only
+    uint8_t error_code;  ///< Ack / Ack_Data only
     size_t header_len;   ///< 10 or 12
     const uint8_t *param;
     const uint8_t *data;

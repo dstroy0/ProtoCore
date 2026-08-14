@@ -12,7 +12,6 @@
 
 #if PROTOCORE_ENABLE_PROXY_PROTOCOL
 
-#include <stdio.h> // snprintf for the v1 dotted-quad text
 
 static const uint8_t kV2Sig[PROXY_V2_SIG_LEN] = {0x0D, 0x0A, 0x0D, 0x0A, 0x00, 0x0D,
                                                  0x0A, 0x51, 0x55, 0x49, 0x54, 0x0A};
@@ -41,6 +40,7 @@ static proto_bool parse_ipv4(const char *s, size_t n, uint32_t *out)
         }
         uint32_t o = 0;
         size_t digits = 0;
+        const proto_bool zero_first = s[i] == '0';
         while (i < n && s[i] >= '0' && s[i] <= '9')
         {
             o = o * 10 + (uint32_t)(s[i] - '0');
@@ -49,6 +49,10 @@ static proto_bool parse_ipv4(const char *s, size_t n, uint32_t *out)
             {
                 return PROTO_FALSE;
             }
+        }
+        if (zero_first && digits > 1) // sec 2.1: heading zeroes are not permitted
+        {
+            return PROTO_FALSE;
         }
         v = (v << 8) | o;
         octets++;
@@ -73,7 +77,7 @@ static proto_bool parse_u16(const char *s, size_t n, uint16_t *out)
 {
     // n == 0 is never true here: both call sites (below, in parse_v1) pass a token produced by
     // parse_v1's own space-delimited tokenizer, which only ever records tokens of length >= 1.
-    if (n == 0 || n > 5)
+    if (n == 0 || n > 5 || (n > 1 && s[0] == '0')) // sec 2.1: heading zeroes are not permitted
     {
         return PROTO_FALSE;
     }

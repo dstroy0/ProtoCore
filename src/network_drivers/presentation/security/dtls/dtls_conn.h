@@ -8,7 +8,7 @@
  * The transport-neutral core that drives one DTLS 1.3 server handshake: it consumes inbound
  * datagrams and produces the outbound flight, wiring the reused TLS 1.3 message builders and key
  * schedule (protocore_tls13_msg, protocore_tls13_kdf) through the DTLS record layer (protocore_dtls_record) and
- * handshake framing (protocore_dtls_handshake). Like protocore_coap_server_process it has no sockets - the UDP glue (a
+ * handshake framing (protocore_dtls_handshake). Like Coap.process it has no sockets - the UDP glue (a
  * later CoAPs front-end) feeds it datagrams and sends whatever it emits.
  *
  * Profile: the single spec-valid suite the whole hand-rolled TLS 1.3 stack uses -

@@ -57,6 +57,15 @@ typedef struct
 /** @brief Pool of SSE connection state, one per MAX_SSE_CONNS. Defined in sse.c. */
 extern SseConn protocore_sse_pool[MAX_SSE_CONNS];
 
+/**
+ * @brief Callback fired when a new SSE client connects.
+ *
+ * Use protocore_sse_send() inside this callback to push an initial event if needed.
+ *
+ * @param protocore_sse_id  Index into protocore_sse_pool[] for this connection.
+ */
+typedef void (*SseConnectHandler)(uint8_t protocore_sse_id);
+
 /** @brief One subscribe route: the path, and what an open on it runs. */
 typedef struct
 {
@@ -86,14 +95,6 @@ struct SseInternal;
 // SSE pool API
 // ---------------------------------------------------------------------------
 
-/**
- * @brief Callback fired when a new SSE client connects.
- *
- * Use protocore_sse_send() inside this callback to push an initial event if needed.
- *
- * @param protocore_sse_id  Index into protocore_sse_pool[] for this connection.
- */
-typedef void (*SseConnectHandler)(uint8_t protocore_sse_id);
 
 /** @brief The id a route carries when it serves no SSE stream. */
 #define PROTOCORE_SSE_NONE 0xFFu

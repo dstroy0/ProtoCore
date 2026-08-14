@@ -101,7 +101,11 @@ proto_bool protocore_eth_parse(const uint8_t *frame, size_t len, EthFrame *out)
 uint32_t protocore_eth_fcs(const uint8_t *bytes, size_t len)
 {
     // CRC-32/ISO-HDLC (the Ethernet FCS): reflected poly 0xEDB88320, init/xorout 0xFFFFFFFF.
-    return protocore_crc(&PROTOCORE_CRC32_ISO_HDLC, bytes, len);
+    Crc.args.params = &PROTOCORE_CRC32_ISO_HDLC;
+    Crc.args.data = bytes;
+    Crc.args.len = len;
+    Crc.compute(Crc.internal);
+    return Crc.value;
 }
 
 #endif // PROTOCORE_ENABLE_RAWL2

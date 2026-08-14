@@ -21,6 +21,8 @@
 #include "../../diffserv/diffserv.h" // DiffServ DSCP marking for accepted connections (compiles out when off)
 #include "../../net_addr/net_addr.h" // protocore_net_addr_to_ip(): the stack's address as a protocore_ip
 #include "../tcp.h"      // the aggregate the halves hang off
+#include "../protocol/protocol.h" // ConnPool: the slots an accept claims
+#include "../lower/lower.h"       // TcpLower.apply_ttl: the TTL a new pcb is stamped with
 #include "core_setup/board_profiles/protocore_platform.h" // the stack's queues, under our names
 #include "server/core/worker.h"        // Workers.wake() - nudge the owning worker task
 #include "network_drivers/tls/tls.h"               // TLS handshake begin (self-stubbing)
@@ -162,7 +164,9 @@ static void listener_accept_throttle_reset(struct TcpListenerInternal *restrict 
 
 static void listener_accept_allowed_ip(struct TcpListenerInternal *restrict ctx)
 {
-    if (Ip.is_unspecified(ctx->ns->gate.addr))
+    Ip.args.ip = ctx->ns->gate.addr;
+    Ip.is_unspecified(Ip.internal);
+    if (Ip.ok)
     {
         ctx->ns->ok = PROTO_TRUE; // untrackable source - defer to the global accept throttle
         return;
@@ -174,7 +178,10 @@ static void listener_accept_allowed_ip(struct TcpListenerInternal *restrict ctx)
     for (int i = 0; i < PROTOCORE_PER_IP_THROTTLE_SLOTS; i++)
     {
         IpThrottleBucket *b = &ctx->store->iptt.buckets[i];
-        if (b->addr.family != PROTOCORE_IP_NONE && Ip.equal(&b->addr, ctx->ns->gate.addr))
+        Ip.args.ip = &b->addr;
+        Ip.args.b = ctx->ns->gate.addr;
+        Ip.equal(Ip.internal);
+        if (b->addr.family != PROTOCORE_IP_NONE && Ip.ok)
         {
             // Unsigned subtraction wraps correctly across the millis() rollover.
             if ((uint32_t)(ctx->ns->gate.now_ms - b->window_start) >= PROTOCORE_PER_IP_THROTTLE_WINDOW_MS)
@@ -292,7 +299,10 @@ static void listener_ip_allow_add_cidr(struct TcpListenerInternal *restrict ctx)
 
     protocore_ip net;
     net.family = PROTOCORE_IP_NONE;
-    if (!Ip.parse(addr, &net))
+    Ip.args.text = addr;
+    Ip.args.out = &net;
+    Ip.parse(Ip.internal);
+    if (!Ip.ok)
     {
         return;
     }
@@ -338,8 +348,11 @@ static void listener_ip_allowed(struct TcpListenerInternal *restrict ctx)
     for (uint8_t i = 0; i < ctx->store->allow.count; i++)
     {
         // protocore_ip_prefix_match requires the same family, so a v4 peer never matches a v6 rule.
-        if (Ip.prefix_match(ctx->ns->gate.addr, &ctx->store->allow.rules[i].network,
-                            ctx->store->allow.rules[i].prefix_len))
+        Ip.args.ip = ctx->ns->gate.addr;
+        Ip.args.b = &ctx->store->allow.rules[i].network;
+        Ip.args.prefix_len = ctx->store->allow.rules[i].prefix_len;
+        Ip.prefix_match(Ip.internal);
+        if (Ip.ok)
         {
             ctx->ns->ok = PROTO_TRUE;
             return;
@@ -469,7 +482,8 @@ protocore_net_err listener_accept_cb(void *arg, protocore_pcb *newpcb, protocore
 #if PROTOCORE_ENABLE_ACCEPT_THROTTLE
     // Connection-flood defense: drop accepts beyond the per-window budget before
     // claiming a pool slot or doing any per-connection work.
-    TcpListener.gate.now_ms = protocore_millis();
+    Clock.millis(Clock.internal);
+    TcpListener.gate.now_ms = Clock.ms;
     listener_accept_allowed(&s_listener);
     if (!TcpListener.ok)
     {
@@ -500,7 +514,8 @@ protocore_net_err listener_accept_cb(void *arg, protocore_pcb *newpcb, protocore
     // protocore_ip (test_per_ip_independent_budgets et al.); only ITS USE HERE, gated behind a
     // peer address this host build can never resolve, cannot be driven to the false case.
     TcpListener.gate.addr = &remote;
-    TcpListener.gate.now_ms = protocore_millis();
+    Clock.millis(Clock.internal);
+    TcpListener.gate.now_ms = Clock.ms;
     listener_accept_allowed_ip(&s_listener);
     if (!TcpListener.ok)
     {
@@ -525,7 +540,8 @@ protocore_net_err listener_accept_cb(void *arg, protocore_pcb *newpcb, protocore
     // First free slot as one ctz on the live-slot bitmask (was a MAX_CONNS scan). Runs in stack context, and
     // accepts are serialized here, so the slot found is claimed by the protocore_conn_set_state() below before any
     // other accept runs.
-    int32_t free_slot = protocore_conn_alloc_free();
+    ConnPool.alloc_free(ConnPool.internal);
+    int32_t free_slot = ConnPool.i32;
     if (free_slot < 0)
     {
         protocore_net_abort(newpcb);
@@ -544,9 +560,12 @@ protocore_net_err listener_accept_cb(void *arg, protocore_pcb *newpcb, protocore
 #else
     slot->owner = 0;
 #endif
-    protocore_conn_set_state((uint8_t)free_slot, CONN_ACTIVE); // reserves the slot in the bitmask
+    ConnPool.slot = (uint8_t)free_slot;
+    ConnPool.st = CONN_ACTIVE;
+    ConnPool.set_state(ConnPool.internal); // reserves the slot in the bitmask
     slot->pcb = newpcb;
-    slot->last_activity_ms = protocore_millis();
+    Clock.millis(Clock.internal);
+    slot->last_activity_ms = Clock.ms;
     slot->rx_head = 0;
     slot->rx_tail = 0;
     slot->rx_acked = 0; // window-ack cursor starts level with an empty ring
@@ -576,7 +595,8 @@ protocore_net_err listener_accept_cb(void *arg, protocore_pcb *newpcb, protocore
     // RFC 9293 sec 3.9.2 MUST-49: the TTL segments go out with is configurable, and it is stamped
     // here - before the connection carries anything - so every segment of it leaves with the same
     // one. Same context as protocore_net_nagle_disable above, so touching the pcb is race-free.
-    newpcb->ttl = protocore_tcp_ttl();
+    TcpLower.pcb = newpcb;
+    TcpLower.apply_ttl(TcpLower.internal);
 
 #if PROTOCORE_ENABLE_DIFFSERV
     // DiffServ (RFC 2474): stamp this connection's DS field so a QoS-aware network - and the Wi-Fi WMM

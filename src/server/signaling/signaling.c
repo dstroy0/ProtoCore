@@ -10,6 +10,7 @@
  */
 
 #include "server/signaling/signaling.h"
+#include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the slot a close names
 #include "network_drivers/transport/tcp/tcp.h"
 
 /**
@@ -86,7 +87,8 @@ static void signal_kill(struct SignalingInternal *restrict ctx)
     // A plain forward: no liveness test, no result. Transport owns the slot's lifetime and its idle
     // sweep reaps a stale one regardless, so a check here would answer a question transport has
     // already answered, and the answer could be stale before the caller read it.
-    Tcp.conn->close(ctx->ns->slot);
+    ConnPool.slot = ctx->ns->slot;
+    ConnPool.close(ConnPool.internal);
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.

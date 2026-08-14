@@ -13,6 +13,15 @@
 
 PROTOCORE_BEGIN_DECLS
 
+/** @brief Lifecycle phase of the forward, for observability. */
+typedef enum PROTO_ENUM_PACKED
+{
+    PROTOCORE_SSH_CLIENT_IDLE = 0,   ///< not started.
+    PROTOCORE_SSH_CLIENT_CONNECTING, ///< TCP + SSH handshake + auth in progress.
+    PROTOCORE_SSH_CLIENT_UP,         ///< authenticated and the remote forward is established.
+    PROTOCORE_SSH_CLIENT_FAILED      ///< the last attempt failed (host-key mismatch, auth, or transport).
+} protocore_ssh_client_state;
+
 #if PROTOCORE_ENABLE_SSH_CLIENT
 
 /** @brief How to reach the relay, who to log in as, and what to forward back. */
@@ -28,15 +37,6 @@ typedef struct
         bind_port; ///< remote port the relay listens on (tcpip-forward); connections accepted there are forwarded back.
     uint16_t local_port; ///< local TCP port a forwarded connection is bridged to (e.g. 80).
 } protocore_ssh_client_cfg;
-
-/** @brief Lifecycle phase of the forward, for observability. */
-typedef enum PROTO_ENUM_PACKED
-{
-    PROTOCORE_SSH_CLIENT_IDLE = 0,   ///< not started.
-    PROTOCORE_SSH_CLIENT_CONNECTING, ///< TCP + SSH handshake + auth in progress.
-    PROTOCORE_SSH_CLIENT_UP,         ///< authenticated and the remote forward is established.
-    PROTOCORE_SSH_CLIENT_FAILED      ///< the last attempt failed (host-key mismatch, auth, or transport).
-} protocore_ssh_client_state;
 
 /**
  * @brief Start (or restart) the forward: connect to the relay, handshake, authenticate, and request

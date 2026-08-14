@@ -12,15 +12,6 @@
 #include "shared/hex/hex.h"
 
 /**
- * @brief The digit tables: the only thing this module owns.
- */
-struct HexStorage
-{
-    const char *lower; ///< the 16 hex digits, lowercase
-    const char *upper; ///< the 16 hex digits, uppercase - for the protocols that specify capitals
-};
-
-/**
  * @brief The digit tables and the calls that read them - what HexNs points at.
  *
  * @var HexInternal::store  the two digit tables
@@ -28,13 +19,13 @@ struct HexStorage
  */
 struct HexInternal
 {
-    const struct HexStorage *store;
+    const HexStorage *store;
     HexNs *ns;
 };
 
-static const struct HexStorage s_store = {"0123456789abcdef", "0123456789ABCDEF"};
+const HexStorage PROTOCORE_HEX = {"0123456789abcdef", "0123456789ABCDEF"};
 
-static struct HexInternal s_hex = {.store = &s_store, .ns = &Hex};
+static struct HexInternal s_hex = {.store = &PROTOCORE_HEX, .ns = &Hex};
 
 // A hex character as 0..15, or -1 when it is not a hex digit of either case.
 static int8_t hex_value(char c)

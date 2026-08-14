@@ -20,16 +20,14 @@
 #ifndef PROTOCORE_HTTP_DATE_H
 #define PROTOCORE_HTTP_DATE_H
 
-#include <time.h> // time_t and strftime
-
-#include "shared/time_compat/time_compat.h" // ::TimeCompat, and the entry point behind it
+#include "shared/time_compat/time_compat.h" // ::TimeCompat, time_t, and the entry point behind it
 
 /**
  * @brief Smallest buffer that holds an RFC 7231 IMF-fixdate plus its NUL.
  *
  * `Sun, 06 Nov 1994 08:49:37 GMT` is 29 characters and the format is fixed-width, so this is a
  * property of the protocol rather than a tuning choice. A smaller buffer truncates silently,
- * because strftime writes nothing and returns 0 when the result does not fit.
+ * because the builder writes nothing and reports 0 when the result does not fit.
  */
 #define PROTOCORE_HTTP_DATE_MAX 30
 

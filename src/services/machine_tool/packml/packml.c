@@ -10,7 +10,14 @@
 
 #if PROTOCORE_ENABLE_PACKML
 
-#include "server/clock/clock.h" // protocore_millis - the monotonic source
+#include "server/clock/clock.h" // Clock - the monotonic source
+
+// The library's monotonic millisecond count.
+static uint32_t now_ms(void)
+{
+    Clock.millis(Clock.internal);
+    return Clock.ms;
+}
 
 // ---------------------------------------------------------------------------
 // Pure state engine
@@ -227,8 +234,8 @@ typedef struct
     float mach_speed_cmd;
     uint32_t prod_processed;
     uint32_t prod_defective;
-    uint32_t reset_ms;       // protocore_millis at the last Reset -> AccTimeSinceReset base
-    uint32_t state_entry_ms; // protocore_millis at the last state change -> StateCurrentTime base
+    uint32_t reset_ms;       // the clock at the last Reset -> AccTimeSinceReset base
+    uint32_t state_entry_ms; // the clock at the last state change -> StateCurrentTime base
 } PackMlSvcCtx;
 // mode is the only member whose default is not the zero fill: PACK_ML_MODE_PRODUCING is 1, and
 // nothing sets it before a read (protocore_packml_set_mode is a caller-driven setter).
@@ -244,7 +251,7 @@ static void enter_state(PackMlState s)
         return;
     }
     s_pml.state = s;
-    s_pml.state_entry_ms = protocore_millis();
+    s_pml.state_entry_ms = now_ms();
 }
 
 void protocore_packml_svc_init(PackMlMode mode)
@@ -253,7 +260,7 @@ void protocore_packml_svc_init(PackMlMode mode)
     s_pml.mach_speed_cmd = 0.0f;
     s_pml.prod_processed = 0;
     s_pml.prod_defective = 0;
-    s_pml.reset_ms = protocore_millis();
+    s_pml.reset_ms = now_ms();
     s_pml.state = PACK_ML_STATE_UNDEFINED; // force enter_state to stamp the entry time
     enter_state(PACK_ML_STATE_STOPPED);
 }
@@ -267,7 +274,7 @@ proto_bool protocore_packml_svc_command(PackMlCommand c)
     }
     if (c == PACK_ML_COMMAND_RESET) // a fresh run: restart the accumulated-time clock
     {
-        s_pml.reset_ms = protocore_millis();
+        s_pml.reset_ms = now_ms();
     }
     enter_state(next);
     return PROTO_TRUE;
@@ -331,7 +338,7 @@ void protocore_packml_svc_status(PackMlStatus *out)
     {
         return;
     }
-    uint32_t now = protocore_millis();
+    uint32_t now = now_ms();
     out->state_current = s_pml.state;
     out->unit_mode_current = s_pml.mode;
     // MachSpeedActual is the commanded speed while producing, otherwise zero.

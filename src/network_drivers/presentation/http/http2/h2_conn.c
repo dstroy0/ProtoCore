@@ -13,7 +13,6 @@
 
 #if PROTOCORE_ENABLE_HTTP2
 
-#include <stdio.h>
 
 static uint32_t rd32(const uint8_t *p)
 {

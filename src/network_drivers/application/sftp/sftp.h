@@ -137,8 +137,9 @@ void protocore_sftp_wr_patch_u32(SftpWriter *w, size_t at, uint32_t v);
 
 // --- framing ---
 /**
- * @brief The full length of the leading packet in @p buf (4-byte prefix + payload), or 0 if fewer than 4 bytes
- *        are present (need more) or the declared length exceeds @p max (caller drops the connection).
+ * @brief The full length of the leading packet in @p buf (4-byte prefix + payload), 0 if fewer than 4 bytes
+ *        are present (need more), or (size_t)-1 when the declared length is 0 or exceeds @p max
+ *        (unparseable: the caller drops the connection).
  */
 size_t protocore_sftp_frame_len(const uint8_t *buf, size_t have, size_t max);
 

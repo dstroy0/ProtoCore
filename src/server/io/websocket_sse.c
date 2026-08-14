@@ -13,6 +13,7 @@
 
 #include "mmgr/membuild.h"
 #include "mmgr/protomem.h"
+#include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the slot a refusal is written on
 #include "network_drivers/transport/tcp/tcp.h"
 #include "protocore.h"
 #if PROTOCORE_ENABLE_WEBSOCKET
@@ -23,7 +24,6 @@
 #if PROTOCORE_ENABLE_SSE
 #include "network_drivers/presentation/http/sse/sse.h"
 #endif
-#include <stdio.h>
 
 #if PROTOCORE_ENABLE_WEBSOCKET
 // Magic GUID concatenated to the client key for the WS accept hash (RFC 6455 4.2.2).
@@ -92,9 +92,12 @@ void ws_send_version_required(uint8_t slot_id)
                                "Content-Length: 0\r\n"
                                "Connection: close\r\n\r\n";
 
-    Tcp.conn->send(slot_id, resp, (proto_u16)(sizeof(resp) - 1));
-    Tcp.conn->flush(slot_id);
-    Tcp.conn->begin_close(slot_id); // dwell in CONN_CLOSING until the response drains
+    ConnPool.slot = slot_id;
+    ConnPool.io.data = resp;
+    ConnPool.io.len = (proto_u16)(sizeof(resp) - 1);
+    ConnPool.send(ConnPool.internal);
+    ConnPool.flush(ConnPool.internal);
+    ConnPool.begin_close(ConnPool.internal); // dwell in CONN_CLOSING until the response drains
 
     http_reset(slot_id);
 }
@@ -151,8 +154,12 @@ proto_bool ws_do_upgrade(uint8_t slot_id, HttpReq *req, WsConnectHandler on_conn
     hlen = (int)Sb.finish(&sb_hdr2);
 #endif
 
-    Tcp.conn->send(slot_id, hdr, (proto_u16)hlen);
-    Tcp.conn->flush(slot_id);
+    ConnPool.slot = slot_id;
+    ConnPool.io.data = hdr;
+    ConnPool.io.len = (proto_u16)hlen;
+    ConnPool.send(ConnPool.internal);
+    ConnPool.slot = slot_id;
+    ConnPool.flush(ConnPool.internal);
 
     // Reset HTTP parser but keep the TCP slot -- WS owns it now
     http_reset(slot_id);
@@ -161,7 +168,8 @@ proto_bool ws_do_upgrade(uint8_t slot_id, HttpReq *req, WsConnectHandler on_conn
     if (!ws)
     {
         // No WS slot available -- abort the connection (transport owns the teardown)
-        Tcp.conn->abort_slot(slot_id);
+        ConnPool.slot = slot_id;
+        ConnPool.abort_slot(ConnPool.internal);
         return PROTO_FALSE;
     }
 
@@ -197,8 +205,12 @@ proto_bool protocore_sse_do_upgrade(uint8_t slot_id, HttpReq *req, SseConnectHan
                                   "Cache-Control: no-cache\r\n"
                                   "Connection: keep-alive\r\n\r\n";
 
-    Tcp.conn->send(slot_id, SSE_HDR, (proto_u16)(sizeof(SSE_HDR) - 1));
-    Tcp.conn->flush(slot_id);
+    ConnPool.slot = slot_id;
+    ConnPool.io.data = SSE_HDR;
+    ConnPool.io.len = (proto_u16)(sizeof(SSE_HDR) - 1);
+    ConnPool.send(ConnPool.internal);
+    ConnPool.slot = slot_id;
+    ConnPool.flush(ConnPool.internal);
 
     // Copy the path BEFORE resetting the parser: http_reset() zeroes the whole
     // HttpReq (including req->path), so a pointer into it would dangle. The saved
@@ -211,7 +223,8 @@ proto_bool protocore_sse_do_upgrade(uint8_t slot_id, HttpReq *req, SseConnectHan
     SseConn *sse = protocore_sse_alloc(slot_id, path);
     if (!sse)
     {
-        Tcp.conn->abort_slot(slot_id); // transport owns detach + reset + RST
+        ConnPool.slot = slot_id;
+        ConnPool.abort_slot(ConnPool.internal); // transport owns detach + reset + RST
         return PROTO_FALSE;
     }
 
@@ -247,7 +260,8 @@ void ws_send_text(uint8_t ws_id, const char *text)
         // on a single-threaded run. It is a re-check for the marshalled send path.
         if (protocore_conn_active(ws->slot_id))
         {
-            Tcp.conn->flush(ws->slot_id);
+            ConnPool.slot = ws->slot_id;
+            ConnPool.flush(ConnPool.internal);
         }
     }
 }
@@ -268,7 +282,8 @@ void ws_send_binary(uint8_t ws_id, const uint8_t *data, uint16_t len)
         // connection, so the false half of this re-check is unreachable from a host test.
         if (protocore_conn_active(ws->slot_id))
         {
-            Tcp.conn->flush(ws->slot_id);
+            ConnPool.slot = ws->slot_id;
+            ConnPool.flush(ConnPool.internal);
         }
     }
 }
@@ -283,7 +298,8 @@ void ws_disconnect(uint8_t ws_id)
     ws_close(ws, WS_CLOSE_NORMAL);
     if (protocore_conn_active(ws->slot_id))
     {
-        Tcp.conn->flush(ws->slot_id);
+        ConnPool.slot = ws->slot_id;
+        ConnPool.flush(ConnPool.internal);
     }
     // handle() detects WS_CLOSED next tick and fires ws_close callback
 }
@@ -306,7 +322,8 @@ void protocore_sse_send(uint8_t protocore_sse_id, const char *data, const char *
         // has itself checked protocore_conn_active(), so the slot is still live here.
         if (protocore_conn_active(sse->slot_id))
         {
-            Tcp.conn->flush(sse->slot_id);
+            ConnPool.slot = sse->slot_id;
+            ConnPool.flush(ConnPool.internal);
         }
     }
 }
@@ -329,7 +346,8 @@ void protocore_sse_broadcast(const char *path, const char *data, const char *eve
             // connection, so the false half of this re-check is unreachable from a host test.
             if (protocore_conn_active(sse->slot_id))
             {
-                Tcp.conn->flush(sse->slot_id);
+                ConnPool.slot = sse->slot_id;
+                ConnPool.flush(ConnPool.internal);
             }
         }
     }

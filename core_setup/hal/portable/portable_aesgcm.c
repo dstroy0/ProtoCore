@@ -21,7 +21,7 @@
 #include "crypto/crypto_opt.h"
 #include "crypto/ct_eq.h" // protocore_ct_eq
 #include "crypto/mac/ghash.h"
-#include "mmgr/rawmemcpy.h" // raw.u32 - the aliasing-permitted word load
+#include "mmgr/rawmemcpy.h" // proto_raw_u32 - the aliasing-permitted word load
 #include "mmgr/secure.h"
 
 #if !PROTOCORE_HAS_HW_AESGCM
@@ -70,7 +70,7 @@ static inline void xor16(uint8_t *dst, const uint8_t *src)
     // machine's own load and store at any alignment, and the fixup sequence only where the die needs it.
     for (int i = 0; i < 16; i += 4)
     {
-        raw.put_u32(dst + i, raw.u32(dst + i) ^ raw.u32(src + i));
+        proto_raw_put_u32(dst + i, proto_raw_u32(dst + i) ^ proto_raw_u32(src + i));
     }
 }
 

@@ -453,7 +453,11 @@ size_t protocore_modbus_process_adu(const uint8_t *req, size_t req_len, uint8_t 
 // CRC16-Modbus (init 0xFFFF, reflected poly 0xA001); transmitted low byte first.
 static uint16_t protocore_modbus_crc16(const uint8_t *data, size_t len)
 {
-    return (uint16_t)protocore_crc(&PROTOCORE_CRC16_MODBUS, data, len);
+    Crc.args.params = &PROTOCORE_CRC16_MODBUS;
+    Crc.args.data = data;
+    Crc.args.len = len;
+    Crc.compute(Crc.internal);
+    return (uint16_t)Crc.value;
 }
 
 size_t protocore_modbus_rtu_process_adu(const uint8_t *req, size_t req_len, uint8_t *resp, size_t protocore_resp_cap, uint8_t my_addr)

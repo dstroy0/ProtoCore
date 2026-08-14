@@ -11,7 +11,6 @@
 
 #if PROTOCORE_ENABLE_POWER_MGMT
 
-#include <stdio.h>
 
 // ---------------------------------------------------------------------------
 // Pure decision

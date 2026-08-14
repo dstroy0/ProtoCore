@@ -12,7 +12,6 @@
 
 #if PROTOCORE_ENABLE_NTRIP_CASTER
 
-#include <stdio.h>
 
 static char lower(char c)
 {
@@ -214,7 +213,8 @@ size_t protocore_ntrip_build_error_response(char *out, size_t cap, NtripVersion 
     if (version == NTRIP_V2)
     {
         protocore_sb sb_out4 = {out, cap, 0, PROTO_TRUE};
-        Sb.put(&sb_out4, "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
+        // The mountpoint names no resource the caster serves: RFC 9110 sec 15.5.5.
+        Sb.put(&sb_out4, "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
         n = (int)Sb.finish(&sb_out4);
     }
     else

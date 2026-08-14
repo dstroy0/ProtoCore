@@ -13,6 +13,17 @@
 #include "mmgr/protomem.h"
 #include "mmgr/protostr.h" // str: the bounded-run walks
                            // strncmp (root-name match), memcpy
+#include "server/storage/mnt.h" // Mnt.active: the filesystem every call works through
+
+/**
+ * @brief The mount state and the calls that reach it - what FilesystemNs points at.
+ *
+ * @var FilesystemInternal::ns  the handle a caller sets a call's members on
+ */
+struct FilesystemInternal
+{
+    FilesystemNs *ns;
+};
 
 // One bound root. The prefix is a copy, not the caller's pointer, and always ends '/', so the join
 // concatenates `root` and `dir` without adding a separator.
@@ -51,7 +62,8 @@ static FilesystemCtx s_fs;
 // so the absence is recorded in the status mask rather than returned as a bare false.
 static const protocore_mnt_backend *store(void)
 {
-    const protocore_mnt_backend *b = protocore_mnt_active();
+    Mnt.active(Mnt.internal);
+    const protocore_mnt_backend *b = Mnt.backend;
     if (b == NULL)
     {
         s_fs.status |= PROTOCORE_FS_STORAGE_EXHAUSTED;
@@ -135,7 +147,8 @@ static void fs_present(struct FilesystemInternal *restrict ctx)
 
     // Asked of the mount directly, not of the mask: the mask says what has failed, this says what is
     // true now. A hotswap can attach a store between the two.
-    ctx->ns->ok = protocore_mnt_active() != NULL;
+    Mnt.active(Mnt.internal);
+    ctx->ns->ok = Mnt.backend != NULL;
 }
 
 static void fs_begin(struct FilesystemInternal *restrict ctx)
@@ -453,15 +466,13 @@ static proto_bool copy_one(const protocore_mnt_backend *b, const char *src, cons
     int in = b->open(src, (int)(PROTOCORE_MNT_READ));
     if (in < 0)
     {
-        ctx->ns->ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     int out = b->open(dst, (int)(PROTOCORE_MNT_WRITE));
     if (out < 0)
     {
         b->close(in);
-        ctx->ns->ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     proto_bool ok = PROTO_TRUE;
     for (;;)
@@ -479,7 +490,7 @@ static proto_bool copy_one(const protocore_mnt_backend *b, const char *src, cons
     }
     b->close(in);
     b->close(out);
-    ctx->ns->ok = ok;
+    return ok;
 }
 
 static void fs_copy(struct FilesystemInternal *restrict ctx)
@@ -759,16 +770,6 @@ static void fs_write_file(struct FilesystemInternal *restrict ctx)
     }
     ctx->ns->ok = PROTO_TRUE;
 }
-
-/**
- * @brief The mount state and the calls that reach it - what FilesystemNs points at.
- *
- * @var FilesystemInternal::ns  the handle a caller sets a call's members on
- */
-struct FilesystemInternal
-{
-    FilesystemNs *ns;
-};
 
 static struct FilesystemInternal s_fs_ctx = {.ns = &Fs};
 

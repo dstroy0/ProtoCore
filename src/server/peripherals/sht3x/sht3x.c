@@ -20,7 +20,11 @@
 uint8_t protocore_sht3x_crc8(const uint8_t *data, size_t len)
 {
     // The Sensirion CRC-8 is the cataloge's CRC-8/NRSC-5 (poly 0x31, init 0xFF, no reflection, no final XOR).
-    return (uint8_t)protocore_crc(&PROTOCORE_CRC8_NRSC5, data, len);
+    Crc.args.params = &PROTOCORE_CRC8_NRSC5;
+    Crc.args.data = data;
+    Crc.args.len = len;
+    Crc.compute(Crc.internal);
+    return (uint8_t)Crc.value;
 }
 
 int32_t protocore_sht3x_temp_mc(uint16_t raw)

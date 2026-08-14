@@ -3,104 +3,156 @@
 
 /**
  * @file dds.c
- * @brief DDS / RTPS wire-protocol framing codec (see dds.h).
+ * @brief The DDSI-RTPS Message framing codec: the Header build, the Submessage build, and the walk.
+ *
+ * header() and submessage() write the two fixed structures of DDSI-RTPS sec 8.3.3 into the caller's
+ * buffer. parse() checks the Header against sec 8.3.6.3 and walks the Submessages by
+ * octetsToNextHeader, handing each to the caller's sink.
  */
 
 #include "services/iot/dds/dds.h"
-#include "mmgr/protomem.h"
 
 #if PROTOCORE_ENABLE_DDS
 
+#include "mmgr/protomem.h" // mem.cpy: the guidPrefix and the Submessage contents
+
+// SubmessageHeader: submessageId 1 + flags 1 + octetsToNextHeader 2 (sec 9.4.5.1).
+#define RTPS_SUBMESSAGE_HEADER_LEN 4
+
+/**
+ * @brief The codec's state and the calls that reach it - what RtpsNs points at.
+ *
+ * No storage member: every call reads the caller's buffer and writes the caller's buffer, so the
+ * codec keeps nothing between calls.
+ *
+ * @var RtpsInternal::ns  the handle a caller sets a call's members on
+ */
+struct RtpsInternal
+{
+    RtpsNs *ns;
+};
+
 const uint8_t RTPS_VERSION[2] = {2, 4};
 
-size_t protocore_rtps_header(const uint8_t *guid_prefix, const uint8_t *vendor_id, uint8_t *out, size_t cap)
+static struct RtpsInternal s_rtps = {.ns = &Rtps};
+
+// Build the 20-octet Header (sec 9.4.4) into ns->out, and report its length in ns->n.
+static void rtps_header(struct RtpsInternal *restrict ctx)
 {
-    if (!guid_prefix || !vendor_id || !out || cap < RTPS_HEADER_LEN)
+    ctx->ns->n = 0;
+    if (!ctx->ns->hdr.guid_prefix || !ctx->ns->hdr.vendor_id || !ctx->ns->out.buf ||
+        ctx->ns->out.cap < RTPS_HEADER_LEN)
     {
-        return 0;
+        return;
     }
+    uint8_t *out = ctx->ns->out.buf;
+    // PROTOCOL_RTPS is the octets 'R' 'T' 'P' 'S' (sec 9.3.2.1), then version, vendorId, guidPrefix.
     out[0] = 'R';
     out[1] = 'T';
     out[2] = 'P';
     out[3] = 'S';
     out[4] = RTPS_VERSION[0];
     out[5] = RTPS_VERSION[1];
-    out[6] = vendor_id[0];
-    out[7] = vendor_id[1];
-    mem.cpy(out + 8, guid_prefix, RTPS_GUIDPREFIX_LEN);
-    return RTPS_HEADER_LEN;
+    out[6] = ctx->ns->hdr.vendor_id[0];
+    out[7] = ctx->ns->hdr.vendor_id[1];
+    mem.cpy(out + 8, ctx->ns->hdr.guid_prefix, RTPS_GUIDPREFIX_LEN);
+    ctx->ns->n = RTPS_HEADER_LEN;
 }
 
-size_t protocore_rtps_submessage(uint8_t id, uint8_t flags, const uint8_t *body, uint16_t body_len, uint8_t *out, size_t cap)
+// Build one Submessage, its SubmessageHeader then its contents (sec 9.4.5.1), into ns->out.
+static void rtps_submessage(struct RtpsInternal *restrict ctx)
 {
-    if (!out || (body_len && !body))
+    ctx->ns->n = 0;
+    const uint16_t contents_len = ctx->ns->sub.contents_len;
+    if (!ctx->ns->out.buf || (contents_len && !ctx->ns->sub.contents))
     {
-        return 0;
+        return;
     }
-    size_t n = 4 + (size_t)body_len;
-    if (n > cap)
+    const size_t total = RTPS_SUBMESSAGE_HEADER_LEN + (size_t)contents_len;
+    if (total > ctx->ns->out.cap)
     {
-        return 0;
+        return;
     }
-    out[0] = id;
-    out[1] = flags;
-    // octetsToNextHeader is written in the submessage's own byte order (the E flag).
-    if (flags & RTPS_FLAG_ENDIAN)
+    uint8_t *out = ctx->ns->out.buf;
+    out[0] = ctx->ns->sub.submessage_id;
+    out[1] = ctx->ns->sub.flags;
+    // octetsToNextHeader is a CDR ushort in the Submessage's own byte order, the EndiannessFlag in
+    // bit 0 of flags deciding it: E=1 little-endian, E=0 big-endian (sec 9.4.5.1).
+    if (ctx->ns->sub.flags & RTPS_FLAG_ENDIAN)
     {
-        out[2] = (uint8_t)body_len;
-        out[3] = (uint8_t)(body_len >> 8);
+        out[2] = (uint8_t)contents_len;
+        out[3] = (uint8_t)(contents_len >> 8);
     }
     else
     {
-        out[2] = (uint8_t)(body_len >> 8);
-        out[3] = (uint8_t)body_len;
+        out[2] = (uint8_t)(contents_len >> 8);
+        out[3] = (uint8_t)contents_len;
     }
-    if (body_len)
+    if (contents_len)
     {
-        mem.cpy(out + 4, body, body_len);
+        mem.cpy(out + RTPS_SUBMESSAGE_HEADER_LEN, ctx->ns->sub.contents, contents_len);
     }
-    return n;
+    ctx->ns->n = total;
 }
 
-proto_bool protocore_rtps_parse(const uint8_t *msg, size_t len, protocore_rtps_cb cb, void *arg)
+// Validate the Header and walk the Submessages, reporting the verdict in ns->ok.
+static void rtps_parse(struct RtpsInternal *restrict ctx)
 {
+    const uint8_t *msg = ctx->ns->msg.msg;
+    const size_t len = ctx->ns->msg.len;
+
+    ctx->ns->ok = PROTO_FALSE;
+    // sec 8.3.6.3: a Header is invalid with fewer octets than the PSM's 20, with a protocol that is
+    // not PROTOCOL_RTPS, or with a major version above the one this implementation supports.
     if (!msg || len < RTPS_HEADER_LEN)
     {
-        return PROTO_FALSE;
+        return;
     }
     if (msg[0] != 'R' || msg[1] != 'T' || msg[2] != 'P' || msg[3] != 'S')
     {
-        return PROTO_FALSE;
+        return;
     }
-    // Accept any peer whose protocol version is <= ours (RTPS is backward compatible).
     if (msg[4] != RTPS_VERSION[0] || msg[5] > RTPS_VERSION[1])
     {
-        return PROTO_FALSE;
+        return;
     }
 
     size_t off = RTPS_HEADER_LEN;
-    while (off + 4 <= len)
+    // sec 8.3.4.1 rule 1: a Submessage whose header does not fit ends the walk.
+    while (off + RTPS_SUBMESSAGE_HEADER_LEN <= len)
     {
-        uint8_t id = msg[off];
-        uint8_t flags = msg[off + 1];
-        uint16_t oth = (flags & RTPS_FLAG_ENDIAN) ? (uint16_t)(msg[off + 2] | (msg[off + 3] << 8))
-                                                  : (uint16_t)((msg[off + 2] << 8) | msg[off + 3]);
-        size_t body = oth ? oth : (len - (off + 4)); // 0 = extends to end of message
-        if (off + 4 + body > len)
+        const uint8_t submessage_id = msg[off];
+        const uint8_t flags = msg[off + 1];
+        const size_t contents_off = off + RTPS_SUBMESSAGE_HEADER_LEN;
+        const uint16_t octets_to_next_header = (flags & RTPS_FLAG_ENDIAN)
+                                                   ? (uint16_t)(msg[off + 2] | (msg[off + 3] << 8))
+                                                   : (uint16_t)((msg[off + 2] << 8) | msg[off + 3]);
+
+        // sec 9.4.5.1: octetsToNextHeader 0 makes the Submessage the last one and runs it to the end
+        // of the Message, except on PAD and INFO_TS, where the next SubmessageHeader starts
+        // immediately after this one.
+        size_t contents_len = octets_to_next_header;
+        if (octets_to_next_header == 0 && submessage_id != RTPS_SM_PAD && submessage_id != RTPS_SM_INFO_TS)
         {
-            return PROTO_FALSE;
+            contents_len = len - contents_off;
         }
-        if (cb)
+        // sec 8.3.4.1 rule 2: contents past the end of the Message invalidate the rest of it.
+        if (contents_off + contents_len > len)
         {
-            cb(id, flags, body ? (msg + off + 4) : NULL, body, arg);
+            return;
         }
-        off += 4 + body;
-        if (oth == 0)
+        if (ctx->ns->sink.on_submessage)
         {
-            break; // a 0-length terminates the message
+            ctx->ns->sink.on_submessage(submessage_id, flags, contents_len ? (msg + contents_off) : NULL,
+                                        contents_len, ctx->ns->sink.arg);
         }
+        // A run to the end of the Message lands off at len, which fails the loop test.
+        off = contents_off + contents_len;
     }
-    return PROTO_TRUE;
+    ctx->ns->ok = PROTO_TRUE;
 }
+
+// Designated, so a member's position in the struct does not decide what it binds to.
+RtpsNs Rtps = {.header = rtps_header, .submessage = rtps_submessage, .parse = rtps_parse, .internal = &s_rtps};
 
 #endif // PROTOCORE_ENABLE_DDS

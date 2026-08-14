@@ -3,24 +3,32 @@
 
 /**
  * @file senml.h
- * @brief SenML (RFC 8428) sensor-measurement pack builder (PROTOCORE_ENABLE_SENML) - zero-heap
- *        SenML-JSON and SenML-CBOR encoders over the shipped JSON / CBOR codecs. SenML is
- *        the standard measurement format for CoAP / LwM2M / HTTP telemetry.
+ * @brief Sensor Measurement Lists (SenML, RFC 8428): the Pack builders and the Record resolver.
  *
- * A SenML pack is an array of records. Each record carries an optional base name / base time
- * (applied to the records that follow), a name, a unit, and exactly one value (a number, a
- * string, or a boolean), plus an optional time:
+ * RFC 8428 sec 3 names the units: a SenML Record is "one measurement or configuration instance in
+ * time presented using the SenML data model", and a SenML Pack is "one or more SenML Records in an
+ * array structure". This module builds a Pack from a caller-owned Record array and resolves a Pack
+ * in place of a consumer.
+ *
+ * A Record carries Base Fields (RFC 8428 sec 4.1) that apply to it and the Records after it, and
+ * Regular Fields (sec 4.2) that apply to it alone. RFC 8428 sec 5.1.1:
  * @code
- *   [{"bn":"urn:dev:ow:10e2073a01080063","u":"Cel","v":23.1}]
+ *   [
+ *     {"n":"urn:dev:ow:10e2073a01080063","u":"Cel","v":23.1}
+ *   ]
  * @endcode
- * SenML-JSON uses the text labels (bn/bt/n/u/v/vs/vb/t); SenML-CBOR uses the integer labels
- * (n=0 u=1 v=2 vs=3 vb=4 t=6, bn=-2 bt=-3) in a CBOR map per record. Numbers that are
- * integral are emitted as integers (so timestamps keep full precision); otherwise as floats.
  *
- * The caller fills a @ref SenmlRecord array and the builder emits the whole pack into a
- * caller buffer (fail-closed on overflow). Verified against the RFC 8428 example. A resolver
- * (@ref protocore_senml_resolve, RFC 8428 §4.6) folds the base name / base time into each record so a
- * consumer gets standalone records with a full name and an absolute time.
+ * The JSON representation (sec 5, application/senml+json) writes the labels as member names. The
+ * CBOR representation (sec 6, application/senml+cbor) writes the Table 4 integer map keys instead;
+ * that table is conclusive, so one walk feeds every binary encoding through @ref protocore_codec and
+ * the encoding is an argument. A Number that is integral is emitted as an integer, so a Time keeps
+ * full precision; otherwise it is emitted as a floating-point value.
+ *
+ * Both builders write into a caller buffer and report 0 bytes when it will not hold the whole Pack.
+ * The resolver (sec 4.6) folds the Base Name and Base Time into each Record, so each output Record
+ * carries a full Name and an absolute Time and stands alone.
+ *
+ * The module exports one symbol, @ref Senml. Everything in senml.c has internal linkage.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -29,81 +37,133 @@
 #ifndef PROTOCORE_SENML_H
 #define PROTOCORE_SENML_H
 
-#include "network_drivers/presentation/codec/codec.h" // protocore_codec - the encoding is a parameter
+#include "network_drivers/presentation/codec/codec.h" // protocore_codec: the binary encoding is an argument
 #include "protocore_config.h"
 
 PROTOCORE_BEGIN_DECLS
 
 #if PROTOCORE_ENABLE_SENML
 
-/** @brief Which value field a record carries. */
+/** @brief Longest resolved Name (Base Name concatenated with Name), the NUL included. */
+#define PROTOCORE_SENML_RESOLVED_NAME_MAX 96
+
+/** @brief Which value field a Record carries (RFC 8428 sec 4.2). */
 typedef enum PROTO_ENUM_PACKED
 {
-    SENML_V_NONE,   ///< no value (e.g. a base-only record)
-    SENML_V_FLOAT,  ///< numeric value (v) - emitted as int when integral, else float
-    SENML_V_STRING, ///< string value (vs)
-    SENML_V_BOOL    ///< boolean value (vb)
+    SENML_VALUE_NONE,    ///< no value field, as in a Base-Fields-only Record
+    SENML_VALUE_NUMBER,  ///< Value (v), a Number; emitted as an integer when integral
+    SENML_VALUE_STRING,  ///< String Value (vs)
+    SENML_VALUE_BOOLEAN, ///< Boolean Value (vb)
 } SenmlValueKind;
 
-/** @brief One SenML record. String pointers are borrowed (not copied); nullptr fields are skipped. */
+/**
+ * @brief One SenML Record (RFC 8428 sec 3): its Base Fields (sec 4.1) and Regular Fields (sec 4.2).
+ *
+ * Every string is borrowed, not copied, and a null one leaves its label out of the Pack.
+ */
 typedef struct
 {
-    const char *base_name; ///< bn (optional)
-    proto_bool has_base_time;
-    double base_time; ///< bt (optional)
-    const char *name; ///< n (optional)
-    const char *unit; ///< u (optional)
-    SenmlValueKind value_kind;
-    double value;          ///< v (when value_kind == SENML_V_FLOAT)
-    const char *value_str; ///< vs (when value_kind == SENML_V_STRING)
-    proto_bool value_bool; ///< vb (when value_kind == SENML_V_BOOL)
-    proto_bool has_time;
-    double time; ///< t (optional)
+    const char *base_name;     ///< Base Name (bn), prepended to the Names that follow
+    proto_bool has_base_time;  ///< a Base Time is present
+    double base_time;          ///< Base Time (bt), added to the Times that follow
+    const char *name;          ///< Name (n)
+    const char *unit;          ///< Unit (u)
+    SenmlValueKind value_kind; ///< which of the three value fields below this Record carries
+    double value;              ///< Value (v)
+    const char *string_value;  ///< String Value (vs)
+    proto_bool boolean_value;  ///< Boolean Value (vb)
+    proto_bool has_time;       ///< a Time is present
+    double time;               ///< Time (t)
 } SenmlRecord;
 
-/** @brief Build a SenML-JSON pack. Returns bytes written (excluding NUL), or 0 on overflow. */
-size_t protocore_senml_json_build(char *buf, size_t cap, const SenmlRecord *records, size_t count);
-
-/** @brief Build a SenML-CBOR pack (a CBOR array of integer-keyed maps). Returns bytes, or 0. */
 /**
- * @brief Build a SenML pack in whichever binary encoding @p c is.
- *
- * The RFC 8428 integer labels and the record structure are the same whatever carries them, so the
- * encoding is a parameter rather than a second copy of this function: pass &Cbor for
- * SenML-CBOR, &MsgPack for the MessagePack pack.
- *
- * @return bytes written, or 0 if the arguments are bad or the buffer was too small.
+ * @brief One resolved SenML Record (RFC 8428 sec 4.6): no Base Fields left and no relative Time.
  */
-size_t protocore_senml_build(const protocore_codec *c, uint8_t *buf, size_t cap, const SenmlRecord *records,
-                             size_t count);
-
-// --- resolution (RFC 8428 §4.6): apply the base fields to produce standalone records ---
-
-/** @brief Maximum resolved-name length (base name + name), including the NUL. */
-#define SENML_RESOLVED_NAME_MAX 96
-
-/** @brief A resolved SenML record: the base name / time folded in, so it stands alone. */
 typedef struct
 {
-    char name[SENML_RESOLVED_NAME_MAX]; ///< the base name concatenated with the record name
-    const char *unit;                   ///< u (borrowed from the input; may be null)
-    SenmlValueKind value_kind;
-    double value;
-    const char *value_str;
-    proto_bool value_bool;
-    proto_bool has_time;
-    double time; ///< the base time added to the record time (an absolute time)
+    char name[PROTOCORE_SENML_RESOLVED_NAME_MAX]; ///< Name (n): the Base Name concatenated with the Name
+    const char *unit;                             ///< Unit (u), borrowed from the input Record
+    SenmlValueKind value_kind;                    ///< which value field this Record carries
+    double value;                                 ///< Value (v)
+    const char *string_value;                     ///< String Value (vs)
+    proto_bool boolean_value;                     ///< Boolean Value (vb)
+    proto_bool has_time;                          ///< a Time is present
+    double time;                                  ///< Time (t): the Base Time added to the Time
 } SenmlResolved;
 
+/** @brief RFC 8428 sec 3: the Pack a call reads, one array of Records. */
+typedef struct
+{
+    const SenmlRecord *records; ///< the Records the array holds
+    size_t count;               ///< how many of them
+} SenmlPackArgs;
+
+/** @brief RFC 8428 sec 5: where the JSON representation (application/senml+json) lands. */
+typedef struct
+{
+    char *buf;  ///< the buffer the text Pack is written into
+    size_t cap; ///< how much room it has, the NUL included
+} SenmlJsonArgs;
+
+/** @brief RFC 8428 sec 6: the binary encoding a Pack takes, and where it lands. */
+typedef struct
+{
+    const protocore_codec *codec; ///< the encoding the Table 4 integer labels are written through
+    uint8_t *buf;                 ///< the buffer the encoded Pack is written into
+    size_t cap;                   ///< how much room it has
+} SenmlBinaryArgs;
+
+/** @brief RFC 8428 sec 4.6: where the resolved Records land. */
+typedef struct
+{
+    SenmlResolved *out; ///< the array a resolve fills
+    size_t max;         ///< how many Records that array holds
+} SenmlResolvedArgs;
+
+/** @brief The builder's calls, described only in senml.c. */
+struct SenmlInternal;
+
 /**
- * @brief Resolve a SenML pack (RFC 8428 §4.6): carry the base name / base time forward across records so
- *        each output record's name is the full base+name and its time is the absolute base+time.
+ * @brief The SenML Pack builders and the Record resolver.
  *
- * A record's base name / base time becomes active for that record and every record after it, until a later
- * record overrides it. Each input record produces one resolved record (a base-only carrier resolves to a
- * value-less record the caller can skip). @return the number of records resolved (min of @p n and @p max).
+ * A caller sets the members a call takes, invokes it through ::Senml, and reads the outcome off the
+ * same handle.
+ *
+ * No slot member: a Pack is the whole unit every call names, so no call names a row.
+ *
+ * @var SenmlNs::pack          the Records a build encodes or a resolve reads (RFC 8428 sec 3)
+ * @var SenmlNs::json          where the JSON representation lands (RFC 8428 sec 5)
+ * @var SenmlNs::binary        the encoding a Pack takes and where it lands (RFC 8428 sec 6)
+ * @var SenmlNs::resolved      where the resolved Records land (RFC 8428 sec 4.6)
+ * @var SenmlNs::ok            a call's true/false outcome
+ * @var SenmlNs::n             the bytes a build wrote, excluding the NUL, or the Records a resolve
+ *                             produced; 0 when the call failed
+ * @var SenmlNs::json_build    encode @c pack into @c json as application/senml+json (sec 5)
+ * @var SenmlNs::binary_build  encode @c pack into @c binary through its codec, with the sec 6
+ *                             Table 4 integer labels
+ * @var SenmlNs::resolve       carry the Base Name and Base Time across @c pack and fold them into
+ *                             each Record, into @c resolved (sec 4.6)
+ * @var SenmlNs::internal      the builder's calls
  */
-size_t protocore_senml_resolve(const SenmlRecord *in, size_t n, SenmlResolved *out, size_t max);
+typedef struct
+{
+    SenmlPackArgs pack;         ///< what a call reads
+    SenmlJsonArgs json;         ///< where the text Pack lands
+    SenmlBinaryArgs binary;     ///< which encoding, and where the encoded Pack lands
+    SenmlResolvedArgs resolved; ///< where the resolved Records land
+
+    proto_bool ok;
+    size_t n;
+
+    void (*json_build)(struct SenmlInternal *ctx);
+    void (*binary_build)(struct SenmlInternal *ctx);
+    void (*resolve)(struct SenmlInternal *ctx);
+
+    struct SenmlInternal *internal;
+} SenmlNs;
+
+/** @brief The one symbol this module exports. */
+extern SenmlNs Senml;
 
 #endif // PROTOCORE_ENABLE_SENML
 

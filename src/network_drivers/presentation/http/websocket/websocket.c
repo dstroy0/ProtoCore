@@ -477,7 +477,10 @@ static void ws_finish_frame(struct WsInternal *restrict ctx, WsConn *ws)
         size_t n = ws->msg_len < WS_FRAME_SIZE ? ws->msg_len : WS_FRAME_SIZE;
         // RFC 6455 8.1: a TEXT message MUST be valid UTF-8 (checked on the fully
         // reassembled + decompressed message); otherwise fail the connection with 1007.
-        if (ws->msg_opcode == WS_OP_TEXT && !protocore_utf8_valid(ws->buf, n))
+        Utf8.args.s = ws->buf;
+        Utf8.args.n = n;
+        Utf8.valid(Utf8.internal);
+        if (ws->msg_opcode == WS_OP_TEXT && !Utf8.ok)
         {
             ctx->ns->conn = ws;
                 ctx->ns->frame.code = WS_CLOSE_INVALID_PAYLOAD;

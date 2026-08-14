@@ -231,6 +231,11 @@ static void verify_mac(struct JwtInternal *restrict ctx)
     {
         return;
     }
+    // A key length with no key octets behind it would be hashed from a null address.
+    if (!ctx->ns->key.secret && ctx->ns->key.secret_len)
+    {
+        return;
+    }
 
     JwsParts parts;
     if (!jws_split(jws, jws_len, &parts))

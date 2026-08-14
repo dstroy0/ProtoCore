@@ -20,7 +20,11 @@ uint8_t protocore_esp3_crc8(const uint8_t *buf, uint16_t len)
 {
     // The ESP3 CRC-8 (the u8CRC8Table generator) is the cataloge's CRC-8/SMBUS: poly 0x07, MSB-first, init 0,
     // no final XOR.
-    return (uint8_t)protocore_crc(&PROTOCORE_CRC8_SMBUS, buf, len);
+    Crc.args.params = &PROTOCORE_CRC8_SMBUS;
+    Crc.args.data = buf;
+    Crc.args.len = len;
+    Crc.compute(Crc.internal);
+    return (uint8_t)Crc.value;
 }
 
 int protocore_esp3_parse(const uint8_t *raw, uint16_t len, protocore_esp3_packet *out)

@@ -14,7 +14,6 @@
 #include "protocore.h"
 #include "server/clock/clock.h"     // protocore_millis: the library clock, not the platform's
 #include "shared/mime/mime.h" // PROTOCORE_MIME_TEXT_PLAIN
-#include <stdio.h>
 
 // Retry-After carries one number and nothing else.
 static const protocore_field RETRY_AFTER[] = {PROTOCORE_U32, PROTOCORE_END};
@@ -77,7 +76,8 @@ void enable_rate_limit(uint16_t max_requests, uint32_t window_ms)
 {
     s_mw.rl_max = max_requests;
     s_mw.rl_window_ms = window_ms;
-    s_mw.rl_window_start = protocore_millis();
+    Clock.millis(Clock.internal);
+    s_mw.rl_window_start = Clock.ms;
     s_mw.rl_count = 0;
 }
 
@@ -90,7 +90,8 @@ proto_bool rate_limit_check(uint8_t slot_id)
         return PROTO_FALSE; // disabled
     }
 
-    uint32_t now = protocore_millis();
+    Clock.millis(Clock.internal);
+    uint32_t now = Clock.ms;
     if ((uint32_t)(now - s_mw.rl_window_start) >= s_mw.rl_window_ms)
     {
         s_mw.rl_window_start = now; // new window

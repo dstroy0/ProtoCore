@@ -48,38 +48,38 @@ proto_bool protocore_lon_parse_nv(const uint8_t *pdu, size_t len, LonNv *out)
 
 void protocore_lon_snvt_temp_encode(double celsius, uint8_t out[2])
 {
-    // SNVT_temp: kelvin in 0.01 K steps -> (celsius + 273.15) * 100, as a signed 16-bit big-endian.
-    double kelvin_hundredths = (celsius + 273.15) * 100.0;
-    int32_t v = (int32_t)(kelvin_hundredths >= 0 ? kelvin_hundredths + 0.5 : kelvin_hundredths - 0.5);
-    if (v > 32767)
+    // SNVT_temp: tenths of a degree Celsius above -274, as an unsigned 16-bit big-endian.
+    // Scaled value = 1 * 10^-1 * (raw - 2740), raw 0..65535.
+    double tenths = celsius * 10.0 + 2740.0;
+    if (tenths < 0.0)
     {
-        v = 32767;
+        tenths = 0.0;
     }
-    if (v < -32768)
+    if (tenths > 65535.0)
     {
-        v = -32768;
+        tenths = 65535.0;
     }
-    uint16_t u = (uint16_t)v;
+    uint16_t u = (uint16_t)(tenths + 0.5);
     out[0] = (uint8_t)(u >> 8);
     out[1] = (uint8_t)u;
 }
 
 double protocore_lon_snvt_temp_decode(const uint8_t in[2])
 {
-    int16_t v = (int16_t)((in[0] << 8) | in[1]);
-    return (double)v / 100.0 - 273.15;
+    uint16_t v = (uint16_t)(((uint16_t)in[0] << 8) | in[1]);
+    return ((double)v - 2740.0) / 10.0;
 }
 
 void protocore_lon_snvt_switch_encode(double percent, uint8_t state, uint8_t out[2])
 {
-    // SNVT_switch: value is 0..200 in 0.5% steps (0..100.5%), state is 0/1/0xFF.
+    // SNVT_switch: value is 0..200 in 0.5 % steps (0..100 %), state is 0 OFF / 1 ON / 0xFF NULL.
     if (percent < 0)
     {
         percent = 0;
     }
-    if (percent > 100.5)
+    if (percent > 100.0)
     {
-        percent = 100.5;
+        percent = 100.0;
     }
     uint8_t v = (uint8_t)(percent * 2.0 + 0.5);
     out[0] = v;

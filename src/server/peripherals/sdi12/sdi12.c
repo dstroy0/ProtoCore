@@ -233,7 +233,11 @@ uint16_t protocore_sdi12_crc16(const uint8_t *data, size_t len)
 {
     // SDI-12 v1.3 uses the reflected CRC-16 (SDI12_CRC_POLY = 0xA001 = reflect(0x8005), init 0, no final XOR)
     // - cataloged as CRC-16/ARC.
-    return (uint16_t)protocore_crc(&PROTOCORE_CRC16_ARC, data, len);
+    Crc.args.params = &PROTOCORE_CRC16_ARC;
+    Crc.args.data = data;
+    Crc.args.len = len;
+    Crc.compute(Crc.internal);
+    return (uint16_t)Crc.value;
 }
 
 void protocore_sdi12_crc_encode(uint16_t crc, char out[SDI12_CRC_CHARS])

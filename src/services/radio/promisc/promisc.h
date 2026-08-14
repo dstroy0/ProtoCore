@@ -65,8 +65,8 @@ typedef struct
  */
 proto_bool wifi_frame_parse(const uint8_t *frame, uint16_t len, WifiFrameInfo *out);
 
-// libpcap framing lives in shared/pcap/pcap.h: protocore_pcap_global_header() with
-// PROTOCORE_DLT_IEEE802_11 + protocore_pcap_record_header() wrap a captured 802.11 frame as a valid PCAP.
+// libpcap framing lives in shared/pcap/pcap.h: Pcap.global_header with PROTOCORE_DLT_IEEE802_11 and
+// Pcap.record_header wrap a captured 802.11 frame as a valid PCAP.
 
 /**
  * @brief Sink for one captured frame: the raw 802.11 bytes plus radio metadata.

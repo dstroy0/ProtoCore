@@ -3,36 +3,75 @@
 
 /**
  * @file nats.c
- * @brief NATS client protocol builder + parser (pure, host-tested).
+ * @brief The NATS client protocol: the operation builders and the inbound operation parser.
+ *
+ * A builder lays one control line, and a payload where the operation carries one, into the caller's
+ * buffer through a bounded cursor that stops at the first overflow. The parser splits the control
+ * line at the head of the caller's buffer on space or tab and reports the octets the whole operation
+ * occupies. See nats.h for the grammar and the reference it comes from.
  */
 
 #include "services/iot/nats/nats.h"
-#include "mmgr/protomem.h"
 
 #if PROTOCORE_ENABLE_NATS
 
-// A tiny bounded append cursor; sets ok=false on overflow and stops.
+#include "mmgr/protomem.h" // mem.cpy / mem.cmp: the spans an operation is laid from and matched against
+#include "mmgr/protostr.h" // str.len: the bounded length of a caller's NUL-terminated field
+
+// The terminator every protocol message ends with (NATS Protocol, Protocol conventions: Newlines).
+#define NATS_CRLF "\r\n"
+#define NATS_CRLF_LEN 2u
+
+// Decimal digits a 64-bit count needs.
+#define NATS_UINT_DIGITS 20u
+
+// Fields a MSG control line carries: subject, sid, [reply-to], #bytes.
+#define NATS_MSG_FIELDS 4u
+
+// Fields an HMSG control line carries: subject, sid, [reply-to], #header bytes, #total bytes.
+#define NATS_HMSG_FIELDS 5u
+
+// Octets in the operation names a parse steps past before it reads the fields.
+#define NATS_OP_LEN_MSG 3u  // MSG
+#define NATS_OP_LEN_HMSG 4u // HMSG
+#define NATS_OP_LEN_ARG 4u  // -ERR and INFO, whose remainder is one argument
+
+/** @brief A bounded append cursor over the caller's buffer; ok clears at the first overflow. */
 typedef struct
 {
-    char *p;
-    size_t cap;
-    size_t pos;
-    proto_bool ok;
+    char *p;       ///< the buffer being written
+    size_t cap;    ///< octets it holds
+    size_t pos;    ///< octets written so far
+    proto_bool ok; ///< every append so far fit
 } Buf;
 
+/**
+ * @brief The calls that read the handle - what NatsNs points at.
+ *
+ * No storage member: every octet a call touches belongs to the caller, so nothing survives a call.
+ *
+ * @var NatsInternal::ns  the handle a caller sets a call's members on
+ */
+struct NatsInternal
+{
+    NatsNs *ns;
+};
+
+static struct NatsInternal s_nats = {.ns = &Nats};
+
+// Append a NUL-terminated string. A null string or a run past cap stops the cursor.
 static void put_str(Buf *b, const char *s)
 {
-    if (!b->ok || !s)
-    // checked/guarded non-null string (see below)
+    if (!s)
     {
-        if (!s)
-        {
-            b->ok = PROTO_FALSE;
-            // non-null string
-        }
+        b->ok = PROTO_FALSE;
         return;
     }
-    size_t n = strnlen(s, b->cap + 1);
+    if (!b->ok)
+    {
+        return;
+    }
+    size_t n = str.len(s, b->cap + 1);
     if (b->pos + n > b->cap)
     {
         b->ok = PROTO_FALSE;
@@ -42,6 +81,7 @@ static void put_str(Buf *b, const char *s)
     b->pos += n;
 }
 
+// Append n octets.
 static void put_bytes(Buf *b, const uint8_t *d, size_t n)
 {
     if (!b->ok)
@@ -60,6 +100,7 @@ static void put_bytes(Buf *b, const uint8_t *d, size_t n)
     b->pos += n;
 }
 
+// Append one octet.
 static void put_ch(Buf *b, char c)
 {
     if (!b->ok)
@@ -74,11 +115,12 @@ static void put_ch(Buf *b, char c)
     b->p[b->pos++] = c;
 }
 
+// Append a count as decimal digits, most significant first.
 static void put_uint(Buf *b, uint64_t v)
 {
-    char tmp[20];
+    char tmp[NATS_UINT_DIGITS];
     size_t n = 0;
-    char rev[20];
+    char rev[NATS_UINT_DIGITS];
     size_t r = 0;
     if (v == 0)
     {
@@ -96,134 +138,168 @@ static void put_uint(Buf *b, uint64_t v)
     put_bytes(b, (const uint8_t *)tmp, n);
 }
 
-static size_t finish(Buf *b)
+// Report the octets the cursor wrote, NUL-terminating when one byte is left over. A stopped cursor
+// reports 0 octets and a false outcome.
+static void finish(struct NatsInternal *restrict ctx, Buf *b)
 {
     if (!b->ok)
     {
-        return 0;
+        ctx->ns->n = 0;
+        ctx->ns->ok = PROTO_FALSE;
+        return;
     }
-    if (b->pos < b->cap) // NUL-terminate when there's room (the returned length excludes it)
+    if (b->pos < b->cap)
     {
         b->p[b->pos] = '\0';
     }
-    return b->pos;
+    ctx->ns->n = b->pos;
+    ctx->ns->ok = PROTO_TRUE;
 }
 
-size_t protocore_nats_build_connect(char *buf, size_t cap, const char *options_json)
+// CONNECT {"option_name":option_value,...}
+static void nats_connect(struct NatsInternal *restrict ctx)
 {
-    if (!buf || !options_json)
+    ctx->ns->n = 0;
+    ctx->ns->ok = PROTO_FALSE;
+    if (!ctx->ns->out.buf || !ctx->ns->client.options)
     {
-        return 0;
+        return;
     }
-    Buf b = {buf, cap, 0, PROTO_TRUE};
+    Buf b = {ctx->ns->out.buf, ctx->ns->out.cap, 0, PROTO_TRUE};
     put_str(&b, "CONNECT ");
-    put_str(&b, options_json);
-    put_str(&b, "\r\n");
-    return finish(&b);
+    put_str(&b, ctx->ns->client.options);
+    put_str(&b, NATS_CRLF);
+    finish(ctx, &b);
 }
 
-size_t protocore_nats_build_pub(char *buf, size_t cap, const char *subject, const char *reply_to, const uint8_t *payload,
-                         size_t payload_len)
+// PUB <subject> [reply-to] <#bytes>CRLF[payload]CRLF
+static void nats_pub(struct NatsInternal *restrict ctx)
 {
-    if (!buf || !subject || (payload_len && !payload))
+    ctx->ns->n = 0;
+    ctx->ns->ok = PROTO_FALSE;
+    if (!ctx->ns->out.buf || !ctx->ns->publish.subject || (ctx->ns->publish.payload_len && !ctx->ns->publish.payload))
     {
-        return 0;
+        return;
     }
-    Buf b = {buf, cap, 0, PROTO_TRUE};
+    Buf b = {ctx->ns->out.buf, ctx->ns->out.cap, 0, PROTO_TRUE};
     put_str(&b, "PUB ");
-    put_str(&b, subject);
-    if (reply_to)
+    put_str(&b, ctx->ns->publish.subject);
+    if (ctx->ns->publish.reply_to)
     {
         put_ch(&b, ' ');
-        put_str(&b, reply_to);
+        put_str(&b, ctx->ns->publish.reply_to);
     }
     put_ch(&b, ' ');
-    put_uint(&b, payload_len);
-    put_str(&b, "\r\n");
-    put_bytes(&b, payload, payload_len);
-    put_str(&b, "\r\n");
-    return finish(&b);
+    put_uint(&b, ctx->ns->publish.payload_len);
+    put_str(&b, NATS_CRLF);
+    put_bytes(&b, ctx->ns->publish.payload, ctx->ns->publish.payload_len);
+    put_str(&b, NATS_CRLF);
+    finish(ctx, &b);
 }
 
-size_t protocore_nats_build_hpub(char *buf, size_t cap, const char *subject, const char *reply_to, const char *headers,
-                          size_t headers_len, const uint8_t *payload, size_t payload_len)
+// HPUB <subject> [reply-to] <#header bytes> <#total bytes>CRLF[headers][payload]CRLF, where the
+// header section carries its own terminating CR LF CR LF and #total bytes counts it plus the payload.
+static void nats_hpub(struct NatsInternal *restrict ctx)
 {
-    if (!buf || !subject || !headers || headers_len == 0 || (payload_len && !payload))
+    ctx->ns->n = 0;
+    ctx->ns->ok = PROTO_FALSE;
+    if (!ctx->ns->out.buf || !ctx->ns->publish.subject || !ctx->ns->headers.block || ctx->ns->headers.bytes == 0 ||
+        (ctx->ns->publish.payload_len && !ctx->ns->publish.payload))
     {
-        return 0;
+        return;
     }
-    Buf b = {buf, cap, 0, PROTO_TRUE};
+    Buf b = {ctx->ns->out.buf, ctx->ns->out.cap, 0, PROTO_TRUE};
     put_str(&b, "HPUB ");
-    put_str(&b, subject);
-    if (reply_to)
+    put_str(&b, ctx->ns->publish.subject);
+    if (ctx->ns->publish.reply_to)
     {
         put_ch(&b, ' ');
-        put_str(&b, reply_to);
+        put_str(&b, ctx->ns->publish.reply_to);
     }
     put_ch(&b, ' ');
-    put_uint(&b, headers_len); // hdr_len
+    put_uint(&b, ctx->ns->headers.bytes);
     put_ch(&b, ' ');
-    put_uint(&b, headers_len + payload_len); // total_len = headers + payload
-    put_str(&b, "\r\n");
-    put_bytes(&b, (const uint8_t *)headers, headers_len);
-    put_bytes(&b, payload, payload_len);
-    put_str(&b, "\r\n");
-    return finish(&b);
+    put_uint(&b, ctx->ns->headers.bytes + ctx->ns->publish.payload_len);
+    put_str(&b, NATS_CRLF);
+    put_bytes(&b, (const uint8_t *)ctx->ns->headers.block, ctx->ns->headers.bytes);
+    put_bytes(&b, ctx->ns->publish.payload, ctx->ns->publish.payload_len);
+    put_str(&b, NATS_CRLF);
+    finish(ctx, &b);
 }
 
-size_t protocore_nats_build_sub(char *buf, size_t cap, const char *subject, const char *queue, const char *sid)
+// SUB <subject> [queue group] <sid>
+static void nats_sub(struct NatsInternal *restrict ctx)
 {
-    if (!buf || !subject || !sid)
+    ctx->ns->n = 0;
+    ctx->ns->ok = PROTO_FALSE;
+    if (!ctx->ns->out.buf || !ctx->ns->subscription.subject || !ctx->ns->subscription.sid)
     {
-        return 0;
+        return;
     }
-    Buf b = {buf, cap, 0, PROTO_TRUE};
+    Buf b = {ctx->ns->out.buf, ctx->ns->out.cap, 0, PROTO_TRUE};
     put_str(&b, "SUB ");
-    put_str(&b, subject);
-    if (queue)
+    put_str(&b, ctx->ns->subscription.subject);
+    if (ctx->ns->subscription.queue_group)
     {
         put_ch(&b, ' ');
-        put_str(&b, queue);
+        put_str(&b, ctx->ns->subscription.queue_group);
     }
     put_ch(&b, ' ');
-    put_str(&b, sid);
-    put_str(&b, "\r\n");
-    return finish(&b);
+    put_str(&b, ctx->ns->subscription.sid);
+    put_str(&b, NATS_CRLF);
+    finish(ctx, &b);
 }
 
-size_t protocore_nats_build_unsub(char *buf, size_t cap, const char *sid, uint32_t max_msgs, proto_bool with_max)
+// UNSUB <sid> [max_msgs]
+static void nats_unsub(struct NatsInternal *restrict ctx)
 {
-    if (!buf || !sid)
+    ctx->ns->n = 0;
+    ctx->ns->ok = PROTO_FALSE;
+    if (!ctx->ns->out.buf || !ctx->ns->subscription.sid)
     {
-        return 0;
+        return;
     }
-    Buf b = {buf, cap, 0, PROTO_TRUE};
+    Buf b = {ctx->ns->out.buf, ctx->ns->out.cap, 0, PROTO_TRUE};
     put_str(&b, "UNSUB ");
-    put_str(&b, sid);
-    if (with_max)
+    put_str(&b, ctx->ns->subscription.sid);
+    if (ctx->ns->subscription.with_max)
     {
         put_ch(&b, ' ');
-        put_uint(&b, max_msgs);
+        put_uint(&b, ctx->ns->subscription.max_msgs);
     }
-    put_str(&b, "\r\n");
-    return finish(&b);
+    put_str(&b, NATS_CRLF);
+    finish(ctx, &b);
 }
 
-size_t protocore_nats_build_ping(char *buf, size_t cap)
+// PING
+static void nats_ping(struct NatsInternal *restrict ctx)
 {
-    Buf b = {buf, cap, 0, PROTO_TRUE};
-    put_str(&b, "PING\r\n");
-    return finish(&b);
+    ctx->ns->n = 0;
+    ctx->ns->ok = PROTO_FALSE;
+    if (!ctx->ns->out.buf)
+    {
+        return;
+    }
+    Buf b = {ctx->ns->out.buf, ctx->ns->out.cap, 0, PROTO_TRUE};
+    put_str(&b, "PING" NATS_CRLF);
+    finish(ctx, &b);
 }
 
-size_t protocore_nats_build_pong(char *buf, size_t cap)
+// PONG
+static void nats_pong(struct NatsInternal *restrict ctx)
 {
-    Buf b = {buf, cap, 0, PROTO_TRUE};
-    put_str(&b, "PONG\r\n");
-    return finish(&b);
+    ctx->ns->n = 0;
+    ctx->ns->ok = PROTO_FALSE;
+    if (!ctx->ns->out.buf)
+    {
+        return;
+    }
+    Buf b = {ctx->ns->out.buf, ctx->ns->out.cap, 0, PROTO_TRUE};
+    put_str(&b, "PONG" NATS_CRLF);
+    finish(ctx, &b);
 }
 
-// Find the CRLF that ends the control line; returns the index of '\r', or len if absent.
+// Index of the CR LF that ends the control line, or len when it is not buffered yet.
 static size_t find_crlf(const char *buf, size_t len)
 {
     for (size_t i = 0; i + 1 < len; i++)
@@ -236,14 +312,12 @@ static size_t find_crlf(const char *buf, size_t len)
     return len;
 }
 
-// Decimal parse of [s, s+n); false on a non-digit.
+// Decimal parse of [s, s+n); false on an empty run or a non-digit.
 static proto_bool parse_uint(const char *s, size_t n, size_t *out)
 {
     if (n == 0)
-    // length>=1 (see below)
     {
         return PROTO_FALSE;
-        // length>=1
     }
     size_t v = 0;
     for (size_t i = 0; i < n; i++)
@@ -258,10 +332,10 @@ static proto_bool parse_uint(const char *s, size_t n, size_t *out)
     return PROTO_TRUE;
 }
 
-// True when the verb token at buf matches op (and is followed by a space or end-of-token).
+// True when the control line opens with the operation name op and ends there or at a delimiter.
 static proto_bool verb_is(const char *buf, size_t line_len, const char *op)
 {
-    size_t n = strnlen(op, line_len + 1);
+    size_t n = str.len(op, line_len + 1);
     if (line_len < n)
     {
         return PROTO_FALSE;
@@ -273,182 +347,195 @@ static proto_bool verb_is(const char *buf, size_t line_len, const char *op)
     return line_len == n || buf[n] == ' ' || buf[n] == '\t';
 }
 
-proto_bool protocore_nats_parse(const char *buf, size_t len, NatsMsg *out, size_t *consumed)
+// Split the control line from index `from` into at most `max` fields and report how many were found.
+// A space or a tab delimits, and repeated whitespace counts as one delimiter (NATS Protocol,
+// Protocol conventions: Field Delimiter).
+static size_t split_fields(const char *buf, size_t line_len, size_t from, const char **tok, size_t *tlen, size_t max)
 {
-    if (!buf || !out || !consumed)
+    size_t ntok = 0;
+    size_t i = from;
+    while (i < line_len && ntok < max)
     {
-        return PROTO_FALSE;
+        while (i < line_len && (buf[i] == ' ' || buf[i] == '\t'))
+        {
+            i++;
+        }
+        if (i >= line_len)
+        {
+            break;
+        }
+        size_t start = i;
+        while (i < line_len && buf[i] != ' ' && buf[i] != '\t')
+        {
+            i++;
+        }
+        tok[ntok] = buf + start;
+        tlen[ntok] = i - start;
+        ntok++;
+    }
+    return ntok;
+}
+
+// Decode the operation at the head of in.buf into msg, and report the octets it occupies.
+static void nats_parse(struct NatsInternal *restrict ctx)
+{
+    ctx->ns->ok = PROTO_FALSE;
+    ctx->ns->consumed = 0;
+
+    const char *buf = ctx->ns->in.buf;
+    const size_t len = ctx->ns->in.len;
+    NatsMsg *out = &ctx->ns->msg;
+    if (!buf)
+    {
+        return;
     }
     size_t crlf = find_crlf(buf, len);
     if (crlf == len)
     {
-        return PROTO_FALSE; // control line not fully buffered
+        return; // control line not fully buffered
     }
     size_t line_len = crlf;
-    size_t after_line = crlf + 2;
+    size_t after_line = crlf + NATS_CRLF_LEN;
 
-    out->subject = out->sid = out->reply = out->arg = NULL;
-    out->subject_len = out->sid_len = out->reply_len = out->arg_len = 0;
+    out->subject = out->sid = out->reply_to = out->arg = NULL;
+    out->subject_len = out->sid_len = out->reply_to_len = out->arg_len = 0;
     out->payload = NULL;
     out->payload_len = 0;
     out->headers = NULL;
-    out->headers_len = 0;
+    out->header_bytes = 0;
 
     if (verb_is(buf, line_len, "PING"))
     {
-        out->type = NATS_PING;
-        *consumed = after_line;
-        return PROTO_TRUE;
+        out->op = NATS_OP_PING;
+        ctx->ns->consumed = after_line;
+        ctx->ns->ok = PROTO_TRUE;
+        return;
     }
     if (verb_is(buf, line_len, "PONG"))
     {
-        out->type = NATS_PONG;
-        *consumed = after_line;
-        return PROTO_TRUE;
+        out->op = NATS_OP_PONG;
+        ctx->ns->consumed = after_line;
+        ctx->ns->ok = PROTO_TRUE;
+        return;
     }
     if (verb_is(buf, line_len, "+OK"))
     {
-        out->type = NATS_OK;
-        *consumed = after_line;
-        return PROTO_TRUE;
+        out->op = NATS_OP_OK;
+        ctx->ns->consumed = after_line;
+        ctx->ns->ok = PROTO_TRUE;
+        return;
     }
     if (verb_is(buf, line_len, "-ERR") || verb_is(buf, line_len, "INFO"))
     {
-        out->type = (buf[0] == '-') ? NATS_ERR : NATS_INFO;
-        size_t a = 4; // skip the verb: both "-ERR" and "INFO" are 4 chars
+        out->op = (buf[0] == '-') ? NATS_OP_ERR : NATS_OP_INFO;
+        size_t a = NATS_OP_LEN_ARG; // "-ERR" and "INFO" are both four octets
         while (a < line_len && (buf[a] == ' ' || buf[a] == '\t'))
         {
             a++;
         }
         out->arg = buf + a;
         out->arg_len = line_len - a;
-        *consumed = after_line;
-        return PROTO_TRUE;
+        ctx->ns->consumed = after_line;
+        ctx->ns->ok = PROTO_TRUE;
+        return;
     }
     if (verb_is(buf, line_len, "MSG"))
     {
         // MSG <subject> <sid> [reply-to] <#bytes>
-        const char *tok[4];
-        size_t tlen[4];
-        size_t ntok = 0;
-        size_t i = 3; // past "MSG"
-        while (i < line_len && ntok < 4)
+        const char *tok[NATS_MSG_FIELDS];
+        size_t tlen[NATS_MSG_FIELDS];
+        size_t ntok = split_fields(buf, line_len, NATS_OP_LEN_MSG, tok, tlen, NATS_MSG_FIELDS);
+        if (ntok != 3 && ntok != NATS_MSG_FIELDS) // subject sid [reply-to] #bytes
         {
-            while (i < line_len && (buf[i] == ' ' || buf[i] == '\t'))
-            {
-                i++;
-            }
-            if (i >= line_len)
-            {
-                break;
-            }
-            size_t start = i;
-            while (i < line_len && buf[i] != ' ' && buf[i] != '\t')
-            {
-                i++;
-            }
-            tok[ntok] = buf + start;
-            tlen[ntok] = i - start;
-            ntok++;
-        }
-        if (ntok != 3 && ntok != 4) // subject sid [reply] size
-        {
-            return PROTO_FALSE;
+            return;
         }
         size_t size;
-        if (!parse_uint(tok[ntok - 1], tlen[ntok - 1], &size)) // the last token is the byte count
+        if (!parse_uint(tok[ntok - 1], tlen[ntok - 1], &size)) // the last field is #bytes
         {
-            return PROTO_FALSE;
+            return;
         }
-        // Bound the byte count against the remaining capacity without adding it (a 32-bit
-        // size_t would wrap if we computed after_line + size + 2 first).
-        if (after_line + 2 > len || size > len - after_line - 2)
+        // Bound #bytes against the remaining capacity without adding it (a 32-bit size_t would wrap
+        // if we computed after_line + size + NATS_CRLF_LEN first).
+        if (after_line + NATS_CRLF_LEN > len || size > len - after_line - NATS_CRLF_LEN)
         {
-            return PROTO_FALSE; // payload + trailing CRLF not fully buffered
+            return; // payload plus its terminator not fully buffered
         }
-        size_t total = after_line + size + 2;
-        out->type = NATS_MSG;
+        out->op = NATS_OP_MSG;
         out->subject = tok[0];
         out->subject_len = tlen[0];
         out->sid = tok[1];
         out->sid_len = tlen[1];
-        if (ntok == 4)
+        if (ntok == NATS_MSG_FIELDS)
         {
-            out->reply = tok[2];
-            out->reply_len = tlen[2];
+            out->reply_to = tok[2];
+            out->reply_to_len = tlen[2];
         }
         out->payload = (const uint8_t *)(buf + after_line);
         out->payload_len = size;
-        *consumed = total;
-        return PROTO_TRUE;
+        ctx->ns->consumed = after_line + size + NATS_CRLF_LEN;
+        ctx->ns->ok = PROTO_TRUE;
+        return;
     }
     if (verb_is(buf, line_len, "HMSG"))
     {
-        // HMSG <subject> <sid> [reply-to] <hdr_len> <total_len>
-        const char *tok[5];
-        size_t tlen[5];
-        size_t ntok = 0;
-        size_t i = 4; // past "HMSG"
-        while (i < line_len && ntok < 5)
+        // HMSG <subject> <sid> [reply-to] <#header bytes> <#total bytes>
+        const char *tok[NATS_HMSG_FIELDS];
+        size_t tlen[NATS_HMSG_FIELDS];
+        size_t ntok = split_fields(buf, line_len, NATS_OP_LEN_HMSG, tok, tlen, NATS_HMSG_FIELDS);
+        if (ntok != 4 && ntok != NATS_HMSG_FIELDS) // subject sid [reply-to] #header bytes #total bytes
         {
-            while (i < line_len && (buf[i] == ' ' || buf[i] == '\t'))
-            {
-                i++;
-            }
-            if (i >= line_len)
-            {
-                break;
-            }
-            size_t start = i;
-            while (i < line_len && buf[i] != ' ' && buf[i] != '\t')
-            {
-                i++;
-            }
-            tok[ntok] = buf + start;
-            tlen[ntok] = i - start;
-            ntok++;
-        }
-        if (ntok != 4 && ntok != 5) // subject sid [reply] hdr_len total_len
-        {
-            return PROTO_FALSE;
+            return;
         }
         size_t hdr_len, total_size;
         if (!parse_uint(tok[ntok - 2], tlen[ntok - 2], &hdr_len) ||
             !parse_uint(tok[ntok - 1], tlen[ntok - 1], &total_size))
         {
-            return PROTO_FALSE;
+            return;
         }
-        if (hdr_len > total_size) // the header block cannot exceed the header+payload total
+        if (hdr_len > total_size) // #header bytes is part of #total bytes
         {
-            return PROTO_FALSE;
+            return;
         }
-        // Bound the total against the remaining capacity without overflowing size_t.
-        if (after_line + 2 > len || total_size > len - after_line - 2)
+        // Bound #total bytes against the remaining capacity without overflowing size_t.
+        if (after_line + NATS_CRLF_LEN > len || total_size > len - after_line - NATS_CRLF_LEN)
         {
-            return PROTO_FALSE; // headers + payload + trailing CRLF not fully buffered
+            return; // header section plus payload plus terminator not fully buffered
         }
-        size_t total = after_line + total_size + 2;
-        out->type = NATS_MSG;
+        out->op = NATS_OP_MSG;
         out->subject = tok[0];
         out->subject_len = tlen[0];
         out->sid = tok[1];
         out->sid_len = tlen[1];
-        if (ntok == 5)
+        if (ntok == NATS_HMSG_FIELDS)
         {
-            out->reply = tok[2];
-            out->reply_len = tlen[2];
+            out->reply_to = tok[2];
+            out->reply_to_len = tlen[2];
         }
         out->headers = buf + after_line;
-        out->headers_len = hdr_len;
+        out->header_bytes = hdr_len;
         out->payload = (const uint8_t *)(buf + after_line + hdr_len);
         out->payload_len = total_size - hdr_len;
-        *consumed = total;
-        return PROTO_TRUE;
+        ctx->ns->consumed = after_line + total_size + NATS_CRLF_LEN;
+        ctx->ns->ok = PROTO_TRUE;
+        return;
     }
 
-    out->type = NATS_UNKNOWN;
-    *consumed = after_line;
-    return PROTO_TRUE;
+    out->op = NATS_OP_UNKNOWN;
+    ctx->ns->consumed = after_line;
+    ctx->ns->ok = PROTO_TRUE;
 }
+
+// Designated, so a member's position in the struct does not decide what it binds to.
+NatsNs Nats = {
+    .connect = nats_connect,
+    .pub = nats_pub,
+    .hpub = nats_hpub,
+    .sub = nats_sub,
+    .unsub = nats_unsub,
+    .ping = nats_ping,
+    .pong = nats_pong,
+    .parse = nats_parse,
+    .internal = &s_nats,
+};
 
 #endif // PROTOCORE_ENABLE_NATS

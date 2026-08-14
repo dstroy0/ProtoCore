@@ -39,32 +39,60 @@ uint8_t protocore_smbus_addr_byte(uint8_t addr, uint8_t rw)
     return (uint8_t)(((addr & 0x7Fu) << 1) | (rw & 1u));
 }
 
+// The register a PEC starts from.
+static uint32_t pec_begin(void)
+{
+    Crc.args.params = &PROTOCORE_CRC8_SMBUS;
+    Crc.begin(Crc.internal);
+    return Crc.value;
+}
+
+// Fold @p len octets at @p data into the running register @p crc.
+static uint32_t pec_fold(uint32_t crc, const uint8_t *data, size_t len)
+{
+    Crc.args.params = &PROTOCORE_CRC8_SMBUS;
+    Crc.args.crc = crc;
+    Crc.args.data = data;
+    Crc.args.len = len;
+    Crc.update(Crc.internal);
+    return Crc.value;
+}
+
+// The PEC octet a running register finishes to.
+static uint8_t pec_final(uint32_t crc)
+{
+    Crc.args.params = &PROTOCORE_CRC8_SMBUS;
+    Crc.args.crc = crc;
+    Crc.final(Crc.internal);
+    return (uint8_t)Crc.value;
+}
+
 uint8_t protocore_smbus_pec_write(uint8_t addr, const uint8_t *payload, size_t len)
 {
     uint8_t a = protocore_smbus_addr_byte(addr, PROTOCORE_SMBUS_WRITE);
-    uint32_t c = protocore_crc_update(&PROTOCORE_CRC8_SMBUS, protocore_crc_begin(&PROTOCORE_CRC8_SMBUS), &a, 1);
+    uint32_t c = pec_fold(pec_begin(), &a, 1);
     if (payload != NULL && len > 0)
     {
-        c = protocore_crc_update(&PROTOCORE_CRC8_SMBUS, c, payload, len);
+        c = pec_fold(c, payload, len);
     }
-    return (uint8_t)protocore_crc_final(&PROTOCORE_CRC8_SMBUS, c);
+    return pec_final(c);
 }
 
 uint8_t protocore_smbus_pec_read(uint8_t addr, const uint8_t *sent, size_t slen, const uint8_t *got, size_t glen)
 {
     uint8_t aw = protocore_smbus_addr_byte(addr, PROTOCORE_SMBUS_WRITE);
     uint8_t ar = protocore_smbus_addr_byte(addr, PROTOCORE_SMBUS_READ);
-    uint32_t c = protocore_crc_update(&PROTOCORE_CRC8_SMBUS, protocore_crc_begin(&PROTOCORE_CRC8_SMBUS), &aw, 1);
+    uint32_t c = pec_fold(pec_begin(), &aw, 1);
     if (sent != NULL && slen > 0)
     {
-        c = protocore_crc_update(&PROTOCORE_CRC8_SMBUS, c, sent, slen);
+        c = pec_fold(c, sent, slen);
     }
-    c = protocore_crc_update(&PROTOCORE_CRC8_SMBUS, c, &ar, 1);
+    c = pec_fold(c, &ar, 1);
     if (got != NULL && glen > 0)
     {
-        c = protocore_crc_update(&PROTOCORE_CRC8_SMBUS, c, got, glen);
+        c = pec_fold(c, got, glen);
     }
-    return (uint8_t)protocore_crc_final(&PROTOCORE_CRC8_SMBUS, c);
+    return pec_final(c);
 }
 
 void protocore_smbus_set_pec(proto_bool on)

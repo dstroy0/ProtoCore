@@ -51,6 +51,25 @@ static void fail(QuicTls *qt, uint8_t alert)
     qt->alert = alert;
 }
 
+// Point the key schedule's handle at this connection's schedule and its bytes. Every step below
+// reads them off the handle, so the binding is set before each call.
+static void ks_bind(QuicTls *qt)
+{
+    Tls13Ks.bind.kdf = &TLS13_KDF;
+    Tls13Ks.bind.ks = &qt->ks;
+    Tls13Ks.bind.s = qt->ks_store;
+}
+
+// verify_data over @p transcript_hash under @p base_secret (RFC 8446 sec 4.4.4).
+static void ks_finished(QuicTls *qt, const uint8_t *base_secret, const uint8_t *transcript_hash, uint8_t *out)
+{
+    ks_bind(qt);
+    Tls13Ks.finished_args.base_secret = base_secret;
+    Tls13Ks.finished_args.transcript_hash = transcript_hash;
+    Tls13Ks.finished_args.out = out;
+    Tls13Ks.finished_mac(Tls13Ks.internal);
+}
+
 // The running Transcript-Hash so far. Finalizing compresses the padded blocks into a copy of the
 // state, so the context comes out untouched and keeps taking messages.
 static void snapshot_hash(protocore_sha256_ctx *ctx, uint8_t out[32])
@@ -229,8 +248,12 @@ static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t m
     // Handshake keys from Transcript-Hash(ClientHello..ServerHello).
     uint8_t hash[32];
     snapshot_hash(&qt->transcript, hash);
-    protocore_tls13_ks_early(&TLS13_KDF, &qt->ks, qt->ks_store);
-    protocore_tls13_ks_handshake(&qt->ks, ecdhe, hash, ecdhe_len);
+    ks_bind(qt);
+    Tls13Ks.early(Tls13Ks.internal);
+    Tls13Ks.step.ecdhe = ecdhe;
+    Tls13Ks.step.ecdhe_len = ecdhe_len;
+    Tls13Ks.step.ch_sh_hash = hash;
+    Tls13Ks.handshake(Tls13Ks.internal);
     protocore_quic_keys_from_secret(qt->keys_work, qt->ks.s + TLS13_KS_CLIENT_HS, &qt->hs_client);
     protocore_quic_keys_from_secret(qt->keys_work, qt->ks.s + TLS13_KS_SERVER_HS, &qt->hs_server);
     qt->hs_keys_ready = PROTO_TRUE;
@@ -268,7 +291,7 @@ static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t m
     // Server Finished over Transcript-Hash(ClientHello..CertificateVerify).
     snapshot_hash(&qt->transcript, hash);
     uint8_t verify[32];
-    protocore_tls13_finished_mac(&qt->ks, qt->ks.s + TLS13_KS_SERVER_HS, hash, verify);
+    ks_finished(qt, qt->ks.s + TLS13_KS_SERVER_HS, hash, verify);
     n = protocore_tls13_build_finished(qt->flight_hs + qt->flight_hs_len, sizeof(qt->flight_hs) - qt->flight_hs_len, verify);
     if (!emit(qt, qt->flight_hs, sizeof(qt->flight_hs), &qt->flight_hs_len, n))
     {
@@ -278,7 +301,9 @@ static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t m
     // 1-RTT keys from Transcript-Hash(ClientHello..server Finished); also the hash we verify the
     // client Finished against.
     snapshot_hash(&qt->transcript, qt->hs_finished_hash);
-    protocore_tls13_ks_master(&qt->ks, qt->hs_finished_hash);
+    ks_bind(qt);
+    Tls13Ks.step.ch_sfin_hash = qt->hs_finished_hash;
+    Tls13Ks.master(Tls13Ks.internal);
     protocore_quic_keys_from_secret(qt->keys_work, qt->ks.s + TLS13_KS_CLIENT_AP, &qt->ap_client);
     protocore_quic_keys_from_secret(qt->keys_work, qt->ks.s + TLS13_KS_SERVER_AP, &qt->ap_server);
     qt->ap_keys_ready = PROTO_TRUE;
@@ -294,7 +319,7 @@ static proto_bool process_client_finished(QuicTls *qt, const uint8_t *msg, size_
         fail(qt, TLS_ALERT_DECODE_ERROR);
         return PROTO_FALSE;
     }
-    protocore_tls13_finished_mac(&qt->ks, qt->ks.s + TLS13_KS_CLIENT_HS, qt->hs_finished_hash, qt->ks.s + TLS13_KS_VERIFY);
+    ks_finished(qt, qt->ks.s + TLS13_KS_CLIENT_HS, qt->hs_finished_hash, qt->ks.s + TLS13_KS_VERIFY);
     if (!protocore_ct_eq(qt->ks.s + TLS13_KS_VERIFY, msg + 4, TLS13_SECRET_LEN))
     {
         fail(qt, TLS_ALERT_DECRYPT_ERROR);

@@ -17,7 +17,7 @@
 #include "mmgr/membuild.h"
 #include "mmgr/protostr.h"  // str.len - a word per test, bounded by a known width
 #include "mmgr/rawmemcpy.h" // proto_raw_read - the span move protocore_sb_put_n is built on
-#include "shared/hex/hex.h" // PROTOCORE_HEX_LOWER - the shared digit table
+#include "shared/hex/hex.h" // PROTOCORE_HEX: the shared digit tables
 
 /// @brief Working width of the `n * 2^s` pair below: four bits clear of the top so a decade fits.
 #define PROTOCORE_G_WORK_BITS 58u
@@ -206,7 +206,7 @@ void protocore_sb_uint(protocore_sb *b, uint64_t v, unsigned base, unsigned min_
     {
         for (unsigned i = digits; i-- > 0;)
         {
-            b->p[b->len + i] = PROTOCORE_HEX_LOWER[v & digit_mask];
+            b->p[b->len + i] = PROTOCORE_HEX.lower[v & digit_mask];
             v >>= bits_per_digit;
         }
     }
@@ -588,12 +588,28 @@ void protocore_sb_fixed(protocore_sb *b, double v, unsigned decimals)
     }
 }
 
+// RFC 8259 sec 7 gives a two-character escape to five of the control characters; the letter each
+// one takes, indexed by the code point, and 0 where the grammar names none.
+static const char JSON_CTRL_ESC[32] = {0, 0, 0, 0, 0,   0,   0, 0, 'b', 't', 'n', 0, 'f', 'r', 0, 0,
+                                       0, 0, 0, 0, 0,   0,   0, 0, 0,   0,   0,   0, 0,   0,   0, 0};
+
 void protocore_sb_json(protocore_sb *b, const char *s)
 {
+    static const char HEX[] = "0123456789abcdef";
+
+    if (!b->ok)
+    {
+        return; // the loop below stores through b->p directly, so the latch is tested here
+    }
     protocore_sb_put(b, "\"");
+    // RFC 8259 sec 7: a quotation mark, a reverse solidus and the control characters U+0000 through
+    // U+001F MUST be escaped. The five with a named two-character form take it; the rest take
+    // \u00XX, the six-character form sec 7 gives for a Basic Multilingual Plane code point.
     for (const char *p = s ? s : ""; *p; p++)
     {
-        if (*p == '"' || *p == '\\')
+        const unsigned char c = (unsigned char)*p;
+        const char two = (c == '"' || c == '\\') ? (char)c : (c < 0x20u ? JSON_CTRL_ESC[c] : 0);
+        if (two)
         {
             if (b->len + 2 >= b->cap)
             {
@@ -601,11 +617,25 @@ void protocore_sb_json(protocore_sb *b, const char *s)
                 return;
             }
             b->p[b->len++] = '\\';
-            b->p[b->len++] = *p;
+            b->p[b->len++] = two;
+        }
+        else if (c < 0x20u)
+        {
+            if (b->len + 6 >= b->cap)
+            {
+                b->ok = PROTO_FALSE;
+                return;
+            }
+            b->p[b->len++] = '\\';
+            b->p[b->len++] = 'u';
+            b->p[b->len++] = '0';
+            b->p[b->len++] = '0';
+            b->p[b->len++] = HEX[(c >> 4) & 0xFu];
+            b->p[b->len++] = HEX[c & 0xFu];
         }
         else if (b->len + 1 < b->cap)
         {
-            b->p[b->len++] = *p;
+            b->p[b->len++] = (char)c;
         }
         else
         {

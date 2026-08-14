@@ -32,7 +32,6 @@
 #include "server/core/proto_handler.h" // ProtoHandler / Session.proto->add(PROTO_MESH serving)
 #include "server/web/edge_cache/edge_mesh.h"     // mesh sibling-cache codec + peer-query engine
 #endif
-#include <stdio.h>
 
 typedef struct
 {

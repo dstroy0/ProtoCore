@@ -13,7 +13,19 @@
 
 #include "shared/ip/ip.h"
 #include "mmgr/protomem.h"
-#include "shared/hex/hex.h" // PROTOCORE_HEX_LOWER - the shared digit table
+#include "shared/hex/hex.h" // PROTOCORE_HEX: the shared digit tables
+
+/**
+ * @brief The address calls - what IpNs points at.
+ *
+ * @var IpInternal::ns  the handle a caller sets a call's members on
+ *
+ * No storage member: every conversion works on the caller's buffers and holds nothing between calls.
+ */
+struct IpInternal
+{
+    IpNs *ns;
+};
 
 // -------------------------------------------------------------------------------------------
 // Parsing helpers (text -> bytes)
@@ -289,7 +301,7 @@ static size_t put_hex16(uint16_t v, char *o)
     int n = 0;
     do
     {
-        t[n] = PROTOCORE_HEX_LOWER[v & 0xF];
+        t[n] = PROTOCORE_HEX.lower[v & 0xF];
         n++;
         v >>= 4;
     } while (v);
@@ -580,27 +592,24 @@ static void ip_format(struct IpInternal *restrict ctx)
 
 proto_bool protocore_ip_is_v4_mapped(const protocore_ip *ip)
 {
-    ctx->ns->n = ip && ip->family == PROTOCORE_IP_V6 && is_v4_mapped_bytes(ip->bytes);
+    return ip && ip->family == PROTOCORE_IP_V6 && is_v4_mapped_bytes(ip->bytes);
 }
 
 static protocore_ip_scope classify_of(const protocore_ip *ip)
 {
     if (!ip)
     {
-        ctx->ns->n = PROTOCORE_IP_SCOPE_UNSPECIFIED;
-        return;
+        return PROTOCORE_IP_SCOPE_UNSPECIFIED;
     }
     if (ip->family == PROTOCORE_IP_V4)
     {
-        ctx->ns->n = classify_v4(ip->bytes);
-        return;
+        return classify_v4(ip->bytes);
     }
     if (ip->family == PROTOCORE_IP_V6)
     {
-        ctx->ns->n = classify_v6(ip->bytes);
-        return;
+        return classify_v6(ip->bytes);
     }
-    ctx->ns->n = PROTOCORE_IP_SCOPE_UNSPECIFIED;
+    return PROTOCORE_IP_SCOPE_UNSPECIFIED;
 }
 
 static void ip_classify(struct IpInternal *restrict ctx)
@@ -644,7 +653,7 @@ protocore_ip protocore_ip_from_v4_octets(uint8_t a, uint8_t b, uint8_t c, uint8_
     ip.bytes[1] = b;
     ip.bytes[2] = c;
     ip.bytes[3] = d;
-    ctx->ns->ok = ip;
+    return ip;
 }
 
 protocore_ip protocore_ip_from_v6_bytes(const uint8_t bytes[16])
@@ -652,28 +661,25 @@ protocore_ip protocore_ip_from_v6_bytes(const uint8_t bytes[16])
     protocore_ip ip;
     ip.family = PROTOCORE_IP_V6;
     mem.cpy(ip.bytes, bytes, 16);
-    ctx->ns->ok = ip;
+    return ip;
 }
 
 uint32_t protocore_ip_to_v4_be(const protocore_ip *ip)
 {
     if (!ip)
     {
-        ctx->ns->ok = 0;
-        return;
+        return 0;
     }
     const uint8_t *b = ip->bytes;
     if (ip->family == PROTOCORE_IP_V4)
     {
-        ctx->ns->ok = ((uint32_t)b[0] << 24) | ((uint32_t)b[1] << 16) | ((uint32_t)b[2] << 8) | b[3];
-        return;
+        return ((uint32_t)b[0] << 24) | ((uint32_t)b[1] << 16) | ((uint32_t)b[2] << 8) | b[3];
     }
     if (protocore_ip_is_v4_mapped(ip))
     {
-        ctx->ns->ok = ((uint32_t)b[12] << 24) | ((uint32_t)b[13] << 16) | ((uint32_t)b[14] << 8) | b[15];
-        return;
+        return ((uint32_t)b[12] << 24) | ((uint32_t)b[13] << 16) | ((uint32_t)b[14] << 8) | b[15];
     }
-    ctx->ns->ok = 0;
+    return 0;
 }
 
 static void ip_is_unspecified(struct IpInternal *restrict ctx)
@@ -735,16 +741,6 @@ static void ip_prefix_match(struct IpInternal *restrict ctx)
     }
     ctx->ns->ok = PROTO_TRUE;
 }
-
-/**
- * @brief The address calls - what IpNs points at.
- *
- * @var IpInternal::ns  the handle a caller sets a call's members on
- */
-struct IpInternal
-{
-    IpNs *ns;
-};
 
 static struct IpInternal s_ip = {.ns = &Ip};
 

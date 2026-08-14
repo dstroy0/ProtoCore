@@ -3,21 +3,48 @@
 
 /**
  * @file amqp.h
- * @brief AMQP 0-9-1 frame codec (PROTOCORE_ENABLE_AMQP) - zero-heap frame builder + parser for
- *        the RabbitMQ wire protocol, so a device can be an AMQP client over the shipped
- *        outbound client transport.
+ * @brief AMQP 0-9-1 wire-level framing (PROTOCORE_ENABLE_AMQP): the frames a client builds and the
+ *        frames it reads back, into and out of caller buffers.
  *
- * The connection opens with an 8-octet protocol header (`"AMQP" 0 0 9 1`). After that every
- * frame is:
+ * The governing document is not an IETF RFC. It is "AMQP, Advanced Message Queuing Protocol,
+ * Protocol Specification, Version 0-9-1, 13 November 2008", published by the AMQP Working Group.
+ * Every section number below is that document's. AMQP 1.0 is a separate OASIS Standard (OASIS
+ * Advanced Message Queuing Protocol (AMQP) Version 1.0 Part 2: Transport, OASIS Standard,
+ * 29 October 2012) whose frame carries an 8 octet fixed header and no frame-end octet; nothing
+ * here speaks it.
+ *
+ * Sec 4.2.2, the 8 octets a client opens the connection with:
  * @code
- *   type(1)  channel(2, big-endian)  size(4, big-endian)  payload(size)  frame-end(1)=0xCE
+ *   protocol-header  = literal-AMQP protocol-id protocol-version
+ *   literal-AMQP     = %d65.77.81.80              ; "AMQP"
+ *   protocol-id      = %d0
+ *   protocol-version = %d0.9.1
  * @endcode
- *  - Frame types: 1 METHOD, 2 HEADER (content header), 3 BODY (content body), 8 HEARTBEAT.
- *  - A method frame's payload is `class-id(2) method-id(2)` then the method arguments.
- *  - A heartbeat is type 8 on channel 0 with an empty payload.
  *
- * The builders frame a payload into a caller buffer (fail-closed, validating the 0xCE end on
- * parse); the method arguments are the application's. Frame format per the AMQP 0-9-1 spec.
+ * Sec 2.3.5 and sec 4.2.3, every frame after it, the size field counting the payload alone:
+ * @code
+ *   type(1)  channel(2)  size(4)  payload(size)  frame-end(1)
+ * @endcode
+ * with type an octet, channel and size held high byte first (sec 4.2.5.1 holds every integer in
+ * network byte order), and `frame-end = %xCE` (sec 4.2.1). Sec 4.2.3 states the frame-end octet
+ * MUST always be %xCE and that a peer MUST check it before decoding the frame, which is the check
+ * ::AmqpNs::parse_frame makes.
+ *
+ * Sec 4.2.3 names the four frame types METHOD, HEADER, BODY and HEARTBEAT. Its prose gives
+ * HEARTBEAT as type 4, while the sec 4.2.1 grammar reads `heartbeat = %d8 %d0 %d0 frame-end` and
+ * the specification's own constant table reads `frame-heartbeat = 8`. @ref AMQP_FRAME_HEARTBEAT
+ * takes 8.
+ *
+ * A method payload is `class-id(2) method-id(2)` then the method's arguments (sec 2.3.5.1, sec
+ * 4.2.4). A content header payload is `class-id(2) weight(2) body-size(8) property-flags(2)` then
+ * the property list (sec 4.2.6.1), the weight field unused and zero, the body size the sum of the
+ * body sizes of the content body frames that follow. A heartbeat carries channel 0 and an empty
+ * payload (sec 4.2.7).
+ *
+ * The arguments in a method payload and the property list in a content header are the
+ * application's octets; this module frames them and validates the framing.
+ *
+ * The module exports one symbol, @ref Amqp. Everything in amqp.c has internal linkage.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -32,59 +59,120 @@ PROTOCORE_BEGIN_DECLS
 
 #if PROTOCORE_ENABLE_AMQP
 
-// Frame types (octet 0).
-#define AMQP_FRAME_METHOD 1
-#define AMQP_FRAME_HEADER 2 ///< content header
-#define AMQP_FRAME_BODY 3   ///< content body
-#define AMQP_FRAME_HEARTBEAT 8
+// Frame types, octet 0 of a frame (sec 4.2.3).
+#define AMQP_FRAME_METHOD 1    ///< method frame
+#define AMQP_FRAME_HEADER 2    ///< content header frame
+#define AMQP_FRAME_BODY 3      ///< content body frame
+#define AMQP_FRAME_HEARTBEAT 8 ///< heartbeat frame
 
-#define AMQP_FRAME_END 0xCE   ///< the mandatory frame terminator octet
+#define AMQP_FRAME_END 0xCE   ///< `frame-end = %xCE` (sec 4.2.1)
 #define AMQP_FRAME_OVERHEAD 8 ///< type(1) + channel(2) + size(4) + frame-end(1)
 
-/** @brief Write the 8-octet protocol header ("AMQP" + 0 0 9 1). Returns 8, or 0 on overflow. */
-size_t protocore_amqp_protocol_header(uint8_t *buf, size_t cap);
-
-/** @brief Build a frame: type + channel + size + payload + 0xCE. Returns total octets, or 0. */
-size_t protocore_amqp_build_frame(uint8_t *buf, size_t cap, uint8_t type, uint16_t channel, const uint8_t *payload,
-                                  size_t payload_len);
-
-/** @brief Build a METHOD frame: payload = class-id + method-id + @p args. */
-size_t protocore_amqp_build_method(uint8_t *buf, size_t cap, uint16_t channel, uint16_t class_id, uint16_t method_id,
-                                   const uint8_t *args, size_t args_len);
-
-/**
- * @brief Build a content HEADER frame (type 2) - the frame that follows a Basic.Publish method and precedes
- *        the BODY frame(s). Its payload is `class-id(2) weight(2)=0 body-size(8, big-endian) property-flags(2,
- *        big-endian)` then @p properties (the encoded property list for the set flags; pass none for a plain
- *        publish). @p body_size is the total octet count of the message body across all BODY frames.
- * @return total octets, or 0 on a null @p properties with a nonzero length, or an overflow.
- */
-size_t protocore_amqp_build_content_header(uint8_t *buf, size_t cap, uint16_t channel, uint16_t class_id,
-                                           uint64_t body_size, uint16_t property_flags, const uint8_t *properties,
-                                           size_t properties_len);
-
-/** @brief Build a heartbeat frame (type 8, channel 0, empty payload). Returns 8, or 0. */
-size_t protocore_amqp_build_heartbeat(uint8_t *buf, size_t cap);
-
-/** @brief A parsed frame. @ref payload points INTO the source buffer. */
+/** @brief Where a build writes its frame. */
 typedef struct
 {
-    uint8_t type;
-    uint16_t channel;
-    const uint8_t *payload;
-    size_t payload_len;
-} AmqpFrame;
+    uint8_t *buf; ///< the buffer the octets land in
+    size_t cap;   ///< how many octets it holds
+} AmqpOutArgs;
+
+/** @brief The octets a parse reads, one frame at their head. */
+typedef struct
+{
+    const uint8_t *buf; ///< the first octet of a frame
+    size_t len;         ///< how many octets are buffered from there
+} AmqpInArgs;
+
+/** @brief Sec 4.2.3: the type octet and the channel a frame header carries. */
+typedef struct
+{
+    uint16_t channel; ///< 0 for frames global to the connection, 1..65535 otherwise
+    uint8_t type;     ///< METHOD, HEADER, BODY or HEARTBEAT
+} AmqpFrameArgs;
+
+/** @brief Sec 4.2.3: the payload the size field counts, the frame-end octet excluded. */
+typedef struct
+{
+    const uint8_t *data; ///< the payload octets; a parse points this into @ref AmqpInArgs::buf
+    size_t len;          ///< how many of them there are
+} AmqpPayloadArgs;
+
+/** @brief Sec 4.2.4: a method payload, `class-id method-id *amqp-field`. */
+typedef struct
+{
+    const uint8_t *args; ///< the encoded method arguments
+    size_t args_len;     ///< their octet count
+    uint16_t class_id;   ///< the class the method belongs to
+    uint16_t method_id;  ///< the method within that class
+} AmqpMethodArgs;
+
+/** @brief Sec 4.2.6.1: a content header payload, less the unused weight field. */
+typedef struct
+{
+    uint64_t body_size;           ///< total octets of the content body frames that follow
+    const uint8_t *property_list; ///< the encoded values of the set property flags
+    size_t property_list_len;     ///< their octet count
+    uint16_t class_id;            ///< matches the class-id of the method frame it follows
+    uint16_t property_flags;      ///< bit 15 marks the first property, bit 0 marks a further flags field
+} AmqpContentArgs;
+
+/** @brief The codec's calls and the handle they read, described only in amqp.c. */
+struct AmqpInternal;
 
 /**
- * @brief Parse one frame at the head of [buf, buf+len), validating the 0xCE frame-end.
- * @param consumed receives the full frame length so the caller can advance.
- * @return true on a complete, terminated frame; false if incomplete or the end octet is wrong.
+ * @brief The AMQP 0-9-1 frame codec.
+ *
+ * A caller sets the members a call takes, invokes it through ::Amqp, and reads the outcome off the
+ * same handle. A build reads @c out and writes @c n; a parse reads @c in and writes @c frame,
+ * @c payload and @c consumed. @c payload carries a build's payload in and a parse's payload out, so
+ * a parse_frame of a METHOD frame hands parse_method its payload with nothing to move.
+ *
+ * No slot member: the codec holds no rows, so no call names one.
+ *
+ * @var AmqpNs::out       the buffer a build writes its frame into
+ * @var AmqpNs::in        the octets a parse reads a frame from
+ * @var AmqpNs::frame     the type and channel of the frame (sec 4.2.3)
+ * @var AmqpNs::payload   the payload octets the size field counts (sec 4.2.3)
+ * @var AmqpNs::method    the class-id, method-id and arguments of a method payload (sec 4.2.4)
+ * @var AmqpNs::content   the class-id, body size, property flags and property list of a content
+ *                        header payload (sec 4.2.6.1)
+ * @var AmqpNs::ok        a call's true/false outcome
+ * @var AmqpNs::n         the octets a build wrote, 0 when it wrote none
+ * @var AmqpNs::consumed  the whole frame length a parse read, for advancing over it
+ * @var AmqpNs::protocol_header      write the 8 octet protocol-header "AMQP" 0 0 9 1 (sec 4.2.2)
+ * @var AmqpNs::build_frame          frame @c payload under @c frame.type and @c frame.channel
+ * @var AmqpNs::build_method         frame a METHOD payload from @c method (sec 4.2.4)
+ * @var AmqpNs::build_content_header frame a HEADER payload from @c content, weight 0 (sec 4.2.6.1)
+ * @var AmqpNs::build_heartbeat      frame a heartbeat, channel 0, empty payload (sec 4.2.7)
+ * @var AmqpNs::parse_frame          split one frame off @c in, the %xCE frame-end checked first
+ * @var AmqpNs::parse_method         split @c payload into class-id, method-id and arguments
+ * @var AmqpNs::internal             the calls and the handle they read
  */
-proto_bool protocore_amqp_parse_frame(const uint8_t *buf, size_t len, AmqpFrame *out, size_t *consumed);
+typedef struct
+{
+    AmqpOutArgs out;         ///< where a build writes
+    AmqpInArgs in;           ///< what a parse reads
+    AmqpFrameArgs frame;     ///< the frame header fields
+    AmqpPayloadArgs payload; ///< the framed octets
+    AmqpMethodArgs method;   ///< a method payload's fields
+    AmqpContentArgs content; ///< a content header payload's fields
 
-/** @brief Split a METHOD frame payload into class-id / method-id / arguments. */
-proto_bool protocore_amqp_parse_method(const uint8_t *payload, size_t payload_len, uint16_t *class_id,
-                                       uint16_t *method_id, const uint8_t **args, size_t *args_len);
+    proto_bool ok;
+    size_t n;
+    size_t consumed;
+
+    void (*protocol_header)(struct AmqpInternal *ctx);
+    void (*build_frame)(struct AmqpInternal *ctx);
+    void (*build_method)(struct AmqpInternal *ctx);
+    void (*build_content_header)(struct AmqpInternal *ctx);
+    void (*build_heartbeat)(struct AmqpInternal *ctx);
+    void (*parse_frame)(struct AmqpInternal *ctx);
+    void (*parse_method)(struct AmqpInternal *ctx);
+
+    struct AmqpInternal *internal;
+} AmqpNs;
+
+/** @brief The one symbol this module exports. */
+extern AmqpNs Amqp;
 
 #endif // PROTOCORE_ENABLE_AMQP
 

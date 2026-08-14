@@ -8,7 +8,7 @@
 
 #include "server/core/exc_decoder.h"
 #include "mmgr/membuild.h"         // protocore_sb frame builder
-#include "shared/hex/hex.h" // PROTOCORE_HEX_LOWER - the shared digit table
+#include "shared/hex/hex.h" // PROTOCORE_HEX: the shared digit tables
 
 #if PROTOCORE_ENABLE_EXC_DECODER
 
@@ -28,8 +28,7 @@ static proto_bool hexval(char c, uint8_t *v)
     }
     else
     {
-        ctx->ns->ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     return PROTO_TRUE;
 }
@@ -97,7 +96,7 @@ static void put_hex32(protocore_sb *b, uint32_t v)
     char t[13] = "\"0x00000000\"";
     for (int i = 0; i < 8; i++)
     {
-        t[3 + i] = PROTOCORE_HEX_LOWER[(v >> ((7 - i) * 4)) & 0xF];
+        t[3 + i] = PROTOCORE_HEX.lower[(v >> ((7 - i) * 4)) & 0xF];
     }
     Sb.put(b, t);
 }
@@ -265,9 +264,10 @@ static void exc_parse(struct ExcDecoderInternal *restrict ctx)
     const char *text = ctx->ns->parse_args.text;
     ExcInfo *out = ctx->ns->parse_args.info;
 
+    ctx->ns->ok = PROTO_FALSE;
     if (!text || !out)
     {
-        return PROTO_FALSE;
+        return;
     }
     out->core = -1;
     out->cause[0] = '\0';
@@ -335,7 +335,9 @@ static void exc_json(struct ExcDecoderInternal *restrict ctx)
     Sb.put(&b, "]}");
     if (!b.ok)
     {
-        return 0;
+        out[0] = '\0';
+        ctx->ns->n = 0;
+        return;
     }
     out[b.len] = '\0';
     ctx->ns->n = b.len;

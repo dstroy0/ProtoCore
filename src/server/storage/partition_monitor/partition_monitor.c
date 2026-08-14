@@ -99,8 +99,11 @@ int32_t protocore_partition_json(const protocore_partition_info *parts, uint8_t 
     {
         return 0;
     }
+    // Each arm empties the buffer before reporting 0: a frame that did not fit leaves the document
+    // open, and a caller measuring the buffer instead of reading the count would ship the fragment.
     if (frame.append(out, cap, PART_OPEN, NULL, 0) == 0)
     {
+        out[0] = '\0';
         return 0;
     }
     for (uint8_t i = 0; i < count; i++)
@@ -115,10 +118,16 @@ int32_t protocore_partition_json(const protocore_partition_info *parts, uint8_t 
                                          PROTOCORE_VSTR(p->running ? "true" : "false")},
                 8) == 0)
         {
+            out[0] = '\0';
             return 0;
         }
     }
-    return (int32_t)frame.append(out, cap, PART_CLOSE, NULL, 0);
+    size_t n = frame.append(out, cap, PART_CLOSE, NULL, 0);
+    if (n == 0)
+    {
+        out[0] = '\0';
+    }
+    return (int32_t)n;
 }
 
 #if PROTOCORE_HAS_VENDOR_OTA

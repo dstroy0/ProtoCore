@@ -3,37 +3,104 @@
 
 /**
  * @file protobuf.c
- * @brief Protocol Buffers wire codec (pure, host-tested against spec vectors).
+ * @brief The Protocol Buffers wire format: the record encoder and the record cursor decoder.
+ *
+ * Google's "Encoding" document (https://protobuf.dev/programming-guides/encoding/) governs every
+ * layout here; it is not an IETF document and no RFC number applies. An encode appends a tag varint
+ * then a payload sized by the tag's wire type. A decode reads the tag at the cursor, takes the
+ * payload the wire type calls for, and leaves the cursor past it.
  */
 
 #include "services/iot/protobuf/protobuf.h"
-#include "mmgr/protomem.h"
 
 #if PROTOCORE_NEED_PROTOBUF
 
-void protocore_pb_writer_init(PbWriter *w, uint8_t *buf, size_t cap)
+#include "mmgr/protomem.h" // mem.cpy: the payload octets and the float bit patterns
+#include "mmgr/protostr.h" // str.len: the bounded length of a NUL-terminated LEN payload
+
+// One encoder row: the caller buffer it appends into, how far it has appended, and the sticky flag
+// an overflow sets.
+typedef struct
 {
-    w->buf = buf;
-    w->cap = cap;
-    w->pos = 0;
-    w->error = PROTO_FALSE;
+    uint8_t *buf;
+    size_t cap;
+    size_t pos;
+    proto_bool error;
+} ProtobufWriterRow;
+
+// One decoder row: the encoded octets it walks and the offset it has walked to.
+typedef struct
+{
+    const uint8_t *buf;
+    size_t len;
+    size_t pos;
+} ProtobufReaderRow;
+
+/**
+ * @brief The codec's compile-time storage: the encoder rows and the decoder rows.
+ *
+ * All of it BSS, so an embedded message costs no heap and lands on no task stack.
+ */
+struct ProtobufStorage
+{
+    ProtobufWriterRow writers[PROTOCORE_PROTOBUF_SLOTS]; ///< the rows an encode appends into
+    ProtobufReaderRow readers[PROTOCORE_PROTOBUF_SLOTS]; ///< the rows a decode walks
+};
+
+/**
+ * @brief The codec's rows and the calls that reach them - what ProtobufNs points at.
+ *
+ * @var ProtobufInternal::store  the encoder rows and the decoder rows
+ * @var ProtobufInternal::ns     the handle a caller sets a call's members on
+ */
+struct ProtobufInternal
+{
+    struct ProtobufStorage *store;
+    ProtobufNs *ns;
+};
+
+static struct ProtobufStorage s_store;
+
+static struct ProtobufInternal s_protobuf = {.store = &s_store, .ns = &Protobuf};
+
+// The encoder row ns->slot names, or NULL when the slot is past the pool.
+static ProtobufWriterRow *writer_row(struct ProtobufInternal *restrict ctx)
+{
+    if (ctx->ns->slot >= PROTOCORE_PROTOBUF_SLOTS)
+    {
+        return NULL;
+    }
+    return &ctx->store->writers[ctx->ns->slot];
 }
 
-proto_bool protocore_pb_write_varint(PbWriter *w, uint64_t v)
+// The decoder row ns->slot names, or NULL when the slot is past the pool.
+static ProtobufReaderRow *reader_row(struct ProtobufInternal *restrict ctx)
 {
-    if (w->error)
+    if (ctx->ns->slot >= PROTOCORE_PROTOBUF_SLOTS)
+    {
+        return NULL;
+    }
+    return &ctx->store->readers[ctx->ns->slot];
+}
+
+// Append v as a Base 128 varint: seven payload bits per octet, little-endian, the continuation bit
+// (MSB) set on every octet but the last. Sets the row's sticky error when it does not fit.
+static proto_bool writer_varint(struct ProtobufInternal *restrict ctx, uint64_t v)
+{
+    ProtobufWriterRow *w = writer_row(ctx);
+    if (!w || w->error)
     {
         return PROTO_FALSE;
     }
-    uint8_t tmp[10];
+    uint8_t tmp[PROTOCORE_PROTOBUF_VARINT_MAX];
     size_t n = 0;
     do
     {
-        uint8_t b = (uint8_t)(v & 0x7F); // low 7 bits of payload
+        uint8_t b = (uint8_t)(v & 0x7Fu);
         v >>= 7;
         if (v)
         {
-            b |= 0x80; // high bit = "more bytes follow" (continuation)
+            b |= 0x80u;
         }
         tmp[n++] = b;
     } while (v);
@@ -47,16 +114,11 @@ proto_bool protocore_pb_write_varint(PbWriter *w, uint64_t v)
     return PROTO_TRUE;
 }
 
-proto_bool protocore_pb_write_tag(PbWriter *w, uint32_t field, uint8_t wire_type)
+// Append the low n octets of v, least significant first, the layout I32 and I64 payloads take.
+static proto_bool writer_le(struct ProtobufInternal *restrict ctx, uint64_t v, size_t n)
 {
-    return protocore_pb_write_varint(w,
-                                     ((uint64_t)field << 3) | (wire_type & 0x07)); // tag = field<<3 | wire(low 3 bits)
-}
-
-// Append @p n raw little-endian octets of @p v.
-static proto_bool protocore_pb_write_le(PbWriter *w, uint64_t v, size_t n)
-{
-    if (w->error)
+    ProtobufWriterRow *w = writer_row(ctx);
+    if (!w || w->error)
     {
         return PROTO_FALSE;
     }
@@ -67,63 +129,26 @@ static proto_bool protocore_pb_write_le(PbWriter *w, uint64_t v, size_t n)
     }
     for (size_t i = 0; i < n; i++)
     {
-        w->buf[w->pos++] = (uint8_t)(v >> (8 * i));
+        w->buf[w->pos++] = (uint8_t)(v >> (8u * i));
     }
     return PROTO_TRUE;
 }
 
-proto_bool protocore_pb_uint64(PbWriter *w, uint32_t field, uint64_t v)
+// Append the tag (field_number << 3) | wire_type, the field number coming off ns->tag.
+static proto_bool writer_tag(struct ProtobufInternal *restrict ctx, uint8_t wire_type)
 {
-    return protocore_pb_write_tag(w, field, PB_WT_VARINT) && protocore_pb_write_varint(w, v);
+    return writer_varint(ctx, ((uint64_t)ctx->ns->tag.field_number << 3) | (uint64_t)(wire_type & 0x07u));
 }
 
-proto_bool protocore_pb_int64(PbWriter *w, uint32_t field, int64_t v)
+// Append a LEN record: the tag, the length prefix varint, then len payload octets.
+static proto_bool writer_len(struct ProtobufInternal *restrict ctx, const uint8_t *data, size_t len)
 {
-    return protocore_pb_uint64(w, field, (uint64_t)v); // two's complement; negatives take 10 bytes
-}
-
-proto_bool protocore_pb_sint64(PbWriter *w, uint32_t field, int64_t v)
-{
-    uint64_t zz = ((uint64_t)v << 1) ^ (uint64_t)(v >> 63); // ZigZag
-    return protocore_pb_uint64(w, field, zz);
-}
-
-proto_bool protocore_pb_bool(PbWriter *w, uint32_t field, proto_bool v)
-{
-    return protocore_pb_uint64(w, field, v ? 1 : 0);
-}
-
-proto_bool protocore_pb_fixed32(PbWriter *w, uint32_t field, uint32_t v)
-{
-    return protocore_pb_write_tag(w, field, PB_WT_I32) && protocore_pb_write_le(w, v, 4);
-}
-
-proto_bool protocore_pb_fixed64(PbWriter *w, uint32_t field, uint64_t v)
-{
-    return protocore_pb_write_tag(w, field, PB_WT_I64) && protocore_pb_write_le(w, v, 8);
-}
-
-proto_bool protocore_pb_float(PbWriter *w, uint32_t field, float v)
-{
-    uint32_t bits;
-    mem.cpy(&bits, &v, 4);
-    return protocore_pb_fixed32(w, field, bits);
-}
-
-proto_bool protocore_pb_double(PbWriter *w, uint32_t field, double v)
-{
-    uint64_t bits;
-    mem.cpy(&bits, &v, 8);
-    return protocore_pb_fixed64(w, field, bits);
-}
-
-proto_bool protocore_pb_bytes(PbWriter *w, uint32_t field, const uint8_t *data, size_t len)
-{
-    if (!protocore_pb_write_tag(w, field, PB_WT_LEN) || !protocore_pb_write_varint(w, len))
+    if (!writer_tag(ctx, PROTOCORE_PROTOBUF_WT_LEN) || !writer_varint(ctx, (uint64_t)len))
     {
         return PROTO_FALSE;
     }
-    if (w->error)
+    ProtobufWriterRow *w = writer_row(ctx);
+    if (!w || w->error)
     {
         return PROTO_FALSE;
     }
@@ -141,140 +166,327 @@ proto_bool protocore_pb_bytes(PbWriter *w, uint32_t field, const uint8_t *data, 
     return PROTO_TRUE;
 }
 
-proto_bool protocore_pb_string(PbWriter *w, uint32_t field, const char *s)
+// Decode the Base 128 varint at the row's cursor into *out and advance the cursor past it. False on
+// a truncated varint or one that runs past ten octets.
+static proto_bool reader_varint(struct ProtobufInternal *restrict ctx, uint64_t *out)
 {
-    if (!s)
-    {
-        w->error = PROTO_TRUE;
-        return PROTO_FALSE;
-    }
-    return protocore_pb_bytes(w, field, (const uint8_t *)s, strnlen(s, w->cap + 1));
-}
-
-size_t protocore_pb_writer_finish(PbWriter *w)
-{
-    return w->error ? 0 : w->pos;
-}
-
-proto_bool protocore_pb_read_varint(const uint8_t *buf, size_t len, size_t *pos, uint64_t *out)
-{
-    if (!buf || !pos || !out)
+    ProtobufReaderRow *r = reader_row(ctx);
+    if (!r || !r->buf)
     {
         return PROTO_FALSE;
     }
     uint64_t v = 0;
     size_t shift = 0;
-    size_t i = *pos;
-    for (size_t b = 0; b < 10; b++) // a 64-bit varint is at most 10 bytes
+    size_t i = r->pos;
+    for (size_t b = 0; b < PROTOCORE_PROTOBUF_VARINT_MAX; b++)
     {
-        if (i >= len)
+        if (i >= r->len)
         {
-            return PROTO_FALSE; // truncated
+            return PROTO_FALSE;
         }
-        uint8_t c = buf[i++];
-        v |= (uint64_t)(c & 0x7F) << shift; // accumulate 7 payload bits, little-endian
-        if (!(c & 0x80))                    // continuation bit clear -> last byte
+        uint8_t c = r->buf[i++];
+        v |= (uint64_t)(c & 0x7Fu) << shift;
+        if (!(c & 0x80u))
         {
             *out = v;
-            *pos = i;
+            r->pos = i;
             return PROTO_TRUE;
         }
         shift += 7;
     }
-    return PROTO_FALSE; // overlong / unterminated
+    return PROTO_FALSE;
 }
 
-proto_bool protocore_pb_read_field(const uint8_t *buf, size_t len, size_t *pos, PbField *out)
+// Take n little-endian octets at the row's cursor into *out and advance the cursor past them.
+static proto_bool reader_le(struct ProtobufInternal *restrict ctx, size_t n, uint64_t *out)
 {
-    if (!buf || !pos || !out || *pos >= len)
+    ProtobufReaderRow *r = reader_row(ctx);
+    if (!r || !r->buf || n > r->len - r->pos)
     {
         return PROTO_FALSE;
     }
-    uint64_t tag;
-    if (!protocore_pb_read_varint(buf, len, pos, &tag))
+    uint64_t v = 0;
+    for (size_t i = 0; i < n; i++)
     {
-        return PROTO_FALSE;
+        v |= (uint64_t)r->buf[r->pos + i] << (8u * i);
     }
-    out->field_number = (uint32_t)(tag >> 3); // tag high bits = field number
-    out->wire_type = (uint8_t)(tag & 0x07);   // tag low 3 bits = wire type
-    out->value = 0;
-    out->data = NULL;
-    out->len = 0;
+    r->pos += n;
+    *out = v;
+    return PROTO_TRUE;
+}
 
-    switch (out->wire_type)
+// Seat the named encoder row on ns->writer and empty it.
+static void protobuf_writer_open(struct ProtobufInternal *restrict ctx)
+{
+    ProtobufWriterRow *w = writer_row(ctx);
+    ctx->ns->ok = PROTO_FALSE;
+    if (!w)
     {
-    case PB_WT_VARINT:
-        return protocore_pb_read_varint(buf, len, pos, &out->value);
-    case PB_WT_I64: {
-        if (*pos + 8 > len)
-        {
-            return PROTO_FALSE;
-        }
+        return;
+    }
+    w->buf = ctx->ns->writer.buf;
+    w->cap = ctx->ns->writer.cap;
+    w->pos = 0;
+    w->error = (w->buf == NULL);
+    ctx->ns->ok = !w->error;
+}
+
+// Append ns->value.u64 as a bare Base 128 varint, no tag.
+static void protobuf_write_varint(struct ProtobufInternal *restrict ctx)
+{
+    ctx->ns->ok = writer_varint(ctx, ctx->ns->value.u64);
+}
+
+// Append the tag ns->tag names.
+static void protobuf_write_tag(struct ProtobufInternal *restrict ctx)
+{
+    ctx->ns->ok = writer_tag(ctx, ctx->ns->tag.wire_type);
+}
+
+// Append a VARINT record carrying ns->value.u64.
+static void protobuf_write_uint64(struct ProtobufInternal *restrict ctx)
+{
+    ctx->ns->ok = writer_tag(ctx, PROTOCORE_PROTOBUF_WT_VARINT) && writer_varint(ctx, ctx->ns->value.u64);
+}
+
+// Append a VARINT record carrying ns->value.i64 in two's complement, ten octets when negative.
+static void protobuf_write_int64(struct ProtobufInternal *restrict ctx)
+{
+    ctx->ns->ok = writer_tag(ctx, PROTOCORE_PROTOBUF_WT_VARINT) && writer_varint(ctx, (uint64_t)ctx->ns->value.i64);
+}
+
+// Append a VARINT record carrying ns->value.i64 as ZigZag: (n << 1) ^ (n >> 63).
+static void protobuf_write_sint64(struct ProtobufInternal *restrict ctx)
+{
+    const int64_t v = ctx->ns->value.i64;
+    const uint64_t zz = ((uint64_t)v << 1) ^ (uint64_t)(v >> 63);
+    ctx->ns->ok = writer_tag(ctx, PROTOCORE_PROTOBUF_WT_VARINT) && writer_varint(ctx, zz);
+}
+
+// Append a VARINT record carrying ns->value.flag as 0 or 1.
+static void protobuf_write_bool(struct ProtobufInternal *restrict ctx)
+{
+    ctx->ns->ok = writer_tag(ctx, PROTOCORE_PROTOBUF_WT_VARINT) && writer_varint(ctx, ctx->ns->value.flag ? 1u : 0u);
+}
+
+// Append an I32 record carrying ns->value.u32 in four little-endian octets.
+static void protobuf_write_fixed32(struct ProtobufInternal *restrict ctx)
+{
+    ctx->ns->ok = writer_tag(ctx, PROTOCORE_PROTOBUF_WT_I32) && writer_le(ctx, (uint64_t)ctx->ns->value.u32, 4);
+}
+
+// Append an I64 record carrying ns->value.u64 in eight little-endian octets.
+static void protobuf_write_fixed64(struct ProtobufInternal *restrict ctx)
+{
+    ctx->ns->ok = writer_tag(ctx, PROTOCORE_PROTOBUF_WT_I64) && writer_le(ctx, ctx->ns->value.u64, 8);
+}
+
+// Append an I32 record carrying the four bits-as-octets of ns->value.f32.
+static void protobuf_write_float(struct ProtobufInternal *restrict ctx)
+{
+    uint32_t bits = 0;
+    const float v = ctx->ns->value.f32;
+    mem.cpy(&bits, &v, 4);
+    ctx->ns->ok = writer_tag(ctx, PROTOCORE_PROTOBUF_WT_I32) && writer_le(ctx, (uint64_t)bits, 4);
+}
+
+// Append an I64 record carrying the eight bits-as-octets of ns->value.f64.
+static void protobuf_write_double(struct ProtobufInternal *restrict ctx)
+{
+    uint64_t bits = 0;
+    const double v = ctx->ns->value.f64;
+    mem.cpy(&bits, &v, 8);
+    ctx->ns->ok = writer_tag(ctx, PROTOCORE_PROTOBUF_WT_I64) && writer_le(ctx, bits, 8);
+}
+
+// Append a LEN record carrying ns->value.data for ns->value.len octets.
+static void protobuf_write_bytes(struct ProtobufInternal *restrict ctx)
+{
+    ctx->ns->ok = writer_len(ctx, ctx->ns->value.data, ctx->ns->value.len);
+}
+
+// Append a LEN record carrying ns->value.text up to its NUL, bounded by the row's capacity.
+static void protobuf_write_string(struct ProtobufInternal *restrict ctx)
+{
+    ProtobufWriterRow *w = writer_row(ctx);
+    ctx->ns->ok = PROTO_FALSE;
+    if (!w)
+    {
+        return;
+    }
+    const char *s = ctx->ns->value.text;
+    if (!s)
+    {
+        w->error = PROTO_TRUE;
+        return;
+    }
+    ctx->ns->ok = writer_len(ctx, (const uint8_t *)s, str.len(s, w->cap + 1));
+}
+
+// Report the encoded octet count in ns->n, or 0 when any append overflowed.
+static void protobuf_writer_finish(struct ProtobufInternal *restrict ctx)
+{
+    ProtobufWriterRow *w = writer_row(ctx);
+    ctx->ns->ok = (w != NULL) && !w->error;
+    ctx->ns->n = ctx->ns->ok ? w->pos : 0;
+}
+
+// Seat the named decoder row on ns->source, its cursor at ns->source.pos clamped to the length.
+static void protobuf_reader_open(struct ProtobufInternal *restrict ctx)
+{
+    ProtobufReaderRow *r = reader_row(ctx);
+    ctx->ns->ok = PROTO_FALSE;
+    ctx->ns->n = 0;
+    if (!r)
+    {
+        return;
+    }
+    r->buf = ctx->ns->source.buf;
+    r->len = ctx->ns->source.len;
+    r->pos = (ctx->ns->source.pos < ctx->ns->source.len) ? ctx->ns->source.pos : ctx->ns->source.len;
+    ctx->ns->n = r->pos;
+    ctx->ns->ok = (r->buf != NULL);
+}
+
+// Decode the Base 128 varint at the cursor into ns->u64 and report the offset it landed at.
+static void protobuf_read_varint(struct ProtobufInternal *restrict ctx)
+{
+    uint64_t v = 0;
+    ctx->ns->ok = reader_varint(ctx, &v);
+    ctx->ns->u64 = ctx->ns->ok ? v : 0;
+    ProtobufReaderRow *r = reader_row(ctx);
+    ctx->ns->n = r ? r->pos : 0;
+}
+
+// Decode the record at the cursor into ns->record and leave the cursor past its payload. False at
+// end of buffer, on a truncated payload, and on the deprecated group IDs.
+static void protobuf_read_record(struct ProtobufInternal *restrict ctx)
+{
+    ProtobufReaderRow *r = reader_row(ctx);
+    ctx->ns->ok = PROTO_FALSE;
+    ctx->ns->record.field_number = 0;
+    ctx->ns->record.wire_type = 0;
+    ctx->ns->record.value = 0;
+    ctx->ns->record.data = NULL;
+    ctx->ns->record.len = 0;
+    ctx->ns->n = r ? r->pos : 0;
+    if (!r || !r->buf || r->pos >= r->len)
+    {
+        return;
+    }
+    uint64_t tag = 0;
+    if (!reader_varint(ctx, &tag))
+    {
+        ctx->ns->n = r->pos;
+        return;
+    }
+    ctx->ns->record.field_number = (uint32_t)(tag >> 3);
+    ctx->ns->record.wire_type = (uint8_t)(tag & 0x07u);
+
+    switch (ctx->ns->record.wire_type)
+    {
+    case PROTOCORE_PROTOBUF_WT_VARINT: {
         uint64_t v = 0;
-        for (size_t i = 0; i < 8; i++)
+        if (reader_varint(ctx, &v))
         {
-            v |= (uint64_t)buf[*pos + i] << (8 * i);
+            ctx->ns->record.value = v;
+            ctx->ns->ok = PROTO_TRUE;
         }
-        *pos += 8;
-        out->value = v;
-        return PROTO_TRUE;
+        break;
     }
-    case PB_WT_I32: {
-        if (*pos + 4 > len)
+    case PROTOCORE_PROTOBUF_WT_I64: {
+        uint64_t v = 0;
+        if (reader_le(ctx, 8, &v))
         {
-            return PROTO_FALSE;
+            ctx->ns->record.value = v;
+            ctx->ns->ok = PROTO_TRUE;
         }
-        uint32_t v = 0;
-        for (size_t i = 0; i < 4; i++)
-        {
-            v |= (uint32_t)buf[*pos + i] << (8 * i);
-        }
-        *pos += 4;
-        out->value = v;
-        return PROTO_TRUE;
+        break;
     }
-    case PB_WT_LEN: {
-        uint64_t l;
-        if (!protocore_pb_read_varint(buf, len, pos, &l))
+    case PROTOCORE_PROTOBUF_WT_I32: {
+        uint64_t v = 0;
+        if (reader_le(ctx, 4, &v))
         {
-            return PROTO_FALSE;
+            ctx->ns->record.value = v;
+            ctx->ns->ok = PROTO_TRUE;
         }
-        if (*pos + l > len)
+        break;
+    }
+    case PROTOCORE_PROTOBUF_WT_LEN: {
+        uint64_t l = 0;
+        if (reader_varint(ctx, &l) && l <= (uint64_t)(r->len - r->pos))
         {
-            return PROTO_FALSE; // payload not fully buffered
+            ctx->ns->record.data = r->buf + r->pos;
+            ctx->ns->record.len = (size_t)l;
+            r->pos += (size_t)l;
+            ctx->ns->ok = PROTO_TRUE;
         }
-        out->data = buf + *pos;
-        out->len = (size_t)l;
-        *pos += (size_t)l;
-        return PROTO_TRUE;
+        break;
     }
     default:
-        return PROTO_FALSE; // groups (3/4) / reserved (6/7) are not supported
+        break; // SGROUP and EGROUP are deprecated; the two remaining IDs name nothing
     }
+    ctx->ns->n = r->pos;
 }
 
-int64_t protocore_pb_zigzag64(uint64_t v)
+// Convert the ZigZag varint ns->value.u64 to the sint64 ns->i64: even maps to positive, odd to negative.
+static void protobuf_zigzag64(struct ProtobufInternal *restrict ctx)
 {
-    return (int64_t)(v >> 1) ^ -(int64_t)(v & 1);
+    const uint64_t v = ctx->ns->value.u64;
+    ctx->ns->i64 = (int64_t)(v >> 1) ^ -(int64_t)(v & 1u);
+    ctx->ns->ok = PROTO_TRUE;
 }
 
-int32_t protocore_pb_zigzag32(uint32_t v)
+// Convert the ZigZag varint ns->value.u32 to the sint32 ns->i32: even maps to positive, odd to negative.
+static void protobuf_zigzag32(struct ProtobufInternal *restrict ctx)
 {
-    return (int32_t)(v >> 1) ^ -(int32_t)(v & 1);
+    const uint32_t v = ctx->ns->value.u32;
+    ctx->ns->i32 = (int32_t)(v >> 1) ^ -(int32_t)(v & 1u);
+    ctx->ns->ok = PROTO_TRUE;
 }
 
-float protocore_pb_float_bits(uint32_t bits)
+// Read the I32 bit pattern ns->value.u32 as the float ns->f32.
+static void protobuf_float_bits(struct ProtobufInternal *restrict ctx)
 {
-    float f;
+    const uint32_t bits = ctx->ns->value.u32;
+    float f = 0.0f;
     mem.cpy(&f, &bits, 4);
-    return f;
+    ctx->ns->f32 = f;
+    ctx->ns->ok = PROTO_TRUE;
 }
 
-double protocore_pb_double_bits(uint64_t bits)
+// Read the I64 bit pattern ns->value.u64 as the double ns->f64.
+static void protobuf_double_bits(struct ProtobufInternal *restrict ctx)
 {
-    double d;
+    const uint64_t bits = ctx->ns->value.u64;
+    double d = 0.0;
     mem.cpy(&d, &bits, 8);
-    return d;
+    ctx->ns->f64 = d;
+    ctx->ns->ok = PROTO_TRUE;
 }
+
+// Designated, so a member's position in the struct does not decide what it binds to.
+ProtobufNs Protobuf = {.writer_open = protobuf_writer_open,
+                       .write_varint = protobuf_write_varint,
+                       .write_tag = protobuf_write_tag,
+                       .write_uint64 = protobuf_write_uint64,
+                       .write_int64 = protobuf_write_int64,
+                       .write_sint64 = protobuf_write_sint64,
+                       .write_bool = protobuf_write_bool,
+                       .write_fixed32 = protobuf_write_fixed32,
+                       .write_fixed64 = protobuf_write_fixed64,
+                       .write_float = protobuf_write_float,
+                       .write_double = protobuf_write_double,
+                       .write_bytes = protobuf_write_bytes,
+                       .write_string = protobuf_write_string,
+                       .writer_finish = protobuf_writer_finish,
+                       .reader_open = protobuf_reader_open,
+                       .read_varint = protobuf_read_varint,
+                       .read_record = protobuf_read_record,
+                       .zigzag64 = protobuf_zigzag64,
+                       .zigzag32 = protobuf_zigzag32,
+                       .float_bits = protobuf_float_bits,
+                       .double_bits = protobuf_double_bits,
+                       .internal = &s_protobuf};
 
 #endif // PROTOCORE_NEED_PROTOBUF

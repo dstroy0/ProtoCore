@@ -35,12 +35,22 @@ typedef struct
 } CsrfCtx;
 static CsrfCtx s_csrf = {{0}, 0, 0};
 
+// Lowercase hex of @p n bytes at @p in, plus a NUL, into @p out.
+static void hex_of(const uint8_t *in, uint32_t n, char *out)
+{
+    Hex.args.upper = PROTO_FALSE;
+    Hex.io.in = in;
+    Hex.io.n = n;
+    Hex.io.out = out;
+    Hex.encode(Hex.internal);
+}
+
 // Hex of the truncated HMAC-SHA256(secret, nonce) into sig_hex (2*CSRF_SIG_BYTES + 1).
 static void sign_nonce(uint8_t *work, const CsrfCtx *c, const uint8_t *nonce, size_t nlen, char *sig_hex)
 {
     uint8_t mac[PROTOCORE_HMAC_SHA256_LEN];
     protocore_hmac_sha256(work, c->secret, c->secret_len, nonce, nlen, mac);
-    protocore_hex_encode(mac, CSRF_SIG_BYTES, sig_hex, PROTO_FALSE); // truncate the MAC to CSRF_SIG_BYTES
+    hex_of(mac, CSRF_SIG_BYTES, sig_hex); // truncate the MAC to CSRF_SIG_BYTES
 }
 
 void protocore_csrf_set_secret(const uint8_t *secret, size_t len)
@@ -70,7 +80,7 @@ int protocore_csrf_issue(char *out, size_t cap)
 
     char nhex[CSRF_NONCE_BYTES * 2 + 1];
     char shex[CSRF_SIG_BYTES * 2 + 1];
-    protocore_hex_encode(nonce, CSRF_NONCE_BYTES, nhex, PROTO_FALSE);
+    hex_of(nonce, CSRF_NONCE_BYTES, nhex);
     // One borrow for this token's MAC, returned before the frame is built.
     size_t mark = protocore_secure_mark();
     protocore_span ws = protocore_secure_span(PROTOCORE_HMAC_SHA256_BORROW, _Alignof(uint32_t));
@@ -106,7 +116,12 @@ proto_bool protocore_csrf_verify(const char *token)
     }
 
     uint8_t nonce[CSRF_NONCE_BYTES];
-    if (protocore_hex_decode(token, nhexlen, nonce, sizeof(nonce)) != CSRF_NONCE_BYTES)
+    Hex.io.text = token;
+    Hex.io.n = (uint32_t)nhexlen;
+    Hex.io.bytes = nonce;
+    Hex.io.cap = (uint32_t)sizeof(nonce);
+    Hex.decode(Hex.internal);
+    if (Hex.i32 != CSRF_NONCE_BYTES)
     {
         return PROTO_FALSE;
     }

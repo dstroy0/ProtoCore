@@ -8,6 +8,24 @@ progress). RFC links go to the RFC Editor; others to the issuing body.
 > The per-standard **conformance audit** - the MUST/SHOULD verdict and the evidence backing each entry
 > below - lives in **[AUDIT.md](AUDIT.md)**.
 
+## The specs are cached locally - read them, do not recall them
+
+Grep these before reaching for the network. Both are plain text and searchable.
+
+| what | where | holds |
+| --- | --- | --- |
+| RFC text | `docs/learn/rfc/text/rfcNNNN.txt` | every RFC cited anywhere in `src/` |
+| Part datasheets | `docs/learn/datasheets/<part>.txt` | register maps, field widths, LSB weights, conversion formulas |
+
+`docs/learn/datasheets/README.md` indexes each part, says what the suite needs it for, and links the
+vendor page. A part marked NOT CACHED there is one the vendor would not serve to a script; get it
+yourself or fall back to properties that hold regardless of the register map, and say which you did.
+
+A test expectation comes from one of exactly three places: a value the standard publishes verbatim,
+arithmetic derived from a definition with the derivation written into the comment, or a property
+that must hold whatever the implementation does. Never from running the code under test - that
+enshrines the current behavior, bugs included, and the test then proves nothing.
+
 Status legend: **impl** = implemented in the library - **via mbedTLS** = provided by
 the platform crypto/TLS stack the library binds to - **roadmap** = planned (see
 [ROADMAP.md](ROADMAP.md)) - **ref** = referenced for correctness but obsoleted by a

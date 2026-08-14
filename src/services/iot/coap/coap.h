@@ -3,35 +3,35 @@
 
 /**
  * @file coap.h
- * @brief Zero-heap CoAP server (RFC 7252): message codec + a fixed resource table.
+ * @brief The CoAP server (RFC 7252): the message codec, a fixed resource table, and the UDP binding.
  *
- * The server is split into a pure, host-testable core and an ESP32-only UDP
- * transport (mirroring the SNMP agent's split):
+ * RFC 7252 sec 3 gives the message: a 4-byte header carrying Version (Ver), Type (T), Token Length
+ * (TKL), Code and Message ID, then the Token of TKL bytes, then zero or more Options in TLV form,
+ * then the Payload behind the one-byte Payload Marker 0xFF.
  *
- *  - protocore_coap_server_process() takes a complete request datagram and produces a
- *    complete response datagram in a caller buffer - no sockets, no heap. It is
- *    unit-tested on the host (env:native_coap).
- *  - protocore_coap_server_begin() binds the transport-layer UDP service on :5683
- *    (Arduino only) and feeds received datagrams through protocore_coap_server_process().
+ * A request is answered piggybacked (RFC 7252 sec 5.2.1): a Confirmable request takes an
+ * Acknowledgement carrying the response, a Non-confirmable request takes a Non-confirmable response
+ * (sec 5.2.3). Separate responses (sec 5.2.2) are not produced - a request is answered before its
+ * handler returns - and the server never sends a Confirmable message, so nothing is retransmitted.
  *
- * The message layer uses the piggybacked-response model: a CON request is answered
- * with a piggybacked ACK, a NON request with a NON response. Message de-duplication
- * (RFC 7252 sec 4.5) is implemented - a retransmitted CON is re-answered from a small
- * cache keyed on (source endpoint, Message-ID) WITHOUT re-running its handler, so a
- * client's retransmission cannot execute a non-idempotent request twice (see
- * PROTOCORE_COAP_DEDUP_*). Separate (deferred) responses are a deliberate non-goal (this is
- * a synchronous, in-line server: a request is answered before the handler returns),
- * and there is no CON retransmission because the server never sends a Confirmable
- * message - notifications go out Non-confirmable. The /.well-known/core resource-
- * discovery listing (RFC 6690) is served. The codec understands the Uri-Path,
- * Uri-Query and Content-Format options; other options are skipped. Block-wise transfer
- * (RFC 7959, the Block1/Block2 options) is available under PROTOCORE_ENABLE_COAP_BLOCK;
- * resource observation (RFC 7641) under PROTOCORE_ENABLE_COAP_OBSERVE.
+ * Message deduplication (RFC 7252 sec 4.5) is kept: a Confirmable message repeated within
+ * @ref PROTOCORE_COAP_DEDUP_LIFETIME_MS is recognized by its Message ID and source endpoint and
+ * re-answered from a cache, so the request is processed only once.
  *
- * The resource table is a fixed BSS array of PROTOCORE_COAP_MAX_RESOURCES entries.
- * Register handlers with protocore_coap_server_add_resource(); the path string is
- * referenced by pointer and must outlive the server (point it at flash/static
- * data, like the rest of the library's strings).
+ * Resource discovery is served at "/.well-known/core" in the CoRE Link Format (RFC 6690 sec 4,
+ * sec 2). The codec reads the Uri-Path (11), Content-Format (12) and Uri-Query (15) options
+ * (RFC 7252 sec 5.10); an unrecognized option of class critical answers 4.02 Bad Option and an
+ * elective one is ignored (sec 5.4.1). Block-wise transfer with the Block2 (23) and Block1 (27)
+ * options (RFC 7959 sec 2.1) is compiled in by PROTOCORE_ENABLE_COAP_BLOCK; resource observation
+ * with the Observe (6) option (RFC 7641 sec 2) by PROTOCORE_ENABLE_COAP_OBSERVE.
+ *
+ * The resource table is a fixed array of PROTOCORE_COAP_MAX_RESOURCES rows in storage. A path is
+ * referenced by pointer and must outlive the server.
+ *
+ * The module exports one symbol, @ref Coap. Everything in coap.c has internal linkage.
+ *
+ * @author  Douglas Quigg (dstroy0)
+ * @date    2026
  */
 
 #ifndef PROTOCORE_COAP_H
@@ -43,193 +43,199 @@ PROTOCORE_BEGIN_DECLS
 
 #if PROTOCORE_ENABLE_COAP
 
-// CoAP message types (RFC 7252 §3, the 2-bit T field).
-typedef enum PROTO_ENUM_PACKED
-{
-    COAP_TYPE_CON = 0, ///< Confirmable (answered with a piggybacked ACK).
-    COAP_TYPE_NON = 1, ///< Non-confirmable (answered with a NON response).
-    COAP_TYPE_ACK = 2, ///< Acknowledgement.
-    COAP_TYPE_RST = 3, ///< Reset (rejects a message; sent for a malformed/empty CON).
-} CoapType;
-
-// CoAP request method codes (class 0; the on-wire Code byte's detail field).
-typedef enum PROTO_ENUM_PACKED
-{
-    COAP_GET = 1,
-    COAP_POST = 2,
-    COAP_PUT = 3,
-    COAP_DELETE = 4,
-} CoapMethod;
-
-// Allowed-methods bitmask for protocore_coap_server_add_resource() (bit per method). A mask is OR'd
-// together, so these stay plain integer constants rather than an enum, which would force a cast at
-// every |. The bit position is the CoapMethod ordinal. Parenthesized because a shift binds looser
-// than most operators a caller may combine it with.
-#define COAP_ALLOW_GET (1u << (unsigned)COAP_GET)       ///< 0x02
-#define COAP_ALLOW_POST (1u << (unsigned)COAP_POST)     ///< 0x04
-#define COAP_ALLOW_PUT (1u << (unsigned)COAP_PUT)       ///< 0x08
-#define COAP_ALLOW_DELETE (1u << (unsigned)COAP_DELETE) ///< 0x10
-
-/** @brief Build a CoAP response Code byte from its class and detail (e.g. COAP_CODE(2,5) = 2.05). */
+/** @brief RFC 7252 sec 3 Code: a 3-bit class and a 5-bit detail, written "c.dd". */
 #define COAP_CODE(c, dd) ((uint8_t)(((c) << 5) | ((dd) & 0x1F)))
 
-// Common CoAP response codes (RFC 7252 §5.9; 2.31 / 4.08 / 4.13 from RFC 7959).
+// One bit per Method Code (RFC 7252 sec 12.1.1: GET 0.01, POST 0.02, PUT 0.03, DELETE 0.04), the bit
+// position being the code. OR'd into the mask a resource registers, so they stay integer constants.
+#define COAP_ALLOW_GET (1u << 1)    ///< 0x02, Method Code 0.01
+#define COAP_ALLOW_POST (1u << 2)   ///< 0x04, Method Code 0.02
+#define COAP_ALLOW_PUT (1u << 3)    ///< 0x08, Method Code 0.03
+#define COAP_ALLOW_DELETE (1u << 4) ///< 0x10, Method Code 0.04
+
+/** @brief RFC 7252 sec 3 Type (T), the 2-bit field. */
 typedef enum PROTO_ENUM_PACKED
 {
-    COAP_RSP_CREATED = COAP_CODE(2, 1),            ///< 2.01
-    COAP_RSP_DELETED = COAP_CODE(2, 2),            ///< 2.02
-    COAP_RSP_VALID = COAP_CODE(2, 3),              ///< 2.03
-    COAP_RSP_CHANGED = COAP_CODE(2, 4),            ///< 2.04
-    COAP_RSP_CONTENT = COAP_CODE(2, 5),            ///< 2.05
-    COAP_RSP_CONTINUE = COAP_CODE(2, 31),          ///< 2.31 (block-wise: more Block1 blocks expected)
-    COAP_RSP_BAD_REQUEST = COAP_CODE(4, 0),        ///< 4.00
-    COAP_RSP_BAD_OPTION = COAP_CODE(4, 2),         ///< 4.02
-    COAP_RSP_NOT_FOUND = COAP_CODE(4, 4),          ///< 4.04
-    COAP_RSP_METHOD_NOT_ALLOWED = COAP_CODE(4, 5), ///< 4.05
-    COAP_RSP_NOT_ACCEPTABLE = COAP_CODE(4, 6),     ///< 4.06
-    COAP_RSP_REQUEST_INCOMPLETE = COAP_CODE(4, 8), ///< 4.08 (block-wise: out-of-order / lost Block1)
-    COAP_RSP_REQUEST_TOO_LARGE = COAP_CODE(4, 13), ///< 4.13 (block-wise: reassembly buffer exceeded)
-    COAP_RSP_INTERNAL_ERROR = COAP_CODE(5, 0),     ///< 5.00
-    COAP_RSP_NOT_IMPLEMENTED = COAP_CODE(5, 1),    ///< 5.01
+    COAP_TYPE_CON = 0, ///< Confirmable
+    COAP_TYPE_NON = 1, ///< Non-confirmable
+    COAP_TYPE_ACK = 2, ///< Acknowledgement
+    COAP_TYPE_RST = 3, ///< Reset
+} CoapType;
+
+/** @brief RFC 7252 sec 12.1.1 Method Codes, the detail of a class-0 Code byte. */
+typedef enum PROTO_ENUM_PACKED
+{
+    COAP_GET = 1,    ///< 0.01 GET (RFC 7252 sec 5.8.1)
+    COAP_POST = 2,   ///< 0.02 POST (sec 5.8.2)
+    COAP_PUT = 3,    ///< 0.03 PUT (sec 5.8.3)
+    COAP_DELETE = 4, ///< 0.04 DELETE (sec 5.8.4)
+} CoapMethod;
+
+/** @brief RFC 7252 sec 5.9 Response Codes, plus the three RFC 7959 sec 2.9 adds. */
+typedef enum PROTO_ENUM_PACKED
+{
+    COAP_RSP_CREATED = COAP_CODE(2, 1),                   ///< 2.01 Created
+    COAP_RSP_DELETED = COAP_CODE(2, 2),                   ///< 2.02 Deleted
+    COAP_RSP_VALID = COAP_CODE(2, 3),                     ///< 2.03 Valid
+    COAP_RSP_CHANGED = COAP_CODE(2, 4),                   ///< 2.04 Changed
+    COAP_RSP_CONTENT = COAP_CODE(2, 5),                   ///< 2.05 Content
+    COAP_RSP_CONTINUE = COAP_CODE(2, 31),                 ///< 2.31 Continue (RFC 7959 sec 2.9.1)
+    COAP_RSP_BAD_REQUEST = COAP_CODE(4, 0),               ///< 4.00 Bad Request
+    COAP_RSP_BAD_OPTION = COAP_CODE(4, 2),                ///< 4.02 Bad Option
+    COAP_RSP_NOT_FOUND = COAP_CODE(4, 4),                 ///< 4.04 Not Found
+    COAP_RSP_METHOD_NOT_ALLOWED = COAP_CODE(4, 5),        ///< 4.05 Method Not Allowed
+    COAP_RSP_NOT_ACCEPTABLE = COAP_CODE(4, 6),            ///< 4.06 Not Acceptable
+    COAP_RSP_REQUEST_ENTITY_INCOMPLETE = COAP_CODE(4, 8), ///< 4.08 Request Entity Incomplete (RFC 7959 sec 2.9.2)
+    COAP_RSP_REQUEST_ENTITY_TOO_LARGE = COAP_CODE(4, 13), ///< 4.13 Request Entity Too Large (RFC 7959 sec 2.9.3)
+    COAP_RSP_INTERNAL_SERVER_ERROR = COAP_CODE(5, 0),     ///< 5.00 Internal Server Error
+    COAP_RSP_NOT_IMPLEMENTED = COAP_CODE(5, 1),           ///< 5.01 Not Implemented
 } CoapResponseCode;
 
-// CoAP Content-Format identifiers (RFC 7252 §12.3). COAP_CF_NONE means "absent".
+/** @brief CoAP Content-Formats (RFC 7252 sec 12.3 Table 9; 60 from the IANA sub-registry, RFC 8949). */
 typedef enum PROTO_ENUM_PACKED
 {
     COAP_CF_TEXT = 0,      ///< text/plain;charset=utf-8
-    COAP_CF_LINK = 40,     ///< application/link-format
+    COAP_CF_LINK = 40,     ///< application/link-format (RFC 6690)
     COAP_CF_XML = 41,      ///< application/xml
     COAP_CF_OCTET = 42,    ///< application/octet-stream
     COAP_CF_JSON = 50,     ///< application/json
-    COAP_CF_CBOR = 60,     ///< application/cbor
-    COAP_CF_NONE = 0xFFFF, ///< no Content-Format option present / emitted
+    COAP_CF_CBOR = 60,     ///< application/cbor (RFC 8949)
+    COAP_CF_NONE = 0xFFFF, ///< no Content-Format option present or emitted
 } CoapContentFormat;
 
 /**
- * @brief A decoded CoAP request handed to a resource handler.
+ * @brief A decoded request handed to a resource handler.
  *
- * All pointers reference transport- or library-owned scratch valid only for the
- * duration of the handler call; copy out anything you need to keep.
+ * Every pointer references scratch that lives for the handler call. Copy out what outlives it.
  */
 typedef struct
 {
-    CoapMethod method;                ///< COAP_GET / COAP_POST / COAP_PUT / COAP_DELETE.
-    const char *path;                 ///< reconstructed Uri-Path, e.g. "/temp" (always begins with '/').
-    const char *query;                ///< reconstructed Uri-Query (segments joined by '&'), or "" if none.
-    const uint8_t *payload;           ///< request payload bytes (may be nullptr if payload_len == 0).
-    size_t payload_len;               ///< request payload length in bytes.
-    CoapContentFormat content_format; ///< request Content-Format, or COAP_CF_NONE if absent.
+    CoapMethod method;                ///< the Method Code the request carries
+    const char *path;                 ///< the Uri-Path segments rejoined, leading '/' included
+    const char *query;                ///< the Uri-Query segments rejoined by '&', or "" when absent
+    const uint8_t *payload;           ///< the request payload, NULL when payload_len is 0
+    size_t payload_len;               ///< its length in bytes
+    CoapContentFormat content_format; ///< the request's Content-Format, or COAP_CF_NONE
 } CoapRequest;
 
 /**
- * @brief A response a resource handler fills in.
+ * @brief The response a resource handler fills in.
  *
- * @p code defaults to 2.05 Content; set it to another CoapResponseCode as
- * appropriate. Write the response body into @p payload (capacity @p payload_cap)
- * and set @p payload_len. Set @p content_format to describe the body, or leave it
- * COAP_CF_NONE for an empty/typeless response.
+ * @c code starts at 2.05 Content. The body goes into @c payload within @c payload_cap, with
+ * @c payload_len set to what was written and @c content_format naming its format.
  */
 typedef struct
 {
-    uint8_t code;                     ///< response Code byte (see CoapResponseCode); defaults to COAP_RSP_CONTENT.
-    CoapContentFormat content_format; ///< COAP_CF_* describing the body, or COAP_CF_NONE.
-    uint8_t *payload;                 ///< caller-provided buffer to write the response body into.
-    size_t payload_cap;               ///< capacity of @p payload in bytes.
-    size_t payload_len;               ///< bytes written by the handler (0 = empty body).
+    uint8_t code;                     ///< the Response Code byte, a ::CoapResponseCode
+    CoapContentFormat content_format; ///< what the body is, or COAP_CF_NONE
+    uint8_t *payload;                 ///< where the handler writes the body
+    size_t payload_cap;               ///< how much room that has
+    size_t payload_len;               ///< how much it wrote
 } CoapResponse;
 
 /** @brief Resource handler: read @p req, fill @p resp. */
 typedef void (*CoapHandler)(const CoapRequest *req, CoapResponse *resp);
 
-// ---------------------------------------------------------------------------
-// Server configuration / resource registration
-// ---------------------------------------------------------------------------
+/** @brief One row of the resource table: a path, the methods it answers, and what answers them. */
+typedef struct
+{
+    const char *path;    ///< the Uri-Path it is reached at, referenced by pointer and not copied
+    uint8_t methods;     ///< the Method Codes it answers, as COAP_ALLOW_* bits
+    CoapHandler handler; ///< what an allowed method on that path dispatches to
+} CoapResourceArgs;
 
-/** @brief Reset the server and clear the resource table. Call before registering resources. */
-void protocore_coap_server_reset();
+/** @brief RFC 7252 sec 3: one request datagram in, one response datagram out. */
+typedef struct
+{
+    const uint8_t *req; ///< the request datagram's octets
+    size_t req_len;     ///< how many
+    uint8_t *resp;      ///< where the response datagram is built
+    size_t resp_cap;    ///< how much room that has
+} CoapMessageArgs;
+
+/** @brief RFC 7641: the Observe option a response carries, and the resource a notification renders. */
+typedef struct
+{
+    int32_t seq;      ///< the sequence number a 2.xx notification carries (sec 4.4); below 0 omits the option
+    const char *path; ///< the resource a notification re-renders (sec 4.2)
+} CoapObserveArgs;
+
+/** @brief RFC 7252 sec 4.5: the exchange a deduplication entry is keyed by, and what it caches. */
+typedef struct
+{
+    const char *src_ip;  ///< the source endpoint's address, as text
+    uint16_t src_port;   ///< its port
+    uint16_t mid;        ///< the Message ID that endpoint sent
+    const uint8_t *resp; ///< the response a store caches for it
+    size_t resp_len;     ///< how many octets that is
+} CoapExchangeArgs;
+
+/** @brief The UDP endpoint the server receives on (RFC 7252 sec 12.6: port 5683, service "coap"). */
+typedef struct
+{
+    uint16_t port; ///< the port a begin binds
+} CoapBindArgs;
+
+/** @brief The server's own state and the calls that reach it, described only in coap.c. */
+struct CoapInternal;
 
 /**
- * @brief Register a resource at @p path served by @p handler.
+ * @brief The CoAP server.
  *
- * @param path     resource path beginning with '/' (referenced by pointer, not copied).
- * @param methods  allowed-methods bitmask (e.g. CoapMethodMask::COAP_ALLOW_GET | CoapMethodMask::COAP_ALLOW_PUT); a
- * request using a method not in the mask is answered 4.05 Method Not Allowed.
- * @param handler  invoked for an allowed method on a matching path.
- * @return false if the table is full.
- */
-proto_bool protocore_coap_server_add_resource(const char *path, uint8_t methods, CoapHandler handler);
-
-// ---------------------------------------------------------------------------
-// Core processing (host-testable; no sockets, no heap)
-// ---------------------------------------------------------------------------
-
-/**
- * @brief Process one CoAP request datagram and build the response datagram.
+ * A caller sets the members a call takes, invokes it through ::Coap, and reads the outcome off the
+ * same handle.
  *
- * Parses the message, reconstructs the Uri-Path/Uri-Query, dispatches against the
- * resource table, and encodes a piggybacked response (ACK for CON, NON for NON).
- * A malformed or unsupported-version CON is answered with an RST; a malformed NON
- * (or any ACK/RST received) yields no response.
+ * No slot member: one server owns one resource table, and each call names its own subject inside its
+ * own argument group, so no member is common to all of them.
  *
- * @param req      request datagram bytes.
- * @param req_len  number of bytes in @p req.
- * @param resp     destination buffer for the response datagram.
- * @param protocore_resp_cap capacity of @p resp.
- * @return number of response bytes written, or 0 to send nothing.
+ * @var CoapNs::resource  the row an add registers
+ * @var CoapNs::msg       the request datagram a process reads and the response it writes
+ * @var CoapNs::observe   the Observe sequence a response carries and the resource a notify renders
+ * @var CoapNs::exchange  the endpoint and Message ID a deduplication entry is keyed by
+ * @var CoapNs::bind      the UDP port a begin binds
+ * @var CoapNs::ok        a call's true/false outcome
+ * @var CoapNs::n         the octets a call produced: the response datagram's length, or a cached response's
+ * @var CoapNs::bytes     the cached response a deduplication lookup reports, NULL on a miss
+ * @var CoapNs::reset          empty the resource table and every cache
+ * @var CoapNs::add_resource   register @c resource, reporting false when the table is full
+ * @var CoapNs::process        answer one request datagram, emitting no Observe option
+ * @var CoapNs::process_observe  the same, carrying @c observe.seq in a 2.xx response (RFC 7641 sec 4.2)
+ * @var CoapNs::dedup_lookup   report the response already sent for @c exchange (RFC 7252 sec 4.5)
+ * @var CoapNs::dedup_store    cache the response sent for @c exchange so a repeat is answered from it
+ * @var CoapNs::begin          bind @c bind.port and route its datagrams into the server
+ * @var CoapNs::notify         send the current representation of @c observe.path to every observer
+ * @var CoapNs::internal       the server's state and the calls that reach it
  */
-size_t protocore_coap_server_process(const uint8_t *req, size_t req_len, uint8_t *resp, size_t protocore_resp_cap);
+typedef struct
+{
+    CoapResourceArgs resource; ///< what registering a resource takes
+    CoapMessageArgs msg;       ///< what answering one datagram takes
+    CoapObserveArgs observe;   ///< what the Observe option carries
+    CoapExchangeArgs exchange; ///< what a deduplication entry is keyed by
+    CoapBindArgs bind;         ///< what binding the receive port takes
 
-/**
- * @brief Like protocore_coap_server_process(), but include an Observe option (RFC 7641) in
- *        a successful (2.xx) response carrying the notification sequence
- *        @p observe_seq (a value < 0 omits it). Used by the Observe transport.
- */
-size_t protocore_coap_server_process_ex(const uint8_t *req, size_t req_len, uint8_t *resp, size_t protocore_resp_cap,
-                                        int32_t observe_seq);
+    proto_bool ok;
+    size_t n;
+    const uint8_t *bytes;
 
+    void (*reset)(struct CoapInternal *ctx);
+    void (*add_resource)(struct CoapInternal *ctx);
+    void (*process)(struct CoapInternal *ctx);
+    void (*process_observe)(struct CoapInternal *ctx);
 #if PROTOCORE_COAP_DEDUP_ENTRIES > 0
-/**
- * @brief Message de-duplication lookup (RFC 7252 sec 4.5). If a Confirmable request from @p src_ip :
- *        @p src_port with Message-ID @p mid was answered within PROTOCORE_COAP_DEDUP_LIFETIME_MS, report its
- *        cached response so the transport can resend it without re-running the handler.
- * @return true and (on non-null out params) the cached response bytes + length; false on a miss.
- */
-proto_bool protocore_coap_dedup_lookup(const char *src_ip, uint16_t src_port, uint16_t mid, const uint8_t **out,
-                                       size_t *out_len);
-
-/**
- * @brief Record the response sent for a Confirmable (@p src_ip : @p src_port, @p mid) exchange so a later
- *        retransmission is deduplicated. A response longer than PROTOCORE_COAP_DEDUP_RESP_MAX is not cached.
- */
-void protocore_coap_dedup_store(const char *src_ip, uint16_t src_port, uint16_t mid, const uint8_t *resp, size_t len);
+    void (*dedup_lookup)(struct CoapInternal *ctx);
+    void (*dedup_store)(struct CoapInternal *ctx);
 #endif
-
-// ---------------------------------------------------------------------------
-// UDP transport (binds via the transport-layer UDP service; no-op on host)
-// ---------------------------------------------------------------------------
-
-/**
- * @brief Bind the server to UDP @p port (5683 is the RFC 7252 default) via the transport-layer
- *        UDP service.
- *
- * Callback-driven (no per-loop servicing). Call after WiFi is up. On non-Arduino
- * builds Udp.listener->listen() is a stub, so the core remains host-testable.
- */
-void protocore_coap_server_begin(uint16_t port);
-
+    void (*begin)(struct CoapInternal *ctx);
 #if PROTOCORE_ENABLE_COAP_OBSERVE
-/**
- * @brief Push a notification to every observer of @p path (RFC 7641).
- *
- * Re-renders the resource (invokes its GET handler) and sends the current
- * representation as a CoAP notification - from the bound server port, carrying
- * each observer's token and an increasing Observe sequence. Call this whenever the
- * resource's state changes. A send failure drops that observer. No-op on a host
- * build. A client registers by sending a GET with the Observe option (0); it
- * deregisters with Observe (1), a Reset, or by going away.
- */
-void protocore_coap_notify(const char *path);
+    void (*notify)(struct CoapInternal *ctx);
 #endif
+
+    struct CoapInternal *internal;
+} CoapNs;
+
+/** @brief The one symbol this module exports. */
+extern CoapNs Coap;
 
 #endif // PROTOCORE_ENABLE_COAP
 

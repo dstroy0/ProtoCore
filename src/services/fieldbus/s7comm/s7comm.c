@@ -187,7 +187,8 @@ proto_bool protocore_s7_parse_header(const uint8_t *buf, size_t len, S7Header *o
     out->data_len = get16(buf + 8);
     out->error_class = 0;
     out->error_code = 0;
-    out->header_len = (out->rosctr == S7_ROSCTR_ACK_DATA) ? 12 : 10; // Ack_Data adds a 2-octet error code
+    // A response ROSCTR (Ack or Ack_Data) carries an error class + error code after the lengths.
+    out->header_len = (out->rosctr == S7_ROSCTR_ACK || out->rosctr == S7_ROSCTR_ACK_DATA) ? 12 : 10;
     if (out->header_len == 12)
     {
         if (len < 12)

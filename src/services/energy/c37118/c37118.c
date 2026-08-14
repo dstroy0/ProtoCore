@@ -17,7 +17,11 @@
 uint16_t protocore_c37118_crc(const uint8_t *data, size_t len)
 {
     // IEEE C37.118 uses CRC-CCITT (poly 0x1021, init 0xFFFF, unreflected), cataloged as CRC-16/IBM-3740.
-    return (uint16_t)protocore_crc(&PROTOCORE_CRC16_IBM_3740, data, len);
+    Crc.args.params = &PROTOCORE_CRC16_IBM_3740;
+    Crc.args.data = data;
+    Crc.args.len = len;
+    Crc.compute(Crc.internal);
+    return (uint16_t)Crc.value;
 }
 
 size_t protocore_c37118_build_frame(uint8_t *buf, size_t cap, uint8_t type, uint8_t version, uint16_t idcode, uint32_t soc,

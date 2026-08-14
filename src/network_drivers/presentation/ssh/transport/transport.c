@@ -1552,7 +1552,7 @@ void ssh_kex_generate(struct SshTransportInternal *restrict ctx)
         ctx->ns->i32 = -1;
         return;
     }
-    return ssh_dh_generate(i);
+    ctx->ns->i32 = ssh_dh_generate(i);
 }
 
 #if PROTOCORE_ENABLE_PQC_KEX
@@ -1837,10 +1837,21 @@ void ssh_kexdh_handle(struct SshTransportInternal *restrict ctx)
 
     // 3. Exchange hash H (SHA-256 or SHA-512 per the KEX method); capture the session id on first KEX.
     const proto_bool is512 = ssh_kex_is_sha512(s->kex_alg);
-    uint8_t H[SSH_KEXHASH_MAX_LEN];
-    size_t h_len = 0;
-    ssh_kex_exchange_hash(i, pub_is_string, cpub_p, cpub_len, spub_p, spub_len, k_hash, k_hash_len, ks, ks_len, H,
-                          &h_len, k_is_string, is512);
+    ctx->ns->slot = i;
+    ctx->ns->kexhash.pub_is_string = pub_is_string;
+    ctx->ns->kexhash.cpub = cpub_p;
+    ctx->ns->kexhash.cpub_len = cpub_len;
+    ctx->ns->kexhash.spub = spub_p;
+    ctx->ns->kexhash.spub_len = spub_len;
+    ctx->ns->kexhash.k_be = k_hash;
+    ctx->ns->kexhash.k_len = k_hash_len;
+    ctx->ns->kexhash.ks = ks;
+    ctx->ns->kexhash.ks_len = ks_len;
+    ctx->ns->kexhash.k_is_string = k_is_string;
+    ctx->ns->kexhash.is512 = is512;
+    ssh_kex_exchange_hash(ctx);
+    uint8_t *const H = ctx->ns->kexhash.hash;
+    const size_t h_len = ctx->ns->kexhash.hash_len;
     ssh_session_id_latch(i, H, h_len);
 
     // 4. Sign H with the negotiated host key (rsa-sha2-512/256 or ssh-ed25519).
@@ -1948,7 +1959,8 @@ void ssh_newkeys_complete(struct SshTransportInternal *restrict ctx)
     // is already authenticated, so resume the open (channel) phase.
     ssh_phase_newkeys_done(i);
     // Reset the re-key timer: the volume/time budget is measured from this completed KEX.
-    ssh_sess[i].last_kex_ms = protocore_millis();
+    Clock.millis(Clock.internal);
+    ssh_sess[i].last_kex_ms = Clock.ms;
     ctx->ns->i32 = 0;
         return;
 }
@@ -1986,14 +1998,21 @@ void ssh_transport_begin_rekey(struct SshTransportInternal *restrict ctx)
         return;
     }
     // Fresh server KEXINIT (re-stores I_S for the new exchange hash).
-    if (ssh_kexinit_build(i, out, out_len, cap) != 0)
+    ctx->ns->slot = i;
+    ctx->ns->out_args.out = out;
+    ctx->ns->out_args.cap = cap;
+    ssh_kexinit_build(ctx);
+    *out_len = ctx->ns->out_args.out_len;
+    if (ctx->ns->i32 != 0)
     {
         ctx->ns->i32 = -1;
         return;
     }
     // New ephemeral for forward secrecy across the re-key (re-generated for the finally
     // negotiated method once the peer's KEXINIT arrives; see the KEXINIT dispatch).
-    if (ssh_kex_generate(i) != 0)
+    ctx->ns->slot = i;
+    ssh_kex_generate(ctx);
+    if (ctx->ns->i32 != 0)
     {
         ctx->ns->i32 = -1;
         return;
@@ -3264,26 +3283,6 @@ SshDhState ssh_dh[MAX_SSH_CONNS];
 // ---------------------------------------------------------------------------
 
 // All SSH server-layer state, owned by one instance (internal linkage): the packet-emit
-// callback. One named owner, unreachable from any other translation unit.
-typedef struct
-{
-    SshEmitCb emit_cb;
-} SshEmitCtx;
-static SshEmitCtx s_emit;
-
-void ssh_set_emit_cb(SshEmitCb cb)
-{
-    s_emit.emit_cb = cb;
-}
-
-void ssh_emit(uint8_t i, const uint8_t *p, size_t n)
-{
-    if (s_emit.emit_cb && n > 0)
-    {
-        s_emit.emit_cb(i, p, n);
-    }
-}
-
 // Build and emit SSH_MSG_DISCONNECT("too many authentication failures") - the reason code, the
 // description string, and an empty language tag (RFC 4253 §11.1) - then the caller closes.
 // RFC 4253 sec 11.1: byte SSH_MSG_DISCONNECT, uint32 reason code, string description, string
@@ -3359,7 +3358,11 @@ int ssh_transport_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
     case SSH_MSG_KEXINIT:
         // Initial KEX or an in-session re-key request. Negotiate, reply with our own KEXINIT unless
         // this one already was the reply to ours, generate a fresh ephemeral, and await KEXDH_INIT.
-        if (SSH_TRANSPORT->kexinit_parse(i, payload, len) != 0)
+        s_sshtr.ns->slot = i;
+        s_sshtr.ns->pkt.payload = payload;
+        s_sshtr.ns->pkt.len = len;
+        ssh_kexinit_parse(&s_sshtr);
+        if (s_sshtr.ns->i32 != 0)
         {
             protocore_plaintext_release(mark);
             return -1;
@@ -3369,7 +3372,9 @@ int ssh_transport_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
         // and rebuild I_S with a fresh cookie after the peer has hashed the old one.
         if (!ssh_kexinit_needs_reply(i))
         {
-            if (SSH_TRANSPORT->kex_generate(i) != 0)
+            s_sshtr.ns->slot = i;
+            ssh_kex_generate(&s_sshtr);
+            if (s_sshtr.ns->i32 != 0)
             {
                 protocore_plaintext_release(mark);
                 return -1;
@@ -3377,13 +3382,23 @@ int ssh_transport_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
             protocore_plaintext_release(mark);
             return 0;
         }
-        if (SSH_TRANSPORT->kexinit_build(i, reply.buf, &n, reply.cap) != 0)
+        s_sshtr.ns->slot = i;
+        s_sshtr.ns->out_args.out = reply.buf;
+        s_sshtr.ns->out_args.cap = reply.cap;
+        ssh_kexinit_build(&s_sshtr);
+        n = s_sshtr.ns->out_args.out_len;
+        if (s_sshtr.ns->i32 != 0)
         {
             protocore_plaintext_release(mark);
             return -1;
         }
-        SshNetwork.emit(i, reply.buf, n);
-        if (SSH_TRANSPORT->kex_generate(i) != 0)
+        SshNetwork.ssh_slot = i;
+        SshNetwork.msg.payload = reply.buf;
+        SshNetwork.msg.len = n;
+        SshNetwork.emit(SshNetwork.internal);
+        s_sshtr.ns->slot = i;
+        ssh_kex_generate(&s_sshtr);
+        if (s_sshtr.ns->i32 != 0)
         {
             protocore_plaintext_release(mark);
             return -1;
@@ -3405,16 +3420,30 @@ int ssh_transport_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
             protocore_plaintext_release(mark);
             return 0;
         }
-        if (SSH_TRANSPORT->kexdh_reply(i, payload, len, reply.buf, &n, reply.cap) != 0)
+        s_sshtr.ns->slot = i;
+        s_sshtr.ns->pkt.payload = payload;
+        s_sshtr.ns->pkt.len = len;
+        s_sshtr.ns->out_args.out = reply.buf;
+        s_sshtr.ns->out_args.cap = reply.cap;
+        ssh_kexdh_handle(&s_sshtr);
+        n = s_sshtr.ns->out_args.out_len;
+        if (s_sshtr.ns->i32 != 0)
         {
             protocore_plaintext_release(mark);
             return -1;
         }
-        SshNetwork.emit(i, reply.buf, n); // KEXDH_REPLY
+        SshNetwork.ssh_slot = i;
+        SshNetwork.msg.payload = reply.buf;
+        SshNetwork.msg.len = n;
+        SshNetwork.emit(SshNetwork.internal); // KEXDH_REPLY
         {
             uint8_t newkeys = SSH_MSG_NEWKEYS;
-            SshNetwork.emit(i, &newkeys, 1);           // server NEWKEYS (this one still goes out unencrypted)
-            SSH_TRANSPORT->newkeys_sent(i); // ...but our outbound is encrypted from the next packet on
+            SshNetwork.ssh_slot = i;
+            SshNetwork.msg.payload = &newkeys;
+            SshNetwork.msg.len = 1;
+            SshNetwork.emit(SshNetwork.internal);           // server NEWKEYS (this one still goes out unencrypted)
+            s_sshtr.ns->slot = i;
+            ssh_newkeys_sent(&s_sshtr); // ...but our outbound is encrypted from the next packet on
         }
         protocore_plaintext_release(mark);
         return 0; // ssh_kexdh_handle advanced phase to NEWKEYS
@@ -3422,7 +3451,9 @@ int ssh_transport_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
     case SSH_MSG_NEWKEYS:
         // RFC 4253 sec 7.3: a NEWKEYS that ends no key exchange is a protocol error, so the
         // connection goes down rather than switching keys.
-        if (SSH_TRANSPORT->newkeys_complete(i) != 0) // activate encryption; → SERVICE or OPEN
+        s_sshtr.ns->slot = i;
+        ssh_newkeys_complete(&s_sshtr);
+        if (s_sshtr.ns->i32 != 0) // activate encryption; → SERVICE or OPEN
         {
             protocore_plaintext_release(mark);
             return -1;
@@ -3437,7 +3468,10 @@ int ssh_transport_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
         if (s->ext_info_enabled && !s->ext_info_sent && ssh_extinfo_build(reply.buf, &n, reply.cap) == 0)
         {
             s->ext_info_sent = PROTO_TRUE;
-            SshNetwork.emit(i, reply.buf, n); // fail: EXT_INFO is ~90 bytes and buf is SSH_PKT_BUF_SIZE
+            SshNetwork.ssh_slot = i;
+            SshNetwork.msg.payload = reply.buf;
+            SshNetwork.msg.len = n;
+            SshNetwork.emit(SshNetwork.internal); // fail: EXT_INFO is ~90 bytes and buf is SSH_PKT_BUF_SIZE
         }
         protocore_plaintext_release(mark);
         return 0;
@@ -3465,12 +3499,18 @@ int ssh_transport_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
             if (ssh_pkt_build_disconnect(SSH_DISCONNECT_SERVICE_NOT_AVAILABLE, desc, sizeof(desc) - 1, reply.buf, &dn,
                                          reply.cap) == 0)
             {
-                SshNetwork.emit(i, reply.buf, dn);
+                SshNetwork.ssh_slot = i;
+                SshNetwork.msg.payload = reply.buf;
+                SshNetwork.msg.len = dn;
+                SshNetwork.emit(SshNetwork.internal);
             }
             protocore_plaintext_release(mark);
             return -1;
         }
-        SshNetwork.emit(i, reply.buf, n);
+        SshNetwork.ssh_slot = i;
+        SshNetwork.msg.payload = reply.buf;
+        SshNetwork.msg.len = n;
+        SshNetwork.emit(SshNetwork.internal);
         ssh_phase_service_done(i);
         protocore_plaintext_release(mark);
         return 0;
@@ -3479,7 +3519,13 @@ int ssh_transport_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
         break;
     }
     protocore_plaintext_release(mark);
-    return ssh_auth_dispatch(i, msg_type, payload, len); // 50 and above are not ours
+    // 50 and above are not ours: sec 6 hands them to the authentication protocol.
+    SshAuth.slot = i;
+    SshAuth.msg_type = msg_type;
+    SshAuth.msg.payload = payload;
+    SshAuth.msg.len = len;
+    SshAuth.dispatch(SshAuth.internal);
+    return SshAuth.i32;
 }
 
 // ---------------------------------------------------------------------------
@@ -3828,18 +3874,35 @@ void ssh_transport_key_re_exchange(uint8_t i)
     {
         return;
     }
-    uint32_t elapsed = protocore_millis() - s->last_kex_ms;
-    if (!SSH_TRANSPORT->rekey_due(ssh_pkt[i].seq_no_send, ssh_pkt[i].seq_no_recv, elapsed, SSH_REKEY_PACKET_THRESHOLD,
-                                  SSH_REKEY_TIME_MS))
+    Clock.millis(Clock.internal);
+    uint32_t elapsed = Clock.ms - s->last_kex_ms;
+    s_sshtr.ns->rekey.seq_send = ssh_pkt[i].seq_no_send;
+    s_sshtr.ns->rekey.seq_recv = ssh_pkt[i].seq_no_recv;
+    s_sshtr.ns->rekey.elapsed_ms = elapsed;
+    s_sshtr.ns->rekey.pkt_threshold = SSH_REKEY_PACKET_THRESHOLD;
+    s_sshtr.ns->rekey.time_threshold_ms = SSH_REKEY_TIME_MS;
+    ssh_rekey_due(&s_sshtr);
+    if (!s_sshtr.ns->ok)
     {
         return;
     }
     size_t mark = protocore_secure_mark();
     uint8_t *buf = (uint8_t *)protocore_secure_alloc(SSH_PKT_BUF_SIZE, 16);
     size_t n = 0;
-    if (buf && SSH_TRANSPORT->begin_rekey(i, buf, &n, SSH_PKT_BUF_SIZE) == 0)
+    s_sshtr.ns->slot = i;
+    s_sshtr.ns->out_args.out = buf;
+    s_sshtr.ns->out_args.cap = SSH_PKT_BUF_SIZE;
+    if (buf)
     {
-        ssh_emit(i, buf, n);
+        ssh_transport_begin_rekey(&s_sshtr);
+        n = s_sshtr.ns->out_args.out_len;
+    }
+    if (buf && s_sshtr.ns->i32 == 0)
+    {
+        SshNetwork.ssh_slot = i;
+        SshNetwork.msg.payload = buf;
+        SshNetwork.msg.len = n;
+        SshNetwork.emit(SshNetwork.internal);
     }
     protocore_secure_release(mark);
 }
@@ -3861,8 +3924,12 @@ int ssh_transport_version_exchange_recv(uint8_t i, const uint8_t *buf, size_t n,
     {
         return 1;
     }
-    size_t consumed = 0;
-    int rc = SSH_TRANSPORT->recv_ident(i, buf, n, &consumed);
+    s_sshtr.ns->slot = i;
+    s_sshtr.ns->pkt.data = buf;
+    s_sshtr.ns->pkt.len = n;
+    ssh_transport_recv_ident(&s_sshtr);
+    const size_t consumed = s_sshtr.ns->pkt.consumed;
+    const int rc = s_sshtr.ns->i32;
     if (rc < 0)
     {
         return -1;

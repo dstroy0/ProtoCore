@@ -24,7 +24,7 @@
 #include "mmgr/secure.h"                          // protocore_secure_persist_span: this module's storage
 #include "network_drivers/network/dns/dns_wire.h" // the name codec both DNS halves share
 #include "network_drivers/physical/physical.h"    // Physical.egress_ip: the address the A record carries
-#include "network_drivers/transport/udp/udp.h"    // Udp.listener: the 5353 group bind and the reply
+#include "network_drivers/transport/udp/server/server.h" // UdpListener: the 5353 group bind and the reply
 #endif
 
 #if PROTOCORE_HAS_VENDOR_MDNS
@@ -470,9 +470,17 @@ static void mdns_udp_handler(const uint8_t *data, size_t len, const struct proto
     tx[7] = (uint8_t)an;
 
     protocore_ip group = {PROTOCORE_IP_NONE, {0}};
-    if (Ip.parse(PROTOCORE_MDNS_GROUP, &group))
+    Ip.args.text = PROTOCORE_MDNS_GROUP;
+    Ip.args.out = &group;
+    Ip.parse(Ip.internal);
+    if (Ip.ok)
     {
-        (void)Udp.listener->sendto(PROTOCORE_MDNS_PORT, &group, PROTOCORE_MDNS_PORT, tx, n);
+        UdpListener.port = PROTOCORE_MDNS_PORT;
+        UdpListener.send_args.dst = &group;
+        UdpListener.send_args.dst_port = PROTOCORE_MDNS_PORT;
+        UdpListener.send_args.data = tx;
+        UdpListener.send_args.len = n;
+        UdpListener.sendto(UdpListener.internal);
     }
 }
 
@@ -564,7 +572,12 @@ proto_bool protocore_mdns_begin(const char *hostname, uint16_t http_port)
     {
         return PROTO_FALSE;
     }
-    s_mdns.running = Udp.listener->listen_multicast(PROTOCORE_MDNS_GROUP, PROTOCORE_MDNS_PORT, mdns_udp_handler, NULL);
+    UdpListener.port = PROTOCORE_MDNS_PORT;
+    UdpListener.bind.handler = mdns_udp_handler;
+    UdpListener.bind.handler_ctx = NULL;
+    UdpListener.bind.group_ip = PROTOCORE_MDNS_GROUP;
+    UdpListener.listen_multicast(UdpListener.internal);
+    s_mdns.running = UdpListener.ok;
     return s_mdns.running;
 }
 

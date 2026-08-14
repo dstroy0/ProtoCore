@@ -3,225 +3,380 @@
 
 /**
  * @file xmpp.c
- * @brief XMPP stanza codec (see xmpp.h).
+ * @brief The XMPP stanza codec: the RFC 6120 sec 8 builders and the XML 1.0 sec 3.1 start-tag reads.
+ *
+ * Every builder starts a run, appends its literals and its escaped members through one bounded
+ * cursor, and terminates it. The cursor is ns->n and the run's verdict is ns->ok, latched false the
+ * first time an append will not fit, so an over-long stanza reports 0 octets instead of a truncated
+ * one.
  */
 
 #include "services/iot/xmpp/xmpp.h"
-#include "mmgr/protomem.h"
 
 #if PROTOCORE_ENABLE_XMPP
 
-// Append a literal to out[*n], bounded. Returns false on overflow.
-static proto_bool put(char *out, size_t cap, size_t *n, const char *s)
-{
-    size_t sl = strnlen(s, cap + 1);
-    if (*n + sl >= cap)
-    {
-        return PROTO_FALSE;
-    }
-    mem.cpy(out + *n, s, sl);
-    *n += sl;
-    return PROTO_TRUE;
-}
+#include "mmgr/protomem.h" // mem.cpy: a literal and an entity move whole
+#include "mmgr/protostr.h" // str.len / str.starts: the bounded length and the attribute-name match
 
-// Append s, XML-escaped, into out[*n]. Returns false on overflow.
-static proto_bool put_escaped(char *out, size_t cap, size_t *n, const char *s)
-{
-    for (; *s; s++)
-    {
-        const char *rep = NULL;
-        switch (*s)
-        {
-        case '&':
-            rep = "&amp;";
-            break;
-        case '<':
-            rep = "&lt;";
-            break;
-        case '>':
-            rep = "&gt;";
-            break;
-        case '\'':
-            rep = "&apos;";
-            break;
-        case '"':
-            rep = "&quot;";
-            break;
-        default:
-            break;
-        }
-        if (rep)
-        {
-            if (!put(out, cap, n, rep))
-            {
-                return PROTO_FALSE;
-            }
-        }
-        else
-        {
-            if (*n + 1 >= cap)
-            {
-                return PROTO_FALSE;
-            }
-            out[(*n)++] = *s;
-        }
-    }
-    return PROTO_TRUE;
-}
+// RFC 6120 sec 8.1: the common attribute names, and RFC 6120 sec 4.7 the stream header's two.
+#define PROTOCORE_XMPP_ATTR_TO "to"
+#define PROTOCORE_XMPP_ATTR_FROM "from"
+#define PROTOCORE_XMPP_ATTR_TYPE "type"
+#define PROTOCORE_XMPP_ATTR_ID "id"
 
-// Append `attr="value"` (value escaped) when value is non-null.
-static proto_bool put_attr(char *out, size_t cap, size_t *n, const char *attr, const char *value)
+// XML 1.0 sec 3.1: what closes a start-tag (production [40]) and an empty-element tag ([44]).
+#define PROTOCORE_XMPP_TAG_END ">"
+#define PROTOCORE_XMPP_EMPTY_END "/>"
+
+// XML 1.0 sec 4.6: how many predefined entities there are.
+#define PROTOCORE_XMPP_ENTITY_COUNT 5
+
+/** @brief One predefined entity of XML 1.0 sec 4.6. */
+typedef struct
 {
-    if (!value)
+    char ch;            ///< the character the entity stands for
+    const char *entity; ///< the entity reference written in its place
+} XmppEntity;
+
+/**
+ * @brief The codec's calls and the handle they read - what XmppNs points at.
+ *
+ * No storage member: every octet a call touches belongs to the caller, so nothing survives a call.
+ *
+ * @var XmppInternal::ns  the handle a caller sets a call's members on
+ */
+struct XmppInternal
+{
+    XmppNs *ns;
+};
+
+static struct XmppInternal s_xmpp = {.ns = &Xmpp};
+
+// XML 1.0 sec 4.6: amp, lt, gt, apos and quot, the only entity references RFC 6120 sec 11.1 leaves
+// an XMPP stream.
+static const XmppEntity s_entities[PROTOCORE_XMPP_ENTITY_COUNT] = {
+    {'&', "&amp;"}, {'<', "&lt;"}, {'>', "&gt;"}, {'\'', "&apos;"}, {'"', "&quot;"},
+};
+
+// XML 1.0 sec 2.3 production [3]: S is one or more of space, tab, carriage return and line feed.
+static proto_bool xml_space(char c)
+{
+    if (c == ' ' || c == '\t' || c == '\r' || c == '\n')
     {
         return PROTO_TRUE;
     }
-    return put(out, cap, n, " ") && put(out, cap, n, attr) && put(out, cap, n, "=\"") &&
-           put_escaped(out, cap, n, value) && put(out, cap, n, "\"");
+    return PROTO_FALSE;
 }
 
-static size_t finish(char *out, size_t n, proto_bool ok)
+// The entity reference XML 1.0 sec 4.6 gives for c, or NULL when c stands as itself.
+static const char *entity_of(char c)
 {
-    if (!ok)
+    for (size_t i = 0; i < PROTOCORE_XMPP_ENTITY_COUNT; i++)
     {
-        return 0;
-    }
-    out[n] = '\0';
-    return n;
-}
-
-size_t protocore_xmpp_escape(const char *in, size_t in_len, char *out, size_t cap)
-{
-    if (!in || !out)
-    {
-        return 0;
-    }
-    size_t n = 0;
-    for (size_t i = 0; i < in_len; i++)
-    {
-        char one[2] = {in[i], '\0'};
-        if (!put_escaped(out, cap, &n, one))
+        if (s_entities[i].ch == c)
         {
-            return 0;
+            return s_entities[i].entity;
         }
     }
-    return finish(out, n, PROTO_TRUE);
+    return NULL;
 }
 
-size_t protocore_xmpp_stream_open(const char *from, const char *to, char *out, size_t cap)
+// Open a run at the head of the caller's buffer. A missing buffer or no room fails it here.
+static void start(struct XmppInternal *restrict ctx)
 {
-    size_t n = 0;
-    proto_bool ok =
-        put(out, cap, &n, "<?xml version='1.0'?><stream:stream") && put_attr(out, cap, &n, "from", from) &&
-        put_attr(out, cap, &n, "to", to) &&
-        put(out, cap, &n, " xmlns='jabber:client' xmlns:stream='http://etherx.jabber.org/streams' version='1.0'>");
-    return finish(out, n, ok);
-}
-
-size_t protocore_xmpp_message(const char *to, const char *from, const char *type, const char *body, char *out, size_t cap)
-{
-    size_t n = 0;
-    proto_bool ok = put(out, cap, &n, "<message") && put_attr(out, cap, &n, "to", to) &&
-                    put_attr(out, cap, &n, "from", from) && put_attr(out, cap, &n, "type", type) &&
-                    put(out, cap, &n, ">");
-    if (ok && body)
+    ctx->ns->n = 0;
+    ctx->ns->ok = PROTO_TRUE;
+    if (ctx->ns->out.buf == NULL || ctx->ns->out.cap == 0)
     {
-        ok = put(out, cap, &n, "<body>") && put_escaped(out, cap, &n, body) && put(out, cap, &n, "</body>");
+        ctx->ns->ok = PROTO_FALSE;
     }
-    ok = ok && put(out, cap, &n, "</message>");
-    return finish(out, n, ok);
 }
 
-size_t protocore_xmpp_presence(const char *type, char *out, size_t cap)
+// Terminate the run, or report nothing written.
+static void finish(struct XmppInternal *restrict ctx)
 {
-    size_t n = 0;
-    proto_bool ok = put(out, cap, &n, "<presence") && put_attr(out, cap, &n, "type", type) && put(out, cap, &n, "/>");
-    return finish(out, n, ok);
-}
-
-size_t protocore_xmpp_iq(const char *type, const char *id, const char *child_xml, char *out, size_t cap)
-{
-    size_t n = 0;
-    proto_bool ok = put(out, cap, &n, "<iq") && put_attr(out, cap, &n, "type", type) &&
-                    put_attr(out, cap, &n, "id", id) && put(out, cap, &n, ">");
-    if (ok && child_xml)
+    if (!ctx->ns->ok)
     {
-        ok = put(out, cap, &n, child_xml);
+        ctx->ns->n = 0;
+        return;
     }
-    ok = ok && put(out, cap, &n, "</iq>");
-    return finish(out, n, ok);
+    ctx->ns->out.buf[ctx->ns->n] = '\0';
 }
 
-size_t protocore_xmpp_stanza_name(const char *xml, size_t len, char *out, size_t cap)
+// Append one octet, keeping room for the terminator.
+static void put_char(struct XmppInternal *restrict ctx, char c)
 {
-    if (!xml || !out || cap == 0)
+    if (!ctx->ns->ok)
     {
-        return 0;
+        return;
     }
-    for (size_t i = 0; i + 1 < len; i++)
+    if (ctx->ns->n + 1 >= ctx->ns->out.cap)
     {
-        if (xml[i] != '<')
+        ctx->ns->ok = PROTO_FALSE;
+        return;
+    }
+    ctx->ns->out.buf[ctx->ns->n] = c;
+    ctx->ns->n++;
+}
+
+// Append a NUL-terminated run, keeping room for the terminator.
+static void put(struct XmppInternal *restrict ctx, const char *s)
+{
+    if (!ctx->ns->ok)
+    {
+        return;
+    }
+    const size_t cap = ctx->ns->out.cap;
+    const size_t sl = str.len(s, cap);
+    if (ctx->ns->n + sl >= cap)
+    {
+        ctx->ns->ok = PROTO_FALSE;
+        return;
+    }
+    mem.cpy(ctx->ns->out.buf + ctx->ns->n, s, sl);
+    ctx->ns->n += sl;
+}
+
+// Append len octets of s, each character carrying an entity written as that entity instead.
+static void put_escaped(struct XmppInternal *restrict ctx, const char *s, size_t len)
+{
+    if (!ctx->ns->ok || s == NULL)
+    {
+        return;
+    }
+    for (size_t i = 0; i < len; i++)
+    {
+        const char *rep = entity_of(s[i]);
+        if (rep == NULL)
         {
-            continue;
+            put_char(ctx, s[i]);
         }
-        char c = xml[i + 1];
-        if (c == '?' || c == '!' || c == '/') // skip declaration / comment / close tag
+        else
         {
-            continue;
+            put(ctx, rep);
         }
-        size_t j = i + 1, k = 0;
-        while (j < len && xml[j] != ' ' && xml[j] != '>' && xml[j] != '/' && xml[j] != '\t' && xml[j] != '\n')
-        {
-            if (k + 1 >= cap)
-            {
-                return 0;
-            }
-            out[k++] = xml[j++];
-        }
-        out[k] = '\0';
-        return k;
     }
-    return 0;
 }
 
-size_t protocore_xmpp_attr(const char *xml, size_t len, const char *attr, char *out, size_t cap)
+// Append one attribute specification, `S Name Eq AttValue` (XML 1.0 sec 3.1 production [41]), with
+// the value escaped and double quotes as its delimiter. A NULL value leaves the attribute out.
+static void put_attr(struct XmppInternal *restrict ctx, const char *name, const char *value)
 {
-    if (!xml || !attr || !out || cap == 0)
+    if (value == NULL)
     {
-        return 0;
+        return;
     }
-    size_t al = strnlen(attr, len + 1);
-    // Search only within the first start tag (up to the first '>').
+    put_char(ctx, ' ');
+    put(ctx, name);
+    put_char(ctx, '=');
+    put_char(ctx, '"');
+    put_escaped(ctx, value, str.len(value, ctx->ns->out.cap));
+    put_char(ctx, '"');
+}
+
+// Write text.in into out with the XML 1.0 sec 4.6 entities substituted.
+static void xmpp_escape(struct XmppInternal *restrict ctx)
+{
+    start(ctx);
+    if (ctx->ns->text.in == NULL)
+    {
+        ctx->ns->ok = PROTO_FALSE;
+    }
+    put_escaped(ctx, ctx->ns->text.in, ctx->ns->text.len);
+    finish(ctx);
+}
+
+// Build the initial stream header (RFC 6120 sec 4.2), preceded by the XML declaration RFC 6120
+// sec 11.5 asks for, with 'jabber:client' as the content namespace (sec 4.8.3) and version '1.0'
+// (sec 4.7.5).
+static void xmpp_stream_open(struct XmppInternal *restrict ctx)
+{
+    start(ctx);
+    put(ctx, "<?xml version='1.0'?><stream:stream");
+    put_attr(ctx, PROTOCORE_XMPP_ATTR_FROM, ctx->ns->stream.from);
+    put_attr(ctx, PROTOCORE_XMPP_ATTR_TO, ctx->ns->stream.to);
+    put(ctx, " xmlns='jabber:client' xmlns:stream='http://etherx.jabber.org/streams' version='1.0'>");
+    finish(ctx);
+}
+
+// Build a `<message/>` (RFC 6120 sec 8.2.1) carrying the `<body/>` of RFC 6121 sec 5.2.3.
+static void xmpp_message(struct XmppInternal *restrict ctx)
+{
+    start(ctx);
+    put(ctx, "<message");
+    put_attr(ctx, PROTOCORE_XMPP_ATTR_TO, ctx->ns->common.to);
+    put_attr(ctx, PROTOCORE_XMPP_ATTR_FROM, ctx->ns->common.from);
+    put_attr(ctx, PROTOCORE_XMPP_ATTR_TYPE, ctx->ns->common.type);
+    put(ctx, PROTOCORE_XMPP_TAG_END);
+    if (ctx->ns->child.body != NULL)
+    {
+        put(ctx, "<body>");
+        put_escaped(ctx, ctx->ns->child.body, str.len(ctx->ns->child.body, ctx->ns->out.cap));
+        put(ctx, "</body>");
+    }
+    put(ctx, "</message>");
+    finish(ctx);
+}
+
+// Build a `<presence/>` (RFC 6120 sec 8.2.2) as an empty-element tag. A NULL type signals available
+// (RFC 6121 sec 4.7.1).
+static void xmpp_presence(struct XmppInternal *restrict ctx)
+{
+    start(ctx);
+    put(ctx, "<presence");
+    put_attr(ctx, PROTOCORE_XMPP_ATTR_TYPE, ctx->ns->common.type);
+    put(ctx, PROTOCORE_XMPP_EMPTY_END);
+    finish(ctx);
+}
+
+// Build an `<iq/>` (RFC 6120 sec 8.2.3) around the extension element of sec 8.4, which is already
+// XML and goes in as it stands.
+static void xmpp_iq(struct XmppInternal *restrict ctx)
+{
+    start(ctx);
+    put(ctx, "<iq");
+    put_attr(ctx, PROTOCORE_XMPP_ATTR_TYPE, ctx->ns->common.type);
+    put_attr(ctx, PROTOCORE_XMPP_ATTR_ID, ctx->ns->common.id);
+    put(ctx, PROTOCORE_XMPP_TAG_END);
+    if (ctx->ns->child.extension != NULL)
+    {
+        put(ctx, ctx->ns->child.extension);
+    }
+    put(ctx, "</iq>");
+    finish(ctx);
+}
+
+// Read the Name of the first start-tag in stanza.xml, the element's type (XML 1.0 sec 3.1).
+static void xmpp_stanza_name(struct XmppInternal *restrict ctx)
+{
+    start(ctx);
+    const char *xml = ctx->ns->stanza.xml;
+    const size_t len = ctx->ns->stanza.len;
+    if (xml == NULL)
+    {
+        ctx->ns->ok = PROTO_FALSE;
+    }
+    if (!ctx->ns->ok)
+    {
+        finish(ctx);
+        return;
+    }
+
+    // A '<' opens a start-tag only when what follows is a Name: '<?' opens a processing instruction
+    // (sec 2.6), '<!' a comment or a declaration (sec 2.5, sec 2.8), and '</' an end-tag (sec 3.1).
+    size_t i = 0;
+    proto_bool found = PROTO_FALSE;
+    while (i + 1 < len && !found)
+    {
+        if (xml[i] == '<' && xml[i + 1] != '?' && xml[i + 1] != '!' && xml[i + 1] != '/')
+        {
+            found = PROTO_TRUE;
+        }
+        else
+        {
+            i++;
+        }
+    }
+    if (!found)
+    {
+        ctx->ns->ok = PROTO_FALSE;
+        finish(ctx);
+        return;
+    }
+
+    // Production [40] and [44]: the Name runs from just past '<' to the S, the '/' or the '>' that
+    // ends it.
+    size_t j = i + 1;
+    while (j < len && !xml_space(xml[j]) && xml[j] != '>' && xml[j] != '/')
+    {
+        put_char(ctx, xml[j]);
+        j++;
+    }
+    finish(ctx);
+}
+
+// Read the attribute value stanza.attr names out of the start-tag of stanza.xml, as the raw octets
+// between the delimiters (XML 1.0 sec 3.1).
+static void xmpp_attr(struct XmppInternal *restrict ctx)
+{
+    start(ctx);
+    const char *xml = ctx->ns->stanza.xml;
+    const size_t len = ctx->ns->stanza.len;
+    const char *name = ctx->ns->stanza.attr;
+    if (xml == NULL || name == NULL)
+    {
+        ctx->ns->ok = PROTO_FALSE;
+    }
+    if (!ctx->ns->ok)
+    {
+        finish(ctx);
+        return;
+    }
+    const size_t nl = str.len(name, len);
+
+    // An attribute specification belongs to the start-tag, which ends at its '>'.
     size_t end = 0;
     while (end < len && xml[end] != '>')
     {
         end++;
     }
-    for (size_t i = 0; i + al + 2 < end; i++)
+
+    // Production [40] puts S in front of every attribute specification and production [41] puts Eq
+    // straight after its Name, so a name that is only the tail of another one never matches.
+    size_t i = 0;
+    proto_bool found = PROTO_FALSE;
+    while (i + nl + 2 < end && !found)
     {
-        // match  <space>attr=  (leading space avoids a substring hit inside another attr name)
-        if (!((i == 0 || xml[i - 1] == ' ') && strncmp(xml + i, attr, al) == 0 && xml[i + al] == '='))
+        proto_bool sep = PROTO_FALSE;
+        if (i == 0)
         {
-            continue;
+            sep = PROTO_TRUE;
         }
-        char q = xml[i + al + 1];
-        if (q != '"' && q != '\'')
+        else if (xml_space(xml[i - 1]))
         {
-            return 0;
+            sep = PROTO_TRUE;
         }
-        size_t j = i + al + 2, k = 0;
-        while (j < end && xml[j] != q)
+        if (sep && str.starts(xml + i, name, nl + 1, PROTO_FALSE) && xml[i + nl] == '=')
         {
-            if (k + 1 >= cap)
-            {
-                return 0;
-            }
-            out[k++] = xml[j++];
+            found = PROTO_TRUE;
         }
-        out[k] = '\0';
-        return k;
+        else
+        {
+            i++;
+        }
     }
-    return 0;
+    if (!found)
+    {
+        ctx->ns->ok = PROTO_FALSE;
+        finish(ctx);
+        return;
+    }
+
+    // Production [10] AttValue: the value is delimited by a pair of '"' or a pair of '\''.
+    const char q = xml[i + nl + 1];
+    if (q != '"' && q != '\'')
+    {
+        ctx->ns->ok = PROTO_FALSE;
+        finish(ctx);
+        return;
+    }
+    size_t j = i + nl + 2;
+    while (j < end && xml[j] != q)
+    {
+        put_char(ctx, xml[j]);
+        j++;
+    }
+    finish(ctx);
 }
+
+// Designated, so a member's position in the struct does not decide what it binds to.
+XmppNs Xmpp = {.escape = xmpp_escape,
+               .stream_open = xmpp_stream_open,
+               .message = xmpp_message,
+               .presence = xmpp_presence,
+               .iq = xmpp_iq,
+               .stanza_name = xmpp_stanza_name,
+               .attr = xmpp_attr,
+               .internal = &s_xmpp};
 
 #endif // PROTOCORE_ENABLE_XMPP

@@ -192,7 +192,10 @@ proto_bool protocore_wisun_node_find(const WisunFan *fan, const protocore_ip *ad
     }
     for (size_t i = 0; i < fan->count; i++)
     {
-        if (Ip.equal(&fan->nodes[i].addr, addr))
+        Ip.args.ip = &fan->nodes[i].addr;
+        Ip.args.b = addr;
+        Ip.equal(Ip.internal);
+        if (Ip.ok)
         {
             if (idx)
             {
@@ -236,7 +239,11 @@ size_t protocore_wisun_nodes_json(const WisunFan *fan, char *out, size_t cap)
             Sb.put(&b, ",");
         }
         char astr[PROTOCORE_IP_STR_MAX];
-        Ip.format(&fan->nodes[i].addr, astr, sizeof(astr));
+        astr[0] = '\0'; // a family-less address formats to nothing rather than to stack contents
+        Ip.args.ip = &fan->nodes[i].addr;
+        Ip.args.buf = astr;
+        Ip.args.cap = sizeof(astr);
+        Ip.format(Ip.internal);
         Sb.put(&b, "{\"addr\":\"");
         Sb.put(&b, astr);
         Sb.put(&b, "\",\"joined\":");

@@ -15,8 +15,8 @@
 #include "mmgr/endian.h"
 // memset, memcpy
 
-#include "network_drivers/transport/udp/udp.h"                // Udp.listener: the port 123 bind and the reply
-#include "server/clock/clock.h"                               // protocore_millis: the sub-second fraction
+#include "network_drivers/transport/udp/server/server.h"      // UdpListener: the port 123 bind and the reply
+#include "server/clock/clock.h"                               // Clock.millis: the sub-second fraction
 #include "services/timing_position/time_source/time_source.h" // protocore_time_now: the seconds we serve
 
 size_t protocore_ntp_server_build_response(const uint8_t *req, size_t req_len, uint8_t stratum, uint32_t refid,
@@ -69,14 +69,18 @@ static void protocore_ntp_server_udp_handler(const uint8_t *data, size_t len, co
     }
     // Sub-second fraction from the monotonic ms clock (best-effort; not phase-locked to the
     // 1 Hz second boundary, so the sub-second component is approximate on this class of clock).
-    uint32_t frac = (uint32_t)(((uint64_t)(protocore_millis() % 1000u) << 32) / 1000u);
+    Clock.millis(Clock.internal);
+    uint32_t frac = (uint32_t)(((uint64_t)(Clock.ms % 1000u) << 32) / 1000u);
 
     uint8_t resp[PROTOCORE_NTP_PACKET_LEN];
     size_t n = protocore_ntp_server_build_response(data, len, s_ntp.stratum, s_ntp.refid,
                                                    unix_secs + PROTOCORE_NTP_UNIX_OFFSET, frac, resp, sizeof(resp));
     if (n)
     {
-        Udp.listener->reply(peer, resp, n);
+        UdpListener.peer_args.peer = peer;
+        UdpListener.send_args.data = resp;
+        UdpListener.send_args.len = n;
+        UdpListener.reply(UdpListener.internal);
     }
 }
 
@@ -84,7 +88,12 @@ proto_bool protocore_ntp_server_begin(uint8_t stratum, uint32_t refid)
 {
     s_ntp.stratum = stratum;
     s_ntp.refid = refid;
-    return Udp.listener->listen(123, protocore_ntp_server_udp_handler, NULL);
+    UdpListener.port = PROTOCORE_NTP_PORT;
+    UdpListener.bind.handler = protocore_ntp_server_udp_handler;
+    UdpListener.bind.handler_ctx = NULL;
+    UdpListener.bind.group_ip = NULL;
+    UdpListener.listen(UdpListener.internal);
+    return UdpListener.ok;
 }
 
 #endif // PROTOCORE_ENABLE_NTP_SERVER

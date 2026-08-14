@@ -188,7 +188,8 @@ static protocore_net_err cc_do_connect(protocore_net_call *cd)
     protocore_net_on_err(c->pcb, cc_err);
     // RFC 9293 sec 3.9.2 MUST-49: stamped before the SYN goes out, so the whole connection carries
     // the configured TTL. Runs in the stack's thread (this is the marshalled connect op).
-    c->pcb->ttl = protocore_tcp_ttl();
+    TcpLower.pcb = c->pcb;
+    TcpLower.apply_ttl(TcpLower.internal);
 #if PROTOCORE_ENABLE_DIFFSERV
     {
         // Mark the outbound connection with the server-wide default DSCP (the SYN onward). Runs in

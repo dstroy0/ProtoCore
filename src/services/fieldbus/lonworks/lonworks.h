@@ -14,9 +14,10 @@
  *
  * where the message code identifies a NetVar update (`0x80 | direction`), the selector addresses the
  * bound network variable, and the value is the SNVT-encoded data. It also provides the two most-common
- * SNVT scalar encodings: **SNVT_temp** (temperature, 0.01 K resolution, offset) and **SNVT_switch**
- * (a level 0..100.5% + a state), so an app reads/writes those without a full SNVT table. Pure, zero heap,
- * no stdlib, host-testable; the LON/IP UDP transport is the shipped UDP layer.
+ * SNVT scalar encodings from the LONMARK SNVT master list: **SNVT_temp** (index 39, tenths of a degree
+ * Celsius above -274) and **SNVT_switch** (index 95, a level 0..100 % in 0.5 % steps + a state), so an
+ * app reads/writes those without a full SNVT table. Pure, zero heap, no stdlib, host-testable; the
+ * LON/IP UDP transport is the shipped UDP layer.
  */
 
 #ifndef PROTOCORE_LONWORKS_H
@@ -56,12 +57,12 @@ typedef struct
 /** @brief Parse a LonTalk NV PDU. @return true if @p len >= 3. */
 proto_bool protocore_lon_parse_nv(const uint8_t *pdu, size_t len, LonNv *out);
 
-/** @brief Encode a SNVT_temp value (degrees C) as the 2-byte big-endian fixed-point (0.01 K, +273.15). */
+/** @brief Encode degrees C as the 2-byte big-endian SNVT_temp raw: (celsius * 10) + 2740, 0..65535. */
 void protocore_lon_snvt_temp_encode(double celsius, uint8_t out[2]);
-/** @brief Decode a SNVT_temp 2-byte value to degrees C. */
+/** @brief Decode a SNVT_temp 2-byte value to degrees C: (raw - 2740) / 10. */
 double protocore_lon_snvt_temp_decode(const uint8_t in[2]);
 
-/** @brief Encode a SNVT_switch (value 0..100.5 %, state 0/1) into the 2-byte value. */
+/** @brief Encode a SNVT_switch (value 0..100 % in 0.5 % steps, state 0 OFF / 1 ON / 0xFF NULL). */
 void protocore_lon_snvt_switch_encode(double percent, uint8_t state, uint8_t out[2]);
 /** @brief Decode a SNVT_switch 2-byte value (percent out via @p percent, state via @p state). */
 void protocore_lon_snvt_switch_decode(const uint8_t in[2], double *percent, uint8_t *state);

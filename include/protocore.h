@@ -1042,6 +1042,8 @@ proto_bool set_cache_control_swr(uint32_t max_age_s, uint32_t swr_s);
  * sketches and the native tests keep working unchanged.
  *
  * One service iteration (see service_once()):
+ * 0. Stamps the clock (`Clock.ms`) so every step below measures against one
+ *    instant; a caller needing the live value reads the source again.
  * 1. Calls `DeterministicAsyncTCP::check_timeouts()` to kill stale
  *    connections.
  * 2. Drains the event queue (connections, data, disconnects, errors).

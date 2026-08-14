@@ -16,7 +16,6 @@
 #include "server/clock/clock.h" // protocore_millis, pcdelay
 #include "services/file_transfer/ftp/ftp.h"
 #include "shared/log/log.h"
-#include <stdio.h>
 
 /** @brief Owned session state. One transfer at a time; the buffers are too big for the stack. */
 typedef struct

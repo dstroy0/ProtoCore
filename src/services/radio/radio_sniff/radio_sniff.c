@@ -40,7 +40,11 @@ uint32_t protocore_radiosniff_i2f32(int32_t dbm)
 
 size_t protocore_radiosniff_global(uint8_t *out, size_t cap)
 {
-    return protocore_pcap_global_header(out, cap, PROTOCORE_DLT_IEEE802_15_4_TAP);
+    Pcap.args.out = out;
+    Pcap.args.cap = cap;
+    Pcap.args.linktype = PROTOCORE_DLT_IEEE802_15_4_TAP;
+    Pcap.global_header(Pcap.internal);
+    return Pcap.n;
 }
 
 size_t protocore_radiosniff_tap_record(uint8_t *out, size_t cap, const uint8_t *frame, size_t flen, int32_t rssi_dbm,
@@ -58,7 +62,13 @@ size_t protocore_radiosniff_tap_record(uint8_t *out, size_t cap, const uint8_t *
     }
 
     // pcap record header.
-    protocore_pcap_record_header(out, cap, ts_sec, ts_usec, (uint32_t)caplen, (uint32_t)caplen);
+    Pcap.args.out = out;
+    Pcap.args.cap = cap;
+    Pcap.rec.ts_sec = ts_sec;
+    Pcap.rec.ts_usec = ts_usec;
+    Pcap.rec.caplen = (uint32_t)caplen;
+    Pcap.rec.origlen = (uint32_t)caplen;
+    Pcap.record_header(Pcap.internal);
     uint8_t *p = out + PROTOCORE_PCAP_REC_HDR_LEN;
 
     // 802.15.4 TAP header: version(1)=0, reserved(1)=0, length(2 LE) = whole TAP block.

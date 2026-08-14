@@ -22,8 +22,6 @@
 
 PROTOCORE_BEGIN_DECLS
 
-#if PROTOCORE_ENABLE_OTA
-
 /**
  * @brief Register an authenticated streaming OTA endpoint.
  *
@@ -69,8 +67,6 @@ typedef struct
 
 /** @brief The one symbol this module exports. */
 extern OtaServiceNs OtaService;
-
-#endif // PROTOCORE_ENABLE_OTA
 
 PROTOCORE_END_DECLS
 

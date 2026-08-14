@@ -11,14 +11,17 @@
 
 #if PROTOCORE_ENABLE_SNP
 
+// GFK-0582D p. 7-62: seed zero, then per byte XOR into the accumulator and rotate it left one bit
+// with the top bit wrapping into the bottom.
 uint8_t protocore_snp_bcc(const uint8_t *bytes, size_t len)
 {
-    uint8_t sum = 0;
+    uint8_t bcc = 0;
     for (size_t i = 0; i < len; i++)
     {
-        sum = (uint8_t)(sum + bytes[i]);
+        bcc = (uint8_t)(bcc ^ bytes[i]);
+        bcc = (uint8_t)((bcc << 1) | (bcc >> 7));
     }
-    return sum;
+    return bcc;
 }
 
 size_t protocore_snp_build(uint8_t control, const uint8_t *data, size_t data_len, uint8_t *out, size_t cap)

@@ -14,6 +14,7 @@
 #include "mmgr/rawmemcpy.h" // raw.read: a captured segment moves into our own buffer
 #include "network_drivers/presentation/http/auth/auth.h"
 #include "network_drivers/presentation/http/route/http_route.h" // HttpRoutes
+#include "network_drivers/transport/tcp/common.h"               // TcpConn, conn_pool: the slots a response writes on
 #include "network_drivers/transport/tcp/protocol/protocol.h"    // ConnPool: the slot a response writes on
 #include "protocore.h"                                          // http_pool, and the request and route widths
 #if PROTOCORE_ENABLE_AUTH_LOCKOUT
@@ -296,13 +297,14 @@ static void path_matches(struct HttpInternal *restrict ctx)
     const char *req_path = ctx->ns->route_args.path;
     if (!is_wildcard)
     {
-        return str.eq(route, req_path, MAX_PATH_LEN, PROTO_FALSE);
+        ctx->ns->ok = str.eq(route, req_path, MAX_PATH_LEN, PROTO_FALSE);
+        return;
     }
 
     // Prefix match: compare everything up to (but not including) the '*'. A first difference AT the
     // bound is the whole prefix agreeing, which is what the scan returns when it never parts.
     size_t prefix_len = str.len(route, MAX_PATH_LEN) - 1;
-    return str.diff(route, req_path, prefix_len, PROTO_FALSE) == prefix_len;
+    ctx->ns->ok = str.diff(route, req_path, prefix_len, PROTO_FALSE) == prefix_len;
 }
 
 // Record one `:name` path parameter (key from the route segment, value from the path segment).
@@ -382,7 +384,7 @@ static void match_path_params(struct HttpInternal *restrict ctx)
     }
 
     // Both strings must be fully consumed (identical segment counts).
-    return (*r == '\0' && *p == '\0');
+    ctx->ns->ok = (*r == '\0' && *p == '\0');
 }
 
 // True when the request on this slot used the HEAD method, whose response must
@@ -438,9 +440,11 @@ static void allow_append(struct HttpInternal *restrict ctx)
 // teardown; HEAD omits the body. One owner for the error-and-close path.
 static void send_error_close(uint8_t slot_id, const char *status, const char *extra_hdr, const char *body)
 {
+    TcpConn *conn = &conn_pool[slot_id];
     if (conn->state != CONN_ACTIVE || conn->pcb == NULL)
     {
-        http_reset(slot_id);
+        HttpConn.slot = slot_id;
+        HttpConn.reset(HttpConn.internal);
         return;
     }
 
@@ -483,7 +487,8 @@ static void send_error_close(uint8_t slot_id, const char *status, const char *ex
     }
     ConnPool.slot = slot_id;
     ConnPool.begin_close(ConnPool.internal); // dwell in CONN_CLOSING until the response drains
-    http_reset(slot_id);
+    HttpConn.slot = slot_id;
+    HttpConn.reset(HttpConn.internal);
 }
 
 // Send 405 Method Not Allowed with the required Allow header (RFC 7231 §6.5.5).
@@ -539,8 +544,8 @@ static proto_bool route_admits(const HttpRoute *r, uint8_t slot_id, HttpReq *req
         return PROTO_FALSE;
     }
     proto_bool matched = r->is_regex   ? regex_match(r->path, req->path)
-                         : (Http.route = r->path, Http.path = req->path, Http.req = req,
-                            Http.is_wildcard = r->is_wildcard,
+                         : (Http.route_args.route = r->path, Http.route_args.path = req->path, Http.route_args.req = req,
+                            Http.route_args.is_wildcard = r->is_wildcard,
                             r->is_param ? Http.match_path_params(Http.internal) : Http.path_matches(Http.internal),
                             Http.ok);
     if (!matched)
@@ -649,7 +654,8 @@ static proto_bool proto_authorize_request(uint8_t slot_id, HttpReq *req, const H
         cip = eff;
     }
 #endif
-    uint32_t now = (uint32_t)protocore_millis();
+    Clock.millis(Clock.internal);
+    uint32_t now = (uint32_t)Clock.ms;
     uint32_t remain = auth_lockout_remaining_ms(&cip, now);
     if (remain > 0)
     {
@@ -722,11 +728,11 @@ static proto_bool dispatch_matched_route(uint8_t slot_id, HttpReq *req, HttpMeth
         if (method != HTTP_GET && method != HTTP_HEAD)
         {
             *path_matched = PROTO_TRUE;
-            Http.buf = allow_buf;
-            Http.cap = allow_cap;
-            Http.token = "GET";
+            Http.allow.buf = allow_buf;
+            Http.allow.cap = allow_cap;
+            Http.method_args.token = "GET";
             Http.allow_append(Http.internal);
-            Http.token = "HEAD";
+            Http.method_args.token = "HEAD";
             Http.allow_append(Http.internal);
             return PROTO_FALSE;
         }
@@ -742,18 +748,18 @@ static proto_bool dispatch_matched_route(uint8_t slot_id, HttpReq *req, HttpMeth
     {
         // Path matches but method differs - record it for a 405 + Allow.
         *path_matched = PROTO_TRUE;
-        Http.method = r->method;
+        Http.method_args.method = r->method;
         Http.method_name(Http.internal);
-        Http.buf = allow_buf;
-        Http.cap = allow_cap;
-        Http.token = Http.text;
+        Http.allow.buf = allow_buf;
+        Http.allow.cap = allow_cap;
+        Http.method_args.token = Http.text;
         Http.allow_append(Http.internal);
         // A GET route also answers HEAD, so advertise it in Allow.
         if (r->method == HTTP_GET)
         {
-            Http.buf = allow_buf;
-            Http.cap = allow_cap;
-            Http.token = "HEAD";
+            Http.allow.buf = allow_buf;
+            Http.allow.cap = allow_cap;
+            Http.method_args.token = "HEAD";
             Http.allow_append(Http.internal);
         }
         return PROTO_FALSE;
@@ -772,7 +778,7 @@ static void match_and_execute(struct HttpInternal *restrict ctx)
 {
     const uint8_t slot_id = ctx->ns->slot;
     HttpReq *req = &http_pool[slot_id];
-    Http.token = req->method;
+    Http.method_args.token = req->method;
     Http.parse_method(Http.internal);
     HttpMethod method = Http.method_of;
 
@@ -938,7 +944,8 @@ static void poll_slot(struct HttpInternal *restrict ctx)
                 ws_free(i);
                 ConnPool.slot = i;
                 ConnPool.abort_slot(ConnPool.internal); // transport owns TLS-free + detach + reset + RST
-                http_reset(i);
+                HttpConn.slot = i;
+                HttpConn.reset(HttpConn.internal);
             }
             return;
         }
@@ -961,7 +968,8 @@ static void poll_slot(struct HttpInternal *restrict ctx)
             // close-frame the WS layer queued still flushes during the dwell).
             ConnPool.slot = i;
             ConnPool.begin_close(ConnPool.internal);
-            http_reset(i);
+            HttpConn.slot = i;
+            HttpConn.reset(HttpConn.internal);
         }
         return; // slot is owned by WS; skip HTTP dispatch
     }
@@ -1006,8 +1014,9 @@ static void poll_slot(struct HttpInternal *restrict ctx)
     // already returned above.
     ConnPool.slot = i;
     ConnPool.active(ConnPool.internal);
+    Clock.millis(Clock.internal);
     if (ConnPool.ok && http_req_start_ms[i] != 0 && http_pool[i].parse_state < PARSE_BODY &&
-        (protocore_millis() - http_req_start_ms[i]) >= PROTOCORE_REQUEST_TIMEOUT_MS)
+        (Clock.ms - http_req_start_ms[i]) >= PROTOCORE_REQUEST_TIMEOUT_MS)
     {
         http_req_start_ms[i] = 0;
         send_text(i, 408, PROTOCORE_MIME_TEXT_PLAIN, "Request Timeout"); // terminal error response -> connection closes
@@ -1022,7 +1031,8 @@ static void poll_slot(struct HttpInternal *restrict ctx)
         Http.match_and_execute(i);
         if (http_pool[i].parse_state == PARSE_COMPLETE)
         {
-            http_reset(i);
+            HttpConn.slot = i;
+            HttpConn.reset(HttpConn.internal);
         }
     }
     else if (http_pool[i].parse_state == PARSE_ERROR)

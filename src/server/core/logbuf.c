@@ -12,7 +12,6 @@
 
 #if PROTOCORE_ENABLE_LOGBUF
 
-#include <stdio.h>
 
 // A log line is its severity letter, a space, then the message.
 static const protocore_field LOG_LINE[] = {PROTOCORE_CH, {PROTOCORE_FK_LIT, 0, 1, " "}, PROTOCORE_STR, PROTOCORE_END};

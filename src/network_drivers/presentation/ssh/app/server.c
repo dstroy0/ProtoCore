@@ -75,6 +75,22 @@ void ssh_classify_file_transfer_request(struct SshAppServerInternal *restrict ct
     }
 #endif
 }
+
+#else
+
+/** @brief The classifier - what SshAppServerNs points at, with no file-transfer subsystem built. */
+struct SshAppServerInternal
+{
+    SshAppServerNs *ns;
+};
+
+static struct SshAppServerInternal s_appsrv = {.ns = &SshAppServer};
+
+void ssh_classify_file_transfer_request(struct SshAppServerInternal *restrict ctx)
+{
+    (void)ctx;
+}
+
 #endif
 
 // Designated, so a member's position in the struct does not decide what it binds to.

@@ -15,7 +15,7 @@
 // ---------------------------------------------------------------------------
 
 #if PROTOCORE_HAS_GPIO
-#include "server/clock/clock.h" // protocore_millis()
+#include "server/clock/clock.h" // Clock.millis
 #endif
 void protocore_sen0192_motion_init(Sen0192Motion *m, uint32_t hold_ms, proto_bool active_high)
 {
@@ -99,12 +99,14 @@ proto_bool protocore_sen0192_poll(void)
         return PROTO_FALSE;
     }
     proto_bool level = protocore_platform_gpio_read((uint8_t)(s_sen.pin)) != 0;
-    return protocore_sen0192_motion_update(&s_sen.motion, level, protocore_millis());
+    Clock.millis(Clock.internal);
+    return protocore_sen0192_motion_update(&s_sen.motion, level, Clock.ms);
 }
 
 proto_bool protocore_sen0192_present(void)
 {
-    protocore_sen0192_motion_tick(&s_sen.motion, protocore_millis()); // age presence out even between poll()s
+    Clock.millis(Clock.internal);
+    protocore_sen0192_motion_tick(&s_sen.motion, Clock.ms); // age presence out even between poll()s
     return protocore_sen0192_motion_present(&s_sen.motion);
 }
 

@@ -14,7 +14,6 @@
 
 #if PROTOCORE_ENABLE_GUARDRAILS
 
-#include <stdio.h>
 
 #if PROTOCORE_HAS_VENDOR_HEAP_INFO
 #include "esp_heap_caps.h"

@@ -46,7 +46,11 @@ static proto_bool put_stuffed(uint8_t *out, uint16_t *p, uint16_t cap, uint8_t b
 uint16_t protocore_ash_crc16(const uint8_t *buf, uint16_t len)
 {
     // ASH uses CRC-CCITT (poly 0x1021, init 0xFFFF, unreflected), cataloged as CRC-16/IBM-3740.
-    return (uint16_t)protocore_crc(&PROTOCORE_CRC16_IBM_3740, buf, len);
+    Crc.args.params = &PROTOCORE_CRC16_IBM_3740;
+    Crc.args.data = buf;
+    Crc.args.len = len;
+    Crc.compute(Crc.internal);
+    return (uint16_t)Crc.value;
 }
 
 uint16_t protocore_ash_frame_encode(uint8_t control, const uint8_t *payload, uint16_t len, uint8_t *out, uint16_t cap)
@@ -57,10 +61,19 @@ uint16_t protocore_ash_frame_encode(uint8_t control, const uint8_t *payload, uin
     }
     // CRC over control + payload. They are not contiguous in memory, which is what the engine's
     // begin/update/final split is for - no scratch buffer to assemble them into.
-    uint32_t c = protocore_crc_begin(&PROTOCORE_CRC16_IBM_3740);
-    c = protocore_crc_update(&PROTOCORE_CRC16_IBM_3740, c, &control, 1);
-    c = protocore_crc_update(&PROTOCORE_CRC16_IBM_3740, c, payload, len);
-    const uint16_t crc = (uint16_t)protocore_crc_final(&PROTOCORE_CRC16_IBM_3740, c);
+    Crc.args.params = &PROTOCORE_CRC16_IBM_3740;
+    Crc.begin(Crc.internal);
+    Crc.args.crc = Crc.value;
+    Crc.args.data = &control;
+    Crc.args.len = 1;
+    Crc.update(Crc.internal);
+    Crc.args.crc = Crc.value;
+    Crc.args.data = payload;
+    Crc.args.len = len;
+    Crc.update(Crc.internal);
+    Crc.args.crc = Crc.value;
+    Crc.final(Crc.internal);
+    const uint16_t crc = (uint16_t)Crc.value;
 
     uint16_t p = 0;
     if (!put_stuffed(out, &p, cap, control))

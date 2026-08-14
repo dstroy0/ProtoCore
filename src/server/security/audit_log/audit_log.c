@@ -70,6 +70,15 @@ static void chain_hash(uint8_t *work, const uint8_t prev[PROTOCORE_AUDIT_HASH_LE
     protocore_sha256_final(&c, out);
 }
 
+// The lowercase hex character for one nibble.
+static char hex_digit(uint8_t nibble)
+{
+    Hex.args.nibble = nibble;
+    Hex.args.upper = PROTO_FALSE;
+    Hex.digit(Hex.internal);
+    return Hex.ch;
+}
+
 // Append @p n JSON-escaped bytes of @p s into out[pos..cap); returns new pos, or
 // cap+1 on overflow (caller checks pos <= cap).
 static size_t json_escape(char *out, size_t pos, size_t cap, const char *s)
@@ -103,8 +112,8 @@ static size_t json_escape(char *out, size_t pos, size_t cap, const char *s)
         else if (ch < 0x20)
         {
             ub[0] = '\\', ub[1] = 'u', ub[2] = '0', ub[3] = '0';
-            ub[4] = protocore_hex_digit((ch >> 4) & 0xF, PROTO_FALSE);
-            ub[5] = protocore_hex_digit(ch & 0xF, PROTO_FALSE);
+            ub[4] = hex_digit((uint8_t)((ch >> 4) & 0xF));
+            ub[5] = hex_digit((uint8_t)(ch & 0xF));
             ub[6] = '\0';
             esc = ub, n = 6;
         }
@@ -135,8 +144,8 @@ static size_t hex_hash(char *out, size_t pos, size_t cap, const uint8_t *h)
     }
     for (size_t i = 0; i < PROTOCORE_AUDIT_HASH_LEN; i++)
     {
-        out[pos++] = protocore_hex_digit((h[i] >> 4) & 0xF, PROTO_FALSE);
-        out[pos++] = protocore_hex_digit(h[i] & 0xF, PROTO_FALSE);
+        out[pos++] = hex_digit((uint8_t)((h[i] >> 4) & 0xF));
+        out[pos++] = hex_digit((uint8_t)(h[i] & 0xF));
     }
     return pos;
 }
@@ -179,7 +188,8 @@ uint32_t protocore_audit_append(protocore_audit_cat category, const char *msg)
 
     protocore_audit_entry *e = &s_audit.ring[idx(&s_audit, s_audit.count)];
     e->seq = ++s_audit.seq;
-    e->ts = protocore_millis();
+    Clock.millis(Clock.internal);
+    e->ts = Clock.ms;
     e->category = category;
     if (msg)
     {
