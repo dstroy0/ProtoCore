@@ -7,6 +7,7 @@
   ci.py gen [name...]         run generators (default: the workflow's set, in order)
   ci.py gen --check [name...] assert the tracked files already match (what CI gates on)
   ci.py check [name...]       run guards (default: the workflow's set)
+  ci.py baseline [name...]    record a ratcheted guard's violations as its new floor
   ci.py cov <sub>             coverage tooling: run / base / map / plan / dedupe
   ci.py fmt [--check]         clang-format, Prettier and black over the tree
   ci.py sonar <sub>           compile database: merge / accept-style
@@ -75,6 +76,18 @@ CHECK = {
 # Flags a guard needs to match how the workflow invokes it.
 CHECK_ARGS = {"src_banned": ["--all"]}
 
+# The ratcheted guards: each records its current violations as a floor and then fails only on new
+# ones. Raising a floor is a deliberate act - it is how a mid-flight conversion keeps its gate
+# useful instead of red on every run - so it is its own command rather than a flag on `check`.
+BASELINE_ARGS = {
+    "owned_context": ["--baseline"],
+    "src_banned": ["--all", "--baseline"],
+    "symbols": ["--baseline"],
+    "comments": ["--save"],
+    "test_coverage": ["--save"],
+}
+BASELINE_DEFAULT = ["owned_context", "src_banned"]
+
 COV = {
     "run": "coverage.covrun",
     "base": "coverage.covbase",
@@ -142,6 +155,16 @@ def cmd_gen(a):
 
 def cmd_check(a):
     return dispatch(CHECK, a.names or CHECK_DEFAULT, per_name_args=CHECK_ARGS)
+
+
+def cmd_baseline(a):
+    names = a.names or BASELINE_DEFAULT
+    unknown = [n for n in names if n not in BASELINE_ARGS]
+    if unknown:
+        print("not a ratcheted guard: %s (ratcheted: %s)" % (" ".join(unknown), " ".join(sorted(BASELINE_ARGS))),
+              file=sys.stderr)
+        return 2
+    return dispatch(CHECK, names, per_name_args=BASELINE_ARGS)
 
 
 def cmd_cov(a):
@@ -220,6 +243,10 @@ def main():
     p = sub.add_parser("check", help="run guards")
     p.add_argument("names", nargs="*")
     p.set_defaults(fn=cmd_check)
+
+    p = sub.add_parser("baseline", help="record a ratcheted guard's current violations as its floor")
+    p.add_argument("names", nargs="*")
+    p.set_defaults(fn=cmd_baseline)
 
     p = sub.add_parser("cov", help="coverage tooling")
     p.add_argument("sub", choices=sorted(COV))

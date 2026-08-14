@@ -17,6 +17,11 @@
 #include "network_drivers/presentation/ssh/ssh.h"
 #include "network_drivers/presentation/ssh/transport/transport.h" // ssh_sess, ssh_pkt - session and packet state
 #include "shared/log/log.h"                                       // PROTOCORE_LOGD
+#if PROTOCORE_SSH_PORT_FORWARD
+#include "network_drivers/presentation/ssh/server/server.h" // SshServer: the listener a binding accepts on
+#include "network_drivers/transport/tcp/tcp.h"              // Tcp: the socket a forwarded channel bridges
+#include "shared/ip/ip.h"                                   // the address a binding accepts on
+#endif
 
 // ---------------------------------------------------------------------------
 // RFC 4254 sec 5 - channel multiplexing
@@ -1839,13 +1844,9 @@ void protocore_ssh_channel_handle_close(struct SshConnectionInternal *restrict c
 
 #if PROTOCORE_SSH_PORT_FORWARD
 
-#include "network_drivers/presentation/ssh/ssh.h"
-#include "network_drivers/transport/tcp/tcp.h"
-
 // Remote forwarding (ssh -R) allocates a real listener and bridges each accepted socket to a
 // server-initiated forwarded-tcpip channel. sec 7.1 decides which bindings exist; the socket those
 // bindings accept on is the listening role's, and its handler binds into the registry elsewhere.
-#include "shared/ip/ip.h"
 
 // All SSH local-forward (ssh -L) state, owned by one instance (internal linkage): the policy
 // callback. The channel is its ssh_chan row; the socket it bridges is the network layer's.
@@ -1894,7 +1895,10 @@ static int on_forward_open(uint8_t ssh_slot, uint32_t channel, const char *host,
 // forwarded-tcpip (ssh -R): client -> the accepted socket we bridged back to it.
 static void on_forward_data(uint8_t ssh_slot, uint32_t channel, const uint8_t *data, size_t len)
 {
-    if (protocore_ssh_chan_by_id(ssh_slot, channel))
+    SshConnection.chan.slot = ssh_slot;
+    SshConnection.chan.id = channel;
+    SshConnection.chan_by_id(SshConnection.internal);
+    if (SshConnection.found)
     {
         SshNetwork.ssh_slot = ssh_slot;
         SshNetwork.stream.channel = channel;
@@ -1976,7 +1980,9 @@ static int on_rforward_open(uint8_t ssh_slot, const char *addr, size_t addr_len,
         return -1; // remote-forward table full
     }
     // sec 7.1 decides that this binding exists; the socket it accepts on is the listening role's.
-    const int li = ssh_rfwd_listener_open(bind_port);
+    SshServer.bind_port = bind_port;
+    SshServer.rfwd_listener_open(SshServer.internal);
+    const int li = SshServer.i32;
     if (li < 0)
     {
         return -1; // no listener capacity, or the port could not be bound
@@ -2002,7 +2008,8 @@ static int on_rforward_cancel(uint8_t ssh_slot, const char *addr, size_t addr_le
     {
         return -1;
     }
-    ssh_rfwd_listener_close(b->listener_idx);
+    SshServer.handle = b->listener_idx;
+    SshServer.rfwd_listener_close(SshServer.internal);
     b->active = PROTO_FALSE;
     return 0;
 }
@@ -2010,7 +2017,10 @@ static int on_rforward_cancel(uint8_t ssh_slot, const char *addr, size_t addr_le
 // The client's reply to a server-initiated forwarded-tcpip open.
 static void on_forward_confirm(uint8_t ssh_slot, uint32_t channel, proto_bool ok)
 {
-    SshChannel *c = protocore_ssh_chan_by_id(ssh_slot, channel);
+    SshConnection.chan.slot = ssh_slot;
+    SshConnection.chan.id = channel;
+    SshConnection.chan_by_id(SshConnection.internal);
+    SshChannel *c = SshConnection.found;
     if (!c)
     {
         return;
