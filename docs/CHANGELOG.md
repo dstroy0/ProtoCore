@@ -119,6 +119,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`41f8a5a`](https://github.com/dstroy0/ProtoCore/commit/41f8a5a99113d023c15f588791daebf2262adb31))
 - update CHANGELOG.md [skip ci] ([`213c34e`](https://github.com/dstroy0/ProtoCore/commit/213c34e5a0cdbba4c073d2e9573ffac032866ca9))
 - update CHANGELOG.md [skip ci] ([`1913244`](https://github.com/dstroy0/ProtoCore/commit/1913244d8a7b3c0c29bfbe8329a4a5f76e0cd9f5))
 - update test report + coverage [skip ci] ([`cac5a0c`](https://github.com/dstroy0/ProtoCore/commit/cac5a0c44faf13e1c0c3e4510041247db448ff7f))
@@ -357,6 +358,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- (housekeeping): move dirs, renames, pimpl as I work through ([`f140888`](https://github.com/dstroy0/ProtoCore/commit/f140888d478a0768e120968ac4e8dd58bc396089))
 - (housekeeping): move dirs, renames, pimpl as I work through ([`408fb25`](https://github.com/dstroy0/ProtoCore/commit/408fb2525c27bcb1dcb3d5289133a724ea21e7ef))
 - Merge branch 'main' of https://github.com/dstroy0/ProtoCore ([`6f95945`](https://github.com/dstroy0/ProtoCore/commit/6f95945ef27f866938f510651fec0eedc0a1b56d))
 - (housekeeping): move dirs, renames, pimpl as I work through ([`e4ce7b5`](https://github.com/dstroy0/ProtoCore/commit/e4ce7b5dbd2c1bc5a2a892032762adaa4fc28584))
