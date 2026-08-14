@@ -46,7 +46,8 @@ void dbench_run(void)
         volatile uint16_t sink16 = 0;
 
         // Assemble the summation frame (build words -> loopback + big-endian words + FCS).
-        DBENCH_OP("protocore_interbus_build x16w", 20000, sink += protocore_interbus_build(words, word_count, buf, sizeof(buf)));
+        DBENCH_OP("protocore_interbus_build x16w", 20000,
+                  sink += protocore_interbus_build(words, word_count, buf, sizeof(buf)));
 
         // Disassemble + validate a received frame (loopback + FCS check, then split into words).
         DBENCH_OP("protocore_interbus_parse x16w", 20000, {

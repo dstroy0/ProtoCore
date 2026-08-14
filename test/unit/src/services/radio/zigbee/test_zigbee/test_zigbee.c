@@ -192,15 +192,18 @@ void test_decode_framing_faults(void)
     uint16_t back_len = 0;
 
     static const uint8_t NO_FLAG[4] = {0xC0, 0x38, 0xBC, 0x00};
-    TEST_ASSERT_EQUAL_INT(0, protocore_ash_frame_decode(NO_FLAG, sizeof(NO_FLAG), &control, back, sizeof(back), &back_len));
+    TEST_ASSERT_EQUAL_INT(
+        0, protocore_ash_frame_decode(NO_FLAG, sizeof(NO_FLAG), &control, back, sizeof(back), &back_len));
     TEST_ASSERT_EQUAL_INT(0, protocore_ash_frame_decode(NO_FLAG, 0, &control, back, sizeof(back), &back_len));
 
     static const uint8_t DANGLING[3] = {0xC0, ASH_ESCAPE, ASH_FLAG};
-    TEST_ASSERT_EQUAL_INT(-1, protocore_ash_frame_decode(DANGLING, sizeof(DANGLING), &control, back, sizeof(back), &back_len));
+    TEST_ASSERT_EQUAL_INT(
+        -1, protocore_ash_frame_decode(DANGLING, sizeof(DANGLING), &control, back, sizeof(back), &back_len));
 
     // Two octets cannot hold a control byte plus a two-octet CRC.
     static const uint8_t TOO_SHORT[3] = {0xC0, 0x38, ASH_FLAG};
-    TEST_ASSERT_EQUAL_INT(-1, protocore_ash_frame_decode(TOO_SHORT, sizeof(TOO_SHORT), &control, back, sizeof(back), &back_len));
+    TEST_ASSERT_EQUAL_INT(
+        -1, protocore_ash_frame_decode(TOO_SHORT, sizeof(TOO_SHORT), &control, back, sizeof(back), &back_len));
 }
 
 // A payload larger than the caller's buffer is refused, not truncated into it.
@@ -229,11 +232,13 @@ void test_decode_consumes_one_frame_from_a_stream(void)
     uint8_t control = 0;
     uint8_t back[32];
     uint16_t back_len = 0;
-    TEST_ASSERT_EQUAL_INT((int)na, protocore_ash_frame_decode(stream, (uint16_t)(na + nb), &control, back, sizeof(back), &back_len));
+    TEST_ASSERT_EQUAL_INT(
+        (int)na, protocore_ash_frame_decode(stream, (uint16_t)(na + nb), &control, back, sizeof(back), &back_len));
     TEST_ASSERT_EQUAL_HEX8(0x10, control);
     TEST_ASSERT_EQUAL_MEMORY(A, back, sizeof(A));
 
-    TEST_ASSERT_EQUAL_INT((int)nb, protocore_ash_frame_decode(stream + na, nb, &control, back, sizeof(back), &back_len));
+    TEST_ASSERT_EQUAL_INT((int)nb,
+                          protocore_ash_frame_decode(stream + na, nb, &control, back, sizeof(back), &back_len));
     TEST_ASSERT_EQUAL_HEX8(0x20, control);
     TEST_ASSERT_EQUAL_MEMORY(B, back, sizeof(B));
 }

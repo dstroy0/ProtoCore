@@ -156,7 +156,8 @@ static void format(struct SseInternal *restrict ctx)
     {
         return;
     }
-    if (!sse_append(buf, n, &pos, "data: ", 6) || !sse_append(buf, n, &pos, ctx->ns->event_args.data, strnlen(ctx->ns->event_args.data, n)) ||
+    if (!sse_append(buf, n, &pos, "data: ", 6) ||
+        !sse_append(buf, n, &pos, ctx->ns->event_args.data, strnlen(ctx->ns->event_args.data, n)) ||
         !sse_append(buf, n, &pos, "\n\n", 2))
     {
         return;

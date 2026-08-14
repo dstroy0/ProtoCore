@@ -102,8 +102,12 @@ void test_build_config_writes_the_datasheet_registers_in_order(void)
     TEST_ASSERT_EQUAL_size_t(21, protocore_ldc1614_build_config(buf, sizeof(buf), 0xFFFF, 0x0400));
 
     static const uint8_t ORDER[7] = {
-        LDC1614_REG_RCOUNT_CH0,       LDC1614_REG_SETTLECOUNT_CH0, LDC1614_REG_CLOCK_DIVIDERS_CH0,
-        LDC1614_REG_DRIVE_CURRENT_CH0, LDC1614_REG_ERROR_CONFIG,   LDC1614_REG_MUX_CONFIG,
+        LDC1614_REG_RCOUNT_CH0,
+        LDC1614_REG_SETTLECOUNT_CH0,
+        LDC1614_REG_CLOCK_DIVIDERS_CH0,
+        LDC1614_REG_DRIVE_CURRENT_CH0,
+        LDC1614_REG_ERROR_CONFIG,
+        LDC1614_REG_MUX_CONFIG,
         LDC1614_REG_CONFIG,
     };
     for (size_t i = 0; i < 7; i++)

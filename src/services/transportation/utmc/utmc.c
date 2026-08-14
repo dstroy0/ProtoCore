@@ -39,8 +39,8 @@ size_t protocore_utmc_request(const char *object_id, char *out, size_t cap)
     return Sb.finish(&b);
 }
 
-size_t protocore_utmc_response(const char *object_id, const char *value, uint8_t quality, const char *timestamp, char *out,
-                        size_t cap)
+size_t protocore_utmc_response(const char *object_id, const char *value, uint8_t quality, const char *timestamp,
+                               char *out, size_t cap)
 {
     protocore_sb b2 = {out, cap, 0, out != NULL && cap > 0};
     Sb.put(&b2, "<?xml version=\"1.0\"?><UTMCResponse><object id=\"");

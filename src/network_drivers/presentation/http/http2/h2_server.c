@@ -384,7 +384,6 @@ proto_bool protocore_h2_server_respond(uint8_t slot, int code, const char *conte
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-H2ServerNs H2Server = {
-    .open = open_conn, .data = data, .respond = respond, .close = close_conn, .internal = &s_h2};
+H2ServerNs H2Server = {.open = open_conn, .data = data, .respond = respond, .close = close_conn, .internal = &s_h2};
 
 #endif // PROTOCORE_ENABLE_HTTP2 && PROTOCORE_ENABLE_TLS

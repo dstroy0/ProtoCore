@@ -34,11 +34,13 @@ int main(void)
         HBENCH_NS(
             1000000,
             {
-                size_t n = protocore_webdav_ms_entry(buf, sizeof(buf), 0, "/dav/report.txt", false, 4096, mtime, "text/plain");
+                size_t n =
+                    protocore_webdav_ms_entry(buf, sizeof(buf), 0, "/dav/report.txt", false, 4096, mtime, "text/plain");
                 sink += n;
             },
             ns);
-        size_t bytes = protocore_webdav_ms_entry(buf, sizeof(buf), 0, "/dav/report.txt", false, 4096, mtime, "text/plain");
+        size_t bytes =
+            protocore_webdav_ms_entry(buf, sizeof(buf), 0, "/dav/report.txt", false, 4096, mtime, "text/plain");
         hbench_row("webdav", "ms_entry file", ns, (double)bytes);
         (void)sink;
     }
@@ -55,7 +57,7 @@ int main(void)
                 for (int k = 0; k < 8; k++)
                 {
                     len = protocore_webdav_ms_entry(buf, sizeof(buf), len, "/dav/sensor-log.csv", false, 12800, mtime,
-                                             "text/csv");
+                                                    "text/csv");
                 }
                 len = protocore_webdav_ms_end(buf, sizeof(buf), len);
                 sink += len;
@@ -65,7 +67,8 @@ int main(void)
         len = protocore_webdav_ms_entry(buf, sizeof(buf), len, "/dav/", true, 0, mtime, "");
         for (int k = 0; k < 8; k++)
         {
-            len = protocore_webdav_ms_entry(buf, sizeof(buf), len, "/dav/sensor-log.csv", false, 12800, mtime, "text/csv");
+            len = protocore_webdav_ms_entry(buf, sizeof(buf), len, "/dav/sensor-log.csv", false, 12800, mtime,
+                                            "text/csv");
         }
         len = protocore_webdav_ms_end(buf, sizeof(buf), len);
         hbench_row("webdav", "PROPFIND depth-1 (8)", ns, (double)len);

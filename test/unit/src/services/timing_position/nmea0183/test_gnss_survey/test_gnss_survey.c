@@ -319,7 +319,7 @@ void test_gga_folds_into_a_geodetic_fix(void)
 
     GnssGeodetic g;
     TEST_ASSERT_TRUE(protocore_gnss_gga_to_geodetic(&m, &g));
-    TEST_ASSERT_TRUE(dabs(g.lat_deg - 44.0690060) < 2e-5);   // 44 + 4.14036/60
+    TEST_ASSERT_TRUE(dabs(g.lat_deg - 44.0690060) < 2e-5);     // 44 + 4.14036/60
     TEST_ASSERT_TRUE(dabs(g.lon_deg - (-121.3143268)) < 2e-5); // -(121 + 18.85961/60)
     near_m(1091.7, g.height_m, 0.01);
 
@@ -339,8 +339,9 @@ void test_gga_without_a_fix_is_refused(void)
     GnssSurvey s;
     protocore_gnss_survey_reset(&s);
 
-    TEST_ASSERT_GREATER_THAN_UINT32(0, (uint32_t)protocore_nmea0183_build(
-                                            buf, sizeof(buf), "GNGGA,001043.00,4404.14036,N,12118.85961,W,0,00,,,M,,M,,"));
+    TEST_ASSERT_GREATER_THAN_UINT32(
+        0, (uint32_t)protocore_nmea0183_build(buf, sizeof(buf),
+                                              "GNGGA,001043.00,4404.14036,N,12118.85961,W,0,00,,,M,,M,,"));
     TEST_ASSERT_TRUE(protocore_nmea0183_parse(buf, strlen(buf), &m));
     TEST_ASSERT_FALSE(protocore_gnss_gga_to_geodetic(&m, &g));
     TEST_ASSERT_FALSE(protocore_gnss_survey_add_gga(&s, &m));

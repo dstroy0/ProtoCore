@@ -124,10 +124,10 @@ void test_payload_value_formatting(void)
         double value;
         const char *want;
     } static const CASES[] = {
-        {0.0, "\"values\":[0.000]"},        {1.0, "\"values\":[1.000]"},
-        {0.5, "\"values\":[0.500]"},        {0.25, "\"values\":[0.250]"},
-        {0.0625, "\"values\":[0.063]"},     {-0.5, "\"values\":[-0.500]"},
-        {-2.75, "\"values\":[-2.750]"},     {1024.5, "\"values\":[1024.500]"},
+        {0.0, "\"values\":[0.000]"},         {1.0, "\"values\":[1.000]"},
+        {0.5, "\"values\":[0.500]"},         {0.25, "\"values\":[0.250]"},
+        {0.0625, "\"values\":[0.063]"},      {-0.5, "\"values\":[-0.500]"},
+        {-2.75, "\"values\":[-2.750]"},      {1024.5, "\"values\":[1024.500]"},
         {0.001953125, "\"values\":[0.002]"}, // 1/512 = 1.953125 milli, rounds to 2
     };
     for (size_t i = 0; i < sizeof(CASES) / sizeof(CASES[0]); i++)

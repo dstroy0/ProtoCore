@@ -120,8 +120,7 @@ void test_chunk_boundaries_do_not_change_the_digest(void)
         protocore_sha256_update(&c, (const uint8_t *)MSG + cut, n - cut);
         protocore_sha256_final(&c, d);
         tohex(d, sizeof(d), got);
-        TEST_ASSERT_EQUAL_STRING_MESSAGE("248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1", got,
-                                         MSG);
+        TEST_ASSERT_EQUAL_STRING_MESSAGE("248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1", got, MSG);
     }
 }
 

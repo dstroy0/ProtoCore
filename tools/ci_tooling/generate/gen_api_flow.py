@@ -28,8 +28,8 @@ import sys
 from tools.ci_tooling.lib import doc_region as dr
 
 ROOT = dr.repo_root(__file__)
-API_H = os.path.join(ROOT, "src", "protocore.h")
-PROTO_CPP = os.path.join(ROOT, "src", "server", "proto_builtins.c")
+API_H = os.path.join(ROOT, "include", "protocore.h")
+PROTO_CPP = os.path.join(ROOT, "src", "server", "protocore_builtins.c")
 PRESENTATION = os.path.join(ROOT, "src", "network_drivers", "presentation")
 README = os.path.join(ROOT, "README.md")
 ARCH = os.path.join(ROOT, "docs", "ARCHITECTURE.md")

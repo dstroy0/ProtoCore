@@ -17,8 +17,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
-static const protocore_field BENCH_LINE[] = {{PROTOCORE_FK_LIT, 0, 7, "sensor="}, PROTOCORE_U32, {PROTOCORE_FK_LIT, 0, 4, " rh="}, PROTOCORE_U32,
-                                      {PROTOCORE_FK_LIT, 0, 7, "% heap="}, PROTOCORE_U32, {PROTOCORE_FK_LIT, 0, 1, "\n"},   PROTOCORE_END};
+static const protocore_field BENCH_LINE[] = {
+    {PROTOCORE_FK_LIT, 0, 7, "sensor="}, PROTOCORE_U32, {PROTOCORE_FK_LIT, 0, 4, " rh="}, PROTOCORE_U32,
+    {PROTOCORE_FK_LIT, 0, 7, "% heap="}, PROTOCORE_U32, {PROTOCORE_FK_LIT, 0, 1, "\n"},   PROTOCORE_END};
 
 void dbench_run(void)
 {
@@ -28,8 +29,9 @@ void dbench_run(void)
         volatile uint32_t sink = 0;
         char line[64];
         DBENCH_OP("web terminal line (frame build)", 200000, {
-            sink += (uint32_t)frame.build(line, sizeof(line), BENCH_LINE,
-                                          (const protocore_fval[]){PROTOCORE_VU32(214u), PROTOCORE_VU32(48u), PROTOCORE_VU32(131072u)}, 3);
+            sink += (uint32_t)frame.build(
+                line, sizeof(line), BENCH_LINE,
+                (const protocore_fval[]){PROTOCORE_VU32(214u), PROTOCORE_VU32(48u), PROTOCORE_VU32(131072u)}, 3);
         });
         DBENCH_OP("protocore_web_terminal_client_count", 200000, sink += protocore_web_terminal_client_count());
         (void)sink;

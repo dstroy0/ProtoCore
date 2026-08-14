@@ -31,7 +31,8 @@ void dbench_run(void)
         DBENCH_BANNER("s7comm");
         volatile size_t sink = 0;
         static uint8_t buf[256];
-        DBENCH_OP("protocore_s7_build_setup", 200000, sink += protocore_s7_build_setup(buf, sizeof(buf), 0x0001, 1, 1, 480));
+        DBENCH_OP("protocore_s7_build_setup", 200000,
+                  sink += protocore_s7_build_setup(buf, sizeof(buf), 0x0001, 1, 1, 480));
         DBENCH_OP("protocore_s7_build_read_request x3", 200000,
                   sink += protocore_s7_build_read_request(buf, sizeof(buf), 0x0002, items, 3));
         S7Header h;

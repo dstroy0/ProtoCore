@@ -223,8 +223,8 @@ static QuicSlot *alloc_slot()
 }
 
 // The HTTP/3 engine surfaces a completed request here; forward it to the application by conn id.
-static void protocore_h3_on_request(void *app, H3Conn * /*h3*/, uint64_t stream_id, const char *method, const char *path,
-                             const char *authority, const uint8_t *body, size_t body_len)
+static void protocore_h3_on_request(void *app, H3Conn * /*h3*/, uint64_t stream_id, const char *method,
+                                    const char *path, const char *authority, const uint8_t *body, size_t body_len)
 {
     QuicSlot *s = (QuicSlot *)app;
     if (s_quic.on_request)
@@ -267,7 +267,8 @@ static QuicSlot *open_conn(const QuicLongHeader *lh, const char *ip, uint16_t po
 
     QuicConnCallbacks cb;
     mem.set(&cb, 0, sizeof cb); // protocore_h3_conn_init installs the real callbacks
-    protocore_quic_conn_init(&s->qc, &tc, lh->dcid, lh->dcid_len, lh->scid, lh->scid_len, our_scid, PROTOCORE_QUIC_SCID_LEN, &cb);
+    protocore_quic_conn_init(&s->qc, &tc, lh->dcid, lh->dcid_len, lh->scid, lh->scid_len, our_scid,
+                             PROTOCORE_QUIC_SCID_LEN, &cb);
     protocore_h3_conn_init(&s->h3, &s->qc, protocore_h3_on_request, s);
 
     copy_str(s->peer_ip, sizeof s->peer_ip, ip);
@@ -322,7 +323,8 @@ static QuicSlot *route(const uint8_t *dg, size_t len, proto_bool *is_initial, Qu
         QuicSlot *s = &s_store.pool[i];
         // scid_len is always PROTOCORE_QUIC_SCID_LEN (only this server sets it, at conn init above), so its
         // != arm below is a defensive guard no host input can reach.
-        if (s->used && s->qc.scid_len == PROTOCORE_QUIC_SCID_LEN && mem.cmp(dg + 1, s->qc.scid, PROTOCORE_QUIC_SCID_LEN) == 0)
+        if (s->used && s->qc.scid_len == PROTOCORE_QUIC_SCID_LEN &&
+            mem.cmp(dg + 1, s->qc.scid, PROTOCORE_QUIC_SCID_LEN) == 0)
         {
             return s;
         }
@@ -434,8 +436,8 @@ static void respond(struct QuicServerInternal *restrict ctx)
         ctx->ns->ok = PROTO_FALSE;
         return;
     }
-    ctx->ns->ok = protocore_h3_conn_respond(&s->h3, ctx->ns->stream.stream_id, ctx->ns->resp.status, ctx->ns->resp.content_type,
-                                            ctx->ns->resp.body, ctx->ns->resp.body_len);
+    ctx->ns->ok = protocore_h3_conn_respond(&s->h3, ctx->ns->stream.stream_id, ctx->ns->resp.status,
+                                            ctx->ns->resp.content_type, ctx->ns->resp.body, ctx->ns->resp.body_len);
 }
 
 static void active_conns(struct QuicServerInternal *restrict ctx)
@@ -479,11 +481,7 @@ proto_bool protocore_quic_server_respond(uint32_t conn_id, uint64_t stream_id, i
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-QuicServerNs QuicServer = {.begin = begin,
-                           .poll = poll,
-                           .respond = respond,
-                           .active_conns = active_conns,
-                           .stop = stop,
-                           .internal = &s_quic};
+QuicServerNs QuicServer = {
+    .begin = begin, .poll = poll, .respond = respond, .active_conns = active_conns, .stop = stop, .internal = &s_quic};
 
 #endif // PROTOCORE_ENABLE_HTTP3

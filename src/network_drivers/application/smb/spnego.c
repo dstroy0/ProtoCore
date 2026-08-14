@@ -93,12 +93,12 @@ size_t protocore_spnego_wrap_negotiate(const uint8_t *ntlm, size_t protocore_ntl
     {
         return 0;
     }
-    size_t octet = tlv_size(protocore_ntlm_len);      // OCTET STRING(mechToken)
-    size_t mt = tlv_size(octet);               // [2] mechToken
-    size_t seqof = tlv_size(sizeof(NTLM_OID)); // SEQUENCE OF { NTLM OID }
-    size_t mtypes = tlv_size(seqof);           // [0] mechTypes
-    size_t seq = tlv_size(mtypes + mt);        // SEQUENCE (NegTokenInit)
-    size_t nti = tlv_size(seq);                // [0] negTokenInit
+    size_t octet = tlv_size(protocore_ntlm_len); // OCTET STRING(mechToken)
+    size_t mt = tlv_size(octet);                 // [2] mechToken
+    size_t seqof = tlv_size(sizeof(NTLM_OID));   // SEQUENCE OF { NTLM OID }
+    size_t mtypes = tlv_size(seqof);             // [0] mechTypes
+    size_t seq = tlv_size(mtypes + mt);          // SEQUENCE (NegTokenInit)
+    size_t nti = tlv_size(seq);                  // [0] negTokenInit
     size_t ictbody = sizeof(SPNEGO_OID) + nti;
     size_t total = tlv_size(ictbody); // [APPLICATION 0] InitialContextToken
     if (!out || total > cap)
@@ -130,9 +130,9 @@ size_t protocore_spnego_wrap_authenticate(const uint8_t *ntlm, size_t protocore_
         return 0;
     }
     size_t octet = tlv_size(protocore_ntlm_len); // OCTET STRING(responseToken)
-    size_t rt = tlv_size(octet);          // [2] responseToken
-    size_t seq = tlv_size(rt);            // SEQUENCE
-    size_t total = tlv_size(seq);         // [1] NegTokenResp
+    size_t rt = tlv_size(octet);                 // [2] responseToken
+    size_t seq = tlv_size(rt);                   // SEQUENCE
+    size_t total = tlv_size(seq);                // [1] NegTokenResp
     if (!out || total > cap)
     {
         return 0;
@@ -148,7 +148,8 @@ size_t protocore_spnego_wrap_authenticate(const uint8_t *ntlm, size_t protocore_
     return p;
 }
 
-proto_bool protocore_spnego_parse_response(const uint8_t *blob, size_t len, const uint8_t **protocore_resp_token, size_t *protocore_resp_len)
+proto_bool protocore_spnego_parse_response(const uint8_t *blob, size_t len, const uint8_t **protocore_resp_token,
+                                           size_t *protocore_resp_len)
 {
     if (!blob || !protocore_resp_token || !protocore_resp_len)
     {

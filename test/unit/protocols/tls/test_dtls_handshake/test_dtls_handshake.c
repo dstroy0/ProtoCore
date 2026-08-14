@@ -94,7 +94,7 @@ static void test_hs_reasm_single_fragment(void)
     uint8_t buf[80];
     DtlsHsReasm r;
     DtlsHandshake.reasm_init(&r, 2, buf, sizeof(buf));
-    TEST_ASSERT_EQUAL_INT(1, feed(&r, 11 , 2, sizeof(body), 0, body, sizeof(body)));
+    TEST_ASSERT_EQUAL_INT(1, feed(&r, 11, 2, sizeof(body), 0, body, sizeof(body)));
     TEST_ASSERT_EQUAL_UINT32(sizeof(body), r.length);
     TEST_ASSERT_EQUAL_UINT8(11, r.msg_type);
     TEST_ASSERT_EQUAL_MEMORY(body, buf, sizeof(body));
@@ -199,7 +199,7 @@ static void test_hs_reasm_rejects(void)
         DtlsHsReasm r;
         DtlsHandshake.reasm_init(&r, 0, buf, sizeof(buf));
         TEST_ASSERT_EQUAL_INT(0, feed(&r, 1, 0, 100, 0, body, 40));
-        DtlsHsHeader h = {1, 90 , 0, 40, 10, body + 40};
+        DtlsHsHeader h = {1, 90, 0, 40, 10, body + 40};
         TEST_ASSERT_EQUAL_INT(-1, DtlsHandshake.reasm_add(&r, &h));
     }
 

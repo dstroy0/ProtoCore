@@ -12,7 +12,6 @@
 
 #if PROTOCORE_ENABLE_SCPI
 
-
 // A response value is one number. 10 significant digits is the SCPI NR2/NR3 rendering.
 static const protocore_field SCPI_REAL[] = {{PROTOCORE_FK_G, 10, 0, NULL}, PROTOCORE_END};
 
@@ -310,7 +309,8 @@ size_t protocore_scpi_parse_string(const char *s, size_t len, char *out, size_t 
     return o;
 }
 
-proto_bool protocore_scpi_parse_block(const uint8_t *buf, size_t len, const uint8_t **data, size_t *data_len, size_t *consumed)
+proto_bool protocore_scpi_parse_block(const uint8_t *buf, size_t len, const uint8_t **data, size_t *data_len,
+                                      size_t *consumed)
 {
     if (!buf || !data || !data_len || !consumed || len < 2 || buf[0] != '#')
     {

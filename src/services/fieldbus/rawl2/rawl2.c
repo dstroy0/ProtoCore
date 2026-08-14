@@ -13,7 +13,7 @@
 #if PROTOCORE_ENABLE_RAWL2
 
 size_t protocore_eth_build(const uint8_t *dst, const uint8_t *src, uint16_t ethertype, const uint8_t *payload,
-                    size_t payload_len, uint8_t *out, size_t cap)
+                           size_t payload_len, uint8_t *out, size_t cap)
 {
     if (!dst || !src || !out || (payload_len && !payload))
     {
@@ -36,7 +36,8 @@ size_t protocore_eth_build(const uint8_t *dst, const uint8_t *src, uint16_t ethe
 }
 
 size_t protocore_eth_build_vlan(const uint8_t *dst, const uint8_t *src, uint8_t pcp, proto_bool dei, uint16_t vid,
-                         uint16_t ethertype, const uint8_t *payload, size_t payload_len, uint8_t *out, size_t cap)
+                                uint16_t ethertype, const uint8_t *payload, size_t payload_len, uint8_t *out,
+                                size_t cap)
 {
     if (!dst || !src || !out || (payload_len && !payload))
     {

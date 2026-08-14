@@ -199,10 +199,9 @@ void test_published_device_object_entries(void)
 }
 
 // LwM2M Core sec 7.4.5.2 B), the 38-octet "Read /2" Access Control payload, verbatim.
-static const uint8_t ACCESS_CONTROL[38] = {0x08, 0x00, 0x0E, 0xC1, 0x00, 0x01, 0xC1, 0x01, 0x00, 0x83,
-                                           0x02, 0x41, 0x7F, 0x07, 0xC1, 0x03, 0x7F, 0x08, 0x02, 0x12,
-                                           0xC1, 0x00, 0x03, 0xC1, 0x01, 0x00, 0x87, 0x02, 0x41, 0x7F,
-                                           0x07, 0x61, 0x01, 0x36, 0x01, 0xC1, 0x03, 0x7F};
+static const uint8_t ACCESS_CONTROL[38] = {0x08, 0x00, 0x0E, 0xC1, 0x00, 0x01, 0xC1, 0x01, 0x00, 0x83, 0x02, 0x41, 0x7F,
+                                           0x07, 0xC1, 0x03, 0x7F, 0x08, 0x02, 0x12, 0xC1, 0x00, 0x03, 0xC1, 0x01, 0x00,
+                                           0x87, 0x02, 0x41, 0x7F, 0x07, 0x61, 0x01, 0x36, 0x01, 0xC1, 0x03, 0x7F};
 
 // Every row of Table 7.4.5.2.-2 read back out of that payload, three levels deep.
 void test_published_access_control_payload(void)
@@ -258,7 +257,7 @@ void test_published_access_control_payload(void)
     uint8_t acl2[7];
     memcpy(acl2, r[2].value, sizeof(acl2));
     TEST_ASSERT_EQUAL_UINT(2u, walk(acl2, sizeof(acl2), ri, 4));
-    TEST_ASSERT_EQUAL_UINT16(0x7F, ri[0].id);  // ACL [127]
+    TEST_ASSERT_EQUAL_UINT16(0x7F, ri[0].id); // ACL [127]
     TEST_ASSERT_EQUAL_INT64(0x07, as_integer(&ri[0]));
     TEST_ASSERT_EQUAL_UINT16(0x0136, ri[1].id); // ACL [310], the 16-bit Identifier
     TEST_ASSERT_EQUAL_INT64(0x01, as_integer(&ri[1]));
@@ -359,10 +358,18 @@ void test_integer_takes_the_shortest_signed_width(void)
         uint8_t type;
         size_t header;
     } static const CASES[] = {
-        {0, 1, 0xC1, 2},          {127, 1, 0xC1, 2},          {-128, 1, 0xC1, 2},
-        {128, 2, 0xC2, 2},        {-129, 2, 0xC2, 2},         {32767, 2, 0xC2, 2},
-        {-32768, 2, 0xC2, 2},     {32768, 4, 0xC4, 2},        {-32769, 4, 0xC4, 2},
-        {2147483647, 4, 0xC4, 2}, {-2147483648LL, 4, 0xC4, 2}, {2147483648LL, 8, 0xC8, 3},
+        {0, 1, 0xC1, 2},
+        {127, 1, 0xC1, 2},
+        {-128, 1, 0xC1, 2},
+        {128, 2, 0xC2, 2},
+        {-129, 2, 0xC2, 2},
+        {32767, 2, 0xC2, 2},
+        {-32768, 2, 0xC2, 2},
+        {32768, 4, 0xC4, 2},
+        {-32769, 4, 0xC4, 2},
+        {2147483647, 4, 0xC4, 2},
+        {-2147483648LL, 4, 0xC4, 2},
+        {2147483648LL, 8, 0xC8, 3},
         {-2147483649LL, 8, 0xC8, 3},
     };
     for (size_t i = 0; i < sizeof(CASES) / sizeof(CASES[0]); i++)

@@ -44,7 +44,8 @@ void dbench_run(void)
 
         DBENCH_OP("protocore_ldc1614_data (28b combine)", 200000, sink32 += protocore_ldc1614_data(msb_reg, lsb_reg));
         DBENCH_OP("protocore_ldc1614_error (flag nibble)", 200000, sink8 += protocore_ldc1614_error(msb_reg));
-        DBENCH_OP("protocore_ldc1614_sensor_freq_hz", 200000, sink64 += protocore_ldc1614_sensor_freq_hz(data28, fref_hz));
+        DBENCH_OP("protocore_ldc1614_sensor_freq_hz", 200000,
+                  sink64 += protocore_ldc1614_sensor_freq_hz(data28, fref_hz));
         // Config builder emits 21 bytes (7 register writes * 3 bytes) - benched as a bulk producer.
         DBENCH_BULK("protocore_ldc1614_build_config", 100000, LDC1614_CONFIG_MAX,
                     sinksz += protocore_ldc1614_build_config(cfg, sizeof(cfg), 0xFFFF, 0x0400));

@@ -1,8 +1,8 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-#include "network_drivers/transport/udp/udp.h"
 #include "network_drivers/transport/udp/server/server.h"
+#include "network_drivers/transport/udp/udp.h"
 #include "server/clock/clock.h"
 #include "services/iot/coap/coap.h"
 #include <string.h>
@@ -116,8 +116,7 @@ void setUp()
                                        h_resource);
     protocore_coap_server_add_resource("/ro", COAP_ALLOW_GET, h_resource);
     protocore_coap_server_add_resource("/a/b", COAP_ALLOW_GET, h_resource);
-    protocore_coap_server_add_resource("/longresourcename12345", COAP_ALLOW_GET,
-                                       h_resource);
+    protocore_coap_server_add_resource("/longresourcename12345", COAP_ALLOW_GET, h_resource);
     protocore_coap_server_add_resource("/", COAP_ALLOW_GET, h_resource);
     protocore_coap_server_add_resource("/big", COAP_ALLOW_GET | COAP_ALLOW_POST | COAP_ALLOW_PUT, h_big);
 }
@@ -465,7 +464,7 @@ void test_empty_con_ping_rst()
 {
     uint8_t req[8], resp[16];
     CoapEnc e;
-    enc_init(&e, req, (uint8_t)COAP_TYPE_CON, 0 , NULL, 0, 0x4242);
+    enc_init(&e, req, (uint8_t)COAP_TYPE_CON, 0, NULL, 0, 0x4242);
     size_t n = protocore_coap_server_process(req, e.len, resp, sizeof(resp));
     CoapDec d;
     TEST_ASSERT_TRUE(dec(resp, n, &d));
@@ -596,8 +595,7 @@ void test_observe_option_in_response()
     TEST_ASSERT_TRUE(dec(resp, n, &d));
     TEST_ASSERT_EQUAL_UINT((uint8_t)COAP_TYPE_ACK, d.type);
     TEST_ASSERT_EQUAL_INT(5, d.observe);
-    TEST_ASSERT_EQUAL_UINT16((uint16_t)COAP_CF_TEXT,
-                             d.content_format);
+    TEST_ASSERT_EQUAL_UINT16((uint16_t)COAP_CF_TEXT, d.content_format);
     TEST_ASSERT_EQUAL_size_t(2, d.payload_len);
 }
 
@@ -611,8 +609,7 @@ void test_response_option_overflows_buffer()
     size_t n = protocore_coap_server_process(req, rl, resp, 6);
     CoapDec d;
     TEST_ASSERT_TRUE(dec(resp, n, &d));
-    TEST_ASSERT_EQUAL_UINT16((uint16_t)COAP_CF_NONE,
-                             d.content_format);
+    TEST_ASSERT_EQUAL_UINT16((uint16_t)COAP_CF_NONE, d.content_format);
 }
 
 void test_no_observe_option_when_seq_negative()
@@ -1086,7 +1083,7 @@ void test_coap_udp_handler_basic()
 
     uint8_t ack[8];
     CoapEnc e;
-    enc_init(&e, ack, 2 , 0, NULL, 0, 0x9001);
+    enc_init(&e, ack, 2, 0, NULL, 0, 0x9001);
     protocore_net_host_udp_reset();
     inject(5683, "10.0.0.5", 5000, ack, e.len);
     TEST_ASSERT_EQUAL_UINT(0, sent_len());
@@ -1119,8 +1116,7 @@ void test_response_code_as_request_is_method_not_allowed()
 {
     const char *paths[] = {"temp"};
     uint8_t req[64], resp[64];
-    size_t rl = build(req, (uint8_t)COAP_TYPE_CON, COAP_CODE(2, 5) , NULL, 0, 0x0D01, paths, 1, NULL,
-                      0, -1, NULL, 0);
+    size_t rl = build(req, (uint8_t)COAP_TYPE_CON, COAP_CODE(2, 5), NULL, 0, 0x0D01, paths, 1, NULL, 0, -1, NULL, 0);
     size_t n = protocore_coap_server_process(req, rl, resp, sizeof(resp));
     CoapDec d;
     TEST_ASSERT_TRUE(dec(resp, n, &d));
@@ -1208,7 +1204,7 @@ void test_error_response_carries_no_observe_or_block2()
     enc_init(&e, req, (uint8_t)COAP_TYPE_CON, (uint8_t)COAP_GET, tok, 2, 0x0D03);
     enc_option(&e, 11, (const uint8_t *)"err", 3);
     enc_block(&e, 23, 0, 0, 2);
-    size_t n = protocore_coap_server_process_ex(req, e.len, resp, sizeof(resp), 9 );
+    size_t n = protocore_coap_server_process_ex(req, e.len, resp, sizeof(resp), 9);
     CoapDec d;
     TEST_ASSERT_TRUE(dec(resp, n, &d));
     TEST_ASSERT_EQUAL_UINT((uint8_t)COAP_RSP_BAD_REQUEST, d.code);

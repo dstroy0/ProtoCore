@@ -61,7 +61,8 @@ void dbench_run(void)
         // Same, reported as throughput over the produced PDU bytes (encode MB/s).
         DBENCH_BULK("protocore_goose_pdu bulk", 50000, pdu_len, sink += protocore_goose_pdu(&g, pdu, sizeof(pdu)));
         // protocore_goose_frame: wrap the PDU in the Ethernet + 8-octet GOOSE header (the full L2 datagram).
-        DBENCH_OP("protocore_goose_frame build", 50000, sink += protocore_goose_frame(dst, src, 0x0001, &g, frame, sizeof(frame)));
+        DBENCH_OP("protocore_goose_frame build", 50000,
+                  sink += protocore_goose_frame(dst, src, 0x0001, &g, frame, sizeof(frame)));
         DBENCH_BULK("protocore_goose_frame bulk", 50000, frame_len,
                     sink += protocore_goose_frame(dst, src, 0x0001, &g, frame, sizeof(frame)));
         (void)sink;

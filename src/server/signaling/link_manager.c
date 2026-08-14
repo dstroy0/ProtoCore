@@ -89,10 +89,7 @@ static void link_set(struct LinkManagerInternal *restrict ctx)
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-LinkManagerNs Link = {.init = link_init,
-                      .select = link_select,
-                      .active = link_active,
-                      .set = link_set,
-                      .internal = &s_link};
+LinkManagerNs Link = {
+    .init = link_init, .select = link_select, .active = link_active, .set = link_set, .internal = &s_link};
 
 #endif // PROTOCORE_ENABLE_LINK_MANAGER

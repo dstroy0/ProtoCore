@@ -58,10 +58,12 @@ void dbench_run(void)
         DBENCH_OP("protocore_cotp_build_dt", 100000,
                   sink += protocore_cotp_build_dt(dt_buf, sizeof(dt_buf), dt_data, sizeof(dt_data), true));
 
-        DBENCH_OP("protocore_cotp_build_cr", 100000, sink += protocore_cotp_build_cr(cr_buf, sizeof(cr_buf), 0x0001, 0x0A, NULL, 0));
+        DBENCH_OP("protocore_cotp_build_cr", 100000,
+                  sink += protocore_cotp_build_cr(cr_buf, sizeof(cr_buf), 0x0001, 0x0A, NULL, 0));
 
         DBENCH_OP("protocore_cotp_build_cr+tsaps", 100000,
-                  sink += protocore_cotp_build_cr(cr_tsap_buf, sizeof(cr_tsap_buf), 0x0002, 0x0A, tsaps, sizeof(tsaps)));
+                  sink +=
+                  protocore_cotp_build_cr(cr_tsap_buf, sizeof(cr_tsap_buf), 0x0002, 0x0A, tsaps, sizeof(tsaps)));
 
         {
             CotpHeader h;

@@ -57,10 +57,10 @@ int protocore_log_discard_args(const struct protocore_field *spec, const struct 
 /** @brief One line to emit: its level, and the spec that shapes it. */
 typedef struct
 {
-    uint8_t level;                   ///< the severity the line carries
+    uint8_t level;                      ///< the severity the line carries
     const struct protocore_field *spec; ///< the shape of the message
-    const struct protocore_fval *v;  ///< the values that fill it
-    size_t nv;                       ///< how many
+    const struct protocore_fval *v;     ///< the values that fill it
+    size_t nv;                          ///< how many
 } LogFrameArgs;
 
 /** @brief The sink and the calls that reach it, described only in log.c. */

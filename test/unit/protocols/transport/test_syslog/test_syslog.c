@@ -65,7 +65,8 @@ void test_empty_message_ok()
 void test_overflow_returns_zero()
 {
     char buf[16];
-    size_t n = protocore_syslog_format(buf, sizeof(buf), SYSLOG_FAC_LOCAL0, SYSLOG_INFO, "esp32", "app", "a long message");
+    size_t n =
+        protocore_syslog_format(buf, sizeof(buf), SYSLOG_FAC_LOCAL0, SYSLOG_INFO, "esp32", "app", "a long message");
     TEST_ASSERT_EQUAL_UINT(0, n);
 }
 
@@ -98,7 +99,8 @@ void test_format_null_and_pri_clamp()
 {
     char buf[64];
 
-    TEST_ASSERT_EQUAL_UINT(0, protocore_syslog_format(NULL, sizeof(buf), (SyslogFacility)0, (SyslogSeverity)0, "h", "a", "m"));
+    TEST_ASSERT_EQUAL_UINT(
+        0, protocore_syslog_format(NULL, sizeof(buf), (SyslogFacility)0, (SyslogSeverity)0, "h", "a", "m"));
     TEST_ASSERT_EQUAL_UINT(0, protocore_syslog_format(buf, 0, (SyslogFacility)0, (SyslogSeverity)0, "h", "a", "m"));
 
     protocore_syslog_format(buf, sizeof(buf), (SyslogFacility)25, (SyslogSeverity)0, "h", "a", "m");

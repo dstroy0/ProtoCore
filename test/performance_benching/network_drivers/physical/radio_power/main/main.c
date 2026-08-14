@@ -23,7 +23,8 @@ void dbench_run(void)
     {
         DBENCH_BANNER("radio_power");
         volatile uintptr_t sink = 0;
-        DBENCH_OP("protocore_radio_ps_name", 200000, sink += (uintptr_t)protocore_radio_ps_name(PROTOCORE_PHY_PS_MAX_MODEM));
+        DBENCH_OP("protocore_radio_ps_name", 200000,
+                  sink += (uintptr_t)protocore_radio_ps_name(PROTOCORE_PHY_PS_MAX_MODEM));
         DBENCH_OP("protocore_radio_ps_get", 200000, sink += protocore_radio_ps_get());
         (void)sink;
         DBENCH_DONE();

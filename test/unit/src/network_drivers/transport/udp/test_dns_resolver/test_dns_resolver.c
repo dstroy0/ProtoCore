@@ -331,17 +331,17 @@ void test_answer_parse_refuses_a_truncated_message(void)
 // 224.0.0.0 to 239.255.255.255".
 void test_classify_matches_the_registry(void)
 {
-    TEST_ASSERT_EQUAL_INT(PROTOCORE_IP_UNSPECIFIED, classify(0u));                  // 0.0.0.0/8
-    TEST_ASSERT_EQUAL_INT(PROTOCORE_IP_BROADCAST, classify(0xFFFFFFFFu));           // 255.255.255.255/32
-    TEST_ASSERT_EQUAL_INT(PROTOCORE_IP_LOOPBACK, classify(IPV4(127, 0, 0, 1)));     // 127.0.0.0/8
-    TEST_ASSERT_EQUAL_INT(PROTOCORE_IP_PRIVATE, classify(IPV4(10, 0, 0, 1)));       // 10.0.0.0/8
-    TEST_ASSERT_EQUAL_INT(PROTOCORE_IP_PRIVATE, classify(IPV4(172, 16, 0, 0)));     // 172.16.0.0/12, first
-    TEST_ASSERT_EQUAL_INT(PROTOCORE_IP_PRIVATE, classify(IPV4(172, 31, 255, 255))); // 172.16.0.0/12, last
-    TEST_ASSERT_EQUAL_INT(PROTOCORE_IP_PUBLIC, classify(IPV4(172, 15, 255, 255)));  // one below the /12
-    TEST_ASSERT_EQUAL_INT(PROTOCORE_IP_PUBLIC, classify(IPV4(172, 32, 0, 0)));      // one above it
-    TEST_ASSERT_EQUAL_INT(PROTOCORE_IP_PRIVATE, classify(IPV4(192, 168, 0, 1)));    // 192.168.0.0/16
-    TEST_ASSERT_EQUAL_INT(PROTOCORE_IP_LINKLOCAL, classify(IPV4(169, 254, 1, 1)));  // 169.254.0.0/16
-    TEST_ASSERT_EQUAL_INT(PROTOCORE_IP_MULTICAST, classify(IPV4(224, 0, 0, 0)));    // host group, first
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_IP_UNSPECIFIED, classify(0u));                     // 0.0.0.0/8
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_IP_BROADCAST, classify(0xFFFFFFFFu));              // 255.255.255.255/32
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_IP_LOOPBACK, classify(IPV4(127, 0, 0, 1)));        // 127.0.0.0/8
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_IP_PRIVATE, classify(IPV4(10, 0, 0, 1)));          // 10.0.0.0/8
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_IP_PRIVATE, classify(IPV4(172, 16, 0, 0)));        // 172.16.0.0/12, first
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_IP_PRIVATE, classify(IPV4(172, 31, 255, 255)));    // 172.16.0.0/12, last
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_IP_PUBLIC, classify(IPV4(172, 15, 255, 255)));     // one below the /12
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_IP_PUBLIC, classify(IPV4(172, 32, 0, 0)));         // one above it
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_IP_PRIVATE, classify(IPV4(192, 168, 0, 1)));       // 192.168.0.0/16
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_IP_LINKLOCAL, classify(IPV4(169, 254, 1, 1)));     // 169.254.0.0/16
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_IP_MULTICAST, classify(IPV4(224, 0, 0, 0)));       // host group, first
     TEST_ASSERT_EQUAL_INT(PROTOCORE_IP_MULTICAST, classify(IPV4(239, 255, 255, 255))); // host group, last
     TEST_ASSERT_EQUAL_INT(PROTOCORE_IP_PUBLIC, classify(IPV4(223, 255, 255, 255)));    // one below the range
     TEST_ASSERT_EQUAL_INT(PROTOCORE_IP_PUBLIC, classify(IPV4(240, 0, 0, 1)));          // one above it

@@ -20,8 +20,8 @@
 // bitfields, the holding / input registers, and the write callback, grouped so it is one
 // named owner, unreachable from any other translation unit.
 #if PROTOCORE_HAS_NET_STACK
-#include "server/core/proto_handler.h"
 #include "network_drivers/transport/tcp/tcp.h"
+#include "server/core/proto_handler.h"
 #endif
 typedef struct
 {
@@ -191,7 +191,8 @@ static size_t protocore_modbus_process_pdu(const uint8_t *pdu, size_t pdu_len, u
             return pdu_exception(fc, MODBUS_EX_ILLEGAL_DATA_VALUE, out);
         }
         uint16_t start = rd16(pdu + 1), qty = rd16(pdu + 3);
-        uint16_t limit = (fc == MODBUS_FC_READ_HOLDING_REGS) ? PROTOCORE_MODBUS_HOLDING_REGS : PROTOCORE_MODBUS_INPUT_REGS;
+        uint16_t limit =
+            (fc == MODBUS_FC_READ_HOLDING_REGS) ? PROTOCORE_MODBUS_HOLDING_REGS : PROTOCORE_MODBUS_INPUT_REGS;
         const uint16_t *src = (fc == MODBUS_FC_READ_HOLDING_REGS) ? s_modbus.holding : s_modbus.input;
         if (qty < 1 || qty > 125)
         {
@@ -380,7 +381,8 @@ static size_t protocore_modbus_process_pdu(const uint8_t *pdu, size_t pdu_len, u
         {
             return pdu_exception(fc, MODBUS_EX_ILLEGAL_DATA_VALUE, out);
         }
-        if ((uint32_t)r_start + r_qty > PROTOCORE_MODBUS_HOLDING_REGS || (uint32_t)w_start + w_qty > PROTOCORE_MODBUS_HOLDING_REGS)
+        if ((uint32_t)r_start + r_qty > PROTOCORE_MODBUS_HOLDING_REGS ||
+            (uint32_t)w_start + w_qty > PROTOCORE_MODBUS_HOLDING_REGS)
         {
             return pdu_exception(fc, MODBUS_EX_ILLEGAL_DATA_ADDRESS, out);
         }
@@ -460,7 +462,8 @@ static uint16_t protocore_modbus_crc16(const uint8_t *data, size_t len)
     return (uint16_t)Crc.value;
 }
 
-size_t protocore_modbus_rtu_process_adu(const uint8_t *req, size_t req_len, uint8_t *resp, size_t protocore_resp_cap, uint8_t my_addr)
+size_t protocore_modbus_rtu_process_adu(const uint8_t *req, size_t req_len, uint8_t *resp, size_t protocore_resp_cap,
+                                        uint8_t my_addr)
 {
     if (req_len < 4 || protocore_resp_cap < 4) // addr(1) + min PDU(1) + CRC(2)
     {

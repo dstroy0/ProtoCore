@@ -20,14 +20,14 @@
 #include "server.h"
 #include "../../diffserv/diffserv.h" // DiffServ DSCP marking for accepted connections (compiles out when off)
 #include "../../net_addr/net_addr.h" // protocore_net_addr_to_ip(): the stack's address as a protocore_ip
-#include "../tcp.h"      // the aggregate the halves hang off
-#include "../protocol/protocol.h" // ConnPool: the slots an accept claims
-#include "../lower/lower.h"       // TcpLower.apply_ttl: the TTL a new pcb is stamped with
+#include "../common.h"               // TcpConn, conn_pool: the slots an accept claims
+#include "../lower/lower.h"          // TcpLower.apply_ttl: the TTL a new pcb is stamped with
+#include "../protocol/protocol.h"    // ConnPool: the slots an accept claims
+#include "../tcp.h"                  // the aggregate the halves hang off
 #include "core_setup/board_profiles/protocore_platform.h" // the stack's queues, under our names
-#include "server/core/worker.h"        // Workers.wake() - nudge the owning worker task
-#include "network_drivers/tls/tls.h"               // TLS handshake begin (self-stubbing)
-#include "server/clock/clock.h"                    // protocore_millis() pluggable monotonic clock
-#include "../common.h" // TcpConn, conn_pool: the slots an accept claims
+#include "network_drivers/tls/tls.h"                      // TLS handshake begin (self-stubbing)
+#include "server/clock/clock.h"                           // protocore_millis() pluggable monotonic clock
+#include "server/core/worker.h"                           // Workers.wake() - nudge the owning worker task
 
 // Listener pool - all storage in BSS.
 Listener listener_pool[MAX_LISTENERS];
@@ -207,12 +207,14 @@ static void listener_accept_allowed_ip(struct TcpListenerInternal *restrict ctx)
         }
         else
         {
-            if (expired < 0 && (uint32_t)(ctx->ns->gate.now_ms - b->window_start) >= PROTOCORE_PER_IP_THROTTLE_WINDOW_MS)
+            if (expired < 0 &&
+                (uint32_t)(ctx->ns->gate.now_ms - b->window_start) >= PROTOCORE_PER_IP_THROTTLE_WINDOW_MS)
             {
                 expired = i;
             }
             // Track the oldest active bucket (largest elapsed) as the eviction victim.
-            if ((uint32_t)(ctx->ns->gate.now_ms - b->window_start) > (uint32_t)(ctx->ns->gate.now_ms - ctx->store->iptt.buckets[lru].window_start))
+            if ((uint32_t)(ctx->ns->gate.now_ms - b->window_start) >
+                (uint32_t)(ctx->ns->gate.now_ms - ctx->store->iptt.buckets[lru].window_start))
             {
                 lru = i;
             }
@@ -253,8 +255,9 @@ static void listener_ip_allow_add(struct TcpListenerInternal *restrict ctx)
     {
         return;
     }
-    int bits =
-        (ctx->ns->gate.addr->family == PROTOCORE_IP_V4) ? 32 : (ctx->ns->gate.addr->family == PROTOCORE_IP_V6 ? 128 : -1);
+    int bits = (ctx->ns->gate.addr->family == PROTOCORE_IP_V4)
+                   ? 32
+                   : (ctx->ns->gate.addr->family == PROTOCORE_IP_V6 ? 128 : -1);
     if (bits < 0 || ctx->ns->gate.prefix_len > (uint8_t)bits)
     {
         return; // reject a malformed family or an over-long prefix
@@ -378,8 +381,8 @@ static void listener_worker_queues_init(struct TcpListenerInternal *restrict ctx
     {
         if (!ctx->store->lq.wq[i])
         {
-            ctx->store->lq.wq[i] =
-                protocore_platform_queue_create(EVT_QUEUE_DEPTH, sizeof(TcpEvt), ctx->store->lq.wq_storage[i], &ctx->store->lq.wq_struct[i]);
+            ctx->store->lq.wq[i] = protocore_platform_queue_create(
+                EVT_QUEUE_DEPTH, sizeof(TcpEvt), ctx->store->lq.wq_storage[i], &ctx->store->lq.wq_struct[i]);
         }
     }
 }
@@ -411,7 +414,6 @@ static void listener_queue(struct TcpListenerInternal *restrict ctx)
     ctx->ns->queue = lst->queue;
 }
 #endif // PROTOCORE_WORKER_COUNT > 1
-
 
 static void listener_enqueue(struct TcpListenerInternal *restrict ctx)
 {
@@ -664,11 +666,13 @@ static void listener_add(struct TcpListenerInternal *restrict ctx)
     lst->proto = ctx->ns->bind.proto;
     lst->tls = ctx->ns->bind.tls;
 #if PROTOCORE_ENABLE_DIFFSERV
-    lst->dscp = PROTOCORE_DSCP_UNSET; // no per-listener override until protocore_listen_set_dscp(); accept() uses the default
+    lst->dscp =
+        PROTOCORE_DSCP_UNSET; // no per-listener override until protocore_listen_set_dscp(); accept() uses the default
 #endif
 
 #if PROTOCORE_WORKER_COUNT == 1
-    lst->queue = protocore_platform_queue_create(EVT_QUEUE_DEPTH, sizeof(TcpEvt), lst->_queue_storage, &lst->_queue_struct);
+    lst->queue =
+        protocore_platform_queue_create(EVT_QUEUE_DEPTH, sizeof(TcpEvt), lst->_queue_storage, &lst->_queue_struct);
     if (!lst->queue)
     {
         ctx->ns->i32 = -1;
@@ -804,7 +808,7 @@ static void set_dscp(struct TcpListenerInternal *restrict ctx)
             // before any app callback and does not inherit the listening block's DS field, so marking
             // begins at the connection's first data segment.
             lst->dscp = (ctx->ns->bind.dscp == PROTOCORE_DSCP_UNSET) ? PROTOCORE_DSCP_UNSET
-                                                                : (uint8_t)(ctx->ns->bind.dscp & 0x3F);
+                                                                     : (uint8_t)(ctx->ns->bind.dscp & 0x3F);
             ctx->ns->ok = PROTO_TRUE;
             return;
         }
@@ -835,7 +839,8 @@ static void listener_add_dynamic(struct TcpListenerInternal *restrict ctx)
 #endif
 
 #if PROTOCORE_WORKER_COUNT == 1
-    lst->queue = protocore_platform_queue_create(EVT_QUEUE_DEPTH, sizeof(TcpEvt), lst->_queue_storage, &lst->_queue_struct);
+    lst->queue =
+        protocore_platform_queue_create(EVT_QUEUE_DEPTH, sizeof(TcpEvt), lst->_queue_storage, &lst->_queue_struct);
     if (!lst->queue)
     {
         ctx->ns->i32 = -1;

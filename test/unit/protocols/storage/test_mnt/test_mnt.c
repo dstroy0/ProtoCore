@@ -366,8 +366,8 @@ static proto_bool stall_readdir(int handle, protocore_mnt_stat *out, char *name,
     return PROTO_FALSE;
 }
 static const protocore_mnt_backend s_stall_backend = {stall_open, stall_read, stall_write,   stall_close,  stall_seek,
-                                               stall_size, stall_true, stall_true,    stall_rename, stall_true,
-                                               stall_true, stall_stat, stall_opendir, stall_readdir};
+                                                      stall_size, stall_true, stall_true,    stall_rename, stall_true,
+                                                      stall_true, stall_stat, stall_opendir, stall_readdir};
 
 void test_zero_progress_backend_terminates()
 {

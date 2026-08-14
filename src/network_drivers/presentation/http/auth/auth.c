@@ -21,8 +21,8 @@
 #include "network_drivers/presentation/http/http.h"
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the slot a challenge writes on
 #include "protocore.h"
-#include "server/clock/clock.h"    // protocore_millis() for the stateless nonce
-#include "shared/hex/hex.h" // protocore_hex_encode/decode
+#include "server/clock/clock.h" // protocore_millis() for the stateless nonce
+#include "shared/hex/hex.h"     // protocore_hex_encode/decode
 
 // ---------------------------------------------------------------------------
 // Basic Auth helpers
@@ -126,9 +126,9 @@ typedef struct
 // rather than a copy of the credential.
 struct AuthStorage
 {
-    uint8_t digest_secret[16];  ///< the Digest keying secret; never leaves this file
-    AuthCred cred[MAX_ROUTES];  ///< every credential set, indexed by the id a route carries
-    uint8_t count;              ///< how many rows are recorded
+    uint8_t digest_secret[16]; ///< the Digest keying secret; never leaves this file
+    AuthCred cred[MAX_ROUTES]; ///< every credential set, indexed by the id a route carries
+    uint8_t count;             ///< how many rows are recorded
 };
 
 /**

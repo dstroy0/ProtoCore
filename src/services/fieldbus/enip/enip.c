@@ -108,7 +108,7 @@ size_t protocore_eip_build_register_session(uint8_t *buf, size_t cap, const uint
 }
 
 size_t protocore_eip_build_unregister_session(uint8_t *buf, size_t cap, uint32_t session_handle,
-                                       const uint8_t sender_context[8])
+                                              const uint8_t sender_context[8])
 {
     EipHeader h;
     mem.set(&h, 0, sizeof(h));
@@ -121,8 +121,9 @@ size_t protocore_eip_build_unregister_session(uint8_t *buf, size_t cap, uint32_t
     return protocore_eip_build(buf, cap, &h, NULL, 0); // no command-specific data
 }
 
-size_t protocore_eip_build_send_rr_data(uint8_t *buf, size_t cap, uint32_t session_handle, const uint8_t sender_context[8],
-                                 uint16_t timeout, const uint8_t *cip, size_t protocore_cip_len)
+size_t protocore_eip_build_send_rr_data(uint8_t *buf, size_t cap, uint32_t session_handle,
+                                        const uint8_t sender_context[8], uint16_t timeout, const uint8_t *cip,
+                                        size_t protocore_cip_len)
 {
     if (!buf || (protocore_cip_len && !cip) || protocore_cip_len > 0xFFFF)
     {
@@ -234,7 +235,8 @@ proto_bool protocore_eip_parse_list_identity(const uint8_t *data, size_t data_le
     return PROTO_FALSE; // no List Identity item
 }
 
-proto_bool protocore_eip_parse_send_rr_data(const uint8_t *data, size_t data_len, const uint8_t **cip, size_t *protocore_cip_len)
+proto_bool protocore_eip_parse_send_rr_data(const uint8_t *data, size_t data_len, const uint8_t **cip,
+                                            size_t *protocore_cip_len)
 {
     if (!data || data_len < 8) // interface handle(4) + timeout(2) + item count(2)
     {

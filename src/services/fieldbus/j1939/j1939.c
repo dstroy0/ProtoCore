@@ -72,7 +72,7 @@ static proto_bool ext_frame(CanFrame *f, uint8_t priority, uint32_t pgn, uint8_t
 }
 
 proto_bool protocore_j1939_build_message(CanFrame *out, uint8_t priority, uint32_t pgn, uint8_t sa, uint8_t da,
-                                  const uint8_t *data, uint8_t len)
+                                         const uint8_t *data, uint8_t len)
 {
     if (!out || len > PROTOCORE_CAN_MAX_DLC || (len && !data))
     {
@@ -109,9 +109,9 @@ proto_bool protocore_j1939_build_request(CanFrame *out, uint8_t sa, uint8_t da, 
 }
 
 uint64_t protocore_j1939_build_name(proto_bool arbitrary_address_capable, uint8_t industry_group,
-                             uint8_t vehicle_system_instance, uint8_t vehicle_system, uint8_t function,
-                             uint8_t function_instance, uint8_t ecu_instance, uint16_t manufacturer_code,
-                             uint32_t identity_number)
+                                    uint8_t vehicle_system_instance, uint8_t vehicle_system, uint8_t function,
+                                    uint8_t function_instance, uint8_t ecu_instance, uint16_t manufacturer_code,
+                                    uint32_t identity_number)
 {
     // NAME bit layout (J1939-81), LSB first:
     //  [0..20] identity number, [21..31] manufacturer code, [32..34] ECU instance,
@@ -169,15 +169,15 @@ proto_bool protocore_j1939_build_bam_cm(CanFrame *out, uint8_t sa, uint32_t pgn,
     out->data[1] = (uint8_t)total_size; // message size, little-endian
     out->data[2] = (uint8_t)(total_size >> 8);
     out->data[3] = protocore_j1939_tp_num_packets(total_size); // total packets
-    out->data[4] = 0xFF;                                // reserved
-    out->data[5] = (uint8_t)pgn;                        // transported PGN, little-endian
+    out->data[4] = 0xFF;                                       // reserved
+    out->data[5] = (uint8_t)pgn;                               // transported PGN, little-endian
     out->data[6] = (uint8_t)(pgn >> 8);
     out->data[7] = (uint8_t)(pgn >> 16);
     return PROTO_TRUE;
 }
 
 proto_bool protocore_j1939_build_tp_dt(CanFrame *out, uint8_t sa, uint8_t da, uint8_t seq, const uint8_t *chunk,
-                                uint8_t chunk_len)
+                                       uint8_t chunk_len)
 {
     if (!out || seq == 0 || chunk_len == 0 || chunk_len > J1939_TP_DT_LEN || !chunk)
     {

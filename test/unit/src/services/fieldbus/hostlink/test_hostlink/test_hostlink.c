@@ -166,13 +166,13 @@ void test_parse_rejects_bad_framing(void)
 {
     HostlinkFrame f;
     static const char *const BAD[] = {
-        "!00RD0000001057*\r", // no '@'
-        "@00RD0000001057*\n", // no CR
+        "!00RD0000001057*\r",  // no '@'
+        "@00RD0000001057*\n",  // no CR
         "@00RD0000001057\r\r", // no '*'
-        "@0XRD0000001057*\r", // node field is not two digits
-        "@00RD00000010G7*\r", // FCS is not hexadecimal
-        "@00RD0000001058*\r", // FCS is hexadecimal but wrong
-        "@00RD57*",           // shorter than nine characters
+        "@0XRD0000001057*\r",  // node field is not two digits
+        "@00RD00000010G7*\r",  // FCS is not hexadecimal
+        "@00RD0000001058*\r",  // FCS is hexadecimal but wrong
+        "@00RD57*",            // shorter than nine characters
         "",
     };
     for (size_t i = 0; i < sizeof(BAD) / sizeof(BAD[0]); i++)

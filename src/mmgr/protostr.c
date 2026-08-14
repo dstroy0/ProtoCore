@@ -127,8 +127,8 @@ static inline size_t diff_ci(const char *a, const char *b, size_t read_cap)
     }
     // The tail runs the same lane math on a one-lane word, so the 0x20 rule is spelled once: the
     // empty lanes are 0x00 on both sides and cancel, leaving only the byte in lane 0 to answer.
-    while (i < read_cap &&
-           swar.xor_((protocore_swar_word)(unsigned char)a[i], (protocore_swar_word)(unsigned char)b[i], PROTO_TRUE) == 0)
+    while (i < read_cap && swar.xor_((protocore_swar_word)(unsigned char)a[i], (protocore_swar_word)(unsigned char)b[i],
+                                     PROTO_TRUE) == 0)
     {
         ++i;
     }
@@ -513,7 +513,8 @@ static const char *find_cs(const char *hay, size_t read_cap, const char *needle,
     // an all-ones `int` is -1, whose right shift is arithmetic and refills the bits just cleared.
     const protocore_swar_word all = (protocore_swar_word) ~(protocore_swar_word)0;
 #if PROTOCORE_HW_BIG_ENDIAN
-    const protocore_swar_word nm = (protocore_swar_word)((all >> (PROTOCORE_SWAR_BYTES * 8u - take * 8u)) << ((w - take) * 8u));
+    const protocore_swar_word nm =
+        (protocore_swar_word)((all >> (PROTOCORE_SWAR_BYTES * 8u - take * 8u)) << ((w - take) * 8u));
 #else
     const protocore_swar_word nm = (protocore_swar_word)(all >> (PROTOCORE_SWAR_BYTES * 8u - take * 8u));
 #endif
@@ -697,7 +698,8 @@ static const char *find_cs(const char *hay, size_t read_cap, const char *needle,
             }
             // Drop this lane and look at the next one in address order.
 #if PROTOCORE_HW_BIG_ENDIAN
-            m &= (protocore_swar_word) ~((protocore_swar_word)1 << (PROTOCORE_SWAR_CLZ_WIDTH - 1u - (unsigned)PROTOCORE_SWAR_CLZ(m)));
+            m &= (protocore_swar_word) ~((protocore_swar_word)1
+                                         << (PROTOCORE_SWAR_CLZ_WIDTH - 1u - (unsigned)PROTOCORE_SWAR_CLZ(m)));
 #else
             m &= (protocore_swar_word)(m - 1u);
 #endif
@@ -830,7 +832,8 @@ static const char *find_ci(const char *hay, size_t read_cap, const char *needle,
 
     const protocore_swar_word all = (protocore_swar_word) ~(protocore_swar_word)0;
 #if PROTOCORE_HW_BIG_ENDIAN
-    const protocore_swar_word nm = (protocore_swar_word)((all >> (PROTOCORE_SWAR_BYTES * 8u - take * 8u)) << ((w - take) * 8u));
+    const protocore_swar_word nm =
+        (protocore_swar_word)((all >> (PROTOCORE_SWAR_BYTES * 8u - take * 8u)) << ((w - take) * 8u));
 #else
     const protocore_swar_word nm = (protocore_swar_word)(all >> (PROTOCORE_SWAR_BYTES * 8u - take * 8u));
 #endif
@@ -980,7 +983,8 @@ static const char *find_ci(const char *hay, size_t read_cap, const char *needle,
                 return hay + i + k;
             }
 #if PROTOCORE_HW_BIG_ENDIAN
-            m &= (protocore_swar_word) ~((protocore_swar_word)1 << (PROTOCORE_SWAR_CLZ_WIDTH - 1u - (unsigned)PROTOCORE_SWAR_CLZ(m)));
+            m &= (protocore_swar_word) ~((protocore_swar_word)1
+                                         << (PROTOCORE_SWAR_CLZ_WIDTH - 1u - (unsigned)PROTOCORE_SWAR_CLZ(m)));
 #else
             m &= (protocore_swar_word)(m - 1u);
 #endif

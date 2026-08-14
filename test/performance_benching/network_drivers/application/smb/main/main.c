@@ -44,7 +44,7 @@ void dbench_run(void)
         uint8_t skey[16];
         DBENCH_OP("protocore_ntlm_v2_response", 50000,
                   sink += protocore_ntlm_v2_response(owf, server_chal, client_chal, timestamp, target_info,
-                                              sizeof(target_info), resp, sizeof(resp), skey));
+                                                     sizeof(target_info), resp, sizeof(resp), skey));
         static uint8_t buf[256];
         DBENCH_OP("protocore_ntlmssp_build_negotiate", 200000,
                   sink += protocore_ntlmssp_build_negotiate(buf, sizeof(buf), 0xE2088297u));

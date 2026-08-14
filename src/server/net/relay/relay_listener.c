@@ -12,9 +12,9 @@
 
 #if PROTOCORE_ENABLE_RELAY
 
-#include "server/core/proto_handler.h"
 #include "network_drivers/transport/tcp/tcp.h"
 #include "relay.h"
+#include "server/core/proto_handler.h"
 #if PROTOCORE_ENABLE_RADIO_POWER
 #include "network_drivers/physical/radio_power.h" // keep the radio awake during a relayed transfer
 #endif

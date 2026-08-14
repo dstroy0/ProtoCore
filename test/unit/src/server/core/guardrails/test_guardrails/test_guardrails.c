@@ -82,7 +82,8 @@ void test_a_null_snapshot_reports_no_breach(void)
 
 // RFC 8259 sec 4 object form, sec 6 number form: four members in the order the snapshot declares
 // them, each an unquoted integer with no leading zero and no plus sign.
-static const char WANT[] = "{\"free_heap\":20000,\"min_free_heap\":15000,\"largest_free_block\":10000,\"stack_free\":2048}";
+static const char WANT[] =
+    "{\"free_heap\":20000,\"min_free_heap\":15000,\"largest_free_block\":10000,\"stack_free\":2048}";
 
 void test_json_is_an_rfc8259_object(void)
 {

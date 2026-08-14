@@ -52,9 +52,9 @@ PROTOCORE_BEGIN_DECLS
 #define RTPS_SM_INFO_REPLY 0x0f
 #define RTPS_SM_DATA 0x15
 #define RTPS_SM_DATA_FRAG 0x16
-#define RTPS_FLAG_ENDIAN 0x01   ///< EndiannessFlag 'E', flags bit 0: E=1 little-endian (sec 9.4.5.1).
-#define RTPS_HEADER_LEN 20      ///< Header: magic 4 + version 2 + vendorId 2 + guidPrefix 12 (sec 9.4.4).
-#define RTPS_GUIDPREFIX_LEN 12  ///< GuidPrefix_t is 12 octets (sec 9.3.1.1).
+#define RTPS_FLAG_ENDIAN 0x01  ///< EndiannessFlag 'E', flags bit 0: E=1 little-endian (sec 9.4.5.1).
+#define RTPS_HEADER_LEN 20     ///< Header: magic 4 + version 2 + vendorId 2 + guidPrefix 12 (sec 9.4.4).
+#define RTPS_GUIDPREFIX_LEN 12 ///< GuidPrefix_t is 12 octets (sec 9.3.1.1).
 
 /**
  * @brief One Submessage a parse surfaces: its SubmessageHeader fields and its contents.

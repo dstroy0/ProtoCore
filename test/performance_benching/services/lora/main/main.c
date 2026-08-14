@@ -157,8 +157,10 @@ void dbench_run(void)
 
         // Driver register protocol against the mock bus (memory-only; no SPI/radio).
         DBENCH_OP("protocore_lora_init", 50000, bsink ^= protocore_lora_init(&g_bus, &cfg));
-        DBENCH_OP("protocore_lora_send", 50000, bsink ^= protocore_lora_send(&g_bus, g_frame, (uint8_t)sizeof(g_frame)));
-        DBENCH_OP("protocore_lora_recv", 50000, isink += protocore_lora_recv(&g_recv_bus, rxbuf, (uint8_t)sizeof(rxbuf), NULL));
+        DBENCH_OP("protocore_lora_send", 50000,
+                  bsink ^= protocore_lora_send(&g_bus, g_frame, (uint8_t)sizeof(g_frame)));
+        DBENCH_OP("protocore_lora_recv", 50000,
+                  isink += protocore_lora_recv(&g_recv_bus, rxbuf, (uint8_t)sizeof(rxbuf), NULL));
 
         (void)usink;
         (void)isink;

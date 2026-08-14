@@ -13,11 +13,11 @@
  * The names @ref Sb aliases are defined here. Everything else in this file has internal linkage.
  */
 
-#include "mmgr/float_bits.h" // proto_dbl_sign / proto_dbl_exp / proto_dbl_mant - the field reads
 #include "mmgr/membuild.h"
-#include "mmgr/protostr.h"  // str.len - a word per test, bounded by a known width
-#include "mmgr/rawmemcpy.h" // proto_raw_read - the span move protocore_sb_put_n is built on
-#include "shared/hex/hex.h" // PROTOCORE_HEX: the shared digit tables
+#include "mmgr/float_bits.h" // proto_dbl_sign / proto_dbl_exp / proto_dbl_mant - the field reads
+#include "mmgr/protostr.h"   // str.len - a word per test, bounded by a known width
+#include "mmgr/rawmemcpy.h"  // proto_raw_read - the span move protocore_sb_put_n is built on
+#include "shared/hex/hex.h"  // PROTOCORE_HEX: the shared digit tables
 
 /// @brief Working width of the `n * 2^s` pair below: four bits clear of the top so a decade fits.
 #define PROTOCORE_G_WORK_BITS 58u
@@ -590,8 +590,8 @@ void protocore_sb_fixed(protocore_sb *b, double v, unsigned decimals)
 
 // RFC 8259 sec 7 gives a two-character escape to five of the control characters; the letter each
 // one takes, indexed by the code point, and 0 where the grammar names none.
-static const char JSON_CTRL_ESC[32] = {0, 0, 0, 0, 0,   0,   0, 0, 'b', 't', 'n', 0, 'f', 'r', 0, 0,
-                                       0, 0, 0, 0, 0,   0,   0, 0, 0,   0,   0,   0, 0,   0,   0, 0};
+static const char JSON_CTRL_ESC[32] = {0, 0, 0, 0, 0, 0, 0, 0, 'b', 't', 'n', 0, 'f', 'r', 0, 0,
+                                       0, 0, 0, 0, 0, 0, 0, 0, 0,   0,   0,   0, 0,   0,   0, 0};
 
 void protocore_sb_json(protocore_sb *b, const char *s)
 {

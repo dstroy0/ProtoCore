@@ -36,8 +36,8 @@ static size_t write_job_header(uint8_t *buf, uint16_t pdu_ref, uint16_t param_le
     return p; // 10
 }
 
-size_t protocore_s7_build_setup(uint8_t *buf, size_t cap, uint16_t pdu_ref, uint16_t max_amq_calling, uint16_t max_amq_called,
-                         uint16_t pdu_size)
+size_t protocore_s7_build_setup(uint8_t *buf, size_t cap, uint16_t pdu_ref, uint16_t max_amq_calling,
+                                uint16_t max_amq_called, uint16_t pdu_size)
 {
     if (!buf)
     {

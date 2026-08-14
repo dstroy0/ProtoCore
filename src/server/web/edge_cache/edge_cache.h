@@ -5,11 +5,10 @@
  * @file edge_cache.h
  * @brief CDN edge-cache tier - pure engine (PROTOCORE_ENABLE_EDGE_CACHE).
  *
- * The caching reverse-proxy edge that network_drivers/presentation/http/httpcache is the origin-side groundwork for. This
- * header is the pure, host-testable core: the response header-field access and HTTP-date math that
- * httpcache lacks, RFC 9111 freshness (lifetime + age), and the deterministic cache key + SHA-256
- * digest + `Vary` secondary key. No sockets, no PC, no heap - the socket glue
- * (edge_cache_proxy) and the L2 SD tier (edge_cache_sd) layer on top.
+ * The caching reverse-proxy edge that network_drivers/presentation/http/httpcache is the origin-side groundwork for.
+ * This header is the pure, host-testable core: the response header-field access and HTTP-date math that httpcache
+ * lacks, RFC 9111 freshness (lifetime + age), and the deterministic cache key + SHA-256 digest + `Vary` secondary key.
+ * No sockets, no PC, no heap - the socket glue (edge_cache_proxy) and the L2 SD tier (edge_cache_sd) layer on top.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -23,7 +22,7 @@
 #if PROTOCORE_ENABLE_EDGE_CACHE
 
 #include "network_drivers/presentation/http/httpcache/httpcache.h" // protocore_cache_control, cache_freshness_lifetime
-#include "shared/http_date/http_date.h"      // PROTOCORE_HTTP_DATE_MAX (the stored-date floor)
+#include "shared/http_date/http_date.h"                            // PROTOCORE_HTTP_DATE_MAX (the stored-date floor)
 
 // --- raw response header-block field access ------------------------------------------------------
 

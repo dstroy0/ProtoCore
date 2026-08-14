@@ -11,9 +11,9 @@
 
 #if PROTOCORE_ENABLE_IFACE_BRIDGE
 
-#include "server/core/proto_handler.h"
 #include "network_drivers/transport/tcp/tcp.h"
 #include "server/clock/clock.h" // protocore_millis() pluggable monotonic clock
+#include "server/core/proto_handler.h"
 
 #if PROTOCORE_HAS_BUS
 #include "server/peripherals/i2c.h"  // the shared I2C bus owner
@@ -36,8 +36,8 @@ typedef struct
 typedef struct
 {
     BridgeBind binds[PROTOCORE_BRIDGE_MAX_RULES];
-    proto_bool registered;                  ///< the PROTO_BRIDGE handler is installed
-    proto_bool spi_begun;                   ///< the shared SPI bus has been brought up (once)
+    proto_bool registered;                         ///< the PROTO_BRIDGE handler is installed
+    proto_bool spi_begun;                          ///< the shared SPI bus has been brought up (once)
     uint8_t stream[PROTOCORE_BRIDGE_STREAM_CHUNK]; ///< the chunk a STREAM target moves per pump
 } BridgeGlueCtx;
 static BridgeGlueCtx s_ctx;
@@ -303,7 +303,8 @@ static void bridge_on_close(uint8_t slot)
 static const ProtoHandler s_bridge_handler = {
     .on_accept = bridge_on_accept, .on_data = bridge_on_data, .on_close = bridge_on_close, .on_poll = bridge_on_poll};
 
-proto_bool protocore_iface_bridge_publish(uint8_t listener_id, uint16_t port, BridgeProto proto, const BridgeTarget *target)
+proto_bool protocore_iface_bridge_publish(uint8_t listener_id, uint16_t port, BridgeProto proto,
+                                          const BridgeTarget *target)
 {
     if (!target)
     {

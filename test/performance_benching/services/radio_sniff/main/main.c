@@ -49,12 +49,12 @@ void dbench_run(void)
         DBENCH_OP("protocore_radiosniff_global", 200000, sink += protocore_radiosniff_global(rec, sizeof(rec)));
         // Full capture record for a tiny 5-byte frame (record hdr + TAP + frame = 41 bytes).
         DBENCH_OP("protocore_radiosniff_tap_record 5B", 100000,
-                  sink += protocore_radiosniff_tap_record(rec, sizeof(rec), frame_small, sizeof(frame_small), -55, 11, 0x1234,
-                                                   0x5678));
+                  sink += protocore_radiosniff_tap_record(rec, sizeof(rec), frame_small, sizeof(frame_small), -55, 11,
+                                                          0x1234, 0x5678));
         // Full capture record for a realistic 64-byte frame - report throughput over the frame bytes.
         DBENCH_BULK("protocore_radiosniff_tap_record 64B", 100000, sizeof(frame_big),
-                    sink +=
-                    protocore_radiosniff_tap_record(rec, sizeof(rec), frame_big, sizeof(frame_big), -72, 15, 0x1234, 0x5678));
+                    sink += protocore_radiosniff_tap_record(rec, sizeof(rec), frame_big, sizeof(frame_big), -72, 15,
+                                                            0x1234, 0x5678));
         (void)sink32;
         (void)sink;
         DBENCH_DONE();

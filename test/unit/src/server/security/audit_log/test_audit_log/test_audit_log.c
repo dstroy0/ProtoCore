@@ -12,8 +12,8 @@
 // then walk one field at a time; a field left out of the hash would pass verify() after being
 // altered, and each of those cases would fail. The JSON string escaping is RFC 8259 sec 7.
 
-#include "server/security/audit_log/audit_log.h"
 #include "crypto/hash/sha256.h"
+#include "server/security/audit_log/audit_log.h"
 #include <string.h>
 
 #include <unity.h>
@@ -192,8 +192,8 @@ void test_identical_messages_hash_differently(void)
 {
     (void)protocore_audit_append(PROTOCORE_AUDIT_SYSTEM, "same");
     (void)protocore_audit_append(PROTOCORE_AUDIT_SYSTEM, "same");
-    TEST_ASSERT_NOT_EQUAL(0, memcmp(protocore_audit_at(0)->hash, protocore_audit_at(1)->hash,
-                                    PROTOCORE_AUDIT_HASH_LEN));
+    TEST_ASSERT_NOT_EQUAL(0,
+                          memcmp(protocore_audit_at(0)->hash, protocore_audit_at(1)->hash, PROTOCORE_AUDIT_HASH_LEN));
 }
 
 // The ring is fixed: past its depth the oldest record is evicted, the retained window is capped, and

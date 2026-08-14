@@ -23,8 +23,8 @@ static const char PROTOCORE_HTTP_DATE_MON[12][3] = {{'J', 'a', 'n'}, {'F', 'e', 
                                                     {'M', 'a', 'y'}, {'J', 'u', 'n'}, {'J', 'u', 'l'}, {'A', 'u', 'g'},
                                                     {'S', 'e', 'p'}, {'O', 'c', 't'}, {'N', 'o', 'v'}, {'D', 'e', 'c'}};
 
-#define PROTOCORE_HTTP_DATE_2DIGIT 2 // day, hour, minute and second are each 2DIGIT
-#define PROTOCORE_HTTP_DATE_4DIGIT 4 // year is 4DIGIT
+#define PROTOCORE_HTTP_DATE_2DIGIT 2       // day, hour, minute and second are each 2DIGIT
+#define PROTOCORE_HTTP_DATE_4DIGIT 4       // year is 4DIGIT
 #define PROTOCORE_HTTP_DATE_YEAR_BASE 1900 // tm_year counts from here
 #define PROTOCORE_HTTP_DATE_YEAR_MAX 9999  // the widest year 4DIGIT holds
 

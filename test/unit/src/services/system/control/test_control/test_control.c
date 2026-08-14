@@ -406,8 +406,8 @@ void test_log_record_layout(void)
 {
     uint8_t buf[PID_LOG_RECORD_LEN + 4];
     memset(buf, 0xAA, sizeof(buf));
-    TEST_ASSERT_EQUAL_UINT32(PID_LOG_RECORD_LEN, (uint32_t)pid_log_record(buf, sizeof(buf), 4.0f, -1.5f, 2.25f,
-                                                                          PROTO_TRUE));
+    TEST_ASSERT_EQUAL_UINT32(PID_LOG_RECORD_LEN,
+                             (uint32_t)pid_log_record(buf, sizeof(buf), 4.0f, -1.5f, 2.25f, PROTO_TRUE));
     TEST_ASSERT_EQUAL_UINT32(16u, (uint32_t)PID_LOG_RECORD_LEN);
     TEST_ASSERT_TRUE(f32le(buf + 0) == 4.0f);
     TEST_ASSERT_TRUE(f32le(buf + 4) == -1.5f);
@@ -416,8 +416,8 @@ void test_log_record_layout(void)
     TEST_ASSERT_EQUAL_HEX32(0x1u, PID_LOG_STATUS_SATURATED);
     TEST_ASSERT_EQUAL_UINT8(0xAA, buf[16]);
 
-    TEST_ASSERT_EQUAL_UINT32(PID_LOG_RECORD_LEN, (uint32_t)pid_log_record(buf, sizeof(buf), 4.0f, -1.5f, 2.25f,
-                                                                          PROTO_FALSE));
+    TEST_ASSERT_EQUAL_UINT32(PID_LOG_RECORD_LEN,
+                             (uint32_t)pid_log_record(buf, sizeof(buf), 4.0f, -1.5f, 2.25f, PROTO_FALSE));
     TEST_ASSERT_EQUAL_HEX32(0u, u32le(buf + 12));
 
     memset(buf, 0xAA, sizeof(buf));

@@ -33,8 +33,8 @@ void dbench_run(void)
     // benches run over real, spec-conformant bytes (cmd 0x2A, data 11 22 33 - the roundtrip vector).
     static const uint8_t parse_data[3] = {0x11, 0x22, 0x33};
     static uint8_t parse_frame[16];
-    size_t parse_len = protocore_hart_build(HART_DELIM_STX, &addr_short, 1, 0x2A, parse_data, sizeof(parse_data), parse_frame,
-                                     sizeof(parse_frame));
+    size_t parse_len = protocore_hart_build(HART_DELIM_STX, &addr_short, 1, 0x2A, parse_data, sizeof(parse_data),
+                                            parse_frame, sizeof(parse_frame));
 
     static uint8_t out[64];
 
@@ -51,20 +51,21 @@ void dbench_run(void)
 
         // Build a long-address (5-byte) command 3 frame.
         DBENCH_OP("protocore_hart_build long addr", 100000,
-                  sink += protocore_hart_build((uint8_t)(HART_DELIM_STX | HART_DELIM_LONG_ADDR), addr_long, 5, 0x03, NULL, 0,
-                                        out, sizeof(out)));
+                  sink += protocore_hart_build((uint8_t)(HART_DELIM_STX | HART_DELIM_LONG_ADDR), addr_long, 5, 0x03,
+                                               NULL, 0, out, sizeof(out)));
 
         // Parse + checksum-verify a known-good short-address frame with data.
         HartFrame f;
         DBENCH_OP("protocore_hart_parse w/data", 100000, sinkb ^= protocore_hart_parse(parse_frame, parse_len, &f));
 
         // Longitudinal XOR checksum over the full frame's byte span (bulk throughput).
-        DBENCH_BULK("protocore_hart_checksum", 100000, parse_len, sink8 ^= protocore_hart_checksum(parse_frame, parse_len));
+        DBENCH_BULK("protocore_hart_checksum", 100000, parse_len,
+                    sink8 ^= protocore_hart_checksum(parse_frame, parse_len));
 
         // Build the 8-octet HART-IP message header.
         DBENCH_OP("protocore_hartip_build_header", 200000,
-                  sink +=
-                  protocore_hartip_build_header(HARTIP_MSG_REQUEST, HARTIP_ID_TOKEN_PDU, 0, 0x1234, 13, out, sizeof(out)));
+                  sink += protocore_hartip_build_header(HARTIP_MSG_REQUEST, HARTIP_ID_TOKEN_PDU, 0, 0x1234, 13, out,
+                                                        sizeof(out)));
 
         (void)sink;
         (void)sink8;

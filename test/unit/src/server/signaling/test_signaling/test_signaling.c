@@ -13,8 +13,8 @@
 // ConnPool is defined here rather than linked from the transport: kill is a forward, and a local
 // definition is what makes the forward observable without pulling the stack into a host test.
 
-#include "server/signaling/signaling.h"
 #include "network_drivers/transport/tcp/protocol/protocol.h"
+#include "server/signaling/signaling.h"
 
 #include <unity.h>
 

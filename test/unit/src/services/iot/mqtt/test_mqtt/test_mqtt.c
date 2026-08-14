@@ -49,14 +49,14 @@ void test_table_2_4_remaining_length_boundaries(void)
         size_t len;
         uint8_t octets[4];
     } static const TABLE[] = {
-        {0u, 1, {0x00, 0, 0, 0}},                        // 1 digit, From
-        {127u, 1, {0x7F, 0, 0, 0}},                      // 1 digit, To
-        {128u, 2, {0x80, 0x01, 0, 0}},                   // 2 digits, From
-        {16383u, 2, {0xFF, 0x7F, 0, 0}},                 // 2 digits, To
-        {16384u, 3, {0x80, 0x80, 0x01, 0}},              // 3 digits, From
-        {2097151u, 3, {0xFF, 0xFF, 0x7F, 0}},            // 3 digits, To
-        {2097152u, 4, {0x80, 0x80, 0x80, 0x01}},         // 4 digits, From
-        {268435455u, 4, {0xFF, 0xFF, 0xFF, 0x7F}},       // 4 digits, To
+        {0u, 1, {0x00, 0, 0, 0}},                  // 1 digit, From
+        {127u, 1, {0x7F, 0, 0, 0}},                // 1 digit, To
+        {128u, 2, {0x80, 0x01, 0, 0}},             // 2 digits, From
+        {16383u, 2, {0xFF, 0x7F, 0, 0}},           // 2 digits, To
+        {16384u, 3, {0x80, 0x80, 0x01, 0}},        // 3 digits, From
+        {2097151u, 3, {0xFF, 0xFF, 0x7F, 0}},      // 3 digits, To
+        {2097152u, 4, {0x80, 0x80, 0x80, 0x01}},   // 4 digits, From
+        {268435455u, 4, {0xFF, 0xFF, 0xFF, 0x7F}}, // 4 digits, To
     };
     TEST_ASSERT_EQUAL_UINT32(268435455u, PROTOCORE_MQTT_REMAINING_LENGTH_MAX);
 

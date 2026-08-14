@@ -24,7 +24,8 @@ typedef struct MdCtx
     uint32_t buf_len; ///< bytes currently in buf
 } MdCtx;
 static_assert(sizeof(struct MdCtx) <= PROTOCORE_WORK_MD,
-              "MdCtx outgrew PROTOCORE_WORK_MD - raise it in protocore_config.h, which derives PROTOCORE_SECURE_ARENA_SIZE from it");
+              "MdCtx outgrew PROTOCORE_WORK_MD - raise it in protocore_config.h, which derives "
+              "PROTOCORE_SECURE_ARENA_SIZE from it");
 
 struct MdCtx *protocore_md_wants(void)
 {

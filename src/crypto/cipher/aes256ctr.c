@@ -42,8 +42,9 @@ static_assert(sizeof(Aes256CtrWork) <= PROTOCORE_WORK_AES256CTR,
               "Aes256CtrWork outgrew PROTOCORE_WORK_AES256CTR - raise it in protocore_config.h, which derives "
               "PROTOCORE_SECURE_ARENA_SIZE from it");
 
-void protocore_aes256ctr_crypt(const uint8_t key[PROTOCORE_AES256CTR_KEY_LEN], uint8_t counter[PROTOCORE_AES256CTR_CTR_LEN],
-                        const uint8_t *in, uint8_t *out, size_t len)
+void protocore_aes256ctr_crypt(const uint8_t key[PROTOCORE_AES256CTR_KEY_LEN],
+                               uint8_t counter[PROTOCORE_AES256CTR_CTR_LEN], const uint8_t *in, uint8_t *out,
+                               size_t len)
 {
     // Schedule + keystream block are borrowed, not local; the pool wipes them on release.
     size_t mark = protocore_secure_mark();
@@ -77,8 +78,9 @@ typedef struct
     uint8_t ks[16];
 } Aes256CtrWork;
 
-void protocore_aes256ctr_crypt(const uint8_t key[PROTOCORE_AES256CTR_KEY_LEN], uint8_t counter[PROTOCORE_AES256CTR_CTR_LEN],
-                        const uint8_t *in, uint8_t *out, size_t len)
+void protocore_aes256ctr_crypt(const uint8_t key[PROTOCORE_AES256CTR_KEY_LEN],
+                               uint8_t counter[PROTOCORE_AES256CTR_CTR_LEN], const uint8_t *in, uint8_t *out,
+                               size_t len)
 {
     // Round-key schedule and the keystream block are borrowed; the pool wipes them on release.
     size_t mark = protocore_secure_mark();
@@ -98,7 +100,7 @@ void protocore_aes256ctr_crypt(const uint8_t key[PROTOCORE_AES256CTR_KEY_LEN], u
         if (pos == 0)
         {
             protocore_aes_encrypt_block(rk, 14, counter, ks); // keystream = AES(counter)
-            for (int j = 15; j >= 0; j--)              // then advance the big-endian counter by one block
+            for (int j = 15; j >= 0; j--)                     // then advance the big-endian counter by one block
             {
                 if (++counter[j])
                 {
@@ -118,8 +120,8 @@ void protocore_aes256ctr_crypt(const uint8_t key[PROTOCORE_AES256CTR_KEY_LEN], u
 // Length peek (used by the SSH recv path; mirrors protocore_chachapoly_get_length)
 // ---------------------------------------------------------------------------
 
-uint32_t protocore_aes256ctr_get_length(const uint8_t key[PROTOCORE_AES256CTR_KEY_LEN], const uint8_t counter[PROTOCORE_AES256CTR_CTR_LEN],
-                                 const uint8_t enc4[4])
+uint32_t protocore_aes256ctr_get_length(const uint8_t key[PROTOCORE_AES256CTR_KEY_LEN],
+                                        const uint8_t counter[PROTOCORE_AES256CTR_CTR_LEN], const uint8_t enc4[4])
 {
     // Produce the keystream block for @p counter (AES-ECB) in the shared crypto scratch, then XOR the first
     // 4 bytes to recover the length. @p counter is not advanced and no cipher state touches the stack.

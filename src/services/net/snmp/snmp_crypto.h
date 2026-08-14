@@ -56,12 +56,12 @@ typedef struct
 /** @brief RFC 3826 sec 3.1.2.1: what the privacy transform reads and where it writes. */
 typedef struct
 {
-    const uint8_t *key;  ///< the 16-octet AES key: the first 16 octets of the localized privacy key
-    const uint8_t *iv;   ///< the 16-octet IV: snmpEngineBoots, snmpEngineTime, msgPrivacyParameters
-    const uint8_t *in;   ///< the octets to transform
-    uint8_t *out;        ///< where they land; may be @c in
-    size_t len;          ///< how many
-    proto_bool encrypt;  ///< encrypt, otherwise decrypt with the feedback taken from the ciphertext
+    const uint8_t *key; ///< the 16-octet AES key: the first 16 octets of the localized privacy key
+    const uint8_t *iv;  ///< the 16-octet IV: snmpEngineBoots, snmpEngineTime, msgPrivacyParameters
+    const uint8_t *in;  ///< the octets to transform
+    uint8_t *out;       ///< where they land; may be @c in
+    size_t len;         ///< how many
+    proto_bool encrypt; ///< encrypt, otherwise decrypt with the feedback taken from the ciphertext
 } SnmpUsmPrivArgs;
 
 /** @brief The transforms, described only in snmp_crypto.c. */

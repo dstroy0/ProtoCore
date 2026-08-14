@@ -36,7 +36,8 @@ int main(void)
     {
         volatile size_t sink = 0;
         double ns = 0.0;
-        HBENCH_NS(2000000, sink += protocore_stomp_build_frame(frame, sizeof(frame), "SEND", bk, bv, 2, body, blen), ns);
+        HBENCH_NS(2000000, sink += protocore_stomp_build_frame(frame, sizeof(frame), "SEND", bk, bv, 2, body, blen),
+                  ns);
         hbench_row("stomp", "build SEND frame", ns, (double)flen);
         (void)sink;
     }

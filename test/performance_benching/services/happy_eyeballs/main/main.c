@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // On-device CCOUNT microbenchmark for the dual-stack Happy Eyeballs selection layer
-// (network_drivers/transport/happy_eyeballs): the RFC 6724 destination-preference score (protocore_he_pref), the candidate
-// list sort + RFC 8305 address-family interleave (protocore_he_order), and the RFC 8305 Connection Attempt
+// (network_drivers/transport/happy_eyeballs): the RFC 6724 destination-preference score (protocore_he_pref), the
+// candidate list sort + RFC 8305 address-family interleave (protocore_he_order), and the RFC 8305 Connection Attempt
 // Delay gate (protocore_he_attempt_due). This is the pure decision layer over the shipped protocore_ip value type -
 // no sockets, no DNS, no heap - so, like performance_benching/device/modbus, every call here runs the real production
 // code path. There is nothing to stub: the app owns the sockets and DNS, this only decides *which*
@@ -27,7 +27,7 @@ void dbench_run(void)
 {
     // Candidate fixtures copied verbatim from test/test_happy_eyeballs.cpp (known-good, spec-conformant).
     protocore_ip g6;
-    protocore_ip_parse("2606:4700::1", &g6);                  // global IPv6
+    protocore_ip_parse("2606:4700::1", &g6);                         // global IPv6
     protocore_ip g4 = protocore_ip_from_v4_octets(93, 184, 216, 34); // global IPv4
 
     // 3-address mixed template, v4-first: the sort must move the two v6 ahead, then interleave alternates.
@@ -64,7 +64,8 @@ void dbench_run(void)
         DBENCH_OP("protocore_he_order x5 (sort+ilv)", 50000,
                   (memcpy(work5, tmpl5, sizeof(tmpl5)), protocore_he_order(work5, 5), sink8 += work5[1].bytes[0]));
         // Connection Attempt Delay gate (wrap-safe modular compare).
-        DBENCH_OP("protocore_he_attempt_due", 200000, sinkb ^= protocore_he_attempt_due(1000, 1000 + 250, PROTOCORE_HE_ATTEMPT_DELAY_MS));
+        DBENCH_OP("protocore_he_attempt_due", 200000,
+                  sinkb ^= protocore_he_attempt_due(1000, 1000 + 250, PROTOCORE_HE_ATTEMPT_DELAY_MS));
 
         (void)sinki;
         (void)sink8;

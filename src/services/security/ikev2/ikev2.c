@@ -245,8 +245,8 @@ static void payload_build(struct IkeInternal *restrict ctx)
 // SA payload holding one Proposal Substructure: Last Substruc 0, its transforms with Last Substruc 3
 // on all but the last, and a Key Length attribute in TV form where one is asked for (sec 3.3.5).
 static size_t ike_sa_build(uint8_t *buf, size_t cap, IkePayloadType next_payload, uint8_t proposal_num,
-                           IkeProtocol protocol_id, const uint8_t *spi, uint8_t spi_size, const IkeTransform *transforms,
-                           uint8_t num_transforms)
+                           IkeProtocol protocol_id, const uint8_t *spi, uint8_t spi_size,
+                           const IkeTransform *transforms, uint8_t num_transforms)
 {
     if (!buf || !transforms || num_transforms == 0)
     {
@@ -460,8 +460,8 @@ static void id_build(struct IkeInternal *restrict ctx)
 
 static void auth_build(struct IkeInternal *restrict ctx)
 {
-    ctx->ns->n = ike_auth_build(ctx->ns->out.buf, ctx->ns->out.cap, ctx->ns->pl.next_payload,
-                                ctx->ns->auth.auth_method, ctx->ns->pl.data, ctx->ns->pl.data_len);
+    ctx->ns->n = ike_auth_build(ctx->ns->out.buf, ctx->ns->out.cap, ctx->ns->pl.next_payload, ctx->ns->auth.auth_method,
+                                ctx->ns->pl.data, ctx->ns->pl.data_len);
 }
 
 // CERT and CERTREQ share the layout: Cert Encoding then the data (sec 3.6, sec 3.7).
@@ -877,10 +877,10 @@ static size_t ike_cookie_compute(uint8_t *work, uint8_t version, const uint8_t *
 
 static void cookie_compute(struct IkeInternal *restrict ctx)
 {
-    ctx->ns->n = ike_cookie_compute(ctx->ns->work, ctx->ns->notify.version, ctx->ns->notify.secret,
-                                    ctx->ns->notify.secret_len, ctx->ns->notify.ni, ctx->ns->notify.ni_len,
-                                    ctx->ns->notify.ipi, ctx->ns->notify.ipi_len, ctx->ns->notify.spii,
-                                    ctx->ns->out.buf, ctx->ns->out.cap);
+    ctx->ns->n =
+        ike_cookie_compute(ctx->ns->work, ctx->ns->notify.version, ctx->ns->notify.secret, ctx->ns->notify.secret_len,
+                           ctx->ns->notify.ni, ctx->ns->notify.ni_len, ctx->ns->notify.ipi, ctx->ns->notify.ipi_len,
+                           ctx->ns->notify.spii, ctx->ns->out.buf, ctx->ns->out.cap);
 }
 
 // The VersionIDofSecret octet names which secret to recompute with, so it comes off the cookie itself.
@@ -1387,10 +1387,10 @@ static proto_bool ike_derive_keys(uint8_t *work, const uint8_t *dh_secret, size_
 
 static void derive_keys(struct IkeInternal *restrict ctx)
 {
-    ctx->ns->ok = ike_derive_keys(ctx->ns->work, ctx->ns->keymat.dh_secret, ctx->ns->keymat.dh_len, ctx->ns->keymat.ni,
-                                  ctx->ns->keymat.ni_len, ctx->ns->keymat.nr, ctx->ns->keymat.nr_len,
-                                  ctx->ns->keymat.spi_i, ctx->ns->keymat.spi_r, ctx->ns->keymat.lens,
-                                  ctx->ns->keymat.keys);
+    ctx->ns->ok =
+        ike_derive_keys(ctx->ns->work, ctx->ns->keymat.dh_secret, ctx->ns->keymat.dh_len, ctx->ns->keymat.ni,
+                        ctx->ns->keymat.ni_len, ctx->ns->keymat.nr, ctx->ns->keymat.nr_len, ctx->ns->keymat.spi_i,
+                        ctx->ns->keymat.spi_r, ctx->ns->keymat.lens, ctx->ns->keymat.keys);
 }
 
 // SKEYSEED = prf(SK_d (old), g^ir (new) | Ni | Nr), then the sec 2.14 split with the new SPIs (sec 2.18).
@@ -1582,9 +1582,9 @@ static void sk_aead_seal(struct IkeInternal *restrict ctx)
 
 static void sk_aead_open(struct IkeInternal *restrict ctx)
 {
-    ctx->ns->ok = ike_sk_aead_open(ctx->ns->sk.key, ctx->ns->sk.salt, ctx->ns->sk.iv, ctx->ns->sk.aad,
-                                   ctx->ns->sk.aad_len, ctx->ns->sk.ct, ctx->ns->sk.ct_len, ctx->ns->sk.icv,
-                                   ctx->ns->out.buf);
+    ctx->ns->ok =
+        ike_sk_aead_open(ctx->ns->sk.key, ctx->ns->sk.salt, ctx->ns->sk.iv, ctx->ns->sk.aad, ctx->ns->sk.aad_len,
+                         ctx->ns->sk.ct, ctx->ns->sk.ct_len, ctx->ns->sk.icv, ctx->ns->out.buf);
 }
 
 // ---------------------------------------------------------------------------
@@ -1674,11 +1674,11 @@ static proto_bool ike_auth_psk(uint8_t *work, const uint8_t *psk, size_t psk_len
 
 static void auth_psk(struct IkeInternal *restrict ctx)
 {
-    ctx->ns->ok = ctx->ns->out.cap >= PROTOCORE_IKE_AUTH_LEN &&
-                  ike_auth_psk(ctx->ns->work, ctx->ns->auth.psk, ctx->ns->auth.psk_len, ctx->ns->auth.real_msg,
-                               ctx->ns->auth.real_len, ctx->ns->auth.peer_nonce, ctx->ns->auth.peer_nonce_len,
-                               ctx->ns->auth.sk_p, ctx->ns->auth.sk_p_len, ctx->ns->id.id_body,
-                               ctx->ns->id.id_body_len, ctx->ns->out.buf);
+    ctx->ns->ok =
+        ctx->ns->out.cap >= PROTOCORE_IKE_AUTH_LEN &&
+        ike_auth_psk(ctx->ns->work, ctx->ns->auth.psk, ctx->ns->auth.psk_len, ctx->ns->auth.real_msg,
+                     ctx->ns->auth.real_len, ctx->ns->auth.peer_nonce, ctx->ns->auth.peer_nonce_len, ctx->ns->auth.sk_p,
+                     ctx->ns->auth.sk_p_len, ctx->ns->id.id_body, ctx->ns->id.id_body_len, ctx->ns->out.buf);
 }
 
 // SignedOctets = RealMessage | NonceData | MACedID, assembled whole because a signer hashes it whole.
@@ -1703,10 +1703,10 @@ static size_t ike_signed_octets(uint8_t *work, uint8_t *scratch, size_t cap, con
 
 static void signed_octets(struct IkeInternal *restrict ctx)
 {
-    ctx->ns->n = ike_signed_octets(ctx->ns->work, ctx->ns->auth.scratch, ctx->ns->auth.scratch_cap,
-                                   ctx->ns->auth.real_msg, ctx->ns->auth.real_len, ctx->ns->auth.peer_nonce,
-                                   ctx->ns->auth.peer_nonce_len, ctx->ns->auth.sk_p, ctx->ns->auth.sk_p_len,
-                                   ctx->ns->id.id_body, ctx->ns->id.id_body_len);
+    ctx->ns->n =
+        ike_signed_octets(ctx->ns->work, ctx->ns->auth.scratch, ctx->ns->auth.scratch_cap, ctx->ns->auth.real_msg,
+                          ctx->ns->auth.real_len, ctx->ns->auth.peer_nonce, ctx->ns->auth.peer_nonce_len,
+                          ctx->ns->auth.sk_p, ctx->ns->auth.sk_p_len, ctx->ns->id.id_body, ctx->ns->id.id_body_len);
 }
 
 // The signer hashes the assembled octets with SHA-256 itself (RFC 7427 sec 3).
@@ -1717,16 +1717,16 @@ static void auth_sign_ecdsa_p256(struct IkeInternal *restrict ctx)
     {
         return;
     }
-    size_t n = ike_signed_octets(ctx->ns->work, ctx->ns->auth.scratch, ctx->ns->auth.scratch_cap,
-                                 ctx->ns->auth.real_msg, ctx->ns->auth.real_len, ctx->ns->auth.peer_nonce,
-                                 ctx->ns->auth.peer_nonce_len, ctx->ns->auth.sk_p, ctx->ns->auth.sk_p_len,
-                                 ctx->ns->id.id_body, ctx->ns->id.id_body_len);
+    size_t n =
+        ike_signed_octets(ctx->ns->work, ctx->ns->auth.scratch, ctx->ns->auth.scratch_cap, ctx->ns->auth.real_msg,
+                          ctx->ns->auth.real_len, ctx->ns->auth.peer_nonce, ctx->ns->auth.peer_nonce_len,
+                          ctx->ns->auth.sk_p, ctx->ns->auth.sk_p_len, ctx->ns->id.id_body, ctx->ns->id.id_body_len);
     if (n == 0)
     {
         return;
     }
-    ctx->ns->ok = protocore_ecdsa_p256_sign(ctx->ns->out.buf, ctx->ns->work, ctx->ns->auth.scratch, n,
-                                            ctx->ns->auth.priv);
+    ctx->ns->ok =
+        protocore_ecdsa_p256_sign(ctx->ns->out.buf, ctx->ns->work, ctx->ns->auth.scratch, n, ctx->ns->auth.priv);
 }
 
 static void auth_verify_ecdsa_p256(struct IkeInternal *restrict ctx)
@@ -1736,16 +1736,16 @@ static void auth_verify_ecdsa_p256(struct IkeInternal *restrict ctx)
     {
         return;
     }
-    size_t n = ike_signed_octets(ctx->ns->work, ctx->ns->auth.scratch, ctx->ns->auth.scratch_cap,
-                                 ctx->ns->auth.real_msg, ctx->ns->auth.real_len, ctx->ns->auth.peer_nonce,
-                                 ctx->ns->auth.peer_nonce_len, ctx->ns->auth.sk_p, ctx->ns->auth.sk_p_len,
-                                 ctx->ns->id.id_body, ctx->ns->id.id_body_len);
+    size_t n =
+        ike_signed_octets(ctx->ns->work, ctx->ns->auth.scratch, ctx->ns->auth.scratch_cap, ctx->ns->auth.real_msg,
+                          ctx->ns->auth.real_len, ctx->ns->auth.peer_nonce, ctx->ns->auth.peer_nonce_len,
+                          ctx->ns->auth.sk_p, ctx->ns->auth.sk_p_len, ctx->ns->id.id_body, ctx->ns->id.id_body_len);
     if (n == 0)
     {
         return;
     }
-    ctx->ns->ok = protocore_ecdsa_p256_verify(ctx->ns->auth.pub, ctx->ns->work, ctx->ns->auth.scratch, n,
-                                              ctx->ns->auth.sig);
+    ctx->ns->ok =
+        protocore_ecdsa_p256_verify(ctx->ns->auth.pub, ctx->ns->work, ctx->ns->auth.scratch, n, ctx->ns->auth.sig);
 }
 
 // Auth Method 1, RSA Digital Signature: RSASSA-PKCS1-v1_5 over the same octets (RFC 7296 sec 3.8).
@@ -1756,10 +1756,10 @@ static void auth_verify_rsa_sha256(struct IkeInternal *restrict ctx)
     {
         return;
     }
-    size_t n = ike_signed_octets(ctx->ns->work, ctx->ns->auth.scratch, ctx->ns->auth.scratch_cap,
-                                 ctx->ns->auth.real_msg, ctx->ns->auth.real_len, ctx->ns->auth.peer_nonce,
-                                 ctx->ns->auth.peer_nonce_len, ctx->ns->auth.sk_p, ctx->ns->auth.sk_p_len,
-                                 ctx->ns->id.id_body, ctx->ns->id.id_body_len);
+    size_t n =
+        ike_signed_octets(ctx->ns->work, ctx->ns->auth.scratch, ctx->ns->auth.scratch_cap, ctx->ns->auth.real_msg,
+                          ctx->ns->auth.real_len, ctx->ns->auth.peer_nonce, ctx->ns->auth.peer_nonce_len,
+                          ctx->ns->auth.sk_p, ctx->ns->auth.sk_p_len, ctx->ns->id.id_body, ctx->ns->id.id_body_len);
     if (n == 0)
     {
         return;
@@ -1800,8 +1800,8 @@ static size_t ike_sa_init_build(uint8_t *buf, size_t cap, const uint8_t *init_sp
         return 0;
     }
     // SPI Size is zero in an initial IKE SA negotiation: the SPI is in the header (sec 3.3.1).
-    size_t n = ike_sa_build(buf + off, cap - off, IKE_PL_KE, proposal_num, IKE_PROTO_IKE, NULL, 0, transforms,
-                            num_transforms);
+    size_t n =
+        ike_sa_build(buf + off, cap - off, IKE_PL_KE, proposal_num, IKE_PROTO_IKE, NULL, 0, transforms, num_transforms);
     if (n == 0)
     {
         return 0;
@@ -1965,8 +1965,7 @@ static void auth_msg_build(struct IkeInternal *restrict ctx)
 }
 
 // Verify the ICV, decrypt in place, then strip Padding and Pad Length (sec 3.14).
-static proto_bool ike_auth_msg_open(uint8_t *msg, size_t len, const uint8_t *key, const uint8_t *salt,
-                                    IkeInnerRef *out)
+static proto_bool ike_auth_msg_open(uint8_t *msg, size_t len, const uint8_t *key, const uint8_t *salt, IkeInnerRef *out)
 {
     mem.set(out, 0, sizeof(*out));
     if (!msg || !key || !salt)
@@ -2019,8 +2018,8 @@ static proto_bool ike_auth_msg_open(uint8_t *msg, size_t len, const uint8_t *key
 
 static void auth_msg_open(struct IkeInternal *restrict ctx)
 {
-    ctx->ns->ok = ike_auth_msg_open(ctx->ns->sk.msg, ctx->ns->sk.msg_len, ctx->ns->sk.key, ctx->ns->sk.salt,
-                                    &ctx->ns->opened);
+    ctx->ns->ok =
+        ike_auth_msg_open(ctx->ns->sk.msg, ctx->ns->sk.msg_len, ctx->ns->sk.key, ctx->ns->sk.salt, &ctx->ns->opened);
 }
 
 // ---------------------------------------------------------------------------
@@ -2043,8 +2042,8 @@ static proto_bool ike_sa_keys_from_init(IkeSa *sa, const uint8_t *our_dh_priv, s
     }
 
     uint8_t shared[PROTOCORE_IKE_X25519_LEN]; // group 31 yields a 32-octet secret
-    size_t sh = ike_dh_compute(sa->suite.dh, our_dh_priv, our_dh_priv_len, peer_ke, peer_ke_len, shared,
-                               sizeof(shared));
+    size_t sh =
+        ike_dh_compute(sa->suite.dh, our_dh_priv, our_dh_priv_len, peer_ke, peer_ke_len, shared, sizeof(shared));
     if (sh == 0)
     {
         return PROTO_FALSE;
@@ -2176,9 +2175,9 @@ static proto_bool ike_ct_eq32(const uint8_t *a, const uint8_t *b)
 
 // Find the ID payload the caller names and the AUTH payload in a decrypted chain, and require the
 // Auth Method to be Shared Key Message Integrity Code with a full-length MAC (sec 2.15, sec 3.8).
-static proto_bool ike_find_id_auth(IkePayloadType first, const uint8_t *inner, size_t inner_len,
-                                   IkePayloadType id_type, const uint8_t **id_body, size_t *id_body_len,
-                                   const uint8_t **authdata, size_t *authdata_len)
+static proto_bool ike_find_id_auth(IkePayloadType first, const uint8_t *inner, size_t inner_len, IkePayloadType id_type,
+                                   const uint8_t **id_body, size_t *id_body_len, const uint8_t **authdata,
+                                   size_t *authdata_len)
 {
     IkePayloadIter it;
     ike_payload_iter_init(&it, first, inner, inner_len);
@@ -2288,8 +2287,8 @@ static void initiator_on_auth_psk(struct IkeInternal *restrict ctx)
     const uint8_t *idr_body = NULL, *authdata = NULL;
     size_t idr_body_len = 0, authdata_len = 0;
     if (!ike_auth_msg_open(buf, resp_len, hs->sa.keys.sk_er, hs->sa.keys.sk_er + PROTOCORE_IKE_AEAD_KEY_LEN, &opened) ||
-        !ike_find_id_auth(opened.first_inner_type, opened.inner, opened.inner_len, IKE_PL_IDR, &idr_body,
-                          &idr_body_len, &authdata, &authdata_len))
+        !ike_find_id_auth(opened.first_inner_type, opened.inner, opened.inner_len, IKE_PL_IDR, &idr_body, &idr_body_len,
+                          &authdata, &authdata_len))
     {
         hs->state = IKE_ST_FAILED;
         return;
@@ -2326,8 +2325,8 @@ static void responder_on_sa_init(struct IkeInternal *restrict ctx)
     size_t nonce_len = ctx->ns->sess.our_nonce_len;
     const IkeSuite *suite = ctx->ns->keymat.suite;
     ctx->ns->n = 0;
-    if (!hs || !req || !our_spi || !our_dh_priv || !our_dh_pub || !our_nonce || !suite ||
-        !ctx->ns->prop.transforms || ctx->ns->prop.num_transforms == 0)
+    if (!hs || !req || !our_spi || !our_dh_priv || !our_dh_pub || !our_nonce || !suite || !ctx->ns->prop.transforms ||
+        ctx->ns->prop.num_transforms == 0)
     {
         return;
     }
@@ -2414,8 +2413,8 @@ static void responder_on_auth_psk(struct IkeInternal *restrict ctx)
     const uint8_t *idi_body = NULL, *authdata = NULL;
     size_t idi_body_len = 0, authdata_len = 0;
     if (!ike_auth_msg_open(buf, req_len, hs->sa.keys.sk_ei, hs->sa.keys.sk_ei + PROTOCORE_IKE_AEAD_KEY_LEN, &opened) ||
-        !ike_find_id_auth(opened.first_inner_type, opened.inner, opened.inner_len, IKE_PL_IDI, &idi_body,
-                          &idi_body_len, &authdata, &authdata_len))
+        !ike_find_id_auth(opened.first_inner_type, opened.inner, opened.inner_len, IKE_PL_IDI, &idi_body, &idi_body_len,
+                          &authdata, &authdata_len))
     {
         hs->state = IKE_ST_FAILED;
         return;

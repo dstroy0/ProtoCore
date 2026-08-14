@@ -241,7 +241,7 @@ static void parse_method(struct HttpInternal *restrict ctx)
         return;
     }
     ctx->ns->method_of = HTTP_METHOD_UNKNOWN;
-        return;
+    return;
 }
 
 /**
@@ -372,14 +372,14 @@ static void match_path_params(struct HttpInternal *restrict ctx)
             if (plen == 0)
             {
                 ctx->ns->ok = PROTO_FALSE;
-        return; // a `:name` segment must capture a non-empty value
+                return; // a `:name` segment must capture a non-empty value
             }
             capture_path_param(req, rseg + 1, rlen - 1, pseg, plen);
         }
         else if (rlen != plen || str.diff(rseg, pseg, rlen, PROTO_FALSE) != rlen)
         {
             ctx->ns->ok = PROTO_FALSE;
-        return; // literal segment mismatch
+            return; // literal segment mismatch
         }
     }
 
@@ -543,11 +543,11 @@ static proto_bool route_admits(const HttpRoute *r, uint8_t slot_id, HttpReq *req
     {
         return PROTO_FALSE;
     }
-    proto_bool matched = r->is_regex   ? regex_match(r->path, req->path)
-                         : (Http.route_args.route = r->path, Http.route_args.path = req->path, Http.route_args.req = req,
-                            Http.route_args.is_wildcard = r->is_wildcard,
-                            r->is_param ? Http.match_path_params(Http.internal) : Http.path_matches(Http.internal),
-                            Http.ok);
+    proto_bool matched =
+        r->is_regex ? regex_match(r->path, req->path)
+                    : (Http.route_args.route = r->path, Http.route_args.path = req->path, Http.route_args.req = req,
+                       Http.route_args.is_wildcard = r->is_wildcard,
+                       r->is_param ? Http.match_path_params(Http.internal) : Http.path_matches(Http.internal), Http.ok);
     if (!matched)
     {
         return PROTO_FALSE;

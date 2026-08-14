@@ -232,7 +232,7 @@ void test_http3_get_end_to_end()
 
     QuicConn qc;
     protocore_quic_conn_init(&qc, &cfg, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), SERVER_SCID,
-                      sizeof(SERVER_SCID), NULL);
+                             sizeof(SERVER_SCID), NULL);
     H3Conn h3;
     protocore_h3_conn_init(&h3, &qc, app_request, NULL);
 

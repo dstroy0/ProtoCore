@@ -38,7 +38,7 @@ size_t protocore_pb_build_sd1(uint8_t da, uint8_t sa, uint8_t fc, uint8_t *out, 
 }
 
 size_t protocore_pb_build_sd2(uint8_t da, uint8_t sa, uint8_t fc, const uint8_t *data, size_t data_len, uint8_t *out,
-                       size_t cap)
+                              size_t cap)
 {
     if (!out || (data_len && !data) || data_len > 246)
     {

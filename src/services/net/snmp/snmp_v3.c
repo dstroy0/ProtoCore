@@ -669,9 +669,9 @@ static void v3_process(struct SnmpV3Internal *restrict ctx)
     if (!engine_match)
     {
         ctx->store->stat_unknown_engine++;
-        ctx->ns->n = build_report(ctx, msg_id, PROTO_FALSE, (int)USM_STAT_UNKNOWN_ENGINE,
-                                  ctx->store->stat_unknown_engine, inner_request_id(mdata, mdata_len, req_priv), resp,
-                                  resp_cap);
+        ctx->ns->n =
+            build_report(ctx, msg_id, PROTO_FALSE, (int)USM_STAT_UNKNOWN_ENGINE, ctx->store->stat_unknown_engine,
+                         inner_request_id(mdata, mdata_len, req_priv), resp, resp_cap);
         return;
     }
 
@@ -736,8 +736,8 @@ static void v3_process(struct SnmpV3Internal *restrict ctx)
         if (!ctx->store->priv_set || pparm_len != SNMP_V3_PRIV_PARAM_LEN)
         {
             ctx->store->stat_decrypt++;
-            ctx->ns->n = build_report(ctx, msg_id, PROTO_TRUE, (int)USM_STAT_DECRYPT, ctx->store->stat_decrypt, 0,
-                                      resp, resp_cap);
+            ctx->ns->n = build_report(ctx, msg_id, PROTO_TRUE, (int)USM_STAT_DECRYPT, ctx->store->stat_decrypt, 0, resp,
+                                      resp_cap);
             return;
         }
         BerDec md;

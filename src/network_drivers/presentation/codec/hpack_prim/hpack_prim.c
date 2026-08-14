@@ -116,7 +116,7 @@ static size_t protocore_hpack_encode_int(uint8_t *out, size_t cap, uint8_t prefi
 }
 
 static proto_bool protocore_hpack_decode_int(const uint8_t *in, size_t len, uint8_t prefix_bits, size_t *consumed,
-                                      uint32_t *value)
+                                             uint32_t *value)
 {
     if (len < 1)
     {
@@ -267,7 +267,7 @@ static proto_bool protocore_hpack_huff_decode(const uint8_t *in, size_t n, char 
 // --- string literal (RFC 7541 sec 5.2; RFC 9204 reuses it verbatim) -------------------------------
 
 static proto_bool protocore_hpack_decode_str(const uint8_t *block, size_t len, size_t *pos, char *out, size_t cap,
-                                      size_t *out_len)
+                                             size_t *out_len)
 {
     if (*pos >= len)
     {
@@ -331,7 +331,8 @@ static size_t protocore_hpack_encode_str(uint8_t *out, size_t cap, const char *s
     return hdr + n;
 }
 
-const HpackPrimNs HpackPrim = {protocore_hpack_encode_int,  protocore_hpack_decode_int, protocore_hpack_huff_encode, protocore_hpack_huff_len,
-                               protocore_hpack_huff_decode, protocore_hpack_decode_str, protocore_hpack_encode_str};
+const HpackPrimNs HpackPrim = {protocore_hpack_encode_int, protocore_hpack_decode_int,  protocore_hpack_huff_encode,
+                               protocore_hpack_huff_len,   protocore_hpack_huff_decode, protocore_hpack_decode_str,
+                               protocore_hpack_encode_str};
 
 #endif // PROTOCORE_ENABLE_HTTP2 || PROTOCORE_ENABLE_HTTP3

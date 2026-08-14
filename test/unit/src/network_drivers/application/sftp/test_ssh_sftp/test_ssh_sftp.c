@@ -231,10 +231,10 @@ void test_attrs_round_trip(void)
 void test_attrs_skips_extended_fields(void)
 {
     static const uint8_t BLOB[] = {
-        0x80, 0x00, 0x00, 0x01,             // flags = EXTENDED | SIZE
+        0x80, 0x00, 0x00, 0x01,                         // flags = EXTENDED | SIZE
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x2A, // size = 42
-        0x00, 0x00, 0x00, 0x01,             // extended_count = 1
-        0x00, 0x00, 0x00, 0x03, 'a', '@', 'b',          // extended_type
+        0x00, 0x00, 0x00, 0x01,                         // extended_count = 1
+        0x00, 0x00, 0x00, 0x03, 'a',  '@',  'b',        // extended_type
         0x00, 0x00, 0x00, 0x02, 0xAA, 0xBB,             // extended_data
         0xC0, 0xDE                                      // a trailing field the caller reads next
     };
@@ -438,12 +438,8 @@ void test_longname_permission_column(void)
         const char *want;
     } static const CASES[] = {
         {PROTO_FALSE, 0755, "-rwxr-xr-x"}, // the draft's own sample line
-        {PROTO_FALSE, 0644, "-rw-r--r--"},
-        {PROTO_FALSE, 0000, "----------"},
-        {PROTO_FALSE, 0777, "-rwxrwxrwx"},
-        {PROTO_FALSE, 0400, "-r--------"},
-        {PROTO_FALSE, 0001, "---------x"},
-        {PROTO_TRUE, 0755, "drwxr-xr-x"},
+        {PROTO_FALSE, 0644, "-rw-r--r--"}, {PROTO_FALSE, 0000, "----------"}, {PROTO_FALSE, 0777, "-rwxrwxrwx"},
+        {PROTO_FALSE, 0400, "-r--------"}, {PROTO_FALSE, 0001, "---------x"}, {PROTO_TRUE, 0755, "drwxr-xr-x"},
         {PROTO_TRUE, 0000, "d---------"},
     };
     for (size_t i = 0; i < sizeof(CASES) / sizeof(CASES[0]); i++)

@@ -19,7 +19,7 @@
 #ifndef PROTOCORE_PROTOCORE_NET_PCAP_H
 #define PROTOCORE_PROTOCORE_NET_PCAP_H
 
-#include "protocore_config.h"       // must be complete before pcap.h is reached
+#include "protocore_config.h" // must be complete before pcap.h is reached
 #include "shared/pcap/pcap.h" // PROTOCORE_DLT_RAW, the global and record headers
 #include <stdint.h>
 #include <string.h>

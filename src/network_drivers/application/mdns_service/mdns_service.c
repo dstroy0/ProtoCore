@@ -19,11 +19,11 @@
 #if PROTOCORE_HAS_VENDOR_MDNS
 #include "mdns.h" // the vendor's responder, driven through its own component API
 #else
-#include "mmgr/protostr.h"                        // str: the bounded-run walks
-#include "mmgr/rawmemcpy.h"                       // raw.read: every field moves whole
-#include "mmgr/secure.h"                          // protocore_secure_persist_span: this module's storage
-#include "network_drivers/network/dns/dns_wire.h" // the name codec both DNS halves share
-#include "network_drivers/physical/physical.h"    // Physical.egress_ip: the address the A record carries
+#include "mmgr/protostr.h"                               // str: the bounded-run walks
+#include "mmgr/rawmemcpy.h"                              // raw.read: every field moves whole
+#include "mmgr/secure.h"                                 // protocore_secure_persist_span: this module's storage
+#include "network_drivers/network/dns/dns_wire.h"        // the name codec both DNS halves share
+#include "network_drivers/physical/physical.h"           // Physical.egress_ip: the address the A record carries
 #include "network_drivers/transport/udp/server/server.h" // UdpListener: the 5353 group bind and the reply
 #endif
 

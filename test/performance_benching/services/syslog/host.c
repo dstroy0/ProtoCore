@@ -34,7 +34,8 @@ int main(void)
         volatile size_t sink = 0;
         double ns = 0.0;
         HBENCH_NS(2000000,
-                  sink += protocore_syslog_format(out, sizeof(out), SYSLOG_FAC_LOCAL0, SYSLOG_INFO, "pc-rig", "rig-app", msg),
+                  sink +=
+                  protocore_syslog_format(out, sizeof(out), SYSLOG_FAC_LOCAL0, SYSLOG_INFO, "pc-rig", "rig-app", msg),
                   ns);
         hbench_row("syslog", "protocore_syslog_format (RFC 5424)", ns, (double)len);
         (void)sink;

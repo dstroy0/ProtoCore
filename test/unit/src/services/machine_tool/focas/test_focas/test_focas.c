@@ -89,8 +89,8 @@ void test_arguments_are_big_endian_i32(void)
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT_ARGS, buf + 16, sizeof(WANT_ARGS));
 
     // A negative argument is the two's-complement pattern, not a truncation or an absolute value.
-    TEST_ASSERT_EQUAL_size_t(36u, protocore_focas_build_request(buf, sizeof(buf), FOCAS_CMD_READ_MACRO, -1, 0, 0, 0, 0,
-                                                                NULL, 0));
+    TEST_ASSERT_EQUAL_size_t(
+        36u, protocore_focas_build_request(buf, sizeof(buf), FOCAS_CMD_READ_MACRO, -1, 0, 0, 0, 0, NULL, 0));
     static const uint8_t WANT_NEG[] = {0xFF, 0xFF, 0xFF, 0xFF};
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT_NEG, buf + 16, sizeof(WANT_NEG));
 }
@@ -100,9 +100,9 @@ void test_position_kind_and_axis_are_the_first_two_arguments(void)
 {
     uint8_t buf[64];
     TEST_ASSERT_EQUAL_size_t(36u, protocore_focas_build_read_position(buf, sizeof(buf), FOCAS_POS_ABSOLUTE, 2));
-    TEST_ASSERT_EQUAL_HEX8(0x26, buf[15]);   // c3 = 0x26
-    TEST_ASSERT_EQUAL_HEX8(0x04, buf[19]);   // v1 = FOCAS_POS_ABSOLUTE = 4
-    TEST_ASSERT_EQUAL_HEX8(0x02, buf[23]);   // v2 = axis 2
+    TEST_ASSERT_EQUAL_HEX8(0x26, buf[15]); // c3 = 0x26
+    TEST_ASSERT_EQUAL_HEX8(0x04, buf[19]); // v1 = FOCAS_POS_ABSOLUTE = 4
+    TEST_ASSERT_EQUAL_HEX8(0x02, buf[23]); // v2 = axis 2
 }
 
 // Trailing data extends the declared payload length by exactly its own size and lands right after
@@ -238,15 +238,15 @@ void test_response_truncation_and_wrong_type_are_refused(void)
 void test_sysinfo_splits_the_fixed_width_ascii_fields(void)
 {
     static const uint8_t DATA[FOCAS_SYSINFO_LEN] = {
-        0x00, 0x02,           // add_info
-        0x00, 0x08,           // max_axis
-        '3',  '0',            // cnc_type
-        ' ',  'M',            // mt_type
-        'F',  '0',            // series
-        '0',  '1',            //
-        '0',  '0',            // version
-        '0',  '7',            //
-        '0',  '3'             // axes
+        0x00, 0x02, // add_info
+        0x00, 0x08, // max_axis
+        '3',  '0',  // cnc_type
+        ' ',  'M',  // mt_type
+        'F',  '0',  // series
+        '0',  '1',  //
+        '0',  '0',  // version
+        '0',  '7',  //
+        '0',  '3'   // axes
     };
     FocasSysInfo si;
     TEST_ASSERT_TRUE(protocore_focas_parse_sysinfo(DATA, sizeof(DATA), &si));

@@ -39,9 +39,9 @@ void dbench_run(void)
     static uint8_t body[64];
     size_t body_len = 0;
     body_len += protocore_pn_dcp_block(PN_DCP_OPT_DEVICE, PN_DCP_SUB_DEV_NAME_OF_STATION, (const uint8_t *)"plc", 3,
-                                body + body_len, sizeof(body) - body_len);
+                                       body + body_len, sizeof(body) - body_len);
     body_len += protocore_pn_dcp_block(PN_DCP_OPT_IP, PN_DCP_SUB_IP_PARAM, (const uint8_t *)"ABCD", 4, body + body_len,
-                                sizeof(body) - body_len);
+                                       sizeof(body) - body_len);
 
     // A known-good Identify-request header (from test/test_profinet test_header_roundtrip) to parse.
     static const uint8_t ident_hdr[] = {0xFE, 0xFE, 0x05, 0x00, 0x11, 0x22, 0x33, 0x44, 0x00, 0x00, 0x00, 0x08};
@@ -56,14 +56,15 @@ void dbench_run(void)
         PnDcpHeader h;
 
         DBENCH_OP("protocore_pn_dcp_header (Identify)", 200000,
-                  sink += protocore_pn_dcp_header(PN_FRAMEID_DCP_IDENT_REQ, PN_DCP_SERVICE_IDENTIFY, PN_DCP_TYPE_REQUEST,
-                                           0x11223344, 0, 8, hdr_out, sizeof(hdr_out)));
+                  sink += protocore_pn_dcp_header(PN_FRAMEID_DCP_IDENT_REQ, PN_DCP_SERVICE_IDENTIFY,
+                                                  PN_DCP_TYPE_REQUEST, 0x11223344, 0, 8, hdr_out, sizeof(hdr_out)));
         DBENCH_OP("protocore_pn_dcp_block (NameOfStation)", 200000,
-                  sink += protocore_pn_dcp_block(PN_DCP_OPT_DEVICE, PN_DCP_SUB_DEV_NAME_OF_STATION, (const uint8_t *)"plc", 3,
-                                          blk_out, sizeof(blk_out)));
+                  sink += protocore_pn_dcp_block(PN_DCP_OPT_DEVICE, PN_DCP_SUB_DEV_NAME_OF_STATION,
+                                                 (const uint8_t *)"plc", 3, blk_out, sizeof(blk_out)));
         DBENCH_OP("protocore_pn_dcp_parse_header", 200000,
                   sink += (size_t)protocore_pn_dcp_parse_header(ident_hdr, sizeof(ident_hdr), &h));
-        DBENCH_OP("protocore_pn_dcp_walk (2 blocks)", 100000, sink += (size_t)protocore_pn_dcp_walk(body, body_len, walk_sink, NULL));
+        DBENCH_OP("protocore_pn_dcp_walk (2 blocks)", 100000,
+                  sink += (size_t)protocore_pn_dcp_walk(body, body_len, walk_sink, NULL));
 
         (void)sink;
         DBENCH_DONE();

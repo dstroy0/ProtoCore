@@ -77,8 +77,8 @@ void test_core_spec_opcode_values(void)
     // Vol 3 Part F sec 3.3.1 splits the opcode into a 6-bit Method with the Command Flag at bit 6
     // and the Authentication Signature Flag at bit 7, so every request and response above has both
     // high bits clear.
-    static const uint8_t OPS[] = {ATT_OP_ERROR_RSP,  ATT_OP_READ_REQ,  ATT_OP_READ_RSP,
-                                  ATT_OP_WRITE_REQ,  ATT_OP_WRITE_RSP, ATT_OP_HANDLE_VALUE_NTF};
+    static const uint8_t OPS[] = {ATT_OP_ERROR_RSP, ATT_OP_READ_REQ,  ATT_OP_READ_RSP,
+                                  ATT_OP_WRITE_REQ, ATT_OP_WRITE_RSP, ATT_OP_HANDLE_VALUE_NTF};
     for (size_t i = 0; i < sizeof(OPS); i++)
     {
         TEST_ASSERT_EQUAL_HEX8(0x00, OPS[i] & 0xC0);

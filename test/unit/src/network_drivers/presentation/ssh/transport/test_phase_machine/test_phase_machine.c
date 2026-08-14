@@ -18,7 +18,9 @@ void setUp(void)
     ssh_pkt_init(0);
     ssh_phase_reset(0);
 }
-void tearDown(void) {}
+void tearDown(void)
+{
+}
 
 // An exchange is running from the moment the slot opens (ssh_transport_init) and stops when NEWKEYS
 // crosses. That flag lives in the session, not in this machine, and ssh_phase_admits_rekey reads

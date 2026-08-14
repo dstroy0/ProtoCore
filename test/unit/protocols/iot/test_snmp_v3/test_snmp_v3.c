@@ -667,8 +667,7 @@ static size_t build_v3_raw_scoped(uint8_t *out, size_t cap, proto_bool auth, con
                                   const uint8_t *scoped, size_t scoped_len, proto_bool priv, size_t auth_plen,
                                   size_t priv_plen)
 {
-    proto_bool digest =
-        auth && auth_plen == SNMP_V3_AUTH_PARAM_LEN;
+    proto_bool digest = auth && auth_plen == SNMP_V3_AUTH_PARAM_LEN;
     uint8_t salt[SNMP_V3_PRIV_PARAM_LEN] = {0, 0, 0, 0, 0, 0, 0, 7};
     uint8_t secp[128];
     BerEnc se2;
@@ -780,19 +779,9 @@ void test_v3_field_tag_corruption(void)
         size_t off;
         uint8_t val;
     } muts[] = {
-        {ver_tag, 0xFF},
-        {ver_tag + 2, 0x04},
-        {gdata_tag, 0xFF},
-        {msgid_tag, 0xFF},
-        {flags_tag, 0xFF},
-        {secmodel_tag + 2, 0x04},
-        {secp_tag, 0xFF},
-        {sseq_tag, 0xFF},
-        {eid_tag, 0xFF},
-        {boots_tag, 0xFF},
-        {uname_tag, 0xFF},
-        {aparm_tag, 0xFF},
-        {pparm_tag, 0xFF},
+        {ver_tag, 0xFF},          {ver_tag + 2, 0x04}, {gdata_tag, 0xFF}, {msgid_tag, 0xFF}, {flags_tag, 0xFF},
+        {secmodel_tag + 2, 0x04}, {secp_tag, 0xFF},    {sseq_tag, 0xFF},  {eid_tag, 0xFF},   {boots_tag, 0xFF},
+        {uname_tag, 0xFF},        {aparm_tag, 0xFF},   {pparm_tag, 0xFF},
     };
     for (size_t i = 0; i < sizeof(muts) / sizeof(muts[0]); i++)
     {
@@ -815,8 +804,7 @@ void test_v3_scoped_parse_rejections(void)
     const uint8_t bad_eid[] = {0x30, 0x03, 0x02, 0x01, 0x00};
     const uint8_t bad_ctx[] = {0x30, 0x06, 0x04, 0x01, 0x00, 0x02, 0x01, 0x00};
     const uint8_t no_pdu[] = {0x30, 0x06, 0x04, 0x01, 0x00, 0x04, 0x01, 0x00};
-    const uint8_t empty_pdu[] = {0x30, 0x08, 0x04, 0x01, 0x00, 0x04, 0x01, 0x00,
-                                 0xA0, 0x00};
+    const uint8_t empty_pdu[] = {0x30, 0x08, 0x04, 0x01, 0x00, 0x04, 0x01, 0x00, 0xA0, 0x00};
     const uint8_t *scopeds[] = {not_seq, bad_eid, bad_ctx, no_pdu, empty_pdu};
     const size_t lens[] = {sizeof(not_seq), sizeof(bad_eid), sizeof(bad_ctx), sizeof(no_pdu), sizeof(empty_pdu)};
     for (size_t i = 0; i < sizeof(scopeds) / sizeof(scopeds[0]); i++)
@@ -837,8 +825,7 @@ void test_v3_discovery_malformed_scoped(void)
     uint8_t req[320], resp[512];
 
     const uint8_t not_seq[] = {0x04, 0x01, 0x00};
-    const uint8_t non_int_rid[] = {0x30, 0x0B, 0x04, 0x01, 0x00, 0x04, 0x01, 0x00,
-                                   0xA0, 0x03, 0x04, 0x01, 0x00};
+    const uint8_t non_int_rid[] = {0x30, 0x0B, 0x04, 0x01, 0x00, 0x04, 0x01, 0x00, 0xA0, 0x03, 0x04, 0x01, 0x00};
     const uint8_t *scopeds[] = {not_seq, non_int_rid};
     const size_t lens[] = {sizeof(not_seq), sizeof(non_int_rid)};
     for (size_t i = 0; i < 2; i++)
@@ -861,9 +848,9 @@ void test_v3_auth_edge_rejections(void)
     uint8_t req[320], resp[512];
 
     const uint8_t any_scoped[] = {0x30, 0x02, 0x04, 0x00};
-    size_t rl = build_v3_raw_scoped(req, sizeof(req), PROTO_TRUE, v.engine_id, v.engine_id_len, v.boots, v.time,
-                                    "myuser", authkey, 420, any_scoped, sizeof(any_scoped), PROTO_FALSE,
-                                    16 , SNMP_V3_PRIV_PARAM_LEN);
+    size_t rl =
+        build_v3_raw_scoped(req, sizeof(req), PROTO_TRUE, v.engine_id, v.engine_id_len, v.boots, v.time, "myuser",
+                            authkey, 420, any_scoped, sizeof(any_scoped), PROTO_FALSE, 16, SNMP_V3_PRIV_PARAM_LEN);
     TEST_ASSERT_TRUE(rl > 0);
     size_t n = protocore_snmp_v3_process(req, rl, resp, sizeof(resp));
     TEST_ASSERT_TRUE(n > 0);
@@ -874,7 +861,7 @@ void test_v3_auth_edge_rejections(void)
 
     const uint8_t not_octet[] = {0x02, 0x01, 0x00};
     rl = build_v3_raw_scoped(req, sizeof(req), PROTO_TRUE, v.engine_id, v.engine_id_len, v.boots, v.time, "myuser",
-                             authkey, 421, not_octet, sizeof(not_octet), PROTO_TRUE , SNMP_V3_AUTH_PARAM_LEN,
+                             authkey, 421, not_octet, sizeof(not_octet), PROTO_TRUE, SNMP_V3_AUTH_PARAM_LEN,
                              SNMP_V3_PRIV_PARAM_LEN);
     TEST_ASSERT_TRUE(rl > 0);
     TEST_ASSERT_EQUAL_UINT(0, protocore_snmp_v3_process(req, rl, resp, sizeof(resp)));
@@ -1199,9 +1186,8 @@ void test_v3_privacy_parameter_edges()
     uint8_t req[320], resp[512];
 
     const uint8_t any[] = {0x04, 0x02, 0x00, 0x00};
-    size_t rl =
-        build_v3_raw_scoped(req, sizeof(req), PROTO_TRUE, v.engine_id, v.engine_id_len, v.boots, v.time, "myuser",
-                            authkey, 590, any, sizeof(any), PROTO_TRUE, SNMP_V3_AUTH_PARAM_LEN, 4 );
+    size_t rl = build_v3_raw_scoped(req, sizeof(req), PROTO_TRUE, v.engine_id, v.engine_id_len, v.boots, v.time,
+                                    "myuser", authkey, 590, any, sizeof(any), PROTO_TRUE, SNMP_V3_AUTH_PARAM_LEN, 4);
     TEST_ASSERT_TRUE(rl > 0);
     size_t n = protocore_snmp_v3_process(req, rl, resp, sizeof(resp));
     TEST_ASSERT_TRUE(n > 0);

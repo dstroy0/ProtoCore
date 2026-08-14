@@ -138,8 +138,7 @@ void test_sbas444_table4_endpoints(void)
         // 8000h = -32768: -FS exactly, since -32768 * FS / 32768 = -FS
         TEST_ASSERT_EQUAL_INT32(-FS_UV[g], protocore_ads1115_raw_to_uv((int16_t)-32768, g));
         // 7FFFh = 32767: FS * 32767 / 32768, one LSB below full scale
-        TEST_ASSERT_EQUAL_INT32((int32_t)(((int64_t)32767 * FS_UV[g]) / 32768),
-                                protocore_ads1115_raw_to_uv(32767, g));
+        TEST_ASSERT_EQUAL_INT32((int32_t)(((int64_t)32767 * FS_UV[g]) / 32768), protocore_ads1115_raw_to_uv(32767, g));
     }
 }
 

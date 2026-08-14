@@ -22,7 +22,6 @@
 #include "network_drivers/tls/tls.h"
 #endif
 
-
 /**
  * @brief One op, carried to the stack's context.
  *
@@ -140,20 +139,24 @@ static protocore_net_err protocore_tcp_do(struct TcpLowerInternal *restrict ctx)
         // (null == null) would otherwise pass the guard and protocore_net_write(null).
         if (!ctx->ns->pcb || ctx->ns->pcb != conn_pool[ctx->ns->slot].pcb)
         {
-            ctx->ns->result = PROTOCORE_NET_ERR_CLSD; // connection torn down between capture and now; skip, do not assert
+            ctx->ns->result =
+                PROTOCORE_NET_ERR_CLSD; // connection torn down between capture and now; skip, do not assert
             break;
         }
 #if PROTOCORE_ENABLE_TLS
         if (conn_pool[ctx->ns->slot].tls)
         {
-            ctx->ns->result = (protocore_tls_write(ctx->ns->slot, ctx->ns->data, ctx->ns->len) >= 0) ? PROTOCORE_NET_OK : PROTOCORE_NET_ERR_MEM;
+            ctx->ns->result = (protocore_tls_write(ctx->ns->slot, ctx->ns->data, ctx->ns->len) >= 0)
+                                  ? PROTOCORE_NET_OK
+                                  : PROTOCORE_NET_ERR_MEM;
             break;
         }
 #endif
         ctx->ns->result = protocore_net_write(ctx->ns->pcb, ctx->ns->data, ctx->ns->len, PROTOCORE_NET_WRITE_COPY);
         if (ctx->ns->flush && ctx->ns->result == PROTOCORE_NET_OK)
         {
-            protocore_net_output(ctx->ns->pcb); // coalesced write+flush: one marshal for a terminal single-shot response
+            protocore_net_output(
+                ctx->ns->pcb); // coalesced write+flush: one marshal for a terminal single-shot response
         }
         break;
     case PROTOCORE_OP_OUTPUT:

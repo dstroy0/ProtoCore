@@ -90,7 +90,8 @@ void dbench_run(void)
             uint32_t _id = 0;
             sink += protocore_j1939_encode_id(&_id, priority, pgn, sa, da) ? _id : 0;
         });
-        DBENCH_OP("protocore_j1939_decode_id", 200000, sink += protocore_j1939_decode_id(enc_id, &decoded) ? decoded.pgn : 0);
+        DBENCH_OP("protocore_j1939_decode_id", 200000,
+                  sink += protocore_j1939_decode_id(enc_id, &decoded) ? decoded.pgn : 0);
         DBENCH_OP("protocore_j1939_build_message x8", 100000,
                   sink += protocore_j1939_build_message(&frame, priority, pgn, sa, da, payload8, 8) ? frame.id : 0);
         DBENCH_OP("protocore_j1939_build_request", 100000,

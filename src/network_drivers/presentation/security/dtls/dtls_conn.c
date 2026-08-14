@@ -238,7 +238,7 @@ static int send_hello_retry(DtlsConn *c, const Tls13ClientHello *ch, const uint8
     }
 
     n = protocore_tls13_build_hello_retry_request(c->msgbuf, sizeof(c->msgbuf), ch->session_id, ch->session_id_len,
-                                           TLS_GROUP_X25519, cookie, clen, /*dtls=*/PROTO_TRUE);
+                                                  TLS_GROUP_X25519, cookie, clen, /*dtls=*/PROTO_TRUE);
     if (!n)
     {
         return fail(c, ALERT_INTERNAL_ERROR);
@@ -353,10 +353,10 @@ static int handle_client_hello(DtlsConn *c, const uint8_t *msg, size_t msg_len, 
     flight_reset(c); // this ClientHello starts a fresh server flight (ServerHello..Finished)
 
     // ServerHello (epoch 0, plaintext).
-    size_t n =
-        protocore_tls13_build_server_hello(c->msgbuf, sizeof(c->msgbuf), c->cfg.server_random, ch.session_id,
-                                    ch.session_id_len, server_share, 32, TLS_GROUP_X25519, /*dtls=*/PROTO_TRUE,
-                                    c->cid_negotiated ? c->local_cid : NULL, c->cid_negotiated ? c->local_cid_len : 0);
+    size_t n = protocore_tls13_build_server_hello(c->msgbuf, sizeof(c->msgbuf), c->cfg.server_random, ch.session_id,
+                                                  ch.session_id_len, server_share, 32, TLS_GROUP_X25519,
+                                                  /*dtls=*/PROTO_TRUE, c->cid_negotiated ? c->local_cid : NULL,
+                                                  c->cid_negotiated ? c->local_cid_len : 0);
     if (!n)
     {
         return fail(c, ALERT_INTERNAL_ERROR);
@@ -676,7 +676,8 @@ static void maybe_send_completion_ack(DtlsConn *c, uint8_t *out, size_t out_cap,
     }
 }
 
-static void protocore_dtls_conn_init(DtlsConn *c, const DtlsServerConfig *cfg, const uint8_t *peer_addr, size_t peer_addr_len)
+static void protocore_dtls_conn_init(DtlsConn *c, const DtlsServerConfig *cfg, const uint8_t *peer_addr,
+                                     size_t peer_addr_len)
 {
     mem.zero(c, sizeof(*c));
     c->cfg = *cfg;
@@ -765,7 +766,8 @@ static int protocore_dtls_conn_on_timeout(DtlsConn *c, uint8_t *out, size_t out_
         return -1;
     }
     c->retransmits++;
-    c->pto_ms = c->pto_ms >= PROTOCORE_DTLS_PTO_MAX_MS / 2 ? PROTOCORE_DTLS_PTO_MAX_MS : c->pto_ms * 2; // §5.8.1 backoff, capped
+    c->pto_ms = c->pto_ms >= PROTOCORE_DTLS_PTO_MAX_MS / 2 ? PROTOCORE_DTLS_PTO_MAX_MS
+                                                           : c->pto_ms * 2; // §5.8.1 backoff, capped
     c->flight_sent_ms = protocore_millis();
     return (int)out_len;
 }
@@ -800,8 +802,8 @@ static size_t protocore_dtls_conn_local_cid(const DtlsConn *c, uint8_t *out)
     return c->local_cid_len;
 }
 
-static proto_bool protocore_dtls_conn_open_app(DtlsConn *c, const uint8_t *rec, size_t rec_len, uint8_t *out, size_t out_cap,
-                                        size_t *out_len)
+static proto_bool protocore_dtls_conn_open_app(DtlsConn *c, const uint8_t *rec, size_t rec_len, uint8_t *out,
+                                               size_t out_cap, size_t *out_len)
 {
     if (!protocore_dtls_conn_established(c))
     {
@@ -838,8 +840,9 @@ static size_t protocore_dtls_conn_seal_app(DtlsConn *c, const uint8_t *data, siz
                               c->cid_negotiated ? c->peer_cid : NULL, c->cid_negotiated ? c->peer_cid_len : 0);
 }
 
-const DtlsConnNs DtlsServer = {protocore_dtls_conn_init,           protocore_dtls_conn_process,       protocore_dtls_conn_timeout_ms,
-                               protocore_dtls_conn_on_timeout,     protocore_dtls_conn_established,   protocore_dtls_conn_alert,
-                               protocore_dtls_conn_app_write_keys, protocore_dtls_conn_app_read_keys, protocore_dtls_conn_local_cid,
-                               protocore_dtls_conn_open_app,       protocore_dtls_conn_seal_app};
+const DtlsConnNs DtlsServer = {
+    protocore_dtls_conn_init,           protocore_dtls_conn_process,       protocore_dtls_conn_timeout_ms,
+    protocore_dtls_conn_on_timeout,     protocore_dtls_conn_established,   protocore_dtls_conn_alert,
+    protocore_dtls_conn_app_write_keys, protocore_dtls_conn_app_read_keys, protocore_dtls_conn_local_cid,
+    protocore_dtls_conn_open_app,       protocore_dtls_conn_seal_app};
 #endif // PROTOCORE_ENABLE_DTLS

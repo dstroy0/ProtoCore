@@ -59,8 +59,8 @@ typedef enum PROTO_ENUM_PACKED
     SNMP_TAG_SNMP_NO_SUCH_INSTANCE = 0x81,
     SNMP_TAG_SNMP_END_OF_MIB_VIEW = 0x82,
     // PDU tags, context-specific constructed (RFC 3416 sec 3).
-    SNMP_TAG_SNMP_PDU_GET = 0xA0,     ///< GetRequest-PDU ::= [0] IMPLICIT PDU
-    SNMP_TAG_SNMP_PDU_GETNEXT = 0xA1, ///< GetNextRequest-PDU ::= [1] IMPLICIT PDU
+    SNMP_TAG_SNMP_PDU_GET = 0xA0,      ///< GetRequest-PDU ::= [0] IMPLICIT PDU
+    SNMP_TAG_SNMP_PDU_GETNEXT = 0xA1,  ///< GetNextRequest-PDU ::= [1] IMPLICIT PDU
     SNMP_TAG_SNMP_PDU_RESPONSE = 0xA2, ///< Response-PDU ::= [2] IMPLICIT PDU
     SNMP_TAG_SNMP_PDU_SET = 0xA3,      ///< SetRequest-PDU ::= [3] IMPLICIT PDU
     SNMP_TAG_SNMP_PDU_GETBULK = 0xA5,  ///< GetBulkRequest-PDU ::= [5] IMPLICIT BulkPDU
@@ -77,10 +77,10 @@ typedef enum PROTO_ENUM_PACKED
  */
 typedef struct BerEnc
 {
-    uint8_t *buf;   ///< the buffer octets are written into
-    size_t cap;     ///< how many it holds
-    size_t len;     ///< how many are written
-    proto_bool ok;  ///< no write has run past cap
+    uint8_t *buf;  ///< the buffer octets are written into
+    size_t cap;    ///< how many it holds
+    size_t len;    ///< how many are written
+    proto_bool ok; ///< no write has run past cap
 } BerEnc;
 
 /** @brief A decoder's cursor: the octets being read, and how far the read has walked. */
@@ -166,8 +166,8 @@ typedef struct
     BerEnc *enc; ///< the encoder cursor every write names
     BerDec *dec; ///< the decoder cursor every read names
 
-    SnmpBerBufArgs buf;  ///< the caller buffer an init binds
-    SnmpBerTlvArgs tlv;  ///< what a write carries
+    SnmpBerBufArgs buf;        ///< the caller buffer an init binds
+    SnmpBerTlvArgs tlv;        ///< what a write carries
     SnmpBerReadArgs read_args; ///< where a read lands
 
     proto_bool ok;

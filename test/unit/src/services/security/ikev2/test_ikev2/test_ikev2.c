@@ -138,7 +138,7 @@ void test_rfc7296_generic_payload_header(void)
     Ike.pl.data = BODY;
     Ike.pl.data_len = sizeof(BODY);
     Ike.payload_build(Ike.internal);
-    TEST_ASSERT_EQUAL_size_t(10, Ike.n); // 4 + 6
+    TEST_ASSERT_EQUAL_size_t(10, Ike.n);  // 4 + 6
     TEST_ASSERT_EQUAL_HEX8(40, g_out[0]); // Nonce
     TEST_ASSERT_EQUAL_HEX8(0x00, g_out[1]);
     TEST_ASSERT_EQUAL_HEX8(0x00, g_out[2]);
@@ -180,9 +180,9 @@ void test_payload_chain_is_walked_forward(void)
 {
     // Three payloads: Nonce(8) -> Notify(12) -> Delete(8), chained by their Next Payload fields.
     static const uint8_t AREA[28] = {
-        41, 0x00, 0x00, 0x08, 0x01, 0x02, 0x03, 0x04,                   // Nonce, next = Notify
-        42, 0x00, 0x00, 0x0C, 0x00, 0x00, 0x40, 0x0E, 0, 0, 0, 0,       // Notify, next = Delete
-        0,  0x00, 0x00, 0x08, 0x03, 0x04, 0x00, 0x01,                   // Delete, next = none
+        41, 0x00, 0x00, 0x08, 0x01, 0x02, 0x03, 0x04,             // Nonce, next = Notify
+        42, 0x00, 0x00, 0x0C, 0x00, 0x00, 0x40, 0x0E, 0, 0, 0, 0, // Notify, next = Delete
+        0,  0x00, 0x00, 0x08, 0x03, 0x04, 0x00, 0x01,             // Delete, next = none
     };
     IkePayloadIter it;
     Ike.walk.chain = &it;
@@ -276,13 +276,13 @@ void test_rfc7296_sa_proposal_transform_tree(void)
 
     //  4 generic header + 8 proposal header + 12 (ENCR with attribute) + 8 (PRF) + 8 (DH) = 40
     static const uint8_t WANT[40] = {
-        34,   0x00, 0x00, 0x28,                   // SA payload: next = KE, Payload Length 40
-        0x00, 0x00, 0x00, 0x24,                   // Last Substruc 0, RESERVED, Proposal Length 36
-        1,    1,    0,    3,                      // Proposal Num 1, Protocol IKE, SPI Size 0, 3 transforms
-        3,    0x00, 0x00, 0x0C, 1, 0x00, 0, 20,   // more follow, len 12, ENCR, id 20 (AES-GCM 16)
-        0x80, 0x0E, 0x01, 0x00,                   // AF|Key Length(14), 256 bits
-        3,    0x00, 0x00, 0x08, 2, 0x00, 0, 5,    // more follow, len 8, PRF, id 5
-        0,    0x00, 0x00, 0x08, 4, 0x00, 0, 31,   // last, len 8, DH, Group Num 31
+        34,   0x00, 0x00, 0x28,                 // SA payload: next = KE, Payload Length 40
+        0x00, 0x00, 0x00, 0x24,                 // Last Substruc 0, RESERVED, Proposal Length 36
+        1,    1,    0,    3,                    // Proposal Num 1, Protocol IKE, SPI Size 0, 3 transforms
+        3,    0x00, 0x00, 0x0C, 1, 0x00, 0, 20, // more follow, len 12, ENCR, id 20 (AES-GCM 16)
+        0x80, 0x0E, 0x01, 0x00,                 // AF|Key Length(14), 256 bits
+        3,    0x00, 0x00, 0x08, 2, 0x00, 0, 5,  // more follow, len 8, PRF, id 5
+        0,    0x00, 0x00, 0x08, 4, 0x00, 0, 31, // last, len 8, DH, Group Num 31
     };
     TEST_ASSERT_EQUAL_size_t(40, Ike.n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, g_out, 40);
@@ -596,8 +596,8 @@ void test_rfc7296_traffic_selectors(void)
     static const uint8_t LO6[16] = {0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     static const uint8_t HI6[16] = {0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
     static const IkeTrafficSelector SELS[2] = {
-        {IKE_TS_IPV4_ADDR_RANGE, 6, 0, 65535, LO4, HI4, 4},   // TCP, every port
-        {IKE_TS_IPV6_ADDR_RANGE, 0, 443, 443, LO6, HI6, 16},  // any protocol, one port
+        {IKE_TS_IPV4_ADDR_RANGE, 6, 0, 65535, LO4, HI4, 4},  // TCP, every port
+        {IKE_TS_IPV6_ADDR_RANGE, 0, 443, 443, LO6, HI6, 16}, // any protocol, one port
     };
     Ike.out.buf = g_out;
     Ike.out.cap = sizeof(g_out);

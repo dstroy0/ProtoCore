@@ -28,8 +28,10 @@ void dbench_run(void)
     {
         DBENCH_BANNER("crc");
         volatile uint32_t sink = 0;
-        DBENCH_BULK("protocore_crc CRC-16/MODBUS (1 KiB)", 20000, 1024, sink += crc_one(&PROTOCORE_CRC16_MODBUS, buf, 1024));
-        DBENCH_BULK("protocore_crc CRC-16/XMODEM (1 KiB)", 20000, 1024, sink += crc_one(&PROTOCORE_CRC16_XMODEM, buf, 1024));
+        DBENCH_BULK("protocore_crc CRC-16/MODBUS (1 KiB)", 20000, 1024,
+                    sink += crc_one(&PROTOCORE_CRC16_MODBUS, buf, 1024));
+        DBENCH_BULK("protocore_crc CRC-16/XMODEM (1 KiB)", 20000, 1024,
+                    sink += crc_one(&PROTOCORE_CRC16_XMODEM, buf, 1024));
         (void)sink;
         DBENCH_DONE();
     }

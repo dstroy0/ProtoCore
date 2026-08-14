@@ -333,7 +333,7 @@ static void k_pke_encrypt(uint8_t ct[MLKEM768_CT_BYTES], const uint8_t ek[MLKEM7
 }
 
 proto_bool protocore_mlkem768_encaps(const uint8_t ek[MLKEM768_EK_BYTES], const uint8_t m[MLKEM768_MSG_BYTES],
-                              uint8_t ct[MLKEM768_CT_BYTES], uint8_t ss[MLKEM768_SS_BYTES])
+                                     uint8_t ct[MLKEM768_CT_BYTES], uint8_t ss[MLKEM768_SS_BYTES])
 {
     if (!check_ek(ek))
     {
@@ -533,7 +533,7 @@ static void k_pke_decrypt(uint8_t m[32], const uint8_t dk_pke[MK_K * MK_POLYBYTE
 }
 
 void protocore_mlkem768_keygen(const uint8_t d[MLKEM768_D_BYTES], const uint8_t z[MLKEM768_Z_BYTES],
-                        uint8_t ek[MLKEM768_EK_BYTES], uint8_t dk[MLKEM768_DK_BYTES])
+                               uint8_t ek[MLKEM768_EK_BYTES], uint8_t dk[MLKEM768_DK_BYTES])
 {
     // dk = dk_PKE || ek || H(ek) || z  (FIPS 203 Algorithm 16).
     k_pke_keygen(ek, dk, d);
@@ -543,7 +543,7 @@ void protocore_mlkem768_keygen(const uint8_t d[MLKEM768_D_BYTES], const uint8_t 
 }
 
 void protocore_mlkem768_decaps(const uint8_t dk[MLKEM768_DK_BYTES], const uint8_t ct[MLKEM768_CT_BYTES],
-                        uint8_t ss[MLKEM768_SS_BYTES])
+                               uint8_t ss[MLKEM768_SS_BYTES])
 {
     const uint8_t *dk_pke = dk;
     const uint8_t *ek_pke = dk + MK_K * MK_POLYBYTES;

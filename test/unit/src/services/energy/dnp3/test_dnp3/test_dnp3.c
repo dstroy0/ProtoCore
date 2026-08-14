@@ -210,22 +210,22 @@ void test_transport_segment_build(void)
 {
     static const uint8_t APP[3] = {0xC0, 0x01, 0x3C};
     uint8_t seg[8];
-    TEST_ASSERT_EQUAL_UINT(4u, protocore_dnp3_build_transport_segment(seg, sizeof(seg), PROTO_TRUE, PROTO_TRUE, 7u, APP,
-                                                                      sizeof(APP)));
+    TEST_ASSERT_EQUAL_UINT(
+        4u, protocore_dnp3_build_transport_segment(seg, sizeof(seg), PROTO_TRUE, PROTO_TRUE, 7u, APP, sizeof(APP)));
     TEST_ASSERT_EQUAL_HEX8(0xC7u, seg[0]);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(APP, seg + 1, sizeof(APP));
 
     uint8_t big[DNP3_TR_MAX_APP + 1];
     memset(big, 0x5A, sizeof(big));
     uint8_t out[DNP3_TR_MAX_APP + 2];
-    TEST_ASSERT_EQUAL_UINT(1u + DNP3_TR_MAX_APP,
-                           protocore_dnp3_build_transport_segment(out, sizeof(out), PROTO_TRUE, PROTO_TRUE, 0u, big,
-                                                                  DNP3_TR_MAX_APP));
+    TEST_ASSERT_EQUAL_UINT(
+        1u + DNP3_TR_MAX_APP,
+        protocore_dnp3_build_transport_segment(out, sizeof(out), PROTO_TRUE, PROTO_TRUE, 0u, big, DNP3_TR_MAX_APP));
     TEST_ASSERT_EQUAL_UINT(0u, protocore_dnp3_build_transport_segment(out, sizeof(out), PROTO_TRUE, PROTO_TRUE, 0u, big,
                                                                       DNP3_TR_MAX_APP + 1));
     TEST_ASSERT_EQUAL_UINT(0u, protocore_dnp3_build_transport_segment(seg, 3u, PROTO_TRUE, PROTO_TRUE, 0u, APP, 3));
-    TEST_ASSERT_EQUAL_UINT(0u, protocore_dnp3_build_transport_segment(NULL, sizeof(seg), PROTO_TRUE, PROTO_TRUE, 0u,
-                                                                      APP, 3));
+    TEST_ASSERT_EQUAL_UINT(
+        0u, protocore_dnp3_build_transport_segment(NULL, sizeof(seg), PROTO_TRUE, PROTO_TRUE, 0u, APP, 3));
 }
 
 // A fragment opens with FIR, continues with sequence-incrementing segments, and closes with FIN;
@@ -241,8 +241,8 @@ void test_transport_reassembles_a_multi_segment_fragment(void)
                                                       (const uint8_t *)"ABCD", 4);
     TEST_ASSERT_EQUAL_INT(DNP3_TR_PROGRESS, protocore_dnp3_transport_feed(&rx, seg, n));
 
-    n = protocore_dnp3_build_transport_segment(seg, sizeof(seg), PROTO_FALSE, PROTO_FALSE, 6u,
-                                               (const uint8_t *)"EFGH", 4);
+    n = protocore_dnp3_build_transport_segment(seg, sizeof(seg), PROTO_FALSE, PROTO_FALSE, 6u, (const uint8_t *)"EFGH",
+                                               4);
     TEST_ASSERT_EQUAL_INT(DNP3_TR_PROGRESS, protocore_dnp3_transport_feed(&rx, seg, n));
 
     n = protocore_dnp3_build_transport_segment(seg, sizeof(seg), PROTO_FALSE, PROTO_TRUE, 7u, (const uint8_t *)"IJ", 2);
@@ -316,8 +316,8 @@ void test_transport_overflow_abandons_the_fragment(void)
     size_t n = protocore_dnp3_build_transport_segment(seg, sizeof(seg), PROTO_TRUE, PROTO_FALSE, 0u,
                                                       (const uint8_t *)"ABCD", 4);
     TEST_ASSERT_EQUAL_INT(DNP3_TR_PROGRESS, protocore_dnp3_transport_feed(&rx, seg, n));
-    n = protocore_dnp3_build_transport_segment(seg, sizeof(seg), PROTO_FALSE, PROTO_TRUE, 1u,
-                                               (const uint8_t *)"EFGH", 4);
+    n = protocore_dnp3_build_transport_segment(seg, sizeof(seg), PROTO_FALSE, PROTO_TRUE, 1u, (const uint8_t *)"EFGH",
+                                               4);
     TEST_ASSERT_EQUAL_INT(DNP3_TR_ERROR, protocore_dnp3_transport_feed(&rx, seg, n));
     TEST_ASSERT_FALSE(rx.active);
     TEST_ASSERT_FALSE(rx.done);
@@ -334,7 +334,8 @@ void test_application_control_bit_layout(void)
     TEST_ASSERT_EQUAL_HEX8(0x10u, protocore_dnp3_app_control(PROTO_FALSE, PROTO_FALSE, PROTO_FALSE, PROTO_TRUE, 0u));
     TEST_ASSERT_EQUAL_HEX8(0xC5u, protocore_dnp3_app_control(PROTO_TRUE, PROTO_TRUE, PROTO_FALSE, PROTO_FALSE, 5u));
     // The sequence is 4 bits, so it cannot bleed into UNS.
-    TEST_ASSERT_EQUAL_HEX8(0x0Fu, protocore_dnp3_app_control(PROTO_FALSE, PROTO_FALSE, PROTO_FALSE, PROTO_FALSE, 0xFFu));
+    TEST_ASSERT_EQUAL_HEX8(0x0Fu,
+                           protocore_dnp3_app_control(PROTO_FALSE, PROTO_FALSE, PROTO_FALSE, PROTO_FALSE, 0xFFu));
 }
 
 // A request fragment is AC + FC + object octets; the header parse hands back the objects that follow.
@@ -379,8 +380,8 @@ void test_application_response_carries_internal_indications(void)
     uint16_t iin = DNP3_IIN_DEVICE_RESTART | DNP3_IIN_CLASS1_EVENTS | DNP3_IIN_OBJECT_UNKNOWN;
 
     uint8_t ac = protocore_dnp3_app_control(PROTO_TRUE, PROTO_TRUE, PROTO_FALSE, PROTO_FALSE, 1u);
-    size_t n = protocore_dnp3_build_app_response(frag, sizeof(frag), ac, DNP3_FC_RESPONSE, iin, OBJECTS,
-                                                 sizeof(OBJECTS));
+    size_t n =
+        protocore_dnp3_build_app_response(frag, sizeof(frag), ac, DNP3_FC_RESPONSE, iin, OBJECTS, sizeof(OBJECTS));
     TEST_ASSERT_EQUAL_UINT(4u + sizeof(OBJECTS), n);
     TEST_ASSERT_EQUAL_HEX8(0x82u, frag[2]); // IIN1: bit 7 device restart | bit 1 class 1 events
     TEST_ASSERT_EQUAL_HEX8(0x02u, frag[3]); // IIN2: bit 1 object unknown
@@ -517,17 +518,17 @@ void test_crob_field_layout(void)
     TEST_ASSERT_EQUAL_HEX8(0x00u, buf[10]);
 
     // The clear bit is bit 5, and the trip code is 2 in bits 6-7.
-    TEST_ASSERT_EQUAL_UINT(DNP3_CROB_LEN, protocore_dnp3_build_crob(buf, sizeof(buf), DNP3_CROB_OP_PULSE_ON,
-                                                                    DNP3_CROB_TCC_TRIP, PROTO_TRUE, 2u, 0u,
-                                                                    0x01020304u));
+    TEST_ASSERT_EQUAL_UINT(DNP3_CROB_LEN,
+                           protocore_dnp3_build_crob(buf, sizeof(buf), DNP3_CROB_OP_PULSE_ON, DNP3_CROB_TCC_TRIP,
+                                                     PROTO_TRUE, 2u, 0u, 0x01020304u));
     TEST_ASSERT_EQUAL_HEX8(0xA1u, buf[0]); // (2 << 6) | 0x20 | 0x01
     TEST_ASSERT_EQUAL_HEX8(0x04u, buf[6]); // off-time 0x01020304, little-endian
     TEST_ASSERT_EQUAL_HEX8(0x03u, buf[7]);
     TEST_ASSERT_EQUAL_HEX8(0x02u, buf[8]);
     TEST_ASSERT_EQUAL_HEX8(0x01u, buf[9]);
 
-    TEST_ASSERT_EQUAL_UINT(0u, protocore_dnp3_build_crob(buf, DNP3_CROB_LEN - 1, DNP3_CROB_OP_NUL, 0u, PROTO_FALSE, 0u,
-                                                         0u, 0u));
+    TEST_ASSERT_EQUAL_UINT(
+        0u, protocore_dnp3_build_crob(buf, DNP3_CROB_LEN - 1, DNP3_CROB_OP_NUL, 0u, PROTO_FALSE, 0u, 0u, 0u));
     TEST_ASSERT_EQUAL_UINT(0u, protocore_dnp3_build_crob(buf, sizeof(buf), 0x10u, 0u, PROTO_FALSE, 0u, 0u, 0u));
     TEST_ASSERT_EQUAL_UINT(0u, protocore_dnp3_build_crob(buf, sizeof(buf), 0u, 4u, PROTO_FALSE, 0u, 0u, 0u));
     TEST_ASSERT_EQUAL_UINT(0u, protocore_dnp3_build_crob(NULL, sizeof(buf), 0u, 0u, PROTO_FALSE, 0u, 0u, 0u));

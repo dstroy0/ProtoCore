@@ -473,8 +473,8 @@ static void test_sec5_2_none_is_not_offered_in_the_continue_list(void)
         if (buf[k] == ',' || buf[k] == 0)
         {
             size_t seg = (size_t)(&buf[k] - start);
-            proto_bool is_none = (seg == 4u) && start[0] == 'n' && start[1] == 'o' && start[2] == 'n' &&
-                                 start[3] == 'e';
+            proto_bool is_none =
+                (seg == 4u) && start[0] == 'n' && start[1] == 'o' && start[2] == 'n' && start[3] == 'e';
             TEST_ASSERT_FALSE(is_none);
             start = &buf[k + 1];
         }
@@ -986,8 +986,7 @@ static void test_slot_past_the_pool_is_refused(void)
     const size_t pn = build_info_response(pkt, 1, r);
     uint8_t out[32];
     size_t olen = 0;
-    TEST_ASSERT_EQUAL_INT(-1,
-                          protocore_ssh_auth_handle_info_response(MAX_SSH_CONNS, pkt, pn, out, &olen, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(-1, protocore_ssh_auth_handle_info_response(MAX_SSH_CONNS, pkt, pn, out, &olen, sizeof(out)));
 }
 
 #endif

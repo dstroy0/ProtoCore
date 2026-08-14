@@ -57,15 +57,17 @@ void protocore_quic_derive_initial_secrets(uint8_t *work, const uint8_t *dcid, s
 
     uint8_t client_secret[PROTOCORE_HKDF_HASH_LEN];
     uint8_t server_secret[PROTOCORE_HKDF_HASH_LEN];
-    protocore_hkdf_expand_label(work, initial_secret, "client in", client_secret, sizeof(client_secret), PROTOCORE_HKDF_LABEL_PREFIX);
-    protocore_hkdf_expand_label(work, initial_secret, "server in", server_secret, sizeof(server_secret), PROTOCORE_HKDF_LABEL_PREFIX);
+    protocore_hkdf_expand_label(work, initial_secret, "client in", client_secret, sizeof(client_secret),
+                                PROTOCORE_HKDF_LABEL_PREFIX);
+    protocore_hkdf_expand_label(work, initial_secret, "server in", server_secret, sizeof(server_secret),
+                                PROTOCORE_HKDF_LABEL_PREFIX);
 
     protocore_quic_keys_from_secret(work, client_secret, &out->client);
     protocore_quic_keys_from_secret(work, server_secret, &out->server);
 }
 
 size_t protocore_quic_packet_protect(uint8_t *pkt, size_t cap, size_t pn_offset, uint8_t pn_len, uint64_t full_pn,
-                              size_t payload_len, QuicPacketKeys *keys, proto_bool is_long)
+                                     size_t payload_len, QuicPacketKeys *keys, proto_bool is_long)
 {
     if (pn_len < 1 || pn_len > 4)
     {
@@ -81,8 +83,8 @@ size_t protocore_quic_packet_protect(uint8_t *pkt, size_t cap, size_t pn_offset,
     // AEAD-seal the payload in place; associated data is the unprotected header.
     uint8_t nonce[12];
     build_nonce(keys->iv, full_pn, nonce);
-    (void)protocore_aes128gcm_seal((struct protocore_aes128gcm_key *)(keys->gcm), nonce, pkt, hdr_len, pkt + hdr_len, payload_len,
-                            pkt + hdr_len, pkt + hdr_len + payload_len);
+    (void)protocore_aes128gcm_seal((struct protocore_aes128gcm_key *)(keys->gcm), nonce, pkt, hdr_len, pkt + hdr_len,
+                                   payload_len, pkt + hdr_len, pkt + hdr_len + payload_len);
 
     // Header protection (RFC 9001 sec 5.4): sample 16 bytes at pn_offset + 4 (always inside the
     // ciphertext because pn_len <= 4), AES-ECB it under hp, mask the low first-byte bits and the PN.
@@ -102,7 +104,7 @@ size_t protocore_quic_packet_protect(uint8_t *pkt, size_t cap, size_t pn_offset,
 }
 
 size_t protocore_quic_packet_unprotect(uint8_t *pkt, size_t pn_offset, size_t length, uint64_t largest_pn,
-                                QuicPacketKeys *keys, proto_bool is_long, uint8_t *out, uint64_t *out_pn)
+                                       QuicPacketKeys *keys, proto_bool is_long, uint8_t *out, uint64_t *out_pn)
 {
     // Header protection needs a full 16-byte sample starting at pn_offset + 4, and the AEAD region
     // must carry at least the 16-byte tag once the (<=4-byte) packet number is removed.
@@ -144,8 +146,8 @@ size_t protocore_quic_packet_unprotect(uint8_t *pkt, size_t pn_offset, size_t le
     uint8_t nonce[12];
     build_nonce(keys->iv, full_pn, nonce);
     const size_t pt_len = ct_len - PROTOCORE_AES128GCM_TAG_LEN;
-    if (!protocore_aes128gcm_open((struct protocore_aes128gcm_key *)(keys->gcm), nonce, pkt, hdr_len, pkt + hdr_len, pt_len,
-                           pkt + hdr_len + pt_len, out))
+    if (!protocore_aes128gcm_open((struct protocore_aes128gcm_key *)(keys->gcm), nonce, pkt, hdr_len, pkt + hdr_len,
+                                  pt_len, pkt + hdr_len + pt_len, out))
     {
         return (size_t)-1;
     }
@@ -157,7 +159,7 @@ size_t protocore_quic_packet_unprotect(uint8_t *pkt, size_t pn_offset, size_t le
 }
 
 void protocore_quic_retry_integrity_tag(const uint8_t *odcid, size_t odcid_len, const uint8_t *retry, size_t retry_len,
-                                 uint8_t tag[16])
+                                        uint8_t tag[16])
 {
     // AAD = Retry Pseudo-Packet: ODCID Length (1 byte) || ODCID || Retry packet (sans tag).
     // Assemble it into a scratch buffer; a Retry is small (short token), so a fixed cap suffices.
@@ -177,7 +179,8 @@ void protocore_quic_retry_integrity_tag(const uint8_t *odcid, size_t odcid_len, 
     // Empty plaintext: seal writes only the 16-byte tag.
     { // fixed RFC 9001 key, once per Retry packet - not worth a resident context
         size_t mark = protocore_secure_mark();
-        struct protocore_aes128gcm_key *rk = protocore_aes128gcm_key_init(protocore_secure_alloc(PROTOCORE_WORK_AES128GCM, 8), RETRY_KEY);
+        struct protocore_aes128gcm_key *rk =
+            protocore_aes128gcm_key_init(protocore_secure_alloc(PROTOCORE_WORK_AES128GCM, 8), RETRY_KEY);
         (void)protocore_aes128gcm_seal(rk, RETRY_NONCE, aad, p, NULL, 0, tag, tag);
         protocore_aes128gcm_key_wipe(rk);
         protocore_secure_release(mark);

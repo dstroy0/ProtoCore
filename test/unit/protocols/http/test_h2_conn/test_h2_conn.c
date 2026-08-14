@@ -353,7 +353,8 @@ static void open_stream(H2Conn *c, uint32_t id)
     uint8_t block[128];
     size_t blen = build_request(block, sizeof block);
     uint8_t hf[160];
-    TEST_ASSERT_TRUE(protocore_h2_conn_recv(c, hf, protocore_h2_build_headers(hf, sizeof hf, id, block, blen, PROTO_FALSE)));
+    TEST_ASSERT_TRUE(
+        protocore_h2_conn_recv(c, hf, protocore_h2_build_headers(hf, sizeof hf, id, block, blen, PROTO_FALSE)));
 }
 
 static uint8_t g_pl[IN_MAX];
@@ -397,8 +398,10 @@ void test_h2_stream_id_must_increase(void)
     uint8_t block[128];
     size_t blen = build_request(block, sizeof block);
     uint8_t hf[160];
-    TEST_ASSERT_TRUE(protocore_h2_conn_recv(&g_conn, hf, protocore_h2_build_headers(hf, sizeof hf, 3, block, blen, PROTO_TRUE)));
-    TEST_ASSERT_FALSE(protocore_h2_conn_recv(&g_conn, hf, protocore_h2_build_headers(hf, sizeof hf, 1, block, blen, PROTO_TRUE)));
+    TEST_ASSERT_TRUE(
+        protocore_h2_conn_recv(&g_conn, hf, protocore_h2_build_headers(hf, sizeof hf, 3, block, blen, PROTO_TRUE)));
+    TEST_ASSERT_FALSE(
+        protocore_h2_conn_recv(&g_conn, hf, protocore_h2_build_headers(hf, sizeof hf, 1, block, blen, PROTO_TRUE)));
 }
 
 void test_h2_headers_rfc7541_c31_block(void)
@@ -409,7 +412,8 @@ void test_h2_headers_rfc7541_c31_block(void)
     const uint8_t c31[20] = {0x82, 0x86, 0x84, 0x41, 0x0f, 0x77, 0x77, 0x77, 0x2e, 0x65,
                              0x78, 0x61, 0x6d, 0x70, 0x6c, 0x65, 0x2e, 0x63, 0x6f, 0x6d};
     uint8_t hf[64];
-    TEST_ASSERT_TRUE(protocore_h2_conn_recv(&g_conn, hf, protocore_h2_build_headers(hf, sizeof hf, 1, c31, sizeof c31, PROTO_TRUE)));
+    TEST_ASSERT_TRUE(
+        protocore_h2_conn_recv(&g_conn, hf, protocore_h2_build_headers(hf, sizeof hf, 1, c31, sizeof c31, PROTO_TRUE)));
 
     TEST_ASSERT_EQUAL_INT(4, (int)cap.req_headers.n);
     TEST_ASSERT_EQUAL_STRING(":method", cap.req_headers.f[0].name);
@@ -434,7 +438,8 @@ void test_h2_trailers_on_open_stream(void)
     uint8_t block[128];
     size_t blen = protocore_hpack_encode_header(block, sizeof block, "x-checksum", 10, "abcd", 4);
     uint8_t hf[160];
-    TEST_ASSERT_TRUE(protocore_h2_conn_recv(&g_conn, hf, protocore_h2_build_headers(hf, sizeof hf, 1, block, blen, PROTO_TRUE)));
+    TEST_ASSERT_TRUE(
+        protocore_h2_conn_recv(&g_conn, hf, protocore_h2_build_headers(hf, sizeof hf, 1, block, blen, PROTO_TRUE)));
 
     TEST_ASSERT_EQUAL_INT(0, count_frames(cap.out, cap.out_len, H2_RST_STREAM, NULL));
     TEST_ASSERT_EQUAL_UINT32((uint32_t)headers_after_request, (uint32_t)cap.req_headers.n);
@@ -450,7 +455,8 @@ void test_h2_trailers_without_end_stream_reset_the_stream(void)
     uint8_t block[128];
     size_t blen = protocore_hpack_encode_header(block, sizeof block, "x-checksum", 10, "abcd", 4);
     uint8_t hf[160];
-    TEST_ASSERT_TRUE(protocore_h2_conn_recv(&g_conn, hf, protocore_h2_build_headers(hf, sizeof hf, 1, block, blen, PROTO_FALSE)));
+    TEST_ASSERT_TRUE(
+        protocore_h2_conn_recv(&g_conn, hf, protocore_h2_build_headers(hf, sizeof hf, 1, block, blen, PROTO_FALSE)));
     TEST_ASSERT_EQUAL_INT(1, count_frames(cap.out, cap.out_len, H2_RST_STREAM, NULL));
 }
 
@@ -463,7 +469,8 @@ void test_h2_trailers_reject_pseudo_headers(void)
     uint8_t block[128];
     size_t blen = protocore_hpack_encode_header(block, sizeof block, ":method", 7, "POST", 4);
     uint8_t hf[160];
-    TEST_ASSERT_TRUE(protocore_h2_conn_recv(&g_conn, hf, protocore_h2_build_headers(hf, sizeof hf, 1, block, blen, PROTO_TRUE)));
+    TEST_ASSERT_TRUE(
+        protocore_h2_conn_recv(&g_conn, hf, protocore_h2_build_headers(hf, sizeof hf, 1, block, blen, PROTO_TRUE)));
     TEST_ASSERT_EQUAL_INT(1, count_frames(cap.out, cap.out_len, H2_RST_STREAM, NULL));
 }
 
@@ -474,8 +481,10 @@ void test_h2_headers_on_ended_stream_is_a_connection_error(void)
     uint8_t block[128];
     size_t blen = build_request(block, sizeof block);
     uint8_t hf[160];
-    TEST_ASSERT_TRUE(protocore_h2_conn_recv(&g_conn, hf, protocore_h2_build_headers(hf, sizeof hf, 1, block, blen, PROTO_TRUE)));
-    TEST_ASSERT_FALSE(protocore_h2_conn_recv(&g_conn, hf, protocore_h2_build_headers(hf, sizeof hf, 1, block, blen, PROTO_TRUE)));
+    TEST_ASSERT_TRUE(
+        protocore_h2_conn_recv(&g_conn, hf, protocore_h2_build_headers(hf, sizeof hf, 1, block, blen, PROTO_TRUE)));
+    TEST_ASSERT_FALSE(
+        protocore_h2_conn_recv(&g_conn, hf, protocore_h2_build_headers(hf, sizeof hf, 1, block, blen, PROTO_TRUE)));
 }
 
 void test_h2_headers_bad_stream_id(void)
@@ -485,7 +494,8 @@ void test_h2_headers_bad_stream_id(void)
     uint8_t block[128];
     size_t blen = build_request(block, sizeof block);
     uint8_t hf[160];
-    TEST_ASSERT_FALSE(protocore_h2_conn_recv(&g_conn, hf, protocore_h2_build_headers(hf, sizeof hf, 2, block, blen, PROTO_TRUE)));
+    TEST_ASSERT_FALSE(
+        protocore_h2_conn_recv(&g_conn, hf, protocore_h2_build_headers(hf, sizeof hf, 2, block, blen, PROTO_TRUE)));
 }
 
 void test_h2_stream_table_full_rst(void)
@@ -502,7 +512,8 @@ void test_h2_stream_table_full_rst(void)
     }
     cap.out_len = 0;
     uint8_t hf[160];
-    size_t hn = protocore_h2_build_headers(hf, sizeof hf, (uint32_t)(1 + 2 * PROTOCORE_H2_MAX_STREAMS), block, blen, PROTO_FALSE);
+    size_t hn = protocore_h2_build_headers(hf, sizeof hf, (uint32_t)(1 + 2 * PROTOCORE_H2_MAX_STREAMS), block, blen,
+                                           PROTO_FALSE);
     TEST_ASSERT_TRUE(protocore_h2_conn_recv(&g_conn, hf, hn));
     TEST_ASSERT_TRUE(count_frames(cap.out, cap.out_len, H2_RST_STREAM, NULL) >= 1);
 }
@@ -739,7 +750,8 @@ void test_h2_headers_stream_zero(void)
     uint8_t block[128];
     size_t blen = build_request(block, sizeof block);
     uint8_t hf[160];
-    TEST_ASSERT_FALSE(protocore_h2_conn_recv(&g_conn, hf, protocore_h2_build_headers(hf, sizeof hf, 0, block, blen, PROTO_TRUE)));
+    TEST_ASSERT_FALSE(
+        protocore_h2_conn_recv(&g_conn, hf, protocore_h2_build_headers(hf, sizeof hf, 0, block, blen, PROTO_TRUE)));
 }
 
 void test_h2_continuation_without_headers(void)
@@ -805,7 +817,8 @@ static void open_stream_with_content_length(H2Conn *c, uint32_t id, const char *
     size_t bo = build_request(block, sizeof block);
     bo += protocore_hpack_encode_header(block + bo, sizeof block - bo, "content-length", 14, cl, strlen(cl));
     uint8_t hf[224];
-    TEST_ASSERT_TRUE(protocore_h2_conn_recv(c, hf, protocore_h2_build_headers(hf, sizeof hf, id, block, bo, PROTO_FALSE)));
+    TEST_ASSERT_TRUE(
+        protocore_h2_conn_recv(c, hf, protocore_h2_build_headers(hf, sizeof hf, id, block, bo, PROTO_FALSE)));
 }
 
 void test_h2_content_length_must_match_the_data(void)
@@ -839,7 +852,8 @@ void test_h2_content_length_must_match_the_data(void)
     size_t bo = build_request(block, sizeof block);
     bo += protocore_hpack_encode_header(block + bo, sizeof block - bo, "content-length", 14, "4", 1);
     uint8_t hf[224];
-    TEST_ASSERT_TRUE(protocore_h2_conn_recv(&g_conn, hf, protocore_h2_build_headers(hf, sizeof hf, 1, block, bo, PROTO_TRUE)));
+    TEST_ASSERT_TRUE(
+        protocore_h2_conn_recv(&g_conn, hf, protocore_h2_build_headers(hf, sizeof hf, 1, block, bo, PROTO_TRUE)));
     TEST_ASSERT_EQUAL_INT(1, count_frames(cap.out, cap.out_len, H2_RST_STREAM, NULL));
 
     establish(&g_conn, &cap);

@@ -232,11 +232,11 @@ void test_addr_response_parsing(void)
     TEST_ASSERT_EQUAL_INT(126, sad);
 
     static const char *const BAD[] = {
-        "31\r\n",     // primary past 30
-        "5 95\r\n",   // secondary below 96
-        "5 127\r\n",  // secondary past 126
-        "5 x\r\n",    // secondary not decimal
-        "x\r\n", "", "  \r\n", "5 96 97\r\n",
+        "31\r\n",    // primary past 30
+        "5 95\r\n",  // secondary below 96
+        "5 127\r\n", // secondary past 126
+        "5 x\r\n",   // secondary not decimal
+        "x\r\n",     "", "  \r\n", "5 96 97\r\n",
     };
     for (size_t i = 0; i < sizeof(BAD) / sizeof(BAD[0]); i++)
     {

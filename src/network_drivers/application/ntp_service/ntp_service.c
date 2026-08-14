@@ -15,12 +15,12 @@
 
 #if PROTOCORE_ENABLE_NTP
 
-#include "mmgr/endian.h"                         // endian.rd32be / endian.wr32be: the timestamp fields
-#include "mmgr/secure.h"                         // protocore_secure_persist_span: this module's storage
-#include "network_drivers/application/ntp/ntp.h" // the packet this role asks with
+#include "mmgr/endian.h"                                 // endian.rd32be / endian.wr32be: the timestamp fields
+#include "mmgr/secure.h"                                 // protocore_secure_persist_span: this module's storage
+#include "network_drivers/application/ntp/ntp.h"         // the packet this role asks with
 #include "network_drivers/transport/udp/server/server.h" // UdpListener: the client port and the ask
-#include "server/clock/clock.h"                  // Clock.millis: how the epoch advances between syncs
-#include "shared/ip/ip.h"                        // Ip.parse: a server given as a literal address
+#include "server/clock/clock.h"                          // Clock.millis: how the epoch advances between syncs
+#include "shared/ip/ip.h"                                // Ip.parse: a server given as a literal address
 
 // A successful sync moves the clock well past this sentinel (2021-01-01 UTC);
 // a cold-booted RTC sits near the Unix epoch.

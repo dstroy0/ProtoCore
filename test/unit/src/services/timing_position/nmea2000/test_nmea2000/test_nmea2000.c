@@ -87,8 +87,8 @@ void test_fastpacket_split_and_reassemble(void)
         {
             CanFrame f;
             memset(&f, 0, sizeof(f));
-            TEST_ASSERT_TRUE(protocore_n2k_fastpacket_build_frame(&f, seq, i, 3, N2K_PGN_ENGINE_DYNAMIC, 0x11, 0xFF,
-                                                                  body, total));
+            TEST_ASSERT_TRUE(
+                protocore_n2k_fastpacket_build_frame(&f, seq, i, 3, N2K_PGN_ENGINE_DYNAMIC, 0x11, 0xFF, body, total));
             TEST_ASSERT_TRUE(f.extended); // a 29-bit J1939 identifier
             TEST_ASSERT_EQUAL_UINT8(seq, (uint8_t)(f.data[0] >> N2K_FP_SEQ_SHIFT));
             TEST_ASSERT_EQUAL_UINT8(i, (uint8_t)(f.data[0] & N2K_FP_FRAME_MASK));
@@ -176,8 +176,8 @@ void test_fastpacket_bounds(void)
 
     uint8_t big[PROTOCORE_N2K_FP_MAX + 8];
     memset(big, 0, sizeof(big));
-    TEST_ASSERT_FALSE(protocore_n2k_fastpacket_build_frame(&f, 0, 0, 3, N2K_PGN_ENGINE_DYNAMIC, 1, 0xFF, big,
-                                                           (uint16_t)sizeof(big)));
+    TEST_ASSERT_FALSE(
+        protocore_n2k_fastpacket_build_frame(&f, 0, 0, 3, N2K_PGN_ENGINE_DYNAMIC, 1, 0xFF, big, (uint16_t)sizeof(big)));
 
     N2kFastPacketRx rx;
     protocore_n2k_fastpacket_reset(&rx);
@@ -196,7 +196,7 @@ void test_single_frame_message(void)
     TEST_ASSERT_TRUE(f.extended);
     TEST_ASSERT_EQUAL_UINT8(8, f.dlc);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(DATA, f.data, 8);
-    TEST_ASSERT_EQUAL_HEX8(0x23, (uint8_t)(f.id & 0xFFu)); // J1939 source address is the low octet
+    TEST_ASSERT_EQUAL_HEX8(0x23, (uint8_t)(f.id & 0xFFu));       // J1939 source address is the low octet
     TEST_ASSERT_EQUAL_UINT8(2, (uint8_t)((f.id >> 26) & 0x07u)); // priority is the top three bits
 
     // More than eight octets is not a single frame.
@@ -245,8 +245,8 @@ void test_cog_sog_rapid_update(void)
 {
     uint8_t p[8];
     memset(p, 0, sizeof(p));
-    p[0] = 0x2A;                 // SID
-    p[1] = N2K_COG_REF_TRUE;     // reference in the low two bits
+    p[0] = 0x2A;                    // SID
+    p[1] = N2K_COG_REF_TRUE;        // reference in the low two bits
     p[2] = (uint8_t)(31416 & 0xFF); // 3.1416 rad
     p[3] = (uint8_t)(31416 >> 8);
     p[4] = (uint8_t)(550 & 0xFF); // 5.50 m/s
@@ -277,12 +277,12 @@ void test_engine_rapid_update(void)
 {
     uint8_t p[8];
     memset(p, 0xFF, sizeof(p));
-    p[0] = 1;                       // instance
-    p[1] = (uint8_t)(7200 & 0xFF);  // 1800 rpm at 0.25 rpm/bit
+    p[0] = 1;                      // instance
+    p[1] = (uint8_t)(7200 & 0xFF); // 1800 rpm at 0.25 rpm/bit
     p[2] = (uint8_t)(7200 >> 8);
-    p[3] = (uint8_t)(1200 & 0xFF);  // 120000 Pa at 100 Pa/bit
+    p[3] = (uint8_t)(1200 & 0xFF); // 120000 Pa at 100 Pa/bit
     p[4] = (uint8_t)(1200 >> 8);
-    p[5] = (uint8_t)(int8_t)(-25);  // tilt/trim
+    p[5] = (uint8_t)(int8_t)(-25); // tilt/trim
 
     N2kEngineRapid e;
     TEST_ASSERT_TRUE(protocore_n2k_decode_engine_rapid(p, sizeof(p), &e));
@@ -457,8 +457,8 @@ void test_battery_status(void)
 {
     uint8_t p[8];
     p[0] = 0;
-    const int16_t volt = 1264; // 12.64 V
-    const int16_t amp = -152;  // -15.2 A (discharging)
+    const int16_t volt = 1264;     // 12.64 V
+    const int16_t amp = -152;      // -15.2 A (discharging)
     const uint16_t kelvin = 29815; // 298.15 K = 25.00 C
     p[1] = (uint8_t)((uint16_t)volt & 0xFF);
     p[2] = (uint8_t)(((uint16_t)volt >> 8) & 0xFF);
@@ -487,7 +487,7 @@ void test_engine_dynamic_rides_the_fast_packet(void)
 {
     uint8_t body[26];
     memset(body, 0xFF, sizeof(body));
-    body[0] = 0;                     // instance
+    body[0] = 0;                      // instance
     body[1] = (uint8_t)(4500 & 0xFF); // oil pressure 450000 Pa at 100 Pa/bit
     body[2] = (uint8_t)(4500 >> 8);
 

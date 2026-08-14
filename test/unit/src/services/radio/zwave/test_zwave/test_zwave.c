@@ -187,11 +187,11 @@ void test_build_bounds(void)
     memset(data, 0x5A, sizeof(data));
     uint8_t out[PROTOCORE_ZWAVE_MAX_DATA + 8];
 
-    TEST_ASSERT_EQUAL_UINT16(0, protocore_zwave_build_frame(ZWAVE_REQ, 0x01, data, PROTOCORE_ZWAVE_MAX_DATA + 1, out,
-                                                            sizeof(out)));
-    TEST_ASSERT_EQUAL_UINT16((uint16_t)(PROTOCORE_ZWAVE_MAX_DATA + 5),
-                             protocore_zwave_build_frame(ZWAVE_REQ, 0x01, data, PROTOCORE_ZWAVE_MAX_DATA, out,
-                                                         sizeof(out)));
+    TEST_ASSERT_EQUAL_UINT16(
+        0, protocore_zwave_build_frame(ZWAVE_REQ, 0x01, data, PROTOCORE_ZWAVE_MAX_DATA + 1, out, sizeof(out)));
+    TEST_ASSERT_EQUAL_UINT16(
+        (uint16_t)(PROTOCORE_ZWAVE_MAX_DATA + 5),
+        protocore_zwave_build_frame(ZWAVE_REQ, 0x01, data, PROTOCORE_ZWAVE_MAX_DATA, out, sizeof(out)));
     TEST_ASSERT_EQUAL_UINT16(0, protocore_zwave_build_frame(ZWAVE_REQ, 0x01, data, 4, NULL, sizeof(out)));
     TEST_ASSERT_EQUAL_UINT16(0, protocore_zwave_build_frame(ZWAVE_REQ, 0x01, NULL, 4, out, sizeof(out)));
     TEST_ASSERT_EQUAL_UINT16(0, protocore_zwave_build_frame(ZWAVE_REQ, 0x01, data, 4, out, 8)); // needs 9

@@ -24,8 +24,8 @@ uint16_t protocore_c37118_crc(const uint8_t *data, size_t len)
     return (uint16_t)Crc.value;
 }
 
-size_t protocore_c37118_build_frame(uint8_t *buf, size_t cap, uint8_t type, uint8_t version, uint16_t idcode, uint32_t soc,
-                             uint32_t fracsec, const uint8_t *payload, size_t payload_len)
+size_t protocore_c37118_build_frame(uint8_t *buf, size_t cap, uint8_t type, uint8_t version, uint16_t idcode,
+                                    uint32_t soc, uint32_t fracsec, const uint8_t *payload, size_t payload_len)
 {
     if (!buf || (payload_len && !payload))
     {
@@ -53,11 +53,13 @@ size_t protocore_c37118_build_frame(uint8_t *buf, size_t cap, uint8_t type, uint
     return p;
 }
 
-size_t protocore_c37118_build_command(uint8_t *buf, size_t cap, uint16_t idcode, uint32_t soc, uint32_t fracsec, uint16_t cmd)
+size_t protocore_c37118_build_command(uint8_t *buf, size_t cap, uint16_t idcode, uint32_t soc, uint32_t fracsec,
+                                      uint16_t cmd)
 {
     uint8_t payload[2];
     endian.wr16be(payload, cmd);
-    return protocore_c37118_build_frame(buf, cap, C37118_TYPE_CMD, C37118_VERSION_2011, idcode, soc, fracsec, payload, 2);
+    return protocore_c37118_build_frame(buf, cap, C37118_TYPE_CMD, C37118_VERSION_2011, idcode, soc, fracsec, payload,
+                                        2);
 }
 
 proto_bool protocore_c37118_parse_frame(const uint8_t *buf, size_t len, C37118Frame *out)

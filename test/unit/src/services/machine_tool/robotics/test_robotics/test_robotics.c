@@ -159,7 +159,7 @@ void test_motion_device_identity(void)
     uint32_t device = g_ref[0].target_id;
 
     browse(device, 7);
-    static const char *const NAMES[7] = {"Manufacturer", "Model", "ProductCode",  "SerialNumber",
+    static const char *const NAMES[7] = {"Manufacturer",         "Model",        "ProductCode", "SerialNumber",
                                          "MotionDeviceCategory", "ParameterSet", "Axes"};
     for (int32_t i = 0; i < 7; i++)
     {

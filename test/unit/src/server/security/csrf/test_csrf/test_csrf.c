@@ -11,8 +11,8 @@
 // rather than the round trip: a token that verified against itself would still pass every other
 // case here if the signature covered the wrong bytes, or no bytes at all.
 
-#include "server/security/csrf/csrf.h"
 #include "crypto/mac/hmac_sha256.h"
+#include "server/security/csrf/csrf.h"
 #include <string.h>
 
 #include <unity.h>
@@ -259,14 +259,14 @@ void test_malformed_tokens_are_refused(void)
         ".",
         "notatoken",
         "abcd.ef",
-        "010000000000",                                  // no separator, no signature
-        "010000000000.",                                 // empty signature
-        "0100000000.0102030405060708090a0b0c0d0e",       // nonce field too short
-        "010000000000ff.0102030405060708090a0b0c0d0e",   // nonce field too long
-        "zzzzzzzzzzzz.0102030405060708090a0b0c0d0e",     // right length, not hex
-        "010000000000.0102030405",                       // signature too short
-        "010000000000.0102030405060708090a0b0c0d0e00",   // signature too long
-        ".0102030405060708090a0b0c0d0e",                 // empty nonce
+        "010000000000",                                // no separator, no signature
+        "010000000000.",                               // empty signature
+        "0100000000.0102030405060708090a0b0c0d0e",     // nonce field too short
+        "010000000000ff.0102030405060708090a0b0c0d0e", // nonce field too long
+        "zzzzzzzzzzzz.0102030405060708090a0b0c0d0e",   // right length, not hex
+        "010000000000.0102030405",                     // signature too short
+        "010000000000.0102030405060708090a0b0c0d0e00", // signature too long
+        ".0102030405060708090a0b0c0d0e",               // empty nonce
     };
     for (size_t i = 0; i < sizeof(BAD) / sizeof(BAD[0]); i++)
     {

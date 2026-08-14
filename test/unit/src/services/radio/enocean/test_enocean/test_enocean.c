@@ -119,9 +119,9 @@ void test_esp3_build_parse_round_trip(void)
     TEST_ASSERT_EQUAL_HEX8_ARRAY(OPT, p.opt, sizeof(OPT));
 
     // Every ESP3 packet type frames the same way; only the type octet differs.
-    static const protocore_esp3_type TYPES[] = {ESP3_RADIO_ERP1,     ESP3_RESPONSE,   ESP3_RADIO_SUB_TEL,
-                                                ESP3_EVENT,          ESP3_COMMON_COMMAND, ESP3_SMART_ACK,
-                                                ESP3_REMOTE_MAN,     ESP3_RADIO_ERP2};
+    static const protocore_esp3_type TYPES[] = {ESP3_RADIO_ERP1, ESP3_RESPONSE,       ESP3_RADIO_SUB_TEL,
+                                                ESP3_EVENT,      ESP3_COMMON_COMMAND, ESP3_SMART_ACK,
+                                                ESP3_REMOTE_MAN, ESP3_RADIO_ERP2};
     for (size_t i = 0; i < sizeof(TYPES) / sizeof(TYPES[0]); i++)
     {
         const uint16_t m = protocore_esp3_build(TYPES[i], DATA, 1, NULL, 0, wire, sizeof(wire));
@@ -174,7 +174,8 @@ void test_esp3_resynchronizes_on_a_bad_frame(void)
     stream[3] = 0x00;
     stream[4] = 0x01;
     stream[5] = 0x00;
-    const uint16_t n = protocore_esp3_build(ESP3_RADIO_ERP1, DATA, sizeof(DATA), NULL, 0, stream + 6, sizeof(stream) - 6);
+    const uint16_t n =
+        protocore_esp3_build(ESP3_RADIO_ERP1, DATA, sizeof(DATA), NULL, 0, stream + 6, sizeof(stream) - 6);
     TEST_ASSERT_EQUAL_INT(-1, protocore_esp3_parse(stream, (uint16_t)(6 + n), &p));
     TEST_ASSERT_EQUAL_INT((int)n, protocore_esp3_parse(stream + 6, n, &p));
 
@@ -198,8 +199,8 @@ void test_esp3_build_fails_closed(void)
     TEST_ASSERT_EQUAL_UINT16(0, protocore_esp3_build(ESP3_RADIO_ERP1, DATA, 4, NULL, 0, NULL, sizeof(out)));
     TEST_ASSERT_EQUAL_UINT16(0, protocore_esp3_build(ESP3_RADIO_ERP1, DATA, 4, NULL, 0, out, 10)); // needs 11
     TEST_ASSERT_EQUAL_UINT16(11, protocore_esp3_build(ESP3_RADIO_ERP1, DATA, 4, NULL, 0, out, 11));
-    TEST_ASSERT_EQUAL_UINT16(0, protocore_esp3_build(ESP3_RADIO_ERP1, NULL, PROTOCORE_ENOCEAN_MAX_DATA + 1, NULL, 0, out,
-                                                     sizeof(out)));
+    TEST_ASSERT_EQUAL_UINT16(
+        0, protocore_esp3_build(ESP3_RADIO_ERP1, NULL, PROTOCORE_ENOCEAN_MAX_DATA + 1, NULL, 0, out, sizeof(out)));
 }
 
 // An ERP1 telegram is RORG, a RORG-specific payload, the 4-octet sender id most significant octet
@@ -287,7 +288,8 @@ void test_erp1_inside_an_esp3_packet(void)
 {
     static const uint8_t PAYLOAD[1] = {0x50};
     uint8_t erp1[16];
-    const uint16_t elen = protocore_erp1_build(erp1, sizeof(erp1), PROTOCORE_ERP_RORG_RPS, PAYLOAD, 1, 0x0029268Cu, 0x30);
+    const uint16_t elen =
+        protocore_erp1_build(erp1, sizeof(erp1), PROTOCORE_ERP_RORG_RPS, PAYLOAD, 1, 0x0029268Cu, 0x30);
 
     uint8_t wire[64];
     const uint16_t wlen = protocore_esp3_build(ESP3_RADIO_ERP1, erp1, elen, NULL, 0, wire, sizeof(wire));

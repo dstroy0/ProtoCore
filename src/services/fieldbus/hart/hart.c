@@ -21,8 +21,8 @@ uint8_t protocore_hart_checksum(const uint8_t *bytes, size_t len)
     return x;
 }
 
-size_t protocore_hart_build(uint8_t delimiter, const uint8_t *addr, size_t addr_len, uint8_t command, const uint8_t *data,
-                     size_t data_len, uint8_t *out, size_t cap)
+size_t protocore_hart_build(uint8_t delimiter, const uint8_t *addr, size_t addr_len, uint8_t command,
+                            const uint8_t *data, size_t data_len, uint8_t *out, size_t cap)
 {
     if (addr_len != 1 && addr_len != 5)
     {
@@ -94,7 +94,7 @@ proto_bool protocore_hart_parse(const uint8_t *frame, size_t len, HartFrame *out
 }
 
 size_t protocore_hartip_build_header(uint8_t msg_type, uint8_t msg_id, uint8_t status, uint16_t seq, uint16_t total_len,
-                              uint8_t *out, size_t cap)
+                                     uint8_t *out, size_t cap)
 {
     if (cap < HARTIP_HEADER_LEN || !out)
     {

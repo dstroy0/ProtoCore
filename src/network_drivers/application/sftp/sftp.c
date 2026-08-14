@@ -14,7 +14,6 @@
 
 #if PROTOCORE_ENABLE_SSH_SFTP
 
-
 #include <time.h>
 
 // --- reader (big-endian, bounds-checked) ---------------------------------------------------------

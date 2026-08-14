@@ -56,16 +56,16 @@ void test_msnlmp_smb2_header_layout(void)
     uint8_t buf[PROTOCORE_SMB2_HEADER_SIZE];
     memset(buf, 0xEE, sizeof(buf));
     TEST_ASSERT_EQUAL_INT(64, PROTOCORE_SMB2_HEADER_SIZE);
-    TEST_ASSERT_EQUAL_size_t(64, protocore_smb2_build_header(buf, sizeof(buf), SMB2_TREE_CONNECT, 0x0100,
-                                                             0x0123456789ABCDEFull, 0x11223344u,
-                                                             0xFEDCBA9876543210ull));
+    TEST_ASSERT_EQUAL_size_t(64,
+                             protocore_smb2_build_header(buf, sizeof(buf), SMB2_TREE_CONNECT, 0x0100,
+                                                         0x0123456789ABCDEFull, 0x11223344u, 0xFEDCBA9876543210ull));
 
     static const uint8_t PROTOCOL_ID[4] = {0xFE, 'S', 'M', 'B'};
     TEST_ASSERT_EQUAL_HEX8_ARRAY(PROTOCOL_ID, buf, 4);
     TEST_ASSERT_EQUAL_HEX32(0x424D53FEu, le32(buf)); // the same four octets read as a little-endian u32
     TEST_ASSERT_EQUAL_UINT16(64, le16(buf + 4));
-    TEST_ASSERT_EQUAL_UINT16(0, le16(buf + 6));  // CreditCharge, unused by this client
-    TEST_ASSERT_EQUAL_UINT32(0, le32(buf + 8));  // Status, set to 0 in a request
+    TEST_ASSERT_EQUAL_UINT16(0, le16(buf + 6)); // CreditCharge, unused by this client
+    TEST_ASSERT_EQUAL_UINT32(0, le32(buf + 8)); // Status, set to 0 in a request
     TEST_ASSERT_EQUAL_UINT16(SMB2_TREE_CONNECT, le16(buf + 12));
     TEST_ASSERT_EQUAL_UINT16(0x0100, le16(buf + 14));
     TEST_ASSERT_EQUAL_UINT32(0, le32(buf + 16)); // Flags: SERVER_TO_REDIR MUST NOT be set on a request
@@ -460,8 +460,8 @@ void test_transform_round_trip_for_every_cipher(void)
     for (size_t c = 0; c < 4; c++)
     {
         const uint16_t cipher = CIPHERS[c];
-        size_t n = protocore_smb2_encrypt(cipher, key, nonce, 0x0102030405060708ull, msg, sizeof(msg), blob,
-                                          sizeof(blob));
+        size_t n =
+            protocore_smb2_encrypt(cipher, key, nonce, 0x0102030405060708ull, msg, sizeof(msg), blob, sizeof(blob));
         TEST_ASSERT_EQUAL_size_t(PROTOCORE_SMB2_TRANSFORM_HDR_LEN + sizeof(msg), n);
 
         // The header sec 2.2.41 describes, at its own offsets.
@@ -515,8 +515,8 @@ void test_transform_fails_closed(void)
     memset(msg, 0x33, sizeof(msg));
 
     TEST_ASSERT_EQUAL_size_t(0, protocore_smb2_encrypt(0x0099, key, nonce, 0, msg, sizeof(msg), blob, sizeof(blob)));
-    TEST_ASSERT_EQUAL_size_t(0, protocore_smb2_encrypt(SMB2_ENCRYPTION_AES128_GCM, NULL, nonce, 0, msg, sizeof(msg),
-                                                       blob, sizeof(blob)));
+    TEST_ASSERT_EQUAL_size_t(
+        0, protocore_smb2_encrypt(SMB2_ENCRYPTION_AES128_GCM, NULL, nonce, 0, msg, sizeof(msg), blob, sizeof(blob)));
     TEST_ASSERT_EQUAL_size_t(0, protocore_smb2_encrypt(SMB2_ENCRYPTION_AES128_GCM, key, nonce, 0, msg, sizeof(msg),
                                                        blob, PROTOCORE_SMB2_TRANSFORM_HDR_LEN + sizeof(msg) - 1));
     size_t n = protocore_smb2_encrypt(SMB2_ENCRYPTION_AES128_GCM, key, nonce, 0, msg, sizeof(msg), blob,

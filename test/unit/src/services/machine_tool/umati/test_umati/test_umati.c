@@ -147,8 +147,8 @@ void test_identification_variables(void)
     uint32_t ident = g_ref[0].target_id;
 
     browse(ident, 6);
-    static const char *const NAMES[6] = {"Manufacturer",       "Model",            "SerialNumber",
-                                         "YearOfConstruction", "SoftwareRevision", "ProductInstanceUri"};
+    static const char *const NAMES[6] = {
+        "Manufacturer", "Model", "SerialNumber", "YearOfConstruction", "SoftwareRevision", "ProductInstanceUri"};
     for (int32_t i = 0; i < 6; i++)
     {
         assert_ref(i, NAMES[i], OPCUA_NODECLASS_VARIABLE);

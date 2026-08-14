@@ -32,7 +32,8 @@
 // The pool is sized from PROTOCORE_WORK_RNG, so the borrow below cannot come up short: a generator that
 // could would hand a caller an unwritten buffer, which is the one failure it must not have. This is
 // the proof the sizing declaration matches what is actually taken.
-static_assert(RNG_STATE_LEN <= PROTOCORE_WORK_RNG, "PROTOCORE_WORK_RNG must cover the generator's seed, nonce and scratch");
+static_assert(RNG_STATE_LEN <= PROTOCORE_WORK_RNG,
+              "PROTOCORE_WORK_RNG must cover the generator's seed, nonce and scratch");
 
 // The borrows and the budget each has spent. Only these live here; every byte of key material is in
 // the pool.

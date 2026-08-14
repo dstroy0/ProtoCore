@@ -141,7 +141,7 @@ void test_sdo_abort_carries_the_code_little_endian(void)
 {
     CanFrame f;
     TEST_ASSERT_TRUE(protocore_canopen_build_sdo_abort(&f, 3, 0x1018u, 9, CANOPEN_ABORT_NO_SUBINDEX, PROTO_FALSE));
-    TEST_ASSERT_EQUAL_HEX32(0x583u, f.id); // server -> client
+    TEST_ASSERT_EQUAL_HEX32(0x583u, f.id);                                           // server -> client
     static const uint8_t WANT[8] = {0x80, 0x18, 0x10, 0x09, 0x11, 0x00, 0x09, 0x06}; // 0x06090011
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, f.data, 8);
 

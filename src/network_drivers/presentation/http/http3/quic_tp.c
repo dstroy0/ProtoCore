@@ -126,7 +126,7 @@ static proto_bool copy_cid(const uint8_t *val, size_t len, uint8_t *dst, uint8_t
 // Apply a connection-ID transport parameter. *handled is set true if id names a CID param (whether or
 // not the copy succeeded); false leaves it for another category. Returns false only on a bad value.
 static proto_bool protocore_quic_tp_apply_cid(uint64_t id, const uint8_t *val, size_t vlen, QuicTransportParams *tp,
-                                       proto_bool *handled)
+                                              proto_bool *handled)
 {
     *handled = PROTO_TRUE;
     switch (id)
@@ -145,7 +145,7 @@ static proto_bool protocore_quic_tp_apply_cid(uint64_t id, const uint8_t *val, s
 
 // Apply a varint-valued transport parameter with its RFC 9000 range checks. *handled is set as above.
 static proto_bool protocore_quic_tp_apply_varint(uint64_t id, const uint8_t *val, size_t vlen, QuicTransportParams *tp,
-                                          proto_bool *handled)
+                                                 proto_bool *handled)
 {
     *handled = PROTO_TRUE;
     switch (id)

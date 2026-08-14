@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #include "mmgr/protoframe.h"
-#include "network_drivers/transport/tcp/common.h"
 #include "network_drivers/presentation/telnet/telnet.h"
-#include "server/core/proto_handler.h"
+#include "network_drivers/transport/tcp/common.h"
 #include "network_drivers/transport/tcp/tcp.h"
+#include "server/core/proto_handler.h"
 #include <stdint.h>
 #include <string.h>
 
@@ -129,7 +129,7 @@ void test_iac_stripped_from_data()
     Telnet.accept(0);
     tcp_capture_reset();
 
-    const uint8_t seq[] = {'a', IAC, 241 , 'b', '\n'};
+    const uint8_t seq[] = {'a', IAC, 241, 'b', '\n'};
     push_bytes(0, seq, sizeof(seq));
     Telnet.rx(0);
     TEST_ASSERT_EQUAL_STRING("ab", g_last_cmd);
@@ -192,7 +192,7 @@ void test_subnegotiation_consumed()
 {
     Telnet.accept(0);
     tcp_capture_reset();
-    const uint8_t seq[] = {IAC, 250 , 24, 'a', 'b', IAC, 240 , 'h', 'i', '\n'};
+    const uint8_t seq[] = {IAC, 250, 24, 'a', 'b', IAC, 240, 'h', 'i', '\n'};
     push_bytes(0, seq, sizeof(seq));
     Telnet.rx(0);
     TEST_ASSERT_EQUAL_STRING("hi", g_last_cmd);
@@ -202,7 +202,7 @@ void test_subnegotiation_bare_se_does_not_inject()
 {
     Telnet.accept(0);
     tcp_capture_reset();
-    const uint8_t seq[] = {IAC, 250 , 24, 'a', 240 , 'X', IAC, 240 , 'h', 'i', '\n'};
+    const uint8_t seq[] = {IAC, 250, 24, 'a', 240, 'X', IAC, 240, 'h', 'i', '\n'};
     push_bytes(0, seq, sizeof(seq));
     Telnet.rx(0);
     TEST_ASSERT_EQUAL_STRING("hi", g_last_cmd);

@@ -97,7 +97,7 @@ void test_the_lane_constants_derive_from_the_carrier_width(void)
         TEST_ASSERT_EQUAL_HEX8(0x80, high[i]);
         TEST_ASSERT_EQUAL_HEX8(0x7F, low7[i]);
     }
-    TEST_ASSERT_TRUE((protocore_swar_word)(h | l) == (protocore_swar_word)~(protocore_swar_word)0);
+    TEST_ASSERT_TRUE((protocore_swar_word)(h | l) == (protocore_swar_word) ~(protocore_swar_word)0);
     TEST_ASSERT_TRUE((protocore_swar_word)(h & l) == 0);
 }
 
@@ -290,7 +290,7 @@ void test_spread_widens_a_guard_mask_without_carrying(void)
     }
     TEST_ASSERT_TRUE(swar.spread(guard_of(set)) == full_of(set));
     TEST_ASSERT_TRUE(swar.spread(0) == 0);
-    TEST_ASSERT_TRUE(swar.spread(PROTOCORE_SWAR_HIGH) == (protocore_swar_word)~(protocore_swar_word)0);
+    TEST_ASSERT_TRUE(swar.spread(PROTOCORE_SWAR_HIGH) == (protocore_swar_word) ~(protocore_swar_word)0);
 }
 
 // The lane-local subtraction: (lane - lo) in the low seven bits, the guard bit taking the borrow, so

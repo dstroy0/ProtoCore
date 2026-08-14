@@ -34,9 +34,9 @@
 /** @brief The instant a format renders, and where it lands. */
 typedef struct
 {
-    time_t epoch;      ///< seconds since the Unix epoch; 0 renders empty
-    char *out;         ///< where the date lands
-    uint32_t out_cap;  ///< how much room it has; ::PROTOCORE_HTTP_DATE_MAX holds the whole form
+    time_t epoch;     ///< seconds since the Unix epoch; 0 renders empty
+    char *out;        ///< where the date lands
+    uint32_t out_cap; ///< how much room it has; ::PROTOCORE_HTTP_DATE_MAX holds the whole form
 } HttpDateArgs;
 
 /** @brief The formatter's own call, described only in http_date.c. */

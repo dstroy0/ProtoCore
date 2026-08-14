@@ -66,13 +66,13 @@ static void wn(W *w, const uint8_t *b, size_t n)
 // Options that make an otherwise valid ClientHello miss one thing the server requires.
 typedef struct
 {
-    proto_bool tls13;    ///< supported_versions carries 0x0304
-    proto_bool suite;    ///< cipher_suites carries TLS_AES_128_GCM_SHA256
-    proto_bool group;    ///< supported_groups carries x25519
-    proto_bool share;    ///< key_share carries an x25519 entry
-    proto_bool ed25519;  ///< signature_algorithms carries ed25519
-    proto_bool alpn_h3;  ///< ALPN carries "h3"
-    proto_bool quic_tp;  ///< the quic_transport_parameters extension is present
+    proto_bool tls13;   ///< supported_versions carries 0x0304
+    proto_bool suite;   ///< cipher_suites carries TLS_AES_128_GCM_SHA256
+    proto_bool group;   ///< supported_groups carries x25519
+    proto_bool share;   ///< key_share carries an x25519 entry
+    proto_bool ed25519; ///< signature_algorithms carries ed25519
+    proto_bool alpn_h3; ///< ALPN carries "h3"
+    proto_bool quic_tp; ///< the quic_transport_parameters extension is present
 } ChOpts;
 
 static const ChOpts CH_FULL = {PROTO_TRUE, PROTO_TRUE, PROTO_TRUE, PROTO_TRUE, PROTO_TRUE, PROTO_TRUE, PROTO_TRUE};
@@ -99,10 +99,10 @@ static size_t build_client_hello(uint8_t *out, const ChOpts *o)
     {
         w8(&w, (uint8_t)i); // random
     }
-    w8(&w, 0);                                                        // legacy_session_id: empty
-    w16(&w, 2);                                                       // cipher_suites length
+    w8(&w, 0);                                                           // legacy_session_id: empty
+    w16(&w, 2);                                                          // cipher_suites length
     w16(&w, o->suite ? PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256 : 0x1305); // TLS_AES_128_CCM_8_SHA256
-    w8(&w, 1);                                                        // legacy_compression_methods
+    w8(&w, 1);                                                           // legacy_compression_methods
     w8(&w, 0);
 
     size_t ext_at = w.pos;
@@ -396,8 +396,8 @@ void test_negotiation_failures(void)
         ChOpts o;
         uint8_t alert;
     } CASES[6];
-    static const char *const WHY[6] = {"no TLS 1.3",       "no AES-128-GCM-SHA256", "no ed25519",
-                                       "no x25519 group",  "no key_share",          "no h3 ALPN"};
+    static const char *const WHY[6] = {"no TLS 1.3",      "no AES-128-GCM-SHA256", "no ed25519",
+                                       "no x25519 group", "no key_share",          "no h3 ALPN"};
     for (size_t i = 0; i < 6; i++)
     {
         CASES[i].o = CH_FULL;

@@ -20,11 +20,11 @@
 /** @brief Owned session state. One transfer at a time; the buffers are too big for the stack. */
 typedef struct
 {
-    int ctrl;                    ///< control-connection id, or -1
-    int data;                    ///< data-connection id, or -1
+    int ctrl;                           ///< control-connection id, or -1
+    int data;                           ///< data-connection id, or -1
     char rx[PROTOCORE_FTP_REPLY_BUF];   ///< control-reply accumulator
-    size_t rx_len;               ///< bytes held in rx
-    size_t rx_consumed;          ///< bytes of rx the last reply occupied, shifted out on the next read
+    size_t rx_len;                      ///< bytes held in rx
+    size_t rx_consumed;                 ///< bytes of rx the last reply occupied, shifted out on the next read
     char cmd[PROTOCORE_FTP_CMD_MAX];    ///< command being built
     uint8_t chunk[PROTOCORE_FTP_CHUNK]; ///< payload staging
 } FtpSessionCtx;
@@ -32,27 +32,35 @@ static FtpSessionCtx s_ftp = {-1, -1, {0}, 0, 0, {0}, {0}};
 
 // Log frames. Each is the shape of one message, fixed when the code was written, so the logger
 // builds it without parsing anything and a level that is compiled out costs the spec nothing.
-static const protocore_field LOG_BUILD_FAILED[] = {{PROTOCORE_FK_LIT, 0, 18, "ftp: cannot build "}, PROTOCORE_STR, PROTOCORE_END};
+static const protocore_field LOG_BUILD_FAILED[] = {
+    {PROTOCORE_FK_LIT, 0, 18, "ftp: cannot build "}, PROTOCORE_STR, PROTOCORE_END};
 static const protocore_field LOG_SENT[] = {{PROTOCORE_FK_LIT, 0, 5, "ftp> "}, PROTOCORE_STR, PROTOCORE_END};
 static const protocore_field LOG_REPLY[] = {{PROTOCORE_FK_LIT, 0, 5, "ftp< "}, PROTOCORE_U32, PROTOCORE_END};
 static const protocore_field LOG_REPLY_TOO_BIG[] = {
-    {PROTOCORE_FK_LIT, 0, 41, "ftp: reply larger than PROTOCORE_FTP_REPLY_BUF ("}, PROTOCORE_U32, {PROTOCORE_FK_LIT, 0, 1, ")"}, PROTOCORE_END};
-static const protocore_field LOG_CTRL_CLOSED[] = {
-    {PROTOCORE_FK_LIT, 0, 25, "ftp: control closed with "}, PROTOCORE_U32, {PROTOCORE_FK_LIT, 0, 15, " bytes buffered"}, PROTOCORE_END};
-static const protocore_field LOG_REPLY_TIMEOUT[] = {
-    {PROTOCORE_FK_LIT, 0, 20, "ftp: reply timeout, "}, PROTOCORE_U32, {PROTOCORE_FK_LIT, 0, 15, " bytes buffered"}, PROTOCORE_END};
+    {PROTOCORE_FK_LIT, 0, 41, "ftp: reply larger than PROTOCORE_FTP_REPLY_BUF ("},
+    PROTOCORE_U32,
+    {PROTOCORE_FK_LIT, 0, 1, ")"},
+    PROTOCORE_END};
+static const protocore_field LOG_CTRL_CLOSED[] = {{PROTOCORE_FK_LIT, 0, 25, "ftp: control closed with "},
+                                                  PROTOCORE_U32,
+                                                  {PROTOCORE_FK_LIT, 0, 15, " bytes buffered"},
+                                                  PROTOCORE_END};
+static const protocore_field LOG_REPLY_TIMEOUT[] = {{PROTOCORE_FK_LIT, 0, 20, "ftp: reply timeout, "},
+                                                    PROTOCORE_U32,
+                                                    {PROTOCORE_FK_LIT, 0, 15, " bytes buffered"},
+                                                    PROTOCORE_END};
 static const protocore_field LOG_DATA_CONNECT_FAILED[] = {{PROTOCORE_FK_LIT, 0, 21, "ftp: data connect to "},
-                                                   PROTOCORE_STR,
-                                                   {PROTOCORE_FK_LIT, 0, 1, ":"},
-                                                   PROTOCORE_U32,
-                                                   {PROTOCORE_FK_LIT, 0, 7, " failed"},
-                                                   PROTOCORE_END};
+                                                          PROTOCORE_STR,
+                                                          {PROTOCORE_FK_LIT, 0, 1, ":"},
+                                                          PROTOCORE_U32,
+                                                          {PROTOCORE_FK_LIT, 0, 7, " failed"},
+                                                          PROTOCORE_END};
 static const protocore_field LOG_CTRL_CONNECT_FAILED[] = {{PROTOCORE_FK_LIT, 0, 24, "ftp: control connect to "},
-                                                   PROTOCORE_STR,
-                                                   {PROTOCORE_FK_LIT, 0, 1, ":"},
-                                                   PROTOCORE_U32,
-                                                   {PROTOCORE_FK_LIT, 0, 7, " failed"},
-                                                   PROTOCORE_END};
+                                                          PROTOCORE_STR,
+                                                          {PROTOCORE_FK_LIT, 0, 1, ":"},
+                                                          PROTOCORE_U32,
+                                                          {PROTOCORE_FK_LIT, 0, 7, " failed"},
+                                                          PROTOCORE_END};
 
 // ---------------------------------------------------------------------------
 // Control channel
@@ -103,7 +111,8 @@ static proto_bool ftp_await(int *code, size_t *rlen)
         }
         if (s_ftp.rx_len == sizeof(s_ftp.rx))
         {
-            PROTOCORE_LOGW(LOG_REPLY_TOO_BIG, ((const protocore_fval[]){PROTOCORE_VU32((uint32_t)sizeof(s_ftp.rx))}), 1);
+            PROTOCORE_LOGW(LOG_REPLY_TOO_BIG, ((const protocore_fval[]){PROTOCORE_VU32((uint32_t)sizeof(s_ftp.rx))}),
+                           1);
             return PROTO_FALSE; // a reply that cannot fit is malformed, not incomplete
         }
         if (Tcp.client->is_closed(s_ftp.ctrl) && Tcp.client->available(s_ftp.ctrl) == 0)
@@ -154,7 +163,8 @@ static proto_bool ftp_open_data(const FtpTarget *target)
     uint16_t port = 0;
     char host[48];
 
-    if (ftp_send("EPSV", NULL) && ftp_await(&code, &rlen) && code == 229 && protocore_ftp_parse_epsv(s_ftp.rx, rlen, &port))
+    if (ftp_send("EPSV", NULL) && ftp_await(&code, &rlen) && code == 229 &&
+        protocore_ftp_parse_epsv(s_ftp.rx, rlen, &port))
     {
         // Extended passive mode reuses the control connection's host.
         strncpy(host, target->host, sizeof(host) - 1);
@@ -189,7 +199,8 @@ static proto_bool ftp_open_data(const FtpTarget *target)
     s_ftp.data = Tcp.client->open(host, port, PROTOCORE_FTP_TIMEOUT_MS);
     if (s_ftp.data < 0)
     {
-        PROTOCORE_LOGW(LOG_DATA_CONNECT_FAILED, ((const protocore_fval[]){PROTOCORE_VSTR(host), PROTOCORE_VU32((uint32_t)port)}), 2);
+        PROTOCORE_LOGW(LOG_DATA_CONNECT_FAILED,
+                       ((const protocore_fval[]){PROTOCORE_VSTR(host), PROTOCORE_VU32((uint32_t)port)}), 2);
     }
     return s_ftp.data >= 0;
 }
@@ -215,7 +226,8 @@ static void ftp_teardown(void)
 // STOR
 // ---------------------------------------------------------------------------
 
-proto_bool protocore_ftp_store(const FtpTarget *target, const char *remote_path, size_t total, protocore_ftp_source src, void *ctx)
+proto_bool protocore_ftp_store(const FtpTarget *target, const char *remote_path, size_t total, protocore_ftp_source src,
+                               void *ctx)
 {
     if (!target || !target->host || !remote_path || remote_path[0] == '\0' || !src)
     {
@@ -232,7 +244,9 @@ proto_bool protocore_ftp_store(const FtpTarget *target, const char *remote_path,
     s_ftp.ctrl = Tcp.client->open(target->host, ctrl_port, PROTOCORE_FTP_TIMEOUT_MS);
     if (s_ftp.ctrl < 0)
     {
-        PROTOCORE_LOGW(LOG_CTRL_CONNECT_FAILED, ((const protocore_fval[]){PROTOCORE_VSTR(target->host), PROTOCORE_VU32((uint32_t)ctrl_port)}), 2);
+        PROTOCORE_LOGW(LOG_CTRL_CONNECT_FAILED,
+                       ((const protocore_fval[]){PROTOCORE_VSTR(target->host), PROTOCORE_VU32((uint32_t)ctrl_port)}),
+                       2);
         return PROTO_FALSE;
     }
 

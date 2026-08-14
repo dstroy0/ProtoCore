@@ -13,7 +13,6 @@
 
 #if PROTOCORE_ENABLE_HTTP2
 
-
 static uint32_t rd32(const uint8_t *p)
 {
     return ((uint32_t)p[0] << 24) | ((uint32_t)p[1] << 16) | ((uint32_t)p[2] << 8) | p[3];
@@ -693,8 +692,8 @@ proto_bool protocore_h2_conn_recv(H2Conn *c, const uint8_t *data, size_t len)
     return PROTO_TRUE;
 }
 
-proto_bool protocore_h2_conn_respond(H2Conn *c, uint32_t stream_id, int status, const char *content_type, const char *body,
-                              size_t body_len)
+proto_bool protocore_h2_conn_respond(H2Conn *c, uint32_t stream_id, int status, const char *content_type,
+                                     const char *body, size_t body_len)
 {
     H2Stream *s = find_stream(c, stream_id);
     if (!s)
@@ -721,7 +720,7 @@ proto_bool protocore_h2_conn_respond(H2Conn *c, uint32_t stream_id, int status, 
         // 5-bit/char (~sizeof block * 8/5): a longer value can never fit, so measuring it as `2*block`
         // still trips the encode's reject below instead of being truncated into a fittable length.
         w = protocore_hpack_encode_header(block + bo, sizeof block - bo, "content-type", 12, content_type,
-                                   strnlen(content_type, sizeof block * 2));
+                                          strnlen(content_type, sizeof block * 2));
         if (!w)
         {
             return PROTO_FALSE;
@@ -760,8 +759,8 @@ proto_bool protocore_h2_conn_respond(H2Conn *c, uint32_t stream_id, int status, 
         }
         proto_bool last = (sent + chunk == body_len);
         uint8_t dh[H2_FRAME_HEADER_LEN];
-        size_t hn =
-            protocore_h2_write_header(dh, sizeof dh, (uint32_t)chunk, H2_DATA, last ? H2_FLAG_END_STREAM : 0, stream_id);
+        size_t hn = protocore_h2_write_header(dh, sizeof dh, (uint32_t)chunk, H2_DATA, last ? H2_FLAG_END_STREAM : 0,
+                                              stream_id);
         if (!hn)
         {
             return PROTO_FALSE;

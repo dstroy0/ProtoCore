@@ -46,7 +46,8 @@ void dbench_run(void)
     // Pre-build a command frame once so the parse benches have real, known-good bytes to chew on
     // (same bytes as test_build_command_bytes / test_parse_command in test/test_fins).
     uint8_t parse_src[32];
-    size_t parse_src_len = protocore_fins_build_command(parse_src, sizeof(parse_src), &h, 0x01, 0x01, params, sizeof(params));
+    size_t parse_src_len =
+        protocore_fins_build_command(parse_src, sizeof(parse_src), &h, 0x01, 0x01, params, sizeof(params));
 
     // A normal-completion response frame (same bytes as test_parse_response_ok).
     const uint8_t resp_ok[] = {
@@ -64,7 +65,8 @@ void dbench_run(void)
         FinsResponse resp_out;
 
         DBENCH_OP("protocore_fins_build_command", 50000,
-                  sink += protocore_fins_build_command(cmd_buf, sizeof(cmd_buf), &h, 0x05, 0x01, params, sizeof(params)));
+                  sink +=
+                  protocore_fins_build_command(cmd_buf, sizeof(cmd_buf), &h, 0x05, 0x01, params, sizeof(params)));
         DBENCH_OP("protocore_fins_build_memory_area_read", 50000,
                   sink += protocore_fins_build_memory_area_read(mar_buf, sizeof(mar_buf), &h, 0xB0, 100, 0, 10));
         DBENCH_OP("protocore_fins_parse_command", 50000,

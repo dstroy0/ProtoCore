@@ -54,12 +54,12 @@ void test_dissector_constants(void)
     TEST_ASSERT_EQUAL_INT(8, S7_TS_REAL);
 
     TEST_ASSERT_EQUAL_INT(0, S7_DTS_NULL);
-    TEST_ASSERT_EQUAL_INT(3, S7_DTS_BIT);  // BBIT, len is in bits
-    TEST_ASSERT_EQUAL_INT(4, S7_DTS_BYTE); // BBYTE, len is in bits
-    TEST_ASSERT_EQUAL_INT(5, S7_DTS_INT);  // BINT, len is in bits
-    TEST_ASSERT_EQUAL_INT(6, S7_DTS_DINT); // BDINT, len is in bytes
-    TEST_ASSERT_EQUAL_INT(7, S7_DTS_REAL); // BREAL, len is in bytes
-    TEST_ASSERT_EQUAL_INT(9, S7_DTS_OCTET);// BSTR, len is in bytes
+    TEST_ASSERT_EQUAL_INT(3, S7_DTS_BIT);   // BBIT, len is in bits
+    TEST_ASSERT_EQUAL_INT(4, S7_DTS_BYTE);  // BBYTE, len is in bits
+    TEST_ASSERT_EQUAL_INT(5, S7_DTS_INT);   // BINT, len is in bits
+    TEST_ASSERT_EQUAL_INT(6, S7_DTS_DINT);  // BDINT, len is in bytes
+    TEST_ASSERT_EQUAL_INT(7, S7_DTS_REAL);  // BREAL, len is in bytes
+    TEST_ASSERT_EQUAL_INT(9, S7_DTS_OCTET); // BSTR, len is in bytes
 
     TEST_ASSERT_EQUAL_HEX8(0x10, S7_SYNTAX_S7ANY);
     TEST_ASSERT_EQUAL_HEX8(0xFF, S7_RET_OK);
@@ -74,15 +74,15 @@ void test_setup_communication_job(void)
     size_t n = protocore_s7_build_setup(buf, sizeof(buf), 0x0400, 1, 1, 480);
     TEST_ASSERT_EQUAL_UINT(18u, n);
     static const uint8_t WANT[18] = {
-        0x32, 0x01,             // protocol id, ROSCTR Job
-        0x00, 0x00,             // redundancy id (reserved)
-        0x04, 0x00,             // pdu reference
-        0x00, 0x08,             // parameter length 8
-        0x00, 0x00,             // data length 0
-        0xF0, 0x00,             // Setup communication, reserved
-        0x00, 0x01,             // MaxAmQ calling
-        0x00, 0x01,             // MaxAmQ called
-        0x01, 0xE0,             // PDU length 480
+        0x32, 0x01, // protocol id, ROSCTR Job
+        0x00, 0x00, // redundancy id (reserved)
+        0x04, 0x00, // pdu reference
+        0x00, 0x08, // parameter length 8
+        0x00, 0x00, // data length 0
+        0xF0, 0x00, // Setup communication, reserved
+        0x00, 0x01, // MaxAmQ calling
+        0x00, 0x01, // MaxAmQ called
+        0x01, 0xE0, // PDU length 480
     };
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, buf, 18);
 
@@ -203,8 +203,8 @@ void test_read_response_item_length_rule(void)
 void test_read_response_even_padding(void)
 {
     static const uint8_t TWO_ITEMS[] = {
-        0xFF, 0x04, 0x00, 0x08, 0xAA, // item 1: BYTE, 8 bits = 1 octet, odd
-        0x00,                         // fill octet, not part of the value
+        0xFF, 0x04, 0x00, 0x08, 0xAA,       // item 1: BYTE, 8 bits = 1 octet, odd
+        0x00,                               // fill octet, not part of the value
         0xFF, 0x04, 0x00, 0x10, 0xBB, 0xCC, // item 2: BYTE, 16 bits = 2 octets, and the last
     };
     size_t off = 0;
@@ -283,13 +283,13 @@ void test_write_request_round_trips_the_length_rule(void)
 void test_response_header_carries_the_error_code(void)
 {
     static const uint8_t ACK_DATA[] = {
-        0x32, 0x03,             // protocol id, ROSCTR Ack_Data
-        0x00, 0x00,             // redundancy id
-        0x05, 0x00,             // pdu reference
-        0x00, 0x02,             // parameter length 2
-        0x00, 0x05,             // data length 5
-        0x00, 0x00,             // error class, error code
-        0x04, 0x01,             // parameter: Read Var, one item
+        0x32, 0x03,                   // protocol id, ROSCTR Ack_Data
+        0x00, 0x00,                   // redundancy id
+        0x05, 0x00,                   // pdu reference
+        0x00, 0x02,                   // parameter length 2
+        0x00, 0x05,                   // data length 5
+        0x00, 0x00,                   // error class, error code
+        0x04, 0x01,                   // parameter: Read Var, one item
         0xFF, 0x04, 0x00, 0x08, 0xAA, // data: one BYTE item of one octet
     };
     S7Header h;

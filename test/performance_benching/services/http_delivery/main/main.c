@@ -32,7 +32,7 @@ void dbench_run(void)
     // Realistic inputs copied from test/test_http_delivery/test_http_delivery.cpp (known-good, spec-
     // conformant): max-age=60 / swr=30, and the {"/","/app.js","/style.css"} @ "v42" precache list.
     static const char *const paths[3] = {"/", "/app.js", "/style.css"};
-    static char cc[64];                       // Cache-Control header build target
+    static char cc[64];                              // Cache-Control header build target
     static char mf[PROTOCORE_DELIVERY_MANIFEST_BUF]; // precache manifest build target (shipped buffer size)
 
     for (;;)
@@ -44,7 +44,8 @@ void dbench_run(void)
         // Freshness verdict: a single branch + one uint64 add, the per-request hot path. Cheap -> large N.
         DBENCH_OP("protocore_delivery_swr (stale)", 200000, sinkv += (int)protocore_delivery_swr(75, 60, 30));
         // Cache-Control builder: hand-rolled decimal format of two windows into a small buffer.
-        DBENCH_OP("protocore_delivery_cache_control", 100000, sinkn += protocore_delivery_cache_control(60, 30, cc, sizeof(cc)));
+        DBENCH_OP("protocore_delivery_cache_control", 100000,
+                  sinkn += protocore_delivery_cache_control(60, 30, cc, sizeof(cc)));
         // SW precache manifest: JSON-escaped serialization of the versioned path list (per /precache.json request).
         DBENCH_OP("protocore_delivery_sw_manifest x3", 50000,
                   sinkn += protocore_delivery_sw_manifest(paths, 3, "v42", mf, sizeof(mf)));

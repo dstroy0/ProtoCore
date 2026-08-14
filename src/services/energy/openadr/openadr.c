@@ -48,8 +48,8 @@ static void put_double(protocore_sb *b, double v)
     Sb.put(b, f);
 }
 
-size_t protocore_openadr_event(const char *program_id, const char *event_name, const OpenAdrInterval *intervals, size_t count,
-                        char *out, size_t cap)
+size_t protocore_openadr_event(const char *program_id, const char *event_name, const OpenAdrInterval *intervals,
+                               size_t count, char *out, size_t cap)
 {
     if (!out || (count && !intervals))
     {
@@ -84,7 +84,7 @@ size_t protocore_openadr_event(const char *program_id, const char *event_name, c
 }
 
 size_t protocore_openadr_report(const char *program_id, const char *event_id, const char *resource_name, double value,
-                         uint32_t timestamp, char *out, size_t cap)
+                                uint32_t timestamp, char *out, size_t cap)
 {
     if (!out)
     {

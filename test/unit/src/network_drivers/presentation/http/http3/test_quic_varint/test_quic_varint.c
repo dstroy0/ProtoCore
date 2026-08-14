@@ -161,8 +161,18 @@ void test_decode_refuses_a_truncated_input(void)
 void test_round_trip_over_every_length_class(void)
 {
     static const uint64_t VALUES[] = {
-        0u,     1u,          63u,          64u,         16383u,          16384u,
-        1u<<20, 1073741823u, 1073741824u,  1ull << 40,  QUIC_VARINT_MAX - 1u, QUIC_VARINT_MAX,
+        0u,
+        1u,
+        63u,
+        64u,
+        16383u,
+        16384u,
+        1u << 20,
+        1073741823u,
+        1073741824u,
+        1ull << 40,
+        QUIC_VARINT_MAX - 1u,
+        QUIC_VARINT_MAX,
     };
     for (size_t i = 0; i < sizeof(VALUES) / sizeof(VALUES[0]); i++)
     {

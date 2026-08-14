@@ -244,9 +244,9 @@ void test_measurement_response_edges(void)
     TEST_ASSERT_TRUE(protocore_sdi12_parse_measure("00122\r\n", 7, NULL, NULL, NULL));
 
     TEST_ASSERT_FALSE(protocore_sdi12_parse_measure(NULL, 7, &addr, &ready, &n));
-    TEST_ASSERT_FALSE(protocore_sdi12_parse_measure("012", 3, &addr, &ready, &n));    // shorter than atttn
-    TEST_ASSERT_FALSE(protocore_sdi12_parse_measure("0X122", 5, &addr, &ready, &n));  // non-digit in ttt
-    TEST_ASSERT_FALSE(protocore_sdi12_parse_measure("0120X", 5, &addr, &ready, &n));  // non-digit count
+    TEST_ASSERT_FALSE(protocore_sdi12_parse_measure("012", 3, &addr, &ready, &n));   // shorter than atttn
+    TEST_ASSERT_FALSE(protocore_sdi12_parse_measure("0X122", 5, &addr, &ready, &n)); // non-digit in ttt
+    TEST_ASSERT_FALSE(protocore_sdi12_parse_measure("0120X", 5, &addr, &ready, &n)); // non-digit count
 }
 
 // Table 11: a value is pd.d - a polarity sign, digits, an optional decimal point, digits. The sign

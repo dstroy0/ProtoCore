@@ -52,7 +52,8 @@ int main(void)
     {
         volatile int sink = 0;
         double ns = 0.0;
-        HBENCH_NS(2000000, sink += protocore_sse_format(buf, sizeof(buf), "sensor=21.4C rh=48%", "telemetry", "12345"), ns);
+        HBENCH_NS(2000000, sink += protocore_sse_format(buf, sizeof(buf), "sensor=21.4C rh=48%", "telemetry", "12345"),
+                  ns);
         int bytes = protocore_sse_format(buf, sizeof(buf), "sensor=21.4C rh=48%", "telemetry", "12345");
         hbench_row("sse", "format event+id+data", ns, (double)bytes);
         (void)sink;

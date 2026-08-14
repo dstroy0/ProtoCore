@@ -628,8 +628,7 @@ void test_pread_in_and_out_of_range(void)
     uint8_t buf[8];
     TEST_ASSERT_TRUE(protocore_wal_store_pread(&s, WAL_RECORD_HEADER, buf, 5));
     TEST_ASSERT_EQUAL_MEMORY("hello", buf, 5);
-    TEST_ASSERT_FALSE(
-        protocore_wal_store_pread(&s, protocore_wal_store_capacity(&s) - 2, buf, 5));
+    TEST_ASSERT_FALSE(protocore_wal_store_pread(&s, protocore_wal_store_capacity(&s) - 2, buf, 5));
 }
 
 int main(void)

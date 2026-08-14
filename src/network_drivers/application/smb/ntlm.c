@@ -67,7 +67,7 @@ proto_bool protocore_ntlm_ntowfv2(const uint8_t nt_hash[16], const char *user, c
 // HMAC-MD5 over a two-part message (the key here is always the 16-byte NTOWFv2, < 64 bytes,
 // so no key-shortening is needed).
 static void protocore_hmac_md5_2(const uint8_t key[16], const uint8_t *m1, size_t l1, const uint8_t *m2, size_t l2,
-                          uint8_t out[16])
+                                 uint8_t out[16])
 {
     uint8_t ipad[64];
     uint8_t opad[64];
@@ -100,12 +100,13 @@ static void protocore_hmac_md5_2(const uint8_t key[16], const uint8_t *m1, size_
     protocore_secure_release(mark);
 }
 
-size_t protocore_ntlm_v2_response(const uint8_t owf[16], const uint8_t server_challenge[8], const uint8_t client_challenge[8],
-                           const uint8_t timestamp[8], const uint8_t *target_info, size_t ti_len, uint8_t *out,
-                           size_t out_cap, uint8_t session_key[16])
+size_t protocore_ntlm_v2_response(const uint8_t owf[16], const uint8_t server_challenge[8],
+                                  const uint8_t client_challenge[8], const uint8_t timestamp[8],
+                                  const uint8_t *target_info, size_t ti_len, uint8_t *out, size_t out_cap,
+                                  uint8_t session_key[16])
 {
     const size_t temp_len = 2 + 6 + 8 + 8 + 4 + ti_len + 4; // MS-NLMP temp layout
-    const size_t protocore_resp_len = 16 + temp_len;               // NTProofStr(16) + temp
+    const size_t protocore_resp_len = 16 + temp_len;        // NTProofStr(16) + temp
     if (!out || protocore_resp_len > out_cap)
     {
         return 0;
@@ -203,7 +204,7 @@ size_t protocore_ntlm_set_mic_flag(const uint8_t *target_info, size_t ti_len, ui
 }
 
 void protocore_ntlm_mic(const uint8_t session_key[16], const uint8_t *neg, size_t neg_len, const uint8_t *chal,
-                 size_t chal_len, const uint8_t *auth, size_t auth_len, uint8_t out[16])
+                        size_t chal_len, const uint8_t *auth, size_t auth_len, uint8_t out[16])
 {
     // HMAC-MD5(session_key, neg || chal || auth), streamed. The key is 16 bytes (< 64), no shortening.
     uint8_t ipad[64];

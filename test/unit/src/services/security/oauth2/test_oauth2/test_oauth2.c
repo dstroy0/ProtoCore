@@ -49,8 +49,8 @@ void test_rfc6749_413_request_body(void)
                                "&code=SplxlOBeZQQYbYS6WxSbIA"
                                "&redirect_uri=https%3A%2F%2Fclient.example.com%2Fcb"
                                "&client_id=s6BhdRkqt3";
-    const int32_t n = build_code("SplxlOBeZQQYbYS6WxSbIA", "https://client.example.com/cb", "s6BhdRkqt3", NULL, NULL,
-                                 sizeof(g_body));
+    const int32_t n =
+        build_code("SplxlOBeZQQYbYS6WxSbIA", "https://client.example.com/cb", "s6BhdRkqt3", NULL, NULL, sizeof(g_body));
     TEST_ASSERT_EQUAL_STRING(WANT, g_body);
     TEST_ASSERT_EQUAL_INT32((int32_t)(sizeof(WANT) - 1), n);
 }
@@ -153,13 +153,13 @@ void test_build_refuses_incomplete_requests(void)
 // different request, and the endpoint would act on it.
 void test_build_refuses_a_short_buffer(void)
 {
-    const int32_t exact = build_code("SplxlOBeZQQYbYS6WxSbIA", "https://client.example.com/cb", "s6BhdRkqt3", NULL,
-                                     NULL, sizeof(g_body));
+    const int32_t exact =
+        build_code("SplxlOBeZQQYbYS6WxSbIA", "https://client.example.com/cb", "s6BhdRkqt3", NULL, NULL, sizeof(g_body));
     TEST_ASSERT_TRUE(exact > 0);
     for (size_t cap = 1; cap <= (size_t)exact; cap++)
     {
-        TEST_ASSERT_EQUAL_INT32(0, build_code("SplxlOBeZQQYbYS6WxSbIA", "https://client.example.com/cb", "s6BhdRkqt3",
-                                              NULL, NULL, cap));
+        TEST_ASSERT_EQUAL_INT32(
+            0, build_code("SplxlOBeZQQYbYS6WxSbIA", "https://client.example.com/cb", "s6BhdRkqt3", NULL, NULL, cap));
     }
     TEST_ASSERT_EQUAL_INT32(exact, build_code("SplxlOBeZQQYbYS6WxSbIA", "https://client.example.com/cb", "s6BhdRkqt3",
                                               NULL, NULL, (size_t)exact + 1));

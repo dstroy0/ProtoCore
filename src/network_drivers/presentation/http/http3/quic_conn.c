@@ -21,17 +21,19 @@
 // reassembly buffer - which is why that clamp in handle_stream carries a coverage exclusion. Both
 // sizes are overridable macros (quic_conn.h), so pin the relationship here rather than let a jumbo
 // PROTOCORE_QUIC_MAX_DATAGRAM or a shrunken PROTOCORE_QUIC_STREAM_RX silently make the excluded path reachable.
-static_assert(PROTOCORE_QUIC_MAX_DATAGRAM < PROTOCORE_QUIC_STREAM_RX,
-              "PROTOCORE_QUIC_STREAM_RX must exceed PROTOCORE_QUIC_MAX_DATAGRAM: one STREAM frame's payload is bounded by the "
-              "datagram, and handle_stream relies on that to deliver it without clamping");
+static_assert(
+    PROTOCORE_QUIC_MAX_DATAGRAM < PROTOCORE_QUIC_STREAM_RX,
+    "PROTOCORE_QUIC_STREAM_RX must exceed PROTOCORE_QUIC_MAX_DATAGRAM: one STREAM frame's payload is bounded by the "
+    "datagram, and handle_stream relies on that to deliver it without clamping");
 
 // The frame payload build_frames fills is one datagram; every builder it calls (ACK, CRYPTO header,
 // HANDSHAKE_DONE, STREAM header) must fit with room to spare, which is why their failure guards
 // carry coverage exclusions. RFC 9000 sec 14.1 already requires at least 1200 octets for Initial
 // packets, so pin that floor: a smaller datagram would make those guards reachable.
-static_assert(PROTOCORE_QUIC_MAX_DATAGRAM >= 1200,
-              "PROTOCORE_QUIC_MAX_DATAGRAM must be at least the RFC 9000 sec 14.1 minimum of 1200 octets, which is also "
-              "what lets build_frames assume every frame builder has room");
+static_assert(
+    PROTOCORE_QUIC_MAX_DATAGRAM >= 1200,
+    "PROTOCORE_QUIC_MAX_DATAGRAM must be at least the RFC 9000 sec 14.1 minimum of 1200 octets, which is also "
+    "what lets build_frames assume every frame builder has room");
 
 // The open (decrypt) keys for an encryption level: Initial keys come from the DCID, Handshake and
 // 1-RTT keys from the TLS handshake. Returns NULL if that level's keys are not available yet.
@@ -121,8 +123,8 @@ static QuicStream *stream_get(struct QuicConn *qc, uint64_t id, proto_bool creat
 }
 
 void protocore_quic_conn_init(struct QuicConn *qc, const QuicTlsConfig *cfg, const uint8_t *odcid, uint8_t odcid_len,
-                       const uint8_t *peer_scid, uint8_t peer_scid_len, const uint8_t *our_scid, uint8_t our_scid_len,
-                       const QuicConnCallbacks *cb)
+                              const uint8_t *peer_scid, uint8_t peer_scid_len, const uint8_t *our_scid,
+                              uint8_t our_scid_len, const QuicConnCallbacks *cb)
 {
     uint8_t *base = qc->streams[0].tx; // the borrow is the connection's, not the call's
     mem.set(qc, 0, sizeof(*qc));
@@ -445,8 +447,8 @@ static size_t recv_packet(struct QuicConn *qc, const uint8_t *dg, size_t len)
     }
     mem.cpy(work, dg, pkt_len);
     uint64_t pn = 0;
-    size_t pt = protocore_quic_packet_unprotect(work, pn_offset, (size_t)payload_length, qc->space[level].largest_rx, keys,
-                                         is_long, plain, &pn);
+    size_t pt = protocore_quic_packet_unprotect(work, pn_offset, (size_t)payload_length, qc->space[level].largest_rx,
+                                                keys, is_long, plain, &pn);
     if (pt == (size_t)-1)
     {
         return is_long ? pkt_len : 0; // drop this packet, keep parsing later coalesced ones
@@ -624,8 +626,8 @@ static size_t build_frames(struct QuicConn *qc, int level, uint8_t *buf, size_t 
     // this for a single level when a close is queued, so it is emitted exactly once.
     if (qc->close_queued && !qc->close_sent)
     {
-        return protocore_quic_build_connection_close(buf, cap, qc->close_is_app, qc->close_error, qc->close_frame_type, NULL,
-                                              0);
+        return protocore_quic_build_connection_close(buf, cap, qc->close_is_app, qc->close_error, qc->close_frame_type,
+                                                     NULL, 0);
     }
 
     p += build_ack_frame(s, buf + p, cap - p); // ACK first, if we owe one
@@ -725,8 +727,8 @@ static size_t build_packet(struct QuicConn *qc, int level, uint8_t *out, size_t 
     if (is_long)
     {
         // Invariant header fields, then the type-specific token (Initial only) + Length + PN.
-        size_t hn = protocore_quic_build_long_header(out, cap, level_lp_type(level), QUIC_VERSION_1, qc->dcid, qc->dcid_len,
-                                              qc->scid, qc->scid_len, pn_len);
+        size_t hn = protocore_quic_build_long_header(out, cap, level_lp_type(level), QUIC_VERSION_1, qc->dcid,
+                                                     qc->dcid_len, qc->scid, qc->scid_len, pn_len);
         if (!hn)
         {
             return 0;
@@ -948,7 +950,7 @@ void protocore_quic_conn_on_timeout(struct QuicConn *qc, uint32_t now_ms)
 }
 
 size_t protocore_quic_conn_stream_send(struct QuicConn *qc, uint64_t stream_id, const uint8_t *data, size_t len,
-                                proto_bool fin)
+                                       proto_bool fin)
 {
     QuicStream *st = stream_get(qc, stream_id, PROTO_TRUE);
     if (!st)

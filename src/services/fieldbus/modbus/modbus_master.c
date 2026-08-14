@@ -10,8 +10,8 @@
 
 #if PROTOCORE_ENABLE_MODBUS_MASTER
 
-size_t protocore_modbus_build_read(uint8_t fc, uint16_t txid, uint8_t unit, uint16_t start, uint16_t count, uint8_t *out,
-                            size_t cap)
+size_t protocore_modbus_build_read(uint8_t fc, uint16_t txid, uint8_t unit, uint16_t start, uint16_t count,
+                                   uint8_t *out, size_t cap)
 {
     if (!out || cap < 12)
     {
@@ -44,7 +44,7 @@ size_t protocore_modbus_build_read(uint8_t fc, uint16_t txid, uint8_t unit, uint
 }
 
 int protocore_modbus_parse_response(const uint8_t *adu, size_t len, uint16_t *regs_out, size_t max_regs,
-                             uint8_t *exception_out)
+                                    uint8_t *exception_out)
 {
     if (exception_out)
     {
@@ -92,8 +92,8 @@ int protocore_modbus_parse_response(const uint8_t *adu, size_t len, uint16_t *re
     return copied;
 }
 
-size_t protocore_modbus_build_read_bits(uint8_t fc, uint16_t txid, uint8_t unit, uint16_t start, uint16_t count, uint8_t *out,
-                                 size_t cap)
+size_t protocore_modbus_build_read_bits(uint8_t fc, uint16_t txid, uint8_t unit, uint16_t start, uint16_t count,
+                                        uint8_t *out, size_t cap)
 {
     if (!out || cap < 12)
     {
@@ -125,7 +125,7 @@ size_t protocore_modbus_build_read_bits(uint8_t fc, uint16_t txid, uint8_t unit,
 }
 
 int protocore_modbus_parse_read_bits_response(const uint8_t *adu, size_t len, uint16_t count, uint8_t *bits_out,
-                                       size_t max_bits, uint8_t *exception_out)
+                                              size_t max_bits, uint8_t *exception_out)
 {
     if (exception_out)
     {
@@ -179,7 +179,7 @@ int protocore_modbus_parse_read_bits_response(const uint8_t *adu, size_t len, ui
 }
 
 size_t protocore_modbus_build_write_single_coil(uint16_t txid, uint8_t unit, uint16_t addr, proto_bool on, uint8_t *out,
-                                         size_t cap)
+                                                size_t cap)
 {
     if (!out || cap < 12)
     {
@@ -203,7 +203,7 @@ size_t protocore_modbus_build_write_single_coil(uint16_t txid, uint8_t unit, uin
 }
 
 size_t protocore_modbus_build_write_multiple_coils(uint16_t txid, uint8_t unit, uint16_t start, const uint8_t *bits,
-                                            uint16_t count, uint8_t *out, size_t cap)
+                                                   uint16_t count, uint8_t *out, size_t cap)
 {
     if (!out || !bits)
     {
@@ -252,7 +252,7 @@ size_t protocore_modbus_build_write_multiple_coils(uint16_t txid, uint8_t unit, 
 }
 
 size_t protocore_modbus_build_write_single(uint16_t txid, uint8_t unit, uint16_t addr, uint16_t value, uint8_t *out,
-                                    size_t cap)
+                                           size_t cap)
 {
     if (!out || cap < 12)
     {
@@ -277,7 +277,7 @@ size_t protocore_modbus_build_write_single(uint16_t txid, uint8_t unit, uint16_t
 }
 
 size_t protocore_modbus_build_write_multiple(uint16_t txid, uint8_t unit, uint16_t start, const uint16_t *values,
-                                      uint16_t count, uint8_t *out, size_t cap)
+                                             uint16_t count, uint8_t *out, size_t cap)
 {
     if (!out || !values)
     {
@@ -366,8 +366,8 @@ int protocore_modbus_parse_write_response(const uint8_t *adu, size_t len, uint16
     return single ? 1 : (int)tail;
 }
 
-size_t protocore_modbus_build_mask_write(uint16_t txid, uint8_t unit, uint16_t addr, uint16_t and_mask, uint16_t or_mask,
-                                  uint8_t *out, size_t cap)
+size_t protocore_modbus_build_mask_write(uint16_t txid, uint8_t unit, uint16_t addr, uint16_t and_mask,
+                                         uint16_t or_mask, uint8_t *out, size_t cap)
 {
     if (!out || cap < 14) // MBAP(7) + FC(1) + addr(2) + And_Mask(2) + Or_Mask(2)
     {
@@ -393,8 +393,8 @@ size_t protocore_modbus_build_mask_write(uint16_t txid, uint8_t unit, uint16_t a
 }
 
 size_t protocore_modbus_build_read_write_multiple(uint16_t txid, uint8_t unit, uint16_t read_start, uint16_t read_count,
-                                           uint16_t write_start, const uint16_t *values, uint16_t write_count,
-                                           uint8_t *out, size_t cap)
+                                                  uint16_t write_start, const uint16_t *values, uint16_t write_count,
+                                                  uint8_t *out, size_t cap)
 {
     if (!out || !values)
     {
@@ -441,7 +441,7 @@ size_t protocore_modbus_build_read_write_multiple(uint16_t txid, uint8_t unit, u
 }
 
 int protocore_modbus_parse_mask_write_response(const uint8_t *adu, size_t len, uint16_t *addr_out, uint16_t *and_out,
-                                        uint16_t *or_out, uint8_t *exception_out)
+                                               uint16_t *or_out, uint8_t *exception_out)
 {
     if (exception_out)
     {

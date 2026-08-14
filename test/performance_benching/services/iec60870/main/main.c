@@ -39,8 +39,8 @@ void dbench_run(void)
     size_t i_len = protocore_iec104_build_i(i_frame, sizeof(i_frame), 100, 50, asdu, sizeof(asdu));
 
     static uint8_t var_frame[32];
-    size_t var_len =
-        protocore_iec101_build_variable(var_frame, sizeof(var_frame), IEC_FC_USER_DATA_CONFIRM, 0x01, asdu, sizeof(asdu));
+    size_t var_len = protocore_iec101_build_variable(var_frame, sizeof(var_frame), IEC_FC_USER_DATA_CONFIRM, 0x01, asdu,
+                                                     sizeof(asdu));
 
     // A 3-octet IOA (little-endian 0x123456) for the read benchmark.
     static const uint8_t ioa_bytes[3] = {0x56, 0x34, 0x12};
@@ -75,16 +75,18 @@ void dbench_run(void)
         }
 
         // Shared ASDU header encode.
-        DBENCH_OP("protocore_iec_asdu_build_header", 200000, sink += protocore_iec_asdu_build_header(out, sizeof(out), &hdr));
+        DBENCH_OP("protocore_iec_asdu_build_header", 200000,
+                  sink += protocore_iec_asdu_build_header(out, sizeof(out), &hdr));
 
         // -101 FT1.2 variable frame build + parse (both walk the body for the sum checksum).
         DBENCH_BULK("protocore_iec101_build_variable", 50000, var_len,
                     sink += protocore_iec101_build_variable(out, sizeof(out), IEC_FC_USER_DATA_CONFIRM, 0x01, asdu,
-                                                     (uint8_t)sizeof(asdu)));
+                                                            (uint8_t)sizeof(asdu)));
         {
             Iec101Frame f;
             size_t c;
-            DBENCH_BULK("protocore_iec101_parse (var)", 50000, var_len, sink += protocore_iec101_parse(var_frame, var_len, &f, &c));
+            DBENCH_BULK("protocore_iec101_parse (var)", 50000, var_len,
+                        sink += protocore_iec101_parse(var_frame, var_len, &f, &c));
         }
 
         // 3-octet IOA read.

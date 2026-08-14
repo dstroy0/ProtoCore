@@ -15,8 +15,8 @@
 // The client's stack callbacks are static, unlike the server's. A test reaches them the way the
 // stack does: through the control block they were wired onto.
 
-#include "network_drivers/transport/tcp/tcp.h"
 #include "network_drivers/transport/tcp/client/client.h"
+#include "network_drivers/transport/tcp/tcp.h"
 #include <string.h>
 
 #include <unity.h>
@@ -163,7 +163,7 @@ void test_the_open_timeout_bounds_the_name_lookup(void)
     set_millis(1999);
     TEST_ASSERT_FALSE(Tcp.client->is_closed(cid)); // inside the caller's budget
     set_millis(2000);
-    TEST_ASSERT_TRUE(Tcp.client->is_closed(cid));  // out of time
+    TEST_ASSERT_TRUE(Tcp.client->is_closed(cid)); // out of time
     TEST_ASSERT_FALSE(Tcp.client->connected(cid));
 }
 
@@ -437,7 +437,6 @@ void test_a_reopened_slot_starts_clean(void)
     TEST_ASSERT_EQUAL_UINT(0, Tcp.client->available(again)); // no carry-over bytes
     TEST_ASSERT_FALSE(Tcp.client->is_closed(again));         // no carry-over close
 }
-
 
 // The runner is generated: Unity's auto/generate_test_runner.rb scans this file for
 // void test_*(void) and emits main() with every case registered, stamped with the line each test

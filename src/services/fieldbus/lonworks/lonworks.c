@@ -12,7 +12,7 @@
 #if PROTOCORE_ENABLE_LONWORKS
 
 size_t protocore_lon_build_nv(uint8_t msg_code, uint16_t selector, const uint8_t *value, size_t value_len, uint8_t *out,
-                       size_t cap)
+                              size_t cap)
 {
     if (!out || (value_len && !value) || selector > LON_NV_SELECTOR_MAX)
     {

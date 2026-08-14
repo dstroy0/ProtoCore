@@ -26,8 +26,10 @@ void dbench_run(void)
         volatile size_t sink = 0;
         static char jbuf[512];
         static uint8_t cbuf[512];
-        DBENCH_OP("protocore_senml_json_build (3 recs)", 200000, sink += protocore_senml_json_build(jbuf, sizeof(jbuf), recs, 3));
-        DBENCH_OP("protocore_senml_cbor_build (3 recs)", 200000, sink += protocore_senml_cbor_build(cbuf, sizeof(cbuf), recs, 3));
+        DBENCH_OP("protocore_senml_json_build (3 recs)", 200000,
+                  sink += protocore_senml_json_build(jbuf, sizeof(jbuf), recs, 3));
+        DBENCH_OP("protocore_senml_cbor_build (3 recs)", 200000,
+                  sink += protocore_senml_cbor_build(cbuf, sizeof(cbuf), recs, 3));
         (void)sink;
         DBENCH_DONE();
     }

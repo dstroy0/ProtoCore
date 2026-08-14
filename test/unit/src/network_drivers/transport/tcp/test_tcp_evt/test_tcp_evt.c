@@ -16,9 +16,9 @@
 // the one below: the reserved storage has to hold EVT_QUEUE_DEPTH records of whatever size the
 // record is on that target.
 
-#include "network_drivers/transport/tcp/tcp.h"
-#include "network_drivers/transport/tcp/server/server.h"
 #include "network_drivers/transport/tcp/evt.h"
+#include "network_drivers/transport/tcp/server/server.h"
+#include "network_drivers/transport/tcp/tcp.h"
 #include <string.h>
 
 #include <unity.h>
@@ -204,7 +204,6 @@ void test_an_empty_queue_yields_nothing(void)
     TEST_ASSERT_NOT_EQUAL(PROTOCORE_PLATFORM_OK, protocore_platform_queue_recv(g_queue, &got, 0));
     TEST_ASSERT_EQUAL_UINT8(0xAB, got.slot_id); // untouched
 }
-
 
 // The runner is generated: Unity's auto/generate_test_runner.rb scans this file for
 // void test_*(void) and emits main() with every case registered, stamped with the line each test

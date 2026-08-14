@@ -91,7 +91,7 @@ static_assert(sizeof(Poly1305Work) <= PROTOCORE_WORK_POLY1305,
               "PROTOCORE_SECURE_ARENA_SIZE from it");
 
 void protocore_poly1305(uint8_t tag[PROTOCORE_POLY1305_TAG_LEN], const uint8_t *msg, size_t len,
-                 const uint8_t key[PROTOCORE_POLY1305_KEY_LEN])
+                        const uint8_t key[PROTOCORE_POLY1305_KEY_LEN])
 {
     // Working limbs + the partial-block buffer are borrowed from the secure pool, never the stack.
     // No hand-assigned region: poly1305 runs nested under chachapoly, whose own borrow is still live,

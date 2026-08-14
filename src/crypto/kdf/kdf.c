@@ -23,7 +23,7 @@ PROTOCORE_CRYPTO_HOT
 typedef struct
 {
     uint8_t block[PROTOCORE_HMAC_SHA256_LEN]; ///< K(i)
-    uint8_t ctr[4];                    ///< the counter, big-endian
+    uint8_t ctr[4];                           ///< the counter, big-endian
     protocore_hmac_sha256_ctx h;              ///< the PRF
 } KdfWork;
 
@@ -35,7 +35,7 @@ static_assert(KDF_WORK_SPAN <= PROTOCORE_WORK_KDF,
               "PROTOCORE_SECURE_ARENA_SIZE from it");
 
 proto_bool protocore_kdf_ctr_hmac_sha256(const uint8_t *ki, size_t ki_len, const uint8_t *fixed, size_t fixed_len,
-                                  uint8_t *out, size_t out_len)
+                                         uint8_t *out, size_t out_len)
 {
     if (!ki || !fixed || !out || out_len == 0)
     {

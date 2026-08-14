@@ -73,16 +73,21 @@ void dbench_run(void)
         volatile bool sinkb = false;
 
         DBENCH_BULK("protocore_dmx_build (512ch)", 20000, sizeof(dmx_frame),
-                    sink += protocore_dmx_build(dmx_frame, sizeof(dmx_frame), DMX_SC_DIMMER, channels, DMX_MAX_CHANNELS));
-        DBENCH_OP("protocore_dmx_get_channel", 100000, sink8 += protocore_dmx_get_channel(dmx_frame, sizeof(dmx_frame), 256));
+                    sink +=
+                    protocore_dmx_build(dmx_frame, sizeof(dmx_frame), DMX_SC_DIMMER, channels, DMX_MAX_CHANNELS));
+        DBENCH_OP("protocore_dmx_get_channel", 100000,
+                  sink8 += protocore_dmx_get_channel(dmx_frame, sizeof(dmx_frame), 256));
         DBENCH_OP("protocore_rdm_uid", 200000, sink64 += protocore_rdm_uid(0x4444, 0x00000001));
-        DBENCH_BULK("protocore_rdm_checksum", 50000, rdm_set_len, sink16 += protocore_rdm_checksum(rdm_set_buf, rdm_set_len));
+        DBENCH_BULK("protocore_rdm_checksum", 50000, rdm_set_len,
+                    sink16 += protocore_rdm_checksum(rdm_set_buf, rdm_set_len));
         DBENCH_OP("protocore_rdm_build (GET, pdl 0)", 50000,
                   sink += protocore_rdm_build(rdm_build_scratch, sizeof(rdm_build_scratch), &get_p, NULL, 0));
         DBENCH_OP("protocore_rdm_build (SET, pdl 2)", 50000,
                   sink += protocore_rdm_build(rdm_build_scratch, sizeof(rdm_build_scratch), &set_p, start_addr, 2));
-        DBENCH_OP("protocore_rdm_parse (GET, pdl 0)", 50000, sinkb = protocore_rdm_parse(rdm_get_buf, rdm_get_len, &parsed, NULL));
-        DBENCH_OP("protocore_rdm_parse (SET, pdl 2)", 50000, sinkb = protocore_rdm_parse(rdm_set_buf, rdm_set_len, &parsed, NULL));
+        DBENCH_OP("protocore_rdm_parse (GET, pdl 0)", 50000,
+                  sinkb = protocore_rdm_parse(rdm_get_buf, rdm_get_len, &parsed, NULL));
+        DBENCH_OP("protocore_rdm_parse (SET, pdl 2)", 50000,
+                  sinkb = protocore_rdm_parse(rdm_set_buf, rdm_set_len, &parsed, NULL));
 
         (void)sink;
         (void)sink8;

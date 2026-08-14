@@ -116,8 +116,7 @@ void test_rfc1035_worked_message(void)
 void test_encode_is_length_prefixed_labels_and_a_root_octet(void)
 {
     uint8_t out[64];
-    static const uint8_t WANT[17] = {3, 'w', 'w', 'w', 7, 'e', 'x', 'a', 'm',
-                                     'p', 'l', 'e', 3, 'c', 'o', 'm', 0};
+    static const uint8_t WANT[17] = {3, 'w', 'w', 'w', 7, 'e', 'x', 'a', 'm', 'p', 'l', 'e', 3, 'c', 'o', 'm', 0};
     TEST_ASSERT_EQUAL_size_t(sizeof(WANT), encode("www.example.com", out, sizeof(out)));
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, out, sizeof(WANT));
 
@@ -312,8 +311,8 @@ void test_case_insensitive_comparison(void)
     TEST_ASSERT_TRUE(eq("a", "A"));
 
     TEST_ASSERT_FALSE(eq("example.com", "example.org"));
-    TEST_ASSERT_FALSE(eq("example.com", "example.com."));  // the trailing dot is an octet
-    TEST_ASSERT_FALSE(eq("example.com", "example.co"));    // a prefix is not a match
+    TEST_ASSERT_FALSE(eq("example.com", "example.com.")); // the trailing dot is an octet
+    TEST_ASSERT_FALSE(eq("example.com", "example.co"));   // a prefix is not a match
     TEST_ASSERT_FALSE(eq("example.co", "example.com"));
     TEST_ASSERT_FALSE(eq("", "a"));
 

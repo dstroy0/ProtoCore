@@ -260,8 +260,8 @@ static void verify_mac(struct JwtInternal *restrict ctx)
         protocore_secure_release(mark);
         return;
     }
-    protocore_hmac_sha256(ws.buf, ctx->ns->key.secret, ctx->ns->key.secret_len, (const uint8_t *)jws,
-                          parts.signing_len, mac);
+    protocore_hmac_sha256(ws.buf, ctx->ns->key.secret, ctx->ns->key.secret_len, (const uint8_t *)jws, parts.signing_len,
+                          mac);
     protocore_secure_release(mark);
 
     char computed[JWT_SIG_B64_CAP];

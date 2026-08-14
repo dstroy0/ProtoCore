@@ -32,8 +32,8 @@
 #define PROTOCORE_SB_MODBUS_H
 
 #include "protocore_config.h"
-#include "services/fieldbus/modbus/modbus.h"    // ModbusFunction, MODBUS_ADU_MAX
-#include "services/southbound/southbound.h" // SouthboundDriver, Southbound
+#include "services/fieldbus/modbus/modbus.h" // ModbusFunction, MODBUS_ADU_MAX
+#include "services/southbound/southbound.h"  // SouthboundDriver, Southbound
 
 PROTOCORE_BEGIN_DECLS
 

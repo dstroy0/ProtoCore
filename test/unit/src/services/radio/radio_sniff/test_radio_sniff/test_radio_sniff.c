@@ -85,12 +85,12 @@ void test_pcap_global_header_declares_the_tap_link_type(void)
     TEST_ASSERT_EQUAL_size_t(PROTOCORE_PCAP_GLOBAL_HDR_LEN, protocore_radiosniff_global(out, sizeof(out)));
 
     static const uint8_t WANT[24] = {
-        0xd4, 0xc3, 0xb2, 0xa1,  // magic 0xa1b2c3d4: microsecond timestamps, writer byte order
-        0x02, 0x00, 0x04, 0x00,  // version 2.4
-        0x00, 0x00, 0x00, 0x00,  // thiszone
-        0x00, 0x00, 0x00, 0x00,  // sigfigs
-        0xff, 0xff, 0x00, 0x00,  // snaplen 65535
-        0x1b, 0x01, 0x00, 0x00,  // network 283 = 0x011b
+        0xd4, 0xc3, 0xb2, 0xa1, // magic 0xa1b2c3d4: microsecond timestamps, writer byte order
+        0x02, 0x00, 0x04, 0x00, // version 2.4
+        0x00, 0x00, 0x00, 0x00, // thiszone
+        0x00, 0x00, 0x00, 0x00, // sigfigs
+        0xff, 0xff, 0x00, 0x00, // snaplen 65535
+        0x1b, 0x01, 0x00, 0x00, // network 283 = 0x011b
     };
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, out, sizeof(WANT));
     TEST_ASSERT_EQUAL_INT(283, PROTOCORE_DLT_IEEE802_15_4_TAP);
@@ -110,27 +110,58 @@ void test_tap_record_layout(void)
     uint8_t out[64];
     memset(out, 0xEE, sizeof(out));
 
-    const size_t n = protocore_radiosniff_tap_record(out, sizeof(out), FRAME, sizeof(FRAME), -40, 15, 0x01020304u,
-                                                     999999u);
+    const size_t n =
+        protocore_radiosniff_tap_record(out, sizeof(out), FRAME, sizeof(FRAME), -40, 15, 0x01020304u, 999999u);
     TEST_ASSERT_EQUAL_size_t(PROTOCORE_PCAP_REC_HDR_LEN + RADIO_SNIFF_TAP_LEN + sizeof(FRAME), n);
     TEST_ASSERT_EQUAL_INT(20, RADIO_SNIFF_TAP_LEN);
 
     static const uint8_t WANT[16 + 20 + 5] = {
         // pcap record header: seconds, microseconds, captured length, wire length
-        0x04, 0x03, 0x02, 0x01,             //
-        0x3f, 0x42, 0x0f, 0x00,             //
-        0x19, 0x00, 0x00, 0x00,             // caplen = 20 + 5 = 25
-        0x19, 0x00, 0x00, 0x00,             // origlen, the same: nothing was truncated
+        0x04,
+        0x03,
+        0x02,
+        0x01, //
+        0x3f,
+        0x42,
+        0x0f,
+        0x00, //
+        0x19,
+        0x00,
+        0x00,
+        0x00, // caplen = 20 + 5 = 25
+        0x19,
+        0x00,
+        0x00,
+        0x00, // origlen, the same: nothing was truncated
         // TAP header: version 0, padding 0, length 20
-        0x00, 0x00, 0x14, 0x00,             //
+        0x00,
+        0x00,
+        0x14,
+        0x00, //
         // TLV type 1 (RSS), length 4, value = binary32 of -40 dBm
-        0x01, 0x00, 0x04, 0x00,             //
-        0x00, 0x00, 0x20, 0xc2,             //
+        0x01,
+        0x00,
+        0x04,
+        0x00, //
+        0x00,
+        0x00,
+        0x20,
+        0xc2, //
         // TLV type 3 (Channel Assignment), length 3: channel 15, page 0, then one padding octet
-        0x03, 0x00, 0x03, 0x00,             //
-        0x0f, 0x00, 0x00, 0x00,             //
+        0x03,
+        0x00,
+        0x03,
+        0x00, //
+        0x0f,
+        0x00,
+        0x00,
+        0x00, //
         // the raw 802.15.4 MAC frame
-        0x41, 0x88, 0x01, 0xCD, 0xAB,
+        0x41,
+        0x88,
+        0x01,
+        0xCD,
+        0xAB,
     };
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, out, sizeof(WANT));
     TEST_ASSERT_EQUAL_HEX8(0xEE, out[sizeof(WANT)]); // nothing written past the record
@@ -149,8 +180,8 @@ void test_tap_record_lengths_track_the_frame(void)
         const size_t n = protocore_radiosniff_tap_record(out, sizeof(out), frame, flen, -70, 26, 7, 8);
         TEST_ASSERT_EQUAL_size_t(PROTOCORE_PCAP_REC_HDR_LEN + RADIO_SNIFF_TAP_LEN + flen, n);
         // caplen is a little-endian 32-bit field at offset 8 of the record header.
-        const uint32_t caplen = (uint32_t)out[8] | ((uint32_t)out[9] << 8) | ((uint32_t)out[10] << 16) |
-                                ((uint32_t)out[11] << 24);
+        const uint32_t caplen =
+            (uint32_t)out[8] | ((uint32_t)out[9] << 8) | ((uint32_t)out[10] << 16) | ((uint32_t)out[11] << 24);
         TEST_ASSERT_EQUAL_UINT32((uint32_t)(RADIO_SNIFF_TAP_LEN + flen), caplen);
         // and the TAP length field states the pseudo-header alone, never the frame.
         TEST_ASSERT_EQUAL_HEX8(RADIO_SNIFF_TAP_LEN, out[PROTOCORE_PCAP_REC_HDR_LEN + 2]);
@@ -190,7 +221,8 @@ void test_tap_record_fails_closed(void)
 
     TEST_ASSERT_EQUAL_size_t(need, protocore_radiosniff_tap_record(out, need, FRAME, sizeof(FRAME), -40, 11, 1, 2));
     TEST_ASSERT_EQUAL_size_t(0, protocore_radiosniff_tap_record(out, need - 1, FRAME, sizeof(FRAME), -40, 11, 1, 2));
-    TEST_ASSERT_EQUAL_size_t(0, protocore_radiosniff_tap_record(NULL, sizeof(out), FRAME, sizeof(FRAME), -40, 11, 1, 2));
+    TEST_ASSERT_EQUAL_size_t(0,
+                             protocore_radiosniff_tap_record(NULL, sizeof(out), FRAME, sizeof(FRAME), -40, 11, 1, 2));
     TEST_ASSERT_EQUAL_size_t(0, protocore_radiosniff_tap_record(out, sizeof(out), NULL, sizeof(FRAME), -40, 11, 1, 2));
     TEST_ASSERT_EQUAL_size_t(0, protocore_radiosniff_tap_record(out, sizeof(out), FRAME, 0, -40, 11, 1, 2));
 }

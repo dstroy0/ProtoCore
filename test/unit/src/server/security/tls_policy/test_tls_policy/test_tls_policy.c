@@ -55,10 +55,8 @@ void test_negotiation_picks_the_highest_common_version(void)
 // ceiling, never with the client's word: a server must not claim a version it cannot speak.
 void test_a_future_client_gets_the_server_ceiling(void)
 {
-    TEST_ASSERT_EQUAL_HEX16(TLS_VERSION_1_3,
-                            protocore_tls_negotiate_version(0x0305, TLS_VERSION_1_2, TLS_VERSION_1_3));
-    TEST_ASSERT_EQUAL_HEX16(TLS_VERSION_1_2,
-                            protocore_tls_negotiate_version(0x03FF, TLS_VERSION_1_2, TLS_VERSION_1_2));
+    TEST_ASSERT_EQUAL_HEX16(TLS_VERSION_1_3, protocore_tls_negotiate_version(0x0305, TLS_VERSION_1_2, TLS_VERSION_1_3));
+    TEST_ASSERT_EQUAL_HEX16(TLS_VERSION_1_2, protocore_tls_negotiate_version(0x03FF, TLS_VERSION_1_2, TLS_VERSION_1_2));
 }
 
 // A client below the server's floor gets no version at all. The floor is the whole point of the

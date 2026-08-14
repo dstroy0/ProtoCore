@@ -67,9 +67,12 @@ struct kat
 };
 
 // [PTlen=0][AADlen=0]
-static const struct kat KAT_EMPTY = {
-    "b52c505a37d78eda5dd34f20c22540ea1b58963cf8e5bf8ffa85f9f2492505b4", "516c33929df5a3284ff463d7", "", "", "",
-    "bdc1ac884d332457a1d2664f168c76f0"};
+static const struct kat KAT_EMPTY = {"b52c505a37d78eda5dd34f20c22540ea1b58963cf8e5bf8ffa85f9f2492505b4",
+                                     "516c33929df5a3284ff463d7",
+                                     "",
+                                     "",
+                                     "",
+                                     "bdc1ac884d332457a1d2664f168c76f0"};
 
 // [PTlen=0][AADlen=160] - GMAC: 20 octets of AAD, no plaintext at all.
 static const struct kat KAT_GMAC = {"886cff5f3e6b8d0e1ad0a38fcdb26de97e8acbe79f6bed66959a598fa5047d65",

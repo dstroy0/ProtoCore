@@ -35,8 +35,8 @@ void test_ivi61_table2_header_layout(void)
     uint8_t buf[PROTOCORE_HISLIP_HEADER_LEN];
     TEST_ASSERT_EQUAL_UINT(16u, PROTOCORE_HISLIP_HEADER_LEN);
 
-    size_t n = protocore_hislip_build_header(buf, sizeof(buf), HISLIP_MSG_DATA_END, 0x5A, 0x01020304u,
-                                             0x0102030405060708ull);
+    size_t n =
+        protocore_hislip_build_header(buf, sizeof(buf), HISLIP_MSG_DATA_END, 0x5A, 0x01020304u, 0x0102030405060708ull);
     TEST_ASSERT_EQUAL_UINT(16u, n);
 
     TEST_ASSERT_EQUAL_HEX8('H', buf[0]); // 'H' in the most significant position
@@ -188,9 +188,9 @@ void test_initialize_response_control_bits_and_session(void)
     uint8_t buf[32];
     HislipInitializeResponse r;
 
-    TEST_ASSERT_EQUAL_UINT(16u, protocore_hislip_build_initialize_response(
-                                    buf, sizeof(buf), PROTOCORE_HISLIP_INITRESP_OVERLAP,
-                                    PROTOCORE_HISLIP_VERSION_2_0, 0x1234));
+    TEST_ASSERT_EQUAL_UINT(16u, protocore_hislip_build_initialize_response(buf, sizeof(buf),
+                                                                           PROTOCORE_HISLIP_INITRESP_OVERLAP,
+                                                                           PROTOCORE_HISLIP_VERSION_2_0, 0x1234));
     TEST_ASSERT_TRUE(protocore_hislip_parse_initialize_response(buf, 16, &r));
     TEST_ASSERT_EQUAL_HEX16(PROTOCORE_HISLIP_VERSION_2_0, r.protocol_version);
     TEST_ASSERT_EQUAL_HEX16(0x1234, r.session_id);

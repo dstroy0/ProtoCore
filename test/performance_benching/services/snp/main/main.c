@@ -25,7 +25,8 @@ void dbench_run(void)
         volatile size_t sink = 0;
         DBENCH_BULK("protocore_snp_bcc", 200000, sizeof(data), sink += protocore_snp_bcc(data, sizeof(data)));
         static uint8_t out[64];
-        DBENCH_OP("protocore_snp_build", 200000, sink += protocore_snp_build(0x03, data, sizeof(data), out, sizeof(out)));
+        DBENCH_OP("protocore_snp_build", 200000,
+                  sink += protocore_snp_build(0x03, data, sizeof(data), out, sizeof(out)));
         SnpFrame sf;
         DBENCH_OP("protocore_snp_parse", 200000, sink += protocore_snp_parse(frame, flen, &sf));
         (void)sink;

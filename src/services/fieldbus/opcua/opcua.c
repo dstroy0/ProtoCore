@@ -318,7 +318,7 @@ static proto_bool r_request_header(UaReader *r, uint32_t *request_handle)
     {
         r_skip(r, (size_t)aid);
     }
-    (void)protocore_ua_r_u32(r);        // TimeoutHint
+    (void)protocore_ua_r_u32(r); // TimeoutHint
     return r_ext_object_skip(r); // AdditionalHeader (ExtensionObject)
 }
 
@@ -420,11 +420,11 @@ size_t protocore_opcua_build_ack(const OpcUaHello *hello, uint8_t *out, size_t c
     protocore_ua_w_u8(&w, 'K');
     protocore_ua_w_u8(&w, 'F');
     protocore_ua_w_u32(&w, total);
-    protocore_ua_w_u32(&w, 0);                                       // ProtocolVersion
+    protocore_ua_w_u32(&w, 0);                                              // ProtocolVersion
     protocore_ua_w_u32(&w, neg(hello->send_buf_size, PROTOCORE_OPCUA_BUF)); // our ReceiveBufferSize
     protocore_ua_w_u32(&w, neg(hello->recv_buf_size, PROTOCORE_OPCUA_BUF)); // our SendBufferSize
     protocore_ua_w_u32(&w, neg(hello->max_msg_size, PROTOCORE_OPCUA_BUF));  // MaxMessageSize
-    protocore_ua_w_u32(&w, 1);                                       // MaxChunkCount (single-chunk)
+    protocore_ua_w_u32(&w, 1);                                              // MaxChunkCount (single-chunk)
     return w.ok ? w.n : 0;
 }
 
@@ -519,7 +519,8 @@ proto_bool protocore_opcua_parse_open(const uint8_t *msg, size_t len, OpcUaOpenC
 }
 
 size_t protocore_opcua_build_open_response(const OpcUaOpenChannel *req, uint32_t channel_id, uint32_t token_id,
-                                    uint32_t seq_number, int64_t now_ft, uint32_t lifetime, uint8_t *out, size_t cap)
+                                           uint32_t seq_number, int64_t now_ft, uint32_t lifetime, uint8_t *out,
+                                           size_t cap)
 {
     if (!req || !out)
     {
@@ -669,7 +670,7 @@ typedef struct
     OpcUaBrowseHandler browse_handler;
 #if PROTOCORE_HAS_NET_STACK
     uint8_t msg[PROTOCORE_OPCUA_BUF]; // single-accessor reassembly buffer
-    uint8_t resp[2048];        // single-accessor response buffer (ACK / OPN / MSG response)
+    uint8_t resp[2048];               // single-accessor response buffer (ACK / OPN / MSG response)
     uint32_t channel_id;
     uint32_t token_id;
     uint32_t seq;
@@ -680,7 +681,8 @@ typedef struct
 // server_info carries the only non-zero default: the response builders read it directly, so it is
 // set here rather than left to the zero fill. Every other member starts at 0 / NULL.
 static OpcuaCtx s_opcua = {
-    .server_info = {PROTOCORE_OPCUA_DEFAULT_ENDPOINT, PROTOCORE_OPCUA_DEFAULT_APP_URI, PROTOCORE_OPCUA_DEFAULT_APP_NAME},
+    .server_info = {PROTOCORE_OPCUA_DEFAULT_ENDPOINT, PROTOCORE_OPCUA_DEFAULT_APP_URI,
+                    PROTOCORE_OPCUA_DEFAULT_APP_NAME},
 };
 
 void protocore_opcua_set_endpoint_url(const char *url)
@@ -708,18 +710,18 @@ void protocore_ua_w_endpoint_description(UaWriter *w, const OpcUaServerInfo *inf
     protocore_ua_w_string(w, OPCUA_POLICY_NONE_URI, (int32_t)(sizeof(OPCUA_POLICY_NONE_URI) - 1)); // SecurityPolicyUri
     // UserIdentityTokens[] - one Anonymous policy.
     protocore_ua_w_i32(w, 1);
-    protocore_ua_w_string(w, "anonymous", 9);                                                  // UserTokenPolicy.PolicyId
-    protocore_ua_w_u32(w, 0);                                                                  // TokenType = Anonymous
-    protocore_ua_w_string(w, NULL, -1);                                                        // IssuedTokenType
-    protocore_ua_w_string(w, NULL, -1);                                                        // IssuerEndpointUrl
-    protocore_ua_w_string(w, NULL, -1);                                                        // SecurityPolicyUri
+    protocore_ua_w_string(w, "anonymous", 9); // UserTokenPolicy.PolicyId
+    protocore_ua_w_u32(w, 0);                 // TokenType = Anonymous
+    protocore_ua_w_string(w, NULL, -1);       // IssuedTokenType
+    protocore_ua_w_string(w, NULL, -1);       // IssuerEndpointUrl
+    protocore_ua_w_string(w, NULL, -1);       // SecurityPolicyUri
     protocore_ua_w_string(w, OPCUA_TRANSPORT_URI, (int32_t)(sizeof(OPCUA_TRANSPORT_URI) - 1)); // TransportProfileUri
     protocore_ua_w_u8(w, 0);                                                                   // SecurityLevel (Byte)
 }
 
 size_t protocore_opcua_build_create_session_response(const OpcUaMsg *req, uint32_t session_id, uint32_t auth_token,
-                                              double revised_timeout, const OpcUaServerInfo *info, uint32_t seq,
-                                              int64_t now_ft, uint8_t *out, size_t cap)
+                                                     double revised_timeout, const OpcUaServerInfo *info, uint32_t seq,
+                                                     int64_t now_ft, uint8_t *out, size_t cap)
 {
     if (!req || !out)
     {
@@ -745,7 +747,7 @@ size_t protocore_opcua_build_create_session_response(const OpcUaMsg *req, uint32
 }
 
 size_t protocore_opcua_build_get_endpoints_response(const OpcUaMsg *req, const OpcUaServerInfo *info, uint32_t seq,
-                                             int64_t now_ft, uint8_t *out, size_t cap)
+                                                    int64_t now_ft, uint8_t *out, size_t cap)
 {
     if (!req || !out)
     {
@@ -761,7 +763,7 @@ size_t protocore_opcua_build_get_endpoints_response(const OpcUaMsg *req, const O
 }
 
 size_t protocore_opcua_build_service_fault(const OpcUaMsg *req, uint32_t service_result, uint32_t seq, int64_t now_ft,
-                                    uint8_t *out, size_t cap)
+                                           uint8_t *out, size_t cap)
 {
     if (!req || !out)
     {
@@ -775,7 +777,7 @@ size_t protocore_opcua_build_service_fault(const OpcUaMsg *req, uint32_t service
 }
 
 size_t protocore_opcua_build_activate_session_response(const OpcUaMsg *req, uint32_t seq, int64_t now_ft, uint8_t *out,
-                                                size_t cap)
+                                                       size_t cap)
 {
     if (!req || !out)
     {
@@ -1002,8 +1004,9 @@ proto_bool protocore_opcua_parse_read(const uint8_t *msg, size_t len, OpcUaReadR
     return !r.err;
 }
 
-size_t protocore_opcua_build_read_response(const OpcUaReadRequest *req, const OpcUaVariant *values, const uint32_t *statuses,
-                                    uint32_t seq, int64_t now_ft, uint8_t *out, size_t cap)
+size_t protocore_opcua_build_read_response(const OpcUaReadRequest *req, const OpcUaVariant *values,
+                                           const uint32_t *statuses, uint32_t seq, int64_t now_ft, uint8_t *out,
+                                           size_t cap)
 {
     if (!req || !out)
     {
@@ -1075,7 +1078,7 @@ proto_bool protocore_opcua_parse_write(const uint8_t *msg, size_t len, OpcUaWrit
 }
 
 size_t protocore_opcua_build_write_response(const OpcUaWriteRequest *req, const uint32_t *results, uint32_t seq,
-                                     int64_t now_ft, uint8_t *out, size_t cap)
+                                            int64_t now_ft, uint8_t *out, size_t cap)
 {
     if (!req || !out)
     {
@@ -1139,9 +1142,9 @@ void protocore_ua_w_reference(UaWriter *w, const OpcUaReference *ref)
         w->ok = PROTO_FALSE; // a lost reference fails the frame closed rather than being serialized
         return;
     }
-    protocore_ua_w_nodeid_numeric(w, 0, ref->ref_type_id);                  // ReferenceTypeId
-    protocore_ua_w_bool(w, ref->is_forward);                                // IsForward
-    protocore_ua_w_nodeid_numeric(w, ref->target_ns, ref->target_id);       // NodeId (ExpandedNodeId, numeric, no flags)
+    protocore_ua_w_nodeid_numeric(w, 0, ref->ref_type_id);            // ReferenceTypeId
+    protocore_ua_w_bool(w, ref->is_forward);                          // IsForward
+    protocore_ua_w_nodeid_numeric(w, ref->target_ns, ref->target_id); // NodeId (ExpandedNodeId, numeric, no flags)
     protocore_ua_w_qualifiedname(w, ref->browse_name_ns, ref->browse_name); // BrowseName
     protocore_ua_w_localizedtext(w, NULL, ref->display_name);               // DisplayName
     protocore_ua_w_u32(w, ref->node_class);                                 // NodeClass
@@ -1191,7 +1194,7 @@ proto_bool protocore_opcua_parse_browse(const uint8_t *msg, size_t len, OpcUaBro
 }
 
 size_t protocore_opcua_build_browse_response(const OpcUaBrowseRequest *req, OpcUaBrowseHandler handler, uint32_t seq,
-                                      int64_t now_ft, uint8_t *out, size_t cap)
+                                             int64_t now_ft, uint8_t *out, size_t cap)
 {
     if (!req || !out)
     {
@@ -1224,7 +1227,7 @@ size_t protocore_opcua_build_browse_response(const OpcUaBrowseRequest *req, OpcU
 }
 
 size_t protocore_opcua_build_close_session_response(const OpcUaMsg *req, uint32_t seq, int64_t now_ft, uint8_t *out,
-                                             size_t cap)
+                                                    size_t cap)
 {
     if (!req || !out)
     {
@@ -1340,8 +1343,8 @@ void protocore_opcua_rx(uint8_t slot)
             uint32_t seq = ++s_opcua.seq;
             uint32_t lifetime = oc.requested_lifetime ? oc.requested_lifetime : 3600000u;
             int64_t now = protocore_opcua_filetime_from_unix((int64_t)time(NULL));
-            size_t n = protocore_opcua_build_open_response(&oc, oc.secure_channel_id, token, seq, now, lifetime, s_opcua.resp,
-                                                    sizeof(s_opcua.resp));
+            size_t n = protocore_opcua_build_open_response(&oc, oc.secure_channel_id, token, seq, now, lifetime,
+                                                           s_opcua.resp, sizeof(s_opcua.resp));
             if (n > 0)
             {
                 raw_send(slot, s_opcua.resp, n);
@@ -1366,13 +1369,13 @@ void protocore_opcua_rx(uint8_t slot)
             if (m.type_id == OPCUA_ID_GET_ENDPOINTS_REQ)
             {
                 n = protocore_opcua_build_get_endpoints_response(&m, &s_opcua.server_info, seq, now, s_opcua.resp,
-                                                          sizeof(s_opcua.resp));
+                                                                 sizeof(s_opcua.resp));
             }
             else if (m.type_id == OPCUA_ID_CREATE_SESSION_REQ)
             {
-                n = protocore_opcua_build_create_session_response(&m, ++s_opcua.session_id, ++s_opcua.auth_token, 1200000.0,
-                                                           &s_opcua.server_info, seq, now, s_opcua.resp,
-                                                           sizeof(s_opcua.resp));
+                n = protocore_opcua_build_create_session_response(&m, ++s_opcua.session_id, ++s_opcua.auth_token,
+                                                                  1200000.0, &s_opcua.server_info, seq, now,
+                                                                  s_opcua.resp, sizeof(s_opcua.resp));
             }
             else if (m.type_id == OPCUA_ID_ACTIVATE_SESSION_REQ)
             {
@@ -1406,7 +1409,7 @@ void protocore_opcua_rx(uint8_t slot)
                     return;
                 }
                 n = protocore_opcua_build_browse_response(&br, s_opcua.browse_handler, seq, now, s_opcua.resp,
-                                                   sizeof(s_opcua.resp));
+                                                          sizeof(s_opcua.resp));
             }
             else if (m.type_id == OPCUA_ID_WRITE_REQ)
             {
@@ -1431,8 +1434,8 @@ void protocore_opcua_rx(uint8_t slot)
             }
             else // unknown/unsupported service -> ServiceFault (so the client never hangs)
             {
-                n = protocore_opcua_build_service_fault(&m, OPCUA_STATUS_BAD_SERVICE_UNSUPPORTED, seq, now, s_opcua.resp,
-                                                 sizeof(s_opcua.resp));
+                n = protocore_opcua_build_service_fault(&m, OPCUA_STATUS_BAD_SERVICE_UNSUPPORTED, seq, now,
+                                                        s_opcua.resp, sizeof(s_opcua.resp));
             }
             if (n > 0)
             {

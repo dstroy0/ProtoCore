@@ -16,12 +16,12 @@
  */
 
 #include "network_drivers/session/session.h"
-#include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the slot an event names
-#include "network_drivers/presentation/presentation.h" // http_req_start_ms: the request deadline a first byte arms
-#include "server/clock/clock.h"                        // Clock.ms: the pass stamp an arm takes
-#include "network_drivers/transport/tcp/server/server.h" // TcpListener: the queues this tick drains
-#include "network_drivers/transport/udp/server/server.h" // UdpListener: the datagram rings this tick drains
 #include "mmgr/plaintext.h"
+#include "network_drivers/presentation/presentation.h" // http_req_start_ms: the request deadline a first byte arms
+#include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the slot an event names
+#include "network_drivers/transport/tcp/server/server.h"     // TcpListener: the queues this tick drains
+#include "network_drivers/transport/udp/server/server.h"     // UdpListener: the datagram rings this tick drains
+#include "server/clock/clock.h"                              // Clock.ms: the pass stamp an arm takes
 #include "server/core/proto_handler.h"
 
 // This layer is protocol-agnostic: it owns the dispatch mechanism only (register / look up /
@@ -95,9 +95,8 @@ static void proto_get(struct ProtoRegistryInternal *restrict ctx)
     }
     // No implicit fallback: a slot must carry an explicit, registered protocol.
     // PROTO_NONE and any unregistered protocol resolve to NULL (event dropped).
-    ctx->ns->handler = ((unsigned)ctx->ns->proto < PROTO_MAX_HANDLERS)
-                           ? s_store.proto_handlers[(unsigned)ctx->ns->proto]
-                           : NULL;
+    ctx->ns->handler =
+        ((unsigned)ctx->ns->proto < PROTO_MAX_HANDLERS) ? s_store.proto_handlers[(unsigned)ctx->ns->proto] : NULL;
 }
 
 // Dispatch one drained event to its slot's protocol handler. Shared by the
@@ -220,10 +219,8 @@ static void server_tick(struct SessionInternal *restrict ctx)
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-ProtoRegistryNs Protocols = {.register_builtins = proto_builtins,
-                             .add = proto_register,
-                             .get = proto_get,
-                             .internal = &s_registry};
+ProtoRegistryNs Protocols = {
+    .register_builtins = proto_builtins, .add = proto_register, .get = proto_get, .internal = &s_registry};
 
 // Designated, so a member's position in the struct does not decide what it binds to.
 SessionNs Session = {.tick = server_tick, .proto = &Protocols, .workers = &Workers, .internal = &s_session};

@@ -392,10 +392,12 @@ static proto_bool protocore_cbor_read_map(protocore_cspan *r, size_t *count)
 
 /** @brief CBOR (RFC 8949) as an instance of the codec interface. */
 const protocore_codec Cbor = {
-    protocore_cbor_uint,      protocore_cbor_int,       protocore_cbor_bytes,      protocore_cbor_str,      protocore_cbor_str_n,      protocore_cbor_bool,
-    protocore_cbor_null,      protocore_cbor_float,     protocore_cbor_array,      protocore_cbor_map,      protocore_cbor_label,      protocore_cbor_peek,
-    protocore_cbor_read_uint, protocore_cbor_read_int,  protocore_cbor_read_bytes, protocore_cbor_read_str, protocore_cbor_read_array, protocore_cbor_read_map,
-    protocore_cbor_read_bool, protocore_cbor_read_null, protocore_cbor_read_float,
+    protocore_cbor_uint,       protocore_cbor_int,      protocore_cbor_bytes,      protocore_cbor_str,
+    protocore_cbor_str_n,      protocore_cbor_bool,     protocore_cbor_null,       protocore_cbor_float,
+    protocore_cbor_array,      protocore_cbor_map,      protocore_cbor_label,      protocore_cbor_peek,
+    protocore_cbor_read_uint,  protocore_cbor_read_int, protocore_cbor_read_bytes, protocore_cbor_read_str,
+    protocore_cbor_read_array, protocore_cbor_read_map, protocore_cbor_read_bool,  protocore_cbor_read_null,
+    protocore_cbor_read_float,
 };
 
 #endif // PROTOCORE_NEED_CBOR

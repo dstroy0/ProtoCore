@@ -12,9 +12,9 @@
 #include "network_drivers/transport/udp/client/client.h"
 
 #include "core_setup/board_profiles/protocore_platform.h" // the stack's UDP, under our names
-#include "mmgr/rawmemcpy.h"                        // raw.read: the caller's bytes into the pbuf
-#include "network_drivers/transport/diffserv/diffserv.h"    // DSCP marking; compiles out when off
-#include "network_drivers/transport/net_addr/net_addr.h"    // NetAddr: the stack's address as a protocore_ip
+#include "mmgr/rawmemcpy.h"                               // raw.read: the caller's bytes into the pbuf
+#include "network_drivers/transport/diffserv/diffserv.h"  // DSCP marking; compiles out when off
+#include "network_drivers/transport/net_addr/net_addr.h"  // NetAddr: the stack's address as a protocore_ip
 
 PROTOCORE_BEGIN_DECLS
 
@@ -76,7 +76,8 @@ static void apply_dscp(protocore_udp_pcb *pcb)
 }
 
 // Take a pbuf, hand the bytes over, release it. Runs in the stack's thread only.
-static proto_bool wire_send(protocore_udp_pcb *pcb, const protocore_ip *a, uint16_t port, const uint8_t *data, size_t len)
+static proto_bool wire_send(protocore_udp_pcb *pcb, const protocore_ip *a, uint16_t port, const uint8_t *data,
+                            size_t len)
 {
     protocore_net_ip dst;
     if (!protocore_net_addr_from_ip(a, &dst))

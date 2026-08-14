@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #include "crypto/asymmetric/curve25519.h"
-#include "network_drivers/transport/udp/server/server.h"
 #include "crypto/hash/sha256.h"
 #include "network_drivers/presentation/http/http3/h3_conn.h"
 #include "network_drivers/presentation/http/http3/h3_frame.h"
@@ -15,6 +14,7 @@
 #include "network_drivers/presentation/http/http3/quic_varint.h"
 #include "network_drivers/presentation/http/http3/tls13_msg.h"
 #include "network_drivers/tls/key_schedule/key_schedule.h"
+#include "network_drivers/transport/udp/server/server.h"
 #include "network_drivers/transport/udp/udp.h"
 #include "protocore_net_host.h"
 #include <string.h>
@@ -698,20 +698,22 @@ void test_quic_server_route_header_edges()
 
     uint8_t short_dcid[4] = {0x11, 0x22, 0x33, 0x44};
     uint8_t hs_hdr[64];
-    size_t hs_len = protocore_quic_build_long_header(hs_hdr, sizeof(hs_hdr), QUIC_LP_HANDSHAKE, QUIC_VERSION_1, short_dcid,
-                                              sizeof(short_dcid), CLIENT_SCID, sizeof(CLIENT_SCID), 1);
+    size_t hs_len =
+        protocore_quic_build_long_header(hs_hdr, sizeof(hs_hdr), QUIC_LP_HANDSHAKE, QUIC_VERSION_1, short_dcid,
+                                         sizeof(short_dcid), CLIENT_SCID, sizeof(CLIENT_SCID), 1);
     deliver(hs_hdr, hs_len, "192.0.2.11", 40001);
 
     uint8_t other_dcid[8] = {0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77, 0x78};
     uint8_t ver_hdr[64];
-    size_t ver_len = protocore_quic_build_long_header(ver_hdr, sizeof(ver_hdr), QUIC_LP_INITIAL, 0xAABBCCDDu, other_dcid,
-                                               sizeof(other_dcid), CLIENT_SCID, sizeof(CLIENT_SCID), 1);
+    size_t ver_len =
+        protocore_quic_build_long_header(ver_hdr, sizeof(ver_hdr), QUIC_LP_INITIAL, 0xAABBCCDDu, other_dcid,
+                                         sizeof(other_dcid), CLIENT_SCID, sizeof(CLIENT_SCID), 1);
     deliver(ver_hdr, ver_len, "192.0.2.12", 40002);
 
     uint8_t scid_hdr[64];
     size_t scid_hdr_len =
         protocore_quic_build_long_header(scid_hdr, sizeof(scid_hdr), QUIC_LP_HANDSHAKE, QUIC_VERSION_1, SERVER_SCID,
-                                  sizeof(SERVER_SCID), CLIENT_SCID, sizeof(CLIENT_SCID), 1);
+                                         sizeof(SERVER_SCID), CLIENT_SCID, sizeof(CLIENT_SCID), 1);
     deliver(scid_hdr, scid_hdr_len, "192.0.2.13", 40003);
 
     run(0);

@@ -80,8 +80,8 @@ void test_dcp_header_field_widths(void)
     uint8_t out[16];
     PnDcpHeader h;
 
-    TEST_ASSERT_EQUAL_UINT(PN_DCP_HDR_LEN, protocore_pn_dcp_header(0xFFFF, 0xFF, 0xFF, 0xFFFFFFFFu, 0xFFFF, 0xFFFF,
-                                                                   out, sizeof(out)));
+    TEST_ASSERT_EQUAL_UINT(PN_DCP_HDR_LEN,
+                           protocore_pn_dcp_header(0xFFFF, 0xFF, 0xFF, 0xFFFFFFFFu, 0xFFFF, 0xFFFF, out, sizeof(out)));
     TEST_ASSERT_TRUE(protocore_pn_dcp_parse_header(out, PN_DCP_HDR_LEN, &h));
     TEST_ASSERT_EQUAL_HEX16(0xFFFF, h.frame_id);
     TEST_ASSERT_EQUAL_HEX8(0xFF, h.service_id);
@@ -200,9 +200,9 @@ void test_identify_response_frame(void)
     blen += protocore_pn_dcp_block(PN_DCP_OPT_IP, PN_DCP_SUB_IP_PARAM, IPPARAM, sizeof(IPPARAM), blocks + blen,
                                    sizeof(blocks) - blen);
 
-    size_t hlen = protocore_pn_dcp_header(PN_FRAMEID_DCP_IDENT_RES, PN_DCP_SERVICE_IDENTIFY,
-                                          PN_DCP_TYPE_RESPONSE_SUCCESS, 0x12345678u, 0, (uint16_t)blen, frame,
-                                          sizeof(frame));
+    size_t hlen =
+        protocore_pn_dcp_header(PN_FRAMEID_DCP_IDENT_RES, PN_DCP_SERVICE_IDENTIFY, PN_DCP_TYPE_RESPONSE_SUCCESS,
+                                0x12345678u, 0, (uint16_t)blen, frame, sizeof(frame));
     TEST_ASSERT_EQUAL_UINT(PN_DCP_HDR_LEN, hlen);
     memcpy(frame + hlen, blocks, blen);
 

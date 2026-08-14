@@ -28,7 +28,8 @@ void dbench_run(void)
                                           0x00, 0x00, 0x00, 0x00, 0x06, '*',  'I',  'D',  'N',  '?',  '\n'};
     // A known-good Initialize message (client offers v1.0, vendor "XY"=0x5859, sub-address "hislip0").
     static uint8_t init_msg[64];
-    size_t init_len = protocore_hislip_build_initialize(init_msg, sizeof(init_msg), PROTOCORE_HISLIP_VERSION_1_0, 0x5859, "hislip0");
+    size_t init_len =
+        protocore_hislip_build_initialize(init_msg, sizeof(init_msg), PROTOCORE_HISLIP_VERSION_1_0, 0x5859, "hislip0");
 
     // A 512-byte SCPI-ish payload for the throughput (MB/s) build path.
     static uint8_t big_payload[512];
@@ -48,7 +49,7 @@ void dbench_run(void)
         // 16-byte header build (prologue + type + control + BE param + BE length).
         DBENCH_OP("protocore_hislip_build_header", 100000,
                   sink += protocore_hislip_build_header(out, sizeof(out), HISLIP_MSG_DATA_END, 0x01, 0xDEADBEEF,
-                                                 0x0102030405060708ULL));
+                                                        0x0102030405060708ULL));
         // 16-byte header parse (prologue check + BE field decode).
         HislipHeader h;
         DBENCH_OP("protocore_hislip_parse_header", 100000,
@@ -56,18 +57,20 @@ void dbench_run(void)
 
         // Initialize handshake: build (header + sub-address payload) and parse.
         DBENCH_OP("protocore_hislip_build_initialize", 50000,
-                  sink += protocore_hislip_build_initialize(out, sizeof(out), PROTOCORE_HISLIP_VERSION_1_0, 0x5859, "hislip0"));
+                  sink +=
+                  protocore_hislip_build_initialize(out, sizeof(out), PROTOCORE_HISLIP_VERSION_1_0, 0x5859, "hislip0"));
         HislipInitialize init;
-        DBENCH_OP("protocore_hislip_parse_initialize", 50000, bsink ^= protocore_hislip_parse_initialize(init_msg, init_len, &init));
+        DBENCH_OP("protocore_hislip_parse_initialize", 50000,
+                  bsink ^= protocore_hislip_parse_initialize(init_msg, init_len, &init));
 
         // DataEND framing carrying a short SCPI query ("*IDN?\n").
         DBENCH_OP("protocore_hislip_build_dataend", 50000,
                   sink += protocore_hislip_build_data(out, sizeof(out), true, 0, PROTOCORE_HISLIP_MESSAGE_ID_INIT,
-                                               (const uint8_t *)"*IDN?\n", 6));
+                                                      (const uint8_t *)"*IDN?\n", 6));
         // Data framing over a 512-byte payload - reports MB/s of the header-build + memcpy path.
         DBENCH_BULK("protocore_hislip_build_data 512B", 20000, sizeof(big_payload),
-                    sink +=
-                    protocore_hislip_build_data(out, sizeof(out), false, 0, 0x00001000, big_payload, sizeof(big_payload)));
+                    sink += protocore_hislip_build_data(out, sizeof(out), false, 0, 0x00001000, big_payload,
+                                                        sizeof(big_payload)));
 
         (void)sink;
         (void)bsink;

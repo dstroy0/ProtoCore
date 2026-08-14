@@ -35,8 +35,8 @@ void dbench_run(void)
         DBENCH_OP("protocore_eth_build (64B payload)", 200000,
                   sink += protocore_eth_build(DST, SRC, 0x88B8, payload, sizeof(payload), out, sizeof(out)));
         DBENCH_OP("protocore_eth_build_vlan (64B)", 200000,
-                  sink +=
-                  protocore_eth_build_vlan(DST, SRC, 5, false, 100, 0x0800, payload, sizeof(payload), out, sizeof(out)));
+                  sink += protocore_eth_build_vlan(DST, SRC, 5, false, 100, 0x0800, payload, sizeof(payload), out,
+                                                   sizeof(out)));
         EthFrame ef;
         DBENCH_OP("protocore_eth_parse", 200000, sink += protocore_eth_parse(frame, flen, &ef));
         DBENCH_OP("protocore_eth_parse (vlan)", 200000, sink += protocore_eth_parse(vframe, flen + 4, &ef));

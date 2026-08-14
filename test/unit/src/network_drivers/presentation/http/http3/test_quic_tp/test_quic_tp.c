@@ -80,14 +80,14 @@ void test_rfc9000_18_2_defaults(void)
 void test_hand_built_wire_string(void)
 {
     static const uint8_t WIRE[] = {
-        0x01, 0x02, 0x67, 0x10,                         // max_idle_timeout = 10000
-        0x03, 0x02, 0x45, 0xc0,                         // max_udp_payload_size = 1472
-        0x04, 0x04, 0x80, 0x01, 0x00, 0x00,             // initial_max_data = 65536
-        0x0a, 0x01, 0x00,                               // ack_delay_exponent = 0
-        0x0b, 0x01, 0x0a,                               // max_ack_delay = 10
-        0x0c, 0x00,                                     // disable_active_migration
-        0x0e, 0x01, 0x04,                               // active_connection_id_limit = 4
-        0x0f, 0x04, 0xde, 0xad, 0xbe, 0xef,             // initial_source_connection_id
+        0x01, 0x02, 0x67, 0x10,             // max_idle_timeout = 10000
+        0x03, 0x02, 0x45, 0xc0,             // max_udp_payload_size = 1472
+        0x04, 0x04, 0x80, 0x01, 0x00, 0x00, // initial_max_data = 65536
+        0x0a, 0x01, 0x00,                   // ack_delay_exponent = 0
+        0x0b, 0x01, 0x0a,                   // max_ack_delay = 10
+        0x0c, 0x00,                         // disable_active_migration
+        0x0e, 0x01, 0x04,                   // active_connection_id_limit = 4
+        0x0f, 0x04, 0xde, 0xad, 0xbe, 0xef, // initial_source_connection_id
     };
     static const uint8_t SCID[4] = {0xde, 0xad, 0xbe, 0xef};
 
@@ -196,11 +196,11 @@ void test_migration_flag_is_absent_when_clear(void)
 void test_reserved_ids_are_ignored(void)
 {
     static const uint8_t WIRE[] = {
-        0x1b, 0x03, 0xde, 0xad, 0xbe,       // id 27  = 31*0 + 27, three arbitrary octets
-        0x0b, 0x01, 0x0a,                   // max_ack_delay = 10
-        0x40, 0x3a, 0x00,                   // id 58  = 31*1 + 27, zero length (2-byte varint id)
-        0x40, 0x59, 0x01, 0xff,             // id 89  = 31*2 + 27, one octet
-        0x0e, 0x01, 0x02,                   // active_connection_id_limit = 2
+        0x1b, 0x03, 0xde, 0xad, 0xbe, // id 27  = 31*0 + 27, three arbitrary octets
+        0x0b, 0x01, 0x0a,             // max_ack_delay = 10
+        0x40, 0x3a, 0x00,             // id 58  = 31*1 + 27, zero length (2-byte varint id)
+        0x40, 0x59, 0x01, 0xff,       // id 89  = 31*2 + 27, one octet
+        0x0e, 0x01, 0x02,             // active_connection_id_limit = 2
     };
     QuicTransportParams tp;
     TEST_ASSERT_TRUE(protocore_quic_tp_parse(WIRE, sizeof(WIRE), &tp));

@@ -132,7 +132,7 @@ size_t protocore_qpack_encode_prefix(uint8_t *out, size_t cap)
 }
 
 size_t protocore_qpack_encode_header(uint8_t *out, size_t cap, const char *name, size_t name_len, const char *value,
-                              size_t value_len)
+                                     size_t value_len)
 {
     int name_idx = -1, full_idx = -1;
     for (int i = 0; i < 99; i++)
@@ -207,7 +207,7 @@ size_t protocore_qpack_encode_header(uint8_t *out, size_t cap, const char *name,
 }
 
 proto_bool protocore_qpack_decode(const uint8_t *block, size_t len, char *scratch, size_t scratch_cap, QpackEmitFn emit,
-                           void *ctx)
+                                  void *ctx)
 {
     size_t pos = 0;
     // Encoded Field Section Prefix (RFC 9204 sec 4.5.1): Required Insert Count, then S + Delta Base.

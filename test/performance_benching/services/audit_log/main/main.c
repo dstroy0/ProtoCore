@@ -38,7 +38,8 @@ void dbench_run(void)
         // (ring wraps after PROTOCORE_AUDIT_LOG_ENTRIES records, exercising the moving-anchor eviction
         // path too) - the hot path a worker hits on every security-relevant event.
         DBENCH_OP("protocore_audit_append", 5000,
-                  sink32 += protocore_audit_append(PROTOCORE_AUDIT_ACCESS, "GET /api/v1/sensors/42 200 OK from 10.0.0.5"));
+                  sink32 +=
+                  protocore_audit_append(PROTOCORE_AUDIT_ACCESS, "GET /api/v1/sensors/42 200 OK from 10.0.0.5"));
 
         // Verify: recompute the chain hash over the full retained window (by now wrapped to
         // PROTOCORE_AUDIT_LOG_ENTRIES records) - one SHA-256 per retained record.
@@ -53,7 +54,8 @@ void dbench_run(void)
 
         // Dump: verify + render the entire retained window as one JSON document (what an
         // endpoint handler would call to serve the audit log).
-        DBENCH_OP("protocore_audit_dump_json (full ring)", 1000, sinki += protocore_audit_dump_json(dump_buf, sizeof(dump_buf)));
+        DBENCH_OP("protocore_audit_dump_json (full ring)", 1000,
+                  sinki += protocore_audit_dump_json(dump_buf, sizeof(dump_buf)));
         (void)sinki;
         (void)sink32;
 

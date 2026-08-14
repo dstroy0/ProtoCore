@@ -29,7 +29,8 @@ void dbench_run(void)
         DBENCH_OP("protocore_sqlite_varint_decode (2B)", 200000, sink += protocore_sqlite_varint_decode(vi2, 2, &v));
         DBENCH_OP("protocore_sqlite_varint_decode (9B)", 200000, sink += protocore_sqlite_varint_decode(vi9, 9, &v));
         static uint8_t out[9];
-        DBENCH_OP("protocore_sqlite_varint_encode", 200000, sink += protocore_sqlite_varint_encode(0x123456789ull, out, sizeof(out)));
+        DBENCH_OP("protocore_sqlite_varint_encode", 200000,
+                  sink += protocore_sqlite_varint_encode(0x123456789ull, out, sizeof(out)));
         DBENCH_OP("protocore_sqlite_serial_type_size", 200000, sink += protocore_sqlite_serial_type_size(6));
         (void)sink;
         DBENCH_DONE();

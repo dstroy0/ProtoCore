@@ -12,9 +12,9 @@ progress). RFC links go to the RFC Editor; others to the issuing body.
 
 Grep these before reaching for the network. Both are plain text and searchable.
 
-| what | where | holds |
-| --- | --- | --- |
-| RFC text | `docs/learn/rfc/text/rfcNNNN.txt` | every RFC cited anywhere in `src/` |
+| what            | where                              | holds                                                         |
+| --------------- | ---------------------------------- | ------------------------------------------------------------- |
+| RFC text        | `docs/learn/rfc/text/rfcNNNN.txt`  | every RFC cited anywhere in `src/`                            |
 | Part datasheets | `docs/learn/datasheets/<part>.txt` | register maps, field widths, LSB weights, conversion formulas |
 
 `docs/learn/datasheets/README.md` indexes each part, says what the suite needs it for, and links the

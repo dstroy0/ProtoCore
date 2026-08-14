@@ -104,9 +104,9 @@ proto_bool protocore_mpint_to_fixed(const uint8_t *m, uint32_t mlen, uint8_t *ou
  *
  * `unused` because a header this wide is included by files that take none of it.
  */
-static const BytesNs bytes __attribute__((unused)) = {protocore_bw_put,     protocore_bw_put_be, protocore_bw_bytes,
-                                                      protocore_br_take_be, protocore_rd_u32,    protocore_rd_str,
-                                                      protocore_mpint_to_fixed};
+static const BytesNs bytes
+    __attribute__((unused)) = {protocore_bw_put, protocore_bw_put_be, protocore_bw_bytes,      protocore_br_take_be,
+                               protocore_rd_u32, protocore_rd_str,    protocore_mpint_to_fixed};
 
 PROTOCORE_END_DECLS
 

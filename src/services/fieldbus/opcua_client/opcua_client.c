@@ -81,12 +81,12 @@ size_t protocore_opcua_client_hello(const char *endpoint_url, uint8_t *out, size
     protocore_ua_w_u8(&w, 'E');
     protocore_ua_w_u8(&w, 'L');
     protocore_ua_w_u8(&w, 'F');
-    protocore_ua_w_u32(&w, 0);            // size placeholder
-    protocore_ua_w_u32(&w, 0);            // ProtocolVersion
+    protocore_ua_w_u32(&w, 0);                   // size placeholder
+    protocore_ua_w_u32(&w, 0);                   // ProtocolVersion
     protocore_ua_w_u32(&w, PROTOCORE_OPCUA_BUF); // ReceiveBufferSize
     protocore_ua_w_u32(&w, PROTOCORE_OPCUA_BUF); // SendBufferSize
-    protocore_ua_w_u32(&w, 0);            // MaxMessageSize (no limit)
-    protocore_ua_w_u32(&w, 0);            // MaxChunkCount
+    protocore_ua_w_u32(&w, 0);                   // MaxMessageSize (no limit)
+    protocore_ua_w_u32(&w, 0);                   // MaxChunkCount
     protocore_ua_w_string(&w, endpoint_url, endpoint_url ? (int32_t)strnlen(endpoint_url, w.cap) : -1);
     return cw_patch(&w);
 }
@@ -121,26 +121,26 @@ size_t protocore_opcua_client_get_endpoints(OpcUaClient *c, const char *endpoint
     cw_msg(c, &w, OPCUA_ID_GET_ENDPOINTS_REQ);
     cw_request_header(c, &w, PROTO_FALSE); // GetEndpoints needs no session
     protocore_ua_w_string(&w, endpoint_url, endpoint_url ? (int32_t)strnlen(endpoint_url, w.cap) : -1); // EndpointUrl
-    protocore_ua_w_i32(&w, -1);                                                                         // LocaleIds[] (null)
-    protocore_ua_w_i32(&w, -1);                                                                         // ProfileUris[] (null)
+    protocore_ua_w_i32(&w, -1); // LocaleIds[] (null)
+    protocore_ua_w_i32(&w, -1); // ProfileUris[] (null)
     return cw_patch(&w);
 }
 
-size_t protocore_opcua_client_create_session(OpcUaClient *c, const char *session_name, const char *endpoint_url, uint8_t *out,
-                                      size_t cap)
+size_t protocore_opcua_client_create_session(OpcUaClient *c, const char *session_name, const char *endpoint_url,
+                                             uint8_t *out, size_t cap)
 {
     UaWriter w = {out, cap, 0, PROTO_TRUE};
     cw_msg(c, &w, OPCUA_ID_CREATE_SESSION_REQ);
     cw_request_header(c, &w, PROTO_FALSE);
     // ClientDescription (ApplicationDescription).
-    protocore_ua_w_string(&w, "urn:det:opcua:client", 20);     // ApplicationUri
-    protocore_ua_w_string(&w, "urn:det:opcua", 13);            // ProductUri
+    protocore_ua_w_string(&w, "urn:det:opcua:client", 20);            // ApplicationUri
+    protocore_ua_w_string(&w, "urn:det:opcua", 13);                   // ProductUri
     protocore_ua_w_localizedtext(&w, NULL, "protocore_opcua_client"); // ApplicationName
-    protocore_ua_w_u32(&w, 1);                                 // ApplicationType = Client
-    protocore_ua_w_string(&w, NULL, -1);                       // GatewayServerUri
-    protocore_ua_w_string(&w, NULL, -1);                       // DiscoveryProfileUri
-    protocore_ua_w_i32(&w, -1);                                // DiscoveryUrls[] (null)
-    protocore_ua_w_string(&w, NULL, -1);                       // ServerUri
+    protocore_ua_w_u32(&w, 1);                                        // ApplicationType = Client
+    protocore_ua_w_string(&w, NULL, -1);                              // GatewayServerUri
+    protocore_ua_w_string(&w, NULL, -1);                              // DiscoveryProfileUri
+    protocore_ua_w_i32(&w, -1);                                       // DiscoveryUrls[] (null)
+    protocore_ua_w_string(&w, NULL, -1);                              // ServerUri
     protocore_ua_w_string(&w, endpoint_url, endpoint_url ? (int32_t)strnlen(endpoint_url, w.cap) : -1); // EndpointUrl
     protocore_ua_w_string(&w, session_name, session_name ? (int32_t)strnlen(session_name, w.cap) : -1); // SessionName
     protocore_ua_w_string(&w, NULL, -1); // ClientNonce (ByteString)
@@ -287,8 +287,8 @@ static proto_bool cr_response_header(UaReader *r, uint32_t *service_result)
     {
         *service_result = svc;
     }
-    (void)protocore_ua_r_u8(r);     // ServiceDiagnostics (DiagnosticInfo, empty)
-    cr_skip_string_array(r); // StringTable
+    (void)protocore_ua_r_u8(r); // ServiceDiagnostics (DiagnosticInfo, empty)
+    cr_skip_string_array(r);    // StringTable
     UaNodeId ah;
     protocore_ua_r_nodeid(r, &ah); // AdditionalHeader NodeId
     (void)protocore_ua_r_u8(r);    // AdditionalHeader ExtensionObject (no body)
@@ -353,9 +353,9 @@ proto_bool protocore_opcua_client_on_open(OpcUaClient *c, const uint8_t *msg, si
     }
     UaReader r = {msg + 8, len - 8, 0, PROTO_FALSE};
     (void)protocore_ua_r_u32(&r); // SecureChannelId (asymmetric security header)
-    cr_skip_string(&r);    // SecurityPolicyUri
-    cr_skip_string(&r);    // SenderCertificate
-    cr_skip_string(&r);    // ReceiverCertificateThumbprint
+    cr_skip_string(&r);           // SecurityPolicyUri
+    cr_skip_string(&r);           // SenderCertificate
+    cr_skip_string(&r);           // ReceiverCertificateThumbprint
     (void)protocore_ua_r_u32(&r); // SequenceNumber
     (void)protocore_ua_r_u32(&r); // RequestId
     UaNodeId tid;
@@ -417,7 +417,8 @@ proto_bool protocore_opcua_client_on_activate_session(const uint8_t *msg, size_t
     return svc == OPCUA_STATUS_GOOD;
 }
 
-int32_t protocore_opcua_client_on_read(const uint8_t *msg, size_t len, OpcUaVariant *vals, uint32_t *statuses, uint32_t max)
+int32_t protocore_opcua_client_on_read(const uint8_t *msg, size_t len, OpcUaVariant *vals, uint32_t *statuses,
+                                       uint32_t max)
 {
     UaReader r;
     uint32_t svc = 0;
@@ -539,7 +540,7 @@ int32_t protocore_opcua_client_on_browse(const uint8_t *msg, size_t len, OpcUaCl
     for (int32_t ri = 0; ri < nres; ri++)
     {
         (void)protocore_ua_r_u32(&r); // BrowseResult.StatusCode
-        cr_skip_string(&r);    // ContinuationPoint (ByteString)
+        cr_skip_string(&r);           // ContinuationPoint (ByteString)
         int32_t nrefs = protocore_ua_r_i32(&r);
         for (int32_t j = 0; j < nrefs; j++)
         {

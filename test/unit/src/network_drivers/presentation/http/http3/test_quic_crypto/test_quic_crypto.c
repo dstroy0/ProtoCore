@@ -318,8 +318,8 @@ void test_rfc9001_a2_client_initial(void)
 void test_rfc9001_a4_retry_integrity_tag(void)
 {
     uint8_t retry[64], odcid[8], tag[16];
-    size_t retry_len = hx("ff000000010008f067a5502a4262b5746f6b656e04a265ba2eff4d829058fb3f0f2496ba", retry,
-                          sizeof(retry));
+    size_t retry_len =
+        hx("ff000000010008f067a5502a4262b5746f6b656e04a265ba2eff4d829058fb3f0f2496ba", retry, sizeof(retry));
     TEST_ASSERT_EQUAL_UINT(36u, retry_len);
     hx("8394c8f03e515708", odcid, sizeof(odcid));
 
@@ -417,8 +417,8 @@ void test_short_header_round_trip(void)
     TEST_ASSERT_TRUE(g_pkt[0] != 0x42); // the first octet is masked
 
     uint64_t pn = 0;
-    size_t pt = protocore_quic_packet_unprotect(g_pkt, 5, 3 + 16 + 16, 0x2700bff3ULL, &s.server, PROTO_FALSE, g_plain,
-                                                &pn);
+    size_t pt =
+        protocore_quic_packet_unprotect(g_pkt, 5, 3 + 16 + 16, 0x2700bff3ULL, &s.server, PROTO_FALSE, g_plain, &pn);
     TEST_ASSERT_EQUAL_UINT(16u, pt);
     TEST_ASSERT_EQUAL_HEX64(0x2700bff4ULL, pn);
     TEST_ASSERT_EQUAL_MEMORY(payload, g_plain, sizeof(payload));

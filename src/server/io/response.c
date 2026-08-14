@@ -19,8 +19,8 @@
 #include "network_drivers/transport/tcp/common.h"            // conn_pool, TcpConn/ConnState
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool.send: the bytes a response writes
 #include "network_drivers/transport/tcp/tcp.h"
-#include "protocore.h" // PROTOCORE_ENABLE_STATS, PROTOCORE_ENABLE_METRICS, PROTOCORE_ENABLE_LOGBUF
-#include "shared/hex/hex.h"  // protocore_hex_u32 (chunk size-line writer)
+#include "protocore.h"        // PROTOCORE_ENABLE_STATS, PROTOCORE_ENABLE_METRICS, PROTOCORE_ENABLE_LOGBUF
+#include "shared/hex/hex.h"   // protocore_hex_u32 (chunk size-line writer)
 #include "shared/mime/mime.h" // PROTOCORE_MIME_*, mime tables
 
 #if PROTOCORE_ENABLE_METRICS || PROTOCORE_ENABLE_STATS

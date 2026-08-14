@@ -96,8 +96,8 @@ int protocore_spinel_unpack_uint(const uint8_t *raw, uint8_t len, uint32_t *valu
     return 0; // truncated - need more bytes
 }
 
-uint16_t protocore_spinel_command_build(uint8_t header, uint32_t cmd, uint32_t prop, const uint8_t *value, uint16_t value_len,
-                                 uint8_t *out, uint16_t cap)
+uint16_t protocore_spinel_command_build(uint8_t header, uint32_t cmd, uint32_t prop, const uint8_t *value,
+                                        uint16_t value_len, uint8_t *out, uint16_t cap)
 {
     if (!out || cap < 1 || (value == NULL && value_len > 0))
     {
@@ -129,7 +129,7 @@ uint16_t protocore_spinel_command_build(uint8_t header, uint32_t cmd, uint32_t p
 }
 
 int protocore_spinel_command_parse(const uint8_t *payload, uint16_t len, uint8_t *header, uint32_t *cmd, uint32_t *prop,
-                            const uint8_t **value, uint16_t *value_len)
+                                   const uint8_t **value, uint16_t *value_len)
 {
     if (!payload || len < 1)
     {
@@ -309,7 +309,8 @@ proto_bool protocore_spinel_get_uint(SpinelReader *r, uint32_t *out)
         return PROTO_FALSE;
     }
     uint32_t v = 0;
-    int n = protocore_spinel_unpack_uint(r->buf + r->off, (uint8_t)((r->len - r->off) > 255 ? 255 : (r->len - r->off)), &v);
+    int n =
+        protocore_spinel_unpack_uint(r->buf + r->off, (uint8_t)((r->len - r->off) > 255 ? 255 : (r->len - r->off)), &v);
     if (n <= 0)
     {
         r->err = PROTO_TRUE;
@@ -786,7 +787,8 @@ uint16_t protocore_spinel_frame_encode(const uint8_t *payload, uint16_t len, uin
     return p;
 }
 
-int protocore_spinel_frame_decode(const uint8_t *raw, uint16_t len, uint8_t *payload, uint16_t pay_cap, uint16_t *pay_len)
+int protocore_spinel_frame_decode(const uint8_t *raw, uint16_t len, uint8_t *payload, uint16_t pay_cap,
+                                  uint16_t *pay_len)
 {
     if (!raw)
     {

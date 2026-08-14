@@ -45,7 +45,7 @@ static_assert(sizeof(ChachapolyWork) <= PROTOCORE_WORK_CHACHAPOLY,
               "PROTOCORE_SECURE_ARENA_SIZE from it");
 
 uint32_t protocore_chachapoly_get_length(const uint8_t key[PROTOCORE_CHACHAPOLY_KEY_LEN], uint32_t seqnr,
-                                  const uint8_t enc_len[PROTOCORE_CHACHAPOLY_AAD_LEN])
+                                         const uint8_t enc_len[PROTOCORE_CHACHAPOLY_AAD_LEN])
 {
     size_t mark = protocore_secure_mark();
     protocore_span ws = protocore_secure_span(sizeof(ChachapolyWork), _Alignof(ChachapolyWork));
@@ -62,8 +62,8 @@ uint32_t protocore_chachapoly_get_length(const uint8_t key[PROTOCORE_CHACHAPOLY_
     return n;
 }
 
-void protocore_chachapoly_encrypt(const uint8_t key[PROTOCORE_CHACHAPOLY_KEY_LEN], uint32_t seqnr, uint8_t *dest, const uint8_t *src,
-                           uint32_t payload_len)
+void protocore_chachapoly_encrypt(const uint8_t key[PROTOCORE_CHACHAPOLY_KEY_LEN], uint32_t seqnr, uint8_t *dest,
+                                  const uint8_t *src, uint32_t payload_len)
 {
     size_t mark = protocore_secure_mark();
     protocore_span ws = protocore_secure_span(sizeof(ChachapolyWork), _Alignof(ChachapolyWork));
@@ -82,7 +82,7 @@ void protocore_chachapoly_encrypt(const uint8_t key[PROTOCORE_CHACHAPOLY_KEY_LEN
 }
 
 proto_bool protocore_chachapoly_decrypt(const uint8_t key[PROTOCORE_CHACHAPOLY_KEY_LEN], uint32_t seqnr, uint8_t *dest,
-                                 const uint8_t *src, uint32_t payload_len)
+                                        const uint8_t *src, uint32_t payload_len)
 {
     size_t mark = protocore_secure_mark();
     protocore_span ws = protocore_secure_span(sizeof(ChachapolyWork), _Alignof(ChachapolyWork));

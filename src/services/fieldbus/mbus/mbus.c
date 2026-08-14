@@ -47,7 +47,7 @@ size_t protocore_mbus_build_short(uint8_t *buf, size_t cap, uint8_t c, uint8_t a
 }
 
 size_t protocore_mbus_build_long(uint8_t *buf, size_t cap, uint8_t c, uint8_t a, uint8_t ci, const uint8_t *data,
-                          uint8_t data_len)
+                                 uint8_t data_len)
 {
     if (!buf || data_len > MBUS_MAX_DATA || (data_len && !data))
     {

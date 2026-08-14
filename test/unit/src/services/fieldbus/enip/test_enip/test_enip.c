@@ -263,8 +263,7 @@ void test_cpf_walk_refuses_a_missing_item(void)
     TEST_ASSERT_FALSE(protocore_eip_parse_send_rr_data(DATA, 14, &cip, &cip_len));
 
     // An item whose declared length runs past the block is refused too.
-    static const uint8_t OVERRUN[12] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                                        0x01, 0x00, 0xB2, 0x00, 0xFF, 0x00};
+    static const uint8_t OVERRUN[12] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0xB2, 0x00, 0xFF, 0x00};
     TEST_ASSERT_FALSE(protocore_eip_parse_send_rr_data(OVERRUN, sizeof(OVERRUN), &cip, &cip_len));
 
     TEST_ASSERT_FALSE(protocore_eip_parse_send_rr_data(DATA, 7, &cip, &cip_len)); // shorter than the CPF preamble

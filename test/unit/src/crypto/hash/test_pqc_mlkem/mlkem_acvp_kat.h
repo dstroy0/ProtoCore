@@ -14,11 +14,9 @@
 #define PROTOCORE_TEST_MLKEM_ACVP_KAT_H
 
 // KeyGen: (d, z) -> (ek, dk).
-static const char *const ACVP_KEYGEN_D =
-    "e582b7d75e6c80b05ae392a1fc9f7153b12390fd99930368cc67a768baebc8a0";
+static const char *const ACVP_KEYGEN_D = "e582b7d75e6c80b05ae392a1fc9f7153b12390fd99930368cc67a768baebc8a0";
 
-static const char *const ACVP_KEYGEN_Z =
-    "1cdacb8740c0b87c4a379575f187b367cbfa3b300bf591b109f79816e9cbe8f0";
+static const char *const ACVP_KEYGEN_Z = "1cdacb8740c0b87c4a379575f187b367cbfa3b300bf591b109f79816e9cbe8f0";
 
 static const char *const ACVP_KEYGEN_EK =
     "28c793778741b80b02b4339f2aa4347255b099f17264e1b8cc0a2c7c2a1a79f7997b907fd0496c6e6c8ad7714f5f339d"
@@ -127,8 +125,7 @@ static const char *const ACVP_ENCAPS_EK =
     "623aa044223079139b7f1c213e93682ed86165468377d40884310163a5539f27745e667adf506896ba933b002e4d50b2"
     "497ecff09d0bbca4f7e6f9db9e10c643d23701bd6385e163cf71c1e919a6e20a";
 
-static const char *const ACVP_ENCAPS_M =
-    "4e77596168711e913965d8175ac3bd76aab08b7f9385a02ae883cf6c6e17dd81";
+static const char *const ACVP_ENCAPS_M = "4e77596168711e913965d8175ac3bd76aab08b7f9385a02ae883cf6c6e17dd81";
 
 static const char *const ACVP_ENCAPS_C =
     "0385e8044d17e2b96b3f50ed28c2502216322ac33f69d2ce34f0a11e9b3de339aebe98283a6010a34bdc98b0e5bbe142"
@@ -155,8 +152,7 @@ static const char *const ACVP_ENCAPS_C =
     "2d484d6f9dfcc8472f05683d9d1144ef6c36294bd06a019efec202fc46288eba2ade82aa3363faf32b9b027c75a7d615"
     "845cf2ec538141f1746009737600f697cc8d90c80c1e19f1ab2c08646c0e3958";
 
-static const char *const ACVP_ENCAPS_K =
-    "79d74f6c6c2d916bec47bd828fd9b67295a37f54927fab1263c0d122f1c6f1ed";
+static const char *const ACVP_ENCAPS_K = "79d74f6c6c2d916bec47bd828fd9b67295a37f54927fab1263c0d122f1c6f1ed";
 
 // Decaps: (dk, c) -> k.
 static const char *const ACVP_DECAPS_DK =
@@ -236,7 +232,6 @@ static const char *const ACVP_DECAPS_C =
     "21685f1f6c9c93eb35900e54f10744d90f4d444e06c45e2a9faef1a96f0b752d4df1df86a9503d8d99cdf8a62622184a"
     "919e19df8230e7017d5f411a89da304b67e63cc3e3d901f998f563ca9bd4c9be";
 
-static const char *const ACVP_DECAPS_K =
-    "34cfae7f2ca3b0b9c3e06afeed554c053f6e51d875d3bd3ff0eda2086ee79f3a";
+static const char *const ACVP_DECAPS_K = "34cfae7f2ca3b0b9c3e06afeed554c053f6e51d875d3bd3ff0eda2086ee79f3a";
 
 #endif // PROTOCORE_TEST_MLKEM_ACVP_KAT_H

@@ -535,7 +535,7 @@ void test_h3_control_stream_frame_guards()
     protocore_h3_conn_init(&g_h3b, &g_qc2, on_request, NULL);
     uint8_t s3[64];
     size_t sp3 = protocore_quic_varint_encode(s3, sizeof(s3), 0x00);
-    sp3 += protocore_h3_frame_write_header(s3 + sp3, sizeof(s3) - sp3, 0x07 , 1);
+    sp3 += protocore_h3_frame_write_header(s3 + sp3, sizeof(s3) - sp3, 0x07, 1);
     s3[sp3++] = 0x00;
     g_qc2.cb.on_stream_data(g_qc2.cb.app, &g_qc2, 2, s3, sp3, PROTO_FALSE);
     TEST_ASSERT_TRUE(g_qc2.close_queued);
@@ -547,7 +547,7 @@ void test_h3_control_stream_frame_guards()
     uint8_t s4[64];
     size_t sp4 = protocore_quic_varint_encode(s4, sizeof(s4), 0x00);
     sp4 += protocore_h3_build_settings(s4 + sp4, sizeof(s4) - sp4, NULL, NULL, 0);
-    sp4 += protocore_h3_frame_write_header(s4 + sp4, sizeof(s4) - sp4, 0x07 , 1);
+    sp4 += protocore_h3_frame_write_header(s4 + sp4, sizeof(s4) - sp4, 0x07, 1);
     s4[sp4++] = 0x00;
     g_qc2.cb.on_stream_data(g_qc2.cb.app, &g_qc2, 2, s4, sp4, PROTO_FALSE);
     TEST_ASSERT_FALSE(g_qc2.close_queued);
@@ -600,7 +600,8 @@ void test_h3_respond_no_content_type_empty_body()
         H3Frame fr;
         TEST_ASSERT_TRUE(protocore_h3_frame_parse(st->tx + off, st->tx_have - off, &fr));
         TEST_ASSERT_EQUAL_UINT64(H3_HEADERS, fr.type);
-        protocore_qpack_decode(st->tx + off + fr.header_len, (size_t)fr.length, scratch, sizeof(scratch), protocore_resp_emit, NULL);
+        protocore_qpack_decode(st->tx + off + fr.header_len, (size_t)fr.length, scratch, sizeof(scratch),
+                               protocore_resp_emit, NULL);
         off += fr.header_len + (size_t)fr.length;
         frames++;
     }

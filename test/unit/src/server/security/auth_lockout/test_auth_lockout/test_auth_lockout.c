@@ -89,7 +89,7 @@ void test_backoff_doubles_then_caps(void)
     for (int extra = 1; extra <= 20; extra++)
     {
         want = (want >= (uint32_t)PROTOCORE_AUTH_LOCKOUT_MAX_MS / 2u) ? (uint32_t)PROTOCORE_AUTH_LOCKOUT_MAX_MS
-                                                                     : want * 2u;
+                                                                      : want * 2u;
         auth_lockout_fail(&ip, 0u);
         TEST_ASSERT_EQUAL_UINT32(want, auth_lockout_remaining_ms(&ip, 0u));
     }

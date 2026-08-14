@@ -12,36 +12,36 @@ A docstring is a claim; treat one that disagrees with this table as the thing th
 
 ## I need to...
 
-| I need to                                       | Run                                                        |
-| ----------------------------------------------- | ---------------------------------------------------------- |
-| know which envs my change affects               | `test/harness.py env select` (stdin or `--base/--head`)    |
-| add a test env                                  | `test/harness.py env add`, then `env gen`                  |
-| change a test env                               | `test/harness.py env update`, then `env gen`               |
-| rebuild `platformio.ini`                        | `test/harness.py env gen` (never hand-edit the ini)        |
-| refresh the dependency graph after a rename     | `test/harness.py env deps`                                 |
-| run the whole native suite and write the report | `test/harness.py run --report-out test/TEST_REPORT.md`     |
-| regenerate coverage for Sonar                   | `test/harness.py run --coverage`                           |
-| check a `src/` file against the ban list        | `tools/ci_tooling/check/check_src_banned.py --all`         |
-| check naming against SYMBOLS.md                 | `tools/ci_tooling/check/check_symbols.py --check`          |
-| check the single-owner state rule               | `tools/ci_tooling/check/check_owned_context.py`            |
-| find a second definition of one symbol          | `tools/ci_tooling/check/check_duplicate_symbols.py`        |
-| verify frame spec literal lengths               | `tools/ci_tooling/check/check_frame_specs.py --fix`        |
-| find prose that cites something now gone        | `tools/ci_tooling/check/check_docs.py`                     |
-| compile every Arduino example for real          | `tools/ci_tooling/check/compile_examples.sh`               |
-| find src files no env compiles                  | `tools/ci_tooling/check/check_test_coverage.py --list`     |
-| see uncovered branches per file                 | `tools/ci_tooling/coverage/covmap.py --cov`                |
-| plan coverage work that will not collide        | `tools/ci_tooling/coverage/covplan.py`                     |
-| run coverage over a few envs                    | `tools/ci_tooling/coverage/covrun.py --env ...`            |
-| rebuild the coverage baseline from scratch      | `tools/ci_tooling/coverage/covbase.py`                     |
-| regenerate a doc region CI checks for drift     | the matching `generate/gen_*.py` (all take `--check`)      |
-| read a whole file at image density              | `tools/dev_env/src2png.py`                                 |
-| move line ranges from one file into another     | `tools/dev_env/move_code.py`                               |
-| build several envs in the WSL clone             | `tools/dev_env/build_envs.sh`                              |
-| measure what an `#include` costs                | `tools/include_footprint.py`                               |
-| measure what a feature costs in flash           | `tools/ci_tooling/generate/example_footprints.py`          |
-| regenerate crypto KAT headers                   | `tools/crypto/gen_*.py`                                    |
-| mint SSH test keys                              | `tools/crypto/gen_ssh_test_keys.py --if-absent`            |
-| tune a PID loop from a run log                  | `tools/pid_tune.py`                                        |
+| I need to                                       | Run                                                     |
+| ----------------------------------------------- | ------------------------------------------------------- |
+| know which envs my change affects               | `test/harness.py env select` (stdin or `--base/--head`) |
+| add a test env                                  | `test/harness.py env add`, then `env gen`               |
+| change a test env                               | `test/harness.py env update`, then `env gen`            |
+| rebuild `platformio.ini`                        | `test/harness.py env gen` (never hand-edit the ini)     |
+| refresh the dependency graph after a rename     | `test/harness.py env deps`                              |
+| run the whole native suite and write the report | `test/harness.py run --report-out test/TEST_REPORT.md`  |
+| regenerate coverage for Sonar                   | `test/harness.py run --coverage`                        |
+| check a `src/` file against the ban list        | `tools/ci_tooling/check/check_src_banned.py --all`      |
+| check naming against SYMBOLS.md                 | `tools/ci_tooling/check/check_symbols.py --check`       |
+| check the single-owner state rule               | `tools/ci_tooling/check/check_owned_context.py`         |
+| find a second definition of one symbol          | `tools/ci_tooling/check/check_duplicate_symbols.py`     |
+| verify frame spec literal lengths               | `tools/ci_tooling/check/check_frame_specs.py --fix`     |
+| find prose that cites something now gone        | `tools/ci_tooling/check/check_docs.py`                  |
+| compile every Arduino example for real          | `tools/ci_tooling/check/compile_examples.sh`            |
+| find src files no env compiles                  | `tools/ci_tooling/check/check_test_coverage.py --list`  |
+| see uncovered branches per file                 | `tools/ci_tooling/coverage/covmap.py --cov`             |
+| plan coverage work that will not collide        | `tools/ci_tooling/coverage/covplan.py`                  |
+| run coverage over a few envs                    | `tools/ci_tooling/coverage/covrun.py --env ...`         |
+| rebuild the coverage baseline from scratch      | `tools/ci_tooling/coverage/covbase.py`                  |
+| regenerate a doc region CI checks for drift     | the matching `generate/gen_*.py` (all take `--check`)   |
+| read a whole file at image density              | `tools/dev_env/src2png.py`                              |
+| move line ranges from one file into another     | `tools/dev_env/move_code.py`                            |
+| build several envs in the WSL clone             | `tools/dev_env/build_envs.sh`                           |
+| measure what an `#include` costs                | `tools/include_footprint.py`                            |
+| measure what a feature costs in flash           | `tools/ci_tooling/generate/example_footprints.py`       |
+| regenerate crypto KAT headers                   | `tools/crypto/gen_*.py`                                 |
+| mint SSH test keys                              | `tools/crypto/gen_ssh_test_keys.py --if-absent`         |
+| tune a PID loop from a run log                  | `tools/pid_tune.py`                                     |
 
 ## check/ - fails CI, writes nothing
 
@@ -99,13 +99,13 @@ Every one takes `--check` to assert the tracked file already matches, which is h
 
 ## lib/ - imported, never run
 
-| Module                | Holds                                                         |
-| --------------------- | ------------------------------------------------------------- |
-| `doc_region.py`       | tracked-file region writer + `--check` comparison             |
-| `baseline.py`         | ratchet baselines (new / known / fixed)                       |
+| Module                | Holds                                                                |
+| --------------------- | -------------------------------------------------------------------- |
+| `doc_region.py`       | tracked-file region writer + `--check` comparison                    |
+| `baseline.py`         | ratchet baselines (new / known / fixed)                              |
 | `affected_common.py`  | changed-file to env mapping shared with `test/harness.py env select` |
-| `feature_taxonomy.py` | the one curated feature grouping + `FEATURES.md` parser       |
-| `src_symbols.py`      | enumerates `src/` headers and their symbols                   |
+| `feature_taxonomy.py` | the one curated feature grouping + `FEATURES.md` parser              |
+| `src_symbols.py`      | enumerates `src/` headers and their symbols                          |
 
 ## crypto/ - generates test vectors and keys
 

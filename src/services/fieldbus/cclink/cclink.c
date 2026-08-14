@@ -21,8 +21,8 @@ uint8_t protocore_cclink_sum(const uint8_t *bytes, size_t len)
     return sum;
 }
 
-size_t protocore_cclink_build(uint8_t station, uint8_t command, const uint8_t *bits, size_t bit_len, const uint8_t *words,
-                       size_t word_len, uint8_t *out, size_t cap)
+size_t protocore_cclink_build(uint8_t station, uint8_t command, const uint8_t *bits, size_t bit_len,
+                              const uint8_t *words, size_t word_len, uint8_t *out, size_t cap)
 {
     if (!out || (bit_len && !bits) || (word_len && !words) || station > 63)
     {

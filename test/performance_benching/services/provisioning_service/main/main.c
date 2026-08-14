@@ -39,11 +39,14 @@ void dbench_run(void)
         volatile size_t sink = 0;
 
         // First field, '+'-decoded value.
-        DBENCH_OP("protocore_prov_form_field ssid (+)", 100000, sink += protocore_prov_form_field(body, "ssid", ssid, sizeof(ssid)));
+        DBENCH_OP("protocore_prov_form_field ssid (+)", 100000,
+                  sink += protocore_prov_form_field(body, "ssid", ssid, sizeof(ssid)));
         // Second field, '%XX'-decoded value (the hot path through protocore_hex_val).
-        DBENCH_OP("protocore_prov_form_field psk (%XX)", 100000, sink += protocore_prov_form_field(body, "psk", psk, sizeof(psk)));
+        DBENCH_OP("protocore_prov_form_field psk (%XX)", 100000,
+                  sink += protocore_prov_form_field(body, "psk", psk, sizeof(psk)));
         // Absent field: whole-body scan that never matches (worst-case lookup).
-        DBENCH_OP("protocore_prov_form_field miss", 100000, sink += protocore_prov_form_field(body, "channel", ssid, sizeof(ssid)));
+        DBENCH_OP("protocore_prov_form_field miss", 100000,
+                  sink += protocore_prov_form_field(body, "channel", ssid, sizeof(ssid)));
         (void)sink;
 
         DBENCH_DONE();

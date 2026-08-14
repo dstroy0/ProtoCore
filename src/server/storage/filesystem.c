@@ -11,8 +11,8 @@
 
 #include "server/storage/filesystem.h"
 #include "mmgr/protomem.h"
-#include "mmgr/protostr.h" // str: the bounded-run walks
-                           // strncmp (root-name match), memcpy
+#include "mmgr/protostr.h"      // str: the bounded-run walks
+                                // strncmp (root-name match), memcpy
 #include "server/storage/mnt.h" // Mnt.active: the filesystem every call works through
 
 /**
@@ -177,7 +177,8 @@ static void fs_begin(struct FilesystemInternal *restrict ctx)
     FsRoot *r = &s_fs.root[s_fs.count];
 
     // One byte of the capacity is held back for the separator below, so appending cannot overrun.
-    size_t n = frame.build(r->path, PROTOCORE_FILESYSTEM_PATH_MAX - 1, FILESYSTEM_ROOT, (const protocore_fval[]){PROTOCORE_VSTR(want)}, 1);
+    size_t n = frame.build(r->path, PROTOCORE_FILESYSTEM_PATH_MAX - 1, FILESYSTEM_ROOT,
+                           (const protocore_fval[]){PROTOCORE_VSTR(want)}, 1);
     if (n == 0) // a root that does not fit - refused, not truncated into another directory
     {
         ctx->ns->i32 = -1;
@@ -188,7 +189,8 @@ static void fs_begin(struct FilesystemInternal *restrict ctx)
         r->path[n] = '/';      // the separator the join relies on, added once here rather than
         r->path[n + 1] = '\0'; // tested on every resolve
     }
-    if (frame.build(r->name, PROTOCORE_FS_ROOT_NAME_MAX, FILESYSTEM_ROOT, (const protocore_fval[]){PROTOCORE_VSTR(want)}, 1) == 0)
+    if (frame.build(r->name, PROTOCORE_FS_ROOT_NAME_MAX, FILESYSTEM_ROOT,
+                    (const protocore_fval[]){PROTOCORE_VSTR(want)}, 1) == 0)
     {
         ctx->ns->i32 = -1;
         return; // a name too long to record is a name that could not be matched again
@@ -372,7 +374,8 @@ static void fs_remove(struct FilesystemInternal *restrict ctx)
     // child, finishing a level truncates back. Each pass re-opens the current level and takes its
     // first surviving entry, so the cursor is never carried across a removal that would invalidate
     // it - whatever the previous pass removed is already gone when the next open happens.
-    size_t len = frame.build(s_fs.walk, PROTOCORE_FILESYSTEM_PATH_MAX, FILESYSTEM_ROOT, (const protocore_fval[]){PROTOCORE_VSTR(p)}, 1);
+    size_t len = frame.build(s_fs.walk, PROTOCORE_FILESYSTEM_PATH_MAX, FILESYSTEM_ROOT,
+                             (const protocore_fval[]){PROTOCORE_VSTR(p)}, 1);
     if (len == 0)
     {
         ctx->ns->ok = PROTO_FALSE;
@@ -393,8 +396,8 @@ static void fs_remove(struct FilesystemInternal *restrict ctx)
         proto_bool sep = !(len == 1 && s_fs.walk[0] == '/');
         size_t at = len + (sep ? 1 : 0);
         protocore_mnt_stat cst;
-        proto_bool got =
-            (at + 1 < PROTOCORE_FILESYSTEM_PATH_MAX) && b->readdir(d, &cst, s_fs.walk + at, PROTOCORE_FILESYSTEM_PATH_MAX - at);
+        proto_bool got = (at + 1 < PROTOCORE_FILESYSTEM_PATH_MAX) &&
+                         b->readdir(d, &cst, s_fs.walk + at, PROTOCORE_FILESYSTEM_PATH_MAX - at);
         b->close(d);
 
         if (!got) // drained: remove this level and step back out
@@ -522,8 +525,10 @@ static void fs_copy(struct FilesystemInternal *restrict ctx)
         return;
     }
 
-    size_t slen = frame.build(s_fs.walk, PROTOCORE_FILESYSTEM_PATH_MAX, FILESYSTEM_ROOT, (const protocore_fval[]){PROTOCORE_VSTR(sp)}, 1);
-    size_t dlen = frame.build(s_fs.dwalk, PROTOCORE_FILESYSTEM_PATH_MAX, FILESYSTEM_ROOT, (const protocore_fval[]){PROTOCORE_VSTR(dp)}, 1);
+    size_t slen = frame.build(s_fs.walk, PROTOCORE_FILESYSTEM_PATH_MAX, FILESYSTEM_ROOT,
+                              (const protocore_fval[]){PROTOCORE_VSTR(sp)}, 1);
+    size_t dlen = frame.build(s_fs.dwalk, PROTOCORE_FILESYSTEM_PATH_MAX, FILESYSTEM_ROOT,
+                              (const protocore_fval[]){PROTOCORE_VSTR(dp)}, 1);
     if (slen == 0 || dlen == 0)
     {
         ctx->ns->ok = PROTO_FALSE;

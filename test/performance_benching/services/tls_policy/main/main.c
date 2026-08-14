@@ -23,7 +23,8 @@ void dbench_run(void)
     {
         DBENCH_BANNER("tls_policy");
         volatile uint32_t sink = 0;
-        DBENCH_OP("protocore_tls_negotiate_version", 200000, sink += protocore_tls_negotiate_version(0x0304, 0x0303, 0x0304));
+        DBENCH_OP("protocore_tls_negotiate_version", 200000,
+                  sink += protocore_tls_negotiate_version(0x0304, 0x0303, 0x0304));
         DBENCH_OP("protocore_tls_select_cipher", 200000, sink += protocore_tls_select_cipher(offered, 5, pinned, 3));
         DBENCH_OP("protocore_tls_is_aead", 200000, sink += protocore_tls_is_aead(0x1301));
         (void)sink;

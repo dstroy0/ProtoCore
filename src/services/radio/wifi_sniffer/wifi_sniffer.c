@@ -211,7 +211,8 @@ const WifiChannelSurvey *protocore_wifi_survey_get(const WifiSurvey *s, uint8_t 
     return (idx < 0) ? NULL : &s->ch[idx];
 }
 
-proto_bool protocore_wifi_survey_best(const WifiSurvey *s, uint8_t exclude_channel, uint8_t *out_channel, int8_t *out_rssi)
+proto_bool protocore_wifi_survey_best(const WifiSurvey *s, uint8_t exclude_channel, uint8_t *out_channel,
+                                      int8_t *out_rssi)
 {
     if (!s)
     {
@@ -280,7 +281,7 @@ proto_bool protocore_wifi_sniffer_begin(uint8_t first_chan, uint8_t last_chan, u
     protocore_wifi_stats_reset(&s_sniffer.stats);
     protocore_wifi_scan_init(&s_sniffer.scan, first_chan, last_chan, dwell_ms, now);
     protocore_wifi_survey_reset(&s_sniffer.survey, s_sniffer.scan.chan_first,
-                         (uint8_t)(s_sniffer.scan.chan_last - s_sniffer.scan.chan_first + 1));
+                                (uint8_t)(s_sniffer.scan.chan_last - s_sniffer.scan.chan_first + 1));
     s_sniffer.running = protocore_promisc_begin(s_sniffer.scan.channel, sniffer_sink);
     return s_sniffer.running;
 }

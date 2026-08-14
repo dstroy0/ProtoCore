@@ -82,7 +82,8 @@ void dbench_run(void)
                   sinkb = protocore_em77_read(PROTOCORE_EM77_NS, N_MI_MANUFACTURER, OPCUA_ATTR_VALUE, &v));
         DBENCH_OP("protocore_em77_read (uint64 counter)", 100000,
                   sinkb = protocore_em77_read(PROTOCORE_EM77_NS, N_AJV_JOBCYCLECOUNTER, OPCUA_ATTR_VALUE, &v));
-        DBENCH_OP("protocore_em77_browse (8-child obj)", 50000, sinki += protocore_em77_browse(PROTOCORE_EM77_NS, N_MACHINEINFO, refs, 8));
+        DBENCH_OP("protocore_em77_browse (8-child obj)", 50000,
+                  sinki += protocore_em77_browse(PROTOCORE_EM77_NS, N_MACHINEINFO, refs, 8));
         DBENCH_OP("protocore_em77_browse (Objects->IMM)", 100000, sinki += protocore_em77_browse(0, 85, refs, 8));
 
         // Re-resolve the UInt64 counter, then encode the Variant it left in `v` to wire bytes - the

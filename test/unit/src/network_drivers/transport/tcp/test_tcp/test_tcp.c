@@ -13,9 +13,9 @@
 // and assert on behavior only that member produces, so a shifted binding fails here rather than on
 // a device.
 
-#include "network_drivers/transport/tcp/tcp.h"
 #include "network_drivers/transport/tcp/protocol/protocol.h"
 #include "network_drivers/transport/tcp/server/server.h"
+#include "network_drivers/transport/tcp/tcp.h"
 #include <string.h>
 
 #include <unity.h>
@@ -356,7 +356,6 @@ void test_the_cidr_form_adds_the_same_rule(void)
     outside.bytes[0] = 11;
     TEST_ASSERT_FALSE(Tcp.listener->ip_allowed(&outside));
 }
-
 
 // The runner is generated: Unity's auto/generate_test_runner.rb scans this file for
 // void test_*(void) and emits main() with every case registered, stamped with the line each test

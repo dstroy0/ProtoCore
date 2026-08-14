@@ -242,12 +242,12 @@ void test_pcap_global_header_declares_ieee80211(void)
     TEST_ASSERT_EQUAL_size_t(PROTOCORE_PCAP_GLOBAL_HDR_LEN, Pcap.n);
 
     static const uint8_t WANT[24] = {
-        0xd4, 0xc3, 0xb2, 0xa1,       // magic 0xa1b2c3d4, little-endian
-        0x02, 0x00, 0x04, 0x00,       // version 2.4
-        0x00, 0x00, 0x00, 0x00,       // thiszone: GMT
-        0x00, 0x00, 0x00, 0x00,       // sigfigs
-        0xff, 0xff, 0x00, 0x00,       // snaplen 65535
-        105,  0x00, 0x00, 0x00,       // network: LINKTYPE_IEEE802_11
+        0xd4, 0xc3, 0xb2, 0xa1, // magic 0xa1b2c3d4, little-endian
+        0x02, 0x00, 0x04, 0x00, // version 2.4
+        0x00, 0x00, 0x00, 0x00, // thiszone: GMT
+        0x00, 0x00, 0x00, 0x00, // sigfigs
+        0xff, 0xff, 0x00, 0x00, // snaplen 65535
+        105,  0x00, 0x00, 0x00, // network: LINKTYPE_IEEE802_11
     };
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, out, sizeof(WANT));
     TEST_ASSERT_EQUAL_INT(105, PROTOCORE_DLT_IEEE802_11);

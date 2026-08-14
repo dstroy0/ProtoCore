@@ -93,7 +93,8 @@ void test_frame_round_trip(void)
     // The version nibble is carried independently of the type field.
     uint8_t buf[32];
     C37118Frame f;
-    size_t n = protocore_c37118_build_frame(buf, sizeof(buf), C37118_TYPE_DATA, C37118_VERSION_2005, 1u, 0u, 0u, NULL, 0);
+    size_t n =
+        protocore_c37118_build_frame(buf, sizeof(buf), C37118_TYPE_DATA, C37118_VERSION_2005, 1u, 0u, 0u, NULL, 0);
     TEST_ASSERT_EQUAL_UINT(16u, n);
     TEST_ASSERT_TRUE(protocore_c37118_parse_frame(buf, n, &f));
     TEST_ASSERT_EQUAL_UINT8(C37118_VERSION_2005, f.version);
@@ -185,8 +186,8 @@ void test_build_refuses_an_undersized_buffer(void)
     TEST_ASSERT_EQUAL_UINT(0u, protocore_c37118_build_frame(NULL, sizeof(buf), C37118_TYPE_DATA, C37118_VERSION_2011,
                                                             1u, 0u, 0u, NULL, 0));
     // A payload pointer is required whenever a payload length is given.
-    TEST_ASSERT_EQUAL_UINT(0u, protocore_c37118_build_frame(buf, sizeof(buf), C37118_TYPE_DATA, C37118_VERSION_2011, 1u,
-                                                            0u, 0u, NULL, 4));
+    TEST_ASSERT_EQUAL_UINT(
+        0u, protocore_c37118_build_frame(buf, sizeof(buf), C37118_TYPE_DATA, C37118_VERSION_2011, 1u, 0u, 0u, NULL, 4));
     TEST_ASSERT_EQUAL_UINT(18u, protocore_c37118_build_command(buf, 18u, 1u, 0u, 0u, C37118_CMD_DATA_ON));
 }
 
@@ -237,9 +238,9 @@ void test_stat_all_ones(void)
     TEST_ASSERT_TRUE(s.trigger);
     TEST_ASSERT_TRUE(s.config_change);
     TEST_ASSERT_TRUE(s.data_modified);
-    TEST_ASSERT_EQUAL_UINT8(7u, s.time_quality);       // bits 8-6
-    TEST_ASSERT_EQUAL_UINT8(3u, s.unlocked_time);      // bits 5-4
-    TEST_ASSERT_EQUAL_UINT8(0x0Fu, s.trigger_reason);  // bits 3-0
+    TEST_ASSERT_EQUAL_UINT8(7u, s.time_quality);      // bits 8-6
+    TEST_ASSERT_EQUAL_UINT8(3u, s.unlocked_time);     // bits 5-4
+    TEST_ASSERT_EQUAL_UINT8(0x0Fu, s.trigger_reason); // bits 3-0
 }
 
 // One bit at a time: each flag moves alone, so no two share a mask.

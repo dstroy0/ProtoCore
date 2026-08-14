@@ -33,7 +33,8 @@ void dbench_run(void)
     static uint8_t sd1_frame[8];
     static uint8_t sd2_frame[16];
     size_t sd1_len = protocore_pb_build_sd1(0x03, 0x02, PB_FC_REQUEST_FDL_STATUS, sd1_frame, sizeof(sd1_frame));
-    size_t sd2_len = protocore_pb_build_sd2(0x05, 0x02, PB_FC_SRD_HIGH, data3, sizeof(data3), sd2_frame, sizeof(sd2_frame));
+    size_t sd2_len =
+        protocore_pb_build_sd2(0x05, 0x02, PB_FC_SRD_HIGH, data3, sizeof(data3), sd2_frame, sizeof(sd2_frame));
 
     for (;;)
     {
@@ -48,7 +49,8 @@ void dbench_run(void)
         DBENCH_OP("protocore_pb_build_sd2 (3B data)", 50000,
                   sink += protocore_pb_build_sd2(0x05, 0x02, PB_FC_SRD_HIGH, data3, sizeof(data3), out, sizeof(out)));
         DBENCH_OP("protocore_pb_parse SD1", 100000, sink += protocore_pb_parse(sd1_frame, sd1_len, &tg) ? 1 : 0);
-        DBENCH_OP("protocore_pb_parse SD2 (3B data)", 100000, sink += protocore_pb_parse(sd2_frame, sd2_len, &tg) ? 1 : 0);
+        DBENCH_OP("protocore_pb_parse SD2 (3B data)", 100000,
+                  sink += protocore_pb_parse(sd2_frame, sd2_len, &tg) ? 1 : 0);
 
         (void)sink;
         (void)sink8;

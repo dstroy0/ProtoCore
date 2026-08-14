@@ -54,12 +54,12 @@ void test_plus_decodes_to_a_space(void)
 // value". Each expectation below is that octet's US-ASCII code written in hex.
 void test_a_triplet_is_the_octets_numeric_value(void)
 {
-    TEST_ASSERT_EQUAL_STRING("A", field("k=%41", "k"));  // 'A' is 0x41
-    TEST_ASSERT_EQUAL_STRING("~", field("k=%7E", "k"));  // '~' is 0x7E
-    TEST_ASSERT_EQUAL_STRING("%", field("k=%25", "k"));  // '%' is 0x25, so an escaped percent survives
-    TEST_ASSERT_EQUAL_STRING("&", field("k=%26", "k"));  // '&' is 0x26, and it does not split the field
-    TEST_ASSERT_EQUAL_STRING("=", field("k=%3D", "k"));  // '=' is 0x3D
-    TEST_ASSERT_EQUAL_STRING("+", field("k=%2B", "k"));  // '+' is 0x2B, so a literal plus is not a space
+    TEST_ASSERT_EQUAL_STRING("A", field("k=%41", "k"));           // 'A' is 0x41
+    TEST_ASSERT_EQUAL_STRING("~", field("k=%7E", "k"));           // '~' is 0x7E
+    TEST_ASSERT_EQUAL_STRING("%", field("k=%25", "k"));           // '%' is 0x25, so an escaped percent survives
+    TEST_ASSERT_EQUAL_STRING("&", field("k=%26", "k"));           // '&' is 0x26, and it does not split the field
+    TEST_ASSERT_EQUAL_STRING("=", field("k=%3D", "k"));           // '=' is 0x3D
+    TEST_ASSERT_EQUAL_STRING("+", field("k=%2B", "k"));           // '+' is 0x2B, so a literal plus is not a space
     TEST_ASSERT_EQUAL_STRING("p@ss!", field("k=p%40ss%21", "k")); // '@' 0x40, '!' 0x21
 }
 

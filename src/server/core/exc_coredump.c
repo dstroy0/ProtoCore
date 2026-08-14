@@ -99,9 +99,9 @@ void protocore_exc_cd_read(struct ExcDecoderInternal *restrict ctx)
         return;
     }
     // The seam refuses a range that runs past the image rather than returning whatever follows it.
-    ctx->ns->ok =
-        protocore_platform_crashdump_read((uint32_t)ctx->ns->dump.offset, (uint8_t *)buf, (uint32_t)len) ? PROTO_TRUE
-                                                                                                        : PROTO_FALSE;
+    ctx->ns->ok = protocore_platform_crashdump_read((uint32_t)ctx->ns->dump.offset, (uint8_t *)buf, (uint32_t)len)
+                      ? PROTO_TRUE
+                      : PROTO_FALSE;
 }
 
 void protocore_exc_cd_save(struct ExcDecoderInternal *restrict ctx)

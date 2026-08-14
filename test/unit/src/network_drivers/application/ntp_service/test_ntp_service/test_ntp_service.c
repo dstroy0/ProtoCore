@@ -153,9 +153,9 @@ void test_a_packet_that_is_not_a_server_reply_is_ignored(void)
     const protocore_net_host_dgram *d = ask(SERVER_IP);
     const uint32_t cookie = cookie_of(d);
 
-    static const uint8_t NOT_SERVER[] = {PROTOCORE_NTP_MODE_RESERVED,  PROTOCORE_NTP_MODE_SYM_ACTIVE,
+    static const uint8_t NOT_SERVER[] = {PROTOCORE_NTP_MODE_RESERVED,    PROTOCORE_NTP_MODE_SYM_ACTIVE,
                                          PROTOCORE_NTP_MODE_SYM_PASSIVE, PROTOCORE_NTP_MODE_CLIENT,
-                                         PROTOCORE_NTP_MODE_BROADCAST, PROTOCORE_NTP_MODE_CONTROL,
+                                         PROTOCORE_NTP_MODE_BROADCAST,   PROTOCORE_NTP_MODE_CONTROL,
                                          PROTOCORE_NTP_MODE_PRIVATE};
     for (size_t i = 0; i < sizeof NOT_SERVER / sizeof NOT_SERVER[0]; i++)
     {

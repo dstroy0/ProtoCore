@@ -56,8 +56,8 @@ void test_leading_slash_is_not_a_segment(void)
 {
     uint8_t with[64];
     uint8_t without[64];
-    const size_t a = protocore_wisun_build_coap(WISUN_COAP_CON, WISUN_COAP_GET, 0x7d34, NULL, 0, "/temperature", NULL, 0,
-                                                with, sizeof(with));
+    const size_t a = protocore_wisun_build_coap(WISUN_COAP_CON, WISUN_COAP_GET, 0x7d34, NULL, 0, "/temperature", NULL,
+                                                0, with, sizeof(with));
     const size_t b = protocore_wisun_build_coap(WISUN_COAP_CON, WISUN_COAP_GET, 0x7d34, NULL, 0, "temperature", NULL, 0,
                                                 without, sizeof(without));
     TEST_ASSERT_EQUAL_size_t(b, a);
@@ -69,11 +69,11 @@ void test_leading_slash_is_not_a_segment(void)
 void test_type_field_selects_confirmable_or_not(void)
 {
     uint8_t out[32];
-    TEST_ASSERT_EQUAL_size_t(4, protocore_wisun_build_coap(WISUN_COAP_CON, WISUN_COAP_GET, 1, NULL, 0, NULL, NULL, 0,
-                                                           out, sizeof(out)));
+    TEST_ASSERT_EQUAL_size_t(
+        4, protocore_wisun_build_coap(WISUN_COAP_CON, WISUN_COAP_GET, 1, NULL, 0, NULL, NULL, 0, out, sizeof(out)));
     TEST_ASSERT_EQUAL_HEX8(0x40, out[0]);
-    TEST_ASSERT_EQUAL_size_t(4, protocore_wisun_build_coap(WISUN_COAP_NON, WISUN_COAP_GET, 1, NULL, 0, NULL, NULL, 0,
-                                                           out, sizeof(out)));
+    TEST_ASSERT_EQUAL_size_t(
+        4, protocore_wisun_build_coap(WISUN_COAP_NON, WISUN_COAP_GET, 1, NULL, 0, NULL, NULL, 0, out, sizeof(out)));
     TEST_ASSERT_EQUAL_HEX8(0x50, out[0]);
 
     // The method code is the second octet: 0.01 GET is 1, 0.03 PUT is 3.
@@ -103,12 +103,12 @@ void test_token_length_and_placement(void)
     for (uint8_t tkl = 9; tkl < 16; tkl++)
     {
         uint8_t big[16] = {0};
-        TEST_ASSERT_EQUAL_size_t(0, protocore_wisun_build_coap(WISUN_COAP_CON, WISUN_COAP_GET, 1, big, tkl, "a", NULL, 0,
-                                                               out, sizeof(out)));
+        TEST_ASSERT_EQUAL_size_t(
+            0, protocore_wisun_build_coap(WISUN_COAP_CON, WISUN_COAP_GET, 1, big, tkl, "a", NULL, 0, out, sizeof(out)));
     }
     // A non-zero length with no token is refused rather than read from nothing.
-    TEST_ASSERT_EQUAL_size_t(0, protocore_wisun_build_coap(WISUN_COAP_CON, WISUN_COAP_GET, 1, NULL, 4, "a", NULL, 0, out,
-                                                           sizeof(out)));
+    TEST_ASSERT_EQUAL_size_t(
+        0, protocore_wisun_build_coap(WISUN_COAP_CON, WISUN_COAP_GET, 1, NULL, 4, "a", NULL, 0, out, sizeof(out)));
 }
 
 // RFC 7252 sec 5.10.1: each path segment is its own Uri-Path option. The first carries delta 11
@@ -126,8 +126,8 @@ void test_each_path_segment_is_its_own_option(void)
     TEST_ASSERT_EQUAL_HEX8('p', out[16]);
 
     // Three segments: one option each, the last two at delta 0.
-    const size_t m = protocore_wisun_build_coap(WISUN_COAP_CON, WISUN_COAP_GET, 42, NULL, 0, "a/b/c", NULL, 0, out,
-                                                sizeof(out));
+    const size_t m =
+        protocore_wisun_build_coap(WISUN_COAP_CON, WISUN_COAP_GET, 42, NULL, 0, "a/b/c", NULL, 0, out, sizeof(out));
     TEST_ASSERT_EQUAL_size_t(4 + 2 + 2 + 2, m);
     TEST_ASSERT_EQUAL_HEX8(0xB1, out[4]);
     TEST_ASSERT_EQUAL_HEX8('a', out[5]);
@@ -176,11 +176,11 @@ void test_payload_marker(void)
     TEST_ASSERT_EQUAL_HEX8(0xFF, out[9]);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(BODY, out + 10, 6);
 
-    const size_t m = protocore_wisun_build_coap(WISUN_COAP_CON, WISUN_COAP_PUT, 0x7d34, NULL, 0, "temp", NULL, 0, out,
-                                                sizeof(out));
+    const size_t m =
+        protocore_wisun_build_coap(WISUN_COAP_CON, WISUN_COAP_PUT, 0x7d34, NULL, 0, "temp", NULL, 0, out, sizeof(out));
     TEST_ASSERT_EQUAL_size_t(9, m); // header + option, no marker
-    TEST_ASSERT_EQUAL_size_t(0, protocore_wisun_build_coap(WISUN_COAP_CON, WISUN_COAP_PUT, 1, NULL, 0, "a", NULL, 4, out,
-                                                           sizeof(out)));
+    TEST_ASSERT_EQUAL_size_t(
+        0, protocore_wisun_build_coap(WISUN_COAP_CON, WISUN_COAP_PUT, 1, NULL, 0, "a", NULL, 4, out, sizeof(out)));
 }
 
 // A PDU that will not fit is refused whole; the builder never emits a half-formed message.
@@ -197,8 +197,8 @@ void test_build_refuses_a_short_buffer(void)
     }
     TEST_ASSERT_EQUAL_size_t(exact, protocore_wisun_build_coap(WISUN_COAP_CON, WISUN_COAP_GET, 0x7d34, NULL, 0,
                                                                "temperature", NULL, 0, out, exact));
-    TEST_ASSERT_EQUAL_size_t(0, protocore_wisun_build_coap(WISUN_COAP_CON, WISUN_COAP_GET, 1, NULL, 0, "a", NULL, 0,
-                                                           NULL, 32));
+    TEST_ASSERT_EQUAL_size_t(
+        0, protocore_wisun_build_coap(WISUN_COAP_CON, WISUN_COAP_GET, 1, NULL, 0, "a", NULL, 0, NULL, 32));
 }
 
 // Registering a node twice keeps one entry and refreshes it, and the table refuses to grow past

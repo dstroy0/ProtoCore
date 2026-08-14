@@ -175,8 +175,7 @@ void test_rfc6455_server_handshake_is_verified(void)
     // Any status other than 101 fails the connection, and so does a 101 with no Accept field.
     TEST_ASSERT_FALSE(check_response("HTTP/1.1 400 Bad Request\r\n\r\n", "s3pPLMBiTxaQ9kYGzzhZRbK+xOo="));
     TEST_ASSERT_FALSE(check_response("HTTP/1.0 100 Continue\r\n\r\n", "s3pPLMBiTxaQ9kYGzzhZRbK+xOo="));
-    TEST_ASSERT_FALSE(
-        check_response("HTTP/1.1 101 OK\r\nUpgrade: websocket\r\n\r\n", "s3pPLMBiTxaQ9kYGzzhZRbK+xOo="));
+    TEST_ASSERT_FALSE(check_response("HTTP/1.1 101 OK\r\nUpgrade: websocket\r\n\r\n", "s3pPLMBiTxaQ9kYGzzhZRbK+xOo="));
 
     // RFC 9110 sec 5.1: field names are case-insensitive, and RFC 9112 sec 5 allows optional
     // whitespace between the colon and the value.
@@ -450,9 +449,9 @@ void test_check_server_handshake_fails_closed(void)
     WsClient.check_server_handshake(WsClient.internal);
     TEST_ASSERT_FALSE(WsClient.ok);
 
-    TEST_ASSERT_FALSE(check_response("abcd", "acc"));                    // shorter than "HTTP/1.1 101"
-    TEST_ASSERT_FALSE(check_response("HTTP/1.1 101 Switching", "acc"));  // no line ending
-    TEST_ASSERT_FALSE(check_response("HTTP/1.1 101 x\r\n\r\n", NULL));   // nothing to compare against
+    TEST_ASSERT_FALSE(check_response("abcd", "acc"));                   // shorter than "HTTP/1.1 101"
+    TEST_ASSERT_FALSE(check_response("HTTP/1.1 101 Switching", "acc")); // no line ending
+    TEST_ASSERT_FALSE(check_response("HTTP/1.1 101 x\r\n\r\n", NULL));  // nothing to compare against
     TEST_ASSERT_FALSE(check_response("HTTP/1.1 101 Switching Protocols\r\nSec-WebSocket-Accept:   ", "x"));
 }
 

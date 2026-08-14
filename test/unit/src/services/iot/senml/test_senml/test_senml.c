@@ -12,8 +12,8 @@
 // character for character pins the array, the object, the label spelling, the member order and the
 // Number rendering all at once.
 
-#include "services/iot/senml/senml.h"
 #include "network_drivers/presentation/codec/cbor/cbor.h"
+#include "services/iot/senml/senml.h"
 #include <string.h>
 
 #include <unity.h>
@@ -171,14 +171,14 @@ void test_cbor_table_4_integer_map_keys(void)
     }};
     // array(1), map(6), then the six label / value pairs in the module's field order.
     static const uint8_t WANT[] = {
-        0x81,                   // array of one Record
-        0xA6,                   // map of six entries
-        0x21, 0x62, 'u', ':',   // -2 (bn), text(2) "u:"
-        0x22, 0x01,             // -3 (bt), unsigned 1
-        0x00, 0x61, 'n',        // 0 (n), text(1) "n"
-        0x01, 0x61, 'V',        // 1 (u), text(1) "V"
-        0x02, 0x02,             // 2 (v), unsigned 2
-        0x06, 0x03,             // 6 (t), unsigned 3
+        0x81,                 // array of one Record
+        0xA6,                 // map of six entries
+        0x21, 0x62, 'u', ':', // -2 (bn), text(2) "u:"
+        0x22, 0x01,           // -3 (bt), unsigned 1
+        0x00, 0x61, 'n',      // 0 (n), text(1) "n"
+        0x01, 0x61, 'V',      // 1 (u), text(1) "V"
+        0x02, 0x02,           // 2 (v), unsigned 2
+        0x06, 0x03,           // 6 (t), unsigned 3
     };
     TEST_ASSERT_EQUAL_UINT(sizeof(WANT), binary_build(PACK, 1, sizeof(g_bin)));
     TEST_ASSERT_TRUE(Senml.ok);
@@ -190,11 +190,11 @@ void test_cbor_table_4_integer_map_keys(void)
         {.name = "b", .value_kind = SENML_VALUE_BOOLEAN, .boolean_value = PROTO_TRUE},
     };
     static const uint8_t WANT_VALUES[] = {
-        0x82,                       // array of two Records
-        0xA2, 0x00, 0x61, 's',      // map(2), 0 (n), "s"
-        0x03, 0x62, 'h', 'i',       // 3 (vs), text(2) "hi"
-        0xA2, 0x00, 0x61, 'b',      // map(2), 0 (n), "b"
-        0x04, 0xF5,                 // 4 (vb), true
+        0x82,                  // array of two Records
+        0xA2, 0x00, 0x61, 's', // map(2), 0 (n), "s"
+        0x03, 0x62, 'h',  'i', // 3 (vs), text(2) "hi"
+        0xA2, 0x00, 0x61, 'b', // map(2), 0 (n), "b"
+        0x04, 0xF5,            // 4 (vb), true
     };
     TEST_ASSERT_EQUAL_UINT(sizeof(WANT_VALUES), binary_build(VALUES, 2, sizeof(g_bin)));
     TEST_ASSERT_EQUAL_UINT8_ARRAY(WANT_VALUES, g_bin, sizeof(WANT_VALUES));
@@ -264,8 +264,12 @@ void test_resolve_overrides_and_absent_time(void)
     static const SenmlRecord PACK[4] = {
         {.name = "a", .value_kind = SENML_VALUE_NUMBER, .value = 1},
         {.base_name = "x/", .name = "b", .value_kind = SENML_VALUE_NUMBER, .value = 2},
-        {.base_name = "y/", .has_base_time = PROTO_TRUE, .base_time = 100.0, .name = "c",
-         .value_kind = SENML_VALUE_NUMBER, .value = 3},
+        {.base_name = "y/",
+         .has_base_time = PROTO_TRUE,
+         .base_time = 100.0,
+         .name = "c",
+         .value_kind = SENML_VALUE_NUMBER,
+         .value = 3},
         {.name = "d", .value_kind = SENML_VALUE_NUMBER, .value = 4, .has_time = PROTO_TRUE, .time = 7},
     };
     TEST_ASSERT_EQUAL_UINT(4u, resolve(PACK, 4));

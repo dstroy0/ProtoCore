@@ -291,7 +291,7 @@ void protocore_hpack_dyn_init(HpackDynTable *t, uint32_t max_bytes)
 }
 
 proto_bool protocore_hpack_decode(HpackDynTable *t, const uint8_t *block, size_t len, char *scratch, size_t scratch_cap,
-                           HpackEmitFn emit, void *ctx)
+                                  HpackEmitFn emit, void *ctx)
 {
     size_t pos = 0;
     while (pos < len)
@@ -349,7 +349,7 @@ proto_bool protocore_hpack_decode(HpackDynTable *t, const uint8_t *block, size_t
 }
 
 size_t protocore_hpack_encode_header(uint8_t *out, size_t cap, const char *name, size_t name_len, const char *value,
-                              size_t value_len)
+                                     size_t value_len)
 {
     int name_idx = 0;
     int full_idx = 0;

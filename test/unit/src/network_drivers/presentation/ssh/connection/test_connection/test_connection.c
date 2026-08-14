@@ -5,11 +5,11 @@
 // the channel multiplexer - its window arithmetic, closing, the channel requests and the
 // pseudo-terminal one of them allocates.
 
+#include "mmgr/protostr.h" // str.len - the bounded length, since the library carries no strlen
 #include "network_drivers/presentation/ssh/connection/connection.h"
 #include <stdint.h>
-#include <unity.h>
 #include <string.h>
-#include "mmgr/protostr.h" // str.len - the bounded length, since the library carries no strlen
+#include <unity.h>
 
 // A length-prefixed string, RFC 4251 sec 5: uint32 length, then that many bytes.
 static size_t put_str(uint8_t *p, size_t off, const char *s, uint32_t n)
@@ -90,7 +90,9 @@ void setUp(void)
     protocore_ssh_channel_init(0);
     protocore_ssh_channel_set_data_cb(NULL);
 }
-void tearDown(void) {}
+void tearDown(void)
+{
+}
 
 // "The window size specifies how many bytes the other party can send before it must wait for the
 // window to be adjusted."

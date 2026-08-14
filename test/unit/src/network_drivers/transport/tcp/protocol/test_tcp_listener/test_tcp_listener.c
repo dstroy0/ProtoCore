@@ -18,9 +18,9 @@
 // event to drive it, so a test calls it with a fabricated control block.
 
 #include "network_drivers/transport/diffserv.h" // the DSCP code points the marking tests name
-#include "network_drivers/transport/tcp/tcp.h"
 #include "network_drivers/transport/tcp/protocol/protocol.h"
 #include "network_drivers/transport/tcp/server/server.h"
+#include "network_drivers/transport/tcp/tcp.h"
 #include "shared/ip/ip.h"
 #include <string.h>
 
@@ -677,7 +677,6 @@ void test_each_listener_owns_its_own_queue(void)
     TEST_ASSERT_EQUAL_INT(0, drain_events(1, got, 2)); // nothing on the other port
     TEST_ASSERT_EQUAL_INT(1, drain_events(0, got, 2));
 }
-
 
 // The runner is generated: Unity's auto/generate_test_runner.rb scans this file for
 // void test_*(void) and emits main() with every case registered, stamped with the line each test

@@ -51,8 +51,8 @@ size_t protocore_ads_build_read_state(uint8_t *buf, size_t cap, const AdsRequest
     return write_header(buf, cap, r, ADS_COMMAND_READ_STATE, 0);
 }
 
-size_t protocore_ads_build_read(uint8_t *buf, size_t cap, const AdsRequest *r, uint32_t index_group, uint32_t index_offset,
-                         uint32_t read_len)
+size_t protocore_ads_build_read(uint8_t *buf, size_t cap, const AdsRequest *r, uint32_t index_group,
+                                uint32_t index_offset, uint32_t read_len)
 {
     size_t p = write_header(buf, cap, r, ADS_COMMAND_READ, 12);
     if (!p)
@@ -65,8 +65,8 @@ size_t protocore_ads_build_read(uint8_t *buf, size_t cap, const AdsRequest *r, u
     return p;
 }
 
-size_t protocore_ads_build_write(uint8_t *buf, size_t cap, const AdsRequest *r, uint32_t index_group, uint32_t index_offset,
-                          const uint8_t *data, uint32_t len)
+size_t protocore_ads_build_write(uint8_t *buf, size_t cap, const AdsRequest *r, uint32_t index_group,
+                                 uint32_t index_offset, const uint8_t *data, uint32_t len)
 {
     if (len && !data)
     {
@@ -89,7 +89,8 @@ size_t protocore_ads_build_write(uint8_t *buf, size_t cap, const AdsRequest *r, 
 }
 
 size_t protocore_ads_build_read_write(uint8_t *buf, size_t cap, const AdsRequest *r, uint32_t index_group,
-                               uint32_t index_offset, uint32_t read_len, const uint8_t *write_data, uint32_t write_len)
+                                      uint32_t index_offset, uint32_t read_len, const uint8_t *write_data,
+                                      uint32_t write_len)
 {
     if (write_len && !write_data)
     {
@@ -113,7 +114,7 @@ size_t protocore_ads_build_read_write(uint8_t *buf, size_t cap, const AdsRequest
 }
 
 size_t protocore_ads_build_write_control(uint8_t *buf, size_t cap, const AdsRequest *r, uint16_t protocore_ads_state,
-                                  uint16_t device_state, const uint8_t *data, uint32_t len)
+                                         uint16_t device_state, const uint8_t *data, uint32_t len)
 {
     if (len && !data)
     {
@@ -136,8 +137,8 @@ size_t protocore_ads_build_write_control(uint8_t *buf, size_t cap, const AdsRequ
 }
 
 size_t protocore_ads_build_add_notification(uint8_t *buf, size_t cap, const AdsRequest *r, uint32_t index_group,
-                                     uint32_t index_offset, uint32_t length, AdsTransMode mode, uint32_t max_delay,
-                                     uint32_t cycle_time)
+                                            uint32_t index_offset, uint32_t length, AdsTransMode mode,
+                                            uint32_t max_delay, uint32_t cycle_time)
 {
     // IndexGroup + IndexOffset + Length + TransMode + MaxDelay + CycleTime + Reserved(16) = 40.
     size_t p = write_header(buf, cap, r, ADS_COMMAND_ADD_NOTIFICATION, 40);
@@ -258,7 +259,8 @@ proto_bool protocore_ads_parse_read_device_info(const uint8_t *data, size_t data
     return PROTO_TRUE;
 }
 
-proto_bool protocore_ads_parse_add_notification(const uint8_t *data, size_t data_len, uint32_t *result, uint32_t *handle)
+proto_bool protocore_ads_parse_add_notification(const uint8_t *data, size_t data_len, uint32_t *result,
+                                                uint32_t *handle)
 {
     if (!data || !result || !handle || data_len < 8)
     {
@@ -270,7 +272,7 @@ proto_bool protocore_ads_parse_add_notification(const uint8_t *data, size_t data
 }
 
 proto_bool protocore_ads_parse_notification(const uint8_t *data, size_t data_len, AdsNotificationSampleFn on_sample,
-                                     void *user)
+                                            void *user)
 {
     // Length(4) + Stamps(4), then per stamp: Timestamp(8) + Samples(4) + samples.
     if (!data || !on_sample || data_len < 8)

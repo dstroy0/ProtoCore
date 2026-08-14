@@ -140,7 +140,8 @@ void dbench_run(void)
                   sinku = protocore_docstore_find_str(&g_ds, "city", "paris", NULL, NULL));
 
         // Same scan, top-level integer field comparison.
-        DBENCH_OP("protocore_docstore_find_int (age==30)", 2000, sinku = protocore_docstore_find_int(&g_ds, "age", 30, NULL, NULL));
+        DBENCH_OP("protocore_docstore_find_int (age==30)", 2000,
+                  sinku = protocore_docstore_find_int(&g_ds, "age", 30, NULL, NULL));
 
         (void)sinkb;
         (void)sinkl;

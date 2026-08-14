@@ -44,8 +44,8 @@ void test_ieee754_binary64_field_layout(void)
 
     TEST_ASSERT_EQUAL_UINT(63, PROTO_DBL_SIGN_SHIFT);
     TEST_ASSERT_EQUAL_UINT(52, PROTO_DBL_MANT_BITS);
-    TEST_ASSERT_EQUAL_HEX64(0x7FFull, PROTO_DBL_EXP_ALL);  // 11 bits, all set
-    TEST_ASSERT_EQUAL_INT(1023, PROTO_DBL_BIAS);           // sec 3.3: bias = 2^(w-1) - 1
+    TEST_ASSERT_EQUAL_HEX64(0x7FFull, PROTO_DBL_EXP_ALL); // 11 bits, all set
+    TEST_ASSERT_EQUAL_INT(1023, PROTO_DBL_BIAS);          // sec 3.3: bias = 2^(w-1) - 1
     TEST_ASSERT_EQUAL_HEX64(PROTO_DBL_EXP_MASK, PROTO_DBL_EXP_ALL << PROTO_DBL_MANT_BITS);
     TEST_ASSERT_EQUAL_HEX64(PROTO_DBL_SIGN_MASK, PROTO_DBL_SIGN_ONE << PROTO_DBL_SIGN_SHIFT);
 }
@@ -206,8 +206,8 @@ void test_a_walking_significand_bit_survives(void)
         proto_u64 cases[4];
         cases[0] = dbl.merge(0ull, 1023ull, one);
         cases[1] = dbl.merge(1ull, 1023ull, PROTO_DBL_MANT_MASK & ~one);
-        cases[2] = dbl.merge(0ull, 0ull, one);                   // subnormal
-        cases[3] = dbl.merge(0ull, PROTO_DBL_EXP_ALL, one);      // NaN payload
+        cases[2] = dbl.merge(0ull, 0ull, one);              // subnormal
+        cases[3] = dbl.merge(0ull, PROTO_DBL_EXP_ALL, one); // NaN payload
         for (unsigned c = 0; c < 4u; c++)
         {
             TEST_ASSERT_EQUAL_HEX64(cases[c], split_and_merge(dbl.from_bits(cases[c])));
@@ -219,10 +219,10 @@ void test_a_walking_significand_bit_survives(void)
 // a shift off by one carries a neighbour's bit in where a mostly-zero significand carries a zero.
 void test_repeating_significand_patterns_survive(void)
 {
-    static const proto_u64 PATTERNS[] = {
-        0x0000000000000ull, 0xFFFFFFFFFFFFFull, 0x5555555555555ull, 0xAAAAAAAAAAAAAull,
-        0x3333333333333ull, 0xCCCCCCCCCCCCCull, 0x0F0F0F0F0F0F0ull, 0xF0F0F0F0F0F0Full,
-        0x1111111111111ull, 0xEEEEEEEEEEEEEull, 0x00FF00FF00FF0ull, 0xFF00FF00FF00Full};
+    static const proto_u64 PATTERNS[] = {0x0000000000000ull, 0xFFFFFFFFFFFFFull, 0x5555555555555ull,
+                                         0xAAAAAAAAAAAAAull, 0x3333333333333ull, 0xCCCCCCCCCCCCCull,
+                                         0x0F0F0F0F0F0F0ull, 0xF0F0F0F0F0F0Full, 0x1111111111111ull,
+                                         0xEEEEEEEEEEEEEull, 0x00FF00FF00FF0ull, 0xFF00FF00FF00Full};
     static const proto_u64 KNEES[] = {0ull, 1ull, 2ull, 1022ull, 1023ull, 1024ull, 2045ull, 2046ull, 2047ull};
 
     for (unsigned p = 0; p < sizeof(PATTERNS) / sizeof(PATTERNS[0]); p++)

@@ -25,27 +25,26 @@ void tearDown(void)
 // SH(NA)-080008 appendix 7, "Device reading", binary code / 3E frame: batch read in word units
 // (command 0401) of 2 points from M100, monitoring timer 0010h (16 x 250 ms = 4 seconds).
 static const uint8_t MITSUBISHI_REQ[MELSEC_3E_READ_REQ_LEN] = {
-    0x50, 0x00,             // subheader (request)
-    0x00,                   // network number
-    0xFF,                   // PC number
-    0xFF, 0x03,             // request destination module I/O number 03FFh
-    0x00,                   // request destination module station number
-    0x0C, 0x00,             // request data length = 12
-    0x10, 0x00,             // monitoring timer 0010h
-    0x01, 0x04,             // command 0401h
-    0x00, 0x00,             // subcommand 0000h
-    0x64, 0x00, 0x00,       // head device number 100
-    0x90,                   // device code M
-    0x02, 0x00,             // number of device points = 2
+    0x50, 0x00,       // subheader (request)
+    0x00,             // network number
+    0xFF,             // PC number
+    0xFF, 0x03,       // request destination module I/O number 03FFh
+    0x00,             // request destination module station number
+    0x0C, 0x00,       // request data length = 12
+    0x10, 0x00,       // monitoring timer 0010h
+    0x01, 0x04,       // command 0401h
+    0x00, 0x00,       // subcommand 0000h
+    0x64, 0x00, 0x00, // head device number 100
+    0x90,             // device code M
+    0x02, 0x00,       // number of device points = 2
 };
 
 // The published response to that request: end code 0000h and 4 octets of read data.
 static const uint8_t MITSUBISHI_RES[] = {
-    0xD0, 0x00,             // subheader (response)
-    0x00, 0xFF, 0xFF, 0x03, 0x00,
-    0x06, 0x00,             // response data length = 6 (end code 2 + data 4)
-    0x00, 0x00,             // end code 0000h
-    0x34, 0x12, 0x02, 0x00, // read data
+    0xD0, 0x00,                               // subheader (response)
+    0x00, 0xFF, 0xFF, 0x03, 0x00, 0x06, 0x00, // response data length = 6 (end code 2 + data 4)
+    0x00, 0x00,                               // end code 0000h
+    0x34, 0x12, 0x02, 0x00,                   // read data
 };
 
 void test_mitsubishi_batch_read_example(void)
@@ -147,8 +146,8 @@ void test_batch_write_command_and_length(void)
     uint8_t rd[64];
     TEST_ASSERT_EQUAL_UINT(MELSEC_3E_READ_REQ_LEN,
                            protocore_melsec_build_read(rd, sizeof(rd), MELSEC_DEV_D, 100, 2, 0x0010));
-    TEST_ASSERT_EQUAL_HEX8_ARRAY(rd, buf, 7);            // subheader + access route
-    TEST_ASSERT_EQUAL_HEX8_ARRAY(rd + 15, buf + 15, 6);  // head device + code + points
+    TEST_ASSERT_EQUAL_HEX8_ARRAY(rd, buf, 7);           // subheader + access route
+    TEST_ASSERT_EQUAL_HEX8_ARRAY(rd + 15, buf + 15, 6); // head device + code + points
 }
 
 // SH(NA)-080008 chapter 5.3: a request with no write data is still a well-formed frame, and its
@@ -197,9 +196,8 @@ void test_response_subheader_is_checked(void)
 void test_error_end_code_response(void)
 {
     static const uint8_t ERR[] = {
-        0xD0, 0x00, 0x00, 0xFF, 0xFF, 0x03, 0x00,
-        0x02, 0x00, // response data length = 2 (the end code only)
-        0x51, 0xC0, // end code C051h
+        0xD0, 0x00, 0x00, 0xFF, 0xFF, 0x03, 0x00, 0x02, 0x00, // response data length = 2 (the end code only)
+        0x51, 0xC0,                                           // end code C051h
     };
     MelsecResponse r;
     TEST_ASSERT_TRUE(protocore_melsec_parse_response(ERR, sizeof(ERR), &r));
@@ -243,8 +241,8 @@ void test_builders_refuse_bad_arguments(void)
     }
     TEST_ASSERT_EQUAL_UINT(0u, protocore_melsec_build_read(NULL, sizeof(buf), MELSEC_DEV_D, 0, 1, 0));
 
-    TEST_ASSERT_EQUAL_UINT(0u, protocore_melsec_build_write(buf, MELSEC_3E_READ_REQ_LEN + 3, MELSEC_DEV_D, 0, 2, 0,
-                                                            DATA, sizeof(DATA)));
+    TEST_ASSERT_EQUAL_UINT(
+        0u, protocore_melsec_build_write(buf, MELSEC_3E_READ_REQ_LEN + 3, MELSEC_DEV_D, 0, 2, 0, DATA, sizeof(DATA)));
     TEST_ASSERT_EQUAL_UINT(0u, protocore_melsec_build_write(buf, sizeof(buf), MELSEC_DEV_D, 0, 2, 0, NULL, 4));
     // the request-length field is 16 bits, so the write data cannot exceed 0xFFFF minus the fixed 12
     TEST_ASSERT_EQUAL_UINT(0u, protocore_melsec_build_write(buf, sizeof(buf), MELSEC_DEV_D, 0, 2, 0, DATA,

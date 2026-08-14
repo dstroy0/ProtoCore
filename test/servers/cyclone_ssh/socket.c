@@ -16,9 +16,9 @@
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 
+#include <sys/protocore_types.h>
 #include <sys/select.h>
 #include <sys/socket.h>
-#include <sys/protocore_types.h>
 #include <unistd.h>
 
 #include "core/net.h"

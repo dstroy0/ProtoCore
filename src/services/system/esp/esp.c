@@ -34,8 +34,9 @@ static void esp_nonce(uint8_t nonce[PROTOCORE_AESGCM_IV_LEN], const uint8_t *sal
 #define PROTOCORE_ESP_CT_OFF (PROTOCORE_ESP_HDR_LEN + PROTOCORE_ESP_IV_LEN)
 
 size_t protocore_esp_gcm_encapsulate(uint32_t spi, uint32_t seq, const uint8_t key[PROTOCORE_ESP_KEY_LEN],
-                              const uint8_t salt[PROTOCORE_ESP_SALT_LEN], const uint8_t iv[PROTOCORE_ESP_IV_LEN], uint8_t next_header,
-                              const uint8_t *payload, size_t payload_len, uint8_t *out, size_t out_cap)
+                                     const uint8_t salt[PROTOCORE_ESP_SALT_LEN], const uint8_t iv[PROTOCORE_ESP_IV_LEN],
+                                     uint8_t next_header, const uint8_t *payload, size_t payload_len, uint8_t *out,
+                                     size_t out_cap)
 {
     if (!key || !salt || !iv || !out || (payload_len && !payload))
     {
@@ -76,7 +77,8 @@ size_t protocore_esp_gcm_encapsulate(uint32_t spi, uint32_t seq, const uint8_t k
         // ~9,200-cycle lifecycle documented in aesgcm.h - hoist the context into session state if it
         // ever shows up in a profile.
         size_t mark = protocore_secure_mark();
-        struct protocore_aesgcm_key *gcm = protocore_aesgcm_key_init(protocore_secure_span(PROTOCORE_WORK_AESGCM, 8).buf, key);
+        struct protocore_aesgcm_key *gcm =
+            protocore_aesgcm_key_init(protocore_secure_span(PROTOCORE_WORK_AESGCM, 8).buf, key);
         protocore_aesgcm_seal(gcm, nonce, out, PROTOCORE_ESP_HDR_LEN, pt, pt_len, pt, pt + pt_len);
         protocore_aesgcm_key_wipe(gcm);
         protocore_secure_release(mark);
@@ -84,9 +86,10 @@ size_t protocore_esp_gcm_encapsulate(uint32_t spi, uint32_t seq, const uint8_t k
     return total;
 }
 
-proto_bool protocore_esp_gcm_decapsulate(const uint8_t key[PROTOCORE_ESP_KEY_LEN], const uint8_t salt[PROTOCORE_ESP_SALT_LEN],
-                                  uint8_t *packet, size_t len, uint32_t *spi_out, uint32_t *seq_out,
-                                  uint8_t *next_header_out, const uint8_t **payload_out, size_t *payload_len_out)
+proto_bool protocore_esp_gcm_decapsulate(const uint8_t key[PROTOCORE_ESP_KEY_LEN],
+                                         const uint8_t salt[PROTOCORE_ESP_SALT_LEN], uint8_t *packet, size_t len,
+                                         uint32_t *spi_out, uint32_t *seq_out, uint8_t *next_header_out,
+                                         const uint8_t **payload_out, size_t *payload_len_out)
 {
     if (!key || !salt || !packet || !payload_out || !payload_len_out)
     {
@@ -111,7 +114,8 @@ proto_bool protocore_esp_gcm_decapsulate(const uint8_t key[PROTOCORE_ESP_KEY_LEN
         // ~9,200-cycle lifecycle documented in aesgcm.h - hoist the context into session state if it
         // ever shows up in a profile.
         size_t mark = protocore_secure_mark();
-        struct protocore_aesgcm_key *gcm = protocore_aesgcm_key_init(protocore_secure_span(PROTOCORE_WORK_AESGCM, 8).buf, key);
+        struct protocore_aesgcm_key *gcm =
+            protocore_aesgcm_key_init(protocore_secure_span(PROTOCORE_WORK_AESGCM, 8).buf, key);
         ok = protocore_aesgcm_open(gcm, nonce, packet, PROTOCORE_ESP_HDR_LEN, ct, ct_len, tag, ct); // AAD = SPI | Seq
         protocore_aesgcm_key_wipe(gcm);
         protocore_secure_release(mark);

@@ -79,8 +79,8 @@ int main(void)
         volatile size_t sink = 0;
         double ns = 0.0;
         HBENCH_NS(5000000,
-                  sink += protocore_npdu_build(npdu, sizeof(npdu), true, NPDU_PRIO_NORMAL, true, 100, dadr, 2, 255, apdu,
-                                        sizeof(apdu)),
+                  sink += protocore_npdu_build(npdu, sizeof(npdu), true, NPDU_PRIO_NORMAL, true, 100, dadr, 2, 255,
+                                               apdu, sizeof(apdu)),
                   ns);
         hbench_row("bacnet", "protocore_npdu_build", ns, (double)npdu_len);
         (void)sink;

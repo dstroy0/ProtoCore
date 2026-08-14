@@ -10,12 +10,12 @@
 
 #if PROTOCORE_ENABLE_HTTP3
 
-#include "core_setup/board_profiles/protocore_platform.h" // protocore_platform_rand_u32: the device TRNG
-#include "mmgr/protostr.h"                                // str: the bounded-run walks
-#include "mmgr/rawmemcpy.h"                               // raw.read: each field moves into the slot
-#include "network_drivers/presentation/http/http.h"       // Http.match_and_execute
-#include "network_drivers/transport/tcp/protocol/protocol.h"  // ConnPool: the reserved dispatch slot
-#include "protocore.h"                                    // http_pool, PROTOCORE_H3_DISPATCH_SLOT, http_reset
+#include "core_setup/board_profiles/protocore_platform.h"    // protocore_platform_rand_u32: the device TRNG
+#include "mmgr/protostr.h"                                   // str: the bounded-run walks
+#include "mmgr/rawmemcpy.h"                                  // raw.read: each field moves into the slot
+#include "network_drivers/presentation/http/http.h"          // Http.match_and_execute
+#include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the reserved dispatch slot
+#include "protocore.h"                                       // http_pool, PROTOCORE_H3_DISPATCH_SLOT, http_reset
 
 /**
  * @brief The bridge's state and the calls that reach it - what H3ServerNs points at.
@@ -57,7 +57,8 @@ static void rng(struct H3ServerInternal *restrict ctx)
 // so send_text()/send_empty() stay protocol-agnostic.
 static proto_bool protocore_h3_resp_sink(uint8_t slot, int code, const char *content_type, const char *body, size_t len)
 {
-    return protocore_quic_server_respond(http_h3_conn_id[slot], http_h3_stream[slot], code, content_type, (const uint8_t *)body, len);
+    return protocore_quic_server_respond(http_h3_conn_id[slot], http_h3_stream[slot], code, content_type,
+                                         (const uint8_t *)body, len);
 }
 
 static void request(struct H3ServerInternal *restrict ctx)
@@ -143,7 +144,8 @@ static void request(struct H3ServerInternal *restrict ctx)
     ConnPool.set_state(ConnPool.internal); // reserved slot: no bitmask bit (slot >= MAX_CONNS)
 
     Http.slot = slot;
-    Http.match_and_execute(Http.internal); // -> handler -> send_text() -> protocore_resp_sink -> protocore_quic_server_respond()
+    Http.match_and_execute(
+        Http.internal); // -> handler -> send_text() -> protocore_resp_sink -> protocore_quic_server_respond()
 
     // Release the dispatch slot for the next request (a no-response handler simply leaves the stream open).
     http_h3[slot] = 0;

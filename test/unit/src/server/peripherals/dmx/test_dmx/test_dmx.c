@@ -35,9 +35,8 @@ void tearDown(void)
 //   23 PDL 0x01   24 PD 0x04 (STATUS_ERROR)   25-26 Checksum 0x066A
 void test_e120_table_6_6_checksum_example(void)
 {
-    static const uint8_t WANT[27] = {0xCC, 0x01, 0x19, 0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC,
-                                     0xCB, 0xA9, 0x87, 0x65, 0x43, 0x21, 0x00, 0x01, 0x00,
-                                     0x00, 0x00, 0x20, 0x00, 0x30, 0x01, 0x04, 0x06, 0x6A};
+    static const uint8_t WANT[27] = {0xCC, 0x01, 0x19, 0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xCB, 0xA9, 0x87, 0x65, 0x43,
+                                     0x21, 0x00, 0x01, 0x00, 0x00, 0x00, 0x20, 0x00, 0x30, 0x01, 0x04, 0x06, 0x6A};
     static const uint8_t PD[1] = {0x04};
 
     RdmPacket p;
@@ -207,9 +206,8 @@ void test_e120_table_7_1_discovery_response_encoding(void)
 void test_e120_table_7_2_discovery_response_decoding(void)
 {
     // The Table 7-1 response for 0x123456789ABC, written out rather than rebuilt.
-    static const uint8_t RESP[24] = {0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xAA,
-                                     0xBA, 0x57, 0xBE, 0x75, 0xFE, 0x57, 0xFA, 0x7D,
-                                     0xBA, 0xDF, 0xBE, 0xFD, 0xAA, 0x5D, 0xEE, 0x75};
+    static const uint8_t RESP[24] = {0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xAA, 0xBA, 0x57, 0xBE, 0x75,
+                                     0xFE, 0x57, 0xFA, 0x7D, 0xBA, 0xDF, 0xBE, 0xFD, 0xAA, 0x5D, 0xEE, 0x75};
     uint64_t uid = 0u;
     TEST_ASSERT_TRUE(protocore_rdm_decode_disc_response(RESP, sizeof(RESP), &uid));
     TEST_ASSERT_EQUAL_HEX64(0x123456789ABCULL, uid);
@@ -290,15 +288,15 @@ void test_e120_device_info_block(void)
     in.sub_device_count = 0u;
     in.sensor_count = 2u;
 
-    static const uint8_t WANT[19] = {0x01, 0x00,                   // protocol version 1.0
-                                     0x12, 0x34,                   // device model id
-                                     0x01, 0x00,                   // product category
-                                     0x0A, 0x0B, 0x0C, 0x0D,       // software version id
-                                     0x00, 0x03,                   // DMX512 footprint
-                                     0x01, 0x04,                   // personality: current, count
-                                     0x00, 0x64,                   // DMX512 start address 100
-                                     0x00, 0x00,                   // sub-device count
-                                     0x02};                        // sensor count
+    static const uint8_t WANT[19] = {0x01, 0x00,             // protocol version 1.0
+                                     0x12, 0x34,             // device model id
+                                     0x01, 0x00,             // product category
+                                     0x0A, 0x0B, 0x0C, 0x0D, // software version id
+                                     0x00, 0x03,             // DMX512 footprint
+                                     0x01, 0x04,             // personality: current, count
+                                     0x00, 0x64,             // DMX512 start address 100
+                                     0x00, 0x00,             // sub-device count
+                                     0x02};                  // sensor count
     uint8_t pd[24];
     TEST_ASSERT_EQUAL_size_t(19u, protocore_rdm_build_device_info(pd, sizeof(pd), &in));
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, pd, 19u);

@@ -31,10 +31,11 @@ int main(void)
     const char *name = "et200sp";
     uint8_t blocks[64];
     size_t blen = protocore_pn_dcp_block(PN_DCP_OPT_DEVICE, PN_DCP_SUB_DEV_NAME_OF_STATION, (const uint8_t *)name,
-                                  strlen(name), blocks, sizeof(blocks));
+                                         strlen(name), blocks, sizeof(blocks));
     uint8_t hdr[16];
-    size_t hlen = protocore_pn_dcp_header(PN_FRAMEID_DCP_IDENT_RES, PN_DCP_SERVICE_IDENTIFY, PN_DCP_TYPE_RESPONSE_SUCCESS,
-                                   0x12345678u, 0, (uint16_t)blen, hdr, sizeof(hdr));
+    size_t hlen =
+        protocore_pn_dcp_header(PN_FRAMEID_DCP_IDENT_RES, PN_DCP_SERVICE_IDENTIFY, PN_DCP_TYPE_RESPONSE_SUCCESS,
+                                0x12345678u, 0, (uint16_t)blen, hdr, sizeof(hdr));
 
     hbench_header();
 
@@ -45,8 +46,8 @@ int main(void)
         double ns = 0.0;
         HBENCH_NS(5000000,
                   sink += protocore_pn_dcp_header(PN_FRAMEID_DCP_IDENT_RES, PN_DCP_SERVICE_IDENTIFY,
-                                           PN_DCP_TYPE_RESPONSE_SUCCESS, 0x12345678u, 0, (uint16_t)blen, buf,
-                                           sizeof(buf)),
+                                                  PN_DCP_TYPE_RESPONSE_SUCCESS, 0x12345678u, 0, (uint16_t)blen, buf,
+                                                  sizeof(buf)),
                   ns);
         hbench_row("profinet", "dcp_header (build)", ns, (double)hlen);
         (void)sink;

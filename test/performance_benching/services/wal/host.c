@@ -6,12 +6,11 @@
 // each hot op over a RAM-backed device, so combined with the measured SD I/O envelope (section 1) it shows
 // where the real-world cost lives (spoiler: the stores are I/O-bound, the CPU cost is tiny). Build + run:
 //   gcc -O2 -std=c11 -I. -Isrc -Itest/mocks -Itest/support -Itest/performance_benching/common
-//   -DPROTOCORE_ENABLE_WAL=1 -DPROTOCORE_ENABLE_DBM=1 -DPROTOCORE_ENABLE_DOCSTORE=1 -DPROTOCORE_ENABLE_SQLITE=1 -DPROTOCORE_ENABLE_REDIS=1
-//   test/performance_benching/services/wal/host.c
-//   src/services/storage/wal/wal.c src/services/storage/wal/wal_store.c src/services/storage/dbm/dbm.c
-//   src/services/storage/docstore/docstore.c src/network_drivers/presentation/codec/json/json.c
-//   src/services/storage/sqlite/sqlite_format.c src/services/iot/redis_resp/redis_resp.c
-//   src/mmgr/protomem.c src/mmgr/protostr.c -o /tmp/bench_ds && /tmp/bench_ds
+//   -DPROTOCORE_ENABLE_WAL=1 -DPROTOCORE_ENABLE_DBM=1 -DPROTOCORE_ENABLE_DOCSTORE=1 -DPROTOCORE_ENABLE_SQLITE=1
+//   -DPROTOCORE_ENABLE_REDIS=1 test/performance_benching/services/wal/host.c src/services/storage/wal/wal.c
+//   src/services/storage/wal/wal_store.c src/services/storage/dbm/dbm.c src/services/storage/docstore/docstore.c
+//   src/network_drivers/presentation/codec/json/json.c src/services/storage/sqlite/sqlite_format.c
+//   src/services/iot/redis_resp/redis_resp.c src/mmgr/protomem.c src/mmgr/protostr.c -o /tmp/bench_ds && /tmp/bench_ds
 
 #include "services/iot/redis_resp/redis_resp.h"
 #include "services/storage/dbm/dbm.h"

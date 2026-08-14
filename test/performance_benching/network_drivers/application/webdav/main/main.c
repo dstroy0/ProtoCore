@@ -24,11 +24,13 @@ void dbench_run(void)
         volatile size_t sink = 0;
         static char buf[4096];
         DBENCH_OP("protocore_webdav_ms_entry (1 file)", 100000,
-                  sink += protocore_webdav_ms_entry(buf, sizeof(buf), 0, "/dav/report.txt", false, 4096, mtime, "text/plain"));
+                  sink +=
+                  protocore_webdav_ms_entry(buf, sizeof(buf), 0, "/dav/report.txt", false, 4096, mtime, "text/plain"));
         DBENCH_OP("protocore_webdav propfind (dir+2)", 100000, {
             size_t len = protocore_webdav_ms_begin(buf, sizeof(buf), 0);
             len = protocore_webdav_ms_entry(buf, sizeof(buf), len, "/dav/", true, 0, mtime, "");
-            len = protocore_webdav_ms_entry(buf, sizeof(buf), len, "/dav/sensor-log.csv", false, 12800, mtime, "text/csv");
+            len = protocore_webdav_ms_entry(buf, sizeof(buf), len, "/dav/sensor-log.csv", false, 12800, mtime,
+                                            "text/csv");
             len = protocore_webdav_ms_end(buf, sizeof(buf), len);
             sink += len;
         });

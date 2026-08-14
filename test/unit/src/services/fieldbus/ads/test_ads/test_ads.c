@@ -274,10 +274,10 @@ void test_parse_read_state_response(void)
 void test_parse_device_info_terminates_a_full_name(void)
 {
     static const uint8_t RESP[24] = {
-        0x00, 0x00, 0x00, 0x00,                         // result
-        0x03, 0x01, 0x0F, 0x10,                         // 3.1 build 0x100F = 4111
-        'T',  'w',  'i',  'n',  'C',  'A',  'T',  '3',  // name, all 16 octets used
-        'P',  'l',  'c',  'R',  'u',  'n',  't',  'm',
+        0x00, 0x00, 0x00, 0x00,                     // result
+        0x03, 0x01, 0x0F, 0x10,                     // 3.1 build 0x100F = 4111
+        'T',  'w',  'i',  'n',  'C', 'A', 'T', '3', // name, all 16 octets used
+        'P',  'l',  'c',  'R',  'u', 'n', 't', 'm',
     };
     AdsDeviceInfo info;
     TEST_ASSERT_TRUE(protocore_ads_parse_read_device_info(RESP, sizeof(RESP), &info));
@@ -333,10 +333,10 @@ static void on_sample(uint32_t handle, const uint8_t *sample, uint32_t sample_le
 void test_walks_a_notification_stamp(void)
 {
     static const uint8_t NOTE[] = {
-        0x24, 0x00, 0x00, 0x00,                         // Length = 36 octets after this field
-        0x01, 0x00, 0x00, 0x00,                         // Stamps = 1
-        0x00, 0x80, 0x3E, 0xD5, 0xDE, 0xB1, 0x9D, 0x01, // FILETIME 0x019DB1DED53E8000, little-endian
-        0x02, 0x00, 0x00, 0x00,                         // Samples = 2
+        0x24, 0x00, 0x00, 0x00,                                     // Length = 36 octets after this field
+        0x01, 0x00, 0x00, 0x00,                                     // Stamps = 1
+        0x00, 0x80, 0x3E, 0xD5, 0xDE, 0xB1, 0x9D, 0x01,             // FILETIME 0x019DB1DED53E8000, little-endian
+        0x02, 0x00, 0x00, 0x00,                                     // Samples = 2
         0x0A, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x11, 0x22, // handle 10, size 2
         0x0B, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x33, 0x44, // handle 11, size 2
     };
@@ -353,9 +353,8 @@ void test_walks_a_notification_stamp(void)
     // A sample size that runs off the end aborts the walk instead of reading past the buffer.
     static const uint8_t TRUNC[] = {
         0x19, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, // Length = 25, the octets that follow
-        0x00, 0x80, 0x3E, 0xD5, 0xDE, 0xB1, 0x9D, 0x01,
-        0x01, 0x00, 0x00, 0x00,
-        0x0A, 0x00, 0x00, 0x00, 0x40, 0x00, 0x00, 0x00, 0x11, // size 64, only 1 octet present
+        0x00, 0x80, 0x3E, 0xD5, 0xDE, 0xB1, 0x9D, 0x01, 0x01, 0x00, 0x00,
+        0x00, 0x0A, 0x00, 0x00, 0x00, 0x40, 0x00, 0x00, 0x00, 0x11, // size 64, only 1 octet present
     };
     g_calls = 0;
     TEST_ASSERT_FALSE(protocore_ads_parse_notification(TRUNC, sizeof(TRUNC), on_sample, NULL));

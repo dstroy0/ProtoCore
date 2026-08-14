@@ -10,7 +10,6 @@
 
 #if PROTOCORE_ENABLE_FAILSAFE
 
-
 /**
  * @brief The lifelines' compile-time storage: the table, and what a breach fires.
  */

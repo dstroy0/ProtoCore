@@ -100,12 +100,12 @@ struct CoapStorage
 #endif
 
 #if PROTOCORE_ENABLE_COAP_OBSERVE
-    uint16_t port;                              ///< the bound port a notification leaves from
+    uint16_t port;                                  ///< the bound port a notification leaves from
     CoapObserver obs[PROTOCORE_COAP_MAX_OBSERVERS]; ///< the list of observers (RFC 7641 sec 4.1)
-    int32_t last_observe;                       ///< the Observe value of the request in flight, -1 when absent
-    uint8_t last_code;                          ///< its Code byte
-    uint8_t last_token[COAP_MAX_TOKEN];         ///< its Token
-    uint8_t last_tkl;                           ///< that Token's length
+    int32_t last_observe;                           ///< the Observe value of the request in flight, -1 when absent
+    uint8_t last_code;                              ///< its Code byte
+    uint8_t last_token[COAP_MAX_TOKEN];             ///< its Token
+    uint8_t last_tkl;                               ///< that Token's length
 #endif
 
 #if PROTOCORE_ENABLE_COAP_BLOCK
@@ -440,7 +440,7 @@ static void coap_process_observe(struct CoapInternal *restrict ctx)
     const uint8_t *payload = NULL;
     size_t payload_len = 0;
     uint32_t opt_num = 0;
-    proto_bool format_error = PROTO_FALSE;   // RFC 7252 sec 3.1: a message format error
+    proto_bool format_error = PROTO_FALSE;     // RFC 7252 sec 3.1: a message format error
     proto_bool unknown_critical = PROTO_FALSE; // an unrecognized option of class critical (sec 5.4.1)
 #if PROTOCORE_ENABLE_COAP_BLOCK
     int32_t req_block1 = -1; // the request's Block1 value (RFC 7959 sec 2.2), or -1 when absent
@@ -660,9 +660,9 @@ static void coap_process_observe(struct CoapInternal *restrict ctx)
         if (req_block1 >= 0 && (code == (uint8_t)COAP_POST || code == (uint8_t)COAP_PUT))
         {
             uint32_t b = (uint32_t)req_block1;
-            uint32_t num = b >> 4;                     // NUM, the block number
-            uint8_t more = (uint8_t)((b >> 3) & 1);    // M, the more flag
-            uint8_t szx = (uint8_t)(b & 7);            // SZX, the size exponent
+            uint32_t num = b >> 4;                  // NUM, the block number
+            uint8_t more = (uint8_t)((b >> 3) & 1); // M, the more flag
+            uint8_t szx = (uint8_t)(b & 7);         // SZX, the size exponent
             if (szx == COAP_SZX_RESERVED)
             {
                 // RFC 7959 sec 2.2: SZX 7 "MUST NOT be sent and MUST lead to a 4.00 Bad Request
@@ -681,15 +681,15 @@ static void coap_process_observe(struct CoapInternal *restrict ctx)
             if (szx != ctx->store->b1_szx || (size_t)num * bsize != ctx->store->b1_len)
             {
                 ctx->store->b1_len = 0;
-                ctx->ns->n = emit_header(resp, resp_cap, rsp_type, (uint8_t)COAP_RSP_REQUEST_ENTITY_INCOMPLETE, mid,
-                                         token, tkl);
+                ctx->ns->n =
+                    emit_header(resp, resp_cap, rsp_type, (uint8_t)COAP_RSP_REQUEST_ENTITY_INCOMPLETE, mid, token, tkl);
                 return;
             }
             if (ctx->store->b1_len + payload_len > sizeof(ctx->store->b1))
             {
                 ctx->store->b1_len = 0;
-                ctx->ns->n = emit_header(resp, resp_cap, rsp_type, (uint8_t)COAP_RSP_REQUEST_ENTITY_TOO_LARGE, mid,
-                                         token, tkl);
+                ctx->ns->n =
+                    emit_header(resp, resp_cap, rsp_type, (uint8_t)COAP_RSP_REQUEST_ENTITY_TOO_LARGE, mid, token, tkl);
                 return;
             }
             if (payload_len)
@@ -937,8 +937,7 @@ static uint16_t dgram_mid(const uint8_t *data)
 // The entry's Token is the one the request in flight carried (RFC 7641 sec 4.1).
 static proto_bool same_token(const struct CoapInternal *ctx, const CoapObserver *o)
 {
-    return o->tkl == ctx->store->last_tkl &&
-           (o->tkl == 0 || mem.cmp(o->token, ctx->store->last_token, o->tkl) == 0);
+    return o->tkl == ctx->store->last_tkl && (o->tkl == 0 || mem.cmp(o->token, ctx->store->last_token, o->tkl) == 0);
 }
 
 // The entry is this endpoint's (RFC 7641 sec 4.1: the list is keyed by client endpoint and Token).

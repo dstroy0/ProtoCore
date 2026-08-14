@@ -45,7 +45,9 @@ void setUp(void)
     ssh_deflate_init(&s_def, s_work, s_head, s_prev, s_ll_code, s_ll_len, s_d_code, s_d_len);
     ssh_inflate_init(&s_inf, s_window);
 }
-void tearDown(void) {}
+void tearDown(void)
+{
+}
 
 static void test_rfc1950_header_is_emitted_once_at_stream_start(void)
 {
@@ -82,8 +84,8 @@ static void test_rfc1950_header_is_not_repeated_per_packet(void)
     // A repeated header would put CM = 8 at the front of the second packet with a multiple-of-31
     // check word; the second packet instead opens mid-stream.
     const uint16_t hdr2 = (uint16_t)(((uint16_t)second[0] << 8) | second[1]);
-    TEST_ASSERT_FALSE((second[0] & 0x0Fu) == 8u && (hdr2 % 31u) == 0u && n2 > 2u &&
-                      second[0] == first[0] && second[1] == first[1]);
+    TEST_ASSERT_FALSE((second[0] & 0x0Fu) == 8u && (hdr2 % 31u) == 0u && n2 > 2u && second[0] == first[0] &&
+                      second[1] == first[1]);
 }
 
 // "passed from one packet to the next" - the history is what makes a repeat of an earlier packet
@@ -153,8 +155,12 @@ int main(void)
 
 #else // PROTOCORE_ENABLE_SSH_ZLIB
 
-void setUp(void) {}
-void tearDown(void) {}
+void setUp(void)
+{
+}
+void tearDown(void)
+{
+}
 
 static void test_this_configuration_does_not_build_it(void)
 {

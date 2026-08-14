@@ -77,7 +77,7 @@ proto_bool protocore_canopen_build_heartbeat(CanFrame *out, uint8_t node_id, uin
 }
 
 proto_bool protocore_canopen_build_emcy(CanFrame *out, uint8_t node_id, uint16_t error_code, uint8_t error_reg,
-                                 const uint8_t msef[5])
+                                        const uint8_t msef[5])
 {
     if (!out || !valid_node(node_id))
     {
@@ -111,7 +111,8 @@ static proto_bool build_pdo(CanFrame *out, uint8_t pdo_num, proto_bool transmit,
                             uint8_t len)
 {
     uint32_t base;
-    if (!out || !valid_node(node_id) || len > PROTOCORE_CAN_MAX_DLC || (len && !data) || !pdo_base(pdo_num, transmit, &base))
+    if (!out || !valid_node(node_id) || len > PROTOCORE_CAN_MAX_DLC || (len && !data) ||
+        !pdo_base(pdo_num, transmit, &base))
     {
         return PROTO_FALSE;
     }
@@ -123,12 +124,14 @@ static proto_bool build_pdo(CanFrame *out, uint8_t pdo_num, proto_bool transmit,
     return PROTO_TRUE;
 }
 
-proto_bool protocore_canopen_build_tpdo(CanFrame *out, uint8_t pdo_num, uint8_t node_id, const uint8_t *data, uint8_t len)
+proto_bool protocore_canopen_build_tpdo(CanFrame *out, uint8_t pdo_num, uint8_t node_id, const uint8_t *data,
+                                        uint8_t len)
 {
     return build_pdo(out, pdo_num, PROTO_TRUE, node_id, data, len);
 }
 
-proto_bool protocore_canopen_build_rpdo(CanFrame *out, uint8_t pdo_num, uint8_t node_id, const uint8_t *data, uint8_t len)
+proto_bool protocore_canopen_build_rpdo(CanFrame *out, uint8_t pdo_num, uint8_t node_id, const uint8_t *data,
+                                        uint8_t len)
 {
     return build_pdo(out, pdo_num, PROTO_FALSE, node_id, data, len);
 }
@@ -153,8 +156,8 @@ proto_bool protocore_canopen_build_sdo_read(CanFrame *out, uint8_t node_id, uint
     return PROTO_TRUE;
 }
 
-proto_bool protocore_canopen_build_sdo_write(CanFrame *out, uint8_t node_id, uint16_t index, uint8_t sub, const uint8_t *data,
-                                      uint8_t len)
+proto_bool protocore_canopen_build_sdo_write(CanFrame *out, uint8_t node_id, uint16_t index, uint8_t sub,
+                                             const uint8_t *data, uint8_t len)
 {
     if (!out || !valid_node(node_id) || len < 1 || len > 4 || !data)
     {
@@ -168,8 +171,8 @@ proto_bool protocore_canopen_build_sdo_write(CanFrame *out, uint8_t node_id, uin
     return PROTO_TRUE;
 }
 
-proto_bool protocore_canopen_build_sdo_abort(CanFrame *out, uint8_t node_id, uint16_t index, uint8_t sub, uint32_t abort_code,
-                                      proto_bool to_server)
+proto_bool protocore_canopen_build_sdo_abort(CanFrame *out, uint8_t node_id, uint16_t index, uint8_t sub,
+                                             uint32_t abort_code, proto_bool to_server)
 {
     if (!out || !valid_node(node_id))
     {
@@ -273,7 +276,7 @@ proto_bool protocore_canopen_parse(const CanFrame *f, CanopenMsg *out)
 }
 
 proto_bool protocore_canopen_parse_emcy(const CanFrame *f, uint8_t *node_id, uint16_t *error_code, uint8_t *error_reg,
-                                 uint8_t msef[5])
+                                        uint8_t msef[5])
 {
     if (!f || f->extended || f->dlc < 8)
     {
@@ -397,7 +400,7 @@ proto_bool protocore_canopen_parse_sdo_response(const CanFrame *f, CanopenSdoRes
 // --- segmented SDO (CiA 301 §7.2.4.3) ---
 
 proto_bool protocore_canopen_build_sdo_download_init(CanFrame *out, uint8_t node_id, uint16_t index, uint8_t sub,
-                                              uint32_t total_size)
+                                                     uint32_t total_size)
 {
     if (!out || !valid_node(node_id))
     {
@@ -414,8 +417,8 @@ proto_bool protocore_canopen_build_sdo_download_init(CanFrame *out, uint8_t node
     return PROTO_TRUE;
 }
 
-proto_bool protocore_canopen_build_sdo_download_segment(CanFrame *out, uint8_t node_id, proto_bool toggle, const uint8_t *data,
-                                                 uint8_t len, proto_bool last)
+proto_bool protocore_canopen_build_sdo_download_segment(CanFrame *out, uint8_t node_id, proto_bool toggle,
+                                                        const uint8_t *data, uint8_t len, proto_bool last)
 {
     if (!out || !valid_node(node_id) || !data || len < 1 || len > CANOPEN_SDO_SEG_DATA)
     {
@@ -442,7 +445,7 @@ proto_bool protocore_canopen_build_sdo_upload_segment_req(CanFrame *out, uint8_t
 }
 
 proto_bool protocore_canopen_parse_sdo_segment(const CanFrame *f, proto_bool *toggle, uint8_t *data, uint8_t *len,
-                                        proto_bool *last)
+                                               proto_bool *last)
 {
     if (!f || f->dlc < 8 || (f->data[0] & 0xE0u) != 0u) // segment form: command specifier (high 3 bits) is 0
     {
@@ -483,7 +486,7 @@ void protocore_canopen_sdo_reasm_init(CanopenSdoReasm *r, uint8_t *buf, size_t c
 }
 
 proto_bool protocore_canopen_sdo_reasm_feed(CanopenSdoReasm *r, const uint8_t *data, uint8_t len, proto_bool toggle,
-                                     proto_bool last)
+                                            proto_bool last)
 {
     if (!r || !r->buf || r->done || (len && !data))
     {

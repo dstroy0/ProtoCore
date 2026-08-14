@@ -132,8 +132,8 @@ proto_bool protocore_rcwl0516_poll()
         return PROTO_FALSE;
     }
     Clock.millis(Clock.internal);
-    protocore_presence_core_update(&s_rcwl.core,
-                                   protocore_platform_gpio_read((uint8_t)(s_rcwl.pin)) == PROTOCORE_GPIO_HIGH, Clock.ms);
+    protocore_presence_core_update(
+        &s_rcwl.core, protocore_platform_gpio_read((uint8_t)(s_rcwl.pin)) == PROTOCORE_GPIO_HIGH, Clock.ms);
     return protocore_presence_take_event(&s_rcwl.core);
 }
 

@@ -75,12 +75,11 @@ static const uint8_t ALERT_RECORD[24] = {
 
 // The trace's ServerHello TLSPlaintext record (95 octets): a 5-byte header over the 90-byte message.
 static const uint8_t SH_RECORD[95] = {
-    0x16, 0x03, 0x03, 0x00, 0x5a, 0x02, 0x00, 0x00, 0x56, 0x03, 0x03, 0xa6, 0xaf, 0x06, 0xa4, 0x12,
-    0x18, 0x60, 0xdc, 0x5e, 0x6e, 0x60, 0x24, 0x9c, 0xd3, 0x4c, 0x95, 0x93, 0x0c, 0x8a, 0xc5, 0xcb,
-    0x14, 0x34, 0xda, 0xc1, 0x55, 0x77, 0x2e, 0xd3, 0xe2, 0x69, 0x28, 0x00, 0x13, 0x01, 0x00, 0x00,
-    0x2e, 0x00, 0x33, 0x00, 0x24, 0x00, 0x1d, 0x00, 0x20, 0xc9, 0x82, 0x88, 0x76, 0x11, 0x20, 0x95,
-    0xfe, 0x66, 0x76, 0x2b, 0xdb, 0xf7, 0xc6, 0x72, 0xe1, 0x56, 0xd6, 0xcc, 0x25, 0x3b, 0x83, 0x3d,
-    0xf1, 0xdd, 0x69, 0xb1, 0xb0, 0x4e, 0x75, 0x1f, 0x0f, 0x00, 0x2b, 0x00, 0x02, 0x03, 0x04,
+    0x16, 0x03, 0x03, 0x00, 0x5a, 0x02, 0x00, 0x00, 0x56, 0x03, 0x03, 0xa6, 0xaf, 0x06, 0xa4, 0x12, 0x18, 0x60, 0xdc,
+    0x5e, 0x6e, 0x60, 0x24, 0x9c, 0xd3, 0x4c, 0x95, 0x93, 0x0c, 0x8a, 0xc5, 0xcb, 0x14, 0x34, 0xda, 0xc1, 0x55, 0x77,
+    0x2e, 0xd3, 0xe2, 0x69, 0x28, 0x00, 0x13, 0x01, 0x00, 0x00, 0x2e, 0x00, 0x33, 0x00, 0x24, 0x00, 0x1d, 0x00, 0x20,
+    0xc9, 0x82, 0x88, 0x76, 0x11, 0x20, 0x95, 0xfe, 0x66, 0x76, 0x2b, 0xdb, 0xf7, 0xc6, 0x72, 0xe1, 0x56, 0xd6, 0xcc,
+    0x25, 0x3b, 0x83, 0x3d, 0xf1, 0xdd, 0x69, 0xb1, 0xb0, 0x4e, 0x75, 0x1f, 0x0f, 0x00, 0x2b, 0x00, 0x02, 0x03, 0x04,
 };
 
 static void derive(const uint8_t *secret)
@@ -362,8 +361,7 @@ void test_a_tampered_record_is_refused(void)
         memcpy(rec, APP_RECORD, sizeof(rec));
         rec[i] ^= 0x01;
         derive(C_AP_SECRET);
-        TEST_ASSERT_FALSE_MESSAGE(unprotect(rec, sizeof(rec), pt, sizeof(pt), &info),
-                                  "a flipped bit must not verify");
+        TEST_ASSERT_FALSE_MESSAGE(unprotect(rec, sizeof(rec), pt, sizeof(pt), &info), "a flipped bit must not verify");
         TEST_ASSERT_EQUAL_UINT64(0u, g_keys.seq);
     }
 }
@@ -392,8 +390,8 @@ void test_malformed_ciphertext_is_refused(void)
     TEST_ASSERT_EQUAL_UINT64(0u, g_keys.seq);
 
     // A destination too small for the sealed record.
-    TEST_ASSERT_EQUAL_UINT(0u, protect(PROTOCORE_TLS_CT_APPLICATION_DATA, APP_PAYLOAD, sizeof(APP_PAYLOAD),
-                                       sizeof(APP_RECORD) - 1));
+    TEST_ASSERT_EQUAL_UINT(
+        0u, protect(PROTOCORE_TLS_CT_APPLICATION_DATA, APP_PAYLOAD, sizeof(APP_PAYLOAD), sizeof(APP_RECORD) - 1));
     TEST_ASSERT_EQUAL_UINT(sizeof(APP_RECORD), protect(PROTOCORE_TLS_CT_APPLICATION_DATA, APP_PAYLOAD,
                                                        sizeof(APP_PAYLOAD), sizeof(APP_RECORD)));
 }
@@ -407,8 +405,8 @@ void test_unkeyed_direction_fails_closed(void)
     memset(&g_keys, 0, sizeof(g_keys));
     TEST_ASSERT_FALSE(g_keys.ready);
 
-    TEST_ASSERT_EQUAL_UINT(0u, protect(PROTOCORE_TLS_CT_APPLICATION_DATA, APP_PAYLOAD, sizeof(APP_PAYLOAD),
-                                       sizeof(g_out)));
+    TEST_ASSERT_EQUAL_UINT(0u,
+                           protect(PROTOCORE_TLS_CT_APPLICATION_DATA, APP_PAYLOAD, sizeof(APP_PAYLOAD), sizeof(g_out)));
     TEST_ASSERT_FALSE(unprotect(APP_RECORD, sizeof(APP_RECORD), pt, sizeof(pt), &info));
 
     // Wiping a keyed direction returns it to that state, and resets the counter (sec 5.3).
@@ -425,8 +423,8 @@ void test_unkeyed_direction_fails_closed(void)
     {
         TEST_ASSERT_EQUAL_HEX8(0x00, g_keys.iv[i]);
     }
-    TEST_ASSERT_EQUAL_UINT(0u, protect(PROTOCORE_TLS_CT_APPLICATION_DATA, APP_PAYLOAD, sizeof(APP_PAYLOAD),
-                                       sizeof(g_out)));
+    TEST_ASSERT_EQUAL_UINT(0u,
+                           protect(PROTOCORE_TLS_CT_APPLICATION_DATA, APP_PAYLOAD, sizeof(APP_PAYLOAD), sizeof(g_out)));
 }
 
 // sec 5.3: "Each sequence number is set to zero at the beginning of a connection and whenever the

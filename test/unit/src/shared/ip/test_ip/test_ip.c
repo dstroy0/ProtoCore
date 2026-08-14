@@ -120,10 +120,10 @@ void test_v4_mapped(void)
 void test_malformed_text_is_refused(void)
 {
     static const char *const BAD[] = {
-        "",  "1.2.3",  "1.2.3.4.5", "256.0.0.1", "1.2.3.-1", "...",
-        ":", "1::2::3", // sec 4.2: only one "::" is allowed
-        "12345::",      // a field wider than four hex digits
-        "0xg::",        "1.2.3.4:80", "unknown",
+        "",         "1.2.3",      "1.2.3.4.5", "256.0.0.1",
+        "1.2.3.-1", "...",        ":",         "1::2::3", // sec 4.2: only one "::" is allowed
+        "12345::",                                        // a field wider than four hex digits
+        "0xg::",    "1.2.3.4:80", "unknown",
     };
     for (size_t i = 0; i < sizeof(BAD) / sizeof(BAD[0]); i++)
     {

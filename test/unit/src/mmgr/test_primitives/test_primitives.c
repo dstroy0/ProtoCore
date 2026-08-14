@@ -126,7 +126,7 @@ void test_g_exponent_carries_a_sign_and_two_digits(void)
 {
     TEST_ASSERT_EQUAL_STRING("1e+06", g_of(1e6, 6));
     TEST_ASSERT_EQUAL_STRING("1e-05", g_of(1e-5, 6));
-    TEST_ASSERT_EQUAL_STRING("1e+300", g_of(1e300, 6));  // three digits when the value needs them
+    TEST_ASSERT_EQUAL_STRING("1e+300", g_of(1e300, 6)); // three digits when the value needs them
     TEST_ASSERT_EQUAL_STRING("1e-300", g_of(1e-300, 6));
 }
 

@@ -152,8 +152,8 @@ void test_tampered_ciphertext_implicitly_rejects(void)
     g_ct[0] ^= 0x01;
     protocore_mlkem768_decaps(g_dk, g_ct, rej1);
     protocore_mlkem768_decaps(g_dk, g_ct, rej2);
-    TEST_ASSERT_TRUE(memcmp(real, rej1, 32) != 0);        // not the real key
-    TEST_ASSERT_EQUAL_HEX8_ARRAY(rej1, rej2, 32);         // deterministic
+    TEST_ASSERT_TRUE(memcmp(real, rej1, 32) != 0); // not the real key
+    TEST_ASSERT_EQUAL_HEX8_ARRAY(rej1, rej2, 32);  // deterministic
     g_ct[0] ^= 0x01;
 
     g_ct[MLKEM768_CT_BYTES - 1] ^= 0x80;

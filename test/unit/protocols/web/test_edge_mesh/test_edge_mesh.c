@@ -310,8 +310,7 @@ static EdgeMeshStatus run_mesh(EdgeMeshFetch *m, const EdgeFetchTransport *t, ui
     return m->st;
 }
 
-static uint8_t
-    g_rbuf[PROTOCORE_EDGE_MESH_RESP_MAX];
+static uint8_t g_rbuf[PROTOCORE_EDGE_MESH_RESP_MAX];
 
 static void test_requester_hit()
 {
@@ -500,10 +499,8 @@ static void test_serialize_entry_guards_and_clamps()
     uint8_t out[PROTOCORE_EDGE_MESH_ENTRY_MAX];
     TEST_ASSERT_EQUAL_UINT(0, edge_mesh_serialize_entry(NULL, 0, out, sizeof(out)));
     TEST_ASSERT_EQUAL_UINT(0, edge_mesh_serialize_entry(&e, 0, NULL, sizeof(out)));
-    TEST_ASSERT_EQUAL_UINT(0,
-                           edge_mesh_serialize_entry(&e, 0, out, PROTOCORE_EDGE_MESH_TRAILER - 1));
-    TEST_ASSERT_EQUAL_UINT(0,
-                           edge_mesh_serialize_entry(&e, 0, out, PROTOCORE_EDGE_MESH_TRAILER + 4));
+    TEST_ASSERT_EQUAL_UINT(0, edge_mesh_serialize_entry(&e, 0, out, PROTOCORE_EDGE_MESH_TRAILER - 1));
+    TEST_ASSERT_EQUAL_UINT(0, edge_mesh_serialize_entry(&e, 0, out, PROTOCORE_EDGE_MESH_TRAILER + 4));
 
     EdgeEntry got;
 
@@ -553,10 +550,8 @@ static void test_build_response_guards()
     TEST_ASSERT_EQUAL_UINT(0, edge_mesh_build_response(PROTO_FALSE, NULL, 0, NULL, sizeof(out)));
     TEST_ASSERT_EQUAL_UINT(0, edge_mesh_build_response(PROTO_FALSE, NULL, 0, out, 3));
     TEST_ASSERT_EQUAL_UINT(0, edge_mesh_build_response(PROTO_TRUE, NULL, 8, out, sizeof(out)));
-    TEST_ASSERT_EQUAL_UINT(0,
-                           edge_mesh_build_response(PROTO_TRUE, entry, 0, out, sizeof(out)));
-    TEST_ASSERT_EQUAL_UINT(
-        0, edge_mesh_build_response(PROTO_TRUE, entry, 0x10000, out, sizeof(out)));
+    TEST_ASSERT_EQUAL_UINT(0, edge_mesh_build_response(PROTO_TRUE, entry, 0, out, sizeof(out)));
+    TEST_ASSERT_EQUAL_UINT(0, edge_mesh_build_response(PROTO_TRUE, entry, 0x10000, out, sizeof(out)));
     TEST_ASSERT_EQUAL_UINT(0, edge_mesh_build_response(PROTO_TRUE, entry, 100, out, sizeof(out)));
     TEST_ASSERT_EQUAL_UINT(4 + 2 + 8, edge_mesh_build_response(PROTO_TRUE, entry, 8, out, sizeof(out)));
 }

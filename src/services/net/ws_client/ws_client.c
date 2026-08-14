@@ -40,12 +40,12 @@
 // RFC 6455 sec 1.3: the GUID concatenated with |Sec-WebSocket-Key| before the SHA-1.
 static const char WS_ACCEPT_GUID[] = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
-#define WSC_CONCAT_CAP 64        // |Sec-WebSocket-Key| plus the GUID, hashed in one buffer
-#define WSC_FRAME_HDR_MAX 14     // 2 + an 8-octet extended length + a 4-octet Masking-key (RFC 6455 sec 5.2)
-#define WSC_LEN16 126            // Payload len 126: the next 2 octets carry the length (RFC 6455 sec 5.2)
-#define WSC_LEN64 127            // Payload len 127: the next 8 octets carry it (RFC 6455 sec 5.2)
-#define WSC_STATUS_MIN 12        // "HTTP/1.1 101" is the shortest status-line worth reading (RFC 9112 sec 4)
-#define WSC_RESP_CAP 512         // the server's opening handshake, up to the empty line ending it
+#define WSC_CONCAT_CAP 64    // |Sec-WebSocket-Key| plus the GUID, hashed in one buffer
+#define WSC_FRAME_HDR_MAX 14 // 2 + an 8-octet extended length + a 4-octet Masking-key (RFC 6455 sec 5.2)
+#define WSC_LEN16 126        // Payload len 126: the next 2 octets carry the length (RFC 6455 sec 5.2)
+#define WSC_LEN64 127        // Payload len 127: the next 8 octets carry it (RFC 6455 sec 5.2)
+#define WSC_STATUS_MIN 12    // "HTTP/1.1 101" is the shortest status-line worth reading (RFC 9112 sec 4)
+#define WSC_RESP_CAP 512     // the server's opening handshake, up to the empty line ending it
 #define WSC_CONNECT_TIMEOUT_MS 8000
 #define WSC_POLL_MS 5
 #define WSC_PUMP_CHUNK 256

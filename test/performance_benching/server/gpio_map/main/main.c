@@ -54,7 +54,8 @@ void dbench_run(void)
         // Serialize the whole pin table to JSON (the browser GET path). This is the heaviest op
         // (per-pin fmtbuf formatting), so bench it two ways: cyc/op and throughput over the bytes it
         // emits.
-        DBENCH_OP("protocore_gpio_json (4 pins)", 20000, sink = (size_t)protocore_gpio_json(pins, kCount, json, sizeof(json)));
+        DBENCH_OP("protocore_gpio_json (4 pins)", 20000,
+                  sink = (size_t)protocore_gpio_json(pins, kCount, json, sizeof(json)));
         {
             int _n = protocore_gpio_json(pins, kCount, json, sizeof(json));
             DBENCH_BULK("protocore_gpio_json bytes", 20000, (size_t)_n,
@@ -64,7 +65,8 @@ void dbench_run(void)
         // Parse the control POST body `pin=2&level=1` (the browser POST path); large N.
         uint8_t out_pin = 0;
         uint8_t out_level = 0;
-        DBENCH_OP("protocore_gpio_parse_set", 100000, bsink = protocore_gpio_parse_set(body, body_len, &out_pin, &out_level));
+        DBENCH_OP("protocore_gpio_parse_set", 100000,
+                  bsink = protocore_gpio_parse_set(body, body_len, &out_pin, &out_level));
 
         // Output guard that gates a drive (linear scan of the table); large N.
         DBENCH_OP("protocore_gpio_is_output", 100000, bsink = protocore_gpio_is_output(pins, kCount, 2));

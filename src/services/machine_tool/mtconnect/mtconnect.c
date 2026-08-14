@@ -111,8 +111,8 @@ static const char *mtc_cat_str(protocore_mtc_category cat)
     return "CONDITION";
 }
 
-void protocore_mtc_streams_begin(protocore_mtc_streams *s, char *buf, size_t cap, uint64_t instance_id, uint64_t next_seq,
-                          const char *device_name)
+void protocore_mtc_streams_begin(protocore_mtc_streams *s, char *buf, size_t cap, uint64_t instance_id,
+                                 uint64_t next_seq, const char *device_name)
 {
     s->buf = buf;
     s->cap = cap;
@@ -131,8 +131,8 @@ void protocore_mtc_streams_begin(protocore_mtc_streams *s, char *buf, size_t cap
     put(s, "\">");
 }
 
-void protocore_mtc_streams_add(protocore_mtc_streams *s, protocore_mtc_category cat, const char *type, const char *data_id, uint64_t seq,
-                        const char *timestamp, const char *value)
+void protocore_mtc_streams_add(protocore_mtc_streams *s, protocore_mtc_category cat, const char *type,
+                               const char *data_id, uint64_t seq, const char *timestamp, const char *value)
 {
     if (!s->ok)
     {
@@ -240,8 +240,8 @@ size_t protocore_mtc_error(uint64_t instance_id, const char *error_code, const c
 
 // --- probe (MTConnectDevices): the device model a client discovers before streaming ---
 
-void protocore_mtc_devices_begin(protocore_mtc_streams *s, char *buf, size_t cap, uint64_t instance_id, const char *device_id,
-                          const char *device_name, const char *uuid)
+void protocore_mtc_devices_begin(protocore_mtc_streams *s, char *buf, size_t cap, uint64_t instance_id,
+                                 const char *device_id, const char *device_name, const char *uuid)
 {
     s->buf = buf;
     s->cap = cap;
@@ -262,8 +262,8 @@ void protocore_mtc_devices_begin(protocore_mtc_streams *s, char *buf, size_t cap
     put(s, "\"><DataItems>");
 }
 
-void protocore_mtc_devices_add_item(protocore_mtc_streams *s, protocore_mtc_category cat, const char *id, const char *type, const char *name,
-                             const char *units)
+void protocore_mtc_devices_add_item(protocore_mtc_streams *s, protocore_mtc_category cat, const char *id,
+                                    const char *type, const char *name, const char *units)
 {
     if (!s->ok)
     {
@@ -304,8 +304,8 @@ size_t protocore_mtc_devices_end(protocore_mtc_streams *s)
 
 // --- asset (MTConnectAssets): the tool/fixture inventory a client reads by GET /asset ---
 
-void protocore_mtc_assets_begin(protocore_mtc_streams *s, char *buf, size_t cap, uint64_t instance_id, uint32_t asset_count,
-                         uint32_t asset_buffer_size)
+void protocore_mtc_assets_begin(protocore_mtc_streams *s, char *buf, size_t cap, uint64_t instance_id,
+                                uint32_t asset_count, uint32_t asset_buffer_size)
 {
     s->buf = buf;
     s->cap = cap;
@@ -325,7 +325,7 @@ void protocore_mtc_assets_begin(protocore_mtc_streams *s, char *buf, size_t cap,
 }
 
 void protocore_mtc_assets_cutting_tool_begin(protocore_mtc_streams *s, const char *asset_id, const char *serial_number,
-                                      const char *tool_id, const char *device_uuid, const char *timestamp)
+                                             const char *tool_id, const char *device_uuid, const char *timestamp)
 {
     put(s, "<CuttingTool assetId=\"");
     put_escaped(s, asset_id ? asset_id : "");
@@ -357,8 +357,8 @@ void protocore_mtc_assets_cutting_tool_begin(protocore_mtc_streams *s, const cha
     put(s, "><CuttingToolLifeCycle>");
 }
 
-void protocore_mtc_assets_tool_life(protocore_mtc_streams *s, const char *type, const char *count_direction, const char *limit,
-                             const char *value)
+void protocore_mtc_assets_tool_life(protocore_mtc_streams *s, const char *type, const char *count_direction,
+                                    const char *limit, const char *value)
 {
     // <ToolLife type="MINUTES" countDirection="UP" limit="100">42</ToolLife>
     put(s, "<ToolLife type=\"");
@@ -452,8 +452,8 @@ void protocore_mtc_sample_buffer_init(protocore_mtc_sample_buffer *b, uint64_t s
     b->first_seq = b->next_seq; // empty: first == next (lastSequence = next-1 sits just below first)
 }
 
-uint64_t protocore_mtc_sample_buffer_add(protocore_mtc_sample_buffer *b, protocore_mtc_category cat, const char *type, const char *data_id,
-                                  const char *timestamp, const char *value)
+uint64_t protocore_mtc_sample_buffer_add(protocore_mtc_sample_buffer *b, protocore_mtc_category cat, const char *type,
+                                         const char *data_id, const char *timestamp, const char *value)
 {
     protocore_mtc_observation *o = &b->obs[b->head];
     o->cat = cat;
@@ -475,7 +475,7 @@ uint64_t protocore_mtc_sample_buffer_add(protocore_mtc_sample_buffer *b, protoco
 }
 
 size_t protocore_mtc_sample_query(const protocore_mtc_sample_buffer *b, char *buf, size_t cap, uint64_t instance_id,
-                           const char *device_name, uint64_t from, uint32_t count)
+                                  const char *device_name, uint64_t from, uint32_t count)
 {
     uint64_t first = b->first_seq;
     uint64_t next = b->next_seq;                  // one past the newest retained observation
@@ -488,7 +488,8 @@ size_t protocore_mtc_sample_query(const protocore_mtc_sample_buffer *b, char *bu
     uint64_t next_report = (start >= next) ? next : start + to_emit;
 
     protocore_mtc_streams s;
-    mtc_streams_begin_windowed(&s, buf, cap, instance_id, first, last, next_report, PROTOCORE_MTC_SAMPLE_BUFFER, device_name);
+    mtc_streams_begin_windowed(&s, buf, cap, instance_id, first, last, next_report, PROTOCORE_MTC_SAMPLE_BUFFER,
+                               device_name);
 
     // The oldest retained observation sits `count` slots behind head; observation `first + k` is at
     // (oldest_idx + k) around the ring.

@@ -286,7 +286,8 @@ static void parse_extension(uint16_t type, const uint8_t *body, size_t blen, Tls
             return;
         }
         size_t ll = body[0];
-        out->offers_tls13 = list16_contains(body + 1, blen - 1, ll, dtls ? PROTOCORE_TLS_VERSION_DTLS_1_3 : TLS_VERSION_1_3);
+        out->offers_tls13 =
+            list16_contains(body + 1, blen - 1, ll, dtls ? PROTOCORE_TLS_VERSION_DTLS_1_3 : TLS_VERSION_1_3);
         break;
     }
     case TLS_EXT_SUPPORTED_GROUPS: {
@@ -496,8 +497,8 @@ proto_bool protocore_tls13_parse_client_hello(const uint8_t *msg, size_t len, Tl
 // Builders
 // ---------------------------------------------------------------------------
 size_t protocore_tls13_build_server_hello(uint8_t *out, size_t cap, const uint8_t random[32], const uint8_t *session_id,
-                                   uint8_t session_id_len, const uint8_t *share, size_t share_len, uint16_t group,
-                                   proto_bool dtls, const uint8_t *conn_id, size_t conn_id_len)
+                                          uint8_t session_id_len, const uint8_t *share, size_t share_len,
+                                          uint16_t group, proto_bool dtls, const uint8_t *conn_id, size_t conn_id_len)
 {
     Writer w = {out, cap, 0, PROTO_TRUE};
     w_u8(&w, TLS_HS_SERVER_HELLO);
@@ -540,12 +541,12 @@ size_t protocore_tls13_build_server_hello(uint8_t *out, size_t cap, const uint8_
 
 // SHA-256("HelloRetryRequest") - RFC 8446 §4.1.3. A ServerHello with this random is a HelloRetryRequest.
 const uint8_t protocore_tls13_hrr_random[32] = {0xCF, 0x21, 0xAD, 0x74, 0xE5, 0x9A, 0x61, 0x11, 0xBE, 0x1D, 0x8C,
-                                         0x02, 0x1E, 0x65, 0xB8, 0x91, 0xC2, 0xA2, 0x11, 0x16, 0x7A, 0xBB,
-                                         0x8C, 0x5E, 0x07, 0x9E, 0x09, 0xE2, 0xC8, 0xA8, 0x33, 0x9C};
+                                                0x02, 0x1E, 0x65, 0xB8, 0x91, 0xC2, 0xA2, 0x11, 0x16, 0x7A, 0xBB,
+                                                0x8C, 0x5E, 0x07, 0x9E, 0x09, 0xE2, 0xC8, 0xA8, 0x33, 0x9C};
 
-size_t protocore_tls13_build_hello_retry_request(uint8_t *out, size_t cap, const uint8_t *session_id, uint8_t session_id_len,
-                                          uint16_t selected_group, const uint8_t *cookie, size_t cookie_len,
-                                          proto_bool dtls)
+size_t protocore_tls13_build_hello_retry_request(uint8_t *out, size_t cap, const uint8_t *session_id,
+                                                 uint8_t session_id_len, uint16_t selected_group, const uint8_t *cookie,
+                                                 size_t cookie_len, proto_bool dtls)
 {
     if (cookie_len > 0xFFFD)
     {
@@ -628,8 +629,8 @@ size_t protocore_tls13_build_message_hash(uint8_t *out, size_t cap, const uint8_
     return w.ok ? w.pos : 0;
 }
 
-size_t protocore_tls13_build_encrypted_extensions(uint8_t *out, size_t cap, const uint8_t *protocore_quic_tp, size_t protocore_quic_tp_len,
-                                           proto_bool rpk_server_cert)
+size_t protocore_tls13_build_encrypted_extensions(uint8_t *out, size_t cap, const uint8_t *protocore_quic_tp,
+                                                  size_t protocore_quic_tp_len, proto_bool rpk_server_cert)
 {
     Writer w = {out, cap, 0, PROTO_TRUE};
     w_u8(&w, TLS_HS_ENCRYPTED_EXTENSIONS);
@@ -704,7 +705,8 @@ size_t protocore_tls13_build_certificate_rpk(uint8_t *out, size_t cap, const uin
 }
 #endif
 
-size_t protocore_tls13_cert_verify_content(uint8_t *out, size_t cap, const uint8_t transcript_hash[32], proto_bool is_server)
+size_t protocore_tls13_cert_verify_content(uint8_t *out, size_t cap, const uint8_t transcript_hash[32],
+                                           proto_bool is_server)
 {
     // RFC 8446 sec 4.4.3: 64 spaces || context string || 0x00 || transcript hash.
     static const char SRV[] = "TLS 1.3, server CertificateVerify";
@@ -724,7 +726,7 @@ size_t protocore_tls13_cert_verify_content(uint8_t *out, size_t cap, const uint8
 }
 
 size_t protocore_tls13_build_cert_verify(uint8_t *work, uint8_t *out, size_t cap, const uint8_t transcript_hash[32],
-                                  const uint8_t seed[32])
+                                         const uint8_t seed[32])
 {
     uint8_t content[64 + 33 + 1 + 32];
     size_t clen = protocore_tls13_cert_verify_content(content, sizeof(content), transcript_hash, PROTO_TRUE);

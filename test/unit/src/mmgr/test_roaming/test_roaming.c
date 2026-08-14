@@ -46,7 +46,7 @@ static size_t put_neighbor_report(uint8_t *p, const uint8_t *bssid, uint8_t chan
     p[9] = 0x00;
     p[10] = 0x00;
     p[11] = 0x00;
-    p[12] = 115;  // Operating Class
+    p[12] = 115; // Operating Class
     p[13] = channel;
     p[14] = 4; // PHY Type
     return 15;

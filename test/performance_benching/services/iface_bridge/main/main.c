@@ -52,7 +52,8 @@ void dbench_run(void)
                   sink += protocore_iface_bridge_map("192.168.1.50", 4001, BRIDGE_PROTO_TCP, &uart) ? 1u : 0u);
 
         // 2) Listener dispatch: find the rule bound to a port+proto - run on every accepted connection.
-        DBENCH_OP("protocore_iface_bridge_find", 200000, sink += (uintptr_t)protocore_iface_bridge_find(4001, BRIDGE_PROTO_TCP));
+        DBENCH_OP("protocore_iface_bridge_find", 200000,
+                  sink += (uintptr_t)protocore_iface_bridge_find(4001, BRIDGE_PROTO_TCP));
 
         // 3) Transaction frame build (write-then-read request), MB/s over the whole emitted frame.
         DBENCH_BULK("protocore_iface_bridge_txn_build", 100000, (size_t)PROTOCORE_BRIDGE_TXN_HDR + sizeof(wr),

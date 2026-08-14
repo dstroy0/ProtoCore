@@ -9,8 +9,8 @@
  * seam, so the framing and the drain loop run the same on a host with the seam mocked.
  */
 
-#include "core_setup/board_profiles/protocore_platform.h"
 #include "server/signaling/bus_capture.h"
+#include "core_setup/board_profiles/protocore_platform.h"
 
 #if PROTOCORE_ENABLE_BUS_CAPTURE
 

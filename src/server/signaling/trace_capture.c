@@ -152,8 +152,7 @@ static void tc_trigger(struct TraceCaptureInternal *restrict ctx)
     }
     for (uint16_t i = 0; i < ctx->store->pretrigger_samples; i++)
     {
-        ctx->store->window[i] =
-            ctx->store->pre_ring[(ctx->store->pre_head + i) % ctx->store->pretrigger_samples];
+        ctx->store->window[i] = ctx->store->pre_ring[(ctx->store->pre_head + i) % ctx->store->pretrigger_samples];
     }
     ctx->store->post_count = 0;
     ctx->store->capturing = PROTO_TRUE;

@@ -7,7 +7,7 @@
 #include "network_drivers/application/web_assets.h"
 
 // ---- html ----
-const char PROTOCORE_DASHBOARD_PAGE[] =
+const char PC_DASHBOARD_PAGE[] =
     "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\" /><meta name=\"viewport\" content=\"width=devic"
     "e-width, initial-scale=1\" /><title>Dashboard</title> <style>*{box-sizing:border-box;}body{margin:0;font-famil"
     "y:system-ui,\"Segoe UI\",Roboto,sans-serif;background:#0e1116;color:#e6edf3;}header{display:flex;align-items:c"
@@ -79,15 +79,15 @@ const char PROTOCORE_DASHBOARD_PAGE[] =
     "};\nes.onmessage = function (ev) {\ntry {\nvar d = JSON.parse(ev.data);\nfor (var k in d)\nif (widgets[k]) wid"
     "gets[k](d[k]);\n} catch (e) {}\n};\n});\n})();</script> </body></html>";
 
-const char PROTOCORE_PROV_FORM[] =
+const char PC_PROV_FORM[] =
     "<!doctype html><html><head><meta name=\"viewport\" content=\"width=device-width\" /><title>WiFi setup</title><"
     "/head><body><h2>WiFi setup</h2><form method=\"POST\" action=\"/save\"> SSID:<br /><input name=\"ssid\" maxleng"
     "th=\"32\" /><br /> Password:<br /><input name=\"psk\" type=\"password\" maxlength=\"63\" /><br /><br /><input "
     "type=\"submit\" value=\"Save\" /></form></body></html>";
 
-const char PROTOCORE_PROV_SAVED_HTML[] = "<html><body> Saved. Rebooting... </body></html>";
+const char PC_PROV_SAVED_HTML[] = "<html><body> Saved. Rebooting... </body></html>";
 
-const char PROTOCORE_TERMINAL_PAGE[] =
+const char PC_TERMINAL_PAGE[] =
     "<!doctype html><html><head><meta charset=\"utf-8\" /><meta name=\"viewport\" content=\"width=device-width,init"
     "ial-scale=1\" /><title>PC Terminal</title> <style>:root{--g:#2bb35a;--g2:#00c000;--bg:#080c08;}*{box-sizing:bo"
     "rder-box;}html,body{margin:0;height:100%;background:var(--bg);color:var(--g);font:14px/1.45 \"Consolas\",\"Dej"
@@ -115,57 +115,65 @@ const char PROTOCORE_TERMINAL_PAGE[] =
     "}\n});\nconn();</script> </body></html>";
 
 // ---- js ----
-const char PROTOCORE_SERVICE_WORKER[] =
+const char PC_SERVICE_WORKER[] =
     "// Client half of the delivery story. The device is slow and often asleep, so the browser should not\n// wait "
     "on it for the shell: cache the shell once, serve it from cache instantly, and refresh in the\n// background. T"
-    "hat is RFC 5861 stale-while-revalidate applied on the client, matching what\n// protocore_delivery_swr decides server"
-    "-side.\n//\n// The manifest (protocore_delivery_sw_manifest) supplies both the file list and a version tag; the cache"
-    " is\n// named after that version, so publishing a new firmware invalidates the old shell exactly once.\n\nvar "
-    "MANIFEST_URL = \"/precache.json\";\nvar CACHE_PREFIX = \"pc-\";\n\nfunction manifest() {\n  // cache: \"no-sto"
-    "re\" - the manifest is the freshness signal, so it must never come from a cache.\n  return fetch(MANIFEST_URL,"
-    " { cache: \"no-store\" }).then(function (r) {\n    if (!r.ok) throw new Error(\"manifest \" + r.status);\n    "
-    "return r.json();\n  });\n}\n\nfunction cacheName(m) {\n  return CACHE_PREFIX + (m && m.version ? m.version : "
-    "\"0\");\n}\n\nself.addEventListener(\"install\", function (e) {\n  e.waitUntil(\n    manifest()\n      .then(f"
-    "unction (m) {\n        return caches.open(cacheName(m)).then(function (c) {\n          return c.addAll((m && m"
-    ".precache) || []);\n        });\n      })\n      // A failed precache must not wedge the worker: it still inst"
-    "alls and fills the cache lazily\n      // on first fetch. Losing the shell is better than losing the page.\n  "
-    "    .catch(function () {})\n      .then(function () {\n        return self.skipWaiting();\n      })\n  );\n});"
-    "\n\nself.addEventListener(\"activate\", function (e) {\n  e.waitUntil(\n    manifest()\n      .then(function ("
-    "m) {\n        var keep = cacheName(m);\n        return caches.keys().then(function (keys) {\n          return "
-    "Promise.all(\n            keys.map(function (k) {\n              // Only ever delete our own versioned caches."
-    "\n              return k.indexOf(CACHE_PREFIX) === 0 && k !== keep ? caches.delete(k) : null;\n            })"
-    "\n          );\n        });\n      })\n      .catch(function () {})\n      .then(function () {\n        return"
-    " self.clients.claim();\n      })\n  );\n});\n\nself.addEventListener(\"fetch\", function (e) {\n  var req = e."
-    "request;\n  // Only same-origin GETs are ours to cache; anything else goes straight to the network.\n  if (req"
-    ".method !== \"GET\" || new URL(req.url).origin !== self.location.origin) return;\n  // The manifest drives inv"
-    "alidation, so it is never served from cache.\n  if (new URL(req.url).pathname === MANIFEST_URL) return;\n\n  e"
-    ".respondWith(\n    caches.match(req).then(function (hit) {\n      var net = fetch(req)\n        .then(function"
-    " (res) {\n          // Only cache a real, complete response: a 206 is a byte range, not the whole resource.\n "
-    "         if (res && res.ok && res.status === 200) {\n            var copy = res.clone();\n            caches.k"
-    "eys().then(function (keys) {\n              for (var i = 0; i < keys.length; i++) {\n                if (keys["
-    "i].indexOf(CACHE_PREFIX) === 0) {\n                  caches.open(keys[i]).then(function (c) {\n               "
-    "     c.put(req, copy);\n                  });\n                  break;\n                }\n              }\n "
-    "           });\n          }\n          return res;\n        })\n        .catch(function () {\n          return"
-    " hit;\n        });\n      // Stale-while-revalidate: hand back the cached copy now, let the refresh land in th"
-    "e cache.\n      return hit || net;\n    })\n  );\n});\n";
+    "hat is RFC 5861 stale-while-revalidate applied on the client, matching what\n// protocore_delivery_swr decides"
+    " server-side.\n//\n// The manifest (protocore_delivery_sw_manifest) supplies both the file list and a version "
+    "tag; the cache is\n// named after that version, so publishing a new firmware invalidates the old shell exactly"
+    " once.\n\nvar MANIFEST_URL = \"/precache.json\";\nvar CACHE_PREFIX = \"pc-\";\n\nfunction manifest() {\n    //"
+    " cache: \"no-store\" - the manifest is the freshness signal, so it must never come from a cache.\n    return f"
+    "etch(MANIFEST_URL, { cache: \"no-store\" }).then(function (r) {\n        if (!r.ok) throw new Error(\"manifest"
+    " \" + r.status);\n        return r.json();\n    });\n}\n\nfunction cacheName(m) {\n    return CACHE_PREFIX + ("
+    "m && m.version ? m.version : \"0\");\n}\n\nself.addEventListener(\"install\", function (e) {\n    e.waitUntil("
+    "\n        manifest()\n            .then(function (m) {\n                return caches.open(cacheName(m)).then("
+    "function (c) {\n                    return c.addAll((m && m.precache) || []);\n                });\n          "
+    "  })\n            // A failed precache must not wedge the worker: it still installs and fills the cache lazily"
+    "\n            // on first fetch. Losing the shell is better than losing the page.\n            .catch(function"
+    " () {})\n            .then(function () {\n                return self.skipWaiting();\n            }),\n    );"
+    "\n});\n\nself.addEventListener(\"activate\", function (e) {\n    e.waitUntil(\n        manifest()\n           "
+    " .then(function (m) {\n                var keep = cacheName(m);\n                return caches.keys().then(fun"
+    "ction (keys) {\n                    return Promise.all(\n                        keys.map(function (k) {\n    "
+    "                        // Only ever delete our own versioned caches.\n                            return k.in"
+    "dexOf(CACHE_PREFIX) === 0 && k !== keep\n                                ? caches.delete(k)\n                 "
+    "               : null;\n                        }),\n                    );\n                });\n            "
+    "})\n            .catch(function () {})\n            .then(function () {\n                return self.clients.c"
+    "laim();\n            }),\n    );\n});\n\nself.addEventListener(\"fetch\", function (e) {\n    var req = e.requ"
+    "est;\n    // Only same-origin GETs are ours to cache; anything else goes straight to the network.\n    if (\n "
+    "       req.method !== \"GET\" ||\n        new URL(req.url).origin !== self.location.origin\n    )\n        ret"
+    "urn;\n    // The manifest drives invalidation, so it is never served from cache.\n    if (new URL(req.url).pat"
+    "hname === MANIFEST_URL) return;\n\n    e.respondWith(\n        caches.match(req).then(function (hit) {\n      "
+    "      var net = fetch(req)\n                .then(function (res) {\n                    // Only cache a real, "
+    "complete response: a 206 is a byte range, not the whole resource.\n                    if (res && res.ok && re"
+    "s.status === 200) {\n                        var copy = res.clone();\n                        caches.keys().th"
+    "en(function (keys) {\n                            for (var i = 0; i < keys.length; i++) {\n                   "
+    "             if (keys[i].indexOf(CACHE_PREFIX) === 0) {\n                                    caches.open(keys["
+    "i]).then(function (c) {\n                                        c.put(req, copy);\n                          "
+    "          });\n                                    break;\n                                }\n                "
+    "            }\n                        });\n                    }\n                    return res;\n          "
+    "      })\n                .catch(function () {\n                    return hit;\n                });\n        "
+    "    // Stale-while-revalidate: hand back the cached copy now, let the refresh land in the cache.\n            "
+    "return hit || net;\n        }),\n    );\n});\n";
 
 // ---- json ----
-const char PROTOCORE_STATS_JSON[] =
+const char PC_STATS_JSON[] =
     "{\"uptime_ms\":{{uptime_ms}},\"requests\":{{requests}},\"http_2xx\":{{http_2xx}},\"http_4xx\":{{http_4xx}},\"h"
     "ttp_5xx\":{{http_5xx}},\"active_conns\":{{active_conns}},\"free_heap\":{{free_heap}}}";
 
 // ---- text ----
-const char PROTOCORE_METRICS_PROM[] =
-    "# HELP protocore_uptime_seconds Device uptime in seconds.\n# TYPE protocore_uptime_seconds gauge\npc_uptime_seconds {{uptime"
-    "_seconds}}\n# HELP protocore_http_requests_total Total HTTP responses sent.\n# TYPE protocore_http_requests_total counter\np"
-    "c_http_requests_total {{requests_total}}\n# HELP protocore_http_responses_total HTTP responses by status class.\n# TY"
-    "PE protocore_http_responses_total counter\npc_http_responses_total{class=\"2xx\"} {{resp_2xx}}\npc_http_responses_tot"
-    "al{class=\"4xx\"} {{resp_4xx}}\npc_http_responses_total{class=\"5xx\"} {{resp_5xx}}\n# HELP protocore_active_connecti"
-    "ons Currently active connection slots.\n# TYPE protocore_active_connections gauge\npc_active_connections {{active_con"
-    "ns}}\n# HELP protocore_max_connections Connection slot capacity.\n# TYPE protocore_max_connections gauge\npc_max_connections"
-    " {{max_conns}}\n# HELP protocore_free_heap_bytes Free heap in bytes.\n# TYPE protocore_free_heap_bytes gauge\npc_free_heap_b"
-    "ytes {{free_heap}}\n# HELP protocore_min_free_heap_bytes Lowest free heap observed since boot, in bytes.\n# TYPE protocore_m"
-    "in_free_heap_bytes gauge\npc_min_free_heap_bytes {{min_free_heap}}\n# HELP protocore_heap_size_bytes Total heap size,"
-    " in bytes.\n# TYPE protocore_heap_size_bytes gauge\npc_heap_size_bytes {{heap_size}}\n# HELP protocore_max_alloc_heap_bytes "
-    "Largest contiguous allocatable heap block, in bytes.\n# TYPE protocore_max_alloc_heap_bytes gauge\npc_max_alloc_heap_"
-    "bytes {{max_alloc_heap}}\n";
+const char PC_METRICS_PROM[] =
+    "# HELP protocore_uptime_seconds Device uptime in seconds.\n# TYPE protocore_uptime_seconds gauge\nprotocore_up"
+    "time_seconds {{uptime_seconds}}\n# HELP protocore_http_requests_total Total HTTP responses sent.\n# TYPE proto"
+    "core_http_requests_total counter\nprotocore_http_requests_total {{requests_total}}\n# HELP protocore_http_resp"
+    "onses_total HTTP responses by status class.\n# TYPE protocore_http_responses_total counter\nprotocore_http_res"
+    "ponses_total{class=\"2xx\"} {{resp_2xx}}\nprotocore_http_responses_total{class=\"4xx\"} {{resp_4xx}}\nprotocor"
+    "e_http_responses_total{class=\"5xx\"} {{resp_5xx}}\n# HELP protocore_active_connections Currently active conne"
+    "ction slots.\n# TYPE protocore_active_connections gauge\nprotocore_active_connections {{active_conns}}\n# HELP"
+    " protocore_max_connections Connection slot capacity.\n# TYPE protocore_max_connections gauge\nprotocore_max_co"
+    "nnections {{max_conns}}\n# HELP protocore_free_heap_bytes Free heap in bytes.\n# TYPE protocore_free_heap_byte"
+    "s gauge\nprotocore_free_heap_bytes {{free_heap}}\n# HELP protocore_min_free_heap_bytes Lowest free heap observ"
+    "ed since boot, in bytes.\n# TYPE protocore_min_free_heap_bytes gauge\nprotocore_min_free_heap_bytes {{min_free"
+    "_heap}}\n# HELP protocore_heap_size_bytes Total heap size, in bytes.\n# TYPE protocore_heap_size_bytes gauge\n"
+    "protocore_heap_size_bytes {{heap_size}}\n# HELP protocore_max_alloc_heap_bytes Largest contiguous allocatable "
+    "heap block, in bytes.\n# TYPE protocore_max_alloc_heap_bytes gauge\nprotocore_max_alloc_heap_bytes {{max_alloc"
+    "_heap}}\n";

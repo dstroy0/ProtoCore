@@ -313,8 +313,7 @@ static int mock_send(void *c, const uint8_t *d, size_t n)
             {
                 m->cipher = SMB2_ENCRYPTION_AES128_GCM;
             }
-            rlen = build_neg_resp_311(resp, h.message_id, m->require_encrypt || m->encrypt_share_only,
-                                      m->cipher);
+            rlen = build_neg_resp_311(resp, h.message_id, m->require_encrypt || m->encrypt_share_only, m->cipher);
             break;
         }
         protocore_smb2_build_header(resp, sizeof(resp), SMB2_NEGOTIATE, 1, h.message_id, 0, 0);
@@ -375,14 +374,16 @@ static int mock_send(void *c, const uint8_t *d, size_t n)
             {
                 if (m->require_311)
                 {
-                    protocore_smb3_derive_signing_key(base_key, (uint16_t)SMB2_DIALECT_0311, m->preauth.hash, m->sign_key);
+                    protocore_smb3_derive_signing_key(base_key, (uint16_t)SMB2_DIALECT_0311, m->preauth.hash,
+                                                      m->sign_key);
                     m->sign_algo = SMB2_SIGN_ALGO_AES_CMAC;
                     m->signing = PROTO_TRUE;
                     if (m->require_encrypt || m->encrypt_share_only)
                     {
 
                         protocore_smb3_derive_encryption_keys(base_key, (uint16_t)SMB2_DIALECT_0311, m->preauth.hash,
-                                                       protocore_smb2_cipher_key_len(m->cipher), m->enc_c2s, m->enc_s2c);
+                                                              protocore_smb2_cipher_key_len(m->cipher), m->enc_c2s,
+                                                              m->enc_s2c);
                         m->enc_keys = PROTO_TRUE;
                         if (m->require_encrypt)
                         {
@@ -518,7 +519,8 @@ static int mock_send(void *c, const uint8_t *d, size_t n)
             {
                 nonce[i] = (uint8_t)(ctr >> (8 * i));
             }
-            size_t el = protocore_smb2_encrypt(m->cipher, m->enc_s2c, nonce, m->session_id, resp, rlen, enc, sizeof(enc));
+            size_t el =
+                protocore_smb2_encrypt(m->cipher, m->enc_s2c, nonce, m->session_id, resp, rlen, enc, sizeof(enc));
             if (m->corrupt_read_sig && h.command == SMB2_READ)
             {
                 enc[PROTOCORE_SMB2_TRANSFORM_HDR_LEN + 2] ^= 0xFF;
@@ -964,10 +966,8 @@ void test_av_skip_then_find()
 {
     Mock m = make_mock();
     const uint8_t ti[] = {
-        0x02, 0x00, 0x04, 0x00, 0xDE, 0xAD, 0xBE, 0xEF,
-        0x07, 0x00, 0x04, 0x00, 0x11, 0x22, 0x33, 0x44,
-        0x07, 0x00, 0x08, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-        0x00, 0x00, 0x00, 0x00,
+        0x02, 0x00, 0x04, 0x00, 0xDE, 0xAD, 0xBE, 0xEF, 0x07, 0x00, 0x04, 0x00, 0x11, 0x22, 0x33, 0x44,
+        0x07, 0x00, 0x08, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x00, 0x00, 0x00, 0x00,
     };
     m.chal_ti = ti;
     m.chal_ti_len = sizeof(ti);

@@ -23,7 +23,7 @@ void dbench_run(void)
         static char out[256];
         DBENCH_OP("protocore_statsd_format (counter+tags)", 200000,
                   sink += protocore_statsd_format(out, sizeof(out), "api.requests", "1", STATSD_COUNTER, 0.1f,
-                                           "env:prod,host:pc-rig"));
+                                                  "env:prod,host:pc-rig"));
         (void)sink;
         DBENCH_DONE();
     }

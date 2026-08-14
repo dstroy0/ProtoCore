@@ -61,7 +61,8 @@ void dbench_run(void)
         DBENCH_OP("protocore_grpcweb_frame_message", 200000,
                   sinksz += protocore_grpcweb_frame_message(framebuf, sizeof(framebuf), msg, sizeof(msg), false));
         DBENCH_BULK("protocore_grpcweb_frame_message 256B", 50000, sizeof(bigbody),
-                    sinksz += protocore_grpcweb_frame_message(bigframe, sizeof(bigframe), bigbody, sizeof(bigbody), false));
+                    sinksz +=
+                    protocore_grpcweb_frame_message(bigframe, sizeof(bigframe), bigbody, sizeof(bigbody), false));
         DBENCH_OP("protocore_grpcweb_frame_trailer", 100000,
                   sinksz += protocore_grpcweb_frame_trailer(trailerbuf, sizeof(trailerbuf), 0, "OK"));
         DBENCH_OP("protocore_grpcweb_parse", 200000,

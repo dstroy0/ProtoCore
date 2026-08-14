@@ -189,10 +189,10 @@ static const char *run(const char *doc)
 void test_spec_example_3_produces_example_4(void)
 {
     TEST_ASSERT_EQUAL_STRING("{\"data\":{\"user\":{\"name\":\"Mark Zuckerberg\"}}}", run("{\n"
-                                                                                        "  user(id: 4) {\n"
-                                                                                        "    name\n"
-                                                                                        "  }\n"
-                                                                                        "}\n"));
+                                                                                         "  user(id: 4) {\n"
+                                                                                         "    name\n"
+                                                                                         "  }\n"
+                                                                                         "}\n"));
     TEST_ASSERT_TRUE(GraphQL.ok);
     TEST_ASSERT_EQUAL_INT(PROTOCORE_GQL_OK, GraphQL.result);
     TEST_ASSERT_EQUAL_UINT(strlen(g_out), GraphQL.n);

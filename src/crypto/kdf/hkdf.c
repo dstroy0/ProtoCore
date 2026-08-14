@@ -24,7 +24,7 @@ static_assert(HKDF_OFF_INFO + HKDF_INFO_CAP <= PROTOCORE_HKDF_BORROW,
               "consumer sizes its own borrow from");
 
 void protocore_hkdf_extract(uint8_t *work, const uint8_t *salt, size_t salt_len, const uint8_t *ikm, size_t ikm_len,
-                     uint8_t prk[PROTOCORE_HKDF_HASH_LEN])
+                            uint8_t prk[PROTOCORE_HKDF_HASH_LEN])
 {
     // RFC 5869 sec 2.2: PRK = HMAC-Hash(salt, IKM). protocore_hmac_sha256 pre-hashes keys > 64 bytes and
     // zero-pads shorter ones, which is exactly HMAC's own key handling, so the salt goes in as-is.
@@ -34,8 +34,8 @@ void protocore_hkdf_extract(uint8_t *work, const uint8_t *salt, size_t salt_len,
 // RFC 5869 sec 2.3 HKDF-Expand for the QUIC case: the info block is small and fixed and the
 // requested length never exceeds one hash block, but the general N-block loop is written out so a
 // future >32-byte caller stays correct. T(i) = HMAC(PRK, T(i-1) || info || i), i counts from 1.
-void protocore_hkdf_expand(uint8_t *work, const uint8_t prk[PROTOCORE_HKDF_HASH_LEN], const uint8_t *info, size_t info_len,
-                    uint8_t *out, size_t out_len)
+void protocore_hkdf_expand(uint8_t *work, const uint8_t prk[PROTOCORE_HKDF_HASH_LEN], const uint8_t *info,
+                           size_t info_len, uint8_t *out, size_t out_len)
 {
     // RFC 5869 sec 2.3 bounds L at 255*HashLen because the block counter is a single octet. Past
     // that the counter wraps and T(256) repeats T(1), so the output would silently reuse earlier
@@ -71,8 +71,8 @@ void protocore_hkdf_expand(uint8_t *work, const uint8_t prk[PROTOCORE_HKDF_HASH_
 }
 
 void protocore_hkdf_expand_label_ctx(uint8_t *work, const uint8_t secret[PROTOCORE_HKDF_HASH_LEN], const char *label,
-                              const uint8_t *context, size_t context_len, uint8_t *out, size_t out_len,
-                              const char *label_prefix)
+                                     const uint8_t *context, size_t context_len, uint8_t *out, size_t out_len,
+                                     const char *label_prefix)
 {
     // HkdfLabel (RFC 8446 sec 7.1): uint16 length | opaque label<..> = label_prefix + label | opaque context.
     // The prefix is "tls13 " for TLS/QUIC (RFC 8446) or "dtls13" for DTLS 1.3 (RFC 9147 sec 5.9); the
@@ -104,8 +104,8 @@ void protocore_hkdf_expand_label_ctx(uint8_t *work, const uint8_t secret[PROTOCO
     protocore_hkdf_expand(work, secret, info, p, out, out_len);
 }
 
-void protocore_hkdf_expand_label(uint8_t *work, const uint8_t secret[PROTOCORE_HKDF_HASH_LEN], const char *label, uint8_t *out,
-                          size_t out_len, const char *label_prefix)
+void protocore_hkdf_expand_label(uint8_t *work, const uint8_t secret[PROTOCORE_HKDF_HASH_LEN], const char *label,
+                                 uint8_t *out, size_t out_len, const char *label_prefix)
 {
     protocore_hkdf_expand_label_ctx(work, secret, label, NULL, 0, out, out_len, label_prefix);
 }

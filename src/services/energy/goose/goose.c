@@ -167,7 +167,8 @@ size_t protocore_goose_pdu(const protocore_goose *g, uint8_t *out, size_t cap)
     size_t n = RESERVE; // build the content after the reserved header area
     static const uint8_t ZT[8] = {0};
     proto_bool ok =
-        protocore_ber_str(out, cap, &n, 0x80, g->gocb_ref) && protocore_ber_int(out, cap, &n, 0x81, g->time_allowed_to_live) &&
+        protocore_ber_str(out, cap, &n, 0x80, g->gocb_ref) &&
+        protocore_ber_int(out, cap, &n, 0x81, g->time_allowed_to_live) &&
         protocore_ber_str(out, cap, &n, 0x82, g->dat_set) && protocore_ber_str(out, cap, &n, 0x83, g->go_id) &&
         tlv(out, cap, &n, 0x84, g->t ? g->t : ZT, 8) && protocore_ber_int(out, cap, &n, 0x85, g->st_num) &&
         protocore_ber_int(out, cap, &n, 0x86, g->sq_num) && protocore_ber_bool(out, cap, &n, 0x87, g->simulation) &&
@@ -187,8 +188,8 @@ size_t protocore_goose_pdu(const protocore_goose *g, uint8_t *out, size_t cap)
     return hdr + content_len;
 }
 
-size_t protocore_goose_frame(const uint8_t *dst, const uint8_t *src, uint16_t appid, const protocore_goose *g, uint8_t *out,
-                      size_t cap)
+size_t protocore_goose_frame(const uint8_t *dst, const uint8_t *src, uint16_t appid, const protocore_goose *g,
+                             uint8_t *out, size_t cap)
 {
     if (!dst || !src || !g || !out || cap < 22)
     {

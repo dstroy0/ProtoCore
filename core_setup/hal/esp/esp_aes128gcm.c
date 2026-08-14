@@ -36,7 +36,8 @@ typedef struct protocore_aes128
     mbedtls_aes_context mbed; ///< mbedtls context (HW-accelerated), key schedule loaded.
 } protocore_aes128;
 
-static_assert(sizeof(protocore_aes128) <= PROTOCORE_WORK_AES128, "protocore_aes128 outgrew PROTOCORE_WORK_AES128 - raise it in protocore_config.h");
+static_assert(sizeof(protocore_aes128) <= PROTOCORE_WORK_AES128,
+              "protocore_aes128 outgrew PROTOCORE_WORK_AES128 - raise it in protocore_config.h");
 
 struct protocore_aes128 *protocore_aes128_wants(void)
 {
@@ -65,7 +66,8 @@ static_assert(sizeof(mbedtls_gcm_context) <= PROTOCORE_WORK_AES128GCM,
               "mbedtls_gcm_context outgrew PROTOCORE_WORK_AES128GCM - raise it in protocore_config.h, which derives "
               "PROTOCORE_SECURE_ARENA_SIZE from it");
 
-struct protocore_aes128gcm_key *protocore_aes128gcm_key_init(void *storage, const uint8_t key[PROTOCORE_AES128GCM_KEY_LEN])
+struct protocore_aes128gcm_key *protocore_aes128gcm_key_init(void *storage,
+                                                             const uint8_t key[PROTOCORE_AES128GCM_KEY_LEN])
 {
     mbedtls_gcm_context *g = (mbedtls_gcm_context *)(storage);
     mbedtls_gcm_init(g);
@@ -84,26 +86,27 @@ void protocore_aes128gcm_key_wipe(struct protocore_aes128gcm_key *k)
     protocore_secure_wipe((uint8_t *)(g), sizeof(mbedtls_gcm_context));
 }
 
-protocore_cspan protocore_aes128gcm_seal(struct protocore_aes128gcm_key *k, const uint8_t nonce[PROTOCORE_AES128GCM_IV_LEN], const uint8_t *aad,
-                           size_t aad_len, const uint8_t *pt, size_t pt_len, uint8_t *ct_out,
-                           uint8_t tag_out[PROTOCORE_AES128GCM_TAG_LEN])
+protocore_cspan protocore_aes128gcm_seal(struct protocore_aes128gcm_key *k,
+                                         const uint8_t nonce[PROTOCORE_AES128GCM_IV_LEN], const uint8_t *aad,
+                                         size_t aad_len, const uint8_t *pt, size_t pt_len, uint8_t *ct_out,
+                                         uint8_t tag_out[PROTOCORE_AES128GCM_TAG_LEN])
 {
     mbedtls_gcm_context *g = (mbedtls_gcm_context *)(k);
-    if (mbedtls_gcm_crypt_and_tag(g, MBEDTLS_GCM_ENCRYPT, pt_len, nonce, PROTOCORE_AES128GCM_IV_LEN, aad, aad_len, pt, ct_out,
-                                  PROTOCORE_AES128GCM_TAG_LEN, tag_out) != 0)
+    if (mbedtls_gcm_crypt_and_tag(g, MBEDTLS_GCM_ENCRYPT, pt_len, nonce, PROTOCORE_AES128GCM_IV_LEN, aad, aad_len, pt,
+                                  ct_out, PROTOCORE_AES128GCM_TAG_LEN, tag_out) != 0)
     {
         return span.cfrom(NULL, 0);
     }
     return span.cfrom(ct_out, pt_len); // the tag rides in tag_out, not in this span
 }
 
-proto_bool protocore_aes128gcm_open(struct protocore_aes128gcm_key *k, const uint8_t nonce[PROTOCORE_AES128GCM_IV_LEN], const uint8_t *aad,
-                             size_t aad_len, const uint8_t *ct, size_t ct_len, const uint8_t tag[PROTOCORE_AES128GCM_TAG_LEN],
-                             uint8_t *out)
+proto_bool protocore_aes128gcm_open(struct protocore_aes128gcm_key *k, const uint8_t nonce[PROTOCORE_AES128GCM_IV_LEN],
+                                    const uint8_t *aad, size_t aad_len, const uint8_t *ct, size_t ct_len,
+                                    const uint8_t tag[PROTOCORE_AES128GCM_TAG_LEN], uint8_t *out)
 {
     mbedtls_gcm_context *g = (mbedtls_gcm_context *)(k);
-    return mbedtls_gcm_auth_decrypt(g, ct_len, nonce, PROTOCORE_AES128GCM_IV_LEN, aad, aad_len, tag, PROTOCORE_AES128GCM_TAG_LEN, ct,
-                                    out) == 0;
+    return mbedtls_gcm_auth_decrypt(g, ct_len, nonce, PROTOCORE_AES128GCM_IV_LEN, aad, aad_len, tag,
+                                    PROTOCORE_AES128GCM_TAG_LEN, ct, out) == 0;
 }
 
 #endif // PROTOCORE_HAS_HW_AESGCM

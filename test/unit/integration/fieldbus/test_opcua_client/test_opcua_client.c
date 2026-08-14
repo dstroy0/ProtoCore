@@ -96,7 +96,8 @@ void test_session_roundtrip()
 
     uint8_t resp[512];
     OpcUaServerInfo si = {"opc.tcp://host:4840", "urn:test", "TestServer"};
-    size_t sn = protocore_opcua_build_create_session_response(&m, 0x500, 0x600, 1200000.0, &si, 1, 0, resp, sizeof(resp));
+    size_t sn =
+        protocore_opcua_build_create_session_response(&m, 0x500, 0x600, 1200000.0, &si, 1, 0, resp, sizeof(resp));
     TEST_ASSERT_TRUE(sn > 0);
     TEST_ASSERT_TRUE(protocore_opcua_client_on_create_session(&c, resp, sn));
     TEST_ASSERT_EQUAL_UINT32(0x600, c.session_auth_id);
@@ -752,8 +753,7 @@ void test_msg_envelope_guards()
     TEST_ASSERT_EQUAL_INT32(-1, protocore_opcua_client_on_read(resp, sn, v, s, 1));
     resp[4] = save;
 
-    sn = forge_msg(resp, sizeof(resp), OPCUA_ID_READ_RESP, OPCUA_STATUS_GOOD, cnt0, sizeof(cnt0),
-                   PROTO_TRUE, "MSG");
+    sn = forge_msg(resp, sizeof(resp), OPCUA_ID_READ_RESP, OPCUA_STATUS_GOOD, cnt0, sizeof(cnt0), PROTO_TRUE, "MSG");
     TEST_ASSERT_TRUE(sn > 0);
     TEST_ASSERT_EQUAL_INT32(-1, protocore_opcua_client_on_read(resp, sn, v, s, 1));
 }
@@ -766,8 +766,8 @@ void test_on_open_envelope_and_result_guards()
     TEST_ASSERT_FALSE(protocore_opcua_client_on_open(&c, tiny, sizeof(tiny)));
 
     uint8_t buf[192];
-    size_t n = build_opn(buf, sizeof(buf), OPCUA_ID_OPEN_RESP, 0, PROTO_TRUE, OPCUA_STATUS_GOOD,
-                         PROTO_TRUE, PROTO_FALSE);
+    size_t n =
+        build_opn(buf, sizeof(buf), OPCUA_ID_OPEN_RESP, 0, PROTO_TRUE, OPCUA_STATUS_GOOD, PROTO_TRUE, PROTO_FALSE);
     TEST_ASSERT_TRUE(n > 0);
     TEST_ASSERT_TRUE(protocore_opcua_client_on_open(&c, buf, n));
     TEST_ASSERT_EQUAL_UINT32(0x2A, c.channel_id);
@@ -796,8 +796,8 @@ void test_on_open_rejects_message_size_mismatch(void)
     OpcUaClient c;
     protocore_opcua_client_init(&c);
     uint8_t buf[192];
-    size_t n = build_opn(buf, sizeof(buf), OPCUA_ID_OPEN_RESP, 0, PROTO_TRUE, OPCUA_STATUS_GOOD,
-                         PROTO_TRUE, PROTO_FALSE);
+    size_t n =
+        build_opn(buf, sizeof(buf), OPCUA_ID_OPEN_RESP, 0, PROTO_TRUE, OPCUA_STATUS_GOOD, PROTO_TRUE, PROTO_FALSE);
     TEST_ASSERT_TRUE(n > 0);
     TEST_ASSERT_TRUE(protocore_opcua_client_on_open(&c, buf, n));
 

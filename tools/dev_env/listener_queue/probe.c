@@ -17,7 +17,8 @@ int main(void)
 {
     // What the queue would cost, from the header constants.
     const unsigned long would_cost = (unsigned long)EVT_QUEUE_DEPTH * sizeof(TcpEvt) * (unsigned long)MAX_LISTENERS;
-    const unsigned long workers = (unsigned long)EVT_QUEUE_DEPTH * sizeof(TcpEvt) * (unsigned long)PROTOCORE_WORKER_COUNT;
+    const unsigned long workers =
+        (unsigned long)EVT_QUEUE_DEPTH * sizeof(TcpEvt) * (unsigned long)PROTOCORE_WORKER_COUNT;
 
     // What it actually costs, measured off the struct the guard edits.
     const unsigned long row = (unsigned long)sizeof(Listener);
