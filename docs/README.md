@@ -717,8 +717,6 @@ src/
 │   ├── time_compat/  (time_compat.h, time_compat.c)
 │   └── utf8/  (utf8.h, utf8.c)
 ├── web_assets/
-│   ├── __pycache__/
-│   │   └── __init__.cpython-311.pyc
 │   ├── favicons/  (288 generated files)
 │   ├── input/
 │   │   ├── PC_DASHBOARD_PAGE.html
@@ -730,12 +728,6 @@ src/
 │   │   └── PC_TERMINAL_PAGE.html
 │   ├── themes/  (112 generated files)
 │   ├── wizard/
-│   │   ├── __pycache__/
-│   │   │   ├── __init__.cpython-311.pyc
-│   │   │   ├── build_assets.cpython-311.pyc
-│   │   │   ├── gen_favicons.cpython-311.pyc
-│   │   │   ├── gen_theme_blobs.cpython-311.pyc
-│   │   │   └── gen_themes.cpython-311.pyc
 │   │   ├── __init__.py
 │   │   ├── build_assets.py
 │   │   ├── gen_favicons.py
