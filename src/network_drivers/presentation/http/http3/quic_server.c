@@ -131,7 +131,10 @@ static proto_bool cid_eq(const uint8_t *a, uint8_t alen, const uint8_t *b, uint8
 static void server_send(const char *ip, uint16_t port, const uint8_t *data, size_t len)
 {
     protocore_ip dst = {PROTOCORE_IP_NONE, {0}};
-    if (Ip.parse(ip, &dst))
+    Ip.args.text = ip;
+    Ip.args.out = &dst;
+    Ip.parse(Ip.internal);
+    if (Ip.ok)
     {
         UdpListener.port = s_quic.port;
         UdpListener.send_args.dst = &dst;

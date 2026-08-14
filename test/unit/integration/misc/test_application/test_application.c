@@ -5,11 +5,10 @@
 #include "network_drivers/transport/tcp/common.h"
 #include "network_drivers/transport/tcp/protocol/protocol.h"
 #include "network_drivers/transport/tcp/server/server.h"
-#include "server/core/proto_handler.h"
-#include "network_drivers/transport/tcp/tcp.h"
 #include "network_drivers/transport/tcp/tcp.h"
 #include "protocore.h"
 #include "rx_feed.h"
+#include "server/core/proto_handler.h"
 #include "server/storage/mnt.h"
 #include <string.h>
 #include <unity.h>
@@ -134,7 +133,7 @@ void setUp(void)
     handler_called = PROTO_FALSE;
     handler_slot = 255;
 #if PROTOCORE_ENABLE_WEBSOCKET
-    ws_init();
+    Ws.init(Ws.internal);
 #endif
 #if PROTOCORE_ENABLE_SSE
     protocore_sse_init();
@@ -1175,13 +1174,15 @@ void test_sse_broadcast_after_upgrade_matches_path(void)
 
 void test_ws_send_api(void)
 {
-    ws_init();
+    Ws.init(Ws.internal);
     conn_pool[0] = (TcpConn){0};
     conn_pool[0].id = 0;
     conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].proto = PROTO_HTTP;
     conn_pool[0].pcb = protocore_net_host_pcb();
-    WsConn *ws = ws_alloc(0);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
     TEST_ASSERT_NOT_NULL(ws);
 
     tcp_capture_reset();
@@ -1503,15 +1504,17 @@ void test_ws_sse_upgrade_failure_paths(void)
     handle();
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "400"));
 
-    ws_alloc(1);
-    ws_alloc(2);
+    Ws.slot = 1;
+    Ws.alloc(Ws.internal);
+    Ws.slot = 2;
+    Ws.alloc(Ws.internal);
     arm_slot(0, "GET /ws HTTP/1.1\r\nHost: x\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n"
                 "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Version: 13\r\n\r\n");
     conn_pool[0].pcb = protocore_net_host_pcb();
     tcp_capture_reset();
     handle();
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "101"));
-    ws_init();
+    Ws.init(Ws.internal);
     tcp_capture_disable();
 #endif
 }
@@ -2045,34 +2048,42 @@ static void ws_upgrade_slot0(const char *path)
 
 void test_ws_upgrade_without_connect_handler(void)
 {
-    ws_init();
+    Ws.init(Ws.internal);
     on_ws("/wsn", NULL, NULL, NULL);
     tcp_capture_reset();
     ws_upgrade_slot0("/wsn");
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "101 Switching Protocols"));
-    TEST_ASSERT_NOT_NULL(ws_find(0));
+    Ws.slot = 0;
+    Ws.find(Ws.internal);
+    TEST_ASSERT_NOT_NULL(Ws.found);
     tcp_capture_disable();
-    ws_init();
+    Ws.init(Ws.internal);
 }
 
 void test_ws_dispatch_without_message_or_close_handler(void)
 {
-    ws_init();
+    Ws.init(Ws.internal);
     on_http("/plain", HTTP_GET, record_handler);
     on_ws("/wsq", NULL, NULL, NULL);
     ws_upgrade_slot0("/wsq");
-    WsConn *ws = ws_find(0);
+    Ws.slot = 0;
+    Ws.find(Ws.internal);
+    WsConn *ws = Ws.found;
     TEST_ASSERT_NOT_NULL(ws);
 
     push_ws_text_frame(0, "hi");
     handle();
-    TEST_ASSERT_NOT_NULL(ws_find(0));
+    Ws.slot = 0;
+    Ws.find(Ws.internal);
+    TEST_ASSERT_NOT_NULL(Ws.found);
     TEST_ASSERT_NOT_EQUAL(WS_FRAME_READY, ws->parse_state);
 
     ws->parse_state = WS_ERROR;
     handle();
-    TEST_ASSERT_NULL(ws_find(0));
-    ws_init();
+    Ws.slot = 0;
+    Ws.find(Ws.internal);
+    TEST_ASSERT_NULL(Ws.found);
+    Ws.init(Ws.internal);
 }
 
 void test_ws_upgrade_handshake_gate(void)
@@ -2179,9 +2190,11 @@ void test_sse_send_on_dead_slot_writes_nothing(void)
 
 void test_ws_send_api_inactive_error_state_and_dead_slot(void)
 {
-    ws_init();
+    Ws.init(Ws.internal);
     live_slot(0);
-    WsConn *ws = ws_alloc(0);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
     TEST_ASSERT_NOT_NULL(ws);
 
     tcp_capture_reset();
@@ -2203,7 +2216,7 @@ void test_ws_send_api_inactive_error_state_and_dead_slot(void)
     ws_disconnect(ws->ws_id);
     TEST_ASSERT_EQUAL_size_t(0, tcp_captured_len());
     tcp_capture_disable();
-    ws_init();
+    Ws.init(Ws.internal);
 }
 #endif
 

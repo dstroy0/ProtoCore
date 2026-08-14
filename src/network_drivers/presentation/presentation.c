@@ -17,7 +17,7 @@
 #include "server/core/proto_handler.h" // ProtoHandler (the L5 dispatch seam this registers into)
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the slot a handler is dispatched on
 #if PROTOCORE_ENABLE_WEBSOCKET
-#include "network_drivers/presentation/http/websocket/websocket.h" // ws_find()/ws_free(): a WS-upgraded slot must never be HTTP-parsed
+#include "network_drivers/presentation/http/websocket/websocket.h" // Ws.find/Ws.free: a WS-upgraded slot must never be HTTP-parsed
 #endif
 #if PROTOCORE_ENABLE_SSE
 #include "network_drivers/presentation/http/sse/sse.h" // Sse.free: release a stream when its HTTP slot closes or is reused
@@ -97,7 +97,8 @@ static void reset(struct HttpConnInternal *restrict ctx)
 static inline void http_release_upgrade_bindings(uint8_t slot_id)
 {
 #if PROTOCORE_ENABLE_WEBSOCKET
-    ws_free(slot_id);
+    Ws.slot = slot_id;
+    Ws.free(Ws.internal);
 #endif
 #if PROTOCORE_ENABLE_SSE
     Sse.slot = slot_id;
@@ -134,7 +135,9 @@ static void parse(struct HttpConnInternal *restrict ctx)
     // would consume - and corrupt - the first WS frame. This guard makes "never HTTP-parse a WS
     // slot" hold for every caller (the event-queue dispatch raced the WS pump and ate the first
     // frame's header byte, dropping the first connection after a reboot).
-    if (ws_find(ctx->ns->slot))
+    Ws.slot = ctx->ns->slot;
+    Ws.find(Ws.internal);
+    if (Ws.found)
     {
         return;
     }
@@ -232,7 +235,9 @@ static void tls_data(uint8_t slot)
     // A TLS slot upgraded to WebSocket is pumped from handle() (it decrypts
     // records and feeds the WS frame parser, dispatching each frame); leave the
     // ciphertext in the rx ring for it rather than feeding the HTTP parser here.
-    if (ws_find(slot))
+    Ws.slot = slot;
+    Ws.find(Ws.internal);
+    if (Ws.found)
     {
         return;
     }

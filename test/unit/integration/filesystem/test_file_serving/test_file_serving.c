@@ -53,7 +53,7 @@ void setUp()
         conn_pool[i].pcb = protocore_net_host_pcb();
         http_reset(i);
     }
-    ws_init();
+    Ws.init(Ws.internal);
     protocore_sse_init();
 
     mock_mnt_reset();
@@ -389,12 +389,7 @@ void test_serve_static_inm_non_matching_forms()
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "ETag: \"f-3e8\""));
 
     static const char *misses[] = {
-        "\"nope\",",
-        "\"a\",\t\"b\"",
-        "Wxyz",
-        "bare-token",
-        "\"unterminated",
-        "\"f-3e9\"",
+        "\"nope\",", "\"a\",\t\"b\"", "Wxyz", "bare-token", "\"unterminated", "\"f-3e9\"",
     };
     for (size_t i = 0; i < sizeof(misses) / sizeof(misses[0]); i++)
     {

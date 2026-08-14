@@ -2,12 +2,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #include "network_drivers/presentation/presentation.h"
+#include "network_drivers/session/session.h"
 #include "network_drivers/transport/tcp/common.h"
 #include "network_drivers/transport/tcp/protocol/protocol.h"
 #include "network_drivers/transport/tcp/server/server.h"
-#include "server/core/proto_handler.h"
-#include "network_drivers/session/session.h"
 #include "network_drivers/transport/tcp/tcp.h"
+#include "server/clock/clock.h"
+#include "server/core/proto_handler.h"
 #include <unity.h>
 
 static void push_to_slot(uint8_t slot, const char *data)
@@ -36,7 +37,8 @@ void setUp()
     {
         conn_pool[i].state = CONN_ACTIVE;
         conn_pool[i].proto = PROTO_HTTP;
-        http_reset(i);
+        HttpConn.slot = (uint8_t)i;
+        HttpConn.reset(HttpConn.internal);
     }
 }
 
@@ -46,7 +48,8 @@ void tearDown()
 
 void test_empty_queue_does_not_crash()
 {
-    Session.tick(0);
+    Session.worker_id = 0;
+    Session.tick(Session.internal);
     TEST_PASS();
 }
 
@@ -62,7 +65,8 @@ void test_reset_clears_mid_parse_state()
 {
     http_pool[0].parse_state = PARSE_HEADER_KEY;
     http_pool[0].header_count = 3;
-    http_reset(0);
+    HttpConn.slot = (uint8_t)0;
+    HttpConn.reset(HttpConn.internal);
     TEST_ASSERT_EQUAL(PARSE_METHOD, http_pool[0].parse_state);
     TEST_ASSERT_EQUAL(0, http_pool[0].header_count);
 }
@@ -71,7 +75,8 @@ void test_tick_fires_check_timeouts_stale_slot_freed()
 {
     conn_pool[0].last_activity_ms = 0;
     set_millis(CONN_TIMEOUT_MS);
-    Session.tick(0);
+    Session.worker_id = 0;
+    Session.tick(Session.internal);
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
 }
 
@@ -79,7 +84,8 @@ void test_tick_does_not_free_fresh_connection()
 {
     conn_pool[0].last_activity_ms = 0;
     set_millis(CONN_TIMEOUT_MS - 1);
-    Session.tick(0);
+    Session.worker_id = 0;
+    Session.tick(Session.internal);
     TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)conn_pool[0].state);
 }
 
@@ -87,7 +93,8 @@ void test_fn_tick_timeout_before_event_drain_ordering()
 {
     conn_pool[1].last_activity_ms = 0;
     set_millis(CONN_TIMEOUT_MS);
-    Session.tick(0);
+    Session.worker_id = 0;
+    Session.tick(Session.internal);
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[1].state);
 
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[1].state);
@@ -103,7 +110,8 @@ void test_fn_tick_only_active_slots_expire()
     conn_pool[3].last_activity_ms = CONN_TIMEOUT_MS;
 
     set_millis(CONN_TIMEOUT_MS);
-    Session.tick(0);
+    Session.worker_id = 0;
+    Session.tick(Session.internal);
 
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[1].state);
@@ -116,7 +124,8 @@ void stress_1000_idle_ticks_stable()
     set_millis(0);
     for (int i = 0; i < 1000; i++)
     {
-        Session.tick(0);
+        Session.worker_id = 0;
+        Session.tick(Session.internal);
     }
     for (int i = 0; i < MAX_CONNS; i++)
     {
@@ -135,7 +144,8 @@ void stress_timeout_all_slots_10_cycles()
             conn_pool[i].last_activity_ms = 0;
         }
         set_millis((uint32_t)(CONN_TIMEOUT_MS * (cycle + 1)));
-        Session.tick(0);
+        Session.worker_id = 0;
+        Session.tick(Session.internal);
         for (int i = 0; i < MAX_CONNS; i++)
         {
             TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[i].state);
@@ -157,7 +167,8 @@ void stress_mixed_fresh_stale_slots_many_ticks()
     set_millis(CONN_TIMEOUT_MS);
     for (int tick = 0; tick < 200; tick++)
     {
-        Session.tick(0);
+        Session.worker_id = 0;
+        Session.tick(Session.internal);
     }
 
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
@@ -176,7 +187,8 @@ void test_evt_connect_calls_http_reset()
     TcpListener.q.evt = &evt;
     TcpListener.enqueue(TcpListener.internal);
     (void)TcpListener.ok;
-    Session.tick(0);
+    Session.worker_id = 0;
+    Session.tick(Session.internal);
 
     TEST_ASSERT_EQUAL(PARSE_METHOD, http_pool[1].parse_state);
     TEST_ASSERT_EQUAL(0, http_pool[1].header_count);
@@ -192,7 +204,8 @@ void test_evt_disconnect_calls_http_reset()
     TcpListener.q.evt = &evt;
     TcpListener.enqueue(TcpListener.internal);
     (void)TcpListener.ok;
-    Session.tick(0);
+    Session.worker_id = 0;
+    Session.tick(Session.internal);
 
     TEST_ASSERT_EQUAL(PARSE_METHOD, http_pool[0].parse_state);
     TEST_ASSERT_EQUAL(0, http_pool[0].header_count);
@@ -207,7 +220,8 @@ void test_evt_error_calls_http_reset()
     TcpListener.q.evt = &evt;
     TcpListener.enqueue(TcpListener.internal);
     (void)TcpListener.ok;
-    Session.tick(0);
+    Session.worker_id = 0;
+    Session.tick(Session.internal);
 
     TEST_ASSERT_EQUAL(PARSE_METHOD, http_pool[2].parse_state);
 }
@@ -221,7 +235,8 @@ void test_evt_data_calls_http_parse()
     TcpListener.q.evt = &evt;
     TcpListener.enqueue(TcpListener.internal);
     (void)TcpListener.ok;
-    Session.tick(0);
+    Session.worker_id = 0;
+    Session.tick(Session.internal);
 
     TEST_ASSERT_EQUAL(PARSE_COMPLETE, http_pool[0].parse_state);
     TEST_ASSERT_EQUAL_STRING("GET", http_pool[0].method);
@@ -252,7 +267,9 @@ void test_multiple_events_drained_in_one_tick()
     TcpListener.enqueue(TcpListener.internal);
     (void)TcpListener.ok;
 
-    Session.tick(0);
+    Session.worker_id = 0;
+
+    Session.tick(Session.internal);
 
     TEST_ASSERT_EQUAL(PARSE_METHOD, http_pool[0].parse_state);
     TEST_ASSERT_EQUAL(PARSE_COMPLETE, http_pool[1].parse_state);
@@ -284,7 +301,8 @@ void test_dispatch_drops_unregistered_protocol_event()
     TcpListener.q.evt = &evt;
     TcpListener.enqueue(TcpListener.internal);
     (void)TcpListener.ok;
-    Session.tick(0);
+    Session.worker_id = 0;
+    Session.tick(Session.internal);
 
     TEST_ASSERT_EQUAL(PARSE_COMPLETE, http_pool[0].parse_state);
 }
@@ -304,7 +322,8 @@ void test_dispatch_skips_null_callback_fields()
     TcpListener.q.evt = &e0;
     TcpListener.enqueue(TcpListener.internal);
     (void)TcpListener.ok;
-    Session.tick(0);
+    Session.worker_id = 0;
+    Session.tick(Session.internal);
     TEST_ASSERT_EQUAL(PARSE_COMPLETE, http_pool[0].parse_state);
 
     TcpEvt e1 = {EVT_DATA, 0, 0};
@@ -312,7 +331,8 @@ void test_dispatch_skips_null_callback_fields()
     TcpListener.q.evt = &e1;
     TcpListener.enqueue(TcpListener.internal);
     (void)TcpListener.ok;
-    Session.tick(0);
+    Session.worker_id = 0;
+    Session.tick(Session.internal);
     TEST_ASSERT_EQUAL(PARSE_COMPLETE, http_pool[0].parse_state);
 
     TcpEvt e2 = {EVT_DISCONNECT, 0, 0};
@@ -320,7 +340,8 @@ void test_dispatch_skips_null_callback_fields()
     TcpListener.q.evt = &e2;
     TcpListener.enqueue(TcpListener.internal);
     (void)TcpListener.ok;
-    Session.tick(0);
+    Session.worker_id = 0;
+    Session.tick(Session.internal);
     TEST_ASSERT_EQUAL(PARSE_COMPLETE, http_pool[0].parse_state);
 
     conn_pool[0].proto = PROTO_HTTP;
@@ -335,7 +356,8 @@ void test_dispatch_ignores_unknown_evt_type()
     TcpListener.q.evt = &evt;
     TcpListener.enqueue(TcpListener.internal);
     (void)TcpListener.ok;
-    Session.tick(0);
+    Session.worker_id = 0;
+    Session.tick(Session.internal);
 
     TEST_ASSERT_EQUAL(PARSE_COMPLETE, http_pool[0].parse_state);
 }
@@ -344,7 +366,8 @@ void test_tick_skips_active_listener_with_null_queue()
 {
     listener_pool[1].active = PROTO_TRUE;
     listener_pool[1].queue = NULL;
-    Session.tick(0);
+    Session.worker_id = 0;
+    Session.tick(Session.internal);
     listener_pool[1].active = PROTO_FALSE;
     TEST_PASS();
 }
@@ -354,10 +377,13 @@ void race_external_free_between_ticks()
     conn_pool[0].last_activity_ms = 0;
 
     set_millis(CONN_TIMEOUT_MS);
-    Session.tick(0);
+    Session.worker_id = 0;
+    Session.tick(Session.internal);
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
 
-    Session.tick(0);
+    Session.worker_id = 0;
+
+    Session.tick(Session.internal);
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
 }
 
@@ -366,13 +392,16 @@ void race_activity_update_saves_slot_from_timeout()
     conn_pool[0].last_activity_ms = 0;
     set_millis(CONN_TIMEOUT_MS - 1);
 
-    Session.tick(0);
+    Session.worker_id = 0;
+
+    Session.tick(Session.internal);
     TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)conn_pool[0].state);
 
     conn_pool[0].last_activity_ms = CONN_TIMEOUT_MS - 1;
 
     set_millis(CONN_TIMEOUT_MS);
-    Session.tick(0);
+    Session.worker_id = 0;
+    Session.tick(Session.internal);
     TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)conn_pool[0].state);
 }
 
@@ -384,13 +413,16 @@ void race_all_expire_then_idle_tick()
         conn_pool[i].last_activity_ms = 0;
     }
     set_millis(CONN_TIMEOUT_MS);
-    Session.tick(0);
+    Session.worker_id = 0;
+    Session.tick(Session.internal);
     for (int i = 0; i < MAX_CONNS; i++)
     {
         TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[i].state);
     }
 
-    Session.tick(0);
+    Session.worker_id = 0;
+
+    Session.tick(Session.internal);
     for (int i = 0; i < MAX_CONNS; i++)
     {
         TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[i].state);
@@ -404,45 +436,55 @@ void race_millis_wraparound_no_spurious_timeout()
     conn_pool[0].last_activity_ms = 0xFFFFFFFF - 100u;
 
     set_millis((uint32_t)(CONN_TIMEOUT_MS - 200));
-    Session.tick(0);
+    Session.worker_id = 0;
+    Session.tick(Session.internal);
 
     TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)conn_pool[0].state);
 }
 
-int main()
+static void stage_data_evt(uint8_t slot)
 {
-    UNITY_BEGIN();
+    TcpEvt evt = {EVT_DATA, slot, 0};
+    TcpListener.idx = 0;
+    TcpListener.q.evt = &evt;
+    TcpListener.enqueue(TcpListener.internal);
+}
 
-    RUN_TEST(test_empty_queue_does_not_crash);
-    RUN_TEST(test_pool_initializes_to_parse_method);
-    RUN_TEST(test_reset_clears_mid_parse_state);
-    RUN_TEST(test_tick_fires_check_timeouts_stale_slot_freed);
-    RUN_TEST(test_tick_does_not_free_fresh_connection);
+void test_first_data_event_arms_the_request_deadline()
+{
+    http_req_start_ms[0] = 0;
+    set_millis(4242);
+    Clock.millis(Clock.internal);
+    stage_data_evt(0);
+    Session.worker_id = 0;
+    Session.tick(Session.internal);
+    TEST_ASSERT_EQUAL_UINT32(4242, http_req_start_ms[0]);
+}
 
-    RUN_TEST(test_fn_tick_timeout_before_event_drain_ordering);
-    RUN_TEST(test_fn_tick_only_active_slots_expire);
+void test_a_request_already_under_way_keeps_its_arm()
+{
+    http_req_start_ms[0] = 0;
+    set_millis(4242);
+    Clock.millis(Clock.internal);
+    stage_data_evt(0);
+    Session.worker_id = 0;
+    Session.tick(Session.internal);
 
-    RUN_TEST(stress_1000_idle_ticks_stable);
-    RUN_TEST(stress_timeout_all_slots_10_cycles);
-    RUN_TEST(stress_mixed_fresh_stale_slots_many_ticks);
+    set_millis(9999);
+    Clock.millis(Clock.internal);
+    stage_data_evt(0);
+    Session.worker_id = 0;
+    Session.tick(Session.internal);
+    TEST_ASSERT_EQUAL_UINT32(4242, http_req_start_ms[0]);
+}
 
-    RUN_TEST(test_evt_connect_calls_http_reset);
-    RUN_TEST(test_evt_disconnect_calls_http_reset);
-    RUN_TEST(test_evt_error_calls_http_reset);
-    RUN_TEST(test_evt_data_calls_http_parse);
-    RUN_TEST(test_multiple_events_drained_in_one_tick);
-
-    RUN_TEST(test_protocore_register_out_of_range_is_nop);
-    RUN_TEST(test_protocore_get_out_of_range_returns_null);
-    RUN_TEST(test_dispatch_drops_unregistered_protocol_event);
-    RUN_TEST(test_dispatch_skips_null_callback_fields);
-    RUN_TEST(test_dispatch_ignores_unknown_evt_type);
-    RUN_TEST(test_tick_skips_active_listener_with_null_queue);
-
-    RUN_TEST(race_external_free_between_ticks);
-    RUN_TEST(race_activity_update_saves_slot_from_timeout);
-    RUN_TEST(race_all_expire_then_idle_tick);
-    RUN_TEST(race_millis_wraparound_no_spurious_timeout);
-
-    return UNITY_END();
+void test_a_zero_stamp_still_reads_as_armed()
+{
+    http_req_start_ms[0] = 0;
+    set_millis(0);
+    Clock.millis(Clock.internal);
+    stage_data_evt(0);
+    Session.worker_id = 0;
+    Session.tick(Session.internal);
+    TEST_ASSERT_EQUAL_UINT32(1, http_req_start_ms[0]);
 }

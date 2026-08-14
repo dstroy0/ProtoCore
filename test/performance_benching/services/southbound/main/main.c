@@ -41,21 +41,50 @@ static int drv_read_block(void *, uint32_t first, int32_t *out, size_t n)
     return (int)n;
 }
 
+static int32_t sb_read(const char *name, uint32_t point, int32_t *value_out)
+{
+    Southbound.name = name;
+    Southbound.point.point = point;
+    Southbound.point.value_out = value_out;
+    Southbound.read(Southbound.internal);
+    return Southbound.i32;
+}
+
+static int32_t sb_write(const char *name, uint32_t point, int32_t value)
+{
+    Southbound.name = name;
+    Southbound.point.point = point;
+    Southbound.point.value = value;
+    Southbound.write(Southbound.internal);
+    return Southbound.i32;
+}
+
+static int32_t sb_read_block(const char *name, uint32_t first, int32_t *out, size_t n)
+{
+    Southbound.name = name;
+    Southbound.block.first = first;
+    Southbound.block.out = out;
+    Southbound.block.n = n;
+    Southbound.read_block(Southbound.internal);
+    return Southbound.i32;
+}
+
 void dbench_run(void)
 {
     static const SouthboundDriver drv = {"plc1", drv_read, drv_write, drv_read_block, NULL, NULL};
-    protocore_southbound_clear();
-    protocore_southbound_register(&drv);
+    Southbound.clear(Southbound.internal);
+    Southbound.drv = &drv;
+    Southbound.add(Southbound.internal);
 
     for (;;)
     {
         DBENCH_BANNER("southbound");
         volatile int sink = 0;
         int32_t v = 0;
-        DBENCH_OP("protocore_southbound_read (dispatch)", 200000, sink += protocore_southbound_read("plc1", 5, &v));
-        DBENCH_OP("protocore_southbound_write (dispatch)", 200000, sink += protocore_southbound_write("plc1", 5, sink));
+        DBENCH_OP("Southbound.read (dispatch)", 200000, sink += sb_read("plc1", 5, &v));
+        DBENCH_OP("Southbound.write (dispatch)", 200000, sink += sb_write("plc1", 5, sink));
         int32_t block[16];
-        DBENCH_OP("protocore_southbound_read_block x16", 100000, sink += protocore_southbound_read_block("plc1", 0, block, 16));
+        DBENCH_OP("Southbound.read_block x16", 100000, sink += sb_read_block("plc1", 0, block, 16));
         (void)sink;
         DBENCH_DONE();
     }

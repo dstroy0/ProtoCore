@@ -674,8 +674,14 @@ static proto_bool proto_authorize_request(uint8_t slot_id, HttpReq *req, const H
         protocore_secure_release(auth_mark);
         return PROTO_FALSE; // pool exhausted: fail closed
     }
-    proto_bool stale = PROTO_FALSE;
-    proto_bool ok = Auth.check(auth_ws.buf, slot_id, req, r->auth_id, &stale);
+    Auth.work = auth_ws.buf;
+    Auth.slot = slot_id;
+    Auth.req = req;
+    Auth.id = r->auth_id;
+    Auth.nonce_args.stale = PROTO_FALSE;
+    Auth.check(Auth.internal);
+    proto_bool stale = Auth.nonce_args.stale;
+    proto_bool ok = Auth.ok;
 #if PROTOCORE_ENABLE_AUTH_LOCKOUT
     // A stale-nonce retry carries valid credentials, so it is not a failed
     // attempt: don't count it toward the lockout (nor reset the counter).
@@ -690,7 +696,11 @@ static proto_bool proto_authorize_request(uint8_t slot_id, HttpReq *req, const H
 #endif
     if (!ok)
     {
-        Auth.challenge(auth_ws.buf, slot_id, r->auth_id, stale);
+        Auth.work = auth_ws.buf;
+        Auth.slot = slot_id;
+        Auth.id = r->auth_id;
+        Auth.nonce_args.stale = stale;
+        Auth.challenge(Auth.internal);
         protocore_secure_release(auth_mark);
         return PROTO_FALSE;
     }
@@ -905,7 +915,9 @@ static void poll_slot(struct HttpInternal *restrict ctx)
 
 #if PROTOCORE_ENABLE_WEBSOCKET
     // WebSocket slot - drain ring buffer and dispatch ready frames
-    WsConn *ws = ws_find(i);
+    Ws.slot = i;
+    Ws.find(Ws.internal);
+    WsConn *ws = Ws.found;
     if (ws)
     {
 #if PROTOCORE_ENABLE_TLS
@@ -922,11 +934,14 @@ static void poll_slot(struct HttpInternal *restrict ctx)
             {
                 for (int k = 0; k < n; k++)
                 {
-                    ws_feed_byte(ws, tbuf[k]);
+                    Ws.conn = ws;
+                    Ws.byte = tbuf[k];
+                    Ws.feed_byte(Ws.internal);
                     if (ws->parse_state == WS_FRAME_READY)
                     {
                         ws_dispatch_message(ws);
-                        ws_reset_frame(ws);
+                        Ws.conn = ws;
+                        Ws.reset_frame(Ws.internal);
                     }
                     else if (ws->parse_state == WS_CLOSED || ws->parse_state == WS_ERROR)
                     {
@@ -941,7 +956,8 @@ static void poll_slot(struct HttpInternal *restrict ctx)
             if (ws->parse_state == WS_CLOSED || ws->parse_state == WS_ERROR || n < 0)
             {
                 ws_dispatch_close(ws);
-                ws_free(i);
+                Ws.slot = i;
+                Ws.free(Ws.internal);
                 ConnPool.slot = i;
                 ConnPool.abort_slot(ConnPool.internal); // transport owns TLS-free + detach + reset + RST
                 HttpConn.slot = i;
@@ -951,17 +967,20 @@ static void poll_slot(struct HttpInternal *restrict ctx)
         }
 #endif // PROTOCORE_ENABLE_TLS
 
-        ws_parse(ws);
+        Ws.conn = ws;
+        Ws.parse(Ws.internal);
 
         if (ws->parse_state == WS_FRAME_READY)
         {
             ws_dispatch_message(ws);
-            ws_reset_frame(ws);
+            Ws.conn = ws;
+            Ws.reset_frame(Ws.internal);
         }
         else if (ws->parse_state == WS_CLOSED || ws->parse_state == WS_ERROR)
         {
             ws_dispatch_close(ws);
-            ws_free(i);
+            Ws.slot = i;
+            Ws.free(Ws.internal);
             // RFC 6455 5.5.1: close the underlying TCP connection after the close
             // handshake. begin_close moves the slot out of CONN_ACTIVE so the
             // post-close bytes are NOT re-parsed as a new HTTP request (the
@@ -1028,7 +1047,8 @@ static void poll_slot(struct HttpInternal *restrict ctx)
     if (http_pool[i].parse_state == PARSE_COMPLETE)
     {
         http_req_start_ms[i] = 0; // request complete: disarm; the next keep-alive request re-arms on its 1st byte
-        Http.match_and_execute(i);
+        Http.slot = i;
+        Http.match_and_execute(Http.internal);
         if (http_pool[i].parse_state == PARSE_COMPLETE)
         {
             HttpConn.slot = i;

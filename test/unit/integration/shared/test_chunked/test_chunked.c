@@ -1,8 +1,8 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-#include "protocore.h"
 #include "network_drivers/transport/tcp/common.h"
+#include "protocore.h"
 #include "shared/hex/hex.h"
 #include <stdio.h>
 #include <string.h>
@@ -190,7 +190,7 @@ void setUp()
         conn_pool[i].pcb = protocore_net_host_pcb();
         http_reset(i);
     }
-    ws_init();
+    Ws.init(Ws.internal);
     protocore_sse_init();
     tcp_capture_reset();
     mock_sndbuf_set(MOCK_SNDBUF_DEFAULT);
@@ -367,7 +367,7 @@ void test_hex_u32_size_line()
     TEST_ASSERT_EQUAL_size_t(1, nd);
     TEST_ASSERT_EQUAL_HEX8('0', out[0]);
 
-    const uint32_t vals[] = {1, 0xF, 0x10, 0x5A0 , 0xFFFF, 0x12345, 0xFFFFFFFFu};
+    const uint32_t vals[] = {1, 0xF, 0x10, 0x5A0, 0xFFFF, 0x12345, 0xFFFFFFFFu};
     for (size_t i = 0; i < sizeof(vals) / sizeof(vals[0]); i++)
     {
         char ref[16];

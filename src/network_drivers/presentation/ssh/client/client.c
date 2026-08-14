@@ -642,7 +642,14 @@ static proto_bool send_userauth_publickey(void)
     protocore_span w = span.from(out, sizeof(out));
     protocore_ssh_auth_write_publickey_request(&w, NULL, 0, user, "ssh-connection", NAME_ED25519, pkblob, pw.pos);
     protocore_ssh_wr_str(&w, sigblob, sg.pos);
-    return span.ok(w) && SshClient.send(out, w.pos);
+    if (!span.ok(w))
+    {
+        return PROTO_FALSE;
+    }
+    SshClient.msg.payload = out;
+    SshClient.msg.len = w.pos;
+    SshClient.send(SshClient.internal);
+    return SshClient.ok;
 }
 
 
@@ -847,7 +854,11 @@ void protocore_ssh_client_begin(struct SshClientInternal *restrict ctx)
         return;
     }
     // The slot is ours for the life of the forward, so an inbound accept passes over it.
-    if (SshNetwork.claim(SSH_CLI_SLOT, s_store.cid, SSH_STREAM_DIALED) != 0)
+    SshNetwork.ssh_slot = SSH_CLI_SLOT;
+    SshNetwork.handle = s_store.cid;
+    SshNetwork.stream.kind = SSH_STREAM_DIALED;
+    SshNetwork.claim(SshNetwork.internal);
+    if (SshNetwork.i32 != 0)
     {
         Tcp.client->close(s_store.cid);
         s_store.cid = -1;
@@ -933,12 +944,14 @@ void protocore_ssh_client_poll(struct SshClientInternal *restrict ctx)
 
 void protocore_ssh_client_end(struct SshClientInternal *restrict ctx)
 {
-    SshNetwork.chan_close_all(SSH_CLI_SLOT);
+    SshNetwork.ssh_slot = SSH_CLI_SLOT;
+    SshNetwork.chan_close_all(SshNetwork.internal);
     if (s_store.cid >= 0)
     {
         Tcp.client->close(s_store.cid);
     }
-    SshNetwork.release(SSH_CLI_SLOT);
+    SshNetwork.ssh_slot = SSH_CLI_SLOT;
+    SshNetwork.release(SshNetwork.internal);
     ssh_keymat_wipe(SSH_CLI_SLOT);
     cli_wipe();
     mem.set(&s_cli, 0, sizeof(s_cli));
@@ -950,13 +963,15 @@ static void cli_fail(const char *why)
 {
     PROTOCORE_LOGW(LOG_FWD_FAIL, ((const protocore_fval[]){PROTOCORE_VSTR(why)}), 1);
     s_store.state = PROTOCORE_SSH_CLIENT_FAILED;
-    SshNetwork.chan_close_all(SSH_CLI_SLOT);
+    SshNetwork.ssh_slot = SSH_CLI_SLOT;
+    SshNetwork.chan_close_all(SshNetwork.internal);
     if (s_store.cid >= 0)
     {
         Tcp.client->close(s_store.cid);
     }
     s_store.cid = -1;
-    SshNetwork.release(SSH_CLI_SLOT);
+    SshNetwork.ssh_slot = SSH_CLI_SLOT;
+    SshNetwork.release(SshNetwork.internal);
     ssh_keymat_wipe(SSH_CLI_SLOT);
     cli_wipe();
 }

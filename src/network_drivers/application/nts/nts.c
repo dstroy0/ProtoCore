@@ -77,7 +77,6 @@ size_t protocore_nts_ke_request(uint8_t *out, size_t cap)
 proto_bool protocore_nts_ke_parse(const uint8_t *buf, size_t len, protocore_nts_ke_cb cb, void *arg)
 {
     size_t off = 0;
-    proto_bool saw_end = PROTO_FALSE;
     while (off + 4 <= len)
     {
         uint16_t tf = get_u16(buf + off);
@@ -95,11 +94,11 @@ proto_bool protocore_nts_ke_parse(const uint8_t *buf, size_t len, protocore_nts_
         off += 4 + blen;
         if (type == NTS_KE_END_OF_MESSAGE)
         {
-            saw_end = PROTO_TRUE;
-            break;
+            // RFC 8915 sec 4.1.1: End of Message is the final record, so octets past it are malformed.
+            return off == len ? PROTO_TRUE : PROTO_FALSE;
         }
     }
-    return saw_end; // a well-formed stream is terminated by an End-of-Message record
+    return PROTO_FALSE; // no End-of-Message record
 }
 
 size_t protocore_nts_ef(uint16_t field_type, const uint8_t *value, size_t value_len, uint8_t *out, size_t cap)

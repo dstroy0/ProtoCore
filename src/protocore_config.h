@@ -1111,7 +1111,7 @@ from halves and is slower than the width it decomposes into"
  * @brief Largest outbound payload permessage-deflate will compress, in bytes.
  *
  * The compressor borrows `len + len/8 + 16` from the scratch arena, so an unbounded outbound length
- * would leave the arena with no worst case - `ws_send_frame()` takes a `uint16_t`, and neither
+ * would leave the arena with no worst case - `Ws.frame.len` is a `uint16_t`, and neither
  * WS_FRAME_SIZE (which bounds the *inbound* reassembled message) nor PROTOCORE_WS_FRAG_SIZE (off by
  * default, and a runtime setter besides) constrains it. This is that bound, and it is what makes
  * PROTOCORE_PLAINTEXT_WORK_WS_SEND a compile-time constant.
@@ -1358,7 +1358,7 @@ from halves and is slower than the width it decomposes into"
  * is compressed), the rest CONTINUATION, the last with FIN - instead of one large frame. Sizing it near
  * the TCP MSS (e.g. 1400) keeps each frame within whole segments (MTU-aligned) and lets a peer with a
  * bounded per-frame reassembly buffer receive an arbitrarily long message. The runtime override is
- * ws_set_frag_size(). Compression applies to the whole message first, then the compressed bytes are
+ * Ws.set_frag_size. Compression applies to the whole message first, then the compressed bytes are
  * split. Default 0 (one frame per message, unchanged).
  */
 #ifndef PROTOCORE_WS_FRAG_SIZE
@@ -4615,7 +4615,7 @@ from halves and is slower than the width it decomposes into"
  * The uniform seam every field-device driver plugs into so the app polls/drives any southbound device
  * (a Modbus slave, a BACnet controller, a raw sensor over SPI/I2C/UART) through one facade: register a
  * SouthboundDriver (a read/write/read_block/write_block vtable + its transport ctx), then address points
- * by driver name via protocore_southbound_read / _write / _read_block / _write_block. The block calls are the
+ * by driver name through Southbound read / write / read_block / write_block. The block calls are the
  * atomic multi-point (register-matrix) path. Bounded registry (PROTOCORE_SOUTHBOUND_MAX_DRIVERS, default 8),
  * no heap; Modbus master is the one such driver today. Default off.
  */

@@ -116,6 +116,10 @@ static proto_bool parse_v1(const uint8_t *buf, size_t len, ProxyInfo *out, size_
     {
         return PROTO_FALSE; // line not complete
     }
+    if (crlf + 2 > 107)
+    {
+        return PROTO_FALSE; // the line, CRLF included, is bounded at 107 octets
+    }
 
     const char *s = (const char *)buf;
     // Tokenize the line by single spaces.
@@ -147,14 +151,24 @@ static proto_bool parse_v1(const uint8_t *buf, size_t len, ProxyInfo *out, size_
     out->src_addr = out->dst_addr = 0;
     out->src_port = out->dst_port = 0;
     *consumed = crlf + 2;
-    // "PROXY TCP4 <src> <dst> <sport> <dport>"; anything else (UNKNOWN/TCP6) yields no addr.
-    if (ntok == 6 && tlen[1] == 4 && mem.cmp(tok[1], "TCP4", 4) == 0)
+    // "PROXY TCP4 <src> <dst> <sport> <dport>". TCP4, TCP6 and UNKNOWN are the published family
+    // tokens; any other sequence does not match the protocol and is discarded.
+    proto_bool tcp4 = (ntok == 6 && tlen[1] == 4 && mem.cmp(tok[1], "TCP4", 4) == 0);
+    proto_bool tcp6 = (ntok == 6 && tlen[1] == 4 && mem.cmp(tok[1], "TCP6", 4) == 0);
+    proto_bool unknown = (ntok >= 2 && tlen[1] == 7 && mem.cmp(tok[1], "UNKNOWN", 7) == 0);
+    if (!tcp4 && !tcp6 && !unknown)
     {
-        if (parse_ipv4(tok[2], tlen[2], &out->src_addr) && parse_ipv4(tok[3], tlen[3], &out->dst_addr) &&
-            parse_u16(tok[4], tlen[4], &out->src_port) && parse_u16(tok[5], tlen[5], &out->dst_port))
+        return PROTO_FALSE;
+    }
+    if (tcp4)
+    {
+        // A TCP4 line whose fields are outside the published ranges is the same mismatch.
+        if (!parse_ipv4(tok[2], tlen[2], &out->src_addr) || !parse_ipv4(tok[3], tlen[3], &out->dst_addr) ||
+            !parse_u16(tok[4], tlen[4], &out->src_port) || !parse_u16(tok[5], tlen[5], &out->dst_port))
         {
-            out->has_addr = PROTO_TRUE;
+            return PROTO_FALSE;
         }
+        out->has_addr = PROTO_TRUE;
     }
     return PROTO_TRUE;
 }
@@ -182,6 +196,15 @@ proto_bool proxy_parse(const uint8_t *buf, size_t len, ProxyInfo *out, size_t *c
             return PROTO_FALSE; // address block not fully buffered
         }
         if ((ver_cmd & 0xF0) != 0x20) // must be version 2
+        {
+            return PROTO_FALSE;
+        }
+        if ((ver_cmd & 0x0Fu) > 0x1u) // LOCAL and PROXY are the assigned commands
+        {
+            return PROTO_FALSE;
+        }
+        // AF_UNSPEC/AF_INET/AF_INET6/AF_UNIX over UNSPEC/STREAM/DGRAM are the assigned pairs.
+        if ((fam >> 4) > 0x3u || (fam & 0x0Fu) > 0x2u)
         {
             return PROTO_FALSE;
         }

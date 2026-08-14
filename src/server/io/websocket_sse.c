@@ -164,7 +164,9 @@ proto_bool ws_do_upgrade(uint8_t slot_id, HttpReq *req, WsConnectHandler on_conn
     // Reset HTTP parser but keep the TCP slot -- WS owns it now
     http_reset(slot_id);
 
-    WsConn *ws = ws_alloc(slot_id);
+    Ws.slot = slot_id;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
     if (!ws)
     {
         // No WS slot available -- abort the connection (transport owns the teardown)
@@ -254,7 +256,12 @@ void ws_send_text(uint8_t ws_id, const char *text)
         return;
     }
     uint16_t len = (uint16_t)strnlen(text, 0xFFFF);
-    if (ws_send_frame(ws, WS_OP_TEXT, (const uint8_t *)text, len))
+    Ws.conn = ws;
+    Ws.frame.opcode = WS_OP_TEXT;
+    Ws.frame.payload = (const uint8_t *)text;
+    Ws.frame.len = len;
+    Ws.send_frame(Ws.internal);
+    if (Ws.ok)
     {
         // has itself checked protocore_conn_active(), and nothing between the two can tear the slot down
         // on a single-threaded run. It is a re-check for the marshalled send path.
@@ -277,7 +284,12 @@ void ws_send_binary(uint8_t ws_id, const uint8_t *data, uint16_t len)
     {
         return;
     }
-    if (ws_send_frame(ws, WS_OP_BINARY, data, len))
+    Ws.conn = ws;
+    Ws.frame.opcode = WS_OP_BINARY;
+    Ws.frame.payload = data;
+    Ws.frame.len = len;
+    Ws.send_frame(Ws.internal);
+    if (Ws.ok)
     {
         // connection, so the false half of this re-check is unreachable from a host test.
         if (protocore_conn_active(ws->slot_id))
@@ -295,7 +307,9 @@ void ws_disconnect(uint8_t ws_id)
         return;
     }
     WsConn *ws = &ws_pool[ws_id];
-    ws_close(ws, WS_CLOSE_NORMAL);
+    Ws.conn = ws;
+    Ws.frame.code = WS_CLOSE_NORMAL;
+    Ws.close(Ws.internal);
     if (protocore_conn_active(ws->slot_id))
     {
         ConnPool.slot = ws->slot_id;

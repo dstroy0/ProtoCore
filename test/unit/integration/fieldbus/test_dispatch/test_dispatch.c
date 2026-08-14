@@ -1,8 +1,8 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-#include "protocore.h"
 #include "network_drivers/transport/tcp/common.h"
+#include "protocore.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -35,7 +35,7 @@ void setUp()
         conn_pool[i].pcb = protocore_net_host_pcb();
         http_reset(i);
     }
-    ws_init();
+    Ws.init(Ws.internal);
     protocore_sse_init();
     tcp_capture_reset();
 #if PROTOCORE_ENABLE_CSRF
@@ -157,7 +157,9 @@ void test_head_on_post_only_route_405()
 
 void test_http_parse_skips_ws_upgraded_slot()
 {
-    WsConn *ws = ws_alloc(2);
+    Ws.slot = 2;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
     TEST_ASSERT_NOT_NULL(ws);
 
     const uint8_t frame[] = {0x81, 0x85, 0x01, 0x02, 0x03, 0x04, 0x41, 0x43, 0x42, 0x45, 0x44};
@@ -172,7 +174,8 @@ void test_http_parse_skips_ws_upgraded_slot()
     http_parse(2);
 
     TEST_ASSERT_EQUAL_size_t(tail_before, c->rx_tail);
-    ws_free(2);
+    Ws.slot = 2;
+    Ws.free(Ws.internal);
 }
 #endif
 

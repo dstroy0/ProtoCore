@@ -169,6 +169,19 @@ static inline void protocore_bus_host_fail_next(uint32_t n)
 // a driver actually composed rather than the owner refusing before the driver got that far.
 #define PROTOCORE_PLATFORM_HAS_BUS 1
 
+// The vendor seams core_setup/hal/host/host_platform.c answers for. Declared here because this is
+// the header protocore_platform.h pulls in on the host arm, so the gates it computes below can read
+// them; the implementations and the setters a test states a fact through are in host_platform.c/.h.
+// Each one turns the owner's real hardware path on, so a host suite exercises the same code the
+// device runs instead of the refusing arm.
+#define PROTOCORE_PLATFORM_HAS_VENDOR_MAC 1
+#define PROTOCORE_PLATFORM_HAS_VENDOR_HEAP_INFO 1
+#define PROTOCORE_PLATFORM_HAS_VENDOR_PM 1
+#define PROTOCORE_PLATFORM_HAS_VENDOR_BT 1
+#define PROTOCORE_PLATFORM_HAS_VENDOR_OTA 1
+#define PROTOCORE_PLATFORM_HAS_VENDOR_COREDUMP 1
+#define PROTOCORE_PLATFORM_HAS_VENDOR_CAN 1
+
 static inline int protocore_platform_uart_begin(uint8_t unit, uint32_t baud, int rx, int tx)
 {
     (void)baud;
@@ -505,15 +518,34 @@ static inline uint32_t protocore_platform_micros(void)
     protocore_host_us_tick++;
     return millis() * 1000u + protocore_host_us_tick;
 }
-// No cycle counter on the host; deltas only, so a micros-derived stand-in is honest enough.
+// The cycle counter is the one time seam that must track real elapsed time: it is what the
+// microbenchmarks measure with, and millis() above is a virtual clock that only set_millis() moves.
+// A monotonic read scaled to PROTOCORE_HOST_CYCLE_MHZ gives a count in the same units the benches
+// divide by, so a host figure is wall time expressed at the nominal clock, not a silicon cycle
+// count. It wraps at 2^32 like the hardware counter, so only short deltas are meaningful.
+#ifndef PROTOCORE_HOST_CYCLE_MHZ
+#define PROTOCORE_HOST_CYCLE_MHZ 240u
+#endif
+
 static inline uint32_t protocore_platform_cycles(void)
 {
-    return protocore_platform_micros() * 240u;
+    struct timespec ts;
+    if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0)
+    {
+        return protocore_platform_micros() * PROTOCORE_HOST_CYCLE_MHZ;
+    }
+    uint64_t ns = (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;
+    return (uint32_t)((ns * PROTOCORE_HOST_CYCLE_MHZ) / 1000ull);
 }
 
 // ---------------------------------------------------------------------------
 // Scheduler surface
 // ---------------------------------------------------------------------------
+
+// Tells the worker layer a scheduler exists, the same way PROTOCORE_PLATFORM_HAS_BUS does for the
+// bus owners: the queues and tasks below are the seam, so the pipeline's worker path runs here
+// instead of resolving to the inline arm.
+#define PROTOCORE_PLATFORM_HAS_SCHEDULER 1
 
 typedef void *protocore_platform_queue;
 typedef struct

@@ -780,13 +780,16 @@ void test_fn_parse_out_of_range_is_nop()
 
 void test_fn_parse_is_nop_on_ws_upgraded_slot()
 {
-    TEST_ASSERT_NOT_NULL(ws_alloc(0));
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    TEST_ASSERT_NOT_NULL(Ws.found);
     push(0, "GET / HTTP/1.1\r\n\r\n");
     size_t before = protocore_conn_available(0);
     http_parse(0);
     TEST_ASSERT_EQUAL(PARSE_METHOD, http_pool[0].parse_state);
     TEST_ASSERT_EQUAL(before, protocore_conn_available(0));
-    ws_free(0);
+    Ws.slot = 0;
+    Ws.free(Ws.internal);
 }
 #endif
 

@@ -4,8 +4,8 @@ name: Test & Analyze
 # (the human report) and test/coverage.xml (for the SonarCloud scan).
 #
 # Affected-only for a change that touches no library source: the diff maps - via the compiler include
-# graph in test/dep_graph.json - to just the envs it affects (test/select_envs.py), and only those run.
-# test/TEST_REPORT.md then has its touched (suite, env) rows/sections replaced (merge_report.py), every
+# graph in test/dep_graph.json - to just the envs it affects (test/harness.py env select), and only those run.
+# test/TEST_REPORT.md then has its touched (suite, env) rows/sections replaced (harness.py report merge), every
 # other suite kept verbatim and header totals recomputed. test/coverage.xml is not written on that path.
 #
 # The whole matrix runs (and both artifacts are regenerated from scratch) when ANY of these hold:
@@ -13,7 +13,7 @@ name: Test & Analyze
 #     ever written whole, so re-measuring everything is what keeps the committed report describing the
 #     code that is actually there rather than the line numbers it used to have;
 #   * a change maps to FULL - a shared header the graph attributes to >=90% of envs, a config/tooling
-#     file, or a new file not yet in the graph (select_envs.py's safe default);
+#     file, or a new file not yet in the graph (env select's safe default);
 #   * the commit message contains [ci full] (or [full ci]);
 #   * the PR carries the 'full-ci' label;
 #   * the workflow_dispatch 'full' input is true.
@@ -82,7 +82,7 @@ jobs:
           sudo apt-get update && sudo apt-get install -y ccache
 
       - name: Check platformio.ini is in sync with the test matrix
-        run: python3 -m test.gen_test_envs --check
+        run: python3 test/harness.py env gen --check
 
       # Map the diff to the envs it affects (or FULL / NONE). Writes changed_src.txt (the changed
       # sources, the coverage replace-set) and exposes mode + the env list.
@@ -116,7 +116,7 @@ jobs:
             SEL="FULL" # first push on a branch / unknown base -> be safe
           else
             git diff --name-only "$BASE" "$HEAD" > changed_all.txt
-            SEL="$(python3 test/select_envs.py --base "$BASE" --head "$HEAD" < changed_all.txt)"
+            SEL="$(python3 test/harness.py env select --base "$BASE" --head "$HEAD" < changed_all.txt)"
             # Headers belong here too: inline code in a .h carries branches and shows up in the
             # coverage report under its own path (src/services/system/control/control.h has 36).
             grep -E '^src/.*\.(cpp|cc|c|h|hpp)$' changed_all.txt > changed_src.txt || true
@@ -163,7 +163,7 @@ jobs:
           # that over the committed report would replace a whole-project measurement with a partial
           # one. coverage.xml is regenerated only by the full-matrix run below.
           bash test/run_tests.sh --report-out partial_report.md ${{ steps.sel.outputs.envs }} || rc=$?
-          python3 -m test.merge_report test/TEST_REPORT.md partial_report.md test/TEST_REPORT.md
+          python3 test/harness.py report merge test/TEST_REPORT.md partial_report.md test/TEST_REPORT.md
           rm -f partial_report.md changed_all.txt changed_src.txt
           echo "rc=$rc" >> "$GITHUB_OUTPUT"
 
@@ -171,11 +171,11 @@ jobs:
         if: ${{ steps.sel.outputs.mode != 'none' }}
         run: npx prettier@3.9.6 --write test/TEST_REPORT.md
 
-      # Keep test/dep_graph.json (the compiler include graph select_envs.py maps changes through)
+      # Keep test/dep_graph.json (the compiler include graph env select maps changes through)
       # current: a full run regenerates it whole; an affected run recomputes just the envs that ran
       # (--merge), so a later #include change is already reflected next time. Deterministic output, so
       # it only shows a diff (and gets committed) when the include structure actually changed.
-      # Non-fatal: the graph is an optimization (select_envs falls back to FULL for anything not in
+      # Non-fatal: the graph is an optimization (env select falls back to FULL for anything not in
       # it), and the real outputs are the report + coverage - a graph hiccup must not fail the job or
       # block their commit. An unchanged graph is a no-op (deterministic output).
       - name: Refresh dependency graph
@@ -200,8 +200,8 @@ jobs:
           # match, restore the committed one so the timing noise is never committed.
           if git cat-file -e HEAD:test/TEST_REPORT.md 2>/dev/null; then
             git show HEAD:test/TEST_REPORT.md > /tmp/old_report.md
-            python3 test/report_stable.py /tmp/old_report.md > /tmp/old.norm
-            python3 test/report_stable.py test/TEST_REPORT.md > /tmp/new.norm
+            python3 test/harness.py report stable /tmp/old_report.md > /tmp/old.norm
+            python3 test/harness.py report stable test/TEST_REPORT.md > /tmp/new.norm
             if diff -q /tmp/old.norm /tmp/new.norm >/dev/null 2>&1; then
               git checkout -- test/TEST_REPORT.md
             fi
@@ -240,7 +240,7 @@ jobs:
       # cost of the job never failing at all. Capture-then-raise keeps the artifact AND restores the gate.
       #
       # The report grep is a second, independent check: it catches a failure that the runner's exit code
-      # misses - notably merge_report.py overlaying an empty partial, which silently rewrites the
+      # misses - notably report merge overlaying an empty partial, which silently rewrites the
       # committed report verbatim and exits 0.
       - name: Gate on test results
         if: ${{ always() && steps.sel.outputs.mode != 'none' }}

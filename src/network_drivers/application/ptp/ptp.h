@@ -44,6 +44,7 @@ enum protocore_ptp_msg_type
 
 #define PROTOCORE_PTP_HEADER_LEN 34    ///< common header length
 #define PROTOCORE_PTP_TS_LEN 10        ///< on-wire timestamp length (6-octet seconds + 4-octet nanoseconds)
+#define PROTOCORE_PTP_PDELAY_REQ_LEN 54 ///< header, originTimestamp, and the reserved field after it
 #define PROTOCORE_PTP_EVENT_PORT 319   ///< UDP port for event messages (Sync, Delay_Req)
 #define PROTOCORE_PTP_GENERAL_PORT 320 ///< UDP port for general messages (Follow_Up, Delay_Resp, Announce)
 

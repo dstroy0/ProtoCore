@@ -20,6 +20,10 @@
  * receives the reply (over protocore_client for Modbus TCP, or a serial gateway). Pure otherwise - no heap,
  * no sockets, host-testable with a mock transaction routed straight into the slave codec.
  *
+ * A caller sets the members a call takes, invokes it through ::SbModbus, and reads the outcome off the
+ * same handle. The module exports one symbol, @ref SbModbus; everything in sb_modbus.c has internal
+ * linkage.
+ *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
  */
@@ -29,7 +33,7 @@
 
 #include "protocore_config.h"
 #include "services/fieldbus/modbus/modbus.h"    // ModbusFunction, MODBUS_ADU_MAX
-#include "services/southbound/southbound.h" // SouthboundDriver, Sb
+#include "services/southbound/southbound.h" // SouthboundDriver, Southbound
 
 PROTOCORE_BEGIN_DECLS
 
@@ -51,7 +55,7 @@ typedef int (*protocore_sb_modbus_txn)(void *io, const uint8_t *req, size_t req_
 /**
  * @brief One Modbus-master southbound driver instance (borrowed by the registry for its lifetime).
  *
- * Fill it with protocore_sb_modbus_init(), then build a SouthboundDriver over it with protocore_sb_modbus_driver().
+ * Fill it through ::SbModbus @c init, then build a SouthboundDriver over it through ::SbModbus @c driver.
  */
 typedef struct
 {
@@ -63,29 +67,47 @@ typedef struct
     uint8_t last_exception;      ///< raw Modbus exception code from the last read (0 = none).
 } protocore_sb_modbus_ctx;
 
-/**
- * @brief Initialize a driver context.
- * @param ctx   the instance to fill.
- * @param txn   the transport seam (must be non-null).
- * @param io    opaque context passed to @p txn on each request (may be null).
- * @param fc    MODBUS_FC_READ_HOLDING_REGS or ::MODBUS_FC_READ_INPUT_REGS.
- * @param unit  Modbus unit / slave id.
- * @return SB_OK, or SB_ERR_ARG on a null ctx/txn or an fc that is not a read function code.
- */
-int protocore_sb_modbus_init(protocore_sb_modbus_ctx *ctx, protocore_sb_modbus_txn txn, void *io, ModbusFunction fc,
-                             uint8_t unit);
+/** @brief The module's handle onto its own calls, described only in sb_modbus.c. */
+struct SbModbusInternal;
 
 /**
- * @brief Fill @p drv_out with a SouthboundDriver bound to @p ctx.
+ * @brief The Modbus-master adapter: fill a driver instance, then build a SouthboundDriver over it.
  *
- * A holding-register context binds read + read_block + write + write_block; an input-register context
- * binds read + read_block only (input registers are read-only).
- * @param drv_out  the driver vtable to fill (borrowed by the registry; must outlive it, as must @p ctx).
- * @param name     the driver's unique registry name (borrowed).
- * @param ctx      an initialized context (see protocore_sb_modbus_init).
- * @return SB_OK, or SB_ERR_ARG on a null / uninitialized argument.
+ * No storage member: the instance every call acts on is the caller's, named by @c ctx.
+ *
+ * @var SbModbusNs::ctx      the driver instance an init fills and a driver call binds
+ * @var SbModbusNs::txn      the transport seam an init takes; a null one is rejected
+ * @var SbModbusNs::io       the opaque context handed to @c txn on each request; may be null
+ * @var SbModbusNs::fc       MODBUS_FC_READ_HOLDING_REGS or MODBUS_FC_READ_INPUT_REGS
+ * @var SbModbusNs::unit     the Modbus unit / slave id an init takes
+ * @var SbModbusNs::drv_out  the driver vtable a driver call fills (borrowed by the registry)
+ * @var SbModbusNs::name     the unique registry name a driver call binds (borrowed)
+ * @var SbModbusNs::i32      SB_OK, or SB_ERR_ARG on a null / out-of-range argument
+ * @var SbModbusNs::init     fill @c ctx from @c txn, @c io, @c fc and @c unit
+ * @var SbModbusNs::driver   fill @c drv_out with a SouthboundDriver bound to @c ctx
+ * @var SbModbusNs::internal the module's handle onto the calls above
  */
-int protocore_sb_modbus_driver(SouthboundDriver *drv_out, const char *name, protocore_sb_modbus_ctx *ctx);
+typedef struct
+{
+    protocore_sb_modbus_ctx *ctx; ///< the driver instance a call acts on
+    protocore_sb_modbus_txn txn;  ///< the transport seam an init takes
+    void *io;                     ///< the opaque context handed to @c txn
+    ModbusFunction fc;            ///< the read function code an init takes
+    uint8_t unit;                 ///< the Modbus unit / slave id an init takes
+
+    SouthboundDriver *drv_out; ///< the driver vtable a driver call fills
+    const char *name;          ///< the registry name a driver call binds
+
+    int32_t i32;
+
+    void (*init)(struct SbModbusInternal *ctx);
+    void (*driver)(struct SbModbusInternal *ctx);
+
+    struct SbModbusInternal *internal;
+} SbModbusNs;
+
+/** @brief The one symbol this module exports. */
+extern SbModbusNs SbModbus;
 
 #endif // PROTOCORE_ENABLE_SOUTHBOUND && PROTOCORE_ENABLE_MODBUS_MASTER
 

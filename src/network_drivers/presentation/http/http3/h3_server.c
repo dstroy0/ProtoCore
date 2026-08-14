@@ -142,7 +142,8 @@ static void request(struct H3ServerInternal *restrict ctx)
     ConnPool.st = CONN_ACTIVE;
     ConnPool.set_state(ConnPool.internal); // reserved slot: no bitmask bit (slot >= MAX_CONNS)
 
-    Http.match_and_execute(slot); // -> handler -> send_text() -> protocore_resp_sink -> protocore_quic_server_respond()
+    Http.slot = slot;
+    Http.match_and_execute(Http.internal); // -> handler -> send_text() -> protocore_resp_sink -> protocore_quic_server_respond()
 
     // Release the dispatch slot for the next request (a no-response handler simply leaves the stream open).
     http_h3[slot] = 0;

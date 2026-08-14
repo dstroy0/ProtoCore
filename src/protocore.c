@@ -194,7 +194,8 @@ static void protocore_pump_trampoline(int worker_id)
 // is no per-server context to thread through.
 static void protocore_http_on_poll(uint8_t slot)
 {
-    Http.poll_slot(slot);
+    Http.slot = slot;
+    Http.poll_slot(Http.internal);
 }
 
 int32_t proto_begin(const WebServerConfig *cfg)
@@ -216,7 +217,8 @@ int32_t proto_begin(const WebServerConfig *cfg)
         protocore_span ws = protocore_secure_span(PROTOCORE_SHA256_BORROW, _Alignof(uint32_t));
         if (span.ok(ws))
         {
-            Auth.rekey(ws.buf);
+            Auth.work = ws.buf;
+            Auth.rekey(Auth.internal);
         }
         protocore_secure_release(mark);
     }
@@ -236,7 +238,7 @@ int32_t proto_begin(const WebServerConfig *cfg)
         HttpConn.reset(HttpConn.internal);
     }
 #if PROTOCORE_ENABLE_WEBSOCKET
-    ws_init();
+    Ws.init(Ws.internal);
 #endif
 #if PROTOCORE_ENABLE_SSE
     Sse.init(Sse.internal);
@@ -271,7 +273,8 @@ int32_t proto_begin(const WebServerConfig *cfg)
 #if PROTOCORE_HAS_SCHEDULER
     // Routes/listeners are now fixed; start the worker task(s) that drive the
     // pipeline off the user's loop(). On host the pipeline runs inline via handle().
-    Session.workers->start(protocore_pump_trampoline);
+    Session.workers->pump = protocore_pump_trampoline;
+    Session.workers->start(Session.workers->internal);
 #endif
     return (int32_t)PROTOCORE_OK;
 }
@@ -364,7 +367,7 @@ void stop(void)
 {
 #if PROTOCORE_HAS_SCHEDULER
     // Stop the worker task(s) before tearing down the slots they service.
-    Session.workers->stop();
+    Session.workers->stop(Session.workers->internal);
 #endif
     TcpListener.stop_all(TcpListener.internal);
     ConnPool.stop(ConnPool.internal);
@@ -374,7 +377,7 @@ void stop(void)
         HttpConn.reset(HttpConn.internal);
     }
 #if PROTOCORE_ENABLE_WEBSOCKET
-    ws_init();
+    Ws.init(Ws.internal);
 #endif
 #if PROTOCORE_ENABLE_SSE
     Sse.init(Sse.internal);
@@ -485,7 +488,12 @@ void on_http_auth(const char *path, HttpMethod method, Handler callback, const c
     r->method = method;
     r->callback = callback;
     // The credential goes to the module that checks it; the route keeps only the id naming it.
-    r->auth_id = Auth.add(realm, user, pass, digest);
+    Auth.cred.realm = realm;
+    Auth.cred.user = user;
+    Auth.cred.pass = pass;
+    Auth.cred.digest = digest;
+    Auth.add(Auth.internal);
+    r->auth_id = Auth.u8;
 }
 #endif // PROTOCORE_ENABLE_AUTH
 
@@ -595,7 +603,8 @@ void ws_dispatch_close(const WsConn *ws)
 void handle(void)
 {
 #if PROTOCORE_HAS_SCHEDULER
-    if (Session.workers->running())
+    Session.workers->running(Session.workers->internal);
+    if (Session.workers->ok)
     {
         return;
     }
@@ -617,7 +626,8 @@ void service_once(int worker_id)
     HttpConn.poll = protocore_http_on_poll;
     HttpConn.set_poll(HttpConn.internal);
 
-    Session.tick(worker_id);
+    Session.worker_id = worker_id;
+    Session.tick(Session.internal);
 
 #if PROTOCORE_ENABLE_HTTP3
     // Drive the QUIC/HTTP-3 server: ingest queued datagrams, run the engines (which dispatch requests
@@ -656,7 +666,8 @@ void service_once(int worker_id)
     }
 
     // Run any callbacks app code deferred to this worker (race-free push path).
-    Session.workers->run_deferred(worker_id);
+    Session.workers->worker_id = worker_id;
+    Session.workers->run_deferred(Session.workers->internal);
 }
 
 proto_bool defer(uint8_t slot, protocore_deferred_fn fn, void *arg)

@@ -55,9 +55,15 @@ proto_bool protocore_iface_bridge_map(const char *ip, uint16_t port, BridgeProto
     BridgeRule r;
     mem.set(&r, 0, sizeof(r));
     r.listen_ip.family = PROTOCORE_IP_NONE; // "any interface" unless a valid address is given
-    if (ip && ip[0] && !Ip.parse(ip, &r.listen_ip))
+    if (ip && ip[0])
     {
-        return PROTO_FALSE; // malformed bind address
+        Ip.args.text = ip;
+        Ip.args.out = &r.listen_ip;
+        Ip.parse(Ip.internal);
+        if (!Ip.ok)
+        {
+            return PROTO_FALSE; // malformed bind address
+        }
     }
     r.listen_port = port;
     r.proto = proto;

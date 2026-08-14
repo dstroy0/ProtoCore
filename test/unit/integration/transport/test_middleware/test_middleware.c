@@ -1,8 +1,8 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-#include "protocore.h"
 #include "network_drivers/transport/tcp/common.h"
+#include "protocore.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -100,7 +100,7 @@ void setUp()
         conn_pool[i].pcb = protocore_net_host_pcb();
         http_reset(i);
     }
-    ws_init();
+    Ws.init(Ws.internal);
     protocore_sse_init();
     tcp_capture_reset();
 

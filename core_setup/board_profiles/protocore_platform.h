@@ -254,32 +254,6 @@
 #endif
 #endif
 
-// Self-update. 1 = the SDK ships an updater that writes the other app partition and flips the boot
-// selector; 0 = there is none, and the OTA service and the rollback policy have nothing to drive.
-#ifndef PROTOCORE_HAS_VENDOR_OTA
-#if PROTOCORE_VENDOR_ESP
-#define PROTOCORE_HAS_VENDOR_OTA 1
-#elif PROTOCORE_HOST
-#define PROTOCORE_HAS_VENDOR_OTA 0 // a unit-test build has no partition table to write
-#else
-#error                                                                                                                 \
-    "ProtoCore: this vendor must state PROTOCORE_HAS_VENDOR_OTA (1 = the SDK's own updater + boot selector, 0 = none, and the OTA service does not compile). Choosing none is fine; defaulting into it is not."
-#endif
-#endif
-
-// Crash-image capture. 1 = the SDK writes a core dump to its own flash partition; 0 = there is none.
-// The decoder that reads one is portable and is not gated on this.
-#ifndef PROTOCORE_HAS_VENDOR_COREDUMP
-#if PROTOCORE_VENDOR_ESP
-#define PROTOCORE_HAS_VENDOR_COREDUMP 1
-#elif PROTOCORE_HOST
-#define PROTOCORE_HAS_VENDOR_COREDUMP 0 // a unit-test build has no crash partition to read
-#else
-#error                                                                                                                 \
-    "ProtoCore: this vendor must state PROTOCORE_HAS_VENDOR_COREDUMP (1 = the SDK's own crash-image capture, 0 = none, and only the portable decoder compiles). Choosing none is fine; defaulting into it is not."
-#endif
-#endif
-
 // WiFi driver. 1 = the SDK exposes the radio below the IP stack, which is what monitor mode and a
 // vendor peer-to-peer protocol need; 0 = there is none, and both refuse. Not the same axis as
 // having a network interface: a stack can carry IP over ethernet with no radio underneath it.
@@ -291,19 +265,6 @@
 #else
 #error                                                                                                                 \
     "ProtoCore: this vendor must state PROTOCORE_HAS_VENDOR_WIFI (1 = an SDK WiFi driver reachable below the IP stack, 0 = none, and monitor mode and the peer-to-peer radio refuse). Choosing none is fine; defaulting into it is not."
-#endif
-#endif
-
-// CAN controller. 1 = the SDK ships a CAN / TWAI driver; 0 = there is none and the bus capture
-// refuses. The SocketCAN framing over it is portable and is not gated on this.
-#ifndef PROTOCORE_HAS_VENDOR_CAN
-#if PROTOCORE_VENDOR_ESP
-#define PROTOCORE_HAS_VENDOR_CAN 1
-#elif PROTOCORE_HOST
-#define PROTOCORE_HAS_VENDOR_CAN 0 // a unit-test build has no controller to open
-#else
-#error                                                                                                                 \
-    "ProtoCore: this vendor must state PROTOCORE_HAS_VENDOR_CAN (1 = an SDK CAN / TWAI driver, 0 = none, and the bus capture refuses). Choosing none is fine; defaulting into it is not."
 #endif
 #endif
 
@@ -324,46 +285,6 @@
 #endif
 #endif
 
-// Tasks to run on. 1 = there is a scheduler, so the pipeline runs on its own worker and a delay
-// sleeps; 0 = there is one context, the pipeline runs inline from the caller's loop, and a delay
-// spins on the clock.
-#ifndef PROTOCORE_HAS_SCHEDULER
-#if PROTOCORE_VENDOR_ESP
-#define PROTOCORE_HAS_SCHEDULER 1
-#elif PROTOCORE_HOST
-#define PROTOCORE_HAS_SCHEDULER 0 // one context: the caller's
-#else
-#error                                                                                                                 \
-    "ProtoCore: this vendor must state PROTOCORE_HAS_SCHEDULER (1 = tasks the pipeline can run on, 0 = one context and an inline pipeline). Choosing one context is fine; defaulting into it is not."
-#endif
-#endif
-
-// A factory MAC to read. 1 = the SDK hands back a burned-in address the device identity is derived
-// from; 0 = there is none, and the identity comes from wherever the application puts it.
-#ifndef PROTOCORE_HAS_VENDOR_MAC
-#if PROTOCORE_VENDOR_ESP
-#define PROTOCORE_HAS_VENDOR_MAC 1
-#elif PROTOCORE_HOST
-#define PROTOCORE_HAS_VENDOR_MAC 0 // a unit-test build has no burned-in address
-#else
-#error                                                                                                                 \
-    "ProtoCore: this vendor must state PROTOCORE_HAS_VENDOR_MAC (1 = a burned-in address from the SDK, 0 = none). Choosing none is fine; defaulting into it is not."
-#endif
-#endif
-
-// Heap and reset introspection. 1 = the SDK reports free / minimum-free heap and why the part last
-// reset, which the health readouts and the guardrails report; 0 = there is none and they report 0.
-#ifndef PROTOCORE_HAS_VENDOR_HEAP_INFO
-#if PROTOCORE_VENDOR_ESP
-#define PROTOCORE_HAS_VENDOR_HEAP_INFO 1
-#elif PROTOCORE_HOST
-#define PROTOCORE_HAS_VENDOR_HEAP_INFO 0 // the host allocator is not ours to measure
-#else
-#error                                                                                                                 \
-    "ProtoCore: this vendor must state PROTOCORE_HAS_VENDOR_HEAP_INFO (1 = SDK heap and reset-reason readouts, 0 = none, and the health panel reports 0). Choosing none is fine; defaulting into it is not."
-#endif
-#endif
-
 // Non-volatile key-value storage. 1 = the SDK keeps a key-value store across a reboot, which is
 // what provisioned credentials are written to; 0 = there is none and provisioning has nowhere to
 // put them.
@@ -375,33 +296,6 @@
 #else
 #error                                                                                                                 \
     "ProtoCore: this vendor must state PROTOCORE_HAS_VENDOR_NVS (1 = an SDK key-value store that survives a reboot, 0 = none, and provisioning does not compile). Choosing none is fine; defaulting into it is not."
-#endif
-#endif
-
-// A Bluetooth controller whose memory can be released. 1 = the SDK ships one; 0 = there is none and
-// there is nothing to release. Its own axis from CONFIG_BT_ENABLED, which says whether a given
-// build compiled it in.
-#ifndef PROTOCORE_HAS_VENDOR_BT
-#if PROTOCORE_VENDOR_ESP
-#define PROTOCORE_HAS_VENDOR_BT 1
-#elif PROTOCORE_HOST
-#define PROTOCORE_HAS_VENDOR_BT 0 // no controller, so no memory to hand back
-#else
-#error                                                                                                                 \
-    "ProtoCore: this vendor must state PROTOCORE_HAS_VENDOR_BT (1 = an SDK Bluetooth controller, 0 = none). Choosing none is fine; defaulting into it is not."
-#endif
-#endif
-
-// Power management. 1 = the SDK reports why the part reset, sets the CPU clock, reads the die
-// temperature and gates a radio's power domain; 0 = there is none of that to bind to.
-#ifndef PROTOCORE_HAS_VENDOR_PM
-#if PROTOCORE_VENDOR_ESP
-#define PROTOCORE_HAS_VENDOR_PM 1
-#elif PROTOCORE_HOST
-#define PROTOCORE_HAS_VENDOR_PM 0 // no clock to set, no die to measure
-#else
-#error                                                                                                                 \
-    "ProtoCore: this vendor must state PROTOCORE_HAS_VENDOR_PM (1 = SDK reset-reason / CPU clock / die temperature / power-domain gating, 0 = none, and the power plan is advice with nothing to apply it to). Choosing none is fine; defaulting into it is not."
 #endif
 #endif
 
@@ -857,7 +751,7 @@ typedef ip_addr_t protocore_net_ip;
 #elif PROTOCORE_HOST
 
 // No vendor stack, so the same surface comes from a host driver the test environment puts on the
-// include path (test/mocks/protocore_net_host.h), exactly the way it supplies <Arduino.h>. Guarded on
+// include path (core_setup/hal/host/protocore_net_host.h), exactly the way it supplies <Arduino.h>. Guarded on
 // presence, so a build without that path simply has no transport.
 #if defined(__has_include)
 #if __has_include("protocore_net_host.h")
@@ -906,6 +800,169 @@ typedef ip_addr_t protocore_net_ip;
 #else
 #error                                                                                                                 \
     "ProtoCore: this vendor must state PROTOCORE_HAS_GPIO (1 = protocore_platform_gpio_mode / _read / _write in core_setup/hal/<vendor>, 0 = none, and every pin driver refuses). Choosing none is fine; defaulting into it is not."
+#endif
+#endif
+
+// Whether a scheduler seam exists to run on. Silicon has one; a host build has one only when the
+// driver above supplied it, and the worker layer keys its host arm off this so the pipeline's real
+// task / queue path runs against the mock rather than resolving to the inline arm.
+#ifndef PROTOCORE_PLATFORM_HAS_SCHEDULER
+#define PROTOCORE_PLATFORM_HAS_SCHEDULER 0
+#endif
+
+// Tasks to run on. 1 = there is a scheduler, so the pipeline runs on its own worker and a delay
+// sleeps; 0 = there is one context, the pipeline runs inline from the caller's loop, and a delay
+// spins on the clock. It sits here rather than with the vendor capabilities above because it reads
+// the seam macro the driver block establishes.
+#ifndef PROTOCORE_HAS_SCHEDULER
+#if PROTOCORE_VENDOR_ESP
+#define PROTOCORE_HAS_SCHEDULER 1
+#elif PROTOCORE_HOST
+#define PROTOCORE_HAS_SCHEDULER PROTOCORE_PLATFORM_HAS_SCHEDULER
+#else
+#error                                                                                                                 \
+    "ProtoCore: this vendor must state PROTOCORE_HAS_SCHEDULER (1 = tasks the pipeline can run on, 0 = one context and an inline pipeline). Choosing one context is fine; defaulting into it is not."
+#endif
+#endif
+
+// Whether a seam exists to call. Silicon has one; a host build has one only when the
+// driver above supplied a burned-in address, so the owners run against it instead of
+// resolving to their refusing arm.
+#ifndef PROTOCORE_PLATFORM_HAS_VENDOR_MAC
+#define PROTOCORE_PLATFORM_HAS_VENDOR_MAC 0
+#endif
+
+// A factory MAC to read. 1 = the SDK hands back a burned-in address the device identity is derived
+// from; 0 = there is none, and the identity comes from wherever the application puts it.
+#ifndef PROTOCORE_HAS_VENDOR_MAC
+#if PROTOCORE_VENDOR_ESP
+#define PROTOCORE_HAS_VENDOR_MAC 1
+#elif PROTOCORE_HOST
+#define PROTOCORE_HAS_VENDOR_MAC PROTOCORE_PLATFORM_HAS_VENDOR_MAC
+#else
+#error                                                                                                                 \
+    "ProtoCore: this vendor must state PROTOCORE_HAS_VENDOR_MAC (1 = a burned-in address from the SDK, 0 = none). Choosing none is fine; defaulting into it is not."
+#endif
+#endif
+
+// Whether a seam exists to call. Silicon has one; a host build has one only when the
+// driver above supplied allocator figures, so the owners run against it instead of
+// resolving to their refusing arm.
+#ifndef PROTOCORE_PLATFORM_HAS_VENDOR_HEAP_INFO
+#define PROTOCORE_PLATFORM_HAS_VENDOR_HEAP_INFO 0
+#endif
+
+// Heap and reset introspection. 1 = the SDK reports free / minimum-free heap and why the part last
+// reset, which the health readouts and the guardrails report; 0 = there is none and they report 0.
+#ifndef PROTOCORE_HAS_VENDOR_HEAP_INFO
+#if PROTOCORE_VENDOR_ESP
+#define PROTOCORE_HAS_VENDOR_HEAP_INFO 1
+#elif PROTOCORE_HOST
+#define PROTOCORE_HAS_VENDOR_HEAP_INFO PROTOCORE_PLATFORM_HAS_VENDOR_HEAP_INFO
+#else
+#error                                                                                                                 \
+    "ProtoCore: this vendor must state PROTOCORE_HAS_VENDOR_HEAP_INFO (1 = SDK heap and reset-reason readouts, 0 = none, and the health panel reports 0). Choosing none is fine; defaulting into it is not."
+#endif
+#endif
+
+// Whether a seam exists to call. Silicon has one; a host build has one only when the
+// driver above supplied the reset cause, die temperature and CPU clock, so the owners run against it instead of
+// resolving to their refusing arm.
+#ifndef PROTOCORE_PLATFORM_HAS_VENDOR_PM
+#define PROTOCORE_PLATFORM_HAS_VENDOR_PM 0
+#endif
+
+// Power management. 1 = the SDK reports why the part reset, sets the CPU clock, reads the die
+// temperature and gates a radio's power domain; 0 = there is none of that to bind to.
+#ifndef PROTOCORE_HAS_VENDOR_PM
+#if PROTOCORE_VENDOR_ESP
+#define PROTOCORE_HAS_VENDOR_PM 1
+#elif PROTOCORE_HOST
+#define PROTOCORE_HAS_VENDOR_PM PROTOCORE_PLATFORM_HAS_VENDOR_PM
+#else
+#error                                                                                                                 \
+    "ProtoCore: this vendor must state PROTOCORE_HAS_VENDOR_PM (1 = SDK reset-reason / CPU clock / die temperature / power-domain gating, 0 = none, and the power plan is advice with nothing to apply it to). Choosing none is fine; defaulting into it is not."
+#endif
+#endif
+
+// Whether a seam exists to call. Silicon has one; a host build has one only when the
+// driver above supplied a radio power domain to hand back, so the owners run against it instead of
+// resolving to their refusing arm.
+#ifndef PROTOCORE_PLATFORM_HAS_VENDOR_BT
+#define PROTOCORE_PLATFORM_HAS_VENDOR_BT 0
+#endif
+
+// A Bluetooth controller whose memory can be released. 1 = the SDK ships one; 0 = there is none and
+// there is nothing to release. Its own axis from CONFIG_BT_ENABLED, which says whether a given
+// build compiled it in.
+#ifndef PROTOCORE_HAS_VENDOR_BT
+#if PROTOCORE_VENDOR_ESP
+#define PROTOCORE_HAS_VENDOR_BT 1
+#elif PROTOCORE_HOST
+#define PROTOCORE_HAS_VENDOR_BT PROTOCORE_PLATFORM_HAS_VENDOR_BT
+#else
+#error                                                                                                                 \
+    "ProtoCore: this vendor must state PROTOCORE_HAS_VENDOR_BT (1 = an SDK Bluetooth controller, 0 = none). Choosing none is fine; defaulting into it is not."
+#endif
+#endif
+
+// Whether a seam exists to call. Silicon has one; a host build has one only when the
+// driver above supplied a stored image to mark, commit or roll back, so the owners run against it instead of
+// resolving to their refusing arm.
+#ifndef PROTOCORE_PLATFORM_HAS_VENDOR_OTA
+#define PROTOCORE_PLATFORM_HAS_VENDOR_OTA 0
+#endif
+
+// Self-update. 1 = the SDK ships an updater that writes the other app partition and flips the boot
+// selector; 0 = there is none, and the OTA service and the rollback policy have nothing to drive.
+#ifndef PROTOCORE_HAS_VENDOR_OTA
+#if PROTOCORE_VENDOR_ESP
+#define PROTOCORE_HAS_VENDOR_OTA 1
+#elif PROTOCORE_HOST
+#define PROTOCORE_HAS_VENDOR_OTA PROTOCORE_PLATFORM_HAS_VENDOR_OTA
+#else
+#error                                                                                                                 \
+    "ProtoCore: this vendor must state PROTOCORE_HAS_VENDOR_OTA (1 = the SDK's own updater + boot selector, 0 = none, and the OTA service does not compile). Choosing none is fine; defaulting into it is not."
+#endif
+#endif
+
+// Whether a seam exists to call. Silicon has one; a host build has one only when the
+// driver above supplied a stored crash image to read, so the owners run against it instead of
+// resolving to their refusing arm.
+#ifndef PROTOCORE_PLATFORM_HAS_VENDOR_COREDUMP
+#define PROTOCORE_PLATFORM_HAS_VENDOR_COREDUMP 0
+#endif
+
+// Crash-image capture. 1 = the SDK writes a core dump to its own flash partition; 0 = there is none.
+// The decoder that reads one is portable and is not gated on this.
+#ifndef PROTOCORE_HAS_VENDOR_COREDUMP
+#if PROTOCORE_VENDOR_ESP
+#define PROTOCORE_HAS_VENDOR_COREDUMP 1
+#elif PROTOCORE_HOST
+#define PROTOCORE_HAS_VENDOR_COREDUMP PROTOCORE_PLATFORM_HAS_VENDOR_COREDUMP
+#else
+#error                                                                                                                 \
+    "ProtoCore: this vendor must state PROTOCORE_HAS_VENDOR_COREDUMP (1 = the SDK's own crash-image capture, 0 = none, and only the portable decoder compiles). Choosing none is fine; defaulting into it is not."
+#endif
+#endif
+
+// Whether a seam exists to call. Silicon has one; a host build has one only when the
+// driver above supplied a CAN controller to open, so the owners run against it instead of
+// resolving to their refusing arm.
+#ifndef PROTOCORE_PLATFORM_HAS_VENDOR_CAN
+#define PROTOCORE_PLATFORM_HAS_VENDOR_CAN 0
+#endif
+
+// CAN controller. 1 = the SDK ships a CAN / TWAI driver; 0 = there is none and the bus capture
+// refuses. The SocketCAN framing over it is portable and is not gated on this.
+#ifndef PROTOCORE_HAS_VENDOR_CAN
+#if PROTOCORE_VENDOR_ESP
+#define PROTOCORE_HAS_VENDOR_CAN 1
+#elif PROTOCORE_HOST
+#define PROTOCORE_HAS_VENDOR_CAN PROTOCORE_PLATFORM_HAS_VENDOR_CAN
+#else
+#error                                                                                                                 \
+    "ProtoCore: this vendor must state PROTOCORE_HAS_VENDOR_CAN (1 = an SDK CAN / TWAI driver, 0 = none, and the bus capture refuses). Choosing none is fine; defaulting into it is not."
 #endif
 #endif
 

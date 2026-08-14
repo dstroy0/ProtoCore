@@ -6,23 +6,21 @@
 # test/fixtures/ssh_test_host_key/ssh_test_keys.h in place before anything compiles, so a bare
 # `pio test -e native_ssh` builds from a clean checkout.
 #
-# --if-absent, so a full run's one fresh key (test/run_tests.sh generates it up front) is the key
-# every env in that run compiles against.
+# --if-absent, so a full run's one fresh key (the runner generates it up front) is the key every
+# env in that run compiles against.
 #
-# PlatformIO exec()s this with no __file__, so the import path is seeded from the SCons
-# construction environment's project root before tools.findroot answers for the rest.
+# PlatformIO exec()s a hook as a file named in extra_scripts, so this stays a file. The work itself
+# is test/harness.py `keys ensure`.
 
-import subprocess
+import os
 import sys
 
 Import("env")  # noqa: F821 - injected by SCons
 
-sys.path.insert(0, env["PROJECT_DIR"])  # noqa: F821
+PROJECT_DIR = env["PROJECT_DIR"]  # noqa: F821
+sys.path.insert(0, PROJECT_DIR)
+sys.path.insert(0, os.path.join(PROJECT_DIR, "test"))
 
-from tools import findroot  # noqa: E402 - the path above is what makes this importable
+import harness  # noqa: E402 - the path above is what makes this importable
 
-subprocess.run(
-    [sys.executable, "-m", "tools.crypto.gen_ssh_test_keys", "--if-absent"],
-    cwd=findroot.root(),
-    check=True,
-)
+harness.ensure_keys(if_absent=True)

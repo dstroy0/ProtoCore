@@ -355,7 +355,8 @@ proto_bool protocore_ptp_parse_pdelay_req(const uint8_t *s, size_t len, protocor
     {
         return PROTO_FALSE;
     }
-    if (len < PROTOCORE_PTP_HEADER_LEN + PROTOCORE_PTP_TS_LEN) // the originTimestamp (the reserved tail is ignored)
+    // header, originTimestamp, and the reserved field that follows it: the whole fixed message.
+    if (len < PROTOCORE_PTP_PDELAY_REQ_LEN)
     {
         return PROTO_FALSE;
     }
