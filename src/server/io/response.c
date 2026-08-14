@@ -178,7 +178,7 @@ void protocore_resp_reset(void)
 static void tmpl_take_placeholder(uint8_t slot, const char **p, TemplateVar resolver, proto_bool emit, size_t *total)
 {
     const char *at = *p;
-    const char *end = strstr(at + 2, "}}");
+    const char *end = str.find(at + 2, str.len(at + 2, 0xFFFF) + 1u, "}}", sizeof("}}"), PROTO_FALSE);
     size_t nlen = end ? (size_t)(end - (at + 2)) : 0;
     if (!end || nlen > 32)
     {

@@ -10,7 +10,7 @@ that env compiles or includes; inverting that gives:
 
     { "src/services/iot/coap/coap.h": ["native_coap", "native_coap_observe"], ... }
 
-select_envs.py consults this to map a changed HEADER to exactly the envs whose include closure
+harness.py env select consults this to map a changed HEADER to exactly the envs whose include closure
 contains it - replacing the conservative "any header -> FULL" heuristic with the real graph.
 A file absent from the map (a brand-new file, or one no env compiles) still falls back to FULL.
 

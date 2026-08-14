@@ -67,7 +67,7 @@ the core.
     ```
 
     Do not hand-edit the generated region of `platformio.ini`. The full suite
-    (`test/run_tests.sh`) auto-discovers every native env, so a new entry is run
+    (`test/harness.py run`) auto-discovers every native env, so a new entry is run
     and reported automatically.
 
 - **Compile for hardware:**

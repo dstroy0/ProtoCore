@@ -322,7 +322,10 @@ static void set_poll(struct HttpConnInternal *restrict ctx)
     ctx->poll = ctx->ns->poll;
 }
 
-static const ProtoHandler s_http_handler = {http_evt_accept, http_evt_data, http_evt_close, http_evt_poll};
+// Designated, so a member's position in the struct does not decide what it binds to. on_abort is
+// unset: a null one falls back to on_close.
+static const ProtoHandler s_http_handler = {
+    .on_accept = http_evt_accept, .on_data = http_evt_data, .on_close = http_evt_close, .on_poll = http_evt_poll};
 
 static void proto_handler(struct HttpConnInternal *restrict ctx)
 {

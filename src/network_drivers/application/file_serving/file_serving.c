@@ -17,6 +17,7 @@
 #include "network_drivers/presentation/http/http.h"
 
 #include "mmgr/membuild.h"                          // protocore_sb frame builder
+#include "mmgr/protostr.h"                          // str.find / str.has: the month table, traversal and gzip markers
 #include "network_drivers/application/http_range.h" // http_parse_byte_range (shared with the edge cache)
 #include "network_drivers/presentation/http/route/http_route.h"
 #include "network_drivers/transport/tcp/tcp.h" // conn_pool, protocore_conn_*, TcpConn/ConnState
@@ -135,7 +136,7 @@ static proto_bool http_not_modified_since(time_t mtime, const char *ims)
         return PROTO_FALSE;
     }
     static const char MONTHS[] = "JanFebMarAprMayJunJulAugSepOctNovDec";
-    const char *mp = strstr(MONTHS, mon);
+    const char *mp = str.find(MONTHS, sizeof(MONTHS), mon, sizeof(mon), PROTO_FALSE);
     // Must align to a 3-char month boundary: a malformed token like "ebM" appears in
     // the table at a non-multiple-of-3 offset and would otherwise mis-parse as a month.
     if (!mp || ((mp - MONTHS) % 3) != 0)
@@ -602,7 +603,7 @@ void serve_static_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
     const char *sub = (strnlen(req->path, MAX_PATH_LEN) >= plen) ? req->path + plen : "";
 
     // Reject path traversal before touching the filesystem.
-    if (strstr(sub, ".."))
+    if (str.has(sub, MAX_PATH_LEN - plen, "..", sizeof(".."), PROTO_FALSE))
     {
         send_text(slot_id, 404, PROTOCORE_MIME_TEXT_PLAIN, "Not Found");
         return;
@@ -647,7 +648,7 @@ void serve_static_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
     // Pre-compressed variant: serve <path>.gz if the client accepts gzip and it
     // exists. Content-Type stays that of the original (uncompressed) resource.
     const char *ae = http_get_header(req, "Accept-Encoding");
-    if (ae && strstr(ae, "gzip"))
+    if (ae && str.has(ae, MAX_VAL_LEN, "gzip", sizeof("gzip"), PROTO_FALSE))
     {
         char gz[260];
         protocore_sb sb_gz = {gz, sizeof(gz), 0, PROTO_TRUE};

@@ -231,7 +231,10 @@ static void relay_on_close(uint8_t slot)
     }
 }
 
-static const ProtoHandler s_relay_handler = {relay_on_accept, relay_on_data, relay_on_close, relay_on_poll};
+// Designated, so a member's position in the struct does not decide what it binds to. on_abort is
+// unset: a null one falls back to on_close.
+static const ProtoHandler s_relay_handler = {
+    .on_accept = relay_on_accept, .on_data = relay_on_data, .on_close = relay_on_close, .on_poll = relay_on_poll};
 
 proto_bool protocore_relay_publish(uint8_t listener_id, const char *origin_host, uint16_t origin_port)
 {

@@ -57,7 +57,17 @@ typedef struct
     uint16_t seq;
 } PcDmaHostCh;
 
-__attribute__((weak)) PcDmaHostCh g_protocore_dma[PROTOCORE_DMA_CHANNELS];
+// One definition per name across every TU that includes this, kept by the linker: selectany on
+// PE/COFF, weak on ELF.
+#ifndef PROTOCORE_HOST_SHARED
+#if defined(_WIN32)
+#define PROTOCORE_HOST_SHARED __declspec(selectany)
+#else
+#define PROTOCORE_HOST_SHARED PROTOCORE_HOST_SHARED
+#endif
+#endif
+
+PROTOCORE_HOST_SHARED PcDmaHostCh g_protocore_dma[PROTOCORE_DMA_CHANNELS];
 
 // A transfer that does not fit is refused whole rather than truncated: a partial one would put
 // bytes on the line no sender ever submitted. This is the ring's own lossless-backpressure rule.

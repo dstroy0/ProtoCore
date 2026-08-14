@@ -10,7 +10,7 @@
 #   4. auto-add any unknown cspell words from the staged docs (README.md + docs/**/*.md) to
 #      cspell.json  (CI: cspell config cspell.json over README.md + docs/**/*.md)
 #   5. regenerate the test-matrix-derived files (platformio.ini + test/README.md) when
-#      test/test_matrix.json is staged  (CI: python3 test/gen_test_envs.py --check)
+#      test/test_matrix.json is staged  (CI: python3 test/harness.py env gen --check)
 # then re-stages whatever it changed.
 #
 # EVERY auto-fix step is scoped to what you are actually committing. The hook never edits or
@@ -97,13 +97,13 @@ fi
 
 # 5) test matrix -> regenerate the derived files. platformio.ini + test/README.md are
 # generated from test/test_matrix.json (the single source of truth for the native test
-# envs); CI hard-fails if platformio.ini drifts (python3 test/gen_test_envs.py --check).
+# envs); CI hard-fails if platformio.ini drifts (python3 test/harness.py env gen --check).
 # Regenerate + re-stage both so a matrix edit never leaves the derived files behind.
 if staged 'test/test_matrix.json' | grep -q .; then
     PYBIN=$(command -v python 2>/dev/null || command -v python3 2>/dev/null)
     if [ -n "$PYBIN" ]; then
-        "$PYBIN" test/gen_test_envs.py >/dev/null 2>&1 && git add -- platformio.ini
-        "$PYBIN" test/gen_test_readme.py >/dev/null 2>&1 && git add -- test/README.md
+        "$PYBIN" test/harness.py env gen >/dev/null 2>&1 && git add -- platformio.ini
+        "$PYBIN" test/harness.py readme gen >/dev/null 2>&1 && git add -- test/README.md
     fi
 fi
 
@@ -120,6 +120,29 @@ if [ "${PROTOCORE_HOOK_NO_BANNED_SCAN:-0}" != "1" ]; then
             echo "pre-commit: BLOCKED - fix the banned construct(s) above before committing (docs/SRCBANNED.md)."
             exit 1
         fi
+    fi
+fi
+
+# 7) HARD GATE - test/coverage.xml against the SonarQube generic coverage format. A report that
+# breaks the schema is rejected by the scan outright, and one whose line numbers outrun the sources
+# it describes is read as coverage of lines that moved. Both land as a silent number on the
+# dashboard rather than an error here, so the commit is what stops them.
+if staged 'test/coverage.xml' | grep -q .; then
+    PYBIN=$(command -v python 2>/dev/null || command -v python3 2>/dev/null)
+    if [ -n "$PYBIN" ] && ! "$PYBIN" -m tools.ci_tooling.check.check_coverage_xml --quiet; then
+        echo "pre-commit: BLOCKED - regenerate it with 'test/harness.py run --coverage'."
+        exit 1
+    fi
+fi
+
+# 8) HARD GATE - every file printing the project version is registered in .bumpversion.cfg. bump2version
+# rewrites the files its config names and nothing else, so an unregistered site keeps displaying the
+# previous number after a release with nothing to report it.
+if staged '*.md' '*.json' '*.yml' '*.yaml' '*.properties' '*.svg' '*.html' 'docs/Doxyfile' '.bumpversion.cfg' | grep -q .; then
+    PYBIN=$(command -v python 2>/dev/null || command -v python3 2>/dev/null)
+    if [ -n "$PYBIN" ] && ! "$PYBIN" -m tools.ci_tooling.check.check_version_sites --quiet; then
+        echo "pre-commit: BLOCKED - register the site(s) above in .bumpversion.cfg."
+        exit 1
     fi
 fi
 

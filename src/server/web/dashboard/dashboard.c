@@ -213,7 +213,7 @@ static const char *control_value_ptr(const char *s, const char *key)
     char pat[8];
     // A key too long for the buffer leaves pat empty, and strstr then finds nothing - fail closed.
     frame.build(pat, sizeof(pat), QUOTED_KEY, (const protocore_fval[]){PROTOCORE_VSTR(key)}, 1);
-    const char *p = strstr(s, pat);
+    const char *p = str.find(s, str.len(s, 0xFFFF) + 1u, pat, str.len(pat, sizeof(pat)) + 1u, PROTO_FALSE);
     if (!p)
     {
         return NULL;

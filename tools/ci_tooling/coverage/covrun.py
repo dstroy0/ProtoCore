@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """covrun.py - run selected native envs instrumented and report their coverage gaps.
 
-The whole-suite loop (test/run_tests.sh --coverage) is far too slow to iterate against while
+The whole-suite loop (test/harness.py run --coverage) is far too slow to iterate against while
 writing tests. This runs only the envs that compile the sources you are working on, gcovr's each,
 and unions those into a scratch report to measure against. It writes nothing shared, so several
 can run at once; test/coverage.xml is written only by covbase.py, over the whole matrix.

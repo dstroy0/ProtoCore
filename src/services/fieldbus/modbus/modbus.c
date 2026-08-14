@@ -584,7 +584,9 @@ void protocore_modbus_rx(uint8_t slot)
 // The Modbus ProtoHandler (Layer 5 dispatch seam) - only a data handler; a partial ADU waits in the
 // rx ring, so there is no per-connection accept/close/poll state. Returned by accessor (no session
 // dependency); Session.proto->register_builtins() installs it.
-static const ProtoHandler s_modbus_handler = {NULL, protocore_modbus_rx, NULL, NULL};
+// Designated, so a member's position in the struct does not decide what it binds to. Only the data
+// seam is served; the rest stay null.
+static const ProtoHandler s_modbus_handler = {.on_data = protocore_modbus_rx};
 const ProtoHandler *protocore_modbus_protocore_handler(void)
 {
     return &s_modbus_handler;

@@ -189,6 +189,8 @@ def cmd_list(a):
 
 
 def host_flags(entry):
+    # The host has no bounded DRAM, so the arenas are sized far past any bench's worst case, the
+    # same way the test envs do it. A failed span is then a defect, not a budget.
     incs = [
         "-Icore_setup/hal/host",
         "-Itest/support",
@@ -196,7 +198,8 @@ def host_flags(entry):
         "-I.",
         "-I" + os.path.relpath(COMMON, ROOT).replace("\\", "/"),
     ]
-    defs = [f for f in entry.get("flags", []) if f.startswith("-D")]
+    defs = ["-DPROTOCORE_SECURE_ARENA_SIZE=262144"]
+    defs += [f for f in entry.get("flags", []) if f.startswith("-D")]
     return incs, defs
 
 

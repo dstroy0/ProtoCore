@@ -14,12 +14,13 @@ A docstring is a claim; treat one that disagrees with this table as the thing th
 
 | I need to                                       | Run                                                        |
 | ----------------------------------------------- | ---------------------------------------------------------- |
-| know which envs my change affects               | `test/select_envs.py` (stdin or `--changed-file`)          |
-| add a test env                                  | `test/add_test_env.py`, then `test/gen_test_envs.py`       |
-| change a test env                               | edit `test/test_matrix.json`, then `test/gen_test_envs.py` |
-| rebuild `platformio.ini`                        | `test/gen_test_envs.py` (never hand-edit the ini)          |
-| refresh the dependency graph after a rename     | `tools/ci_tooling/generate/gen_dep_graph.py`               |
-| run the whole native suite and write the report | `test/run_tests.sh` / `test/run_tests.ps1`                 |
+| know which envs my change affects               | `test/harness.py env select` (stdin or `--base/--head`)    |
+| add a test env                                  | `test/harness.py env add`, then `env gen`                  |
+| change a test env                               | `test/harness.py env update`, then `env gen`               |
+| rebuild `platformio.ini`                        | `test/harness.py env gen` (never hand-edit the ini)        |
+| refresh the dependency graph after a rename     | `test/harness.py env deps`                                 |
+| run the whole native suite and write the report | `test/harness.py run --report-out test/TEST_REPORT.md`     |
+| regenerate coverage for Sonar                   | `test/harness.py run --coverage`                           |
 | check a `src/` file against the ban list        | `tools/ci_tooling/check/check_src_banned.py --all`         |
 | check naming against SYMBOLS.md                 | `tools/ci_tooling/check/check_symbols.py --check`          |
 | check the single-owner state rule               | `tools/ci_tooling/check/check_owned_context.py`            |
@@ -102,7 +103,7 @@ Every one takes `--check` to assert the tracked file already matches, which is h
 | --------------------- | ------------------------------------------------------------- |
 | `doc_region.py`       | tracked-file region writer + `--check` comparison             |
 | `baseline.py`         | ratchet baselines (new / known / fixed)                       |
-| `affected_common.py`  | changed-file to env mapping shared with `test/select_envs.py` |
+| `affected_common.py`  | changed-file to env mapping shared with `test/harness.py env select` |
 | `feature_taxonomy.py` | the one curated feature grouping + `FEATURES.md` parser       |
 | `src_symbols.py`      | enumerates `src/` headers and their symbols                   |
 

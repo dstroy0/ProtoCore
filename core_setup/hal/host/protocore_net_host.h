@@ -12,11 +12,11 @@
 // stored so a test can fire them. Nothing here talks to a socket. A test that wants behavior
 // drives it through the protocore_net_host_* entry points at the bottom.
 //
-// Every mutable global below carries external linkage through a weak definition rather than
+// Every mutable global below carries external linkage through a shared definition rather than
 // `static`. A `static` in a header is one object PER TRANSLATION UNIT, so the core wrote its own
 // copy of the send capture while the test read a different one and found it empty - the state is
-// only a seam if both sides reach the same bytes. Weak lets every TU emit the same definition and
-// the linker keep exactly one.
+// only a seam if both sides reach the same bytes. PROTOCORE_HOST_SHARED lets every TU emit the
+// same definition and the linker keep exactly one.
 //
 // test/ is exempt from the src/ style rules, so this reads as plain host C.
 
@@ -45,11 +45,21 @@
 #define PROTOCORE_BUS_HOST_CAP 1024
 #endif
 
-__attribute__((weak)) uint8_t protocore_bus_host_tx[PROTOCORE_BUS_HOST_CAP];
-__attribute__((weak)) uint32_t protocore_bus_host_tx_len;
-__attribute__((weak)) uint8_t protocore_bus_host_rx[PROTOCORE_BUS_HOST_CAP];
-__attribute__((weak)) uint32_t protocore_bus_host_rx_len;
-__attribute__((weak)) uint32_t protocore_bus_host_rx_pos;
+// One definition per name across every TU that includes this, kept by the linker: selectany on
+// PE/COFF, weak on ELF.
+#ifndef PROTOCORE_HOST_SHARED
+#if defined(_WIN32)
+#define PROTOCORE_HOST_SHARED __declspec(selectany)
+#else
+#define PROTOCORE_HOST_SHARED PROTOCORE_HOST_SHARED
+#endif
+#endif
+
+PROTOCORE_HOST_SHARED uint8_t protocore_bus_host_tx[PROTOCORE_BUS_HOST_CAP];
+PROTOCORE_HOST_SHARED uint32_t protocore_bus_host_tx_len;
+PROTOCORE_HOST_SHARED uint8_t protocore_bus_host_rx[PROTOCORE_BUS_HOST_CAP];
+PROTOCORE_HOST_SHARED uint32_t protocore_bus_host_rx_len;
+PROTOCORE_HOST_SHARED uint32_t protocore_bus_host_rx_pos;
 
 static inline void protocore_bus_host_capture(const void *buf, uint32_t len)
 {
@@ -91,9 +101,9 @@ typedef struct
     uint32_t t_us; /**< when it ran, so the gap to the next one is assertable */
 } protocore_bus_host_rec;
 
-__attribute__((weak)) protocore_bus_host_rec protocore_bus_host_log[PROTOCORE_BUS_HOST_MAX_TXN];
-__attribute__((weak)) uint32_t protocore_bus_host_log_len;
-__attribute__((weak)) uint32_t protocore_bus_host_fail;
+PROTOCORE_HOST_SHARED protocore_bus_host_rec protocore_bus_host_log[PROTOCORE_BUS_HOST_MAX_TXN];
+PROTOCORE_HOST_SHARED uint32_t protocore_bus_host_log_len;
+PROTOCORE_HOST_SHARED uint32_t protocore_bus_host_fail;
 
 /* Defined with the time base further down; the log stamps every transfer with it. */
 static inline uint32_t protocore_platform_micros(void);
@@ -215,7 +225,7 @@ static inline uint32_t protocore_platform_uart_available(uint8_t unit)
 #define PROTOCORE_SPI_LANES_2 2
 #define PROTOCORE_SPI_LANES_4 4
 
-__attribute__((weak)) int protocore_spi_host_up;
+PROTOCORE_HOST_SHARED int protocore_spi_host_up;
 
 static inline int protocore_platform_spi_begin(uint8_t host, int mosi, int miso, int sclk, int quadwp, int quadhd)
 {
@@ -273,8 +283,8 @@ static inline int protocore_platform_spi_txn_ext(uint8_t host, uint32_t hz, uint
 #define PROTOCORE_I2C_ADDR_MASK 0x03FFu
 #define PROTOCORE_I2C_GENERAL_CALL 0x00u
 
-__attribute__((weak)) int protocore_i2c_host_up;
-__attribute__((weak)) uint16_t protocore_bus_host_last_addr;
+PROTOCORE_HOST_SHARED int protocore_i2c_host_up;
+PROTOCORE_HOST_SHARED uint16_t protocore_bus_host_last_addr;
 
 static inline int protocore_platform_i2c_begin(uint8_t bus, int sda, int scl, uint32_t hz)
 {
@@ -390,7 +400,7 @@ static inline void protocore_bus_host_reset(void)
 //
 // protocore_rand_host_seed() makes a run repeatable from a chosen point.
 
-__attribute__((weak)) uint32_t protocore_rand_host_state = 0x2545F491u;
+PROTOCORE_HOST_SHARED uint32_t protocore_rand_host_state = 0x2545F491u;
 
 static inline uint32_t protocore_platform_rand_u32(void)
 {
@@ -448,8 +458,8 @@ static inline void protocore_rand_host_seed(uint32_t seed)
 #ifndef PROTOCORE_GPIO_HOST_PINS
 #define PROTOCORE_GPIO_HOST_PINS 64
 #endif
-__attribute__((weak)) uint8_t protocore_gpio_host_mode_tbl[PROTOCORE_GPIO_HOST_PINS];
-__attribute__((weak)) uint8_t protocore_gpio_host_level_tbl[PROTOCORE_GPIO_HOST_PINS];
+PROTOCORE_HOST_SHARED uint8_t protocore_gpio_host_mode_tbl[PROTOCORE_GPIO_HOST_PINS];
+PROTOCORE_HOST_SHARED uint8_t protocore_gpio_host_level_tbl[PROTOCORE_GPIO_HOST_PINS];
 
 static inline void protocore_platform_gpio_mode(uint8_t pin, uint8_t mode)
 {
@@ -511,7 +521,7 @@ static inline uint32_t protocore_platform_millis(void)
 // millisecond, so a sub-millisecond spin (a part's settle time, protocore_delay_us) would never see the
 // counter move and would not terminate. Advancing per read makes such a wait finish in bounded
 // time and makes the elapsed value deterministic, which is what a jitter assertion needs.
-__attribute__((weak)) uint32_t protocore_host_us_tick;
+PROTOCORE_HOST_SHARED uint32_t protocore_host_us_tick;
 
 static inline uint32_t protocore_platform_micros(void)
 {
@@ -567,9 +577,9 @@ typedef uint32_t protocore_platform_ticks;
 // it while it is blocked. Deleting a task abandons its frame, so the host does the same with
 // longjmp - the entry runs until it would block and control resumes in protocore_platform_host_task_run.
 // The depth is 0 outside a run, so a blocking call made by ordinary code cannot unwind.
-__attribute__((weak)) jmp_buf protocore_task_host_jmp;
-__attribute__((weak)) int protocore_task_host_depth;
-__attribute__((weak)) int protocore_task_host_budget;
+PROTOCORE_HOST_SHARED jmp_buf protocore_task_host_jmp;
+PROTOCORE_HOST_SHARED int protocore_task_host_depth;
+PROTOCORE_HOST_SHARED int protocore_task_host_budget;
 
 // How many timed waits one run allows before it unwinds. A task that waits on a timeout rather than
 // forever would spin, since nothing else runs here to make its condition true.
@@ -600,7 +610,7 @@ typedef struct
     size_t tail[PROTOCORE_QUEUE_MAX];
     uint8_t buf[PROTOCORE_QUEUE_MAX][PROTOCORE_QUEUE_DEPTH * PROTOCORE_QUEUE_ITEM];
 } PcQueueTable;
-__attribute__((weak)) PcQueueTable g_protocore_queues;
+PROTOCORE_HOST_SHARED PcQueueTable g_protocore_queues;
 
 static inline int protocore_queue_slot(protocore_platform_queue q)
 {
@@ -616,7 +626,7 @@ static inline int protocore_queue_slot(protocore_platform_queue q)
 
 // One-shot creation failure: the next queue create reports no room, the way a kernel out of
 // queue objects does, so the caller has to unwind the listener it was building.
-__attribute__((weak)) int protocore_platform_queue_create_fail_once;
+PROTOCORE_HOST_SHARED int protocore_platform_queue_create_fail_once;
 
 static inline void mock_queue_create_fail_once(void)
 {
@@ -665,7 +675,7 @@ static inline protocore_platform_queue protocore_platform_queue_create(size_t de
 }
 // One-shot send failure: the next protocore_platform_queue_send() reports a full queue and clears the
 // latch. Lets a test drive the enqueue path's rejection branch.
-__attribute__((weak)) int protocore_platform_queue_send_fail_once = 0;
+PROTOCORE_HOST_SHARED int protocore_platform_queue_send_fail_once = 0;
 
 static inline void mock_queue_send_fail_once(void)
 {
@@ -799,7 +809,7 @@ typedef struct
     const char *name[PROTOCORE_TASK_MAX]; // what start was given, so one task can be run by itself
     int started[PROTOCORE_TASK_MAX];
 } PcTaskTable;
-__attribute__((weak)) PcTaskTable g_protocore_tasks;
+PROTOCORE_HOST_SHARED PcTaskTable g_protocore_tasks;
 
 static inline int protocore_task_slot(protocore_platform_task t)
 {
@@ -815,7 +825,7 @@ static inline int protocore_task_slot(protocore_platform_task t)
 
 // One-shot start failure: the next protocore_platform_task_start reports no room, the way a kernel out of
 // task control blocks does, so the caller has to unwind what it was bringing up.
-__attribute__((weak)) int protocore_platform_task_start_fail_once;
+PROTOCORE_HOST_SHARED int protocore_platform_task_start_fail_once;
 
 static inline void mock_task_start_fail_once(void)
 {
@@ -1187,8 +1197,8 @@ struct protocore_udp_pcb
 #ifndef PROTOCORE_NET_HOST_PCBS
 #define PROTOCORE_NET_HOST_PCBS 16
 #endif
-__attribute__((weak)) protocore_pcb protocore_net_host_pcbs[PROTOCORE_NET_HOST_PCBS];
-__attribute__((weak)) protocore_udp_pcb protocore_net_host_udp_pcbs[PROTOCORE_NET_HOST_PCBS];
+PROTOCORE_HOST_SHARED protocore_pcb protocore_net_host_pcbs[PROTOCORE_NET_HOST_PCBS];
+PROTOCORE_HOST_SHARED protocore_udp_pcb protocore_net_host_udp_pcbs[PROTOCORE_NET_HOST_PCBS];
 
 /**
  * @brief A stable pcb a test can bind a slot to, when what it needs is only "this slot has one".
@@ -1204,7 +1214,7 @@ static inline protocore_pcb *protocore_net_host_pcb(void)
 }
 
 // One-shot allocation failure: the next protocore_net_new() reports the control-block pool spent.
-__attribute__((weak)) int protocore_net_host_new_fail_once;
+PROTOCORE_HOST_SHARED int protocore_net_host_new_fail_once;
 
 static inline void mock_new_pcb_fail_once(void)
 {
@@ -1231,7 +1241,7 @@ static inline protocore_pcb *protocore_net_new(int type)
     return NULL;
 }
 // One-shot bind failure: the next bind reports the address already in use.
-__attribute__((weak)) int protocore_net_host_bind_fail_once;
+PROTOCORE_HOST_SHARED int protocore_net_host_bind_fail_once;
 
 static inline void mock_bind_fail_once(void)
 {
@@ -1254,7 +1264,7 @@ static inline protocore_net_err protocore_net_bind(protocore_pcb *p, const proto
     return PROTOCORE_NET_OK;
 }
 // One-shot listen failure: the next listen reports no memory for the listen block.
-__attribute__((weak)) int protocore_net_host_listen_fail_once;
+PROTOCORE_HOST_SHARED int protocore_net_host_listen_fail_once;
 
 static inline void mock_listen_fail_once(void)
 {
@@ -1273,7 +1283,7 @@ static inline protocore_pcb *protocore_net_listen(protocore_pcb *p, uint8_t back
 }
 // One-shot connect refusal: the next protocore_net_connect() reports the peer unreachable and never
 // completes, the way a RST to the SYN does.
-__attribute__((weak)) int protocore_net_host_connect_fail_once;
+PROTOCORE_HOST_SHARED int protocore_net_host_connect_fail_once;
 
 static inline void mock_connect_fail_once(void)
 {
@@ -1307,7 +1317,7 @@ static inline protocore_net_err protocore_net_connect(protocore_pcb *p, const pr
 }
 // One-shot close failure: the next protocore_net_close() reports no memory and leaves the pcb open, the
 // way a stack that cannot queue the FIN does. The caller has to keep the slot draining, not drop it.
-__attribute__((weak)) int protocore_net_host_close_fail_once;
+PROTOCORE_HOST_SHARED int protocore_net_host_close_fail_once;
 
 static inline void mock_close_fail_once(void)
 {
@@ -1329,7 +1339,7 @@ static inline protocore_net_err protocore_net_close(protocore_pcb *p)
 }
 // How many aborts the code under test has issued. A slot reaped by an accept gate or a timeout
 // sweep is only distinguishable from one closed cleanly by whether the stack was told to abort.
-__attribute__((weak)) int protocore_net_host_abort_calls;
+PROTOCORE_HOST_SHARED int protocore_net_host_abort_calls;
 
 static inline int mock_abort_call_count(void)
 {
@@ -1391,12 +1401,12 @@ static inline void protocore_net_on_err(protocore_pcb *p, protocore_net_err_fn f
 #ifndef PROTOCORE_NET_HOST_TXCAP
 #define PROTOCORE_NET_HOST_TXCAP 65536
 #endif
-__attribute__((weak)) uint8_t protocore_net_host_tx[PROTOCORE_NET_HOST_TXCAP];
-__attribute__((weak)) size_t protocore_net_host_tx_len;
+PROTOCORE_HOST_SHARED uint8_t protocore_net_host_tx[PROTOCORE_NET_HOST_TXCAP];
+PROTOCORE_HOST_SHARED size_t protocore_net_host_tx_len;
 
 // After this many successful writes the next protocore_net_write reports a full send buffer and queues
 // nothing, so a send pump takes its un-read-and-retry path. -1 never fails.
-__attribute__((weak)) int protocore_net_host_write_fail_after = -1;
+PROTOCORE_HOST_SHARED int protocore_net_host_write_fail_after = -1;
 
 static inline void mock_send_fail_after(int n)
 {
@@ -1436,9 +1446,9 @@ static inline protocore_net_err protocore_net_output(protocore_pcb *p)
 // section 3.8.6 makes the amount the assertable part (the receiver advertises RCV.BUFF - RCV.USER,
 // and SHLD-14 says it never moves that edge left), so a no-op here left the transport's
 // ack-on-consume model untestable. Records the call count, the running total, and the last length.
-__attribute__((weak)) int protocore_net_host_recved_calls;
-__attribute__((weak)) uint32_t protocore_net_host_recved_total;
-__attribute__((weak)) uint16_t protocore_net_host_recved_last;
+PROTOCORE_HOST_SHARED int protocore_net_host_recved_calls;
+PROTOCORE_HOST_SHARED uint32_t protocore_net_host_recved_total;
+PROTOCORE_HOST_SHARED uint16_t protocore_net_host_recved_last;
 
 static inline void protocore_net_recved(protocore_pcb *p, uint16_t len)
 {
@@ -1473,7 +1483,7 @@ static inline void mock_recved_reset(void)
 // backpressure-and-resume path, where a response has to page out across several worker loops
 // instead of fitting one send.
 #define MOCK_SNDBUF_DEFAULT 5744 /* a typical lwIP TCP_SND_BUF */
-__attribute__((weak)) uint16_t protocore_net_host_sndbuf_val = MOCK_SNDBUF_DEFAULT;
+PROTOCORE_HOST_SHARED uint16_t protocore_net_host_sndbuf_val = MOCK_SNDBUF_DEFAULT;
 
 static inline void mock_sndbuf_set(uint16_t v)
 {
@@ -1529,8 +1539,8 @@ typedef struct
     int in_use;
 } protocore_net_host_pbuf_slot;
 
-__attribute__((weak)) protocore_net_host_pbuf_slot protocore_net_host_pbuf_pool[PROTOCORE_NET_HOST_PBUFS];
-__attribute__((weak)) int protocore_net_host_pbuf_fail_once;
+PROTOCORE_HOST_SHARED protocore_net_host_pbuf_slot protocore_net_host_pbuf_pool[PROTOCORE_NET_HOST_PBUFS];
+PROTOCORE_HOST_SHARED int protocore_net_host_pbuf_fail_once;
 
 /** @brief One datagram the core handed to the stack. */
 typedef struct
@@ -1545,9 +1555,9 @@ typedef struct
     uint8_t data[PROTOCORE_NET_HOST_DGRAM_LEN];
 } protocore_net_host_dgram;
 
-__attribute__((weak)) protocore_net_host_dgram protocore_net_host_dgrams[PROTOCORE_NET_HOST_DGRAMS];
-__attribute__((weak)) size_t protocore_net_host_dgram_n;    // records kept
-__attribute__((weak)) size_t protocore_net_host_dgram_sent; // sends seen, kept or not
+PROTOCORE_HOST_SHARED protocore_net_host_dgram protocore_net_host_dgrams[PROTOCORE_NET_HOST_DGRAMS];
+PROTOCORE_HOST_SHARED size_t protocore_net_host_dgram_n;    // records kept
+PROTOCORE_HOST_SHARED size_t protocore_net_host_dgram_sent; // sends seen, kept or not
 
 // The next protocore_net_pbuf_alloc() reports the pool spent, so the send path's refuse branch is reachable.
 static inline void mock_pbuf_fail_once(void)
@@ -1651,7 +1661,7 @@ static inline void protocore_net_udp_recv(protocore_udp_pcb *p, protocore_net_ud
 }
 // After this many successful datagrams the next protocore_net_udp_sendto refuses and records nothing, the
 // way a stack with no route to the destination does. -1 never fails.
-__attribute__((weak)) int protocore_net_host_udp_fail_after = -1;
+PROTOCORE_HOST_SHARED int protocore_net_host_udp_fail_after = -1;
 
 static inline void mock_udp_send_fail_after(int n)
 {

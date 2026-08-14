@@ -65,7 +65,17 @@ typedef struct
 
 // One instance for the whole program: the test registers files from its own translation unit and
 // the code under test reads them from another. See the note on linkage in protocore_net_host.h.
-__attribute__((weak)) MockMntCtx g_mock_mnt;
+// One definition per name across every TU that includes this, kept by the linker: selectany on
+// PE/COFF, weak on ELF.
+#ifndef PROTOCORE_HOST_SHARED
+#if defined(_WIN32)
+#define PROTOCORE_HOST_SHARED __declspec(selectany)
+#else
+#define PROTOCORE_HOST_SHARED PROTOCORE_HOST_SHARED
+#endif
+#endif
+
+PROTOCORE_HOST_SHARED MockMntCtx g_mock_mnt;
 
 static inline int mock_mnt_find(const char *path)
 {
@@ -329,7 +339,7 @@ static inline proto_bool mock_mnt_readdir(int handle, protocore_mnt_stat *out, c
     return PROTO_FALSE;
 }
 
-__attribute__((weak)) const protocore_mnt_backend g_mock_mnt_backend = {
+PROTOCORE_HOST_SHARED const protocore_mnt_backend g_mock_mnt_backend = {
     mock_mnt_open,    mock_mnt_read,   mock_mnt_write,   mock_mnt_close,     mock_mnt_seek,
     mock_mnt_size,    mock_mnt_exists, mock_mnt_no_path, mock_mnt_no_rename, mock_mnt_no_path,
     mock_mnt_no_path, mock_mnt_stat,   mock_mnt_opendir, mock_mnt_readdir};

@@ -1211,7 +1211,10 @@ static void mesh_on_close(uint8_t slot)
     }
 }
 
-static const ProtoHandler s_mesh_handler = {mesh_on_accept, mesh_on_data, mesh_on_close, mesh_on_poll};
+// Designated, so a member's position in the struct does not decide what it binds to. on_abort is
+// unset: a null one falls back to on_close.
+static const ProtoHandler s_mesh_handler = {
+    .on_accept = mesh_on_accept, .on_data = mesh_on_data, .on_close = mesh_on_close, .on_poll = mesh_on_poll};
 #endif // PROTOCORE_ENABLE_EDGE_MESH
 
 // --- public API ----------------------------------------------------------------------------------

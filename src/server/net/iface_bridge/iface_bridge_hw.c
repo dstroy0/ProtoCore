@@ -298,7 +298,10 @@ static void bridge_on_close(uint8_t slot)
     // nothing to free; the transport owns the closing slot.
 }
 
-static const ProtoHandler s_bridge_handler = {bridge_on_accept, bridge_on_data, bridge_on_close, bridge_on_poll};
+// Designated, so a member's position in the struct does not decide what it binds to. on_abort is
+// unset: a null one falls back to on_close.
+static const ProtoHandler s_bridge_handler = {
+    .on_accept = bridge_on_accept, .on_data = bridge_on_data, .on_close = bridge_on_close, .on_poll = bridge_on_poll};
 
 proto_bool protocore_iface_bridge_publish(uint8_t listener_id, uint16_t port, BridgeProto proto, const BridgeTarget *target)
 {

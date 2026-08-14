@@ -8,7 +8,7 @@
 # one key. RSA-2048 keygen is not something a test can do in C, so this runs at build time instead:
 #
 #   baseline   the committed fixture key (test/fixtures/ssh_test_host_key/ssh_test_host_key.h)
-#   throwaway  a new RSA-2048 key on every run of test/run_tests.sh
+#   throwaway  a new RSA-2048 key on every run of test/harness.py run
 #
 # A failing run's throwaway key stays on disk in the output below, and --if-absent leaves it alone,
 # so re-running that one env reproduces the failure against the same key.

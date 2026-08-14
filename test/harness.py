@@ -314,6 +314,10 @@ build_flags =
     ; The host branch of the platform: the stand-ins protocore_platform.h reaches for by bare name
     ; (protocore_net_host.h, Arduino.h, freertos/, lwip/) when no vendor macro matched. It sits on
     ; the include path as a root of its own, so those names resolve the way a vendor SDK's do.
+    ; The host has no bounded DRAM, so the arenas are sized far past any suite's worst case. A
+    ; span that fails to allocate is then a real defect rather than a budget the env forgot to
+    ; raise: the route table, the persist end and the scratch end all come out of this one pool.
+    -DPROTOCORE_SECURE_ARENA_SIZE=262144
     -I core_setup/hal/host
     -I test/support
     -I src
@@ -727,6 +731,19 @@ def cmd_env_deps(a):
                     graph.setdefault(dep, set()).add(name)
         if a.progress:
             print("  [%d/%d] %s" % (i, len(names), name), file=sys.stderr)
+    # A named subset re-scans only those envs, so it carries every other env's entries over from the
+    # graph on disk: drop the rescanned names, then merge what this run found.
+    if a.envs:
+        rescanned = set(names)
+        try:
+            with open(DEP_GRAPH, encoding="utf-8") as fh:
+                prior = json.load(fh)
+        except (OSError, ValueError):
+            prior = {}
+        for dep, owners in prior.items():
+            keep = [o for o in owners if o not in rescanned]
+            if keep:
+                graph.setdefault(dep, set()).update(keep)
     out = {k: sorted(v) for k, v in sorted(graph.items())}
     with open(DEP_GRAPH, "w", encoding="utf-8", newline="\n") as fh:
         json.dump(out, fh, indent=1)
@@ -758,26 +775,41 @@ def _flag_split(flags):
             incs.append(f if len(f) > 2 else "-I" + next(it, ""))
         elif f.startswith("-D"):
             defs.append(f)
-    for base in ("-Icore_setup/hal/host", "-Itest/support", "-Isrc", "-I."):
+    # -Iinclude is PlatformIO's implicit include_dir, where protocore.h lives. Nothing here is pio,
+    # so every path that compiles or scans a TU names it.
+    for base in ("-Icore_setup/hal/host", "-Itest/support", "-Isrc", "-Iinclude", "-I."):
         if base not in incs:
             incs.append(base)
     return incs, defs
 
 
 def _resolve_src(globs):
-    """Expand an env's build_src_filter '+<glob>' entries into repo-relative .c paths."""
+    """Expand an env's build_src_filter '+<glob>' entries into repo-relative .c paths.
+
+    An entry is read under src/ first, then from the repo root: core_setup/ is a root directory, so
+    the backends an env names there ("core_setup/hal/portable/portable_aesgcm.c") resolve from the
+    root and nowhere else. An entry matching neither is reported rather than dropped.
+    """
+    import glob as _glob
     out = []
     for g in globs:
-        rel = g[2:] if g.startswith("../") else "src/" + g
-        rel = rel.replace("../", "")
-        full = os.path.join(ROOT, rel)
-        if os.path.isfile(full):
-            out.append(rel.replace("\\", "/"))
+        stem = g[3:] if g.startswith("../") else g
+        stem = stem.replace("../", "")
+        hits = []
+        for rel in ("src/" + stem, stem):
+            full = os.path.join(ROOT, rel)
+            if os.path.isfile(full):
+                hits = [rel.replace("\\", "/")]
+                break
+            found = [os.path.relpath(h, ROOT).replace("\\", "/")
+                     for h in _glob.glob(full, recursive=True) if h.endswith(".c")]
+            if found:
+                hits = found
+                break
+        if not hits:
+            print("  src filter matches nothing: %s" % g, file=sys.stderr)
             continue
-        import glob as _glob
-        for hit in _glob.glob(os.path.join(ROOT, rel), recursive=True):
-            if hit.endswith(".c"):
-                out.append(os.path.relpath(hit, ROOT).replace("\\", "/"))
+        out.extend(hits)
     return out
 
 
@@ -1110,8 +1142,11 @@ def parse_test_file(filepath):
 
 def build_test_directory():
     import glob as _glob
+    # Suites live at any depth under test/ and are C, not C++: test/unit/<area>/test_x/test_x.c.
     suites = {}
-    for fp in sorted(_glob.glob(os.path.join(ROOT, "test", "test_*", "test_*.cpp"))):
+    for fp in sorted(_glob.glob(os.path.join(ROOT, "test", "**", "test_*.c"), recursive=True)):
+        if os.path.basename(fp) == GENERATED_RUNNER:
+            continue
         cases = parse_test_file(fp)
         if cases:
             suites[os.path.basename(os.path.dirname(fp))] = cases
@@ -1180,9 +1215,48 @@ def suite_dirs(env_entry):
     return [os.path.join(ROOT, "test", *t.split("/")) for t in env_entry["tests"]]
 
 
-def build_and_run(name, e, jobs, keep, verbose):
-    """Compile an env's sources + its suite into one binary and run it. Returns (rc, output)."""
-    cc = shutil.which("gcc") or shutil.which("cc")
+COV_BUILD = ".pio_cov"      # per-env .gcno/.gcda, mirroring run_tests.sh's instrumented build dir
+COV_REPORTS = "coverage_reports"  # per-env gcovr tracefiles, unioned once every env has run
+
+
+def gcovr_cmd():
+    """A runnable gcovr: the interpreter that can `-m gcovr`, else the console script.
+
+    The interpreter running this harness is often PlatformIO's venv, which has no gcovr, so
+    sys.executable alone silently produces no report.
+    """
+    for cand in (sys.executable, shutil.which("python3"), shutil.which("python")):
+        if not cand:
+            continue
+        p = subprocess.run([cand, "-m", "gcovr", "--version"], capture_output=True, text=True)
+        if p.returncode == 0:
+            return [cand, "-m", "gcovr"]
+    exe = shutil.which("gcovr")
+    if exe:
+        return [exe]
+    return None
+
+
+def _obj_for(objdir, src):
+    """One object per source, named after its whole path: basenames repeat across src/."""
+    return os.path.join(objdir, src.replace("/", "_").replace("\\", "_")[:-2] + ".o")
+
+
+def build_and_run(name, e, jobs, keep, verbose, debug=False, coverage=False):
+    """Compile an env's sources + its suite into one binary and run it. Returns (rc, output).
+
+    Under coverage each translation unit is compiled to its own object under .pio_cov/<env>/ so the
+    .gcno files land somewhere gcovr can find, and the .gcda the run writes land beside them. The
+    plain path stays one compile-and-link command.
+    """
+    # The ccache masquerade dir first: it keys on the preprocessed source and flags, so the library
+    # and Unity compiles repeated across envs hit the cache instead of running the compiler again.
+    cc = None
+    for c in ("/usr/lib/ccache/gcc", "/usr/lib/ccache/cc"):
+        if os.path.isfile(c):
+            cc = c
+            break
+    cc = cc or shutil.which("gcc") or shutil.which("cc")
     if not cc:
         return 1, "no gcc on PATH"
     usrc = unity_src()
@@ -1210,8 +1284,34 @@ def build_and_run(name, e, jobs, keep, verbose):
                 srcs.append(os.path.relpath(gen, ROOT).replace("\\", "/"))
         exe = os.path.join(ROOT, ".pio", "native", name + ".exe")
         os.makedirs(os.path.dirname(exe), exist_ok=True)
-        cmd = [cc, "-std=c11", "-D_POSIX_C_SOURCE=200809L", "-fno-exceptions", "-O1"] + defs + incs + \
-              ["-I" + os.path.relpath(sd, ROOT).replace("\\", "/")] + srcs + ["-o", exe, "-lm"]
+        opt = ["-g", "-O0"] if debug else ["-O1"]
+        # Coverage counters are what is being measured, so the optimizer stays out of the way.
+        if coverage:
+            opt = ["-g", "-O0", "--coverage"]
+        base = [cc, "-std=c11", "-D_POSIX_C_SOURCE=200809L", "-fno-exceptions"] + opt + defs + incs + \
+               ["-I" + os.path.relpath(sd, ROOT).replace("\\", "/")]
+        if coverage:
+            objdir = os.path.join(ROOT, COV_BUILD, name)
+            os.makedirs(objdir, exist_ok=True)
+            objs = []
+            failed = None
+            for src in srcs:
+                obj = _obj_for(objdir, src)
+                c = base + ["-c", src, "-o", obj]
+                if verbose:
+                    out_lines.append(" ".join(c))
+                p = subprocess.run(c, capture_output=True, text=True, cwd=ROOT)
+                if p.returncode != 0:
+                    failed = "BUILD FAILED %s (%s)\n%s" % (name, src, p.stderr.strip())
+                    break
+                objs.append(obj)
+            if failed:
+                out_lines.append(failed)
+                rc_total = 1
+                continue
+            cmd = [cc, "--coverage"] + objs + ["-o", exe, "-lm"]
+        else:
+            cmd = base + srcs + ["-o", exe, "-lm"]
         if verbose:
             out_lines.append(" ".join(cmd))
         b = subprocess.run(cmd, capture_output=True, text=True, cwd=ROOT)
@@ -1231,15 +1331,164 @@ def build_and_run(name, e, jobs, keep, verbose):
     return rc_total, "\n".join(out_lines)
 
 
+UNITY_LINE = re.compile(r"^(?P<file>[^:]*[/\\][^:]+\.c):(?P<line>\d+):(?P<test>[A-Za-z_]\w*):(?P<st>PASS|FAIL|IGNORE)")
+
+
+def parse_unity(text):
+    """Per-test results out of a suite's Unity output: [(suite, test, status)]."""
+    out = []
+    for ln in text.splitlines():
+        m = UNITY_LINE.match(ln.strip())
+        if not m:
+            continue
+        suite = os.path.basename(os.path.dirname(m.group("file").replace("\\", "/")))
+        out.append((suite, m.group("test"), m.group("st")))
+    return out
+
+
+def describe_suite(suite):
+    """fn_name -> humanized description for one suite, from its own source."""
+    import glob as _glob
+    for fp in _glob.glob(os.path.join(ROOT, "test", "**", suite, "*.c"), recursive=True):
+        if os.path.basename(fp) == GENERATED_RUNNER:
+            continue
+        cases = parse_test_file(fp)
+        if cases:
+            return {c["fn_name"]: c["description"] for c in cases}
+    return {}
+
+
+def write_report(path, results, envs_run, passed, failed, secs):
+    """The run's TEST_REPORT.md: a header, then one collapsible section per suite."""
+    mark = "✅" if not failed else "❌"
+    md = ["# Test Report", "",
+          "**Generated:** " + time.strftime("%Y-%m-%d %H:%M:%S"),
+          "**Command:** `harness.py run` over %d native envs" % envs_run,
+          "**Result:** %s %d passed, %d failed - %ds" % (mark, passed, failed, secs),
+          "", "---", "", "## Summary", "",
+          "| Suite | Environment | Tests | Status | Duration |",
+          "| :---- | :---------- | ----: | :----: | -------: |"]
+    for env, suite, cases in results:
+        nf = sum(1 for _, s in cases if s == "FAIL")
+        md.append("| %s | %s | %d | %s | - |" % (suite, env, len(cases), "✅" if not nf else "❌"))
+    md.append("")
+    for env, suite, cases in results:
+        nf = sum(1 for _, s in cases if s == "FAIL")
+        head = "✅ %d passed" % len(cases) if not nf else "❌ %d of %d failed" % (nf, len(cases))
+        desc = describe_suite(suite)
+        md += ["---", "", "## %s - %s - %s" % (suite, env, head), "",
+               "<details>", "<summary><b>Expand Suite Details</b></summary>", "",
+               "|   # | Test | Status | Description |",
+               "| --: | :--- | :----: | :---------- |"]
+        for i, (test, st) in enumerate(cases, 1):
+            icon = {"PASS": "✅", "FAIL": "❌", "IGNORE": "⚠️"}[st]
+            md.append("| %3d | `%s` | %s | %s |" % (i, test, icon, _cell(desc.get(test, clean_name(test)))))
+        md += ["", "</details>", ""]
+    full = os.path.join(ROOT, *path.split("/")) if not os.path.isabs(path) else path
+    with open(full, "w", encoding="utf-8", newline="\n") as fh:
+        fh.write("\n".join(md) + "\n")
+
+
+def cov_one(gc, name):
+    """gcovr one env's instrumented build into a tracefile. True when it produced one.
+
+    JSON, not the SonarQube format: that format keeps only a per-line (branchesToCover,
+    coveredBranches) aggregate, so two envs covering different branches of one condition cannot be
+    unioned. gcovr's JSON keeps the per-branch counts --add-tracefile needs.
+    """
+    os.makedirs(os.path.join(ROOT, COV_REPORTS), exist_ok=True)
+    js = "%s/%s.json" % (COV_REPORTS, name)
+    p = subprocess.run(gc + ["--root", ".", "--filter", "src/.*", "--gcov-ignore-parse-errors",
+                             "--json", js, "%s/%s" % (COV_BUILD, name)],
+                       capture_output=True, text=True, cwd=ROOT)
+    full = os.path.join(ROOT, js)
+    return p.returncode == 0 and os.path.isfile(full) and os.path.getsize(full) > 0
+
+
+def cov_merge(gc, out_rel):
+    """Union every per-env tracefile into one SonarQube report, then fold duplicate lines.
+
+    merge-mode-functions=separate, not the default strict: a build knob can put two definitions of
+    one function in one file, and envs compiling different arms report it at different lines, which
+    strict calls a conflict. separate keeps one entry per definition. It also emits a header's
+    inline lines once per including TU, and the generic format requires each line once per file, so
+    the dedupe pass folds those.
+    """
+    out = os.path.join(ROOT, *out_rel.split("/"))
+    p = subprocess.run(gc + ["--add-tracefile", "%s/*.json" % COV_REPORTS,
+                             "--merge-mode-functions=separate", "--sonarqube", out],
+                       capture_output=True, text=True, cwd=ROOT)
+    if p.returncode != 0 or not os.path.isfile(out):
+        print((p.stdout or "")[-2000:] + (p.stderr or "")[-2000:], file=sys.stderr)
+        return False
+    sys.path.insert(0, ROOT)
+    from tools.ci_tooling.coverage import dedupe_sonar_cov
+    dedupe_sonar_cov.dedupe(out)
+    return True
+
+
+def find_pio():
+    """PlatformIO Core, from PATH or the places its installers put it."""
+    p = shutil.which("pio") or shutil.which("platformio")
+    if p:
+        return p
+    home = os.path.expanduser("~")
+    for c in (os.path.join(home, ".platformio", "penv", "Scripts", "pio.exe"),
+              os.path.join(home, ".platformio", "penv", "bin", "pio"),
+              os.path.join(home, ".pio-venv", "bin", "pio"),
+              os.path.join(home, ".local", "bin", "pio")):
+        if os.path.isfile(c):
+            return c
+    return None
+
+
+def run_pio(a):
+    """Run envs through `pio test`, one env per invocation."""
+    pio = find_pio()
+    if not pio:
+        print("error: PlatformIO Core not found - install it or put pio on PATH")
+        return 1
+    with open(TABLE, encoding="utf-8") as f:
+        table = json.load(f)["envs"]
+    names = a.envs or [n for n, e in table.items() if e.get("tests") and n not in NEVER_SELECT]
+    failed = []
+    total = len(names)
+    for i, name in enumerate(names, 1):
+        r = subprocess.run([pio, "test", "-e", name], capture_output=True, text=True, cwd=ROOT)
+        status = "PASS" if r.returncode == 0 else "FAIL"
+        print("[%d/%d] %-34s %s" % (i, total, name, status))
+        if r.returncode != 0 or a.verbose:
+            print(r.stdout.strip())
+            if r.stderr.strip():
+                print(r.stderr.strip())
+        if r.returncode != 0:
+            failed.append(name)
+    print("\n%d/%d envs passed" % (total - len(failed), total))
+    if failed:
+        print("failed: " + " ".join(failed))
+    return 1 if failed else 0
+
+
 def cmd_run(a):
     if a.pio:
-        script = findroot.at("test", "run_tests.sh")
-        return subprocess.run(["bash", str(script)] + a.envs, cwd=ROOT).returncode
+        return run_pio(a)
     with open(TABLE, encoding="utf-8") as f:
         table = json.load(f)["envs"]
     names = a.envs or [n for n, e in table.items() if e.get("tests") and n not in NEVER_SELECT]
     envs = parse_ini_envs(INI)
+    gc = None
+    if a.coverage:
+        gc = gcovr_cmd()
+        if not gc:
+            print("error: no gcovr (tried `-m gcovr` on this interpreter, python3, python, and PATH)")
+            return 3
+        shutil.rmtree(os.path.join(ROOT, COV_REPORTS), ignore_errors=True)
+        shutil.rmtree(os.path.join(ROOT, COV_BUILD), ignore_errors=True)
     failed = []
+    cov_failed = []
+    results = []
+    n_pass = n_fail = 0
+    t0 = time.time()
     total = len(names)
     for i, name in enumerate(names, 1):
         e = envs.get(name)
@@ -1247,16 +1496,45 @@ def cmd_run(a):
             print("unknown env: %s" % name)
             failed.append(name)
             continue
-        rc, out = build_and_run(name, e, a.jobs, a.keep, a.verbose)
+        rc, out = build_and_run(name, e, a.jobs, a.keep or a.debug, a.verbose, a.debug, a.coverage)
         status = "PASS" if rc == 0 else "FAIL"
         print("[%d/%d] %-34s %s" % (i, total, name, status))
         if rc != 0 or a.verbose:
             print(out)
         if rc != 0:
             failed.append(name)
+        if a.report_out:
+            by_suite = {}
+            for suite, test, st in parse_unity(out):
+                by_suite.setdefault(suite, []).append((test, st))
+                n_pass += st == "PASS"
+                n_fail += st == "FAIL"
+            for suite, cases in by_suite.items():
+                results.append((name, suite, cases))
+        if a.coverage and not cov_one(gc, name):
+            print("  ERROR: gcovr produced no coverage report for %s" % name, file=sys.stderr)
+            cov_failed.append(name)
     print("\n%d/%d envs passed" % (total - len(failed), total))
     if failed:
         print("failed: " + " ".join(failed))
+    if a.report_out:
+        write_report(a.report_out, results, total, n_pass, n_fail, int(time.time() - t0))
+        print("Report written: %s" % a.report_out)
+    if a.coverage:
+        # A silently-missing per-env tracefile is the worst failure here: the merge only unions, so
+        # an env that stops contributing freezes its files at whatever the baseline last said
+        # instead of lowering the number. Refuse the merge rather than publish that.
+        if cov_failed:
+            print("ERROR: no coverage report from %d env(s): %s" % (len(cov_failed), " ".join(cov_failed)),
+                  file=sys.stderr)
+            print("Refusing to merge - a partial merge would silently freeze those files' coverage.",
+                  file=sys.stderr)
+            shutil.rmtree(os.path.join(ROOT, COV_REPORTS), ignore_errors=True)
+            return 3  # distinct from a test failure: the caller may commit a report but not this
+        if not cov_merge(gc, a.coverage_out):
+            return 3
+        shutil.rmtree(os.path.join(ROOT, COV_REPORTS), ignore_errors=True)
+        print("Coverage written: %s" % a.coverage_out)
     return 1 if failed else 0
 
 
@@ -1333,7 +1611,15 @@ def main():
     p.add_argument("-j", "--jobs", type=int, default=os.cpu_count() or 4)
     p.add_argument("-v", "--verbose", action="store_true")
     p.add_argument("--keep", action="store_true", help="leave the built binaries in .pio/native")
-    p.add_argument("--pio", action="store_true", help="hand off to test/run_tests.sh (report + coverage)")
+    p.add_argument("--debug", action="store_true",
+                   help="build -g -O0 and keep the binary, for gdb")
+    p.add_argument("--coverage", action="store_true",
+                   help="instrument, gcovr each env, union into the SonarQube coverage report")
+    p.add_argument("--coverage-out", default="test/coverage.xml",
+                   help="where --coverage writes the report (default test/coverage.xml)")
+    p.add_argument("--report-out", metavar="PATH",
+                   help="write the run's TEST_REPORT.md here")
+    p.add_argument("--pio", action="store_true", help="run the envs through `pio test` instead")
     p.set_defaults(fn=cmd_run, group="run", cmd="")
 
     # runners / keys / report -------------------------------------------
