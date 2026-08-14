@@ -426,7 +426,9 @@ static void evt_close(uint8_t slot)
 
 // The Telnet ProtoHandler (Layer 5 dispatch seam) - installed by the builtins list through this
 // accessor, so this module carries no dependency on the session layer.
-static const ProtoHandler s_telnet_handler = {evt_accept, evt_rx, evt_close, NULL};
+// Designated, so a member's position in the struct does not decide what it binds to. on_abort and
+// on_poll are unset: a null on_abort falls back to on_close, and this protocol is not polled.
+static const ProtoHandler s_telnet_handler = {.on_accept = evt_accept, .on_data = evt_rx, .on_close = evt_close};
 
 static void proto_handler(struct TelnetInternal *restrict ctx)
 {

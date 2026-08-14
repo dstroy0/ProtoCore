@@ -9,6 +9,7 @@
 
 #include "network_drivers/application/webdav/webdav.h"
 #include "mmgr/protomem.h"
+#include "mmgr/protostr.h" // str.find: the scheme marker inside a Destination header
 #include "shared/hex/hex.h"
 
 #if PROTOCORE_ENABLE_WEBDAV
@@ -169,7 +170,7 @@ proto_bool protocore_webdav_dest_path(const char *destination, char *out, size_t
     // Skip an absolute-URI scheme + authority: after "://", advance to the first
     // '/' (the path). An abs-path value ("/p/q") is used as-is.
     const char *p = destination;
-    const char *scheme = strstr(destination, "://");
+    const char *scheme = str.find(destination, MAX_VAL_LEN, "://", sizeof("://"), PROTO_FALSE);
     if (scheme)
     {
         p = scheme + 3;

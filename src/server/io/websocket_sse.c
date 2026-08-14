@@ -13,6 +13,7 @@
 
 #include "mmgr/membuild.h"
 #include "mmgr/protomem.h"
+#include "mmgr/protostr.h" // str.has: the permessage-deflate token in Sec-WebSocket-Extensions
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the slot a refusal is written on
 #include "network_drivers/transport/tcp/tcp.h"
 #include "protocore.h"
@@ -134,7 +135,7 @@ proto_bool ws_do_upgrade(uint8_t slot_id, HttpReq *req, WsConnectHandler on_conn
     // no_context_takeover in both directions so each message decompresses
     // independently (the INFLATE window is the message buffer, not a kept window).
     const char *ws_ext = http_get_header(req, "Sec-WebSocket-Extensions");
-    proto_bool pmd = ws_ext && strstr(ws_ext, "permessage-deflate");
+    proto_bool pmd = ws_ext && str.has(ws_ext, MAX_VAL_LEN, "permessage-deflate", sizeof("permessage-deflate"), PROTO_FALSE);
     protocore_sb sb_hdr = {hdr, sizeof(hdr), 0, PROTO_TRUE};
     Sb.put(&sb_hdr,
            "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: ");

@@ -8,6 +8,7 @@
 
 #include "server/core/exc_decoder.h"
 #include "mmgr/membuild.h"         // protocore_sb frame builder
+#include "mmgr/protostr.h"         // str.find: each field's marker inside the panic dump
 #include "shared/hex/hex.h" // PROTOCORE_HEX: the shared digit tables
 
 #if PROTOCORE_ENABLE_EXC_DECODER
@@ -145,7 +146,7 @@ static int parse_small_int(const char *p)
 // Cause: "...panic'ed (LoadProhibited)."
 static void parse_cause(const char *text, ExcInfo *out)
 {
-    const char *c = strstr(text, "panic'ed (");
+    const char *c = str.find(text, str.len(text, 0xFFFF) + 1u, "panic'ed (", sizeof("panic'ed ("), PROTO_FALSE);
     if (!c)
     {
         return;
@@ -163,7 +164,7 @@ static void parse_cause(const char *text, ExcInfo *out)
 // Core number: "Core  N ...".
 static void parse_core(const char *text, ExcInfo *out)
 {
-    const char *co = strstr(text, "Core ");
+    const char *co = str.find(text, str.len(text, 0xFFFF) + 1u, "Core ", sizeof("Core "), PROTO_FALSE);
     if (!co)
     {
         return;
@@ -178,7 +179,7 @@ static void parse_core(const char *text, ExcInfo *out)
 // EXCVADDR (faulting data address).
 static void parse_excvaddr(const char *text, ExcInfo *out)
 {
-    const char *e = strstr(text, "EXCVADDR");
+    const char *e = str.find(text, str.len(text, 0xFFFF) + 1u, "EXCVADDR", sizeof("EXCVADDR"), PROTO_FALSE);
     if (!e)
     {
         return;
@@ -199,7 +200,8 @@ static void parse_excvaddr(const char *text, ExcInfo *out)
 // Register-dump PC: a line that starts with "PC" (not "EPC..."). Anchor to a line break.
 static void parse_pc(const char *text, ExcInfo *out)
 {
-    const char *pcl = (strncmp(text, "PC", 2) == 0) ? text : strstr(text, "\nPC");
+    const char *pcl =
+        (strncmp(text, "PC", 2) == 0) ? text : str.find(text, str.len(text, 0xFFFF) + 1u, "\nPC", sizeof("\nPC"), PROTO_FALSE);
     if (!pcl)
     {
         return;
@@ -219,7 +221,7 @@ static void parse_pc(const char *text, ExcInfo *out)
 // Backtrace: "Backtrace: pc:sp pc:sp ...".
 static void parse_backtrace(const char *text, ExcInfo *out)
 {
-    const char *bt = strstr(text, "Backtrace:");
+    const char *bt = str.find(text, str.len(text, 0xFFFF) + 1u, "Backtrace:", sizeof("Backtrace:"), PROTO_FALSE);
     if (!bt)
     {
         return;

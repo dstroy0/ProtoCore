@@ -27,7 +27,7 @@ next author could only guess. **Read this before adding tooling.**
 Domain tooling stays with its domain, because splitting a cohesive family across two
 roots is worse than either root alone:
 
-- `test/gen_test_envs.py`, `gen_test_readme.py`, `run_tests.sh` - test infrastructure
+- `test/harness.py` - test infrastructure (matrix, runners, run, coverage, report)
 - `tools/gen_crypto_vectors.py` and the other vector generators - test **data**
 - `src/web_assets/wizard/*` - the web asset build
 - `tools/git-hooks/` - git hooks

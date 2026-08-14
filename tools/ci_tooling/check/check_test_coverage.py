@@ -92,7 +92,7 @@ def main(argv):
             print(f"  {t}", file=sys.stderr)
         print(
             "\nAdd a native_<name> entry to test/test_matrix.json naming the file in its src\n"
-            "filter, then regenerate with test/gen_test_envs.py. A module with no host test\n"
+            "filter, then regenerate with test/harness.py env gen. A module with no host test\n"
             "is a module whose behavior is asserted only by reading it.",
             file=sys.stderr,
         )

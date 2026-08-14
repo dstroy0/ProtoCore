@@ -19,8 +19,8 @@ name: Test & Analyze
 #   * the workflow_dispatch 'full' input is true.
 # A docs-only diff maps to NONE and skips the suite entirely.
 #
-# ccache (auto-detected by run_tests.sh) caches the repeated library + Unity compiles across envs and,
-# via the ~/.ccache cache, across runs, so even a full run stays warm.
+# ccache (preferred by harness.py over the bare compiler) caches the repeated library + Unity compiles
+# across envs and, via the ~/.ccache cache, across runs, so even a full run stays warm.
 
 on:
   push:
@@ -76,10 +76,15 @@ jobs:
       - name: Install PlatformIO + gcovr + ccache
         # gcovr is pinned: an unpinned drift to 8.6+ changed --filter anchoring and silently emptied
         # every coverage report (0% on Sonar). ccache provides the /usr/lib/ccache masquerade dir that
-        # run_tests.sh auto-detects.
+        # harness.py prefers over the bare compiler.
         run: |
           pip install --upgrade platformio 'gcovr==8.6'
           sudo apt-get update && sudo apt-get install -y ccache
+
+      # harness.py compiles and links the envs itself rather than shelling out to `pio test`, so
+      # nothing else fetches lib_deps: Unity has to be on disk under .pio/libdeps before the run.
+      - name: Install lib_deps (Unity)
+        run: pio pkg install
 
       - name: Check platformio.ini is in sync with the test matrix
         run: python3 test/harness.py env gen --check
@@ -145,7 +150,7 @@ jobs:
         if: ${{ steps.sel.outputs.mode == 'full' }}
         run: |
           rc=0
-          bash test/run_tests.sh --coverage || rc=$?
+          python3 test/harness.py run --coverage --report-out test/TEST_REPORT.md || rc=$?
           echo "rc=$rc" >> "$GITHUB_OUTPUT"
           # rc 3 is specifically "coverage could not be produced" (a per-env gcovr failure), as
           # opposed to failing tests, which the gate step below reports without losing the report.
@@ -162,7 +167,7 @@ jobs:
           # No --coverage: this ran a subset of the envs, so it measures a subset of src/. Writing
           # that over the committed report would replace a whole-project measurement with a partial
           # one. coverage.xml is regenerated only by the full-matrix run below.
-          bash test/run_tests.sh --report-out partial_report.md ${{ steps.sel.outputs.envs }} || rc=$?
+          python3 test/harness.py run --report-out partial_report.md ${{ steps.sel.outputs.envs }} || rc=$?
           python3 test/harness.py report merge test/TEST_REPORT.md partial_report.md test/TEST_REPORT.md
           rm -f partial_report.md changed_all.txt changed_src.txt
           echo "rc=$rc" >> "$GITHUB_OUTPUT"

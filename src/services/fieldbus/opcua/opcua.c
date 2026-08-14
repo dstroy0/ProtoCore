@@ -1450,7 +1450,9 @@ void protocore_opcua_rx(uint8_t slot)
 // The OPC UA ProtoHandler (Layer 5 dispatch seam) - only a data handler; the handshake reads from
 // the rx ring, so there is no per-connection accept/close/poll state. Returned by accessor (no
 // session dependency); Session.proto->register_builtins() installs it.
-static const ProtoHandler s_opcua_handler = {NULL, protocore_opcua_rx, NULL, NULL};
+// Designated, so a member's position in the struct does not decide what it binds to. Only the data
+// seam is served; the rest stay null.
+static const ProtoHandler s_opcua_handler = {.on_data = protocore_opcua_rx};
 const ProtoHandler *protocore_opcua_protocore_handler(void)
 {
     return &s_opcua_handler;

@@ -65,7 +65,17 @@ typedef struct
 
 // One instance for the whole program, like every other host-driver global: the test writes the
 // tree from its translation unit and the code under test reads it from another.
-__attribute__((weak)) LfsmCtx g_lfsm;
+// One definition per name across every TU that includes this, kept by the linker: selectany on
+// PE/COFF, weak on ELF.
+#ifndef PROTOCORE_HOST_SHARED
+#if defined(_WIN32)
+#define PROTOCORE_HOST_SHARED __declspec(selectany)
+#else
+#define PROTOCORE_HOST_SHARED PROTOCORE_HOST_SHARED
+#endif
+#endif
+
+PROTOCORE_HOST_SHARED LfsmCtx g_lfsm;
 
 // --- the block device: RAM, so each call is the obvious move ------------------
 
@@ -565,7 +575,7 @@ static inline proto_bool lfsm_readdir(int handle, protocore_mnt_stat *out, char 
     }
 }
 
-__attribute__((weak)) const protocore_mnt_backend g_lfsm_backend = {
+PROTOCORE_HOST_SHARED const protocore_mnt_backend g_lfsm_backend = {
     lfsm_open,   lfsm_read,   lfsm_write,    lfsm_close, lfsm_seek, lfsm_size,    lfsm_exists,
     lfsm_remove, lfsm_rename, lfsm_mkdir_op, lfsm_rmdir, lfsm_stat, lfsm_opendir, lfsm_readdir};
 

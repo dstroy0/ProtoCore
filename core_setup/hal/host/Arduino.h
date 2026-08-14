@@ -20,7 +20,17 @@
 // would leave the library reading a counter nobody set. A weak definition in the header gives
 // every TU the same symbol and lets the linker collapse them to one instance, which is what the
 // C++ build got for free from ODR merging of inline-function-local statics.
-__attribute__((weak)) uint32_t g_protocore_mock_millis = 0;
+// One definition per name across every TU that includes this, kept by the linker: selectany on
+// PE/COFF, weak on ELF.
+#ifndef PROTOCORE_HOST_SHARED
+#if defined(_WIN32)
+#define PROTOCORE_HOST_SHARED __declspec(selectany)
+#else
+#define PROTOCORE_HOST_SHARED PROTOCORE_HOST_SHARED
+#endif
+#endif
+
+PROTOCORE_HOST_SHARED uint32_t g_protocore_mock_millis = 0;
 
 static inline uint32_t millis(void)
 {

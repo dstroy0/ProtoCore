@@ -251,7 +251,10 @@ static void caster_on_close(uint8_t slot)
     }
 }
 
-static const ProtoHandler s_caster_handler = {caster_on_accept, caster_on_data, caster_on_close, NULL};
+// Designated, so a member's position in the struct does not decide what it binds to. on_abort and
+// on_poll are unset: a null on_abort falls back to on_close, and this protocol is not polled.
+static const ProtoHandler s_caster_handler = {
+    .on_accept = caster_on_accept, .on_data = caster_on_data, .on_close = caster_on_close};
 
 proto_bool protocore_ntrip_caster_add_mount(uint8_t listener_id, const NtripMount *mount, const char *auth_b64)
 {

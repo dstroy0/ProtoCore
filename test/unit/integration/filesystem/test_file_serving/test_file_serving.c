@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "network_drivers/presentation/http/websocket/websocket.h"
 #include "network_drivers/transport/tcp/tcp.h"
 #include "rx_feed.h"
 #include <unity.h>

@@ -15,6 +15,7 @@
 #include "crypto/rng/rng.h" // protocore_rand_fill(): the lock token's unpredictable half
 #include "mmgr/membuild.h"
 #include "mmgr/protomem.h"
+#include "mmgr/protostr.h" // str.has: the traversal marker in a resolved subpath, tokens in a body
 #include "network_drivers/application/webdav/webdav.h"
 #include "network_drivers/presentation/http/http.h"
 #include "network_drivers/presentation/http/route/http_route.h"
@@ -108,7 +109,7 @@ static int dav_resolve_path(const HttpRoute *r, const char *reqpath, char *out, 
     // prefix, so the length test always holds. Kept so a future caller that resolves without
     // matching first still cannot index past the end of reqpath.
     const char *sub = (strnlen(reqpath, MAX_PATH_LEN) >= plen) ? reqpath + plen : "";
-    if (strstr(sub, ".."))
+    if (str.has(sub, MAX_PATH_LEN - plen, "..", sizeof(".."), PROTO_FALSE))
     {
         return 403;
     }
@@ -169,7 +170,7 @@ static proto_bool dav_write_blocked(HttpReq *req, const char *path)
 // True if the (always NUL-terminated) request body contains @p needle - used to spot a <shared> lockscope.
 static proto_bool dav_body_has(HttpReq *req, const char *needle)
 {
-    return strstr((const char *)req->body, needle) != NULL;
+    return str.has((const char *)req->body, req->body_len + 1u, needle, str.len(needle, 0xFFFF) + 1u, PROTO_FALSE);
 }
 
 // Extract the token from a Lock-Token Coded-URL ("<opaquelocktoken:...>") into @p out; false if malformed.
@@ -549,7 +550,7 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
             return;
         }
         const char *dest_sub = dest_url + plen;
-        if (strstr(dest_sub, ".."))
+        if (str.has(dest_sub, sizeof(dest_url) - plen, "..", sizeof(".."), PROTO_FALSE))
         {
             dav_send_status(slot_id, 403, "");
             return;

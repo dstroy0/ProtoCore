@@ -8,6 +8,7 @@
 
 #include "multipart.h"
 #include "mmgr/protomem.h"
+#include "mmgr/protostr.h" // str.find: a quoted parameter key, and the boundary in a Content-Type
 
 // Longest parameter key the header scan will match ("name=", "filename=").
 #define MULTIPART_KEY_MAX 32
@@ -35,7 +36,7 @@ static char *mem_find(char *hay, size_t hlen, const char *needle, size_t nlen)
 // Returns NULL if not found.
 static char *extract_quoted_param(char *src, const char *key)
 {
-    char *p = strstr(src, key);
+    char *p = (char *)str.find(src, str.len(src, 0xFFFF) + 1u, key, str.len(key, MULTIPART_KEY_MAX) + 1u, PROTO_FALSE);
     if (!p)
     {
         return NULL;
@@ -66,7 +67,7 @@ static proto_bool protocore_multipart_parse(HttpReq *req, MultipartBody *mp)
     }
 
     // Extract boundary value (may be quoted or unquoted)
-    const char *bsearch = strstr(ct, "boundary=");
+    const char *bsearch = str.find(ct, MAX_VAL_LEN, "boundary=", sizeof("boundary="), PROTO_FALSE);
     if (!bsearch)
     {
         return PROTO_FALSE;

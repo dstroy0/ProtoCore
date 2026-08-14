@@ -8,6 +8,7 @@
 
 #include "server/web/edge_cache/edge_fetch.h"
 #include "mmgr/protomem.h"
+#include "mmgr/protostr.h" // str.has: the chunked token in a folded Transfer-Encoding
 
 #if PROTOCORE_ENABLE_EDGE_CACHE
 
@@ -123,7 +124,7 @@ static proto_bool has_chunked(const char *s)
         low[i] = (s[i] >= 'A' && s[i] <= 'Z') ? (char)(s[i] + 32) : s[i];
     }
     low[i] = '\0';
-    return strstr(low, "chunked") != NULL;
+    return str.has(low, sizeof(low), "chunked", sizeof("chunked"), PROTO_FALSE);
 }
 
 proto_bool edge_resp_complete(const uint8_t *buf, size_t len, proto_bool conn_closed, size_t *head_len)

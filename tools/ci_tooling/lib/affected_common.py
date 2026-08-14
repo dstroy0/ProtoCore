@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """affected_common.py - content-aware CI change classification.
 
-Shared by test/select_envs.py (native test envs) and tools/ci_tooling/generate/example_footprints.py
+Shared by test/harness.py env select (native test envs) and tools/ci_tooling/generate/example_footprints.py
 (ESP32 example builds). EVERY feature commit touches the same three "global" files -
 src/protocore_config.h (a new gate), test/test_matrix.json (a new env) and the generated
 platformio.ini - and a name-only diff can only treat those as "runs everything". But
