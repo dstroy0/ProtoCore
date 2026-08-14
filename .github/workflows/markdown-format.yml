@@ -49,62 +49,27 @@ jobs:
       - name: Naming law (docs/SYMBOLS.md)
         run: python3 -m tools.ci_tooling.check.check_symbols --check
 
-      # Interop matrix counts are derived from the tree, not hand-maintained. Hand
-      # maintenance failed: the table claimed 34 peers / ~39 benches while the tree had
-      # 39 / 207, i.e. it understated coverage roughly fivefold, which sends you to build
-      # a bench that already exists.
-      - name: Interop matrix counts in sync
+      # Every generated region a PR can make stale, asserted through the one CI entry point. Each
+      # generator implements --check; several implemented it and nothing ran it, so the regions
+      # could drift silently - a gate that exists and is not wired is the same as no gate. ci.py
+      # prints ok/FAIL per generator, so a drifted region still names itself.
+      #
+      #   interop_matrix   peer / bench counts derived from the tree, not hand-maintained
+      #   hardware_ref     the per-module hardware table, derived from the headers
+      #   readme_intro     the quick start copied from Basic.ino + the status table from
+      #                    test/coverage.xml and test/TEST_REPORT.md
+      #   api_flow         docs/ARCHITECTURE.md + the README diagrams
+      #   examples         docs/EXAMPLES.md
+      #   flag_deps        the README flag-dependency block
+      #   readme_sections  the docs/README.md reference sections
+      #   changelog        the changelog decoration
+      #   configurator     not markdown, but the same staleness class, and this is the only
+      #   build_opt        workflow that runs on a pull request: Feature Tables regenerates both
+      #                    on push to main, so without them a PR could not tell you it had made
+      #                    them stale.
+      - name: Generated regions in sync (ci.py gen --check)
         if: github.event_name == 'pull_request'
-        run: python3 -m tools.ci_tooling.generate.gen_interop_matrix --check
-
-      # The per-module hardware table is derived from the headers. Hand-maintained it
-      # covered 32 of 77 hardware-touching modules and invented pinouts the library does
-      # not impose - every driver takes its wiring through the API, and six are pure
-      # codecs with no bring-up call at all.
-      - name: Hardware module table in sync
-        if: github.event_name == 'pull_request'
-        run: python3 -m tools.ci_tooling.generate.gen_hardware_ref --check
-
-      # The README quick start is copied from examples/Foundation/Basic/Basic.ino, which
-      # CI compiles, and the status table is computed from test/coverage.xml plus
-      # test/TEST_REPORT.md. Both replaced hand-written claims that had gone wrong in
-      # opposite directions: no code sample at all, and coverage described as "lacking"
-      # while the committed report measured 99.0% line / 96.1% branch.
-      - name: README intro blocks in sync
-        if: github.event_name == 'pull_request'
-        run: python3 -m tools.ci_tooling.generate.gen_readme_intro --check
-
-      # These five implement --check but nothing ran it, so docs/ARCHITECTURE.md,
-      # docs/EXAMPLES.md, the README flag-deps block, the docs/README.md reference
-      # sections, and the changelog decoration could all drift silently. A gate that
-      # exists and is not wired is the same as no gate.
-      - name: API flow diagrams in sync
-        if: github.event_name == 'pull_request'
-        run: python3 -m tools.ci_tooling.generate.gen_api_flow --check
-
-      - name: Example index in sync
-        if: github.event_name == 'pull_request'
-        run: python3 -m tools.ci_tooling.generate.gen_examples --check
-
-      - name: Build-flag dependency graph in sync
-        if: github.event_name == 'pull_request'
-        run: python3 -m tools.ci_tooling.generate.gen_flag_deps --check
-
-      - name: Docs reference sections in sync
-        if: github.event_name == 'pull_request'
-        run: python3 -m tools.ci_tooling.generate.gen_readme_sections --check
-
-      - name: Changelog decoration in sync
-        if: github.event_name == 'pull_request'
-        run: python3 -m tools.ci_tooling.generate.decorate_changelog --check
-
-      # Not markdown, but the same staleness class and this is the only workflow that
-      # runs on a pull request: Feature Tables regenerates these on push to main, so
-      # without these two steps a PR could not tell you it had made them stale.
-      - name: Configurator in sync with protocore_config.h
-        if: github.event_name == 'pull_request'
-        run: python3 -m tools.ci_tooling.generate.gen_configurator --check
-
-      - name: Example build_opt.h files in sync
-        if: github.event_name == 'pull_request'
-        run: python3 -m tools.ci_tooling.generate.gen_build_opt --check
+        run: |
+          python3 -m tools.ci_tooling.ci gen --check \
+            interop_matrix hardware_ref readme_intro api_flow examples \
+            flag_deps readme_sections changelog configurator build_opt

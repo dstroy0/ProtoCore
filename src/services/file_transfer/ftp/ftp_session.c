@@ -37,7 +37,7 @@ static const protocore_field LOG_BUILD_FAILED[] = {
 static const protocore_field LOG_SENT[] = {{PROTOCORE_FK_LIT, 0, 5, "ftp> "}, PROTOCORE_STR, PROTOCORE_END};
 static const protocore_field LOG_REPLY[] = {{PROTOCORE_FK_LIT, 0, 5, "ftp< "}, PROTOCORE_U32, PROTOCORE_END};
 static const protocore_field LOG_REPLY_TOO_BIG[] = {
-    {PROTOCORE_FK_LIT, 0, 41, "ftp: reply larger than PROTOCORE_FTP_REPLY_BUF ("},
+    {PROTOCORE_FK_LIT, 0, 48, "ftp: reply larger than PROTOCORE_FTP_REPLY_BUF ("},
     PROTOCORE_U32,
     {PROTOCORE_FK_LIT, 0, 1, ")"},
     PROTOCORE_END};

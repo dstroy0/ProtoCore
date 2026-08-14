@@ -81,7 +81,11 @@ _TERNARY_MSG = (
 BANS = [
     (re.compile(r"\bstrlen\s*\("), 1, "strlen (unbounded read); use strnlen(p, cap)"),
     (re.compile(r"#\s*include\s*<c?stdlib\.h>"), 2, "<stdlib.h>/<cstdlib>; no heap / hidden parse"),
-    (re.compile(r"\b(?:malloc|calloc|realloc|free|aligned_alloc)\s*\("), 2, "heap allocation; use fixed BSS buffers"),
+    # Not preceded by `.` or `->`: a pimpl module publishes members by plain verb, so `Ws.free(...)`
+    # and `Sse.free(...)` release a slot back to that module's own table and never reach the
+    # allocator. Matching the bare token read every one of them as a heap call.
+    (re.compile(r"(?<![.>\w])(?:malloc|calloc|realloc|free|aligned_alloc)\s*\("), 2,
+     "heap allocation; use fixed BSS buffers"),
     (
         re.compile(r"\b(?:atoi|atol|atoll|strtol|strtoll|strtoul|strtoull|strtod|strtof|qsort|srand|rand)\s*\("),
         2,
@@ -97,7 +101,12 @@ BANS = [
     (re.compile(r"#\s*include\s*<c?string\.h>"), 25, "<string.h>/<cstring>; use mem.* / str.*"),
     (re.compile(r"\bauto\b"), 3, "auto keyword; spell the explicit type"),
     (re.compile(r"\bdelay\s*\("), 4, "delay(); use pcdelay(ms) from server/clock/clock.h"),
-    (re.compile(r"\b(?:gmtime|localtime|ctime|asctime)\s*\("), 8, "non-reentrant time; use the _r form"),
+    # Not preceded by `.` or `->`, as with the heap ban: TimeCompat publishes the reentrant call as
+    # a member named `gmtime`, so `TimeCompat.gmtime(TimeCompat.internal)` fills a caller-supplied
+    # `struct tm` and is the _r form. The one owner (shared/time_compat/time_compat.c) calls
+    # gmtime_r / gmtime_s and is what this ban is guarding.
+    (re.compile(r"(?<![.>\w])(?:gmtime|localtime|ctime|asctime)\s*\("), 8,
+     "non-reentrant time; use the _r form"),
     (re.compile("—"), 7, "em-dash; use a comma / parentheses / a linking word"),
     (re.compile(r"\bvirtual\b"), 22, _VIRTUAL_MSG),
     (re.compile(r"\b(?:class|struct)\s+\w+\s*:\s*(?:public|protected|private|virtual)\b"), 22, _INHERIT_MSG),
@@ -127,7 +136,15 @@ _PREPROC = re.compile(r"^\s*#")
 # in C++ to `extern "C" {` and `}`, so an include after one is neither read-order-dependent nor
 # layering-hiding. protocore.h opens the block above its include list to give every header underneath
 # C linkage in one place.
-_MIDINC_MSG = "#include after code; hoist all includes to the top of the file"
+_MIDINC_MSG = "#include after the first function; hoist it above them"
+# What opens the region an include may not follow: a FUNCTION DEFINITION. Everything above the first
+# one - preprocessor directives and the blocks they guard, typedefs, aggregates, forward
+# declarations, prototypes - is still the include region, so a guarded `#if ... #include ... #endif`
+# and a forward declaration a later include needs both read as fine. A signature ends in `)` with an
+# optional trailing `{` (Allman puts the brace on the next line); `=` means an initializer and `;`
+# means a prototype, and neither defines anything.
+_FUNC_SIG = re.compile(r"^\s*(?!#)(?!typedef\b)(?!return\b)[A-Za-z_][\w\s\*&,<>:\[\]]*\([^;=]*\)"
+                       r"\s*(?:const)?\s*\{?\s*$")
 _ALLOW_LATE = "PROTOCORE_ALLOW_LATE_INCLUDE"
 _LINKAGE = re.compile(r"^\s*PROTO_(?:BEGIN|END)_DECLS\s*$")
 
@@ -218,6 +235,7 @@ def scan_file(path):
     agg_pending = False  # saw a struct/class/union head, waiting for its brace (Allman style)
     ns_depth = 0  # open namespace blocks; brace beyond this means a function body
     ns_pending = False  # saw a namespace head, waiting for its brace
+    func_pending = False  # saw a function signature, waiting for its brace (Allman style)
     for line_no, line in enumerate(clean.splitlines(), 1):
         # Ban 18: only a FREE constexpr (file or namespace scope) is a value other code
         # sizes itself against. Excluded: a member of a namespacing struct (a scoped data
@@ -247,6 +265,7 @@ def scan_file(path):
         elif "{" in line and ns_pending:
             ns_depth += 1
             ns_pending = False
+        prev_brace = brace  # depth this line opened at, before its own braces are counted
         brace += line.count("{") - line.count("}")
         agg_at = [d for d in agg_at if d <= brace]
         ns_depth = min(ns_depth, brace)
@@ -264,8 +283,15 @@ def scan_file(path):
         if _INCLUDE.match(line) and not pp_cont:
             if seen_code and _ALLOW_LATE not in raw_lines[line_no - 1]:
                 hits.append((str(path), line_no, 17, _MIDINC_MSG))
-        elif stripped and not is_pp and not _LINKAGE.match(line):
-            seen_code = True
+        # The first function definition closes the include region. A signature at file scope arms
+        # it; the brace that follows - same line or the next, since the tree is Allman - opens the
+        # body. An aggregate or namespace claims its own brace above, so what is left is a function.
+        if not seen_code and not is_pp and not agg_pending and not ns_pending and prev_brace == 0:
+            if func_pending and "{" in line:
+                seen_code = True
+            func_pending = bool(_FUNC_SIG.match(line))
+            if func_pending and "{" in line:
+                seen_code = True
         pp_cont = is_pp and stripped.endswith("\\")
     return hits
 

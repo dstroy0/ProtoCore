@@ -736,7 +736,7 @@ static const protocore_field DIAG_DOC[] = {
     PROTOCORE_STR,
     {PROTOCORE_FK_LIT, 0, 10, ",\"syslog\":"},
     PROTOCORE_STR,
-    {PROTOCORE_FK_LIT, 0, 17, ",\"protocore_ntp_server\":"},
+    {PROTOCORE_FK_LIT, 0, 24, ",\"protocore_ntp_server\":"},
     PROTOCORE_STR,
     {PROTOCORE_FK_LIT, 0, 14, ",\"dns_server\":"},
     PROTOCORE_STR,

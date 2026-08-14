@@ -121,13 +121,33 @@ def is_definition_line(line: str):
     return m.group("name"), decl
 
 
-def is_ctx_type(type_str: str) -> bool:
-    """True if the declared type is an owned-context type (`*_ctx` / `*Ctx`), including a pointer
-    to one: a context whose storage is an mmgr borrow is the module's one owner held as
-    `static <Name>Ctx *`, so the pointer tokens are stripped before the last type token is read."""
+def _last_type_token(type_str: str) -> str:
+    """The declared type's final token, with pointer punctuation stripped."""
     toks = [t.rstrip("*&") for t in type_str.replace("static", "").split()]
     toks = [t for t in toks if t]  # a bare `*` / `&` token is punctuation, not the type
-    return bool(toks) and toks[-1].endswith(("_ctx", "Ctx"))
+    return toks[-1] if toks else ""
+
+
+def is_ctx_type(type_str: str) -> bool:
+    """True if the declared type is an owned-context type, including a pointer to one: a context
+    whose storage is an mmgr borrow is the module's one owner held as `static <Name>Ctx *`, so the
+    pointer tokens are stripped before the last type token is read.
+
+    `Storage` and `Internal` are the pimpl spelling of the same thing. A converted module keeps its
+    state in `static struct <Name>Storage s_store;` and reaches it through
+    `static struct <Name>Internal s_x = {.store = &s_store, .ns = &X};` - one owner per module,
+    internal linkage, exactly what a `*Ctx` was. The suffix changed; the rule did not."""
+    return _last_type_token(type_str).endswith(("_ctx", "Ctx", "Storage", "Internal"))
+
+
+def is_ns_type(type_str: str) -> bool:
+    """True if the declared type is a module's namespace table (`<Name>Ns`).
+
+    This is the ONE definition a pimpl module exports, and it carries external linkage because that
+    is what it is for: a caller sets its argument members, invokes a member through it, and reads
+    the outcome off it. Requiring internal linkage here would forbid the calling convention. What
+    the guard still enforces is that the state behind it - Storage and Internal - stays static."""
+    return _last_type_token(type_str).endswith("Ns")
 
 
 def classify(name: str, type_str: str, in_anon_ns: bool) -> bool:
@@ -154,6 +174,9 @@ def classify(name: str, type_str: str, in_anon_ns: bool) -> bool:
     # defined in a TU that used neither, `extern`'d into a shared header and reached by two others.
     if is_ctx_type(type_str):
         return bool(re.search(r"\bstatic\b", type_str)) or in_anon_ns
+    # The exported namespace table, whose external linkage is the point of it.
+    if is_ns_type(type_str):
+        return True
     return False
 
 
@@ -198,7 +221,12 @@ def main(argv) -> int:
                 anon_depth = -1
 
     externs = [(str(p).replace(os.sep, "/"), i, n, t) for p, i, n, t in scan_extern_ctx()]
-    ratcheted = linkage + externs
+    # Loose globals ride the ratchet too while the pimpl conversion runs. The ones left are state
+    # the conversion has not reached, in modules whose callers still read them by name; recording
+    # them keeps the gate doing the job it can still do - refusing a NEW ambient global - instead of
+    # failing on every run and being read past. Each conversion drops the count, and the baseline is
+    # prefix-closed under removal, so it never rises.
+    ratcheted = linkage + externs + loose
 
     # Key by file + name + OCCURRENCE ORDINAL. Without the ordinal, config_store.cpp's two `s_cfg`
     # definitions collapse to one key and a re-added third would pass unseen - the same trap
@@ -217,7 +245,8 @@ def main(argv) -> int:
         return 0
 
     new_ratcheted, known, fixed = bl.filter_new(ratcheted, lambda v: keys[v], BASELINE)
-    violations = loose + [v for v in new_ratcheted if v in linkage]
+    loose_set, linkage_set = set(loose), set(linkage)
+    violations = [v for v in new_ratcheted if v in linkage_set or v in loose_set]
     externs = [v for v in new_ratcheted if v in externs]
 
     if violations or externs:

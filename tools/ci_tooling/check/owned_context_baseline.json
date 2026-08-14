@@ -1,7 +1,14 @@
 [
-  "src/network_drivers/presentation/ssh/transport/ssh_transport.c|protocore_ssh_kex_bench#1",
-  "src/network_drivers/presentation/ssh/transport/ssh_transport.h|protocore_ssh_kex_bench#1",
-  "src/network_drivers/tls/tls.c|protocore_tls_hs_bench#1",
-  "src/network_drivers/tls/tls.h|protocore_tls_hs_bench#1",
-  "src/server/security/auth_lockout/auth_lockout.c|s_lock#1"
+ "src/network_drivers/presentation/presentation.c|http_h2#1",
+ "src/network_drivers/presentation/presentation.c|http_h2_checked#1",
+ "src/network_drivers/presentation/presentation.c|http_h2_stream#1",
+ "src/network_drivers/presentation/presentation.c|http_h3#1",
+ "src/network_drivers/presentation/presentation.c|http_h3_conn_id#1",
+ "src/network_drivers/presentation/presentation.c|http_h3_stream#1",
+ "src/network_drivers/presentation/presentation.c|http_req_start_ms#1",
+ "src/network_drivers/presentation/presentation.c|http_resp_sink#1",
+ "src/network_drivers/presentation/ssh/transport/transport.c|protocore_ssh_kex_bench#1",
+ "src/network_drivers/presentation/ssh/transport/transport.h|protocore_ssh_kex_bench#1",
+ "src/network_drivers/transport/tcp/protocol/protocol.c|protocore_conn_bits#1",
+ "src/server/security/auth_lockout/auth_lockout.c|s_lock#1"
 ]
