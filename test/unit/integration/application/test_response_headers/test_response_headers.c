@@ -91,7 +91,7 @@ void setUp()
         conn_pool[i].pcb = protocore_net_host_pcb();
         http_reset(i);
     }
-    ws_init();
+    Ws.init(Ws.internal);
     protocore_sse_init();
     tcp_capture_reset();
     protocore_ntp_set_test_epoch(0);

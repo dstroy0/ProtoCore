@@ -6,7 +6,7 @@
  * @brief DMA peripheral ingest / egress - implementation.
  *
  * The front end validates and dispatches to the weak protocore_dma_hw_* hooks a driver overrides.
- * The host build overrides them too (test/mocks/protocore_dma_host.h), so the arm that runs on
+ * The host build overrides them too (core_setup/hal/host/protocore_dma_host.h), so the arm that runs on
  * silicon is the arm the tests drive.
  */
 

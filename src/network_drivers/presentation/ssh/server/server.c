@@ -190,7 +190,8 @@ static void net_close(uint8_t conn_slot)
         SshAuth.reset(SshAuth.internal);
         protocore_secure_wipe(ssh_conn_slot(j), SSH_SLOT_BORROW);
         protocore_secure_wipe(&ssh_sess[j], sizeof(SshSession));
-        SshNetwork.release(j);
+        SshNetwork.ssh_slot = j;
+        SshNetwork.release(SshNetwork.internal);
     }
     conn->proto_slot = PROTOCORE_PROTO_SLOT_NONE;
 }
@@ -306,7 +307,9 @@ static void rfwd_on_close(uint8_t conn_slot)
     }
     protocore_ssh_channel_send_eof(slot, channel);   // the socket is gone, so this direction sends no more
     protocore_ssh_channel_send_close(slot, channel); // then terminate the channel
-    SshNetwork.chan_close(slot, channel);
+    SshNetwork.ssh_slot = slot;
+    SshNetwork.stream.channel = channel;
+    SshNetwork.chan_close(SshNetwork.internal);
 }
 
 static void rfwd_on_poll(uint8_t conn_slot)
@@ -328,7 +331,9 @@ static void rfwd_on_poll(uint8_t conn_slot)
     // The client closed its side of the channel -> close the accepted socket.
     if (protocore_ssh_chan_by_id(slot, channel) == NULL)
     {
-        SshNetwork.chan_close(slot, channel);
+        SshNetwork.ssh_slot = slot;
+        SshNetwork.stream.channel = channel;
+        SshNetwork.chan_close(SshNetwork.internal);
         return;
     }
     protocore_ssh_forward_pump(slot); // drain anything the window blocked earlier

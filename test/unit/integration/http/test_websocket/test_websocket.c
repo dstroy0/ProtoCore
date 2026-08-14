@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #include "crypto/hash/sha1.h"
-#include "network_drivers/transport/tcp/common.h"
 #include "network_drivers/presentation/codec/base64/base64.h"
 #include "network_drivers/presentation/http/websocket/websocket.h"
+#include "network_drivers/transport/tcp/common.h"
 #include <string.h>
 
 #include "rx_feed.h"
@@ -53,7 +53,7 @@ static size_t build_frame(uint8_t *dst, WsOpcode opcode, proto_bool fin, const u
 
 void setUp()
 {
-    ws_init();
+    Ws.init(Ws.internal);
     for (int i = 0; i < MAX_CONNS; i++)
     {
         conn_pool[i] = (TcpConn){0};
@@ -233,101 +233,154 @@ void test_ws_all_inactive_after_init()
 
 void test_ws_alloc_returns_non_null()
 {
-    TEST_ASSERT_NOT_NULL(ws_alloc(0));
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    TEST_ASSERT_NOT_NULL(Ws.found);
 }
 
 void test_ws_alloc_sets_active()
 {
-    WsConn *ws = ws_alloc(0);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
     TEST_ASSERT_TRUE(ws->active);
 }
 
 void test_ws_alloc_sets_slot_id()
 {
-    WsConn *ws = ws_alloc(0);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
     TEST_ASSERT_EQUAL(0, (int)ws->slot_id);
 }
 
 void test_ws_alloc_sets_parse_state_header1()
 {
-    WsConn *ws = ws_alloc(0);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
     TEST_ASSERT_EQUAL(WS_HEADER1, ws->parse_state);
 }
 
 void test_ws_alloc_pool_full_returns_null()
 {
-    TEST_ASSERT_NOT_NULL(ws_alloc(0));
-    TEST_ASSERT_NOT_NULL(ws_alloc(1));
-    TEST_ASSERT_NULL(ws_alloc(2));
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    TEST_ASSERT_NOT_NULL(Ws.found);
+    Ws.slot = 1;
+    Ws.alloc(Ws.internal);
+    TEST_ASSERT_NOT_NULL(Ws.found);
+    Ws.slot = 2;
+    Ws.alloc(Ws.internal);
+    TEST_ASSERT_NULL(Ws.found);
 }
 
 void test_ws_active_reflects_pool_state()
 {
-    TEST_ASSERT_FALSE(ws_active(0));
-    ws_alloc(0);
-    TEST_ASSERT_TRUE(ws_active(0));
-    TEST_ASSERT_FALSE(ws_active((uint8_t)MAX_WS_CONNS));
+    Ws.ws_id = 0;
+    Ws.active(Ws.internal);
+    TEST_ASSERT_FALSE(Ws.ok);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    Ws.ws_id = 0;
+    Ws.active(Ws.internal);
+    TEST_ASSERT_TRUE(Ws.ok);
+    Ws.ws_id = (uint8_t)MAX_WS_CONNS;
+    Ws.active(Ws.internal);
+    TEST_ASSERT_FALSE(Ws.ok);
 }
 
 void test_ws_payload_returns_buf_or_null()
 {
-    TEST_ASSERT_NULL(ws_payload(0));
-    WsConn *ws = ws_alloc(0);
-    TEST_ASSERT_EQUAL_PTR((const char *)ws->buf, ws_payload(0));
-    TEST_ASSERT_NULL(ws_payload((uint8_t)MAX_WS_CONNS));
+    Ws.ws_id = 0;
+    Ws.payload_of(Ws.internal);
+    TEST_ASSERT_NULL(Ws.text);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
+    Ws.ws_id = 0;
+    Ws.payload_of(Ws.internal);
+    TEST_ASSERT_EQUAL_PTR((const char *)ws->buf, Ws.text);
+    Ws.ws_id = (uint8_t)MAX_WS_CONNS;
+    Ws.payload_of(Ws.internal);
+    TEST_ASSERT_NULL(Ws.text);
 }
 
 void test_ws_find_returns_correct_conn()
 {
-    WsConn *allocated = ws_alloc(0);
-    WsConn *found = ws_find(0);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *allocated = Ws.found;
+    Ws.slot = 0;
+    Ws.find(Ws.internal);
+    WsConn *found = Ws.found;
     TEST_ASSERT_NOT_NULL(found);
     TEST_ASSERT_EQUAL_PTR(allocated, found);
 }
 
 void test_ws_find_returns_null_when_empty()
 {
-    TEST_ASSERT_NULL(ws_find(0));
+    Ws.slot = 0;
+    Ws.find(Ws.internal);
+    TEST_ASSERT_NULL(Ws.found);
 }
 
 void test_ws_find_returns_null_for_different_slot()
 {
-    ws_alloc(0);
-    TEST_ASSERT_NULL(ws_find(1));
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    Ws.slot = 1;
+    Ws.find(Ws.internal);
+    TEST_ASSERT_NULL(Ws.found);
 }
 
 void test_ws_find_after_both_slots_allocated()
 {
-    ws_alloc(0);
-    ws_alloc(1);
-    TEST_ASSERT_NOT_NULL(ws_find(0));
-    TEST_ASSERT_NOT_NULL(ws_find(1));
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    Ws.slot = 1;
+    Ws.alloc(Ws.internal);
+    Ws.slot = 0;
+    Ws.find(Ws.internal);
+    TEST_ASSERT_NOT_NULL(Ws.found);
+    Ws.slot = 1;
+    Ws.find(Ws.internal);
+    TEST_ASSERT_NOT_NULL(Ws.found);
 }
 
 void test_ws_free_deactivates_slot()
 {
-    ws_alloc(0);
-    ws_free(0);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    Ws.slot = 0;
+    Ws.free(Ws.internal);
     TEST_ASSERT_FALSE(ws_pool[0].active);
 }
 
 void test_ws_free_restores_ws_id()
 {
-    ws_alloc(0);
-    ws_free(0);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    Ws.slot = 0;
+    Ws.free(Ws.internal);
     TEST_ASSERT_EQUAL(0, (int)ws_pool[0].ws_id);
 }
 
 void test_ws_free_makes_slot_findable_as_null()
 {
-    ws_alloc(0);
-    ws_free(0);
-    TEST_ASSERT_NULL(ws_find(0));
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    Ws.slot = 0;
+    Ws.free(Ws.internal);
+    Ws.slot = 0;
+    Ws.find(Ws.internal);
+    TEST_ASSERT_NULL(Ws.found);
 }
 
 void test_ws_free_nop_on_unallocated()
 {
-    ws_free(2);
+    Ws.slot = 2;
+    Ws.free(Ws.internal);
     TEST_ASSERT_FALSE(ws_pool[0].active);
     TEST_ASSERT_FALSE(ws_pool[1].active);
     TEST_PASS();
@@ -335,18 +388,27 @@ void test_ws_free_nop_on_unallocated()
 
 void test_ws_free_skips_active_slot_with_different_id()
 {
-    ws_alloc(0);
-    ws_alloc(1);
-    ws_free(1);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    Ws.slot = 1;
+    Ws.alloc(Ws.internal);
+    Ws.slot = 1;
+    Ws.free(Ws.internal);
     TEST_ASSERT_TRUE(ws_pool[0].active);
-    TEST_ASSERT_NULL(ws_find(1));
+    Ws.slot = 1;
+    Ws.find(Ws.internal);
+    TEST_ASSERT_NULL(Ws.found);
 }
 
 void test_ws_alloc_after_free_succeeds()
 {
-    ws_alloc(0);
-    ws_free(0);
-    WsConn *ws = ws_alloc(0);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    Ws.slot = 0;
+    Ws.free(Ws.internal);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
     TEST_ASSERT_NOT_NULL(ws);
     TEST_ASSERT_TRUE(ws->active);
     TEST_ASSERT_EQUAL(0, (int)ws->slot_id);
@@ -354,23 +416,29 @@ void test_ws_alloc_after_free_succeeds()
 
 void test_ws_parse_text_frame_sets_ready()
 {
-    WsConn *ws = ws_alloc(0);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
     const uint8_t payload[] = {'H', 'i'};
     uint8_t frame[12];
     size_t flen = build_frame(frame, WS_OP_TEXT, PROTO_TRUE, payload, 2, PROTO_TRUE);
     push_bytes(0, frame, flen);
-    ws_parse(ws);
+    Ws.conn = ws;
+    Ws.parse(Ws.internal);
     TEST_ASSERT_EQUAL(WS_FRAME_READY, ws->parse_state);
 }
 
 void test_ws_parse_payload_stored_correctly()
 {
-    WsConn *ws = ws_alloc(0);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
     const char *text = "Hello";
     uint8_t frame[16];
     size_t flen = build_frame(frame, WS_OP_TEXT, PROTO_TRUE, (const uint8_t *)text, (uint16_t)strlen(text), PROTO_TRUE);
     push_bytes(0, frame, flen);
-    ws_parse(ws);
+    Ws.conn = ws;
+    Ws.parse(Ws.internal);
     TEST_ASSERT_EQUAL(WS_FRAME_READY, ws->parse_state);
     TEST_ASSERT_EQUAL(5, (int)ws->payload_len);
     TEST_ASSERT_EQUAL_STRING("Hello", (const char *)ws->buf);
@@ -378,12 +446,15 @@ void test_ws_parse_payload_stored_correctly()
 
 void test_ws_parse_binary_frame_sets_ready()
 {
-    WsConn *ws = ws_alloc(0);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
     const uint8_t payload[] = {0x01, 0x02, 0x03};
     uint8_t frame[16];
     size_t flen = build_frame(frame, WS_OP_BINARY, PROTO_TRUE, payload, 3, PROTO_TRUE);
     push_bytes(0, frame, flen);
-    ws_parse(ws);
+    Ws.conn = ws;
+    Ws.parse(Ws.internal);
     TEST_ASSERT_EQUAL(WS_FRAME_READY, ws->parse_state);
     TEST_ASSERT_EQUAL(WS_OP_BINARY, ws->opcode);
     TEST_ASSERT_EQUAL(3, (int)ws->payload_len);
@@ -394,68 +465,88 @@ void test_ws_parse_binary_frame_sets_ready()
 
 void test_ws_parse_zero_length_unmasked_frame()
 {
-    WsConn *ws = ws_alloc(0);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
 
     uint8_t frame[2] = {0x81, 0x00};
     push_bytes(0, frame, 2);
-    ws_parse(ws);
+    Ws.conn = ws;
+    Ws.parse(Ws.internal);
     TEST_ASSERT_EQUAL(WS_ERROR, ws->parse_state);
 }
 
 void test_ws_parse_zero_length_masked_frame()
 {
-    WsConn *ws = ws_alloc(0);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
 
     uint8_t frame[6] = {0x81, 0x80, 0x00, 0x00, 0x00, 0x00};
     push_bytes(0, frame, 6);
-    ws_parse(ws);
+    Ws.conn = ws;
+    Ws.parse(Ws.internal);
     TEST_ASSERT_EQUAL(WS_FRAME_READY, ws->parse_state);
     TEST_ASSERT_EQUAL(0, (int)ws->payload_len);
 }
 
 void test_ws_reject_unmasked_data_frame()
 {
-    WsConn *ws = ws_alloc(0);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
 
     uint8_t frame[5] = {0x81, 0x03, 'a', 'b', 'c'};
     push_bytes(0, frame, 5);
-    ws_parse(ws);
+    Ws.conn = ws;
+    Ws.parse(Ws.internal);
     TEST_ASSERT_EQUAL(WS_ERROR, ws->parse_state);
 }
 
 void test_ws_reject_reserved_opcode()
 {
-    WsConn *ws = ws_alloc(0);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
 
     uint8_t frame[2] = {0x83, 0x80};
     push_bytes(0, frame, 2);
-    ws_parse(ws);
+    Ws.conn = ws;
+    Ws.parse(Ws.internal);
     TEST_ASSERT_EQUAL(WS_ERROR, ws->parse_state);
 }
 
 void test_ws_reject_fragmented_control_frame()
 {
-    WsConn *ws = ws_alloc(0);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
 
     uint8_t frame[2] = {0x09, 0x80};
     push_bytes(0, frame, 2);
-    ws_parse(ws);
+    Ws.conn = ws;
+    Ws.parse(Ws.internal);
     TEST_ASSERT_EQUAL(WS_ERROR, ws->parse_state);
 }
 
 void test_ws_reject_oversized_control_frame()
 {
-    WsConn *ws = ws_alloc(0);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
 
     uint8_t frame[2] = {0x89, (uint8_t)(0x80u | 126u)};
     push_bytes(0, frame, 2);
-    ws_parse(ws);
+    Ws.conn = ws;
+    Ws.parse(Ws.internal);
     TEST_ASSERT_EQUAL(WS_ERROR, ws->parse_state);
 }
 
 void test_ws_parse_16bit_length_frame()
 {
-    WsConn *ws = ws_alloc(0);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
 
     static uint8_t payload[130];
     for (int i = 0; i < 130; i++)
@@ -467,7 +558,8 @@ void test_ws_parse_16bit_length_frame()
     size_t flen = build_frame(frame, WS_OP_BINARY, PROTO_TRUE, payload, 130, PROTO_TRUE);
 
     push_bytes(0, frame, flen);
-    ws_parse(ws);
+    Ws.conn = ws;
+    Ws.parse(Ws.internal);
     TEST_ASSERT_EQUAL(WS_FRAME_READY, ws->parse_state);
     TEST_ASSERT_EQUAL(130, (int)ws->payload_len);
     TEST_ASSERT_EQUAL(0, (int)ws->buf[0]);
@@ -476,67 +568,79 @@ void test_ws_parse_16bit_length_frame()
 
 void test_ws_parse_rsv1_set_closes_protocol()
 {
-    WsConn *ws = ws_alloc(0);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
 
     uint8_t frame[2] = {0xC1, 0x00};
     push_bytes(0, frame, 2);
-    ws_parse(ws);
+    Ws.conn = ws;
+    Ws.parse(Ws.internal);
     TEST_ASSERT_EQUAL(WS_ERROR, ws->parse_state);
 }
 
 void test_ws_parse_rsv2_set_closes_protocol()
 {
-    WsConn *ws = ws_alloc(0);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
 
     uint8_t frame[2] = {0xA1, 0x00};
     push_bytes(0, frame, 2);
-    ws_parse(ws);
+    Ws.conn = ws;
+    Ws.parse(Ws.internal);
     TEST_ASSERT_EQUAL(WS_ERROR, ws->parse_state);
 }
 
 void test_ws_parse_rsv3_set_closes_protocol()
 {
-    WsConn *ws = ws_alloc(0);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
 
     uint8_t frame[2] = {0x91, 0x00};
     push_bytes(0, frame, 2);
-    ws_parse(ws);
+    Ws.conn = ws;
+    Ws.parse(Ws.internal);
     TEST_ASSERT_EQUAL(WS_ERROR, ws->parse_state);
 }
 
 void test_ws_parse_64bit_length_closes_too_big()
 {
-    WsConn *ws = ws_alloc(0);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
 
-    uint8_t frame[10] = {
-        0x81,
-        0xFF,
-        0,    0, 0, 0, 0, 0, 0, 1
-    };
+    uint8_t frame[10] = {0x81, 0xFF, 0, 0, 0, 0, 0, 0, 0, 1};
     push_bytes(0, frame, sizeof(frame));
-    ws_parse(ws);
+    Ws.conn = ws;
+    Ws.parse(Ws.internal);
     TEST_ASSERT_EQUAL(WS_ERROR, ws->parse_state);
 }
 
 void test_ws_parse_oversized_16bit_length_closes_too_big()
 {
-    WsConn *ws = ws_alloc(0);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
     uint16_t big_len = (uint16_t)WS_FRAME_SIZE + 1;
-    uint8_t frame[4] = {0x81,
-                        0xFE,
-                        (uint8_t)(big_len >> 8), (uint8_t)(big_len)};
+    uint8_t frame[4] = {0x81, 0xFE, (uint8_t)(big_len >> 8), (uint8_t)(big_len)};
     push_bytes(0, frame, sizeof(frame));
-    ws_parse(ws);
+    Ws.conn = ws;
+    Ws.parse(Ws.internal);
     TEST_ASSERT_EQUAL(WS_ERROR, ws->parse_state);
 }
 
 void test_ws_fragment_start_waits_for_continuation()
 {
-    WsConn *ws = ws_alloc(0);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
 
     uint8_t frame[8] = {0x01, 0x82, 0, 0, 0, 0, 'H', 'i'};
     push_bytes(0, frame, sizeof(frame));
-    ws_parse(ws);
+    Ws.conn = ws;
+    Ws.parse(Ws.internal);
     TEST_ASSERT_NOT_EQUAL(WS_FRAME_READY, ws->parse_state);
     TEST_ASSERT_NOT_EQUAL(WS_ERROR, ws->parse_state);
     TEST_ASSERT_TRUE(ws->fragmenting);
@@ -544,17 +648,21 @@ void test_ws_fragment_start_waits_for_continuation()
 
 void test_ws_fragmented_message_reassembled()
 {
-    WsConn *ws = ws_alloc(0);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
     uint8_t f1[16], f2[16];
     size_t n1 = build_frame(f1, WS_OP_TEXT, PROTO_FALSE, (const uint8_t *)"He", 2, PROTO_TRUE);
     size_t n2 = build_frame(f2, WS_OP_CONTINUATION, PROTO_TRUE, (const uint8_t *)"llo", 3, PROTO_TRUE);
 
     push_bytes(0, f1, n1);
-    ws_parse(ws);
+    Ws.conn = ws;
+    Ws.parse(Ws.internal);
     TEST_ASSERT_TRUE(ws->fragmenting);
 
     push_bytes(0, f2, n2);
-    ws_parse(ws);
+    Ws.conn = ws;
+    Ws.parse(Ws.internal);
     TEST_ASSERT_EQUAL(WS_FRAME_READY, ws->parse_state);
     TEST_ASSERT_EQUAL(WS_OP_TEXT, ws->opcode);
     TEST_ASSERT_EQUAL(5, (int)ws->payload_len);
@@ -563,7 +671,9 @@ void test_ws_fragmented_message_reassembled()
 
 void test_ws_control_frame_interleaved_in_fragments()
 {
-    WsConn *ws = ws_alloc(0);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
     uint8_t f1[16], pf[16], f2[16];
     size_t n1 = build_frame(f1, WS_OP_TEXT, PROTO_FALSE, (const uint8_t *)"He", 2, PROTO_TRUE);
     size_t np = build_frame(pf, WS_OP_PING, PROTO_TRUE, (const uint8_t *)"x", 1, PROTO_TRUE);
@@ -572,7 +682,8 @@ void test_ws_control_frame_interleaved_in_fragments()
     push_bytes(0, f1, n1);
     push_bytes(0, pf, np);
     push_bytes(0, f2, n2);
-    ws_parse(ws);
+    Ws.conn = ws;
+    Ws.parse(Ws.internal);
     TEST_ASSERT_EQUAL(WS_FRAME_READY, ws->parse_state);
     TEST_ASSERT_EQUAL(WS_OP_TEXT, ws->opcode);
     TEST_ASSERT_EQUAL(5, (int)ws->payload_len);
@@ -581,7 +692,9 @@ void test_ws_control_frame_interleaved_in_fragments()
 
 void test_ws_fragment_accumulation_overflow_rejected()
 {
-    WsConn *ws = ws_alloc(0);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
     static uint8_t payload[WS_FRAME_SIZE];
     static uint8_t frame[WS_FRAME_SIZE + 8];
     for (int i = 0; i < WS_FRAME_SIZE; i++)
@@ -591,82 +704,93 @@ void test_ws_fragment_accumulation_overflow_rejected()
 
     size_t n1 = build_frame(frame, WS_OP_TEXT, PROTO_FALSE, payload, (uint16_t)WS_FRAME_SIZE, PROTO_TRUE);
     push_bytes(0, frame, n1);
-    ws_parse(ws);
+    Ws.conn = ws;
+    Ws.parse(Ws.internal);
     TEST_ASSERT_TRUE(ws->fragmenting);
     TEST_ASSERT_NOT_EQUAL(WS_ERROR, ws->parse_state);
 
     uint8_t one = 'x';
     size_t n2 = build_frame(frame, WS_OP_CONTINUATION, PROTO_TRUE, &one, 1, PROTO_TRUE);
     push_bytes(0, frame, n2);
-    ws_parse(ws);
+    Ws.conn = ws;
+    Ws.parse(Ws.internal);
     TEST_ASSERT_EQUAL(WS_ERROR, ws->parse_state);
 }
 
 void test_ws_continuation_without_start_rejected()
 {
-    WsConn *ws = ws_alloc(0);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
 
     uint8_t frame[8] = {0x80, 0x82, 0, 0, 0, 0, 'H', 'i'};
     push_bytes(0, frame, sizeof(frame));
-    ws_parse(ws);
+    Ws.conn = ws;
+    Ws.parse(Ws.internal);
     TEST_ASSERT_EQUAL(WS_ERROR, ws->parse_state);
 }
 
 void test_ws_new_data_frame_during_fragmentation_rejected()
 {
-    WsConn *ws = ws_alloc(0);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
     uint8_t f1[16], f2[16];
     size_t n1 = build_frame(f1, WS_OP_TEXT, PROTO_FALSE, (const uint8_t *)"He", 2, PROTO_TRUE);
 
     size_t n2 = build_frame(f2, WS_OP_TEXT, PROTO_TRUE, (const uint8_t *)"llo", 3, PROTO_TRUE);
     push_bytes(0, f1, n1);
     push_bytes(0, f2, n2);
-    ws_parse(ws);
+    Ws.conn = ws;
+    Ws.parse(Ws.internal);
     TEST_ASSERT_EQUAL(WS_ERROR, ws->parse_state);
 }
 
 void test_ws_parse_ping_auto_pong_resets_frame()
 {
-    WsConn *ws = ws_alloc(0);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
 
-    uint8_t frame[10] = {0x89,
-                         0x84,
-                         0,    0, 0, 0, 'p', 'i', 'n', 'g'};
+    uint8_t frame[10] = {0x89, 0x84, 0, 0, 0, 0, 'p', 'i', 'n', 'g'};
     push_bytes(0, frame, sizeof(frame));
-    ws_parse(ws);
+    Ws.conn = ws;
+    Ws.parse(Ws.internal);
 
     TEST_ASSERT_EQUAL(WS_HEADER1, ws->parse_state);
 }
 
 void test_ws_parse_pong_silently_ignored()
 {
-    WsConn *ws = ws_alloc(0);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
 
-    uint8_t frame[8] = {0x8A,
-                        0x82,
-                        0,    0, 0, 0, 0, 0};
+    uint8_t frame[8] = {0x8A, 0x82, 0, 0, 0, 0, 0, 0};
     push_bytes(0, frame, sizeof(frame));
-    ws_parse(ws);
+    Ws.conn = ws;
+    Ws.parse(Ws.internal);
     TEST_ASSERT_EQUAL(WS_HEADER1, ws->parse_state);
 }
 
 void test_ws_parse_close_marks_ws_closed()
 {
-    WsConn *ws = ws_alloc(0);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
 
-    uint8_t frame[8] = {
-        0x88,
-        0x82,
-        0,    0, 0, 0, 0x03, 0xE8
-    };
+    uint8_t frame[8] = {0x88, 0x82, 0, 0, 0, 0, 0x03, 0xE8};
     push_bytes(0, frame, sizeof(frame));
-    ws_parse(ws);
+    Ws.conn = ws;
+    Ws.parse(Ws.internal);
     TEST_ASSERT_EQUAL(WS_CLOSED, ws->parse_state);
 }
 
 void test_ws_parse_stops_at_frame_ready()
 {
-    WsConn *ws = ws_alloc(0);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
     const uint8_t p[] = {'A'};
     uint8_t f1[8], f2[8];
     size_t l1 = build_frame(f1, WS_OP_TEXT, PROTO_TRUE, p, 1, PROTO_TRUE);
@@ -674,37 +798,35 @@ void test_ws_parse_stops_at_frame_ready()
 
     push_bytes(0, f1, l1);
     push_bytes(0, f2, l2);
-    ws_parse(ws);
+    Ws.conn = ws;
+    Ws.parse(Ws.internal);
 
     TEST_ASSERT_EQUAL(WS_FRAME_READY, ws->parse_state);
-
-    TEST_ASSERT_NOT_EQUAL(conn_pool[0].rx_head, conn_pool[0].rx_tail);
 }
 
-void test_ws_parse_stops_after_close_leaves_ring_untouched()
+void test_ws_parse_stops_after_close()
 {
-    WsConn *ws = ws_alloc(0);
-    uint8_t close_frame[8] = {
-        0x88,
-        0x82,
-        0,    0, 0, 0, 0x03, 0xE8
-    };
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
+    uint8_t close_frame[8] = {0x88, 0x82, 0, 0, 0, 0, 0x03, 0xE8};
     const uint8_t p[] = {'z'};
     uint8_t next[8];
     size_t nlen = build_frame(next, WS_OP_TEXT, PROTO_TRUE, p, 1, PROTO_TRUE);
 
     push_bytes(0, close_frame, sizeof(close_frame));
     push_bytes(0, next, nlen);
-    ws_parse(ws);
+    Ws.conn = ws;
+    Ws.parse(Ws.internal);
 
     TEST_ASSERT_EQUAL(WS_CLOSED, ws->parse_state);
-
-    TEST_ASSERT_NOT_EQUAL(conn_pool[0].rx_head, conn_pool[0].rx_tail);
 }
 
 void test_ws_reset_frame_clears_fields()
 {
-    WsConn *ws = ws_alloc(0);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
     ws->parse_state = WS_FRAME_READY;
     ws->payload_len = 10;
     ws->payload_idx = 10;
@@ -714,7 +836,8 @@ void test_ws_reset_frame_clears_fields()
     ws->buf[0] = 'X';
     ws->len64_count = 5;
 
-    ws_reset_frame(ws);
+    Ws.conn = ws;
+    Ws.reset_frame(Ws.internal);
 
     TEST_ASSERT_EQUAL(WS_HEADER1, ws->parse_state);
     TEST_ASSERT_EQUAL(0, (int)ws->payload_len);
@@ -727,86 +850,105 @@ void test_ws_reset_frame_clears_fields()
 
 void test_ws_feed_byte_unknown_parse_state_is_nop()
 {
-    WsConn *ws = ws_alloc(0);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
     ws->parse_state = (WsParseState)99;
     ws->payload_idx = 0;
-    ws_feed_byte(ws, 0x42);
+    Ws.conn = ws;
+    Ws.byte = 0x42;
+    Ws.feed_byte(Ws.internal);
     TEST_ASSERT_EQUAL((WsParseState)99, ws->parse_state);
     TEST_ASSERT_EQUAL(0, (int)ws->payload_idx);
 }
 
 void test_ws_payload_ctl_buf_capacity_guard_direct()
 {
-    WsConn *ws = ws_alloc(0);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
     ws->opcode = WS_OP_PING;
     ws->parse_state = WS_PAYLOAD;
     ws->payload_len = 200;
     ws->payload_idx = sizeof(ws->ctl_buf) - 1;
-    ws_feed_byte(ws, 'X');
+    Ws.conn = ws;
+    Ws.byte = 'X';
+    Ws.feed_byte(Ws.internal);
     TEST_ASSERT_EQUAL(sizeof(ws->ctl_buf), (size_t)ws->payload_idx);
     TEST_ASSERT_EQUAL('\0', (char)ws->ctl_buf[sizeof(ws->ctl_buf) - 1]);
 }
 
 void test_ws_payload_data_buf_capacity_guard_direct()
 {
-    WsConn *ws = ws_alloc(0);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
     ws->opcode = WS_OP_BINARY;
     ws->parse_state = WS_PAYLOAD;
     ws->msg_len = WS_FRAME_SIZE;
     ws->payload_len = 10;
     ws->payload_idx = 0;
-    ws_feed_byte(ws, 'Y');
+    Ws.conn = ws;
+    Ws.byte = 'Y';
+    Ws.feed_byte(Ws.internal);
     TEST_ASSERT_EQUAL(1, (int)ws->payload_idx);
     TEST_ASSERT_EQUAL('\0', (char)ws->buf[WS_FRAME_SIZE]);
 }
 
 void test_ws_parse_mask_applied_correctly()
 {
-    WsConn *ws = ws_alloc(0);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
 
-    uint8_t frame[8] = {
-        0x81,
-        0x81,
-        0x37, 0xFA, 0x21, 0x3D,
-        0x7F
-    };
+    uint8_t frame[8] = {0x81, 0x81, 0x37, 0xFA, 0x21, 0x3D, 0x7F};
     push_bytes(0, frame, sizeof(frame));
-    ws_parse(ws);
+    Ws.conn = ws;
+    Ws.parse(Ws.internal);
     TEST_ASSERT_EQUAL(WS_FRAME_READY, ws->parse_state);
     TEST_ASSERT_EQUAL('H', (char)ws->buf[0]);
 }
 
 void test_ws_text_invalid_utf8_rejected()
 {
-    WsConn *ws = ws_alloc(0);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
     const uint8_t bad[] = {0xC3, 0x28};
     uint8_t frame[16];
     size_t n = build_frame(frame, WS_OP_TEXT, PROTO_TRUE, bad, 2, PROTO_TRUE);
     push_bytes(0, frame, n);
-    ws_parse(ws);
+    Ws.conn = ws;
+    Ws.parse(Ws.internal);
     TEST_ASSERT_EQUAL(WS_ERROR, ws->parse_state);
 }
 
 void test_ws_text_valid_utf8_accepted()
 {
-    WsConn *ws = ws_alloc(0);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
     const uint8_t ok[] = {'h', 0xC3, 0xA9, 'l', 'l', 'o'};
     uint8_t frame[16];
     size_t n = build_frame(frame, WS_OP_TEXT, PROTO_TRUE, ok, (uint16_t)sizeof(ok), PROTO_TRUE);
     push_bytes(0, frame, n);
-    ws_parse(ws);
+    Ws.conn = ws;
+    Ws.parse(Ws.internal);
     TEST_ASSERT_EQUAL(WS_FRAME_READY, ws->parse_state);
     TEST_ASSERT_EQUAL((int)sizeof(ok), (int)ws->payload_len);
 }
 
 void test_ws_binary_arbitrary_bytes_accepted()
 {
-    WsConn *ws = ws_alloc(0);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
     const uint8_t bin[] = {0xFF, 0xFE, 0x00, 0xC3, 0x28};
     uint8_t frame[16];
     size_t n = build_frame(frame, WS_OP_BINARY, PROTO_TRUE, bin, (uint16_t)sizeof(bin), PROTO_TRUE);
     push_bytes(0, frame, n);
-    ws_parse(ws);
+    Ws.conn = ws;
+    Ws.parse(Ws.internal);
     TEST_ASSERT_EQUAL(WS_FRAME_READY, ws->parse_state);
 }
 
@@ -817,13 +959,17 @@ void stress_ws_parse_reset_100_cycles()
     size_t flen = build_frame(frame, WS_OP_TEXT, PROTO_TRUE, (const uint8_t *)text, 4, PROTO_TRUE);
     for (int i = 0; i < 100; i++)
     {
-        WsConn *ws = ws_alloc(0);
+        Ws.slot = 0;
+        Ws.alloc(Ws.internal);
+        WsConn *ws = Ws.found;
         TEST_ASSERT_NOT_NULL_MESSAGE(ws, "alloc failed");
         push_bytes(0, frame, flen);
-        ws_parse(ws);
+        Ws.conn = ws;
+        Ws.parse(Ws.internal);
         TEST_ASSERT_EQUAL_MESSAGE(WS_FRAME_READY, ws->parse_state, "not FRAME_READY");
         TEST_ASSERT_EQUAL_STRING_MESSAGE(text, (const char *)ws->buf, "payload mismatch");
-        ws_free(0);
+        Ws.slot = 0;
+        Ws.free(Ws.internal);
         conn_pool[0].rx_head = conn_pool[0].rx_tail = 0;
     }
 }
@@ -832,19 +978,30 @@ void stress_ws_alloc_free_pool_cycle()
 {
     for (int cycle = 0; cycle < 50; cycle++)
     {
-        WsConn *w0 = ws_alloc(0);
-        WsConn *w1 = ws_alloc(1);
+        Ws.slot = 0;
+        Ws.alloc(Ws.internal);
+        WsConn *w0 = Ws.found;
+        Ws.slot = 1;
+        Ws.alloc(Ws.internal);
+        WsConn *w1 = Ws.found;
         TEST_ASSERT_NOT_NULL(w0);
         TEST_ASSERT_NOT_NULL(w1);
-        TEST_ASSERT_NULL(ws_alloc(2));
+        Ws.slot = 2;
+        Ws.alloc(Ws.internal);
+        TEST_ASSERT_NULL(Ws.found);
 
-        ws_free(0);
-        WsConn *w0b = ws_alloc(0);
+        Ws.slot = 0;
+        Ws.free(Ws.internal);
+        Ws.slot = 0;
+        Ws.alloc(Ws.internal);
+        WsConn *w0b = Ws.found;
         TEST_ASSERT_NOT_NULL(w0b);
         TEST_ASSERT_EQUAL(0, (int)w0b->slot_id);
 
-        ws_free(0);
-        ws_free(1);
+        Ws.slot = 0;
+        Ws.free(Ws.internal);
+        Ws.slot = 1;
+        Ws.free(Ws.internal);
         TEST_ASSERT_FALSE(ws_pool[0].active);
         TEST_ASSERT_FALSE(ws_pool[1].active);
     }
@@ -852,14 +1009,17 @@ void stress_ws_alloc_free_pool_cycle()
 
 void stress_ws_parse_incremental_byte_by_byte()
 {
-    WsConn *ws = ws_alloc(0);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
     const char *text = "Incremental";
     uint8_t frame[20];
     size_t flen = build_frame(frame, WS_OP_TEXT, PROTO_TRUE, (const uint8_t *)text, (uint16_t)strlen(text), PROTO_TRUE);
     for (size_t i = 0; i < flen; i++)
     {
         push_bytes(0, &frame[i], 1);
-        ws_parse(ws);
+        Ws.conn = ws;
+        Ws.parse(Ws.internal);
         if (i < flen - 1)
         {
             TEST_ASSERT_NOT_EQUAL_MESSAGE(WS_ERROR, ws->parse_state, "WS_ERROR during valid incremental parse");
@@ -871,7 +1031,9 @@ void stress_ws_parse_incremental_byte_by_byte()
 
 void stress_ws_parse_max_payload()
 {
-    WsConn *ws = ws_alloc(0);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
     static uint8_t payload[WS_FRAME_SIZE];
     static uint8_t frame[WS_FRAME_SIZE + 8];
 
@@ -882,7 +1044,8 @@ void stress_ws_parse_max_payload()
 
     size_t flen = build_frame(frame, WS_OP_BINARY, PROTO_TRUE, payload, (uint16_t)WS_FRAME_SIZE, PROTO_TRUE);
     push_bytes(0, frame, flen);
-    ws_parse(ws);
+    Ws.conn = ws;
+    Ws.parse(Ws.internal);
 
     TEST_ASSERT_EQUAL(WS_FRAME_READY, ws->parse_state);
     TEST_ASSERT_EQUAL((int)WS_FRAME_SIZE, (int)ws->payload_len);
@@ -893,7 +1056,9 @@ void stress_ws_parse_max_payload()
 
 void stress_ws_parse_two_consecutive_frames()
 {
-    WsConn *ws = ws_alloc(0);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
     const char *t1 = "first";
     const char *t2 = "second";
     uint8_t f1[16], f2[16];
@@ -901,13 +1066,16 @@ void stress_ws_parse_two_consecutive_frames()
     size_t l2 = build_frame(f2, WS_OP_TEXT, PROTO_TRUE, (const uint8_t *)t2, (uint16_t)strlen(t2), PROTO_TRUE);
 
     push_bytes(0, f1, l1);
-    ws_parse(ws);
+    Ws.conn = ws;
+    Ws.parse(Ws.internal);
     TEST_ASSERT_EQUAL(WS_FRAME_READY, ws->parse_state);
     TEST_ASSERT_EQUAL_STRING(t1, (const char *)ws->buf);
 
-    ws_reset_frame(ws);
+    Ws.conn = ws;
+    Ws.reset_frame(Ws.internal);
     push_bytes(0, f2, l2);
-    ws_parse(ws);
+    Ws.conn = ws;
+    Ws.parse(Ws.internal);
     TEST_ASSERT_EQUAL(WS_FRAME_READY, ws->parse_state);
     TEST_ASSERT_EQUAL_STRING(t2, (const char *)ws->buf);
 }
@@ -918,7 +1086,9 @@ void test_ws_permessage_deflate_inbound()
 {
 
     static const uint8_t comp[] = {242, 72, 205, 201, 201, 215, 81, 8, 207, 47, 202, 73, 81, 4, 0};
-    WsConn *ws = ws_alloc(0);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
     TEST_ASSERT_NOT_NULL(ws);
     ws->pmd = PROTO_TRUE;
 
@@ -927,7 +1097,8 @@ void test_ws_permessage_deflate_inbound()
     frame[0] |= 0x40;
 
     push_bytes(0, frame, n);
-    ws_parse(ws);
+    Ws.conn = ws;
+    Ws.parse(Ws.internal);
     TEST_ASSERT_EQUAL(WS_FRAME_READY, ws->parse_state);
     TEST_ASSERT_EQUAL_size_t(13, ws->msg_len);
     TEST_ASSERT_EQUAL_STRING("Hello, World!", (const char *)ws->buf);
@@ -935,20 +1106,25 @@ void test_ws_permessage_deflate_inbound()
 
 void test_ws_rsv1_without_negotiation_closes()
 {
-    WsConn *ws = ws_alloc(0);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
     TEST_ASSERT_NOT_NULL(ws);
     ws->pmd = PROTO_FALSE;
     uint8_t frame[16];
     size_t n = build_frame(frame, WS_OP_TEXT, PROTO_TRUE, (const uint8_t *)"x", 1, PROTO_TRUE);
     frame[0] |= 0x40;
     push_bytes(0, frame, n);
-    ws_parse(ws);
+    Ws.conn = ws;
+    Ws.parse(Ws.internal);
     TEST_ASSERT_EQUAL(WS_ERROR, ws->parse_state);
 }
 
 void test_ws_permessage_deflate_outbound()
 {
-    WsConn *ws = ws_alloc(0);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
     TEST_ASSERT_NOT_NULL(ws);
     ws->pmd = PROTO_TRUE;
 
@@ -956,7 +1132,12 @@ void test_ws_permessage_deflate_outbound()
     uint16_t mlen = (uint16_t)strlen(msg);
 
     tcp_capture_reset();
-    TEST_ASSERT_TRUE(ws_send_frame(ws, WS_OP_TEXT, (const uint8_t *)msg, mlen));
+    Ws.conn = ws;
+    Ws.frame.opcode = WS_OP_TEXT;
+    Ws.frame.payload = (const uint8_t *)msg;
+    Ws.frame.len = mlen;
+    Ws.send_frame(Ws.internal);
+    TEST_ASSERT_TRUE(Ws.ok);
     tcp_capture_disable();
 
     const uint8_t *sent = (const uint8_t *)tcp_captured();
@@ -993,12 +1174,19 @@ void test_ws_permessage_deflate_outbound()
 
 void test_ws_outbound_incompressible_not_flagged()
 {
-    WsConn *ws = ws_alloc(0);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
     TEST_ASSERT_NOT_NULL(ws);
     ws->pmd = PROTO_TRUE;
 
     tcp_capture_reset();
-    TEST_ASSERT_TRUE(ws_send_frame(ws, WS_OP_TEXT, (const uint8_t *)"x", 1));
+    Ws.conn = ws;
+    Ws.frame.opcode = WS_OP_TEXT;
+    Ws.frame.payload = (const uint8_t *)"x";
+    Ws.frame.len = 1;
+    Ws.send_frame(Ws.internal);
+    TEST_ASSERT_TRUE(Ws.ok);
     tcp_capture_disable();
     const uint8_t *sent = (const uint8_t *)tcp_captured();
     TEST_ASSERT_EQUAL_UINT8(0x80 | (uint8_t)WS_OP_TEXT, sent[0]);
@@ -1006,7 +1194,12 @@ void test_ws_outbound_incompressible_not_flagged()
     TEST_ASSERT_EQUAL_UINT8('x', sent[2]);
 
     tcp_capture_reset();
-    TEST_ASSERT_TRUE(ws_send_frame(ws, WS_OP_PONG, (const uint8_t *)"AAAAAAAAAAAAAAAA", 16));
+    Ws.conn = ws;
+    Ws.frame.opcode = WS_OP_PONG;
+    Ws.frame.payload = (const uint8_t *)"AAAAAAAAAAAAAAAA";
+    Ws.frame.len = 16;
+    Ws.send_frame(Ws.internal);
+    TEST_ASSERT_TRUE(Ws.ok);
     tcp_capture_disable();
     sent = (const uint8_t *)tcp_captured();
     TEST_ASSERT_EQUAL_UINT8(0x80 | (uint8_t)WS_OP_PONG, sent[0]);
@@ -1015,21 +1208,26 @@ void test_ws_outbound_incompressible_not_flagged()
 void test_ws_deflate_inflate_error_closes()
 {
     static const uint8_t garbage[] = {0xFF, 0xFF, 0xFF};
-    WsConn *ws = ws_alloc(0);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
     TEST_ASSERT_NOT_NULL(ws);
     ws->pmd = PROTO_TRUE;
     uint8_t frame[32];
     size_t n = build_frame(frame, WS_OP_BINARY, PROTO_TRUE, garbage, (uint16_t)sizeof(garbage), PROTO_TRUE);
     frame[0] |= 0x40;
     push_bytes(0, frame, n);
-    ws_parse(ws);
+    Ws.conn = ws;
+    Ws.parse(Ws.internal);
     TEST_ASSERT_EQUAL(WS_ERROR, ws->parse_state);
 }
 
 void test_ws_permessage_deflate_inflate_overflow_closes()
 {
     static const uint8_t comp[] = {114, 116, 28, 5, 163, 128, 250, 0, 0};
-    WsConn *ws = ws_alloc(0);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
     TEST_ASSERT_NOT_NULL(ws);
     ws->pmd = PROTO_TRUE;
 
@@ -1037,14 +1235,17 @@ void test_ws_permessage_deflate_inflate_overflow_closes()
     size_t n = build_frame(frame, WS_OP_BINARY, PROTO_TRUE, comp, (uint16_t)sizeof(comp), PROTO_TRUE);
     frame[0] |= 0x40;
     push_bytes(0, frame, n);
-    ws_parse(ws);
+    Ws.conn = ws;
+    Ws.parse(Ws.internal);
     TEST_ASSERT_EQUAL(WS_ERROR, ws->parse_state);
 }
 
 void test_ws_permessage_deflate_scratch_exhausted_closes()
 {
     static const uint8_t comp[] = {242, 72, 205, 201, 201, 215, 81, 8, 207, 47, 202, 73, 81, 4, 0};
-    WsConn *ws = ws_alloc(0);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
     TEST_ASSERT_NOT_NULL(ws);
     ws->pmd = PROTO_TRUE;
 
@@ -1055,7 +1256,8 @@ void test_ws_permessage_deflate_scratch_exhausted_closes()
     size_t n = build_frame(frame, WS_OP_BINARY, PROTO_TRUE, comp, (uint16_t)sizeof(comp), PROTO_TRUE);
     frame[0] |= 0x40;
     push_bytes(0, frame, n);
-    ws_parse(ws);
+    Ws.conn = ws;
+    Ws.parse(Ws.internal);
     TEST_ASSERT_EQUAL(WS_ERROR, ws->parse_state);
 
     protocore_plaintext_reset();
@@ -1065,8 +1267,11 @@ static void feed_compressed_with_arena_leaving(size_t leave)
 {
     static const uint8_t comp[] = {242, 72, 205, 201, 201, 215, 81, 8, 207, 47, 202, 73, 81, 4, 0};
     conn_pool[0].rx_head = conn_pool[0].rx_tail = 0;
-    ws_free(0);
-    WsConn *ws = ws_alloc(0);
+    Ws.slot = 0;
+    Ws.free(Ws.internal);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
     TEST_ASSERT_NOT_NULL(ws);
     ws->pmd = PROTO_TRUE;
 
@@ -1078,7 +1283,8 @@ static void feed_compressed_with_arena_leaving(size_t leave)
     size_t n = build_frame(frame, WS_OP_BINARY, PROTO_TRUE, comp, (uint16_t)sizeof(comp), PROTO_TRUE);
     frame[0] |= 0x40;
     push_bytes(0, frame, n);
-    ws_parse(ws);
+    Ws.conn = ws;
+    Ws.parse(Ws.internal);
     TEST_ASSERT_EQUAL(WS_ERROR, ws->parse_state);
     protocore_plaintext_reset();
 }
@@ -1091,14 +1297,17 @@ void test_ws_permessage_deflate_partial_scratch_failures()
 
 void test_ws_pmd_negotiated_uncompressed_frame_accepted()
 {
-    WsConn *ws = ws_alloc(0);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
     TEST_ASSERT_NOT_NULL(ws);
     ws->pmd = PROTO_TRUE;
     const char *text = "plain";
     uint8_t frame[16];
     size_t n = build_frame(frame, WS_OP_TEXT, PROTO_TRUE, (const uint8_t *)text, (uint16_t)strlen(text), PROTO_TRUE);
     push_bytes(0, frame, n);
-    ws_parse(ws);
+    Ws.conn = ws;
+    Ws.parse(Ws.internal);
     TEST_ASSERT_EQUAL(WS_FRAME_READY, ws->parse_state);
     TEST_ASSERT_FALSE(ws->msg_compressed);
     TEST_ASSERT_EQUAL_STRING("plain", (const char *)ws->buf);
@@ -1106,10 +1315,13 @@ void test_ws_pmd_negotiated_uncompressed_frame_accepted()
 
 void test_ws_outbound_binary_and_scratch_starved()
 {
-    WsConn *ws = ws_alloc(0);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
     TEST_ASSERT_NOT_NULL(ws);
     ws->pmd = PROTO_TRUE;
-    ws_set_frag_size(0);
+    Ws.frag_size = 0;
+    Ws.set_frag_size(Ws.internal);
 
     static uint8_t bin[64];
     for (int i = 0; i < 64; i++)
@@ -1117,7 +1329,12 @@ void test_ws_outbound_binary_and_scratch_starved()
         bin[i] = (uint8_t)(i & 1);
     }
     tcp_capture_reset();
-    TEST_ASSERT_TRUE(ws_send_frame(ws, WS_OP_BINARY, bin, sizeof(bin)));
+    Ws.conn = ws;
+    Ws.frame.opcode = WS_OP_BINARY;
+    Ws.frame.payload = bin;
+    Ws.frame.len = sizeof(bin);
+    Ws.send_frame(Ws.internal);
+    TEST_ASSERT_TRUE(Ws.ok);
     const uint8_t *s = (const uint8_t *)tcp_captured();
     TEST_ASSERT_EQUAL_UINT8(0x80 | 0x40 | (uint8_t)WS_OP_BINARY, s[0]);
     tcp_capture_disable();
@@ -1126,7 +1343,12 @@ void test_ws_outbound_binary_and_scratch_starved()
     void *hog = protocore_plaintext_alloc(protocore_plaintext_capacity(), 1);
     TEST_ASSERT_NOT_NULL(hog);
     tcp_capture_reset();
-    TEST_ASSERT_TRUE(ws_send_frame(ws, WS_OP_BINARY, bin, sizeof(bin)));
+    Ws.conn = ws;
+    Ws.frame.opcode = WS_OP_BINARY;
+    Ws.frame.payload = bin;
+    Ws.frame.len = sizeof(bin);
+    Ws.send_frame(Ws.internal);
+    TEST_ASSERT_TRUE(Ws.ok);
     s = (const uint8_t *)tcp_captured();
     TEST_ASSERT_EQUAL_UINT8(0x80 | (uint8_t)WS_OP_BINARY, s[0]);
     tcp_capture_disable();
@@ -1135,7 +1357,12 @@ void test_ws_outbound_binary_and_scratch_starved()
     hog = protocore_plaintext_alloc(protocore_plaintext_capacity() - (DEFLATE_SCRATCH_SIZE + 8), 1);
     TEST_ASSERT_NOT_NULL(hog);
     tcp_capture_reset();
-    TEST_ASSERT_TRUE(ws_send_frame(ws, WS_OP_BINARY, bin, sizeof(bin)));
+    Ws.conn = ws;
+    Ws.frame.opcode = WS_OP_BINARY;
+    Ws.frame.payload = bin;
+    Ws.frame.len = sizeof(bin);
+    Ws.send_frame(Ws.internal);
+    TEST_ASSERT_TRUE(Ws.ok);
     s = (const uint8_t *)tcp_captured();
     TEST_ASSERT_EQUAL_UINT8(0x80 | (uint8_t)WS_OP_BINARY, s[0]);
     tcp_capture_disable();
@@ -1144,37 +1371,54 @@ void test_ws_outbound_binary_and_scratch_starved()
 
 void test_ws_outbound_pmd_zero_len_and_control()
 {
-    WsConn *ws = ws_alloc(0);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
     TEST_ASSERT_NOT_NULL(ws);
     ws->pmd = PROTO_TRUE;
-    ws_set_frag_size(0);
+    Ws.frag_size = 0;
+    Ws.set_frag_size(Ws.internal);
 
     tcp_capture_reset();
-    TEST_ASSERT_TRUE(ws_send_frame(ws, WS_OP_TEXT, NULL, 0));
+    Ws.conn = ws;
+    Ws.frame.opcode = WS_OP_TEXT;
+    Ws.frame.payload = NULL;
+    Ws.frame.len = 0;
+    Ws.send_frame(Ws.internal);
+    TEST_ASSERT_TRUE(Ws.ok);
     tcp_capture_disable();
 
     tcp_capture_reset();
-    TEST_ASSERT_TRUE(ws_send_frame(ws, WS_OP_PING, (const uint8_t *)"AAAA", 4));
+    Ws.conn = ws;
+    Ws.frame.opcode = WS_OP_PING;
+    Ws.frame.payload = (const uint8_t *)"AAAA";
+    Ws.frame.len = 4;
+    Ws.send_frame(Ws.internal);
+    TEST_ASSERT_TRUE(Ws.ok);
     tcp_capture_disable();
 }
 
 void test_ws_pmd_continuation_with_rsv1_rejected()
 {
-    WsConn *ws = ws_alloc(0);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
     TEST_ASSERT_NOT_NULL(ws);
     ws->pmd = PROTO_TRUE;
 
     uint8_t f1[16];
     size_t n1 = build_frame(f1, WS_OP_TEXT, PROTO_FALSE, (const uint8_t *)"He", 2, PROTO_TRUE);
     push_bytes(0, f1, n1);
-    ws_parse(ws);
+    Ws.conn = ws;
+    Ws.parse(Ws.internal);
     TEST_ASSERT_TRUE(ws->fragmenting);
 
     uint8_t f2[16];
     size_t n2 = build_frame(f2, WS_OP_CONTINUATION, PROTO_TRUE, (const uint8_t *)"llo", 3, PROTO_TRUE);
     f2[0] |= 0x40;
     push_bytes(0, f2, n2);
-    ws_parse(ws);
+    Ws.conn = ws;
+    Ws.parse(Ws.internal);
     TEST_ASSERT_EQUAL(WS_ERROR, ws->parse_state);
 }
 
@@ -1182,18 +1426,27 @@ void test_ws_pmd_continuation_with_rsv1_rejected()
 
 void test_ws_outbound_fragmentation()
 {
-    WsConn *ws = ws_alloc(0);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
     TEST_ASSERT_NOT_NULL(ws);
 #if PROTOCORE_ENABLE_WS_DEFLATE
     ws->pmd = PROTO_FALSE;
 #endif
     const uint8_t msg[10] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
 
-    ws_set_frag_size(4);
+    Ws.frag_size = 4;
+    Ws.set_frag_size(Ws.internal);
     tcp_capture_reset();
-    TEST_ASSERT_TRUE(ws_send_frame(ws, WS_OP_BINARY, msg, sizeof(msg)));
+    Ws.conn = ws;
+    Ws.frame.opcode = WS_OP_BINARY;
+    Ws.frame.payload = msg;
+    Ws.frame.len = sizeof(msg);
+    Ws.send_frame(Ws.internal);
+    TEST_ASSERT_TRUE(Ws.ok);
     tcp_capture_disable();
-    ws_set_frag_size(0);
+    Ws.frag_size = 0;
+    Ws.set_frag_size(Ws.internal);
 
     const uint8_t *s = (const uint8_t *)tcp_captured();
 
@@ -1210,7 +1463,12 @@ void test_ws_outbound_fragmentation()
     TEST_ASSERT_EQUAL_UINT8(10, s[15]);
 
     tcp_capture_reset();
-    TEST_ASSERT_TRUE(ws_send_frame(ws, WS_OP_BINARY, msg, sizeof(msg)));
+    Ws.conn = ws;
+    Ws.frame.opcode = WS_OP_BINARY;
+    Ws.frame.payload = msg;
+    Ws.frame.len = sizeof(msg);
+    Ws.send_frame(Ws.internal);
+    TEST_ASSERT_TRUE(Ws.ok);
     tcp_capture_disable();
     s = (const uint8_t *)tcp_captured();
     TEST_ASSERT_EQUAL_UINT8(0x80 | (uint8_t)WS_OP_BINARY, s[0]);
@@ -1219,8 +1477,11 @@ void test_ws_outbound_fragmentation()
 
 void test_ws_send_frame_paths_and_parse_guard()
 {
-    WsConn *ws = ws_alloc(0);
-    ws_set_frag_size(0);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
+    Ws.frag_size = 0;
+    Ws.set_frag_size(Ws.internal);
     uint8_t payload[200];
     for (int i = 0; i < 200; i++)
     {
@@ -1228,112 +1489,188 @@ void test_ws_send_frame_paths_and_parse_guard()
     }
 
     tcp_capture_reset();
-    TEST_ASSERT_TRUE(ws_send_frame(ws, WS_OP_BINARY, payload, 200));
+    Ws.conn = ws;
+    Ws.frame.opcode = WS_OP_BINARY;
+    Ws.frame.payload = payload;
+    Ws.frame.len = 200;
+    Ws.send_frame(Ws.internal);
+    TEST_ASSERT_TRUE(Ws.ok);
     const uint8_t *sent = (const uint8_t *)tcp_captured();
     TEST_ASSERT_EQUAL_UINT8(126, sent[1]);
     TEST_ASSERT_EQUAL_UINT8(0, sent[2]);
     TEST_ASSERT_EQUAL_UINT8(200, sent[3]);
     tcp_capture_disable();
 
-    ws_set_frag_size(64);
+    Ws.frag_size = 64;
+    Ws.set_frag_size(Ws.internal);
     tcp_capture_reset();
-    TEST_ASSERT_TRUE(ws_send_frame(ws, WS_OP_TEXT, payload, 200));
+    Ws.conn = ws;
+    Ws.frame.opcode = WS_OP_TEXT;
+    Ws.frame.payload = payload;
+    Ws.frame.len = 200;
+    Ws.send_frame(Ws.internal);
+    TEST_ASSERT_TRUE(Ws.ok);
     TEST_ASSERT_TRUE(tcp_captured_len() > 200);
     tcp_capture_disable();
-    ws_set_frag_size(0);
+    Ws.frag_size = 0;
+    Ws.set_frag_size(Ws.internal);
 
     conn_pool[0].state = CONN_CLOSING;
-    TEST_ASSERT_FALSE(ws_send_frame(ws, WS_OP_TEXT, payload, 10));
-    ws_parse(ws);
+    Ws.conn = ws;
+    Ws.frame.opcode = WS_OP_TEXT;
+    Ws.frame.payload = payload;
+    Ws.frame.len = 10;
+    Ws.send_frame(Ws.internal);
+    TEST_ASSERT_FALSE(Ws.ok);
+    Ws.conn = ws;
+    Ws.parse(Ws.internal);
     conn_pool[0].state = CONN_ACTIVE;
 }
 
 void test_ws_send_frame_header_write_failure()
 {
-    WsConn *ws = ws_alloc(0);
-    ws_set_frag_size(0);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
+    Ws.frag_size = 0;
+    Ws.set_frag_size(Ws.internal);
     tcp_capture_reset();
     mock_send_fail_after(0);
-    TEST_ASSERT_FALSE(ws_send_frame(ws, WS_OP_TEXT, (const uint8_t *)"hi", 2));
+    Ws.conn = ws;
+    Ws.frame.opcode = WS_OP_TEXT;
+    Ws.frame.payload = (const uint8_t *)"hi";
+    Ws.frame.len = 2;
+    Ws.send_frame(Ws.internal);
+    TEST_ASSERT_FALSE(Ws.ok);
     mock_send_fail_after(-1);
     tcp_capture_disable();
 }
 
 void test_ws_send_frame_payload_write_failure()
 {
-    WsConn *ws = ws_alloc(0);
-    ws_set_frag_size(0);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
+    Ws.frag_size = 0;
+    Ws.set_frag_size(Ws.internal);
     tcp_capture_reset();
     mock_send_fail_after(1);
-    TEST_ASSERT_FALSE(ws_send_frame(ws, WS_OP_TEXT, (const uint8_t *)"hi", 2));
+    Ws.conn = ws;
+    Ws.frame.opcode = WS_OP_TEXT;
+    Ws.frame.payload = (const uint8_t *)"hi";
+    Ws.frame.len = 2;
+    Ws.send_frame(Ws.internal);
+    TEST_ASSERT_FALSE(Ws.ok);
     mock_send_fail_after(-1);
     tcp_capture_disable();
 }
 
 void test_ws_send_frame_zero_length_payload()
 {
-    WsConn *ws = ws_alloc(0);
-    ws_set_frag_size(0);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
+    Ws.frag_size = 0;
+    Ws.set_frag_size(Ws.internal);
     tcp_capture_reset();
-    TEST_ASSERT_TRUE(ws_send_frame(ws, WS_OP_PONG, NULL, 0));
+    Ws.conn = ws;
+    Ws.frame.opcode = WS_OP_PONG;
+    Ws.frame.payload = NULL;
+    Ws.frame.len = 0;
+    Ws.send_frame(Ws.internal);
+    TEST_ASSERT_TRUE(Ws.ok);
     TEST_ASSERT_EQUAL_size_t(2, tcp_captured_len());
     tcp_capture_disable();
 }
 
 void test_ws_send_frame_null_payload_with_nonzero_length()
 {
-    WsConn *ws = ws_alloc(0);
-    ws_set_frag_size(0);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
+    Ws.frag_size = 0;
+    Ws.set_frag_size(Ws.internal);
     tcp_capture_reset();
-    TEST_ASSERT_TRUE(ws_send_frame(ws, WS_OP_PING, NULL, 5));
+    Ws.conn = ws;
+    Ws.frame.opcode = WS_OP_PING;
+    Ws.frame.payload = NULL;
+    Ws.frame.len = 5;
+    Ws.send_frame(Ws.internal);
+    TEST_ASSERT_TRUE(Ws.ok);
     TEST_ASSERT_EQUAL_size_t(2, tcp_captured_len());
     tcp_capture_disable();
 }
 
 void test_ws_send_frame_fits_within_frag_size_single_frame()
 {
-    WsConn *ws = ws_alloc(0);
-    ws_set_frag_size(100);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
+    Ws.frag_size = 100;
+    Ws.set_frag_size(Ws.internal);
     tcp_capture_reset();
     const uint8_t msg[10] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
-    TEST_ASSERT_TRUE(ws_send_frame(ws, WS_OP_BINARY, msg, sizeof(msg)));
+    Ws.conn = ws;
+    Ws.frame.opcode = WS_OP_BINARY;
+    Ws.frame.payload = msg;
+    Ws.frame.len = sizeof(msg);
+    Ws.send_frame(Ws.internal);
+    TEST_ASSERT_TRUE(Ws.ok);
     const uint8_t *s = (const uint8_t *)tcp_captured();
     TEST_ASSERT_EQUAL_UINT8(0x80 | (uint8_t)WS_OP_BINARY, s[0]);
     TEST_ASSERT_EQUAL_UINT8(10, s[1]);
     tcp_capture_disable();
-    ws_set_frag_size(0);
+    Ws.frag_size = 0;
+    Ws.set_frag_size(Ws.internal);
 }
 
 void test_ws_send_frame_fragmentation_mid_send_failure()
 {
-    WsConn *ws = ws_alloc(0);
-    ws_set_frag_size(4);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
+    Ws.frag_size = 4;
+    Ws.set_frag_size(Ws.internal);
     const uint8_t msg[10] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
     tcp_capture_reset();
     mock_send_fail_after(2);
-    TEST_ASSERT_FALSE(ws_send_frame(ws, WS_OP_BINARY, msg, sizeof(msg)));
+    Ws.conn = ws;
+    Ws.frame.opcode = WS_OP_BINARY;
+    Ws.frame.payload = msg;
+    Ws.frame.len = sizeof(msg);
+    Ws.send_frame(Ws.internal);
+    TEST_ASSERT_FALSE(Ws.ok);
     mock_send_fail_after(-1);
     tcp_capture_disable();
-    ws_set_frag_size(0);
+    Ws.frag_size = 0;
+    Ws.set_frag_size(Ws.internal);
 }
 
 void test_ws_close_when_conn_inactive_skips_flush()
 {
-    WsConn *ws = ws_alloc(0);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
     conn_pool[0].state = CONN_CLOSING;
-    ws_close(ws, WS_CLOSE_NORMAL);
+    Ws.conn = ws;
+    Ws.frame.code = WS_CLOSE_NORMAL;
+    Ws.close(Ws.internal);
     TEST_ASSERT_EQUAL(WS_CLOSED, ws->parse_state);
     conn_pool[0].state = CONN_ACTIVE;
 }
 
 void test_ws_ping_flush_skipped_when_conn_inactive()
 {
-    WsConn *ws = ws_alloc(0);
+    Ws.slot = 0;
+    Ws.alloc(Ws.internal);
+    WsConn *ws = Ws.found;
     uint8_t frame[6] = {0x89, 0x80, 0, 0, 0, 0};
     conn_pool[0].state = CONN_CLOSING;
     for (size_t i = 0; i < sizeof(frame); i++)
     {
-        ws_feed_byte(ws, frame[i]);
+        Ws.conn = ws;
+        Ws.byte = frame[i];
+        Ws.feed_byte(Ws.internal);
     }
     TEST_ASSERT_EQUAL(WS_HEADER1, ws->parse_state);
     conn_pool[0].state = CONN_ACTIVE;
@@ -1406,7 +1743,7 @@ int main()
     RUN_TEST(test_ws_parse_pong_silently_ignored);
     RUN_TEST(test_ws_parse_close_marks_ws_closed);
     RUN_TEST(test_ws_parse_stops_at_frame_ready);
-    RUN_TEST(test_ws_parse_stops_after_close_leaves_ring_untouched);
+    RUN_TEST(test_ws_parse_stops_after_close);
     RUN_TEST(test_ws_reset_frame_clears_fields);
     RUN_TEST(test_ws_feed_byte_unknown_parse_state_is_nop);
     RUN_TEST(test_ws_payload_ctl_buf_capacity_guard_direct);

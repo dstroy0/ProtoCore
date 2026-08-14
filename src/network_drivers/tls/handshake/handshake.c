@@ -44,8 +44,8 @@ static_assert(PROTOCORE_ENABLE_TLS_RPK,
               "PROTOCORE_TLS_SOFTWARE authenticates by RFC 7250 raw public key: set PROTOCORE_ENABLE_TLS_RPK");
 
 // RFC 8446 sec 6.2 alerts this driver raises.
+#define TLS_ALERT_UNEXPECTED_MESSAGE 10
 #define TLS_ALERT_HANDSHAKE_FAILURE 40
-#define TLS_ALERT_ILLEGAL_PARAMETER 47
 #define TLS_ALERT_DECODE_ERROR 50
 #define TLS_ALERT_DECRYPT_ERROR 51
 #define TLS_ALERT_INTERNAL_ERROR 80
@@ -431,9 +431,17 @@ static void conn_process(struct TlsConnInternal *restrict ctx)
         ctx->ns->i32 = 0; // middlebox compatibility record, outside the transcript (sec 5)
         return;
     }
-    if (inner_type != PROTOCORE_TLS_CT_HANDSHAKE || len < TLS_HS_HDR_LEN || len != TLS_HS_HDR_LEN + hs_body_len(msg))
+    // sec 6.2: a record that is not a handshake record here is premature application data or an
+    // unexpected record type, which is unexpected_message; a header whose 24-bit length does not
+    // frame the message is a length past the message boundary, which sec 6 makes decode_error.
+    if (inner_type != PROTOCORE_TLS_CT_HANDSHAKE)
     {
-        fail(ctx, TLS_ALERT_ILLEGAL_PARAMETER);
+        fail(ctx, TLS_ALERT_UNEXPECTED_MESSAGE);
+        return;
+    }
+    if (len < TLS_HS_HDR_LEN || len != TLS_HS_HDR_LEN + hs_body_len(msg))
+    {
+        fail(ctx, TLS_ALERT_DECODE_ERROR);
         return;
     }
     if (c->state == TLS_CONN_START && msg[0] == TLS_HS_CLIENT_HELLO)
@@ -446,7 +454,8 @@ static void conn_process(struct TlsConnInternal *restrict ctx)
         server_on_finished(ctx, msg, len);
         return;
     }
-    fail(ctx, TLS_ALERT_ILLEGAL_PARAMETER);
+    // sec 4: a handshake message received in an unexpected order is unexpected_message.
+    fail(ctx, TLS_ALERT_UNEXPECTED_MESSAGE);
 }
 
 static void conn_established(struct TlsConnInternal *restrict ctx)

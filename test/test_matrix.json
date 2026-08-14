@@ -1,5 +1,5 @@
 {
-  "_note": "Single source of truth for native test envs; run test/gen_test_envs.py to regenerate platformio.ini. A hardware path is host-testable: an env declares the capability it needs and the mocks under test/mocks stand in for silicon, including a queue keyed by handle.",
+  "_note": "Single source of truth for native test envs; run test/gen_test_envs.py to regenerate platformio.ini. A hardware path is host-testable: an env declares the capability it needs and the mocks under core_setup/hal/host stand in for silicon, including a queue keyed by handle.",
   "envs": {
     "native_accept_gate": {
       "desc": "Accept-time connection gates with their flags ON (PROTOCORE_ENABLE_ACCEPT_THROTTLE\n/ PER_IP_THROTTLE / IP_ALLOWLIST): the global fixed-window throttle, the per-source-IP\nbucket table (independent budgets, window rollover, the millis() wrap, bounded LRU\neviction), and the CIDR source-IP allowlist. Compiles the flag-guarded accept-callback\npaths that no other env builds. Budgets overridden small so the boundaries are explicit.",
@@ -1666,7 +1666,8 @@
         "+<server/clock/clock.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<mmgr/span.c>"
       ],
       "tests": [
         "unit/protocols/mmgr/test_dma"
@@ -4047,7 +4048,7 @@
       ]
     },
     "native_lfs_mock": {
-      "desc": "The littlefs-backed protocore_mnt_backend used by the host tests that need a real tree\n(test/mocks/lfs_mock.h): round-trip, seek, directory listing, stat, rename/remove,\nappend, and a full volume refusing rather than pretending. Real littlefs on a RAM\nblock device, so the host answers the way the device does.",
+      "desc": "The littlefs-backed protocore_mnt_backend used by the host tests that need a real tree\n(core_setup/hal/host/lfs_mock.h): round-trip, seek, directory listing, stat, rename/remove,\nappend, and a full volume refusing rather than pretending. Real littlefs on a RAM\nblock device, so the host answers the way the device does.",
       "flags": [
         "-DPROTOCORE_ENABLE_MNT=1"
       ],
@@ -5561,7 +5562,7 @@
       ]
     },
     "native_phy": {
-      "desc": "Layer 1 driven through a REAL backend: the env declares PROTOCORE_PHYSICAL_HAS_BACKEND=1,\nso and test/mocks/physical stands in for silicon instead of the\nno-op stubs in physical.c. Nothing else in the tree builds that backend, and without it every L1\nreadout answers empty - which means a caller that mishandles a live link reads exactly like one\nthat works, and no assertion can tell them apart. Here the link actually comes up: the station\nassociates and reports its SSID, channel and a negative dBm RSSI; the softAP takes its own address\nwithout stealing the route; Ethernet then takes the default route from the station, the way a\nstack picks one when both are up. That is also the only way to separate the same-signature members\na stub build cannot - eth->init from eth->ready, ip6->init from ip6->ready, and link->mac from\nlink->egress_mac, which return DIFFERENT addresses once a wired link carries traffic. Addresses\nare RFC 5737 TEST-NET-1 and RFC 3849 2001:db8::/32, the MACs are checked for the IEEE 802 U/L and\nI/G bits, the SSID cap is IEEE 802.11-2020 9.4.2.2's 32 octets, and a global IPv6 address is\nchecked not to be an RFC 4291 sec 2.5.6 link-local. PROTOCORE_RADIO_WIFI_PS is set to max modem so the\nkeep-awake refcount is provable: the first busy_hold forces sleep off and the balancing release\nrestores the configured mode, which is indistinguishable from the held state at the default of 0.\nThis is the only env that compiles radio_power.c's backend arm at all.",
+      "desc": "Layer 1 driven through a REAL backend: the env declares PROTOCORE_PHYSICAL_HAS_BACKEND=1,\nso and core_setup/hal/host/physical stands in for silicon instead of the\nno-op stubs in physical.c. Nothing else in the tree builds that backend, and without it every L1\nreadout answers empty - which means a caller that mishandles a live link reads exactly like one\nthat works, and no assertion can tell them apart. Here the link actually comes up: the station\nassociates and reports its SSID, channel and a negative dBm RSSI; the softAP takes its own address\nwithout stealing the route; Ethernet then takes the default route from the station, the way a\nstack picks one when both are up. That is also the only way to separate the same-signature members\na stub build cannot - eth->init from eth->ready, ip6->init from ip6->ready, and link->mac from\nlink->egress_mac, which return DIFFERENT addresses once a wired link carries traffic. Addresses\nare RFC 5737 TEST-NET-1 and RFC 3849 2001:db8::/32, the MACs are checked for the IEEE 802 U/L and\nI/G bits, the SSID cap is IEEE 802.11-2020 9.4.2.2's 32 octets, and a global IPv6 address is\nchecked not to be an RFC 4291 sec 2.5.6 link-local. PROTOCORE_RADIO_WIFI_PS is set to max modem so the\nkeep-awake refcount is provable: the first busy_hold forces sleep off and the balancing release\nrestores the configured mode, which is indistinguishable from the held state at the default of 0.\nThis is the only env that compiles radio_power.c's backend arm at all.",
       "flags": [
         "-DPROTOCORE_PHYSICAL_HAS_BACKEND=1",
         "-DPROTOCORE_ENABLE_ETHERNET=1",
@@ -5573,7 +5574,7 @@
         "-<*>",
         "+<network_drivers/physical/physical.c>",
         "+<network_drivers/physical/radio_power.c>",
-        "+<../test/mocks/physical/physical_mock.c>",
+        "+<../core_setup/hal/host/physical/physical_mock.c>",
         "+<shared/ip/ip.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
@@ -5588,7 +5589,7 @@
       ]
     },
     "native_l1_link": {
-      "desc": "Layer 1 driven through a real backend: the env declares PROTOCORE_PHYSICAL_HAS_BACKEND=1, so test/mocks/physical stands in for silicon instead of the no-op stubs in physical.c, and the link can actually come up. That is what makes the readouts checkable at all, since a stub answers every one of them with an empty value and a caller that mishandles a live link then reads exactly like one that works. The station associates and reports its SSID, its channel and a negative dBm RSSI; the softAP takes its own address without stealing the route; Ethernet then takes the default route from the station the way a stack picks one when both are up. It is also the only way to separate the same-signature calls a stub build cannot: eth_init from eth_ready, ip6_init from ip6_ready, and wifi_mac from egress_mac, which answer with DIFFERENT addresses once a wired link carries traffic. Addresses are RFC 5737 TEST-NET-1 and RFC 3849 2001:db8::/32, the hardware addresses are checked for the RFC 7042 sec 2.1 U/L and I/G bits, the SSID cap is IEEE 802.11-2020 9.4.2.2's 32 octets, and a global unicast IPv6 address (RFC 4291 sec 2.5.4) is checked not to be an RFC 4291 sec 2.5.6 link-local. PROTOCORE_RADIO_WIFI_PS is set to max modem so the keep-awake refcount is provable: the first hold forces doze off and the balancing release restores the configured mode, which at the default of 0 would be indistinguishable from the held state. This is the only env that compiles radio_power.c's backend arm at all.",
+      "desc": "Layer 1 driven through a real backend: the env declares PROTOCORE_PHYSICAL_HAS_BACKEND=1, so core_setup/hal/host/physical stands in for silicon instead of the no-op stubs in physical.c, and the link can actually come up. That is what makes the readouts checkable at all, since a stub answers every one of them with an empty value and a caller that mishandles a live link then reads exactly like one that works. The station associates and reports its SSID, its channel and a negative dBm RSSI; the softAP takes its own address without stealing the route; Ethernet then takes the default route from the station the way a stack picks one when both are up. It is also the only way to separate the same-signature calls a stub build cannot: eth_init from eth_ready, ip6_init from ip6_ready, and wifi_mac from egress_mac, which answer with DIFFERENT addresses once a wired link carries traffic. Addresses are RFC 5737 TEST-NET-1 and RFC 3849 2001:db8::/32, the hardware addresses are checked for the RFC 7042 sec 2.1 U/L and I/G bits, the SSID cap is IEEE 802.11-2020 9.4.2.2's 32 octets, and a global unicast IPv6 address (RFC 4291 sec 2.5.4) is checked not to be an RFC 4291 sec 2.5.6 link-local. PROTOCORE_RADIO_WIFI_PS is set to max modem so the keep-awake refcount is provable: the first hold forces doze off and the balancing release restores the configured mode, which at the default of 0 would be indistinguishable from the held state. This is the only env that compiles radio_power.c's backend arm at all.",
       "flags": [
         "-DPROTOCORE_PHYSICAL_HAS_BACKEND=1",
         "-DPROTOCORE_ENABLE_ETHERNET=1",
@@ -5599,7 +5600,7 @@
       "src": [
         "+<network_drivers/physical/physical.c>",
         "+<network_drivers/physical/radio_power.c>",
-        "+<../test/mocks/physical/physical_mock.c>",
+        "+<../core_setup/hal/host/physical/physical_mock.c>",
         "+<shared/ip/ip.c>",
         "+<shared/hex/hex.c>",
         "+<mmgr/protomem.c>",
@@ -9517,7 +9518,7 @@
       ]
     },
     "native_tcp": {
-      "desc": "The TCP path a stack drives, run on the host against the pcb driver in test/mocks. This is the only env that compiles the marshaled\narm of tcp_conn.c - every send, output, close, abort and recved the target routes through\npc_tcp_marshal - and the only one that drives a segment through the callbacks listener_accept_cb\ninstalled on the pcb rather than naming lowlevel_recv_cb directly.",
+      "desc": "The TCP path a stack drives, run on the host against the pcb driver in core_setup/hal/host. This is the only env that compiles the marshaled\narm of tcp_conn.c - every send, output, close, abort and recved the target routes through\npc_tcp_marshal - and the only one that drives a segment through the callbacks listener_accept_cb\ninstalled on the pcb rather than naming lowlevel_recv_cb directly.",
       "flags": [],
       "src": [
         "+<network_drivers/transport/tcp/tcp.c>",
@@ -10119,7 +10120,7 @@
       ]
     },
     "native_udp": {
-      "desc": "The UDP path a stack drives, run on the host against the pcb driver in test/mocks. Covers udp_listener + udp_client against the\nhost pcb driver: the receive ring, both send paths reaching the wire in the call that makes them,\nNetAddr carrying v4 and v6 both ways, the pbuf pool refusing, and the datagrams the core handed to the stack read back as a DLT_RAW libpcap\ncapture with synthesized IP and UDP headers (test/mocks/protocore_net_pcap.h).",
+      "desc": "The UDP path a stack drives, run on the host against the pcb driver in core_setup/hal/host. Covers udp_listener + udp_client against the\nhost pcb driver: the receive ring, both send paths reaching the wire in the call that makes them,\nNetAddr carrying v4 and v6 both ways, the pbuf pool refusing, and the datagrams the core handed to the stack read back as a DLT_RAW libpcap\ncapture with synthesized IP and UDP headers (core_setup/hal/host/protocore_net_pcap.h).",
       "flags": [],
       "src": [
         "+<network_drivers/transport/udp/server/server.c>",
@@ -10205,7 +10206,7 @@
       ]
     },
     "native_upload": {
-      "desc": "Streaming file upload: POST body -> FS file via the parser streaming hook.\nSmall BODY_BUF_SIZE exercises multi-chunk streaming; the mock FS captures the\nwritten bytes (test/mocks/FS.h write-capture).",
+      "desc": "Streaming file upload: POST body -> FS file via the parser streaming hook.\nSmall BODY_BUF_SIZE exercises multi-chunk streaming; the mock FS captures the\nwritten bytes (core_setup/hal/host/FS.h write-capture).",
       "flags": [
         "-DPROTOCORE_ENFORCE_HOST_HEADER=0",
         "-DPROTOCORE_ENABLE_UPLOAD=1",

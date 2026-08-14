@@ -12,6 +12,20 @@
 
 #include "services/fieldbus/modbus/modbus_master.h"
 
+/**
+ * @brief The module's handle onto its own calls - what SbModbusNs points at.
+ *
+ * No store member: the instance every call acts on is the caller's, reached through the handle.
+ *
+ * @var SbModbusInternal::ns  the handle a caller sets a call's members on
+ */
+struct SbModbusInternal
+{
+    SbModbusNs *ns;
+};
+
+static struct SbModbusInternal s_sb_modbus = {.ns = &SbModbus};
+
 // Read a contiguous span of `n` registers (1..125) at `first` in one Modbus request; write the parsed
 // values to `out` as int32. Shared by the single-point and block reads. Returns the register count
 // (>= 0), a negative transport error (propagated from txn), PROTOCORE_SB_MODBUS_EXCEPTION on a Modbus
@@ -148,41 +162,52 @@ static int sb_modbus_write_block(void *vctx, uint32_t first, const int32_t *in, 
     return sb_modbus_write_txn(c, req, rn); // count written (>= 0) / negative code
 }
 
-int protocore_sb_modbus_init(protocore_sb_modbus_ctx *ctx, protocore_sb_modbus_txn txn, void *io, ModbusFunction fc, uint8_t unit)
+// Fill a caller-owned instance from the transport seam and the slave it addresses.
+static void init(struct SbModbusInternal *restrict ctx)
 {
-    if (!ctx || !txn)
+    protocore_sb_modbus_ctx *c = ctx->ns->ctx;
+    if (!c || !ctx->ns->txn)
     {
-        return SB_ERR_ARG;
+        ctx->ns->i32 = SB_ERR_ARG;
+        return;
     }
-    if (fc != MODBUS_FC_READ_HOLDING_REGS && fc != MODBUS_FC_READ_INPUT_REGS)
+    if (ctx->ns->fc != MODBUS_FC_READ_HOLDING_REGS && ctx->ns->fc != MODBUS_FC_READ_INPUT_REGS)
     {
-        return SB_ERR_ARG;
+        ctx->ns->i32 = SB_ERR_ARG;
+        return;
     }
-    ctx->txn = txn;
-    ctx->io = io;
-    ctx->fc = fc;
-    ctx->unit = unit;
-    ctx->txid = 0;
-    ctx->last_exception = 0;
-    return SB_OK;
+    c->txn = ctx->ns->txn;
+    c->io = ctx->ns->io;
+    c->fc = ctx->ns->fc;
+    c->unit = ctx->ns->unit;
+    c->txid = 0;
+    c->last_exception = 0;
+    ctx->ns->i32 = SB_OK;
 }
 
-int protocore_sb_modbus_driver(SouthboundDriver *drv_out, const char *name, protocore_sb_modbus_ctx *ctx)
+// Bind the vtable the southbound registry dispatches through to one instance.
+static void driver(struct SbModbusInternal *restrict ctx)
 {
-    if (!drv_out || !name || !ctx || !ctx->txn)
+    protocore_sb_modbus_ctx *c = ctx->ns->ctx;
+    SouthboundDriver *drv_out = ctx->ns->drv_out;
+    if (!drv_out || !ctx->ns->name || !c || !c->txn)
     {
-        return SB_ERR_ARG;
+        ctx->ns->i32 = SB_ERR_ARG;
+        return;
     }
     // Holding registers are read/write; input registers are read-only (a Modbus input register cannot be
     // written), so an input-register driver leaves write / write_block unbound (framework: SB_ERR_UNSUPPORTED).
-    proto_bool writable = (ctx->fc == MODBUS_FC_READ_HOLDING_REGS);
-    drv_out->name = name;
+    proto_bool writable = (c->fc == MODBUS_FC_READ_HOLDING_REGS);
+    drv_out->name = ctx->ns->name;
     drv_out->read = &sb_modbus_read;
     drv_out->write = writable ? &sb_modbus_write : NULL;
     drv_out->read_block = &sb_modbus_read_block;
     drv_out->write_block = writable ? &sb_modbus_write_block : NULL;
-    drv_out->ctx = ctx;
-    return SB_OK;
+    drv_out->ctx = c;
+    ctx->ns->i32 = SB_OK;
 }
+
+// Designated, so a member's position in the struct does not decide what it binds to.
+SbModbusNs SbModbus = {.init = init, .driver = driver, .internal = &s_sb_modbus};
 
 #endif // PROTOCORE_ENABLE_SOUTHBOUND && PROTOCORE_ENABLE_MODBUS_MASTER

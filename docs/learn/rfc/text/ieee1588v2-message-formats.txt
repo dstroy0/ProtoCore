@@ -1,0 +1,197 @@
+IEEE 1588v2 / 1588v2.1 (PTP) message formats
+Secondary source. Huawei NE40E "IP Packet Format" feature description, retrieved 2026-08-14.
+The document cites IEEE 1588-2008 and IEEE 1588-2019; neither IEEE text is on disk here.
+
+  https://support.huawei.com/enterprise/en/doc/EDOC1100174721/7631975b/general-format-of-ptp-messages
+  https://support.huawei.com/enterprise/en/doc/EDOC1100174721/c22c0ffa/ptp-pdelay_req-message
+
+
+================================================================================
+General Format of PTP Messages
+================================================================================
+
+A PTP message consists of a message encapsulation header (Ethernet, IPv4, or
+IPv6), a common PTP message header, and a PTP message body (payload).  A PTP
+message must have a header, body, and suffix.  The suffix may have zero length.
+
+The Ethernet Type of an Ethernet-encapsulated PTP message is 0x88F7.
+
+For IPv4/IPv6-encapsulated PTP messages, the UDP destination port number of an
+event message shall be 319, and the UDP destination port number of a general
+message shall be 320.
+
+1588v2 appendix D defines 1588v2 over IPv4 encapsulation, appendix E defines
+1588v2 over IPv6, appendix F defines 1588v2 over IEEE 802.3/Ethernet.
+
+
+PTP message header
+------------------
+
+  +0-------3-------7--------11--------15--------------------------------31
+  |MsgType|TranSpec|VerPTP | Reserved1| MsgLength                        |
+  +----------------|------------------|---------------------------------|
+  | DomainNumber   | Reserved2        | FlagField                        |
+  +---------------------------------------------------------------------|
+  | CorrectionField                                                      |
+  |                                                                      |
+  +---------------------------------------------------------------------|
+  | Reserved3                                                            |
+  +---------------------------------------------------------------------|
+  | SourcePortIdentity                                                   |
+  |                                                                      |
+  |                +---------------------------------------------------- |
+  |                | SequenceID                                          |
+  +----------------|------------------|---------------------------------|
+  | ControlField   | LogMsgInterval   |                                  |
+  +---------------------------------------------------------------------|
+  | PTP Specified Message Field                                          |
+
+  Field               Length    Description
+  ------------------  --------  --------------------------------------------
+  MsgType             4 bits    0x00 Sync, 0x01 Delay_Req, 0x02 Pdelay_Req,
+                                0x03 Pdelay_Resp, 0x04-0x07 Reserved,
+                                0x08 Follow_Up, 0x09 Delay_Resp,
+                                0x0A Pdelay_Resp_Follow_Up, 0x0B Announce,
+                                0x0C Signaling, 0x0D Management,
+                                0x0E-0x0F Reserved.
+                                0x00-0x03 are event messages (timestamped);
+                                0x08-0x0D are general messages.
+  TranSpec            4 bits    0: message is used by IEEE 1588.
+                                1: message is used by IEEE 802.1AS.
+  VerPTP              4 bits    Version of the 1588 protocol.
+  Reserved1           4 bits    Reserved.
+  MsgLength           2 bytes   Total number of octets that form the PTP
+                                message, counted from the first byte of the
+                                header through the last byte of any suffix, or
+                                if there are no suffix members, the last byte
+                                of the message.
+  DomainNumber        1 byte    Domain the originating clock belongs to.
+  Reserved2           1 byte    Reserved.
+  FlagField           2 bytes   See flagField table below.
+  CorrectionField     8 bytes   Compensates transmission delay.
+  Reserved3           4 bytes   Reserved.
+  SourcePortIdentity  10 bytes  ID and port number of the originating clock.
+  SequenceID          2 bytes   Sequence number of the PTP message.
+  ControlField        1 byte    0x00 Sync, 0x01 Delay_Req, 0x02 Follow_Up,
+                                0x03 Delay_Resp, 0x04 Management,
+                                0x05 all others, 0x06-0xFF reserved.
+  LogMsgInterval      1 byte    Send interval, determined by message type.
+  PTP Specified       Variable  Message body and suffix.
+    Message Field
+
+  Header total: 1 + 1 + 2 + 1 + 1 + 2 + 8 + 4 + 10 + 2 + 1 + 1 = 34 octets.
+
+1588v2.1 changes to the header: majorSdoId replaces TranSpec; minorVersionPTP
+replaces Reserved1; minorSdoId replaces Reserved2; messageTypeSpecific replaces
+Reserved3.
+
+
+flagField
+---------
+
+  Octet  Bit  Message Type                        Name
+  -----  ---  ----------------------------------  -----------------------
+  0      0    Announce, Sync, Follow_Up,           alternateMasterFlag
+              Delay_Resp
+  0      1    Sync, Pdelay_Resp                    twoStepFlag
+  0      2    ALL                                  unicastFlag
+  0      5    ALL                                  PTP profile Specific 1
+  0      6    ALL                                  PTP profile Specific 2
+  0      7    ALL                                  Reserved (experimental
+                                                   security mechanism)
+  1      0    Announce                             leap61
+  1      1    Announce                             leap59
+  1      2    Announce                             currentUtcOffsetValid
+  1      3    Announce                             ptpTimescale
+  1      4    Announce                             timeTraceable
+  1      5    Announce                             frequencyTraceable
+
+
+================================================================================
+PTP Pdelay_Req Message
+================================================================================
+
+  +0------3--------7--------11--------15--------------------------------31
+  |MsgType|TranSpec|VerPTP | Reserved1| MsgLength                        |
+  +----------------|------------------|---------------------------------|
+  | DomainNumber   | Reserved2        | FlagField                        |
+  +---------------------------------------------------------------------|
+  | CorrectionField                                                      |
+  |                                                                      |
+  +---------------------------------------------------------------------|
+  | Reserved3                                                            |
+  +---------------------------------------------------------------------|
+  | SourcePortIdentity                                                   |
+  |                                                                      |
+  |                +---------------------------------------------------- |
+  |                | SequenceID                                          |
+  +----------------|------------------|---------------------------------|
+  | ControlField   | LogMsgInterval   |                                  |
+  +-----------------------------------|                                  |
+  | OriginTimestamp                                                      |
+  |                                                                      |
+  +---------------------------------------------------------------------|
+  | Reserved                                                             |
+  |                                                                      |
+  |                +---------------------------------------------------- |
+  |                                                                      |
+  +-----------------------------------|
+
+  Fields after the common header:
+
+  OriginTimestamp     10 bytes  Timestamp when the Pdelay_Req message is sent.
+                                The value can be all 0s.
+  Reserved            10 bytes  Reserved.
+
+  LogMsgInterval for Pdelay_Req: the value can be 0x7F.
+
+  Total: 34 (header) + 10 (originTimestamp) + 10 (reserved) = 54 octets.
+
+
+Message example, Pdelay_Req over UDP
+------------------------------------
+
+  Frame 1: 100 bytes on wire (800 bits), 100 bytes captured (800 bits)
+  Ethernet II, Src: 0a:2a:0a:31:0a:13, Dst: LLDP_Multicast (01:80:c2:00:00:0e)
+  Internet Protocol Version 4, Src: 10.1.1.1, Dst: 224.0.0.107
+  User Datagram Protocol, Src Port: ptp-event (319), Dst Port: ptp-event (319)
+  Precision Time Protocol (IEEE1588)
+      0000 .... = transportSpecific: 0x00
+      ...0 .... = V1 Compatibility: False
+      .... 0010 = messageId: Path_Delay_Req Message (0x02)
+      .... 0010 = versionPTP: 2
+      messageLength: 54
+      subdomainNumber: 0
+      flags: 0x002c
+      correction: 0.000000 nanoseconds
+      ClockIdentity: 0x00259e1000000001
+      SourcePortID: 1280
+      sequenceId: 12705
+      control: Other Message (5)
+      logMessagePeriod: 127
+      originTimestamp (seconds): 0
+      originTimestamp (nanoseconds): 0
+
+
+Message example, Pdelay_Req over Ethernet
+-----------------------------------------
+
+  Frame 1: 100 bytes on wire (800 bits), 100 bytes captured (800 bits)
+  Ethernet II, Src: 0a:2a:0a:31:0a:13, Dst: LLDP_Multicast (01:80:c2:00:00:0e)
+      Type: IP (0x0800)
+  Precision Time Protocol (IEEE1588)
+      0000 .... = transportSpecific: 0x00
+      ...0 .... = V1 Compatibility: False
+      .... 0010 = messageId: Path_Delay_Req Message (0x02)
+      .... 0010 = versionPTP: 2
+      messageLength: 54
+      subdomainNumber: 0
+      flags: 0x062c
+      correction: 0.000000 nanoseconds
+      ClockIdentity: 0x00259e1000000001
+      SourcePortID: 1280
+      sequenceId: 12705
+      control: Other Message (5)
+      logMessagePeriod: 127
+      originTimestamp (seconds): 0
+      originTimestamp (nanoseconds): 0

@@ -17,6 +17,8 @@
 
 #include "network_drivers/session/session.h"
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the slot an event names
+#include "network_drivers/presentation/presentation.h" // http_req_start_ms: the request deadline a first byte arms
+#include "server/clock/clock.h"                        // Clock.ms: the pass stamp an arm takes
 #include "network_drivers/transport/tcp/server/server.h" // TcpListener: the queues this tick drains
 #include "network_drivers/transport/udp/server/server.h" // UdpListener: the datagram rings this tick drains
 #include "mmgr/plaintext.h"
@@ -129,6 +131,12 @@ static inline void dispatch_event(const TcpEvt *evt)
         }
         break;
     case EVT_DATA:
+        // First byte of a request arms the completion deadline; a request already under way keeps
+        // the arm it has. Zero means unarmed, so a stamp of zero is carried as one.
+        if (http_req_start_ms[evt->slot_id] == 0)
+        {
+            http_req_start_ms[evt->slot_id] = Clock.ms ? Clock.ms : 1;
+        }
         if (h->on_data)
         {
             h->on_data(evt->slot_id);

@@ -41,7 +41,7 @@ A detected vendor answers for its own silicon in
 a build with no vendor answers 0 and turns a capability on with
 `-DPROTOCORE_HAS_<X>=1`, which is how a test env drives a hardware path on a machine
 that has no hardware. Which vendor a build speaks to is `core_setup/`'s job, the
-backends a suite stands up live in `test/mocks/`, and no vendor header appears in
+backends a suite stands up live in `core_setup/hal/host/`, and no vendor header appears in
 the core.
 
 - **Native tests** (fast, no hardware): every feature has a `native_*` test
@@ -53,12 +53,17 @@ the core.
 
     The `native_*` env blocks in [platformio.ini](../platformio.ini) are
     **generated** from a single table, [test/test_matrix.json](../test/test_matrix.json).
-    To add or change a test env, edit that table (each entry keeps its own flags,
-    src filter, and test dirs - per-feature isolation is the point) and regenerate:
+    The table is never hand-edited: `test/harness.py` mutates it under a lock, splices the
+    change as text so the file is not reformatted, and re-parses to prove no other env moved.
+    Each entry keeps its own flags, src filter, and test dirs - per-feature isolation is the
+    point. `python3 test/harness.py -h` lists everything the harness can do.
 
     ```sh
-    python3 -m test.gen_test_envs            # rewrite the env blocks in platformio.ini
-    python3 -m test.gen_test_envs --check    # CI: fail if the ini is out of date
+    python3 test/harness.py env add native_x --after native_w --src services/x/x.c
+    python3 test/harness.py env update native_x --flags=-DPROTOCORE_ENABLE_X=1
+    python3 test/harness.py env gen            # rewrite the env blocks in platformio.ini
+    python3 test/harness.py env gen --check    # CI: fail if the ini is out of date
+    python3 test/harness.py run native_x       # build and run it natively, without pio
     ```
 
     Do not hand-edit the generated region of `platformio.ini`. The full suite

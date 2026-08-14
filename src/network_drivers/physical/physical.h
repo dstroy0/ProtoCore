@@ -32,7 +32,7 @@
 
 // Is there a physical (L1) backend to drive? The real bring-up (radio, Ethernet PHY, the stack's
 // interface access) lives beside its owner - core_setup/physical/<vendor>/ for silicon,
-// test/mocks/physical/ for a suite. When 0, physical.c supplies the seam as no-op stubs so a build
+// core_setup/hal/host/physical/ for a suite. When 0, physical.c supplies the seam as no-op stubs so a build
 // with no PHY still links headless.
 //
 // A detected part answers for its silicon; anything else answers 0 and turns it on with

@@ -28,15 +28,34 @@ size_t protocore_ntp_server_build_response(const uint8_t *req, size_t req_len, u
         return 0;
     }
 
-    // LI (2 bits) | VN (3 bits) | Mode (3 bits). Echo the client's version; reply as server (4).
+    // LI (2 bits) | VN (3 bits) | Mode (3 bits). Client (3) is answered server (4) and symmetric
+    // active (1) symmetric passive (2); every other mode returns no reply.
     uint8_t vn = (uint8_t)((req[0] >> 3) & 0x7);
+    uint8_t mode = (uint8_t)(req[0] & 0x7);
+    uint8_t reply_mode;
+    if (mode == 3u)
+    {
+        reply_mode = 4u;
+    }
+    else if (mode == 1u)
+    {
+        reply_mode = 2u;
+    }
+    else
+    {
+        return 0;
+    }
     mem.set(out, 0, PROTOCORE_NTP_PACKET_LEN);
-    out[0] = (uint8_t)((0u << 6) | (vn << 3) | 4u); // LI = 0 (in sync), VN echoed, Mode = 4 (server)
+    out[0] = (uint8_t)((0u << 6) | (vn << 3) | reply_mode); // LI = 0 (in sync), VN echoed
     out[1] = stratum;
-    out[2] = req[2] ? req[2] : 6; // poll interval: echo the client's, else 2^6 s
-    out[3] = (uint8_t)(-6);       // precision: ~2^-6 s (16 ms), the clock's granularity
-    // Root delay (4..7) stays 0; root dispersion (8..11) ~ 1 s to advertise a coarse clock.
-    endian.wr32be(out + 8, 0x00010000u);
+    out[2] = req[2];        // poll interval: the request's, intact
+    out[3] = (uint8_t)(-6); // precision: ~2^-6 s (16 ms), the clock's granularity
+    // Root delay (4..7) stays 0. Root dispersion (8..11) is 0 for a primary server; a higher
+    // stratum advertises ~1 s.
+    if (stratum != 1u)
+    {
+        endian.wr32be(out + 8, 0x00010000u);
+    }
     endian.wr32be(out + 12, refid);
     endian.wr32be(out + 16, protocore_ntp_secs); // reference timestamp (when our clock was last good = now)
     endian.wr32be(out + 20, protocore_ntp_frac);

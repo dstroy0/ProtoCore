@@ -35,9 +35,9 @@ PROTOCORE_BEGIN_DECLS
 #define PB_SD4 0xDC ///< token telegram.
 #define PB_ED 0x16  ///< end delimiter.
 // Frame Control (FC) common values.
-#define PB_FC_REQUEST_FDL_STATUS 0x49 ///< request FDL status (with FCB/FCV).
-#define PB_FC_SRD_LOW 0x6C            ///< Send and Request Data, low priority.
-#define PB_FC_SRD_HIGH 0x7C           ///< Send and Request Data, high priority.
+#define PB_FC_REQUEST_FDL_STATUS 0x49 ///< request FDL status: function code 9, request frame, FCB 0, FCV 0.
+#define PB_FC_SRD_LOW 0x6C            ///< Send and Request Data low: function code 12, request frame, FCB 1, FCV 0.
+#define PB_FC_SRD_HIGH 0x7D           ///< Send and Request Data high: function code 13, request frame, FCB 1, FCV 1.
 
 /** @brief PROFIBUS FCS: arithmetic sum (mod 256) of @p len bytes (DA + SA + FC + data). */
 uint8_t protocore_pb_fcs(const uint8_t *bytes, size_t len);

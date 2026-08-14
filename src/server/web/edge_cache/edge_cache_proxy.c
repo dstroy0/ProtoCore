@@ -1265,7 +1265,8 @@ void protocore_edge_cache_enable(void)
     if (!s_ctx.registered)
     {
         use(edge_cache_mw);
-        Http.set_edge_poll(edge_cache_poll);
+        Http.edge_poll = edge_cache_poll;
+        Http.set_edge_poll(Http.internal);
         s_ctx.registered = PROTO_TRUE;
     }
 }

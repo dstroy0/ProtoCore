@@ -75,7 +75,9 @@ static void dash_ws_message(uint8_t ws_id)
     // Control widgets send {"k":"<key>","v":<num>}; parse + dispatch to the callback.
     if (ws_id < MAX_WS_CONNS)
     {
-        protocore_dashboard_dispatch_control(ws_payload(ws_id));
+        Ws.ws_id = ws_id;
+        Ws.payload_of(Ws.internal);
+        protocore_dashboard_dispatch_control(Ws.text);
     }
 }
 static void dash_ws_close(uint8_t ws_id)

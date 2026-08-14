@@ -19,6 +19,10 @@
  *
  * Pure registry + dispatch: no heap, no stdlib, host-testable with a fake driver. Drivers are borrowed
  * (the caller keeps the SouthboundDriver + its ctx alive for the registry's lifetime).
+ *
+ * A caller sets the members a call takes, invokes it through ::Southbound, and reads the outcome off the
+ * same handle. The module exports one symbol, @ref Southbound; everything in southbound.c has internal
+ * linkage.
  */
 
 #ifndef PROTOCORE_SOUTHBOUND_H
@@ -30,10 +34,9 @@ PROTOCORE_BEGIN_DECLS
 
 #if PROTOCORE_ENABLE_SOUTHBOUND
 
-// Southbound result codes. The API returns int (SB_OK / a count on success, or a negative code), so
-// the return stays int and these stay plain integer constants - callers keep their `< 0` and
-// `== SB_OK` checks cast-free. A driver may also return its own negative transport error, which is
-// passed through unchanged.
+// Southbound result codes. A dispatch reports SB_OK / a count, or a negative code, through
+// SouthboundNs::i32, so a caller's `< 0` and `== SB_OK` checks stay cast-free. A driver may also
+// return its own negative transport error, which is passed through unchanged.
 #define SB_OK 0               ///< success.
 #define SB_ERR_NOT_FOUND -1   ///< no registered driver by that name.
 #define SB_ERR_UNSUPPORTED -2 ///< the driver does not implement that operation.
@@ -59,32 +62,75 @@ typedef struct
     void *ctx;                                                                  ///< driver instance state (borrowed).
 } SouthboundDriver;
 
+/** @brief The one point a read or a write moves. */
+typedef struct
+{
+    uint32_t point;     ///< the point id (register, coil, object) the call addresses
+    int32_t value;      ///< the value a write carries
+    int32_t *value_out; ///< where a read lands the value it got
+} SouthboundPointArgs;
+
+/** @brief The contiguous span of points a block read or a block write moves in one driver call. */
+typedef struct
+{
+    uint32_t first;    ///< the first point id of the span
+    int32_t *out;      ///< where a block read lands the values it got
+    const int32_t *in; ///< the values a block write carries
+    size_t n;          ///< how many points the span covers
+} SouthboundBlockArgs;
+
+/** @brief The registry and the calls that reach it, described only in southbound.c. */
+struct SouthboundInternal;
+
 /**
- * @brief Register a driver (borrowed; must outlive the registry).
- * @return SB_OK, SB_ERR_ARG (null / no name), SB_ERR_DUP (name taken), or SB_ERR_FULL.
+ * @brief The southbound facade: register drivers, then move points by driver name.
+ *
+ * @c add takes the keyword-free name of the registration call; every other member carries the name of
+ * the operation it performs.
+ *
+ * @var SouthboundNs::name     the driver a lookup or a dispatch addresses
+ * @var SouthboundNs::drv      the driver an add registers (borrowed; must outlive the registry)
+ * @var SouthboundNs::point    the one point a read or a write moves
+ * @var SouthboundNs::block    the span of points a block read or a block write moves
+ * @var SouthboundNs::i32      SB_OK / a count from a registration or a dispatch, or a negative code
+ * @var SouthboundNs::n        how many drivers the registry holds
+ * @var SouthboundNs::driver   the driver a find matched, or null
+ * @var SouthboundNs::add         register @c drv: SB_OK, SB_ERR_ARG, SB_ERR_DUP or SB_ERR_FULL
+ * @var SouthboundNs::clear       drop all registrations
+ * @var SouthboundNs::count       how many drivers are registered
+ * @var SouthboundNs::find        look up @c name
+ * @var SouthboundNs::read        read @c point.point from @c name
+ * @var SouthboundNs::write       write @c point.value to @c point.point of @c name
+ * @var SouthboundNs::read_block  read @c block.n points from @c name, starting at @c block.first
+ * @var SouthboundNs::write_block write @c block.n points to @c name, starting at @c block.first
+ * @var SouthboundNs::internal    the registry and the calls that reach it
  */
-int protocore_southbound_register(const SouthboundDriver *drv);
+typedef struct
+{
+    const char *name;            ///< the driver a lookup or a dispatch addresses
+    const SouthboundDriver *drv; ///< the driver an add registers
 
-/** @brief Drop all registrations (test / re-init helper). */
-void protocore_southbound_clear(void);
+    SouthboundPointArgs point; ///< the one point a read or a write moves
+    SouthboundBlockArgs block; ///< the span a block read or a block write moves
 
-/** @brief Number of registered drivers. */
-size_t protocore_southbound_count(void);
+    int32_t i32;
+    size_t n;
+    const SouthboundDriver *driver;
 
-/** @brief Look up a driver by name, or null. */
-const SouthboundDriver *protocore_southbound_find(const char *name);
+    void (*add)(struct SouthboundInternal *ctx);
+    void (*clear)(struct SouthboundInternal *ctx);
+    void (*count)(struct SouthboundInternal *ctx);
+    void (*find)(struct SouthboundInternal *ctx);
+    void (*read)(struct SouthboundInternal *ctx);
+    void (*write)(struct SouthboundInternal *ctx);
+    void (*read_block)(struct SouthboundInternal *ctx);
+    void (*write_block)(struct SouthboundInternal *ctx);
 
-/** @brief Read one point from a named driver. @return SB_OK / negative code. */
-int protocore_southbound_read(const char *name, uint32_t point, int32_t *value_out);
+    struct SouthboundInternal *internal;
+} SouthboundNs;
 
-/** @brief Write one point to a named driver. @return SB_OK / negative code. */
-int protocore_southbound_write(const char *name, uint32_t point, int32_t value);
-
-/** @brief Atomically read @p n points starting at @p first. @return count read (>=0) / negative code. */
-int protocore_southbound_read_block(const char *name, uint32_t first, int32_t *out, size_t n);
-
-/** @brief Atomically write @p n points starting at @p first. @return count written (>=0) / negative code. */
-int protocore_southbound_write_block(const char *name, uint32_t first, const int32_t *in, size_t n);
+/** @brief The one symbol this module exports. */
+extern SouthboundNs Southbound;
 
 #endif // PROTOCORE_ENABLE_SOUTHBOUND
 

@@ -56,7 +56,8 @@ static proto_bool upload_stream_begin(HttpReq *req)
     s_upl.handle = -1;
     // The seam fails closed when nothing is mounted, so a cold mount answers "upload failed"
     // rather than faulting.
-    const protocore_mnt_backend *mnt = protocore_mnt_active();
+    Mnt.active(Mnt.internal);
+    const protocore_mnt_backend *mnt = Mnt.backend;
     if (mnt && s_upl.dest)
     {
         s_upl.handle = mnt->open(s_upl.dest, PROTOCORE_MNT_WRITE);
@@ -83,7 +84,8 @@ static void upload_stream_data(HttpReq *req, const uint8_t *data, size_t len)
     (void)req; // a single upload streams at a time
     if (s_upl.active && !s_upl.error)
     {
-        const protocore_mnt_backend *mnt = protocore_mnt_active();
+        Mnt.active(Mnt.internal);
+        const protocore_mnt_backend *mnt = Mnt.backend;
         if (!mnt || mnt->write(s_upl.handle, data, len) != (int)len)
         {
             s_upl.error = PROTO_TRUE;
@@ -105,7 +107,8 @@ static void upload_handle(uint8_t slot_id, HttpReq *req)
     }
     if (s_upl.active)
     {
-        const protocore_mnt_backend *mnt = protocore_mnt_active();
+        Mnt.active(Mnt.internal);
+        const protocore_mnt_backend *mnt = Mnt.backend;
         if (mnt)
         {
             mnt->close(s_upl.handle);

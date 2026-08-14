@@ -1,6 +1,39 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
+// Host tests for the Sercos IDN and telegram codec (services/fieldbus/sercos/sercos.h).
+//
+// The IDN half is anchored. Two published documents were obtained in this session and agree on the
+// 16-bit IDN bit ranges:
+//   Phoenix Contact "sercos System Manual for I/O Devices", UM EN SERCOS SYS, order 8336_en_00,
+//   Figure 2-6 "sercos parameter model", Figure 2-7 "IDN structure" and Table 8-1 "Numbering of the
+//   IDNs", which read: "Bit 11-0: Data block number", "Bit 14-12: Parameter set (PS)",
+//   "Bit 15: S/P parameter (S/P)", with bit 15 = 0 "Standard data (S, normative)" and
+//   bit 15 = 1 "Product-specific data (P)", parameter record 0-7 and data block number 0-4095.
+//   OPC UA for SERCOS Devices, OPC 30100 v1.2 (OPC Foundation with Sercos International), sec 3.3.5
+//   "Sercos Parameter (32-Bit IDN)", which publishes the symbolic notation <S/P>-<PS>-<DBN>.<SI>.<SE>
+//   and its field meanings.
+// The load-bearing case is test_idn_symbolic_names: every expected word is the sum of the three
+// published fields placed at those bit positions, with the addition written into the comment, so
+// S-0-0100 is 0x0064 because the S bit is 0, the parameter set is 0 and 100 decimal is 0x064.
+//
+// The telegram half is NOT anchored, and asserts properties only. The governing document for the
+// wire frame is the Sercos III Communication Specification of Sercos International (IEC 61784-2
+// CP16 / IEC 61158 Type 19); it is members-only and was not obtained. No field offset, no header
+// length and no telegram type number is asserted as a wire value anywhere below. What is asserted
+// is round-trip identity, that a frame is a fixed-size header plus its payload, that the cycle
+// field carries all 65536 values and the phase octet all 256, that the two defined types are
+// distinct, that an undefined type is refused in both directions, and the bounds refusals.
+//
+// One published layout was found and it does not match this module, which is why the framing
+// constants are carried and never asserted: the same Phoenix Contact manual, Figure 3-1 "General
+// telegram structure for sercos MDT and AT telegrams" and Table 3-1 "sercos type structure", puts a
+// 6-octet sercos header (MST) inside the EtherType 0x88CD frame and encodes MDT versus AT as bit 6
+// of its first octet ("6 MDT or AT, 0: MDT, 1: AT"), not as the whole octet. sercos.h documents its
+// own reduced 4-octet [type][phase][cycle:2] header instead. A vendor system manual is not the
+// governing specification, so nothing here is failed against it; the conflict is recorded, not
+// asserted.
+
 #include "services/fieldbus/sercos/sercos.h"
 #include <string.h>
 
@@ -13,7 +46,20 @@ void tearDown(void)
 {
 }
 
-void test_idn_bit_structure(void)
+// Table 8-1 of UM EN SERCOS SYS numbers the 16-bit IDN as
+//   bit 15    S/P parameter, 0 = standard (S), 1 = product-specific (P)
+//   bit 14-12 parameter record, 0-7
+//   bit 11-0  data block number, 0-4095
+// so the word is (S/P << 15) + (PS << 12) + DBN, and each symbolic name below adds up as:
+//   S-0-0100  0 + 0      + 0x064  = 0x0064
+//   S-0-0001  0 + 0      + 0x001  = 0x0001
+//   S-0-0000  0 + 0      + 0x000  = 0x0000
+//   P-0-0100  0x8000 + 0 + 0x064  = 0x8064
+//   S-1-0100  0 + 0x1000 + 0x064  = 0x1064
+//   S-7-4095  0 + 0x7000 + 0x0FFF = 0x7FFF
+//   P-7-4095  0x8000 + 0x7000 + 0x0FFF = 0xFFFF
+//   P-0-0000  0x8000 + 0 + 0      = 0x8000
+void test_idn_symbolic_names(void)
 {
     struct
     {
@@ -22,14 +68,9 @@ void test_idn_bit_structure(void)
         uint16_t block;
         uint16_t idn;
     } static const CASES[] = {
-        {PROTO_FALSE, 0, 100, 0x0064},
-        {PROTO_FALSE, 0, 1, 0x0001},
-        {PROTO_FALSE, 0, 0, 0x0000},
-        {PROTO_TRUE, 0, 100, 0x8064},
-        {PROTO_FALSE, 1, 100, 0x1064},
-        {PROTO_FALSE, 7, 4095, 0x7FFF},
-        {PROTO_TRUE, 7, 4095, 0xFFFF},
-        {PROTO_TRUE, 0, 0, 0x8000},
+        {PROTO_FALSE, 0, 100, 0x0064}, {PROTO_FALSE, 0, 1, 0x0001},   {PROTO_FALSE, 0, 0, 0x0000},
+        {PROTO_TRUE, 0, 100, 0x8064},  {PROTO_FALSE, 1, 100, 0x1064}, {PROTO_FALSE, 7, 4095, 0x7FFF},
+        {PROTO_TRUE, 7, 4095, 0xFFFF}, {PROTO_TRUE, 0, 0, 0x8000},
     };
     for (size_t i = 0; i < sizeof(CASES) / sizeof(CASES[0]); i++)
     {
@@ -46,18 +87,49 @@ void test_idn_bit_structure(void)
     }
 }
 
-void test_idn_fields_do_not_overlap(void)
+// Each field alone, at the bit range Table 8-1 gives it:
+//   S/P at bit 15 alone            -> 1 << 15            = 0x8000
+//   parameter set 7 at bits 14-12  -> 7 << 12            = 0x7000
+//   data block 4095 at bits 11-0   -> 4095               = 0x0FFF
+// The three are disjoint (pairwise AND is zero) and together tile the whole word
+// (0x8000 | 0x7000 | 0x0FFF = 0xFFFF), which is what "no field overlaps another" means.
+void test_idn_fields_are_disjoint_and_tile_the_word(void)
 {
-    TEST_ASSERT_EQUAL_HEX16(0x8000, protocore_sercos_idn(PROTO_TRUE, 0, 0));
-    TEST_ASSERT_EQUAL_HEX16(0x7000, protocore_sercos_idn(PROTO_FALSE, 7, 0));
-    TEST_ASSERT_EQUAL_HEX16(0x0FFF, protocore_sercos_idn(PROTO_FALSE, 0, 4095));
+    const uint16_t sp = protocore_sercos_idn(PROTO_TRUE, 0, 0);
+    const uint16_t ps = protocore_sercos_idn(PROTO_FALSE, 7, 0);
+    const uint16_t dbn = protocore_sercos_idn(PROTO_FALSE, 0, 4095);
 
-    TEST_ASSERT_EQUAL_HEX16(0x0000, protocore_sercos_idn(PROTO_FALSE, 8, 0));
-    TEST_ASSERT_EQUAL_HEX16(0x1000, protocore_sercos_idn(PROTO_FALSE, 9, 0));
-    TEST_ASSERT_EQUAL_HEX16(0x0000, protocore_sercos_idn(PROTO_FALSE, 0, 0x1000));
-    TEST_ASSERT_EQUAL_HEX16(0x0001, protocore_sercos_idn(PROTO_FALSE, 0, 0x1001));
+    TEST_ASSERT_EQUAL_HEX16(0x8000, sp);
+    TEST_ASSERT_EQUAL_HEX16(0x7000, ps);
+    TEST_ASSERT_EQUAL_HEX16(0x0FFF, dbn);
+
+    TEST_ASSERT_EQUAL_HEX16(0x0000, sp & ps);
+    TEST_ASSERT_EQUAL_HEX16(0x0000, sp & dbn);
+    TEST_ASSERT_EQUAL_HEX16(0x0000, ps & dbn);
+    TEST_ASSERT_EQUAL_HEX16(0xFFFF, (uint16_t)(sp | ps | dbn));
 }
 
+// An argument wider than the field Table 8-1 gives it cannot reach a neighboring field: a parameter
+// set above 7 leaves the S/P bit and the data block number alone, and a data block number above
+// 4095 leaves the S/P bit and the parameter set alone.
+void test_an_over_wide_argument_stays_in_its_own_field(void)
+{
+    for (unsigned set = 8; set < 256; set++)
+    {
+        const uint16_t v = protocore_sercos_idn(PROTO_FALSE, (uint8_t)set, 0x0ABC);
+        TEST_ASSERT_EQUAL_HEX16(0x0000, (uint16_t)(v & 0x8000));
+        TEST_ASSERT_EQUAL_HEX16(0x0ABC, (uint16_t)(v & 0x0FFF));
+    }
+    for (uint32_t block = 0x1000; block <= 0xFFFF; block += 0x111)
+    {
+        const uint16_t v = protocore_sercos_idn(PROTO_TRUE, 5, (uint16_t)block);
+        TEST_ASSERT_EQUAL_HEX16(0x8000, (uint16_t)(v & 0x8000));
+        TEST_ASSERT_EQUAL_HEX16(0x5000, (uint16_t)(v & 0x7000));
+    }
+}
+
+// Decode then re-encode is the identity on every one of the 65536 words, so the three fields lose
+// no bit and claim none twice.
 void test_idn_round_trip_over_every_word(void)
 {
     for (uint32_t v = 0; v <= 0xFFFFu; v++)
@@ -70,6 +142,8 @@ void test_idn_round_trip_over_every_word(void)
     }
 }
 
+// sercos.h: "Decode a SERCOS IDN into its parts (any out-pointer may be null)". Dropping one output
+// must not change the others. 0x9064 is P-1-0100: 0x8000 + 0x1000 + 0x064.
 void test_idn_parse_accepts_null_outputs(void)
 {
     uint8_t s = 0;
@@ -91,11 +165,19 @@ void test_idn_parse_accepts_null_outputs(void)
     protocore_sercos_idn_parse(0x9064, NULL, NULL, NULL);
 }
 
-void test_telegram_round_trip(void)
+// The header is whatever length an empty telegram is, measured rather than named, and every
+// telegram is that header followed by its payload, so the built length grows one for one with the
+// payload and the parsed payload length is the built length less the header.
+static size_t header_length(void)
 {
-    TEST_ASSERT_EQUAL_INT(4, SERCOS_HDR_LEN);
-    TEST_ASSERT_EQUAL_HEX8(0x00, SERCOS_TEL_MDT);
-    TEST_ASSERT_EQUAL_HEX8(0x01, SERCOS_TEL_AT);
+    uint8_t out[8];
+    return protocore_sercos_build(SERCOS_TEL_MDT, 0, 0, NULL, 0, out, sizeof(out));
+}
+
+void test_a_telegram_is_a_fixed_header_plus_its_payload(void)
+{
+    const size_t hdr = header_length();
+    TEST_ASSERT_TRUE(hdr > 0);
 
     static const uint8_t TYPES[2] = {SERCOS_TEL_MDT, SERCOS_TEL_AT};
     uint8_t pdo[32];
@@ -109,12 +191,35 @@ void test_telegram_round_trip(void)
         for (size_t len = 0; len <= sizeof(pdo); len++)
         {
             uint8_t out[64];
-            size_t n = protocore_sercos_build(TYPES[t], 0x04, 0xBEEF, len ? pdo : NULL, len, out, sizeof(out));
-            TEST_ASSERT_EQUAL_UINT(SERCOS_HDR_LEN + len, n);
-            TEST_ASSERT_EQUAL_HEX8(TYPES[t], out[0]);
-            TEST_ASSERT_EQUAL_HEX8(0x04, out[1]);
-            TEST_ASSERT_EQUAL_HEX8(0xEF, out[2]);
-            TEST_ASSERT_EQUAL_HEX8(0xBE, out[3]);
+            const size_t n = protocore_sercos_build(TYPES[t], 0x04, 0xBEEF, len ? pdo : NULL, len, out, sizeof(out));
+            TEST_ASSERT_EQUAL_UINT(hdr + len, n);
+
+            SercosTelegram s;
+            TEST_ASSERT_TRUE(protocore_sercos_parse(out, n, &s));
+            TEST_ASSERT_EQUAL_UINT(len, s.data_len);
+        }
+    }
+}
+
+// Build then parse returns every field the builder was given, for both telegram types and every
+// payload length up to 32. sercos.h says the parsed data "points into the input", so the payload
+// pointer must land inside the frame just past the header, not in a copy.
+void test_telegram_round_trip(void)
+{
+    const size_t hdr = header_length();
+    static const uint8_t TYPES[2] = {SERCOS_TEL_MDT, SERCOS_TEL_AT};
+    uint8_t pdo[32];
+    for (size_t i = 0; i < sizeof(pdo); i++)
+    {
+        pdo[i] = (uint8_t)(i * 11 + 5);
+    }
+
+    for (size_t t = 0; t < 2; t++)
+    {
+        for (size_t len = 0; len <= sizeof(pdo); len++)
+        {
+            uint8_t out[64];
+            const size_t n = protocore_sercos_build(TYPES[t], 0x04, 0xBEEF, len ? pdo : NULL, len, out, sizeof(out));
 
             SercosTelegram s;
             TEST_ASSERT_TRUE(protocore_sercos_parse(out, n, &s));
@@ -125,7 +230,7 @@ void test_telegram_round_trip(void)
             if (len)
             {
                 TEST_ASSERT_EQUAL_HEX8_ARRAY(pdo, s.data, len);
-                TEST_ASSERT_EQUAL_PTR(out + SERCOS_HDR_LEN, s.data);
+                TEST_ASSERT_EQUAL_PTR(out + hdr, s.data);
             }
             else
             {
@@ -135,84 +240,131 @@ void test_telegram_round_trip(void)
     }
 }
 
-void test_cycle_count_is_a_full_16_bit_field(void)
+// A master telegram and a drive telegram must not encode to the same octet, or a receiver could not
+// tell which direction a frame came from.
+void test_the_two_telegram_types_are_distinct(void)
 {
-    static const uint16_t CYCLES[5] = {0, 1, 0x00FF, 0x0100, 0xFFFF};
+    TEST_ASSERT_NOT_EQUAL_UINT8(SERCOS_TEL_MDT, SERCOS_TEL_AT);
+
+    uint8_t mdt[8];
+    uint8_t at[8];
+    const size_t n = protocore_sercos_build(SERCOS_TEL_MDT, 0, 0, NULL, 0, mdt, sizeof(mdt));
+    TEST_ASSERT_EQUAL_UINT(n, protocore_sercos_build(SERCOS_TEL_AT, 0, 0, NULL, 0, at, sizeof(at)));
+    TEST_ASSERT_TRUE(memcmp(mdt, at, n) != 0);
+
+    SercosTelegram s;
+    TEST_ASSERT_TRUE(protocore_sercos_parse(mdt, n, &s));
+    TEST_ASSERT_EQUAL_HEX8(SERCOS_TEL_MDT, s.type);
+    TEST_ASSERT_TRUE(protocore_sercos_parse(at, n, &s));
+    TEST_ASSERT_EQUAL_HEX8(SERCOS_TEL_AT, s.type);
+}
+
+// The cycle count is a 16-bit field, so it must survive every value a 16-bit field can hold,
+// including the ones that differ only in the high octet.
+void test_cycle_count_carries_every_sixteen_bit_value(void)
+{
     uint8_t out[8];
     SercosTelegram s;
-    for (size_t i = 0; i < 5; i++)
+    for (uint32_t c = 0; c <= 0xFFFFu; c++)
     {
-        TEST_ASSERT_EQUAL_UINT(SERCOS_HDR_LEN,
-                               protocore_sercos_build(SERCOS_TEL_MDT, 0, CYCLES[i], NULL, 0, out, sizeof(out)));
-        TEST_ASSERT_TRUE(protocore_sercos_parse(out, SERCOS_HDR_LEN, &s));
-        TEST_ASSERT_EQUAL_HEX16(CYCLES[i], s.cycle);
+        const size_t n = protocore_sercos_build(SERCOS_TEL_MDT, 0, (uint16_t)c, NULL, 0, out, sizeof(out));
+        TEST_ASSERT_TRUE(protocore_sercos_parse(out, n, &s));
+        TEST_ASSERT_EQUAL_HEX16((uint16_t)c, s.cycle);
     }
 }
 
-void test_phase_octet_is_carried_whole(void)
+// The phase octet is carried whole: all 256 values come back unchanged.
+void test_phase_octet_carries_every_value(void)
 {
     uint8_t out[8];
     SercosTelegram s;
     for (unsigned p = 0; p < 256; p++)
     {
-        TEST_ASSERT_EQUAL_UINT(SERCOS_HDR_LEN,
-                               protocore_sercos_build(SERCOS_TEL_AT, (uint8_t)p, 1, NULL, 0, out, sizeof(out)));
-        TEST_ASSERT_TRUE(protocore_sercos_parse(out, SERCOS_HDR_LEN, &s));
+        const size_t n = protocore_sercos_build(SERCOS_TEL_AT, (uint8_t)p, 1, NULL, 0, out, sizeof(out));
+        TEST_ASSERT_TRUE(protocore_sercos_parse(out, n, &s));
         TEST_ASSERT_EQUAL_HEX8((uint8_t)p, s.phase);
     }
 }
 
-void test_only_mdt_and_at_are_accepted(void)
+// sercos.h: build takes "SERCOS_TEL_MDT or SERCOS_TEL_AT" and parse returns "true if len >= 4 and
+// the type is MDT/AT". Every other octet in the type position is refused in both directions, so an
+// undefined telegram is neither produced nor accepted.
+void test_only_the_two_defined_types_are_accepted(void)
 {
+    const size_t hdr = header_length();
     uint8_t out[8];
     SercosTelegram s;
-    for (unsigned t = 2; t < 256; t++)
+    for (unsigned t = 0; t < 256; t++)
     {
-        TEST_ASSERT_EQUAL_UINT(0u, protocore_sercos_build((uint8_t)t, 0, 0, NULL, 0, out, sizeof(out)));
-        uint8_t frame[4] = {(uint8_t)t, 0x00, 0x00, 0x00};
-        TEST_ASSERT_FALSE(protocore_sercos_parse(frame, sizeof(frame), &s));
+        const proto_bool defined = (t == SERCOS_TEL_MDT || t == SERCOS_TEL_AT) ? PROTO_TRUE : PROTO_FALSE;
+
+        const size_t n = protocore_sercos_build((uint8_t)t, 0, 0, NULL, 0, out, sizeof(out));
+        uint8_t frame[8];
+        memset(frame, 0, sizeof(frame));
+        frame[0] = (uint8_t)t;
+
+        if (defined)
+        {
+            TEST_ASSERT_EQUAL_UINT(hdr, n);
+            TEST_ASSERT_TRUE(protocore_sercos_parse(frame, hdr, &s));
+        }
+        else
+        {
+            TEST_ASSERT_EQUAL_UINT(0u, n);
+            TEST_ASSERT_FALSE(protocore_sercos_parse(frame, hdr, &s));
+        }
     }
 }
 
+// A frame shorter than the header is not a telegram, a buffer smaller than header plus payload
+// cannot hold one, and a null pointer is neither.
 void test_bounds_refusals(void)
 {
+    const size_t hdr = header_length();
     uint8_t out[16];
     SercosTelegram s;
     static const uint8_t PDO[4] = {1, 2, 3, 4};
 
-    static const uint8_t FRAME[4] = {SERCOS_TEL_MDT, 0x02, 0x34, 0x12};
-    for (size_t n = 0; n < SERCOS_HDR_LEN; n++)
+    uint8_t frame[16];
+    memset(frame, 0, sizeof(frame));
+    frame[0] = SERCOS_TEL_MDT;
+    frame[1] = 0x02;
+    for (size_t n = 0; n < hdr; n++)
     {
-        TEST_ASSERT_FALSE(protocore_sercos_parse(FRAME, n, &s));
+        TEST_ASSERT_FALSE(protocore_sercos_parse(frame, n, &s));
     }
-    TEST_ASSERT_TRUE(protocore_sercos_parse(FRAME, SERCOS_HDR_LEN, &s));
-    TEST_ASSERT_EQUAL_HEX16(0x1234, s.cycle);
-    TEST_ASSERT_FALSE(protocore_sercos_parse(NULL, SERCOS_HDR_LEN, &s));
-    TEST_ASSERT_FALSE(protocore_sercos_parse(FRAME, SERCOS_HDR_LEN, NULL));
+    TEST_ASSERT_TRUE(protocore_sercos_parse(frame, hdr, &s));
+    TEST_ASSERT_FALSE(protocore_sercos_parse(NULL, hdr, &s));
+    TEST_ASSERT_FALSE(protocore_sercos_parse(frame, hdr, NULL));
 
-    for (size_t cap = 0; cap < SERCOS_HDR_LEN + sizeof(PDO); cap++)
+    for (size_t cap = 0; cap < hdr + sizeof(PDO); cap++)
     {
         TEST_ASSERT_EQUAL_UINT(0u, protocore_sercos_build(SERCOS_TEL_MDT, 0, 0, PDO, sizeof(PDO), out, cap));
     }
-    TEST_ASSERT_EQUAL_UINT(8u, protocore_sercos_build(SERCOS_TEL_MDT, 0, 0, PDO, sizeof(PDO), out, 8));
+    TEST_ASSERT_EQUAL_UINT(hdr + sizeof(PDO),
+                           protocore_sercos_build(SERCOS_TEL_MDT, 0, 0, PDO, sizeof(PDO), out, hdr + sizeof(PDO)));
     TEST_ASSERT_EQUAL_UINT(0u, protocore_sercos_build(SERCOS_TEL_MDT, 0, 0, NULL, 4, out, sizeof(out)));
     TEST_ASSERT_EQUAL_UINT(0u, protocore_sercos_build(SERCOS_TEL_MDT, 0, 0, NULL, 0, NULL, sizeof(out)));
 }
 
+// One cycle of the exchange sercos.h describes: the master sends a setpoint in an MDT and the drive
+// answers with an actual value in an AT. The two IDNs name the parameters carried, and add up from
+// Table 8-1 as S-0-0047 = 0 + 0 + 0x02F = 0x002F and S-0-0051 = 0 + 0 + 0x033 = 0x0033.
 void test_mdt_at_exchange(void)
 {
     uint8_t buf[32];
     SercosTelegram s;
 
-    uint16_t cmd_idn = protocore_sercos_idn(PROTO_FALSE, 0, 47);
-    uint16_t fb_idn = protocore_sercos_idn(PROTO_FALSE, 0, 51);
-    TEST_ASSERT_EQUAL_HEX16(0x002F, cmd_idn);
-    TEST_ASSERT_EQUAL_HEX16(0x0033, fb_idn);
+    TEST_ASSERT_EQUAL_HEX16(0x002F, protocore_sercos_idn(PROTO_FALSE, 0, 47));
+    TEST_ASSERT_EQUAL_HEX16(0x0033, protocore_sercos_idn(PROTO_FALSE, 0, 51));
 
     static const uint8_t SETPOINT[4] = {0x10, 0x27, 0x00, 0x00};
     size_t n = protocore_sercos_build(SERCOS_TEL_MDT, 4, 1, SETPOINT, sizeof(SETPOINT), buf, sizeof(buf));
     TEST_ASSERT_TRUE(protocore_sercos_parse(buf, n, &s));
     TEST_ASSERT_EQUAL_HEX8(SERCOS_TEL_MDT, s.type);
+    TEST_ASSERT_EQUAL_HEX8(4, s.phase);
+    TEST_ASSERT_EQUAL_HEX16(1, s.cycle);
+    TEST_ASSERT_EQUAL_UINT(sizeof(SETPOINT), s.data_len);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(SETPOINT, s.data, sizeof(SETPOINT));
 
     static const uint8_t FEEDBACK[4] = {0x0F, 0x27, 0x00, 0x00};
@@ -220,5 +372,6 @@ void test_mdt_at_exchange(void)
     TEST_ASSERT_TRUE(protocore_sercos_parse(buf, n, &s));
     TEST_ASSERT_EQUAL_HEX8(SERCOS_TEL_AT, s.type);
     TEST_ASSERT_EQUAL_HEX16(1, s.cycle);
+    TEST_ASSERT_EQUAL_UINT(sizeof(FEEDBACK), s.data_len);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(FEEDBACK, s.data, sizeof(FEEDBACK));
 }

@@ -14,137 +14,194 @@
 #define PROTOCORE_SOUTHBOUND_MAX_DRIVERS 8 ///< bounded registry; no heap.
 #endif
 
-// All southbound-registry state, owned by one instance (internal linkage): the bounded
-// driver table and its count, grouped so it is one named owner, unreachable cross-TU.
-typedef struct
+/**
+ * @brief The whole registry: the bounded driver table and its count.
+ *
+ * All of it BSS, so a registration costs no heap.
+ */
+struct SouthboundStorage
 {
-    const SouthboundDriver *drivers[PROTOCORE_SOUTHBOUND_MAX_DRIVERS];
-    size_t count;
-} SouthboundCtx;
-static SouthboundCtx s_sb;
+    const SouthboundDriver *drivers[PROTOCORE_SOUTHBOUND_MAX_DRIVERS]; ///< the borrowed drivers, in registration order
+    size_t count;                                                      ///< how many entries of @c drivers are live
+};
 
-int protocore_southbound_register(const SouthboundDriver *drv)
+/**
+ * @brief The registry and the calls that reach it - what SouthboundNs points at.
+ *
+ * @var SouthboundInternal::store  the driver table and its count
+ * @var SouthboundInternal::ns     the handle a caller sets a call's members on
+ */
+struct SouthboundInternal
 {
-    if (!drv || !drv->name)
-    {
-        return SB_ERR_ARG;
-    }
-    if (protocore_southbound_find(drv->name))
-    {
-        return SB_ERR_DUP;
-    }
-    if (s_sb.count >= PROTOCORE_SOUTHBOUND_MAX_DRIVERS)
-    {
-        return SB_ERR_FULL;
-    }
-    s_sb.drivers[s_sb.count++] = drv;
-    return SB_OK;
-}
+    struct SouthboundStorage *store;
+    SouthboundNs *ns;
+};
 
-void protocore_southbound_clear(void)
-{
-    for (size_t i = 0; i < PROTOCORE_SOUTHBOUND_MAX_DRIVERS; i++)
-    {
-        s_sb.drivers[i] = NULL;
-    }
-    s_sb.count = 0;
-}
+static struct SouthboundStorage s_store;
 
-size_t protocore_southbound_count(void)
-{
-    return s_sb.count;
-}
+static struct SouthboundInternal s_sb = {.store = &s_store, .ns = &Southbound};
 
-const SouthboundDriver *protocore_southbound_find(const char *name)
+// The registered driver of that name, or null.
+//
+// Only the first && arm's false side is structurally unreachable: store->drivers[i] can never be
+// null for i < count, because add() only ever stores a drv already proven non-null (its own !drv
+// check) in the same statement that increments count, and clear() resets the whole array and count
+// together - no public-API path leaves a live index holding a null pointer. The second arm
+// (drivers[i]->name) is NOT similarly guaranteed: the registry stores a *borrowed* pointer, so a
+// caller can null out a registered driver's name field after registration (see
+// test_find_skips_driver_mutated_name_null) - that guard is live, tested defensive code, not dead
+// code; the exclusion below covers only the first arm's genuinely dead branch.
+static const SouthboundDriver *lookup(const struct SouthboundStorage *store, const char *name)
 {
     if (!name)
     {
         return NULL;
     }
-    // Only the first && arm's false side is structurally unreachable: s_sb.drivers[i] can never be
-    // null for i < count, because register() only ever stores a drv already proven non-null (its own
-    // !drv check above) in the same statement that increments count, and clear() resets the whole
-    // array and count together - no public-API path leaves a live index holding a null pointer. The
-    // second arm (drivers[i]->name) is NOT similarly guaranteed: the registry stores a *borrowed*
-    // pointer, so a caller can null out a registered driver's name field after registration (see
-    // test_find_skips_driver_mutated_name_null) - that guard is live, tested defensive code, not dead
-    // code; the exclusion below covers only the first arm's genuinely dead branch.
-    for (size_t i = 0; i < s_sb.count; i++)
+    for (size_t i = 0; i < store->count; i++)
     {
-        if (s_sb.drivers[i] && s_sb.drivers[i]->name && strcmp(s_sb.drivers[i]->name, name) == 0)
+        if (store->drivers[i] && store->drivers[i]->name && strcmp(store->drivers[i]->name, name) == 0)
         {
-            return s_sb.drivers[i];
+            return store->drivers[i];
         }
     }
     return NULL;
 }
 
-int protocore_southbound_read(const char *name, uint32_t point, int32_t *value_out)
+// Append a borrowed driver to the table.
+static void add(struct SouthboundInternal *restrict ctx)
 {
-    if (!value_out)
+    const SouthboundDriver *drv = ctx->ns->drv;
+    if (!drv || !drv->name)
     {
-        return SB_ERR_ARG;
+        ctx->ns->i32 = SB_ERR_ARG;
+        return;
     }
-    const SouthboundDriver *d = protocore_southbound_find(name);
+    if (lookup(ctx->store, drv->name))
+    {
+        ctx->ns->i32 = SB_ERR_DUP;
+        return;
+    }
+    if (ctx->store->count >= PROTOCORE_SOUTHBOUND_MAX_DRIVERS)
+    {
+        ctx->ns->i32 = SB_ERR_FULL;
+        return;
+    }
+    ctx->store->drivers[ctx->store->count++] = drv;
+    ctx->ns->i32 = SB_OK;
+}
+
+// Empty the table and its count together.
+static void clear(struct SouthboundInternal *restrict ctx)
+{
+    for (size_t i = 0; i < PROTOCORE_SOUTHBOUND_MAX_DRIVERS; i++)
+    {
+        ctx->store->drivers[i] = NULL;
+    }
+    ctx->store->count = 0;
+}
+
+static void count(struct SouthboundInternal *restrict ctx)
+{
+    ctx->ns->n = ctx->store->count;
+}
+
+static void find(struct SouthboundInternal *restrict ctx)
+{
+    ctx->ns->driver = lookup(ctx->store, ctx->ns->name);
+}
+
+// Read one point through the named driver's read callback.
+static void read(struct SouthboundInternal *restrict ctx)
+{
+    if (!ctx->ns->point.value_out)
+    {
+        ctx->ns->i32 = SB_ERR_ARG;
+        return;
+    }
+    const SouthboundDriver *d = lookup(ctx->store, ctx->ns->name);
     if (!d)
     {
-        return SB_ERR_NOT_FOUND;
+        ctx->ns->i32 = SB_ERR_NOT_FOUND;
+        return;
     }
     if (!d->read)
     {
-        return SB_ERR_UNSUPPORTED;
+        ctx->ns->i32 = SB_ERR_UNSUPPORTED;
+        return;
     }
-    return d->read(d->ctx, point, value_out);
+    ctx->ns->i32 = d->read(d->ctx, ctx->ns->point.point, ctx->ns->point.value_out);
 }
 
-int protocore_southbound_write(const char *name, uint32_t point, int32_t value)
+// Write one point through the named driver's write callback.
+static void write(struct SouthboundInternal *restrict ctx)
 {
-    const SouthboundDriver *d = protocore_southbound_find(name);
+    const SouthboundDriver *d = lookup(ctx->store, ctx->ns->name);
     if (!d)
     {
-        return SB_ERR_NOT_FOUND;
+        ctx->ns->i32 = SB_ERR_NOT_FOUND;
+        return;
     }
     if (!d->write)
     {
-        return SB_ERR_UNSUPPORTED;
+        ctx->ns->i32 = SB_ERR_UNSUPPORTED;
+        return;
     }
-    return d->write(d->ctx, point, value);
+    ctx->ns->i32 = d->write(d->ctx, ctx->ns->point.point, ctx->ns->point.value);
 }
 
-int protocore_southbound_read_block(const char *name, uint32_t first, int32_t *out, size_t n)
+// Read a contiguous span of points in one driver call.
+static void read_block(struct SouthboundInternal *restrict ctx)
 {
-    if (!out || n == 0)
+    if (!ctx->ns->block.out || ctx->ns->block.n == 0)
     {
-        return SB_ERR_ARG;
+        ctx->ns->i32 = SB_ERR_ARG;
+        return;
     }
-    const SouthboundDriver *d = protocore_southbound_find(name);
+    const SouthboundDriver *d = lookup(ctx->store, ctx->ns->name);
     if (!d)
     {
-        return SB_ERR_NOT_FOUND;
+        ctx->ns->i32 = SB_ERR_NOT_FOUND;
+        return;
     }
     if (!d->read_block)
     {
-        return SB_ERR_UNSUPPORTED;
+        ctx->ns->i32 = SB_ERR_UNSUPPORTED;
+        return;
     }
-    return d->read_block(d->ctx, first, out, n);
+    ctx->ns->i32 = d->read_block(d->ctx, ctx->ns->block.first, ctx->ns->block.out, ctx->ns->block.n);
 }
 
-int protocore_southbound_write_block(const char *name, uint32_t first, const int32_t *in, size_t n)
+// Write a contiguous span of points in one driver call.
+static void write_block(struct SouthboundInternal *restrict ctx)
 {
-    if (!in || n == 0)
+    if (!ctx->ns->block.in || ctx->ns->block.n == 0)
     {
-        return SB_ERR_ARG;
+        ctx->ns->i32 = SB_ERR_ARG;
+        return;
     }
-    const SouthboundDriver *d = protocore_southbound_find(name);
+    const SouthboundDriver *d = lookup(ctx->store, ctx->ns->name);
     if (!d)
     {
-        return SB_ERR_NOT_FOUND;
+        ctx->ns->i32 = SB_ERR_NOT_FOUND;
+        return;
     }
     if (!d->write_block)
     {
-        return SB_ERR_UNSUPPORTED;
+        ctx->ns->i32 = SB_ERR_UNSUPPORTED;
+        return;
     }
-    return d->write_block(d->ctx, first, in, n);
+    ctx->ns->i32 = d->write_block(d->ctx, ctx->ns->block.first, ctx->ns->block.in, ctx->ns->block.n);
 }
+
+// Designated, so a member's position in the struct does not decide what it binds to.
+SouthboundNs Southbound = {.add = add,
+                           .clear = clear,
+                           .count = count,
+                           .find = find,
+                           .read = read,
+                           .write = write,
+                           .read_block = read_block,
+                           .write_block = write_block,
+                           .internal = &s_sb};
 
 #endif // PROTOCORE_ENABLE_SOUTHBOUND

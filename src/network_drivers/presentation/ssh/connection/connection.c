@@ -1888,7 +1888,13 @@ static int on_forward_open(uint8_t ssh_slot, uint32_t channel, const char *host,
         return -1; // target administratively denied
     }
     // blocks on DNS + connect
-    if (SshNetwork.chan_open(ssh_slot, channel, hbuf, port, PROTOCORE_SSH_FWD_CONNECT_MS) < 0)
+    SshNetwork.ssh_slot = ssh_slot;
+    SshNetwork.stream.channel = channel;
+    SshNetwork.dial.host = hbuf;
+    SshNetwork.dial.port = port;
+    SshNetwork.dial.timeout_ms = PROTOCORE_SSH_FWD_CONNECT_MS;
+    SshNetwork.chan_open(SshNetwork.internal);
+    if (SshNetwork.i32 < 0)
     {
         return -1; // -> CHANNEL_OPEN_FAILURE (connect failed)
     }
@@ -1901,7 +1907,11 @@ static void on_forward_data(uint8_t ssh_slot, uint32_t channel, const uint8_t *d
 {
     if (protocore_ssh_chan_by_id(ssh_slot, channel))
     {
-        SshNetwork.chan_write(ssh_slot, channel, data, len);
+        SshNetwork.ssh_slot = ssh_slot;
+        SshNetwork.stream.channel = channel;
+        SshNetwork.msg.payload = data;
+        SshNetwork.msg.len = len;
+        SshNetwork.chan_write(SshNetwork.internal);
     }
 }
 
@@ -2023,7 +2033,9 @@ static void on_forward_confirm(uint8_t ssh_slot, uint32_t channel, proto_bool ok
     }
     else
     {
-        SshNetwork.chan_close(ssh_slot, channel); // client refused the channel: drop the socket
+        SshNetwork.ssh_slot = ssh_slot;
+        SshNetwork.stream.channel = channel;
+        SshNetwork.chan_close(SshNetwork.internal); // client refused the channel: drop the socket
         c->open = PROTO_FALSE;
     }
 }
@@ -2076,14 +2088,19 @@ void protocore_ssh_forward_pump(struct SshConnectionInternal *restrict ctx)
         // Client closed its side of the channel: drop the target socket.
         if (!c->open)
         {
-            SshNetwork.chan_close(ssh_slot, ch);
+            SshNetwork.ssh_slot = ssh_slot;
+            SshNetwork.stream.channel = ch;
+            SshNetwork.chan_close(SshNetwork.internal);
             continue;
         }
 
         // Target -> client: forward what the peer window allows, bounded per poll.
         for (int burst = 0; burst < kFwdBurst; burst++)
         {
-            size_t avail = SshNetwork.chan_avail(ssh_slot, ch);
+            SshNetwork.ssh_slot = ssh_slot;
+            SshNetwork.stream.channel = ch;
+            SshNetwork.chan_avail(SshNetwork.internal);
+            size_t avail = SshNetwork.n;
             if (avail > sizeof(buf))
             {
                 avail = sizeof(buf);
@@ -2093,7 +2110,12 @@ void protocore_ssh_forward_pump(struct SshConnectionInternal *restrict ctx)
             {
                 break;
             }
-            size_t n = SshNetwork.chan_read(ssh_slot, ch, buf, budget);
+            SshNetwork.ssh_slot = ssh_slot;
+            SshNetwork.stream.channel = ch;
+            SshNetwork.read_args.out = buf;
+            SshNetwork.read_args.cap = budget;
+            SshNetwork.chan_read(SshNetwork.internal);
+            size_t n = SshNetwork.n;
             if (n == 0)
             {
                 break;
@@ -2106,7 +2128,10 @@ void protocore_ssh_forward_pump(struct SshConnectionInternal *restrict ctx)
 
         // Target closed and fully drained: this direction sends no more, so half-close it with
         // CHANNEL_EOF, once. The channel stays open and the peer keeps sending (RFC 4254 sec 5.3).
-        if (SshNetwork.chan_drained(ssh_slot, ch) && !c->eof_sent)
+        SshNetwork.ssh_slot = ssh_slot;
+        SshNetwork.stream.channel = ch;
+        SshNetwork.chan_drained(SshNetwork.internal);
+        if (SshNetwork.ok && !c->eof_sent)
         {
             protocore_ssh_channel_send_eof(ssh_slot, ch);
         }
@@ -2117,7 +2142,9 @@ void protocore_ssh_forward_pump(struct SshConnectionInternal *restrict ctx)
             // The socket goes now; the channel number stays taken until the peer's CLOSE answers
             // ours (sec 5.3), which build_close_chan settles.
             protocore_ssh_channel_send_close(ssh_slot, ch);
-            SshNetwork.chan_close(ssh_slot, ch);
+            SshNetwork.ssh_slot = ssh_slot;
+            SshNetwork.stream.channel = ch;
+            SshNetwork.chan_close(SshNetwork.internal);
         }
     }
 }
@@ -2127,7 +2154,8 @@ void protocore_ssh_forward_reset(struct SshConnectionInternal *restrict ctx)
     uint8_t ssh_slot = ctx->ns->fwd.slot;
 
     // every socket this connection's channels bridged, forwarded or direct.
-    SshNetwork.chan_close_all(ssh_slot);
+    SshNetwork.ssh_slot = ssh_slot;
+    SshNetwork.chan_close_all(SshNetwork.internal);
     // remote (ssh -R): stop this connection's forwarded listeners and drop every
     // accepted socket it had bridged (the SSH channels go away with the connection).
     for (int i = 0; i < PROTOCORE_SSH_RFWD_MAX; i++)

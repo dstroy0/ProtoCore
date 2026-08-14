@@ -380,7 +380,9 @@ static void challenge(struct AuthInternal *restrict ctx)
 
     // The flush rides the final write, so the challenge leaves in one marshal whether or not a body
     // follows the header.
-    if (!Http.req_is_head(slot_id))
+    Http.slot = slot_id;
+    Http.req_is_head(Http.internal);
+    if (!Http.ok)
     {
         ConnPool.slot = slot_id;
         ConnPool.io.data = header;

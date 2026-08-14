@@ -64,7 +64,9 @@ static void term_ws_message(uint8_t ws_id)
     // exercised by the suite (with and without a registered command callback).
     if (s_term.cb && ws_id < MAX_WS_CONNS)
     {
-        s_term.cb(ws_payload(ws_id), ws_id);
+        Ws.ws_id = ws_id;
+        Ws.payload_of(Ws.internal);
+        s_term.cb(Ws.text, ws_id);
     }
 }
 
@@ -114,9 +116,14 @@ void protocore_web_terminal_print(const char *s)
     }
     for (uint8_t i = 0; i < MAX_WS_CONNS; i++)
     {
-        if (s_term.is_client[i] && ws_active(i))
+        if (s_term.is_client[i])
         {
-            ws_send_text(i, s);
+            Ws.ws_id = i;
+            Ws.active(Ws.internal);
+            if (Ws.ok)
+            {
+                ws_send_text(i, s);
+            }
         }
     }
 }
@@ -139,9 +146,14 @@ uint8_t protocore_web_terminal_client_count()
     uint8_t n = 0;
     for (uint8_t i = 0; i < MAX_WS_CONNS; i++)
     {
-        if (s_term.is_client[i] && ws_active(i))
+        if (s_term.is_client[i])
         {
-            n++;
+            Ws.ws_id = i;
+            Ws.active(Ws.internal);
+            if (Ws.ok)
+            {
+                n++;
+            }
         }
     }
     return n;

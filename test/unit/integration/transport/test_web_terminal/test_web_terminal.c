@@ -1,8 +1,8 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-#include "network_drivers/transport/tcp/tcp.h"
 #include "network_drivers/transport/tcp/common.h"
+#include "network_drivers/transport/tcp/tcp.h"
 #include "protocore.h"
 #include "server/web/web_terminal/web_terminal.h"
 #include <stdio.h>
@@ -51,7 +51,7 @@ void setUp()
         conn_pool[i].pcb = protocore_net_host_pcb();
         http_reset(i);
     }
-    ws_init();
+    Ws.init(Ws.internal);
     protocore_sse_init();
     tcp_capture_reset();
     g_cmd[0] = '\0';
@@ -77,7 +77,9 @@ static uint8_t do_handshake(uint8_t slot)
                    "Sec-WebSocket-Version: 13\r\n\r\n");
     http_parse(slot);
     handle();
-    WsConn *ws = ws_find(slot);
+    Ws.slot = slot;
+    Ws.find(Ws.internal);
+    WsConn *ws = Ws.found;
     return ws ? ws->ws_id : 0xFF;
 }
 
@@ -110,7 +112,9 @@ void test_ws_upgrade_requires_connection_token()
                 "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Version: 13\r\n\r\n");
     http_parse(0);
     handle();
-    TEST_ASSERT_NULL(ws_find(0));
+    Ws.slot = 0;
+    Ws.find(Ws.internal);
+    TEST_ASSERT_NULL(Ws.found);
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "400"));
 }
 
@@ -121,7 +125,9 @@ void test_ws_upgrade_rejects_bad_key_length()
                 "Sec-WebSocket-Key: c2hvcnQ=\r\nSec-WebSocket-Version: 13\r\n\r\n");
     http_parse(0);
     handle();
-    TEST_ASSERT_NULL(ws_find(0));
+    Ws.slot = 0;
+    Ws.find(Ws.internal);
+    TEST_ASSERT_NULL(Ws.found);
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "400"));
 }
 
@@ -169,7 +175,9 @@ void test_close_clears_client()
 {
     do_handshake(0);
     TEST_ASSERT_EQUAL_UINT(1, protocore_web_terminal_client_count());
-    WsConn *ws = ws_find(0);
+    Ws.slot = 0;
+    Ws.find(Ws.internal);
+    WsConn *ws = Ws.found;
     ws->parse_state = WS_CLOSED;
     handle();
     TEST_ASSERT_EQUAL_UINT(0, protocore_web_terminal_client_count());
@@ -249,7 +257,9 @@ void test_stale_client_slot_is_skipped()
 {
     do_handshake(0);
     TEST_ASSERT_EQUAL_UINT(1, protocore_web_terminal_client_count());
-    WsConn *ws = ws_find(0);
+    Ws.slot = 0;
+    Ws.find(Ws.internal);
+    WsConn *ws = Ws.found;
     TEST_ASSERT_NOT_NULL(ws);
     ws->active = PROTO_FALSE;
     TEST_ASSERT_EQUAL_UINT(0, protocore_web_terminal_client_count());

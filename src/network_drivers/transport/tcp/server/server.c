@@ -431,7 +431,8 @@ static void listener_enqueue(struct TcpListenerInternal *restrict ctx)
     {
         return;
     }
-    Workers.wake(owner); // nudge the owning worker so it services this now
+    Workers.worker_id = owner; // nudge the owning worker so it services this now
+    Workers.wake(Workers.internal);
 #else
     if (ctx->ns->idx >= MAX_LISTENERS)
     {
@@ -446,7 +447,8 @@ static void listener_enqueue(struct TcpListenerInternal *restrict ctx)
     {
         return;
     }
-    Workers.wake(0); // single worker owns every slot - nudge it now
+    Workers.worker_id = 0; // single worker owns every slot - nudge it now
+    Workers.wake(Workers.internal);
 #endif
     ctx->ns->ok = PROTO_TRUE;
 }
