@@ -14,9 +14,8 @@
  * rv32imac inline the same operations and never reach this file.
  *
  * The sequence is made indivisible by masking interrupts across it, which is what "atomic" can mean
- * on a core with no exclusive monitor. That holds against an interrupt on the same core and nothing
- * else: a second core reaching the same word is not excluded, so this is correct only where the
- * word is shared between a task and its interrupts.
+ * on a core with no exclusive monitor. Both cores that reach this file are single-core parts; a
+ * multi-core target carries the instruction and never gets here.
  *
  * The memory order argument is dropped. A masked region cannot be observed part-done by anything
  * this can exclude, and the compiler barrier on both asm statements keeps the accesses inside it.
