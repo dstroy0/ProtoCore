@@ -71,7 +71,7 @@ To isolate our application code from physical hardware and the operating system'
 
 <!-- BEGIN GENERATED test-environments (edit test/test_matrix.json, run test/gen_test_readme.py) -->
 
-The native test matrix has **454 environments**, one per feature, generated from [test_matrix.json](test_matrix.json) into [platformio.ini](../platformio.ini) by [gen_test_envs.py](gen_test_envs.py). Each compiles a strict per-feature slice of `src/` with its own flags and runs that feature's suite in isolation, so "this feature builds and tests on its own" stays guaranteed.
+The native test matrix has **455 environments**, one per feature, generated from [test_matrix.json](test_matrix.json) into [platformio.ini](../platformio.ini) by [gen_test_envs.py](gen_test_envs.py). Each compiles a strict per-feature slice of `src/` with its own flags and runs that feature's suite in isolation, so "this feature builds and tests on its own" stays guaranteed.
 
 | Environment | Feature flag(s) | Test suite(s) | Purpose |
 | :--- | :--- | :--- | :--- |
@@ -93,6 +93,7 @@ The native test matrix has **454 environments**, one per feature, generated from
 | `native_bitio` | default | `unit/src/mmgr/test_bitio` | The LSB-first bit writer (mmgr/bitio.h) the DEFLATE encoder and the SSH zlib@openssh.com compressor both write their bitstreams through. |
 | `native_ble_gatt` | `PROTOCORE_ENABLE_BLE_GATT=1` | `unit/src/services/radio/ble_gatt/test_ble_gatt` | Bluetooth ATT codec + GATT bridge (services/radio/ble_gatt): build/parse the common ATT PDUs (read/write/notify/error, LE handles) and serialize a GATT characteristic table as JSON for the web stack. |
 | `native_ble_gatt_att` | `PROTOCORE_ENABLE_BLE_GATT=1` | `unit/src/services/radio/ble_gatt/test_ble_gatt` | Bluetooth ATT codec and GATT characteristic bridge (services/radio/ble_gatt/ble_gatt.c): the Core Specification Vol 3 Part F section 3.4 PDU layouts and their section 3.4.8 opcodes with little-endian ... |
+| `native_boot` | default | `unit/core_setup/boot/test_boot` | The reset handler's loops (core_setup/boot): the .data copy, the .bss zero and the stack paint that protocore_platform_stack_free() reads back. |
 | `native_bus_capture` | `PROTOCORE_ENABLE_BUS_CAPTURE=1` | `unit/src/server/signaling/test_bus_capture` | CAN listen-only capture framing (server/signaling/bus_capture): can_to_socketcan() building the 16-byte Linux SocketCAN frame (big-endian can_id, EFF/RTR flags, length, data) and the DLT_CAN_SOCKETCAN... |
 | `native_bus_wire` | `PROTOCORE_ENABLE_SHT3X=1`, `PROTOCORE_ENABLE_PCA9685=1`, `PROTOCORE_ENABLE_INA219=1`, `PROTOCORE_ENABLE_RTC=1`, `PROTOCORE_ENABLE_SMBUS=1` | `unit/integration/peripherals/test_bus_wire` | End to end from the host harness through the library: a real peripheral driver is called, it goes through the real I2C / SPI bus owner, and the bytes it put on the wire are asserted. |
 | `native_bytes` | default | `unit/src/mmgr/test_bytes` | The byte verbs (mmgr/bytes.h): append into a protocore_span, take out of a protocore_cspan, and the offset-passing reads a parser walks a raw payload with. |
@@ -744,7 +745,7 @@ We test session and socket race conditions by interleaved function calling:
 
 <!-- BEGIN GENERATED test-directory (run test/gen_test_readme.py) -->
 
-A thorough directory of all **5214 test cases** across **329 suites**. Expand a suite to see its test cases, and a test case to see its objective and assertions.
+A thorough directory of all **5226 test cases** across **330 suites**. Expand a suite to see its test cases, and a test case to see its objective and assertions.
 
 <details>
 <summary><b>test_accept_gate (19 tests)</b></summary>
@@ -4427,6 +4428,108 @@ A thorough directory of all **5214 test cases** across **329 suites**. Expand a 
       * <code>TEST_ASSERT_EQUAL_size_t(0, protocore_gatt_char_json(CHARS, 1, NULL, sizeof(out)));</code>
       * <code>TEST_ASSERT_EQUAL_size_t(0, protocore_gatt_char_json(CHARS, 1, out, 0));</code>
       * <code>TEST_ASSERT_EQUAL_size_t(0, protocore_gatt_char_json(NULL, 1, out, sizeof(out)));</code>
+  </details>
+
+</details>
+
+<details>
+<summary><b>test_boot (10 tests)</b></summary>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_data_is_copied_word_for_word</b> &mdash; <i>Data is copied word for word</i></summary>
+
+    * **Objective**: Data is copied word for word
+    * **Assertions**:
+      * <code>TEST_ASSERT_EQUAL_HEX32(0x11110000u + i, s_dst[1u + i]);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX32(GUARD, s_dst[0]);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX32(GUARD, s_dst[REGION_WORDS + 1u]);</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_bss_is_zeroed_and_nothing_else</b> &mdash; <i>Bss is zeroed and nothing else</i></summary>
+
+    * **Objective**: Bss is zeroed and nothing else
+    * **Assertions**:
+      * <code>TEST_ASSERT_EQUAL_HEX32(0u, s_bss[1u + i]);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX32(GUARD, s_bss[0]);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX32(GUARD, s_bss[REGION_WORDS + 1u]);</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_a_reset_does_both</b> &mdash; <i>A reset does both</i></summary>
+
+    * **Objective**: A reset does both
+    * **Assertions**:
+      * <code>TEST_ASSERT_EQUAL_HEX32(0x11110000u, s_dst[1]);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX32(0u, s_bss[1]);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX32(GUARD, s_dst[0]);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX32(GUARD, s_bss[REGION_WORDS + 1u]);</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_empty_regions_write_nothing</b> &mdash; <i>Empty regions write nothing</i></summary>
+
+    * **Objective**: Empty regions write nothing
+    * **Assertions**:
+      * <code>TEST_ASSERT_EQUAL_HEX32(GUARD, s_dst[i]);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX32(0xDEADBEEFu, s_bss[1]);</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_null_regions_are_skipped</b> &mdash; <i>Null regions are skipped</i></summary>
+
+    * **Objective**: Null regions are skipped
+    * **Assertions**:
+      * <code>TEST_ASSERT_EQUAL_HEX32(GUARD, s_dst[1]);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX32(0u, s_bss[1]);  // .bss still zeroed</code>
+      * <code>TEST_ASSERT_EQUAL_HEX32(GUARD, s_dst[1]); // .data skipped</code>
+      * <code>TEST_ASSERT_EQUAL_HEX32(0x11110000u, s_dst[1]);  // .data still copied</code>
+      * <code>TEST_ASSERT_EQUAL_HEX32(0xDEADBEEFu, s_bss[1]); // .bss skipped</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_paint_covers_the_region_below_the_frame</b> &mdash; <i>Paint covers the region below the frame</i></summary>
+
+    * **Objective**: Paint covers the region below the frame
+    * **Assertions**:
+      * <code>TEST_ASSERT_LESS_OR_EQUAL_UINT32(STACK_WORDS, painted);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX32(PROTOCORE_BOOT_STACK_PAINT, s_stack[i]);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX32(GUARD, s_stack[i]);</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_unused_counts_the_paint_from_the_low_end</b> &mdash; <i>Unused counts the paint from the low end</i></summary>
+
+    * **Objective**: Unused counts the paint from the low end
+    * **Assertions**:
+      * <code>TEST_ASSERT_EQUAL_UINT32(STACK_WORDS &lt;&lt; 2, protocore_boot_stack_unused(s_stack, STACK_WORDS));</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(10u &lt;&lt; 2, protocore_boot_stack_unused(s_stack, STACK_WORDS));</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(0u, protocore_boot_stack_unused(s_stack, STACK_WORDS));</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_an_unpainted_stack_reports_nothing_free</b> &mdash; <i>An unpainted stack reports nothing free</i></summary>
+
+    * **Objective**: An unpainted stack reports nothing free
+    * **Assertions**:
+      * <code>TEST_ASSERT_EQUAL_UINT32(0u, protocore_boot_stack_unused(s_stack, STACK_WORDS));</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_paint_and_measure_agree</b> &mdash; <i>Paint and measure agree</i></summary>
+
+    * **Objective**: Paint and measure agree
+    * **Assertions**:
+      * <code>TEST_ASSERT_EQUAL_UINT32(painted &lt;&lt; 2, protocore_boot_stack_unused(s_stack, STACK_WORDS));</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_a_null_stack_is_not_a_fault</b> &mdash; <i>A null stack is not a fault</i></summary>
+
+    * **Objective**: A null stack is not a fault
+    * **Assertions**:
+      * <code>TEST_ASSERT_EQUAL_UINT32(0u, protocore_boot_paint_stack(NULL, STACK_WORDS));</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(0u, protocore_boot_stack_unused(NULL, STACK_WORDS));</code>
   </details>
 
 </details>
@@ -18950,7 +19053,7 @@ A thorough directory of all **5214 test cases** across **329 suites**. Expand a 
 </details>
 
 <details>
-<summary><b>test_guardrails (11 tests)</b></summary>
+<summary><b>test_guardrails (13 tests)</b></summary>
 
   <details style="margin-left: 20px;">
     <summary><b>test_the_floor_is_strictly_below</b> &mdash; <i>The floor is strictly below</i></summary>
@@ -18998,7 +19101,7 @@ A thorough directory of all **5214 test cases** across **329 suites**. Expand a 
 
     * **Objective**: A null snapshot reports no breach
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_UINT8(PROTOCORE_BREACH_NONE, protocore_guardrail_eval(NULL, HEAP_MIN, FRAG_MIN, STACK_MIN));</code>
+      * <code>TEST_ASSERT_EQUAL_UINT8(PROTOCORE_BREACH_NONE, eval_snapshot(NULL));</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -19015,7 +19118,7 @@ A thorough directory of all **5214 test cases** across **329 suites**. Expand a 
 
     * **Objective**: Json writes zero as one digit
     * **Assertions**:
-      * <code>Assert true (protocore_health_json(&h, buf, sizeof(buf)) &gt; 0)</code>
+      * <code>Assert true (json_of(&h, buf, sizeof(buf)) &gt; 0)</code>
       * <code>Assert equal string ("{\\"free_heap\\":0,\\"min_free_heap\\":0,\\"largest_free_block\\":0,\\"stack_free\\":0}", buf)</code>
   </details>
 
@@ -19024,7 +19127,7 @@ A thorough directory of all **5214 test cases** across **329 suites**. Expand a 
 
     * **Objective**: Json writes the full 32 bit range
     * **Assertions**:
-      * <code>Assert true (protocore_health_json(&h, buf, sizeof(buf)) &gt; 0)</code>
+      * <code>Assert true (json_of(&h, buf, sizeof(buf)) &gt; 0)</code>
       * <code>TEST_ASSERT_EQUAL_STRING("{\\"free_heap\\":4294967295,\\"min_free_heap\\":4294967295,"</code>
   </details>
 
@@ -19033,9 +19136,9 @@ A thorough directory of all **5214 test cases** across **329 suites**. Expand a 
 
     * **Objective**: Json boundary is the object plus its terminator
     * **Assertions**:
-      * <code>Assert equal int ((int)sizeof(WANT) - 1, protocore_health_json(&h, exact, sizeof(exact)))</code>
+      * <code>Assert equal int ((int)sizeof(WANT) - 1, json_of(&h, exact, sizeof(exact)))</code>
       * <code>Assert equal string (WANT, exact)</code>
-      * <code>Assert equal int (0, protocore_health_json(&h, one_short, sizeof(one_short)))</code>
+      * <code>Assert equal int (0, json_of(&h, one_short, sizeof(one_short)))</code>
       * <code>Assert equal char ('\\0', one_short[0])</code>
   </details>
 
@@ -19044,23 +19147,41 @@ A thorough directory of all **5214 test cases** across **329 suites**. Expand a 
 
     * **Objective**: Json refuses null and zero capacity
     * **Assertions**:
-      * <code>Assert equal int (0, protocore_health_json(&h, NULL, sizeof(buf)))</code>
-      * <code>Assert equal int (0, protocore_health_json(&h, buf, 0))</code>
+      * <code>Assert equal int (0, json_of(&h, NULL, sizeof(buf)))</code>
+      * <code>Assert equal int (0, json_of(&h, buf, 0))</code>
       * <code>Assert equal char ('x', buf[0])</code>
-      * <code>Assert equal int (0, protocore_health_json(NULL, buf, sizeof(buf)))</code>
+      * <code>Assert equal int (0, json_of(NULL, buf, sizeof(buf)))</code>
       * <code>Assert equal string ("", buf)</code>
   </details>
 
   <details style="margin-left: 20px;">
-    <summary><b>test_the_host_sampler_reports_no_counters</b> &mdash; <i>The host sampler reports no counters</i></summary>
+    <summary><b>test_the_sampler_reports_the_stated_counters</b> &mdash; <i>A snapshot there is nowhere to write is not a crash.</i></summary>
 
-    * **Objective**: The host sampler reports no counters
+    * **Objective**: A snapshot there is nowhere to write is not a crash.
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_UINT32(0u, h.free_heap);</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(0u, h.min_free_heap);</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(0u, h.largest_free_block);</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(0u, h.stack_free);</code>
-      * <code>TEST_ASSERT_EQUAL_UINT8(PROTOCORE_BREACH_NONE, protocore_guardrails_check());</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(20000u, h.free_heap);</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(15000u, h.min_free_heap);</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(10000u, h.largest_free_block);</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(2048u, h.stack_free);</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_check_judges_what_the_sampler_read</b> &mdash; <i>Check judges what the sampler read</i></summary>
+
+    * **Objective**: Check judges what the sampler read
+    * **Assertions**:
+      * <code>TEST_ASSERT_EQUAL_UINT8(PROTOCORE_BREACH_NONE, Guardrails.breaches);</code>
+      * <code>TEST_ASSERT_EQUAL_UINT8(PROTOCORE_BREACH_HEAP | PROTOCORE_BREACH_FRAG | PROTOCORE_BREACH_STACK,</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_begin_installs_and_replaces_the_callback</b> &mdash; <i>Begin installs and replaces the callback</i></summary>
+
+    * **Objective**: Begin installs and replaces the callback
+    * **Assertions**:
+      * <code>TEST_ASSERT_EQUAL_UINT8(Guardrails.breaches, g_seen_mask); // the callback saw the mask check reports</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(0u, g_seen_health.free_heap);     // and the snapshot it judged</code>
+      * <code>TEST_ASSERT_EQUAL_UINT8(0xFFu, g_seen_mask); // replaced with none: the callback never ran</code>
   </details>
 
 </details>
