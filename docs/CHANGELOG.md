@@ -119,6 +119,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`3ff134f`](https://github.com/dstroy0/ProtoCore/commit/3ff134f3849fdb260209bb12ce737f2f742e6ebd))
 - update CHANGELOG.md [skip ci] ([`c319e4d`](https://github.com/dstroy0/ProtoCore/commit/c319e4dfd215c435ee487e7a69606d3caf56992f))
 - update CHANGELOG.md [skip ci] ([`fe42832`](https://github.com/dstroy0/ProtoCore/commit/fe428325b8d012476285d57f5c4d83d8ec1d4633))
 - update CHANGELOG.md [skip ci] ([`d6a3a95`](https://github.com/dstroy0/ProtoCore/commit/d6a3a95010893af4a664b93ca8e9a6d9cd8d4eda))
@@ -369,6 +370,8 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- Merge branch 'main' of https://github.com/dstroy0/ProtoCore ([`21366a9`](https://github.com/dstroy0/ProtoCore/commit/21366a9a93a76d493f35995129700a9ae94e5488))
+- (housekeeping): pimpl, alias hwcrypto registers+offsets+call order to public handles ([`ed640bb`](https://github.com/dstroy0/ProtoCore/commit/ed640bbf04b7f73391b2c005dda652afd5af96cf))
 - Merge branch 'main' of https://github.com/dstroy0/ProtoCore ([`d68c18e`](https://github.com/dstroy0/ProtoCore/commit/d68c18e1f70e58943e6571de9db57e9181a8e569))
 - (ci): version tracking stamp now fires on release and file touch ([`3de0506`](https://github.com/dstroy0/ProtoCore/commit/3de0506eb7bd66d7758bdcf487b36dc11d371fbf))
 - Merge branch 'main' of https://github.com/dstroy0/ProtoCore ([`bda8a8a`](https://github.com/dstroy0/ProtoCore/commit/bda8a8add4d254f50e0d13339d58d4f59688d3d0))
