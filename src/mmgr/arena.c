@@ -14,9 +14,22 @@
 // ---------------------------------------------------------------------------
 //
 // Per-task worker id, for a genuine multi-worker build. Default 0: the user loop(), the lwIP
-// thread, and unit tests all read worker 0. With PROTOCORE_WORKER_COUNT == 1 protocore_worker_self() answers 0
-// inline (see arena.h) and this TLS slot is never read on the hot path.
-static _Thread_local int t_worker_id = 0;
+// thread, and unit tests all read worker 0.
+//
+// The binding is a table keyed on the platform's own answer to "which execution context is running
+// me", not a `_Thread_local`. Both reach the same place on an RTOS - the task's own storage - but a
+// thread-local makes the compiler emit __emutls_get_address, and libgcc's emulated-TLS allocates
+// each block with malloc and calls abort when it cannot. A build that owns no heap after boot
+// cannot link that, so the identity is held here instead.
+//
+// One entry per worker plus the ghost slot, which is every context that can ever bind one; the
+// count is fixed at build time, so this is BSS and the claim is a bounded walk. `s_bound` is the
+// counter: a context that has never bound reads worker 0.
+#define PROTOCORE_WORKER_BINDINGS (PROTOCORE_WORKER_COUNT + 1)
+
+static uintptr_t s_ctx[PROTOCORE_WORKER_BINDINGS];
+static int s_ctx_worker[PROTOCORE_WORKER_BINDINGS];
+static int s_bound;
 
 int protocore_worker_count(void)
 {
@@ -26,13 +39,35 @@ int protocore_worker_count(void)
 #if PROTOCORE_WORKER_COUNT != 1
 int protocore_worker_self(void)
 {
-    return t_worker_id;
+    const uintptr_t me = protocore_platform_context_id();
+    for (int i = 0; i < s_bound; i++)
+    {
+        if (s_ctx[i] == me)
+        {
+            return s_ctx_worker[i];
+        }
+    }
+    return 0;
 }
 #endif
 
 void protocore_worker_set_self(int id)
 {
-    t_worker_id = id;
+    const uintptr_t me = protocore_platform_context_id();
+    for (int i = 0; i < s_bound; i++)
+    {
+        if (s_ctx[i] == me)
+        {
+            s_ctx_worker[i] = id; // this context rebinding itself
+            return;
+        }
+    }
+    if (s_bound < PROTOCORE_WORKER_BINDINGS)
+    {
+        s_ctx[s_bound] = me;
+        s_ctx_worker[s_bound] = id;
+        s_bound++;
+    }
 }
 
 // Persistent-pool block header: a chain of these spans [0, persist_end).

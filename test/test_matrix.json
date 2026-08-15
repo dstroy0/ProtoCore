@@ -145,7 +145,8 @@
         "+<mmgr/arena.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/mmgr/test_arena"
@@ -161,7 +162,8 @@
         "+<mmgr/arena.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/mmgr/test_arena"
