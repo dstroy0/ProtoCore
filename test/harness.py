@@ -14,15 +14,19 @@ Everything the harness can do is a subcommand here, so `harness.py -h` is the wh
   env deps      rebuild test/dep_graph.json from the compiler include closure
 
   run           build and run test envs natively (no pio); --pio hands off to run_tests.sh
-  bare          hand off to test/bare.py; `harness.py bare help` is its whole surface
+  bare          cross-compile the core, and boot it on the part under QEMU
+  bench         the microbenchmark matrix
   runners gen   generate a suite's Unity runner (the logic the pre-build hook calls)
   keys ensure   put the SSH test host key in place
   readme gen    refresh the generated sections of test/README.md
   report merge  overlay a partial TEST_REPORT.md onto the committed one
   report stable print TEST_REPORT.md with per-run timing blanked out
 
-Two sibling tools answer different questions and are launched the same way: the microbenchmarks at
-test/performance_benching/bench.py, and the bare-metal image at test/bare.py.
+Every test activity starts here. `bare` and `bench` are separate matrices in their own files
+(test/bare.py, test/performance_benching/bench.py) because they answer different questions, but
+neither is invoked directly: this is the one entry point, so what a session learns about driving
+the tests does not have to be re-derived. `harness.py bare help` and `harness.py bench help` are
+their full surfaces.
 
 The matrix is the single source of truth. Nothing here hand-writes one: every mutation takes the
 table's lock, splices text so the file is not reformatted, and re-parses to prove no other env moved.
