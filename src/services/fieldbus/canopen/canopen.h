@@ -30,9 +30,10 @@
 
 #if PROTOCORE_ENABLE_CANOPEN
 
+PROTOCORE_BEGIN_DECLS
+
 #include "shared/can/can.h"
 
-PROTOCORE_BEGIN_DECLS
 
 // Function-code COB-ID bases. The 11-bit id is (function-code | node-id); the node id is
 // 1..127 (0 = broadcast for NMT / SYNC / TIME). EMCY shares 0x080 with SYNC: SYNC is the
@@ -245,4 +246,5 @@ proto_bool protocore_canopen_sdo_reasm_feed(CanopenSdoReasm *r, const uint8_t *d
 PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_CANOPEN
+
 #endif // PROTOCORE_CANOPEN_H

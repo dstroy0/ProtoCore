@@ -36,6 +36,31 @@
 #define PROTOCORE_HW_DS 1
 #endif
 
+// --- SHA accelerator register map ---
+// The die is identified here, so the values are stated here and crypto/ reads only these names. Clock
+// and reset share one PCR register and nothing else holds SHA, so the hold-clear mask is empty.
+#ifndef PROTOCORE_SHA_BASE
+#define PROTOCORE_SHA_BASE 0x60089000u
+#endif
+#ifndef PROTOCORE_SHA_CLK_REG
+#define PROTOCORE_SHA_CLK_REG 0x600960C8u // PCR_SHA_CONF_REG
+#endif
+#ifndef PROTOCORE_SHA_CLK_BIT
+#define PROTOCORE_SHA_CLK_BIT (1u << 0) // PCR_SHA_CLK_EN
+#endif
+#ifndef PROTOCORE_SHA_RST_REG
+#define PROTOCORE_SHA_RST_REG 0x600960C8u // PCR_SHA_CONF_REG (same reg)
+#endif
+#ifndef PROTOCORE_SHA_RST_BIT
+#define PROTOCORE_SHA_RST_BIT (1u << 1) // PCR_SHA_RST_EN
+#endif
+#ifndef PROTOCORE_SHA_HOLD_REG
+#define PROTOCORE_SHA_HOLD_REG 0x600960C8u
+#endif
+#ifndef PROTOCORE_SHA_HOLD_CLEAR
+#define PROTOCORE_SHA_HOLD_CLEAR 0u
+#endif
+
 // --- Sizing (conservative: single core, 320 KB SRAM, no Wi-Fi) ---
 // Internal-SRAM-budget values (no PSRAM assumed); a PSRAM-size profile, included first, scales the
 // RAM-backed buffers further and moves the big TLS / HTTP-2 pools off-chip.

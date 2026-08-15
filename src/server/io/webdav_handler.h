@@ -16,13 +16,14 @@
 #ifndef PROTOCORE_WEBDAV_HANDLER_H
 #define PROTOCORE_WEBDAV_HANDLER_H
 
-#include "network_drivers/presentation/http/http_parser/http_parser.h" // HttpReq
-#include "network_drivers/presentation/http/route/http_route.h"        // HttpRoute (by pointer)
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_WEBDAV
+
+#include "network_drivers/presentation/http/http_parser/http_parser.h" // HttpReq
+#include "network_drivers/presentation/http/route/http_route.h"        // HttpRoute (by pointer)
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief If @p req matches a ROUTE_DAV mount, handle it as WebDAV and return true. */
 proto_bool try_serve_dav(uint8_t slot_id, HttpReq *req);
@@ -46,8 +47,8 @@ void dav_put_abort_tramp(HttpReq *req);
 
 #endif // PROTOCORE_ENABLE_STREAM_BODY
 
-#endif // PROTOCORE_ENABLE_WEBDAV
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_WEBDAV
 
 #endif // PROTOCORE_WEBDAV_HANDLER_H

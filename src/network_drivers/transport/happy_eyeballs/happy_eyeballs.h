@@ -20,11 +20,12 @@
 #define PROTOCORE_HAPPY_EYEBALLS_H
 
 #include "protocore_config.h"
+
+#if PROTOCORE_ENABLE_HAPPY_EYEBALLS
+
 #include "shared/ip/ip.h"
 
 PROTOCORE_BEGIN_DECLS
-
-#if PROTOCORE_ENABLE_HAPPY_EYEBALLS
 
 #ifndef PROTOCORE_HE_MAX
 #define PROTOCORE_HE_MAX 16 ///< candidate list size the interleave step handles (larger lists are only sorted).
@@ -53,8 +54,8 @@ void protocore_he_order(protocore_ip *list, size_t n);
  */
 proto_bool protocore_he_attempt_due(uint32_t last_start_ms, uint32_t now_ms, uint32_t attempt_delay_ms);
 
-#endif // PROTOCORE_ENABLE_HAPPY_EYEBALLS
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_HAPPY_EYEBALLS
 
 #endif // PROTOCORE_HAPPY_EYEBALLS_H

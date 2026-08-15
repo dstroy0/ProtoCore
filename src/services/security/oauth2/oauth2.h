@@ -34,9 +34,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_OAUTH2
+
+PROTOCORE_BEGIN_DECLS
 
 #ifndef PROTOCORE_OAUTH2_TOKEN_TYPE_LEN
 #define PROTOCORE_OAUTH2_TOKEN_TYPE_LEN 24 ///< the `token_type` value buffer, "Bearer" and any longer registered name.
@@ -159,8 +159,8 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern Oauth2Ns Oauth2;
 
-#endif // PROTOCORE_ENABLE_OAUTH2
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_OAUTH2
 
 #endif // PROTOCORE_OAUTH2_H

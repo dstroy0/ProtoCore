@@ -11,15 +11,36 @@
 
 #if PROTOCORE_ENABLE_SSH_CLIENT
 
+// The client's lifecycle calls, reached through its namespace.
+static void client_poll(void)
+{
+    SshClient.poll(SshClient.internal);
+}
+
+static void client_end(void)
+{
+    SshClient.end(SshClient.internal);
+}
+
+
+// The client, reached through its namespace. Inside the gate: client.h declares SshClient only when
+// the feature is compiled in, and this file is empty without it.
+static proto_bool client_begin(const protocore_ssh_client_cfg *cfg)
+{
+    SshClient.cfg = cfg;
+    SshClient.begin(SshClient.internal);
+    return SshClient.ok;
+}
+
 void setUp(void)
 {
 
-    protocore_ssh_client_end(); // whatever a previous case left
+    client_end(); // whatever a previous case left
 }
 void tearDown(void)
 {
 
-    protocore_ssh_client_end();
+    client_end();
 }
 
 // Before anything is asked of it, the role has not started.
@@ -42,7 +63,7 @@ static void test_a_configuration_without_a_host_does_not_start(void)
     cfg.bind_port = 8022;
     cfg.local_port = 80;
 
-    TEST_ASSERT_FALSE(protocore_ssh_client_begin(&cfg));
+    TEST_ASSERT_FALSE(client_begin(&cfg));
     TEST_ASSERT_NOT_EQUAL(PROTOCORE_SSH_CLIENT_UP, SshClient.state());
     TEST_ASSERT_FALSE(protocore_ssh_client_up());
 }
@@ -57,21 +78,21 @@ static void test_a_configuration_without_a_key_does_not_start(void)
     cfg.bind_port = 8022;
     cfg.local_port = 80;
 
-    TEST_ASSERT_FALSE(protocore_ssh_client_begin(&cfg));
+    TEST_ASSERT_FALSE(client_begin(&cfg));
     TEST_ASSERT_FALSE(protocore_ssh_client_up());
 }
 
 // A null configuration is not one.
 static void test_a_null_configuration_does_not_start(void)
 {
-    TEST_ASSERT_FALSE(protocore_ssh_client_begin(NULL));
+    TEST_ASSERT_FALSE(client_begin(NULL));
     TEST_ASSERT_FALSE(protocore_ssh_client_up());
 }
 
 // Ending returns the role to where it began, so a slot is not left claimed behind it.
 static void test_end_returns_the_role_to_idle(void)
 {
-    protocore_ssh_client_end();
+    client_end();
     TEST_ASSERT_EQUAL(PROTOCORE_SSH_CLIENT_IDLE, SshClient.state());
     TEST_ASSERT_FALSE(protocore_ssh_client_up());
 }
@@ -79,16 +100,16 @@ static void test_end_returns_the_role_to_idle(void)
 // Ending twice, or ending something never started, is not an error.
 static void test_end_is_idempotent(void)
 {
-    protocore_ssh_client_end();
-    protocore_ssh_client_end();
+    client_end();
+    client_end();
     TEST_ASSERT_EQUAL(PROTOCORE_SSH_CLIENT_IDLE, SshClient.state());
 }
 
 // Polling an idle role does nothing and does not invent a connection.
 static void test_polling_an_idle_role_is_inert(void)
 {
-    protocore_ssh_client_poll();
-    protocore_ssh_client_poll();
+    client_poll();
+    client_poll();
     TEST_ASSERT_EQUAL(PROTOCORE_SSH_CLIENT_IDLE, SshClient.state());
 }
 

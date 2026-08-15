@@ -21,9 +21,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_CONFIG_IO
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief Type of a config field (selects the typed get/set used). */
 typedef enum PROTO_ENUM_PACKED
@@ -54,8 +54,8 @@ int protocore_config_export(const char *ns, const protocore_cfg_field *fields, s
  */
 int protocore_config_import(const char *ns, const protocore_cfg_field *fields, size_t n, const char *text, size_t len);
 
-#endif // PROTOCORE_ENABLE_CONFIG_IO
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_CONFIG_IO
 
 #endif // PROTOCORE_CONFIG_IO_H

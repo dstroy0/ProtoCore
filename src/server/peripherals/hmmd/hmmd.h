@@ -48,9 +48,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_HMMD
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief Range gates the HMMD reports energy for (gate 0..15). */
 #define PROTOCORE_HMMD_GATES 16
@@ -174,8 +174,8 @@ proto_bool protocore_hmmd_poll(void);
 /** @brief The most recently decoded report, or NULL before the first one arrives. */
 const HmmdReport *protocore_hmmd_last(void);
 
-#endif // PROTOCORE_ENABLE_HMMD
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_HMMD
 
 #endif // PROTOCORE_HMMD_H

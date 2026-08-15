@@ -57,7 +57,7 @@ GEN = {
 
 # The guards the Format Code workflow runs. src_banned takes --all there.
 CHECK_DEFAULT = ["owned_context", "test_coverage", "src_banned", "duplicate_symbols", "frame_specs",
-                 "coverage_xml", "version_sites", "version_stamps"]
+                 "coverage_xml", "version_sites", "version_stamps", "test_matrix"]
 
 CHECK = {
     "owned_context": "check.check_owned_context",
@@ -74,6 +74,7 @@ CHECK = {
     "comments": "check.check_comments",
     "examples": "check.check_examples",
     "layering": "check.check_layering",
+    "test_matrix": "check.check_test_matrix",
 }
 
 # Flags a guard needs to match how the workflow invokes it.
@@ -89,6 +90,7 @@ BASELINE_ARGS = {
     "null_ctx": ["--baseline"],
     "comments": ["--save"],
     "test_coverage": ["--save"],
+    "test_matrix": ["--baseline"],
 }
 BASELINE_DEFAULT = ["owned_context", "src_banned"]
 

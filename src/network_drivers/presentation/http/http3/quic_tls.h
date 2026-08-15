@@ -35,6 +35,8 @@
 
 #if PROTOCORE_ENABLE_HTTP3
 
+PROTOCORE_BEGIN_DECLS
+
 #include "crypto/hash/sha256.h"
 #include "network_drivers/presentation/http/http3/quic_crypto.h"
 #include "network_drivers/presentation/http/http3/quic_tp.h"
@@ -141,5 +143,8 @@ QuicPacketKeys *protocore_quic_tls_keys(QuicTls *qt, int level, proto_bool is_se
 /** @brief The client's parsed transport parameters (valid once the ClientHello is processed). */
 const QuicTransportParams *protocore_quic_tls_peer_params(const QuicTls *qt);
 
+PROTOCORE_END_DECLS
+
 #endif // PROTOCORE_ENABLE_HTTP3
+
 #endif // PROTOCORE_QUIC_TLS_H

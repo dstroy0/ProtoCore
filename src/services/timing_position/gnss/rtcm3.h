@@ -29,9 +29,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_NTRIP_CASTER
+
+PROTOCORE_BEGIN_DECLS
 
 #define RTCM3_PREAMBLE 0xD3u ///< frame start byte
 #define RTCM3_HDR_LEN 3      ///< preamble (1) + 6 reserved bits + 10-bit length (2)
@@ -131,8 +131,8 @@ size_t protocore_rtcm3_build_1006(uint8_t *out, size_t cap, uint16_t station_id,
  */
 proto_bool protocore_rtcm3_parse_1005(const uint8_t *payload, uint16_t payload_len, Rtcm3StationArp *out);
 
-#endif // PROTOCORE_ENABLE_NTRIP_CASTER
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_NTRIP_CASTER
 
 #endif // PROTOCORE_RTCM3_H

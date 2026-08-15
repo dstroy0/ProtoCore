@@ -29,9 +29,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_NTRIP_CASTER
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief NTRIP protocol revision detected in / used for a request or response. */
 typedef enum PROTO_ENUM_PACKED
@@ -110,8 +110,8 @@ size_t protocore_ntrip_build_str_record(char *out, size_t cap, const NtripMount 
 size_t protocore_ntrip_build_sourcetable(char *out, size_t cap, NtripVersion version, const NtripMount *mounts,
                                          size_t mount_count);
 
-#endif // PROTOCORE_ENABLE_NTRIP_CASTER
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_NTRIP_CASTER
 
 #endif // PROTOCORE_NTRIP_CASTER_H

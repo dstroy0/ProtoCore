@@ -24,9 +24,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_NETADAPT
+
+PROTOCORE_BEGIN_DECLS
 
 /**
  * @brief Recommend a TCP receive window / RX buffer size (bytes) from the free heap.
@@ -53,8 +53,8 @@ uint32_t protocore_netadapt_window(uint32_t free_heap, uint32_t reserve, uint32_
 proto_bool protocore_netadapt_dhcp_fallback(uint32_t elapsed_ms, uint32_t attempts, uint32_t timeout_ms,
                                             uint32_t max_attempts);
 
-#endif // PROTOCORE_ENABLE_NETADAPT
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_NETADAPT
 
 #endif // PROTOCORE_NETADAPT_H

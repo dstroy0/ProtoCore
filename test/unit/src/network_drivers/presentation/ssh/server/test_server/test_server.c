@@ -15,6 +15,29 @@
 
 #include <unity.h>
 
+// The protocol handler this server registers, reached through its namespace.
+static const ProtoHandler *ssh_handler(void)
+{
+    SshServer.proto_handler(SshServer.internal);
+    return SshServer.handler;
+}
+
+
+// The remote-forward listener table, reached through the server namespace.
+static int rfwd_listener_open(uint16_t bind_port)
+{
+    SshServer.bind_port = bind_port;
+    SshServer.rfwd_listener_open(SshServer.internal);
+    return SshServer.i32;
+}
+
+static void rfwd_listener_close(int handle)
+{
+    SshServer.handle = handle;
+    SshServer.rfwd_listener_close(SshServer.internal);
+}
+
+
 void setUp(void)
 {
 }
@@ -30,7 +53,7 @@ void tearDown(void)
 // layer. It has to hand back a handler, or nothing dispatches to SSH at all.
 static void test_sec4_1_the_ssh_handler_is_published(void)
 {
-    const ProtoHandler *h = ssh_protocore_handler();
+    const ProtoHandler *h = ssh_handler();
     TEST_ASSERT_NOT_NULL(h);
 }
 
@@ -38,7 +61,7 @@ static void test_sec4_1_the_ssh_handler_is_published(void)
 // events the session loop raises all have somewhere to go.
 static void test_sec4_1_the_handler_covers_accept_data_and_close(void)
 {
-    const ProtoHandler *h = ssh_protocore_handler();
+    const ProtoHandler *h = ssh_handler();
     TEST_ASSERT_NOT_NULL(h->on_accept);
     TEST_ASSERT_NOT_NULL(h->on_data);
     TEST_ASSERT_NOT_NULL(h->on_close);
@@ -48,14 +71,14 @@ static void test_sec4_1_the_handler_covers_accept_data_and_close(void)
 // password change, the forward pump - so it takes the poll the loop offers.
 static void test_sec4_1_the_handler_takes_the_poll(void)
 {
-    const ProtoHandler *h = ssh_protocore_handler();
+    const ProtoHandler *h = ssh_handler();
     TEST_ASSERT_NOT_NULL(h->on_poll);
 }
 
 // The accessor is a view of one instance, not a fresh handler per call.
 static void test_sec4_1_the_handler_is_one_instance(void)
 {
-    TEST_ASSERT_EQUAL_PTR(ssh_protocore_handler(), ssh_protocore_handler());
+    TEST_ASSERT_EQUAL_PTR(ssh_handler(), ssh_handler());
 }
 
 #if PROTOCORE_SSH_PORT_FORWARD
@@ -69,7 +92,7 @@ static void test_sec7_2_the_forward_handler_is_published_and_distinct(void)
 {
     const ProtoHandler *rf = ssh_protocore_rfwd_handler();
     TEST_ASSERT_NOT_NULL(rf);
-    TEST_ASSERT_TRUE(rf != ssh_protocore_handler());
+    TEST_ASSERT_TRUE(rf != ssh_handler());
 }
 
 static void test_sec7_2_the_forward_handler_covers_its_events(void)
@@ -94,48 +117,48 @@ static void test_sec7_2_the_forward_handler_is_one_instance(void)
 // connections for forwarding are to be accepted." The caller names a port and gets a handle back.
 static void test_sec7_1_a_binding_gets_a_listener(void)
 {
-    const int h = ssh_rfwd_listener_open(48080);
+    const int h = rfwd_listener_open(48080);
     TEST_ASSERT_GREATER_OR_EQUAL_INT(0, h);
-    ssh_rfwd_listener_close(h);
+    rfwd_listener_close(h);
 }
 
 // Closing gives the listener back, so the next binding can have one.
 static void test_sec7_1_closing_returns_the_listener(void)
 {
-    const int a = ssh_rfwd_listener_open(48081);
+    const int a = rfwd_listener_open(48081);
     TEST_ASSERT_GREATER_OR_EQUAL_INT(0, a);
-    ssh_rfwd_listener_close(a);
+    rfwd_listener_close(a);
 
-    const int b = ssh_rfwd_listener_open(48082);
+    const int b = rfwd_listener_open(48082);
     TEST_ASSERT_GREATER_OR_EQUAL_INT(0, b);
-    ssh_rfwd_listener_close(b);
+    rfwd_listener_close(b);
 }
 
 // Two bindings at once are two different sockets, or one would accept the other's connections.
 static void test_sec7_1_two_bindings_get_two_listeners(void)
 {
-    const int a = ssh_rfwd_listener_open(48083);
-    const int b = ssh_rfwd_listener_open(48084);
+    const int a = rfwd_listener_open(48083);
+    const int b = rfwd_listener_open(48084);
     TEST_ASSERT_GREATER_OR_EQUAL_INT(0, a);
     if (b >= 0)
     {
         TEST_ASSERT_TRUE(a != b);
-        ssh_rfwd_listener_close(b);
+        rfwd_listener_close(b);
     }
-    ssh_rfwd_listener_close(a);
+    rfwd_listener_close(a);
 }
 
 // A handle that was never opened, or one outside the pool, closes nothing rather than stopping
 // somebody else's listener.
 static void test_sec7_1_closing_a_bad_handle_is_inert(void)
 {
-    ssh_rfwd_listener_close(-1);
-    ssh_rfwd_listener_close(0x7FFFFFFF);
+    rfwd_listener_close(-1);
+    rfwd_listener_close(0x7FFFFFFF);
 
-    const int h = ssh_rfwd_listener_open(48085);
+    const int h = rfwd_listener_open(48085);
     TEST_ASSERT_GREATER_OR_EQUAL_INT(0, h);
-    ssh_rfwd_listener_close(h - 1000); // not this one
-    ssh_rfwd_listener_close(h);
+    rfwd_listener_close(h - 1000); // not this one
+    rfwd_listener_close(h);
 }
 #endif // PROTOCORE_SSH_PORT_FORWARD
 

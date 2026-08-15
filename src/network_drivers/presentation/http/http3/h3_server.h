@@ -21,9 +21,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_HTTP3
+
+PROTOCORE_BEGIN_DECLS
 
 #include "network_drivers/presentation/http/http3/quic_server.h" // QuicServerRequestFn: the seam this fills
 
@@ -101,8 +101,8 @@ void protocore_h3_server_request(void *app, uint32_t conn_id, uint64_t stream_id
  */
 void protocore_h3_server_rng(uint8_t *out, size_t len);
 
-#endif // PROTOCORE_ENABLE_HTTP3
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_HTTP3
 
 #endif // PROTOCORE_H3_SERVER_H

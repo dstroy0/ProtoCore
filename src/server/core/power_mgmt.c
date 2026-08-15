@@ -85,7 +85,7 @@ static void power_decide(struct PowerMgmtInternal *restrict ctx)
     }
     else
     {
-        p.throttled = PROTO_FALSE;
+        p.throttled = was_throttled; // no reading crosses no threshold, so the held state stands
     }
 
     // A supply that just failed under load gets a gentle restart rather than an immediate return to

@@ -37,9 +37,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_POWER_MGMT
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief Governor limits. Temperatures in whole degrees C; frequencies in MHz. */
 typedef struct
@@ -142,8 +142,8 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern PowerMgmtNs Power;
 
-#endif // PROTOCORE_ENABLE_POWER_MGMT
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_POWER_MGMT
 
 #endif // PROTOCORE_POWER_MGMT_H

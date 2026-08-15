@@ -27,9 +27,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_ENOCEAN
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief ESP3 sync byte that starts every telegram. */
 #define ESP3_SYNC 0x55
@@ -118,8 +118,8 @@ proto_bool protocore_erp1_parse(const uint8_t *data, uint16_t len, protocore_erp
 uint16_t protocore_erp1_build(uint8_t *out, uint16_t cap, uint8_t rorg, const uint8_t *payload, uint8_t payload_len,
                               uint32_t sender_id, uint8_t status);
 
-#endif // PROTOCORE_ENABLE_ENOCEAN
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_ENOCEAN
 
 #endif // PROTOCORE_ENOCEAN_H

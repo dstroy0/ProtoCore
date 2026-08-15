@@ -20,6 +20,8 @@
  * and the scalar arithmetic mod L are shared. Both paths are byte-identical by construction.
  */
 
+#if PROTOCORE_ENABLE_ED25519
+
 #include "crypto/asymmetric/ed25519.h"
 #include "crypto/asymmetric/curve25519.h" // protocore_gf + field ops (native / non-S3 path)
 #include "crypto/asymmetric/fe25519.h"    // MODMULT dies: canonical uint32[8] field on the RSA accelerator
@@ -27,10 +29,12 @@
 #include "crypto/ct_eq.h" // protocore_ct_eq
 #include "crypto/hash/sha512.h"
 #include "mmgr/secure.h" // protocore_secure_wipe
-#ifdef PROTOCORE_FE25519_MPI_HW
+#if PROTOCORE_FE25519_MPI_HW
 #include "crypto/asymmetric/ed25519_comb_table.h" // fixed-base comb ED_COMB[i][j] = (j+1)*256^i*B; drives the MODMULT sign
 #endif
+
 PROTOCORE_CRYPTO_HOT
+PROTOCORE_BEGIN_DECLS
 
 // --- Shared constants -------------------------------------------------------
 
@@ -120,7 +124,7 @@ static proto_bool ed_scalar_canonical(const uint8_t s[32])
     return PROTO_FALSE; // S == L is out of range
 }
 
-#ifdef PROTOCORE_FE25519_MPI_HW
+#if PROTOCORE_FE25519_MPI_HW
 // ===================== ESP32-S3 Edwards point arithmetic on the RSA/MPI field ============================
 // The curve constants as canonical uint32[8] (each word = protocore_gf limb 2i | limb 2i+1 << 16 of the radix-2^16
 // constants below; the point arithmetic is byte-identical to the protocore_gf path, verified by the RFC 8032 KAT).
@@ -369,7 +373,9 @@ static proto_bool ed_verify_recompute(uint8_t out[32], const uint8_t S[32], cons
     protocore_fe_hw_disable();
     return PROTO_TRUE;
 }
-#else
+#endif
+
+#if !PROTOCORE_FE25519_MPI_HW
 // --- Curve constants (radix-2^16 field elements, little-endian limbs) --------
 
 static const protocore_gf GF0 = {0};
@@ -578,7 +584,7 @@ static proto_bool ed_verify_recompute(uint8_t out[32], const uint8_t S[32], cons
     ed_pack(out, p);
     return PROTO_TRUE;
 }
-#endif // PROTOCORE_FE25519_MPI_HW
+#endif // !PROTOCORE_FE25519_MPI_HW (SW path)
 
 // --- Public API -------------------------------------------------------------
 
@@ -677,3 +683,7 @@ proto_bool protocore_ed25519_verify(uint8_t *work, const uint8_t pub[32], const 
     }
     return ct_verify32(sig, t) == 0; // R == S*B - h*A ?
 }
+
+PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_ED25519

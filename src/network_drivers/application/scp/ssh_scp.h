@@ -26,9 +26,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_SSH_SCP
+
+PROTOCORE_BEGIN_DECLS
 
 /**
  * @brief Serve SCP uploads onto the mounted filesystem. Installs the channel exec-"scp" + data
@@ -37,8 +37,8 @@ PROTOCORE_BEGIN_DECLS
  */
 void protocore_ssh_scp_begin(void);
 
-#endif // PROTOCORE_ENABLE_SSH_SCP
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_SSH_SCP
 
 #endif // PROTOCORE_SSH_SCP_H

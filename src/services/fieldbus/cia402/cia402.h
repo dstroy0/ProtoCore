@@ -26,6 +26,8 @@
 
 #if PROTOCORE_ENABLE_CIA402
 
+PROTOCORE_BEGIN_DECLS
+
 #include "services/fieldbus/canopen/canopen.h"
 
 // --- object dictionary indices (sub-index 0 unless noted); the comment gives the CANopen type ---
@@ -184,6 +186,8 @@ size_t protocore_cia402_pack_command(uint8_t *buf, size_t cap, uint16_t controlw
 /// Unpack a TPDO payload = Statusword (u16 LE) + Actual (i32 LE) into @p statusword / @p actual
 /// (a typical CSP/PP TPDO map). Returns false if len < 6.
 proto_bool protocore_cia402_unpack_status(const uint8_t *buf, size_t len, uint16_t *statusword, int32_t *actual);
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_CIA402
 

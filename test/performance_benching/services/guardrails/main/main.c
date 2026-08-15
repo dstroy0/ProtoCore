@@ -38,14 +38,24 @@ void dbench_run(void)
         volatile uint8_t sink8 = 0;
         volatile int sinki = 0;
 
+        Guardrails.floors.heap_min = heap_min;
+        Guardrails.floors.frag_min_block = frag_min;
+        Guardrails.floors.stack_min = stack_min;
+
         // Threshold evaluator - a handful of unsigned compares + bit-ORs; cheap, so large N.
-        DBENCH_OP("protocore_guardrail_eval all-clear", 200000,
-                  sink8 += protocore_guardrail_eval(&clear, heap_min, frag_min, stack_min));
-        DBENCH_OP("protocore_guardrail_eval all-breach", 200000,
-                  sink8 += protocore_guardrail_eval(&breach, heap_min, frag_min, stack_min));
+        Guardrails.health = &clear;
+        DBENCH_OP("Guardrails.eval all-clear", 200000,
+                  Guardrails.eval(Guardrails.internal); sink8 += Guardrails.breaches);
+
+        Guardrails.health = &breach;
+        DBENCH_OP("Guardrails.eval all-breach", 200000,
+                  Guardrails.eval(Guardrails.internal); sink8 += Guardrails.breaches);
 
         // JSON serializer - one snprintf of four uint32s; still cheap, moderate N.
-        DBENCH_OP("protocore_health_json", 50000, sinki += protocore_health_json(&clear, json, sizeof(json)));
+        Guardrails.health = &clear;
+        Guardrails.out.out = json;
+        Guardrails.out.cap = sizeof(json);
+        DBENCH_OP("Guardrails.json", 50000, Guardrails.json(Guardrails.internal); sinki += Guardrails.n);
 
         (void)sink8;
         (void)sinki;

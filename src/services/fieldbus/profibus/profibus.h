@@ -24,9 +24,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_PROFIBUS
+
+PROTOCORE_BEGIN_DECLS
 
 // PROFIBUS telegram delimiters + Frame Control values.
 #define PB_SD1 0x10 ///< start delimiter: no data.
@@ -77,8 +77,8 @@ typedef struct
 /** @brief Validate + parse an SD1 / SD2 / SD3 telegram (FCS + ED checked). @return true if well-formed. */
 proto_bool protocore_pb_parse(const uint8_t *frame, size_t len, PbTelegram *out);
 
-#endif // PROTOCORE_ENABLE_PROFIBUS
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_PROFIBUS
 
 #endif // PROTOCORE_PROFIBUS_H

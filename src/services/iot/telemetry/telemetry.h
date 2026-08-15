@@ -38,9 +38,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_TELEMETRY
+
+PROTOCORE_BEGIN_DECLS
 
 /**
  * @brief A moving window over the last @c cap samples, in storage the caller provides.
@@ -170,8 +170,8 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern TelemetryNs Telemetry;
 
-#endif // PROTOCORE_ENABLE_TELEMETRY
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_TELEMETRY
 
 #endif // PROTOCORE_TELEMETRY_H

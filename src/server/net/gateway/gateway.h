@@ -34,9 +34,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_GATEWAY
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief Southbound radio / bus kind a port bridges (informational + topic hint). */
 typedef enum PROTO_ENUM_PACKED
@@ -153,8 +153,8 @@ uint16_t protocore_gateway_topic(const protocore_gateway_msg *msg, char *buf, ui
  */
 void protocore_gateway_get_stats(protocore_gateway_stats *out);
 
-#endif // PROTOCORE_ENABLE_GATEWAY
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_GATEWAY
 
 #endif // PROTOCORE_GATEWAY_H

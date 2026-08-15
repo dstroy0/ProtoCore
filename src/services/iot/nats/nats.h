@@ -54,9 +54,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_NATS
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief The server-to-client operation a parse decoded (NATS Protocol). */
 typedef enum PROTO_ENUM_PACKED
@@ -207,8 +207,8 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern NatsNs Nats;
 
-#endif // PROTOCORE_ENABLE_NATS
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_NATS
 
 #endif // PROTOCORE_NATS_H

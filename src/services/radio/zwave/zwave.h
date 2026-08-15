@@ -31,9 +31,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_ZWAVE
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief Z-Wave Serial API control bytes / frame markers. */
 #define ZWAVE_SOF 0x01 ///< start of a data frame
@@ -80,8 +80,8 @@ proto_bool protocore_zwave_is_can(uint8_t b);
 /** @brief Write the single ACK byte into @p out. @return 1, or 0 if @p cap < 1. */
 uint16_t protocore_zwave_build_ack(uint8_t *out, uint16_t cap);
 
-#endif // PROTOCORE_ENABLE_ZWAVE
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_ZWAVE
 
 #endif // PROTOCORE_ZWAVE_H

@@ -24,9 +24,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_NEED_NMEA0183
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief A parsed NMEA 0183 sentence. Field pointers reference the caller's buffer. */
 typedef struct Nmea0183
@@ -281,8 +281,8 @@ typedef struct
  */
 proto_bool protocore_nmea0183_parse_vlw(const Nmea0183 *m, protocore_nmea_vlw *out);
 
-#endif // PROTOCORE_NEED_NMEA0183
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_NEED_NMEA0183
 
 #endif // PROTOCORE_NMEA0183_H

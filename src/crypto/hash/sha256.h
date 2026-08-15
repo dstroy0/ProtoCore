@@ -20,6 +20,10 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths, PROTOCORE_HAS_HW_SHA for the context below
 
+#if PROTOCORE_ENABLE_SHA256
+
+PROTOCORE_BEGIN_DECLS
+
 /** @brief SHA-256 digest length in bytes. */
 #define PROTOCORE_SHA256_DIGEST_LEN 32
 
@@ -30,46 +34,20 @@
 // protocore_config.h, which gates it on the accelerator and sums it into the secure arena.
 
 /**
- * @brief Streaming SHA-256 context.
- *
- * Holds the running hash state so data can be fed in multiple chunks. Backs the per-packet HMAC (run
- * on every inbound and outbound SSH packet) and the KEX exchange-hash assembled from several
- * separately-encoded fields, so hardware acceleration matters for bulk throughput, not just handshakes.
- *
- * The context owns nothing. The caller hands it ::PROTOCORE_SHA256_BORROW working bytes, aligned for
- * @c uint32_t and alive until the digest comes back, and the context splits them into the regions
- * below at fixed offsets.
+ * @brief Streaming SHA-256 context. Forward-declared only: the definition is the compiled arm's, in
+ * sha256.c, so a consumer holds it by pointer and sizes its storage with PROTOCORE_SHA256_BORROW.
  */
-#if PROTOCORE_HAS_HW_SHA
-#include <mbedtls/sha256.h>
-typedef struct
-{
-    mbedtls_sha256_context mbed; ///< HW-accelerated SHA-256 state (ESP32 mbedtls).
-} protocore_sha256_ctx;
-#else
-typedef struct
-{
-    uint32_t s[8];  ///< Running hash words (H0..H7).
-    uint64_t n;     ///< Total bytes processed so far.
-    uint8_t *rx;    ///< Caller storage: bytes as they arrive, compressed when a block fills.
-    uint8_t *tx;    ///< Caller storage: the padded last block, composed whole so no rx byte carries in.
-    uint32_t *fs;   ///< Caller storage: the state copy the padded blocks compress into.
-    uint32_t rxlen; ///< Bytes valid in rx.
-} protocore_sha256_ctx;
-// The three pointers above are the caller's, so a struct copy aliases the original's storage and
-// finalizing the copy writes through it. final() leaves the context running, so read it in place.
-#endif
-
-PROTOCORE_BEGIN_DECLS
+struct protocore_sha256;
 
 /**
- * @brief Start a digest in @p ctx, working out of the caller's @p work.
- * @param work  PROTOCORE_SHA256_BORROW bytes, aligned for uint32_t, alive until final() returns.
+ * @brief Bind @p storage as a context and start a digest.
+ * @param storage  PROTOCORE_SHA256_BORROW bytes, aligned for uint32_t, alive until final() returns.
+ * @return the context, or NULL if @p storage is NULL.
  */
-void protocore_sha256_init(protocore_sha256_ctx *ctx, uint8_t *work);
+struct protocore_sha256 *protocore_sha256_init_impl(void *storage);
 
 /** @brief Feed @p len bytes of @p data into the running hash. */
-void protocore_sha256_update(protocore_sha256_ctx *ctx, const uint8_t *data, size_t len);
+void protocore_sha256_update_impl(struct protocore_sha256 *ctx, const uint8_t *data, size_t len);
 
 /**
  * @brief Pad, compress the last block, and write the 32-byte digest.
@@ -80,15 +58,16 @@ void protocore_sha256_update(protocore_sha256_ctx *ctx, const uint8_t *data, siz
  *
  * @param digest  Output buffer, PROTOCORE_SHA256_DIGEST_LEN bytes.
  */
-void protocore_sha256_final(protocore_sha256_ctx *ctx, uint8_t digest[PROTOCORE_SHA256_DIGEST_LEN]);
+void protocore_sha256_final_impl(struct protocore_sha256 *ctx, uint8_t digest[PROTOCORE_SHA256_DIGEST_LEN]);
 
-/** @brief One call: hash @p len bytes of @p data out of @p work into @p digest. */
-void protocore_sha256(uint8_t *work, const uint8_t *data, size_t len, uint8_t digest[PROTOCORE_SHA256_DIGEST_LEN]);
+/** @brief One call: hash @p len bytes of @p data out of @p storage into @p digest. */
+void protocore_sha256_hash_impl(void *storage, const uint8_t *data, size_t len,
+                                uint8_t digest[PROTOCORE_SHA256_DIGEST_LEN]);
 
 /**
  * @brief SHA-256: hand it storage, take back a digest.
  *
- * @var Sha256Ns::init    bind @c ctx to the caller's working bytes and start a digest
+ * @var Sha256Ns::init    bind PROTOCORE_SHA256_BORROW bytes as a context and start a digest
  * @var Sha256Ns::update  feed the running digest a chunk
  * @var Sha256Ns::final   pad, compress the last block, write the 32 bytes out
  * @var Sha256Ns::hash    the three above in one call, for a message already whole
@@ -98,10 +77,10 @@ void protocore_sha256(uint8_t *work, const uint8_t *data, size_t len, uint8_t di
  */
 typedef struct
 {
-    void (*init)(protocore_sha256_ctx *ctx, uint8_t *work);
-    void (*update)(protocore_sha256_ctx *ctx, const uint8_t *data, size_t len);
-    void (*final)(protocore_sha256_ctx *ctx, uint8_t digest[PROTOCORE_SHA256_DIGEST_LEN]);
-    void (*hash)(uint8_t *work, const uint8_t *data, size_t len, uint8_t digest[PROTOCORE_SHA256_DIGEST_LEN]);
+    struct protocore_sha256 *(*const init)(void *storage);
+    void (*const update)(struct protocore_sha256 *ctx, const uint8_t *data, size_t len);
+    void (*const final)(struct protocore_sha256 *ctx, uint8_t digest[PROTOCORE_SHA256_DIGEST_LEN]);
+    void (*const hash)(void *storage, const uint8_t *data, size_t len, uint8_t digest[PROTOCORE_SHA256_DIGEST_LEN]);
 } Sha256Ns;
 
 /**
@@ -112,9 +91,15 @@ typedef struct
  *
  * `unused` because this header reaches files that take none of it.
  */
-static const Sha256Ns sha256 __attribute__((unused)) = {protocore_sha256_init, protocore_sha256_update,
-                                                        protocore_sha256_final, protocore_sha256};
+static const Sha256Ns sha256 __attribute__((unused)) = {
+    .init = protocore_sha256_init_impl,
+    .update = protocore_sha256_update_impl,
+    .final = protocore_sha256_final_impl,
+    .hash = protocore_sha256_hash_impl,
+};
 
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_SHA256
 
 #endif // PROTOCORE_SHA256_H

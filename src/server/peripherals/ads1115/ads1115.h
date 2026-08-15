@@ -28,9 +28,9 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths and PROTOCORE_INLINE
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_ADS1115
+
+PROTOCORE_BEGIN_DECLS
 
 #define ADS1115_REG_CONVERSION 0x00 ///< conversion result register
 #define ADS1115_REG_CONFIG 0x01     ///< configuration register
@@ -75,8 +75,8 @@ proto_bool protocore_ads1115_read_raw(uint8_t channel, uint8_t gain, int16_t *ra
 /** @brief Single-shot read of @p channel at @p gain, converted to microvolts in @p microvolts. */
 proto_bool protocore_ads1115_read_uv(uint8_t channel, uint8_t gain, int32_t *microvolts);
 
-#endif // PROTOCORE_ENABLE_ADS1115
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_ADS1115
 
 #endif // PROTOCORE_ADS1115_H

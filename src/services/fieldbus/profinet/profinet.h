@@ -23,9 +23,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_PROFINET
+
+PROTOCORE_BEGIN_DECLS
 
 #define PN_FRAMEID_DCP_HELLO 0xFEFC
 #define PN_FRAMEID_DCP_GETSET 0xFEFD
@@ -87,8 +87,8 @@ typedef void (*protocore_pn_dcp_block_cb)(uint8_t option, uint8_t suboption, con
  */
 proto_bool protocore_pn_dcp_walk(const uint8_t *blocks, size_t len, protocore_pn_dcp_block_cb cb, void *arg);
 
-#endif // PROTOCORE_ENABLE_PROFINET
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_PROFINET
 
 #endif // PROTOCORE_PROFINET_H

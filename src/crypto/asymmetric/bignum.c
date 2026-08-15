@@ -25,12 +25,15 @@
  * ─────────────────────────────────────────────────────────────────────────
  */
 
+#if PROTOCORE_ENABLE_BIGNUM
+
 #include "crypto/asymmetric/bignum.h"
 #include "crypto/crypto_opt.h"
 #include "mmgr/protomem.h"
 #include "mmgr/secure.h"
 
 PROTOCORE_CRYPTO_HOT
+PROTOCORE_BEGIN_DECLS
 
 // The modexp below borrows its Montgomery temporaries from the secure pool as one working set. It does not
 // know where that memory comes from or that releasing it wipes - it asks for a resource and uses it.
@@ -153,3 +156,7 @@ int bn_dh_validate(const protocore_bignum *v)
 // ---------------------------------------------------------------------------
 // Modular exponentiation: out = base^exp mod group14_p
 // ---------------------------------------------------------------------------
+
+PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_BIGNUM

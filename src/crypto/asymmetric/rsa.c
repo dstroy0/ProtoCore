@@ -9,6 +9,15 @@
  * (native) is the test reference path. Protocol-agnostic - raw big-endian key material in, no SSH.
  */
 
+#if PROTOCORE_ENABLE_RSA
+
+#if PROTOCORE_HAS_HW_BIGNUM
+#include <mbedtls/md.h>
+#include <mbedtls/rsa.h>
+#endif
+#if !PROTOCORE_HAS_HW_BIGNUM
+#include "crypto/asymmetric/bignum.h" // SW path RSA
+#endif
 #include "crypto/asymmetric/rsa.h"
 #include "crypto/crypto_opt.h"
 #include "crypto/ct_eq.h" // protocore_ct_eq
@@ -17,13 +26,8 @@
 #include "mmgr/protomem.h"
 #include "mmgr/secure.h"
 
-#if PROTOCORE_HAS_HW_BIGNUM
-#include <mbedtls/md.h>
-#include <mbedtls/rsa.h>
-#else
-#include "crypto/asymmetric/bignum.h" // SW path RSA
-#endif
 PROTOCORE_CRYPTO_HOT
+PROTOCORE_BEGIN_DECLS
 
 // ---------------------------------------------------------------------------
 // DigestInfo for SHA-256 / SHA-512 (PKCS#1 v1.5, RFC 8017 §9.2, RFC 5754)
@@ -109,7 +113,9 @@ int protocore_rsa_verify(const uint8_t n_be[PROTOCORE_RSA_KEY_BYTES], const uint
     return rc == 0 ? 0 : -1;
 }
 
-#else
+#endif
+
+#if !PROTOCORE_HAS_HW_BIGNUM
 
 // ---------------------------------------------------------------------------
 // SW path RSA. NOT constant time - see SECURITY.md, timing.
@@ -403,4 +409,8 @@ int protocore_rsa_verify(const uint8_t n_be[PROTOCORE_RSA_KEY_BYTES], const uint
     return protocore_ct_eq(em, expected, PROTOCORE_RSA_KEY_BYTES) ? 0 : -1;
 }
 
-#endif // PROTOCORE_HAS_HW_BIGNUM
+#endif // !PROTOCORE_HAS_HW_BIGNUM (SW path)
+
+PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_RSA

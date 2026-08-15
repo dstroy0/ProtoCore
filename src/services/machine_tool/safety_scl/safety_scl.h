@@ -47,9 +47,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_SAFETY_SCL
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief Where a safety connection stands. */
 typedef enum PROTO_ENUM_PACKED
@@ -154,8 +154,8 @@ SclFault protocore_scl_fault(const SclConn *c);
  */
 uint32_t protocore_scl_next_counter(uint32_t counter, uint32_t counter_mod);
 
-#endif // PROTOCORE_ENABLE_SAFETY_SCL
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_SAFETY_SCL
 
 #endif // PROTOCORE_SAFETY_SCL_H

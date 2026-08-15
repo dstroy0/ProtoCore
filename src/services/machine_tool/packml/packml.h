@@ -32,9 +32,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_PACKML
+
+PROTOCORE_BEGIN_DECLS
 
 /**
  * @brief PackML unit / machine state. The underlying value is the ISA-TR88.00.02 StateCurrent wire number
@@ -174,8 +174,8 @@ PackMlState protocore_packml_svc_state(void);
 /** @brief Fill @p out with the current Status/Admin tag snapshot. */
 void protocore_packml_svc_status(PackMlStatus *out);
 
-#endif // PROTOCORE_ENABLE_PACKML
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_PACKML
 
 #endif // PROTOCORE_PACKML_H

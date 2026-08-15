@@ -50,6 +50,8 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for proto_bool and the widths
 
+#if PROTOCORE_ENABLE_ECDSA
+
 PROTOCORE_BEGIN_DECLS
 
 /** @brief P-256 private key (scalar d) length. */
@@ -121,5 +123,7 @@ proto_bool protocore_ecdsa_p256_ecdh(uint8_t shared_x[PROTOCORE_ECDSA_P256_COORD
                                      const uint8_t priv[PROTOCORE_ECDSA_P256_PRIV_LEN]);
 
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_ECDSA
 
 #endif // PROTOCORE_ECDSA_H

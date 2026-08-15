@@ -9,6 +9,8 @@
  * requested length. The PRF is protocore_hmac_sha256, which carries the hardware acceleration underneath it.
  */
 
+#if PROTOCORE_ENABLE_KDF
+
 #include "crypto/kdf/kdf.h"
 #include "crypto/crypto_opt.h"
 #include "crypto/mac/hmac_sha256.h"
@@ -17,6 +19,7 @@
 #include "mmgr/secure.h" // the secure pool: the PRF's working set, wiped on release
 
 PROTOCORE_CRYPTO_HOT
+PROTOCORE_BEGIN_DECLS
 
 // Transient KDF working set, borrowed from the secure pool per call and wiped on release. K(i) is
 // derived from Ki, so it is key material and never lands on the stack.
@@ -70,3 +73,7 @@ proto_bool protocore_kdf_ctr_hmac_sha256(const uint8_t *ki, size_t ki_len, const
     protocore_secure_release(mark);
     return PROTO_TRUE;
 }
+
+PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_KDF

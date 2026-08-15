@@ -31,9 +31,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_ENIP
+
+PROTOCORE_BEGIN_DECLS
 
 #define EIP_HEADER_SIZE 24
 
@@ -125,8 +125,8 @@ typedef struct
  */
 proto_bool protocore_eip_parse_list_identity(const uint8_t *data, size_t data_len, EipIdentity *out);
 
-#endif // PROTOCORE_ENABLE_ENIP
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_ENIP
 
 #endif // PROTOCORE_ENIP_H

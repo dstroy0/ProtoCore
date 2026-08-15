@@ -6,6 +6,8 @@
  * @brief MD4 / MD5 / HMAC-MD5 implementation (see md.h). Little-endian word order.
  */
 
+#if PROTOCORE_ENABLE_MD
+
 #include "crypto/hash/md.h"
 #include "crypto/crypto_opt.h"
 #include "mmgr/endian.h"
@@ -13,6 +15,7 @@
 #include "mmgr/secure.h" // the secure pool: digest state, wiped on release
 
 PROTOCORE_CRYPTO_HOT
+PROTOCORE_BEGIN_DECLS
 
 // The one definition of MdCtx - private to this TU (md.h forward-declares it). External callers hold it
 // only via pointer and get their storage from protocore_md_wants() below, so the size never leaves this file.
@@ -316,3 +319,7 @@ void protocore_hmac_md5(const uint8_t *key, size_t key_len, const uint8_t *msg, 
     protocore_md5_update(&c, inner, 16);
     protocore_md5_final(&c, out);
 }
+
+PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_MD

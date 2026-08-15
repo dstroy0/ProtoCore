@@ -23,9 +23,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_OCIT
+
+PROTOCORE_BEGIN_DECLS
 
 // OCIT message types: wire bytes compared/emitted, so integer constants in a namespacing struct.
 // (OcitMsg is the parsed-message struct below; these codes live in OcitMsgType.)
@@ -74,8 +74,8 @@ proto_bool protocore_ocit_parse(const uint8_t *msg, size_t len, OcitMsg *out);
 /** @brief Read a big-endian uint16 value out of a parsed message (0 if the type/length does not match). */
 uint16_t protocore_ocit_value_u16(const OcitMsg *m);
 
-#endif // PROTOCORE_ENABLE_OCIT
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_OCIT
 
 #endif // PROTOCORE_OCIT_H

@@ -28,9 +28,9 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths and PROTOCORE_INLINE
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_SHT3X
+
+PROTOCORE_BEGIN_DECLS
 
 // Single-shot measurement commands (16-bit, sent most-significant byte first).
 #define SHT3X_CMD_SINGLE_HIGH 0x2400 ///< high repeatability, no clock stretching
@@ -68,8 +68,8 @@ proto_bool protocore_sht3x_begin(uint8_t addr);
  */
 proto_bool protocore_sht3x_read(int32_t *temp_mc, int32_t *rh_mpct);
 
-#endif // PROTOCORE_ENABLE_SHT3X
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_SHT3X
 
 #endif // PROTOCORE_SHT3X_H

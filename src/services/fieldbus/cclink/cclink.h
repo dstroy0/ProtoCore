@@ -22,9 +22,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_CCLINK
+
+PROTOCORE_BEGIN_DECLS
 
 // CC-Link command bytes: wire values compared/emitted, so integer constants in a namespacing struct.
 #define CCLINK_CMD_REFRESH 0x01 ///< cyclic refresh (master <-> station process image).
@@ -68,8 +68,8 @@ void protocore_cclink_set_bit(uint8_t *bits, size_t bit_len, size_t index, proto
 /** @brief Read word @p index (0-based, little-endian) from a word-device byte array. */
 uint16_t protocore_cclink_get_word(const uint8_t *words, size_t word_len, size_t index);
 
-#endif // PROTOCORE_ENABLE_CCLINK
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_CCLINK
 
 #endif // PROTOCORE_CCLINK_H

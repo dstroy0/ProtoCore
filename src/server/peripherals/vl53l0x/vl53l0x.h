@@ -23,9 +23,9 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths and PROTOCORE_INLINE
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_VL53L0X
+
+PROTOCORE_BEGIN_DECLS
 
 #define VL53L0X_REG_SYSRANGE_START 0x00
 #define VL53L0X_REG_SYSTEM_INTERRUPT_CLEAR 0x0B
@@ -59,8 +59,8 @@ proto_bool protocore_vl53l0x_begin(uint8_t addr);
  */
 proto_bool protocore_vl53l0x_read_mm(uint16_t *mm);
 
-#endif // PROTOCORE_ENABLE_VL53L0X
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_VL53L0X
 
 #endif // PROTOCORE_VL53L0X_H

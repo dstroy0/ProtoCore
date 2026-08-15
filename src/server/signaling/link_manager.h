@@ -22,9 +22,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_LINK_MANAGER
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief Interface kind (informational; selection is by priority). Stored in a uint8_t field and
  *  compared, so integer constants in a namespacing struct - cast-free. */
@@ -103,8 +103,8 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern LinkManagerNs Link;
 
-#endif // PROTOCORE_ENABLE_LINK_MANAGER
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_LINK_MANAGER
 
 #endif // PROTOCORE_LINK_MANAGER_H

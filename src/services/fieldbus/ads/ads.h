@@ -41,9 +41,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_ADS
+
+PROTOCORE_BEGIN_DECLS
 
 #define ADS_TCP_PORT 48898     ///< AMS/TCP listening port (0xBF02)
 #define ADS_AMSTCP_HDR_LEN 6   ///< reserved(2) + length(4)
@@ -254,8 +254,8 @@ typedef void (*AdsNotificationSampleFn)(uint32_t notification_handle, const uint
 proto_bool protocore_ads_parse_notification(const uint8_t *data, size_t data_len, AdsNotificationSampleFn on_sample,
                                             void *user);
 
-#endif // PROTOCORE_ENABLE_ADS
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_ADS
 
 #endif // PROTOCORE_ADS_H

@@ -21,9 +21,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_HTTP3
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief Largest value a QUIC varint can hold (2^62 - 1). */
 #define QUIC_VARINT_MAX 0x3FFFFFFFFFFFFFFFull
@@ -40,8 +40,8 @@ size_t protocore_quic_varint_encode(uint8_t *out, size_t cap, uint64_t value);
  */
 proto_bool protocore_quic_varint_decode(const uint8_t *in, size_t len, uint64_t *value, size_t *consumed);
 
-#endif // PROTOCORE_ENABLE_HTTP3
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_HTTP3
 
 #endif // PROTOCORE_QUIC_VARINT_H

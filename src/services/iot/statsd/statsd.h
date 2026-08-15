@@ -43,9 +43,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_STATSD
+
+PROTOCORE_BEGIN_DECLS
 
 /**
  * @brief The four metric types of github.com/statsd/statsd `docs/metric_types.md`.
@@ -156,8 +156,8 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern StatsdNs Statsd;
 
-#endif // PROTOCORE_ENABLE_STATSD
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_STATSD
 
 #endif // PROTOCORE_STATSD_H

@@ -26,9 +26,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_SMB
+
+PROTOCORE_BEGIN_DECLS
 
 /**
  * @brief Wrap an NTLMSSP NEGOTIATE token in a SPNEGO GSS-API InitialContextToken (the first
@@ -52,8 +52,8 @@ proto_bool protocore_spnego_parse_response(const uint8_t *blob, size_t len, cons
  */
 size_t protocore_spnego_wrap_authenticate(const uint8_t *ntlm, size_t protocore_ntlm_len, uint8_t *out, size_t cap);
 
-#endif // PROTOCORE_ENABLE_SMB
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_SMB
 
 #endif // PROTOCORE_SPNEGO_H

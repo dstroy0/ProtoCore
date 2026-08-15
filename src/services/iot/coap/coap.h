@@ -39,9 +39,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_COAP
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief RFC 7252 sec 3 Code: a 3-bit class and a 5-bit detail, written "c.dd". */
 #define COAP_CODE(c, dd) ((uint8_t)(((c) << 5) | ((dd) & 0x1F)))
@@ -237,8 +237,8 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern CoapNs Coap;
 
-#endif // PROTOCORE_ENABLE_COAP
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_COAP
 
 #endif // PROTOCORE_COAP_H

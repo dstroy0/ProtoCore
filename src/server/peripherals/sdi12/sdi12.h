@@ -26,9 +26,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_SDI12
+
+PROTOCORE_BEGIN_DECLS
 
 #define SDI12_CRC_POLY 0xA001u ///< CRC-16 polynomial (reflected 0x8005), init 0x0000
 #define SDI12_CRC_CHARS 3      ///< the CRC is appended as 3 printable ASCII octets
@@ -132,8 +132,8 @@ void protocore_sdi12_crc_encode(uint16_t crc, char out[SDI12_CRC_CHARS]);
  */
 proto_bool protocore_sdi12_check_crc(const char *resp, size_t len);
 
-#endif // PROTOCORE_ENABLE_SDI12
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_SDI12
 
 #endif // PROTOCORE_SDI12_H

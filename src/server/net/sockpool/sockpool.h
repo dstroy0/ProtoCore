@@ -21,9 +21,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_SOCKPOOL
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief One connection slot. */
 typedef struct
@@ -73,8 +73,8 @@ proto_bool protocore_sockpool_find(const SockPool *p, uint32_t id, size_t *idx);
 /** @brief Count of in-use slots. */
 size_t protocore_sockpool_in_use(const SockPool *p);
 
-#endif // PROTOCORE_ENABLE_SOCKPOOL
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_SOCKPOOL
 
 #endif // PROTOCORE_SOCKPOOL_H

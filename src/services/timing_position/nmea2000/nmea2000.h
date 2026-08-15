@@ -28,6 +28,8 @@
 
 #if PROTOCORE_ENABLE_NMEA2000
 
+PROTOCORE_BEGIN_DECLS
+
 #include "services/fieldbus/j1939/j1939.h" // reuses the J1939 29-bit identifier codec
 #include "shared/can/can.h"
 
@@ -422,5 +424,8 @@ proto_bool protocore_n2k_decode_water_depth(const uint8_t *payload, size_t len, 
  */
 proto_bool protocore_n2k_decode_vessel_heading(const uint8_t *payload, size_t len, N2kVesselHeading *out);
 
+PROTOCORE_END_DECLS
+
 #endif // PROTOCORE_ENABLE_NMEA2000
+
 #endif // PROTOCORE_NMEA2000_H

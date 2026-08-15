@@ -35,9 +35,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_SIMATIC
+
+PROTOCORE_BEGIN_DECLS
 
 // 3964R control characters (wire bytes).
 #define SIMATIC_STX 0x02
@@ -211,8 +211,8 @@ proto_bool protocore_rk512_parse_header(const uint8_t *buf, size_t len, Rk512Hea
 proto_bool protocore_rk512_parse_reaction(const uint8_t *buf, size_t len, uint16_t *status, const uint8_t **data,
                                           size_t *dlen);
 
-#endif // PROTOCORE_ENABLE_SIMATIC
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_SIMATIC
 
 #endif // PROTOCORE_SIMATIC_H

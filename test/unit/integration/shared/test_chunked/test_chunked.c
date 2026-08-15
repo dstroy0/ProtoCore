@@ -191,12 +191,8 @@ void setUp()
         HttpConn.slot = i;
         HttpConn.reset(HttpConn.internal);
     }
-#if PROTOCORE_ENABLE_WEBSOCKET
     Ws.init(Ws.internal);
-#endif
-#if PROTOCORE_ENABLE_SSE
     Sse.init(Sse.internal);
-#endif
     tcp_capture_reset();
     mock_sndbuf_set(MOCK_SNDBUF_DEFAULT);
     g_log_status = 0;
@@ -369,8 +365,10 @@ void test_chunked_source_overreport_clamped()
 void test_hex_u32_size_line()
 {
     char out[8];
-    size_t nd = protocore_hex_u32(0, out);
-    TEST_ASSERT_EQUAL_size_t(1, nd);
+    Hex.args.v = 0;
+    Hex.io.out = out;
+    Hex.u32(Hex.internal);
+    TEST_ASSERT_EQUAL_size_t(1, (size_t)Hex.u8);
     TEST_ASSERT_EQUAL_HEX8('0', out[0]);
 
     const uint32_t vals[] = {1, 0xF, 0x10, 0x5A0, 0xFFFF, 0x12345, 0xFFFFFFFFu};
@@ -378,9 +376,11 @@ void test_hex_u32_size_line()
     {
         char ref[16];
         int rn = snprintf(ref, sizeof(ref), "%x", (unsigned)vals[i]);
-        nd = protocore_hex_u32(vals[i], out);
-        TEST_ASSERT_EQUAL_size_t((size_t)rn, nd);
-        TEST_ASSERT_EQUAL_MEMORY(ref, out, nd);
+        Hex.args.v = vals[i];
+        Hex.io.out = out;
+        Hex.u32(Hex.internal);
+        TEST_ASSERT_EQUAL_size_t((size_t)rn, (size_t)Hex.u8);
+        TEST_ASSERT_EQUAL_MEMORY(ref, out, (size_t)Hex.u8);
     }
 }
 

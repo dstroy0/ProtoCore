@@ -21,12 +21,12 @@
 #define PROTOCORE_EXC_DECODER_H
 
 #include "protocore_config.h"
-#include "server/storage/mnt.h" // protocore_mnt_backend - the store a dump is offloaded to
-
-PROTOCORE_BEGIN_DECLS
 
 #if PROTOCORE_ENABLE_EXC_DECODER
 
+PROTOCORE_BEGIN_DECLS
+
+#include "server/storage/mnt.h" // protocore_mnt_backend - the store a dump is offloaded to
 #ifndef PROTOCORE_EXC_MAX_FRAMES
 #define PROTOCORE_EXC_MAX_FRAMES 32 ///< backtrace frames retained (a panic rarely exceeds this).
 #endif
@@ -132,8 +132,8 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern ExcDecoderNs Exc;
 
-#endif // PROTOCORE_ENABLE_EXC_DECODER
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_EXC_DECODER
 
 #endif // PROTOCORE_EXC_DECODER_H

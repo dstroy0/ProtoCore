@@ -27,9 +27,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_BACNET
+
+PROTOCORE_BEGIN_DECLS
 
 #define BVLC_TYPE_BIP 0x81 ///< BVLC Type: BACnet/IP
 #define BVLC_HEADER_SIZE 4 ///< type + function + 2-octet length
@@ -184,8 +184,8 @@ size_t protocore_apdu_build_i_am(uint8_t *buf, size_t cap, uint32_t device_insta
 size_t protocore_apdu_build_read_property(uint8_t *buf, size_t cap, uint8_t invoke_id, uint8_t max_resp,
                                           uint16_t object_type, uint32_t object_instance, uint32_t property_id);
 
-#endif // PROTOCORE_ENABLE_BACNET
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_BACNET
 
 #endif // PROTOCORE_BACNET_H

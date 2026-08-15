@@ -37,9 +37,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_MELSEC
+
+PROTOCORE_BEGIN_DECLS
 
 #define MELSEC_3E_REQ_SUBHEADER0 0x50 ///< request subheader (sent 0x50 then 0x00)
 #define MELSEC_3E_REQ_SUBHEADER1 0x00
@@ -111,8 +111,8 @@ typedef struct
 /** @brief Parse + validate a binary 3E response (subheader 0xD0 0x00, length, end code, data). */
 proto_bool protocore_melsec_parse_response(const uint8_t *buf, size_t len, MelsecResponse *out);
 
-#endif // PROTOCORE_ENABLE_MELSEC
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_MELSEC
 
 #endif // PROTOCORE_MELSEC_H

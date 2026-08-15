@@ -40,9 +40,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_FLOW_EXPORT
+
+PROTOCORE_BEGIN_DECLS
 
 #define FLOW_V5_HEADER_SIZE 24 ///< octets in the vendor Version 5 packet header
 #define FLOW_V5_RECORD_SIZE 48 ///< octets in one vendor Version 5 flow record
@@ -190,8 +190,8 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern FlowExportNs FlowExport;
 
-#endif // PROTOCORE_ENABLE_FLOW_EXPORT
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_FLOW_EXPORT
 
 #endif // PROTOCORE_FLOW_EXPORT_H

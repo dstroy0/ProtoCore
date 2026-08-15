@@ -6,6 +6,8 @@
  * @brief chacha20-poly1305@openssh.com - implementation. See protocore_chachapoly.h.
  */
 
+#if PROTOCORE_ENABLE_CHACHAPOLY
+
 #include "crypto/aead/chachapoly.h"
 #include "crypto/cipher/chacha20.h"
 #include "crypto/crypto_opt.h"
@@ -14,6 +16,7 @@
 #include "mmgr/secure.h" // the secure pool: AEAD working state, wiped on release
 
 PROTOCORE_CRYPTO_HOT
+PROTOCORE_BEGIN_DECLS
 
 // The 8-byte ChaCha nonce is the sequence number as a big-endian uint64 (POKE_U64 in OpenSSH); a
 // 32-bit SSH seqnr leaves the high 4 bytes zero.
@@ -105,3 +108,7 @@ proto_bool protocore_chachapoly_decrypt(const uint8_t key[PROTOCORE_CHACHAPOLY_K
     protocore_secure_release(mark);
     return PROTO_TRUE;
 }
+
+PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_CHACHAPOLY

@@ -14,6 +14,53 @@
 
 #include <unity.h>
 
+// The file-transfer request classifier, reached through the app-server namespace.
+static proto_bool classify_file_transfer_request(uint8_t slot, uint32_t channel, const uint8_t *rtype,
+                                                 uint32_t rtype_len, const uint8_t *payload, size_t len,
+                                                 size_t *off, proto_bool *accept)
+{
+    SshAppServer.slot = slot;
+    SshAppServer.channel = channel;
+    SshAppServer.req.rtype = rtype;
+    SshAppServer.req.rtype_len = rtype_len;
+    SshAppServer.req.payload = payload;
+    SshAppServer.req.len = len;
+    SshAppServer.req.off = off ? *off : 0u;
+    SshAppServer.accept = accept ? *accept : PROTO_FALSE;
+    SshAppServer.classify(SshAppServer.internal);
+    if (off)
+    {
+        *off = SshAppServer.req.off;
+    }
+    if (accept)
+    {
+        *accept = SshAppServer.accept;
+    }
+    return SshAppServer.accept;
+}
+
+
+// The connection layer, reached through its namespace.
+static int chan_alloc(uint8_t slot)
+{
+    SshConnection.chan.slot = slot;
+    SshConnection.chan_alloc(SshConnection.internal);
+    return SshConnection.i32;
+}
+
+static void channel_set_sftp_open_cb(SshSftpOpenCb cb)
+{
+    SshConnection.sftp_open_cb = cb;
+    SshConnection.set_sftp_open_cb(SshConnection.internal);
+}
+
+static void channel_set_scp_open_cb(SshScpOpenCb cb)
+{
+    SshConnection.scp_open_cb = cb;
+    SshConnection.set_scp_open_cb(SshConnection.internal);
+}
+
+
 #if PROTOCORE_ENABLE_SSH_SFTP || PROTOCORE_ENABLE_SSH_SCP
 
 static int s_sftp_opens;
@@ -47,7 +94,7 @@ static void scp_open(uint8_t i, uint32_t channel, const char *cmd, uint32_t cmd_
 // A channel open as "session", which is what both requests arrive on.
 static uint32_t open_session_channel(void)
 {
-    const int cid = protocore_ssh_chan_alloc(0);
+    const int cid = chan_alloc(0);
     TEST_ASSERT_GREATER_OR_EQUAL_INT(0, cid);
     SshChannel *c = &ssh_chan[0][cid];
     c->open = PROTO_TRUE;
@@ -68,19 +115,19 @@ void setUp(void)
     s_opened_channel = 0xFFFFFFFFu;
     s_scp_command[0] = '\0';
 #if PROTOCORE_ENABLE_SSH_SFTP
-    protocore_ssh_channel_set_sftp_open_cb(sftp_open);
+    channel_set_sftp_open_cb(sftp_open);
 #endif
 #if PROTOCORE_ENABLE_SSH_SCP
-    protocore_ssh_channel_set_scp_open_cb(scp_open);
+    channel_set_scp_open_cb(scp_open);
 #endif
 }
 void tearDown(void)
 {
 #if PROTOCORE_ENABLE_SSH_SFTP
-    protocore_ssh_channel_set_sftp_open_cb(NULL);
+    channel_set_sftp_open_cb(NULL);
 #endif
 #if PROTOCORE_ENABLE_SSH_SCP
-    protocore_ssh_channel_set_scp_open_cb(NULL);
+    channel_set_scp_open_cb(NULL);
 #endif
 }
 
@@ -105,7 +152,7 @@ static proto_bool classify(const char *rtype, uint32_t rtype_len, const char *ar
     const size_t n = put_str(payload, 0, arg, arg_len);
     size_t off = 0;
     proto_bool accept = PROTO_FALSE;
-    ssh_classify_file_transfer_request(0, channel, (const uint8_t *)rtype, rtype_len, payload, n, &off, &accept);
+    classify_file_transfer_request(0, channel, (const uint8_t *)rtype, rtype_len, payload, n, &off, &accept);
     return accept;
 }
 
@@ -153,7 +200,7 @@ static void test_sec6_5_subsystem_without_its_argument_is_not_accepted(void)
     uint8_t payload[4] = {0, 0, 0, 8}; // claims eight bytes that are not there
     size_t off = 0;
     proto_bool accept = PROTO_FALSE;
-    ssh_classify_file_transfer_request(0, ch, (const uint8_t *)"subsystem", 9, payload, sizeof(payload), &off, &accept);
+    classify_file_transfer_request(0, ch, (const uint8_t *)"subsystem", 9, payload, sizeof(payload), &off, &accept);
     TEST_ASSERT_FALSE(accept);
     TEST_ASSERT_EQUAL_INT(0, s_sftp_opens);
 }

@@ -14,18 +14,78 @@
 
 #include <unity.h>
 
+// The SSH slot-to-stream binding, reached through its namespace: set the members a call takes,
+// invoke it, read the outcome off the same handle.
+static uint8_t net_slot_free(void)
+{
+    SshNetwork.slot_free(SshNetwork.internal);
+    return SshNetwork.u8;
+}
+
+static int net_claim(uint8_t ssh_slot, int handle, SshStreamKind kind)
+{
+    SshNetwork.ssh_slot = ssh_slot;
+    SshNetwork.handle = handle;
+    SshNetwork.stream.kind = kind;
+    SshNetwork.claim(SshNetwork.internal);
+    return SshNetwork.i32;
+}
+
+static void net_release(uint8_t ssh_slot)
+{
+    SshNetwork.ssh_slot = ssh_slot;
+    SshNetwork.release(SshNetwork.internal);
+}
+
+static proto_bool net_owns(uint8_t ssh_slot, uint8_t conn_slot)
+{
+    SshNetwork.ssh_slot = ssh_slot;
+    SshNetwork.conn_slot = conn_slot;
+    SshNetwork.owns(SshNetwork.internal);
+    return SshNetwork.ok;
+}
+
+static int net_write_msg(uint8_t ssh_slot, const uint8_t *msg, size_t len)
+{
+    SshNetwork.ssh_slot = ssh_slot;
+    SshNetwork.msg.payload = msg;
+    SshNetwork.msg.len = len;
+    SshNetwork.write_msg(SshNetwork.internal);
+    return SshNetwork.i32;
+}
+
+static int net_write_msg_at(uint8_t ssh_slot, size_t plen)
+{
+    SshNetwork.ssh_slot = ssh_slot;
+    SshNetwork.msg.plen = plen;
+    SshNetwork.write_msg_at(SshNetwork.internal);
+    return SshNetwork.i32;
+}
+
+static uint8_t *net_payload_region(uint8_t ssh_slot, size_t *cap)
+{
+    SshNetwork.ssh_slot = ssh_slot;
+    SshNetwork.payload_region(SshNetwork.internal);
+    if (cap)
+    {
+        *cap = SshNetwork.read_args.cap;
+    }
+    return SshNetwork.region;
+}
+
+
 void setUp(void)
 {
     for (uint8_t i = 0; i < MAX_SSH_CONNS; i++)
     {
-        SshNetwork.release(i);
+        net_release(i);
     }
 }
 void tearDown(void)
 {
     for (uint8_t i = 0; i < MAX_SSH_CONNS; i++)
     {
-        SshNetwork.release(i);
+        net_release(i);
     }
 }
 
@@ -36,11 +96,11 @@ void tearDown(void)
 // A free pool hands out the lowest slot, and keeps handing out the next one as they are taken.
 static void test_free_slots_are_handed_out_lowest_first(void)
 {
-    TEST_ASSERT_EQUAL_UINT8(0u, SshNetwork.slot_free());
-    TEST_ASSERT_EQUAL_INT(0, SshNetwork.claim(0, 3, SSH_STREAM_ACCEPTED));
+    TEST_ASSERT_EQUAL_UINT8(0u, net_slot_free());
+    TEST_ASSERT_EQUAL_INT(0, net_claim(0, 3, SSH_STREAM_ACCEPTED));
     if (MAX_SSH_CONNS > 1)
     {
-        TEST_ASSERT_EQUAL_UINT8(1u, SshNetwork.slot_free());
+        TEST_ASSERT_EQUAL_UINT8(1u, net_slot_free());
     }
 }
 
@@ -49,9 +109,9 @@ static void test_a_full_pool_reports_no_free_slot(void)
 {
     for (uint8_t i = 0; i < MAX_SSH_CONNS; i++)
     {
-        TEST_ASSERT_EQUAL_INT(0, SshNetwork.claim(i, (int)(i + 1), SSH_STREAM_ACCEPTED));
+        TEST_ASSERT_EQUAL_INT(0, net_claim(i, (int)(i + 1), SSH_STREAM_ACCEPTED));
     }
-    TEST_ASSERT_EQUAL_UINT8(0xFFu, SshNetwork.slot_free());
+    TEST_ASSERT_EQUAL_UINT8(0xFFu, net_slot_free());
 }
 
 // Releasing puts the slot back.
@@ -59,39 +119,39 @@ static void test_release_returns_the_slot_to_the_pool(void)
 {
     for (uint8_t i = 0; i < MAX_SSH_CONNS; i++)
     {
-        TEST_ASSERT_EQUAL_INT(0, SshNetwork.claim(i, (int)(i + 1), SSH_STREAM_ACCEPTED));
+        TEST_ASSERT_EQUAL_INT(0, net_claim(i, (int)(i + 1), SSH_STREAM_ACCEPTED));
     }
-    TEST_ASSERT_EQUAL_UINT8(0xFFu, SshNetwork.slot_free());
-    SshNetwork.release(0);
-    TEST_ASSERT_EQUAL_UINT8(0u, SshNetwork.slot_free());
+    TEST_ASSERT_EQUAL_UINT8(0xFFu, net_slot_free());
+    net_release(0);
+    TEST_ASSERT_EQUAL_UINT8(0u, net_slot_free());
 }
 
 // A slot already bound is not re-bound underneath the connection using it.
 static void test_a_bound_slot_cannot_be_claimed_again(void)
 {
-    TEST_ASSERT_EQUAL_INT(0, SshNetwork.claim(0, 3, SSH_STREAM_ACCEPTED));
-    TEST_ASSERT_EQUAL_INT(-1, SshNetwork.claim(0, 4, SSH_STREAM_ACCEPTED));
-    TEST_ASSERT_TRUE(SshNetwork.owns(0, 3)); // still the first stream
+    TEST_ASSERT_EQUAL_INT(0, net_claim(0, 3, SSH_STREAM_ACCEPTED));
+    TEST_ASSERT_EQUAL_INT(-1, net_claim(0, 4, SSH_STREAM_ACCEPTED));
+    TEST_ASSERT_TRUE(net_owns(0, 3)); // still the first stream
 }
 
 // 0xFF is the free marker, so a handle that would collide with it cannot be bound.
 static void test_the_free_marker_is_not_a_usable_handle(void)
 {
-    TEST_ASSERT_EQUAL_INT(-1, SshNetwork.claim(0, 0xFF, SSH_STREAM_ACCEPTED));
-    TEST_ASSERT_EQUAL_INT(-1, SshNetwork.claim(0, 0x100, SSH_STREAM_ACCEPTED));
+    TEST_ASSERT_EQUAL_INT(-1, net_claim(0, 0xFF, SSH_STREAM_ACCEPTED));
+    TEST_ASSERT_EQUAL_INT(-1, net_claim(0, 0x100, SSH_STREAM_ACCEPTED));
 }
 
 // A negative handle is not a stream.
 static void test_a_negative_handle_is_refused(void)
 {
-    TEST_ASSERT_EQUAL_INT(-1, SshNetwork.claim(0, -1, SSH_STREAM_ACCEPTED));
+    TEST_ASSERT_EQUAL_INT(-1, net_claim(0, -1, SSH_STREAM_ACCEPTED));
 }
 
 // A slot outside the pool binds nothing.
 static void test_slot_past_the_pool_is_refused(void)
 {
-    TEST_ASSERT_EQUAL_INT(-1, SshNetwork.claim(MAX_SSH_CONNS, 3, SSH_STREAM_ACCEPTED));
-    SshNetwork.release(MAX_SSH_CONNS); // inert
+    TEST_ASSERT_EQUAL_INT(-1, net_claim(MAX_SSH_CONNS, 3, SSH_STREAM_ACCEPTED));
+    net_release(MAX_SSH_CONNS); // inert
 }
 
 // ---------------------------------------------------------------------------
@@ -100,19 +160,19 @@ static void test_slot_past_the_pool_is_refused(void)
 
 static void test_owns_answers_only_for_the_bound_stream(void)
 {
-    TEST_ASSERT_EQUAL_INT(0, SshNetwork.claim(0, 7, SSH_STREAM_ACCEPTED));
-    TEST_ASSERT_TRUE(SshNetwork.owns(0, 7));
-    TEST_ASSERT_FALSE(SshNetwork.owns(0, 8));
+    TEST_ASSERT_EQUAL_INT(0, net_claim(0, 7, SSH_STREAM_ACCEPTED));
+    TEST_ASSERT_TRUE(net_owns(0, 7));
+    TEST_ASSERT_FALSE(net_owns(0, 8));
 }
 
 static void test_owns_is_false_for_an_unbound_slot(void)
 {
-    TEST_ASSERT_FALSE(SshNetwork.owns(0, 7));
+    TEST_ASSERT_FALSE(net_owns(0, 7));
 }
 
 static void test_owns_is_false_past_the_pool(void)
 {
-    TEST_ASSERT_FALSE(SshNetwork.owns(MAX_SSH_CONNS, 7));
+    TEST_ASSERT_FALSE(net_owns(MAX_SSH_CONNS, 7));
 }
 
 // Bindings are per slot: two connections on two streams do not answer for each other.
@@ -123,12 +183,12 @@ static void test_bindings_are_per_slot(void)
         TEST_IGNORE_MESSAGE("needs a second slot");
         return;
     }
-    TEST_ASSERT_EQUAL_INT(0, SshNetwork.claim(0, 5, SSH_STREAM_ACCEPTED));
-    TEST_ASSERT_EQUAL_INT(0, SshNetwork.claim(1, 6, SSH_STREAM_ACCEPTED));
-    TEST_ASSERT_TRUE(SshNetwork.owns(0, 5));
-    TEST_ASSERT_TRUE(SshNetwork.owns(1, 6));
-    TEST_ASSERT_FALSE(SshNetwork.owns(0, 6));
-    TEST_ASSERT_FALSE(SshNetwork.owns(1, 5));
+    TEST_ASSERT_EQUAL_INT(0, net_claim(0, 5, SSH_STREAM_ACCEPTED));
+    TEST_ASSERT_EQUAL_INT(0, net_claim(1, 6, SSH_STREAM_ACCEPTED));
+    TEST_ASSERT_TRUE(net_owns(0, 5));
+    TEST_ASSERT_TRUE(net_owns(1, 6));
+    TEST_ASSERT_FALSE(net_owns(0, 6));
+    TEST_ASSERT_FALSE(net_owns(1, 5));
 }
 
 // The same handle number means different streams in the two pools, so releasing one binding does
@@ -140,21 +200,21 @@ static void test_release_disturbs_only_its_own_slot(void)
         TEST_IGNORE_MESSAGE("needs a second slot");
         return;
     }
-    TEST_ASSERT_EQUAL_INT(0, SshNetwork.claim(0, 5, SSH_STREAM_ACCEPTED));
-    TEST_ASSERT_EQUAL_INT(0, SshNetwork.claim(1, 6, SSH_STREAM_ACCEPTED));
-    SshNetwork.release(0);
-    TEST_ASSERT_FALSE(SshNetwork.owns(0, 5));
-    TEST_ASSERT_TRUE(SshNetwork.owns(1, 6));
+    TEST_ASSERT_EQUAL_INT(0, net_claim(0, 5, SSH_STREAM_ACCEPTED));
+    TEST_ASSERT_EQUAL_INT(0, net_claim(1, 6, SSH_STREAM_ACCEPTED));
+    net_release(0);
+    TEST_ASSERT_FALSE(net_owns(0, 5));
+    TEST_ASSERT_TRUE(net_owns(1, 6));
 }
 
 // A released slot can be bound again, which is what makes the pool a pool.
 static void test_a_released_slot_can_be_rebound(void)
 {
-    TEST_ASSERT_EQUAL_INT(0, SshNetwork.claim(0, 5, SSH_STREAM_ACCEPTED));
-    SshNetwork.release(0);
-    TEST_ASSERT_EQUAL_INT(0, SshNetwork.claim(0, 9, SSH_STREAM_ACCEPTED));
-    TEST_ASSERT_TRUE(SshNetwork.owns(0, 9));
-    TEST_ASSERT_FALSE(SshNetwork.owns(0, 5));
+    TEST_ASSERT_EQUAL_INT(0, net_claim(0, 5, SSH_STREAM_ACCEPTED));
+    net_release(0);
+    TEST_ASSERT_EQUAL_INT(0, net_claim(0, 9, SSH_STREAM_ACCEPTED));
+    TEST_ASSERT_TRUE(net_owns(0, 9));
+    TEST_ASSERT_FALSE(net_owns(0, 5));
 }
 
 // ---------------------------------------------------------------------------
@@ -167,29 +227,29 @@ static void test_a_released_slot_can_be_rebound(void)
 static void test_no_payload_region_without_a_stream(void)
 {
     size_t cap = 0xFFFFu;
-    TEST_ASSERT_NULL(SshNetwork.payload_region(0, &cap));
+    TEST_ASSERT_NULL(net_payload_region(0, &cap));
 }
 
 static void test_no_write_without_a_stream(void)
 {
     const uint8_t msg[] = {1, 2, 3, 4, 5};
-    TEST_ASSERT_EQUAL_INT(-1, SshNetwork.write_msg(0, msg, sizeof(msg)));
-    TEST_ASSERT_EQUAL_INT(-1, SshNetwork.write_msg_at(0, sizeof(msg)));
+    TEST_ASSERT_EQUAL_INT(-1, net_write_msg(0, msg, sizeof(msg)));
+    TEST_ASSERT_EQUAL_INT(-1, net_write_msg_at(0, sizeof(msg)));
 }
 
 static void test_no_write_past_the_pool(void)
 {
     const uint8_t msg[] = {1, 2, 3, 4, 5};
     size_t cap = 0;
-    TEST_ASSERT_NULL(SshNetwork.payload_region(MAX_SSH_CONNS, &cap));
-    TEST_ASSERT_EQUAL_INT(-1, SshNetwork.write_msg(MAX_SSH_CONNS, msg, sizeof(msg)));
-    TEST_ASSERT_EQUAL_INT(-1, SshNetwork.write_msg_at(MAX_SSH_CONNS, sizeof(msg)));
+    TEST_ASSERT_NULL(net_payload_region(MAX_SSH_CONNS, &cap));
+    TEST_ASSERT_EQUAL_INT(-1, net_write_msg(MAX_SSH_CONNS, msg, sizeof(msg)));
+    TEST_ASSERT_EQUAL_INT(-1, net_write_msg_at(MAX_SSH_CONNS, sizeof(msg)));
 }
 
 // A null capacity pointer is refused rather than written through.
 static void test_payload_region_requires_somewhere_to_report_the_capacity(void)
 {
-    TEST_ASSERT_NULL(SshNetwork.payload_region(0, NULL));
+    TEST_ASSERT_NULL(net_payload_region(0, NULL));
 }
 
 // ---------------------------------------------------------------------------

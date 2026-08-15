@@ -42,9 +42,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_TRACE_CAPTURE
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief One completed pre/post-trigger sample window, handed to the sink inline. */
 typedef struct
@@ -129,8 +129,8 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern TraceCaptureNs TraceCapture;
 
-#endif // PROTOCORE_ENABLE_TRACE_CAPTURE
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_TRACE_CAPTURE
 
 #endif // PROTOCORE_TRACE_CAPTURE_H

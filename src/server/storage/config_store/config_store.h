@@ -30,9 +30,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_CONFIG_STORE
+
+PROTOCORE_BEGIN_DECLS
 
 /**
  * @brief Open a configuration namespace (e.g. "wifi", "net"). Call once before
@@ -72,8 +72,8 @@ proto_bool protocore_config_erase(const char *key);
 /** @brief Erase every key in the open namespace. @return true on success. */
 proto_bool protocore_config_clear(void);
 
-#endif // PROTOCORE_ENABLE_CONFIG_STORE
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_CONFIG_STORE
 
 #endif // PROTOCORE_CONFIG_STORE_H

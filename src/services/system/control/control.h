@@ -34,9 +34,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_CONTROL
+
+PROTOCORE_BEGIN_DECLS
 
 #define CONTROL_UNBOUNDED 1e30f ///< sentinel for "no clamp" (well outside any real actuator range)
 
@@ -232,8 +232,8 @@ size_t pid_log_header(uint8_t *buf, size_t cap, const Pid *p, float dt);
 /// Write one 16-octet dense-binary log record. Returns PID_LOG_RECORD_LEN, or 0 if cap too small.
 size_t pid_log_record(uint8_t *buf, size_t cap, float setpoint, float measurement, float output, proto_bool saturated);
 
-#endif // PROTOCORE_ENABLE_CONTROL
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_CONTROL
 
 #endif // PROTOCORE_CONTROL_H

@@ -29,9 +29,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_DF1
+
+PROTOCORE_BEGIN_DECLS
 
 #define DF1_DLE 0x10
 #define DF1_STX 0x02
@@ -69,8 +69,8 @@ size_t protocore_df1_build_frame(uint8_t *buf, size_t cap, const uint8_t *data, 
 proto_bool protocore_df1_parse_frame(const uint8_t *buf, size_t len, Df1Check check, uint8_t *out, size_t out_cap,
                                      size_t *out_len);
 
-#endif // PROTOCORE_ENABLE_DF1
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_DF1
 
 #endif // PROTOCORE_DF1_H

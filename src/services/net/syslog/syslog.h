@@ -40,9 +40,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_SYSLOG
+
+PROTOCORE_BEGIN_DECLS
 
 /**
  * @brief RFC 5424 sec 6.2.1 Severity, the low three bits of PRIVAL (lower is more severe).
@@ -147,8 +147,8 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern SyslogNs Syslog;
 
-#endif // PROTOCORE_ENABLE_SYSLOG
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_SYSLOG
 
 #endif // PROTOCORE_SYSLOG_H

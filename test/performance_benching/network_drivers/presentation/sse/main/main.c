@@ -19,8 +19,12 @@ void dbench_run(void)
         DBENCH_BANNER("sse");
         volatile int sink = 0;
         static char buf[256];
-        DBENCH_OP("protocore_sse_format (data+event+id)", 200000,
-                  sink += protocore_sse_format(buf, sizeof(buf), "{\"temp\":21.4,\"rh\":48}", "telemetry", "42"));
+        Sse.out.buf = buf;
+        Sse.out.cap = sizeof(buf);
+        Sse.event_args.data = "{\"temp\":21.4,\"rh\":48}";
+        Sse.event_args.event = "telemetry";
+        Sse.event_args.event_id = "42";
+        DBENCH_OP("Sse.format (data+event+id)", 200000, Sse.format(Sse.internal); sink += Sse.n);
         (void)sink;
         DBENCH_DONE();
     }

@@ -24,9 +24,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_CSRF
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief Nonce length in bytes (hex-encoded in the token). */
 #define CSRF_NONCE_BYTES 6
@@ -63,8 +63,8 @@ proto_bool protocore_csrf_verify(const char *token);
 /** @brief Clear the secret and nonce counter (e.g. between tests). */
 void protocore_csrf_reset(void);
 
-#endif // PROTOCORE_ENABLE_CSRF
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_CSRF
 
 #endif // PROTOCORE_CSRF_H

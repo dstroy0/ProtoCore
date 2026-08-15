@@ -6,13 +6,14 @@
  * @brief HKDF-SHA256 and TLS 1.3 HKDF-Expand-Label (see protocore_hkdf.h).
  */
 
+#if PROTOCORE_ENABLE_HKDF
+
 #include "crypto/kdf/hkdf.h"
+#include "crypto/mac/hmac_sha256.h"
 #include "mmgr/protomem.h"
 #include "mmgr/protostr.h"
 
-#if (PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_TLS_SOFTWARE)
-
-#include "crypto/mac/hmac_sha256.h"
+PROTOCORE_BEGIN_DECLS
 
 // The caller's working bytes, split: the HMAC's own, the T(i) block, then the HkdfLabel.
 #define HKDF_OFF_HMAC 0u
@@ -111,4 +112,6 @@ void protocore_hkdf_expand_label(uint8_t *work, const uint8_t secret[PROTOCORE_H
     protocore_hkdf_expand_label_ctx(work, secret, label, NULL, 0, out, out_len, label_prefix);
 }
 
-#endif // PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_TLS_SOFTWARE
+PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_HKDF

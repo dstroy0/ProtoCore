@@ -21,9 +21,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_BLE_GATT
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief ATT opcodes (subset). */
 #define ATT_OP_ERROR_RSP 0x01        ///< [op][req-op][handle:2][error]
@@ -83,8 +83,8 @@ typedef struct
  */
 size_t protocore_gatt_char_json(const GattChar *chars, size_t n, char *out, size_t cap);
 
-#endif // PROTOCORE_ENABLE_BLE_GATT
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_BLE_GATT
 
 #endif // PROTOCORE_BLE_GATT_H

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // On-device CCOUNT microbenchmark for the JWT HS256 bearer-auth codec (services/security/jwt): the whole
-// verifier is pure crypto/codec - pc_jwt_verify_hs256() splits the compact token, checks the
+// verifier is pure crypto/codec - Jwt.verify_mac() splits the compact token, checks the
 // header "alg", recomputes base64url(HMAC-SHA-256(secret, "header.payload")) and compares it
 // constant-time against the signature; the claim parsers base64url-decode the payload and scan the
 // JSON. No sockets, no sessions, no heap - every call here runs the real production path (like
@@ -50,15 +50,28 @@ void dbench_run(void)
         char strbuf[32];
 
         // --- Crypto path: real HMAC-SHA-256 over ~100 bytes + base64url encode/compare (small N). ---
-        DBENCH_OP("pc_jwt_verify_hs256", 2000, sink += pc_jwt_verify_hs256(TOKEN, token_len, secret, secret_len));
-        DBENCH_OP("pc_jwt_bearer_valid", 2000, sink += pc_jwt_bearer_valid(auth_hdr, secret, secret_len));
+        Jwt.token.jws = TOKEN;
+        Jwt.token.jws_len = token_len;
+        Jwt.key.secret = secret;
+        Jwt.key.secret_len = secret_len;
+        DBENCH_OP("Jwt.verify_mac", 2000, Jwt.verify_mac(Jwt.internal); sink += Jwt.ok ? 1 : 0);
+
+        Jwt.token.credentials = auth_hdr;
+        DBENCH_OP("Jwt.verify_bearer", 2000, Jwt.verify_bearer(Jwt.internal); sink += Jwt.ok ? 1 : 0);
 
         // --- Codec path: base64url-decode the payload + scan JSON for a claim (medium N). ---
-        DBENCH_OP("pc_jwt_claim_int", 10000, sink += pc_jwt_claim_int(TOKEN, token_len, "exp", (long *)&lsink));
-        DBENCH_OP("pc_jwt_claim_str", 10000, sink += pc_jwt_claim_str(TOKEN, token_len, "sub", strbuf, sizeof(strbuf)));
+        Jwt.claim.name = "exp";
+        DBENCH_OP("Jwt.claim_int", 10000, Jwt.claim_int(Jwt.internal); lsink = Jwt.num; sink += Jwt.ok ? 1 : 0);
+
+        Jwt.claim.name = "sub";
+        Jwt.claim.out = strbuf;
+        Jwt.claim.out_cap = sizeof(strbuf);
+        DBENCH_OP("Jwt.claim_str", 10000, Jwt.claim_str(Jwt.internal); sink += Jwt.ok ? 1 : 0);
 
         // --- Pure string path: whole-token scope match, no decode (large N). ---
-        DBENCH_OP("pc_jwt_scope_allows", 50000, sink += pc_jwt_scope_allows(scope_claim, "admin"));
+        Jwt.scope.claim = scope_claim;
+        Jwt.scope.required = "admin";
+        DBENCH_OP("Jwt.scope_allows", 50000, Jwt.scope_allows(Jwt.internal); sink += Jwt.ok ? 1 : 0);
 
         (void)sink;
         (void)lsink;

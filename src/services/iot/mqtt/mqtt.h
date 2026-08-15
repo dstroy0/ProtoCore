@@ -38,9 +38,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_MQTT
+
+PROTOCORE_BEGIN_DECLS
 
 // ---------------------------------------------------------------------------
 // Literals
@@ -312,8 +312,8 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern MqttNs Mqtt;
 
-#endif // PROTOCORE_ENABLE_MQTT
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_MQTT
 
 #endif // PROTOCORE_MQTT_H

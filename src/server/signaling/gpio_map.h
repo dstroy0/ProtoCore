@@ -21,9 +21,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_GPIO_MAP
+
+PROTOCORE_BEGIN_DECLS
 
 /**
  * @brief Configured direction of a mapped pin (how the panel renders / drives it).
@@ -137,8 +137,8 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern GpioMapNs GpioMap;
 
-#endif // PROTOCORE_ENABLE_GPIO_MAP
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_GPIO_MAP
 
 #endif // PROTOCORE_GPIO_MAP_H

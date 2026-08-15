@@ -23,9 +23,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_NTCIP
+
+PROTOCORE_BEGIN_DECLS
 
 /**
  * @brief NTCIP object roots under 1.3.6.1.4.1.1206.4.2 (private.enterprises.nema.transportation.devices).
@@ -55,8 +55,8 @@ extern const size_t NTCIP_1203_DMS_MESSAGE_MULTI_LEN;
  */
 size_t protocore_ntcip_oid(const uint32_t *root, size_t root_len, uint32_t index, uint32_t *out, size_t out_cap);
 
-#endif // PROTOCORE_ENABLE_NTCIP
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_NTCIP
 
 #endif // PROTOCORE_NTCIP_H

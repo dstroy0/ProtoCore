@@ -22,8 +22,11 @@
 #ifndef PROTOCORE_HMAC_SHA256_H
 #define PROTOCORE_HMAC_SHA256_H
 
-#include "crypto/hash/sha256.h"
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths and PROTOCORE_BEGIN_DECLS
+
+#if PROTOCORE_ENABLE_HMAC_SHA256
+
+#include "crypto/hash/sha256.h"
 #include <stddef.h>
 #include <stdint.h>
 
@@ -86,5 +89,7 @@ void protocore_hmac_sha256_update(protocore_hmac_sha256_ctx *ctx, const uint8_t 
 void protocore_hmac_sha256_final(protocore_hmac_sha256_ctx *ctx, uint8_t mac[PROTOCORE_HMAC_SHA256_LEN]);
 
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_HMAC_SHA256
 
 #endif // PROTOCORE_HMAC_SHA256_H

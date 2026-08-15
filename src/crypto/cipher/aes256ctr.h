@@ -38,6 +38,9 @@
 #define PROTOCORE_AES256CTR_H
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths and PROTOCORE_BEGIN_DECLS
+
+#if PROTOCORE_ENABLE_AES256CTR
+
 #include <stddef.h>
 #include <stdint.h>
 
@@ -81,5 +84,7 @@ uint32_t protocore_aes256ctr_get_length(const uint8_t key[PROTOCORE_AES256CTR_KE
                                         const uint8_t counter[PROTOCORE_AES256CTR_CTR_LEN], const uint8_t enc4[4]);
 
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_AES256CTR
 
 #endif // PROTOCORE_AES256CTR_H

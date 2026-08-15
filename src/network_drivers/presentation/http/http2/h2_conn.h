@@ -27,6 +27,10 @@
 
 #if PROTOCORE_ENABLE_HTTP2
 
+#define PROTOCORE_H2_CONN_BORROW                                                                                       \
+
+PROTOCORE_BEGIN_DECLS
+
 #include "network_drivers/presentation/http/http2/h2_frame.h"
 #include "network_drivers/presentation/http/http2/hpack.h"
 
@@ -60,7 +64,6 @@ typedef struct
  * span's own alignment. HTTP is what the plaintext pool is for, and the connection owns the bytes.
  */
 #define PROTOCORE_H2_FRAME_HDR_CAP 16u
-#define PROTOCORE_H2_CONN_BORROW                                                                                       \
     ((size_t)PROTOCORE_H2_MAX_FRAME + PROTOCORE_H2_HDR_BLOCK + PROTOCORE_H2_HDR_BLOCK + PROTOCORE_H2_FRAME_HDR_CAP)
 
 /** @brief Application callbacks the engine drives (all optional except write). */
@@ -132,5 +135,8 @@ proto_bool protocore_h2_conn_respond(H2Conn *c, uint32_t stream_id, int status, 
 /** @brief Send a GOAWAY (last accepted stream, @p error) to begin a graceful shutdown. */
 void protocore_h2_conn_goaway(H2Conn *c, uint32_t error);
 
+PROTOCORE_END_DECLS
+
 #endif // PROTOCORE_ENABLE_HTTP2
+
 #endif // PROTOCORE_H2_CONN_H

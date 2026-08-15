@@ -26,9 +26,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_DSHOT
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief The standard DShot special commands (value field 0..47; throttle starts at 48). */
 #define DSHOT_CMD_MOTOR_STOP 0 ///< disarm / zero throttle.
@@ -93,8 +93,8 @@ typedef enum PROTO_ENUM_PACKED
  */
 uint32_t protocore_esc_pwm_ns(uint16_t throttle_1000, protocore_esc_pwm mode);
 
-#endif // PROTOCORE_ENABLE_DSHOT
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_DSHOT
 
 #endif // PROTOCORE_DSHOT_H

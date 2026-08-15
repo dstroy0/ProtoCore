@@ -24,16 +24,22 @@
 #ifndef PROTOCORE_FE25519_H
 #define PROTOCORE_FE25519_H
 
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
+
+#if PROTOCORE_ENABLE_FE25519
+
 #include "core_setup/hal/esp/esp_crypto_hal.h" // protocore_rsa_modmul + protocore_rsa_hw_acquire/release (the RSA-accelerator HAL)
 #include "crypto/ct_eq.h"                      // protocore_ct_eq
 
+PROTOCORE_BEGIN_DECLS
+
 // 25519 has no dedicated ECC accelerator on any ESP32 die, so the RSA MODMULT is the field-layer win wherever
 // it exists - track the HAL's PROTOCORE_RSA_MODMUL_HW (S3, P4, ...). Classic ESP32 / native keep the software ladder.
-#ifdef PROTOCORE_RSA_MODMUL_HW
+#if PROTOCORE_RSA_MODMUL_HW
 #define PROTOCORE_FE25519_MPI_HW 1
 #endif
 
-#ifdef PROTOCORE_FE25519_MPI_HW
+#if PROTOCORE_FE25519_MPI_HW
 
 /** @brief A field element of GF(2^255-19): canonical, eight little-endian 32-bit limbs (< p). */
 typedef uint32_t fe[8];
@@ -220,4 +226,9 @@ static inline int fe_neq(const fe a, const fe b)
 }
 
 #endif // PROTOCORE_FE25519_MPI_HW
+
+PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_FE25519
+
 #endif // PROTOCORE_FE25519_H

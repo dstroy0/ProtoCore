@@ -40,9 +40,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_DMA
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief Peripheral a channel is bound to (informational; selects the real backend). */
 typedef enum PROTO_ENUM_PACKED
@@ -128,8 +128,8 @@ void protocore_dma_close(uint8_t ch);
  */
 void protocore_dma_poll(void);
 
-#endif // PROTOCORE_ENABLE_DMA
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_DMA
 
 #endif // PROTOCORE_DMA_H

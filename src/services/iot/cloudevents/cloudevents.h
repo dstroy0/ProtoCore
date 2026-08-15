@@ -52,9 +52,10 @@
 
 #if PROTOCORE_ENABLE_CLOUDEVENTS
 
+PROTOCORE_BEGIN_DECLS
+
 #include "network_drivers/presentation/http/http_parser/http_parser.h" // HttpReq: the message a binary read parses
 
-PROTOCORE_BEGIN_DECLS
 
 /** @brief The `specversion` every envelope carries (CloudEvents 1.0.2, section "specversion"). */
 #define PROTOCORE_CLOUDEVENTS_SPECVERSION "1.0"

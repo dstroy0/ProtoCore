@@ -22,9 +22,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_SIGFOX
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief Classification of a Sigfox modem response line. */
 typedef enum PROTO_ENUM_PACKED
@@ -49,8 +49,8 @@ uint16_t protocore_sigfox_build_uplink(const uint8_t *payload, uint8_t len, char
  */
 protocore_sigfox_result protocore_sigfox_parse_response(const char *buf, uint16_t len);
 
-#endif // PROTOCORE_ENABLE_SIGFOX
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_SIGFOX
 
 #endif // PROTOCORE_SIGFOX_H

@@ -20,12 +20,12 @@
 #define PROTOCORE_RADIO_SNIFF_H
 
 #include "protocore_config.h"
-#include "shared/pcap/pcap.h"
-
-PROTOCORE_BEGIN_DECLS
 
 #if PROTOCORE_ENABLE_RADIO_SNIFF
 
+PROTOCORE_BEGIN_DECLS
+
+#include "shared/pcap/pcap.h"
 /** @brief The TAP pseudo-header length this codec emits: 4 header + RSSI TLV(8) + channel TLV(8). */
 #define RADIO_SNIFF_TAP_LEN 20
 
@@ -48,8 +48,8 @@ uint32_t protocore_radiosniff_i2f32(int32_t dbm);
 size_t protocore_radiosniff_tap_record(uint8_t *out, size_t cap, const uint8_t *frame, size_t flen, int32_t rssi_dbm,
                                        uint16_t channel, uint32_t ts_sec, uint32_t ts_usec);
 
-#endif // PROTOCORE_ENABLE_RADIO_SNIFF
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_RADIO_SNIFF
 
 #endif // PROTOCORE_RADIO_SNIFF_H

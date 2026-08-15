@@ -24,9 +24,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_GUARDRAILS
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief A health snapshot. */
 typedef struct
@@ -106,8 +106,8 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern GuardrailsNs Guardrails;
 
-#endif // PROTOCORE_ENABLE_GUARDRAILS
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_GUARDRAILS
 
 #endif // PROTOCORE_GUARDRAILS_H

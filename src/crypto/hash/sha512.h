@@ -19,6 +19,10 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths, PROTOCORE_HAS_HW_SHA for the context below
 
+#if PROTOCORE_ENABLE_SHA512
+
+PROTOCORE_BEGIN_DECLS
+
 /** @brief SHA-512 digest length in bytes. */
 #define PROTOCORE_SHA512_DIGEST_LEN 64
 
@@ -32,13 +36,7 @@
  * @c uint64_t and alive until the digest comes back, and the context splits them into the regions
  * below at fixed offsets.
  */
-#if PROTOCORE_HAS_HW_SHA
-#include <mbedtls/sha512.h>
-typedef struct
-{
-    mbedtls_sha512_context mbed; ///< mbedtls SHA-512 state (ESP32).
-} protocore_sha512_ctx;
-#else
+
 typedef struct
 {
     uint64_t s[8];  ///< Running hash words (H0..H7).
@@ -50,9 +48,6 @@ typedef struct
 } protocore_sha512_ctx;
 // The three pointers above are the caller's, so a struct copy aliases the original's storage and
 // finalizing the copy writes through it. final() leaves the context running, so read it in place.
-#endif
-
-PROTOCORE_BEGIN_DECLS
 
 /**
  * @brief Start a digest in @p ctx, working out of the caller's @p work.
@@ -77,5 +72,7 @@ void protocore_sha512_final(protocore_sha512_ctx *ctx, uint8_t digest[PROTOCORE_
 void protocore_sha512(uint8_t *work, const uint8_t *data, size_t len, uint8_t digest[PROTOCORE_SHA512_DIGEST_LEN]);
 
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_SHA512
 
 #endif // PROTOCORE_SHA512_H

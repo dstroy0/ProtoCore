@@ -28,9 +28,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_SSH_SFTP
+
+PROTOCORE_BEGIN_DECLS
 
 /**
  * @brief Serve the SFTP subsystem from the mounted filesystem. Installs the channel subsystem +
@@ -38,8 +38,8 @@ PROTOCORE_BEGIN_DECLS
  */
 void protocore_ssh_sftp_begin(void);
 
-#endif // PROTOCORE_ENABLE_SSH_SFTP
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_SSH_SFTP
 
 #endif // PROTOCORE_SSH_SFTP_H

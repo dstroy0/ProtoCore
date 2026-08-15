@@ -37,6 +37,33 @@
 #define PROTOCORE_HW_DS 1
 #endif
 
+// --- SHA accelerator register map ---
+// The die is identified here, so the values are stated here and crypto/ reads only these names. The
+// block register offsets are shared across every die that carries the unified SHA peripheral and are
+// stated once beside the driver; what differs per die is the peripheral base and the clock, reset and
+// hold-clear bits below. Reset holds SHA while the sibling DS and HMAC resets are set, so both clear.
+#ifndef PROTOCORE_SHA_BASE
+#define PROTOCORE_SHA_BASE 0x6003B000u
+#endif
+#ifndef PROTOCORE_SHA_CLK_REG
+#define PROTOCORE_SHA_CLK_REG 0x600C001Cu // SYSTEM_PERIP_CLK_EN1_REG
+#endif
+#ifndef PROTOCORE_SHA_CLK_BIT
+#define PROTOCORE_SHA_CLK_BIT (1u << 2) // SYSTEM_CRYPTO_SHA_CLK_EN
+#endif
+#ifndef PROTOCORE_SHA_RST_REG
+#define PROTOCORE_SHA_RST_REG 0x600C0024u // SYSTEM_PERIP_RST_EN1_REG
+#endif
+#ifndef PROTOCORE_SHA_RST_BIT
+#define PROTOCORE_SHA_RST_BIT (1u << 2) // SYSTEM_CRYPTO_SHA_RST
+#endif
+#ifndef PROTOCORE_SHA_HOLD_REG
+#define PROTOCORE_SHA_HOLD_REG 0x600C0024u // SYSTEM_PERIP_RST_EN1_REG (same reg)
+#endif
+#ifndef PROTOCORE_SHA_HOLD_CLEAR
+#define PROTOCORE_SHA_HOLD_CLEAR ((1u << 4) | (1u << 5)) // SYSTEM_CRYPTO_DS_RST | SYSTEM_CRYPTO_HMAC_RST
+#endif
+
 // --- Vector unit ---
 // The LX7's PIE (Processor Instruction Extensions): 128-bit vector registers with their own
 // load/store path and byte-lane compares, which is a real unit rather than the wider GPR the classic

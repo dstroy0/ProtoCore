@@ -29,9 +29,9 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths and PROTOCORE_INLINE
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_DNS_SERVER
+
+PROTOCORE_BEGIN_DECLS
 
 /**
  * @brief Resolve a QNAME to an IPv4 ADDRESS (RFC 1035 sec 3.4.1).
@@ -123,8 +123,8 @@ extern DnsServerNs DnsServer;
  */
 uint32_t protocore_dns_server_resolve(const char *name);
 
-#endif // PROTOCORE_ENABLE_DNS_SERVER
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_DNS_SERVER
 
 #endif // PROTOCORE_DNS_SERVER_H

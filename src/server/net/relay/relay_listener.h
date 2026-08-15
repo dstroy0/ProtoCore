@@ -29,9 +29,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_RELAY
+
+PROTOCORE_BEGIN_DECLS
 
 /**
  * @brief Bind a published listener to an origin. Call after `server.listen(port, ProtoConn::PROTO_RELAY)` with
@@ -47,8 +47,8 @@ proto_bool protocore_relay_publish(uint8_t listener_id, const char *origin_host,
 /** @brief Clear all published binds and active bridges (start from empty). */
 void protocore_relay_listener_reset(void);
 
-#endif // PROTOCORE_ENABLE_RELAY
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_RELAY
 
 #endif // PROTOCORE_RELAY_LISTENER_H

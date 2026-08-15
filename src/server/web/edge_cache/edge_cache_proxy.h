@@ -22,6 +22,8 @@
 
 #if PROTOCORE_ENABLE_EDGE_CACHE
 
+PROTOCORE_BEGIN_DECLS
+
 #include "server/web/edge_cache/edge_cache.h" // EdgeCacheStats
 
 /**
@@ -96,6 +98,8 @@ uint32_t protocore_edge_cache_purge_prefix(const char *path_prefix);
 
 /** @brief Snapshot the cache counters. */
 void protocore_edge_cache_stats(EdgeCacheStats *out);
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_EDGE_CACHE
 

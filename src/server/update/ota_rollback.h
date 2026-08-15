@@ -21,9 +21,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_OTA_ROLLBACK
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief OTA image states, mirroring PROTOCORE_PLATFORM_IMG_* so the core is host-pure. These arrive
  *  from the platform seam as a uint8_t and are compared, so integer constants - cast-free. */
@@ -97,8 +97,8 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern OtaRollbackNs OtaRollback;
 
-#endif // PROTOCORE_ENABLE_OTA_ROLLBACK
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_OTA_ROLLBACK
 
 #endif // PROTOCORE_OTA_ROLLBACK_H

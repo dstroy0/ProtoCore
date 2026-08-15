@@ -28,9 +28,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_NTS
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief NTS-KE record types (RFC 8915 sec 4). The critical bit is 0x8000. */
 #define NTS_KE_CRITICAL 0x8000
@@ -90,8 +90,8 @@ size_t protocore_nts_ef_unique_id(const uint8_t *nonce, size_t nonce_len, uint8_
 /** @brief Build an NTS Cookie EF carrying @p cookie. */
 size_t protocore_nts_ef_cookie(const uint8_t *cookie, size_t cookie_len, uint8_t *out, size_t cap);
 
-#endif // PROTOCORE_ENABLE_NTS
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_NTS
 
 #endif // PROTOCORE_NTS_H

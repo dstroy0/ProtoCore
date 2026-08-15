@@ -32,9 +32,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_WS_CLIENT
+
+PROTOCORE_BEGIN_DECLS
 
 // ---------------------------------------------------------------------------
 // Literals
@@ -188,8 +188,8 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern WsClientNs WsClient;
 
-#endif // PROTOCORE_ENABLE_WS_CLIENT
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_WS_CLIENT
 
 #endif // PROTOCORE_WS_CLIENT_H

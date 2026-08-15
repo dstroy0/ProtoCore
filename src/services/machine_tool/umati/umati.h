@@ -46,6 +46,8 @@
 
 #if PROTOCORE_ENABLE_UMATI
 
+PROTOCORE_BEGIN_DECLS
+
 #include "services/fieldbus/opcua/opcua.h" // OpcUaVariant / OpcUaReference / handler typedefs (shares the OPC UA codec)
 
 /** @brief The OPC UA for Machine Tools companion-spec namespace URI (OPC 40501-1). */
@@ -159,5 +161,8 @@ int32_t protocore_umati_browse(uint16_t ns, uint32_t id, OpcUaReference *out, ui
  */
 void protocore_umati_install(const UmatiMachineTool *mt);
 
+PROTOCORE_END_DECLS
+
 #endif // PROTOCORE_ENABLE_UMATI
+
 #endif // PROTOCORE_UMATI_H

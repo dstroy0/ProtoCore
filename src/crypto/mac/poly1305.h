@@ -18,6 +18,9 @@
 #define PROTOCORE_POLY1305_H
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths and PROTOCORE_BEGIN_DECLS
+
+#if PROTOCORE_ENABLE_POLY1305
+
 #include <stddef.h>
 #include <stdint.h>
 
@@ -31,5 +34,7 @@ void protocore_poly1305(uint8_t tag[PROTOCORE_POLY1305_TAG_LEN], const uint8_t *
                         const uint8_t key[PROTOCORE_POLY1305_KEY_LEN]);
 
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_POLY1305
 
 #endif // PROTOCORE_POLY1305_H

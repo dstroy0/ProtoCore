@@ -40,12 +40,8 @@ void setUp()
         HttpConn.slot = i;
         HttpConn.reset(HttpConn.internal);
     }
-#if PROTOCORE_ENABLE_WEBSOCKET
     Ws.init(Ws.internal);
-#endif
-#if PROTOCORE_ENABLE_SSE
     Sse.init(Sse.internal);
-#endif
 
     tcp_capture_reset();
 }

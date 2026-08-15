@@ -10,16 +10,17 @@
  * CSRF, and SMB 2.x message signing.
  */
 
+#if PROTOCORE_ENABLE_SHA256
+
+#if !PROTOCORE_HAS_HW_SHA
+#include "mmgr/endian.h" // native software SHA-256
+#endif
 #include "crypto/hash/sha256.h"
 #include "crypto/crypto_opt.h"
 #include "mmgr/protomem.h"
 
-#if PROTOCORE_HAS_HW_SHA
-#include <mbedtls/sha256.h> // hardware SHA accelerator
-#else
-#include "mmgr/endian.h" // native software SHA-256
-#endif
 PROTOCORE_CRYPTO_HOT
+PROTOCORE_BEGIN_DECLS
 
 #if PROTOCORE_HAS_HW_SHA
 
@@ -57,12 +58,14 @@ void protocore_sha256_final(protocore_sha256_ctx *ctx, uint8_t digest[PROTOCORE_
     mbedtls_sha256_free(&ctx->mbed);
 }
 
-void protocore_sha256(const uint8_t *data, size_t len, uint8_t digest[PROTOCORE_SHA256_DIGEST_LEN])
+void protocore_sha256(uint8_t *work, const uint8_t *data, size_t len, uint8_t digest[PROTOCORE_SHA256_DIGEST_LEN])
 {
+    (void)work; // the accelerator carries its own, the same as init
     (void)mbedtls_sha256(data, len, digest, 0 /* 0 = SHA-256, 1 = SHA-224 */);
 }
+#endif
 
-#else // native software path
+#if !PROTOCORE_HAS_HW_SHA // native software path
 
 // ---------------------------------------------------------------------------
 // SW path: software SHA-256 (FIPS 180-4).
@@ -358,3 +361,7 @@ void protocore_sha256(uint8_t *work, const uint8_t *data, size_t len, uint8_t di
 }
 
 #endif // !PROTOCORE_HAS_HW_SHA (SW path)
+
+PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_SHA256

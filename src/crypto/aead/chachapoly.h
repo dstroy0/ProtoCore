@@ -26,6 +26,8 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for proto_bool and the widths
 
+#if PROTOCORE_ENABLE_CHACHAPOLY
+
 PROTOCORE_BEGIN_DECLS
 
 #define PROTOCORE_CHACHAPOLY_KEY_LEN 64 ///< two 256-bit ChaCha20 keys
@@ -58,5 +60,7 @@ proto_bool protocore_chachapoly_decrypt(const uint8_t key[PROTOCORE_CHACHAPOLY_K
                                         const uint8_t *src, uint32_t payload_len);
 
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_CHACHAPOLY
 
 #endif // PROTOCORE_CHACHAPOLY_H

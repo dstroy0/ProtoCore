@@ -39,6 +39,8 @@
 
 #if PROTOCORE_ENABLE_DTLS
 
+PROTOCORE_BEGIN_DECLS
+
 #include "crypto/hash/sha256.h"
 #include "network_drivers/presentation/security/dtls/dtls_handshake.h"
 #include "network_drivers/presentation/security/dtls/dtls_record.h"
@@ -214,5 +216,8 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern const DtlsConnNs DtlsServer;
 
+PROTOCORE_END_DECLS
+
 #endif // PROTOCORE_ENABLE_DTLS
+
 #endif // PROTOCORE_DTLS_CONN_H

@@ -25,9 +25,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_ROAMING
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief One BSS Transition Candidate: a Neighbor Report entry (IEEE 802.11 sec 9.4.2.36) or a scan row. */
 typedef struct
@@ -191,8 +191,8 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern RoamNs Roam;
 
-#endif // PROTOCORE_ENABLE_ROAMING
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_ROAMING
 
 #endif // PROTOCORE_ROAMING_H

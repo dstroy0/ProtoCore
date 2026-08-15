@@ -23,9 +23,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_SLEEP_SCHED
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief Scheduler configuration (all times in ms). */
 typedef struct
@@ -79,8 +79,8 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern SleepSchedNs SleepSched;
 
-#endif // PROTOCORE_ENABLE_SLEEP_SCHED
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_SLEEP_SCHED
 
 #endif // PROTOCORE_SLEEP_SCHED_H

@@ -25,6 +25,8 @@
 
 #if PROTOCORE_ENABLE_FORWARDED_TRUST
 
+PROTOCORE_BEGIN_DECLS
+
 #include "shared/ip/ip.h"
 
 /** @brief Empty the trusted-upstream table (trust no forwarded header). */
@@ -60,5 +62,8 @@ proto_bool protocore_forwarded_trust_contains(const protocore_ip *peer);
  */
 proto_bool protocore_forwarded_effective_ip(const protocore_ip *peer, const char *fwd_ip_str, protocore_ip *out);
 
+PROTOCORE_END_DECLS
+
 #endif // PROTOCORE_ENABLE_FORWARDED_TRUST
+
 #endif // PROTOCORE_FORWARDED_TRUST_H

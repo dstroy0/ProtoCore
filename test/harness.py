@@ -686,7 +686,7 @@ def classify(changed, envs, graph, total_testable, base=None, head=None):
             return "FULL"
         if f in IGNORE_EXACT or f.startswith(IGNORE_PREFIX):
             continue
-        if f.startswith("src/"):
+        if f.startswith(("src/", "include/")):
             # The compiler dep graph maps a source OR header to exactly the envs whose include
             # closure contains it - so a feature header hits only its feature's envs, not FULL.
             if f in graph:
@@ -842,9 +842,14 @@ def _resolve_src(globs):
     An entry is read under src/ first, then from the repo root: core_setup/ is a root directory, so
     the backends an env names there ("core_setup/hal/portable/portable_aesgcm.c") resolve from the
     root and nowhere else. An entry matching neither is reported rather than dropped.
+
+    A path is returned once however many entries reach it. An env that extends a stack base inherits
+    that base's filter and then names files of its own, and the two overlap; one .c compiled twice is
+    every symbol in it defined twice, which the linker refuses.
     """
     import glob as _glob
     out = []
+    seen = set()
     for g in globs:
         stem = g[3:] if g.startswith("../") else g
         stem = stem.replace("../", "")
@@ -862,7 +867,10 @@ def _resolve_src(globs):
         if not hits:
             print("  src filter matches nothing: %s" % g, file=sys.stderr)
             continue
-        out.extend(hits)
+        for h in hits:
+            if h not in seen:
+                seen.add(h)
+                out.append(h)
     return out
 
 
@@ -1461,6 +1469,13 @@ def build_and_run(name, e, jobs, keep, verbose, debug=False, coverage=False):
         r = subprocess.run([exe], capture_output=True, text=True, cwd=ROOT)
         out_lines.append(r.stdout.strip())
         if r.returncode != 0:
+            # A suite that dies mid-run prints no Unity line to read and says nothing on stdout, so
+            # without the exit status and stderr the env fails with an empty record and the only way
+            # to find out which suite it was is to run them again one at a time.
+            note = "RUN FAILED %s (%s) exit=%d" % (name, os.path.relpath(sd, ROOT).replace("\\", "/"), r.returncode)
+            if r.stderr.strip():
+                note += "\n" + r.stderr.strip()
+            out_lines.append(note)
             rc_total = 1
         if not keep:
             try:

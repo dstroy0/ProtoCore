@@ -16,12 +16,15 @@
  * + GF(2^8) xtime) + software GHASH. The GF(2^128) reduction mirrors aes128gcm.cpp.
  */
 
+#if PROTOCORE_ENABLE_AESGCM
+
 #include "crypto/aead/aesgcm.h"
 #include "crypto/crypto_opt.h"
 #include "crypto/mac/ghash.h"
 #include "mmgr/secure.h"
 
 PROTOCORE_CRYPTO_HOT
+PROTOCORE_BEGIN_DECLS
 
 // Advance the RFC 5647 invocation counter: the low 8 bytes of the 12-byte nonce, big-endian; the 4-byte
 // fixed field never changes. Shared by both paths and exposed publicly for the SSH packet layer.
@@ -35,3 +38,7 @@ void protocore_aesgcm_iv_increment(uint8_t iv[PROTOCORE_AESGCM_IV_LEN])
         }
     }
 }
+
+PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_AESGCM

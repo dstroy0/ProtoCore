@@ -28,12 +28,12 @@
 #define PROTOCORE_SNMP_NOTIFY_H
 
 #include "protocore_config.h"
-#include "services/net/snmp/snmp_ber.h" // BerEnc: the open encoder a PDU append writes into
-
-PROTOCORE_BEGIN_DECLS
 
 #if PROTOCORE_ENABLE_SNMP_TRAP
 
+PROTOCORE_BEGIN_DECLS
+
+#include "services/net/snmp/snmp_ber.h" // BerEnc: the open encoder a PDU append writes into
 /** @brief Which SMIv2 type a caller variable-binding carries (RFC 2578 sec 7.1). */
 typedef enum PROTO_ENUM_PACKED
 {
@@ -127,8 +127,8 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern SnmpNotifyNs SnmpNotify;
 
-#endif // PROTOCORE_ENABLE_SNMP_TRAP
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_SNMP_TRAP
 
 #endif // PROTOCORE_SNMP_NOTIFY_H

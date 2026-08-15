@@ -22,9 +22,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_NEMA_TS2
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief Common TS 2 frame types (the third octet). */
 // NEMA TS2 frame types: wire values compared, so integer constants in a namespacing struct.
@@ -59,8 +59,8 @@ typedef struct
 /** @brief Validate the FCS and parse a TS 2 frame. @return true if the CRC matches and it is well-formed. */
 proto_bool protocore_nema_ts2_parse(const uint8_t *frame, size_t len, NemaTs2Frame *out);
 
-#endif // PROTOCORE_ENABLE_NEMA_TS2
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_NEMA_TS2
 
 #endif // PROTOCORE_NEMA_TS2_H

@@ -27,9 +27,9 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths and PROTOCORE_INLINE
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_INA219
+
+PROTOCORE_BEGIN_DECLS
 
 #define INA219_REG_CONFIG 0x00      ///< configuration
 #define INA219_REG_SHUNT 0x01       ///< shunt voltage
@@ -77,8 +77,8 @@ proto_bool protocore_ina219_read_current_ua(int32_t *microamps);
 /** @brief Read the power into @p microwatts (needs the calibration set by protocore_ina219_begin). */
 proto_bool protocore_ina219_read_power_uw(int32_t *microwatts);
 
-#endif // PROTOCORE_ENABLE_INA219
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_INA219
 
 #endif // PROTOCORE_INA219_H

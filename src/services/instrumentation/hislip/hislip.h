@@ -33,9 +33,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_HISLIP
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief The IANA-assigned HiSLIP TCP port (both channels connect here). */
 #define PROTOCORE_HISLIP_PORT 4880
@@ -202,8 +202,8 @@ typedef struct
  */
 proto_bool protocore_hislip_parse_initialize_response(const uint8_t *buf, size_t len, HislipInitializeResponse *out);
 
-#endif // PROTOCORE_ENABLE_HISLIP
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_HISLIP
 
 #endif // PROTOCORE_HISLIP_H

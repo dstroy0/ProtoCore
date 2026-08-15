@@ -6,9 +6,126 @@
 
 #include "network_drivers/presentation/ssh/auth/auth.h"
 #include "network_drivers/presentation/ssh/transport/transport.h"
+#include "server/clock/clock.h" // Clock.millis(): refresh the stamp auth.c judges the cooldown against
 #include <Arduino.h> // set_millis(): time travel past the change cooldown
 #include <stdint.h>
 #include <unity.h>
+
+static int auth_parse_request(const uint8_t *payload, size_t len, SshAuthReq *req)
+{
+    SshAuth.msg.payload = payload;
+    SshAuth.msg.len = len;
+    SshAuth.req = req;
+    SshAuth.parse_request(SshAuth.internal);
+    return SshAuth.i32;
+}
+
+#if PROTOCORE_ENABLE_SSH_KEYBOARD_INTERACTIVE
+// RFC 4256 sec 3.4. The member exists only when the method is compiled in, so the helper is gated
+// the same way the calls to it are.
+static int auth_handle_info_response(uint8_t slot, const uint8_t *payload, size_t len, uint8_t *out, size_t *out_len,
+                                     size_t cap)
+{
+    SshAuth.slot = slot;
+    SshAuth.msg.payload = payload;
+    SshAuth.msg.len = len;
+    SshAuth.out_args.out = out;
+    SshAuth.out_args.cap = cap;
+    SshAuth.handle_info_response(SshAuth.internal);
+    if (out_len)
+    {
+        *out_len = SshAuth.out_args.out_len;
+    }
+    return SshAuth.i32;
+}
+#endif // PROTOCORE_ENABLE_SSH_KEYBOARD_INTERACTIVE
+
+static int auth_build_failure(uint8_t *out, size_t *out_len, size_t cap, proto_bool partial)
+{
+    SshAuth.out_args.out = out;
+    SshAuth.out_args.cap = cap;
+    SshAuth.partial = partial;
+    SshAuth.build_failure(SshAuth.internal);
+    if (out_len)
+    {
+        *out_len = SshAuth.out_args.out_len;
+    }
+    return SshAuth.i32;
+}
+
+static int auth_build_success(uint8_t *out, size_t *out_len, size_t cap)
+{
+    SshAuth.out_args.out = out;
+    SshAuth.out_args.cap = cap;
+    SshAuth.build_success(SshAuth.internal);
+    if (out_len)
+    {
+        *out_len = SshAuth.out_args.out_len;
+    }
+    return SshAuth.i32;
+}
+
+
+// The publickey USERAUTH_REQUEST body writer, reached through the auth namespace.
+static void auth_write_publickey_request(protocore_span *w, const uint8_t *sid, size_t sid_len, const char *user,
+                                         const char *service, const char *pk_algo, const uint8_t *pk_blob,
+                                         size_t pk_len)
+{
+    SshAuth.out_args.w = w;
+    SshAuth.userauth.sid = sid;
+    SshAuth.userauth.sid_len = sid_len;
+    SshAuth.userauth.user = user;
+    SshAuth.userauth.service = service;
+    SshAuth.userauth.pk_algo = pk_algo;
+    SshAuth.userauth.pk_blob = pk_blob;
+    SshAuth.userauth.pk_len = pk_len;
+    SshAuth.write_publickey_request(SshAuth.internal);
+}
+
+
+// The userauth layer, reached through its namespace: set the members a call reads, invoke it, take
+// the outcome off the same handle.
+static void auth_reset(uint8_t slot)
+{
+    SshAuth.slot = slot;
+    SshAuth.reset(SshAuth.internal);
+}
+
+static void auth_set_password_cb(SshPasswordCb cb)
+{
+    SshAuth.cbs.password_cb = cb;
+    SshAuth.set_password_cb(SshAuth.internal);
+}
+
+static void auth_set_password_change_cb(SshPasswordChangeCb cb)
+{
+    SshAuth.cbs.password_change_cb = cb;
+    SshAuth.set_password_change_cb(SshAuth.internal);
+}
+
+static void auth_pw_change_report(uint8_t slot, proto_bool ok)
+{
+    SshAuth.slot = slot;
+    SshAuth.ok = ok;
+    SshAuth.pw_change_report(SshAuth.internal);
+}
+
+static int auth_handle_request(uint8_t slot, const uint8_t *payload, size_t len, uint8_t *out, size_t *out_len,
+                               size_t cap)
+{
+    SshAuth.slot = slot;
+    SshAuth.msg.payload = payload;
+    SshAuth.msg.len = len;
+    SshAuth.out_args.out = out;
+    SshAuth.out_args.cap = cap;
+    SshAuth.handle_request(SshAuth.internal);
+    if (out_len)
+    {
+        *out_len = SshAuth.out_args.out_len;
+    }
+    return SshAuth.i32;
+}
+
 
 static proto_bool s_change_seen;
 static uint32_t s_clock;
@@ -85,6 +202,10 @@ static void clock_past_cooldown(void)
 {
     s_clock += PROTOCORE_SSH_PW_CHANGE_COOLDOWN_MS + 1u;
     set_millis(s_clock);
+    // auth.c judges the cooldown against Clock.ms, the stamp one read of the source leaves behind.
+    // The dispatch loop refreshes it once a pass; there is no loop here, so moving the mock counter
+    // alone leaves the library reading the previous instant.
+    Clock.millis(Clock.internal);
 }
 
 static uint32_t rd_u32(const uint8_t *p)
@@ -164,7 +285,7 @@ static size_t arm(const char *user, uint8_t *out, size_t cap)
     uint8_t req[128];
     const size_t rn = build_kbdint_request(req, user, "");
     size_t olen = 0;
-    TEST_ASSERT_EQUAL_INT(0, protocore_ssh_auth_handle_request(0, req, rn, out, &olen, cap));
+    TEST_ASSERT_EQUAL_INT(0, auth_handle_request(0, req, rn, out, &olen, cap));
     return olen;
 }
 
@@ -174,9 +295,9 @@ void setUp(void)
 {
     ssh_transport_init(0);
     ssh_pkt_init(0);
-    protocore_ssh_auth_reset(0);
+    auth_reset(0);
 #if PROTOCORE_ENABLE_SSH_KEYBOARD_INTERACTIVE
-    protocore_ssh_auth_set_password_cb(pw_cb);
+    auth_set_password_cb(pw_cb);
     s_seen_user[0] = '\0';
     s_seen_pass[0] = '\0';
     s_answer = PROTO_TRUE;
@@ -186,7 +307,7 @@ void setUp(void)
 void tearDown(void)
 {
 #if PROTOCORE_ENABLE_SSH_KEYBOARD_INTERACTIVE
-    protocore_ssh_auth_set_password_cb(NULL);
+    auth_set_password_cb(NULL);
 #endif
 }
 
@@ -196,7 +317,7 @@ static void test_sec5_common_fields_are_parsed(void)
     SshAuthReq req;
     size_t n = build_req_head(p, "root", "ssh-connection", "none");
 
-    TEST_ASSERT_EQUAL_INT(0, protocore_ssh_auth_parse_request(p, n, &req));
+    TEST_ASSERT_EQUAL_INT(0, auth_parse_request(p, n, &req));
     TEST_ASSERT_EQUAL_STRING("root", req.user);
     TEST_ASSERT_EQUAL_STRING("ssh-connection", req.service);
     TEST_ASSERT_EQUAL_STRING("none", req.method);
@@ -209,7 +330,7 @@ static void test_sec5_wrong_message_number_is_refused(void)
     size_t n = build_req_head(p, "root", "ssh-connection", "none");
     p[0] = SSH_MSG_USERAUTH_SUCCESS;
 
-    TEST_ASSERT_EQUAL_INT(-1, protocore_ssh_auth_parse_request(p, n, &req));
+    TEST_ASSERT_EQUAL_INT(-1, auth_parse_request(p, n, &req));
 }
 
 static void test_sec5_truncation_at_each_field_is_refused(void)
@@ -220,7 +341,7 @@ static void test_sec5_truncation_at_each_field_is_refused(void)
 
     for (size_t cut = 1; cut < n; cut++)
     {
-        TEST_ASSERT_EQUAL_INT(-1, protocore_ssh_auth_parse_request(p, cut, &req));
+        TEST_ASSERT_EQUAL_INT(-1, auth_parse_request(p, cut, &req));
     }
 }
 
@@ -229,7 +350,7 @@ static void test_sec5_empty_payload_is_refused(void)
     SshAuthReq req;
     uint8_t p[1] = {0};
 
-    TEST_ASSERT_EQUAL_INT(-1, protocore_ssh_auth_parse_request(p, 0, &req));
+    TEST_ASSERT_EQUAL_INT(-1, auth_parse_request(p, 0, &req));
 }
 
 static void test_sec5_overlong_user_name_is_refused(void)
@@ -244,7 +365,7 @@ static void test_sec5_overlong_user_name_is_refused(void)
     big[sizeof(big) - 1u] = 0;
 
     size_t n = build_req_head(p, big, "ssh-connection", "none");
-    TEST_ASSERT_EQUAL_INT(-1, protocore_ssh_auth_parse_request(p, n, &req));
+    TEST_ASSERT_EQUAL_INT(-1, auth_parse_request(p, n, &req));
 }
 
 static void test_sec5_length_header_beyond_payload_is_refused(void)
@@ -257,7 +378,7 @@ static void test_sec5_length_header_beyond_payload_is_refused(void)
     p[3] = 0xFFu;
     p[4] = 0xFFu;
 
-    TEST_ASSERT_EQUAL_INT(-1, protocore_ssh_auth_parse_request(p, sizeof(p), &req));
+    TEST_ASSERT_EQUAL_INT(-1, auth_parse_request(p, sizeof(p), &req));
 }
 
 static void test_sec5_2_none_carries_no_method_fields(void)
@@ -266,7 +387,7 @@ static void test_sec5_2_none_carries_no_method_fields(void)
     SshAuthReq req;
     size_t n = build_req_head(p, "root", "ssh-connection", "none");
 
-    TEST_ASSERT_EQUAL_INT(0, protocore_ssh_auth_parse_request(p, n, &req));
+    TEST_ASSERT_EQUAL_INT(0, auth_parse_request(p, n, &req));
     TEST_ASSERT_EQUAL_STRING("none", req.method);
     TEST_ASSERT_FALSE(req.is_password);
     TEST_ASSERT_FALSE(req.is_pubkey);
@@ -281,7 +402,7 @@ static void test_sec8_password_request_is_parsed(void)
     p[n++] = 0; // boolean FALSE: not a change request
     n = put_cstr(p, n, "hunter2");
 
-    TEST_ASSERT_EQUAL_INT(0, protocore_ssh_auth_parse_request(p, n, &req));
+    TEST_ASSERT_EQUAL_INT(0, auth_parse_request(p, n, &req));
     TEST_ASSERT_TRUE(req.is_password);
     TEST_ASSERT_FALSE(req.is_pw_change);
     TEST_ASSERT_EQUAL_STRING("hunter2", req.password);
@@ -296,7 +417,7 @@ static void test_sec8_password_change_carries_both_passwords(void)
     n = put_cstr(p, n, "oldpass");
     n = put_cstr(p, n, "newpass");
 
-    TEST_ASSERT_EQUAL_INT(0, protocore_ssh_auth_parse_request(p, n, &req));
+    TEST_ASSERT_EQUAL_INT(0, auth_parse_request(p, n, &req));
     TEST_ASSERT_TRUE(req.is_password);
     TEST_ASSERT_TRUE(req.is_pw_change);
     TEST_ASSERT_EQUAL_STRING("oldpass", req.password);
@@ -311,7 +432,7 @@ static void test_sec8_change_without_new_password_is_refused(void)
     p[n++] = 1;
     n = put_cstr(p, n, "oldpass");
 
-    TEST_ASSERT_EQUAL_INT(-1, protocore_ssh_auth_parse_request(p, n, &req));
+    TEST_ASSERT_EQUAL_INT(-1, auth_parse_request(p, n, &req));
 }
 
 static void test_sec8_password_method_without_fields_is_refused(void)
@@ -320,7 +441,7 @@ static void test_sec8_password_method_without_fields_is_refused(void)
     SshAuthReq req;
     size_t n = build_req_head(p, "root", "ssh-connection", "password");
 
-    TEST_ASSERT_EQUAL_INT(-1, protocore_ssh_auth_parse_request(p, n, &req));
+    TEST_ASSERT_EQUAL_INT(-1, auth_parse_request(p, n, &req));
 }
 
 static void test_sec8_empty_password_parses(void)
@@ -331,7 +452,7 @@ static void test_sec8_empty_password_parses(void)
     p[n++] = 0;
     n = put_cstr(p, n, "");
 
-    TEST_ASSERT_EQUAL_INT(0, protocore_ssh_auth_parse_request(p, n, &req));
+    TEST_ASSERT_EQUAL_INT(0, auth_parse_request(p, n, &req));
     TEST_ASSERT_TRUE(req.is_password);
     TEST_ASSERT_EQUAL_STRING("", req.password);
 }
@@ -345,7 +466,7 @@ static void test_sec7_query_form_has_no_signature(void)
     n = put_cstr(p, n, "ssh-ed25519");
     n = put_str(p, n, "\x01\x02\x03\x04", 4);
 
-    TEST_ASSERT_EQUAL_INT(0, protocore_ssh_auth_parse_request(p, n, &req));
+    TEST_ASSERT_EQUAL_INT(0, auth_parse_request(p, n, &req));
     TEST_ASSERT_TRUE(req.is_pubkey);
     TEST_ASSERT_FALSE(req.has_signature);
     TEST_ASSERT_EQUAL_STRING("ssh-ed25519", req.pk_algo);
@@ -363,7 +484,7 @@ static void test_sec7_signed_form_reports_signature_and_covered_prefix(void)
     size_t before_sig = n;
     n = put_sig_blob(p, n, "ssh-ed25519", "\x09\x08\x07\x06\x05", 5);
 
-    TEST_ASSERT_EQUAL_INT(0, protocore_ssh_auth_parse_request(p, n, &req));
+    TEST_ASSERT_EQUAL_INT(0, auth_parse_request(p, n, &req));
     TEST_ASSERT_TRUE(req.is_pubkey);
     TEST_ASSERT_TRUE(req.has_signature);
     TEST_ASSERT_EQUAL_UINT32(5u, req.signature_len);
@@ -381,7 +502,7 @@ static void test_sec6_6_signature_without_a_format_identifier_is_refused(void)
     n = put_str(p, n, "\x01\x02\x03\x04", 4);
     n = put_str(p, n, "\x09\x08\x07", 3); // three raw bytes, not string || string
 
-    TEST_ASSERT_EQUAL_INT(-1, protocore_ssh_auth_parse_request(p, n, &req));
+    TEST_ASSERT_EQUAL_INT(-1, auth_parse_request(p, n, &req));
 }
 
 static void test_sec7_signature_promised_but_absent_is_refused(void)
@@ -393,7 +514,7 @@ static void test_sec7_signature_promised_but_absent_is_refused(void)
     n = put_cstr(p, n, "ssh-ed25519");
     n = put_str(p, n, "\x01\x02\x03\x04", 4);
 
-    TEST_ASSERT_EQUAL_INT(-1, protocore_ssh_auth_parse_request(p, n, &req));
+    TEST_ASSERT_EQUAL_INT(-1, auth_parse_request(p, n, &req));
 }
 
 static void test_sec7_missing_key_blob_is_refused(void)
@@ -404,7 +525,7 @@ static void test_sec7_missing_key_blob_is_refused(void)
     p[n++] = 0;
     n = put_cstr(p, n, "ssh-ed25519");
 
-    TEST_ASSERT_EQUAL_INT(-1, protocore_ssh_auth_parse_request(p, n, &req));
+    TEST_ASSERT_EQUAL_INT(-1, auth_parse_request(p, n, &req));
 }
 
 static void test_sec7_overlong_algorithm_name_is_refused(void)
@@ -423,7 +544,7 @@ static void test_sec7_overlong_algorithm_name_is_refused(void)
     n = put_cstr(p, n, big);
     n = put_str(p, n, "\x01", 1);
 
-    TEST_ASSERT_EQUAL_INT(-1, protocore_ssh_auth_parse_request(p, n, &req));
+    TEST_ASSERT_EQUAL_INT(-1, auth_parse_request(p, n, &req));
 }
 
 static void test_sec5_1_failure_has_type_namelist_and_partial_flag(void)
@@ -431,7 +552,7 @@ static void test_sec5_1_failure_has_type_namelist_and_partial_flag(void)
     uint8_t out[128];
     size_t len = 0;
 
-    TEST_ASSERT_EQUAL_INT(0, protocore_ssh_auth_build_failure(out, &len, sizeof(out), PROTO_FALSE));
+    TEST_ASSERT_EQUAL_INT(0, auth_build_failure(out, &len, sizeof(out), PROTO_FALSE));
     TEST_ASSERT_EQUAL_UINT8(SSH_MSG_USERAUTH_FAILURE, out[0]);
 
     uint32_t nl = rd32(out + 1);
@@ -444,10 +565,10 @@ static void test_sec5_1_partial_success_flag_is_carried(void)
     uint8_t out[128];
     size_t len = 0;
 
-    TEST_ASSERT_EQUAL_INT(0, protocore_ssh_auth_build_failure(out, &len, sizeof(out), PROTO_TRUE));
+    TEST_ASSERT_EQUAL_INT(0, auth_build_failure(out, &len, sizeof(out), PROTO_TRUE));
     TEST_ASSERT_EQUAL_UINT8(1u, out[len - 1u]);
 
-    TEST_ASSERT_EQUAL_INT(0, protocore_ssh_auth_build_failure(out, &len, sizeof(out), PROTO_FALSE));
+    TEST_ASSERT_EQUAL_INT(0, auth_build_failure(out, &len, sizeof(out), PROTO_FALSE));
     TEST_ASSERT_EQUAL_UINT8(0u, out[len - 1u]);
 }
 
@@ -455,7 +576,7 @@ static void test_sec5_2_none_is_not_offered_in_the_continue_list(void)
 {
     uint8_t out[128];
     size_t len = 0;
-    TEST_ASSERT_EQUAL_INT(0, protocore_ssh_auth_build_failure(out, &len, sizeof(out), PROTO_FALSE));
+    TEST_ASSERT_EQUAL_INT(0, auth_build_failure(out, &len, sizeof(out), PROTO_FALSE));
 
     uint32_t nl = rd32(out + 1);
     char buf[96];
@@ -485,7 +606,7 @@ static void test_sec5_1_continue_list_is_a_well_formed_name_list(void)
 {
     uint8_t out[128];
     size_t len = 0;
-    TEST_ASSERT_EQUAL_INT(0, protocore_ssh_auth_build_failure(out, &len, sizeof(out), PROTO_FALSE));
+    TEST_ASSERT_EQUAL_INT(0, auth_build_failure(out, &len, sizeof(out), PROTO_FALSE));
 
     uint32_t nl = rd32(out + 1);
     const uint8_t *names = out + 5;
@@ -505,12 +626,12 @@ static void test_sec5_1_failure_into_an_undersized_buffer_is_refused(void)
 {
     uint8_t out[128];
     size_t full = 0;
-    TEST_ASSERT_EQUAL_INT(0, protocore_ssh_auth_build_failure(out, &full, sizeof(out), PROTO_FALSE));
+    TEST_ASSERT_EQUAL_INT(0, auth_build_failure(out, &full, sizeof(out), PROTO_FALSE));
 
     for (size_t cap = 0; cap < full; cap++)
     {
         size_t len = 0;
-        TEST_ASSERT_EQUAL_INT(-1, protocore_ssh_auth_build_failure(out, &len, cap, PROTO_FALSE));
+        TEST_ASSERT_EQUAL_INT(-1, auth_build_failure(out, &len, cap, PROTO_FALSE));
     }
 }
 
@@ -519,7 +640,7 @@ static void test_sec5_1_success_is_a_single_byte(void)
     uint8_t out[16];
     size_t len = 0;
 
-    TEST_ASSERT_EQUAL_INT(0, protocore_ssh_auth_build_success(out, &len, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, auth_build_success(out, &len, sizeof(out)));
     TEST_ASSERT_EQUAL_UINT32(1u, (uint32_t)len);
     TEST_ASSERT_EQUAL_UINT8(SSH_MSG_USERAUTH_SUCCESS, out[0]);
 }
@@ -529,24 +650,24 @@ static void test_sec5_1_success_needs_one_byte_of_room(void)
     uint8_t out[16];
     size_t len = 0;
 
-    TEST_ASSERT_EQUAL_INT(-1, protocore_ssh_auth_build_success(out, &len, 0));
-    TEST_ASSERT_EQUAL_INT(0, protocore_ssh_auth_build_success(out, &len, 1));
+    TEST_ASSERT_EQUAL_INT(-1, auth_build_success(out, &len, 0));
+    TEST_ASSERT_EQUAL_INT(0, auth_build_success(out, &len, 1));
 }
 
 static void test_reset_clears_any_pending_password_change(void)
 {
-    protocore_ssh_auth_reset(0);
+    auth_reset(0);
     TEST_ASSERT_EQUAL_INT(PROTOCORE_SSH_PW_CHANGE_NONE, protocore_ssh_auth_pw_change_take(0));
 }
 
 static void test_outcome_for_a_slot_with_no_change_in_flight_is_ignored(void)
 {
-    protocore_ssh_auth_reset(0);
-    protocore_ssh_auth_pw_change_report(0, PROTO_TRUE);
+    auth_reset(0);
+    auth_pw_change_report(0, PROTO_TRUE);
     TEST_ASSERT_EQUAL_INT(PROTOCORE_SSH_PW_CHANGE_NONE, protocore_ssh_auth_pw_change_take(0));
 
-    protocore_ssh_auth_reset(0);
-    protocore_ssh_auth_pw_change_report(0, PROTO_FALSE);
+    auth_reset(0);
+    auth_pw_change_report(0, PROTO_FALSE);
     TEST_ASSERT_EQUAL_INT(PROTOCORE_SSH_PW_CHANGE_NONE, protocore_ssh_auth_pw_change_take(0));
 }
 
@@ -556,23 +677,23 @@ static void test_sec8_change_outcome_round_trip(void)
     uint8_t out[256];
     size_t out_len = 0;
 
-    protocore_ssh_auth_reset(0);
-    protocore_ssh_auth_set_password_change_cb(change_cb);
+    auth_reset(0);
+    auth_set_password_change_cb(change_cb);
     s_change_seen = PROTO_FALSE;
     clock_past_cooldown();
 
     size_t n = build_pw_change(p, "oldpass", "newpass");
-    (void)protocore_ssh_auth_handle_request(0, p, n, out, &out_len, sizeof(out));
+    (void)auth_handle_request(0, p, n, out, &out_len, sizeof(out));
     TEST_ASSERT_TRUE(s_change_seen);
 
     // Now that a change is in flight the outcome is accepted, and taking it consumes it so one
     // change produces one reply rather than a reply on every poll.
-    protocore_ssh_auth_pw_change_report(0, PROTO_TRUE);
+    auth_pw_change_report(0, PROTO_TRUE);
     TEST_ASSERT_EQUAL_INT(PROTOCORE_SSH_PW_CHANGE_OK, protocore_ssh_auth_pw_change_take(0));
     TEST_ASSERT_EQUAL_INT(PROTOCORE_SSH_PW_CHANGE_NONE, protocore_ssh_auth_pw_change_take(0));
 
-    protocore_ssh_auth_set_password_change_cb(NULL);
-    protocore_ssh_auth_reset(0);
+    auth_set_password_change_cb(NULL);
+    auth_reset(0);
 }
 
 static void test_sec8_change_refusal_round_trip(void)
@@ -581,19 +702,19 @@ static void test_sec8_change_refusal_round_trip(void)
     uint8_t out[256];
     size_t out_len = 0;
 
-    protocore_ssh_auth_reset(0);
-    protocore_ssh_auth_set_password_change_cb(change_cb);
+    auth_reset(0);
+    auth_set_password_change_cb(change_cb);
     clock_past_cooldown();
 
     size_t n = build_pw_change(p, "oldpass", "newpass");
-    (void)protocore_ssh_auth_handle_request(0, p, n, out, &out_len, sizeof(out));
+    (void)auth_handle_request(0, p, n, out, &out_len, sizeof(out));
 
-    protocore_ssh_auth_pw_change_report(0, PROTO_FALSE);
+    auth_pw_change_report(0, PROTO_FALSE);
     TEST_ASSERT_EQUAL_INT(PROTOCORE_SSH_PW_CHANGE_FAIL, protocore_ssh_auth_pw_change_take(0));
     TEST_ASSERT_EQUAL_INT(PROTOCORE_SSH_PW_CHANGE_NONE, protocore_ssh_auth_pw_change_take(0));
 
-    protocore_ssh_auth_set_password_change_cb(NULL);
-    protocore_ssh_auth_reset(0);
+    auth_set_password_change_cb(NULL);
+    auth_reset(0);
 }
 
 static void test_sec8_second_change_inside_the_cooldown_is_refused(void)
@@ -602,25 +723,25 @@ static void test_sec8_second_change_inside_the_cooldown_is_refused(void)
     uint8_t out[256];
     size_t out_len = 0;
 
-    protocore_ssh_auth_reset(0);
-    protocore_ssh_auth_set_password_change_cb(change_cb);
+    auth_reset(0);
+    auth_set_password_change_cb(change_cb);
     clock_past_cooldown();
 
     size_t n = build_pw_change(p, "oldpass", "newpass");
     s_change_seen = PROTO_FALSE;
-    (void)protocore_ssh_auth_handle_request(0, p, n, out, &out_len, sizeof(out));
+    (void)auth_handle_request(0, p, n, out, &out_len, sizeof(out));
     TEST_ASSERT_TRUE(s_change_seen);
 
     // Answer the first one so the slot is idle again, then retry without advancing the clock.
-    protocore_ssh_auth_pw_change_report(0, PROTO_TRUE);
+    auth_pw_change_report(0, PROTO_TRUE);
     (void)protocore_ssh_auth_pw_change_take(0);
 
     s_change_seen = PROTO_FALSE;
-    (void)protocore_ssh_auth_handle_request(0, p, n, out, &out_len, sizeof(out));
+    (void)auth_handle_request(0, p, n, out, &out_len, sizeof(out));
     TEST_ASSERT_FALSE(s_change_seen);
 
-    protocore_ssh_auth_set_password_change_cb(NULL);
-    protocore_ssh_auth_reset(0);
+    auth_set_password_change_cb(NULL);
+    auth_reset(0);
 }
 
 static void test_sec8_change_while_one_is_in_flight_is_refused(void)
@@ -629,20 +750,20 @@ static void test_sec8_change_while_one_is_in_flight_is_refused(void)
     uint8_t out[256];
     size_t out_len = 0;
 
-    protocore_ssh_auth_reset(0);
-    protocore_ssh_auth_set_password_change_cb(change_cb);
+    auth_reset(0);
+    auth_set_password_change_cb(change_cb);
     clock_past_cooldown();
 
     size_t n = build_pw_change(p, "oldpass", "newpass");
-    (void)protocore_ssh_auth_handle_request(0, p, n, out, &out_len, sizeof(out));
+    (void)auth_handle_request(0, p, n, out, &out_len, sizeof(out));
 
     clock_past_cooldown(); // the cooldown is not what refuses this one
     s_change_seen = PROTO_FALSE;
-    (void)protocore_ssh_auth_handle_request(0, p, n, out, &out_len, sizeof(out));
+    (void)auth_handle_request(0, p, n, out, &out_len, sizeof(out));
     TEST_ASSERT_FALSE(s_change_seen);
 
-    protocore_ssh_auth_set_password_change_cb(NULL);
-    protocore_ssh_auth_reset(0);
+    auth_set_password_change_cb(NULL);
+    auth_reset(0);
 }
 
 static void test_sec8_change_without_a_callback_is_refused(void)
@@ -651,21 +772,21 @@ static void test_sec8_change_without_a_callback_is_refused(void)
     uint8_t out[256];
     size_t out_len = 0;
 
-    protocore_ssh_auth_reset(0);
-    protocore_ssh_auth_set_password_change_cb(NULL);
+    auth_reset(0);
+    auth_set_password_change_cb(NULL);
     clock_past_cooldown();
 
     size_t n = build_pw_change(p, "oldpass", "newpass");
-    (void)protocore_ssh_auth_handle_request(0, p, n, out, &out_len, sizeof(out));
+    (void)auth_handle_request(0, p, n, out, &out_len, sizeof(out));
     TEST_ASSERT_EQUAL_INT(PROTOCORE_SSH_PW_CHANGE_NONE, protocore_ssh_auth_pw_change_take(0));
     TEST_ASSERT_TRUE(out_len > 0u); // an answer went out
-    protocore_ssh_auth_reset(0);
+    auth_reset(0);
 }
 
 static void test_out_of_range_slot_is_ignored(void)
 {
-    protocore_ssh_auth_reset((uint8_t)MAX_SSH_CONNS);
-    protocore_ssh_auth_pw_change_report((uint8_t)MAX_SSH_CONNS, PROTO_TRUE);
+    auth_reset((uint8_t)MAX_SSH_CONNS);
+    auth_pw_change_report((uint8_t)MAX_SSH_CONNS, PROTO_TRUE);
     TEST_ASSERT_EQUAL_INT(PROTOCORE_SSH_PW_CHANGE_NONE, protocore_ssh_auth_pw_change_take((uint8_t)MAX_SSH_CONNS));
 }
 
@@ -749,7 +870,7 @@ static void test_sec7_signed_data_field_order(void)
 
     uint8_t buf[256];
     protocore_span w = protocore_span_from(buf, sizeof(buf));
-    protocore_ssh_auth_write_publickey_request(&w, sid, sizeof(sid), "root", "ssh-connection", "ssh-ed25519", pk, pkn);
+    auth_write_publickey_request(&w, sid, sizeof(sid), "root", "ssh-connection", "ssh-ed25519", pk, pkn);
     TEST_ASSERT_TRUE(protocore_span_ok(w));
 
     size_t o = 0;
@@ -782,11 +903,11 @@ static void test_sec7_request_is_the_signed_data_without_the_session_id(void)
 
     uint8_t signed_data[256];
     protocore_span sd = protocore_span_from(signed_data, sizeof(signed_data));
-    protocore_ssh_auth_write_publickey_request(&sd, sid, sizeof(sid), "user", "ssh-connection", "ssh-ed25519", pk, pkn);
+    auth_write_publickey_request(&sd, sid, sizeof(sid), "user", "ssh-connection", "ssh-ed25519", pk, pkn);
 
     uint8_t request[256];
     protocore_span rq = protocore_span_from(request, sizeof(request));
-    protocore_ssh_auth_write_publickey_request(&rq, NULL, 0, "user", "ssh-connection", "ssh-ed25519", pk, pkn);
+    auth_write_publickey_request(&rq, NULL, 0, "user", "ssh-connection", "ssh-ed25519", pk, pkn);
 
     TEST_ASSERT_TRUE(protocore_span_ok(sd));
     TEST_ASSERT_TRUE(protocore_span_ok(rq));
@@ -811,7 +932,7 @@ static void test_sec7_long_session_identifier_is_carried_whole(void)
 
     uint8_t buf[256];
     protocore_span w = protocore_span_from(buf, sizeof(buf));
-    protocore_ssh_auth_write_publickey_request(&w, sid, sizeof(sid), "u", "ssh-connection", "ssh-ed25519", pk, pkn);
+    auth_write_publickey_request(&w, sid, sizeof(sid), "u", "ssh-connection", "ssh-ed25519", pk, pkn);
     TEST_ASSERT_TRUE(protocore_span_ok(w));
     TEST_ASSERT_EQUAL_UINT32(64u, rd_u32(buf));
     TEST_ASSERT_EQUAL_HEX8(63u, buf[4 + 63]);
@@ -823,7 +944,7 @@ static void test_sec7_undersized_span_is_reported(void)
     const size_t pkn = blob_of(pk, "ssh-ed25519", 11);
     uint8_t buf[16];
     protocore_span w = protocore_span_from(buf, sizeof(buf));
-    protocore_ssh_auth_write_publickey_request(&w, NULL, 0, "user", "ssh-connection", "ssh-ed25519", pk, pkn);
+    auth_write_publickey_request(&w, NULL, 0, "user", "ssh-connection", "ssh-ed25519", pk, pkn);
     TEST_ASSERT_FALSE(protocore_span_ok(w));
 }
 
@@ -870,7 +991,7 @@ static void test_sec3_4_the_one_response_reaches_the_verifier(void)
     const size_t pn = build_info_response(pkt, 1, r);
 
     size_t olen = 0;
-    TEST_ASSERT_EQUAL_INT(0, protocore_ssh_auth_handle_info_response(0, pkt, pn, out, &olen, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, auth_handle_info_response(0, pkt, pn, out, &olen, sizeof(out)));
     TEST_ASSERT_EQUAL_INT(1, s_calls);
     TEST_ASSERT_EQUAL_STRING("alice", s_seen_user); // the user is remembered across the round trip
     TEST_ASSERT_EQUAL_STRING("hunter2", s_seen_pass);
@@ -888,7 +1009,7 @@ static void test_sec3_4_rejected_response_fails(void)
     const size_t pn = build_info_response(pkt, 1, r);
 
     size_t olen = 0;
-    TEST_ASSERT_EQUAL_INT(0, protocore_ssh_auth_handle_info_response(0, pkt, pn, out, &olen, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, auth_handle_info_response(0, pkt, pn, out, &olen, sizeof(out)));
     TEST_ASSERT_EQUAL(SSH_MSG_USERAUTH_FAILURE, out[0]);
 }
 
@@ -901,7 +1022,7 @@ static void test_sec3_4_zero_responses_against_one_prompt_fails(void)
     const size_t pn = build_info_response(pkt, 0, NULL);
 
     size_t olen = 0;
-    TEST_ASSERT_EQUAL_INT(0, protocore_ssh_auth_handle_info_response(0, pkt, pn, out, &olen, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, auth_handle_info_response(0, pkt, pn, out, &olen, sizeof(out)));
     TEST_ASSERT_EQUAL(SSH_MSG_USERAUTH_FAILURE, out[0]);
     TEST_ASSERT_EQUAL_INT(0, s_calls); // nothing was verified
 }
@@ -916,7 +1037,7 @@ static void test_sec3_4_two_responses_against_one_prompt_fails(void)
     const size_t pn = build_info_response(pkt, 2, r);
 
     size_t olen = 0;
-    TEST_ASSERT_EQUAL_INT(0, protocore_ssh_auth_handle_info_response(0, pkt, pn, out, &olen, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, auth_handle_info_response(0, pkt, pn, out, &olen, sizeof(out)));
     TEST_ASSERT_EQUAL(SSH_MSG_USERAUTH_FAILURE, out[0]);
     TEST_ASSERT_EQUAL_INT(0, s_calls);
 }
@@ -933,7 +1054,7 @@ static void test_sec3_4_count_past_the_packet_fails(void)
     n = put_u32(pkt, n, 0xFFFFu); // a string longer than anything that follows
 
     size_t olen = 0;
-    TEST_ASSERT_EQUAL_INT(0, protocore_ssh_auth_handle_info_response(0, pkt, n, out, &olen, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, auth_handle_info_response(0, pkt, n, out, &olen, sizeof(out)));
     TEST_ASSERT_EQUAL(SSH_MSG_USERAUTH_FAILURE, out[0]);
     TEST_ASSERT_EQUAL_INT(0, s_calls);
 }
@@ -946,7 +1067,7 @@ static void test_sec3_4_response_without_a_prompt_is_refused(void)
 
     uint8_t out[64];
     size_t olen = 0;
-    TEST_ASSERT_EQUAL_INT(-1, protocore_ssh_auth_handle_info_response(0, pkt, pn, out, &olen, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(-1, auth_handle_info_response(0, pkt, pn, out, &olen, sizeof(out)));
     TEST_ASSERT_EQUAL_INT(0, s_calls);
 }
 
@@ -960,8 +1081,8 @@ static void test_sec3_4_the_exchange_is_single_use(void)
     const size_t pn = build_info_response(pkt, 1, r);
 
     size_t olen = 0;
-    TEST_ASSERT_EQUAL_INT(0, protocore_ssh_auth_handle_info_response(0, pkt, pn, out, &olen, sizeof(out)));
-    TEST_ASSERT_EQUAL_INT(-1, protocore_ssh_auth_handle_info_response(0, pkt, pn, out, &olen, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, auth_handle_info_response(0, pkt, pn, out, &olen, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(-1, auth_handle_info_response(0, pkt, pn, out, &olen, sizeof(out)));
     TEST_ASSERT_EQUAL_INT(1, s_calls);
 }
 
@@ -976,7 +1097,7 @@ static void test_sec3_4_wrong_message_number_is_refused(void)
     n = put_u32(pkt, n, 1);
 
     size_t olen = 0;
-    TEST_ASSERT_EQUAL_INT(-1, protocore_ssh_auth_handle_info_response(0, pkt, n, out, &olen, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(-1, auth_handle_info_response(0, pkt, n, out, &olen, sizeof(out)));
 }
 
 static void test_slot_past_the_pool_is_refused(void)
@@ -986,7 +1107,7 @@ static void test_slot_past_the_pool_is_refused(void)
     const size_t pn = build_info_response(pkt, 1, r);
     uint8_t out[32];
     size_t olen = 0;
-    TEST_ASSERT_EQUAL_INT(-1, protocore_ssh_auth_handle_info_response(MAX_SSH_CONNS, pkt, pn, out, &olen, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(-1, auth_handle_info_response(MAX_SSH_CONNS, pkt, pn, out, &olen, sizeof(out)));
 }
 
 #endif

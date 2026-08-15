@@ -28,9 +28,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_VXI11
+
+PROTOCORE_BEGIN_DECLS
 
 // ── ONC RPC / portmapper / VXI-11 program constants ─────────────────────────────────────────────
 #define PROTOCORE_VXI11_CORE_PROG 0x0607AFu ///< DEVICE_CORE RPC program number
@@ -226,8 +226,8 @@ size_t protocore_vxi11_build_destroy_link(uint8_t *buf, size_t cap, uint32_t xid
  */
 proto_bool protocore_vxi11_parse_error_resp(const uint8_t *rpc, size_t len, int32_t *error);
 
-#endif // PROTOCORE_ENABLE_VXI11
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_VXI11
 
 #endif // PROTOCORE_VXI11_H

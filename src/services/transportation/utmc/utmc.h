@@ -22,9 +22,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_UTMC
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief UTMC data-quality flags. */
 // UTMC value-quality codes: wire values compared, so integer constants in a namespacing struct.
@@ -54,8 +54,8 @@ size_t protocore_utmc_response(const char *object_id, const char *value, uint8_t
  */
 size_t protocore_utmc_parse_request(const char *xml, size_t len, char *out, size_t cap);
 
-#endif // PROTOCORE_ENABLE_UTMC
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_UTMC
 
 #endif // PROTOCORE_UTMC_H

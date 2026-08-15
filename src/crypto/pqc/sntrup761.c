@@ -23,14 +23,14 @@
  * house style normally.
  */
 
-#include "crypto/pqc/sntrup761.h"
-#include "mmgr/protomem.h"
-
-#include "crypto/rng/rng.h" // protocore_rand_fill
-
-#if PROTOCORE_ENABLE_SSH_SNTRUP761
+#if PROTOCORE_ENABLE_SNTRUP761
 
 #include "crypto/hash/sha512.h"
+#include "crypto/pqc/sntrup761.h"
+#include "crypto/rng/rng.h" // protocore_rand_fill
+#include "mmgr/protomem.h"
+
+PROTOCORE_BEGIN_DECLS
 
 // --- parameters (sntrup761) ---
 // The spec names these p, q, w. Spelled out here because a bare `#define P`
@@ -869,4 +869,6 @@ void protocore_sntrup761_dec(uint8_t *work, const uint8_t sk[PROTOCORE_SNTRUP761
     HashSession(work, ss, 1 + mask, r_enc, ct);
 }
 
-#endif // PROTOCORE_ENABLE_SSH_SNTRUP761
+PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_SNTRUP761

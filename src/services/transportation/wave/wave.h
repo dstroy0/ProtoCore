@@ -23,9 +23,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_WAVE
+
+PROTOCORE_BEGIN_DECLS
 
 // WSMP / 1609.2 versions + content types + PSIDs: wire values, so integer constants in a struct.
 #define WSMP_VERSION 0x03         ///< WSMP version (in the low nibble of byte 0).
@@ -77,8 +77,8 @@ proto_bool protocore_wsmp_parse(const uint8_t *frame, size_t len, WsmpFrame *out
 size_t protocore_wave_1609dot2_wrap(uint8_t content_type, const uint8_t *payload, size_t payload_len, uint8_t *out,
                                     size_t cap);
 
-#endif // PROTOCORE_ENABLE_WAVE
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_WAVE
 
 #endif // PROTOCORE_WAVE_H

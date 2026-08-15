@@ -38,12 +38,12 @@
 #define PROTOCORE_SNMP_AGENT_H
 
 #include "protocore_config.h"
-#include "services/net/snmp/snmp_ber.h"
-
-PROTOCORE_BEGIN_DECLS
 
 #if PROTOCORE_ENABLE_SNMP
 
+PROTOCORE_BEGIN_DECLS
+
+#include "services/net/snmp/snmp_ber.h"
 /** @brief The version field of the message wrapper, as it is encoded. */
 typedef enum PROTO_ENUM_PACKED
 {
@@ -195,8 +195,8 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern SnmpAgentNs SnmpAgent;
 
-#endif // PROTOCORE_ENABLE_SNMP
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_SNMP
 
 #endif // PROTOCORE_SNMP_AGENT_H

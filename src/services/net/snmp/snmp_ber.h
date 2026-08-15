@@ -34,9 +34,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_SNMP
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief The identifier octets SNMP puts on the wire. */
 typedef enum PROTO_ENUM_PACKED
@@ -198,8 +198,8 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern SnmpBerNs SnmpBer;
 
-#endif // PROTOCORE_ENABLE_SNMP
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_SNMP
 
 #endif // PROTOCORE_SNMP_BER_H

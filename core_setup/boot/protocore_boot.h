@@ -59,4 +59,26 @@ uint32_t protocore_boot_paint_stack(uint32_t *stack_low, uint32_t stack_words);
 /** @brief Bytes of stack still carrying the paint, counted up from the low end. */
 uint32_t protocore_boot_stack_unused(const uint32_t *stack_low, uint32_t stack_words);
 
+/**
+ * @brief What the last machine-mode trap reported.
+ *
+ * @var protocore_trap_record::mcause  the exception code, high bit set for an interrupt
+ * @var protocore_trap_record::mepc    the address of the instruction that trapped
+ * @var protocore_trap_record::mtval   the faulting address, or the instruction word
+ * @var protocore_trap_record::count   traps recorded since reset
+ */
+typedef struct
+{
+    uint32_t mcause;
+    uint32_t mepc;
+    uint32_t mtval;
+    uint32_t count;
+} protocore_trap_record;
+
+/** @brief The last trap's registers. Zero until one is taken. */
+extern protocore_trap_record protocore_last_trap;
+
+/** @brief What a machine-mode trap reaches. Weak; the reset stub stops after it returns. */
+void protocore_platform_trap(uint32_t mcause, uint32_t mepc, uint32_t mtval);
+
 #endif // PROTOCORE_BOOT_H

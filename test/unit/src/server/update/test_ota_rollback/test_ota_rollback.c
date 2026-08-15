@@ -13,10 +13,15 @@
 
 #include "server/update/ota_rollback.h"
 
+#include "core_setup/hal/host/host_platform.h"
+#include "server/clock/clock.h"
+
 #include <unity.h>
 
 void setUp(void)
 {
+    protocore_host_platform_reset();
+    Clock.ms = 0u;
 }
 void tearDown(void)
 {
@@ -108,21 +113,64 @@ void test_the_image_states_are_distinct(void)
     TEST_ASSERT_EQUAL_UINT8(0xFFu, PROTOCORE_OTA_IMG_UNDEFINED);
 }
 
-// Off target there are no image partitions to read or mark, so the seam reports no image and the
-// tick does nothing rather than acting on a state it does not have.
-void test_the_platform_seam_reports_no_image_off_target(void)
+// The seam reports the state the part holds, and reports back what a mark changed it to.
+void test_the_seam_reports_the_state_the_part_holds(void)
 {
+    protocore_host_set_img_state(PROTOCORE_OTA_IMG_PENDING_VERIFY);
     OtaRollback.state(OtaRollback.internal);
-    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_OTA_IMG_UNDEFINED, OtaRollback.img_state);
+    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_OTA_IMG_PENDING_VERIFY, OtaRollback.img_state);
 
-    OtaRollback.action = PROTOCORE_OTA_ROLLBACK; // a value the tick has to overwrite
-    OtaRollback.self_test_ok = PROTO_TRUE;
-    OtaRollback.tick(OtaRollback.internal);
-    TEST_ASSERT_EQUAL_INT(PROTOCORE_OTA_WAIT, OtaRollback.action);
-
-    // The commit and the rollback reach a seam that owns no partitions, so both return.
     OtaRollback.commit(OtaRollback.internal);
+    OtaRollback.state(OtaRollback.internal);
+    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_OTA_IMG_VALID, OtaRollback.img_state);
+
+    protocore_host_set_img_state(PROTOCORE_OTA_IMG_PENDING_VERIFY);
     OtaRollback.rollback(OtaRollback.internal);
     OtaRollback.state(OtaRollback.internal);
-    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_OTA_IMG_UNDEFINED, OtaRollback.img_state);
+    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_OTA_IMG_INVALID, OtaRollback.img_state);
+}
+
+// A tick reads the state through the seam and carries the decision back through it: a pending image
+// whose self-test passed is marked valid, and nothing is rolled back.
+void test_a_tick_commits_a_confirmed_image_through_the_seam(void)
+{
+    protocore_host_set_img_state(PROTOCORE_OTA_IMG_PENDING_VERIFY);
+    Clock.ms = 0u;
+    OtaRollback.self_test_ok = PROTO_TRUE;
+    OtaRollback.action = PROTOCORE_OTA_ROLLBACK; // a value the tick has to overwrite
+
+    OtaRollback.tick(OtaRollback.internal);
+
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_OTA_COMMIT, OtaRollback.action);
+    TEST_ASSERT_TRUE(protocore_host_img_committed());
+    TEST_ASSERT_FALSE(protocore_host_img_rolled_back());
+}
+
+// An image that never confirms itself is rolled back through the seam once the window has closed.
+void test_a_tick_rolls_back_an_unconfirmed_image_through_the_seam(void)
+{
+    protocore_host_set_img_state(PROTOCORE_OTA_IMG_PENDING_VERIFY);
+    Clock.ms = PROTOCORE_OTA_CONFIRM_WINDOW_MS;
+    OtaRollback.self_test_ok = PROTO_FALSE;
+
+    OtaRollback.tick(OtaRollback.internal);
+
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_OTA_ROLLBACK, OtaRollback.action);
+    TEST_ASSERT_TRUE(protocore_host_img_rolled_back());
+    TEST_ASSERT_FALSE(protocore_host_img_committed());
+}
+
+// A settled image is left alone: the tick reads it through the seam and marks nothing either way.
+void test_a_tick_leaves_a_settled_image_alone_at_the_seam(void)
+{
+    protocore_host_set_img_state(PROTOCORE_OTA_IMG_VALID);
+    Clock.ms = 999999u;
+    OtaRollback.self_test_ok = PROTO_FALSE;
+    OtaRollback.action = PROTOCORE_OTA_ROLLBACK;
+
+    OtaRollback.tick(OtaRollback.internal);
+
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_OTA_WAIT, OtaRollback.action);
+    TEST_ASSERT_FALSE(protocore_host_img_committed());
+    TEST_ASSERT_FALSE(protocore_host_img_rolled_back());
 }

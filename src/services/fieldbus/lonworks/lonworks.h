@@ -25,9 +25,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_LONWORKS
+
+PROTOCORE_BEGIN_DECLS
 
 // LonTalk NV message codes + selector limit: wire values, so integer constants in a struct.
 #define LON_MSG_NV_UPDATE 0x80     ///< network-variable update message code (base).
@@ -67,8 +67,8 @@ void protocore_lon_snvt_switch_encode(double percent, uint8_t state, uint8_t out
 /** @brief Decode a SNVT_switch 2-byte value (percent out via @p percent, state via @p state). */
 void protocore_lon_snvt_switch_decode(const uint8_t in[2], double *percent, uint8_t *state);
 
-#endif // PROTOCORE_ENABLE_LONWORKS
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_LONWORKS
 
 #endif // PROTOCORE_LONWORKS_H

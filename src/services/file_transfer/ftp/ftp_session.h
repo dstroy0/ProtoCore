@@ -26,9 +26,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_FTP_SESSION
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief Where a transfer stands. */
 typedef enum PROTO_ENUM_PACKED
@@ -74,8 +74,8 @@ typedef size_t (*protocore_ftp_source)(void *ctx, size_t offset, uint8_t *buf, s
 protocore_ftp_state protocore_ftp_store(const FtpTarget *target, const char *remote_path, size_t total,
                                         protocore_ftp_source src, void *ctx);
 
-#endif // PROTOCORE_ENABLE_FTP_SESSION
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_FTP_SESSION
 
 #endif // PROTOCORE_FTP_SESSION_H

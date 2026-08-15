@@ -29,9 +29,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_MTCONNECT
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief The MTConnect DataItem category (which stream element wraps the value). */
 typedef enum PROTO_ENUM_PACKED
@@ -201,8 +201,8 @@ uint64_t protocore_mtc_sample_buffer_add(protocore_mtc_sample_buffer *b, protoco
 size_t protocore_mtc_sample_query(const protocore_mtc_sample_buffer *b, char *buf, size_t cap, uint64_t instance_id,
                                   const char *device_name, uint64_t from, uint32_t count);
 
-#endif // PROTOCORE_ENABLE_MTCONNECT
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_MTCONNECT
 
 #endif // PROTOCORE_MTCONNECT_H

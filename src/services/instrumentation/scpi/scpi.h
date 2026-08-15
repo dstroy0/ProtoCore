@@ -35,9 +35,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_SCPI
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief The default raw-socket ("SCPI-RAW") TCP port instruments listen on. */
 #define PROTOCORE_SCPI_PORT 5025
@@ -194,8 +194,8 @@ const char *protocore_scpi_std_error(int16_t number);
  */
 proto_bool protocore_scpi_match(const char *input, size_t input_len, const char *pattern);
 
-#endif // PROTOCORE_ENABLE_SCPI
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_SCPI
 
 #endif // PROTOCORE_SCPI_H

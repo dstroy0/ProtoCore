@@ -32,6 +32,8 @@
 
 #if PROTOCORE_ENABLE_IKEV2
 
+PROTOCORE_BEGIN_DECLS
+
 #include "services/security/ikev2/ikev2.h"
 #include "services/system/esp/esp.h"
 
@@ -179,5 +181,8 @@ proto_bool protocore_ipsec_sad_remove(IpsecSad *sad, uint32_t spi);
  */
 proto_bool protocore_ipsec_sad_next_seq(IpsecSaEntry *sa, uint32_t *seq_out);
 
+PROTOCORE_END_DECLS
+
 #endif // PROTOCORE_ENABLE_IKEV2
+
 #endif // PROTOCORE_IPSEC_DB_H

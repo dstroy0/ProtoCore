@@ -28,9 +28,9 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths and PROTOCORE_INLINE
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_MPR121
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief Sense electrodes on the MPR121 (ELE0..ELE11). */
 #define MPR121_ELECTRODES 12
@@ -80,8 +80,8 @@ uint16_t protocore_mpr121_read_touched(void);
 /** @brief Read electrode @p e's 10-bit filtered capacitance value. */
 uint16_t protocore_mpr121_read_filtered(uint8_t e);
 
-#endif // PROTOCORE_ENABLE_MPR121
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_MPR121
 
 #endif // PROTOCORE_MPR121_H

@@ -16,8 +16,11 @@
 #ifndef PROTOCORE_SHA1_H
 #define PROTOCORE_SHA1_H
 
-#include <stddef.h>
-#include <stdint.h>
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
+
+#if PROTOCORE_ENABLE_SHA1
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief SHA-1 digest length in bytes. */
 #define PROTOCORE_SHA1_DIGEST_LEN 20
@@ -30,5 +33,9 @@
  * @param digest  Output buffer; must be at least PROTOCORE_SHA1_DIGEST_LEN bytes.
  */
 void protocore_sha1(const uint8_t *data, size_t len, uint8_t digest[PROTOCORE_SHA1_DIGEST_LEN]);
+
+PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_SHA1
 
 #endif // PROTOCORE_SHA1_H

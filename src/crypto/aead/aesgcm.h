@@ -29,8 +29,11 @@
 #ifndef PROTOCORE_AESGCM_H
 #define PROTOCORE_AESGCM_H
 
-#include "mmgr/span.h"        // protocore_cspan: what the seal produced (empty == it did not)
 #include "protocore_config.h" // PROTOCORE_WORK_AESGCM sizes a context
+
+#if PROTOCORE_ENABLE_AESGCM
+
+#include "mmgr/span.h" // protocore_cspan: what the seal produced (empty == it did not)
 
 PROTOCORE_BEGIN_DECLS
 
@@ -86,5 +89,7 @@ proto_bool protocore_aesgcm_open(struct protocore_aesgcm_key *k, const uint8_t n
 void protocore_aesgcm_iv_increment(uint8_t iv[PROTOCORE_AESGCM_IV_LEN]);
 
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_AESGCM
 
 #endif // PROTOCORE_AESGCM_H

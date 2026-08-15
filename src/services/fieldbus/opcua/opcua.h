@@ -53,9 +53,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_OPCUA
+
+PROTOCORE_BEGIN_DECLS
 
 // ---------------------------------------------------------------------------
 // OPC UA Binary built-in type codec (little-endian; OPC UA Part 6 §5.2)
@@ -569,8 +569,8 @@ void protocore_opcua_rx(uint8_t slot);
 struct ProtoHandler;
 const struct ProtoHandler *protocore_opcua_protocore_handler(void);
 
-#endif // PROTOCORE_ENABLE_OPCUA
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_OPCUA
 
 #endif // PROTOCORE_OPCUA_H

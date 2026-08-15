@@ -25,6 +25,9 @@
 #define PROTOCORE_CHACHA20_H
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths and PROTOCORE_BEGIN_DECLS
+
+#if PROTOCORE_ENABLE_CHACHA20
+
 #include <stddef.h>
 #include <stdint.h>
 
@@ -56,5 +59,7 @@ void protocore_chacha20_block_ietf(const uint8_t key[PROTOCORE_CHACHA20_KEY_LEN]
                                    const uint8_t nonce[12], uint8_t out[PROTOCORE_CHACHA20_BLOCK_LEN]);
 
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_CHACHA20
 
 #endif // PROTOCORE_CHACHA20_H

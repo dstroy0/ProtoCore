@@ -24,6 +24,8 @@
 
 #if PROTOCORE_ENABLE_DNC
 
+PROTOCORE_BEGIN_DECLS
+
 #include "dnc.h"
 
 /** @brief Result of a drip-feed. 0 is success; each failure is a distinct code. */
@@ -58,6 +60,8 @@ typedef int (*DncRecvFn)(void *ctx, uint8_t *buf, size_t cap);
  */
 DncStreamResult dnc_stream(const DncCfg *cfg, const char *program, size_t prog_len, DncSendFn send, DncRecvFn recv,
                            void *ctx);
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_DNC
 

@@ -21,9 +21,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_WEARLEVEL
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief The slot table a call reads, and the slot it names. */
 typedef struct
@@ -75,8 +75,8 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern WearlevelNs Wearlevel;
 
-#endif // PROTOCORE_ENABLE_WEARLEVEL
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_WEARLEVEL
 
 #endif // PROTOCORE_WEARLEVEL_H

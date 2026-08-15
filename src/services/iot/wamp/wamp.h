@@ -34,9 +34,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_WAMP
+
+PROTOCORE_BEGIN_DECLS
 
 // Message type codes, WAMP sec 3.5 (the Basic Profile table).
 #define WAMP_HELLO 1
@@ -176,8 +176,8 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern WampNs Wamp;
 
-#endif // PROTOCORE_ENABLE_WAMP
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_WAMP
 
 #endif // PROTOCORE_WAMP_H

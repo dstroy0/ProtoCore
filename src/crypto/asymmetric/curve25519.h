@@ -20,6 +20,8 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths and PROTOCORE_BEGIN_DECLS
 
+#if PROTOCORE_ENABLE_CURVE25519
+
 PROTOCORE_BEGIN_DECLS
 
 /** @brief A field element of GF(2^255 - 19): 16 limbs, radix 2^16 (limb i weighs 2^(16i)). */
@@ -52,5 +54,7 @@ void protocore_x25519(uint8_t out[32], const uint8_t scalar[32], const uint8_t p
 void protocore_x25519_base(uint8_t out[32], const uint8_t scalar[32]);
 
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_CURVE25519
 
 #endif // PROTOCORE_CURVE25519_H

@@ -9,10 +9,13 @@
  * ipad = 0x36 repeated, opad = 0x5c repeated.
  */
 
+#if PROTOCORE_ENABLE_HMAC_SHA512
+
 #include "crypto/mac/hmac_sha512.h"
 #include "crypto/crypto_opt.h"
 #include "mmgr/protomem.h"
 PROTOCORE_CRYPTO_HOT
+PROTOCORE_BEGIN_DECLS
 
 // The transient half of the caller's bytes: live inside init and inside final, dead between them.
 typedef struct
@@ -87,3 +90,7 @@ void protocore_hmac_sha512(uint8_t *work, const uint8_t *key, size_t key_len, co
     protocore_hmac_sha512_update(&ctx, data, len);
     protocore_hmac_sha512_final(&ctx, mac);
 }
+
+PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_HMAC_SHA512

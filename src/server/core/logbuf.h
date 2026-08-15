@@ -21,9 +21,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_LOGBUF
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief Severity levels (ordered low -> high). Compared (level >= threshold) and passed through the
  *  uint8_t trap-callback ABI, so integer constants in a namespacing struct - cast-free. */
@@ -105,8 +105,8 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern LogbufNs Logbuf;
 
-#endif // PROTOCORE_ENABLE_LOGBUF
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_LOGBUF
 
 #endif // PROTOCORE_LOGBUF_H

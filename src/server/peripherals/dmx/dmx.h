@@ -25,9 +25,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_DMX
+
+PROTOCORE_BEGIN_DECLS
 
 #define DMX_MAX_CHANNELS 512u ///< slots per DMX512 universe
 #define DMX_SC_DIMMER 0x00u   ///< start code for standard dimmer data
@@ -162,8 +162,8 @@ size_t protocore_rdm_build_device_info(uint8_t *pdata, size_t cap, const RdmDevi
  */
 proto_bool protocore_rdm_parse_device_info(const uint8_t *pdata, uint8_t pdl, RdmDeviceInfo *out);
 
-#endif // PROTOCORE_ENABLE_DMX
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_DMX
 
 #endif // PROTOCORE_DMX_H

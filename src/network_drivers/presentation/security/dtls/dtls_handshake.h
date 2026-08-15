@@ -32,9 +32,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_DTLS
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief DTLS handshake header length: msg_type(1) + length(3) + message_seq(2) + fragment_offset(3)
  *         + fragment_length(3) = 12 bytes (RFC 9147 §5.2). */
@@ -141,8 +141,8 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern const DtlsHandshakeNs DtlsHandshake;
 
-#endif // PROTOCORE_ENABLE_DTLS
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_DTLS
 
 #endif // PROTOCORE_DTLS_HANDSHAKE_H

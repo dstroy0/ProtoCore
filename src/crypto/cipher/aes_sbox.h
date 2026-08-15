@@ -16,7 +16,13 @@
 #ifndef PROTOCORE_AES_SBOX_H
 #define PROTOCORE_AES_SBOX_H
 
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
+
+#if PROTOCORE_ENABLE_AES_SBOX
+
 #include <stdint.h>
+
+PROTOCORE_BEGIN_DECLS
 
 // AES forward S-box (FIPS 197 Figure 7).
 static const uint8_t PROTOCORE_AES_SBOX[256] = {
@@ -35,5 +41,9 @@ static const uint8_t PROTOCORE_AES_SBOX[256] = {
     0x69, 0xd9, 0x8e, 0x94, 0x9b, 0x1e, 0x87, 0xe9, 0xce, 0x55, 0x28, 0xdf, 0x8c, 0xa1, 0x89, 0x0d, 0xbf, 0xe6, 0x42,
     0x68, 0x41, 0x99, 0x2d, 0x0f, 0xb0, 0x54, 0xbb, 0x16,
 };
+
+PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_AES_SBOX
 
 #endif // PROTOCORE_AES_SBOX_H

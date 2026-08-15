@@ -53,9 +53,7 @@ static size_t build_frame(uint8_t *dst, WsOpcode opcode, proto_bool fin, const u
 
 void setUp()
 {
-#if PROTOCORE_ENABLE_WEBSOCKET
     Ws.init(Ws.internal);
-#endif
     for (int i = 0; i < MAX_CONNS; i++)
     {
         conn_pool[i] = (TcpConn){0};

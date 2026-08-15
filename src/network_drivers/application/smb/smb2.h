@@ -38,9 +38,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_SMB
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief SMB2 command codes (MS-SMB2 §2.2.1.2). */
 typedef enum PROTO_ENUM_PACKED
@@ -608,8 +608,8 @@ size_t protocore_smb2_encrypt(uint16_t cipher, const uint8_t *key, const uint8_t
 size_t protocore_smb2_decrypt(uint16_t cipher, const uint8_t *key, const uint8_t *in, size_t in_len, uint8_t *out,
                               size_t out_cap);
 
-#endif // PROTOCORE_ENABLE_SMB
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_SMB
 
 #endif // PROTOCORE_SMB2_H

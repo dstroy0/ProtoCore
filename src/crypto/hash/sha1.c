@@ -9,16 +9,20 @@
  * the SW path, a software implementation with no mbedTLS dependency.
  */
 
+#if PROTOCORE_ENABLE_SHA1
+
+#if PROTOCORE_HAS_HW_SHA
+#include "mbedtls/sha1.h" // hardware-accelerated SHA-1 on ESP32
+#endif
+#if !PROTOCORE_HAS_HW_SHA
+#include "mmgr/endian.h" // native software SHA-1
+#endif
 #include "crypto/hash/sha1.h"
 #include "crypto/crypto_opt.h"
 #include "mmgr/protomem.h"
 
-#if PROTOCORE_HAS_HW_SHA
-#include "mbedtls/sha1.h" // hardware-accelerated SHA-1 on ESP32
-#else
-#include "mmgr/endian.h" // native software SHA-1
-#endif
 PROTOCORE_CRYPTO_HOT
+PROTOCORE_BEGIN_DECLS
 
 #if PROTOCORE_HAS_HW_SHA
 
@@ -29,7 +33,9 @@ void protocore_sha1(const uint8_t *data, size_t len, uint8_t digest[PROTOCORE_SH
     (void)mbedtls_sha1(data, len, digest);
 }
 
-#else
+#endif
+
+#if !PROTOCORE_HAS_HW_SHA
 
 // --- SW path: software SHA-1, no external dependencies ---------------------
 
@@ -138,4 +144,8 @@ void protocore_sha1(const uint8_t *data, size_t len, uint8_t digest[PROTOCORE_SH
     }
 }
 
-#endif // PROTOCORE_HAS_HW_SHA
+#endif // !PROTOCORE_HAS_HW_SHA (SW path)
+
+PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_SHA1

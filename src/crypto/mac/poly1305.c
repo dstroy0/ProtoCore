@@ -11,6 +11,8 @@
  * time, and s is added modulo 2^128.
  */
 
+#if PROTOCORE_ENABLE_POLY1305
+
 #include "crypto/mac/poly1305.h"
 #include "crypto/crypto_opt.h"
 #include "mmgr/protomem.h"
@@ -21,6 +23,7 @@
 // (the final reduction is branchless), so a higher level for this TU is side-channel safe. Byte-exact.
 // See the caveats in crypto_opt.h and the ChaCha note in protocore_chacha20.cpp.
 PROTOCORE_CRYPTO_HOT
+PROTOCORE_BEGIN_DECLS
 
 static uint32_t rd_le32(const uint8_t *p)
 {
@@ -212,3 +215,7 @@ void protocore_poly1305(uint8_t tag[PROTOCORE_POLY1305_TAG_LEN], const uint8_t *
     wr_le32(tag + 12, f3);
     protocore_secure_release(mark);
 }
+
+PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_POLY1305
