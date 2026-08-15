@@ -3,8 +3,8 @@
 //
 // On-device CCOUNT microbenchmark for the NMEA 0183 sentence codec (services/timing_position/nmea0183): the marine
 // / GPS ASCII protocol (`$GPGGA,123519,4807.038,N,...*47<CR><LF>`). Benched are the four pure hot
-// paths - the XOR checksum over the sentence body, pc_nmea0183_build() (adds `$`, `*HH`, CRLF),
-// pc_nmea0183_parse() (leading-`$` guard, `*HH` XOR validation, comma field split, talker/type
+// paths - the XOR checksum over the sentence body, protocore_nmea0183_build() (adds `$`, `*HH`, CRLF),
+// protocore_nmea0183_parse() (leading-`$` guard, `*HH` XOR validation, comma field split, talker/type
 // derivation), and the pc_strtof / pc_strtol field-value helpers. Like performance_benching/device/modbus this is
 // a pure codec with no hardware involved: on a real rig the receiver is a plain HardwareSerial UART,
 // which is the application's - no UART / socket / radio I/O is ever performed here, so every call
@@ -34,7 +34,7 @@ void dbench_run(void)
 
     // Parse once up front so the field-value helpers have a real, spec-conformant message to walk.
     Nmea0183 m;
-    pc_nmea0183_parse(GGA, gga_len, &m);
+    protocore_nmea0183_parse(GGA, gga_len, &m);
 
     for (;;)
     {
@@ -46,19 +46,19 @@ void dbench_run(void)
         volatile long sinkl = 0;
 
         // XOR checksum over the 60-byte sentence body: bulk op, so ns/byte and MB/s are reported.
-        DBENCH_BULK("pc_nmea0183_checksum", 200000, body_len, sink8 += pc_nmea0183_checksum(GGA_BODY, body_len));
+        DBENCH_BULK("protocore_nmea0183_checksum", 200000, body_len, sink8 += protocore_nmea0183_checksum(GGA_BODY, body_len));
         // Build `$<body>*HH\r\n` (checksum + framing) from the GGA body.
-        DBENCH_OP("pc_nmea0183_build", 100000, sinksz += pc_nmea0183_build(build_buf, sizeof(build_buf), GGA_BODY));
+        DBENCH_OP("protocore_nmea0183_build", 100000, sinksz += protocore_nmea0183_build(build_buf, sizeof(build_buf), GGA_BODY));
         // Full parse: guard + checksum validation + comma field split + talker/type derivation.
-        DBENCH_OP("pc_nmea0183_parse GGA", 50000, sinkb ^= pc_nmea0183_parse(GGA, gga_len, &m));
+        DBENCH_OP("protocore_nmea0183_parse GGA", 50000, sinkb ^= protocore_nmea0183_parse(GGA, gga_len, &m));
         // Field-value helpers: decode field 2 ("4807.038") as float, field 7 ("08") as int.
         {
             float f = 0.0f;
-            DBENCH_OP("pc_nmea0183_field_float", 100000, sinkb ^= pc_nmea0183_field_float(&m, 2, &f); sinkf += f);
+            DBENCH_OP("protocore_nmea0183_field_float", 100000, sinkb ^= protocore_nmea0183_field_float(&m, 2, &f); sinkf += f);
         }
         {
             long v = 0;
-            DBENCH_OP("pc_nmea0183_field_int", 100000, sinkb ^= pc_nmea0183_field_int(&m, 7, &v); sinkl += v);
+            DBENCH_OP("protocore_nmea0183_field_int", 100000, sinkb ^= protocore_nmea0183_field_int(&m, 7, &v); sinkl += v);
         }
 
         (void)sink8;

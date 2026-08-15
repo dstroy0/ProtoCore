@@ -116,7 +116,8 @@ static void close_file(ScpConn *c)
 {
     if (c->fh >= 0)
     {
-        protocore_fs_close(c->fh);
+        Fs.io.handle = c->fh;
+        Fs.close(Fs.internal);
         c->fh = -1;
     }
 }
@@ -216,7 +217,12 @@ static void protocore_scp_on_data(uint8_t slot, uint32_t channel, const uint8_t 
             }
             // A directory target takes the control line's filename; a file target is the whole
             // destination on its own. Either way the accessor gets the pieces and frames once.
-            c->fh = protocore_fs_open(s_scp.root, c->dest, c->dest_is_dir ? s_scp.leaf : "", PROTOCORE_MNT_WRITE);
+            Fs.path.root = s_scp.root;
+            Fs.path.dir = c->dest;
+            Fs.path.name = c->dest_is_dir ? s_scp.leaf : "";
+            Fs.io.mode = PROTOCORE_MNT_WRITE;
+            Fs.open(Fs.internal);
+            c->fh = Fs.i32;
             if (c->fh < 0)
             {
                 err_ack(c, SCP_ERR_CREATE, sizeof(SCP_ERR_CREATE) - 1);
@@ -232,7 +238,11 @@ static void protocore_scp_on_data(uint8_t slot, uint32_t channel, const uint8_t 
         if (c->st == RECV)
         {
             size_t take = (len < c->remaining) ? len : (size_t)c->remaining;
-            if (protocore_fs_write(c->fh, data, take) != (int)take)
+            Fs.io.handle = c->fh;
+            Fs.io.wbuf = data;
+            Fs.io.n = take;
+            Fs.write(Fs.internal);
+            if (Fs.i32 != (int)take)
             {
                 c->err = PROTO_TRUE;
             }
@@ -269,7 +279,9 @@ void protocore_ssh_scp_begin(void)
 {
     // Bind the root this server answers from. Naming a different one than SFTP is how the two end up
     // over different storage; naming the same one shares it and costs one entry.
-    s_scp.root = protocore_fs_begin("mnt/scp");
+    Fs.mount = "mnt/scp";
+    Fs.begin(Fs.internal);
+    s_scp.root = Fs.i32;
 
     for (int i = 0; i < MAX_SSH_CONNS; i++)
     {

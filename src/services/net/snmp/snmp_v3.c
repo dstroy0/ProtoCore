@@ -138,7 +138,7 @@ _Static_assert(4 + 3 + SNMP_V3_ENGINEID_MAX + 7 + 7 + 3 + SNMP_V3_USER_MAX + 2 +
 static uint32_t v3_uptime_s(void)
 {
 #if PROTOCORE_HAS_NET_STACK
-    return (uint32_t)(protocore_millis() / 1000ULL);
+    return (uint32_t)(Clock.ms / 1000ULL);
 #else
     return 0; // no clock in this build; boots and time come through the discovery handshake
 #endif

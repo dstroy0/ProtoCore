@@ -17,6 +17,9 @@
 #include "network_drivers/presentation/ssh/ssh.h"
 #include "network_drivers/presentation/ssh/transport/transport.h" // ssh_sess, ssh_pkt - session and packet state
 #include "shared/log/log.h"                                       // PROTOCORE_LOGD
+#if PROTOCORE_ENABLE_SSH_SFTP || PROTOCORE_ENABLE_SSH_SCP
+#include "network_drivers/presentation/ssh/app/server.h" // SshAppServer: the service a channel request binds
+#endif
 #if PROTOCORE_SSH_PORT_FORWARD
 #include "network_drivers/presentation/ssh/server/server.h" // SshServer: the listener a binding accepts on
 #include "network_drivers/transport/tcp/tcp.h"              // Tcp: the socket a forwarded channel bridges
@@ -2056,13 +2059,18 @@ void protocore_ssh_forward_begin(struct SshConnectionInternal *restrict ctx)
     {
         s_store.rbind[i].active = PROTO_FALSE;
     }
-    protocore_ssh_channel_set_forward_open_cb(on_forward_open);
-    protocore_ssh_channel_set_forward_data_cb(on_forward_data);
+    ctx->ns->forward_open_cb = on_forward_open;
+    protocore_ssh_channel_set_forward_open_cb(ctx);
+    ctx->ns->forward_data_cb = on_forward_data;
+    protocore_ssh_channel_set_forward_data_cb(ctx);
     // Remote forwarding (ssh -R): the request/cancel seam, the open-confirmation
     // callback, and the accept handler for connections on a forwarded port.
-    protocore_ssh_channel_set_rforward_open_cb(on_rforward_open);
-    protocore_ssh_channel_set_rforward_cancel_cb(on_rforward_cancel);
-    protocore_ssh_channel_set_forward_confirm_cb(on_forward_confirm);
+    ctx->ns->rforward_open_cb = on_rforward_open;
+    protocore_ssh_channel_set_rforward_open_cb(ctx);
+    ctx->ns->rforward_cancel_cb = on_rforward_cancel;
+    protocore_ssh_channel_set_rforward_cancel_cb(ctx);
+    ctx->ns->forward_confirm_cb = on_forward_confirm;
+    protocore_ssh_channel_set_forward_confirm_cb(ctx);
 }
 
 void protocore_ssh_forward_pump(struct SshConnectionInternal *restrict ctx)

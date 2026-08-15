@@ -44,38 +44,67 @@ typedef struct
 #define PROTOCORE_BREACH_FRAG 2  ///< largest block below PROTOCORE_GUARDRAIL_FRAG_MIN_BLOCK.
 #define PROTOCORE_BREACH_STACK 4 ///< task stack remaining below PROTOCORE_GUARDRAIL_STACK_MIN.
 
-// ---------------------------------------------------------------------------
-// Host-testable core
-// ---------------------------------------------------------------------------
-
-/** @brief Evaluate @p h against the floors; returns a PROTOCORE_BREACH_* bitmask. */
-uint8_t protocore_guardrail_eval(const protocore_health *h, uint32_t heap_min, uint32_t frag_min_block,
-                                 uint32_t stack_min);
-
-/**
- * @brief Serialize a health snapshot as JSON into @p out.
- * @return characters written, or 0 if @p cap is too small (fail-closed).
- */
-int protocore_health_json(const protocore_health *h, char *out, size_t cap);
-
-// ---------------------------------------------------------------------------
-// Sampling + guardrail check (ESP32; zeros / no-op on host)
-// ---------------------------------------------------------------------------
-
-/** @brief Fill @p h from the live esp_* / FreeRTOS counters (zeros on host). */
-void protocore_guardrails_sample(protocore_health *h);
-
 /** @brief Breach callback: @p breaches is a PROTOCORE_BREACH_* bitmask, @p h the snapshot. */
 typedef void (*protocore_breach_fn)(uint8_t breaches, const protocore_health *h);
 
-/** @brief Install the breach callback (thresholds come from PROTOCORE_GUARDRAIL_*). */
-void protocore_guardrails_begin(protocore_breach_fn cb);
+/** @brief The floors an evaluation judges a snapshot against. */
+typedef struct
+{
+    uint32_t heap_min;       ///< free heap under this trips PROTOCORE_BREACH_HEAP
+    uint32_t frag_min_block; ///< largest block under this trips PROTOCORE_BREACH_FRAG
+    uint32_t stack_min;      ///< stack remaining under this trips PROTOCORE_BREACH_STACK
+} GuardrailFloorArgs;
+
+/** @brief Where a serialize writes. */
+typedef struct
+{
+    char *out;  ///< the buffer the JSON lands in
+    size_t cap; ///< how much room it has
+} GuardrailOutArgs;
+
+/** @brief The installed callback and the calls that reach it, described only in guardrails.c. */
+struct GuardrailsInternal;
 
 /**
- * @brief Sample, evaluate, and fire the callback if any guardrail is breached.
- * @return the PROTOCORE_BREACH_* bitmask (0 = all clear).
+ * @brief The device's live health, and the floors it is judged against.
+ *
+ * A caller sets the members a call takes, invokes it through ::Guardrails, and reads the outcome
+ * off the same handle.
+ *
+ * @var GuardrailsNs::health    the snapshot a call fills, judges, or serializes
+ * @var GuardrailsNs::floors    what an eval judges against
+ * @var GuardrailsNs::out       where a json writes
+ * @var GuardrailsNs::cb        the callback a begin installs
+ * @var GuardrailsNs::breaches  the PROTOCORE_BREACH_* bitmask an eval or a check reports
+ * @var GuardrailsNs::n         characters a json wrote, 0 when it did not fit
+ * @var GuardrailsNs::eval      judge @ref health against @ref floors
+ * @var GuardrailsNs::json      serialize @ref health
+ * @var GuardrailsNs::sample    fill @ref health from the live counters
+ * @var GuardrailsNs::begin     install the breach callback
+ * @var GuardrailsNs::check     sample, judge against PROTOCORE_GUARDRAIL_*, fire on a breach
+ * @var GuardrailsNs::internal  the installed callback and the calls that reach it
  */
-uint8_t protocore_guardrails_check(void);
+typedef struct
+{
+    protocore_health *health;
+    GuardrailFloorArgs floors;
+    GuardrailOutArgs out;
+    protocore_breach_fn cb;
+
+    uint8_t breaches;
+    int n;
+
+    void (*eval)(struct GuardrailsInternal *ctx);
+    void (*json)(struct GuardrailsInternal *ctx);
+    void (*sample)(struct GuardrailsInternal *ctx);
+    void (*begin)(struct GuardrailsInternal *ctx);
+    void (*check)(struct GuardrailsInternal *ctx);
+
+    struct GuardrailsInternal *internal;
+} GuardrailsNs;
+
+/** @brief The one symbol this module exports. */
+extern GuardrailsNs Guardrails;
 
 #endif // PROTOCORE_ENABLE_GUARDRAILS
 

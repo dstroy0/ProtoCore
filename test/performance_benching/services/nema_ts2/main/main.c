@@ -32,7 +32,7 @@ void dbench_run(void)
     static const uint8_t cmd_data[3] = {0x01, 0x02, 0x03};
     static uint8_t frame[16];
     size_t frame_len =
-        pc_nema_ts2_build(0x05, 0x10, NEMA_TS2_FT_CMD_LOADSWITCH, cmd_data, sizeof(cmd_data), frame, sizeof(frame));
+        protocore_nema_ts2_build(0x05, 0x10, NEMA_TS2_FT_CMD_LOADSWITCH, cmd_data, sizeof(cmd_data), frame, sizeof(frame));
 
     static uint8_t out[16];
 
@@ -45,13 +45,13 @@ void dbench_run(void)
         NemaTs2Frame parsed;
 
         // FCS-16 (CRC-16/X-25) over the 9-byte check vector - reports MB/s.
-        DBENCH_BULK("pc_nema_ts2_crc x25 (9B)", 50000, sizeof(chk), sink16 += pc_nema_ts2_crc(chk, sizeof(chk)));
+        DBENCH_BULK("protocore_nema_ts2_crc x25 (9B)", 50000, sizeof(chk), sink16 += protocore_nema_ts2_crc(chk, sizeof(chk)));
         // Build a full command frame (header + memcpy(data) + FCS-16).
-        DBENCH_OP("pc_nema_ts2_build cmd+3B", 50000,
-                  sinksz += pc_nema_ts2_build(0x05, 0x10, NEMA_TS2_FT_CMD_LOADSWITCH, cmd_data, sizeof(cmd_data), out,
+        DBENCH_OP("protocore_nema_ts2_build cmd+3B", 50000,
+                  sinksz += protocore_nema_ts2_build(0x05, 0x10, NEMA_TS2_FT_CMD_LOADSWITCH, cmd_data, sizeof(cmd_data), out,
                                               sizeof(out)));
         // Validate the FCS and parse a well-formed command frame.
-        DBENCH_OP("pc_nema_ts2_parse cmd+3B", 50000, sinkb ^= pc_nema_ts2_parse(frame, frame_len, &parsed));
+        DBENCH_OP("protocore_nema_ts2_parse cmd+3B", 50000, sinkb ^= protocore_nema_ts2_parse(frame, frame_len, &parsed));
         (void)sink16;
         (void)sinksz;
         (void)sinkb;

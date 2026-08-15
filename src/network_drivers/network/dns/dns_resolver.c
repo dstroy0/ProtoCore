@@ -377,7 +377,6 @@ static void resolver_resolve(struct ResolverInternal *restrict ctx)
             ctx->ns->state = PROTOCORE_DNS_READY;
             return;
         }
-        Clock.millis(Clock.internal);
         if ((uint32_t)(Clock.ms - ctx->store->timer) >= PROTOCORE_DNS_TIMEOUT_MS)
         {
             ctx->store->busy = PROTO_FALSE;
@@ -407,7 +406,6 @@ static void resolver_resolve(struct ResolverInternal *restrict ctx)
         return;
     }
     ctx->store->busy = PROTO_TRUE;
-    Clock.millis(Clock.internal);
     ctx->store->timer = Clock.ms;
     ctx->ns->state = PROTOCORE_DNS_BUSY;
 }
@@ -524,7 +522,6 @@ static void resolver_resolve(struct ResolverInternal *restrict ctx)
             ctx->ns->state = PROTOCORE_DNS_READY;
             return;
         }
-        Clock.millis(Clock.internal);
         if ((uint32_t)(Clock.ms - ctx->store->timer) >= PROTOCORE_DNS_TIMEOUT_MS)
         {
             ctx->store->busy = PROTO_FALSE;
@@ -558,7 +555,6 @@ static void resolver_resolve(struct ResolverInternal *restrict ctx)
     }
 
     // The ID ties the response to this query. It ticks, so two resolves in a row do not share one.
-    Clock.millis(Clock.internal);
     ctx->store->id = (uint16_t)(Clock.ms | 1u);
     ctx->store->answer = 0;
     ctx->store->done = PROTO_FALSE;
@@ -579,7 +575,6 @@ static void resolver_resolve(struct ResolverInternal *restrict ctx)
         return;
     }
     ctx->store->busy = PROTO_TRUE;
-    Clock.millis(Clock.internal);
     ctx->store->timer = Clock.ms;
     ctx->ns->state = PROTOCORE_DNS_BUSY;
 }

@@ -537,7 +537,6 @@ static void begin_close(struct ConnPoolInternal *restrict ctx)
         return;
     }
     protocore_pcb *pcb = c->pcb;
-    Clock.millis(Clock.internal);
     c->last_activity_ms = Clock.ms;                // start the dwell clock
     protocore_conn_set_state(c->id, CONN_CLOSING); // release store: the callbacks now see CLOSING
     PROTOCORE_OBS_TRANSITION(ctx->ns->slot, CONN_ACTIVE, CONN_CLOSING, PROTOCORE_CONN_R_CLOSE_LOCAL);
@@ -753,14 +752,12 @@ static void touch_active(struct ConnPoolInternal *restrict ctx)
     TcpConn *c = &conn_pool[ctx->ns->slot];
     if (PROTO_ATOMIC_LOAD(&c->state) == CONN_ACTIVE)
     {
-        Clock.millis(Clock.internal);
         c->last_activity_ms = Clock.ms;
     }
 }
 
 static void check_timeouts(struct ConnPoolInternal *restrict ctx)
 {
-    Clock.millis(Clock.internal);
     uint32_t now = Clock.ms;
     for (int i = 0; i < MAX_CONNS; i++)
     {
@@ -918,7 +915,6 @@ protocore_net_err lowlevel_recv_cb(void *arg, protocore_pcb *tpcb, protocore_pbu
         return PROTOCORE_NET_ERR_MEM; // do NOT free the segment: the stack keeps it and redelivers
     }
 
-    Clock.millis(Clock.internal);
     slot->last_activity_ms = Clock.ms; // accepted data is progress: refresh the idle timer
 
     // Move the segment into the ring a contiguous span per chain link, two across the wrap,
@@ -954,7 +950,6 @@ protocore_net_err lowlevel_sent_cb(void *arg, protocore_pcb *tpcb, proto_u16 len
     TcpConn *slot = (TcpConn *)arg;
     if (slot != NULL)
     {
-        Clock.millis(Clock.internal);
         slot->last_activity_ms = Clock.ms;
         if (PROTO_ATOMIC_LOAD(&slot->state) == CONN_CLOSING)
         {

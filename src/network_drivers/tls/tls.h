@@ -67,6 +67,10 @@ typedef struct
     const uint8_t *ephemeral_priv; ///< 32-byte X25519 ephemeral private key (fresh per handshake)
     const uint8_t *random;         ///< 32-byte Hello random (fresh per handshake)
     const char *hostname;          ///< client: the SNI to offer, or NULL
+    // Server: the protocols this listener answers, in descending preference (RFC 7301 sec 3.1). A
+    // null list leaves ALPN unanswered; a client that offered it then gets no extension back.
+    const char *const *alpn; ///< NUL-terminated protocol names, or NULL
+    uint8_t alpn_count;      ///< how many
 } TlsConnConfig;
 
 /**
@@ -100,7 +104,18 @@ typedef struct
     uint8_t *sign_work; ///< PROTOCORE_SHA512_BORROW: the bytes the CertificateVerify signature works out of
     uint8_t *ks_work;   ///< PROTOCORE_TLS13_KS_BORROW: the bytes the key schedule works out of
     Tls13ClientHello *hello; ///< the peer's parsed ClientHello
+    const char *alpn;        ///< the protocol selected from TlsConnConfig::alpn, or NULL when none was
 } TlsConn;
+
+/** @brief The connection standing on @p slot, or NULL when the index is out of range. */
+TlsConn *protocore_tls_conn_at(uint8_t slot);
+
+/**
+ * @brief The protocol ALPN selected on @p slot, or NULL when none was negotiated.
+ *
+ * Points into the listener's ::TlsConnConfig::alpn list, which outlives the connection.
+ */
+const char *protocore_tls_alpn(uint8_t slot);
 
 #endif // PROTOCORE_TLS_SOFTWARE
 

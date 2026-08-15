@@ -80,11 +80,11 @@ void dbench_run(void)
         DBENCH_BANNER("nrf24");
         volatile bool sinkb = false;
         volatile int sinki = 0;
-        DBENCH_OP("pc_nrf24_init", 20000, sinkb = pc_nrf24_init(&g_bus, &cfg));
-        DBENCH_OP("pc_nrf24_send", 50000, sinkb = pc_nrf24_send(&g_bus, send_data, sizeof(send_data)));
-        DBENCH_OP("pc_nrf24_tx_done", 100000, sinkb = pc_nrf24_tx_done(&g_bus));
-        DBENCH_OP("pc_nrf24_set_rx", 50000, pc_nrf24_set_rx(&g_bus));
-        DBENCH_OP("pc_nrf24_recv", 50000, sinki = pc_nrf24_recv(&g_bus, recv_buf, sizeof(recv_buf), &recv_pipe));
+        DBENCH_OP("protocore_nrf24_init", 20000, sinkb = protocore_nrf24_init(&g_bus, &cfg));
+        DBENCH_OP("protocore_nrf24_send", 50000, sinkb = protocore_nrf24_send(&g_bus, send_data, sizeof(send_data)));
+        DBENCH_OP("protocore_nrf24_tx_done", 100000, sinkb = protocore_nrf24_tx_done(&g_bus));
+        DBENCH_OP("protocore_nrf24_set_rx", 50000, protocore_nrf24_set_rx(&g_bus));
+        DBENCH_OP("protocore_nrf24_recv", 50000, sinki = protocore_nrf24_recv(&g_bus, recv_buf, sizeof(recv_buf), &recv_pipe));
         (void)sinkb;
         (void)sinki;
         DBENCH_DONE();

@@ -1,0 +1,146 @@
+/* Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ *
+ * Cortex-M image layout. Preprocessed, not linked directly:
+ *
+ *   arm-none-eabi-gcc -E -P -x c -I <profile dir> core_setup/link/cortex_m.ld.in -o build/link.ld
+ *
+ * The five region figures come from the board profile. They are part facts, so there is no default
+ * for any of them: an unset one stops the preprocessor rather than linking an image at an address
+ * nobody chose.
+ *
+ * On this core the hardware loads the initial stack pointer from word 0 of the vector table and the
+ * entry address from word 1, so the table has to be the first thing in FLASH and both words have to
+ * be the linker's, which is what .protocore_vectors is placed for.
+ *
+ * Exports the addresses protocore_boot_init_memory() copies and zeroes between.
+ */
+
+#ifndef PROTOCORE_LINK_FLASH_ORIGIN
+#error "PROTOCORE_LINK_FLASH_ORIGIN is not set by the board profile"
+#endif
+#ifndef PROTOCORE_LINK_FLASH_LEN
+#error "PROTOCORE_LINK_FLASH_LEN is not set by the board profile"
+#endif
+#ifndef PROTOCORE_LINK_SRAM_ORIGIN
+#error "PROTOCORE_LINK_SRAM_ORIGIN is not set by the board profile"
+#endif
+#ifndef PROTOCORE_LINK_SRAM_LEN
+#error "PROTOCORE_LINK_SRAM_LEN is not set by the board profile"
+#endif
+#ifndef PROTOCORE_LINK_STACK_SIZE
+#error "PROTOCORE_LINK_STACK_SIZE is not set by the board profile"
+#endif
+#ifndef PROTOCORE_LINK_IRQ_STACK_SIZE
+#error "PROTOCORE_LINK_IRQ_STACK_SIZE is not set by the board profile"
+#endif
+#ifndef PROTOCORE_LINK_DMA_ORIGIN
+#error "PROTOCORE_LINK_DMA_ORIGIN is not set by the board profile"
+#endif
+#ifndef PROTOCORE_LINK_DMA_LEN
+#error "PROTOCORE_LINK_DMA_LEN is not set by the board profile"
+#endif
+#ifndef PROTOCORE_LINK_DMA_ALIGN
+#error "PROTOCORE_LINK_DMA_ALIGN is not set by the board profile"
+#endif
+
+OUTPUT_FORMAT("elf32-littlearm", "elf32-littlearm", "elf32-littlearm")
+OUTPUT_ARCH(arm)
+ENTRY(protocore_reset)
+
+MEMORY
+{
+    FLASH (rx)  : ORIGIN = PROTOCORE_LINK_FLASH_ORIGIN, LENGTH = PROTOCORE_LINK_FLASH_LEN
+    SRAM  (rwx) : ORIGIN = PROTOCORE_LINK_SRAM_ORIGIN,  LENGTH = PROTOCORE_LINK_SRAM_LEN
+    DMA   (rw)  : ORIGIN = PROTOCORE_LINK_DMA_ORIGIN,   LENGTH = PROTOCORE_LINK_DMA_LEN
+}
+
+SECTIONS
+{
+    .vectors :
+    {
+        . = ALIGN(4);
+        KEEP(*(.protocore_vectors))
+    } > FLASH
+
+    .text :
+    {
+        . = ALIGN(4);
+        *(.text .text.*)
+        *(.glue_7) *(.glue_7t)
+        . = ALIGN(4);
+    } > FLASH
+
+    .rodata :
+    {
+        . = ALIGN(4);
+        *(.rodata .rodata.*)
+        . = ALIGN(4);
+    } > FLASH
+
+    /* Unwind tables. Discarded builds still emit references, so the bounds are exported. */
+    .ARM.extab : { *(.ARM.extab* .gnu.linkonce.armextab.*) } > FLASH
+    __exidx_start = .;
+    .ARM.exidx : { *(.ARM.exidx* .gnu.linkonce.armexidx.*) } > FLASH
+    __exidx_end = .;
+
+    . = ALIGN(4);
+    __protocore_data_load = LOADADDR(.data);
+
+    .data :
+    {
+        . = ALIGN(4);
+        __protocore_data_start = .;
+        *(.data .data.*)
+        . = ALIGN(4);
+        __protocore_data_end = .;
+    } > SRAM AT> FLASH
+
+    .bss (NOLOAD) :
+    {
+        . = ALIGN(4);
+        __protocore_bss_start = .;
+        *(.bss .bss.*)
+        *(COMMON)
+        . = ALIGN(4);
+        __protocore_bss_end = .;
+    } > SRAM
+
+    /* AAPCS keeps the stack 8-byte aligned, so the region it lives in is too. */
+    .stack (NOLOAD) :
+    {
+        . = ALIGN(8);
+        __protocore_stack_low = .;
+        . = . + PROTOCORE_LINK_STACK_SIZE;
+        . = ALIGN(8);
+        __protocore_stack_top = .;
+    } > SRAM
+
+    /* The stack exceptions run on, kept off the stack of whatever task they preempted. On this
+     * core that is MSP, which reset loads from vector word 0 and a task switch moves off of, so a
+     * port relocates MSP here and leaves .stack as the boot stack. */
+    .irq_stack (NOLOAD) :
+    {
+        . = ALIGN(8);
+        __protocore_irq_stack_low = .;
+        . = . + PROTOCORE_LINK_IRQ_STACK_SIZE;
+        . = ALIGN(8);
+        __protocore_irq_stack_top = .;
+    } > SRAM
+
+    __protocore_heap_start = __protocore_irq_stack_top;
+    __protocore_heap_end = ORIGIN(SRAM) + LENGTH(SRAM);
+
+    /* The bank the DMA engine can reach, which is not always the bank .bss landed in. Buffers are
+     * static and compile-time sized, so they are placed, not allocated. */
+    .dma (NOLOAD) :
+    {
+        . = ALIGN(PROTOCORE_LINK_DMA_ALIGN);
+        __protocore_dma_start = .;
+        *(.protocore_dma .protocore_dma.*)
+        . = ALIGN(PROTOCORE_LINK_DMA_ALIGN);
+        __protocore_dma_end = .;
+    } > DMA
+
+    /DISCARD/ : { *(.note.GNU-stack) *(.gnu_debuglink) *(.gnu.lto_*) }
+}

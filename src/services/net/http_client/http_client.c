@@ -532,7 +532,6 @@ static int tls_bio_recv(void *bio, unsigned char *buf, size_t len)
 // The library's monotonic millisecond count.
 static uint32_t now_ms(void)
 {
-    Clock.millis(Clock.internal);
     return Clock.ms;
 }
 

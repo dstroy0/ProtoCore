@@ -49,6 +49,7 @@ static_assert(PROTOCORE_ENABLE_TLS_RPK,
 #define TLS_ALERT_DECODE_ERROR 50
 #define TLS_ALERT_DECRYPT_ERROR 51
 #define TLS_ALERT_INTERNAL_ERROR 80
+#define TLS_ALERT_NO_APPLICATION_PROTOCOL 120
 
 /** @brief Handshake message header: msg_type(1) + 24-bit length. */
 #define TLS_HS_HDR_LEN 4
@@ -218,7 +219,7 @@ static void server_flight(struct TlsConnInternal *restrict ctx)
     keys_derive(&c->hs_rx, c->ks.s + TLS13_KS_CLIENT_HS);
     c->hs_keys_ready = PROTO_TRUE;
 
-    n = protocore_tls13_build_encrypted_extensions_empty(c->tx, PROTOCORE_TLS_CONN_MSG_CAP, PROTO_TRUE);
+    n = protocore_tls13_build_encrypted_extensions_empty(c->tx, PROTOCORE_TLS_CONN_MSG_CAP, PROTO_TRUE, c->alpn);
     w = emit_encrypted(ctx, n, out + off, out_cap - off);
     if (w == 0)
     {
@@ -273,6 +274,37 @@ static void server_flight(struct TlsConnInternal *restrict ctx)
     ctx->ns->i32 = (int)off;
 }
 
+// The first configured protocol that also appears in the client's ProtocolNameList, or NULL. The
+// list is name(1) then that many bytes, after a 2-byte total length (RFC 7301 sec 3.1). Server
+// preference decides, so the configured order is the one walked first.
+static const char *alpn_select(const TlsConnConfig *cfg, const uint8_t *list, size_t list_len)
+{
+    if (!cfg || !cfg->alpn || !list || list_len < 2)
+    {
+        return NULL;
+    }
+    for (uint8_t k = 0; k < cfg->alpn_count; k++)
+    {
+        const char *want = cfg->alpn[k];
+        const size_t want_len = str.len(want, 255);
+        size_t i = 2;
+        while (i < list_len)
+        {
+            const size_t nl = list[i++];
+            if (i + nl > list_len)
+            {
+                return NULL; // malformed list: nothing selectable
+            }
+            if (nl == want_len && mem.cmp(list + i, want, nl) == 0)
+            {
+                return want;
+            }
+            i += nl;
+        }
+    }
+    return NULL;
+}
+
 // A ClientHello arrived whole. Check it against the profile and answer it.
 static void server_on_client_hello(struct TlsConnInternal *restrict ctx, const uint8_t *msg, size_t len)
 {
@@ -288,6 +320,14 @@ static void server_on_client_hello(struct TlsConnInternal *restrict ctx, const u
         !c->hello->offers_aes128gcm_sha256)
     {
         fail(ctx, TLS_ALERT_HANDSHAKE_FAILURE);
+        return;
+    }
+    // ALPN (RFC 7301 sec 3.2): take the first configured protocol the client also offers. A client
+    // that offered the extension and shares none of them ends the handshake here.
+    c->alpn = alpn_select(c->cfg, c->hello->alpn_list, c->hello->alpn_list_len);
+    if (c->hello->alpn_list && c->cfg->alpn && !c->alpn)
+    {
+        fail(ctx, TLS_ALERT_NO_APPLICATION_PROTOCOL);
         return;
     }
     transcript_add(ctx, msg, len);

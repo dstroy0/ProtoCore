@@ -31,7 +31,7 @@ void dbench_run(void)
     // An S_RI run-info data reply carrying 3 payload bytes (test golden vector) for the parser.
     static const uint8_t sri_frame[] = {0x00, 0x00, 0x00, 0x03, 'S', '_', 'R', 'I', 0xAA, 0xBB, 0xCC};
     static Lsv2Telegram err_t;
-    pc_lsv2_parse(err_frame, sizeof(err_frame), &err_t, NULL);
+    protocore_lsv2_parse(err_frame, sizeof(err_frame), &err_t, NULL);
 
     // A 256-byte payload for a bulk framing pass (e.g. a C_FL file-data block): exercises the
     // header write + memcpy throughput the framer is dominated by for real transfers.
@@ -48,29 +48,29 @@ void dbench_run(void)
         volatile uint8_t bsink = 0;
 
         // ── request builders (cheap: header write + a small copy) ──────────────────────────────
-        DBENCH_OP("pc_lsv2_build_run_info", 200000,
-                  sink += pc_lsv2_build_run_info(buf, sizeof(buf), LSV2_RI_PGM_STATE));
-        DBENCH_OP("pc_lsv2_build_login", 100000,
-                  sink += pc_lsv2_build_login(buf, sizeof(buf), PROTOCORE_LSV2_LOGIN_INSPECT, NULL));
-        DBENCH_OP("pc_lsv2_build_filename", 100000,
-                  sink += pc_lsv2_build_filename(buf, sizeof(buf), PROTOCORE_LSV2_CMD_FILE_LOAD, "PGM.H"));
+        DBENCH_OP("protocore_lsv2_build_run_info", 200000,
+                  sink += protocore_lsv2_build_run_info(buf, sizeof(buf), LSV2_RI_PGM_STATE));
+        DBENCH_OP("protocore_lsv2_build_login", 100000,
+                  sink += protocore_lsv2_build_login(buf, sizeof(buf), PROTOCORE_LSV2_LOGIN_INSPECT, NULL));
+        DBENCH_OP("protocore_lsv2_build_filename", 100000,
+                  sink += protocore_lsv2_build_filename(buf, sizeof(buf), PROTOCORE_LSV2_CMD_FILE_LOAD, "PGM.H"));
 
         // ── framer throughput over a 256-byte payload block ────────────────────────────────────
-        DBENCH_BULK("pc_lsv2_build 256B", 100000, sizeof(big_payload),
+        DBENCH_BULK("protocore_lsv2_build 256B", 100000, sizeof(big_payload),
                     sink +=
-                    pc_lsv2_build(buf, sizeof(buf), PROTOCORE_LSV2_CMD_FILE_SEND, big_payload, sizeof(big_payload)));
+                    protocore_lsv2_build(buf, sizeof(buf), PROTOCORE_LSV2_CMD_FILE_SEND, big_payload, sizeof(big_payload)));
 
         // ── parse + response readers ───────────────────────────────────────────────────────────
         {
             Lsv2Telegram t;
             size_t consumed = 0;
-            DBENCH_OP("pc_lsv2_parse S_RI", 200000,
-                      sink += pc_lsv2_parse(sri_frame, sizeof(sri_frame), &t, &consumed) ? consumed : 0);
+            DBENCH_OP("protocore_lsv2_parse S_RI", 200000,
+                      sink += protocore_lsv2_parse(sri_frame, sizeof(sri_frame), &t, &consumed) ? consumed : 0);
         }
         {
             uint8_t ec = 0, code = 0;
-            DBENCH_OP("pc_lsv2_error decode", 200000,
-                      bsink += pc_lsv2_error(&err_t, &ec, &code) ? (uint8_t)(ec + code) : 0);
+            DBENCH_OP("protocore_lsv2_error decode", 200000,
+                      bsink += protocore_lsv2_error(&err_t, &ec, &code) ? (uint8_t)(ec + code) : 0);
         }
 
         (void)sink;

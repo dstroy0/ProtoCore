@@ -9,12 +9,12 @@
 // (server/clock/clock.h), which defaults to the platform millis() on device, so nothing is stubbed.
 //
 // Benched (the performance-relevant pure ops the model surfaces):
-//   - pc_packml_command          : apply a control command, return the resulting state (the core
+//   - protocore_packml_command          : apply a control command, return the resulting state (the core
 //                                   transition table + the universal Stop/Abort branches)
-//   - pc_packml_state_complete   : advance an acting state to its target (the State-Complete edge)
-//   - pc_packml_command_valid    : is a command legal in a state (runs the table, compares)
-//   - pc_packml_execute_complete : production-done edge, Execute -> Completing
-//   - pc_packml_svc_status       : fill the full Status/Admin PackTags snapshot (reads the clock)
+//   - protocore_packml_state_complete   : advance an acting state to its target (the State-Complete edge)
+//   - protocore_packml_command_valid    : is a command legal in a state (runs the table, compares)
+//   - protocore_packml_execute_complete : production-done edge, Execute -> Completing
+//   - protocore_packml_svc_status       : fill the full Status/Admin PackTags snapshot (reads the clock)
 // Deliberately out of scope: OPC UA / any transport carrying these tags - none is part of the pure
 // state model, and this rig has no network attached.
 //
@@ -31,7 +31,7 @@
 
 void dbench_run(void)
 {
-    pc_packml_svc_init(PACK_ML_MODE_PRODUCING); // owned service: Stopped, counters cleared
+    protocore_packml_svc_init(PACK_ML_MODE_PRODUCING); // owned service: Stopped, counters cleared
     PackMlStatus st;
 
     for (;;)
@@ -40,19 +40,19 @@ void dbench_run(void)
         volatile uint32_t sink = 0;
 
         // Core transition table: a real production edge (Execute + Hold -> Holding).
-        DBENCH_OP("pc_packml_command Ex+Hold", 200000,
-                  sink += (uint32_t)pc_packml_command(PACK_ML_STATE_EXECUTE, PACK_ML_COMMAND_HOLD));
+        DBENCH_OP("protocore_packml_command Ex+Hold", 200000,
+                  sink += (uint32_t)protocore_packml_command(PACK_ML_STATE_EXECUTE, PACK_ML_COMMAND_HOLD));
         // State-Complete edge: an acting state auto-advances (Starting -> Execute).
-        DBENCH_OP("pc_packml_state_complete", 200000,
-                  sink += (uint32_t)pc_packml_state_complete(PACK_ML_STATE_STARTING));
+        DBENCH_OP("protocore_packml_state_complete", 200000,
+                  sink += (uint32_t)protocore_packml_state_complete(PACK_ML_STATE_STARTING));
         // Command validity: runs the transition table and compares (Execute + Hold is legal).
-        DBENCH_OP("pc_packml_command_valid", 200000,
-                  sink += pc_packml_command_valid(PACK_ML_STATE_EXECUTE, PACK_ML_COMMAND_HOLD) ? 1u : 0u);
+        DBENCH_OP("protocore_packml_command_valid", 200000,
+                  sink += protocore_packml_command_valid(PACK_ML_STATE_EXECUTE, PACK_ML_COMMAND_HOLD) ? 1u : 0u);
         // Production-done edge: Execute -> Completing.
-        DBENCH_OP("pc_packml_execute_complete", 200000,
-                  sink += (uint32_t)pc_packml_execute_complete(PACK_ML_STATE_EXECUTE));
+        DBENCH_OP("protocore_packml_execute_complete", 200000,
+                  sink += (uint32_t)protocore_packml_execute_complete(PACK_ML_STATE_EXECUTE));
         // Full PackTags Status/Admin snapshot (reads the monotonic clock for the timer tags).
-        DBENCH_OP("pc_packml_svc_status", 100000, (pc_packml_svc_status(&st), sink += (uint32_t)st.state_current));
+        DBENCH_OP("protocore_packml_svc_status", 100000, (protocore_packml_svc_status(&st), sink += (uint32_t)st.state_current));
 
         (void)sink;
         DBENCH_DONE();

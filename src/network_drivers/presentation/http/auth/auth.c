@@ -34,7 +34,11 @@ static void sha256_hex(uint8_t *work, const uint8_t *data, size_t len, char out[
 {
     uint8_t d[PROTOCORE_SHA256_DIGEST_LEN];
     protocore_sha256(work, data, len, d);
-    protocore_hex_encode(d, PROTOCORE_SHA256_DIGEST_LEN, out, PROTO_FALSE);
+    Hex.io.in = d;
+    Hex.io.n = PROTOCORE_SHA256_DIGEST_LEN;
+    Hex.io.out = out;
+    Hex.args.upper = PROTO_FALSE;
+    Hex.encode(Hex.internal);
 }
 
 // Extract the value of @p key from a Digest auth header into @p out.
@@ -216,7 +220,7 @@ static void rekey(struct AuthInternal *restrict ctx)
         raw.put_u32(seed + i * 4, r);
     }
     uint32_t c = counter;
-    uint32_t t = (uint32_t)protocore_millis();
+    uint32_t t = (uint32_t)Clock.ms;
     raw.put_u32(seed + 16, c);
     raw.put_u32(seed + 20, t);
     uint8_t d[PROTOCORE_SHA256_DIGEST_LEN];
@@ -236,7 +240,11 @@ static uint32_t digest_nonce_mac(uint8_t *work, const uint8_t *secret, uint32_t 
     raw.put_u32(material + 16, issue); // endian-symmetric: minted and verified the same way
     uint8_t d[PROTOCORE_SHA256_DIGEST_LEN];
     protocore_sha256(work, material, sizeof(material), d);
-    protocore_hex_encode(d, 16, mac_hex, PROTO_FALSE); // 16 bytes -> 32 hex chars + NUL
+    Hex.io.in = d;
+    Hex.io.n = 16;
+    Hex.io.out = mac_hex;
+    Hex.args.upper = PROTO_FALSE;
+    Hex.encode(Hex.internal); // 16 bytes -> 32 hex chars + NUL
     return issue;
 }
 
@@ -250,9 +258,13 @@ static void mint_nonce(struct AuthInternal *restrict ctx)
         out[0] = '\0';
         return;
     }
-    uint32_t issue = protocore_millis();
+    uint32_t issue = Clock.ms;
     char issue_hex[9];
-    protocore_hex_encode((const uint8_t *)&issue, 4, issue_hex, PROTO_FALSE); // 4 bytes -> 8 hex chars
+    Hex.io.in = (const uint8_t *)&issue;
+    Hex.io.n = 4;
+    Hex.io.out = issue_hex;
+    Hex.args.upper = PROTO_FALSE;
+    Hex.encode(Hex.internal); // 4 bytes -> 8 hex chars
     char mac_hex[33];
     digest_nonce_mac(work, ctx->store->digest_secret, issue, mac_hex);
     protocore_sb sb_out = {out, cap, 0, PROTO_TRUE};
@@ -281,7 +293,12 @@ static void verify_nonce(struct AuthInternal *restrict ctx)
         return PROTO_FALSE;
     }
     uint32_t issue;
-    if (protocore_hex_decode(nonce, 8, (uint8_t *)&issue, 4) != 4)
+    Hex.io.text = nonce;
+    Hex.io.n = 8;
+    Hex.io.bytes = (uint8_t *)&issue;
+    Hex.io.cap = 4;
+    Hex.decode(Hex.internal);
+    if (Hex.i32 != 4)
     {
         return PROTO_FALSE;
     }
@@ -299,7 +316,6 @@ static void verify_nonce(struct AuthInternal *restrict ctx)
     {
         return PROTO_FALSE; // not a nonce this server minted
     }
-    Clock.millis(Clock.internal);
     uint32_t age = Clock.ms - issue; // unsigned: tolerant of the 32-bit millis wrap
     ctx->ns->expired = (age > PROTOCORE_DIGEST_NONCE_LIFETIME_MS);
     ctx->ns->ok = PROTO_TRUE;

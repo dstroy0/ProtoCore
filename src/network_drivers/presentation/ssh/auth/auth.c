@@ -177,7 +177,6 @@ void protocore_ssh_auth_timed_out(struct SshAuthInternal *restrict ctx)
         ctx->ns->ok = PROTO_FALSE;
         return;
     }
-    Clock.millis(Clock.internal);
     const uint32_t now = Clock.ms;
     if (!s_store.started[i])
     {
@@ -619,7 +618,6 @@ void protocore_ssh_auth_handle_request(struct SshAuthInternal *restrict ctx)
     // inside the cooldown, is refused now. The unsigned difference wraps with the millis clock.
     if (req.is_password && req.is_pw_change)
     {
-        Clock.millis(Clock.internal);
         uint32_t now = Clock.ms;
         uint32_t elapsed = now - s_store.pw_change_last_ms;
         if (s_store.pw_change[i] == PROTOCORE_SSH_PW_CHANGE_NONE && elapsed >= PROTOCORE_SSH_PW_CHANGE_COOLDOWN_MS &&
@@ -886,7 +884,14 @@ void ssh_auth_dispatch(struct SshAuthInternal *restrict ctx)
             ctx->ns->i32 = -1;
             return;
         }
-        if (protocore_ssh_auth_handle_info_response(i, payload, len, reply.buf, &n, reply.cap) != 0)
+        ctx->ns->slot = i;
+        ctx->ns->msg.payload = payload;
+        ctx->ns->msg.len = len;
+        ctx->ns->out_args.out = reply.buf;
+        ctx->ns->out_args.cap = reply.cap;
+        protocore_ssh_auth_handle_info_response(ctx);
+        n = ctx->ns->out_args.out_len;
+        if (ctx->ns->i32 != 0)
         {
             protocore_plaintext_release(mark);
             ctx->ns->i32 = -1;
@@ -978,7 +983,8 @@ void ssh_auth_passwd_change_reply(struct SshAuthInternal *restrict ctx)
     // take, which advances the phase itself on an OK.
     if (ssh_phase_auth_complete(i))
     {
-        protocore_ssh_auth_pw_change_clear(i);
+        ctx->ns->slot = i;
+        protocore_ssh_auth_pw_change_clear(ctx);
         return;
     }
     SshPwChange pw = protocore_ssh_auth_pw_change_take(i);

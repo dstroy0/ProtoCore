@@ -166,7 +166,7 @@ proto_bool protocore_mdns_adaptive_begin(const MdnsAdaptiveCfg *cfg)
     }
 
     s_ad.cfg = *cfg;
-    uint32_t now = protocore_millis();
+    uint32_t now = Clock.ms;
     uint32_t base = protocore_mdns_refresh_interval(cfg->ttl_s);
 
     // Never let the backoff push the refresh past the TTL: a cache evicts the record at its TTL, so
@@ -195,7 +195,7 @@ void protocore_mdns_adaptive_tick(void)
     {
         return;
     }
-    uint32_t now = protocore_millis();
+    uint32_t now = Clock.ms;
 
     // Follow the station if it roamed to another channel, so capture stays on the live link.
     Physical.wifi_channel(Physical.internal);

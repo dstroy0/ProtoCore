@@ -48,7 +48,10 @@ void ssh_classify_file_transfer_request(struct SshAppServerInternal *restrict ct
         if (bytes.rd_str(payload, len, off, &arg, &arg_len) && arg_len == 4 && mem.cmp(arg, "sftp", 4) == 0)
         {
             *accept = PROTO_TRUE;
-            protocore_ssh_channel_bind_service(i, channel, SSH_CHAN_SERVICE_SFTP);
+            SshConnection.chan.slot = i;
+            SshConnection.chan.channel = channel;
+            SshConnection.chan.service = SSH_CHAN_SERVICE_SFTP;
+            SshConnection.channel_bind_service(SshConnection.internal);
             SshSftpOpenCb open_cb = protocore_ssh_channel_sftp_open_cb();
             if (open_cb)
             {
@@ -65,7 +68,10 @@ void ssh_classify_file_transfer_request(struct SshAppServerInternal *restrict ct
         uint32_t arg_len = 0;
         if (bytes.rd_str(payload, len, off, &arg, &arg_len) && arg_len >= 4 && mem.cmp(arg, "scp ", 4) == 0)
         {
-            protocore_ssh_channel_bind_service(i, channel, SSH_CHAN_SERVICE_SCP);
+            SshConnection.chan.slot = i;
+            SshConnection.chan.channel = channel;
+            SshConnection.chan.service = SSH_CHAN_SERVICE_SCP;
+            SshConnection.channel_bind_service(SshConnection.internal);
             SshScpOpenCb open_cb = protocore_ssh_channel_scp_open_cb();
             if (open_cb)
             {

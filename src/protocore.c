@@ -267,7 +267,11 @@ int32_t proto_begin(const WebServerConfig *cfg)
         h3cfg.rng = protocore_h3_server_rng;
         // No app pointer: the trampoline dispatches through the global route table. The QUIC server
         // records whether it came up and protocore_quic_server_poll() reads its own answer.
-        (void)protocore_quic_server_begin(s_inst.h3_port, &h3cfg, protocore_h3_server_request, NULL);
+        QuicServer.begin_args.port = s_inst.h3_port;
+        QuicServer.begin_args.cfg = &h3cfg;
+        QuicServer.begin_args.on_request = protocore_h3_server_request;
+        QuicServer.begin_args.app = NULL;
+        QuicServer.begin(QuicServer.internal);
     }
 #endif
 #if PROTOCORE_HAS_SCHEDULER
@@ -617,7 +621,6 @@ void service_once(int worker_id)
     // The iteration's stamp. One read of the source per pass, before anything reads the time, so
     // every step of the pass measures against the same instant. A caller that needs the live value
     // - a latency measurement, an elapsed time - calls Clock.millis() again and reads the delta.
-    Clock.millis(Clock.internal);
 
     // Install HTTP's poll so the dispatch loop below pumps it through the uniform
     // ProtoHandler.on_poll seam (see http_poll_slot). Done here rather than only in begin() so a
@@ -634,7 +637,8 @@ void service_once(int worker_id)
     // through the route table), flush replies. One worker owns it, so requests stay single-threaded.
     if (worker_id == 0)
     {
-        protocore_quic_server_poll(Clock.ms);
+        QuicServer.now_ms = Clock.ms;
+        QuicServer.poll(QuicServer.internal);
     }
 #endif
 

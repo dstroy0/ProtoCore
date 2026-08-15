@@ -2850,10 +2850,26 @@
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/swar.c>",
         "+<mmgr/float_bits.c>",
-        "+<shared/hex/hex.c>"
+        "+<shared/hex/hex.c>",
+        "+<core_setup/hal/host/host_platform.c>"
       ],
       "tests": [
         "unit/src/server/core/guardrails/test_guardrails"
+      ],
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
+    },
+    
+    "native_boot": {
+      "desc": "The reset handler's loops (core_setup/boot): the .data copy, the .bss zero and the stack paint that protocore_platform_stack_free() reads back. Host-run, so the same loops the silicon runs are exercised against caller-supplied regions carrying guard words on both ends.",
+      "flags": [],
+      "src": [
+        "-<*>",
+        "+<core_setup/boot/protocore_boot.c>"
+      ],
+      "tests": [
+        "unit/core_setup/boot/test_boot"
       ],
       "extra_scripts": [
         "pre:test/gen_test_runners.py"

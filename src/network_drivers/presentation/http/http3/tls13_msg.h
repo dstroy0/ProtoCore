@@ -78,6 +78,8 @@ typedef struct
     proto_bool offers_rpk_server_cert; ///< server_certificate_type (RFC 7250) offered RawPublicKey(2)
 #endif
     proto_bool offers_h3_alpn;        ///< ALPN contains "h3"
+    const uint8_t *alpn_list;         ///< the ProtocolNameList body (aliases input), or NULL when absent
+    size_t alpn_list_len;             ///< how many bytes of it there are
     const uint8_t *protocore_quic_tp; ///< raw protocore_quic_transport_parameters extension body (or NULL)
     size_t protocore_quic_tp_len;
     const uint8_t *sni; ///< first server_name host_name (or NULL), not NUL-terminated
@@ -215,7 +217,8 @@ size_t protocore_tls13_build_hello_retry_request(uint8_t *out, size_t cap, const
  * server_certificate_type = RawPublicKey extension (RFC 7250 sec 4.2); otherwise the list is empty.
  * @return bytes written, or 0 on overflow.
  */
-size_t protocore_tls13_build_encrypted_extensions_empty(uint8_t *out, size_t cap, proto_bool rpk_server_cert);
+size_t protocore_tls13_build_encrypted_extensions_empty(uint8_t *out, size_t cap, proto_bool rpk_server_cert,
+                                                        const char *alpn);
 
 /**
  * @brief Write the synthetic @c message_hash handshake message that replaces ClientHello1 in the

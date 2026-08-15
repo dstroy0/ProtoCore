@@ -4,13 +4,13 @@
 // On-device CCOUNT microbenchmark for the HLK-LD2410 24 GHz mmWave radar codec (server/peripherals/ld2410):
 // a pure protocol codec, so every call here exercises the real production code path (contrast with
 // performance_benching/device/ads1115, a peripheral driver where the bus transaction is stubbed). What is benched:
-//   - pc_ld2410_parse_report over a basic (13B payload) and an engineering-mode (35B payload)
+//   - protocore_ld2410_parse_report over a basic (13B payload) and an engineering-mode (35B payload)
 //     report frame - decode + full header/footer/length/marker validation;
-//   - pc_ld2410_stream_push, the byte-by-byte UART reassembler, driven over a whole basic frame so
+//   - protocore_ld2410_stream_push, the byte-by-byte UART reassembler, driven over a whole basic frame so
 //     DBENCH_BULK reports the per-byte reassembly throughput (MB/s) of the real serial hot path;
-//   - pc_ld2410_parse_ack decoding a get-MAC command-ACK frame;
-//   - pc_ld2410_cmd_get_mac building a config-command frame.
-// Deliberately out of scope: the ESP32 UART binding (pc_ld2410_begin/poll/last, which pump a
+//   - protocore_ld2410_parse_ack decoding a get-MAC command-ACK frame;
+//   - protocore_ld2410_cmd_get_mac building a config-command frame.
+// Deliberately out of scope: the ESP32 UART binding (protocore_ld2410_begin/poll/last, which pump a
 // HardwareSerial at 256000 baud) - this rig has no LD2410 wired to it, so only the deterministic
 // CPU-side codec is ever benched. The sample frames are the byte-for-byte, spec-conformant vectors
 // lifted straight from test/test_ld2410/test_ld2410.cpp (already known-good).
@@ -59,14 +59,14 @@ static const uint8_t MAC_ACK[] = {0xFD, 0xFC, 0xFB, 0xFA, 0x0A, 0x00, 0xA5, 0x01
                                   0x8F, 0x27, 0x2E, 0xB8, 0x0F, 0x65, 0x04, 0x03, 0x02, 0x01};
 
 // Drive the byte-by-byte stream reassembler over a whole frame; returns true if it completed one.
-// pc_ld2410_stream_push resets the stream itself on completion, so feeding a frame repeatedly is
+// protocore_ld2410_stream_push resets the stream itself on completion, so feeding a frame repeatedly is
 // safe. Kept out-of-line so the loop body is a single expression for DBENCH_BULK.
 static bool feed_frame(Ld2410Stream *s, const uint8_t *f, size_t n, Ld2410Report *out)
 {
     bool got = false;
     for (size_t i = 0; i < n; i++)
     {
-        if (pc_ld2410_stream_push(s, f[i], out))
+        if (protocore_ld2410_stream_push(s, f[i], out))
         {
             got = true;
         }
@@ -80,20 +80,20 @@ void dbench_run(void)
     static Ld2410Ack ack;
     static Ld2410Stream stream;
     static uint8_t cmd[32];
-    pc_ld2410_stream_reset(&stream);
+    protocore_ld2410_stream_reset(&stream);
 
     for (;;)
     {
         DBENCH_BANNER("ld2410");
         volatile size_t sink = 0;
 
-        DBENCH_OP("pc_ld2410_parse_report basic", 100000, sink += pc_ld2410_parse_report(BASIC, sizeof(BASIC), &rep));
-        DBENCH_OP("pc_ld2410_parse_report eng", 100000, sink += pc_ld2410_parse_report(ENG, sizeof(ENG), &rep));
+        DBENCH_OP("protocore_ld2410_parse_report basic", 100000, sink += protocore_ld2410_parse_report(BASIC, sizeof(BASIC), &rep));
+        DBENCH_OP("protocore_ld2410_parse_report eng", 100000, sink += protocore_ld2410_parse_report(ENG, sizeof(ENG), &rep));
         // Per-byte UART reassembly throughput over a whole basic frame (reports ns/B, MB/s).
-        DBENCH_BULK("pc_ld2410_stream_push basic", 20000, sizeof(BASIC),
+        DBENCH_BULK("protocore_ld2410_stream_push basic", 20000, sizeof(BASIC),
                     sink += feed_frame(&stream, BASIC, sizeof(BASIC), &rep));
-        DBENCH_OP("pc_ld2410_parse_ack mac", 100000, sink += pc_ld2410_parse_ack(MAC_ACK, sizeof(MAC_ACK), &ack));
-        DBENCH_OP("pc_ld2410_cmd_get_mac build", 100000, sink += pc_ld2410_cmd_get_mac(cmd, sizeof(cmd)));
+        DBENCH_OP("protocore_ld2410_parse_ack mac", 100000, sink += protocore_ld2410_parse_ack(MAC_ACK, sizeof(MAC_ACK), &ack));
+        DBENCH_OP("protocore_ld2410_cmd_get_mac build", 100000, sink += protocore_ld2410_cmd_get_mac(cmd, sizeof(cmd)));
 
         (void)sink;
         DBENCH_DONE();

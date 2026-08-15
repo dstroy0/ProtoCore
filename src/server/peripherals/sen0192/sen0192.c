@@ -99,13 +99,11 @@ proto_bool protocore_sen0192_poll(void)
         return PROTO_FALSE;
     }
     proto_bool level = protocore_platform_gpio_read((uint8_t)(s_sen.pin)) != 0;
-    Clock.millis(Clock.internal);
     return protocore_sen0192_motion_update(&s_sen.motion, level, Clock.ms);
 }
 
 proto_bool protocore_sen0192_present(void)
 {
-    Clock.millis(Clock.internal);
     protocore_sen0192_motion_tick(&s_sen.motion, Clock.ms); // age presence out even between poll()s
     return protocore_sen0192_motion_present(&s_sen.motion);
 }

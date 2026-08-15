@@ -14,6 +14,8 @@
 
 #include "network_drivers/presentation/http/http.h"                    // Http.set_edge_poll
 #include "network_drivers/presentation/http/http_parser/http_parser.h" // HttpReq, http_get_header, http_pool
+#include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the accepted slot
+#include "network_drivers/transport/tcp/client/client.h" // TcpClient: the dialed connection
 #include "network_drivers/transport/tcp/tcp.h"                         // protocore_client_*
 #include "network_drivers/transport/tcp/tcp.h"                         // protocore_conn_active
 #include "protocore.h"                                                 // PC, Middleware, MwResult, ChunkSource
@@ -160,32 +162,49 @@ static void edge_on_evict(void *ctx, const EdgeEntry *victim)
 static int t_open(void *c, const char *host, uint16_t port, uint32_t timeout)
 {
     (void)c;
-    return Tcp.client->open(host, port, timeout);
+    TcpClient.dial.host = host;
+    TcpClient.dial.port = port;
+    TcpClient.dial.timeout_ms = timeout;
+    TcpClient.open(TcpClient.internal);
+    return TcpClient.i32;
 }
 static proto_bool t_connected(void *c, int cid)
 {
     (void)c;
-    return Tcp.client->connected(cid);
+    TcpClient.cid = cid;
+    TcpClient.connected(TcpClient.internal);
+    return TcpClient.ok;
 }
 static proto_bool t_send(void *c, int cid, const void *d, size_t l)
 {
     (void)c;
-    return Tcp.client->send(cid, d, l);
+    TcpClient.cid = cid;
+    TcpClient.io.data = d;
+    TcpClient.io.len = l;
+    TcpClient.send(TcpClient.internal);
+    return TcpClient.ok;
 }
 static size_t t_read(void *c, int cid, uint8_t *b, size_t cap)
 {
     (void)c;
-    return Tcp.client->read(cid, b, cap);
+    TcpClient.cid = cid;
+    TcpClient.io.buf = b;
+    TcpClient.io.cap = cap;
+    TcpClient.read(TcpClient.internal);
+    return TcpClient.n;
 }
 static proto_bool t_closed(void *c, int cid)
 {
     (void)c;
-    return Tcp.client->is_closed(cid);
+    TcpClient.cid = cid;
+    TcpClient.is_closed(TcpClient.internal);
+    return TcpClient.ok;
 }
 static void t_close(void *c, int cid)
 {
     (void)c;
-    Tcp.client->close(cid);
+    TcpClient.cid = cid;
+    TcpClient.close(TcpClient.internal);
 }
 
 #if PROTOCORE_ENABLE_EDGE_ORIGIN_TLS
@@ -197,15 +216,25 @@ static int edge_tls_bio_send(void *ctx, const unsigned char *buf, size_t len)
 {
     (void)ctx;
     size_t cap = len > 0xFFFF ? 0xFFFF : len;
-    return Tcp.client->send(s_ctx.tls_cid, buf, cap) ? (int)cap : PROTOCORE_PLATFORM_TLS_WANT_WRITE;
+    TcpClient.cid = s_ctx.tls_cid;
+    TcpClient.io.data = buf;
+    TcpClient.io.len = cap;
+    TcpClient.send(TcpClient.internal);
+    return TcpClient.ok ? (int)cap : PROTOCORE_PLATFORM_TLS_WANT_WRITE;
 }
 static int edge_tls_bio_recv(void *ctx, unsigned char *buf, size_t len)
 {
     (void)ctx;
-    size_t n = Tcp.client->read(s_ctx.tls_cid, buf, len);
+    TcpClient.cid = s_ctx.tls_cid;
+    TcpClient.io.buf = buf;
+    TcpClient.io.cap = len;
+    TcpClient.read(TcpClient.internal);
+    size_t n = TcpClient.n;
     if (n == 0)
     {
-        return Tcp.client->is_closed(s_ctx.tls_cid) ? 0 : PROTOCORE_PLATFORM_TLS_WANT_READ;
+        TcpClient.cid = s_ctx.tls_cid;
+        TcpClient.is_closed(TcpClient.internal);
+        return TcpClient.ok ? 0 : PROTOCORE_PLATFORM_TLS_WANT_READ;
     }
     return (int)n;
 }
@@ -213,7 +242,11 @@ static int edge_tls_bio_recv(void *ctx, unsigned char *buf, size_t len)
 static int t_tls_open(void *c, const char *host, uint16_t port, uint32_t timeout)
 {
     (void)c;
-    s_ctx.tls_cid = Tcp.client->open(host, port, timeout);
+    TcpClient.dial.host = host;
+    TcpClient.dial.port = port;
+    TcpClient.dial.timeout_ms = timeout;
+    TcpClient.open(TcpClient.internal);
+    s_ctx.tls_cid = TcpClient.i32;
     if (s_ctx.tls_cid < 0)
     {
         return -1;
@@ -222,7 +255,8 @@ static int t_tls_open(void *c, const char *host, uint16_t port, uint32_t timeout
     s_ctx.tls_ready = PROTO_FALSE;
     if (!protocore_tls_client_session_begin(host, edge_tls_bio_send, edge_tls_bio_recv))
     {
-        Tcp.client->close(s_ctx.tls_cid);
+        TcpClient.cid = s_ctx.tls_cid;
+        TcpClient.close(TcpClient.internal);
         s_ctx.tls_cid = -1;
         return -1;
     }
@@ -235,7 +269,9 @@ static int t_tls_open(void *c, const char *host, uint16_t port, uint32_t timeout
 static proto_bool t_tls_connected(void *c, int cid)
 {
     (void)c;
-    if (!Tcp.client->connected(cid))
+    TcpClient.cid = cid;
+    TcpClient.connected(TcpClient.internal);
+    if (!TcpClient.ok)
     {
         return PROTO_FALSE;
     }
@@ -275,13 +311,16 @@ static size_t t_tls_read(void *c, int cid, uint8_t *b, size_t cap)
 static proto_bool t_tls_closed(void *c, int cid)
 {
     (void)c;
-    return s_ctx.tls_peer_closed || Tcp.client->is_closed(cid);
+    TcpClient.cid = cid;
+    TcpClient.is_closed(TcpClient.internal);
+    return s_ctx.tls_peer_closed || TcpClient.ok;
 }
 static void t_tls_close(void *c, int cid)
 {
     (void)c;
     protocore_tls_client_session_end();
-    Tcp.client->close(cid);
+    TcpClient.cid = cid;
+    TcpClient.close(TcpClient.internal);
     s_ctx.tls_cid = -1;
     s_ctx.tls_ready = PROTO_FALSE;
 }
@@ -878,7 +917,7 @@ static MwResult edge_cache_mw(uint8_t slot, HttpReq *req)
     s_ctx.range_hdr[slot][sizeof(s_ctx.range_hdr[slot]) - 1] = '\0';
 #endif
 
-    uint32_t now = protocore_millis();
+    uint32_t now = Clock.ms;
     EdgeEntry *e = edge_store_find(&s_ctx.store, canon, req_lookup, req, now);
     if (e && edge_entry_fresh(e, now))
     {
@@ -911,12 +950,14 @@ static proto_bool edge_cache_poll(uint8_t slot)
     }
     uint8_t fi = s_ctx.pending[slot].fetch_idx;
     EdgeFetchSlot *fs = &s_ctx.fetches[fi];
-    uint32_t now = protocore_millis();
+    uint32_t now = Clock.ms;
 
 #if PROTOCORE_ENABLE_EDGE_MESH
     if (fs->phase == EDGE_FETCH_PHASE_MESH)
     {
-        if (!protocore_conn_active(slot)) // client vanished mid-query: abort
+        ConnPool.slot = slot;
+        ConnPool.active(ConnPool.internal);
+        if (!ConnPool.ok) // client vanished mid-query: abort
         {
             edge_mesh_fetch_end(&fs->mf, &s_ctx.transport);
             fs->used = PROTO_FALSE;
@@ -949,7 +990,9 @@ static proto_bool edge_cache_poll(uint8_t slot)
 #endif
 
     const EdgeFetchTransport *tport = fs->transport; // the transport chosen for this fetch (plaintext or TLS)
-    if (!protocore_conn_active(slot))                // client vanished mid-fetch: abort
+    ConnPool.slot = slot;
+    ConnPool.active(ConnPool.internal);
+    if (!ConnPool.ok) // client vanished mid-fetch: abort
     {
         edge_fetch_end(&fs->f, tport);
         fs->used = PROTO_FALSE;
@@ -1104,7 +1147,8 @@ static void mesh_answer(MeshConn *mc, const uint8_t digest[32], const char *cano
 static void mesh_serve_end(MeshConn *mc)
 {
     mc->active = PROTO_FALSE;
-    Tcp.conn->close(mc->conn_slot);
+    ConnPool.slot = mc->conn_slot;
+    ConnPool.close(ConnPool.internal);
 }
 
 // Drive one serve connection: accumulate the request, answer it, then page the response out with backpressure.
@@ -1113,10 +1157,15 @@ static void mesh_serve_pump(MeshConn *mc)
     uint8_t slot = mc->conn_slot;
     if (!mc->responded)
     {
-        if (protocore_conn_available(slot) && mc->req_len < sizeof(mc->reqbuf))
+        ConnPool.slot = slot;
+        ConnPool.available(ConnPool.internal);
+        if (ConnPool.n && mc->req_len < sizeof(mc->reqbuf))
         {
-            mc->req_len +=
-                (uint16_t)protocore_conn_read(slot, mc->reqbuf + mc->req_len, sizeof(mc->reqbuf) - mc->req_len);
+            ConnPool.slot = slot;
+            ConnPool.io.buf = mc->reqbuf + mc->req_len;
+            ConnPool.io.cap = sizeof(mc->reqbuf) - mc->req_len;
+            ConnPool.read(ConnPool.internal);
+            mc->req_len += (uint16_t)ConnPool.n;
         }
         uint8_t digest[32];
         char canon[PROTOCORE_EDGE_KEY_MAX];
@@ -1135,18 +1184,24 @@ static void mesh_serve_pump(MeshConn *mc)
             mesh_serve_end(mc); // malformed
             return;
         }
-        mesh_answer(mc, digest, canon, protocore_millis());
+        mesh_answer(mc, digest, canon, Clock.ms);
     }
     while (mc->out_off < mc->out_len)
     {
-        proto_u16 room = Tcp.conn->sndbuf(slot);
+        ConnPool.slot = slot;
+        ConnPool.sndbuf(ConnPool.internal);
+        proto_u16 room = ConnPool.u16;
         if (room == 0)
         {
             return; // backpressure; retry next poll
         }
         uint16_t remaining = (uint16_t)(mc->out_len - mc->out_off);
         proto_u16 n = remaining < room ? remaining : room;
-        if (!Tcp.conn->send(slot, mc->outbuf + mc->out_off, n))
+        ConnPool.slot = slot;
+        ConnPool.io.data = mc->outbuf + mc->out_off;
+        ConnPool.io.len = n;
+        ConnPool.send(ConnPool.internal);
+        if (!ConnPool.ok)
         {
             return; // retry next poll
         }
@@ -1156,8 +1211,10 @@ static void mesh_serve_pump(MeshConn *mc)
     // Tcp.conn->close would RST and discard the response the peer has not read yet). Tcp.conn->send already
     // COPY'd the bytes into the TCP buffer and the graceful finalize does not call on_close, so free the
     // MeshConn now - the transport owns the drain from here.
-    Tcp.conn->flush(slot);
-    Tcp.conn->begin_close(slot);
+    ConnPool.slot = slot;
+    ConnPool.flush(ConnPool.internal);
+    ConnPool.slot = slot;
+    ConnPool.begin_close(ConnPool.internal);
     mc->active = PROTO_FALSE;
 }
 
@@ -1177,7 +1234,8 @@ static void mesh_on_accept(uint8_t slot)
             return;
         }
     }
-    Tcp.conn->close(slot); // no free serve slot
+    ConnPool.slot = slot;
+    ConnPool.close(ConnPool.internal); // no free serve slot
 }
 
 static void mesh_on_data(uint8_t slot)
@@ -1191,7 +1249,9 @@ static void mesh_on_data(uint8_t slot)
 
 static void mesh_on_poll(uint8_t slot)
 {
-    if (!protocore_conn_active(slot))
+    ConnPool.slot = slot;
+    ConnPool.active(ConnPool.internal);
+    if (!ConnPool.ok)
     {
         return;
     }
@@ -1371,7 +1431,9 @@ void protocore_edge_cache_mesh_serve(void)
 {
     if (!s_ctx.mesh_registered)
     {
-        Session.proto->add(PROTO_MESH, &s_mesh_handler);
+        Session.proto->proto = PROTO_MESH;
+        Session.proto->h = &s_mesh_handler;
+        Session.proto->add(Session.proto->internal);
         s_ctx.mesh_registered = PROTO_TRUE;
     }
 }

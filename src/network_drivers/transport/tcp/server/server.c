@@ -486,7 +486,6 @@ protocore_net_err listener_accept_cb(void *arg, protocore_pcb *newpcb, protocore
 #if PROTOCORE_ENABLE_ACCEPT_THROTTLE
     // Connection-flood defense: drop accepts beyond the per-window budget before
     // claiming a pool slot or doing any per-connection work.
-    Clock.millis(Clock.internal);
     TcpListener.gate.now_ms = Clock.ms;
     listener_accept_allowed(&s_listener);
     if (!TcpListener.ok)
@@ -518,7 +517,6 @@ protocore_net_err listener_accept_cb(void *arg, protocore_pcb *newpcb, protocore
     // protocore_ip (test_per_ip_independent_budgets et al.); only ITS USE HERE, gated behind a
     // peer address this host build can never resolve, cannot be driven to the false case.
     TcpListener.gate.addr = &remote;
-    Clock.millis(Clock.internal);
     TcpListener.gate.now_ms = Clock.ms;
     listener_accept_allowed_ip(&s_listener);
     if (!TcpListener.ok)
@@ -568,7 +566,6 @@ protocore_net_err listener_accept_cb(void *arg, protocore_pcb *newpcb, protocore
     ConnPool.st = CONN_ACTIVE;
     ConnPool.set_state(ConnPool.internal); // reserves the slot in the bitmask
     slot->pcb = newpcb;
-    Clock.millis(Clock.internal);
     slot->last_activity_ms = Clock.ms;
     slot->rx_head = 0;
     slot->rx_tail = 0;

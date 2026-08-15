@@ -65,18 +65,28 @@ static size_t build_req(uint8_t *buf, size_t cap, long version, const char *comm
     BerEnc e;
     protocore_ber_enc_init(&e, buf, cap);
     size_t msg = protocore_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
-    protocore_ber_put_integer(&e, version);
+    SnmpBer.enc = &e;
+    SnmpBer.tlv.ival = version;
+    SnmpBer.put_integer(SnmpBer.internal);
     protocore_ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, (const uint8_t *)comm, strlen(comm));
     size_t pdus = protocore_ber_seq_begin(&e, pdu);
-    protocore_ber_put_integer(&e, reqid);
-    protocore_ber_put_integer(&e, f2);
-    protocore_ber_put_integer(&e, f3);
+    SnmpBer.enc = &e;
+    SnmpBer.tlv.ival = reqid;
+    SnmpBer.put_integer(SnmpBer.internal);
+    SnmpBer.enc = &e;
+    SnmpBer.tlv.ival = f2;
+    SnmpBer.put_integer(SnmpBer.internal);
+    SnmpBer.enc = &e;
+    SnmpBer.tlv.ival = f3;
+    SnmpBer.put_integer(SnmpBer.internal);
     size_t vbl = protocore_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
     size_t vb = protocore_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
     protocore_ber_put_oid(&e, oid, oidn);
     if (setval && setval->type == (uint8_t)SNMP_TAG_BER_INTEGER)
     {
-        protocore_ber_put_integer(&e, setval->ival);
+        SnmpBer.enc = &e;
+        SnmpBer.tlv.ival = setval->ival;
+        SnmpBer.put_integer(SnmpBer.internal);
     }
     else if (setval && setval->type == (uint8_t)SNMP_TAG_BER_OCTET_STRING)
     {
@@ -110,9 +120,15 @@ static size_t build_pdu(uint8_t *buf, size_t cap, int knob)
     BerEnc e;
     protocore_ber_enc_init(&e, buf, cap);
     size_t pdus = protocore_ber_seq_begin(&e, (uint8_t)SNMP_TAG_SNMP_PDU_GET);
-    protocore_ber_put_integer(&e, 42);
-    protocore_ber_put_integer(&e, 0);
-    protocore_ber_put_integer(&e, 0);
+    SnmpBer.enc = &e;
+    SnmpBer.tlv.ival = 42;
+    SnmpBer.put_integer(SnmpBer.internal);
+    SnmpBer.enc = &e;
+    SnmpBer.tlv.ival = 0;
+    SnmpBer.put_integer(SnmpBer.internal);
+    SnmpBer.enc = &e;
+    SnmpBer.tlv.ival = 0;
+    SnmpBer.put_integer(SnmpBer.internal);
     if (knob == VB_BAD_VBL_TAG)
     {
         protocore_ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, (const uint8_t *)"x", 1);
@@ -137,7 +153,9 @@ static size_t build_pdu(uint8_t *buf, size_t cap, int knob)
         else if (knob == VB_BAD_OID)
         {
             size_t vb = protocore_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
-            protocore_ber_put_integer(&e, 5);
+            SnmpBer.enc = &e;
+            SnmpBer.tlv.ival = 5;
+            SnmpBer.put_integer(SnmpBer.internal);
             protocore_ber_put_null(&e);
             protocore_ber_seq_end(&e, vb);
         }
@@ -472,7 +490,9 @@ void test_v3_message_dropped()
     BerEnc e;
     protocore_ber_enc_init(&e, req, sizeof(req));
     size_t msg = protocore_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
-    protocore_ber_put_integer(&e, (int)SNMP_V3);
+    SnmpBer.enc = &e;
+    SnmpBer.tlv.ival = (int)SNMP_V3;
+    SnmpBer.put_integer(SnmpBer.internal);
     protocore_ber_seq_end(&e, msg);
     uint8_t resp[64];
     size_t n = protocore_snmp_agent_process(req, e.len, resp, sizeof(resp));
@@ -578,9 +598,15 @@ static size_t build_pdu_with_value(uint8_t *buf, size_t cap, uint8_t pdu_tag, in
     BerEnc e;
     protocore_ber_enc_init(&e, buf, cap);
     size_t p = protocore_ber_seq_begin(&e, pdu_tag);
-    protocore_ber_put_integer(&e, 1);
-    protocore_ber_put_integer(&e, 0);
-    protocore_ber_put_integer(&e, 0);
+    SnmpBer.enc = &e;
+    SnmpBer.tlv.ival = 1;
+    SnmpBer.put_integer(SnmpBer.internal);
+    SnmpBer.enc = &e;
+    SnmpBer.tlv.ival = 0;
+    SnmpBer.put_integer(SnmpBer.internal);
+    SnmpBer.enc = &e;
+    SnmpBer.tlv.ival = 0;
+    SnmpBer.put_integer(SnmpBer.internal);
     size_t vbl = protocore_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
     size_t vb = protocore_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
     protocore_ber_put_oid(&e, OID_SYSDESCR, 9);
@@ -932,12 +958,20 @@ static size_t build_getbulk_multi(uint8_t *buf, size_t cap, long reqid, long non
     BerEnc e;
     protocore_ber_enc_init(&e, buf, cap);
     size_t msg = protocore_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
-    protocore_ber_put_integer(&e, (int)SNMP_V2C);
+    SnmpBer.enc = &e;
+    SnmpBer.tlv.ival = (int)SNMP_V2C;
+    SnmpBer.put_integer(SnmpBer.internal);
     protocore_ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, (const uint8_t *)"public", 6);
     size_t pdus = protocore_ber_seq_begin(&e, (uint8_t)SNMP_TAG_SNMP_PDU_GETBULK);
-    protocore_ber_put_integer(&e, reqid);
-    protocore_ber_put_integer(&e, non_rep);
-    protocore_ber_put_integer(&e, max_rep);
+    SnmpBer.enc = &e;
+    SnmpBer.tlv.ival = reqid;
+    SnmpBer.put_integer(SnmpBer.internal);
+    SnmpBer.enc = &e;
+    SnmpBer.tlv.ival = non_rep;
+    SnmpBer.put_integer(SnmpBer.internal);
+    SnmpBer.enc = &e;
+    SnmpBer.tlv.ival = max_rep;
+    SnmpBer.put_integer(SnmpBer.internal);
     size_t vbl = protocore_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
     for (size_t i = 0; i < nvb; i++)
     {
@@ -988,9 +1022,15 @@ void test_dispatch_empty_varbind_list_tiny_buffer()
     BerEnc e;
     protocore_ber_enc_init(&e, pdu, sizeof(pdu));
     size_t p = protocore_ber_seq_begin(&e, (uint8_t)SNMP_TAG_SNMP_PDU_GET);
-    protocore_ber_put_integer(&e, 1);
-    protocore_ber_put_integer(&e, 0);
-    protocore_ber_put_integer(&e, 0);
+    SnmpBer.enc = &e;
+    SnmpBer.tlv.ival = 1;
+    SnmpBer.put_integer(SnmpBer.internal);
+    SnmpBer.enc = &e;
+    SnmpBer.tlv.ival = 0;
+    SnmpBer.put_integer(SnmpBer.internal);
+    SnmpBer.enc = &e;
+    SnmpBer.tlv.ival = 0;
+    SnmpBer.put_integer(SnmpBer.internal);
     size_t vbl = protocore_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
     protocore_ber_seq_end(&e, vbl);
     protocore_ber_seq_end(&e, p);

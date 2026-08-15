@@ -449,7 +449,6 @@ static void coaps_server_poll(struct CoapsServerInternal *restrict ctx)
     {
         return;
     }
-    Clock.millis(Clock.internal);
     const uint32_t now = Clock.ms;
     uint8_t out[PROTOCORE_COAPS_OUT_CAP];
 

@@ -188,7 +188,6 @@ uint32_t protocore_audit_append(protocore_audit_cat category, const char *msg)
 
     protocore_audit_entry *e = &s_audit.ring[idx(&s_audit, s_audit.count)];
     e->seq = ++s_audit.seq;
-    Clock.millis(Clock.internal);
     e->ts = Clock.ms;
     e->category = category;
     if (msg)

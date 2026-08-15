@@ -1959,7 +1959,6 @@ void ssh_newkeys_complete(struct SshTransportInternal *restrict ctx)
     // is already authenticated, so resume the open (channel) phase.
     ssh_phase_newkeys_done(i);
     // Reset the re-key timer: the volume/time budget is measured from this completed KEX.
-    Clock.millis(Clock.internal);
     ssh_sess[i].last_kex_ms = Clock.ms;
     ctx->ns->i32 = 0;
     return;
@@ -3872,7 +3871,6 @@ void ssh_transport_key_re_exchange(uint8_t i)
     {
         return;
     }
-    Clock.millis(Clock.internal);
     uint32_t elapsed = Clock.ms - s->last_kex_ms;
     s_sshtr.ns->rekey.seq_send = ssh_pkt[i].seq_no_send;
     s_sshtr.ns->rekey.seq_recv = ssh_pkt[i].seq_no_recv;

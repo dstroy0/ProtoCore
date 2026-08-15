@@ -258,7 +258,7 @@ static void trap_v2c(struct SnmpNotifyInternal *restrict ctx)
     ctx->ns->pdu.pdu_tag = (uint8_t)SNMP_TAG_SNMP_PDU_TRAPV2;
 #if PROTOCORE_HAS_NET_STACK
     ctx->ns->pdu.request_id = ctx->store->trap_reqid++;
-    ctx->ns->pdu.uptime_ticks = (uint32_t)(protocore_millis() / 10); // TimeTicks: hundredths of a second
+    ctx->ns->pdu.uptime_ticks = (uint32_t)(Clock.ms / 10); // TimeTicks: hundredths of a second
     send_built(ctx);
 #else
     ctx->ns->n = 0;
@@ -272,7 +272,7 @@ static void inform_v2c(struct SnmpNotifyInternal *restrict ctx)
 {
     ctx->ns->pdu.pdu_tag = (uint8_t)SNMP_TAG_SNMP_PDU_INFORM;
 #if PROTOCORE_HAS_NET_STACK
-    ctx->ns->pdu.uptime_ticks = (uint32_t)(protocore_millis() / 10);
+    ctx->ns->pdu.uptime_ticks = (uint32_t)(Clock.ms / 10);
     send_built(ctx);
 #else
     ctx->ns->n = 0;

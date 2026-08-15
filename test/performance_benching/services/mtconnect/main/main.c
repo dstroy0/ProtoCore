@@ -11,7 +11,7 @@
 //   - MTConnectDevices (the `probe` response): the device model - a <Device> with its <DataItems>.
 //   - MTConnectAssets (the `asset` response): a <CuttingTool> with its <CuttingToolLifeCycle>.
 //   - MTConnectError (a request error): header + <Errors><Error errorCode=..>.
-//   - pc_mtc_sample_query: replay a from/count sub-window out of the rolling observation ring
+//   - protocore_mtc_sample_query: replay a from/count sub-window out of the rolling observation ring
 //     into an MTConnectStreams document (the long-poll `sample` cursor).
 // Out of scope: the HTTP transport (sockets/AsyncWebServer) that carries these documents - only the
 // deterministic CPU-side document framing is timed. Sample data is copied verbatim from the
@@ -35,10 +35,10 @@ void dbench_run(void)
 
     // A populated rolling observation ring for the `sample` long-poll query (built once).
     static pc_mtc_sample_buffer ring;
-    pc_mtc_sample_buffer_init(&ring, 1);
-    pc_mtc_sample_buffer_add(&ring, PROTOCORE_MTC_SAMPLE, "Position", "xpos", "T1", "1.0");
-    pc_mtc_sample_buffer_add(&ring, PROTOCORE_MTC_SAMPLE, "Position", "xpos", "T2", "2.0");
-    pc_mtc_sample_buffer_add(&ring, PROTOCORE_MTC_EVENT, "Execution", "exec", "T3", "ACTIVE");
+    protocore_mtc_sample_buffer_init(&ring, 1);
+    protocore_mtc_sample_buffer_add(&ring, PROTOCORE_MTC_SAMPLE, "Position", "xpos", "T1", "1.0");
+    protocore_mtc_sample_buffer_add(&ring, PROTOCORE_MTC_SAMPLE, "Position", "xpos", "T2", "2.0");
+    protocore_mtc_sample_buffer_add(&ring, PROTOCORE_MTC_EVENT, "Execution", "exec", "T3", "ACTIVE");
 
     for (;;)
     {
@@ -46,34 +46,34 @@ void dbench_run(void)
         volatile size_t sink = 0;
 
         // MTConnectStreams (`current`/`sample`): header + one Event, one Sample, one Condition.
-        DBENCH_OP("pc_mtc_streams build", 20000, pc_mtc_streams_begin(&s, buf, sizeof(buf), 1500, 42, "cnc1");
-                  pc_mtc_streams_add(&s, PROTOCORE_MTC_EVENT, "Availability", "avail", 40, "2026-07-06T00:00:00Z",
+        DBENCH_OP("pc_mtc_streams build", 20000, protocore_mtc_streams_begin(&s, buf, sizeof(buf), 1500, 42, "cnc1");
+                  protocore_mtc_streams_add(&s, PROTOCORE_MTC_EVENT, "Availability", "avail", 40, "2026-07-06T00:00:00Z",
                                      "AVAILABLE");
-                  pc_mtc_streams_add(&s, PROTOCORE_MTC_SAMPLE, "Position", "xpos", 41, "2026-07-06T00:00:01Z", "12.5");
-                  pc_mtc_streams_add(&s, PROTOCORE_MTC_CONDITION, "SystemCondition", "sys", 42, "2026-07-06T00:00:02Z",
+                  protocore_mtc_streams_add(&s, PROTOCORE_MTC_SAMPLE, "Position", "xpos", 41, "2026-07-06T00:00:01Z", "12.5");
+                  protocore_mtc_streams_add(&s, PROTOCORE_MTC_CONDITION, "SystemCondition", "sys", 42, "2026-07-06T00:00:02Z",
                                      "Fault");
-                  sink += pc_mtc_streams_end(&s));
+                  sink += protocore_mtc_streams_end(&s));
 
         // MTConnectDevices (`probe`): the device model with three DataItems.
         DBENCH_OP("pc_mtc_devices probe build", 20000,
-                  pc_mtc_devices_begin(&s, buf, sizeof(buf), 1500, "dev1", "cnc1", "uuid-abc");
-                  pc_mtc_devices_add_item(&s, PROTOCORE_MTC_EVENT, "avail", "Availability", NULL, NULL);
-                  pc_mtc_devices_add_item(&s, PROTOCORE_MTC_SAMPLE, "xpos", "Position", "Xabs", "MILLIMETER");
-                  pc_mtc_devices_add_item(&s, PROTOCORE_MTC_CONDITION, "sys", "SystemCondition", NULL, NULL);
-                  sink += pc_mtc_devices_end(&s));
+                  protocore_mtc_devices_begin(&s, buf, sizeof(buf), 1500, "dev1", "cnc1", "uuid-abc");
+                  protocore_mtc_devices_add_item(&s, PROTOCORE_MTC_EVENT, "avail", "Availability", NULL, NULL);
+                  protocore_mtc_devices_add_item(&s, PROTOCORE_MTC_SAMPLE, "xpos", "Position", "Xabs", "MILLIMETER");
+                  protocore_mtc_devices_add_item(&s, PROTOCORE_MTC_CONDITION, "sys", "SystemCondition", NULL, NULL);
+                  sink += protocore_mtc_devices_end(&s));
 
         // MTConnectAssets (`asset`): one CuttingTool with a ToolLife.
-        DBENCH_OP("pc_mtc_assets build", 20000, pc_mtc_assets_begin(&s, buf, sizeof(buf), 1500, 2, 1024);
-                  pc_mtc_assets_cutting_tool_begin(&s, "tool-1", "SN-42", "T17", "uuid-abc", "2026-07-09T00:00:00Z");
-                  pc_mtc_assets_tool_life(&s, "MINUTES", "DOWN", "100", "42"); pc_mtc_assets_cutting_tool_end(&s);
-                  sink += pc_mtc_assets_end(&s));
+        DBENCH_OP("pc_mtc_assets build", 20000, protocore_mtc_assets_begin(&s, buf, sizeof(buf), 1500, 2, 1024);
+                  protocore_mtc_assets_cutting_tool_begin(&s, "tool-1", "SN-42", "T17", "uuid-abc", "2026-07-09T00:00:00Z");
+                  protocore_mtc_assets_tool_life(&s, "MINUTES", "DOWN", "100", "42"); protocore_mtc_assets_cutting_tool_end(&s);
+                  sink += protocore_mtc_assets_end(&s));
 
         // MTConnectError: header + one Error element.
-        DBENCH_OP("pc_mtc_error build", 50000, sink += pc_mtc_error(1500, "UNSUPPORTED", "bad path", buf, sizeof(buf)));
+        DBENCH_OP("protocore_mtc_error build", 50000, sink += protocore_mtc_error(1500, "UNSUPPORTED", "bad path", buf, sizeof(buf)));
 
         // Long-poll `sample` cursor: replay the whole retained window as an MTConnectStreams document.
-        DBENCH_OP("pc_mtc_sample_query", 20000,
-                  sink += pc_mtc_sample_query(&ring, buf, sizeof(buf), 1500, "cnc1", 1, 10));
+        DBENCH_OP("protocore_mtc_sample_query", 20000,
+                  sink += protocore_mtc_sample_query(&ring, buf, sizeof(buf), 1500, "cnc1", 1, 10));
 
         (void)sink;
         DBENCH_DONE();

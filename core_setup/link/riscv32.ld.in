@@ -1,0 +1,147 @@
+/* Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ *
+ * riscv32 image layout. Preprocessed, not linked directly:
+ *
+ *   riscv32-esp-elf-gcc -E -P -x c -I <profile dir> core_setup/link/riscv32.ld.in -o build/link.ld
+ *
+ * The five region figures come from the board profile. They are part facts, so there is no default
+ * for any of them: an unset one stops the preprocessor rather than linking an image at an address
+ * nobody chose.
+ *
+ * This core has no vector table the hardware reads a stack pointer out of: reset jumps to the entry
+ * address and the first instructions there load sp and gp themselves, which is what startup_riscv32.S
+ * does with __protocore_stack_top and __global_pointer$.
+ *
+ * .sdata and .sbss sit inside the .data and .bss bounds, so the two loops in
+ * protocore_boot_init_memory() cover the gp-relative variables as well.
+ *
+ * Exports the addresses protocore_boot_init_memory() copies and zeroes between.
+ */
+
+#ifndef PROTOCORE_LINK_FLASH_ORIGIN
+#error "PROTOCORE_LINK_FLASH_ORIGIN is not set by the board profile"
+#endif
+#ifndef PROTOCORE_LINK_FLASH_LEN
+#error "PROTOCORE_LINK_FLASH_LEN is not set by the board profile"
+#endif
+#ifndef PROTOCORE_LINK_SRAM_ORIGIN
+#error "PROTOCORE_LINK_SRAM_ORIGIN is not set by the board profile"
+#endif
+#ifndef PROTOCORE_LINK_SRAM_LEN
+#error "PROTOCORE_LINK_SRAM_LEN is not set by the board profile"
+#endif
+#ifndef PROTOCORE_LINK_STACK_SIZE
+#error "PROTOCORE_LINK_STACK_SIZE is not set by the board profile"
+#endif
+#ifndef PROTOCORE_LINK_IRQ_STACK_SIZE
+#error "PROTOCORE_LINK_IRQ_STACK_SIZE is not set by the board profile"
+#endif
+#ifndef PROTOCORE_LINK_DMA_ORIGIN
+#error "PROTOCORE_LINK_DMA_ORIGIN is not set by the board profile"
+#endif
+#ifndef PROTOCORE_LINK_DMA_LEN
+#error "PROTOCORE_LINK_DMA_LEN is not set by the board profile"
+#endif
+#ifndef PROTOCORE_LINK_DMA_ALIGN
+#error "PROTOCORE_LINK_DMA_ALIGN is not set by the board profile"
+#endif
+
+OUTPUT_FORMAT("elf32-littleriscv", "elf32-littleriscv", "elf32-littleriscv")
+OUTPUT_ARCH(riscv)
+ENTRY(protocore_reset)
+
+MEMORY
+{
+    FLASH (rx)  : ORIGIN = PROTOCORE_LINK_FLASH_ORIGIN, LENGTH = PROTOCORE_LINK_FLASH_LEN
+    SRAM  (rwx) : ORIGIN = PROTOCORE_LINK_SRAM_ORIGIN,  LENGTH = PROTOCORE_LINK_SRAM_LEN
+    DMA   (rw)  : ORIGIN = PROTOCORE_LINK_DMA_ORIGIN,   LENGTH = PROTOCORE_LINK_DMA_LEN
+}
+
+SECTIONS
+{
+    .init :
+    {
+        . = ALIGN(4);
+        KEEP(*(.protocore_entry))
+    } > FLASH
+
+    .text :
+    {
+        . = ALIGN(4);
+        *(.text .text.*)
+        . = ALIGN(4);
+    } > FLASH
+
+    .rodata :
+    {
+        . = ALIGN(4);
+        *(.rodata .rodata.*)
+        *(.srodata .srodata.*)
+        . = ALIGN(4);
+    } > FLASH
+
+    . = ALIGN(4);
+    __protocore_data_load = LOADADDR(.data);
+
+    .data :
+    {
+        . = ALIGN(4);
+        __protocore_data_start = .;
+        *(.data .data.*)
+        . = ALIGN(8);
+        /* gp addresses +/- 2 KiB, so it is placed 2 KiB into the small-data run. */
+        PROVIDE(__global_pointer$ = . + 0x800);
+        *(.sdata .sdata.*)
+        . = ALIGN(4);
+        __protocore_data_end = .;
+    } > SRAM AT> FLASH
+
+    .bss (NOLOAD) :
+    {
+        . = ALIGN(4);
+        __protocore_bss_start = .;
+        *(.sbss .sbss.*)
+        *(.bss .bss.*)
+        *(COMMON)
+        . = ALIGN(4);
+        __protocore_bss_end = .;
+    } > SRAM
+
+    /* The ABI keeps sp 16-byte aligned, so the region it lives in is too. */
+    .stack (NOLOAD) :
+    {
+        . = ALIGN(16);
+        __protocore_stack_low = .;
+        . = . + PROTOCORE_LINK_STACK_SIZE;
+        . = ALIGN(16);
+        __protocore_stack_top = .;
+    } > SRAM
+
+    /* The stack a trap runs on, kept off the stack of whatever task it preempted. This core has no
+     * second stack pointer, so the trap entry switches sp here itself. */
+    .irq_stack (NOLOAD) :
+    {
+        . = ALIGN(16);
+        __protocore_irq_stack_low = .;
+        . = . + PROTOCORE_LINK_IRQ_STACK_SIZE;
+        . = ALIGN(16);
+        __protocore_irq_stack_top = .;
+    } > SRAM
+
+    __protocore_heap_start = __protocore_irq_stack_top;
+    __protocore_heap_end = ORIGIN(SRAM) + LENGTH(SRAM);
+
+    /* The bank the DMA engine can reach, which is not always the bank .bss landed in. Buffers are
+     * static and compile-time sized, so they are placed, not allocated. */
+    .dma (NOLOAD) :
+    {
+        . = ALIGN(PROTOCORE_LINK_DMA_ALIGN);
+        __protocore_dma_start = .;
+        *(.protocore_dma .protocore_dma.*)
+        . = ALIGN(PROTOCORE_LINK_DMA_ALIGN);
+        __protocore_dma_end = .;
+    } > DMA
+
+    /DISCARD/ : { *(.note.GNU-stack) *(.gnu_debuglink) *(.gnu.lto_*) }
+}

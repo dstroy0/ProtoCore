@@ -113,7 +113,9 @@ static int dav_resolve_path(const HttpRoute *r, const char *reqpath, char *out, 
     {
         return 403;
     }
-    const char *root = protocore_mnt_point_root(r->mnt_id);
+    Mnt.args.id = r->mnt_id;
+    Mnt.root_of(Mnt.internal);
+    const char *root = Mnt.text;
     if (!dav_join(root, sub, out, cap))
     {
         return 414;
@@ -207,7 +209,8 @@ void dav_put_abort_tramp(HttpReq *req)
     // long, so the bound still has to be tested here.
     if (slot < MAX_CONNS && s_davput.put[slot].active)
     {
-        protocore_fs_close(s_davput.put[slot].fh);
+        Fs.io.handle = s_davput.put[slot].fh;
+        Fs.close(Fs.internal);
         s_davput.put[slot].active = PROTO_FALSE;
     }
 }
@@ -236,7 +239,9 @@ proto_bool dav_stream_put_begin(HttpReq *req)
         {
             continue;
         }
-        if (r->iface_filter != PROTOCORE_IF_ANY && r->iface_filter != protocore_conn_iface(slot))
+        ConnPool.slot = slot;
+        ConnPool.iface(ConnPool.internal);
+        if (r->iface_filter != PROTOCORE_IF_ANY && r->iface_filter != ConnPool.if_kind)
         {
             continue;
         }
@@ -257,8 +262,17 @@ proto_bool dav_stream_put_begin(HttpReq *req)
             d->locked = PROTO_TRUE;
             return PROTO_TRUE;
         }
-        d->existed = protocore_fs_exists(s_dav.root, fs_path, "");
-        d->fh = protocore_fs_open(s_dav.root, fs_path, "", PROTOCORE_MNT_WRITE);
+        Fs.path.root = s_dav.root;
+        Fs.path.dir = fs_path;
+        Fs.path.name = "";
+        Fs.exists(Fs.internal);
+        d->existed = Fs.ok;
+        Fs.path.root = s_dav.root;
+        Fs.path.dir = fs_path;
+        Fs.path.name = "";
+        Fs.io.mode = PROTOCORE_MNT_WRITE;
+        Fs.open(Fs.internal);
+        d->fh = Fs.i32;
         if (d->fh >= 0)
         {
             d->active = PROTO_TRUE;
@@ -282,7 +296,11 @@ void dav_stream_put_data(HttpReq *req, const uint8_t *data, size_t len)
     DavPut *d = &s_davput.put[slot];
     if (d->active && !d->error)
     {
-        if (protocore_fs_write(d->fh, data, len) != (int)len)
+        Fs.io.handle = d->fh;
+        Fs.io.wbuf = data;
+        Fs.io.n = len;
+        Fs.write(Fs.internal);
+        if (Fs.i32 != (int)len)
         {
             d->error = PROTO_TRUE;
         }
@@ -326,11 +344,16 @@ void dav(const char *url_prefix, const protocore_mnt_backend *file_sys, const ch
     fill_route_base(r, pat);
     r->type = ROUTE_DAV;
     r->method = HTTP_GET;                                   // unused: WebDAV dispatch keys off the raw method token
-    r->mnt_id = protocore_mnt_point_add(file_sys, fs_root); // null backend is legal: whatever is mounted
+    Mnt.args.backend = file_sys;
+    Mnt.args.root = fs_root;
+    Mnt.point_add(Mnt.internal); // null backend is legal: whatever is mounted
+    r->mnt_id = Mnt.u8;
 
     // Bind the root every operation in this file resolves against. Re-binding a name already bound
     // hands back the same handle, so a second mount costs nothing and both see the same storage.
-    s_dav.root = protocore_fs_begin("/");
+    Fs.mount = "/";
+    Fs.begin(Fs.internal);
+    s_dav.root = Fs.i32;
 
 #if PROTOCORE_ENABLE_STREAM_BODY
     // Stream PUT bodies straight to the file (one global sink; see PROTOCORE_ENABLE_STREAM_BODY).
@@ -340,9 +363,11 @@ void dav(const char *url_prefix, const protocore_mnt_backend *file_sys, const ch
 
 void dav_send_status(uint8_t slot_id, int code, const char *extra_headers)
 {
-    if (!protocore_conn_active(slot_id))
+    ConnPool.slot = slot_id;
+    ConnPool.active(ConnPool.internal);
+    if (!ConnPool.ok)
     {
-        http_reset(slot_id);
+        http_parser_reset(&http_pool[slot_id]);
         return;
     }
     proto_bool keep;
@@ -362,7 +387,10 @@ void dav_send_status(uint8_t slot_id, int code, const char *extra_headers)
     Sb.put(&sb_header, cl);
     Sb.put(&sb_header, "\r\n");
     int hlen = (int)Sb.finish(&sb_header);
-    Tcp.conn->send(slot_id, header, (proto_u16)hlen);
+    ConnPool.slot = slot_id;
+    ConnPool.io.data = header;
+    ConnPool.io.len = (proto_u16)hlen;
+    ConnPool.send(ConnPool.internal);
     protocore_resp_end(slot_id, code, 0, keep, /*pre_flushed=*/PROTO_FALSE);
 }
 
@@ -385,7 +413,9 @@ proto_bool try_serve_dav(uint8_t slot_id, HttpReq *req)
         {
             continue;
         }
-        if (r->iface_filter != PROTOCORE_IF_ANY && r->iface_filter != protocore_conn_iface(slot_id))
+        ConnPool.slot = slot_id;
+        ConnPool.iface(ConnPool.internal);
+        if (r->iface_filter != PROTOCORE_IF_ANY && r->iface_filter != ConnPool.if_kind)
         {
             continue;
         }
@@ -412,11 +442,13 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
     {
         plen--;
     }
-    const char *root = protocore_mnt_point_root(r->mnt_id);
+    Mnt.args.id = r->mnt_id;
+    Mnt.root_of(Mnt.internal);
+    const char *root = Mnt.text;
 
     // Expire any timed-out locks (RFC 4918 §6.6) before this request consults the table, so a stale lock
     // never gates a write. The clock is protocore_millis() (pluggable); seconds are enough for lock lifetimes.
-    uint32_t dav_now_s = (uint32_t)(protocore_millis() / 1000u);
+    uint32_t dav_now_s = (uint32_t)(Clock.ms / 1000u);
     protocore_dav_lock_sweep(&s_dav_lock.table, dav_now_s);
 
     switch (protocore_webdav_method(req->method))
@@ -433,7 +465,12 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
     case DAV_M_HEAD: {
         // One stat answers both questions this method asks: does it exist, and is it a collection.
         protocore_mnt_stat gst;
-        if (!protocore_fs_stat(s_dav.root, fs_path, "", &gst))
+        Fs.path.root = s_dav.root;
+        Fs.path.dir = fs_path;
+        Fs.path.name = "";
+        Fs.io.stat = &gst;
+        Fs.stat(Fs.internal);
+        if (!Fs.ok)
         {
             dav_send_status(slot_id, 404, "");
             return;
@@ -443,8 +480,10 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
             dav_send_status(slot_id, 405, ""); // GET on a collection is not a download
             return;
         }
-        serve_file_internal(slot_id, protocore_webdav_method(req->method) == DAV_M_HEAD,
-                            protocore_mnt_point_backend(r->mnt_id), fs_path, mime_type(fs_path), NULL);
+        Mnt.args.id = r->mnt_id;
+        Mnt.point_of(Mnt.internal);
+        serve_file_internal(slot_id, protocore_webdav_method(req->method) == DAV_M_HEAD, Mnt.backend, fs_path,
+                            mime_type(fs_path), NULL);
         return;
     }
 
@@ -462,7 +501,8 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
             }
             if (d->active)
             {
-                protocore_fs_close(d->fh);
+                Fs.io.handle = d->fh;
+                Fs.close(Fs.internal);
                 d->active = PROTO_FALSE; // closed here: the abort hook must not double-close
             }
             else
@@ -493,8 +533,18 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
         // stream_begin's only decline reasons for a matched DAV route are the ones that also fail the
         // top-level resolve above. The body is written anyway so a caller that somehow does arrive
         // buffered stores it instead of having it silently dropped.
-        proto_bool existed = protocore_fs_exists(s_dav.root, fs_path, "");
-        if (!protocore_fs_write_file(s_dav.root, fs_path, "", req->body, req->body_len))
+        Fs.path.root = s_dav.root;
+        Fs.path.dir = fs_path;
+        Fs.path.name = "";
+        Fs.exists(Fs.internal);
+        proto_bool existed = Fs.ok;
+        Fs.path.root = s_dav.root;
+        Fs.path.dir = fs_path;
+        Fs.path.name = "";
+        Fs.io.wbuf = req->body;
+        Fs.io.n = req->body_len;
+        Fs.write_file(Fs.internal);
+        if (!Fs.ok)
         {
             dav_send_status(slot_id, 409, ""); // parent missing / not writable
             return;
@@ -509,14 +559,22 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
             dav_send_status(slot_id, 423, "");
             return;
         }
-        if (!protocore_fs_exists(s_dav.root, fs_path, ""))
+        Fs.path.root = s_dav.root;
+        Fs.path.dir = fs_path;
+        Fs.path.name = "";
+        Fs.exists(Fs.internal);
+        if (!Fs.ok)
         {
             dav_send_status(slot_id, 404, "");
             return;
         }
         // A collection and its members go in one call: the accessor owns the walk, so the target
         // being a file or a tree does not change what DELETE does here.
-        dav_send_status(slot_id, protocore_fs_remove(s_dav.root, fs_path, "") ? 204 : 403, "");
+        Fs.path.root = s_dav.root;
+        Fs.path.dir = fs_path;
+        Fs.path.name = "";
+        Fs.remove(Fs.internal);
+        dav_send_status(slot_id, Fs.ok ? 204 : 403, "");
         return;
     }
 
@@ -526,12 +584,20 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
             dav_send_status(slot_id, 423, "");
             return;
         }
-        if (protocore_fs_exists(s_dav.root, fs_path, ""))
+        Fs.path.root = s_dav.root;
+        Fs.path.dir = fs_path;
+        Fs.path.name = "";
+        Fs.exists(Fs.internal);
+        if (Fs.ok)
         {
             dav_send_status(slot_id, 405, ""); // already exists
             return;
         }
-        dav_send_status(slot_id, protocore_fs_mkdir(s_dav.root, fs_path, "") ? 201 : 409, "");
+        Fs.path.root = s_dav.root;
+        Fs.path.dir = fs_path;
+        Fs.path.name = "";
+        Fs.mkdir(Fs.internal);
+        dav_send_status(slot_id, Fs.ok ? 201 : 409, "");
         return;
 
     case DAV_M_COPY:
@@ -577,7 +643,11 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
 
         const char *ow = http_get_header(req, "Overwrite");
         proto_bool overwrite = !(ow && (ow[0] == 'F' || ow[0] == 'f'));
-        proto_bool dest_exists = protocore_fs_exists(s_dav.root, dest_fs, "");
+        Fs.path.root = s_dav.root;
+        Fs.path.dir = dest_fs;
+        Fs.path.name = "";
+        Fs.exists(Fs.internal);
+        proto_bool dest_exists = Fs.ok;
         if (dest_exists && !overwrite)
         {
             dav_send_status(slot_id, 412, "");
@@ -588,9 +658,18 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
         {
             if (dest_exists)
             {
-                protocore_fs_remove(s_dav.root, dest_fs, ""); // replace
+                Fs.path.root = s_dav.root;
+                Fs.path.dir = dest_fs;
+                Fs.path.name = "";
+                Fs.remove(Fs.internal); // replace
             }
-            proto_bool moved = protocore_fs_rename(s_dav.root, fs_path, "", dest_fs, "");
+            Fs.path.root = s_dav.root;
+            Fs.path.dir = fs_path;
+            Fs.path.name = "";
+            Fs.dest.dir = dest_fs;
+            Fs.dest.name = "";
+            Fs.rename(Fs.internal);
+            proto_bool moved = Fs.ok;
             dav_send_status(slot_id, moved ? (dest_exists ? 204 : 201) : 409, "");
             return;
         }
@@ -599,7 +678,12 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
         // "0" copies just the collection itself, "infinity" (the default, also when absent) copies
         // the entire tree. One stat says whether the source exists and which of those it is.
         protocore_mnt_stat sst;
-        if (!protocore_fs_stat(s_dav.root, fs_path, "", &sst))
+        Fs.path.root = s_dav.root;
+        Fs.path.dir = fs_path;
+        Fs.path.name = "";
+        Fs.io.stat = &sst;
+        Fs.stat(Fs.internal);
+        if (!Fs.ok)
         {
             dav_send_status(slot_id, 404, "");
             return;
@@ -610,17 +694,30 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
 
         if (dest_exists)
         {
-            protocore_fs_remove(s_dav.root, dest_fs, ""); // overwrite: clear the target first
+            Fs.path.root = s_dav.root;
+            Fs.path.dir = dest_fs;
+            Fs.path.name = "";
+            Fs.remove(Fs.internal); // overwrite: clear the target first
         }
 
         proto_bool ok;
         if (sst.is_dir && shallow)
         {
-            ok = protocore_fs_mkdir(s_dav.root, dest_fs, ""); // collection, Depth:0 - no members
+            Fs.path.root = s_dav.root;
+            Fs.path.dir = dest_fs;
+            Fs.path.name = "";
+            Fs.mkdir(Fs.internal); // collection, Depth:0 - no members
+            ok = Fs.ok;
         }
         else
         {
-            ok = protocore_fs_copy(s_dav.root, fs_path, "", dest_fs, "");
+            Fs.path.root = s_dav.root;
+            Fs.path.dir = fs_path;
+            Fs.path.name = "";
+            Fs.dest.dir = dest_fs;
+            Fs.dest.name = "";
+            Fs.copy(Fs.internal);
+            ok = Fs.ok;
         }
         dav_send_status(slot_id, ok ? (dest_exists ? 204 : 201) : 409, "");
         return;
@@ -659,7 +756,7 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
             // to Depth: infinity when the header is absent (RFC 4918 §9.10.3).
             shared = req->body_len && dav_body_has(req, "shared");
             depth_inf = protocore_webdav_depth(http_get_header(req, "Depth"), PROTOCORE_DAV_DEPTH_INFINITY) != 0;
-            unsigned long tok = (unsigned long)protocore_millis();
+            unsigned long tok = (unsigned long)Clock.ms;
             uint32_t tok_rand = 0;
             protocore_rand_fill((uint8_t *)&tok_rand, sizeof(tok_rand)); // boundary: bytes into the scalar
             tok ^= (unsigned long)tok_rand;
@@ -727,7 +824,12 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
         // Every property reported for the target - collection or not, size, mtime - is a field of
         // one directory record, so one stat reads all three.
         protocore_mnt_stat fst;
-        if (!protocore_fs_stat(s_dav.root, fs_path, "", &fst))
+        Fs.path.root = s_dav.root;
+        Fs.path.dir = fs_path;
+        Fs.path.name = "";
+        Fs.io.stat = &fst;
+        Fs.stat(Fs.internal);
+        if (!Fs.ok)
         {
             dav_send_status(slot_id, 404, "");
             return;
@@ -781,7 +883,11 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
 
         if (isdir && depth >= 1)
         {
-            int d = protocore_fs_opendir(s_dav.root, fs_path, "");
+            Fs.path.root = s_dav.root;
+            Fs.path.dir = fs_path;
+            Fs.path.name = "";
+            Fs.opendir(Fs.internal);
+            int d = Fs.i32;
             if (d < 0)
             {
                 dav_send_status(slot_id, 404, "");
@@ -793,7 +899,12 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
                 // One readdir hands back the entry's facts and its own name together, so a child
                 // costs one call and the name it writes is already the leaf.
                 protocore_mnt_stat cst;
-                if (!protocore_fs_readdir(d, &cst, s_dav.child, sizeof(s_dav.child)))
+                Fs.io.handle = d;
+                Fs.io.stat = &cst;
+                Fs.io.name_out = s_dav.child;
+                Fs.io.name_cap = sizeof(s_dav.child);
+                Fs.readdir(Fs.internal);
+                if (!Fs.ok)
                 {
                     break;
                 }
@@ -821,7 +932,8 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
                 }
                 count++;
             }
-            protocore_fs_close(d);
+            Fs.io.handle = d;
+            Fs.close(Fs.internal);
         }
         len = protocore_webdav_ms_end(s_dav.buf, cap, len);
         send_text(slot_id, 207, "application/xml; charset=utf-8", s_dav.buf);
@@ -832,7 +944,11 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
         // Read-only properties (no dead-property store): answer 207 with each
         // requested property refused 403, rather than 405 - keeps Explorer/Finder,
         // which PROPPATCH a timestamp right after a PUT, from erroring.
-        if (!protocore_fs_exists(s_dav.root, fs_path, ""))
+        Fs.path.root = s_dav.root;
+        Fs.path.dir = fs_path;
+        Fs.path.name = "";
+        Fs.exists(Fs.internal);
+        if (!Fs.ok)
         {
             dav_send_status(slot_id, 404, "");
             return;

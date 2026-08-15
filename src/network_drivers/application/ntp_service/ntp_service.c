@@ -88,7 +88,6 @@ static void ntp_reply(const uint8_t *data, size_t len, const struct protocore_ud
     {
         return; // a server that answers with a pre-2021 clock is not one to follow
     }
-    Clock.millis(Clock.internal);
     s_ntp_svc.epoch = epoch;
     s_ntp_svc.sync_ms = Clock.ms;
 }
@@ -128,7 +127,6 @@ proto_bool protocore_ntp_begin(const char *tz, const char *server1, const char *
     }
     // The transmit stamp doubles as the cookie the reply has to echo. Ticks, not a clock: this runs
     // before there is one.
-    Clock.millis(Clock.internal);
     s_ntp_svc.cookie = Clock.ms | 1u;
     uint8_t *req = s_ntp_svc.req.buf;
     for (size_t i = 0; i < PROTOCORE_NTP_PACKET_LEN; i++)
@@ -157,14 +155,12 @@ time_t protocore_ntp_epoch(void)
         return 0;
     }
     // The reply fixed one instant; the monotonic clock carries it forward from there.
-    Clock.millis(Clock.internal);
     uint32_t elapsed = Clock.ms - s_ntp_svc.sync_ms;
     return s_ntp_svc.epoch + (time_t)(elapsed / 1000u);
 }
 
 void protocore_ntp_set_test_epoch(time_t epoch)
 {
-    Clock.millis(Clock.internal);
     s_ntp_svc.epoch = epoch;
     s_ntp_svc.sync_ms = Clock.ms;
 }

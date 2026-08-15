@@ -48,7 +48,7 @@ static GatewayCtx s_gw = {.prefix = PROTOCORE_GW_DEFAULT_PREFIX};
 // test stepping it - installs its own clock with protocore_set_clock(), which governs every module.
 static uint32_t gw_now()
 {
-    return protocore_millis();
+    return Clock.ms;
 }
 
 // Returns a mutable port (callers mutate it), so it takes the owner by non-const reference.

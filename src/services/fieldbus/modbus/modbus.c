@@ -20,6 +20,7 @@
 // bitfields, the holding / input registers, and the write callback, grouped so it is one
 // named owner, unreachable from any other translation unit.
 #if PROTOCORE_HAS_NET_STACK
+#include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the accepted slot
 #include "network_drivers/transport/tcp/tcp.h"
 #include "server/core/proto_handler.h"
 #endif
@@ -517,30 +518,45 @@ size_t protocore_modbus_rtu_process_adu(const uint8_t *req, size_t req_len, uint
 // this service never indexes rx_buffer or advances rx_tail itself.
 static size_t ring_avail(const TcpConn *c)
 {
-    return protocore_conn_available(c->id);
+    ConnPool.slot = c->id;
+    ConnPool.available(ConnPool.internal);
+    return ConnPool.n;
 }
 static void ring_peek(const TcpConn *c, size_t off, uint8_t *dst, size_t n)
 {
-    protocore_conn_peek(c->id, off, dst, n);
+    ConnPool.slot = c->id;
+    ConnPool.io.off = off;
+    ConnPool.io.buf = dst;
+    ConnPool.io.count = n;
+    ConnPool.peek(ConnPool.internal);
 }
 static void ring_consume(TcpConn *c, size_t n)
 {
-    protocore_conn_consume(c->id, n);
+    ConnPool.slot = c->id;
+    ConnPool.io.count = n;
+    ConnPool.consume(ConnPool.internal);
 }
 
 static void raw_send(uint8_t slot, const void *data, size_t n)
 {
-    if (!protocore_conn_active(slot) || n == 0)
+    ConnPool.slot = slot;
+    ConnPool.active(ConnPool.internal);
+    if (!ConnPool.ok || n == 0)
     {
         return;
     }
-    Tcp.conn->send(slot, data, (proto_u16)n);
-    Tcp.conn->flush(slot);
+    ConnPool.slot = slot;
+    ConnPool.io.data = data;
+    ConnPool.io.len = (proto_u16)n;
+    ConnPool.send(ConnPool.internal);
+    ConnPool.slot = slot;
+    ConnPool.flush(ConnPool.internal);
 }
 
 static void close_conn(uint8_t slot)
 {
-    Tcp.conn->close(slot); // transport owns detach + slot reset + close
+    ConnPool.slot = slot;
+    ConnPool.close(ConnPool.internal); // transport owns detach + slot reset + close
 }
 
 void protocore_modbus_rx(uint8_t slot)
