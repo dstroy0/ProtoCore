@@ -4,7 +4,8 @@
 The C record layer is pinned byte for byte against an independent reconstruction: HKDF-Expand-Label
 (RFC 8446 sec 7.1) from stdlib hmac/hashlib, and AEAD_AES_128_GCM from the cryptography package
 (OpenSSL), neither of which shares code with ProtoCore. The same shape as the DTLS 1.3 vector in
-test/unit/tls/test_dtls_record/test_dtls_record.c, over the TLS record header instead.
+test/unit/src/network_drivers/presentation/security/dtls/test_dtls_record/test_dtls_record.c, over the
+TLS record header instead.
 
     python3 -m tools.crypto.gen_tls_record_kat
 

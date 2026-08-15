@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+# ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """Generate a build_opt.h next to every example that needs feature flags.
 
@@ -42,6 +42,8 @@ def wanted():
     """Map example dir -> desired build_opt.h text (empty string = no file wanted)."""
     out = {}
     for ino in glob.glob(os.path.join(EX, "**", "*.ino"), recursive=True):
+        if "managed_components" in ino.replace(os.sep, "/").split("/"):
+            continue  # vendored IDF component sketches, not this project's examples
         d = os.path.dirname(ino)
         defs = flags_for(d)
         out[d] = ("\n".join(defs) + "\n") if defs else ""

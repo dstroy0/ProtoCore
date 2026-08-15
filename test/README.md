@@ -69,9 +69,9 @@ To isolate our application code from physical hardware and the operating system'
 
 ## 3. PlatformIO Test Environments
 
-<!-- BEGIN GENERATED test-environments (edit test/test_matrix.json, run test/gen_test_readme.py) -->
+<!-- BEGIN GENERATED test-environments (edit test/test_matrix.json, run test/harness.py readme gen) -->
 
-The native test matrix has **455 environments**, one per feature, generated from [test_matrix.json](test_matrix.json) into [platformio.ini](../platformio.ini) by [gen_test_envs.py](gen_test_envs.py). Each compiles a strict per-feature slice of `src/` with its own flags and runs that feature's suite in isolation, so "this feature builds and tests on its own" stays guaranteed.
+The native test matrix has **455 environments**, one per feature, generated from [test_matrix.json](test_matrix.json) into [platformio.ini](../platformio.ini) by [harness.py](harness.py). Each compiles a strict per-feature slice of `src/` with its own flags and runs that feature's suite in isolation, so "this feature builds and tests on its own" stays guaranteed.
 
 | Environment | Feature flag(s) | Test suite(s) | Purpose |
 | :--- | :--- | :--- | :--- |
@@ -247,7 +247,7 @@ The native test matrix has **455 environments**, one per feature, generated from
 | `native_json_codec` | default | `unit/src/network_drivers/presentation/codec/json/test_json` | Zero-heap JSON writer and top-level reader (network_drivers/presentation/codec/json, RFC 8259): the sec 13 example object built byte for byte, the sec 7 mandatory escape set, the sec 7 "\uD834\uDD1E" ... |
 | `native_jwt` | `PROTOCORE_ENABLE_JWT=1` | `unit/src/services/security/jwt/test_jwt` | JWT (HS256) bearer-auth verification. |
 | `native_jwt_rfc7515` | `PROTOCORE_ENABLE_JWT=1` | `unit/src/services/security/jwt/test_jwt` | HS256 JWT verifier (services/security/jwt). |
-| `native_keepalive` | `PROTOCORE_ENFORCE_HOST_HEADER=0`, `PROTOCORE_ENABLE_KEEPALIVE=1`, `PROTOCORE_KEEPALIVE_MAX_REQUESTS=3` | `unit/integration/server/test_keepalive` | HTTP/1.1 keep-alive (persistent connections): full server built with PROTOCORE_ENABLE_KEEPALIVE=1; a small per-connection request cap makes the fairness-bound test fast. |
+| `native_keepalive` | `PROTOCORE_ENFORCE_HOST_HEADER=0`, `PROTOCORE_ENABLE_KEEPALIVE=1`, `PROTOCORE_KEEPALIVE_MAX_REQUESTS=3`, `PROTOCORE_ENABLE_WEBSOCKET=1`, `PROTOCORE_ENABLE_SSE=1` | `unit/integration/server/test_keepalive` | HTTP/1.1 keep-alive (persistent connections): full server built with PROTOCORE_ENABLE_KEEPALIVE=1; a small per-connection request cap makes the fairness-bound test fast. |
 | `native_l1_egress` | default | `unit/src/network_drivers/physical/test_net_egress` | Egress-interface reporting with no L1 backend (network_drivers/physical). |
 | `native_l1_iface` | `PROTOCORE_PHY_MAX_IFACES=4` | `unit/src/network_drivers/physical/test_iface` | The layer 1 interface registry (network_drivers/physical, the PhysicalNs iface_* calls): an interface is an id, a kind, and the callback that puts octets on the wire, and one device carries several of... |
 | `native_l1_link` | `PROTOCORE_PHYSICAL_HAS_BACKEND=1`, `PROTOCORE_ENABLE_ETHERNET=1`, `PROTOCORE_ENABLE_IPV6=1`, `PROTOCORE_ENABLE_RADIO_POWER=1`, `PROTOCORE_RADIO_WIFI_PS=2` | `unit/src/network_drivers/physical/test_phy` | Layer 1 driven through a real backend: the env declares PROTOCORE_PHYSICAL_HAS_BACKEND=1, so core_setup/hal/host/physical stands in for silicon instead of the no-op stubs in physical.c, and the link c... |
@@ -334,7 +334,7 @@ The native test matrix has **455 environments**, one per feature, generated from
 | `native_path_params` | default | `unit/integration/transport/test_path_params` | test_path_params against the native_stack_http stack. |
 | `native_pca9685` | `PROTOCORE_ENABLE_PCA9685=1` | `unit/src/server/peripherals/pca9685/test_pca9685` | PCA9685 PWM/servo codec (server/peripherals/pca9685): the PRESCALE computation from a PWM frequency (with clamping), the per-channel register address, the servo pulse-width -> 12-bit count conversion ... |
 | `native_pcap` | default | `unit/src/shared/pcap/test_pcap` | libpcap savefile headers (shared/pcap): the 24-octet global header - magic 0xa1b2c3d4 in file order, version 2.4, snaplen, DLT - and the 16-octet per-record header, each field read back at its own lit... |
-| `native_pentest` | `PROTOCORE_ENABLE_MODBUS=1`, `PROTOCORE_ENABLE_MODBUS_MASTER=1`, `PROTOCORE_ENABLE_TOTP=1`, `PROTOCORE_ENABLE_MULTIPART=1`, `PROTOCORE_ENABLE_CBOR=1`, `PROTOCORE_ENABLE_MSGPACK=1`, `PROTOCORE_ENABLE_COAP=1`, `PROTOCORE_ENABLE_COAP_BLOCK=1`, `PROTOCORE_COAP_BLOCK_SZX_MAX=2`, `PROTOCORE_COAP_BLOCK1_MAX=128`, `PROTOCORE_ENABLE_SNMP=1`, `PROTOCORE_ENABLE_SQLITE=1`, `PROTOCORE_ENABLE_REDIS=1`, `PROTOCORE_ENABLE_OPCUA=1`, `PROTOCORE_ENABLE_GRAPHQL=1`, `PROTOCORE_ENABLE_DNS_SERVER=1`, `PROTOCORE_ENABLE_DNP3=1`, `PROTOCORE_ENABLE_STOMP=1`, `PROTOCORE_ENABLE_SMB=1`, `PROTOCORE_ENABLE_DNC=1`, `PROTOCORE_ENABLE_FTP=1`, `PROTOCORE_ENABLE_FINS=1`, `PROTOCORE_ENABLE_MELSEC=1`, `PROTOCORE_ENABLE_CIP=1`, `PROTOCORE_ENABLE_ENIP=1`, `PROTOCORE_ENABLE_DF1=1`, `PROTOCORE_ENABLE_BACNET=1`, `PROTOCORE_ENABLE_COTP=1`, `PROTOCORE_ENABLE_C37118=1`, `PROTOCORE_ENABLE_JWT=1`, `PROTOCORE_ENABLE_DIRECTNET=1`, `PROTOCORE_ENABLE_CCLINK=1`, `PROTOCORE_ENABLE_AMQP=1`, `PROTOCORE_ENABLE_MMS=1`, `PROTOCORE_ENABLE_DDS=1`, `PROTOCORE_ENABLE_WEBDAV=1`, `PROTOCORE_ENABLE_HTTP2=1`, `PROTOCORE_ENABLE_HTTP3=1`, `PROTOCORE_ENABLE_FILE_SERVING=1` | `unit/src/network_drivers/application/smb/test_pentest` | Adversarial / pentest harness - run SEPARATELY (`pio test -e native_pentest`), NOT part of run_tests.sh. |
+| `native_pentest` | `PROTOCORE_ENABLE_MODBUS=1`, `PROTOCORE_ENABLE_MODBUS_MASTER=1`, `PROTOCORE_ENABLE_TOTP=1`, `PROTOCORE_ENABLE_MULTIPART=1`, `PROTOCORE_ENABLE_CBOR=1`, `PROTOCORE_ENABLE_MSGPACK=1`, `PROTOCORE_ENABLE_COAP=1`, `PROTOCORE_ENABLE_COAP_BLOCK=1`, `PROTOCORE_COAP_BLOCK_SZX_MAX=2`, `PROTOCORE_COAP_BLOCK1_MAX=128`, `PROTOCORE_ENABLE_SNMP=1`, `PROTOCORE_ENABLE_SQLITE=1`, `PROTOCORE_ENABLE_REDIS=1`, `PROTOCORE_ENABLE_OPCUA=1`, `PROTOCORE_ENABLE_GRAPHQL=1`, `PROTOCORE_ENABLE_DNS_SERVER=1`, `PROTOCORE_ENABLE_DNP3=1`, `PROTOCORE_ENABLE_STOMP=1`, `PROTOCORE_ENABLE_SMB=1`, `PROTOCORE_ENABLE_DNC=1`, `PROTOCORE_ENABLE_FTP=1`, `PROTOCORE_ENABLE_FINS=1`, `PROTOCORE_ENABLE_MELSEC=1`, `PROTOCORE_ENABLE_CIP=1`, `PROTOCORE_ENABLE_ENIP=1`, `PROTOCORE_ENABLE_DF1=1`, `PROTOCORE_ENABLE_BACNET=1`, `PROTOCORE_ENABLE_COTP=1`, `PROTOCORE_ENABLE_C37118=1`, `PROTOCORE_ENABLE_JWT=1`, `PROTOCORE_ENABLE_DIRECTNET=1`, `PROTOCORE_ENABLE_CCLINK=1`, `PROTOCORE_ENABLE_AMQP=1`, `PROTOCORE_ENABLE_MMS=1`, `PROTOCORE_ENABLE_DDS=1`, `PROTOCORE_ENABLE_WEBDAV=1`, `PROTOCORE_ENABLE_HTTP2=1`, `PROTOCORE_ENABLE_HTTP3=1`, `PROTOCORE_ENABLE_FILE_SERVING=1` | `unit/src/network_drivers/application/smb/test_pentest` | Adversarial / pentest harness - run SEPARATELY (`python test/harness.py run native_pentest`), NOT part of the default run. |
 | `native_phy` | `PROTOCORE_PHYSICAL_HAS_BACKEND=1`, `PROTOCORE_ENABLE_ETHERNET=1`, `PROTOCORE_ENABLE_IPV6=1`, `PROTOCORE_ENABLE_RADIO_POWER=1`, `PROTOCORE_RADIO_WIFI_PS=2` | `unit/src/network_drivers/physical/test_phy` | Layer 1 driven through a REAL backend: the env declares PROTOCORE_PHYSICAL_HAS_BACKEND=1, so and core_setup/hal/host/physical stands in for silicon instead of the no-op stubs in physical.c. |
 | `native_phy_iface` | `PROTOCORE_PHY_MAX_IFACES=4` | `unit/src/network_drivers/physical/test_iface` | The layer 1 interface registry (network_drivers/physical, Physical.iface): an interface is an id, a kind and the callback that puts bytes on the wire, and a device carries several of mixed kind. |
 | `native_plaintext` | default | `unit/src/mmgr/test_plaintext` | The plaintext pool accessor (mmgr/plaintext): bump-allocate + reset semantics, alignment, and fail-closed exhaustion. |
@@ -383,7 +383,7 @@ The native test matrix has **455 environments**, one per feature, generated from
 | `native_radio_wisun` | `PROTOCORE_ENABLE_WISUN=1` | `unit/src/services/radio/wisun/test_wisun` | Wi-SUN FAN border-router connector (services/radio/wisun). |
 | `native_radio_zigbee` | `PROTOCORE_ENABLE_ZIGBEE=1`, `PROTOCORE_ZIGBEE_MAX_DATA=32` | `unit/src/services/radio/zigbee/test_zigbee` | Zigbee EZSP / ASH data-link framing codec (services/radio/zigbee). |
 | `native_radio_zwave` | `PROTOCORE_ENABLE_ZWAVE=1`, `PROTOCORE_ZWAVE_MAX_DATA=16` | `unit/src/services/radio/zwave/test_zwave` | Z-Wave Serial API frame codec (services/radio/zwave). |
-| `native_range` | `PROTOCORE_ENFORCE_HOST_HEADER=0`, `PROTOCORE_ENABLE_RANGE=1`, `PROTOCORE_ENABLE_FILE_SERVING=1`, `PROTOCORE_ENABLE_KEEPALIVE=1` | `unit/integration/server/test_range` | HTTP Range requests / 206 Partial Content (RFC 7233): full server built with PROTOCORE_ENABLE_RANGE=1, serving a real littlefs volume through the mount seam and reading the responses back off the tcp_... |
+| `native_range` | `PROTOCORE_ENFORCE_HOST_HEADER=0`, `PROTOCORE_ENABLE_RANGE=1`, `PROTOCORE_ENABLE_FILE_SERVING=1`, `PROTOCORE_ENABLE_KEEPALIVE=1`, `PROTOCORE_ENABLE_WEBSOCKET=1`, `PROTOCORE_ENABLE_SSE=1` | `unit/integration/server/test_range` | HTTP Range requests / 206 Partial Content (RFC 7233): full server built with PROTOCORE_ENABLE_RANGE=1, serving a real littlefs volume through the mount seam and reading the responses back off the tcp_... |
 | `native_rawl2` | `PROTOCORE_ENABLE_RAWL2=1` | `unit/src/services/fieldbus/rawl2/test_rawl2` | Raw Layer-2 Ethernet frame codec (services/fieldbus/rawl2): the Ethernet II and 802.1Q VLAN-tagged builders, the parser that separates the two framings, the TCI field widths, and the IEEE 802.3 frame ... |
 | `native_rawmemcpy` | default | `unit/src/mmgr/test_rawmemcpy` | The raw load (mmgr/rawmemcpy.h): bytes at a pointer read as a wider type in the machine's own order, and the ladder proto_raw_read steps down. |
 | `native_rcwl0516` | `PROTOCORE_ENABLE_RCWL0516=1` | `unit/src/server/peripherals/rcwl0516/test_rcwl0516` | RCWL-0516 Doppler presence sensor + the shared one-GPIO presence facade (server/peripherals/rcwl0516): the debounce that swallows comparator chatter, the hold that bridges the module's ~2s retrigger g... |
@@ -540,7 +540,7 @@ The native test matrix has **455 environments**, one per feature, generated from
 > **Compilation Isolation & Feature Flags**:
 > Under PlatformIO (and standard Arduino/C++ build systems), library source files (in `src/`) are compiled independently of the main application (the sketch's `.ino` file) as separate translation units.
 >
-> Consequently, `#define` macros specified inside `.ino` sketch files (e.g., `#define PROTOCORE_ENABLE_PROVISIONING 1`) **do not propagate** to the library's compiled source code. If you define a configuration macro or feature flag in your sketch rather than in the build configuration, the library's `.cpp` files will compile with their default configuration, resulting in linker errors (e.g., undefined symbols) or severe runtime/memory layout mismatches.
+> Consequently, `#define` macros specified inside `.ino` sketch files (e.g., `#define PROTOCORE_ENABLE_PROVISIONING 1`) **do not propagate** to the library's compiled source code. If you define a configuration macro or feature flag in your sketch rather than in the build configuration, the library's `.c` files will compile with their default configuration, resulting in linker errors (e.g., undefined symbols) or severe runtime/memory layout mismatches.
 >
 > To configure the library correctly, all override configuration constants and feature flags (such as [`PROTOCORE_ENABLE_PROVISIONING`](@ref PROTOCORE_ENABLE_PROVISIONING), [`PROTOCORE_ENABLE_SSH`](@ref PROTOCORE_ENABLE_SSH), [`MAX_CONNS`](@ref MAX_CONNS), etc.) **must** be set as compiler build flags in your environment (e.g., `build_flags = -DPROTOCORE_ENABLE_PROVISIONING=1` in `platformio.ini`).
 
@@ -583,19 +583,20 @@ All tests are written using the **Unity** testing framework.
 To run all test suites across all environments:
 
 ```bash
-pio test -e native_stack_l46 -e native_stack_http -e native_ssh -e native_ssh_hardened -e native_ssh_conn -e native_compliance
+python test/harness.py run native_stack_l46 native_stack_http native_ssh native_ssh_hardened native_ssh_conn native_compliance
 ```
 
+Run it with no env names to build and run every environment the matrix defines.
 To run a single specific environment (which is much faster):
 
 ```bash
-pio test -e native
+python test/harness.py run native_ssh
 ```
 
 To regenerate the formatted Markdown test report locally:
 
 ```bash
-bash test/run_tests.sh
+python test/harness.py run --report-out test/TEST_REPORT.md
 ```
 
 ---
@@ -612,10 +613,10 @@ build only on Linux. Continuous integration runs on Linux, so a green run under
 
 ```powershell
 #one environment(fast)
-pio test -e native_hostlink
+python test/harness.py run native_hostlink
 
 #the formatting / lint gates, identical to CI:
-clang-format -i src\services\hostlink\hostlink.cpp          # format C/C++ in place
+clang-format -i src\services\fieldbus\hostlink\hostlink.c   # format C in place
 clang-format --dry-run --Werror (git diff --name-only)     # check only (CI gate)
 npx prettier@3.9.1 --write --end-of-line auto docs\*.md     # Markdown; --end-of-line auto avoids CRLF false flags
 npx cspell --no-progress docs\ROADMAP.md                    # spellcheck (CI gate)
@@ -633,8 +634,8 @@ npx cspell --no-progress docs\ROADMAP.md                    # spellcheck (CI gat
 cd /mnt/c/Users/<you>/.../ProtoCore
 export PATH="$HOME/.pio-venv/bin:$PATH"
 
-pio test -e native_tsan        # a Linux-only environment (ThreadSanitizer)
-bash test/run_tests.sh         # full suite + regenerates docs/TEST_REPORT.md
+python test/harness.py run native_tsan   # a Linux-only environment (ThreadSanitizer)
+python test/harness.py run --report-out test/TEST_REPORT.md   # full suite + regenerates the report
 ```
 
 **Driving WSL from a Windows shell (Git Bash):** calling `wsl.exe` from Git Bash
@@ -651,13 +652,11 @@ mangles arguments in two ways worth knowing:
 tr -d '\r' < scripts/run_native.sh | MSYS_NO_PATHCONV=1 wsl -d Ubuntu -- bash -l
 ```
 
-To run the whole native suite in **parallel** on WSL (much faster than one serial
-`pio test` invocation that builds every environment back to back):
+`harness.py run` already builds and runs the whole native suite in **parallel**;
+`-j` sets the worker count and defaults to the machine's CPU count:
 
 ```bash
-envs=$(grep -oE '^\[env:native[A-Za-z0-9_]*\]' platformio.ini \
-        | sed -E 's/\[env:(.*)\]/\1/' | grep -vE 'codeql')
-printf '%s\n' $envs | xargs -P 6 -I{} pio test -e {}
+python test/harness.py run -j 6
 ```
 
 ---
@@ -668,7 +667,8 @@ Let's walk through creating a test case to verify that the HTTP parser correctly
 
 #### Step 1: Open the Test Suite File
 
-If you are testing parser mechanics, open `test/test_http_parser/test_http_parser.cpp`.
+If you are testing parser mechanics, open
+`test/unit/src/network_drivers/presentation/http/http_parser/test_http_parser/test_http_parser.c`.
 
 #### Step 2: Write the Test Function
 
@@ -696,19 +696,16 @@ void test_http_parser_simple_get_request() {
 > [!TIP]
 > Keep your descriptions inside the function body as a single line comment starting with `//`. The reporting scripts automatically parse these comments to generate documentation strings in the final report!
 
-#### Step 3: Register the Test in `main()`
+#### Step 3: Regenerate the Suite Runner
 
-Scroll to the bottom of the test file where `main()` resides, and register your function using `RUN_TEST`:
+There is nothing to register by hand. A suite `.c` file has no `main()`; each suite
+directory holds a `unity_runner.c` marked `/* AUTOGENERATED FILE. DO NOT EDIT. */`
+that declares every `test_*` function and calls them from its own `main()`. The
+PlatformIO pre-build hook (`test/gen_test_runners.py`) regenerates it on every
+build, so adding the function above is enough. To regenerate one by hand:
 
-```cpp
-int main() {
-    UNITY_BEGIN();
-
-    // ... other registered tests ...
-    RUN_TEST(test_http_parser_simple_get_request);
-
-    return UNITY_END();
-}
+```bash
+python test/harness.py runners gen test/unit/src/network_drivers/presentation/http/http_parser/test_http_parser
 ```
 
 ---
@@ -719,17 +716,14 @@ When developing C++ code natively, we can compile our suites with compilers like
 
 ### AddressSanitizer (ASan)
 
-If you run into segmentation faults or want to ensure your code has no memory leaks, you can enable AddressSanitizer. In your `platformio.ini` file, add:
+If you run into segmentation faults or want to ensure your code has no memory leaks, you can enable AddressSanitizer. `platformio.ini`'s env block is generated from `test/test_matrix.json`, so the flags go in the matrix entry, not in the `.ini`: add them with `harness.py env add` (or `env update` on an existing env), one `--flags` per flag in the attached form, then regenerate the `.ini`:
 
-```ini
-[env:native]
-platform = native
-build_flags =
-    -fsanitize=address,undefined
-    -g
+```bash
+python test/harness.py env update <env> --flags=-g --flags=-O1 --flags=-fsanitize=address,undefined
+python test/harness.py env gen
 ```
 
-When you execute `pio test`, your host compiler compiles instrumentation checks around every pointer access. If a buffer overflow or use-after-free occurs, the test runner immediately stops and prints a stack trace pointing directly to the offending line of code.
+`native_tsan` is the in-tree example of the same pattern; its matrix flags are `-g`, `-O1`, `-fsanitize=thread`, `-pthread`. When you execute `python test/harness.py run <env>`, your host compiler compiles instrumentation checks around every pointer access. If a buffer overflow or use-after-free occurs, the test runner immediately stops and prints a stack trace pointing directly to the offending line of code.
 
 ### Simulating Race Conditions
 
@@ -743,7 +737,7 @@ We test session and socket race conditions by interleaved function calling:
 
 ## 7. Comprehensive Test Directory
 
-<!-- BEGIN GENERATED test-directory (run test/gen_test_readme.py) -->
+<!-- BEGIN GENERATED test-directory (run test/harness.py readme gen) -->
 
 A thorough directory of all **5226 test cases** across **330 suites**. Expand a suite to see its test cases, and a test case to see its objective and assertions.
 
@@ -913,7 +907,7 @@ A thorough directory of all **5226 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Clock default is platform millis
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_UINT32(4242, protocore_millis());</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(4242, clock_ms());</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -921,9 +915,9 @@ A thorough directory of all **5226 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Clock custom and revert
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_UINT32(1000, protocore_millis());</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(2000, protocore_millis());</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(777, protocore_millis());</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(1000, clock_ms());</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(2000, clock_ms());</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(777, clock_ms());</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -6621,8 +6615,8 @@ A thorough directory of all **5226 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Default is platform millis
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_UINT32(5000, protocore_millis());</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(12345, protocore_millis());</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(5000, clock_ms());</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(12345, clock_ms());</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -6630,9 +6624,9 @@ A thorough directory of all **5226 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Custom clock divides to 1000hz
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_UINT32(1000, protocore_millis());</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(2000, protocore_millis());</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(1000, protocore_millis());</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(1000, clock_ms());</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(2000, clock_ms());</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(1000, clock_ms());</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -6640,7 +6634,7 @@ A thorough directory of all **5226 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Sub khz source not divided
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_UINT32(1234, protocore_millis());</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(1234, clock_ms());</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -6648,8 +6642,8 @@ A thorough directory of all **5226 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Revert to default
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_UINT32(42, protocore_millis());</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(777, protocore_millis());</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(42, clock_ms());</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(777, clock_ms());</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -6657,8 +6651,8 @@ A thorough directory of all **5226 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Micros custom divides to 1mhz
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_UINT32(1000000u, protocore_micros());</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(2u, protocore_micros());</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(1000000u, clock_us());</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(2u, clock_us());</code>
   </details>
 
   <details style="margin-left: 20px;">

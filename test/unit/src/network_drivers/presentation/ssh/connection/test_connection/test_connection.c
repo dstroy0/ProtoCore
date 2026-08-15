@@ -1,4 +1,4 @@
-// Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+// ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // connection/connection.c (RFC 4254 sec 5.2, sec 5.3, sec 6.2, sec 6.4, sec 6.5, sec 6.7, sec 8):

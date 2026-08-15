@@ -213,7 +213,8 @@
         "+<mmgr/span.c>",
         "+<mmgr/swar.c>",
         "+<shared/hex/hex.c>",
-        "+<mmgr/float_bits.c>"
+        "+<mmgr/float_bits.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/server/security/audit_log/test_audit_log"
@@ -1764,7 +1765,8 @@
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/span.c>",
         "+<mmgr/swar.c>",
-        "+<shared/hex/hex.c>"
+        "+<shared/hex/hex.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/network_drivers/transport/udp/test_dns_resolver"
@@ -1986,7 +1988,8 @@
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/span.c>",
         "+<mmgr/swar.c>",
-        "+<mmgr/protostr.c>"
+        "+<mmgr/protostr.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/network_drivers/presentation/http/http3/test_dtls_tls13"
@@ -2013,7 +2016,8 @@
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/span.c>",
         "+<mmgr/swar.c>",
-        "+<mmgr/protostr.c>"
+        "+<mmgr/protostr.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/network_drivers/presentation/http/http3/test_dtls_tls13"
@@ -2910,7 +2914,8 @@
         "+<mmgr/span.c>",
         "+<mmgr/swar.c>",
         "+<mmgr/float_bits.c>",
-        "+<shared/hex/hex.c>"
+        "+<shared/hex/hex.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/protocols/http/test_h2_conn"
@@ -2976,7 +2981,8 @@
         "+<mmgr/span.c>",
         "+<mmgr/swar.c>",
         "+<shared/hex/hex.c>",
-        "+<mmgr/float_bits.c>"
+        "+<mmgr/float_bits.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/protocols/http/test_h2_server"
@@ -4369,7 +4375,8 @@
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/span.c>",
         "+<mmgr/swar.c>",
-        "+<shared/hex/hex.c>"
+        "+<shared/hex/hex.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/network_drivers/application/mdns_service/test_mdns_service"
@@ -4559,7 +4566,8 @@
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/span.c>",
         "+<mmgr/swar.c>",
-        "+<shared/utf8/utf8.c>"
+        "+<shared/utf8/utf8.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/services/iot/mqtt/test_mqtt"
@@ -4585,7 +4593,8 @@
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/span.c>",
         "+<mmgr/swar.c>",
-        "+<shared/utf8/utf8.c>"
+        "+<shared/utf8/utf8.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/services/iot/mqtt/test_mqtt"
@@ -5023,7 +5032,8 @@
         "+<shared/hex/hex.c>",
         "+<shared/time_compat/time_compat.c>",
         "+<mmgr/membuild.c>",
-        "+<mmgr/float_bits.c>"
+        "+<mmgr/float_bits.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/network_drivers/application/ntp_service/test_ntp_service"
@@ -5178,7 +5188,8 @@
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/span.c>",
         "+<mmgr/swar.c>",
-        "+<shared/hex/hex.c>"
+        "+<shared/hex/hex.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/integration/transport/test_observability"
@@ -5478,7 +5489,7 @@
       ]
     },
     "native_pentest": {
-      "desc": "Adversarial / pentest harness - run SEPARATELY (`pio test -e native_pentest`),\nNOT part of run_tests.sh. Fuzzes the untrusted-input parsers (HTTP, multipart,\nCoAP, SNMP+BER, Modbus, CBOR, MessagePack, JSON, base64/base32, the SQLite\non-disk file-format reader, the Redis RESP reply decoder, the OPC UA Binary\nmessage parsers, the SMB2 client response parsers + the SPNEGO DER walker +\nNTLMSSP CHALLENGE, the DNC block decoder, the FTP client reply parsers, and the\nindustrial client response parsers FINS / MELSEC / CIP / EtherNet-IP / DF1, the\nBACnet/IP + ISO-transport TPKT/COTP frame parsers, the IEEE C37.118\nsynchrophasor + FINS command parsers, the JWT HS256 token verifier, the\nDirectNET / CC-Link / AMQP / MMS frame parsers, the DDS/RTPS UDP submessage\nwalker, the WebDAV (RFC 4918) PROPPATCH body walker + Destination-header\npercent-decoder, and the HPACK HTTP/2 + QPACK HTTP/3 header-block decoders) with malformed/oversized/partial/random/mutated input and asserts bounded\nbuffers + fail-closed + termination (no crash, no over-read, no hang). Pairs with\nthe live driver penetration_testing/protocore_pentest.py. See docs/PENTEST.md.",
+      "desc": "Adversarial / pentest harness - run SEPARATELY (`python test/harness.py run native_pentest`), NOT part of the default run. Fuzzes the untrusted-input parsers (HTTP, multipart,\nCoAP, SNMP+BER, Modbus, CBOR, MessagePack, JSON, base64/base32, the SQLite\non-disk file-format reader, the Redis RESP reply decoder, the OPC UA Binary\nmessage parsers, the SMB2 client response parsers + the SPNEGO DER walker +\nNTLMSSP CHALLENGE, the DNC block decoder, the FTP client reply parsers, and the\nindustrial client response parsers FINS / MELSEC / CIP / EtherNet-IP / DF1, the\nBACnet/IP + ISO-transport TPKT/COTP frame parsers, the IEEE C37.118\nsynchrophasor + FINS command parsers, the JWT HS256 token verifier, the\nDirectNET / CC-Link / AMQP / MMS frame parsers, the DDS/RTPS UDP submessage\nwalker, the WebDAV (RFC 4918) PROPPATCH body walker + Destination-header\npercent-decoder, and the HPACK HTTP/2 + QPACK HTTP/3 header-block decoders) with malformed/oversized/partial/random/mutated input and asserts bounded\nbuffers + fail-closed + termination (no crash, no over-read, no hang). Pairs with\nthe live driver penetration_testing/pc_pentest.py. See docs/PENTEST.md.",
       "flags": [
         "-DPROTOCORE_ENABLE_MODBUS=1",
         "-DPROTOCORE_ENABLE_MODBUS_MASTER=1",
@@ -5731,7 +5742,8 @@
         "+<mmgr/span.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/mmgr/test_plaintext"
@@ -5947,7 +5959,8 @@
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/span.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/server/core/test_preempt_queue"
@@ -6224,7 +6237,8 @@
         "+<shared/log/log.c>",
         "+<shared/pcap/pcap.c>",
         "+<shared/time_compat/time_compat.c>",
-        "+<mmgr/float_bits.c>"
+        "+<mmgr/float_bits.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/server/core/provisioning_service/test_provisioning"
@@ -7093,7 +7107,8 @@
         "+<mmgr/arena.c>",
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/span.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/mmgr/test_roaming"
@@ -7822,7 +7837,8 @@
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/span.c>",
         "+<mmgr/endian.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/network_drivers/application/smb/test_ntlm"
@@ -8758,7 +8774,8 @@
         "+<mmgr/endian.c>",
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/span.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/crypto/asymmetric/test_ssh_ed25519"
@@ -8780,7 +8797,8 @@
         "+<mmgr/endian.c>",
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/span.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/crypto/asymmetric/test_ssh_ed25519"
@@ -8900,7 +8918,8 @@
         "+<network_drivers/transport/net_addr/net_addr.c>",
         "+<network_drivers/transport/tcp/lower/lower.c>",
         "+<network_drivers/transport/tcp/server/server.c>",
-        "+<shared/ip/ip.c>"
+        "+<shared/ip/ip.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/network_drivers/presentation/ssh/connection/test_connection"
@@ -9599,7 +9618,8 @@
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/span.c>",
         "+<mmgr/swar.c>",
-        "+<shared/hex/hex.c>"
+        "+<shared/hex/hex.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/protocols/transport/test_tcp"
@@ -9968,7 +9988,8 @@
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/span.c>",
         "+<mmgr/swar.c>",
-        "+<mmgr/protostr.c>"
+        "+<mmgr/protostr.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/network_drivers/presentation/http/http3/test_tls13_msg"

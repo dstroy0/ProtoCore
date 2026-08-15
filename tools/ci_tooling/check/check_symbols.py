@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+# ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """Enforce the mechanical half of docs/SYMBOLS.md.
 
@@ -176,15 +176,14 @@ def check():
                 "namespace",
                 rel,
                 text[: m.start(1)].count("\n") + 1,
-                f"named namespace `{m.group(1)}`; the library is one flat pc_ scope",
+                f"named namespace `{m.group(1)}`; the library is one flat protocore_ scope",
             )
         for m in re.finditer(r"^\s*using\s+namespace\s+([\w:]+)", text, re.M):
             add("using-namespace", rel, text[: m.start(1)].count("\n") + 1, f"using namespace {m.group(1)}")
 
         # 4. macros (headers only: a .cpp macro is not exported)
         if is_header:
-            # the file's own include guard is a macro, but s4 gives it PROTOCORE_,
-            # not PROTOCORE_ - checking it here would contradict the guard rule above
+            # the file's own include guard is a macro; check 1 above owns its form
             own_guard = guard_for(rel)
             for m in re.finditer(r"^\s*#\s*define\s+([A-Za-z_]\w*)", text, re.M):
                 name = m.group(1)

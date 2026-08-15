@@ -1,4 +1,4 @@
-// Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+// ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #include "crypto/asymmetric/curve25519.h"
@@ -109,7 +109,9 @@ void setUp()
 {
     protocore_coap_server_reset();
     protocore_coap_server_add_resource("/temp", COAP_ALLOW_GET, h_temp);
-    protocore_set_clock(test_clock, 1000);
+    Clock.src.fn = test_clock;
+    Clock.src.ticks_per_second = 1000;
+    Clock.set_ms(Clock.internal);
     g_ms = 0;
     g_rng_ctr = 0;
     out_reset();
@@ -128,7 +130,9 @@ void setUp()
 void tearDown()
 {
     protocore_coaps_server_stop();
-    protocore_set_clock(NULL, 0);
+    Clock.src.fn = NULL;
+    Clock.src.ticks_per_second = 0;
+    Clock.set_ms(Clock.internal);
 }
 
 typedef struct

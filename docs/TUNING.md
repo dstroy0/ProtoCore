@@ -182,17 +182,18 @@ inherited the same cramped numbers. Instead, [`core_setup/board_profiles/`](../c
 layers defaults along three independent axes, selected in [`board_profile.h`](../core_setup/board_profiles/board_profile.h)
 (included first thing in `protocore_config.h`):
 
-- **chip** - one file per ESP-IDF die: `classic_defaults.h` (ESP32), `s2` / `s3` / `c2` /
-  `c3` / `c5` / `c6` / `c61` / `h2` / `p4` `_defaults.h`, plus preview targets `s31` / `h4` /
-  `h21` (in ESP-IDF `master` only). Auto-selected from `CONFIG_IDF_TARGET_*`; classic ESP32
+- **chip** - one file per ESP-IDF die: `classic_defaults.h` (ESP32) beside `board_profile.h`,
+  and under [`core_setup/board_profiles/esp/`](../core_setup/board_profiles/esp/) the
+  `s2` / `s3` / `c2` / `c3` / `c5` / `c6` / `c61` / `h2` / `p4` `_defaults.h`, plus preview
+  targets `s31` / `h4` / `h21` (in ESP-IDF `master` only). Auto-selected from `CONFIG_IDF_TARGET_*`; classic ESP32
   and host builds use the classic floor. Holds each die's chip-appropriate sizing and its
   per-die HW-crypto flags - `PROTOCORE_HW_AES` / `_SHA` / `_RSA` / `_ECC` / `_ECDSA` / `_HMAC` /
   `_DS` - which are genuinely different across the lineup (e.g. C2/C61 have no general-purpose
   AES peripheral and no RSA/MPI; C6 has no ECDSA; H4 has no RSA/DS), so gate a HW path on the
   specific flag, never on "it's an ESP32". Values track each target's ESP-IDF `soc_caps.h`.
-- **PSRAM size** - `2mbpsram.h` / `4mbpsram.h` / `8mbpsram.h` / `16mbpsram.h` / `32mbpsram.h`.
+- **PSRAM size** - `esp/2mbpsram.h` / `4mbpsram.h` / `8mbpsram.h` / `16mbpsram.h` / `32mbpsram.h`.
   A given chip ships with or without PSRAM, so this is its own axis. Scales the RAM-backed pools up.
-- **flash size** - `2mbflash.h` / `4mbflash.h` / `8mbflash.h` / `16mbflash.h` / `32mbflash.h`.
+- **flash size** - `esp/2mbflash.h` / `4mbflash.h` / `8mbflash.h` / `16mbflash.h` / `32mbflash.h`.
   Likewise independent; for flash-backed sizing.
 
 Every profile default is `#ifndef`-guarded, so precedence is _first definition wins_:
@@ -271,4 +272,4 @@ latency is unchanged.
 - `PROTOCORE_WORKER_COUNT > 1` adds `PROTOCORE_PLAINTEXT_ARENA_SIZE` of BSS per extra worker
   and one event queue per worker; all static.
 - The internal time base stays 1000 Hz regardless of `PROTOCORE_WORKER_POLL_TICKS`
-  (see `services/clock.h`), so timeouts keep their tested 1 ms granularity.
+  (see `src/server/clock/clock.h`), so timeouts keep their tested 1 ms granularity.

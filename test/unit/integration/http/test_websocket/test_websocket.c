@@ -1,4 +1,4 @@
-// Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+// ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #include "crypto/hash/sha1.h"
@@ -53,7 +53,9 @@ static size_t build_frame(uint8_t *dst, WsOpcode opcode, proto_bool fin, const u
 
 void setUp()
 {
+#if PROTOCORE_ENABLE_WEBSOCKET
     Ws.init(Ws.internal);
+#endif
     for (int i = 0; i < MAX_CONNS; i++)
     {
         conn_pool[i] = (TcpConn){0};

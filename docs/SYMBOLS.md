@@ -35,8 +35,11 @@ C11, which every compiler in that list ships. Three of its features are load-bea
 
 No `namespace`. No `using namespace`. The table is the rule; the sections below are the reasoning.
 
-**The tree is mid-rename.** `pc_` / `PROTOCORE_` is the internal spelling the library carries today;
-`protocore_` / `PROTOCORE_` is what it publishes. `check_symbols.py` still gates the internal spelling and
+**The tree is mid-rename.** No `pc_` identifier is left in `src/`, `include/` or `core_setup/`; what
+`check_symbols.py --check` still reports unconverted is the `PROTO_` macro prefix (`PROTO_TRUE`,
+`PROTO_FALSE`, `PROTO_ENUM_PACKED`, `PROTO_RAW`, `PROTO_ALIGN`, `PROTO_RAW_WORD`, `PROTO_DBL_*`) plus
+unprefixed macros such as `SSH_AUTH_TIMEOUT_MS`, `RFC1951` and `H3_NO_ERROR`.
+`protocore_` / `PROTOCORE_` is what the library publishes. `check_symbols.py` still gates the internal spelling and
 `tools/ci_tooling/check/symbols_baseline.json` counts the distance left, which ratchets down only. The
 table above is the destination, and the rename lands before 1.0.0.
 
@@ -180,8 +183,8 @@ keeps `.ino` and `performance_benching/` keeps `.cpp`; neither is governed by th
 
 **A second exception, `src/web_assets/`.** That directory holds the editable source documents the
 firmware serves and the Python that compiles them, so it carries `.html`, `.css`, `.js`, `.json`,
-`.txt`, `.svg`, `.md` and `.py`. None of them is a translation unit: `build_assets.py` and
-`gen_theme_blobs.py` turn them into `network_drivers/application/web_assets.{h,c}` and
+`.txt`, `.svg`, `.md` and `.py`. None of them is a translation unit: `wizard/build_assets.py` and
+`wizard/gen_theme_blobs.py` turn them into `network_drivers/application/web_assets.{h,c}` and
 `binary_asset_blobs.{h,c}`, which are the files this law governs. Every `src/` checker filters on
 `{.c, .cc, .cpp, .h, .hpp, .ino}` and the CMake and PlatformIO source globs name `.c` and `.cpp`, so
 the directory is inert to the build. The rule for it is the input's own: an em-dash in an HTML

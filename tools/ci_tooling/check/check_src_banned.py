@@ -14,7 +14,7 @@ justified ``// PROTOCORE_ALLOW_LATE_INCLUDE:`` on an ordered include that derive
 
 Ban #5 (bare ``millis()``) is deliberately *not* enforced here: it is a "for new timing" rule, so a
 whole-file scan cannot distinguish a new call from a grandfathered timing site, and the clock source
-(``services/clock.h``) must call the platform ``millis()`` to provide ``protocore_millis()``. It stays a
+(``src/server/clock/clock.h``) must call the platform ``millis()`` to provide ``protocore_millis()``. It stays a
 review item (``rg -n '\bmillis\s*\(' src/``) rather than a mechanical gate.
 
 Comments and string / char literals are blanked out first (line numbers preserved), so a construct
@@ -187,7 +187,7 @@ _CONSTEXPR_MSG = (
 # Ban #20: snprintf and vsnprintf. A format string is parsed at
 # RUNTIME, every call, to rediscover what the code already knew at compile time - roughly 3x
 # the cost of appending the pieces directly, plus it drags in the libc float formatter. Build
-# the frame instead: protocore_sb (shared/strbuf.h) bump-appends into a caller-owned
+# the frame instead: protocore_sb (src/mmgr/membuild.h) bump-appends into a caller-owned
 # buffer and latches ok=false the first time something would not fit, so overflow is one flag
 # test at the end rather than a truncation nobody notices. It also carries its own capacity,
 # which is why this ban is swept BEFORE #19: it makes each buffer's size explicit at the

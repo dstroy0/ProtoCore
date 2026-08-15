@@ -1,4 +1,4 @@
-// Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+// ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #include "server/clock/clock.h"
@@ -107,7 +107,9 @@ void setUp()
     g_up_accept = PROTO_TRUE;
     g_tx_accept = PROTO_TRUE;
     protocore_gateway_reset();
-    protocore_set_clock(test_clock, 1000);
+    Clock.src.fn = test_clock;
+    Clock.src.ticks_per_second = 1000;
+    Clock.set_ms(Clock.internal);
     set_now(0);
 }
 void tearDown()

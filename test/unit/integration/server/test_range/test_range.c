@@ -1,4 +1,4 @@
-// Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+// ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #include "lfs_mock.h"
@@ -39,8 +39,12 @@ void setUp()
         HttpConn.slot = i;
         HttpConn.reset(HttpConn.internal);
     }
+#if PROTOCORE_ENABLE_WEBSOCKET
     Ws.init(Ws.internal);
+#endif
+#if PROTOCORE_ENABLE_SSE
     Sse.init(Sse.internal);
+#endif
     lfsm_format();
     Mnt.args.backend = lfsm();
     Mnt.mount(Mnt.internal);

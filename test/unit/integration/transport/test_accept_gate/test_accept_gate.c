@@ -1,4 +1,4 @@
-// Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+// ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #include "network_drivers/session/session.h"
@@ -10,6 +10,13 @@
 #include "server/core/proto_handler.h"
 #include "shared/ip/ip.h"
 #include <unity.h>
+
+// The library's millisecond clock, read through the namespace.
+static uint32_t clock_ms(void)
+{
+    Clock.millis(Clock.internal);
+    return Clock.ms;
+}
 
 static uint32_t g_fake_ticks = 0;
 static uint32_t fake_ticks(void)
@@ -367,22 +374,28 @@ void test_protocore_register_builtins_installs_http(void)
 
 void test_clock_default_is_platform_millis(void)
 {
-    protocore_set_clock(NULL, 0);
+    Clock.src.fn = NULL;
+    Clock.src.ticks_per_second = 0;
+    Clock.set_ms(Clock.internal);
     set_millis(4242);
-    TEST_ASSERT_EQUAL_UINT32(4242, protocore_millis());
+    TEST_ASSERT_EQUAL_UINT32(4242, clock_ms());
 }
 
 void test_clock_custom_and_revert(void)
 {
-    protocore_set_clock(fake_ticks, 8000);
+    Clock.src.fn = fake_ticks;
+    Clock.src.ticks_per_second = 8000;
+    Clock.set_ms(Clock.internal);
     g_fake_ticks = 8000;
-    TEST_ASSERT_EQUAL_UINT32(1000, protocore_millis());
+    TEST_ASSERT_EQUAL_UINT32(1000, clock_ms());
     g_fake_ticks = 16000;
-    TEST_ASSERT_EQUAL_UINT32(2000, protocore_millis());
+    TEST_ASSERT_EQUAL_UINT32(2000, clock_ms());
 
-    protocore_set_clock(NULL, 0);
+    Clock.src.fn = NULL;
+    Clock.src.ticks_per_second = 0;
+    Clock.set_ms(Clock.internal);
     set_millis(777);
-    TEST_ASSERT_EQUAL_UINT32(777, protocore_millis());
+    TEST_ASSERT_EQUAL_UINT32(777, clock_ms());
 }
 
 void test_accept_cb_global_throttle_rejects_over_budget()

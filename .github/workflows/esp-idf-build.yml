@@ -4,8 +4,9 @@ name: ESP-IDF Build
 # PlatformIO (esp32-build.yml) and arduino-cli (arduino-build.yml). Those two both compile the
 # tree as an Arduino library; this one compiles it as an IDF component via the repo-root
 # CMakeLists.txt, which is the only path that exercises idf_component_register, the REQUIRES
-# list, and the whole-tree source glob. The glob takes src/*.c AND src/*.cpp, so a duplicate
-# translation unit or a source that only compiles under a C++ driver fails here and nowhere else.
+# list, and the whole-tree source glob. The glob takes src/ and core_setup/, .c and .cpp alike, so a
+# duplicate translation unit or a source that only compiles under a C++ driver fails here and
+# nowhere else.
 #
 # The two projects under examples/esp-idf/ are built as committed, sdkconfig.defaults included.
 # Both set CONFIG_AUTOSTART_ARDUINO, so this is the Arduino-as-component flavor; the plain-IDF
@@ -16,6 +17,8 @@ on:
     branches: [main, master]
     paths:
       - "src/**"
+      - "include/**"
+      - "core_setup/**"
       - "examples/esp-idf/**"
       - "CMakeLists.txt"
       - "idf_component.yml"
@@ -24,6 +27,8 @@ on:
     branches: [main, master]
     paths:
       - "src/**"
+      - "include/**"
+      - "core_setup/**"
       - "examples/esp-idf/**"
       - "CMakeLists.txt"
       - "idf_component.yml"

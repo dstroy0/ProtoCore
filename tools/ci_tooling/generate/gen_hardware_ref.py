@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+# ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """Generate the hardware module table and API quick-reference in HARDWARE_HOOKUP.md.
 
@@ -32,7 +32,14 @@ ROOT = dr.repo_root(__file__)
 DOC = os.path.join(ROOT, "docs/HARDWARE_HOOKUP.md")
 REGION = dr.Region(DOC, "HARDWARE TABLE", dr.tool_id(__file__))
 
-HW_GROUPS = ["peripherals", "instrumentation", "radio", "fieldbus", "timing_position"]
+# (parent dir, group dir). peripherals sits under src/server/, the rest under src/services/.
+HW_GROUPS = [
+    ("src/server", "peripherals"),
+    ("src/services", "instrumentation"),
+    ("src/services", "radio"),
+    ("src/services", "fieldbus"),
+    ("src/services", "timing_position"),
+]
 
 
 def sh(*a):
@@ -80,9 +87,10 @@ def main() -> int:
 
     rows = []
     unplaced = []
-    for grp in HW_GROUPS:
-        base = os.path.join(ROOT, "src/services", grp)
+    for parent, grp in HW_GROUPS:
+        base = os.path.join(ROOT, parent, grp)
         if not os.path.isdir(base):
+            print(f"  hardware group missing on disk: {parent}/{grp}", file=sys.stderr)
             continue
         for mod in sorted(os.listdir(base)):
             d = os.path.join(base, mod)
@@ -99,15 +107,15 @@ def main() -> int:
             NOT_BRINGUP = re.compile(r"_(build|encode|decode|parse|make)_")
             sig = ""
             for pat in (
-                r"\b(pc_" + re.escape(mod) + r"_[a-z0-9_]*(?:begin|init)\([^;)]*\))\s*;",
-                r"\b(pc_[a-z0-9_]*(?:begin|init)\([^;)]*\))\s*;",
+                r"\b(protocore_" + re.escape(mod) + r"_[a-z0-9_]*(?:begin|init)\([^;)]*\))\s*;",
+                r"\b(protocore_[a-z0-9_]*(?:begin|init)\([^;)]*\))\s*;",
             ):
                 for m in re.finditer(pat, hdrs, re.S):
                     cand = m.group(1)
                     if NOT_BRINGUP.search(cand):
                         continue
                     # a shared-bus helper is not this module's own bring-up call
-                    if not cand.startswith("pc_" + mod.split("_")[0]):
+                    if not cand.startswith("protocore_" + mod.split("_")[0]):
                         continue
                     # signatures wrap across lines in the header; a newline inside a
                     # markdown table cell breaks the row
@@ -132,9 +140,7 @@ def main() -> int:
                 # FEATURES.md is the source of truth for the feature grid, so a module
                 # that cannot be placed means its entry there is absent or malformed.
                 # Report it rather than hiding it behind a directory-name fallback.
-                unplaced.append(
-                    (f"src/services/{grp}/{mod}", flag or f"(no PROTOCORE_ENABLE_* found; expected {guess})")
-                )
+                unplaced.append((f"{parent}/{grp}/{mod}", flag or f"(no PROTOCORE_ENABLE_* found; expected {guess})"))
                 group = grp.replace("_", " ")
             rows.append((group, mod, classify(text, sig), sig, flag))
 

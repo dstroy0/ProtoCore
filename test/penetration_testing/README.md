@@ -1,6 +1,6 @@
 # Pentesting suite - live adversarial tester
 
-**What this is:** `protocore_pentest.py`, a stdlib-only Python driver that attacks a
+**What this is:** `pc_pentest.py`, a stdlib-only Python driver that attacks a
 **running** ProtoCore device the way a hostile client would,
 and asserts the guarantees that keep a deterministic, zero-heap device safe. It is
 the on-device companion to the host-side parser fuzzer (`env:native_pentest`, see
@@ -30,7 +30,7 @@ reproducible, and runs in CI.
 
 But a real device is more than its parsers: it has a fixed connection pool, accept
 and per-IP throttles, auth lockout, TLS, idle-timeout reaping, and a strict "no
-heap after `begin()`" promise. Those only exist on the wire. `protocore_pentest.py`
+heap after `begin()`" promise. Those only exist on the wire. `pc_pentest.py`
 drives a flashed board and confirms the **live** behavior:
 
 - **It fails closed** - oversized/malformed requests get 4xx, never a crash.
@@ -207,19 +207,19 @@ library's zero-dependency ethos and means it runs anywhere Python does.
 List everything the tool can do (no target needed):
 
 ```sh
-python3 protocore_pentest.py --list
+python3 pc_pentest.py --list
 ```
 
 Auto-detect features from `/diag` and run the applicable suite at medium intensity:
 
 ```sh
-python3 protocore_pentest.py --host 192.168.1.85 --diag --authorized
+python3 pc_pentest.py --host 192.168.1.85 --diag --authorized
 ```
 
 Declare your flags explicitly (when `/diag` is off or for non-HTTP features):
 
 ```sh
-python3 protocore_pentest.py --host 192.168.1.85 \
+python3 pc_pentest.py --host 192.168.1.85 \
   --flags PROTOCORE_ENABLE_AUTH,PROTOCORE_ENABLE_AUTH_LOCKOUT,PROTOCORE_ENABLE_ACCEPT_THROTTLE \
   --secure-path /admin --username admin --password hunter2 --authorized
 ```
@@ -227,14 +227,14 @@ python3 protocore_pentest.py --host 192.168.1.85 \
 Throw everything reachable at it, hard, and save a machine-readable report:
 
 ```sh
-python3 protocore_pentest.py --host 192.168.1.85 --all --intensity high \
+python3 pc_pentest.py --host 192.168.1.85 --all --intensity high \
   --json report.json --authorized
 ```
 
 Target the binary protocols on their own ports:
 
 ```sh
-python3 protocore_pentest.py --host 192.168.1.85 \
+python3 pc_pentest.py --host 192.168.1.85 \
   --flags PROTOCORE_ENABLE_COAP,PROTOCORE_ENABLE_SNMP,PROTOCORE_ENABLE_MODBUS \
   --coap-port 5683 --snmp-port 161 --modbus-port 502 --authorized
 ```
@@ -278,5 +278,5 @@ are all available to it.
 
 - [docs/PENTEST.md](../../docs/PENTEST.md) - the full pentesting guide, including the
   host-side parser fuzzer (`env:native_pentest`) and sanitizer runs.
-- [test/test_pentest/test_pentest.c](../unit/fieldbus/test_pentest/test_pentest.c) - the
+- [test/unit/src/network_drivers/application/smb/test_pentest/test_pentest.c](../unit/src/network_drivers/application/smb/test_pentest/test_pentest.c) - the
   off-device fuzz harness this tool complements.

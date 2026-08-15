@@ -1,4 +1,4 @@
-// Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+// ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -7,13 +7,15 @@
  *
  * The library's internal timing runs at **1000 Hz** - one tick is one millisecond,
  * the cadence the test suite asserts and every timeout / poll is expressed in.
- * `protocore_millis()` is that single time source; by default it is the platform
- * `millis()`.
+ * `Clock.millis()` is that single time source, leaving the reading in `Clock.ms`; by
+ * default it is the platform `millis()`.
  *
  * To drive the library from your own clock (a hardware timer, an external RTC, a
  * simulation clock), call:
  *
- *     protocore_set_clock(my_clock_fn, my_ticks_per_second);
+ *     Clock.src.fn = my_clock_fn;
+ *     Clock.src.ticks_per_second = my_ticks_per_second;
+ *     Clock.set_ms(Clock.internal);
  *
  * Your clock reports a free-running tick count at `ticks_per_second`. The library
  * **divides it down to its internal 1000 Hz**, so timeouts and polling keep the

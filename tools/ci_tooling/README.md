@@ -28,7 +28,7 @@ Domain tooling stays with its domain, because splitting a cohesive family across
 roots is worse than either root alone:
 
 - `test/harness.py` - test infrastructure (matrix, runners, run, coverage, report)
-- `tools/gen_crypto_vectors.py` and the other vector generators - test **data**
+- `tools/crypto/gen_crypto_vectors.py` and the other vector generators - test **data**
 - `src/web_assets/wizard/*` - the web asset build
 - `tools/git-hooks/` - git hooks
 - `penetration_testing/`, `performance_benching/`, `reverse_engineering/` - separate domains

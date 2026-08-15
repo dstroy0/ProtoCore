@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-# Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+# ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 # SPDX-License-Identifier: AGPL-3.0-or-later
-"""Owner-context guard: fail if a library .cpp carries a loose file-scope mutable.
+"""Owner-context guard: fail if a library .c carries a loose file-scope mutable.
 
 The library's security model (least privilege / object-capability) is that every
 subsystem's mutable state lives in ONE owned, feature-gated context struct with internal
@@ -43,21 +43,21 @@ BASELINE = bl.path_for(__file__, "owned_context_baseline")
 # through the L5 seam (see docs/ARCHITECTURE.md). These are the documented "one seam", not
 # scattered outliers, so they are exempt. Keyed by the exact variable name.
 SHARED_SUBSTRATE = {
-    "conn_pool",  # tcp.cpp   - the TCP connection pool (extern in tcp.h)
-    "http_pool",  # http_parser.cpp - the parsed-request pool (extern in http_parser.h)
-    "ws_pool",  # websocket.cpp   - the WebSocket connection pool (extern in websocket.h)
-    "protocore_sse_pool",  # sse.cpp         - the SSE connection pool (extern in sse.h)
-    "listener_pool",  # listener.cpp    - the listener pool
-    "http_req_count",  # presentation.cpp - per-slot request counter (extern)
+    "conn_pool",  # transport/tcp/protocol/protocol.c - the TCP connection pool (extern in tcp/common.h)
+    "http_pool",  # presentation/http/http_parser/http_parser.c - the parsed-request pool (extern in http_parser.h)
+    "ws_pool",  # presentation/http/websocket/websocket.c - the WebSocket connection pool (extern in websocket.h)
+    "protocore_sse_pool",  # presentation/http/sse/sse.c - the SSE connection pool (extern in sse.h)
+    "listener_pool",  # transport/tcp/server/server.c - the listener pool (extern in tcp/common.h)
+    "http_req_count",  # presentation/presentation.c - per-slot request counter (extern in presentation.h)
     # SSH per-connection substrate: one row per SSH slot, indexed cross-TU by the SSH layers.
-    "ssh_chan",  # ssh_channel.cpp  - the SSH channel table
-    "ssh_keys",  # ssh_keymat.cpp   - per-conn key material
-    "ssh_dh",  # ssh_keymat.cpp   - per-conn DH state
-    "ssh_pkt",  # ssh_packet_state.cpp - per-conn packet state
-    "ssh_sess",  # ssh_transport.c- per-conn session state
-    "ssh_host_pubkey",  # ssh_rsa.cpp      - the loaded RSA host public key
-    "crypto_work",  # ssh_bignum.cpp   - shared SSH bignum scratch
-    "protocore_ap_ip",  # tcp.cpp    - the softAP IP (extern)
+    "ssh_chan",  # ssh/connection/connection.c - the SSH channel table
+    "ssh_keys",  # ssh/transport/transport.c - per-conn key material
+    "ssh_dh",  # ssh/transport/transport.c - per-conn DH state
+    "ssh_pkt",  # ssh/transport/transport.c - per-conn packet state
+    "ssh_sess",  # ssh/transport/transport.c - per-conn session state
+    "ssh_host_pubkey",  # ssh/transport/ssh_rsa.c - the loaded RSA host public key
+    "crypto_work",  # a SshPacketState member (ssh/transport/transport.h); no file-scope definition in src/
+    "protocore_ap_ip",  # transport/tcp/protocol/protocol.c - the softAP IP (extern in tcp/common.h)
 }
 
 # A file-scope definition line (column 0). Optional ALL_CAPS attribute macros
@@ -256,7 +256,7 @@ def main(argv) -> int:
                 print(f"  {path}:{ln}: `{name}`  ->  {text}")
             print(
                 f"\n{len(violations)} violation(s). Move each into its subsystem's owned <name>_ctx "
-                "(see src/services/iot/coap/coap.cpp), give the context internal linkage (`static`, "
+                "(see src/services/iot/coap/coap.c), give the context internal linkage (`static`, "
                 "or an anonymous namespace), or, if it is genuinely the shared cross-TU substrate, "
                 "add it to SHARED_SUBSTRATE in tools/ci_tooling/check/check_owned_context.py."
             )

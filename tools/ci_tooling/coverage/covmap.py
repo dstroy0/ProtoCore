@@ -76,7 +76,7 @@ def parse_envs() -> dict[str, dict]:
 
 
 def env_covers(env: dict, srcpath: str) -> bool:
-    """srcpath is repo-relative, e.g. src/services/iot/coap/coap.cpp."""
+    """srcpath is repo-relative, e.g. src/services/iot/coap/coap.c."""
     rel = srcpath[4:] if srcpath.startswith("src/") else srcpath
     for pat in env["src"]:
         if fnmatch.fnmatch(rel, pat) or rel == pat:

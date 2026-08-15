@@ -1,4 +1,4 @@
-// Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+// ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -129,7 +129,7 @@ void protocore_server_reset(void)
 #if PROTOCORE_ENABLE_AUTH
     // A credential id names a row by index and a route holds that id, so the two tables empty
     // together: routes left behind rows the table has no way to reach, and the table is bounded.
-    Auth.reset();
+    Auth.reset(Auth.internal);
 #endif
     Mnt.reset(Mnt.internal); // the same, for the mount id a static or DAV route holds
     protocore_resp_reset();

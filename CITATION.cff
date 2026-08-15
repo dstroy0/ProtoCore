@@ -16,8 +16,8 @@ authors:
 repository-code: "https://github.com/dstroy0/ProtoCore"
 url: "https://dstroy0.github.io/ProtoCore/"
 license: AGPL-3.0-or-later
-version: 3.8.4
-date-released: "2026-06-27"
+version: 1.0.16
+date-released: "2026-08-08"
 keywords:
   - esp32
   - http

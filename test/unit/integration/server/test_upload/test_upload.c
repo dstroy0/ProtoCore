@@ -1,4 +1,4 @@
-// Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+// ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #include "mnt_mock.h"
@@ -29,8 +29,12 @@ void setUp()
         HttpConn.slot = (uint8_t)i;
         HttpConn.reset(HttpConn.internal);
     }
+#if PROTOCORE_ENABLE_WEBSOCKET
     Ws.init(Ws.internal);
+#endif
+#if PROTOCORE_ENABLE_SSE
     Sse.init(Sse.internal);
+#endif
     mock_mnt_reset();
     Mnt.args.backend = mock_mnt();
     Mnt.mount(Mnt.internal);
