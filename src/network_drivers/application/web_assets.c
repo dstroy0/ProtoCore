@@ -7,7 +7,7 @@
 #include "network_drivers/application/web_assets.h"
 
 // ---- html ----
-const char PC_DASHBOARD_PAGE[] =
+const char PROTOCORE_DASHBOARD_PAGE[] =
     "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\" /><meta name=\"viewport\" content=\"width=devic"
     "e-width, initial-scale=1\" /><title>Dashboard</title> <style>*{box-sizing:border-box;}body{margin:0;font-famil"
     "y:system-ui,\"Segoe UI\",Roboto,sans-serif;background:#0e1116;color:#e6edf3;}header{display:flex;align-items:c"
@@ -79,15 +79,15 @@ const char PC_DASHBOARD_PAGE[] =
     "};\nes.onmessage = function (ev) {\ntry {\nvar d = JSON.parse(ev.data);\nfor (var k in d)\nif (widgets[k]) wid"
     "gets[k](d[k]);\n} catch (e) {}\n};\n});\n})();</script> </body></html>";
 
-const char PC_PROV_FORM[] =
+const char PROTOCORE_PROV_FORM[] =
     "<!doctype html><html><head><meta name=\"viewport\" content=\"width=device-width\" /><title>WiFi setup</title><"
     "/head><body><h2>WiFi setup</h2><form method=\"POST\" action=\"/save\"> SSID:<br /><input name=\"ssid\" maxleng"
     "th=\"32\" /><br /> Password:<br /><input name=\"psk\" type=\"password\" maxlength=\"63\" /><br /><br /><input "
     "type=\"submit\" value=\"Save\" /></form></body></html>";
 
-const char PC_PROV_SAVED_HTML[] = "<html><body> Saved. Rebooting... </body></html>";
+const char PROTOCORE_PROV_SAVED_HTML[] = "<html><body> Saved. Rebooting... </body></html>";
 
-const char PC_TERMINAL_PAGE[] =
+const char PROTOCORE_TERMINAL_PAGE[] =
     "<!doctype html><html><head><meta charset=\"utf-8\" /><meta name=\"viewport\" content=\"width=device-width,init"
     "ial-scale=1\" /><title>PC Terminal</title> <style>:root{--g:#2bb35a;--g2:#00c000;--bg:#080c08;}*{box-sizing:bo"
     "rder-box;}html,body{margin:0;height:100%;background:var(--bg);color:var(--g);font:14px/1.45 \"Consolas\",\"Dej"
@@ -115,7 +115,7 @@ const char PC_TERMINAL_PAGE[] =
     "}\n});\nconn();</script> </body></html>";
 
 // ---- js ----
-const char PC_SERVICE_WORKER[] =
+const char PROTOCORE_SERVICE_WORKER[] =
     "// Client half of the delivery story. The device is slow and often asleep, so the browser should not\n// wait "
     "on it for the shell: cache the shell once, serve it from cache instantly, and refresh in the\n// background. T"
     "hat is RFC 5861 stale-while-revalidate applied on the client, matching what\n// protocore_delivery_swr decides"
@@ -156,12 +156,12 @@ const char PC_SERVICE_WORKER[] =
     "return hit || net;\n        }),\n    );\n});\n";
 
 // ---- json ----
-const char PC_STATS_JSON[] =
+const char PROTOCORE_STATS_JSON[] =
     "{\"uptime_ms\":{{uptime_ms}},\"requests\":{{requests}},\"http_2xx\":{{http_2xx}},\"http_4xx\":{{http_4xx}},\"h"
     "ttp_5xx\":{{http_5xx}},\"active_conns\":{{active_conns}},\"free_heap\":{{free_heap}}}";
 
 // ---- text ----
-const char PC_METRICS_PROM[] =
+const char PROTOCORE_METRICS_PROM[] =
     "# HELP protocore_uptime_seconds Device uptime in seconds.\n# TYPE protocore_uptime_seconds gauge\nprotocore_up"
     "time_seconds {{uptime_seconds}}\n# HELP protocore_http_requests_total Total HTTP responses sent.\n# TYPE proto"
     "core_http_requests_total counter\nprotocore_http_requests_total {{requests_total}}\n# HELP protocore_http_resp"

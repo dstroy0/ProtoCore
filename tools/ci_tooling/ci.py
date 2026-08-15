@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """One entry point for every CI operation, so the whole surface is visible in one place.
 
+  ci.py help [command]        every command's help in one call, or one command's
   ci.py list                  every operation this runs, grouped
   ci.py gen [name...]         run generators (default: the workflow's set, in order)
   ci.py gen --check [name...] assert the tracked files already match (what CI gates on)
@@ -67,6 +68,7 @@ CHECK = {
     "coverage_xml": "check.check_coverage_xml",
     "version_sites": "check.check_version_sites",
     "symbols": "check.check_symbols",
+    "null_ctx": "check.check_null_ctx",
     "docs": "check.check_docs",
     "comments": "check.check_comments",
     "examples": "check.check_examples",
@@ -83,6 +85,7 @@ BASELINE_ARGS = {
     "owned_context": ["--baseline"],
     "src_banned": ["--all", "--baseline"],
     "symbols": ["--baseline"],
+    "null_ctx": ["--baseline"],
     "comments": ["--save"],
     "test_coverage": ["--save"],
 }
@@ -147,6 +150,38 @@ def cmd_list(a):
             print("  %-18s %s%s" % (name, table[name], star))
     print("\n  * in the default set, run when no name is given")
     return 0
+
+
+def _subcommands(parser):
+    """{name: subparser} for a parser's one subparser group."""
+    for action in parser._actions:
+        if isinstance(action, argparse._SubParsersAction):
+            return action.choices
+    return {}
+
+
+def cmd_help(a):
+    """Every command's own help in one call, or one command's.
+
+    `-h` prints usage one level at a time, so reading the whole surface means invoking it once per
+    subcommand. This prints all of it, then the module tables `list` prints, so a single call is
+    the whole tool.
+    """
+    parser = build_parser()
+    subs = _subcommands(parser)
+    if a.command:
+        if a.command not in subs:
+            print("no such command: %s (try `ci.py help`)" % a.command, file=sys.stderr)
+            return 2
+        subs[a.command].print_help()
+        return 0
+    print(__doc__.strip())
+    for name in sorted(subs):
+        print("\n" + "-" * 78)
+        print("### ci.py %s" % name)
+        print(subs[name].format_help().strip())
+    print("\n" + "-" * 78)
+    return cmd_list(a)
 
 
 def cmd_gen(a):
@@ -228,12 +263,16 @@ def cmd_fmt(a):
     return rc_all
 
 
-def main():
+def build_parser():
     ap = argparse.ArgumentParser(prog="ci.py", description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="group", required=True)
 
     sub.add_parser("list", help="every operation, grouped").set_defaults(fn=cmd_list)
+
+    p = sub.add_parser("help", help="every command's help in one call, or one command's")
+    p.add_argument("command", nargs="?")
+    p.set_defaults(fn=cmd_help)
 
     p = sub.add_parser("gen", help="run generators")
     p.add_argument("names", nargs="*")
@@ -261,8 +300,11 @@ def main():
     p = sub.add_parser("fmt", help="clang-format, Prettier and black")
     p.add_argument("--check", action="store_true", help="report violations instead of rewriting")
     p.set_defaults(fn=cmd_fmt)
+    return ap
 
-    a = ap.parse_args()
+
+def main():
+    a = build_parser().parse_args()
     return a.fn(a)
 
 

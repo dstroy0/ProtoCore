@@ -20,22 +20,32 @@
 #include <stdint.h>
 #include <string.h>
 
+/** @brief Format one sampled, tagged counter line into @p out; the octets written. */
+static size_t statsd_counter_line(char *out, size_t cap)
+{
+    Statsd.line.out = out;
+    Statsd.line.cap = cap;
+    Statsd.metric.name = "api.requests";
+    Statsd.metric.type = STATSD_COUNTER;
+    Statsd.metric.rate = 0.1f;
+    Statsd.value.text = "1";
+    Statsd.tags.metric = "env:prod,host:pc-rig";
+    Statsd.format(Statsd.internal);
+    return Statsd.n;
+}
+
 int main(void)
 {
     char out[256];
-    size_t len =
-        protocore_statsd_format(out, sizeof(out), "api.requests", "1", STATSD_COUNTER, 0.1f, "env:prod,host:pc-rig");
+    size_t len = statsd_counter_line(out, sizeof(out));
 
     hbench_header();
 
     // format one sampled counter line with tags (the per-metric cost before the UDP send).
     volatile size_t sink = 0;
     double ns = 0.0;
-    HBENCH_NS(3000000,
-              sink += protocore_statsd_format(out, sizeof(out), "api.requests", "1", STATSD_COUNTER, 0.1f,
-                                              "env:prod,host:pc-rig"),
-              ns);
-    hbench_row("statsd", "protocore_statsd_format (counter)", ns, (double)len);
+    HBENCH_NS(3000000, sink += statsd_counter_line(out, sizeof(out)), ns);
+    hbench_row("statsd", "Statsd.format (counter)", ns, (double)len);
     (void)sink;
 
     return 0;

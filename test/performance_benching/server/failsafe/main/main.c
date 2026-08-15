@@ -3,15 +3,14 @@
 //
 // On-device CCOUNT microbenchmark for the software watchdog / deadlock detector (server/failsafe):
 // the wrap-safe overdue predicate (protocore_lifeline_overdue), the lifeline registry check-in
-// (protocore_failsafe_feed_at), the fire-once-per-episode breach evaluation (protocore_failsafe_check_at), and
-// the /health-style JSON serializer (protocore_failsafe_json_at) - all pure (zero heap, a fixed-size
-// static registry, no hardware). Uses the explicit *_at(now) core with a synthetic clock, the same
+// (Failsafe.feed), the fire-once-per-episode breach evaluation (Failsafe.check), and
+// the /health-style JSON serializer (Failsafe.json) - all pure (zero heap, a fixed-size
+// static registry, no hardware). Every call takes the clock as args.now, the same
 // host-testable surface test/test_failsafe/test_failsafe.cpp exercises, so nothing here depends on
 // a real millis() tick. Worked example match: a pure protocol/data-structure codec with no hardware
 // involved, so every call here exercises the real production code path (contrast with
 // performance_benching/device/ads1115, a peripheral driver where the bus transaction itself is stubbed); out of
-// scope: protocore_failsafe_register/feed/check (the protocore_millis()-reading wrappers) - thin pass-throughs
-// to the *_at core benched here, and protocore_failsafe_on_breach (a one-time install, not a hot path).
+// scope: Failsafe.on_breach, a one-time install rather than a hot path.
 //
 // Build/flash (JTAG-capable S3 over its USB-Serial/JTAG port):
 //   idf.py -C test/performance_benching/failsafe -t upload --upload-port COM7
@@ -35,22 +34,61 @@ static void on_breach(int id, const char *name, void *arg)
     s_fire_count++;
 }
 
+/** @brief Arm one lifeline named @p name against @p now with deadline @p deadline_ms. */
+static int failsafe_add(const char *name, uint32_t deadline_ms, uint32_t now)
+{
+    Failsafe.args.name = name;
+    Failsafe.args.deadline_ms = deadline_ms;
+    Failsafe.args.now = now;
+    Failsafe.add(Failsafe.internal);
+    return Failsafe.i32;
+}
+
+/** @brief Check lifeline @p id in against @p now. */
+static proto_bool failsafe_feed(int id, uint32_t now)
+{
+    Failsafe.args.id = id;
+    Failsafe.args.now = now;
+    Failsafe.feed(Failsafe.internal);
+    return Failsafe.ok;
+}
+
+/** @brief Judge every armed lifeline against @p now; one bit per lifeline that went overdue. */
+static uint32_t failsafe_check(uint32_t now)
+{
+    Failsafe.args.now = now;
+    Failsafe.check(Failsafe.internal);
+    return Failsafe.breached;
+}
+
+/** @brief Report every armed lifeline as JSON into @p out; the characters written. */
+static int failsafe_json(uint32_t now, char *out, size_t cap)
+{
+    Failsafe.args.now = now;
+    Failsafe.out_args.out = out;
+    Failsafe.out_args.cap = cap;
+    Failsafe.json(Failsafe.internal);
+    return Failsafe.n;
+}
+
 void dbench_run(void)
 {
-    protocore_failsafe_reset();
-    protocore_failsafe_on_breach(on_breach, NULL);
+    Failsafe.reset(Failsafe.internal);
+    Failsafe.out_args.cb = on_breach;
+    Failsafe.out_args.arg = NULL;
+    Failsafe.on_breach(Failsafe.internal);
 
     // Fill the registry (PROTOCORE_FAILSAFE_MAX_LIFELINES lifelines), mirroring test_failsafe.cpp's
     // test_registry_full: each starts fed at t=1000 with a 500 ms deadline.
     for (int i = 0; i < PROTOCORE_FAILSAFE_MAX_LIFELINES; i++)
     {
-        protocore_failsafe_register_at("lifeline", 500, 1000);
+        failsafe_add("lifeline", 500, 1000);
     }
 
     // Size the JSON buffer once up front (8 armed entries; digit widths are stable across the
     // repeating loop below, so this length stays accurate for every DBENCH_BULK pass).
     static char json[1024];
-    size_t json_len = (size_t)protocore_failsafe_json_at(5000, json, sizeof(json));
+    size_t json_len = (size_t)failsafe_json(5000, json, sizeof(json));
 
     for (;;)
     {
@@ -64,17 +102,16 @@ void dbench_run(void)
         DBENCH_OP("protocore_lifeline_overdue", 200000, sinkb = protocore_lifeline_overdue(1600, 1000, 500));
 
         // Check-in: every armed lifeline calls this at least once per deadline window.
-        DBENCH_OP("protocore_failsafe_feed_at", 200000, sinkf = protocore_failsafe_feed_at(0, 1700));
+        DBENCH_OP("Failsafe.feed", 200000, sinkf = failsafe_feed(0, 1700));
 
         // Full-registry evaluation (PROTOCORE_FAILSAFE_MAX_LIFELINES=8 lines); now=100000 keeps every
         // lifeline solidly overdue without wraparound, so this exercises the fire-once-per-episode
         // path (first call in the loop fires id 0's callback since feed_at above just cleared its
         // breach; the remaining iterations hit the already-breached fast path).
-        DBENCH_OP("protocore_failsafe_check_at", 50000, sinkm += protocore_failsafe_check_at(100000));
+        DBENCH_OP("Failsafe.check", 50000, sinkm += failsafe_check(100000));
 
         // /health-style JSON serialization of the whole registry.
-        DBENCH_BULK("protocore_failsafe_json_at", 20000, json_len,
-                    sinkj += protocore_failsafe_json_at(5000, json, sizeof(json)));
+        DBENCH_BULK("Failsafe.json", 20000, json_len, sinkj += failsafe_json(5000, json, sizeof(json)));
 
         (void)sinkb;
         (void)sinkf;

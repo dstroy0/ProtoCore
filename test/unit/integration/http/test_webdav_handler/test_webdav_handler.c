@@ -19,7 +19,8 @@ static const protocore_mnt_backend *davfs;
 static void feed_and_handle(uint8_t slot, const char *req)
 {
     push_str(slot, req);
-    http_parse(slot);
+    HttpConn.slot = slot;
+    HttpConn.parse(HttpConn.internal);
     handle();
 }
 
@@ -30,7 +31,8 @@ static void rearm()
     conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].proto = PROTO_HTTP;
     conn_pool[0].pcb = protocore_net_host_pcb();
-    http_reset(0);
+    HttpConn.slot = 0;
+    HttpConn.reset(HttpConn.internal);
     tcp_capture_reset();
 }
 
@@ -98,14 +100,16 @@ void setUp()
         conn_pool[i].state = CONN_ACTIVE;
         conn_pool[i].proto = PROTO_HTTP;
         conn_pool[i].pcb = protocore_net_host_pcb();
-        http_reset(i);
+        HttpConn.slot = i;
+        HttpConn.reset(HttpConn.internal);
     }
     Ws.init(Ws.internal);
-    protocore_sse_init();
+    Sse.init(Sse.internal);
     tcp_capture_reset();
     lfsm_format();
     davfs = lfsm();
-    protocore_mnt_mount(davfs);
+    Mnt.args.backend = davfs;
+    Mnt.mount(Mnt.internal);
 
     lfsm_mkdir("/dav");
     dav("/dav", davfs, "/dav");
@@ -240,12 +244,14 @@ static void feed_put(uint8_t slot, const char *path, const uint8_t *body, size_t
     char hdr[128];
     snprintf(hdr, sizeof(hdr), "PUT %s HTTP/1.1\r\nHost: x\r\nContent-Length: %u\r\n\r\n", path, (unsigned)n);
     push_str(slot, hdr);
-    http_parse(slot);
+    HttpConn.slot = slot;
+    HttpConn.parse(HttpConn.internal);
     for (size_t off = 0; off < n;)
     {
         size_t chunk = n - off > 200 ? 200 : n - off;
         push_bytes(slot, body + off, chunk);
-        http_parse(slot);
+        HttpConn.slot = slot;
+        HttpConn.parse(HttpConn.internal);
         off += chunk;
     }
     handle();
@@ -315,9 +321,11 @@ void test_put_stream_abort()
 {
 
     push_str(0, "PUT /dav/ab.txt HTTP/1.1\r\nHost: x\r\nContent-Length: 10\r\n\r\nabcd");
-    http_parse(0);
+    HttpConn.slot = 0;
+    HttpConn.parse(HttpConn.internal);
     TEST_ASSERT_TRUE(tree_has("/dav/ab.txt"));
-    http_reset(0);
+    HttpConn.slot = 0;
+    HttpConn.reset(HttpConn.internal);
 
     TEST_ASSERT_TRUE(tree_has("/dav/ab.txt"));
 }
@@ -328,12 +336,14 @@ static void feed_put_if(uint8_t slot, const char *path, const char *if_hdr, cons
     snprintf(hdr, sizeof(hdr), "PUT %s HTTP/1.1\r\nHost: x\r\nIf: %s\r\nContent-Length: %u\r\n\r\n", path, if_hdr,
              (unsigned)n);
     push_str(slot, hdr);
-    http_parse(slot);
+    HttpConn.slot = slot;
+    HttpConn.parse(HttpConn.internal);
     for (size_t off = 0; off < n;)
     {
         size_t chunk = n - off > 200 ? 200 : n - off;
         push_bytes(slot, body + off, chunk);
-        http_parse(slot);
+        HttpConn.slot = slot;
+        HttpConn.parse(HttpConn.internal);
         off += chunk;
     }
     handle();
@@ -723,9 +733,11 @@ void test_webdav_stream_put_abort_without_open()
 {
     lfsm_fail_prog_always();
     push_str(0, "PUT /dav/never.txt HTTP/1.1\r\nHost: x\r\nContent-Length: 10\r\n\r\nabcd");
-    http_parse(0);
+    HttpConn.slot = 0;
+    HttpConn.parse(HttpConn.internal);
     TEST_ASSERT_FALSE(tree_has("/dav/never.txt"));
-    http_reset(0);
+    HttpConn.slot = 0;
+    HttpConn.reset(HttpConn.internal);
     TEST_ASSERT_FALSE(tree_has("/dav/never.txt"));
     lfsm_no_prog_failure();
 }
@@ -733,7 +745,8 @@ void test_webdav_stream_put_abort_without_open()
 void test_webdav_status_on_dead_connection()
 {
     push_str(0, "UNLOCK /dav/x HTTP/1.1\r\nHost: x\r\n\r\n");
-    http_parse(0);
+    HttpConn.slot = 0;
+    HttpConn.parse(HttpConn.internal);
     conn_pool[0].pcb = NULL;
     handle();
     TEST_ASSERT_EQUAL_size_t(0, tcp_captured_len());

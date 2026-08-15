@@ -63,10 +63,11 @@ void setUp()
         conn_pool[i].state = CONN_ACTIVE;
         conn_pool[i].proto = PROTO_HTTP;
         conn_pool[i].pcb = protocore_net_host_pcb();
-        http_reset(i);
+        HttpConn.slot = i;
+        HttpConn.reset(HttpConn.internal);
     }
     Ws.init(Ws.internal);
-    protocore_sse_init();
+    Sse.init(Sse.internal);
     tcp_capture_reset();
 }
 
@@ -78,7 +79,8 @@ void tearDown()
 static void feed_and_handle(uint8_t slot, const char *req_str)
 {
     push_str(slot, req_str);
-    http_parse(slot);
+    HttpConn.slot = slot;
+    HttpConn.parse(HttpConn.internal);
     handle();
 }
 

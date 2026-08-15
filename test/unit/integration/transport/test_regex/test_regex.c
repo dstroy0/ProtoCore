@@ -29,10 +29,11 @@ void setUp()
         conn_pool[i].state = CONN_ACTIVE;
         conn_pool[i].proto = PROTO_HTTP;
         conn_pool[i].pcb = protocore_net_host_pcb();
-        http_reset(i);
+        HttpConn.slot = i;
+        HttpConn.reset(HttpConn.internal);
     }
     Ws.init(Ws.internal);
-    protocore_sse_init();
+    Sse.init(Sse.internal);
     tcp_capture_reset();
     g_called = PROTO_FALSE;
 }
@@ -49,13 +50,15 @@ static proto_bool hit(const char *method, const char *path)
     conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].proto = PROTO_HTTP;
     conn_pool[0].pcb = protocore_net_host_pcb();
-    http_reset(0);
+    HttpConn.slot = 0;
+    HttpConn.reset(HttpConn.internal);
     tcp_capture_reset();
     g_called = PROTO_FALSE;
     char req[160];
     snprintf(req, sizeof(req), "%s %s HTTP/1.1\r\n\r\n", method, path);
     push_str(0, req);
-    http_parse(0);
+    HttpConn.slot = 0;
+    HttpConn.parse(HttpConn.internal);
     handle();
     return g_called;
 }

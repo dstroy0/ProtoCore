@@ -52,14 +52,16 @@ void setUp()
         conn_pool[i].state = CONN_ACTIVE;
         conn_pool[i].proto = PROTO_HTTP;
         conn_pool[i].pcb = protocore_net_host_pcb();
-        http_reset(i);
+        HttpConn.slot = i;
+        HttpConn.reset(HttpConn.internal);
     }
     Ws.init(Ws.internal);
-    protocore_sse_init();
+    Sse.init(Sse.internal);
 
     mock_mnt_reset();
 
-    protocore_mnt_mount(mock_mnt());
+    Mnt.args.backend = mock_mnt();
+    Mnt.mount(Mnt.internal);
     tcp_capture_reset();
 }
 
@@ -72,7 +74,8 @@ void tearDown()
 static void feed_and_handle(uint8_t slot, const char *req_str)
 {
     push_str(slot, req_str);
-    http_parse(slot);
+    HttpConn.slot = slot;
+    HttpConn.parse(HttpConn.internal);
     handle();
 }
 
@@ -252,7 +255,8 @@ void test_multiple_content_types()
         conn_pool[0].state = CONN_ACTIVE;
         conn_pool[0].proto = PROTO_HTTP;
         conn_pool[0].pcb = protocore_net_host_pcb();
-        http_reset(0);
+        HttpConn.slot = 0;
+        HttpConn.reset(HttpConn.internal);
         tcp_capture_reset();
 
         on_http(cur_path, HTTP_GET, h_case);
@@ -274,7 +278,8 @@ static void rearm(uint8_t slot)
     conn_pool[slot].state = CONN_ACTIVE;
     conn_pool[slot].proto = PROTO_HTTP;
     conn_pool[slot].pcb = protocore_net_host_pcb();
-    http_reset(slot);
+    HttpConn.slot = slot;
+    HttpConn.reset(HttpConn.internal);
     tcp_capture_reset();
 }
 
@@ -444,12 +449,14 @@ void stress_serve_file_50_requests()
         conn_pool[slot].state = CONN_ACTIVE;
         conn_pool[slot].proto = PROTO_HTTP;
         conn_pool[slot].pcb = protocore_net_host_pcb();
-        http_reset(slot);
+        HttpConn.slot = slot;
+        HttpConn.reset(HttpConn.internal);
         tcp_capture_reset();
         handler_called = PROTO_FALSE;
 
         push_str(slot, "GET /f HTTP/1.1\r\n\r\n");
-        http_parse(slot);
+        HttpConn.slot = slot;
+        HttpConn.parse(HttpConn.internal);
         handle();
 
         TEST_ASSERT_TRUE_MESSAGE(handler_called, "handler not called");
@@ -470,7 +477,8 @@ void stress_alternate_missing_and_found()
         conn_pool[slot].state = CONN_ACTIVE;
         conn_pool[slot].proto = PROTO_HTTP;
         conn_pool[slot].pcb = protocore_net_host_pcb();
-        http_reset(slot);
+        HttpConn.slot = slot;
+        HttpConn.reset(HttpConn.internal);
         tcp_capture_reset();
 
         if (i % 2 == 0)
@@ -483,7 +491,8 @@ void stress_alternate_missing_and_found()
         }
 
         push_str(slot, "GET /f HTTP/1.1\r\n\r\n");
-        http_parse(slot);
+        HttpConn.slot = slot;
+        HttpConn.parse(HttpConn.internal);
         handle();
 
         if (i % 2 == 0)
@@ -513,7 +522,8 @@ void test_inm_leading_ows_still_matches()
     serve_static("/", g_fs, "/www");
 
     push_str(0, "GET /p.html HTTP/1.1\r\nHost: x\r\n\r\n");
-    http_parse(0);
+    HttpConn.slot = 0;
+    HttpConn.parse(HttpConn.internal);
     inject_header(0, "If-None-Match", " \t\"f-3e8\"");
     handle();
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "304 Not Modified"));

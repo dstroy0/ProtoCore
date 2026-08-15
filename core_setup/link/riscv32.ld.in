@@ -60,22 +60,27 @@ MEMORY
 
 SECTIONS
 {
+    /* Every section pads to a word at its END, which is what makes the NEXT one start on a word.
+     * The alignment cannot go anywhere else: as the first statement inside, it runs after the
+     * output section's address is already fixed and only shifts the contents; as a bare `.`
+     * assignment before, it does not move a region-assigned section's allocation pointer; and as
+     * the section's address expression it overrides the region entirely and evaluates `.` from
+     * zero. Left unpadded, .init's 0x16 bytes put .text at 0x40380016 and the ESP32-C3 ROM loader
+     * refuses the image - "Invalid image block, can't boot" - because it loads a word at a time. */
     .init :
     {
-        . = ALIGN(4);
         KEEP(*(.protocore_entry))
+        . = ALIGN(4);
     } > FLASH
 
     .text :
     {
-        . = ALIGN(4);
         *(.text .text.*)
         . = ALIGN(4);
     } > FLASH
 
     .rodata :
     {
-        . = ALIGN(4);
         *(.rodata .rodata.*)
         *(.srodata .srodata.*)
         . = ALIGN(4);

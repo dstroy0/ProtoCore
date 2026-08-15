@@ -38,8 +38,10 @@ static void arm_slot(uint8_t slot, const char *raw)
         s->rx_buffer[s->rx_head] = (uint8_t)raw[i];
         s->rx_head = next;
     }
-    http_reset(slot);
-    http_parse(slot);
+    HttpConn.slot = slot;
+    HttpConn.reset(HttpConn.internal);
+    HttpConn.slot = slot;
+    HttpConn.parse(HttpConn.internal);
 }
 
 #define MARK_MAX 8
@@ -72,7 +74,8 @@ static void reset_handler(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
     g_mark[0]++;
-    http_reset(slot_id);
+    HttpConn.slot = slot_id;
+    HttpConn.reset(HttpConn.internal);
 }
 
 static char g_body_seen[32];
@@ -128,7 +131,8 @@ void setUp(void)
         conn_pool[i].id = i;
         conn_pool[i].state = CONN_ACTIVE;
         conn_pool[i].proto = PROTO_HTTP;
-        http_reset(i);
+        HttpConn.slot = i;
+        HttpConn.reset(HttpConn.internal);
     }
     handler_called = PROTO_FALSE;
     handler_slot = 255;
@@ -136,7 +140,7 @@ void setUp(void)
     Ws.init(Ws.internal);
 #endif
 #if PROTOCORE_ENABLE_SSE
-    protocore_sse_init();
+    Sse.init(Sse.internal);
 #endif
     protocore_server_reset();
 }
@@ -332,8 +336,10 @@ void test_slot_not_stuck_in_complete_after_handle(void)
 void test_parse_error_slot_auto_reset(void)
 {
     push_str(0, "TOOLONGMETHODNAME /path HTTP/1.1\r\n\r\n");
-    http_reset(0);
-    http_parse(0);
+    HttpConn.slot = 0;
+    HttpConn.reset(HttpConn.internal);
+    HttpConn.slot = 0;
+    HttpConn.parse(HttpConn.internal);
     TEST_ASSERT_EQUAL(PARSE_ERROR, http_pool[0].parse_state);
     handle();
     TEST_ASSERT_NOT_EQUAL(PARSE_ERROR, http_pool[0].parse_state);
@@ -500,8 +506,10 @@ void race_error_and_valid_slot_in_same_handle(void)
     on_http("/ok", HTTP_GET, mark0);
 
     push_str(0, "TOOLONGMETHODNAME /path HTTP/1.1\r\n\r\n");
-    http_reset(0);
-    http_parse(0);
+    HttpConn.slot = 0;
+    HttpConn.reset(HttpConn.internal);
+    HttpConn.slot = 0;
+    HttpConn.parse(HttpConn.internal);
     TEST_ASSERT_EQUAL(PARSE_ERROR, http_pool[0].parse_state);
 
     arm_slot(1, "GET /ok HTTP/1.1\r\n\r\n");
@@ -539,8 +547,10 @@ void test_uri_too_long_auto_resets_slot(void)
     req[idx] = '\0';
 
     push_str(0, req);
-    http_reset(0);
-    http_parse(0);
+    HttpConn.slot = 0;
+    HttpConn.reset(HttpConn.internal);
+    HttpConn.slot = 0;
+    HttpConn.parse(HttpConn.internal);
     TEST_ASSERT_EQUAL(PARSE_URI_TOO_LONG, http_pool[0].parse_state);
 
     handle();
@@ -609,7 +619,8 @@ void test_mime_type_detection(void)
 void test_serve_static_file_and_mime(void)
 {
     lfsm_format();
-    protocore_mnt_mount(lfsm());
+    Mnt.args.backend = lfsm();
+    Mnt.mount(Mnt.internal);
     static const char css[] = "body{color:red}";
     TEST_ASSERT_TRUE(lfsm_write_text("/www/style.css", css));
     serve_static("/", lfsm(), "/www");
@@ -627,7 +638,8 @@ void test_serve_static_file_and_mime(void)
 void test_serve_static_cache_control(void)
 {
     lfsm_format();
-    protocore_mnt_mount(lfsm());
+    Mnt.args.backend = lfsm();
+    Mnt.mount(Mnt.internal);
     static const char css[] = "body{color:red}";
     TEST_ASSERT_TRUE(lfsm_write_text("/www/style.css", css));
     serve_static("/", lfsm(), "/www");
@@ -655,7 +667,8 @@ void test_serve_static_cache_control(void)
 void test_serve_static_index_fallback(void)
 {
     lfsm_format();
-    protocore_mnt_mount(lfsm());
+    Mnt.args.backend = lfsm();
+    Mnt.mount(Mnt.internal);
     static const char html[] = "<h1>home</h1>";
     TEST_ASSERT_TRUE(lfsm_write_text("/www/index.html", html));
     serve_static("/", lfsm(), "/www");
@@ -673,7 +686,8 @@ void test_serve_static_index_fallback(void)
 void test_serve_static_gzip_when_accepted(void)
 {
     lfsm_format();
-    protocore_mnt_mount(lfsm());
+    Mnt.args.backend = lfsm();
+    Mnt.mount(Mnt.internal);
     static const char gzbody[] = "\x1f\x8b"
                                  "FAKEGZIP";
     TEST_ASSERT_TRUE(lfsm_write_file("/www/app.js.gz", gzbody, sizeof(gzbody) - 1));
@@ -692,7 +706,8 @@ void test_serve_static_gzip_when_accepted(void)
 void test_serve_static_wildcard_and_route_full(void)
 {
     lfsm_format();
-    protocore_mnt_mount(lfsm());
+    Mnt.args.backend = lfsm();
+    Mnt.mount(Mnt.internal);
     static const char js[] = "x=1;";
     TEST_ASSERT_TRUE(lfsm_write_text("/www/app.js", js));
     serve_static("/assets*", lfsm(), "/www");
@@ -743,7 +758,8 @@ void test_response_header_cookie_guards(void)
 void test_serve_static_no_gzip_when_not_accepted(void)
 {
     lfsm_format();
-    protocore_mnt_mount(lfsm());
+    Mnt.args.backend = lfsm();
+    Mnt.mount(Mnt.internal);
     static const char js[] = "console.log(1)";
     TEST_ASSERT_TRUE(lfsm_write_text("/www/app.js", js));
     TEST_ASSERT_TRUE(lfsm_write_text("/www/app.js.gz", "GZIPPED"));
@@ -761,7 +777,8 @@ void test_serve_static_no_gzip_when_not_accepted(void)
 void test_serve_static_traversal_not_leaked(void)
 {
     lfsm_format();
-    protocore_mnt_mount(lfsm());
+    Mnt.args.backend = lfsm();
+    Mnt.mount(Mnt.internal);
     TEST_ASSERT_TRUE(lfsm_write_text("/secret", "topsecret"));
     serve_static("/", lfsm(), "/www");
     arm_slot(0, "GET /../secret HTTP/1.1\r\nHost: x\r\n\r\n");
@@ -776,7 +793,8 @@ void test_serve_static_traversal_not_leaked(void)
 void test_serve_static_missing_is_404(void)
 {
     lfsm_format();
-    protocore_mnt_mount(lfsm());
+    Mnt.args.backend = lfsm();
+    Mnt.mount(Mnt.internal);
     TEST_ASSERT_TRUE(lfsm_write_text("/www/exists.txt", "hi"));
     serve_static("/", lfsm(), "/www");
     arm_slot(0, "GET /nope.txt HTTP/1.1\r\nHost: x\r\n\r\n");
@@ -791,7 +809,8 @@ void test_serve_static_missing_is_404(void)
 void test_serve_static_etag_conditional_get(void)
 {
     lfsm_format();
-    protocore_mnt_mount(lfsm());
+    Mnt.args.backend = lfsm();
+    Mnt.mount(Mnt.internal);
     TEST_ASSERT_TRUE(lfsm_write_text_at("/www/page.html", "<html>hi</html>", 1000));
     serve_static("/", lfsm(), "/www");
 
@@ -830,7 +849,8 @@ void test_serve_static_etag_conditional_get(void)
 void test_serve_static_inm_star_list_weak(void)
 {
     lfsm_format();
-    protocore_mnt_mount(lfsm());
+    Mnt.args.backend = lfsm();
+    Mnt.mount(Mnt.internal);
     TEST_ASSERT_TRUE(lfsm_write_text_at("/www/page.html", "<html>hi</html>", 1000));
     serve_static("/", lfsm(), "/www");
 
@@ -895,7 +915,8 @@ void test_serve_static_inm_star_list_weak(void)
 void test_serve_static_last_modified_conditional_get(void)
 {
     lfsm_format();
-    protocore_mnt_mount(lfsm());
+    Mnt.args.backend = lfsm();
+    Mnt.mount(Mnt.internal);
     TEST_ASSERT_TRUE(lfsm_write_text_at("/www/page.html", "<html>hi</html>", 1000));
     serve_static("/", lfsm(), "/www");
     const char *LM = "Thu, 01 Jan 1970 00:16:40 GMT";
@@ -953,7 +974,8 @@ void test_serve_static_last_modified_conditional_get(void)
 void test_serve_static_ims_field_comparisons(void)
 {
     lfsm_format();
-    protocore_mnt_mount(lfsm());
+    Mnt.args.backend = lfsm();
+    Mnt.mount(Mnt.internal);
     TEST_ASSERT_TRUE(lfsm_write_text_at("/www/page.html", "<html>hi</html>", 1000));
     serve_static("/", lfsm(), "/www");
     const char *ims[] = {
@@ -989,7 +1011,8 @@ void test_serve_static_ims_field_comparisons(void)
 void test_serve_static_no_timestamp(void)
 {
     lfsm_format();
-    protocore_mnt_mount(lfsm());
+    Mnt.args.backend = lfsm();
+    Mnt.mount(Mnt.internal);
     TEST_ASSERT_TRUE(lfsm_write_text("/www/page.html", "<html>hi</html>"));
     serve_static("/", lfsm(), "/www");
 
@@ -1015,7 +1038,8 @@ void test_serve_static_no_timestamp(void)
 void test_serve_static_if_modified_since_malformed(void)
 {
     lfsm_format();
-    protocore_mnt_mount(lfsm());
+    Mnt.args.backend = lfsm();
+    Mnt.mount(Mnt.internal);
     TEST_ASSERT_TRUE(lfsm_write_text_at("/www/page.html", "<html>hi</html>", 1000));
     serve_static("/", lfsm(), "/www");
     const char *bad[] = {
@@ -1097,7 +1121,8 @@ void test_metrics_emits_prometheus(void)
     conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].proto = PROTO_HTTP;
     conn_pool[0].pcb = protocore_net_host_pcb();
-    http_reset(0);
+    HttpConn.slot = 0;
+    HttpConn.reset(HttpConn.internal);
     tcp_capture_reset();
     metrics(0);
     const char *out = tcp_captured();
@@ -1157,8 +1182,10 @@ void test_sse_broadcast_after_upgrade_matches_path(void)
     conn_pool[0].proto = PROTO_HTTP;
     conn_pool[0].pcb = protocore_net_host_pcb();
     push_str(0, "GET /events HTTP/1.1\r\n\r\n");
-    http_reset(0);
-    http_parse(0);
+    HttpConn.slot = 0;
+    HttpConn.reset(HttpConn.internal);
+    HttpConn.slot = 0;
+    HttpConn.parse(HttpConn.internal);
 
     tcp_capture_reset();
     handle();
@@ -1222,7 +1249,7 @@ void test_ws_send_api(void)
 
 void test_sse_send_api(void)
 {
-    protocore_sse_init();
+    Sse.init(Sse.internal);
     conn_pool[0] = (TcpConn){0};
     conn_pool[0].id = 0;
     conn_pool[0].state = CONN_ACTIVE;
@@ -1291,7 +1318,8 @@ void test_status_text_reason_phrases(void)
         conn_pool[0].state = CONN_ACTIVE;
         conn_pool[0].proto = PROTO_HTTP;
         conn_pool[0].pcb = protocore_net_host_pcb();
-        http_reset(0);
+        HttpConn.slot = 0;
+        HttpConn.reset(HttpConn.internal);
         tcp_capture_reset();
         send_text(0, cases[i].code, "text/plain", "x");
         char want[48];
@@ -1307,7 +1335,8 @@ void test_send_binary_body_with_nul(void)
     conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].proto = PROTO_HTTP;
     conn_pool[0].pcb = protocore_net_host_pcb();
-    http_reset(0);
+    HttpConn.slot = 0;
+    HttpConn.reset(HttpConn.internal);
     const uint8_t body[] = {0x00, 0x00, 0x00, 0x00, 0x05, 'h', 'e', 0x00, 'l', 'o'};
     tcp_capture_reset();
     send_bin(0, 200, "application/grpc-web+proto", body, sizeof(body));
@@ -1438,7 +1467,8 @@ void test_redirect_response_and_code_normalization(void)
     conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].proto = PROTO_HTTP;
     conn_pool[0].pcb = protocore_net_host_pcb();
-    http_reset(0);
+    HttpConn.slot = 0;
+    HttpConn.reset(HttpConn.internal);
     tcp_capture_reset();
     redirect(0, 307, "/new");
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "307 Temporary Redirect"));
@@ -1446,7 +1476,8 @@ void test_redirect_response_and_code_normalization(void)
 
     conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].pcb = protocore_net_host_pcb();
-    http_reset(0);
+    HttpConn.slot = 0;
+    HttpConn.reset(HttpConn.internal);
     tcp_capture_reset();
     redirect(0, 200, "/z");
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "302 Found"));
@@ -1531,7 +1562,7 @@ void test_sse_upgrade_pool_exhausted(void)
     tcp_capture_reset();
     handle();
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "text/event-stream"));
-    protocore_sse_init();
+    Sse.init(Sse.internal);
     tcp_capture_disable();
 }
 #endif
@@ -1576,7 +1607,8 @@ static void live_slot(uint8_t slot)
     conn_pool[slot].state = CONN_ACTIVE;
     conn_pool[slot].proto = PROTO_HTTP;
     conn_pool[slot].pcb = protocore_net_host_pcb();
-    http_reset(slot);
+    HttpConn.slot = slot;
+    HttpConn.reset(HttpConn.internal);
     http_pool[slot].version = HTTP_11;
 }
 
@@ -1625,7 +1657,8 @@ void test_response_trailer_cors_block_and_null_disable(void)
 void test_cache_control_null_clears_header(void)
 {
     lfsm_format();
-    protocore_mnt_mount(lfsm());
+    Mnt.args.backend = lfsm();
+    Mnt.mount(Mnt.internal);
     static const char body[] = "x";
     TEST_ASSERT_TRUE(lfsm_write_text("/www/c.txt", body));
     serve_static("/", lfsm(), "/www");
@@ -1640,7 +1673,8 @@ void test_cache_control_null_clears_header(void)
     TEST_ASSERT_NULL(strstr(tcp_captured(), "Cache-Control"));
     tcp_capture_disable();
     lfsm_format();
-    protocore_mnt_mount(lfsm());
+    Mnt.args.backend = lfsm();
+    Mnt.mount(Mnt.internal);
 }
 
 void test_empty_route_pattern_matches_nothing(void)
@@ -1826,7 +1860,8 @@ void test_transfer_encoding_on_semantic_ingress_is_501(void)
 void test_static_mount_rejects_non_get_methods(void)
 {
     lfsm_format();
-    protocore_mnt_mount(lfsm());
+    Mnt.args.backend = lfsm();
+    Mnt.mount(Mnt.internal);
     static const char body[] = "hi";
     TEST_ASSERT_TRUE(lfsm_write_text("/www/a.txt", body));
     serve_static("/", lfsm(), "/www");
@@ -1839,7 +1874,8 @@ void test_static_mount_rejects_non_get_methods(void)
     TEST_ASSERT_NOT_NULL(strstr(out, "Allow: GET, HEAD\r\n"));
     tcp_capture_disable();
     lfsm_format();
-    protocore_mnt_mount(lfsm());
+    Mnt.args.backend = lfsm();
+    Mnt.mount(Mnt.internal);
 }
 
 void test_send_null_payload_and_slot_bounds(void)
@@ -2153,7 +2189,7 @@ static void sse_on_connect(uint8_t id)
 
 void test_sse_upgrade_fires_connect_handler(void)
 {
-    protocore_sse_init();
+    Sse.init(Sse.internal);
     g_sse_connect_calls = 0;
     g_sse_connected_id = 0xFF;
     on_sse("/evh", sse_on_connect);
@@ -2166,12 +2202,12 @@ void test_sse_upgrade_fires_connect_handler(void)
     TEST_ASSERT_NOT_NULL(protocore_sse_find(0));
     TEST_ASSERT_EQUAL_UINT8(protocore_sse_find(0)->protocore_sse_id, g_sse_connected_id);
     tcp_capture_disable();
-    protocore_sse_init();
+    Sse.init(Sse.internal);
 }
 
 void test_sse_send_on_dead_slot_writes_nothing(void)
 {
-    protocore_sse_init();
+    Sse.init(Sse.internal);
     live_slot(0);
     SseConn *sse = protocore_sse_alloc(0, "/events");
     TEST_ASSERT_NOT_NULL(sse);
@@ -2182,7 +2218,7 @@ void test_sse_send_on_dead_slot_writes_nothing(void)
     protocore_sse_broadcast("/events", "x");
     TEST_ASSERT_EQUAL_size_t(0, tcp_captured_len());
     tcp_capture_disable();
-    protocore_sse_init();
+    Sse.init(Sse.internal);
 }
 #endif
 

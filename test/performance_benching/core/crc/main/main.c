@@ -14,7 +14,15 @@
 
 static uint32_t crc_one(const protocore_crc_params *p, const uint8_t *d, size_t n)
 {
-    return protocore_crc_final(p, protocore_crc_update(p, protocore_crc_begin(p), d, n));
+    Crc.args.params = p;
+    Crc.args.data = d;
+    Crc.args.len = n;
+    Crc.begin(Crc.internal);
+    Crc.args.crc = Crc.value;
+    Crc.update(Crc.internal);
+    Crc.args.crc = Crc.value;
+    Crc.final(Crc.internal);
+    return Crc.value;
 }
 
 void dbench_run(void)

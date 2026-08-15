@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // On-device CCOUNT microbenchmark for the SoC power governor (server/power_mgmt): the pure clock
-// decision protocore_power_plan() - load-based scaling, the thermal hysteresis that keeps a part parked at
-// the limit from oscillating, and post-brownout recovery - plus protocore_power_json() which serializes a
+// decision Power.decide - load-based scaling, the thermal hysteresis that keeps a part parked at
+// the limit from oscillating, and post-brownout recovery - plus Power.json which serializes a
 // plan. All of these take every input explicitly and touch no hardware, so each call here exercises
 // the real production decision path (like performance_benching/device/modbus, a pure codec).
 //
-// Deliberately out of scope: the device binding (protocore_power_brownout_boot / protocore_power_temp_c /
-// protocore_power_apply / protocore_power_cpu_mhz / protocore_power_gate_bt). Those read esp_reset_reason() and the die
+// Deliberately out of scope: the device binding (Power.brownout / Power.die_temp /
+// Power.apply / Power.cpu_mhz / Power.gate_bt). Those read esp_reset_reason() and the die
 // sensor and actually re-clock the core / release the BT domain - a real side effect on the SoC, not
 // a deterministic bit of math - so they are never benched. They still compile into the library (their
 // esp_* / Arduino symbols are provided by the framework) but this sketch never calls them.
@@ -24,12 +24,38 @@
 #include <stddef.h>
 #include <stdint.h>
 
+/** @brief The clock plan for @p load_pct at @p temp_c under @p cfg. */
+static PowerPlan power_decide(const PowerCfg *cfg, uint8_t load_pct, int16_t temp_c, proto_bool brownout_boot,
+                              uint32_t since_boot_ms, proto_bool was_throttled)
+{
+    Power.plan_args.cfg = cfg;
+    Power.plan_args.load_pct = load_pct;
+    Power.plan_args.temp_c = temp_c;
+    Power.plan_args.brownout_boot = brownout_boot;
+    Power.plan_args.since_boot_ms = since_boot_ms;
+    Power.plan_args.was_throttled = was_throttled;
+    Power.decide(Power.internal);
+    return Power.plan;
+}
+
+/** @brief Serialize @p plan and @p temp_c as JSON into @p out; the bytes written. */
+static size_t power_json(const PowerPlan *plan, int16_t temp_c, char *out, size_t cap)
+{
+    Power.out_args.plan = plan;
+    Power.out_args.temp_c = temp_c;
+    Power.out_args.out = out;
+    Power.out_args.cap = cap;
+    Power.json(Power.internal);
+    return Power.n;
+}
+
 void dbench_run(void)
 {
     // Governor limits pinned to the same values test/test_power_mgmt reasons about (which also match
     // the shipped PROTOCORE_POWER_* defaults), so these numbers describe the real decision.
     PowerCfg cfg;
-    protocore_power_cfg_defaults(&cfg);
+    Power.cfg_out = &cfg;
+    Power.defaults(Power.internal);
     cfg.mhz_max = 240;
     cfg.mhz_min = 80;
     cfg.busy_pct = 40;
@@ -47,26 +73,25 @@ void dbench_run(void)
         volatile size_t sink_len = 0;
 
         // Idle at a cool die: the load path drops to the floor (240 -> 80).
-        DBENCH_OP("protocore_power_plan idle->floor", 100000,
-                  sink_mhz += protocore_power_plan(&cfg, 0, 40, false, 60000, false).cpu_mhz);
+        DBENCH_OP("Power.decide idle->floor", 100000,
+                  sink_mhz += power_decide(&cfg, 0, 40, PROTO_FALSE, 60000, PROTO_FALSE).cpu_mhz);
 
         // Busy at a cool die: the load path runs at the ceiling.
-        DBENCH_OP("protocore_power_plan busy->ceiling", 100000,
-                  sink_mhz += protocore_power_plan(&cfg, 90, 40, false, 60000, false).cpu_mhz);
+        DBENCH_OP("Power.decide busy->ceiling", 100000,
+                  sink_mhz += power_decide(&cfg, 90, 40, PROTO_FALSE, 60000, PROTO_FALSE).cpu_mhz);
 
         // Hot die while busy: thermal outranks load and holds the floor (hysteresis branch, entering
         // throttle from was_throttled=false).
-        DBENCH_OP("protocore_power_plan hot->throttle", 100000,
-                  sink_flags += protocore_power_plan(&cfg, 100, 85, false, 60000, false).throttled);
+        DBENCH_OP("Power.decide hot->throttle", 100000,
+                  sink_flags += power_decide(&cfg, 100, 85, PROTO_FALSE, 60000, PROTO_FALSE).throttled);
 
         // Brownout boot inside the settle window: recovery outranks everything and holds the floor.
-        DBENCH_OP("protocore_power_plan brownout->recover", 100000,
-                  sink_flags += protocore_power_plan(&cfg, 100, 25, true, 0, false).recovering);
+        DBENCH_OP("Power.decide brownout->recover", 100000,
+                  sink_flags += power_decide(&cfg, 100, 25, PROTO_TRUE, 0, PROTO_FALSE).recovering);
 
         // Serialize a plan to the {"cpu_mhz":...} JSON object (snprintf-backed, so a touch heavier).
-        PowerPlan p = protocore_power_plan(&cfg, 90, 41, false, 60000, false);
-        DBENCH_OP("protocore_power_json serialize", 20000,
-                  sink_len += protocore_power_json(&p, 41, json, sizeof(json)));
+        PowerPlan p = power_decide(&cfg, 90, 41, PROTO_FALSE, 60000, PROTO_FALSE);
+        DBENCH_OP("Power.json serialize", 20000, sink_len += power_json(&p, 41, json, sizeof(json)));
 
         (void)sink_mhz;
         (void)sink_flags;

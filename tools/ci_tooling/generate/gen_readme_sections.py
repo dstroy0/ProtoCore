@@ -97,11 +97,20 @@ def render_consts(consts):
 # so show the node with a file count instead of listing hundreds of generated names.
 COLLAPSE_DIRS = {"favicons", "generated", "themes"}
 
+# Build artifacts of the generators that live beside the sources they read. Gitignored, so
+# listing them makes the committed tree depend on whether anyone has run the tools.
+SKIP_DIRS = {"__pycache__"}
+
+
+def _visible(d):
+    """The entries of dir `d` that are library files: no dot-entries, no build artifacts."""
+    return [e for e in os.listdir(d) if not e.startswith(".") and e not in SKIP_DIRS]
+
 
 def _child_pair(d):
     """If dir `d` holds exactly one .h + one .c/.cpp and nothing else, return (h, src);
     else None. These one-file-pair service folders collapse to the service name."""
-    entries = [e for e in os.listdir(d) if not e.startswith(".")]
+    entries = _visible(d)
     if any(os.path.isdir(os.path.join(d, e)) for e in entries):
         return None
     hs = [e for e in entries if e.endswith(".h")]
@@ -117,8 +126,7 @@ def render_tree():
 
     def walk(rel, prefix):
         d = os.path.join(SRC_DIR, rel)
-        entries = sorted(os.listdir(d), key=lambda e: (not os.path.isdir(os.path.join(d, e)), e.lower()))
-        entries = [e for e in entries if not e.startswith(".")]
+        entries = sorted(_visible(d), key=lambda e: (not os.path.isdir(os.path.join(d, e)), e.lower()))
         for i, e in enumerate(entries):
             last = i == len(entries) - 1
             conn = "└── " if last else "├── "

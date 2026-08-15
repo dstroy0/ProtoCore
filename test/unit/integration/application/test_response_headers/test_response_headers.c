@@ -89,10 +89,11 @@ void setUp()
         conn_pool[i].state = CONN_ACTIVE;
         conn_pool[i].proto = PROTO_HTTP;
         conn_pool[i].pcb = protocore_net_host_pcb();
-        http_reset(i);
+        HttpConn.slot = i;
+        HttpConn.reset(HttpConn.internal);
     }
     Ws.init(Ws.internal);
-    protocore_sse_init();
+    Sse.init(Sse.internal);
     tcp_capture_reset();
     protocore_ntp_set_test_epoch(0);
 }
@@ -106,7 +107,8 @@ void tearDown()
 static void feed_and_handle(uint8_t slot, const char *req_str)
 {
     push_str(slot, req_str);
-    http_parse(slot);
+    HttpConn.slot = slot;
+    HttpConn.parse(HttpConn.internal);
     handle();
 }
 
@@ -169,7 +171,8 @@ void test_headers_do_not_leak_across_requests()
     conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].proto = PROTO_HTTP;
     conn_pool[0].pcb = protocore_net_host_pcb();
-    http_reset(0);
+    HttpConn.slot = 0;
+    HttpConn.reset(HttpConn.internal);
     tcp_capture_reset();
 
     feed_and_handle(0, "GET /p HTTP/1.1\r\n\r\n");

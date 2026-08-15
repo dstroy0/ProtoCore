@@ -61,7 +61,8 @@ static uint32_t open_session_channel(void)
 
 void setUp(void)
 {
-    protocore_ssh_channel_init(0);
+    SshConnection.chan.slot = 0;
+    SshConnection.channel_init(SshConnection.internal);
     s_sftp_opens = 0;
     s_scp_opens = 0;
     s_opened_channel = 0xFFFFFFFFu;

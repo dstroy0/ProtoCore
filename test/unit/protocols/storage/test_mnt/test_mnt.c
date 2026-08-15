@@ -11,7 +11,8 @@ static int s_root;
 
 void setUp()
 {
-    protocore_mnt_mount(protocore_mnt_ram());
+    Mnt.args.backend = protocore_mnt_ram();
+    Mnt.mount(Mnt.internal);
     protocore_mnt_ram_format();
     s_root = protocore_fs_begin("/");
 }
@@ -174,7 +175,8 @@ void test_handle_pool_exhaustion()
 
 void test_unmounted_fails_closed()
 {
-    protocore_mnt_mount(NULL);
+    Mnt.args.backend = NULL;
+    Mnt.mount(Mnt.internal);
     TEST_ASSERT_TRUE(protocore_fs_open(s_root, "/a", "", PROTOCORE_MNT_READ) < 0);
     TEST_ASSERT_FALSE(protocore_fs_exists(s_root, "/a", ""));
     TEST_ASSERT_EQUAL_INT32(-1, protocore_fs_size(s_root, "/a", ""));
@@ -183,7 +185,8 @@ void test_unmounted_fails_closed()
 
 void test_ram_guard_subconditions()
 {
-    protocore_mnt_mount(protocore_mnt_ram());
+    Mnt.args.backend = protocore_mnt_ram();
+    Mnt.mount(Mnt.internal);
     protocore_mnt_ram_format();
     uint8_t b[8] = {0};
 
@@ -205,7 +208,8 @@ void test_ram_guard_subconditions()
 
 void test_unmounted_all_entry_points()
 {
-    protocore_mnt_mount(NULL);
+    Mnt.args.backend = NULL;
+    Mnt.mount(Mnt.internal);
     uint8_t b[8] = {0};
     TEST_ASSERT_EQUAL_INT(-1, protocore_fs_read(0, b, sizeof(b)));
     TEST_ASSERT_EQUAL_INT(-1, protocore_fs_write(0, b, sizeof(b)));
@@ -213,7 +217,8 @@ void test_unmounted_all_entry_points()
     TEST_ASSERT_FALSE(protocore_fs_remove(s_root, "/a", ""));
     TEST_ASSERT_FALSE(protocore_fs_rename(s_root, "/a", "", "/b", ""));
     TEST_ASSERT_TRUE(protocore_fs_read_file(s_root, "/a", "", b, sizeof(b)) < 0);
-    protocore_mnt_mount(protocore_mnt_ram());
+    Mnt.args.backend = protocore_mnt_ram();
+    Mnt.mount(Mnt.internal);
     TEST_ASSERT_TRUE(protocore_fs_write_file(s_root, "/a", "", "x", 1));
 }
 
@@ -371,11 +376,13 @@ static const protocore_mnt_backend s_stall_backend = {stall_open, stall_read, st
 
 void test_zero_progress_backend_terminates()
 {
-    protocore_mnt_mount(&s_stall_backend);
+    Mnt.args.backend = &s_stall_backend;
+    Mnt.mount(Mnt.internal);
     char buf[16];
     TEST_ASSERT_EQUAL_INT32(0, protocore_fs_read_file(s_root, "/x", "", buf, sizeof(buf)));
     TEST_ASSERT_FALSE(protocore_fs_write_file(s_root, "/x", "", "abcd", 4));
-    protocore_mnt_mount(protocore_mnt_ram());
+    Mnt.args.backend = protocore_mnt_ram();
+    Mnt.mount(Mnt.internal);
     TEST_ASSERT_TRUE(protocore_fs_write_file(s_root, "/x", "", "abcd", 4));
 }
 
@@ -476,7 +483,8 @@ void test_unbound_root_fails_closed()
 
 void test_null_store_is_intentional_and_says_so()
 {
-    protocore_mnt_mount(NULL);
+    Mnt.args.backend = NULL;
+    Mnt.mount(Mnt.internal);
     protocore_fs_clear_status();
 
     int r = protocore_fs_begin("/local");
@@ -489,7 +497,8 @@ void test_null_store_is_intentional_and_says_so()
     TEST_ASSERT_FALSE(protocore_fs_exists(r, "/a", ""));
     TEST_ASSERT_EQUAL_INT32(-1, protocore_fs_size(r, "/a", ""));
 
-    protocore_mnt_mount(protocore_mnt_ram());
+    Mnt.args.backend = protocore_mnt_ram();
+    Mnt.mount(Mnt.internal);
     protocore_mnt_ram_format();
     TEST_ASSERT_TRUE(protocore_fs_storage_present());
     TEST_ASSERT_TRUE((protocore_fs_status() & PROTOCORE_FS_STORAGE_EXHAUSTED) != 0);

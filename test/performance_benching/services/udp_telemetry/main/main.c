@@ -13,6 +13,48 @@
 #include <stddef.h>
 #include <stdint.h>
 
+/** @brief Bind @p buf as the line buffer and open the line with @p measurement. */
+static void line_open(char *buf, size_t cap, const char *measurement)
+{
+    UdpTelemetry.line.buf = buf;
+    UdpTelemetry.line.cap = cap;
+    UdpTelemetry.line.measurement = measurement;
+    UdpTelemetry.measurement(UdpTelemetry.internal);
+}
+
+/** @brief Append one tag set entry `,key=value`. */
+static void line_tag(const char *key, const char *value)
+{
+    UdpTelemetry.tags.key = key;
+    UdpTelemetry.tags.value = value;
+    UdpTelemetry.tag(UdpTelemetry.internal);
+}
+
+/** @brief Append `key=<v>i`. */
+static void line_int(const char *key, int64_t v)
+{
+    UdpTelemetry.fields.key = key;
+    UdpTelemetry.fields.i64 = v;
+    UdpTelemetry.field_int(UdpTelemetry.internal);
+}
+
+/** @brief Append `key=<v>u`. */
+static void line_uint(const char *key, uint64_t v)
+{
+    UdpTelemetry.fields.key = key;
+    UdpTelemetry.fields.u64 = v;
+    UdpTelemetry.field_uint(UdpTelemetry.internal);
+}
+
+/** @brief Append `key=<v>` to @p decimals places. */
+static void line_float(const char *key, float v, uint8_t decimals)
+{
+    UdpTelemetry.fields.key = key;
+    UdpTelemetry.fields.f32 = v;
+    UdpTelemetry.fields.decimals = decimals;
+    UdpTelemetry.field_float(UdpTelemetry.internal);
+}
+
 void dbench_run(void)
 {
     for (;;)
@@ -20,15 +62,14 @@ void dbench_run(void)
         DBENCH_BANNER("udp_telemetry");
         volatile size_t sink = 0;
         static char buf[256];
-        DBENCH_OP("protocore_line build (2 tags, 3 fields)", 200000, {
-            protocore_line l;
-            protocore_line_init(&l, buf, sizeof(buf), "env");
-            protocore_line_add_tag(&l, "host", "rig-1");
-            protocore_line_add_tag(&l, "room", "lab");
-            protocore_line_add_float(&l, "temp", 21.5f, 1);
-            protocore_line_add_int(&l, "rssi", -42);
-            protocore_line_add_uint(&l, "uptime", 1234u);
-            sink += protocore_line_len(&l);
+        DBENCH_OP("UdpTelemetry line build (2 tags, 3 fields)", 200000, {
+            line_open(buf, sizeof(buf), "env");
+            line_tag("host", "rig-1");
+            line_tag("room", "lab");
+            line_float("temp", 21.5f, 1);
+            line_int("rssi", -42);
+            line_uint("uptime", 1234u);
+            sink += UdpTelemetry.n;
         });
         (void)sink;
         DBENCH_DONE();

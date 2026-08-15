@@ -556,7 +556,8 @@ static void net_chan_close_all(struct SshNetworkInternal *restrict ctx)
     }
     for (uint32_t k = 0; k < PROTOCORE_SSH_MAX_CHANNELS; k++)
     {
-        net_chan_close(ssh_slot, k);
+        ctx->ns->stream.channel = k;
+        net_chan_close(ctx);
     }
 }
 

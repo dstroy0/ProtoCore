@@ -30,10 +30,11 @@ void setUp()
         conn_pool[i].state = CONN_ACTIVE;
         conn_pool[i].proto = PROTO_HTTP;
         conn_pool[i].pcb = protocore_net_host_pcb();
-        http_conn_open(i);
+        HttpConn.slot = i;
+        HttpConn.conn_open(HttpConn.internal);
     }
     Ws.init(Ws.internal);
-    protocore_sse_init();
+    Sse.init(Sse.internal);
     tcp_capture_reset();
 }
 
@@ -45,7 +46,8 @@ void tearDown()
 static void feed_and_handle(uint8_t slot, const char *req_str)
 {
     push_str(slot, req_str);
-    http_parse(slot);
+    HttpConn.slot = slot;
+    HttpConn.parse(HttpConn.internal);
     handle();
 }
 
@@ -114,7 +116,8 @@ void test_pipelined_requests()
 {
 
     push_str(0, "GET /res HTTP/1.1\r\n\r\nGET /res HTTP/1.1\r\n\r\n");
-    http_parse(0);
+    HttpConn.slot = 0;
+    HttpConn.parse(HttpConn.internal);
     for (int i = 0; i < 4; i++)
     {
         handle();
@@ -163,7 +166,8 @@ void test_fresh_connection_resets_count()
     conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].proto = PROTO_HTTP;
     conn_pool[0].pcb = protocore_net_host_pcb();
-    http_conn_open(0);
+    HttpConn.slot = 0;
+    HttpConn.conn_open(HttpConn.internal);
 
     tcp_capture_reset();
     feed_and_handle(0, "GET /res HTTP/1.1\r\n\r\n");

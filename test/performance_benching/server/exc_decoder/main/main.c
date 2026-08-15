@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // On-device CCOUNT microbenchmark for the ESP32 panic / exception decoder (server/exc_decoder):
-// protocore_exc_parse() scans a captured Guru Meditation dump (cause, register-dump PC + EXCVADDR, and the
+// Exc.parse scans a captured Guru Meditation dump (cause, register-dump PC + EXCVADDR, and the
 // "Backtrace: pc:sp pc:sp ..." frame list) into a structured ExcInfo using hand-rolled hex/decimal
-// parsing (no stdlib, no heap), and protocore_exc_json() serializes that struct for a live "/exception"
+// parsing (no stdlib, no heap), and Exc.json serializes that struct for a live "/exception"
 // panel - both pure text-in/struct-or-text-out code with no hardware involved, so every call here
 // exercises the real production code path (worked example: a pure protocol codec, same category as
 // performance_benching/device/modbus). Out of scope: the core-dump-partition half of this service
-// (protocore_exc_coredump_present/summary/read/save/erase in exc_coredump.cpp) - those read a flash
+// (Exc.present/summary/read/save/erase in exc_coredump.c) - those read a flash
 // partition via esp_partition_read()/esp_core_dump_*(), which is hardware I/O this physical rig
 // cannot exercise meaningfully, so they are never called here.
 //
@@ -22,6 +22,25 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+
+/** @brief Decode the printed panic dump @p text into @p info. */
+static proto_bool exc_parse(const char *text, ExcInfo *info)
+{
+    Exc.parse_args.text = text;
+    Exc.parse_args.info = info;
+    Exc.parse(Exc.internal);
+    return Exc.ok;
+}
+
+/** @brief Serialize the decoded panic @p info into @p out; the bytes written. */
+static size_t exc_json(ExcInfo *info, char *out, size_t cap)
+{
+    Exc.parse_args.info = info;
+    Exc.out_args.out = out;
+    Exc.out_args.cap = cap;
+    Exc.json(Exc.internal);
+    return Exc.n;
+}
 
 void dbench_run(void)
 {
@@ -46,7 +65,7 @@ void dbench_run(void)
     const char *BT_ONLY = "Backtrace: 0x400e1111:0x3ffc0000 0x400e2222:0x3ffc0020 |<-CORRUPTED\n";
 
     ExcInfo info_full;
-    protocore_exc_parse(PANIC, &info_full);
+    exc_parse(PANIC, &info_full);
     char json_buf[512];
 
     for (;;)
@@ -56,13 +75,11 @@ void dbench_run(void)
         volatile bool sinkb = false;
         volatile size_t sinksz = 0;
 
-        DBENCH_BULK("protocore_exc_parse (full dump)", 20000, PANIC_LEN,
-                    sinkb ^= protocore_exc_parse(PANIC, &info_full));
+        DBENCH_BULK("Exc.parse (full dump)", 20000, PANIC_LEN, sinkb ^= exc_parse(PANIC, &info_full));
 
-        DBENCH_OP("protocore_exc_parse (backtrace-only)", 20000, sinkb ^= protocore_exc_parse(BT_ONLY, &info_full));
+        DBENCH_OP("Exc.parse (backtrace-only)", 20000, sinkb ^= exc_parse(BT_ONLY, &info_full));
 
-        DBENCH_OP("protocore_exc_json (full dump)", 20000,
-                  sinksz += protocore_exc_json(&info_full, json_buf, sizeof(json_buf)));
+        DBENCH_OP("Exc.json (full dump)", 20000, sinksz += exc_json(&info_full, json_buf, sizeof(json_buf)));
 
         (void)sinkb;
         (void)sinksz;
