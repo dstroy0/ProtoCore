@@ -9,6 +9,7 @@
 #include "services/instrumentation/scpi/scpi.h"
 #include "mmgr/protoframe.h" // the one frame engine
 #include "mmgr/protomem.h"
+#include "mmgr/protostr.h"
 
 #if PROTOCORE_ENABLE_SCPI
 
@@ -93,7 +94,7 @@ size_t protocore_scpi_build(char *buf, size_t cap, const char *header, const cha
     {
         return 0;
     }
-    size_t hlen = strnlen(header, cap);
+    size_t hlen = str.len(header, cap);
     if (hlen == 0 || hlen >= cap)
     {
         return 0;
@@ -109,7 +110,7 @@ size_t protocore_scpi_build(char *buf, size_t cap, const char *header, const cha
             return 0;
         }
         char sep = (i == 0) ? ' ' : ',';
-        size_t alen = strnlen(args[i], cap);
+        size_t alen = str.len(args[i], cap);
         if (p + 1 + alen + 1 >= cap) // sep + arg + the trailing '\n' + NUL
         {
             return 0;
@@ -648,7 +649,7 @@ proto_bool protocore_scpi_match(const char *input, size_t input_len, const char 
     // common command: match the whole token case-insensitively
     if (pattern[0] == '*')
     {
-        return ieq(ip, irem, pattern, strnlen(pattern, 64));
+        return ieq(ip, irem, pattern, str.len(pattern, 64));
     }
 
     // a leading ':' on the input is an absolute-root anchor - skip it
@@ -658,7 +659,7 @@ proto_bool protocore_scpi_match(const char *input, size_t input_len, const char 
         irem--;
     }
 
-    size_t prem = strnlen(pattern, 256);
+    size_t prem = str.len(pattern, 256);
     const char *pp = pattern;
 
     // reconcile the query '?' suffix: both must have it or neither

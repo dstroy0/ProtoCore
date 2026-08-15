@@ -8,6 +8,7 @@
 
 #include "services/instrumentation/vxi11/vxi11.h"
 #include "mmgr/protomem.h"
+#include "mmgr/protostr.h"
 
 #if PROTOCORE_ENABLE_VXI11
 
@@ -254,7 +255,7 @@ size_t protocore_vxi11_build_create_link(uint8_t *buf, size_t cap, uint32_t xid,
     xw_u32(&w, (uint32_t)client_id);
     xw_u32(&w, lock_device ? 1 : 0);
     xw_u32(&w, lock_timeout);
-    size_t dlen = device ? strnlen(device, cap) : 0;
+    size_t dlen = device ? str.len(device, cap) : 0;
     xw_bytes(&w, (const uint8_t *)device, dlen);
     return finish_call(&w);
 }

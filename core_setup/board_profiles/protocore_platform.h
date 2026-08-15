@@ -871,9 +871,18 @@ typedef ip_addr_t protocore_net_ip;
 // exists, which is the only arm that runs a BIO - a build that enables a TLS client without one
 // fails on the module's own #error rather than silently sending a wrong sentinel.
 #if PROTOCORE_HAS_VENDOR_TLS
+#if PROTOCORE_VENDOR_SILICON
 #include <mbedtls/ssl.h> // PROTOCORE_ALLOW_LATE_INCLUDE: ordered - only exists once the vendor arm resolved
 #define PROTOCORE_PLATFORM_TLS_WANT_READ MBEDTLS_ERR_SSL_WANT_READ
 #define PROTOCORE_PLATFORM_TLS_WANT_WRITE MBEDTLS_ERR_SSL_WANT_WRITE
+#else
+// The host arm of the same capability. An env states this capability to drive the vendor BIO path
+// off silicon, where there is no SDK to take the values from, so the host owns both ends of the
+// contract: the BIO returns these and the stand-in engine reads them. Negative, so they can never
+// be confused with a byte count, and distinct from each other.
+#define PROTOCORE_PLATFORM_TLS_WANT_READ (-0x7101)
+#define PROTOCORE_PLATFORM_TLS_WANT_WRITE (-0x7102)
+#endif
 #endif
 // ---------------------------------------------------------------------------
 // Device facts, power domains and stored images

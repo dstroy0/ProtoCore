@@ -9,6 +9,7 @@
 #include "network_drivers/presentation/telnet/telnet.h"
 #include "mmgr/protoframe.h" // frame.build: a console line is a spec, not a format string
 #include "mmgr/protomem.h"
+#include "mmgr/protostr.h" // str: the bounded-run walks
 
 #if PROTOCORE_ENABLE_TELNET
 
@@ -370,7 +371,7 @@ static void print(struct TelnetInternal *restrict ctx)
 {
     if (ctx->ns->out.text)
     {
-        broadcast(ctx, ctx->ns->out.text, strnlen(ctx->ns->out.text, TELNET_BUF_SIZE)); // line-oriented console
+        broadcast(ctx, ctx->ns->out.text, str.len(ctx->ns->out.text, TELNET_BUF_SIZE)); // line-oriented console
     }
 }
 
@@ -378,7 +379,7 @@ static void println(struct TelnetInternal *restrict ctx)
 {
     if (ctx->ns->out.text)
     {
-        broadcast(ctx, ctx->ns->out.text, strnlen(ctx->ns->out.text, TELNET_BUF_SIZE));
+        broadcast(ctx, ctx->ns->out.text, str.len(ctx->ns->out.text, TELNET_BUF_SIZE));
     }
     broadcast(ctx, "\r\n", 2);
 }

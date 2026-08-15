@@ -75,7 +75,7 @@ proto_bool protocore_dashboard_set(const char *key, float value)
     }
     for (uint8_t i = 0; i < s_dash.count; i++)
     {
-        if (s_dash.widgets[i].key && strcmp(s_dash.widgets[i].key, key) == 0)
+        if (s_dash.widgets[i].key && str.eq(s_dash.widgets[i].key, key, MAX_KEY_LEN, PROTO_FALSE))
         {
             s_dash.values[i] = value;
             return PROTO_TRUE;
@@ -218,7 +218,7 @@ static const char *control_value_ptr(const char *s, const char *key)
     {
         return NULL;
     }
-    p += strnlen(pat, sizeof(pat));
+    p += str.len(pat, sizeof(pat));
     while (*p == ' ' || *p == '\t')
     {
         p++;

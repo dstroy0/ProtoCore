@@ -10,6 +10,7 @@
 #define PROTOCORE_SSH_COMMON_H
 
 #include "mmgr/bytes.h"       // protocore_span, bytes.* writers, bytes.rd_str / bytes.rd_u32 readers
+#include "mmgr/protostr.h"    // str.len: the length prefix on a written string
 #include "protocore_config.h" // protocore_types.h for the fixed widths, PROTOCORE_INLINE, the SSH sizing constants
 
 #include "crypto/aead/chachapoly.h"   // PROTOCORE_CHACHAPOLY_KEY_LEN - the chacha keys in the memory map

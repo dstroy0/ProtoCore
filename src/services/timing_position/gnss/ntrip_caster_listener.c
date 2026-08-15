@@ -9,6 +9,7 @@
 
 #include "services/timing_position/gnss/ntrip_caster_listener.h"
 #include "mmgr/protomem.h"
+#include "mmgr/protostr.h"
 
 #if PROTOCORE_ENABLE_NTRIP_CASTER
 
@@ -73,6 +74,11 @@ static int rover_find_free()
 // Find a mount by name, optionally constrained to a given listener (-1 = any).
 static int mount_index(const char *name, int listener_id)
 {
+    const size_t nl = str.len(name, PROTOCORE_NTRIP_MOUNT_MAX);
+    if (nl >= PROTOCORE_NTRIP_MOUNT_MAX)
+    {
+        return -1;
+    }
     for (int i = 0; i < PROTOCORE_NTRIP_MAX_MOUNTS; i++)
     {
         if (!s_ctx.mounts[i].active)
@@ -83,7 +89,7 @@ static int mount_index(const char *name, int listener_id)
         {
             continue;
         }
-        if (strcmp(s_ctx.mounts[i].name, name) == 0)
+        if (str.eq(s_ctx.mounts[i].name, name, nl + 1, PROTO_FALSE))
         {
             return i;
         }
@@ -134,7 +140,7 @@ static proto_bool auth_ok(const NtripRequest *req, const char *expect)
     {
         return PROTO_FALSE;
     }
-    size_t el = strnlen(expect, req->auth_b64_len + 1);
+    size_t el = str.len(expect, req->auth_b64_len + 1);
     if (el != req->auth_b64_len)
     {
         return PROTO_FALSE;
@@ -303,7 +309,7 @@ proto_bool protocore_ntrip_caster_add_mount(uint8_t listener_id, const NtripMoun
     {
         return PROTO_FALSE;
     }
-    size_t nl = strnlen(mount->mountpoint, PROTOCORE_NTRIP_MOUNT_MAX + 1);
+    size_t nl = str.len(mount->mountpoint, PROTOCORE_NTRIP_MOUNT_MAX + 1);
     if (nl == 0 || nl >= PROTOCORE_NTRIP_MOUNT_MAX)
     {
         return PROTO_FALSE;

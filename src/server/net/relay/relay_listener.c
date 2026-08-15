@@ -12,6 +12,7 @@
 
 #if PROTOCORE_ENABLE_RELAY
 
+#include "mmgr/protostr.h"
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the accepted slot
 #include "network_drivers/transport/tcp/client/client.h" // TcpClient: the dialed connection
 #include "network_drivers/transport/tcp/tcp.h"
@@ -285,7 +286,7 @@ proto_bool protocore_relay_publish(uint8_t listener_id, const char *origin_host,
     {
         return PROTO_FALSE;
     }
-    size_t hl = strnlen(origin_host, PROTOCORE_RELAY_HOST_MAX + 1);
+    size_t hl = str.len(origin_host, PROTOCORE_RELAY_HOST_MAX + 1);
     if (hl == 0 || hl >= PROTOCORE_RELAY_HOST_MAX)
     {
         return PROTO_FALSE;

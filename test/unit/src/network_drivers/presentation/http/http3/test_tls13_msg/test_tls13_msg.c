@@ -358,7 +358,7 @@ void test_encrypted_extensions_carries_alpn_and_transport_params(void)
     TEST_ASSERT_EQUAL_UINT8_ARRAY(TP, out + 19, sizeof(TP));
 
     // The DTLS profile of the same message carries no extensions at all.
-    size_t m = protocore_tls13_build_encrypted_extensions_empty(out, sizeof(out), PROTO_FALSE);
+    size_t m = protocore_tls13_build_encrypted_extensions_empty(out, sizeof(out), PROTO_FALSE, NULL);
     TEST_ASSERT_EQUAL_UINT(6u, m);
     TEST_ASSERT_EQUAL_HEX8(TLS_HS_ENCRYPTED_EXTENSIONS, out[0]);
     TEST_ASSERT_EQUAL_UINT32(2u, ((uint32_t)out[1] << 16) | ((uint32_t)out[2] << 8) | out[3]);

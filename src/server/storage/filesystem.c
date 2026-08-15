@@ -162,7 +162,7 @@ static void fs_begin(struct FilesystemInternal *restrict ctx)
     // give them two views of one thing.
     for (uint8_t i = 0; i < s_fs.count; i++)
     {
-        if (strncmp(s_fs.root[i].name, want, PROTOCORE_FS_ROOT_NAME_MAX) == 0)
+        if (str.eq(s_fs.root[i].name, want, PROTOCORE_FS_ROOT_NAME_MAX, PROTO_FALSE))
         {
             ctx->ns->i32 = (int)i;
             return;

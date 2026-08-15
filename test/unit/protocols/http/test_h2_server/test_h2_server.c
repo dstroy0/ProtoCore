@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #include "network_drivers/presentation/http/http2/h2_server.h"
+#include "network_drivers/session/session.h" // the per-connection tables this suite stands in for
 #include "network_drivers/transport/tcp/common.h"
 
 #include "network_drivers/presentation/http/http2/h2_conn.h"
@@ -15,6 +16,14 @@
 
 TcpConn conn_pool[CONN_POOL_SLOTS];
 uint32_t protocore_ap_ip;
+
+// The session layer owns a connection's state and this suite stands in for it, the same way it
+// stands in for the transport's conn_pool above. Declared in network_drivers/session/session.h.
+uint32_t http_req_start_ms[CONN_POOL_SLOTS];
+protocore_resp_sink_fn http_resp_sink[CONN_POOL_SLOTS];
+uint8_t http_h2[CONN_POOL_SLOTS];
+uint8_t http_h2_checked[CONN_POOL_SLOTS];
+uint32_t http_h2_stream[CONN_POOL_SLOTS];
 
 #define WIRE_MAX 8192
 
@@ -102,7 +111,8 @@ static void feed_request(const Hdr *fields, size_t n)
 {
     wire_reset();
     memset(&conn_pool[0], 0, sizeof conn_pool[0]);
-    protocore_h2_server_open(0);
+    H2Server.slot = 0;
+    H2Server.open(H2Server.internal);
     g_out_len = 0;
 
     uint8_t block[1024];
@@ -120,7 +130,8 @@ static void feed_request(const Hdr *fields, size_t n)
     uint8_t hf[H2_FRAME_HEADER_LEN + sizeof block];
     in_add(hf, protocore_h2_build_headers(hf, sizeof hf, 1, block, bo, PROTO_TRUE));
 
-    protocore_h2_server_data(0);
+    H2Server.slot = 0;
+    H2Server.data(H2Server.internal);
 }
 
 #define BASE3 {":method", "GET"}, {":scheme", "https"}, {":path", "/"}
@@ -154,7 +165,9 @@ void test_h2s_minimal_request_is_accepted(void)
     assert_accepted();
     TEST_ASSERT_EQUAL_STRING("GET", http_pool[0].method);
     TEST_ASSERT_EQUAL_STRING("/", http_pool[0].path);
-    TEST_ASSERT_EQUAL_UINT32(1, conn_pool[0].protocore_h2_stream);
+    // RFC 9113 sec 5.1.1: a client MUST use odd-numbered stream identifiers and 0 cannot establish a
+    // stream, so the first request on a fresh connection arrives on stream 1.
+    TEST_ASSERT_EQUAL_UINT32(1, http_h2_stream[0]);
 }
 
 void test_h2s_path_query_split(void)

@@ -286,7 +286,8 @@
         "+<network_drivers/presentation/codec/base64/base64.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": [
         "unit/src/network_drivers/presentation/codec/base64/test_base64"
@@ -304,7 +305,8 @@
         "+<network_drivers/presentation/codec/base64/base64.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": [
         "unit/src/network_drivers/presentation/codec/base64/test_base64"
@@ -322,7 +324,8 @@
         "+<network_drivers/presentation/codec/base64/base64.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": [
         "unit/src/network_drivers/presentation/codec/base64/test_base64"
@@ -564,7 +567,8 @@
         "+<mmgr/endian.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": [
         "unit/src/network_drivers/presentation/codec/cbor/test_cbor"
@@ -1106,7 +1110,8 @@
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/swar.c>",
-        "+<shared/hex/hex.c>"
+        "+<shared/hex/hex.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": [
         "unit/integration/http/test_compliance"
@@ -1254,7 +1259,8 @@
         "+<mmgr/endian.c>",
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/span.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": [
         "unit/src/crypto/mac/test_crypto_kat"
@@ -1288,7 +1294,8 @@
         "+<mmgr/endian.c>",
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/span.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": [
         "unit/src/crypto/mac/test_crypto_kat"
@@ -1889,7 +1896,8 @@
         "+<mmgr/endian.c>",
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/span.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": [
         "unit/src/network_drivers/presentation/security/dtls/test_dtls_record"
@@ -1927,7 +1935,8 @@
         "+<mmgr/endian.c>",
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/span.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": [
         "unit/protocols/tls/test_dtls_conn"
@@ -1974,7 +1983,8 @@
         "+<mmgr/endian.c>",
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/span.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": [
         "unit/src/network_drivers/presentation/http/http3/test_dtls_tls13"
@@ -2000,7 +2010,8 @@
         "+<mmgr/endian.c>",
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/span.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": [
         "unit/src/network_drivers/presentation/http/http3/test_dtls_tls13"
@@ -2333,7 +2344,8 @@
         "+<services/machine_tool/euromap77/euromap77.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": [
         "unit/file_conversion/services/machine_tool/euromap77/test_euromap77"
@@ -2623,7 +2635,8 @@
         "+<services/file_transfer/ftp/ftp.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": [
         "unit/src/services/file_transfer/ftp/test_ftp"
@@ -2700,7 +2713,8 @@
         "+<services/energy/goose/goose.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": [
         "unit/src/services/energy/goose/test_goose"
@@ -3001,7 +3015,8 @@
         "+<mmgr/endian.c>",
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/span.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": [
         "unit/protocols/http/test_h3_conn"
@@ -3042,7 +3057,8 @@
         "+<mmgr/endian.c>",
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/span.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": [
         "unit/integration/http/test_h3_e2e"
@@ -3234,7 +3250,8 @@
         "+<mmgr/protomem.c>",
         "+<mmgr/endian.c>",
         "+<mmgr/rawmemcpy.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": [
         "unit/src/services/instrumentation/hislip/test_hislip"
@@ -3309,7 +3326,8 @@
         "+<network_drivers/presentation/http/http2/hpack.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": [
         "unit/src/network_drivers/presentation/codec/hpack_prim/test_hpack"
@@ -3422,7 +3440,8 @@
         "+<network_drivers/presentation/http/httpcache/httpcache.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": [
         "unit/src/network_drivers/presentation/http/httpcache/test_httpcache"
@@ -4073,7 +4092,8 @@
         "+<server/storage/mnt.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": [
         "unit/protocols/storage/test_lfs_mock"
@@ -4428,7 +4448,8 @@
         "+<services/energy/mms/mms.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": [
         "unit/src/services/energy/mms/test_mms"
@@ -4660,7 +4681,8 @@
         "+<services/machine_tool/mtconnect/mtconnect.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": [
         "unit/file_conversion/services/machine_tool/mtconnect/test_mtconnect"
@@ -5279,7 +5301,8 @@
         "+<services/fieldbus/opcua/opcua.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": [
         "unit/src/services/fieldbus/opcua/test_opcua"
@@ -5298,7 +5321,8 @@
         "+<services/fieldbus/opcua_client/opcua_client.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": [
         "unit/integration/fieldbus/test_opcua_client"
@@ -5339,7 +5363,8 @@
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/swar.c>",
-        "+<shared/hex/hex.c>"
+        "+<shared/hex/hex.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": [
         "unit/integration/http/test_http_ota"
@@ -6293,7 +6318,8 @@
         "+<network_drivers/presentation/http/http3/qpack.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": [
         "unit/src/network_drivers/presentation/http/http3/test_qpack"
@@ -6312,7 +6338,8 @@
         "+<network_drivers/presentation/codec/hpack_prim/hpack_prim.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": [
         "unit/src/network_drivers/presentation/http/http3/test_qpack"
@@ -6352,7 +6379,8 @@
         "+<mmgr/endian.c>",
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/span.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": [
         "unit/protocols/http/test_quic_conn"
@@ -6379,7 +6407,8 @@
         "+<mmgr/endian.c>",
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/span.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": [
         "unit/src/network_drivers/presentation/http/http3/test_quic_crypto"
@@ -6409,7 +6438,8 @@
         "+<mmgr/endian.c>",
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/span.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": [
         "unit/src/network_drivers/presentation/http/http3/test_quic_crypto"
@@ -6572,7 +6602,8 @@
         "+<mmgr/endian.c>",
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/span.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": [
         "unit/src/network_drivers/presentation/http/http3/test_quic_tls"
@@ -6610,7 +6641,8 @@
         "+<mmgr/endian.c>",
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/span.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": [
         "unit/src/network_drivers/presentation/http/http3/test_quic_tls"
@@ -6652,7 +6684,8 @@
         "+<mmgr/endian.c>",
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/span.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": [
         "unit/src/network_drivers/presentation/http/http3/test_quic_tls"
@@ -7074,7 +7107,8 @@
         "+<services/machine_tool/robotics/robotics.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": [
         "unit/src/services/machine_tool/robotics/test_robotics"
@@ -7188,7 +7222,8 @@
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/swar.c>",
-        "+<shared/crc/crc.c>"
+        "+<shared/crc/crc.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": [
         "unit/integration/net/test_sb_modbus"
@@ -8126,7 +8161,8 @@
         "+<services/southbound/southbound.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": [
         "unit/protocols/net/test_southbound"
@@ -8141,7 +8177,8 @@
         "+<server/web/spa_router/spa_router.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": [
         "unit/src/server/web/spa_router/test_spa_router"
@@ -8199,7 +8236,8 @@
         "+<services/storage/sqlite/sqlite_format.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": [
         "unit/src/services/storage/sqlite/test_sqlite"
@@ -8217,7 +8255,8 @@
         "+<services/storage/sqlite/sqlite_format.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": [
         "unit/src/services/storage/sqlite/test_sqlite"
@@ -9386,7 +9425,8 @@
         "+<shared/pcap/pcap.c>",
         "+<shared/time_compat/time_compat.c>",
         "+<shared/utf8/utf8.c>",
-        "+<mmgr/float_bits.c>"
+        "+<mmgr/float_bits.c>",
+        "+<core_setup/hal/host/host_platform.c>"
       ],
       "tests": []
     },
@@ -9483,7 +9523,8 @@
         "+<services/energy/sunspec/sunspec.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": [
         "unit/src/services/energy/sunspec/test_sunspec"
@@ -9894,7 +9935,8 @@
         "+<mmgr/endian.c>",
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/span.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": [
         "unit/src/network_drivers/tls/key_schedule/test_tls13_kdf"
@@ -9919,7 +9961,8 @@
         "+<mmgr/endian.c>",
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/span.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": [
         "unit/src/network_drivers/presentation/http/http3/test_tls13_msg"
@@ -9956,7 +9999,8 @@
         "+<mmgr/endian.c>",
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/span.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": [
         "unit/file_conversion/network_drivers/tls/handshake/test_tls_conn"
@@ -10004,7 +10048,8 @@
         "+<mmgr/endian.c>",
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/span.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": [
         "unit/src/network_drivers/tls/record/test_tls_record"
@@ -10212,7 +10257,8 @@
         "+<services/machine_tool/umati/umati.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": [
         "unit/src/services/machine_tool/umati/test_umati"
@@ -10379,7 +10425,8 @@
         "+<mmgr/protomem.c>",
         "+<mmgr/endian.c>",
         "+<mmgr/rawmemcpy.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": [
         "unit/src/services/instrumentation/vxi11/test_vxi11"
@@ -10501,7 +10548,8 @@
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/swar.c>",
-        "+<shared/hex/hex.c>"
+        "+<shared/hex/hex.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": [
         "unit/src/network_drivers/application/webdav/test_webdav"
@@ -10521,7 +10569,8 @@
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/swar.c>",
-        "+<shared/hex/hex.c>"
+        "+<shared/hex/hex.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": [
         "unit/src/network_drivers/application/webdav/test_webdav"

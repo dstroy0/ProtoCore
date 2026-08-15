@@ -376,7 +376,7 @@ static const char *json_find_value(const char *json, const char *key)
     }
     p++; // into the object
 
-    size_t keylen = strnlen(key, JSON_KEY_MAX);
+    size_t keylen = str.len(key, JSON_KEY_MAX);
     while (PROTO_TRUE)
     {
         p = skip_ws(p);
@@ -392,7 +392,7 @@ static const char *json_find_value(const char *json, const char *key)
         const char *kstart = p + 1;
         const char *kend = skip_string(p); // just past closing quote
         size_t klen = (kend > kstart) ? (size_t)((kend - 1) - kstart) : 0;
-        proto_bool match = (klen == keylen) && (strncmp(kstart, key, klen) == 0);
+        proto_bool match = (klen == keylen) && (str.diff(kstart, key, klen, PROTO_FALSE) == klen);
 
         p = skip_ws(kend);
         if (*p != ':')
@@ -663,12 +663,12 @@ static proto_bool json_get_bool(const char *json, const char *key, proto_bool *o
     {
         return PROTO_FALSE;
     }
-    if (strncmp(v, "true", 4) == 0 && (v[4] == '\0' || v[4] == ',' || v[4] == '}' || v[4] == ']' || is_ws(v[4])))
+    if (str.starts(v, "true", 4, PROTO_FALSE) && (v[4] == '\0' || v[4] == ',' || v[4] == '}' || v[4] == ']' || is_ws(v[4])))
     {
         *out = PROTO_TRUE;
         return PROTO_TRUE;
     }
-    if (strncmp(v, "false", 5) == 0 && (v[5] == '\0' || v[5] == ',' || v[5] == '}' || v[5] == ']' || is_ws(v[5])))
+    if (str.starts(v, "false", 5, PROTO_FALSE) && (v[5] == '\0' || v[5] == ',' || v[5] == '}' || v[5] == ']' || is_ws(v[5])))
     {
         *out = PROTO_FALSE;
         return PROTO_TRUE;

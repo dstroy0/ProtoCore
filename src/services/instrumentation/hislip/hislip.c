@@ -8,6 +8,7 @@
 
 #include "services/instrumentation/hislip/hislip.h"
 #include "mmgr/protomem.h"
+#include "mmgr/protostr.h"
 
 #if PROTOCORE_ENABLE_HISLIP
 
@@ -66,7 +67,7 @@ static size_t build_with_payload(uint8_t *buf, size_t cap, HislipMsg type, uint8
 size_t protocore_hislip_build_initialize(uint8_t *buf, size_t cap, uint16_t protocol_version, uint16_t vendor_id,
                                          const char *sub_address)
 {
-    size_t sub_len = sub_address ? strnlen(sub_address, cap) : 0;
+    size_t sub_len = sub_address ? str.len(sub_address, cap) : 0;
     uint32_t parameter = ((uint32_t)protocol_version << 16) | vendor_id;
     return build_with_payload(buf, cap, HISLIP_MSG_INITIALIZE, 0, parameter, (const uint8_t *)sub_address, sub_len);
 }

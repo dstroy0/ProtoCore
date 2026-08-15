@@ -31,10 +31,10 @@
 void dbench_run(void)
 {
     static char buf[1024];
-    pc_mtc_streams s;
+    protocore_mtc_streams s;
 
     // A populated rolling observation ring for the `sample` long-poll query (built once).
-    static pc_mtc_sample_buffer ring;
+    static protocore_mtc_sample_buffer ring;
     protocore_mtc_sample_buffer_init(&ring, 1);
     protocore_mtc_sample_buffer_add(&ring, PROTOCORE_MTC_SAMPLE, "Position", "xpos", "T1", "1.0");
     protocore_mtc_sample_buffer_add(&ring, PROTOCORE_MTC_SAMPLE, "Position", "xpos", "T2", "2.0");
@@ -46,7 +46,7 @@ void dbench_run(void)
         volatile size_t sink = 0;
 
         // MTConnectStreams (`current`/`sample`): header + one Event, one Sample, one Condition.
-        DBENCH_OP("pc_mtc_streams build", 20000, protocore_mtc_streams_begin(&s, buf, sizeof(buf), 1500, 42, "cnc1");
+        DBENCH_OP("protocore_mtc_streams build", 20000, protocore_mtc_streams_begin(&s, buf, sizeof(buf), 1500, 42, "cnc1");
                   protocore_mtc_streams_add(&s, PROTOCORE_MTC_EVENT, "Availability", "avail", 40, "2026-07-06T00:00:00Z",
                                      "AVAILABLE");
                   protocore_mtc_streams_add(&s, PROTOCORE_MTC_SAMPLE, "Position", "xpos", 41, "2026-07-06T00:00:01Z", "12.5");

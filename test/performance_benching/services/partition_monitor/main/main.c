@@ -24,8 +24,8 @@ void dbench_run(void)
 {
     // A realistic ESP32-S3 dual-OTA partition table (labels/types/subtypes/offsets/sizes straight
     // out of a factory csv layout) - the exact shape protocore_partition_collect() would hand the
-    // serializer at runtime. Field ordering matches the pc_partition_info test fixtures.
-    static const pc_partition_info table[] = {
+    // serializer at runtime. Field ordering matches the protocore_partition_info test fixtures.
+    static const protocore_partition_info table[] = {
         {"nvs", 1, 0x02, 0x009000, 0x005000, false},      // data / nvs
         {"otadata", 1, 0x00, 0x00E000, 0x002000, false},  // data / otadata
         {"phy_init", 1, 0x01, 0x010000, 0x001000, false}, // data / phy

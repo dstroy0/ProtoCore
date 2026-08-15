@@ -12,6 +12,7 @@
 
 #include "http_parser.h"
 #include "mmgr/protomem.h"
+#include "mmgr/protostr.h"
 #include "shared/ip/ip.h" // validate a recovered proxy client IP (v4/v6)
 
 HttpReq http_pool[CONN_POOL_SLOTS];
@@ -303,7 +304,7 @@ void http_parser_feed(HttpReq *p, uint8_t byte)
 #if PROTOCORE_CAPTURE_AUTH_HEADER
             // The Authorization value (Digest / JWT bearer) exceeds MAX_VAL_LEN,
             // so capture it whole into a dedicated buffer independent of scratch.
-            p->cur_is_auth = (strcasecmp(p->cur_key, "Authorization") == 0);
+            p->cur_is_auth = (str.eq(p->cur_key, "Authorization", MAX_KEY_LEN, PROTO_TRUE));
             if (p->cur_is_auth)
             {
                 p->auth_idx = 0;
@@ -376,12 +377,12 @@ void http_parser_feed(HttpReq *p, uint8_t byte)
             // Host / Content-Length detection works off the scratch copies, so
             // it is correct even for headers past MAX_HEADERS (RFC 7230 §5.4,
             // §3.3.2).
-            if (strcasecmp(p->cur_key, "Host") == 0)
+            if (str.eq(p->cur_key, "Host", MAX_KEY_LEN, PROTO_TRUE))
             {
                 p->host_count++;
             }
 
-            if (strcasecmp(p->cur_key, "Content-Length") == 0)
+            if (str.eq(p->cur_key, "Content-Length", MAX_KEY_LEN, PROTO_TRUE))
             {
                 // RFC 7230 §3.3.2: Content-Length = 1*DIGIT.
                 size_t cl = 0;
@@ -412,7 +413,7 @@ void http_parser_feed(HttpReq *p, uint8_t byte)
             // request-smuggling vector - the chunked octets would otherwise be left in
             // the buffer and reparsed as the next request. Reject any request bearing
             // Transfer-Encoding (fail closed).
-            if (strcasecmp(p->cur_key, "Transfer-Encoding") == 0)
+            if (str.eq(p->cur_key, "Transfer-Encoding", MAX_KEY_LEN, PROTO_TRUE))
             {
                 p->parse_state = PARSE_ERROR;
                 break;
@@ -563,7 +564,7 @@ const char *http_get_header(const HttpReq *req, const char *key)
 {
     for (uint8_t i = 0; i < req->header_count; i++)
     {
-        if (strcasecmp(req->headers[i].key, key) == 0)
+        if (str.eq(req->headers[i].key, key, MAX_KEY_LEN, PROTO_TRUE))
         {
             return req->headers[i].val;
         }
@@ -590,55 +591,49 @@ proto_bool http_get_cookie(const HttpReq *req, const char *name, char *out, size
     {
         return PROTO_FALSE;
     }
-    size_t nlen = strnlen(name, MAX_VAL_LEN); // a matchable cookie-name span cannot exceed a header value
+    const size_t clen = str.len(c, MAX_VAL_LEN);
+    const size_t nlen = str.len(name, MAX_VAL_LEN); // a matchable cookie-name span cannot exceed a header value
 
-    const char *p = c;
-    while (*p != '\0')
+    size_t at = 0;
+    for (size_t g = 0; g < clen && at < clen; ++g) // each pair consumes at least its ';', so clen bounds the trips
     {
-        while (*p == ' ' || *p == '\t' || *p == ';') // skip inter-pair separators/spaces
+        const char *semi = str.find(c + at, clen - at, ";", sizeof(";"), PROTO_FALSE);
+        const size_t stop = semi ? (size_t)(semi - c) : clen;
+
+        size_t a = at;
+        while (a < stop && (c[a] == ' ' || c[a] == '\t')) // the OWS this pair opens with
         {
-            p++;
+            a++;
         }
-        if (*p == '\0')
+
+        const char *eqp = str.find(c + a, stop - a, "=", sizeof("="), PROTO_FALSE);
+        if (eqp)
         {
-            break;
-        }
-        const char *eq = p;
-        while (*eq != '\0' && *eq != '=' && *eq != ';') // cookie-name runs up to '='
-        {
-            eq++;
-        }
-        if (*eq == '=' && (size_t)(eq - p) == nlen && strncmp(p, name, nlen) == 0)
-        {
-            const char *v = eq + 1;
-            const char *end = v;
-            while (*end != '\0' && *end != ';') // value runs up to the next ';'
+            const size_t eq = (size_t)(eqp - c);
+            if (eq - a == nlen && str.diff(c + a, name, nlen, PROTO_FALSE) == nlen)
             {
-                end++;
+                size_t v = eq + 1u;
+                size_t end = stop;
+                while (end > v && (c[end - 1] == ' ' || c[end - 1] == '\t')) // trailing OWS
+                {
+                    end--;
+                }
+                size_t vlen = end - v;
+                if (vlen >= 2u && c[v] == '"' && c[end - 1u] == '"') // a DQUOTE-wrapped cookie-value
+                {
+                    v++;
+                    vlen -= 2u;
+                }
+                if (vlen >= out_size)
+                {
+                    vlen = out_size - 1u;
+                }
+                mem.cpy(out, c + v, vlen);
+                out[vlen] = '\0';
+                return PROTO_TRUE;
             }
-            while (end > v && (end[-1] == ' ' || end[-1] == '\t')) // trim trailing OWS
-            {
-                end--;
-            }
-            size_t vlen = (size_t)(end - v);
-            if (vlen >= 2 && v[0] == '"' && v[vlen - 1] == '"') // strip a quoted cookie-value
-            {
-                v++;
-                vlen -= 2;
-            }
-            if (vlen >= out_size)
-            {
-                vlen = out_size - 1;
-            }
-            mem.cpy(out, v, vlen);
-            out[vlen] = '\0';
-            return PROTO_TRUE;
         }
-        p = eq;
-        while (*p != '\0' && *p != ';') // advance past this pair
-        {
-            p++;
-        }
+        at = stop + 1u;
     }
     return PROTO_FALSE;
 }
@@ -745,19 +740,83 @@ static proto_bool fwd_extract_client(const char *s, size_t n, char *out, size_t 
     return Ip.n > 0; // false if out is too small for the canonical text
 }
 
-// First case-insensitive occurrence of @p needle in the NUL-terminated @p hay, or NULL. RFC 7239
-// §4: "The parameter names are case-insensitive", and its own examples spell one "For=".
-static const char *fwd_find_param(const char *hay, const char *needle)
+// Index just past the DQUOTE that closes the one at @p i. RFC 7230 §3.2.6:
+// quoted-string = DQUOTE *( qdtext / quoted-pair ) DQUOTE and quoted-pair = "\" octet, so the
+// closing DQUOTE is the first one no backslash reached.
+static size_t fwd_skip_quoted(const char *s, size_t n, size_t i)
 {
-    size_t n = strnlen(needle, MAX_VAL_LEN);
-    for (const char *p = hay; *p; p++)
+    size_t at = i + 1u;
+    for (size_t g = 0; g < n && at < n; ++g)
     {
-        if (strncasecmp(p, needle, n) == 0)
+        const char *dq = str.find(s + at, n - at, "\"", sizeof("\""), PROTO_FALSE);
+        if (!dq)
         {
-            return p;
+            return n;
         }
+        const size_t span = (size_t)(dq - (s + at));
+        const char *bs = span ? str.find(s + at, span, "\\", sizeof("\\"), PROTO_FALSE) : NULL;
+        if (!bs)
+        {
+            return (size_t)(dq - s) + 1u;
+        }
+        at = (size_t)(bs - s) + 2u;
+    }
+    return n;
+}
+
+// Index of the first @p stop octet outside a quoted-string, or @p n. @p stop is a one-octet
+// literal, so its needle capacity is the octet and its NUL.
+static size_t fwd_split(const char *s, size_t n, const char *stop)
+{
+    size_t at = 0;
+    for (size_t g = 0; g < n && at < n; ++g)
+    {
+        const char *hit = str.find(s + at, n - at, stop, 2u, PROTO_FALSE);
+        if (!hit)
+        {
+            return n;
+        }
+        const size_t span = (size_t)(hit - (s + at));
+        const char *dq = span ? str.find(s + at, span, "\"", sizeof("\""), PROTO_FALSE) : NULL;
+        if (!dq)
+        {
+            return (size_t)(hit - s);
+        }
+        at = fwd_skip_quoted(s, n, (size_t)(dq - s));
+    }
+    return n;
+}
+
+// RFC 7239 §4: forwarded-element = [ forwarded-pair ] *( ";" [ forwarded-pair ] ),
+// forwarded-pair = token "=" value, and "the parameter names are case-insensitive". The ABNF puts
+// no OWS around "=" or ";", so the name is the whole span before "=" and a longer token ending in
+// it never answers. The value span lands in @p vlen.
+static const char *fwd_param(const char *el, size_t n, const char *name, size_t nlen, size_t *vlen)
+{
+    size_t at = 0;
+    for (size_t g = 0; g < n && at < n; ++g)
+    {
+        const size_t stop = at + fwd_split(el + at, n - at, ";");
+        const size_t eq = at + fwd_split(el + at, stop - at, "=");
+        if (eq < stop && eq - at == nlen && str.diff(el + at, name, nlen, PROTO_TRUE) == nlen)
+        {
+            *vlen = stop - (eq + 1u);
+            return el + eq + 1u;
+        }
+        at = stop + 1u;
     }
     return NULL;
+}
+
+// RFC 7239 §4: value = token / quoted-string, so a parameter value can arrive quoted.
+static proto_bool fwd_value_is(const char *v, size_t n, const char *lit, size_t litlen)
+{
+    if (n >= 2u && v[0] == '"' && v[n - 1u] == '"')
+    {
+        v++;
+        n -= 2u;
+    }
+    return n == litlen && str.diff(v, lit, litlen, PROTO_TRUE) == litlen;
 }
 
 proto_bool http_forwarded_client(const HttpReq *req, char *ip_out, size_t ip_cap, proto_bool *is_https)
@@ -777,38 +836,24 @@ proto_bool http_forwarded_client(const HttpReq *req, char *ip_out, size_t ip_cap
     const char *fwd = http_get_header(req, "Forwarded");
     if (fwd)
     {
-        // First element = up to the first ','. Within it, find for= and proto=.
-        const char *elem_end = strchr(fwd, ',');
-        size_t elen = elem_end ? (size_t)(elem_end - fwd) : strnlen(fwd, MAX_VAL_LEN);
-        // proto=
+        // RFC 7239 §4: Forwarded = 1#forwarded-element, the leftmost holding what the first proxy
+        // added. A ',' inside a quoted-string does not end it.
+        const size_t hlen = str.len(fwd, MAX_VAL_LEN);
+        const size_t elen = fwd_split(fwd, hlen, ",");
         if (is_https)
         {
-            // Only the first element's proto= matters, so this is a single check.
-            const char *hit = fwd_find_param(fwd, "proto=");
-            if (hit && (size_t)(hit - fwd) < elen)
+            size_t plen = 0;
+            const char *proto = fwd_param(fwd, elen, "proto", 5u, &plen);
+            if (proto)
             {
-                *is_https = (strncasecmp(hit + 6, "https", 5) == 0);
+                *is_https = fwd_value_is(proto, plen, "https", 5u);
             }
         }
-        // for=
-        const char *f = fwd_find_param(fwd, "for=");
-        if (f && (size_t)(f - fwd) < elen)
+        size_t flen = 0;
+        const char *f = fwd_param(fwd, elen, "for", 3u, &flen);
+        if (f && fwd_extract_client(f, flen, ip_out, ip_cap))
         {
-            const char *fv = f + 4;
-            const char *fend = fv;
-            size_t lim = elen - (size_t)(fv - fwd);
-            size_t k = 0;
-            // fend[k]==',' is unreachable here: lim is derived from elen, which is itself the
-            // offset of the first ',' (or end of string when there is none) - so k can never
-            // walk far enough to land on a comma without k<lim failing first.
-            while (k < lim && fend[k] != ';' && fend[k] != ',')
-            {
-                k++;
-            }
-            if (fwd_extract_client(fv, k, ip_out, ip_cap))
-            {
-                return PROTO_TRUE;
-            }
+            return PROTO_TRUE;
         }
     }
 
@@ -816,7 +861,7 @@ proto_bool http_forwarded_client(const HttpReq *req, char *ip_out, size_t ip_cap
     if (is_https)
     {
         const char *xfp = http_get_header(req, "X-Forwarded-Proto");
-        if (xfp && strncasecmp(xfp, "https", 5) == 0)
+        if (xfp && str.starts(xfp, "https", 5, PROTO_TRUE))
         {
             *is_https = PROTO_TRUE;
         }
@@ -824,8 +869,8 @@ proto_bool http_forwarded_client(const HttpReq *req, char *ip_out, size_t ip_cap
     const char *xff = http_get_header(req, "X-Forwarded-For");
     if (xff)
     {
-        const char *end = strchr(xff, ',');
-        size_t len = end ? (size_t)(end - xff) : strnlen(xff, MAX_VAL_LEN);
+        const char *end = str.find(xff, MAX_VAL_LEN, ",", sizeof(","), PROTO_FALSE);
+        size_t len = end ? (size_t)(end - xff) : str.len(xff, MAX_VAL_LEN);
         if (fwd_extract_client(xff, len, ip_out, ip_cap))
         {
             return PROTO_TRUE;
@@ -838,7 +883,7 @@ const char *http_get_query(const HttpReq *req, const char *key)
 {
     for (uint8_t i = 0; i < req->query_count; i++)
     {
-        if (strcmp(req->query_params[i].key, key) == 0)
+        if (str.eq(req->query_params[i].key, key, QUERY_KEY_LEN, PROTO_FALSE))
         {
             return req->query_params[i].val;
         }
@@ -860,14 +905,14 @@ proto_bool http_get_form(const HttpReq *req, const char *key, char *out, size_t 
 
     // Only urlencoded bodies (allow a trailing "; charset=..." suffix).
     const char *ct = http_get_header(req, "Content-Type");
-    if (ct == NULL || strncasecmp(ct, "application/x-www-form-urlencoded", 33) != 0)
+    if (ct == NULL || !str.starts(ct, "application/x-www-form-urlencoded", 33, PROTO_TRUE))
     {
         return PROTO_FALSE;
     }
 
     const char *body = (const char *)req->body;
     size_t len = req->body_len;
-    size_t key_len = strnlen(key, len + 1); // a matchable body key cannot exceed the body length
+    size_t key_len = str.len(key, len + 1); // a matchable body key cannot exceed the body length
     size_t i = 0;
 
     while (i < len)
@@ -877,7 +922,7 @@ proto_bool http_get_form(const HttpReq *req, const char *key, char *out, size_t 
         {
             i++;
         }
-        proto_bool key_matches = (i - ks == key_len) && (strncmp(body + ks, key, key_len) == 0);
+        proto_bool key_matches = (i - ks == key_len) && (str.diff(body + ks, key, key_len, PROTO_FALSE) == key_len);
 
         size_t vs = i;
         size_t ve = i;
@@ -924,7 +969,7 @@ const char *http_get_param(const HttpReq *req, const char *key)
     }
     for (uint8_t i = 0; i < req->path_param_count; i++)
     {
-        if (strcmp(req->path_params[i].key, key) == 0)
+        if (str.eq(req->path_params[i].key, key, QUERY_KEY_LEN, PROTO_FALSE))
         {
             return req->path_params[i].val;
         }

@@ -8,6 +8,7 @@
 
 #include "server/web/edge_cache/edge_cache_sd.h"
 #include "mmgr/protomem.h"
+#include "mmgr/protostr.h"
 
 #if PROTOCORE_ENABLE_EDGE_CACHE
 
@@ -26,9 +27,9 @@ static uint16_t get_u16(const uint8_t *p)
 // Append a u16 length prefix + the NUL-terminated string @p s. False (no write) on overflow.
 static proto_bool put_str(uint8_t *out, size_t cap, size_t *pos, const char *s)
 {
-    size_t sl = strnlen(s, cap);
+    size_t sl = str.len(s, cap);
     // Split from the capacity check below so excluding it does not also drop that check - which IS
-    // reachable and tested - out of the branch measurement. sl is strnlen-capped to `cap`, the
+    // reachable and tested - out of the branch measurement. sl is str.len-capped to `cap`, the
     // caller's record buffer, which is orders of magnitude below the 16-bit prefix limit in every
     // build this library is sized for. The check guards the u16 cast if cap ever grows.
     if (sl > 0xFFFFu)
@@ -124,7 +125,7 @@ proto_bool edge_sd_deserialize(uint8_t *work, const uint8_t *buf, size_t len, Ed
     }
     mem.cpy(e->body, buf + pos, bl);
     e->body_len = bl;
-    edge_key_digest(work, e->key, strnlen(e->key, sizeof(e->key)), e->digest); // re-derive the digest from the key
+    edge_key_digest(work, e->key, str.len(e->key, sizeof(e->key)), e->digest); // re-derive the digest from the key
     return PROTO_TRUE;
 }
 
@@ -196,7 +197,7 @@ static proto_bool collect_cb(const char *key, uint16_t key_len, void *vctx)
     if (c->prefix)
     {
         const char *path = canon_path(canon);
-        if (!path || strncmp(path, c->prefix, c->plen) != 0)
+        if (!path || !str.starts(path, c->prefix, c->plen, PROTO_FALSE))
         {
             return PROTO_TRUE; // path does not match the purge prefix
         }
@@ -218,7 +219,7 @@ static uint32_t purge_matching(struct protocore_dbm *db, const char *prefix, uin
         CollectCtx c;
         c.db = db;
         c.prefix = prefix;
-        c.plen = prefix ? strnlen(prefix, PROTOCORE_EDGE_KEY_MAX) : 0;
+        c.plen = prefix ? str.len(prefix, PROTOCORE_EDGE_KEY_MAX) : 0;
         c.scratch = scratch;
         c.scratch_cap = scratch_cap;
         c.count = 0;

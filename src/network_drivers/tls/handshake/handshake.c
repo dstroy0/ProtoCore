@@ -12,6 +12,7 @@
 
 #include "crypto/asymmetric/curve25519.h" // protocore_x25519, protocore_x25519_base
 #include "crypto/ct_eq.h"                 // protocore_ct_eq: the Finished compare
+#include "mmgr/protostr.h"                // str.len: the ALPN protocol name lengths
 #include "mmgr/rawmemcpy.h"               // raw.read
 #include "mmgr/secure.h"                  // the borrow this driver runs out of, and protocore_secure_wipe
 

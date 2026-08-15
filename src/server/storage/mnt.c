@@ -14,6 +14,7 @@
 
 #include "server/storage/mnt.h"
 #include "mmgr/protomem.h"
+#include "mmgr/protostr.h"
 
 // --- the HAL: which store is mounted -------------------------------------------------------------
 // Ungated, because mnt.h declares it ungated: this is the seam every caller reads through, and the
@@ -165,7 +166,7 @@ static int ram_find(const char *name)
 {
     for (int i = 0; i < PROTOCORE_MNT_RAM_FILES; i++)
     {
-        if (ram_used(i) && strncmp(s_mnt.rf[i].name, name, PROTOCORE_MNT_NAME_MAX) == 0)
+        if (ram_used(i) && str.eq(s_mnt.rf[i].name, name, PROTOCORE_MNT_NAME_MAX, PROTO_FALSE))
         {
             return i;
         }
@@ -175,7 +176,7 @@ static int ram_find(const char *name)
 
 static int ram_create(const char *name, proto_bool is_dir)
 {
-    if (strnlen(name, PROTOCORE_MNT_NAME_MAX + 1) >= PROTOCORE_MNT_NAME_MAX)
+    if (str.len(name, PROTOCORE_MNT_NAME_MAX + 1) >= PROTOCORE_MNT_NAME_MAX)
     {
         return -1;
     }
@@ -187,7 +188,7 @@ static int ram_create(const char *name, proto_bool is_dir)
     int i = (int)__builtin_ctz(free_bits);
     s_mnt.used |= (1u << i);
     s_mnt.rf[i].is_dir = is_dir;
-    strncpy(s_mnt.rf[i].name, name, PROTOCORE_MNT_NAME_MAX - 1);
+    str.copy(s_mnt.rf[i].name, name, sizeof(s_mnt.rf[i].name));
     s_mnt.rf[i].name[PROTOCORE_MNT_NAME_MAX - 1] = '\0';
     s_mnt.rf[i].len = 0;
     return i;
@@ -221,8 +222,8 @@ static const char *ram_dirpath(const RamHandle *h)
 // own name. The root prefix is "/" and carries its own separator; any other prefix needs one.
 static proto_bool ram_child_of(const char *name, const char *prefix, const char **rest)
 {
-    size_t plen = strnlen(prefix, PROTOCORE_MNT_NAME_MAX);
-    if (strncmp(name, prefix, plen) != 0)
+    size_t plen = str.len(prefix, PROTOCORE_MNT_NAME_MAX);
+    if (!str.starts(name, prefix, plen, PROTO_FALSE))
     {
         return PROTO_FALSE;
     }
@@ -235,7 +236,8 @@ static proto_bool ram_child_of(const char *name, const char *prefix, const char 
         }
         tail++;
     }
-    if (tail[0] == '\0' || strchr(tail, '/') != NULL)
+    if (tail[0] == '\0' ||
+        str.find(tail, PROTOCORE_MNT_NAME_MAX - (size_t)(tail - name), "/", sizeof("/"), PROTO_FALSE) != NULL)
     {
         return PROTO_FALSE; // the prefix itself, or something deeper than one level
     }
@@ -367,7 +369,7 @@ static proto_bool ram_remove(const char *path)
 
 static proto_bool ram_rename(const char *from, const char *to)
 {
-    if (from == NULL || to == NULL || strnlen(to, PROTOCORE_MNT_NAME_MAX + 1) >= PROTOCORE_MNT_NAME_MAX)
+    if (from == NULL || to == NULL || str.len(to, PROTOCORE_MNT_NAME_MAX + 1) >= PROTOCORE_MNT_NAME_MAX)
     {
         return PROTO_FALSE;
     }
@@ -381,7 +383,7 @@ static proto_bool ram_rename(const char *from, const char *to)
     {
         s_mnt.used &= ~(1u << dst); // overwrite an existing destination
     }
-    strncpy(s_mnt.rf[f].name, to, PROTOCORE_MNT_NAME_MAX - 1);
+    str.copy(s_mnt.rf[f].name, to, sizeof(s_mnt.rf[f].name));
     s_mnt.rf[f].name[PROTOCORE_MNT_NAME_MAX - 1] = '\0';
     return PROTO_TRUE;
 }
@@ -486,7 +488,7 @@ static proto_bool ram_readdir(int h, protocore_mnt_stat *out, char *name, size_t
         {
             continue;
         }
-        size_t rl = strnlen(rest, name_cap);
+        size_t rl = str.len(rest, name_cap);
         if (rl >= name_cap)
         {
             continue; // the caller's buffer cannot hold this name - skip it rather than truncate

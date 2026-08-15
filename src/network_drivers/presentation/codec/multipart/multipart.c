@@ -41,13 +41,13 @@ static char *extract_quoted_param(char *src, const char *key)
     {
         return NULL;
     }
-    p += strnlen(key, MULTIPART_KEY_MAX);
+    p += str.len(key, MULTIPART_KEY_MAX);
     if (*p != '"')
     {
         return NULL;
     }
     p++; // skip opening quote
-    char *end = strchr(p, '"');
+    char *end = (char *)str.find(p, str.len(p, 0xFFFF) + 1u, "\"", sizeof("\""), PROTO_FALSE);
     if (!end)
     {
         return NULL;
@@ -156,7 +156,9 @@ static proto_bool protocore_multipart_parse(HttpReq *req, MultipartBody *mp)
 
             *line_end = '\0'; // null-terminate header line
 
-            if (strncasecmp(pos, "Content-Disposition:", 20) == 0)
+            const size_t hlen = (size_t)(line_end - pos);
+
+            if (hlen >= 20 && str.starts(pos, "Content-Disposition:", 20, PROTO_TRUE))
             {
                 char *v = pos + 20;
                 while (*v == ' ')
@@ -169,7 +171,7 @@ static proto_bool protocore_multipart_parse(HttpReq *req, MultipartBody *mp)
                 part->filename = extract_quoted_param(v, "filename=");
                 part->name = extract_quoted_param(v, "name=");
             }
-            else if (strncasecmp(pos, "Content-Type:", 13) == 0)
+            else if (hlen >= 13 && str.starts(pos, "Content-Type:", 13, PROTO_TRUE))
             {
                 char *v = pos + 13;
                 while (*v == ' ')
@@ -209,7 +211,8 @@ static const char *protocore_multipart_get_field(const MultipartBody *mp, const 
 {
     for (int i = 0; i < mp->part_count; i++)
     {
-        if (mp->parts[i].name && strcmp(mp->parts[i].name, field) == 0)
+        if (mp->parts[i].name &&
+            str.eq(mp->parts[i].name, field, str.len(mp->parts[i].name, str.len(field, 0xFFFF)) + 1u, PROTO_FALSE))
         {
             return mp->parts[i].data;
         }

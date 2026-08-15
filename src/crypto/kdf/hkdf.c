@@ -8,6 +8,7 @@
 
 #include "crypto/kdf/hkdf.h"
 #include "mmgr/protomem.h"
+#include "mmgr/protostr.h"
 
 #if (PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_TLS_SOFTWARE)
 
@@ -83,8 +84,8 @@ void protocore_hkdf_expand_label_ctx(uint8_t *work, const uint8_t secret[PROTOCO
     // Bound the scans: the combined label is opaque<7..255> (RFC 8446 sec 7.1), so cap prefix+label at
     // 255 - this both fits the reserved region below and keeps the single length byte from wrapping,
     // even if a caller ever passed a non-NUL-terminated string.
-    size_t prefix_len = strnlen(label_prefix, 255);
-    size_t label_len = strnlen(label, 255 - prefix_len);
+    size_t prefix_len = str.len(label_prefix, 255);
+    size_t label_len = str.len(label, 255 - prefix_len);
     uint8_t *info = work + HKDF_OFF_INFO;
     size_t p = 0;
     info[p++] = (uint8_t)(out_len >> 8);

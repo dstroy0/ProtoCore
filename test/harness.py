@@ -530,16 +530,24 @@ def parse_ini_envs(ini_path):
     with open(ini_path, encoding="utf-8") as fh:
         for raw in fh:
             line = raw.rstrip("\n")
-            m = re.match(r"^\[env:(native[A-Za-z0-9_]*)\]\s*$", line)
+            # A stack base is a bare [native_stack_l46]-style section: it owns no suite and carries
+            # the flags and sources for the envs that extend it, so it has to be read too.
+            m = re.match(r"^\[(?:env:)?(native[A-Za-z0-9_]*)\]\s*$", line)
             if m:
                 cur = m.group(1)
-                envs[cur] = {"src": [], "tests": [], "flags": []}
+                envs[cur] = {"src": [], "tests": [], "flags": [], "extends": None}
                 section = None
                 continue
             if line.startswith("["):
                 cur = None
                 section = None
                 continue
+            if cur is not None:
+                x = re.match(r"^\s*extends\s*=\s*(?:env:)?([A-Za-z0-9_]+)\s*$", line)
+                if x:
+                    envs[cur]["extends"] = x.group(1)
+                    section = None
+                    continue
             if cur is None:
                 continue
             # A blank line or a comment ends the current list. The next env's desc is emitted as
@@ -571,6 +579,24 @@ def parse_ini_envs(ini_path):
                 envs[cur]["tests"].append(line.strip())
             elif section == "flags" and line.strip():
                 envs[cur]["flags"].append(line.strip())
+
+    # Fold each base chain in. `extends` is what carries a stack base's sources and flags to the
+    # envs built on it; without this a direct compile builds the suite against nothing and every
+    # namespace the suite drives comes back undefined at the link. The base goes first so the env's
+    # own entries are the later word. A ${base.build_flags} interpolation is dropped: the flags it
+    # names are now present literally.
+    def fold(name, key, seen):
+        e = envs.get(name)
+        if not e or name in seen:
+            return []
+        seen.add(name)
+        base = e.get("extends")
+        out = fold(base, key, seen) if base else []
+        return out + [v for v in e[key] if not v.startswith("${")]
+
+    for name in list(envs):
+        for key in ("src", "flags"):
+            envs[name][key] = fold(name, key, set())
     return envs
 
 
@@ -1237,6 +1263,84 @@ def suite_dirs(env_entry):
     return [os.path.join(ROOT, "test", *t.split("/")) for t in env_entry["tests"]]
 
 
+def inherited(envs, name, key, seen=None):
+    """An env's @p key with its base chain in front of it.
+
+    A stack base carries the flags and the sources for the envs that extend it and owns no suite of
+    its own, so an env that names `base: env:native_stack_l46` and no src of its own gets everything
+    from there. `gen` walks that chain to write `extends =`; a direct compile has to walk it too, or
+    it builds the suite against nothing and every namespace the suite drives comes back undefined.
+    The base goes first so the env's own entries are the later word.
+    """
+    seen = seen or set()
+    if name in seen or name not in envs:
+        return []
+    seen.add(name)
+    e = envs[name]
+    base = e.get("base", "")
+    out = []
+    if base.startswith("env:"):
+        out = inherited(envs, base[len("env:"):], key, seen)
+    return out + list(e.get(key, []))
+
+
+def lib_packages(envname):
+    """A lib_dep's include dir and sources, which `pio` passes and a direct compile does not.
+
+    Unity is handled on its own because every env links it. Anything else under an env's libdeps is
+    a package the env asked for: littlefs is the one in the tree, reached through the host mount
+    mock. The include dir costs nothing to add, so it always is; the sources are only compiled when
+    the suite actually reaches the package, because pio installs a package per env whether that
+    env's suite uses it or not.
+    """
+    base = os.path.join(ROOT, ".pio", "libdeps", envname)
+    if not os.path.isdir(base):
+        return [], []
+    incs, pkgs = [], []
+    for d in sorted(os.listdir(base)):
+        if d == "Unity":
+            continue
+        inc = os.path.join(base, d, "include")
+        src = os.path.join(base, d, "src")
+        if not os.path.isdir(inc) or not os.path.isdir(src):
+            continue
+        incs.append(inc)
+        heads = [h for h in os.listdir(inc) if h.endswith(".h")]
+        srcs = [os.path.join(src, f) for f in sorted(os.listdir(src)) if f.endswith(".c")]
+        pkgs.append((heads, srcs))
+    return incs, pkgs
+
+
+def _reached_headers(sdir):
+    """Header names a suite includes, one level on from the host mocks it names.
+
+    A suite reaches littlefs through core_setup/hal/host/lfs_mock.h rather than by naming lfs.h, so
+    the includes of the headers it does name are read too.
+    """
+    names = set()
+    text = []
+    try:
+        for f in os.listdir(sdir):
+            if f.endswith((".c", ".h")):
+                text.append(open(os.path.join(sdir, f), encoding="utf-8", errors="replace").read())
+    except OSError:
+        return names
+    hal = os.path.join(ROOT, "core_setup", "hal", "host")
+    seen = set()
+    i = 0
+    while i < len(text):  # appended headers are scanned too, which is what "one level on" means
+        t = text[i]
+        i += 1
+        for m in re.findall(r'#\s*include\s*[<"]([^">]+)[">]', t):
+            base = os.path.basename(m)
+            names.add(base)
+            cand = os.path.join(hal, base)
+            if base not in seen and os.path.isfile(cand):
+                seen.add(base)
+                text.append(open(cand, encoding="utf-8", errors="replace").read())
+    return names
+
+
 COV_BUILD = ".pio_cov"      # per-env .gcno/.gcda, mirroring run_tests.sh's instrumented build dir
 COV_REPORTS = "coverage_reports"  # per-env gcovr tracefiles, unioned once every env has run
 
@@ -1286,6 +1390,9 @@ def build_and_run(name, e, jobs, keep, verbose, debug=False, coverage=False):
         return 1, "Unity sources not found under .pio/libdeps - run `pio pkg install` once"
     incs, defs = _flag_split(e["flags"])
     incs.append("-I" + os.path.relpath(usrc, ROOT).replace("\\", "/"))
+    lib_incs, lib_pkgs = lib_packages(name)
+    for d in lib_incs:
+        incs.append("-I" + os.path.relpath(d, ROOT).replace("\\", "/"))
     tus = _resolve_src(e["src"])
     tus.append(os.path.relpath(os.path.join(usrc, "unity.c"), ROOT).replace("\\", "/"))
     out_lines = []
@@ -1297,6 +1404,11 @@ def build_and_run(name, e, jobs, keep, verbose, debug=False, coverage=False):
             continue
         cases = [f for f in sorted(os.listdir(sd)) if f.endswith(".c") and f != GENERATED_RUNNER]
         srcs = list(tus) + [os.path.relpath(os.path.join(sd, f), ROOT).replace("\\", "/") for f in cases]
+        # A lib_dep the suite reaches has to be compiled in: pio links it, a direct build does not.
+        reached = _reached_headers(sd)
+        for heads, lib_srcs in lib_pkgs:
+            if reached & set(heads):
+                srcs += [os.path.relpath(s, ROOT).replace("\\", "/") for s in lib_srcs]
         # A suite with no main() of its own is registered by Unity's generator, the same way the
         # PlatformIO hook does it.
         has_main = any("int main(" in open(os.path.join(sd, f), encoding="utf-8").read() for f in cases)

@@ -12,6 +12,7 @@
 
 #include "config_store.h"
 #include "mmgr/protomem.h"
+#include "mmgr/protostr.h"
 
 #if PROTOCORE_ENABLE_CONFIG_STORE
 
@@ -27,12 +28,12 @@ static ConfigStoreCtx s_cfg;
 
 proto_bool protocore_config_begin(const char *ns)
 {
-    if (!ns || !ns[0] || strnlen(ns, PROTOCORE_CONFIG_KEY_MAX) >= PROTOCORE_CONFIG_KEY_MAX)
+    if (!ns || !ns[0] || str.len(ns, PROTOCORE_CONFIG_KEY_MAX) >= PROTOCORE_CONFIG_KEY_MAX)
     {
         s_cfg.ns[0] = '\0';
         return PROTO_FALSE;
     }
-    strncpy(s_cfg.ns, ns, PROTOCORE_CONFIG_KEY_MAX - 1);
+    str.copy(s_cfg.ns, ns, sizeof(s_cfg.ns));
     s_cfg.ns[PROTOCORE_CONFIG_KEY_MAX - 1] = '\0';
     return PROTO_TRUE;
 }
@@ -54,7 +55,7 @@ size_t protocore_config_get_str(const char *key, char *out, size_t out_cap, cons
         return n;
     }
     // Absent: the default is this layer's, so the seam never has to know there is one.
-    n = def ? strnlen(def, out_cap) : 0;
+    n = def ? str.len(def, out_cap) : 0;
     if (n > out_cap - 1)
     {
         n = out_cap - 1;

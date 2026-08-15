@@ -6,6 +6,7 @@
  * @brief HTTP/2 engine <-> request-pipeline bridge - implementation. See protocore_h2_server.h.
  */
 
+#include "network_drivers/session/session.h" // the per-connection tables this reads
 #include "network_drivers/presentation/http/http2/h2_server.h"
 #include "mmgr/protomem.h"
 
@@ -375,10 +376,10 @@ static void close_conn(struct H2ServerInternal *restrict ctx)
 proto_bool protocore_h2_server_respond(uint8_t slot, int code, const char *content_type, const char *body, size_t len)
 {
     H2Server.slot = slot;
-    H2Server.code = code;
-    H2Server.content_type = content_type;
-    H2Server.body = body;
-    H2Server.len = len;
+    H2Server.resp.code = code;
+    H2Server.resp.content_type = content_type;
+    H2Server.resp.body = body;
+    H2Server.resp.len = len;
     respond(&s_h2);
     return H2Server.ok;
 }

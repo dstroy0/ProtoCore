@@ -52,7 +52,7 @@ size_t protocore_nmea0183_build(char *buf, size_t cap, const char *body)
     {
         return 0;
     }
-    size_t blen = strnlen(body, cap);
+    size_t blen = str.len(body, cap);
     size_t total = 1 + blen + 1 + 2 + 2; // '$' + body + '*' + HH + CRLF
     if (cap < total + 1)                 // + NUL
     {
@@ -237,7 +237,8 @@ static void nmea_date(const Nmea0183 *m, uint8_t idx, uint8_t *d, uint8_t *mo, u
 
 proto_bool protocore_nmea0183_parse_gga(const Nmea0183 *m, protocore_nmea_gga *out)
 {
-    if (!m || !out || strcmp(m->type, "GGA") != 0 || m->field_count < 10) // need through altitude (field 9)
+    if (!m || !out || !str.eq(m->type, "GGA", sizeof(m->type), PROTO_FALSE) ||
+        m->field_count < 10) // need through altitude (field 9)
     {
         return PROTO_FALSE;
     }
@@ -269,7 +270,8 @@ proto_bool protocore_nmea0183_parse_gga(const Nmea0183 *m, protocore_nmea_gga *o
 
 proto_bool protocore_nmea0183_parse_rmc(const Nmea0183 *m, protocore_nmea_rmc *out)
 {
-    if (!m || !out || strcmp(m->type, "RMC") != 0 || m->field_count < 10) // need through date (field 9)
+    if (!m || !out || !str.eq(m->type, "RMC", sizeof(m->type), PROTO_FALSE) ||
+        m->field_count < 10) // need through date (field 9)
     {
         return PROTO_FALSE;
     }
@@ -293,7 +295,8 @@ proto_bool protocore_nmea0183_parse_rmc(const Nmea0183 *m, protocore_nmea_rmc *o
 
 proto_bool protocore_nmea0183_parse_gsv(const Nmea0183 *m, protocore_nmea_gsv *out)
 {
-    if (!m || !out || strcmp(m->type, "GSV") != 0 || m->field_count < 4) // header: totalMsgs, msgNum, satsInView
+    if (!m || !out || !str.eq(m->type, "GSV", sizeof(m->type), PROTO_FALSE) ||
+        m->field_count < 4) // header: totalMsgs, msgNum, satsInView
     {
         return PROTO_FALSE;
     }
@@ -347,7 +350,8 @@ proto_bool protocore_nmea0183_parse_gsv(const Nmea0183 *m, protocore_nmea_gsv *o
 
 proto_bool protocore_nmea0183_parse_zda(const Nmea0183 *m, protocore_nmea_zda *out)
 {
-    if (!m || !out || strcmp(m->type, "ZDA") != 0 || m->field_count < 5) // need through year (field 4)
+    if (!m || !out || !str.eq(m->type, "ZDA", sizeof(m->type), PROTO_FALSE) ||
+        m->field_count < 5) // need through year (field 4)
     {
         return PROTO_FALSE;
     }
@@ -380,7 +384,8 @@ proto_bool protocore_nmea0183_parse_zda(const Nmea0183 *m, protocore_nmea_zda *o
 
 proto_bool protocore_nmea0183_parse_vtg(const Nmea0183 *m, protocore_nmea_vtg *out)
 {
-    if (!m || !out || strcmp(m->type, "VTG") != 0 || m->field_count < 9) // need through the km/h unit (field 8)
+    if (!m || !out || !str.eq(m->type, "VTG", sizeof(m->type), PROTO_FALSE) ||
+        m->field_count < 9) // need through the km/h unit (field 8)
     {
         return PROTO_FALSE;
     }
@@ -399,7 +404,8 @@ proto_bool protocore_nmea0183_parse_vtg(const Nmea0183 *m, protocore_nmea_vtg *o
 
 proto_bool protocore_nmea0183_parse_gsa(const Nmea0183 *m, protocore_nmea_gsa *out)
 {
-    if (!m || !out || strcmp(m->type, "GSA") != 0 || m->field_count < 18) // need through VDOP (field 17)
+    if (!m || !out || !str.eq(m->type, "GSA", sizeof(m->type), PROTO_FALSE) ||
+        m->field_count < 18) // need through VDOP (field 17)
     {
         return PROTO_FALSE;
     }
@@ -431,7 +437,8 @@ proto_bool protocore_nmea0183_parse_gsa(const Nmea0183 *m, protocore_nmea_gsa *o
 
 proto_bool protocore_nmea0183_parse_mwv(const Nmea0183 *m, protocore_nmea_mwv *out)
 {
-    if (!m || !out || strcmp(m->type, "MWV") != 0 || m->field_count < 6) // need through status (field 5)
+    if (!m || !out || !str.eq(m->type, "MWV", sizeof(m->type), PROTO_FALSE) ||
+        m->field_count < 6) // need through status (field 5)
     {
         return PROTO_FALSE;
     }
@@ -452,7 +459,8 @@ proto_bool protocore_nmea0183_parse_mwv(const Nmea0183 *m, protocore_nmea_mwv *o
 
 proto_bool protocore_nmea0183_parse_dpt(const Nmea0183 *m, protocore_nmea_dpt *out)
 {
-    if (!m || !out || strcmp(m->type, "DPT") != 0 || m->field_count < 3) // need depth (field 1) + offset (field 2)
+    if (!m || !out || !str.eq(m->type, "DPT", sizeof(m->type), PROTO_FALSE) ||
+        m->field_count < 3) // need depth (field 1) + offset (field 2)
     {
         return PROTO_FALSE;
     }
@@ -465,7 +473,8 @@ proto_bool protocore_nmea0183_parse_dpt(const Nmea0183 *m, protocore_nmea_dpt *o
 
 proto_bool protocore_nmea0183_parse_hdg(const Nmea0183 *m, protocore_nmea_hdg *out)
 {
-    if (!m || !out || strcmp(m->type, "HDG") != 0 || m->field_count < 6) // heading + dev + dir + var + dir
+    if (!m || !out || !str.eq(m->type, "HDG", sizeof(m->type), PROTO_FALSE) ||
+        m->field_count < 6) // heading + dev + dir + var + dir
     {
         return PROTO_FALSE;
     }
@@ -486,7 +495,8 @@ proto_bool protocore_nmea0183_parse_hdg(const Nmea0183 *m, protocore_nmea_hdg *o
 
 proto_bool protocore_nmea0183_parse_gll(const Nmea0183 *m, protocore_nmea_gll *out)
 {
-    if (!m || !out || strcmp(m->type, "GLL") != 0 || m->field_count < 7) // need through status (field 6)
+    if (!m || !out || !str.eq(m->type, "GLL", sizeof(m->type), PROTO_FALSE) ||
+        m->field_count < 7) // need through status (field 6)
     {
         return PROTO_FALSE;
     }
@@ -512,7 +522,8 @@ proto_bool protocore_nmea0183_parse_gll(const Nmea0183 *m, protocore_nmea_gll *o
 
 proto_bool protocore_nmea0183_parse_vhw(const Nmea0183 *m, protocore_nmea_vhw *out)
 {
-    if (!m || !out || strcmp(m->type, "VHW") != 0 || m->field_count < 8) // need through speed km/h (field 7)
+    if (!m || !out || !str.eq(m->type, "VHW", sizeof(m->type), PROTO_FALSE) ||
+        m->field_count < 8) // need through speed km/h (field 7)
     {
         return PROTO_FALSE;
     }
@@ -526,7 +537,8 @@ proto_bool protocore_nmea0183_parse_vhw(const Nmea0183 *m, protocore_nmea_vhw *o
 
 proto_bool protocore_nmea0183_parse_vlw(const Nmea0183 *m, protocore_nmea_vlw *out)
 {
-    if (!m || !out || strcmp(m->type, "VLW") != 0 || m->field_count < 4) // need through the trip distance (field 3)
+    if (!m || !out || !str.eq(m->type, "VLW", sizeof(m->type), PROTO_FALSE) ||
+        m->field_count < 4) // need through the trip distance (field 3)
     {
         return PROTO_FALSE;
     }

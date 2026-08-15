@@ -13,6 +13,7 @@
 #include "csrf.h"
 #include "mmgr/protoframe.h" // the one frame engine
 #include "mmgr/protomem.h"
+#include "mmgr/protostr.h" // str: the bounded-run walks
 
 #if PROTOCORE_ENABLE_CSRF
 
@@ -103,7 +104,7 @@ proto_bool protocore_csrf_verify(const char *token)
         return PROTO_FALSE;
     }
 
-    const char *dot = strchr(token, '.');
+    const char *dot = str.find(token, str.len(token, 0xFFFF) + 1u, ".", sizeof("."), PROTO_FALSE);
     if (!dot)
     {
         return PROTO_FALSE;
@@ -127,7 +128,7 @@ proto_bool protocore_csrf_verify(const char *token)
     }
 
     const char *sig = dot + 1;
-    if (strnlen(sig, CSRF_SIG_BYTES * 2 + 1) != CSRF_SIG_BYTES * 2)
+    if (str.len(sig, CSRF_SIG_BYTES * 2 + 1) != CSRF_SIG_BYTES * 2)
     {
         return PROTO_FALSE;
     }

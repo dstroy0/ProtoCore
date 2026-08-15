@@ -8,6 +8,7 @@
 
 #include "services/storage/sqlite/sqlite_format.h"
 #include "mmgr/protomem.h"
+#include "mmgr/protostr.h"
 
 #if PROTOCORE_ENABLE_SQLITE
 
@@ -899,8 +900,8 @@ uint32_t protocore_sqlite_build_table_db(uint32_t page_size, const char *table_n
     wr_be32(out + 96, 3046001); // SQLITE_VERSION_NUMBER that wrote the file
 
     // --- Page 1: the protocore_sqlite_schema row for our table (type,name,tbl_name,rootpage,sql) ---
-    uint32_t name_len = (uint32_t)strnlen(table_name, out_cap);
-    uint32_t sql_len = (uint32_t)strnlen(create_sql, out_cap);
+    uint32_t name_len = (uint32_t)str.len(table_name, out_cap);
+    uint32_t sql_len = (uint32_t)str.len(create_sql, out_cap);
     SqliteValue master[5];
     master[0] = (SqliteValue){SQLITE_COL_TEXT, 0, 0, (const uint8_t *)"table", 5};
     master[1] = (SqliteValue){SQLITE_COL_TEXT, 0, 0, (const uint8_t *)table_name, name_len};

@@ -72,7 +72,7 @@ static DavBufCtx s_dav = {.root = -1};
 // Returns false on overflow.
 static proto_bool dav_join(const char *root, const char *sub, char *out, size_t cap)
 {
-    size_t rlen = strnlen(root, MAX_PATH_LEN);
+    size_t rlen = str.len(root, MAX_PATH_LEN);
     proto_bool root_slash = (rlen > 0 && root[rlen - 1] == '/');
     if (root_slash && sub[0] == '/')
     {
@@ -98,7 +98,7 @@ static proto_bool dav_join(const char *root, const char *sub, char *out, size_t 
 // handler and the streaming-PUT begin hook.
 static int dav_resolve_path(const HttpRoute *r, const char *reqpath, char *out, size_t cap)
 {
-    size_t plen = strnlen(r->path, MAX_PATH_LEN);
+    size_t plen = str.len(r->path, MAX_PATH_LEN);
     // plen == 0 is unreachable: dav() always stores at least "*" - it appends the wildcard when the
     // prefix lacks one, so even dav("") yields a one-character pattern.
     if (plen > 0 && r->path[plen - 1] == '*')
@@ -108,7 +108,7 @@ static int dav_resolve_path(const HttpRoute *r, const char *reqpath, char *out, 
     // Http.path_matches() against this same route, which already required reqpath to carry the mount
     // prefix, so the length test always holds. Kept so a future caller that resolves without
     // matching first still cannot index past the end of reqpath.
-    const char *sub = (strnlen(reqpath, MAX_PATH_LEN) >= plen) ? reqpath + plen : "";
+    const char *sub = (str.len(reqpath, MAX_PATH_LEN) >= plen) ? reqpath + plen : "";
     if (str.has(sub, MAX_PATH_LEN - plen, "..", sizeof(".."), PROTO_FALSE))
     {
         return 403;
@@ -120,7 +120,7 @@ static int dav_resolve_path(const HttpRoute *r, const char *reqpath, char *out, 
     {
         return 414;
     }
-    size_t fpl = strnlen(out, cap);
+    size_t fpl = str.len(out, cap);
     if (fpl > 1 && out[fpl - 1] == '/')
     {
         out[fpl - 1] = '\0';
@@ -178,12 +178,12 @@ static proto_bool dav_body_has(HttpReq *req, const char *needle)
 // Extract the token from a Lock-Token Coded-URL ("<opaquelocktoken:...>") into @p out; false if malformed.
 static proto_bool dav_coded_url_token(const char *coded, char *out, size_t cap)
 {
-    const char *lt = strchr(coded, '<');
+    const char *lt = str.find(coded, MAX_VAL_LEN, "<", sizeof("<"), PROTO_FALSE);
     if (!lt)
     {
         return PROTO_FALSE;
     }
-    const char *gt = strchr(lt, '>');
+    const char *gt = str.find(lt, MAX_VAL_LEN - (size_t)(lt - coded), ">", sizeof(">"), PROTO_FALSE);
     if (!gt)
     {
         return PROTO_FALSE;
@@ -217,7 +217,7 @@ void dav_put_abort_tramp(HttpReq *req)
 
 proto_bool dav_stream_put_begin(HttpReq *req)
 {
-    if (strcmp(req->method, "PUT") != 0)
+    if (!str.eq(req->method, "PUT", sizeof("PUT"), PROTO_FALSE))
     {
         return PROTO_FALSE;
     }
@@ -321,7 +321,7 @@ void dav(const char *url_prefix, const protocore_mnt_backend *file_sys, const ch
     }
 
     char pat[MAX_PATH_LEN];
-    size_t n = strnlen(url_prefix, MAX_PATH_LEN);
+    size_t n = str.len(url_prefix, MAX_PATH_LEN);
     if (n > 0 && url_prefix[n - 1] == '*')
     {
         protocore_sb sb_pat = {pat, sizeof(pat), 0, PROTO_TRUE};
@@ -437,7 +437,7 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
 
     // Mount-prefix length and FS root, used by COPY/MOVE to resolve the Destination. As in
     // dav_resolve_path, plen == 0 is unreachable: dav() always stores at least "*".
-    size_t plen = strnlen(r->path, MAX_PATH_LEN);
+    size_t plen = str.len(r->path, MAX_PATH_LEN);
     if (plen > 0 && r->path[plen - 1] == '*')
     {
         plen--;
@@ -610,7 +610,7 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
             return;
         }
         // The destination must live under this same mount.
-        if (strncmp(dest_url, r->path, plen) != 0)
+        if (str.diff(dest_url, r->path, plen, PROTO_FALSE) != plen)
         {
             dav_send_status(slot_id, 502, "");
             return;
@@ -635,7 +635,7 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
             dav_send_status(slot_id, 414, "");
             return;
         }
-        size_t dpl = strnlen(dest_fs, sizeof(dest_fs));
+        size_t dpl = str.len(dest_fs, sizeof(dest_fs));
         if (dpl > 1 && dest_fs[dpl - 1] == '/')
         {
             dest_fs[dpl - 1] = '\0';
@@ -860,7 +860,7 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
         {
             self_href[0] = '\0';
         }
-        size_t sl = strnlen(self_href, sizeof(self_href));
+        size_t sl = str.len(self_href, sizeof(self_href));
         // HttpReq::path[MAX_PATH_LEN] and the parser always leaves at least "/" in it, so sl is
         // between 1 and MAX_PATH_LEN-1. That makes `sl == 0` impossible, and makes the room test
         // below always true (self_href is MAX_PATH_LEN+2). Both are kept as bounds on an index.

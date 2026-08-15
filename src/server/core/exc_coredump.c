@@ -16,6 +16,7 @@
 
 #include "core_setup/board_profiles/protocore_platform.h"
 #include "mmgr/protomem.h"
+#include "mmgr/protostr.h"
 #include "server/core/exc_decoder.h"
 
 #if PROTOCORE_ENABLE_EXC_DECODER && PROTOCORE_HAS_VENDOR_COREDUMP
@@ -61,8 +62,7 @@ void protocore_exc_cd_summary(struct ExcDecoderInternal *restrict ctx)
     out->pc = s.pc;
     // The crashing task name is the most useful short label the summary carries, so it fills the
     // slot the console decoder puts the panic cause in.
-    strncpy(out->cause, s.task, sizeof(out->cause) - 1);
-    out->cause[sizeof(out->cause) - 1] = '\0';
+    str.copy(out->cause, s.task, sizeof(out->cause));
 
     out->excvaddr = s.fault_addr;
     out->has_excvaddr = s.has_fault_addr ? PROTO_TRUE : PROTO_FALSE;

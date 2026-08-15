@@ -49,7 +49,7 @@ static const char WS_MAGIC[] = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
  */
 static proto_bool ws_accept_key(const char *client_key, char *out)
 {
-    size_t key_len = strnlen(client_key, WS_MAX_KEY_LEN + 1);
+    size_t key_len = str.len(client_key, WS_MAX_KEY_LEN + 1);
     if (key_len > WS_MAX_KEY_LEN)
     {
         out[0] = '\0';
@@ -226,8 +226,7 @@ proto_bool protocore_sse_do_upgrade(uint8_t slot_id, HttpReq *req, SseConnectHan
     // HttpReq (including req->path), so a pointer into it would dangle. The saved
     // path is what protocore_sse_broadcast() matches against.
     char path[MAX_PATH_LEN];
-    strncpy(path, req->path, sizeof(path) - 1);
-    path[sizeof(path) - 1] = '\0';
+    str.copy(path, req->path, sizeof(path));
     http_parser_reset(&http_pool[slot_id]);
 
     Sse.slot = slot_id;
@@ -266,7 +265,7 @@ void ws_send_text(uint8_t ws_id, const char *text)
     {
         return;
     }
-    uint16_t len = (uint16_t)strnlen(text, 0xFFFF);
+    uint16_t len = (uint16_t)str.len(text, 0xFFFF);
     Ws.conn = ws;
     Ws.frame.opcode = WS_OP_TEXT;
     Ws.frame.payload = (const uint8_t *)text;
@@ -374,7 +373,7 @@ void protocore_sse_broadcast(const char *path, const char *data, const char *eve
         {
             continue;
         }
-        if (strcmp(protocore_sse_pool[i].path, path) != 0)
+        if (!str.eq(protocore_sse_pool[i].path, path, MAX_PATH_LEN, PROTO_FALSE))
         {
             continue;
         }

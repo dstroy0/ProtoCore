@@ -10,6 +10,7 @@
 
 #if PROTOCORE_ENABLE_DOCSTORE
 
+#include "mmgr/protostr.h" // str.eq: the string-field find compare
 #include "network_drivers/presentation/codec/json/json.h"
 
 void protocore_docstore_open(protocore_doc_store *ds, struct protocore_dbm *db)
@@ -88,7 +89,7 @@ static proto_bool find_cb(const char *key, uint16_t key_len, void *vctx)
     {
         if (Json.get_str(json, f->field, f->fieldtmp, sizeof(f->fieldtmp)))
         {
-            match = (strcmp(f->fieldtmp, f->sval) == 0);
+            match = str.eq(f->fieldtmp, f->sval, sizeof(f->fieldtmp), PROTO_FALSE);
         }
     }
     else if (f->kind == FIND_INT)

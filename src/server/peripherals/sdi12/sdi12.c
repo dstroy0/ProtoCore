@@ -20,7 +20,7 @@ size_t protocore_sdi12_build(char *buf, size_t cap, char addr, const char *body)
     {
         return 0;
     }
-    size_t blen = strnlen(body, cap);
+    size_t blen = str.len(body, cap);
     size_t n = 1 + blen + 1; // addr + body + '!'
     if (cap < n + 1)         // + room for the NUL terminator
     {

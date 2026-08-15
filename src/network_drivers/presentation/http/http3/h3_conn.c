@@ -9,6 +9,7 @@
 #include "network_drivers/presentation/http/http3/h3_conn.h"
 #include "mmgr/plaintext.h" // HTTP is plaintext; its streams borrow from that arena
 #include "mmgr/protomem.h"
+#include "mmgr/protostr.h"
 
 #if PROTOCORE_ENABLE_HTTP3
 
@@ -445,7 +446,7 @@ proto_bool protocore_h3_conn_respond(H3Conn *h3, uint64_t stream_id, int status,
         // 5-bit/char (~PROTOCORE_H3_QPACK_BLOCK * 8/5), so an over-long value trips the encode's reject
         // below instead of being truncated into a fittable length (see the matching protocore_h2_conn note).
         bp += protocore_qpack_encode_header(block + bp, PROTOCORE_H3_QPACK_BLOCK - bp, "content-type", 12, content_type,
-                                            strnlen(content_type, (size_t)PROTOCORE_H3_QPACK_BLOCK * 2));
+                                            str.len(content_type, (size_t)PROTOCORE_H3_QPACK_BLOCK * 2));
     }
     char clen[16];
     size_t cl = 0;

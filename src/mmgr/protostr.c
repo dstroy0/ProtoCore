@@ -414,6 +414,49 @@ static inline proto_bool starts_ci(const char *s, const char *pre, size_t read_c
 }
 
 /**
+ * @brief The lane a mask names, from whichever end @p rev asks for.
+ *
+ * A lane's guard bit IS its position, so naming one is a bit scan and the end it starts from is the
+ * only thing that separates a forward walk from a reverse one. That is the same swap the byte-order
+ * arms already make: address order decides which end of the word is the low address, so reading a
+ * mask backwards on a little-endian load is exactly what reading it forwards on a big-endian one
+ * does. @p rev selects the other arm.
+ */
+PROTOCORE_INLINE size_t lane_of(protocore_swar_word m, int rev)
+{
+#if PROTOCORE_HW_BIG_ENDIAN
+    if (rev)
+    {
+        return (size_t)((PROTO_SWAR_BITS - 1u - (unsigned)PROTOCORE_SWAR_CTZ(m)) >> 3);
+    }
+#else
+    if (rev)
+    {
+        return (size_t)((PROTOCORE_SWAR_CLZ_WIDTH - 1u - (unsigned)PROTOCORE_SWAR_CLZ(m)) >> 3);
+    }
+#endif
+    return swar.zero_lane(m);
+}
+
+/** @brief Drop the lane ::lane_of just named, so the next read gives the one after it. */
+PROTOCORE_INLINE protocore_swar_word drop_lane(protocore_swar_word m, int rev)
+{
+    // Clearing the lowest set bit is `m & (m-1)`; clearing the highest needs its position. Which of
+    // the two is "the lane just read" is what the byte order and @p rev together decide.
+#if PROTOCORE_HW_BIG_ENDIAN
+    const int clear_low = (rev != 0);
+#else
+    const int clear_low = (rev == 0);
+#endif
+    if (clear_low)
+    {
+        return (protocore_swar_word)(m & (m - (protocore_swar_word)1));
+    }
+    return (protocore_swar_word)(m & ~((protocore_swar_word)1
+                                       << (PROTOCORE_SWAR_CLZ_WIDTH - 1u - (unsigned)PROTOCORE_SWAR_CLZ(m))));
+}
+
+/**
  * @brief First occurrence of @p needle in @p hay within @p read_cap bytes, or NULL. Exact.
  *
  * **Not fixed-work.** Its cost depends on how many candidate lanes the haystack happens to hold, so
@@ -696,13 +739,7 @@ static const char *find_cs(const char *hay, size_t read_cap, const char *needle,
             {
                 return hay + i + k;
             }
-            // Drop this lane and look at the next one in address order.
-#if PROTOCORE_HW_BIG_ENDIAN
-            m &= (protocore_swar_word) ~((protocore_swar_word)1
-                                         << (PROTOCORE_SWAR_CLZ_WIDTH - 1u - (unsigned)PROTOCORE_SWAR_CLZ(m)));
-#else
-            m &= (protocore_swar_word)(m - 1u);
-#endif
+            m = drop_lane(m, 0); // the next candidate in address order
         }
 
         if (z != 0)
@@ -982,12 +1019,7 @@ static const char *find_ci(const char *hay, size_t read_cap, const char *needle,
             {
                 return hay + i + k;
             }
-#if PROTOCORE_HW_BIG_ENDIAN
-            m &= (protocore_swar_word) ~((protocore_swar_word)1
-                                         << (PROTOCORE_SWAR_CLZ_WIDTH - 1u - (unsigned)PROTOCORE_SWAR_CLZ(m)));
-#else
-            m &= (protocore_swar_word)(m - 1u);
-#endif
+            m = drop_lane(m, 0);
         }
 
         if (z != 0)

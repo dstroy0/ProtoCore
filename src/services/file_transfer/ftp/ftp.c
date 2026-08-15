@@ -8,6 +8,7 @@
 
 #include "ftp.h"
 #include "mmgr/protomem.h"
+#include "mmgr/protostr.h"
 
 #if PROTOCORE_ENABLE_FTP
 
@@ -80,11 +81,11 @@ size_t protocore_ftp_build_command(char *buf, size_t cap, const char *verb, cons
         return 0;
     }
     size_t n = 0;
-    n = protocore_ftp_emit(buf, cap, n, verb, strnlen(verb, cap));
+    n = protocore_ftp_emit(buf, cap, n, verb, str.len(verb, cap));
     if (arg && arg[0])
     {
         n = protocore_ftp_emit(buf, cap, n, " ", 1);
-        n = protocore_ftp_emit(buf, cap, n, arg, strnlen(arg, cap));
+        n = protocore_ftp_emit(buf, cap, n, arg, str.len(arg, cap));
     }
     n = protocore_ftp_emit(buf, cap, n, "\r\n", 2);
     return protocore_ftp_finish(buf, cap, n);
@@ -120,7 +121,7 @@ size_t protocore_ftp_build_eprt(char *buf, size_t cap, const char *ip_str, proto
     n = protocore_ftp_emit(buf, cap, n, "EPRT |", 6);
     n = protocore_ftp_emit(buf, cap, n, ipv6 ? "2" : "1", 1);
     n = protocore_ftp_emit(buf, cap, n, "|", 1);
-    n = protocore_ftp_emit(buf, cap, n, ip_str, strnlen(ip_str, cap));
+    n = protocore_ftp_emit(buf, cap, n, ip_str, str.len(ip_str, cap));
     n = protocore_ftp_emit(buf, cap, n, "|", 1);
     n = protocore_ftp_emit_uint(buf, cap, n, port);
     n = protocore_ftp_emit(buf, cap, n, "|\r\n", 3);

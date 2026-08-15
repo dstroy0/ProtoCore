@@ -14,6 +14,16 @@ typedef uint16_t u16_t;
 #define IP_ANY_TYPE NULL
 #define TCP_WRITE_FLAG_COPY 0x01
 
+struct tcp_pcb;
+struct pbuf;
+
+// Typed callback aliases matching the real lwIP API so tcp.cpp compiles
+// without modification.
+typedef err_t (*tcp_accept_fn)(void *arg, struct tcp_pcb *newpcb, err_t err);
+typedef err_t (*tcp_recv_fn)(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err);
+typedef err_t (*tcp_sent_fn)(void *arg, struct tcp_pcb *tpcb, u16_t len);
+typedef void (*tcp_err_fn)(void *arg, err_t err);
+
 struct tcp_pcb
 {
     // Outstanding TX segments not yet acked. The real lwIP pcb has this; the
@@ -24,6 +34,17 @@ struct tcp_pcb
     // IPv4 TOS / DS field. The real lwIP pcb has this; DiffServ marking (PROTOCORE_ENABLE_DIFFSERV) writes the
     // DSCP here so a host test can assert the applied class. Defaults to 0 (best-effort).
     uint8_t tos = 0;
+
+    // What the transport registered on this pcb. The real lwIP keeps these and calls them; a mock
+    // that dropped them would leave the transport unreachable - nothing could ever be delivered to
+    // it - so a suite could not drive a connection at all. Fired through the mock_tcp_fire_* calls
+    // below, which is what stands in for the stack's own dispatch.
+    void *cb_arg = nullptr;
+    tcp_accept_fn accept_cb = nullptr;
+    tcp_recv_fn recv_cb = nullptr;
+    tcp_sent_fn sent_cb = nullptr;
+    tcp_err_fn err_cb = nullptr;
+    bool nagle_off = false; ///< tcp_nagle_disable() was called on this pcb
 };
 
 struct pbuf
@@ -37,12 +58,6 @@ struct pbuf
 // Return a stable non-null address so init() path succeeds in native tests.
 // We use a single static instance since the mock never actually owns memory.
 static struct tcp_pcb _mock_pcb;
-// Typed callback aliases matching the real lwIP API so tcp.cpp compiles
-// without modification.
-typedef err_t (*tcp_accept_fn)(void *arg, struct tcp_pcb *newpcb, err_t err);
-typedef err_t (*tcp_recv_fn)(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err);
-typedef err_t (*tcp_sent_fn)(void *arg, struct tcp_pcb *tpcb, u16_t len);
-typedef void (*tcp_err_fn)(void *arg, err_t err);
 
 // Test hooks: force the next call to report failure, modeling the real-lwIP cases
 // Tcp.listener->add() guards against (out of PCBs / a port already bound / backlog alloc
@@ -89,23 +104,85 @@ inline struct tcp_pcb *tcp_listen_with_backlog(struct tcp_pcb *p, uint8_t)
     }
     return p;
 }
-inline void tcp_arg(struct tcp_pcb *, void *)
+inline void tcp_arg(struct tcp_pcb *p, void *arg)
 {
+    if (p)
+    {
+        p->cb_arg = arg;
+    }
 }
-inline void tcp_nagle_disable(struct tcp_pcb *)
+inline void tcp_nagle_disable(struct tcp_pcb *p)
 {
+    if (p)
+    {
+        p->nagle_off = true;
+    }
 }
-inline void tcp_accept(struct tcp_pcb *, tcp_accept_fn)
+inline void tcp_accept(struct tcp_pcb *p, tcp_accept_fn fn)
 {
+    if (p)
+    {
+        p->accept_cb = fn;
+    }
 }
-inline void tcp_recv(struct tcp_pcb *, tcp_recv_fn)
+inline void tcp_recv(struct tcp_pcb *p, tcp_recv_fn fn)
 {
+    if (p)
+    {
+        p->recv_cb = fn;
+    }
 }
-inline void tcp_sent(struct tcp_pcb *, tcp_sent_fn)
+inline void tcp_sent(struct tcp_pcb *p, tcp_sent_fn fn)
 {
+    if (p)
+    {
+        p->sent_cb = fn;
+    }
 }
-inline void tcp_err(struct tcp_pcb *, tcp_err_fn)
+inline void tcp_err(struct tcp_pcb *p, tcp_err_fn fn)
 {
+    if (p)
+    {
+        p->err_cb = fn;
+    }
+}
+
+// What the stack does to the transport, which the mock has to do itself: deliver an arrival, an
+// ack, a fault. A suite calls these to drive a connection the way lwIP would. Each reports whether
+// there was a callback registered to take it, so a test can tell "the transport refused it" from
+// "nothing was listening".
+inline err_t mock_tcp_fire_accept(struct tcp_pcb *listener, struct tcp_pcb *newpcb, err_t e)
+{
+    if (!listener || !listener->accept_cb)
+    {
+        return ERR_VAL;
+    }
+    return listener->accept_cb(listener->cb_arg, newpcb, e);
+}
+inline err_t mock_tcp_fire_recv(struct tcp_pcb *p, struct pbuf *b, err_t e)
+{
+    if (!p || !p->recv_cb)
+    {
+        return ERR_VAL;
+    }
+    return p->recv_cb(p->cb_arg, p, b, e);
+}
+inline err_t mock_tcp_fire_sent(struct tcp_pcb *p, u16_t len)
+{
+    if (!p || !p->sent_cb)
+    {
+        return ERR_VAL;
+    }
+    return p->sent_cb(p->cb_arg, p, len);
+}
+inline bool mock_tcp_fire_err(struct tcp_pcb *p, err_t e)
+{
+    if (!p || !p->err_cb)
+    {
+        return false;
+    }
+    p->err_cb(p->cb_arg, e);
+    return true;
 }
 // Call counter: lets a test prove tcp_abort() was (or was not) reached - e.g. the
 // tcp_close()-failed fallback path, which has no other observable side effect.

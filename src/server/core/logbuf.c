@@ -9,6 +9,7 @@
 #include "server/core/logbuf.h"
 #include "mmgr/protoframe.h" // the one frame engine
 #include "mmgr/protomem.h"
+#include "mmgr/protostr.h"
 
 #if PROTOCORE_ENABLE_LOGBUF
 
@@ -123,7 +124,7 @@ static void logbuf_dump(struct LogbufInternal *restrict ctx)
     for (uint16_t i = 0; i < ctx->store->count; i++)
     {
         const char *line = ctx->store->lines[(ctx->store->head + i) % PROTOCORE_LOG_LINES];
-        size_t n = strnlen(line, cap);
+        size_t n = str.len(line, cap);
         size_t need = n + (i + 1 < ctx->store->count ? 1 : 0); // +1 for the '\n' separator
         if (pos + need >= cap)                                 // keep room for the null terminator
         {

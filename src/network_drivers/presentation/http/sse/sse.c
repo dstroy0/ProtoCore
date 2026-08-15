@@ -8,6 +8,7 @@
 
 #include "sse.h"
 #include "mmgr/protomem.h"
+#include "mmgr/protostr.h"
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the slot a stream sends on
 
 SseConn protocore_sse_pool[MAX_SSE_CONNS];
@@ -79,7 +80,7 @@ static void alloc(struct SseInternal *restrict ctx)
             protocore_sse_pool[i].protocore_sse_id = (uint8_t)i;
             protocore_sse_pool[i].slot_id = ctx->ns->slot;
             protocore_sse_pool[i].active = PROTO_TRUE;
-            strncpy(protocore_sse_pool[i].path, ctx->ns->route.path, MAX_PATH_LEN - 1);
+            str.copy(protocore_sse_pool[i].path, ctx->ns->route.path, sizeof(protocore_sse_pool[i].path));
             protocore_sse_pool[i].path[MAX_PATH_LEN - 1] = '\0';
             ctx->ns->conn = &protocore_sse_pool[i];
             return;
@@ -138,26 +139,26 @@ static void format(struct SseInternal *restrict ctx)
     }
 
     // WHATWG event-stream field order: event, then id, then data (blank line terminates the record). A
-    // branchless memcpy framer - fixed prefixes + strnlen/memcpy of each value + the terminators - instead of
+    // branchless memcpy framer - fixed prefixes + str.len/memcpy of each value + the terminators - instead of
     // three snprintf("%s") calls; ~an order of magnitude cheaper on the Xtensa vsnprintf path, which matters
     // for a high-rate broadcast fan-out (many subscribers). Byte-identical output (test_sse_format).
-    // Bounded lengths (strnlen, cap n): a field can never exceed the output buffer (an over-long value makes
-    // the append fail and the record report 0), and strnlen never reads past `n` if a value is unterminated.
+    // Bounded lengths (str.len, cap n): a field can never exceed the output buffer (an over-long value makes
+    // the append fail and the record report 0), and str.len never reads past `n` if a value is unterminated.
     size_t pos = 0;
     const char *event = ctx->ns->event_args.event;
     const char *id = ctx->ns->event_args.event_id;
-    if (event && (!sse_append(buf, n, &pos, "event: ", 7) || !sse_append(buf, n, &pos, event, strnlen(event, n)) ||
+    if (event && (!sse_append(buf, n, &pos, "event: ", 7) || !sse_append(buf, n, &pos, event, str.len(event, n)) ||
                   !sse_append(buf, n, &pos, "\n", 1)))
     {
         return;
     }
-    if (id && (!sse_append(buf, n, &pos, "id: ", 4) || !sse_append(buf, n, &pos, id, strnlen(id, n)) ||
+    if (id && (!sse_append(buf, n, &pos, "id: ", 4) || !sse_append(buf, n, &pos, id, str.len(id, n)) ||
                !sse_append(buf, n, &pos, "\n", 1)))
     {
         return;
     }
     if (!sse_append(buf, n, &pos, "data: ", 6) ||
-        !sse_append(buf, n, &pos, ctx->ns->event_args.data, strnlen(ctx->ns->event_args.data, n)) ||
+        !sse_append(buf, n, &pos, ctx->ns->event_args.data, str.len(ctx->ns->event_args.data, n)) ||
         !sse_append(buf, n, &pos, "\n\n", 2))
     {
         return;

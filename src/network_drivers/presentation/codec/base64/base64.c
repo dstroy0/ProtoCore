@@ -20,6 +20,7 @@
 
 #include "base64.h"
 
+#include "mmgr/protostr.h"    // str: the bounded-run walks
 #include "mmgr/swar.h"        // the lane math; the classification below is base64's own
 #include "protocore_config.h" // PROTOCORE_BASE64_SWAR (scalar vs SWAR constant-time decode; default SWAR)
                               // strnlen
@@ -141,7 +142,7 @@ static inline uint32_t swar_quad(uint32_t a, uint32_t *ok)
 
 static size_t protocore_base64_decode(const char *src, uint8_t *dst, size_t dst_cap)
 {
-    size_t src_len = strnlen(src, ((dst_cap + 2) / 3) * 4 + 4);
+    size_t src_len = str.len(src, ((dst_cap + 2) / 3) * 4 + 4);
     if (src_len == 0 || (src_len & 3u) != 0)
     {
         return 0;
@@ -206,7 +207,7 @@ static size_t protocore_base64_decode(const char *src, uint8_t *dst, size_t dst_
 {
     // Bounded length (a missing NUL cannot run past what dst_cap could ever hold). Canonical base64 is
     // whole 4-character quads.
-    size_t src_len = strnlen(src, ((dst_cap + 2) / 3) * 4 + 4);
+    size_t src_len = str.len(src, ((dst_cap + 2) / 3) * 4 + 4);
     if (src_len == 0 || (src_len & 3u) != 0)
     {
         return 0;

@@ -9,6 +9,7 @@
 #include "server/web/edge_cache/edge_cache_proxy.h"
 #include "mmgr/membuild.h" // protocore_sb frame builder
 #include "mmgr/protomem.h"
+#include "mmgr/protostr.h"
 
 #if PROTOCORE_ENABLE_EDGE_CACHE
 
@@ -340,8 +341,7 @@ static EdgeRouteMap *map_match(const char *path)
         {
             continue;
         }
-        size_t pl = strnlen(s_ctx.maps[i].prefix, sizeof(s_ctx.maps[i].prefix));
-        if (strncmp(path, s_ctx.maps[i].prefix, pl) == 0)
+        if (str.starts(path, s_ctx.maps[i].prefix, sizeof(s_ctx.maps[i].prefix), PROTO_FALSE))
         {
             return &s_ctx.maps[i];
         }
@@ -488,7 +488,7 @@ static void serve_passthrough(uint8_t slot, EdgeFetch *f)
     e->status = f->status;
     if (!edge_header_value((const char *)f->buf, f->head_len, "Content-Type", e->content_type, sizeof(e->content_type)))
     {
-        strncpy(e->content_type, "application/octet-stream", sizeof(e->content_type) - 1);
+        str.copy(e->content_type, "application/octet-stream", sizeof(e->content_type));
     }
     edge_header_value((const char *)f->buf, f->head_len, "Content-Encoding", e->content_encoding,
                       sizeof(e->content_encoding));
@@ -536,7 +536,7 @@ static void store_response(uint8_t slot, EdgeFetchSlot *fs, HttpReq *req, const 
     edge_header_value(head, head_len, "Content-Encoding", e->content_encoding, sizeof(e->content_encoding));
     edge_header_value(head, head_len, "ETag", e->etag, sizeof(e->etag));
     edge_header_value(head, head_len, "Last-Modified", e->last_modified, sizeof(e->last_modified));
-    size_t vhl = strnlen(vary_hdr, sizeof(e->vary_names));
+    size_t vhl = str.len(vary_hdr, sizeof(e->vary_names));
     if (vary_hdr[0] && vhl < sizeof(e->vary_names))
     {
         mem.cpy(e->vary_names, vary_hdr, vhl + 1);
@@ -558,15 +558,15 @@ static void store_response(uint8_t slot, EdgeFetchSlot *fs, HttpReq *req, const 
     char v[64];
     if (edge_header_value(head, head_len, "Date", v, sizeof(v)))
     {
-        date = edge_parse_http_date(v, strnlen(v, sizeof(v)));
+        date = edge_parse_http_date(v, str.len(v, sizeof(v)));
     }
     if (edge_header_value(head, head_len, "Expires", v, sizeof(v)))
     {
-        expires = edge_parse_http_date(v, strnlen(v, sizeof(v)));
+        expires = edge_parse_http_date(v, str.len(v, sizeof(v)));
     }
     if (e->last_modified[0])
     {
-        last_mod = edge_parse_http_date(e->last_modified, strnlen(e->last_modified, sizeof(e->last_modified)));
+        last_mod = edge_parse_http_date(e->last_modified, str.len(e->last_modified, sizeof(e->last_modified)));
     }
     if (edge_header_value(head, head_len, "Age", v, sizeof(v)))
     {
@@ -609,7 +609,7 @@ static void on_fetch_done(uint8_t slot, EdgeFetchSlot *fs, uint32_t now)
         char v[128];
         if (edge_header_value(head, head_len, "Cache-Control", v, sizeof(v)))
         {
-            cache_control_parse(v, strnlen(v, sizeof(v)), &cc);
+            cache_control_parse(v, str.len(v, sizeof(v)), &cc);
         }
         char vary_hdr[PROTOCORE_EDGE_VARY_MAX];
         vary_hdr[0] = '\0';
@@ -719,8 +719,8 @@ static void mesh_snapshot_headers(const HttpReq *req, char *out, size_t cap)
     {
         const char *k = req->headers[i].key;
         const char *v = req->headers[i].val;
-        size_t kl = strnlen(k, MAX_KEY_LEN);
-        size_t vl = strnlen(v, MAX_VAL_LEN);
+        size_t kl = str.len(k, MAX_KEY_LEN);
+        size_t vl = str.len(v, MAX_VAL_LEN);
         if (pos + kl + 1 + vl + 1 >= cap)
         {
             break;
@@ -765,7 +765,7 @@ static proto_bool mesh_store_and_serve(uint8_t slot, EdgeFetchSlot *fs, uint32_t
     }
     if (!edge_mesh_deserialize_entry(s_ctx.store.digest_work, fs->mf.buf + fs->mf.entry_off, fs->mf.entry_len, e,
                                      now) ||
-        strcmp(e->key, fs->canon) != 0 || !edge_entry_fresh(e, now))
+        !str.eq(e->key, fs->canon, sizeof(fs->canon), PROTO_FALSE) || !edge_entry_fresh(e, now))
     {
         edge_store_free_entry(&s_ctx.store, e);
         return PROTO_FALSE;
@@ -807,18 +807,16 @@ static proto_bool start_fetch(uint8_t slot, HttpReq *req, EdgeRouteMap *m, const
     fs->revalidate = (reval != NULL);
     fs->reval_entry = reval;
     fs->route = m;
-    mem.cpy(fs->canon, canon, strnlen(canon, sizeof(fs->canon) - 1) + 1);
-    strncpy(fs->path, req->path, sizeof(fs->path) - 1);
-    fs->path[sizeof(fs->path) - 1] = '\0';
-    strncpy(fs->query, req->query, sizeof(fs->query) - 1);
-    fs->query[sizeof(fs->query) - 1] = '\0';
+    mem.cpy(fs->canon, canon, str.len(canon, sizeof(fs->canon) - 1) + 1);
+    str.copy(fs->path, req->path, sizeof(fs->path));
+    str.copy(fs->query, req->query, sizeof(fs->query));
 
 #if PROTOCORE_ENABLE_EDGE_MESH
     // On a full miss (not a revalidation) with >= 1 sibling, query the mesh before the origin.
     if (!reval && mesh_peer_count() > 0)
     {
         uint8_t digest[32];
-        edge_key_digest(s_ctx.store.digest_work, canon, strnlen(canon, PROTOCORE_EDGE_KEY_MAX), digest);
+        edge_key_digest(s_ctx.store.digest_work, canon, str.len(canon, PROTOCORE_EDGE_KEY_MAX), digest);
         mesh_snapshot_headers(req, s_ctx.mesh_hdrs, sizeof(s_ctx.mesh_hdrs));
         fs->mreq_len = edge_mesh_build_request(digest, canon, s_ctx.mesh_hdrs, fs->mreq, sizeof(fs->mreq));
         fs->peer_idx = 0;
@@ -849,14 +847,14 @@ static proto_bool start_fetch(uint8_t slot, HttpReq *req, EdgeRouteMap *m, const
 static EdgeEntry *try_promote_l2(const char *canon, uint32_t now)
 {
     uint8_t digest[32];
-    edge_key_digest(s_ctx.store.digest_work, canon, strnlen(canon, PROTOCORE_EDGE_KEY_MAX), digest);
+    edge_key_digest(s_ctx.store.digest_work, canon, str.len(canon, PROTOCORE_EDGE_KEY_MAX), digest);
     EdgeEntry *e = edge_store_alloc(&s_ctx.store, canon, ""); // may evict + write-back an L1 victim first
     if (!e)
     {
         return NULL;
     }
     if (!edge_sd_get(s_ctx.store.digest_work, s_ctx.l2, digest, e, s_ctx.sd_buf, sizeof(s_ctx.sd_buf)) ||
-        strcmp(e->key, canon) != 0)
+        !str.eq(e->key, canon, sizeof(e->key), PROTO_FALSE))
     {
         edge_store_free_entry(&s_ctx.store, e); // L2 miss or digest collision -> not promoted
         return NULL;
@@ -882,8 +880,8 @@ static MwResult edge_cache_mw(uint8_t slot, HttpReq *req)
     {
         return MW_NEXT;
     }
-    proto_bool is_get = strcmp(req->method, "GET") == 0;
-    proto_bool is_head = strcmp(req->method, "HEAD") == 0;
+    proto_bool is_get = str.eq(req->method, "GET", sizeof("GET"), PROTO_FALSE);
+    proto_bool is_head = str.eq(req->method, "HEAD", sizeof("HEAD"), PROTO_FALSE);
     if (!is_get && !is_head)
     {
         return MW_NEXT; // only cache safe methods
@@ -913,8 +911,7 @@ static MwResult edge_cache_mw(uint8_t slot, HttpReq *req)
     // Capture the Range header now, while http_pool[slot] is the client request: a miss serves from the
     // poll after the async fetch has reused that buffer, so serve_hit resolves the window against this copy.
     const char *rh = http_get_header(req, "Range");
-    strncpy(s_ctx.range_hdr[slot], rh ? rh : "", sizeof(s_ctx.range_hdr[slot]) - 1);
-    s_ctx.range_hdr[slot][sizeof(s_ctx.range_hdr[slot]) - 1] = '\0';
+    str.copy(s_ctx.range_hdr[slot], rh ? rh : "", sizeof(s_ctx.range_hdr[slot]));
 #endif
 
     uint32_t now = Clock.ms;
@@ -1061,16 +1058,18 @@ typedef struct
 static const char *mesh_hdr_lookup(void *ctx, const char *name)
 {
     MeshLookupCtx *lc = (MeshLookupCtx *)ctx;
-    size_t nl = strnlen(name, MAX_KEY_LEN);
+    size_t nl = str.len(name, MAX_KEY_LEN);
     const char *p = lc->blob;
     while (*p)
     {
-        const char *rs = strchr(p, '\x1e');
+        const char *rs =
+            str.find(p, sizeof(s_ctx.mesh_hdrs) - (size_t)(p - lc->blob), "\x1e", sizeof("\x1e"), PROTO_FALSE);
         if (!rs)
         {
             break;
         }
-        const char *us = strchr(rs + 1, '\x1f');
+        const char *us = str.find(rs + 1, sizeof(s_ctx.mesh_hdrs) - (size_t)(rs + 1 - lc->blob), "\x1f",
+                                  sizeof("\x1f"), PROTO_FALSE);
         if (!us)
         {
             break;
@@ -1108,7 +1107,7 @@ static void mesh_answer(MeshConn *mc, const uint8_t digest[32], const char *cano
 {
     proto_bool hit = PROTO_FALSE;
     uint8_t verify[32];
-    edge_key_digest(s_ctx.store.digest_work, canon, strnlen(canon, PROTOCORE_EDGE_KEY_MAX), verify);
+    edge_key_digest(s_ctx.store.digest_work, canon, str.len(canon, PROTOCORE_EDGE_KEY_MAX), verify);
     if (mem.cmp(verify, digest, 32) == 0) // integrity: the canonical key must hash to the advertised digest
     {
         MeshLookupCtx lc;
@@ -1349,7 +1348,7 @@ proto_bool protocore_edge_cache_map(const char *path_prefix, const char *origin_
     {
         return PROTO_FALSE;
     }
-    if (strnlen(path_prefix, sizeof(s_ctx.maps[0].prefix)) >= sizeof(s_ctx.maps[0].prefix))
+    if (str.len(path_prefix, sizeof(s_ctx.maps[0].prefix)) >= sizeof(s_ctx.maps[0].prefix))
     {
         return PROTO_FALSE;
     }
@@ -1379,10 +1378,8 @@ proto_bool protocore_edge_cache_map(const char *path_prefix, const char *origin_
         {
             continue;
         }
-        strncpy(s_ctx.maps[i].prefix, path_prefix, sizeof(s_ctx.maps[i].prefix) - 1);
-        s_ctx.maps[i].prefix[sizeof(s_ctx.maps[i].prefix) - 1] = '\0';
-        strncpy(s_ctx.maps[i].origin_host, host, sizeof(s_ctx.maps[i].origin_host) - 1);
-        s_ctx.maps[i].origin_host[sizeof(s_ctx.maps[i].origin_host) - 1] = '\0';
+        str.copy(s_ctx.maps[i].prefix, path_prefix, sizeof(s_ctx.maps[i].prefix));
+        str.copy(s_ctx.maps[i].origin_host, host, sizeof(s_ctx.maps[i].origin_host));
         s_ctx.maps[i].origin_port = port;
         s_ctx.maps[i].https = https;
         s_ctx.maps[i].used = PROTO_TRUE;
@@ -1409,7 +1406,7 @@ proto_bool protocore_edge_cache_add_peer(const char *host, uint16_t port)
     {
         return PROTO_FALSE;
     }
-    size_t hl = strnlen(host, PROTOCORE_MESH_HOST_MAX + 1);
+    size_t hl = str.len(host, PROTOCORE_MESH_HOST_MAX + 1);
     if (hl == 0 || hl >= PROTOCORE_MESH_HOST_MAX)
     {
         return PROTO_FALSE;
@@ -1472,7 +1469,7 @@ proto_bool protocore_edge_cache_purge(const char *canonical_key)
     if (s_ctx.l2)
     {
         uint8_t digest[32];
-        edge_key_digest(s_ctx.store.digest_work, canonical_key, strnlen(canonical_key, PROTOCORE_EDGE_KEY_MAX), digest);
+        edge_key_digest(s_ctx.store.digest_work, canonical_key, str.len(canonical_key, PROTOCORE_EDGE_KEY_MAX), digest);
         if (edge_sd_del(s_ctx.l2, digest))
         {
             purged = PROTO_TRUE;

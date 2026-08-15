@@ -10,6 +10,7 @@
 
 #include "services/fieldbus/opcua_client/opcua_client.h"
 #include "mmgr/protomem.h"
+#include "mmgr/protostr.h"
 
 #if PROTOCORE_ENABLE_OPCUA_CLIENT
 
@@ -87,7 +88,7 @@ size_t protocore_opcua_client_hello(const char *endpoint_url, uint8_t *out, size
     protocore_ua_w_u32(&w, PROTOCORE_OPCUA_BUF); // SendBufferSize
     protocore_ua_w_u32(&w, 0);                   // MaxMessageSize (no limit)
     protocore_ua_w_u32(&w, 0);                   // MaxChunkCount
-    protocore_ua_w_string(&w, endpoint_url, endpoint_url ? (int32_t)strnlen(endpoint_url, w.cap) : -1);
+    protocore_ua_w_string(&w, endpoint_url, endpoint_url ? (int32_t)str.len(endpoint_url, w.cap) : -1);
     return cw_patch(&w);
 }
 
@@ -120,7 +121,7 @@ size_t protocore_opcua_client_get_endpoints(OpcUaClient *c, const char *endpoint
     UaWriter w = {out, cap, 0, PROTO_TRUE};
     cw_msg(c, &w, OPCUA_ID_GET_ENDPOINTS_REQ);
     cw_request_header(c, &w, PROTO_FALSE); // GetEndpoints needs no session
-    protocore_ua_w_string(&w, endpoint_url, endpoint_url ? (int32_t)strnlen(endpoint_url, w.cap) : -1); // EndpointUrl
+    protocore_ua_w_string(&w, endpoint_url, endpoint_url ? (int32_t)str.len(endpoint_url, w.cap) : -1); // EndpointUrl
     protocore_ua_w_i32(&w, -1); // LocaleIds[] (null)
     protocore_ua_w_i32(&w, -1); // ProfileUris[] (null)
     return cw_patch(&w);
@@ -141,8 +142,8 @@ size_t protocore_opcua_client_create_session(OpcUaClient *c, const char *session
     protocore_ua_w_string(&w, NULL, -1);                              // DiscoveryProfileUri
     protocore_ua_w_i32(&w, -1);                                       // DiscoveryUrls[] (null)
     protocore_ua_w_string(&w, NULL, -1);                              // ServerUri
-    protocore_ua_w_string(&w, endpoint_url, endpoint_url ? (int32_t)strnlen(endpoint_url, w.cap) : -1); // EndpointUrl
-    protocore_ua_w_string(&w, session_name, session_name ? (int32_t)strnlen(session_name, w.cap) : -1); // SessionName
+    protocore_ua_w_string(&w, endpoint_url, endpoint_url ? (int32_t)str.len(endpoint_url, w.cap) : -1); // EndpointUrl
+    protocore_ua_w_string(&w, session_name, session_name ? (int32_t)str.len(session_name, w.cap) : -1); // SessionName
     protocore_ua_w_string(&w, NULL, -1); // ClientNonce (ByteString)
     protocore_ua_w_string(&w, NULL, -1); // ClientCertificate
     protocore_ua_w_f64(&w, 1200000.0);   // RequestedSessionTimeout

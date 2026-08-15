@@ -7,6 +7,7 @@
  */
 
 #include "services/southbound/southbound.h"
+#include "mmgr/protostr.h" // str.eq: the driver registry name lookup
 
 #if PROTOCORE_ENABLE_SOUTHBOUND
 
@@ -59,7 +60,8 @@ static const SouthboundDriver *lookup(const struct SouthboundStorage *store, con
     }
     for (size_t i = 0; i < store->count; i++)
     {
-        if (store->drivers[i] && store->drivers[i]->name && strcmp(store->drivers[i]->name, name) == 0)
+        if (store->drivers[i] && store->drivers[i]->name &&
+            str.eq(store->drivers[i]->name, name, MAX_KEY_LEN, PROTO_FALSE))
         {
             return store->drivers[i];
         }

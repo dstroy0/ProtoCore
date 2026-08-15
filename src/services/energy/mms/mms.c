@@ -8,6 +8,7 @@
 
 #include "services/energy/mms/mms.h"
 #include "mmgr/protomem.h"
+#include "mmgr/protostr.h"
 
 #if PROTOCORE_ENABLE_MMS
 
@@ -141,7 +142,7 @@ size_t protocore_mms_read_request(uint32_t invoke_id, const char *item_name, uin
     {
         return 0;
     }
-    size_t name_len = strnlen(item_name, 128 + 1);
+    size_t name_len = str.len(item_name, 128 + 1);
     if (name_len > 128)
     {
         return 0;

@@ -8,6 +8,7 @@
 
 #include "services/machine_tool/mtconnect/mtconnect.h"
 #include "mmgr/protomem.h"
+#include "mmgr/protostr.h"
 
 #if PROTOCORE_ENABLE_MTCONNECT
 
@@ -22,7 +23,7 @@ static void put(protocore_mtc_streams *s, const char *text)
     {
         return;
     }
-    size_t tl = strnlen(text, s->cap + 1);
+    size_t tl = str.len(text, s->cap + 1);
     if (s->len + tl >= s->cap)
     {
         s->ok = PROTO_FALSE;
