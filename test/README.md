@@ -13429,7 +13429,7 @@ A thorough directory of all **5226 test cases** across **330 suites**. Expand a 
     * **Objective**: Builders refuse a short destination
     * **Assertions**:
       * <code>TEST_ASSERT_EQUAL_UINT(0u, protocore_tls13_build_hello_retry_request(g_out, 65, NULL, 0, TLS_GROUP_X25519, COOKIE,</code>
-      * <code>Assert equal uint (0u, protocore_tls13_build_encrypted_extensions_empty(g_out, 5, PROTO_FALSE))</code>
+      * <code>Assert equal uint (0u, protocore_tls13_build_encrypted_extensions_empty(g_out, 5, PROTO_FALSE, NULL))</code>
       * <code>Assert equal uint (0u, protocore_tls13_build_message_hash(g_out, 35, ch1))</code>
       * <code>Assert equal uint (0u, protocore_tls13_build_certificate_rpk(g_out, 56, ch1))</code>
   </details>
@@ -19885,13 +19885,13 @@ A thorough directory of all **5226 test cases** across **330 suites**. Expand a 
 <summary><b>test_h2_server (15 tests)</b></summary>
 
   <details style="margin-left: 20px;">
-    <summary><b>test_h2s_minimal_request_is_accepted</b> &mdash; <i>H2s minimal request is accepted</i></summary>
+    <summary><b>test_h2s_minimal_request_is_accepted</b> &mdash; <i>RFC 9113 sec 5.1.1: a client MUST use odd-numbered stream identifiers and 0 cannot establish a</i></summary>
 
-    * **Objective**: H2s minimal request is accepted
+    * **Objective**: RFC 9113 sec 5.1.1: a client MUST use odd-numbered stream identifiers and 0 cannot establish a
     * **Assertions**:
       * <code>Assert equal string ("GET", http_pool[0].method)</code>
       * <code>Assert equal string ("/", http_pool[0].path)</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(1, conn_pool[0].protocore_h2_stream);</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(1, http_h2_stream[0]);</code>
   </details>
 
   <details style="margin-left: 20px;">

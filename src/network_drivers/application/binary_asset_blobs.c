@@ -5,7 +5,6 @@
 // Add or edit a theme under src/web_assets/themes/ and re-run the generator.
 
 #include "network_drivers/application/binary_asset_blobs.h"
-#include "mmgr/protostr.h" // str.eq: the theme name lookup
 
 #if PROTOCORE_ENABLE_THEMES
 
@@ -2153,7 +2152,7 @@ const char *protocore_theme_css(const char *name)
     }
     for (size_t i = 0; i < PROTOCORE_THEME_BLOB_COUNT; i++)
     {
-        if (str.eq(PROTOCORE_THEME_BLOBS[i].name, name, MAX_KEY_LEN, PROTO_FALSE))
+        if (strcmp(PROTOCORE_THEME_BLOBS[i].name, name) == 0)
         {
             return PROTOCORE_THEME_BLOBS[i].css;
         }
