@@ -26,7 +26,6 @@
 #include "shared/mime/mime.h"               // mime_type, PROTOCORE_MIME_*
 #include "shared/time_compat/time_compat.h" // protocore_gmtime_r (portable reentrant UTC)
 #include <stdio.h>                          // snprintf, sscanf
-                                            // strncasecmp, strchr, strstr, strncmp, strnlen
 #include <time.h> // strftime (RFC 1123 / conditional-GET dates) (RFC 1123 / conditional-GET dates)
 
 // ---------------------------------------------------------------------------
@@ -198,7 +197,7 @@ static proto_bool inm_matches(const char *inm, const char *etag)
     {
         return PROTO_TRUE; // "*" matches the existing representation
     }
-    size_t etlen = strnlen(etag, 40);
+    size_t etlen = str.len(etag, 40);
     const char *p = inm;
     while (*p)
     {
@@ -217,13 +216,13 @@ static proto_bool inm_matches(const char *inm, const char *etag)
         }
         if (tag[0] == '"')
         {
-            const char *end = strchr(tag + 1, '"');
-            if (end && (size_t)(end - tag + 1) == etlen && strncmp(tag, etag, etlen) == 0)
+            const char *end = str.find(tag + 1, str.len(tag + 1, MAX_VAL_LEN) + 1u, "\"", sizeof("\""), PROTO_FALSE);
+            if (end && (size_t)(end - tag + 1) == etlen && str.diff(tag, etag, etlen, PROTO_FALSE) == etlen)
             {
                 return PROTO_TRUE;
             }
         }
-        const char *comma = strchr(p, ',');
+        const char *comma = str.find(p, str.len(p, MAX_VAL_LEN) + 1u, ",", sizeof(","), PROTO_FALSE);
         if (!comma)
         {
             break;
@@ -606,7 +605,7 @@ void serve_static(const char *url_prefix, const protocore_mnt_backend *file_sys,
     // exact-match route for a path the caller never named - a route that serves something other
     // than what was asked for is worse than a route that does not exist.
     char pat[MAX_PATH_LEN];
-    size_t n = strnlen(url_prefix, MAX_PATH_LEN);
+    size_t n = str.len(url_prefix, MAX_PATH_LEN);
     protocore_sb sb_pat = {pat, sizeof(pat), 0, PROTO_TRUE};
     Sb.put(&sb_pat, url_prefix);
     if (n == 0 || url_prefix[n - 1] != '*')
@@ -637,12 +636,12 @@ void serve_static_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
     // Request path beyond the mount prefix (route path minus its trailing '*'). plen == 0 is
     // unreachable: serve_static() always stores at least "*" (it appends the wildcard when the
     // prefix lacks one), so the pattern is never empty.
-    size_t plen = strnlen(r->path, MAX_PATH_LEN);
+    size_t plen = str.len(r->path, MAX_PATH_LEN);
     if (plen > 0 && r->path[plen - 1] == '*')
     {
         plen--;
     }
-    const char *sub = (strnlen(req->path, MAX_PATH_LEN) >= plen) ? req->path + plen : "";
+    const char *sub = (str.len(req->path, MAX_PATH_LEN) >= plen) ? req->path + plen : "";
 
     // Reject path traversal before touching the filesystem.
     if (str.has(sub, MAX_PATH_LEN - plen, "..", sizeof(".."), PROTO_FALSE))
@@ -654,7 +653,7 @@ void serve_static_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
     Mnt.args.id = r->mnt_id;
     Mnt.root_of(Mnt.internal);
     const char *root = Mnt.text;
-    size_t rlen = strnlen(root, MAX_PATH_LEN);
+    size_t rlen = str.len(root, MAX_PATH_LEN);
     proto_bool root_slash = (rlen > 0 && root[rlen - 1] == '/');
     if (root_slash && sub[0] == '/') // avoid a doubled separator
     {
@@ -664,7 +663,7 @@ void serve_static_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
     const char *sep = (root_slash || sub_slash) ? "" : "/";
 
     // Directory or bare-prefix request → index.html.
-    size_t slen = strnlen(sub, MAX_PATH_LEN);
+    size_t slen = str.len(sub, MAX_PATH_LEN);
     proto_bool dir = (slen == 0) || (sub[slen - 1] == '/');
 
     // A path that does not fit is refused, not truncated: a clipped path names a different file,

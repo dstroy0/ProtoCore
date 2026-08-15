@@ -36,6 +36,20 @@
  *
  * All of it BSS. One named owner, unreachable from any other translation unit.
  */
+// The per-connection tables session.h declares. All BSS.
+uint32_t http_req_start_ms[CONN_POOL_SLOTS];
+protocore_resp_sink_fn http_resp_sink[CONN_POOL_SLOTS];
+#if PROTOCORE_ENABLE_HTTP2
+uint8_t http_h2[CONN_POOL_SLOTS];
+uint8_t http_h2_checked[CONN_POOL_SLOTS];
+uint32_t http_h2_stream[CONN_POOL_SLOTS];
+#endif
+#if PROTOCORE_ENABLE_HTTP3
+uint8_t http_h3[CONN_POOL_SLOTS];
+uint32_t http_h3_conn_id[CONN_POOL_SLOTS];
+uint64_t http_h3_stream[CONN_POOL_SLOTS];
+#endif
+
 struct SessionStorage
 {
     const ProtoHandler *proto_handlers[PROTO_MAX_HANDLERS];

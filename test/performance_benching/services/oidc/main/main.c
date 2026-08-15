@@ -58,7 +58,7 @@ void dbench_run(void)
 
     // Pre-resolve the signing key once so pc_oidc_verify_with_key benches the crypto path in
     // isolation (the JWKS scan/decode is timed separately by pc_oidc_jwks_find below).
-    pc_oidc_key key;
+    protocore_oidc_key key;
     key.loaded = false;
     bool key_ok = pc_oidc_jwks_find(K_JWKS, "test-key-1", &key);
 

@@ -17,7 +17,7 @@
 // known-good bytes.
 //
 // Out of scope (deliberately not benched): the ESP32 TCP data handler protocore_opcua_rx() and its
-// transport ring plumbing (pc_conn_*) - that is real socket I/O this rig has no peer for; only the
+// transport ring plumbing (protocore_conn_*) - that is real socket I/O this rig has no peer for; only the
 // deterministic CPU-side codec/framing/builders are timed.
 //
 // Build/flash (JTAG-capable S3 over its USB-Serial/JTAG port):

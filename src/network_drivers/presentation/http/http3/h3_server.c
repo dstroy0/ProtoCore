@@ -6,6 +6,7 @@
  * @brief The HTTP/3 request bridge. See h3_server.h.
  */
 
+#include "network_drivers/session/session.h" // the per-connection tables this reads
 #include "network_drivers/presentation/http/http3/h3_server.h"
 
 #if PROTOCORE_ENABLE_HTTP3

@@ -8,6 +8,7 @@
 
 #include "server/web/edge_cache/edge_cache.h"
 #include "mmgr/protomem.h"
+#include "mmgr/protostr.h"
 
 #if PROTOCORE_ENABLE_EDGE_CACHE
 
@@ -162,7 +163,7 @@ proto_bool edge_header_value(const char *hdrs, size_t len, const char *name, cha
         return PROTO_FALSE;
     }
     out[0] = '\0';
-    size_t namelen = strnlen(name, out_cap); // header names are short literals, always < the value buffer
+    size_t namelen = str.len(name, out_cap); // header names are short literals, always < the value buffer
     const char *p = hdrs;
     const char *end = hdrs + len;
     // Skip the status line.
@@ -320,7 +321,7 @@ int64_t edge_parse_http_date(const char *s, size_t len)
     int hh = 0;
     int mm = 0;
     int ss = 0;
-    const char *comma = strchr(buf, ',');
+    const char *comma = str.find(buf, len + 1u, ",", sizeof(","), PROTO_FALSE);
     proto_bool ok = comma ? parse_date_after_comma(comma + 1, &mday, &mon, &year, &hh, &mm, &ss)
                           : parse_date_asctime(buf, &mday, &mon, &year, &hh, &mm, &ss);
     if (!ok)
@@ -589,7 +590,7 @@ void edge_store_init(EdgeCacheStore *s)
 
 EdgeEntry *edge_store_alloc(EdgeCacheStore *s, const char *canon, const char *vary_key)
 {
-    size_t klen = strnlen(canon, sizeof(s->entries[0].key));
+    size_t klen = str.len(canon, sizeof(s->entries[0].key));
     if (klen >= sizeof(s->entries[0].key))
     {
         return NULL; // key too long -> non-cacheable
@@ -626,7 +627,7 @@ EdgeEntry *edge_store_alloc(EdgeCacheStore *s, const char *canon, const char *va
     mem.cpy(e->key, canon, klen);
     e->key[klen] = '\0';
     edge_key_digest(s->digest_work, canon, klen, e->digest);
-    size_t vl = vary_key ? strnlen(vary_key, sizeof(e->vary_vals)) : 0;
+    size_t vl = vary_key ? str.len(vary_key, sizeof(e->vary_vals)) : 0;
     if (vl >= sizeof(e->vary_vals))
     {
         vl = sizeof(e->vary_vals) - 1;
@@ -649,7 +650,8 @@ EdgeEntry *edge_store_lookup(EdgeCacheStore *s, const char *canon, const char *v
     for (uint16_t i = 0; i < PROTOCORE_EDGE_CACHE_SLOTS; i++)
     {
         EdgeEntry *e = &s->entries[i];
-        if (e->used && strcmp(e->key, canon) == 0 && strcmp(e->vary_vals, vk) == 0)
+        if (e->used && str.eq(canon, e->key, sizeof(e->key), PROTO_FALSE) &&
+            str.eq(vk, e->vary_vals, sizeof(e->vary_vals), PROTO_FALSE))
         {
             lru_unlink(s, i);
             lru_push_front(s, i);
@@ -665,7 +667,7 @@ EdgeEntry *edge_store_find(EdgeCacheStore *s, const char *canon, EdgeHdrLookup l
     for (uint16_t i = 0; i < PROTOCORE_EDGE_CACHE_SLOTS; i++)
     {
         EdgeEntry *e = &s->entries[i];
-        if (!e->used || strcmp(e->key, canon) != 0)
+        if (!e->used || !str.eq(canon, e->key, sizeof(e->key), PROTO_FALSE))
         {
             continue;
         }
@@ -675,7 +677,7 @@ EdgeEntry *edge_store_find(EdgeCacheStore *s, const char *canon, EdgeHdrLookup l
         {
             continue;
         }
-        if (strcmp(cur, e->vary_vals) == 0)
+        if (str.eq(cur, e->vary_vals, sizeof(cur), PROTO_FALSE))
         {
             lru_unlink(s, i);
             lru_push_front(s, i);
@@ -745,7 +747,7 @@ uint32_t edge_store_purge(EdgeCacheStore *s, const char *canon)
     uint32_t n = 0;
     for (uint16_t i = 0; i < PROTOCORE_EDGE_CACHE_SLOTS; i++)
     {
-        if (s->entries[i].used && strcmp(s->entries[i].key, canon) == 0)
+        if (s->entries[i].used && str.eq(canon, s->entries[i].key, sizeof(s->entries[i].key), PROTO_FALSE))
         {
             store_free(s, i);
             s->stats.purges++;
@@ -757,7 +759,7 @@ uint32_t edge_store_purge(EdgeCacheStore *s, const char *canon)
 
 uint32_t edge_store_purge_prefix(EdgeCacheStore *s, const char *prefix)
 {
-    size_t plen = strnlen(prefix, sizeof(s->entries[0].key));
+    size_t plen = str.len(prefix, sizeof(s->entries[0].key));
     uint32_t n = 0;
     for (uint16_t i = 0; i < PROTOCORE_EDGE_CACHE_SLOTS; i++)
     {
@@ -766,7 +768,7 @@ uint32_t edge_store_purge_prefix(EdgeCacheStore *s, const char *prefix)
             continue;
         }
         const char *path = key_path(s->entries[i].key);
-        if (path && strncmp(path, prefix, plen) == 0)
+        if (path && str.starts(path, prefix, plen, PROTO_FALSE))
         {
             store_free(s, i);
             s->stats.purges++;
@@ -791,7 +793,7 @@ void edge_store_free_entry(EdgeCacheStore *s, const EdgeEntry *e)
 proto_bool edge_is_storeable(int status, const char *method, const protocore_cache_control *cc, const char *vary_header,
                              size_t body_len)
 {
-    if (!method || strcmp(method, "GET") != 0)
+    if (!method || !str.eq(method, "GET", sizeof("GET"), PROTO_FALSE))
     {
         return PROTO_FALSE;
     }
@@ -848,7 +850,7 @@ void edge_apply_304(EdgeEntry *e, const char *new_hdrs, size_t hdr_len, int64_t 
     protocore_cache_control cc;
     if (edge_header_value(new_hdrs, hdr_len, "Cache-Control", v, sizeof(v)))
     {
-        cache_control_parse(v, strnlen(v, sizeof(v)), &cc);
+        cache_control_parse(v, str.len(v, sizeof(v)), &cc);
     }
     else
     {
@@ -858,12 +860,12 @@ void edge_apply_304(EdgeEntry *e, const char *new_hdrs, size_t hdr_len, int64_t 
     int64_t date = -1;
     if (edge_header_value(new_hdrs, hdr_len, "Date", v, sizeof(v)))
     {
-        date = edge_parse_http_date(v, strnlen(v, sizeof(v)));
+        date = edge_parse_http_date(v, str.len(v, sizeof(v)));
     }
     int64_t expires = -1;
     if (edge_header_value(new_hdrs, hdr_len, "Expires", v, sizeof(v)))
     {
-        expires = edge_parse_http_date(v, strnlen(v, sizeof(v)));
+        expires = edge_parse_http_date(v, str.len(v, sizeof(v)));
     }
 
     int32_t age = 0;
@@ -891,7 +893,7 @@ void edge_apply_304(EdgeEntry *e, const char *new_hdrs, size_t hdr_len, int64_t 
     // Adopt any validators the 304 carried (RFC 9111 4.3.4: the newer representation metadata wins).
     if (edge_header_value(new_hdrs, hdr_len, "ETag", v, sizeof(v)))
     {
-        size_t vlen = strnlen(v, sizeof(v));
+        size_t vlen = str.len(v, sizeof(v));
         if (vlen < sizeof(e->etag))
         {
             mem.cpy(e->etag, v, vlen + 1);
@@ -900,7 +902,7 @@ void edge_apply_304(EdgeEntry *e, const char *new_hdrs, size_t hdr_len, int64_t 
     int64_t last_mod = -1;
     if (edge_header_value(new_hdrs, hdr_len, "Last-Modified", v, sizeof(v)))
     {
-        size_t vlen = strnlen(v, sizeof(v));
+        size_t vlen = str.len(v, sizeof(v));
         last_mod = edge_parse_http_date(v, vlen);
         if (vlen < sizeof(e->last_modified))
         {
@@ -909,7 +911,7 @@ void edge_apply_304(EdgeEntry *e, const char *new_hdrs, size_t hdr_len, int64_t 
     }
     else if (e->last_modified[0])
     {
-        last_mod = edge_parse_http_date(e->last_modified, strnlen(e->last_modified, sizeof(e->last_modified)));
+        last_mod = edge_parse_http_date(e->last_modified, str.len(e->last_modified, sizeof(e->last_modified)));
     }
 
     edge_entry_set_freshness(e, &cc, PROTO_TRUE, date, expires, last_mod, age, response_time_epoch, now_ms);

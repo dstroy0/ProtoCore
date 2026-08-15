@@ -8,6 +8,7 @@
 
 #include "services/energy/sunspec/sunspec.h"
 #include "mmgr/protomem.h"
+#include "mmgr/protostr.h"
 
 #if PROTOCORE_ENABLE_SUNSPEC
 
@@ -181,7 +182,7 @@ proto_bool protocore_sunspec_write_string(SunSpecWriter *w, const char *s, size_
         w->error = PROTO_TRUE;
         return PROTO_FALSE;
     }
-    size_t slen = strnlen(s, field);
+    size_t slen = str.len(s, field);
     for (size_t i = 0; i < field; i++)
     {
         w->buf[w->pos + i] = (i < slen) ? (uint8_t)s[i] : 0; // NUL-pad the remainder

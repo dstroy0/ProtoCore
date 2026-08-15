@@ -8,6 +8,7 @@
 
 #include "cbor.h"
 #include "mmgr/protomem.h"
+#include "mmgr/protostr.h"
 
 #if PROTOCORE_NEED_CBOR
 
@@ -87,7 +88,7 @@ static void protocore_cbor_str_n(protocore_span *w, const char *s, size_t len)
 
 static void protocore_cbor_str(protocore_span *w, const char *s)
 {
-    protocore_cbor_str_n(w, s, s ? strnlen(s, w->cap + 1) : 0);
+    protocore_cbor_str_n(w, s, s ? str.len(s, w->cap + 1) : 0);
 }
 
 static void protocore_cbor_bool(protocore_span *w, proto_bool b)

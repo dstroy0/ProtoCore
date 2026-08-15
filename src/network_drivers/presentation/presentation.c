@@ -35,18 +35,6 @@ uint16_t http_req_count[MAX_CONNS];
 #endif
 
 // HTTP's own per-slot state. All BSS, sized on the whole pool so the HTTP/3 dispatch slot fits.
-uint32_t http_req_start_ms[CONN_POOL_SLOTS];
-protocore_resp_sink_fn http_resp_sink[CONN_POOL_SLOTS];
-#if PROTOCORE_ENABLE_HTTP2
-uint8_t http_h2[CONN_POOL_SLOTS];
-uint8_t http_h2_checked[CONN_POOL_SLOTS];
-uint32_t http_h2_stream[CONN_POOL_SLOTS];
-#endif
-#if PROTOCORE_ENABLE_HTTP3
-uint8_t http_h3[CONN_POOL_SLOTS];
-uint32_t http_h3_conn_id[CONN_POOL_SLOTS];
-uint64_t http_h3_stream[CONN_POOL_SLOTS];
-#endif
 
 /**
  * @brief The glue's compile-time storage: the read scratch each slot's bytes land in.
@@ -215,7 +203,7 @@ static void tls_data(uint8_t slot)
     {
         http_h2_checked[slot] = 1;
         const char *alpn = protocore_tls_alpn(slot);
-        if (alpn && strcmp(alpn, "h2") == 0)
+        if (alpn && str.eq(alpn, "h2", sizeof("h2"), PROTO_FALSE))
         {
             http_h2[slot] = 1;
             http_resp_sink[slot] = protocore_h2_server_respond; // route responses through the h2 framer

@@ -13,6 +13,7 @@
 
 #include "server/signaling/gpio_map.h"
 #include "mmgr/protomem.h"
+#include "mmgr/protostr.h"
 #include "server/clock/clock.h" // protocore_millis()
 
 #if PROTOCORE_ENABLE_GPIO_MAP
@@ -120,7 +121,7 @@ static void gpio_json(struct GpioMapInternal *restrict ctx)
 // false if the field is absent or has no digits.
 static proto_bool form_field_uint(const char *body, size_t len, const char *name, unsigned *out)
 {
-    size_t nlen = strnlen(name, len + 1);
+    size_t nlen = str.len(name, len + 1);
     for (size_t i = 0; i + nlen + 1 <= len; i++)
     {
         proto_bool at_field = (i == 0) || body[i - 1] == '&';

@@ -21,10 +21,53 @@
 #ifndef PROTOCORE_SESSION_H
 #define PROTOCORE_SESSION_H
 
+#include "protocore_config.h" // CONN_POOL_SLOTS, proto_bool: the tables below
 #include "network_drivers/transport/tcp/evt.h" // EvtType, TcpEvt: the events this layer drains
 
 #include "server/core/proto_handler.h" // ProtoRegistryNs: carried below as Session.proto
 #include "server/core/worker.h"        // WorkerNs: carried below as Session.workers
+
+/**
+ * @brief Per-connection state, keyed on the transport slot index.
+ *
+ * A connection is opened, closed and controlled here, so what a connection carries between its
+ * requests is held here too rather than by whichever layer happens to read it. Sized
+ * CONN_POOL_SLOTS, not MAX_CONNS: the HTTP/3 dispatch slot is a reserved index above the TCP range.
+ * All BSS. Defined in session.c.
+ *
+ * @var http_req_start_ms  protocore_millis() at the first byte of the in-progress request (0 = none).
+ *                         The request-header deadline (PROTOCORE_REQUEST_TIMEOUT_MS, slow-loris
+ *                         defense) measures against this; unlike the transport's idle timer a
+ *                         trickle byte cannot reset it.
+ * @var http_resp_sink     where a response for the slot is written, per slot.
+ */
+typedef proto_bool (*protocore_resp_sink_fn)(uint8_t slot, int code, const char *content_type, const char *body,
+                                             size_t len);
+
+extern uint32_t http_req_start_ms[CONN_POOL_SLOTS];
+extern protocore_resp_sink_fn http_resp_sink[CONN_POOL_SLOTS];
+
+#if PROTOCORE_ENABLE_HTTP2
+/**
+ * @brief Whether the slot negotiated HTTP/2 (ALPN "h2"), whether that check has run, and the
+ * stream it is serving.
+ *
+ * RFC 9113 sec 5: a stream is "an independent, bidirectional sequence of frames exchanged between
+ * the client and server within an HTTP/2 connection", and "stream identifiers are assigned to
+ * streams by the endpoint initiating the stream" - so which stream a slot is answering on is a
+ * property of the connection, not of the request being parsed.
+ */
+extern uint8_t http_h2[CONN_POOL_SLOTS];
+extern uint8_t http_h2_checked[CONN_POOL_SLOTS];
+extern uint32_t http_h2_stream[CONN_POOL_SLOTS];
+#endif
+
+#if PROTOCORE_ENABLE_HTTP3
+/** @brief The reserved HTTP/3 dispatch slot, and the QUIC connection and stream a response routes back on. */
+extern uint8_t http_h3[CONN_POOL_SLOTS];
+extern uint32_t http_h3_conn_id[CONN_POOL_SLOTS];
+extern uint64_t http_h3_stream[CONN_POOL_SLOTS];
+#endif
 
 /** @brief The layer's own state and the calls that reach it, described only in session.c. */
 struct SessionInternal;

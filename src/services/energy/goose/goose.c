@@ -8,6 +8,7 @@
 
 #include "services/energy/goose/goose.h"
 #include "mmgr/protomem.h"
+#include "mmgr/protostr.h"
 
 #if PROTOCORE_ENABLE_GOOSE
 
@@ -97,7 +98,7 @@ static proto_bool protocore_ber_int(uint8_t *out, size_t cap, size_t *n, uint8_t
 
 static proto_bool protocore_ber_str(uint8_t *out, size_t cap, size_t *n, uint8_t tag, const char *s)
 {
-    return tlv(out, cap, n, tag, (const uint8_t *)(s ? s : ""), s ? strnlen(s, cap + 1) : 0);
+    return tlv(out, cap, n, tag, (const uint8_t *)(s ? s : ""), s ? str.len(s, cap + 1) : 0);
 }
 
 static proto_bool protocore_ber_bool(uint8_t *out, size_t cap, size_t *n, uint8_t tag, proto_bool v)

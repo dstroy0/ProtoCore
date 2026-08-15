@@ -8,6 +8,7 @@
 
 #include "httpcache.h"
 #include "mmgr/protomem.h"
+#include "mmgr/protostr.h"
 
 #if PROTOCORE_ENABLE_HTTP_CACHE
 
@@ -69,7 +70,7 @@ static size_t cc_tok(char *buf, size_t cap, size_t n, proto_bool *first, const c
     {
         return CC_SENT;
     }
-    size_t tlen = strnlen(tok, cap);
+    size_t tlen = str.len(tok, cap);
     size_t need = (*first ? 0 : 2) + tlen;
     if (n + need > cap)
     {

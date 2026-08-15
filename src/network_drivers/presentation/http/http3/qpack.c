@@ -12,6 +12,7 @@
 
 #include "network_drivers/presentation/http/http3/qpack.h"
 #include "mmgr/protomem.h"
+#include "mmgr/protostr.h"
 
 #if PROTOCORE_ENABLE_HTTP3
 
@@ -137,13 +138,13 @@ size_t protocore_qpack_encode_header(uint8_t *out, size_t cap, const char *name,
     int name_idx = -1, full_idx = -1;
     for (int i = 0; i < 99; i++)
     {
-        if (strnlen(QPACK_STATIC[i][0], name_len + 1) == name_len && mem.cmp(QPACK_STATIC[i][0], name, name_len) == 0)
+        if (str.len(QPACK_STATIC[i][0], name_len + 1) == name_len && mem.cmp(QPACK_STATIC[i][0], name, name_len) == 0)
         {
             if (name_idx < 0)
             {
                 name_idx = i;
             }
-            if (strnlen(QPACK_STATIC[i][1], value_len + 1) == value_len &&
+            if (str.len(QPACK_STATIC[i][1], value_len + 1) == value_len &&
                 mem.cmp(QPACK_STATIC[i][1], value, value_len) == 0)
             {
                 full_idx = i;
@@ -246,7 +247,7 @@ proto_bool protocore_qpack_decode(const uint8_t *block, size_t len, char *scratc
             pos += c;
             const char *nm = QPACK_STATIC[idx][0];
             const char *vl = QPACK_STATIC[idx][1];
-            if (!emit(ctx, nm, strnlen(nm, scratch_cap + 1), vl, strnlen(vl, scratch_cap + 1)))
+            if (!emit(ctx, nm, str.len(nm, scratch_cap + 1), vl, str.len(vl, scratch_cap + 1)))
             {
                 return PROTO_FALSE;
             }
@@ -265,7 +266,7 @@ proto_bool protocore_qpack_decode(const uint8_t *block, size_t len, char *scratc
                 return PROTO_FALSE;
             }
             const char *nm = QPACK_STATIC[idx][0];
-            size_t nlen = strnlen(nm, scratch_cap + 1);
+            size_t nlen = str.len(nm, scratch_cap + 1);
             if (nlen > scratch_cap)
             {
                 return PROTO_FALSE;

@@ -4,6 +4,8 @@
 // is compiled only inside ARDUINO-guarded code, so on the host this header just has to resolve the
 // #include; the type + stub are provided for completeness so any future host reference still links.
 #include "freertos/FreeRTOS.h"
+#include <errno.h> // EINTR: a signal can cut a sleep short
+#include <time.h>  // nanosleep: the tick delay below is a real one
 
 typedef void *TaskHandle_t;
 
@@ -20,10 +22,17 @@ typedef void (*TaskFunction_t)(void *);
 
 #define portTICK_PERIOD_MS 1u
 
-/// Return without sleeping: the host has no scheduler to yield to.
+/// Sleep the ticks asked for. A caller that paces itself is pacing here too, so a test measuring an
+/// interval measures the one the device would take rather than zero.
 static inline void vTaskDelay(TickType_t ticks)
 {
-    (void)ticks;
+    struct timespec ts;
+    ts.tv_sec = (time_t)(ticks / 1000u);
+    ts.tv_nsec = (long)((ticks % 1000u) * 1000000u);
+    while (nanosleep(&ts, &ts) != 0 && errno == EINTR)
+    {
+        // a signal cut the sleep short; ts carries what is left
+    }
 }
 
 /// Record nothing and run nothing; the task body is entered only on silicon.

@@ -20,6 +20,7 @@
 #ifndef PROTOCORE_PRESENTATION_H
 #define PROTOCORE_PRESENTATION_H
 
+#include "network_drivers/session/session.h" // the per-connection tables this reads
 #include "../transport/tcp/evt.h" // EvtType: the event a handler is dispatched on
 #include "network_drivers/presentation/http/http_parser/http_parser.h"
 
@@ -54,8 +55,6 @@ extern uint16_t http_req_count[MAX_CONNS];
  * HTTP/2 installs it at ALPN, HTTP/3 at dispatch, so the response methods route through it instead
  * of building an HTTP/1.1 message. Null means plain HTTP/1.1, the default builder.
  */
-typedef proto_bool (*protocore_resp_sink_fn)(uint8_t slot, int code, const char *content_type, const char *body,
-                                             size_t len);
 
 /**
  * @brief HTTP's own per-slot state, keyed on the transport slot index.
@@ -70,22 +69,6 @@ typedef proto_bool (*protocore_resp_sink_fn)(uint8_t slot, int code, const char 
  *                         trickle byte cannot reset it. Armed by the HTTP layer on the first byte.
  * @var http_resp_sink     the TX seam above, per slot.
  */
-extern uint32_t http_req_start_ms[CONN_POOL_SLOTS];
-extern protocore_resp_sink_fn http_resp_sink[CONN_POOL_SLOTS];
-
-#if PROTOCORE_ENABLE_HTTP2
-/** @brief Negotiated HTTP/2 (ALPN "h2"), whether that check has run, and the stream being served. */
-extern uint8_t http_h2[CONN_POOL_SLOTS];
-extern uint8_t http_h2_checked[CONN_POOL_SLOTS];
-extern uint32_t http_h2_stream[CONN_POOL_SLOTS];
-#endif
-
-#if PROTOCORE_ENABLE_HTTP3
-/** @brief The reserved HTTP/3 dispatch slot, and the QUIC connection and stream a response routes back on. */
-extern uint8_t http_h3[CONN_POOL_SLOTS];
-extern uint32_t http_h3_conn_id[CONN_POOL_SLOTS];
-extern uint64_t http_h3_stream[CONN_POOL_SLOTS];
-#endif
 
 #if PROTOCORE_ENABLE_KEEPALIVE
 

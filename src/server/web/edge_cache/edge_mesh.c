@@ -8,6 +8,7 @@
 
 #include "server/web/edge_cache/edge_mesh.h"
 #include "mmgr/protomem.h"
+#include "mmgr/protostr.h"
 
 #if PROTOCORE_ENABLE_EDGE_MESH
 
@@ -77,8 +78,8 @@ size_t edge_mesh_build_request(const uint8_t digest[32], const char *canon, cons
         return 0;
     }
     const char *hdrs = req_hdrs ? req_hdrs : "";
-    size_t kl = strnlen(canon, PROTOCORE_EDGE_KEY_MAX);
-    size_t hl = strnlen(hdrs, PROTOCORE_MESH_HDRS_MAX);
+    size_t kl = str.len(canon, PROTOCORE_EDGE_KEY_MAX);
+    size_t hl = str.len(hdrs, PROTOCORE_MESH_HDRS_MAX);
     // Both lengths are strnlen-capped to PROTOCORE_EDGE_KEY_MAX (128) and PROTOCORE_MESH_HDRS_MAX, neither of
     // which is within three orders of magnitude of the 16-bit wire limit, so neither arm can be
     // taken in any build this library is sized for. The guard is what keeps the u16 length prefixes

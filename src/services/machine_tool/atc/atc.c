@@ -8,6 +8,7 @@
 
 #include "services/machine_tool/atc/atc.h"
 #include "mmgr/membuild.h" // protocore_sb frame builder
+#include "mmgr/protostr.h" // str.eq: the FIO point name lookup
 
 #if PROTOCORE_ENABLE_ATC
 
@@ -105,7 +106,7 @@ proto_bool protocore_atc_set_output(AtcFieldIo *io, const char *name, uint8_t va
     }
     for (size_t i = 0; i < io->count; i++)
     {
-        if (io->points[i].is_output && io->points[i].name && strcmp(io->points[i].name, name) == 0)
+        if (io->points[i].is_output && io->points[i].name && str.eq(io->points[i].name, name, MAX_KEY_LEN, PROTO_FALSE))
         {
             io->points[i].value = value;
             return PROTO_TRUE;
@@ -126,7 +127,7 @@ uint8_t protocore_atc_get(const AtcFieldIo *io, const char *name, proto_bool *fo
     }
     for (size_t i = 0; i < io->count; i++)
     {
-        if (io->points[i].name && strcmp(io->points[i].name, name) == 0)
+        if (io->points[i].name && str.eq(io->points[i].name, name, MAX_KEY_LEN, PROTO_FALSE))
         {
             if (found)
             {

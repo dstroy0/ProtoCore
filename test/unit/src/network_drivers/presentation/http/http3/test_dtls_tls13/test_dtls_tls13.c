@@ -112,7 +112,7 @@ void test_rfc8446_message_hash(void)
 void test_rfc8446_empty_encrypted_extensions(void)
 {
     static const uint8_t WANT[6] = {0x08, 0x00, 0x00, 0x02, 0x00, 0x00};
-    size_t n = protocore_tls13_build_encrypted_extensions_empty(g_out, sizeof(g_out), PROTO_FALSE);
+    size_t n = protocore_tls13_build_encrypted_extensions_empty(g_out, sizeof(g_out), PROTO_FALSE, NULL);
     TEST_ASSERT_EQUAL_UINT(6u, n);
     TEST_ASSERT_EQUAL_MEMORY(WANT, g_out, 6);
 }
@@ -123,7 +123,7 @@ void test_rfc8446_empty_encrypted_extensions(void)
 void test_rfc7250_negotiated_server_certificate_type(void)
 {
     static const uint8_t WANT[11] = {0x08, 0x00, 0x00, 0x07, 0x00, 0x05, 0x00, 0x14, 0x00, 0x01, 0x02};
-    size_t n = protocore_tls13_build_encrypted_extensions_empty(g_out, sizeof(g_out), PROTO_TRUE);
+    size_t n = protocore_tls13_build_encrypted_extensions_empty(g_out, sizeof(g_out), PROTO_TRUE, NULL);
     TEST_ASSERT_EQUAL_UINT(11u, n);
     TEST_ASSERT_EQUAL_MEMORY(WANT, g_out, 11);
     TEST_ASSERT_EQUAL_INT(2, TLS_CERT_TYPE_RAW_PUBLIC_KEY);
@@ -261,7 +261,7 @@ void test_builders_refuse_a_short_destination(void)
     memset(ch1, 0, sizeof(ch1));
     TEST_ASSERT_EQUAL_UINT(0u, protocore_tls13_build_hello_retry_request(g_out, 65, NULL, 0, TLS_GROUP_X25519, COOKIE,
                                                                          sizeof(COOKIE), PROTO_TRUE));
-    TEST_ASSERT_EQUAL_UINT(0u, protocore_tls13_build_encrypted_extensions_empty(g_out, 5, PROTO_FALSE));
+    TEST_ASSERT_EQUAL_UINT(0u, protocore_tls13_build_encrypted_extensions_empty(g_out, 5, PROTO_FALSE, NULL));
     TEST_ASSERT_EQUAL_UINT(0u, protocore_tls13_build_message_hash(g_out, 35, ch1));
     TEST_ASSERT_EQUAL_UINT(0u, protocore_tls13_build_certificate_rpk(g_out, 56, ch1));
 }

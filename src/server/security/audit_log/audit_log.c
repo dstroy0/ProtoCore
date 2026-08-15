@@ -15,6 +15,7 @@
 #include "server/security/audit_log/audit_log.h"
 #include "mmgr/membuild.h" // protocore_sb frame builder
 #include "mmgr/protomem.h"
+#include "mmgr/protostr.h" // str: the bounded-run walks
 #include "shared/hex/hex.h"
 
 #if PROTOCORE_ENABLE_AUDIT_LOG
@@ -64,7 +65,7 @@ static void chain_hash(uint8_t *work, const uint8_t prev[PROTOCORE_AUDIT_HASH_LE
     put_le32(le, e->ts);
     protocore_sha256_update(&c, le, 4);
     protocore_sha256_update(&c, (const uint8_t *)&e->category, 1); // hash the raw category byte
-    uint8_t mlen = (uint8_t)strnlen(e->msg, PROTOCORE_AUDIT_MSG_LEN - 1);
+    uint8_t mlen = (uint8_t)str.len(e->msg, PROTOCORE_AUDIT_MSG_LEN - 1);
     protocore_sha256_update(&c, &mlen, 1);
     protocore_sha256_update(&c, (const uint8_t *)e->msg, mlen);
     protocore_sha256_final(&c, out);
@@ -192,7 +193,7 @@ uint32_t protocore_audit_append(protocore_audit_cat category, const char *msg)
     e->category = category;
     if (msg)
     {
-        size_t n = strnlen(msg, PROTOCORE_AUDIT_MSG_LEN - 1);
+        size_t n = str.len(msg, PROTOCORE_AUDIT_MSG_LEN - 1);
         mem.cpy(e->msg, msg, n);
         e->msg[n] = '\0';
     }

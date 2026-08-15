@@ -13,10 +13,9 @@
  */
 
 #include "services/machine_tool/euromap77/euromap77.h"
+#include "mmgr/protostr.h"
 
 #if PROTOCORE_ENABLE_EUROMAP77
-
-// strnlen (string.h is allowed; the no-stdlib rule is about stdlib.h/malloc)
 
 // ---------------------------------------------------------------------------
 // Node identifiers (namespace PROTOCORE_EM77_NS). Objects end in 0; their variables count up from it.
@@ -75,7 +74,7 @@ static void set_str(OpcUaVariant *o, const char *s)
 {
     o->type = OPCUA_VAR_STRING;
     o->str = s ? s : "";
-    o->str_len = (int32_t)strnlen(o->str, 0xFFFF); // bound the scan: a model string is a caller-owned C string
+    o->str_len = (int32_t)str.len(o->str, 0xFFFF); // bound the scan: a model string is a caller-owned C string
 }
 static void set_u32(OpcUaVariant *o, uint32_t v)
 {

@@ -29,7 +29,8 @@ static proto_bool field_type(const protocore_cfg_field *fields, size_t n, const 
 {
     for (size_t i = 0; i < n; i++)
     {
-        if (fields[i].key && strcmp(fields[i].key, key) == 0)
+        if (fields[i].key &&
+            str.eq(fields[i].key, key, str.len(fields[i].key, PROTOCORE_KEY_MAX - 1u) + 1u, PROTO_FALSE))
         {
             *out = fields[i].type;
             return PROTO_TRUE;
@@ -41,7 +42,7 @@ static proto_bool field_type(const protocore_cfg_field *fields, size_t n, const 
 // Append "<key>=<val>\n" to out at *pos, overflow-safe. Returns false on overflow.
 static proto_bool append_kv(char *out, size_t cap, size_t *pos, const char *key, const char *val)
 {
-    size_t kn = strnlen(key, cap + 1), vn = strnlen(val, cap + 1);
+    size_t kn = str.len(key, cap + 1), vn = str.len(val, cap + 1);
     size_t need = kn + 1 + vn + 1; // key '=' val '\n'
     if (*pos + need >= cap)        // keep room for the null terminator
     {

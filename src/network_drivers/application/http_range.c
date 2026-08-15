@@ -7,6 +7,7 @@
  */
 
 #include "network_drivers/application/http_range.h"
+#include "mmgr/protostr.h" // str.starts / str.find: the unit prefix and the multi-range comma
 
 #if PROTOCORE_ENABLE_RANGE
 
@@ -19,7 +20,7 @@ int http_parse_byte_range(const char *hdr, size_t size, size_t *out_start, size_
         return 0;
     }
     // Require the "bytes=" unit (case-insensitive).
-    if (strncasecmp(hdr, "bytes=", 6) != 0)
+    if (!str.starts(hdr, "bytes=", 6, PROTO_TRUE))
     {
         return 0;
     }
@@ -28,7 +29,7 @@ int http_parse_byte_range(const char *hdr, size_t size, size_t *out_start, size_
     {
         p++;
     }
-    if (strchr(p, ',')) // multi-range not supported -> fall back to full 200
+    if (str.find(p, MAX_VAL_LEN, ",", sizeof(","), PROTO_FALSE)) // multi-range not supported -> fall back to full 200
     {
         return 0;
     }

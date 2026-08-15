@@ -8,6 +8,7 @@
 
 #include "ota_service.h"
 #include "mmgr/protomem.h"
+#include "mmgr/protostr.h"
 #include "server/clock/clock.h" // pcdelay
 
 #if PROTOCORE_ENABLE_OTA && PROTOCORE_HAS_VENDOR_OTA
@@ -36,7 +37,7 @@ static OtaCtx s_ota;
 static proto_bool ota_check_auth(HttpReq *req)
 {
     const char *h = http_get_header(req, "Authorization");
-    if (!h || strncmp(h, "Basic ", 6) != 0)
+    if (!h || !str.starts(h, "Basic ", 6, PROTO_FALSE))
     {
         return PROTO_FALSE;
     }
@@ -56,18 +57,18 @@ static proto_bool ota_check_auth(HttpReq *req)
     }
     size_t ulen = (size_t)(colon - (const char *)decoded);
     const char *pass = colon + 1;
-    return (ulen == strnlen(s_ota.user, sizeof(s_ota.user))) && (mem.cmp(decoded, s_ota.user, ulen) == 0) &&
-           (strcmp(pass, s_ota.pass) == 0);
+    return (ulen == str.len(s_ota.user, sizeof(s_ota.user))) && (mem.cmp(decoded, s_ota.user, ulen) == 0) &&
+           str.eq(pass, s_ota.pass, sizeof(s_ota.pass), PROTO_FALSE);
 }
 
 /// @brief Stream-begin hook: accept POST @p s_ota.path; begin Update if authorized.
 static proto_bool ota_stream_begin(HttpReq *req)
 {
-    if (strcmp(req->method, "POST") != 0)
+    if (!str.eq(req->method, "POST", sizeof("POST"), PROTO_FALSE))
     {
         return PROTO_FALSE;
     }
-    if (!s_ota.path || strcmp(req->path, s_ota.path) != 0)
+    if (!s_ota.path || !str.eq(req->path, s_ota.path, MAX_PATH_LEN, PROTO_FALSE))
     {
         return PROTO_FALSE;
     }
@@ -151,9 +152,9 @@ static void ota_service_begin(struct OtaServiceInternal *restrict ctx)
     const char *pass = ctx->ns->args.pass;
 
     s_ota.path = path;
-    strncpy(s_ota.user, user ? user : "", sizeof(s_ota.user) - 1);
+    str.copy(s_ota.user, user ? user : "", sizeof(s_ota.user));
     s_ota.user[sizeof(s_ota.user) - 1] = '\0';
-    strncpy(s_ota.pass, pass ? pass : "", sizeof(s_ota.pass) - 1);
+    str.copy(s_ota.pass, pass ? pass : "", sizeof(s_ota.pass));
     s_ota.pass[sizeof(s_ota.pass) - 1] = '\0';
 
     http_parser_set_stream_hooks(ota_stream_begin, ota_stream_data, NULL);

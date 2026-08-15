@@ -9,7 +9,7 @@
 // code path (like performance_benching/device/modbus, and unlike a peripheral driver). Deliberately out of scope: the
 // AES-SIV-CMAC-256 AEAD (RFC 5297) and the TLS-exporter key derivation that sit on top of this framing
 // are crypto integration, not part of this codec, so they are not benched here. The NTS-KE parse
-// callback (pc_nts_ke_cb) is satisfied by a tiny local no-op sink - it is a required function pointer,
+// callback (protocore_nts_ke_cb) is satisfied by a tiny local no-op sink - it is a required function pointer,
 // not a hardware/transport dependency.
 //
 // Build/flash (JTAG-capable S3 over its USB-Serial/JTAG port):
@@ -23,7 +23,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-// No-op sink satisfying the pc_nts_ke_cb function-pointer arg of protocore_nts_ke_parse; counts records so the
+// No-op sink satisfying the protocore_nts_ke_cb function-pointer arg of protocore_nts_ke_parse; counts records so the
 // parse cannot be optimized away. Not a hardware/transport stub - the parser has no such dependency.
 static void nts_ke_sink(bool critical, uint16_t type, const uint8_t *body, size_t body_len, void *arg)
 {

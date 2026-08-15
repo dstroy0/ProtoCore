@@ -15,6 +15,7 @@
 #if PROTOCORE_ENABLE_PARTITION_MONITOR
 
 #include "mmgr/protoframe.h"
+#include "mmgr/protostr.h"
 
 // esp_partition type/subtype constants (mirrors esp_partition_type_t/subtype_t so
 // the classifier stays pure and host-testable without the IDF headers).
@@ -145,7 +146,7 @@ uint8_t protocore_partition_collect(protocore_partition_info *out, uint8_t max)
     {
         const esp_partition_t *p = esp_partition_get(it);
         protocore_partition_info *d = &out[n++];
-        strncpy(d->label, p->label, sizeof(d->label) - 1);
+        (void)str.copy(d->label, p->label, sizeof(d->label));
         d->label[sizeof(d->label) - 1] = '\0';
         d->type = (uint8_t)p->type;
         d->subtype = (uint8_t)p->subtype;

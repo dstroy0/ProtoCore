@@ -8,6 +8,7 @@
 
 #include "upload_service.h"
 #include "mmgr/protoframe.h" // the one frame engine
+#include "mmgr/protostr.h"
 
 #if PROTOCORE_ENABLE_UPLOAD
 
@@ -37,7 +38,7 @@ static UploadCtx s_upl;
 /// @brief Stream-begin hook: accept POST @p s_upl.path and open the destination file.
 static proto_bool upload_stream_begin(HttpReq *req)
 {
-    if (strcmp(req->method, "POST") != 0)
+    if (!str.eq(req->method, "POST", sizeof("POST"), PROTO_FALSE))
     {
         return PROTO_FALSE;
     }
@@ -45,7 +46,7 @@ static proto_bool upload_stream_begin(HttpReq *req)
     // which immediately hands that same pointer to on_http() -> fill_route_base(), whose
     // strncpy() would fault on a null path before any request could reach this hook. So by the
     // time this hook is installed, s_upl.path is always a live C string.
-    if (!s_upl.path || strcmp(req->path, s_upl.path) != 0)
+    if (!s_upl.path || !str.eq(req->path, s_upl.path, str.len(s_upl.path, MAX_PATH_LEN - 1u) + 1u, PROTO_FALSE))
     {
         return PROTO_FALSE;
     }

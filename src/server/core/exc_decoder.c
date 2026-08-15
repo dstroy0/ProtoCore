@@ -184,7 +184,7 @@ static void parse_excvaddr(const char *text, ExcInfo *out)
     {
         return;
     }
-    const char *colon = strchr(e, ':');
+    const char *colon = str.find(e, str.len(e, 0xFFFF) + 1u, ":", sizeof(":"), PROTO_FALSE);
     if (!colon)
     {
         return;
@@ -200,14 +200,14 @@ static void parse_excvaddr(const char *text, ExcInfo *out)
 // Register-dump PC: a line that starts with "PC" (not "EPC..."). Anchor to a line break.
 static void parse_pc(const char *text, ExcInfo *out)
 {
-    const char *pcl = (strncmp(text, "PC", 2) == 0)
+    const char *pcl = str.starts(text, "PC", 2, PROTO_FALSE)
                           ? text
                           : str.find(text, str.len(text, 0xFFFF) + 1u, "\nPC", sizeof("\nPC"), PROTO_FALSE);
     if (!pcl)
     {
         return;
     }
-    const char *colon = strchr(pcl, ':');
+    const char *colon = str.find(pcl, str.len(pcl, 0xFFFF) + 1u, ":", sizeof(":"), PROTO_FALSE);
     if (!colon)
     {
         return;

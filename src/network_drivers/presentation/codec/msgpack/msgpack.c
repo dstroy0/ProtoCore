@@ -8,6 +8,7 @@
 
 #include "msgpack.h"
 #include "mmgr/protomem.h"
+#include "mmgr/protostr.h"
 
 #if PROTOCORE_ENABLE_MSGPACK
 
@@ -116,7 +117,7 @@ static void protocore_msgpack_str_n(protocore_span *w, const char *s, size_t len
 
 static void protocore_msgpack_str(protocore_span *w, const char *s)
 {
-    protocore_msgpack_str_n(w, s, s ? strnlen(s, w->cap + 1) : 0);
+    protocore_msgpack_str_n(w, s, s ? str.len(s, w->cap + 1) : 0);
 }
 
 static void protocore_msgpack_bytes(protocore_span *w, const uint8_t *data, size_t len)

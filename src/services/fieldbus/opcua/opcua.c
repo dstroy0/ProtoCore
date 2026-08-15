@@ -15,6 +15,7 @@
 
 #include "services/fieldbus/opcua/opcua.h"
 #include "mmgr/protomem.h"
+#include "mmgr/protostr.h"
 
 #if PROTOCORE_ENABLE_OPCUA
 
@@ -435,7 +436,7 @@ size_t protocore_opcua_build_error(uint32_t error_code, const char *reason, uint
     {
         return 0;
     }
-    int32_t rlen = reason ? (int32_t)strnlen(reason, cap) : -1;
+    int32_t rlen = reason ? (int32_t)str.len(reason, cap) : -1;
     // the wire layout is the four type octets, the total-size UInt32, the error-code UInt32, then the reason
     // string carried as an int32 length followed by its bytes
     const uint32_t total = 8 + 4 + 4 + (rlen > 0 ? (uint32_t)rlen : 0);
@@ -697,9 +698,9 @@ void protocore_ua_w_endpoint_description(UaWriter *w, const OpcUaServerInfo *inf
     const char *auri = (info && info->application_uri) ? info->application_uri : PROTOCORE_OPCUA_DEFAULT_APP_URI;
     const char *aname = (info && info->application_name) ? info->application_name : PROTOCORE_OPCUA_DEFAULT_APP_NAME;
 
-    protocore_ua_w_string(w, url, (int32_t)strnlen(url, w->cap)); // EndpointUrl
+    protocore_ua_w_string(w, url, (int32_t)str.len(url, w->cap)); // EndpointUrl
     // Server (ApplicationDescription).
-    protocore_ua_w_string(w, auri, (int32_t)strnlen(auri, w->cap)); // ApplicationUri
+    protocore_ua_w_string(w, auri, (int32_t)str.len(auri, w->cap)); // ApplicationUri
     protocore_ua_w_string(w, "urn:det:opcua", 13);                  // ProductUri
     protocore_ua_w_localizedtext(w, NULL, aname);                   // ApplicationName
     protocore_ua_w_u32(w, 0);                                       // ApplicationType = Server
@@ -1111,7 +1112,7 @@ void protocore_opcua_set_write_handler(OpcUaWriteHandler fn)
 void protocore_ua_w_qualifiedname(UaWriter *w, uint16_t ns, const char *name)
 {
     protocore_ua_w_u16(w, ns);
-    protocore_ua_w_string(w, name, name ? (int32_t)strnlen(name, w->cap) : -1);
+    protocore_ua_w_string(w, name, name ? (int32_t)str.len(name, w->cap) : -1);
 }
 
 void protocore_ua_w_localizedtext(UaWriter *w, const char *locale, const char *text)
@@ -1128,11 +1129,11 @@ void protocore_ua_w_localizedtext(UaWriter *w, const char *locale, const char *t
     protocore_ua_w_u8(w, mask);
     if (locale)
     {
-        protocore_ua_w_string(w, locale, (int32_t)strnlen(locale, w->cap));
+        protocore_ua_w_string(w, locale, (int32_t)str.len(locale, w->cap));
     }
     if (text)
     {
-        protocore_ua_w_string(w, text, (int32_t)strnlen(text, w->cap));
+        protocore_ua_w_string(w, text, (int32_t)str.len(text, w->cap));
     }
 }
 

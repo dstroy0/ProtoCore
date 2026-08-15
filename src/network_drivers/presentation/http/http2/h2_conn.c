@@ -10,6 +10,7 @@
 #include "mmgr/membuild.h"  // protocore_sb frame builder
 #include "mmgr/plaintext.h" // HTTP is plaintext; its frames borrow from that arena
 #include "mmgr/protomem.h"
+#include "mmgr/protostr.h"
 
 #if PROTOCORE_ENABLE_HTTP2
 
@@ -720,7 +721,7 @@ proto_bool protocore_h2_conn_respond(H2Conn *c, uint32_t stream_id, int status, 
         // 5-bit/char (~sizeof block * 8/5): a longer value can never fit, so measuring it as `2*block`
         // still trips the encode's reject below instead of being truncated into a fittable length.
         w = protocore_hpack_encode_header(block + bo, sizeof block - bo, "content-type", 12, content_type,
-                                          strnlen(content_type, sizeof block * 2));
+                                          str.len(content_type, sizeof block * 2));
         if (!w)
         {
             return PROTO_FALSE;

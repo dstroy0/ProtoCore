@@ -25,7 +25,7 @@ int main(void)
     HBENCH_NS(
         200000,
         {
-            pc_mtc_streams s;
+            protocore_mtc_streams s;
             protocore_mtc_streams_begin(&s, buf, sizeof(buf), 1500, 20, "cnc1");
             for (int i = 0; i < 20; i++)
             {

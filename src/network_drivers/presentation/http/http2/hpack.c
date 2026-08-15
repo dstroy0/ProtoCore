@@ -12,6 +12,7 @@
 
 #include "network_drivers/presentation/http/http2/hpack.h"
 #include "mmgr/protomem.h"
+#include "mmgr/protostr.h"
 
 #if PROTOCORE_ENABLE_HTTP2
 
@@ -187,7 +188,7 @@ static proto_bool resolve_name(const HpackDynTable *t, uint32_t idx, char *out, 
 {
     if (idx >= 1 && idx <= 61)
     {
-        size_t nl = strnlen(STATIC[idx][0], cap + 1);
+        size_t nl = str.len(STATIC[idx][0], cap + 1);
         if (nl > cap)
         {
             return PROTO_FALSE;
@@ -215,8 +216,8 @@ static proto_bool emit_indexed(HpackDynTable *t, uint32_t idx, char *scratch, si
     size_t vl;
     if (idx >= 1 && idx <= 61)
     {
-        nl = strnlen(STATIC[idx][0], cap + 1);
-        vl = strnlen(STATIC[idx][1], cap + 1);
+        nl = str.len(STATIC[idx][0], cap + 1);
+        vl = str.len(STATIC[idx][1], cap + 1);
         if (nl + vl > cap)
         {
             return PROTO_FALSE;
@@ -355,13 +356,13 @@ size_t protocore_hpack_encode_header(uint8_t *out, size_t cap, const char *name,
     int full_idx = 0;
     for (int i = 1; i <= 61; i++)
     {
-        if (strnlen(STATIC[i][0], name_len + 1) == name_len && mem.cmp(STATIC[i][0], name, name_len) == 0)
+        if (str.len(STATIC[i][0], name_len + 1) == name_len && mem.cmp(STATIC[i][0], name, name_len) == 0)
         {
             if (!name_idx)
             {
                 name_idx = i;
             }
-            if (strnlen(STATIC[i][1], value_len + 1) == value_len && mem.cmp(STATIC[i][1], value, value_len) == 0)
+            if (str.len(STATIC[i][1], value_len + 1) == value_len && mem.cmp(STATIC[i][1], value, value_len) == 0)
             {
                 full_idx = i;
                 break;

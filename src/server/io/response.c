@@ -12,6 +12,7 @@
  * other file can name.
  */
 
+#include "network_drivers/session/session.h" // the per-connection tables this reads
 #include "mmgr/membuild.h" // protocore_sb frame builder (replaces snprintf)
 #include "mmgr/protomem.h"
 #include "mmgr/protostr.h" // str.len: send_text measures the body it was handed
@@ -204,7 +205,7 @@ static void tmpl_take_placeholder(uint8_t slot, const char **p, TemplateVar reso
     }
     // Bounded by what the send can carry, which is the width of its length parameter. Spelling that
     // as a literal stated the same bound twice, in two places that could disagree.
-    size_t vlen = strnlen(val, UINT16_MAX);
+    size_t vlen = str.len(val, UINT16_MAX);
     *total += vlen;
     if (emit && vlen)
     {
@@ -506,7 +507,7 @@ void proto_add_response_header(uint8_t slot_id, const char *name, const char *va
     }
 
     char *buf = s_resp.extra_hdr[slot_id];
-    size_t used = strnlen(buf, EXTRA_HDR_BUF_SIZE);
+    size_t used = str.len(buf, EXTRA_HDR_BUF_SIZE);
     size_t room = EXTRA_HDR_BUF_SIZE - used;
     protocore_sb hb3 = {buf + used, room, 0, PROTO_TRUE};
     Sb.put(&hb3, name);
@@ -529,7 +530,7 @@ void set_cookie(uint8_t slot_id, const char *name, const char *value, const char
     }
 
     char *buf = s_resp.extra_hdr[slot_id];
-    size_t used = strnlen(buf, EXTRA_HDR_BUF_SIZE);
+    size_t used = str.len(buf, EXTRA_HDR_BUF_SIZE);
     size_t room = EXTRA_HDR_BUF_SIZE - used;
     protocore_sb cb = {buf + used, room, 0, PROTO_TRUE};
     Sb.put(&cb, "Set-Cookie: ");
@@ -664,34 +665,34 @@ static StatsCtx s_stats;
 
 static const char *stats_var(const char *name)
 {
-    if (!strcmp(name, "uptime_ms"))
+    if (str.eq(name, "uptime_ms", sizeof("uptime_ms"), PROTO_FALSE))
     {
         return s_stats.uptime;
     }
-    if (!strcmp(name, "requests"))
+    if (str.eq(name, "requests", sizeof("requests"), PROTO_FALSE))
     {
         return s_stats.requests;
     }
-    if (!strcmp(name, "http_2xx"))
+    if (str.eq(name, "http_2xx", sizeof("http_2xx"), PROTO_FALSE))
     {
         return s_stats.n2xx;
     }
-    if (!strcmp(name, "http_4xx"))
+    if (str.eq(name, "http_4xx", sizeof("http_4xx"), PROTO_FALSE))
     {
         return s_stats.n4xx;
     }
-    if (!strcmp(name, "http_5xx"))
+    if (str.eq(name, "http_5xx", sizeof("http_5xx"), PROTO_FALSE))
     {
         return s_stats.n5xx;
     }
-    if (!strcmp(name, "active_conns"))
+    if (str.eq(name, "active_conns", sizeof("active_conns"), PROTO_FALSE))
     {
         return s_stats.active;
     }
     // The not-found tail is unreachable: stats_var is only ever invoked by stats() against
     // PROTOCORE_STATS_JSON, and that asset's seven placeholders are exactly the seven names tested here,
     // so the last one always matches. Kept because the resolver has to answer an unknown name.
-    if (!strcmp(name, "free_heap"))
+    if (str.eq(name, "free_heap", sizeof("free_heap"), PROTO_FALSE))
     {
         return s_stats.heap;
     }
@@ -753,43 +754,43 @@ static MetricsCtx s_metrics;
 
 static const char *metrics_var(const char *name)
 {
-    if (!strcmp(name, "uptime_seconds"))
+    if (str.eq(name, "uptime_seconds", sizeof("uptime_seconds"), PROTO_FALSE))
     {
         return s_metrics.uptime;
     }
-    if (!strcmp(name, "requests_total"))
+    if (str.eq(name, "requests_total", sizeof("requests_total"), PROTO_FALSE))
     {
         return s_metrics.requests;
     }
-    if (!strcmp(name, "resp_2xx"))
+    if (str.eq(name, "resp_2xx", sizeof("resp_2xx"), PROTO_FALSE))
     {
         return s_metrics.n2xx;
     }
-    if (!strcmp(name, "resp_4xx"))
+    if (str.eq(name, "resp_4xx", sizeof("resp_4xx"), PROTO_FALSE))
     {
         return s_metrics.n4xx;
     }
-    if (!strcmp(name, "resp_5xx"))
+    if (str.eq(name, "resp_5xx", sizeof("resp_5xx"), PROTO_FALSE))
     {
         return s_metrics.n5xx;
     }
-    if (!strcmp(name, "active_conns"))
+    if (str.eq(name, "active_conns", sizeof("active_conns"), PROTO_FALSE))
     {
         return s_metrics.active;
     }
-    if (!strcmp(name, "max_conns"))
+    if (str.eq(name, "max_conns", sizeof("max_conns"), PROTO_FALSE))
     {
         return s_metrics.max;
     }
-    if (!strcmp(name, "free_heap"))
+    if (str.eq(name, "free_heap", sizeof("free_heap"), PROTO_FALSE))
     {
         return s_metrics.heap;
     }
-    if (!strcmp(name, "min_free_heap"))
+    if (str.eq(name, "min_free_heap", sizeof("min_free_heap"), PROTO_FALSE))
     {
         return s_metrics.minheap;
     }
-    if (!strcmp(name, "heap_size"))
+    if (str.eq(name, "heap_size", sizeof("heap_size"), PROTO_FALSE))
     {
         return s_metrics.heapsize;
     }
@@ -798,7 +799,7 @@ static const char *metrics_var(const char *name)
     // assumption - test_metrics_emits_prometheus asserts every emitted sample line carries a
     // value, which fails the moment a placeholder stops resolving (as three of them silently did
     // until the resolver names were aligned with the template).
-    if (!strcmp(name, "max_alloc_heap"))
+    if (str.eq(name, "max_alloc_heap", sizeof("max_alloc_heap"), PROTO_FALSE))
     {
         return s_metrics.maxalloc;
     }

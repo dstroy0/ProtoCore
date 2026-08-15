@@ -8,6 +8,7 @@
  * The one symbol this file exports is @ref Http.
  */
 
+#include "network_drivers/session/session.h" // the per-connection tables this reads
 #include "network_drivers/presentation/http/http.h"
 #include "mmgr/membuild.h"  // protocore_sb: the Allow list is appended, not formatted
 #include "mmgr/protostr.h"  // str: the bounded-run walks

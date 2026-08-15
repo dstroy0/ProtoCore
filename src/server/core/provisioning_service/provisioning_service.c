@@ -11,6 +11,7 @@
 
 #include "provisioning_service.h"
 #include "mmgr/protomem.h"
+#include "mmgr/protostr.h"      // str: the bounded-run walks
 #include "server/clock/clock.h" // pcdelay
 #include "shared/hex/hex.h"
 #include "shared/mime/mime.h"
@@ -42,12 +43,12 @@ proto_bool protocore_prov_form_field(const char *body, const char *key, char *ou
     {
         blen++;
     }
-    size_t klen = strnlen(key, blen); // a name longer than the body cannot occur in it
+    size_t klen = str.len(key, blen); // a name longer than the body cannot occur in it
     const char *val = NULL;
     for (const char *p = body; *p; p++)
     {
         // Match the key only as a whole field name: at the start or after '&'.
-        if ((p == body || p[-1] == '&') && strncmp(p, key, klen) == 0 && p[klen] == '=')
+        if ((p == body || p[-1] == '&') && str.starts(p, key, klen, PROTO_FALSE) && p[klen] == '=')
         {
             val = p + klen + 1;
             break;

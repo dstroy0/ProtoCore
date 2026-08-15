@@ -8,6 +8,7 @@
 
 #include "server/web/spa_router/spa_router.h"
 #include "mmgr/protomem.h"
+#include "mmgr/protostr.h"
 
 #if PROTOCORE_ENABLE_SPA_ROUTER
 
@@ -17,10 +18,32 @@ proto_bool protocore_spa_has_extension(const char *path)
     {
         return PROTO_FALSE;
     }
-    // Look at the last path segment; an extension is a '.' after the last '/', not at the segment start.
-    const char *slash = strrchr(path, '/');
-    const char *seg = slash ? slash + 1 : path;
-    const char *dot = strrchr(seg, '.');
+    // The last '/' opens the final segment, the last '.' inside it marks the extension. find runs
+    // forward, so each search resumes past its hit and the last one to return is the rightmost; a
+    // path is bounded by MAX_PATH_LEN, so the resumed walks cover it once.
+    const size_t n = str.len(path, MAX_PATH_LEN + 1);
+    const char *seg = path;
+    for (size_t i = 0; i < n; ++i) // each hit advances seg by at least one, so n bounds the trips
+    {
+        const char *slash = str.find(seg, n - (size_t)(seg - path), "/", sizeof("/"), PROTO_FALSE);
+        if (!slash)
+        {
+            break;
+        }
+        seg = slash + 1;
+    }
+    const char *dot = NULL;
+    const char *q = seg;
+    for (size_t i = 0; i < n; ++i)
+    {
+        const char *hit = str.find(q, n - (size_t)(q - path), ".", sizeof("."), PROTO_FALSE);
+        if (!hit)
+        {
+            break;
+        }
+        dot = hit;
+        q = hit + 1;
+    }
     return dot && dot != seg && dot[1] != '\0';
 }
 
@@ -33,8 +56,8 @@ protocore_spa_action protocore_spa_route(const char *path, const char *api_prefi
 
     if (api_prefix && api_prefix[0])
     {
-        size_t pl = strnlen(api_prefix, MAX_PATH_LEN + 1);
-        if (strncmp(path, api_prefix, pl) == 0)
+        size_t pl = str.len(api_prefix, MAX_PATH_LEN + 1);
+        if (str.starts(path, api_prefix, pl, PROTO_FALSE))
         {
             return PROTOCORE_SPA_PASSTHROUGH; // "/api/..." -> handlers
         }

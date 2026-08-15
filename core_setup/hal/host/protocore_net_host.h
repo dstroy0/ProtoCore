@@ -567,6 +567,51 @@ typedef void (*protocore_platform_task_fn)(void *);
 typedef int protocore_platform_status;
 typedef uint32_t protocore_platform_ticks;
 
+// A real lock, not a stand-in. The one caller (ssh_rsa) serializes signs on a single shared mbedtls
+// context because the sign mutates it, so a host arm that only pretended to lock would run the case
+// the mutex exists to prevent and still pass. The control block is the caller's, in BSS, the same
+// as the static FreeRTOS mutex it stands for.
+#include <pthread.h> // PROTOCORE_ALLOW_LATE_INCLUDE: host only, and only the scheduler surface uses it
+
+typedef void *protocore_platform_mutex;
+typedef struct
+{
+    pthread_mutex_t m;
+    int ready; ///< the block has been initialised; take/give on an uninitialised one refuses
+} protocore_platform_mutex_ctrl;
+
+static inline protocore_platform_mutex protocore_platform_mutex_create(protocore_platform_mutex_ctrl *ctrl)
+{
+    if (!ctrl || pthread_mutex_init(&ctrl->m, NULL) != 0)
+    {
+        return (protocore_platform_mutex)0;
+    }
+    ctrl->ready = 1;
+    return (protocore_platform_mutex)ctrl;
+}
+
+/// Blocks until the holder releases. The tick budget is the caller's on silicon; here it waits.
+static inline int protocore_platform_mutex_take(protocore_platform_mutex h, uint32_t ticks)
+{
+    (void)ticks;
+    protocore_platform_mutex_ctrl *c = (protocore_platform_mutex_ctrl *)h;
+    if (!c || !c->ready)
+    {
+        return 0;
+    }
+    return pthread_mutex_lock(&c->m) == 0;
+}
+
+static inline int protocore_platform_mutex_give(protocore_platform_mutex h)
+{
+    protocore_platform_mutex_ctrl *c = (protocore_platform_mutex_ctrl *)h;
+    if (!c || !c->ready)
+    {
+        return 0;
+    }
+    return pthread_mutex_unlock(&c->m) == 0;
+}
+
 #define PROTOCORE_PLATFORM_OK 1
 #define PROTOCORE_PLATFORM_PASS 1
 #define PROTOCORE_PLATFORM_FALSE 0

@@ -9,6 +9,7 @@
 #include "network_drivers/application/sftp/sftp.h"
 #include "mmgr/membuild.h" // protocore_sb frame builder
 #include "mmgr/protomem.h"
+#include "mmgr/protostr.h"
 
 #include "shared/time_compat/time_compat.h" // protocore_gmtime_r (portable reentrant UTC)
 
@@ -274,7 +275,7 @@ size_t protocore_sftp_build_status(uint32_t id, uint32_t code, const char *msg, 
     protocore_sftp_wr_u8(&w, PROTOCORE_SSH_FXP_STATUS);
     protocore_sftp_wr_u32(&w, id);
     protocore_sftp_wr_u32(&w, code);
-    size_t ml = msg ? strnlen(msg, cap) : 0;
+    size_t ml = msg ? str.len(msg, cap) : 0;
     protocore_sftp_wr_string(&w, msg ? msg : "", (uint32_t)ml);
     protocore_sftp_wr_string(&w, "", 0); // language tag
     return protocore_sftp_wr_finish(&w);
@@ -318,8 +319,8 @@ size_t protocore_sftp_build_name1(uint32_t id, const char *name, const char *lon
     protocore_sftp_wr_u8(&w, PROTOCORE_SSH_FXP_NAME);
     protocore_sftp_wr_u32(&w, id);
     protocore_sftp_wr_u32(&w, 1); // one entry
-    protocore_sftp_wr_string(&w, name, (uint32_t)strnlen(name, cap));
-    protocore_sftp_wr_string(&w, longname, (uint32_t)strnlen(longname, cap));
+    protocore_sftp_wr_string(&w, name, (uint32_t)str.len(name, cap));
+    protocore_sftp_wr_string(&w, longname, (uint32_t)str.len(longname, cap));
     protocore_sftp_wr_attrs(&w, a);
     return protocore_sftp_wr_finish(&w);
 }
