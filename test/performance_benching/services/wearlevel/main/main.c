@@ -15,6 +15,33 @@
 
 #define SLOTS 16
 
+/** @brief The least-worn slot of the @p n counts at @p counts. */
+static size_t wear_pick(const uint32_t *counts, size_t n)
+{
+    Wearlevel.args.counts = counts;
+    Wearlevel.args.n = n;
+    Wearlevel.pick(Wearlevel.internal);
+    return Wearlevel.n_out;
+}
+
+/** @brief Record a write to slot @p idx of the @p n counts at @p counts. */
+static void wear_mark(uint32_t *counts, size_t n, size_t idx)
+{
+    Wearlevel.args.counts_rw = counts;
+    Wearlevel.args.n = n;
+    Wearlevel.args.idx = idx;
+    Wearlevel.mark(Wearlevel.internal);
+}
+
+/** @brief Max count - min count across the @p n counts at @p counts. */
+static uint32_t wear_spread(const uint32_t *counts, size_t n)
+{
+    Wearlevel.args.counts = counts;
+    Wearlevel.args.n = n;
+    Wearlevel.imbalance(Wearlevel.internal);
+    return Wearlevel.spread;
+}
+
 void dbench_run(void)
 {
     static uint32_t counts[SLOTS];
@@ -27,12 +54,12 @@ void dbench_run(void)
             counts[i] = (uint32_t)(i * 3 + 1);
         }
         volatile uint32_t sink = 0;
-        DBENCH_OP("protocore_wearlevel_pick (16 slots)", 200000, sink += protocore_wearlevel_pick(counts, SLOTS));
-        DBENCH_OP("protocore_wearlevel_mark", 200000, {
-            protocore_wearlevel_mark(counts, SLOTS, sink % SLOTS);
+        DBENCH_OP("Wearlevel.pick (16 slots)", 200000, sink += (uint32_t)wear_pick(counts, SLOTS));
+        DBENCH_OP("Wearlevel.mark", 200000, {
+            wear_mark(counts, SLOTS, sink % SLOTS);
             sink += 1;
         });
-        DBENCH_OP("protocore_wearlevel_spread", 200000, sink += protocore_wearlevel_spread(counts, SLOTS));
+        DBENCH_OP("Wearlevel.imbalance", 200000, sink += wear_spread(counts, SLOTS));
         (void)sink;
         DBENCH_DONE();
     }

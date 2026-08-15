@@ -878,7 +878,9 @@ const char *protocore_resp_conn_hdr(uint8_t slot_id, proto_bool *keep_out)
 {
     proto_bool keep = PROTO_FALSE;
 #if PROTOCORE_ENABLE_KEEPALIVE
-    keep = keepalive_eval(slot_id);
+    HttpConn.slot = slot_id;
+    HttpConn.keepalive_eval(HttpConn.internal);
+    keep = HttpConn.ok;
 #else
     (void)slot_id;
 #endif

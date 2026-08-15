@@ -21,11 +21,25 @@
 #include <stdint.h>
 #include <string.h>
 
+/** @brief Format one local0/info SYSLOG-MSG carrying @p msg into @p out; the octets written. */
+static size_t syslog_line(char *out, size_t cap, const char *msg)
+{
+    Syslog.line.out = out;
+    Syslog.line.cap = cap;
+    Syslog.header.facility = SYSLOG_FAC_LOCAL0;
+    Syslog.header.hostname = "pc-rig";
+    Syslog.header.app_name = "rig-app";
+    Syslog.record.severity = SYSLOG_INFO;
+    Syslog.record.msg = msg;
+    Syslog.format(Syslog.internal);
+    return Syslog.n;
+}
+
 int main(void)
 {
     char out[256];
     const char *msg = "sensor=21.4C rh=48% link=up heap=131072";
-    size_t len = protocore_syslog_format(out, sizeof(out), SYSLOG_FAC_LOCAL0, SYSLOG_INFO, "pc-rig", "rig-app", msg);
+    size_t len = syslog_line(out, sizeof(out), msg);
 
     hbench_header();
 
@@ -33,11 +47,8 @@ int main(void)
     {
         volatile size_t sink = 0;
         double ns = 0.0;
-        HBENCH_NS(2000000,
-                  sink +=
-                  protocore_syslog_format(out, sizeof(out), SYSLOG_FAC_LOCAL0, SYSLOG_INFO, "pc-rig", "rig-app", msg),
-                  ns);
-        hbench_row("syslog", "protocore_syslog_format (RFC 5424)", ns, (double)len);
+        HBENCH_NS(2000000, sink += syslog_line(out, sizeof(out), msg), ns);
+        hbench_row("syslog", "Syslog.format (RFC 5424)", ns, (double)len);
         (void)sink;
     }
 

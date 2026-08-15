@@ -17,7 +17,8 @@ static void reset_slot(uint8_t slot)
     conn_pool[slot].state = CONN_ACTIVE;
     conn_pool[slot].proto = PROTO_HTTP;
     conn_pool[slot].pcb = protocore_net_host_pcb();
-    http_reset(slot);
+    HttpConn.slot = slot;
+    HttpConn.reset(HttpConn.internal);
 }
 
 static void push_rx(TcpConn *c, const char *s, size_t n)
@@ -51,7 +52,8 @@ static HttpReq *build_multipart_req(uint8_t slot, const char *boundary, const ch
     push_rx(c, hdr, strlen(hdr));
     push_rx(c, body_buf, blen);
 
-    http_parse(slot);
+    HttpConn.slot = slot;
+    HttpConn.parse(HttpConn.internal);
     return &http_pool[slot];
 }
 
@@ -68,7 +70,8 @@ static HttpReq *build_multipart_req_bin(uint8_t slot, const char *boundary, cons
     TcpConn *c = &conn_pool[slot];
     push_rx(c, hdr, strlen(hdr));
     push_rx(c, body, blen);
-    http_parse(slot);
+    HttpConn.slot = slot;
+    HttpConn.parse(HttpConn.internal);
     return &http_pool[slot];
 }
 
@@ -99,7 +102,8 @@ void test_no_content_type_returns_false()
         c->rx_buffer[c->rx_head] = (uint8_t)*p;
         c->rx_head = next;
     }
-    http_parse(0);
+    HttpConn.slot = 0;
+    HttpConn.parse(HttpConn.internal);
 
     MultipartBody mp;
     proto_bool ok = Multipart.parse(&http_pool[0], &mp);
@@ -121,7 +125,8 @@ void test_no_boundary_in_content_type_returns_false()
         c->rx_buffer[c->rx_head] = (uint8_t)*p;
         c->rx_head = next;
     }
-    http_parse(0);
+    HttpConn.slot = 0;
+    HttpConn.parse(HttpConn.internal);
 
     MultipartBody mp;
     TEST_ASSERT_FALSE(Multipart.parse(&http_pool[0], &mp));

@@ -11,7 +11,7 @@
 
 void setUp()
 {
-    protocore_sse_init();
+    Sse.init(Sse.internal);
     for (int i = 0; i < MAX_CONNS; i++)
     {
         conn_pool[i] = (TcpConn){0};
@@ -271,7 +271,8 @@ void test_http_conn_open_releases_stale_sse_binding()
 {
     protocore_sse_alloc(0, "/events");
     TEST_ASSERT_NOT_NULL(protocore_sse_find(0));
-    http_conn_open(0);
+    HttpConn.slot = 0;
+    HttpConn.conn_open(HttpConn.internal);
     TEST_ASSERT_NULL(protocore_sse_find(0));
 }
 
@@ -279,7 +280,8 @@ void test_http_conn_open_leaves_other_slot_sse_binding()
 {
     protocore_sse_alloc(0, "/events");
     protocore_sse_alloc(1, "/metrics");
-    http_conn_open(0);
+    HttpConn.slot = 0;
+    HttpConn.conn_open(HttpConn.internal);
     TEST_ASSERT_NULL(protocore_sse_find(0));
     TEST_ASSERT_NOT_NULL(protocore_sse_find(1));
 }

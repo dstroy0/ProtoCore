@@ -44,10 +44,11 @@ void setUp()
         conn_pool[i].state = CONN_ACTIVE;
         conn_pool[i].proto = PROTO_HTTP;
         conn_pool[i].pcb = protocore_net_host_pcb();
-        http_reset(i);
+        HttpConn.slot = i;
+        HttpConn.reset(HttpConn.internal);
     }
     Ws.init(Ws.internal);
-    protocore_sse_init();
+    Sse.init(Sse.internal);
     tcp_capture_reset();
     g_called = PROTO_FALSE;
     protocore_ap_ip = 0;
@@ -66,10 +67,12 @@ static const char *do_req(protocore_if_kind iface, const char *req_str)
     conn_pool[0].proto = PROTO_HTTP;
     conn_pool[0].pcb = protocore_net_host_pcb();
     conn_pool[0].iface = iface;
-    http_reset(0);
+    HttpConn.slot = 0;
+    HttpConn.reset(HttpConn.internal);
     tcp_capture_reset();
     push_str(0, req_str);
-    http_parse(0);
+    HttpConn.slot = 0;
+    HttpConn.parse(HttpConn.internal);
     handle();
     return tcp_captured();
 }

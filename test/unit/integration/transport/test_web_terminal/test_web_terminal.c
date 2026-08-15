@@ -49,10 +49,11 @@ void setUp()
         conn_pool[i].state = CONN_ACTIVE;
         conn_pool[i].proto = PROTO_HTTP;
         conn_pool[i].pcb = protocore_net_host_pcb();
-        http_reset(i);
+        HttpConn.slot = i;
+        HttpConn.reset(HttpConn.internal);
     }
     Ws.init(Ws.internal);
-    protocore_sse_init();
+    Sse.init(Sse.internal);
     tcp_capture_reset();
     g_cmd[0] = '\0';
     g_cmd_client = 0xFF;
@@ -75,7 +76,8 @@ static uint8_t do_handshake(uint8_t slot)
                    "Upgrade: websocket\r\nConnection: Upgrade\r\n"
                    "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n"
                    "Sec-WebSocket-Version: 13\r\n\r\n");
-    http_parse(slot);
+    HttpConn.slot = slot;
+    HttpConn.parse(HttpConn.internal);
     handle();
     Ws.slot = slot;
     Ws.find(Ws.internal);
@@ -86,7 +88,8 @@ static uint8_t do_handshake(uint8_t slot)
 void test_serves_terminal_page()
 {
     push_str(0, "GET /terminal HTTP/1.1\r\nHost: x\r\n\r\n");
-    http_parse(0);
+    HttpConn.slot = 0;
+    HttpConn.parse(HttpConn.internal);
     handle();
     const char *r = tcp_captured();
     TEST_ASSERT_NOT_NULL(strstr(r, "200 OK"));
@@ -110,7 +113,8 @@ void test_ws_upgrade_requires_connection_token()
     push_str(0, "GET /terminal/ws HTTP/1.1\r\nHost: x\r\n"
                 "Upgrade: websocket\r\n"
                 "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Version: 13\r\n\r\n");
-    http_parse(0);
+    HttpConn.slot = 0;
+    HttpConn.parse(HttpConn.internal);
     handle();
     Ws.slot = 0;
     Ws.find(Ws.internal);
@@ -123,7 +127,8 @@ void test_ws_upgrade_rejects_bad_key_length()
     push_str(0, "GET /terminal/ws HTTP/1.1\r\nHost: x\r\n"
                 "Upgrade: websocket\r\nConnection: Upgrade\r\n"
                 "Sec-WebSocket-Key: c2hvcnQ=\r\nSec-WebSocket-Version: 13\r\n\r\n");
-    http_parse(0);
+    HttpConn.slot = 0;
+    HttpConn.parse(HttpConn.internal);
     handle();
     Ws.slot = 0;
     Ws.find(Ws.internal);
@@ -188,7 +193,8 @@ static const char *get_path(uint8_t slot, const char *path)
     char req[128];
     snprintf(req, sizeof(req), "GET %s HTTP/1.1\r\nHost: x\r\n\r\n", path);
     push_str(slot, req);
-    http_parse(slot);
+    HttpConn.slot = slot;
+    HttpConn.parse(HttpConn.internal);
     handle();
     return tcp_captured();
 }

@@ -13,6 +13,42 @@
 #include <stddef.h>
 #include <stdint.h>
 
+/** @brief Join `spBv1.0/Group1/NDATA/edge1/dev1` into @p out; the octets written. */
+static size_t spb_topic(char *out, size_t cap)
+{
+    Sparkplug.topic_out.out = out;
+    Sparkplug.topic_out.cap = cap;
+    Sparkplug.topic.group_id = "Group1";
+    Sparkplug.topic.message_type = "NDATA";
+    Sparkplug.topic.edge_node_id = "edge1";
+    Sparkplug.topic.device_id = "dev1";
+    Sparkplug.build_topic(Sparkplug.internal);
+    return Sparkplug.n;
+}
+
+/** @brief Serialize @p m as one Metric message into @p out; the octets written. */
+static size_t spb_metric(uint8_t *out, size_t cap, const SpbMetric *m)
+{
+    Sparkplug.out.buf = out;
+    Sparkplug.out.cap = cap;
+    Sparkplug.metrics.list = m;
+    Sparkplug.build_metric(Sparkplug.internal);
+    return Sparkplug.n;
+}
+
+/** @brief Serialize a Payload header plus @p n Metrics into @p out; the octets written. */
+static size_t spb_payload(uint8_t *out, size_t cap, const SpbMetric *m, size_t n, uint64_t ts, uint64_t seq)
+{
+    Sparkplug.out.buf = out;
+    Sparkplug.out.cap = cap;
+    Sparkplug.payload.timestamp = ts;
+    Sparkplug.payload.seq = seq;
+    Sparkplug.metrics.list = m;
+    Sparkplug.metrics.count = n;
+    Sparkplug.build_payload(Sparkplug.internal);
+    return Sparkplug.n;
+}
+
 void dbench_run(void)
 {
     static SpbMetric metrics[3];
@@ -30,13 +66,11 @@ void dbench_run(void)
         DBENCH_BANNER("sparkplug");
         volatile size_t sink = 0;
         static char topic[128];
-        DBENCH_OP("protocore_spb_build_topic", 200000,
-                  sink += protocore_spb_build_topic(topic, sizeof(topic), "Group1", "NDATA", "edge1", "dev1"));
+        DBENCH_OP("Sparkplug.build_topic", 200000, sink += spb_topic(topic, sizeof(topic)));
         static uint8_t buf[256];
-        DBENCH_OP("protocore_spb_build_metric", 200000,
-                  sink += protocore_spb_build_metric(buf, sizeof(buf), &metrics[0]));
-        DBENCH_OP("protocore_spb_build_payload (3 metrics)", 200000,
-                  sink += protocore_spb_build_payload(buf, sizeof(buf), 1720700000000ull, 1, metrics, 3));
+        DBENCH_OP("Sparkplug.build_metric", 200000, sink += spb_metric(buf, sizeof(buf), &metrics[0]));
+        DBENCH_OP("Sparkplug.build_payload (3 metrics)", 200000,
+                  sink += spb_payload(buf, sizeof(buf), metrics, 3, 1720700000000ull, 1));
         (void)sink;
         DBENCH_DONE();
     }

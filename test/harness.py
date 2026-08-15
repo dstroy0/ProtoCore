@@ -14,13 +14,15 @@ Everything the harness can do is a subcommand here, so `harness.py -h` is the wh
   env deps      rebuild test/dep_graph.json from the compiler include closure
 
   run           build and run test envs natively (no pio); --pio hands off to run_tests.sh
+  bare          hand off to test/bare.py; `harness.py bare help` is its whole surface
   runners gen   generate a suite's Unity runner (the logic the pre-build hook calls)
   keys ensure   put the SSH test host key in place
   readme gen    refresh the generated sections of test/README.md
   report merge  overlay a partial TEST_REPORT.md onto the committed one
   report stable print TEST_REPORT.md with per-run timing blanked out
 
-The microbenchmarks are the same shape in their own tool: test/performance_benching/bench.py.
+Two sibling tools answer different questions and are launched the same way: the microbenchmarks at
+test/performance_benching/bench.py, and the bare-metal image at test/bare.py.
 
 The matrix is the single source of truth. Nothing here hand-writes one: every mutation takes the
 table's lock, splices text so the file is not reformatted, and re-parses to prove no other env moved.
@@ -1604,204 +1606,32 @@ def run_pio(a):
 
 
 # ---------------------------------------------------------------------------
-# bare: cross-compile an env's core as a bare-metal image
+# bare: hand off to the bare-metal tool
 # ---------------------------------------------------------------------------
-
-# The two cross toolchains PlatformIO already installed, and the flags each part wants. They are off
-# PATH, so they are named by absolute path the way every other automation here does.
-PIO_PKGS = os.path.join(os.path.expanduser("~"), ".platformio", "packages")
-BARE_ARCH = {
-    "cortex-m": {
-        "cc": os.path.join(PIO_PKGS, "toolchain-gccarmnoneeabi", "bin", "arm-none-eabi-gcc.exe"),
-        "objdump": os.path.join(PIO_PKGS, "toolchain-gccarmnoneeabi", "bin", "arm-none-eabi-objdump.exe"),
-        "march": ["-mcpu=cortex-m4", "-mthumb"],
-        "ld": os.path.join(ROOT, "core_setup", "link", "cortex_m.ld.in"),
-        "startup": "core_setup/boot/startup_cortex_m.c",
-        "regions": ["-DPROTOCORE_LINK_FLASH_ORIGIN=0x08000000", "-DPROTOCORE_LINK_FLASH_LEN=1M",
-                    "-DPROTOCORE_LINK_SRAM_ORIGIN=0x20000000", "-DPROTOCORE_LINK_SRAM_LEN=256K",
-                    "-DPROTOCORE_LINK_STACK_SIZE=16K", "-DPROTOCORE_LINK_IRQ_STACK_SIZE=4K",
-                    "-DPROTOCORE_LINK_DMA_ORIGIN=0x20040000", "-DPROTOCORE_LINK_DMA_LEN=64K",
-                    "-DPROTOCORE_LINK_DMA_ALIGN=32"],
-    },
-    # armv6-m has no LDREX/STREX and rv32imc has no LR/SC, so a read-modify-write is a call into
-    # __atomic_*_4 rather than an instruction. The ring claims and releases its slots with
-    # atomic_fetch_or / atomic_fetch_and, which is where this library's locking actually is, so
-    # these two are the arches that prove core_setup/boot/protocore_atomic.c covers it.
-    "cortex-m0": {
-        "cc": os.path.join(PIO_PKGS, "toolchain-gccarmnoneeabi", "bin", "arm-none-eabi-gcc.exe"),
-        "objdump": os.path.join(PIO_PKGS, "toolchain-gccarmnoneeabi", "bin", "arm-none-eabi-objdump.exe"),
-        "march": ["-mcpu=cortex-m0", "-mthumb"],
-        "ld": os.path.join(ROOT, "core_setup", "link", "cortex_m.ld.in"),
-        "startup": "core_setup/boot/startup_cortex_m.c",
-        "regions": ["-DPROTOCORE_LINK_FLASH_ORIGIN=0x08000000", "-DPROTOCORE_LINK_FLASH_LEN=1M",
-                    "-DPROTOCORE_LINK_SRAM_ORIGIN=0x20000000", "-DPROTOCORE_LINK_SRAM_LEN=256K",
-                    "-DPROTOCORE_LINK_STACK_SIZE=16K", "-DPROTOCORE_LINK_IRQ_STACK_SIZE=4K",
-                    "-DPROTOCORE_LINK_DMA_ORIGIN=0x20040000", "-DPROTOCORE_LINK_DMA_LEN=64K",
-                    "-DPROTOCORE_LINK_DMA_ALIGN=32"],
-    },
-    "riscv32-noa": {
-        "cc": os.path.join(PIO_PKGS, "toolchain-riscv32-esp", "bin", "riscv32-esp-elf-gcc.exe"),
-        "objdump": os.path.join(PIO_PKGS, "toolchain-riscv32-esp", "bin", "riscv32-esp-elf-objdump.exe"),
-        "march": ["-march=rv32imc_zicsr", "-mabi=ilp32"],
-        "ld": os.path.join(ROOT, "core_setup", "link", "riscv32.ld.in"),
-        "startup": "core_setup/boot/startup_riscv32.S",
-        "regions": ["-DPROTOCORE_LINK_FLASH_ORIGIN=0x20000000", "-DPROTOCORE_LINK_FLASH_LEN=1M",
-                    "-DPROTOCORE_LINK_SRAM_ORIGIN=0x80000000", "-DPROTOCORE_LINK_SRAM_LEN=256K",
-                    "-DPROTOCORE_LINK_STACK_SIZE=16K", "-DPROTOCORE_LINK_IRQ_STACK_SIZE=4K",
-                    "-DPROTOCORE_LINK_DMA_ORIGIN=0x80040000", "-DPROTOCORE_LINK_DMA_LEN=64K",
-                    "-DPROTOCORE_LINK_DMA_ALIGN=32"],
-    },
-    "riscv32": {
-        "cc": os.path.join(PIO_PKGS, "toolchain-riscv32-esp", "bin", "riscv32-esp-elf-gcc.exe"),
-        "objdump": os.path.join(PIO_PKGS, "toolchain-riscv32-esp", "bin", "riscv32-esp-elf-objdump.exe"),
-        "march": ["-march=rv32imac_zicsr", "-mabi=ilp32"],
-        "ld": os.path.join(ROOT, "core_setup", "link", "riscv32.ld.in"),
-        "startup": "core_setup/boot/startup_riscv32.S",
-        "regions": ["-DPROTOCORE_LINK_FLASH_ORIGIN=0x20000000", "-DPROTOCORE_LINK_FLASH_LEN=1M",
-                    "-DPROTOCORE_LINK_SRAM_ORIGIN=0x80000000", "-DPROTOCORE_LINK_SRAM_LEN=256K",
-                    "-DPROTOCORE_LINK_STACK_SIZE=16K", "-DPROTOCORE_LINK_IRQ_STACK_SIZE=4K",
-                    "-DPROTOCORE_LINK_DMA_ORIGIN=0x80040000", "-DPROTOCORE_LINK_DMA_LEN=64K",
-                    "-DPROTOCORE_LINK_DMA_ALIGN=32"],
-    },
-}
-
-# The runtime the image needs under it, beside whatever the env builds: the reset path, and the two
-# things a freestanding compile emits calls to that no library provides.
-BARE_RUNTIME = ["core_setup/boot/protocore_boot.c", "core_setup/boot/startup_common.c",
-                "core_setup/boot/protocore_assert.c", "core_setup/boot/protocore_atomic.c",
-                "core_setup/boot/protocore_memfns.c", "core_setup/boot/protocore_time.c",
-                "src/mmgr/protomem.c", "src/mmgr/rawmemcpy.c", "src/mmgr/swar.c"]
 
 
 def cmd_bare(a):
-    """Compile an env's sources for a real cross target and say what the image cannot satisfy.
+    """Run test/bare.py with whatever followed `bare` on the command line.
 
-    The point is not the binary: it is the symbol list. A host build answers a question about the
-    machine that compiled it, and its answers hide behind the host arm's own header inlines - the
-    reason the earlier survey counted clock_gettime and longjmp as library needs when both came from
-    core_setup/hal/host. Building with the cross compiler and -ffreestanding asks the question the
-    device asks, and whatever is still undefined is what bare metal actually owes.
+    The bare-metal build is its own tool because it answers a different question than the native
+    suite: not "do the tests pass" but "what does an image owe that no library provides", and then
+    whether it runs on the part. It is reached from here so the harness stays the one launcher, and
+    its arch table, its runtime list and its help live in one file rather than two.
     """
-    arch = BARE_ARCH[a.arch]
-    if not os.path.isfile(arch["cc"]):
-        print("no %s toolchain at %s" % (a.arch, arch["cc"]))
-        return 3
+    import bare  # here, not at import time: bare.py imports this module
+    return bare.main(a.rest)
 
-    envs = parse_ini_envs(INI)
-    names = a.envs or [n for n, e in envs.items() if e.get("tests") and n not in NEVER_SELECT]
-    out_dir = os.path.join(ROOT, ".pio", "bare", a.arch)
-    os.makedirs(out_dir, exist_ok=True)
 
-    # The bare-metal include set: the host arm is deliberately absent, which is the whole point.
-    incs = ["-I" + os.path.join(ROOT, p) for p in (".", "src", "include")]
-    base = [arch["cc"], "-std=c11", "-Os", "-w", "-ffreestanding", "-fno-builtin", "-c"] + arch["march"]
+def cmd_bench(a):
+    """Run test/performance_benching/bench.py with whatever followed `bench`.
 
-    rc_total = 0
-    for i, name in enumerate(names, 1):
-        e = envs.get(name)
-        if not e:
-            print("unknown env: %s" % name)
-            rc_total = 1
-            continue
-        _, defs = _flag_split(e["flags"])
-        # Most envs already list the mmgr sources the runtime rests on, and one object per source is
-        # what the linker wants: a second copy is a duplicate symbol, not a second definition.
-        srcs, seen_src = [], set()
-        for s in _resolve_src(e["src"]) + BARE_RUNTIME + [arch["startup"]]:
-            k = s.replace("\\", "/")
-            if k not in seen_src:
-                seen_src.add(k)
-                srcs.append(s)
-
-        # The reset path calls main() and the library has no application entry, so the gate supplies
-        # one. Without it the link fails on `main` alone and no image is produced - which is a fact
-        # about this build having no application, not about the core.
-        stub = os.path.join(out_dir, "_bare_main.c")
-        if not os.path.isfile(stub):
-            with open(stub, "w", encoding="utf-8") as fh:
-                fh.write("// Generated by harness.py bare: the entry protocore_boot_start() calls.\n"
-                         "int main(void);\n"
-                         "int main(void)\n{\n    for (;;)\n    {\n    }\n}\n")
-        srcs.append(os.path.relpath(stub, ROOT).replace("\\", "/"))
-
-        objs, bad = [], []
-        for s in srcs:
-            obj = os.path.join(out_dir, name + "__" + s.replace("/", "_").replace("\\", "_") + ".o")
-            p = subprocess.run(base + defs + incs + [s, "-o", obj], capture_output=True, text=True, cwd=ROOT)
-            if p.returncode != 0:
-                # The first stderr line is "In file included from ...", which names the include
-                # chain rather than the fault. The first line carrying `error:` is the fault.
-                msg = "?"
-                for ln in p.stderr.split("\n"):
-                    if ": error:" in ln or ": fatal error:" in ln:
-                        msg = ln.split("error:", 1)[1].strip()
-                        break
-                bad.append((s, msg))
-            else:
-                objs.append(obj)
-
-        undef = []
-        linked = False
-        link_err = ""
-        if objs and not bad:
-            ldout = os.path.join(out_dir, name + ".ld")
-            subprocess.run([arch["cc"], "-E", "-P", "-x", "c"] + arch["regions"] + [arch["ld"], "-o", ldout],
-                           capture_output=True, text=True, cwd=ROOT)
-            elf = os.path.join(out_dir, name + ".elf")
-            # -lgcc is the compiler's own runtime (64-bit shifts, soft float, __aeabi_*). The
-            # toolchain ships it and a real image links it, so an image missing it says nothing
-            # about the core. `main` is the application's, which a library build does not carry.
-            l = subprocess.run([arch["cc"]] + arch["march"] + ["-nostdlib", "-nostartfiles", "-T", ldout] +
-                               objs + ["-o", elf, "-lgcc"], capture_output=True, text=True, cwd=ROOT)
-            # An image exists or it does not. Reading only the undefined-reference lines called a
-            # link that failed some other way a success, and reported LINKS with no ELF on disk.
-            linked = (l.returncode == 0 and os.path.isfile(elf))
-            if not linked:
-                undef = sorted(set(re.findall(r"undefined reference to `([^']+)'", l.stderr)))
-                undef = [u for u in undef if u != "main"]
-                if not undef:
-                    for ln in l.stderr.split("\n"):
-                        if ": error:" in ln or "ld.exe:" in ln or "cannot" in ln:
-                            link_err = ln.strip()
-                            break
-
-        # A TU that only wants the network arm's types is waiting on idemIP (core_setup/idemIP),
-        # which is the low-level stack and is not written yet. That is a known hole, not a finding,
-        # so it is counted apart from a TU that fails for its own reasons.
-        net = [x for x in bad if re.search(r"'(protocore_net_err|protocore_pcb|protocore_net_ip|"
-                                           r"protocore_pbuf|protocore_net_call)'", x[1])]
-        sched = [x for x in bad if re.search(r"'(protocore_platform_task|protocore_platform_queue|"
-                                             r"protocore_platform_mutex|protocore_platform_ticks|"
-                                             r"protocore_platform_status)[a-z_]*'", x[1])]
-        real = [x for x in bad if x not in net and x not in sched]
-
-        if linked:
-            status = "LINKS"
-        elif not real and not undef and not link_err:
-            status = "NEEDS-ARM"
-        else:
-            status = "FAIL"
-        waiting = []
-        if net:
-            waiting.append("%d net" % len(net))
-        if sched:
-            waiting.append("%d sched" % len(sched))
-        print("[%d/%d] %-34s %-11s %s" % (i, len(names), name, status,
-                                          ("(%s TU waiting on a platform arm)" % ", ".join(waiting)) if waiting else ""))
-        if real:
-            print("   %d TU(s) will not compile freestanding:" % len(real))
-            for s, msg in real[:6]:
-                print("      %-52s %s" % (s, msg[:90]))
-        if undef:
-            print("   %d symbol(s) the image cannot satisfy:" % len(undef))
-            for u in undef[:20]:
-                print("      " + u)
-        if link_err:
-            print("   the link failed without naming a symbol:")
-            print("      " + link_err[:160])
-        if status == "FAIL":
-            rc_total = 1
-    return rc_total
+    Same reason as `bare`: the microbenchmarks are their own matrix and their own tool, but nothing
+    should have to know that to run them. One entry point is what keeps a session's knowledge of how
+    to drive the tests from being re-derived every time.
+    """
+    sys.path.insert(0, os.path.join(ROOT, "test", "performance_benching"))
+    import bench  # here, not at import time: bench.py imports this module
+    return bench.main(a.rest)
 
 
 def cmd_run(a):
@@ -1878,13 +1708,52 @@ def cmd_run(a):
 # ---------------------------------------------------------------------------
 
 
-def main():
+def _subcommands(parser):
+    """{name: subparser} for a parser's one subparser group."""
+    for action in parser._actions:
+        if isinstance(action, argparse._SubParsersAction):
+            return action.choices
+    return {}
+
+
+def cmd_help(a):
+    """Every command's own help in one call, or one command's.
+
+    `-h` prints usage one level at a time, so reading the whole surface means invoking it once per
+    subcommand, and the nested groups make that three levels deep. This prints all of it.
+    """
+    subs = _subcommands(build_parser())
+    if a.command:
+        if a.command not in subs:
+            print("no such command: %s (try `harness.py help`)" % a.command, file=sys.stderr)
+            return 2
+        subs[a.command].print_help()
+        for name, nested in sorted(_subcommands(subs[a.command]).items()):
+            print("\n### harness.py %s %s" % (a.command, name))
+            print(nested.format_help().strip())
+        return 0
+    print(__doc__.strip())
+    for name in sorted(subs):
+        print("\n" + "-" * 78)
+        print("### harness.py %s" % name)
+        print(subs[name].format_help().strip())
+        for nested_name, nested in sorted(_subcommands(subs[name]).items()):
+            print("\n  ### harness.py %s %s" % (name, nested_name))
+            print(nested.format_help().strip())
+    return 0
+
+
+def build_parser():
     ap = argparse.ArgumentParser(
         prog="harness.py",
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     sub = ap.add_subparsers(dest="group", required=True)
+
+    p = sub.add_parser("help", help="every command's help in one call, or one command's")
+    p.add_argument("command", nargs="?")
+    p.set_defaults(fn=cmd_help)
 
     # env ---------------------------------------------------------------
     env = sub.add_parser("env", help="the native test matrix").add_subparsers(dest="cmd", required=True)
@@ -1942,10 +1811,19 @@ def main():
     p.set_defaults(fn=cmd_env_deps)
 
     # run ---------------------------------------------------------------
-    b = sub.add_parser("bare", help="cross-compile an env's core as a bare-metal image and report what it cannot satisfy")
-    b.add_argument("envs", nargs="*")
-    b.add_argument("--arch", choices=sorted(BARE_ARCH), default="cortex-m")
+    b = sub.add_parser("bare", help="hand off to test/bare.py: cross-compile the core, and boot it on the part",
+                       description="Everything after `bare` is passed to test/bare.py unread, so its "
+                                   "own surface is the authority: `harness.py bare help`.",
+                       add_help=False)
+    b.add_argument("rest", nargs=argparse.REMAINDER, metavar="...")
     b.set_defaults(fn=cmd_bare)
+
+    b = sub.add_parser("bench", help="hand off to test/performance_benching/bench.py: the microbenchmark matrix",
+                       description="Everything after `bench` is passed to bench.py unread, so its "
+                                   "own surface is the authority: `harness.py bench help`.",
+                       add_help=False)
+    b.add_argument("rest", nargs=argparse.REMAINDER, metavar="...")
+    b.set_defaults(fn=cmd_bench)
 
     p = sub.add_parser("run", help="build and run test envs natively (no pio)")
     p.add_argument("envs", nargs="*")
@@ -1988,8 +1866,11 @@ def main():
     p = report.add_parser("stable")
     p.add_argument("path")
     p.set_defaults(fn=cmd_report_stable)
+    return ap
 
-    a = ap.parse_args()
+
+def main():
+    a = build_parser().parse_args()
     return a.fn(a)
 
 

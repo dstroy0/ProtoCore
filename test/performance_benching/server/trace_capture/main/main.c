@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // On-device CCOUNT microbenchmark for the pre/post-trigger capture assembler (server/signaling/trace_capture):
-// protocore_tc_feed() is the per-batch hot op (most naturally called from a DMA-complete handler) that fills
+// TraceCapture.feed_in is the per-batch hot op (most naturally called from a DMA-complete handler) that fills
 // the pre-trigger ring and, after a trigger, the post-trigger half. Pure ring bookkeeping over a
 // caller sample batch; the DMA source and the completed-window sink are the application's.
 //
@@ -20,6 +20,23 @@ static void sink_cb(const protocore_tc_window *, void *)
     g_windows++; // count completed windows; do no work in the hot path
 }
 
+/** @brief Open a capture with @p cfg: the pre-roll ring, the post-trigger half, and the sink. */
+static proto_bool tc_begin(const protocore_tc_config *cfg)
+{
+    TraceCapture.cfg = cfg;
+    TraceCapture.begin(TraceCapture.internal);
+    return TraceCapture.ok;
+}
+
+/** @brief Feed @p n samples at @p samples into the capture; how many it took. */
+static uint16_t tc_feed(const uint16_t *samples, uint16_t n)
+{
+    TraceCapture.feed.samples = samples;
+    TraceCapture.feed.n = n;
+    TraceCapture.feed_in(TraceCapture.internal);
+    return TraceCapture.accepted;
+}
+
 void dbench_run(void)
 {
     static uint16_t batch[64];
@@ -32,12 +49,12 @@ void dbench_run(void)
     {
         DBENCH_BANNER("trace_capture");
         protocore_tc_config cfg = {512, 512, sink_cb, NULL};
-        protocore_tc_begin(&cfg);
+        tc_begin(&cfg);
         volatile uint32_t sink = 0;
         // Steady pre-trigger feeding: the continuous ring fill that runs every DMA-complete.
-        DBENCH_OP("protocore_tc_feed (64 samples)", 100000, sink += protocore_tc_feed(batch, 64));
+        DBENCH_OP("TraceCapture.feed_in (64 samples)", 100000, sink += tc_feed(batch, 64));
         (void)sink;
-        protocore_tc_end();
+        TraceCapture.end(TraceCapture.internal);
         DBENCH_DONE();
     }
 }

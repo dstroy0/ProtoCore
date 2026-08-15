@@ -1,10 +1,10 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Host-side microbenchmark for the STOMP 1.2 frame codec: protocore_stomp_build_frame (the device emits a SEND) and
-// protocore_stomp_parse_frame (decode one inbound broker frame - command + headers + content-length body, the
+// Host-side microbenchmark for the STOMP 1.2 frame codec: Stomp.build (the device emits a SEND) and
+// Stomp.parse (decode one inbound broker frame - command + headers + content-length body, the
 // untrusted-input hot op). Both pure (no sockets, no heap), so they link standalone. The device figure comes
-// from the rig /bench protocore_stomp_parse_frame op; this host ns/op + MB/s is a relative baseline. Build + run:
+// from the rig /bench Stomp.parse op; this host ns/op + MB/s is a relative baseline. Build + run:
 //   gcc -O2 -std=c11 -I. -Isrc -Itest/mocks -Itest/support -Itest/performance_benching/common
 //   -DPROTOCORE_ENABLE_STOMP=1 test/performance_benching/services/stomp/host.c
 //   src/services/iot/stomp/stomp.c src/mmgr/protomem.c src/mmgr/protostr.c -o /tmp/bstomp && /tmp/bstomp
@@ -16,14 +16,40 @@
 #include <stdint.h>
 #include <string.h>
 
+/** @brief Write a SEND frame carrying @p body and the two headers into @p out; the octets written. */
+static size_t stomp_send_frame(char *out, size_t cap, const char *const *hk, const char *const *hv, const char *body,
+                               size_t blen)
+{
+    Stomp.buf.out = out;
+    Stomp.buf.cap = cap;
+    Stomp.build_args.command = "SEND";
+    Stomp.build_args.header_names = hk;
+    Stomp.build_args.header_values = hv;
+    Stomp.build_args.header_count = 2;
+    Stomp.build_args.body = body;
+    Stomp.build_args.body_len = blen;
+    Stomp.build(Stomp.internal);
+    return Stomp.n;
+}
+
+/** @brief Take one frame from the head of @p in into @p f; the octets it occupied, 0 on a refusal. */
+static size_t stomp_take_frame(StompFrame *f, const char *in, size_t len)
+{
+    Stomp.frame = f;
+    Stomp.buf.in = in;
+    Stomp.buf.len = len;
+    Stomp.parse(Stomp.internal);
+    return Stomp.ok ? Stomp.consumed : 0;
+}
+
 int main(void)
 {
     const char *body = "hello-from-pc-rig";
     const size_t blen = strlen(body);
     char frame[384];
-    const char *bk[] = {"destination", "content-length"};
-    const char *bv[] = {"/topic/pc", "20"};
-    size_t flen = protocore_stomp_build_frame(frame, sizeof(frame), "SEND", bk, bv, 2, body, blen);
+    const char *const bk[] = {"destination", "content-length"};
+    const char *const bv[] = {"/topic/pc", "20"};
+    size_t flen = stomp_send_frame(frame, sizeof(frame), bk, bv, body, blen);
 
     // A representative inbound MESSAGE frame (what a subscriber receives). Ends at the NUL.
     const char msg[] = "MESSAGE\ndestination:/topic/pc\nmessage-id:007\nsubscription:0\n"
@@ -36,8 +62,7 @@ int main(void)
     {
         volatile size_t sink = 0;
         double ns = 0.0;
-        HBENCH_NS(2000000, sink += protocore_stomp_build_frame(frame, sizeof(frame), "SEND", bk, bv, 2, body, blen),
-                  ns);
+        HBENCH_NS(2000000, sink += stomp_send_frame(frame, sizeof(frame), bk, bv, body, blen), ns);
         hbench_row("stomp", "build SEND frame", ns, (double)flen);
         (void)sink;
     }
@@ -49,8 +74,7 @@ int main(void)
             2000000,
             {
                 StompFrame f;
-                size_t used = 0;
-                sink += protocore_stomp_parse_frame(msg, mlen, &f, &used) ? (int)used : 0;
+                sink += (int)stomp_take_frame(&f, msg, mlen);
             },
             ns);
         hbench_row("stomp", "parse MESSAGE frame", ns, (double)mlen);

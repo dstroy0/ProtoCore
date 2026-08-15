@@ -12,6 +12,55 @@
 #include <stddef.h>
 #include <stdint.h>
 
+/** @brief Write the nine characters of the escape fixture through the predefined entities. */
+static size_t xmpp_escape(char *out, size_t cap)
+{
+    Xmpp.out.buf = out;
+    Xmpp.out.cap = cap;
+    Xmpp.text.in = "a<b>&\"c'd";
+    Xmpp.text.len = 9;
+    Xmpp.escape(Xmpp.internal);
+    return Xmpp.n;
+}
+
+/** @brief Build the initial stream header into @p out; the octets written. */
+static size_t xmpp_stream_open(char *out, size_t cap)
+{
+    Xmpp.out.buf = out;
+    Xmpp.out.cap = cap;
+    Xmpp.stream.from = "rig@pc";
+    Xmpp.stream.to = "pc.example";
+    Xmpp.stream_open(Xmpp.internal);
+    return Xmpp.n;
+}
+
+/** @brief Build a chat `<message/>` with a body into @p out; the octets written. */
+static size_t xmpp_message(char *out, size_t cap)
+{
+    Xmpp.out.buf = out;
+    Xmpp.out.cap = cap;
+    Xmpp.common.to = "ops@pc";
+    Xmpp.common.from = "rig@pc";
+    Xmpp.common.type = "chat";
+    Xmpp.child.body = "temp 84C over threshold";
+    Xmpp.message(Xmpp.internal);
+    return Xmpp.n;
+}
+
+/** @brief Build a get `<iq/>` carrying a ping extension into @p out; the octets written. */
+static size_t xmpp_iq(char *out, size_t cap)
+{
+    Xmpp.out.buf = out;
+    Xmpp.out.cap = cap;
+    Xmpp.common.to = NULL;
+    Xmpp.common.from = NULL;
+    Xmpp.common.type = "get";
+    Xmpp.common.id = "q1";
+    Xmpp.child.extension = "<ping xmlns='urn:xmpp:ping'/>";
+    Xmpp.iq(Xmpp.internal);
+    return Xmpp.n;
+}
+
 void dbench_run(void)
 {
     for (;;)
@@ -19,14 +68,10 @@ void dbench_run(void)
         DBENCH_BANNER("xmpp");
         volatile size_t sink = 0;
         static char out[512];
-        DBENCH_OP("protocore_xmpp_escape", 200000, sink += protocore_xmpp_escape("a<b>&\"c'd", 9, out, sizeof(out)));
-        DBENCH_OP("protocore_xmpp_stream_open", 200000,
-                  sink += protocore_xmpp_stream_open("rig@pc", "pc.example", out, sizeof(out)));
-        DBENCH_OP("protocore_xmpp_message", 200000,
-                  sink +=
-                  protocore_xmpp_message("ops@pc", "rig@pc", "chat", "temp 84C over threshold", out, sizeof(out)));
-        DBENCH_OP("protocore_xmpp_iq", 200000,
-                  sink += protocore_xmpp_iq("get", "q1", "<ping xmlns='urn:xmpp:ping'/>", out, sizeof(out)));
+        DBENCH_OP("Xmpp.escape", 200000, sink += xmpp_escape(out, sizeof(out)));
+        DBENCH_OP("Xmpp.stream_open", 200000, sink += xmpp_stream_open(out, sizeof(out)));
+        DBENCH_OP("Xmpp.message", 200000, sink += xmpp_message(out, sizeof(out)));
+        DBENCH_OP("Xmpp.iq", 200000, sink += xmpp_iq(out, sizeof(out)));
         (void)sink;
         DBENCH_DONE();
     }

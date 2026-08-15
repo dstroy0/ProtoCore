@@ -512,7 +512,11 @@ void on_ws(const char *path, WsConnectHandler on_connect, WsMessageHandler on_me
 
     fill_route_base(r, path);
     r->type = ROUTE_WS;
-    r->ws_id = ws_route_add(on_connect, on_message, on_close);
+    Ws.route.on_connect = on_connect;
+    Ws.route.on_message = on_message;
+    Ws.route.on_close = on_close;
+    Ws.route_add(Ws.internal);
+    r->ws_id = Ws.u8;
 }
 #endif // PROTOCORE_ENABLE_WEBSOCKET
 
@@ -566,10 +570,11 @@ void ws_dispatch_message(const WsConn *ws)
         {
             continue;
         }
-        WsMessageHandler on_message = ws_route_message(rt->ws_id);
-        if (on_message != NULL)
+        Ws.id = rt->ws_id;
+        Ws.route_message(Ws.internal);
+        if (Ws.message_handler != NULL)
         {
-            on_message(ws->ws_id);
+            Ws.message_handler(ws->ws_id);
             break;
         }
     }
@@ -584,10 +589,11 @@ void ws_dispatch_close(const WsConn *ws)
         {
             continue;
         }
-        WsCloseHandler on_close = ws_route_close(rt->ws_id);
-        if (on_close != NULL)
+        Ws.id = rt->ws_id;
+        Ws.route_close(Ws.internal);
+        if (Ws.close_handler != NULL)
         {
-            on_close(ws->ws_id);
+            Ws.close_handler(ws->ws_id);
             break;
         }
     }

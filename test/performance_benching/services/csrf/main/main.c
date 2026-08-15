@@ -30,6 +30,27 @@ static const uint8_t SECRET[32] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x7
                                    0xbb, 0xcc, 0xdd, 0xee, 0xff, 0x10, 0x32, 0x54, 0x76, 0x98, 0xba,
                                    0xdc, 0xfe, 0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef};
 
+/** @brief Render @p raw as CSRF_NONCE_BYTES * 2 lowercase hex characters plus a NUL at @p out. */
+static void hex_encode_nonce(const uint8_t *raw, char *out)
+{
+    Hex.io.in = raw;
+    Hex.io.n = CSRF_NONCE_BYTES;
+    Hex.io.out = out;
+    Hex.args.upper = PROTO_FALSE;
+    Hex.encode(Hex.internal);
+}
+
+/** @brief Read CSRF_NONCE_BYTES * 2 hex characters at @p text back into @p out; bytes written. */
+static int32_t hex_decode_nonce(const char *text, uint8_t *out)
+{
+    Hex.io.text = text;
+    Hex.io.n = CSRF_NONCE_BYTES * 2;
+    Hex.io.bytes = out;
+    Hex.io.cap = CSRF_NONCE_BYTES;
+    Hex.decode(Hex.internal);
+    return Hex.i32;
+}
+
 void dbench_run(void)
 {
     protocore_csrf_set_secret(SECRET, sizeof(SECRET));
@@ -40,7 +61,7 @@ void dbench_run(void)
 
     static const uint8_t raw6[CSRF_NONCE_BYTES] = {0xde, 0xad, 0xbe, 0xef, 0x01, 0x02};
     static char hex_out[CSRF_NONCE_BYTES * 2 + 1];
-    protocore_hex_encode(raw6, sizeof(raw6), hex_out, PROTO_FALSE);
+    hex_encode_nonce(raw6, hex_out);
     static uint8_t bin_out[CSRF_NONCE_BYTES];
 
     for (;;)
@@ -51,10 +72,8 @@ void dbench_run(void)
 
         DBENCH_OP("protocore_csrf_issue", 20000, sinki += protocore_csrf_issue(token, sizeof(token)));
         DBENCH_OP("protocore_csrf_verify", 20000, sinkb = protocore_csrf_verify(token));
-        DBENCH_OP("protocore_hex_encode (6B nonce)", 50000,
-                  protocore_hex_encode(raw6, sizeof(raw6), hex_out, PROTO_FALSE));
-        DBENCH_OP("protocore_hex_decode (6B nonce)", 50000,
-                  sinki += protocore_hex_decode(hex_out, sizeof(hex_out) - 1, bin_out, sizeof(bin_out)));
+        DBENCH_OP("Hex.encode (6B nonce)", 50000, hex_encode_nonce(raw6, hex_out));
+        DBENCH_OP("Hex.decode (6B nonce)", 50000, sinki += hex_decode_nonce(hex_out, bin_out));
 
         (void)sinki;
         (void)sinkb;

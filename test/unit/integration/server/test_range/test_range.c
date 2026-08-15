@@ -36,12 +36,14 @@ void setUp()
         conn_pool[i].state = CONN_ACTIVE;
         conn_pool[i].proto = PROTO_HTTP;
         conn_pool[i].pcb = protocore_net_host_pcb();
-        http_reset(i);
+        HttpConn.slot = i;
+        HttpConn.reset(HttpConn.internal);
     }
     Ws.init(Ws.internal);
-    protocore_sse_init();
+    Sse.init(Sse.internal);
     lfsm_format();
-    protocore_mnt_mount(lfsm());
+    Mnt.args.backend = lfsm();
+    Mnt.mount(Mnt.internal);
     TEST_ASSERT_TRUE(lfsm_write_text("/data.bin", FILE_DATA));
     tcp_capture_reset();
     mock_sndbuf_set(MOCK_SNDBUF_DEFAULT);
@@ -80,7 +82,8 @@ static void request(const char *range_hdr)
         snprintf(req, sizeof(req), "GET /data HTTP/1.1\r\n\r\n");
     }
     push_str(0, req);
-    http_parse(0);
+    HttpConn.slot = 0;
+    HttpConn.parse(HttpConn.internal);
     handle();
 }
 
@@ -199,7 +202,8 @@ void test_range_suffix_zero_unsatisfiable()
 void test_head_with_range_no_body()
 {
     push_str(0, "HEAD /data HTTP/1.1\r\nRange: bytes=0-3\r\n\r\n");
-    http_parse(0);
+    HttpConn.slot = 0;
+    HttpConn.parse(HttpConn.internal);
     handle();
     const char *r = tcp_captured();
     TEST_ASSERT_NOT_NULL(strstr(r, "206 Partial Content"));
@@ -279,7 +283,8 @@ void test_serve_file_connection_gone()
 {
     on_http("/gone", HTTP_GET, serve_data_conn_gone);
     push_str(0, "GET /gone HTTP/1.1\r\n\r\n");
-    http_parse(0);
+    HttpConn.slot = 0;
+    HttpConn.parse(HttpConn.internal);
     handle();
     TEST_ASSERT_EQUAL_UINT(0, tcp_captured_len());
     TEST_ASSERT_NULL(strstr(tcp_captured(), "200 OK"));
@@ -289,7 +294,8 @@ void test_unsatisfiable_range_416_carries_cors()
 {
     set_cors("*");
     push_str(0, "GET /data HTTP/1.1\r\nHost: x\r\nRange: bytes=100-200\r\n\r\n");
-    http_parse(0);
+    HttpConn.slot = 0;
+    HttpConn.parse(HttpConn.internal);
     handle();
     const char *out = tcp_captured();
     TEST_ASSERT_NOT_NULL(strstr(out, "416 Range Not Satisfiable"));

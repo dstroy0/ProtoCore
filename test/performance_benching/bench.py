@@ -5,8 +5,9 @@
 bench.py - the one entry point for the microbenchmark matrix.
 
 The counterpart to test/harness.py: same discipline, same shape, for
-test/performance_benching instead of the native test suite. `bench.py -h` is the whole surface:
+test/performance_benching instead of the native test suite. `bench.py help` is the whole surface:
 
+  help    every command's help in one call, or one command's
   add     splice a new bench into bench_matrix.json
   update  change an existing bench's flags / src / desc
   gen     regenerate every bench project's platformio.ini from the matrix
@@ -23,6 +24,7 @@ other bench moved. Each project's platformio.ini is generated - editing one is d
 import argparse
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -188,9 +190,35 @@ def cmd_list(a):
 # ---------------------------------------------------------------------------
 
 
+# The host branch of the platform seam. These answer the calls src/ makes through
+# core_setup/board_profiles/protocore_platform.h and the crypto, NVS and PHY seams: the arm is
+# chosen by vendor, so it sits nowhere near the header and no include closure reaches it. The unit
+# envs name the same files in their build_src_filter; a bench's src list is derived, so they are
+# named here.
+#
+# They go in an archive rather than on the link line, so the linker takes only the members that
+# resolve something. A bench that never reaches the crypto seam then does not drag the AES arm in
+# and does not have to link what the AES arm itself needs. Built per bench: a body behind a
+# PROTOCORE_ENABLE_* flag is present or empty depending on what that bench defines.
+HOST_ARMS = [
+    "core_setup/hal/portable/portable_platform.c",
+    "core_setup/hal/portable/portable_aesgcm.c",
+    "core_setup/hal/portable/portable_aes128gcm.c",
+    "core_setup/hal/portable/portable_bignum.c",
+    "core_setup/hal/host/host_platform.c",
+    "core_setup/hal/host/host_nvs.c",
+    "core_setup/hal/host/physical/physical_mock.c",
+]
+
+
 def host_flags(entry):
     # The host has no bounded DRAM, so the arenas are sized far past any bench's worst case, the
     # same way the test envs do it. A failed span is then a defect, not a budget.
+    # -Iinclude, where protocore.h lives, is deliberately NOT here. A bench measures one module, and
+    # the umbrella header pulls the whole server in behind it: adding the path took server_gpio_map
+    # from 10 translation units to 288 and its build from seconds to a minute, for the same measured
+    # numbers. The two benches whose subject really is the umbrella (upload_service, ota_service)
+    # therefore do not resolve it, and say so at the compile rather than building the world.
     incs = [
         "-Icore_setup/hal/host",
         "-Itest/support",
@@ -218,11 +246,111 @@ def _mm_headers(cc, entry, main_c):
     return out, None
 
 
+def _siblings_of(header):
+    """The other .c files in a header's own directory that include it.
+
+    One module is not always one .c: exc_decoder.h is served by exc_decoder.c and exc_coredump.c,
+    and the namespace one defines points at calls the other holds. Naming the header is what makes
+    such a file part of the module, so that is the test - a .c in the same directory that does not
+    include the header is a different module and is not taken.
+    """
+    d = os.path.dirname(header)
+    base = os.path.basename(header)
+    # An include names the header from an include-path root, not from the repo root: src/ is one of
+    # those roots, so both spellings are accepted.
+    wants = ['#include "' + header + '"', '#include "' + header[4:] + '"', '#include "' + base + '"']
+    out = []
+    for f in sorted(os.listdir(os.path.join(ROOT, d))):
+        if not f.endswith(".c") or f == base[:-2] + ".c":
+            continue
+        p = (d + "/" + f).replace("\\", "/")
+        with open(os.path.join(ROOT, p), "r", encoding="utf-8", errors="replace") as fh:
+            text = fh.read()
+        if any(w in text for w in wants):
+            out.append(p)
+    return out
+
+
+# A file-scope definition: a return type at column 0, then a name, then the parameter list. `static`
+# is kept rather than skipped - a definition behind a feature gate is still the file that would
+# provide the symbol, and reading it wrong costs nothing here (see symbol_index).
+DEFN = re.compile(r"^[A-Za-z_][\w\s\*]*?\b(\w+)\s*\([^;]*$", re.M)
+
+
+def _defines(path):
+    """The names a .c appears to define at file scope, read from its text.
+
+    Compiling each source and reading nm is exact but costs minutes over the whole tree, and the
+    exactness buys nothing: this table is only ever consulted for a symbol a real link has already
+    reported missing, so a name it lists that the file does not actually define is never looked up.
+    Reading the text is the same answer for this purpose, at a thousandth of the cost.
+    """
+    with open(os.path.join(ROOT, path), "r", encoding="utf-8", errors="replace") as f:
+        return set(DEFN.findall(f.read()))
+
+
+# symbol -> the src/ .c that defines it. Built once per run; the answer does not depend on which
+# bench is asking. Feature gates are ignored on purpose: a symbol only ever reaches this table
+# because a link reported it missing, so listing more than a given build defines cannot pull
+# anything in that the linker did not ask for.
+_SYM_INDEX = None
+
+
+def symbol_index():
+    global _SYM_INDEX
+    if _SYM_INDEX is not None:
+        return _SYM_INDEX
+    _SYM_INDEX = {}
+    for d, _dirs, files in os.walk(os.path.join(ROOT, "src")):
+        for f in sorted(files):
+            if not f.endswith(".c"):
+                continue
+            p = os.path.relpath(os.path.join(d, f), ROOT).replace("\\", "/")
+            for s in _defines(p):
+                _SYM_INDEX.setdefault(s, p)
+    return _SYM_INDEX
+
+
+def symbol_closure(cc, entry, incs, defs, srcs, out_dir, name, index, rounds=12):
+    """Add the .c files that define what the link is still missing, until it is missing nothing.
+
+    An include closure finds a module's own translation unit, and the sibling rule finds the other
+    .c files of that module. Neither finds a definition that lives in a different module with no
+    header of its own on the path - response.c's send_text, regex.c's regex_match, the pcap and
+    uuid helpers. The linker is the only thing that knows what is actually missing, so it is asked:
+    link, read the undefined names, and add whatever src/ file defines each one.
+    """
+    exe = os.path.join(out_dir, "_deps_" + name + ".exe")
+    main_c = os.path.relpath(os.path.join(bench_dir(entry), "main", "main.c"), ROOT).replace("\\", "/")
+    # Built once, not once per round: the arms depend on this bench's flags, and those do not
+    # change while its source list is being closed over.
+    lib, _err = host_arm_archive(cc, entry, incs, defs, out_dir, name)
+    for _ in range(rounds):
+        cmd = [cc, "-std=c11", "-D_POSIX_C_SOURCE=200809L", "-O0"] + defs + incs + [main_c] + srcs
+        if lib:
+            cmd.append(lib)
+        r = subprocess.run(cmd + ["-o", exe, "-lm"], capture_output=True, text=True, cwd=ROOT)
+        if r.returncode == 0:
+            return srcs, []
+        missing = sorted(set(re.findall(r"undefined reference to [`']([^'`]+)'", r.stderr)))
+        if not missing:
+            return srcs, []
+        added = [index[m] for m in missing if m in index and index[m] not in srcs]
+        if not added:
+            return srcs, missing
+        for p in added:
+            if p not in srcs:
+                srcs.append(p)
+    return srcs, []
+
+
 def cmd_deps(a):
     """A header that has a .c beside it is a translation unit the bench has to link.
 
     Iterated to a fixpoint: a .c pulled in for main.c has its own include closure, and the
-    definitions it needs (protomem, swar, ...) are only reachable from there.
+    definitions it needs (protomem, swar, ...) are only reachable from there. Whatever the link is
+    still missing after that is resolved by symbol, which is the only way to reach a definition
+    that no header on the path declares.
     """
     cc = shutil.which("gcc") or shutil.which("cc")
     if not cc:
@@ -254,17 +382,29 @@ def cmd_deps(a):
                 continue  # a TU that does not preprocess alone contributes nothing
             for h in headers:
                 c = h[:-2] + ".c"
-                if c not in srcs and os.path.isfile(os.path.join(ROOT, c)):
-                    srcs.append(c)
-                    pending.append(c)
+                if not os.path.isfile(os.path.join(ROOT, c)):
+                    continue
+                for tu2 in [c] + _siblings_of(h):
+                    if tu2 not in srcs:
+                        srcs.append(tu2)
+                        pending.append(tu2)
         if failed is not None:
             print("[%d/%d] %-30s SCAN FAILED" % (i, len(names), name))
             if a.verbose:
                 print(failed)
             continue
+        incs, defs = host_flags(e)
+        out_dir = os.path.join(ROOT, ".pio", "bench")
+        os.makedirs(out_dir, exist_ok=True)
+        index = symbol_index()
+        n_headers = len(srcs)
+        srcs, missing = symbol_closure(cc, e, incs, defs, srcs, out_dir, name, index)
         srcs.sort()
         resolved[name] = srcs
-        print("[%d/%d] %-30s %d sources" % (i, len(names), name, len(srcs)))
+        extra = (" (+%d by symbol)" % (len(srcs) - n_headers)) if len(srcs) > n_headers else ""
+        print("[%d/%d] %-30s %d sources%s" % (i, len(names), name, len(srcs), extra))
+        if missing:
+            print("   %d symbol(s) nothing under src/ defines: %s" % (len(missing), ", ".join(missing[:8])))
     if a.dry_run:
         return 0
     lock = lock_acquire(TABLE)
@@ -299,6 +439,30 @@ def cmd_deps(a):
 # ---------------------------------------------------------------------------
 
 
+def host_arm_archive(cc, entry, incs, defs, outdir, name):
+    """Compile ::HOST_ARMS under this bench's flags into one archive; its path, or (None, error)."""
+    ar = shutil.which("ar")
+    if not ar:
+        return None, "no ar on PATH"
+    objdir = os.path.join(outdir, "arms", name)
+    os.makedirs(objdir, exist_ok=True)
+    objs = []
+    for src in HOST_ARMS:
+        obj = os.path.join(objdir, os.path.basename(src)[:-2] + ".o")
+        cmd = [cc, "-std=c11", "-D_POSIX_C_SOURCE=200809L", "-O2", "-c"] + defs + incs + [src, "-o", obj]
+        r = subprocess.run(cmd, capture_output=True, text=True, cwd=ROOT)
+        if r.returncode != 0:
+            return None, r.stderr.strip()
+        objs.append(obj)
+    lib = os.path.join(objdir, "libhostarms.a")
+    if os.path.isfile(lib):
+        os.remove(lib)
+    r = subprocess.run([ar, "rcs", lib] + objs, capture_output=True, text=True, cwd=ROOT)
+    if r.returncode != 0:
+        return None, r.stderr.strip()
+    return lib, None
+
+
 def cmd_run(a):
     """Build each bench against the host branch of the platform and run one pass."""
     cc = shutil.which("gcc") or shutil.which("cc")
@@ -323,8 +487,15 @@ def cmd_run(a):
         incs, defs = host_flags(e)
         main_c = os.path.relpath(os.path.join(bench_dir(e), "main", "main.c"), ROOT).replace("\\", "/")
         exe = os.path.join(outdir, name + ".exe")
+        lib, err = host_arm_archive(cc, e, incs, defs, outdir, name)
+        if lib is None:
+            print("[%d/%d] %-30s HOST ARMS FAILED" % (i, len(names), name))
+            if a.verbose:
+                print(err)
+            failed.append(name)
+            continue
         cmd = [cc, "-std=c11", "-D_POSIX_C_SOURCE=200809L", "-O2"] + defs + incs + \
-              [main_c] + e["src"] + ["-o", exe, "-lm"]
+              [main_c] + e["src"] + [lib, "-o", exe, "-lm"]
         b = subprocess.run(cmd, capture_output=True, text=True, cwd=ROOT)
         if b.returncode != 0:
             print("[%d/%d] %-30s BUILD FAILED" % (i, len(names), name))
@@ -370,11 +541,44 @@ def cmd_flash(a):
 # ---------------------------------------------------------------------------
 
 
-def main():
+def _subcommands(parser):
+    """{name: subparser} for a parser's one subparser group."""
+    for action in parser._actions:
+        if isinstance(action, argparse._SubParsersAction):
+            return action.choices
+    return {}
+
+
+def cmd_help(a):
+    """Every command's own help in one call, or one command's.
+
+    `-h` prints usage one level at a time, so reading the whole surface means invoking it once per
+    subcommand. This prints all of it.
+    """
+    subs = _subcommands(build_parser())
+    if a.command:
+        if a.command not in subs:
+            print("no such command: %s (try `bench.py help`)" % a.command, file=sys.stderr)
+            return 2
+        subs[a.command].print_help()
+        return 0
+    print(__doc__.strip())
+    for name in sorted(subs):
+        print("\n" + "-" * 78)
+        print("### bench.py %s" % name)
+        print(subs[name].format_help().strip())
+    return 0
+
+
+def build_parser():
     ap = argparse.ArgumentParser(
         prog="bench.py", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
     sub = ap.add_subparsers(dest="cmd", required=True)
+
+    p = sub.add_parser("help", help="every command's help in one call, or one command's")
+    p.add_argument("command", nargs="?")
+    p.set_defaults(fn=cmd_help)
 
     p = sub.add_parser("add", help="splice a new bench into the matrix")
     p.add_argument("name")
@@ -420,8 +624,11 @@ def main():
     p.add_argument("--upload", action="store_true")
     p.add_argument("--port")
     p.set_defaults(fn=cmd_flash)
+    return ap
 
-    a = ap.parse_args()
+
+def main(argv=None):
+    a = build_parser().parse_args(argv)
     return a.fn(a)
 
 

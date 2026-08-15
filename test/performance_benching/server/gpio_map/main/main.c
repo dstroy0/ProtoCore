@@ -22,6 +22,46 @@
 #include <stddef.h>
 #include <stdint.h>
 
+/** @brief The short name for direction @p dir. */
+static const char *gpio_dir_name(protocore_gpio_dir dir)
+{
+    GpioMap.args.dir = dir;
+    GpioMap.dir_name(GpioMap.internal);
+    return GpioMap.text;
+}
+
+/** @brief Serialize the @p count pins at @p pins into @p out; the characters written. */
+static int32_t gpio_json(const protocore_gpio_pin *pins, uint8_t count, char *out, uint32_t cap)
+{
+    GpioMap.args.pins = pins;
+    GpioMap.args.count = count;
+    GpioMap.out_args.out = out;
+    GpioMap.out_args.cap = cap;
+    GpioMap.json(GpioMap.internal);
+    return GpioMap.n;
+}
+
+/** @brief Parse `pin=<n>&level=<0|1>` out of @p body into @p pin and @p level. */
+static proto_bool gpio_parse_set(const char *body, size_t len, uint8_t *pin, uint8_t *level)
+{
+    GpioMap.parse_args.body = body;
+    GpioMap.parse_args.len = len;
+    GpioMap.parse_args.pin_out = pin;
+    GpioMap.parse_args.level_out = level;
+    GpioMap.parse_set(GpioMap.internal);
+    return GpioMap.ok;
+}
+
+/** @brief Whether @p pin is mapped as an output in the @p count pins at @p pins. */
+static proto_bool gpio_is_output(const protocore_gpio_pin *pins, uint8_t count, uint8_t pin)
+{
+    GpioMap.args.pins = pins;
+    GpioMap.args.count = count;
+    GpioMap.args.pin = pin;
+    GpioMap.is_output(GpioMap.internal);
+    return GpioMap.ok;
+}
+
 void dbench_run(void)
 {
     // Realistic pin table copied from test/test_gpio_map/test_gpio_map.cpp (known-good, spec-conformant):
@@ -49,27 +89,25 @@ void dbench_run(void)
         volatile const char *csink = NULL;
 
         // Direction -> short name: a tiny switch, the cheapest op; large N.
-        DBENCH_OP("protocore_gpio_dir_name", 200000, csink = protocore_gpio_dir_name(pins[3].dir));
+        DBENCH_OP("GpioMap.dir_name", 200000, csink = gpio_dir_name(pins[3].dir));
 
         // Serialize the whole pin table to JSON (the browser GET path). This is the heaviest op
         // (per-pin fmtbuf formatting), so bench it two ways: cyc/op and throughput over the bytes it
         // emits.
-        DBENCH_OP("protocore_gpio_json (4 pins)", 20000,
-                  sink = (size_t)protocore_gpio_json(pins, kCount, json, sizeof(json)));
+        DBENCH_OP("GpioMap.json (4 pins)", 20000, sink = (size_t)gpio_json(pins, kCount, json, sizeof(json)));
         {
-            int _n = protocore_gpio_json(pins, kCount, json, sizeof(json));
-            DBENCH_BULK("protocore_gpio_json bytes", 20000, (size_t)_n,
-                        sink = (size_t)protocore_gpio_json(pins, kCount, json, sizeof(json)));
+            int32_t _n = gpio_json(pins, kCount, json, sizeof(json));
+            DBENCH_BULK("GpioMap.json bytes", 20000, (size_t)_n,
+                        sink = (size_t)gpio_json(pins, kCount, json, sizeof(json)));
         }
 
         // Parse the control POST body `pin=2&level=1` (the browser POST path); large N.
         uint8_t out_pin = 0;
         uint8_t out_level = 0;
-        DBENCH_OP("protocore_gpio_parse_set", 100000,
-                  bsink = protocore_gpio_parse_set(body, body_len, &out_pin, &out_level));
+        DBENCH_OP("GpioMap.parse_set", 100000, bsink = gpio_parse_set(body, body_len, &out_pin, &out_level));
 
         // Output guard that gates a drive (linear scan of the table); large N.
-        DBENCH_OP("protocore_gpio_is_output", 100000, bsink = protocore_gpio_is_output(pins, kCount, 2));
+        DBENCH_OP("GpioMap.is_output", 100000, bsink = gpio_is_output(pins, kCount, 2));
 
         (void)sink;
         (void)bsink;

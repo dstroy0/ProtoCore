@@ -720,13 +720,13 @@ src/
 ├── web_assets/
 │   ├── favicons/  (288 generated files)
 │   ├── input/
-│   │   ├── PC_DASHBOARD_PAGE.html
-│   │   ├── PC_METRICS_PROM.txt
-│   │   ├── PC_PROV_FORM.html
-│   │   ├── PC_PROV_SAVED_HTML.html
-│   │   ├── PC_SERVICE_WORKER.js
-│   │   ├── PC_STATS_JSON.json
-│   │   └── PC_TERMINAL_PAGE.html
+│   │   ├── PROTOCORE_DASHBOARD_PAGE.html
+│   │   ├── PROTOCORE_METRICS_PROM.txt
+│   │   ├── PROTOCORE_PROV_FORM.html
+│   │   ├── PROTOCORE_PROV_SAVED_HTML.html
+│   │   ├── PROTOCORE_SERVICE_WORKER.js
+│   │   ├── PROTOCORE_STATS_JSON.json
+│   │   └── PROTOCORE_TERMINAL_PAGE.html
 │   ├── themes/  (112 generated files)
 │   ├── wizard/
 │   │   ├── __init__.py

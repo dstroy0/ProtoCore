@@ -33,10 +33,11 @@ void setUp()
         conn_pool[i].state = CONN_ACTIVE;
         conn_pool[i].proto = PROTO_HTTP;
         conn_pool[i].pcb = protocore_net_host_pcb();
-        http_reset(i);
+        HttpConn.slot = i;
+        HttpConn.reset(HttpConn.internal);
     }
     Ws.init(Ws.internal);
-    protocore_sse_init();
+    Sse.init(Sse.internal);
     tcp_capture_reset();
 #if PROTOCORE_ENABLE_CSRF
 
@@ -54,7 +55,8 @@ void tearDown()
 static void feed_and_handle(uint8_t slot, const char *req_str)
 {
     push_str(slot, req_str);
-    http_parse(slot);
+    HttpConn.slot = slot;
+    HttpConn.parse(HttpConn.internal);
     handle();
 }
 
@@ -171,7 +173,8 @@ void test_http_parse_skips_ws_upgraded_slot()
     }
     size_t tail_before = c->rx_tail;
 
-    http_parse(2);
+    HttpConn.slot = 2;
+    HttpConn.parse(HttpConn.internal);
 
     TEST_ASSERT_EQUAL_size_t(tail_before, c->rx_tail);
     Ws.slot = 2;
@@ -194,7 +197,8 @@ void test_slowloris_incomplete_request_reaped_past_deadline()
     on_http("/res", HTTP_GET, handle_ok);
     conn_pool[0].req_start_ms = 1;
     push_str(0, "GET /res HTTP/1.1\r\nHost: x\r\n");
-    http_parse(0);
+    HttpConn.slot = 0;
+    HttpConn.parse(HttpConn.internal);
     TEST_ASSERT_NOT_EQUAL(PARSE_COMPLETE, http_pool[0].parse_state);
 
     set_millis(1 + PROTOCORE_REQUEST_TIMEOUT_MS);
@@ -214,7 +218,8 @@ void test_incomplete_request_survives_before_deadline()
     on_http("/res", HTTP_GET, handle_ok);
     conn_pool[0].req_start_ms = 1;
     push_str(0, "GET /res HTTP/1.1\r\nHost: x\r\n");
-    http_parse(0);
+    HttpConn.slot = 0;
+    HttpConn.parse(HttpConn.internal);
 
     set_millis(PROTOCORE_REQUEST_TIMEOUT_MS);
     conn_pool[0].last_activity_ms = PROTOCORE_REQUEST_TIMEOUT_MS;

@@ -25,10 +25,11 @@ void setUp()
         conn_pool[i].state = CONN_ACTIVE;
         conn_pool[i].proto = PROTO_HTTP;
         conn_pool[i].pcb = protocore_net_host_pcb();
-        http_reset(i);
+        HttpConn.slot = i;
+        HttpConn.reset(HttpConn.internal);
     }
     Ws.init(Ws.internal);
-    protocore_sse_init();
+    Sse.init(Sse.internal);
     tcp_capture_reset();
 }
 
@@ -41,7 +42,8 @@ void test_diag_serves_build_info_json()
 {
     on_http("/diag", HTTP_GET, diag_handler);
     push_str(0, "GET /diag HTTP/1.1\r\nHost: x\r\n\r\n");
-    http_parse(0);
+    HttpConn.slot = 0;
+    HttpConn.parse(HttpConn.internal);
     handle();
 
     const char *resp = tcp_captured();
@@ -56,7 +58,8 @@ void test_diag_json_braces_balanced()
 {
     on_http("/diag2", HTTP_GET, diag_handler);
     push_str(0, "GET /diag2 HTTP/1.1\r\nHost: x\r\n\r\n");
-    http_parse(0);
+    HttpConn.slot = 0;
+    HttpConn.parse(HttpConn.internal);
     handle();
     const char *j = tcp_captured();
     int depth = 0, min_depth = 0;

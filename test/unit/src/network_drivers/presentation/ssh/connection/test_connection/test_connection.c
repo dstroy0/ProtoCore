@@ -87,7 +87,8 @@ static size_t build_pty(uint8_t *p, const char *term, uint32_t term_len, uint32_
 void setUp(void)
 {
 
-    protocore_ssh_channel_init(0);
+    SshConnection.chan.slot = 0;
+    SshConnection.channel_init(SshConnection.internal);
     protocore_ssh_channel_set_data_cb(NULL);
 }
 void tearDown(void)

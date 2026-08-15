@@ -79,6 +79,28 @@ static proto_bool mem_read(void *ctx, uint32_t pgno, uint8_t *page, uint32_t pag
     return PROTO_TRUE;
 }
 
+/** @brief Encode @p argc bulk strings, sized by @p lens, as one command into @p out; the octets written. */
+static size_t resp_encode(char *out, size_t cap, const char *const *argv, const size_t *lens, size_t argc)
+{
+    Resp.out.buf = out;
+    Resp.out.cap = cap;
+    Resp.command.argv = argv;
+    Resp.command.argv_len = lens;
+    Resp.command.argc = argc;
+    Resp.encode_command(Resp.internal);
+    return Resp.n;
+}
+
+/** @brief Decode the one value at the head of @p buf into @p r; the octets it consumed, 0 on a refusal. */
+static size_t resp_take(RespReply *r, const uint8_t *buf, size_t len)
+{
+    Resp.wire.buf = buf;
+    Resp.wire.len = len;
+    Resp.parse_reply(Resp.internal);
+    *r = Resp.reply;
+    return Resp.ok ? Resp.n : 0;
+}
+
 int main(void)
 {
     hbench_header();
@@ -245,11 +267,11 @@ int main(void)
     // ---- Redis RESP ----
     {
         char out[128];
-        const char *args[] = {"SET", "session:42", "hello-world-value"};
+        const char *const args[] = {"SET", "session:42", "hello-world-value"};
         const size_t lens[] = {3, 10, 17};
         volatile size_t sink = 0;
         double ne = 0.0;
-        HBENCH_NS(2000000, sink += protocore_resp_encode_command(out, sizeof(out), args, lens, 3), ne);
+        HBENCH_NS(2000000, sink += resp_encode(out, sizeof(out), args, lens, 3), ne);
         hbench_row("resp", "encode_command (3 args)", ne, (double)(3 + 10 + 17));
 
         const uint8_t bulk[] = "$17\r\nhello-world-value\r\n";
@@ -258,8 +280,7 @@ int main(void)
             5000000,
             {
                 RespReply r;
-                size_t c;
-                if (protocore_resp_parse(bulk, sizeof(bulk) - 1, &r, &c))
+                if (resp_take(&r, bulk, sizeof(bulk) - 1))
                 {
                     sink += r.str_len;
                 }

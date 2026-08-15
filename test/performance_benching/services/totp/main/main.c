@@ -13,6 +13,40 @@
 #include <stddef.h>
 #include <stdint.h>
 
+/** @brief HOTP(K,C) over @p k for counter @p c, @p digit digits wide. */
+static uint32_t hotp_of(const uint8_t *k, size_t keylen, uint64_t c, uint8_t digit)
+{
+    Totp.k = k;
+    Totp.keylen = keylen;
+    Totp.digit = digit;
+    Totp.step.counter = c;
+    Totp.hotp(Totp.internal);
+    return Totp.u32;
+}
+
+/** @brief HOTP(K,T) over @p k at Unix time @p t, time step @p x, @p digit digits wide. */
+static uint32_t totp_of(const uint8_t *k, size_t keylen, uint64_t t, uint32_t x, uint8_t digit)
+{
+    Totp.k = k;
+    Totp.keylen = keylen;
+    Totp.digit = digit;
+    Totp.step.unix_time = t;
+    Totp.step.t0 = 0;
+    Totp.step.x = x;
+    Totp.totp(Totp.internal);
+    return Totp.u32;
+}
+
+/** @brief Decode the base32 text @p b32 into @p out; the K bytes written, -1 on a refusal. */
+static int32_t base32_of(const char *b32, uint8_t *out, size_t cap)
+{
+    Totp.secret.b32 = b32;
+    Totp.secret.out = out;
+    Totp.secret.cap = cap;
+    Totp.base32_decode(Totp.internal);
+    return Totp.i32;
+}
+
 void dbench_run(void)
 {
     // RFC 6238 SHA-1 secret: ASCII "12345678901234567890" (20 bytes).
@@ -24,11 +58,10 @@ void dbench_run(void)
     {
         DBENCH_BANNER("totp");
         volatile uint32_t sink = 0;
-        DBENCH_OP("protocore_hotp (HMAC-SHA1)", 20000, sink += protocore_hotp(SECRET, sizeof(SECRET), 1234ull, 6));
-        DBENCH_OP("protocore_totp (RFC 6238)", 20000,
-                  sink += protocore_totp(SECRET, sizeof(SECRET), 1234567890ull, 30, 8));
+        DBENCH_OP("Totp.hotp (HMAC-SHA1)", 20000, sink += hotp_of(SECRET, sizeof(SECRET), 1234ull, 6));
+        DBENCH_OP("Totp.totp (RFC 6238)", 20000, sink += totp_of(SECRET, sizeof(SECRET), 1234567890ull, 30, 8));
         static uint8_t dec[20];
-        DBENCH_OP("protocore_base32_decode", 100000, sink += protocore_base32_decode(B32, dec, sizeof(dec)));
+        DBENCH_OP("Totp.base32_decode", 100000, sink += (uint32_t)base32_of(B32, dec, sizeof(dec)));
         (void)sink;
         DBENCH_DONE();
     }

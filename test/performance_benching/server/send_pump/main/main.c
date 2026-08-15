@@ -3,7 +3,7 @@
 //
 // On-device CCOUNT microbenchmark for the chunked send-pump framing (src/server/response.cpp
 // chunk_send_pump): the per-chunk "<hexlen>\r\n...\r\n" HTTP/1.1 transfer-coding framing. Compares the
-// old snprintf("%x\r\n") size line against the hand-rolled protocore_hex_u32 (shared/hex/hex.h) that
+// old snprintf("%x\r\n") size line against the hand-rolled Hex.u32 (shared/hex/hex.h) that
 // replaced it, to size the win on the ESP32 (where newlib snprintf is heavy). Pure - the ChunkSource
 // that fills the body is measured elsewhere. Build/flash: pio run -d performance_benching/server/send_pump -t upload
 #include "device_bench.h"
@@ -31,11 +31,14 @@ static inline size_t frame_snprintf(uint8_t *body, size_t n)
     return (size_t)sn + n + 2;
 }
 
-// The new framing: hand-written hex size line (protocore_hex_u32) + trailing CRLF.
+// The new framing: hand-written hex size line (Hex.u32) + trailing CRLF.
 static inline size_t frame_hex_u32(uint8_t *body, size_t n)
 {
     char digits[8];
-    size_t nd = protocore_hex_u32((uint32_t)n, digits);
+    Hex.args.v = (uint32_t)n;
+    Hex.io.out = digits;
+    Hex.u32(Hex.internal);
+    size_t nd = Hex.u8;
     uint8_t *start = body - (nd + 2);
     memcpy(start, digits, nd);
     start[nd] = '\r';
@@ -56,14 +59,14 @@ void dbench_run(void)
         DBENCH_BANNER("send_pump");
         volatile size_t sink = 0;
         DBENCH_OP("frame snprintf (1440B)", 200000, { sink += frame_snprintf(body, CHUNK); });
-        DBENCH_OP("frame protocore_hex_u32 (1440B)", 200000, { sink += frame_hex_u32(body, CHUNK); });
+        DBENCH_OP("frame Hex.u32 (1440B)", 200000, { sink += frame_hex_u32(body, CHUNK); });
         DBENCH_BULK("pump 64KiB snprintf", 2000, BODY, {
             for (size_t c = 0; c < NCHUNKS; c++)
             {
                 sink += frame_snprintf(body, CHUNK);
             }
         });
-        DBENCH_BULK("pump 64KiB protocore_hex_u32", 2000, BODY, {
+        DBENCH_BULK("pump 64KiB Hex.u32", 2000, BODY, {
             for (size_t c = 0; c < NCHUNKS; c++)
             {
                 sink += frame_hex_u32(body, CHUNK);
