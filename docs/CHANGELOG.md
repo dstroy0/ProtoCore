@@ -119,6 +119,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`c319e4d`](https://github.com/dstroy0/ProtoCore/commit/c319e4dfd215c435ee487e7a69606d3caf56992f))
 - update CHANGELOG.md [skip ci] ([`fe42832`](https://github.com/dstroy0/ProtoCore/commit/fe428325b8d012476285d57f5c4d83d8ec1d4633))
 - update CHANGELOG.md [skip ci] ([`d6a3a95`](https://github.com/dstroy0/ProtoCore/commit/d6a3a95010893af4a664b93ca8e9a6d9cd8d4eda))
 - update CHANGELOG.md [skip ci] ([`0fd3016`](https://github.com/dstroy0/ProtoCore/commit/0fd3016d6c887b8a52c6062a6585a9d15c9b92dc))
@@ -368,6 +369,8 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- Merge branch 'main' of https://github.com/dstroy0/ProtoCore ([`d68c18e`](https://github.com/dstroy0/ProtoCore/commit/d68c18e1f70e58943e6571de9db57e9181a8e569))
+- (ci): version tracking stamp now fires on release and file touch ([`3de0506`](https://github.com/dstroy0/ProtoCore/commit/3de0506eb7bd66d7758bdcf487b36dc11d371fbf))
 - Merge branch 'main' of https://github.com/dstroy0/ProtoCore ([`bda8a8a`](https://github.com/dstroy0/ProtoCore/commit/bda8a8add4d254f50e0d13339d58d4f59688d3d0))
 - (test): test/harness.py single test entry point+sim entry point ([`b294293`](https://github.com/dstroy0/ProtoCore/commit/b29429306e62dfacea2c71293c6447f3c9edc5d1))
 - (test): RISC-V bare metal, linker alignment, QEMU setup, startup+reset __assert_func, RMW atomics (nonexclusivitey), protomem, gmtime_r ([`8f3f441`](https://github.com/dstroy0/ProtoCore/commit/8f3f441f61034cad30b50f21dfcd909e2eb17095))
@@ -436,6 +439,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`f816acc`](https://github.com/dstroy0/ProtoCore/commit/f816accc38d31a4481b4726ff0b2d16c2939bf41))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`c0fdb0c`](https://github.com/dstroy0/ProtoCore/commit/c0fdb0ceab09c5fd8ab78af25d8078931ed2a9bc))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`26aa29c`](https://github.com/dstroy0/ProtoCore/commit/26aa29c51e200b41ffdf571baf58c88b74074c3a))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`775c0d9`](https://github.com/dstroy0/ProtoCore/commit/775c0d9bac9f739395edd2547045b228f3bd5f57))
