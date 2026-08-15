@@ -119,6 +119,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`d6a3a95`](https://github.com/dstroy0/ProtoCore/commit/d6a3a95010893af4a664b93ca8e9a6d9cd8d4eda))
 - update CHANGELOG.md [skip ci] ([`0fd3016`](https://github.com/dstroy0/ProtoCore/commit/0fd3016d6c887b8a52c6062a6585a9d15c9b92dc))
 - update CHANGELOG.md [skip ci] ([`b2637b8`](https://github.com/dstroy0/ProtoCore/commit/b2637b8f5a7bad8bbe542fc20d7ace8ea04c0d4c))
 - update CHANGELOG.md [skip ci] ([`849ff74`](https://github.com/dstroy0/ProtoCore/commit/849ff741e9ec8e97f611dc976d77f0449672f8ed))
@@ -366,6 +367,9 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- Merge branch 'main' of https://github.com/dstroy0/ProtoCore ([`cd99eb6`](https://github.com/dstroy0/ProtoCore/commit/cd99eb646fb5d2c4a11e01398dbfa14a901723e4))
+- (test): ARM M4 bare runtime: reset path+startup __assert_func, RMW atomics (nonexclusivity) protomem, gmtime_r ([`e9b7def`](https://github.com/dstroy0/ProtoCore/commit/e9b7def6d0566bb27c9e2d0264a3178682047011))
+- (test): QEMU integration for bare metal sim ([`5d0b90e`](https://github.com/dstroy0/ProtoCore/commit/5d0b90e4b0aea34f213c643e36f6fa13c10d0cfb))
 - Merge branch 'main' of https://github.com/dstroy0/ProtoCore ([`aab883a`](https://github.com/dstroy0/ProtoCore/commit/aab883af22ffdaeb488d80b7dc61ffa3b5542088))
 - (test): extend to linker and os primitives ([`30f2e1b`](https://github.com/dstroy0/ProtoCore/commit/30f2e1be491caf954c0d28f504934e0619550bad))
 - Merge branch 'main' of https://github.com/dstroy0/ProtoCore ([`5326ee9`](https://github.com/dstroy0/ProtoCore/commit/5326ee9702e0cf3f3106b3d7c9f307beb54f46d6))
@@ -428,6 +432,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`26aa29c`](https://github.com/dstroy0/ProtoCore/commit/26aa29c51e200b41ffdf571baf58c88b74074c3a))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`775c0d9`](https://github.com/dstroy0/ProtoCore/commit/775c0d9bac9f739395edd2547045b228f3bd5f57))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`198daea`](https://github.com/dstroy0/ProtoCore/commit/198daeaccbdb64118294665ced8c8ebb9e9de37b))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`f729fa7`](https://github.com/dstroy0/ProtoCore/commit/f729fa718a5bac891c57656d7c90ae59c107d61e))
