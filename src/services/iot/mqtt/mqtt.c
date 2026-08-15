@@ -860,7 +860,7 @@ static void tx_drain(struct MqttInternal *restrict ctx)
     }
     if (ctx->store->tx_off >= ctx->store->tx_len)
     {
-        ctx->store->last_tx_ms = protocore_millis();
+        ctx->store->last_tx_ms = Clock.ms;
         ctx->store->tx_ready = PROTO_FALSE;
     }
 }
@@ -1026,7 +1026,7 @@ static void handle_packet(struct MqttInternal *restrict ctx, const uint8_t *body
         if (slot >= 0)
         {
             ctx->store->inflight[slot].state = MQTT_INFLIGHT_COMP;
-            ctx->store->inflight[slot].sent_ms = protocore_millis();
+            ctx->store->inflight[slot].sent_ms = Clock.ms;
         }
         (void)send_ack(ctx, MQTT_PUBREL, packet_id);
         break;
@@ -1112,7 +1112,7 @@ static void process_rx(struct MqttInternal *restrict ctx)
 // handshake and the CONNACK each report where they are and the caller comes back on its own tick.
 static void link_step(struct MqttInternal *restrict ctx)
 {
-    if (ctx->store->closed || (protocore_millis() - ctx->store->timer) >= ctx->store->link_budget_ms)
+    if (ctx->store->closed || (Clock.ms - ctx->store->timer) >= ctx->store->link_budget_ms)
     {
         link_close(ctx);
         return;
@@ -1168,7 +1168,7 @@ static void link_step(struct MqttInternal *restrict ctx)
         if (ctx->store->session_up)
         {
             ctx->store->link = MQTT_LINK_IDLE;
-            ctx->store->last_tx_ms = protocore_millis();
+            ctx->store->last_tx_ms = Clock.ms;
         }
         else if (ctx->store->connack_code >= 0)
         {
@@ -1255,7 +1255,7 @@ static void mqtt_connect(struct MqttInternal *restrict ctx)
 #endif
 
     ctx->store->link = MQTT_LINK_TCP;
-    ctx->store->timer = protocore_millis();
+    ctx->store->timer = Clock.ms;
     ctx->ns->ok = PROTO_TRUE; // started, not connected: step the loop and read connected()
 }
 
@@ -1303,7 +1303,7 @@ static void mqtt_publish(struct MqttInternal *restrict ctx)
     ctx->store->inflight[slot].packet_id = packet_id;
     ctx->store->inflight[slot].state = MQTT_INFLIGHT_ACK;
     ctx->store->inflight[slot].len = ctx->ns->n;
-    ctx->store->inflight[slot].sent_ms = protocore_millis();
+    ctx->store->inflight[slot].sent_ms = Clock.ms;
     ctx->ns->ok = tx_arm(ctx, ctx->ns->n);
 }
 
@@ -1361,7 +1361,7 @@ static void mqtt_loop(struct MqttInternal *restrict ctx)
         return; // a protocol violation in the batch above already closed it (MQTT-4.8.0-1)
     }
 
-    uint32_t now = protocore_millis();
+    uint32_t now = Clock.ms;
 
     // Keep Alive (sec 3.1.2.10): send PINGREQ once the interval has passed with nothing sent
     // (sec 3.12), and close the Network Connection when no PINGRESP comes back within another

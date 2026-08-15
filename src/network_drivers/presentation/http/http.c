@@ -613,9 +613,11 @@ static void handle_ws_route(uint8_t slot_id, HttpReq *req, HttpMethod method, co
     const char *upgrade_hdr = http_get_header(req, "Upgrade");
     // RFC 6455 4.2.1: a valid handshake needs Upgrade: websocket AND a Connection
     // header that includes the "Upgrade" token.
+    HttpConn.hdr_args.hdr = http_get_header(req, "Connection");
+    HttpConn.hdr_args.token = "upgrade";
+    HttpConn.has_token(HttpConn.internal);
     proto_bool is_ws_upgrade = (method == HTTP_GET) && (upgrade_hdr != NULL) &&
-                               str.eq(upgrade_hdr, "websocket", sizeof("websocket"), PROTO_TRUE) &&
-                               protocore_http_conn_has_token(http_get_header(req, "Connection"), "upgrade");
+                               str.eq(upgrade_hdr, "websocket", sizeof("websocket"), PROTO_TRUE) && HttpConn.ok;
     if (!is_ws_upgrade)
     {
         send_text(slot_id, 400, PROTOCORE_MIME_TEXT_PLAIN, "WebSocket upgrade required");
@@ -630,7 +632,9 @@ static void handle_ws_route(uint8_t slot_id, HttpReq *req, HttpMethod method, co
     }
     // A failed upgrade here means a malformed/oversized Sec-WebSocket-Key (a
     // client error, RFC 6455 4.2.1), so answer 400 rather than 503.
-    if (!ws_do_upgrade(slot_id, req, ws_route_connect(r->ws_id)))
+    Ws.id = r->ws_id;
+    Ws.route_connect(Ws.internal);
+    if (!ws_do_upgrade(slot_id, req, Ws.connect_handler))
     {
         send_text(slot_id, 400, PROTOCORE_MIME_TEXT_PLAIN, "Bad WebSocket handshake");
     }
@@ -654,7 +658,6 @@ static proto_bool proto_authorize_request(uint8_t slot_id, HttpReq *req, const H
         cip = eff;
     }
 #endif
-    Clock.millis(Clock.internal);
     uint32_t now = (uint32_t)Clock.ms;
     uint32_t remain = auth_lockout_remaining_ms(&cip, now);
     if (remain > 0)
@@ -723,7 +726,9 @@ static proto_bool dispatch_matched_route(uint8_t slot_id, HttpReq *req, HttpMeth
 #if PROTOCORE_ENABLE_SSE
     if (r->type == ROUTE_SSE)
     {
-        if (!protocore_sse_do_upgrade(slot_id, req, protocore_sse_route_connect(r->sse_id)))
+        Sse.id = r->sse_id;
+        Sse.route_connect(Sse.internal);
+        if (!protocore_sse_do_upgrade(slot_id, req, Sse.handler))
         {
             send_text(slot_id, 503, PROTOCORE_MIME_TEXT_PLAIN, "Service Unavailable");
         }
@@ -996,7 +1001,9 @@ static void poll_slot(struct HttpInternal *restrict ctx)
 
 #if PROTOCORE_ENABLE_SSE
     // SSE slot - connection stays open, nothing to parse from client
-    if (protocore_sse_find(i))
+    Sse.slot = i;
+    Sse.find(Sse.internal);
+    if (Sse.conn)
     {
         return;
     }
@@ -1033,7 +1040,6 @@ static void poll_slot(struct HttpInternal *restrict ctx)
     // already returned above.
     ConnPool.slot = i;
     ConnPool.active(ConnPool.internal);
-    Clock.millis(Clock.internal);
     if (ConnPool.ok && http_req_start_ms[i] != 0 && http_pool[i].parse_state < PARSE_BODY &&
         (Clock.ms - http_req_start_ms[i]) >= PROTOCORE_REQUEST_TIMEOUT_MS)
     {

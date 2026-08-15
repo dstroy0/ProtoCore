@@ -15,7 +15,6 @@
 // The library's monotonic millisecond count.
 static uint32_t now_ms(void)
 {
-    Clock.millis(Clock.internal);
     return Clock.ms;
 }
 

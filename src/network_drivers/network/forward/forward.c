@@ -100,7 +100,6 @@ static struct ForwardInternal s_forward = {.store = &s_store, .ns = &Forward};
 // The one time source (server/clock/clock.h): read the millisecond count off the clock handle.
 static uint32_t fwd_now(void)
 {
-    Clock.millis(Clock.internal);
     return Clock.ms;
 }
 

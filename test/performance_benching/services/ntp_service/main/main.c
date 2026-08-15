@@ -3,17 +3,17 @@
 //
 // On-device CCOUNT microbenchmark for the SNTP wall-clock service (network_drivers/application/ntp_service). The
 // service is a thin wrapper over the ESP-IDF SNTP client: the network half (configTzTime / the
-// async pool.ntp.org sync in pc_ntp_begin) is real transport and is deliberately OUT OF SCOPE on
+// async pool.ntp.org sync in protocore_ntp_begin) is real transport and is deliberately OUT OF SCOPE on
 // this rig - we never start SNTP, so nothing here touches WiFi or a socket. What IS benched is the
 // one pure, deterministic CPU path the service owns: formatting the current epoch as the RFC 7231
-// IMF-fixdate HTTP `Date` header (pc_ntp_http_date -> shared pc_http_date -> gmtime_r + strftime),
+// IMF-fixdate HTTP `Date` header (protocore_ntp_http_date -> shared protocore_http_date -> gmtime_r + strftime),
 // plus the cheap epoch/synced poll accessors and the time_source registry adapter.
 //
 // Time seam: PROTOCORE_ENABLE_NTP defaults to 0 (and test_matrix.json's flag set for this service does not
 // enable it), so the host branch of ntp_service.cpp is what compiles here - it exposes the
-// pc_ntp_set_test_epoch() seam the unit tests use to inject a wall clock. We forward-declare it
+// protocore_ntp_set_test_epoch() seam the unit tests use to inject a wall clock. We forward-declare it
 // (the header only declares it for !ARDUINO) and seed a realistic modern epoch once at task start,
-// so pc_ntp_http_date() runs its full gmtime_r + strftime path instead of the epoch==0 fast-out.
+// so protocore_ntp_http_date() runs its full gmtime_r + strftime path instead of the epoch==0 fast-out.
 //
 // Build/flash (JTAG-capable S3 over its USB-Serial/JTAG port):
 //   idf.py -C test/performance_benching/ntp_service -t upload --upload-port COM7
@@ -21,7 +21,7 @@
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
 #include "network_drivers/application/ntp_service/ntp_service.h"
-#include "shared/http_date/http_date.h" // pc_http_date() - the shared IMF-fixdate formatter
+#include "shared/http_date/http_date.h" // protocore_http_date() - the shared IMF-fixdate formatter
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -30,13 +30,13 @@
 // Host/test time seam (see file header): defined by the host branch of ntp_service.cpp, which is the
 // branch that compiles when PROTOCORE_ENABLE_NTP is 0. The public header hides its declaration behind
 // !defined(ARDUINO), so forward-declare it here (matching C++ linkage) to inject a wall clock.
-extern void pc_ntp_set_test_epoch(time_t epoch);
+extern void protocore_ntp_set_test_epoch(time_t epoch);
 
 void dbench_run(void)
 {
     // Seed a realistic modern wall clock (2023-11-14 22:13:20 UTC) so the Date formatter has real
     // broken-down-time work to do; no SNTP is ever started.
-    pc_ntp_set_test_epoch((time_t)1700000000);
+    protocore_ntp_set_test_epoch((time_t)1700000000);
 
     // RFC 7231's own canonical example epoch: "Sun, 06 Nov 1994 08:49:37 GMT" - a known-good,
     // spec-conformant literal for the direct-formatter bench (isolates gmtime_r + strftime cost).
@@ -51,15 +51,15 @@ void dbench_run(void)
         volatile int sinkb = 0;
 
         // The service's Date-header path end to end: read the (seeded) epoch, break it down, strftime.
-        DBENCH_OP("pc_ntp_http_date", 20000, sinkz += pc_ntp_http_date(datebuf, sizeof(datebuf)));
+        DBENCH_OP("protocore_ntp_http_date", 20000, sinkz += protocore_ntp_http_date(datebuf, sizeof(datebuf)));
         // The shared formatter directly with a fixed spec epoch: pure gmtime_r + strftime, no clock read.
-        DBENCH_OP("pc_http_date", 20000, sinkz += pc_http_date(rfc_epoch, datebuf, sizeof(datebuf)));
+        DBENCH_OP("protocore_http_date", 20000, sinkz += protocore_http_date(rfc_epoch, datebuf, sizeof(datebuf)));
         // Cheap poll accessors the app calls to gate the Date header on / read the wall clock.
-        DBENCH_OP("pc_ntp_epoch", 200000, sinku += (uint32_t)pc_ntp_epoch());
-        DBENCH_OP("pc_ntp_synced", 200000, sinkb += pc_ntp_synced() ? 1 : 0);
+        DBENCH_OP("protocore_ntp_epoch", 200000, sinku += (uint32_t)protocore_ntp_epoch());
+        DBENCH_OP("protocore_ntp_synced", 200000, sinkb += protocore_ntp_synced() ? 1 : 0);
         // The multi-source time registry adapter (services/timing_position/time_source feeds the Date header from
         // this).
-        DBENCH_OP("pc_ntp_time_source", 200000, sinku += pc_ntp_time_source());
+        DBENCH_OP("protocore_ntp_time_source", 200000, sinku += protocore_ntp_time_source());
 
         (void)sinkz;
         (void)sinku;

@@ -825,7 +825,6 @@ static void coap_dedup_lookup(struct CoapInternal *restrict ctx)
     {
         return;
     }
-    Clock.millis(Clock.internal);
     const uint32_t now = Clock.ms;
     for (size_t i = 0; i < PROTOCORE_COAP_DEDUP_ENTRIES; i++)
     {
@@ -851,7 +850,6 @@ static void coap_dedup_store(struct CoapInternal *restrict ctx)
     {
         return; // an over-long response is not cached, so its repeat is processed again
     }
-    Clock.millis(Clock.internal);
     const uint32_t now = Clock.ms;
     // The row already holding this key, then a free or expired one, then the oldest.
     size_t victim = 0;
@@ -1044,7 +1042,6 @@ static void coap_notify(struct CoapInternal *restrict ctx)
 
         // A Non-confirmable notification: header, Token, Observe, then the body. Sec 4.4 puts the
         // sequence number in the low 24 bits and requires it to rise for a given token and resource.
-        Clock.millis(Clock.internal);
         uint16_t mid = (uint16_t)Clock.ms;
         o->seq = (o->seq + 1) & 0xFFFFFF;
         size_t n =

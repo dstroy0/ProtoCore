@@ -71,7 +71,6 @@ static void ota_tick(struct OtaRollbackInternal *restrict ctx)
     ota_state(ctx);
     ctx->ns->decide_args.img_state = ctx->ns->img_state;
     ctx->ns->decide_args.self_test_ok = ctx->ns->self_test_ok;
-    Clock.millis(Clock.internal);
     ctx->ns->decide_args.ms_since_boot = Clock.ms;
     ctx->ns->decide_args.window_ms = PROTOCORE_OTA_CONFIRM_WINDOW_MS;
     ota_decide(ctx);

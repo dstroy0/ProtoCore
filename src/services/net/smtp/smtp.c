@@ -606,8 +606,8 @@ static int plain_send(void *ctx, const uint8_t *data, size_t len)
 static int plain_recv(void *ctx, uint8_t *buf, size_t cap)
 {
     SmtpChannel *chan = (SmtpChannel *)ctx;
-    chan->deadline = protocore_millis() + PROTOCORE_SMTP_TIMEOUT_MS;
-    while ((int32_t)(chan->deadline - protocore_millis()) > 0)
+    chan->deadline = Clock.ms + PROTOCORE_SMTP_TIMEOUT_MS;
+    while ((int32_t)(chan->deadline - Clock.ms) > 0)
     {
         TcpClient.cid = chan->cid;
         TcpClient.io.buf = buf;
@@ -673,8 +673,8 @@ static int secure_send(void *ctx, const uint8_t *data, size_t len)
 static int secure_recv(void *ctx, uint8_t *buf, size_t cap)
 {
     SmtpChannel *chan = (SmtpChannel *)ctx;
-    chan->deadline = protocore_millis() + PROTOCORE_SMTP_TIMEOUT_MS;
-    while ((int32_t)(chan->deadline - protocore_millis()) > 0)
+    chan->deadline = Clock.ms + PROTOCORE_SMTP_TIMEOUT_MS;
+    while ((int32_t)(chan->deadline - Clock.ms) > 0)
     {
         int n = protocore_tls_client_session_read(buf, cap);
         if (n > 0)
@@ -694,9 +694,9 @@ static int secure_recv(void *ctx, uint8_t *buf, size_t cap)
 // left of a read deadline could be abandoned before its first flight went out.
 static proto_bool tls_handshake(struct SmtpInternal *restrict ctx)
 {
-    ctx->store->chan.deadline = protocore_millis() + PROTOCORE_SMTP_TIMEOUT_MS;
+    ctx->store->chan.deadline = Clock.ms + PROTOCORE_SMTP_TIMEOUT_MS;
     protocore_tls_state st = protocore_tls_client_session_handshake();
-    while (st == PROTOCORE_TLS_BUSY && (int32_t)(ctx->store->chan.deadline - protocore_millis()) > 0)
+    while (st == PROTOCORE_TLS_BUSY && (int32_t)(ctx->store->chan.deadline - Clock.ms) > 0)
     {
         pcdelay(5);
         st = protocore_tls_client_session_handshake();
@@ -775,7 +775,7 @@ static void send_message(struct SmtpInternal *restrict ctx)
     chan->cid = TcpClient.i32;
     chan->host = ctx->ns->session.host;
     chan->tls_active = PROTO_FALSE;
-    chan->deadline = protocore_millis() + PROTOCORE_SMTP_TIMEOUT_MS;
+    chan->deadline = Clock.ms + PROTOCORE_SMTP_TIMEOUT_MS;
 
     // open() takes a slot and starts the name lookup; the connection exists only once connected()
     // says so, so the open is stepped here until it lands, closes, or runs out of budget.
@@ -789,7 +789,7 @@ static void send_message(struct SmtpInternal *restrict ctx)
         }
         TcpClient.cid = chan->cid;
         TcpClient.is_closed(TcpClient.internal);
-        if (TcpClient.ok || (int32_t)(chan->deadline - protocore_millis()) <= 0)
+        if (TcpClient.ok || (int32_t)(chan->deadline - Clock.ms) <= 0)
         {
             TcpClient.cid = chan->cid;
             TcpClient.close(TcpClient.internal);

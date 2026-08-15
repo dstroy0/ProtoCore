@@ -72,7 +72,7 @@ static void request(struct H3ServerInternal *restrict ctx)
     const size_t body_len = ctx->ns->req.body_len;
     const uint8_t slot = PROTOCORE_H3_DISPATCH_SLOT;
     HttpReq *r = &http_pool[slot];
-    http_reset(slot);
+    http_parser_reset(&http_pool[slot]);
 
     // Map the semantic request fields into the shared HttpReq (as protocore_h2_server does per stream).
     size_t mn = str.len(method, sizeof(r->method));
@@ -153,14 +153,14 @@ static void request(struct H3ServerInternal *restrict ctx)
     ConnPool.slot = slot;
     ConnPool.st = CONN_FREE;
     ConnPool.set_state(ConnPool.internal); // reserved slot: no bitmask bit (slot >= MAX_CONNS)
-    http_reset(slot);
+    http_parser_reset(&http_pool[slot]);
 }
 
 // The QUIC server's seam dictates these two shapes, so they carry their arguments onto the handle.
 void protocore_h3_server_rng(uint8_t *out, size_t len)
 {
-    H3Server.out = out;
-    H3Server.len = len;
+    H3Server.rng_args.out = out;
+    H3Server.rng_args.len = len;
     rng(&s_h3);
 }
 
@@ -168,13 +168,13 @@ void protocore_h3_server_request(void *app, uint32_t conn_id, uint64_t stream_id
                                  const char *authority, const uint8_t *body, size_t body_len)
 {
     (void)app; // the route table and the slot pools are global owners; nothing is carried here
-    H3Server.conn_id = conn_id;
-    H3Server.stream_id = stream_id;
-    H3Server.method = method;
-    H3Server.path = path;
-    H3Server.authority = authority;
-    H3Server.body = body;
-    H3Server.body_len = body_len;
+    H3Server.stream.conn_id = conn_id;
+    H3Server.stream.stream_id = stream_id;
+    H3Server.req.method = method;
+    H3Server.req.path = path;
+    H3Server.req.authority = authority;
+    H3Server.req.body = body;
+    H3Server.req.body_len = body_len;
     request(&s_h3);
 }
 

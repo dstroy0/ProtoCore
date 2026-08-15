@@ -223,16 +223,6 @@
 #endif
 #endif
 
-// What a BIO returns to the record engine when no octet moved and the call is to be retried. The
-// engine owns these values, so they are taken from it rather than restated: a BIO that invents its
-// own would be read as a fatal error and drop the session. Only defined where a vendor engine
-// exists, which is the only arm that runs a BIO - a build that enables a TLS client without one
-// fails on the module's own #error rather than silently sending a wrong sentinel.
-#if PROTOCORE_HAS_VENDOR_TLS
-#include <mbedtls/ssl.h> // PROTOCORE_ALLOW_LATE_INCLUDE: ordered - only exists once the vendor arm resolved
-#define PROTOCORE_PLATFORM_TLS_WANT_READ MBEDTLS_ERR_SSL_WANT_READ
-#define PROTOCORE_PLATFORM_TLS_WANT_WRITE MBEDTLS_ERR_SSL_WANT_WRITE
-#endif
 
 // SNTP has no vendor seam: network_drivers/application/ntp_service is the client on every target. It
 // asks a server over the UDP listener, keeps the epoch in its own state, and hands it out through
@@ -340,50 +330,9 @@
 // trivially agrees and the tripwire is a no-op rather than a false alarm.
 uintptr_t protocore_platform_context_id(void);
 
-// ---------------------------------------------------------------------------
-// Device facts, power domains and stored images
-// ---------------------------------------------------------------------------
-//
-// The core cannot name a vendor, so it asks here. Each seam sits under the capability that answers
-// whether the part carries the thing at all: a build whose capability is 0 gets no declaration, so
-// reaching for it is a compile error rather than a link-time surprise, and the owning module keys
-// its own refusing arm off the same macro.
-//
-// Every one is implemented once per arm - core_setup/hal/<vendor> on silicon,
-// core_setup/hal/portable on the host - so a test drives the real module against the mock rather
-// than compiling the module out. Plain int and uint32_t only: this header carries <stdint.h> and
-// nothing else, and it is reached before the library's own types exist.
 
-#if PROTOCORE_HAS_VENDOR_MAC
-/** @brief The part's burned-in station address, six bytes. 0 when there was none to read. */
-int protocore_platform_mac_read(uint8_t mac[6]);
-#endif
 
-#if PROTOCORE_HAS_VENDOR_HEAP_INFO
-uint32_t protocore_platform_heap_free(void);      ///< bytes free in the allocator right now
-uint32_t protocore_platform_heap_min_free(void);  ///< its low-water mark since boot
-uint32_t protocore_platform_heap_size(void);      ///< its total size
-uint32_t protocore_platform_heap_max_alloc(void); ///< the largest single block it would hand out now
-#endif
 
-#if PROTOCORE_HAS_VENDOR_PM
-/** @brief The reset that started this boot was a brownout. Reads the cause; the caller latches it. */
-int protocore_platform_reset_was_brownout(void);
-
-/** @brief Die temperature in whole degrees C, or INT16_MIN where the part has no usable sensor. */
-int16_t protocore_platform_die_temp_c(void);
-
-/** @brief The CPU clock the part is running at, in MHz. */
-uint16_t protocore_platform_cpu_mhz(void);
-
-/** @brief Set the CPU clock to @p mhz. 0 when the part refused it. */
-int protocore_platform_set_cpu_mhz(uint32_t mhz);
-#endif
-
-#if PROTOCORE_HAS_VENDOR_BT
-/** @brief Disable the Bluetooth controller and hand its RAM back. 0 when nothing was released. */
-int protocore_platform_bt_release(void);
-#endif
 
 // The stored image's state, in the order a rollback walks it. These values are the library's own;
 // each arm maps its vendor's onto them, so a caller reads one set whatever it is running on.
@@ -394,64 +343,8 @@ int protocore_platform_bt_release(void);
 #define PROTOCORE_PLATFORM_IMG_ABORTED 4
 #define PROTOCORE_PLATFORM_IMG_UNDEFINED 0xFF
 
-#if PROTOCORE_HAS_VENDOR_OTA
-uint8_t protocore_platform_img_state(void); ///< the running image's state, PROTOCORE_PLATFORM_IMG_*
-void protocore_platform_img_commit(void);   ///< mark it valid and cancel the pending rollback
-void protocore_platform_img_rollback(void); ///< mark it invalid and reboot into the previous one
-#endif
 
-#if PROTOCORE_HAS_VENDOR_COREDUMP
-/** @brief Backtrace frames a crash summary carries. */
-#ifndef PROTOCORE_PLATFORM_CRASH_FRAMES
-#define PROTOCORE_PLATFORM_CRASH_FRAMES 32
-#endif
-/** @brief Longest faulting-task name a summary carries, terminator included. */
-#define PROTOCORE_PLATFORM_CRASH_TASK_MAX 32
 
-/**
- * @brief One crash, in the library's own shape rather than a vendor's.
- *
- * @ref frame_count is 0 where the part stores a stack dump rather than a walkable backtrace: those
- * need debug information that lives off the device, so the frames are absent, not invented.
- */
-typedef struct
-{
-    uint32_t pc;                                        ///< the faulting program counter
-    uint32_t fault_addr;                                ///< the address the fault names
-    uint8_t has_fault_addr;                             ///< that address is meaningful
-    char task[PROTOCORE_PLATFORM_CRASH_TASK_MAX];       ///< the faulting task's name
-    uint32_t frame_pc[PROTOCORE_PLATFORM_CRASH_FRAMES]; ///< return addresses, as the part stored them
-    uint8_t frame_count;                                ///< frames present in @ref frame_pc
-} protocore_crash_summary;
-
-/** @brief Bytes of stored crash image, once it verifies. 0 when there is none or it is corrupt. */
-uint32_t protocore_platform_crashdump_size(void);
-/** @brief Read @p len bytes at @p offset within the crash image. 0 on a short or failed read. */
-int protocore_platform_crashdump_read(uint32_t offset, uint8_t *buf, uint32_t len);
-/** @brief Discard the stored crash image. */
-int protocore_platform_crashdump_erase(void);
-/** @brief The crash summary, where the stored image carries one. */
-int protocore_platform_crashdump_summary(protocore_crash_summary *out);
-#endif
-
-#if PROTOCORE_HAS_VENDOR_CAN
-/** @brief One received CAN frame, in the library's own shape rather than a vendor's. */
-typedef struct
-{
-    uint32_t id;     ///< the identifier: 11-bit, or 29-bit when @ref ext is set
-    uint8_t ext;     ///< the identifier is the 29-bit extended form
-    uint8_t rtr;     ///< remote transmission request, so the frame carries no data
-    uint8_t len;     ///< data bytes present, 0 to 8
-    uint8_t data[8]; ///< the payload
-} protocore_can_frame;
-
-/** @brief Open the controller on @p tx_pin / @p rx_pin at @p bitrate, listening to every id. */
-int protocore_platform_can_open(int tx_pin, int rx_pin, uint32_t bitrate);
-/** @brief Take one frame from the driver queue without blocking. 0 when the queue is empty. */
-int protocore_platform_can_recv(protocore_can_frame *out);
-/** @brief Stop the controller and release it. */
-void protocore_platform_can_close(void);
-#endif
 
 // ---------------------------------------------------------------------------
 // The target's scheduler and network stack, under our names
@@ -969,5 +862,116 @@ typedef ip_addr_t protocore_net_ip;
 // A single "targets real silicon" convenience (any vendor backend, i.e. not the host software floor).
 #define PROTOCORE_VENDOR_SILICON                                                                                       \
     (PROTOCORE_VENDOR_ESP || PROTOCORE_VENDOR_STM || PROTOCORE_VENDOR_RP || PROTOCORE_VENDOR_TI)
+
+// The seams each capability above resolved to. They are declared here, after the switching,
+// so every guard is read at its settled value.
+// What a BIO returns to the record engine when no octet moved and the call is to be retried. The
+// engine owns these values, so they are taken from it rather than restated: a BIO that invents its
+// own would be read as a fatal error and drop the session. Only defined where a vendor engine
+// exists, which is the only arm that runs a BIO - a build that enables a TLS client without one
+// fails on the module's own #error rather than silently sending a wrong sentinel.
+#if PROTOCORE_HAS_VENDOR_TLS
+#include <mbedtls/ssl.h> // PROTOCORE_ALLOW_LATE_INCLUDE: ordered - only exists once the vendor arm resolved
+#define PROTOCORE_PLATFORM_TLS_WANT_READ MBEDTLS_ERR_SSL_WANT_READ
+#define PROTOCORE_PLATFORM_TLS_WANT_WRITE MBEDTLS_ERR_SSL_WANT_WRITE
+#endif
+// ---------------------------------------------------------------------------
+// Device facts, power domains and stored images
+// ---------------------------------------------------------------------------
+//
+// The core cannot name a vendor, so it asks here. Each seam sits under the capability that answers
+// whether the part carries the thing at all: a build whose capability is 0 gets no declaration, so
+// reaching for it is a compile error rather than a link-time surprise, and the owning module keys
+// its own refusing arm off the same macro.
+//
+// Every one is implemented once per arm - core_setup/hal/<vendor> on silicon,
+// core_setup/hal/portable on the host - so a test drives the real module against the mock rather
+// than compiling the module out. Plain int and uint32_t only: this header carries <stdint.h> and
+// nothing else, and it is reached before the library's own types exist.
+
+#if PROTOCORE_HAS_VENDOR_MAC
+/** @brief The part's burned-in station address, six bytes. 0 when there was none to read. */
+int protocore_platform_mac_read(uint8_t mac[6]);
+#endif
+#if PROTOCORE_HAS_VENDOR_HEAP_INFO
+uint32_t protocore_platform_heap_free(void);      ///< bytes free in the allocator right now
+uint32_t protocore_platform_heap_min_free(void);  ///< its low-water mark since boot
+uint32_t protocore_platform_heap_size(void);      ///< its total size
+uint32_t protocore_platform_heap_max_alloc(void); ///< the largest single block it would hand out now
+uint32_t protocore_platform_stack_free(void);     ///< bytes never touched on the calling task's stack
+#endif
+#if PROTOCORE_HAS_VENDOR_PM
+/** @brief The reset that started this boot was a brownout. Reads the cause; the caller latches it. */
+int protocore_platform_reset_was_brownout(void);
+
+/** @brief Die temperature in whole degrees C, or INT16_MIN where the part has no usable sensor. */
+int16_t protocore_platform_die_temp_c(void);
+
+/** @brief The CPU clock the part is running at, in MHz. */
+uint16_t protocore_platform_cpu_mhz(void);
+
+/** @brief Set the CPU clock to @p mhz. 0 when the part refused it. */
+int protocore_platform_set_cpu_mhz(uint32_t mhz);
+#endif
+#if PROTOCORE_HAS_VENDOR_BT
+/** @brief Disable the Bluetooth controller and hand its RAM back. 0 when nothing was released. */
+int protocore_platform_bt_release(void);
+#endif
+#if PROTOCORE_HAS_VENDOR_OTA
+uint8_t protocore_platform_img_state(void); ///< the running image's state, PROTOCORE_PLATFORM_IMG_*
+void protocore_platform_img_commit(void);   ///< mark it valid and cancel the pending rollback
+void protocore_platform_img_rollback(void); ///< mark it invalid and reboot into the previous one
+#endif
+#if PROTOCORE_HAS_VENDOR_COREDUMP
+/** @brief Backtrace frames a crash summary carries. */
+#ifndef PROTOCORE_PLATFORM_CRASH_FRAMES
+#define PROTOCORE_PLATFORM_CRASH_FRAMES 32
+#endif
+/** @brief Longest faulting-task name a summary carries, terminator included. */
+#define PROTOCORE_PLATFORM_CRASH_TASK_MAX 32
+
+/**
+ * @brief One crash, in the library's own shape rather than a vendor's.
+ *
+ * @ref frame_count is 0 where the part stores a stack dump rather than a walkable backtrace: those
+ * need debug information that lives off the device, so the frames are absent, not invented.
+ */
+typedef struct
+{
+    uint32_t pc;                                        ///< the faulting program counter
+    uint32_t fault_addr;                                ///< the address the fault names
+    uint8_t has_fault_addr;                             ///< that address is meaningful
+    char task[PROTOCORE_PLATFORM_CRASH_TASK_MAX];       ///< the faulting task's name
+    uint32_t frame_pc[PROTOCORE_PLATFORM_CRASH_FRAMES]; ///< return addresses, as the part stored them
+    uint8_t frame_count;                                ///< frames present in @ref frame_pc
+} protocore_crash_summary;
+
+/** @brief Bytes of stored crash image, once it verifies. 0 when there is none or it is corrupt. */
+uint32_t protocore_platform_crashdump_size(void);
+/** @brief Read @p len bytes at @p offset within the crash image. 0 on a short or failed read. */
+int protocore_platform_crashdump_read(uint32_t offset, uint8_t *buf, uint32_t len);
+/** @brief Discard the stored crash image. */
+int protocore_platform_crashdump_erase(void);
+/** @brief The crash summary, where the stored image carries one. */
+int protocore_platform_crashdump_summary(protocore_crash_summary *out);
+#endif
+#if PROTOCORE_HAS_VENDOR_CAN
+/** @brief One received CAN frame, in the library's own shape rather than a vendor's. */
+typedef struct
+{
+    uint32_t id;     ///< the identifier: 11-bit, or 29-bit when @ref ext is set
+    uint8_t ext;     ///< the identifier is the 29-bit extended form
+    uint8_t rtr;     ///< remote transmission request, so the frame carries no data
+    uint8_t len;     ///< data bytes present, 0 to 8
+    uint8_t data[8]; ///< the payload
+} protocore_can_frame;
+
+/** @brief Open the controller on @p tx_pin / @p rx_pin at @p bitrate, listening to every id. */
+int protocore_platform_can_open(int tx_pin, int rx_pin, uint32_t bitrate);
+/** @brief Take one frame from the driver queue without blocking. 0 when the queue is empty. */
+int protocore_platform_can_recv(protocore_can_frame *out);
+/** @brief Stop the controller and release it. */
+void protocore_platform_can_close(void);
+#endif
 
 #endif // PROTOCORE_PLATFORM_H

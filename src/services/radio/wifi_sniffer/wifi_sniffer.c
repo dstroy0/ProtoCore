@@ -277,7 +277,7 @@ static void sniffer_sink(const uint8_t *frame, uint16_t len, int8_t rssi, uint8_
 
 proto_bool protocore_wifi_sniffer_begin(uint8_t first_chan, uint8_t last_chan, uint16_t dwell_ms)
 {
-    uint32_t now = protocore_millis();
+    uint32_t now = Clock.ms;
     protocore_wifi_stats_reset(&s_sniffer.stats);
     protocore_wifi_scan_init(&s_sniffer.scan, first_chan, last_chan, dwell_ms, now);
     protocore_wifi_survey_reset(&s_sniffer.survey, s_sniffer.scan.chan_first,
@@ -292,7 +292,7 @@ void protocore_wifi_sniffer_tick(void)
     {
         return;
     }
-    uint32_t now = protocore_millis();
+    uint32_t now = Clock.ms;
     if (!protocore_wifi_scan_due(&s_sniffer.scan, now))
     {
         return;

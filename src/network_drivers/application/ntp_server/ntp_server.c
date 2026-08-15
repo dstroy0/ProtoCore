@@ -88,7 +88,6 @@ static void protocore_ntp_server_udp_handler(const uint8_t *data, size_t len, co
     }
     // Sub-second fraction from the monotonic ms clock (best-effort; not phase-locked to the
     // 1 Hz second boundary, so the sub-second component is approximate on this class of clock).
-    Clock.millis(Clock.internal);
     uint32_t frac = (uint32_t)(((uint64_t)(Clock.ms % 1000u) << 32) / 1000u);
 
     uint8_t resp[PROTOCORE_NTP_PACKET_LEN];

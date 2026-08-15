@@ -11,8 +11,10 @@
 
 #if PROTOCORE_ENABLE_IFACE_BRIDGE
 
+#include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the accepted slot
 #include "network_drivers/transport/tcp/tcp.h"
 #include "server/clock/clock.h" // protocore_millis() pluggable monotonic clock
+#include "network_drivers/session/session.h" // Session.proto->add: the handler registration
 #include "server/core/proto_handler.h"
 
 #if PROTOCORE_HAS_BUS
@@ -44,7 +46,9 @@ static BridgeGlueCtx s_ctx;
 
 static const BridgeRule *rule_for_slot(uint8_t slot)
 {
-    uint8_t lid = protocore_conn_listener_id(slot);
+    ConnPool.slot = slot;
+    ConnPool.listener_id(ConnPool.internal);
+    uint8_t lid = ConnPool.u8;
     for (int i = 0; i < PROTOCORE_BRIDGE_MAX_RULES; i++)
     {
         if (s_ctx.binds[i].active && s_ctx.binds[i].listener_id == lid)
@@ -143,9 +147,17 @@ static proto_bool bus_txn(const BridgeTarget *t, const uint8_t *wbuf, uint16_t w
 // STREAM: pipe socket RX -> UART (called from on_data).
 static void stream_sock_to_uart(uint8_t slot, const BridgeTarget *t)
 {
-    size_t n = 0;
-    while ((n = protocore_conn_read(slot, s_ctx.stream, sizeof s_ctx.stream)) > 0)
+    for (;;)
     {
+        ConnPool.slot = slot;
+        ConnPool.io.buf = s_ctx.stream;
+        ConnPool.io.cap = sizeof s_ctx.stream;
+        ConnPool.read(ConnPool.internal);
+        const size_t n = ConnPool.n;
+        if (n == 0)
+        {
+            break;
+        }
         (void)protocore_uart_write(t->unit, s_ctx.stream, n);
     }
 }
@@ -162,9 +174,14 @@ static void stream_uart_to_sock(uint8_t slot, const BridgeTarget *t)
         {
             return;
         }
-        if (protocore_conn_active(slot))
+        ConnPool.slot = slot;
+        ConnPool.active(ConnPool.internal);
+        if (ConnPool.ok)
         {
-            (void)Tcp.conn->send(slot, s_ctx.stream, (proto_u16)n);
+            ConnPool.slot = slot;
+            ConnPool.io.data = s_ctx.stream;
+            ConnPool.io.len = (proto_u16)n;
+            ConnPool.send(ConnPool.internal);
         }
     }
 }
@@ -206,18 +223,25 @@ static void service_txn(uint8_t slot, const BridgeTarget *t)
     uint8_t rbuf[PROTOCORE_BRIDGE_TXN_MAX];
     for (;;)
     {
-        size_t avail = protocore_conn_available(slot);
+        ConnPool.slot = slot;
+        ConnPool.available(ConnPool.internal);
+        const size_t avail = ConnPool.n;
         if (avail < PROTOCORE_BRIDGE_TXN_HDR)
         {
             return; // header not yet complete
         }
         uint8_t hdr[PROTOCORE_BRIDGE_TXN_HDR];
-        protocore_conn_peek(slot, 0, hdr, PROTOCORE_BRIDGE_TXN_HDR);
+        ConnPool.slot = slot;
+        ConnPool.io.off = 0;
+        ConnPool.io.buf = hdr;
+        ConnPool.io.count = PROTOCORE_BRIDGE_TXN_HDR;
+        ConnPool.peek(ConnPool.internal);
         uint16_t wlen = (uint16_t)((hdr[0] << 8) | hdr[1]);
         uint16_t rlen = (uint16_t)((hdr[2] << 8) | hdr[3]);
         if (wlen > PROTOCORE_BRIDGE_TXN_MAX || rlen > PROTOCORE_BRIDGE_TXN_MAX)
         {
-            Tcp.conn->close(slot); // frame exceeds the configured cap - protocol error
+            ConnPool.slot = slot;
+            ConnPool.close(ConnPool.internal); // frame exceeds the configured cap - protocol error
             return;
         }
         size_t need = (size_t)PROTOCORE_BRIDGE_TXN_HDR + wlen;
@@ -225,24 +249,37 @@ static void service_txn(uint8_t slot, const BridgeTarget *t)
         {
             return; // write payload not fully buffered yet
         }
-        protocore_conn_peek(slot, 0, frame, need);
+        ConnPool.slot = slot;
+        ConnPool.io.off = 0;
+        ConnPool.io.buf = frame;
+        ConnPool.io.count = need;
+        ConnPool.peek(ConnPool.internal);
         uint16_t pw = 0;
         uint16_t pr = 0;
         const uint8_t *wd = NULL;
         if (protocore_iface_bridge_txn_parse(frame, need, &pw, &pr, &wd) != need)
         {
-            Tcp.conn->close(slot); // codec disagreed with the header - drop the connection
+            ConnPool.slot = slot;
+            ConnPool.close(ConnPool.internal); // codec disagreed with the header - drop the connection
             return;
         }
-        protocore_conn_consume(slot, need);
+        ConnPool.slot = slot;
+        ConnPool.io.count = need;
+        ConnPool.consume(ConnPool.internal);
         if (!bus_txn(t, wd, pw, rbuf, pr))
         {
-            Tcp.conn->close(slot); // bus fault
+            ConnPool.slot = slot;
+            ConnPool.close(ConnPool.internal); // bus fault
             return;
         }
-        if (pr && protocore_conn_active(slot))
+        ConnPool.slot = slot;
+        ConnPool.active(ConnPool.internal);
+        if (pr && ConnPool.ok)
         {
-            Tcp.conn->send(slot, rbuf, pr);
+            ConnPool.slot = slot;
+            ConnPool.io.data = rbuf;
+            ConnPool.io.len = pr;
+            ConnPool.send(ConnPool.internal);
         }
     }
 }
@@ -255,7 +292,8 @@ static void bridge_on_accept(uint8_t slot)
 {
     if (!rule_for_slot(slot))
     {
-        Tcp.conn->close(slot); // no rule published for this listener
+        ConnPool.slot = slot;
+        ConnPool.close(ConnPool.internal); // no rule published for this listener
     }
 }
 
@@ -264,7 +302,8 @@ static void bridge_on_data(uint8_t slot)
     const BridgeRule *r = rule_for_slot(slot);
     if (!r)
     {
-        Tcp.conn->close(slot);
+        ConnPool.slot = slot;
+        ConnPool.close(ConnPool.internal);
         return;
     }
     if (r->target.mode == BRIDGE_MODE_STREAM)
@@ -279,7 +318,9 @@ static void bridge_on_data(uint8_t slot)
 
 static void bridge_on_poll(uint8_t slot)
 {
-    if (!protocore_conn_active(slot))
+    ConnPool.slot = slot;
+    ConnPool.active(ConnPool.internal);
+    if (!ConnPool.ok)
     {
         return;
     }
@@ -338,7 +379,9 @@ proto_bool protocore_iface_bridge_publish(uint8_t listener_id, uint16_t port, Br
     bus_begin(&rule->target);
     if (!s_ctx.registered)
     {
-        Session.proto->add(PROTO_BRIDGE, &s_bridge_handler);
+        Session.proto->proto = PROTO_BRIDGE;
+        Session.proto->h = &s_bridge_handler;
+        Session.proto->add(Session.proto->internal);
         s_ctx.registered = PROTO_TRUE;
     }
     return PROTO_TRUE;

@@ -9,10 +9,10 @@
 // real production code path.
 //
 // The response buffers the parsers consume are prepared once, before the timing loop, by driving the
-// matching services/fieldbus/opcua *server* builders (pc_opcua_build_read_response / _browse_response) with
+// matching services/fieldbus/opcua *server* builders (protocore_opcua_build_read_response / _browse_response) with
 // the same known-good, spec-conformant sample data as test/test_opcua_client - that is how the host
 // test manufactures a wire-accurate reply in-process, and it keeps every parse a self-contained,
-// deterministic measurement. Out of scope: pc_opcua_rx() (the ESP32 TCP data handler) and any real
+// deterministic measurement. Out of scope: protocore_opcua_rx() (the ESP32 TCP data handler) and any real
 // socket I/O - the transport is the application's job, not this codec's.
 //
 // Build/flash (JTAG-capable S3 over its USB-Serial/JTAG port):
@@ -54,7 +54,7 @@ static int32_t srv_browse(uint16_t ns, uint32_t id, OpcUaReference *out, uint32_
 void dbench_run(void)
 {
     OpcUaClient c;
-    pc_opcua_client_init(&c);
+    protocore_opcua_client_init(&c);
     c.token_id = 88; // pretend a SecureChannel is open (the builders stamp it into each MSG)
 
     // Two nodes to read (ns=1 ids 1,2, the Value attribute) - the request the Read builder frames.
@@ -66,9 +66,9 @@ void dbench_run(void)
     size_t read_resp_len = 0;
     {
         uint8_t rq[256];
-        size_t rn = pc_opcua_client_read(&c, items, 2, rq, sizeof(rq));
+        size_t rn = protocore_opcua_client_read(&c, items, 2, rq, sizeof(rq));
         OpcUaReadRequest rr;
-        if (rn > 0 && pc_opcua_parse_read(rq, rn, &rr))
+        if (rn > 0 && protocore_opcua_parse_read(rq, rn, &rr))
         {
             OpcUaVariant sv[2];
             uint32_t ss[2];
@@ -79,7 +79,7 @@ void dbench_run(void)
             sv[1].type = OPCUA_VAR_DOUBLE;
             sv[1].f64 = 2.5;
             ss[1] = OPCUA_STATUS_GOOD;
-            read_resp_len = pc_opcua_build_read_response(&rr, sv, ss, 3, 0, read_resp, sizeof(read_resp));
+            read_resp_len = protocore_opcua_build_read_response(&rr, sv, ss, 3, 0, read_resp, sizeof(read_resp));
         }
     }
 
@@ -88,11 +88,11 @@ void dbench_run(void)
     size_t browse_resp_len = 0;
     {
         uint8_t bq[256];
-        size_t bn = pc_opcua_client_browse(&c, 0, 85, bq, sizeof(bq));
+        size_t bn = protocore_opcua_client_browse(&c, 0, 85, bq, sizeof(bq));
         OpcUaBrowseRequest br;
-        if (bn > 0 && pc_opcua_parse_browse(bq, bn, &br))
+        if (bn > 0 && protocore_opcua_parse_browse(bq, bn, &br))
         {
-            browse_resp_len = pc_opcua_build_browse_response(&br, srv_browse, 4, 0, browse_resp, sizeof(browse_resp));
+            browse_resp_len = protocore_opcua_build_browse_response(&br, srv_browse, 4, 0, browse_resp, sizeof(browse_resp));
         }
     }
 
@@ -103,19 +103,19 @@ void dbench_run(void)
         volatile int32_t isink = 0;
 
         // Request builders (little-endian encode into a caller buffer, then patch the frame size).
-        DBENCH_OP("pc_opcua_client_hello", 20000,
-                  sink += pc_opcua_client_hello("opc.tcp://host:4840", reqbuf, sizeof(reqbuf)));
-        DBENCH_OP("pc_opcua_client_open", 20000, sink += pc_opcua_client_open(&c, reqbuf, sizeof(reqbuf)));
-        DBENCH_OP("pc_opcua_client_read x2", 20000, sink += pc_opcua_client_read(&c, items, 2, reqbuf, sizeof(reqbuf)));
+        DBENCH_OP("protocore_opcua_client_hello", 20000,
+                  sink += protocore_opcua_client_hello("opc.tcp://host:4840", reqbuf, sizeof(reqbuf)));
+        DBENCH_OP("protocore_opcua_client_open", 20000, sink += protocore_opcua_client_open(&c, reqbuf, sizeof(reqbuf)));
+        DBENCH_OP("protocore_opcua_client_read x2", 20000, sink += protocore_opcua_client_read(&c, items, 2, reqbuf, sizeof(reqbuf)));
 
         // Response parsers (validate the UACP + MSG envelope, then decode the service body).
         OpcUaVariant cvals[2];
         uint32_t csts[2];
-        DBENCH_OP("pc_opcua_client_on_read x2", 20000,
-                  isink += pc_opcua_client_on_read(read_resp, read_resp_len, cvals, csts, 2));
+        DBENCH_OP("protocore_opcua_client_on_read x2", 20000,
+                  isink += protocore_opcua_client_on_read(read_resp, read_resp_len, cvals, csts, 2));
         OpcUaClientRef refs[4];
-        DBENCH_OP("pc_opcua_client_on_browse", 20000,
-                  isink += pc_opcua_client_on_browse(browse_resp, browse_resp_len, refs, 4));
+        DBENCH_OP("protocore_opcua_client_on_browse", 20000,
+                  isink += protocore_opcua_client_on_browse(browse_resp, browse_resp_len, refs, 4));
 
         (void)sink;
         (void)isink;

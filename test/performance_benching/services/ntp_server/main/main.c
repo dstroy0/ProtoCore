@@ -2,14 +2,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // On-device CCOUNT microbenchmark for the NTP/SNTP server codec (network_drivers/application/ntp_server):
-// pc_ntp_server_build_response() takes a received 48-octet client request plus the current
+// protocore_ntp_server_build_response() takes a received 48-octet client request plus the current
 // NTP-epoch time and writes the RFC 5905 mode-4 server reply - echoing the version, copying the
 // client's transmit timestamp into the origin field, and stamping reference/receive/transmit
 // times big-endian. It is pure (no clock, no sockets, zero heap), so every call here exercises
 // the real production code path. Worked-example class: a pure protocol codec with no hardware
 // involved (contrast with performance_benching/device/ads1115, a peripheral driver where the bus is stubbed).
 //
-// The UDP-binding half (pc_ntp_server_begin -> pc_udp_listen on port 123) is deliberately out of
+// The UDP-binding half (protocore_ntp_server_begin -> pc_udp_listen on port 123) is deliberately out of
 // scope: this rig has no network attached and the codec is what determines per-request CPU cost.
 // We never call it, so no transport transaction is ever issued.
 //
@@ -42,16 +42,16 @@ void dbench_run(void)
         DBENCH_BANNER("ntp_server");
         volatile size_t sink = 0;
         // Full server reply build: stratum 3 relay advertising the local clock (LOCL).
-        DBENCH_OP("pc_ntp_server_build_response", 100000,
-                  sink += pc_ntp_server_build_response(req, sizeof(req), 3, PROTOCORE_NTP_REFID_LOCL, secs, frac, out,
+        DBENCH_OP("protocore_ntp_server_build_response", 100000,
+                  sink += protocore_ntp_server_build_response(req, sizeof(req), 3, PROTOCORE_NTP_REFID_LOCL, secs, frac, out,
                                                        sizeof(out)));
         // Same codec advertising a stratum-1 GPS reference clock (different stratum/refid inputs).
         DBENCH_OP("build_response gps stratum1", 100000,
-                  sink += pc_ntp_server_build_response(req, sizeof(req), 1, PROTOCORE_NTP_REFID_GPS, secs, frac, out,
+                  sink += protocore_ntp_server_build_response(req, sizeof(req), 1, PROTOCORE_NTP_REFID_GPS, secs, frac, out,
                                                        sizeof(out)));
         // Throughput view: the reply is a fixed 48-octet packet, so report ns/byte + MB/s.
         DBENCH_BULK("build_response throughput", 100000, PROTOCORE_NTP_PACKET_LEN,
-                    sink += pc_ntp_server_build_response(req, sizeof(req), 3, PROTOCORE_NTP_REFID_LOCL, secs, frac, out,
+                    sink += protocore_ntp_server_build_response(req, sizeof(req), 3, PROTOCORE_NTP_REFID_LOCL, secs, frac, out,
                                                          sizeof(out)));
         (void)sink;
         DBENCH_DONE();

@@ -262,7 +262,7 @@ static void cc_pump(struct TcpClientInternal *restrict ctx)
     {
         return;
     }
-    if ((uint32_t)(protocore_millis() - c->timer) >= c->timeout_ms)
+    if ((uint32_t)(Clock.ms - c->timer) >= c->timeout_ms)
     {
         c->closed = PROTO_TRUE; // out of time, whether it was still resolving or already connecting
         return;
@@ -330,7 +330,7 @@ static void protocore_client_open(struct TcpClientInternal *restrict ctx)
     c->host = ctx->ns->dial.host;
     c->port = ctx->ns->dial.port;
     c->timeout_ms = ctx->ns->dial.timeout_ms;
-    c->timer = protocore_millis();
+    c->timer = Clock.ms;
     c->resolving = PROTO_TRUE;
     c->in_use = PROTO_TRUE;
     ctx->conn = c;

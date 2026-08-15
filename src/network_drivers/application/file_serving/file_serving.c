@@ -80,7 +80,9 @@ static int file_root(void)
 {
     if (s_file.root < 0)
     {
-        s_file.root = protocore_fs_begin("/");
+        Fs.mount = "/";
+        Fs.begin(Fs.internal);
+        s_file.root = Fs.i32;
     }
     return s_file.root;
 }
@@ -103,9 +105,11 @@ void http_rfc1123(int64_t epoch, char *out, size_t cap)
     }
     // The API states its own width; time_t is whatever the toolchain picked (32 or 64 bit) and
     // only the conversion seam is allowed to name it.
-    time_t t = (time_t)epoch;
     struct tm tmv;
-    if (!protocore_gmtime_r(&t, &tmv)) // reentrant: never the shared static buffer (worker-safe)
+    TimeCompat.args.epoch = epoch;
+    TimeCompat.args.out = &tmv;
+    TimeCompat.gmtime(TimeCompat.internal); // reentrant: never the shared static buffer (worker-safe)
+    if (!TimeCompat.tm_out)
     {
         return;
     }
@@ -146,7 +150,10 @@ static proto_bool http_not_modified_since(time_t mtime, const char *ims)
     int imon = (int)(mp - MONTHS) / 3; // 0-based, matches struct tm tm_mon
 
     struct tm tf;
-    if (!protocore_gmtime_r(&mtime, &tf)) // reentrant: never the shared static buffer (worker-safe)
+    TimeCompat.args.epoch = (uint32_t)mtime;
+    TimeCompat.args.out = &tf;
+    TimeCompat.gmtime(TimeCompat.internal); // reentrant: never the shared static buffer (worker-safe)
+    if (!TimeCompat.tm_out)
     {
         return PROTO_FALSE;
     }
@@ -229,26 +236,40 @@ static proto_bool inm_matches(const char *inm, const char *etag)
 void serve_file_internal(uint8_t slot_id, proto_bool head, const protocore_mnt_backend *file_sys, const char *fs_path,
                          const char *content_type, const char *content_encoding)
 {
-    int fh = protocore_fs_open(file_root(), fs_path, "", PROTOCORE_MNT_READ);
+    Fs.path.root = file_root();
+    Fs.path.dir = fs_path;
+    Fs.path.name = "";
+    Fs.io.mode = PROTOCORE_MNT_READ;
+    Fs.open(Fs.internal);
+    int fh = Fs.i32;
     if (fh < 0)
     {
         send_text(slot_id, 404, PROTOCORE_MIME_TEXT_PLAIN, "Not Found");
         return;
     }
 
-    if (!protocore_conn_active(slot_id))
+    ConnPool.slot = slot_id;
+    ConnPool.active(ConnPool.internal);
+    if (!ConnPool.ok)
     {
-        protocore_fs_close(fh);
-        http_reset(slot_id);
+        Fs.io.handle = fh;
+        Fs.close(Fs.internal);
+        http_parser_reset(&http_pool[slot_id]);
         return;
     }
 
     // Size and mtime come from one stat, not two calls on the handle: they are two fields of the same
     // directory record, and asking separately is two lookups of what one read already had.
     protocore_mnt_stat st;
-    if (!protocore_fs_stat(file_root(), fs_path, "", &st))
+    Fs.path.root = file_root();
+    Fs.path.dir = fs_path;
+    Fs.path.name = "";
+    Fs.io.stat = &st;
+    Fs.stat(Fs.internal);
+    if (!Fs.ok)
     {
-        protocore_fs_close(fh);
+        Fs.io.handle = fh;
+        Fs.close(Fs.internal);
         send_text(slot_id, 404, PROTOCORE_MIME_TEXT_PLAIN, "Not Found");
         return;
     }
@@ -312,7 +333,8 @@ void serve_file_internal(uint8_t slot_id, proto_bool head, const protocore_mnt_b
             : http_not_modified_since(mtime, http_get_header(&http_pool[slot_id], "If-Modified-Since"));
     if (not_modified)
     {
-        protocore_fs_close(fh);
+        Fs.io.handle = fh;
+        Fs.close(Fs.internal);
         char h304[RESP_HDR_BUF_SIZE];
         protocore_sb sb_h304 = {h304, sizeof(h304), 0, PROTO_TRUE};
         Sb.put(&sb_h304, "HTTP/1.1 304 Not Modified\r\nETag: ");
@@ -361,7 +383,8 @@ void serve_file_internal(uint8_t slot_id, proto_bool head, const protocore_mnt_b
     if (rr < 0)
     {
         // Unsatisfiable range -> 416 with Content-Range: bytes */<size>.
-        protocore_fs_close(fh);
+        Fs.io.handle = fh;
+        Fs.close(Fs.internal);
         char h416[RESP_HDR_BUF_SIZE];
         protocore_sb sb_h416 = {h416, sizeof(h416), 0, PROTO_TRUE};
         Sb.put(&sb_h416, "HTTP/1.1 416 Range Not Satisfiable\r\nContent-Range: bytes */");
@@ -396,7 +419,10 @@ void serve_file_internal(uint8_t slot_id, proto_bool head, const protocore_mnt_b
         }
         // A backend that cannot seek serves the whole representation instead, which keeps the body
         // matching the headers. RFC 9110 14.2 permits a server to ignore Range.
-        if (protocore_fs_seek(fh, (uint64_t)r_start))
+        Fs.io.handle = fh;
+        Fs.io.off = (uint64_t)r_start;
+        Fs.seek(Fs.internal);
+        if (Fs.ok)
         {
             body_off = r_start;
         }
@@ -445,7 +471,8 @@ void serve_file_internal(uint8_t slot_id, proto_bool head, const protocore_mnt_b
     // HEAD or empty body: headers only, finish now.
     if (head || body_len == 0)
     {
-        protocore_fs_close(fh);
+        Fs.io.handle = fh;
+        Fs.close(Fs.internal);
         protocore_resp_end(slot_id, status, 0, keep, /*pre_flushed=*/PROTO_FALSE);
         return;
     }
@@ -477,10 +504,13 @@ void file_send_pump(uint8_t slot_id)
         return;
     }
 
-    if (!protocore_conn_active(slot_id))
+    ConnPool.slot = slot_id;
+    ConnPool.active(ConnPool.internal);
+    if (!ConnPool.ok)
     {
         // Connection went away mid-transfer: drop the source and the continuation.
-        protocore_fs_close(s->fh);
+        Fs.io.handle = s->fh;
+        Fs.close(Fs.internal);
         s->active = PROTO_FALSE;
         return;
     }
@@ -509,7 +539,11 @@ void file_send_pump(uint8_t slot_id)
         }
         // The backend reports a fault as -1 and end-of-data as 0; both stop the transfer, and the
         // comparison is <= so a fault can never be added to the offset as a negative count.
-        int n = protocore_fs_read(s->fh, chunk, want);
+        Fs.io.handle = s->fh;
+        Fs.io.buf = chunk;
+        Fs.io.n = want;
+        Fs.read(Fs.internal);
+        int n = Fs.i32;
         if (n <= 0)
         {
             s->remaining = 0; // read error / short file: stop (response will be short)
@@ -523,9 +557,13 @@ void file_send_pump(uint8_t slot_id)
         {
             // Un-read the bytes that did not go out so the next loop resends them. A backend that
             // cannot rewind would resume at the wrong offset, so the transfer ends there instead.
-            if (!protocore_fs_seek(s->fh, s->off))
+            Fs.io.handle = s->fh;
+            Fs.io.off = s->off;
+            Fs.seek(Fs.internal);
+            if (!Fs.ok)
             {
-                protocore_fs_close(s->fh);
+                Fs.io.handle = s->fh;
+                Fs.close(Fs.internal);
                 s->active = PROTO_FALSE;
                 s->remaining = 0;
             }
@@ -538,7 +576,8 @@ void file_send_pump(uint8_t slot_id)
     }
 
     // Whole body queued: finish the response (flush, keep-alive/close, log, reset).
-    protocore_fs_close(s->fh);
+    Fs.io.handle = s->fh;
+    Fs.close(Fs.internal);
     s->active = PROTO_FALSE;
     ConnPool.slot = slot_id;
     ConnPool.flush(ConnPool.internal);
@@ -582,7 +621,10 @@ void serve_static(const char *url_prefix, const protocore_mnt_backend *file_sys,
     fill_route_base(r, pat);
     r->type = ROUTE_STATIC;
     r->method = HTTP_GET;
-    r->mnt_id = protocore_mnt_point_add(file_sys, fs_root); // null backend is legal: whatever is mounted
+    Mnt.args.backend = file_sys;
+    Mnt.args.root = fs_root;
+    Mnt.point_add(Mnt.internal); // null backend is legal: whatever is mounted
+    r->mnt_id = Mnt.u8;
 }
 
 void serve_static_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
@@ -609,7 +651,9 @@ void serve_static_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
         return;
     }
 
-    const char *root = protocore_mnt_point_root(r->mnt_id);
+    Mnt.args.id = r->mnt_id;
+    Mnt.root_of(Mnt.internal);
+    const char *root = Mnt.text;
     size_t rlen = strnlen(root, MAX_PATH_LEN);
     proto_bool root_slash = (rlen > 0 && root[rlen - 1] == '/');
     if (root_slash && sub[0] == '/') // avoid a doubled separator
@@ -659,13 +703,21 @@ void serve_static_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
         // always under gz's 260. Both are kept because the two buffer sizes are independent
         // constants. The exclusion is per-line, so it also drops the exists() halves - those ARE
         // exercised both ways (see the gzip tests).
-        if (gn > 0 && gn < (int)sizeof(gz) && protocore_fs_exists(file_root(), gz, ""))
+        Fs.path.root = file_root();
+        Fs.path.dir = gz;
+        Fs.path.name = "";
+        Fs.exists(Fs.internal);
+        if (gn > 0 && gn < (int)sizeof(gz) && Fs.ok)
         {
-            serve_file_internal(slot_id, head, protocore_mnt_point_backend(r->mnt_id), gz, ctype, "gzip");
+            Mnt.args.id = r->mnt_id;
+            Mnt.point_of(Mnt.internal);
+            serve_file_internal(slot_id, head, Mnt.backend, gz, ctype, "gzip");
             return;
         }
     }
 
-    serve_file_internal(slot_id, head, protocore_mnt_point_backend(r->mnt_id), fs_path, ctype, NULL);
+    Mnt.args.id = r->mnt_id;
+    Mnt.point_of(Mnt.internal);
+    serve_file_internal(slot_id, head, Mnt.backend, fs_path, ctype, NULL);
 }
 #endif // PROTOCORE_ENABLE_FILE_SERVING

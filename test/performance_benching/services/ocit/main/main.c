@@ -22,7 +22,7 @@
 void dbench_run(void)
 {
     // SET of a uint32 object value, straight out of test/test_ocit (known-good, spec-conformant):
-    //   pc_ocit_build(SET, object_type=0x0102, instance=0x0003, UINT32, value, 4)
+    //   protocore_ocit_build(SET, object_type=0x0102, instance=0x0003, UINT32, value, 4)
     static const uint8_t val32[4] = {0x00, 0x00, 0x12, 0x34};
     // The 10-byte wire message that build produces, reused as the parse input:
     //   [02][01 02][00 03][04][00 00 12 34]
@@ -36,18 +36,18 @@ void dbench_run(void)
         volatile uint16_t sink16 = 0;
         volatile bool sinkb = false;
 
-        DBENCH_OP("pc_ocit_build SET u32", 200000,
-                  sinkn += pc_ocit_build(OCIT_MSG_SET, 0x0102, 0x0003, OCIT_TYPE_UINT32, val32, sizeof(val32), out,
+        DBENCH_OP("protocore_ocit_build SET u32", 200000,
+                  sinkn += protocore_ocit_build(OCIT_MSG_SET, 0x0102, 0x0003, OCIT_TYPE_UINT32, val32, sizeof(val32), out,
                                          sizeof(out)));
-        DBENCH_OP("pc_ocit_set_u16", 200000, sinkn += pc_ocit_set_u16(0x00A0, 0x0005, 0xBEEF, out, sizeof(out)));
+        DBENCH_OP("protocore_ocit_set_u16", 200000, sinkn += protocore_ocit_set_u16(0x00A0, 0x0005, 0xBEEF, out, sizeof(out)));
 
         OcitMsg m;
-        DBENCH_OP("pc_ocit_parse", 200000, sinkb ^= pc_ocit_parse(wire, sizeof(wire), &m));
+        DBENCH_OP("protocore_ocit_parse", 200000, sinkb ^= protocore_ocit_parse(wire, sizeof(wire), &m));
         // Parse once so the accessor bench reads a valid message.
-        pc_ocit_parse(wire, sizeof(wire), &m);
+        protocore_ocit_parse(wire, sizeof(wire), &m);
         // Re-tag the parsed message as UINT16 so the accessor returns the value (wire is UINT32).
         m.data_type = OCIT_TYPE_UINT16;
-        DBENCH_OP("pc_ocit_value_u16", 200000, sink16 += pc_ocit_value_u16(&m));
+        DBENCH_OP("protocore_ocit_value_u16", 200000, sink16 += protocore_ocit_value_u16(&m));
 
         (void)sinkn;
         (void)sink16;

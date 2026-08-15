@@ -27,6 +27,7 @@
 #include "network_drivers/presentation/ssh/transport/ssh_kexhash.h" // SshKexHash (SHA-256/SHA-512 by method)
 #include "network_drivers/presentation/ssh/transport/ssh_rsa.h"     // rsa-sha2-256/512 host-key verify
 #include "network_drivers/presentation/ssh/transport/transport.h"
+#include "network_drivers/transport/tcp/client/client.h" // TcpClient: the dialed connection
 #include "network_drivers/transport/tcp/tcp.h" // protocore_client_*
 #include "server/clock/clock.h"                // protocore_millis, pcdelay
 #include "shared/log/log.h"
@@ -552,7 +553,11 @@ static void cli_send(struct SshClientInternal *restrict ctx)
         ctx->ns->ok = PROTO_FALSE;
         return;
     }
-    ctx->ns->ok = Tcp.client->send(s_store.cid, wire, wlen);
+    TcpClient.cid = s_store.cid;
+    TcpClient.io.data = wire;
+    TcpClient.io.len = wlen;
+    TcpClient.send(TcpClient.internal);
+    ctx->ns->ok = TcpClient.ok;
     return;
 }
 
@@ -621,7 +626,15 @@ static proto_bool send_userauth_publickey(void)
     }
     uint8_t signed_data[256 + SSH_KEXHASH_MAX_LEN];
     protocore_span sd = span.from(signed_data, sizeof(signed_data));
-    protocore_ssh_auth_write_publickey_request(&sd, sid, sid_len, user, "ssh-connection", NAME_ED25519, pkblob, pw.pos);
+    SshAuth.out_args.w = &sd;
+    SshAuth.userauth.sid = sid;
+    SshAuth.userauth.sid_len = sid_len;
+    SshAuth.userauth.user = user;
+    SshAuth.userauth.service = "ssh-connection";
+    SshAuth.userauth.pk_algo = NAME_ED25519;
+    SshAuth.userauth.pk_blob = pkblob;
+    SshAuth.userauth.pk_len = pw.pos;
+    SshAuth.write_publickey_request(SshAuth.internal);
     if (!span.ok(sd))
     {
         return PROTO_FALSE;
@@ -643,7 +656,15 @@ static proto_bool send_userauth_publickey(void)
     // The full USERAUTH_REQUEST is the signed prefix (minus the session_id) plus the signature.
     uint8_t out[300];
     protocore_span w = span.from(out, sizeof(out));
-    protocore_ssh_auth_write_publickey_request(&w, NULL, 0, user, "ssh-connection", NAME_ED25519, pkblob, pw.pos);
+    SshAuth.out_args.w = &w;
+    SshAuth.userauth.sid = NULL;
+    SshAuth.userauth.sid_len = 0;
+    SshAuth.userauth.user = user;
+    SshAuth.userauth.service = "ssh-connection";
+    SshAuth.userauth.pk_algo = NAME_ED25519;
+    SshAuth.userauth.pk_blob = pkblob;
+    SshAuth.userauth.pk_len = pw.pos;
+    SshAuth.write_publickey_request(SshAuth.internal);
     protocore_ssh_wr_str(&w, sigblob, sg.pos);
     if (!span.ok(w))
     {
@@ -805,7 +826,12 @@ static void cli_msg_handler(uint8_t slot, uint8_t type, const uint8_t *payload, 
         }
         // RFC 4254 messages 80 and above belong to the connection layer, which owns them for both
         // roles; a zero return means it consumed the message.
-        handled = (ssh_connection_dispatch(SSH_CLI_SLOT, type, payload, len) == 0);
+        SshConnection.chan.slot = SSH_CLI_SLOT;
+        SshConnection.msg_type = type;
+        SshConnection.chan.payload = payload;
+        SshConnection.chan.len = len;
+        SshConnection.dispatch(SshConnection.internal);
+        handled = (SshConnection.i32 == 0);
         break;
     default:
         break;
@@ -841,7 +867,8 @@ void protocore_ssh_client_begin(struct SshClientInternal *restrict ctx)
     protocore_ssh_client_end();
     mem.set(&s_cli, 0, sizeof(s_cli));
     s_store.cfg = *cfg;
-    protocore_ssh_channel_init(SSH_CLI_SLOT); // the channel table this slot's bridges hang off
+    SshConnection.chan.slot = SSH_CLI_SLOT;
+    SshConnection.channel_init(SshConnection.internal); // the channel table this slot's bridges hang off
 
     // Own a dedicated scratch arena, distinct from the server's worker(s): packet decryption borrows
     // from the shared scratch, and that arena is single-accessor-per-task. begin() and poll() run in
@@ -849,7 +876,11 @@ void protocore_ssh_client_begin(struct SshClientInternal *restrict ctx)
     protocore_worker_set_self(PROTOCORE_GHOST_WORKER_SLOT);
 
     uint16_t port = cfg->port ? cfg->port : 22;
-    s_store.cid = Tcp.client->open(cfg->host, port, 8000);
+    TcpClient.dial.host = cfg->host;
+    TcpClient.dial.port = port;
+    TcpClient.dial.timeout_ms = 8000;
+    TcpClient.open(TcpClient.internal);
+    s_store.cid = TcpClient.i32;
     if (s_store.cid < 0)
     {
         s_store.state = PROTOCORE_SSH_CLIENT_FAILED;
@@ -863,7 +894,8 @@ void protocore_ssh_client_begin(struct SshClientInternal *restrict ctx)
     SshNetwork.claim(SshNetwork.internal);
     if (SshNetwork.i32 != 0)
     {
-        Tcp.client->close(s_store.cid);
+        TcpClient.cid = s_store.cid;
+        TcpClient.close(TcpClient.internal);
         s_store.cid = -1;
         s_store.state = PROTOCORE_SSH_CLIENT_FAILED;
         ctx->ns->ok = PROTO_FALSE;
@@ -878,15 +910,19 @@ void protocore_ssh_client_begin(struct SshClientInternal *restrict ctx)
     // Send our identification string, then our KEXINIT.
     uint8_t banner[SSH_VERSION_MAX + 2];
     size_t n = 0;
-    if (SSH_TRANSPORT->send_ident(SSH_CLI_SLOT, banner, &n, sizeof(banner)) != 0 ||
-        !Tcp.client->send(s_store.cid, banner, n))
+    const int ident = SSH_TRANSPORT->send_ident(SSH_CLI_SLOT, banner, &n, sizeof(banner));
+    TcpClient.cid = s_store.cid;
+    TcpClient.io.data = banner;
+    TcpClient.io.len = n;
+    TcpClient.send(TcpClient.internal);
+    if (ident != 0 || !TcpClient.ok)
     {
         cli_fail("banner send failed");
         ctx->ns->ok = PROTO_FALSE;
         return;
     }
     s_store.state = PROTOCORE_SSH_CLIENT_CONNECTING;
-    s_store.deadline_ms = protocore_millis() + 15000;
+    s_store.deadline_ms = Clock.ms + 15000;
     ctx->ns->ok = PROTO_TRUE;
     return;
 }
@@ -898,19 +934,28 @@ void protocore_ssh_client_poll(struct SshClientInternal *restrict ctx)
         return;
     }
 
-    if (Tcp.client->is_closed(s_store.cid) && Tcp.client->available(s_store.cid) == 0)
+    TcpClient.cid = s_store.cid;
+    TcpClient.is_closed(TcpClient.internal);
+    const proto_bool peer_closed = TcpClient.ok;
+    TcpClient.cid = s_store.cid;
+    TcpClient.available(TcpClient.internal);
+    if (peer_closed && TcpClient.n == 0)
     {
         cli_fail("relay closed the connection");
         return;
     }
-    if (s_store.state == PROTOCORE_SSH_CLIENT_CONNECTING && (int32_t)(protocore_millis() - s_store.deadline_ms) > 0)
+    if (s_store.state == PROTOCORE_SSH_CLIENT_CONNECTING && (int32_t)(Clock.ms - s_store.deadline_ms) > 0)
     {
         cli_fail("handshake timed out");
         return;
     }
 
     uint8_t buf[1024];
-    size_t got = Tcp.client->read(s_store.cid, buf, sizeof(buf));
+    TcpClient.cid = s_store.cid;
+    TcpClient.io.buf = buf;
+    TcpClient.io.cap = sizeof(buf);
+    TcpClient.read(TcpClient.internal);
+    size_t got = TcpClient.n;
     if (got)
     {
         size_t off = 0;
@@ -940,7 +985,8 @@ void protocore_ssh_client_poll(struct SshClientInternal *restrict ctx)
 #if PROTOCORE_SSH_PORT_FORWARD
     if (s_store.state == PROTOCORE_SSH_CLIENT_UP)
     {
-        protocore_ssh_forward_pump(SSH_CLI_SLOT);
+        SshConnection.fwd.slot = SSH_CLI_SLOT;
+        SshConnection.forward_pump(SshConnection.internal);
     }
 #endif
 }
@@ -951,7 +997,8 @@ void protocore_ssh_client_end(struct SshClientInternal *restrict ctx)
     SshNetwork.chan_close_all(SshNetwork.internal);
     if (s_store.cid >= 0)
     {
-        Tcp.client->close(s_store.cid);
+        TcpClient.cid = s_store.cid;
+        TcpClient.close(TcpClient.internal);
     }
     SshNetwork.ssh_slot = SSH_CLI_SLOT;
     SshNetwork.release(SshNetwork.internal);
@@ -970,7 +1017,8 @@ static void cli_fail(const char *why)
     SshNetwork.chan_close_all(SshNetwork.internal);
     if (s_store.cid >= 0)
     {
-        Tcp.client->close(s_store.cid);
+        TcpClient.cid = s_store.cid;
+        TcpClient.close(TcpClient.internal);
     }
     s_store.cid = -1;
     SshNetwork.ssh_slot = SSH_CLI_SLOT;

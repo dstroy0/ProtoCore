@@ -76,7 +76,6 @@ void enable_rate_limit(uint16_t max_requests, uint32_t window_ms)
 {
     s_mw.rl_max = max_requests;
     s_mw.rl_window_ms = window_ms;
-    Clock.millis(Clock.internal);
     s_mw.rl_window_start = Clock.ms;
     s_mw.rl_count = 0;
 }
@@ -90,7 +89,6 @@ proto_bool rate_limit_check(uint8_t slot_id)
         return PROTO_FALSE; // disabled
     }
 
-    Clock.millis(Clock.internal);
     uint32_t now = Clock.ms;
     if ((uint32_t)(now - s_mw.rl_window_start) >= s_mw.rl_window_ms)
     {

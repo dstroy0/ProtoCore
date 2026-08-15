@@ -36,6 +36,7 @@ typedef struct
     uint32_t heap_min_free;
     uint32_t heap_size;
     uint32_t heap_max_alloc;
+    uint32_t stack_free;
 #endif
 #if PROTOCORE_HAS_VENDOR_PM
     int brownout;
@@ -104,6 +105,11 @@ void protocore_host_set_heap(uint32_t free_now, uint32_t min_free, uint32_t tota
     s_hp.heap_min_free = min_free;
     s_hp.heap_size = total;
     s_hp.heap_max_alloc = max_alloc;
+}
+
+void protocore_host_set_stack(uint32_t free_bytes)
+{
+    s_hp.stack_free = free_bytes;
 }
 #endif
 
@@ -236,6 +242,11 @@ uint32_t protocore_platform_heap_size(void)
 uint32_t protocore_platform_heap_max_alloc(void)
 {
     return s_hp.heap_max_alloc;
+}
+
+uint32_t protocore_platform_stack_free(void)
+{
+    return s_hp.stack_free;
 }
 #endif
 

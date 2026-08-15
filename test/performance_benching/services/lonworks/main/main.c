@@ -25,7 +25,7 @@ void dbench_run(void)
     // Known-good, spec-conformant literals lifted from test/test_lonworks/test_lonworks.cpp:
     // an NV-update carrying a 2-byte SNVT value to 14-bit selector 0x1234.
     static const uint8_t nv_value[2] = {0xAB, 0xCD};
-    // The wire PDU that pc_lon_build_nv() produces for that update: [0x80][0x12 0x34][0xAB 0xCD].
+    // The wire PDU that protocore_lon_build_nv() produces for that update: [0x80][0x12 0x34][0xAB 0xCD].
     static const uint8_t nv_pdu[5] = {LON_MSG_NV_UPDATE, 0x12, 0x34, 0xAB, 0xCD};
     static uint8_t out[16];
     // A SNVT_temp value encoding 25.0 C, and a SNVT_switch value encoding 50% / state 1.
@@ -38,20 +38,20 @@ void dbench_run(void)
         volatile size_t sink = 0;
         volatile double sinkd = 0;
 
-        DBENCH_OP("pc_lon_build_nv (upd+2B)", 100000,
-                  sink += pc_lon_build_nv(LON_MSG_NV_UPDATE, 0x1234, nv_value, sizeof(nv_value), out, sizeof(out)));
+        DBENCH_OP("protocore_lon_build_nv (upd+2B)", 100000,
+                  sink += protocore_lon_build_nv(LON_MSG_NV_UPDATE, 0x1234, nv_value, sizeof(nv_value), out, sizeof(out)));
 
         LonNv nv;
-        DBENCH_OP("pc_lon_parse_nv", 200000, sink += pc_lon_parse_nv(nv_pdu, sizeof(nv_pdu), &nv) ? 1u : 0u);
+        DBENCH_OP("protocore_lon_parse_nv", 200000, sink += protocore_lon_parse_nv(nv_pdu, sizeof(nv_pdu), &nv) ? 1u : 0u);
 
-        DBENCH_OP("pc_lon_snvt_temp_encode", 100000, pc_lon_snvt_temp_encode(25.0, out));
-        DBENCH_OP("pc_lon_snvt_temp_decode", 200000, sinkd += pc_lon_snvt_temp_decode(snvt_temp_val));
+        DBENCH_OP("protocore_lon_snvt_temp_encode", 100000, protocore_lon_snvt_temp_encode(25.0, out));
+        DBENCH_OP("protocore_lon_snvt_temp_decode", 200000, sinkd += protocore_lon_snvt_temp_decode(snvt_temp_val));
 
-        DBENCH_OP("pc_lon_snvt_switch_encode", 100000, pc_lon_snvt_switch_encode(50.0, 1, out));
+        DBENCH_OP("protocore_lon_snvt_switch_encode", 100000, protocore_lon_snvt_switch_encode(50.0, 1, out));
         {
             double pct = 0;
             uint8_t st = 0;
-            DBENCH_OP("pc_lon_snvt_switch_decode", 200000, pc_lon_snvt_switch_decode(snvt_switch_val, &pct, &st));
+            DBENCH_OP("protocore_lon_snvt_switch_decode", 200000, protocore_lon_snvt_switch_decode(snvt_switch_val, &pct, &st));
             sinkd += pct + st;
         }
 

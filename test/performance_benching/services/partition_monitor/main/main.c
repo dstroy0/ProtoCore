@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // On-device CCOUNT microbenchmark for the flash partition-map monitor (server/storage/partition_monitor):
-// pc_partition_kind() (the type/subtype -> human "kind" classifier) and pc_partition_json() (the
+// protocore_partition_kind() (the type/subtype -> human "kind" classifier) and protocore_partition_json() (the
 // {"partitions":[...]} serializer). Both are pure - no flash, no server - so every call here
 // exercises the real production code path. Like performance_benching/device/ads1115 (a peripheral driver), only the
-// deterministic CPU-side core is benched: pc_partition_collect() is the ESP32-only esp_partition /
+// deterministic CPU-side core is benched: protocore_partition_collect() is the ESP32-only esp_partition /
 // esp_ota_ops flash walk (a no-op on host builds) and is deliberately out of scope, so nothing here
 // touches flash or any peripheral.
 //
@@ -23,7 +23,7 @@
 void dbench_run(void)
 {
     // A realistic ESP32-S3 dual-OTA partition table (labels/types/subtypes/offsets/sizes straight
-    // out of a factory csv layout) - the exact shape pc_partition_collect() would hand the
+    // out of a factory csv layout) - the exact shape protocore_partition_collect() would hand the
     // serializer at runtime. Field ordering matches the pc_partition_info test fixtures.
     static const pc_partition_info table[] = {
         {"nvs", 1, 0x02, 0x009000, 0x005000, false},      // data / nvs
@@ -48,14 +48,14 @@ void dbench_run(void)
         volatile uint32_t sink = 0;
         volatile int jsink = 0;
 
-        DBENCH_OP("pc_partition_kind app (ota)", 200000, sink += (uint32_t)pc_partition_kind(app_type, app_sub)[0]);
-        DBENCH_OP("pc_partition_kind data (littlefs)", 200000,
-                  sink += (uint32_t)pc_partition_kind(dat_type, dat_sub)[0]);
+        DBENCH_OP("protocore_partition_kind app (ota)", 200000, sink += (uint32_t)protocore_partition_kind(app_type, app_sub)[0]);
+        DBENCH_OP("protocore_partition_kind data (littlefs)", 200000,
+                  sink += (uint32_t)protocore_partition_kind(dat_type, dat_sub)[0]);
 
         // Serializer throughput: report MB/s over the JSON produced for the full 7-entry table.
-        int jlen = pc_partition_json(table, count, buf, sizeof(buf));
-        DBENCH_BULK("pc_partition_json (7 parts)", 20000, (jlen > 0 ? (size_t)jlen : 1),
-                    jsink += pc_partition_json(table, count, buf, sizeof(buf)));
+        int jlen = protocore_partition_json(table, count, buf, sizeof(buf));
+        DBENCH_BULK("protocore_partition_json (7 parts)", 20000, (jlen > 0 ? (size_t)jlen : 1),
+                    jsink += protocore_partition_json(table, count, buf, sizeof(buf)));
 
         (void)sink;
         (void)jsink;

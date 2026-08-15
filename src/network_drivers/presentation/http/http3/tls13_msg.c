@@ -12,6 +12,7 @@
 
 #include "crypto/asymmetric/ed25519.h"
 #include "mmgr/protomem.h"
+#include "mmgr/protostr.h" // str.len: the selected ProtocolName's length
 #if PROTOCORE_ENABLE_PQC_KEX
 #include "crypto/pqc/mlkem.h" // MLKEM768_EK_BYTES (X25519MLKEM768 share sizing)
 #endif
@@ -243,6 +244,9 @@ static void parse_alpn(const uint8_t *body, size_t blen, Tls13ClientHello *out)
         {
             out->offers_h3_alpn = PROTO_TRUE;
         }
+        // The whole ProtocolNameList, kept so a server can select from it (RFC 7301 sec 3.1).
+        out->alpn_list = body;
+        out->alpn_list_len = end;
         i += nl;
     }
 }
@@ -599,14 +603,25 @@ static void w_server_cert_type_rpk(Writer *w)
 }
 #endif
 
-size_t protocore_tls13_build_encrypted_extensions_empty(uint8_t *out, size_t cap, proto_bool rpk_server_cert)
+size_t protocore_tls13_build_encrypted_extensions_empty(uint8_t *out, size_t cap, proto_bool rpk_server_cert,
+                                                        const char *alpn)
 {
     Writer w = {out, cap, 0, PROTO_TRUE};
     w_u8(&w, TLS_HS_ENCRYPTED_EXTENSIONS);
     size_t hs_len = w_mark(&w, 3);
-    // The DTLS profile carries no ALPN / transport params; the only possible extension is the
-    // negotiated server_certificate_type (RFC 7250) when RawPublicKey was selected.
+    // No transport params here; the extensions this can carry are the negotiated
+    // server_certificate_type (RFC 7250) when RawPublicKey was selected, and the one selected ALPN
+    // protocol (RFC 7301 sec 3.2 - the list MUST hold exactly one name).
     size_t ext_len = w_mark(&w, 2);
+    if (alpn)
+    {
+        const size_t nl = str.len(alpn, 255); // ProtocolName is 1..255 octets (RFC 7301 sec 3.1)
+        w_u16(&w, TLS_EXT_ALPN);
+        w_u16(&w, (uint16_t)(nl + 3)); // 2 list length + 1 name length + the name
+        w_u16(&w, (uint16_t)(nl + 1));
+        w_u8(&w, (uint8_t)nl);
+        w_bytes(&w, (const uint8_t *)alpn, nl);
+    }
 #if PROTOCORE_ENABLE_TLS_RPK
     if (rpk_server_cert)
     {

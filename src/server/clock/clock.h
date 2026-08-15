@@ -101,38 +101,13 @@ extern ClockNs Clock;
 /** @brief The library's monotonic time at 1000 Hz (milliseconds). */
 
 /**
- * @brief Block for at least @p ms milliseconds - the library's single delay primitive.
+ * @brief Block for @p ms milliseconds - the library's single delay primitive.
  *
- * `src/` never calls the platform `delay()` directly; every wait goes through this so timing stays
- * centralized and portable. On device it yields to the RTOS one tick at a time until @p ms has elapsed on
- * the monotonic clock (so it sleeps the task and feeds the watchdog, never starving the scheduler); on host
- * it spins on the same clock. Measured against ::protocore_millis, so a custom clock governs it too.
+ * Hands the core back for @p ms ticks. A tick is a millisecond, and zero is a bare yield.
  */
 PROTOCORE_INLINE void pcdelay(uint32_t ms)
 {
-#if PROTOCORE_HAS_SCHEDULER
-    if (ms == 0)
-    {
-        protocore_platform_task_delay(0); // a bare cooperative yield
-        return;
-    }
-    Clock.millis(Clock.internal);
-    const uint32_t start = Clock.ms;
-    for (Clock.millis(Clock.internal); Clock.ms - start < ms; Clock.millis(Clock.internal))
-    {
-        protocore_platform_task_delay(1); // one tick: sleeps the task (the core can idle) and feeds the watchdog
-    }
-#else
-    Clock.millis(Clock.internal);
-    const uint32_t start = Clock.ms;
-    for (Clock.millis(Clock.internal); Clock.ms - start < ms; Clock.millis(Clock.internal))
-    {
-        // Same one-tick hand-off the RTOS arm makes. A host has no tick timer, so its clock only
-        // moves when something moves it, and this is what gives the platform that hook: without a
-        // call in the loop a driver's wait would spin on a value that never changes.
-        protocore_platform_task_delay(1);
-    }
-#endif
+    protocore_platform_task_delay(ms);
 }
 
 // ---------------------------------------------------------------------------

@@ -3,10 +3,7 @@
 
 /**
  * @file guardrails.c
- * @brief Heap/stack guardrail evaluator + JSON (pure) and the ESP32 sampler.
- *
- * The evaluator and serializer are host-tested; the sample reads the live esp_* /
- * FreeRTOS counters on ESP32 and returns zeros on host.
+ * @brief Heap/stack guardrail evaluator + JSON (pure) and the live sampler. See guardrails.h.
  */
 
 #include "server/core/guardrails/guardrails.h"
@@ -14,17 +11,40 @@
 
 #if PROTOCORE_ENABLE_GUARDRAILS
 
-#if PROTOCORE_HAS_VENDOR_HEAP_INFO
-#include "esp_heap_caps.h"
-#include "esp_system.h"
-#endif
-uint8_t protocore_guardrail_eval(const protocore_health *h, uint32_t heap_min, uint32_t frag_min_block,
-                                 uint32_t stack_min)
+/** @brief The guardrails' compile-time storage: the breach callback, for the length of a build. */
+struct GuardrailsStorage
 {
+    protocore_breach_fn cb;
+};
+
+/**
+ * @brief The installed callback and the calls that reach it - what GuardrailsNs points at.
+ *
+ * @var GuardrailsInternal::store  the breach callback
+ * @var GuardrailsInternal::ns     the handle a caller sets a call's members on
+ */
+struct GuardrailsInternal
+{
+    struct GuardrailsStorage *store;
+    GuardrailsNs *ns;
+};
+
+static struct GuardrailsStorage s_store;
+
+static struct GuardrailsInternal s_gr = {.store = &s_store, .ns = &Guardrails};
+
+static void guardrails_eval(struct GuardrailsInternal *restrict ctx)
+{
+    const protocore_health *h = ctx->ns->health;
+    const uint32_t heap_min = ctx->ns->floors.heap_min;
+    const uint32_t frag_min_block = ctx->ns->floors.frag_min_block;
+    const uint32_t stack_min = ctx->ns->floors.stack_min;
+
     uint8_t b = PROTOCORE_BREACH_NONE;
     if (!h)
     {
-        return b;
+        ctx->ns->breaches = b;
+        return;
     }
     if (h->free_heap < heap_min)
     {
@@ -38,19 +58,24 @@ uint8_t protocore_guardrail_eval(const protocore_health *h, uint32_t heap_min, u
     {
         b |= PROTOCORE_BREACH_STACK;
     }
-    return b;
+    ctx->ns->breaches = b;
 }
 
-int protocore_health_json(const protocore_health *h, char *out, size_t cap)
+static void guardrails_json(struct GuardrailsInternal *restrict ctx)
 {
+    const protocore_health *h = ctx->ns->health;
+    char *out = ctx->ns->out.out;
+    const size_t cap = ctx->ns->out.cap;
+
+    ctx->ns->n = 0;
     if (!out || cap == 0)
     {
-        return 0;
+        return;
     }
     out[0] = '\0';
     if (!h)
     {
-        return 0;
+        return;
     }
     protocore_sb sb_out = {out, cap, 0, PROTO_TRUE};
     Sb.put(&sb_out, "{\"free_heap\":");
@@ -62,76 +87,63 @@ int protocore_health_json(const protocore_health *h, char *out, size_t cap)
     Sb.put(&sb_out, ",\"stack_free\":");
     Sb.u32(&sb_out, (uint32_t)((unsigned)h->stack_free));
     Sb.put(&sb_out, "}");
-    int w = (int)Sb.finish(&sb_out);
+    const int w = (int)Sb.finish(&sb_out);
     // w < 0 is unreachable: this format is all %u (unsigned) with literal text, no
     // multibyte/wide-character conversion, which is the only way snprintf goes negative.
     if (!sb_out.ok)
     {
         out[0] = '\0';
-        return 0;
+        return;
     }
-    return w;
+    ctx->ns->n = w;
 }
 
-#if PROTOCORE_HAS_VENDOR_HEAP_INFO
-
-// All guardrails sampler state, owned by one instance (internal linkage): the breach
-// callback, so it is one named owner, unreachable from any other translation unit.
-typedef struct
+static void guardrails_sample(struct GuardrailsInternal *restrict ctx)
 {
-    protocore_breach_fn cb;
-} GuardrailsCtx;
-static GuardrailsCtx s_gr;
-
-void protocore_guardrails_sample(protocore_health *h)
-{
+    protocore_health *h = ctx->ns->health;
     if (!h)
     {
         return;
     }
-    h->free_heap = esp_get_free_heap_size();
-    h->min_free_heap = esp_get_minimum_free_heap_size();
-    h->largest_free_block = heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT);
-    h->stack_free = (uint32_t)uxTaskGetStackHighWaterMark(NULL) * sizeof(StackType_t);
+#if PROTOCORE_HAS_VENDOR_HEAP_INFO
+    h->free_heap = protocore_platform_heap_free();
+    h->min_free_heap = protocore_platform_heap_min_free();
+    h->largest_free_block = protocore_platform_heap_max_alloc();
+    h->stack_free = protocore_platform_stack_free();
+#else
+    const protocore_health blank = {0};
+    *h = blank;
+#endif
 }
 
-void protocore_guardrails_begin(protocore_breach_fn cb)
+static void guardrails_begin(struct GuardrailsInternal *restrict ctx)
 {
-    s_gr.cb = cb;
+    ctx->store->cb = ctx->ns->cb;
 }
 
-uint8_t protocore_guardrails_check(void)
+static void guardrails_check(struct GuardrailsInternal *restrict ctx)
 {
     protocore_health h;
-    protocore_guardrails_sample(&h);
-    uint8_t b = protocore_guardrail_eval(&h, PROTOCORE_GUARDRAIL_HEAP_MIN, PROTOCORE_GUARDRAIL_FRAG_MIN_BLOCK,
-                                         PROTOCORE_GUARDRAIL_STACK_MIN);
-    if (b != PROTOCORE_BREACH_NONE && s_gr.cb)
+    ctx->ns->health = &h;
+    guardrails_sample(ctx);
+    ctx->ns->health = &h;
+    ctx->ns->floors.heap_min = PROTOCORE_GUARDRAIL_HEAP_MIN;
+    ctx->ns->floors.frag_min_block = PROTOCORE_GUARDRAIL_FRAG_MIN_BLOCK;
+    ctx->ns->floors.stack_min = PROTOCORE_GUARDRAIL_STACK_MIN;
+    guardrails_eval(ctx);
+    if (ctx->ns->breaches != PROTOCORE_BREACH_NONE && ctx->store->cb)
     {
-        s_gr.cb(b, &h);
+        ctx->store->cb(ctx->ns->breaches, &h);
     }
-    return b;
+    ctx->ns->health = NULL;
 }
 
-#else // host build - no live counters
-
-void protocore_guardrails_sample(protocore_health *h)
-{
-    if (h)
-    {
-        const protocore_health blank = {0};
-        *h = blank;
-    }
-}
-void protocore_guardrails_begin(protocore_breach_fn cb)
-{
-    (void)cb;
-}
-uint8_t protocore_guardrails_check(void)
-{
-    return PROTOCORE_BREACH_NONE;
-}
-
-#endif // PROTOCORE_HAS_VENDOR_HEAP_INFO
+// Designated, so a member's position in the struct does not decide what it binds to.
+GuardrailsNs Guardrails = {.eval = guardrails_eval,
+                           .json = guardrails_json,
+                           .sample = guardrails_sample,
+                           .begin = guardrails_begin,
+                           .check = guardrails_check,
+                           .internal = &s_gr};
 
 #endif // PROTOCORE_ENABLE_GUARDRAILS

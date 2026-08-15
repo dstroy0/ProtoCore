@@ -305,7 +305,7 @@ static void add_dynamic(struct SnmpAgentInternal *restrict ctx)
 static uint32_t snmp_uptime_cs(void)
 {
 #if PROTOCORE_HAS_NET_STACK
-    return (uint32_t)(protocore_millis() / 10ULL);
+    return (uint32_t)(Clock.ms / 10ULL);
 #else
     return 0; // no clock in this build
 #endif

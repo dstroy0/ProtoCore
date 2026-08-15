@@ -14,8 +14,8 @@
  * partition (`protocore_exc_coredump_read`) - without this owner knowing about any of them, and nothing
  * ever has to fit in RAM at once.
  *
- * Blocking and synchronous, bounded by PROTOCORE_FTP_TIMEOUT_MS per reply: an offload runs at boot or
- * from a maintenance route, not from the request hot path.
+ * Non-blocking: a call advances the sequence as far as the sockets allow, then reports
+ * ::PROTOCORE_FTP_BUSY. A reply is bounded by PROTOCORE_FTP_TIMEOUT_MS.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -29,6 +29,14 @@
 PROTOCORE_BEGIN_DECLS
 
 #if PROTOCORE_ENABLE_FTP_SESSION
+
+/** @brief Where a transfer stands. */
+typedef enum PROTO_ENUM_PACKED
+{
+    PROTOCORE_FTP_READY = 0, ///< the server confirmed the completed transfer
+    PROTOCORE_FTP_BUSY,      ///< the sockets have no more to give; ask again on the next tick
+    PROTOCORE_FTP_FAILED,    ///< the sequence broke, or a reply passed its deadline
+} protocore_ftp_state;
 
 /** @brief Where to connect and who to log in as. */
 typedef struct
@@ -58,10 +66,13 @@ typedef size_t (*protocore_ftp_source)(void *ctx, size_t offset, uint8_t *buf, s
  * 226 transfer-complete before reporting success - a socket that merely accepted the bytes is not
  * treated as a stored file.
  *
- * @return true only if the server confirmed the completed transfer.
+ * The first call starts the session; each one after it resumes where the last stopped, so the
+ * arguments must name the same transfer until it reports something other than ::PROTOCORE_FTP_BUSY.
+ *
+ * @return ::PROTOCORE_FTP_READY only if the server confirmed the completed transfer.
  */
-proto_bool protocore_ftp_store(const FtpTarget *target, const char *remote_path, size_t total, protocore_ftp_source src,
-                               void *ctx);
+protocore_ftp_state protocore_ftp_store(const FtpTarget *target, const char *remote_path, size_t total,
+                                        protocore_ftp_source src, void *ctx);
 
 #endif // PROTOCORE_ENABLE_FTP_SESSION
 

@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // On-device CCOUNT microbenchmark for the NXP MPR121 capacitive-touch codec (server/peripherals/mpr121):
-// decoding the 16-bit touch-status word into a 12-electrode bitmask (pc_mpr121_touched), the
-// per-electrode touched test (pc_mpr121_is_touched), the proximity / over-current status flags,
-// combining an LSB/MSB register pair into a 10-bit filtered/baseline value (pc_mpr121_word10),
+// decoding the 16-bit touch-status word into a 12-electrode bitmask (protocore_mpr121_touched), the
+// per-electrode touched test (protocore_mpr121_is_touched), the proximity / over-current status flags,
+// combining an LSB/MSB register pair into a 10-bit filtered/baseline value (protocore_mpr121_word10),
 // and emitting the whole register bring-up sequence as (register, value) byte pairs
-// (pc_mpr121_build_init) - all pure, all host-tested. This rig has no MPR121 breakout wired to
-// the I2C bus, so the Wire binding (pc_mpr121_begin / read_touched / read_filtered) is out of
+// (protocore_mpr121_build_init) - all pure, all host-tested. This rig has no MPR121 breakout wired to
+// the I2C bus, so the Wire binding (protocore_mpr121_begin / read_touched / read_filtered) is out of
 // scope everywhere - only the deterministic CPU-side codec is ever benched here.
 //
 // Build/flash (JTAG-capable S3 over its USB-Serial/JTAG port):
@@ -40,14 +40,14 @@ void dbench_run(void)
         volatile uint32_t sinkb = 0;
         volatile size_t sinksz = 0;
 
-        DBENCH_OP("pc_mpr121_touched decode", 200000, sink16 += pc_mpr121_touched(status_lo, status_hi));
-        DBENCH_OP("pc_mpr121_is_touched e7", 200000,
-                  sinkb += pc_mpr121_is_touched((uint16_t)(status_lo | (status_hi << 8)), 7) ? 1u : 0u);
+        DBENCH_OP("protocore_mpr121_touched decode", 200000, sink16 += protocore_mpr121_touched(status_lo, status_hi));
+        DBENCH_OP("protocore_mpr121_is_touched e7", 200000,
+                  sinkb += protocore_mpr121_is_touched((uint16_t)(status_lo | (status_hi << 8)), 7) ? 1u : 0u);
         DBENCH_OP("pc_mpr121_prox+ovcf flags", 200000,
-                  sinkb += (pc_mpr121_proximity(status_hi) ? 1u : 0u) + (pc_mpr121_overcurrent(status_hi) ? 2u : 0u));
-        DBENCH_OP("pc_mpr121_word10 combine", 200000, sink16 += pc_mpr121_word10(filt_lsb, filt_msb));
-        DBENCH_OP("pc_mpr121_build_init x12", 50000,
-                  sinksz += pc_mpr121_build_init(initbuf, sizeof(initbuf), MPR121_ELECTRODES, 12, 6));
+                  sinkb += (protocore_mpr121_proximity(status_hi) ? 1u : 0u) + (protocore_mpr121_overcurrent(status_hi) ? 2u : 0u));
+        DBENCH_OP("protocore_mpr121_word10 combine", 200000, sink16 += protocore_mpr121_word10(filt_lsb, filt_msb));
+        DBENCH_OP("protocore_mpr121_build_init x12", 50000,
+                  sinksz += protocore_mpr121_build_init(initbuf, sizeof(initbuf), MPR121_ELECTRODES, 12, 6));
 
         (void)sink16;
         (void)sinkb;

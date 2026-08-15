@@ -705,7 +705,7 @@ static void ws_connect(struct WsClientInternal *restrict ctx)
     ctx->store->msg_len = 0;
     ctx->store->secure = secure;
 
-    const uint32_t deadline = protocore_millis() + WSC_CONNECT_TIMEOUT_MS;
+    const uint32_t deadline = Clock.ms + WSC_CONNECT_TIMEOUT_MS;
 
     TcpClient.dial.host = host;
     TcpClient.dial.port = port;
@@ -721,7 +721,7 @@ static void ws_connect(struct WsClientInternal *restrict ctx)
     // The open returns before the connection exists: step it until the slot reports the handshake
     // complete, reports itself closed, or the deadline passes.
     proto_bool up = PROTO_FALSE;
-    while ((int32_t)(deadline - protocore_millis()) > 0)
+    while ((int32_t)(deadline - Clock.ms) > 0)
     {
         TcpClient.cid = ctx->store->cid;
         TcpClient.connected(TcpClient.internal);
@@ -756,7 +756,7 @@ static void ws_connect(struct WsClientInternal *restrict ctx)
         }
         protocore_tls_state h = PROTOCORE_TLS_BUSY;
         while ((h = protocore_tls_client_session_handshake()) == PROTOCORE_TLS_BUSY && !ctx->store->closed &&
-               (int32_t)(deadline - protocore_millis()) > 0)
+               (int32_t)(deadline - Clock.ms) > 0)
         {
             pcdelay(WSC_POLL_MS);
         }
@@ -797,7 +797,7 @@ static void ws_connect(struct WsClientInternal *restrict ctx)
     uint8_t resp[WSC_RESP_CAP];
     size_t rlen = 0;
     proto_bool done = PROTO_FALSE;
-    while (!done && !ctx->store->closed && (int32_t)(deadline - protocore_millis()) > 0)
+    while (!done && !ctx->store->closed && (int32_t)(deadline - Clock.ms) > 0)
     {
         ws_pump(ctx);
         while (ring_avail(ctx) > 0 && rlen < sizeof(resp))

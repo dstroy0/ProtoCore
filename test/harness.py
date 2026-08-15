@@ -27,6 +27,7 @@ table's lock, splices text so the file is not reformatted, and re-parses to prov
 """
 
 import argparse
+import concurrent.futures
 import errno
 import fnmatch
 import json
@@ -175,9 +176,19 @@ def write_verified(path, text, before, changed, expect):
 # ---------------------------------------------------------------------------
 
 
+def module_path(src_path):
+    """Where a src entry actually is. A first segment naming a directory beside src/ rather than
+    inside it (core_setup/, include/) is already repo-relative; anything else is src-relative."""
+    p = src_path.replace("\\", "/")
+    head = p.split("/", 1)[0]
+    if not os.path.isdir(os.path.join(ROOT, "src", head)) and os.path.isdir(os.path.join(ROOT, head)):
+        return p
+    return "src/" + p
+
+
 def mirror_dir(src_path):
-    """The test directory that mirrors a src module: src/a/b/c.c -> unit/src/a/b."""
-    return "unit/src/" + os.path.dirname(src_path).replace("\\", "/")
+    """The test directory that mirrors a module: src/a/b/c.c -> unit/src/a/b."""
+    return "unit/" + os.path.dirname(module_path(src_path))
 
 
 def resolve_tests(tests, src):
@@ -192,8 +203,8 @@ def resolve_tests(tests, src):
         got = t.rstrip("/").rsplit("/", 1)[0]
         if got != want:
             return None, ("suite %s does not mirror %s\n"
-                          "  the module is src/%s, so the suite belongs in test/%s/<test_name>"
-                          % (t, src[0], src[0], want))
+                          "  the module is %s, so the suite belongs in test/%s/<test_name>"
+                          % (t, src[0], module_path(src[0]), want))
     return tests, None
 
 
@@ -715,22 +726,33 @@ def cmd_env_deps(a):
     if not cc:
         print("no gcc on PATH", file=sys.stderr)
         return 1
-    for i, name in enumerate(names, 1):
+    # One -MM per (env, TU). They share nothing and only the join writes graph, so the whole cross
+    # product runs at once and the scan is bound by cores rather than by the number of envs.
+    jobs = []
+    for name in names:
         e = envs.get(name)
         if not e:
             print("unknown env:", name, file=sys.stderr)
             return 1
         incs, defs = _flag_split(e["flags"])
         for tu in _resolve_src(e["src"]):
-            cmd = [cc, "-MM", "-std=c11", "-D_POSIX_C_SOURCE=200809L"] + defs + incs + [tu]
-            r = subprocess.run(cmd, capture_output=True, text=True, cwd=ROOT)
-            if r.returncode != 0:
-                continue  # an env whose TU does not preprocess alone contributes nothing
-            for dep in _parse_mm(r.stdout):
-                if dep.startswith("src/"):
-                    graph.setdefault(dep, set()).add(name)
-        if a.progress:
-            print("  [%d/%d] %s" % (i, len(names), name), file=sys.stderr)
+            jobs.append((name, [cc, "-MM", "-std=c11", "-D_POSIX_C_SOURCE=200809L"] + defs + incs + [tu]))
+
+    def scan(job):
+        name, cmd = job
+        r = subprocess.run(cmd, capture_output=True, text=True, cwd=ROOT)
+        if r.returncode != 0:
+            return name, ()  # an env whose TU does not preprocess alone contributes nothing
+        return name, tuple(d for d in _parse_mm(r.stdout) if d.startswith("src/"))
+
+    done = 0
+    with concurrent.futures.ThreadPoolExecutor(max_workers=a.jobs) as pool:
+        for name, deps in pool.map(scan, jobs):
+            for dep in deps:
+                graph.setdefault(dep, set()).add(name)
+            done += 1
+            if a.progress and (done % 100 == 0 or done == len(jobs)):
+                print("  [%d/%d] scans" % (done, len(jobs)), file=sys.stderr)
     # A named subset re-scans only those envs, so it carries every other env's entries over from the
     # graph on disk: drop the rescanned names, then merge what this run found.
     if a.envs:
@@ -1602,6 +1624,7 @@ def main():
 
     p = env.add_parser("deps", help="rebuild test/dep_graph.json from the compiler include closure")
     p.add_argument("envs", nargs="*")
+    p.add_argument("-j", "--jobs", type=int, default=os.cpu_count() or 4)
     p.add_argument("--progress", action="store_true")
     p.set_defaults(fn=cmd_env_deps)
 

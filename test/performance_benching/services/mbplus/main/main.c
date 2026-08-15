@@ -28,7 +28,7 @@ void dbench_run(void)
     // A pre-built, known-good frame for the parse bench: station 5, data control, 3-byte payload.
     static uint8_t frame[16];
     static size_t frame_len = 0;
-    frame_len = pc_mbplus_build(5, MBPLUS_CTRL_DATA, payload, sizeof(payload), frame, sizeof(frame));
+    frame_len = protocore_mbplus_build(5, MBPLUS_CTRL_DATA, payload, sizeof(payload), frame, sizeof(frame));
 
     static uint8_t out[32];
 
@@ -41,15 +41,15 @@ void dbench_run(void)
         volatile bool sinkb = false;
 
         // CRC-16/X-25 FCS over the 9-byte check vector - bulk op, so we also get ns/byte + MB/s.
-        DBENCH_BULK("pc_mbplus_crc (X-25)", 100000, sizeof(crc_vec), sink16 += pc_mbplus_crc(crc_vec, sizeof(crc_vec)));
+        DBENCH_BULK("protocore_mbplus_crc (X-25)", 100000, sizeof(crc_vec), sink16 += protocore_mbplus_crc(crc_vec, sizeof(crc_vec)));
         // Build a full HDLC data frame (flags + addr + ctrl + payload + CRC).
-        DBENCH_OP("pc_mbplus_build (data+3B)", 50000,
-                  sink += pc_mbplus_build(5, MBPLUS_CTRL_DATA, payload, sizeof(payload), out, sizeof(out)));
+        DBENCH_OP("protocore_mbplus_build (data+3B)", 50000,
+                  sink += protocore_mbplus_build(5, MBPLUS_CTRL_DATA, payload, sizeof(payload), out, sizeof(out)));
         // Validate flags + CRC and parse the pre-built frame.
         MbPlusFrame f;
-        DBENCH_OP("pc_mbplus_parse", 50000, sinkb = pc_mbplus_parse(frame, frame_len, &f));
+        DBENCH_OP("protocore_mbplus_parse", 50000, sinkb = protocore_mbplus_parse(frame, frame_len, &f));
         // Token-ring rotation helper (the token-bus MAC's next-holder computation).
-        DBENCH_OP("pc_mbplus_next_token", 200000, sink8 += pc_mbplus_next_token(sink8, 64));
+        DBENCH_OP("protocore_mbplus_next_token", 200000, sink8 += protocore_mbplus_next_token(sink8, 64));
 
         (void)sink;
         (void)sink16;

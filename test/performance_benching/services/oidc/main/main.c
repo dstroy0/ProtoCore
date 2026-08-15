@@ -6,7 +6,7 @@
 // verifies the RSASSA-PKCS1-v1.5 SHA-256 signature. Four pure operations are timed:
 //   * pc_oidc_token_kid        - base64url-decode the header and scan out the `kid` (cheap, no crypto)
 //   * pc_oidc_jwks_find        - scan the JWKS JSON and base64url-decode the RSA modulus/exponent
-//   * pc_oidc_verify_with_key  - the headline op: real RSA-2048 modexp (pc_rsa_verify, mbedTLS-
+//   * pc_oidc_verify_with_key  - the headline op: real RSA-2048 modexp (protocore_rsa_verify, mbedTLS-
 //                                 accelerated on ESP32) over a pre-resolved key + all claim checks
 //   * pc_oidc_verify           - the end-to-end entry point (jwks_find + verify_with_key combined)
 // Everything here is deterministic CPU work over fixed BSS/scratch buffers - the verifier never
@@ -24,7 +24,7 @@
 // then open the port to capture the repeating "DB ..." lines (each run repeats every ~5 s, so a
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
-#include "mmgr/plaintext.h" // pc_plaintext_reset() (the verify path borrows from this arena)
+#include "mmgr/plaintext.h" // protocore_plaintext_reset() (the verify path borrows from this arena)
 #include "services/security/oidc/oidc.h"
 
 #include <stdbool.h>
@@ -54,7 +54,7 @@ static const uint32_t NOW = 1700000100; // after iat(1700000000), before exp(410
 
 void dbench_run(void)
 {
-    pc_plaintext_reset(); // start from an empty per-dispatch arena (verify borrows ~2.6 KB from it)
+    protocore_plaintext_reset(); // start from an empty per-dispatch arena (verify borrows ~2.6 KB from it)
 
     // Pre-resolve the signing key once so pc_oidc_verify_with_key benches the crypto path in
     // isolation (the JWKS scan/decode is timed separately by pc_oidc_jwks_find below).

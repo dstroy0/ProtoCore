@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Host-side microbenchmark for the NTP server (RFC 5905 server mode): pc_ntp_server_build_response() parses a
+// Host-side microbenchmark for the NTP server (RFC 5905 server mode): protocore_ntp_server_build_response() parses a
 // 48-octet client request and stamps the mode-4 server reply (echo VN, copy the client transmit stamp into
 // origin, fill reference/receive/transmit timestamps). Pure (no clock, no socket), so it links standalone;
 // the device UDP binding is compiled out on host. The device figure comes from the rig /bench op; this host
@@ -42,7 +42,7 @@ int main(void)
         volatile size_t sink = 0;
         double ns = 0.0;
         HBENCH_NS(5000000,
-                  sink += pc_ntp_server_build_response(req, sizeof(req), 2, PROTOCORE_NTP_REFID_LOCL, 0xE9A1B2C3u,
+                  sink += protocore_ntp_server_build_response(req, sizeof(req), 2, PROTOCORE_NTP_REFID_LOCL, 0xE9A1B2C3u,
                                                        0x80000000u, out, sizeof(out)),
                   ns);
         hbench_row("ntp", "build_response (48-octet)", ns,

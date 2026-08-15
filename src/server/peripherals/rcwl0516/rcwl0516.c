@@ -120,7 +120,6 @@ proto_bool protocore_rcwl0516_begin(int out_pin)
     s_rcwl.pin = out_pin;
     protocore_platform_gpio_mode((uint8_t)(out_pin),
                                  PROTOCORE_GPIO_IN); // the module drives OUT actively; no pull needed
-    Clock.millis(Clock.internal);
     protocore_rcwl0516_core_init(&s_rcwl.core, Clock.ms);
     return PROTO_TRUE;
 }
@@ -131,7 +130,6 @@ proto_bool protocore_rcwl0516_poll()
     {
         return PROTO_FALSE;
     }
-    Clock.millis(Clock.internal);
     protocore_presence_core_update(
         &s_rcwl.core, protocore_platform_gpio_read((uint8_t)(s_rcwl.pin)) == PROTOCORE_GPIO_HIGH, Clock.ms);
     return protocore_presence_take_event(&s_rcwl.core);

@@ -26,13 +26,13 @@ int main(void)
         200000,
         {
             pc_mtc_streams s;
-            pc_mtc_streams_begin(&s, buf, sizeof(buf), 1500, 20, "cnc1");
+            protocore_mtc_streams_begin(&s, buf, sizeof(buf), 1500, 20, "cnc1");
             for (int i = 0; i < 20; i++)
             {
-                pc_mtc_streams_add(&s, PROTOCORE_MTC_SAMPLE, "Position", "xpos", (uint64_t)i, "2026-07-09T00:00:00Z",
+                protocore_mtc_streams_add(&s, PROTOCORE_MTC_SAMPLE, "Position", "xpos", (uint64_t)i, "2026-07-09T00:00:00Z",
                                    "12.5");
             }
-            sink += pc_mtc_streams_end(&s);
+            sink += protocore_mtc_streams_end(&s);
         },
         ns);
     hbench_row("mtconnect", "streams doc (20 obs)", ns, (double)sink / 200000.0);

@@ -23,7 +23,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-// No-op sink satisfying the pc_nts_ke_cb function-pointer arg of pc_nts_ke_parse; counts records so the
+// No-op sink satisfying the pc_nts_ke_cb function-pointer arg of protocore_nts_ke_parse; counts records so the
 // parse cannot be optimized away. Not a hardware/transport stub - the parser has no such dependency.
 static void nts_ke_sink(bool critical, uint16_t type, const uint8_t *body, size_t body_len, void *arg)
 {
@@ -51,7 +51,7 @@ void dbench_run(void)
 
     // Pre-build the standard 16-byte NTS-KE request once; the parse bench walks this known-good stream.
     static uint8_t req[32];
-    size_t req_len = pc_nts_ke_request(req, sizeof(req));
+    size_t req_len = protocore_nts_ke_request(req, sizeof(req));
 
     static uint8_t out[128];
 
@@ -61,14 +61,14 @@ void dbench_run(void)
         volatile size_t sink = 0;
         volatile uint32_t rec_count = 0;
 
-        DBENCH_OP("pc_nts_ke_request", 100000, sink += pc_nts_ke_request(out, sizeof(out)));
-        DBENCH_OP("pc_nts_ke_record aead", 100000,
+        DBENCH_OP("protocore_nts_ke_request", 100000, sink += protocore_nts_ke_request(out, sizeof(out)));
+        DBENCH_OP("protocore_nts_ke_record aead", 100000,
                   sink +=
-                  pc_nts_ke_record(true, NTS_KE_AEAD_ALGORITHM, aead_body, sizeof(aead_body), out, sizeof(out)));
-        DBENCH_OP("pc_nts_ke_parse request", 100000,
-                  sink += pc_nts_ke_parse(req, req_len, nts_ke_sink, (void *)&rec_count));
-        DBENCH_OP("pc_nts_ef_unique_id 32B", 100000, sink += pc_nts_ef_unique_id(uid, sizeof(uid), out, sizeof(out)));
-        DBENCH_OP("pc_nts_ef_cookie 64B", 100000, sink += pc_nts_ef_cookie(cookie, sizeof(cookie), out, sizeof(out)));
+                  protocore_nts_ke_record(true, NTS_KE_AEAD_ALGORITHM, aead_body, sizeof(aead_body), out, sizeof(out)));
+        DBENCH_OP("protocore_nts_ke_parse request", 100000,
+                  sink += protocore_nts_ke_parse(req, req_len, nts_ke_sink, (void *)&rec_count));
+        DBENCH_OP("protocore_nts_ef_unique_id 32B", 100000, sink += protocore_nts_ef_unique_id(uid, sizeof(uid), out, sizeof(out)));
+        DBENCH_OP("protocore_nts_ef_cookie 64B", 100000, sink += protocore_nts_ef_cookie(cookie, sizeof(cookie), out, sizeof(out)));
 
         (void)sink;
         (void)rec_count;

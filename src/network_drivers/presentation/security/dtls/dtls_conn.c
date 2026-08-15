@@ -197,7 +197,7 @@ static void flight_arm(DtlsConn *c)
     c->awaiting_reply = PROTO_TRUE;
     c->retransmits = 0;
     c->pto_ms = PROTOCORE_DTLS_PTO_INITIAL_MS;
-    c->flight_sent_ms = protocore_millis();
+    c->flight_sent_ms = Clock.ms;
 }
 
 // Stop the retransmission timer: the expected reply arrived, or the flight was acknowledged.
@@ -230,7 +230,7 @@ static int send_hello_retry(DtlsConn *c, const Tls13ClientHello *ch, const uint8
     // Stateless cookie with an empty payload: this connection keeps its own transcript across the
     // retry, so the cookie only has to prove return-routability and bind the client address.
     uint8_t cookie[PROTOCORE_DTLS_COOKIE_MAX];
-    size_t clen = DtlsHandshake.cookie_make(c->mac_work, c->cfg.cookie_key, protocore_millis(), NULL, 0, c->peer_addr,
+    size_t clen = DtlsHandshake.cookie_make(c->mac_work, c->cfg.cookie_key, Clock.ms, NULL, 0, c->peer_addr,
                                             c->peer_addr_len, cookie, sizeof(cookie));
     if (!clen)
     {
@@ -264,7 +264,7 @@ static proto_bool protocore_dtls_hrr_cookie_ok(const DtlsConn *c, const Tls13Cli
     }
     uint8_t payload[1];
     size_t plen = 0;
-    return ch->cookie && DtlsHandshake.cookie_verify(c->mac_work, c->cfg.cookie_key, protocore_millis(),
+    return ch->cookie && DtlsHandshake.cookie_verify(c->mac_work, c->cfg.cookie_key, Clock.ms,
                                                      DTLS_HRR_COOKIE_MAX_AGE_MS, c->peer_addr, c->peer_addr_len,
                                                      ch->cookie, ch->cookie_len, payload, sizeof(payload), &plen);
 }
@@ -370,8 +370,15 @@ static int handle_client_hello(DtlsConn *c, const uint8_t *msg, size_t msg_len, 
     // Handshake-traffic keys from Transcript-Hash(..ServerHello).
     uint8_t hash[PROTOCORE_SHA256_DIGEST_LEN];
     snapshot(&c->transcript, hash);
-    protocore_tls13_ks_early(&DTLS13_KDF, &c->ks, c->ks_store);
-    protocore_tls13_ks_handshake(&c->ks, ecdhe, hash, 32);
+    Tls13Ks.bind.kdf = &DTLS13_KDF;
+    Tls13Ks.bind.ks = &c->ks;
+    Tls13Ks.bind.s = c->ks_store;
+    Tls13Ks.early(Tls13Ks.internal);
+    Tls13Ks.bind.ks = &c->ks;
+    Tls13Ks.step.ecdhe = ecdhe;
+    Tls13Ks.step.ch_sh_hash = hash;
+    Tls13Ks.step.ecdhe_len = 32;
+    Tls13Ks.handshake(Tls13Ks.internal);
     protocore_secure_wipe(ecdhe, sizeof(ecdhe)); // every epoch-2 and epoch-3 key derives from these 32 bytes
     DtlsRecord.keys_derive(&c->ep2_srv, DTLS_CIPHER_AES_128_GCM_SHA256, 2, c->ks.s + TLS13_KS_SERVER_HS);
     DtlsRecord.keys_derive(&c->ep2_cli, DTLS_CIPHER_AES_128_GCM_SHA256, 2, c->ks.s + TLS13_KS_CLIENT_HS);
@@ -393,7 +400,7 @@ static int handle_client_hello(DtlsConn *c, const uint8_t *msg, size_t msg_len, 
     }
 
     // EncryptedExtensions.
-    n = protocore_tls13_build_encrypted_extensions_empty(c->msgbuf, sizeof(c->msgbuf), rpk);
+    n = protocore_tls13_build_encrypted_extensions_empty(c->msgbuf, sizeof(c->msgbuf), rpk, NULL);
     protocore_sha256_update(&c->transcript, c->msgbuf, n);
     if (!flight_add(c, 2, c->msgbuf, n))
     {
@@ -437,7 +444,11 @@ static int handle_client_hello(DtlsConn *c, const uint8_t *msg, size_t msg_len, 
     // Server Finished over Transcript-Hash(..CertificateVerify).
     snapshot(&c->transcript, hash);
     uint8_t verify[PROTOCORE_SHA256_DIGEST_LEN];
-    protocore_tls13_finished_mac(&c->ks, c->ks.s + TLS13_KS_SERVER_HS, hash, verify);
+    Tls13Ks.bind.ks = &c->ks;
+    Tls13Ks.finished_args.base_secret = c->ks.s + TLS13_KS_SERVER_HS;
+    Tls13Ks.finished_args.transcript_hash = hash;
+    Tls13Ks.finished_args.out = verify;
+    Tls13Ks.finished_mac(Tls13Ks.internal);
     n = protocore_tls13_build_finished(c->msgbuf, sizeof(c->msgbuf), verify);
     protocore_sha256_update(&c->transcript, c->msgbuf, n);
     if (!flight_add(c, 2, c->msgbuf, n))
@@ -448,7 +459,9 @@ static int handle_client_hello(DtlsConn *c, const uint8_t *msg, size_t msg_len, 
     // Application-traffic keys from Transcript-Hash(..server Finished); this hash also verifies the
     // client's Finished.
     snapshot(&c->transcript, c->hs_finished_hash);
-    protocore_tls13_ks_master(&c->ks, c->hs_finished_hash);
+    Tls13Ks.bind.ks = &c->ks;
+    Tls13Ks.step.ch_sfin_hash = c->hs_finished_hash;
+    Tls13Ks.master(Tls13Ks.internal);
     DtlsRecord.keys_derive(&c->ep3_srv, DTLS_CIPHER_AES_128_GCM_SHA256, 3, c->ks.s + TLS13_KS_SERVER_AP);
     DtlsRecord.keys_derive(&c->ep3_cli, DTLS_CIPHER_AES_128_GCM_SHA256, 3, c->ks.s + TLS13_KS_CLIENT_AP);
     c->ep3_ready = PROTO_TRUE;
@@ -471,7 +484,11 @@ static int handle_client_finished(DtlsConn *c, const uint8_t *msg, size_t msg_le
     {
         return fail(c, ALERT_DECODE_ERROR); // only routes a Finished here, so the type arm cannot be taken
     }
-    protocore_tls13_finished_mac(&c->ks, c->ks.s + TLS13_KS_CLIENT_HS, c->hs_finished_hash, c->ks.s + TLS13_KS_VERIFY);
+    Tls13Ks.bind.ks = &c->ks;
+    Tls13Ks.finished_args.base_secret = c->ks.s + TLS13_KS_CLIENT_HS;
+    Tls13Ks.finished_args.transcript_hash = c->hs_finished_hash;
+    Tls13Ks.finished_args.out = c->ks.s + TLS13_KS_VERIFY;
+    Tls13Ks.finished_mac(Tls13Ks.internal);
     if (!protocore_ct_eq(c->ks.s + TLS13_KS_VERIFY, msg + 4, TLS13_SECRET_LEN))
     {
         return fail(c, ALERT_DECRYPT_ERROR);
@@ -739,7 +756,7 @@ static int protocore_dtls_conn_timeout_ms(const DtlsConn *c)
         return -1;
     }
     // Wrap-safe remaining time: (deadline - now) as a signed delta, clamped at 0 (already due).
-    int32_t remaining = (int32_t)(c->flight_sent_ms + c->pto_ms - protocore_millis());
+    int32_t remaining = (int32_t)(c->flight_sent_ms + c->pto_ms - Clock.ms);
     return remaining > 0 ? remaining : 0;
 }
 
@@ -749,7 +766,7 @@ static int protocore_dtls_conn_on_timeout(DtlsConn *c, uint8_t *out, size_t out_
     {
         return 0;
     }
-    if ((int32_t)(protocore_millis() - (c->flight_sent_ms + c->pto_ms)) < 0)
+    if ((int32_t)(Clock.ms - (c->flight_sent_ms + c->pto_ms)) < 0)
     {
         return 0; // not yet due (spurious / early wake-up)
     }
@@ -768,7 +785,7 @@ static int protocore_dtls_conn_on_timeout(DtlsConn *c, uint8_t *out, size_t out_
     c->retransmits++;
     c->pto_ms = c->pto_ms >= PROTOCORE_DTLS_PTO_MAX_MS / 2 ? PROTOCORE_DTLS_PTO_MAX_MS
                                                            : c->pto_ms * 2; // §5.8.1 backoff, capped
-    c->flight_sent_ms = protocore_millis();
+    c->flight_sent_ms = Clock.ms;
     return (int)out_len;
 }
 

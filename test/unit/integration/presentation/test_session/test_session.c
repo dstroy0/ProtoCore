@@ -454,7 +454,6 @@ void test_first_data_event_arms_the_request_deadline()
 {
     http_req_start_ms[0] = 0;
     set_millis(4242);
-    Clock.millis(Clock.internal);
     stage_data_evt(0);
     Session.worker_id = 0;
     Session.tick(Session.internal);
@@ -465,13 +464,11 @@ void test_a_request_already_under_way_keeps_its_arm()
 {
     http_req_start_ms[0] = 0;
     set_millis(4242);
-    Clock.millis(Clock.internal);
     stage_data_evt(0);
     Session.worker_id = 0;
     Session.tick(Session.internal);
 
     set_millis(9999);
-    Clock.millis(Clock.internal);
     stage_data_evt(0);
     Session.worker_id = 0;
     Session.tick(Session.internal);
@@ -482,7 +479,6 @@ void test_a_zero_stamp_still_reads_as_armed()
 {
     http_req_start_ms[0] = 0;
     set_millis(0);
-    Clock.millis(Clock.internal);
     stage_data_evt(0);
     Session.worker_id = 0;
     Session.tick(Session.internal);

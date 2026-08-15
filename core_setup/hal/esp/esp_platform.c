@@ -57,6 +57,12 @@ uint32_t protocore_platform_heap_max_alloc(void)
 {
     return (uint32_t)heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT);
 }
+
+// The high-water mark counts stack words never touched; the seam reports bytes.
+uint32_t protocore_platform_stack_free(void)
+{
+    return (uint32_t)uxTaskGetStackHighWaterMark(NULL) * (uint32_t)sizeof(StackType_t);
+}
 #endif // PROTOCORE_HAS_VENDOR_HEAP_INFO
 
 #if PROTOCORE_HAS_VENDOR_PM

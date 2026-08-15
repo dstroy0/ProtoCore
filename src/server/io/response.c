@@ -703,7 +703,7 @@ void stats(uint8_t slot_id)
     ConnPool.active_count(ConnPool.internal);
     int active = ConnPool.i32;
 
-    unsigned long up = protocore_millis();
+    unsigned long up = Clock.ms;
 #if PROTOCORE_HAS_VENDOR_HEAP_INFO
     uint32_t heap = protocore_platform_heap_free();
 #else
@@ -713,7 +713,8 @@ void stats(uint8_t slot_id)
     // One read of the bucket, not four reads of four owners: a report that gathered field by field
     // could straddle two server states while it was still formatting the first.
     protocore_signal_snapshot sig;
-    protocore_signal_know(&sig);
+    Signal.out = &sig;
+    Signal.know(Signal.internal);
 
     // millis() is a 32-bit tick counter, so the uptime field wraps with it.
     num_field(s_stats.uptime, sizeof(s_stats.uptime), (uint32_t)up);
@@ -809,7 +810,7 @@ void metrics(uint8_t slot_id)
     ConnPool.active_count(ConnPool.internal);
     int active = ConnPool.i32;
 
-    unsigned long up = protocore_millis();
+    unsigned long up = Clock.ms;
 #if PROTOCORE_HAS_VENDOR_HEAP_INFO
     uint32_t heap = protocore_platform_heap_free();
     uint32_t min_heap = protocore_platform_heap_min_free();
@@ -823,7 +824,8 @@ void metrics(uint8_t slot_id)
 #endif
 
     protocore_signal_snapshot sig;
-    protocore_signal_know(&sig);
+    Signal.out = &sig;
+    Signal.know(Signal.internal);
 
     num_field(s_metrics.uptime, sizeof(s_metrics.uptime), (uint32_t)(up / 1000UL));
     num_field(s_metrics.requests, sizeof(s_metrics.requests), sig.requests_total);

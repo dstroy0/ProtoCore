@@ -4,9 +4,9 @@
 // On-device CCOUNT microbenchmark for the OpenADR 3.0 JSON codec (services/energy/openadr): the two
 // production builders that turn a demand-response signal / telemetry reading into spec-conformant
 // JSON text in a caller buffer -
-//   pc_openadr_event()  -> {"objectType":"EVENT",...} with programID + eventName + an intervals
+//   protocore_openadr_event()  -> {"objectType":"EVENT",...} with programID + eventName + an intervals
 //                           array (each interval a start/duration + a SIMPLE/PRICE payload point),
-//   pc_openadr_report() -> {"objectType":"REPORT",...} carrying one VEN reading for one resource.
+//   protocore_openadr_report() -> {"objectType":"REPORT",...} carrying one VEN reading for one resource.
 // Both are pure: string escaping + a no-stdlib 3-decimal double formatter, zero heap, no sockets.
 // The OAuth2 token and HTTP transport that actually move these objects are separate services and are
 // deliberately out of scope here (this rig moves no packets); every call below exercises the real
@@ -43,12 +43,12 @@ void dbench_run(void)
     {
         DBENCH_BANNER("openadr");
         volatile size_t sink = 0;
-        DBENCH_OP("pc_openadr_event x2 intervals", 20000,
-                  sink += pc_openadr_event("program-1", "peak", iv2, 2, out, sizeof(out)));
-        DBENCH_OP("pc_openadr_event x8 intervals", 10000,
-                  sink += pc_openadr_event("program-1", "day-ahead", iv8, 8, out, sizeof(out)));
-        DBENCH_OP("pc_openadr_report reading", 20000,
-                  sink += pc_openadr_report("program-1", "event-9", "meter-A", -2.5, 1720000000u, out, sizeof(out)));
+        DBENCH_OP("protocore_openadr_event x2 intervals", 20000,
+                  sink += protocore_openadr_event("program-1", "peak", iv2, 2, out, sizeof(out)));
+        DBENCH_OP("protocore_openadr_event x8 intervals", 10000,
+                  sink += protocore_openadr_event("program-1", "day-ahead", iv8, 8, out, sizeof(out)));
+        DBENCH_OP("protocore_openadr_report reading", 20000,
+                  sink += protocore_openadr_report("program-1", "event-9", "meter-A", -2.5, 1720000000u, out, sizeof(out)));
         (void)sink;
         DBENCH_DONE();
     }

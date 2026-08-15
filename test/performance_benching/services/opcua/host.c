@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // Host-side microbenchmark for the OPC UA Binary server codec (IEC 62541 / OPC UA Part 6): the UACP
-// Hello/Acknowledge handshake (pc_opcua_parse_hello + pc_opcua_build_ack, run on every new connection) and the
-// per-node DataValue Variant encode (pc_ua_w_datavalue, the Read-service hot op). All pure (no sockets, no
+// Hello/Acknowledge handshake (protocore_opcua_parse_hello + protocore_opcua_build_ack, run on every new connection) and the
+// per-node DataValue Variant encode (protocore_ua_w_datavalue, the Read-service hot op). All pure (no sockets, no
 // heap); opcua_rx() (not benched here) references a few transport symbols, stubbed below. The device
 // number comes from the rig /bench endpoint; this host ns/op + MB/s is a relative baseline. Build + run:
 //   gcc -O2 -std=c11 -I. -Isrc -Itest/mocks -Itest/support -Itest/performance_benching/common
@@ -31,7 +31,7 @@ bool pc_conn_send(uint8_t slot, const void *data, uint16_t len)
     return true;
 }
 
-void pc_conn_flush(uint8_t slot)
+void protocore_conn_flush(uint8_t slot)
 {
     (void)slot;
 }
@@ -79,17 +79,17 @@ int main(void)
     {
         volatile int sink = 0;
         double ns = 0.0;
-        HBENCH_NS(2000000, sink += pc_opcua_parse_hello(hel, heln, &hello) ? 1 : 0, ns);
+        HBENCH_NS(2000000, sink += protocore_opcua_parse_hello(hel, heln, &hello) ? 1 : 0, ns);
         hbench_row("opcua", "parse HELLO", ns, (double)heln);
         (void)sink;
     }
     // Build ACK: negotiate the buffer sizes down to the server limit and emit the reply.
-    pc_opcua_parse_hello(hel, heln, &hello);
+    protocore_opcua_parse_hello(hel, heln, &hello);
     {
         volatile size_t sink = 0;
         double ns = 0.0;
-        HBENCH_NS(2000000, sink += pc_opcua_build_ack(&hello, ack, sizeof(ack)), ns);
-        size_t n = pc_opcua_build_ack(&hello, ack, sizeof(ack));
+        HBENCH_NS(2000000, sink += protocore_opcua_build_ack(&hello, ack, sizeof(ack)), ns);
+        size_t n = protocore_opcua_build_ack(&hello, ack, sizeof(ack));
         hbench_row("opcua", "build ACK", ns, (double)n);
         (void)sink;
     }
@@ -109,7 +109,7 @@ int main(void)
                 w.cap = sizeof(out);
                 w.n = 0;
                 w.ok = true;
-                pc_ua_w_datavalue(&w, &v, 0);
+                protocore_ua_w_datavalue(&w, &v, 0);
                 sink += w.n;
             },
             ns);
@@ -118,7 +118,7 @@ int main(void)
         w.cap = sizeof(out);
         w.n = 0;
         w.ok = true;
-        pc_ua_w_datavalue(&w, &v, 0);
+        protocore_ua_w_datavalue(&w, &v, 0);
         hbench_row("opcua", "encode DataValue (f64)", ns, (double)w.n);
         (void)sink;
     }
