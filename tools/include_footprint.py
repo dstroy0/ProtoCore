@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+# ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """
 include_footprint.py - map the std/Arduino header dependency surface of src/.
@@ -88,7 +88,7 @@ KNOWN_STD_HEADERS = {
 }
 
 # Platform umbrella headers that transitively pull in the C std headers below.
-# Both the ESP32 Arduino core and the native test mock (test/mocks/Arduino.h)
+# Both the ESP32 Arduino core and the native test mock (core_setup/hal/host/Arduino.h)
 # provide these, so a file that reaches Arduino.h has them without a direct
 # include. Modeled so a symbol satisfied only via Arduino.h is not a false
 # "missing include" (it still shows up as an unused direct std include if the

@@ -1,4 +1,4 @@
-// Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+// ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // Host-side microbenchmark for the IEC 60870-5-104 codec (SCADA telecontrol over TCP): the APCI I-format

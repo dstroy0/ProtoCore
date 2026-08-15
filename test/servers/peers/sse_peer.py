@@ -1,4 +1,4 @@
-# Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+# ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """Server-Sent Events interop: drive the device's SSE endpoint with a spec-faithful
 EventSource client (stdlib only).

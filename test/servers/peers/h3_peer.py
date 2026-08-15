@@ -1,4 +1,4 @@
-# Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+# ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """HTTP/3 interop: complete a real QUIC handshake (ALPN h3) with the device and drive HTTP/3 requests
 through an independent, spec-compliant stack (aioquic).

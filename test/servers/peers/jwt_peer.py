@@ -1,4 +1,4 @@
-# Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+# ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """JWT (RFC 7519, HS256) interop: validate the device's bearer-auth verifier with a real PyJWT client.
 

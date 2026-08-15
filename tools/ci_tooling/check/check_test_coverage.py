@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-# Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+# ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """Every translation unit under src/ is exercised by a named test env.
 
-`src/` is protocol logic and nothing else, so every file in it runs on the host. The one
-exemption is `src/board_drivers/`, which speaks to vendor SDKs and only runs on silicon.
+`src/` is protocol logic and nothing else, so every file in it runs on the host. The vendor seam
+that speaks to SDKs and only runs on silicon is core_setup/, which this does not scan, so EXEMPT
+is empty.
 
 The check is that a TU is named by at least one env's `build_src_filter` in
 test/test_matrix.json. Being *compiled* is not the bar: 24 envs carry no filter at all and

@@ -1,4 +1,4 @@
-// Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+// ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // Data-driven external known-answer tests for the library's shared crypto primitives: HMAC-SHA256,

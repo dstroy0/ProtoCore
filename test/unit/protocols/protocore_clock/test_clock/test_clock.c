@@ -1,9 +1,23 @@
-// Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+// ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #include "server/clock/clock.h"
 #include <Arduino.h>
 #include <unity.h>
+
+// The library's microsecond clock, read through the namespace.
+static uint32_t clock_us(void)
+{
+    Clock.micros(Clock.internal);
+    return Clock.us;
+}
+
+// The library's millisecond clock, read through the namespace.
+static uint32_t clock_ms(void)
+{
+    Clock.millis(Clock.internal);
+    return Clock.ms;
+}
 
 static uint32_t g_fake = 0;
 static uint32_t fake_clock()
@@ -18,65 +32,87 @@ static uint32_t fake_us()
 
 void setUp()
 {
-    protocore_set_clock(NULL, 0);
-    protocore_set_micros_clock(NULL, 0);
+    Clock.src.fn = NULL;
+    Clock.src.ticks_per_second = 0;
+    Clock.set_ms(Clock.internal);
+    Clock.src.fn = NULL;
+    Clock.src.ticks_per_second = 0;
+    Clock.set_us(Clock.internal);
 }
 void tearDown()
 {
-    protocore_set_clock(NULL, 0);
-    protocore_set_micros_clock(NULL, 0);
+    Clock.src.fn = NULL;
+    Clock.src.ticks_per_second = 0;
+    Clock.set_ms(Clock.internal);
+    Clock.src.fn = NULL;
+    Clock.src.ticks_per_second = 0;
+    Clock.set_us(Clock.internal);
 }
 
 void test_default_is_platform_millis()
 {
     set_millis(5000);
-    TEST_ASSERT_EQUAL_UINT32(5000, protocore_millis());
+    TEST_ASSERT_EQUAL_UINT32(5000, clock_ms());
     set_millis(12345);
-    TEST_ASSERT_EQUAL_UINT32(12345, protocore_millis());
+    TEST_ASSERT_EQUAL_UINT32(12345, clock_ms());
 }
 
 void test_custom_clock_divides_to_1000hz()
 {
-    protocore_set_clock(fake_clock, 8000);
+    Clock.src.fn = fake_clock;
+    Clock.src.ticks_per_second = 8000;
+    Clock.set_ms(Clock.internal);
     g_fake = 8000;
-    TEST_ASSERT_EQUAL_UINT32(1000, protocore_millis());
+    TEST_ASSERT_EQUAL_UINT32(1000, clock_ms());
     g_fake = 16000;
-    TEST_ASSERT_EQUAL_UINT32(2000, protocore_millis());
+    TEST_ASSERT_EQUAL_UINT32(2000, clock_ms());
 
     g_fake = 1000000;
-    protocore_set_clock(fake_clock, 1000000);
-    TEST_ASSERT_EQUAL_UINT32(1000, protocore_millis());
+    Clock.src.fn = fake_clock;
+    Clock.src.ticks_per_second = 1000000;
+    Clock.set_ms(Clock.internal);
+    TEST_ASSERT_EQUAL_UINT32(1000, clock_ms());
 }
 
 void test_sub_khz_source_not_divided()
 {
-    protocore_set_clock(fake_clock, 500);
+    Clock.src.fn = fake_clock;
+    Clock.src.ticks_per_second = 500;
+    Clock.set_ms(Clock.internal);
     g_fake = 1234;
-    TEST_ASSERT_EQUAL_UINT32(1234, protocore_millis());
+    TEST_ASSERT_EQUAL_UINT32(1234, clock_ms());
 }
 
 void test_revert_to_default()
 {
-    protocore_set_clock(fake_clock, 1000);
+    Clock.src.fn = fake_clock;
+    Clock.src.ticks_per_second = 1000;
+    Clock.set_ms(Clock.internal);
     g_fake = 42;
-    TEST_ASSERT_EQUAL_UINT32(42, protocore_millis());
-    protocore_set_clock(NULL, 0);
+    TEST_ASSERT_EQUAL_UINT32(42, clock_ms());
+    Clock.src.fn = NULL;
+    Clock.src.ticks_per_second = 0;
+    Clock.set_ms(Clock.internal);
     set_millis(777);
-    TEST_ASSERT_EQUAL_UINT32(777, protocore_millis());
+    TEST_ASSERT_EQUAL_UINT32(777, clock_ms());
 }
 
 void test_micros_custom_divides_to_1mhz()
 {
-    protocore_set_micros_clock(fake_us, 80000000u);
+    Clock.src.fn = fake_us;
+    Clock.src.ticks_per_second = 80000000u;
+    Clock.set_us(Clock.internal);
     g_fake_us = 80000000u;
-    TEST_ASSERT_EQUAL_UINT32(1000000u, protocore_micros());
+    TEST_ASSERT_EQUAL_UINT32(1000000u, clock_us());
     g_fake_us = 160u;
-    TEST_ASSERT_EQUAL_UINT32(2u, protocore_micros());
+    TEST_ASSERT_EQUAL_UINT32(2u, clock_us());
 }
 
 void test_latency_stat_records_and_budgets()
 {
-    protocore_set_micros_clock(fake_us, 1000000u);
+    Clock.src.fn = fake_us;
+    Clock.src.ticks_per_second = 1000000u;
+    Clock.set_us(Clock.internal);
     protocore_latency_stat s;
     protocore_lat_reset(&s);
     TEST_ASSERT_EQUAL_UINT32(0, protocore_lat_avg_us(&s));
@@ -105,7 +141,9 @@ void test_latency_stat_records_and_budgets()
 
 void test_latency_budget_zero_disables()
 {
-    protocore_set_micros_clock(fake_us, 1000000u);
+    Clock.src.fn = fake_us;
+    Clock.src.ticks_per_second = 1000000u;
+    Clock.set_us(Clock.internal);
     protocore_latency_stat s;
     protocore_lat_reset(&s);
     g_fake_us = 0;

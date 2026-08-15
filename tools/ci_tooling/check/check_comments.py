@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+# ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """The comment law, mechanically.
 
@@ -18,7 +18,8 @@ What is deliberately NOT flagged, because a checker cannot decide it: whether a
 description is accurate, whether it is too long, or whether prose without one of these
 markers is really a justification. Those stay review items.
 
-Exempt: docs/, test/, examples/, performance_benching/; file-header Doxygen blocks;
+Exempt: everything outside src/, which is the only tree walked - docs/, test/ (penetration_testing
+and performance_benching with it), examples/, core_setup/; file-header Doxygen blocks;
 @param / @return / @brief lines; SPDX and license headers; the PROTOCORE_ALLOW_* and NOSONAR
 justification markers the other checkers require.
 

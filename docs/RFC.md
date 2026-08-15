@@ -58,8 +58,8 @@ sweep; pipelined requests already in the buffer are drained in order.
 
 | Behavior                                  | RFC reference | Notes                                                                                                                                                                                       |
 | ----------------------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Content-Length` on fixed-size responses  | 7230 §3.3.2   | [`send()`](@ref PC::send) / [`send_empty()`](@ref PC::send_empty) / [`redirect()`](@ref PC::redirect) / [`send_template()`](@ref PC::send_template) |
-| Chunked transfer-encoding (streamed body) | 7230 §4.1     | [`send_chunked()`](@ref PC::send_chunked): `Transfer-Encoding: chunked`, `<hexlen>\r\n<data>\r\n` chunks, `0\r\n\r\n` terminator                                                  |
+| `Content-Length` on fixed-size responses  | 7230 §3.3.2   | [`send_text()`](@ref send_text) / [`send_bin()`](@ref send_bin) / [`send_empty()`](@ref send_empty) / [`redirect()`](@ref redirect) / [`send_template()`](@ref send_template) |
+| Chunked transfer-encoding (streamed body) | 7230 §4.1     | [`send_chunked()`](@ref send_chunked): `Transfer-Encoding: chunked`, `<hexlen>\r\n<data>\r\n` chunks, `0\r\n\r\n` terminator                                                  |
 | `HEAD` suppresses body, keeps headers     | 7231 §4.3.2   | applies to chunked too (the `Transfer-Encoding` header is sent, but no chunks)                                                                                                              |
 
 </details>
@@ -67,7 +67,7 @@ sweep; pipelined requests already in the buffer are drained in order.
 Note the deliberate asymmetry: an inbound **request** carrying `Transfer-Encoding`
 is **rejected** (501, §3.3.1 - the server does not de-chunk request bodies),
 whereas an outbound **response** may use chunked transfer via
-[`send_chunked()`](@ref PC::send_chunked).
+[`send_chunked()`](@ref send_chunked).
 
 ## HTTP authentication (RFC 7235)
 
@@ -131,7 +131,7 @@ mbedTLS on a static memory pool (no heap). TLS 1.2 (RFC 5246) is the negotiated
 minimum; TLS 1.3 (RFC 8446) is used when the client offers it. The verified
 cipher suite is `ECDHE-ECDSA-AES256-GCM-SHA384` (forward-secret ECDHE, ECDSA
 authentication, AEAD AES-256-GCM). Server certificate/key are loaded via
-[`begin_tls()`](@ref PC::begin_tls) / [`tls_cert()`](@ref PC::tls_cert).
+[`begin_tls()`](@ref begin_tls) / [`tls_cert()`](@ref tls_cert).
 `wss://` and TLS Server-Sent Events run over the same TLS record layer when TLS is
 enabled: the WebSocket upgrade and every subsequent frame/event are encrypted,
 transparent to handler code. Optional **mutual TLS**
@@ -211,7 +211,7 @@ RFC 7233 §3.1 explicitly permits, as does a malformed or absent `Range`.
 ## WebDAV (RFC 4918)
 
 Optional ([`PROTOCORE_ENABLE_WEBDAV`](@ref PROTOCORE_ENABLE_WEBDAV), requires file serving,
-default off). [`dav()`](@ref PC::dav) mounts a filesystem subtree that
+default off). [`dav()`](@ref dav) mounts a filesystem subtree that
 answers the WebDAV methods, extending HTTP so a client can manage files:
 
 - **OPTIONS** advertises `DAV: 1, 2` and the supported `Allow` set.
@@ -343,8 +343,8 @@ Optional ([`PROTOCORE_ENABLE_JWT`](@ref PROTOCORE_ENABLE_JWT), default off). Ver
 compact-serialization JWS (RFC 7515) JSON Web Token (RFC 7519):
 `base64url(header).base64url(payload).base64url(signature)` with `alg=HS256`
 (HMAC-SHA-256, RFC 7518). The signature is recomputed over `header.payload` and
-compared in constant time ([`protocore_jwt_bearer_valid()`](@ref protocore_jwt_bearer_valid)); integer
-claims such as `exp` are readable via [`protocore_jwt_claim_int()`](@ref protocore_jwt_claim_int) for
+compared in constant time ([`Jwt.verify_bearer()`](@ref JwtNs::verify_bearer)); integer
+claims such as `exp` are readable via [`Jwt.claim_int()`](@ref JwtNs::claim_int) for
 the handler to enforce. The full `Authorization` header is captured (a bearer
 token exceeds the normal header-value cap). Shared-secret caveat:
 [SECURITY.md](SECURITY.md).
@@ -392,18 +392,18 @@ outbound client - the device as a WebSocket client to a remote endpoint:
 ## Outbound HTTP(S) client (RFC 7230)
 
 Optional ([`PROTOCORE_ENABLE_HTTP_CLIENT`](@ref PROTOCORE_ENABLE_HTTP_CLIENT), default
-off). Builds RFC 7230 request messages ([`http_get()`](@ref http_get) /
-[`http_post()`](@ref http_post)) and parses responses framed by `Content-Length`
+off). Builds RFC 7230 request messages ([`HttpClient.get()`](@ref HttpClientNs::get) /
+[`HttpClient.post()`](@ref HttpClientNs::post)) and parses responses framed by `Content-Length`
 or `Transfer-Encoding: chunked` (decoded in place) or by connection close.
 `https://` runs over client-side mbedTLS
 ([`PROTOCORE_ENABLE_HTTP_CLIENT_TLS`](@ref PROTOCORE_ENABLE_HTTP_CLIENT_TLS)); encrypt-only
 by default, with optional server authentication via a CA trust anchor
-([`http_client_set_ca()`](@ref http_client_set_ca)) or a SHA-256 certificate pin
-([`http_client_set_pin()`](@ref http_client_set_pin)). See [SECURITY.md](SECURITY.md).
+([`HttpClient.set_ca()`](@ref HttpClientNs::set_ca)) or a SHA-256 certificate pin
+([`HttpClient.set_pin()`](@ref HttpClientNs::set_pin)). See [SECURITY.md](SECURITY.md).
 
 ## Automatic error responses
 
-[`handle()`](@ref PC::handle) sends these before dispatching to any route handler:
+[`handle()`](@ref handle) sends these before dispatching to any route handler:
 
 <details>
 <summary><b>Parser State Errors Table</b></summary>

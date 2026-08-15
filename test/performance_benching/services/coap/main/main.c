@@ -1,4 +1,4 @@
-// Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+// ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // On-device CCOUNT microbenchmark for the CoAP server codec (services/iot/coap):
@@ -75,10 +75,17 @@ static void h_big(const CoapRequest *req, CoapResponse *resp)
 
 void dbench_run(void)
 {
-    protocore_coap_server_reset();
-    protocore_coap_server_add_resource("/temp", COAP_ALLOW_GET | COAP_ALLOW_POST | COAP_ALLOW_PUT | COAP_ALLOW_DELETE,
-                                       h_temp);
-    protocore_coap_server_add_resource("/big", COAP_ALLOW_GET | COAP_ALLOW_POST | COAP_ALLOW_PUT, h_big);
+    Coap.reset(Coap.internal);
+
+    Coap.resource.path = "/temp";
+    Coap.resource.methods = COAP_ALLOW_GET | COAP_ALLOW_POST | COAP_ALLOW_PUT | COAP_ALLOW_DELETE;
+    Coap.resource.handler = h_temp;
+    Coap.add_resource(Coap.internal);
+
+    Coap.resource.path = "/big";
+    Coap.resource.methods = COAP_ALLOW_GET | COAP_ALLOW_POST | COAP_ALLOW_PUT;
+    Coap.resource.handler = h_big;
+    Coap.add_resource(Coap.internal);
 
     // GET /temp, token AA BB CC DD, MID 0x1234 (test_get_content): hdr(Ver1,CON,TKL4) + code GET +
     // MID + token + Uri-Path "temp".
@@ -113,25 +120,33 @@ void dbench_run(void)
 
     static uint8_t resp[300];
 
+    Coap.msg.resp = resp;
+    Coap.msg.resp_cap = sizeof(resp);
+
     for (;;)
     {
         DBENCH_BANNER("coap");
         volatile size_t sink = 0;
 
-        DBENCH_OP("protocore_coap_server_process GET", 20000,
-                  sink += protocore_coap_server_process(get_temp, sizeof(get_temp), resp, sizeof(resp)));
+        Coap.msg.req = get_temp;
+        Coap.msg.req_len = sizeof(get_temp);
+        DBENCH_OP("Coap.process GET", 20000, Coap.process(Coap.internal); sink += Coap.n);
 
-        DBENCH_OP("protocore_coap_server_process PUT", 20000,
-                  sink += protocore_coap_server_process(put_temp, sizeof(put_temp), resp, sizeof(resp)));
+        Coap.msg.req = put_temp;
+        Coap.msg.req_len = sizeof(put_temp);
+        DBENCH_OP("Coap.process PUT", 20000, Coap.process(Coap.internal); sink += Coap.n);
 
-        DBENCH_OP("protocore_coap_server_process discovery", 20000,
-                  sink += protocore_coap_server_process(get_discovery, sizeof(get_discovery), resp, sizeof(resp)));
+        Coap.msg.req = get_discovery;
+        Coap.msg.req_len = sizeof(get_discovery);
+        DBENCH_OP("Coap.process discovery", 20000, Coap.process(Coap.internal); sink += Coap.n);
 
-        DBENCH_BULK("protocore_coap_server_process block2", 20000, 64,
-                    sink += protocore_coap_server_process(get_block2, sizeof(get_block2), resp, sizeof(resp)));
+        Coap.msg.req = get_block2;
+        Coap.msg.req_len = sizeof(get_block2);
+        DBENCH_BULK("Coap.process block2", 20000, 64, Coap.process(Coap.internal); sink += Coap.n);
 
-        DBENCH_BULK("protocore_coap_server_process block1", 20000, 64,
-                    sink += protocore_coap_server_process(post_block1, sizeof(post_block1), resp, sizeof(resp)));
+        Coap.msg.req = post_block1;
+        Coap.msg.req_len = sizeof(post_block1);
+        DBENCH_BULK("Coap.process block1", 20000, 64, Coap.process(Coap.internal); sink += Coap.n);
 
         (void)sink;
         DBENCH_DONE();

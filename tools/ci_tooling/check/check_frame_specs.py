@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+# ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """Verify every PROTOCORE_FK_LIT field in a frame spec carries its literal's true length.
 
@@ -9,7 +9,7 @@ function-like macro, which AUTOSAR A16-0-1 forbids, and `constexpr` is banned he
 length is not a compile error: too small silently truncates the frame, too large reads past the
 literal, and both look correct in review.
 
-This gate closes that. It scans src/, examples/ and penetration_testing/ for PROTOCORE_FK_LIT initializers, decodes
+This gate closes that. It scans src/, examples/ and test/ for PROTOCORE_FK_LIT initializers, decodes
 the C escape sequences in each literal, and compares the byte count against the declared value.
 `--fix` rewrites the declared value in place.
 
@@ -26,7 +26,7 @@ import sys
 from tools.ci_tooling.lib import doc_region as dr
 
 ROOT = pathlib.Path(dr.repo_root(__file__))
-TREES = ("src", "examples", "penetration_testing", "test")
+TREES = ("src", "examples", "test")
 EXTS = (".h", ".c", ".cpp", ".ino")
 
 # {PROTOCORE_FK_LIT, <width>, <len>, "text"} - the literal may be several adjacent string tokens, which C

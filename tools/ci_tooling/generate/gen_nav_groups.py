@@ -62,7 +62,6 @@ GROUPS = [
             ("md_docs_2SRC__LAW", "The src/ law"),
             ("md_docs_2SRCBANNED", "Banned in src/, and what to use instead"),
             ("md_docs_2SSH", "SSH support"),
-            ("md_docs_2DTLS", "DTLS 1.3 (RFC 9147)"),
         ],
     ),
     (

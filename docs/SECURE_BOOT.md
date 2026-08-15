@@ -24,14 +24,14 @@ The library keeps these secrets/assets in flash; without Flash Encryption they c
 be dumped with `esptool.py read_flash`, and without Secure Boot the firmware can be
 replaced with a malicious build:
 
-| Asset                                  | Where it lives                    | Protected by                   |
-| -------------------------------------- | --------------------------------- | ------------------------------ |
-| Firmware image (your logic + keys)     | app partition                     | Secure Boot + Flash Encryption |
-| SSH RSA host private key               | NVS (`ssh_host_key` / `priv_der`) | Flash Encryption (+NVS enc)    |
-| TLS server key & certificate           | flash / NVS (your storage)        | Flash Encryption               |
-| SNMPv3 USM auth/priv keys, JWT secret  | flash / NVS / build constants     | Flash Encryption               |
-| WiFi credentials, config blobs         | NVS (`config_store`)              | Flash Encryption (+NVS enc)    |
-| Audit-log chain (`services/audit_log`) | RAM ring (+ your sink)            | see "Audit log" below          |
+| Asset                                             | Where it lives                    | Protected by                   |
+| ------------------------------------------------- | --------------------------------- | ------------------------------ |
+| Firmware image (your logic + keys)                | app partition                     | Secure Boot + Flash Encryption |
+| SSH RSA host private key                          | NVS (`ssh_host_key` / `priv_der`) | Flash Encryption (+NVS enc)    |
+| TLS server key & certificate                      | flash / NVS (your storage)        | Flash Encryption               |
+| SNMPv3 USM auth/priv keys, JWT secret             | flash / NVS / build constants     | Flash Encryption               |
+| WiFi credentials, config blobs                    | NVS (`config_store`)              | Flash Encryption (+NVS enc)    |
+| Audit-log chain (`src/server/security/audit_log`) | RAM ring (+ your sink)            | see "Audit log" below          |
 
 The SSH private key is already loaded to the stack and wiped after use
 (`ssh_rsa.h`), so it never rests in static RAM - Flash Encryption protects the
@@ -108,7 +108,7 @@ DIS_PAD_JTAG` / soft-disable), and UART download mode or Secure Download Mode
 
 ## Audit log under a physical attacker
 
-The hash chain in [`services/audit_log`](FEATURES.md#audit-log) makes on-device
+The hash chain in [`src/server/security/audit_log`](FEATURES.md#audit-log) makes on-device
 tampering detectable, but an attacker who holds the Flash Encryption key could in
 principle recompute the chain. For **true off-device tamper-evidence**, install a
 sink (`protocore_audit_set_sink`) that forwards every record - with its chain hash - to

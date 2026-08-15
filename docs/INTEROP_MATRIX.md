@@ -34,9 +34,9 @@ Related: [AUDIT.md](AUDIT.md) records the per-standard conformance verdicts this
 | Dimension            | Count | Source of truth                                  |
 | -------------------- | ----: | ------------------------------------------------ |
 | Interop peers        |    39 | `test/servers/peers/*_peer.py`                   |
-| Throughput benches   |     0 | `performance_benching/**/platformio.ini`         |
-| Advanced attacks     |     0 | `@attack(...)` in `penetration_testing/protocore_pentest.py`     |
-| Adversarial fuzz     |     0 | `native_pentest` (`test/unit/fieldbus/test_pentest/`)          |
+| Throughput benches   |   206 | `test/performance_benching/**/platformio.ini`    |
+| Advanced attacks     |    79 | `@attack(...)` in `test/penetration_testing/pc_pentest.py`       |
+| Adversarial fuzz     |    10 | `native_pentest` (`test/unit/src/network_drivers/application/smb/test_pentest/`)          |
 | Service modules      |   121 | `src/services/<group>/<module>/`                 |
 
 Interop peers cover **39 of 121** service modules. Not every module needs a third-party

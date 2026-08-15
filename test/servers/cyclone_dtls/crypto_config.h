@@ -1,4 +1,4 @@
-// Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+// ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Lean CycloneCRYPTO build config for the DTLS 1.3 interop client (test tooling; see run_interop.sh).
 #ifndef _CRYPTO_CONFIG_H

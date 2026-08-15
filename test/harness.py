@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+# ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """
 harness.py - the one entry point for the native test matrix.
@@ -13,7 +13,7 @@ Everything the harness can do is a subcommand here, so `harness.py -h` is the wh
   env list      print the envs the matrix defines
   env deps      rebuild test/dep_graph.json from the compiler include closure
 
-  run           build and run test envs natively (no pio); --pio hands off to run_tests.sh
+  run           build and run test envs natively (no pio); --pio runs them through `pio test`
   bare          cross-compile the core, and boot it on the part under QEMU
   bench         the microbenchmark matrix
   runners gen   generate a suite's Unity runner (the logic the pre-build hook calls)
@@ -53,7 +53,7 @@ INI = findroot.at("platformio.ini")
 TABLE = findroot.at("test", "test_matrix.json")
 DEP_GRAPH = findroot.at("test", "dep_graph.json")
 
-BEGIN = "; >>> GENERATED TEST ENVS - do not edit below; edit test/test_matrix.json and run test/gen_test_envs.py >>>"
+BEGIN = "; >>> GENERATED TEST ENVS - do not edit below; edit test/test_matrix.json and run test/harness.py env gen >>>"
 END = "; <<< END GENERATED TEST ENVS <<<"
 
 LOCK_TIMEOUT_S = 120.0  # a writer that cannot get in by then reports rather than racing
@@ -506,7 +506,6 @@ FORCE_FULL_EXACT = {
     "platformio.ini",
     "test/test_matrix.json",
     "test/harness.py",
-    "test/run_tests.sh",
     "sonar-project.properties",
     "library.json",
     "library.properties",
@@ -1089,9 +1088,9 @@ def cmd_report_stable(a):
 # ---------------------------------------------------------------------------
 
 README = findroot.at("test", "README.md")
-ENV_BEGIN = "<!-- BEGIN GENERATED test-environments (edit test/test_matrix.json, run test/gen_test_readme.py) -->"
+ENV_BEGIN = "<!-- BEGIN GENERATED test-environments (edit test/test_matrix.json, run test/harness.py readme gen) -->"
 ENV_END = "<!-- END GENERATED test-environments -->"
-DIR_BEGIN = "<!-- BEGIN GENERATED test-directory (run test/gen_test_readme.py) -->"
+DIR_BEGIN = "<!-- BEGIN GENERATED test-directory (run test/harness.py readme gen) -->"
 DIR_END = "<!-- END GENERATED test-directory -->"
 
 
@@ -1119,7 +1118,7 @@ def build_env_table():
     out = [
         f"The native test matrix has **{len(envs)} environments**, one per feature, generated from "
         "[test_matrix.json](test_matrix.json) into [platformio.ini](../platformio.ini) by "
-        "[gen_test_envs.py](gen_test_envs.py). Each compiles a strict per-feature slice of `src/` with its "
+        "[harness.py](harness.py). Each compiles a strict per-feature slice of `src/` with its "
         "own flags and runs that feature's suite in isolation, so \"this feature builds and tests on its "
         'own" stays guaranteed.\n',
         "| Environment | Feature flag(s) | Test suite(s) | Purpose |",
@@ -1347,7 +1346,7 @@ def _reached_headers(sdir):
     return names
 
 
-COV_BUILD = ".pio_cov"      # per-env .gcno/.gcda, mirroring run_tests.sh's instrumented build dir
+COV_BUILD = ".pio_cov"      # per-env .gcno/.gcda from the instrumented build
 COV_REPORTS = "coverage_reports"  # per-env gcovr tracefiles, unioned once every env has run
 
 

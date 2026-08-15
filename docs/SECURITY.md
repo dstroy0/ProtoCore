@@ -19,7 +19,7 @@ with caveats, ❌ = a real weakness to be aware of.
 
 | Area                   | Why it's solid                                                                                                                                                                                                                                                 |
 | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Deterministic memory   | Zero heap after [`begin()`](@ref PC::begin); every buffer is fixed-size and bounds-checked. No use-after-free, no fragmentation, no allocation failure paths.                                                                                        |
+| Deterministic memory   | Zero heap after `begin()`; every buffer is fixed-size and bounds-checked. No use-after-free, no fragmentation, no allocation failure paths.                                                                                        |
 | HTTP input validation  | RFC 7230 parser validates every byte; rejects malformed method/path/headers, enforces Host and Content-Length, refuses Transfer-Encoding (no request smuggling surface).                                                                                       |
 | WebSocket framing      | Enforces client masking, reserved-opcode/RSV checks, control-frame size and fragmentation rules.                                                                                                                                                               |
 | SSH crypto correctness | SHA-256/HMAC/AES-CTR/DH validated against NIST/RFC vectors; RSA verification validated against an openssl KAT and native RSA signing against a sign→verify round-trip with a real 2048-bit private exponent. MAC-verify-before-use; constant-time MAC compare. |
@@ -38,11 +38,11 @@ with caveats, ❌ = a real weakness to be aware of.
 | Transport encryption (HTTP) | Opt-in **HTTPS** ([`PROTOCORE_ENABLE_TLS`](@ref PROTOCORE_ENABLE_TLS)) via mbedTLS on a static memory pool - TLS 1.2+/`ECDHE-ECDSA-AES256-GCM-SHA384`, zero-heap (§6). Default off (plain HTTP). Optional **mutual TLS** ([`PROTOCORE_ENABLE_MTLS`](@ref PROTOCORE_ENABLE_MTLS)) adds client-certificate authentication (handshake requires a cert chaining to a configured CA), and `wss://` + TLS-SSE run encrypted over the same TLS record layer. Optional **session resumption** ([`PROTOCORE_ENABLE_TLS_RESUMPTION`](@ref PROTOCORE_ENABLE_TLS_RESUMPTION)) via RFC 5077 tickets gives returning clients an abbreviated handshake. Caveat: one connection at a time (`MAX_TLS_CONNS`=1). On a trusted LAN plain HTTP is fine; the SSH layer is also an encrypted channel. |
 | SSH timing side-channels    | The native software bignum/AES/RSA paths are **not constant-time**, but they are **compile-excluded from firmware**: the software Montgomery cluster is under `#ifndef ARDUINO` (`crypto/asymmetric/bignum.c`) and the software AES / native RSA modexp live in the `#else` of an `#ifdef ARDUINO` (`crypto/cipher/aes256ctr.c`, `crypto/asymmetric/rsa.c`). On ESP32 only the hardware/mbedTLS paths are compiled and run; the software paths exist solely for host testing. |
 | `Date` response header      | Not emitted (the device usually has no wall clock). RFC 7231 §7.1.1.2 permits this for clock-less servers.                                                                                                                                                                                                                                                                                                                                    |
-| Single SSH channel          | One `session` channel per connection; no port-forwarding/X11. Smaller attack surface, but a functional limit.                                                                                                                                                                                                                                                                                                                                 |
+| Single SSH channel          | [`PROTOCORE_SSH_MAX_CHANNELS`](@ref PROTOCORE_SSH_MAX_CHANNELS) channels per connection (default 1). Port forwarding (`ssh -L` / `ssh -R`) is opt-in via [`PROTOCORE_SSH_PORT_FORWARD`](@ref PROTOCORE_SSH_PORT_FORWARD) (default off); X11 forwarding is not implemented. Smaller attack surface, but a functional limit.                                                                                                                                                                                                                                                                                                                                 |
 | Diagnostic endpoint         | [`PROTOCORE_ENABLE_DIAG`](@ref PROTOCORE_ENABLE_DIAG) leaks build configuration; default-off and must stay off in production.                                                                                                                                                                                                                                                                                                                         |
 | SNMP agent (v1/v2c)         | Opt-in ([`PROTOCORE_ENABLE_SNMP`](@ref PROTOCORE_ENABLE_SNMP), default off). Community-string access only - the community is sent **in cleartext** and is not real authentication (§10). Read-only by default; `Set` is refused unless a separate read-write community is configured. Run only on a trusted/management network and rename the default `public`/`private` communities. For authenticated + encrypted access, enable **SNMPv3 / USM** ([`PROTOCORE_ENABLE_SNMP_V3`](@ref PROTOCORE_ENABLE_SNMP_V3): HMAC-SHA-256 auth + AES-128 privacy). |
 | JWT bearer auth             | Opt-in ([`PROTOCORE_ENABLE_JWT`](@ref PROTOCORE_ENABLE_JWT), default off). HS256 only - a single shared secret both signs and verifies, so any holder of the secret can mint tokens; keep it server-side. Signature compare is constant-time. The verifier checks the signature and can read integer claims (e.g. `exp`), but does not itself enforce expiry - gate on the claim in your handler. Send tokens only over HTTPS (a bearer token is a password). |
-| Outbound HTTPS client       | Opt-in ([`PROTOCORE_ENABLE_HTTP_CLIENT_TLS`](@ref PROTOCORE_ENABLE_HTTP_CLIENT_TLS), default off). **Encrypt-only by default** (no trust store): resists passive eavesdropping but not an active MITM. Authenticate the peer by installing a CA trust anchor (`http_client_set_ca()`) - verifies the chain + hostname - and/or a SHA-256 certificate pin (`http_client_set_pin()`); a failure aborts the connection. Without one, treat secrets you send as MITM-exposed. |
+| Outbound HTTPS client       | Opt-in ([`PROTOCORE_ENABLE_HTTP_CLIENT_TLS`](@ref PROTOCORE_ENABLE_HTTP_CLIENT_TLS), default off). **Encrypt-only by default** (no trust store): resists passive eavesdropping but not an active MITM. Authenticate the peer by installing a CA trust anchor (`HttpClient.set_ca()`) - verifies the chain + hostname - and/or a SHA-256 certificate pin (`HttpClient.set_pin()`); a failure aborts the connection. Without one, treat secrets you send as MITM-exposed. |
 | MQTT client                 | Opt-in ([`PROTOCORE_ENABLE_MQTT`](@ref PROTOCORE_ENABLE_MQTT), default off). Plain MQTT sends the broker username/password and all payloads **in cleartext** - use it only on a trusted segment. For an untrusted network use `mqtts://` ([`PROTOCORE_ENABLE_MQTT_TLS`](@ref PROTOCORE_ENABLE_MQTT_TLS)), which shares the client-TLS trust model (encrypt-only by default; install a CA / cert pin via `protocore_tls_client_set_ca` / `protocore_tls_client_set_pin` to authenticate the broker). |
 | WebDAV share                | Opt-in ([`PROTOCORE_ENABLE_WEBDAV`](@ref PROTOCORE_ENABLE_WEBDAV), default off). A `dav()` mount exposes a **read/write** view of the filesystem (PUT/DELETE/MKCOL/COPY/MOVE) with **no authentication of its own** - an unprotected mount lets anyone on the network read, overwrite, and delete files. Gate the mount with per-route auth and serve it over HTTPS, and front it with the accept throttles. Locks are **advisory** (a token is issued but not enforced), so they do not prevent concurrent writers. The `..` traversal guard keeps requests inside the mount root. |
 | Modbus TCP slave            | Opt-in ([`PROTOCORE_ENABLE_MODBUS`](@ref PROTOCORE_ENABLE_MODBUS), default off). Modbus has **no authentication or encryption** - any client that reaches port 502 can read and write the entire data model (coils and holding registers). This is inherent to the protocol. Run it only on an isolated/trusted control network (or behind a VPN), front it with the per-IP accept throttle, and keep safety-critical logic from depending solely on client-supplied register values. Reads/writes are bounds-checked against the configured table sizes (out-of-range -> exception 0x02). |
@@ -154,7 +154,7 @@ The remaining sections document each property in depth.
 
 ## 2. Memory Safety - HTTP / Core Stack {#memory-safety}
 
-**Files:** [src/network_drivers/transport/tcp.c](@ref tcp.c),
+**Files:** [src/network_drivers/transport/tcp/tcp.c](@ref tcp.c),
 [src/network_drivers/presentation/presentation.c](@ref presentation.c),
 [src/protocore_config.h](@ref protocore_config.h)
 
@@ -362,7 +362,7 @@ records) is ~41.5 KB; the default arena is 48 KB.
   ESP-IDF-framework build).
 - **Client-certificate auth is optional, off by default** - enable mutual TLS
   with [`PROTOCORE_ENABLE_MTLS`](@ref PROTOCORE_ENABLE_MTLS) and
-  [`tls_require_client_cert()`](@ref PC::tls_require_client_cert): the
+  [`tls_require_client_cert()`](@ref tls_require_client_cert): the
   handshake then requires a client cert chaining to the configured CA and exposes
   the verified peer subject DN to handlers. Without it the server does not
   authenticate clients via TLS (use HTTP Basic/Digest/JWT auth for client
@@ -390,15 +390,13 @@ records) is ~41.5 KB; the default arena is 48 KB.
 
 **Files:**
 
-- [src/network_drivers/presentation/ssh/transport/ssh_keymat.h](@ref ssh_keymat.h) - security model, types, wipe helpers
+- [src/network_drivers/presentation/ssh/transport/transport.h](@ref transport.h) / [.c](@ref transport.c) - key-material types and wipe helpers, DH-group14-SHA256 KEX, binary packet protocol
 - [src/crypto/asymmetric/bignum.h](@ref bignum.h) / [.c](@ref bignum.c) - 2048-bit Montgomery arithmetic (shared library primitive)
 - [src/crypto/hash/sha256.h](@ref sha256.h) / [.c](@ref sha256.c) - SHA-256 (shared library primitive)
 - [src/crypto/mac/hmac_sha256.h](@ref hmac_sha256.h) / [.c](@ref hmac_sha256.c) - HMAC-SHA2-256 (shared library primitive)
 - [src/crypto/cipher/aes256ctr.h](@ref aes256ctr.h) / [.c](@ref aes256ctr.c) - AES-256-CTR (shared library primitive)
-- [src/network_drivers/presentation/ssh/transport/ssh_dh.h](@ref ssh_dh.h) / [.c](@ref ssh_dh.c) - DH-group14-SHA256 KEX
 - [src/crypto/asymmetric/rsa.h](@ref rsa.h) / [.c](@ref rsa.c) - RSA-2048 PKCS#1 v1.5 verify + software sign (shared primitive)
-- [src/network_drivers/tls/ssh_rsa.h](@ref ssh_rsa.h) / [.c](@ref ssh_rsa.c) - SSH RSA host-key layer (NVS key, signing, "ssh-rsa" blob)
-- [src/network_drivers/presentation/ssh/transport/ssh_packet.h](@ref ssh_packet.h) / [.c](@ref ssh_packet.c) - binary packet protocol
+- [src/network_drivers/presentation/ssh/transport/ssh_rsa.h](@ref ssh_rsa.h) / [.c](@ref ssh_rsa.c) - SSH RSA host-key layer (NVS key, signing, "ssh-rsa" blob)
 
 ---
 
@@ -530,8 +528,8 @@ right-padded with zeros.
 **Verify-before-use**
 
 The MAC is verified **before** the payload bytes are forwarded to any protocol
-handler. The verification uses a constant-time 32-byte comparison (`ct_memcmp`
-in [ssh_packet.c](@ref ssh_packet.c))
+handler. The verification uses a constant-time 32-byte comparison
+([`protocore_ct_eq()`](@ref protocore_ct_eq) in [ct_eq.h](@ref ct_eq.h))
 that accumulates XOR differences without early-exit branching. This prevents
 timing-oracle attacks where an attacker measures how many bytes of the MAC
 matched before a short-circuit return.
@@ -628,7 +626,7 @@ optional `0x00` prefix byte (required if the MSB of K is set, to indicate a
 positive integer), followed by the 256-byte big-endian value of K.
 
 After derivation, all stack temporaries (`key_c2s`, `key_s2c`, `iv_c2s`,
-`iv_s2c`, the SHA-256 context) are zeroed via `ssh_wipe()` before
+`iv_s2c`, the SHA-256 context) are zeroed via `protocore_secure_wipe()` before
 [`ssh_dh_derive_keys()`](@ref ssh_dh_derive_keys) returns.
 
 </details>
@@ -674,7 +672,7 @@ local SshRsaPrivKey on the stack   ← only location the private key exists in R
 private key loaded into local struct
     │
     ▼  sign operation completes
-ssh_wipe(&priv, sizeof(priv))       ← volatile loop, not elided by compiler
+protocore_secure_wipe(&priv, sizeof(priv))  ← volatile loop, not elided by compiler
     │
     ▼  ssh_rsa_sign() returns
 stack frame deallocated - no key bytes remain anywhere in RAM
@@ -703,8 +701,7 @@ the device.
 <details>
 <summary><b>Expand 7.7 Memory Layout Defenses Details</b></summary>
 
-**Source:** [ssh_keymat.h](@ref ssh_keymat.h)
-(Defense 1 comment block)
+**Source:** [transport.h](@ref transport.h)
 
 Three separate BSS symbols hold SSH state:
 
@@ -740,8 +737,8 @@ symbol layout eliminates that risk.
 <details>
 <summary><b>Expand 7.8 Sequence Number Overflow Guard Details</b></summary>
 
-**Source:** [ssh_packet.h](@ref ssh_packet.h),
-[ssh_packet.c](@ref ssh_packet.c)
+**Source:** [transport.h](@ref transport.h),
+[transport.c](@ref transport.c)
 
 SSH sequence numbers are 32-bit unsigned integers (RFC 4253 §6.4). They wrap
 at 2^32. Two problems arise at wrap:
@@ -776,12 +773,33 @@ limitation and is noted in [docs/CHANGELOG.md](CHANGELOG.md).
 <details>
 <summary><b>Expand 7.9 Secure Wipe Details</b></summary>
 
-**Source:** [ssh_keymat.h](@ref ssh_keymat.h)
+**Source:** [src/mmgr/secure.h](@ref secure.h)
 
-```cpp
-static inline void ssh_wipe(void *ptr, size_t len) {
-    volatile uint8_t *p = (volatile uint8_t *)ptr;
-    for (size_t i = 0; i < len; i++) p[i] = 0;
+```c
+static inline void protocore_secure_wipe(void *ptr, size_t len)
+{
+    // Machine-width stores, with byte head/tail only for unaligned edges. Both edges are normally
+    // empty - pool borrows are aligned and their lengths rounded up - so this is the word loop.
+    // volatile is per-access, so a volatile word store is exactly as un-elidable as a volatile byte
+    // store; the guarantee is unchanged and the store count drops by the width.
+    volatile uint8_t *b = (volatile uint8_t *)ptr;
+    while (len != 0 && (((uintptr_t)b & (sizeof(uintptr_t) - 1)) != 0))
+    {
+        *b++ = 0;
+        len--;
+    }
+    volatile uintptr_t *w = (volatile uintptr_t *)b;
+    while (len >= sizeof(uintptr_t))
+    {
+        *w++ = 0;
+        len -= sizeof(uintptr_t);
+    }
+    b = (volatile uint8_t *)w;
+    while (len != 0)
+    {
+        *b++ = 0;
+        len--;
+    }
 }
 ```
 
@@ -800,17 +818,17 @@ The `volatile` pointer cast forces every store to actually reach SRAM because
 `volatile` reads/writes are not subject to the "as-if rule" and cannot be
 removed.
 
-**Where ssh_wipe is used**
+**Where protocore_secure_wipe is used**
 
 | What is wiped                                 | When                                                             | File             |
 | --------------------------------------------- | ---------------------------------------------------------------- | ---------------- |
 | `crypto_work[1536]`                           | After every [`bn_expmod_group14()`](@ref bn_expmod_group14) call | `crypto/asymmetric/bignum.c` |
-| `SshDhState.y`, `.K`                          | After key derivation in [`ssh_dh_finish()`](@ref ssh_dh_finish)  | `ssh_dh.c`     |
+| `SshDhState.y`, `.K`                          | After key derivation in [`ssh_dh_finish()`](@ref ssh_dh_finish)  | `network_drivers/presentation/ssh/transport/transport.c` |
 | RSA sign bignum temporaries (n/d/m/s)         | Before [`protocore_rsa_sign_sw()`](@ref protocore_rsa_sign_sw) returns       | `crypto/asymmetric/rsa.c` |
-| [`SshKeyMat`](@ref SshKeyMat)                 | On connection close / error                                      | `ssh_keymat.h`   |
-| [`SshDhState`](@ref SshDhState) (full struct) | On connection close / error                                      | `ssh_keymat.h`   |
+| [`SshKeyMat`](@ref SshKeyMat)                 | On connection close / error                                      | `network_drivers/presentation/ssh/transport/transport.h` |
+| [`SshDhState`](@ref SshDhState) (full struct) | On connection close / error                                      | `network_drivers/presentation/ssh/transport/transport.h` |
 | DER private key stack copy                    | After `mbedtls_pk_parse_key()` in `protocore_ssh_rsa_load_pubkey()`    | `ssh_rsa.c`    |
-| Key derivation stack temporaries              | After `ssh_dh_derive_keys()`                                     | `ssh_dh.c`     |
+| Key derivation stack temporaries              | After `ssh_dh_derive_keys()`                                     | `network_drivers/presentation/ssh/transport/transport.c` |
 
 </details>
 
@@ -821,7 +839,7 @@ removed.
 <details>
 <summary><b>Expand 7.10 Random Number Generation Details</b></summary>
 
-**Source:** `test/mocks/Arduino.h` (native mock),
+**Source:** `core_setup/hal/host/Arduino.h` (native stand-in),
 ESP-IDF `esp_random.h` (Arduino production)
 
 **Production (Arduino / ESP32)**
@@ -840,14 +858,20 @@ using `esp_fill_random()`, which wraps `esp_random()`. On ESP32:
 
 **Native test environment**
 
-The native test mock in `test/mocks/Arduino.h` provides a time-seeded PRNG:
+The native stand-in in `core_setup/hal/host/Arduino.h` provides a time-seeded PRNG:
 
-```cpp
-inline uint32_t esp_random() {
-    static bool seeded = false;
+```c
+static inline uint32_t esp_random(void)
+{
+    static int seeded = 0;
     static uint32_t ctr = 0;
-    if (!seeded) { srand((unsigned)time(nullptr) ^ 0xDEADBEEFu); seeded = true; }
-    return (uint32_t)rand() ^ (++ctr * 0x9e3779b9u);
+    if (!seeded)
+    {
+        srand((unsigned)time(NULL) ^ 0xDEADBEEFu);
+        seeded = 1;
+    }
+    ctr++;
+    return (uint32_t)rand() ^ (ctr * 0x9e3779b9u);
 }
 ```
 
@@ -857,9 +881,10 @@ exercise these paths use known-value inputs where possible (small exponents,
 fixed test keys) and do not rely on the RNG producing cryptographically
 unpredictable output.
 
-The native mock is clearly marked and will not compile on Arduino targets
-because `test/mocks/Arduino.h` is only included by the `native_ssh` PlatformIO
-environment.
+The native stand-in is reached only through the host branch of
+`protocore_platform.h`: `core_setup/hal/host` is on the include path of the
+`[native_base]` section every native environment extends, and an Arduino target
+resolves `Arduino.h` to the vendor SDK header instead.
 
 </details>
 
@@ -894,8 +919,8 @@ server.on("/diag", HTTP_GET, [](uint8_t slot, HttpReq *req) {
 | No SSH user authentication                      | Any client that completes KEX is accepted             | Add [`SSH_MSG_USERAUTH_REQUEST`](@ref SSH_MSG_USERAUTH_REQUEST) handler |
 | HTTP Basic Auth is not constant-time            | Timing oracle risk if measurable from network         | Use TLS or SSH tunnel                                                   |
 | Software AES/SHA paths are not constant-time    | Test-only paths; not relevant in production           | Production uses hardware AES (mbedTLS)                                  |
-| Outbound HTTPS client is encrypt-only by default | Without a CA/pin the client does not authenticate the peer (active MITM exposed) | Install a CA (`http_client_set_ca`) and/or SHA-256 cert pin (`http_client_set_pin`); treat secrets as MITM-exposed otherwise |
-| No HSTS, CSP, or other HTTP security headers    | Application must add headers manually                 | Call [`send()`](@ref PC::send) with appropriate headers       |
+| Outbound HTTPS client is encrypt-only by default | Without a CA/pin the client does not authenticate the peer (active MITM exposed) | Install a CA (`HttpClient.set_ca`) and/or SHA-256 cert pin (`HttpClient.set_pin`); treat secrets as MITM-exposed otherwise |
+| No HSTS, CSP, or other HTTP security headers    | Application must add headers manually                 | Call `send_text()` / `send_bin()` with appropriate headers    |
 | WebSocket Origin not validated                  | Cross-origin WebSocket requests accepted              | Check Origin in ws_connect handler                                      |
 | NVS not encrypted by default                    | RSA private key readable from flash                   | Enable `CONFIG_NVS_ENCRYPTION`                                          |
 | SNMP v1/v2c community is cleartext              | Anyone who can sniff UDP/161 learns the community      | Trusted/management VLAN; rename communities; enable SNMPv3 USM authPriv (`PROTOCORE_ENABLE_SNMP_V3`), or tunnel |
@@ -993,6 +1018,6 @@ Use this checklist before deploying to a production environment.
 
 ### Build Hardening {#build-hardening}
 
-- [ ] Build with `-Os` (default in ESP-IDF) - do not disable optimization, as it is not needed for security and `ssh_wipe` is already volatile-correct
+- [ ] Build with `-Os` (default in ESP-IDF) - do not disable optimization, as it is not needed for security and `protocore_secure_wipe` is already volatile-correct
 - [ ] Confirm the final binary does not include the native test PRNG mock (it is excluded by the `#ifdef ARDUINO` guard in production builds)
-- [ ] Run `pio test -e native_ssh` to verify all SSH crypto test vectors pass before deployment
+- [ ] Run `python test/harness.py run native_ssh` to verify all SSH crypto test vectors pass before deployment

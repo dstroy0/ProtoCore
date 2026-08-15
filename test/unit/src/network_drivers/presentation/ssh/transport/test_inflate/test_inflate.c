@@ -1,4 +1,4 @@
-// Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+// ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // transport/inflate.c (RFC 1950, RFC 1951, RFC 4253 sec 6.2): the decompressor half of the

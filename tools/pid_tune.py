@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+# ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """
 pid_tune.py - offline PID tuner / plotter for services/control.
@@ -34,7 +34,7 @@ except ImportError:
 
 
 # --------------------------------------------------------------------------------------
-# PID - a faithful re-implementation of src/services/system/control/control.cpp (same law, so
+# PID - a faithful re-implementation of src/services/system/control/control.c (same law, so
 # the simulation matches what the device will actually do).
 # --------------------------------------------------------------------------------------
 class Pid:

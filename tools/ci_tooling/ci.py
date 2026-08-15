@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+# ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """One entry point for every CI operation, so the whole surface is visible in one place.
 
@@ -57,7 +57,7 @@ GEN = {
 
 # The guards the Format Code workflow runs. src_banned takes --all there.
 CHECK_DEFAULT = ["owned_context", "test_coverage", "src_banned", "duplicate_symbols", "frame_specs",
-                 "coverage_xml", "version_sites"]
+                 "coverage_xml", "version_sites", "version_stamps"]
 
 CHECK = {
     "owned_context": "check.check_owned_context",
@@ -67,6 +67,7 @@ CHECK = {
     "frame_specs": "check.check_frame_specs",
     "coverage_xml": "check.check_coverage_xml",
     "version_sites": "check.check_version_sites",
+    "version_stamps": "check.stamp_version",
     "symbols": "check.check_symbols",
     "null_ctx": "check.check_null_ctx",
     "docs": "check.check_docs",
@@ -76,7 +77,7 @@ CHECK = {
 }
 
 # Flags a guard needs to match how the workflow invokes it.
-CHECK_ARGS = {"src_banned": ["--all"]}
+CHECK_ARGS = {"src_banned": ["--all"], "version_stamps": ["--check"]}
 
 # The ratcheted guards: each records its current violations as a floor and then fails only on new
 # ones. Raising a floor is a deliberate act - it is how a mid-flight conversion keeps its gate

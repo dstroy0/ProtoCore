@@ -1,4 +1,4 @@
-// Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+// ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #include "lfs_mock.h"
@@ -1201,7 +1201,9 @@ void test_sse_broadcast_after_upgrade_matches_path(void)
 
 void test_ws_send_api(void)
 {
+#if PROTOCORE_ENABLE_WEBSOCKET
     Ws.init(Ws.internal);
+#endif
     conn_pool[0] = (TcpConn){0};
     conn_pool[0].id = 0;
     conn_pool[0].state = CONN_ACTIVE;
@@ -1249,7 +1251,9 @@ void test_ws_send_api(void)
 
 void test_sse_send_api(void)
 {
+#if PROTOCORE_ENABLE_SSE
     Sse.init(Sse.internal);
+#endif
     conn_pool[0] = (TcpConn){0};
     conn_pool[0].id = 0;
     conn_pool[0].state = CONN_ACTIVE;
@@ -1545,7 +1549,9 @@ void test_ws_sse_upgrade_failure_paths(void)
     tcp_capture_reset();
     handle();
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "101"));
+#if PROTOCORE_ENABLE_WEBSOCKET
     Ws.init(Ws.internal);
+#endif
     tcp_capture_disable();
 #endif
 }
@@ -1562,7 +1568,9 @@ void test_sse_upgrade_pool_exhausted(void)
     tcp_capture_reset();
     handle();
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "text/event-stream"));
+#if PROTOCORE_ENABLE_SSE
     Sse.init(Sse.internal);
+#endif
     tcp_capture_disable();
 }
 #endif
@@ -2084,7 +2092,9 @@ static void ws_upgrade_slot0(const char *path)
 
 void test_ws_upgrade_without_connect_handler(void)
 {
+#if PROTOCORE_ENABLE_WEBSOCKET
     Ws.init(Ws.internal);
+#endif
     on_ws("/wsn", NULL, NULL, NULL);
     tcp_capture_reset();
     ws_upgrade_slot0("/wsn");
@@ -2093,12 +2103,16 @@ void test_ws_upgrade_without_connect_handler(void)
     Ws.find(Ws.internal);
     TEST_ASSERT_NOT_NULL(Ws.found);
     tcp_capture_disable();
+#if PROTOCORE_ENABLE_WEBSOCKET
     Ws.init(Ws.internal);
+#endif
 }
 
 void test_ws_dispatch_without_message_or_close_handler(void)
 {
+#if PROTOCORE_ENABLE_WEBSOCKET
     Ws.init(Ws.internal);
+#endif
     on_http("/plain", HTTP_GET, record_handler);
     on_ws("/wsq", NULL, NULL, NULL);
     ws_upgrade_slot0("/wsq");
@@ -2119,7 +2133,9 @@ void test_ws_dispatch_without_message_or_close_handler(void)
     Ws.slot = 0;
     Ws.find(Ws.internal);
     TEST_ASSERT_NULL(Ws.found);
+#if PROTOCORE_ENABLE_WEBSOCKET
     Ws.init(Ws.internal);
+#endif
 }
 
 void test_ws_upgrade_handshake_gate(void)
@@ -2189,7 +2205,9 @@ static void sse_on_connect(uint8_t id)
 
 void test_sse_upgrade_fires_connect_handler(void)
 {
+#if PROTOCORE_ENABLE_SSE
     Sse.init(Sse.internal);
+#endif
     g_sse_connect_calls = 0;
     g_sse_connected_id = 0xFF;
     on_sse("/evh", sse_on_connect);
@@ -2202,12 +2220,16 @@ void test_sse_upgrade_fires_connect_handler(void)
     TEST_ASSERT_NOT_NULL(protocore_sse_find(0));
     TEST_ASSERT_EQUAL_UINT8(protocore_sse_find(0)->protocore_sse_id, g_sse_connected_id);
     tcp_capture_disable();
+#if PROTOCORE_ENABLE_SSE
     Sse.init(Sse.internal);
+#endif
 }
 
 void test_sse_send_on_dead_slot_writes_nothing(void)
 {
+#if PROTOCORE_ENABLE_SSE
     Sse.init(Sse.internal);
+#endif
     live_slot(0);
     SseConn *sse = protocore_sse_alloc(0, "/events");
     TEST_ASSERT_NOT_NULL(sse);
@@ -2218,7 +2240,9 @@ void test_sse_send_on_dead_slot_writes_nothing(void)
     protocore_sse_broadcast("/events", "x");
     TEST_ASSERT_EQUAL_size_t(0, tcp_captured_len());
     tcp_capture_disable();
+#if PROTOCORE_ENABLE_SSE
     Sse.init(Sse.internal);
+#endif
 }
 #endif
 
@@ -2226,7 +2250,9 @@ void test_sse_send_on_dead_slot_writes_nothing(void)
 
 void test_ws_send_api_inactive_error_state_and_dead_slot(void)
 {
+#if PROTOCORE_ENABLE_WEBSOCKET
     Ws.init(Ws.internal);
+#endif
     live_slot(0);
     Ws.slot = 0;
     Ws.alloc(Ws.internal);
@@ -2252,7 +2278,9 @@ void test_ws_send_api_inactive_error_state_and_dead_slot(void)
     ws_disconnect(ws->ws_id);
     TEST_ASSERT_EQUAL_size_t(0, tcp_captured_len());
     tcp_capture_disable();
+#if PROTOCORE_ENABLE_WEBSOCKET
     Ws.init(Ws.internal);
+#endif
 }
 #endif
 

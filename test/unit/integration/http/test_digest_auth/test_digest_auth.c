@@ -1,4 +1,4 @@
-// Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+// ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #include "crypto/hash/sha256.h"
@@ -95,15 +95,21 @@ void setUp()
         HttpConn.slot = i;
         HttpConn.reset(HttpConn.internal);
     }
+#if PROTOCORE_ENABLE_WEBSOCKET
     Ws.init(Ws.internal);
+#endif
+#if PROTOCORE_ENABLE_SSE
     Sse.init(Sse.internal);
+#endif
     tcp_capture_reset();
 }
 
 void tearDown()
 {
     tcp_capture_disable();
-    protocore_set_clock(NULL, 0);
+    Clock.src.fn = NULL;
+    Clock.src.ticks_per_second = 0;
+    Clock.set_ms(Clock.internal);
 }
 
 static void rearm_slot(uint8_t slot)
@@ -327,7 +333,9 @@ void test_nonce_is_stateless_timestamped()
 
 void test_stale_nonce_triggers_transparent_retry()
 {
-    protocore_set_clock(fake_clock, 1000);
+    Clock.src.fn = fake_clock;
+    Clock.src.ticks_per_second = 1000;
+    Clock.set_ms(Clock.internal);
     g_fake_ms = 0;
     protocore_server_reset();
     on_http_auth("/secure", HTTP_GET, h_secure, kRealm, kUser, kPass, PROTO_TRUE);

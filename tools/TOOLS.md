@@ -56,6 +56,10 @@ A docstring is a claim; treat one that disagrees with this table as the thing th
 | `check_examples.py`          |     | `--verbose`                    | pio              |
 | `check_frame_specs.py`       | W   | `--fix --verbose`              | pio              |
 | `check_test_coverage.py`     |     | `--list --save`                |                  |
+| `check_layering.py`          |     | `--baseline --list`            |                  |
+| `check_null_ctx.py`          |     | `--baseline`                   |                  |
+| `check_version_sites.py`     |     | `--quiet`                      |                  |
+| `check_coverage_xml.py`      |     | `--quiet`                      |                  |
 | `compile_examples.sh`        | W   |                                | arduino-cli, ssh |
 
 `check_frame_specs.py` writes only under `--fix`. `compile_examples.sh` builds on a remote host.
@@ -77,7 +81,7 @@ Every one takes `--check` to assert the tracked file already matches, which is h
 | `gen_interop_matrix.py`  |     | `docs/INTEROP_MATRIX.md`                                       |
 | `gen_api_flow.py`        |     | `docs/ARCHITECTURE.md`, `README.md`                            |
 | `gen_examples.py`        |     | `docs/EXAMPLES.md`, `README.md`                                |
-| `gen_configurator.py`    | W   | `platformio-build_flags.ini` (932 lines, the web configurator) |
+| `gen_configurator.py`    | W   | `docs/configurator.html` (the web configurator)                |
 | `gen_build_opt.py`       | W   | per-example `build_opt.h`                                      |
 | `gen_nav_groups.py`      | W   | the Sphinx/Doxygen sidebar grouping                            |
 | `decorate_changelog.py`  | W   | `docs/CHANGELOG.md`                                            |
@@ -127,6 +131,7 @@ Every one takes `--check` to assert the tracked file already matches, which is h
 | `assets/render_diagrams.sh`           | W   | mermaid/mmdc, git        |
 | `assets/svg_tooltips.py`              | W   |                          |
 | `assets/pack_favicons.sh`             |     | convert                  |
+| `assets/render_theme_previews.cjs`    | W   | puppeteer-core, Chromium |
 | `build/ccache_wrap.sh`                |     | ccache, arduino-cli, g++ |
 | `sonar/gen_compiledb.sh`              | W   | pio                      |
 | `sonar/merge_compiledb.py`            | W   |                          |
@@ -134,6 +139,10 @@ Every one takes `--check` to assert the tracked file already matches, which is h
 | `dev_env/build_envs.sh`               |     | pio                      |
 | `dev_env/src2png.py`                  |     |                          |
 | `dev_env/move_code.py`                | W   |                          |
+| `dev_env/strip_comments.py`           | W   |                          |
+| `dev_env/listener_queue/run.sh`       | W   | cc                       |
+| `dev_env/pimpl_bench/bench.sh`        | W   | gcc, cc                  |
+| `dev_env/pimpl_bench/sweep.sh`        | W   | gcc, cc, objdump         |
 | `git-hooks/add_cspell_words.py`       | W   | cspell                   |
 | `git-hooks/merge_dependabot.sh`       |     | git                      |
 | `psram/rebuild_arduino_core_psram.sh` | W   | arduino-cli, cmake, git  |

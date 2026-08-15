@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+# ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """gen_dep_graph.py - build test/dep_graph.json from the compiler's own dependency output.
 
@@ -63,9 +63,21 @@ def pio_compiledb(env):
     return db
 
 
+def split_command(cmd):
+    """Split a compile_commands `command` string into argv.
+
+    POSIX mode eats the backslash as an escape: `C:\\Strawberry\\c\\bin\\gcc.exe` splits to
+    `C:Strawberrycbingcc.exe`, and every `-I` path with it. Windows splits non-POSIX and
+    strips the quotes that mode leaves on a token.
+    """
+    if os.name != "nt":
+        return shlex.split(cmd)
+    return [a[1:-1] if len(a) > 1 and a[0] == '"' and a[-1] == '"' else a for a in shlex.split(cmd, posix=False)]
+
+
 def mm_command(entry):
     """Turn a compile entry into a `g++ -MM ...` command (drop -c / -o / -M* output flags)."""
-    args = entry.get("arguments") or shlex.split(entry["command"])
+    args = entry.get("arguments") or split_command(entry["command"])
     out = [args[0], "-MM"]
     i = 1
     while i < len(args):
@@ -100,6 +112,7 @@ def deps_of(entry):
     cmd, directory = mm_command(entry)
     r = subprocess.run(cmd, cwd=directory, capture_output=True, text=True)
     if r.returncode != 0 or ":" not in r.stdout:
+        print(f"  -MM failed ({r.returncode}) for {entry.get('file')}: {r.stderr.strip()[:200]}", file=sys.stderr)
         return []
     body = r.stdout.replace("\\\n", " ").split(":", 1)[1]
     files = []

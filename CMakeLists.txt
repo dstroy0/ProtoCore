@@ -52,7 +52,7 @@ endif()
 
 idf_component_register(
     SRCS ${PROTOCORE_SRCS}
-    INCLUDE_DIRS "src" "."
+    INCLUDE_DIRS "include" "src" "."
     REQUIRES ${PROTOCORE_REQUIRES}
 )
 

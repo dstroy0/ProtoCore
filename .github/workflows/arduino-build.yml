@@ -12,12 +12,14 @@ on:
     branches: [main, master]
     paths:
       - "src/**"
+      - "include/**"
       - "examples/**"
       - ".github/workflows/arduino-build.yml"
   pull_request:
     branches: [main, master]
     paths:
       - "src/**"
+      - "include/**"
       - "examples/**"
   workflow_dispatch:
 

@@ -7,10 +7,10 @@ connection/channel protocol - all built on constant-memory, side-channel-aware
 primitives.
 
 The message state machine is driven by a single transport-agnostic dispatcher
-([`ssh_server.c`](@ref ssh_server.c)) that
+([`server/server.c`](../src/network_drivers/presentation/ssh/server/server.c)) that
 consumes decrypted message payloads and emits responses through a callback, so
 it is fully unit-testable off-target. The TCP glue
-([`ssh_conn.c`](@ref ssh_conn.c)) binds a
+([`network/network.c`](../src/network_drivers/presentation/ssh/network/network.c)) binds a
 [`PROTO_SSH`](@ref PROTO_SSH) connection to a session slot, pumps ring-buffer bytes through the
 banner exchange and binary-packet layer, and writes responses back to the
 socket.
@@ -43,7 +43,7 @@ socket.
 - **Remote port forwarding** (`forwarded-tcpip`, the `ssh -R` remote forward, RFC 4254 §7) - same `PROTOCORE_SSH_PORT_FORWARD` gate: the client's `tcpip-forward` global request makes the device open a listener, and each inbound connection is bridged back to the client over a server-initiated `forwarded-tcpip` channel (`protocore_ssh_conn_open_forwarded`), gated by the same policy callback. HW-verified on an ESP32-P4: a stock OpenSSH `ssh -R` through the device tunnels a byte-exact reverse round trip. (X11 forwarding is a deliberate non-goal.)
 - **OpenSSH interoperability** - works with a stock `ssh` client (no algorithm overrides): the RX ring and KEXINIT store hold a full modern client KEXINIT, and **`ext-info` / `server-sig-algs`** (RFC 8308) is advertised (`rsa-sha2-512`, `rsa-sha2-256`, `ecdsa-sha2-nistp256` and `ssh-ed25519`, in preference order) so the client picks a key type it can offer. Depending on the server preference the client negotiates `curve25519-sha256` + `ssh-ed25519` (default modern client choice) or `diffie-hellman-group14-sha256` + `rsa-sha2-512`. HW-validated on an ESP32-S3 with a stock OpenSSH client on both suites (curve25519/ed25519 and DH/RSA), including an ed25519-only client key
 - **In-session re-keying** (RFC 4253 §9) - client- or server-initiated; the session id is fixed at the first exchange hash across re-keys
-- **Static-only allocation** - all SSH state pre-allocated in BSS; no heap after [`begin()`](@ref PC::begin) (except the one-per-connection mbedTLS RSA operation during KEX, freed immediately)
+- **Static-only allocation** - all SSH state pre-allocated in BSS; no heap after `begin()` (except the one-per-connection mbedTLS RSA operation during KEX, freed immediately)
 - **RSA private key never in static memory** - loaded from NVS → stack → sign → volatile-wipe; zero window for overflow-based key exfiltration
 - **Sequence number overflow guard** - connection closed before 32-bit wrap to prevent CTR keystream reuse
 

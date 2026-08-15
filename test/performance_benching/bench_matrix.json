@@ -68,9 +68,25 @@
       "desc": "On-device CCOUNT microbenchmark for the HTTP byte-range parser (server/http_range):\nhttp_parse_byte_range() decodes a `Range: bytes=...` header against a known resource size - the\nper-request hot op for 206 Partial Content. Pure. Build/flash: pio run -d\nperformance_benching/network_drivers/application/http_range -t upload",
       "path": "network_drivers/application/http_range",
       "flags": [
-        "-DPROTOCORE_ENABLE_RANGE=1"
+        "-DPROTOCORE_ENABLE_RANGE=1",
+        "-DPROTOCORE_ENABLE_FILE_SERVING=1"
       ],
-      "src": []
+      "src": [
+        "src/mmgr/arena.c",
+        "src/mmgr/float_bits.c",
+        "src/mmgr/membuild.c",
+        "src/mmgr/plaintext.c",
+        "src/mmgr/protoframe.c",
+        "src/mmgr/protomem.c",
+        "src/mmgr/protostr.c",
+        "src/mmgr/rawmemcpy.c",
+        "src/mmgr/secure.c",
+        "src/mmgr/span.c",
+        "src/mmgr/swar.c",
+        "src/network_drivers/application/http_range.c",
+        "src/server/clock/clock.c",
+        "src/shared/hex/hex.c"
+      ]
     },
     "network_drivers_application_scp": {
       "desc": "On-device CCOUNT microbenchmark for the SCP/RCP control-line codec (network_drivers/application/scp): parse and\nbuild the `C<mode> <size> <name>` transfer control line (octal mode, decimal size, name). Pure\nstring logic - the SSH channel/file plumbing is elsewhere; only the per-file control-line codec\nis benched.\nBuild/flash (JTAG-capable S3 over its USB-Serial/JTAG port):\nidf.py -C test/performance_benching/scp -t upload --upload-port COM7",
@@ -258,9 +274,25 @@
       "desc": "On-device CCOUNT microbenchmark for the WebDAV multi-status builder (network_drivers/application/webdav): the\nPROPFIND 207 Multi-Status response assembly (protocore_webdav_ms_begin / _entry / _end) and the XML\nescaper. Pure string logic - the FS traversal is elsewhere; only the per-response codec is benched.\nBuild/flash (JTAG-capable S3 over its USB-Serial/JTAG port):\nidf.py -C test/performance_benching/webdav -t upload --upload-port COM7",
       "path": "network_drivers/application/webdav",
       "flags": [
-        "-DPROTOCORE_ENABLE_WEBDAV=1"
+        "-DPROTOCORE_ENABLE_WEBDAV=1",
+        "-DPROTOCORE_ENABLE_FILE_SERVING=1"
       ],
-      "src": []
+      "src": [
+        "src/mmgr/arena.c",
+        "src/mmgr/float_bits.c",
+        "src/mmgr/membuild.c",
+        "src/mmgr/plaintext.c",
+        "src/mmgr/protoframe.c",
+        "src/mmgr/protomem.c",
+        "src/mmgr/protostr.c",
+        "src/mmgr/rawmemcpy.c",
+        "src/mmgr/secure.c",
+        "src/mmgr/span.c",
+        "src/mmgr/swar.c",
+        "src/network_drivers/application/webdav/webdav.c",
+        "src/server/clock/clock.c",
+        "src/shared/hex/hex.c"
+      ]
     },
     "network_drivers_network_dns_resolver": {
       "desc": "On-device CCOUNT microbenchmark for the DNS answer classifier/verifier (network_drivers/network/dns_resolver):\nprotocore_dns_resolver_classify() buckets a host-order IPv4 word into an RFC special-purpose-range\ncategory, and protocore_dns_resolver_verify() uses it to reject spoof / DNS-rebinding indicators\n(unspecified / broadcast / loopback / multicast) - both pure, branch-heavy, no lwIP involved.\nOut of scope: protocore_dns_resolver_resolve() (and therefore protocore_dns_resolver_resolve_verified(),\nwhich calls it) - on ARDUINO builds that is the real lwIP dns_gethostbyname() marshalled to\ntcpip_thread, a blocking DNS query over the network. This rig has no network association to\nresolve against and no host-side test hook exists on-device (protocore_dns_resolver_test_set_resolve()\nis compiled only \"#if !defined(ARDUINO)\"), so only the deterministic CPU-side classifier/verifier\nis ever benched here.\nBuild/flash (JTAG-capable S3 over its USB-Serial/JTAG port):\nidf.py -C test/performance_benching/dns_resolver -t upload --upload-port COM7\nthen open the port to capture the repeating \"DB ...\" lines (each run repeats every ~5 s, so a\ncapture opened at any time still catches a full cycle).",
@@ -344,9 +376,28 @@
       "desc": "On-device CCOUNT microbenchmark for the permessage-deflate codec (network_drivers/presentation/\ndeflate): Deflate.raw() + Inflate.raw() over a JSON telemetry frame. Pure (caller scratch).",
       "path": "network_drivers/presentation/deflate",
       "flags": [
-        "-DPROTOCORE_ENABLE_WS_DEFLATE=1"
+        "-DPROTOCORE_ENABLE_WS_DEFLATE=1",
+        "-DPROTOCORE_ENABLE_WEBSOCKET=1"
       ],
-      "src": []
+      "src": [
+        "src/mmgr/arena.c",
+        "src/mmgr/bitio.c",
+        "src/mmgr/float_bits.c",
+        "src/mmgr/membuild.c",
+        "src/mmgr/plaintext.c",
+        "src/mmgr/protoframe.c",
+        "src/mmgr/protomem.c",
+        "src/mmgr/protostr.c",
+        "src/mmgr/rawmemcpy.c",
+        "src/mmgr/secure.c",
+        "src/mmgr/span.c",
+        "src/mmgr/swar.c",
+        "src/network_drivers/presentation/codec/deflate/deflate.c",
+        "src/network_drivers/presentation/codec/deflate/rfc1951.c",
+        "src/network_drivers/presentation/codec/inflate/inflate.c",
+        "src/server/clock/clock.c",
+        "src/shared/hex/hex.c"
+      ]
     },
     "network_drivers_presentation_http_parser": {
       "desc": "On-device CCOUNT microbenchmark for the HTTP/1.1 request parser (network_drivers/presentation/\nhttp_parser): feed a whole request through the per-byte state machine (the real ingest hot path).\nPure. Build/flash: pio run -d performance_benching/network_drivers/presentation/http_parser -t upload",
@@ -531,7 +582,6 @@
         "src/mmgr/swar.c",
         "src/server/clock/clock.c",
         "src/server/signaling/gpio_map.c",
-        "src/server/signaling/gpio_map_routes.c",
         "src/shared/hex/hex.c"
       ]
     },
@@ -610,8 +660,7 @@
         "-DPROTOCORE_ENABLE_OTA=1"
       ],
       "src": [
-        "src/server/clock/clock.c",
-        "src/server/update/ota_service.c"
+        "src/server/clock/clock.c"
       ]
     },
     "server_power_mgmt": {
@@ -1478,9 +1527,25 @@
       "desc": "On-device CCOUNT microbenchmark for the dashboard widget-table JSON serializers\n(server/web/dashboard core): protocore_dashboard_set() (the per-sample hot path that feeds\ntelemetry into the widget table), the layout/values JSON serializers that back the\npage's initial fetch and each SSE publish, and the inbound control-message parser +\ndispatcher (WebSocket control messages from the page). All pure - no heap, no server,\nno SSE/WebSocket transport - so every call here exercises the real production code\npath. Worked example for performance_benching/device/<service>/: a pure protocol codec with no\nhardware involved (contrast with performance_benching/device/ads1115, a peripheral driver where the\nbus transaction itself is stubbed). protocore_dashboard_begin()/protocore_dashboard_publish()\n(server/SSE wiring in dashboard_routes.cpp) are deliberately out of scope, same split\ntest_matrix.json draws for the host test suite: never called here.\nBuild/flash (JTAG-capable S3 over its USB-Serial/JTAG port):\nidf.py -C test/performance_benching/dashboard -t upload --upload-port COM7\nthen open the port to capture the repeating \"DB ...\" lines (each run repeats every ~5 s, so a\ncapture opened at any time still catches a full cycle).",
       "path": "services/dashboard",
       "flags": [
-        "-DPROTOCORE_ENABLE_DASHBOARD=1"
+        "-DPROTOCORE_ENABLE_DASHBOARD=1",
+        "-DPROTOCORE_ENABLE_SSE=1"
       ],
-      "src": []
+      "src": [
+        "src/mmgr/arena.c",
+        "src/mmgr/float_bits.c",
+        "src/mmgr/membuild.c",
+        "src/mmgr/plaintext.c",
+        "src/mmgr/protoframe.c",
+        "src/mmgr/protomem.c",
+        "src/mmgr/protostr.c",
+        "src/mmgr/rawmemcpy.c",
+        "src/mmgr/secure.c",
+        "src/mmgr/span.c",
+        "src/mmgr/swar.c",
+        "src/server/clock/clock.c",
+        "src/server/web/dashboard/dashboard.c",
+        "src/shared/hex/hex.c"
+      ]
     },
     "services_dbm": {
       "desc": "On-device CCOUNT microbenchmark for the dbm log-structured key-value store (services/storage/dbm): put\n(overwrite an existing key), get, contains, delete, and the index rebuild that protocore_dbm_open performs\nby replaying the WAL - all pure CPU-side work (hashing, open-addressed probing, WAL record framing)\nwith no flash/SD hardware involved. The WAL's block-device seam (WalDev) is backed by a plain static\nRAM buffer here, exactly the way test/test_dbm/test_dbm.cpp drives it on the host (a RamDisk with\nread/write/sync function pointers) - this rig has no SD card attached, so the durable-storage half of\nthe stack (FS/SPI) is out of scope everywhere; only the deterministic codec above that seam is\nbenched. put/delete each append one WAL record, so the RAM disk is reformatted at the top of every\npass to keep each run's log growth bounded and repeatable.\nBuild/flash (JTAG-capable S3 over its USB-Serial/JTAG port):\nidf.py -C test/performance_benching/dbm -t upload --upload-port COM7\nthen open the port to capture the repeating \"DB ...\" lines (each run repeats every ~5 s, so a capture\nopened at any time still catches a full cycle).",
@@ -1761,7 +1826,6 @@
         "src/network_drivers/presentation/http/httpcache/httpcache.c",
         "src/server/clock/clock.c",
         "src/server/web/edge_cache/edge_cache.c",
-        "src/server/web/edge_cache/edge_cache_proxy.c",
         "src/server/web/edge_cache/edge_fetch.c",
         "src/services/net/http_client/http_client.c",
         "src/shared/hex/hex.c",
@@ -2422,7 +2486,6 @@
         "src/mmgr/swar.c",
         "src/server/clock/clock.c",
         "src/services/file_transfer/http_delivery/http_delivery.c",
-        "src/services/file_transfer/http_delivery/http_delivery_routes.c",
         "src/shared/hex/hex.c"
       ]
     },
@@ -3163,9 +3226,34 @@
       "desc": "On-device CCOUNT microbenchmark for the NTP/SNTP server codec (network_drivers/application/ntp_server):\npc_ntp_server_build_response() takes a received 48-octet client request plus the current\nNTP-epoch time and writes the RFC 5905 mode-4 server reply - echoing the version, copying the\nclient's transmit timestamp into the origin field, and stamping reference/receive/transmit\ntimes big-endian. It is pure (no clock, no sockets, zero heap), so every call here exercises\nthe real production code path. Worked-example class: a pure protocol codec with no hardware\ninvolved (contrast with performance_benching/device/ads1115, a peripheral driver where the bus is stubbed).\nThe UDP-binding half (pc_ntp_server_begin -> pc_udp_listen on port 123) is deliberately out of\nscope: this rig has no network attached and the codec is what determines per-request CPU cost.\nWe never call it, so no transport transaction is ever issued.\nBuild/flash (JTAG-capable S3 over its USB-Serial/JTAG port):\nidf.py -C test/performance_benching/ntp_server -t upload --upload-port COM7\nthen open the port to capture the repeating \"DB ...\" lines (each run repeats every ~5 s, so a\ncapture opened at any time still catches a full cycle).",
       "path": "services/ntp_server",
       "flags": [
-        "-DPROTOCORE_ENABLE_NTP_SERVER=1"
+        "-DPROTOCORE_ENABLE_NTP_SERVER=1",
+        "-DPROTOCORE_ENABLE_TIME_SOURCE=1"
       ],
-      "src": []
+      "src": [
+        "src/mmgr/arena.c",
+        "src/mmgr/bytes.c",
+        "src/mmgr/endian.c",
+        "src/mmgr/float_bits.c",
+        "src/mmgr/membuild.c",
+        "src/mmgr/plaintext.c",
+        "src/mmgr/protoframe.c",
+        "src/mmgr/protomem.c",
+        "src/mmgr/protostr.c",
+        "src/mmgr/rawmemcpy.c",
+        "src/mmgr/secure.c",
+        "src/mmgr/span.c",
+        "src/mmgr/swar.c",
+        "src/network_drivers/application/ntp_server/ntp_server.c",
+        "src/network_drivers/transport/diffserv/diffserv.c",
+        "src/network_drivers/transport/net_addr/net_addr.c",
+        "src/network_drivers/transport/udp/server/server.c",
+        "src/server/clock/clock.c",
+        "src/services/timing_position/time_source/time_source.c",
+        "src/shared/hex/hex.c",
+        "src/shared/http_date/http_date.c",
+        "src/shared/ip/ip.c",
+        "src/shared/time_compat/time_compat.c"
+      ]
     },
     "services_ntp_service": {
       "desc": "On-device CCOUNT microbenchmark for the SNTP wall-clock service (network_drivers/application/ntp_service). The\nservice is a thin wrapper over the ESP-IDF SNTP client: the network half (configTzTime / the\nasync pool.ntp.org sync in pc_ntp_begin) is real transport and is deliberately OUT OF SCOPE on\nthis rig - we never start SNTP, so nothing here touches WiFi or a socket. What IS benched is the\none pure, deterministic CPU path the service owns: formatting the current epoch as the RFC 7231\nIMF-fixdate HTTP `Date` header (pc_ntp_http_date -> shared pc_http_date -> gmtime_r + strftime),\nplus the cheap epoch/synced poll accessors and the time_source registry adapter.\nTime seam: PROTOCORE_ENABLE_NTP defaults to 0 (and test_matrix.json's flag set for this service does not\nenable it), so the host branch of ntp_service.cpp is what compiles here - it exposes the\npc_ntp_set_test_epoch() seam the unit tests use to inject a wall clock. We forward-declare it\n(the header only declares it for !ARDUINO) and seed a realistic modern epoch once at task start,\nso pc_ntp_http_date() runs its full gmtime_r + strftime path instead of the epoch==0 fast-out.\nBuild/flash (JTAG-capable S3 over its USB-Serial/JTAG port):\nidf.py -C test/performance_benching/ntp_service -t upload --upload-port COM7\nthen open the port to capture the repeating \"DB ...\" lines (each run repeats every ~5 s, so a\ncapture opened at any time still catches a full cycle).",
@@ -3177,9 +3265,27 @@
         "-DPROTOCORE_ENABLE_METRICS=1",
         "-DPROTOCORE_ENABLE_ETAG=1",
         "-DPROTOCORE_ENABLE_WEB_TERMINAL=1",
-        "-DPROTOCORE_HTTP_EMIT_DATE=1"
+        "-DPROTOCORE_HTTP_EMIT_DATE=1",
+        "-DPROTOCORE_ENABLE_WEBSOCKET=1"
       ],
-      "src": []
+      "src": [
+        "src/mmgr/arena.c",
+        "src/mmgr/float_bits.c",
+        "src/mmgr/membuild.c",
+        "src/mmgr/plaintext.c",
+        "src/mmgr/protoframe.c",
+        "src/mmgr/protomem.c",
+        "src/mmgr/protostr.c",
+        "src/mmgr/rawmemcpy.c",
+        "src/mmgr/secure.c",
+        "src/mmgr/span.c",
+        "src/mmgr/swar.c",
+        "src/network_drivers/application/ntp_service/ntp_service.c",
+        "src/server/clock/clock.c",
+        "src/shared/hex/hex.c",
+        "src/shared/http_date/http_date.c",
+        "src/shared/time_compat/time_compat.c"
+      ]
     },
     "services_nts": {
       "desc": "On-device CCOUNT microbenchmark for the Network Time Security wire codec (network_drivers/application/nts, RFC 8915):\nbuilding the standard NTS-KE client request (Next-Protocol + AEAD + End-of-Message TLV records),\nbuilding a single NTS-KE record, walking an NTS-KE response stream, and framing the NTS NTP\nextension fields (Unique Identifier / Cookie, with RFC 7822 4-byte padding). All of this is pure\nwire framing - zero heap, no stdlib, no sockets - so every call here exercises the real production\ncode path (like performance_benching/device/modbus, and unlike a peripheral driver). Deliberately out of scope: the\nAES-SIV-CMAC-256 AEAD (RFC 5297) and the TLS-exporter key derivation that sit on top of this framing\nare crypto integration, not part of this codec, so they are not benched here. The NTS-KE parse\ncallback (pc_nts_ke_cb) is satisfied by a tiny local no-op sink - it is a required function pointer,\nnot a hardware/transport dependency.\nBuild/flash (JTAG-capable S3 over its USB-Serial/JTAG port):\nidf.py -C test/performance_benching/nts -t upload --upload-port COM7\nthen open the port to capture the repeating \"DB ...\" lines (each run repeats every ~5 s, so a\ncapture opened at any time still catches a full cycle).",
@@ -3382,7 +3488,6 @@
         "src/mmgr/swar.c",
         "src/server/clock/clock.c",
         "src/server/storage/partition_monitor/partition_monitor.c",
-        "src/server/storage/partition_monitor/partition_monitor_routes.c",
         "src/shared/hex/hex.c"
       ]
     },
@@ -4525,9 +4630,25 @@
       "desc": "On-device CCOUNT microbenchmark for services/web_terminal. NOTE: web_terminal is a thin *server\nbinding* - it serves a terminal page and pumps I/O to connected clients over WebSocket + SSE, both\nof which have their own device benches (performance_benching/device/websocket, performance_benching/device/sse). It\nhas no standalone pure codec of its own, so the only side-effect-free op to time is the line builder\nthe line build (protocore_frame_build over a static spec, what an application does before handing the\ntext over) and the client-count getter. Kept for suite completeness; not a throughput number.",
       "path": "services/web_terminal",
       "flags": [
-        "-DPROTOCORE_ENABLE_WEB_TERMINAL=1"
+        "-DPROTOCORE_ENABLE_WEB_TERMINAL=1",
+        "-DPROTOCORE_ENABLE_WEBSOCKET=1"
       ],
-      "src": []
+      "src": [
+        "src/mmgr/arena.c",
+        "src/mmgr/float_bits.c",
+        "src/mmgr/membuild.c",
+        "src/mmgr/plaintext.c",
+        "src/mmgr/protoframe.c",
+        "src/mmgr/protomem.c",
+        "src/mmgr/protostr.c",
+        "src/mmgr/rawmemcpy.c",
+        "src/mmgr/secure.c",
+        "src/mmgr/span.c",
+        "src/mmgr/swar.c",
+        "src/server/clock/clock.c",
+        "src/server/web/web_terminal/web_terminal.c",
+        "src/shared/hex/hex.c"
+      ]
     },
     "services_webhook": {
       "desc": "On-device CCOUNT microbenchmark for the webhook client (services/net/webhook): the IFTTT Maker URL\nbuilder and the JSON payload builder. Pure string logic; the HTTPS POST (protocore_webhook_post /\nprotocore_ifttt_trigger) is out of scope.",

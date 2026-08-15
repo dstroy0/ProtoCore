@@ -1,4 +1,4 @@
-// Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+// ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #include "crypto/asymmetric/curve25519.h"
@@ -38,7 +38,9 @@ static uint32_t test_clock()
 void setUp()
 {
     g_ms = 0;
-    protocore_set_clock(test_clock, 1000);
+    Clock.src.fn = test_clock;
+    Clock.src.ticks_per_second = 1000;
+    Clock.set_ms(Clock.internal);
 }
 void tearDown()
 {

@@ -1,4 +1,4 @@
-// Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+// ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #include "server/clock/clock.h"
@@ -63,7 +63,9 @@ static void reset_counts()
 void setUp()
 {
     protocore_hotswap_core_init(&c, 3, 2000, 100000);
-    protocore_set_clock(test_clock, 1000);
+    Clock.src.fn = test_clock;
+    Clock.src.ticks_per_second = 1000;
+    Clock.set_ms(Clock.internal);
     g_mount_ok = PROTO_TRUE;
     g_present_ok = PROTO_TRUE;
     reset_counts();

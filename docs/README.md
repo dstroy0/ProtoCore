@@ -49,35 +49,38 @@ Each OSI layer lives in its own subdirectory under `src/network_drivers/`:
 <summary><b>View Directory and OSI Layer Layout</b></summary>
 
 ```
-L7  src/protocore.h/cpp     HttpRoute table, dispatch, send()
+L7  include/protocore.h  src/protocore.c         Public API, dispatch, send_text()
 L6  src/network_drivers/presentation/
-        presentation.h/cpp                        Drains ring buffer → parser
-        http_parser.h/cpp                         RFC 7230 byte-stream state machine
-        sha1.h/cpp  base64.h/cpp                  mbedTLS hardware-accelerated helpers
-        websocket.h/cpp  sse.h/cpp                WS frame parser; SSE connection pool
-        multipart.h/cpp                           Multipart form-data parser
-L5  src/server/core/
-        session.h/cpp                             FreeRTOS event queue drain
+        presentation.c/.h                         Drains ring buffer → parser
+        http/http_parser/http_parser.c/.h         RFC 7230 byte-stream state machine
+        http/websocket/websocket.c/.h             WS frame parser
+        http/sse/sse.c/.h                         SSE connection pool
+        codec/base64/base64.c/.h                  Base64 / base64url
+        codec/multipart/multipart.c/.h            Multipart form-data parser
+L5  src/network_drivers/session/
+        session.c/.h                              FreeRTOS event queue drain
 L4  src/network_drivers/transport/
-        tcp.h/cpp                           lwIP callbacks, ring buffers, timeouts
-        listener.h/cpp                            Per-port TCP listener, per-listener queue
+        tcp/tcp.c/.h                              lwIP callbacks, ring buffers, timeouts
+        tcp/server/server.c/.h                    Per-port TCP listener, per-listener queue
 L3  src/network_drivers/network/
-        network.h/cpp                             lwIP stub
+        network.c/.h                              lwIP stub
 L2  src/network_drivers/datalink/
-        datalink.h/cpp                            Espressif WiFi driver stub
+        datalink.c/.h                             Espressif WiFi driver stub
 L1  src/network_drivers/physical/
-        physical.h/cpp                            WiFi.begin() wrapper
+        physical.c/.h                             WiFi.begin() wrapper
 
+    src/crypto/hash/sha1.c/.h                     SHA-1 for the WebSocket handshake
     src/network_drivers/tls/                      mbedTLS over a fixed static pool (HTTPS / wss)
     src/network_drivers/application/              Generated web assets (dashboard, terminal)
+    src/web_assets/                               The editable sources those blobs are built from
     src/network_drivers/presentation/ssh/         Zero-heap SSH-2.0 server
-    src/services/                                 Optional L7 subsystems, one folder each:
-        opcua/ + opcua_client/, modbus/, mqtt/, coap/, snmp/, oidc/,
-        oauth2/, totp/, audit_log/, vfs/, graphql/, espnow/, ...  (see FEATURES.md)
+    src/services/                                 Optional L7 subsystems, grouped by domain:
+        fieldbus/{modbus, opcua, opcua_client}, iot/{mqtt, coap, graphql},
+        net/snmp, security/{oidc, oauth2, totp}, radio/espnow, ...  (see FEATURES.md)
 ```
 
 The conceptual layer map above is a summary; the complete file layout is generated
-below from `src/` by `tools/ci_tooling/generate/gen_readme_sections.py` (single-`.h`/`.cpp`
+below from `src/` by `tools/ci_tooling/generate/gen_readme_sections.py` (single-`.h`/`.c`
 service folders are collapsed to their name; generated web-asset blobs are counted,
 not listed).
 
@@ -942,19 +945,19 @@ Every byte of memory the library uses is accounted for at compile time:
 
 | Storage                                                                        | Location                       |
 | ------------------------------------------------------------------------------ | ------------------------------ |
-| `conn_pool[MAX_CONNS]` - TCP connections + ring buffers                        | BSS                            |
-| `http_pool[MAX_CONNS]` - HTTP request structs                                  | BSS                            |
+| `conn_pool[CONN_POOL_SLOTS]` - TCP connections + ring buffers                  | BSS                            |
+| `http_pool[CONN_POOL_SLOTS]` - HTTP request structs                            | BSS                            |
 | `ws_pool[MAX_WS_CONNS]` - WebSocket connection state                           | BSS                            |
-| `sse_pool[MAX_SSE_CONNS]` - SSE connection state                               | BSS                            |
+| `protocore_sse_pool[MAX_SSE_CONNS]` - SSE connection state                     | BSS                            |
 | `_queue_storage[EVT_QUEUE_DEPTH * sizeof(TcpEvt)]` - event queue backing store | BSS                            |
-| `_queue_struct` - FreeRTOS `StaticQueue_t`                                     | BSS                            |
-| HttpRoute table `_routes[MAX_ROUTES]`                                              | BSS (inside [`PC`](@ref PC)) |
+| `_queue_struct` - `protocore_platform_queue_ctrl`                              | BSS                            |
+| HttpRoute table `HttpRouteCtx.entry[MAX_ROUTES]`                               | mmgr `secure` (persistent end) |
 
 </details>
 
-[`begin()`](@ref PC::begin) calls `xQueueCreateStatic()` - no `pvPortMalloc`, no fragmentation risk. The library makes no heap allocations.
+`proto_begin()` creates each listener's event queue through `protocore_platform_queue_create` (`xQueueCreateStatic` on FreeRTOS) - no `pvPortMalloc`, no fragmentation risk. The library makes no heap allocations.
 
-The only post-`begin()` allocation that can occur is inside `fs::File` construction in `serve_file()`, which is an Arduino FS implementation detail outside the library's control.
+The only post-`proto_begin()` allocation that can occur is inside the Arduino `fs::File` construction in the mount backend `serve_file()` reaches (`core_setup/hal/esp/esp_mnt_fs.cpp`), which is an Arduino FS implementation detail outside the library's control.
 
 Every pool above is a fixed BSS array sized from the compile-time constants, so the memory cost is exactly what the configuration says - it never grows at runtime. For the measured flash and static-RAM cost of each optional feature, see the [Build Footprint](#build-footprint) table above.
 
@@ -1596,12 +1599,12 @@ guards at compile time.
 
 The connection idle timeout can be changed without a rebuild:
 
-```cpp
+```c
 const WebServerConfig cfg PROGMEM = { .conn_timeout_ms = 10000 }; // flash, no RAM cost
-server.begin(80, &cfg);
+begin_http(80, &cfg);
 ```
 
-Pass `nullptr` (or omit) to use the compile-time default [`CONN_TIMEOUT_MS`](@ref CONN_TIMEOUT_MS) (5000 ms).
+Pass `NULL` to use the compile-time default [`CONN_TIMEOUT_MS`](@ref CONN_TIMEOUT_MS) (5000 ms).
 
 </details>
 
@@ -1610,30 +1613,31 @@ Pass `nullptr` (or omit) to use the compile-time default [`CONN_TIMEOUT_MS`](@re
 <details>
 <summary><b>Expand API Reference</b></summary>
 
-**PC - Lifecycle**
+**Lifecycle**
 
-| Method                         | Description                                                                           |
-| ------------------------------ | ------------------------------------------------------------------------------------- |
-| `begin(port, cfg = nullptr)`   | Bind and listen. Returns `PROTOCORE_OK` (1) on success, a negative error code on failure. |
-| [`stop()`](@ref PC::stop)     | Abort all connections, close listener, reset all pools.                               |
-| `restart(cfg = nullptr)`       | `stop()` + `begin()` on the same port. Returns `-1` if called before `begin()`.       |
-| [`handle()`](@ref PC::handle) | Call every `loop()`. Runs timeout sweep, event drain, and dispatch.                   |
+| Function                | Description                                                                                                          |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `proto_begin(cfg)`      | Open every port registered with `listen()`. Returns `PROTOCORE_OK` (1) on success, a negative error code on failure. |
+| `begin_http(port, cfg)` | `listen(port)` + `proto_begin(cfg)`, for the single-port case.                                                       |
+| `stop()`                | Abort all connections, close listener, reset all pools.                                                              |
+| `restart(cfg)`          | `stop()` + `proto_begin()` on the same ports. Returns `-1` if called before any `listen()`.                          |
+| `handle()`              | Call every `loop()`. Runs timeout sweep, event drain, and dispatch.                                                  |
 
-**PC - HTTP Routes**
+**HTTP Routes**
 
-| Method                                         | Description                                                     |
-| ---------------------------------------------- | --------------------------------------------------------------- |
-| `on(path, method, handler)`                    | Register a route. Trailing `*` enables prefix matching.         |
-| `on(path, method, handler, realm, user, pass)` | Same, with Basic Auth (`PROTOCORE_ENABLE_AUTH`).                    |
-| `on_not_found(handler)`                        | Fallback handler; default sends 404.                            |
-| `set_cors(origin)`                             | Enable CORS and answer OPTIONS with 204. Pass `""` to disable.  |
-| `send(slot_id, code, type, body)`              | Send a response with body and close the connection.             |
-| `send_empty(slot_id, code)`                    | Send a headers-only response and close the connection.          |
-| `serve_file(slot_id, fs, path, type)`          | Stream a file from an Arduino FS (`PROTOCORE_ENABLE_FILE_SERVING`). |
+| Function                                                         | Description                                                                                |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `on_http(path, method, handler)`                                 | Register a route. Trailing `*` enables prefix matching.                                    |
+| `on_http_auth(path, method, handler, realm, user, pass, digest)` | Same, behind Basic or Digest auth (`PROTOCORE_ENABLE_AUTH`).                               |
+| `on_not_found(handler)`                                          | Fallback handler; default sends 404.                                                       |
+| `set_cors(origin)`                                               | Enable CORS and answer OPTIONS with 204. Pass `""` to disable.                             |
+| `send_text(slot_id, code, content_type, payload)`                | Send a response with body and close the connection.                                        |
+| `send_empty(slot_id, code)`                                      | Send a headers-only response and close the connection.                                     |
+| `serve_file(slot_id, file_sys, fs_path, content_type)`           | Stream a file from a mount backend, in `file_serving.h` (`PROTOCORE_ENABLE_FILE_SERVING`). |
 
-**PC - WebSocket (PROTOCORE_ENABLE_WEBSOCKET)**
+**WebSocket (PROTOCORE_ENABLE_WEBSOCKET)**
 
-| Method                                          | Description                                 |
+| Function                                        | Description                                 |
 | ----------------------------------------------- | ------------------------------------------- |
 | `on_ws(path, on_connect, on_message, on_close)` | Register a WebSocket route.                 |
 | `ws_send_text(ws_id, text)`                     | Send a UTF-8 text frame to a client.        |
@@ -1642,23 +1646,23 @@ Pass `nullptr` (or omit) to use the compile-time default [`CONN_TIMEOUT_MS`](@re
 
 In `on_message`, read the received payload from `ws_pool[ws_id].buf` (length in `ws_pool[ws_id].payload_len`).
 
-**PC - SSE (PROTOCORE_ENABLE_SSE)**
+**SSE (PROTOCORE_ENABLE_SSE)**
 
-| Method                                                     | Description                             |
-| ---------------------------------------------------------- | --------------------------------------- |
-| `on_sse(path, on_connect)`                                 | Register an SSE route.                  |
-| `sse_send(sse_id, data, event = nullptr, id = nullptr)`    | Push an event to one client.            |
-| `sse_broadcast(path, data, event = nullptr, id = nullptr)` | Push an event to all clients on a path. |
+| Function                                         | Description                                                  |
+| ------------------------------------------------ | ------------------------------------------------------------ |
+| `on_sse(path, on_connect)`                       | Register an SSE route.                                       |
+| `protocore_sse_send(sse_id, data, event, id)`    | Push an event to one client. `event` and `id` may be `NULL`. |
+| `protocore_sse_broadcast(path, data, event, id)` | Push an event to all clients on a path.                      |
 
-**PC - Diagnostic (PROTOCORE_ENABLE_DIAG)**
+**Diagnostic (PROTOCORE_ENABLE_DIAG)**
 
-| Method          | Description                                                                                          |
+| Function        | Description                                                                                          |
 | --------------- | ---------------------------------------------------------------------------------------------------- |
 | `diag(slot_id)` | Send a JSON object with all active feature flags and configuration constants. Disable in production. |
 
 **Handler Signatures**
 
-```cpp
+```c
 // HTTP
 void handler(uint8_t slot_id, HttpReq *req);
 
@@ -1675,7 +1679,7 @@ void sse_connect(uint8_t sse_id);
 
 | Field            | Type                              | Description                                                                                  |
 | ---------------- | --------------------------------- | -------------------------------------------------------------------------------------------- |
-| `method`         | `char[8]`                         | HTTP method string, e.g. `"GET"`                                                             |
+| `method`         | `char[PROTOCORE_METHOD_BUF_SIZE]` | HTTP method string, e.g. `"GET"`                                                             |
 | `path`           | `char[MAX_PATH_LEN]`              | URL path, e.g. `"/api/status"`                                                               |
 | `version`        | [`HttpVersion`](@ref HttpVersion) | [`HTTP_10`](@ref HTTP_10), [`HTTP_11`](@ref HTTP_11), or [`HTTP_UNKNOWN`](@ref HTTP_UNKNOWN) |
 | `query`          | `char[MAX_QUERY_LEN]`             | Raw query string (everything after `?`)                                                      |
@@ -1689,7 +1693,7 @@ void sse_connect(uint8_t sse_id);
 
 **Helper Functions**
 
-```cpp
+```c
 const char *http_get_header(const HttpReq *req, const char *key); // case-insensitive
 const char *http_get_query (const HttpReq *req, const char *key); // case-sensitive
 ```
@@ -1744,7 +1748,7 @@ drifts; run any of them locally from the repo root.
 | `gen_examples.py`        | the example index in `EXAMPLES.md`                                                   |
 | `decorate_changelog.py`  | wraps each release in `CHANGELOG.md` in a collapsible block (CI)                     |
 
-The suite's own generator lives with the tests: [`test/gen_test_readme.py`](../test/gen_test_readme.py) refreshes the env matrix + per-test directory in [`test/README.md`](../test/README.md).
+The suite's own generator is a subcommand of the test entry point: `python test/harness.py readme gen` refreshes the env matrix + per-test directory in [`test/README.md`](../test/README.md).
 
 **Web-asset build** (`src/web_assets/wizard/`)
 
@@ -1769,9 +1773,10 @@ python -m src.web_assets.wizard.build_assets              # rebuild the embedded
 per-suite breakdown and totals. Run a representative subset with:
 
 ```
-pio test -e native -e native_app -e native_ssh \
-         -e native_ssh_hardened -e native_ssh_conn -e native_compliance
+python test/harness.py run native_ssh native_ssh_conn native_compliance
 ```
+
+Every test activity starts at `test/harness.py`; `python test/harness.py help` is its whole surface.
 
 See the **[test suite README](../test/README.md)** for the suite
 breakdown, environment matrix, and per-test directory, and
@@ -1806,7 +1811,6 @@ own reason; they do not overlap by accident.
 | [FEATURE_PERFORMANCE.md](FEATURE_PERFORMANCE.md) | Per-feature benchmarks, plus conjecture on open work            |
 | [RFC.md](RFC.md)                                 | HTTP/1.1, WebSocket, and error-response RFC conformance tables  |
 | [SSH.md](SSH.md)                                 | SSH-2.0 server: features, RFC/FIPS compliance, auth, memory     |
-| [DTLS.md](DTLS.md)                               | DTLS 1.3 (RFC 9147): TLS for datagrams, for CoAP and telemetry  |
 | [SECURITY.md](SECURITY.md)                       | Security posture (good/ok/bad) and per-feature treatment        |
 | [CODEQL.md](CODEQL.md)                           | CodeQL static-analysis setup, coverage, findings disposition    |
 | [SONARQUBE.md](SONARQUBE.md)                     | SonarCloud analysis: why it is CI-based, and the compile DB     |

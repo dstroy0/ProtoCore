@@ -987,7 +987,7 @@ codec, see [FEATURES.md](FEATURES.md) and [STANDARDS.md](STANDARDS.md).
 
 <!-- prettier-ignore-start -->
 
-**55 modules** attach to something physical. Every one takes its wiring **through the API** -
+**73 modules** attach to something physical. Every one takes its wiring **through the API** -
 an I2C address, explicit pins, or a caller-supplied bus struct - so the library never dictates a
 pinout and none is documented here. Pure codecs have no bring-up call at all: you own the link.
 
@@ -995,24 +995,36 @@ pinout and none is documented here. Pure codecs have no bring-up call at all: yo
 
 | Module | Attaches via | Bring-up call | Feature flag |
 | ------ | ------------ | ------------- | ------------ |
+| `rtc` | I2C | `protocore_rtc_begin(void)` | `PROTOCORE_ENABLE_RTC` |
 | `time_source` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_TIME_SOURCE` |
 
 ### Physical & Data Link (L1-L2)
 
 | Module | Attaches via | Bring-up call | Feature flag |
 | ------ | ------------ | ------------- | ------------ |
+| `ads1115` | I2C | `protocore_ads1115_begin(uint8_t addr)` | `PROTOCORE_ENABLE_ADS1115` |
+| `dshot` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_DSHOT` |
+| `fdc2214` | I2C | `protocore_fdc2214_begin(uint8_t addr, uint16_t rcount, uint16_t settlecount)` | `PROTOCORE_ENABLE_FDC2214` |
+| `ina219` | I2C | `protocore_ina219_begin(uint8_t addr, uint32_t current_lsb_ua, uint32_t shunt_mohm)` | `PROTOCORE_ENABLE_INA219` |
+| `ld2410` | UART | `protocore_ld2410_begin(int rx_pin, int tx_pin)` | `PROTOCORE_ENABLE_LD2410` |
+| `ldc1614` | I2C | `protocore_ldc1614_begin(uint8_t addr, uint16_t rcount, uint16_t settlecount)` | `PROTOCORE_ENABLE_LDC1614` |
+| `mpr121` | I2C | `protocore_mpr121_begin(uint8_t addr)` | `PROTOCORE_ENABLE_MPR121` |
+| `pca9685` | I2C | `protocore_pca9685_begin(uint8_t addr, uint32_t freq_hz)` | `PROTOCORE_ENABLE_PCA9685` |
+| `pn532` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_PN532` |
+| `sht3x` | I2C | `protocore_sht3x_begin(uint8_t addr)` | `PROTOCORE_ENABLE_SHT3X` |
+| `vl53l0x` | I2C | `protocore_vl53l0x_begin(uint8_t addr)` | `PROTOCORE_ENABLE_VL53L0X` |
 | `ble_gatt` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_BLE_GATT` |
-| `cc1101` | SPI (caller-supplied bus) | _none (pure codec)_ | `PROTOCORE_ENABLE_CC1101` |
+| `cc1101` | SPI (caller-supplied bus) | `protocore_cc1101_init(const protocore_cc1101_bus *bus, const protocore_cc1101_config *cfg)` | `PROTOCORE_ENABLE_CC1101` |
 | `enocean` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_ENOCEAN` |
-| `espnow` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_ESPNOW` |
-| `lora` | SPI (caller-supplied bus) | _none (pure codec)_ | `PROTOCORE_ENABLE_LORA` |
-| `nrf24` | SPI (caller-supplied bus) | _none (pure codec)_ | `PROTOCORE_ENABLE_NRF24` |
-| `promisc` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_PROMISC` |
+| `espnow` | caller-supplied link | `protocore_espnow_begin(uint8_t channel, protocore_espnow_recv_fn cb)` | `PROTOCORE_ENABLE_ESPNOW` |
+| `lora` | SPI (caller-supplied bus) | `protocore_lora_init(const protocore_lora_bus *bus, const protocore_lora_config *cfg)` | `PROTOCORE_ENABLE_LORA` |
+| `nrf24` | SPI (caller-supplied bus) | `protocore_nrf24_init(const nrf_bus *bus, const nrf_config *cfg)` | `PROTOCORE_ENABLE_NRF24` |
+| `promisc` | caller-supplied link | `protocore_promisc_begin(uint8_t channel, protocore_promisc_sink_fn sink)` | `PROTOCORE_ENABLE_PROMISC` |
 | `radio_sniff` | CAN | _none (pure codec)_ | `PROTOCORE_ENABLE_RADIO_SNIFF` |
 | `sigfox` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_SIGFOX` |
 | `thread` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_THREAD` |
-| `wifi_sniffer` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_WIFI_SNIFFER` |
-| `wisun` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_WISUN` |
+| `wifi_sniffer` | caller-supplied link | `protocore_wifi_sniffer_begin(uint8_t first_chan, uint8_t last_chan, uint16_t dwell_ms)` | `PROTOCORE_ENABLE_WIFI_SNIFFER` |
+| `wisun` | caller-supplied link | `protocore_wisun_init(WisunFan *fan, const protocore_ip *border_router, WisunNode *storage, size_t cap)` | `PROTOCORE_ENABLE_WISUN` |
 | `zigbee` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_ZIGBEE` |
 | `zwave` | CAN | _none (pure codec)_ | `PROTOCORE_ENABLE_ZWAVE` |
 | `rawl2` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_RAWL2` |
@@ -1021,9 +1033,11 @@ pinout and none is documented here. Pure codecs have no bring-up call at all: yo
 
 | Module | Attaches via | Bring-up call | Feature flag |
 | ------ | ------------ | ------------- | ------------ |
+| `dmx` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_DMX` |
+| `sdi12` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_SDI12` |
 | `ads` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_ADS` |
 | `bacnet` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_BACNET` |
-| `canopen` | CAN | _none (pure codec)_ | `PROTOCORE_ENABLE_CANOPEN` |
+| `canopen` | CAN | `protocore_canopen_sdo_reasm_init(CanopenSdoReasm *r, uint8_t *buf, size_t cap)` | `PROTOCORE_ENABLE_CANOPEN` |
 | `cclink` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_CCLINK` |
 | `cia402` | CAN | _none (pure codec)_ | `PROTOCORE_ENABLE_CIA402` |
 | `cip` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_CIP` |
@@ -1040,7 +1054,7 @@ pinout and none is documented here. Pure codecs have no bring-up call at all: yo
 | `lonworks` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_LONWORKS` |
 | `mbplus` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_MBPLUS` |
 | `melsec` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_MELSEC` |
-| `modbus` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_MODBUS` |
+| `modbus` | caller-supplied link | `protocore_modbus_server_init()` | `PROTOCORE_ENABLE_MODBUS` |
 | `powerlink` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_POWERLINK` |
 | `profibus` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_PROFIBUS` |
 | `profinet` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_PROFINET` |
@@ -1059,7 +1073,7 @@ pinout and none is documented here. Pure codecs have no bring-up call at all: yo
 | Module | Attaches via | Bring-up call | Feature flag |
 | ------ | ------------ | ------------- | ------------ |
 | `opcua` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_OPCUA` |
-| `opcua_client` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_OPCUA_CLIENT` |
+| `opcua_client` | caller-supplied link | `protocore_opcua_client_init(OpcUaClient *c)` | `PROTOCORE_ENABLE_OPCUA_CLIENT` |
 
 ### Transportation & ITS
 
@@ -1074,12 +1088,16 @@ pinout and none is documented here. Pure codecs have no bring-up call at all: yo
 
 | Module | Attaches via | Bring-up call | Feature flag |
 | ------ | ------------ | ------------- | ------------ |
+| `ad9238` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_AD9238` |
+| `hmmd` | UART | `protocore_hmmd_begin(int rx_pin, int tx_pin)` | `PROTOCORE_ENABLE_HMMD` |
+| `rcwl0516` | caller-supplied link | `protocore_rcwl0516_core_init(PresenceCore *c, uint32_t now)` | `PROTOCORE_ENABLE_RCWL0516` |
+| `sen0192` | caller-supplied link | `protocore_sen0192_motion_init(Sen0192Motion *m, uint32_t hold_ms, proto_bool active_high)` | `PROTOCORE_ENABLE_SEN0192` |
 | `gpib` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_GPIB` |
 | `hislip` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_HISLIP` |
-| `scpi` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_SCPI` |
+| `scpi` | caller-supplied link | `protocore_scpi_status_init(ScpiStatus *s)` | `PROTOCORE_ENABLE_SCPI` |
 | `vxi11` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_VXI11` |
 | `simatic` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_SIMATIC` |
-| `ubx` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_UBX` |
+| `ubx` | caller-supplied link | `protocore_ubx_stream_init(protocore_ubx_stream *st)` | `PROTOCORE_ENABLE_UBX` |
 
 <!-- prettier-ignore-end -->
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+# ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 # SPDX-License-Identifier: AGPL-3.0-or-later
 #
 # Q7: is TcpListenerNs::listener_queue unguarded, or guarded to PROTOCORE_WORKER_COUNT == 1?
@@ -43,10 +43,11 @@ echo " 2. sizeof: what the queue costs at each worker count"
 echo "=============================================================="
 for n in 1 2 4 8; do
     echo
-    # board_profile.h sits at the repo root, not under src/. The platform's queue and control-block
-    # types come from the host driver under test/mocks, the same one the native envs build against.
-    cc -std=c11 -I "$SRC" -I "$ROOT" -I "$ROOT/test/mocks" \
-       -include "$ROOT/test/mocks/protocore_net_host.h" \
+    # protocore_config.h includes board_profile.h repo-root-relative, so $ROOT is on the include path.
+    # The platform's queue and control-block types come from the host driver under core_setup/hal/host,
+    # the same one the native envs build against.
+    cc -std=c11 -I "$SRC" -I "$ROOT" -I "$ROOT/core_setup/hal/host" \
+       -include "$ROOT/core_setup/hal/host/protocore_net_host.h" \
        -DPROTOCORE_WORKER_COUNT="$n" \
        "$(dirname "$0")/probe.c" -o "$OUT/probe_$n" 2> "$OUT/err_$n"
     if [ $? -ne 0 ]; then

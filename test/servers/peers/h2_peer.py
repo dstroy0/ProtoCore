@@ -1,4 +1,4 @@
-# Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+# ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """HTTP/2 interop: negotiate ALPN h2 with the device's HTTPS listener and drive real HTTP/2 traffic
 through an independent, spec-compliant stack (httpx, backed by the `h2` library).

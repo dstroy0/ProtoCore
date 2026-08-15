@@ -1,4 +1,4 @@
-# Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+# ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 # SPDX-License-Identifier: AGPL-3.0-or-later
 #
 # Curate external crypto known-answer-test (KAT) vectors into compact, auditable
@@ -12,12 +12,12 @@
 #
 # Run this only to (re)fetch/refresh the vendored subsets; it needs the network
 # and a git checkout of Wycheproof. The committed test/vectors/*.json are then
-# consumed offline by tools/gen_crypto_vectors.py. Selection is deterministic:
+# consumed offline by tools/crypto/gen_crypto_vectors.py. Selection is deterministic:
 # every vector whose result is "invalid" or that carries a Wycheproof flag (the
 # security-relevant edge cases) is kept up to CAP_FLAGGED, plus the first
 # CAP_PLAIN plain-"valid" vectors, so both outcomes are always represented.
 #
-# Usage:  python3 tools/curate_crypto_vectors.py [path-to-wycheproof-checkout]
+# Usage:  python3 tools/crypto/curate_crypto_vectors.py [path-to-wycheproof-checkout]
 # If no path is given it shallow-clones a pinned commit into a temp dir.
 
 import glob

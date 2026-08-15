@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+# ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """Doc staleness guard: fail when the prose cites something the tree no longer has.
 
@@ -9,7 +9,7 @@ mechanically verified:
 
   1. relative links that resolve to nothing
   2. ``PROTOCORE_ENABLE_*`` / ``PROTOCORE_*`` flags that no longer exist in the config header
-  3. ``pc_*`` functions cited in prose that no longer exist in src/
+  3. ``protocore_*`` functions cited in prose that no longer exist in src/
   4. ``src/`` paths cited inline (outside a link) that no longer exist
   5. ``native_*`` test envs cited that platformio.ini no longer defines
 
@@ -30,7 +30,7 @@ ROOT = dr.repo_root(__file__)
 
 LINK = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
 FLAG = re.compile(r"`(PROTOCORE_[A-Z0-9_]+)`")
-FUNC = re.compile(r"`(pc_[a-z0-9_]+)\(\)`")
+FUNC = re.compile(r"`(protocore_[a-z0-9_]+)\(\)`")
 SRCPATH = re.compile(r"`(src/[A-Za-z0-9_./-]+)`")
 ENV = re.compile(r"`(native_[a-z0-9_]+)`")
 
@@ -49,7 +49,7 @@ def read(p):
 def main() -> int:
     mds = [f for f in sh("git", "ls-files", "*.md").split() if f]
 
-    # Every PROTOCORE_ / pc_ token that exists anywhere in src/. Deliberately broader than
+    # Every PROTOCORE_ / protocore_ token that exists anywhere in src/. Deliberately broader than
     # "#define": PROTOCORE_OK and PROTOCORE_OP_SEND are enum MEMBERS, and PROTOCORE_ names also arrive via
     # namespacing structs of static constexpr. The question is "does this symbol exist",
     # not "is it a macro".
@@ -75,7 +75,7 @@ def main() -> int:
         ).split()
     )
     known_flags = set(re.findall(r"\b(PROTOCORE_[A-Z0-9_]+)\b", src_blob))
-    known_funcs = set(re.findall(r"\b(pc_[a-z0-9_]+)\s*\(", src_blob))
+    known_funcs = set(re.findall(r"\b(protocore_[a-z0-9_]+)\s*\(", src_blob))
 
     # Symbol and env checks apply to docs written in the PRESENT tense - those describing
     # the library as it is now. Two other kinds legitimately name things absent from the

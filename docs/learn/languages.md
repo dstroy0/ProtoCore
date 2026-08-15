@@ -123,16 +123,22 @@ maintain the project.
 **Python**, created by Guido van Rossum, is famous for being easy to read - it looks
 almost like English and uses indentation instead of braces. It is interpreted (no
 compile step), which makes it perfect for quick automation. Here it generates and
-checks project files - for example [`test/gen_test_envs.py`](../../test/gen_test_envs.py)
-builds the long list of test configurations from one small table, so a human never has
-to maintain them by hand.
+checks project files - for example [`test/harness.py`](../../test/harness.py) `env gen`
+builds the long list of test configurations from one small table
+([`test/test_matrix.json`](../../test/test_matrix.json)), so a human never has to
+maintain them by hand.
 
 ### Shell (`.sh`) and PowerShell (`.ps1`)
 
 **Shell scripts** are the language you type into a terminal, saved to a file so the
 computer can repeat the steps. The classic Unix shell dates to the 1970s; **PowerShell**
-(2006) is Microsoft's modern, object-oriented take for Windows. This repo has a small
-one of each (e.g. a test runner) so the same commands work on Linux/macOS and Windows.
+(2006) is Microsoft's modern, object-oriented take for Windows. This repo keeps a
+handful of `.sh` helpers for jobs that are already Linux-only - the interop servers
+under `test/servers/`, the rig-firmware builds under
+`test/penetration_testing/rig_firmware/`, and the CI helpers under
+`tools/ci_tooling/`. The test runner itself is Python
+([`test/harness.py`](../../test/harness.py)) so the same commands work on Linux/macOS
+and Windows.
 
 ---
 

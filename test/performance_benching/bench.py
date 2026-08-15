@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+# ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """
 bench.py - the one entry point for the microbenchmark matrix.
@@ -368,6 +368,7 @@ def cmd_deps(a):
         srcs = []
         pending = [main_c]
         seen_tu = set()
+        dropped = set()
         failed = None
         while pending:
             tu = pending.pop()
@@ -379,13 +380,21 @@ def cmd_deps(a):
                 if tu == main_c:
                     failed = err
                     break
-                continue  # a TU that does not preprocess alone contributes nothing
+                # A TU that does not preprocess under this bench's flags contributes nothing, and
+                # leaving it in the list makes the build fail on its includes. The sibling rule
+                # takes every .c that names the header; symbol_closure puts back any of them the
+                # link actually needs. Recorded, because the same header is reached from more than
+                # one TU and the sibling rule would otherwise add it back on the next visit.
+                dropped.add(tu)
+                if tu in srcs:
+                    srcs.remove(tu)
+                continue
             for h in headers:
                 c = h[:-2] + ".c"
                 if not os.path.isfile(os.path.join(ROOT, c)):
                     continue
                 for tu2 in [c] + _siblings_of(h):
-                    if tu2 not in srcs:
+                    if tu2 not in srcs and tu2 not in dropped:
                         srcs.append(tu2)
                         pending.append(tu2)
         if failed is not None:

@@ -1,4 +1,4 @@
-// Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+// ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #include "network_drivers/transport/udp/server/server.h"
@@ -1536,7 +1536,9 @@ static uint32_t mock_clock()
 
 void test_dedup_store_lookup_roundtrip()
 {
-    protocore_set_clock(mock_clock, 1000);
+    Clock.src.fn = mock_clock;
+    Clock.src.ticks_per_second = 1000;
+    Clock.set_ms(Clock.internal);
     g_now_ms = 1000;
     protocore_coap_server_reset();
     const uint8_t r[] = {0x62, 0x45, 0x12, 0x34, 0xAB, 0xCD};
@@ -1546,12 +1548,16 @@ void test_dedup_store_lookup_roundtrip()
     TEST_ASSERT_TRUE(protocore_coap_dedup_lookup("192.168.1.10", 5683, 0x1234, &c, &cl));
     TEST_ASSERT_EQUAL_size_t(sizeof(r), cl);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(r, c, cl);
-    protocore_set_clock(NULL, 1000);
+    Clock.src.fn = NULL;
+    Clock.src.ticks_per_second = 1000;
+    Clock.set_ms(Clock.internal);
 }
 
 void test_dedup_full_address_keying()
 {
-    protocore_set_clock(mock_clock, 1000);
+    Clock.src.fn = mock_clock;
+    Clock.src.ticks_per_second = 1000;
+    Clock.set_ms(Clock.internal);
     g_now_ms = 1000;
     protocore_coap_server_reset();
     const uint8_t r[] = {1, 2, 3};
@@ -1562,12 +1568,16 @@ void test_dedup_full_address_keying()
     TEST_ASSERT_FALSE(protocore_coap_dedup_lookup("192.168.1.10", 5684, 0x1234, &c, &cl));
     TEST_ASSERT_FALSE(protocore_coap_dedup_lookup("192.168.1.10", 5683, 0x1235, &c, &cl));
     TEST_ASSERT_TRUE(protocore_coap_dedup_lookup("192.168.1.10", 5683, 0x1234, &c, &cl));
-    protocore_set_clock(NULL, 1000);
+    Clock.src.fn = NULL;
+    Clock.src.ticks_per_second = 1000;
+    Clock.set_ms(Clock.internal);
 }
 
 void test_dedup_expiry()
 {
-    protocore_set_clock(mock_clock, 1000);
+    Clock.src.fn = mock_clock;
+    Clock.src.ticks_per_second = 1000;
+    Clock.set_ms(Clock.internal);
     g_now_ms = 1000;
     protocore_coap_server_reset();
     const uint8_t r[] = {1, 2, 3};
@@ -1578,12 +1588,16 @@ void test_dedup_expiry()
     TEST_ASSERT_TRUE(protocore_coap_dedup_lookup("10.0.0.1", 5683, 0x0001, &c, &cl));
     g_now_ms = 1000 + PROTOCORE_COAP_DEDUP_LIFETIME_MS;
     TEST_ASSERT_FALSE(protocore_coap_dedup_lookup("10.0.0.1", 5683, 0x0001, &c, &cl));
-    protocore_set_clock(NULL, 1000);
+    Clock.src.fn = NULL;
+    Clock.src.ticks_per_second = 1000;
+    Clock.set_ms(Clock.internal);
 }
 
 void test_dedup_too_large_not_cached()
 {
-    protocore_set_clock(mock_clock, 1000);
+    Clock.src.fn = mock_clock;
+    Clock.src.ticks_per_second = 1000;
+    Clock.set_ms(Clock.internal);
     g_now_ms = 1000;
     protocore_coap_server_reset();
     static uint8_t big[PROTOCORE_COAP_DEDUP_RESP_MAX + 1];
@@ -1592,12 +1606,16 @@ void test_dedup_too_large_not_cached()
     const uint8_t *c = NULL;
     size_t cl = 0;
     TEST_ASSERT_FALSE(protocore_coap_dedup_lookup("10.0.0.2", 5683, 0x0002, &c, &cl));
-    protocore_set_clock(NULL, 1000);
+    Clock.src.fn = NULL;
+    Clock.src.ticks_per_second = 1000;
+    Clock.set_ms(Clock.internal);
 }
 
 void test_dedup_eviction_and_update()
 {
-    protocore_set_clock(mock_clock, 1000);
+    Clock.src.fn = mock_clock;
+    Clock.src.ticks_per_second = 1000;
+    Clock.set_ms(Clock.internal);
     protocore_coap_server_reset();
     const uint8_t r[] = {9};
     for (int i = 0; i < PROTOCORE_COAP_DEDUP_ENTRIES; i++)
@@ -1619,12 +1637,16 @@ void test_dedup_eviction_and_update()
     TEST_ASSERT_TRUE(protocore_coap_dedup_lookup("10.0.1.99", 5683, 0x999, &c, &cl));
     TEST_ASSERT_EQUAL_size_t(sizeof(r2), cl);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(r2, c, cl);
-    protocore_set_clock(NULL, 1000);
+    Clock.src.fn = NULL;
+    Clock.src.ticks_per_second = 1000;
+    Clock.set_ms(Clock.internal);
 }
 
 void test_dedup_handler_replays_without_rerunning()
 {
-    protocore_set_clock(mock_clock, 1000);
+    Clock.src.fn = mock_clock;
+    Clock.src.ticks_per_second = 1000;
+    Clock.set_ms(Clock.internal);
     g_now_ms = 5000;
     reset_udp();
     protocore_coap_server_begin(5683);
@@ -1654,7 +1676,9 @@ void test_dedup_handler_replays_without_rerunning()
     inject(5683, "10.0.0.10", 5555, req, rl);
     TEST_ASSERT_TRUE(g_called);
 
-    protocore_set_clock(NULL, 1000);
+    Clock.src.fn = NULL;
+    Clock.src.ticks_per_second = 1000;
+    Clock.set_ms(Clock.internal);
 }
 #endif
 

@@ -1,4 +1,4 @@
-// Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+// ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 // Q7: is the per-listener event queue live at PROTOCORE_WORKER_COUNT > 1?
@@ -10,6 +10,7 @@
 
 #include <stdio.h>
 
+#include "network_drivers/transport/tcp/common.h" // Listener, listener_pool
 #include "network_drivers/transport/tcp/server/server.h"
 #include "protocore_config.h"
 

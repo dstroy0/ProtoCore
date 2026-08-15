@@ -135,7 +135,19 @@ if staged 'test/coverage.xml' | grep -q .; then
     fi
 fi
 
-# 8) HARD GATE - every file printing the project version is registered in .bumpversion.cfg. bump2version
+# 8) Stamp the STAGED source files with the current version, then re-stage them. The stamp sits on
+# the copyright line and names the release a file's contents were last edited against, so it moves
+# per file rather than per release: a file this commit does not touch keeps the version it had.
+# Generated files are skipped - their generator writes their stamp.
+mapfile -t VS < <(staged 'src' 'test' 'core_setup' 'include' 'tools')
+if [ "${#VS[@]}" -gt 0 ]; then
+    PYBIN=$(command -v python 2>/dev/null || command -v python3 2>/dev/null)
+    if [ -n "$PYBIN" ] && "$PYBIN" -m tools.ci_tooling.check.stamp_version --write --quiet "${VS[@]}"; then
+        git add -- "${VS[@]}"
+    fi
+fi
+
+# 9) HARD GATE - every file printing the project version is registered in .bumpversion.cfg. bump2version
 # rewrites the files its config names and nothing else, so an unregistered site keeps displaying the
 # previous number after a release with nothing to report it.
 if staged '*.md' '*.json' '*.yml' '*.yaml' '*.properties' '*.svg' '*.html' 'docs/Doxyfile' '.bumpversion.cfg' | grep -q .; then
