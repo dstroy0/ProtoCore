@@ -19,8 +19,6 @@
 
 #if PROTOCORE_ENABLE_THEMES
 
-PROTOCORE_BEGIN_DECLS
-
 #include <stddef.h>
 
 /** @brief One embedded theme: its name and its minified CSS (NUL-terminated flash string). */
@@ -40,8 +38,5 @@ extern const size_t PROTOCORE_THEME_BLOB_COUNT;
  */
 const char *protocore_theme_css(const char *name);
 
-PROTOCORE_END_DECLS
-
 #endif // PROTOCORE_ENABLE_THEMES
-
 #endif // PROTOCORE_BINARY_ASSET_BLOBS_H
