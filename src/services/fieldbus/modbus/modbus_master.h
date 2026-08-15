@@ -23,9 +23,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_MODBUS_MASTER
+
+PROTOCORE_BEGIN_DECLS
 
 /**
  * @brief Build a read-request ADU (FC 0x03 holding or 0x04 input registers).
@@ -182,8 +182,8 @@ size_t protocore_modbus_build_read_write_multiple(uint16_t txid, uint8_t unit, u
 int protocore_modbus_parse_mask_write_response(const uint8_t *adu, size_t len, uint16_t *addr_out, uint16_t *and_out,
                                                uint16_t *or_out, uint8_t *exception_out);
 
-#endif // PROTOCORE_ENABLE_MODBUS_MASTER
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_MODBUS_MASTER
 
 #endif // PROTOCORE_MODBUS_MASTER_H

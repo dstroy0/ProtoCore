@@ -26,9 +26,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_DASHBOARD
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief Widget rendering / interaction style. */
 typedef enum PROTO_ENUM_PACKED
@@ -110,8 +110,8 @@ void protocore_dashboard_begin(const char *path, const protocore_widget *widgets
 /** @brief Broadcast the current values to all SSE subscribers (after protocore_dashboard_set()). */
 void protocore_dashboard_publish();
 
-#endif // PROTOCORE_ENABLE_DASHBOARD
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_DASHBOARD
 
 #endif // PROTOCORE_DASHBOARD_H

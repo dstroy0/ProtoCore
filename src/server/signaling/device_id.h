@@ -21,9 +21,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_DEVICE_ID
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief Length of a formatted UUID string including the null terminator. */
 #define PROTOCORE_UUID_STR_LEN 37
@@ -76,8 +76,8 @@ extern DeviceIdNs DeviceId;
 
 #endif
 
-#endif // PROTOCORE_ENABLE_DEVICE_ID
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_DEVICE_ID
 
 #endif // PROTOCORE_DEVICE_ID_H

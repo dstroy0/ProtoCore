@@ -20,9 +20,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_WIFI_SNIFFER
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief 802.11 frame type (Frame Control bits 2-3). */
 #define WIFI_TYPE_MGMT 0 ///< management (beacon, probe, auth, assoc, ...).
@@ -183,8 +183,8 @@ const WifiSurvey *protocore_wifi_sniffer_survey(void);
 const WifiScan *protocore_wifi_sniffer_scan(void);
 #endif // PROTOCORE_ENABLE_PROMISC
 
-#endif // PROTOCORE_ENABLE_WIFI_SNIFFER
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_WIFI_SNIFFER
 
 #endif // PROTOCORE_WIFI_SNIFFER_H

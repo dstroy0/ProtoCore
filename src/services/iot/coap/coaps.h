@@ -27,12 +27,13 @@
 #ifndef PROTOCORE_COAPS_H
 #define PROTOCORE_COAPS_H
 
-#include "network_drivers/presentation/security/dtls/dtls_conn.h" // DtlsConn: the connection a call drives
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_DTLS && PROTOCORE_ENABLE_COAP
+
+#include "network_drivers/presentation/security/dtls/dtls_conn.h" // DtlsConn: the connection a call drives
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief One inbound datagram and the buffer whatever it owes is written into. */
 typedef struct
@@ -79,8 +80,8 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern CoapsNs Coaps;
 
-#endif // PROTOCORE_ENABLE_DTLS && PROTOCORE_ENABLE_COAP
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_DTLS && PROTOCORE_ENABLE_COAP
 
 #endif // PROTOCORE_COAPS_H

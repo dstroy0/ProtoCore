@@ -21,9 +21,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_PARTITION_MONITOR
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief One flash partition entry. */
 typedef struct
@@ -62,8 +62,8 @@ uint8_t protocore_partition_collect(protocore_partition_info *out, uint8_t max);
 /** @brief Serve the partition map as JSON at @p path (GET). Default "/partitions". */
 void protocore_partition_monitor_begin(const char *path);
 
-#endif // PROTOCORE_ENABLE_PARTITION_MONITOR
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_PARTITION_MONITOR
 
 #endif // PROTOCORE_PARTITION_MONITOR_H

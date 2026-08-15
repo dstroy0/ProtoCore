@@ -20,6 +20,8 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
+#if PROTOCORE_ENABLE_MD
+
 PROTOCORE_BEGIN_DECLS
 
 /**
@@ -58,5 +60,7 @@ void protocore_md4(const uint8_t *data, size_t len, uint8_t out[16]);
 void protocore_hmac_md5(const uint8_t *key, size_t key_len, const uint8_t *msg, size_t msg_len, uint8_t out[16]);
 
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_MD
 
 #endif // PROTOCORE_MD_H

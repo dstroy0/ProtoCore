@@ -30,9 +30,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_SOUTHBOUND
+
+PROTOCORE_BEGIN_DECLS
 
 // Southbound result codes. A dispatch reports SB_OK / a count, or a negative code, through
 // SouthboundNs::i32, so a caller's `< 0` and `== SB_OK` checks stay cast-free. A driver may also
@@ -132,8 +132,8 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern SouthboundNs Southbound;
 
-#endif // PROTOCORE_ENABLE_SOUTHBOUND
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_SOUTHBOUND
 
 #endif // PROTOCORE_SOUTHBOUND_H

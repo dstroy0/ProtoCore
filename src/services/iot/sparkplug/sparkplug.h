@@ -47,9 +47,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_SPARKPLUG
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief Sparkplug 3.0.0 sec 4.1.1: the namespace element for the Sparkplug B payload definition. */
 #define SPB_NAMESPACE "spBv1.0"
@@ -266,8 +266,8 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern SparkplugNs Sparkplug;
 
-#endif // PROTOCORE_ENABLE_SPARKPLUG
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_SPARKPLUG
 
 #endif // PROTOCORE_SPARKPLUG_H

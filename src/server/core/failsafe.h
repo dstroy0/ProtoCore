@@ -22,9 +22,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_FAILSAFE
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief One monitored lifeline. */
 typedef struct
@@ -125,8 +125,8 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern FailsafeNs Failsafe;
 
-#endif // PROTOCORE_ENABLE_FAILSAFE
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_FAILSAFE
 
 #endif // PROTOCORE_FAILSAFE_H

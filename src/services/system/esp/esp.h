@@ -27,9 +27,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_IKEV2
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief ESP header size: SPI(4) + Sequence Number(4). */
 #define PROTOCORE_ESP_HDR_LEN 8
@@ -100,8 +100,8 @@ void protocore_esp_replay_init(EspReplay *r);
  */
 proto_bool protocore_esp_replay_check(EspReplay *r, uint32_t seq);
 
-#endif // PROTOCORE_ENABLE_IKEV2
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_IKEV2
 
 #endif // PROTOCORE_ESP_H

@@ -27,9 +27,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_FTP
+
+PROTOCORE_BEGIN_DECLS
 
 /**
  * @brief Build a control command line: `VERB<CRLF>` or `VERB<SP>ARG<CRLF>`.
@@ -100,8 +100,8 @@ static inline proto_bool protocore_ftp_reply_ok(int code)
     return protocore_ftp_reply_class(code) == 2;
 }
 
-#endif // PROTOCORE_ENABLE_FTP
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_FTP
 
 #endif // PROTOCORE_FTP_H

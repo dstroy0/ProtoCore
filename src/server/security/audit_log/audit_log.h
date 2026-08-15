@@ -34,9 +34,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_AUDIT_LOG
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief SHA-256 chain-hash length per record. */
 #define PROTOCORE_AUDIT_HASH_LEN 32
@@ -119,8 +119,8 @@ int protocore_audit_format(const protocore_audit_entry *entry, char *out, size_t
  */
 int protocore_audit_dump_json(char *out, size_t cap);
 
-#endif // PROTOCORE_ENABLE_AUDIT_LOG
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_AUDIT_LOG
 
 #endif // PROTOCORE_AUDIT_LOG_H

@@ -150,6 +150,7 @@ BARE_ARCH = {
 # things a freestanding compile emits calls to that no library provides.
 BARE_RUNTIME = ["core_setup/boot/protocore_boot.c", "core_setup/boot/startup_common.c",
                 "core_setup/boot/protocore_assert.c", "core_setup/boot/protocore_atomic.c",
+                "core_setup/boot/protocore_trap.c",
                 "core_setup/boot/protocore_memfns.c", "core_setup/boot/protocore_time.c",
                 "src/mmgr/protomem.c", "src/mmgr/rawmemcpy.c", "src/mmgr/swar.c"]
 

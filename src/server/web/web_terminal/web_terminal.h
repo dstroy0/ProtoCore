@@ -37,9 +37,11 @@
 #ifndef PROTOCORE_WEB_TERMINAL_H
 #define PROTOCORE_WEB_TERMINAL_H
 
-#include <stdint.h>
+#include "protocore_config.h"
 
 #if PROTOCORE_ENABLE_WEB_TERMINAL
+
+PROTOCORE_BEGIN_DECLS
 
 /**
  * @brief Callback for a line typed in a connected browser terminal.
@@ -93,6 +95,8 @@ static inline uint8_t protocore_web_terminal_client_count(void)
 {
     return 0;
 }
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_WEB_TERMINAL
 

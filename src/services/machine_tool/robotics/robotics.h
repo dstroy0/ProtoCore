@@ -50,6 +50,8 @@
 
 #if PROTOCORE_ENABLE_ROBOTICS
 
+PROTOCORE_BEGIN_DECLS
+
 #include "services/fieldbus/opcua/opcua.h" // OpcUaVariant / OpcUaReference / handler typedefs (shares the OPC UA codec)
 
 /** @brief The OPC UA for Robotics companion-spec namespace URI (OPC 40010-1). */
@@ -180,5 +182,8 @@ int32_t protocore_robotics_browse(uint16_t ns, uint32_t id, OpcUaReference *out,
  */
 void protocore_robotics_install(const RoboticsMotionDeviceSystem *mds);
 
+PROTOCORE_END_DECLS
+
 #endif // PROTOCORE_ENABLE_ROBOTICS
+
 #endif // PROTOCORE_ROBOTICS_H

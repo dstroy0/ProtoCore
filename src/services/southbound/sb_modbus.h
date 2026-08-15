@@ -32,12 +32,13 @@
 #define PROTOCORE_SB_MODBUS_H
 
 #include "protocore_config.h"
+
+#if PROTOCORE_ENABLE_SOUTHBOUND && PROTOCORE_ENABLE_MODBUS_MASTER
+
 #include "services/fieldbus/modbus/modbus.h" // ModbusFunction, MODBUS_ADU_MAX
 #include "services/southbound/southbound.h"  // SouthboundDriver, Southbound
 
 PROTOCORE_BEGIN_DECLS
-
-#if PROTOCORE_ENABLE_SOUTHBOUND && PROTOCORE_ENABLE_MODBUS_MASTER
 
 /**
  * @brief Request/response transport seam.

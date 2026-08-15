@@ -7,6 +7,12 @@
 #ifndef PROTOCORE_ED25519_COMB_TABLE_H
 #define PROTOCORE_ED25519_COMB_TABLE_H
 
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
+
+#if PROTOCORE_ENABLE_ED25519
+
+PROTOCORE_BEGIN_DECLS
+
 static const fe ED_COMB[32][8][3] = {
     {
         {{0x8f25d51au, 0xc9562d60u, 0x9525a7b2u, 0x692cc760u, 0xfdd6dc5cu, 0xc0a4e231u, 0xcd6e53feu, 0x216936d3u},
@@ -842,4 +848,8 @@ static const fe ED_COMB[32][8][3] = {
     },
 };
 
-#endif
+PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_ED25519
+
+#endif // PROTOCORE_ED25519_COMB_TABLE_H

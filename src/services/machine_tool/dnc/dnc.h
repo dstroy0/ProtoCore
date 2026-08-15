@@ -36,9 +36,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_DNC
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief Which punched-tape character code the wire stream uses. */
 typedef enum PROTO_ENUM_PACKED
@@ -186,8 +186,8 @@ void protocore_dnc_decode_init(DncDecoder *d, DncCode code);
  */
 DncEvent protocore_dnc_decode_feed(DncDecoder *d, uint8_t wire);
 
-#endif // PROTOCORE_ENABLE_DNC
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_DNC
 
 #endif // PROTOCORE_DNC_H

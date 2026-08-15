@@ -38,9 +38,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_SPA_ROUTER
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief What to do with a request path. */
 typedef enum PROTO_ENUM_PACKED
@@ -131,8 +131,8 @@ size_t protocore_ui_stream_next(protocore_ui_stream *s, char *out, size_t cap);
 /** @brief True once every included fragment has been emitted. */
 proto_bool protocore_ui_stream_done(const protocore_ui_stream *s);
 
-#endif // PROTOCORE_ENABLE_SPA_ROUTER
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_SPA_ROUTER
 
 #endif // PROTOCORE_SPA_ROUTER_H

@@ -30,12 +30,12 @@
 #define PROTOCORE_OPCUA_CLIENT_H
 
 #include "protocore_config.h"
-#include "services/fieldbus/opcua/opcua.h"
-
-PROTOCORE_BEGIN_DECLS
 
 #if PROTOCORE_ENABLE_OPCUA_CLIENT
 
+PROTOCORE_BEGIN_DECLS
+
+#include "services/fieldbus/opcua/opcua.h"
 // Dependency (OPCUA_CLIENT requires OPCUA) is enforced centrally in protocore_config.h.
 
 /** @brief Per-connection OPC UA client state (SecureChannel + Session + counters). */
@@ -148,8 +148,8 @@ int32_t protocore_opcua_client_on_browse(const uint8_t *msg, size_t len, OpcUaCl
  */
 int32_t protocore_opcua_client_on_write(const uint8_t *msg, size_t len, uint32_t *results, uint32_t max);
 
-#endif // PROTOCORE_ENABLE_OPCUA_CLIENT
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_OPCUA_CLIENT
 
 #endif // PROTOCORE_OPCUA_CLIENT_H

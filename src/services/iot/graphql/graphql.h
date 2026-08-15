@@ -49,9 +49,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_GRAPHQL
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief The scalar kinds a resolved leaf or an argument carries (GraphQL spec sec 3.5). */
 typedef enum PROTO_ENUM_PACKED
@@ -171,8 +171,8 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern GraphQLNs GraphQL;
 
-#endif // PROTOCORE_ENABLE_GRAPHQL
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_GRAPHQL
 
 #endif // PROTOCORE_GRAPHQL_H

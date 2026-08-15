@@ -45,9 +45,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_FOCAS
+
+PROTOCORE_BEGIN_DECLS
 
 #define FOCAS_TCP_PORT 8193    ///< FOCAS Ethernet listening port
 #define FOCAS_FRAME_HDR_LEN 10 ///< magic(4) + version(2) + type(2) + length(2)
@@ -214,8 +214,8 @@ proto_bool protocore_focas_decode8(const uint8_t *chunk, size_t len, FocasValue 
 /// The scaled value `data / base^exp` as a float (0 for an invalid value).
 float protocore_focas_value_f(const FocasValue *v);
 
-#endif // PROTOCORE_ENABLE_FOCAS
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_FOCAS
 
 #endif // PROTOCORE_FOCAS_H

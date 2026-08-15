@@ -31,9 +31,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_THREAD
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief HDLC-lite markers. */
 #define HDLC_FLAG 0x7E   ///< frame delimiter
@@ -270,8 +270,8 @@ uint16_t protocore_spinel_frame_encode(const uint8_t *payload, uint16_t len, uin
 int protocore_spinel_frame_decode(const uint8_t *raw, uint16_t len, uint8_t *payload, uint16_t pay_cap,
                                   uint16_t *pay_len);
 
-#endif // PROTOCORE_ENABLE_THREAD
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_THREAD
 
 #endif // PROTOCORE_THREAD_H

@@ -37,9 +37,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_SNMP_V3
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief Localized-key length: the SHA-256 digest size (RFC 7860 sec 9.3). */
 #define SNMP_USM_KEY_LEN 32
@@ -102,8 +102,8 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern SnmpCryptoNs SnmpCrypto;
 
-#endif // PROTOCORE_ENABLE_SNMP_V3
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_SNMP_V3
 
 #endif // PROTOCORE_SNMP_CRYPTO_H

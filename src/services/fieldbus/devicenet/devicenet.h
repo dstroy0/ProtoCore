@@ -37,6 +37,8 @@
 
 #if PROTOCORE_ENABLE_DEVICENET
 
+PROTOCORE_BEGIN_DECLS
+
 #include "shared/can/can.h"
 
 // Message-group identifier bases / field widths.
@@ -152,5 +154,8 @@ void protocore_devicenet_frag_reset(DeviceNetFragRx *rx);
  */
 DeviceNetFragResult protocore_devicenet_frag_feed(DeviceNetFragRx *rx, const uint8_t *body, uint8_t body_len);
 
+PROTOCORE_END_DECLS
+
 #endif // PROTOCORE_ENABLE_DEVICENET
+
 #endif // PROTOCORE_DEVICENET_H

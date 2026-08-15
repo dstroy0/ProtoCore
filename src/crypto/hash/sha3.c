@@ -1,9 +1,11 @@
 // ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+#if PROTOCORE_ENABLE_SHA3
+
 #include "crypto/hash/sha3.h"
 
-#if PROTOCORE_ENABLE_PQC_KEX
+PROTOCORE_BEGIN_DECLS
 
 // Keccak-f[1600] permutation constants (FIPS 202): iota round constants, rho rotation offsets, and
 // the rho/pi lane-permutation order.
@@ -166,4 +168,6 @@ void protocore_shake128_absorb(KeccakCtx *c, const uint8_t *in, size_t inlen)
     protocore_keccak_absorb(c, KECCAK_RATE_SHAKE128, in, inlen, 0x1F);
 }
 
-#endif // PROTOCORE_ENABLE_PQC_KEX
+PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_SHA3

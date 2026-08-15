@@ -29,9 +29,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_PN532
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief Frame identifier: host -> PN532. */
 #define PN532_TFI_HOST 0xD4
@@ -62,8 +62,8 @@ proto_bool protocore_pn532_is_ack(const uint8_t *raw, uint16_t len);
 /** @brief Write the 6-byte ACK frame into @p out. @return 6, or 0 if @p cap < 6. */
 uint16_t protocore_pn532_build_ack(uint8_t *out, uint16_t cap);
 
-#endif // PROTOCORE_ENABLE_PN532
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_PN532
 
 #endif // PROTOCORE_PN532_H

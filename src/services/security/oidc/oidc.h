@@ -42,9 +42,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_OIDC
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief RSA modulus and signature size in bytes; RFC 7518 sec 3.3 requires at least 2048 bits. */
 #define PROTOCORE_OIDC_RSA_BYTES 256
@@ -158,8 +158,8 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern OidcNs Oidc;
 
-#endif // PROTOCORE_ENABLE_OIDC
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_OIDC
 
 #endif // PROTOCORE_OIDC_H

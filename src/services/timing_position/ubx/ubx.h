@@ -25,9 +25,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_UBX
+
+PROTOCORE_BEGIN_DECLS
 
 #define PROTOCORE_UBX_SYNC1 0xB5u ///< first sync char
 #define PROTOCORE_UBX_SYNC2 0x62u ///< second sync char
@@ -269,8 +269,8 @@ void protocore_ubx_stream_init(protocore_ubx_stream *st);
  */
 int protocore_ubx_stream_feed(protocore_ubx_stream *st, uint8_t b, protocore_ubx *out, uint8_t *passthrough);
 
-#endif // PROTOCORE_ENABLE_UBX
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_UBX
 
 #endif // PROTOCORE_UBX_H

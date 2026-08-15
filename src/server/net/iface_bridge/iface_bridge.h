@@ -32,6 +32,8 @@
 
 #if PROTOCORE_ENABLE_IFACE_BRIDGE
 
+PROTOCORE_BEGIN_DECLS
+
 #include "shared/ip/ip.h" // protocore_ip (carry the full bind address, never a flattened one)
 
 // PROTOCORE_BRIDGE_MAX_RULES is defined in protocore_config.h (the config owner).
@@ -124,6 +126,8 @@ size_t protocore_iface_bridge_txn_parse(const uint8_t *buf, size_t len, uint16_t
  */
 size_t protocore_iface_bridge_txn_build(uint8_t *out, size_t cap, const uint8_t *write_data, uint16_t write_len,
                                         uint16_t read_len);
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_IFACE_BRIDGE
 

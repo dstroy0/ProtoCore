@@ -6,6 +6,8 @@
  * @brief ChaCha20 (RFC 8439) - implementation. See protocore_chacha20.h.
  */
 
+#if PROTOCORE_ENABLE_CHACHA20
+
 #include "crypto/cipher/chacha20.h"
 #include "crypto/crypto_opt.h"
 #include "mmgr/secure.h" // the secure pool: nested-cipher working state, wiped on release
@@ -25,6 +27,8 @@ PROTOCORE_CRYPTO_HOT_UNSWITCH
 #else
 PROTOCORE_CRYPTO_HOT
 #endif
+
+PROTOCORE_BEGIN_DECLS
 
 static uint32_t rd_le32(const uint8_t *p)
 {
@@ -160,3 +164,7 @@ void protocore_chacha20_block_ietf(const uint8_t key[PROTOCORE_CHACHA20_KEY_LEN]
     chacha_core(w, out);
     protocore_secure_release(mark);
 }
+
+PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_CHACHA20

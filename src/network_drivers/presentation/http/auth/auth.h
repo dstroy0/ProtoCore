@@ -22,9 +22,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_AUTH
+
+PROTOCORE_BEGIN_DECLS
 
 // Named, not defined: the request is the parser's and the route is the table's, and this module only
 // reads them. Declaring them here rather than including their headers is what keeps auth.h includable
@@ -146,8 +146,8 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern AuthNs Auth;
 
-#endif // PROTOCORE_ENABLE_AUTH
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_AUTH
 
 #endif // PROTOCORE_AUTH_H

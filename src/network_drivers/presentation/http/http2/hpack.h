@@ -25,9 +25,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_HTTP2
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief One dynamic-table entry descriptor (its bytes live in the table's byte ring). */
 typedef struct
@@ -77,8 +77,8 @@ size_t protocore_hpack_encode_header(uint8_t *out, size_t cap, const char *name,
 
 // The prefix-integer and Huffman primitives moved to protocore_hpack_prim.h (shared with QPACK).
 
-#endif // PROTOCORE_ENABLE_HTTP2
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_HTTP2
 
 #endif // PROTOCORE_HPACK_H

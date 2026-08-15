@@ -23,9 +23,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_RAWL2
+
+PROTOCORE_BEGIN_DECLS
 
 // Ethernet II framing sizes + ethertypes.
 #define ETH_ALEN 6            ///< MAC address length.
@@ -75,8 +75,8 @@ proto_bool protocore_eth_parse(const uint8_t *frame, size_t len, EthFrame *out);
 /** @brief IEEE 802.3 frame check sequence (CRC-32, reflected, init 0xFFFFFFFF, xorout 0xFFFFFFFF). */
 uint32_t protocore_eth_fcs(const uint8_t *bytes, size_t len);
 
-#endif // PROTOCORE_ENABLE_RAWL2
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_RAWL2
 
 #endif // PROTOCORE_RAWL2_H

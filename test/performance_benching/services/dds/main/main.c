@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // On-device CCOUNT microbenchmark for the DDS / RTPS framing codec (services/iot/dds):
-// protocore_rtps_header() and protocore_rtps_submessage() build the 20-octet RTPS message header and the
-// submessage TLV (id/flags/octetsToNextHeader, either endianness), and protocore_rtps_parse() validates
+// Rtps.header() and Rtps.submessage() build the 20-octet RTPS message header and the
+// submessage TLV (id/flags/octetsToNextHeader, either endianness), and Rtps.parse() validates
 // a header and walks a message's submessages via callback - all pure (no sockets, no multicast, no
 // heap). Worked example for performance_benching/device/<service>/: a pure protocol codec with no hardware involved
 // (contrast with performance_benching/device/ads1115, a peripheral driver where the bus transaction is stubbed), so
@@ -44,28 +44,62 @@ void dbench_run(void)
 
     // A full RTPS message: header + INFO_TS (8B, LE) + DATA (4B, LE) - mirrors test_parse_message.
     static uint8_t msg[64];
-    size_t msg_len = protocore_rtps_header(GUID, VENDOR, msg, sizeof(msg));
+    Rtps.hdr.guid_prefix = GUID;
+    Rtps.hdr.vendor_id = VENDOR;
+    Rtps.out.buf = msg;
+    Rtps.out.cap = sizeof(msg);
+    Rtps.header(Rtps.internal);
+    size_t msg_len = Rtps.n;
+
     uint8_t ts_body[8] = {0};
-    msg_len +=
-        protocore_rtps_submessage(RTPS_SM_INFO_TS, RTPS_FLAG_ENDIAN, ts_body, 8, msg + msg_len, sizeof(msg) - msg_len);
+    Rtps.sub.submessage_id = RTPS_SM_INFO_TS;
+    Rtps.sub.flags = RTPS_FLAG_ENDIAN;
+    Rtps.sub.contents = ts_body;
+    Rtps.sub.contents_len = 8;
+    Rtps.out.buf = msg + msg_len;
+    Rtps.out.cap = sizeof(msg) - msg_len;
+    Rtps.submessage(Rtps.internal);
+    msg_len += Rtps.n;
+
     uint8_t data_body[4] = {0xDE, 0xAD, 0xBE, 0xEF};
-    msg_len +=
-        protocore_rtps_submessage(RTPS_SM_DATA, RTPS_FLAG_ENDIAN, data_body, 4, msg + msg_len, sizeof(msg) - msg_len);
+    Rtps.sub.submessage_id = RTPS_SM_DATA;
+    Rtps.sub.flags = RTPS_FLAG_ENDIAN;
+    Rtps.sub.contents = data_body;
+    Rtps.sub.contents_len = 4;
+    Rtps.out.buf = msg + msg_len;
+    Rtps.out.cap = sizeof(msg) - msg_len;
+    Rtps.submessage(Rtps.internal);
+    msg_len += Rtps.n;
 
     for (;;)
     {
         DBENCH_BANNER("dds");
         volatile size_t sink = 0;
-        DBENCH_OP("protocore_rtps_header", 100000,
-                  sink += protocore_rtps_header(GUID, VENDOR, hdr_out, sizeof(hdr_out)));
-        DBENCH_OP("protocore_rtps_submessage LE", 100000,
-                  sink += protocore_rtps_submessage(RTPS_SM_INFO_TS, RTPS_FLAG_ENDIAN, sm_body, sizeof(sm_body), sm_out,
-                                                    sizeof(sm_out)));
-        DBENCH_OP("protocore_rtps_submessage BE", 100000,
-                  sink +=
-                  protocore_rtps_submessage(RTPS_SM_DATA, 0x00, sm_body, sizeof(sm_body), sm_out, sizeof(sm_out)));
-        DBENCH_BULK("protocore_rtps_parse", 50000, msg_len,
-                    sink += protocore_rtps_parse(msg, msg_len, count_submessage, NULL) ? 1 : 0);
+
+        Rtps.hdr.guid_prefix = GUID;
+        Rtps.hdr.vendor_id = VENDOR;
+        Rtps.out.buf = hdr_out;
+        Rtps.out.cap = sizeof(hdr_out);
+        DBENCH_OP("Rtps.header", 100000, Rtps.header(Rtps.internal); sink += Rtps.n);
+
+        Rtps.sub.submessage_id = RTPS_SM_INFO_TS;
+        Rtps.sub.flags = RTPS_FLAG_ENDIAN;
+        Rtps.sub.contents = sm_body;
+        Rtps.sub.contents_len = sizeof(sm_body);
+        Rtps.out.buf = sm_out;
+        Rtps.out.cap = sizeof(sm_out);
+        DBENCH_OP("Rtps.submessage LE", 100000, Rtps.submessage(Rtps.internal); sink += Rtps.n);
+
+        Rtps.sub.submessage_id = RTPS_SM_DATA;
+        Rtps.sub.flags = 0x00;
+        DBENCH_OP("Rtps.submessage BE", 100000, Rtps.submessage(Rtps.internal); sink += Rtps.n);
+
+        Rtps.msg.msg = msg;
+        Rtps.msg.len = msg_len;
+        Rtps.sink.on_submessage = count_submessage;
+        Rtps.sink.arg = NULL;
+        DBENCH_BULK("Rtps.parse", 50000, msg_len, Rtps.parse(Rtps.internal); sink += Rtps.ok ? 1 : 0);
+
         (void)sink;
         DBENCH_DONE();
     }

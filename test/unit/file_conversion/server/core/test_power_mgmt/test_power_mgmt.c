@@ -130,12 +130,10 @@ void test_a_feedback_ramp_crosses_once_per_direction(void)
     TEST_ASSERT_EQUAL_INT(1, down);
 }
 
-// FAILS AGAINST THE CURRENT SOURCE. power_mgmt.c line 81: "INT16_MIN means 'no sensor on this
-// part', which must not read as ice-cold and un-throttle." A part with no sensor therefore keeps a
-// throttle it was already holding, which is what separates the sentinel from the coldest reading an
-// int16 can carry - INT16_MIN+1 is a temperature, is at/below cool, and does release.
-// power_mgmt.c:87-90 clears the throttle unconditionally when have_temp is false, so the sentinel
-// and the coldest reading decide alike and the guard changes nothing.
+// power_mgmt.c: "INT16_MIN means 'no sensor on this part', which must not read as ice-cold and
+// un-throttle." A part with no sensor therefore keeps a throttle it was already holding, which is
+// what separates the sentinel from the coldest reading an int16 can carry - INT16_MIN+1 is a
+// temperature, is at/below cool, and does release.
 void test_no_sensor_holds_a_throttle_already_held(void)
 {
     TEST_ASSERT_FALSE(decide(100, (int16_t)(INT16_MIN + 1), PROTO_FALSE, 60000u, PROTO_TRUE).throttled);

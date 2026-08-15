@@ -18,6 +18,8 @@
  * every packet, so a MAC on the packet path costs no borrow and no wipe.
  */
 
+#if PROTOCORE_ENABLE_HMAC_SHA256
+
 #include "crypto/mac/hmac_sha256.h"
 #include "crypto/crypto_opt.h"
 #include "mmgr/protomem.h"
@@ -29,6 +31,7 @@
 // that 4% deliberately would take a source #pragma GCC unroll on the key-block loops (a code change, not a flag).
 // See crypto_opt.h caveat 1.
 PROTOCORE_CRYPTO_HOT
+PROTOCORE_BEGIN_DECLS
 
 // The transient half of the caller's bytes: live inside init and inside final, dead between them. The
 // two 64-byte key blocks double as key-padding scratch for build_key_block.
@@ -122,3 +125,7 @@ void protocore_hmac_sha256(uint8_t *work, const uint8_t *key, size_t key_len, co
     protocore_sha256_update(&w->hash, w->inner_digest, PROTOCORE_SHA256_DIGEST_LEN);
     protocore_sha256_final(&w->hash, mac); // HMAC = H((K XOR opad) || inner)
 }
+
+PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_HMAC_SHA256

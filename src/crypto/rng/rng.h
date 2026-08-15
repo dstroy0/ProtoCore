@@ -42,6 +42,8 @@
 
 #include "protocore_config.h"
 
+#if PROTOCORE_ENABLE_RNG
+
 PROTOCORE_BEGIN_DECLS
 
 /** @brief The seed: a ChaCha20 key. */
@@ -59,5 +61,7 @@ PROTOCORE_BEGIN_DECLS
 void protocore_rand_fill(uint8_t *out, size_t len);
 
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_RNG
 
 #endif // PROTOCORE_RNG_H

@@ -33,6 +33,8 @@
 
 #if PROTOCORE_ENABLE_HTTP3
 
+PROTOCORE_BEGIN_DECLS
+
 #include "crypto/aead/aes128gcm.h" // protocore_aes128gcm_key, PROTOCORE_WORK_AES128GCM
 #include "crypto/kdf/hkdf.h"       // PROTOCORE_HKDF_HASH_LEN
 
@@ -134,5 +136,8 @@ size_t protocore_quic_packet_unprotect(uint8_t *pkt, size_t pn_offset, size_t le
 void protocore_quic_retry_integrity_tag(const uint8_t *odcid, size_t odcid_len, const uint8_t *retry, size_t retry_len,
                                         uint8_t tag[16]);
 
+PROTOCORE_END_DECLS
+
 #endif // PROTOCORE_ENABLE_HTTP3
+
 #endif // PROTOCORE_QUIC_CRYPTO_H

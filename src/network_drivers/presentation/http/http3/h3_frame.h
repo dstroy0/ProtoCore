@@ -19,9 +19,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_HTTP3
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief HTTP/3 frame types (RFC 9114 sec 7.2 / 11.2.1). */
 #define H3_DATA 0x00
@@ -103,8 +103,8 @@ size_t protocore_h3_build_settings(uint8_t *out, size_t cap, const uint64_t *ids
 /** @brief GOAWAY frame carrying @p stream_id (RFC 9114 sec 7.2.6). */
 size_t protocore_h3_build_goaway(uint8_t *out, size_t cap, uint64_t stream_id);
 
-#endif // PROTOCORE_ENABLE_HTTP3
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_HTTP3
 
 #endif // PROTOCORE_H3_FRAME_H

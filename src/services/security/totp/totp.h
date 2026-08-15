@@ -32,9 +32,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_TOTP
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief X: the time step in seconds a zero @c step.x takes (RFC 6238 sec 4.1). */
 #define PROTOCORE_TOTP_X_DEFAULT 30u
@@ -120,8 +120,8 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern TotpNs Totp;
 
-#endif // PROTOCORE_ENABLE_TOTP
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_TOTP
 
 #endif // PROTOCORE_TOTP_H

@@ -23,6 +23,8 @@
 
 #include "protocore_config.h" // the entry point: PROTO_ENUM_PACKED, and protocore_types.h for the widths
 
+#if PROTOCORE_ENABLE_RSA
+
 PROTOCORE_BEGIN_DECLS
 
 /** @brief RSA modulus / signature size in bytes (RSA-2048). */
@@ -93,5 +95,7 @@ int protocore_rsa_sign_sw(const uint8_t n_be[PROTOCORE_RSA_KEY_BYTES], const uin
 #endif
 
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_RSA
 
 #endif // PROTOCORE_RSA_H

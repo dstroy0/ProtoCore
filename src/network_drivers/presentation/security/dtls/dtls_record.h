@@ -32,12 +32,13 @@
 #ifndef PROTOCORE_DTLS_RECORD_H
 #define PROTOCORE_DTLS_RECORD_H
 
-#include "crypto/aead/aes128gcm.h" // protocore_aes128gcm_key, PROTOCORE_WORK_AES128GCM
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_DTLS
+
+#include "crypto/aead/aes128gcm.h" // protocore_aes128gcm_key, PROTOCORE_WORK_AES128GCM
+
+PROTOCORE_BEGIN_DECLS
 
 /** @name Record content types (RFC 8446 §5 / RFC 9147 §4).
  *  Shared by the DTLSPlaintext `type` field and the DTLSInnerPlaintext trailing content type. */
@@ -166,8 +167,8 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern const DtlsRecordNs DtlsRecord;
 
-#endif // PROTOCORE_ENABLE_DTLS
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_DTLS
 
 #endif // PROTOCORE_DTLS_RECORD_H

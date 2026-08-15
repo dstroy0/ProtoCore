@@ -35,9 +35,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_PMBUS
+
+PROTOCORE_BEGIN_DECLS
 
 // Command codes, from the PMBus 1.3 Part II specification.
 #define PROTOCORE_PMBUS_PAGE 0x00u
@@ -163,8 +163,8 @@ proto_bool protocore_pmbus_clear_faults(uint8_t addr);
  */
 proto_bool protocore_pmbus_read_mfr_string(uint8_t addr, uint8_t cmd, uint8_t *out, size_t cap, size_t *len);
 
-#endif // PROTOCORE_ENABLE_PMBUS
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_PMBUS
 
 #endif // PROTOCORE_PMBUS_H

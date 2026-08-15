@@ -45,9 +45,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_RCWL0516
+
+PROTOCORE_BEGIN_DECLS
 
 /**
  * @brief Default hold time (ms) for the RCWL-0516.
@@ -132,8 +132,8 @@ proto_bool protocore_rcwl0516_poll();
 /** @brief Latest debounced, hold-extended presence. */
 proto_bool protocore_rcwl0516_present();
 
-#endif // PROTOCORE_ENABLE_RCWL0516
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_RCWL0516
 
 #endif // PROTOCORE_RCWL0516_H

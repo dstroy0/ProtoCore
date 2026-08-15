@@ -38,9 +38,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_HOTSWAP
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief Where a removable volume currently stands. */
 typedef enum PROTO_ENUM_PACKED
@@ -150,8 +150,8 @@ const char *protocore_hotswap_state_name(StorageState s);
  */
 size_t protocore_hotswap_json(char *out, size_t cap);
 
-#endif // PROTOCORE_ENABLE_HOTSWAP
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_HOTSWAP
 
 #endif // PROTOCORE_HOTSWAP_H

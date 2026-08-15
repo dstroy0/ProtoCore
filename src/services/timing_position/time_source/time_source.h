@@ -27,8 +27,6 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 /**
  * @brief A time source: returns the current Unix epoch seconds for this source,
  *        or 0 if it currently has no valid time.
@@ -39,6 +37,8 @@ PROTOCORE_BEGIN_DECLS
 typedef uint32_t (*TimeSourceFn)(void);
 
 #if PROTOCORE_ENABLE_TIME_SOURCE
+
+PROTOCORE_BEGIN_DECLS
 
 /**
  * @brief Register a time source.
@@ -75,8 +75,8 @@ void protocore_time_source_reset(void);
  */
 size_t protocore_time_http_date(char *out, size_t out_cap);
 
-#endif // PROTOCORE_ENABLE_TIME_SOURCE
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_TIME_SOURCE
 
 #endif // PROTOCORE_TIME_SOURCE_H

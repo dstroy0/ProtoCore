@@ -18,21 +18,25 @@
  * bracketed by protocore_fe_hw_enable()/protocore_fe_hw_disable() (esp_mpi_{enable,disable}_hardware_hw_op()).
  */
 
+#if PROTOCORE_ENABLE_CURVE25519
+
+#if PROTOCORE_HAS_HW_ECC
+#include "sdkconfig.h"      // CONFIG_IDF_TARGET_ESP32S3 - selects the vector (PIE) field multiply
+#include <mbedtls/bignum.h> // ESP32: field inversion on the MPI/RSA hardware accelerator
+#endif
 #include "crypto/asymmetric/curve25519.h"
 // On the S3, X25519 runs its whole Montgomery ladder in canonical uint32[8] and does each field multiply as
 // one 256-bit modular multiply on the RSA/MPI accelerator (~4.3x the software/PIE ladder). That field layer is
 // shared with Ed25519 (protocore_ed25519.cpp) and defines PROTOCORE_FE25519_MPI_HW when active (Arduino + S3).
 #include "crypto/asymmetric/fe25519.h"
-#if PROTOCORE_HAS_HW_ECC
-#include "sdkconfig.h"      // CONFIG_IDF_TARGET_ESP32S3 - selects the vector (PIE) field multiply
-#include <mbedtls/bignum.h> // ESP32: field inversion on the MPI/RSA hardware accelerator
-#endif
 #include "crypto/crypto_opt.h"
+
 PROTOCORE_CRYPTO_HOT
+PROTOCORE_BEGIN_DECLS
 
 // Small field constant (radix-2^16). Used only by the software X25519 ladder (the S3 MODMULT path carries its
 // own canonical a24), so it would be unused there.
-#ifndef PROTOCORE_FE25519_MPI_HW
+#if !PROTOCORE_FE25519_MPI_HW
 static const protocore_gf GF_121665 = {0xDB41, 1}; // 121665 = 0x1DB41 (Montgomery a24)
 #endif
 
@@ -294,7 +298,9 @@ void protocore_gf_inv(protocore_gf out, const protocore_gf a)
     }
     protocore_gf_unpack(out, le);
 }
-#else
+#endif
+
+#if !PROTOCORE_HAS_HW_ECC
 void protocore_gf_inv(protocore_gf out, const protocore_gf a)
 {
     gf_inv_sw(out, a);
@@ -353,7 +359,7 @@ void protocore_gf_unpack(protocore_gf out, const uint8_t in[32])
     out[15] &= 0x7fff;
 }
 
-#ifdef PROTOCORE_FE25519_MPI_HW
+#if PROTOCORE_FE25519_MPI_HW
 // ============================= ESP32-S3 X25519 on the RSA/MPI accelerator =================================
 // The canonical uint32[8] field layer (fe, fe_add/sub/mul/sq/..., the MODMULT, and the lock+power bring-up)
 // lives in protocore_fe25519.h - shared with Ed25519. Here is only the X25519-specific a24 and the RFC 7748 ladder.
@@ -431,7 +437,9 @@ void protocore_x25519(uint8_t out[32], const uint8_t scalar[32], const uint8_t p
     fe_tobytes(out, x2);
     protocore_fe_hw_disable(); // release the lock + power down
 }
-#else
+#endif
+
+#if !PROTOCORE_FE25519_MPI_HW
 void protocore_x25519(uint8_t out[32], const uint8_t scalar[32], const uint8_t point[32])
 {
     uint8_t z[32];
@@ -490,10 +498,14 @@ void protocore_x25519(uint8_t out[32], const uint8_t scalar[32], const uint8_t p
     protocore_gf_mul(a, a, c);
     protocore_gf_pack(out, a);
 }
-#endif // PROTOCORE_FE25519_MPI_HW
+#endif // !PROTOCORE_FE25519_MPI_HW (SW path)
 
 void protocore_x25519_base(uint8_t out[32], const uint8_t scalar[32])
 {
     uint8_t base[32] = {9};
     protocore_x25519(out, scalar, base);
 }
+
+PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_CURVE25519

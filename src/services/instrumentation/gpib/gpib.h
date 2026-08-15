@@ -28,9 +28,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_GPIB
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief The Prologix GPIB-Ethernet raw-socket TCP port. */
 #define PROTOCORE_GPIB_PORT 1234
@@ -119,8 +119,8 @@ proto_bool protocore_gpib_parse_addr(const char *s, size_t len, uint8_t *pad, in
  */
 proto_bool protocore_gpib_parse_version(const char *s, size_t len, const char **ver, size_t *ver_len);
 
-#endif // PROTOCORE_ENABLE_GPIB
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_GPIB
 
 #endif // PROTOCORE_GPIB_H

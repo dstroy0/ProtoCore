@@ -32,9 +32,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_JWT
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief RFC 7515 sec 7.1: the compact serialization a call reads, bare or inside Bearer credentials. */
 typedef struct
@@ -156,8 +156,8 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern JwtNs Jwt;
 
-#endif // PROTOCORE_ENABLE_JWT
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_JWT
 
 #endif // PROTOCORE_JWT_H

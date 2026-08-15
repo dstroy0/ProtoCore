@@ -26,9 +26,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_MDNS_ADAPTIVE
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief Adaptive beacon state. */
 typedef struct
@@ -149,8 +149,8 @@ uint16_t protocore_mdns_adaptive_contention(void);
 uint32_t protocore_mdns_adaptive_announces(void);
 #endif // PROTOCORE_HAS_VENDOR_WIFI && PROTOCORE_ENABLE_MDNS && PROTOCORE_ENABLE_PROMISC
 
-#endif // PROTOCORE_ENABLE_MDNS_ADAPTIVE
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_MDNS_ADAPTIVE
 
 #endif // PROTOCORE_MDNS_ADAPTIVE_H

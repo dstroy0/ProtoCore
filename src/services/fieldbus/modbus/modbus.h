@@ -34,9 +34,10 @@
 
 #include "protocore_config.h"
 
+#if PROTOCORE_NEED_MODBUS
+
 PROTOCORE_BEGIN_DECLS
 
-#if PROTOCORE_NEED_MODBUS
 
 /** @brief Modbus function codes (Modbus Application Protocol §6). */
 typedef enum PROTO_ENUM_PACKED
@@ -137,8 +138,8 @@ void protocore_modbus_rx(uint8_t slot);
 struct ProtoHandler;
 const struct ProtoHandler *protocore_modbus_protocore_handler(void);
 
-#endif // PROTOCORE_NEED_MODBUS
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_NEED_MODBUS
 
 #endif // PROTOCORE_MODBUS_H

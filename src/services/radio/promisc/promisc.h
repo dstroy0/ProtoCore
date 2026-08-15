@@ -32,6 +32,8 @@
 
 #if PROTOCORE_ENABLE_PROMISC
 
+PROTOCORE_BEGIN_DECLS
+
 #include "shared/pcap/pcap.h" // protocore_pcap_* framing + PROTOCORE_DLT_IEEE802_11
 
 /** @brief 802.11 frame type (frame-control bits 2-3). */
@@ -91,6 +93,8 @@ void protocore_promisc_set_channel(uint8_t channel);
 
 /** @brief Stop promiscuous capture. */
 void protocore_promisc_end(void);
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_PROMISC
 

@@ -53,9 +53,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_STOMP
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief One header entry (sec 9 `header = header-name ":" header-value`), sliced from the source. */
 typedef struct
@@ -157,8 +157,8 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern StompNs Stomp;
 
-#endif // PROTOCORE_ENABLE_STOMP
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_STOMP
 
 #endif // PROTOCORE_STOMP_H

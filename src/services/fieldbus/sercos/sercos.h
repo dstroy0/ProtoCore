@@ -24,9 +24,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_SERCOS
+
+PROTOCORE_BEGIN_DECLS
 
 // SERCOS telegram types + header length: wire values, so integer constants in a struct.
 #define SERCOS_TEL_MDT 0x00 ///< Master Data Telegram (master -> drives).
@@ -69,8 +69,8 @@ typedef struct
 /** @brief Parse a SERCOS telegram. @return true if @p len >= 4 and the type is MDT/AT. */
 proto_bool protocore_sercos_parse(const uint8_t *frame, size_t len, SercosTelegram *out);
 
-#endif // PROTOCORE_ENABLE_SERCOS
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_SERCOS
 
 #endif // PROTOCORE_SERCOS_H

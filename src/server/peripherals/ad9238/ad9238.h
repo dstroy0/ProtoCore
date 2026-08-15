@@ -40,9 +40,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_AD9238
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief SPI register addresses (13-bit address field). Verify against your datasheet revision. */
 typedef enum PROTO_ENUM_PACKED
@@ -126,8 +126,8 @@ size_t protocore_ad9238_build_read(uint16_t reg_addr, uint8_t *out, size_t cap);
  */
 size_t protocore_ad9238_build_transfer(uint8_t *out, size_t cap);
 
-#endif // PROTOCORE_ENABLE_AD9238
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_AD9238
 
 #endif // PROTOCORE_AD9238_H

@@ -22,9 +22,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_PSRAM_POOL
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief Placement verdict (the sole return of protocore_psram_place). */
 typedef enum PROTO_ENUM_PACKED
@@ -70,8 +70,8 @@ uint8_t protocore_pingpong_drain_index(const PingPong *pp);
 /** @brief Swap roles (a filled buffer is handed to DMA; the drained one is now filled). @return new fill index. */
 uint8_t protocore_pingpong_swap(PingPong *pp);
 
-#endif // PROTOCORE_ENABLE_PSRAM_POOL
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_PSRAM_POOL
 
 #endif // PROTOCORE_PSRAM_POOL_H

@@ -38,6 +38,32 @@
 #define PROTOCORE_HW_DS 1
 #endif
 
+// --- SHA accelerator register map ---
+// The die is identified here, so the values are stated here and crypto/ reads only these names. Clock
+// and reset sit in separate HP_SYS_CLKRST registers and nothing else holds SHA, so the hold-clear mask
+// is empty.
+#ifndef PROTOCORE_SHA_BASE
+#define PROTOCORE_SHA_BASE 0x50091000u
+#endif
+#ifndef PROTOCORE_SHA_CLK_REG
+#define PROTOCORE_SHA_CLK_REG 0x500E60A8u // HP_SYS_CLKRST_PERI_CLK_CTRL25_REG
+#endif
+#ifndef PROTOCORE_SHA_CLK_BIT
+#define PROTOCORE_SHA_CLK_BIT (1u << 20) // REG_CRYPTO_SHA_CLK_EN
+#endif
+#ifndef PROTOCORE_SHA_RST_REG
+#define PROTOCORE_SHA_RST_REG 0x500E60C8u // HP_SYS_CLKRST_HP_RST_EN2_REG
+#endif
+#ifndef PROTOCORE_SHA_RST_BIT
+#define PROTOCORE_SHA_RST_BIT (1u << 18) // REG_RST_EN_SHA
+#endif
+#ifndef PROTOCORE_SHA_HOLD_REG
+#define PROTOCORE_SHA_HOLD_REG 0x500E60C8u
+#endif
+#ifndef PROTOCORE_SHA_HOLD_CLEAR
+#define PROTOCORE_SHA_HOLD_CLEAR 0u
+#endif
+
 // --- Sizing (largest no-PSRAM bump: 768 KB L2MEM + fast dual core) ---
 // Internal-SRAM-budget values; a PSRAM-size profile (included first) scales the RAM-backed buffers
 // further and moves the big TLS / HTTP-2 pools to the (up to 32 MB) high-bandwidth PSRAM.

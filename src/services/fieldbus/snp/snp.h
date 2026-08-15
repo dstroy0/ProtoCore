@@ -22,9 +22,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_SNP
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief SNP control bytes (subset). */
 // SNP control bytes: wire values compared/emitted, so integer constants in a namespacing struct.
@@ -59,8 +59,8 @@ typedef struct
 /** @brief Validate the BCC and parse an SNP frame. @return true if the BCC matches and it is well-formed. */
 proto_bool protocore_snp_parse(const uint8_t *frame, size_t len, SnpFrame *out);
 
-#endif // PROTOCORE_ENABLE_SNP
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_SNP
 
 #endif // PROTOCORE_SNP_H

@@ -35,9 +35,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_WS_DEFLATE
+
+PROTOCORE_BEGIN_DECLS
 
 /**
  * @brief Working-memory bytes deflate_raw() needs (hash chains + code tables).
@@ -73,8 +73,8 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern const DeflateNs Deflate;
 
-#endif // PROTOCORE_ENABLE_WS_DEFLATE
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_WS_DEFLATE
 
 #endif // PROTOCORE_DEFLATE_H

@@ -22,9 +22,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
+#if PROTOCORE_ENABLE_SHA3
 
-#if PROTOCORE_ENABLE_PQC_KEX
+PROTOCORE_BEGIN_DECLS
 
 /// Sponge rates (block size in octets = 1600/8 - 2*capacity/8) for the modes we use.
 #define KECCAK_RATE_SHA3_256 136
@@ -62,8 +62,8 @@ void protocore_shake256(uint8_t *out, size_t outlen, const uint8_t *in, size_t i
 /// Begin an incremental SHAKE128 XOF over @p in; pull output with protocore_keccak_squeeze(@p c, ...).
 void protocore_shake128_absorb(KeccakCtx *c, const uint8_t *in, size_t inlen);
 
-#endif // PROTOCORE_ENABLE_PQC_KEX
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_SHA3
 
 #endif // PROTOCORE_SHA3_H

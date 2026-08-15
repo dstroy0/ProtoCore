@@ -1,12 +1,13 @@
 // ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+#if PROTOCORE_ENABLE_MLKEM
+
+#include "crypto/hash/sha3.h"
 #include "crypto/pqc/mlkem.h"
 #include "mmgr/protomem.h"
 
-#if PROTOCORE_ENABLE_PQC_KEX
-
-#include "crypto/hash/sha3.h"
+PROTOCORE_BEGIN_DECLS
 
 // ML-KEM-768 parameters (FIPS 203).
 #define MK_N 256
@@ -576,4 +577,6 @@ void protocore_mlkem768_decaps(const uint8_t dk[MLKEM768_DK_BYTES], const uint8_
     }
 }
 
-#endif // PROTOCORE_ENABLE_PQC_KEX
+PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_MLKEM

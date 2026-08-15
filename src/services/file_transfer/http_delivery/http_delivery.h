@@ -27,9 +27,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_HTTP_DELIVERY
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief Freshness verdict for a cached response. */
 /** @brief Cache-freshness verdict (the sole return of protocore_delivery_swr). */
@@ -90,8 +90,8 @@ size_t protocore_delivery_sw_manifest(const char *const *paths, size_t n, const 
  */
 proto_bool protocore_delivery_serve_sw(const char *const *paths, size_t n, const char *version);
 
-#endif // PROTOCORE_ENABLE_HTTP_DELIVERY
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_HTTP_DELIVERY
 
 #endif // PROTOCORE_HTTP_DELIVERY_H

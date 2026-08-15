@@ -24,9 +24,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_J2735
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief A UPER bit writer over a caller buffer (MSB-first within each octet). */
 typedef struct
@@ -166,8 +166,8 @@ size_t protocore_j2735_map_encode(const J2735MapIntersection *isect, const J2735
 proto_bool protocore_j2735_map_decode(const uint8_t *in, size_t len, J2735MapIntersection *isect, J2735Lane *out_lanes,
                                       size_t max_lanes, size_t *out_count);
 
-#endif // PROTOCORE_ENABLE_J2735
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_J2735
 
 #endif // PROTOCORE_J2735_H

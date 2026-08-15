@@ -24,8 +24,7 @@
 
 #include "protocore_config.h"
 
-// Shared by the HTTP/3 (QUIC) packet protection and the DTLS 1.3 record layer.
-#if (PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_ENABLE_SMB || PROTOCORE_TLS_SOFTWARE)
+#if PROTOCORE_ENABLE_AES128GCM
 
 #include "mmgr/span.h" // protocore_cspan: what the seal produced (empty == it did not)
 
@@ -126,6 +125,6 @@ proto_bool protocore_aes128gcm_open(struct protocore_aes128gcm_key *k, const uin
 
 PROTOCORE_END_DECLS
 
-#endif // PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_ENABLE_SMB || PROTOCORE_TLS_SOFTWARE
+#endif // PROTOCORE_ENABLE_AES128GCM
 
 #endif // PROTOCORE_AES128GCM_H

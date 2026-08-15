@@ -21,12 +21,13 @@
 #ifndef PROTOCORE_NTP_SERVER_H
 #define PROTOCORE_NTP_SERVER_H
 
-#include "network_drivers/application/ntp/ntp.h" // the packet this role answers on
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths and PROTOCORE_INLINE
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_NTP_SERVER
+
+#include "network_drivers/application/ntp/ntp.h" // the packet this role answers on
+
+PROTOCORE_BEGIN_DECLS
 
 /**
  * @brief Build a server (mode 4) reply to a client NTP request. Pure - no clock, no I/O.
@@ -61,8 +62,8 @@ size_t protocore_ntp_server_build_response(const uint8_t *req, size_t req_len, u
  */
 proto_bool protocore_ntp_server_begin(uint8_t stratum, uint32_t refid);
 
-#endif // PROTOCORE_ENABLE_NTP_SERVER
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_NTP_SERVER
 
 #endif // PROTOCORE_NTP_SERVER_H

@@ -61,8 +61,14 @@ def _int(value, allow_zero):
 
 
 def line_count(path):
+    """Lines of text in the file. A trailing newline ends the last line, it does not start a new
+    one; counting it as one more leaves the check a line too lenient, which is exactly the width an
+    edit that removes one line slips through."""
     with open(path, "rb") as fh:
-        return fh.read().count(b"\n") + 1
+        data = fh.read()
+    if not data:
+        return 0
+    return data.count(b"\n") + (0 if data.endswith(b"\n") else 1)
 
 
 def check(report):

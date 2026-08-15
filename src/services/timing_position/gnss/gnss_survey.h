@@ -26,12 +26,12 @@
 #define PROTOCORE_GNSS_SURVEY_H
 
 #include "protocore_config.h"
-#include "services/timing_position/nmea0183/nmea0183.h" // Nmea0183 - the sentence a fix is read out of
-
-PROTOCORE_BEGIN_DECLS
 
 #if PROTOCORE_ENABLE_NTRIP_CASTER
 
+PROTOCORE_BEGIN_DECLS
+
+#include "services/timing_position/nmea0183/nmea0183.h" // Nmea0183 - the sentence a fix is read out of
 /** @brief A WGS84 geodetic position: latitude/longitude in degrees, ellipsoidal height in metres. */
 typedef struct
 {
@@ -120,8 +120,8 @@ proto_bool protocore_gnss_gga_to_geodetic(const Nmea0183 *m, GnssGeodetic *out);
 proto_bool protocore_gnss_survey_add_gga(GnssSurvey *s, const Nmea0183 *m);
 #endif
 
-#endif // PROTOCORE_ENABLE_NTRIP_CASTER
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_NTRIP_CASTER
 
 #endif // PROTOCORE_GNSS_SURVEY_H

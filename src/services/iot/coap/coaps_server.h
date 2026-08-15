@@ -34,9 +34,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_DTLS && PROTOCORE_ENABLE_COAP
+
+PROTOCORE_BEGIN_DECLS
 
 #ifndef PROTOCORE_COAPS_MAX_CONNS
 #define PROTOCORE_COAPS_MAX_CONNS 2 ///< simultaneous connections; each slot is one handshake engine
@@ -150,8 +150,8 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern CoapsServerNs CoapsServer;
 
-#endif // PROTOCORE_ENABLE_DTLS && PROTOCORE_ENABLE_COAP
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_DTLS && PROTOCORE_ENABLE_COAP
 
 #endif // PROTOCORE_COAPS_SERVER_H

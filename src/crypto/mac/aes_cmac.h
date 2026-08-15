@@ -22,8 +22,14 @@
 #ifndef PROTOCORE_AES_CMAC_H
 #define PROTOCORE_AES_CMAC_H
 
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
+
+#if PROTOCORE_ENABLE_AES_CMAC
+
 #include <stddef.h>
 #include <stdint.h>
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief AES-128-CMAC output length (one AES block). */
 #define PROTOCORE_AES_CMAC_LEN 16
@@ -37,5 +43,9 @@
  * @param mac      receives the 16-byte tag.
  */
 void protocore_aes_cmac(const uint8_t key[16], const uint8_t *msg, size_t msg_len, uint8_t mac[PROTOCORE_AES_CMAC_LEN]);
+
+PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_AES_CMAC
 
 #endif // PROTOCORE_AES_CMAC_H

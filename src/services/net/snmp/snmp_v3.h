@@ -40,13 +40,14 @@
 
 #include "protocore_config.h"
 
+#if PROTOCORE_ENABLE_SNMP_V3
+
+PROTOCORE_BEGIN_DECLS
+
 #if PROTOCORE_ENABLE_SNMP_TRAP
 #include "services/net/snmp/snmp_notify.h" // SnmpVarbind: the bindings a v3 notification carries
 #endif
 
-PROTOCORE_BEGIN_DECLS
-
-#if PROTOCORE_ENABLE_SNMP_V3
 
 /** @brief msgAuthenticationParameters length: HMAC-SHA-256 truncated to 192 bits (RFC 7860 sec 4.1). */
 #define SNMP_V3_AUTH_PARAM_LEN 24
@@ -146,8 +147,8 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern SnmpV3Ns SnmpV3;
 
-#endif // PROTOCORE_ENABLE_SNMP_V3
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_SNMP_V3
 
 #endif // PROTOCORE_SNMP_V3_H

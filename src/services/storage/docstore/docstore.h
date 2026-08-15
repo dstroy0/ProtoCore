@@ -23,6 +23,8 @@
 
 #if PROTOCORE_ENABLE_DOCSTORE
 
+PROTOCORE_BEGIN_DECLS
+
 #include "services/storage/dbm/dbm.h"
 
 /** @brief A document store bound to a mounted ::protocore_dbm. */
@@ -81,5 +83,8 @@ uint32_t protocore_docstore_find_int(protocore_doc_store *ds, const char *field,
 uint32_t protocore_docstore_find_bool(protocore_doc_store *ds, const char *field, proto_bool value,
                                       protocore_doc_match_cb cb, void *ctx);
 
+PROTOCORE_END_DECLS
+
 #endif // PROTOCORE_ENABLE_DOCSTORE
+
 #endif // PROTOCORE_DOCSTORE_H

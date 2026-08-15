@@ -24,9 +24,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_PROVISIONING
+
+PROTOCORE_BEGIN_DECLS
 
 /**
  * @brief Extract and URL-decode a field from an x-www-form-urlencoded body.
@@ -65,8 +65,8 @@ void protocore_provisioning_begin(const char *ap_ssid);
 /** @brief Erase stored credentials (forces re-provisioning on next boot). */
 void protocore_provisioning_clear(void);
 
-#endif // PROTOCORE_ENABLE_PROVISIONING
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_PROVISIONING
 
 #endif // PROTOCORE_PROVISIONING_H

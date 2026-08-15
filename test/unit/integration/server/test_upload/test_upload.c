@@ -29,12 +29,8 @@ void setUp()
         HttpConn.slot = (uint8_t)i;
         HttpConn.reset(HttpConn.internal);
     }
-#if PROTOCORE_ENABLE_WEBSOCKET
     Ws.init(Ws.internal);
-#endif
-#if PROTOCORE_ENABLE_SSE
     Sse.init(Sse.internal);
-#endif
     mock_mnt_reset();
     Mnt.args.backend = mock_mnt();
     Mnt.mount(Mnt.internal);

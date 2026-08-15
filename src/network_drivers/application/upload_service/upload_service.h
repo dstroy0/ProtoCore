@@ -20,9 +20,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_UPLOAD
+
+PROTOCORE_BEGIN_DECLS
 
 /**
  * @brief Register a streaming-upload endpoint.
@@ -43,8 +43,8 @@ void protocore_upload_begin(const char *path, const char *dest_path);
 /** @brief Bytes written by the most recent upload (for handlers / tests). */
 size_t protocore_upload_last_size();
 
-#endif // PROTOCORE_ENABLE_UPLOAD
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_UPLOAD
 
 #endif // PROTOCORE_UPLOAD_SERVICE_H

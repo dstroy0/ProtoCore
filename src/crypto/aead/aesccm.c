@@ -13,19 +13,19 @@
  * secure pool and is wiped when the borrow is released - no cipher state on the stack or in BSS.
  */
 
-#include "crypto/aead/aesccm.h"
-#include "mmgr/protomem.h"
-#include "mmgr/secure.h"
-
-#if PROTOCORE_ENABLE_SMB
-
-#include "crypto/crypto_opt.h"
-#include "crypto/ct_eq.h" // protocore_ct_eq
+#if PROTOCORE_ENABLE_AESCCM
 
 #if !PROTOCORE_HAS_HW_AES
 #include "crypto/cipher/aes_block.h" // native software AES-128/256 (mbedtls path uses its own on the hot path)
 #endif
+#include "crypto/aead/aesccm.h"
+#include "crypto/crypto_opt.h"
+#include "crypto/ct_eq.h" // protocore_ct_eq
+#include "mmgr/protomem.h"
+#include "mmgr/secure.h"
+
 PROTOCORE_CRYPTO_HOT
+PROTOCORE_BEGIN_DECLS
 
 #if PROTOCORE_HAS_HW_AES
 // ===========================================================================
@@ -99,7 +99,9 @@ proto_bool protocore_aesccm_open_tag(const uint8_t *key, size_t key_len, const u
     return PROTO_TRUE;
 }
 
-#else // native software CCM
+#endif
+
+#if !PROTOCORE_HAS_HW_AES // native software CCM
 // ===========================================================================
 // Software path (NIST SP 800-38C): CBC-MAC over B0 || fmt(AAD) || fmt(PT), CTR encryption from A1, and
 // the tag encrypted with the counter block A0. The whole working set (CcmWork) is one pool borrow.
@@ -313,5 +315,8 @@ proto_bool protocore_aesccm_open_tag(const uint8_t *key, size_t key_len, const u
     return PROTO_TRUE;
 }
 
-#endif // PROTOCORE_HAS_HW_AES
-#endif // PROTOCORE_ENABLE_SMB
+#endif // !PROTOCORE_HAS_HW_AES (SW path)
+
+PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_AESCCM

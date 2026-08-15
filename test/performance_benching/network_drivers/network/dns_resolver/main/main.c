@@ -39,16 +39,24 @@ void dbench_run(void)
         DBENCH_BANNER("dns_resolver");
         volatile uint8_t sink8 = 0;
         volatile bool sinkb = false;
-        DBENCH_OP("protocore_dns_resolver_classify (public)", 200000,
-                  sink8 += (uint8_t)protocore_dns_resolver_classify(ip_public));
-        DBENCH_OP("protocore_dns_resolver_classify (private)", 200000,
-                  sink8 += (uint8_t)protocore_dns_resolver_classify(ip_private));
-        DBENCH_OP("protocore_dns_resolver_verify (accept public)", 200000,
-                  sinkb ^= protocore_dns_resolver_verify(ip_public));
-        DBENCH_OP("protocore_dns_resolver_verify (reject loopback)", 200000,
-                  sinkb ^= protocore_dns_resolver_verify(ip_loopback));
-        DBENCH_OP("protocore_dns_resolver_verify (reject multicast)", 200000,
-                  sinkb ^= protocore_dns_resolver_verify(ip_multicast));
+        Resolver.addr.ip = ip_public;
+        DBENCH_OP("Resolver.classify (public)", 200000,
+                  Resolver.classify(Resolver.internal); sink8 += (uint8_t)Resolver.cls);
+
+        Resolver.addr.ip = ip_private;
+        DBENCH_OP("Resolver.classify (private)", 200000,
+                  Resolver.classify(Resolver.internal); sink8 += (uint8_t)Resolver.cls);
+
+        Resolver.addr.ip = ip_public;
+        DBENCH_OP("Resolver.verify (accept public)", 200000,
+                  Resolver.verify(Resolver.internal); sinkb ^= Resolver.ok);
+
+        Resolver.addr.ip = ip_loopback;
+        DBENCH_OP("Resolver.verify (reject loopback)", 200000,
+                  Resolver.verify(Resolver.internal); sinkb ^= Resolver.ok);
+        Resolver.addr.ip = ip_multicast;
+        DBENCH_OP("Resolver.verify (reject multicast)", 200000,
+                  Resolver.verify(Resolver.internal); sinkb ^= Resolver.ok);
         (void)sink8;
         (void)sinkb;
         DBENCH_DONE();

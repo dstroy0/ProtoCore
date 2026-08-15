@@ -13,6 +13,304 @@
 
 #include <unity.h>
 
+// USM key localization (RFC 3414 sec 2.6), reached through the crypto namespace. The hash borrows
+// the caller's scratch, so the work region is a member like everything else.
+static proto_bool snmp_localize_key(uint8_t *work, const char *password, const uint8_t *engine_id,
+                                    size_t engine_id_len, uint8_t *out)
+{
+    SnmpCrypto.work = work;
+    SnmpCrypto.key.password = password;
+    SnmpCrypto.key.engine_id = engine_id;
+    SnmpCrypto.key.engine_id_len = engine_id_len;
+    SnmpCrypto.key.out = out;
+    SnmpCrypto.localize_key(SnmpCrypto.internal);
+    return SnmpCrypto.ok;
+}
+
+// The SNMPv3 / USM message path, reached through its namespace.
+static proto_bool snmp_v3_init(const uint8_t *engine_id, size_t engine_id_len)
+{
+    SnmpV3.engine.engine_id = engine_id;
+    SnmpV3.engine.engine_id_len = engine_id_len;
+    SnmpV3.init(SnmpV3.internal);
+    return SnmpV3.ok;
+}
+
+static proto_bool snmp_v3_set_user(const char *user, const char *auth_pass, const char *priv_pass)
+{
+    SnmpV3.user.user = user;
+    SnmpV3.user.auth_pass = auth_pass;
+    SnmpV3.user.priv_pass = priv_pass;
+    SnmpV3.set_user(SnmpV3.internal);
+    return SnmpV3.ok;
+}
+
+static void snmp_v3_set_boots(uint32_t boots)
+{
+    SnmpV3.engine.boots = boots;
+    SnmpV3.set_boots(SnmpV3.internal);
+}
+
+static uint32_t snmp_v3_get_boots(void)
+{
+    SnmpV3.get_boots(SnmpV3.internal);
+    return SnmpV3.u32;
+}
+
+static size_t snmp_v3_process(const uint8_t *req, size_t req_len, uint8_t *resp, size_t resp_cap)
+{
+    SnmpV3.msg.req = req;
+    SnmpV3.msg.req_len = req_len;
+    SnmpV3.msg.resp = resp;
+    SnmpV3.msg.resp_cap = resp_cap;
+    SnmpV3.process(SnmpV3.internal);
+    return SnmpV3.n;
+}
+
+static void snmp_v3_notify(const char *dst_ip, uint16_t port, uint32_t request_id, const uint32_t *trap_oid,
+                           size_t trap_oid_len, const SnmpVarbind *vbs, size_t vb_count)
+{
+    SnmpV3.notify.dst_ip = dst_ip;
+    SnmpV3.notify.port = port;
+    SnmpV3.notify.request_id = request_id;
+    SnmpV3.notify.trap_oid = trap_oid;
+    SnmpV3.notify.trap_oid_len = trap_oid_len;
+    SnmpV3.notify.vbs = vbs;
+    SnmpV3.notify.vb_count = vb_count;
+}
+
+static proto_bool snmp_trap_v3(const char *dst_ip, uint16_t port, const uint32_t *trap_oid, size_t trap_oid_len,
+                               const SnmpVarbind *vbs, size_t vb_count)
+{
+    snmp_v3_notify(dst_ip, port, 0u, trap_oid, trap_oid_len, vbs, vb_count);
+    SnmpV3.trap(SnmpV3.internal);
+    return SnmpV3.ok;
+}
+
+static proto_bool snmp_inform_v3(const char *dst_ip, uint16_t port, uint32_t request_id, const uint32_t *trap_oid,
+                                 size_t trap_oid_len, const SnmpVarbind *vbs, size_t vb_count)
+{
+    snmp_v3_notify(dst_ip, port, request_id, trap_oid, trap_oid_len, vbs, vb_count);
+    SnmpV3.inform(SnmpV3.internal);
+    return SnmpV3.ok;
+}
+
+
+// The BER codec, reached through its namespace. The cursor stays the caller's: several encodings
+// are open at once here, so each call names the one it acts on.
+static void ber_enc_init(BerEnc *e, uint8_t *buf, size_t cap)
+{
+    SnmpBer.enc = e;
+    SnmpBer.buf.out = buf;
+    SnmpBer.buf.cap = cap;
+    SnmpBer.enc_init(SnmpBer.internal);
+}
+
+static void ber_dec_init(BerDec *d, const uint8_t *buf, size_t len)
+{
+    SnmpBer.dec = d;
+    SnmpBer.buf.in = buf;
+    SnmpBer.buf.cap = len;
+    SnmpBer.dec_init(SnmpBer.internal);
+}
+
+static size_t ber_seq_begin(BerEnc *e, uint8_t tag)
+{
+    SnmpBer.enc = e;
+    SnmpBer.tlv.tag = tag;
+    SnmpBer.seq_begin(SnmpBer.internal);
+    return SnmpBer.tlv.token;
+}
+
+static void ber_seq_end(BerEnc *e, size_t token)
+{
+    SnmpBer.enc = e;
+    SnmpBer.tlv.token = token;
+    SnmpBer.seq_end(SnmpBer.internal);
+}
+
+static void ber_put_octet_string(BerEnc *e, uint8_t tag, const uint8_t *bytes, size_t len)
+{
+    SnmpBer.enc = e;
+    SnmpBer.tlv.tag = tag;
+    SnmpBer.tlv.bytes = bytes;
+    SnmpBer.tlv.len = len;
+    SnmpBer.put_octet_string(SnmpBer.internal);
+}
+
+static void ber_put_null(BerEnc *e)
+{
+    SnmpBer.enc = e;
+    SnmpBer.put_null(SnmpBer.internal);
+}
+
+static void ber_put_oid(BerEnc *e, const uint32_t *arcs, size_t arc_count)
+{
+    SnmpBer.enc = e;
+    SnmpBer.tlv.arcs = arcs;
+    SnmpBer.tlv.arc_count = arc_count;
+    SnmpBer.put_oid(SnmpBer.internal);
+}
+
+static void ber_put_raw(BerEnc *e, const uint8_t *bytes, size_t len)
+{
+    SnmpBer.enc = e;
+    SnmpBer.tlv.bytes = bytes;
+    SnmpBer.tlv.len = len;
+    SnmpBer.put_raw(SnmpBer.internal);
+}
+
+static void ber_put_uint(BerEnc *e, uint8_t tag, uint32_t uval)
+{
+    SnmpBer.enc = e;
+    SnmpBer.tlv.tag = tag;
+    SnmpBer.tlv.uval = uval;
+    SnmpBer.put_uint(SnmpBer.internal);
+}
+
+static void ber_put_integer(BerEnc *e, long ival)
+{
+    SnmpBer.enc = e;
+    SnmpBer.tlv.ival = ival;
+    SnmpBer.put_integer(SnmpBer.internal);
+}
+
+static proto_bool ber_read_header(BerDec *d, uint8_t *tag, size_t *vlen)
+{
+    SnmpBer.dec = d;
+    SnmpBer.read_header(SnmpBer.internal);
+    if (tag)
+    {
+        *tag = SnmpBer.tag;
+    }
+    if (vlen)
+    {
+        *vlen = SnmpBer.vlen;
+    }
+    return SnmpBer.ok;
+}
+
+static proto_bool ber_read_integer(BerDec *d, long *out)
+{
+    SnmpBer.dec = d;
+    SnmpBer.read_integer(SnmpBer.internal);
+    if (out)
+    {
+        *out = SnmpBer.ival;
+    }
+    return SnmpBer.ok;
+}
+
+static proto_bool ber_read_oid(BerDec *d, uint32_t *arc_out, size_t arc_cap, size_t *count)
+{
+    SnmpBer.dec = d;
+    SnmpBer.read_args.arc_out = arc_out;
+    SnmpBer.read_args.arc_cap = arc_cap;
+    SnmpBer.read_oid(SnmpBer.internal);
+    if (count)
+    {
+        *count = SnmpBer.n;
+    }
+    return SnmpBer.ok;
+}
+
+static proto_bool ber_skip(BerDec *d, size_t len)
+{
+    SnmpBer.dec = d;
+    SnmpBer.read_args.skip = len;
+    SnmpBer.skip(SnmpBer.internal);
+    return SnmpBer.ok;
+}
+
+
+// The SNMP agent, reached through its namespace: set the members a call takes, invoke it, read the
+// outcome off the same handle.
+static void snmp_init(const char *ro)
+{
+    SnmpAgent.community.ro = ro;
+    SnmpAgent.init(SnmpAgent.internal);
+}
+
+static void snmp_set_rw_community(const char *rw)
+{
+    SnmpAgent.community.rw = rw;
+    SnmpAgent.set_rw_community(SnmpAgent.internal);
+}
+
+static void snmp_set_system(const char *descr, const char *contact, const char *name, const char *location,
+                            long services)
+{
+    SnmpAgent.system.descr = descr;
+    SnmpAgent.system.contact = contact;
+    SnmpAgent.system.name = name;
+    SnmpAgent.system.location = location;
+    SnmpAgent.system.services = services;
+    SnmpAgent.set_system(SnmpAgent.internal);
+}
+
+static proto_bool snmp_add_integer(const uint32_t *oid, size_t oid_len, long ival, SnmpSetFn setter)
+{
+    SnmpAgent.object.oid = oid;
+    SnmpAgent.object.oid_len = oid_len;
+    SnmpAgent.object.ival = ival;
+    SnmpAgent.object.setter = setter;
+    SnmpAgent.add_integer(SnmpAgent.internal);
+    return SnmpAgent.ok;
+}
+
+static proto_bool snmp_add_string(const uint32_t *oid, size_t oid_len, const char *text, SnmpSetFn setter)
+{
+    SnmpAgent.object.oid = oid;
+    SnmpAgent.object.oid_len = oid_len;
+    SnmpAgent.object.text = text;
+    SnmpAgent.object.setter = setter;
+    SnmpAgent.add_string(SnmpAgent.internal);
+    return SnmpAgent.ok;
+}
+
+static proto_bool snmp_add_dynamic(const uint32_t *oid, size_t oid_len, uint8_t type, SnmpGetFn getter)
+{
+    SnmpAgent.object.oid = oid;
+    SnmpAgent.object.oid_len = oid_len;
+    SnmpAgent.object.type = type;
+    SnmpAgent.object.getter = getter;
+    SnmpAgent.object.setter = NULL;
+    SnmpAgent.add_dynamic(SnmpAgent.internal);
+    return SnmpAgent.ok;
+}
+
+static proto_bool snmp_listen(uint16_t port)
+{
+    SnmpAgent.port = port;
+    SnmpAgent.listen(SnmpAgent.internal);
+    return SnmpAgent.ok;
+}
+
+static size_t snmp_process(const uint8_t *req, size_t req_len, uint8_t *resp, size_t resp_cap)
+{
+    SnmpAgent.msg.req = req;
+    SnmpAgent.msg.req_len = req_len;
+    SnmpAgent.msg.resp = resp;
+    SnmpAgent.msg.resp_cap = resp_cap;
+    SnmpAgent.process(SnmpAgent.internal);
+    return SnmpAgent.n;
+}
+
+// CFB128-AES-128 over the USM privacy args (RFC 3826 sec 3.1.4).
+static proto_bool snmp_aes_cfb(const uint8_t *key, const uint8_t *iv, const uint8_t *in, uint8_t *out, size_t len,
+                               proto_bool encrypt)
+{
+    SnmpCrypto.priv.key = key;
+    SnmpCrypto.priv.iv = iv;
+    SnmpCrypto.priv.in = in;
+    SnmpCrypto.priv.out = out;
+    SnmpCrypto.priv.len = len;
+    SnmpCrypto.priv.encrypt = encrypt;
+    SnmpCrypto.aes_cfb128(SnmpCrypto.internal);
+    return SnmpCrypto.ok;
+}
+
+
 static uint8_t tw[4096];
 
 static const uint8_t *udp_cap(void)
@@ -31,11 +329,11 @@ static const char *SYSDESCR_VAL = "PC v3 agent";
 
 void setUp()
 {
-    protocore_snmp_agent_init("public");
-    protocore_snmp_agent_set_system(SYSDESCR_VAL, "admin", "esp32", "lab", 72);
-    protocore_snmp_v3_init(NULL, 0);
-    protocore_snmp_v3_set_boots(1);
-    protocore_snmp_v3_set_user("myuser", "authpass12", "privpass12");
+    snmp_init("public");
+    snmp_set_system(SYSDESCR_VAL, "admin", "esp32", "lab", 72);
+    snmp_v3_init(NULL, 0);
+    snmp_v3_set_boots(1);
+    snmp_v3_set_user("myuser", "authpass12", "privpass12");
 }
 void tearDown()
 {
@@ -49,7 +347,7 @@ void test_localize_key_sha256_vector()
                                 0x79, 0x69, 0xaf, 0xe3, 0x90, 0x37, 0x34, 0x07, 0xd6, 0x52, 0x9a,
                                 0x98, 0x08, 0x41, 0x8a, 0xef, 0x8e, 0xb0, 0xbf, 0x45, 0x86};
     uint8_t key[SNMP_USM_KEY_LEN];
-    protocore_snmp_usm_localize_key(tw, "maplesyrup", engine, sizeof(engine), key);
+    snmp_localize_key(tw, "maplesyrup", engine, sizeof(engine), key);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(expect, key, 32);
 }
 
@@ -60,11 +358,11 @@ void test_localize_key_empty_password()
     uint8_t key[SNMP_USM_KEY_LEN];
 
     memset(key, 0xAA, sizeof(key));
-    protocore_snmp_usm_localize_key(tw, "", engine, sizeof(engine), key);
+    snmp_localize_key(tw, "", engine, sizeof(engine), key);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(zero, key, SNMP_USM_KEY_LEN);
 
     memset(key, 0xBB, sizeof(key));
-    protocore_snmp_usm_localize_key(tw, NULL, engine, sizeof(engine), key);
+    snmp_localize_key(tw, NULL, engine, sizeof(engine), key);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(zero, key, SNMP_USM_KEY_LEN);
 }
 
@@ -79,7 +377,7 @@ void test_aes128_fips197_vector()
                                 0xd8, 0xcd, 0xb7, 0x80, 0x70, 0xb4, 0xc5, 0x5a};
     uint8_t zero[16] = {0};
     uint8_t out[16];
-    protocore_snmp_aes128_cfb(key, pt, zero, out, 16, PROTO_TRUE);
+    snmp_aes_cfb(key, pt, zero, out, 16, PROTO_TRUE);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(expect, out, 16);
 }
 
@@ -90,8 +388,8 @@ void test_aes_cfb_roundtrip_partial_block()
     const char *msg = "SNMPv3 scopedPDU spanning more than one AES block plus a tail.";
     size_t n = strlen(msg);
     uint8_t ct[128], pt[128];
-    protocore_snmp_aes128_cfb(key, iv, (const uint8_t *)msg, ct, n, PROTO_TRUE);
-    protocore_snmp_aes128_cfb(key, iv, ct, pt, n, PROTO_FALSE);
+    snmp_aes_cfb(key, iv, (const uint8_t *)msg, ct, n, PROTO_TRUE);
+    snmp_aes_cfb(key, iv, ct, pt, n, PROTO_FALSE);
     TEST_ASSERT_EQUAL_MEMORY(msg, pt, n);
     TEST_ASSERT_TRUE(memcmp(msg, ct, n) != 0);
 }
@@ -128,8 +426,8 @@ static size_t build_get(uint8_t *out, size_t cap, proto_bool auth, proto_bool pr
 
     uint8_t pdu[256];
     BerEnc pe;
-    protocore_ber_enc_init(&pe, pdu, sizeof(pdu));
-    size_t pp = protocore_ber_seq_begin(&pe, (uint8_t)SNMP_TAG_SNMP_PDU_GET);
+    ber_enc_init(&pe, pdu, sizeof(pdu));
+    size_t pp = ber_seq_begin(&pe, (uint8_t)SNMP_TAG_SNMP_PDU_GET);
     SnmpBer.enc = &pe;
     SnmpBer.tlv.ival = req_id;
     SnmpBer.put_integer(SnmpBer.internal);
@@ -139,22 +437,22 @@ static size_t build_get(uint8_t *out, size_t cap, proto_bool auth, proto_bool pr
     SnmpBer.enc = &pe;
     SnmpBer.tlv.ival = 0;
     SnmpBer.put_integer(SnmpBer.internal);
-    size_t vbl = protocore_ber_seq_begin(&pe, (uint8_t)SNMP_TAG_BER_SEQUENCE);
-    size_t vb = protocore_ber_seq_begin(&pe, (uint8_t)SNMP_TAG_BER_SEQUENCE);
-    protocore_ber_put_oid(&pe, oid, oid_len);
-    protocore_ber_put_null(&pe);
-    protocore_ber_seq_end(&pe, vb);
-    protocore_ber_seq_end(&pe, vbl);
-    protocore_ber_seq_end(&pe, pp);
+    size_t vbl = ber_seq_begin(&pe, (uint8_t)SNMP_TAG_BER_SEQUENCE);
+    size_t vb = ber_seq_begin(&pe, (uint8_t)SNMP_TAG_BER_SEQUENCE);
+    ber_put_oid(&pe, oid, oid_len);
+    ber_put_null(&pe);
+    ber_seq_end(&pe, vb);
+    ber_seq_end(&pe, vbl);
+    ber_seq_end(&pe, pp);
 
     uint8_t scoped[320];
     BerEnc se;
-    protocore_ber_enc_init(&se, scoped, sizeof(scoped));
-    size_t ss = protocore_ber_seq_begin(&se, (uint8_t)SNMP_TAG_BER_SEQUENCE);
-    protocore_ber_put_octet_string(&se, (uint8_t)SNMP_TAG_BER_OCTET_STRING, eid, eid_len);
-    protocore_ber_put_octet_string(&se, (uint8_t)SNMP_TAG_BER_OCTET_STRING, NULL, 0);
-    protocore_ber_put_raw(&se, pdu, pe.len);
-    protocore_ber_seq_end(&se, ss);
+    ber_enc_init(&se, scoped, sizeof(scoped));
+    size_t ss = ber_seq_begin(&se, (uint8_t)SNMP_TAG_BER_SEQUENCE);
+    ber_put_octet_string(&se, (uint8_t)SNMP_TAG_BER_OCTET_STRING, eid, eid_len);
+    ber_put_octet_string(&se, (uint8_t)SNMP_TAG_BER_OCTET_STRING, NULL, 0);
+    ber_put_raw(&se, pdu, pe.len);
+    ber_seq_end(&se, ss);
 
     uint8_t salt[8] = {0, 0, 0, 0, 0, 0, 0, 7};
     uint8_t cipher[320];
@@ -166,50 +464,50 @@ static size_t build_get(uint8_t *out, size_t cap, proto_bool auth, proto_bool pr
         put_be32(iv, (uint32_t)boots);
         put_be32(iv + 4, (uint32_t)time);
         memcpy(iv + 8, salt, 8);
-        protocore_snmp_aes128_cfb(privkey, iv, scoped, cipher, se.len, PROTO_TRUE);
+        snmp_aes_cfb(privkey, iv, scoped, cipher, se.len, PROTO_TRUE);
         data = cipher;
     }
 
     uint8_t secp[128];
     BerEnc se2;
-    protocore_ber_enc_init(&se2, secp, sizeof(secp));
-    size_t s2 = protocore_ber_seq_begin(&se2, (uint8_t)SNMP_TAG_BER_SEQUENCE);
-    protocore_ber_put_octet_string(&se2, (uint8_t)SNMP_TAG_BER_OCTET_STRING, eid, eid_len);
+    ber_enc_init(&se2, secp, sizeof(secp));
+    size_t s2 = ber_seq_begin(&se2, (uint8_t)SNMP_TAG_BER_SEQUENCE);
+    ber_put_octet_string(&se2, (uint8_t)SNMP_TAG_BER_OCTET_STRING, eid, eid_len);
     SnmpBer.enc = &se2;
     SnmpBer.tlv.ival = boots;
     SnmpBer.put_integer(SnmpBer.internal);
     SnmpBer.enc = &se2;
     SnmpBer.tlv.ival = time;
     SnmpBer.put_integer(SnmpBer.internal);
-    protocore_ber_put_octet_string(&se2, (uint8_t)SNMP_TAG_BER_OCTET_STRING, (const uint8_t *)user, strlen(user));
+    ber_put_octet_string(&se2, (uint8_t)SNMP_TAG_BER_OCTET_STRING, (const uint8_t *)user, strlen(user));
     size_t auth_off = 0;
     if (auth)
     {
         auth_off = se2.len + 2;
         uint8_t z[SNMP_V3_AUTH_PARAM_LEN] = {0};
-        protocore_ber_put_octet_string(&se2, (uint8_t)SNMP_TAG_BER_OCTET_STRING, z, SNMP_V3_AUTH_PARAM_LEN);
+        ber_put_octet_string(&se2, (uint8_t)SNMP_TAG_BER_OCTET_STRING, z, SNMP_V3_AUTH_PARAM_LEN);
     }
     else
     {
-        protocore_ber_put_octet_string(&se2, (uint8_t)SNMP_TAG_BER_OCTET_STRING, NULL, 0);
+        ber_put_octet_string(&se2, (uint8_t)SNMP_TAG_BER_OCTET_STRING, NULL, 0);
     }
     if (priv)
     {
-        protocore_ber_put_octet_string(&se2, (uint8_t)SNMP_TAG_BER_OCTET_STRING, salt, 8);
+        ber_put_octet_string(&se2, (uint8_t)SNMP_TAG_BER_OCTET_STRING, salt, 8);
     }
     else
     {
-        protocore_ber_put_octet_string(&se2, (uint8_t)SNMP_TAG_BER_OCTET_STRING, NULL, 0);
+        ber_put_octet_string(&se2, (uint8_t)SNMP_TAG_BER_OCTET_STRING, NULL, 0);
     }
-    protocore_ber_seq_end(&se2, s2);
+    ber_seq_end(&se2, s2);
 
     BerEnc e;
-    protocore_ber_enc_init(&e, out, cap);
-    size_t msg = protocore_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
+    ber_enc_init(&e, out, cap);
+    size_t msg = ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
     SnmpBer.enc = &e;
     SnmpBer.tlv.ival = (int)SNMP_V3;
     SnmpBer.put_integer(SnmpBer.internal);
-    size_t hdr = protocore_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
+    size_t hdr = ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
     SnmpBer.enc = &e;
     SnmpBer.tlv.ival = msg_id;
     SnmpBer.put_integer(SnmpBer.internal);
@@ -217,22 +515,22 @@ static size_t build_get(uint8_t *out, size_t cap, proto_bool auth, proto_bool pr
     SnmpBer.tlv.ival = 65507;
     SnmpBer.put_integer(SnmpBer.internal);
     uint8_t fl = (uint8_t)((auth ? 1 : 0) | (priv ? 2 : 0) | (auth ? 0 : 4));
-    protocore_ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, &fl, 1);
+    ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, &fl, 1);
     SnmpBer.enc = &e;
     SnmpBer.tlv.ival = 3;
     SnmpBer.put_integer(SnmpBer.internal);
-    protocore_ber_seq_end(&e, hdr);
-    protocore_ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, secp, se2.len);
+    ber_seq_end(&e, hdr);
+    ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, secp, se2.len);
     size_t sec_value_pos = e.len - se2.len;
     if (priv)
     {
-        protocore_ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, data, data_len);
+        ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, data, data_len);
     }
     else
     {
-        protocore_ber_put_raw(&e, data, data_len);
+        ber_put_raw(&e, data, data_len);
     }
-    protocore_ber_seq_end(&e, msg);
+    ber_seq_end(&e, msg);
 
     if (auth)
     {
@@ -247,77 +545,77 @@ static proto_bool parse_v3(const uint8_t *buf, size_t len, const uint8_t *privke
 {
     memset(v, 0, sizeof(*v));
     BerDec d;
-    protocore_ber_dec_init(&d, buf, len);
+    ber_dec_init(&d, buf, len);
     uint8_t tag;
     size_t l;
-    if (!protocore_ber_read_header(&d, &tag, &l) || tag != (uint8_t)SNMP_TAG_BER_SEQUENCE)
+    if (!ber_read_header(&d, &tag, &l) || tag != (uint8_t)SNMP_TAG_BER_SEQUENCE)
     {
         return PROTO_FALSE;
     }
     long version;
-    if (!protocore_ber_read_integer(&d, &version))
+    if (!ber_read_integer(&d, &version))
     {
         return PROTO_FALSE;
     }
-    if (!protocore_ber_read_header(&d, &tag, &l) || tag != (uint8_t)SNMP_TAG_BER_SEQUENCE)
+    if (!ber_read_header(&d, &tag, &l) || tag != (uint8_t)SNMP_TAG_BER_SEQUENCE)
     {
         return PROTO_FALSE;
     }
     long msgid, maxsize, secmodel;
-    if (!protocore_ber_read_integer(&d, &msgid) || !protocore_ber_read_integer(&d, &maxsize))
+    if (!ber_read_integer(&d, &msgid) || !ber_read_integer(&d, &maxsize))
     {
         return PROTO_FALSE;
     }
     size_t fl;
-    if (!protocore_ber_read_header(&d, &tag, &fl) || tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING)
+    if (!ber_read_header(&d, &tag, &fl) || tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING)
     {
         return PROTO_FALSE;
     }
     v->flags = d.buf[d.pos];
     d.pos += fl;
-    if (!protocore_ber_read_integer(&d, &secmodel))
+    if (!ber_read_integer(&d, &secmodel))
     {
         return PROTO_FALSE;
     }
 
     size_t seclen;
-    if (!protocore_ber_read_header(&d, &tag, &seclen) || tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING)
+    if (!ber_read_header(&d, &tag, &seclen) || tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING)
     {
         return PROTO_FALSE;
     }
     BerDec sd;
-    protocore_ber_dec_init(&sd, d.buf + d.pos, seclen);
+    ber_dec_init(&sd, d.buf + d.pos, seclen);
     d.pos += seclen;
-    if (!protocore_ber_read_header(&sd, &tag, &l) || tag != (uint8_t)SNMP_TAG_BER_SEQUENCE)
+    if (!ber_read_header(&sd, &tag, &l) || tag != (uint8_t)SNMP_TAG_BER_SEQUENCE)
     {
         return PROTO_FALSE;
     }
     size_t eidl;
-    if (!protocore_ber_read_header(&sd, &tag, &eidl) || tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING)
+    if (!ber_read_header(&sd, &tag, &eidl) || tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING)
     {
         return PROTO_FALSE;
     }
     memcpy(v->engine_id, sd.buf + sd.pos, eidl < sizeof(v->engine_id) ? eidl : sizeof(v->engine_id));
     v->engine_id_len = eidl;
     sd.pos += eidl;
-    if (!protocore_ber_read_integer(&sd, &v->boots) || !protocore_ber_read_integer(&sd, &v->time))
+    if (!ber_read_integer(&sd, &v->boots) || !ber_read_integer(&sd, &v->time))
     {
         return PROTO_FALSE;
     }
     size_t ul;
-    if (!protocore_ber_read_header(&sd, &tag, &ul) || tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING)
+    if (!ber_read_header(&sd, &tag, &ul) || tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING)
     {
         return PROTO_FALSE;
     }
     sd.pos += ul;
     size_t al;
-    if (!protocore_ber_read_header(&sd, &tag, &al) || tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING)
+    if (!ber_read_header(&sd, &tag, &al) || tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING)
     {
         return PROTO_FALSE;
     }
     sd.pos += al;
     size_t pl;
-    if (!protocore_ber_read_header(&sd, &tag, &pl) || tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING)
+    if (!ber_read_header(&sd, &tag, &pl) || tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING)
     {
         return PROTO_FALSE;
     }
@@ -328,7 +626,7 @@ static proto_bool parse_v3(const uint8_t *buf, size_t len, const uint8_t *privke
     if (v->flags & 0x02)
     {
         size_t ctl;
-        if (!protocore_ber_read_header(&d, &tag, &ctl) || tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING)
+        if (!ber_read_header(&d, &tag, &ctl) || tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING)
         {
             return PROTO_FALSE;
         }
@@ -336,7 +634,7 @@ static proto_bool parse_v3(const uint8_t *buf, size_t len, const uint8_t *privke
         put_be32(iv, (uint32_t)v->boots);
         put_be32(iv + 4, (uint32_t)v->time);
         memcpy(iv + 8, privparm, 8);
-        protocore_snmp_aes128_cfb(privkey, iv, d.buf + d.pos, g_dec, ctl, PROTO_FALSE);
+        snmp_aes_cfb(privkey, iv, d.buf + d.pos, g_dec, ctl, PROTO_FALSE);
         scoped = g_dec;
         scoped_len = ctl;
     }
@@ -347,50 +645,50 @@ static proto_bool parse_v3(const uint8_t *buf, size_t len, const uint8_t *privke
     }
 
     BerDec cd;
-    protocore_ber_dec_init(&cd, scoped, scoped_len);
-    if (!protocore_ber_read_header(&cd, &tag, &l) || tag != (uint8_t)SNMP_TAG_BER_SEQUENCE)
+    ber_dec_init(&cd, scoped, scoped_len);
+    if (!ber_read_header(&cd, &tag, &l) || tag != (uint8_t)SNMP_TAG_BER_SEQUENCE)
     {
         return PROTO_FALSE;
     }
-    if (!protocore_ber_read_header(&cd, &tag, &l) || tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING)
-    {
-        return PROTO_FALSE;
-    }
-    cd.pos += l;
-    if (!protocore_ber_read_header(&cd, &tag, &l) || tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING)
+    if (!ber_read_header(&cd, &tag, &l) || tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING)
     {
         return PROTO_FALSE;
     }
     cd.pos += l;
-    if (!protocore_ber_read_header(&cd, &v->pdu_tag, &l))
+    if (!ber_read_header(&cd, &tag, &l) || tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING)
     {
         return PROTO_FALSE;
     }
-    if (!protocore_ber_read_integer(&cd, &v->request_id) || !protocore_ber_read_integer(&cd, &v->err_status))
+    cd.pos += l;
+    if (!ber_read_header(&cd, &v->pdu_tag, &l))
+    {
+        return PROTO_FALSE;
+    }
+    if (!ber_read_integer(&cd, &v->request_id) || !ber_read_integer(&cd, &v->err_status))
     {
         return PROTO_FALSE;
     }
     long erridx;
-    if (!protocore_ber_read_integer(&cd, &erridx))
+    if (!ber_read_integer(&cd, &erridx))
     {
         return PROTO_FALSE;
     }
-    if (!protocore_ber_read_header(&cd, &tag, &l) || tag != (uint8_t)SNMP_TAG_BER_SEQUENCE)
+    if (!ber_read_header(&cd, &tag, &l) || tag != (uint8_t)SNMP_TAG_BER_SEQUENCE)
     {
         return PROTO_FALSE;
     }
     if (cd.pos < cd.len)
     {
-        if (!protocore_ber_read_header(&cd, &tag, &l) || tag != (uint8_t)SNMP_TAG_BER_SEQUENCE)
+        if (!ber_read_header(&cd, &tag, &l) || tag != (uint8_t)SNMP_TAG_BER_SEQUENCE)
         {
             return PROTO_FALSE;
         }
-        if (!protocore_ber_read_oid(&cd, v->oid, SNMP_MAX_OID_LEN, &v->oid_len))
+        if (!ber_read_oid(&cd, v->oid, SNMP_MAX_OID_LEN, &v->oid_len))
         {
             return PROTO_FALSE;
         }
         size_t vl;
-        if (!protocore_ber_read_header(&cd, &v->val_tag, &vl))
+        if (!ber_read_header(&cd, &v->val_tag, &vl))
         {
             return PROTO_FALSE;
         }
@@ -411,7 +709,7 @@ static void discover(V3View *v)
     uint32_t empty_oid[] = {1, 3, 6, 1, 2, 1, 1, 1, 0};
     size_t rl =
         build_get(req, sizeof(req), PROTO_FALSE, PROTO_FALSE, NULL, 0, 0, 0, "", NULL, NULL, 100, 1, empty_oid, 9);
-    size_t n = protocore_snmp_agent_process(req, rl, resp, sizeof(resp));
+    size_t n = snmp_process(req, rl, resp, sizeof(resp));
     TEST_ASSERT_TRUE(n > 0);
     TEST_ASSERT_TRUE(parse_v3(resp, n, NULL, v));
 }
@@ -433,12 +731,12 @@ void test_authnopriv_get()
     V3View disc;
     discover(&disc);
     uint8_t authkey[SNMP_USM_KEY_LEN];
-    protocore_snmp_usm_localize_key(tw, "authpass12", disc.engine_id, disc.engine_id_len, authkey);
+    snmp_localize_key(tw, "authpass12", disc.engine_id, disc.engine_id_len, authkey);
 
     uint8_t req[300], resp[512];
     size_t rl = build_get(req, sizeof(req), PROTO_TRUE, PROTO_FALSE, disc.engine_id, disc.engine_id_len, disc.boots,
                           disc.time, "myuser", authkey, NULL, 200, 42, OID_SYSDESCR, 9);
-    size_t n = protocore_snmp_agent_process(req, rl, resp, sizeof(resp));
+    size_t n = snmp_process(req, rl, resp, sizeof(resp));
     TEST_ASSERT_TRUE(n > 0);
 
     V3View v;
@@ -456,13 +754,13 @@ void test_authpriv_get()
     V3View disc;
     discover(&disc);
     uint8_t authkey[SNMP_USM_KEY_LEN], privkey[SNMP_USM_KEY_LEN];
-    protocore_snmp_usm_localize_key(tw, "authpass12", disc.engine_id, disc.engine_id_len, authkey);
-    protocore_snmp_usm_localize_key(tw, "privpass12", disc.engine_id, disc.engine_id_len, privkey);
+    snmp_localize_key(tw, "authpass12", disc.engine_id, disc.engine_id_len, authkey);
+    snmp_localize_key(tw, "privpass12", disc.engine_id, disc.engine_id_len, privkey);
 
     uint8_t req[300], resp[512];
     size_t rl = build_get(req, sizeof(req), PROTO_TRUE, PROTO_TRUE, disc.engine_id, disc.engine_id_len, disc.boots,
                           disc.time, "myuser", authkey, privkey, 201, 77, OID_SYSDESCR, 9);
-    size_t n = protocore_snmp_agent_process(req, rl, resp, sizeof(resp));
+    size_t n = snmp_process(req, rl, resp, sizeof(resp));
     TEST_ASSERT_TRUE(n > 0);
 
     V3View v;
@@ -478,12 +776,12 @@ void test_wrong_auth_password_reports_wrong_digest()
     V3View disc;
     discover(&disc);
     uint8_t badkey[SNMP_USM_KEY_LEN];
-    protocore_snmp_usm_localize_key(tw, "wrongpass99", disc.engine_id, disc.engine_id_len, badkey);
+    snmp_localize_key(tw, "wrongpass99", disc.engine_id, disc.engine_id_len, badkey);
 
     uint8_t req[300], resp[512];
     size_t rl = build_get(req, sizeof(req), PROTO_TRUE, PROTO_FALSE, disc.engine_id, disc.engine_id_len, disc.boots,
                           disc.time, "myuser", badkey, NULL, 202, 5, OID_SYSDESCR, 9);
-    size_t n = protocore_snmp_agent_process(req, rl, resp, sizeof(resp));
+    size_t n = snmp_process(req, rl, resp, sizeof(resp));
     TEST_ASSERT_TRUE(n > 0);
 
     V3View v;
@@ -498,12 +796,12 @@ void test_unknown_user_reports()
     V3View disc;
     discover(&disc);
     uint8_t authkey[SNMP_USM_KEY_LEN];
-    protocore_snmp_usm_localize_key(tw, "authpass12", disc.engine_id, disc.engine_id_len, authkey);
+    snmp_localize_key(tw, "authpass12", disc.engine_id, disc.engine_id_len, authkey);
 
     uint8_t req[300], resp[512];
     size_t rl = build_get(req, sizeof(req), PROTO_TRUE, PROTO_FALSE, disc.engine_id, disc.engine_id_len, disc.boots,
                           disc.time, "nobody", authkey, NULL, 203, 9, OID_SYSDESCR, 9);
-    size_t n = protocore_snmp_agent_process(req, rl, resp, sizeof(resp));
+    size_t n = snmp_process(req, rl, resp, sizeof(resp));
     TEST_ASSERT_TRUE(n > 0);
 
     V3View v;
@@ -517,12 +815,12 @@ void test_not_in_time_window_reports()
     V3View disc;
     discover(&disc);
     uint8_t authkey[SNMP_USM_KEY_LEN];
-    protocore_snmp_usm_localize_key(tw, "authpass12", disc.engine_id, disc.engine_id_len, authkey);
+    snmp_localize_key(tw, "authpass12", disc.engine_id, disc.engine_id_len, authkey);
 
     uint8_t req[300], resp[512];
     size_t rl = build_get(req, sizeof(req), PROTO_TRUE, PROTO_FALSE, disc.engine_id, disc.engine_id_len, disc.boots,
                           disc.time + 100000, "myuser", authkey, NULL, 204, 11, OID_SYSDESCR, 9);
-    size_t n = protocore_snmp_agent_process(req, rl, resp, sizeof(resp));
+    size_t n = snmp_process(req, rl, resp, sizeof(resp));
     TEST_ASSERT_TRUE(n > 0);
 
     V3View v;
@@ -572,11 +870,11 @@ static proto_bool find_inform_with_reqid(const uint8_t *d, size_t n, uint32_t re
 
 void test_inform_v3_builds_informrequest()
 {
-    protocore_snmp_v3_set_user("myuser", "authpass12", "");
+    snmp_v3_set_user("myuser", "authpass12", "");
     protocore_net_host_udp_reset();
 
     const uint32_t reqid = 0x4321;
-    proto_bool ok = protocore_snmp_inform_v3("127.0.0.1", 162, reqid, OID_SYSDESCR, 9, NULL, 0);
+    proto_bool ok = snmp_inform_v3("127.0.0.1", 162, reqid, OID_SYSDESCR, 9, NULL, 0);
     TEST_ASSERT_TRUE(ok);
 
     const uint8_t *d = udp_cap();
@@ -603,16 +901,16 @@ void test_v3_message_structure_rejections()
     size_t full = build_get(req, sizeof(req), PROTO_FALSE, PROTO_FALSE, v.engine_id, v.engine_id_len, v.boots, v.time,
                             "myuser", NULL, NULL, 300, 7, OID_SYSDESCR, 9);
     TEST_ASSERT_TRUE(full > 0);
-    TEST_ASSERT_EQUAL_UINT(0, protocore_snmp_v3_process(req, full, resp, sizeof(resp)));
+    TEST_ASSERT_EQUAL_UINT(0, snmp_v3_process(req, full, resp, sizeof(resp)));
     for (size_t L = 0; L < full; L++)
     {
-        TEST_ASSERT_EQUAL_UINT(0, protocore_snmp_v3_process(req, L, resp, sizeof(resp)));
+        TEST_ASSERT_EQUAL_UINT(0, snmp_v3_process(req, L, resp, sizeof(resp)));
     }
 
     uint8_t pk[SNMP_USM_KEY_LEN] = {0};
     size_t pl = build_get(req, sizeof(req), PROTO_FALSE, PROTO_TRUE, v.engine_id, v.engine_id_len, v.boots, v.time,
                           "myuser", NULL, pk, 300, 8, OID_SYSDESCR, 9);
-    TEST_ASSERT_EQUAL_UINT(0, protocore_snmp_v3_process(req, pl, resp, sizeof(resp)));
+    TEST_ASSERT_EQUAL_UINT(0, snmp_v3_process(req, pl, resp, sizeof(resp)));
 }
 
 void test_v3_init_and_boots_accessors()
@@ -620,14 +918,14 @@ void test_v3_init_and_boots_accessors()
     V3View v;
     discover(&v);
     uint8_t custom[8] = {0x80, 0, 0, 0, 1, 2, 3, 4};
-    protocore_snmp_v3_init(custom, sizeof(custom));
-    protocore_snmp_v3_init(v.engine_id, v.engine_id_len);
-    protocore_snmp_v3_set_user("myuser", "authpass12", "privpass12");
+    snmp_v3_init(custom, sizeof(custom));
+    snmp_v3_init(v.engine_id, v.engine_id_len);
+    snmp_v3_set_user("myuser", "authpass12", "privpass12");
 
-    uint32_t saved = protocore_snmp_v3_get_boots();
-    protocore_snmp_v3_set_boots(0xABCD);
-    TEST_ASSERT_EQUAL_UINT32(0xABCD, protocore_snmp_v3_get_boots());
-    protocore_snmp_v3_set_boots(saved);
+    uint32_t saved = snmp_v3_get_boots();
+    snmp_v3_set_boots(0xABCD);
+    TEST_ASSERT_EQUAL_UINT32(0xABCD, snmp_v3_get_boots());
+    snmp_v3_set_boots(saved);
 }
 
 void test_v3_discovery_variants()
@@ -635,18 +933,18 @@ void test_v3_discovery_variants()
     V3View v;
     discover(&v);
     uint8_t authkey[SNMP_USM_KEY_LEN];
-    protocore_snmp_usm_localize_key(tw, "authpass12", v.engine_id, v.engine_id_len, authkey);
+    snmp_localize_key(tw, "authpass12", v.engine_id, v.engine_id_len, authkey);
     uint8_t wrong_eid[8] = {0xDE, 0xAD, 0xBE, 0xEF, 0x00, 0x11, 0x22, 0x33};
     uint8_t privkey[SNMP_USM_KEY_LEN] = {0};
 
     uint8_t req[300], resp[512];
     size_t rl = build_get(req, sizeof(req), PROTO_TRUE, PROTO_TRUE, wrong_eid, sizeof(wrong_eid), v.boots, v.time,
                           "myuser", authkey, privkey, 300, 9, OID_SYSDESCR, 9);
-    TEST_ASSERT_TRUE(protocore_snmp_v3_process(req, rl, resp, sizeof(resp)) > 0);
+    TEST_ASSERT_TRUE(snmp_v3_process(req, rl, resp, sizeof(resp)) > 0);
 
     rl = build_get(req, sizeof(req), PROTO_FALSE, PROTO_FALSE, wrong_eid, sizeof(wrong_eid), 0, 0, "", NULL, NULL, 300,
                    10, OID_SYSDESCR, 9);
-    TEST_ASSERT_EQUAL_UINT(0, protocore_snmp_v3_process(req, rl, resp, 20));
+    TEST_ASSERT_EQUAL_UINT(0, snmp_v3_process(req, rl, resp, 20));
 }
 
 void test_v3_priv_not_configured()
@@ -654,29 +952,29 @@ void test_v3_priv_not_configured()
     V3View v;
     discover(&v);
     uint8_t authkey[SNMP_USM_KEY_LEN];
-    protocore_snmp_usm_localize_key(tw, "authpass12", v.engine_id, v.engine_id_len, authkey);
-    protocore_snmp_v3_set_user("myuser", "authpass12", "");
+    snmp_localize_key(tw, "authpass12", v.engine_id, v.engine_id_len, authkey);
+    snmp_v3_set_user("myuser", "authpass12", "");
     uint8_t privkey[SNMP_USM_KEY_LEN] = {0};
 
     uint8_t req[300], resp[512];
     size_t rl = build_get(req, sizeof(req), PROTO_TRUE, PROTO_TRUE, v.engine_id, v.engine_id_len, v.boots, v.time,
                           "myuser", authkey, privkey, 300, 11, OID_SYSDESCR, 9);
-    size_t n = protocore_snmp_v3_process(req, rl, resp, sizeof(resp));
+    size_t n = snmp_v3_process(req, rl, resp, sizeof(resp));
     TEST_ASSERT_TRUE(n > 0);
     V3View r;
     TEST_ASSERT_TRUE(parse_v3(resp, n, NULL, &r));
     TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_TAG_SNMP_PDU_REPORT, r.pdu_tag);
-    protocore_snmp_v3_set_user("myuser", "authpass12", "privpass12");
+    snmp_v3_set_user("myuser", "authpass12", "privpass12");
 }
 
 void test_v3_notify_paths()
 {
     uint32_t trap_oid[] = {1, 3, 6, 1, 4, 1, 49374, 0, 1};
-    protocore_snmp_v3_set_user("myuser", "", "");
-    TEST_ASSERT_FALSE(protocore_snmp_trap_v3("192.168.1.1", 162, trap_oid, 9, NULL, 0));
+    snmp_v3_set_user("myuser", "", "");
+    TEST_ASSERT_FALSE(snmp_trap_v3("192.168.1.1", 162, trap_oid, 9, NULL, 0));
 
-    protocore_snmp_v3_set_user("myuser", "authpass12", "privpass12");
-    TEST_ASSERT_TRUE(protocore_snmp_trap_v3("192.168.1.1", 162, trap_oid, 9, NULL, 0));
+    snmp_v3_set_user("myuser", "authpass12", "privpass12");
+    TEST_ASSERT_TRUE(snmp_trap_v3("192.168.1.1", 162, trap_oid, 9, NULL, 0));
     TEST_ASSERT_TRUE(udp_cap_len() > 0);
 }
 
@@ -689,44 +987,44 @@ static size_t build_v3_raw_scoped(uint8_t *out, size_t cap, proto_bool auth, con
     uint8_t salt[SNMP_V3_PRIV_PARAM_LEN] = {0, 0, 0, 0, 0, 0, 0, 7};
     uint8_t secp[128];
     BerEnc se2;
-    protocore_ber_enc_init(&se2, secp, sizeof(secp));
-    size_t s2 = protocore_ber_seq_begin(&se2, (uint8_t)SNMP_TAG_BER_SEQUENCE);
-    protocore_ber_put_octet_string(&se2, (uint8_t)SNMP_TAG_BER_OCTET_STRING, eid, eid_len);
+    ber_enc_init(&se2, secp, sizeof(secp));
+    size_t s2 = ber_seq_begin(&se2, (uint8_t)SNMP_TAG_BER_SEQUENCE);
+    ber_put_octet_string(&se2, (uint8_t)SNMP_TAG_BER_OCTET_STRING, eid, eid_len);
     SnmpBer.enc = &se2;
     SnmpBer.tlv.ival = boots;
     SnmpBer.put_integer(SnmpBer.internal);
     SnmpBer.enc = &se2;
     SnmpBer.tlv.ival = time;
     SnmpBer.put_integer(SnmpBer.internal);
-    protocore_ber_put_octet_string(&se2, (uint8_t)SNMP_TAG_BER_OCTET_STRING, (const uint8_t *)user, strlen(user));
+    ber_put_octet_string(&se2, (uint8_t)SNMP_TAG_BER_OCTET_STRING, (const uint8_t *)user, strlen(user));
     size_t auth_off = 0;
     if (auth)
     {
         auth_off = se2.len + 2;
         uint8_t z[SNMP_V3_AUTH_PARAM_LEN] = {0};
-        protocore_ber_put_octet_string(&se2, (uint8_t)SNMP_TAG_BER_OCTET_STRING, z, auth_plen);
+        ber_put_octet_string(&se2, (uint8_t)SNMP_TAG_BER_OCTET_STRING, z, auth_plen);
     }
     else
     {
-        protocore_ber_put_octet_string(&se2, (uint8_t)SNMP_TAG_BER_OCTET_STRING, NULL, 0);
+        ber_put_octet_string(&se2, (uint8_t)SNMP_TAG_BER_OCTET_STRING, NULL, 0);
     }
     if (priv)
     {
-        protocore_ber_put_octet_string(&se2, (uint8_t)SNMP_TAG_BER_OCTET_STRING, salt, priv_plen);
+        ber_put_octet_string(&se2, (uint8_t)SNMP_TAG_BER_OCTET_STRING, salt, priv_plen);
     }
     else
     {
-        protocore_ber_put_octet_string(&se2, (uint8_t)SNMP_TAG_BER_OCTET_STRING, NULL, 0);
+        ber_put_octet_string(&se2, (uint8_t)SNMP_TAG_BER_OCTET_STRING, NULL, 0);
     }
-    protocore_ber_seq_end(&se2, s2);
+    ber_seq_end(&se2, s2);
 
     BerEnc e;
-    protocore_ber_enc_init(&e, out, cap);
-    size_t msg = protocore_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
+    ber_enc_init(&e, out, cap);
+    size_t msg = ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
     SnmpBer.enc = &e;
     SnmpBer.tlv.ival = (int)SNMP_V3;
     SnmpBer.put_integer(SnmpBer.internal);
-    size_t hdr = protocore_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
+    size_t hdr = ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
     SnmpBer.enc = &e;
     SnmpBer.tlv.ival = msg_id;
     SnmpBer.put_integer(SnmpBer.internal);
@@ -734,15 +1032,15 @@ static size_t build_v3_raw_scoped(uint8_t *out, size_t cap, proto_bool auth, con
     SnmpBer.tlv.ival = 65507;
     SnmpBer.put_integer(SnmpBer.internal);
     uint8_t fl = (uint8_t)((auth ? 0x01 : 0) | (priv ? 0x02 : 0) | (auth ? 0 : 0x04));
-    protocore_ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, &fl, 1);
+    ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, &fl, 1);
     SnmpBer.enc = &e;
     SnmpBer.tlv.ival = 3;
     SnmpBer.put_integer(SnmpBer.internal);
-    protocore_ber_seq_end(&e, hdr);
-    protocore_ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, secp, se2.len);
+    ber_seq_end(&e, hdr);
+    ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, secp, se2.len);
     size_t sec_value_pos = e.len - se2.len;
-    protocore_ber_put_raw(&e, scoped, scoped_len);
-    protocore_ber_seq_end(&e, msg);
+    ber_put_raw(&e, scoped, scoped_len);
+    ber_seq_end(&e, msg);
     if (!e.ok)
     {
         return 0;
@@ -766,41 +1064,41 @@ void test_v3_field_tag_corruption(void)
     TEST_ASSERT_TRUE(full > 0);
 
     BerDec d;
-    protocore_ber_dec_init(&d, req, full);
+    ber_dec_init(&d, req, full);
     uint8_t tag;
     size_t l;
     long tmp;
-    protocore_ber_read_header(&d, &tag, &l);
+    ber_read_header(&d, &tag, &l);
     size_t ver_tag = d.pos;
-    protocore_ber_read_integer(&d, &tmp);
+    ber_read_integer(&d, &tmp);
     size_t gdata_tag = d.pos;
-    protocore_ber_read_header(&d, &tag, &l);
+    ber_read_header(&d, &tag, &l);
     size_t msgid_tag = d.pos;
-    protocore_ber_read_integer(&d, &tmp);
-    protocore_ber_read_integer(&d, &tmp);
+    ber_read_integer(&d, &tmp);
+    ber_read_integer(&d, &tmp);
     size_t flags_tag = d.pos;
-    protocore_ber_read_header(&d, &tag, &l);
+    ber_read_header(&d, &tag, &l);
     d.pos += l;
     size_t secmodel_tag = d.pos;
-    protocore_ber_read_integer(&d, &tmp);
+    ber_read_integer(&d, &tmp);
     size_t secp_tag = d.pos;
-    protocore_ber_read_header(&d, &tag, &l);
+    ber_read_header(&d, &tag, &l);
     size_t base = d.pos;
     BerDec sd;
-    protocore_ber_dec_init(&sd, req + base, l);
+    ber_dec_init(&sd, req + base, l);
     size_t sseq_tag = base + sd.pos;
-    protocore_ber_read_header(&sd, &tag, &l);
+    ber_read_header(&sd, &tag, &l);
     size_t eid_tag = base + sd.pos;
-    protocore_ber_read_header(&sd, &tag, &l);
+    ber_read_header(&sd, &tag, &l);
     sd.pos += l;
     size_t boots_tag = base + sd.pos;
-    protocore_ber_read_integer(&sd, &tmp);
-    protocore_ber_read_integer(&sd, &tmp);
+    ber_read_integer(&sd, &tmp);
+    ber_read_integer(&sd, &tmp);
     size_t uname_tag = base + sd.pos;
-    protocore_ber_read_header(&sd, &tag, &l);
+    ber_read_header(&sd, &tag, &l);
     sd.pos += l;
     size_t aparm_tag = base + sd.pos;
-    protocore_ber_read_header(&sd, &tag, &l);
+    ber_read_header(&sd, &tag, &l);
     sd.pos += l;
     size_t pparm_tag = base + sd.pos;
 
@@ -818,7 +1116,7 @@ void test_v3_field_tag_corruption(void)
         uint8_t bad[300];
         memcpy(bad, req, full);
         bad[muts[i].off] = muts[i].val;
-        TEST_ASSERT_EQUAL_UINT(0, protocore_snmp_v3_process(bad, full, resp, sizeof(resp)));
+        TEST_ASSERT_EQUAL_UINT(0, snmp_v3_process(bad, full, resp, sizeof(resp)));
     }
 }
 
@@ -827,7 +1125,7 @@ void test_v3_scoped_parse_rejections(void)
     V3View v;
     discover(&v);
     uint8_t authkey[SNMP_USM_KEY_LEN];
-    protocore_snmp_usm_localize_key(tw, "authpass12", v.engine_id, v.engine_id_len, authkey);
+    snmp_localize_key(tw, "authpass12", v.engine_id, v.engine_id_len, authkey);
     uint8_t req[320], resp[512];
 
     const uint8_t not_seq[] = {0x04, 0x01, 0x00};
@@ -843,7 +1141,7 @@ void test_v3_scoped_parse_rejections(void)
                                         "myuser", authkey, 400 + (long)i, scopeds[i], lens[i], PROTO_FALSE,
                                         SNMP_V3_AUTH_PARAM_LEN, SNMP_V3_PRIV_PARAM_LEN);
         TEST_ASSERT_TRUE(rl > 0);
-        TEST_ASSERT_EQUAL_UINT(0, protocore_snmp_v3_process(req, rl, resp, sizeof(resp)));
+        TEST_ASSERT_EQUAL_UINT(0, snmp_v3_process(req, rl, resp, sizeof(resp)));
     }
 }
 
@@ -865,7 +1163,7 @@ void test_v3_discovery_malformed_scoped(void)
                                         SNMP_V3_AUTH_PARAM_LEN, SNMP_V3_PRIV_PARAM_LEN);
         TEST_ASSERT_TRUE(rl > 0);
 
-        TEST_ASSERT_TRUE(protocore_snmp_v3_process(req, rl, resp, sizeof(resp)) > 0);
+        TEST_ASSERT_TRUE(snmp_v3_process(req, rl, resp, sizeof(resp)) > 0);
     }
 }
 
@@ -874,7 +1172,7 @@ void test_v3_auth_edge_rejections(void)
     V3View v;
     discover(&v);
     uint8_t authkey[SNMP_USM_KEY_LEN];
-    protocore_snmp_usm_localize_key(tw, "authpass12", v.engine_id, v.engine_id_len, authkey);
+    snmp_localize_key(tw, "authpass12", v.engine_id, v.engine_id_len, authkey);
     uint8_t req[320], resp[512];
 
     const uint8_t any_scoped[] = {0x30, 0x02, 0x04, 0x00};
@@ -882,7 +1180,7 @@ void test_v3_auth_edge_rejections(void)
         build_v3_raw_scoped(req, sizeof(req), PROTO_TRUE, v.engine_id, v.engine_id_len, v.boots, v.time, "myuser",
                             authkey, 420, any_scoped, sizeof(any_scoped), PROTO_FALSE, 16, SNMP_V3_PRIV_PARAM_LEN);
     TEST_ASSERT_TRUE(rl > 0);
-    size_t n = protocore_snmp_v3_process(req, rl, resp, sizeof(resp));
+    size_t n = snmp_v3_process(req, rl, resp, sizeof(resp));
     TEST_ASSERT_TRUE(n > 0);
     V3View r;
     TEST_ASSERT_TRUE(parse_v3(resp, n, NULL, &r));
@@ -894,12 +1192,12 @@ void test_v3_auth_edge_rejections(void)
                              authkey, 421, not_octet, sizeof(not_octet), PROTO_TRUE, SNMP_V3_AUTH_PARAM_LEN,
                              SNMP_V3_PRIV_PARAM_LEN);
     TEST_ASSERT_TRUE(rl > 0);
-    TEST_ASSERT_EQUAL_UINT(0, protocore_snmp_v3_process(req, rl, resp, sizeof(resp)));
+    TEST_ASSERT_EQUAL_UINT(0, snmp_v3_process(req, rl, resp, sizeof(resp)));
 }
 
 void test_v3_notify_overflow_guards()
 {
-    protocore_snmp_v3_set_user("myuser", "authpass12", "privpass12");
+    snmp_v3_set_user("myuser", "authpass12", "privpass12");
     uint32_t trap_oid[] = {1, 3, 6, 1, 4, 1, 49374, 0, 1};
     uint32_t vb_oid[] = {1, 3, 6, 1, 4, 1, 49374, 5, 0};
     static uint8_t big[1600];
@@ -915,13 +1213,13 @@ void test_v3_notify_overflow_guards()
     vb.oid_val_len = 0;
 
     vb.blen = 32;
-    TEST_ASSERT_TRUE(protocore_snmp_trap_v3("192.168.1.1", 162, trap_oid, 9, &vb, 1));
+    TEST_ASSERT_TRUE(snmp_trap_v3("192.168.1.1", 162, trap_oid, 9, &vb, 1));
     vb.blen = 1550;
-    TEST_ASSERT_FALSE(protocore_snmp_trap_v3("192.168.1.1", 162, trap_oid, 9, &vb, 1));
+    TEST_ASSERT_FALSE(snmp_trap_v3("192.168.1.1", 162, trap_oid, 9, &vb, 1));
     for (size_t blen = 1360; blen <= 1480; blen += 2)
     {
         vb.blen = blen;
-        (void)protocore_snmp_trap_v3("192.168.1.1", 162, trap_oid, 9, &vb, 1);
+        (void)snmp_trap_v3("192.168.1.1", 162, trap_oid, 9, &vb, 1);
     }
 }
 
@@ -939,12 +1237,12 @@ void test_v3_response_scopedpdu_overflow()
 {
     memset(g_big, 0x42, sizeof(g_big));
     static const uint32_t big_oid[] = {1, 3, 6, 1, 4, 1, 49374, 7, 0};
-    TEST_ASSERT_TRUE(protocore_snmp_agent_add_dynamic(big_oid, 9, (uint8_t)SNMP_TAG_BER_OCTET_STRING, big_getter));
+    TEST_ASSERT_TRUE(snmp_add_dynamic(big_oid, 9, (uint8_t)SNMP_TAG_BER_OCTET_STRING, big_getter));
 
     V3View disc;
     discover(&disc);
     uint8_t authkey[SNMP_USM_KEY_LEN];
-    protocore_snmp_usm_localize_key(tw, "authpass12", disc.engine_id, disc.engine_id_len, authkey);
+    snmp_localize_key(tw, "authpass12", disc.engine_id, disc.engine_id_len, authkey);
 
     uint8_t req[300], resp[2048];
     proto_bool saw_overflow = PROTO_FALSE, saw_ok = PROTO_FALSE;
@@ -954,7 +1252,7 @@ void test_v3_response_scopedpdu_overflow()
         size_t rl = build_get(req, sizeof(req), PROTO_TRUE, PROTO_FALSE, disc.engine_id, disc.engine_id_len, disc.boots,
                               disc.time, "myuser", authkey, NULL, 500, 88, big_oid, 9);
         TEST_ASSERT_TRUE(rl > 0);
-        size_t n = protocore_snmp_agent_process(req, rl, resp, sizeof(resp));
+        size_t n = snmp_process(req, rl, resp, sizeof(resp));
         if (n == 0)
         {
             saw_overflow = PROTO_TRUE;
@@ -972,37 +1270,37 @@ static size_t build_v3_frame(uint8_t *out, size_t cap, long msg_id, uint8_t flag
                              const uint8_t *tail, size_t tail_len)
 {
     BerEnc e;
-    protocore_ber_enc_init(&e, out, cap);
-    size_t msg = protocore_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
+    ber_enc_init(&e, out, cap);
+    size_t msg = ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
     SnmpBer.enc = &e;
     SnmpBer.tlv.ival = (int)SNMP_V3;
     SnmpBer.put_integer(SnmpBer.internal);
-    size_t hdr = protocore_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
+    size_t hdr = ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
     SnmpBer.enc = &e;
     SnmpBer.tlv.ival = msg_id;
     SnmpBer.put_integer(SnmpBer.internal);
     SnmpBer.enc = &e;
     SnmpBer.tlv.ival = 65507;
     SnmpBer.put_integer(SnmpBer.internal);
-    protocore_ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, &flags, 1);
+    ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, &flags, 1);
     SnmpBer.enc = &e;
     SnmpBer.tlv.ival = 3;
     SnmpBer.put_integer(SnmpBer.internal);
-    protocore_ber_seq_end(&e, hdr);
-    protocore_ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, sec, sec_len);
-    protocore_ber_put_raw(&e, tail, tail_len);
-    protocore_ber_seq_end(&e, msg);
+    ber_seq_end(&e, hdr);
+    ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, sec, sec_len);
+    ber_put_raw(&e, tail, tail_len);
+    ber_seq_end(&e, msg);
     return e.ok ? e.len : 0;
 }
 
 static size_t build_secparams_prefix(uint8_t *out, size_t cap, unsigned nfields)
 {
     BerEnc e;
-    protocore_ber_enc_init(&e, out, cap);
-    size_t s = protocore_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
+    ber_enc_init(&e, out, cap);
+    size_t s = ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
     if (nfields >= 1)
     {
-        protocore_ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, NULL, 0);
+        ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, NULL, 0);
     }
     if (nfields >= 2)
     {
@@ -1018,13 +1316,13 @@ static size_t build_secparams_prefix(uint8_t *out, size_t cap, unsigned nfields)
     }
     if (nfields >= 4)
     {
-        protocore_ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, NULL, 0);
+        ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, NULL, 0);
     }
     if (nfields >= 5)
     {
-        protocore_ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, NULL, 0);
+        ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, NULL, 0);
     }
-    protocore_ber_seq_end(&e, s);
+    ber_seq_end(&e, s);
     return e.ok ? e.len : 0;
 }
 
@@ -1035,14 +1333,14 @@ void test_v3_truncated_fields_fail_closed()
     for (int stop = 0; stop <= 4; stop++)
     {
         BerEnc e;
-        protocore_ber_enc_init(&e, req, sizeof(req));
-        size_t msg = protocore_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
+        ber_enc_init(&e, req, sizeof(req));
+        size_t msg = ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
         SnmpBer.enc = &e;
         SnmpBer.tlv.ival = (int)SNMP_V3;
         SnmpBer.put_integer(SnmpBer.internal);
         if (stop >= 1)
         {
-            size_t hdr = protocore_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
+            size_t hdr = ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
             SnmpBer.enc = &e;
             SnmpBer.tlv.ival = 500 + stop;
             SnmpBer.put_integer(SnmpBer.internal);
@@ -1055,7 +1353,7 @@ void test_v3_truncated_fields_fail_closed()
             if (stop >= 3)
             {
                 uint8_t fl = 0x04;
-                protocore_ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, &fl, 1);
+                ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, &fl, 1);
             }
             if (stop >= 4)
             {
@@ -1063,17 +1361,17 @@ void test_v3_truncated_fields_fail_closed()
                 SnmpBer.tlv.ival = 3;
                 SnmpBer.put_integer(SnmpBer.internal);
             }
-            protocore_ber_seq_end(&e, hdr);
+            ber_seq_end(&e, hdr);
         }
-        protocore_ber_seq_end(&e, msg);
+        ber_seq_end(&e, msg);
         TEST_ASSERT_TRUE(e.ok);
-        TEST_ASSERT_EQUAL_UINT(0, protocore_snmp_v3_process(req, e.len, resp, sizeof(resp)));
+        TEST_ASSERT_EQUAL_UINT(0, snmp_v3_process(req, e.len, resp, sizeof(resp)));
     }
 
     const uint8_t tail[] = {0x30, 0x02, 0x04, 0x00};
     size_t fl = build_v3_frame(req, sizeof(req), 510, 0x04, NULL, 0, tail, sizeof(tail));
     TEST_ASSERT_TRUE(fl > 0);
-    TEST_ASSERT_EQUAL_UINT(0, protocore_snmp_v3_process(req, fl, resp, sizeof(resp)));
+    TEST_ASSERT_EQUAL_UINT(0, snmp_v3_process(req, fl, resp, sizeof(resp)));
     for (unsigned nf = 0; nf <= 5; nf++)
     {
         uint8_t sec[64];
@@ -1081,7 +1379,7 @@ void test_v3_truncated_fields_fail_closed()
         TEST_ASSERT_TRUE(sl > 0);
         size_t n = build_v3_frame(req, sizeof(req), 520 + (long)nf, 0x04, sec, sl, tail, sizeof(tail));
         TEST_ASSERT_TRUE(n > 0);
-        TEST_ASSERT_EQUAL_UINT(0, protocore_snmp_v3_process(req, n, resp, sizeof(resp)));
+        TEST_ASSERT_EQUAL_UINT(0, snmp_v3_process(req, n, resp, sizeof(resp)));
     }
 }
 
@@ -1089,31 +1387,31 @@ void test_v3_outer_tag_and_empty_flags()
 {
     uint8_t resp[512];
     const uint8_t not_seq[] = {0x04, 0x02, 0x00, 0x00};
-    TEST_ASSERT_EQUAL_UINT(0, protocore_snmp_v3_process(not_seq, sizeof(not_seq), resp, sizeof(resp)));
+    TEST_ASSERT_EQUAL_UINT(0, snmp_v3_process(not_seq, sizeof(not_seq), resp, sizeof(resp)));
 
     uint8_t req[320];
     BerEnc e;
-    protocore_ber_enc_init(&e, req, sizeof(req));
-    size_t msg = protocore_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
+    ber_enc_init(&e, req, sizeof(req));
+    size_t msg = ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
     SnmpBer.enc = &e;
     SnmpBer.tlv.ival = (int)SNMP_V3;
     SnmpBer.put_integer(SnmpBer.internal);
-    size_t hdr = protocore_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
+    size_t hdr = ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
     SnmpBer.enc = &e;
     SnmpBer.tlv.ival = 530;
     SnmpBer.put_integer(SnmpBer.internal);
     SnmpBer.enc = &e;
     SnmpBer.tlv.ival = 65507;
     SnmpBer.put_integer(SnmpBer.internal);
-    protocore_ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, NULL, 0);
+    ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, NULL, 0);
     SnmpBer.enc = &e;
     SnmpBer.tlv.ival = 3;
     SnmpBer.put_integer(SnmpBer.internal);
-    protocore_ber_seq_end(&e, hdr);
-    protocore_ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, NULL, 0);
-    protocore_ber_seq_end(&e, msg);
+    ber_seq_end(&e, hdr);
+    ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, NULL, 0);
+    ber_seq_end(&e, msg);
     TEST_ASSERT_TRUE(e.ok);
-    TEST_ASSERT_EQUAL_UINT(0, protocore_snmp_v3_process(req, e.len, resp, sizeof(resp)));
+    TEST_ASSERT_EQUAL_UINT(0, snmp_v3_process(req, e.len, resp, sizeof(resp)));
 }
 
 void test_v3_scoped_truncated_headers()
@@ -1121,7 +1419,7 @@ void test_v3_scoped_truncated_headers()
     V3View v;
     discover(&v);
     uint8_t authkey[SNMP_USM_KEY_LEN];
-    protocore_snmp_usm_localize_key(tw, "authpass12", v.engine_id, v.engine_id_len, authkey);
+    snmp_localize_key(tw, "authpass12", v.engine_id, v.engine_id_len, authkey);
     uint8_t req[320], resp[512];
 
     const uint8_t no_len[] = {0x30};
@@ -1135,7 +1433,7 @@ void test_v3_scoped_truncated_headers()
                                         "myuser", authkey, 540 + (long)i, scopeds[i], lens[i], PROTO_FALSE,
                                         SNMP_V3_AUTH_PARAM_LEN, SNMP_V3_PRIV_PARAM_LEN);
         TEST_ASSERT_TRUE(rl > 0);
-        TEST_ASSERT_EQUAL_UINT(0, protocore_snmp_v3_process(req, rl, resp, sizeof(resp)));
+        TEST_ASSERT_EQUAL_UINT(0, snmp_v3_process(req, rl, resp, sizeof(resp)));
     }
 }
 
@@ -1151,7 +1449,7 @@ void test_v3_same_length_wrong_engine_id()
     uint8_t req[320], resp[512];
     size_t rl = build_get(req, sizeof(req), PROTO_FALSE, PROTO_FALSE, wrong, v.engine_id_len, 0, 0, "", NULL, NULL, 550,
                           1, OID_SYSDESCR, 9);
-    size_t n = protocore_snmp_v3_process(req, rl, resp, sizeof(resp));
+    size_t n = snmp_v3_process(req, rl, resp, sizeof(resp));
     TEST_ASSERT_TRUE(n > 0);
     V3View r;
     TEST_ASSERT_TRUE(parse_v3(resp, n, NULL, &r));
@@ -1164,7 +1462,7 @@ void test_v3_unknown_user_variants()
     V3View v;
     discover(&v);
     uint8_t authkey[SNMP_USM_KEY_LEN];
-    protocore_snmp_usm_localize_key(tw, "authpass12", v.engine_id, v.engine_id_len, authkey);
+    snmp_localize_key(tw, "authpass12", v.engine_id, v.engine_id_len, authkey);
     uint8_t req[320], resp[512];
     V3View r;
 
@@ -1180,11 +1478,11 @@ void test_v3_unknown_user_variants()
     };
     for (unsigned i = 0; i < 3; i++)
     {
-        protocore_snmp_v3_set_user(cases[i].cfg_user, cases[i].cfg_auth, "");
+        snmp_v3_set_user(cases[i].cfg_user, cases[i].cfg_auth, "");
         size_t rl = build_get(req, sizeof(req), PROTO_TRUE, PROTO_FALSE, v.engine_id, v.engine_id_len, v.boots, v.time,
                               cases[i].req_user, authkey, NULL, 560 + (long)i, 3, OID_SYSDESCR, 9);
         TEST_ASSERT_TRUE(rl > 0);
-        size_t n = protocore_snmp_v3_process(req, rl, resp, sizeof(resp));
+        size_t n = snmp_v3_process(req, rl, resp, sizeof(resp));
         TEST_ASSERT_TRUE(n > 0);
         TEST_ASSERT_TRUE(parse_v3(resp, n, NULL, &r));
         TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_TAG_SNMP_PDU_REPORT, r.pdu_tag);
@@ -1197,7 +1495,7 @@ void test_v3_oversized_message_is_wrong_digest()
     V3View v;
     discover(&v);
     uint8_t authkey[SNMP_USM_KEY_LEN];
-    protocore_snmp_usm_localize_key(tw, "authpass12", v.engine_id, v.engine_id_len, authkey);
+    snmp_localize_key(tw, "authpass12", v.engine_id, v.engine_id_len, authkey);
 
     static uint8_t scoped[SNMP_MSG_BUF_SIZE + 64];
     memset(scoped, 0x00, sizeof(scoped));
@@ -1208,7 +1506,7 @@ void test_v3_oversized_message_is_wrong_digest()
                                     "myuser", authkey, 570, scoped, sizeof(scoped), PROTO_FALSE, SNMP_V3_AUTH_PARAM_LEN,
                                     SNMP_V3_PRIV_PARAM_LEN);
     TEST_ASSERT_TRUE(rl > SNMP_MSG_BUF_SIZE);
-    size_t n = protocore_snmp_v3_process(req, rl, resp, sizeof(resp));
+    size_t n = snmp_v3_process(req, rl, resp, sizeof(resp));
     TEST_ASSERT_TRUE(n > 0);
     V3View r;
     TEST_ASSERT_TRUE(parse_v3(resp, n, NULL, &r));
@@ -1221,12 +1519,12 @@ void test_v3_boots_mismatch_not_in_time()
     V3View v;
     discover(&v);
     uint8_t authkey[SNMP_USM_KEY_LEN];
-    protocore_snmp_usm_localize_key(tw, "authpass12", v.engine_id, v.engine_id_len, authkey);
+    snmp_localize_key(tw, "authpass12", v.engine_id, v.engine_id_len, authkey);
 
     uint8_t req[320], resp[512];
     size_t rl = build_get(req, sizeof(req), PROTO_TRUE, PROTO_FALSE, v.engine_id, v.engine_id_len, v.boots + 7, v.time,
                           "myuser", authkey, NULL, 580, 4, OID_SYSDESCR, 9);
-    size_t n = protocore_snmp_v3_process(req, rl, resp, sizeof(resp));
+    size_t n = snmp_v3_process(req, rl, resp, sizeof(resp));
     TEST_ASSERT_TRUE(n > 0);
     V3View r;
     TEST_ASSERT_TRUE(parse_v3(resp, n, NULL, &r));
@@ -1240,14 +1538,14 @@ void test_v3_privacy_parameter_edges()
     V3View v;
     discover(&v);
     uint8_t authkey[SNMP_USM_KEY_LEN];
-    protocore_snmp_usm_localize_key(tw, "authpass12", v.engine_id, v.engine_id_len, authkey);
+    snmp_localize_key(tw, "authpass12", v.engine_id, v.engine_id_len, authkey);
     uint8_t req[320], resp[512];
 
     const uint8_t any[] = {0x04, 0x02, 0x00, 0x00};
     size_t rl = build_v3_raw_scoped(req, sizeof(req), PROTO_TRUE, v.engine_id, v.engine_id_len, v.boots, v.time,
                                     "myuser", authkey, 590, any, sizeof(any), PROTO_TRUE, SNMP_V3_AUTH_PARAM_LEN, 4);
     TEST_ASSERT_TRUE(rl > 0);
-    size_t n = protocore_snmp_v3_process(req, rl, resp, sizeof(resp));
+    size_t n = snmp_v3_process(req, rl, resp, sizeof(resp));
     TEST_ASSERT_TRUE(n > 0);
     V3View r;
     TEST_ASSERT_TRUE(parse_v3(resp, n, NULL, &r));
@@ -1259,7 +1557,7 @@ void test_v3_privacy_parameter_edges()
                              authkey, 591, stub, sizeof(stub), PROTO_TRUE, SNMP_V3_AUTH_PARAM_LEN,
                              SNMP_V3_PRIV_PARAM_LEN);
     TEST_ASSERT_TRUE(rl > 0);
-    TEST_ASSERT_EQUAL_UINT(0, protocore_snmp_v3_process(req, rl, resp, sizeof(resp)));
+    TEST_ASSERT_EQUAL_UINT(0, snmp_v3_process(req, rl, resp, sizeof(resp)));
 }
 
 void test_v3_init_length_guards_and_null_user()
@@ -1268,7 +1566,7 @@ void test_v3_init_length_guards_and_null_user()
     discover(&before);
 
     uint8_t tooshort[4] = {0x80, 0x00, 0x00, 0x01};
-    protocore_snmp_v3_init(tooshort, sizeof(tooshort));
+    snmp_v3_init(tooshort, sizeof(tooshort));
     V3View after;
     discover(&after);
     TEST_ASSERT_EQUAL_UINT(before.engine_id_len, after.engine_id_len);
@@ -1276,18 +1574,18 @@ void test_v3_init_length_guards_and_null_user()
 
     uint8_t toolong[SNMP_V3_ENGINEID_MAX + 1];
     memset(toolong, 0xA5, sizeof(toolong));
-    protocore_snmp_v3_init(toolong, sizeof(toolong));
+    snmp_v3_init(toolong, sizeof(toolong));
     discover(&after);
     TEST_ASSERT_EQUAL_UINT(before.engine_id_len, after.engine_id_len);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(before.engine_id, after.engine_id, before.engine_id_len);
 
-    protocore_snmp_v3_set_user(NULL, NULL, NULL);
+    snmp_v3_set_user(NULL, NULL, NULL);
     uint8_t authkey[SNMP_USM_KEY_LEN];
-    protocore_snmp_usm_localize_key(tw, "authpass12", after.engine_id, after.engine_id_len, authkey);
+    snmp_localize_key(tw, "authpass12", after.engine_id, after.engine_id_len, authkey);
     uint8_t req[320], resp[512];
     size_t rl = build_get(req, sizeof(req), PROTO_TRUE, PROTO_FALSE, after.engine_id, after.engine_id_len, after.boots,
                           after.time, "myuser", authkey, NULL, 600, 5, OID_SYSDESCR, 9);
-    size_t n = protocore_snmp_v3_process(req, rl, resp, sizeof(resp));
+    size_t n = snmp_v3_process(req, rl, resp, sizeof(resp));
     TEST_ASSERT_TRUE(n > 0);
     V3View r;
     TEST_ASSERT_TRUE(parse_v3(resp, n, NULL, &r));
@@ -1299,16 +1597,16 @@ void test_v3_trap_reports_transport_failure()
 {
     uint32_t trap_oid[] = {1, 3, 6, 1, 4, 1, 49374, 0, 1};
 
-    TEST_ASSERT_FALSE(protocore_snmp_trap_v3("not.an.address", 162, trap_oid, 9, NULL, 0));
-    TEST_ASSERT_FALSE(protocore_snmp_trap_v3(NULL, 162, trap_oid, 9, NULL, 0));
+    TEST_ASSERT_FALSE(snmp_trap_v3("not.an.address", 162, trap_oid, 9, NULL, 0));
+    TEST_ASSERT_FALSE(snmp_trap_v3(NULL, 162, trap_oid, 9, NULL, 0));
 
     protocore_net_host_udp_reset();
     mock_udp_send_fail_after(0);
-    TEST_ASSERT_FALSE(protocore_snmp_trap_v3("192.168.1.1", 162, trap_oid, 9, NULL, 0));
+    TEST_ASSERT_FALSE(snmp_trap_v3("192.168.1.1", 162, trap_oid, 9, NULL, 0));
     TEST_ASSERT_EQUAL_size_t(0, protocore_net_host_udp_count());
 
     mock_udp_send_fail_after(-1);
-    TEST_ASSERT_TRUE(protocore_snmp_trap_v3("192.168.1.1", 162, trap_oid, 9, NULL, 0));
+    TEST_ASSERT_TRUE(snmp_trap_v3("192.168.1.1", 162, trap_oid, 9, NULL, 0));
     TEST_ASSERT_EQUAL_size_t(1, protocore_net_host_udp_count());
     TEST_ASSERT_EQUAL_UINT16(162, protocore_net_host_udp_at(0)->dst_port);
 }

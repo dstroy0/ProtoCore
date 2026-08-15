@@ -32,9 +32,9 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths and PROTOCORE_INLINE
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_SMTP
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief How one session ended. 0 is a delivered message; every failure is a distinct code. */
 typedef enum PROTO_ENUM_PACKED
@@ -167,8 +167,8 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern SmtpNs Smtp;
 
-#endif // PROTOCORE_ENABLE_SMTP
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_SMTP
 
 #endif // PROTOCORE_SMTP_H

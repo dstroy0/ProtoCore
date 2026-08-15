@@ -22,12 +22,12 @@
 #define PROTOCORE_WISUN_H
 
 #include "protocore_config.h"
-#include "shared/ip/ip.h"
-
-PROTOCORE_BEGIN_DECLS
 
 #if PROTOCORE_ENABLE_WISUN
 
+PROTOCORE_BEGIN_DECLS
+
+#include "shared/ip/ip.h"
 /** @brief CoAP message type + method codes (RFC 7252) used by the connector. */
 #define WISUN_COAP_CON 0 ///< Confirmable.
 #define WISUN_COAP_NON 1 ///< Non-confirmable.
@@ -87,8 +87,8 @@ size_t protocore_wisun_joined_count(const WisunFan *fan);
  */
 size_t protocore_wisun_nodes_json(const WisunFan *fan, char *out, size_t cap);
 
-#endif // PROTOCORE_ENABLE_WISUN
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_WISUN
 
 #endif // PROTOCORE_WISUN_H

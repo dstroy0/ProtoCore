@@ -29,9 +29,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_RELAY
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief protocore_relay_step() outcome. */
 typedef enum PROTO_ENUM_PACKED
@@ -113,8 +113,8 @@ protocore_relay_status protocore_relay_step(protocore_relay *r);
  */
 void protocore_relay_note_eof(protocore_relay *r, proto_bool origin);
 
-#endif // PROTOCORE_ENABLE_RELAY
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_RELAY
 
 #endif // PROTOCORE_RELAY_H

@@ -47,9 +47,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_IKEV2
+
+PROTOCORE_BEGIN_DECLS
 
 // ---------------------------------------------------------------------------
 // Literals
@@ -955,8 +955,8 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern IkeNs Ike;
 
-#endif // PROTOCORE_ENABLE_IKEV2
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_IKEV2
 
 #endif // PROTOCORE_IKEV2_H

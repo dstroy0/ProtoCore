@@ -36,9 +36,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_DDS
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief DDSI-RTPS sec 9.4.5.1 SubmessageKind: the submessageId octet of a SubmessageHeader. */
 #define RTPS_SM_PAD 0x01
@@ -152,8 +152,8 @@ extern const uint8_t RTPS_VERSION[2];
 /** @brief The one symbol this module exports. */
 extern RtpsNs Rtps;
 
-#endif // PROTOCORE_ENABLE_DDS
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_DDS
 
 #endif // PROTOCORE_DDS_H

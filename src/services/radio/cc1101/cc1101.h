@@ -26,9 +26,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_CC1101
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief Full-duplex SPI transfer of @p len bytes (chip-select toggled by the callback). */
 typedef void (*protocore_cc1101_spi_fn)(const uint8_t *tx, uint8_t *rx, uint8_t len, void *ctx);
@@ -83,8 +83,8 @@ int protocore_cc1101_recv(const protocore_cc1101_bus *bus, uint8_t *buf, uint8_t
 /** @brief Convert a raw CC1101 RSSI register value to dBm (TI datasheet formula). Pure. */
 int16_t protocore_cc1101_rssi_dbm(uint8_t raw);
 
-#endif // PROTOCORE_ENABLE_CC1101
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_CC1101
 
 #endif // PROTOCORE_CC1101_H

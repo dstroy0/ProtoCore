@@ -18,6 +18,8 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for proto_bool and the widths
 
+#if PROTOCORE_ENABLE_KDF
+
 PROTOCORE_BEGIN_DECLS
 
 /**
@@ -40,5 +42,7 @@ proto_bool protocore_kdf_ctr_hmac_sha256(const uint8_t *ki, size_t ki_len, const
                                          uint8_t *out, size_t out_len);
 
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_KDF
 
 #endif // PROTOCORE_KDF_H

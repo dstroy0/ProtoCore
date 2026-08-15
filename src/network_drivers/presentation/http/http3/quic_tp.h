@@ -26,6 +26,8 @@
 
 #if PROTOCORE_ENABLE_HTTP3
 
+PROTOCORE_BEGIN_DECLS
+
 #include "network_drivers/presentation/http/http3/quic_packet.h" // QUIC_MAX_CID_LEN
 
 /** @brief Transport parameter identifiers (RFC 9000 sec 18.2 / Table 7). */
@@ -97,5 +99,8 @@ size_t protocore_quic_tp_encode(const QuicTransportParams *tp, uint8_t *out, siz
  */
 proto_bool protocore_quic_tp_parse(const uint8_t *buf, size_t len, QuicTransportParams *tp);
 
+PROTOCORE_END_DECLS
+
 #endif // PROTOCORE_ENABLE_HTTP3
+
 #endif // PROTOCORE_QUIC_TP_H

@@ -38,6 +38,8 @@
 
 #include "protocore_config.h"
 
+#ifdef PROTOCORE_ENABLE_MNT
+
 PROTOCORE_BEGIN_DECLS
 
 /**
@@ -181,5 +183,7 @@ typedef struct
 extern MntNs Mnt;
 
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_MNT
 
 #endif // PROTOCORE_MNT_H

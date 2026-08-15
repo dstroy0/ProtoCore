@@ -31,9 +31,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_C37118
+
+PROTOCORE_BEGIN_DECLS
 
 #define C37118_SYNC_LEADER 0xAA  ///< SYNC byte 0 (frame leader)
 #define C37118_TYPE_SHIFT 4      ///< SYNC byte 1: frame type occupies bits 6-4
@@ -138,8 +138,8 @@ typedef struct
  */
 proto_bool protocore_c37118_decode_stat(const C37118Frame *f, C37118Stat *out);
 
-#endif // PROTOCORE_ENABLE_C37118
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_C37118
 
 #endif // PROTOCORE_C37118_H

@@ -41,9 +41,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_UDP_TELEMETRY
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief RFC 768 "User Interface": the destination address and port every datagram carries. */
 typedef struct
@@ -153,8 +153,8 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern UdpTelemetryNs UdpTelemetry;
 
-#endif // PROTOCORE_ENABLE_UDP_TELEMETRY
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_UDP_TELEMETRY
 
 #endif // PROTOCORE_UDP_TELEMETRY_H

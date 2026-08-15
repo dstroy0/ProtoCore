@@ -20,9 +20,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_EDGE_CACHE
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief The origin transport, bound to protocore_client on the device and a mock in host tests. */
 typedef struct
@@ -88,8 +88,8 @@ void edge_fetch_end(EdgeFetch *f, const EdgeFetchTransport *t);
  */
 proto_bool edge_resp_complete(const uint8_t *buf, size_t len, proto_bool conn_closed, size_t *head_len);
 
-#endif // PROTOCORE_ENABLE_EDGE_CACHE
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_EDGE_CACHE
 
 #endif // PROTOCORE_EDGE_FETCH_H

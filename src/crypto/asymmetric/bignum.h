@@ -69,8 +69,11 @@
 #ifndef PROTOCORE_BIGNUM_H
 #define PROTOCORE_BIGNUM_H
 
-#include "mmgr/secure.h"
 #include "protocore_config.h"
+
+#if PROTOCORE_ENABLE_BIGNUM
+
+#include "mmgr/secure.h"
 
 PROTOCORE_BEGIN_DECLS
 
@@ -190,5 +193,7 @@ extern const protocore_bignum group14_p;
 extern const protocore_bignum group14_g;
 
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_BIGNUM
 
 #endif // PROTOCORE_BIGNUM_H

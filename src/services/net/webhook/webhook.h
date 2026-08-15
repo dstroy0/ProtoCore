@@ -33,9 +33,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_WEBHOOK
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief RFC 9110 sec 7.1 / sec 6.4: what a POST names and what it carries. */
 typedef struct
@@ -106,8 +106,8 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern WebhookNs Webhook;
 
-#endif // PROTOCORE_ENABLE_WEBHOOK
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_WEBHOOK
 
 #endif // PROTOCORE_WEBHOOK_H

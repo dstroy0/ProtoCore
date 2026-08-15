@@ -28,9 +28,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_ESPNOW
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief Envelope header size (magic + type + length). */
 #define PROTOCORE_ESPNOW_HDR 3
@@ -101,8 +101,8 @@ proto_bool protocore_espnow_send(const uint8_t mac[6], uint8_t type, const uint8
 /** @brief Send to the broadcast address (all peers in range). */
 proto_bool protocore_espnow_broadcast(uint8_t type, const uint8_t *payload, size_t len);
 
-#endif // PROTOCORE_ENABLE_ESPNOW
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_ESPNOW
 
 #endif // PROTOCORE_ESPNOW_H

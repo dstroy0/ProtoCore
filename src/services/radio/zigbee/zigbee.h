@@ -30,9 +30,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_ZIGBEE
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief ASH markers / reset control bytes. */
 #define ASH_FLAG 0x7E   ///< frame delimiter
@@ -63,8 +63,8 @@ uint16_t protocore_ash_frame_encode(uint8_t control, const uint8_t *payload, uin
 int protocore_ash_frame_decode(const uint8_t *raw, uint16_t len, uint8_t *control, uint8_t *payload, uint16_t pay_cap,
                                uint16_t *pay_len);
 
-#endif // PROTOCORE_ENABLE_ZIGBEE
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_ZIGBEE
 
 #endif // PROTOCORE_ZIGBEE_H

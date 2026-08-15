@@ -22,9 +22,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_MBPLUS
+
+PROTOCORE_BEGIN_DECLS
 
 // Modbus Plus HDLC wire constants: integer values compared/emitted, in a namespacing struct.
 #define MBPLUS_FLAG 0x7E       ///< HDLC frame delimiter.
@@ -68,8 +68,8 @@ proto_bool protocore_mbplus_parse(const uint8_t *frame, size_t len, MbPlusFrame 
  */
 uint8_t protocore_mbplus_next_token(uint8_t current, uint8_t max_station);
 
-#endif // PROTOCORE_ENABLE_MBPLUS
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_MBPLUS
 
 #endif // PROTOCORE_MBPLUS_H

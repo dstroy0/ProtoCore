@@ -31,6 +31,8 @@
 
 #if PROTOCORE_ENABLE_DBM
 
+PROTOCORE_BEGIN_DECLS
+
 #include "services/storage/wal/wal_store.h"
 
 /** @brief One in-RAM index slot. `state`: 0 empty, 1 live, 2 deleted (tombstone, still probed through). */
@@ -115,5 +117,8 @@ uint64_t protocore_dbm_live_bytes(const struct protocore_dbm *db);
  */
 proto_bool protocore_dbm_compact(struct protocore_dbm *db, WalStore *dst);
 
+PROTOCORE_END_DECLS
+
 #endif // PROTOCORE_ENABLE_DBM
+
 #endif // PROTOCORE_DBM_H

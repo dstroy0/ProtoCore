@@ -41,6 +41,8 @@
 
 #if PROTOCORE_ENABLE_NTRIP_CASTER
 
+PROTOCORE_BEGIN_DECLS
+
 #include "services/timing_position/gnss/ntrip_caster.h"
 
 /**
@@ -65,6 +67,8 @@ int protocore_ntrip_caster_subscriber_count(const char *mountpoint);
 
 /** @brief Clear all mounts and drop all rover state (start from empty). */
 void protocore_ntrip_caster_reset(void);
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_NTRIP_CASTER
 

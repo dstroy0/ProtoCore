@@ -33,9 +33,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_HTTP_CLIENT
+
+PROTOCORE_BEGIN_DECLS
 
 /**
  * @brief What went wrong below the status code.
@@ -165,8 +165,8 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern HttpClientNs HttpClient;
 
-#endif // PROTOCORE_ENABLE_HTTP_CLIENT
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_HTTP_CLIENT
 
 #endif // PROTOCORE_HTTP_CLIENT_H

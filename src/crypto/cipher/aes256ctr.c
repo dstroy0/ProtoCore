@@ -14,16 +14,20 @@
  * for host-side unit tests only.
  */
 
+#if PROTOCORE_ENABLE_AES256CTR
+
+#if PROTOCORE_HAS_HW_AES
+#include <mbedtls/aes.h>
+#endif
+#if !PROTOCORE_HAS_HW_AES
+#include "crypto/cipher/aes_block.h" // native software AES S-box/blocks (the hot path uses the mbedtls block above)
+#endif
 #include "crypto/cipher/aes256ctr.h"
 #include "crypto/crypto_opt.h"
 #include "mmgr/secure.h"
 
-#if PROTOCORE_HAS_HW_AES
-#include <mbedtls/aes.h>
-#else
-#include "crypto/cipher/aes_block.h" // native software AES S-box/blocks (the hot path uses the mbedtls block above)
-#endif
 PROTOCORE_CRYPTO_HOT
+PROTOCORE_BEGIN_DECLS
 
 // ============================================================================
 // Hot path - hardware-accelerated via mbedtls
@@ -69,7 +73,9 @@ void protocore_aes256ctr_crypt(const uint8_t key[PROTOCORE_AES256CTR_KEY_LEN],
 // SW path: software AES-256.
 // ============================================================================
 
-#else
+#endif
+
+#if !PROTOCORE_HAS_HW_AES
 
 // The whole working set in one borrow: 60-word round-key schedule + one keystream block.
 typedef struct
@@ -114,7 +120,7 @@ void protocore_aes256ctr_crypt(const uint8_t key[PROTOCORE_AES256CTR_KEY_LEN],
     protocore_secure_release(mark);
 }
 
-#endif // PROTOCORE_HAS_HW_AES
+#endif // !PROTOCORE_HAS_HW_AES (SW path)
 
 // ---------------------------------------------------------------------------
 // Length peek (used by the SSH recv path; mirrors protocore_chachapoly_get_length)
@@ -139,7 +145,8 @@ uint32_t protocore_aes256ctr_get_length(const uint8_t key[PROTOCORE_AES256CTR_KE
     mbedtls_aes_setkey_enc(&w->aes, key, 256);
     mbedtls_aes_crypt_ecb(&w->aes, MBEDTLS_AES_ENCRYPT, counter, ks);
     mbedtls_aes_free(&w->aes);
-#else
+#endif
+#if !PROTOCORE_HAS_HW_AES
     protocore_aes_key_expand(key, 8, w->rk);
     protocore_aes_encrypt_block(w->rk, 14, counter, ks);
 #endif
@@ -149,3 +156,7 @@ uint32_t protocore_aes256ctr_get_length(const uint8_t key[PROTOCORE_AES256CTR_KE
     protocore_secure_release(mark);
     return len;
 }
+
+PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_AES256CTR

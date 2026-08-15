@@ -24,9 +24,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
+#if PROTOCORE_ENABLE_SNTRUP761
 
-#if PROTOCORE_ENABLE_SSH_SNTRUP761
+PROTOCORE_BEGIN_DECLS
 
 #define PROTOCORE_SNTRUP761_PK_BYTES 1158 ///< public key (Rq-encoded h)
 #define PROTOCORE_SNTRUP761_SK_BYTES 1763 ///< secret key (f, 1/g, pk, rho, cache)
@@ -61,8 +61,8 @@ void protocore_sntrup761_enc(uint8_t *work, const uint8_t pk[PROTOCORE_SNTRUP761
 void protocore_sntrup761_dec(uint8_t *work, const uint8_t sk[PROTOCORE_SNTRUP761_SK_BYTES],
                              const uint8_t ct[PROTOCORE_SNTRUP761_CT_BYTES], uint8_t ss[PROTOCORE_SNTRUP761_SS_BYTES]);
 
-#endif // PROTOCORE_ENABLE_SSH_SNTRUP761
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_SNTRUP761
 
 #endif // PROTOCORE_SNTRUP761_H

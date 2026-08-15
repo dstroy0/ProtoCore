@@ -44,8 +44,17 @@ protocore_reset:
     .type protocore_trap, @function
     .align 2
 
-/* Every trap lands here and stops, leaving mcause and mepc as the trap left them. */
+/* Every trap lands here. mcause says what it was, mepc where, mtval on what (privileged ISA,
+   Machine Cause / Exception Program Counter / Trap Value registers); the three go to the seam in
+   protocore_trap.c, and the stop below catches its return. sp is already established, because
+   mtvec is written after it. */
 protocore_trap:
-    j       protocore_trap
+    csrr    a0, mcause
+    csrr    a1, mepc
+    csrr    a2, mtval
+    call    protocore_platform_trap
+
+.Lprotocore_trap_stop:
+    j       .Lprotocore_trap_stop
 
     .size protocore_trap, . - protocore_trap

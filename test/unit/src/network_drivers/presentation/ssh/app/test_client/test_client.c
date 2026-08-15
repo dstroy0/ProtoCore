@@ -12,15 +12,21 @@
 
 #if PROTOCORE_ENABLE_SSH_CLIENT
 
+static void client_end(void)
+{
+    SshClient.end(SshClient.internal);
+}
+
+
 void setUp(void)
 {
 
-    protocore_ssh_client_end(); // whatever a previous case left
+    client_end(); // whatever a previous case left
 }
 void tearDown(void)
 {
 
-    protocore_ssh_client_end();
+    client_end();
 }
 
 // The application-facing accessor and the engine's own report the same thing: one is a view of the

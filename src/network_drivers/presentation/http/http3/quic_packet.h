@@ -23,9 +23,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_HTTP3
+
+PROTOCORE_BEGIN_DECLS
 
 #define QUIC_VERSION_1 0x00000001u ///< RFC 9000
 #define QUIC_MAX_CID_LEN 20        ///< maximum connection-ID length in QUIC version 1
@@ -99,8 +99,8 @@ size_t protocore_quic_pn_encode(uint8_t *out, size_t cap, uint64_t full_pn, int6
 /** @brief Recover the full packet number from a @p truncated_pn of @p pn_nbits bits (Appendix A.3). */
 uint64_t protocore_quic_pn_decode(uint64_t largest_pn, uint64_t truncated_pn, uint8_t pn_nbits);
 
-#endif // PROTOCORE_ENABLE_HTTP3
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_HTTP3
 
 #endif // PROTOCORE_QUIC_PACKET_H

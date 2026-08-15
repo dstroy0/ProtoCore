@@ -40,6 +40,8 @@
  * @date    2026
  */
 
+#if PROTOCORE_ENABLE_ECDSA
+
 #include "crypto/asymmetric/ecdsa.h"
 #include "crypto/hash/sha256.h"
 #include "crypto/rng/rng.h" // protocore_rand_fill: the mbedtls RNG callback
@@ -57,13 +59,14 @@
 
 // Platform-conditional headers, hoisted here so no #include follows code (no mid-file includes -
 // ci_tooling/check/check_src_banned.py enforces it). The implementation branches below use the same guards.
-#if PROTOCORE_HAS_HW_ECC && !defined(PROTOCORE_ECDSA_MPI_HW)
+#if PROTOCORE_HAS_HW_ECC && !PROTOCORE_ECDSA_MPI_HW
 #include <mbedtls/ecdh.h>
 #include <mbedtls/ecdsa.h>
 #include <mbedtls/ecp.h>
-#else
+#endif
+#if !(PROTOCORE_HAS_HW_ECC && !PROTOCORE_ECDSA_MPI_HW)
 #include "crypto/mac/hmac_sha256.h" // RFC 6979 HMAC-DRBG for the deterministic-nonce complete-formula path
-#ifdef PROTOCORE_ECDSA_MPI_HW
+#if PROTOCORE_ECDSA_MPI_HW
 #include "core_setup/hal/esp/esp_crypto_hal.h" // protocore_rsa_modmul + protocore_rsa_hw_acquire/release (RSA-accelerator HAL)
 #endif
 #endif
@@ -78,11 +81,13 @@ PROTOCORE_CRYPTO_HOT_PEEL
 PROTOCORE_CRYPTO_HOT
 #endif
 
+PROTOCORE_BEGIN_DECLS
+
 // ---------------------------------------------------------------------------
 // HW path without MPI modmult - mbedTLS
 // ---------------------------------------------------------------------------
 
-#if PROTOCORE_HAS_HW_ECC && !defined(PROTOCORE_ECDSA_MPI_HW)
+#if PROTOCORE_HAS_HW_ECC && !PROTOCORE_ECDSA_MPI_HW
 
 // RNG callback backed by the ESP32 hardware RNG.
 static int ecdsa_rng(void *ctx, unsigned char *buf, size_t len)
@@ -218,7 +223,10 @@ proto_bool protocore_ecdsa_p256_ecdh(uint8_t shared_x[PROTOCORE_ECDSA_P256_COORD
     return ok;
 }
 
-#else // ---- S3 HW-MODMULT path, or native software path (shared complete-formula P-256) ----
+#endif
+
+// ---- S3 HW-MODMULT path, or native software path (shared complete-formula P-256) ----
+#if !(PROTOCORE_HAS_HW_ECC && !PROTOCORE_ECDSA_MPI_HW)
 
 // ---- 256-bit little-endian field / scalar arithmetic ----
 // Values are eight uint32 limbs (limb 0 least significant), held canonical (< the domain modulus).
@@ -350,7 +358,7 @@ static void fp_reduce_once(uint32_t r[8], const uint32_t a[8], const uint32_t m[
     }
 }
 
-#ifdef PROTOCORE_ECDSA_MPI_HW
+#if PROTOCORE_ECDSA_MPI_HW
 // z = x*y mod F->m on the S3 RSA accelerator. Requires ecdsa_hw_on() first. Preloading R^2 into the result
 // block makes MODMULT return the plain residue (the esp_mpi_mul_mpi_mod convention). Output canonical (< m).
 static void fp_mul(uint32_t z[8], const uint32_t x[8], const uint32_t y[8], const Fp *F) // safe if z aliases x/y
@@ -367,7 +375,9 @@ static void ecdsa_hw_off()
 {
     protocore_rsa_hw_release();
 }
-#else
+#endif
+
+#if !PROTOCORE_ECDSA_MPI_HW
 // acc[0..7] >= m[0..7]? Compares the low 8 limbs from the most significant down.
 // Both P256_P and P256_N are prime, and every operand ever passed into fp_mul (hence into this
 // bit-serial reduction) is invariant-bound strictly below its own modulus before use (see every
@@ -1025,3 +1035,7 @@ proto_bool protocore_ecdsa_p256_ecdh(uint8_t shared_x[PROTOCORE_ECDSA_P256_COORD
 }
 
 #endif // PROTOCORE_HAS_HW_ECC path selection
+
+PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_ECDSA

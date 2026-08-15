@@ -28,9 +28,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_SMBUS
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief Longest block payload the protocol carries. */
 #define PROTOCORE_SMBUS_BLOCK_MAX 32
@@ -118,8 +118,8 @@ proto_bool protocore_smbus_process_call(uint8_t addr, uint8_t cmd, uint16_t valu
 proto_bool protocore_smbus_block_process_call(uint8_t addr, uint8_t cmd, const uint8_t *buf, size_t len, uint8_t *out,
                                               size_t cap, size_t *out_len);
 
-#endif // PROTOCORE_ENABLE_SMBUS
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_SMBUS
 
 #endif // PROTOCORE_SMBUS_H

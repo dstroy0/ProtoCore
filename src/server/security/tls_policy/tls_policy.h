@@ -23,9 +23,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_TLS_POLICY
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief TLS protocol version wire words. */
 #define TLS_VERSION_1_2 0x0303
@@ -53,8 +53,8 @@ uint16_t protocore_tls_select_cipher(const uint16_t *client_offered, size_t n_cl
 /** @brief True if @p suite is one of the modern AEAD suites (GCM / ChaCha20-Poly1305). */
 proto_bool protocore_tls_is_aead(uint16_t suite);
 
-#endif // PROTOCORE_ENABLE_TLS_POLICY
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_TLS_POLICY
 
 #endif // PROTOCORE_TLS_POLICY_H

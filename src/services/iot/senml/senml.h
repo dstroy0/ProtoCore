@@ -37,12 +37,13 @@
 #ifndef PROTOCORE_SENML_H
 #define PROTOCORE_SENML_H
 
-#include "network_drivers/presentation/codec/codec.h" // protocore_codec: the binary encoding is an argument
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_SENML
+
+#include "network_drivers/presentation/codec/codec.h" // protocore_codec: the binary encoding is an argument
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief Longest resolved Name (Base Name concatenated with Name), the NUL included. */
 #define PROTOCORE_SENML_RESOLVED_NAME_MAX 96
@@ -165,8 +166,8 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern SenmlNs Senml;
 
-#endif // PROTOCORE_ENABLE_SENML
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_SENML
 
 #endif // PROTOCORE_SENML_H

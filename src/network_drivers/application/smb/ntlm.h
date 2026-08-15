@@ -27,9 +27,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_SMB
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief The NT hash: MD4 of the UTF-16LE password (@p password is ASCII/UTF-8, NUL-terminated). */
 void protocore_ntlm_nt_hash(const char *password, uint8_t nt_hash[16]);
@@ -86,8 +86,8 @@ size_t protocore_ntlm_set_mic_flag(const uint8_t *target_info, size_t ti_len, ui
 void protocore_ntlm_mic(const uint8_t session_key[16], const uint8_t *neg, size_t neg_len, const uint8_t *chal,
                         size_t chal_len, const uint8_t *auth, size_t auth_len, uint8_t out[16]);
 
-#endif // PROTOCORE_ENABLE_SMB
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_SMB
 
 #endif // PROTOCORE_NTLM_H

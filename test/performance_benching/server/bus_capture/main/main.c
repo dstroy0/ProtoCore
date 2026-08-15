@@ -65,8 +65,10 @@ void dbench_run(void)
                     sink += can_to_socketcan(&std8, out, sizeof(out)));
         DBENCH_OP("can_to_socketcan ext2", 100000, sink += can_to_socketcan(&ext2, out, sizeof(out)));
         DBENCH_OP("can_to_socketcan rtr4", 100000, sink += can_to_socketcan(&rtr4, out, sizeof(out)));
-        DBENCH_OP("protocore_pcap_global_header can", 100000,
-                  sink += protocore_pcap_global_header(pcap_hdr, sizeof(pcap_hdr), PROTOCORE_DLT_CAN_SOCKETCAN));
+        Pcap.args.out = pcap_hdr;
+        Pcap.args.cap = sizeof(pcap_hdr);
+        Pcap.args.linktype = PROTOCORE_DLT_CAN_SOCKETCAN;
+        DBENCH_OP("Pcap.global_header can", 100000, Pcap.global_header(Pcap.internal); sink += Pcap.n);
         (void)sink;
         DBENCH_DONE();
     }

@@ -30,9 +30,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_HTTP_CACHE
+
+PROTOCORE_BEGIN_DECLS
 
 /**
  * @brief A `Cache-Control` directive set (a superset of request + response directives).
@@ -114,8 +114,8 @@ void cache_shared(protocore_cache_control *cc, uint32_t max_age, uint32_t s_maxa
  */
 long cache_freshness_lifetime(const protocore_cache_control *cc, proto_bool shared, long expires_minus_date);
 
-#endif // PROTOCORE_ENABLE_HTTP_CACHE
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_HTTP_CACHE
 
 #endif // PROTOCORE_HTTPCACHE_H

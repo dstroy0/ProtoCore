@@ -35,6 +35,8 @@
 
 #if PROTOCORE_ENABLE_EDGE_MESH
 
+PROTOCORE_BEGIN_DECLS
+
 #include "server/web/edge_cache/edge_cache.h"    // EdgeEntry
 #include "server/web/edge_cache/edge_cache_sd.h" // PROTOCORE_EDGE_SD_VALUE_MAX + the shared entry serializer
 #include "server/web/edge_cache/edge_fetch.h"    // EdgeFetchTransport (reused transport seam)
@@ -143,6 +145,8 @@ EdgeMeshStatus edge_mesh_fetch_pump(EdgeMeshFetch *m, const EdgeFetchTransport *
 
 /** @brief Release the peer connection (idempotent). */
 void edge_mesh_fetch_end(EdgeMeshFetch *m, const EdgeFetchTransport *t);
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_EDGE_MESH
 

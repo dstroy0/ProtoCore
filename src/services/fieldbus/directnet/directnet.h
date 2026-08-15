@@ -24,9 +24,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_DIRECTNET
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief DirectNET control bytes: wire values compared/emitted, so integer constants in a struct. */
 #define DNET_ENQ 0x05
@@ -65,8 +65,8 @@ size_t protocore_dnet_data(const uint8_t *data, size_t data_len, uint8_t *out, s
  */
 proto_bool protocore_dnet_data_parse(const uint8_t *frame, size_t len, const uint8_t **data, size_t *data_len);
 
-#endif // PROTOCORE_ENABLE_DIRECTNET
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_DIRECTNET
 
 #endif // PROTOCORE_DIRECTNET_H

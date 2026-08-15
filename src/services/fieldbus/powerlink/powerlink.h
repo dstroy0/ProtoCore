@@ -24,9 +24,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_POWERLINK
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief EPL message types (EPSG DS 301). */
 // POWERLINK message types + node ids: wire bytes, so integer constants in a namespacing struct.
@@ -77,8 +77,8 @@ typedef struct
 /** @brief Parse an EPL basic frame. @return true if @p len >= 3 and the message type is known. */
 proto_bool protocore_epl_parse(const uint8_t *frame, size_t len, EplFrame *out);
 
-#endif // PROTOCORE_ENABLE_POWERLINK
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_POWERLINK
 
 #endif // PROTOCORE_POWERLINK_H

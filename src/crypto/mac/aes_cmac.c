@@ -10,15 +10,19 @@
  * construction (subkey derivation + CBC-MAC + last-block handling) is identical on both.
  */
 
-#include "crypto/mac/aes_cmac.h"
-#include "crypto/crypto_opt.h"
+#if PROTOCORE_ENABLE_AES_CMAC
 
 #if PROTOCORE_HAS_HW_AES
 #include <mbedtls/aes.h> // AES-128 single-block via the ESP32 AES peripheral
-#else
+#endif
+#if !PROTOCORE_HAS_HW_AES
 #include "crypto/cipher/aes_block.h" // native software AES-128 block
 #endif
+#include "crypto/mac/aes_cmac.h"
+#include "crypto/crypto_opt.h"
+
 PROTOCORE_CRYPTO_HOT
+PROTOCORE_BEGIN_DECLS
 
 // ---------------------------------------------------------------------------
 // AES-128 single-block encrypt seam - one small wrapper, two platform bodies
@@ -44,7 +48,9 @@ static inline void blk_free(AesBlk *b)
     mbedtls_aes_free(&b->c);
 }
 
-#else
+#endif
+
+#if !PROTOCORE_HAS_HW_AES
 
 typedef struct
 {
@@ -63,7 +69,7 @@ static inline void blk_free(AesBlk *b)
     (void)b; // the software path holds no vendor allocation to release
 }
 
-#endif // PROTOCORE_HAS_HW_AES
+#endif // !PROTOCORE_HAS_HW_AES (SW path)
 
 // ---------------------------------------------------------------------------
 // CMAC construction (RFC 4493 / NIST SP800-38B)
@@ -149,3 +155,7 @@ void protocore_aes_cmac(const uint8_t key[16], const uint8_t *msg, size_t msg_le
 
     blk_free(&blk);
 }
+
+PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_AES_CMAC

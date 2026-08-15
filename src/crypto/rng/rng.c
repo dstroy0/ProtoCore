@@ -16,6 +16,8 @@
  * value is. Every PROTOCORE_RAND_RESEED_BYTES the seed is redrawn from the platform instead.
  */
 
+#if PROTOCORE_ENABLE_RNG
+
 #include "crypto/rng/rng.h"
 
 #include "core_setup/board_profiles/protocore_platform.h" // protocore_platform_rand_fill: the entropy source
@@ -23,6 +25,8 @@
 #include "mmgr/arena.h" // protocore_worker_self: the slot the pools index by
 #include "mmgr/protomem.h"
 #include "mmgr/secure.h"
+
+PROTOCORE_BEGIN_DECLS
 
 // key || iv || next, one contiguous borrow per worker.
 #define RNG_IV_LEN 8
@@ -106,3 +110,7 @@ void protocore_rand_fill(uint8_t *out, size_t len)
     protocore_secure_wipe(next, PROTOCORE_RAND_SEED_LEN);
     s_rng.drawn[w] += len;
 }
+
+PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_RNG

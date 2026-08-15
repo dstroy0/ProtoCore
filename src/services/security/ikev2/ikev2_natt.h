@@ -33,12 +33,12 @@
 #define PROTOCORE_IKEV2_NATT_H
 
 #include "protocore_config.h"
-#include "services/security/ikev2/ikev2.h" // IkePayloadType: the Next Payload a detection Notify carries
-
-PROTOCORE_BEGIN_DECLS
 
 #if PROTOCORE_ENABLE_IKEV2
 
+PROTOCORE_BEGIN_DECLS
+
+#include "services/security/ikev2/ikev2.h" // IkePayloadType: the Next Payload a detection Notify carries
 // ---------------------------------------------------------------------------
 // Literals
 // ---------------------------------------------------------------------------
@@ -152,8 +152,8 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern IkeNattNs IkeNatt;
 
-#endif // PROTOCORE_ENABLE_IKEV2
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_IKEV2
 
 #endif // PROTOCORE_IKEV2_NATT_H

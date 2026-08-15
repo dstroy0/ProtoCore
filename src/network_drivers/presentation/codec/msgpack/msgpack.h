@@ -28,13 +28,14 @@
 #ifndef PROTOCORE_MSGPACK_H
 #define PROTOCORE_MSGPACK_H
 
-#include "mmgr/span.h" // protocore_span / protocore_cspan - the region, bound with span.from()
-#include "network_drivers/presentation/codec/codec.h" // protocore_codec_type - one item vocabulary
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_MSGPACK
+
+#include "mmgr/span.h" // protocore_span / protocore_cspan - the region, bound with span.from()
+#include "network_drivers/presentation/codec/codec.h" // protocore_codec_type - one item vocabulary
+
+PROTOCORE_BEGIN_DECLS
 
 // The encoder writes into a protocore_span and the decoder reads from a protocore_cspan. Bind with
 // span.from(buf, cap), check with span.ok(), and take the encoded length from span.len().
@@ -47,8 +48,8 @@ PROTOCORE_BEGIN_DECLS
  */
 extern const protocore_codec MsgPack;
 
-#endif // PROTOCORE_ENABLE_MSGPACK
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_MSGPACK
 
 #endif // PROTOCORE_MSGPACK_H

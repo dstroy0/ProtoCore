@@ -26,6 +26,8 @@
 
 #if PROTOCORE_ENABLE_SMB
 
+PROTOCORE_BEGIN_DECLS
+
 #include "smb2.h" // Smb2SignAlgo (the per-session signing algorithm carried on the handle)
 
 /** @brief Result of an SMB client operation. 0 is success; each failure is a distinct code. */
@@ -113,6 +115,8 @@ SmbResult smb_read(SmbHandle *h, uint64_t offset, uint8_t *out, size_t cap, size
  */
 SmbResult smb_write(SmbHandle *h, uint64_t offset, const uint8_t *data, size_t len, size_t *written, SmbSendFn send,
                     SmbRecvFn recv, void *ctx);
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SMB
 

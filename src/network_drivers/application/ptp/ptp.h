@@ -25,9 +25,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_PTP
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief PTPv2 messageType values (low nibble of octet 0). */
 enum protocore_ptp_msg_type
@@ -207,8 +207,8 @@ void protocore_ptp_compute(int64_t t1, int64_t t2, int64_t t3, int64_t t4, proto
  */
 int64_t protocore_ptp_compute_link_delay(int64_t t1, int64_t t2, int64_t t3, int64_t t4);
 
-#endif // PROTOCORE_ENABLE_PTP
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_PTP
 
 #endif // PROTOCORE_PTP_H

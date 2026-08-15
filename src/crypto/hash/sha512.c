@@ -9,16 +9,21 @@
  * is used. Shared by SSH (Ed25519 / kex), PQC, and SMB 3.1.1 preauth integrity.
  */
 
-#include "crypto/hash/sha512.h"
-#include "crypto/crypto_opt.h"
-#include "mmgr/protomem.h"
 
-#if PROTOCORE_HAS_HW_SHA
-#include <mbedtls/sha512.h> // hardware SHA accelerator
-#else
+
+#if PROTOCORE_ENABLE_SHA512
+
+#if !PROTOCORE_HAS_HW_SHA
 #include "mmgr/endian.h" // native software SHA-512
 #endif
+
+#include "crypto/hash/sha512.h"
+#include "mmgr/protomem.h"
+#include "crypto/crypto_opt.h"
+
 PROTOCORE_CRYPTO_HOT
+
+PROTOCORE_BEGIN_DECLS
 
 #if PROTOCORE_HAS_HW_SHA
 
@@ -61,12 +66,13 @@ void protocore_sha512(uint8_t *work, const uint8_t *data, size_t len, uint8_t di
     (void)work; // the accelerator carries its own
     (void)mbedtls_sha512(data, len, digest, 0 /* 0 = SHA-512, 1 = SHA-384 */);
 }
-
-#else // native software path
+#endif
+#if !PROTOCORE_HAS_HW_SHA // native software path
 
 // ---------------------------------------------------------------------------
 // SW path: software SHA-512 (FIPS 180-4).
 // ---------------------------------------------------------------------------
+
 
 static const uint64_t K512[80] = {
     0x428a2f98d728ae22ULL, 0x7137449123ef65cdULL, 0xb5c0fbcfec4d3b2fULL, 0xe9b5dba58189dbbcULL, 0x3956c25bf348b538ULL,
@@ -373,3 +379,7 @@ void protocore_sha512(uint8_t *work, const uint8_t *data, size_t len, uint8_t di
 }
 
 #endif // !PROTOCORE_HAS_HW_SHA (SW path)
+
+PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_SHA512

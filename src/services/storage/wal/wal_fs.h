@@ -34,12 +34,16 @@
 #ifndef PROTOCORE_WAL_FS_H
 #define PROTOCORE_WAL_FS_H
 
-#include "mmgr/protomem.h"
 #include "protocore_config.h"
+
+#if PROTOCORE_ENABLE_WAL
+
+PROTOCORE_BEGIN_DECLS
+
+#include "mmgr/protomem.h"
 #include "server/storage/mnt.h" // protocore_mnt_backend - the store the log lives on
 #include "services/storage/wal/wal_store.h"
 
-#if PROTOCORE_ENABLE_WAL
 
 /** @brief What the adapter needs to reach one open file: the store and the handle it returned. */
 typedef struct
@@ -158,5 +162,8 @@ PROTOCORE_INLINE void protocore_wal_fs_close(protocore_wal_fs_ctx *c)
     }
 }
 
+PROTOCORE_END_DECLS
+
 #endif // PROTOCORE_ENABLE_WAL
+
 #endif // PROTOCORE_WAL_FS_H

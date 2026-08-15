@@ -23,9 +23,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_HTTP3
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief Frame types (RFC 9000 sec 19 / Table 3). STREAM is the range 0x08..0x0f. */
 typedef struct
@@ -145,8 +145,8 @@ size_t protocore_quic_build_max_data(uint8_t *out, size_t cap, uint64_t max);
 size_t protocore_quic_build_connection_close(uint8_t *out, size_t cap, proto_bool app, uint64_t error_code,
                                              uint64_t frame_type, const char *reason, size_t reason_len);
 
-#endif // PROTOCORE_ENABLE_HTTP3
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_HTTP3
 
 #endif // PROTOCORE_QUIC_FRAME_H

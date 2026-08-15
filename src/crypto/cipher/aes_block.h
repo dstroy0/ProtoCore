@@ -22,9 +22,14 @@
 #ifndef PROTOCORE_AES_BLOCK_H
 #define PROTOCORE_AES_BLOCK_H
 
+#include "protocore_config.h" // the entry point: PROTOCORE_INLINE, and protocore_types.h for the widths
+
+#if PROTOCORE_ENABLE_AES_BLOCK
+
 #include "crypto/cipher/aes_sbox.h" // PROTOCORE_AES_SBOX
 #include "mmgr/protomem.h"
-#include "protocore_config.h" // the entry point: PROTOCORE_INLINE, and protocore_types.h for the widths
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief GF(2^8) multiply-by-2 (xtime) for the AES MixColumns step. */
 PROTOCORE_INLINE uint8_t protocore_aes_xtime(uint8_t a)
@@ -161,5 +166,9 @@ PROTOCORE_INLINE void protocore_aes_encrypt_block(const uint32_t *rk, int nr, co
 
     mem.cpy(out, s, 16);
 }
+
+PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_AES_BLOCK
 
 #endif // PROTOCORE_AES_BLOCK_H

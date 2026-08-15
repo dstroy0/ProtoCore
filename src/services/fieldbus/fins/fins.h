@@ -30,9 +30,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_FINS
+
+PROTOCORE_BEGIN_DECLS
 
 #define FINS_HEADER_SIZE 10
 
@@ -131,8 +131,8 @@ typedef struct
 /** @brief Parse a response frame (header + MRC + SRC + MRES + SRES + data). */
 proto_bool protocore_fins_parse_response(const uint8_t *buf, size_t len, FinsResponse *out);
 
-#endif // PROTOCORE_ENABLE_FINS
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_FINS
 
 #endif // PROTOCORE_FINS_H

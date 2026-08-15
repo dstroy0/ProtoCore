@@ -34,6 +34,8 @@
 
 #if PROTOCORE_ENABLE_IFACE_BRIDGE
 
+PROTOCORE_BEGIN_DECLS
+
 #include "server/net/iface_bridge/iface_bridge.h"
 
 /**
@@ -53,6 +55,8 @@ proto_bool protocore_iface_bridge_publish(uint8_t listener_id, uint16_t port, Br
 
 /** @brief Clear all listener bindings and rules (start from empty). */
 void protocore_iface_bridge_listener_reset(void);
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_IFACE_BRIDGE
 

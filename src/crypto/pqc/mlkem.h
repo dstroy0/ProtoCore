@@ -36,9 +36,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
+#if PROTOCORE_ENABLE_MLKEM
 
-#if PROTOCORE_ENABLE_PQC_KEX
+PROTOCORE_BEGIN_DECLS
 
 #define MLKEM768_EK_BYTES 1184 ///< encapsulation key (public key): 384*k + 32
 #define MLKEM768_DK_BYTES 2400 ///< decapsulation key (private): 768*k + 96
@@ -92,8 +92,8 @@ proto_bool protocore_mlkem768_encaps(const uint8_t ek[MLKEM768_EK_BYTES], const 
 void protocore_mlkem768_decaps(const uint8_t dk[MLKEM768_DK_BYTES], const uint8_t ct[MLKEM768_CT_BYTES],
                                uint8_t ss[MLKEM768_SS_BYTES]);
 
-#endif // PROTOCORE_ENABLE_PQC_KEX
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_MLKEM
 
 #endif // PROTOCORE_MLKEM_H

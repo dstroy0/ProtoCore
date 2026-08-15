@@ -30,9 +30,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_WS_DEFLATE
+
+PROTOCORE_BEGIN_DECLS
 
 /**
  * @brief Working-memory bytes inflate_raw() needs for its Huffman tables.
@@ -68,8 +68,8 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern const InflateNs Inflate;
 
-#endif // PROTOCORE_ENABLE_WS_DEFLATE
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_WS_DEFLATE
 
 #endif // PROTOCORE_INFLATE_H

@@ -22,6 +22,8 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for proto_bool and the widths
 
+#if PROTOCORE_ENABLE_ED25519
+
 PROTOCORE_BEGIN_DECLS
 
 /** @brief Ed25519 seed (private key) length. */
@@ -50,5 +52,7 @@ proto_bool protocore_ed25519_verify(uint8_t *work, const uint8_t pub[PROTOCORE_E
                                     size_t mlen, const uint8_t sig[PROTOCORE_ED25519_SIG_LEN]);
 
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_ED25519
 
 #endif // PROTOCORE_ED25519_H

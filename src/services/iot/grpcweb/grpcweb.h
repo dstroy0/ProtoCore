@@ -49,9 +49,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_GRPC_WEB
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief Compressed-Flag set in the frame byte: the Message uses the Message-Encoding. */
 #define PROTOCORE_GRPCWEB_COMPRESSED 0x01
@@ -156,8 +156,8 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern GrpcWebNs GrpcWeb;
 
-#endif // PROTOCORE_ENABLE_GRPC_WEB
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_GRPC_WEB
 
 #endif // PROTOCORE_GRPCWEB_H

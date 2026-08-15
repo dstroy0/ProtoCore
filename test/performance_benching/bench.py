@@ -214,15 +214,14 @@ HOST_ARMS = [
 def host_flags(entry):
     # The host has no bounded DRAM, so the arenas are sized far past any bench's worst case, the
     # same way the test envs do it. A failed span is then a defect, not a budget.
-    # -Iinclude, where protocore.h lives, is deliberately NOT here. A bench measures one module, and
-    # the umbrella header pulls the whole server in behind it: adding the path took server_gpio_map
-    # from 10 translation units to 288 and its build from seconds to a minute, for the same measured
-    # numbers. The two benches whose subject really is the umbrella (upload_service, ota_service)
-    # therefore do not resolve it, and say so at the compile rather than building the world.
+    # include/ is where protocore.h lives. Every TU that names it compiles; what the umbrella
+    # reaches is kept out of the source list by _mm_headers pruning its subtree, not by leaving the
+    # path off.
     incs = [
         "-Icore_setup/hal/host",
         "-Itest/support",
         "-Isrc",
+        "-Iinclude",
         "-I.",
         "-I" + os.path.relpath(COMMON, ROOT).replace("\\", "/"),
     ]
@@ -231,16 +230,40 @@ def host_flags(entry):
     return incs, defs
 
 
+# The umbrella header. It names every module in the library, so what it reaches says nothing about
+# what a bench measures.
+UMBRELLA = "include/protocore.h"
+
+
 def _mm_headers(cc, entry, main_c):
-    """The src/ headers main.c pulls in, from the compiler's own dependency scan."""
+    """The src/ headers a TU pulls in on its own account, from the compiler's include tree.
+
+    Read as a tree (-H) rather than a flat list (-MM) so the subtree under the umbrella can be
+    pruned. A bench measures one module; reaching protocore.h through any header would otherwise
+    make the whole server its source list - server_gpio_map went 10 -> 288 translation units that
+    way, for the same measured numbers. Pruning the subtree keeps the path available so every TU
+    still compiles, and only the membership question ignores it.
+    """
     incs, defs = host_flags(entry)
-    cmd = [cc, "-MM", "-std=c11", "-D_POSIX_C_SOURCE=200809L"] + defs + incs + [main_c]
+    cmd = [cc, "-H", "-fsyntax-only", "-std=c11", "-D_POSIX_C_SOURCE=200809L"] + defs + incs + [main_c]
     r = subprocess.run(cmd, capture_output=True, text=True, cwd=ROOT)
     if r.returncode != 0:
         return None, r.stderr.strip()
     out = []
-    for tok in r.stdout.replace("\\\n", " ").split(":", 1)[-1].split():
-        p = os.path.relpath(os.path.abspath(os.path.join(ROOT, tok)), ROOT).replace("\\", "/")
+    prune_depth = None
+    for line in r.stderr.split("\n"):
+        m = re.match(r"^(\.+)\s+(\S.*?)\s*$", line)
+        if not m:
+            continue
+        depth = len(m.group(1))
+        if prune_depth is not None:
+            if depth > prune_depth:
+                continue  # included by the umbrella, not by this TU
+            prune_depth = None
+        p = os.path.relpath(os.path.abspath(os.path.join(ROOT, m.group(2))), ROOT).replace("\\", "/")
+        if p == UMBRELLA:
+            prune_depth = depth
+            continue
         if p.startswith("src/") and p.endswith(".h"):
             out.append(p)
     return out, None
@@ -276,6 +299,11 @@ def _siblings_of(header):
 # provide the symbol, and reading it wrong costs nothing here (see symbol_index).
 DEFN = re.compile(r"^[A-Za-z_][\w\s\*]*?\b(\w+)\s*\([^;]*$", re.M)
 
+# A file-scope object: a type at column 0, a name, then an initializer. Every module exports its
+# namespace as one of these (`HttpNs Http = {...}`), and a link that is missing `Http` is missing an
+# object, not a function - DEFN alone never sees it and the closure stalls with the name unresolved.
+OBJDEFN = re.compile(r"^[A-Za-z_][\w\s\*]*?\b(\w+)\s*(?:\[[^\]]*\])?\s*=[^=]", re.M)
+
 
 def _defines(path):
     """The names a .c appears to define at file scope, read from its text.
@@ -286,7 +314,8 @@ def _defines(path):
     Reading the text is the same answer for this purpose, at a thousandth of the cost.
     """
     with open(os.path.join(ROOT, path), "r", encoding="utf-8", errors="replace") as f:
-        return set(DEFN.findall(f.read()))
+        text = f.read()
+    return set(DEFN.findall(text)) | set(OBJDEFN.findall(text))
 
 
 # symbol -> the src/ .c that defines it. Built once per run; the answer does not depend on which

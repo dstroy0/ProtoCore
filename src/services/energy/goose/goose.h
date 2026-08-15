@@ -24,9 +24,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_GOOSE
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief The GOOSE control fields (strings are borrowed, not copied). */
 typedef struct
@@ -89,8 +89,8 @@ typedef struct
  */
 proto_bool protocore_goose_parse_frame(const uint8_t *buf, size_t len, protocore_goose_rx *out);
 
-#endif // PROTOCORE_ENABLE_GOOSE
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_GOOSE
 
 #endif // PROTOCORE_GOOSE_H

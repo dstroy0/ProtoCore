@@ -21,6 +21,8 @@
 
 #if PROTOCORE_ENABLE_EDGE_CACHE
 
+PROTOCORE_BEGIN_DECLS
+
 #include "network_drivers/presentation/http/httpcache/httpcache.h" // protocore_cache_control, cache_freshness_lifetime
 #include "shared/http_date/http_date.h"                            // PROTOCORE_HTTP_DATE_MAX (the stored-date floor)
 
@@ -256,6 +258,8 @@ size_t edge_build_conditional(const EdgeEntry *e, char *out, size_t cap);
  * no wall clock); @p now_ms is the monotonic clock.
  */
 void edge_apply_304(EdgeEntry *e, const char *new_hdrs, size_t hdr_len, int64_t response_time_epoch, uint32_t now_ms);
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_EDGE_CACHE
 

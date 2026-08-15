@@ -27,6 +27,8 @@
 
 #if PROTOCORE_ENABLE_AUTH_LOCKOUT
 
+PROTOCORE_BEGIN_DECLS
+
 #include "shared/ip/ip.h"
 
 /**
@@ -46,6 +48,8 @@ void auth_lockout_succeed(const protocore_ip *ip);
 
 /** @brief Reset the whole lockout table (e.g. between tests). */
 void auth_lockout_reset(void);
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_AUTH_LOCKOUT
 

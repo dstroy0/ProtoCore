@@ -22,14 +22,15 @@
 #ifndef PROTOCORE_AESCCM_H
 #define PROTOCORE_AESCCM_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for proto_bool and the widths
 
-// SMB 3.x is the only consumer of AES-CCM today; gate it so non-SMB builds do not carry the code.
-#if PROTOCORE_ENABLE_SMB
+#if PROTOCORE_ENABLE_AESCCM
 
 #if PROTOCORE_HAS_HW_AES
 #include <mbedtls/ccm.h> // hardware-backed AES-CCM on ESP32
 #endif
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief AES-CCM authentication tag length used by SMB 3.x (bytes). */
 #define PROTOCORE_AESCCM_TAG_LEN 16
@@ -65,6 +66,8 @@ proto_bool protocore_aesccm_open_tag(const uint8_t *key, size_t key_len, const u
                                      const uint8_t *aad, size_t aad_len, const uint8_t *ct, size_t ct_len,
                                      const uint8_t tag[PROTOCORE_AESCCM_TAG_LEN], uint8_t *out);
 
-#endif // PROTOCORE_ENABLE_SMB
+PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_AESCCM
 
 #endif // PROTOCORE_AESCCM_H

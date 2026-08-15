@@ -18,9 +18,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_RANGE
+
+PROTOCORE_BEGIN_DECLS
 
 /**
  * @brief Parse a single-range `Range: bytes=...` header value against a resource of @p size bytes.
@@ -34,8 +34,8 @@ PROTOCORE_BEGIN_DECLS
  */
 int http_parse_byte_range(const char *hdr, size_t size, size_t *out_start, size_t *out_end);
 
-#endif // PROTOCORE_ENABLE_RANGE
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_RANGE
 
 #endif // PROTOCORE_HTTP_RANGE_H

@@ -206,26 +206,28 @@ def check():
         #
         # That form is also ANONYMOUS: the type's name is the typedef's trailing identifier, not a
         # tag. When no tag is present the brace is matched to find it.
-        for m in re.finditer(r"\benum\s+(?:PROTO_ENUM_PACKED\s+)?(\w+|(?=\{))", text):
+        # comments and string literals blanked, offsets preserved
+        code = src_symbols.blank_comments_and_strings(raw)
+        for m in re.finditer(r"\benum\s+(?:PROTO_ENUM_PACKED\s+)?(\w+|(?=\{))", code):
             name = m.group(1)
             at = m.start(1)
             if not name:  # anonymous: the typedef name follows the closing brace
-                depth, i = 0, text.find("{", m.end())
-                while i < len(text):
-                    if text[i] == "{":
+                depth, i = 0, code.find("{", m.end())
+                while i < len(code):
+                    if code[i] == "{":
                         depth += 1
-                    elif text[i] == "}":
+                    elif code[i] == "}":
                         depth -= 1
                         if depth == 0:
                             break
                     i += 1
-                tail = re.match(r"\s*(\w+)\s*;", text[i + 1 :]) if i < len(text) else None
+                tail = re.match(r"\s*(\w+)\s*;", code[i + 1 :]) if i < len(code) else None
                 if not tail:
                     continue  # an inline anonymous enum names no type
                 name, at = tail.group(1), i + 1 + tail.start(1)
-            ln = text[:at].count("\n") + 1
-            if not re.fullmatch(r"pc_[a-z0-9_]+", name):
-                add("enum-name", rel, ln, f"enum type {name} is not protocore_snake_case")
+            ln = code[:at].count("\n") + 1
+            if not re.fullmatch(r"[A-Z][A-Za-z0-9]*", name):
+                add("enum-name", rel, ln, f"enum type {name} is not StructName PascalCase")
             types_seen.setdefault(name.lower(), rel)
 
         # 8. collision material: exported function names

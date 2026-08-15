@@ -22,9 +22,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_SQLITE
+
+PROTOCORE_BEGIN_DECLS
 
 /**
  * @brief Decode a SQLite variable-length integer (1-9 bytes, big-endian; the high bit of each of the first
@@ -296,8 +296,8 @@ typedef struct
 uint32_t protocore_sqlite_build_table_db(uint32_t page_size, const char *table_name, const char *create_sql,
                                          const SqliteRow *rows, uint32_t nrows, uint8_t *out, uint32_t out_cap);
 
-#endif // PROTOCORE_ENABLE_SQLITE
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_SQLITE
 
 #endif // PROTOCORE_SQLITE_FORMAT_H

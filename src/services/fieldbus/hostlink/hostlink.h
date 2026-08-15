@@ -28,9 +28,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_HOSTLINK
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief FCS: 8-bit XOR of [data, data+len). */
 uint8_t protocore_hostlink_fcs(const char *data, size_t len);
@@ -89,8 +89,8 @@ proto_bool protocore_hostlink_read_word(const HostlinkFrame *f, size_t index, ui
 size_t protocore_hostlink_build_write(char *buf, size_t cap, uint8_t node, uint16_t address, const uint16_t *words,
                                       size_t word_count);
 
-#endif // PROTOCORE_ENABLE_HOSTLINK
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_HOSTLINK
 
 #endif // PROTOCORE_HOSTLINK_H

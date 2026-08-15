@@ -21,9 +21,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_ATC
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief One ATC field-I/O point. */
 typedef struct
@@ -55,8 +55,8 @@ proto_bool protocore_atc_set_output(AtcFieldIo *io, const char *name, uint8_t va
 /** @brief Read a point's value by name; @p found (may be null) reports whether it existed. */
 uint8_t protocore_atc_get(const AtcFieldIo *io, const char *name, proto_bool *found);
 
-#endif // PROTOCORE_ENABLE_ATC
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_ATC
 
 #endif // PROTOCORE_ATC_H

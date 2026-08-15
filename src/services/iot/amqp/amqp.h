@@ -55,9 +55,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_AMQP
+
+PROTOCORE_BEGIN_DECLS
 
 // Frame types, octet 0 of a frame (sec 4.2.3).
 #define AMQP_FRAME_METHOD 1    ///< method frame
@@ -174,8 +174,8 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern AmqpNs Amqp;
 
-#endif // PROTOCORE_ENABLE_AMQP
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_AMQP
 
 #endif // PROTOCORE_AMQP_H

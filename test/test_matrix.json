@@ -13,7 +13,8 @@
         "-DPROTOCORE_PER_IP_THROTTLE_MAX=2",
         "-DPROTOCORE_PER_IP_THROTTLE_WINDOW_MS=1000",
         "-DPROTOCORE_PER_IP_THROTTLE_SLOTS=4",
-        "-DPROTOCORE_IP_ALLOWLIST_SLOTS=4"
+        "-DPROTOCORE_IP_ALLOWLIST_SLOTS=4",
+        "-DPROTOCORE_HAS_NET_STACK=1"
       ],
       "src": [
         "+<shared/ip/ip.c>",
@@ -135,7 +136,9 @@
         "unit/integration/misc/test_application"
       ],
       "flags": [
-        "-DPROTOCORE_ENABLE_FILE_SERVING=1"
+        "-DPROTOCORE_ENABLE_FILE_SERVING=1",
+        "-DPROTOCORE_ENABLE_WEBSOCKET=1",
+        "-DPROTOCORE_ENABLE_SSE=1"
       ]
     },
     "native_arena": {
@@ -230,14 +233,18 @@
         "unit/integration/http/test_auth"
       ],
       "flags": [
-        "-DPROTOCORE_ENABLE_AUTH=1"
+        "-DPROTOCORE_ENABLE_AUTH=1",
+        "-DPROTOCORE_ENABLE_WEBSOCKET=1",
+        "-DPROTOCORE_ENABLE_SSE=1"
       ]
     },
     "native_auth_lockout": {
       "desc": "Per-IP brute-force auth lockout (server/security/auth_lockout): exponential-backoff\nlockout state machine. Pure core (the millisecond clock is passed in), so it\nunit-tests on the host. PROTOCORE_ENABLE_AUTH_LOCKOUT (and its required parent\nPROTOCORE_ENABLE_AUTH) are set so the flag-guarded code compiles.",
       "flags": [
         "-DPROTOCORE_ENABLE_AUTH=1",
-        "-DPROTOCORE_ENABLE_AUTH_LOCKOUT=1"
+        "-DPROTOCORE_ENABLE_AUTH_LOCKOUT=1",
+        "-DPROTOCORE_ENABLE_WEBSOCKET=1",
+        "-DPROTOCORE_ENABLE_SSE=1"
       ],
       "src": [
         "+<server/security/auth_lockout/auth_lockout.c>",
@@ -417,7 +424,8 @@
     "native_bus_capture": {
       "desc": "CAN listen-only capture framing (server/signaling/bus_capture): can_to_socketcan() building the\n16-byte Linux SocketCAN frame (big-endian can_id, EFF/RTR flags, length, data) and the\nDLT_CAN_SOCKETCAN libpcap link type. Pure host tests.",
       "flags": [
-        "-DPROTOCORE_ENABLE_BUS_CAPTURE=1"
+        "-DPROTOCORE_ENABLE_BUS_CAPTURE=1",
+        "-DPROTOCORE_HAS_VENDOR_CAN=1"
       ],
       "src": [
         "+<server/signaling/bus_capture.c>",
@@ -425,7 +433,8 @@
         "+<mmgr/endian.c>",
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/swar.c>",
-        "+<shared/pcap/pcap.c>"
+        "+<shared/pcap/pcap.c>",
+        "+<core_setup/hal/host/host_platform.c>"
       ],
       "tests": [
         "unit/src/server/signaling/test_bus_capture"
@@ -618,6 +627,10 @@
       "base": "env:native_stack_http",
       "tests": [
         "unit/integration/shared/test_chunked"
+      ],
+      "flags": [
+        "-DPROTOCORE_ENABLE_WEBSOCKET=1",
+        "-DPROTOCORE_ENABLE_SSE=1"
       ]
     },
     "native_cia402": {
@@ -662,7 +675,8 @@
     "native_client": {
       "desc": "Outbound TCP client transport (network_drivers/transport/tcp/tcp_client.c), the pooled\nlayer-4 peer of tcp.c used by http_client / mqtt / ws_client / relay / smtp / ssh\nport-forward (PROTOCORE_NEED_CLIENT). The marshaled path is driven against the host pcb driver:\nthe connect completes inline, sends land in the capture, and received bytes arrive through\nthe recv callback the client armed. Covers the dial, the ring, the peer FIN and pool exhaustion.",
       "flags": [
-        "-DPROTOCORE_ENABLE_HTTP_CLIENT=1"
+        "-DPROTOCORE_ENABLE_HTTP_CLIENT=1",
+        "-DPROTOCORE_HAS_NET_STACK=1"
       ],
       "src": [
         "+<network_drivers/transport/tcp/tcp.c>",
@@ -740,7 +754,8 @@
         "-DPROTOCORE_ENABLE_COAP=1",
         "-DPROTOCORE_ENABLE_COAP_BLOCK=1",
         "-DPROTOCORE_COAP_BLOCK_SZX_MAX=2",
-        "-DPROTOCORE_COAP_BLOCK1_MAX=128"
+        "-DPROTOCORE_COAP_BLOCK1_MAX=128",
+        "-DPROTOCORE_HAS_NET_STACK=1"
       ],
       "src": [
         "+<services/iot/coap/coap.c>",
@@ -770,7 +785,8 @@
         "-DPROTOCORE_ENABLE_COAP_BLOCK=1",
         "-DPROTOCORE_COAP_BLOCK_SZX_MAX=2",
         "-DPROTOCORE_COAP_BLOCK1_MAX=128",
-        "-DPROTOCORE_ENABLE_COAP_OBSERVE=1"
+        "-DPROTOCORE_ENABLE_COAP_OBSERVE=1",
+        "-DPROTOCORE_HAS_NET_STACK=1"
       ],
       "src": [
         "+<services/iot/coap/coap.c>",
@@ -797,7 +813,8 @@
       "desc": "CoAP over DTLS (services/iot/coap/coaps, RFC 7252 sec 9): the bridge that drives a DtlsConn\nhandshake and, once established, unwraps each epoch-3 application record, answers it with\ncoap_server_process(), and re-wraps the response. An in-test DTLS 1.3 client completes the handshake\nand exchanges a CoAP GET, decrypting the CoAP response from the returned DTLS record; a replayed\napplication record is dropped. Pure host tests.",
       "flags": [
         "-DPROTOCORE_ENABLE_DTLS=1",
-        "-DPROTOCORE_ENABLE_COAP=1"
+        "-DPROTOCORE_ENABLE_COAP=1",
+        "-DPROTOCORE_HAS_NET_STACK=1"
       ],
       "src": [
         "+<services/iot/coap/coaps.c>",
@@ -842,7 +859,8 @@
       "desc": "CoAP-over-DTLS server front-end (services/iot/coap/coaps_server): the per-peer DtlsConn pool +\ningest/poll seam on top of protocore_coaps_process(). An in-test DTLS 1.3 client drives the server only through\ncoaps_server_ingest() and an output sink, exercising peer-address routing, the handshake + CoAP\nexchange, the poll-driven retransmission timer (RFC 9147 sec 5.8), and idle-connection reaping. Two\nsimultaneous peers are routed to their own connections. Pure host tests.",
       "flags": [
         "-DPROTOCORE_ENABLE_DTLS=1",
-        "-DPROTOCORE_ENABLE_COAP=1"
+        "-DPROTOCORE_ENABLE_COAP=1",
+        "-DPROTOCORE_HAS_NET_STACK=1"
       ],
       "src": [
         "+<services/iot/coap/coaps_server.c>",
@@ -970,7 +988,8 @@
         "-DPROTOCORE_ENABLE_OPCUA=1",
         "-DPROTOCORE_ENABLE_OPCUA_CLIENT=1",
         "-DPROTOCORE_ENABLE_WEBSOCKET=1",
-        "-DPROTOCORE_ENABLE_SSE=1"
+        "-DPROTOCORE_ENABLE_SSE=1",
+        "-DPROTOCORE_HAS_NET_STACK=1"
       ],
       "src": [
         "+<shared/ip/ip.c>",
@@ -1501,7 +1520,8 @@
     "native_device_id": {
       "desc": "MAC-derived device UUID (server/signaling/device_id): RFC 4122 v5 from a MAC via SHA-1.\nPure core - the ESP32 MAC read is ARDUINO-gated - so it unit-tests on the host\nagainst Python uuid.uuid5 reference values.",
       "flags": [
-        "-DPROTOCORE_ENABLE_DEVICE_ID=1"
+        "-DPROTOCORE_ENABLE_DEVICE_ID=1",
+        "-DPROTOCORE_HAS_VENDOR_MAC=1"
       ],
       "src": [
         "+<server/signaling/device_id.c>",
@@ -1510,7 +1530,8 @@
         "+<mmgr/endian.c>",
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/swar.c>",
-        "+<shared/hex/hex.c>"
+        "+<shared/hex/hex.c>",
+        "+<core_setup/hal/host/host_platform.c>"
       ],
       "tests": [
         "unit/src/server/signaling/test_device_id"
@@ -1560,7 +1581,9 @@
       "desc": "Build-flag reporter (diag() / PROTOCORE_ENABLE_DIAG). The gated diag() entry point\nand its DIAG_DOC frame spec are enabled by no other env, so this one keeps them\ncompiled + exercised in CI. Reuses the full app src via the native_stack_http\nbase.",
       "base": "env:native_stack_http",
       "flags": [
-        "-DPROTOCORE_ENABLE_DIAG=1"
+        "-DPROTOCORE_ENABLE_DIAG=1",
+        "-DPROTOCORE_ENABLE_WEBSOCKET=1",
+        "-DPROTOCORE_ENABLE_SSE=1"
       ],
       "src": [
         "${env:native_stack_http.build_src_filter}",
@@ -1575,7 +1598,8 @@
     "native_diffserv": {
       "desc": "DiffServ QoS marking (PROTOCORE_ENABLE_DIFFSERV): the DSCP->TOS encode (DSCP << 2, ECN 0),\nthe server-wide and UDP DSCP defaults (set/get, 6-bit mask), the per-connection setter\n(protocore_conn_set_dscp writes pcb->tos on the host path), and the per-listener override\n(protocore_listen_set_dscp incl. the UNSET sentinel + mask + unknown-port miss). Compiles the\nflag-guarded transport paths no other env builds. Pure L4 core - host-tested.",
       "flags": [
-        "-DPROTOCORE_ENABLE_DIFFSERV=1"
+        "-DPROTOCORE_ENABLE_DIFFSERV=1",
+        "-DPROTOCORE_HAS_NET_STACK=1"
       ],
       "src": [
         "+<shared/ip/ip.c>",
@@ -1606,7 +1630,9 @@
         "unit/integration/http/test_digest_auth"
       ],
       "flags": [
-        "-DPROTOCORE_ENABLE_AUTH=1"
+        "-DPROTOCORE_ENABLE_AUTH=1",
+        "-DPROTOCORE_ENABLE_WEBSOCKET=1",
+        "-DPROTOCORE_ENABLE_SSE=1"
       ]
     },
     "native_digest_vectors": {
@@ -1662,6 +1688,10 @@
       "base": "env:native_stack_http",
       "tests": [
         "unit/integration/fieldbus/test_dispatch"
+      ],
+      "flags": [
+        "-DPROTOCORE_ENABLE_WEBSOCKET=1",
+        "-DPROTOCORE_ENABLE_SSE=1"
       ]
     },
     "native_dma": {
@@ -1744,7 +1774,8 @@
     "native_dns_resolver": {
       "desc": "The portable DNS resolver (network_drivers/network/dns/dns_resolver, RFC 1035) on the build\nwhere PROTOCORE_HAS_VENDOR_DNS_RESOLVER is 0: the A-record question it writes, the answer it reads back -\nwalking past a CNAME and following the compression pointers a real response uses - and the replies it\nrefuses on a wrong id, a set RCODE, a question rather than an answer, or no A record at all. Plus the\ndotted-quad fast path, the nameserver setter, and the classifier that rejects a loopback or multicast\nanswer as a rebinding indicator.",
       "flags": [
-        "-DPROTOCORE_ENABLE_DNS_RESOLVER=1"
+        "-DPROTOCORE_ENABLE_DNS_RESOLVER=1",
+        "-DPROTOCORE_HAS_NET_STACK=1"
       ],
       "src": [
         "+<network_drivers/network/dns/dns_resolver.c>",
@@ -1778,7 +1809,8 @@
     "native_dns_server": {
       "desc": "Authoritative DNS server (network_drivers/network/dns/dns_server): the A-record response builder\n(QNAME parse, compressed A answer, NXDOMAIN, non-A query, header flags, malformed\nguards), the built-in name->IP table (add / case-insensitive lookup / clear), and begin() binding\nport 53 on the UDP listener, driven against the host pcb driver.",
       "flags": [
-        "-DPROTOCORE_ENABLE_DNS_SERVER=1"
+        "-DPROTOCORE_ENABLE_DNS_SERVER=1",
+        "-DPROTOCORE_HAS_NET_STACK=1"
       ],
       "src": [
         "+<network_drivers/network/dns/dns_server.c>",
@@ -2446,7 +2478,9 @@
         "unit/integration/filesystem/test_file_serving"
       ],
       "flags": [
-        "-DPROTOCORE_ENABLE_FILE_SERVING=1"
+        "-DPROTOCORE_ENABLE_FILE_SERVING=1",
+        "-DPROTOCORE_ENABLE_WEBSOCKET=1",
+        "-DPROTOCORE_ENABLE_SSE=1"
       ]
     },
     "native_fins": {
@@ -2542,6 +2576,10 @@
       "base": "env:native_stack_http",
       "tests": [
         "unit/integration/transport/test_form_params"
+      ],
+      "flags": [
+        "-DPROTOCORE_ENABLE_WEBSOCKET=1",
+        "-DPROTOCORE_ENABLE_SSE=1"
       ]
     },
     "native_forward": {
@@ -3076,7 +3114,8 @@
       "desc": "HTTP/3 dispatch bridge end-to-end through PC (the full Layer-7 app built with\nPROTOCORE_ENABLE_HTTP3=1): a QUIC client completes the handshake and sends an HTTP/3 GET, quic_server\nroutes it to the reserved dispatch slot, match_and_execute runs the registered route, and the\nhandler's send() is routed back onto the request stream via protocore_quic_server_respond. Verifies the whole\nwire: a real route handler answers an HTTP/3 request. Reuses the native_stack_http full-app base.",
       "base": "env:native_stack_http",
       "flags": [
-        "-DPROTOCORE_ENABLE_HTTP3=1"
+        "-DPROTOCORE_ENABLE_HTTP3=1",
+        "-DPROTOCORE_HAS_NET_STACK=1"
       ],
       "src": [
         "${env:native_stack_http.build_src_filter}",
@@ -3521,12 +3560,18 @@
       "base": "env:native_stack_http",
       "tests": [
         "unit/integration/transport/test_iface"
+      ],
+      "flags": [
+        "-DPROTOCORE_ENABLE_WEBSOCKET=1",
+        "-DPROTOCORE_ENABLE_SSE=1"
       ]
     },
     "native_iface_bridge": {
       "desc": "Interface bridge pure core (server/net/iface_bridge): the user-defined address:port -> bus\nrule table (register / find / dedup / capacity, keyed by port+proto with the full protocore_ip bind address\npreserved) and the write-then-read transaction frame codec (big-endian write_len/read_len header,\npartial-frame handling, build/parse round-trip). Bus I/O + listener are ESP32-only. Pure host tests.",
       "flags": [
-        "-DPROTOCORE_ENABLE_IFACE_BRIDGE=1"
+        "-DPROTOCORE_ENABLE_IFACE_BRIDGE=1",
+        "-DPROTOCORE_ENABLE_WEBSOCKET=1",
+        "-DPROTOCORE_ENABLE_SSE=1"
       ],
       "src": [
         "+<server/net/iface_bridge/iface_bridge.c>",
@@ -3991,7 +4036,8 @@
         "-DPROTOCORE_ENABLE_KEEPALIVE=1",
         "-DPROTOCORE_KEEPALIVE_MAX_REQUESTS=3",
         "-DPROTOCORE_ENABLE_WEBSOCKET=1",
-        "-DPROTOCORE_ENABLE_SSE=1"
+        "-DPROTOCORE_ENABLE_SSE=1",
+        "-DPROTOCORE_HAS_NET_STACK=1"
       ],
       "src": [
         "+<shared/ip/ip.c>",
@@ -4353,7 +4399,8 @@
     "native_mdns_service": {
       "desc": "The portable mDNS / DNS-SD responder (network_drivers/application/mdns_service, RFC 6762 /\nRFC 6763) on the build where PROTOCORE_HAS_VENDOR_MDNS is 0: joining 224.0.0.251:5353 through the UDP\nlistener, and answering a query for the service-enumeration name, a service type, and an instance's\nSRV / TXT - each answer read back off the wire and decoded by the test's own label reader.",
       "flags": [
-        "-DPROTOCORE_ENABLE_MDNS=1"
+        "-DPROTOCORE_ENABLE_MDNS=1",
+        "-DPROTOCORE_HAS_NET_STACK=1"
       ],
       "src": [
         "+<network_drivers/application/mdns_service/mdns_service.c>",
@@ -4448,6 +4495,10 @@
       "base": "env:native_stack_http",
       "tests": [
         "unit/integration/transport/test_middleware"
+      ],
+      "flags": [
+        "-DPROTOCORE_ENABLE_WEBSOCKET=1",
+        "-DPROTOCORE_ENABLE_SSE=1"
       ]
     },
     "native_mms": {
@@ -4974,7 +5025,8 @@
       "desc": "NTP/SNTP server (RFC 5905 server mode): the response codec (ntp_server_build_response) -\nversion echo, mode/LI/stratum, origin-timestamp copy, reference/receive/transmit stamps,\nbig-endian encoding, and the length guards - plus the UDP/123 bind and its handler, driven\nthrough the host stack's pcb so the reply that reaches the wire is the one a client would get.",
       "flags": [
         "-DPROTOCORE_ENABLE_NTP_SERVER=1",
-        "-DPROTOCORE_ENABLE_TIME_SOURCE=1"
+        "-DPROTOCORE_ENABLE_TIME_SOURCE=1",
+        "-DPROTOCORE_HAS_NET_STACK=1"
       ],
       "src": [
         "+<network_drivers/application/ntp_server/ntp_server.c>",
@@ -5008,7 +5060,8 @@
     "native_ntp_service": {
       "desc": "The SNTP client (network_drivers/application/ntp_service, RFC 4330), which is the client on\nevery target: the mode-3 request it puts on the wire, the mode-4 reply it accepts, and the ones it\nrefuses - a wrong mode, a kiss-o'-death stratum, an origin that does not echo the request's transmit\nstamp, and a pre-2021 clock. Plus the epoch advancing off the monotonic tick between syncs.",
       "flags": [
-        "-DPROTOCORE_ENABLE_NTP=1"
+        "-DPROTOCORE_ENABLE_NTP=1",
+        "-DPROTOCORE_HAS_NET_STACK=1"
       ],
       "src": [
         "+<network_drivers/application/ntp_service/ntp_service.c>",
@@ -5171,7 +5224,8 @@
     "native_observability": {
       "desc": "Transport observability (PROTOCORE_ENABLE_OBSERVABILITY): the protocore_conn_on_event\nhook, by-reason counters, the live CONN_CLOSING gauge, and that the real lwIP\ncallbacks (recv FIN / error / timeout / local close / backpressure) drive the\nright counter. Pure L4 core - host-tested.",
       "flags": [
-        "-DPROTOCORE_ENABLE_OBSERVABILITY=1"
+        "-DPROTOCORE_ENABLE_OBSERVABILITY=1",
+        "-DPROTOCORE_HAS_NET_STACK=1"
       ],
       "src": [
         "+<shared/ip/ip.c>",
@@ -5388,14 +5442,16 @@
     "native_ota_rollback": {
       "desc": "OTA rollback decision (server/update/ota_rollback): pure decision matrix host-tested;\nthe esp_ota commit/rollback are ESP32-only.",
       "flags": [
-        "-DPROTOCORE_ENABLE_OTA_ROLLBACK=1"
+        "-DPROTOCORE_ENABLE_OTA_ROLLBACK=1",
+        "-DPROTOCORE_HAS_VENDOR_OTA=1"
       ],
       "src": [
         "+<server/update/ota_rollback.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<core_setup/hal/host/host_platform.c>"
       ],
       "tests": [
         "unit/src/server/update/test_ota_rollback"
@@ -5451,6 +5507,10 @@
       "base": "env:native_stack_http",
       "tests": [
         "unit/integration/transport/test_path_params"
+      ],
+      "flags": [
+        "-DPROTOCORE_ENABLE_WEBSOCKET=1",
+        "-DPROTOCORE_ENABLE_SSE=1"
       ]
     },
     "native_pca9685": {
@@ -5529,7 +5589,8 @@
         "-DPROTOCORE_ENABLE_WEBDAV=1",
         "-DPROTOCORE_ENABLE_HTTP2=1",
         "-DPROTOCORE_ENABLE_HTTP3=1",
-        "-DPROTOCORE_ENABLE_FILE_SERVING=1"
+        "-DPROTOCORE_ENABLE_FILE_SERVING=1",
+        "-DPROTOCORE_HAS_NET_STACK=1"
       ],
       "src": [
         "+<shared/ip/ip.c>",
@@ -5673,7 +5734,9 @@
     "native_phy_iface": {
       "desc": "The layer 1 interface registry (network_drivers/physical, Physical.iface): an interface is\nan id, a kind and the callback that puts bytes on the wire, and a device carries several of mixed\nkind. Registration and its refusals (duplicate id, null send, table full), the readbacks, reset,\nrow walking, and that send hands the callback the id and ctx it was registered with. Every\nforwarded byte leaves through this send, so it is covered here and not only through forward.",
       "flags": [
-        "-DPROTOCORE_PHY_MAX_IFACES=4"
+        "-DPROTOCORE_PHY_MAX_IFACES=4",
+        "-DPROTOCORE_ENABLE_WEBSOCKET=1",
+        "-DPROTOCORE_ENABLE_SSE=1"
       ],
       "src": [
         "+<network_drivers/physical/physical.c>",
@@ -5694,7 +5757,9 @@
     "native_l1_iface": {
       "desc": "The layer 1 interface registry (network_drivers/physical, the PhysicalNs iface_* calls): an interface is an id, a kind, and the callback that puts octets on the wire, and one device carries several of mixed kind. No standard publishes the layout of such a table, so every case is a property the container must hold: registration is an identity, a duplicate id is refused, an interface with no send is refused, a full table fails closed rather than evicting, reset frees rows for reuse, and a row walk marks the empty and out-of-range rows with PROTOCORE_IF_NONE. The load-bearing case is that a send reaches only the addressed row and hands its callback the id and the ctx that row was registered with, since every forwarded octet leaves through it. The kinds are protocore_config.h's vocabulary, which separates a wired route (RFC 894 framing) from an IEEE 802 wireless one (RFC 1042). PROTOCORE_PHY_MAX_IFACES is pinned at 4 so the full-table boundary is explicit.",
       "flags": [
-        "-DPROTOCORE_PHY_MAX_IFACES=4"
+        "-DPROTOCORE_PHY_MAX_IFACES=4",
+        "-DPROTOCORE_ENABLE_WEBSOCKET=1",
+        "-DPROTOCORE_ENABLE_SSE=1"
       ],
       "src": [
         "+<network_drivers/physical/physical.c>",
@@ -5820,7 +5885,9 @@
     "native_power_mgmt": {
       "desc": "SoC power governor (server/power_mgmt): the pure clock decision from load, die\ntemperature and reset reason - load-based scaling, the thermal hysteresis that stops a part parked at\nthe limit from oscillating (asserted by feeding the plan's own output back for 20 ticks and counting\none transition), post-brownout recovery holding the floor even when busy and cool, the precedence\nbetween the three, and INT16_MIN meaning no sensor rather than ice-cold.",
       "flags": [
-        "-DPROTOCORE_ENABLE_POWER_MGMT=1"
+        "-DPROTOCORE_ENABLE_POWER_MGMT=1",
+        "-DPROTOCORE_HAS_VENDOR_PM=1",
+        "-DPROTOCORE_HAS_VENDOR_BT=1"
       ],
       "src": [
         "+<server/core/power_mgmt.c>",
@@ -5830,7 +5897,8 @@
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/swar.c>",
         "+<mmgr/float_bits.c>",
-        "+<shared/hex/hex.c>"
+        "+<shared/hex/hex.c>",
+        "+<core_setup/hal/host/host_platform.c>"
       ],
       "tests": [
         "unit/file_conversion/server/core/test_power_mgmt"
@@ -6543,7 +6611,8 @@
     "native_quic_server": {
       "desc": "HTTP/3 server glue (network_drivers/presentation/http/http3/quic_server): the UDP-facing pool\nthat routes datagrams by Destination Connection ID to a pool of QuicConn + H3Conn engines. A QUIC\nclient in the test hands datagrams to the pcb the server bound and reads its replies back out of the\nhost stack's send log, driving a full handshake + HTTP/3 GET and verifying the 200 + body - the same\nend-to-end flow as test_h3_e2e but through protocore_quic_server_begin / poll / respond over the real UDP\nlistener, exercising the connection-ID routing, the ingest ring, and new-connection creation from a\nclient Initial. The HTTP/3 dispatch bridge (h3_server.c) belongs to native_h3_server: it reaches the\nroute table and the TCP slot pools, which this env does not build.",
       "flags": [
-        "-DPROTOCORE_ENABLE_HTTP3=1"
+        "-DPROTOCORE_ENABLE_HTTP3=1",
+        "-DPROTOCORE_HAS_NET_STACK=1"
       ],
       "src": [
         "+<network_drivers/presentation/http/http3/quic_server.c>",
@@ -6839,7 +6908,8 @@
         "-DPROTOCORE_ENABLE_FILE_SERVING=1",
         "-DPROTOCORE_ENABLE_KEEPALIVE=1",
         "-DPROTOCORE_ENABLE_WEBSOCKET=1",
-        "-DPROTOCORE_ENABLE_SSE=1"
+        "-DPROTOCORE_ENABLE_SSE=1",
+        "-DPROTOCORE_HAS_NET_STACK=1"
       ],
       "src": [
         "+<shared/ip/ip.c>",
@@ -7001,6 +7071,10 @@
       "base": "env:native_stack_http",
       "tests": [
         "unit/integration/transport/test_regex"
+      ],
+      "flags": [
+        "-DPROTOCORE_ENABLE_WEBSOCKET=1",
+        "-DPROTOCORE_ENABLE_SSE=1"
       ]
     },
     "native_relay": {
@@ -7022,7 +7096,10 @@
       "desc": "test_response_headers against the native_stack_http stack. Carries PROTOCORE_ENABLE_NTP because the\nDate-header cases drive the clock through the NTP client's own entry points, and with it the UDP\nlistener the portable client binds its reply port on.",
       "base": "env:native_stack_http",
       "flags": [
-        "-DPROTOCORE_ENABLE_NTP=1"
+        "-DPROTOCORE_ENABLE_NTP=1",
+        "-DPROTOCORE_ENABLE_WEBSOCKET=1",
+        "-DPROTOCORE_ENABLE_SSE=1",
+        "-DPROTOCORE_HAS_NET_STACK=1"
       ],
       "src": [
         "${env:native_stack_http.build_src_filter}",
@@ -8008,7 +8085,8 @@
     "native_snmp": {
       "desc": "SNMP ASN.1 BER codec (the version-agnostic base for the SNMP agent). Pure\ncodec - no lwIP/UDP - so it unit-tests on the host.",
       "flags": [
-        "-DPROTOCORE_ENABLE_SNMP=1"
+        "-DPROTOCORE_ENABLE_SNMP=1",
+        "-DPROTOCORE_HAS_NET_STACK=1"
       ],
       "src": [
         "+<services/net/snmp/snmp_ber.c>",
@@ -8104,7 +8182,8 @@
       "flags": [
         "-DPROTOCORE_ENABLE_SNMP=1",
         "-DPROTOCORE_ENABLE_SNMP_V3=1",
-        "-DPROTOCORE_ENABLE_SNMP_TRAP=1"
+        "-DPROTOCORE_ENABLE_SNMP_TRAP=1",
+        "-DPROTOCORE_HAS_NET_STACK=1"
       ],
       "src": [
         "+<services/net/snmp/snmp_ber.c>",
@@ -8291,7 +8370,8 @@
       "desc": "test_sse against the native_stack_l46 stack.",
       "base": "env:native_stack_l46",
       "flags": [
-        "-DPROTOCORE_ENABLE_SSE=1"
+        "-DPROTOCORE_ENABLE_SSE=1",
+        "-DPROTOCORE_ENABLE_WEBSOCKET=1"
       ],
       "tests": [
         "unit/integration/http/test_sse"
@@ -8304,7 +8384,10 @@
         "-DPROTOCORE_ENABLE_SSH=1",
         "-DPROTOCORE_ENABLE_MNT=1",
         "-DPROTOCORE_ENABLE_SSH_SFTP=1",
-        "-DPROTOCORE_ENABLE_SSH_SCP=1"
+        "-DPROTOCORE_ENABLE_SSH_SCP=1",
+        "-DPROTOCORE_ENABLE_WEBSOCKET=1",
+        "-DPROTOCORE_ENABLE_SSE=1",
+        "-DPROTOCORE_HAS_NET_STACK=1"
       ],
       "src": [
         "+<crypto/hash/sha256.c>",
@@ -8637,7 +8720,8 @@
     "native_ssh_conn": {
       "desc": "SSH wired through the real transport/session layers (PROTO_SSH byte-pump)",
       "flags": [
-        "-DPROTOCORE_ENABLE_SSH=1"
+        "-DPROTOCORE_ENABLE_SSH=1",
+        "-DPROTOCORE_HAS_NET_STACK=1"
       ],
       "src": [
         "+<shared/ip/ip.c>",
@@ -8876,7 +8960,8 @@
     "native_ssh_flow": {
       "desc": "The RFC 4254 sec 5.2 channel window (ssh/connection/connection.c): the send cap is the smaller of the peer's window and its maximum packet size, a send decrements the window, an adjust increments it, and the window stops at 2^32-1 because sec 5.2 says it MUST NOT be increased above that. Expected values are transcribed from RFC 4254.",
       "flags": [
-        "-DPROTOCORE_ENABLE_SSH=1"
+        "-DPROTOCORE_ENABLE_SSH=1",
+        "-DPROTOCORE_HAS_NET_STACK=1"
       ],
       "src": [
         "-<*>",
@@ -8930,7 +9015,8 @@
       "flags": [
         "-DPROTOCORE_ENABLE_SSH=1",
         "-DPROTOCORE_SSH_PORT_FORWARD=1",
-        "-DPROTOCORE_SSH_MAX_CHANNELS=3"
+        "-DPROTOCORE_SSH_MAX_CHANNELS=3",
+        "-DPROTOCORE_HAS_NET_STACK=1"
       ],
       "src": [
         "+<shared/ip/ip.c>",
@@ -9100,7 +9186,10 @@
       "desc": "SSH keyboard-interactive auth (RFC 4256) built with PROTOCORE_ENABLE_SSH_KEYBOARD_INTERACTIVE=1: the server sends one non-echoed Password prompt (INFO_REQUEST) and verifies the INFO_RESPONSE via the password callback. Also re-runs test_ssh_auth to confirm the password/publickey methods are unaffected with keyboard-interactive advertised.",
       "flags": [
         "-DPROTOCORE_ENABLE_SSH=1",
-        "-DPROTOCORE_ENABLE_SSH_KEYBOARD_INTERACTIVE=1"
+        "-DPROTOCORE_ENABLE_SSH_KEYBOARD_INTERACTIVE=1",
+        "-DPROTOCORE_ENABLE_WEBSOCKET=1",
+        "-DPROTOCORE_ENABLE_SSE=1",
+        "-DPROTOCORE_HAS_NET_STACK=1"
       ],
       "src": [
         "+<crypto/hash/sha256.c>",
@@ -9498,7 +9587,8 @@
     "native_statsd": {
       "desc": "StatsD metrics client (services/iot/statsd): the pure line formatter (name:value|type,\nsample rate, DogStatsD tags) plus the count/gauge/timing/set emit helpers, whose sent\nbytes are captured through the transport UDP service's host seam.",
       "flags": [
-        "-DPROTOCORE_ENABLE_STATSD=1"
+        "-DPROTOCORE_ENABLE_STATSD=1",
+        "-DPROTOCORE_HAS_NET_STACK=1"
       ],
       "src": [
         "+<services/iot/statsd/statsd.c>",
@@ -9577,7 +9667,8 @@
     "native_syslog": {
       "desc": "Syslog client (RFC 5424) line formatter. Pure formatter - no lwIP/UDP - so it\nunit-tests on the host (udp_transport provides host stubs for protocore_udp_sendto).",
       "flags": [
-        "-DPROTOCORE_ENABLE_SYSLOG=1"
+        "-DPROTOCORE_ENABLE_SYSLOG=1",
+        "-DPROTOCORE_HAS_NET_STACK=1"
       ],
       "src": [
         "+<services/net/syslog/syslog.c>",
@@ -9601,7 +9692,9 @@
     },
     "native_tcp": {
       "desc": "The TCP path a stack drives, run on the host against the pcb driver in core_setup/hal/host. This is the only env that compiles the marshaled\narm of tcp_conn.c - every send, output, close, abort and recved the target routes through\npc_tcp_marshal - and the only one that drives a segment through the callbacks listener_accept_cb\ninstalled on the pcb rather than naming lowlevel_recv_cb directly.",
-      "flags": [],
+      "flags": [
+        "-DPROTOCORE_HAS_NET_STACK=1"
+      ],
       "src": [
         "+<network_drivers/transport/tcp/tcp.c>",
         "+<network_drivers/transport/tcp/protocol/protocol.c>",
@@ -9628,7 +9721,8 @@
     "native_tcp_client": {
       "desc": "tcp_client.h: the outbound client pool - slot claim, the non-blocking resolve/connect\npump, the whole-open timeout bound, the wire ring and its ack-on-consume window\nreopening (RFC 9293 sec 3.8.6). PROTOCORE_ENABLE_HTTP_CLIENT turns PROTOCORE_NEED_CLIENT\non, which is what compiles the translation unit's body at all.",
       "flags": [
-        "-DPROTOCORE_ENABLE_HTTP_CLIENT=1"
+        "-DPROTOCORE_ENABLE_HTTP_CLIENT=1",
+        "-DPROTOCORE_HAS_NET_STACK=1"
       ],
       "src": [
         "+<shared/ip/ip.c>",
@@ -9689,6 +9783,9 @@
       ],
       "extra_scripts": [
         "pre:test/gen_test_runners.py"
+      ],
+      "flags": [
+        "-DPROTOCORE_HAS_NET_STACK=1"
       ]
     },
     "native_tcp_evt": {
@@ -9715,6 +9812,9 @@
       ],
       "extra_scripts": [
         "pre:test/gen_test_runners.py"
+      ],
+      "flags": [
+        "-DPROTOCORE_HAS_NET_STACK=1"
       ]
     },
     "native_tcp_listener": {
@@ -9729,7 +9829,8 @@
         "-DPROTOCORE_PER_IP_THROTTLE_WINDOW_MS=1000",
         "-DPROTOCORE_PER_IP_THROTTLE_SLOTS=4",
         "-DPROTOCORE_IP_ALLOWLIST_SLOTS=4",
-        "-DPROTOCORE_ENABLE_DIFFSERV=1"
+        "-DPROTOCORE_ENABLE_DIFFSERV=1",
+        "-DPROTOCORE_HAS_NET_STACK=1"
       ],
       "src": [
         "+<shared/ip/ip.c>",
@@ -9780,6 +9881,9 @@
       ],
       "extra_scripts": [
         "pre:test/gen_test_runners.py"
+      ],
+      "flags": [
+        "-DPROTOCORE_HAS_NET_STACK=1"
       ]
     },
     "native_telemetry": {
@@ -9803,7 +9907,8 @@
     "native_telnet": {
       "desc": "Telnet server (RFC 854 IAC negotiation + line editing) wired through the real\ntransport ring buffer; output checked via the tcp_write capture mock.",
       "flags": [
-        "-DPROTOCORE_ENABLE_TELNET=1"
+        "-DPROTOCORE_ENABLE_TELNET=1",
+        "-DPROTOCORE_HAS_NET_STACK=1"
       ],
       "src": [
         "+<shared/ip/ip.c>",
@@ -9836,6 +9941,10 @@
       "base": "env:native_stack_http",
       "tests": [
         "unit/integration/transport/test_template"
+      ],
+      "flags": [
+        "-DPROTOCORE_ENABLE_WEBSOCKET=1",
+        "-DPROTOCORE_ENABLE_SSE=1"
       ]
     },
     "native_thread": {
@@ -10209,7 +10318,9 @@
     },
     "native_udp": {
       "desc": "The UDP path a stack drives, run on the host against the pcb driver in core_setup/hal/host. Covers udp_listener + udp_client against the\nhost pcb driver: the receive ring, both send paths reaching the wire in the call that makes them,\nNetAddr carrying v4 and v6 both ways, the pbuf pool refusing, and the datagrams the core handed to the stack read back as a DLT_RAW libpcap\ncapture with synthesized IP and UDP headers (core_setup/hal/host/protocore_net_pcap.h).",
-      "flags": [],
+      "flags": [
+        "-DPROTOCORE_HAS_NET_STACK=1"
+      ],
       "src": [
         "+<network_drivers/transport/udp/server/server.c>",
         "+<network_drivers/transport/net_addr/net_addr.c>",
@@ -10253,7 +10364,9 @@
     },
     "native_udp_transport": {
       "desc": "UDP transport multicast receive (network_drivers/transport/udp.c): joining an IPv4\nmulticast group by dotted-quad, rejecting a non-multicast or malformed group, delivering a group\ndatagram to the registered handler, and leaving the group (releasing the listener slot). Drives the\nhost UDP mock's inject seam.",
-      "flags": [],
+      "flags": [
+        "-DPROTOCORE_HAS_NET_STACK=1"
+      ],
       "src": [
         "+<network_drivers/transport/udp/udp.c>",
         "+<network_drivers/transport/udp/server/server.c>",
@@ -10299,7 +10412,10 @@
       "flags": [
         "-DPROTOCORE_ENFORCE_HOST_HEADER=0",
         "-DPROTOCORE_ENABLE_UPLOAD=1",
-        "-DBODY_BUF_SIZE=64"
+        "-DBODY_BUF_SIZE=64",
+        "-DPROTOCORE_ENABLE_WEBSOCKET=1",
+        "-DPROTOCORE_ENABLE_SSE=1",
+        "-DPROTOCORE_HAS_NET_STACK=1"
       ],
       "src": [
         "+<shared/ip/ip.c>",
@@ -10562,6 +10678,10 @@
       "base": "env:native_stack_http",
       "tests": [
         "unit/integration/transport/test_web_terminal"
+      ],
+      "flags": [
+        "-DPROTOCORE_ENABLE_WEBSOCKET=1",
+        "-DPROTOCORE_ENABLE_SSE=1"
       ]
     },
     "native_webdav": {
@@ -10614,7 +10734,9 @@
         "-DPROTOCORE_ENABLE_WEBDAV=1",
         "-DPROTOCORE_ENABLE_FILE_SERVING=1",
         "-DPROTOCORE_ENABLE_WEB_TERMINAL=1",
-        "-DPROTOCORE_ENABLE_WEBSOCKET=1"
+        "-DPROTOCORE_ENABLE_WEBSOCKET=1",
+        "-DPROTOCORE_ENABLE_SSE=1",
+        "-DPROTOCORE_HAS_NET_STACK=1"
       ],
       "src": [
         "+<shared/ip/ip.c>",
@@ -10734,6 +10856,10 @@
       "base": "env:native_stack_l46",
       "tests": [
         "unit/integration/http/test_websocket"
+      ],
+      "flags": [
+        "-DPROTOCORE_ENABLE_WEBSOCKET=1",
+        "-DPROTOCORE_ENABLE_SSE=1"
       ]
     },
     "native_wifi_sniffer": {
@@ -10827,7 +10953,8 @@
     "native_workers": {
       "desc": "Core-partitioning invariant at N=2 (PROTOCORE_WORKER_COUNT=2): each worker reaps\nonly its owned slots (check_timeouts ownership). The host queue is keyed by handle, so\nper-worker routing is checkable here rather than only on hardware.",
       "flags": [
-        "-DPROTOCORE_WORKER_COUNT=2"
+        "-DPROTOCORE_WORKER_COUNT=2",
+        "-DPROTOCORE_HAS_NET_STACK=1"
       ],
       "src": [
         "+<shared/ip/ip.c>",
@@ -10853,7 +10980,8 @@
     "native_workers_stack": {
       "desc": "PROTOCORE_WORKER_COUNT=2 over the stack path, which nothing else compiles: native_tcp is\nsingle-worker and takes the other arm of listener_enqueue, so the multi-worker arm - the per-worker queue routing and the wake that\nfollows it - had no witness in the matrix at all.",
       "flags": [
-        "-DPROTOCORE_WORKER_COUNT=2"
+        "-DPROTOCORE_WORKER_COUNT=2",
+        "-DPROTOCORE_HAS_NET_STACK=1"
       ],
       "src": [
         "+<network_drivers/transport/tcp/tcp.c>",
@@ -10936,7 +11064,9 @@
       "flags": [
         "-DPROTOCORE_ENFORCE_HOST_HEADER=0",
         "-DPROTOCORE_ENABLE_WS_DEFLATE=1",
-        "-DPROTOCORE_ENABLE_WEBSOCKET=1"
+        "-DPROTOCORE_ENABLE_WEBSOCKET=1",
+        "-DPROTOCORE_ENABLE_SSE=1",
+        "-DPROTOCORE_HAS_NET_STACK=1"
       ],
       "src": [
         "+<shared/ip/ip.c>",

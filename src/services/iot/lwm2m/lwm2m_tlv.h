@@ -50,9 +50,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_LWM2M
+
+PROTOCORE_BEGIN_DECLS
 
 // Type byte bit-fields (LwM2M Core sec 7.4.5 Table 7.4.5.-1).
 #define LWM2M_TLV_IDTYPE_MASK 0xC0     ///< bits 7-6: the type of Identifier
@@ -157,8 +157,8 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern Lwm2mTlvNs Lwm2mTlv;
 
-#endif // PROTOCORE_ENABLE_LWM2M
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_LWM2M
 
 #endif // PROTOCORE_LWM2M_TLV_H

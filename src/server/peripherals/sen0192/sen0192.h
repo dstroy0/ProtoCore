@@ -25,9 +25,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_SEN0192
+
+PROTOCORE_BEGIN_DECLS
 
 /**
  * @brief Debounced motion-presence tracker over a single digital line.
@@ -86,8 +86,8 @@ proto_bool protocore_sen0192_present(void);
 /** @brief Count of motion events (clear -> present transitions) since protocore_sen0192_begin(). */
 uint32_t protocore_sen0192_motion_count(void);
 
-#endif // PROTOCORE_ENABLE_SEN0192
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_SEN0192
 
 #endif // PROTOCORE_SEN0192_H

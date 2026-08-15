@@ -17,8 +17,11 @@
 #ifndef PROTOCORE_HMAC_SHA512_H
 #define PROTOCORE_HMAC_SHA512_H
 
-#include "crypto/hash/sha512.h"
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths and PROTOCORE_BEGIN_DECLS
+
+#if PROTOCORE_ENABLE_HMAC_SHA512
+
+#include "crypto/hash/sha512.h"
 #include <stddef.h>
 #include <stdint.h>
 
@@ -54,5 +57,7 @@ void protocore_hmac_sha512(uint8_t *work, const uint8_t *key, size_t key_len, co
                            uint8_t mac[PROTOCORE_HMAC_SHA512_LEN]);
 
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_HMAC_SHA512
 
 #endif // PROTOCORE_HMAC_SHA512_H

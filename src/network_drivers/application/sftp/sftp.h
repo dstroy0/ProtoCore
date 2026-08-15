@@ -23,9 +23,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_SSH_SFTP
+
+PROTOCORE_BEGIN_DECLS
 
 #define PROTOCORE_SFTP_VERSION 3
 
@@ -161,8 +161,8 @@ size_t protocore_sftp_build_name1(uint32_t id, const char *name, const char *lon
 size_t protocore_sftp_format_longname(proto_bool is_dir, uint32_t perms, uint64_t size, uint32_t mtime,
                                       const char *name, char *out, size_t cap);
 
-#endif // PROTOCORE_ENABLE_SSH_SFTP
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_SSH_SFTP
 
 #endif // PROTOCORE_SFTP_H

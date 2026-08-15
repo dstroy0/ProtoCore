@@ -27,6 +27,8 @@
 
 #if PROTOCORE_ENABLE_BUS_CAPTURE
 
+PROTOCORE_BEGIN_DECLS
+
 #include "shared/can/can.h"   // CanFrame
 #include "shared/pcap/pcap.h" // PROTOCORE_DLT_CAN_SOCKETCAN
 
@@ -66,6 +68,8 @@ void bus_capture_poll(void);
 
 /** @brief Stop capture and release the controller. */
 void bus_capture_end(void);
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_BUS_CAPTURE
 

@@ -21,9 +21,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_SMB
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief NTLMSSP NegotiateFlags (MS-NLMP §2.2.2.5), the subset a basic NTLMv2 client uses. */
 #define NTLMSSP_NEGOTIATE_UNICODE 0x00000001
@@ -91,8 +91,8 @@ size_t protocore_ntlmssp_build_authenticate(uint8_t *buf, size_t cap, const uint
                                             const uint8_t *nt_resp, size_t nt_len, const char *domain, const char *user,
                                             const char *workstation, uint32_t flags, proto_bool with_mic);
 
-#endif // PROTOCORE_ENABLE_SMB
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_SMB
 
 #endif // PROTOCORE_NTLMSSP_H

@@ -51,6 +51,8 @@
 
 #if PROTOCORE_ENABLE_EUROMAP77
 
+PROTOCORE_BEGIN_DECLS
+
 #include "services/fieldbus/opcua/opcua.h" // OpcUaVariant / OpcUaReference / handler typedefs (shares the OPC UA codec)
 
 /** @brief The EUROMAP 77 companion-spec namespace URI (OPC 40077). */
@@ -179,5 +181,8 @@ int32_t protocore_em77_browse(uint16_t ns, uint32_t id, OpcUaReference *out, uin
  */
 void protocore_em77_install(const EmImm *imm);
 
+PROTOCORE_END_DECLS
+
 #endif // PROTOCORE_ENABLE_EUROMAP77
+
 #endif // PROTOCORE_EUROMAP77_H

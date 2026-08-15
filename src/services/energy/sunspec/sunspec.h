@@ -32,9 +32,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_SUNSPEC
+
+PROTOCORE_BEGIN_DECLS
 
 #define SUNSPEC_MARKER 0x53756E53u ///< "SunS"
 #define SUNSPEC_END_MODEL 0xFFFFu  ///< end-model id
@@ -98,8 +98,8 @@ proto_bool protocore_sunspec_write_string(SunSpecWriter *w, const char *s,
 proto_bool protocore_sunspec_write_end_model(SunSpecWriter *w); ///< [0xFFFF][0]
 size_t protocore_sunspec_writer_finish(SunSpecWriter *w);       ///< bytes written, or 0 on overflow
 
-#endif // PROTOCORE_ENABLE_SUNSPEC
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_SUNSPEC
 
 #endif // PROTOCORE_SUNSPEC_H

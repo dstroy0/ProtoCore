@@ -29,9 +29,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_CIP
+
+PROTOCORE_BEGIN_DECLS
 
 // Common service codes.
 #define CIP_SC_GET_ATTR_ALL 0x01
@@ -94,8 +94,8 @@ typedef struct
 /** @brief Parse a CIP response (service + status + additional status + data). */
 proto_bool protocore_cip_parse_response(const uint8_t *buf, size_t len, CipResponse *out);
 
-#endif // PROTOCORE_ENABLE_CIP
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_CIP
 
 #endif // PROTOCORE_CIP_H

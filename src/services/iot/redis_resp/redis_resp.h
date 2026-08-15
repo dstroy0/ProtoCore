@@ -43,9 +43,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_REDIS
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief The decoded type, named after the "RESP protocol description" table of first bytes. */
 typedef enum PROTO_ENUM_PACKED
@@ -139,8 +139,8 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern RespNs Resp;
 
-#endif // PROTOCORE_ENABLE_REDIS
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_REDIS
 
 #endif // PROTOCORE_REDIS_RESP_H

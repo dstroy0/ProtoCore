@@ -24,9 +24,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_OPENADR
+
+PROTOCORE_BEGIN_DECLS
 
 /** @brief One OpenADR interval payload point (a single value over a time interval). */
 typedef struct
@@ -60,8 +60,8 @@ size_t protocore_openadr_event(const char *program_id, const char *event_name, c
 size_t protocore_openadr_report(const char *program_id, const char *event_id, const char *resource_name, double value,
                                 uint32_t timestamp, char *out, size_t cap);
 
-#endif // PROTOCORE_ENABLE_OPENADR
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_OPENADR
 
 #endif // PROTOCORE_OPENADR_H

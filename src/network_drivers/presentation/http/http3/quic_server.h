@@ -31,6 +31,8 @@
 
 #if PROTOCORE_ENABLE_HTTP3
 
+PROTOCORE_BEGIN_DECLS
+
 #include "network_drivers/presentation/http/http3/h3_conn.h"
 #include "network_drivers/presentation/http/http3/quic_conn.h"
 
@@ -144,5 +146,8 @@ extern QuicServerNs QuicServer;
 proto_bool protocore_quic_server_respond(uint32_t conn_id, uint64_t stream_id, int status, const char *content_type,
                                          const uint8_t *body, size_t body_len);
 
+PROTOCORE_END_DECLS
+
 #endif // PROTOCORE_ENABLE_HTTP3
+
 #endif // PROTOCORE_QUIC_SERVER_H

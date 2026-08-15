@@ -23,10 +23,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
+#if PROTOCORE_ENABLE_HKDF
 
-// Shared by the HTTP/3 (QUIC) key schedule and the DTLS 1.3 and TLS 1.3 record layers.
-#if (PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_TLS_SOFTWARE)
+PROTOCORE_BEGIN_DECLS
 
 /** @brief HKDF-SHA256 output block length (== SHA-256 digest length). */
 #define PROTOCORE_HKDF_HASH_LEN 32
@@ -102,8 +101,8 @@ void protocore_hkdf_expand_label_ctx(uint8_t *work, const uint8_t secret[PROTOCO
                                      const uint8_t *context, size_t context_len, uint8_t *out, size_t out_len,
                                      const char *label_prefix);
 
-#endif // PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_TLS_SOFTWARE
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_HKDF
 
 #endif // PROTOCORE_HKDF_H

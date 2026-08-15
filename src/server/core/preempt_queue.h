@@ -41,9 +41,9 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_PREEMPT_QUEUE
+
+PROTOCORE_BEGIN_DECLS
 
 /**
  * @brief The preempting lanes, ordered by role. The USER lane is exposed to the
@@ -204,8 +204,8 @@ PROTOCORE_INLINE size_t protocore_pq_high_water(void)
     return PreemptQueue.n;
 }
 
-#endif // PROTOCORE_ENABLE_PREEMPT_QUEUE
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_PREEMPT_QUEUE
 
 #endif // PROTOCORE_PREEMPT_QUEUE_H
