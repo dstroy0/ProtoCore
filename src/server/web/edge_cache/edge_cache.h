@@ -115,7 +115,7 @@ typedef struct
 {
     proto_bool used;
     char key[PROTOCORE_EDGE_KEY_MAX];               ///< canonical key (collision-safe exact compare)
-    uint8_t digest[32];                             ///< protocore_sha256(key) - the L2 dbm key
+    uint8_t digest[32];                             ///< sha256.hash(key) - the L2 dbm key
     char vary_names[PROTOCORE_EDGE_VARY_MAX];       ///< the response Vary header value (field-name list), "" if none
     char vary_vals[PROTOCORE_EDGE_VARY_MAX];        ///< serialized request Vary values at store time (secondary key)
     int status;                                     ///< stored response status (200)

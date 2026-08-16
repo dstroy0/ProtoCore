@@ -20,6 +20,45 @@
 
 static uint8_t g_work[PROTOCORE_ECDSA_BORROW] __attribute__((aligned(8)));
 
+// The namespace, called the way the vectors below read: operands in, one call, answer out. The work
+// pointer stays a parameter on sign and verify because the cases pass it explicitly.
+static proto_bool ec_pubkey(uint8_t *pub, const uint8_t *priv)
+{
+    Ecdsa.pubkey_args.priv = priv;
+    Ecdsa.pubkey_args.pub = pub;
+    Ecdsa.pubkey(g_work);
+    return Ecdsa.ok;
+}
+
+static proto_bool ec_sign(uint8_t *sig, uint8_t *w, const uint8_t *msg, size_t mlen, const uint8_t *priv)
+{
+    Ecdsa.sign_args.msg = msg;
+    Ecdsa.sign_args.mlen = mlen;
+    Ecdsa.sign_args.priv = priv;
+    Ecdsa.sign_args.sig = sig;
+    Ecdsa.sign(w);
+    return Ecdsa.ok;
+}
+
+static proto_bool ec_verify(const uint8_t *pub, uint8_t *w, const uint8_t *msg, size_t mlen, const uint8_t *sig)
+{
+    Ecdsa.verify_args.pub = pub;
+    Ecdsa.verify_args.msg = msg;
+    Ecdsa.verify_args.mlen = mlen;
+    Ecdsa.verify_args.sig = sig;
+    Ecdsa.verify(w);
+    return Ecdsa.ok;
+}
+
+static proto_bool ec_ecdh(uint8_t *shared_x, const uint8_t *peer_pub, const uint8_t *priv)
+{
+    Ecdsa.ecdh_args.peer_pub = peer_pub;
+    Ecdsa.ecdh_args.priv = priv;
+    Ecdsa.ecdh_args.shared_x = shared_x;
+    Ecdsa.ecdh(g_work);
+    return Ecdsa.ok;
+}
+
 void setUp(void)
 {
 }
@@ -75,7 +114,7 @@ void test_rfc6979_public_point(void)
 {
     uint8_t priv[32], pub[65], want[32];
     unhex(X, priv);
-    TEST_ASSERT_TRUE(protocore_ecdsa_p256_pubkey(pub, priv));
+    TEST_ASSERT_TRUE(ec_pubkey(pub, priv));
     TEST_ASSERT_EQUAL_UINT8(0x04, pub[0]);
     unhex(UX, want);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(want, pub + 1, 32);
@@ -89,12 +128,12 @@ void test_rfc6979_deterministic_signatures(void)
     uint8_t priv[32], sig[64], want[64];
     unhex(X, priv);
 
-    TEST_ASSERT_TRUE(protocore_ecdsa_p256_sign(sig, g_work, (const uint8_t *)"sample", 6, priv));
+    TEST_ASSERT_TRUE(ec_sign(sig, g_work, (const uint8_t *)"sample", 6, priv));
     unhex(SAMPLE_R, want);
     unhex(SAMPLE_S, want + 32);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(want, sig, 64);
 
-    TEST_ASSERT_TRUE(protocore_ecdsa_p256_sign(sig, g_work, (const uint8_t *)"test", 4, priv));
+    TEST_ASSERT_TRUE(ec_sign(sig, g_work, (const uint8_t *)"test", 4, priv));
     unhex(TEST_R, want);
     unhex(TEST_S, want + 32);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(want, sig, 64);
@@ -105,15 +144,15 @@ void test_rfc6979_signatures_verify(void)
 {
     uint8_t priv[32], pub[65], sig[64];
     unhex(X, priv);
-    TEST_ASSERT_TRUE(protocore_ecdsa_p256_pubkey(pub, priv));
+    TEST_ASSERT_TRUE(ec_pubkey(pub, priv));
 
     unhex(SAMPLE_R, sig);
     unhex(SAMPLE_S, sig + 32);
-    TEST_ASSERT_TRUE(protocore_ecdsa_p256_verify(pub, g_work, (const uint8_t *)"sample", 6, sig));
+    TEST_ASSERT_TRUE(ec_verify(pub, g_work, (const uint8_t *)"sample", 6, sig));
 
     unhex(TEST_R, sig);
     unhex(TEST_S, sig + 32);
-    TEST_ASSERT_TRUE(protocore_ecdsa_p256_verify(pub, g_work, (const uint8_t *)"test", 4, sig));
+    TEST_ASSERT_TRUE(ec_verify(pub, g_work, (const uint8_t *)"test", 4, sig));
 }
 
 // The two published signatures are bound to their own messages: neither verifies under the other's.
@@ -121,15 +160,15 @@ void test_verify_binds_signature_to_message(void)
 {
     uint8_t priv[32], pub[65], sig[64];
     unhex(X, priv);
-    TEST_ASSERT_TRUE(protocore_ecdsa_p256_pubkey(pub, priv));
+    TEST_ASSERT_TRUE(ec_pubkey(pub, priv));
 
     unhex(TEST_R, sig);
     unhex(TEST_S, sig + 32);
-    TEST_ASSERT_FALSE(protocore_ecdsa_p256_verify(pub, g_work, (const uint8_t *)"sample", 6, sig));
+    TEST_ASSERT_FALSE(ec_verify(pub, g_work, (const uint8_t *)"sample", 6, sig));
 
     unhex(SAMPLE_R, sig);
     unhex(SAMPLE_S, sig + 32);
-    TEST_ASSERT_FALSE(protocore_ecdsa_p256_verify(pub, g_work, (const uint8_t *)"test", 4, sig));
+    TEST_ASSERT_FALSE(ec_verify(pub, g_work, (const uint8_t *)"test", 4, sig));
 }
 
 // A one-bit change in r, in s, or in the public point breaks the verification.
@@ -137,22 +176,22 @@ void test_verify_refuses_tampering(void)
 {
     uint8_t priv[32], pub[65], sig[64], bad[64];
     unhex(X, priv);
-    TEST_ASSERT_TRUE(protocore_ecdsa_p256_pubkey(pub, priv));
+    TEST_ASSERT_TRUE(ec_pubkey(pub, priv));
     unhex(SAMPLE_R, sig);
     unhex(SAMPLE_S, sig + 32);
 
     memcpy(bad, sig, 64);
     bad[0] ^= 0x01;
-    TEST_ASSERT_FALSE(protocore_ecdsa_p256_verify(pub, g_work, (const uint8_t *)"sample", 6, bad));
+    TEST_ASSERT_FALSE(ec_verify(pub, g_work, (const uint8_t *)"sample", 6, bad));
 
     memcpy(bad, sig, 64);
     bad[63] ^= 0x01;
-    TEST_ASSERT_FALSE(protocore_ecdsa_p256_verify(pub, g_work, (const uint8_t *)"sample", 6, bad));
+    TEST_ASSERT_FALSE(ec_verify(pub, g_work, (const uint8_t *)"sample", 6, bad));
 
     uint8_t badpub[65];
     memcpy(badpub, pub, 65);
     badpub[1] ^= 0x01;
-    TEST_ASSERT_FALSE(protocore_ecdsa_p256_verify(badpub, g_work, (const uint8_t *)"sample", 6, sig));
+    TEST_ASSERT_FALSE(ec_verify(badpub, g_work, (const uint8_t *)"sample", 6, sig));
 }
 
 // RFC 5656 sec 3.1 carries Q as 0x04 || X || Y. A compressed-point prefix is a form this module does
@@ -161,14 +200,14 @@ void test_verify_refuses_a_non_uncompressed_point(void)
 {
     uint8_t priv[32], pub[65], sig[64];
     unhex(X, priv);
-    TEST_ASSERT_TRUE(protocore_ecdsa_p256_pubkey(pub, priv));
+    TEST_ASSERT_TRUE(ec_pubkey(pub, priv));
     unhex(SAMPLE_R, sig);
     unhex(SAMPLE_S, sig + 32);
 
     pub[0] = 0x02;
-    TEST_ASSERT_FALSE(protocore_ecdsa_p256_verify(pub, g_work, (const uint8_t *)"sample", 6, sig));
+    TEST_ASSERT_FALSE(ec_verify(pub, g_work, (const uint8_t *)"sample", 6, sig));
     pub[0] = 0x00;
-    TEST_ASSERT_FALSE(protocore_ecdsa_p256_verify(pub, g_work, (const uint8_t *)"sample", 6, sig));
+    TEST_ASSERT_FALSE(ec_verify(pub, g_work, (const uint8_t *)"sample", 6, sig));
 }
 
 // A coordinate of 2^256-1 is above the field prime, so the point cannot be decoded at all - a
@@ -177,17 +216,17 @@ void test_verify_refuses_an_out_of_field_coordinate(void)
 {
     uint8_t priv[32], pub[65], sig[64], bad[65];
     unhex(X, priv);
-    TEST_ASSERT_TRUE(protocore_ecdsa_p256_pubkey(pub, priv));
+    TEST_ASSERT_TRUE(ec_pubkey(pub, priv));
     unhex(SAMPLE_R, sig);
     unhex(SAMPLE_S, sig + 32);
 
     memcpy(bad, pub, 65);
     memset(bad + 1, 0xFF, 32);
-    TEST_ASSERT_FALSE(protocore_ecdsa_p256_verify(bad, g_work, (const uint8_t *)"sample", 6, sig));
+    TEST_ASSERT_FALSE(ec_verify(bad, g_work, (const uint8_t *)"sample", 6, sig));
 
     memcpy(bad, pub, 65);
     memset(bad + 33, 0xFF, 32);
-    TEST_ASSERT_FALSE(protocore_ecdsa_p256_verify(bad, g_work, (const uint8_t *)"sample", 6, sig));
+    TEST_ASSERT_FALSE(ec_verify(bad, g_work, (const uint8_t *)"sample", 6, sig));
 }
 
 // ECDSA verification requires 1 <= r < n and 1 <= s < n. Zero and n itself sit either side of that
@@ -196,26 +235,26 @@ void test_verify_refuses_r_or_s_outside_one_to_n_minus_one(void)
 {
     uint8_t priv[32], pub[65], base[64], bad[64], n[32];
     unhex(X, priv);
-    TEST_ASSERT_TRUE(protocore_ecdsa_p256_pubkey(pub, priv));
+    TEST_ASSERT_TRUE(ec_pubkey(pub, priv));
     unhex(SAMPLE_R, base);
     unhex(SAMPLE_S, base + 32);
     unhex(N, n);
 
     memcpy(bad, base, 64);
     memset(bad, 0, 32); // r = 0
-    TEST_ASSERT_FALSE(protocore_ecdsa_p256_verify(pub, g_work, (const uint8_t *)"sample", 6, bad));
+    TEST_ASSERT_FALSE(ec_verify(pub, g_work, (const uint8_t *)"sample", 6, bad));
 
     memcpy(bad, base, 64);
     memcpy(bad, n, 32); // r = n
-    TEST_ASSERT_FALSE(protocore_ecdsa_p256_verify(pub, g_work, (const uint8_t *)"sample", 6, bad));
+    TEST_ASSERT_FALSE(ec_verify(pub, g_work, (const uint8_t *)"sample", 6, bad));
 
     memcpy(bad, base, 64);
     memset(bad + 32, 0, 32); // s = 0
-    TEST_ASSERT_FALSE(protocore_ecdsa_p256_verify(pub, g_work, (const uint8_t *)"sample", 6, bad));
+    TEST_ASSERT_FALSE(ec_verify(pub, g_work, (const uint8_t *)"sample", 6, bad));
 
     memcpy(bad, base, 64);
     memcpy(bad + 32, n, 32); // s = n
-    TEST_ASSERT_FALSE(protocore_ecdsa_p256_verify(pub, g_work, (const uint8_t *)"sample", 6, bad));
+    TEST_ASSERT_FALSE(ec_verify(pub, g_work, (const uint8_t *)"sample", 6, bad));
 }
 
 // A private scalar must satisfy 1 <= d < n. Every entry point validates it for itself.
@@ -225,19 +264,19 @@ void test_private_scalar_bounds_are_enforced(void)
     mkpub(peer, GRX, GRY);
 
     memset(priv, 0, 32); // d = 0
-    TEST_ASSERT_FALSE(protocore_ecdsa_p256_pubkey(pub, priv));
-    TEST_ASSERT_FALSE(protocore_ecdsa_p256_sign(sig, g_work, (const uint8_t *)"x", 1, priv));
-    TEST_ASSERT_FALSE(protocore_ecdsa_p256_ecdh(shared, peer, priv));
+    TEST_ASSERT_FALSE(ec_pubkey(pub, priv));
+    TEST_ASSERT_FALSE(ec_sign(sig, g_work, (const uint8_t *)"x", 1, priv));
+    TEST_ASSERT_FALSE(ec_ecdh(shared, peer, priv));
 
     memset(priv, 0xFF, 32); // d = 2^256-1, above n
-    TEST_ASSERT_FALSE(protocore_ecdsa_p256_pubkey(pub, priv));
-    TEST_ASSERT_FALSE(protocore_ecdsa_p256_sign(sig, g_work, (const uint8_t *)"x", 1, priv));
-    TEST_ASSERT_FALSE(protocore_ecdsa_p256_ecdh(shared, peer, priv));
+    TEST_ASSERT_FALSE(ec_pubkey(pub, priv));
+    TEST_ASSERT_FALSE(ec_sign(sig, g_work, (const uint8_t *)"x", 1, priv));
+    TEST_ASSERT_FALSE(ec_ecdh(shared, peer, priv));
 
     unhex(N, priv); // d = n exactly, the first value outside the window
-    TEST_ASSERT_FALSE(protocore_ecdsa_p256_pubkey(pub, priv));
-    TEST_ASSERT_FALSE(protocore_ecdsa_p256_sign(sig, g_work, (const uint8_t *)"x", 1, priv));
-    TEST_ASSERT_FALSE(protocore_ecdsa_p256_ecdh(shared, peer, priv));
+    TEST_ASSERT_FALSE(ec_pubkey(pub, priv));
+    TEST_ASSERT_FALSE(ec_sign(sig, g_work, (const uint8_t *)"x", 1, priv));
+    TEST_ASSERT_FALSE(ec_ecdh(shared, peer, priv));
 }
 
 // RFC 5903 sec 8.1: g^i and g^r derived from the printed private keys.
@@ -246,14 +285,14 @@ void test_rfc5903_public_points(void)
     uint8_t priv[32], pub[65], want[32];
 
     unhex(I_PRIV, priv);
-    TEST_ASSERT_TRUE(protocore_ecdsa_p256_pubkey(pub, priv));
+    TEST_ASSERT_TRUE(ec_pubkey(pub, priv));
     unhex(GIX, want);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(want, pub + 1, 32);
     unhex(GIY, want);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(want, pub + 33, 32);
 
     unhex(R_PRIV, priv);
-    TEST_ASSERT_TRUE(protocore_ecdsa_p256_pubkey(pub, priv));
+    TEST_ASSERT_TRUE(ec_pubkey(pub, priv));
     unhex(GRX, want);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(want, pub + 1, 32);
     unhex(GRY, want);
@@ -270,9 +309,9 @@ void test_rfc5903_shared_secret(void)
     mkpub(rpub, GRX, GRY);
     unhex(GIRX, want);
 
-    TEST_ASSERT_TRUE(protocore_ecdsa_p256_ecdh(got, rpub, ipriv));
+    TEST_ASSERT_TRUE(ec_ecdh(got, rpub, ipriv));
     TEST_ASSERT_EQUAL_UINT8_ARRAY(want, got, 32);
-    TEST_ASSERT_TRUE(protocore_ecdsa_p256_ecdh(got, ipub, rpriv));
+    TEST_ASSERT_TRUE(ec_ecdh(got, ipub, rpriv));
     TEST_ASSERT_EQUAL_UINT8_ARRAY(want, got, 32);
 }
 
@@ -285,15 +324,15 @@ void test_ecdh_refuses_an_invalid_peer_point(void)
 
     mkpub(bad, GIX, GIY);
     bad[1] ^= 0x01; // X moved off the curve
-    TEST_ASSERT_FALSE(protocore_ecdsa_p256_ecdh(out, bad, priv));
+    TEST_ASSERT_FALSE(ec_ecdh(out, bad, priv));
 
     mkpub(bad, GIX, GIY);
     bad[64] ^= 0x01; // Y moved off the curve
-    TEST_ASSERT_FALSE(protocore_ecdsa_p256_ecdh(out, bad, priv));
+    TEST_ASSERT_FALSE(ec_ecdh(out, bad, priv));
 
     mkpub(bad, GIX, GIY);
     bad[0] = 0x02; // compressed-point prefix
-    TEST_ASSERT_FALSE(protocore_ecdsa_p256_ecdh(out, bad, priv));
+    TEST_ASSERT_FALSE(ec_ecdh(out, bad, priv));
 }
 
 // Sign then verify over many distinct scalars and message lengths: a windowed ladder has table-index
@@ -314,16 +353,16 @@ void test_sign_verify_round_trip_over_many_keys(void)
         priv[0] &= 0x7F; // n has 0xFF as its top octet, so clearing the high bit keeps d < n
         priv[31] |= 0x01;
 
-        TEST_ASSERT_TRUE(protocore_ecdsa_p256_pubkey(pub, priv));
+        TEST_ASSERT_TRUE(ec_pubkey(pub, priv));
         size_t mlen = (size_t)(iter + 1);
         for (size_t i = 0; i < mlen; i++)
         {
             msg[i] = (uint8_t)(i * 13 + iter);
         }
-        TEST_ASSERT_TRUE(protocore_ecdsa_p256_sign(sig, g_work, msg, mlen, priv));
-        TEST_ASSERT_TRUE(protocore_ecdsa_p256_verify(pub, g_work, msg, mlen, sig));
+        TEST_ASSERT_TRUE(ec_sign(sig, g_work, msg, mlen, priv));
+        TEST_ASSERT_TRUE(ec_verify(pub, g_work, msg, mlen, sig));
         sig[iter % 64] ^= (uint8_t)(1u << (iter % 8));
-        TEST_ASSERT_FALSE(protocore_ecdsa_p256_verify(pub, g_work, msg, mlen, sig));
+        TEST_ASSERT_FALSE(ec_verify(pub, g_work, msg, mlen, sig));
     }
 }
 
@@ -338,9 +377,9 @@ void test_ecdh_agrees_for_derived_keys(void)
     }
     a[0] &= 0x7F;
     b[0] &= 0x7F;
-    TEST_ASSERT_TRUE(protocore_ecdsa_p256_pubkey(apub, a));
-    TEST_ASSERT_TRUE(protocore_ecdsa_p256_pubkey(bpub, b));
-    TEST_ASSERT_TRUE(protocore_ecdsa_p256_ecdh(s1, bpub, a));
-    TEST_ASSERT_TRUE(protocore_ecdsa_p256_ecdh(s2, apub, b));
+    TEST_ASSERT_TRUE(ec_pubkey(apub, a));
+    TEST_ASSERT_TRUE(ec_pubkey(bpub, b));
+    TEST_ASSERT_TRUE(ec_ecdh(s1, bpub, a));
+    TEST_ASSERT_TRUE(ec_ecdh(s2, apub, b));
     TEST_ASSERT_EQUAL_UINT8_ARRAY(s1, s2, 32);
 }

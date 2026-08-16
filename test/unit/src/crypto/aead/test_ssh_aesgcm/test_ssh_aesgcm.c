@@ -26,17 +26,57 @@ void tearDown(void)
 
 // One scratch context, rebuilt per vector and wiped first so a backend that attaches vendor
 // resources to a context does not leak one per call.
-static uint8_t g_ws[PROTOCORE_WORK_AESGCM] __attribute__((aligned(8)));
+static uint8_t g_ws[PROTOCORE_AESGCM_BORROW] __attribute__((aligned(8)));
 static proto_bool g_live = PROTO_FALSE;
 
-static struct protocore_aesgcm_key *keyed(const uint8_t *key)
+static uint8_t *keyed(const uint8_t *key)
 {
     if (g_live)
     {
-        protocore_aesgcm_key_wipe((struct protocore_aesgcm_key *)g_ws);
+        AesGcm.key_wipe(g_ws);
     }
     g_live = PROTO_TRUE;
-    return protocore_aesgcm_key_init(g_ws, key);
+    AesGcm.key_args.key = key;
+    AesGcm.key_init(g_ws);
+    return g_ws;
+}
+
+// One sealed record through the namespace, so the vectors below read as one call each.
+static void gcm_seal(const uint8_t *key, const uint8_t *iv, const uint8_t *aad, size_t aadn, const uint8_t *pt,
+                     size_t ptn, uint8_t *ct_out, uint8_t *tag_out)
+{
+    uint8_t *w = keyed(key);
+    AesGcm.seal_args.nonce = iv;
+    AesGcm.seal_args.aad = aad;
+    AesGcm.seal_args.aad_len = aadn;
+    AesGcm.seal_args.pt = pt;
+    AesGcm.seal_args.pt_len = ptn;
+    AesGcm.seal_args.ct_out = ct_out;
+    AesGcm.seal_args.tag_out = tag_out;
+    AesGcm.seal(w);
+}
+
+// One opened record; the outcome is the return, as the flat call's was.
+static proto_bool gcm_open(const uint8_t *key, const uint8_t *iv, const uint8_t *aad, size_t aadn, const uint8_t *ct,
+                           size_t ctn, const uint8_t *tag, uint8_t *out)
+{
+    uint8_t *w = keyed(key);
+    AesGcm.open_args.nonce = iv;
+    AesGcm.open_args.aad = aad;
+    AesGcm.open_args.aad_len = aadn;
+    AesGcm.open_args.ct = ct;
+    AesGcm.open_args.ct_len = ctn;
+    AesGcm.open_args.tag = tag;
+    AesGcm.open_args.out = out;
+    AesGcm.open(w);
+    return AesGcm.ok;
+}
+
+// The nonce is the caller's own, so the counter advance reads nothing out of the borrow.
+static void gcm_iv_increment(uint8_t *iv)
+{
+    AesGcm.iv_args.iv = iv;
+    AesGcm.iv_increment(g_ws);
 }
 
 static uint8_t nib(char c)
@@ -111,8 +151,8 @@ static void seal_matches(const struct kat *v)
     unhex(v->ct, ct);
     unhex(v->tag, tag);
 
-    protocore_cspan out = protocore_aesgcm_seal(keyed(key), iv, aad, aadn, pt, ptn, got_ct, got_tag);
-    TEST_ASSERT_EQUAL_UINT(ptn, out.len);
+    gcm_seal(key, iv, aad, aadn, pt, ptn, got_ct, got_tag);
+    TEST_ASSERT_TRUE(AesGcm.ok);
     if (ptn)
     {
         TEST_ASSERT_EQUAL_UINT8_ARRAY(ct, got_ct, ptn);
@@ -131,7 +171,7 @@ static void open_matches(const struct kat *v)
     unhex(v->ct, ct);
     unhex(v->tag, tag);
 
-    TEST_ASSERT_TRUE(protocore_aesgcm_open(keyed(key), iv, aad, aadn, ct, ptn, tag, got));
+    TEST_ASSERT_TRUE(gcm_open(key, iv, aad, aadn, ct, ptn, tag, got));
     if (ptn)
     {
         TEST_ASSERT_EQUAL_UINT8_ARRAY(pt, got, ptn);
@@ -177,24 +217,24 @@ void test_open_refuses_every_tampered_input(void)
     uint8_t bad_tag[16];
     memcpy(bad_tag, tag, 16);
     bad_tag[15] ^= 0x01;
-    TEST_ASSERT_FALSE(protocore_aesgcm_open(keyed(key), iv, aad, aadn, ct, ptn, bad_tag, got));
+    TEST_ASSERT_FALSE(gcm_open(key, iv, aad, aadn, ct, ptn, bad_tag, got));
 
     uint8_t bad_ct[64];
     memcpy(bad_ct, ct, ptn);
     bad_ct[0] ^= 0x80;
-    TEST_ASSERT_FALSE(protocore_aesgcm_open(keyed(key), iv, aad, aadn, bad_ct, ptn, tag, got));
+    TEST_ASSERT_FALSE(gcm_open(key, iv, aad, aadn, bad_ct, ptn, tag, got));
 
     uint8_t bad_aad[64];
     memcpy(bad_aad, aad, aadn);
     bad_aad[aadn - 1] ^= 0x01;
-    TEST_ASSERT_FALSE(protocore_aesgcm_open(keyed(key), iv, bad_aad, aadn, ct, ptn, tag, got));
+    TEST_ASSERT_FALSE(gcm_open(key, iv, bad_aad, aadn, ct, ptn, tag, got));
 
     uint8_t bad_iv[12];
     memcpy(bad_iv, iv, 12);
     bad_iv[11] ^= 0x01;
-    TEST_ASSERT_FALSE(protocore_aesgcm_open(keyed(key), bad_iv, aad, aadn, ct, ptn, tag, got));
+    TEST_ASSERT_FALSE(gcm_open(key, bad_iv, aad, aadn, ct, ptn, tag, got));
 
-    TEST_ASSERT_TRUE(protocore_aesgcm_open(keyed(key), iv, aad, aadn, ct, ptn, tag, got));
+    TEST_ASSERT_TRUE(gcm_open(key, iv, aad, aadn, ct, ptn, tag, got));
     TEST_ASSERT_EQUAL_UINT8_ARRAY(pt, got, ptn);
 }
 
@@ -212,7 +252,7 @@ void test_aad_and_plaintext_are_not_interchangeable(void)
 
     moved[0] = aad[aadn - 1];
     unhex(KAT_ONE_BLOCK.pt, moved + 1);
-    protocore_aesgcm_seal(keyed(key), iv, aad, aadn - 1, moved, 17, ct, got_tag);
+    gcm_seal(key, iv, aad, aadn - 1, moved, 17, ct, got_tag);
     TEST_ASSERT_TRUE(memcmp(tag, got_tag, 16) != 0);
 }
 
@@ -222,7 +262,7 @@ void test_rfc5647_invocation_counter_carries(void)
 {
     uint8_t iv[12] = {0x01, 0x02, 0x03, 0x04, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
     static const uint8_t want[12] = {0x01, 0x02, 0x03, 0x04, 0, 0, 0, 0, 0, 0, 0, 0};
-    protocore_aesgcm_iv_increment(iv);
+    gcm_iv_increment(iv);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(want, iv, 12);
 }
 
@@ -231,7 +271,7 @@ void test_rfc5647_invocation_counter_steps(void)
 {
     uint8_t iv[12] = {0xaa, 0xbb, 0xcc, 0xdd, 0, 0, 0, 0, 0, 0, 0x00, 0xff};
     static const uint8_t want[12] = {0xaa, 0xbb, 0xcc, 0xdd, 0, 0, 0, 0, 0, 0, 0x01, 0x00};
-    protocore_aesgcm_iv_increment(iv);
+    gcm_iv_increment(iv);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(want, iv, 12);
 }
 
@@ -258,19 +298,19 @@ void test_stepped_nonce_changes_the_record(void)
     uint8_t enc_iv[12];
     memcpy(enc_iv, iv, 12);
     uint8_t p0[32], p1[32];
-    protocore_aesgcm_seal(keyed(key), enc_iv, aad, 4, msg, 16, p0, p0 + 16);
-    protocore_aesgcm_iv_increment(enc_iv);
-    protocore_aesgcm_seal(keyed(key), enc_iv, aad, 4, msg, 16, p1, p1 + 16);
+    gcm_seal(key, enc_iv, aad, 4, msg, 16, p0, p0 + 16);
+    gcm_iv_increment(enc_iv);
+    gcm_seal(key, enc_iv, aad, 4, msg, 16, p1, p1 + 16);
     TEST_ASSERT_TRUE(memcmp(p0, p1, 32) != 0);
 
     uint8_t dec_iv[12], r[16];
     memcpy(dec_iv, iv, 12);
-    TEST_ASSERT_TRUE(protocore_aesgcm_open(keyed(key), dec_iv, aad, 4, p0, 16, p0 + 16, r));
+    TEST_ASSERT_TRUE(gcm_open(key, dec_iv, aad, 4, p0, 16, p0 + 16, r));
     TEST_ASSERT_EQUAL_UINT8_ARRAY(msg, r, 16);
-    protocore_aesgcm_iv_increment(dec_iv);
-    TEST_ASSERT_TRUE(protocore_aesgcm_open(keyed(key), dec_iv, aad, 4, p1, 16, p1 + 16, r));
+    gcm_iv_increment(dec_iv);
+    TEST_ASSERT_TRUE(gcm_open(key, dec_iv, aad, 4, p1, 16, p1 + 16, r));
     TEST_ASSERT_EQUAL_UINT8_ARRAY(msg, r, 16);
-    TEST_ASSERT_FALSE(protocore_aesgcm_open(keyed(key), iv, aad, 4, p1, 16, p1 + 16, r));
+    TEST_ASSERT_FALSE(gcm_open(key, iv, aad, 4, p1, 16, p1 + 16, r));
 }
 
 // NIST SP 800-38D sec 6.5: GCTR steps the low 32 bits of the counter block once per 16-octet block,
@@ -296,8 +336,8 @@ void test_gctr_counter_byte_carry(void)
         pt[i] = (uint8_t)(i * 31 + 7);
     }
 
-    protocore_aesgcm_seal(keyed(key), iv, NULL, 0, pt, sizeof(pt), out, out + sizeof(pt));
-    TEST_ASSERT_TRUE(protocore_aesgcm_open(keyed(key), iv, NULL, 0, out, sizeof(pt), out + sizeof(pt), rt));
+    gcm_seal(key, iv, NULL, 0, pt, sizeof(pt), out, out + sizeof(pt));
+    TEST_ASSERT_TRUE(gcm_open(key, iv, NULL, 0, out, sizeof(pt), out + sizeof(pt), rt));
     TEST_ASSERT_EQUAL_UINT8_ARRAY(pt, rt, sizeof(pt));
 }
 
@@ -314,10 +354,10 @@ void test_seal_in_place(void)
     unhex(KAT_PARTIAL.tag, tag);
 
     memcpy(inplace, pt, ptn);
-    protocore_aesgcm_seal(keyed(key), iv, aad, aadn, inplace, ptn, inplace, inplace_tag);
+    gcm_seal(key, iv, aad, aadn, inplace, ptn, inplace, inplace_tag);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(ct, inplace, ptn);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(tag, inplace_tag, 16);
 
-    TEST_ASSERT_TRUE(protocore_aesgcm_open(keyed(key), iv, aad, aadn, inplace, ptn, inplace_tag, inplace));
+    TEST_ASSERT_TRUE(gcm_open(key, iv, aad, aadn, inplace, ptn, inplace_tag, inplace));
     TEST_ASSERT_EQUAL_UINT8_ARRAY(pt, inplace, ptn);
 }

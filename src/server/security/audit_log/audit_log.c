@@ -56,19 +56,33 @@ static void put_le32(uint8_t out[4], uint32_t v)
 static void chain_hash(uint8_t *work, const uint8_t prev[PROTOCORE_AUDIT_HASH_LEN], const protocore_audit_entry *e,
                        uint8_t out[PROTOCORE_AUDIT_HASH_LEN])
 {
-    protocore_sha256_ctx c;
-    protocore_sha256_init(&c, work);
-    protocore_sha256_update(&c, prev, PROTOCORE_AUDIT_HASH_LEN);
+    uint8_t *c;
+    c = work;
+    Sha256.init(c);
+    Sha256.update_args.data = prev;
+    Sha256.update_args.len = PROTOCORE_AUDIT_HASH_LEN;
+    Sha256.update(c);
     uint8_t le[4];
     put_le32(le, e->seq);
-    protocore_sha256_update(&c, le, 4);
+    Sha256.update_args.data = le;
+    Sha256.update_args.len = 4;
+    Sha256.update(c);
     put_le32(le, e->ts);
-    protocore_sha256_update(&c, le, 4);
-    protocore_sha256_update(&c, (const uint8_t *)&e->category, 1); // hash the raw category byte
+    Sha256.update_args.data = le;
+    Sha256.update_args.len = 4;
+    Sha256.update(c);
+    Sha256.update_args.data = (const uint8_t *)&e->category;
+    Sha256.update_args.len = 1;
+    Sha256.update(c); // hash the raw category byte
     uint8_t mlen = (uint8_t)str.len(e->msg, PROTOCORE_AUDIT_MSG_LEN - 1);
-    protocore_sha256_update(&c, &mlen, 1);
-    protocore_sha256_update(&c, (const uint8_t *)e->msg, mlen);
-    protocore_sha256_final(&c, out);
+    Sha256.update_args.data = &mlen;
+    Sha256.update_args.len = 1;
+    Sha256.update(c);
+    Sha256.update_args.data = (const uint8_t *)e->msg;
+    Sha256.update_args.len = mlen;
+    Sha256.update(c);
+    Sha256.final_args.out = out;
+    Sha256.final(c);
 }
 
 // The lowercase hex character for one nibble.

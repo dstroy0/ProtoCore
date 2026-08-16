@@ -34,15 +34,26 @@ static struct Tls13KsInternal s_ks = {.ns = &Tls13Ks};
 static void expand(const Tls13Kdf *kdf, uint8_t *work, const uint8_t *secret, const char *label, uint8_t *out,
                    size_t out_len)
 {
-    protocore_hkdf_expand_label(work, secret, label, out, out_len, kdf->label_prefix);
+    Hkdf.expand_label_args.secret = secret;
+    Hkdf.expand_label_args.label = label;
+    Hkdf.expand_label_args.out = out;
+    Hkdf.expand_label_args.out_len = out_len;
+    Hkdf.expand_label_args.label_prefix = kdf->label_prefix;
+    Hkdf.expand_label(work);
 }
 
 // Derive-Secret(secret, label, Messages) = HKDF-Expand-Label(secret, label, Hash(Messages), L).
 static void derive(const Tls13Kdf *kdf, uint8_t *work, const uint8_t *secret, const char *label,
                    const uint8_t *transcript_hash, uint8_t *out)
 {
-    protocore_hkdf_expand_label_ctx(work, secret, label, transcript_hash, TLS13_SECRET_LEN, out, TLS13_SECRET_LEN,
-                                    kdf->label_prefix);
+    Hkdf.expand_label_ctx_args.secret = secret;
+    Hkdf.expand_label_ctx_args.label = label;
+    Hkdf.expand_label_ctx_args.context = transcript_hash;
+    Hkdf.expand_label_ctx_args.context_len = TLS13_SECRET_LEN;
+    Hkdf.expand_label_ctx_args.out = out;
+    Hkdf.expand_label_ctx_args.out_len = TLS13_SECRET_LEN;
+    Hkdf.expand_label_ctx_args.label_prefix = kdf->label_prefix;
+    Hkdf.expand_label_ctx(work);
 }
 
 static void ks_expand_label(struct Tls13KsInternal *restrict ctx)
@@ -69,8 +80,12 @@ static void ks_early(struct Tls13KsInternal *restrict ctx)
     }
     // No PSK: Early Secret = HKDF-Extract(salt=0, IKM=0^Hash.length). HMAC zero-pads a short/absent
     // key, so an empty salt and a 32-zero-byte IKM reproduce the RFC 8448 early secret exactly.
-    protocore_hkdf_extract(ks->s + TLS13_KS_WORK, NULL, 0, ks->s + TLS13_KS_ZEROS, TLS13_SECRET_LEN,
-                           ks->s + TLS13_KS_EARLY);
+    Hkdf.extract_args.salt = NULL;
+    Hkdf.extract_args.salt_len = 0;
+    Hkdf.extract_args.ikm = ks->s + TLS13_KS_ZEROS;
+    Hkdf.extract_args.ikm_len = TLS13_SECRET_LEN;
+    Hkdf.extract_args.prk = ks->s + TLS13_KS_EARLY;
+    Hkdf.extract(ks->s + TLS13_KS_WORK);
     ctx->ns->ok = PROTO_TRUE;
 }
 
@@ -83,11 +98,18 @@ static void ks_handshake(struct Tls13KsInternal *restrict ctx)
     }
     const uint8_t *ch_sh_hash = ctx->ns->step.ch_sh_hash;
     // Handshake Secret = HKDF-Extract(Derive-Secret(Early, "derived", ""), (EC)DHE).
-    protocore_sha256(ks->s + TLS13_KS_WORK, NULL, 0, ks->s + TLS13_KS_EMPTY_HASH);
+    Sha256.hash_args.data = NULL;
+    Sha256.hash_args.len = 0;
+    Sha256.hash_args.out = ks->s + TLS13_KS_EMPTY_HASH;
+    Sha256.hash(ks->s + TLS13_KS_WORK);
     derive(ks->kdf, ks->s + TLS13_KS_WORK, ks->s + TLS13_KS_EARLY, "derived", ks->s + TLS13_KS_EMPTY_HASH,
            ks->s + TLS13_KS_DERIVED);
-    protocore_hkdf_extract(ks->s + TLS13_KS_WORK, ks->s + TLS13_KS_DERIVED, TLS13_SECRET_LEN, ctx->ns->step.ecdhe,
-                           ctx->ns->step.ecdhe_len, ks->s + TLS13_KS_HANDSHAKE);
+    Hkdf.extract_args.salt = ks->s + TLS13_KS_DERIVED;
+    Hkdf.extract_args.salt_len = TLS13_SECRET_LEN;
+    Hkdf.extract_args.ikm = ctx->ns->step.ecdhe;
+    Hkdf.extract_args.ikm_len = ctx->ns->step.ecdhe_len;
+    Hkdf.extract_args.prk = ks->s + TLS13_KS_HANDSHAKE;
+    Hkdf.extract(ks->s + TLS13_KS_WORK);
 
     derive(ks->kdf, ks->s + TLS13_KS_WORK, ks->s + TLS13_KS_HANDSHAKE, "c hs traffic", ch_sh_hash,
            ks->s + TLS13_KS_CLIENT_HS);
@@ -104,11 +126,18 @@ static void ks_master(struct Tls13KsInternal *restrict ctx)
     }
     const uint8_t *ch_sfin_hash = ctx->ns->step.ch_sfin_hash;
     // Master Secret = HKDF-Extract(Derive-Secret(Handshake, "derived", ""), 0^Hash.length).
-    protocore_sha256(ks->s + TLS13_KS_WORK, NULL, 0, ks->s + TLS13_KS_EMPTY_HASH);
+    Sha256.hash_args.data = NULL;
+    Sha256.hash_args.len = 0;
+    Sha256.hash_args.out = ks->s + TLS13_KS_EMPTY_HASH;
+    Sha256.hash(ks->s + TLS13_KS_WORK);
     derive(ks->kdf, ks->s + TLS13_KS_WORK, ks->s + TLS13_KS_HANDSHAKE, "derived", ks->s + TLS13_KS_EMPTY_HASH,
            ks->s + TLS13_KS_DERIVED);
-    protocore_hkdf_extract(ks->s + TLS13_KS_WORK, ks->s + TLS13_KS_DERIVED, TLS13_SECRET_LEN, ks->s + TLS13_KS_ZEROS,
-                           TLS13_SECRET_LEN, ks->s + TLS13_KS_MASTER);
+    Hkdf.extract_args.salt = ks->s + TLS13_KS_DERIVED;
+    Hkdf.extract_args.salt_len = TLS13_SECRET_LEN;
+    Hkdf.extract_args.ikm = ks->s + TLS13_KS_ZEROS;
+    Hkdf.extract_args.ikm_len = TLS13_SECRET_LEN;
+    Hkdf.extract_args.prk = ks->s + TLS13_KS_MASTER;
+    Hkdf.extract(ks->s + TLS13_KS_WORK);
 
     derive(ks->kdf, ks->s + TLS13_KS_WORK, ks->s + TLS13_KS_MASTER, "c ap traffic", ch_sfin_hash,
            ks->s + TLS13_KS_CLIENT_AP);
@@ -126,8 +155,12 @@ static void ks_finished_mac(struct Tls13KsInternal *restrict ctx)
     // finished_key = HKDF-Expand-Label(base_secret, "finished", "", L); verify_data = HMAC(fk, Hash).
     uint8_t *fk = ks->s + TLS13_KS_FINISHED_KEY;
     expand(ks->kdf, ks->s + TLS13_KS_WORK, ctx->ns->finished_args.base_secret, "finished", fk, TLS13_SECRET_LEN);
-    protocore_hmac_sha256(ks->s + TLS13_KS_WORK, fk, TLS13_SECRET_LEN, ctx->ns->finished_args.transcript_hash,
-                          TLS13_SECRET_LEN, ctx->ns->finished_args.out);
+    HmacSha256.mac_args.key = fk;
+    HmacSha256.mac_args.key_len = TLS13_SECRET_LEN;
+    HmacSha256.mac_args.data = ctx->ns->finished_args.transcript_hash;
+    HmacSha256.mac_args.len = TLS13_SECRET_LEN;
+    HmacSha256.mac_args.out = ctx->ns->finished_args.out;
+    HmacSha256.mac(ks->s + TLS13_KS_WORK);
 }
 
 Tls13KsNs Tls13Ks = {.expand_label = ks_expand_label,

@@ -36,7 +36,7 @@
 
 #if PROTOCORE_ENABLE_DTLS
 
-#include "crypto/aead/aes128gcm.h" // protocore_aes128gcm_key, PROTOCORE_WORK_AES128GCM
+#include "crypto/aead/aes128gcm.h" // Aes128Gcm, PROTOCORE_AES128GCM_BORROW
 
 PROTOCORE_BEGIN_DECLS
 
@@ -80,12 +80,11 @@ typedef struct
 {
     DtlsCipher cipher; ///< negotiated AEAD (phase 1: AES-128-GCM)
     uint16_t epoch;    ///< this epoch number; its low 2 bits appear in the unified header
-    _Alignas(8) uint8_t gcm[PROTOCORE_WORK_AES128GCM]; ///< keyed AEAD context, built once per key.
-                                                       ///< Replaces the raw key: the schedule is what the
-                                                       ///< AEAD needs, so no raw key stays resident.
-    uint8_t iv[12];                                    ///< AEAD write IV (per-record nonce = iv XOR sequence_number)
-    _Alignas(8) uint8_t sn_key[PROTOCORE_WORK_AES128]; ///< Keyed sequence-number-protection context.
-                                                       ///< Built once; see quic_crypto.h for the numbers.
+    _Alignas(8) uint8_t gcm[PROTOCORE_AES128GCM_BORROW]; ///< this epoch's AEAD borrow. Carries both keyed
+                                                         ///< contexts: the record AEAD and the
+                                                         ///< sequence-number-protection block. Replaces the raw
+                                                         ///< keys, so neither stays resident.
+    uint8_t iv[12];                                      ///< AEAD write IV (per-record nonce = iv XOR sequence_number)
 } DtlsRecordKeys;
 
 // ---------------------------------------------------------------------------

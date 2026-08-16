@@ -128,16 +128,49 @@ static size_t unhex(const char *h, uint8_t *out)
 
 // A keyed AES-128-GCM context over one reusable work region. Some backends attach vendor resources
 // to a context, so the previous one is released before the next is built.
-static uint8_t g_gcm_ws[PROTOCORE_WORK_AES128GCM] __attribute__((aligned(8)));
+static uint8_t g_gcm_ws[PROTOCORE_AES128GCM_BORROW] __attribute__((aligned(8)));
 static proto_bool g_gcm_live = PROTO_FALSE;
-static struct protocore_aes128gcm_key *gcm(const uint8_t *key)
+static uint8_t *gcm(const uint8_t *key)
 {
     if (g_gcm_live)
     {
-        protocore_aes128gcm_key_wipe((struct protocore_aes128gcm_key *)g_gcm_ws);
+        Aes128Gcm.key_wipe(g_gcm_ws);
     }
     g_gcm_live = PROTO_TRUE;
-    return protocore_aes128gcm_key_init(g_gcm_ws, key);
+    Aes128Gcm.key_args.key = key;
+    Aes128Gcm.key_init(g_gcm_ws);
+    return g_gcm_ws;
+}
+
+// One sealed record through the namespace, so the vector rows below read as one call each.
+static void gcm_seal(const uint8_t *key, const uint8_t *iv, const uint8_t *aad, size_t alen, const uint8_t *pt,
+                     size_t plen, uint8_t *ct_out, uint8_t *tag_out)
+{
+    uint8_t *w = gcm(key);
+    Aes128Gcm.seal_args.nonce = iv;
+    Aes128Gcm.seal_args.aad = aad;
+    Aes128Gcm.seal_args.aad_len = alen;
+    Aes128Gcm.seal_args.pt = pt;
+    Aes128Gcm.seal_args.pt_len = plen;
+    Aes128Gcm.seal_args.ct_out = ct_out;
+    Aes128Gcm.seal_args.tag_out = tag_out;
+    Aes128Gcm.seal(w);
+}
+
+// One opened record; the outcome is the return, as the flat call's was.
+static proto_bool gcm_open(const uint8_t *key, const uint8_t *iv, const uint8_t *aad, size_t alen, const uint8_t *ct,
+                           size_t clen, const uint8_t *tag, uint8_t *out)
+{
+    uint8_t *w = gcm(key);
+    Aes128Gcm.open_args.nonce = iv;
+    Aes128Gcm.open_args.aad = aad;
+    Aes128Gcm.open_args.aad_len = alen;
+    Aes128Gcm.open_args.ct = ct;
+    Aes128Gcm.open_args.ct_len = clen;
+    Aes128Gcm.open_args.tag = tag;
+    Aes128Gcm.open_args.out = out;
+    Aes128Gcm.open(w);
+    return Aes128Gcm.ok;
 }
 
 // ---- HMAC (RFC 4231 / Wycheproof) -----------------------------------------
@@ -155,11 +188,21 @@ static void run_hmac(const KatMac *rows, size_t n, proto_bool is512)
         size_t wlen = unhex(v->tag, want);
         if (is512)
         {
-            protocore_hmac_sha512(g_work, key, klen, msg, mlen, got);
+            HmacSha512.mac_args.key = key;
+            HmacSha512.mac_args.key_len = klen;
+            HmacSha512.mac_args.data = msg;
+            HmacSha512.mac_args.len = mlen;
+            HmacSha512.mac_args.out = got;
+            HmacSha512.mac(g_work);
         }
         else
         {
-            protocore_hmac_sha256(g_work, key, klen, msg, mlen, got);
+            HmacSha256.mac_args.key = key;
+            HmacSha256.mac_args.key_len = klen;
+            HmacSha256.mac_args.data = msg;
+            HmacSha256.mac_args.len = mlen;
+            HmacSha256.mac_args.out = got;
+            HmacSha256.mac(g_work);
         }
         size_t cmp = (size_t)v->tag_bits / 8;
         proto_bool match = (wlen == cmp) && memcmp(got, want, cmp) == 0;
@@ -206,30 +249,27 @@ void test_aes128gcm(void)
         if (!v->valid)
         {
             TEST_ASSERT_FALSE_MESSAGE(
-                protocore_aes128gcm_open(gcm(key), iv, alen ? aad : NULL, alen, clen ? ct : NULL, clen, tag, opened),
-                v->tag);
+                gcm_open(key, iv, alen ? aad : NULL, alen, clen ? ct : NULL, clen, tag, opened), v->tag);
             continue;
         }
 
-        protocore_aes128gcm_seal(gcm(key), iv, alen ? aad : NULL, alen, plen ? pt : NULL, plen, sealed, sealed + plen);
+        gcm_seal(key, iv, alen ? aad : NULL, alen, plen ? pt : NULL, plen, sealed, sealed + plen);
         if (clen)
         {
             TEST_ASSERT_EQUAL_HEX8_ARRAY_MESSAGE(ct, sealed, clen, v->ct);
         }
         TEST_ASSERT_EQUAL_HEX8_ARRAY_MESSAGE(tag, sealed + plen, 16, v->tag);
 
-        TEST_ASSERT_TRUE_MESSAGE(
-            protocore_aes128gcm_open(gcm(key), iv, alen ? aad : NULL, alen, sealed, plen, sealed + plen, opened),
-            v->tag);
+        TEST_ASSERT_TRUE_MESSAGE(gcm_open(key, iv, alen ? aad : NULL, alen, sealed, plen, sealed + plen, opened),
+                                 v->tag);
         if (plen)
         {
             TEST_ASSERT_EQUAL_HEX8_ARRAY_MESSAGE(pt, opened, plen, v->msg);
         }
 
         sealed[plen + 15] ^= 0x80;
-        TEST_ASSERT_FALSE_MESSAGE(
-            protocore_aes128gcm_open(gcm(key), iv, alen ? aad : NULL, alen, sealed, plen, sealed + plen, opened),
-            v->tag);
+        TEST_ASSERT_FALSE_MESSAGE(gcm_open(key, iv, alen ? aad : NULL, alen, sealed, plen, sealed + plen, opened),
+                                  v->tag);
     }
 }
 
@@ -249,12 +289,12 @@ void test_aes128gcm_counter_carry(void)
         pt[i] = (uint8_t)(i * 131u + 7u);
     }
 
-    protocore_aes128gcm_seal(gcm(KEY), IV, NULL, 0, pt, sizeof(pt), sealed, sealed + sizeof(pt));
-    TEST_ASSERT_TRUE(protocore_aes128gcm_open(gcm(KEY), IV, NULL, 0, sealed, sizeof(pt), sealed + sizeof(pt), opened));
+    gcm_seal(KEY, IV, NULL, 0, pt, sizeof(pt), sealed, sealed + sizeof(pt));
+    TEST_ASSERT_TRUE(gcm_open(KEY, IV, NULL, 0, sealed, sizeof(pt), sealed + sizeof(pt), opened));
     TEST_ASSERT_EQUAL_HEX8_ARRAY(pt, opened, sizeof(pt));
 
     sealed[sizeof(pt) + 15] ^= 0x80;
-    TEST_ASSERT_FALSE(protocore_aes128gcm_open(gcm(KEY), IV, NULL, 0, sealed, sizeof(pt), sealed + sizeof(pt), opened));
+    TEST_ASSERT_FALSE(gcm_open(KEY, IV, NULL, 0, sealed, sizeof(pt), sealed + sizeof(pt), opened));
 }
 
 // ---- X25519 ---------------------------------------------------------------
@@ -269,7 +309,10 @@ void test_x25519(void)
         unhex(v->pub, pub);
         unhex(v->priv, priv);
         TEST_ASSERT_EQUAL_UINT_MESSAGE(32u, (unsigned)unhex(v->shared, want), v->shared);
-        protocore_x25519(got, priv, pub);
+        Curve25519.x25519_args.scalar = priv;
+        Curve25519.x25519_args.point = pub;
+        Curve25519.x25519_args.out = got;
+        Curve25519.x25519(g_work);
         TEST_ASSERT_EQUAL_HEX8_ARRAY_MESSAGE(want, got, 32, v->shared);
     }
 }
@@ -287,7 +330,12 @@ void test_ed25519_verify(void)
         unhex(v->pub, pub);
         size_t mlen = unhex(v->msg, msg);
         size_t slen = unhex(v->sig, sig);
-        proto_bool ok = (slen == PROTOCORE_ED25519_SIG_LEN) && protocore_ed25519_verify(g_work, pub, msg, mlen, sig);
+        Ed25519.verify_args.pub = pub;
+        Ed25519.verify_args.msg = msg;
+        Ed25519.verify_args.msg_len = mlen;
+        Ed25519.verify_args.sig = sig;
+        Ed25519.verify(g_work);
+        proto_bool ok = (slen == PROTOCORE_ED25519_SIG_LEN) && Ed25519.ok;
         TEST_ASSERT_EQUAL_MESSAGE(v->valid ? PROTO_TRUE : PROTO_FALSE, ok, v->sig);
     }
 }
@@ -304,9 +352,15 @@ void test_ed25519_sign(void)
         unhex(v->pub, want_pub);
         unhex(v->sig, want_sig);
         size_t mlen = unhex(v->msg, msg);
-        protocore_ed25519_pubkey(g_work, got_pub, seed);
+        Ed25519.pubkey_args.seed = seed;
+        Ed25519.pubkey_args.pub = got_pub;
+        Ed25519.pubkey(g_work);
         TEST_ASSERT_EQUAL_HEX8_ARRAY_MESSAGE(want_pub, got_pub, 32, v->pub);
-        protocore_ed25519_sign(g_work, got_sig, msg, mlen, seed);
+        Ed25519.sign_args.seed = seed;
+        Ed25519.sign_args.msg = msg;
+        Ed25519.sign_args.msg_len = mlen;
+        Ed25519.sign_args.sig = got_sig;
+        Ed25519.sign(g_work);
         TEST_ASSERT_EQUAL_HEX8_ARRAY_MESSAGE(want_sig, got_sig, 64, v->sig);
     }
 }
@@ -322,7 +376,12 @@ void test_hkdf_extract(void)
         size_t slen = unhex(v->salt, salt);
         size_t ilen = unhex(v->ikm, ikm);
         unhex(v->prk, want);
-        protocore_hkdf_extract(g_work, slen ? salt : NULL, slen, ikm, ilen, got);
+        Hkdf.extract_args.salt = slen ? salt : NULL;
+        Hkdf.extract_args.salt_len = slen;
+        Hkdf.extract_args.ikm = ikm;
+        Hkdf.extract_args.ikm_len = ilen;
+        Hkdf.extract_args.prk = got;
+        Hkdf.extract(g_work);
         TEST_ASSERT_EQUAL_HEX8_ARRAY_MESSAGE(want, got, 32, v->prk);
     }
 }
@@ -339,7 +398,12 @@ void test_hkdf_expand(void)
         size_t ilen = unhex(v->info, info);
         size_t wlen = unhex(v->okm, want);
         TEST_ASSERT_EQUAL_UINT32_MESSAGE(v->l, (uint32_t)wlen, v->okm);
-        protocore_hkdf_expand(g_work, prk, ilen ? info : NULL, ilen, got, wlen);
+        Hkdf.expand_args.prk = prk;
+        Hkdf.expand_args.info = ilen ? info : NULL;
+        Hkdf.expand_args.info_len = ilen;
+        Hkdf.expand_args.out = got;
+        Hkdf.expand_args.out_len = wlen;
+        Hkdf.expand(g_work);
         TEST_ASSERT_EQUAL_HEX8_ARRAY_MESSAGE(want, got, wlen, v->okm);
     }
 }
@@ -353,11 +417,21 @@ void test_hkdf_expand_length_bound(void)
     unhex(KAT_HKDF[0].prk, prk);
 
     memset(out, 0xAA, sizeof(out));
-    protocore_hkdf_expand(g_work, prk, NULL, 0, out, (size_t)255 * 32);
+    Hkdf.expand_args.prk = prk;
+    Hkdf.expand_args.info = NULL;
+    Hkdf.expand_args.info_len = 0;
+    Hkdf.expand_args.out = out;
+    Hkdf.expand_args.out_len = (size_t)255 * 32;
+    Hkdf.expand(g_work);
     TEST_ASSERT_NOT_EQUAL(0xAA, out[0]);
 
     memset(out, 0xAA, sizeof(out));
-    protocore_hkdf_expand(g_work, prk, NULL, 0, out, (size_t)255 * 32 + 1);
+    Hkdf.expand_args.prk = prk;
+    Hkdf.expand_args.info = NULL;
+    Hkdf.expand_args.info_len = 0;
+    Hkdf.expand_args.out = out;
+    Hkdf.expand_args.out_len = (size_t)255 * 32 + 1;
+    Hkdf.expand(g_work);
     for (size_t i = 0; i < (size_t)255 * 32 + 1; i++)
     {
         TEST_ASSERT_EQUAL_HEX8(0x00, out[i]);
@@ -374,7 +448,11 @@ void test_chacha20_block(void)
         unhex(v->key, key);
         unhex(v->nonce, nonce);
         unhex(v->keystream, want);
-        protocore_chacha20_block_ietf(key, v->counter, nonce, got);
+        Chacha20.block_ietf_args.key = key;
+        Chacha20.block_ietf_args.counter = v->counter;
+        Chacha20.block_ietf_args.nonce = nonce;
+        Chacha20.block_ietf_args.out = got;
+        Chacha20.block_ietf(g_work);
         TEST_ASSERT_EQUAL_HEX8_ARRAY_MESSAGE(want, got, 64, v->keystream);
     }
 }
@@ -388,7 +466,11 @@ void test_poly1305(void)
         unhex(v->key, key);
         size_t mlen = unhex(v->msg, msg);
         unhex(v->tag, want);
-        protocore_poly1305(got, msg, mlen, key);
+        Poly1305.mac_args.key = key;
+        Poly1305.mac_args.msg = msg;
+        Poly1305.mac_args.len = mlen;
+        Poly1305.mac_args.out = got;
+        Poly1305.mac(g_work);
         TEST_ASSERT_EQUAL_HEX8_ARRAY_MESSAGE(want, got, 16, v->tag);
     }
 }

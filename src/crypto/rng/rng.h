@@ -3,12 +3,11 @@
 
 /**
  * @file rng.h
- * @brief The seed a worker inherits, and the only thing a caller may ask of it.
+ * @brief The seed a worker holds, and the draw over it.
  *
- * One call: give me @p len bytes, and that is what comes back. A caller cannot seed it, reseed it,
- * or read its pace, because a caller that could would set the pace, and every caller setting its own
- * is how an entropy source gets drained by whichever module asks most often. The generator keeps its
- * own schedule.
+ * One draw: give me @p len bytes, and that is what comes back. The generator keeps its own schedule -
+ * it redraws from the platform once its budget is spent, so no caller sets the pace and no entropy
+ * source is drained by whichever module asks most often.
  *
  * ## What belongs here and what does not
  *
@@ -30,8 +29,8 @@
  * draw. Independently of that ratchet, the seed is redrawn from the platform once the draw budget
  * @ref PROTOCORE_RAND_RESEED_BYTES is spent.
  *
- * The seed is per worker: a persistent borrow from that worker's secure pool, so two workers never
- * share a generator and the draw path takes no lock.
+ * The seed lives in the caller's borrow, one span per worker, so two workers never share a generator
+ * and the draw path takes no lock.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -40,7 +39,7 @@
 #ifndef PROTOCORE_RNG_H
 #define PROTOCORE_RNG_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_RNG
 
@@ -49,16 +48,75 @@ PROTOCORE_BEGIN_DECLS
 /** @brief The seed: a ChaCha20 key. */
 #define PROTOCORE_RAND_SEED_LEN 32
 
+// PROTOCORE_RNG_BORROW - the bytes a generator runs out of - is stated in protocore_config.h, which
+// sums it into the secure arena. A caller takes them once, for the life of the program, and passes
+// the pointer to every call.
+
+/** @brief Where a draw lands. */
+typedef struct
+{
+    uint8_t *out; ///< destination
+    size_t len;   ///< how many; any length, the block counter carries across 64-byte boundaries
+} RngFillArgs;
+
 /**
- * @brief Write @p len bytes to @p out.
+ * @brief The general-purpose draw (ChaCha20 keystream, RFC 8439).
  *
- * Binds and seeds itself on first use, ratchets after every draw, and redraws from the platform on
- * its own schedule. There is nothing else to call.
+ * A caller sets the members a call takes, invokes it through ::Rng with the bytes it runs out of, and
+ * reads the outcome off the same handle. How those bytes are carved is this module's and is never
+ * named here.
  *
- * @param out  destination; untouched when @p out is NULL or @p len is 0.
- * @param len  bytes to write. Any length: the block counter carries across 64-byte boundaries.
+ *   Rng.fill_args.out = nonce;
+ *   Rng.fill_args.len = nonce_len;
+ *   Rng.fill(protocore_rng_span());
+ *
+ * @var RngNs::fill_args  where a draw lands
+ * @var RngNs::ok         a call's true/false outcome
+ * @var RngNs::fill       write @c len keystream bytes out, then ratchet the seed
+ * @var RngNs::reseed     redraw the seed and its nonce from the platform, and start the budget over
+ *
+ * A caller with no reason to hold a generator of its own passes @ref protocore_rng_span, the one the
+ * whole program shares. A caller that took its own PROTOCORE_RNG_BORROW span passes that instead and
+ * is a separate generator.
+ *
+ * @ref RngNs::fill draws the seed from the platform itself on the first call over a borrow, and again
+ * once @ref PROTOCORE_RAND_RESEED_BYTES is spent. @ref RngNs::reseed forces that redraw at a moment
+ * the caller picks.
+ *
+ * @c work is PROTOCORE_RNG_BORROW secure bytes the CALLER took, at an address it knows. It arrives
+ * @c restrict and is not held past the call, so nothing here aliases it. The seed is in those bytes
+ * rather than in this module, so a caller takes them once for the life of the program and every draw
+ * runs out of the same span. The caller releases it, and the pool wipes on release; this module
+ * neither takes it, holds it, nor releases it, and the only bytes of it this module erases are the
+ * ratchet's replacement copy, after every draw. The borrow IS the generator, so two workers are two
+ * borrows and never collide.
+ *
+ * No storage member and no context: a caller sets operands and reads @ref RngNs::ok, and that is all
+ * the surface there is.
  */
-void protocore_rand_fill(uint8_t *out, size_t len);
+typedef struct
+{
+    RngFillArgs fill_args;
+
+    proto_bool ok;
+
+    void (*const fill)(uint8_t *restrict work);
+    void (*const reseed)(uint8_t *restrict work);
+} RngNs;
+
+/** @brief The one symbol this module exports. */
+extern RngNs Rng;
+
+/**
+ * @brief The PROTOCORE_RNG_BORROW bytes the whole program's generator runs out of.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where that
+ * borrow comes from. Taken once from the end of the secure pool, which no mark and no release walks,
+ * so the seed and the ratchet last the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+uint8_t *protocore_rng_span(void);
 
 PROTOCORE_END_DECLS
 

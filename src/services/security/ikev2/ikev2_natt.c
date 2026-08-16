@@ -12,6 +12,8 @@
 #if PROTOCORE_ENABLE_IKEV2
 
 #include "crypto/hash/sha1.h"
+#include "mmgr/secure.h" // the pool the digest borrow comes from
+#include "mmgr/span.h"   // protocore_span, span.ok
 
 // ---------------------------------------------------------------------------
 // Literals
@@ -73,7 +75,18 @@ static size_t natd_hash(const uint8_t *init_spi, const uint8_t *resp_spi, const 
     {
         return 0;
     }
-    protocore_sha1(in, n, out);
+    const size_t mark = protocore_secure_mark();
+    protocore_span w = protocore_secure_span(PROTOCORE_SHA1_BORROW, 8);
+    if (!span.ok(w))
+    {
+        protocore_secure_release(mark);
+        return 0;
+    }
+    Sha1.hash_args.data = in;
+    Sha1.hash_args.len = n;
+    Sha1.hash_args.out = out;
+    Sha1.hash(w.buf);
+    protocore_secure_release(mark);
     return PROTOCORE_IKE_NATD_HASH_LEN;
 }
 

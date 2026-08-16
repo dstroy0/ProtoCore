@@ -40,9 +40,9 @@ static HalRsaCtx s_rsa = {NULL, portMUX_INITIALIZER_UNLOCKED};
 // which are always accessible even when the RSA block itself is unclocked.
 static proto_bool rsa_is_up(void)
 {
-    const proto_bool clocked = (PROTOCORE_HW_REG(PROTOCORE_RSA_CLK_REG) & PROTOCORE_RSA_CLK_BIT) != 0u;
+    const proto_bool clocked = (PROTOCORE_HW_RD(PROTOCORE_RSA_CLK_REG) & PROTOCORE_RSA_CLK_BIT) != 0u;
 #if PROTOCORE_RSA_HAS_PD
-    const proto_bool powered = (PROTOCORE_HW_REG(PROTOCORE_RSA_PD_REG) & PROTOCORE_RSA_PD_DOWN_BIT) == 0u;
+    const proto_bool powered = (PROTOCORE_HW_RD(PROTOCORE_RSA_PD_REG) & PROTOCORE_RSA_PD_DOWN_BIT) == 0u;
     return clocked && powered;
 #else
     return clocked;
@@ -55,37 +55,37 @@ static proto_bool rsa_is_up(void)
 // the caller holds s_rsa.hw_mux. Each RMW is an explicit read-modify-write of one bit.
 static void rsa_bring_up(void)
 {
-    uint32_t v = PROTOCORE_HW_REG(PROTOCORE_RSA_CLK_REG);
+    uint32_t v = PROTOCORE_HW_RD(PROTOCORE_RSA_CLK_REG);
     v |= PROTOCORE_RSA_CLK_BIT; // bus clock on
-    PROTOCORE_HW_REG(PROTOCORE_RSA_CLK_REG) = v;
+    PROTOCORE_HW_WR(PROTOCORE_RSA_CLK_REG, v);
 
-    v = PROTOCORE_HW_REG(PROTOCORE_RSA_RST_REG);
+    v = PROTOCORE_HW_RD(PROTOCORE_RSA_RST_REG);
     v |= PROTOCORE_RSA_RST_BIT; // assert RSA reset
-    PROTOCORE_HW_REG(PROTOCORE_RSA_RST_REG) = v;
-    v = PROTOCORE_HW_REG(PROTOCORE_RSA_RST_REG);
+    PROTOCORE_HW_WR(PROTOCORE_RSA_RST_REG, v);
+    v = PROTOCORE_HW_RD(PROTOCORE_RSA_RST_REG);
     v &= ~PROTOCORE_RSA_RST_BIT; // deassert RSA reset
-    PROTOCORE_HW_REG(PROTOCORE_RSA_RST_REG) = v;
+    PROTOCORE_HW_WR(PROTOCORE_RSA_RST_REG, v);
 
-    v = PROTOCORE_HW_REG(PROTOCORE_RSA_HOLD_REG);
+    v = PROTOCORE_HW_RD(PROTOCORE_RSA_HOLD_REG);
     v &= ~PROTOCORE_RSA_HOLD_CLEAR; // release the sibling resets (DS / crypto / ECDSA) that would hold RSA in reset
-    PROTOCORE_HW_REG(PROTOCORE_RSA_HOLD_REG) = v;
+    PROTOCORE_HW_WR(PROTOCORE_RSA_HOLD_REG, v);
 
 #ifdef PROTOCORE_RSA_HOLD2_REG
-    v = PROTOCORE_HW_REG(PROTOCORE_RSA_HOLD2_REG);
+    v = PROTOCORE_HW_RD(PROTOCORE_RSA_HOLD2_REG);
     v &= ~PROTOCORE_RSA_HOLD2_CLEAR; // some dies (C5/H2) hold the ECDSA reset in a second, separate register
-    PROTOCORE_HW_REG(PROTOCORE_RSA_HOLD2_REG) = v;
+    PROTOCORE_HW_WR(PROTOCORE_RSA_HOLD2_REG, v);
 #endif
 
 #if PROTOCORE_RSA_HAS_PD
-    v = PROTOCORE_HW_REG(PROTOCORE_RSA_PD_REG);
+    v = PROTOCORE_HW_RD(PROTOCORE_RSA_PD_REG);
     v &= ~PROTOCORE_RSA_PD_UP_CLEAR; // power up the RSA memory
-    PROTOCORE_HW_REG(PROTOCORE_RSA_PD_REG) = v;
+    PROTOCORE_HW_WR(PROTOCORE_RSA_PD_REG, v);
 #endif
 
     // Bounded: this runs with interrupts off, so a clean bit that never clears would leave only the
     // watchdog. On expiry the block is left as it is and the modmul that follows zeroes its result.
     uint32_t spins = 0u;
-    while (PROTOCORE_HW_REG(PROTOCORE_RSA_CLEAN) != 0u) // wait until the accelerator's memory init completes
+    while (PROTOCORE_HW_RD(PROTOCORE_RSA_CLEAN) != 0u) // wait until the accelerator's memory init completes
     {
         spins++;
         if (spins >= PROTOCORE_RSA_SPIN_MAX)
@@ -116,7 +116,7 @@ void protocore_rsa_hw_acquire(void)
         rsa_bring_up();
         portEXIT_CRITICAL(&s_rsa.hw_mux);
     }
-    PROTOCORE_HW_REG(PROTOCORE_RSA_INTENA) = 0u; // poll only, no completion IRQ
+    PROTOCORE_HW_WR(PROTOCORE_RSA_INTENA, 0u); // poll only, no completion IRQ
 }
 
 void protocore_rsa_hw_release(void)

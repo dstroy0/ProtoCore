@@ -33,7 +33,10 @@
 static void sha256_hex(uint8_t *work, const uint8_t *data, size_t len, char out[65])
 {
     uint8_t d[PROTOCORE_SHA256_DIGEST_LEN];
-    protocore_sha256(work, data, len, d);
+    Sha256.hash_args.data = data;
+    Sha256.hash_args.len = len;
+    Sha256.hash_args.out = d;
+    Sha256.hash(work);
     Hex.io.in = d;
     Hex.io.n = PROTOCORE_SHA256_DIGEST_LEN;
     Hex.io.out = out;
@@ -224,7 +227,10 @@ static void rekey(struct AuthInternal *restrict ctx)
     raw.put_u32(seed + 16, c);
     raw.put_u32(seed + 20, t);
     uint8_t d[PROTOCORE_SHA256_DIGEST_LEN];
-    protocore_sha256(work, seed, sizeof(seed), d);
+    Sha256.hash_args.data = seed;
+    Sha256.hash_args.len = sizeof(seed);
+    Sha256.hash_args.out = d;
+    Sha256.hash(work);
     raw.read(a->digest_secret, d, sizeof(a->digest_secret)); // first 128 bits
 }
 
@@ -239,7 +245,10 @@ static uint32_t digest_nonce_mac(uint8_t *work, const uint8_t *secret, uint32_t 
     raw.read(material, secret, 16);
     raw.put_u32(material + 16, issue); // endian-symmetric: minted and verified the same way
     uint8_t d[PROTOCORE_SHA256_DIGEST_LEN];
-    protocore_sha256(work, material, sizeof(material), d);
+    Sha256.hash_args.data = material;
+    Sha256.hash_args.len = sizeof(material);
+    Sha256.hash_args.out = d;
+    Sha256.hash(work);
     Hex.io.in = d;
     Hex.io.n = 16;
     Hex.io.out = mac_hex;

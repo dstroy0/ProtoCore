@@ -18,7 +18,13 @@
  * accelerates the X25519 KEX, here driving the Edwards point arithmetic so the host-key
  * signature runs several times faster. Only the point/field layer differs; the SHA-512 hashing
  * and the scalar arithmetic mod L are shared. Both paths are byte-identical by construction.
+ *
+ * The working set is this file's. The module's own borrow holds it - the expanded seed, the public
+ * key, the two reduced hashes, the S accumulator and the recomputed point - and behind it a region
+ * for the SHA-512 every entry drives.
  */
+
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_ED25519
 
@@ -28,13 +34,41 @@
 #include "crypto/crypto_opt.h"
 #include "crypto/ct_eq.h" // protocore_ct_eq
 #include "crypto/hash/sha512.h"
-#include "mmgr/secure.h" // protocore_secure_wipe
 #if PROTOCORE_FE25519_MPI_HW
 #include "crypto/asymmetric/ed25519_comb_table.h" // fixed-base comb ED_COMB[i][j] = (j+1)*256^i*B; drives the MODMULT sign
 #endif
 
 PROTOCORE_CRYPTO_HOT
 PROTOCORE_BEGIN_DECLS
+
+// The one definition, both arms, private to this TU. It sits at ED25519_OFF_CTX in the caller's
+// borrow, so its size never leaves this file and no consumer can name it.
+//
+// Only what is not derivable: the expanded seed, the public key, the two reduced hashes, the S
+// accumulator, and the point a verification recomputes. The SHA-512 region is a fixed offset from the
+// base, so a macro computes it rather than the context storing it.
+typedef struct
+{
+    int64_t x[64];   ///< S accumulator, r + h*a before the reduction mod L
+    uint8_t d[64];   ///< SHA-512(seed) clamped: d[0..31] the scalar a, d[32..63] the nonce prefix
+    uint8_t r[64];   ///< SHA-512(prefix || M), reduced mod L
+    uint8_t h[64];   ///< SHA-512(R || A || M), reduced mod L
+    uint8_t pub[32]; ///< A = a * B
+    uint8_t t[32];   ///< pack(S*B - h*A), what a verification compares R against
+} Ed25519Ctx;
+
+// The caller's borrow, split: the working set, then the region the nested SHA-512 runs out of. That
+// hash is driven through its own namespace, so this borrow carries a region for it rather than naming
+// any term of its split.
+#define ED25519_OFF_CTX 0u
+#define ED25519_OFF_SHA (ED25519_OFF_CTX + sizeof(Ed25519Ctx))
+static_assert(ED25519_OFF_SHA + PROTOCORE_SHA512_BORROW <= PROTOCORE_ED25519_BORROW,
+              "PROTOCORE_ED25519_BORROW is short of the working set and the nested SHA-512 borrow - "
+              "raise it in protocore_config.h, which derives PROTOCORE_SECURE_ARENA_SIZE from it");
+
+// The regions, at their offsets in the caller's borrow.
+#define ED25519_CTX(w) ((Ed25519Ctx *)(void *)((w) + ED25519_OFF_CTX))
+#define ED25519_SHA(w) ((w) + ED25519_OFF_SHA)
 
 // --- Shared constants -------------------------------------------------------
 
@@ -586,103 +620,141 @@ static proto_bool ed_verify_recompute(uint8_t out[32], const uint8_t S[32], cons
 }
 #endif // !PROTOCORE_FE25519_MPI_HW (SW path)
 
-// --- Public API -------------------------------------------------------------
+// --- helpers over the borrow -----------------------------------------------
 
-void protocore_ed25519_pubkey(uint8_t *work, uint8_t pub[32], const uint8_t seed[32])
+// d = SHA-512(seed), clamped: d[0..31] the secret scalar a, d[32..63] the nonce prefix.
+static void ed_expand_seed(uint8_t *restrict work, const uint8_t *seed)
 {
-    uint8_t d[64];
-    protocore_sha512(work, seed, 32, d);
-    d[0] &= 248;
-    d[31] &= 127;
-    d[31] |= 64; // clamp -> secret scalar a = d[0..31]
-    ed_scalarbase_bytes(pub, d);
+    Ed25519Ctx *ctx = ED25519_CTX(work);
+    Sha512.hash_args.data = seed;
+    Sha512.hash_args.len = PROTOCORE_ED25519_SEED_LEN;
+    Sha512.hash_args.out = ctx->d;
+    Sha512.hash(ED25519_SHA(work));
+    ctx->d[0] &= 248;
+    ctx->d[31] &= 127;
+    ctx->d[31] |= 64;
 }
 
-void protocore_ed25519_sign(uint8_t *work, uint8_t sig[64], const uint8_t *msg, size_t mlen, const uint8_t seed[32])
+// ctx->h = SHA-512(R || A || M) mod L, taken through the Sha512 namespace in this borrow's region.
+static void ed_challenge(uint8_t *restrict work, const uint8_t *sig_r, const uint8_t *pub, const uint8_t *msg,
+                         size_t msg_len)
 {
-    uint8_t d[64];
-    uint8_t pub[32];
-    uint8_t r[64];
-    uint8_t h[64];
-    protocore_sha512(work, seed, 32, d);
-    d[0] &= 248;
-    d[31] &= 127;
-    d[31] |= 64; // a = d[0..31]; prefix = d[32..63]
+    Ed25519Ctx *ctx = ED25519_CTX(work);
+    uint8_t *sha = ED25519_SHA(work);
+    Sha512.init(sha);
+    Sha512.update_args.data = sig_r; // R
+    Sha512.update_args.len = 32;
+    Sha512.update(sha);
+    Sha512.update_args.data = pub; // A
+    Sha512.update_args.len = 32;
+    Sha512.update(sha);
+    Sha512.update_args.data = msg;
+    Sha512.update_args.len = msg_len;
+    Sha512.update(sha);
+    Sha512.final_args.out = ctx->h;
+    Sha512.final(sha);
+    ed_reduce(ctx->h);
+}
+
+// --- the entries -----------------------------------------------------------
+
+static void ed25519_pubkey(uint8_t *restrict work)
+{
+    Ed25519.ok = PROTO_FALSE;
+    if (!work || !Ed25519.pubkey_args.seed || !Ed25519.pubkey_args.pub)
+    {
+        return;
+    }
+    ed_expand_seed(work, Ed25519.pubkey_args.seed);
+    ed_scalarbase_bytes(Ed25519.pubkey_args.pub, ED25519_CTX(work)->d);
+    Ed25519.ok = PROTO_TRUE;
+}
+
+static void ed25519_sign(uint8_t *restrict work)
+{
+    Ed25519.ok = PROTO_FALSE;
+    if (!work || !Ed25519.sign_args.seed || !Ed25519.sign_args.sig)
+    {
+        return;
+    }
+    Ed25519Ctx *ctx = ED25519_CTX(work);
+    uint8_t *sha = ED25519_SHA(work);
+    const uint8_t *msg = Ed25519.sign_args.msg;
+    const size_t msg_len = Ed25519.sign_args.msg_len;
+    uint8_t *sig = Ed25519.sign_args.sig;
+
+    ed_expand_seed(work, Ed25519.sign_args.seed);
 
     // A = a * B
-    ed_scalarbase_bytes(pub, d);
+    ed_scalarbase_bytes(ctx->pub, ctx->d);
 
     // r = SHA-512(prefix || M) mod L
-    protocore_sha512_ctx c;
-    protocore_sha512_init(&c, work);
-    protocore_sha512_update(&c, d + 32, 32);
-    protocore_sha512_update(&c, msg, mlen);
-    protocore_sha512_final(&c, r);
-    ed_reduce(r);
+    Sha512.init(sha);
+    Sha512.update_args.data = ctx->d + 32;
+    Sha512.update_args.len = 32;
+    Sha512.update(sha);
+    Sha512.update_args.data = msg;
+    Sha512.update_args.len = msg_len;
+    Sha512.update(sha);
+    Sha512.final_args.out = ctx->r;
+    Sha512.final(sha);
+    ed_reduce(ctx->r);
 
     // R = r * B
-    ed_scalarbase_bytes(sig, r); // sig[0..31] = R
+    ed_scalarbase_bytes(sig, ctx->r); // sig[0..31] = R
 
     // h = SHA-512(R || A || M) mod L
-    protocore_sha512_init(&c, work);
-    protocore_sha512_update(&c, sig, 32);
-    protocore_sha512_update(&c, pub, 32);
-    protocore_sha512_update(&c, msg, mlen);
-    protocore_sha512_final(&c, h);
-    ed_reduce(h);
+    ed_challenge(work, sig, ctx->pub, msg, msg_len);
 
     // S = (r + h*a) mod L
-    int64_t x[64];
     for (int i = 0; i < 64; i++)
     {
-        x[i] = 0;
+        ctx->x[i] = 0;
     }
     for (int i = 0; i < 32; i++)
     {
-        x[i] = (int64_t)(uint64_t)r[i];
+        ctx->x[i] = (int64_t)(uint64_t)ctx->r[i];
     }
     for (int i = 0; i < 32; i++)
     {
         for (int j = 0; j < 32; j++)
         {
-            x[i + j] += (int64_t)(uint64_t)h[i] * (int64_t)(uint64_t)d[j];
+            ctx->x[i + j] += (int64_t)(uint64_t)ctx->h[i] * (int64_t)(uint64_t)ctx->d[j];
         }
     }
-    ed_modL(sig + 32, x); // sig[32..63] = S
-
-    // d[0..31] the secret scalar, d[32..63] the nonce prefix, r the nonce, h the challenge, x the S
-    // accumulator.
-    protocore_secure_wipe(d, sizeof(d));
-    protocore_secure_wipe(r, sizeof(r));
-    protocore_secure_wipe(h, sizeof(h));
-    protocore_secure_wipe(x, sizeof(x));
+    ed_modL(sig + 32, ctx->x); // sig[32..63] = S
+    Ed25519.ok = PROTO_TRUE;
 }
 
-proto_bool protocore_ed25519_verify(uint8_t *work, const uint8_t pub[32], const uint8_t *msg, size_t mlen,
-                                    const uint8_t sig[64])
+static void ed25519_verify(uint8_t *restrict work)
 {
+    Ed25519.ok = PROTO_FALSE;
+    if (!work || !Ed25519.verify_args.pub || !Ed25519.verify_args.sig)
+    {
+        return;
+    }
+    const uint8_t *sig = Ed25519.verify_args.sig;
+    const uint8_t *pub = Ed25519.verify_args.pub;
     if (!ed_scalar_canonical(sig + 32))
     {
-        return PROTO_FALSE; // non-canonical S (RFC 8032 §5.1.7): reject to prevent malleability
+        return; // non-canonical S (RFC 8032 §5.1.7): reject to prevent malleability
     }
+    Ed25519Ctx *ctx = ED25519_CTX(work);
 
     // h = SHA-512(R || A || M) mod L
-    uint8_t h[64];
-    protocore_sha512_ctx c;
-    protocore_sha512_init(&c, work);
-    protocore_sha512_update(&c, sig, 32); // R
-    protocore_sha512_update(&c, pub, 32); // A
-    protocore_sha512_update(&c, msg, mlen);
-    protocore_sha512_final(&c, h);
-    ed_reduce(h);
+    ed_challenge(work, sig, pub, Ed25519.verify_args.msg, Ed25519.verify_args.msg_len);
 
-    uint8_t t[32];
-    if (!ed_verify_recompute(t, sig + 32, h, pub))
+    if (!ed_verify_recompute(ctx->t, sig + 32, ctx->h, pub))
     {
-        return PROTO_FALSE; // invalid A
+        return; // invalid A
     }
-    return ct_verify32(sig, t) == 0; // R == S*B - h*A ?
+    if (ct_verify32(sig, ctx->t) == 0) // R == S*B - h*A ?
+    {
+        Ed25519.ok = PROTO_TRUE;
+    }
 }
+
+Ed25519Ns Ed25519 = {.pubkey = ed25519_pubkey, .sign = ed25519_sign, .verify = ed25519_verify};
 
 PROTOCORE_END_DECLS
 

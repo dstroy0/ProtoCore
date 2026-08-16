@@ -123,7 +123,7 @@ typedef struct
     DtlsConnState state;
     uint8_t alert; ///< RFC 8446 §6 alert code when @c state is FAILED (0 otherwise)
 
-    protocore_sha256_ctx transcript;             ///< running Transcript-Hash over the TLS handshake messages
+    uint8_t *transcript;                         ///< running Transcript-Hash over the TLS handshake messages
     Tls13KeySchedule ks;                         ///< TLS 1.3 key schedule, over @ref ks_store
     uint8_t ks_store[PROTOCORE_TLS13_KS_BORROW]; ///< the schedule's terms and its HKDF's bytes
     // The transcript hash and the one-off hashes taken beside it work out of these. Live and die with

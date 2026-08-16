@@ -6,169 +6,21 @@
  * @brief SSH RSA host-key layer: NVS/fixture host key, host-key signing, "ssh-rsa" blob (see ssh_rsa.h).
  *
  * The RSASSA-PKCS1-v1.5 math lives in crypto/rsa; this file owns the SSH host key and calls into it.
+ * The accelerated arm of that math is the RSA/MPI HAL under core_setup/hal, so no arm is named here.
  */
 
 #include "network_drivers/presentation/ssh/transport/ssh_rsa.h"
 #include "core_setup/hal/nvs.h" // the host key is read from non-volatile storage
-#include "crypto/asymmetric/rsa.h"
-#include "crypto/hash/sha256.h"
-#include "crypto/hash/sha512.h"
-#include "crypto/rng/rng.h" // protocore_rand_fill: the mbedtls RNG callback
+#include "crypto/asymmetric/rsa.h" // Rsa: the signer, and the key widths
 #include "mmgr/protomem.h"
 #include "mmgr/secure.h"
-#include "network_drivers/presentation/ssh/transport/transport.h"
-
-#if PROTOCORE_HAS_HW_BIGNUM
-#include <mbedtls/md.h>
-#include <mbedtls/pk.h>
-#include <mbedtls/rsa.h>
-#endif
 
 // Public host key (BSS - no secret material).
 SshRsaPubKey ssh_host_pubkey;
 
-#if PROTOCORE_HAS_HW_BIGNUM
-
-// ---------------------------------------------------------------------------
-// Accelerated - cached mbedtls host-key signer over the vendor's modexp (NVS-backed)
-// ---------------------------------------------------------------------------
-
-// RNG callback for mbedtls private-key operations (mbedtls v3 requires a real f_rng for RSA blinding).
-static int ssh_mbedtls_rng(void *ctx, unsigned char *buf, size_t len)
-{
-    (void)ctx;
-    protocore_rand_fill(buf, len);
-    return 0;
-}
-
-// Cached RSA host-key signer. Re-parsing the PKCS#8 key per handshake also re-ran mbedtls's first-use
-// blinding setup (~170 ms wasted per sign); the parsed context caches the blinding state, so keeping it
-// resident means each sign pays only the CRT modexp. The private key stays in RAM for the server
-// lifetime (as an SSH host key normally does); the mutex serializes signs because mbedtls mutates the
-// blinding values per operation. Loaded once at startup by protocore_ssh_rsa_load_pubkey().
-typedef struct
-{
-    mbedtls_pk_context pk;                    ///< parsed host key + cached blinding state
-    protocore_platform_mutex lock;            ///< serializes signs on the shared context
-    protocore_platform_mutex_ctrl lock_store; ///< the mutex object itself, in BSS
-    proto_bool ready;                         ///< pk holds a valid parsed key
-} SshRsaCtx;
-static SshRsaCtx s_rsa;
-
-int protocore_ssh_rsa_load_pubkey(void)
-{
-    if (!s_rsa.lock)
-    {
-        s_rsa.lock = protocore_platform_mutex_create(&s_rsa.lock_store);
-    }
-
-    uint8_t der[SSH_RSA_KEY_DER_MAX];
-    size_t der_len = protocore_nvs_get_blob(PROTOCORE_SSH_HOST_KEY_NS, PROTOCORE_SSH_HOST_KEY_ITEM, der, sizeof(der));
-    if (der_len == 0)
-    {
-        return -1;
-    }
-
-    // (Re)parse into the persistent context. Free any prior key first.
-    if (s_rsa.ready)
-    {
-        mbedtls_pk_free(&s_rsa.pk);
-        s_rsa.ready = PROTO_FALSE;
-    }
-    mbedtls_pk_init(&s_rsa.pk);
-    int rc = mbedtls_pk_parse_key(&s_rsa.pk, der, der_len, NULL, 0
-#if MBEDTLS_VERSION_MAJOR >= 3
-                                  ,
-                                  ssh_mbedtls_rng, NULL
-#endif
-    );
-    protocore_secure_wipe(der, der_len);
-
-    if (rc != 0)
-    {
-        mbedtls_pk_free(&s_rsa.pk);
-        return -1;
-    }
-
-    mbedtls_rsa_context *rsa = mbedtls_pk_rsa(s_rsa.pk);
-    if (mbedtls_rsa_get_len(rsa) != PROTOCORE_RSA_KEY_BYTES)
-    {
-        mbedtls_pk_free(&s_rsa.pk);
-        return -1;
-    }
-
-    // Write n and e into the public-only BSS struct.
-    mbedtls_mpi n_mpi;
-    mbedtls_mpi e_mpi;
-    mbedtls_mpi_init(&n_mpi);
-    mbedtls_mpi_init(&e_mpi);
-    mbedtls_rsa_export(rsa, &n_mpi, NULL, NULL, NULL, &e_mpi);
-    mbedtls_mpi_write_binary(&n_mpi, ssh_host_pubkey.n, PROTOCORE_RSA_KEY_BYTES);
-    mbedtls_mpi_write_binary(&e_mpi, ssh_host_pubkey.e_bytes + 4 - sizeof(ssh_host_pubkey.e_bytes),
-                             sizeof(ssh_host_pubkey.e_bytes));
-    mbedtls_mpi_free(&n_mpi);
-    mbedtls_mpi_free(&e_mpi);
-
-    s_rsa.ready = PROTO_TRUE;
-    ssh_host_pubkey.loaded = PROTO_TRUE;
-    return 0;
-}
-
-int ssh_rsa_sign(uint8_t *work, const uint8_t *msg, size_t msg_len, protocore_rsa_hash hash,
-                 uint8_t sig[PROTOCORE_RSA_SIG_BYTES])
-{
-    // Reuse the key parsed once at startup; lazy-load as a fallback if the sketch never did.
-    if (!s_rsa.ready && protocore_ssh_rsa_load_pubkey() != 0)
-    {
-        return -1;
-    }
-
-    // mbedtls_pk_sign() PKCS#1-pads the supplied digest (it does NOT hash), so for rsa-sha2-256/512 we
-    // pass SHA-256(msg) / SHA-512(msg).
-    const proto_bool sha512 = (hash == PROTOCORE_RSA_HASH_SHA512);
-    const mbedtls_md_type_t md = sha512 ? MBEDTLS_MD_SHA512 : MBEDTLS_MD_SHA256;
-    const size_t dlen = sha512 ? PROTOCORE_SHA512_DIGEST_LEN : PROTOCORE_SHA256_DIGEST_LEN;
-    uint8_t digest[PROTOCORE_SHA512_DIGEST_LEN];
-    if (sha512)
-    {
-        protocore_sha512(work, msg, msg_len, digest);
-    }
-    else
-    {
-        protocore_sha256(work, msg, msg_len, digest);
-    }
-
-    // Serialize: mbedtls mutates the context's blinding state on each private op.
-    if (s_rsa.lock)
-    {
-        protocore_platform_mutex_take(s_rsa.lock, PROTOCORE_PLATFORM_WAIT_FOREVER);
-    }
-    size_t sig_len = 0;
-#if MBEDTLS_VERSION_MAJOR >= 3
-    int rc =
-        mbedtls_pk_sign(&s_rsa.pk, md, digest, dlen, sig, PROTOCORE_RSA_SIG_BYTES, &sig_len, ssh_mbedtls_rng, NULL);
-#else
-    int rc = mbedtls_pk_sign(&s_rsa.pk, md, digest, dlen, sig, &sig_len, ssh_mbedtls_rng, NULL);
-#endif
-    if (s_rsa.lock)
-    {
-        protocore_platform_mutex_give(s_rsa.lock);
-    }
-    protocore_secure_wipe(digest, sizeof(digest));
-
-    return (rc == 0 && sig_len == PROTOCORE_RSA_SIG_BYTES) ? 0 : -1;
-}
-
-#else
-
-// ---------------------------------------------------------------------------
-// Software - the same NVS host key, walked here; signing runs crypto/rsa's software path.
-// ---------------------------------------------------------------------------
-
 // The private exponent, borrowed from the secure pool. n and e are public and live in
 // ssh_host_pubkey; only d is secret, so only d comes from here. The persistent end is walked by no
-// mark and no release, so the key stays for the life of the program - the lifetime the accelerated
-// arm gives its parsed mbedtls context.
+// mark and no release, so the key stays for the life of the program.
 typedef struct
 {
     protocore_span d; ///< private exponent, PROTOCORE_RSA_KEY_BYTES big-endian
@@ -260,7 +112,7 @@ static proto_bool der_int(const uint8_t *der, size_t len, size_t *off, uint8_t *
 /** @brief DER tag for a constructed SEQUENCE. */
 #define SSH_RSA_DER_SEQUENCE 0x30
 
-// Read n, e and d out of an RSA private key, in either shape mbedtls accepts.
+// Read n, e and d out of an RSA private key, in either shape the key file comes in.
 //
 // PKCS#1 RSAPrivateKey is SEQUENCE { INTEGER version, n, e, d, p, q, dp, dq, qinv }. PKCS#8 wraps
 // it: SEQUENCE { INTEGER version, SEQUENCE algorithm, OCTET STRING privateKey }, the privateKey
@@ -349,10 +201,19 @@ int ssh_rsa_sign(uint8_t *work, const uint8_t *msg, size_t msg_len, protocore_rs
     {
         return -1;
     }
-    return protocore_rsa_sign_sw(ssh_host_pubkey.n, s_rsa.d.buf, work, msg, msg_len, hash, sig);
+    Rsa.sign_args.n = ssh_host_pubkey.n;
+    Rsa.sign_args.d = s_rsa.d.buf;
+    Rsa.sign_args.msg = msg;
+    Rsa.sign_args.msg_len = msg_len;
+    Rsa.sign_args.hash = hash;
+    Rsa.sign_args.sig = sig;
+    Rsa.sign(work);
+    if (!Rsa.ok)
+    {
+        return -1;
+    }
+    return 0;
 }
-
-#endif // PROTOCORE_HAS_HW_BIGNUM
 
 // ---------------------------------------------------------------------------
 // "ssh-rsa" public-key blob serialization (both backends)

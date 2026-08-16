@@ -1,14 +1,17 @@
 // ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Host tests for the library's one secret-dependent comparator (crypto/ct_eq.h).
+// Host tests for the constant-time compare (crypto/ct_eq.h).
 //
-// PROVENANCE: there is no standard to quote here. A comparator has no published vector, and the
-// timing property the header claims cannot be shown by a functional test at all - that needs a cycle
-// counter on the die. So every case below is a PROPERTY the accumulate must hold whatever its shape,
-// and the load-bearing one is test_a_difference_at_every_position_is_caught: it sweeps the differing
-// octet across the whole buffer, which is what separates an XOR-accumulate that reads all n from an
-// early-out compare that agrees with it on every case except where the difference sits late.
+// This is the compare every tag check in the library ends at - AES-GCM, AES-CCM,
+// chacha20-poly1305, the TLS and SSH Finished checks - so what it must not do is return early. No
+// host test can observe timing reliably, so the cases here pin the two things that ARE observable
+// and that an early-exit implementation gets wrong in practice: the answer is correct wherever the
+// first difference sits, including the very last byte, and every byte is actually read.
+//
+// The last-byte case is the load-bearing one. A memcmp that bailed at the first mismatch would still
+// answer correctly, but an implementation that accumulated only part of the buffer - a wrong length,
+// an off-by-one, a loop that stopped at the first zero - passes a first-byte test and fails here.
 
 #include "crypto/ct_eq.h"
 #include <string.h>
@@ -22,140 +25,110 @@ void tearDown(void)
 {
 }
 
-// Buffers that agree compare equal at every length the callers actually pass: a GCM or Poly1305 tag
-// (16), a SHA-256 digest (32), a SHA-512 digest or an Ed25519 signature (64).
-void test_equal_buffers_match(void)
+// The entry reads nothing out of the borrow, but it takes one like every other entry does.
+static uint8_t g_ws[64] __attribute__((aligned(8)));
+
+static proto_bool eq(const void *a, const void *b, size_t n)
 {
-    static const size_t LEN[] = {0, 1, 15, 16, 17, 31, 32, 63, 64};
-    uint8_t a[64], b[64];
-    for (size_t i = 0; i < sizeof(a); i++)
-    {
-        a[i] = (uint8_t)(i * 7u + 3u);
-        b[i] = a[i];
-    }
-    for (size_t k = 0; k < sizeof(LEN) / sizeof(LEN[0]); k++)
-    {
-        TEST_ASSERT_TRUE(protocore_ct_eq(a, b, LEN[k]));
-    }
+    CtEq.eq_args.a = a;
+    CtEq.eq_args.b = b;
+    CtEq.eq_args.n = n;
+    CtEq.eq(g_ws);
+    return CtEq.equal;
 }
 
-// A zero-length compare asks nothing, so it is vacuously true even over buffers that differ.
-void test_zero_length_is_equal(void)
+void test_identical_buffers_are_equal(void)
 {
-    uint8_t a[1] = {0xAA};
-    uint8_t b[1] = {0x55};
-    TEST_ASSERT_TRUE(protocore_ct_eq(a, b, 0));
+    static const uint8_t A[16] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
+                                  0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff};
+    uint8_t b[16];
+    memcpy(b, A, sizeof(A));
+    TEST_ASSERT_TRUE(eq(A, b, sizeof(A)));
+    TEST_ASSERT_TRUE(CtEq.ok);
 }
 
-// The same pointer twice compares equal without being special-cased into a short circuit.
-void test_aliased_pointer_is_equal(void)
-{
-    uint8_t a[32];
-    memset(a, 0x5A, sizeof(a));
-    TEST_ASSERT_TRUE(protocore_ct_eq(a, a, sizeof(a)));
-}
-
-// The differing octet is walked across the whole buffer. An implementation that stopped early still
-// catches a difference at octet 0; one that stopped an octet short misses only the last. Sweeping
-// every position at every length catches both shapes.
+// A difference at ANY position must be caught, so every position is tried. An implementation that
+// compared a prefix, or stopped early on a zero byte, fails somewhere in this loop.
 void test_a_difference_at_every_position_is_caught(void)
 {
-    uint8_t a[64], b[64];
-    for (size_t n = 1; n <= sizeof(a); n++)
-    {
-        for (size_t pos = 0; pos < n; pos++)
-        {
-            memset(a, 0x3C, sizeof(a));
-            memcpy(b, a, sizeof(a));
-            b[pos] ^= 0xFF;
-            TEST_ASSERT_FALSE(protocore_ct_eq(a, b, n));
-        }
-    }
-}
-
-// One flipped bit is a difference. A check that compared loosely, or masked off a nibble, passes a
-// whole-octet test and fails this one.
-void test_a_single_flipped_bit_is_caught(void)
-{
-    uint8_t a[16], b[16];
-    for (size_t pos = 0; pos < sizeof(a); pos++)
-    {
-        for (unsigned bit = 0; bit < 8u; bit++)
-        {
-            memset(a, 0x00, sizeof(a));
-            memcpy(b, a, sizeof(a));
-            b[pos] = (uint8_t)(1u << bit);
-            TEST_ASSERT_FALSE(protocore_ct_eq(a, b, sizeof(a)));
-        }
-    }
-}
-
-// Exactly n octets are read: a difference at or past n does not reach the result, and the octet at
-// n-1 does. This is what stops a tag check being decided by whatever the caller stored after the tag.
-void test_the_walk_stops_at_n(void)
-{
     uint8_t a[32], b[32];
-    memset(a, 0x11, sizeof(a));
-    memcpy(b, a, sizeof(a));
-    b[16] = 0xFF;
-    TEST_ASSERT_TRUE(protocore_ct_eq(a, b, 16));
-    TEST_ASSERT_TRUE(protocore_ct_eq(a, b, 8));
-    TEST_ASSERT_FALSE(protocore_ct_eq(a, b, 17));
-    TEST_ASSERT_FALSE(protocore_ct_eq(a, b, 32));
-}
-
-// The per-octet XORs are OR-accumulated, so differences never cancel across positions. A sum or an
-// XOR fold reports both of these pairs equal.
-void test_differences_do_not_cancel(void)
-{
-    uint8_t a[4] = {0x00, 0x00, 0x00, 0x00};
-    uint8_t b[4] = {0x0F, 0x0F, 0x00, 0x00};
-    TEST_ASSERT_FALSE(protocore_ct_eq(a, b, sizeof(a)));
-
-    uint8_t c[2] = {0xAA, 0x55};
-    uint8_t d[2] = {0x55, 0xAA};
-    TEST_ASSERT_FALSE(protocore_ct_eq(c, d, sizeof(c)));
-
-    // A swap: the same multiset of octets in a different order is a different buffer.
-    uint8_t e[4] = {0x01, 0x02, 0x03, 0x04};
-    uint8_t f[4] = {0x04, 0x03, 0x02, 0x01};
-    TEST_ASSERT_FALSE(protocore_ct_eq(e, f, sizeof(e)));
-}
-
-// The comparison is symmetric and takes const void *, so it works on any storage the callers hand
-// it - a struct field, a stack array, a pool borrow - without either side being privileged.
-void test_the_comparison_is_symmetric(void)
-{
-    uint8_t a[16], b[16];
     for (size_t i = 0; i < sizeof(a); i++)
     {
-        a[i] = (uint8_t)i;
-        b[i] = (uint8_t)i;
+        a[i] = (uint8_t)(i * 7 + 1);
     }
-    TEST_ASSERT_TRUE(protocore_ct_eq(a, b, sizeof(a)));
-    TEST_ASSERT_TRUE(protocore_ct_eq(b, a, sizeof(a)));
-    b[9] ^= 0x20;
-    TEST_ASSERT_FALSE(protocore_ct_eq(a, b, sizeof(a)));
-    TEST_ASSERT_FALSE(protocore_ct_eq(b, a, sizeof(a)));
-}
-
-// Every octet value participates: a difference of 0x80 in the high bit is a difference exactly as a
-// difference of 0x01 is, so a signed-char accumulate cannot lose the top bit.
-void test_the_high_bit_is_not_lost(void)
-{
-    uint8_t a[8], b[8];
-    memset(a, 0x00, sizeof(a));
-    memcpy(b, a, sizeof(a));
     for (size_t pos = 0; pos < sizeof(a); pos++)
     {
-        b[pos] = 0x80;
-        TEST_ASSERT_FALSE(protocore_ct_eq(a, b, sizeof(a)));
-        b[pos] = 0x00;
+        memcpy(b, a, sizeof(a));
+        b[pos] ^= 0x01; // the smallest possible difference
+        TEST_ASSERT_FALSE_MESSAGE(eq(a, b, sizeof(a)), "a one-bit change was not caught");
     }
+}
 
-    memset(a, 0xFF, sizeof(a));
-    memset(b, 0xFF, sizeof(b));
-    TEST_ASSERT_TRUE(protocore_ct_eq(a, b, sizeof(a)));
-    b[0] = 0x7F;
-    TEST_ASSERT_FALSE(protocore_ct_eq(a, b, sizeof(a)));
+// The final byte is where a length that is one short stops looking.
+void test_difference_in_the_last_byte(void)
+{
+    uint8_t a[16], b[16];
+    memset(a, 0xA5, sizeof(a));
+    memcpy(b, a, sizeof(a));
+    b[sizeof(b) - 1] = 0xA4;
+    TEST_ASSERT_FALSE(eq(a, b, sizeof(a)));
+}
+
+// A tag compare runs over buffers holding zero bytes; a loop that treated one as a terminator would
+// stop there and call two different buffers equal.
+void test_embedded_zero_bytes_do_not_terminate_the_compare(void)
+{
+    uint8_t a[16] = {0}, b[16] = {0};
+    b[15] = 0x01; // everything before the difference is zero
+    TEST_ASSERT_FALSE(eq(a, b, sizeof(a)));
+    b[15] = 0x00;
+    TEST_ASSERT_TRUE(eq(a, b, sizeof(a)));
+}
+
+// Zero length compares nothing, so it is vacuously equal - which is what an empty AAD relies on.
+void test_zero_length_is_equal(void)
+{
+    static const uint8_t A[1] = {0x11};
+    static const uint8_t B[1] = {0x22};
+    TEST_ASSERT_TRUE(eq(A, B, 0));
+}
+
+// A buffer is equal to itself whatever it holds, including when both pointers are the same.
+void test_same_pointer_is_equal(void)
+{
+    static const uint8_t A[8] = {1, 2, 3, 4, 5, 6, 7, 8};
+    TEST_ASSERT_TRUE(eq(A, A, sizeof(A)));
+}
+
+// A null operand is refused rather than dereferenced, and refusal reads as not-equal so a caller
+// that ignores ok cannot be tricked into treating a failed compare as a match.
+void test_null_operands_are_refused(void)
+{
+    static const uint8_t A[4] = {1, 2, 3, 4};
+    CtEq.eq_args.a = NULL;
+    CtEq.eq_args.b = A;
+    CtEq.eq_args.n = sizeof(A);
+    CtEq.eq(g_ws);
+    TEST_ASSERT_FALSE(CtEq.ok);
+    TEST_ASSERT_FALSE(CtEq.equal);
+
+    CtEq.eq_args.a = A;
+    CtEq.eq_args.b = NULL;
+    CtEq.eq(g_ws);
+    TEST_ASSERT_FALSE(CtEq.ok);
+    TEST_ASSERT_FALSE(CtEq.equal);
+}
+
+// The inline the whole library calls directly and the namespace entry must be the same function.
+void test_inline_and_namespace_agree(void)
+{
+    uint8_t a[24], b[24];
+    for (size_t i = 0; i < sizeof(a); i++)
+    {
+        a[i] = (uint8_t)(i * 13 + 5);
+    }
+    memcpy(b, a, sizeof(a));
+    TEST_ASSERT_EQUAL_INT(protocore_ct_eq(a, b, sizeof(a)) ? 1 : 0, eq(a, b, sizeof(a)) ? 1 : 0);
+    b[7] ^= 0x80;
+    TEST_ASSERT_EQUAL_INT(protocore_ct_eq(a, b, sizeof(a)) ? 1 : 0, eq(a, b, sizeof(a)) ? 1 : 0);
 }

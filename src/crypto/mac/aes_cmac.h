@@ -3,7 +3,7 @@
 
 /**
  * @file aes_cmac.h
- * @brief AES-128-CMAC (RFC 4493 / NIST SP800-38B) one-shot MAC.
+ * @brief AES-128-CMAC (RFC 4493 / NIST SP800-38B) - one-shot MAC.
  *
  * The CMAC construction over the AES-128 block cipher: derive two subkeys K1/K2 from
  * AES-128(key, 0^128), CBC-MAC the message, and XOR the final block with K1 (message a whole
@@ -11,9 +11,8 @@
  * MAC when the negotiated signing algorithm is AES-CMAC (MS-SMB2 §3.1.4.1, dialects 3.0 / 3.0.2 /
  * 3.1.1); it is a general primitive, not SMB-specific.
  *
- * On ESP32/Arduino the AES-128 block runs on the mbedTLS context (hardware AES accelerator); on the
- * native host build it uses the shared table-free software AES (crypto/cipher/aes_block.h). Pure,
- * zero heap. Verified against the RFC 4493 §4 worked examples.
+ * The entry below is one surface over both arms: a part with an AES peripheral encrypts a block on
+ * it, a part without runs the FIPS 197 rounds.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -34,15 +33,55 @@ PROTOCORE_BEGIN_DECLS
 /** @brief AES-128-CMAC output length (one AES block). */
 #define PROTOCORE_AES_CMAC_LEN 16
 
+// PROTOCORE_AES_CMAC_BORROW - the bytes a MAC runs out of - is stated in protocore_config.h, which
+// sums it into the secure arena. A caller takes them once and passes the pointer to every call.
+
+/** @brief The key and message a MAC is taken over. */
+typedef struct
+{
+    const uint8_t *key; ///< the 16-byte AES-128 key
+    const uint8_t *msg; ///< the message; null iff msg_len is 0
+    size_t msg_len;     ///< message length in bytes; 0 is the empty-message CMAC
+    uint8_t *out;       ///< PROTOCORE_AES_CMAC_LEN bytes
+} AesCmacMacArgs;
+
 /**
- * @brief Compute the AES-128-CMAC of @p msg under @p key (RFC 4493).
+ * @brief AES-128-CMAC (RFC 4493).
  *
- * @param key      the 16-byte AES-128 key.
- * @param msg      the message (may be null iff @p msg_len is 0).
- * @param msg_len  message length in bytes (0 is valid - the empty-message CMAC).
- * @param mac      receives the 16-byte tag.
+ * A caller sets the members the call takes, invokes it through ::AesCmac with the bytes it runs out
+ * of, and reads the outcome off the same handle. How those bytes are carved is this module's and is
+ * never named here.
+ *
+ *   AesCmac.mac_args.key = key;
+ *   AesCmac.mac_args.msg = msg;
+ *   AesCmac.mac_args.msg_len = msg_len;
+ *   AesCmac.mac_args.out = tag;
+ *   AesCmac.mac(work);
+ *
+ * @var AesCmacNs::mac_args  the key and message a MAC is taken over
+ * @var AesCmacNs::ok        the call's true/false outcome
+ * @var AesCmacNs::mac       derive K1/K2, CBC-MAC the message, write the 16 bytes out
+ *
+ * @c work is PROTOCORE_AES_CMAC_BORROW secure bytes the CALLER took, at an address it knows. It
+ * arrives @c restrict and is not held past the call, so nothing here aliases it. The caller releases
+ * it, and the pool wipes on release; this module neither takes it, holds it, releases it, nor wipes
+ * it. The borrow carries the round-key schedule and both subkeys, so two MACs are two borrows and
+ * never collide.
+ *
+ * No storage member and no context: a caller sets operands and reads @ref AesCmacNs::ok, and that is
+ * all the surface there is.
  */
-void protocore_aes_cmac(const uint8_t key[16], const uint8_t *msg, size_t msg_len, uint8_t mac[PROTOCORE_AES_CMAC_LEN]);
+typedef struct
+{
+    AesCmacMacArgs mac_args;
+
+    proto_bool ok;
+
+    void (*const mac)(uint8_t *restrict work);
+} AesCmacNs;
+
+/** @brief The one symbol this module exports. */
+extern AesCmacNs AesCmac;
 
 PROTOCORE_END_DECLS
 

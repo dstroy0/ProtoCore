@@ -88,14 +88,14 @@ typedef struct
     TlsRole role;
     uint8_t alert; ///< RFC 8446 sec 6 alert code when @c state is FAILED (0 otherwise)
 
-    protocore_sha256_ctx transcript; ///< running Transcript-Hash over the handshake messages
-    Tls13KeySchedule ks;             ///< TLS 1.3 key schedule
-    TlsRecordKeys hs_tx;             ///< handshake traffic keys, this end writing
-    TlsRecordKeys hs_rx;             ///< handshake traffic keys, this end reading
-    TlsRecordKeys ap_tx;             ///< application traffic keys, this end writing
-    TlsRecordKeys ap_rx;             ///< application traffic keys, this end reading
-    proto_bool hs_keys_ready;        ///< the handshake traffic keys are installed
-    proto_bool ap_keys_ready;        ///< the application traffic keys are installed
+    uint8_t *transcript;      ///< running Transcript-Hash over the handshake messages
+    Tls13KeySchedule ks;      ///< TLS 1.3 key schedule
+    TlsRecordKeys hs_tx;      ///< handshake traffic keys, this end writing
+    TlsRecordKeys hs_rx;      ///< handshake traffic keys, this end reading
+    TlsRecordKeys ap_tx;      ///< application traffic keys, this end writing
+    TlsRecordKeys ap_rx;      ///< application traffic keys, this end reading
+    proto_bool hs_keys_ready; ///< the handshake traffic keys are installed
+    proto_bool ap_keys_ready; ///< the application traffic keys are installed
 
     uint8_t *tx;        ///< PROTOCORE_TLS_CONN_MSG_CAP: a message built to send, or a received record opened into it
     uint8_t *rx;        ///< PROTOCORE_TLS_CONN_REC_CAP: the record the worker filled
@@ -206,9 +206,9 @@ static inline void protocore_tls_client_set_ca(const uint8_t *ca, size_t ca_len)
     (void)ca;
     (void)ca_len;
 }
-static inline void protocore_tls_client_set_pin(const uint8_t sha256[32])
+static inline void protocore_tls_client_set_pin(const uint8_t pin[32])
 {
-    (void)sha256;
+    (void)pin;
 }
 static inline void protocore_tls_client_clear_verify(void)
 {

@@ -35,7 +35,7 @@
 #ifndef PROTOCORE_TLS_RECORD_H
 #define PROTOCORE_TLS_RECORD_H
 
-#include "crypto/aead/aes128gcm.h" // protocore_aes128gcm_key, PROTOCORE_WORK_AES128GCM
+#include "crypto/aead/aes128gcm.h" // Aes128Gcm, PROTOCORE_AES128GCM_BORROW
 #include "protocore_config.h"
 
 PROTOCORE_BEGIN_DECLS
@@ -85,14 +85,14 @@ typedef enum PROTO_ENUM_PACKED
  */
 typedef struct
 {
-    TlsCipher cipher;                                  ///< negotiated AEAD (phase 1: AES-128-GCM)
-    _Alignas(8) uint8_t gcm[PROTOCORE_WORK_AES128GCM]; ///< keyed AEAD context, built once per key
-                                                       ///< Replaces the raw key: the schedule is what the
-                                                       ///< AEAD needs, so no raw key stays resident.
-    uint8_t iv[PROTOCORE_AES128GCM_IV_LEN];            ///< AEAD write IV (per-record nonce = iv XOR seq)
-    uint8_t nonce[PROTOCORE_AES128GCM_IV_LEN];         ///< this record's nonce, rebuilt from iv and seq
-    uint64_t seq;                                      ///< records sealed/opened under this key, never sent
-    proto_bool ready;                                  ///< the AEAD context holds a key
+    TlsCipher cipher;                                    ///< negotiated AEAD (phase 1: AES-128-GCM)
+    _Alignas(8) uint8_t gcm[PROTOCORE_AES128GCM_BORROW]; ///< the AEAD's borrow, keyed once per key.
+                                                         ///< Replaces the raw key: the schedule is what the
+                                                         ///< AEAD needs, so no raw key stays resident.
+    uint8_t iv[PROTOCORE_AES128GCM_IV_LEN];              ///< AEAD write IV (per-record nonce = iv XOR seq)
+    uint8_t nonce[PROTOCORE_AES128GCM_IV_LEN];           ///< this record's nonce, rebuilt from iv and seq
+    uint64_t seq;                                        ///< records sealed/opened under this key, never sent
+    proto_bool ready;                                    ///< the AEAD context holds a key
 } TlsRecordKeys;
 
 /** @brief Parsed view of a TLSPlaintext record (fields point into the caller's buffer). */

@@ -24,40 +24,89 @@
 
 PROTOCORE_BEGIN_DECLS
 
-/**
- * @brief Opaque streaming digest context (MD4 / MD5). Forward-declared only: the definition is private to
- * md.cpp, so other translation units know the symbol but never its members - they hold it via `struct MdCtx *`,
- * getting their storage from protocore_md_wants() below.
- */
-struct MdCtx;
+/** @brief MD digest length in bytes. MD4 and MD5 are both 128-bit. */
+#define PROTOCORE_MD_DIGEST_LEN 16
+
+// PROTOCORE_MD_BORROW - the bytes a digest runs out of - is stated in protocore_config.h, which sums
+// it into the secure arena. A caller takes them once and passes the pointer to every call.
+
+/** @brief One chunk fed to a running digest. */
+typedef struct
+{
+    const uint8_t *data; ///< the bytes
+    size_t len;          ///< how many
+} MdUpdateArgs;
+
+/** @brief Where a finished digest lands. */
+typedef struct
+{
+    uint8_t *out; ///< PROTOCORE_MD_DIGEST_LEN bytes
+} MdFinalArgs;
+
+/** @brief The key and message an HMAC-MD5 is taken over. */
+typedef struct
+{
+    const uint8_t *key; ///< MAC key bytes
+    size_t key_len;     ///< key length
+    const uint8_t *msg; ///< the message
+    size_t msg_len;     ///< its length
+    uint8_t *out;       ///< PROTOCORE_MD_DIGEST_LEN bytes
+} MdHmacArgs;
 
 /**
- * @brief Storage this module wants for one MD4/MD5 context.
+ * @brief MD4 / MD5 / HMAC-MD5.
  *
- * The type is opaque, so a consumer cannot size it - this module owns the definition and therefore
- * owns the allocation. Call inside a SecureScope: the scope states how long the caller needs the
- * resource, and the pool wipes the digest state when that scope ends. MD4/MD5 here carry NTLM
- * password and session-key material, so the storage comes from the secure pool.
+ * A caller sets the members a call takes, invokes it through ::Md, and reads the outcome off the same
+ * handle, with the bytes it runs out of. How those bytes are carved is this module's and is never
+ * named here.
  *
- * @return a context to pass to protocore_md4_init() / protocore_md5_init(), or nullptr if the pool could not
- *         satisfy it.
+ *   Md.md4_init(work);
+ *   Md.update_args.data = pw;
+ *   Md.update_args.len = pw_len;
+ *   Md.update(work);
+ *   Md.final_args.out = nt_hash;
+ *   Md.final(work);
+ *
+ * @var MdNs::update_args  one chunk fed to a running digest
+ * @var MdNs::final_args   where a finished digest lands
+ * @var MdNs::hmac_args    the key and message an HMAC-MD5 is taken over
+ * @var MdNs::ok           a call's true/false outcome
+ * @var MdNs::md5_init     start an MD5
+ * @var MdNs::md4_init     start an MD4
+ * @var MdNs::update       feed the running digest a chunk
+ * @var MdNs::final        pad, compress the last block, write the 16 bytes out
+ * @var MdNs::md5          init, update and final in one call
+ * @var MdNs::md4          the same for MD4, the NT-hash primitive
+ * @var MdNs::hmac_md5     HMAC-MD5 (RFC 2104), the NTLMv2 MAC primitive
+ *
+ * @c work is PROTOCORE_MD_BORROW secure bytes the CALLER took, at an address it knows. It arrives
+ * @c restrict and is not held past the call, so nothing here aliases it. The caller releases it, and
+ * the pool wipes on release; this module neither takes it, holds it, releases it, nor wipes it. That
+ * is what keeps the NTLM password and session-key material in it from outliving the caller. The borrow
+ * IS the digest, so two running digests are two borrows and never collide.
+ *
+ * No storage member and no context: a caller sets operands and reads @ref MdNs::ok, and that is all
+ * the surface there is.
  */
-struct MdCtx *protocore_md_wants(void);
+typedef struct
+{
+    MdUpdateArgs update_args;
+    MdFinalArgs final_args;
+    MdHmacArgs hmac_args;
 
-void protocore_md5_init(struct MdCtx *c);
-void protocore_md5_update(struct MdCtx *c, const uint8_t *data, size_t len);
-void protocore_md5_final(struct MdCtx *c, uint8_t out[16]);
-/** @brief One-shot MD5. */
-void protocore_md5(const uint8_t *data, size_t len, uint8_t out[16]);
+    proto_bool ok;
 
-void protocore_md4_init(struct MdCtx *c);
-void protocore_md4_update(struct MdCtx *c, const uint8_t *data, size_t len);
-void protocore_md4_final(struct MdCtx *c, uint8_t out[16]);
-/** @brief One-shot MD4 (the NT-hash primitive). */
-void protocore_md4(const uint8_t *data, size_t len, uint8_t out[16]);
+    void (*const md5_init)(uint8_t *restrict work);
+    void (*const md4_init)(uint8_t *restrict work);
+    void (*const update)(uint8_t *restrict work);
+    void (*const final)(uint8_t *restrict work);
+    void (*const md5)(uint8_t *restrict work);
+    void (*const md4)(uint8_t *restrict work);
+    void (*const hmac_md5)(uint8_t *restrict work);
+} MdNs;
 
-/** @brief HMAC-MD5 (RFC 2104): the NTLMv2 MAC primitive. */
-void protocore_hmac_md5(const uint8_t *key, size_t key_len, const uint8_t *msg, size_t msg_len, uint8_t out[16]);
+/** @brief The one symbol this module exports. */
+extern MdNs Md;
 
 PROTOCORE_END_DECLS
 

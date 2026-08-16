@@ -1046,7 +1046,10 @@ static const uint8_t RFC8448_S_HS_IV[12] = {0x5d, 0x31, 0x3e, 0xb2, 0x67, 0x12, 
 // Transcript-Hash of the first @p n octets of the flight.
 static void transcript(size_t n, uint8_t out[32])
 {
-    protocore_sha256(g_hash_work, RFC8448_FLIGHT, n, out);
+    Sha256.hash_args.data = RFC8448_FLIGHT;
+    Sha256.hash_args.len = n;
+    Sha256.hash_args.out = out;
+    Sha256.hash(g_hash_work);
 }
 
 static void bind_early(const Tls13Kdf *kdf)

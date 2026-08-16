@@ -109,6 +109,68 @@ static const char *const S256_LONG_MSG =
     "aa1fe31d0bda53272045598015a8ae4d8cec226fefa58daa05500906c4d85e7567";
 static const char *const S256_LONG_MD = "cb5648a1d61c6c5bdacd96f81c9591debc3950dcf658145b8d996570ba881a05";
 
+// The bytes the entries run out of. The borrow IS the sponge: a streaming absorb/squeeze run carries
+// its state here rather than in a context the caller names, which is why no KeccakCtx appears below.
+static uint8_t g_ws[PROTOCORE_SHA3_BORROW] __attribute__((aligned(8)));
+
+// The namespace, called the way the vectors below read: operands in, one call, answer out.
+static void sha3_256(uint8_t *out, const uint8_t *in, size_t inlen)
+{
+    Sha3.digest_args.out = out;
+    Sha3.digest_args.in = in;
+    Sha3.digest_args.inlen = inlen;
+    Sha3.sha3_256(g_ws);
+}
+
+static void sha3_512(uint8_t *out, const uint8_t *in, size_t inlen)
+{
+    Sha3.digest_args.out = out;
+    Sha3.digest_args.in = in;
+    Sha3.digest_args.inlen = inlen;
+    Sha3.sha3_512(g_ws);
+}
+
+static void shake128(uint8_t *out, size_t outlen, const uint8_t *in, size_t inlen)
+{
+    Sha3.xof_args.out = out;
+    Sha3.xof_args.outlen = outlen;
+    Sha3.xof_args.in = in;
+    Sha3.xof_args.inlen = inlen;
+    Sha3.shake128(g_ws);
+}
+
+static void shake256(uint8_t *out, size_t outlen, const uint8_t *in, size_t inlen)
+{
+    Sha3.xof_args.out = out;
+    Sha3.xof_args.outlen = outlen;
+    Sha3.xof_args.in = in;
+    Sha3.xof_args.inlen = inlen;
+    Sha3.shake256(g_ws);
+}
+
+static void shake128_absorb(const uint8_t *in, size_t inlen)
+{
+    Sha3.shake128_absorb_args.in = in;
+    Sha3.shake128_absorb_args.inlen = inlen;
+    Sha3.shake128_absorb(g_ws);
+}
+
+static void keccak_absorb(uint32_t rate, const uint8_t *in, size_t inlen, uint8_t domain)
+{
+    Sha3.absorb_args.rate = rate;
+    Sha3.absorb_args.in = in;
+    Sha3.absorb_args.inlen = inlen;
+    Sha3.absorb_args.domain = domain;
+    Sha3.absorb(g_ws);
+}
+
+static void keccak_squeeze(uint8_t *out, size_t outlen)
+{
+    Sha3.squeeze_args.out = out;
+    Sha3.squeeze_args.outlen = outlen;
+    Sha3.squeeze(g_ws);
+}
+
 static uint8_t g_msg[512];
 static uint8_t g_want[64];
 static uint8_t g_got[64];
@@ -119,7 +181,7 @@ void test_fips202_sha3_256(void)
     {
         size_t n = unhex(S256_MSG[i], g_msg);
         unhex(S256_MD[i], g_want);
-        protocore_sha3_256(g_got, g_msg, n);
+        sha3_256(g_got, g_msg, n);
         TEST_ASSERT_EQUAL_HEX8_ARRAY_MESSAGE(g_want, g_got, 32, S256_MD[i]);
     }
 }
@@ -129,7 +191,7 @@ void test_fips202_sha3_256_three_blocks(void)
     size_t n = unhex(S256_LONG_MSG, g_msg);
     TEST_ASSERT_EQUAL_UINT(273u, n);
     unhex(S256_LONG_MD, g_want);
-    protocore_sha3_256(g_got, g_msg, n);
+    sha3_256(g_got, g_msg, n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(g_want, g_got, 32);
 }
 
@@ -139,7 +201,7 @@ void test_fips202_sha3_512(void)
     {
         size_t n = unhex(S512_MSG[i], g_msg);
         unhex(S512_MD[i], g_want);
-        protocore_sha3_512(g_got, g_msg, n);
+        sha3_512(g_got, g_msg, n);
         TEST_ASSERT_EQUAL_HEX8_ARRAY_MESSAGE(g_want, g_got, 64, S512_MD[i]);
     }
 }
@@ -150,7 +212,7 @@ void test_fips202_shake128(void)
     {
         size_t n = unhex(K128_MSG[i], g_msg);
         unhex(K128_OUT[i], g_want);
-        protocore_shake128(g_got, 16, g_msg, n);
+        shake128(g_got, 16, g_msg, n);
         TEST_ASSERT_EQUAL_HEX8_ARRAY_MESSAGE(g_want, g_got, 16, K128_OUT[i]);
     }
 }
@@ -161,7 +223,7 @@ void test_fips202_shake256(void)
     {
         size_t n = unhex(K256_MSG[i], g_msg);
         unhex(K256_OUT[i], g_want);
-        protocore_shake256(g_got, 32, g_msg, n);
+        shake256(g_got, 32, g_msg, n);
         TEST_ASSERT_EQUAL_HEX8_ARRAY_MESSAGE(g_want, g_got, 32, K256_OUT[i]);
     }
 }
@@ -183,8 +245,8 @@ void test_domain_separation_splits_sha3_from_shake(void)
 {
     uint8_t sha3[32], shake[32];
     size_t n = unhex(K256_MSG[2], g_msg);
-    protocore_sha3_256(sha3, g_msg, n);
-    protocore_shake256(shake, 32, g_msg, n);
+    sha3_256(sha3, g_msg, n);
+    shake256(shake, 32, g_msg, n);
     TEST_ASSERT_TRUE(memcmp(sha3, shake, 32) != 0);
 }
 
@@ -196,20 +258,19 @@ void test_incremental_squeeze_matches_one_shot(void)
     static const uint8_t MSG[3] = {'a', 'b', 'c'};
     uint8_t whole[400], split[400];
 
-    protocore_shake128(whole, sizeof(whole), MSG, sizeof(MSG));
-    KeccakCtx c;
-    protocore_shake128_absorb(&c, MSG, sizeof(MSG));
+    shake128(whole, sizeof(whole), MSG, sizeof(MSG));
+    shake128_absorb(MSG, sizeof(MSG));
     for (size_t off = 0; off < sizeof(split); off += 3) // three at a time, the sampler's step
     {
         size_t take = sizeof(split) - off < 3 ? sizeof(split) - off : 3;
-        protocore_keccak_squeeze(&c, split + off, take);
+        keccak_squeeze(split + off, take);
     }
     TEST_ASSERT_EQUAL_HEX8_ARRAY(whole, split, sizeof(whole));
 
-    protocore_shake256(whole, sizeof(whole), MSG, sizeof(MSG));
-    protocore_keccak_absorb(&c, KECCAK_RATE_SHAKE256, MSG, sizeof(MSG), 0x1F);
-    protocore_keccak_squeeze(&c, split, 100);       // inside the first 136-octet block
-    protocore_keccak_squeeze(&c, split + 100, 300); // across two more boundaries
+    shake256(whole, sizeof(whole), MSG, sizeof(MSG));
+    keccak_absorb(KECCAK_RATE_SHAKE256, MSG, sizeof(MSG), 0x1F);
+    keccak_squeeze(split, 100);       // inside the first 136-octet block
+    keccak_squeeze(split + 100, 300); // across two more boundaries
     TEST_ASSERT_EQUAL_HEX8_ARRAY(whole, split, sizeof(whole));
 }
 
@@ -219,12 +280,12 @@ void test_shake_output_is_a_prefix_stream(void)
 {
     static const uint8_t MSG[3] = {'a', 'b', 'c'};
     uint8_t shortr[32], longr[400];
-    protocore_shake128(shortr, sizeof(shortr), MSG, sizeof(MSG));
-    protocore_shake128(longr, sizeof(longr), MSG, sizeof(MSG));
+    shake128(shortr, sizeof(shortr), MSG, sizeof(MSG));
+    shake128(longr, sizeof(longr), MSG, sizeof(MSG));
     TEST_ASSERT_EQUAL_HEX8_ARRAY(shortr, longr, sizeof(shortr));
 
-    protocore_shake256(shortr, sizeof(shortr), MSG, sizeof(MSG));
-    protocore_shake256(longr, sizeof(longr), MSG, sizeof(MSG));
+    shake256(shortr, sizeof(shortr), MSG, sizeof(MSG));
+    shake256(longr, sizeof(longr), MSG, sizeof(MSG));
     TEST_ASSERT_EQUAL_HEX8_ARRAY(shortr, longr, sizeof(shortr));
 }
 
@@ -234,12 +295,12 @@ void test_every_message_octet_reaches_the_digest(void)
 {
     uint8_t base[32], moved[32];
     size_t n = unhex(S256_MSG[3], g_msg);
-    protocore_sha3_256(base, g_msg, n);
+    sha3_256(base, g_msg, n);
     static const size_t POS[] = {0, 1, 67, 134, 135};
     for (size_t i = 0; i < sizeof(POS) / sizeof(POS[0]); i++)
     {
         g_msg[POS[i]] ^= 0x01;
-        protocore_sha3_256(moved, g_msg, n);
+        sha3_256(moved, g_msg, n);
         TEST_ASSERT_TRUE(memcmp(base, moved, 32) != 0);
         g_msg[POS[i]] ^= 0x01;
     }

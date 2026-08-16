@@ -49,20 +49,34 @@ static void put_le32(uint8_t out[4], uint32_t v)
 static void chain_hash(const uint8_t prev[PROTOCORE_AUDIT_HASH_LEN], const protocore_audit_entry *e,
                        uint8_t out[PROTOCORE_AUDIT_HASH_LEN])
 {
-    protocore_sha256_ctx c;
+    uint8_t *c;
     uint8_t le[4];
-    protocore_sha256_init(&c, (uint8_t *)g_work);
-    protocore_sha256_update(&c, prev, PROTOCORE_AUDIT_HASH_LEN);
+    c = (uint8_t *)g_work;
+    Sha256.init(c);
+    Sha256.update_args.data = prev;
+    Sha256.update_args.len = PROTOCORE_AUDIT_HASH_LEN;
+    Sha256.update(c);
     put_le32(le, e->seq);
-    protocore_sha256_update(&c, le, 4);
+    Sha256.update_args.data = le;
+    Sha256.update_args.len = 4;
+    Sha256.update(c);
     put_le32(le, e->ts);
-    protocore_sha256_update(&c, le, 4);
+    Sha256.update_args.data = le;
+    Sha256.update_args.len = 4;
+    Sha256.update(c);
     const uint8_t cat = (uint8_t)e->category;
-    protocore_sha256_update(&c, &cat, 1);
+    Sha256.update_args.data = &cat;
+    Sha256.update_args.len = 1;
+    Sha256.update(c);
     const uint8_t mlen = (uint8_t)strlen(e->msg);
-    protocore_sha256_update(&c, &mlen, 1);
-    protocore_sha256_update(&c, (const uint8_t *)e->msg, mlen);
-    protocore_sha256_final(&c, out);
+    Sha256.update_args.data = &mlen;
+    Sha256.update_args.len = 1;
+    Sha256.update(c);
+    Sha256.update_args.data = (const uint8_t *)e->msg;
+    Sha256.update_args.len = mlen;
+    Sha256.update(c);
+    Sha256.final_args.out = out;
+    Sha256.final(c);
 }
 
 // The chain starts from a genesis anchor of 32 zero octets, and the first record's stored hash is

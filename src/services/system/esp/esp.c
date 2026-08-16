@@ -77,10 +77,18 @@ size_t protocore_esp_gcm_encapsulate(uint32_t spi, uint32_t seq, const uint8_t k
         // ~9,200-cycle lifecycle documented in aesgcm.h - hoist the context into session state if it
         // ever shows up in a profile.
         size_t mark = protocore_secure_mark();
-        struct protocore_aesgcm_key *gcm =
-            protocore_aesgcm_key_init(protocore_secure_span(PROTOCORE_WORK_AESGCM, 8).buf, key);
-        protocore_aesgcm_seal(gcm, nonce, out, PROTOCORE_ESP_HDR_LEN, pt, pt_len, pt, pt + pt_len);
-        protocore_aesgcm_key_wipe(gcm);
+        uint8_t *gcm = protocore_secure_span(PROTOCORE_AESGCM_BORROW, 8).buf;
+        AesGcm.key_args.key = key;
+        AesGcm.key_init(gcm);
+        AesGcm.seal_args.nonce = nonce;
+        AesGcm.seal_args.aad = out;
+        AesGcm.seal_args.aad_len = PROTOCORE_ESP_HDR_LEN;
+        AesGcm.seal_args.pt = pt;
+        AesGcm.seal_args.pt_len = pt_len;
+        AesGcm.seal_args.ct_out = pt;
+        AesGcm.seal_args.tag_out = pt + pt_len;
+        AesGcm.seal(gcm);
+        AesGcm.key_wipe(gcm);
         protocore_secure_release(mark);
     }
     return total;
@@ -114,10 +122,19 @@ proto_bool protocore_esp_gcm_decapsulate(const uint8_t key[PROTOCORE_ESP_KEY_LEN
         // ~9,200-cycle lifecycle documented in aesgcm.h - hoist the context into session state if it
         // ever shows up in a profile.
         size_t mark = protocore_secure_mark();
-        struct protocore_aesgcm_key *gcm =
-            protocore_aesgcm_key_init(protocore_secure_span(PROTOCORE_WORK_AESGCM, 8).buf, key);
-        ok = protocore_aesgcm_open(gcm, nonce, packet, PROTOCORE_ESP_HDR_LEN, ct, ct_len, tag, ct); // AAD = SPI | Seq
-        protocore_aesgcm_key_wipe(gcm);
+        uint8_t *gcm = protocore_secure_span(PROTOCORE_AESGCM_BORROW, 8).buf;
+        AesGcm.key_args.key = key;
+        AesGcm.key_init(gcm);
+        AesGcm.open_args.nonce = nonce;
+        AesGcm.open_args.aad = packet; // AAD = SPI | Seq
+        AesGcm.open_args.aad_len = PROTOCORE_ESP_HDR_LEN;
+        AesGcm.open_args.ct = ct;
+        AesGcm.open_args.ct_len = ct_len;
+        AesGcm.open_args.tag = tag;
+        AesGcm.open_args.out = ct;
+        AesGcm.open(gcm);
+        ok = AesGcm.ok;
+        AesGcm.key_wipe(gcm);
         protocore_secure_release(mark);
     }
     if (!ok)

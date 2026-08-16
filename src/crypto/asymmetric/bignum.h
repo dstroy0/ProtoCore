@@ -5,62 +5,11 @@
  * @file bignum.h
  * @brief 2048-bit big-integer arithmetic for DH-group14 and RSA-2048.
  *
- * ═══════════════════════════════════════════════════════════════════════════
- * DESIGN RATIONALE
- * ═══════════════════════════════════════════════════════════════════════════
- *
- * protocore_bignum is a fixed-width 2048-bit integer stored as 64 little-endian
- * 32-bit limbs (d[0] = least significant).  Fixed width means:
- *   - Struct size is a compile-time constant: 256 bytes.
- *   - No dynamic allocation - both DH scalars and RSA key fragments fit in
- *     the same type and can live in BSS or on the stack.
- *   - Array indexing is bounds-safe; no VLA or pointer arithmetic hazards.
- *
- * On Arduino (ESP32), DH uses mbedtls_mpi from ESP-IDF (heap-allocated,
- * variable-length bignum), which has hardware-accelerated multiplication.
- * On native builds, the software Montgomery path is used - correct but
- * slower (~200 ms for a 2048-bit exponentiation on x86 at test time).
- * Since DH happens once per connection and ESP32 uses the HW path in
- * production, the native speed is acceptable for testing.
- *
- * ═══════════════════════════════════════════════════════════════════════════
- * MONTGOMERY MULTIPLICATION
- * ═══════════════════════════════════════════════════════════════════════════
- *
- * For DH-group14 the modulus p ends in ...FFFFFFFF FFFFFFFF (little-endian
- * d[0]=0xFFFFFFFF).  This gives Montgomery parameter:
- *
- *   p_inv = (-(p mod 2^32))^(-1) mod 2^32
- *         = (-(0xFFFFFFFF))^(-1) mod 2^32
- *         = (0x00000001)^(-1) mod 2^32
- *         = 1
- *
- * p_inv = 1 simplifies the inner reduction loop: m_i = t[i] * 1 = t[i].
- *
- * Montgomery product:  MonPro(a,b) = a·b·R^-1 mod p
- *   where R = 2^2048.
- *
- * To compute a·b mod p normally:
- *   1. Convert a, b to Montgomery form: aR = a·R mod p (= MonPro(a, R²mod p))
- *   2. Compute MonPro(aR, bR) = a·b·R mod p
- *   3. Convert back: MonPro(a·b·R, 1) = a·b mod p
- *
- * R² mod p is a precomputed 2048-bit constant (see protocore_bignum.cpp).
- *
- * ═══════════════════════════════════════════════════════════════════════════
- * SCRATCH BUFFER
- * ═══════════════════════════════════════════════════════════════════════════
- *
- * The Montgomery SOS multiplication needs a 129-word (516-byte) temporary and the
- * expmod three protocore_bignum temporaries (768 bytes). bn_expmod_group14() borrows all of
- * them as ONE working set from the secure pool (mmgr/secure.h), so the layout
- * is the struct's own field order rather than byte offsets kept in step by hand here.
- *
- * These temporaries hold DH private-exponent and shared-secret fragments. They are
- * wiped when the borrow is released - by the pool, on every exit path. This module
- * does not perform the wipe and does not need to know that one happens.
- *
- * ═══════════════════════════════════════════════════════════════════════════
+ * A protocore_bignum is a fixed-width 2048-bit unsigned integer held as 64 little-endian 32-bit limbs,
+ * so its size is the compile-time constant 256 and a DH scalar and an RSA key fragment are the same
+ * type. The entries below read big-endian bytes in and write them back out, order two values, test one
+ * for zero, check a received DH public value against RFC 4253 §8, and run the group-14 modular
+ * exponentiation on whichever backend the vendor linked.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -69,11 +18,9 @@
 #ifndef PROTOCORE_BIGNUM_H
 #define PROTOCORE_BIGNUM_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_BIGNUM
-
-#include "mmgr/secure.h"
 
 PROTOCORE_BEGIN_DECLS
 
@@ -96,68 +43,18 @@ typedef struct
 } protocore_bignum;
 
 // ---------------------------------------------------------------------------
-// Scratch buffer (defined in protocore_bignum.cpp)
+// Group-14 prime constant (exposed for key-derivation and validation)
 // ---------------------------------------------------------------------------
 
-// bn_expmod_group14() borrows its Montgomery temporaries from the secure pool as one working set; the pool
-// wipes them when the borrow is released. This module names no address and performs no wipe.
+/** @brief The RFC 3526 MODP group-14 prime (2048-bit). */
+extern const protocore_bignum group14_p;
 
-// ---------------------------------------------------------------------------
-// Conversion helpers
-// ---------------------------------------------------------------------------
+/** @brief Generator for group-14: g = 2. */
+extern const protocore_bignum group14_g;
 
-/**
- * @brief Read a big-endian byte array of @p len bytes into a protocore_bignum.
- *
- * If @p len < 256 the most-significant limbs are zeroed.
- * If @p len > 256 only the least-significant 256 bytes are read.
- *
- * @param out   Destination bignum.
- * @param bytes Big-endian source bytes.
- * @param len   Number of source bytes (typically 256 for 2048-bit).
- */
-void bn_from_bytes(protocore_bignum *out, const uint8_t *bytes, size_t len);
+// PROTOCORE_BIGNUM_BORROW - the bytes a bignum call runs out of - is stated in protocore_config.h,
+// which sums it into the secure arena. A caller takes them once and passes the pointer to every call.
 
-/**
- * @brief Write a protocore_bignum as a 256-byte big-endian array.
- *
- * @param bytes Destination buffer (exactly 256 bytes).
- * @param in    Source bignum.
- */
-void bn_to_bytes(uint8_t bytes[256], const protocore_bignum *in);
-
-// ---------------------------------------------------------------------------
-// Comparison
-// ---------------------------------------------------------------------------
-
-/**
- * @brief Compare two protocore_bignum values.
- * @return -1 if a < b, 0 if a == b, 1 if a > b.
- */
-int bn_cmp(const protocore_bignum *a, const protocore_bignum *b);
-
-/**
- * @brief Return non-zero if @p a is zero (all limbs zero).
- */
-int bn_is_zero(const protocore_bignum *a);
-
-// ---------------------------------------------------------------------------
-// DH-group14 modular exponentiation
-// ---------------------------------------------------------------------------
-
-/**
- * @brief Compute out = base^exp mod group14_p.
- *
- * Uses Montgomery modular exponentiation with left-to-right binary scan.
- * Borrows one working set for all temporaries; it is wiped when released.
- *
- * On Arduino the computation is delegated to mbedtls_mpi_exp_mod() which
- * uses hardware multiplication and blinding.
- *
- * @param out   Result (base^exp mod p, 2048-bit).
- * @param base  Base value; must satisfy 1 < base < p-1.
- * @param exp   Exponent (e.g. the 2048-bit private DH scalar y).
- */
 // ---------------------------------------------------------------------------
 // Backend-facing
 // ---------------------------------------------------------------------------
@@ -172,25 +69,127 @@ int bn_cmp_raw(const uint32_t *a, const uint32_t *b, int n);
 
 void bn_expmod_group14(protocore_bignum *out, const protocore_bignum *base, const protocore_bignum *exp);
 
+/** @brief The big-endian bytes read into a bignum. */
+typedef struct
+{
+    protocore_bignum *out; ///< destination
+    const uint8_t *bytes;  ///< big-endian source bytes
+    size_t len;            ///< how many; a shorter source zeroes the top limbs, a longer one keeps its low 256
+} BignumFromBytesArgs;
+
+/** @brief Where a bignum lands as big-endian bytes. */
+typedef struct
+{
+    uint8_t *bytes;             ///< exactly 256 bytes
+    const protocore_bignum *in; ///< the value written
+} BignumToBytesArgs;
+
+/** @brief The two values a compare orders. */
+typedef struct
+{
+    const protocore_bignum *a; ///< left
+    const protocore_bignum *b; ///< right
+} BignumCmpArgs;
+
+/** @brief The two magnitudes a raw compare orders. */
+typedef struct
+{
+    const uint32_t *a; ///< left limbs, little-endian
+    const uint32_t *b; ///< right limbs, little-endian
+    int n;             ///< limbs spanned
+} BignumCmpRawArgs;
+
+/** @brief The value tested for zero. */
+typedef struct
+{
+    const protocore_bignum *a; ///< the value
+} BignumIsZeroArgs;
+
+/** @brief The operands of a group-14 modular exponentiation. */
+typedef struct
+{
+    protocore_bignum *out;        ///< base^exp mod group14_p
+    const protocore_bignum *base; ///< the base, 1 < base < p-1
+    const protocore_bignum *exp;  ///< the exponent, e.g. the 2048-bit private DH scalar y
+} BignumExpmodArgs;
+
+/** @brief The received DH public value a validation checks. */
+typedef struct
+{
+    const protocore_bignum *v; ///< the received e or f
+} BignumValidateArgs;
+
 /**
- * @brief Validate a received DH public value.
+ * @brief 2048-bit big-integer arithmetic (RFC 3526 group-14).
  *
- * RFC 4253 §8: the received value e (or f) must satisfy 1 < e < p-1.
- * Returns 0 if the value is valid, -1 otherwise.
+ * A caller sets the members a call takes, invokes it through ::Bignum with the bytes it runs out of,
+ * and reads the outcome off the same handle. How those bytes are carved is this module's and is never
+ * named here.
  *
- * @param v  Received public DH value.
+ *   Bignum.from_bytes_args.out = &e;
+ *   Bignum.from_bytes_args.bytes = e_be;
+ *   Bignum.from_bytes_args.len = 256;
+ *   Bignum.from_bytes(work);
+ *   Bignum.validate_args.v = &e;
+ *   Bignum.dh_validate(work);
+ *   Bignum.expmod_args.out = &K;
+ *   Bignum.expmod_args.base = &e;
+ *   Bignum.expmod_args.exp = &y;
+ *   Bignum.expmod_group14(work);
+ *
+ * @var BignumNs::from_bytes_args  the big-endian bytes read into a bignum
+ * @var BignumNs::to_bytes_args    where a bignum lands as big-endian bytes
+ * @var BignumNs::cmp_args         the two values a compare orders
+ * @var BignumNs::cmp_raw_args     the two magnitudes a raw compare orders
+ * @var BignumNs::is_zero_args     the value tested for zero
+ * @var BignumNs::expmod_args      the operands of a group-14 modular exponentiation
+ * @var BignumNs::validate_args    the received DH public value a validation checks
+ * @var BignumNs::ok               a call's true/false outcome
+ * @var BignumNs::sign             the sign of a - b the last @ref BignumNs::cmp or @ref BignumNs::cmp_raw
+ *                                 left: -1, 0 or 1
+ * @var BignumNs::zero             whether the last @ref BignumNs::is_zero found every limb zero
+ * @var BignumNs::from_bytes       read a big-endian byte array into a bignum
+ * @var BignumNs::to_bytes         write a bignum as 256 big-endian bytes
+ * @var BignumNs::cmp              order two bignums over all 64 limbs
+ * @var BignumNs::cmp_raw          order two magnitudes over the stated limb count
+ * @var BignumNs::is_zero          test every limb for zero
+ * @var BignumNs::expmod_group14   out = base^exp mod group14_p, on the linked backend
+ * @var BignumNs::dh_validate      RFC 4253 §8: @ref BignumNs::ok is true when 1 < v < p-1
+ *
+ * @c work is PROTOCORE_BIGNUM_BORROW secure bytes the CALLER took, at an address it knows. It arrives
+ * @c restrict and is not held past the call, so nothing here aliases it. The caller releases it, and
+ * the pool wipes on release; this module neither takes it, holds it, releases it, nor wipes it. The DH
+ * exponent and the shared secret pass through those bytes, so they die with the release rather than on
+ * the stack. Two callers are two borrows and never collide.
+ *
+ * No storage member and no context: a caller sets operands and reads @ref BignumNs::ok, and that is
+ * all the surface there is.
  */
-int bn_dh_validate(const protocore_bignum *v);
+typedef struct
+{
+    BignumFromBytesArgs from_bytes_args;
+    BignumToBytesArgs to_bytes_args;
+    BignumCmpArgs cmp_args;
+    BignumCmpRawArgs cmp_raw_args;
+    BignumIsZeroArgs is_zero_args;
+    BignumExpmodArgs expmod_args;
+    BignumValidateArgs validate_args;
 
-// ---------------------------------------------------------------------------
-// Group-14 prime constant (exposed for key-derivation and validation)
-// ---------------------------------------------------------------------------
+    proto_bool ok;
+    int sign;
+    proto_bool zero;
 
-/** @brief The RFC 3526 MODP group-14 prime (2048-bit). */
-extern const protocore_bignum group14_p;
+    void (*const from_bytes)(uint8_t *restrict work);
+    void (*const to_bytes)(uint8_t *restrict work);
+    void (*const cmp)(uint8_t *restrict work);
+    void (*const cmp_raw)(uint8_t *restrict work);
+    void (*const is_zero)(uint8_t *restrict work);
+    void (*const expmod_group14)(uint8_t *restrict work);
+    void (*const dh_validate)(uint8_t *restrict work);
+} BignumNs;
 
-/** @brief Generator for group-14: g = 2. */
-extern const protocore_bignum group14_g;
+/** @brief The one symbol this module exports. */
+extern BignumNs Bignum;
 
 PROTOCORE_END_DECLS
 

@@ -5,75 +5,62 @@
  * @file sha512.c
  * @brief SHA-512 implementation (FIPS 180-4).
  *
- * HW path: streaming + one-shot delegate to mbedtls. SW path: the implementation below,
- * is used. Shared by SSH (Ed25519 / kex), PQC, and SMB 3.1.1 preauth integrity.
+ * One context and one set of entries; only the block compression has two arms - the accelerator where
+ * the part carries one, the FIPS 180-4 rounds below where it does not. Shared by SSH
+ * (Ed25519 / kex), PQC, and SMB 3.1.1 preauth integrity.
+ *
+ * The context is this file's. The module's own borrow is split by offset into the block as it
+ * arrives, the padded last one, and the state copy finalizing compresses into.
  */
 
-
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_SHA512
 
-#if !PROTOCORE_HAS_HW_SHA
-#include "mmgr/endian.h" // native software SHA-512
+#if PROTOCORE_HAS_HW_SHA
 #endif
-
+#include "mmgr/endian.h" // protocore_rd64be / protocore_wr64be: the block reader and the digest writer
 #include "crypto/hash/sha512.h"
-#include "mmgr/protomem.h"
 #include "crypto/crypto_opt.h"
+#include "mmgr/protomem.h"
 
 PROTOCORE_CRYPTO_HOT
-
 PROTOCORE_BEGIN_DECLS
 
-#if PROTOCORE_HAS_HW_SHA
+// The one definition, both arms, private to this TU. The accelerator compresses a block; it does not
+// pad, buffer a partial block, or hold a digest a caller can keep feeding. Those are this file's, so
+// the state a context carries is the same either way and only the compression below has two arms.
+//
+// Only what is not derivable: the regions live at fixed offsets in the caller's borrow, so a helper
+// computes them from the pointer rather than the context storing them.
+typedef struct
+{
+    uint64_t s[8];  ///< Running hash words (H0..H7).
+    uint64_t n;     ///< Total bytes processed so far.
+    uint32_t rxlen; ///< Bytes valid in rx.
+} Sha512Ctx;
+
+// The caller's borrow, split: the running context, the block as it arrives, the padded last one, and
+// the state copy the padded blocks compress into so finalizing leaves the running hash alone.
+#define SHA512_OFF_CTX 0u
+#define SHA512_OFF_RX (SHA512_OFF_CTX + sizeof(Sha512Ctx))
+#define SHA512_OFF_TX (SHA512_OFF_RX + PROTOCORE_SHA512_BLOCK_LEN)
+#define SHA512_OFF_STATE (SHA512_OFF_TX + PROTOCORE_SHA512_BLOCK_LEN)
+static_assert(SHA512_OFF_STATE + sizeof(uint64_t) * 8 <= PROTOCORE_SHA512_BORROW,
+              "PROTOCORE_SHA512_BORROW is short of the context, the two blocks and the state copy - "
+              "raise it in protocore_config.h, which derives PROTOCORE_SECURE_ARENA_SIZE from it");
+
+// The regions, at their offsets in the caller's borrow.
+#define SHA512_CTX(w) ((Sha512Ctx *)(void *)((w) + SHA512_OFF_CTX))
+#define SHA512_RX(w) ((w) + SHA512_OFF_RX)
+#define SHA512_TX(w) ((w) + SHA512_OFF_TX)
+#define SHA512_FS(w) ((uint64_t *)(void *)((w) + SHA512_OFF_STATE))
 
 // ---------------------------------------------------------------------------
-// HW path: streaming + one-shot via mbedtls.
+// SHA-512 (FIPS 180-4).
 // ---------------------------------------------------------------------------
 
-void protocore_sha512_init(protocore_sha512_ctx *ctx, uint8_t *work)
-{
-    (void)work; // the accelerator carries its own
-    mbedtls_sha512_init(&ctx->mbed);
-#if MBEDTLS_VERSION_MAJOR >= 3
-    mbedtls_sha512_starts(&ctx->mbed, 0 /* 0 = SHA-512 */);
-#else
-    mbedtls_sha512_starts_ret(&ctx->mbed, 0);
-#endif
-}
-
-void protocore_sha512_update(protocore_sha512_ctx *ctx, const uint8_t *data, size_t len)
-{
-#if MBEDTLS_VERSION_MAJOR >= 3
-    mbedtls_sha512_update(&ctx->mbed, data, len);
-#else
-    mbedtls_sha512_update_ret(&ctx->mbed, data, len);
-#endif
-}
-
-void protocore_sha512_final(protocore_sha512_ctx *ctx, uint8_t digest[PROTOCORE_SHA512_DIGEST_LEN])
-{
-#if MBEDTLS_VERSION_MAJOR >= 3
-    mbedtls_sha512_finish(&ctx->mbed, digest);
-#else
-    mbedtls_sha512_finish_ret(&ctx->mbed, digest);
-#endif
-    mbedtls_sha512_free(&ctx->mbed);
-}
-
-void protocore_sha512(uint8_t *work, const uint8_t *data, size_t len, uint8_t digest[PROTOCORE_SHA512_DIGEST_LEN])
-{
-    (void)work; // the accelerator carries its own
-    (void)mbedtls_sha512(data, len, digest, 0 /* 0 = SHA-512, 1 = SHA-384 */);
-}
-#endif
-#if !PROTOCORE_HAS_HW_SHA // native software path
-
-// ---------------------------------------------------------------------------
-// SW path: software SHA-512 (FIPS 180-4).
-// ---------------------------------------------------------------------------
-
-
+#if !PROTOCORE_HAS_HW_SHA
 static const uint64_t K512[80] = {
     0x428a2f98d728ae22ULL, 0x7137449123ef65cdULL, 0xb5c0fbcfec4d3b2fULL, 0xe9b5dba58189dbbcULL, 0x3956c25bf348b538ULL,
     0x59f111f1b605d019ULL, 0x923f82a4af194f9bULL, 0xab1c5ed5da6d8118ULL, 0xd807aa98a3030242ULL, 0x12835b0145706fbeULL,
@@ -92,24 +79,27 @@ static const uint64_t K512[80] = {
     0x113f9804bef90daeULL, 0x1b710b35131c471bULL, 0x28db77f523047d84ULL, 0x32caab7b40c72493ULL, 0x3c9ebe0a15c9bebcULL,
     0x431d67c49c100d4cULL, 0x4cc5d4becb3e42b6ULL, 0x597f299cfc657e2aULL, 0x5fcb6fab3ad6faecULL, 0x6c44198c4a475817ULL,
 };
+#endif
+
+// Where the 128-bit message length sits in the final block (FIPS 180-4 §5.1.2).
+#define SHA512_LEN_OFF (PROTOCORE_SHA512_BLOCK_LEN - 16u)
 
 static const uint64_t H0[8] = {
     0x6a09e667f3bcc908ULL, 0xbb67ae8584caa73bULL, 0x3c6ef372fe94f82bULL, 0xa54ff53a5f1d36f1ULL,
     0x510e527fade682d1ULL, 0x9b05688c2b3e6c1fULL, 0x1f83d9abfb41bd6bULL, 0x5be0cd19137e2179ULL,
 };
 
-// Where the 128-bit message length sits in the final block (FIPS 180-4 §5.1.2).
-#define SHA512_LEN_OFF (PROTOCORE_SHA512_BLOCK_LEN - 16u)
+#if PROTOCORE_HAS_HW_SHA
+// Compress one block into @p h on the accelerator. SHA-512 state and block are twice SHA-256's, and
+// the H and M banks are addressed as 32-bit words, so the counts are 16 and 32.
+static void sha512_block(uint64_t h[8], const uint8_t blk[PROTOCORE_SHA512_BLOCK_LEN])
+{
+    protocore_sha_hw_block(PROTOCORE_SHA_MODE_512, (uint32_t *)(void *)h, 16u, (const uint32_t *)(const void *)blk,
+                           32u, PROTO_FALSE);
+}
+#endif
 
-// The caller's working bytes, split: the block as it arrives, the padded last one, and the state copy
-// the padded blocks compress into so finalizing leaves the running hash alone.
-#define SHA512_OFF_RX 0u
-#define SHA512_OFF_TX (SHA512_OFF_RX + PROTOCORE_SHA512_BLOCK_LEN)
-#define SHA512_OFF_STATE (SHA512_OFF_TX + PROTOCORE_SHA512_BLOCK_LEN)
-static_assert(SHA512_OFF_STATE + sizeof(uint64_t) * 8 <= PROTOCORE_SHA512_BORROW,
-              "PROTOCORE_SHA512_BORROW is short of the two blocks and the state copy - raise it in "
-              "protocore_config.h");
-
+#if !PROTOCORE_HAS_HW_SHA
 static inline uint64_t rotr64(uint64_t x, unsigned n)
 {
     return (x >> n) | (x << (64 - n));
@@ -293,22 +283,26 @@ static void sha512_block(uint64_t h[8], const uint8_t blk[PROTOCORE_SHA512_BLOCK
     h[6] += v6;
     h[7] += v7;
 }
+#endif // !PROTOCORE_HAS_HW_SHA (software compression)
 
-void protocore_sha512_init(protocore_sha512_ctx *ctx, uint8_t *work)
+// --- framing (one arm, both compressions) ----------------------------------
+
+// Seed the state.
+static void sha512_state_init(uint8_t *restrict work)
 {
+    Sha512Ctx *ctx = SHA512_CTX(work);
     for (int i = 0; i < 8; i++)
     {
         ctx->s[i] = H0[i];
     }
     ctx->n = 0;
-    ctx->rx = work + SHA512_OFF_RX;
-    ctx->tx = work + SHA512_OFF_TX;
-    ctx->fs = (uint64_t *)(work + SHA512_OFF_STATE);
     ctx->rxlen = 0;
 }
 
-void protocore_sha512_update(protocore_sha512_ctx *ctx, const uint8_t *data, size_t len)
+static void sha512_absorb(uint8_t *restrict work, const uint8_t *data, size_t len)
 {
+    Sha512Ctx *ctx = SHA512_CTX(work);
+    uint8_t *rx = SHA512_RX(work);
     ctx->n += len;
     while (len > 0)
     {
@@ -318,21 +312,26 @@ void protocore_sha512_update(protocore_sha512_ctx *ctx, const uint8_t *data, siz
             take = (uint32_t)len;
         }
         // rx + rxlen carries no alignment, so this is the raw mover, not the aligned-span one.
-        uint8_t *fill = ctx->rx + ctx->rxlen;
+        uint8_t *fill = rx + ctx->rxlen;
         proto_raw_read(fill, data, take);
         ctx->rxlen += take;
         data += take;
         len -= take;
         if (ctx->rxlen == PROTOCORE_SHA512_BLOCK_LEN)
         {
-            sha512_block(ctx->s, ctx->rx);
+            sha512_block(ctx->s, rx);
             ctx->rxlen = 0;
         }
     }
 }
 
-void protocore_sha512_final(protocore_sha512_ctx *ctx, uint8_t digest[PROTOCORE_SHA512_DIGEST_LEN])
+static void sha512_finish(uint8_t *restrict work, uint8_t digest[PROTOCORE_SHA512_DIGEST_LEN])
 {
+    Sha512Ctx *ctx = SHA512_CTX(work);
+    uint8_t *rx = SHA512_RX(work);
+    uint8_t *tx = SHA512_TX(work);
+    uint64_t *fs = SHA512_FS(work);
+
     // 128-bit length in bits. Our byte count fits a uint64, so the high word is n >> 61 (bits above 64)
     // and the low word is n << 3.
     uint64_t len_hi = ctx->n >> 61;
@@ -340,45 +339,85 @@ void protocore_sha512_final(protocore_sha512_ctx *ctx, uint8_t digest[PROTOCORE_
 
     // The padded blocks compress into a copy of the state, so s, rx, rxlen and n all come out of this
     // untouched and the hash can keep taking data afterwards.
-    mem.cpy(ctx->fs, ctx->s, sizeof(ctx->s));
+    mem.cpy(fs, ctx->s, sizeof(ctx->s));
 
     // The last block is composed in tx, whole: what rx holds, the mark, zeros, and the length. rx is
     // read and never written back, so nothing it still carries from an earlier block reaches the wire.
-    mem.zero(ctx->tx, PROTOCORE_SHA512_BLOCK_LEN);
-    mem.cpy(ctx->tx, ctx->rx, ctx->rxlen);
-    ctx->tx[ctx->rxlen] = 0x80;
+    mem.zero(tx, PROTOCORE_SHA512_BLOCK_LEN);
+    mem.cpy(tx, rx, ctx->rxlen);
+    tx[ctx->rxlen] = 0x80;
 
     // The 128-bit length occupies the block's last 16 bytes, so a mark at or past that offset takes
     // its own block.
     if (ctx->rxlen >= SHA512_LEN_OFF)
     {
-        sha512_block(ctx->fs, ctx->tx);
-        mem.zero(ctx->tx, PROTOCORE_SHA512_BLOCK_LEN);
+        sha512_block(fs, tx);
+        mem.zero(tx, PROTOCORE_SHA512_BLOCK_LEN);
     }
 
-    protocore_wr64be(ctx->tx + SHA512_LEN_OFF, len_hi);
-    protocore_wr64be(ctx->tx + SHA512_LEN_OFF + 8, len_lo);
-    sha512_block(ctx->fs, ctx->tx);
+    protocore_wr64be(tx + SHA512_LEN_OFF, len_hi);
+    protocore_wr64be(tx + SHA512_LEN_OFF + 8, len_lo);
+    sha512_block(fs, tx);
 
-    protocore_wr64be(digest, ctx->fs[0]);
-    protocore_wr64be(digest + 8, ctx->fs[1]);
-    protocore_wr64be(digest + 16, ctx->fs[2]);
-    protocore_wr64be(digest + 24, ctx->fs[3]);
-    protocore_wr64be(digest + 32, ctx->fs[4]);
-    protocore_wr64be(digest + 40, ctx->fs[5]);
-    protocore_wr64be(digest + 48, ctx->fs[6]);
-    protocore_wr64be(digest + 56, ctx->fs[7]);
+    protocore_wr64be(digest, fs[0]);
+    protocore_wr64be(digest + 8, fs[1]);
+    protocore_wr64be(digest + 16, fs[2]);
+    protocore_wr64be(digest + 24, fs[3]);
+    protocore_wr64be(digest + 32, fs[4]);
+    protocore_wr64be(digest + 40, fs[5]);
+    protocore_wr64be(digest + 48, fs[6]);
+    protocore_wr64be(digest + 56, fs[7]);
 }
 
-void protocore_sha512(uint8_t *work, const uint8_t *data, size_t len, uint8_t digest[PROTOCORE_SHA512_DIGEST_LEN])
+// --- the entries -----------------------------------------------------------
+
+static void sha512_init(uint8_t *restrict work)
 {
-    protocore_sha512_ctx ctx = {0};
-    protocore_sha512_init(&ctx, work);
-    protocore_sha512_update(&ctx, data, len);
-    protocore_sha512_final(&ctx, digest);
+    if (!work)
+    {
+        Sha512.ok = PROTO_FALSE;
+        return;
+    }
+    sha512_state_init(work);
+    Sha512.ok = PROTO_TRUE;
 }
 
-#endif // !PROTOCORE_HAS_HW_SHA (SW path)
+static void sha512_update(uint8_t *restrict work)
+{
+    if (!work)
+    {
+        Sha512.ok = PROTO_FALSE;
+        return;
+    }
+    sha512_absorb(work, Sha512.update_args.data, Sha512.update_args.len);
+}
+
+static void sha512_final(uint8_t *restrict work)
+{
+    if (!work || !Sha512.final_args.out)
+    {
+        Sha512.ok = PROTO_FALSE;
+        return;
+    }
+    sha512_finish(work, Sha512.final_args.out);
+    Sha512.ok = PROTO_TRUE;
+}
+
+// One-shot over the members already set: init, absorb, finish.
+static void sha512_hash(uint8_t *restrict work)
+{
+    Sha512.ok = PROTO_FALSE;
+    if (!work || !Sha512.hash_args.out)
+    {
+        return;
+    }
+    sha512_state_init(work);
+    sha512_absorb(work, Sha512.hash_args.data, Sha512.hash_args.len);
+    sha512_finish(work, Sha512.hash_args.out);
+    Sha512.ok = PROTO_TRUE;
+}
+
+Sha512Ns Sha512 = {.init = sha512_init, .update = sha512_update, .final = sha512_final, .hash = sha512_hash};
 
 PROTOCORE_END_DECLS
 

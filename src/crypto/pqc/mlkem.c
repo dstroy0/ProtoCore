@@ -1,12 +1,28 @@
 // ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+/**
+ * @file mlkem.c
+ * @brief ML-KEM-768 implementation (FIPS 203). See mlkem.h.
+ *
+ * One arm: the software NTT over q=3329 with Montgomery reduction, the CBD and rejection samplers, the
+ * K-PKE codecs, and the three FIPS 203 top-level algorithms. G = SHA3-512, H = SHA3-256, the matrix
+ * XOF = SHAKE128 and the noise PRF = SHAKE256 all run through the @ref Sha3Ns entries.
+ *
+ * The module's own borrow is one region: the bytes the nested sponge runs out of. Nothing is carried
+ * from one call to the next, so there is no context.
+ */
+
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
 #if PROTOCORE_ENABLE_MLKEM
 
+#include "crypto/crypto_opt.h"
 #include "crypto/hash/sha3.h"
 #include "crypto/pqc/mlkem.h"
 #include "mmgr/protomem.h"
 
+PROTOCORE_CRYPTO_HOT
 PROTOCORE_BEGIN_DECLS
 
 // ML-KEM-768 parameters (FIPS 203).
@@ -18,6 +34,62 @@ PROTOCORE_BEGIN_DECLS
 #define MK_DV 4
 #define MK_POLYBYTES 384 // 12 bits * 256 / 8
 #define MK_QINV (-3327)  // q^-1 mod 2^16, signed
+
+// The caller's borrow: the region the nested sponge runs in. G, H, the matrix XOF and the noise PRF
+// run one at a time, so one region carries them all, and the incremental XOF absorbs and squeezes in
+// it with no other sponge in flight. Sha3 is driven through its own namespace, so this borrow names a
+// region for it rather than any term of its split.
+#define MLKEM_OFF_SHA3 0u
+static_assert(MLKEM_OFF_SHA3 + PROTOCORE_SHA3_BORROW <= PROTOCORE_MLKEM_BORROW,
+              "PROTOCORE_MLKEM_BORROW is short of the nested Sha3 borrow - raise it in "
+              "protocore_config.h, which derives PROTOCORE_SECURE_ARENA_SIZE from it");
+
+// The region, at its offset in the caller's borrow.
+#define MLKEM_SHA3(w) ((w) + MLKEM_OFF_SHA3)
+
+// H: one SHA3-256 through the Sha3 namespace.
+static void mk_sha3_256(uint8_t *restrict work, uint8_t *out, const uint8_t *in, size_t inlen)
+{
+    Sha3.digest_args.out = out;
+    Sha3.digest_args.in = in;
+    Sha3.digest_args.inlen = inlen;
+    Sha3.sha3_256(MLKEM_SHA3(work));
+}
+
+// G: one SHA3-512 through the Sha3 namespace.
+static void mk_sha3_512(uint8_t *restrict work, uint8_t *out, const uint8_t *in, size_t inlen)
+{
+    Sha3.digest_args.out = out;
+    Sha3.digest_args.in = in;
+    Sha3.digest_args.inlen = inlen;
+    Sha3.sha3_512(MLKEM_SHA3(work));
+}
+
+// PRF / J: one SHAKE256 run through the Sha3 namespace.
+static void mk_shake256(uint8_t *restrict work, uint8_t *out, size_t outlen, const uint8_t *in, size_t inlen)
+{
+    Sha3.xof_args.out = out;
+    Sha3.xof_args.outlen = outlen;
+    Sha3.xof_args.in = in;
+    Sha3.xof_args.inlen = inlen;
+    Sha3.shake256(MLKEM_SHA3(work));
+}
+
+// The matrix XOF: absorb the seed once, then squeeze repeatedly out of the same region.
+static void mk_shake128_absorb(uint8_t *restrict work, const uint8_t *in, size_t inlen)
+{
+    Sha3.shake128_absorb_args.in = in;
+    Sha3.shake128_absorb_args.inlen = inlen;
+    Sha3.shake128_absorb(MLKEM_SHA3(work));
+}
+
+// One pull from the running XOF, permuting between blocks.
+static void mk_squeeze(uint8_t *restrict work, uint8_t *out, size_t outlen)
+{
+    Sha3.squeeze_args.out = out;
+    Sha3.squeeze_args.outlen = outlen;
+    Sha3.squeeze(MLKEM_SHA3(work));
+}
 
 // Twiddle factors zeta^BitRev7(i) in Montgomery form, reduced to (-q/2, q/2] (FIPS 203 / pq-crystals).
 static const int16_t mk_zetas[128] = {
@@ -180,31 +252,30 @@ static void cbd2(int16_t r[MK_N], const uint8_t buf[128])
 }
 
 // PRF_eta(seed, nonce) = SHAKE256(seed || nonce), then sample CBD_eta (eta = 2).
-static void poly_getnoise(int16_t r[MK_N], const uint8_t seed[32], uint8_t nonce)
+static void poly_getnoise(uint8_t *restrict work, int16_t r[MK_N], const uint8_t seed[32], uint8_t nonce)
 {
     uint8_t extseed[33];
     mem.cpy(extseed, seed, 32);
     extseed[32] = nonce;
     uint8_t buf[MK_ETA * MK_N / 4]; // 128
-    protocore_shake256(buf, sizeof(buf), extseed, sizeof(extseed));
+    mk_shake256(work, buf, sizeof(buf), extseed, sizeof(extseed));
     cbd2(r, buf);
 }
 
 // One transposed matrix entry: A^T[i][j] = SampleNTT(XOF(rho || i || j)) (FIPS 203 gen with (i,j)).
-static void gen_matrix_entry(int16_t out[MK_N], const uint8_t rho[32], uint8_t i, uint8_t j)
+static void gen_matrix_entry(uint8_t *restrict work, int16_t out[MK_N], const uint8_t rho[32], uint8_t i, uint8_t j)
 {
     uint8_t seed[34];
     mem.cpy(seed, rho, 32);
     seed[32] = i;
     seed[33] = j;
-    KeccakCtx ctx;
-    protocore_shake128_absorb(&ctx, seed, sizeof(seed));
+    mk_shake128_absorb(work, seed, sizeof(seed));
 
     unsigned count = 0;
     while (count < MK_N)
     {
         uint8_t buf[KECCAK_RATE_SHAKE128]; // 168 = 56*3, no 3-octet group straddles a block
-        protocore_keccak_squeeze(&ctx, buf, sizeof(buf));
+        mk_squeeze(work, buf, sizeof(buf));
         for (unsigned p = 0; p + 3 <= sizeof(buf) && count < MK_N; p += 3)
         {
             uint16_t d1 = (uint16_t)(buf[p] | ((uint16_t)(buf[p + 1] & 0xF) << 8));
@@ -281,8 +352,8 @@ static proto_bool check_ek(const uint8_t ek[MLKEM768_EK_BYTES])
 }
 
 // K-PKE.Encrypt(ek, m, r) -> ct. u is streamed and compressed one row at a time to bound stack.
-static void k_pke_encrypt(uint8_t ct[MLKEM768_CT_BYTES], const uint8_t ek[MLKEM768_EK_BYTES], const uint8_t m[32],
-                          const uint8_t coins[32])
+static void k_pke_encrypt(uint8_t *restrict work, uint8_t ct[MLKEM768_CT_BYTES], const uint8_t ek[MLKEM768_EK_BYTES],
+                          const uint8_t m[32], const uint8_t coins[32])
 {
     int16_t that[MK_K][MK_N];
     for (unsigned i = 0; i < MK_K; i++)
@@ -294,7 +365,7 @@ static void k_pke_encrypt(uint8_t ct[MLKEM768_CT_BYTES], const uint8_t ek[MLKEM7
     int16_t sp[MK_K][MK_N];
     for (unsigned i = 0; i < MK_K; i++)
     {
-        poly_getnoise(sp[i], coins, (uint8_t)i); // y, nonce 0..k-1
+        poly_getnoise(work, sp[i], coins, (uint8_t)i); // y, nonce 0..k-1
         ntt(sp[i]);
     }
 
@@ -304,13 +375,13 @@ static void k_pke_encrypt(uint8_t ct[MLKEM768_CT_BYTES], const uint8_t ek[MLKEM7
         int16_t at_row[MK_K][MK_N];
         for (unsigned j = 0; j < MK_K; j++)
         {
-            gen_matrix_entry(at_row[j], rho, (uint8_t)i, (uint8_t)j);
+            gen_matrix_entry(work, at_row[j], rho, (uint8_t)i, (uint8_t)j);
         }
         int16_t u_row[MK_N];
         polyvec_basemul_acc(u_row, at_row, sp);
         invntt(u_row);
         int16_t e1[MK_N];
-        poly_getnoise(e1, coins, (uint8_t)(MK_K + i)); // e1, nonce k..2k-1
+        poly_getnoise(work, e1, coins, (uint8_t)(MK_K + i)); // e1, nonce k..2k-1
         for (unsigned x = 0; x < MK_N; x++)
         {
             u_row[x] = barrett_reduce((int16_t)(u_row[x] + e1[x]));
@@ -323,7 +394,7 @@ static void k_pke_encrypt(uint8_t ct[MLKEM768_CT_BYTES], const uint8_t ek[MLKEM7
     polyvec_basemul_acc(v, that, sp);
     invntt(v);
     int16_t e2[MK_N];
-    poly_getnoise(e2, coins, (uint8_t)(2 * MK_K)); // e2, nonce 2k
+    poly_getnoise(work, e2, coins, (uint8_t)(2 * MK_K)); // e2, nonce 2k
     int16_t mu[MK_N];
     poly_frommsg(mu, m);
     for (unsigned x = 0; x < MK_N; x++)
@@ -331,26 +402,6 @@ static void k_pke_encrypt(uint8_t ct[MLKEM768_CT_BYTES], const uint8_t ek[MLKEM7
         v[x] = barrett_reduce((int16_t)(v[x] + e2[x] + mu[x]));
     }
     poly_compress4(ct + MK_K * 320, v);
-}
-
-proto_bool protocore_mlkem768_encaps(const uint8_t ek[MLKEM768_EK_BYTES], const uint8_t m[MLKEM768_MSG_BYTES],
-                                     uint8_t ct[MLKEM768_CT_BYTES], uint8_t ss[MLKEM768_SS_BYTES])
-{
-    if (!check_ek(ek))
-    {
-        return PROTO_FALSE;
-    }
-
-    // (K, r) = G(m || H(ek)); ss = K.
-    uint8_t g_in[64];
-    mem.cpy(g_in, m, 32);
-    protocore_sha3_256(g_in + 32, ek, MLKEM768_EK_BYTES); // H(ek)
-    uint8_t g_out[64];
-    protocore_sha3_512(g_out, g_in, sizeof(g_in));
-    mem.cpy(ss, g_out, 32);
-
-    k_pke_encrypt(ct, ek, m, g_out + 32);
-    return PROTO_TRUE;
 }
 
 // ── Initiator side: KeyGen + Decaps (the FO transform) ──────────────────────────────────────────
@@ -448,14 +499,15 @@ static uint8_t ct_diff_mask(const uint8_t *a, const uint8_t *b, size_t n)
 // K-PKE.KeyGen(d) -> ek_PKE (ByteEncode_12(t) || rho) and dk_PKE (ByteEncode_12(s)), both in the NTT
 // domain. t[i] = sum_j A[i][j] o s[j]. K-PKE.Encrypt multiplies by the SAME matrix transposed - its
 // u[i] = sum_j XOF(rho, i, j) o y[j] - so for the KEM to invert, KeyGen's A[i][j] = XOF(rho, j, i).
-static void k_pke_keygen(uint8_t ek[MLKEM768_EK_BYTES], uint8_t dk_pke[MK_K * MK_POLYBYTES], const uint8_t d[32])
+static void k_pke_keygen(uint8_t *restrict work, uint8_t ek[MLKEM768_EK_BYTES], uint8_t dk_pke[MK_K * MK_POLYBYTES],
+                         const uint8_t d[32])
 {
     // (rho, sigma) = G(d || k). The trailing k byte is the FIPS 203 domain separation on module rank.
     uint8_t g_in[33];
     mem.cpy(g_in, d, 32);
     g_in[32] = MK_K;
     uint8_t g_out[64];
-    protocore_sha3_512(g_out, g_in, sizeof(g_in));
+    mk_sha3_512(work, g_out, g_in, sizeof(g_in));
     const uint8_t *rho = g_out;
     const uint8_t *sigma = g_out + 32;
 
@@ -464,11 +516,11 @@ static void k_pke_keygen(uint8_t ek[MLKEM768_EK_BYTES], uint8_t dk_pke[MK_K * MK
     uint8_t nonce = 0;
     for (unsigned i = 0; i < MK_K; i++)
     {
-        poly_getnoise(s[i], sigma, nonce++); // s, nonce 0..k-1
+        poly_getnoise(work, s[i], sigma, nonce++); // s, nonce 0..k-1
     }
     for (unsigned i = 0; i < MK_K; i++)
     {
-        poly_getnoise(e[i], sigma, nonce++); // e, nonce k..2k-1
+        poly_getnoise(work, e[i], sigma, nonce++); // e, nonce k..2k-1
     }
     for (unsigned i = 0; i < MK_K; i++)
     {
@@ -486,7 +538,7 @@ static void k_pke_keygen(uint8_t ek[MLKEM768_EK_BYTES], uint8_t dk_pke[MK_K * MK
         int16_t a_row[MK_K][MK_N];
         for (unsigned j = 0; j < MK_K; j++)
         {
-            gen_matrix_entry(a_row[j], rho, (uint8_t)j, (uint8_t)i); // A[i][j] = XOF(rho, j, i)
+            gen_matrix_entry(work, a_row[j], rho, (uint8_t)j, (uint8_t)i); // A[i][j] = XOF(rho, j, i)
         }
         int16_t t_row[MK_N];
         polyvec_basemul_acc(t_row, a_row, s);
@@ -533,19 +585,63 @@ static void k_pke_decrypt(uint8_t m[32], const uint8_t dk_pke[MK_K * MK_POLYBYTE
     poly_tomsg(m, w);
 }
 
-void protocore_mlkem768_keygen(const uint8_t d[MLKEM768_D_BYTES], const uint8_t z[MLKEM768_Z_BYTES],
-                               uint8_t ek[MLKEM768_EK_BYTES], uint8_t dk[MLKEM768_DK_BYTES])
+// --- the entries -----------------------------------------------------------
+
+static void mlkem_keygen(uint8_t *restrict work)
 {
+    MlKem.ok = PROTO_FALSE;
+    if (!work || !MlKem.keygen_args.d || !MlKem.keygen_args.z || !MlKem.keygen_args.ek || !MlKem.keygen_args.dk)
+    {
+        return;
+    }
+    uint8_t *ek = MlKem.keygen_args.ek;
+    uint8_t *dk = MlKem.keygen_args.dk;
+
     // dk = dk_PKE || ek || H(ek) || z  (FIPS 203 Algorithm 16).
-    k_pke_keygen(ek, dk, d);
+    k_pke_keygen(work, ek, dk, MlKem.keygen_args.d);
     mem.cpy(dk + MK_K * MK_POLYBYTES, ek, MLKEM768_EK_BYTES);
-    protocore_sha3_256(dk + MK_K * MK_POLYBYTES + MLKEM768_EK_BYTES, ek, MLKEM768_EK_BYTES);
-    mem.cpy(dk + MK_K * MK_POLYBYTES + MLKEM768_EK_BYTES + 32, z, 32);
+    mk_sha3_256(work, dk + MK_K * MK_POLYBYTES + MLKEM768_EK_BYTES, ek, MLKEM768_EK_BYTES);
+    mem.cpy(dk + MK_K * MK_POLYBYTES + MLKEM768_EK_BYTES + 32, MlKem.keygen_args.z, 32);
+    MlKem.ok = PROTO_TRUE;
 }
 
-void protocore_mlkem768_decaps(const uint8_t dk[MLKEM768_DK_BYTES], const uint8_t ct[MLKEM768_CT_BYTES],
-                               uint8_t ss[MLKEM768_SS_BYTES])
+static void mlkem_encaps(uint8_t *restrict work)
 {
+    MlKem.ok = PROTO_FALSE;
+    if (!work || !MlKem.encaps_args.ek || !MlKem.encaps_args.m || !MlKem.encaps_args.ct || !MlKem.encaps_args.ss)
+    {
+        return;
+    }
+    const uint8_t *ek = MlKem.encaps_args.ek;
+    const uint8_t *m = MlKem.encaps_args.m;
+    if (!check_ek(ek))
+    {
+        return;
+    }
+
+    // (K, r) = G(m || H(ek)); ss = K.
+    uint8_t g_in[64];
+    mem.cpy(g_in, m, 32);
+    mk_sha3_256(work, g_in + 32, ek, MLKEM768_EK_BYTES); // H(ek)
+    uint8_t g_out[64];
+    mk_sha3_512(work, g_out, g_in, sizeof(g_in));
+    mem.cpy(MlKem.encaps_args.ss, g_out, 32);
+
+    k_pke_encrypt(work, MlKem.encaps_args.ct, ek, m, g_out + 32);
+    MlKem.ok = PROTO_TRUE;
+}
+
+static void mlkem_decaps(uint8_t *restrict work)
+{
+    MlKem.ok = PROTO_FALSE;
+    if (!work || !MlKem.decaps_args.dk || !MlKem.decaps_args.ct || !MlKem.decaps_args.ss)
+    {
+        return;
+    }
+    const uint8_t *dk = MlKem.decaps_args.dk;
+    const uint8_t *ct = MlKem.decaps_args.ct;
+    uint8_t *ss = MlKem.decaps_args.ss;
+
     const uint8_t *dk_pke = dk;
     const uint8_t *ek_pke = dk + MK_K * MK_POLYBYTES;
     const uint8_t *h = ek_pke + MLKEM768_EK_BYTES; // H(ek), 32 octets
@@ -558,24 +654,27 @@ void protocore_mlkem768_decaps(const uint8_t dk[MLKEM768_DK_BYTES], const uint8_
     mem.cpy(g_in, mprime, 32);
     mem.cpy(g_in + 32, h, 32);
     uint8_t g_out[64];
-    protocore_sha3_512(g_out, g_in, sizeof(g_in));
+    mk_sha3_512(work, g_out, g_in, sizeof(g_in));
 
     // Implicit-reject key K_bar = J(z || ct) = SHAKE256(z || ct, 32).
     uint8_t jbuf[32 + MLKEM768_CT_BYTES];
     mem.cpy(jbuf, z, 32);
     mem.cpy(jbuf + 32, ct, MLKEM768_CT_BYTES);
     uint8_t kbar[32];
-    protocore_shake256(kbar, sizeof(kbar), jbuf, sizeof(jbuf));
+    mk_shake256(work, kbar, sizeof(kbar), jbuf, sizeof(jbuf));
 
     // Re-encrypt under the embedded ek with the derived coins r'; select in constant time.
     uint8_t ctprime[MLKEM768_CT_BYTES];
-    k_pke_encrypt(ctprime, ek_pke, mprime, g_out + 32);
+    k_pke_encrypt(work, ctprime, ek_pke, mprime, g_out + 32);
     uint8_t diff = ct_diff_mask(ct, ctprime, MLKEM768_CT_BYTES);
     for (unsigned i = 0; i < 32; i++)
     {
         ss[i] = (uint8_t)((g_out[i] & (uint8_t)~diff) | (kbar[i] & diff)); // K' if match, K_bar if not
     }
+    MlKem.ok = PROTO_TRUE;
 }
+
+MlKemNs MlKem = {.keygen = mlkem_keygen, .encaps = mlkem_encaps, .decaps = mlkem_decaps};
 
 PROTOCORE_END_DECLS
 

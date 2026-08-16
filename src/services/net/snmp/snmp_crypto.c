@@ -58,8 +58,9 @@ static void localize_key(struct SnmpCryptoInternal *restrict ctx)
         return;
     }
 
-    protocore_sha256_ctx sha;
-    protocore_sha256_init(&sha, ctx->ns->work);
+    uint8_t *sha;
+    sha = ctx->ns->work;
+    Sha256.init(sha);
     uint8_t block[64];
     size_t pw_index = 0;
     uint32_t count = 0;
@@ -70,17 +71,28 @@ static void localize_key(struct SnmpCryptoInternal *restrict ctx)
             block[i] = (uint8_t)password[pw_index];
             pw_index = (pw_index + 1) % pwlen;
         }
-        protocore_sha256_update(&sha, block, 64);
+        Sha256.update_args.data = block;
+        Sha256.update_args.len = 64;
+        Sha256.update(sha);
         count += 64;
     }
     uint8_t ku[SNMP_USM_KEY_LEN];
-    protocore_sha256_final(&sha, ku);
+    Sha256.final_args.out = ku;
+    Sha256.final(sha);
 
-    protocore_sha256_init(&sha, ctx->ns->work);
-    protocore_sha256_update(&sha, ku, SNMP_USM_KEY_LEN);
-    protocore_sha256_update(&sha, ctx->ns->key.engine_id, ctx->ns->key.engine_id_len);
-    protocore_sha256_update(&sha, ku, SNMP_USM_KEY_LEN);
-    protocore_sha256_final(&sha, key_out);
+    sha = ctx->ns->work;
+    Sha256.init(sha);
+    Sha256.update_args.data = ku;
+    Sha256.update_args.len = SNMP_USM_KEY_LEN;
+    Sha256.update(sha);
+    Sha256.update_args.data = ctx->ns->key.engine_id;
+    Sha256.update_args.len = ctx->ns->key.engine_id_len;
+    Sha256.update(sha);
+    Sha256.update_args.data = ku;
+    Sha256.update_args.len = SNMP_USM_KEY_LEN;
+    Sha256.update(sha);
+    Sha256.final_args.out = key_out;
+    Sha256.final(sha);
 
     protocore_secure_wipe(ku, sizeof(ku));
     protocore_secure_wipe(block, sizeof(block));

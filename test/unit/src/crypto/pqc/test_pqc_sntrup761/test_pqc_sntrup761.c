@@ -14,25 +14,63 @@
 // header names, and the KeyGen retry when g is not invertible.
 
 #include "crypto/pqc/sntrup761.h"
+#include "crypto/rng/rng.h" // this suite defines ::Rng itself; see the seam below
 #include <string.h>
 
 #include <unity.h>
 
 #include "sntrup761_kat.h"
 
-static uint8_t g_work[4096] __attribute__((aligned(8)));
+// The bytes the entries run out of: sntrup761's borrow is the region its SHA-512 runs in.
+static uint8_t g_work[PROTOCORE_SNTRUP761_BORROW] __attribute__((aligned(8)));
 
-// The CSPRNG seam sntrup761.c declares: a deterministic source so every draw here is reproducible.
+// The namespace, called the way the cases below read: operands in, one call, answer out.
+static void sn_keypair(uint8_t *w, uint8_t *pk, uint8_t *sk)
+{
+    Sntrup761.keypair_args.pk = pk;
+    Sntrup761.keypair_args.sk = sk;
+    Sntrup761.keypair(w);
+}
+
+static void sn_enc(uint8_t *w, const uint8_t *pk, uint8_t *ct, uint8_t *ss)
+{
+    Sntrup761.enc_args.pk = pk;
+    Sntrup761.enc_args.ct = ct;
+    Sntrup761.enc_args.ss = ss;
+    Sntrup761.enc(w);
+}
+
+static void sn_dec(uint8_t *w, const uint8_t *sk, const uint8_t *ct, uint8_t *ss)
+{
+    Sntrup761.dec_args.sk = sk;
+    Sntrup761.dec_args.ct = ct;
+    Sntrup761.dec_args.ss = ss;
+    Sntrup761.dec(w);
+}
+
+// The CSPRNG seam sntrup761.c draws through is ::Rng, so this suite defines that one symbol itself
+// and does not link crypto/rng/rng.c. A deterministic source makes every draw here reproducible;
 // sntrup761 interop does not depend on how r and the keys are drawn, only that they are valid.
 static uint32_t s_rng = 0xA5A5F00Du;
 
-// KeyGen's g retry hook. While positive, protocore_rand_fill hands back bytes that drive
-// Small_random's ternary map to coefficient 0 and counts down one per call; 0 everywhere else, so
-// it is inert for the other cases.
+// KeyGen's g retry hook. While positive, a draw hands back bytes that drive Small_random's ternary
+// map to coefficient 0 and counts down one per call; 0 everywhere else, so it is inert for the other
+// cases.
 static int s_force_zero_calls = 0;
 
-void protocore_rand_fill(uint8_t *b, size_t n)
+static uint8_t g_rng_span[8]; // the borrow's address is all this Rng uses it for
+
+uint8_t *protocore_rng_span(void)
 {
+    return g_rng_span;
+}
+
+static void kat_rng_fill(uint8_t *restrict work)
+{
+    (void)work;
+    uint8_t *b = Rng.fill_args.out;
+    size_t n = Rng.fill_args.len;
+    Rng.ok = PROTO_TRUE;
     if (s_force_zero_calls > 0)
     {
         --s_force_zero_calls;
@@ -53,6 +91,15 @@ void protocore_rand_fill(uint8_t *b, size_t n)
     }
 }
 
+static void kat_rng_reseed(uint8_t *restrict work)
+{
+    (void)work;
+    s_rng = 0xA5A5F00Du;
+    Rng.ok = PROTO_TRUE;
+}
+
+RngNs Rng = {.fill = kat_rng_fill, .reseed = kat_rng_reseed};
+
 void setUp(void)
 {
 }
@@ -65,7 +112,7 @@ void tearDown(void)
 void test_openssh_interop_decaps_vector(void)
 {
     uint8_t ss[PROTOCORE_SNTRUP761_SS_BYTES];
-    protocore_sntrup761_dec(g_work, KAT_SK, KAT_CT, ss);
+    sn_dec(g_work, KAT_SK, KAT_CT, ss);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(KAT_SS, ss, PROTOCORE_SNTRUP761_SS_BYTES);
 }
 
@@ -88,9 +135,9 @@ void test_round_trip_agrees_over_many_keypairs(void)
         uint8_t pk[PROTOCORE_SNTRUP761_PK_BYTES], sk[PROTOCORE_SNTRUP761_SK_BYTES];
         uint8_t ct[PROTOCORE_SNTRUP761_CT_BYTES];
         uint8_t ss_enc[PROTOCORE_SNTRUP761_SS_BYTES], ss_dec[PROTOCORE_SNTRUP761_SS_BYTES];
-        protocore_sntrup761_keypair(g_work, pk, sk);
-        protocore_sntrup761_enc(g_work, pk, ct, ss_enc);
-        protocore_sntrup761_dec(g_work, sk, ct, ss_dec);
+        sn_keypair(g_work, pk, sk);
+        sn_enc(g_work, pk, ct, ss_enc);
+        sn_dec(g_work, sk, ct, ss_dec);
         TEST_ASSERT_EQUAL_HEX8_ARRAY(ss_enc, ss_dec, PROTOCORE_SNTRUP761_SS_BYTES);
     }
 }
@@ -102,9 +149,9 @@ void test_encaps_is_randomized(void)
     uint8_t pk[PROTOCORE_SNTRUP761_PK_BYTES], sk[PROTOCORE_SNTRUP761_SK_BYTES];
     uint8_t c1[PROTOCORE_SNTRUP761_CT_BYTES], c2[PROTOCORE_SNTRUP761_CT_BYTES];
     uint8_t s1[PROTOCORE_SNTRUP761_SS_BYTES], s2[PROTOCORE_SNTRUP761_SS_BYTES];
-    protocore_sntrup761_keypair(g_work, pk, sk);
-    protocore_sntrup761_enc(g_work, pk, c1, s1);
-    protocore_sntrup761_enc(g_work, pk, c2, s2);
+    sn_keypair(g_work, pk, sk);
+    sn_enc(g_work, pk, c1, s1);
+    sn_enc(g_work, pk, c2, s2);
     TEST_ASSERT_TRUE(memcmp(c1, c2, sizeof(c1)) != 0);
     TEST_ASSERT_TRUE(memcmp(s1, s2, sizeof(s1)) != 0);
 }
@@ -115,16 +162,16 @@ void test_encaps_is_randomized(void)
 void test_secret_key_embeds_the_public_key(void)
 {
     uint8_t pk[PROTOCORE_SNTRUP761_PK_BYTES], sk[PROTOCORE_SNTRUP761_SK_BYTES];
-    protocore_sntrup761_keypair(g_work, pk, sk);
+    sn_keypair(g_work, pk, sk);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(pk, sk + PROTOCORE_SNTRUP761_SK_PK_OFFSET, PROTOCORE_SNTRUP761_PK_BYTES);
 
     // ...and encapsulating against the embedded copy is the same operation as against pk itself.
     uint8_t c1[PROTOCORE_SNTRUP761_CT_BYTES], c2[PROTOCORE_SNTRUP761_CT_BYTES];
     uint8_t s1[PROTOCORE_SNTRUP761_SS_BYTES], s2[PROTOCORE_SNTRUP761_SS_BYTES];
     s_rng = 0x1234ABCDu;
-    protocore_sntrup761_enc(g_work, pk, c1, s1);
+    sn_enc(g_work, pk, c1, s1);
     s_rng = 0x1234ABCDu;
-    protocore_sntrup761_enc(g_work, sk + PROTOCORE_SNTRUP761_SK_PK_OFFSET, c2, s2);
+    sn_enc(g_work, sk + PROTOCORE_SNTRUP761_SK_PK_OFFSET, c2, s2);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(c1, c2, sizeof(c1));
     TEST_ASSERT_EQUAL_HEX8_ARRAY(s1, s2, sizeof(s1));
 }
@@ -137,23 +184,23 @@ void test_tampered_ciphertext_implicitly_rejects(void)
     uint8_t pk[PROTOCORE_SNTRUP761_PK_BYTES], sk[PROTOCORE_SNTRUP761_SK_BYTES];
     uint8_t ct[PROTOCORE_SNTRUP761_CT_BYTES];
     uint8_t good[PROTOCORE_SNTRUP761_SS_BYTES], r1[PROTOCORE_SNTRUP761_SS_BYTES], r2[PROTOCORE_SNTRUP761_SS_BYTES];
-    protocore_sntrup761_keypair(g_work, pk, sk);
-    protocore_sntrup761_enc(g_work, pk, ct, good);
+    sn_keypair(g_work, pk, sk);
+    sn_enc(g_work, pk, ct, good);
 
     ct[0] ^= 0xFF; // the Rounded-encoded polynomial
-    protocore_sntrup761_dec(g_work, sk, ct, r1);
-    protocore_sntrup761_dec(g_work, sk, ct, r2);
+    sn_dec(g_work, sk, ct, r1);
+    sn_dec(g_work, sk, ct, r2);
     TEST_ASSERT_TRUE(memcmp(good, r1, sizeof(good)) != 0);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(r1, r2, sizeof(r1)); // deterministic, not random
     ct[0] ^= 0xFF;
 
     ct[PROTOCORE_SNTRUP761_CT_BYTES - 1] ^= 0x01; // the trailing Confirm hash
-    protocore_sntrup761_dec(g_work, sk, ct, r2);
+    sn_dec(g_work, sk, ct, r2);
     TEST_ASSERT_TRUE(memcmp(good, r2, sizeof(good)) != 0);
     TEST_ASSERT_TRUE(memcmp(r1, r2, sizeof(r1)) != 0);
     ct[PROTOCORE_SNTRUP761_CT_BYTES - 1] ^= 0x01;
 
-    protocore_sntrup761_dec(g_work, sk, ct, r1); // restored: the real secret comes back
+    sn_dec(g_work, sk, ct, r1); // restored: the real secret comes back
     TEST_ASSERT_EQUAL_HEX8_ARRAY(good, r1, sizeof(good));
 }
 
@@ -166,9 +213,9 @@ void test_keygen_retries_a_noninvertible_g(void)
     uint8_t pk[PROTOCORE_SNTRUP761_PK_BYTES], sk[PROTOCORE_SNTRUP761_SK_BYTES];
     uint8_t ct[PROTOCORE_SNTRUP761_CT_BYTES];
     uint8_t ss_enc[PROTOCORE_SNTRUP761_SS_BYTES], ss_dec[PROTOCORE_SNTRUP761_SS_BYTES];
-    protocore_sntrup761_keypair(g_work, pk, sk);
+    sn_keypair(g_work, pk, sk);
     TEST_ASSERT_EQUAL_INT(0, s_force_zero_calls); // the forced draw really was consumed
-    protocore_sntrup761_enc(g_work, pk, ct, ss_enc);
-    protocore_sntrup761_dec(g_work, sk, ct, ss_dec);
+    sn_enc(g_work, pk, ct, ss_enc);
+    sn_dec(g_work, sk, ct, ss_dec);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(ss_enc, ss_dec, PROTOCORE_SNTRUP761_SS_BYTES);
 }

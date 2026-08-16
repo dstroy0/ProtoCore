@@ -19,6 +19,8 @@
 #include "protocore.h"
 #if PROTOCORE_ENABLE_WEBSOCKET
 #include "crypto/hash/sha1.h"
+#include "mmgr/secure.h" // the pool the digest borrow comes from
+#include "mmgr/span.h"   // protocore_span, span.ok
 #include "network_drivers/presentation/codec/base64/base64.h"
 #include "network_drivers/presentation/http/websocket/websocket.h"
 #endif
@@ -68,7 +70,19 @@ static proto_bool ws_accept_key(const char *client_key, char *out)
     mem.cpy(concat + key_len, WS_MAGIC, magic_len);
 
     uint8_t digest[PROTOCORE_SHA1_DIGEST_LEN];
-    protocore_sha1((const uint8_t *)concat, key_len + magic_len, digest);
+    const size_t mark = protocore_secure_mark();
+    protocore_span w = protocore_secure_span(PROTOCORE_SHA1_BORROW, 8);
+    if (!span.ok(w))
+    {
+        protocore_secure_release(mark);
+        out[0] = '\0';
+        return PROTO_FALSE;
+    }
+    Sha1.hash_args.data = (const uint8_t *)concat;
+    Sha1.hash_args.len = key_len + magic_len;
+    Sha1.hash_args.out = digest;
+    Sha1.hash(w.buf);
+    protocore_secure_release(mark);
     Base64.encode(digest, PROTOCORE_SHA1_DIGEST_LEN, out);
     return PROTO_TRUE;
 }

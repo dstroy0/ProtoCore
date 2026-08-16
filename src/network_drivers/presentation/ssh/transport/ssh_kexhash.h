@@ -5,77 +5,99 @@
  * @file ssh_kexhash.h
  * @brief One key-exchange digest that dispatches SHA-256 or SHA-512 by the negotiated method.
  *
- * RFC 4253 §8 ties the exchange hash H (and the §7.2 key derivation) to the KEX method's hash: the
- * `-sha256` methods (curve25519-sha256, ecdh-sha2-nistp256, dh-group14-sha256, mlkem768x25519-sha256)
- * use SHA-256; `-sha512` methods (sntrup761x25519-sha512@openssh.com) use SHA-512. Rather than fork
- * every hash site, the exchange hash and the KDF run over this small wrapper, so adding a KEX with a
- * different hash is a one-line change (SshKexHash + ssh_kex_hash_is512()), not a new code path.
+ * RFC 4253 sec 8 ties the exchange hash H (and the sec 7.2 key derivation) to the KEX method's hash:
+ * the `-sha256` methods (curve25519-sha256, ecdh-sha2-nistp256, dh-group14-sha256,
+ * mlkem768x25519-sha256) use SHA-256; `-sha512` methods (sntrup761x25519-sha512@openssh.com) use
+ * SHA-512. Rather than fork every hash site, the exchange hash and the KDF run through this one
+ * namespace, so adding a KEX with a different hash is a one-line change and not a new code path.
  *
- * The digest length is 32 (SHA-256) or 64 (SHA-512); H and the session_id are sized to the max (64).
+ * @author  Douglas Quigg (dstroy0)
+ * @date    2026
  */
 
 #ifndef PROTOCORE_SSH_KEXHASH_H
 #define PROTOCORE_SSH_KEXHASH_H
 
-#include "crypto/hash/sha256.h"
-#include "crypto/hash/sha512.h"
-#include "protocore_config.h" // the entry point: protocore_types.h for the widths and PROTOCORE_INLINE
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-#define SSH_KEXHASH_MAX_LEN 64 ///< longest exchange-hash / session_id (SHA-512)
+PROTOCORE_BEGIN_DECLS
 
-/** @brief A key-exchange digest bound to one of the SSH KEX hashes (SHA-256 or SHA-512). */
+/** @brief Longest exchange hash / session_id the two KEX hashes produce (SHA-512). */
+#define SSH_KEXHASH_MAX_LEN 64
+
+// PROTOCORE_SSH_KEXHASH_BORROW - the bytes one digest runs out of - is stated in protocore_config.h,
+// which sums it into the secure arena. A caller takes them once and passes the pointer to every call.
+
+/** @brief Which of the two KEX hashes the negotiated method binds a digest to. */
 typedef struct
 {
-    proto_bool is512;
-    protocore_sha256_ctx c256;
-    protocore_sha512_ctx c512;
-} SshKexHash;
+    proto_bool is512; ///< true for a -sha512 method, false for a -sha256 one
+} SshKexHashInitArgs;
+
+/** @brief The bytes absorbed. */
+typedef struct
+{
+    const uint8_t *data; ///< the bytes
+    size_t len;          ///< how many
+} SshKexHashUpdateArgs;
+
+/** @brief Where the digest lands. */
+typedef struct
+{
+    uint8_t *out; ///< SSH_KEXHASH_MAX_LEN bytes; the bound hash writes its own length
+} SshKexHashFinalArgs;
 
 /**
- * @brief Bind the digest to @p work and start it.
- * @param work PROTOCORE_SHA256_BORROW bytes of caller storage; the SHA-512 arm carries its own.
+ * @brief The SSH key-exchange digest (RFC 4253 sec 8), bound to the KEX method's hash.
+ *
+ * A caller sets the members a call takes, invokes it through ::SshKexHash with the bytes it runs out
+ * of, and reads the outcome off the same handle. How those bytes are carved is this module's and is
+ * never named here.
+ *
+ *   SshKexHash.init_args.is512 = is512;
+ *   SshKexHash.init(work);
+ *   SshKexHash.update_args.data = v_c;
+ *   SshKexHash.update_args.len = v_c_len;
+ *   SshKexHash.update(work);
+ *   SshKexHash.final_args.out = H;
+ *   SshKexHash.final(work);
+ *   // SshKexHash.len is 32 or 64, the length written
+ *
+ * @var SshKexHashNs::init_args    which of the two KEX hashes the negotiated method binds this to
+ * @var SshKexHashNs::update_args  the bytes absorbed
+ * @var SshKexHashNs::final_args   where the digest lands
+ * @var SshKexHashNs::ok           a call's true/false outcome; false on a null pointer
+ * @var SshKexHashNs::len          the bound hash's digest length, 32 or 64, from @ref SshKexHashNs::init
+ * @var SshKexHashNs::init         bind the digest to the negotiated method's hash and start it
+ * @var SshKexHashNs::update       absorb the staged bytes
+ * @var SshKexHashNs::final        write @ref SshKexHashNs::len octets of digest
+ *
+ * @c work is PROTOCORE_SSH_KEXHASH_BORROW secure bytes the CALLER took, at an address it knows. It
+ * arrives @c restrict and is not held past the call, so nothing here aliases it. The caller releases
+ * it, and the pool wipes on release; this module neither takes it, holds it, releases it, nor wipes
+ * it. The exchange hash and every key the sec 7.2 chain derives pass through those bytes, so they die
+ * with the release rather than on the stack. Two digests are two borrows and never collide.
+ *
+ * No storage member and no context: a caller sets operands and reads @ref SshKexHashNs::ok, and that
+ * is all the surface there is.
  */
-static inline void ssh_kexhash_init(SshKexHash *h, uint8_t *work, proto_bool is512)
+typedef struct
 {
-    h->is512 = is512;
-    if (is512)
-    {
-        protocore_sha512_init(&h->c512, work);
-    }
-    else
-    {
-        protocore_sha256_init(&h->c256, work);
-    }
-}
+    SshKexHashInitArgs init_args;
+    SshKexHashUpdateArgs update_args;
+    SshKexHashFinalArgs final_args;
 
-static inline void ssh_kexhash_update(SshKexHash *h, const uint8_t *data, size_t len)
-{
-    if (h->is512)
-    {
-        protocore_sha512_update(&h->c512, data, len);
-    }
-    else
-    {
-        protocore_sha256_update(&h->c256, data, len);
-    }
-}
+    proto_bool ok;
+    size_t len;
 
-/** @brief Finalize into @p out (must hold SSH_KEXHASH_MAX_LEN); returns the digest length (32 or 64). */
-static inline size_t ssh_kexhash_final(SshKexHash *h, uint8_t out[SSH_KEXHASH_MAX_LEN])
-{
-    if (h->is512)
-    {
-        protocore_sha512_final(&h->c512, out);
-        return PROTOCORE_SHA512_DIGEST_LEN;
-    }
-    protocore_sha256_final(&h->c256, out);
-    return PROTOCORE_SHA256_DIGEST_LEN;
-}
+    void (*const init)(uint8_t *restrict work);
+    void (*const update)(uint8_t *restrict work);
+    void (*const final)(uint8_t *restrict work);
+} SshKexHashNs;
 
-/** @brief The digest length for a given hash selection (32 or 64). */
-static inline size_t ssh_kexhash_len(proto_bool is512)
-{
-    return is512 ? PROTOCORE_SHA512_DIGEST_LEN : PROTOCORE_SHA256_DIGEST_LEN;
-}
+/** @brief The one symbol this module exports. */
+extern SshKexHashNs SshKexHash;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_SSH_KEXHASH_H

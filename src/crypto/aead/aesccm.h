@@ -7,13 +7,16 @@
  *
  * CCM = CTR encryption + CBC-MAC authentication under one key. SMB 3.x offers it as
  * SMB2_ENCRYPTION_AES128_CCM (0x0001) and SMB2_ENCRYPTION_AES256_CCM (0x0003); the transport uses an
- * 11-byte nonce and a 16-byte tag (MS-SMB2 §3.1.4.3). The tag is kept detached (returned separately, not
- * appended to the ciphertext) because the SMB2 TRANSFORM_HEADER carries it in its own Signature field.
+ * 11-byte nonce and a 16-byte tag (MS-SMB2 §3.1.4.3). The entries below are one surface over both arms: the
+ * SP 800-38C construction is the same on either, and the AES block under it is the part's accelerator where
+ * it carries one and the shared software block (crypto/cipher/aes_block.h) where it does not, so the whole
+ * AEAD is unit-testable off-target.
  *
- * On Arduino (ESP32) the block cipher is mbedtls_ccm, which routes AES through the hardware accelerator; on
- * the native host a compact software AES (crypto/cipher/aes_block.h, shared with the GCM modules) drives the same
- * CCM construction so the whole AEAD is unit-testable off-target. Pure, zero heap; host-tested against
- * reference AES-CCM vectors (nonce 11, tag 16, AES-128 and AES-256).
+ * The key rides with the record: a seal or an open expands it into the borrow and runs that one record
+ * under it. The tag is detached: a seal writes the ciphertext and the 16 tag bytes to separate
+ * destinations, which is where the SMB2 TRANSFORM_HEADER carries them - the Signature field holds the tag.
+ *
+ * Host-tested against reference AES-CCM vectors (nonce 11, tag 16, AES-128 and AES-256).
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -26,45 +29,95 @@
 
 #if PROTOCORE_ENABLE_AESCCM
 
-#if PROTOCORE_HAS_HW_AES
-#include <mbedtls/ccm.h> // hardware-backed AES-CCM on ESP32
-#endif
-
 PROTOCORE_BEGIN_DECLS
 
 /** @brief AES-CCM authentication tag length used by SMB 3.x (bytes). */
 #define PROTOCORE_AESCCM_TAG_LEN 16
 
-/**
- * @brief Seal: AES-CCM encrypt-and-authenticate with a detached tag.
- *
- * @param key       16-byte (AES-128) or 32-byte (AES-256) key.
- * @param key_len   16 or 32.
- * @param nonce     Nonce (7..13 bytes; SMB uses 11).
- * @param nonce_len Nonce length.
- * @param aad       Additional authenticated data (may be NULL when @p aad_len is 0).
- * @param aad_len   AAD length (< 0xFF00).
- * @param pt        Plaintext.
- * @param pt_len    Plaintext length.
- * @param ct_out    Output: @p pt_len ciphertext bytes (may alias @p pt).
- * @param tag_out   Output: the 16-byte authentication tag.
- * @return true on success, false on a bad argument.
- */
-proto_bool protocore_aesccm_seal_tag(const uint8_t *key, size_t key_len, const uint8_t *nonce, size_t nonce_len,
-                                     const uint8_t *aad, size_t aad_len, const uint8_t *pt, size_t pt_len,
-                                     uint8_t *ct_out, uint8_t tag_out[PROTOCORE_AESCCM_TAG_LEN]);
+// PROTOCORE_AESCCM_BORROW - the bytes one record runs out of - is stated in protocore_config.h, which
+// sums it into the secure arena. A caller takes them once and passes the pointer to every call.
+
+/** @brief One record sealed under the key given with it. */
+typedef struct
+{
+    const uint8_t *key;   ///< 16 bytes (AES-128) or 32 bytes (AES-256)
+    size_t key_len;       ///< 16 or 32
+    const uint8_t *nonce; ///< 7..13 bytes; SMB uses 11
+    size_t nonce_len;     ///< its length
+    const uint8_t *aad;   ///< additional authenticated data, NULL when @c aad_len is 0
+    size_t aad_len;       ///< its length, below 0xFF00
+    const uint8_t *pt;    ///< the plaintext
+    size_t pt_len;        ///< its length
+    uint8_t *ct_out;      ///< pt_len ciphertext bytes; may alias @c pt
+    uint8_t *tag_out;     ///< PROTOCORE_AESCCM_TAG_LEN bytes
+} AesCcmSealArgs;
+
+/** @brief One record opened under the key given with it. */
+typedef struct
+{
+    const uint8_t *key;   ///< 16 bytes (AES-128) or 32 bytes (AES-256)
+    size_t key_len;       ///< 16 or 32
+    const uint8_t *nonce; ///< 7..13 bytes; SMB uses 11
+    size_t nonce_len;     ///< its length
+    const uint8_t *aad;   ///< additional authenticated data, NULL when @c aad_len is 0
+    size_t aad_len;       ///< its length, below 0xFF00
+    const uint8_t *ct;    ///< the ciphertext
+    size_t ct_len;        ///< its length
+    const uint8_t *tag;   ///< PROTOCORE_AESCCM_TAG_LEN bytes to verify against
+    uint8_t *out;         ///< ct_len plaintext bytes; may alias @c ct
+} AesCcmOpenArgs;
 
 /**
- * @brief Open: AES-CCM verify-and-decrypt with a detached tag.
+ * @brief AES-CCM (NIST SP 800-38C, RFC 3610).
  *
- * The tag is recomputed over the recovered plaintext and compared in constant time; on mismatch @p out is
- * zeroed and false is returned (fails closed - no unauthenticated plaintext is exposed to the caller).
- * @p out receives @p ct_len plaintext bytes and may alias @p ct.
- * @return true iff the tag is valid.
+ * A caller sets the members a call takes, invokes it through ::AesCcm with the bytes it runs out of, and
+ * reads the outcome off the same handle. How those bytes are carved is this module's and is never named
+ * here.
+ *
+ *   AesCcm.seal_args.key = key;
+ *   AesCcm.seal_args.key_len = key_len;
+ *   AesCcm.seal_args.nonce = nonce;
+ *   AesCcm.seal_args.nonce_len = nonce_len;
+ *   AesCcm.seal_args.aad = aad;
+ *   AesCcm.seal_args.aad_len = aad_len;
+ *   AesCcm.seal_args.pt = pt;
+ *   AesCcm.seal_args.pt_len = pt_len;
+ *   AesCcm.seal_args.ct_out = ct;
+ *   AesCcm.seal_args.tag_out = tag;
+ *   AesCcm.seal(work);
+ *
+ * @var AesCcmNs::seal_args  one record sealed under the key given with it
+ * @var AesCcmNs::open_args  one record opened under the key given with it
+ * @var AesCcmNs::ok         a call's true/false outcome
+ * @var AesCcmNs::seal       CBC-MAC the record, encrypt the payload from A1, write the detached tag
+ * @var AesCcmNs::open       decrypt from A1, recompute the tag over the recovered plaintext, compare it in
+ *                           constant time
+ *
+ * @ref AesCcmNs::open fails closed: on a tag mismatch it zeroes @c out and @ref AesCcmNs::ok comes back
+ * false, so no unauthenticated plaintext reaches the caller.
+ *
+ * @c work is PROTOCORE_AESCCM_BORROW secure bytes the CALLER took, at an address it knows. It arrives
+ * @c restrict and is not held past the call, so nothing here aliases it. The caller releases it, and the
+ * pool wipes on release; this module neither takes it, holds it, releases it, nor wipes it. The borrow IS
+ * the record context, so two records are two borrows and never collide, and the expanded key schedule dies
+ * with the release.
+ *
+ * No storage member and no context: a caller sets operands and reads @ref AesCcmNs::ok, and that is all
+ * the surface there is.
  */
-proto_bool protocore_aesccm_open_tag(const uint8_t *key, size_t key_len, const uint8_t *nonce, size_t nonce_len,
-                                     const uint8_t *aad, size_t aad_len, const uint8_t *ct, size_t ct_len,
-                                     const uint8_t tag[PROTOCORE_AESCCM_TAG_LEN], uint8_t *out);
+typedef struct
+{
+    AesCcmSealArgs seal_args;
+    AesCcmOpenArgs open_args;
+
+    proto_bool ok;
+
+    void (*const seal)(uint8_t *restrict work);
+    void (*const open)(uint8_t *restrict work);
+} AesCcmNs;
+
+/** @brief The one symbol this module exports. */
+extern AesCcmNs AesCcm;
 
 PROTOCORE_END_DECLS
 

@@ -273,8 +273,12 @@ static SmbResult smb_negotiate(SmbSendFn send, SmbRecvFn recv, void *ctx, uint16
 {
     uint8_t guid[16];
     uint8_t salt[32];
-    protocore_rand_fill(guid, 16);
-    protocore_rand_fill(salt, sizeof(salt));
+    Rng.fill_args.out = guid;
+    Rng.fill_args.len = 16;
+    Rng.fill(protocore_rng_span());
+    Rng.fill_args.out = salt;
+    Rng.fill_args.len = sizeof(salt);
+    Rng.fill(protocore_rng_span());
     size_t mlen =
         protocore_smb2_build_negotiate_311(s_smb.tx + 4, sizeof(s_smb.tx) - 4, guid, SMB2_NEGOTIATE_SIGNING_ENABLED,
                                            salt, sizeof(salt), offer_ciphers, offer_count);
@@ -384,7 +388,9 @@ static SmbResult smb_session_setup(const SmbConfig *cfg, const char *domain, pro
     uint8_t cli_chal[8];
     uint8_t ts[8];
     uint8_t skey[16];
-    protocore_rand_fill(cli_chal, 8);
+    Rng.fill_args.out = cli_chal;
+    Rng.fill_args.len = 8;
+    Rng.fill(protocore_rng_span());
     find_av_timestamp(ch.target_info, ch.target_info_len, ts);
     // Set the MsvAvFlags "MIC provided" bit in the target-info the NTLMv2 response is computed over, so a
     // server that enforces the MIC accepts it and verifies the digest attached below.

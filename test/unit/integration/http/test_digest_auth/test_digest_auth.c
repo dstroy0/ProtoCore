@@ -36,7 +36,10 @@ static void h_secure(uint8_t slot, HttpReq *req)
 static void sha256_hex(const char *s, char out[65])
 {
     uint8_t d[PROTOCORE_SHA256_DIGEST_LEN];
-    protocore_sha256(tw, (const uint8_t *)s, strlen(s), d);
+    Sha256.hash_args.data = (const uint8_t *)s;
+    Sha256.hash_args.len = strlen(s);
+    Sha256.hash_args.out = d;
+    Sha256.hash(tw);
     static const char *hx = "0123456789abcdef";
     for (int i = 0; i < PROTOCORE_SHA256_DIGEST_LEN; i++)
     {

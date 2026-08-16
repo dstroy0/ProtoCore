@@ -6581,10 +6581,20 @@ from halves and is slower than the width it decomposes into"
 // stream: every reassembly buffer, then every :path, every :authority and every :method. Grouped,
 // each stride is a power of two and stream i reaches its bytes with a shift; strided by stream, the
 // stride would be their sum and the reach a multiply. Proved by a static_assert in h3_conn.c.
+// The context leads the borrow, as the digest context leads sha256's: it carries no key material, so
+// it belongs with the stream bytes rather than in the secure arena. Proved against sizeof(H3ConnCtx)
+// by a static_assert in h3_conn.c.
+#ifndef PROTOCORE_H3_CONN_CTX
+#define PROTOCORE_H3_CONN_CTX 640
+#endif
+#ifndef PROTOCORE_H3_CONN_BORROW
+#define PROTOCORE_H3_CONN_BORROW                                                                                       \
+    ((size_t)PROTOCORE_H3_CONN_CTX +                                                                                   \
+     (size_t)PROTOCORE_H3_MAX_STREAMS * ((size_t)PROTOCORE_H3_STREAM_BUF + PROTOCORE_H3_PATH_LEN +                     \
+                                         PROTOCORE_H3_AUTHORITY_LEN + PROTOCORE_H3_METHOD_LEN))
+#endif
 #ifndef PROTOCORE_WORK_H3_CONN
-#define PROTOCORE_WORK_H3_CONN                                                                                         \
-    ((size_t)PROTOCORE_QUIC_MAX_CONNS * (size_t)PROTOCORE_H3_MAX_STREAMS *                                             \
-     ((size_t)PROTOCORE_H3_STREAM_BUF + PROTOCORE_H3_PATH_LEN + PROTOCORE_H3_AUTHORITY_LEN + PROTOCORE_H3_METHOD_LEN))
+#define PROTOCORE_WORK_H3_CONN ((size_t)PROTOCORE_QUIC_MAX_CONNS * PROTOCORE_H3_CONN_BORROW)
 #endif
 
 #if PROTOCORE_ENABLE_HTTP2
@@ -6595,10 +6605,14 @@ from halves and is slower than the width it decomposes into"
 
 // The QUIC transport under it takes its own borrow from the same end: the bytes it owes each stream
 // and the CRYPTO window per packet-number space. Proved by a static_assert in quic_conn.c.
+// Only the byte buffers: the connection's context is key material and takes a secure borrow instead
+// (PROTOCORE_QUIC_CONN_CTX_BORROW). Proved against the real split by a static_assert in quic_conn.c.
+#ifndef PROTOCORE_QUIC_CONN_BORROW
+#define PROTOCORE_QUIC_CONN_BORROW                                                                                     \
+    (((size_t)PROTOCORE_QUIC_MAX_STREAMS * PROTOCORE_QUIC_STREAM_TX) + 3u * (size_t)PROTOCORE_QUIC_CRYPTO_RX)
+#endif
 #ifndef PROTOCORE_WORK_QUIC_CONN
-#define PROTOCORE_WORK_QUIC_CONN                                                                                       \
-    ((size_t)PROTOCORE_QUIC_MAX_CONNS *                                                                                \
-     (((size_t)PROTOCORE_QUIC_MAX_STREAMS * PROTOCORE_QUIC_STREAM_TX) + 3u * (size_t)PROTOCORE_QUIC_CRYPTO_RX))
+#define PROTOCORE_WORK_QUIC_CONN ((size_t)PROTOCORE_QUIC_MAX_CONNS * PROTOCORE_QUIC_CONN_BORROW)
 #endif
 
 #if PROTOCORE_ENABLE_HTTP3
@@ -6648,6 +6662,115 @@ from halves and is slower than the width it decomposes into"
 #define PROTOCORE_RAND_RESEED_BYTES (1u << 20)
 #endif
 
+// ---------------------------------------------------------------------------
+// One gate per crypto primitive
+// ---------------------------------------------------------------------------
+// Each module under crypto/ is wrapped in exactly one of these, so a build turns a primitive off by
+// name rather than by knowing which consumer drags it in. Stated here rather than in the module's own
+// header because the six derived below read the feature flags, which are all resolved above.
+//
+// The six that a header used to gate on a consumer keep that consumer's expression verbatim; the rest
+// were compiled unconditionally before they had a gate, so they stand at 1. Every one is
+// #ifndef-guarded, so -D on the command line wins.
+
+// Derived: these carry the expression their header used to hold.
+#ifndef PROTOCORE_ENABLE_AES128GCM
+#define PROTOCORE_ENABLE_AES128GCM                                                                                     \
+    (PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_ENABLE_SMB || PROTOCORE_TLS_SOFTWARE)
+#endif
+#ifndef PROTOCORE_ENABLE_AESCCM
+#define PROTOCORE_ENABLE_AESCCM PROTOCORE_ENABLE_SMB
+#endif
+#ifndef PROTOCORE_ENABLE_HKDF
+#define PROTOCORE_ENABLE_HKDF (PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_TLS_SOFTWARE)
+#endif
+#ifndef PROTOCORE_ENABLE_SHA3
+#define PROTOCORE_ENABLE_SHA3 PROTOCORE_ENABLE_PQC_KEX
+#endif
+#ifndef PROTOCORE_ENABLE_MLKEM
+#define PROTOCORE_ENABLE_MLKEM PROTOCORE_ENABLE_PQC_KEX
+#endif
+#ifndef PROTOCORE_ENABLE_SNTRUP761
+#define PROTOCORE_ENABLE_SNTRUP761 PROTOCORE_ENABLE_SSH_SNTRUP761
+#endif
+
+// Ungated before the wrap, so they stand where they stood.
+#ifndef PROTOCORE_ENABLE_SHA1
+#define PROTOCORE_ENABLE_SHA1 1
+#endif
+#ifndef PROTOCORE_ENABLE_SHA256
+#define PROTOCORE_ENABLE_SHA256 1
+#endif
+#ifndef PROTOCORE_ENABLE_SHA512
+#define PROTOCORE_ENABLE_SHA512 1
+#endif
+#ifndef PROTOCORE_ENABLE_MD
+#define PROTOCORE_ENABLE_MD 1
+#endif
+#ifndef PROTOCORE_ENABLE_HMAC_SHA256
+#define PROTOCORE_ENABLE_HMAC_SHA256 1
+#endif
+#ifndef PROTOCORE_ENABLE_HMAC_SHA512
+#define PROTOCORE_ENABLE_HMAC_SHA512 1
+#endif
+#ifndef PROTOCORE_ENABLE_POLY1305
+#define PROTOCORE_ENABLE_POLY1305 1
+#endif
+#ifndef PROTOCORE_ENABLE_AES_CMAC
+#define PROTOCORE_ENABLE_AES_CMAC 1
+#endif
+#ifndef PROTOCORE_ENABLE_GHASH
+#define PROTOCORE_ENABLE_GHASH 1
+#endif
+// The constant-time compare. Every tag check in the library ends at it and mmgr/protomem.h and
+// mmgr/protostr.h both reach for it, so a build that turns this off has no AEAD open and no
+// authenticated anything: it is stated for the shape every other primitive has, not as a knob.
+#ifndef PROTOCORE_ENABLE_CT_EQ
+#define PROTOCORE_ENABLE_CT_EQ 1
+#endif
+#ifndef PROTOCORE_ENABLE_KDF
+#define PROTOCORE_ENABLE_KDF 1
+#endif
+#ifndef PROTOCORE_ENABLE_AESGCM
+#define PROTOCORE_ENABLE_AESGCM 1
+#endif
+#ifndef PROTOCORE_ENABLE_CHACHAPOLY
+#define PROTOCORE_ENABLE_CHACHAPOLY 1
+#endif
+#ifndef PROTOCORE_ENABLE_CHACHA20
+#define PROTOCORE_ENABLE_CHACHA20 1
+#endif
+#ifndef PROTOCORE_ENABLE_AES256CTR
+#define PROTOCORE_ENABLE_AES256CTR 1
+#endif
+#ifndef PROTOCORE_ENABLE_AES_BLOCK
+#define PROTOCORE_ENABLE_AES_BLOCK 1
+#endif
+#ifndef PROTOCORE_ENABLE_AES_SBOX
+#define PROTOCORE_ENABLE_AES_SBOX 1
+#endif
+#ifndef PROTOCORE_ENABLE_BIGNUM
+#define PROTOCORE_ENABLE_BIGNUM 1
+#endif
+#ifndef PROTOCORE_ENABLE_CURVE25519
+#define PROTOCORE_ENABLE_CURVE25519 1
+#endif
+#ifndef PROTOCORE_ENABLE_FE25519
+#define PROTOCORE_ENABLE_FE25519 1
+#endif
+#ifndef PROTOCORE_ENABLE_ECDSA
+#define PROTOCORE_ENABLE_ECDSA 1
+#endif
+#ifndef PROTOCORE_ENABLE_ED25519
+#define PROTOCORE_ENABLE_ED25519 1
+#endif
+#ifndef PROTOCORE_ENABLE_RSA
+#define PROTOCORE_ENABLE_RSA 1
+#endif
+#ifndef PROTOCORE_ENABLE_RNG
+#define PROTOCORE_ENABLE_RNG 1
+#endif
+
 /**
  * @brief Worst-case bytes each module borrows from the secure pool in a single call.
  *
@@ -6664,16 +6787,24 @@ from halves and is slower than the width it decomposes into"
  * Values are what the ESP32 toolchain reported for the real structs, rounded up.
  */
 
-// A SHA-256 context works out of bytes its caller hands it: the block as it arrives, the padded last
-// one, and the state copy finalizing compresses into so the running hash survives it. The schedule is
-// a register window, not storage. The accelerator holds its own state and takes none. Proved against
-// the real layout by a static_assert in sha256.c.
+// The SHA-256 borrow, split by offset in sha256.c: the 64-byte block as it arrives, the padded last
+// one, and the 32-byte state copy finalizing compresses into so the running hash survives it. 64 + 64
+// + 32 = 160. The context is that module's own state and is no longer a region here. The schedule is a
+// register window, not storage.
+//
+// One figure, both arms. The accelerator compresses a block; it does not pad, buffer a partial block,
+// or hold a digest a caller can keep feeding, so the same regions are taken whether the compression
+// runs on the peripheral or in software. Proved against the real layout by a static_assert in sha256.c.
 #ifndef PROTOCORE_SHA256_BORROW
-#if PROTOCORE_HAS_HW_SHA
-#define PROTOCORE_SHA256_BORROW 0
-#else
-#define PROTOCORE_SHA256_BORROW 160
+#define PROTOCORE_SHA256_BORROW 256
 #endif
+
+// The SHA-1 borrow, split by offset in sha1.c: the running state (uint32_t h[5], 20 bytes) then the
+// two padded final blocks (128 bytes) a message whose tail reaches 56 bytes composes. 148 bytes,
+// rounded up to the next 32-byte multiple. One figure, both arms: the accelerated arm digests through
+// mbedtls and takes none of it. Proved against the real split by a static_assert in sha1.c.
+#ifndef PROTOCORE_SHA1_BORROW
+#define PROTOCORE_SHA1_BORROW 160
 #endif
 
 // One IKE SA's crypto: the cookie hash, the prf+ chain, the AUTH MAC and the ECDSA / RSA signature,
@@ -6705,21 +6836,25 @@ from halves and is slower than the width it decomposes into"
 #define PROTOCORE_HKDF_BORROW (PROTOCORE_HMAC_SHA256_BORROW + 32 + 514)
 #endif
 
-// The RFC 4253 sec 7.2 KDF runs one exchange-hash context and accumulates the K1 || K2 chain behind
-// it. SHA-512 is the wider of the two KEX hashes, and the chain is bounded by SSH_KDF_MAX (128).
-#ifndef PROTOCORE_SSH_KDF_BORROW
-#define PROTOCORE_SSH_KDF_BORROW (PROTOCORE_SHA512_BORROW + 128)
+// The SSH key-exchange digest borrow, split by offset in ssh_kexhash.c: the region the bound hash
+// runs in - SHA-512's, the wider of the two - then the octet naming which hash that is. Proved by a
+// static_assert in ssh_kexhash.c.
+#ifndef PROTOCORE_SSH_KEXHASH_BORROW
+#define PROTOCORE_SSH_KEXHASH_BORROW (PROTOCORE_SHA512_BORROW + 8)
 #endif
 
-// A SHA-512 context works out of the same three regions as SHA-256, at its own widths: the 128-byte
-// block as it arrives, the padded last one, and the 64-byte state copy finalizing compresses into.
-// The schedule is a register window, not storage.
-#ifndef PROTOCORE_SHA512_BORROW
-#if PROTOCORE_HAS_HW_SHA
-#define PROTOCORE_SHA512_BORROW 0
-#else
-#define PROTOCORE_SHA512_BORROW 320
+// The RFC 4253 sec 7.2 KDF runs one exchange-hash digest and accumulates the K1 || K2 chain behind
+// it. The chain is bounded by SSH_KDF_MAX (128).
+#ifndef PROTOCORE_SSH_KDF_BORROW
+#define PROTOCORE_SSH_KDF_BORROW (PROTOCORE_SSH_KEXHASH_BORROW + 128)
 #endif
+
+// A SHA-512 context works out of the same regions as SHA-256, at its own widths: the context itself,
+// the 128-byte block as it arrives, the padded last one, and the 64-byte state copy finalizing
+// compresses into. The schedule is a register window, not storage. One figure for both arms, for the
+// reason stated above SHA-256. Proved by a static_assert in sha512.c.
+#ifndef PROTOCORE_SHA512_BORROW
+#define PROTOCORE_SHA512_BORROW 448
 #endif
 
 // An HMAC-SHA512 context works out of two SHA-512 borrows - the inner hash it keeps across updates and
@@ -6736,8 +6871,10 @@ from halves and is slower than the width it decomposes into"
 #define PROTOCORE_HMAC_SHA256_BORROW (2 * PROTOCORE_SHA256_BORROW + 384)
 #endif
 
+// The accelerated modexp backend: four 256-octet big-endian buffers handed to the vendor, then the
+// region the Bignum conversions that fill and drain them run in.
 #ifndef PROTOCORE_WORK_BIGNUM_HW
-#define PROTOCORE_WORK_BIGNUM_HW 1024
+#define PROTOCORE_WORK_BIGNUM_HW 1328
 #endif
 #ifndef PROTOCORE_WORK_BIGNUM_SW
 #define PROTOCORE_WORK_BIGNUM_SW 1408
@@ -6747,17 +6884,17 @@ from halves and is slower than the width it decomposes into"
 // borrow - a consumer now embeds two of these per connection (send and receive) for the life of the
 // key, so one flat figure sized for the largest backend is RAM every target pays and only one uses.
 // The static_assert in each backend is what keeps these honest against a vendor header we do not own.
-#ifndef PROTOCORE_WORK_AESGCM_HW
-#define PROTOCORE_WORK_AESGCM_HW 416 // mbedtls_gcm_context measures 392 on the S3
+#ifndef PROTOCORE_AESGCM_BORROW_HW
+#define PROTOCORE_AESGCM_BORROW_HW 416 // mbedtls_gcm_context measures 392 on the S3
 #endif
-#ifndef PROTOCORE_WORK_AESGCM_SW
-#define PROTOCORE_WORK_AESGCM_SW 640 // GcmWork is 608: AES-256 round keys + the 4-bit GHASH table
+#ifndef PROTOCORE_AESGCM_BORROW_SW
+#define PROTOCORE_AESGCM_BORROW_SW 640 // GcmWork is 608: AES-256 round keys + the 4-bit GHASH table
 #endif
-#ifndef PROTOCORE_WORK_AESGCM
+#ifndef PROTOCORE_AESGCM_BORROW
 #if PROTOCORE_HAS_HW_AESGCM
-#define PROTOCORE_WORK_AESGCM PROTOCORE_WORK_AESGCM_HW
+#define PROTOCORE_AESGCM_BORROW PROTOCORE_AESGCM_BORROW_HW
 #else
-#define PROTOCORE_WORK_AESGCM PROTOCORE_WORK_AESGCM_SW
+#define PROTOCORE_AESGCM_BORROW PROTOCORE_AESGCM_BORROW_SW
 #endif
 #endif
 #ifndef PROTOCORE_WORK_AESCCM
@@ -6781,7 +6918,7 @@ from halves and is slower than the width it decomposes into"
 #endif
 #endif
 
-// AES-128-GCM keyed context, sized per vendor exactly as PROTOCORE_WORK_AESGCM above and for the same reason:
+// AES-128-GCM keyed context, sized per vendor exactly as PROTOCORE_AESGCM_BORROW above and for the same reason:
 // one backend is compiled, and a consumer holding a context per direction should not carry storage for
 // the backend it did not build.
 #ifndef PROTOCORE_WORK_AES128GCM_HW
@@ -6797,24 +6934,115 @@ from halves and is slower than the width it decomposes into"
 #define PROTOCORE_WORK_AES128GCM PROTOCORE_WORK_AES128GCM_SW
 #endif
 #endif
-#ifndef PROTOCORE_WORK_CHACHAPOLY
-#define PROTOCORE_WORK_CHACHAPOLY 64
+// The chacha20-poly1305 borrow, split by offset in chachapoly.c: the per-packet working set (the
+// nonce, the derived one-time Poly1305 key, the computed tag and the decrypted length word, 60
+// octets), then a region for the nested ChaCha20 and one for the nested Poly1305, each driven through
+// its own namespace. Proved by a static_assert in chachapoly.c.
+#ifndef PROTOCORE_CHACHAPOLY_BORROW
+#define PROTOCORE_CHACHAPOLY_BORROW (64 + PROTOCORE_CHACHA20_BORROW + PROTOCORE_POLY1305_BORROW)
 #endif
-#ifndef PROTOCORE_WORK_CHACHA20
-#define PROTOCORE_WORK_CHACHA20 192
+// The ChaCha20 borrow: the 16-word input state and the 16-word round state, then one keystream block.
+// 192 octets. Proved by a static_assert in chacha20.c.
+#ifndef PROTOCORE_CHACHA20_BORROW
+#define PROTOCORE_CHACHA20_BORROW 192
 #endif
-#ifndef PROTOCORE_WORK_AES256CTR
-#define PROTOCORE_WORK_AES256CTR 384
+// The AES-256-CTR borrow: the expanded key, then one keystream block. The accelerator's context is the
+// larger of the two arms at 304 octets. Proved by a static_assert in aes256ctr.c.
+#ifndef PROTOCORE_AES256CTR_BORROW
+#define PROTOCORE_AES256CTR_BORROW 384
 #endif
-#ifndef PROTOCORE_WORK_POLY1305
-#define PROTOCORE_WORK_POLY1305 80
+// The Poly1305 borrow: the clamped key part, its reduction multipliers and the accumulator, five
+// 26-bit limbs each, then the padded final block. 76 octets. Proved by a static_assert in poly1305.c.
+#ifndef PROTOCORE_POLY1305_BORROW
+#define PROTOCORE_POLY1305_BORROW 96
 #endif
-#ifndef PROTOCORE_WORK_MD
-#define PROTOCORE_WORK_MD 96
+// The AES-128-CMAC borrow: the block context, then the prepared last block, the CBC-MAC accumulator
+// and the XOR scratch. The accelerator's context is the larger of the two arms at 336 octets. Proved
+// by a static_assert in aes_cmac.c.
+#ifndef PROTOCORE_AES_CMAC_BORROW
+#define PROTOCORE_AES_CMAC_BORROW 384
 #endif
-// KdfWork - one counter block and one digest - then the PRF's own bytes.
-#ifndef PROTOCORE_WORK_KDF
-#define PROTOCORE_WORK_KDF (128 + PROTOCORE_HMAC_SHA256_BORROW)
+// The MD-family borrow, split by offset in md.c: the running digest state, then the regions HMAC-MD5
+// needs - the key block, its two pads, the inner digest, and the state a key longer than the block is
+// hashed down in. All of it is NTLM password and session-key material, so none of it may sit on the
+// stack. Proved against the real split by a static_assert in md.c.
+#ifndef PROTOCORE_MD_BORROW
+#define PROTOCORE_MD_BORROW 448
+#endif
+// The Keccak borrow, split by offset in sha3.c: the sponge the streaming XOF carries across calls,
+// then the sponge the one-shot digests and XOFs run in. One KeccakCtx is 25 lanes plus the rate and
+// the squeeze position, 208 octets, and the split holds two of them. Proved against the real split by
+// a static_assert in sha3.c.
+#ifndef PROTOCORE_SHA3_BORROW
+#define PROTOCORE_SHA3_BORROW 224
+#endif
+// The SP800-108 KDF borrow, split by offset in kdf.c: the PRF's own bytes, then K(i) and the 32-bit
+// counter, 36 octets. Proved by a static_assert in kdf.c.
+#ifndef PROTOCORE_KDF_BORROW
+#define PROTOCORE_KDF_BORROW (PROTOCORE_HMAC_SHA256_BORROW + 64)
+#endif
+// The GHASH borrow: the 4-bit table built from the subkey H, 16 rows of 4 words. The table is the
+// state the module's own entries carry between them - key_init builds it, update and mul read it.
+// Proved by a static_assert in ghash.c.
+#ifndef PROTOCORE_GHASH_BORROW
+#define PROTOCORE_GHASH_BORROW 256
+#endif
+// The bignum borrow: the operands an entry stages for its helpers, then the value a conversion or a
+// compare runs over. The modexp's own scratch is not here - that lives in the backend the build
+// selects, sized by PROTOCORE_WORK_BIGNUM_HW / _SW above. Proved by a static_assert in bignum.c.
+#ifndef PROTOCORE_BIGNUM_BORROW
+#define PROTOCORE_BIGNUM_BORROW 304
+#endif
+// The AES-CCM borrow: the keyed context one record runs out of. The software arm holds the AES key
+// schedule, the round count, the CBC-MAC accumulator, the formatting block, the counter block and the
+// keystream, 308 octets; the accelerator's mbedtls_ccm_context is the larger arm at the figure this
+// file already carried for it. Proved by a static_assert in aesccm.c.
+#ifndef PROTOCORE_AESCCM_BORROW
+#define PROTOCORE_AESCCM_BORROW PROTOCORE_WORK_AESCCM
+#endif
+// The AES-128-GCM borrow, split by offset in aes128gcm.c: the keyed AEAD context, then the
+// single-block context the header protection uses. Both terms are already sized per vendor above, so
+// the borrow is their sum and follows the arm the build selects. Proved by a static_assert in
+// aes128gcm.c.
+#ifndef PROTOCORE_AES128GCM_BORROW
+#define PROTOCORE_AES128GCM_BORROW (PROTOCORE_WORK_AES128GCM + PROTOCORE_WORK_AES128)
+#endif
+// The X25519 borrow: the clamped scalar, the base point, and the Montgomery ladder's running points
+// and per-bit intermediates. The radix-2^16 protocore_gf arm is the larger of the two at 960 octets,
+// seven 128-octet field elements over the two 32-octet scalars; the radix-2^32 fe arm is 576. Proved
+// by a static_assert in curve25519.c.
+#ifndef PROTOCORE_CURVE25519_BORROW
+#define PROTOCORE_CURVE25519_BORROW 960
+#endif
+// The Ed25519 borrow, split by offset in ed25519.c: the signature working set - the S accumulator,
+// the clamped hash of the seed, the two reduced scalars, the public point and the packed comparison
+// value, 768 octets - then the region SHA-512 runs in. Proved by a static_assert in ed25519.c.
+#ifndef PROTOCORE_ED25519_BORROW
+#define PROTOCORE_ED25519_BORROW (768 + PROTOCORE_SHA512_BORROW)
+#endif
+// The RSA borrow, split by offset in rsa.c: the regions SHA-256, SHA-512 and the bignum conversions
+// run in, then the ladder's working set - the staged multiply, the digest, the encoded block, the
+// recovered block, the five 256-octet bignums and the double-width product, 2,432 octets. Proved by a
+// static_assert in rsa.c.
+#ifndef PROTOCORE_RSA_BORROW
+#define PROTOCORE_RSA_BORROW (PROTOCORE_SHA256_BORROW + PROTOCORE_SHA512_BORROW + PROTOCORE_BIGNUM_BORROW + 2432)
+#endif
+// The ML-KEM-768 borrow: the region SHA-3 runs in. The module carries nothing across its entries, so
+// the sponge is the whole working set. Proved by a static_assert in mlkem.c.
+#ifndef PROTOCORE_MLKEM_BORROW
+#define PROTOCORE_MLKEM_BORROW PROTOCORE_SHA3_BORROW
+#endif
+// The sntrup761 borrow: the region SHA-512 runs in. The module carries nothing across its entries.
+// Proved by a static_assert in sntrup761.c.
+#ifndef PROTOCORE_SNTRUP761_BORROW
+#define PROTOCORE_SNTRUP761_BORROW PROTOCORE_SHA512_BORROW
+#endif
+// The generator's borrow, split by offset in rng.c: the draw counter and the seeded flag, the seed,
+// the nonce, the ratchet's next seed, then the region ChaCha20 runs in. 88 octets over the cipher's
+// own borrow. This one is taken from the pool's PERSISTENT end and lives for the program, so the seed
+// survives across calls and a reseed lands in the same bytes. Proved by a static_assert in rng.c.
+#ifndef PROTOCORE_RNG_BORROW
+#define PROTOCORE_RNG_BORROW (88 + PROTOCORE_CHACHA20_BORROW)
 #endif
 
 // SSH frames every outbound packet in the secure pool: the payload it carries is the session's own
@@ -6892,10 +7120,6 @@ from halves and is slower than the width it decomposes into"
 #ifndef PROTOCORE_WORK_AUTH_TABLE
 #define PROTOCORE_WORK_AUTH_TABLE (MAX_ROUTES * (3 * MAX_AUTH_LEN + 8) + 32) // AuthCred is 3*MAX_AUTH_LEN + 1
 #endif
-#ifndef PROTOCORE_WORK_RNG
-#define PROTOCORE_WORK_RNG 72 // the generator: seed(32) + nonce(8) + ratchet scratch(32), for the program's life
-#endif
-
 // The SSH host key on the software RSA backend: the private exponent from the persistent end for the
 // program's life, plus the PKCS#8 DER borrowed while protocore_ssh_rsa_load_pubkey walks it.
 #ifndef PROTOCORE_WORK_SSH_HOST_KEY
@@ -6931,20 +7155,20 @@ from halves and is slower than the width it decomposes into"
 #if PROTOCORE_ENABLE_SSH || PROTOCORE_ENABLE_SSH_CLIENT || PROTOCORE_ENABLE_TLS || PROTOCORE_ENABLE_HTTP3 ||           \
     PROTOCORE_ENABLE_DTLS
 #define PROTOCORE_SECURE_WORK_AEAD                                                                                     \
-    (PROTOCORE_WORK_AESGCM + PROTOCORE_WORK_CHACHAPOLY + PROTOCORE_WORK_CHACHA20 + PROTOCORE_WORK_POLY1305)
+    (PROTOCORE_AESGCM_BORROW + PROTOCORE_CHACHAPOLY_BORROW + PROTOCORE_CHACHA20_BORROW + PROTOCORE_POLY1305_BORROW)
 #else
 #define PROTOCORE_SECURE_WORK_AEAD 0
 #endif
 
 #if PROTOCORE_ENABLE_SMB
 #define PROTOCORE_SECURE_WORK_SMB                                                                                      \
-    (PROTOCORE_WORK_AESCCM + PROTOCORE_WORK_AES128GCM + PROTOCORE_WORK_MD + PROTOCORE_WORK_KDF)
+    (PROTOCORE_WORK_AESCCM + PROTOCORE_WORK_AES128GCM + PROTOCORE_MD_BORROW + PROTOCORE_KDF_BORROW)
 #else
 #define PROTOCORE_SECURE_WORK_SMB 0
 #endif
 
 #if PROTOCORE_ENABLE_SSH || PROTOCORE_ENABLE_SSH_CLIENT
-#define PROTOCORE_SECURE_WORK_SSHCIPHER PROTOCORE_WORK_AES256CTR
+#define PROTOCORE_SECURE_WORK_SSHCIPHER PROTOCORE_AES256CTR_BORROW
 #define PROTOCORE_SECURE_WORK_SSHCONN PROTOCORE_WORK_SSH_CONN
 #else
 #define PROTOCORE_SECURE_WORK_SSHCIPHER 0
@@ -6963,10 +7187,100 @@ from halves and is slower than the width it decomposes into"
 #define PROTOCORE_SECURE_WORK_TLSCONN 0
 #endif
 
+// A QUIC connection's context: the packet-number spaces, the stream table, and the TLS handshake
+// with its traffic secrets. Secure rather than plaintext because of that last term - the bytes the
+// connection owes its streams are the plaintext borrow beside it (PROTOCORE_QUIC_CONN_BORROW), and
+// only these carry key material. One per connection, taken from the persistent end so it lasts the
+// connection. Proved against sizeof(QuicConnCtx) by a static_assert in quic_conn.c.
+#ifndef PROTOCORE_QUIC_CONN_CTX_BORROW
+#define PROTOCORE_QUIC_CONN_CTX_BORROW 12544
+#endif
+
+// The HTTP/3 connection above it carries no key material, so its context sits in the plaintext
+// borrow with the stream bytes and takes nothing from here.
+#if PROTOCORE_ENABLE_HTTP3
+#define PROTOCORE_SECURE_WORK_QUICCONN ((size_t)PROTOCORE_QUIC_MAX_CONNS * PROTOCORE_QUIC_CONN_CTX_BORROW)
+#else
+#define PROTOCORE_SECURE_WORK_QUICCONN 0
+#endif
+
+#if PROTOCORE_ENABLE_SHA1
+#define PROTOCORE_SECURE_WORK_SHA1 PROTOCORE_SHA1_BORROW
+#else
+#define PROTOCORE_SECURE_WORK_SHA1 0
+#endif
+
+#if PROTOCORE_ENABLE_SHA3
+#define PROTOCORE_SECURE_WORK_SHA3 PROTOCORE_SHA3_BORROW
+#else
+#define PROTOCORE_SECURE_WORK_SHA3 0
+#endif
+
+#if PROTOCORE_ENABLE_SHA256
+#define PROTOCORE_SECURE_WORK_SHA256 PROTOCORE_SHA256_BORROW
+#else
+#define PROTOCORE_SECURE_WORK_SHA256 0
+#endif
+
+#if PROTOCORE_ENABLE_CURVE25519
+#define PROTOCORE_SECURE_WORK_CURVE25519 PROTOCORE_CURVE25519_BORROW
+#else
+#define PROTOCORE_SECURE_WORK_CURVE25519 0
+#endif
+
+#if PROTOCORE_ENABLE_ED25519
+#define PROTOCORE_SECURE_WORK_ED25519 PROTOCORE_ED25519_BORROW
+#else
+#define PROTOCORE_SECURE_WORK_ED25519 0
+#endif
+
+#if PROTOCORE_ENABLE_ECDSA
+#define PROTOCORE_SECURE_WORK_ECDSA PROTOCORE_ECDSA_BORROW
+#else
+#define PROTOCORE_SECURE_WORK_ECDSA 0
+#endif
+
+#if PROTOCORE_ENABLE_RSA
+#define PROTOCORE_SECURE_WORK_RSA PROTOCORE_RSA_BORROW
+#else
+#define PROTOCORE_SECURE_WORK_RSA 0
+#endif
+
+#if PROTOCORE_ENABLE_MLKEM
+#define PROTOCORE_SECURE_WORK_MLKEM PROTOCORE_MLKEM_BORROW
+#else
+#define PROTOCORE_SECURE_WORK_MLKEM 0
+#endif
+
+#if PROTOCORE_ENABLE_SNTRUP761
+#define PROTOCORE_SECURE_WORK_SNTRUP761 PROTOCORE_SNTRUP761_BORROW
+#else
+#define PROTOCORE_SECURE_WORK_SNTRUP761 0
+#endif
+
+// The record AEAD the QUIC, DTLS and TLS paths key per direction, one borrow carrying both the AEAD
+// context and the header-protection block context. The SMB term below carries its own.
+#if PROTOCORE_ENABLE_AES128GCM
+#define PROTOCORE_SECURE_WORK_AES128GCM PROTOCORE_AES128GCM_BORROW
+#else
+#define PROTOCORE_SECURE_WORK_AES128GCM 0
+#endif
+
+// The generator takes its borrow from the pool's PERSISTENT end, once, for the program's life.
+#if PROTOCORE_ENABLE_RNG
+#define PROTOCORE_SECURE_WORK_RNG PROTOCORE_RNG_BORROW
+#else
+#define PROTOCORE_SECURE_WORK_RNG 0
+#endif
+
 #define PROTOCORE_SECURE_ARENA_SIZE                                                                                    \
     (PROTOCORE_SECURE_WORK_BIGNUM + PROTOCORE_SECURE_WORK_AEAD + PROTOCORE_SECURE_WORK_SMB +                           \
      PROTOCORE_SECURE_WORK_SSHCIPHER + PROTOCORE_SECURE_WORK_SSHCONN + PROTOCORE_SECURE_WORK_TLSCONN +                 \
-     PROTOCORE_WORK_ROUTE_TABLE + PROTOCORE_SECURE_WORK_AUTH + PROTOCORE_WORK_RNG +                                    \
+     PROTOCORE_SECURE_WORK_SHA1 + PROTOCORE_SECURE_WORK_SHA3 + PROTOCORE_SECURE_WORK_SHA256 +                          \
+     PROTOCORE_SECURE_WORK_CURVE25519 + PROTOCORE_SECURE_WORK_ED25519 + PROTOCORE_SECURE_WORK_ECDSA +                  \
+     PROTOCORE_SECURE_WORK_RSA + PROTOCORE_SECURE_WORK_MLKEM + PROTOCORE_SECURE_WORK_SNTRUP761 +                       \
+     PROTOCORE_SECURE_WORK_AES128GCM + PROTOCORE_WORK_ROUTE_TABLE + PROTOCORE_SECURE_WORK_AUTH +                       \
+     PROTOCORE_SECURE_WORK_RNG + PROTOCORE_SECURE_WORK_QUICCONN +                                                      \
      256) // + 256: alignment round-up across the individual borrows
 #endif
 
@@ -7008,7 +7322,7 @@ from halves and is slower than the width it decomposes into"
 // │  ssh_keys[MAX_SSH_CONNS]     │ MAX_SSH_CONNS × sizeof(SshKeyMat)                            │   1187 B │
 // │   └─ SshKeyMat (all builds)  │   2×aes_key[32] + 2×aes_iv[16] + 2×mac_key[64]               │          │
 // │                              │   + 2×chacha_key[64] + 3 flags = 355 B, plus the two keyed   │          │
-// │                              │   GCM contexts 2×PROTOCORE_WORK_AESGCM (832 B on a vendor AEAD).    │          │
+// │                              │   GCM contexts 2×PROTOCORE_AESGCM_BORROW (832 B on a vendor AEAD).    │          │
 // │                              │   The contexts buy ~9,200 cycles per packet - a FIXED cost   │          │
 // │                              │   that dominates small interactive traffic (see aesgcm.h).   │          │
 // │                              │   CTR still rebuilds its schedule in scratch per packet.     │          │
@@ -7943,5 +8257,26 @@ static_assert((unsigned)PROTO_UDP < PROTO_MAX_HANDLERS, "PROTO_MAX_HANDLERS must
 // Final sizing pass: raise buffers to the floors the enabled features require (every PROTOCORE_ENABLE_*
 // flag is resolved by this point). Kept in the board-profile layer, not inline above.
 #include "core_setup/board_profiles/derived_sizing.h" // PROTOCORE_ALLOW_LATE_INCLUDE: ordered - derives sizes from the PROTOCORE_ENABLE_* flags resolved above
+
+// The accelerator HALs, reached HERE so nothing under src/ ever names a core_setup path: a module
+// calls protocore_sha_hw_block / protocore_aes_hw_block / protocore_rsa_modmul inside its own hardware
+// arm and includes nothing to get them. Each one is gated on its own capability and states nothing
+// when the die carries no such peripheral.
+//
+// A host build takes the function-level host arms, which answer the same contract in software so the
+// accelerated arm compiles, runs and is checked off target. Every other build takes the register
+// drivers. Ordered: both need the capability flags from the platform and the register map from the
+// die profile, and both are resolved above.
+#if PROTOCORE_HOST
+#include "core_setup/hal/host/host_aes_hal.h" // PROTOCORE_ALLOW_LATE_INCLUDE: ordered - gated on PROTOCORE_HAS_HW_AES
+#include "core_setup/hal/host/host_crypto_hal.h" // PROTOCORE_ALLOW_LATE_INCLUDE: ordered - gated on PROTOCORE_RSA_MODMUL_HW
+#include "core_setup/hal/host/host_hw_reg.h"     // PROTOCORE_ALLOW_LATE_INCLUDE: ordered - the modelled register bus
+#include "core_setup/hal/host/host_sha_hal.h" // PROTOCORE_ALLOW_LATE_INCLUDE: ordered - gated on PROTOCORE_HAS_HW_SHA
+#endif
+#if !PROTOCORE_HOST
+#include "core_setup/hal/esp/esp_aes_hal.h"    // PROTOCORE_ALLOW_LATE_INCLUDE: ordered - gated on PROTOCORE_HAS_HW_AES
+#include "core_setup/hal/esp/esp_crypto_hal.h" // PROTOCORE_ALLOW_LATE_INCLUDE: ordered - gated on PROTOCORE_RSA_MODMUL_HW
+#include "core_setup/hal/esp/esp_sha_hal.h"    // PROTOCORE_ALLOW_LATE_INCLUDE: ordered - gated on PROTOCORE_HAS_HW_SHA
+#endif
 
 #endif

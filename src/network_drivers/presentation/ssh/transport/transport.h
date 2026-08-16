@@ -13,7 +13,8 @@
 #include "crypto/aead/chachapoly.h"
 #include "crypto/asymmetric/bignum.h"
 #include "crypto/cipher/aes256ctr.h"
-#include "mmgr/secure.h" // protocore_secure_wipe (the canonical secure wipe)
+#include "crypto/hash/sha256.h" // PROTOCORE_SHA256_DIGEST_LEN - the exchange hash and session id
+#include "mmgr/secure.h"        // protocore_secure_wipe (the canonical secure wipe)
 #include "network_drivers/presentation/ssh/common.h"
 #include "network_drivers/presentation/ssh/transport/phase_machine.h" // SshPhase: the session's phase
 #include "protocore_config.h"
@@ -346,6 +347,9 @@ typedef struct
     // The packet MAC and the key exchange work out of these, and they come from the same one borrow as
     // tx_wire. Held for the slot's life so neither costs a borrow or a wipe on the packet path.
     uint8_t *mac_work; ///< PROTOCORE_HMAC_SHA256_BORROW bytes. Null until the first packet.
+    // SSH_CIPHER_WORK_LEN bytes for the negotiated record cipher, its own region so a MAC and a
+    // cipher on the same packet never reach each other's bytes.
+    uint8_t *cipher_work;
     // PROTOCORE_CRYPTO_BORROW_MAX bytes for the handshake's crypto: the exchange hash, the RFC 4253 sec 7.2 KDF,
     // the host-key signature and the userauth one. Those run in sequence, never at once, so they share.
     uint8_t *crypto_work;
@@ -593,7 +597,7 @@ typedef struct
     uint8_t *chacha_key_s2c; ///< PROTOCORE_CHACHAPOLY_KEY_LEN: server-to-client, used only in chacha mode.
 
     // aes256-gcm@openssh.com (RFC 5647) reuses aes_iv_* above (mode-exclusive with CTR): the low 12 bytes
-    // are the nonce, advanced per packet by protocore_aesgcm_iv_increment. No separate MAC key.
+    // are the nonce, advanced per packet by AesGcm.iv_increment. No separate MAC key.
     //
     // It does NOT use aes_key_*. A GCM key becomes a keyed context at install time and the raw key is
     // wiped there, so in this mode the expanded schedule is the only key material resident - strictly
@@ -601,8 +605,8 @@ typedef struct
     // ~9,200 cycles on an ESP32-S3, a fixed price per packet that dominates small interactive traffic
     // (see aesgcm.h). Wiped on rekey and by ssh_keymat_wipe() on close.
     // These two open the kmt epoch, so the region's 8-alignment is the epoch's own start.
-    uint8_t *gcm_ctx_c2s; ///< PROTOCORE_WORK_AESGCM: keyed GCM context C→S (server opens inbound).
-    uint8_t *gcm_ctx_s2c; ///< PROTOCORE_WORK_AESGCM: keyed GCM context S→C (server seals outbound).
+    uint8_t *gcm_ctx_c2s; ///< PROTOCORE_AESGCM_BORROW: keyed GCM context C→S (server opens inbound).
+    uint8_t *gcm_ctx_s2c; ///< PROTOCORE_AESGCM_BORROW: keyed GCM context S→C (server seals outbound).
 
     proto_bool active; ///< True once keys are installed after successful KEX.
 } SshKeyMat;
@@ -693,19 +697,19 @@ static inline void ssh_keymat_wipe(uint8_t i)
         SshKeyMat *km = &ssh_keys[i][e];
         if (km->gcm_ctx_c2s != NULL)
         {
-            // A keyed GCM context owns a vendor allocation (mbedtls_gcm_setkey sets up a cipher context),
-            // so zeroing the bytes would leak it once per closed connection. Release first, then wipe.
-            // Each direction owns its context, and only the direction that negotiated GCM stood one up.
+            // A keyed GCM context may hold what the accelerator arm attached, so zeroing the bytes alone
+            // would leak it once per closed connection. Release first, then wipe. Each direction owns its
+            // context, and only the direction that negotiated GCM stood one up.
             if (km->active && km->cipher_mode_c2s == SSH_CIPHER_AES256GCM)
             {
-                protocore_aesgcm_key_wipe((struct protocore_aesgcm_key *)(km->gcm_ctx_c2s));
+                AesGcm.key_wipe(km->gcm_ctx_c2s);
             }
             if (km->active && km->cipher_mode_s2c == SSH_CIPHER_AES256GCM)
             {
-                protocore_aesgcm_key_wipe((struct protocore_aesgcm_key *)(km->gcm_ctx_s2c));
+                AesGcm.key_wipe(km->gcm_ctx_s2c);
             }
-            protocore_secure_wipe(km->gcm_ctx_c2s, PROTOCORE_WORK_AESGCM);
-            protocore_secure_wipe(km->gcm_ctx_s2c, PROTOCORE_WORK_AESGCM);
+            protocore_secure_wipe(km->gcm_ctx_c2s, PROTOCORE_AESGCM_BORROW);
+            protocore_secure_wipe(km->gcm_ctx_s2c, PROTOCORE_AESGCM_BORROW);
             protocore_secure_wipe(km->chacha_key_c2s, PROTOCORE_CHACHAPOLY_KEY_LEN);
             protocore_secure_wipe(km->chacha_key_s2c, PROTOCORE_CHACHAPOLY_KEY_LEN);
             protocore_secure_wipe(km->mac_key_c2s, 64);

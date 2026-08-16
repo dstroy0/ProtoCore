@@ -57,6 +57,24 @@
 #ifndef PROTOCORE_SHA_RST_BIT
 #define PROTOCORE_SHA_RST_BIT (1u << 18) // REG_RST_EN_SHA
 #endif
+
+// AES accelerator: the block register window and the clock/reset bits that bring it up.
+// Drives crypto/cipher, crypto/aead and crypto/mac through core_setup/hal/esp/esp_aes_hal.h.
+#ifndef PROTOCORE_AES_BASE
+#define PROTOCORE_AES_BASE 0x50090000u
+#endif
+#ifndef PROTOCORE_AES_CLK_REG
+#define PROTOCORE_AES_CLK_REG 0x500E60A8u // HP_SYS_CLKRST_PERI_CLK_CTRL25_REG
+#endif
+#ifndef PROTOCORE_AES_CLK_BIT
+#define PROTOCORE_AES_CLK_BIT (1u << 14) // REG_CRYPTO_AES_CLK_EN
+#endif
+#ifndef PROTOCORE_AES_RST_REG
+#define PROTOCORE_AES_RST_REG 0x500E60C8u // HP_SYS_CLKRST_HP_RST_EN2_REG
+#endif
+#ifndef PROTOCORE_AES_RST_BIT
+#define PROTOCORE_AES_RST_BIT (1u << 16) // REG_RST_EN_AES
+#endif
 #ifndef PROTOCORE_SHA_HOLD_REG
 #define PROTOCORE_SHA_HOLD_REG 0x500E60C8u
 #endif

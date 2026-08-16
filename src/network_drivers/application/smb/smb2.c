@@ -11,13 +11,13 @@
 
 #if PROTOCORE_ENABLE_SMB
 
-#include "crypto/aead/aes128gcm.h"  // protocore_aes128gcm_* keyed AEAD (SMB 3.x AES-128-GCM)
-#include "crypto/aead/aesccm.h"     // protocore_aesccm_seal_tag/open_tag (SMB 3.x AES-128/256-CCM)
-#include "crypto/aead/aesgcm.h"     // protocore_aesgcm_* keyed AEAD (SMB 3.x AES-256-GCM)
-#include "crypto/hash/sha512.h"     // protocore_sha512 for the SMB 3.1.1 preauth-integrity chain
-#include "crypto/kdf/kdf.h"         // protocore_kdf_ctr_hmac_sha256 for SMB 3.x key derivation
-#include "crypto/mac/aes_cmac.h"    // protocore_aes_cmac for SMB 3.x message signing
-#include "crypto/mac/hmac_sha256.h" // protocore_hmac_sha256 for SMB 2.x message signing
+#include "crypto/aead/aes128gcm.h"  // Aes128Gcm keyed AEAD (SMB 3.x AES-128-GCM)
+#include "crypto/aead/aesccm.h"     // AesCcm (SMB 3.x AES-128/256-CCM)
+#include "crypto/aead/aesgcm.h"     // AesGcm keyed AEAD (SMB 3.x AES-256-GCM)
+#include "crypto/hash/sha512.h"     // Sha512 for the SMB 3.1.1 preauth-integrity chain
+#include "crypto/kdf/kdf.h"         // Kdf for SMB 3.x key derivation
+#include "crypto/mac/aes_cmac.h"    // AesCmac for SMB 3.x message signing
+#include "crypto/mac/hmac_sha256.h" // HmacSha256 for SMB 2.x message signing
 #include "mmgr/endian.h"
 #include "mmgr/secure.h" // the per-call GCM context borrow
 
@@ -361,11 +361,15 @@ void protocore_smb_preauth_update(uint8_t *work, SmbPreauth *p, const uint8_t *m
     // Snapshot the previous hash so the digest input never aliases its output buffer.
     uint8_t prev[PROTOCORE_SMB2_PREAUTH_HASH_LEN];
     mem.cpy(prev, p->hash, sizeof(prev));
-    protocore_sha512_ctx c;
-    protocore_sha512_init(&c, work);
-    protocore_sha512_update(&c, prev, sizeof(prev));
-    protocore_sha512_update(&c, msg, len);
-    protocore_sha512_final(&c, p->hash);
+    Sha512.init(work);
+    Sha512.update_args.data = prev;
+    Sha512.update_args.len = sizeof(prev);
+    Sha512.update(work);
+    Sha512.update_args.data = msg;
+    Sha512.update_args.len = len;
+    Sha512.update(work);
+    Sha512.final_args.out = p->hash;
+    Sha512.final(work);
 }
 
 size_t protocore_smb2_build_session_setup(uint8_t *buf, size_t cap, uint64_t message_id, uint64_t session_id,
@@ -726,14 +730,22 @@ typedef void (*Smb2MacFn)(uint8_t *work, const uint8_t key[16], const uint8_t *m
 static void mac_hmac_sha256(uint8_t *work, const uint8_t key[16], const uint8_t *msg, size_t len, uint8_t out16[16])
 {
     uint8_t mac[32];
-    protocore_hmac_sha256(work, key, 16, msg, len, mac);
+    HmacSha256.mac_args.key = key;
+    HmacSha256.mac_args.key_len = 16;
+    HmacSha256.mac_args.data = msg;
+    HmacSha256.mac_args.len = len;
+    HmacSha256.mac_args.out = mac;
+    HmacSha256.mac(work);
     mem.cpy(out16, mac, 16); // Signature = first 16 octets of the HMAC
 }
 
 static void mac_aes_cmac(uint8_t *work, const uint8_t key[16], const uint8_t *msg, size_t len, uint8_t out16[16])
 {
-    (void)work;                               // the CMAC keys itself
-    protocore_aes_cmac(key, msg, len, out16); // the whole 16-octet CMAC tag
+    AesCmac.mac_args.key = key;
+    AesCmac.mac_args.msg = msg;
+    AesCmac.mac_args.msg_len = len;
+    AesCmac.mac_args.out = out16;
+    AesCmac.mac(work); // the whole 16-octet CMAC tag
 }
 
 static void smb2_sign_framed(uint8_t *work, const uint8_t key[16], uint8_t *msg, size_t msg_len, Smb2MacFn mac)
@@ -832,7 +844,18 @@ proto_bool protocore_smb3_derive_signing_key(const uint8_t session_key[16], uint
     fixed[n++] = 0x00;
     fixed[n++] = 0x00;
     fixed[n++] = 0x80;
-    return protocore_kdf_ctr_hmac_sha256(session_key, 16, fixed, n, out_key, 16);
+    size_t mark = protocore_secure_mark();
+    uint8_t *w = protocore_secure_span(PROTOCORE_KDF_BORROW, 8).buf;
+    Kdf.ctr_args.ki = session_key;
+    Kdf.ctr_args.ki_len = 16;
+    Kdf.ctr_args.fixed = fixed;
+    Kdf.ctr_args.fixed_len = n;
+    Kdf.ctr_args.out = out_key;
+    Kdf.ctr_args.out_len = 16;
+    Kdf.ctr_hmac_sha256(w);
+    const proto_bool derived = Kdf.ok;
+    protocore_secure_release(mark);
+    return derived;
 }
 
 // One SMB 3.x cipher key (MS-SMB2 §3.1.4.2), same SP800-108 construction as the signing key. @p c2s picks the
@@ -874,7 +897,18 @@ static proto_bool smb3_derive_cipher_key(const uint8_t session_key[16], uint16_t
     fixed[n++] = (uint8_t)((l_bits >> 16) & 0xff);
     fixed[n++] = (uint8_t)((l_bits >> 8) & 0xff);
     fixed[n++] = (uint8_t)(l_bits & 0xff);
-    return protocore_kdf_ctr_hmac_sha256(session_key, 16, fixed, n, out_key, key_len);
+    size_t mark = protocore_secure_mark();
+    uint8_t *w = protocore_secure_span(PROTOCORE_KDF_BORROW, 8).buf;
+    Kdf.ctr_args.ki = session_key;
+    Kdf.ctr_args.ki_len = 16;
+    Kdf.ctr_args.fixed = fixed;
+    Kdf.ctr_args.fixed_len = n;
+    Kdf.ctr_args.out = out_key;
+    Kdf.ctr_args.out_len = key_len;
+    Kdf.ctr_hmac_sha256(w);
+    const proto_bool derived = Kdf.ok;
+    protocore_secure_release(mark);
+    return derived;
 }
 
 proto_bool protocore_smb3_derive_encryption_keys(const uint8_t session_key[16], uint16_t dialect,
@@ -920,10 +954,18 @@ size_t protocore_smb2_encrypt(uint16_t cipher, const uint8_t *key, const uint8_t
         // Per-call context: same reasoning as the AES-256 branch below - not a hot enough path to justify
         // a per-session one, and the lifecycle cost is at least visible here.
         size_t mark = protocore_secure_mark();
-        struct protocore_aes128gcm_key *g =
-            protocore_aes128gcm_key_init(protocore_secure_span(PROTOCORE_WORK_AES128GCM, 8).buf, key);
-        protocore_aes128gcm_seal(g, out + 20, aad, 32, msg, msg_len, ct, tag);
-        protocore_aes128gcm_key_wipe(g);
+        uint8_t *g = protocore_secure_span(PROTOCORE_AES128GCM_BORROW, 8).buf;
+        Aes128Gcm.key_args.key = key;
+        Aes128Gcm.key_init(g);
+        Aes128Gcm.seal_args.nonce = out + 20;
+        Aes128Gcm.seal_args.aad = aad;
+        Aes128Gcm.seal_args.aad_len = 32;
+        Aes128Gcm.seal_args.pt = msg;
+        Aes128Gcm.seal_args.pt_len = msg_len;
+        Aes128Gcm.seal_args.ct_out = ct;
+        Aes128Gcm.seal_args.tag_out = tag;
+        Aes128Gcm.seal(g);
+        Aes128Gcm.key_wipe(g);
         protocore_secure_release(mark);
     }
         ok = PROTO_TRUE;
@@ -933,17 +975,41 @@ size_t protocore_smb2_encrypt(uint16_t cipher, const uint8_t *key, const uint8_t
         // ~9,200-cycle lifecycle documented in aesgcm.h - hoist the context into session state if it
         // ever shows up in a profile.
         size_t mark = protocore_secure_mark();
-        struct protocore_aesgcm_key *gcm =
-            protocore_aesgcm_key_init(protocore_secure_span(PROTOCORE_WORK_AESGCM, 8).buf, key);
-        protocore_aesgcm_seal(gcm, out + 20, aad, 32, msg, msg_len, ct, tag);
-        protocore_aesgcm_key_wipe(gcm);
+        uint8_t *gcm = protocore_secure_span(PROTOCORE_AESGCM_BORROW, 8).buf;
+        AesGcm.key_args.key = key;
+        AesGcm.key_init(gcm);
+        AesGcm.seal_args.nonce = out + 20;
+        AesGcm.seal_args.aad = aad;
+        AesGcm.seal_args.aad_len = 32;
+        AesGcm.seal_args.pt = msg;
+        AesGcm.seal_args.pt_len = msg_len;
+        AesGcm.seal_args.ct_out = ct;
+        AesGcm.seal_args.tag_out = tag;
+        AesGcm.seal(gcm);
+        AesGcm.key_wipe(gcm);
         protocore_secure_release(mark);
     }
         ok = PROTO_TRUE;
         break;
     case SMB2_ENCRYPTION_AES128_CCM:
     case SMB2_ENCRYPTION_AES256_CCM:
-        ok = protocore_aesccm_seal_tag(key, key_len, out + 20, nonce_len, aad, 32, msg, msg_len, ct, tag);
+    {
+        size_t mark = protocore_secure_mark();
+        uint8_t *c = protocore_secure_span(PROTOCORE_AESCCM_BORROW, 8).buf;
+        AesCcm.seal_args.key = key;
+        AesCcm.seal_args.key_len = key_len;
+        AesCcm.seal_args.nonce = out + 20;
+        AesCcm.seal_args.nonce_len = nonce_len;
+        AesCcm.seal_args.aad = aad;
+        AesCcm.seal_args.aad_len = 32;
+        AesCcm.seal_args.pt = msg;
+        AesCcm.seal_args.pt_len = msg_len;
+        AesCcm.seal_args.ct_out = ct;
+        AesCcm.seal_args.tag_out = tag;
+        AesCcm.seal(c);
+        ok = AesCcm.ok;
+        protocore_secure_release(mark);
+    }
         break;
     default:
         return 0;
@@ -992,10 +1058,19 @@ size_t protocore_smb2_decrypt(uint16_t cipher, const uint8_t *key, const uint8_t
         // Per-call context: same reasoning as the AES-256 branch below - not a hot enough path to justify
         // a per-session one, and the lifecycle cost is at least visible here.
         size_t mark = protocore_secure_mark();
-        struct protocore_aes128gcm_key *g =
-            protocore_aes128gcm_key_init(protocore_secure_span(PROTOCORE_WORK_AES128GCM, 8).buf, key);
-        ok = protocore_aes128gcm_open(g, aad, aad, 32, ct, ct_len, tag, out);
-        protocore_aes128gcm_key_wipe(g);
+        uint8_t *g = protocore_secure_span(PROTOCORE_AES128GCM_BORROW, 8).buf;
+        Aes128Gcm.key_args.key = key;
+        Aes128Gcm.key_init(g);
+        Aes128Gcm.open_args.nonce = aad;
+        Aes128Gcm.open_args.aad = aad;
+        Aes128Gcm.open_args.aad_len = 32;
+        Aes128Gcm.open_args.ct = ct;
+        Aes128Gcm.open_args.ct_len = ct_len;
+        Aes128Gcm.open_args.tag = tag;
+        Aes128Gcm.open_args.out = out;
+        Aes128Gcm.open(g);
+        ok = Aes128Gcm.ok;
+        Aes128Gcm.key_wipe(g);
         protocore_secure_release(mark);
     }
     break;
@@ -1004,16 +1079,41 @@ size_t protocore_smb2_decrypt(uint16_t cipher, const uint8_t *key, const uint8_t
         // ~9,200-cycle lifecycle documented in aesgcm.h - hoist the context into session state if it
         // ever shows up in a profile.
         size_t mark = protocore_secure_mark();
-        struct protocore_aesgcm_key *gcm =
-            protocore_aesgcm_key_init(protocore_secure_span(PROTOCORE_WORK_AESGCM, 8).buf, key);
-        ok = protocore_aesgcm_open(gcm, aad, aad, 32, ct, ct_len, tag, out);
-        protocore_aesgcm_key_wipe(gcm);
+        uint8_t *gcm = protocore_secure_span(PROTOCORE_AESGCM_BORROW, 8).buf;
+        AesGcm.key_args.key = key;
+        AesGcm.key_init(gcm);
+        AesGcm.open_args.nonce = aad;
+        AesGcm.open_args.aad = aad;
+        AesGcm.open_args.aad_len = 32;
+        AesGcm.open_args.ct = ct;
+        AesGcm.open_args.ct_len = ct_len;
+        AesGcm.open_args.tag = tag;
+        AesGcm.open_args.out = out;
+        AesGcm.open(gcm);
+        ok = AesGcm.ok;
+        AesGcm.key_wipe(gcm);
         protocore_secure_release(mark);
     }
     break;
     case SMB2_ENCRYPTION_AES128_CCM:
     case SMB2_ENCRYPTION_AES256_CCM:
-        ok = protocore_aesccm_open_tag(key, key_len, aad, nonce_len, aad, 32, ct, ct_len, tag, out);
+    {
+        size_t mark = protocore_secure_mark();
+        uint8_t *c = protocore_secure_span(PROTOCORE_AESCCM_BORROW, 8).buf;
+        AesCcm.open_args.key = key;
+        AesCcm.open_args.key_len = key_len;
+        AesCcm.open_args.nonce = aad;
+        AesCcm.open_args.nonce_len = nonce_len;
+        AesCcm.open_args.aad = aad;
+        AesCcm.open_args.aad_len = 32;
+        AesCcm.open_args.ct = ct;
+        AesCcm.open_args.ct_len = ct_len;
+        AesCcm.open_args.tag = tag;
+        AesCcm.open_args.out = out;
+        AesCcm.open(c);
+        ok = AesCcm.ok;
+        protocore_secure_release(mark);
+    }
         break;
     default:
         return 0;

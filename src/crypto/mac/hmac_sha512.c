@@ -3,48 +3,73 @@
 
 /**
  * @file hmac_sha512.c
- * @brief HMAC-SHA2-512 implementation (RFC 2104). See hmac_sha512.h.
+ * @brief HMAC-SHA2-512 implementation (RFC 2104).
  *
- * HMAC(K, m) = H((K XOR opad) || H((K XOR ipad) || m)), H = SHA-512, block = 128 bytes,
- * ipad = 0x36 repeated, opad = 0x5c repeated.
+ * Implemented in terms of the @ref Sha512Ns entries, so which arm compresses the inner hash is not
+ * visible here and this file is the same on every target.
+ *
+ * RFC 2104 construction: HMAC(K, m) = H((K XOR opad) || H((K XOR ipad) || m)), H = SHA-512, ipad = 0x36
+ * repeated, opad = 0x5c repeated. Keys > 128 bytes are pre-hashed; keys <= 128 are zero-padded to the
+ * 128-byte block. SSH-derived MAC keys are 64 bytes, so they are padded, not pre-hashed.
+ *
+ * Nothing here owns storage or touches the pool. The caller hands over PROTOCORE_HMAC_SHA512_BORROW
+ * bytes and this file splits them by offset: the inner hash's own bytes, the outer key block, the
+ * transient set, and the bytes that set's own hash works out of. A connection takes those bytes once
+ * for its slot and reuses them for every packet, so a MAC on the packet path costs no borrow and no
+ * wipe.
  */
+
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_HMAC_SHA512
 
 #include "crypto/mac/hmac_sha512.h"
+#include "crypto/hash/sha512.h" // the Sha512 entries the inner and outer hashes run through
 #include "crypto/crypto_opt.h"
 #include "mmgr/protomem.h"
+
 PROTOCORE_CRYPTO_HOT
 PROTOCORE_BEGIN_DECLS
 
-// The transient half of the caller's bytes: live inside init and inside final, dead between them.
+// The transient half of the caller's bytes: live inside init and inside final, dead between them. The
+// two 128-byte key blocks double as key-padding scratch for build_key_block.
 typedef struct
 {
-    uint8_t ipad[PROTOCORE_SHA512_BLOCK_LEN];          ///< K XOR 0x36, folded into the inner hash by init
-    uint8_t kpad[PROTOCORE_SHA512_BLOCK_LEN];          ///< the key zero-padded to the block, or its hash
+    uint8_t opad[PROTOCORE_SHA512_BLOCK_LEN];          ///< one-shot opad block (inner->outer); else key-pad scratch
+    uint8_t ipad[PROTOCORE_SHA512_BLOCK_LEN];          ///< ipad block; also key-pad scratch once its ipad is consumed
     uint8_t inner_digest[PROTOCORE_SHA512_DIGEST_LEN]; ///< H((K XOR ipad) || m)
-    protocore_sha512_ctx hash;                         ///< the outer hash final runs
 } Hmac512Work;
 
-// The caller's working bytes, split: the inner hash's own, the outer key block, the transient set, and
-// the bytes that set's own hash works out of.
+// The module's own borrow, split by offset: the inner hash's bytes, the outer key block, the transient
+// set, and the bytes that set's own hash works out of.
 #define HMAC512_OFF_INNER 0u
 #define HMAC512_OFF_OKEY (HMAC512_OFF_INNER + PROTOCORE_SHA512_BORROW)
 #define HMAC512_OFF_WORK (HMAC512_OFF_OKEY + PROTOCORE_SHA512_BLOCK_LEN)
 #define HMAC512_OFF_HASH (HMAC512_OFF_WORK + sizeof(Hmac512Work))
 static_assert(HMAC512_OFF_HASH + PROTOCORE_SHA512_BORROW <= PROTOCORE_HMAC_SHA512_BORROW,
               "PROTOCORE_HMAC_SHA512_BORROW is short of the split - raise it in protocore_config.h, which "
-              "every consumer sizes its own borrow from");
+              "sums it into the secure arena");
 
-// One 128-byte HMAC key block into @p block: keys > 128 bytes are pre-hashed (RFC 2104), else
-// zero-padded, using @p kpad to hold the padded key and @p hw for the pre-hash.
+// The regions, at their offsets in the caller's borrow.
+#define HMAC512_INNER(w) ((w) + HMAC512_OFF_INNER)
+#define HMAC512_OKEY(w) ((w) + HMAC512_OFF_OKEY)
+#define HMAC512_WORK(w) ((Hmac512Work *)(void *)((w) + HMAC512_OFF_WORK))
+#define HMAC512_HASH(w) ((w) + HMAC512_OFF_HASH)
+
+// One 128-byte HMAC key block into @p block (RFC 2104 sec 2): keys > 128 bytes are pre-hashed, else
+// zero-padded, using @p kpad (128 bytes) to hold the padded key and @p hw for the pre-hash. Both
+// @p block and @p kpad are pool-resident, never the stack.
 static void build_key_block(const uint8_t *key, size_t key_len, uint8_t block[PROTOCORE_SHA512_BLOCK_LEN],
                             uint8_t pad_byte, uint8_t kpad[PROTOCORE_SHA512_BLOCK_LEN], uint8_t *hw)
 {
     mem.set(kpad, 0, PROTOCORE_SHA512_BLOCK_LEN);
     if (key_len > PROTOCORE_SHA512_BLOCK_LEN)
     {
-        protocore_sha512(hw, key, key_len, kpad); // 64-byte digest; the remaining 64 bytes stay zero
+        // Keys longer than the block become their SHA-512 hash: 64 bytes, the remaining 64 stay zero.
+        Sha512.hash_args.data = key;
+        Sha512.hash_args.len = key_len;
+        Sha512.hash_args.out = kpad;
+        Sha512.hash(hw);
     }
     else
     {
@@ -56,40 +81,103 @@ static void build_key_block(const uint8_t *key, size_t key_len, uint8_t block[PR
     }
 }
 
-void protocore_hmac_sha512_init(protocore_hmac_sha512_ctx *ctx, uint8_t *work, const uint8_t *key, size_t key_len)
+// --- the entries -----------------------------------------------------------
+
+static void hmac_init(uint8_t *restrict work)
 {
-    ctx->work = work;
-    Hmac512Work *w = (Hmac512Work *)(work + HMAC512_OFF_WORK);
-    // ipad -> the inner hash, opad -> the slot final reads it back from
-    build_key_block(key, key_len, w->ipad, 0x36u, w->kpad, work + HMAC512_OFF_HASH);
-    build_key_block(key, key_len, work + HMAC512_OFF_OKEY, 0x5cu, w->kpad, work + HMAC512_OFF_HASH);
-    protocore_sha512_init(&ctx->inner, work + HMAC512_OFF_INNER);
-    protocore_sha512_update(&ctx->inner, w->ipad, PROTOCORE_SHA512_BLOCK_LEN);
+    HmacSha512.ok = PROTO_FALSE;
+    if (!work)
+    {
+        return;
+    }
+    Hmac512Work *w = HMAC512_WORK(work);
+    // ipad -> scratch (opad slot holds the padded key), opad -> the slot final reads it back from
+    build_key_block(HmacSha512.key_args.key, HmacSha512.key_args.key_len, w->ipad, 0x36u, w->opad,
+                    HMAC512_HASH(work));
+    build_key_block(HmacSha512.key_args.key, HmacSha512.key_args.key_len, HMAC512_OKEY(work), 0x5cu, w->opad,
+                    HMAC512_HASH(work));
+
+    Sha512.init(HMAC512_INNER(work));
+    Sha512.update_args.data = w->ipad;
+    Sha512.update_args.len = PROTOCORE_SHA512_BLOCK_LEN;
+    Sha512.update(HMAC512_INNER(work));
+    HmacSha512.ok = PROTO_TRUE;
 }
 
-void protocore_hmac_sha512_update(protocore_hmac_sha512_ctx *ctx, const uint8_t *data, size_t len)
+static void hmac_update(uint8_t *restrict work)
 {
-    protocore_sha512_update(&ctx->inner, data, len);
+    if (!work)
+    {
+        HmacSha512.ok = PROTO_FALSE;
+        return;
+    }
+    Sha512.update_args.data = HmacSha512.update_args.data;
+    Sha512.update_args.len = HmacSha512.update_args.len;
+    Sha512.update(HMAC512_INNER(work));
 }
 
-void protocore_hmac_sha512_final(protocore_hmac_sha512_ctx *ctx, uint8_t mac[PROTOCORE_HMAC_SHA512_LEN])
+static void hmac_final(uint8_t *restrict work)
 {
-    Hmac512Work *w = (Hmac512Work *)(ctx->work + HMAC512_OFF_WORK);
-    protocore_sha512_final(&ctx->inner, w->inner_digest);
-    protocore_sha512_init(&w->hash, ctx->work + HMAC512_OFF_HASH);
-    protocore_sha512_update(&w->hash, ctx->work + HMAC512_OFF_OKEY, PROTOCORE_SHA512_BLOCK_LEN);
-    protocore_sha512_update(&w->hash, w->inner_digest, PROTOCORE_SHA512_DIGEST_LEN);
-    protocore_sha512_final(&w->hash, mac);
+    if (!work || !HmacSha512.final_args.out)
+    {
+        HmacSha512.ok = PROTO_FALSE;
+        return;
+    }
+    Hmac512Work *w = HMAC512_WORK(work);
+    Sha512.final_args.out = w->inner_digest;
+    Sha512.final(HMAC512_INNER(work));
+
+    // Outer hash: H(okey || inner_digest)
+    Sha512.init(HMAC512_HASH(work));
+    Sha512.update_args.data = HMAC512_OKEY(work);
+    Sha512.update_args.len = PROTOCORE_SHA512_BLOCK_LEN;
+    Sha512.update(HMAC512_HASH(work));
+    Sha512.update_args.data = w->inner_digest;
+    Sha512.update_args.len = PROTOCORE_SHA512_DIGEST_LEN;
+    Sha512.update(HMAC512_HASH(work));
+    Sha512.final_args.out = HmacSha512.final_args.out;
+    Sha512.final(HMAC512_HASH(work));
+    HmacSha512.ok = PROTO_TRUE;
 }
 
-void protocore_hmac_sha512(uint8_t *work, const uint8_t *key, size_t key_len, const uint8_t *data, size_t len,
-                           uint8_t mac[PROTOCORE_HMAC_SHA512_LEN])
+static void hmac_mac(uint8_t *restrict work)
 {
-    protocore_hmac_sha512_ctx ctx = {0};
-    protocore_hmac_sha512_init(&ctx, work, key, key_len);
-    protocore_hmac_sha512_update(&ctx, data, len);
-    protocore_hmac_sha512_final(&ctx, mac);
+    HmacSha512.ok = PROTO_FALSE;
+    if (!work || !HmacSha512.mac_args.out)
+    {
+        return;
+    }
+    // Self-contained: ipad block first, fold it into the inner hash, then reuse its slot as the opad
+    // key-padding scratch - so no key block ever lands on the stack.
+    const uint8_t *key = HmacSha512.mac_args.key;
+    const size_t key_len = HmacSha512.mac_args.key_len;
+    Hmac512Work *w = HMAC512_WORK(work);
+    uint8_t *hw = HMAC512_HASH(work);
+    build_key_block(key, key_len, w->ipad, 0x36u, w->opad, hw); // ipad block (opad slot as key-pad scratch)
+    Sha512.init(hw);
+    Sha512.update_args.data = w->ipad;
+    Sha512.update_args.len = PROTOCORE_SHA512_BLOCK_LEN;
+    Sha512.update(hw);
+    Sha512.update_args.data = HmacSha512.mac_args.data;
+    Sha512.update_args.len = HmacSha512.mac_args.len;
+    Sha512.update(hw);
+    Sha512.final_args.out = w->inner_digest;
+    Sha512.final(hw); // inner = H((K XOR ipad) || m)
+
+    build_key_block(key, key_len, w->opad, 0x5cu, w->ipad, hw); // opad block (ipad slot now free as scratch)
+    Sha512.init(hw);
+    Sha512.update_args.data = w->opad;
+    Sha512.update_args.len = PROTOCORE_SHA512_BLOCK_LEN;
+    Sha512.update(hw);
+    Sha512.update_args.data = w->inner_digest;
+    Sha512.update_args.len = PROTOCORE_SHA512_DIGEST_LEN;
+    Sha512.update(hw);
+    Sha512.final_args.out = HmacSha512.mac_args.out;
+    Sha512.final(hw); // HMAC = H((K XOR opad) || inner)
+    HmacSha512.ok = PROTO_TRUE;
 }
+
+HmacSha512Ns HmacSha512 = {.init = hmac_init, .update = hmac_update, .final = hmac_final, .mac = hmac_mac};
 
 PROTOCORE_END_DECLS
 

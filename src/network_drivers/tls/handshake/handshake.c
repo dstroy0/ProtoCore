@@ -93,14 +93,17 @@ static void fail(struct TlsConnInternal *restrict ctx, uint8_t alert)
 // Fold a whole handshake message (header included) into the running Transcript-Hash.
 static void transcript_add(struct TlsConnInternal *restrict ctx, const uint8_t *msg, size_t len)
 {
-    protocore_sha256_update(&ctx->c->transcript, msg, len);
+    Sha256.update_args.data = msg;
+    Sha256.update_args.len = len;
+    Sha256.update(ctx->c->transcript);
 }
 
 // The Transcript-Hash so far into terms[off]. Finalizing compresses the padded blocks into a copy of
 // the state, so the running context is untouched and keeps taking messages.
 static void transcript_peek(struct TlsConnInternal *restrict ctx, size_t off)
 {
-    protocore_sha256_final(&ctx->c->transcript, ctx->c->terms + off);
+    Sha256.final_args.out = ctx->c->terms + off;
+    Sha256.final(ctx->c->transcript);
 }
 
 // The body length a handshake message header declares.
@@ -180,8 +183,13 @@ static void server_flight(struct TlsConnInternal *restrict ctx)
     uint8_t *out = ctx->ns->out_args.out;
     const size_t out_cap = ctx->ns->out_args.out_cap;
 
-    protocore_x25519_base(c->terms + TLS_TERM_SHARE, c->cfg->ephemeral_priv);
-    protocore_x25519(c->terms + TLS_TERM_SECRET, c->cfg->ephemeral_priv, c->hello->client_x25519);
+    Curve25519.x25519_base_args.scalar = c->cfg->ephemeral_priv;
+    Curve25519.x25519_base_args.out = c->terms + TLS_TERM_SHARE;
+    Curve25519.x25519_base(c->sign_work);
+    Curve25519.x25519_args.scalar = c->cfg->ephemeral_priv;
+    Curve25519.x25519_args.point = c->hello->client_x25519;
+    Curve25519.x25519_args.out = c->terms + TLS_TERM_SECRET;
+    Curve25519.x25519(c->sign_work);
 
     size_t off = 0;
 
@@ -407,7 +415,8 @@ static void conn_init(struct TlsConnInternal *restrict ctx)
     c->cfg = ctx->ns->init_args.cfg;
     c->role = ctx->ns->init_args.role;
     c->state = TLS_CONN_START;
-    protocore_sha256_init(&c->transcript, c->hash_work);
+    c->transcript = c->hash_work;
+    Sha256.init(c->transcript);
 
     Tls13Ks.bind.kdf = &TLS13_KDF;
     Tls13Ks.bind.ks = &c->ks;

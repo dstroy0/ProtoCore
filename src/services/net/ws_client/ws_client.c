@@ -15,8 +15,10 @@
 
 #if PROTOCORE_ENABLE_WS_CLIENT
 
-#include "crypto/hash/sha1.h"                                 // protocore_sha1: the accept computation
-#include "crypto/rng/rng.h"                                   // protocore_rand_fill: the key and the Masking-key
+#include "crypto/hash/sha1.h"                                 // Sha1: the accept computation
+#include "crypto/rng/rng.h"                                   // Rng: the key and the Masking-key
+#include "mmgr/secure.h"                                      // the pool the digest borrow comes from
+#include "mmgr/span.h"                                        // protocore_span, span.ok
 #include "mmgr/membuild.h"                                    // protocore_sb: the request-line and its field lines
 #include "mmgr/protomem.h"                                    // mem.cpy / mem.cmp / mem.chr
 #include "mmgr/protostr.h"                                    // str.len / str.starts
@@ -147,7 +149,18 @@ static void ws_accept_for_key(struct WsClientInternal *restrict ctx)
     mem.cpy(concat, key, klen);
     mem.cpy(concat + klen, WS_ACCEPT_GUID, glen);
     uint8_t digest[PROTOCORE_SHA1_DIGEST_LEN];
-    protocore_sha1((const uint8_t *)concat, klen + glen, digest);
+    const size_t mark = protocore_secure_mark();
+    protocore_span w = protocore_secure_span(PROTOCORE_SHA1_BORROW, 8);
+    if (!span.ok(w))
+    {
+        protocore_secure_release(mark);
+        return;
+    }
+    Sha1.hash_args.data = (const uint8_t *)concat;
+    Sha1.hash_args.len = klen + glen;
+    Sha1.hash_args.out = digest;
+    Sha1.hash(w.buf);
+    protocore_secure_release(mark);
     Base64.encode(digest, PROTOCORE_SHA1_DIGEST_LEN, accept);
 }
 
@@ -549,7 +562,9 @@ static proto_bool ws_emit_frame(struct WsClientInternal *restrict ctx, uint8_t o
         return PROTO_FALSE;
     }
     uint8_t mask[4];
-    protocore_rand_fill(mask, sizeof(mask));
+    Rng.fill_args.out = mask;
+    Rng.fill_args.len = sizeof(mask);
+    Rng.fill(protocore_rng_span());
     ctx->ns->frame.opcode = opcode;
     ctx->ns->frame.payload = payload;
     ctx->ns->frame.payload_len = len;
@@ -773,7 +788,9 @@ static void ws_connect(struct WsClientInternal *restrict ctx)
     // |Sec-WebSocket-Key| is 16 fresh random octets, base64-encoded (RFC 6455 sec 4.1); the accept
     // it implies is computed now and compared against the field the server sends back.
     uint8_t key_raw[16];
-    protocore_rand_fill(key_raw, sizeof(key_raw));
+    Rng.fill_args.out = key_raw;
+    Rng.fill_args.len = sizeof(key_raw);
+    Rng.fill(protocore_rng_span());
     char key_b64[PROTOCORE_WS_KEY_CAP];
     Base64.encode(key_raw, sizeof(key_raw), key_b64);
     char accept[PROTOCORE_WS_ACCEPT_CAP];

@@ -26,12 +26,61 @@
 
 PROTOCORE_BEGIN_DECLS
 
+/** @brief Poly1305 one-time key length in bytes (r || s). */
 #define PROTOCORE_POLY1305_KEY_LEN 32
+
+/** @brief Poly1305 tag length in bytes. */
 #define PROTOCORE_POLY1305_TAG_LEN 16
 
-/** @brief Compute the 16-byte Poly1305 tag over @p msg under the 32-byte one-time @p key. */
-void protocore_poly1305(uint8_t tag[PROTOCORE_POLY1305_TAG_LEN], const uint8_t *msg, size_t len,
-                        const uint8_t key[PROTOCORE_POLY1305_KEY_LEN]);
+// PROTOCORE_POLY1305_BORROW - the bytes a tag runs out of - is stated in protocore_config.h, which
+// sums it into the secure arena. A caller takes them once and passes the pointer to every call.
+
+/** @brief The key and message a tag is taken over. */
+typedef struct
+{
+    const uint8_t *key; ///< PROTOCORE_POLY1305_KEY_LEN bytes, used exactly once
+    const uint8_t *msg; ///< the message
+    size_t len;         ///< its length
+    uint8_t *out;       ///< PROTOCORE_POLY1305_TAG_LEN bytes
+} Poly1305MacArgs;
+
+/**
+ * @brief Poly1305 one-time authenticator (RFC 8439 Section 2.5).
+ *
+ * A caller sets the members the call takes, invokes it through ::Poly1305 with the bytes it runs out
+ * of, and reads the outcome off the same handle. How those bytes are carved is this module's and is
+ * never named here.
+ *
+ *   Poly1305.mac_args.key = poly_key;
+ *   Poly1305.mac_args.msg = packet;
+ *   Poly1305.mac_args.len = packet_len;
+ *   Poly1305.mac_args.out = tag;
+ *   Poly1305.mac(work);
+ *
+ * @var Poly1305Ns::mac_args  the key and message a tag is taken over
+ * @var Poly1305Ns::ok        the call's true/false outcome
+ * @var Poly1305Ns::mac       take the 16-byte tag over the whole message under the one-time key
+ *
+ * @c work is PROTOCORE_POLY1305_BORROW secure bytes the CALLER took, at an address it knows. It
+ * arrives @c restrict and is not held past the call, so nothing here aliases it. The caller releases
+ * it, and the pool wipes on release; this module neither takes it, holds it, releases it, nor wipes
+ * it. The borrow IS the accumulator, so a tag taken under a caller whose own borrow is still live is
+ * a second borrow and the two never collide.
+ *
+ * No storage member and no context: a caller sets operands and reads @ref Poly1305Ns::ok, and that is
+ * all the surface there is.
+ */
+typedef struct
+{
+    Poly1305MacArgs mac_args;
+
+    proto_bool ok;
+
+    void (*const mac)(uint8_t *restrict work);
+} Poly1305Ns;
+
+/** @brief The one symbol this module exports. */
+extern Poly1305Ns Poly1305;
 
 PROTOCORE_END_DECLS
 

@@ -7,7 +7,7 @@
  */
 
 #include "network_drivers/presentation/ssh/app/client.h"
-#include "crypto/asymmetric/ed25519.h" // protocore_ed25519_pubkey(): the provisioning key derivation
+#include "crypto/asymmetric/ed25519.h" // Ed25519.pubkey: the provisioning key derivation
 #include "mmgr/arena.h"
 #include "mmgr/protomem.h"
 #include "mmgr/secure.h"
@@ -60,7 +60,9 @@ static void pubkey(struct SshAppClientInternal *restrict ctx)
         mem.zero(pub, 32);
         return;
     }
-    protocore_ed25519_pubkey(work, pub, seed);
+    Ed25519.pubkey_args.seed = seed;
+    Ed25519.pubkey_args.pub = pub;
+    Ed25519.pubkey(work);
 }
 
 #else

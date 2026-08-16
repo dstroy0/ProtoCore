@@ -41,10 +41,28 @@ static void tohex(const uint8_t *d, size_t n, char *out)
     out[2 * n] = '\0';
 }
 
+// The namespace, called the way the vectors below read: operands in, one call, digest out. A running
+// digest is its borrow, so a streaming case feeds g_ctx_work and never carries a handle of its own.
+static void sha_update(const void *data, size_t len)
+{
+    Sha256.update_args.data = (const uint8_t *)data;
+    Sha256.update_args.len = len;
+    Sha256.update(g_ctx_work);
+}
+
+static void sha_final(uint8_t *out)
+{
+    Sha256.final_args.out = out;
+    Sha256.final(g_ctx_work);
+}
+
 static void one_shot_hex(const void *msg, size_t len, char out[65])
 {
     uint8_t d[PROTOCORE_SHA256_DIGEST_LEN];
-    protocore_sha256(g_work, (const uint8_t *)msg, len, d);
+    Sha256.hash_args.data = (const uint8_t *)msg;
+    Sha256.hash_args.len = len;
+    Sha256.hash_args.out = d;
+    Sha256.hash(g_work);
     tohex(d, sizeof(d), out);
 }
 
@@ -78,17 +96,16 @@ void test_rfc6234_published_vectors(void)
 // so the streaming path carries the length across 15,625 compressions.
 void test_rfc6234_one_million_a(void)
 {
-    protocore_sha256_ctx c;
     uint8_t chunk[1000];
     memset(chunk, 'a', sizeof(chunk));
 
-    protocore_sha256_init(&c, g_ctx_work);
+    Sha256.init(g_ctx_work);
     for (int i = 0; i < 1000; i++)
     {
-        protocore_sha256_update(&c, chunk, sizeof(chunk));
+        sha_update(chunk, sizeof(chunk));
     }
     uint8_t d[PROTOCORE_SHA256_DIGEST_LEN];
-    protocore_sha256_final(&c, d);
+    sha_final(d);
 
     char got[65];
     tohex(d, sizeof(d), got);
@@ -112,13 +129,12 @@ void test_chunk_boundaries_do_not_change_the_digest(void)
     const size_t n = sizeof(MSG) - 1;
     for (size_t cut = 0; cut <= n; cut++)
     {
-        protocore_sha256_ctx c;
         uint8_t d[PROTOCORE_SHA256_DIGEST_LEN];
         char got[65];
-        protocore_sha256_init(&c, g_ctx_work);
-        protocore_sha256_update(&c, (const uint8_t *)MSG, cut);
-        protocore_sha256_update(&c, (const uint8_t *)MSG + cut, n - cut);
-        protocore_sha256_final(&c, d);
+        Sha256.init(g_ctx_work);
+        sha_update((const uint8_t *)MSG, cut);
+        sha_update((const uint8_t *)MSG + cut, n - cut);
+        sha_final(d);
         tohex(d, sizeof(d), got);
         TEST_ASSERT_EQUAL_STRING_MESSAGE("248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1", got, MSG);
     }
@@ -127,16 +143,15 @@ void test_chunk_boundaries_do_not_change_the_digest(void)
 // A zero-length update is a no-op, so it may not disturb a running digest.
 void test_empty_update_is_a_no_op(void)
 {
-    protocore_sha256_ctx c;
     uint8_t d[PROTOCORE_SHA256_DIGEST_LEN];
     char got[65];
-    protocore_sha256_init(&c, g_ctx_work);
-    protocore_sha256_update(&c, (const uint8_t *)"", 0);
-    protocore_sha256_update(&c, (const uint8_t *)"a", 1);
-    protocore_sha256_update(&c, (const uint8_t *)"", 0);
-    protocore_sha256_update(&c, (const uint8_t *)"bc", 2);
-    protocore_sha256_update(&c, (const uint8_t *)"", 0);
-    protocore_sha256_final(&c, d);
+    Sha256.init(g_ctx_work);
+    sha_update((const uint8_t *)"", 0);
+    sha_update((const uint8_t *)"a", 1);
+    sha_update((const uint8_t *)"", 0);
+    sha_update((const uint8_t *)"bc", 2);
+    sha_update((const uint8_t *)"", 0);
+    sha_final(d);
     tohex(d, sizeof(d), got);
     TEST_ASSERT_EQUAL_STRING("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad", got);
 }
@@ -147,23 +162,22 @@ void test_empty_update_is_a_no_op(void)
 void test_final_leaves_the_context_running(void)
 {
     static const char MSG[] = TEST2_1;
-    protocore_sha256_ctx c;
     uint8_t d[PROTOCORE_SHA256_DIGEST_LEN];
     char got[65];
 
-    protocore_sha256_init(&c, g_ctx_work);
-    protocore_sha256_update(&c, (const uint8_t *)"abc", 3);
-    protocore_sha256_final(&c, d);
+    Sha256.init(g_ctx_work);
+    sha_update((const uint8_t *)"abc", 3);
+    sha_final(d);
     tohex(d, sizeof(d), got);
     TEST_ASSERT_EQUAL_STRING("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad", got);
 
     // Reading it twice in a row must give the same answer.
-    protocore_sha256_final(&c, d);
+    sha_final(d);
     tohex(d, sizeof(d), got);
     TEST_ASSERT_EQUAL_STRING("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad", got);
 
-    protocore_sha256_update(&c, (const uint8_t *)MSG + 3, sizeof(MSG) - 1 - 3);
-    protocore_sha256_final(&c, d);
+    sha_update((const uint8_t *)MSG + 3, sizeof(MSG) - 1 - 3);
+    sha_final(d);
     tohex(d, sizeof(d), got);
     TEST_ASSERT_EQUAL_STRING("248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1", got);
 }
@@ -173,15 +187,14 @@ void test_one_shot_matches_streaming(void)
 {
     static const char MSG[] = "The quick brown fox jumps over the lazy dog";
     uint8_t one[PROTOCORE_SHA256_DIGEST_LEN], streamed[PROTOCORE_SHA256_DIGEST_LEN];
-    protocore_sha256(g_work, (const uint8_t *)MSG, sizeof(MSG) - 1, one);
+    Sha256.hash_args.data = (const uint8_t *)MSG; Sha256.hash_args.len = sizeof(MSG) - 1; Sha256.hash_args.out = one; Sha256.hash(g_work);
 
-    protocore_sha256_ctx c;
-    protocore_sha256_init(&c, g_ctx_work);
+    Sha256.init(g_ctx_work);
     for (size_t i = 0; i < sizeof(MSG) - 1; i++)
     {
-        protocore_sha256_update(&c, (const uint8_t *)MSG + i, 1);
+        sha_update((const uint8_t *)MSG + i, 1);
     }
-    protocore_sha256_final(&c, streamed);
+    sha_final(streamed);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(one, streamed, PROTOCORE_SHA256_DIGEST_LEN);
 }
 
@@ -190,12 +203,12 @@ void test_one_shot_matches_streaming(void)
 void test_distinct_messages_hash_differently(void)
 {
     uint8_t a[PROTOCORE_SHA256_DIGEST_LEN], b[PROTOCORE_SHA256_DIGEST_LEN];
-    protocore_sha256(g_work, (const uint8_t *)"abc", 3, a);
-    protocore_sha256(g_work, (const uint8_t *)"abd", 3, b);
+    Sha256.hash_args.data = (const uint8_t *)"abc"; Sha256.hash_args.len = 3; Sha256.hash_args.out = a; Sha256.hash(g_work);
+    Sha256.hash_args.data = (const uint8_t *)"abd"; Sha256.hash_args.len = 3; Sha256.hash_args.out = b; Sha256.hash(g_work);
     TEST_ASSERT_TRUE(memcmp(a, b, sizeof(a)) != 0);
 
-    protocore_sha256(g_work, (const uint8_t *)"abc", 3, a);
-    protocore_sha256(g_work, (const uint8_t *)"abc\0", 4, b);
+    Sha256.hash_args.data = (const uint8_t *)"abc"; Sha256.hash_args.len = 3; Sha256.hash_args.out = a; Sha256.hash(g_work);
+    Sha256.hash_args.data = (const uint8_t *)"abc\0"; Sha256.hash_args.len = 4; Sha256.hash_args.out = b; Sha256.hash(g_work);
     TEST_ASSERT_TRUE(memcmp(a, b, sizeof(a)) != 0);
 }
 
@@ -209,7 +222,7 @@ void test_block_length_constants(void)
 
     // 64 octets of TEST4 is one whole block; its digest must differ from the 63-octet prefix.
     uint8_t full[PROTOCORE_SHA256_DIGEST_LEN], short_[PROTOCORE_SHA256_DIGEST_LEN];
-    protocore_sha256(g_work, (const uint8_t *)TEST4, 64, full);
-    protocore_sha256(g_work, (const uint8_t *)TEST4, 63, short_);
+    Sha256.hash_args.data = (const uint8_t *)TEST4; Sha256.hash_args.len = 64; Sha256.hash_args.out = full; Sha256.hash(g_work);
+    Sha256.hash_args.data = (const uint8_t *)TEST4; Sha256.hash_args.len = 63; Sha256.hash_args.out = short_; Sha256.hash(g_work);
     TEST_ASSERT_TRUE(memcmp(full, short_, sizeof(full)) != 0);
 }

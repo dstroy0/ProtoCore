@@ -5,13 +5,20 @@
  * @file sha256.c
  * @brief SHA-256 implementation (FIPS 180-4).
  *
- * HW path: streaming + one-shot delegate to mbedtls. SW path: the implementation below. On
- * native builds the software path below is used. Shared by SSH, TLS 1.3 / QUIC / DTLS, SNMPv3, JWT,
- * CSRF, and SMB 2.x message signing.
+ * One context and one set of entries; only the block compression has two arms - the accelerator where
+ * the part carries one, the FIPS 180-4 rounds below where it does not. Shared by SSH,
+ * TLS 1.3 / QUIC / DTLS, SNMPv3, JWT, CSRF, and SMB 2.x message signing.
+ *
+ * The context is this file's. The module's own borrow is split by offset into the block as it
+ * arrives, the padded last one, and the state copy finalizing compresses into.
  */
+
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_SHA256
 
+#if PROTOCORE_HAS_HW_SHA
+#endif
 #if !PROTOCORE_HAS_HW_SHA
 #include "mmgr/endian.h" // native software SHA-256
 #endif
@@ -22,55 +29,40 @@
 PROTOCORE_CRYPTO_HOT
 PROTOCORE_BEGIN_DECLS
 
-#if PROTOCORE_HAS_HW_SHA
+// The one definition, both arms, private to this TU. The accelerator compresses a block; it does not
+// pad, buffer a partial block, or hold a digest a caller can keep feeding. Those are this file's, so
+// the state a context carries is the same either way and only the compression below has two arms.
+//
+// Only what is not derivable: the regions live at fixed offsets in the caller's borrow, so a helper
+// computes them from the pointer rather than the context storing them.
+typedef struct
+{
+    uint32_t s[8];  ///< Running hash words (H0..H7).
+    uint64_t n;     ///< Total bytes processed so far.
+    uint32_t rxlen; ///< Bytes valid in rx.
+} Sha256Ctx;
+
+// The caller's borrow, split: the running context, the block as it arrives, the padded last one, and
+// the state copy the padded blocks compress into so finalizing leaves the running hash alone.
+#define SHA256_OFF_CTX 0u
+#define SHA256_OFF_RX (SHA256_OFF_CTX + sizeof(Sha256Ctx))
+#define SHA256_OFF_TX (SHA256_OFF_RX + PROTOCORE_SHA256_BLOCK_LEN)
+#define SHA256_OFF_STATE (SHA256_OFF_TX + PROTOCORE_SHA256_BLOCK_LEN)
+static_assert(SHA256_OFF_STATE + sizeof(uint32_t) * 8 <= PROTOCORE_SHA256_BORROW,
+              "PROTOCORE_SHA256_BORROW is short of the context, the two blocks and the state copy - "
+              "raise it in protocore_config.h, which derives PROTOCORE_SECURE_ARENA_SIZE from it");
+
+// The regions, at their offsets in the caller's borrow.
+#define SHA256_CTX(w) ((Sha256Ctx *)(void *)((w) + SHA256_OFF_CTX))
+#define SHA256_RX(w) ((w) + SHA256_OFF_RX)
+#define SHA256_TX(w) ((w) + SHA256_OFF_TX)
+#define SHA256_FS(w) ((uint32_t *)(void *)((w) + SHA256_OFF_STATE))
 
 // ---------------------------------------------------------------------------
-// HW path: streaming + one-shot via mbedtls.
+// SHA-256 (FIPS 180-4).
 // ---------------------------------------------------------------------------
 
-void protocore_sha256_init(protocore_sha256_ctx *ctx, uint8_t *work)
-{
-    (void)work; // the accelerator carries its own
-    mbedtls_sha256_init(&ctx->mbed);
-#if MBEDTLS_VERSION_MAJOR >= 3
-    mbedtls_sha256_starts(&ctx->mbed, 0 /* 0 = SHA-256 */);
-#else
-    mbedtls_sha256_starts_ret(&ctx->mbed, 0);
-#endif
-}
-
-void protocore_sha256_update(protocore_sha256_ctx *ctx, const uint8_t *data, size_t len)
-{
-#if MBEDTLS_VERSION_MAJOR >= 3
-    mbedtls_sha256_update(&ctx->mbed, data, len);
-#else
-    mbedtls_sha256_update_ret(&ctx->mbed, data, len);
-#endif
-}
-
-void protocore_sha256_final(protocore_sha256_ctx *ctx, uint8_t digest[PROTOCORE_SHA256_DIGEST_LEN])
-{
-#if MBEDTLS_VERSION_MAJOR >= 3
-    mbedtls_sha256_finish(&ctx->mbed, digest);
-#else
-    mbedtls_sha256_finish_ret(&ctx->mbed, digest);
-#endif
-    mbedtls_sha256_free(&ctx->mbed);
-}
-
-void protocore_sha256(uint8_t *work, const uint8_t *data, size_t len, uint8_t digest[PROTOCORE_SHA256_DIGEST_LEN])
-{
-    (void)work; // the accelerator carries its own, the same as init
-    (void)mbedtls_sha256(data, len, digest, 0 /* 0 = SHA-256, 1 = SHA-224 */);
-}
-#endif
-
-#if !PROTOCORE_HAS_HW_SHA // native software path
-
-// ---------------------------------------------------------------------------
-// SW path: software SHA-256 (FIPS 180-4).
-// ---------------------------------------------------------------------------
-
+#if !PROTOCORE_HAS_HW_SHA
 static const uint32_t K256[64] = {
     0x428a2f98u, 0x71374491u, 0xb5c0fbcfu, 0xe9b5dba5u, 0x3956c25bu, 0x59f111f1u, 0x923f82a4u, 0xab1c5ed5u,
     0xd807aa98u, 0x12835b01u, 0x243185beu, 0x550c7dc3u, 0x72be5d74u, 0x80deb1feu, 0x9bdc06a7u, 0xc19bf174u,
@@ -81,23 +73,25 @@ static const uint32_t K256[64] = {
     0x19a4c116u, 0x1e376c08u, 0x2748774cu, 0x34b0bcb5u, 0x391c0cb3u, 0x4ed8aa4au, 0x5b9cca4fu, 0x682e6ff3u,
     0x748f82eeu, 0x78a5636fu, 0x84c87814u, 0x8cc70208u, 0x90befffau, 0xa4506cebu, 0xbef9a3f7u, 0xc67178f2u,
 };
+#endif
 
 // Where the 64-bit message length sits in the final block (FIPS 180-4 §5.1.1).
 #define SHA256_LEN_OFF (PROTOCORE_SHA256_BLOCK_LEN - 8u)
-
-// The caller's working bytes, split: the block as it arrives, the padded last one, and the state copy
-// the padded blocks compress into so finalizing leaves the running hash alone.
-#define SHA256_OFF_RX 0u
-#define SHA256_OFF_TX (SHA256_OFF_RX + PROTOCORE_SHA256_BLOCK_LEN)
-#define SHA256_OFF_STATE (SHA256_OFF_TX + PROTOCORE_SHA256_BLOCK_LEN)
-static_assert(SHA256_OFF_STATE + sizeof(uint32_t) * 8 <= PROTOCORE_SHA256_BORROW,
-              "PROTOCORE_SHA256_BORROW is short of the schedule and the two blocks - raise it in protocore_config.h, "
-              "which derives PROTOCORE_SECURE_ARENA_SIZE from it");
 
 static const uint32_t H0[8] = {
     0x6a09e667u, 0xbb67ae85u, 0x3c6ef372u, 0xa54ff53au, 0x510e527fu, 0x9b05688cu, 0x1f83d9abu, 0x5be0cd19u,
 };
 
+#if PROTOCORE_HAS_HW_SHA
+// Compress one block into @p h on the accelerator. The state is written back per block, so two
+// contexts interleaving never share what the H bank holds.
+static void sha256_block(uint32_t h[8], const uint8_t blk[PROTOCORE_SHA256_BLOCK_LEN])
+{
+    protocore_sha_hw_block(PROTOCORE_SHA_MODE_256, h, 8u, (const uint32_t *)(const void *)blk, 16u, PROTO_FALSE);
+}
+#endif
+
+#if !PROTOCORE_HAS_HW_SHA
 static inline uint32_t rotr32(uint32_t x, uint32_t n)
 {
     return (x >> n) | (x << (32 - n));
@@ -283,19 +277,23 @@ static void sha256_block(uint32_t h[8], const uint8_t blk[PROTOCORE_SHA256_BLOCK
     h[6] += v6;
     h[7] += v7;
 }
+#endif // !PROTOCORE_HAS_HW_SHA (software compression)
 
-void protocore_sha256_init(protocore_sha256_ctx *ctx, uint8_t *work)
+// --- framing (one arm, both compressions) ----------------------------------
+
+// Seed the state.
+static void sha256_state_init(uint8_t *restrict work)
 {
+    Sha256Ctx *ctx = SHA256_CTX(work);
     mem.cpy(ctx->s, H0, sizeof(H0));
     ctx->n = 0;
-    ctx->rx = work + SHA256_OFF_RX;
-    ctx->tx = work + SHA256_OFF_TX;
-    ctx->fs = (uint32_t *)(work + SHA256_OFF_STATE);
     ctx->rxlen = 0;
 }
 
-void protocore_sha256_update(protocore_sha256_ctx *ctx, const uint8_t *data, size_t len)
+static void sha256_absorb(uint8_t *restrict work, const uint8_t *data, size_t len)
 {
+    Sha256Ctx *ctx = SHA256_CTX(work);
+    uint8_t *rx = SHA256_RX(work);
     ctx->n += len;
     while (len > 0)
     {
@@ -305,62 +303,106 @@ void protocore_sha256_update(protocore_sha256_ctx *ctx, const uint8_t *data, siz
             take = (uint32_t)len;
         }
         // rx + rxlen carries no alignment, so this is the raw mover, not the aligned-span one.
-        uint8_t *fill = ctx->rx + ctx->rxlen;
+        uint8_t *fill = rx + ctx->rxlen;
         proto_raw_read(fill, data, take);
         ctx->rxlen += take;
         data += take;
         len -= take;
         if (ctx->rxlen == PROTOCORE_SHA256_BLOCK_LEN)
         {
-            sha256_block(ctx->s, ctx->rx);
+            sha256_block(ctx->s, rx);
             ctx->rxlen = 0;
         }
     }
 }
 
-void protocore_sha256_final(protocore_sha256_ctx *ctx, uint8_t digest[PROTOCORE_SHA256_DIGEST_LEN])
+static void sha256_finish(uint8_t *restrict work, uint8_t digest[PROTOCORE_SHA256_DIGEST_LEN])
 {
+    Sha256Ctx *ctx = SHA256_CTX(work);
+    uint8_t *rx = SHA256_RX(work);
+    uint8_t *tx = SHA256_TX(work);
+    uint32_t *fs = SHA256_FS(work);
     uint64_t bitlen = ctx->n << 3;
 
     // The padded blocks compress into a copy of the state, so s, rx, rxlen and n all come out of this
     // untouched and the hash can keep taking data afterwards.
-    mem.cpy(ctx->fs, ctx->s, sizeof(ctx->s));
+    mem.cpy(fs, ctx->s, sizeof(ctx->s));
 
     // The last block is composed in tx, whole: what rx holds, the mark, zeros, and the length. rx is
     // read and never written back, so nothing it still carries from an earlier block reaches the wire.
-    mem.zero(ctx->tx, PROTOCORE_SHA256_BLOCK_LEN);
-    mem.cpy(ctx->tx, ctx->rx, ctx->rxlen);
-    ctx->tx[ctx->rxlen] = 0x80;
+    mem.zero(tx, PROTOCORE_SHA256_BLOCK_LEN);
+    mem.cpy(tx, rx, ctx->rxlen);
+    tx[ctx->rxlen] = 0x80;
 
     // The bit length occupies the block's last 8 bytes, so a mark at or past that offset takes its own.
     if (ctx->rxlen >= SHA256_LEN_OFF)
     {
-        sha256_block(ctx->fs, ctx->tx);
-        mem.zero(ctx->tx, PROTOCORE_SHA256_BLOCK_LEN);
+        sha256_block(fs, tx);
+        mem.zero(tx, PROTOCORE_SHA256_BLOCK_LEN);
     }
 
-    protocore_wr64be(ctx->tx + SHA256_LEN_OFF, bitlen);
-    sha256_block(ctx->fs, ctx->tx);
+    protocore_wr64be(tx + SHA256_LEN_OFF, bitlen);
+    sha256_block(fs, tx);
 
-    protocore_wr32be(digest, ctx->fs[0]);
-    protocore_wr32be(digest + 4, ctx->fs[1]);
-    protocore_wr32be(digest + 8, ctx->fs[2]);
-    protocore_wr32be(digest + 12, ctx->fs[3]);
-    protocore_wr32be(digest + 16, ctx->fs[4]);
-    protocore_wr32be(digest + 20, ctx->fs[5]);
-    protocore_wr32be(digest + 24, ctx->fs[6]);
-    protocore_wr32be(digest + 28, ctx->fs[7]);
+    protocore_wr32be(digest, fs[0]);
+    protocore_wr32be(digest + 4, fs[1]);
+    protocore_wr32be(digest + 8, fs[2]);
+    protocore_wr32be(digest + 12, fs[3]);
+    protocore_wr32be(digest + 16, fs[4]);
+    protocore_wr32be(digest + 20, fs[5]);
+    protocore_wr32be(digest + 24, fs[6]);
+    protocore_wr32be(digest + 28, fs[7]);
 }
 
-void protocore_sha256(uint8_t *work, const uint8_t *data, size_t len, uint8_t digest[PROTOCORE_SHA256_DIGEST_LEN])
+// --- the entries -----------------------------------------------------------
+
+static void sha256_init(uint8_t *restrict work)
 {
-    protocore_sha256_ctx ctx = {0};
-    protocore_sha256_init(&ctx, work);
-    protocore_sha256_update(&ctx, data, len);
-    protocore_sha256_final(&ctx, digest);
+    if (!work)
+    {
+        Sha256.ok = PROTO_FALSE;
+        return;
+    }
+    sha256_state_init(work);
+    Sha256.ok = PROTO_TRUE;
 }
 
-#endif // !PROTOCORE_HAS_HW_SHA (SW path)
+static void sha256_update(uint8_t *restrict work)
+{
+    if (!work)
+    {
+        Sha256.ok = PROTO_FALSE;
+        return;
+    }
+    sha256_absorb(work, Sha256.update_args.data, Sha256.update_args.len);
+}
+
+static void sha256_final(uint8_t *restrict work)
+{
+    if (!work || !Sha256.final_args.out)
+    {
+        Sha256.ok = PROTO_FALSE;
+        return;
+    }
+    sha256_finish(work, Sha256.final_args.out);
+    Sha256.ok = PROTO_TRUE;
+}
+
+// One-shot over the members already set: init, absorb, finish.
+static void sha256_hash(uint8_t *restrict work)
+{
+    Sha256.ok = PROTO_FALSE;
+    if (!work || !Sha256.hash_args.out)
+    {
+        return;
+    }
+    sha256_state_init(work);
+    sha256_absorb(work, Sha256.hash_args.data, Sha256.hash_args.len);
+    sha256_finish(work, Sha256.hash_args.out);
+    Sha256.ok = PROTO_TRUE;
+}
+
+Sha256Ns Sha256 = {.init = sha256_init, .update = sha256_update, .final = sha256_final, .hash = sha256_hash};
 
 PROTOCORE_END_DECLS
 

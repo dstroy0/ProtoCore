@@ -17,8 +17,15 @@
  * `protocore_fe_hw_enable()` / `protocore_fe_hw_disable()` (mbedTLS's own `esp_mpi_{enable,disable}_hardware_hw_op`,
  * i.e. acquire the MPI lock + clock/power the peripheral) and holds the lock for its whole run.
  *
- * Header-only `static inline` on purpose: the cheap ops (add/sub/cswap) inline into the ladder in each
- * translation unit with no cross-TU call overhead, and the whole layer stays one source of truth.
+ * `static inline` on purpose: the cheap ops (add/sub/cswap) inline into the ladder in each translation
+ * unit with no cross-TU call overhead, and the whole layer stays one source of truth.
+ *
+ * Two surfaces, and they are not the same kind of thing: the field ops below are shared internals that
+ * X25519 and Ed25519 are written in and call directly, and ::Fe25519 is the namespace this module
+ * exports over those same ops.
+ *
+ * @author  Douglas Quigg (dstroy0)
+ * @date    2026
  */
 
 #ifndef PROTOCORE_FE25519_H
@@ -28,8 +35,7 @@
 
 #if PROTOCORE_ENABLE_FE25519
 
-#include "core_setup/hal/esp/esp_crypto_hal.h" // protocore_rsa_modmul + protocore_rsa_hw_acquire/release (the RSA-accelerator HAL)
-#include "crypto/ct_eq.h"                      // protocore_ct_eq
+#include "crypto/ct_eq.h" // protocore_ct_eq
 
 PROTOCORE_BEGIN_DECLS
 
@@ -224,6 +230,220 @@ static inline int fe_neq(const fe a, const fe b)
     fe_tobytes(d, b);
     return protocore_ct_eq(c, d, 32) ? 0 : -1;
 }
+
+// --- the namespace over the field layer ------------------------------------
+//
+// Every field element an entry reads or writes is the caller's own, and no entry carries anything to
+// the next one, so none of them needs a borrow and this module states no BORROW constant.
+
+/** @brief The product a multiply writes and the two factors it reads. */
+typedef struct
+{
+    uint32_t *z;       ///< the destination fe, eight limbs; may alias @c x or @c y
+    const uint32_t *x; ///< the first factor, canonical
+    const uint32_t *y; ///< the second factor, canonical
+} Fe25519MulArgs;
+
+/** @brief The square a squaring writes and the element it reads. */
+typedef struct
+{
+    uint32_t *o;       ///< the destination fe, eight limbs
+    const uint32_t *x; ///< the element squared
+} Fe25519SqArgs;
+
+/** @brief The destination and source of a field-element copy. */
+typedef struct
+{
+    uint32_t *o;       ///< the destination fe, eight limbs
+    const uint32_t *a; ///< the source fe
+} Fe25519CopyArgs;
+
+/** @brief The element set to zero. */
+typedef struct
+{
+    uint32_t *o; ///< the destination fe, eight limbs
+} Fe25519ZeroArgs;
+
+/** @brief The element set to one. */
+typedef struct
+{
+    uint32_t *o; ///< the destination fe, eight limbs
+} Fe25519OneArgs;
+
+/** @brief The element canonicalized in place. */
+typedef struct
+{
+    uint32_t *o; ///< the fe reduced in place, in [p, 2p) on entry
+} Fe25519ReduceArgs;
+
+/** @brief The sum an addition writes and the two terms it reads. */
+typedef struct
+{
+    uint32_t *o;       ///< the destination fe, eight limbs
+    const uint32_t *x; ///< the first term, < p
+    const uint32_t *y; ///< the second term, < p
+} Fe25519AddArgs;
+
+/** @brief The difference a subtraction writes and the two terms it reads. */
+typedef struct
+{
+    uint32_t *o;       ///< the destination fe, eight limbs
+    const uint32_t *x; ///< the minuend, < p
+    const uint32_t *y; ///< the subtrahend, < p
+} Fe25519SubArgs;
+
+/** @brief The two elements a conditional swap exchanges, and the bit selecting it. */
+typedef struct
+{
+    uint32_t *x;   ///< the first fe, exchanged in place
+    uint32_t *y;   ///< the second fe, exchanged in place
+    uint32_t swap; ///< 1 swaps, 0 leaves both alone
+} Fe25519CswapArgs;
+
+/** @brief The 32 bytes a decode reads and the element it writes. */
+typedef struct
+{
+    uint32_t *o;      ///< the destination fe, eight limbs
+    const uint8_t *b; ///< 32 little-endian bytes; bit 255 is ignored
+} Fe25519FromBytesArgs;
+
+/** @brief The element an encode reads and the 32 bytes it writes. */
+typedef struct
+{
+    uint8_t *b;        ///< 32 little-endian bytes of the canonical residue
+    const uint32_t *a; ///< the source fe
+} Fe25519ToBytesArgs;
+
+/** @brief The inverse an inversion writes and the element it reads. */
+typedef struct
+{
+    uint32_t *o;       ///< the destination fe, eight limbs
+    const uint32_t *a; ///< the element inverted
+} Fe25519InvertArgs;
+
+/** @brief The power a^((p-5)/8) writes and the element it reads. */
+typedef struct
+{
+    uint32_t *o;       ///< the destination fe, eight limbs
+    const uint32_t *a; ///< the base
+} Fe25519Pow2523Args;
+
+/** @brief The element a parity read is taken over. */
+typedef struct
+{
+    const uint32_t *a; ///< the fe whose canonical encoding supplies the low bit
+} Fe25519ParityArgs;
+
+/** @brief The two elements an equality test compares. */
+typedef struct
+{
+    const uint32_t *a; ///< the first fe
+    const uint32_t *b; ///< the second fe
+} Fe25519NeqArgs;
+
+/**
+ * @brief GF(2^255-19) on the RSA/MPI accelerator.
+ *
+ * A caller sets the members a call takes, invokes it through ::Fe25519, and reads the outcome off the
+ * same handle.
+ *
+ *   Fe25519.hw_enable(work);
+ *   Fe25519.mul_args.z = z;
+ *   Fe25519.mul_args.x = x;
+ *   Fe25519.mul_args.y = y;
+ *   Fe25519.mul(work);
+ *   Fe25519.hw_disable(work);
+ *
+ * @var Fe25519Ns::mul_args        the product a multiply writes and the two factors it reads
+ * @var Fe25519Ns::sq_args         the square a squaring writes and the element it reads
+ * @var Fe25519Ns::copy_args       the destination and source of a field-element copy
+ * @var Fe25519Ns::zero_args       the element set to zero
+ * @var Fe25519Ns::one_args        the element set to one
+ * @var Fe25519Ns::reduce_args     the element canonicalized in place
+ * @var Fe25519Ns::add_args        the sum an addition writes and the two terms it reads
+ * @var Fe25519Ns::sub_args        the difference a subtraction writes and the two terms it reads
+ * @var Fe25519Ns::cswap_args      the two elements a conditional swap exchanges, and the bit selecting it
+ * @var Fe25519Ns::frombytes_args  the 32 bytes a decode reads and the element it writes
+ * @var Fe25519Ns::tobytes_args    the element an encode reads and the 32 bytes it writes
+ * @var Fe25519Ns::invert_args     the inverse an inversion writes and the element it reads
+ * @var Fe25519Ns::pow2523_args    the power a^((p-5)/8) writes and the element it reads
+ * @var Fe25519Ns::parity_args     the element a parity read is taken over
+ * @var Fe25519Ns::neq_args        the two elements an equality test compares
+ * @var Fe25519Ns::ok              a call's true/false outcome; false on a null operand
+ * @var Fe25519Ns::parity          the low bit of the canonical encoding the last parity read recovered
+ * @var Fe25519Ns::neq             0 when the last compare found the same element, -1 otherwise
+ * @var Fe25519Ns::hw_enable       take the accelerator lock and power it for a run
+ * @var Fe25519Ns::hw_disable      drop the lock and power the accelerator down
+ * @var Fe25519Ns::mul             z = x*y mod p, one 256-bit MODMULT
+ * @var Fe25519Ns::sq              o = x^2 mod p
+ * @var Fe25519Ns::copy            o = a
+ * @var Fe25519Ns::zero            o = 0
+ * @var Fe25519Ns::one             o = 1
+ * @var Fe25519Ns::reduce_once     subtract p once when o >= p, in constant time
+ * @var Fe25519Ns::add             o = x+y mod p
+ * @var Fe25519Ns::sub             o = x-y mod p
+ * @var Fe25519Ns::cswap           exchange x and y when @c swap is 1, in constant time
+ * @var Fe25519Ns::frombytes       decode 32 little-endian bytes to a canonical element
+ * @var Fe25519Ns::tobytes         encode a canonical element to 32 little-endian bytes
+ * @var Fe25519Ns::invert          o = a^(p-2) = a^-1 mod p
+ * @var Fe25519Ns::pow2523         o = a^((p-5)/8), the Ed25519 decompression square-root exponent
+ * @var Fe25519Ns::get_parity      read the low bit of a's canonical encoding into @ref Fe25519Ns::parity
+ * @var Fe25519Ns::get_neq         compare a and b in constant time into @ref Fe25519Ns::neq
+ *
+ * @ref Fe25519Ns::mul, @ref Fe25519Ns::sq, @ref Fe25519Ns::invert and @ref Fe25519Ns::pow2523 run on the
+ * accelerator, so @ref Fe25519Ns::hw_enable brackets them and @ref Fe25519Ns::hw_disable closes the run.
+ *
+ * @c work goes unread by every entry: each one works on the caller's own field elements and carries
+ * nothing to the next call, so this module needs no borrow, holds no context, and names no BORROW
+ * constant. The ops themselves stay @c static @c inline above, where the X25519 ladder and the Ed25519
+ * point arithmetic call them directly with no cross-TU call in the loop.
+ *
+ * No storage member and no context: a caller sets operands and reads @ref Fe25519Ns::ok, and that is
+ * all the surface there is.
+ */
+typedef struct
+{
+    Fe25519MulArgs mul_args;
+    Fe25519SqArgs sq_args;
+    Fe25519CopyArgs copy_args;
+    Fe25519ZeroArgs zero_args;
+    Fe25519OneArgs one_args;
+    Fe25519ReduceArgs reduce_args;
+    Fe25519AddArgs add_args;
+    Fe25519SubArgs sub_args;
+    Fe25519CswapArgs cswap_args;
+    Fe25519FromBytesArgs frombytes_args;
+    Fe25519ToBytesArgs tobytes_args;
+    Fe25519InvertArgs invert_args;
+    Fe25519Pow2523Args pow2523_args;
+    Fe25519ParityArgs parity_args;
+    Fe25519NeqArgs neq_args;
+
+    proto_bool ok;
+    int parity;
+    int neq;
+
+    void (*const hw_enable)(uint8_t *restrict work);
+    void (*const hw_disable)(uint8_t *restrict work);
+    void (*const mul)(uint8_t *restrict work);
+    void (*const sq)(uint8_t *restrict work);
+    void (*const copy)(uint8_t *restrict work);
+    void (*const zero)(uint8_t *restrict work);
+    void (*const one)(uint8_t *restrict work);
+    void (*const reduce_once)(uint8_t *restrict work);
+    void (*const add)(uint8_t *restrict work);
+    void (*const sub)(uint8_t *restrict work);
+    void (*const cswap)(uint8_t *restrict work);
+    void (*const frombytes)(uint8_t *restrict work);
+    void (*const tobytes)(uint8_t *restrict work);
+    void (*const invert)(uint8_t *restrict work);
+    void (*const pow2523)(uint8_t *restrict work);
+    void (*const get_parity)(uint8_t *restrict work);
+    void (*const get_neq)(uint8_t *restrict work);
+} Fe25519Ns;
+
+/** @brief The one symbol this module exports. */
+extern Fe25519Ns Fe25519;
 
 #endif // PROTOCORE_FE25519_MPI_HW
 

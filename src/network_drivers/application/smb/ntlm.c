@@ -11,25 +11,29 @@
 
 #if PROTOCORE_ENABLE_SMB
 
-#include "crypto/hash/md.h"
-#include "mmgr/secure.h" // SecureScope: lifetime of the borrowed digest state
+#include "crypto/hash/md.h" // Md: MD4, MD5 and HMAC-MD5
+#include "mmgr/secure.h"     // the pool the digest borrow comes from
+#include "mmgr/span.h"       // protocore_span, span.ok
 
 void protocore_ntlm_nt_hash(const char *password, uint8_t nt_hash[16])
 {
     size_t mark = protocore_secure_mark();
-    struct MdCtx *c = protocore_md_wants();
-    if (c == NULL)
+    protocore_span w = protocore_secure_span(PROTOCORE_MD_BORROW, 0);
+    if (!span.ok(w))
     {
         protocore_secure_release(mark);
         return;
     }
-    protocore_md4_init(c);
+    Md.md4_init(w.buf);
     for (const char *p = password; *p; p++)
     {
         uint8_t pair[2] = {(uint8_t)*p, 0}; // UTF-16LE (ASCII/UTF-8 code unit + high byte 0)
-        protocore_md4_update(c, pair, 2);
+        Md.update_args.data = pair;
+        Md.update_args.len = 2;
+        Md.update(w.buf);
     }
-    protocore_md4_final(c, nt_hash);
+    Md.final_args.out = nt_hash;
+    Md.final(w.buf);
     protocore_secure_release(mark);
 }
 
@@ -60,7 +64,20 @@ proto_bool protocore_ntlm_ntowfv2(const uint8_t nt_hash[16], const char *user, c
         buf[n++] = (uint8_t)*p;
         buf[n++] = 0;
     }
-    protocore_hmac_md5(nt_hash, 16, buf, n, owf);
+    size_t mark = protocore_secure_mark();
+    protocore_span w = protocore_secure_span(PROTOCORE_MD_BORROW, 0);
+    if (!span.ok(w))
+    {
+        protocore_secure_release(mark);
+        return PROTO_FALSE;
+    }
+    Md.hmac_args.key = nt_hash;
+    Md.hmac_args.key_len = 16;
+    Md.hmac_args.msg = buf;
+    Md.hmac_args.msg_len = n;
+    Md.hmac_args.out = owf;
+    Md.hmac_md5(w.buf);
+    protocore_secure_release(mark);
     return PROTO_TRUE;
 }
 
@@ -79,24 +96,36 @@ static void protocore_hmac_md5_2(const uint8_t key[16], const uint8_t *m1, size_
     }
     uint8_t inner[16];
     size_t mark = protocore_secure_mark();
-    struct MdCtx *c = protocore_md_wants();
-    if (c == NULL)
+    protocore_span w = protocore_secure_span(PROTOCORE_MD_BORROW, 0);
+    if (!span.ok(w))
     {
         protocore_secure_release(mark);
         return;
     }
-    protocore_md5_init(c);
-    protocore_md5_update(c, ipad, 64);
-    protocore_md5_update(c, m1, l1);
+    Md.md5_init(w.buf);
+    Md.update_args.data = ipad;
+    Md.update_args.len = 64;
+    Md.update(w.buf);
+    Md.update_args.data = m1;
+    Md.update_args.len = l1;
+    Md.update(w.buf);
     if (m2 && l2)
     {
-        protocore_md5_update(c, m2, l2);
+        Md.update_args.data = m2;
+        Md.update_args.len = l2;
+        Md.update(w.buf);
     }
-    protocore_md5_final(c, inner);
-    protocore_md5_init(c);
-    protocore_md5_update(c, opad, 64);
-    protocore_md5_update(c, inner, 16);
-    protocore_md5_final(c, out);
+    Md.final_args.out = inner;
+    Md.final(w.buf);
+    Md.md5_init(w.buf);
+    Md.update_args.data = opad;
+    Md.update_args.len = 64;
+    Md.update(w.buf);
+    Md.update_args.data = inner;
+    Md.update_args.len = 16;
+    Md.update(w.buf);
+    Md.final_args.out = out;
+    Md.final(w.buf);
     protocore_secure_release(mark);
 }
 
@@ -134,7 +163,18 @@ size_t protocore_ntlm_v2_response(const uint8_t owf[16], const uint8_t server_ch
     mem.cpy(out, ntproof, 16); // out = NTProofStr || temp
     if (session_key)
     {
-        protocore_hmac_md5(owf, 16, ntproof, 16, session_key);
+        size_t mark = protocore_secure_mark();
+        protocore_span w = protocore_secure_span(PROTOCORE_MD_BORROW, 0);
+        if (span.ok(w))
+        {
+            Md.hmac_args.key = owf;
+            Md.hmac_args.key_len = 16;
+            Md.hmac_args.msg = ntproof;
+            Md.hmac_args.msg_len = 16;
+            Md.hmac_args.out = session_key;
+            Md.hmac_md5(w.buf);
+        }
+        protocore_secure_release(mark);
     }
     return protocore_resp_len;
 }
@@ -216,23 +256,37 @@ void protocore_ntlm_mic(const uint8_t session_key[16], const uint8_t *neg, size_
         opad[i] = (uint8_t)(k ^ 0x5c);
     }
     size_t mark = protocore_secure_mark();
-    struct MdCtx *c = protocore_md_wants();
-    if (c == NULL)
+    protocore_span w = protocore_secure_span(PROTOCORE_MD_BORROW, 0);
+    if (!span.ok(w))
     {
         protocore_secure_release(mark);
         return;
     }
     uint8_t inner[16];
-    protocore_md5_init(c);
-    protocore_md5_update(c, ipad, 64);
-    protocore_md5_update(c, neg, neg_len);
-    protocore_md5_update(c, chal, chal_len);
-    protocore_md5_update(c, auth, auth_len);
-    protocore_md5_final(c, inner);
-    protocore_md5_init(c);
-    protocore_md5_update(c, opad, 64);
-    protocore_md5_update(c, inner, 16);
-    protocore_md5_final(c, out);
+    Md.md5_init(w.buf);
+    Md.update_args.data = ipad;
+    Md.update_args.len = 64;
+    Md.update(w.buf);
+    Md.update_args.data = neg;
+    Md.update_args.len = neg_len;
+    Md.update(w.buf);
+    Md.update_args.data = chal;
+    Md.update_args.len = chal_len;
+    Md.update(w.buf);
+    Md.update_args.data = auth;
+    Md.update_args.len = auth_len;
+    Md.update(w.buf);
+    Md.final_args.out = inner;
+    Md.final(w.buf);
+    Md.md5_init(w.buf);
+    Md.update_args.data = opad;
+    Md.update_args.len = 64;
+    Md.update(w.buf);
+    Md.update_args.data = inner;
+    Md.update_args.len = 16;
+    Md.update(w.buf);
+    Md.final_args.out = out;
+    Md.final(w.buf);
     protocore_secure_release(mark);
 }
 

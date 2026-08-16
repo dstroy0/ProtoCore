@@ -50,7 +50,12 @@ static void hex_of(const uint8_t *in, uint32_t n, char *out)
 static void sign_nonce(uint8_t *work, const CsrfCtx *c, const uint8_t *nonce, size_t nlen, char *sig_hex)
 {
     uint8_t mac[PROTOCORE_HMAC_SHA256_LEN];
-    protocore_hmac_sha256(work, c->secret, c->secret_len, nonce, nlen, mac);
+    HmacSha256.mac_args.key = c->secret;
+    HmacSha256.mac_args.key_len = c->secret_len;
+    HmacSha256.mac_args.data = nonce;
+    HmacSha256.mac_args.len = nlen;
+    HmacSha256.mac_args.out = mac;
+    HmacSha256.mac(work);
     hex_of(mac, CSRF_SIG_BYTES, sig_hex); // truncate the MAC to CSRF_SIG_BYTES
 }
 

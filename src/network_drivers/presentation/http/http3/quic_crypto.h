@@ -35,19 +35,17 @@
 
 PROTOCORE_BEGIN_DECLS
 
-#include "crypto/aead/aes128gcm.h" // protocore_aes128gcm_key, PROTOCORE_WORK_AES128GCM
+#include "crypto/aead/aes128gcm.h" // Aes128Gcm, PROTOCORE_AES128GCM_BORROW
 #include "crypto/kdf/hkdf.h"       // PROTOCORE_HKDF_HASH_LEN
 
 /** @brief The client/server packet-protection secrets for one QUIC encryption level. */
 typedef struct
 {
-    _Alignas(8) uint8_t gcm[PROTOCORE_WORK_AES128GCM]; ///< keyed AEAD context, built once per key.
-                                                       ///< Replaces the raw key: the schedule is what the
-                                                       ///< AEAD needs, so no raw key stays resident.
-    uint8_t iv[12];                                    ///< AEAD nonce base (XOR'd with the padded packet number).
-    _Alignas(8) uint8_t hp[PROTOCORE_WORK_AES128];     ///< Keyed header-protection context (AES-128-ECB mask).
-                                                       ///< Built once: ~556 cycles per record, plus the pool
-                                                       ///< borrow and wipe it also removes.
+    _Alignas(8) uint8_t gcm[PROTOCORE_AES128GCM_BORROW]; ///< this direction's AEAD borrow. Carries both keyed
+                                                         ///< contexts: the record AEAD and the header-protection
+                                                         ///< block. Replaces the raw keys, so neither stays
+                                                         ///< resident, and both are keyed once.
+    uint8_t iv[12];                                      ///< AEAD nonce base (XOR'd with the padded packet number).
 } QuicPacketKeys;
 
 /** @brief Both directions' Initial secrets derived from the client's Destination Connection ID. */

@@ -17,6 +17,8 @@
 #if PROTOCORE_ENABLE_TOTP
 
 #include "crypto/hash/sha1.h"
+#include "mmgr/secure.h" // the pool the digest borrow comes from
+#include "mmgr/span.h"   // protocore_span, span.ok
 
 /** @brief B: the block length HMAC pads K out to for SHA-1 (RFC 2104 sec 2). */
 #define PROTOCORE_TOTP_HMAC_B 64
@@ -49,6 +51,21 @@ static uint32_t pow10u(uint8_t n)
     return v;
 }
 
+// One SHA-1 over the caller's bytes, out of a pool borrow taken and released per digest.
+static void sha1_of(const uint8_t *data, size_t len, uint8_t out[PROTOCORE_SHA1_DIGEST_LEN])
+{
+    const size_t mark = protocore_secure_mark();
+    protocore_span w = protocore_secure_span(PROTOCORE_SHA1_BORROW, 8);
+    if (span.ok(w))
+    {
+        Sha1.hash_args.data = data;
+        Sha1.hash_args.len = len;
+        Sha1.hash_args.out = out;
+        Sha1.hash(w.buf);
+    }
+    protocore_secure_release(mark);
+}
+
 // RFC 2104 sec 2 H(K XOR opad, H(K XOR ipad, text)) with text the 8-byte counter C: K is zero-padded
 // to B bytes, or replaced by H(K) when it is longer than B.
 static void hmac_sha1_counter(const uint8_t *key, size_t keylen, const uint8_t c[PROTOCORE_TOTP_C_LEN],
@@ -58,7 +75,7 @@ static void hmac_sha1_counter(const uint8_t *key, size_t keylen, const uint8_t c
     if (keylen > PROTOCORE_TOTP_HMAC_B)
     {
         uint8_t kh[PROTOCORE_SHA1_DIGEST_LEN];
-        protocore_sha1(key, keylen, kh);
+        sha1_of(key, keylen, kh);
         mem.cpy(k, kh, PROTOCORE_SHA1_DIGEST_LEN);
     }
     else
@@ -73,7 +90,7 @@ static void hmac_sha1_counter(const uint8_t *key, size_t keylen, const uint8_t c
     }
     mem.cpy(inner_in + PROTOCORE_TOTP_HMAC_B, c, PROTOCORE_TOTP_C_LEN);
     uint8_t inner[PROTOCORE_SHA1_DIGEST_LEN];
-    protocore_sha1(inner_in, sizeof(inner_in), inner);
+    sha1_of(inner_in, sizeof(inner_in), inner);
 
     uint8_t outer_in[PROTOCORE_TOTP_HMAC_B + PROTOCORE_SHA1_DIGEST_LEN];
     for (int i = 0; i < PROTOCORE_TOTP_HMAC_B; i++)
@@ -81,7 +98,7 @@ static void hmac_sha1_counter(const uint8_t *key, size_t keylen, const uint8_t c
         outer_in[i] = k[i] ^ 0x5c; // opad
     }
     mem.cpy(outer_in + PROTOCORE_TOTP_HMAC_B, inner, PROTOCORE_SHA1_DIGEST_LEN);
-    protocore_sha1(outer_in, sizeof(outer_in), out);
+    sha1_of(outer_in, sizeof(outer_in), out);
 }
 
 // RFC 4226 sec 5.2 HOTP(K,C) = Truncate(HMAC-SHA-1(K,C)): C goes in high-order byte first, DT takes
