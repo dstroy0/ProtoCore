@@ -48,7 +48,7 @@ PROTOCORE_BEGIN_DECLS
 #define QUIC_ENC_APP 2 ///< 1-RTT (application) keys
 
 /** @brief Server handshake configuration (certificate, key, transport params, ephemeral inputs). */
-typedef struct
+typedef struct QuicTlsConfig
 {
     const uint8_t *cert_der; ///< DER X.509 leaf certificate (Ed25519 public key)
     size_t cert_len;

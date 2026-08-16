@@ -13,9 +13,115 @@
 #if PROTOCORE_ENABLE_HTTP3
 
 #include "crypto/aead/aes128gcm.h" // PROTOCORE_AES128GCM_TAG_LEN
+#include "mmgr/secure.h"            // the context span is key material
+#include "network_drivers/presentation/http/http3/quic_crypto.h"
 #include "network_drivers/presentation/http/http3/quic_frame.h"
 #include "network_drivers/presentation/http/http3/quic_packet.h"
+#include "network_drivers/presentation/http/http3/quic_tls.h"
 #include "network_drivers/presentation/http/http3/quic_varint.h"
+
+PROTOCORE_BEGIN_DECLS
+
+// Per-connection stream state. The bytes it sends out of are the plaintext span at a fixed offset,
+// so only what is not derivable lives here.
+typedef struct
+{
+    uint64_t id;            ///< stream id (UINT64_MAX = free slot)
+    uint64_t rx_off;        ///< next in-order byte offset expected
+    uint64_t tx_off;        ///< next send offset
+    proto_bool rx_fin;      ///< a FIN was received (final size known)
+    proto_bool tx_fin;      ///< a FIN should be sent after the buffered tx bytes
+    proto_bool tx_fin_sent; ///< the FIN has been sent
+    uint8_t *tx;            ///< PROTOCORE_QUIC_STREAM_TX bytes of the connection's plaintext span
+    size_t tx_have;         ///< bytes buffered to send
+    size_t tx_sent;         ///< bytes of tx already put on the wire
+} QuicStream;
+
+// One packet-number space (Initial / Handshake / Application).
+typedef struct
+{
+    uint64_t next_pn;            ///< next packet number to send in this space
+    int64_t largest_acked;       ///< largest of our PNs the peer has acknowledged (-1 = none)
+    int64_t last_ae_pn;          ///< PN of the last ack-eliciting packet we sent here (-1 = none)
+    uint64_t largest_rx;         ///< largest PN received in this space
+    proto_bool have_rx;          ///< at least one packet received
+    proto_bool ack_eliciting_rx; ///< an ack-eliciting packet is unacknowledged (we owe an ACK)
+    proto_bool discarded;        ///< this space's keys have been dropped
+    uint64_t crypto_rx_off;      ///< in-order CRYPTO bytes already delivered to the TLS handshake
+    uint8_t *crypto_rx;          ///< PROTOCORE_QUIC_CRYPTO_RX bytes of the connection's plaintext span
+    size_t crypto_rx_have;       ///< contiguous CRYPTO bytes buffered at crypto_rx_off
+    uint64_t crypto_tx_off;      ///< CRYPTO flight bytes already sent from this level
+} QuicPnSpace;
+
+// The one definition, private to this TU. It sits at QUIC_OFF_CTX in the caller's secure span, so
+// its size never leaves this file and no consumer can name it.
+typedef struct
+{
+    uint8_t *b; ///< the connection's plaintext span, bound once and held for its life
+
+    uint8_t scid[QUIC_MAX_CID_LEN]; ///< our connection ID (peer's DCID toward us)
+    uint8_t scid_len;
+    uint8_t dcid[QUIC_MAX_CID_LEN]; ///< peer's connection ID (our DCID toward the peer)
+    uint8_t dcid_len;
+    uint8_t odcid[QUIC_MAX_CID_LEN]; ///< client's original DCID (Initial keys + transport param)
+    uint8_t odcid_len;
+
+    QuicInitialSecrets initial; ///< Initial keys derived from odcid
+    QuicTls tls;                ///< the TLS 1.3 handshake
+
+    QuicPnSpace space[3]; ///< indexed by QUIC_ENC_*
+
+    QuicStream streams[PROTOCORE_QUIC_MAX_STREAMS];
+
+    QuicConnCallbacks cb;
+
+    proto_bool handshake_done_queued; ///< a HANDSHAKE_DONE frame still needs sending
+    proto_bool handshake_done_sent;
+    proto_bool closed;            ///< a CONNECTION_CLOSE has been sent or received
+    proto_bool draining;          ///< peer closed; we only drain
+    uint64_t recv_bytes;          ///< total bytes received (anti-amplification budget)
+    uint64_t sent_bytes;          ///< total bytes sent before address validation
+    proto_bool address_validated; ///< handshake-complete or received enough to lift the 3x limit
+
+    proto_bool pto_armed;     ///< a Probe Timeout is running for the outstanding handshake flight
+    uint8_t pto_count;        ///< consecutive PTO expirations (exponential backoff exponent)
+    uint32_t pto_deadline_ms; ///< when the PTO fires (caller's monotonic ms; valid when pto_armed)
+
+    proto_bool close_queued;   ///< a CONNECTION_CLOSE is owed to the peer (fatal error hit)
+    proto_bool close_is_app;   ///< send the application variant (0x1d)
+    proto_bool close_sent;     ///< the CONNECTION_CLOSE has been put on the wire
+    uint64_t close_error;      ///< error code to report
+    uint64_t close_frame_type; ///< frame type that triggered it (0 when not frame-specific)
+    uint8_t close_level;       ///< encryption level to send the close at
+} QuicConnCtx;
+
+// The caller's two spans, split. The context takes the whole secure span; the plaintext span is
+// grouped by field, so each region's stride is a power of two and stream i reaches its bytes with a
+// shift rather than a multiply.
+#define QUIC_OFF_CTX 0u
+#define QUIC_OFF_TX 0u
+#define QUIC_OFF_CRYPTO (QUIC_OFF_TX + (size_t)PROTOCORE_QUIC_MAX_STREAMS * PROTOCORE_QUIC_STREAM_TX)
+static_assert(sizeof(QuicConnCtx) <= PROTOCORE_QUIC_CONN_CTX_BORROW,
+              "PROTOCORE_QUIC_CONN_CTX_BORROW is short of the connection context - raise it in "
+              "protocore_config.h, which derives PROTOCORE_SECURE_ARENA_SIZE from it");
+static_assert(QUIC_OFF_CRYPTO + 3u * (size_t)PROTOCORE_QUIC_CRYPTO_RX <= PROTOCORE_QUIC_CONN_BORROW,
+              "PROTOCORE_QUIC_CONN_BORROW is short of one outbound buffer per stream and one CRYPTO window "
+              "per packet-number space - raise it in protocore_config.h, which derives "
+              "PROTOCORE_PLAINTEXT_ARENA_SIZE from it");
+
+// The handle a caller sets a call's members on, and the connection the bound span holds.
+struct QuicConnInternal
+{
+    QuicConnCtx *c;  ///< the connection, resolved from the bound context span
+    QuicConnNs *ns;  ///< the handle a caller sets a call's members on
+};
+
+// The regions, at their offsets in the caller's spans.
+#define QUIC_CTX(w) ((QuicConnCtx *)(void *)((w) + QUIC_OFF_CTX))
+// QUIC_OFF_CTX is 0, so a callback is handed back the span it was bound with.
+#define QUIC_SPAN(c) ((uint8_t *)(void *)(c))
+#define QUIC_TX(b, i) ((b) + QUIC_OFF_TX + (size_t)(i) * PROTOCORE_QUIC_STREAM_TX)
+#define QUIC_CRYPTO(b, i) ((b) + QUIC_OFF_CRYPTO + (size_t)(i) * PROTOCORE_QUIC_CRYPTO_RX)
 
 // A single STREAM frame's payload cannot exceed one datagram, so it can never overflow a stream's
 // reassembly buffer - which is why that clamp in handle_stream carries a coverage exclusion. Both
@@ -37,7 +143,7 @@ static_assert(
 
 // The open (decrypt) keys for an encryption level: Initial keys come from the DCID, Handshake and
 // 1-RTT keys from the TLS handshake. Returns NULL if that level's keys are not available yet.
-static QuicPacketKeys *open_keys(struct QuicConn *qc, int level)
+static QuicPacketKeys *open_keys(QuicConnCtx *qc, int level)
 {
     if (level == QUIC_ENC_INITIAL)
     {
@@ -45,7 +151,7 @@ static QuicPacketKeys *open_keys(struct QuicConn *qc, int level)
     }
     return protocore_quic_tls_keys(&qc->tls, level, /*is_server=*/PROTO_FALSE);
 }
-static QuicPacketKeys *seal_keys(struct QuicConn *qc, int level)
+static QuicPacketKeys *seal_keys(QuicConnCtx *qc, int level)
 {
     if (level == QUIC_ENC_INITIAL)
     {
@@ -54,44 +160,35 @@ static QuicPacketKeys *seal_keys(struct QuicConn *qc, int level)
     return protocore_quic_tls_keys(&qc->tls, level, /*is_server=*/PROTO_TRUE);
 }
 
-// Find a stream slot by id, or allocate one; NULL if the table is full.
-// The plaintext-pool term this file declares: one borrow per QUIC connection, taken from the
-// persistent end on first use and held for the connection's life.
-static_assert(PROTOCORE_WORK_QUIC_CONN >= (size_t)PROTOCORE_QUIC_MAX_CONNS * PROTOCORE_QUIC_CONN_BORROW,
-              "PROTOCORE_WORK_QUIC_CONN must cover one outbound buffer per stream plus one CRYPTO window per "
-              "packet-number space on every connection: raise it in protocore_config.h");
+// The engine is one translation unit; these are defined below in dependency order.
+static void quic_conn_close_transport(QuicConnCtx *qc, uint64_t error_code);
+static void quic_conn_close_application(QuicConnCtx *qc, uint64_t error_code);
+static size_t quic_conn_stream_put(QuicConnCtx *qc, uint64_t stream_id, const uint8_t *data, size_t len,
+                                   proto_bool fin);
+static proto_bool quic_conn_done(const QuicConnCtx *qc);
+static proto_bool quic_conn_gone(const QuicConnCtx *qc);
 
-// Offsets into the one borrow. Grouped by field, so each region's stride is a power of two.
-#define QUIC_OFF_TX 0u
-#define QUIC_OFF_CRYPTO (QUIC_OFF_TX + (size_t)PROTOCORE_QUIC_MAX_STREAMS * PROTOCORE_QUIC_STREAM_TX)
-
-// The connection's bytes, split by offset over its streams and packet-number spaces. Idempotent: a
-// connection initialised again keeps the borrow it already holds, because the persistent end is
-// never given back.
-static proto_bool quic_conn_slot_storage(struct QuicConn *qc)
+// The connection's plaintext bytes, split by offset over its streams and packet-number spaces.
+static proto_bool quic_conn_slot_storage(QuicConnCtx *qc)
 {
-    uint8_t *base = qc->streams[0].tx; // QUIC_OFF_TX is 0, so the borrow is recoverable from it
-    if (base == NULL)
+    if (qc->b == NULL)
     {
-        protocore_span b = protocore_plaintext_persist_span(PROTOCORE_QUIC_CONN_BORROW);
-        if (!span.ok(b))
-        {
-            return PROTO_FALSE;
-        }
-        base = b.buf;
+        return PROTO_FALSE;
     }
     for (size_t i = 0; i < PROTOCORE_QUIC_MAX_STREAMS; i++)
     {
-        qc->streams[i].tx = base + QUIC_OFF_TX + i * PROTOCORE_QUIC_STREAM_TX;
+        qc->streams[i].tx = QUIC_TX(qc->b, i);
     }
     for (size_t i = 0; i < 3; i++)
     {
-        qc->space[i].crypto_rx = base + QUIC_OFF_CRYPTO + i * PROTOCORE_QUIC_CRYPTO_RX;
+        qc->space[i].crypto_rx = QUIC_CRYPTO(qc->b, i);
     }
     return PROTO_TRUE;
 }
 
-static QuicStream *stream_get(struct QuicConn *qc, uint64_t id, proto_bool create)
+// Find a stream slot by id, or allocate one; NULL if the table is full.
+
+static QuicStream *stream_get(QuicConnCtx *qc, uint64_t id, proto_bool create)
 {
     if (!quic_conn_slot_storage(qc))
     {
@@ -111,7 +208,7 @@ static QuicStream *stream_get(struct QuicConn *qc, uint64_t id, proto_bool creat
     }
     if (!create || !free_slot)
     {
-        return NULL; // protocore_quic_conn_stream_send), so the lookup-only arm is never taken
+        return NULL; // QuicConnNs::stream_send), so the lookup-only arm is never taken
     }
     // The bytes are the connection's and outlive the stream that last held them.
     uint8_t *tx = free_slot->tx;
@@ -122,20 +219,20 @@ static QuicStream *stream_get(struct QuicConn *qc, uint64_t id, proto_bool creat
     return free_slot;
 }
 
-void protocore_quic_conn_init(struct QuicConn *qc, const QuicTlsConfig *cfg, const uint8_t *odcid, uint8_t odcid_len,
+static void quic_conn_open(QuicConnCtx *qc, const QuicTlsConfig *cfg, const uint8_t *odcid, uint8_t odcid_len,
                               const uint8_t *peer_scid, uint8_t peer_scid_len, const uint8_t *our_scid,
                               uint8_t our_scid_len, const QuicConnCallbacks *cb)
 {
-    uint8_t *base = qc->streams[0].tx; // the borrow is the connection's, not the call's
+    uint8_t *b = qc->b; // the plaintext span is the connection's, bound before this call
     mem.set(qc, 0, sizeof(*qc));
-    qc->streams[0].tx = base;
+    qc->b = b;
     if (!quic_conn_slot_storage(qc))
     {
         qc->closed = PROTO_TRUE; // no bytes to run out of; the connection answers nothing
         return;
     }
-    // The borrow carries the previous connection's stream and handshake bytes.
-    mem.set(qc->streams[0].tx, 0, PROTOCORE_QUIC_CONN_BORROW);
+    // The span carries the previous connection's stream and handshake bytes.
+    mem.set(qc->b, 0, PROTOCORE_QUIC_CONN_BORROW);
     mem.cpy(qc->odcid, odcid, odcid_len);
     qc->odcid_len = odcid_len;
     mem.cpy(qc->dcid, peer_scid, peer_scid_len);
@@ -173,7 +270,7 @@ void protocore_quic_conn_init(struct QuicConn *qc, const QuicTlsConfig *cfg, con
 // --- Frame handling --------------------------------------------------------------------------
 // Queue a transport CONNECTION_CLOSE for a fatal error at @p level; the first error wins (RFC 9000 sec
 // 10.2.3). Sending at the level the error was seen on guarantees the peer holds keys to read it.
-static void queue_close(struct QuicConn *qc, uint64_t error_code, uint64_t frame_type, int level, proto_bool app)
+static void queue_close(QuicConnCtx *qc, uint64_t error_code, uint64_t frame_type, int level, proto_bool app)
 {
     if (qc->close_queued || qc->closed)
     {
@@ -186,7 +283,7 @@ static void queue_close(struct QuicConn *qc, uint64_t error_code, uint64_t frame
     qc->close_level = (uint8_t)level;
 }
 
-static void handle_crypto(struct QuicConn *qc, int level, const QuicFrame *f)
+static void handle_crypto(QuicConnCtx *qc, int level, const QuicFrame *f)
 {
     QuicPnSpace *s = &qc->space[level];
     uint64_t want = s->crypto_rx_off;
@@ -231,12 +328,12 @@ static void handle_crypto(struct QuicConn *qc, int level, const QuicFrame *f)
         qc->address_validated = PROTO_TRUE;
         if (qc->cb.on_handshake_done)
         {
-            qc->cb.on_handshake_done(qc->cb.app, qc);
+            qc->cb.on_handshake_done(qc->cb.app, QUIC_SPAN(qc));
         }
     }
 }
 
-static void handle_stream(struct QuicConn *qc, const QuicFrame *f)
+static void handle_stream(QuicConnCtx *qc, const QuicFrame *f)
 {
     QuicStream *st = stream_get(qc, f->stream.id, PROTO_TRUE);
     if (!st)
@@ -265,7 +362,7 @@ static void handle_stream(struct QuicConn *qc, const QuicFrame *f)
         }
         if (qc->cb.on_stream_data)
         {
-            qc->cb.on_stream_data(qc->cb.app, qc, st->id, nd, nl, st->rx_fin);
+            qc->cb.on_stream_data(qc->cb.app, QUIC_SPAN(qc), st->id, nd, nl, st->rx_fin);
         }
         return;
     }
@@ -274,13 +371,13 @@ static void handle_stream(struct QuicConn *qc, const QuicFrame *f)
         st->rx_fin = PROTO_TRUE;
         if (qc->cb.on_stream_data)
         {
-            qc->cb.on_stream_data(qc->cb.app, qc, st->id, NULL, 0, PROTO_TRUE);
+            qc->cb.on_stream_data(qc->cb.app, QUIC_SPAN(qc), st->id, NULL, 0, PROTO_TRUE);
         }
     }
 }
 
 // Process the frames in one decrypted packet. Returns false on a fatal connection error.
-static proto_bool process_frames(struct QuicConn *qc, int level, const uint8_t *p, size_t len,
+static proto_bool process_frames(QuicConnCtx *qc, int level, const uint8_t *p, size_t len,
                                  proto_bool *ack_eliciting)
 {
     size_t off = 0;
@@ -358,7 +455,7 @@ static proto_bool skip_initial_token(const uint8_t *dg, size_t len, size_t *off)
 
 // Parse one packet's (long or short) header, filling the fields needed to locate + unprotect it.
 // Returns false on a malformed header or an unsupported type/version (drop the packet).
-static proto_bool parse_packet_header(const struct QuicConn *qc, const uint8_t *dg, size_t len, proto_bool is_long,
+static proto_bool parse_packet_header(const QuicConnCtx *qc, const uint8_t *dg, size_t len, proto_bool is_long,
                                       int *level, size_t *pn_offset, size_t *pkt_len, uint64_t *payload_length)
 {
     if (!is_long)
@@ -414,7 +511,7 @@ static proto_bool parse_packet_header(const struct QuicConn *qc, const uint8_t *
 }
 
 // Decrypt and process one packet at datagram offset; returns bytes consumed (0 to stop the datagram).
-static size_t recv_packet(struct QuicConn *qc, const uint8_t *dg, size_t len)
+static size_t recv_packet(QuicConnCtx *qc, const uint8_t *dg, size_t len)
 {
     if (len < 1)
     {
@@ -464,7 +561,7 @@ static size_t recv_packet(struct QuicConn *qc, const uint8_t *dg, size_t len)
     }
     if (work[0] & reserved_mask)
     {
-        protocore_quic_conn_close(qc, QUIC_ERR_PROTOCOL_VIOLATION);
+        quic_conn_close_transport(qc, QUIC_ERR_PROTOCOL_VIOLATION);
         return 0;
     }
 
@@ -491,7 +588,7 @@ static size_t recv_packet(struct QuicConn *qc, const uint8_t *dg, size_t len)
     return pkt_len;
 }
 
-proto_bool protocore_quic_conn_recv(struct QuicConn *qc, const uint8_t *datagram, size_t len)
+static proto_bool quic_conn_take(QuicConnCtx *qc, const uint8_t *datagram, size_t len)
 {
     if (qc->closed)
     {
@@ -532,7 +629,7 @@ static size_t build_ack_frame(QuicPnSpace *s, uint8_t *buf, size_t cap)
 
 // Append the CRYPTO flight for INITIAL/HANDSHAKE (ServerHello / EE..Finished); returns bytes written,
 // sets *ae when it emits an ack-eliciting CRYPTO frame.
-static size_t build_crypto_frame(const struct QuicConn *qc, int level, QuicPnSpace *s, uint8_t *buf, size_t cap,
+static size_t build_crypto_frame(const QuicConnCtx *qc, int level, QuicPnSpace *s, uint8_t *buf, size_t cap,
                                  proto_bool *ae)
 {
     if (level != QUIC_ENC_INITIAL && level != QUIC_ENC_HANDSHAKE)
@@ -563,7 +660,7 @@ static size_t build_crypto_frame(const struct QuicConn *qc, int level, QuicPnSpa
 }
 
 // Append 1-RTT extras (HANDSHAKE_DONE + stream data) at APP level; returns bytes written, sets *ae.
-static size_t build_app_frames(struct QuicConn *qc, int level, uint8_t *buf, size_t cap, proto_bool *ae)
+static size_t build_app_frames(QuicConnCtx *qc, int level, uint8_t *buf, size_t cap, proto_bool *ae)
 {
     if (level != QUIC_ENC_APP)
     {
@@ -615,14 +712,14 @@ static size_t build_app_frames(struct QuicConn *qc, int level, uint8_t *buf, siz
 // Build the frame payload for one encryption level into buf; returns its length (0 = nothing to send).
 // @p ae is set true if the payload carries an ack-eliciting frame (CRYPTO / STREAM / HANDSHAKE_DONE),
 // which arms loss recovery for this space.
-static size_t build_frames(struct QuicConn *qc, int level, uint8_t *buf, size_t cap, proto_bool *ae)
+static size_t build_frames(QuicConnCtx *qc, int level, uint8_t *buf, size_t cap, proto_bool *ae)
 {
     QuicPnSpace *s = &qc->space[level];
     size_t p = 0;
     *ae = PROTO_FALSE;
 
     // While closing, the only frame we send is the transport CONNECTION_CLOSE (RFC 9000 sec 10.2.3).
-    // It is not ack-eliciting (*ae stays false), so no PTO is armed for it. protocore_quic_conn_send() invokes
+    // It is not ack-eliciting (*ae stays false), so no PTO is armed for it. QuicConnNs::send invokes
     // this for a single level when a close is queued, so it is emitted exactly once.
     if (qc->close_queued && !qc->close_sent)
     {
@@ -643,7 +740,7 @@ static uint8_t level_lp_type(int level)
 }
 
 // Bytes a protected packet needs on top of its payload: AEAD tag + packet number, plus the header.
-static size_t packet_overhead(const struct QuicConn *qc, proto_bool is_long, uint8_t pn_len)
+static size_t packet_overhead(const QuicConnCtx *qc, proto_bool is_long, uint8_t pn_len)
 {
     size_t overhead = (size_t)PROTOCORE_AES128GCM_TAG_LEN + pn_len;
     if (is_long)
@@ -660,7 +757,7 @@ static size_t packet_overhead(const struct QuicConn *qc, proto_bool is_long, uin
 }
 
 // Build one protected packet for a level into out; returns its length (0 = nothing to send).
-static size_t build_packet(struct QuicConn *qc, int level, uint8_t *out, size_t cap)
+static size_t build_packet(QuicConnCtx *qc, int level, uint8_t *out, size_t cap)
 {
     QuicPnSpace *s = &qc->space[level];
     if (s->discarded)
@@ -797,7 +894,7 @@ static size_t build_packet(struct QuicConn *qc, int level, uint8_t *out, size_t 
 
 // Highest encryption level (INITIAL..APP) we still hold seal keys for and haven't discarded - the
 // level at which a CONNECTION_CLOSE can still be decrypted by the peer. Falls back to INITIAL.
-static int protocore_quic_highest_sealed_level(struct QuicConn *qc)
+static int protocore_quic_highest_sealed_level(QuicConnCtx *qc)
 {
     for (int l = QUIC_ENC_APP; l >= QUIC_ENC_INITIAL; l--)
     {
@@ -809,7 +906,7 @@ static int protocore_quic_highest_sealed_level(struct QuicConn *qc)
     return QUIC_ENC_INITIAL;
 }
 
-size_t protocore_quic_conn_send(struct QuicConn *qc, uint8_t *out, size_t cap)
+static size_t quic_conn_build(QuicConnCtx *qc, uint8_t *out, size_t cap)
 {
     if (qc->closed && !qc->draining)
     {
@@ -882,7 +979,7 @@ static proto_bool space_outstanding(const QuicPnSpace *s)
     return !s->discarded && s->last_ae_pn >= 0 && s->largest_acked < s->last_ae_pn;
 }
 
-void protocore_quic_conn_on_timeout(struct QuicConn *qc, uint32_t now_ms)
+static void quic_conn_timeout(QuicConnCtx *qc, uint32_t now_ms)
 {
     if (qc->closed)
     {
@@ -913,7 +1010,7 @@ void protocore_quic_conn_on_timeout(struct QuicConn *qc, uint32_t now_ms)
     }
 
     // PTO fired: mark the unacknowledged data in each outstanding space for retransmission so the next
-    // protocore_quic_conn_send() re-sends it, then back the timer off.
+    // QuicConnNs::send re-sends it, then back the timer off.
     for (int level = QUIC_ENC_INITIAL; level <= QUIC_ENC_HANDSHAKE; level++)
     {
         if (space_outstanding(&qc->space[level]))
@@ -949,7 +1046,7 @@ void protocore_quic_conn_on_timeout(struct QuicConn *qc, uint32_t now_ms)
     qc->pto_deadline_ms = now_ms + pto_period(qc->pto_count);
 }
 
-size_t protocore_quic_conn_stream_send(struct QuicConn *qc, uint64_t stream_id, const uint8_t *data, size_t len,
+static size_t quic_conn_stream_put(QuicConnCtx *qc, uint64_t stream_id, const uint8_t *data, size_t len,
                                        proto_bool fin)
 {
     QuicStream *st = stream_get(qc, stream_id, PROTO_TRUE);
@@ -968,14 +1065,14 @@ size_t protocore_quic_conn_stream_send(struct QuicConn *qc, uint64_t stream_id, 
     return take;
 }
 
-void protocore_quic_conn_close(struct QuicConn *qc, uint64_t error_code)
+static void quic_conn_close_transport(QuicConnCtx *qc, uint64_t error_code)
 {
     // Application-initiated close: send at the highest level we still hold keys for.
     int level = protocore_quic_highest_sealed_level(qc);
     queue_close(qc, error_code, 0, level, PROTO_FALSE);
 }
 
-void protocore_quic_conn_close_app(struct QuicConn *qc, uint64_t error_code)
+static void quic_conn_close_application(QuicConnCtx *qc, uint64_t error_code)
 {
     // RFC 9000 sec 19.19 / 10.2.3: the application variant travels only in 1-RTT packets. Before
     // those keys exist the same intent goes as a transport close carrying APPLICATION_ERROR, whose
@@ -989,14 +1086,167 @@ void protocore_quic_conn_close_app(struct QuicConn *qc, uint64_t error_code)
     queue_close(qc, error_code, 0, level, PROTO_TRUE);
 }
 
-proto_bool protocore_quic_conn_established(const struct QuicConn *qc)
+static proto_bool quic_conn_done(const QuicConnCtx *qc)
 {
     return qc->tls.state == QTLS_DONE;
 }
 
-proto_bool protocore_quic_conn_is_closed(const struct QuicConn *qc)
+static proto_bool quic_conn_gone(const QuicConnCtx *qc)
 {
     return qc->closed || qc->draining;
 }
+
+// --- the entries -----------------------------------------------------------
+
+// The bound context span, as this file's connection. Every entry starts here, so no entry reads the
+// bind twice and none of them carries the span as a parameter.
+static QuicConnCtx *qc_bound(struct QuicConnInternal *restrict ctx)
+{
+    if (!ctx || !ctx->ns->bind.ctx)
+    {
+        return NULL;
+    }
+    ctx->c = QUIC_CTX(ctx->ns->bind.ctx);
+    return ctx->c;
+}
+
+static void quic_conn_init(struct QuicConnInternal *restrict ctx)
+{
+    QuicConnCtx *qc = qc_bound(ctx);
+    QuicConn.ok = PROTO_FALSE;
+    if (!qc || !QuicConn.bind.b || !QuicConn.init_args.cfg)
+    {
+        return;
+    }
+    qc->b = QuicConn.bind.b; // survives the wipe inside quic_conn_open
+    quic_conn_open(qc, QuicConn.init_args.cfg, QuicConn.init_args.odcid, QuicConn.init_args.odcid_len,
+                   QuicConn.init_args.peer_scid, QuicConn.init_args.peer_scid_len, QuicConn.init_args.our_scid,
+                   QuicConn.init_args.our_scid_len, &QuicConn.cb);
+    QuicConn.ok = !qc->closed;
+}
+
+static void quic_conn_callbacks(struct QuicConnInternal *restrict ctx)
+{
+    QuicConnCtx *qc = qc_bound(ctx);
+    QuicConn.ok = PROTO_FALSE;
+    if (!qc)
+    {
+        return;
+    }
+    qc->cb = QuicConn.cb;
+    QuicConn.ok = PROTO_TRUE;
+}
+
+static void quic_conn_recv(struct QuicConnInternal *restrict ctx)
+{
+    QuicConnCtx *qc = qc_bound(ctx);
+    QuicConn.ok = PROTO_FALSE;
+    if (!qc || !QuicConn.recv_args.datagram)
+    {
+        return;
+    }
+    QuicConn.ok = quic_conn_take(qc, QuicConn.recv_args.datagram, QuicConn.recv_args.len);
+}
+
+static void quic_conn_send(struct QuicConnInternal *restrict ctx)
+{
+    QuicConnCtx *qc = qc_bound(ctx);
+    QuicConn.ok = PROTO_FALSE;
+    QuicConn.n = 0;
+    if (!qc || !QuicConn.send_args.out)
+    {
+        return;
+    }
+    QuicConn.n = quic_conn_build(qc, QuicConn.send_args.out, QuicConn.send_args.cap);
+    QuicConn.ok = PROTO_TRUE;
+}
+
+static void quic_conn_on_timeout(struct QuicConnInternal *restrict ctx)
+{
+    QuicConnCtx *qc = qc_bound(ctx);
+    QuicConn.ok = PROTO_FALSE;
+    if (!qc)
+    {
+        return;
+    }
+    quic_conn_timeout(qc, QuicConn.timeout_args.now_ms);
+    QuicConn.ok = PROTO_TRUE;
+}
+
+static void quic_conn_stream_send(struct QuicConnInternal *restrict ctx)
+{
+    QuicConnCtx *qc = qc_bound(ctx);
+    QuicConn.ok = PROTO_FALSE;
+    QuicConn.n = 0;
+    if (!qc)
+    {
+        return;
+    }
+    QuicConn.n = quic_conn_stream_put(qc, QuicConn.stream_send_args.stream_id, QuicConn.stream_send_args.data,
+                                      QuicConn.stream_send_args.len, QuicConn.stream_send_args.fin);
+    QuicConn.ok = PROTO_TRUE;
+}
+
+static void quic_conn_close(struct QuicConnInternal *restrict ctx)
+{
+    QuicConnCtx *qc = qc_bound(ctx);
+    QuicConn.ok = PROTO_FALSE;
+    if (!qc)
+    {
+        return;
+    }
+    quic_conn_close_transport(qc, QuicConn.close_args.error_code);
+    QuicConn.ok = PROTO_TRUE;
+}
+
+static void quic_conn_close_app(struct QuicConnInternal *restrict ctx)
+{
+    QuicConnCtx *qc = qc_bound(ctx);
+    QuicConn.ok = PROTO_FALSE;
+    if (!qc)
+    {
+        return;
+    }
+    quic_conn_close_application(qc, QuicConn.close_args.error_code);
+    QuicConn.ok = PROTO_TRUE;
+}
+
+static void quic_conn_is_established(struct QuicConnInternal *restrict ctx)
+{
+    QuicConnCtx *qc = qc_bound(ctx);
+    QuicConn.established = PROTO_FALSE;
+    QuicConn.ok = (qc != NULL);
+    if (qc)
+    {
+        QuicConn.established = quic_conn_done(qc);
+    }
+}
+
+static void quic_conn_is_closed(struct QuicConnInternal *restrict ctx)
+{
+    QuicConnCtx *qc = qc_bound(ctx);
+    QuicConn.closed = PROTO_TRUE; // an unbound connection answers nothing, which is closed
+    QuicConn.ok = (qc != NULL);
+    if (qc)
+    {
+        QuicConn.closed = quic_conn_gone(qc);
+    }
+}
+
+static struct QuicConnInternal s_qc = {.ns = &QuicConn};
+
+QuicConnNs QuicConn = {.init = quic_conn_init,
+                       .callbacks = quic_conn_callbacks,
+                       .recv = quic_conn_recv,
+                       .send = quic_conn_send,
+                       .on_timeout = quic_conn_on_timeout,
+                       .stream_send = quic_conn_stream_send,
+                       .close = quic_conn_close,
+                       .close_app = quic_conn_close_app,
+                       .is_established = quic_conn_is_established,
+                       .is_closed = quic_conn_is_closed,
+                       .internal = &s_qc};
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HTTP3
