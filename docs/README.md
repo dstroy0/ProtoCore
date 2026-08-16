@@ -95,6 +95,7 @@ not listed).
 src/
 ├── crypto/
 │   ├── aead/
+│   │   ├── aes128gcm.c
 │   │   ├── aes128gcm.h
 │   │   ├── aesccm.c
 │   │   ├── aesccm.h
@@ -112,12 +113,14 @@ src/
 │   │   ├── ed25519.c
 │   │   ├── ed25519.h
 │   │   ├── ed25519_comb_table.h
+│   │   ├── fe25519.c
 │   │   ├── fe25519.h
 │   │   ├── rsa.c
 │   │   └── rsa.h
 │   ├── cipher/
 │   │   ├── aes256ctr.c
 │   │   ├── aes256ctr.h
+│   │   ├── aes_block.c
 │   │   ├── aes_block.h
 │   │   ├── aes_sbox.h
 │   │   ├── chacha20.c
@@ -141,6 +144,7 @@ src/
 │   ├── mac/
 │   │   ├── aes_cmac.c
 │   │   ├── aes_cmac.h
+│   │   ├── ghash.c
 │   │   ├── ghash.h
 │   │   ├── hmac_sha256.c
 │   │   ├── hmac_sha256.h
@@ -155,6 +159,7 @@ src/
 │   │   └── sntrup761.h
 │   ├── rng/  (rng.h, rng.c)
 │   ├── crypto_opt.h
+│   ├── ct_eq.c
 │   └── ct_eq.h
 ├── mmgr/
 │   ├── arena.c
@@ -341,6 +346,7 @@ src/
 │   │   │   │   ├── inflate.h
 │   │   │   │   ├── phase_machine.c
 │   │   │   │   ├── phase_machine.h
+│   │   │   │   ├── ssh_kexhash.c
 │   │   │   │   ├── ssh_kexhash.h
 │   │   │   │   ├── ssh_rsa.c
 │   │   │   │   ├── ssh_rsa.h
@@ -1004,12 +1010,20 @@ The complete set of `PROTOCORE_ENABLE_*` flags and their defaults, scraped from
 | `PROTOCORE_ENABLE_AD9238` | `0` | Enable the AD9238 SPI configuration-port codec (default off). |
 | `PROTOCORE_ENABLE_ADS` | `0` | Beckhoff ADS / AMS protocol codec (`services/ads`). |
 | `PROTOCORE_ENABLE_ADS1115` | `0` | TI ADS1115 16-bit ADC (I2C) - a precise external analog input. |
+| `PROTOCORE_ENABLE_AES128GCM` | `\` |  |
+| `PROTOCORE_ENABLE_AES256CTR` | `1` |  |
+| `PROTOCORE_ENABLE_AESCCM` | `PROTOCORE_ENABLE_SMB` |  |
+| `PROTOCORE_ENABLE_AESGCM` | `1` |  |
+| `PROTOCORE_ENABLE_AES_BLOCK` | `1` |  |
+| `PROTOCORE_ENABLE_AES_CMAC` | `1` |  |
+| `PROTOCORE_ENABLE_AES_SBOX` | `1` |  |
 | `PROTOCORE_ENABLE_AMQP` | `0` | AMQP 0-9-1 frame codec (`services/amqp`). |
 | `PROTOCORE_ENABLE_ATC` | `0` | Opt-in ATC (Advanced Traffic Controller) field-I/O interop snapshot. |
 | `PROTOCORE_ENABLE_AUDIT_LOG` | `0` | Tamper-evident audit log. |
 | `PROTOCORE_ENABLE_AUTH` | `0` | HTTP Basic Authentication per-route. |
 | `PROTOCORE_ENABLE_AUTH_LOCKOUT` | `0` | Opt-in per-IP brute-force lockout for HTTP auth (requires PROTOCORE_ENABLE_AUTH). |
 | `PROTOCORE_ENABLE_BACNET` | `0` | BACnet/IP BVLC + NPDU codec (`services/bacnet`). |
+| `PROTOCORE_ENABLE_BIGNUM` | `1` |  |
 | `PROTOCORE_ENABLE_BLE_GATT` | `0` | Opt-in Bluetooth ATT protocol codec + GATT characteristic bridge. |
 | `PROTOCORE_ENABLE_BUS_CAPTURE` | `0` | Wired field-bus listen-only capture. |
 | `PROTOCORE_ENABLE_C37118` | `0` | IEEE C37.118.2 synchrophasor frame codec (`services/c37118`). |
@@ -1017,6 +1031,8 @@ The complete set of `PROTOCORE_ENABLE_*` flags and their defaults, scraped from
 | `PROTOCORE_ENABLE_CBOR` | `0` | Zero-heap CBOR (RFC 8949) encoder for compact binary payloads. |
 | `PROTOCORE_ENABLE_CC1101` | `0` | Opt-in CC1101 sub-GHz radio driver. |
 | `PROTOCORE_ENABLE_CCLINK` | `0` | Opt-in CC-Link (CLPA) cyclic fieldbus frame codec. |
+| `PROTOCORE_ENABLE_CHACHA20` | `1` |  |
+| `PROTOCORE_ENABLE_CHACHAPOLY` | `1` |  |
 | `PROTOCORE_ENABLE_CIA402` | `0` | CiA 402 / IEC 61800-7-201 drive + motion profile (`services/cia402`). |
 | `PROTOCORE_ENABLE_CIP` | `0` | CIP (Common Industrial Protocol) message codec (`services/cip`). |
 | `PROTOCORE_ENABLE_CLOUDEVENTS` | `0` | CloudEvents v1.0 (CNCF) event envelope (structured JSON + binary headers). |
@@ -1028,6 +1044,8 @@ The complete set of `PROTOCORE_ENABLE_*` flags and their defaults, scraped from
 | `PROTOCORE_ENABLE_CONTROL` | `0` | Closed-loop control law (`services/control`). |
 | `PROTOCORE_ENABLE_COTP` | `0` | TPKT (RFC 1006) + COTP (X.224 class 0) frame codec (`services/cotp`). |
 | `PROTOCORE_ENABLE_CSRF` | `0` | Opt-in CSRF protection for state-changing HTTP requests. |
+| `PROTOCORE_ENABLE_CT_EQ` | `1` |  |
+| `PROTOCORE_ENABLE_CURVE25519` | `1` |  |
 | `PROTOCORE_ENABLE_DASHBOARD` | `0` | Real-time SVG dashboard (PROTOCORE_ENABLE_DASHBOARD; requires PROTOCORE_ENABLE_SSE). |
 | `PROTOCORE_ENABLE_DBM` | `0` | Opt-in dbm: a log-structured hash key-value store on the WAL (PROTOCORE_ENABLE_DBM, requires WAL). |
 | `PROTOCORE_ENABLE_DDS` | `0` | Opt-in DDS / RTPS wire-protocol codec. |
@@ -1046,6 +1064,8 @@ The complete set of `PROTOCORE_ENABLE_*` flags and their defaults, scraped from
 | `PROTOCORE_ENABLE_DOCSTORE` | `0` | Opt-in local JSON document store on the WAL (PROTOCORE_ENABLE_DOCSTORE, requires DBM + WAL). |
 | `PROTOCORE_ENABLE_DSHOT` | `0` | Opt-in DShot ESC throttle protocol codec. |
 | `PROTOCORE_ENABLE_DTLS` | `0` | DTLS 1.3 datagram security (RFC 9147) - the record layer. |
+| `PROTOCORE_ENABLE_ECDSA` | `1` |  |
+| `PROTOCORE_ENABLE_ED25519` | `1` |  |
 | `PROTOCORE_ENABLE_EDGE_CACHE` | `0` | Opt-in CDN edge-cache tier (PROTOCORE_ENABLE_EDGE_CACHE, requires HTTP_CACHE). |
 | `PROTOCORE_ENABLE_EDGE_MESH` | `0` | Opt-in mesh (sibling-cache) distribution for the edge cache. |
 | `PROTOCORE_ENABLE_EDGE_ORIGIN_TLS` | `0` |  |
@@ -1059,6 +1079,7 @@ The complete set of `PROTOCORE_ENABLE_*` flags and their defaults, scraped from
 | `PROTOCORE_ENABLE_FAILSAFE` | `0` | Opt-in software watchdog: deadlock detection + fail-safe safe-state. |
 | `PROTOCORE_ENABLE_FANUC_J519` | `0` | FANUC Stream Motion (option J519) UDP codec (`services/fanuc_j519`). |
 | `PROTOCORE_ENABLE_FDC2214` | `0` | Opt-in FDC2114/2214 capacitance-to-digital field sensor. |
+| `PROTOCORE_ENABLE_FE25519` | `1` |  |
 | `PROTOCORE_ENABLE_FILE_SERVING` | `0` | Static file serving via Arduino FS (LittleFS, SPIFFS, SD). |
 | `PROTOCORE_ENABLE_FINS` | `0` | Omron FINS frame codec (`services/fins`). |
 | `PROTOCORE_ENABLE_FLOW_EXPORT` | `0` | Flow-record export codec (`services/flow_export`). |
@@ -1068,6 +1089,7 @@ The complete set of `PROTOCORE_ENABLE_*` flags and their defaults, scraped from
 | `PROTOCORE_ENABLE_FTP` | `0` | Opt-in FTP client wire codec. |
 | `PROTOCORE_ENABLE_FTP_SESSION` | `0` | Opt-in FTP client session driver (PROTOCORE_ENABLE_FTP_SESSION, requires PROTOCORE_ENABLE_FTP). |
 | `PROTOCORE_ENABLE_GATEWAY` | `0` | Enable the radio / wireless gateway bridge (default off). |
+| `PROTOCORE_ENABLE_GHASH` | `1` |  |
 | `PROTOCORE_ENABLE_GOOSE` | `0` | Opt-in IEC 61850 GOOSE publisher codec. |
 | `PROTOCORE_ENABLE_GPIB` | `0` | GPIB-over-LAN (Prologix-style) controller command codec (`services/gpib`). |
 | `PROTOCORE_ENABLE_GPIO_MAP` | `0` | Opt-in browser GPIO pin-mapper / diagnostics endpoint. |
@@ -1078,6 +1100,9 @@ The complete set of `PROTOCORE_ENABLE_*` flags and their defaults, scraped from
 | `PROTOCORE_ENABLE_HAPPY_EYEBALLS` | `0` | Opt-in dual-stack Happy Eyeballs destination selection. |
 | `PROTOCORE_ENABLE_HART` | `0` | Opt-in HART / HART-IP process-instrument protocol codec. |
 | `PROTOCORE_ENABLE_HISLIP` | `0` | HiSLIP (High-Speed LAN Instrument Protocol) message codec (`services/hislip`). |
+| `PROTOCORE_ENABLE_HKDF` | `(PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_TLS_SOFTWARE)` |  |
+| `PROTOCORE_ENABLE_HMAC_SHA256` | `1` |  |
+| `PROTOCORE_ENABLE_HMAC_SHA512` | `1` |  |
 | `PROTOCORE_ENABLE_HMMD` | `0` | Waveshare HMMD 24 GHz mmWave micro-motion radar codec (`services/hmmd`). |
 | `PROTOCORE_ENABLE_HOSTLINK` | `0` | Omron Host Link (C-mode) frame codec (`services/hostlink`). |
 | `PROTOCORE_ENABLE_HOTSWAP` | `0` | Opt-in removable-storage hot-swap safeties. |
@@ -1100,6 +1125,7 @@ The complete set of `PROTOCORE_ENABLE_*` flags and their defaults, scraped from
 | `PROTOCORE_ENABLE_J1939` | `0` | SAE J1939 message codec (`services/j1939`). |
 | `PROTOCORE_ENABLE_J2735` | `0` | Opt-in SAE J2735 V2X codec. |
 | `PROTOCORE_ENABLE_JWT` | `0` | JWT bearer-token authentication (HS256). |
+| `PROTOCORE_ENABLE_KDF` | `1` |  |
 | `PROTOCORE_ENABLE_KEEPALIVE` | `0` | HTTP/1.1 persistent connections (keep-alive). |
 | `PROTOCORE_ENABLE_LD2410` | `0` | HLK-LD2410 24 GHz mmWave presence / motion radar (UART). |
 | `PROTOCORE_ENABLE_LDC1614` | `0` | Opt-in LDC1614 inductance-to-digital field sensor. |
@@ -1111,10 +1137,12 @@ The complete set of `PROTOCORE_ENABLE_*` flags and their defaults, scraped from
 | `PROTOCORE_ENABLE_LWM2M` | `0` | OMA LwM2M TLV codec (`services/lwm2m`). |
 | `PROTOCORE_ENABLE_MBPLUS` | `0` | Opt-in Modbus Plus HDLC token-bus frame codec. |
 | `PROTOCORE_ENABLE_MBUS` | `0` | Wired M-Bus (Meter-Bus, EN 13757) frame codec (`services/mbus`). |
+| `PROTOCORE_ENABLE_MD` | `1` |  |
 | `PROTOCORE_ENABLE_MDNS` | `0` | mDNS / DNS-SD advertisement: `<name>.local` plus `_http._tcp` and any service added. |
 | `PROTOCORE_ENABLE_MDNS_ADAPTIVE` | `0` | Opt-in adaptive mDNS beacon scheduling. |
 | `PROTOCORE_ENABLE_MELSEC` | `0` | Mitsubishi MELSEC MC protocol (binary 3E) codec (`services/melsec`). |
 | `PROTOCORE_ENABLE_METRICS` | `0` | Prometheus `/metrics` endpoint (text exposition format 0.0.4). |
+| `PROTOCORE_ENABLE_MLKEM` | `PROTOCORE_ENABLE_PQC_KEX` |  |
 | `PROTOCORE_ENABLE_MMS` | `0` | Opt-in IEC 61850 MMS PDU codec. |
 | `PROTOCORE_ENABLE_MNT` | `0` | Mounted storage. |
 | `PROTOCORE_ENABLE_MODBUS` | `0` | Modbus TCP slave/server (Modbus Application Protocol v1.1b3) on TCP/502. |
@@ -1154,6 +1182,7 @@ The complete set of `PROTOCORE_ENABLE_*` flags and their defaults, scraped from
 | `PROTOCORE_ENABLE_PER_IP_THROTTLE` | `0` | Opt-in per-IP accept-rate throttle (connection-flood defense, keyed by source IPv4). |
 | `PROTOCORE_ENABLE_PMBUS` | `0` | PMBus 1.3 power-management command set over SMBus. |
 | `PROTOCORE_ENABLE_PN532` | `0` | Enable the PN532 NFC frame codec (default off). |
+| `PROTOCORE_ENABLE_POLY1305` | `1` |  |
 | `PROTOCORE_ENABLE_POWERLINK` | `0` | Opt-in Ethernet POWERLINK (EPSG) basic frame codec. |
 | `PROTOCORE_ENABLE_POWER_MGMT` | `0` | Opt-in SoC power governor. |
 | `PROTOCORE_ENABLE_PQC_KEX` | `0` | Post-quantum hybrid key exchange: ML-KEM-768 + X25519 (FIPS 203 / RFC 9370 combiner). |
@@ -1173,8 +1202,10 @@ The complete set of `PROTOCORE_ENABLE_*` flags and their defaults, scraped from
 | `PROTOCORE_ENABLE_RCWL0516` | `0` | RCWL-0516 microwave Doppler presence sensor + the shared one-GPIO presence facade (`services/rcwl0516`). |
 | `PROTOCORE_ENABLE_REDIS` | `0` | Redis RESP2/RESP3 wire codec (`services/iot/redis_resp`). |
 | `PROTOCORE_ENABLE_RELAY` | `0` | Opt-in TCP relay / DNAT port forwarding. |
+| `PROTOCORE_ENABLE_RNG` | `1` |  |
 | `PROTOCORE_ENABLE_ROAMING` | `0` | Wi-Fi roaming decision layer (`services/roaming`). |
 | `PROTOCORE_ENABLE_ROBOTICS` | `0` | OPC UA for Robotics information model. |
+| `PROTOCORE_ENABLE_RSA` | `1` |  |
 | `PROTOCORE_ENABLE_RTC` | `0` | I2C real-time-clock driver (DS1307 / DS3231) - a battery-backed time source. |
 | `PROTOCORE_ENABLE_S7COMM` | `0` | Siemens S7comm PDU codec (`services/s7comm`). |
 | `PROTOCORE_ENABLE_SAFETY_SCL` | `0` | IEC 61784-3 black-channel Safety Communication Layer primitives (`services/safety_scl`). |
@@ -1184,6 +1215,10 @@ The complete set of `PROTOCORE_ENABLE_*` flags and their defaults, scraped from
 | `PROTOCORE_ENABLE_SENML` | `0` | SenML (RFC 8428) measurement-pack builder (`services/senml`). |
 | `PROTOCORE_ENABLE_SEP2` | `0` | Opt-in IEEE 2030.5 (Smart Energy Profile 2.0) resource codec. |
 | `PROTOCORE_ENABLE_SERCOS` | `0` | Opt-in SERCOS III motion-bus telegram codec. |
+| `PROTOCORE_ENABLE_SHA1` | `1` |  |
+| `PROTOCORE_ENABLE_SHA256` | `1` |  |
+| `PROTOCORE_ENABLE_SHA3` | `PROTOCORE_ENABLE_PQC_KEX` |  |
+| `PROTOCORE_ENABLE_SHA512` | `1` |  |
 | `PROTOCORE_ENABLE_SHT3X` | `0` | Sensirion SHT3x temperature / humidity sensor (I2C). |
 | `PROTOCORE_ENABLE_SIGFOX` | `0` | Enable the Sigfox AT-command codec (default off). |
 | `PROTOCORE_ENABLE_SIMATIC` | `0` | Siemens SIMATIC serial point-to-point: 3964R link + RK512 telegrams (`services/simatic`). |
@@ -1196,6 +1231,7 @@ The complete set of `PROTOCORE_ENABLE_*` flags and their defaults, scraped from
 | `PROTOCORE_ENABLE_SNMP_TRAP` | `0` | Outbound SNMP notifications - traps and informs (requires PROTOCORE_ENABLE_SNMP). |
 | `PROTOCORE_ENABLE_SNMP_V3` | `0` | Add SNMPv3 USM (auth via HMAC-SHA, privacy via AES-128-CFB). |
 | `PROTOCORE_ENABLE_SNP` | `0` | Opt-in GE Fanuc SNP (Series Ninety Protocol) serial frame codec. |
+| `PROTOCORE_ENABLE_SNTRUP761` | `PROTOCORE_ENABLE_SSH_SNTRUP761` |  |
 | `PROTOCORE_ENABLE_SOCKPOOL` | `0` | Opt-in dynamic socket recycling: an LRU connection-slot pool. |
 | `PROTOCORE_ENABLE_SOUTHBOUND` | `0` | Opt-in southbound protocol-driver framework. |
 | `PROTOCORE_ENABLE_SPARKPLUG` | `0` | Sparkplug B payload + topic codec (`services/sparkplug`). |
@@ -1307,16 +1343,20 @@ guards at compile time.
 | `PROTOCORE_ACCEPT_THROTTLE_WINDOW_MS` | `1000` | Throttle window length in milliseconds (see PROTOCORE_ENABLE_ACCEPT_THROTTLE). |
 | `PROTOCORE_ADS1115_DIFFERENTIAL` | `0` | ADS1115 input mode: 0 = single-ended (AINx vs GND), 1 = differential. |
 | `PROTOCORE_ADS1115_I2C_ADDR` | `0x48` | I2C address of the ADS1115 (0x48 with ADDR to GND; 0x49/0x4A/0x4B for VDD/SDA/SCL). |
+| `PROTOCORE_AES256CTR_BORROW` | `384` |  |
+| `PROTOCORE_AES_CMAC_BORROW` | `384` |  |
 | `PROTOCORE_AUTH_LOCKOUT_BASE_MS` | `1000` | First lockout duration in ms; doubles on each further failure. |
 | `PROTOCORE_AUTH_LOCKOUT_MAX_MS` | `300000` | Maximum lockout duration in ms (the exponential backoff cap). |
 | `PROTOCORE_AUTH_LOCKOUT_SLOTS` | `16` | Number of source IPs the auth lockout tracks (BSS bucket table). |
 | `PROTOCORE_AUTH_LOCKOUT_THRESHOLD` | `5` | Consecutive failed auths from one IP before it is locked out. |
 | `PROTOCORE_BASE64_SWAR` | `1` | Use the SWAR base64 decoder (classify 4 characters per 32-bit word). |
+| `PROTOCORE_BIGNUM_BORROW` | `304` |  |
 | `PROTOCORE_BRIDGE_MAX_DRAIN` | `8` | Chunks a STREAM target moves per poll before yielding, bounding the UART drain loop. |
 | `PROTOCORE_BRIDGE_MAX_RULES` | `8` | Max concurrent address:port -> bus rules (server/net/iface_bridge). |
 | `PROTOCORE_BRIDGE_STREAM_CHUNK` | `256` | STREAM (UART) pipe chunk size (bytes) for server/net/iface_bridge - one socket<->UART hop. |
 | `PROTOCORE_BRIDGE_TXN_MAX` | `256` | Max write / read payload (bytes) per TRANSACTION frame (server/net/iface_bridge). |
 | `PROTOCORE_BRIDGE_UART_TXN_MS` | `50` | UART TRANSACTION read window (ms): how long a write-then-read waits for the read_len reply. |
+| `PROTOCORE_CHACHA20_BORROW` | `192` |  |
 | `PROTOCORE_CLIENT_RX_BUF` | `8192` | Per-connection wire receive ring size (bytes). |
 | `PROTOCORE_CLOSING_TIMEOUT_MS` | `2000` | Upper bound (ms) a slot may dwell in CONN_CLOSING after a graceful close before the idle sweep force-aborts it. |
 | `PROTOCORE_COAP_BLOCK1_MAX` | `1024` | Reassembly buffer for a block-wise (Block1) request upload, in bytes. |
@@ -1333,6 +1373,7 @@ guards at compile time.
 | `PROTOCORE_CONFIG_KEY_MAX` | `16` | Max key length incl. |
 | `PROTOCORE_CONFIG_MAX_ENTRIES` | `16` | Max key/value entries in the host (test) config backend. |
 | `PROTOCORE_CONFIG_VAL_MAX` | `2048` | Max value bytes per entry in the host (test) config backend. |
+| `PROTOCORE_CURVE25519_BORROW` | `960` |  |
 | `PROTOCORE_DASHBOARD_JSON_BUF` | `1024` | Stack buffer for the dashboard layout / values JSON (bytes). |
 | `PROTOCORE_DASHBOARD_MAX_WIDGETS` | `16` | Maximum widgets in the dashboard table (BSS value array). |
 | `PROTOCORE_DAV_MAX_DEPTH` | `8` | Deepest tree a WebDAV DELETE / COPY walks before refusing (see PROTOCORE_ENABLE_WEBDAV). |
@@ -1371,6 +1412,7 @@ guards at compile time.
 | `PROTOCORE_FWD_MAX_ACL` | `8` | Max ingress access-control entries (byte-pattern permit/deny; static). |
 | `PROTOCORE_FWD_MAX_ROUTES` | `8` | Max policy routes (byte-pattern -> egress interface; static). |
 | `PROTOCORE_FWD_MAX_RULES` | `8` | Max forwarding rules (src -> dst allow/deny + rate cap; static-allocated). |
+| `PROTOCORE_GHASH_BORROW` | `256` |  |
 | `PROTOCORE_GPIO_JSON_BUF` | `1024` | Stack buffer for the GPIO-map JSON (bytes). |
 | `PROTOCORE_GPIO_MAX` | `40` | Maximum GPIO pins the mapper reports (BSS table). |
 | `PROTOCORE_GUARDRAIL_FRAG_MIN_BLOCK` | `4096` | Largest-free-block floor (bytes); below this trips the fragmentation guardrail. |
@@ -1382,6 +1424,7 @@ guards at compile time.
 | `PROTOCORE_H2_MAX_FRAME` | `16384` | Largest HTTP/2 frame we accept, in bytes (advertised as SETTINGS_MAX_FRAME_SIZE). |
 | `PROTOCORE_H2_MAX_STREAMS` | `8` | Max concurrent HTTP/2 streams per connection (advertised as MAX_CONCURRENT_STREAMS). |
 | `PROTOCORE_H2_POOL_IN_PSRAM` | `0` | Place the HTTP/2 connection-engine pool in external PSRAM (ESP32). |
+| `PROTOCORE_H3_CONN_CTX` | `640` |  |
 | `PROTOCORE_H3_CRYPTO_BUF` | `2048` | Maximum bytes of one QUIC/TLS handshake CRYPTO flight (RFC 9001). |
 | `PROTOCORE_H3_MAX_STREAMS` | `8` | Maximum concurrent request streams per HTTP/3 connection. |
 | `PROTOCORE_H3_QPACK_BLOCK` | `256` |  |
@@ -1413,6 +1456,7 @@ guards at compile time.
 | `PROTOCORE_MDNS_MAX_SERVICES` | `4` | Services the responder advertises at once, `_http._tcp` included. |
 | `PROTOCORE_MDNS_TXT_MAX` | `128` | Bytes of packed `key=value` TXT strings, each with its own length byte ahead of it. |
 | `PROTOCORE_MDNS_TX_MAX` | `512` | Response datagram the responder composes. |
+| `PROTOCORE_MD_BORROW` | `448` |  |
 | `PROTOCORE_MODBUS_COILS` | `64` | Number of Modbus coils (FC 1/5/15), single-bit R/W (BSS, bit-packed). |
 | `PROTOCORE_MODBUS_DISCRETE_INPUTS` | `64` | Number of Modbus discrete inputs (FC 2), single-bit read-only (BSS, bit-packed). |
 | `PROTOCORE_MODBUS_HOLDING_REGS` | `64` | Number of Modbus holding registers (FC 3/6/16), 16-bit R/W (BSS). |
@@ -1450,6 +1494,7 @@ guards at compile time.
 | `PROTOCORE_PHY_MAX_IFACES` | `4` | Interfaces layer 1 can carry: wifi station and softAP, ethernet, a bridged bus, a radio. |
 | `PROTOCORE_PLAINTEXT_SCRATCH` | `10240` |  |
 | `PROTOCORE_PN532_MAX_DATA` | `254` | Reject a PN532 normal frame whose declared length exceeds this (framing sanity). |
+| `PROTOCORE_POLY1305_BORROW` | `96` |  |
 | `PROTOCORE_POWER_BUSY_PCT` | `40` | Load percentage at/above which the ceiling clock is used. |
 | `PROTOCORE_POWER_MHZ_MAX` | `240` | CPU clock (MHz) when there is work to do. |
 | `PROTOCORE_POWER_MHZ_MIN` | `80` | CPU clock (MHz) when idle, thermally throttled, or recovering from a brownout. |
@@ -1460,6 +1505,7 @@ guards at compile time.
 | `PROTOCORE_PQ_INTERNAL_PRIORITY` | `8` | Base FreeRTOS priority for the internal preempting lanes (DMA / forwarding / device access). |
 | `PROTOCORE_PQ_ITEM_SIZE` | `32` | Bytes per preempting-queue item (the posted item must fit). |
 | `PROTOCORE_PQ_STACK` | `4096` | Stack (bytes) for each preempting-queue processing task (ESP32). |
+| `PROTOCORE_QUIC_CONN_CTX_BORROW` | `12544` |  |
 | `PROTOCORE_QUIC_MAX_CONNS` | `2` | Simultaneous HTTP/3 connections. |
 | `PROTOCORE_RADIO_MAX_TX_DBM` | `0` | Max TX power cap in dBm (2..20); 0 = leave the platform default. |
 | `PROTOCORE_RADIO_WIFI_PS` | `0` | WiFi modem-sleep mode: 0 = none (max perf), 1 = min modem, 2 = max modem. |
@@ -1480,6 +1526,10 @@ guards at compile time.
 | `PROTOCORE_SFTP_MAX_HANDLES` | `4` | Max concurrent open SFTP handles (files + dirs) per SSH connection. |
 | `PROTOCORE_SFTP_MAX_READ` | `1024` | Largest PROTOCORE_SSH_FXP_DATA payload returned for one READ (a short read - the client re-requests). |
 | `PROTOCORE_SFTP_PKT_BUF` | `2048` | SFTP packet-assembly buffer per SFTP channel (bytes); bounds one non-streamed request/response. |
+| `PROTOCORE_SHA1_BORROW` | `160` |  |
+| `PROTOCORE_SHA256_BORROW` | `256` |  |
+| `PROTOCORE_SHA3_BORROW` | `224` |  |
+| `PROTOCORE_SHA512_BORROW` | `448` |  |
 | `PROTOCORE_SHT3X_I2C_ADDR` | `0x44` | I2C address of the SHT3x (0x44 with ADDR low; 0x45 with ADDR high). |
 | `PROTOCORE_SIGFOX_MAX_PAYLOAD` | `12` | Maximum Sigfox uplink payload (the network caps a message at 12 bytes). |
 | `PROTOCORE_SIMATIC_BLOCK_MAX` | `256` | 3964R block-body buffer size (built/received bytes: DLE-stuffed payload + DLE ETX + BCC). |
@@ -1547,14 +1597,9 @@ guards at compile time.
 | `PROTOCORE_WORKER_STACK_PQC_MIN` | `16384` |  |
 | `PROTOCORE_WORKER_STACK_RSA_MIN` | `8192` | Minimum worker-task stack (bytes) required once an RSA-2048 verifier is compiled in (OIDC / SSH). |
 | `PROTOCORE_WORKER_TASK_PRIORITY` | `5` | FreeRTOS priority for each server worker task (ESP32). |
-| `PROTOCORE_WORK_AES256CTR` | `384` |  |
 | `PROTOCORE_WORK_AESCCM` | `448` |  |
-| `PROTOCORE_WORK_BIGNUM_HW` | `1024` |  |
+| `PROTOCORE_WORK_BIGNUM_HW` | `1328` |  |
 | `PROTOCORE_WORK_BIGNUM_SW` | `1408` |  |
-| `PROTOCORE_WORK_CHACHA20` | `192` |  |
-| `PROTOCORE_WORK_CHACHAPOLY` | `64` |  |
-| `PROTOCORE_WORK_MD` | `96` |  |
-| `PROTOCORE_WORK_POLY1305` | `80` |  |
 | `PROTOCORE_WS_CLIENT_BUF_SIZE` | `1024` | WebSocket client send/receive buffer size in bytes (bounds one frame). |
 | `PROTOCORE_WS_CLIENT_CT_BUF_SIZE` | `4096` | Ciphertext receive-ring size for wss:// (draining ring; must exceed one TCP_MSS). |
 | `PROTOCORE_WS_FRAG_SIZE` | `0` | WebSocket outbound fragmentation size (RFC 6455 sec 5.4), in payload bytes. |
