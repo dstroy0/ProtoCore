@@ -360,7 +360,11 @@ src/
 │   │   ├── telnet/  (telnet.h, telnet.c)
 │   │   ├── presentation.c
 │   │   └── presentation.h
-│   ├── session/  (session.h, session.c)
+│   ├── session/
+│   │   ├── sse/  (sse.h, sse.c)
+│   │   ├── ws/  (ws.h, ws.c)
+│   │   ├── session.c
+│   │   └── session.h
 │   ├── tls/
 │   │   ├── handshake/  (handshake.h, handshake.c)
 │   │   ├── key_schedule/  (key_schedule.h, key_schedule.c)
@@ -1419,12 +1423,13 @@ guards at compile time.
 | `PROTOCORE_GUARDRAIL_HEAP_MIN` | `8192` | Free-heap floor (bytes); below this trips the heap guardrail. |
 | `PROTOCORE_GUARDRAIL_STACK_MIN` | `512` | Task remaining-stack floor (bytes); below this trips the stack guardrail. |
 | `PROTOCORE_GW_MAX_PORTS` | `4` | Max southbound gateway ports (radios / buses; static-allocated). |
+| `PROTOCORE_H2_CONN_RECORD` | `32768` |  |
 | `PROTOCORE_H2_HDR_BLOCK` | `4096` | Header-block reassembly buffer for HTTP/2 requests that span HEADERS + CONTINUATION frames (a single END_HEADERS frame decodes in place and needs no copy). |
 | `PROTOCORE_H2_MAX_CONTINUATION` | `8` | CONTINUATION frames one header block may span (RFC 9113 sec 6.10). |
 | `PROTOCORE_H2_MAX_FRAME` | `16384` | Largest HTTP/2 frame we accept, in bytes (advertised as SETTINGS_MAX_FRAME_SIZE). |
 | `PROTOCORE_H2_MAX_STREAMS` | `8` | Max concurrent HTTP/2 streams per connection (advertised as MAX_CONCURRENT_STREAMS). |
 | `PROTOCORE_H2_POOL_IN_PSRAM` | `0` | Place the HTTP/2 connection-engine pool in external PSRAM (ESP32). |
-| `PROTOCORE_H3_CONN_CTX` | `640` |  |
+| `PROTOCORE_H3_CONN_CTX` | `672` |  |
 | `PROTOCORE_H3_CRYPTO_BUF` | `2048` | Maximum bytes of one QUIC/TLS handshake CRYPTO flight (RFC 9001). |
 | `PROTOCORE_H3_MAX_STREAMS` | `8` | Maximum concurrent request streams per HTTP/3 connection. |
 | `PROTOCORE_H3_QPACK_BLOCK` | `256` |  |
