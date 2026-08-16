@@ -750,7 +750,11 @@ size_t protocore_tls13_build_cert_verify(uint8_t *work, uint8_t *out, size_t cap
         return 0;
     }
     uint8_t sig[PROTOCORE_ED25519_SIG_LEN];
-    protocore_ed25519_sign(work, sig, content, clen, seed);
+    Ed25519.sign_args.seed = seed;
+    Ed25519.sign_args.msg = content;
+    Ed25519.sign_args.msg_len = clen;
+    Ed25519.sign_args.sig = sig;
+    Ed25519.sign(work);
 
     Writer w = {out, cap, 0, PROTO_TRUE};
     w_u8(&w, TLS_HS_CERTIFICATE_VERIFY);

@@ -10,9 +10,13 @@
  * variants + native), so the constant-time integer helpers are written directly with our int widths
  * instead of the reference's portable crypto_int layer. The generic sntrup761_encode/sntrup761_decode take a scratch
  * arena rather than the reference's variable-length recursion arrays, so the stack stays bounded.
- * SHA-512 and the RNG come from the SSH crypto seams; byte encodings and the hashing (prefix bytes
- * 1/2/3/4) match OpenSSH exactly, so a ciphertext produced here decapsulates on a real peer and a
- * public key generated here encapsulates on one - verified byte-exact against the reference both ways.
+ * SHA-512 runs through @ref Sha512Ns and the randomness through protocore_rand_fill(); byte encodings
+ * and the hashing (prefix bytes 1/2/3/4) match OpenSSH exactly, so a ciphertext produced here
+ * decapsulates on a real peer and a public key generated here encapsulates on one - verified
+ * byte-exact against the reference both ways.
+ *
+ * The module's own borrow carries one region: the bytes the nested SHA-512 runs out of. Nothing
+ * crosses a call, so there is no context.
  *
  * Everything NOT called out above tracks upstream line for line on purpose - crypto_sort_int32 is
  * upstream's own vendored djbsort (supercop crypto_sort/int32/portable4), and R3_recip / Rq_recip3
@@ -23,6 +27,8 @@
  * house style normally.
  */
 
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
 #if PROTOCORE_ENABLE_SNTRUP761
 
 #include "crypto/hash/sha512.h"
@@ -31,6 +37,18 @@
 #include "mmgr/protomem.h"
 
 PROTOCORE_BEGIN_DECLS
+
+// The caller's borrow, split: the region the nested SHA-512 runs out of. That hash is driven through
+// its own namespace, so this borrow carries a region for it rather than naming any term of its split.
+// Nothing is kept between calls, so there is no context here: what a call needs beyond the hash lives
+// and dies inside it.
+#define SNTRUP761_OFF_SHA512 0u
+static_assert(SNTRUP761_OFF_SHA512 + PROTOCORE_SHA512_BORROW <= PROTOCORE_SNTRUP761_BORROW,
+              "PROTOCORE_SNTRUP761_BORROW is short of the nested SHA-512 borrow - raise it in "
+              "protocore_config.h, which derives PROTOCORE_SECURE_ARENA_SIZE from it");
+
+// The regions, at their offsets in the caller's borrow.
+#define SNTRUP761_SHA512(w) ((w) + SNTRUP761_OFF_SHA512)
 
 // --- parameters (sntrup761) ---
 // The spec names these p, q, w. Spelled out here because a bare `#define P`
@@ -395,22 +413,29 @@ static void Short_random(small_t *out)
     uint8_t rb[4];
     for (int i = 0; i < PROTOCORE_SNTRUP_P; ++i)
     {
-        protocore_rand_fill(rb, 4);
+        Rng.fill_args.out = rb;
+        Rng.fill_args.len = 4;
+        Rng.fill(protocore_rng_span());
         L[i] = (uint32_t)rb[0] | ((uint32_t)rb[1] << 8) | ((uint32_t)rb[2] << 16) | ((uint32_t)rb[3] << 24);
     }
     Short_fromlist(out, L);
 }
 
-// out = SHA512(b || in)[0:32].
-static void Hash_prefix(uint8_t *work, uint8_t *out, int b, const uint8_t *in, size_t inlen)
+// out = SHA512(b || in)[0:32], through the Sha512 namespace in this borrow's hash region.
+static void Hash_prefix(uint8_t *restrict work, uint8_t *out, int b, const uint8_t *in, size_t inlen)
 {
-    protocore_sha512_ctx ctx;
     uint8_t h[PROTOCORE_SHA512_DIGEST_LEN];
     uint8_t bb = (uint8_t)b;
-    protocore_sha512_init(&ctx, work);
-    protocore_sha512_update(&ctx, &bb, 1);
-    protocore_sha512_update(&ctx, in, inlen);
-    protocore_sha512_final(&ctx, h);
+    uint8_t *hw = SNTRUP761_SHA512(work);
+    Sha512.init(hw);
+    Sha512.update_args.data = &bb;
+    Sha512.update_args.len = 1;
+    Sha512.update(hw);
+    Sha512.update_args.data = in;
+    Sha512.update_args.len = inlen;
+    Sha512.update(hw);
+    Sha512.final_args.out = h;
+    Sha512.final(hw);
     mem.cpy(out, h, PROTOCORE_HASH_BYTES);
 }
 
@@ -456,7 +481,7 @@ static void Rounded_encode(uint8_t *s, const Fq *r, uint16_t *scr)
     sntrup761_encode(s, Rr, M, PROTOCORE_SNTRUP_P, scr);
 }
 
-static void HashConfirm(uint8_t *work, uint8_t *h, const uint8_t *r_enc, const uint8_t *cache)
+static void HashConfirm(uint8_t *restrict work, uint8_t *h, const uint8_t *r_enc, const uint8_t *cache)
 {
     uint8_t x[PROTOCORE_HASH_BYTES * 2];
     Hash_prefix(work, x, 3, r_enc, PROTOCORE_SMALL_BYTES);
@@ -464,7 +489,7 @@ static void HashConfirm(uint8_t *work, uint8_t *h, const uint8_t *r_enc, const u
     Hash_prefix(work, h, 2, x, sizeof x);
 }
 
-static void HashSession(uint8_t *work, uint8_t *k, int b, const uint8_t *r_enc, const uint8_t *c)
+static void HashSession(uint8_t *restrict work, uint8_t *k, int b, const uint8_t *r_enc, const uint8_t *c)
 {
     uint8_t x[PROTOCORE_HASH_BYTES + PROTOCORE_CT_BYTES];
     Hash_prefix(work, x, 3, r_enc, PROTOCORE_SMALL_BYTES);
@@ -473,8 +498,8 @@ static void HashSession(uint8_t *work, uint8_t *k, int b, const uint8_t *r_enc, 
 }
 
 // Encapsulation reused for the Decapsulation FO re-encrypt check.
-static void Hide(uint8_t *work, uint8_t *c, uint8_t *r_enc, const small_t *r, const uint8_t *pk, const uint8_t *cache,
-                 uint16_t *scr, uint32_t *scr32)
+static void Hide(uint8_t *restrict work, uint8_t *c, uint8_t *r_enc, const small_t *r, const uint8_t *pk,
+                 const uint8_t *cache, uint16_t *scr, uint32_t *scr32)
 {
     Small_encode(r_enc, r);
     Fq h[PROTOCORE_SNTRUP_P], cp[PROTOCORE_SNTRUP_P];
@@ -710,7 +735,9 @@ static void Small_random(small_t *out)
     uint8_t rb[4];
     for (int i = 0; i < PROTOCORE_SNTRUP_P; ++i)
     {
-        protocore_rand_fill(rb, 4);
+        Rng.fill_args.out = rb;
+        Rng.fill_args.len = 4;
+        Rng.fill(protocore_rng_span());
         uint32_t u = (uint32_t)rb[0] | ((uint32_t)rb[1] << 8) | ((uint32_t)rb[2] << 16) | ((uint32_t)rb[3] << 24);
         out[i] = (small_t)((((u & 0x3fffffff) * 3) >> 30) - 1);
     }
@@ -807,9 +834,19 @@ static int Ciphertexts_diff_mask(const uint8_t *c, const uint8_t *c2)
     return ((((uint16_t)(differentbits - 1)) >> 8) & 1) - 1;
 }
 
-void protocore_sntrup761_enc(uint8_t *work, const uint8_t pk[PROTOCORE_SNTRUP761_PK_BYTES],
-                             uint8_t ct[PROTOCORE_SNTRUP761_CT_BYTES], uint8_t ss[PROTOCORE_SNTRUP761_SS_BYTES])
+// --- the entries -----------------------------------------------------------
+
+static void sntrup761_enc(uint8_t *restrict work)
 {
+    Sntrup761.ok = PROTO_FALSE;
+    if (!work || !Sntrup761.enc_args.pk || !Sntrup761.enc_args.ct || !Sntrup761.enc_args.ss)
+    {
+        return;
+    }
+    const uint8_t *pk = Sntrup761.enc_args.pk;
+    uint8_t *ct = Sntrup761.enc_args.ct;
+    uint8_t *ss = Sntrup761.enc_args.ss;
+
     uint16_t scr16[PROTOCORE_SCR16];
     uint32_t scr32[PROTOCORE_SCR32];
     small_t r[PROTOCORE_SNTRUP_P];
@@ -820,11 +857,19 @@ void protocore_sntrup761_enc(uint8_t *work, const uint8_t pk[PROTOCORE_SNTRUP761
     Short_random(r);
     Hide(work, ct, r_enc, r, pk, cache, scr16, scr32);
     HashSession(work, ss, 1, r_enc, ct);
+    Sntrup761.ok = PROTO_TRUE;
 }
 
-void protocore_sntrup761_keypair(uint8_t *work, uint8_t pk[PROTOCORE_SNTRUP761_PK_BYTES],
-                                 uint8_t sk[PROTOCORE_SNTRUP761_SK_BYTES])
+static void sntrup761_keypair(uint8_t *restrict work)
 {
+    Sntrup761.ok = PROTO_FALSE;
+    if (!work || !Sntrup761.keypair_args.pk || !Sntrup761.keypair_args.sk)
+    {
+        return;
+    }
+    uint8_t *pk = Sntrup761.keypair_args.pk;
+    uint8_t *sk = Sntrup761.keypair_args.sk;
+
     uint16_t scr16[PROTOCORE_SCR16];
     Fq h[PROTOCORE_SNTRUP_P];
     small_t f[PROTOCORE_SNTRUP_P];
@@ -837,13 +882,24 @@ void protocore_sntrup761_keypair(uint8_t *work, uint8_t pk[PROTOCORE_SNTRUP761_P
     // ...then the pk copy, a random rho for implicit reject, and the cached H(4||pk).
     uint8_t *tail = sk + 2 * PROTOCORE_SMALL_BYTES; // SecretKeys_bytes = 2 * Small_bytes
     mem.cpy(tail, pk, PROTOCORE_PK_BYTES);
-    protocore_rand_fill(tail + PROTOCORE_PK_BYTES, PROTOCORE_SMALL_BYTES);
+    Rng.fill_args.out = tail + PROTOCORE_PK_BYTES;
+    Rng.fill_args.len = PROTOCORE_SMALL_BYTES;
+    Rng.fill(protocore_rng_span());
     Hash_prefix(work, tail + PROTOCORE_PK_BYTES + PROTOCORE_SMALL_BYTES, 4, pk, PROTOCORE_PK_BYTES);
+    Sntrup761.ok = PROTO_TRUE;
 }
 
-void protocore_sntrup761_dec(uint8_t *work, const uint8_t sk[PROTOCORE_SNTRUP761_SK_BYTES],
-                             const uint8_t ct[PROTOCORE_SNTRUP761_CT_BYTES], uint8_t ss[PROTOCORE_SNTRUP761_SS_BYTES])
+static void sntrup761_dec(uint8_t *restrict work)
 {
+    Sntrup761.ok = PROTO_FALSE;
+    if (!work || !Sntrup761.dec_args.sk || !Sntrup761.dec_args.ct || !Sntrup761.dec_args.ss)
+    {
+        return;
+    }
+    const uint8_t *sk = Sntrup761.dec_args.sk;
+    const uint8_t *ct = Sntrup761.dec_args.ct;
+    uint8_t *ss = Sntrup761.dec_args.ss;
+
     uint16_t scr16[PROTOCORE_SCR16];
     uint32_t scr32[PROTOCORE_SCR32];
     const uint8_t *pk = sk + 2 * PROTOCORE_SMALL_BYTES;
@@ -867,7 +923,10 @@ void protocore_sntrup761_dec(uint8_t *work, const uint8_t sk[PROTOCORE_SNTRUP761
         r_enc[i] = (uint8_t)(r_enc[i] ^ (mask & (r_enc[i] ^ rho[i]))); // implicit reject -> rho
     }
     HashSession(work, ss, 1 + mask, r_enc, ct);
+    Sntrup761.ok = PROTO_TRUE;
 }
+
+Sntrup761Ns Sntrup761 = {.keypair = sntrup761_keypair, .enc = sntrup761_enc, .dec = sntrup761_dec};
 
 PROTOCORE_END_DECLS
 

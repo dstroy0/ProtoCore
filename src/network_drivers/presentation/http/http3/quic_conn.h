@@ -36,8 +36,6 @@
 
 #if PROTOCORE_ENABLE_HTTP3
 
-#define PROTOCORE_QUIC_CONN_BORROW                                                                                     \
-
 PROTOCORE_BEGIN_DECLS
 
 #include "network_drivers/presentation/http/http3/quic_crypto.h"
@@ -104,6 +102,7 @@ typedef struct
  * packet-number space. Both carry what the peer sent us and what we owe it, which is the
  * connection's working set for its life.
  */
+#define PROTOCORE_QUIC_CONN_BORROW                                                                                     \
     (((size_t)PROTOCORE_QUIC_MAX_STREAMS * PROTOCORE_QUIC_STREAM_TX) + (3u * (size_t)PROTOCORE_QUIC_CRYPTO_RX))
 
 /** @brief One QUIC connection's engine state (fixed storage, no heap). */

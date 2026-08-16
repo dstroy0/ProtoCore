@@ -20,6 +20,7 @@
 # Usage:  python3 tools/crypto/curate_crypto_vectors.py [path-to-wycheproof-checkout]
 # If no path is given it shallow-clones a pinned commit into a temp dir.
 
+import base64
 import glob
 import json
 import os
@@ -32,7 +33,7 @@ from tools.ci_tooling.lib import doc_region as dr
 # Pinned Wycheproof revision for reproducible provenance. Refreshing the vectors
 # is a deliberate act: bump this, re-run, and review the JSON diff.
 WYCHEPROOF_REPO = "https://github.com/C2SP/wycheproof"
-WYCHEPROOF_REF = "master"
+WYCHEPROOF_REF = "main"
 
 CAP_FLAGGED = 40  # adversarial / edge-case vectors kept per primitive
 CAP_PLAIN = 12  # plain happy-path vectors kept per primitive
@@ -111,6 +112,152 @@ def write(name, doc):
         json.dump(doc, f, indent=1, sort_keys=False)
         f.write("\n")
     print("wrote %s (%d vectors)" % (os.path.relpath(p, ROOT), len(doc["vectors"])))
+
+
+# --- openssl-signed RSA vectors -------------------------------------------
+#
+# Wycheproof publishes public keys only, so its RSA files ground verify and nothing else. PKCS#1 v1.5
+# signing is deterministic in (n, d, message, digest), so the signature openssl produces over a
+# throwaway 2048-bit key is a byte-exact expected answer for the sign entry. The key's two primes are
+# published with the vectors, so re-running this rebuilds the same key and re-asks openssl for the
+# same signatures rather than trusting the committed file.
+
+RSA_SIGN_MSGS = [
+    ("", "empty message"),
+    ("54657374", 'the four bytes "Test"'),
+    ("00", "a single zero byte"),
+    ("6162636465666768696a6b6c6d6e6f70" * 16, "256 bytes, four SHA-256 blocks"),
+    ("ff" * 200, "200 bytes of 0xff"),
+]
+
+
+def _der_len(n):
+    if n < 0x80:
+        return bytes([n])
+    e = n.to_bytes((n.bit_length() + 7) // 8, "big")
+    return bytes([0x80 | len(e)]) + e
+
+
+def _der_int(v):
+    # DER INTEGER: minimal big-endian two's complement, so a leading zero goes in front of a top bit.
+    b = v.to_bytes((v.bit_length() + 8) // 8 or 1, "big")
+    return b"\x02" + _der_len(len(b)) + b
+
+
+def _rsa_private_pem(n, e, d, p, q):
+    """PKCS#1 RSAPrivateKey (RFC 8017 A.1.2) as PEM, built without a crypto library."""
+    body = b"".join(_der_int(v) for v in (0, n, e, d, p, q, d % (p - 1), d % (q - 1), pow(q, -1, p)))
+    der = b"\x30" + _der_len(len(body)) + body
+    b64 = base64.b64encode(der).decode("ascii")
+    rows = "\n".join(b64[i : i + 64] for i in range(0, len(b64), 64))
+    return "-----BEGIN RSA PRIVATE KEY-----\n%s\n-----END RSA PRIVATE KEY-----\n" % rows
+
+
+def curate_openssl_rsa_sign(p_hex, q_hex, e=65537):
+    """Sign RSA_SIGN_MSGS under the key those primes make, with openssl, for both digests."""
+    p = int(p_hex, 16)
+    q = int(q_hex, 16)
+    n = p * q
+    d = pow(e, -1, (p - 1) * (q - 1))
+    if n.bit_length() != 2048:
+        raise SystemExit("the primes do not make a 2048-bit modulus")
+
+    ver = subprocess.run(["openssl", "version"], capture_output=True, text=True).stdout.strip()
+    tmp = tempfile.mkdtemp(prefix="rsa_sign_")
+    key = os.path.join(tmp, "key.pem")
+    with open(key, "w", encoding="ascii", newline="\n") as f:
+        f.write(_rsa_private_pem(n, e, d, p, q))
+
+    out, tc = [], 1
+    for alg, name in (("sha256", "SHA-256"), ("sha512", "SHA-512")):
+        for msg_hex, comment in RSA_SIGN_MSGS:
+            mf = os.path.join(tmp, "msg.bin")
+            sf = os.path.join(tmp, "sig.bin")
+            with open(mf, "wb") as f:
+                f.write(bytes.fromhex(msg_hex))
+            subprocess.run(["openssl", "dgst", "-" + alg, "-sign", key, "-out", sf, mf], check=True)
+            with open(sf, "rb") as f:
+                sig = f.read()
+            out.append(
+                {
+                    "tcId": tc,
+                    "comment": "%s over %s" % (name, comment),
+                    "result": "valid",
+                    "flags": [],
+                    "hash": name,
+                    "n": n.to_bytes(256, "big").hex(),
+                    "e": "%06x" % e,
+                    "d": d.to_bytes(256, "big").hex(),
+                    "p": p_hex,
+                    "q": q_hex,
+                    "msg": msg_hex,
+                    "sig": sig.hex(),
+                }
+            )
+            tc += 1
+    return {"source": "openssl dgst -sign (%s)" % ver, "commit": "", "file": "openssl", "vectors": out}
+
+
+# --- RFC 3526 group-14 modular exponentiation ------------------------------
+#
+# The prime and the generator are transcribed from RFC 3526 section 3. The RFC publishes no residues,
+# so the expected answers come from CPython's pow(), an implementation outside this tree; re-running
+# recomputes them rather than copying the committed file. The cases are the identities a modexp must
+# satisfy - a small power, Fermat's little theorem over a prime modulus, an exponent at the group's
+# full width, and the two halves of a Diffie-Hellman exchange whose shared secrets must agree.
+
+GROUP14_P_HEX = (
+    "FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E088A67CC74"
+    "020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B302B0A6DF25F1437"
+    "4FE1356D6D51C245E485B576625E7EC6F44C42E9A637ED6B0BFF5CB6F406B7ED"
+    "EE386BFB5A899FA5AE9F24117C4B1FE649286651ECE45B3DC2007CB8A163BF05"
+    "98DA48361C55D39A69163FA8FD24CF5F83655D23DCA3AD961C62F356208552BB"
+    "9ED529077096966D670C354E4ABC9804F1746C08CA18217C32905E462E36CE3B"
+    "E39E772C180E86039B2783A2EC07A28FB5C55DF06F4C52C9DE2BCBF695581718"
+    "3995497CEA956AE515D2261898FA051015728E5A8AACAA68FFFFFFFFFFFFFFFF"
+)
+
+
+def group14_vectors():
+    p = int(GROUP14_P_HEX, 16)
+    g = 2
+
+    def be(v):
+        return v.to_bytes(256, "big").hex()
+
+    # Two deterministic full-width private scalars, so the pair below is a real exchange rather than
+    # two small numbers, and re-running this produces the same file.
+    a = int.from_bytes(bytes((i * 7 + 3) & 0xFF for i in range(256)), "big") % (p - 2) + 1
+    b = int.from_bytes(bytes((i * 251 + 17) & 0xFF for i in range(256)), "big") % (p - 2) + 1
+
+    cases = [
+        (g, 1, "g^1 is the generator"),
+        (g, 2, "g^2 is 4"),
+        (g, p - 1, "Fermat over a prime modulus: g^(p-1) is 1"),
+        (p - 1, 2, "(p-1)^2 is 1"),
+        (g, 0, "an exponent of zero is 1"),
+        (g, a, "the generator at a full-width exponent"),
+        (g, b, "the generator at a second full-width exponent"),
+        (pow(g, b, p), a, "one half of a Diffie-Hellman exchange"),
+        (pow(g, a, p), b, "the other half, which must land on the same secret"),
+    ]
+    return {
+        "source": "RFC 3526 Section 3 prime and generator; residues from CPython pow()",
+        "commit": "",
+        "file": "rfc3526",
+        "vectors": [
+            {
+                "tcId": i + 1,
+                "comment": c,
+                "result": "valid",
+                "flags": [],
+                "base": be(base),
+                "exp": be(exp),
+                "out": be(pow(base, exp, p)),
+            }
+            for i, (base, exp, c) in enumerate(cases)
+        ],
+    }
 
 
 # --- RFC appendix vectors (small, canonical; transcribed from the RFC text and
@@ -315,6 +462,31 @@ def main():
             {"public": "group:publicKey.pk", "msg": "msg", "sig": "sig"},
         ),
     )
+
+    # RSASSA-PKCS1-v1.5 over RSA-2048: the modulus and public exponent come off the group, the
+    # message and signature off the test. Wycheproof's invalid cases here are the encoding attacks -
+    # BER-encoded padding, altered ASN.1 in the DigestInfo, a missing NULL, short padding - which a
+    # verifier that compares against a byte-exact canonical block must all refuse.
+    rsa_fields = {
+        "n": "group:publicKey.modulus",
+        "e": "group:publicKey.publicExponent",
+        "msg": "msg",
+        "sig": "sig",
+    }
+    write(
+        "wycheproof_rsa_2048_sha256.json",
+        curate_wycheproof(checkout, "rsa_signature_2048_sha256_test.json", None, rsa_fields),
+    )
+    write(
+        "wycheproof_rsa_2048_sha512.json",
+        curate_wycheproof(checkout, "rsa_signature_2048_sha512_test.json", None, rsa_fields),
+    )
+    # The sign key's primes come off the committed file, so this re-derives the same signatures
+    # instead of minting a new key and a new expected answer every run.
+    with open(os.path.join(OUT_DIR, "openssl_rsa_2048_sign.json")) as f:
+        prev = json.load(f)["vectors"][0]
+    write("openssl_rsa_2048_sign.json", curate_openssl_rsa_sign(prev["p"], prev["q"]))
+    write("rfc3526_group14_modexp.json", group14_vectors())
 
     hkdf, chacha, poly, ed_sign = rfc_vectors()
     write("rfc5869_hkdf_sha256.json", hkdf)

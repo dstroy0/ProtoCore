@@ -420,7 +420,10 @@ size_t edge_key_canon(const char *method, const char *host, const char *path, co
 
 void edge_key_digest(uint8_t *work, const char *canon, size_t len, uint8_t digest[32])
 {
-    protocore_sha256(work, (const uint8_t *)canon, len, digest);
+    Sha256.hash_args.data = (const uint8_t *)canon;
+    Sha256.hash_args.len = len;
+    Sha256.hash_args.out = digest;
+    Sha256.hash(work);
 }
 
 // Parse one Vary field-name token at *pp (advancing past it) and, when non-empty, emit its

@@ -17,6 +17,7 @@
 #include "crypto/asymmetric/bignum.h" // protocore_bignum - the DH ephemeral in the memory map
 #include "crypto/cipher/aes256ctr.h"  // PROTOCORE_AES256CTR_KEY_LEN / _CTR_LEN - the aes keys and IVs
 #include "crypto/mac/hmac_sha256.h"   // PROTOCORE_HMAC_SHA256_BORROW - the packet MAC scratch
+#include "crypto/pqc/sntrup761.h"     // PROTOCORE_SNTRUP761_PK_BYTES - the PQC public key in the memory map
 #include "network_drivers/presentation/ssh/transport/ssh_kexhash.h" // SSH_KEXHASH_MAX_LEN - the session id span
 
 // ---------------------------------------------------------------------------
@@ -135,8 +136,8 @@ typedef enum PROTO_ENUM_PACKED
 // One key epoch: the six RFC 4253 sec 7.2 keys in every cipher mode negotiation can pick, at
 // offsets from the epoch's own base. Both epochs are laid out this way.
 #define SSH_OFF_GCM_C2S 0u
-#define SSH_OFF_GCM_S2C (SSH_OFF_GCM_C2S + PROTOCORE_WORK_AESGCM)
-#define SSH_OFF_CHACHA_C2S (SSH_OFF_GCM_S2C + PROTOCORE_WORK_AESGCM)
+#define SSH_OFF_GCM_S2C (SSH_OFF_GCM_C2S + PROTOCORE_AESGCM_BORROW)
+#define SSH_OFF_CHACHA_C2S (SSH_OFF_GCM_S2C + PROTOCORE_AESGCM_BORROW)
 #define SSH_OFF_CHACHA_S2C (SSH_OFF_CHACHA_C2S + PROTOCORE_CHACHAPOLY_KEY_LEN)
 #define SSH_OFF_MAC_C2S (SSH_OFF_CHACHA_S2C + PROTOCORE_CHACHAPOLY_KEY_LEN)
 #define SSH_OFF_MAC_S2C (SSH_OFF_MAC_C2S + 64u)
@@ -195,9 +196,19 @@ typedef enum PROTO_ENUM_PACKED
 #define SSH_OFF_CRYPTO_WORK (SSH_OFF_ECDH_PK + 32u)
 #define SSH_EXCHANGE_END (SSH_OFF_CRYPTO_WORK + PROTOCORE_CRYPTO_BORROW_MAX)
 
-// packet: the bytes one message's MAC works out of. Live for that message only.
+// packet: the bytes one message's MAC works out of, then the bytes its cipher does. Live for that
+// message only. The two are separate regions rather than one shared max, so a MAC and a cipher on
+// the same packet cannot reach each other's bytes whatever order a mode runs them in. The cipher's
+// width is the wider of the two negotiable ones, since a connection runs one of them.
 #define SSH_OFF_MAC_WORK SSH_EXCHANGE_END
-#define SSH_PACKET_END (SSH_OFF_MAC_WORK + PROTOCORE_HMAC_SHA256_BORROW)
+#define SSH_OFF_CIPHER_WORK (SSH_OFF_MAC_WORK + PROTOCORE_HMAC_SHA256_BORROW)
+#if PROTOCORE_CHACHAPOLY_BORROW > PROTOCORE_AES256CTR_BORROW
+#define SSH_CIPHER_WORK_LEN PROTOCORE_CHACHAPOLY_BORROW
+#endif
+#if PROTOCORE_CHACHAPOLY_BORROW <= PROTOCORE_AES256CTR_BORROW
+#define SSH_CIPHER_WORK_LEN PROTOCORE_AES256CTR_BORROW
+#endif
+#define SSH_PACKET_END (SSH_OFF_CIPHER_WORK + SSH_CIPHER_WORK_LEN)
 
 // rx: the bytes drained off the transport ring, then the reassembly they feed. Last, so what it
 // runs into is the next slot's wire.

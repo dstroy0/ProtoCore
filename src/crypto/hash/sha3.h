@@ -9,9 +9,9 @@
  * XOF = SHAKE128, and the noise PRF = SHAKE256. Zero-heap, endian-independent (the sponge state is
  * addressed as a little-endian byte string regardless of host byte order), no external dependency.
  *
- * One-shot helpers cover fixed-length digests and arbitrary SHAKE output. For an incremental XOF
+ * One-shot entries cover fixed-length digests and arbitrary SHAKE output. For an incremental XOF
  * (ML-KEM samples the public matrix by squeezing three bytes at a time) absorb once with
- * protocore_shake128_absorb() then pull with protocore_keccak_squeeze() as many times as needed.
+ * @ref Sha3Ns::shake128_absorb then pull with @ref Sha3Ns::squeeze as many times as needed.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -32,35 +32,110 @@ PROTOCORE_BEGIN_DECLS
 #define KECCAK_RATE_SHAKE128 168
 #define KECCAK_RATE_SHAKE256 136
 
-/// A Keccak sponge in the squeeze phase; `out_pos` is how many octets of the current block are spent.
+/** @brief The message a raw sponge absorbs, at a stated rate and domain. */
 typedef struct
 {
-    uint64_t st[25];
-    uint32_t rate;
-    uint32_t out_pos;
-} KeccakCtx;
+    uint32_t rate;     ///< sponge rate in octets
+    const uint8_t *in; ///< the message
+    size_t inlen;      ///< its length
+    uint8_t domain;    ///< domain-separation byte (0x06 SHA3, 0x1F SHAKE)
+} Sha3AbsorbArgs;
 
-/// Absorb the whole message with domain-separation byte @p domain (0x06 SHA3, 0x1F SHAKE) and pad,
-/// leaving @p c ready to squeeze. Handles any input length (multi-block).
-void protocore_keccak_absorb(KeccakCtx *c, uint32_t rate, const uint8_t *in, size_t inlen, uint8_t domain);
+/** @brief Where squeezed octets land. */
+typedef struct
+{
+    uint8_t *out;  ///< the output buffer
+    size_t outlen; ///< how many octets to pull
+} Sha3SqueezeArgs;
 
-/// Squeeze @p outlen octets, permuting between blocks. May be called repeatedly for XOF use.
-void protocore_keccak_squeeze(KeccakCtx *c, uint8_t *out, size_t outlen);
+/** @brief The message a fixed-length digest is taken over. */
+typedef struct
+{
+    uint8_t *out;      ///< 32 octets for SHA3-256, 64 for SHA3-512
+    const uint8_t *in; ///< the message
+    size_t inlen;      ///< its length
+} Sha3DigestArgs;
 
-/// SHA3-256 one-shot: 32-octet digest of @p in.
-void protocore_sha3_256(uint8_t out[32], const uint8_t *in, size_t inlen);
+/** @brief The message a one-shot XOF is taken over, and how much output it yields. */
+typedef struct
+{
+    uint8_t *out;      ///< the output buffer
+    size_t outlen;     ///< how many octets to produce
+    const uint8_t *in; ///< the message
+    size_t inlen;      ///< its length
+} Sha3XofArgs;
 
-/// SHA3-512 one-shot: 64-octet digest of @p in.
-void protocore_sha3_512(uint8_t out[64], const uint8_t *in, size_t inlen);
+/** @brief The message an incremental SHAKE128 XOF absorbs. */
+typedef struct
+{
+    const uint8_t *in; ///< the message
+    size_t inlen;      ///< its length
+} Sha3Shake128AbsorbArgs;
 
-/// SHAKE128 one-shot: @p outlen octets from @p in.
-void protocore_shake128(uint8_t *out, size_t outlen, const uint8_t *in, size_t inlen);
+// PROTOCORE_SHA3_BORROW - the bytes a sponge runs out of - is stated in protocore_config.h, which sums
+// it into the secure arena. A caller takes them once and passes the pointer to every call.
 
-/// SHAKE256 one-shot: @p outlen octets from @p in.
-void protocore_shake256(uint8_t *out, size_t outlen, const uint8_t *in, size_t inlen);
+/**
+ * @brief SHA3-256 / SHA3-512 / SHAKE128 / SHAKE256 (FIPS 202).
+ *
+ * A caller sets the members a call takes, invokes it through ::Sha3 with the bytes it runs out of, and
+ * reads the outcome off the same handle. How those bytes are carved is this module's and is never
+ * named here.
+ *
+ * The incremental XOF ML-KEM samples its matrix with:
+ *
+ *   Sha3.shake128_absorb_args.in = seed;
+ *   Sha3.shake128_absorb_args.inlen = sizeof(seed);
+ *   Sha3.shake128_absorb(work);
+ *   Sha3.squeeze_args.out = buf;
+ *   Sha3.squeeze_args.outlen = sizeof(buf);
+ *   Sha3.squeeze(work);
+ *
+ * @var Sha3Ns::absorb_args           the message a raw sponge absorbs, at a stated rate and domain
+ * @var Sha3Ns::squeeze_args          where squeezed octets land
+ * @var Sha3Ns::digest_args           the message a fixed-length digest is taken over
+ * @var Sha3Ns::xof_args              the message a one-shot XOF is taken over
+ * @var Sha3Ns::shake128_absorb_args  the message an incremental SHAKE128 XOF absorbs
+ * @var Sha3Ns::ok                    a call's true/false outcome
+ * @var Sha3Ns::absorb                absorb the whole message, pad, leave the sponge ready to squeeze
+ * @var Sha3Ns::squeeze               pull octets, permuting between blocks; repeatable for XOF use
+ * @var Sha3Ns::sha3_256              SHA3-256 one-shot, 32 octets out
+ * @var Sha3Ns::sha3_512              SHA3-512 one-shot, 64 octets out
+ * @var Sha3Ns::shake128              SHAKE128 one-shot
+ * @var Sha3Ns::shake256              SHAKE256 one-shot
+ * @var Sha3Ns::shake128_absorb       begin an incremental SHAKE128 XOF
+ *
+ * @c work is PROTOCORE_SHA3_BORROW secure bytes the CALLER took, at an address it knows. It arrives
+ * @c restrict and is not held past the call, so nothing here aliases it. The caller releases it, and
+ * the pool wipes on release; this module neither takes it, holds it, releases it, nor wipes it.
+ *
+ * The borrow IS the sponge, and everything carried call to call lives in it. A digest taken in its own
+ * borrow therefore leaves an incremental XOF running in another exactly where it was.
+ *
+ * No storage member and no context: a caller sets operands and reads @ref Sha3Ns::ok, and that is
+ * all the surface there is.
+ */
+typedef struct
+{
+    Sha3AbsorbArgs absorb_args;
+    Sha3SqueezeArgs squeeze_args;
+    Sha3DigestArgs digest_args;
+    Sha3XofArgs xof_args;
+    Sha3Shake128AbsorbArgs shake128_absorb_args;
 
-/// Begin an incremental SHAKE128 XOF over @p in; pull output with protocore_keccak_squeeze(@p c, ...).
-void protocore_shake128_absorb(KeccakCtx *c, const uint8_t *in, size_t inlen);
+    proto_bool ok;
+
+    void (*const absorb)(uint8_t *restrict work);
+    void (*const squeeze)(uint8_t *restrict work);
+    void (*const sha3_256)(uint8_t *restrict work);
+    void (*const sha3_512)(uint8_t *restrict work);
+    void (*const shake128)(uint8_t *restrict work);
+    void (*const shake256)(uint8_t *restrict work);
+    void (*const shake128_absorb)(uint8_t *restrict work);
+} Sha3Ns;
+
+/** @brief The one symbol this module exports. */
+extern Sha3Ns Sha3;
 
 PROTOCORE_END_DECLS
 

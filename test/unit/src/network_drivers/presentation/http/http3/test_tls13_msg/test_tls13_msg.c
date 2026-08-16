@@ -235,8 +235,15 @@ void test_cert_verify_signature_round_trip(void)
     uint8_t content[160];
     size_t clen = protocore_tls13_cert_verify_content(content, sizeof(content), HASH, PROTO_TRUE);
     uint8_t pub[PROTOCORE_ED25519_PUBKEY_LEN];
-    protocore_ed25519_pubkey(g_work, pub, SEED);
-    TEST_ASSERT_TRUE(protocore_ed25519_verify(g_work, pub, content, clen, msg + 8));
+    Ed25519.pubkey_args.pub = pub;
+    Ed25519.pubkey_args.seed = SEED;
+    Ed25519.pubkey(g_work);
+    Ed25519.verify_args.pub = pub;
+    Ed25519.verify_args.msg = content;
+    Ed25519.verify_args.msg_len = clen;
+    Ed25519.verify_args.sig = msg + 8;
+    Ed25519.verify(g_work);
+    TEST_ASSERT_TRUE(Ed25519.ok);
 
     // The signature is over that content and nothing else: a different transcript hash does not
     // verify under the same signature.
@@ -244,7 +251,12 @@ void test_cert_verify_signature_round_trip(void)
     memcpy(other, HASH, 32);
     other[0] ^= 0x01;
     size_t olen = protocore_tls13_cert_verify_content(content, sizeof(content), other, PROTO_TRUE);
-    TEST_ASSERT_FALSE(protocore_ed25519_verify(g_work, pub, content, olen, msg + 8));
+    Ed25519.verify_args.pub = pub;
+    Ed25519.verify_args.msg = content;
+    Ed25519.verify_args.msg_len = olen;
+    Ed25519.verify_args.sig = msg + 8;
+    Ed25519.verify(g_work);
+    TEST_ASSERT_FALSE(Ed25519.ok);
 }
 
 // RFC 8446 sec 4.4.2: "Certificate { opaque certificate_request_context<0..2^8-1>;

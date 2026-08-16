@@ -10,9 +10,9 @@
  * knows nothing about SSH key blobs, host-key storage, or the "ssh-rsa" / "rsa-sha2-256" wire names -
  * that layer lives in network_drivers/presentation/ssh/transport/ssh_rsa and calls into this primitive.
  *
- * Verify runs on both platforms (mbedtls on Arduino/ESP32, software on native). The software sign
- * (protocore_rsa_sign_sw, raw n/d) is the native-only reference path used by the tests; on-device signing
- * with a cached host-key context is the SSH layer's job.
+ * Both entries take raw big-endian key material: verify takes n and the four-byte public exponent,
+ * sign takes n and the full-width private exponent d. One modular multiply underneath them has an
+ * accelerated arm and a software arm; everything else is the same code on every part.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -56,43 +56,82 @@ extern const uint8_t protocore_pkcs1_sha256_digestinfo[PROTOCORE_PKCS1_DIGESTINF
 /** @brief The DER-encoded DigestInfo wrapper for SHA-512 (prepend to the 64-byte digest). */
 extern const uint8_t protocore_pkcs1_sha512_digestinfo[PROTOCORE_PKCS1_SHA512_DIGESTINFO_LEN];
 
-/**
- * @brief Verify an RSA-2048 PKCS#1 v1.5 signature over @p msg.
- *
- * @param n_be     Modulus n, 256 bytes big-endian.
- * @param e_be4    Public exponent e, 4 bytes big-endian (typically 65537).
- * @param work     PROTOCORE_SHA256_BORROW bytes of caller storage, for the message digest.
- * @param msg      Message that was signed (this hashes it; do not pre-hash).
- * @param msg_len  Message length.
- * @param sig      Signature, big-endian.
- * @param sig_len  Signature length (must equal PROTOCORE_RSA_KEY_BYTES).
- * @param hash     Digest algorithm (SHA-256 / SHA-512).
- * @return 0 if the signature is valid, -1 otherwise.
- */
-int protocore_rsa_verify(const uint8_t n_be[PROTOCORE_RSA_KEY_BYTES], const uint8_t e_be4[4], uint8_t *work,
-                         const uint8_t *msg, size_t msg_len, const uint8_t *sig, size_t sig_len,
-                         protocore_rsa_hash hash);
+// PROTOCORE_RSA_BORROW - the bytes one signature operation runs out of - is stated in
+// protocore_config.h, which sums it into the secure arena. A caller takes them once and passes the
+// pointer to every call.
 
-#if !PROTOCORE_HAS_HW_BIGNUM
+/** @brief The key, message and signature a verify checks. */
+typedef struct
+{
+    const uint8_t *n;        ///< modulus n, PROTOCORE_RSA_KEY_BYTES big-endian
+    const uint8_t *e;        ///< public exponent e, 4 bytes big-endian (typically 65537)
+    const uint8_t *msg;      ///< the message that was signed; this hashes it, do not pre-hash
+    size_t msg_len;          ///< its length
+    const uint8_t *sig;      ///< the signature, big-endian
+    size_t sig_len;          ///< its length; must equal PROTOCORE_RSA_KEY_BYTES
+    protocore_rsa_hash hash; ///< digest algorithm (SHA-256 / SHA-512)
+} RsaVerifyArgs;
+
+/** @brief The key and message a sign covers. */
+typedef struct
+{
+    const uint8_t *n;        ///< modulus n, PROTOCORE_RSA_KEY_BYTES big-endian
+    const uint8_t *d;        ///< private exponent d, PROTOCORE_RSA_KEY_BYTES big-endian
+    const uint8_t *msg;      ///< the message to sign; this hashes it
+    size_t msg_len;          ///< its length
+    protocore_rsa_hash hash; ///< digest algorithm (SHA-256 / SHA-512)
+    uint8_t *sig;            ///< PROTOCORE_RSA_SIG_BYTES big-endian signature bytes
+} RsaSignArgs;
+
 /**
- * @brief Software RSA-2048 PKCS#1 v1.5 sign with a raw private key (SW path).
+ * @brief RSASSA-PKCS1-v1.5 over RSA-2048 (RFC 8017 §8.2).
  *
- * Full-width square-and-multiply modexp (s = pkcs1(H(msg))^d mod n). NOT constant-time - the native
- * on the HW path, signing uses the SSH layer's cached mbedtls host-key context.
+ * A caller sets the members a call takes, invokes it through ::Rsa with the bytes it runs out of, and
+ * reads the outcome off the same handle. How those bytes are carved is this module's and is never
+ * named here.
  *
- * @param n_be     Modulus n, 256 bytes big-endian.
- * @param d_be     Private exponent d, 256 bytes big-endian (SENSITIVE; caller wipes).
- * @param work     PROTOCORE_SHA256_BORROW bytes of caller storage, for the message digest.
- * @param msg      Message to sign (this hashes it).
- * @param msg_len  Message length.
- * @param hash     Digest algorithm (SHA-256 / SHA-512).
- * @param sig      Output signature, PROTOCORE_RSA_SIG_BYTES big-endian.
- * @return 0 on success.
+ *   Rsa.verify_args.n = n_be;
+ *   Rsa.verify_args.e = e_be4;
+ *   Rsa.verify_args.msg = msg;
+ *   Rsa.verify_args.msg_len = msg_len;
+ *   Rsa.verify_args.sig = sig;
+ *   Rsa.verify_args.sig_len = sig_len;
+ *   Rsa.verify_args.hash = PROTOCORE_RSA_HASH_SHA256;
+ *   Rsa.verify(work);
+ *   // Rsa.ok is true only for a signature that verified
+ *
+ * @var RsaNs::verify_args  the key, message and signature a verify checks
+ * @var RsaNs::sign_args    the key and message a sign covers
+ * @var RsaNs::ok           a call's true/false outcome; false on a null pointer, a signature that is
+ *                          not PROTOCORE_RSA_KEY_BYTES long, a representative that is not below n, and
+ *                          a block that does not match
+ * @var RsaNs::verify       hash the message, recover the signature block, compare the two in constant
+ *                          time
+ * @var RsaNs::sign         hash the message, PKCS#1 v1.5 encode it, raise it to d mod n; NOT
+ *                          constant-time - see SECURITY.md, timing
+ *
+ * @c work is PROTOCORE_RSA_BORROW secure bytes the CALLER took, at an address it knows. It arrives
+ * @c restrict and is not held past the call, so nothing here aliases it. The caller releases it, and
+ * the pool wipes on release; this module neither takes it, holds it, releases it, nor wipes it. That is
+ * what keeps the private exponent and the encoded block a sign works in from outliving the caller. The
+ * digest each entry takes runs out of those bytes too, so a verify costs one borrow and no wipe.
+ *
+ * No storage member and no context: a caller sets operands and reads @ref RsaNs::ok, and that is all
+ * the surface there is.
  */
-int protocore_rsa_sign_sw(const uint8_t n_be[PROTOCORE_RSA_KEY_BYTES], const uint8_t d_be[PROTOCORE_RSA_KEY_BYTES],
-                          uint8_t *work, const uint8_t *msg, size_t msg_len, protocore_rsa_hash hash,
-                          uint8_t sig[PROTOCORE_RSA_SIG_BYTES]);
-#endif
+typedef struct
+{
+    RsaVerifyArgs verify_args;
+    RsaSignArgs sign_args;
+
+    proto_bool ok;
+
+    void (*const verify)(uint8_t *restrict work);
+    void (*const sign)(uint8_t *restrict work);
+} RsaNs;
+
+/** @brief The one symbol this module exports. */
+extern RsaNs Rsa;
 
 PROTOCORE_END_DECLS
 

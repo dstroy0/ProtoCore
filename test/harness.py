@@ -57,7 +57,7 @@ BEGIN = "; >>> GENERATED TEST ENVS - do not edit below; edit test/test_matrix.js
 END = "; <<< END GENERATED TEST ENVS <<<"
 
 LOCK_TIMEOUT_S = 120.0  # a writer that cannot get in by then reports rather than racing
-LOCK_STALE_S = 300.0    # a lock older than this belonged to a run that died
+LOCK_STALE_S = 300.0  # a lock older than this belonged to a run that died
 LOCK_POLL_S = 0.05
 
 
@@ -153,6 +153,30 @@ def splice_replace(text, name, entry):
     return text[:key_start] + reindent(block, pad).lstrip() + text[close + 1 :]
 
 
+def splice_remove(text, name):
+    """Cut an env's whole `"name": {...}` out, taking the one comma that joined it to its neighbours.
+
+    The comma sits after the close brace for every env but the last, where it sits before the key.
+    Removing the wrong one, or neither, leaves the table unparseable.
+    """
+    _, key_start, close = env_span(text, name)
+    end = close + 1
+    tail = text[end:]
+    lead = len(tail) - len(tail.lstrip(" \t\r\n"))
+    if tail[lead : lead + 1] == ",":
+        end += lead + 1  # not the last env: take the comma that follows it
+        while end < len(text) and text[end] in " \t":
+            end += 1
+        if text[end : end + 1] == "\n":
+            end += 1
+        return text[:key_start] + text[end:]
+    head = text[:key_start]
+    cut = len(head.rstrip(" \t\r\n"))
+    if head[cut - 1 : cut] == ",":
+        cut -= 1  # the last env: take the comma that preceded it
+    return text[:cut] + text[end:]
+
+
 def read_table(path):
     with open(path, "r", encoding="utf-8") as fh:
         text = fh.read()
@@ -208,9 +232,11 @@ def resolve_tests(tests, src):
     for t in tests:
         got = t.rstrip("/").rsplit("/", 1)[0]
         if got != want:
-            return None, ("suite %s does not mirror %s\n"
-                          "  the module is %s, so the suite belongs in test/%s/<test_name>"
-                          % (t, src[0], module_path(src[0]), want))
+            return None, (
+                "suite %s does not mirror %s\n"
+                "  the module is %s, so the suite belongs in test/%s/<test_name>"
+                % (t, src[0], module_path(src[0]), want)
+            )
     return tests, None
 
 
@@ -290,6 +316,64 @@ def cmd_env_update(a):
         rc = write_verified(TABLE, text, before, {a.name}, {a.name: entry})
         if rc == 0:
             print("updated %s; run: harness.py env gen" % a.name)
+        return rc
+    finally:
+        lock_release(lock)
+
+
+def cmd_env_remove(a):
+    """Cut an env out of the matrix. Its tests are not deleted: they run wherever else they are named,
+    so an env whose tests no env still names takes its coverage with it and is refused unless --force."""
+    lock = lock_acquire(TABLE)
+    if not lock:
+        print("could not take the table lock within %.0fs" % LOCK_TIMEOUT_S)
+        return 1
+    try:
+        text, before = read_table(TABLE)
+        envs = before["envs"]
+        missing = [n for n in a.name if n not in envs]
+        if missing:
+            print("env not found:", " ".join(missing))
+            return 1
+        if len(envs) - len(set(a.name)) < 1:
+            print("refusing to empty the table")
+            return 1
+        kept = {n: e for n, e in envs.items() if n not in set(a.name)}
+        still_run = set()
+        for e in kept.values():
+            still_run.update(e.get("tests") or [])
+        orphaned = []
+        for n in set(a.name):
+            for t in envs[n].get("tests") or []:
+                if t not in still_run:
+                    orphaned.append("%s (only in %s)" % (t, n))
+        if orphaned and not a.force:
+            print("these suites would stop running - name them in another env first, or pass --force:")
+            for o in sorted(set(orphaned)):
+                print("   ", o)
+            return 1
+        if a.verbose:
+            # Where each suite still runs once these envs are gone. A removal is only safe because
+            # something else names the same suite, so that is what is printed rather than a count.
+            covers = {}
+            for n, e in kept.items():
+                for t in e.get("tests") or []:
+                    covers.setdefault(t, []).append(n)
+            for n in sorted(set(a.name)):
+                tests = envs[n].get("tests") or []
+                print("%s (%d suite%s)" % (n, len(tests), "" if len(tests) == 1 else "s"))
+                for t in tests:
+                    where = covers.get(t) or []
+                    print("    %-52s %s" % (t, ("still in: " + ", ".join(sorted(where))) if where else "NOWHERE ELSE"))
+        for n in set(a.name):
+            text = splice_remove(text, n)
+        left = [n for n in set(a.name) if n in json.loads(text)["envs"]]
+        if left:
+            print("still present after the splice:", " ".join(left))
+            return 1
+        rc = write_verified(TABLE, text, before, set(a.name), {})
+        if rc == 0:
+            print("removed %d env(s); run: harness.py env gen" % len(set(a.name)))
         return rc
     finally:
         lock_release(lock)
@@ -488,8 +572,10 @@ def cmd_env_list(a):
         if a.targets_only and not e.get("tests"):
             continue
         if a.verbose:
-            print("%-32s %2d flags %3d src %s" % (name, len(e.get("flags", [])), len(e.get("src", [])),
-                                                  " ".join(e.get("tests", []))))
+            print(
+                "%-32s %2d flags %3d src %s"
+                % (name, len(e.get("flags", [])), len(e.get("src", [])), " ".join(e.get("tests", [])))
+            )
         else:
             print(name)
     return 0
@@ -521,9 +607,18 @@ FORCE_FULL_PREFIX = (
 )
 IGNORE_PREFIX = ("docs/", "examples/", ".vscode/", ".github/ISSUE_TEMPLATE/")
 IGNORE_EXACT = {
-    "README.md", "CHANGELOG.md", "LICENSE", ".gitignore", ".clang-format",
-    ".prettierignore", ".editorconfig", "CONTRIBUTING.md", "SECURITY.md",
-    "test/TEST_REPORT.md", "test/coverage.xml", "test/dep_graph.json",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE",
+    ".gitignore",
+    ".clang-format",
+    ".prettierignore",
+    ".editorconfig",
+    "CONTRIBUTING.md",
+    "SECURITY.md",
+    "test/TEST_REPORT.md",
+    "test/coverage.xml",
+    "test/dep_graph.json",
 }
 
 
@@ -645,6 +740,7 @@ def _classify_additive(f, base, head, known_envs):
     # than being copied in here.
     sys.path.insert(0, os.path.join(ROOT, "tools", "ci_tooling", "lib"))
     import affected_common as ac
+
     old = ac.file_at(base, f)
     new = ac.file_at(head, f)
     if f == "src/protocore_config.h":
@@ -733,8 +829,7 @@ def cmd_env_select(a):
         print("NONE")
         return 0
     envs = parse_ini_envs(INI)
-    result = classify(changed, envs, load_graph(), len(set(envs) - NEVER_SELECT),
-                      base=a.base, head=a.head)
+    result = classify(changed, envs, load_graph(), len(set(envs) - NEVER_SELECT), base=a.base, head=a.head)
     print(" ".join(result) if isinstance(result, list) else result)
     return 0
 
@@ -840,7 +935,7 @@ def _resolve_src(globs):
     """Expand an env's build_src_filter '+<glob>' entries into repo-relative .c paths.
 
     An entry is read under src/ first, then from the repo root: core_setup/ is a root directory, so
-    the backends an env names there ("core_setup/hal/portable/portable_aesgcm.c") resolve from the
+    the backends an env names there ("core_setup/hal/portable/portable_bignum.c") resolve from the
     root and nowhere else. An entry matching neither is reported rather than dropped.
 
     A path is returned once however many entries reach it. An env that extends a stack base inherits
@@ -848,6 +943,7 @@ def _resolve_src(globs):
     every symbol in it defined twice, which the linker refuses.
     """
     import glob as _glob
+
     out = []
     seen = set()
     for g in globs:
@@ -859,8 +955,11 @@ def _resolve_src(globs):
             if os.path.isfile(full):
                 hits = [rel.replace("\\", "/")]
                 break
-            found = [os.path.relpath(h, ROOT).replace("\\", "/")
-                     for h in _glob.glob(full, recursive=True) if h.endswith(".c")]
+            found = [
+                os.path.relpath(h, ROOT).replace("\\", "/")
+                for h in _glob.glob(full, recursive=True)
+                if h.endswith(".c")
+            ]
             if found:
                 hits = found
                 break
@@ -896,6 +995,7 @@ def find_ruby():
     if found:
         return found
     import glob as _glob
+
     for pattern in RUBY_GLOBS:
         for hit in sorted(_glob.glob(pattern), reverse=True):  # newest install first
             if os.path.isfile(hit):
@@ -993,6 +1093,7 @@ SUMMARY_ROW = re.compile(r"^(\|.*\|.*\|.*\|.*\|)\s*[0-9:.]+\s*\|\s*$")
 
 def report_parse(text):
     from collections import OrderedDict
+
     lines = text.splitlines()
     i_sum = next((i for i, ln in enumerate(lines) if ln.strip() == "## Summary"), None)
     i_first_sec = next((i for i, ln in enumerate(lines) if SEC_RE.match(ln)), len(lines))
@@ -1032,6 +1133,7 @@ def dur_secs(row):
 
 def cmd_report_merge(a):
     import datetime
+
     committed = open(a.committed, encoding="utf-8").read()
     partial = open(a.partial, encoding="utf-8").read()
     head, intro, rows, mid, sections = report_parse(committed)
@@ -1203,6 +1305,7 @@ def parse_test_file(filepath):
 
 def build_test_directory():
     import glob as _glob
+
     # Suites live at any depth under test/ and are C, not C++: test/unit/<area>/test_x/test_x.c.
     suites = {}
     for fp in sorted(_glob.glob(os.path.join(ROOT, "test", "**", "test_*.c"), recursive=True)):
@@ -1293,7 +1396,7 @@ def inherited(envs, name, key, seen=None):
     base = e.get("base", "")
     out = []
     if base.startswith("env:"):
-        out = inherited(envs, base[len("env:"):], key, seen)
+        out = inherited(envs, base[len("env:") :], key, seen)
     return out + list(e.get(key, []))
 
 
@@ -1354,7 +1457,7 @@ def _reached_headers(sdir):
     return names
 
 
-COV_BUILD = ".pio_cov"      # per-env .gcno/.gcda from the instrumented build
+COV_BUILD = ".pio_cov"  # per-env .gcno/.gcda from the instrumented build
 COV_REPORTS = "coverage_reports"  # per-env gcovr tracefiles, unioned once every env has run
 
 
@@ -1435,8 +1538,13 @@ def build_and_run(name, e, jobs, keep, verbose, debug=False, coverage=False):
         # Coverage counters are what is being measured, so the optimizer stays out of the way.
         if coverage:
             opt = ["-g", "-O0", "--coverage"]
-        base = [cc, "-std=c11", "-D_POSIX_C_SOURCE=200809L", "-fno-exceptions"] + opt + defs + incs + \
-               ["-I" + os.path.relpath(sd, ROOT).replace("\\", "/")]
+        base = (
+            [cc, "-std=c11", "-D_POSIX_C_SOURCE=200809L", "-fno-exceptions"]
+            + opt
+            + defs
+            + incs
+            + ["-I" + os.path.relpath(sd, ROOT).replace("\\", "/")]
+        )
         if coverage:
             objdir = os.path.join(ROOT, COV_BUILD, name)
             os.makedirs(objdir, exist_ok=True)
@@ -1503,6 +1611,7 @@ def parse_unity(text):
 def describe_suite(suite):
     """fn_name -> humanized description for one suite, from its own source."""
     import glob as _glob
+
     for fp in _glob.glob(os.path.join(ROOT, "test", "**", suite, "*.c"), recursive=True):
         if os.path.basename(fp) == GENERATED_RUNNER:
             continue
@@ -1515,13 +1624,20 @@ def describe_suite(suite):
 def write_report(path, results, envs_run, passed, failed, secs):
     """The run's TEST_REPORT.md: a header, then one collapsible section per suite."""
     mark = "✅" if not failed else "❌"
-    md = ["# Test Report", "",
-          "**Generated:** " + time.strftime("%Y-%m-%d %H:%M:%S"),
-          "**Command:** `harness.py run` over %d native envs" % envs_run,
-          "**Result:** %s %d passed, %d failed - %ds" % (mark, passed, failed, secs),
-          "", "---", "", "## Summary", "",
-          "| Suite | Environment | Tests | Status | Duration |",
-          "| :---- | :---------- | ----: | :----: | -------: |"]
+    md = [
+        "# Test Report",
+        "",
+        "**Generated:** " + time.strftime("%Y-%m-%d %H:%M:%S"),
+        "**Command:** `harness.py run` over %d native envs" % envs_run,
+        "**Result:** %s %d passed, %d failed - %ds" % (mark, passed, failed, secs),
+        "",
+        "---",
+        "",
+        "## Summary",
+        "",
+        "| Suite | Environment | Tests | Status | Duration |",
+        "| :---- | :---------- | ----: | :----: | -------: |",
+    ]
     for env, suite, cases in results:
         nf = sum(1 for _, s in cases if s == "FAIL")
         md.append("| %s | %s | %d | %s | - |" % (suite, env, len(cases), "✅" if not nf else "❌"))
@@ -1530,10 +1646,17 @@ def write_report(path, results, envs_run, passed, failed, secs):
         nf = sum(1 for _, s in cases if s == "FAIL")
         head = "✅ %d passed" % len(cases) if not nf else "❌ %d of %d failed" % (nf, len(cases))
         desc = describe_suite(suite)
-        md += ["---", "", "## %s - %s - %s" % (suite, env, head), "",
-               "<details>", "<summary><b>Expand Suite Details</b></summary>", "",
-               "|   # | Test | Status | Description |",
-               "| --: | :--- | :----: | :---------- |"]
+        md += [
+            "---",
+            "",
+            "## %s - %s - %s" % (suite, env, head),
+            "",
+            "<details>",
+            "<summary><b>Expand Suite Details</b></summary>",
+            "",
+            "|   # | Test | Status | Description |",
+            "| --: | :--- | :----: | :---------- |",
+        ]
         for i, (test, st) in enumerate(cases, 1):
             icon = {"PASS": "✅", "FAIL": "❌", "IGNORE": "⚠️"}[st]
             md.append("| %3d | `%s` | %s | %s |" % (i, test, icon, _cell(desc.get(test, clean_name(test)))))
@@ -1552,9 +1675,22 @@ def cov_one(gc, name):
     """
     os.makedirs(os.path.join(ROOT, COV_REPORTS), exist_ok=True)
     js = "%s/%s.json" % (COV_REPORTS, name)
-    p = subprocess.run(gc + ["--root", ".", "--filter", "src/.*", "--gcov-ignore-parse-errors",
-                             "--json", js, "%s/%s" % (COV_BUILD, name)],
-                       capture_output=True, text=True, cwd=ROOT)
+    p = subprocess.run(
+        gc
+        + [
+            "--root",
+            ".",
+            "--filter",
+            "src/.*",
+            "--gcov-ignore-parse-errors",
+            "--json",
+            js,
+            "%s/%s" % (COV_BUILD, name),
+        ],
+        capture_output=True,
+        text=True,
+        cwd=ROOT,
+    )
     full = os.path.join(ROOT, js)
     return p.returncode == 0 and os.path.isfile(full) and os.path.getsize(full) > 0
 
@@ -1569,14 +1705,18 @@ def cov_merge(gc, out_rel):
     the dedupe pass folds those.
     """
     out = os.path.join(ROOT, *out_rel.split("/"))
-    p = subprocess.run(gc + ["--add-tracefile", "%s/*.json" % COV_REPORTS,
-                             "--merge-mode-functions=separate", "--sonarqube", out],
-                       capture_output=True, text=True, cwd=ROOT)
+    p = subprocess.run(
+        gc + ["--add-tracefile", "%s/*.json" % COV_REPORTS, "--merge-mode-functions=separate", "--sonarqube", out],
+        capture_output=True,
+        text=True,
+        cwd=ROOT,
+    )
     if p.returncode != 0 or not os.path.isfile(out):
         print((p.stdout or "")[-2000:] + (p.stderr or "")[-2000:], file=sys.stderr)
         return False
     sys.path.insert(0, ROOT)
     from tools.ci_tooling.coverage import dedupe_sonar_cov
+
     dedupe_sonar_cov.dedupe(out)
     return True
 
@@ -1587,10 +1727,12 @@ def find_pio():
     if p:
         return p
     home = os.path.expanduser("~")
-    for c in (os.path.join(home, ".platformio", "penv", "Scripts", "pio.exe"),
-              os.path.join(home, ".platformio", "penv", "bin", "pio"),
-              os.path.join(home, ".pio-venv", "bin", "pio"),
-              os.path.join(home, ".local", "bin", "pio")):
+    for c in (
+        os.path.join(home, ".platformio", "penv", "Scripts", "pio.exe"),
+        os.path.join(home, ".platformio", "penv", "bin", "pio"),
+        os.path.join(home, ".pio-venv", "bin", "pio"),
+        os.path.join(home, ".local", "bin", "pio"),
+    ):
         if os.path.isfile(c):
             return c
     return None
@@ -1637,6 +1779,7 @@ def cmd_bare(a):
     its arch table, its runtime list and its help live in one file rather than two.
     """
     import bare  # here, not at import time: bare.py imports this module
+
     return bare.main(a.rest)
 
 
@@ -1649,6 +1792,7 @@ def cmd_bench(a):
     """
     sys.path.insert(0, os.path.join(ROOT, "test", "performance_benching"))
     import bench  # here, not at import time: bench.py imports this module
+
     return bench.main(a.rest)
 
 
@@ -1708,10 +1852,11 @@ def cmd_run(a):
         # an env that stops contributing freezes its files at whatever the baseline last said
         # instead of lowering the number. Refuse the merge rather than publish that.
         if cov_failed:
-            print("ERROR: no coverage report from %d env(s): %s" % (len(cov_failed), " ".join(cov_failed)),
-                  file=sys.stderr)
-            print("Refusing to merge - a partial merge would silently freeze those files' coverage.",
-                  file=sys.stderr)
+            print(
+                "ERROR: no coverage report from %d env(s): %s" % (len(cov_failed), " ".join(cov_failed)),
+                file=sys.stderr,
+            )
+            print("Refusing to merge - a partial merge would silently freeze those files' coverage.", file=sys.stderr)
             shutil.rmtree(os.path.join(ROOT, COV_REPORTS), ignore_errors=True)
             return 3  # distinct from a test failure: the caller may commit a report but not this
         if not cov_merge(gc, a.coverage_out):
@@ -1734,11 +1879,63 @@ def _subcommands(parser):
     return {}
 
 
+CORE_SETUP = findroot.at("core_setup")
+
+
+def _brief_of(path):
+    """The file's own @brief, which is where every file under core_setup says what it supplies."""
+    try:
+        with open(path, "r", encoding="utf-8", errors="replace") as fh:
+            head = fh.read(4096)
+    except OSError:
+        return ""
+    m = re.search(r"@brief\s+(.+)", head)
+    if not m:
+        return ""
+    text = m.group(1).strip()
+    # A brief that wraps continues on the next comment line until the first blank one.
+    for line in head[m.end() :].split("\n")[1:]:
+        line = line.strip().lstrip("*").strip()
+        if not line or line.startswith("@"):
+            break
+        text += " " + line
+    return " ".join(text.split())
+
+
+def print_core_setup_tree(width=96):
+    """The core_setup tree and what each file supplies.
+
+    src/ reaches this layer only through protocore_config.h, so nothing under src/ names a path here
+    and the arms a build actually links are not visible from a call site. This is where they are
+    listed: the platform and board profiles that identify the die, the register drivers that own each
+    accelerator, and the host arms that answer the same contracts in software so an accelerated arm is
+    runnable and testable off target.
+    """
+    print("core_setup/ - the platform layer, reached from src/ only through protocore_config.h")
+    for dirpath, dirnames, filenames in os.walk(CORE_SETUP):
+        dirnames.sort()
+        rel = os.path.relpath(dirpath, ROOT).replace("\\", "/")
+        names = sorted(f for f in filenames if f.endswith((".c", ".h", ".cpp", ".S")))
+        if not names:
+            continue
+        depth = rel.count("/")
+        print("\n%s%s/" % ("  " * depth, rel.rsplit("/", 1)[-1] if depth else rel))
+        pad = "  " * (depth + 1)
+        wide = max(len(n) for n in names)
+        for n in names:
+            brief = _brief_of(os.path.join(dirpath, n))
+            room = width - len(pad) - wide - 3
+            if len(brief) > room > 3:
+                brief = brief[: room - 3] + "..."
+            print("%s%-*s   %s" % (pad, wide, n, brief))
+
+
 def cmd_help(a):
     """Every command's own help in one call, or one command's.
 
     `-h` prints usage one level at a time, so reading the whole surface means invoking it once per
-    subcommand, and the nested groups make that three levels deep. This prints all of it.
+    subcommand, and the nested groups make that three levels deep. This prints all of it, and the
+    core_setup tree after it, because that layer is invisible from any call site under src/.
     """
     subs = _subcommands(build_parser())
     if a.command:
@@ -1758,6 +1955,8 @@ def cmd_help(a):
         for nested_name, nested in sorted(_subcommands(subs[name]).items()):
             print("\n  ### harness.py %s %s" % (name, nested_name))
             print(nested.format_help().strip())
+    print("\n" + "-" * 78)
+    print_core_setup_tree()
     return 0
 
 
@@ -1804,6 +2003,12 @@ def build_parser():
     p.add_argument("--desc", default=None)
     p.set_defaults(fn=cmd_env_update)
 
+    p = env.add_parser("remove", help="cut envs out of the matrix")
+    p.add_argument("name", nargs="+")
+    p.add_argument("--force", action="store_true", help="remove even if a suite stops running anywhere")
+    p.add_argument("-v", "--verbose", action="store_true", help="print each env's suites and where they still run")
+    p.set_defaults(fn=cmd_env_remove)
+
     p = env.add_parser("gen", help="regenerate platformio.ini from the matrix")
     p.add_argument("--check", action="store_true", help="exit 1 if the ini is out of date (no write)")
     p.set_defaults(fn=cmd_env_gen)
@@ -1811,8 +2016,11 @@ def build_parser():
     p = env.add_parser("select", help="map changed files to the envs they affect")
     p.add_argument("--full", action="store_true", help="force FULL regardless of the diff")
     p.add_argument("--changed-file", action="append", default=[], help="a changed path (repeatable)")
-    p.add_argument("--base", help="diff base git ref; enables content-aware classification of "
-                                  "protocore_config.h / test_matrix.json / platformio.ini")
+    p.add_argument(
+        "--base",
+        help="diff base git ref; enables content-aware classification of "
+        "protocore_config.h / test_matrix.json / platformio.ini",
+    )
     p.add_argument("--head", help="diff head git ref for the NEW content (default: the working tree)")
     p.set_defaults(fn=cmd_env_select)
 
@@ -1829,17 +2037,23 @@ def build_parser():
     p.set_defaults(fn=cmd_env_deps)
 
     # run ---------------------------------------------------------------
-    b = sub.add_parser("bare", help="hand off to test/bare.py: cross-compile the core, and boot it on the part",
-                       description="Everything after `bare` is passed to test/bare.py unread, so its "
-                                   "own surface is the authority: `harness.py bare help`.",
-                       add_help=False)
+    b = sub.add_parser(
+        "bare",
+        help="hand off to test/bare.py: cross-compile the core, and boot it on the part",
+        description="Everything after `bare` is passed to test/bare.py unread, so its "
+        "own surface is the authority: `harness.py bare help`.",
+        add_help=False,
+    )
     b.add_argument("rest", nargs=argparse.REMAINDER, metavar="...")
     b.set_defaults(fn=cmd_bare)
 
-    b = sub.add_parser("bench", help="hand off to test/performance_benching/bench.py: the microbenchmark matrix",
-                       description="Everything after `bench` is passed to bench.py unread, so its "
-                                   "own surface is the authority: `harness.py bench help`.",
-                       add_help=False)
+    b = sub.add_parser(
+        "bench",
+        help="hand off to test/performance_benching/bench.py: the microbenchmark matrix",
+        description="Everything after `bench` is passed to bench.py unread, so its "
+        "own surface is the authority: `harness.py bench help`.",
+        add_help=False,
+    )
     b.add_argument("rest", nargs=argparse.REMAINDER, metavar="...")
     b.set_defaults(fn=cmd_bench)
 
@@ -1848,14 +2062,16 @@ def build_parser():
     p.add_argument("-j", "--jobs", type=int, default=os.cpu_count() or 4)
     p.add_argument("-v", "--verbose", action="store_true")
     p.add_argument("--keep", action="store_true", help="leave the built binaries in .pio/native")
-    p.add_argument("--debug", action="store_true",
-                   help="build -g -O0 and keep the binary, for gdb")
-    p.add_argument("--coverage", action="store_true",
-                   help="instrument, gcovr each env, union into the SonarQube coverage report")
-    p.add_argument("--coverage-out", default="test/coverage.xml",
-                   help="where --coverage writes the report (default test/coverage.xml)")
-    p.add_argument("--report-out", metavar="PATH",
-                   help="write the run's TEST_REPORT.md here")
+    p.add_argument("--debug", action="store_true", help="build -g -O0 and keep the binary, for gdb")
+    p.add_argument(
+        "--coverage", action="store_true", help="instrument, gcovr each env, union into the SonarQube coverage report"
+    )
+    p.add_argument(
+        "--coverage-out",
+        default="test/coverage.xml",
+        help="where --coverage writes the report (default test/coverage.xml)",
+    )
+    p.add_argument("--report-out", metavar="PATH", help="write the run's TEST_REPORT.md here")
     p.add_argument("--pio", action="store_true", help="run the envs through `pio test` instead")
     p.set_defaults(fn=cmd_run, group="run", cmd="")
 
@@ -1870,7 +2086,9 @@ def build_parser():
     p.add_argument("--force", action="store_true", help="regenerate even when one is present")
     p.set_defaults(fn=cmd_keys_ensure)
 
-    readme = sub.add_parser("readme", help="test/README.md generated sections").add_subparsers(dest="cmd", required=True)
+    readme = sub.add_parser("readme", help="test/README.md generated sections").add_subparsers(
+        dest="cmd", required=True
+    )
     p = readme.add_parser("gen")
     p.add_argument("--check", action="store_true", help="exit 1 if the generated sections are stale")
     p.set_defaults(fn=cmd_readme_gen)

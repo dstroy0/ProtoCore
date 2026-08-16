@@ -12,17 +12,21 @@
  * ECDSA always hashes the message with SHA-256 (nistp256 pairs with SHA-256, RFC 5656 §6.2.1).
  *
  * ═══════════════════════════════════════════════════════════════════════════
- * ARDUINO VS NATIVE
+ * THE TWO ARMS
  * ═══════════════════════════════════════════════════════════════════════════
  *
- * Arduino: mbedTLS (mbedtls_ecdsa_*, mbedtls_ecp_*) - hardware-accelerated big-integer
- *   math on the ESP32 and side-channel-hardened. This is the production path. Signing
- *   uses the ESP32 hardware RNG (randomized ECDSA, RFC 6979 not required for validity).
+ * One self-contained software P-256 serves both: 256-bit field and scalar arithmetic, the
+ *   exception-free complete addition formulas, a constant-time fixed-window scalar multiply,
+ *   and RFC 6979 deterministic signing, so the sign path is byte-exact against the RFC 6979
+ *   A.2.5 (P-256/SHA-256) known-answer vectors on every target.
  *
- * Native:  self-contained software P-256 - 256-bit field/scalar arithmetic (bit-serial
- *   reduction mod p and mod n), Jacobian point arithmetic, and RFC 6979 deterministic
- *   signing so the sign path is byte-exact against the RFC 6979 A.2.5 (P-256/SHA-256)
- *   known-answer vectors. Test-only, like the native RSA path; not compiled into firmware.
+ * Only the field multiply changes arm. A die whose MPI accelerator carries a single-shot
+ *   MODMULT does each 256-bit multiply on it; every other target, and a host build, runs the
+ *   software product. The vectors are the same either way, which is what makes the native run
+ *   a check on the accelerated one.
+ *
+ * The entries below are one surface over every arm: which one runs the curve math is this
+ * module's and is never visible here.
  *
  * ═══════════════════════════════════════════════════════════════════════════
  * WIRE FORMATS (assembled by the SSH transport/auth layers, not here)
@@ -30,15 +34,15 @@
  *
  * Public-key blob (RFC 5656 §3.1):
  *   string("ecdsa-sha2-nistp256") || string("nistp256") || string(Q)
- * where Q is the uncompressed point 0x04 || X || Y (65 bytes). This module exposes Q
- * as @ref protocore_ecdsa_p256_pubkey; the layers wrap it.
+ * where Q is the uncompressed point 0x04 || X || Y (65 bytes). This module writes Q
+ * through @ref EcdsaNs::pubkey; the layers wrap it.
  *
  * Signature blob (RFC 5656 §3.1.2):
  *   string("ecdsa-sha2-nistp256") || string( mpint(r) || mpint(s) )
- * This module exposes the raw r || s (32 + 32 big-endian); the layers mpint-wrap them.
+ * This module writes the raw r || s (32 + 32 big-endian); the layers mpint-wrap them.
  *
  * ECDH shared secret (RFC 5656 §4):
- *   K = the X coordinate of d * Q_peer. @ref protocore_ecdsa_p256_ecdh returns the raw 32-byte X;
+ *   K = the X coordinate of d * Q_peer. @ref EcdsaNs::ecdh writes the raw 32-byte X;
  *   the transport encodes it as an mpint in the exchange hash and the key derivation.
  *
  * @author  Douglas Quigg (dstroy0)
@@ -63,64 +67,91 @@ PROTOCORE_BEGIN_DECLS
 /** @brief Raw ECDSA signature length: r || s (32 + 32, big-endian). */
 #define PROTOCORE_ECDSA_P256_SIG_LEN 64
 
-// PROTOCORE_ECDSA_BORROW - the working bytes sign and verify take from their caller - is stated in
-// protocore_config.h, which sums it into the secure arena.
+// PROTOCORE_ECDSA_BORROW - the bytes one P-256 operation runs out of - is stated in protocore_config.h,
+// which sums it into the secure arena. A caller takes them once and passes the pointer to every call.
+
+/** @brief The private scalar a public point is derived from. */
+typedef struct
+{
+    const uint8_t *priv; ///< PROTOCORE_ECDSA_P256_PRIV_LEN big-endian scalar d, 1 <= d < n
+    uint8_t *pub;        ///< PROTOCORE_ECDSA_P256_PUB_LEN bytes: 0x04 || X || Y
+} EcdsaPubkeyArgs;
+
+/** @brief The message and key a signature is taken over. */
+typedef struct
+{
+    const uint8_t *msg;  ///< the message, hashed with SHA-256 here
+    size_t mlen;         ///< its length
+    const uint8_t *priv; ///< PROTOCORE_ECDSA_P256_PRIV_LEN big-endian scalar d
+    uint8_t *sig;        ///< PROTOCORE_ECDSA_P256_SIG_LEN bytes: r || s, 32 + 32 big-endian
+} EcdsaSignArgs;
+
+/** @brief The message, key and signature a verification checks. */
+typedef struct
+{
+    const uint8_t *pub; ///< PROTOCORE_ECDSA_P256_PUB_LEN uncompressed point, rejected if not on-curve
+    const uint8_t *msg; ///< the signed message
+    size_t mlen;        ///< its length
+    const uint8_t *sig; ///< PROTOCORE_ECDSA_P256_SIG_LEN bytes: r || s, 32 + 32 big-endian
+} EcdsaVerifyArgs;
+
+/** @brief The peer point and key an ECDH shared secret is taken from. */
+typedef struct
+{
+    const uint8_t *peer_pub; ///< PROTOCORE_ECDSA_P256_PUB_LEN uncompressed peer point 0x04 || X || Y
+    const uint8_t *priv;     ///< PROTOCORE_ECDSA_P256_PRIV_LEN big-endian scalar d, 1 <= d < n
+    uint8_t *shared_x;       ///< PROTOCORE_ECDSA_P256_COORD_LEN big-endian X coordinate of d * Q_peer
+} EcdsaEcdhArgs;
 
 /**
- * @brief Derive the uncompressed public point Q = d*G from a P-256 private scalar.
+ * @brief NIST P-256 ECDSA and ECDH (RFC 5656 / FIPS 186-4).
  *
- * @param[out] pub   65-byte uncompressed point 0x04 || X || Y.
- * @param[in]  priv  32-byte big-endian private scalar d (must satisfy 1 <= d < n).
- * @return true on success, false if @p priv is 0 or >= the group order n.
+ * A caller sets the members a call takes, invokes it through ::Ecdsa with the bytes it runs out of, and
+ * reads the outcome off the same handle. How those bytes are carved is this module's and is never named
+ * here.
+ *
+ *   Ecdsa.sign_args.msg = exchange_hash;
+ *   Ecdsa.sign_args.mlen = 32;
+ *   Ecdsa.sign_args.priv = host_key;
+ *   Ecdsa.sign_args.sig = sig;
+ *   Ecdsa.sign(work);
+ *
+ * @var EcdsaNs::pubkey_args  the private scalar a public point is derived from
+ * @var EcdsaNs::sign_args    the message and key a signature is taken over
+ * @var EcdsaNs::verify_args  the message, key and signature a verification checks
+ * @var EcdsaNs::ecdh_args    the peer point and key an ECDH shared secret is taken from
+ * @var EcdsaNs::ok           a call's true/false outcome; false on a null pointer, an out-of-range
+ *                            scalar, an off-curve point, an identity result, and on a bad signature
+ * @var EcdsaNs::pubkey       derive Q = d*G and write it uncompressed
+ * @var EcdsaNs::sign         hash the message with SHA-256 and write the raw r || s
+ * @var EcdsaNs::verify       hash the message with SHA-256 and check r || s against the point
+ * @var EcdsaNs::ecdh         write the X coordinate of d * Q_peer
+ *
+ * @c work is PROTOCORE_ECDSA_BORROW secure bytes the CALLER took, at an address it knows. It arrives
+ * @c restrict and is not held past the call, so nothing here aliases it. The caller releases it, and
+ * the pool wipes on release; this module neither takes it, holds it, releases it, nor wipes it. That is
+ * what keeps the message hash and the RFC 6979 nonce chain from outliving the caller.
+ *
+ * No storage member and no context: a caller sets operands and reads @ref EcdsaNs::ok, and that is all
+ * the surface there is.
  */
-proto_bool protocore_ecdsa_p256_pubkey(uint8_t pub[PROTOCORE_ECDSA_P256_PUB_LEN],
-                                       const uint8_t priv[PROTOCORE_ECDSA_P256_PRIV_LEN]);
+typedef struct
+{
+    EcdsaPubkeyArgs pubkey_args;
+    EcdsaSignArgs sign_args;
+    EcdsaVerifyArgs verify_args;
+    EcdsaEcdhArgs ecdh_args;
 
-/**
- * @brief Sign @p mlen bytes of @p msg with a P-256 private key (ECDSA, SHA-256).
- *
- * The message is hashed with SHA-256 internally. Native builds sign deterministically
- * (RFC 6979); Arduino builds sign with the hardware RNG. Both produce a valid signature.
- *
- * @param[out] sig   64-byte raw signature r || s (big-endian, 32 + 32).
- * @param[in]  work  PROTOCORE_ECDSA_BORROW bytes of caller storage.
- * @param[in]  msg   Message to sign (typically the KEX exchange hash H).
- * @param[in]  mlen  Length of @p msg.
- * @param[in]  priv  32-byte big-endian private scalar d.
- * @return true on success, false on invalid key or internal failure.
- */
-proto_bool protocore_ecdsa_p256_sign(uint8_t sig[PROTOCORE_ECDSA_P256_SIG_LEN], uint8_t *work, const uint8_t *msg,
-                                     size_t mlen, const uint8_t priv[PROTOCORE_ECDSA_P256_PRIV_LEN]);
+    proto_bool ok;
 
-/**
- * @brief Verify a P-256 ECDSA signature (SHA-256) against an uncompressed public point.
- *
- * @param[in] pub   65-byte uncompressed point 0x04 || X || Y (rejected if not on-curve).
- * @param[in] work  PROTOCORE_ECDSA_BORROW bytes of caller storage.
- * @param[in] msg   Signed message.
- * @param[in] mlen  Length of @p msg.
- * @param[in] sig   64-byte raw signature r || s (big-endian, 32 + 32).
- * @return true if the signature is valid, false otherwise.
- */
-proto_bool protocore_ecdsa_p256_verify(const uint8_t pub[PROTOCORE_ECDSA_P256_PUB_LEN], uint8_t *work,
-                                       const uint8_t *msg, size_t mlen,
-                                       const uint8_t sig[PROTOCORE_ECDSA_P256_SIG_LEN]);
+    void (*const pubkey)(uint8_t *restrict work);
+    void (*const sign)(uint8_t *restrict work);
+    void (*const verify)(uint8_t *restrict work);
+    void (*const ecdh)(uint8_t *restrict work);
+} EcdsaNs;
 
-/**
- * @brief P-256 ECDH: the shared-secret X coordinate of d * Q_peer (RFC 5656 §4 / RFC 5903).
- *
- * Backs the ecdh-sha2-nistp256 SSH key exchange. Validates that @p peer_pub is a valid
- * on-curve point and that the product is not the identity; the returned 32-byte big-endian
- * X coordinate is the shared field element the transport encodes as an mpint.
- *
- * @param[out] shared_x  32-byte big-endian X coordinate of d * Q_peer.
- * @param[in]  peer_pub  65-byte uncompressed peer point 0x04 || X || Y.
- * @param[in]  priv      32-byte big-endian private scalar d (1 <= d < n).
- * @return true on success, false on an invalid peer point / scalar or an identity result.
- */
-proto_bool protocore_ecdsa_p256_ecdh(uint8_t shared_x[PROTOCORE_ECDSA_P256_COORD_LEN],
-                                     const uint8_t peer_pub[PROTOCORE_ECDSA_P256_PUB_LEN],
-                                     const uint8_t priv[PROTOCORE_ECDSA_P256_PRIV_LEN]);
+/** @brief The one symbol this module exports. */
+extern EcdsaNs Ecdsa;
 
 PROTOCORE_END_DECLS
 

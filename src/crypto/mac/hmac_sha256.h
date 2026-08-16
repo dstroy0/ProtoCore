@@ -7,8 +7,8 @@
  *
  * The shared keyed-MAC primitive for the whole library: SSH binary-packet MAC (RFC 4253 §6.4), the
  * TLS 1.3 / QUIC / DTLS HKDF PRF, SNMPv3 usmHMACSHAAuthProtocol, JWT HS256, CSRF tokens, and SMB 2.x
- * message signing / the SP800-108 KDF. Built over the protocore_sha256 streaming functions so the inner
- * SHA-256 hardware acceleration (where present) is transparent.
+ * message signing / the SP800-108 KDF. Built over the @ref Sha256Ns entries, so which arm compresses
+ * the inner hash is not visible here.
  *
  * RFC 2104 construction: HMAC(K, m) = H((K XOR opad) || H((K XOR ipad) || m)), H = SHA-256.
  *
@@ -26,7 +26,6 @@
 
 #if PROTOCORE_ENABLE_HMAC_SHA256
 
-#include "crypto/hash/sha256.h"
 #include <stddef.h>
 #include <stdint.h>
 
@@ -35,58 +34,93 @@ PROTOCORE_BEGIN_DECLS
 /** @brief HMAC-SHA2-256 output length in bytes. */
 #define PROTOCORE_HMAC_SHA256_LEN 32
 
-// PROTOCORE_HMAC_SHA256_BORROW - the working bytes a context takes from its caller - is stated in
-// protocore_config.h, which gates it on the accelerator and sums it into the secure arena.
+// PROTOCORE_HMAC_SHA256_BORROW - the bytes a MAC runs out of - is stated in protocore_config.h, which
+// sums it into the secure arena. A caller takes them once and passes the pointer to every call.
+
+/** @brief The key a MAC is taken with. */
+typedef struct
+{
+    const uint8_t *key; ///< MAC key bytes
+    size_t key_len;     ///< key length; > 64 is pre-hashed (RFC 2104), shorter is zero-padded to the block
+} HmacSha256KeyArgs;
+
+/** @brief One chunk fed to a running MAC. */
+typedef struct
+{
+    const uint8_t *data; ///< the bytes
+    size_t len;          ///< how many
+} HmacSha256UpdateArgs;
+
+/** @brief Where the finished MAC lands. */
+typedef struct
+{
+    uint8_t *out; ///< PROTOCORE_HMAC_SHA256_LEN bytes
+} HmacSha256FinalArgs;
+
+/** @brief The key and message a one-shot MAC is taken over. */
+typedef struct
+{
+    const uint8_t *key;  ///< MAC key bytes
+    size_t key_len;      ///< key length
+    const uint8_t *data; ///< the message
+    size_t len;          ///< its length
+    uint8_t *out;        ///< PROTOCORE_HMAC_SHA256_LEN bytes
+} HmacSha256MacArgs;
 
 /**
- * @brief Compute HMAC-SHA2-256 over a single contiguous buffer.
+ * @brief HMAC-SHA2-256 (RFC 2104).
  *
- * @param work     PROTOCORE_HMAC_SHA256_BORROW bytes of caller storage.
- * @param key      MAC key bytes.
- * @param key_len  Key length in bytes. Keys > 64 bytes are pre-hashed per RFC 2104; keys <= 64 bytes
- *                 are zero-padded to the block length. SSH-derived keys are always 32 bytes.
- * @param data     Input bytes.
- * @param len      Input length.
- * @param mac      Output buffer, must be PROTOCORE_HMAC_SHA256_LEN bytes.
- */
-void protocore_hmac_sha256(uint8_t *work, const uint8_t *key, size_t key_len, const uint8_t *data, size_t len,
-                           uint8_t mac[PROTOCORE_HMAC_SHA256_LEN]);
-
-/**
- * @brief Streaming HMAC-SHA2-256 context.
+ * A caller sets the members a call takes, invokes it through ::HmacSha256 with the bytes it runs out
+ * of, and reads the outcome off the same handle. How those bytes are carved is this module's and is
+ * never named here.
  *
- * For MACs assembled from separate pieces - e.g. the SSH packet MAC over
+ * For a MAC assembled from separate pieces - the SSH packet MAC over
  * (uint32_be(seq_num) || plaintext_packet):
  *
- *   protocore_hmac_sha256_init(&ctx, work, key, key_len);
- *   protocore_hmac_sha256_update(&ctx, seq_bytes, 4);
- *   protocore_hmac_sha256_update(&ctx, packet, pkt_len);
- *   protocore_hmac_sha256_final(&ctx, mac_out);
+ *   HmacSha256.key_args.key = key;
+ *   HmacSha256.key_args.key_len = key_len;
+ *   HmacSha256.init(work);
+ *   HmacSha256.update_args.data = seq_bytes;
+ *   HmacSha256.update_args.len = 4;
+ *   HmacSha256.update(work);
+ *   HmacSha256.final_args.out = mac_out;
+ *   HmacSha256.final(work);
  *
- * The context owns nothing and touches no pool. The caller hands it ::PROTOCORE_HMAC_SHA256_BORROW working
- * bytes, alive until the MAC comes back, and the context splits them by offset. A connection takes
- * those bytes once for its slot and reuses them for every packet.
+ * @var HmacSha256Ns::key_args      the key a MAC is taken with
+ * @var HmacSha256Ns::update_args   one chunk fed to a running MAC
+ * @var HmacSha256Ns::final_args    where the finished MAC lands
+ * @var HmacSha256Ns::mac_args      the key and message a one-shot MAC is taken over
+ * @var HmacSha256Ns::ok            a call's true/false outcome
+ * @var HmacSha256Ns::init          start a MAC under @ref HmacSha256Ns::key_args
+ * @var HmacSha256Ns::update        feed the running MAC a chunk
+ * @var HmacSha256Ns::final         finish, writing the 32 bytes out
+ * @var HmacSha256Ns::mac           init, update and final in one call, for a message already whole
+ *
+ * @c work is PROTOCORE_HMAC_SHA256_BORROW secure bytes the CALLER took, at an address it knows. It
+ * arrives @c restrict and is not held past the call, so nothing here aliases it. The caller releases
+ * it, and the pool wipes on release; this module neither takes it, holds it, releases it, nor wipes
+ * it. A connection takes those bytes once for its slot and passes them on every packet.
+ *
+ * No storage member and no context: a caller sets operands and reads @ref HmacSha256Ns::ok, and that
+ * is all the surface there is.
  */
 typedef struct
 {
-    protocore_sha256_ctx inner; ///< Inner hash context (key XOR ipad prepended).
-    uint8_t *work;              ///< Caller storage: the outer key block and the transient set.
-} protocore_hmac_sha256_ctx;
+    HmacSha256KeyArgs key_args;
+    HmacSha256UpdateArgs update_args;
+    HmacSha256FinalArgs final_args;
+    HmacSha256MacArgs mac_args;
 
-/**
- * @brief Initialize a streaming HMAC-SHA2-256 context.
- * @param ctx      Context to initialize.
- * @param work     PROTOCORE_HMAC_SHA256_BORROW bytes, aligned for uint32_t, alive until final() returns.
- * @param key      Key bytes (keys > 64 are pre-hashed per RFC 2104).
- * @param key_len  Length of key in bytes.
- */
-void protocore_hmac_sha256_init(protocore_hmac_sha256_ctx *ctx, uint8_t *work, const uint8_t *key, size_t key_len);
+    proto_bool ok;
 
-/** @brief Feed @p len bytes into the running HMAC. */
-void protocore_hmac_sha256_update(protocore_hmac_sha256_ctx *ctx, const uint8_t *data, size_t len);
+    void (*const init)(uint8_t *restrict work);
+    void (*const update)(uint8_t *restrict work);
+    void (*const final)(uint8_t *restrict work);
+    void (*const mac)(uint8_t *restrict work);
+} HmacSha256Ns;
 
-/** @brief Finalize and write the 32-byte MAC. */
-void protocore_hmac_sha256_final(protocore_hmac_sha256_ctx *ctx, uint8_t mac[PROTOCORE_HMAC_SHA256_LEN]);
+/** @brief The one symbol this module exports. */
+extern HmacSha256Ns HmacSha256;
 
 PROTOCORE_END_DECLS
 

@@ -28,8 +28,6 @@
 
 #if PROTOCORE_ENABLE_HTTP3
 
-#define PROTOCORE_H3_CONN_BORROW                                                                                       \
-
 PROTOCORE_BEGIN_DECLS
 
 #include "network_drivers/presentation/http/http3/h3_frame.h"
@@ -78,6 +76,7 @@ typedef struct
  * power of two: PROTOCORE_H3_MAX_STREAMS reassembly buffers, then that many :path, :authority and :method
  * fields. HTTP is what the plaintext pool is for, and the connection is what owns the bytes.
  */
+#define PROTOCORE_H3_CONN_BORROW                                                                                       \
     ((size_t)PROTOCORE_H3_MAX_STREAMS *                                                                                \
      ((size_t)PROTOCORE_H3_STREAM_BUF + PROTOCORE_H3_PATH_LEN + PROTOCORE_H3_AUTHORITY_LEN + PROTOCORE_H3_METHOD_LEN))
 

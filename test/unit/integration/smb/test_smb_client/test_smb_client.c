@@ -184,7 +184,12 @@ static proto_bool mock_derive_key(const uint8_t *msg, size_t mlen, const SmbConf
     {
         return PROTO_FALSE;
     }
-    protocore_hmac_md5(owf, 16, auth + nt_off, 16, key);
+    Md.hmac_args.key = owf;
+    Md.hmac_args.key_len = 16;
+    Md.hmac_args.msg = auth + nt_off;
+    Md.hmac_args.msg_len = 16;
+    Md.hmac_args.out = key;
+    Md.hmac_md5(tw);
     return PROTO_TRUE;
 }
 

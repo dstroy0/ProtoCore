@@ -30,6 +30,7 @@ typedef struct
     uint8_t exp_be[256];
     uint8_t p_be[256];
     uint8_t res_be[256];
+    uint8_t bn[PROTOCORE_BIGNUM_BORROW]; ///< the region the Bignum conversions run in
 } BnExpmodBytes;
 
 // Worst-case bytes this backend borrows in one modexp. PROTOCORE_SECURE_ARENA_SIZE is derived
@@ -54,9 +55,15 @@ void bn_expmod_group14(protocore_bignum *out, const protocore_bignum *base, cons
     uint8_t *exp_be = w->exp_be;
     uint8_t *p_be = w->p_be;
     uint8_t *res_be = w->res_be;
-    bn_to_bytes(base_be, base);
-    bn_to_bytes(exp_be, exp);
-    bn_to_bytes(p_be, &group14_p);
+    Bignum.to_bytes_args.bytes = base_be;
+    Bignum.to_bytes_args.in = base;
+    Bignum.to_bytes(w->bn);
+    Bignum.to_bytes_args.bytes = exp_be;
+    Bignum.to_bytes_args.in = exp;
+    Bignum.to_bytes(w->bn);
+    Bignum.to_bytes_args.bytes = p_be;
+    Bignum.to_bytes_args.in = &group14_p;
+    Bignum.to_bytes(w->bn);
 
     mbedtls_mpi B;
     mbedtls_mpi E;
@@ -79,7 +86,10 @@ void bn_expmod_group14(protocore_bignum *out, const protocore_bignum *base, cons
     mbedtls_mpi_free(&P);
     mbedtls_mpi_free(&R);
 
-    bn_from_bytes(out, res_be, 256);
+    Bignum.from_bytes_args.out = out;
+    Bignum.from_bytes_args.bytes = res_be;
+    Bignum.from_bytes_args.len = 256;
+    Bignum.from_bytes(w->bn);
     protocore_secure_release(mark);
 }
 

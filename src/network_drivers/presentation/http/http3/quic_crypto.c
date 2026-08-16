@@ -42,25 +42,55 @@ void protocore_quic_keys_from_secret(uint8_t *work, const uint8_t secret[PROTOCO
     // The key becomes a context here and the raw bytes are wiped: nothing downstream needs them.
     uint8_t *k = work + PROTOCORE_HKDF_BORROW;
     uint8_t *hpk = k + PROTOCORE_AES128GCM_KEY_LEN;
-    protocore_hkdf_expand_label(work, secret, "quic key", k, PROTOCORE_AES128GCM_KEY_LEN, PROTOCORE_HKDF_LABEL_PREFIX);
-    (void)protocore_aes128gcm_key_init(out->gcm, k);
-    protocore_hkdf_expand_label(work, secret, "quic iv", out->iv, sizeof(out->iv), PROTOCORE_HKDF_LABEL_PREFIX);
-    protocore_hkdf_expand_label(work, secret, "quic hp", hpk, PROTOCORE_AES128GCM_KEY_LEN, PROTOCORE_HKDF_LABEL_PREFIX);
-    protocore_aes128_init((struct protocore_aes128 *)(out->hp), hpk);
+    Hkdf.expand_label_args.secret = secret;
+    Hkdf.expand_label_args.label = "quic key";
+    Hkdf.expand_label_args.out = k;
+    Hkdf.expand_label_args.out_len = PROTOCORE_AES128GCM_KEY_LEN;
+    Hkdf.expand_label_args.label_prefix = PROTOCORE_HKDF_LABEL_PREFIX;
+    Hkdf.expand_label(work);
+    Aes128Gcm.key_args.key = k;
+    Aes128Gcm.key_init(out->gcm);
+    Hkdf.expand_label_args.secret = secret;
+    Hkdf.expand_label_args.label = "quic iv";
+    Hkdf.expand_label_args.out = out->iv;
+    Hkdf.expand_label_args.out_len = sizeof(out->iv);
+    Hkdf.expand_label_args.label_prefix = PROTOCORE_HKDF_LABEL_PREFIX;
+    Hkdf.expand_label(work);
+    Hkdf.expand_label_args.secret = secret;
+    Hkdf.expand_label_args.label = "quic hp";
+    Hkdf.expand_label_args.out = hpk;
+    Hkdf.expand_label_args.out_len = PROTOCORE_AES128GCM_KEY_LEN;
+    Hkdf.expand_label_args.label_prefix = PROTOCORE_HKDF_LABEL_PREFIX;
+    Hkdf.expand_label(work);
+    Aes128Gcm.block_key_args.key = hpk;
+    Aes128Gcm.block_init(out->gcm);
     protocore_secure_wipe(k, 2 * PROTOCORE_AES128GCM_KEY_LEN);
 }
 
 void protocore_quic_derive_initial_secrets(uint8_t *work, const uint8_t *dcid, size_t dcid_len, QuicInitialSecrets *out)
 {
     uint8_t initial_secret[PROTOCORE_HKDF_HASH_LEN];
-    protocore_hkdf_extract(work, INITIAL_SALT, sizeof(INITIAL_SALT), dcid, dcid_len, initial_secret);
+    Hkdf.extract_args.salt = INITIAL_SALT;
+    Hkdf.extract_args.salt_len = sizeof(INITIAL_SALT);
+    Hkdf.extract_args.ikm = dcid;
+    Hkdf.extract_args.ikm_len = dcid_len;
+    Hkdf.extract_args.prk = initial_secret;
+    Hkdf.extract(work);
 
     uint8_t client_secret[PROTOCORE_HKDF_HASH_LEN];
     uint8_t server_secret[PROTOCORE_HKDF_HASH_LEN];
-    protocore_hkdf_expand_label(work, initial_secret, "client in", client_secret, sizeof(client_secret),
-                                PROTOCORE_HKDF_LABEL_PREFIX);
-    protocore_hkdf_expand_label(work, initial_secret, "server in", server_secret, sizeof(server_secret),
-                                PROTOCORE_HKDF_LABEL_PREFIX);
+    Hkdf.expand_label_args.secret = initial_secret;
+    Hkdf.expand_label_args.label = "client in";
+    Hkdf.expand_label_args.out = client_secret;
+    Hkdf.expand_label_args.out_len = sizeof(client_secret);
+    Hkdf.expand_label_args.label_prefix = PROTOCORE_HKDF_LABEL_PREFIX;
+    Hkdf.expand_label(work);
+    Hkdf.expand_label_args.secret = initial_secret;
+    Hkdf.expand_label_args.label = "server in";
+    Hkdf.expand_label_args.out = server_secret;
+    Hkdf.expand_label_args.out_len = sizeof(server_secret);
+    Hkdf.expand_label_args.label_prefix = PROTOCORE_HKDF_LABEL_PREFIX;
+    Hkdf.expand_label(work);
 
     protocore_quic_keys_from_secret(work, client_secret, &out->client);
     protocore_quic_keys_from_secret(work, server_secret, &out->server);
@@ -83,8 +113,14 @@ size_t protocore_quic_packet_protect(uint8_t *pkt, size_t cap, size_t pn_offset,
     // AEAD-seal the payload in place; associated data is the unprotected header.
     uint8_t nonce[12];
     build_nonce(keys->iv, full_pn, nonce);
-    (void)protocore_aes128gcm_seal((struct protocore_aes128gcm_key *)(keys->gcm), nonce, pkt, hdr_len, pkt + hdr_len,
-                                   payload_len, pkt + hdr_len, pkt + hdr_len + payload_len);
+    Aes128Gcm.seal_args.nonce = nonce;
+    Aes128Gcm.seal_args.aad = pkt;
+    Aes128Gcm.seal_args.aad_len = hdr_len;
+    Aes128Gcm.seal_args.pt = pkt + hdr_len;
+    Aes128Gcm.seal_args.pt_len = payload_len;
+    Aes128Gcm.seal_args.ct_out = pkt + hdr_len;
+    Aes128Gcm.seal_args.tag_out = pkt + hdr_len + payload_len;
+    Aes128Gcm.seal(keys->gcm);
 
     // Header protection (RFC 9001 sec 5.4): sample 16 bytes at pn_offset + 4 (always inside the
     // ciphertext because pn_len <= 4), AES-ECB it under hp, mask the low first-byte bits and the PN.
@@ -92,7 +128,9 @@ size_t protocore_quic_packet_protect(uint8_t *pkt, size_t cap, size_t pn_offset,
     // costs ~556 cycles per packet plus a pool borrow and wipe. (The ECB block itself is ~7,842 - a
     // single HW-AES operation is expensive on this die, and that is the bigger target.)
     uint8_t mask[16];
-    protocore_aes128_encrypt_block((struct protocore_aes128 *)(keys->hp), pkt + pn_offset + 4, mask);
+    Aes128Gcm.block_args.in = pkt + pn_offset + 4;
+    Aes128Gcm.block_args.out = mask;
+    Aes128Gcm.block_encrypt(keys->gcm);
 
     pkt[0] ^= mask[0] & (is_long ? 0x0f : 0x1f);
     for (uint8_t i = 0; i < pn_len; i++)
@@ -116,7 +154,9 @@ size_t protocore_quic_packet_unprotect(uint8_t *pkt, size_t pn_offset, size_t le
     // The header-protection context is already keyed and lives in the key material; building one here
     // would cost ~8,400 cycles to encrypt sixteen bytes.
     uint8_t mask[16];
-    protocore_aes128_encrypt_block((struct protocore_aes128 *)(keys->hp), pkt + pn_offset + 4, mask);
+    Aes128Gcm.block_args.in = pkt + pn_offset + 4;
+    Aes128Gcm.block_args.out = mask;
+    Aes128Gcm.block_encrypt(keys->gcm);
 
     pkt[0] ^= mask[0] & (is_long ? 0x0f : 0x1f);
     uint8_t pn_len = (uint8_t)((pkt[0] & 0x03) + 1);
@@ -138,7 +178,7 @@ size_t protocore_quic_packet_unprotect(uint8_t *pkt, size_t pn_offset, size_t le
     // A record too short to hold a tag is rejected HERE. The detached-tag api takes the ciphertext
     // length and the tag pointer separately, so it no longer has a combined length to range-check on
     // the caller's behalf - and ct_len comes off the wire, so the subtraction below would wrap to a
-    // huge size_t rather than fail. This guard used to live inside protocore_aes128gcm_open().
+    // huge size_t rather than fail. This guard used to live inside the AEAD open itself.
     if (ct_len < PROTOCORE_AES128GCM_TAG_LEN)
     {
         return (size_t)-1;
@@ -146,8 +186,15 @@ size_t protocore_quic_packet_unprotect(uint8_t *pkt, size_t pn_offset, size_t le
     uint8_t nonce[12];
     build_nonce(keys->iv, full_pn, nonce);
     const size_t pt_len = ct_len - PROTOCORE_AES128GCM_TAG_LEN;
-    if (!protocore_aes128gcm_open((struct protocore_aes128gcm_key *)(keys->gcm), nonce, pkt, hdr_len, pkt + hdr_len,
-                                  pt_len, pkt + hdr_len + pt_len, out))
+    Aes128Gcm.open_args.nonce = nonce;
+    Aes128Gcm.open_args.aad = pkt;
+    Aes128Gcm.open_args.aad_len = hdr_len;
+    Aes128Gcm.open_args.ct = pkt + hdr_len;
+    Aes128Gcm.open_args.ct_len = pt_len;
+    Aes128Gcm.open_args.tag = pkt + hdr_len + pt_len;
+    Aes128Gcm.open_args.out = out;
+    Aes128Gcm.open(keys->gcm);
+    if (!Aes128Gcm.ok)
     {
         return (size_t)-1;
     }
@@ -179,10 +226,18 @@ void protocore_quic_retry_integrity_tag(const uint8_t *odcid, size_t odcid_len, 
     // Empty plaintext: seal writes only the 16-byte tag.
     { // fixed RFC 9001 key, once per Retry packet - not worth a resident context
         size_t mark = protocore_secure_mark();
-        struct protocore_aes128gcm_key *rk =
-            protocore_aes128gcm_key_init(protocore_secure_alloc(PROTOCORE_WORK_AES128GCM, 8), RETRY_KEY);
-        (void)protocore_aes128gcm_seal(rk, RETRY_NONCE, aad, p, NULL, 0, tag, tag);
-        protocore_aes128gcm_key_wipe(rk);
+        uint8_t *rk = protocore_secure_alloc(PROTOCORE_AES128GCM_BORROW, 8);
+        Aes128Gcm.key_args.key = RETRY_KEY;
+        Aes128Gcm.key_init(rk);
+        Aes128Gcm.seal_args.nonce = RETRY_NONCE;
+        Aes128Gcm.seal_args.aad = aad;
+        Aes128Gcm.seal_args.aad_len = p;
+        Aes128Gcm.seal_args.pt = NULL;
+        Aes128Gcm.seal_args.pt_len = 0;
+        Aes128Gcm.seal_args.ct_out = tag;
+        Aes128Gcm.seal_args.tag_out = tag;
+        Aes128Gcm.seal(rk);
+        Aes128Gcm.key_wipe(rk);
         protocore_secure_release(mark);
     }
 }

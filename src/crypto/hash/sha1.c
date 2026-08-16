@@ -5,18 +5,18 @@
  * @file sha1.c
  * @brief SHA-1 implementation (FIPS 180-4).
  *
- * On Arduino (ESP32) targets, delegates to mbedtls_sha1() which uses the hardware SHA accelerator. On
- * the SW path, a software implementation with no mbedTLS dependency.
+ * One framing and one set of entries; only the block compression has two arms - the accelerator where
+ * the part carries one, the FIPS 180-4 rounds below where it does not. Padding, the padded final
+ * blocks and the digest output are software on both arms.
  */
+
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_SHA1
 
 #if PROTOCORE_HAS_HW_SHA
-#include "mbedtls/sha1.h" // hardware-accelerated SHA-1 on ESP32
 #endif
-#if !PROTOCORE_HAS_HW_SHA
-#include "mmgr/endian.h" // native software SHA-1
-#endif
+#include "mmgr/endian.h" // the big-endian serializers the framing and the rounds step with
 #include "crypto/hash/sha1.h"
 #include "crypto/crypto_opt.h"
 #include "mmgr/protomem.h"
@@ -24,20 +24,40 @@
 PROTOCORE_CRYPTO_HOT
 PROTOCORE_BEGIN_DECLS
 
+// The one definition of Sha1Ctx - private to this TU. It sits at SHA1_OFF_CTX in the caller's borrow,
+// so its size never leaves this file and no consumer can name it.
+typedef struct Sha1Ctx
+{
+    uint32_t h[5]; ///< running hash words H0..H4
+} Sha1Ctx;
+
+// The caller's borrow, split by offset: the running state, then the two padded final blocks a message
+// whose tail reaches 56 bytes composes.
+#define SHA1_OFF_CTX 0u
+#define SHA1_OFF_PAD (SHA1_OFF_CTX + sizeof(struct Sha1Ctx))
+static_assert(SHA1_OFF_PAD + 128u <= PROTOCORE_SHA1_BORROW,
+              "PROTOCORE_SHA1_BORROW is short of the state and the padded final blocks - raise it in "
+              "protocore_config.h, which sums it into the secure arena");
+
+
 #if PROTOCORE_HAS_HW_SHA
 
-// --- HW path: mbedTLS ------------------------------------------------------
+// --- HW path: the accelerator's compression --------------------------------
 
-void protocore_sha1(const uint8_t *data, size_t len, uint8_t digest[PROTOCORE_SHA1_DIGEST_LEN])
+// Process one 64-byte block into the running state h[0..4] on the accelerator. The state is written
+// back per block, so two contexts interleaving never share what the H bank holds.
+static void sha1_block(uint32_t h[5], const uint8_t block[64])
 {
-    (void)mbedtls_sha1(data, len, digest);
+    protocore_sha_hw_acquire();
+    protocore_sha_hw_block(PROTOCORE_SHA_MODE_1, h, 5u, (const uint32_t *)(const void *)block, 16u, PROTO_FALSE);
+    protocore_sha_hw_release();
 }
 
 #endif
 
 #if !PROTOCORE_HAS_HW_SHA
 
-// --- SW path: software SHA-1, no external dependencies ---------------------
+// --- SW path: the FIPS 180-4 rounds ----------------------------------------
 
 static inline uint32_t rot32(uint32_t x, int n)
 {
@@ -107,9 +127,22 @@ static void sha1_block(uint32_t h[5], const uint8_t block[64])
     h[4] += e;
 }
 
-void protocore_sha1(const uint8_t *data, size_t len, uint8_t digest[PROTOCORE_SHA1_DIGEST_LEN])
+#endif // !PROTOCORE_HAS_HW_SHA (software compression)
+
+// --- framing (one arm, both compressions) ----------------------------------
+
+static void sha1_run(uint8_t *restrict work, const uint8_t *data, size_t len,
+                     uint8_t digest[PROTOCORE_SHA1_DIGEST_LEN])
 {
-    uint32_t h[5] = {0x67452301u, 0xEFCDAB89u, 0x98BADCFEu, 0x10325476u, 0xC3D2E1F0u};
+    // State and padded blocks at their offsets in the caller's borrow.
+    uint32_t *h = ((struct Sha1Ctx *)(void *)(work + SHA1_OFF_CTX))->h;
+    uint8_t *pad = work + SHA1_OFF_PAD;
+
+    h[0] = 0x67452301u;
+    h[1] = 0xEFCDAB89u;
+    h[2] = 0x98BADCFEu;
+    h[3] = 0x10325476u;
+    h[4] = 0xC3D2E1F0u;
 
     // Process full 64-byte blocks
     size_t blocks = len / 64;
@@ -119,7 +152,7 @@ void protocore_sha1(const uint8_t *data, size_t len, uint8_t digest[PROTOCORE_SH
     }
 
     // Build the padded final block(s)
-    uint8_t pad[128] = {};
+    mem.set(pad, 0, 128);
     size_t tail = len - blocks * 64;
     mem.cpy(pad, data + blocks * 64, tail);
     pad[tail] = 0x80;
@@ -144,7 +177,18 @@ void protocore_sha1(const uint8_t *data, size_t len, uint8_t digest[PROTOCORE_SH
     }
 }
 
-#endif // !PROTOCORE_HAS_HW_SHA (SW path)
+static void sha1_hash(uint8_t *restrict work)
+{
+    if (!work || !Sha1.hash_args.out)
+    {
+        Sha1.ok = PROTO_FALSE;
+        return;
+    }
+    sha1_run(work, Sha1.hash_args.data, Sha1.hash_args.len, Sha1.hash_args.out);
+    Sha1.ok = PROTO_TRUE;
+}
+
+Sha1Ns Sha1 = {.hash = sha1_hash};
 
 PROTOCORE_END_DECLS
 

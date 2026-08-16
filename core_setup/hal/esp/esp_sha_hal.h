@@ -33,15 +33,27 @@
 #if PROTOCORE_HAS_HW_SHA
 
 #ifndef PROTOCORE_SHA_BASE
-#error "esp_sha_hal: PROTOCORE_HAS_HW_SHA is on but this die states no SHA register map - add its base and clock/reset bits to its board profile"
+#error                                                                                                                 \
+    "esp_sha_hal: PROTOCORE_HAS_HW_SHA is on but this die states no SHA register map - add its base and clock/reset bits to its board profile"
+#endif
+
+// A host build has no peripheral window, so the accessor comes from the host arm and this file's own
+// definition below is skipped - which is what lets the capability be compiled and run off-target.
+#if PROTOCORE_HOST
+#include "core_setup/hal/host/host_hw_reg.h"
 #endif
 
 PROTOCORE_BEGIN_DECLS
 
-// Raw 32-bit memory-mapped register access - the only primitive; no vendor REG_* macro. The RSA HAL
-// states the same one, so a build that pulls in both agrees on it.
-#ifndef PROTOCORE_HW_REG
-#define PROTOCORE_HW_REG(a) (*(volatile uint32_t *)(uintptr_t)(a))
+// Raw memory-mapped register access - the only primitive; no vendor REG_* macro. A read and a write
+// rather than one lvalue, because a host build models the bus that carries them and a narrow or
+// byte-swapped access cannot be a dereference. On silicon both are the direct volatile access. The
+// AES and RSA HALs state the same pair, so a build that pulls in several agrees on it.
+#ifndef PROTOCORE_HW_RD
+#define PROTOCORE_HW_RD(a) (*(volatile const uint32_t *)(uintptr_t)(a))
+#endif
+#ifndef PROTOCORE_HW_WR
+#define PROTOCORE_HW_WR(a, v) ((*(volatile uint32_t *)(uintptr_t)(a)) = (uint32_t)(v))
 #endif
 
 // ── Block register offsets (identical on every die with the unified SHA peripheral) ──────────────
@@ -95,24 +107,23 @@ void protocore_sha_hw_release(void);
 static inline void protocore_sha_hw_block(uint32_t mode, uint32_t *h, unsigned hwords, const uint32_t *blk,
                                           unsigned bwords, proto_bool first)
 {
-    volatile uint32_t *H = (volatile uint32_t *)(uintptr_t)PROTOCORE_SHA_H_MEM;
-    volatile uint32_t *M = (volatile uint32_t *)(uintptr_t)PROTOCORE_SHA_M_MEM;
-    PROTOCORE_HW_REG(PROTOCORE_SHA_MODE) = mode;
+    PROTOCORE_HW_WR(PROTOCORE_SHA_MODE, mode);
     if (!first)
     {
         for (unsigned i = 0; i < hwords; i++)
         {
-            H[i] = h[i]; // this context's running state, so two digests do not interleave in one bank
+            // this context's running state, so two digests do not interleave in one bank
+            PROTOCORE_HW_WR(PROTOCORE_SHA_H_MEM + 4u * i, h[i]);
         }
     }
     for (unsigned i = 0; i < bwords; i++)
     {
-        M[i] = blk[i];
+        PROTOCORE_HW_WR(PROTOCORE_SHA_M_MEM + 4u * i, blk[i]);
     }
-    PROTOCORE_HW_REG(PROTOCORE_SHA_CLEAR_IRQ) = 1u; // clear any stale completion flag before starting
-    PROTOCORE_HW_REG(first ? PROTOCORE_SHA_START : PROTOCORE_SHA_CONTINUE) = 1u;
+    PROTOCORE_HW_WR(PROTOCORE_SHA_CLEAR_IRQ, 1u); // clear any stale completion flag before starting
+    PROTOCORE_HW_WR(first ? PROTOCORE_SHA_START : PROTOCORE_SHA_CONTINUE, 1u);
     uint32_t spins = 0u;
-    while (PROTOCORE_HW_REG(PROTOCORE_SHA_BUSY) != 0u)
+    while (PROTOCORE_HW_RD(PROTOCORE_SHA_BUSY) != 0u)
     {
         spins++;
         if (spins >= PROTOCORE_SHA_SPIN_MAX)
@@ -126,7 +137,7 @@ static inline void protocore_sha_hw_block(uint32_t mode, uint32_t *h, unsigned h
     }
     for (unsigned i = 0; i < hwords; i++)
     {
-        h[i] = H[i];
+        h[i] = PROTOCORE_HW_RD(PROTOCORE_SHA_H_MEM + 4u * i);
     }
 }
 

@@ -15,6 +15,7 @@
 
 #include "crypto/asymmetric/curve25519.h"
 #include "crypto/asymmetric/ed25519.h" // protocore_ed25519_pubkey for the RFC 7250 RawPublicKey
+#include "crypto/hash/sha256.h"        // PROTOCORE_SHA256_DIGEST_LEN - the transcript hash length
 #include "network_drivers/presentation/http/http3/tls13_msg.h"
 #include "server/clock/clock.h" // protocore_millis() stamps / checks the HelloRetryRequest cookie freshness
 
@@ -84,9 +85,10 @@ static int fail(DtlsConn *c, uint8_t alert)
 // The running transcript's hash so far (RFC 8446 intermediate hashes). Finalizing compresses the
 // padded blocks into a copy of the state, so the context comes out untouched and keeps taking
 // messages.
-static void snapshot(protocore_sha256_ctx *ctx, uint8_t out[PROTOCORE_SHA256_DIGEST_LEN])
+static void snapshot(uint8_t *ctx, uint8_t out[PROTOCORE_SHA256_DIGEST_LEN])
 {
-    protocore_sha256_final(ctx, out);
+    Sha256.final_args.out = out;
+    Sha256.final(ctx);
 }
 
 // Begin a new outbound flight (RFC 9147 §5.8): drop whatever was buffered for the previous one.
@@ -214,18 +216,25 @@ static int send_hello_retry(DtlsConn *c, const Tls13ClientHello *ch, const uint8
                             size_t out_cap, size_t *out_len)
 {
     uint8_t ch1_hash[PROTOCORE_SHA256_DIGEST_LEN];
-    protocore_sha256_ctx h;
-    protocore_sha256_init(&h, c->hash_work2);
-    protocore_sha256_update(&h, ch1, ch1_len);
-    protocore_sha256_final(&h, ch1_hash);
+    uint8_t *h;
+    h = c->hash_work2;
+    Sha256.init(h);
+    Sha256.update_args.data = ch1;
+    Sha256.update_args.len = ch1_len;
+    Sha256.update(h);
+    Sha256.final_args.out = ch1_hash;
+    Sha256.final(h);
 
-    protocore_sha256_init(&c->transcript, c->hash_work); // restart: message_hash(Hash(CH1)) replaces ClientHello1
+    c->transcript = c->hash_work;
+    Sha256.init(c->transcript); // restart: message_hash(Hash(CH1)) replaces ClientHello1
     size_t n = protocore_tls13_build_message_hash(c->msgbuf, sizeof(c->msgbuf), ch1_hash);
     if (!n)
     {
         return fail(c, ALERT_INTERNAL_ERROR);
     }
-    protocore_sha256_update(&c->transcript, c->msgbuf, n); // transcript only; message_hash is never sent
+    Sha256.update_args.data = c->msgbuf;
+    Sha256.update_args.len = n;
+    Sha256.update(c->transcript); // transcript only; message_hash is never sent
 
     // Stateless cookie with an empty payload: this connection keeps its own transcript across the
     // retry, so the cookie only has to prove return-routability and bind the client address.
@@ -243,7 +252,9 @@ static int send_hello_retry(DtlsConn *c, const Tls13ClientHello *ch, const uint8
     {
         return fail(c, ALERT_INTERNAL_ERROR);
     }
-    protocore_sha256_update(&c->transcript, c->msgbuf, n);
+    Sha256.update_args.data = c->msgbuf;
+    Sha256.update_args.len = n;
+    Sha256.update(c->transcript);
     flight_reset(c);
     if (!flight_add(c, 0, c->msgbuf, n) || !flight_transmit(c, out, out_cap, out_len))
     {
@@ -345,10 +356,17 @@ static int handle_client_hello(DtlsConn *c, const uint8_t *msg, size_t msg_len, 
     // X25519 shared secret and the server's key_share.
     uint8_t ecdhe[32];
     uint8_t server_share[32];
-    protocore_x25519(ecdhe, c->cfg.ephemeral_priv, ch.client_x25519);
-    protocore_x25519_base(server_share, c->cfg.ephemeral_priv);
+    Curve25519.x25519_args.scalar = c->cfg.ephemeral_priv;
+    Curve25519.x25519_args.point = ch.client_x25519;
+    Curve25519.x25519_args.out = ecdhe;
+    Curve25519.x25519(c->sign_work);
+    Curve25519.x25519_base_args.scalar = c->cfg.ephemeral_priv;
+    Curve25519.x25519_base_args.out = server_share;
+    Curve25519.x25519_base(c->sign_work);
 
-    protocore_sha256_update(&c->transcript, msg, msg_len); // transcript: ClientHello (CH2 when an HRR preceded it)
+    Sha256.update_args.data = msg;
+    Sha256.update_args.len = msg_len;
+    Sha256.update(c->transcript); // transcript: ClientHello (CH2 when an HRR preceded it)
 
     flight_reset(c); // this ClientHello starts a fresh server flight (ServerHello..Finished)
 
@@ -361,7 +379,9 @@ static int handle_client_hello(DtlsConn *c, const uint8_t *msg, size_t msg_len, 
     {
         return fail(c, ALERT_INTERNAL_ERROR);
     }
-    protocore_sha256_update(&c->transcript, c->msgbuf, n);
+    Sha256.update_args.data = c->msgbuf;
+    Sha256.update_args.len = n;
+    Sha256.update(c->transcript);
     if (!flight_add(c, 0, c->msgbuf, n))
     {
         return fail(c, ALERT_INTERNAL_ERROR);
@@ -369,7 +389,7 @@ static int handle_client_hello(DtlsConn *c, const uint8_t *msg, size_t msg_len, 
 
     // Handshake-traffic keys from Transcript-Hash(..ServerHello).
     uint8_t hash[PROTOCORE_SHA256_DIGEST_LEN];
-    snapshot(&c->transcript, hash);
+    snapshot(c->transcript, hash);
     Tls13Ks.bind.kdf = &DTLS13_KDF;
     Tls13Ks.bind.ks = &c->ks;
     Tls13Ks.bind.s = c->ks_store;
@@ -401,7 +421,9 @@ static int handle_client_hello(DtlsConn *c, const uint8_t *msg, size_t msg_len, 
 
     // EncryptedExtensions.
     n = protocore_tls13_build_encrypted_extensions_empty(c->msgbuf, sizeof(c->msgbuf), rpk, NULL);
-    protocore_sha256_update(&c->transcript, c->msgbuf, n);
+    Sha256.update_args.data = c->msgbuf;
+    Sha256.update_args.len = n;
+    Sha256.update(c->transcript);
     if (!flight_add(c, 2, c->msgbuf, n))
     {
         return fail(c, ALERT_INTERNAL_ERROR);
@@ -412,7 +434,9 @@ static int handle_client_hello(DtlsConn *c, const uint8_t *msg, size_t msg_len, 
     if (rpk)
     {
         uint8_t ed_pub[PROTOCORE_ED25519_PUBKEY_LEN];
-        protocore_ed25519_pubkey(c->sign_work, ed_pub, c->cfg.ed25519_seed);
+        Ed25519.pubkey_args.seed = c->cfg.ed25519_seed;
+        Ed25519.pubkey_args.pub = ed_pub;
+        Ed25519.pubkey(c->sign_work);
         n = protocore_tls13_build_certificate_rpk(c->msgbuf, sizeof(c->msgbuf), ed_pub);
     }
     else
@@ -422,27 +446,31 @@ static int handle_client_hello(DtlsConn *c, const uint8_t *msg, size_t msg_len, 
     {
         return fail(c, ALERT_INTERNAL_ERROR);
     }
-    protocore_sha256_update(&c->transcript, c->msgbuf, n);
+    Sha256.update_args.data = c->msgbuf;
+    Sha256.update_args.len = n;
+    Sha256.update(c->transcript);
     if (!flight_add(c, 2, c->msgbuf, n))
     {
         return fail(c, ALERT_INTERNAL_ERROR);
     }
 
     // CertificateVerify signs Transcript-Hash(..Certificate).
-    snapshot(&c->transcript, hash);
+    snapshot(c->transcript, hash);
     n = protocore_tls13_build_cert_verify(c->sign_work, c->msgbuf, sizeof(c->msgbuf), hash, c->cfg.ed25519_seed);
     if (!n)
     {
         return fail(c, ALERT_INTERNAL_ERROR);
     }
-    protocore_sha256_update(&c->transcript, c->msgbuf, n);
+    Sha256.update_args.data = c->msgbuf;
+    Sha256.update_args.len = n;
+    Sha256.update(c->transcript);
     if (!flight_add(c, 2, c->msgbuf, n))
     {
         return fail(c, ALERT_INTERNAL_ERROR);
     }
 
     // Server Finished over Transcript-Hash(..CertificateVerify).
-    snapshot(&c->transcript, hash);
+    snapshot(c->transcript, hash);
     uint8_t verify[PROTOCORE_SHA256_DIGEST_LEN];
     Tls13Ks.bind.ks = &c->ks;
     Tls13Ks.finished_args.base_secret = c->ks.s + TLS13_KS_SERVER_HS;
@@ -450,7 +478,9 @@ static int handle_client_hello(DtlsConn *c, const uint8_t *msg, size_t msg_len, 
     Tls13Ks.finished_args.out = verify;
     Tls13Ks.finished_mac(Tls13Ks.internal);
     n = protocore_tls13_build_finished(c->msgbuf, sizeof(c->msgbuf), verify);
-    protocore_sha256_update(&c->transcript, c->msgbuf, n);
+    Sha256.update_args.data = c->msgbuf;
+    Sha256.update_args.len = n;
+    Sha256.update(c->transcript);
     if (!flight_add(c, 2, c->msgbuf, n))
     {
         return fail(c, ALERT_INTERNAL_ERROR);
@@ -458,7 +488,7 @@ static int handle_client_hello(DtlsConn *c, const uint8_t *msg, size_t msg_len, 
 
     // Application-traffic keys from Transcript-Hash(..server Finished); this hash also verifies the
     // client's Finished.
-    snapshot(&c->transcript, c->hs_finished_hash);
+    snapshot(c->transcript, c->hs_finished_hash);
     Tls13Ks.bind.ks = &c->ks;
     Tls13Ks.step.ch_sfin_hash = c->hs_finished_hash;
     Tls13Ks.master(Tls13Ks.internal);
@@ -493,7 +523,9 @@ static int handle_client_finished(DtlsConn *c, const uint8_t *msg, size_t msg_le
     {
         return fail(c, ALERT_DECRYPT_ERROR);
     }
-    protocore_sha256_update(&c->transcript, msg, msg_len);
+    Sha256.update_args.data = msg;
+    Sha256.update_args.len = msg_len;
+    Sha256.update(c->transcript);
     c->state = DTLS_CONN_STATE_DONE;
     flight_disarm(c); // the reply arrived; stop retransmitting the server flight
     // Re-arm the reassembler for the same message_seq so a retransmitted Finished (its ACK was lost)
@@ -715,7 +747,8 @@ static void protocore_dtls_conn_init(DtlsConn *c, const DtlsServerConfig *cfg, c
         mem.cpy(c->peer_addr, peer_addr, peer_addr_len);
         c->peer_addr_len = (uint8_t)peer_addr_len;
     }
-    protocore_sha256_init(&c->transcript, c->hash_work);
+    c->transcript = c->hash_work;
+    Sha256.init(c->transcript);
     DtlsRecord.replay_init(&c->replay_ep2);
     DtlsRecord.replay_init(&c->replay_ep3);
     c->next_recv_msg_seq = 0;

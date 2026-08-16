@@ -21,6 +21,8 @@
 
 #include <unity.h>
 
+static uint8_t tw[4096]; // the borrow every namespace call in this suite runs out of
+
 void setUp(void)
 {
 }
@@ -80,10 +82,12 @@ static struct protocore_aes128gcm_key *gcm(const uint8_t *key)
 {
     if (g_gcm_live)
     {
-        protocore_aes128gcm_key_wipe((struct protocore_aes128gcm_key *)(g_gcm_ws));
+        Aes128Gcm.key_wipe(g_gcm_ws);
     }
     g_gcm_live = PROTO_TRUE;
-    return protocore_aes128gcm_key_init(g_gcm_ws, key);
+    Aes128Gcm.key_args.key = key;
+    Aes128Gcm.key_init(g_gcm_ws);
+    return g_gcm_ws;
 }
 
 // The derived AEAD context is opaque, so it is compared by what it produces against a context built
@@ -94,12 +98,28 @@ static void same_aead_key(const uint8_t expect_key[16], uint8_t *derived_ctx)
     uint8_t nonce[12] = {0};
     uint8_t pt[16] = {0};
     uint8_t c1[16], t1[16], c2[16], t2[16];
-    struct protocore_aes128gcm_key *ref = protocore_aes128gcm_key_init(ref_ws, expect_key);
-    protocore_aes128gcm_seal(ref, nonce, NULL, 0, pt, sizeof(pt), c1, t1);
-    protocore_aes128gcm_seal((struct protocore_aes128gcm_key *)(derived_ctx), nonce, NULL, 0, pt, sizeof(pt), c2, t2);
+    Aes128Gcm.key_args.key = expect_key;
+    Aes128Gcm.key_init(ref_ws);
+    uint8_t *ref = ref_ws;
+    Aes128Gcm.seal_args.nonce = nonce;
+    Aes128Gcm.seal_args.aad = NULL;
+    Aes128Gcm.seal_args.aad_len = 0;
+    Aes128Gcm.seal_args.pt = pt;
+    Aes128Gcm.seal_args.pt_len = sizeof(pt);
+    Aes128Gcm.seal_args.ct_out = c1;
+    Aes128Gcm.seal_args.tag_out = t1;
+    Aes128Gcm.seal(ref);
+    Aes128Gcm.seal_args.nonce = nonce;
+    Aes128Gcm.seal_args.aad = NULL;
+    Aes128Gcm.seal_args.aad_len = 0;
+    Aes128Gcm.seal_args.pt = pt;
+    Aes128Gcm.seal_args.pt_len = sizeof(pt);
+    Aes128Gcm.seal_args.ct_out = c2;
+    Aes128Gcm.seal_args.tag_out = t2;
+    Aes128Gcm.seal(derived_ctx);
     TEST_ASSERT_EQUAL_MEMORY(c1, c2, 16);
     TEST_ASSERT_EQUAL_MEMORY(t1, t2, 16);
-    protocore_aes128gcm_key_wipe(ref);
+    Aes128Gcm.key_wipe(ref);
 }
 
 // The header-protection context likewise: compare the mask block it produces.
@@ -153,21 +173,52 @@ void test_gcm_test_case_4(void)
     hx("5bc94fbc3221a5db94fae95ae7121a47", want_tag, sizeof(want_tag));
 
     uint8_t sealed[60 + 16];
-    protocore_aes128gcm_seal(gcm(key), iv, aad, sizeof(aad), pt, sizeof(pt), sealed, sealed + 60);
+    Aes128Gcm.seal_args.nonce = iv;
+    Aes128Gcm.seal_args.aad = aad;
+    Aes128Gcm.seal_args.aad_len = sizeof(aad);
+    Aes128Gcm.seal_args.pt = pt;
+    Aes128Gcm.seal_args.pt_len = sizeof(pt);
+    Aes128Gcm.seal_args.ct_out = sealed;
+    Aes128Gcm.seal_args.tag_out = sealed + 60;
+    Aes128Gcm.seal(gcm(key);
     TEST_ASSERT_EQUAL_MEMORY(want_ct, sealed, 60);
     TEST_ASSERT_EQUAL_MEMORY(want_tag, sealed + 60, 16);
 
     uint8_t opened[60];
-    TEST_ASSERT_TRUE(protocore_aes128gcm_open(gcm(key), iv, aad, sizeof(aad), sealed, 60, sealed + 60, opened));
+    Aes128Gcm.open_args.nonce = iv;
+    Aes128Gcm.open_args.aad = aad;
+    Aes128Gcm.open_args.aad_len = sizeof(aad);
+    Aes128Gcm.open_args.ct = sealed;
+    Aes128Gcm.open_args.ct_len = 60;
+    Aes128Gcm.open_args.tag = sealed + 60;
+    Aes128Gcm.open_args.out = opened;
+    Aes128Gcm.open(gcm(key);
+    TEST_ASSERT_TRUE(Aes128Gcm.ok);
     TEST_ASSERT_EQUAL_MEMORY(pt, opened, 60);
 
     // one flipped ciphertext bit must fail the tag check, and nothing may be written on failure
     sealed[0] ^= 0x01;
-    TEST_ASSERT_FALSE(protocore_aes128gcm_open(gcm(key), iv, aad, sizeof(aad), sealed, 60, sealed + 60, opened));
+    Aes128Gcm.open_args.nonce = iv;
+    Aes128Gcm.open_args.aad = aad;
+    Aes128Gcm.open_args.aad_len = sizeof(aad);
+    Aes128Gcm.open_args.ct = sealed;
+    Aes128Gcm.open_args.ct_len = 60;
+    Aes128Gcm.open_args.tag = sealed + 60;
+    Aes128Gcm.open_args.out = opened;
+    Aes128Gcm.open(gcm(key);
+    TEST_ASSERT_FALSE(Aes128Gcm.ok);
     // and one flipped associated-data bit likewise, since the header is authenticated too
     sealed[0] ^= 0x01;
     aad[0] ^= 0x01;
-    TEST_ASSERT_FALSE(protocore_aes128gcm_open(gcm(key), iv, aad, sizeof(aad), sealed, 60, sealed + 60, opened));
+    Aes128Gcm.open_args.nonce = iv;
+    Aes128Gcm.open_args.aad = aad;
+    Aes128Gcm.open_args.aad_len = sizeof(aad);
+    Aes128Gcm.open_args.ct = sealed;
+    Aes128Gcm.open_args.ct_len = 60;
+    Aes128Gcm.open_args.tag = sealed + 60;
+    Aes128Gcm.open_args.out = opened;
+    Aes128Gcm.open(gcm(key);
+    TEST_ASSERT_FALSE(Aes128Gcm.ok);
 }
 
 // RFC 9001 sec 5.2 gives the version-1 Initial salt, and Appendix A.1 the value it extracts to for
@@ -182,11 +233,26 @@ void test_rfc9001_a1_initial_secret_chain(void)
     hx("3c199828fd139efd216c155ad844cc81fb82fa8d7446fa7d78be803acdda951b", want_server, 32);
 
     uint8_t initial[32], client[32], server[32];
-    protocore_hkdf_extract(g_work, salt, sizeof(salt), dcid, sizeof(dcid), initial);
+    Hkdf.extract_args.salt = salt;
+    Hkdf.extract_args.salt_len = sizeof(salt);
+    Hkdf.extract_args.ikm = dcid;
+    Hkdf.extract_args.ikm_len = sizeof(dcid);
+    Hkdf.extract_args.prk = initial;
+    Hkdf.extract(g_work);
     TEST_ASSERT_EQUAL_MEMORY(want_initial, initial, 32);
 
-    protocore_hkdf_expand_label(g_work, initial, "client in", client, 32, PROTOCORE_HKDF_LABEL_PREFIX);
-    protocore_hkdf_expand_label(g_work, initial, "server in", server, 32, PROTOCORE_HKDF_LABEL_PREFIX);
+    Hkdf.expand_label_args.secret = initial;
+    Hkdf.expand_label_args.label = "client in";
+    Hkdf.expand_label_args.out = client;
+    Hkdf.expand_label_args.out_len = 32;
+    Hkdf.expand_label_args.label_prefix = PROTOCORE_HKDF_LABEL_PREFIX;
+    Hkdf.expand_label(g_work);
+    Hkdf.expand_label_args.secret = initial;
+    Hkdf.expand_label_args.label = "server in";
+    Hkdf.expand_label_args.out = server;
+    Hkdf.expand_label_args.out_len = 32;
+    Hkdf.expand_label_args.label_prefix = PROTOCORE_HKDF_LABEL_PREFIX;
+    Hkdf.expand_label(g_work);
     TEST_ASSERT_EQUAL_MEMORY(want_client, client, 32);
     TEST_ASSERT_EQUAL_MEMORY(want_server, server, 32);
 }

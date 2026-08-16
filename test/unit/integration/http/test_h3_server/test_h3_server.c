@@ -347,7 +347,9 @@ void test_h3_request_served_by_route()
     uint8_t ctpe[128];
     size_t ctpl = protocore_quic_tp_encode(&ctp, ctpe, sizeof(ctpe));
     uint8_t client_pub[32];
-    protocore_x25519_base(client_pub, CLIENT_PRIV);
+    Curve25519.x25519_base_args.out = client_pub;
+    Curve25519.x25519_base_args.scalar = CLIENT_PRIV;
+    Curve25519.x25519_base(tw);
     uint8_t ch[512];
     size_t chl = build_client_hello(ch, client_pub, ctpe, ctpl);
     uint8_t frames[1200];
@@ -373,19 +375,35 @@ void test_h3_request_served_by_route()
     size_t shl = extract_crypto(plain, pt, sh);
     uint8_t server_pub[32], ecdhe[32];
     TEST_ASSERT_TRUE(server_pub_from_sh(sh, shl, server_pub));
-    protocore_x25519(ecdhe, CLIENT_PRIV, server_pub);
-    protocore_sha256_ctx t;
+    Curve25519.x25519_args.out = ecdhe;
+    Curve25519.x25519_args.scalar = CLIENT_PRIV;
+    Curve25519.x25519_args.point = server_pub;
+    Curve25519.x25519(tw);
+    uint8_t *t;
     uint8_t chsh[32], chsf[32];
-    protocore_sha256_init(&t, tw_t);
-    protocore_sha256_update(&t, ch, chl);
-    protocore_sha256_update(&t, sh, shl);
+    t = tw_t;
+    Sha256.init(t);
+    Sha256.update_args.data = ch;
+    Sha256.update_args.len = chl;
+    Sha256.update(t);
+    Sha256.update_args.data = sh;
+    Sha256.update_args.len = shl;
+    Sha256.update(t);
     {
-        protocore_sha256_final(&t, chsh);
+        Sha256.final_args.out = chsh;
+        Sha256.final(t);
     }
     Tls13KeySchedule cks;
     static uint8_t ks_store_408[PROTOCORE_TLS13_KS_BORROW];
-    protocore_tls13_ks_early(&TLS13_KDF, &cks, ks_store_408);
-    protocore_tls13_ks_handshake(&cks, ecdhe, chsh, 32);
+    Tls13Ks.bind.kdf = &TLS13_KDF;
+    Tls13Ks.bind.ks = &cks;
+    Tls13Ks.bind.s = ks_store_408;
+    Tls13Ks.early(Tls13Ks.internal);
+    Tls13Ks.bind.ks = &cks;
+    Tls13Ks.step.ecdhe = ecdhe;
+    Tls13Ks.step.ecdhe_len = 32;
+    Tls13Ks.step.ch_sh_hash = chsh;
+    Tls13Ks.handshake(Tls13Ks.internal);
     QuicPacketKeys hs_s, hs_c, ap_s, ap_c;
     protocore_quic_keys_from_secret(tw, cks.s + TLS13_KS_SERVER_HS, &hs_s);
     protocore_quic_keys_from_secret(tw, cks.s + TLS13_KS_CLIENT_HS, &hs_c);
@@ -393,9 +411,14 @@ void test_h3_request_served_by_route()
     uint8_t hty = 0;
     size_t hpt = open_long(g_out[0] + wire, g_out_len[0] - wire, &hs_s, plain, &hw, &hty);
     size_t hsfl = extract_crypto(plain, hpt, hsf);
-    protocore_sha256_update(&t, hsf, hsfl);
-    protocore_sha256_final(&t, chsf);
-    protocore_tls13_ks_master(&cks, chsf);
+    Sha256.update_args.data = hsf;
+    Sha256.update_args.len = hsfl;
+    Sha256.update(t);
+    Sha256.final_args.out = chsf;
+    Sha256.final(t);
+    Tls13Ks.bind.ks = &cks;
+    Tls13Ks.step.ch_sfin_hash = chsf;
+    Tls13Ks.master(Tls13Ks.internal);
     protocore_quic_keys_from_secret(tw, cks.s + TLS13_KS_SERVER_AP, &ap_s);
     protocore_quic_keys_from_secret(tw, cks.s + TLS13_KS_CLIENT_AP, &ap_c);
 
@@ -405,7 +428,11 @@ void test_h3_request_served_by_route()
     size_t idl = build_long(idg, sizeof(idg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID),
                             1, &init.client, ifr, ifl);
     uint8_t cfin[36] = {TLS_HS_FINISHED, 0x00, 0x00, 0x20};
-    protocore_tls13_finished_mac(&cks, cks.s + TLS13_KS_CLIENT_HS, chsf, cfin + 4);
+    Tls13Ks.bind.ks = &cks;
+    Tls13Ks.finished_args.base_secret = cks.s + TLS13_KS_CLIENT_HS;
+    Tls13Ks.finished_args.transcript_hash = chsf;
+    Tls13Ks.finished_args.out = cfin + 4;
+    Tls13Ks.finished_mac(Tls13Ks.internal);
     uint8_t hfr[64];
     size_t hfl = protocore_quic_build_ack(hfr, sizeof(hfr), 0, 0, 0);
     hfl += protocore_quic_build_crypto(hfr + hfl, sizeof(hfr) - hfl, 0, cfin, sizeof(cfin));

@@ -3,142 +3,123 @@
 
 /**
  * @file aesccm.c
- * @brief AEAD AES-CCM (NIST SP 800-38C) - see aesccm.h.
+ * @brief AEAD AES-CCM implementation (NIST SP 800-38C) - see aesccm.h.
  *
- * Hot path: mbedtls_ccm (AES routed to the ESP32 HW accelerator), detached tag natively. Test build: a
- * software CCM built on the shared table-free AES block (crypto/cipher/aes_block.h) - CBC-MAC for authentication
- * (formatting function per SP 800-38C Appendix A) and AES-CTR for encryption, both under the one key.
+ * One record context and one set of entries. Both arms run the same SP 800-38C construction: CBC-MAC over
+ * B0 || fmt(AAD) || fmt(PT), CTR encryption from A1, and the tag encrypted with the counter block A0. Only
+ * the AES block under it follows the part - the accelerator's single-block encrypt where the part carries
+ * one, the shared software AES block where it does not.
  *
- * All working memory (key schedule, CBC-MAC accumulator, keystream, counter/format blocks) lives in the
- * secure pool and is wiped when the borrow is released - no cipher state on the stack or in BSS.
+ * The context is this file's. The module's own borrow carries it at the base, so the key material, the
+ * CBC-MAC accumulator, the keystream and the counter/format blocks all live in the caller's secure bytes
+ * and none of them touches the stack or BSS.
  */
+
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_AESCCM
 
+#if PROTOCORE_HAS_HW_AES
+#endif
 #if !PROTOCORE_HAS_HW_AES
-#include "crypto/cipher/aes_block.h" // native software AES-128/256 (mbedtls path uses its own on the hot path)
+#include "crypto/cipher/aes_block.h" // native software AES-128/256 key schedule and single-block encrypt
 #endif
 #include "crypto/aead/aesccm.h"
 #include "crypto/crypto_opt.h"
 #include "crypto/ct_eq.h" // protocore_ct_eq
 #include "mmgr/protomem.h"
-#include "mmgr/secure.h"
 
 PROTOCORE_CRYPTO_HOT
 PROTOCORE_BEGIN_DECLS
 
+// ---------------------------------------------------------------------------
+// AES single-block encrypt seam - one small wrapper, two platform bodies
+// ---------------------------------------------------------------------------
+
 #if PROTOCORE_HAS_HW_AES
-// ===========================================================================
-// Hardware path: mbedtls_ccm -> ESP32 AES peripheral. Detached tag is native. The mbedtls context (AES
-// key schedule) lives in the shared crypto scratch, never on the stack.
-// ===========================================================================
 
-proto_bool protocore_aesccm_seal_tag(const uint8_t *key, size_t key_len, const uint8_t *nonce, size_t nonce_len,
-                                     const uint8_t *aad, size_t aad_len, const uint8_t *pt, size_t pt_len,
-                                     uint8_t *ct_out, uint8_t tag_out[PROTOCORE_AESCCM_TAG_LEN])
+typedef struct
 {
-    if (!key || !nonce || !ct_out || !tag_out || (key_len != 16 && key_len != 32))
-    {
-        return PROTO_FALSE;
-    }
-    size_t mark = protocore_secure_mark();
-    protocore_span ws = protocore_secure_span(sizeof(mbedtls_ccm_context), _Alignof(mbedtls_ccm_context));
-    if (!protocore_span_ok(ws))
-    {
-        protocore_secure_release(mark);
-        return PROTO_FALSE;
-    }
-    mbedtls_ccm_context *c = (mbedtls_ccm_context *)ws.buf;
-    mbedtls_ccm_init(c);
-    if (mbedtls_ccm_setkey(c, MBEDTLS_CIPHER_ID_AES, key, (unsigned)(key_len * 8)) != 0)
-    {
-        mbedtls_ccm_free(c);
-        protocore_secure_release(mark);
-        return PROTO_FALSE;
-    }
-    int rc = mbedtls_ccm_encrypt_and_tag(c, pt_len, nonce, nonce_len, aad, aad_len, pt, ct_out, tag_out,
-                                         PROTOCORE_AESCCM_TAG_LEN);
-    mbedtls_ccm_free(c);
-    protocore_secure_release(mark);
-    return rc == 0;
+    uint8_t key[32];    ///< reloaded into the accelerator's key bank per block
+    unsigned key_bytes; ///< 16 for AES-128, 32 for AES-256
+} AesBlk;
+static inline void blk_init(AesBlk *b, const uint8_t *key, size_t key_len)
+{
+    mem.cpy(b->key, key, key_len);
+    b->key_bytes = (unsigned)key_len;
 }
-
-proto_bool protocore_aesccm_open_tag(const uint8_t *key, size_t key_len, const uint8_t *nonce, size_t nonce_len,
-                                     const uint8_t *aad, size_t aad_len, const uint8_t *ct, size_t ct_len,
-                                     const uint8_t tag[PROTOCORE_AESCCM_TAG_LEN], uint8_t *out)
+static inline void blk_enc(const AesBlk *b, const uint8_t in[16], uint8_t out[16])
 {
-    if (!key || !nonce || !ct || !out || !tag || (key_len != 16 && key_len != 32))
-    {
-        return PROTO_FALSE;
-    }
-    size_t mark = protocore_secure_mark();
-    protocore_span ws = protocore_secure_span(sizeof(mbedtls_ccm_context), _Alignof(mbedtls_ccm_context));
-    if (!protocore_span_ok(ws))
-    {
-        protocore_secure_release(mark);
-        return PROTO_FALSE;
-    }
-    mbedtls_ccm_context *c = (mbedtls_ccm_context *)ws.buf;
-    mbedtls_ccm_init(c);
-    if (mbedtls_ccm_setkey(c, MBEDTLS_CIPHER_ID_AES, key, (unsigned)(key_len * 8)) != 0)
-    {
-        mbedtls_ccm_free(c);
-        protocore_secure_release(mark);
-        return PROTO_FALSE;
-    }
-    // mbedtls verifies the tag in constant time and only then keeps the plaintext; non-zero => bad tag.
-    int rc =
-        mbedtls_ccm_auth_decrypt(c, ct_len, nonce, nonce_len, aad, aad_len, ct, out, tag, PROTOCORE_AESCCM_TAG_LEN);
-    mbedtls_ccm_free(c);
-    protocore_secure_release(mark);
-    if (rc != 0)
-    {
-        mem.set(out, 0, ct_len);
-        return PROTO_FALSE;
-    }
-    return PROTO_TRUE;
+    protocore_aes_hw_acquire();
+    protocore_aes_hw_setkey(b->key, b->key_bytes);
+    protocore_aes_hw_block(in, out);
+    protocore_aes_hw_release();
 }
 
 #endif
 
-#if !PROTOCORE_HAS_HW_AES // native software CCM
-// ===========================================================================
-// Software path (NIST SP 800-38C): CBC-MAC over B0 || fmt(AAD) || fmt(PT), CTR encryption from A1, and
-// the tag encrypted with the counter block A0. The whole working set (CcmWork) is one pool borrow.
-// ===========================================================================
+#if !PROTOCORE_HAS_HW_AES
 
-// The entire CCM working set, laid over the shared crypto scratch. No key schedule or keystream on the
-// stack; the whole struct is wiped after each operation.
 typedef struct
 {
     uint32_t rk[60]; ///< AES key schedule (44 words for AES-128, 60 for AES-256).
     int nr;          ///< rounds (10 or 14).
+} AesBlk;
+static inline void blk_init(AesBlk *b, const uint8_t *key, size_t key_len)
+{
+    if (key_len == 32)
+    {
+        protocore_aes_key_expand(key, 8, b->rk);
+        b->nr = 14;
+    }
+    else
+    {
+        protocore_aes_key_expand(key, 4, b->rk);
+        b->nr = 10;
+    }
+}
+static inline void blk_enc(const AesBlk *b, const uint8_t in[16], uint8_t out[16])
+{
+    protocore_aes_encrypt_block(b->rk, b->nr, in, out);
+}
+
+#endif // !PROTOCORE_HAS_HW_AES (SW block)
+
+// The one definition of CcmWork - private to this TU. It sits at AESCCM_OFF_CTX in the caller's borrow, so
+// its size never leaves this file and no consumer can name it. AesBlk is the arm's own block context, so
+// the context's size follows the arm.
+//
+// Only what is not derivable: the region lives at a fixed offset in the borrow, so a macro computes it from
+// the pointer rather than anything storing it.
+typedef struct
+{
+    AesBlk aes;      ///< the arm's AES block context
     uint8_t X[16];   ///< CBC-MAC accumulator (holds the raw MAC T when done).
     uint8_t blk[16]; ///< formatting block (B0 / AAD / payload / computed tag).
     uint8_t A[16];   ///< CTR counter block.
     uint8_t S[16];   ///< keystream / ECB output.
 } CcmWork;
-static_assert(sizeof(CcmWork) <= PROTOCORE_WORK_AESCCM,
-              "CcmWork outgrew PROTOCORE_WORK_AESCCM - raise it in protocore_config.h, which derives "
-              "PROTOCORE_SECURE_ARENA_SIZE from it");
+
+// The caller's borrow, split: the record context at the base. Nothing else is carried across a call.
+#define AESCCM_OFF_CTX 0u
+#define AESCCM_OFF_END (AESCCM_OFF_CTX + sizeof(CcmWork))
+static_assert(AESCCM_OFF_END <= PROTOCORE_AESCCM_BORROW,
+              "PROTOCORE_AESCCM_BORROW is short of the record context - raise it in protocore_config.h, "
+              "which sums it into the secure arena");
+
+// The region, at its offset in the caller's borrow.
+#define AESCCM_CTX(w) ((CcmWork *)(void *)((w) + AESCCM_OFF_CTX))
+
+// --- CBC-MAC and CTR over that block (SP 800-38C), both arms ---------------
 
 static inline void ccm_key_init(CcmWork *w, const uint8_t *key, size_t key_len)
 {
-    if (key_len == 32)
-    {
-        protocore_aes_key_expand(key, 8, w->rk);
-        w->nr = 14;
-    }
-    else
-    {
-        protocore_aes_key_expand(key, 4, w->rk);
-        w->nr = 10;
-    }
+    blk_init(&w->aes, key, key_len);
 }
 
 static inline void ecb(const CcmWork *w, const uint8_t in[16], uint8_t out[16])
 {
-    protocore_aes_encrypt_block(w->rk, w->nr, in, out);
+    blk_enc(&w->aes, in, out);
 }
 
 // Build the counter block A_i = flags(L-1) || nonce || [i]_L (SP 800-38C Appendix A, the CTR formatting).
@@ -260,53 +241,38 @@ static void tag_encrypt(CcmWork *w, const uint8_t *nonce, size_t nonce_len, uint
     }
 }
 
-proto_bool protocore_aesccm_seal_tag(const uint8_t *key, size_t key_len, const uint8_t *nonce, size_t nonce_len,
-                                     const uint8_t *aad, size_t aad_len, const uint8_t *pt, size_t pt_len,
-                                     uint8_t *ct_out, uint8_t tag_out[PROTOCORE_AESCCM_TAG_LEN])
+static proto_bool aesccm_seal_record(uint8_t *restrict work, const uint8_t *key, size_t key_len, const uint8_t *nonce,
+                                     size_t nonce_len, const uint8_t *aad, size_t aad_len, const uint8_t *pt,
+                                     size_t pt_len, uint8_t *ct_out, uint8_t *tag_out)
 {
-    if (!key || !nonce || !ct_out || !tag_out || (key_len != 16 && key_len != 32) || nonce_len < 7 || nonce_len > 13)
+    // Reject a nonce outside 7..13: the formatting blocks carry L = 15 - nonce_len as the length field.
+    if (nonce_len < 7 || nonce_len > 13)
     {
         return PROTO_FALSE;
     }
-    size_t mark = protocore_secure_mark();
-    protocore_span ws = protocore_secure_span(sizeof(CcmWork), _Alignof(CcmWork));
-    if (!protocore_span_ok(ws))
-    {
-        protocore_secure_release(mark);
-        return PROTO_FALSE;
-    }
-    CcmWork *w = (CcmWork *)ws.buf;
+    CcmWork *w = AESCCM_CTX(work);
     ccm_key_init(w, key, key_len);
     cbc_mac(w, nonce, nonce_len, aad, aad_len, pt, pt_len); // MAC -> w->X
     ctr_crypt(w, nonce, nonce_len, 1, pt, pt_len, ct_out);  // payload from A1
     tag_encrypt(w, nonce, nonce_len, tag_out);              // MAC protected by A0
-    protocore_secure_release(mark);
     return PROTO_TRUE;
 }
 
-proto_bool protocore_aesccm_open_tag(const uint8_t *key, size_t key_len, const uint8_t *nonce, size_t nonce_len,
-                                     const uint8_t *aad, size_t aad_len, const uint8_t *ct, size_t ct_len,
-                                     const uint8_t tag[PROTOCORE_AESCCM_TAG_LEN], uint8_t *out)
+static proto_bool aesccm_open_record(uint8_t *restrict work, const uint8_t *key, size_t key_len, const uint8_t *nonce,
+                                     size_t nonce_len, const uint8_t *aad, size_t aad_len, const uint8_t *ct,
+                                     size_t ct_len, const uint8_t *tag, uint8_t *out)
 {
-    if (!key || !nonce || !ct || !out || !tag || (key_len != 16 && key_len != 32) || nonce_len < 7 || nonce_len > 13)
+    // Reject a nonce outside 7..13: the formatting blocks carry L = 15 - nonce_len as the length field.
+    if (nonce_len < 7 || nonce_len > 13)
     {
         return PROTO_FALSE;
     }
-    size_t mark = protocore_secure_mark();
-    protocore_span ws = protocore_secure_span(sizeof(CcmWork), _Alignof(CcmWork));
-    if (!protocore_span_ok(ws))
-    {
-        protocore_secure_release(mark);
-        return PROTO_FALSE;
-    }
-    CcmWork *w = (CcmWork *)ws.buf;
+    CcmWork *w = AESCCM_CTX(work);
     ccm_key_init(w, key, key_len);
     ctr_crypt(w, nonce, nonce_len, 1, ct, ct_len, out);      // recover plaintext into out
     cbc_mac(w, nonce, nonce_len, aad, aad_len, out, ct_len); // MAC over the recovered plaintext -> w->X
     tag_encrypt(w, nonce, nonce_len, w->blk);                // computed tag into w->blk (free after cbc_mac)
-    // Compare before releasing: the release wipes w->blk, which holds the computed tag.
     proto_bool ok = protocore_ct_eq(w->blk, tag, PROTOCORE_AESCCM_TAG_LEN);
-    protocore_secure_release(mark);
     if (!ok)
     {
         mem.set(out, 0, ct_len); // fail closed: no unauthenticated plaintext escapes
@@ -315,7 +281,37 @@ proto_bool protocore_aesccm_open_tag(const uint8_t *key, size_t key_len, const u
     return PROTO_TRUE;
 }
 
-#endif // !PROTOCORE_HAS_HW_AES (SW path)
+// --- the entries -----------------------------------------------------------
+
+static void aesccm_seal(uint8_t *restrict work)
+{
+    AesCcm.ok = PROTO_FALSE;
+    if (!work || !AesCcm.seal_args.key || !AesCcm.seal_args.nonce || !AesCcm.seal_args.ct_out ||
+        !AesCcm.seal_args.tag_out || (AesCcm.seal_args.key_len != 16 && AesCcm.seal_args.key_len != 32))
+    {
+        return;
+    }
+    AesCcm.ok = aesccm_seal_record(work, AesCcm.seal_args.key, AesCcm.seal_args.key_len, AesCcm.seal_args.nonce,
+                                   AesCcm.seal_args.nonce_len, AesCcm.seal_args.aad, AesCcm.seal_args.aad_len,
+                                   AesCcm.seal_args.pt, AesCcm.seal_args.pt_len, AesCcm.seal_args.ct_out,
+                                   AesCcm.seal_args.tag_out);
+}
+
+static void aesccm_open(uint8_t *restrict work)
+{
+    AesCcm.ok = PROTO_FALSE;
+    if (!work || !AesCcm.open_args.key || !AesCcm.open_args.nonce || !AesCcm.open_args.ct || !AesCcm.open_args.out ||
+        !AesCcm.open_args.tag || (AesCcm.open_args.key_len != 16 && AesCcm.open_args.key_len != 32))
+    {
+        return;
+    }
+    AesCcm.ok =
+        aesccm_open_record(work, AesCcm.open_args.key, AesCcm.open_args.key_len, AesCcm.open_args.nonce,
+                           AesCcm.open_args.nonce_len, AesCcm.open_args.aad, AesCcm.open_args.aad_len,
+                           AesCcm.open_args.ct, AesCcm.open_args.ct_len, AesCcm.open_args.tag, AesCcm.open_args.out);
+}
+
+AesCcmNs AesCcm = {.seal = aesccm_seal, .open = aesccm_open};
 
 PROTOCORE_END_DECLS
 

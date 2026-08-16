@@ -33,7 +33,7 @@ static HalShaCtx s_sha = {NULL, portMUX_INITIALIZER_UNLOCKED};
 // even when the SHA block itself is unclocked.
 static proto_bool sha_is_up(void)
 {
-    return (PROTOCORE_HW_REG(PROTOCORE_SHA_CLK_REG) & PROTOCORE_SHA_CLK_BIT) != 0u;
+    return (PROTOCORE_HW_RD(PROTOCORE_SHA_CLK_REG) & PROTOCORE_SHA_CLK_BIT) != 0u;
 }
 
 // Bring the accelerator up by direct register writes: enable the bus clock, pulse the SHA reset, then
@@ -42,21 +42,21 @@ static proto_bool sha_is_up(void)
 // read-modify-write of one bit.
 static void sha_bring_up(void)
 {
-    uint32_t v = PROTOCORE_HW_REG(PROTOCORE_SHA_CLK_REG);
+    uint32_t v = PROTOCORE_HW_RD(PROTOCORE_SHA_CLK_REG);
     v |= PROTOCORE_SHA_CLK_BIT; // bus clock on
-    PROTOCORE_HW_REG(PROTOCORE_SHA_CLK_REG) = v;
+    PROTOCORE_HW_WR(PROTOCORE_SHA_CLK_REG, v);
 
-    v = PROTOCORE_HW_REG(PROTOCORE_SHA_RST_REG);
+    v = PROTOCORE_HW_RD(PROTOCORE_SHA_RST_REG);
     v |= PROTOCORE_SHA_RST_BIT; // assert SHA reset
-    PROTOCORE_HW_REG(PROTOCORE_SHA_RST_REG) = v;
-    v = PROTOCORE_HW_REG(PROTOCORE_SHA_RST_REG);
+    PROTOCORE_HW_WR(PROTOCORE_SHA_RST_REG, v);
+    v = PROTOCORE_HW_RD(PROTOCORE_SHA_RST_REG);
     v &= ~PROTOCORE_SHA_RST_BIT; // deassert SHA reset
-    PROTOCORE_HW_REG(PROTOCORE_SHA_RST_REG) = v;
+    PROTOCORE_HW_WR(PROTOCORE_SHA_RST_REG, v);
 
 #if PROTOCORE_SHA_HOLD_CLEAR
-    v = PROTOCORE_HW_REG(PROTOCORE_SHA_HOLD_REG);
+    v = PROTOCORE_HW_RD(PROTOCORE_SHA_HOLD_REG);
     v &= ~(uint32_t)PROTOCORE_SHA_HOLD_CLEAR; // release the sibling resets (DS / HMAC) that would hold SHA in reset
-    PROTOCORE_HW_REG(PROTOCORE_SHA_HOLD_REG) = v;
+    PROTOCORE_HW_WR(PROTOCORE_SHA_HOLD_REG, v);
 #endif
 }
 
@@ -79,7 +79,7 @@ void protocore_sha_hw_acquire(void)
         sha_bring_up();
         portEXIT_CRITICAL(&s_sha.hw_mux);
     }
-    PROTOCORE_HW_REG(PROTOCORE_SHA_INT_ENA) = 0u; // poll only, no completion IRQ
+    PROTOCORE_HW_WR(PROTOCORE_SHA_INT_ENA, 0u); // poll only, no completion IRQ
 }
 
 void protocore_sha_hw_release(void)

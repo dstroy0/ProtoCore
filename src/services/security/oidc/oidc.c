@@ -7,7 +7,7 @@
  *
  * The shared base64url decoder (Base64.url_decode, RFC 7515 sec 2 encoding), bounded JSON member
  * scanners over the decoded JOSE Header and JWS Payload, and the RSASSA-PKCS1-v1_5 SHA-256 check
- * (RFC 7518 sec 3.3) delegated to protocore_rsa_verify(). Claims are read only after the signature
+ * (RFC 7518 sec 3.3) delegated to ::RsaNs::verify. Claims are read only after the signature
  * verifies, which is the order OIDC Core sec 3.1.3.7 puts steps 6 and 9 in.
  */
 
@@ -507,7 +507,7 @@ static void verify_with_key(struct OidcInternal *restrict ctx)
     }
 
     // Step 6: check the signature over the JWS Signing Input, the header and payload parts with
-    // their '.' (RFC 7515 sec 2). protocore_rsa_verify() hashes it; RS256 is SHA-256. One borrow for
+    // their '.' (RFC 7515 sec 2). Rsa.verify hashes it; RS256 is SHA-256. One borrow for
     // that digest, returned either way before the Claims are read.
     size_t signing_input_len = (size_t)(seg[OIDC_SEG_PAYLOAD] + seglen[OIDC_SEG_PAYLOAD] - token);
     size_t vmark = protocore_secure_mark();
@@ -519,10 +519,17 @@ static void verify_with_key(struct OidcInternal *restrict ctx)
         ctx->ns->result = PROTOCORE_OIDC_ERR_SIGNATURE; // pool exhausted: fail closed
         return;
     }
-    int vrc = protocore_rsa_verify(key->n, key->e, vws.buf, (const uint8_t *)token, signing_input_len, sig,
-                                   PROTOCORE_OIDC_RSA_BYTES, PROTOCORE_RSA_HASH_SHA256);
+    Rsa.verify_args.n = key->n;
+    Rsa.verify_args.e = key->e;
+    Rsa.verify_args.msg = (const uint8_t *)token;
+    Rsa.verify_args.msg_len = signing_input_len;
+    Rsa.verify_args.sig = sig;
+    Rsa.verify_args.sig_len = PROTOCORE_OIDC_RSA_BYTES;
+    Rsa.verify_args.hash = PROTOCORE_RSA_HASH_SHA256;
+    Rsa.verify(vws.buf);
+    const proto_bool verified = Rsa.ok;
     protocore_secure_release(vmark);
-    if (vrc != 0)
+    if (!verified)
     {
         protocore_plaintext_release(scope);
         ctx->ns->result = PROTOCORE_OIDC_ERR_SIGNATURE;

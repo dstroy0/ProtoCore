@@ -42,7 +42,9 @@ int main(void)
         HBENCH_NS(
             4000,
             {
-                protocore_x25519_base(pk, sk);
+                Curve25519.x25519_base_args.out = pk;
+                Curve25519.x25519_base_args.scalar = sk;
+                Curve25519.x25519_base(tw);
                 sink += pk[0];
             },
             ns);
@@ -55,7 +57,10 @@ int main(void)
         HBENCH_NS(
             4000,
             {
-                protocore_x25519(shared, sk, peer_pk);
+                Curve25519.x25519_args.out = shared;
+                Curve25519.x25519_args.scalar = sk;
+                Curve25519.x25519_args.point = peer_pk;
+                Curve25519.x25519(tw);
                 sink += shared[0];
             },
             ns);
@@ -103,7 +108,11 @@ int main(void)
         HBENCH_NS(
             2000,
             {
-                protocore_ed25519_sign(tw, sig, hash, sizeof(hash), seed);
+                Ed25519.sign_args.sig = sig;
+                Ed25519.sign_args.msg = hash;
+                Ed25519.sign_args.msg_len = sizeof(hash);
+                Ed25519.sign_args.seed = seed;
+                Ed25519.sign(tw);
                 sink += sig[0];
             },
             ns);
@@ -128,7 +137,12 @@ int main(void)
         HBENCH_NS(
             40000,
             {
-                protocore_chachapoly_encrypt(key, seq++, dst, src, plen);
+                ChachaPoly.encrypt_args.key = key;
+                ChachaPoly.encrypt_args.src = src;
+                ChachaPoly.encrypt_args.dest = dst;
+                ChachaPoly.encrypt_args.seqnr = seq++;
+                ChachaPoly.encrypt_args.payload_len = plen;
+                ChachaPoly.encrypt(tw);
                 sink += dst[0];
             },
             ns);

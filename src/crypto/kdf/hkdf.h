@@ -8,8 +8,8 @@
  * QUIC packet protection keys are derived with the TLS 1.3 key schedule (RFC 9001 sec 5.2):
  * an Initial secret is HKDF-Extract'd from a fixed salt and the client's Destination Connection
  * ID, and every packet-protection value (key / iv / hp) is an HKDF-Expand-Label of a traffic
- * secret. This is the same HMAC-SHA256 the SSH transport already ships, so these two routines are
- * a thin layer over protocore_hmac_sha256 rather than a second HMAC.
+ * secret. This is the same HMAC-SHA256 the SSH transport already ships, so these entries are a
+ * thin layer over the @ref HmacSha256Ns entries rather than a second HMAC.
  *
  * Pure, zero heap, host-tested against the RFC 9001 Appendix A worked examples (the HkdfLabel
  * byte strings and the derived client/server secrets).
@@ -21,7 +21,7 @@
 #ifndef PROTOCORE_HKDF_H
 #define PROTOCORE_HKDF_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_HKDF
 
@@ -30,76 +30,113 @@ PROTOCORE_BEGIN_DECLS
 /** @brief HKDF-SHA256 output block length (== SHA-256 digest length). */
 #define PROTOCORE_HKDF_HASH_LEN 32
 
-/**
- * @brief HKDF-Extract (RFC 5869 sec 2.2): PRK = HMAC-SHA256(salt, ikm).
- *
- * @param work      PROTOCORE_HKDF_BORROW bytes of caller storage.
- * @param salt      Optional salt (may be NULL only when @p salt_len is 0).
- * @param salt_len  Salt length in bytes.
- * @param ikm       Input keying material.
- * @param ikm_len   Input keying material length.
- * @param prk       Output pseudo-random key, must be PROTOCORE_HKDF_HASH_LEN bytes.
- */
-void protocore_hkdf_extract(uint8_t *work, const uint8_t *salt, size_t salt_len, const uint8_t *ikm, size_t ikm_len,
-                            uint8_t prk[PROTOCORE_HKDF_HASH_LEN]);
-
-/**
- * @brief HKDF-Expand (RFC 5869 sec 2.3): OKM = T(1) | T(2) | ..., T(i) = HMAC(PRK, T(i-1) | info | i).
- *
- * The bare primitive, taking @p info verbatim rather than the RFC 8446 HkdfLabel structure that
- * protocore_hkdf_expand_label() builds around it. TLS and QUIC use the labelled form; this one is what the
- * RFC's own Appendix A test vectors address, since they expand an arbitrary info string.
- *
- * @param prk       Pseudo-random key from protocore_hkdf_extract(), PROTOCORE_HKDF_HASH_LEN bytes.
- * @param info      Optional context (may be NULL only when @p info_len is 0).
- * @param info_len  Context length in bytes.
- * @param out       Output keying material.
- * @param out_len   Bytes requested; sec 2.3 caps this at 255*PROTOCORE_HKDF_HASH_LEN, past which the block
- *                  counter has no encoding and @p out is zeroed instead.
- */
-void protocore_hkdf_expand(uint8_t *work, const uint8_t prk[PROTOCORE_HKDF_HASH_LEN], const uint8_t *info,
-                           size_t info_len, uint8_t *out, size_t out_len);
-
 /** @brief The RFC 8446 sec 7.1 HKDF-Expand-Label prefix used by TLS 1.3 and QUIC. DTLS 1.3 overrides
  *  it with "dtls13" (RFC 9147 sec 5.9); callers that need it pass it explicitly. */
 #define PROTOCORE_HKDF_LABEL_PREFIX "tls13 "
 
-/**
- * @brief HKDF-Expand-Label (RFC 8446 sec 7.1) with the QUIC/TLS 1.3 "tls13 " label prefix.
- *
- * Builds the HkdfLabel structure
- *   struct { uint16 length; opaque label<7..255> = "tls13 " + label; opaque context<0..255>; }
- * and runs HKDF-Expand (RFC 5869 sec 2.3) with an empty context (all QUIC packet-protection uses of
- * this function pass an empty context). @p out_len must not exceed 255*32 bytes; QUIC only ever asks
- * for <= 32, which is a single HMAC block.
- *
- * @param secret        Traffic secret (HKDF PRK), PROTOCORE_HKDF_HASH_LEN bytes.
- * @param label         Short ASCII label, e.g. "quic key" (without the prefix), <= 249 bytes.
- * @param out           Output keying material.
- * @param out_len       Number of output bytes requested.
- * @param label_prefix  HkdfLabel prefix: PROTOCORE_HKDF_LABEL_PREFIX for TLS 1.3 and QUIC, "dtls13" for DTLS 1.3.
- */
-void protocore_hkdf_expand_label(uint8_t *work, const uint8_t secret[PROTOCORE_HKDF_HASH_LEN], const char *label,
-                                 uint8_t *out, size_t out_len, const char *label_prefix);
+// PROTOCORE_HKDF_BORROW - the bytes a derivation runs out of - is stated in protocore_config.h, which
+// sums it into the secure arena. A caller takes them once and passes the pointer to every call.
+
+/** @brief The salt and input keying material HKDF-Extract folds into a PRK. */
+typedef struct
+{
+    const uint8_t *salt; ///< salt bytes; NULL only when salt_len is 0
+    size_t salt_len;     ///< salt length
+    const uint8_t *ikm;  ///< input keying material
+    size_t ikm_len;      ///< its length
+    uint8_t *prk;        ///< PROTOCORE_HKDF_HASH_LEN bytes
+} HkdfExtractArgs;
+
+/** @brief The PRK, context and output span of a bare HKDF-Expand. */
+typedef struct
+{
+    const uint8_t *prk;  ///< PROTOCORE_HKDF_HASH_LEN bytes from extract
+    const uint8_t *info; ///< context taken verbatim; NULL only when info_len is 0
+    size_t info_len;     ///< its length
+    uint8_t *out;        ///< output keying material
+    size_t out_len;      ///< bytes requested; past 255*PROTOCORE_HKDF_HASH_LEN out is zeroed instead
+} HkdfExpandArgs;
+
+/** @brief The secret and label an HKDF-Expand-Label derives from, with an empty HkdfLabel context. */
+typedef struct
+{
+    const uint8_t *secret;    ///< traffic secret (HKDF PRK), PROTOCORE_HKDF_HASH_LEN bytes
+    const char *label;        ///< ASCII label without the prefix, <= 249 bytes
+    uint8_t *out;             ///< output keying material
+    size_t out_len;           ///< bytes requested
+    const char *label_prefix; ///< PROTOCORE_HKDF_LABEL_PREFIX, or "dtls13" for DTLS 1.3
+} HkdfExpandLabelArgs;
+
+/** @brief The same with an explicit HkdfLabel context. */
+typedef struct
+{
+    const uint8_t *secret;    ///< PRK, PROTOCORE_HKDF_HASH_LEN bytes
+    const char *label;        ///< ASCII label without the prefix, <= 249 bytes
+    const uint8_t *context;   ///< context bytes, <= 255; NULL only when context_len is 0
+    size_t context_len;       ///< context length
+    uint8_t *out;             ///< output keying material
+    size_t out_len;           ///< bytes requested
+    const char *label_prefix; ///< PROTOCORE_HKDF_LABEL_PREFIX, or "dtls13" for DTLS 1.3
+} HkdfExpandLabelCtxArgs;
 
 /**
- * @brief HKDF-Expand-Label with an explicit context (RFC 8446 sec 7.1, the general form).
+ * @brief HKDF-SHA256 (RFC 5869) and HKDF-Expand-Label (RFC 8446 sec 7.1).
  *
- * Identical to protocore_hkdf_expand_label() but the HkdfLabel context is @p context (0..255 bytes)
- * instead of empty. The TLS 1.3 key schedule's Derive-Secret (sec 7.1) is exactly this with the
- * context set to a Transcript-Hash, so the whole handshake key schedule layers on this one routine.
+ * A caller sets the members a call takes, invokes it through ::Hkdf with the bytes it runs out of, and
+ * reads the outcome off the same handle. How those bytes are carved is this module's and is never named
+ * here.
  *
- * @param secret       PRK, PROTOCORE_HKDF_HASH_LEN bytes.
- * @param label        Short ASCII label without the "tls13 " prefix, <= 249 bytes.
- * @param context      Context bytes (may be NULL only when @p context_len is 0), <= 255 bytes.
- * @param context_len  Context length.
- * @param out          Output keying material.
- * @param out_len      Number of output bytes requested.
- * @param label_prefix HkdfLabel prefix: PROTOCORE_HKDF_LABEL_PREFIX for TLS 1.3 and QUIC, "dtls13" for DTLS 1.3.
+ *   Hkdf.extract_args.salt = salt;
+ *   Hkdf.extract_args.salt_len = sizeof(salt);
+ *   Hkdf.extract_args.ikm = dcid;
+ *   Hkdf.extract_args.ikm_len = dcid_len;
+ *   Hkdf.extract_args.prk = initial_secret;
+ *   Hkdf.extract(work);
+ *   Hkdf.expand_label_args.secret = initial_secret;
+ *   Hkdf.expand_label_args.label = "quic key";
+ *   Hkdf.expand_label_args.out = key;
+ *   Hkdf.expand_label_args.out_len = 16;
+ *   Hkdf.expand_label_args.label_prefix = PROTOCORE_HKDF_LABEL_PREFIX;
+ *   Hkdf.expand_label(work);
+ *
+ * @var HkdfNs::extract_args           the salt and IKM HKDF-Extract folds into a PRK
+ * @var HkdfNs::expand_args            the PRK, context and output span of a bare HKDF-Expand
+ * @var HkdfNs::expand_label_args      the secret and label of an empty-context HKDF-Expand-Label
+ * @var HkdfNs::expand_label_ctx_args  the same with an explicit HkdfLabel context
+ * @var HkdfNs::ok                     a call's true/false outcome
+ * @var HkdfNs::extract                PRK = HMAC-SHA256(salt, ikm) (RFC 5869 sec 2.2)
+ * @var HkdfNs::expand                 OKM = T(1) | T(2) | ..., info taken verbatim (RFC 5869 sec 2.3)
+ * @var HkdfNs::expand_label           expand under an HkdfLabel with an empty context
+ * @var HkdfNs::expand_label_ctx       expand under an HkdfLabel carrying a context, the Derive-Secret form
+ *
+ * @ref HkdfNs::expand caps out_len at 255*PROTOCORE_HKDF_HASH_LEN, the point past which the single-octet
+ * block counter has no encoding: out is zeroed and @ref HkdfNs::ok comes back false.
+ *
+ * @c work is PROTOCORE_HKDF_BORROW secure bytes the CALLER took, at an address it knows. It arrives
+ * @c restrict and is not held past the call, so nothing here aliases it. The caller releases it, and the
+ * pool wipes on release; this module neither takes it, holds it, releases it, nor wipes it. The borrow
+ * carries the PRK and the T(i) block, so two derivations in flight are two borrows and never collide.
+ *
+ * No storage member and no context: a caller sets operands and reads @ref HkdfNs::ok, and that is all
+ * the surface there is.
  */
-void protocore_hkdf_expand_label_ctx(uint8_t *work, const uint8_t secret[PROTOCORE_HKDF_HASH_LEN], const char *label,
-                                     const uint8_t *context, size_t context_len, uint8_t *out, size_t out_len,
-                                     const char *label_prefix);
+typedef struct
+{
+    HkdfExtractArgs extract_args;
+    HkdfExpandArgs expand_args;
+    HkdfExpandLabelArgs expand_label_args;
+    HkdfExpandLabelCtxArgs expand_label_ctx_args;
+
+    proto_bool ok;
+
+    void (*const extract)(uint8_t *restrict work);
+    void (*const expand)(uint8_t *restrict work);
+    void (*const expand_label)(uint8_t *restrict work);
+    void (*const expand_label_ctx)(uint8_t *restrict work);
+} HkdfNs;
+
+/** @brief The one symbol this module exports. */
+extern HkdfNs Hkdf;
 
 PROTOCORE_END_DECLS
 

@@ -15,7 +15,7 @@
 #include "crypto/asymmetric/curve25519.h"
 #include "network_drivers/presentation/http/http3/tls13_msg.h"
 #if PROTOCORE_ENABLE_PQC_KEX
-#include "crypto/pqc/mlkem.h" // protocore_mlkem768_encaps (X25519MLKEM768 hybrid)
+#include "crypto/pqc/mlkem.h" // MlKem (X25519MLKEM768 hybrid)
 #endif
 
 // TLS alert codes we may raise (RFC 8446 sec 6).
@@ -72,9 +72,10 @@ static void ks_finished(QuicTls *qt, const uint8_t *base_secret, const uint8_t *
 
 // The running Transcript-Hash so far. Finalizing compresses the padded blocks into a copy of the
 // state, so the context comes out untouched and keeps taking messages.
-static void snapshot_hash(protocore_sha256_ctx *ctx, uint8_t out[32])
+static void snapshot_hash(uint8_t *ctx, uint8_t out[32])
 {
-    protocore_sha256_final(ctx, out);
+    Sha256.final_args.out = out;
+    Sha256.final(ctx);
 }
 
 // Append a handshake message to both the outbound flight buffer and the transcript.
@@ -88,7 +89,9 @@ static proto_bool emit(QuicTls *qt, uint8_t *flight, size_t cap, size_t *plen, s
         fail(qt, TLS_ALERT_INTERNAL_ERROR);
         return PROTO_FALSE;
     }
-    protocore_sha256_update(&qt->transcript, flight + *plen, written);
+    Sha256.update_args.data = flight + *plen;
+    Sha256.update_args.len = written;
+    Sha256.update(qt->transcript);
     *plen += written;
     return PROTO_TRUE;
 }
@@ -102,12 +105,17 @@ static proto_bool send_hello_retry(QuicTls *qt, const uint8_t *msg, size_t msg_l
 {
     uint8_t ch1_hash[32];
     {
-        protocore_sha256_ctx t;
-        protocore_sha256_init(&t, qt->hash_work2);
-        protocore_sha256_update(&t, msg, msg_len);
-        protocore_sha256_final(&t, ch1_hash);
+        uint8_t *t;
+        t = qt->hash_work2;
+        Sha256.init(t);
+        Sha256.update_args.data = msg;
+        Sha256.update_args.len = msg_len;
+        Sha256.update(t);
+        Sha256.final_args.out = ch1_hash;
+        Sha256.final(t);
     }
-    protocore_sha256_init(&qt->transcript, qt->hash_work);
+    qt->transcript = qt->hash_work;
+    Sha256.init(qt->transcript);
     uint8_t mh[40];
     size_t mhn = protocore_tls13_build_message_hash(mh, sizeof(mh), ch1_hash);
     if (!mhn)
@@ -115,7 +123,9 @@ static proto_bool send_hello_retry(QuicTls *qt, const uint8_t *msg, size_t msg_l
         fail(qt, TLS_ALERT_INTERNAL_ERROR);
         return PROTO_FALSE;
     }
-    protocore_sha256_update(&qt->transcript, mh, mhn); // message_hash is transcript-only, never sent
+    Sha256.update_args.data = mh;
+    Sha256.update_args.len = mhn;
+    Sha256.update(qt->transcript); // message_hash is transcript-only, never sent
 
     qt->flight_initial_len = 0;
     size_t n = protocore_tls13_build_hello_retry_request(qt->flight_initial, sizeof(qt->flight_initial), ch->session_id,
@@ -200,15 +210,20 @@ static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t m
     if (use_hybrid)
     {
         uint8_t ml_ss[32];
-        if (!protocore_mlkem768_encaps(ch.client_mlkem_ek, qt->cfg.mlkem_m, server_share, ml_ss))
+        if (!(MlKem.encaps_args.ek = ch.client_mlkem_ek, MlKem.encaps_args.m = qt->cfg.mlkem_m, MlKem.encaps_args.ct = server_share, MlKem.encaps_args.ss = ml_ss, MlKem.encaps(qt->sign_work), MlKem.ok))
         {
             fail(qt, TLS_ALERT_HANDSHAKE_FAILURE); // malformed ML-KEM key
             return PROTO_FALSE;
         }
         uint8_t x_ss[32];
         uint8_t server_pub[32];
-        protocore_x25519(x_ss, qt->cfg.ephemeral_priv, ch.client_x25519);
-        protocore_x25519_base(server_pub, qt->cfg.ephemeral_priv);
+        Curve25519.x25519_args.scalar = qt->cfg.ephemeral_priv;
+        Curve25519.x25519_args.point = ch.client_x25519;
+        Curve25519.x25519_args.out = x_ss;
+        Curve25519.x25519(qt->sign_work);
+        Curve25519.x25519_base_args.scalar = qt->cfg.ephemeral_priv;
+        Curve25519.x25519_base_args.out = server_pub;
+        Curve25519.x25519_base(qt->sign_work);
         mem.cpy(server_share + MLKEM768_CT_BYTES, server_pub, 32);
         mem.cpy(ecdhe, ml_ss, 32);
         mem.cpy(ecdhe + 32, x_ss, 32);
@@ -221,8 +236,13 @@ static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t m
     uint8_t server_share[32];
 #endif
     {
-        protocore_x25519(ecdhe, qt->cfg.ephemeral_priv, ch.client_x25519);
-        protocore_x25519_base(server_share, qt->cfg.ephemeral_priv);
+        Curve25519.x25519_args.scalar = qt->cfg.ephemeral_priv;
+        Curve25519.x25519_args.point = ch.client_x25519;
+        Curve25519.x25519_args.out = ecdhe;
+        Curve25519.x25519(qt->sign_work);
+        Curve25519.x25519_base_args.scalar = qt->cfg.ephemeral_priv;
+        Curve25519.x25519_base_args.out = server_share;
+        Curve25519.x25519_base(qt->sign_work);
         ecdhe_len = 32;
         share_len = 32;
         group = TLS_GROUP_X25519;
@@ -230,7 +250,9 @@ static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t m
 
     // Fold the ClientHello into the transcript. On the happy path it is the first message; after a
     // HelloRetryRequest the transcript already holds message_hash || HRR, so this is ClientHello2.
-    protocore_sha256_update(&qt->transcript, msg, msg_len);
+    Sha256.update_args.data = msg;
+    Sha256.update_args.len = msg_len;
+    Sha256.update(qt->transcript);
 
     // ServerHello (Initial-level flight). The Initial CRYPTO is one contiguous byte stream, so after a
     // HelloRetryRequest the ServerHello is appended after the HRR already in flight_initial - build at the
@@ -247,7 +269,7 @@ static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t m
 
     // Handshake keys from Transcript-Hash(ClientHello..ServerHello).
     uint8_t hash[32];
-    snapshot_hash(&qt->transcript, hash);
+    snapshot_hash(qt->transcript, hash);
     ks_bind(qt);
     Tls13Ks.early(Tls13Ks.internal);
     Tls13Ks.step.ecdhe = ecdhe;
@@ -280,7 +302,7 @@ static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t m
     }
 
     // CertificateVerify signs Transcript-Hash(ClientHello..Certificate).
-    snapshot_hash(&qt->transcript, hash);
+    snapshot_hash(qt->transcript, hash);
     n = protocore_tls13_build_cert_verify(qt->sign_work, qt->flight_hs + qt->flight_hs_len,
                                           sizeof(qt->flight_hs) - qt->flight_hs_len, hash, qt->cfg.ed25519_seed);
     if (!emit(qt, qt->flight_hs, sizeof(qt->flight_hs), &qt->flight_hs_len, n))
@@ -289,7 +311,7 @@ static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t m
     }
 
     // Server Finished over Transcript-Hash(ClientHello..CertificateVerify).
-    snapshot_hash(&qt->transcript, hash);
+    snapshot_hash(qt->transcript, hash);
     uint8_t verify[32];
     ks_finished(qt, qt->ks.s + TLS13_KS_SERVER_HS, hash, verify);
     n = protocore_tls13_build_finished(qt->flight_hs + qt->flight_hs_len, sizeof(qt->flight_hs) - qt->flight_hs_len,
@@ -301,7 +323,7 @@ static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t m
 
     // 1-RTT keys from Transcript-Hash(ClientHello..server Finished); also the hash we verify the
     // client Finished against.
-    snapshot_hash(&qt->transcript, qt->hs_finished_hash);
+    snapshot_hash(qt->transcript, qt->hs_finished_hash);
     ks_bind(qt);
     Tls13Ks.step.ch_sfin_hash = qt->hs_finished_hash;
     Tls13Ks.master(Tls13Ks.internal);
@@ -326,7 +348,9 @@ static proto_bool process_client_finished(QuicTls *qt, const uint8_t *msg, size_
         fail(qt, TLS_ALERT_DECRYPT_ERROR);
         return PROTO_FALSE;
     }
-    protocore_sha256_update(&qt->transcript, msg, msg_len);
+    Sha256.update_args.data = msg;
+    Sha256.update_args.len = msg_len;
+    Sha256.update(qt->transcript);
     qt->complete = PROTO_TRUE;
     qt->state = QTLS_DONE;
     return PROTO_TRUE;
@@ -350,7 +374,8 @@ void protocore_quic_tls_server_init(QuicTls *qt, const QuicTlsConfig *cfg)
 {
     mem.zero(qt, sizeof(*qt));
     qt->cfg = *cfg;
-    protocore_sha256_init(&qt->transcript, qt->hash_work);
+    qt->transcript = qt->hash_work;
+    Sha256.init(qt->transcript);
     qt->state = QTLS_START;
 }
 

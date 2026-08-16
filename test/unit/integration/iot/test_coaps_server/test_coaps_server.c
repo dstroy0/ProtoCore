@@ -116,7 +116,9 @@ void setUp()
     g_rng_ctr = 0;
     out_reset();
 
-    protocore_ed25519_pubkey(tw, g_server_cert, SERVER_ED_SEED);
+    Ed25519.pubkey_args.pub = g_server_cert;
+    Ed25519.pubkey_args.seed = SERVER_ED_SEED;
+    Ed25519.pubkey(tw);
     CoapsServerConfig cfg;
     memset(&cfg, 0, sizeof cfg);
     cfg.cert_der = g_server_cert;
@@ -307,13 +309,18 @@ static void client_handshake(const char *ip, uint16_t port, DtlsRecordKeys *cli_
                              const uint8_t *client_cid, size_t client_cid_len, uint8_t *scid_out, size_t *scid_len_out)
 {
     uint8_t client_pub[32];
-    protocore_x25519_base(client_pub, CLIENT_X25519_PRIV);
+    Curve25519.x25519_base_args.out = client_pub;
+    Curve25519.x25519_base_args.scalar = CLIENT_X25519_PRIV;
+    Curve25519.x25519_base(tw);
 
     uint8_t ch[256];
     size_t ch_len = build_client_hello(ch, client_pub, client_cid, client_cid_len);
-    protocore_sha256_ctx tr;
-    protocore_sha256_init(&tr, tw_tr);
-    protocore_sha256_update(&tr, ch, ch_len);
+    uint8_t *tr;
+    tr = tw_tr;
+    Sha256.init(tr);
+    Sha256.update_args.data = ch;
+    Sha256.update_args.len = ch_len;
+    Sha256.update(tr);
     uint8_t ch_frag[300];
     size_t ch_fl = DtlsHandshake.frag_build(ch[0], 0, (uint32_t)(ch_len - 4), 0, ch + 4, (uint32_t)(ch_len - 4),
                                             ch_frag, sizeof(ch_frag));
@@ -336,7 +343,9 @@ static void client_handshake(const char *ip, uint16_t port, DtlsRecordKeys *cli_
     uint8_t sh[512];
     size_t sh_len = frag_to_tls(pt.fragment, pt.frag_len, sh);
     TEST_ASSERT_TRUE(sh_len > 0);
-    protocore_sha256_update(&tr, sh, sh_len);
+    Sha256.update_args.data = sh;
+    Sha256.update_args.len = sh_len;
+    Sha256.update(tr);
     uint8_t server_pub[32];
     TEST_ASSERT_TRUE(sh_keyshare(sh, sh_len, server_pub));
 
@@ -353,13 +362,24 @@ static void client_handshake(const char *ip, uint16_t port, DtlsRecordKeys *cli_
     }
 
     uint8_t ecdhe[32];
-    protocore_x25519(ecdhe, CLIENT_X25519_PRIV, server_pub);
+    Curve25519.x25519_args.out = ecdhe;
+    Curve25519.x25519_args.scalar = CLIENT_X25519_PRIV;
+    Curve25519.x25519_args.point = server_pub;
+    Curve25519.x25519(tw);
     Tls13KeySchedule cks;
     uint8_t hh[32];
-    protocore_sha256_final(&tr, hh);
+    Sha256.final_args.out = hh;
+    Sha256.final(tr);
     static uint8_t ks_store_372[PROTOCORE_TLS13_KS_BORROW];
-    protocore_tls13_ks_early(&DTLS13_KDF, &cks, ks_store_372);
-    protocore_tls13_ks_handshake(&cks, ecdhe, hh, 32);
+    Tls13Ks.bind.kdf = &DTLS13_KDF;
+    Tls13Ks.bind.ks = &cks;
+    Tls13Ks.bind.s = ks_store_372;
+    Tls13Ks.early(Tls13Ks.internal);
+    Tls13Ks.bind.ks = &cks;
+    Tls13Ks.step.ecdhe = ecdhe;
+    Tls13Ks.step.ecdhe_len = 32;
+    Tls13Ks.step.ch_sh_hash = hh;
+    Tls13Ks.handshake(Tls13Ks.internal);
     DtlsRecordKeys srv_read;
     DtlsRecord.keys_derive(&srv_read, DTLS_CIPHER_AES_128_GCM_SHA256, 2, cks.s + TLS13_KS_SERVER_HS);
 
@@ -377,14 +397,23 @@ static void client_handshake(const char *ip, uint16_t port, DtlsRecordKeys *cli_
         uint8_t msg[512];
         size_t mlen = frag_to_tls(inner, info.pt_len, msg);
         TEST_ASSERT_TRUE(mlen > 0);
-        protocore_sha256_update(&tr, msg, mlen);
+        Sha256.update_args.data = msg;
+        Sha256.update_args.len = mlen;
+        Sha256.update(tr);
     }
 
     uint8_t h_sfin[32];
-    protocore_sha256_final(&tr, h_sfin);
-    protocore_tls13_ks_master(&cks, h_sfin);
+    Sha256.final_args.out = h_sfin;
+    Sha256.final(tr);
+    Tls13Ks.bind.ks = &cks;
+    Tls13Ks.step.ch_sfin_hash = h_sfin;
+    Tls13Ks.master(Tls13Ks.internal);
     uint8_t cfin_verify[32];
-    protocore_tls13_finished_mac(&cks, cks.s + TLS13_KS_CLIENT_HS, h_sfin, cfin_verify);
+    Tls13Ks.bind.ks = &cks;
+    Tls13Ks.finished_args.base_secret = cks.s + TLS13_KS_CLIENT_HS;
+    Tls13Ks.finished_args.transcript_hash = h_sfin;
+    Tls13Ks.finished_args.out = cfin_verify;
+    Tls13Ks.finished_mac(Tls13Ks.internal);
     uint8_t cfin[64];
     size_t cfin_len = protocore_tls13_build_finished(cfin, sizeof(cfin), cfin_verify);
     DtlsRecordKeys cli_write;
@@ -478,7 +507,9 @@ static void test_idle_reap(void)
 static void test_pto_retransmit_driven_by_poll(void)
 {
     uint8_t client_pub[32];
-    protocore_x25519_base(client_pub, CLIENT_X25519_PRIV);
+    Curve25519.x25519_base_args.out = client_pub;
+    Curve25519.x25519_base_args.scalar = CLIENT_X25519_PRIV;
+    Curve25519.x25519_base(tw);
     uint8_t ch[256];
     size_t ch_len = build_client_hello(ch, client_pub, NULL, 0);
     uint8_t ch_frag[300];
@@ -532,7 +563,9 @@ static void test_cid_address_migration(void)
 static void ingest_real_client_hello(const char *ip, uint16_t port)
 {
     uint8_t client_pub[32];
-    protocore_x25519_base(client_pub, CLIENT_X25519_PRIV);
+    Curve25519.x25519_base_args.out = client_pub;
+    Curve25519.x25519_base_args.scalar = CLIENT_X25519_PRIV;
+    Curve25519.x25519_base(tw);
     uint8_t ch[256];
     size_t ch_len = build_client_hello(ch, client_pub, NULL, 0);
     uint8_t ch_frag[300];

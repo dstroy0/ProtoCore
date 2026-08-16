@@ -148,7 +148,12 @@ static void bn_monpro(protocore_bignum *out, const protocore_bignum *a, const pr
             t[i + j] = (uint32_t)uv;
             carry = uv >> 32;
         }
-        t[i + PROTOCORE_BN_LIMBS] += (uint32_t)carry;
+        // The multiply's last carry lands in t[i+64], and that add carries out again whenever
+        // t[i+64] is near the top of its word, so it goes on into t[i+65] the same way the
+        // reduction's does. i+65 is at most 128, the accumulator's last limb.
+        uint64_t mul_hi = (uint64_t)t[i + PROTOCORE_BN_LIMBS] + carry;
+        t[i + PROTOCORE_BN_LIMBS] = (uint32_t)mul_hi;
+        t[i + PROTOCORE_BN_LIMBS + 1] += (uint32_t)(mul_hi >> 32);
 
         // Reduction step: m = t[i] * p_inv = t[i] * 1 = t[i]
         uint32_t m = t[i];

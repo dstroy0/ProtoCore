@@ -7,8 +7,8 @@
  */
 
 #include "network_drivers/presentation/ssh/auth/auth.h"
-#include "crypto/asymmetric/ecdsa.h"   // protocore_ecdsa_p256_verify() (ecdsa-sha2-nistp256)
-#include "crypto/asymmetric/ed25519.h" // protocore_ed25519_verify() (ssh-ed25519 client keys)
+#include "crypto/asymmetric/ecdsa.h"   // Ecdsa (ecdsa-sha2-nistp256)
+#include "crypto/asymmetric/ed25519.h" // Ed25519 (ssh-ed25519 client keys)
 #include "mmgr/bytes.h"                // bytes.rd_str() - the RFC 4251 sec 5 string reader
 #include "mmgr/endian.h"               // endian.wr32be() - the one source of truth for wire integers
 #include "mmgr/plaintext.h"            // protocore_plaintext_span() for the verify buffers
@@ -17,7 +17,7 @@
 #include "mmgr/secure.h"
 #include "network_drivers/presentation/ssh/connection/connection.h" // ssh_connection_dispatch()
 #include "network_drivers/presentation/ssh/network/network.h"       // SshNetwork.emit()
-#include "network_drivers/presentation/ssh/transport/ssh_rsa.h"     // protocore_rsa_verify(), PROTOCORE_RSA_KEY_BYTES
+#include "network_drivers/presentation/ssh/transport/ssh_rsa.h"     // Rsa, PROTOCORE_RSA_KEY_BYTES
 #include "network_drivers/presentation/ssh/transport/transport.h"   // ssh_sess[], SshPhase
 #include "server/clock/clock.h" // protocore_millis(): the password-change cooldown clock
 #if PROTOCORE_ENABLE_SSH_ZLIB

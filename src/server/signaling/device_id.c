@@ -12,6 +12,8 @@
 #if PROTOCORE_ENABLE_DEVICE_ID
 
 #include "crypto/hash/sha1.h"
+#include "mmgr/secure.h" // the pool the digest borrow comes from
+#include "mmgr/span.h"   // protocore_span, span.ok
 
 // RFC 4122 DNS namespace UUID (6ba7b810-9dad-11d1-80b4-00c04fd430c8).
 static const uint8_t NS_DNS[16] = {0x6b, 0xa7, 0xb8, 0x10, 0x9d, 0xad, 0x11, 0xd1,
@@ -56,7 +58,19 @@ static void devid_from_mac(struct DeviceIdInternal *restrict ctx)
     }
 
     uint8_t h[PROTOCORE_SHA1_DIGEST_LEN];
-    protocore_sha1(input, sizeof(input), h);
+    const size_t mark = protocore_secure_mark();
+    protocore_span w = protocore_secure_span(PROTOCORE_SHA1_BORROW, 8);
+    if (!span.ok(w))
+    {
+        protocore_secure_release(mark);
+        out[0] = '\0';
+        return;
+    }
+    Sha1.hash_args.data = input;
+    Sha1.hash_args.len = sizeof(input);
+    Sha1.hash_args.out = h;
+    Sha1.hash(w.buf);
+    protocore_secure_release(mark);
     h[6] = (uint8_t)((h[6] & 0x0F) | 0x50); // version 5
     h[8] = (uint8_t)((h[8] & 0x3F) | 0x80); // RFC 4122 variant
 

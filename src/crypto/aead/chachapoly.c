@@ -3,8 +3,13 @@
 
 /**
  * @file chachapoly.c
- * @brief chacha20-poly1305@openssh.com - implementation. See protocore_chachapoly.h.
+ * @brief chacha20-poly1305@openssh.com - implementation. See chachapoly.h.
+ *
+ * The context is this file's. The module's own borrow holds the per-packet working set: the nonce, the
+ * derived one-time Poly1305 key, the computed tag, and the decrypted length word.
  */
+
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_CHACHAPOLY
 
@@ -13,10 +18,60 @@
 #include "crypto/crypto_opt.h"
 #include "crypto/ct_eq.h" // protocore_ct_eq
 #include "crypto/mac/poly1305.h"
-#include "mmgr/secure.h" // the secure pool: AEAD working state, wiped on release
 
 PROTOCORE_CRYPTO_HOT
 PROTOCORE_BEGIN_DECLS
+
+// The one definition, private to this TU. It sits at CHACHAPOLY_OFF_CTX in the caller's borrow, so its size
+// never leaves this file and no consumer can name it.
+//
+// Only what is not derivable: the nonce, the derived one-time Poly1305 key, the computed tag, and the
+// decrypted length word.
+typedef struct
+{
+    uint8_t iv[8];        ///< the 8-byte ChaCha nonce
+    uint8_t poly_key[32]; ///< Poly1305 key = K_main block 0
+    uint8_t tag[16];      ///< the tag computed over the ciphertext
+    uint8_t len[4];       ///< the decrypted length word
+} ChachaPolyCtx;
+
+// The caller's borrow, split: the per-packet working set, then the regions the nested ChaCha20 and
+// Poly1305 run out of. Those two are driven through their own namespaces, so this borrow carries a
+// region for each rather than naming any term of theirs.
+#define CHACHAPOLY_OFF_CTX 0u
+#define CHACHAPOLY_OFF_CHACHA (CHACHAPOLY_OFF_CTX + sizeof(ChachaPolyCtx))
+#define CHACHAPOLY_OFF_POLY (CHACHAPOLY_OFF_CHACHA + PROTOCORE_CHACHA20_BORROW)
+static_assert(CHACHAPOLY_OFF_POLY + PROTOCORE_POLY1305_BORROW <= PROTOCORE_CHACHAPOLY_BORROW,
+              "PROTOCORE_CHACHAPOLY_BORROW is short of the per-packet working set and the two nested "
+              "borrows - raise it in protocore_config.h, which derives PROTOCORE_SECURE_ARENA_SIZE from it");
+
+// The regions, at their offsets in the caller's borrow.
+#define CHACHAPOLY_CTX(w) ((ChachaPolyCtx *)(void *)((w) + CHACHAPOLY_OFF_CTX))
+#define CHACHAPOLY_CHACHA(w) ((w) + CHACHAPOLY_OFF_CHACHA)
+#define CHACHAPOLY_POLY(w) ((w) + CHACHAPOLY_OFF_POLY)
+
+// One keystream run through the Chacha20 namespace.
+static void cp_chacha(uint8_t *restrict work, const uint8_t *key, const uint8_t iv[8], uint64_t counter,
+                      const uint8_t *in, uint8_t *out, size_t len)
+{
+    Chacha20.xor_args.key = key;
+    Chacha20.xor_args.iv = iv;
+    Chacha20.xor_args.counter = counter;
+    Chacha20.xor_args.in = in;
+    Chacha20.xor_args.out = out;
+    Chacha20.xor_args.len = len;
+    Chacha20.xor_(CHACHAPOLY_CHACHA(work));
+}
+
+// One tag through the Poly1305 namespace.
+static void cp_poly(uint8_t *restrict work, const uint8_t *poly_key, const uint8_t *msg, size_t len, uint8_t *out)
+{
+    Poly1305.mac_args.key = poly_key;
+    Poly1305.mac_args.msg = msg;
+    Poly1305.mac_args.len = len;
+    Poly1305.mac_args.out = out;
+    Poly1305.mac(CHACHAPOLY_POLY(work));
+}
 
 // The 8-byte ChaCha nonce is the sequence number as a big-endian uint64 (POKE_U64 in OpenSSH); a
 // 32-bit SSH seqnr leaves the high 4 bytes zero.
@@ -32,82 +87,71 @@ static void seq_nonce(uint32_t seqnr, uint8_t iv[8])
     iv[7] = (uint8_t)seqnr;
 }
 
-// chacha20-poly1305 per-op working set (nonce, the derived one-time Poly1305 key, the computed tag, and the
-// decrypted length word) in the shared crypto scratch at the base span - this is a top-level op, so it shares
-// the base with the other one-at-a-time top-level ops; its nested chacha20/poly1305 use their own regions
-// above the base. Wiped per op so the Poly1305 key never lingers.
-typedef struct
-{
-    uint8_t iv[8];
-    uint8_t poly_key[32];
-    uint8_t tag[16];
-    uint8_t len[4];
-} ChachapolyWork;
-static_assert(sizeof(ChachapolyWork) <= PROTOCORE_WORK_CHACHAPOLY,
-              "ChachapolyWork outgrew PROTOCORE_WORK_CHACHAPOLY - raise it in protocore_config.h, which derives "
-              "PROTOCORE_SECURE_ARENA_SIZE from it");
+// --- the entries -----------------------------------------------------------
 
-uint32_t protocore_chachapoly_get_length(const uint8_t key[PROTOCORE_CHACHAPOLY_KEY_LEN], uint32_t seqnr,
-                                         const uint8_t enc_len[PROTOCORE_CHACHAPOLY_AAD_LEN])
+static void chachapoly_get_length(uint8_t *restrict work)
 {
-    size_t mark = protocore_secure_mark();
-    protocore_span ws = protocore_secure_span(sizeof(ChachapolyWork), _Alignof(ChachapolyWork));
-    if (!protocore_span_ok(ws))
+    ChachaPoly.ok = PROTO_FALSE;
+    if (!work || !ChachaPoly.length_args.key || !ChachaPoly.length_args.enc_len)
     {
-        protocore_secure_release(mark);
-        return 0; // pool exhausted: a zero length is rejected by every caller
+        return;
     }
-    ChachapolyWork *w = (ChachapolyWork *)ws.buf;
-    seq_nonce(seqnr, w->iv);
-    protocore_chacha20_xor(key + 32, w->iv, 0, enc_len, w->len, 4); // header key, counter 0
-    uint32_t n = ((uint32_t)w->len[0] << 24) | ((uint32_t)w->len[1] << 16) | ((uint32_t)w->len[2] << 8) | w->len[3];
-    protocore_secure_release(mark);
-    return n;
+    ChachaPolyCtx *ctx = CHACHAPOLY_CTX(work);
+    const uint8_t *key = ChachaPoly.length_args.key;
+    seq_nonce(ChachaPoly.length_args.seqnr, ctx->iv);
+    // header key, counter 0
+    cp_chacha(work, key + 32, ctx->iv, 0, ChachaPoly.length_args.enc_len, ctx->len, 4);
+    ChachaPoly.length =
+        ((uint32_t)ctx->len[0] << 24) | ((uint32_t)ctx->len[1] << 16) | ((uint32_t)ctx->len[2] << 8) | ctx->len[3];
+    ChachaPoly.ok = PROTO_TRUE;
 }
 
-void protocore_chachapoly_encrypt(const uint8_t key[PROTOCORE_CHACHAPOLY_KEY_LEN], uint32_t seqnr, uint8_t *dest,
-                                  const uint8_t *src, uint32_t payload_len)
+static void chachapoly_encrypt(uint8_t *restrict work)
 {
-    size_t mark = protocore_secure_mark();
-    protocore_span ws = protocore_secure_span(sizeof(ChachapolyWork), _Alignof(ChachapolyWork));
-    if (!protocore_span_ok(ws))
+    ChachaPoly.ok = PROTO_FALSE;
+    if (!work || !ChachaPoly.encrypt_args.key || !ChachaPoly.encrypt_args.src || !ChachaPoly.encrypt_args.dest)
     {
-        protocore_secure_release(mark);
-        return; // pool exhausted: emit nothing rather than an unauthenticated frame
+        return;
     }
-    ChachapolyWork *w = (ChachapolyWork *)ws.buf;
-    seq_nonce(seqnr, w->iv);
-    protocore_chacha20_xor(key, w->iv, 0, NULL, w->poly_key, 32);          // Poly1305 key = K_main block 0
-    protocore_chacha20_xor(key + 32, w->iv, 0, src, dest, 4);              // length field: K_header, counter 0
-    protocore_chacha20_xor(key, w->iv, 1, src + 4, dest + 4, payload_len); // payload: K_main, counter 1
-    protocore_poly1305(dest + 4 + payload_len, dest, 4 + payload_len, w->poly_key);
-    protocore_secure_release(mark);
+    ChachaPolyCtx *ctx = CHACHAPOLY_CTX(work);
+    const uint8_t *key = ChachaPoly.encrypt_args.key;
+    const uint8_t *src = ChachaPoly.encrypt_args.src;
+    uint8_t *dest = ChachaPoly.encrypt_args.dest;
+    const uint32_t payload_len = ChachaPoly.encrypt_args.payload_len;
+    seq_nonce(ChachaPoly.encrypt_args.seqnr, ctx->iv);
+    cp_chacha(work, key, ctx->iv, 0, NULL, ctx->poly_key, 32);        // Poly1305 key = K_main block 0
+    cp_chacha(work, key + 32, ctx->iv, 0, src, dest, 4);              // length field: K_header, counter 0
+    cp_chacha(work, key, ctx->iv, 1, src + 4, dest + 4, payload_len); // payload: K_main, counter 1
+    cp_poly(work, ctx->poly_key, dest, 4 + payload_len, dest + 4 + payload_len);
+    ChachaPoly.ok = PROTO_TRUE;
 }
 
-proto_bool protocore_chachapoly_decrypt(const uint8_t key[PROTOCORE_CHACHAPOLY_KEY_LEN], uint32_t seqnr, uint8_t *dest,
-                                        const uint8_t *src, uint32_t payload_len)
+static void chachapoly_decrypt(uint8_t *restrict work)
 {
-    size_t mark = protocore_secure_mark();
-    protocore_span ws = protocore_secure_span(sizeof(ChachapolyWork), _Alignof(ChachapolyWork));
-    if (!protocore_span_ok(ws))
+    ChachaPoly.ok = PROTO_FALSE;
+    if (!work || !ChachaPoly.decrypt_args.key || !ChachaPoly.decrypt_args.src || !ChachaPoly.decrypt_args.dest)
     {
-        protocore_secure_release(mark);
-        return PROTO_FALSE; // pool exhausted: fail closed
+        return;
     }
-    ChachapolyWork *w = (ChachapolyWork *)ws.buf;
-    seq_nonce(seqnr, w->iv);
-    protocore_chacha20_xor(key, w->iv, 0, NULL, w->poly_key, 32);
-    protocore_poly1305(w->tag, src, 4 + payload_len, w->poly_key); // MAC over the ciphertext (length || payload)
-    if (!protocore_ct_eq(w->tag, src + 4 + payload_len, 16))
+    ChachaPolyCtx *ctx = CHACHAPOLY_CTX(work);
+    const uint8_t *key = ChachaPoly.decrypt_args.key;
+    const uint8_t *src = ChachaPoly.decrypt_args.src;
+    uint8_t *dest = ChachaPoly.decrypt_args.dest;
+    const uint32_t payload_len = ChachaPoly.decrypt_args.payload_len;
+    seq_nonce(ChachaPoly.decrypt_args.seqnr, ctx->iv);
+    cp_chacha(work, key, ctx->iv, 0, NULL, ctx->poly_key, 32);
+    cp_poly(work, ctx->poly_key, src, 4 + payload_len, ctx->tag); // MAC over the ciphertext (length || payload)
+    if (!protocore_ct_eq(ctx->tag, src + 4 + payload_len, 16))
     {
-        protocore_secure_release(mark);
-        return PROTO_FALSE; // authentication failed - produce no plaintext
+        return; // authentication failed - produce no plaintext
     }
-    protocore_chacha20_xor(key + 32, w->iv, 0, src, dest, 4);
-    protocore_chacha20_xor(key, w->iv, 1, src + 4, dest + 4, payload_len);
-    protocore_secure_release(mark);
-    return PROTO_TRUE;
+    cp_chacha(work, key + 32, ctx->iv, 0, src, dest, 4);
+    cp_chacha(work, key, ctx->iv, 1, src + 4, dest + 4, payload_len);
+    ChachaPoly.ok = PROTO_TRUE;
 }
+
+ChachaPolyNs ChachaPoly = {
+    .get_length = chachapoly_get_length, .encrypt = chachapoly_encrypt, .decrypt = chachapoly_decrypt};
 
 PROTOCORE_END_DECLS
 

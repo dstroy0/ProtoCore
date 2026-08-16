@@ -18,14 +18,58 @@
 
 #include <unity.h>
 
-// The entry points hash with SHA-512, so they borrow exactly what a SHA-512 context does.
-static uint8_t g_work[PROTOCORE_SHA512_BORROW] __attribute__((aligned(8)));
+// Each module states the bytes its entries run out of, and they are not the same: Ed25519 carries a
+// signature working set on top of the SHA-512 region it drives, and X25519 carries a ladder.
+static uint8_t g_work[PROTOCORE_ED25519_BORROW] __attribute__((aligned(8)));
+static uint8_t g_c25519[PROTOCORE_CURVE25519_BORROW] __attribute__((aligned(8)));
 
 void setUp(void)
 {
 }
 void tearDown(void)
 {
+}
+
+// The namespaces, called the way the vectors below read: operands in, one call, answer out.
+static void x25519(uint8_t *out, const uint8_t *scalar, const uint8_t *point)
+{
+    Curve25519.x25519_args.scalar = scalar;
+    Curve25519.x25519_args.point = point;
+    Curve25519.x25519_args.out = out;
+    Curve25519.x25519(g_c25519);
+}
+
+static void x25519_base(uint8_t *out, const uint8_t *scalar)
+{
+    Curve25519.x25519_base_args.scalar = scalar;
+    Curve25519.x25519_base_args.out = out;
+    Curve25519.x25519_base(g_c25519);
+}
+
+static void ed_pubkey(uint8_t *w, uint8_t *pub, const uint8_t *seed)
+{
+    Ed25519.pubkey_args.seed = seed;
+    Ed25519.pubkey_args.pub = pub;
+    Ed25519.pubkey(w);
+}
+
+static void ed_sign(uint8_t *w, uint8_t *sig, const uint8_t *msg, size_t mlen, const uint8_t *seed)
+{
+    Ed25519.sign_args.seed = seed;
+    Ed25519.sign_args.msg = msg;
+    Ed25519.sign_args.msg_len = mlen;
+    Ed25519.sign_args.sig = sig;
+    Ed25519.sign(w);
+}
+
+static proto_bool ed_verify(uint8_t *w, const uint8_t *pub, const uint8_t *msg, size_t mlen, const uint8_t *sig)
+{
+    Ed25519.verify_args.pub = pub;
+    Ed25519.verify_args.msg = msg;
+    Ed25519.verify_args.msg_len = mlen;
+    Ed25519.verify_args.sig = sig;
+    Ed25519.verify(w);
+    return Ed25519.ok;
 }
 
 static uint8_t nib(char c)
@@ -51,7 +95,7 @@ static void x25519_case(const char *scalar_hex, const char *u_hex, const char *w
     unhex(scalar_hex, scalar);
     unhex(u_hex, u);
     unhex(want_hex, want);
-    protocore_x25519(got, scalar, u);
+    x25519(got, scalar, u);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(want, got, 32);
 }
 
@@ -70,7 +114,7 @@ void test_rfc7748_scalar_multiplication(void)
     for (int i = 1; i <= 1000; i++)
     {
         uint8_t r[32];
-        protocore_x25519(r, k, u);
+        x25519(r, k, u);
         memcpy(u, k, 32);
         memcpy(k, r, 32);
         if (i == 1)
@@ -91,18 +135,18 @@ void test_rfc7748_diffie_hellman_vector(void)
     unhex("77076d0a7318a57d3c16c17251b26645df4c2f87ebc0992ab177fba51db92c2a", a);
     unhex("5dab087e624a8a4b79e17f8b83800ee66f3bb1292618b6fd1c2f8b27ff88e0eb", b);
 
-    protocore_x25519_base(apub, a);
+    x25519_base(apub, a);
     unhex("8520f0098930a754748b7ddcb43ef75a0dbf3a0d26381af4eba4a98eaa9b4e6a", want);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(want, apub, 32);
 
-    protocore_x25519_base(bpub, b);
+    x25519_base(bpub, b);
     unhex("de9edb7d7b7dc1b4d35b61c2ece435373f8343c85b78674dadfc7e146f882b4f", want);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(want, bpub, 32);
 
     unhex("4a5d9d5ba4ce2de1728e3bf480350f25e07e21c947d19e3376f09b3c1e161742", want);
-    protocore_x25519(got, a, bpub);
+    x25519(got, a, bpub);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(want, got, 32);
-    protocore_x25519(got, b, apub);
+    x25519(got, b, apub);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(want, got, 32);
 }
 
@@ -117,8 +161,8 @@ void test_rfc7748_high_bit_of_u_is_masked(void)
     memcpy(u_set, u, 32);
     u_set[31] |= 0x80u;
 
-    protocore_x25519(from_clear, scalar, u);
-    protocore_x25519(from_set, scalar, u_set);
+    x25519(from_clear, scalar, u);
+    x25519(from_set, scalar, u_set);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(from_clear, from_set, 32);
 }
 
@@ -131,12 +175,12 @@ void test_small_order_points_yield_zero(void)
     unhex("a546e36bf0527c9d3b16154b82465edd62144c0ac1fc5a18506a2244ba449ac4", scalar);
 
     memset(u, 0, 32); // u = 0, the point of order 1
-    protocore_x25519(out, scalar, u);
+    x25519(out, scalar, u);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(ZERO, out, 32);
 
     memset(u, 0, 32);
     u[0] = 1; // u = 1, the point of order 2
-    protocore_x25519(out, scalar, u);
+    x25519(out, scalar, u);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(ZERO, out, 32);
 }
 
@@ -150,13 +194,13 @@ static void ed_case(const char *seed_hex, const char *msg_hex, const char *pub_h
     unhex(sig_hex, sig);
     size_t mlen = unhex(msg_hex, msg);
 
-    protocore_ed25519_pubkey(g_work, got_pub, seed);
+    ed_pubkey(g_work, got_pub, seed);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(pub, got_pub, 32);
 
-    protocore_ed25519_sign(g_work, got_sig, msg, mlen, seed);
+    ed_sign(g_work, got_sig, msg, mlen, seed);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(sig, got_sig, 64);
 
-    TEST_ASSERT_TRUE(protocore_ed25519_verify(g_work, pub, msg, mlen, sig));
+    TEST_ASSERT_TRUE(ed_verify(g_work, pub, msg, mlen, sig));
 }
 
 // TEST 1 (empty message), TEST 2 (one octet), TEST 3 (two octets), TEST SHA(abc) (64 octets).
@@ -192,26 +236,26 @@ void test_verify_refuses_tampering(void)
           "4a7c15e9716ed28dc027beceea1ec40a",
           sig);
     unhex("af82", msg);
-    TEST_ASSERT_TRUE(protocore_ed25519_verify(g_work, pub, msg, 2, sig));
+    TEST_ASSERT_TRUE(ed_verify(g_work, pub, msg, 2, sig));
 
     memcpy(bad, sig, 64);
     bad[0] ^= 0x01; // R
-    TEST_ASSERT_FALSE(protocore_ed25519_verify(g_work, pub, msg, 2, bad));
+    TEST_ASSERT_FALSE(ed_verify(g_work, pub, msg, 2, bad));
 
     memcpy(bad, sig, 64);
     bad[32] ^= 0x01; // S, still canonical
-    TEST_ASSERT_FALSE(protocore_ed25519_verify(g_work, pub, msg, 2, bad));
+    TEST_ASSERT_FALSE(ed_verify(g_work, pub, msg, 2, bad));
 
     uint8_t badmsg[2] = {0xaf, 0x83};
-    TEST_ASSERT_FALSE(protocore_ed25519_verify(g_work, pub, badmsg, 2, sig));
+    TEST_ASSERT_FALSE(ed_verify(g_work, pub, badmsg, 2, sig));
 
     uint8_t badpub[32];
     memcpy(badpub, pub, 32);
     badpub[0] ^= 0x01;
-    TEST_ASSERT_FALSE(protocore_ed25519_verify(g_work, badpub, msg, 2, sig));
+    TEST_ASSERT_FALSE(ed_verify(g_work, badpub, msg, 2, sig));
 
     // The empty message is a different message from a one-octet one, even for the same key.
-    TEST_ASSERT_FALSE(protocore_ed25519_verify(g_work, pub, msg, 1, sig));
+    TEST_ASSERT_FALSE(ed_verify(g_work, pub, msg, 1, sig));
 }
 
 // RFC 8032 sec 5.1.7 step 1 decodes S "in the range 0 <= s < L" and calls the signature invalid when
@@ -232,11 +276,11 @@ void test_verify_refuses_non_canonical_s(void)
 
     memcpy(bad, sig, 64);
     memcpy(bad + 32, L_LE, 32); // S = L, the first value out of range
-    TEST_ASSERT_FALSE(protocore_ed25519_verify(g_work, pub, msg, 2, bad));
+    TEST_ASSERT_FALSE(ed_verify(g_work, pub, msg, 2, bad));
 
     memcpy(bad, sig, 64);
     memset(bad + 32, 0xFF, 32); // S = 2^256-1, far above L
-    TEST_ASSERT_FALSE(protocore_ed25519_verify(g_work, pub, msg, 2, bad));
+    TEST_ASSERT_FALSE(ed_verify(g_work, pub, msg, 2, bad));
 }
 
 // RFC 8032 sec 5.1.7: a public key that does not decode to a curve point makes the signature
@@ -255,7 +299,7 @@ void test_verify_refuses_an_undecodable_public_key(void)
         memset(cand, 0, 32);
         cand[0] = (uint8_t)i;
         cand[16] = (uint8_t)(i * 7 + 1);
-        TEST_ASSERT_FALSE(protocore_ed25519_verify(g_work, cand, msg, 2, sig));
+        TEST_ASSERT_FALSE(ed_verify(g_work, cand, msg, 2, sig));
     }
 }
 
@@ -273,11 +317,11 @@ void test_signing_is_deterministic_and_round_trips(void)
     {
         msg[i] = (uint8_t)(i ^ 0x5a);
     }
-    protocore_ed25519_pubkey(g_work, pub, seed);
-    protocore_ed25519_sign(g_work, s1, msg, sizeof(msg), seed);
-    protocore_ed25519_sign(g_work, s2, msg, sizeof(msg), seed);
+    ed_pubkey(g_work, pub, seed);
+    ed_sign(g_work, s1, msg, sizeof(msg), seed);
+    ed_sign(g_work, s2, msg, sizeof(msg), seed);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(s1, s2, 64);
-    TEST_ASSERT_TRUE(protocore_ed25519_verify(g_work, pub, msg, sizeof(msg), s1));
+    TEST_ASSERT_TRUE(ed_verify(g_work, pub, msg, sizeof(msg), s1));
 }
 
 // ---- GF(2^255-19) field arithmetic ----------------------------------------

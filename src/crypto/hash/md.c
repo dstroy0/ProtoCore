@@ -6,6 +6,8 @@
  * @brief MD4 / MD5 / HMAC-MD5 implementation (see md.h). Little-endian word order.
  */
 
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
 #if PROTOCORE_ENABLE_MD
 
 #include "crypto/hash/md.h"
@@ -17,24 +19,29 @@
 PROTOCORE_CRYPTO_HOT
 PROTOCORE_BEGIN_DECLS
 
-// The one definition of MdCtx - private to this TU (md.h forward-declares it). External callers hold it
-// only via pointer and get their storage from protocore_md_wants() below, so the size never leaves this file.
+// The one definition of MdCtx - private to this TU. It sits at MD_OFF_CTX in the caller's borrow, so
+// its size never leaves this file and no consumer can name it.
 typedef struct MdCtx
 {
     uint32_t state[4];
     uint64_t bits;    ///< total message length in bits
     uint8_t buf[64];  ///< partial block
     uint32_t buf_len; ///< bytes currently in buf
+    uint8_t md4;      ///< 1 when seeded for MD4, 0 for MD5
 } MdCtx;
-static_assert(sizeof(struct MdCtx) <= PROTOCORE_WORK_MD,
-              "MdCtx outgrew PROTOCORE_WORK_MD - raise it in protocore_config.h, which derives "
-              "PROTOCORE_SECURE_ARENA_SIZE from it");
 
-struct MdCtx *protocore_md_wants(void)
-{
-    protocore_span ws = protocore_secure_span(sizeof(struct MdCtx), _Alignof(struct MdCtx));
-    return protocore_span_ok(ws) ? (struct MdCtx *)ws.buf : NULL;
-}
+// The caller's borrow, split by offset: the running digest state, then the regions HMAC-MD5 needs -
+// the key block, its two pads, the inner digest, and the state a key longer than the block is hashed
+// down in. Everything here is NTLM password and session-key material, so none of it touches the stack.
+#define MD_OFF_CTX 0u
+#define MD_OFF_KEY (MD_OFF_CTX + sizeof(struct MdCtx))
+#define MD_OFF_IPAD (MD_OFF_KEY + 64u)
+#define MD_OFF_OPAD (MD_OFF_IPAD + 64u)
+#define MD_OFF_INNER (MD_OFF_OPAD + 64u)
+#define MD_OFF_KCTX (MD_OFF_INNER + PROTOCORE_MD_DIGEST_LEN)
+static_assert(MD_OFF_KCTX + sizeof(struct MdCtx) <= PROTOCORE_MD_BORROW,
+              "PROTOCORE_MD_BORROW is short of the digest state and the HMAC regions - raise it in "
+              "protocore_config.h, which derives PROTOCORE_SECURE_ARENA_SIZE from it");
 
 static inline uint32_t rotl(uint32_t v, unsigned n)
 {
@@ -105,7 +112,7 @@ static void protocore_md5_compress(uint32_t s[4], const uint8_t block[64])
     s[3] += d;
 }
 
-void protocore_md5_init(struct MdCtx *c)
+static void md5_state_init(struct MdCtx *c)
 {
     c->state[0] = 0x67452301;
     c->state[1] = 0xefcdab89;
@@ -194,7 +201,7 @@ static void protocore_md4_compress(uint32_t s[4], const uint8_t block[64])
     s[3] += d;
 }
 
-void protocore_md4_init(struct MdCtx *c)
+static void md4_state_init(struct MdCtx *c)
 {
     c->state[0] = 0x67452301;
     c->state[1] = 0xefcdab89;
@@ -252,73 +259,162 @@ static void md_finish(struct MdCtx *c, uint8_t out[16], md_compress_fn compress)
     }
 }
 
-void protocore_md5_update(struct MdCtx *c, const uint8_t *data, size_t len)
+// The regions, at their offsets in the caller's borrow.
+#define MD_STATE(w) ((struct MdCtx *)(void *)((w) + MD_OFF_CTX))
+#define MD_KEY(w) ((w) + MD_OFF_KEY)
+#define MD_IPAD(w) ((w) + MD_OFF_IPAD)
+#define MD_OPAD(w) ((w) + MD_OFF_OPAD)
+#define MD_INNER(w) ((w) + MD_OFF_INNER)
+#define MD_KCTX(w) ((struct MdCtx *)(void *)((w) + MD_OFF_KCTX))
+
+// Which compression the state was seeded for. It rides in the borrow with the state, so a running
+// digest carries it and nothing survives the call here.
+static md_compress_fn md_bound(const uint8_t *restrict work)
 {
-    md_absorb(c, data, len, protocore_md5_compress);
-}
-void protocore_md5_final(struct MdCtx *c, uint8_t out[16])
-{
-    md_finish(c, out, protocore_md5_compress);
-}
-void protocore_md4_update(struct MdCtx *c, const uint8_t *data, size_t len)
-{
-    md_absorb(c, data, len, protocore_md4_compress);
-}
-void protocore_md4_final(struct MdCtx *c, uint8_t out[16])
-{
-    md_finish(c, out, protocore_md4_compress);
+    return MD_STATE(work)->md4 ? protocore_md4_compress : protocore_md5_compress;
 }
 
-void protocore_md5(const uint8_t *data, size_t len, uint8_t out[16])
+// Seed the state. Shared by both inits, which differ only in the IV and the compression.
+static void md_begin(uint8_t *restrict work, md_compress_fn compress)
 {
-    struct MdCtx c;
-    protocore_md5_init(&c);
-    protocore_md5_update(&c, data, len);
-    protocore_md5_final(&c, out);
+    if (compress == protocore_md5_compress)
+    {
+        md5_state_init(MD_STATE(work));
+        MD_STATE(work)->md4 = 0;
+    }
+    else
+    {
+        md4_state_init(MD_STATE(work));
+        MD_STATE(work)->md4 = 1;
+    }
+    Md.ok = PROTO_TRUE;
 }
-void protocore_md4(const uint8_t *data, size_t len, uint8_t out[16])
+
+static void md_md5_init(uint8_t *restrict work)
 {
-    struct MdCtx c;
-    protocore_md4_init(&c);
-    protocore_md4_update(&c, data, len);
-    protocore_md4_final(&c, out);
+    if (!work)
+    {
+        Md.ok = PROTO_FALSE;
+        return;
+    }
+    md_begin(work, protocore_md5_compress);
+}
+
+static void md_md4_init(uint8_t *restrict work)
+{
+    if (!work)
+    {
+        Md.ok = PROTO_FALSE;
+        return;
+    }
+    md_begin(work, protocore_md4_compress);
+}
+
+static void md_update(uint8_t *restrict work)
+{
+    if (!work)
+    {
+        Md.ok = PROTO_FALSE;
+        return;
+    }
+    md_absorb(MD_STATE(work), Md.update_args.data, Md.update_args.len, md_bound(work));
+}
+
+static void md_final(uint8_t *restrict work)
+{
+    if (!work || !Md.final_args.out)
+    {
+        Md.ok = PROTO_FALSE;
+        return;
+    }
+    md_finish(MD_STATE(work), Md.final_args.out, md_bound(work));
+    Md.ok = PROTO_TRUE;
+}
+
+// One-shot over the members already set: init, absorb, finish.
+static void md_one(uint8_t *restrict work, md_compress_fn compress)
+{
+    if (!work || !Md.final_args.out)
+    {
+        Md.ok = PROTO_FALSE;
+        return;
+    }
+    md_begin(work, compress);
+    md_absorb(MD_STATE(work), Md.update_args.data, Md.update_args.len, compress);
+    md_finish(MD_STATE(work), Md.final_args.out, compress);
+}
+
+static void md_md5(uint8_t *restrict work)
+{
+    md_one(work, protocore_md5_compress);
+}
+
+static void md_md4(uint8_t *restrict work)
+{
+    md_one(work, protocore_md4_compress);
 }
 
 // --- HMAC-MD5 (RFC 2104) ---------------------------------------------------
 
-void protocore_hmac_md5(const uint8_t *key, size_t key_len, const uint8_t *msg, size_t msg_len, uint8_t out[16])
+static void md_hmac_md5(uint8_t *restrict work)
 {
-    uint8_t k[64];
-    mem.set(k, 0, sizeof(k));
+    Md.ok = PROTO_FALSE;
+    if (!work || !Md.hmac_args.out)
+    {
+        return;
+    }
+    const uint8_t *key = Md.hmac_args.key;
+    const size_t key_len = Md.hmac_args.key_len;
+
+    // Every region is a named offset in the caller's borrow: the key block, its two pads, the inner
+    // digest, the running state, and the state a long key is hashed down in.
+    uint8_t *k = MD_KEY(work);
+    uint8_t *ipad = MD_IPAD(work);
+    uint8_t *opad = MD_OPAD(work);
+    uint8_t *inner = MD_INNER(work);
+    struct MdCtx *c = MD_STATE(work);
+
+    mem.set(k, 0, 64);
     if (key_len > 64)
     {
-        protocore_md5(key, key_len, k); // keys longer than the block are hashed down (leaves 16 bytes, rest zero)
+        // Keys longer than the block are hashed down, leaving 16 bytes and the rest zero. Its state is
+        // its own region so hashing the key does not disturb the one the MAC runs in.
+        struct MdCtx *kc = MD_KCTX(work);
+        md5_state_init(kc);
+        md_absorb(kc, key, key_len, protocore_md5_compress);
+        md_finish(kc, k, protocore_md5_compress);
     }
     else
     {
         mem.cpy(k, key, key_len);
     }
 
-    uint8_t ipad[64];
-    uint8_t opad[64];
     for (int i = 0; i < 64; i++)
     {
         ipad[i] = (uint8_t)(k[i] ^ 0x36);
         opad[i] = (uint8_t)(k[i] ^ 0x5c);
     }
 
-    uint8_t inner[16];
-    struct MdCtx c;
-    protocore_md5_init(&c);
-    protocore_md5_update(&c, ipad, 64);
-    protocore_md5_update(&c, msg, msg_len);
-    protocore_md5_final(&c, inner);
+    md5_state_init(c);
+    md_absorb(c, ipad, 64, protocore_md5_compress);
+    md_absorb(c, Md.hmac_args.msg, Md.hmac_args.msg_len, protocore_md5_compress);
+    md_finish(c, inner, protocore_md5_compress);
 
-    protocore_md5_init(&c);
-    protocore_md5_update(&c, opad, 64);
-    protocore_md5_update(&c, inner, 16);
-    protocore_md5_final(&c, out);
+    md5_state_init(c);
+    md_absorb(c, opad, 64, protocore_md5_compress);
+    md_absorb(c, inner, PROTOCORE_MD_DIGEST_LEN, protocore_md5_compress);
+    md_finish(c, Md.hmac_args.out, protocore_md5_compress);
+
+    Md.ok = PROTO_TRUE;
 }
+
+MdNs Md = {.md5_init = md_md5_init,
+           .md4_init = md_md4_init,
+           .update = md_update,
+           .final = md_final,
+           .md5 = md_md5,
+           .md4 = md_md4,
+           .hmac_md5 = md_hmac_md5};
 
 PROTOCORE_END_DECLS
 

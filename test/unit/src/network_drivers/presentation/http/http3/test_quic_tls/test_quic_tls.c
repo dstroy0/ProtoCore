@@ -22,6 +22,8 @@
 
 #include <unity.h>
 
+static uint8_t tw[4096]; // the borrow every namespace call in this suite runs out of
+
 void setUp(void)
 {
 }
@@ -171,7 +173,9 @@ static void server_start(void)
     protocore_quic_tls_server_init(&g_qt, &g_cfg);
 
     memset(g_client_priv, 0x33, sizeof(g_client_priv));
-    protocore_x25519_base(g_client_pub, g_client_priv);
+    Curve25519.x25519_base_args.out = g_client_pub;
+    Curve25519.x25519_base_args.scalar = g_client_priv;
+    Curve25519.x25519_base(tw);
 }
 
 static size_t feed_client_hello(const ChOpts *o)
@@ -251,7 +255,9 @@ void test_rfc8446_server_hello_fields(void)
 
     // the share is the public half of the configured ephemeral private key
     uint8_t want_pub[32];
-    protocore_x25519_base(want_pub, g_cfg.ephemeral_priv);
+    Curve25519.x25519_base_args.out = want_pub;
+    Curve25519.x25519_base_args.scalar = g_cfg.ephemeral_priv;
+    Curve25519.x25519_base(tw);
     TEST_ASSERT_EQUAL_MEMORY(want_pub, sh + SH_SHARE_OFFSET, 32);
 }
 
@@ -268,7 +274,7 @@ void test_handshake_interop_round_trip(void)
     static uint8_t hash_work[PROTOCORE_SHA256_BORROW];
     static uint8_t keys_work[PROTOCORE_QUIC_KEYS_BORROW];
     Tls13KeySchedule ks;
-    protocore_sha256_ctx tr;
+    uint8_t *tr;
     uint8_t hash[32];
 
     TEST_ASSERT_EQUAL_UINT(g_ch_len, feed_client_hello(&CH_FULL));
@@ -281,17 +287,23 @@ void test_handshake_interop_round_trip(void)
 
     // the client's (EC)DHE secret, from its own private key and the server's share
     uint8_t ecdhe[32];
-    protocore_x25519(ecdhe, g_client_priv, sh + SH_SHARE_OFFSET);
+    Curve25519.x25519_args.out = ecdhe;
+    Curve25519.x25519_args.scalar = g_client_priv;
+    Curve25519.x25519_args.point = sh + SH_SHARE_OFFSET;
+    Curve25519.x25519(tw);
 
     // Transcript-Hash(ClientHello .. ServerHello)
     memset(ks_store, 0, sizeof(ks_store));
-    protocore_sha256_init(&tr, hash_work);
-    protocore_sha256_update(&tr, g_ch, g_ch_len);
-    protocore_sha256_update(&tr, sh, sh_len);
-    {
-        protocore_sha256_ctx snap = tr;
-        protocore_sha256_final(&snap, hash);
-    }
+    tr = hash_work;
+    Sha256.init(tr);
+    Sha256.update_args.data = g_ch;
+    Sha256.update_args.len = g_ch_len;
+    Sha256.update(tr);
+    Sha256.update_args.data = sh;
+    Sha256.update_args.len = sh_len;
+    Sha256.update(tr);
+    Sha256.final_args.out = hash;
+    Sha256.final(tr);
 
     Tls13Ks.bind.kdf = &TLS13_KDF;
     Tls13Ks.bind.ks = &ks;
@@ -315,13 +327,13 @@ void test_handshake_interop_round_trip(void)
     size_t fin_at = 0;
     for (size_t i = 0; i < 3; i++)
     {
-        protocore_sha256_update(&tr, hs + fin_at, msg_len(hs + fin_at));
+        Sha256.update_args.data = hs + fin_at;
+        Sha256.update_args.len = msg_len(hs + fin_at);
+        Sha256.update(tr);
         fin_at += msg_len(hs + fin_at);
     }
-    {
-        protocore_sha256_ctx snap = tr;
-        protocore_sha256_final(&snap, hash);
-    }
+    Sha256.final_args.out = hash;
+    Sha256.final(tr);
     uint8_t verify[32];
     Tls13Ks.bind.ks = &ks;
     Tls13Ks.bind.s = ks_store;
@@ -334,11 +346,11 @@ void test_handshake_interop_round_trip(void)
     TEST_ASSERT_EQUAL_MEMORY(verify, hs + fin_at + 4, 32);
 
     // Transcript-Hash(ClientHello .. server Finished) keys the application secrets
-    protocore_sha256_update(&tr, hs + fin_at, msg_len(hs + fin_at));
-    {
-        protocore_sha256_ctx snap = tr;
-        protocore_sha256_final(&snap, hash);
-    }
+    Sha256.update_args.data = hs + fin_at;
+    Sha256.update_args.len = msg_len(hs + fin_at);
+    Sha256.update(tr);
+    Sha256.final_args.out = hash;
+    Sha256.final(tr);
     Tls13Ks.bind.ks = &ks;
     Tls13Ks.bind.s = ks_store;
     Tls13Ks.step.ch_sfin_hash = hash;

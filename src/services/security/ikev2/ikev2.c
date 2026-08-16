@@ -855,23 +855,31 @@ static size_t ike_cookie_compute(uint8_t *work, uint8_t version, const uint8_t *
     {
         return 0;
     }
-    protocore_sha256_ctx sha;
-    protocore_sha256_init(&sha, work);
+    Sha256.init(work);
     if (ni_len)
     {
-        protocore_sha256_update(&sha, ni, ni_len);
+        Sha256.update_args.data = ni;
+        Sha256.update_args.len = ni_len;
+        Sha256.update(work);
     }
     if (ipi_len)
     {
-        protocore_sha256_update(&sha, ipi, ipi_len);
+        Sha256.update_args.data = ipi;
+        Sha256.update_args.len = ipi_len;
+        Sha256.update(work);
     }
-    protocore_sha256_update(&sha, spii, PROTOCORE_IKE_SPI_LEN);
+    Sha256.update_args.data = spii;
+    Sha256.update_args.len = PROTOCORE_IKE_SPI_LEN;
+    Sha256.update(work);
     if (secret_len)
     {
-        protocore_sha256_update(&sha, secret, secret_len);
+        Sha256.update_args.data = secret;
+        Sha256.update_args.len = secret_len;
+        Sha256.update(work);
     }
     out[0] = version;
-    protocore_sha256_final(&sha, out + 1);
+    Sha256.final_args.out = out + 1;
+    Sha256.final(work);
     return PROTOCORE_IKE_COOKIE_LEN;
 }
 
@@ -1281,15 +1289,23 @@ static proto_bool ike_prf_plus(uint8_t *work, const uint8_t *key, size_t key_len
     while (produced < out_len)
     {
         counter++;
-        protocore_hmac_sha256_ctx hmac;
-        protocore_hmac_sha256_init(&hmac, work, key, key_len);
+        HmacSha256.key_args.key = key;
+        HmacSha256.key_args.key_len = key_len;
+        HmacSha256.init(work);
         if (t_len)
         {
-            protocore_hmac_sha256_update(&hmac, t, t_len);
+            HmacSha256.update_args.data = t;
+            HmacSha256.update_args.len = t_len;
+            HmacSha256.update(work);
         }
-        protocore_hmac_sha256_update(&hmac, seed, seed_len);
-        protocore_hmac_sha256_update(&hmac, &counter, 1);
-        protocore_hmac_sha256_final(&hmac, t);
+        HmacSha256.update_args.data = seed;
+        HmacSha256.update_args.len = seed_len;
+        HmacSha256.update(work);
+        HmacSha256.update_args.data = &counter;
+        HmacSha256.update_args.len = 1;
+        HmacSha256.update(work);
+        HmacSha256.final_args.out = t;
+        HmacSha256.final(work);
         t_len = PROTOCORE_HMAC_SHA256_LEN;
 
         size_t take = out_len - produced;
@@ -1381,7 +1397,12 @@ static proto_bool ike_derive_keys(uint8_t *work, const uint8_t *dh_secret, size_
         return PROTO_FALSE;
     }
     uint8_t skeyseed[PROTOCORE_IKE_PRF_LEN];
-    protocore_hmac_sha256(work, s, ni_len + nr_len, dh_secret, dh_len, skeyseed);
+    HmacSha256.mac_args.key = s;
+    HmacSha256.mac_args.key_len = ni_len + nr_len;
+    HmacSha256.mac_args.data = dh_secret;
+    HmacSha256.mac_args.len = dh_len;
+    HmacSha256.mac_args.out = skeyseed;
+    HmacSha256.mac(work);
     return sk_split_from_skeyseed(work, skeyseed, s, s_len, lens, out);
 }
 
@@ -1423,7 +1444,12 @@ static void rekey_derive_keys(struct IkeInternal *restrict ctx)
     mem.cpy(seed + sl, nr, nr_len);
     sl += nr_len;
     uint8_t skeyseed[PROTOCORE_IKE_PRF_LEN];
-    protocore_hmac_sha256(ctx->ns->work, sk_d_old, ctx->ns->keymat.sk_d_len, seed, sl, skeyseed);
+    HmacSha256.mac_args.key = sk_d_old;
+    HmacSha256.mac_args.key_len = ctx->ns->keymat.sk_d_len;
+    HmacSha256.mac_args.data = seed;
+    HmacSha256.mac_args.len = sl;
+    HmacSha256.mac_args.out = skeyseed;
+    HmacSha256.mac(ctx->ns->work);
 
     uint8_t s[2 * PROTOCORE_IKE_NONCE_MAX + 2 * PROTOCORE_IKE_SPI_LEN];
     size_t s_len = build_ni_nr_spi(s, ni, ni_len, nr, nr_len, ctx->ns->keymat.spi_i, ctx->ns->keymat.spi_r);
@@ -1544,10 +1570,18 @@ static proto_bool ike_sk_aead_seal(const uint8_t *key, const uint8_t *salt, cons
     // A fresh IV per message makes the context single use: init, seal once, wipe.
     {
         size_t mark = protocore_secure_mark();
-        struct protocore_aesgcm_key *gcm =
-            protocore_aesgcm_key_init(protocore_secure_span(PROTOCORE_WORK_AESGCM, 8).buf, key);
-        protocore_aesgcm_seal(gcm, nonce, aad, aad_len, pt, pt_len, out, out + pt_len);
-        protocore_aesgcm_key_wipe(gcm);
+        uint8_t *gcm = protocore_secure_span(PROTOCORE_AESGCM_BORROW, 8).buf;
+        AesGcm.key_args.key = key;
+        AesGcm.key_init(gcm);
+        AesGcm.seal_args.nonce = nonce;
+        AesGcm.seal_args.aad = aad;
+        AesGcm.seal_args.aad_len = aad_len;
+        AesGcm.seal_args.pt = pt;
+        AesGcm.seal_args.pt_len = pt_len;
+        AesGcm.seal_args.ct_out = out;
+        AesGcm.seal_args.tag_out = out + pt_len;
+        AesGcm.seal(gcm);
+        AesGcm.key_wipe(gcm);
         protocore_secure_release(mark);
     }
     return PROTO_TRUE;
@@ -1565,10 +1599,19 @@ static proto_bool ike_sk_aead_open(const uint8_t *key, const uint8_t *salt, cons
     proto_bool ok = PROTO_FALSE;
     {
         size_t mark = protocore_secure_mark();
-        struct protocore_aesgcm_key *gcm =
-            protocore_aesgcm_key_init(protocore_secure_span(PROTOCORE_WORK_AESGCM, 8).buf, key);
-        ok = protocore_aesgcm_open(gcm, nonce, aad, aad_len, ct, ct_len, icv, out);
-        protocore_aesgcm_key_wipe(gcm);
+        uint8_t *gcm = protocore_secure_span(PROTOCORE_AESGCM_BORROW, 8).buf;
+        AesGcm.key_args.key = key;
+        AesGcm.key_init(gcm);
+        AesGcm.open_args.nonce = nonce;
+        AesGcm.open_args.aad = aad;
+        AesGcm.open_args.aad_len = aad_len;
+        AesGcm.open_args.ct = ct;
+        AesGcm.open_args.ct_len = ct_len;
+        AesGcm.open_args.tag = icv;
+        AesGcm.open_args.out = out;
+        AesGcm.open(gcm);
+        ok = AesGcm.ok;
+        AesGcm.key_wipe(gcm);
         protocore_secure_release(mark);
     }
     return ok;
@@ -1591,6 +1634,35 @@ static void sk_aead_open(struct IkeInternal *restrict ctx)
 // The Diffie-Hellman exchange (RFC 7296 sec 3.4, RFC 8031)
 // ---------------------------------------------------------------------------
 
+// One scalar multiplication, out of a borrow taken and released per call. The entries below take
+// only their operands, so the bytes the curve runs in are this file's.
+static proto_bool ike_x25519(proto_bool base, const uint8_t *scalar, const uint8_t *point, uint8_t *out)
+{
+    const size_t mark = protocore_secure_mark();
+    protocore_span w = protocore_secure_span(PROTOCORE_CURVE25519_BORROW, 8);
+    if (!span.ok(w))
+    {
+        protocore_secure_release(mark);
+        return PROTO_FALSE;
+    }
+    if (base)
+    {
+        Curve25519.x25519_base_args.scalar = scalar;
+        Curve25519.x25519_base_args.out = out;
+        Curve25519.x25519_base(w.buf);
+    }
+    else
+    {
+        Curve25519.x25519_args.scalar = scalar;
+        Curve25519.x25519_args.point = point;
+        Curve25519.x25519_args.out = out;
+        Curve25519.x25519(w.buf);
+    }
+    const proto_bool ok = Curve25519.ok;
+    protocore_secure_release(mark);
+    return ok;
+}
+
 // Group 31: the Key Exchange Data is X25519(private, base), 32 octets (RFC 8031 sec 3.1).
 static void dh_public(struct IkeInternal *restrict ctx)
 {
@@ -1607,7 +1679,10 @@ static void dh_public(struct IkeInternal *restrict ctx)
         {
             return;
         }
-        protocore_x25519_base(out, our_priv);
+        if (!ike_x25519(PROTO_TRUE, our_priv, NULL, out))
+        {
+            return;
+        }
         ctx->ns->n = PROTOCORE_IKE_X25519_LEN;
     }
     // Groups 19 and 14 are a later increment.
@@ -1628,7 +1703,10 @@ static size_t ike_dh_compute(uint16_t group, const uint8_t *our_priv, size_t pri
         {
             return 0;
         }
-        protocore_x25519(out, our_priv, peer_pub);
+        if (!ike_x25519(PROTO_FALSE, our_priv, peer_pub, out))
+        {
+            return 0;
+        }
         return PROTOCORE_IKE_X25519_LEN;
     }
     return 0;
@@ -1656,19 +1734,37 @@ static proto_bool ike_auth_psk(uint8_t *work, const uint8_t *psk, size_t psk_len
     }
 
     uint8_t macid[PROTOCORE_IKE_AUTH_LEN];
-    protocore_hmac_sha256(work, sk_p, sk_p_len, id_body, id_body_len, macid);
+    HmacSha256.mac_args.key = sk_p;
+    HmacSha256.mac_args.key_len = sk_p_len;
+    HmacSha256.mac_args.data = id_body;
+    HmacSha256.mac_args.len = id_body_len;
+    HmacSha256.mac_args.out = macid;
+    HmacSha256.mac(work);
 
     uint8_t keypad[PROTOCORE_IKE_AUTH_LEN];
     static const char pad[] = PROTOCORE_IKE_PSK_PAD; // 17 characters, the NUL is not sent
-    protocore_hmac_sha256(work, psk, psk_len, (const uint8_t *)pad, sizeof(pad) - 1, keypad);
+    HmacSha256.mac_args.key = psk;
+    HmacSha256.mac_args.key_len = psk_len;
+    HmacSha256.mac_args.data = (const uint8_t *)pad;
+    HmacSha256.mac_args.len = sizeof(pad) - 1;
+    HmacSha256.mac_args.out = keypad;
+    HmacSha256.mac(work);
 
     // Streamed, so RealMessage is never copied again.
-    protocore_hmac_sha256_ctx hmac;
-    protocore_hmac_sha256_init(&hmac, work, keypad, sizeof(keypad));
-    protocore_hmac_sha256_update(&hmac, real_msg, real_len);
-    protocore_hmac_sha256_update(&hmac, peer_nonce, nonce_len);
-    protocore_hmac_sha256_update(&hmac, macid, sizeof(macid));
-    protocore_hmac_sha256_final(&hmac, out);
+    HmacSha256.key_args.key = keypad;
+    HmacSha256.key_args.key_len = sizeof(keypad);
+    HmacSha256.init(work);
+    HmacSha256.update_args.data = real_msg;
+    HmacSha256.update_args.len = real_len;
+    HmacSha256.update(work);
+    HmacSha256.update_args.data = peer_nonce;
+    HmacSha256.update_args.len = nonce_len;
+    HmacSha256.update(work);
+    HmacSha256.update_args.data = macid;
+    HmacSha256.update_args.len = sizeof(macid);
+    HmacSha256.update(work);
+    HmacSha256.final_args.out = out;
+    HmacSha256.final(work);
     return PROTO_TRUE;
 }
 
@@ -1697,7 +1793,12 @@ static size_t ike_signed_octets(uint8_t *work, uint8_t *scratch, size_t cap, con
     }
     mem.cpy(scratch, real, real_len);
     mem.cpy(scratch + real_len, nonce, nonce_len);
-    protocore_hmac_sha256(work, sk_p, sk_p_len, id_body, id_body_len, scratch + real_len + nonce_len);
+    HmacSha256.mac_args.key = sk_p;
+    HmacSha256.mac_args.key_len = sk_p_len;
+    HmacSha256.mac_args.data = id_body;
+    HmacSha256.mac_args.len = id_body_len;
+    HmacSha256.mac_args.out = scratch + real_len + nonce_len;
+    HmacSha256.mac(work);
     return total;
 }
 
@@ -1725,8 +1826,12 @@ static void auth_sign_ecdsa_p256(struct IkeInternal *restrict ctx)
     {
         return;
     }
-    ctx->ns->ok =
-        protocore_ecdsa_p256_sign(ctx->ns->out.buf, ctx->ns->work, ctx->ns->auth.scratch, n, ctx->ns->auth.priv);
+    Ecdsa.sign_args.msg = ctx->ns->auth.scratch;
+    Ecdsa.sign_args.mlen = n;
+    Ecdsa.sign_args.priv = ctx->ns->auth.priv;
+    Ecdsa.sign_args.sig = ctx->ns->out.buf;
+    Ecdsa.sign(ctx->ns->work);
+    ctx->ns->ok = Ecdsa.ok;
 }
 
 static void auth_verify_ecdsa_p256(struct IkeInternal *restrict ctx)
@@ -1744,8 +1849,12 @@ static void auth_verify_ecdsa_p256(struct IkeInternal *restrict ctx)
     {
         return;
     }
-    ctx->ns->ok =
-        protocore_ecdsa_p256_verify(ctx->ns->auth.pub, ctx->ns->work, ctx->ns->auth.scratch, n, ctx->ns->auth.sig);
+    Ecdsa.verify_args.pub = ctx->ns->auth.pub;
+    Ecdsa.verify_args.msg = ctx->ns->auth.scratch;
+    Ecdsa.verify_args.mlen = n;
+    Ecdsa.verify_args.sig = ctx->ns->auth.sig;
+    Ecdsa.verify(ctx->ns->work);
+    ctx->ns->ok = Ecdsa.ok;
 }
 
 // Auth Method 1, RSA Digital Signature: RSASSA-PKCS1-v1_5 over the same octets (RFC 7296 sec 3.8).
@@ -1764,8 +1873,15 @@ static void auth_verify_rsa_sha256(struct IkeInternal *restrict ctx)
     {
         return;
     }
-    ctx->ns->ok = protocore_rsa_verify(ctx->ns->auth.rsa_n, ctx->ns->auth.rsa_e, ctx->ns->work, ctx->ns->auth.scratch,
-                                       n, ctx->ns->auth.sig, ctx->ns->auth.sig_len, PROTOCORE_RSA_HASH_SHA256) == 0;
+    Rsa.verify_args.n = ctx->ns->auth.rsa_n;
+    Rsa.verify_args.e = ctx->ns->auth.rsa_e;
+    Rsa.verify_args.msg = ctx->ns->auth.scratch;
+    Rsa.verify_args.msg_len = n;
+    Rsa.verify_args.sig = ctx->ns->auth.sig;
+    Rsa.verify_args.sig_len = ctx->ns->auth.sig_len;
+    Rsa.verify_args.hash = PROTOCORE_RSA_HASH_SHA256;
+    Rsa.verify(ctx->ns->work);
+    ctx->ns->ok = Rsa.ok;
 }
 
 // ---------------------------------------------------------------------------

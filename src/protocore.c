@@ -34,7 +34,7 @@
  */
 
 #include "protocore.h"
-#include "crypto/rng/rng.h"  // protocore_rand_fill(): the CSRF secret's seed
+#include "crypto/rng/rng.h"  // Rng: the CSRF secret's seed
 #include "mmgr/membuild.h"   // Sb: the frame builder
 #include "mmgr/plaintext.h"  // the diag document is borrowed, not a stack array
 #include "mmgr/protoframe.h" // the diag document is a frame spec, not a concatenation
@@ -228,7 +228,9 @@ int32_t proto_begin(const WebServerConfig *cfg)
         // Seed the CSRF HMAC secret from the generator, which binds and seeds itself on first use
         // and redraws from the platform on its own schedule.
         uint8_t sec[32];
-        protocore_rand_fill(sec, sizeof(sec));
+        Rng.fill_args.out = sec;
+        Rng.fill_args.len = sizeof(sec);
+        Rng.fill(protocore_rng_span());
         protocore_csrf_set_secret(sec, sizeof(sec));
     }
 #endif

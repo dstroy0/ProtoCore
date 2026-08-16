@@ -6,24 +6,22 @@
  * @brief SSH RSA host-key layer: NVS-backed host key, host-key signing, and "ssh-rsa" blob encoding.
  *
  * This is the SSH-specific wrapper around the shared RSA primitive (crypto/rsa): it owns the device's
- * RSA-2048 host key, loaded from NVS by both backends, signs handshake data with
- * it, and serializes the public key into the RFC 4253 / RFC 8332 "ssh-rsa" blob. The
- * protocol-agnostic RSASSA-PKCS1-v1.5 math (verify, software sign, PKCS#1 encoding, modexp) lives in
- * crypto/rsa (protocore_rsa_verify / protocore_rsa_sign_sw); peers' signatures are verified via that primitive.
+ * RSA-2048 host key, loaded from NVS, signs handshake data with it, and serializes the public key
+ * into the RFC 4253 / RFC 8332 "ssh-rsa" blob. The protocol-agnostic RSASSA-PKCS1-v1.5 math (verify,
+ * sign, PKCS#1 encoding, modexp) is ::Rsa in crypto/rsa, whose modular multiply is the arm a part
+ * with an RSA accelerator takes; peers' signatures are verified through the same namespace.
  *
  * ═══════════════════════════════════════════════════════════════════════════
  * SECURITY MODEL - PRIVATE KEY LIFETIME
  * ═══════════════════════════════════════════════════════════════════════════
- * The RSA-2048 private key MUST NEVER live in static or global memory. On the accelerated backend the
- * parsed key is held in a private mbedtls context for the server lifetime (as an SSH host key normally
- * is) and every sign runs under a mutex; on the software backend the private exponent is a secure-pool
- * borrow (mmgr/secure.h), the DER it was walked out of is released and wiped before the load returns,
- * and the software sign (protocore_rsa_sign_sw) wipes its own temporaries. The signature scheme is PKCS#1
- * v1.5 (RFC 8017 §8.2), "rsa-sha2-256" / "rsa-sha2-512" (RFC 8332) - only the hash and its DigestInfo
- * OID differ.
+ * The RSA-2048 private key MUST NEVER live in static or global memory. The private exponent is a
+ * secure-pool borrow (mmgr/secure.h), the DER it was walked out of is released and wiped before the
+ * load returns, and ::RsaNs::sign wipes its own temporaries. The signature scheme is PKCS#1 v1.5
+ * (RFC 8017 §8.2), "rsa-sha2-256" / "rsa-sha2-512" (RFC 8332) - only the hash and its DigestInfo OID
+ * differ.
  *
- * NVS: the private key is a PKCS#8 DER in namespace "ssh_host_key" / key "priv_der". The accelerated
- * backend hands it to mbedtls; the software backend walks n, e and d out of it itself.
+ * NVS: the private key is a PKCS#8 DER in namespace "ssh_host_key" / key "priv_der"; n, e and d are
+ * walked out of it here.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -32,7 +30,7 @@
 #ifndef PROTOCORE_SSH_RSA_H
 #define PROTOCORE_SSH_RSA_H
 
-#include "crypto/asymmetric/rsa.h" // protocore_rsa_hash, PROTOCORE_RSA_KEY_BYTES/SIG_BYTES, protocore_rsa_verify / protocore_rsa_sign_sw
+#include "crypto/asymmetric/rsa.h" // protocore_rsa_hash, PROTOCORE_RSA_KEY_BYTES/SIG_BYTES, Rsa
 
 PROTOCORE_BEGIN_DECLS
 
@@ -85,9 +83,9 @@ extern SshRsaPubKey ssh_host_pubkey;
 /**
  * @brief Load the public portion of the RSA host key into ssh_host_pubkey.
  *
- * Reads and parses the DER blob from NVS ("ssh_host_key"/"priv_der") and caches the signer: an
- * mbedtls context on the accelerated backend, the private exponent on the software one. Call once at
- * startup (single-threaded).
+ * Reads and parses the DER blob from NVS ("ssh_host_key"/"priv_der"), leaving n and e in
+ * ssh_host_pubkey and the private exponent in a secure-pool borrow. Call once at startup
+ * (single-threaded).
  * @return 0 on success, -1 if the key is absent or malformed.
  */
 int protocore_ssh_rsa_load_pubkey(void);

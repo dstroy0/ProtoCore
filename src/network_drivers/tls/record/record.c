@@ -10,8 +10,9 @@
 
 #if PROTOCORE_TLS_SOFTWARE
 
-#include "mmgr/protomem.h" // mem.cpy / mem.zero
-#include "mmgr/secure.h"   // the secure pool: key/iv material during derivation
+#include "crypto/aead/aes128gcm.h" // Aes128Gcm - the record AEAD, and its key and nonce lengths
+#include "mmgr/protomem.h"         // mem.cpy / mem.zero
+#include "mmgr/secure.h"           // the secure pool: key/iv material during derivation
 #include "network_drivers/tls/key_schedule/key_schedule.h"
 
 /**
@@ -81,15 +82,17 @@ static void record_keys_derive(struct TlsRecordInternal *restrict ctx)
     }
     expand_label(ws.buf, ctx->ns->key.secret, "key", k.buf, PROTOCORE_AES128GCM_KEY_LEN);
     expand_label(ws.buf, ctx->ns->key.secret, "iv", out->iv, sizeof(out->iv));
-    // The vendor may refuse the key; without a keyed context every record operation must refuse too.
-    out->ready = (protocore_aes128gcm_key_init(out->gcm, k.buf) != NULL);
+    // The arm may refuse the key; without a keyed context every record operation must refuse too.
+    Aes128Gcm.key_args.key = k.buf;
+    Aes128Gcm.key_init(out->gcm);
+    out->ready = Aes128Gcm.ok;
     protocore_secure_release(mark);
 }
 
 static void record_keys_wipe(struct TlsRecordInternal *restrict ctx)
 {
     TlsRecordKeys *keys = ctx->ns->key.keys;
-    protocore_aes128gcm_key_wipe((struct protocore_aes128gcm_key *)(keys->gcm));
+    Aes128Gcm.key_wipe(keys->gcm);
     protocore_secure_wipe(keys->iv, sizeof(keys->iv));
     protocore_secure_wipe(keys->nonce, sizeof(keys->nonce));
     keys->ready = PROTO_FALSE;
@@ -184,10 +187,14 @@ static void record_protect(struct TlsRecordInternal *restrict ctx)
     out[PROTOCORE_TLS_PLAINTEXT_HDR_LEN + pt_len] = content_type;
 
     build_nonce(keys);
-    (void)protocore_aes128gcm_seal((struct protocore_aes128gcm_key *)(keys->gcm), keys->nonce, out,
-                                   PROTOCORE_TLS_PLAINTEXT_HDR_LEN, out + PROTOCORE_TLS_PLAINTEXT_HDR_LEN, inner_len,
-                                   out + PROTOCORE_TLS_PLAINTEXT_HDR_LEN,
-                                   out + PROTOCORE_TLS_PLAINTEXT_HDR_LEN + inner_len);
+    Aes128Gcm.seal_args.nonce = keys->nonce;
+    Aes128Gcm.seal_args.aad = out;
+    Aes128Gcm.seal_args.aad_len = PROTOCORE_TLS_PLAINTEXT_HDR_LEN;
+    Aes128Gcm.seal_args.pt = out + PROTOCORE_TLS_PLAINTEXT_HDR_LEN;
+    Aes128Gcm.seal_args.pt_len = inner_len;
+    Aes128Gcm.seal_args.ct_out = out + PROTOCORE_TLS_PLAINTEXT_HDR_LEN;
+    Aes128Gcm.seal_args.tag_out = out + PROTOCORE_TLS_PLAINTEXT_HDR_LEN + inner_len;
+    Aes128Gcm.seal(keys->gcm);
     keys->seq++;
     ctx->ns->n = total;
 }
@@ -218,8 +225,15 @@ static void record_unprotect(struct TlsRecordInternal *restrict ctx)
 
     build_nonce(keys);
     const uint8_t *ct = rec + PROTOCORE_TLS_PLAINTEXT_HDR_LEN;
-    if (!protocore_aes128gcm_open((struct protocore_aes128gcm_key *)(keys->gcm), keys->nonce, rec,
-                                  PROTOCORE_TLS_PLAINTEXT_HDR_LEN, ct, inner_len, ct + inner_len, out))
+    Aes128Gcm.open_args.nonce = keys->nonce;
+    Aes128Gcm.open_args.aad = rec;
+    Aes128Gcm.open_args.aad_len = PROTOCORE_TLS_PLAINTEXT_HDR_LEN;
+    Aes128Gcm.open_args.ct = ct;
+    Aes128Gcm.open_args.ct_len = inner_len;
+    Aes128Gcm.open_args.tag = ct + inner_len;
+    Aes128Gcm.open_args.out = out;
+    Aes128Gcm.open(keys->gcm);
+    if (!Aes128Gcm.ok)
     {
         return; // seq does not advance: a forged record must not desynchronize the count
     }

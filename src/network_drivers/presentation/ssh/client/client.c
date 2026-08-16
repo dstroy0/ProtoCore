@@ -8,11 +8,11 @@
 
 #include "network_drivers/presentation/ssh/client/client.h"
 #include "crypto/asymmetric/bignum.h"     // bn_expmod_group14 (dh-group14 client)
-#include "crypto/asymmetric/curve25519.h" // protocore_x25519 (curve25519-sha256)
+#include "crypto/asymmetric/curve25519.h" // Curve25519 (curve25519-sha256)
 #include "crypto/asymmetric/ecdsa.h"      // ecdh-sha2-nistp256 + ecdsa host-key verify
 #include "crypto/asymmetric/ed25519.h"    // ssh-ed25519 host key + client auth
 #include "crypto/hash/sha256.h"
-#include "crypto/rng/rng.h"  // protocore_rand_fill
+#include "crypto/rng/rng.h"  // Rng
 #include "mmgr/arena.h"      // protocore_worker_set_self (own scratch slot)
 #include "mmgr/bytes.h"      // bytes.* writers / bytes.rd_str() - the byte verbs this file frames with
 #include "mmgr/plaintext.h"  // protocore_plaintext_alloc for the large hybrid C_INIT
@@ -135,7 +135,7 @@ static proto_bool send_service_request(void)
     protocore_span w = span.from(out, sizeof(out));
     bytes.put(&w, SSH_MSG_SERVICE_REQUEST);
     protocore_ssh_wr_cstr(&w, "ssh-userauth");
-    return span.ok(w) && (SshClient.payload = out, SshClient.len = w.pos, cli_send(\& s_cli), SshClient.ok);
+    return span.ok(w) && (SshClient.payload = out, SshClient.len = w.pos, cli_send(&s_cli), SshClient.ok);
 }
 
 // ---------------------------------------------------------------------------
@@ -194,10 +194,10 @@ static proto_bool handle_kexdh_reply(const uint8_t *p, size_t len)
         return PROTO_FALSE;
     }
     uint8_t fp[32];
-    protocore_sha256_ctx fc;
-    protocore_sha256_init(&fc, fwork);
-    protocore_sha256_update(&fc, ks, ks_len);
-    protocore_sha256_final(&fc, fp);
+    Sha256.hash_args.data = ks;
+    Sha256.hash_args.len = ks_len;
+    Sha256.hash_args.out = fp;
+    Sha256.hash(fwork);
     if (mem.cmp(fp, s_store.cfg.host_pin, 32) != 0)
     {
         cli_fail("relay host key does not match the pin");
@@ -284,7 +284,7 @@ static proto_bool handle_kexdh_reply(const uint8_t *p, size_t len)
 #endif
 
     uint8_t nk = SSH_MSG_NEWKEYS;
-    if (!(SshClient.payload = &nk, SshClient.len = 1, cli_send(\& s_cli), SshClient.ok))
+    if (!(SshClient.payload = &nk, SshClient.len = 1, cli_send(&s_cli), SshClient.ok))
     {
         return PROTO_FALSE;
     }
@@ -315,25 +315,39 @@ static proto_bool build_kexinit(void)
     {
         return PROTO_FALSE;
     }
-    return (SshClient.payload = out, SshClient.len = n, cli_send(\& s_cli), SshClient.ok);
+    return (SshClient.payload = out, SshClient.len = n, cli_send(&s_cli), SshClient.ok);
 }
 
 // Generate our KEX ephemeral for the negotiated method and build Q_C / e into s_store.qc.
 static proto_bool build_kex_public(void)
 {
+    uint8_t *work = (cli_crypto_work(&s_cli), SshClient.work);
+    if (work == NULL)
+    {
+        return PROTO_FALSE;
+    }
     switch (s_store.kex)
     {
     case SSH_KEX_CURVE25519:
-        protocore_rand_fill(s_store.kex_priv, 32);
-        protocore_x25519_base(s_store.qc, s_store.kex_priv);
+        Rng.fill_args.out = s_store.kex_priv;
+        Rng.fill_args.len = 32;
+        Rng.fill(protocore_rng_span());
+        Curve25519.x25519_base_args.scalar = s_store.kex_priv;
+        Curve25519.x25519_base_args.out = s_store.qc;
+        Curve25519.x25519_base(work);
         s_store.qc_len = 32;
         return PROTO_TRUE;
     case SSH_KEX_ECDH_NISTP256:
         // Draw a valid P-256 scalar (pubkey derivation rejects 0 / >= group order).
         for (int tries = 0; tries < 8; tries++)
         {
-            protocore_rand_fill(s_store.kex_priv, 32);
-            if (protocore_ecdsa_p256_pubkey(s_store.qc, s_store.kex_priv))
+            Rng.fill_args.out = s_store.kex_priv;
+            Rng.fill_args.len = 32;
+            Rng.fill(protocore_rng_span());
+            Ecdsa.pubkey_args.priv = s_store.kex_priv;
+            Ecdsa.pubkey_args.pub = s_store.qc;
+            Ecdsa.pubkey(work);
+            if (Ecdsa.ok)
             {
                 s_store.qc_len = PROTOCORE_ECDSA_P256_PUB_LEN; // 65
                 return PROTO_TRUE;
@@ -342,13 +356,26 @@ static proto_bool build_kex_public(void)
         return PROTO_FALSE;
     case SSH_KEX_DH_GROUP14: {
         // e = g^x mod p, g = 2 (RFC 3526 group 14). x is a 256-bit exponent.
-        protocore_rand_fill(s_store.kex_priv, 32);
+        Rng.fill_args.out = s_store.kex_priv;
+        Rng.fill_args.len = 32;
+        Rng.fill(protocore_rng_span());
         protocore_bignum g, x, e;
         uint8_t two = 2;
-        bn_from_bytes(&g, &two, 1);
-        bn_from_bytes(&x, s_store.kex_priv, 32);
-        bn_expmod_group14(&e, &g, &x);
-        bn_to_bytes(s_store.qc, &e);
+        Bignum.from_bytes_args.out = &g;
+        Bignum.from_bytes_args.bytes = &two;
+        Bignum.from_bytes_args.len = 1;
+        Bignum.from_bytes(work);
+        Bignum.from_bytes_args.out = &x;
+        Bignum.from_bytes_args.bytes = s_store.kex_priv;
+        Bignum.from_bytes_args.len = 32;
+        Bignum.from_bytes(work);
+        Bignum.expmod_args.out = &e;
+        Bignum.expmod_args.base = &g;
+        Bignum.expmod_args.exp = &x;
+        Bignum.expmod_group14(work);
+        Bignum.to_bytes_args.bytes = s_store.qc;
+        Bignum.to_bytes_args.in = &e;
+        Bignum.to_bytes(work);
         s_store.qc_len = 256;
         protocore_secure_wipe(&x, sizeof(x));
         protocore_secure_wipe(&e, sizeof(e));
@@ -359,14 +386,26 @@ static proto_bool build_kex_public(void)
         // ML-KEM-768 keypair (dk kept for Decaps; ek is embedded in dk) + an X25519 ephemeral. C_INIT
         // (ek || Q_C) is assembled at send time; Q_C lives in qc[0..31].
         uint8_t d[32], z[32], ek[MLKEM768_EK_BYTES];
-        protocore_rand_fill(d, sizeof(d));
-        protocore_rand_fill(z, sizeof(z));
-        protocore_mlkem768_keygen(d, z, ek, s_store.hyb.mlkem_dk);
+        Rng.fill_args.out = d;
+        Rng.fill_args.len = sizeof(d);
+        Rng.fill(protocore_rng_span());
+        Rng.fill_args.out = z;
+        Rng.fill_args.len = sizeof(z);
+        Rng.fill(protocore_rng_span());
+        MlKem.keygen_args.d = d;
+        MlKem.keygen_args.z = z;
+        MlKem.keygen_args.ek = ek;
+        MlKem.keygen_args.dk = s_store.hyb.mlkem_dk;
+        MlKem.keygen(work);
         protocore_secure_wipe(d, sizeof(d));
         protocore_secure_wipe(z, sizeof(z));
         protocore_secure_wipe(ek, sizeof(ek)); // ek persists inside mlkem_dk
-        protocore_rand_fill(s_store.kex_priv, 32);
-        protocore_x25519_base(s_store.qc, s_store.kex_priv);
+        Rng.fill_args.out = s_store.kex_priv;
+        Rng.fill_args.len = 32;
+        Rng.fill(protocore_rng_span());
+        Curve25519.x25519_base_args.scalar = s_store.kex_priv;
+        Curve25519.x25519_base_args.out = s_store.qc;
+        Curve25519.x25519_base(work);
         s_store.qc_len = 32;
         return PROTO_TRUE;
     }
@@ -376,21 +415,22 @@ static proto_bool build_kex_public(void)
         // sntrup761 keypair (sk kept for Decaps; pk is embedded in sk) + an X25519 ephemeral. C_INIT
         // (pk || Q_C) is assembled at send time from sk; Q_C lives in qc[0..31]. pk is only needed
         // transiently here (sk embeds a copy), so it borrows the scratch arena.
-        uint8_t *work = (cli_crypto_work(&s_cli), SshClient.work);
-        if (work == NULL)
-        {
-            return PROTO_FALSE;
-        }
         size_t mark = protocore_plaintext_mark();
         uint8_t *pk = (uint8_t *)protocore_plaintext_alloc(PROTOCORE_SNTRUP761_PK_BYTES, 1);
         if (!pk)
         {
             return PROTO_FALSE;
         }
-        protocore_sntrup761_keypair(work, pk, s_store.hyb.sntrup_sk);
+        Sntrup761.keypair_args.pk = pk;
+        Sntrup761.keypair_args.sk = s_store.hyb.sntrup_sk;
+        Sntrup761.keypair(work);
         protocore_plaintext_release(mark); // pk persists inside sntrup_sk at PROTOCORE_SNTRUP761_SK_PK_OFFSET
-        protocore_rand_fill(s_store.kex_priv, 32);
-        protocore_x25519_base(s_store.qc, s_store.kex_priv);
+        Rng.fill_args.out = s_store.kex_priv;
+        Rng.fill_args.len = 32;
+        Rng.fill(protocore_rng_span());
+        Curve25519.x25519_base_args.scalar = s_store.kex_priv;
+        Curve25519.x25519_base_args.out = s_store.qc;
+        Curve25519.x25519_base(work);
         s_store.qc_len = 32;
         return PROTO_TRUE;
     }
@@ -441,7 +481,7 @@ static proto_bool handle_server_kexinit(const uint8_t *p, size_t len)
         bytes.put_be(&w, (uint32_t)clen, 4);
         bytes.raw(&w, hs->cpub, clen);
         proto_bool ok =
-            span.ok(w) && (SshClient.payload = out, SshClient.len = w.pos, cli_send(\& s_cli), SshClient.ok);
+            span.ok(w) && (SshClient.payload = out, SshClient.len = w.pos, cli_send(&s_cli), SshClient.ok);
         protocore_plaintext_release(mark);
         return ok;
     }
@@ -470,7 +510,7 @@ static proto_bool handle_server_kexinit(const uint8_t *p, size_t len)
         bytes.put_be(&w, (uint32_t)clen, 4);
         bytes.raw(&w, hs->cpub, clen);
         proto_bool ok =
-            span.ok(w) && (SshClient.payload = out, SshClient.len = w.pos, cli_send(\& s_cli), SshClient.ok);
+            span.ok(w) && (SshClient.payload = out, SshClient.len = w.pos, cli_send(&s_cli), SshClient.ok);
         protocore_plaintext_release(mark);
         return ok;
     }
@@ -506,7 +546,7 @@ static proto_bool handle_server_kexinit(const uint8_t *p, size_t len)
     {
         protocore_ssh_wr_str(&w, s_store.qc, s_store.qc_len);
     }
-    return span.ok(w) && (SshClient.payload = out, SshClient.len = w.pos, cli_send(\& s_cli), SshClient.ok);
+    return span.ok(w) && (SshClient.payload = out, SshClient.len = w.pos, cli_send(&s_cli), SshClient.ok);
 }
 
 // ---------------------------------------------------------------------------
@@ -588,7 +628,7 @@ static proto_bool send_tcpip_forward(void)
     bytes.put(&w, 1); // want reply
     protocore_ssh_wr_cstr(&w, s_store.cfg.bind_addr ? s_store.cfg.bind_addr : "");
     bytes.put_be(&w, s_store.cfg.bind_port, 4);
-    return span.ok(w) && (SshClient.payload = out, SshClient.len = w.pos, cli_send(\& s_cli), SshClient.ok);
+    return span.ok(w) && (SshClient.payload = out, SshClient.len = w.pos, cli_send(&s_cli), SshClient.ok);
 }
 // ---------------------------------------------------------------------------
 // RFC 4252 sec 7 - the outbound role's publickey request
@@ -603,7 +643,9 @@ static proto_bool send_userauth_publickey(void)
         return PROTO_FALSE;
     }
     uint8_t pub[32];
-    protocore_ed25519_pubkey(work, pub, s_store.cfg.auth_seed);
+    Ed25519.pubkey_args.seed = s_store.cfg.auth_seed;
+    Ed25519.pubkey_args.pub = pub;
+    Ed25519.pubkey(work);
 
     // The device's public-key blob: string("ssh-ed25519") || string(pub32).
     uint8_t pkblob[4 + 11 + 4 + 32];
@@ -641,7 +683,11 @@ static proto_bool send_userauth_publickey(void)
     }
 
     uint8_t sig[64];
-    protocore_ed25519_sign(work, sig, signed_data, sd.pos, s_store.cfg.auth_seed);
+    Ed25519.sign_args.seed = s_store.cfg.auth_seed;
+    Ed25519.sign_args.msg = signed_data;
+    Ed25519.sign_args.msg_len = sd.pos;
+    Ed25519.sign_args.sig = sig;
+    Ed25519.sign(work);
 
     // Signature blob: string("ssh-ed25519") || string(sig64).
     uint8_t sigblob[4 + 11 + 4 + 64];
@@ -846,7 +892,7 @@ static void cli_msg_handler(uint8_t slot, uint8_t type, const uint8_t *payload, 
         size_t n = 0;
         if (ssh_pkt_unimplemented(SSH_CLI_SLOT, out, &n, sizeof(out)) == 0)
         {
-            (void)(SshClient.payload = out, SshClient.len = n, cli_send(\& s_cli), SshClient.ok);
+            (void)(SshClient.payload = out, SshClient.len = n, cli_send(&s_cli), SshClient.ok);
         }
     }
 }

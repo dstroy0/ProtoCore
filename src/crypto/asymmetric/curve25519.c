@@ -14,15 +14,22 @@
  * On the ESP32-S3 (Arduino) X25519 has a second, byte-identical implementation that runs the
  * ladder in canonical uint32[8] and does each field multiply as one 256-bit modular multiply on
  * the RSA/MPI accelerator (~4.3x the software/PIE ladder); the field layer is in protocore_fe25519.h (shared with
- * Ed25519, active as PROTOCORE_FE25519_MPI_HW). It shares the accelerator lock with mbedtls, so a scalar-mult is
- * bracketed by protocore_fe_hw_enable()/protocore_fe_hw_disable() (esp_mpi_{enable,disable}_hardware_hw_op()).
+ * Ed25519, active as PROTOCORE_FE25519_MPI_HW). A scalar-mult takes the accelerator lock for its whole
+ * run, bracketed by protocore_fe_hw_enable()/protocore_fe_hw_disable().
+ *
+ * The context is this file's. The module's own borrow holds one scalar multiplication's whole working
+ * set: the clamped scalar, the base point a base multiplication runs against, and the ladder's field
+ * elements, which are the radix-2^16 seven on the software arm and the canonical sixteen on the
+ * accelerated one. The field ops carry nothing across a call and run on the caller's stack; Ed25519
+ * links against them directly.
  */
+
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_CURVE25519
 
 #if PROTOCORE_HAS_HW_ECC
-#include "sdkconfig.h"      // CONFIG_IDF_TARGET_ESP32S3 - selects the vector (PIE) field multiply
-#include <mbedtls/bignum.h> // ESP32: field inversion on the MPI/RSA hardware accelerator
+#include "sdkconfig.h" // CONFIG_IDF_TARGET_ESP32S3 - selects the vector (PIE) field multiply
 #endif
 #include "crypto/asymmetric/curve25519.h"
 // On the S3, X25519 runs its whole Montgomery ladder in canonical uint32[8] and does each field multiply as
@@ -30,9 +37,68 @@
 // shared with Ed25519 (protocore_ed25519.cpp) and defines PROTOCORE_FE25519_MPI_HW when active (Arduino + S3).
 #include "crypto/asymmetric/fe25519.h"
 #include "crypto/crypto_opt.h"
+#include "mmgr/protomem.h"
 
 PROTOCORE_CRYPTO_HOT
 PROTOCORE_BEGIN_DECLS
+
+// The one definition, both arms, private to this TU. It sits at CURVE25519_OFF_CTX in the caller's
+// borrow, so its size never leaves this file and no consumer can name it.
+//
+// Only what is not derivable: the region lives at a fixed offset in the borrow, so a macro computes it
+// from the pointer rather than anything storing it.
+#if PROTOCORE_FE25519_MPI_HW
+typedef struct
+{
+    uint8_t e[32];    ///< the clamped scalar
+    uint8_t base[32]; ///< the standard base point u = 9
+    fe x1;            ///< the input u coordinate
+    fe x2;            ///< ladder: (x2:z2) and (x3:z3), the two running points
+    fe z2;
+    fe x3;
+    fe z3;
+    fe A; ///< ladder: the RFC 7748 §5 per-bit intermediates
+    fe AA;
+    fe B;
+    fe BB;
+    fe E;
+    fe C;
+    fe D;
+    fe DA;
+    fe CB;
+    fe t0;
+    fe t1;
+} Curve25519Ctx;
+#endif
+#if !PROTOCORE_FE25519_MPI_HW
+typedef struct
+{
+    uint8_t z[32];    ///< the clamped scalar
+    uint8_t base[32]; ///< the standard base point u = 9
+    protocore_gf x;   ///< the input u coordinate
+    protocore_gf a;   ///< ladder: the two running points and the per-bit intermediates
+    protocore_gf b;
+    protocore_gf c;
+    protocore_gf d;
+    protocore_gf e;
+    protocore_gf f;
+} Curve25519Ctx;
+#endif
+
+// The caller's borrow, split: one scalar multiplication's working set at the base. Nothing else is
+// carried, and nothing is carried across a call.
+#define CURVE25519_OFF_CTX 0u
+#define CURVE25519_OFF_END (CURVE25519_OFF_CTX + sizeof(Curve25519Ctx))
+static_assert(CURVE25519_OFF_END <= PROTOCORE_CURVE25519_BORROW,
+              "PROTOCORE_CURVE25519_BORROW is short of the ladder's working set - raise it in "
+              "protocore_config.h, which derives PROTOCORE_SECURE_ARENA_SIZE from it");
+
+// The region, at its offset in the caller's borrow.
+#define CURVE25519_CTX(w) ((Curve25519Ctx *)(void *)((w) + CURVE25519_OFF_CTX))
+
+// ---------------------------------------------------------------------------
+// Field arithmetic (GF(2^255-19), radix-2^16). Shared with Ed25519.
+// ---------------------------------------------------------------------------
 
 // Small field constant (radix-2^16). Used only by the software X25519 ladder (the S3 MODMULT path carries its
 // own canonical a24), so it would be unused there.
@@ -188,7 +254,9 @@ void protocore_gf_sq(protocore_gf out, const protocore_gf a)
     gf_balance_s16(as, a);
     gf_conv_finish(out, as, as);
 }
-#else
+#endif // CONFIG_IDF_TARGET_ESP32S3 (vector field multiply)
+
+#if !(defined(CONFIG_IDF_TARGET_ESP32S3) && CONFIG_IDF_TARGET_ESP32S3)
 void protocore_gf_mul(protocore_gf out, const protocore_gf a, const protocore_gf b)
 {
     int64_t t[31];
@@ -246,61 +314,34 @@ static void gf_inv_sw(protocore_gf out, const protocore_gf a)
     protocore_gf_copy(out, c);
 }
 
-#if PROTOCORE_HAS_HW_ECC
-// p = 2^255 - 19 and the inversion exponent p-2 = 2^255 - 21, big-endian for mbedtls.
-static const uint8_t P25519_BE[32] = {0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-                                      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-                                      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xed};
-static const uint8_t P25519_MINUS2_BE[32] = {0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-                                             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-                                             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xeb};
-
-// out = a^(p-2) mod p on the ESP32 MPI/RSA hardware accelerator - the same modexp engine
-// that runs RSA sign and DH-group14. mbedtls_mpi_exp_mod takes an arbitrary modulus, so
-// 2^255-19 runs on the accelerator. Only the inversion is offloaded (one big modexp);
-// the 255-round Montgomery ladder multiply stays in the software radix-2^16 core, where
-// per-multiply marshalling to the peripheral would cost more than it saves. The exponent
-// is a public constant; the base is packed to its canonical residue first.
+#if PROTOCORE_FE25519_MPI_HW
+// out = a^-1 mod p through the canonical field layer, whose multiply is one 256-bit MODMULT on the
+// RSA/MPI accelerator. Only the inversion is offloaded; the 255-round Montgomery ladder multiply stays
+// in the software radix-2^16 core, where per-multiply marshalling to the peripheral would cost more
+// than it saves. The base is packed to its canonical residue first.
 void protocore_gf_inv(protocore_gf out, const protocore_gf a)
 {
     uint8_t le[32];
-    uint8_t be[32];
+    fe x;
+    fe r;
+    fe zero;
     protocore_gf_pack(le, a); // canonical little-endian residue in [0, p)
-    for (int i = 0; i < 32; i++)
+    fe_frombytes(x, le);
+    protocore_fe_hw_enable();
+    fe_invert(r, x);
+    protocore_fe_hw_disable();
+    fe_0(zero);
+    if (fe_neq(r, zero) == 0)
     {
-        be[i] = le[31 - i]; // to big-endian for mbedtls
-    }
-
-    mbedtls_mpi A;
-    mbedtls_mpi E;
-    mbedtls_mpi N;
-    mbedtls_mpi X;
-    mbedtls_mpi_init(&A);
-    mbedtls_mpi_init(&E);
-    mbedtls_mpi_init(&N);
-    mbedtls_mpi_init(&X);
-    proto_bool ok = mbedtls_mpi_read_binary(&A, be, 32) == 0 &&
-                    mbedtls_mpi_read_binary(&E, P25519_MINUS2_BE, 32) == 0 &&
-                    mbedtls_mpi_read_binary(&N, P25519_BE, 32) == 0 && mbedtls_mpi_exp_mod(&X, &A, &E, &N, NULL) == 0 &&
-                    mbedtls_mpi_write_binary(&X, be, 32) == 0;
-    mbedtls_mpi_free(&A);
-    mbedtls_mpi_free(&E);
-    mbedtls_mpi_free(&N);
-    mbedtls_mpi_free(&X);
-    if (!ok)
-    {
-        gf_inv_sw(out, a); // never expected; keep correctness if the peripheral path fails
+        gf_inv_sw(out, a); // the modmul zeroes its result on a peripheral timeout; keep correctness
         return;
     }
-    for (int i = 0; i < 32; i++)
-    {
-        le[i] = be[31 - i];
-    }
+    fe_tobytes(le, r);
     protocore_gf_unpack(out, le);
 }
 #endif
 
-#if !PROTOCORE_HAS_HW_ECC
+#if !PROTOCORE_FE25519_MPI_HW
 void protocore_gf_inv(protocore_gf out, const protocore_gf a)
 {
     gf_inv_sw(out, a);
@@ -359,15 +400,22 @@ void protocore_gf_unpack(protocore_gf out, const uint8_t in[32])
     out[15] &= 0x7fff;
 }
 
+// ---------------------------------------------------------------------------
+// X25519 (RFC 7748 §5). The ladder runs entirely in the caller's borrow.
+// ---------------------------------------------------------------------------
+
 #if PROTOCORE_FE25519_MPI_HW
 // ============================= ESP32-S3 X25519 on the RSA/MPI accelerator =================================
 // The canonical uint32[8] field layer (fe, fe_add/sub/mul/sq/..., the MODMULT, and the lock+power bring-up)
 // lives in protocore_fe25519.h - shared with Ed25519. Here is only the X25519-specific a24 and the RFC 7748 ladder.
 static const uint32_t FE_A24[8] = {121665u, 0, 0, 0, 0, 0, 0, 0}; // X25519 a24 = (486662-2)/4 (RFC 7748 §5)
 
-void protocore_x25519(uint8_t out[32], const uint8_t scalar[32], const uint8_t point[32])
+// out = scalar * point. Every field element is a named member of the borrow's context, bound here so the
+// ladder below reads as the RFC does.
+static void x25519_mult(uint8_t *restrict work, uint8_t out[32], const uint8_t scalar[32], const uint8_t point[32])
 {
-    uint8_t e[32];
+    Curve25519Ctx *ctx = CURVE25519_CTX(work);
+    uint8_t *e = ctx->e;
     for (int i = 0; i < 32; i++)
     {
         e[i] = scalar[i];
@@ -378,22 +426,22 @@ void protocore_x25519(uint8_t out[32], const uint8_t scalar[32], const uint8_t p
 
     protocore_fe_hw_enable(); // lock + power the accelerator for the whole ladder
 
-    fe x1;
-    fe x2;
-    fe z2;
-    fe x3;
-    fe z3;
-    fe A;
-    fe AA;
-    fe B;
-    fe BB;
-    fe E;
-    fe C;
-    fe D;
-    fe DA;
-    fe CB;
-    fe t0;
-    fe t1;
+    uint32_t *x1 = ctx->x1;
+    uint32_t *x2 = ctx->x2;
+    uint32_t *z2 = ctx->z2;
+    uint32_t *x3 = ctx->x3;
+    uint32_t *z3 = ctx->z3;
+    uint32_t *A = ctx->A;
+    uint32_t *AA = ctx->AA;
+    uint32_t *B = ctx->B;
+    uint32_t *BB = ctx->BB;
+    uint32_t *E = ctx->E;
+    uint32_t *C = ctx->C;
+    uint32_t *D = ctx->D;
+    uint32_t *DA = ctx->DA;
+    uint32_t *CB = ctx->CB;
+    uint32_t *t0 = ctx->t0;
+    uint32_t *t1 = ctx->t1;
     fe_frombytes(x1, point);
     fe_1(x2);
     fe_0(z2);
@@ -440,9 +488,12 @@ void protocore_x25519(uint8_t out[32], const uint8_t scalar[32], const uint8_t p
 #endif
 
 #if !PROTOCORE_FE25519_MPI_HW
-void protocore_x25519(uint8_t out[32], const uint8_t scalar[32], const uint8_t point[32])
+// out = scalar * point. Every field element is a named member of the borrow's context, bound here so the
+// ladder below reads as the RFC does.
+static void x25519_mult(uint8_t *restrict work, uint8_t out[32], const uint8_t scalar[32], const uint8_t point[32])
 {
-    uint8_t z[32];
+    Curve25519Ctx *ctx = CURVE25519_CTX(work);
+    uint8_t *z = ctx->z;
     for (int i = 0; i < 31; i++)
     {
         z[i] = scalar[i];
@@ -450,13 +501,13 @@ void protocore_x25519(uint8_t out[32], const uint8_t scalar[32], const uint8_t p
     z[31] = (uint8_t)((scalar[31] & 127) | 64); // clamp the scalar (RFC 7748 §5)
     z[0] &= 248;
 
-    protocore_gf x;
-    protocore_gf a;
-    protocore_gf b;
-    protocore_gf c;
-    protocore_gf d;
-    protocore_gf e;
-    protocore_gf f;
+    int64_t *x = ctx->x;
+    int64_t *a = ctx->a;
+    int64_t *b = ctx->b;
+    int64_t *c = ctx->c;
+    int64_t *d = ctx->d;
+    int64_t *e = ctx->e;
+    int64_t *f = ctx->f;
     protocore_gf_unpack(x, point);
     for (int i = 0; i < 16; i++)
     {
@@ -500,11 +551,36 @@ void protocore_x25519(uint8_t out[32], const uint8_t scalar[32], const uint8_t p
 }
 #endif // !PROTOCORE_FE25519_MPI_HW (SW path)
 
-void protocore_x25519_base(uint8_t out[32], const uint8_t scalar[32])
+// --- the entries -----------------------------------------------------------
+
+static void curve25519_x25519(uint8_t *restrict work)
 {
-    uint8_t base[32] = {9};
-    protocore_x25519(out, scalar, base);
+    Curve25519.ok = PROTO_FALSE;
+    if (!work || !Curve25519.x25519_args.out || !Curve25519.x25519_args.scalar || !Curve25519.x25519_args.point)
+    {
+        return;
+    }
+    x25519_mult(work, Curve25519.x25519_args.out, Curve25519.x25519_args.scalar, Curve25519.x25519_args.point);
+    Curve25519.ok = PROTO_TRUE;
 }
+
+// The standard base point is written into the borrow and multiplied by the same body: u = 9, the rest
+// zero (RFC 7748 §5).
+static void curve25519_x25519_base(uint8_t *restrict work)
+{
+    Curve25519.ok = PROTO_FALSE;
+    if (!work || !Curve25519.x25519_base_args.out || !Curve25519.x25519_base_args.scalar)
+    {
+        return;
+    }
+    Curve25519Ctx *ctx = CURVE25519_CTX(work);
+    mem.zero(ctx->base, 32);
+    ctx->base[0] = 9;
+    x25519_mult(work, Curve25519.x25519_base_args.out, Curve25519.x25519_base_args.scalar, ctx->base);
+    Curve25519.ok = PROTO_TRUE;
+}
+
+Curve25519Ns Curve25519 = {.x25519 = curve25519_x25519, .x25519_base = curve25519_x25519_base};
 
 PROTOCORE_END_DECLS
 

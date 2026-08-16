@@ -15,8 +15,8 @@
  * ═══════════════════════════════════════════════════════════════════════════
  * The objective is a platform-agnostic library that reaches the silicon by DIRECT register access. So this HAL
  * reproduces the accelerator's register map ITSELF (bases, offsets, clock/reset/power bits - values below,
- * cross-checked against each die's TRM) and pokes it with @ref PROTOCORE_HW_REG. It includes NO `soc/` header and
- * references NO vendor symbol (no `esp_mpi_*` / `mpi_hal_*` / `mpi_ll_*`, no `RSA_*_REG`, no `SYSTEM`/
+ * cross-checked against each die's TRM) and pokes it with PROTOCORE_HW_RD / PROTOCORE_HW_WR. It includes NO `soc/`
+ * header and references NO vendor symbol (no `esp_mpi_*` / `mpi_hal_*` / `mpi_ll_*`, no `RSA_*_REG`, no `SYSTEM`/
  * `HP_SYS_CLKRST` struct). An upstream rename or header reshuffle therefore cannot touch our crypto; only a
  * genuine silicon change would, caught by the per-die `#error`. The one build dependency is `sdkconfig.h`,
  * solely to learn which die we are compiling for (`CONFIG_IDF_TARGET_*`) - that is the build target, not a
@@ -60,8 +60,16 @@
 
 #ifdef PROTOCORE_RSA_MODMUL_HW
 
-// Raw 32-bit memory-mapped register access - the only primitive; no vendor REG_* macro.
-#define PROTOCORE_HW_REG(a) (*(volatile uint32_t *)(uintptr_t)(a))
+// Raw memory-mapped register access - the only primitive; no vendor REG_* macro. A read and a write
+// rather than one lvalue, because a host build models the bus that carries them and a narrow or
+// byte-swapped access cannot be a dereference. Guarded so a host build, which has no peripheral
+// window, keeps the modelled accessors from the host arm.
+#ifndef PROTOCORE_HW_RD
+#define PROTOCORE_HW_RD(a) (*(volatile const uint32_t *)(uintptr_t)(a))
+#endif
+#ifndef PROTOCORE_HW_WR
+#define PROTOCORE_HW_WR(a, v) ((*(volatile uint32_t *)(uintptr_t)(a)) = (uint32_t)(v))
+#endif
 
 // ── Per-die peripheral base + clock/reset/power control (reproduced from each die's TRM) ──────────────────
 // Model (fits every die's quirks): a clock-enable reg+bit, an RSA-reset reg+bit, a "hold-clear" reg+mask (the
@@ -200,23 +208,20 @@ PROTOCORE_END_DECLS
 static inline void protocore_rsa_modmul(uint32_t *z, const uint32_t *x, const uint32_t *y, const uint32_t *m,
                                         uint32_t mprime, const uint32_t *rinv, unsigned words)
 {
-    volatile uint32_t *M = (volatile uint32_t *)(uintptr_t)PROTOCORE_RSA_MEM_M;
-    volatile uint32_t *X = (volatile uint32_t *)(uintptr_t)PROTOCORE_RSA_MEM_X;
-    volatile uint32_t *Y = (volatile uint32_t *)(uintptr_t)PROTOCORE_RSA_MEM_Y;
-    volatile uint32_t *Z = (volatile uint32_t *)(uintptr_t)PROTOCORE_RSA_MEM_Z;
-    PROTOCORE_HW_REG(PROTOCORE_RSA_MODE) = words - 1u; // mode = words - 1
-    PROTOCORE_HW_REG(PROTOCORE_RSA_MPRIME) = mprime;
+    PROTOCORE_HW_WR(PROTOCORE_RSA_MODE, words - 1u); // mode = words - 1
+    PROTOCORE_HW_WR(PROTOCORE_RSA_MPRIME, mprime);
     for (unsigned i = 0; i < words; i++)
     {
-        M[i] = m[i];
-        X[i] = x[i];
-        Y[i] = y[i];
-        Z[i] = rinv[i]; // R^2 mod m in the result block -> plain (non-Montgomery) output
+        PROTOCORE_HW_WR(PROTOCORE_RSA_MEM_M + 4u * i, m[i]);
+        PROTOCORE_HW_WR(PROTOCORE_RSA_MEM_X + 4u * i, x[i]);
+        PROTOCORE_HW_WR(PROTOCORE_RSA_MEM_Y + 4u * i, y[i]);
+        // R^2 mod m in the result block -> plain (non-Montgomery) output
+        PROTOCORE_HW_WR(PROTOCORE_RSA_MEM_Z + 4u * i, rinv[i]);
     }
-    PROTOCORE_HW_REG(PROTOCORE_RSA_INTCLR) = 1u; // clear any stale done flag before starting
-    PROTOCORE_HW_REG(PROTOCORE_RSA_START) = 1u;
+    PROTOCORE_HW_WR(PROTOCORE_RSA_INTCLR, 1u); // clear any stale done flag before starting
+    PROTOCORE_HW_WR(PROTOCORE_RSA_START, 1u);
     uint32_t spins = 0u;
-    while (PROTOCORE_HW_REG(PROTOCORE_RSA_DONE) == 0u) // wait until the done bit reads 1, bounded
+    while (PROTOCORE_HW_RD(PROTOCORE_RSA_DONE) == 0u) // wait until the done bit reads 1, bounded
     {
         spins++;
         if (spins >= PROTOCORE_RSA_SPIN_MAX)
@@ -228,10 +233,10 @@ static inline void protocore_rsa_modmul(uint32_t *z, const uint32_t *x, const ui
             return;
         }
     }
-    PROTOCORE_HW_REG(PROTOCORE_RSA_INTCLR) = 1u;
+    PROTOCORE_HW_WR(PROTOCORE_RSA_INTCLR, 1u);
     for (unsigned i = 0; i < words; i++)
     {
-        z[i] = Z[i];
+        z[i] = PROTOCORE_HW_RD(PROTOCORE_RSA_MEM_Z + 4u * i);
     }
 }
 

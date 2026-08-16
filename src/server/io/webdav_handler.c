@@ -12,7 +12,7 @@
  */
 
 #include "server/io/webdav_handler.h"
-#include "crypto/rng/rng.h" // protocore_rand_fill(): the lock token's unpredictable half
+#include "crypto/rng/rng.h" // Rng: the lock token's unpredictable half
 #include "mmgr/membuild.h"
 #include "mmgr/protomem.h"
 #include "mmgr/protostr.h" // str.has: the traversal marker in a resolved subpath, tokens in a body
@@ -758,7 +758,9 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
             depth_inf = protocore_webdav_depth(http_get_header(req, "Depth"), PROTOCORE_DAV_DEPTH_INFINITY) != 0;
             unsigned long tok = (unsigned long)Clock.ms;
             uint32_t tok_rand = 0;
-            protocore_rand_fill((uint8_t *)&tok_rand, sizeof(tok_rand)); // boundary: bytes into the scalar
+            Rng.fill_args.out = (uint8_t *)&tok_rand;
+            Rng.fill_args.len = sizeof(tok_rand);
+            Rng.fill(protocore_rng_span()); // boundary: bytes into the scalar
             tok ^= (unsigned long)tok_rand;
             protocore_sb sb_token2 = {token, sizeof(token), 0, PROTO_TRUE};
             Sb.put(&sb_token2, "opaquelocktoken:");

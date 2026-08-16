@@ -6,8 +6,14 @@
  * @brief SP800-108 counter-mode KDF with HMAC-SHA256 PRF (see kdf.h).
  *
  * K(i) = HMAC-SHA256(Ki, [i]_32be || fixed) for i = 1, 2, ..., concatenated and truncated to the
- * requested length. The PRF is protocore_hmac_sha256, which carries the hardware acceleration underneath it.
+ * requested length. The PRF is the @ref HmacSha256Ns entries, which carry the hardware acceleration
+ * underneath them, so this file is the same on every target.
+ *
+ * Nothing here owns storage or touches the pool. The caller hands over PROTOCORE_KDF_BORROW bytes and
+ * this file splits them by offset: the PRF's own bytes, then the counter and the block it writes.
  */
+
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_KDF
 
@@ -16,63 +22,75 @@
 #include "crypto/mac/hmac_sha256.h"
 #include "mmgr/endian.h"
 #include "mmgr/protomem.h"
-#include "mmgr/secure.h" // the secure pool: the PRF's working set, wiped on release
 
 PROTOCORE_CRYPTO_HOT
 PROTOCORE_BEGIN_DECLS
 
-// Transient KDF working set, borrowed from the secure pool per call and wiped on release. K(i) is
-// derived from Ki, so it is key material and never lands on the stack.
+// The one definition, private to this TU. Only what is not derivable: the counter and the block K(i)
+// lands in. K(i) is derived from Ki, so it is key material and never lands on the stack.
 typedef struct
 {
     uint8_t block[PROTOCORE_HMAC_SHA256_LEN]; ///< K(i)
     uint8_t ctr[4];                           ///< the counter, big-endian
-    protocore_hmac_sha256_ctx h;              ///< the PRF
-} KdfWork;
+} KdfCtx;
 
-// The borrow is the struct then the PRF's own bytes, so the PRF takes its storage from this caller
-// the way every other caller hands it over.
-#define KDF_WORK_SPAN (sizeof(KdfWork) + PROTOCORE_HMAC_SHA256_BORROW)
-static_assert(KDF_WORK_SPAN <= PROTOCORE_WORK_KDF,
-              "KdfWork outgrew PROTOCORE_WORK_KDF - raise it in protocore_config.h, which derives "
-              "PROTOCORE_SECURE_ARENA_SIZE from it");
+// The caller's borrow, split: the PRF's own bytes first so they land at the alignment its context
+// wants, then the counter and the block.
+#define KDF_OFF_MAC 0u
+#define KDF_OFF_CTX (KDF_OFF_MAC + PROTOCORE_HMAC_SHA256_BORROW)
+static_assert(KDF_OFF_CTX + sizeof(KdfCtx) <= PROTOCORE_KDF_BORROW,
+              "PROTOCORE_KDF_BORROW is short of the PRF's bytes, the counter and the block - raise it in "
+              "protocore_config.h, which derives PROTOCORE_SECURE_ARENA_SIZE from it");
 
-proto_bool protocore_kdf_ctr_hmac_sha256(const uint8_t *ki, size_t ki_len, const uint8_t *fixed, size_t fixed_len,
-                                         uint8_t *out, size_t out_len)
+// The regions, at their offsets in the caller's borrow.
+#define KDF_MAC(w) ((w) + KDF_OFF_MAC)
+#define KDF_CTX(w) ((KdfCtx *)(void *)((w) + KDF_OFF_CTX))
+
+// --- the entries -----------------------------------------------------------
+
+static void kdf_ctr_hmac_sha256(uint8_t *restrict work)
 {
-    if (!ki || !fixed || !out || out_len == 0)
+    Kdf.ok = PROTO_FALSE;
+    if (!work || !Kdf.ctr_args.ki || !Kdf.ctr_args.fixed || !Kdf.ctr_args.out || Kdf.ctr_args.out_len == 0)
     {
-        return PROTO_FALSE;
+        return;
     }
-    size_t mark = protocore_secure_mark();
-    protocore_span ws = protocore_secure_span(KDF_WORK_SPAN, _Alignof(KdfWork));
-    if (!protocore_span_ok(ws))
-    {
-        protocore_secure_release(mark);
-        return PROTO_FALSE; // pool exhausted: the empty borrow is the supported failure signal
-    }
-    KdfWork *w = (KdfWork *)ws.buf;
-    uint8_t *hw = ws.buf + sizeof(KdfWork);
+    const uint8_t *ki = Kdf.ctr_args.ki;
+    const size_t ki_len = Kdf.ctr_args.ki_len;
+    const uint8_t *fixed = Kdf.ctr_args.fixed;
+    const size_t fixed_len = Kdf.ctr_args.fixed_len;
+    uint8_t *out = Kdf.ctr_args.out;
+    const size_t out_len = Kdf.ctr_args.out_len;
+    KdfCtx *c = KDF_CTX(work);
+    uint8_t *hw = KDF_MAC(work);
 
     size_t done = 0;
     for (uint32_t counter = 1; done < out_len; counter++)
     {
-        protocore_wr32be(w->ctr, counter);
-        protocore_hmac_sha256_init(&w->h, hw, ki, ki_len);
-        protocore_hmac_sha256_update(&w->h, w->ctr, sizeof(w->ctr));
-        protocore_hmac_sha256_update(&w->h, fixed, fixed_len);
-        protocore_hmac_sha256_final(&w->h, w->block);
+        protocore_wr32be(c->ctr, counter);
+        HmacSha256.key_args.key = ki;
+        HmacSha256.key_args.key_len = ki_len;
+        HmacSha256.init(hw);
+        HmacSha256.update_args.data = c->ctr;
+        HmacSha256.update_args.len = sizeof(c->ctr);
+        HmacSha256.update(hw);
+        HmacSha256.update_args.data = fixed;
+        HmacSha256.update_args.len = fixed_len;
+        HmacSha256.update(hw);
+        HmacSha256.final_args.out = c->block;
+        HmacSha256.final(hw);
         size_t take = PROTOCORE_HMAC_SHA256_LEN;
         if (out_len - done < PROTOCORE_HMAC_SHA256_LEN)
         {
             take = out_len - done;
         }
-        mem.cpy(out + done, w->block, take);
+        mem.cpy(out + done, c->block, take);
         done += take;
     }
-    protocore_secure_release(mark);
-    return PROTO_TRUE;
+    Kdf.ok = PROTO_TRUE;
 }
+
+KdfNs Kdf = {.ctr_hmac_sha256 = kdf_ctr_hmac_sha256};
 
 PROTOCORE_END_DECLS
 

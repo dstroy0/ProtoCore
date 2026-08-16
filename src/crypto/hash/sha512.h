@@ -3,12 +3,12 @@
 
 /**
  * @file sha512.h
- * @brief SHA-512 (FIPS 180-4) - streaming context and one-shot API.
+ * @brief SHA-512 (FIPS 180-4) - streaming and one-shot digest.
  *
  * The shared SHA-512 primitive for the whole library (SSH Ed25519 / kex hashing, PQC, SMB 3.1.1
- * preauth integrity). On Arduino (ESP32) the streaming context and one-shot delegate to mbedtls
- * (hardware-accelerated where available); on native builds the software FIPS-180-4 implementation is
- * used. Mirrors the sha256 dual-path structure.
+ * preauth integrity). The entries below are one surface over both arms: a part with a hashing
+ * peripheral compresses on it, a part without runs the FIPS 180-4 rounds. Mirrors the sha256
+ * structure.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -17,7 +17,7 @@
 #ifndef PROTOCORE_SHA512_H
 #define PROTOCORE_SHA512_H
 
-#include "protocore_config.h" // the entry point: protocore_types.h for the widths, PROTOCORE_HAS_HW_SHA for the context below
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_SHA512
 
@@ -29,47 +29,81 @@ PROTOCORE_BEGIN_DECLS
 /** @brief SHA-512 block size in bytes. */
 #define PROTOCORE_SHA512_BLOCK_LEN 128
 
-/**
- * @brief Streaming SHA-512 context.
- *
- * The context owns nothing. The caller hands it ::PROTOCORE_SHA512_BORROW working bytes, aligned for
- * @c uint64_t and alive until the digest comes back, and the context splits them into the regions
- * below at fixed offsets.
- */
+// PROTOCORE_SHA512_BORROW - the bytes a digest runs out of - is stated in protocore_config.h, which
+// sums it into the secure arena. A caller takes them once and passes the pointer to every call.
 
+/** @brief One chunk fed to a running digest. */
 typedef struct
 {
-    uint64_t s[8];  ///< Running hash words (H0..H7).
-    uint64_t n;     ///< Total bytes processed so far.
-    uint8_t *rx;    ///< Caller storage: bytes as they arrive, compressed when a block fills.
-    uint8_t *tx;    ///< Caller storage: the padded last block, composed whole so no rx byte carries in.
-    uint64_t *fs;   ///< Caller storage: the state copy the padded blocks compress into.
-    uint32_t rxlen; ///< Bytes valid in rx.
-} protocore_sha512_ctx;
-// The three pointers above are the caller's, so a struct copy aliases the original's storage and
-// finalizing the copy writes through it. final() leaves the context running, so read it in place.
+    const uint8_t *data; ///< the bytes
+    size_t len;          ///< how many
+} Sha512UpdateArgs;
+
+/** @brief Where a finished digest lands. */
+typedef struct
+{
+    uint8_t *out; ///< PROTOCORE_SHA512_DIGEST_LEN bytes
+} Sha512FinalArgs;
+
+/** @brief The message a one-shot digest is taken over. */
+typedef struct
+{
+    const uint8_t *data; ///< the message
+    size_t len;          ///< its length
+    uint8_t *out;        ///< PROTOCORE_SHA512_DIGEST_LEN bytes
+} Sha512HashArgs;
 
 /**
- * @brief Start a digest in @p ctx, working out of the caller's @p work.
- * @param work  PROTOCORE_SHA512_BORROW bytes, aligned for uint64_t, alive until final() returns.
- */
-void protocore_sha512_init(protocore_sha512_ctx *ctx, uint8_t *work);
-
-/** @brief Feed @p len bytes of @p data into the running hash. */
-void protocore_sha512_update(protocore_sha512_ctx *ctx, const uint8_t *data, size_t len);
-
-/**
- * @brief Pad, compress the last block, and write the 64-byte digest.
+ * @brief SHA-512 (FIPS 180-4).
  *
- * The context survives: the padded blocks compress into a copy of the state, so the running hash is
- * exactly where it was and can keep taking data.
+ * A caller sets the members a call takes, invokes it through ::Sha512 with the bytes it runs out of,
+ * and reads the outcome off the same handle. How those bytes are carved is this module's and is never
+ * named here.
  *
- * @param digest  Output buffer, PROTOCORE_SHA512_DIGEST_LEN bytes.
+ *   Sha512.init(work);
+ *   Sha512.update_args.data = msg;
+ *   Sha512.update_args.len = msg_len;
+ *   Sha512.update(work);
+ *   Sha512.final_args.out = digest;
+ *   Sha512.final(work);
+ *
+ * @var Sha512Ns::update_args  one chunk fed to a running digest
+ * @var Sha512Ns::final_args   where a finished digest lands
+ * @var Sha512Ns::hash_args    the message a one-shot digest is taken over
+ * @var Sha512Ns::ok           a call's true/false outcome
+ * @var Sha512Ns::init         start a digest
+ * @var Sha512Ns::update       feed the running digest a chunk
+ * @var Sha512Ns::final        pad, compress the last block, write the 64 bytes out
+ * @var Sha512Ns::hash         init, update and final in one call, for a message already whole
+ *
+ * @ref Sha512Ns::final leaves the running digest where it was: the padded blocks compress into a copy
+ * of the state, so the hash keeps taking data afterwards. That is what lets SSH read the exchange
+ * hash at every stage the key exchange asks for without snapshotting anything.
+ *
+ * @c work is PROTOCORE_SHA512_BORROW secure bytes the CALLER took, at an address it knows. It arrives
+ * @c restrict and is not held past the call, so nothing here aliases it. The caller releases it, and
+ * the pool wipes on release; this module neither takes it, holds it, releases it, nor wipes it. The
+ * borrow IS the digest, so two running hashes are two borrows and never collide.
+ *
+ * No storage member and no context: a caller sets operands and reads @ref Sha512Ns::ok, and that is
+ * all the surface there is.
  */
-void protocore_sha512_final(protocore_sha512_ctx *ctx, uint8_t digest[PROTOCORE_SHA512_DIGEST_LEN]);
+typedef struct
+{
+    Sha512UpdateArgs update_args;
+    Sha512FinalArgs final_args;
+    Sha512HashArgs hash_args;
 
-/** @brief One call: hash @p len bytes of @p data out of @p work into @p digest (64 bytes). */
-void protocore_sha512(uint8_t *work, const uint8_t *data, size_t len, uint8_t digest[PROTOCORE_SHA512_DIGEST_LEN]);
+    proto_bool ok;
+
+    void (*const init)(uint8_t *restrict work);
+    void (*const update)(uint8_t *restrict work);
+    void (*const final)(uint8_t *restrict work);
+    void (*const hash)(uint8_t *restrict work);
+} Sha512Ns;
+
+/** @brief The one symbol this module exports. */
+extern Sha512Ns Sha512;
 
 PROTOCORE_END_DECLS
 

@@ -3,20 +3,24 @@
 
 /**
  * @file poly1305.c
- * @brief Poly1305 (RFC 8439) - implementation. See protocore_poly1305.h.
+ * @brief Poly1305 (RFC 8439) - implementation. See poly1305.h.
  *
  * poly1305-donna 32-bit: the accumulator h and key part r are held as five 26-bit limbs; each
  * 16-byte block adds the message limb (with the 2^128 high bit), multiplies by r, and reduces
  * modulo 2^130 - 5. The final value is fully reduced, conditionally has p subtracted in constant
  * time, and s is added modulo 2^128.
+ *
+ * The context is this file's. The module's own borrow is split by offset into the limbs and the
+ * buffer the padded final block is composed in.
  */
+
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_POLY1305
 
 #include "crypto/mac/poly1305.h"
 #include "crypto/crypto_opt.h"
 #include "mmgr/protomem.h"
-#include "mmgr/secure.h" // the secure pool: nested-MAC working state, wiped on release
 
 // Poly1305 is a hot, pure-integer MAC (the other half of chacha20-poly1305). Like ChaCha it has no vector
 // path on the S3 and runs materially faster than the framework -Os; it is constant-time by structure
@@ -24,6 +28,30 @@
 // See the caveats in crypto_opt.h and the ChaCha note in protocore_chacha20.cpp.
 PROTOCORE_CRYPTO_HOT
 PROTOCORE_BEGIN_DECLS
+
+// Only what is not derivable: the buffer the padded final block is composed in lives at a fixed offset
+// in the caller's borrow, so a helper computes it from the pointer rather than the context storing it.
+typedef struct
+{
+    uint32_t r[5];  ///< Clamped key part r, five 26-bit limbs.
+    uint32_t sr[5]; ///< r times 5, the reduction multipliers.
+    uint32_t h[5];  ///< Accumulator, five 26-bit limbs.
+} Poly1305Ctx;
+
+// The caller's borrow, split: the limbs, and the 16 bytes the padded final block is composed in.
+#define POLY1305_OFF_CTX 0u
+#define POLY1305_OFF_BUF (POLY1305_OFF_CTX + sizeof(Poly1305Ctx))
+static_assert(POLY1305_OFF_BUF + 16u <= PROTOCORE_POLY1305_BORROW,
+              "PROTOCORE_POLY1305_BORROW is short of the limbs and the padded final block - raise it in "
+              "protocore_config.h, which sums it into the secure arena");
+
+// The regions, at their offsets in the caller's borrow.
+#define POLY1305_CTX(w) ((Poly1305Ctx *)(void *)((w) + POLY1305_OFF_CTX))
+#define POLY1305_BUF(w) ((w) + POLY1305_OFF_BUF)
+
+// ---------------------------------------------------------------------------
+// Poly1305 (RFC 8439 Section 2.5).
+// ---------------------------------------------------------------------------
 
 static uint32_t rd_le32(const uint8_t *p)
 {
@@ -80,37 +108,15 @@ static void poly_block(uint32_t h[5], const uint32_t r[5], const uint32_t sr[5],
     h[1] += c;
 }
 
-// Poly1305 working limbs (key part r, its *5 form sr, accumulator h) + the partial-block buffer, in the
-// shared crypto scratch at the poly1305 region (it runs under chachapoly, so cannot share the base span).
-typedef struct
-{
-    uint32_t r[5];
-    uint32_t sr[5];
-    uint32_t h[5];
-    uint8_t buf[16];
-} Poly1305Work;
-static_assert(sizeof(Poly1305Work) <= PROTOCORE_WORK_POLY1305,
-              "Poly1305Work outgrew PROTOCORE_WORK_POLY1305 - raise it in protocore_config.h, which derives "
-              "PROTOCORE_SECURE_ARENA_SIZE from it");
+// --- framing ---------------------------------------------------------------
 
-void protocore_poly1305(uint8_t tag[PROTOCORE_POLY1305_TAG_LEN], const uint8_t *msg, size_t len,
-                        const uint8_t key[PROTOCORE_POLY1305_KEY_LEN])
+// Split the key into r and s: clamp r into its limbs, derive its *5 form, zero the accumulator.
+static void poly1305_state_init(uint8_t *restrict work, const uint8_t *key)
 {
-    // Working limbs + the partial-block buffer are borrowed from the secure pool, never the stack.
-    // No hand-assigned region: poly1305 runs nested under chachapoly, whose own borrow is still live,
-    // so the pool hands this one a different address by construction. SecureScope wipes it on every
-    // exit path, not just the one that falls off the end.
-    size_t mark = protocore_secure_mark();
-    protocore_span work = protocore_secure_span(sizeof(Poly1305Work), _Alignof(Poly1305Work));
-    if (!protocore_span_ok(work))
-    {
-        protocore_secure_release(mark);
-        return; // pool exhausted: fail closed rather than tag with a half-built state
-    }
-    Poly1305Work *w = (Poly1305Work *)work.buf;
-    uint32_t *r = w->r;
-    uint32_t *sr = w->sr;
-    uint32_t *h = w->h;
+    Poly1305Ctx *ctx = POLY1305_CTX(work);
+    uint32_t *r = ctx->r;
+    uint32_t *sr = ctx->sr;
+    uint32_t *h = ctx->h;
     uint32_t t0 = rd_le32(key + 0), t1 = rd_le32(key + 4), t2 = rd_le32(key + 8), t3 = rd_le32(key + 12);
     // Clamp r (RFC 8439 sec 2.5) folded into the limb split.
     r[0] = t0 & 0x3ffffff;
@@ -128,23 +134,38 @@ void protocore_poly1305(uint8_t tag[PROTOCORE_POLY1305_TAG_LEN], const uint8_t *
     h[2] = 0;
     h[3] = 0;
     h[4] = 0;
+}
+
+// Run the whole message through the accumulator: full blocks as they stand, then the short tail
+// composed in the borrow's block buffer.
+static void poly1305_absorb(uint8_t *restrict work, const uint8_t *msg, size_t len)
+{
+    Poly1305Ctx *ctx = POLY1305_CTX(work);
+    uint8_t *buf = POLY1305_BUF(work);
 
     while (len >= 16)
     {
-        poly_block(h, r, sr, msg, 1u << 24);
+        poly_block(ctx->h, ctx->r, ctx->sr, msg, 1u << 24);
         msg += 16;
         len -= 16;
     }
     if (len)
     {
-        mem.set(w->buf, 0, 16);
+        mem.set(buf, 0, 16);
         for (size_t i = 0; i < len; i++)
         {
-            w->buf[i] = msg[i];
+            buf[i] = msg[i];
         }
-        w->buf[len] = 1; // the message-terminating high bit for the partial block
-        poly_block(h, r, sr, w->buf, 0);
+        buf[len] = 1; // the message-terminating high bit for the partial block
+        poly_block(ctx->h, ctx->r, ctx->sr, buf, 0);
     }
+}
+
+// Carry h out, reduce it modulo 2^130 - 5 in constant time, and write (h + s) mod 2^128.
+static void poly1305_finish(uint8_t *restrict work, const uint8_t *key, uint8_t tag[PROTOCORE_POLY1305_TAG_LEN])
+{
+    Poly1305Ctx *ctx = POLY1305_CTX(work);
+    uint32_t *h = ctx->h;
 
     // Fully carry h.
     uint32_t c;
@@ -213,8 +234,25 @@ void protocore_poly1305(uint8_t tag[PROTOCORE_POLY1305_TAG_LEN], const uint8_t *
     wr_le32(tag + 4, f1);
     wr_le32(tag + 8, f2);
     wr_le32(tag + 12, f3);
-    protocore_secure_release(mark);
 }
+
+// --- the entries -----------------------------------------------------------
+
+// One-shot over the members already set: split the key, absorb the message, reduce and add s.
+static void poly1305_mac(uint8_t *restrict work)
+{
+    Poly1305.ok = PROTO_FALSE;
+    if (!work || !Poly1305.mac_args.key || !Poly1305.mac_args.out)
+    {
+        return;
+    }
+    poly1305_state_init(work, Poly1305.mac_args.key);
+    poly1305_absorb(work, Poly1305.mac_args.msg, Poly1305.mac_args.len);
+    poly1305_finish(work, Poly1305.mac_args.key, Poly1305.mac_args.out);
+    Poly1305.ok = PROTO_TRUE;
+}
+
+Poly1305Ns Poly1305 = {.mac = poly1305_mac};
 
 PROTOCORE_END_DECLS
 

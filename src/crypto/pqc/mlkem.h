@@ -3,7 +3,7 @@
 
 /**
  * @file mlkem.h
- * @brief ML-KEM-768 (FIPS 203): Encaps (responder) + KeyGen and Decaps (initiator).
+ * @brief ML-KEM-768 (FIPS 203): KeyGen, Encaps (responder) and Decaps (initiator).
  *
  * The post-quantum half of the mlkem768x25519-sha256 (SSH) and X25519MLKEM768 (TLS 1.3) hybrid key
  * exchanges. Both KEM roles are present:
@@ -18,7 +18,7 @@
  * decryption failure - FIPS 203 §6.3.
  *
  * KeyGen, Encaps and Decaps are the FIPS 203 "internal" (derandomized) forms: the caller supplies the
- * randomness (KeyGen's (d, z), Encaps's message @p m), drawn from the platform RNG in production and
+ * randomness (KeyGen's (d, z), Encaps's message m), drawn from the platform RNG in production and
  * fixed in known-answer tests. Deterministic given their inputs, which is exactly what the ACVP
  * keyGen / encapDecap vectors pin.
  *
@@ -34,7 +34,7 @@
 #ifndef PROTOCORE_MLKEM_H
 #define PROTOCORE_MLKEM_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_MLKEM
 
@@ -48,49 +48,85 @@ PROTOCORE_BEGIN_DECLS
 #define MLKEM768_D_BYTES 32    ///< KeyGen seed d (K-PKE key material)
 #define MLKEM768_Z_BYTES 32    ///< KeyGen seed z (implicit-reject value)
 
-/**
- * @brief ML-KEM-768 KeyGen (FIPS 203, derandomized): (ek, dk) from the two 32-octet seeds.
- *
- * The initiator's step: publish @p ek (the peer Encaps against it) and keep @p dk for Decaps. @p dk
- * embeds @p ek, H(ek) and @p z, so Decaps needs no other state. Deterministic given (@p d, @p z).
- *
- * @param[in]  d   32-octet key-material seed.
- * @param[in]  z   32-octet implicit-reject seed.
- * @param[out] ek  encapsulation key (MLKEM768_EK_BYTES).
- * @param[out] dk  decapsulation key (MLKEM768_DK_BYTES).
- */
-void protocore_mlkem768_keygen(const uint8_t d[MLKEM768_D_BYTES], const uint8_t z[MLKEM768_Z_BYTES],
-                               uint8_t ek[MLKEM768_EK_BYTES], uint8_t dk[MLKEM768_DK_BYTES]);
+// PROTOCORE_MLKEM_BORROW - the bytes a KEM operation runs out of - is stated in protocore_config.h,
+// which sums it into the secure arena. A caller takes them once and passes the pointer to every call.
+
+/** @brief The two seeds a KeyGen runs from, and where the key pair lands. */
+typedef struct
+{
+    const uint8_t *d; ///< MLKEM768_D_BYTES key-material seed
+    const uint8_t *z; ///< MLKEM768_Z_BYTES implicit-reject seed
+    uint8_t *ek;      ///< MLKEM768_EK_BYTES encapsulation key
+    uint8_t *dk;      ///< MLKEM768_DK_BYTES decapsulation key, embedding ek, H(ek) and z
+} MlKemKeygenArgs;
+
+/** @brief The peer key and message an Encaps runs on, and where its outputs land. */
+typedef struct
+{
+    const uint8_t *ek; ///< MLKEM768_EK_BYTES peer encapsulation key
+    const uint8_t *m;  ///< MLKEM768_MSG_BYTES encapsulation randomness
+    uint8_t *ct;       ///< MLKEM768_CT_BYTES ciphertext
+    uint8_t *ss;       ///< MLKEM768_SS_BYTES shared secret
+} MlKemEncapsArgs;
+
+/** @brief The key and ciphertext a Decaps runs on, and where the secret lands. */
+typedef struct
+{
+    const uint8_t *dk; ///< MLKEM768_DK_BYTES decapsulation key from a KeyGen
+    const uint8_t *ct; ///< MLKEM768_CT_BYTES ciphertext from the peer's Encaps
+    uint8_t *ss;       ///< MLKEM768_SS_BYTES shared secret
+} MlKemDecapsArgs;
 
 /**
- * @brief ML-KEM-768 Encaps (FIPS 203, derandomized): (ct, ss) from an encapsulation key and message.
+ * @brief ML-KEM-768 (FIPS 203).
  *
- * Validates @p ek (FIPS 203 modulus check: every decoded coefficient must be < q); on a malformed key
- * it writes nothing and returns false. Otherwise derives K = ss and encrypts @p m under @p ek.
+ * A caller sets the members a call takes, invokes it through ::MlKem with the bytes it runs out of,
+ * and reads the outcome off the same handle. How those bytes are carved is this module's and is never
+ * named here.
  *
- * @param[in]  ek  peer encapsulation key (MLKEM768_EK_BYTES).
- * @param[in]  m   32-octet message (the encapsulation randomness).
- * @param[out] ct  ciphertext (MLKEM768_CT_BYTES).
- * @param[out] ss  32-octet shared secret.
- * @return true on success, false if @p ek fails the modulus check.
+ *   MlKem.encaps_args.ek = peer_ek;
+ *   MlKem.encaps_args.m = m;
+ *   MlKem.encaps_args.ct = ct;
+ *   MlKem.encaps_args.ss = ss;
+ *   MlKem.encaps(work);
+ *
+ * @var MlKemNs::keygen_args  the two seeds a KeyGen runs from, and where the key pair lands
+ * @var MlKemNs::encaps_args  the peer key and message an Encaps runs on, and where its outputs land
+ * @var MlKemNs::decaps_args  the key and ciphertext a Decaps runs on, and where the secret lands
+ * @var MlKemNs::ok           a call's true/false outcome
+ * @var MlKemNs::keygen       (ek, dk) from the two seeds, deterministic given them
+ * @var MlKemNs::encaps       (ct, ss) from a peer key and a message
+ * @var MlKemNs::decaps       the shared secret from a ciphertext, through the FO transform
+ *
+ * @ref MlKemNs::encaps runs the FIPS 203 modulus check on the peer key first: on a key whose decoded
+ * coefficients are not all < q it writes nothing and leaves @ref MlKemNs::ok false.
+ *
+ * @ref MlKemNs::decaps has no failure of its own: a malformed or tampered ciphertext selects
+ * J(z || ct) in constant time and the call still reports true.
+ *
+ * @c work is PROTOCORE_MLKEM_BORROW secure bytes the CALLER took, at an address it knows. It arrives
+ * @c restrict and is not held past the call, so nothing here aliases it. The caller releases it, and
+ * the pool wipes on release; this module neither takes it, holds it, releases it, nor wipes it. That
+ * is what keeps the seeds, the noise and the decrypted message from outliving the caller.
+ *
+ * No storage member and no context: a caller sets operands and reads @ref MlKemNs::ok, and that is
+ * all the surface there is.
  */
-proto_bool protocore_mlkem768_encaps(const uint8_t ek[MLKEM768_EK_BYTES], const uint8_t m[MLKEM768_MSG_BYTES],
-                                     uint8_t ct[MLKEM768_CT_BYTES], uint8_t ss[MLKEM768_SS_BYTES]);
+typedef struct
+{
+    MlKemKeygenArgs keygen_args;
+    MlKemEncapsArgs encaps_args;
+    MlKemDecapsArgs decaps_args;
 
-/**
- * @brief ML-KEM-768 Decaps (FIPS 203, §6.3): recover the shared secret from a ciphertext.
- *
- * Runs the full constant-time Fujisaki-Okamoto transform: decrypt @p ct to m', re-derive (K', r') and
- * re-encrypt under the ek embedded in @p dk, then in constant time return K' if the recomputed
- * ciphertext matches @p ct or the implicit-reject key J(z || ct) if it does not. Never fails - a bad
- * ciphertext yields a pseudorandom secret, not an error - so there is no boolean return.
- *
- * @param[in]  dk  decapsulation key (MLKEM768_DK_BYTES) from protocore_mlkem768_keygen().
- * @param[in]  ct  ciphertext (MLKEM768_CT_BYTES) from the peer's Encaps.
- * @param[out] ss  32-octet shared secret.
- */
-void protocore_mlkem768_decaps(const uint8_t dk[MLKEM768_DK_BYTES], const uint8_t ct[MLKEM768_CT_BYTES],
-                               uint8_t ss[MLKEM768_SS_BYTES]);
+    proto_bool ok;
+
+    void (*const keygen)(uint8_t *restrict work);
+    void (*const encaps)(uint8_t *restrict work);
+    void (*const decaps)(uint8_t *restrict work);
+} MlKemNs;
+
+/** @brief The one symbol this module exports. */
+extern MlKemNs MlKem;
 
 PROTOCORE_END_DECLS
 

@@ -17,6 +17,8 @@
 
 #include <unity.h>
 
+static uint8_t tw[4096]; // the borrow every namespace call in this suite runs out of
+
 // RFC 4231's first test-case key, used here only as a fixed secret with no structure of its own.
 static const uint8_t SECRET[20] = {0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
                                    0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b};
@@ -61,7 +63,12 @@ void test_token_is_the_documented_hmac_over_the_nonce(void)
     TEST_ASSERT_EQUAL_CHAR('.', token[CSRF_NONCE_BYTES * 2]);
 
     uint8_t mac[PROTOCORE_HMAC_SHA256_LEN];
-    protocore_hmac_sha256((uint8_t *)g_work, SECRET, sizeof(SECRET), nonce, sizeof(nonce), mac);
+    HmacSha256.mac_args.key = SECRET;
+    HmacSha256.mac_args.key_len = sizeof(SECRET);
+    HmacSha256.mac_args.data = nonce;
+    HmacSha256.mac_args.len = sizeof(nonce);
+    HmacSha256.mac_args.out = mac;
+    HmacSha256.mac((uint8_t *)g_work);
     char want_sig[CSRF_SIG_BYTES * 2 + 1];
     hex_of(mac, CSRF_SIG_BYTES, want_sig);
     TEST_ASSERT_EQUAL_STRING(want_sig, &token[CSRF_NONCE_BYTES * 2 + 1]);

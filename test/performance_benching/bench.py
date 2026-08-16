@@ -202,8 +202,6 @@ def cmd_list(a):
 # PROTOCORE_ENABLE_* flag is present or empty depending on what that bench defines.
 HOST_ARMS = [
     "core_setup/hal/portable/portable_platform.c",
-    "core_setup/hal/portable/portable_aesgcm.c",
-    "core_setup/hal/portable/portable_aes128gcm.c",
     "core_setup/hal/portable/portable_bignum.c",
     "core_setup/hal/host/host_platform.c",
     "core_setup/hal/host/host_nvs.c",
@@ -532,8 +530,14 @@ def cmd_run(a):
                 print(err)
             failed.append(name)
             continue
-        cmd = [cc, "-std=c11", "-D_POSIX_C_SOURCE=200809L", "-O2"] + defs + incs + \
-              [main_c] + e["src"] + [lib, "-o", exe, "-lm"]
+        cmd = (
+            [cc, "-std=c11", "-D_POSIX_C_SOURCE=200809L", "-O2"]
+            + defs
+            + incs
+            + [main_c]
+            + e["src"]
+            + [lib, "-o", exe, "-lm"]
+        )
         b = subprocess.run(cmd, capture_output=True, text=True, cwd=ROOT)
         if b.returncode != 0:
             print("[%d/%d] %-30s BUILD FAILED" % (i, len(names), name))

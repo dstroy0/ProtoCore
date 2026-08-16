@@ -27,8 +27,6 @@
 
 #if PROTOCORE_ENABLE_HTTP2
 
-#define PROTOCORE_H2_CONN_BORROW                                                                                       \
-
 PROTOCORE_BEGIN_DECLS
 
 #include "network_drivers/presentation/http/http2/h2_frame.h"
@@ -55,6 +53,7 @@ typedef struct
     uint32_t data_seen;            ///< DATA payload octets received on this stream
 } H2Stream;
 
+#define PROTOCORE_H2_FRAME_HDR_CAP 16u
 /**
  * @brief This module's draw on the plaintext pool, declared here and asserted in h2_conn.c.
  *
@@ -63,7 +62,7 @@ typedef struct
  * is a power of two, so every offset after it is a multiple of one and the payload starts at the
  * span's own alignment. HTTP is what the plaintext pool is for, and the connection owns the bytes.
  */
-#define PROTOCORE_H2_FRAME_HDR_CAP 16u
+#define PROTOCORE_H2_CONN_BORROW                                                                                       \
     ((size_t)PROTOCORE_H2_MAX_FRAME + PROTOCORE_H2_HDR_BLOCK + PROTOCORE_H2_HDR_BLOCK + PROTOCORE_H2_FRAME_HDR_CAP)
 
 /** @brief Application callbacks the engine drives (all optional except write). */

@@ -20,6 +20,8 @@
 
 #include <unity.h>
 
+static uint8_t tw[4096]; // the borrow every namespace call in this suite runs out of
+
 // RFC 9562 Table 3: the DNS namespace ID, as its sixteen octets.
 static const uint8_t NS_DNS[16] = {0x6b, 0xa7, 0xb8, 0x10, 0x9d, 0xad, 0x11, 0xd1,
                                    0x80, 0xb4, 0x00, 0xc0, 0x4f, 0xd4, 0x30, 0xc8};
@@ -43,7 +45,10 @@ static void uuid5(const uint8_t ns[16], const char *name, size_t name_len, char 
     memcpy(in + 16, name, name_len);
 
     uint8_t h[PROTOCORE_SHA1_DIGEST_LEN];
-    protocore_sha1(in, 16 + name_len, h);
+    Sha1.hash_args.data = in;
+    Sha1.hash_args.len = 16 + name_len;
+    Sha1.hash_args.out = h;
+    Sha1.hash(tw);
     h[6] = (uint8_t)((h[6] & 0x0Fu) | 0x50u);
     h[8] = (uint8_t)((h[8] & 0x3Fu) | 0x80u);
 
@@ -97,7 +102,10 @@ void test_rfc9562_published_uuidv5_vector(void)
     memcpy(in, NS_DNS, 16);
     memcpy(in + 16, "www.example.com", 15);
     uint8_t got[PROTOCORE_SHA1_DIGEST_LEN];
-    protocore_sha1(in, sizeof(in), got);
+    Sha1.hash_args.data = in;
+    Sha1.hash_args.len = sizeof(in);
+    Sha1.hash_args.out = got;
+    Sha1.hash(tw);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT_SHA1, got, sizeof(WANT_SHA1));
 
     char out[PROTOCORE_UUID_STR_LEN];

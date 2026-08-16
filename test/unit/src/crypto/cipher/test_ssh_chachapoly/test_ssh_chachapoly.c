@@ -23,11 +23,47 @@
 
 #include <unity.h>
 
+// The bytes one packet operation runs out of. A connection takes these once for its slot; a test
+// takes them once for the file.
+static uint8_t g_ws[PROTOCORE_CHACHAPOLY_BORROW] __attribute__((aligned(8)));
+
 void setUp(void)
 {
 }
 void tearDown(void)
 {
+}
+
+// The namespace, called the way the vectors below read: operands in, one call, answer out.
+static void cp_encrypt(const uint8_t *key, uint32_t seqnr, uint8_t *dest, const uint8_t *src, uint32_t payload_len)
+{
+    ChachaPoly.encrypt_args.key = key;
+    ChachaPoly.encrypt_args.src = src;
+    ChachaPoly.encrypt_args.dest = dest;
+    ChachaPoly.encrypt_args.seqnr = seqnr;
+    ChachaPoly.encrypt_args.payload_len = payload_len;
+    ChachaPoly.encrypt(g_ws);
+}
+
+static proto_bool cp_decrypt(const uint8_t *key, uint32_t seqnr, uint8_t *dest, const uint8_t *src,
+                             uint32_t payload_len)
+{
+    ChachaPoly.decrypt_args.key = key;
+    ChachaPoly.decrypt_args.src = src;
+    ChachaPoly.decrypt_args.dest = dest;
+    ChachaPoly.decrypt_args.seqnr = seqnr;
+    ChachaPoly.decrypt_args.payload_len = payload_len;
+    ChachaPoly.decrypt(g_ws);
+    return ChachaPoly.ok;
+}
+
+static uint32_t cp_get_length(const uint8_t *key, uint32_t seqnr, const uint8_t *enc_len)
+{
+    ChachaPoly.length_args.key = key;
+    ChachaPoly.length_args.enc_len = enc_len;
+    ChachaPoly.length_args.seqnr = seqnr;
+    ChachaPoly.get_length(g_ws);
+    return ChachaPoly.length;
 }
 
 // RFC 8439 A.1 Test Vector #1: key 0^32, nonce 0^12, block counter 0.
@@ -63,7 +99,7 @@ void test_rfc8439_keystream_is_applied_as_openssh_splits_it(void)
 
     uint8_t pt[4 + 5], ct[4 + 5 + PROTOCORE_CHACHAPOLY_TAG_LEN];
     make_plaintext(pt, 5, HELLO);
-    protocore_chachapoly_encrypt(key, 0, ct, pt, 5);
+    cp_encrypt(key, 0, ct, pt, 5);
 
     uint8_t want[9];
     for (int i = 0; i < 4; i++)
@@ -77,10 +113,10 @@ void test_rfc8439_keystream_is_applied_as_openssh_splits_it(void)
     TEST_ASSERT_EQUAL_UINT8_ARRAY(want, ct, 9);
 
     // The same keystream read back the other way: the length field decodes on its own.
-    TEST_ASSERT_EQUAL_UINT32(5u, protocore_chachapoly_get_length(key, 0, ct));
+    TEST_ASSERT_EQUAL_UINT32(5u, cp_get_length(key, 0, ct));
 
     uint8_t rt[4 + 5];
-    TEST_ASSERT_TRUE(protocore_chachapoly_decrypt(key, 0, rt, ct, 5));
+    TEST_ASSERT_TRUE(cp_decrypt(key, 0, rt, ct, 5));
     TEST_ASSERT_EQUAL_UINT8_ARRAY(pt, rt, sizeof(pt));
 }
 
@@ -95,7 +131,7 @@ void test_the_two_keys_are_not_interchangeable(void)
 
     uint8_t pt[4 + 5], ct[4 + 5 + PROTOCORE_CHACHAPOLY_TAG_LEN];
     make_plaintext(pt, 5, HELLO);
-    protocore_chachapoly_encrypt(key, 0, ct, pt, 5);
+    cp_encrypt(key, 0, ct, pt, 5);
 
     uint8_t want[9];
     for (int i = 0; i < 4; i++)
@@ -107,7 +143,7 @@ void test_the_two_keys_are_not_interchangeable(void)
         want[4 + i] = (uint8_t)(KS_ONE_CTR1[i] ^ HELLO[i]); // main key is now 0^31 || 01
     }
     TEST_ASSERT_EQUAL_UINT8_ARRAY(want, ct, 9);
-    TEST_ASSERT_EQUAL_UINT32(5u, protocore_chachapoly_get_length(key, 0, ct));
+    TEST_ASSERT_EQUAL_UINT32(5u, cp_get_length(key, 0, ct));
 }
 
 // The nonce is the sequence number, so the same packet under a different seqnr is a different
@@ -121,13 +157,13 @@ void test_sequence_number_is_the_nonce(void)
     }
     uint8_t pt[4 + 5], c0[4 + 5 + 16], c1[4 + 5 + 16];
     make_plaintext(pt, 5, HELLO);
-    protocore_chachapoly_encrypt(key, 0, c0, pt, 5);
-    protocore_chachapoly_encrypt(key, 1, c1, pt, 5);
+    cp_encrypt(key, 0, c0, pt, 5);
+    cp_encrypt(key, 1, c1, pt, 5);
     TEST_ASSERT_TRUE(memcmp(c0, c1, sizeof(c0)) != 0);
 
-    TEST_ASSERT_EQUAL_UINT32(5u, protocore_chachapoly_get_length(key, 0, c0));
-    TEST_ASSERT_EQUAL_UINT32(5u, protocore_chachapoly_get_length(key, 1, c1));
-    TEST_ASSERT_TRUE(protocore_chachapoly_get_length(key, 1, c0) != 5u);
+    TEST_ASSERT_EQUAL_UINT32(5u, cp_get_length(key, 0, c0));
+    TEST_ASSERT_EQUAL_UINT32(5u, cp_get_length(key, 1, c1));
+    TEST_ASSERT_TRUE(cp_get_length(key, 1, c0) != 5u);
 }
 
 // A payload spanning several ChaCha blocks round-trips, and the ciphertext is not the plaintext.
@@ -147,10 +183,10 @@ void test_multi_block_payload_round_trip(void)
     uint8_t pt[4 + 200], ct[4 + 200 + 16], rt[4 + 200];
     make_plaintext(pt, n, payload);
 
-    protocore_chachapoly_encrypt(key, 42, ct, pt, n);
+    cp_encrypt(key, 42, ct, pt, n);
     TEST_ASSERT_TRUE(memcmp(ct + 4, pt + 4, n) != 0);
-    TEST_ASSERT_EQUAL_UINT32(n, protocore_chachapoly_get_length(key, 42, ct));
-    TEST_ASSERT_TRUE(protocore_chachapoly_decrypt(key, 42, rt, ct, n));
+    TEST_ASSERT_EQUAL_UINT32(n, cp_get_length(key, 42, ct));
+    TEST_ASSERT_TRUE(cp_decrypt(key, 42, rt, ct, n));
     TEST_ASSERT_EQUAL_UINT8_ARRAY(pt, rt, 4 + n);
 }
 
@@ -172,28 +208,28 @@ void test_decrypt_refuses_every_tampered_field(void)
     }
     uint8_t pt[4 + 16], ct[4 + 16 + 16], rt[4 + 16];
     make_plaintext(pt, n, payload);
-    protocore_chachapoly_encrypt(key, 0, ct, pt, n);
+    cp_encrypt(key, 0, ct, pt, n);
 
     memset(rt, 0xCC, sizeof(rt));
     ct[1] ^= 0x01; // the encrypted length field
-    TEST_ASSERT_FALSE(protocore_chachapoly_decrypt(key, 0, rt, ct, n));
+    TEST_ASSERT_FALSE(cp_decrypt(key, 0, rt, ct, n));
     ct[1] ^= 0x01;
 
     ct[6] ^= 0x01; // the encrypted payload
-    TEST_ASSERT_FALSE(protocore_chachapoly_decrypt(key, 0, rt, ct, n));
+    TEST_ASSERT_FALSE(cp_decrypt(key, 0, rt, ct, n));
     ct[6] ^= 0x01;
 
     ct[4 + n] ^= 0x80; // the tag
-    TEST_ASSERT_FALSE(protocore_chachapoly_decrypt(key, 0, rt, ct, n));
+    TEST_ASSERT_FALSE(cp_decrypt(key, 0, rt, ct, n));
     ct[4 + n] ^= 0x80;
 
-    TEST_ASSERT_FALSE(protocore_chachapoly_decrypt(key, 1, rt, ct, n)); // wrong sequence number
+    TEST_ASSERT_FALSE(cp_decrypt(key, 1, rt, ct, n)); // wrong sequence number
 
     for (size_t i = 0; i < sizeof(rt); i++)
     {
         TEST_ASSERT_EQUAL_UINT8(0xCC, rt[i]); // no refusal wrote plaintext
     }
-    TEST_ASSERT_TRUE(protocore_chachapoly_decrypt(key, 0, rt, ct, n));
+    TEST_ASSERT_TRUE(cp_decrypt(key, 0, rt, ct, n));
     TEST_ASSERT_EQUAL_UINT8_ARRAY(pt, rt, sizeof(pt));
 }
 
@@ -208,14 +244,14 @@ void test_empty_payload(void)
     }
     uint8_t pt[4] = {0, 0, 0, 0};
     uint8_t ct[4 + 16], rt[4];
-    protocore_chachapoly_encrypt(key, 7, ct, pt, 0);
+    cp_encrypt(key, 7, ct, pt, 0);
 
-    TEST_ASSERT_EQUAL_UINT32(0u, protocore_chachapoly_get_length(key, 7, ct));
-    TEST_ASSERT_TRUE(protocore_chachapoly_decrypt(key, 7, rt, ct, 0));
+    TEST_ASSERT_EQUAL_UINT32(0u, cp_get_length(key, 7, ct));
+    TEST_ASSERT_TRUE(cp_decrypt(key, 7, rt, ct, 0));
     TEST_ASSERT_EQUAL_UINT8_ARRAY(pt, rt, 4);
 
     ct[4] ^= 0x01;
-    TEST_ASSERT_FALSE(protocore_chachapoly_decrypt(key, 7, rt, ct, 0));
+    TEST_ASSERT_FALSE(cp_decrypt(key, 7, rt, ct, 0));
 }
 
 // dest may alias src, which is how the SSH transport encrypts a packet in its own buffer.
@@ -235,12 +271,12 @@ void test_in_place_encrypt_and_decrypt(void)
     uint8_t pt[4 + 64], sep[4 + 64 + 16], buf[4 + 64 + 16];
     make_plaintext(pt, n, payload);
 
-    protocore_chachapoly_encrypt(key, 9, sep, pt, n);
+    cp_encrypt(key, 9, sep, pt, n);
     memcpy(buf, pt, 4 + n);
-    protocore_chachapoly_encrypt(key, 9, buf, buf, n);
+    cp_encrypt(key, 9, buf, buf, n);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(sep, buf, 4 + n + 16);
 
-    TEST_ASSERT_TRUE(protocore_chachapoly_decrypt(key, 9, buf, buf, n));
+    TEST_ASSERT_TRUE(cp_decrypt(key, 9, buf, buf, n));
     TEST_ASSERT_EQUAL_UINT8_ARRAY(pt, buf, 4 + n);
 }
 
@@ -261,8 +297,8 @@ void test_length_is_readable_before_the_body(void)
         pt[1] = (uint8_t)(LENGTHS[i] >> 16);
         pt[2] = (uint8_t)(LENGTHS[i] >> 8);
         pt[3] = (uint8_t)LENGTHS[i];
-        protocore_chachapoly_encrypt(key, 5, ct, pt, 0);
+        cp_encrypt(key, 5, ct, pt, 0);
         memcpy(enc_len, ct, 4);
-        TEST_ASSERT_EQUAL_UINT32(LENGTHS[i], protocore_chachapoly_get_length(key, 5, enc_len));
+        TEST_ASSERT_EQUAL_UINT32(LENGTHS[i], cp_get_length(key, 5, enc_len));
     }
 }

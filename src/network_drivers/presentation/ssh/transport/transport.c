@@ -9,10 +9,12 @@
 #include "network_drivers/presentation/ssh/transport/transport.h"
 #include "crypto/aead/aesgcm.h"
 #include "crypto/aead/chachapoly.h"
-#include "crypto/asymmetric/bignum.h"     // bn_*, protocore_bignum
-#include "crypto/asymmetric/curve25519.h" // protocore_x25519 (curve25519-sha256 KEX)
+#include "crypto/asymmetric/bignum.h"     // Bignum, protocore_bignum
+#include "crypto/asymmetric/curve25519.h" // Curve25519 (curve25519-sha256 KEX)
 #include "crypto/asymmetric/ecdsa.h"      // protocore_ecdsa_p256_* (ecdsa-sha2-nistp256 host key)
 #include "crypto/asymmetric/ed25519.h"    // protocore_ed25519 host-key sign
+#include "crypto/asymmetric/rsa.h"        // PROTOCORE_RSA_KEY_BYTES / _SIG_BYTES - the host-key sizes
+#include "crypto/cipher/aes256ctr.h"      // PROTOCORE_AES256CTR_KEY_LEN / _CTR_LEN - the cipher key and IV
 #include "crypto/ct_eq.h"                 // protocore_ct_eq
 #include "crypto/hash/sha256.h"
 #include "crypto/mac/hmac_sha256.h"
@@ -32,10 +34,10 @@
 #include "network_drivers/presentation/ssh/transport/ssh_rsa.h" // ssh_rsa_encode_pubkey/sign, ssh_host_pubkey, SSH_RSA_*
 #include "server/clock/clock.h"                                 // protocore_millis() (re-key timer)
 #if PROTOCORE_ENABLE_PQC_KEX
-#include "crypto/pqc/mlkem.h" // protocore_mlkem768_encaps (PQ/T hybrid KEX responder)
+#include "crypto/pqc/mlkem.h" // MlKem (PQ/T hybrid KEX responder)
 #endif
 #if PROTOCORE_ENABLE_SSH_SNTRUP761
-#include "crypto/pqc/sntrup761.h" // protocore_sntrup761_enc (sntrup761x25519 responder)
+#include "crypto/pqc/sntrup761.h" // Sntrup761 (sntrup761x25519 responder)
 #endif
 #if PROTOCORE_ENABLE_SSH_ZLIB
 #include "network_drivers/presentation/ssh/transport/comp.h" // compression negotiation
@@ -182,7 +184,9 @@ void protocore_ssh_hostkey_ed25519_set(const uint8_t seed[32])
         return;
     }
     mem.cpy(s_store.ed_seed, seed, 32);
-    protocore_ed25519_pubkey(ssh_pkt[0].crypto_work, s_store.ed_pub, s_store.ed_seed);
+    Ed25519.pubkey_args.seed = s_store.ed_seed;
+    Ed25519.pubkey_args.pub = s_store.ed_pub;
+    Ed25519.pubkey(ssh_pkt[0].crypto_work);
     s_store.ed_have = PROTO_TRUE;
 }
 proto_bool protocore_ssh_hostkey_ed25519_available(void)
@@ -192,7 +196,10 @@ proto_bool protocore_ssh_hostkey_ed25519_available(void)
 void protocore_ssh_hostkey_ecdsa_set(const uint8_t priv[PROTOCORE_ECDSA_P256_PRIV_LEN])
 {
     // Derive and cache the public point; reject an invalid scalar (leaves ecdsa_have false).
-    if (!protocore_ecdsa_p256_pubkey(s_store.ecdsa_pub, priv))
+    Ecdsa.pubkey_args.priv = priv;
+    Ecdsa.pubkey_args.pub = s_store.ecdsa_pub;
+    Ecdsa.pubkey(ssh_pkt[0].crypto_work);
+    if (!Ecdsa.ok)
     {
         return;
     }
@@ -682,7 +689,9 @@ void ssh_kexinit_build(struct SshTransportInternal *restrict ctx)
     bytes.put(&w, SSH_MSG_KEXINIT);
 
     uint8_t cookie[16];
-    protocore_rand_fill(cookie, sizeof(cookie));
+    Rng.fill_args.out = cookie;
+    Rng.fill_args.len = sizeof(cookie);
+    Rng.fill(protocore_rng_span());
     bytes.raw(&w, cookie, sizeof(cookie));
 
     char kexlist[SSH_KEXLIST_BUF];
@@ -1030,23 +1039,36 @@ void ssh_kexinit_parse(struct SshTransportInternal *restrict ctx)
 // SshKexHash), no large buffer.
 // ---------------------------------------------------------------------------
 
+// The exchange hash runs in the slot's crypto_work, which spans PROTOCORE_CRYPTO_BORROW_MAX.
+static_assert(PROTOCORE_SSH_KEXHASH_BORROW <= PROTOCORE_CRYPTO_BORROW_MAX,
+              "the slot's crypto_work is short of one exchange-hash digest - raise "
+              "PROTOCORE_CRYPTO_BORROW_MAX in protocore_config.h");
+
+// Absorb @p len bytes of @p data into the digest running in @p work.
+static void hash_bytes(uint8_t *work, const uint8_t *data, size_t len)
+{
+    SshKexHash.update_args.data = data;
+    SshKexHash.update_args.len = len;
+    SshKexHash.update(work);
+}
+
 // Hash a 4-byte big-endian length prefix.
-static void hash_u32(SshKexHash *h, uint32_t v)
+static void hash_u32(uint8_t *work, uint32_t v)
 {
     uint8_t b[4] = {(uint8_t)(v >> 24), (uint8_t)(v >> 16), (uint8_t)(v >> 8), (uint8_t)v};
-    ssh_kexhash_update(h, b, 4);
+    hash_bytes(work, b, 4);
 }
 
 // Hash an SSH string: uint32 length + raw bytes.
-void hash_string(SshKexHash *h, const uint8_t *data, size_t len)
+static void hash_string(uint8_t *work, const uint8_t *data, size_t len)
 {
-    hash_u32(h, (uint32_t)len);
-    ssh_kexhash_update(h, data, len);
+    hash_u32(work, (uint32_t)len);
+    hash_bytes(work, data, len);
 }
 
 // Hash an SSH mpint from a fixed-width big-endian integer: strip leading zero
 // bytes, prepend a 0x00 if the top bit is set (to keep it positive).
-void hash_mpint(SshKexHash *h, const uint8_t *be, size_t len)
+static void hash_mpint(uint8_t *work, const uint8_t *be, size_t len)
 {
     size_t off = 0;
     while (off < len && be[off] == 0)
@@ -1056,18 +1078,22 @@ void hash_mpint(SshKexHash *h, const uint8_t *be, size_t len)
     if (off == len)
     {
         // Value is zero → mpint is an empty string.
-        hash_u32(h, 0);
+        hash_u32(work, 0);
         return;
     }
     proto_bool pad = (be[off] & 0x80u) != 0;
-    uint32_t mlen = (uint32_t)(len - off) + (pad ? 1u : 0u);
-    hash_u32(h, mlen);
+    uint32_t mlen = (uint32_t)(len - off);
+    if (pad)
+    {
+        mlen++;
+    }
+    hash_u32(work, mlen);
     if (pad)
     {
         uint8_t zero = 0;
-        ssh_kexhash_update(h, &zero, 1);
+        hash_bytes(work, &zero, 1);
     }
-    ssh_kexhash_update(h, be + off, len - off);
+    hash_bytes(work, be + off, len - off);
 }
 
 proto_bool ssh_kex_is_sha512(SshKexAlg a)
@@ -1111,32 +1137,35 @@ void ssh_kex_exchange_hash(struct SshTransportInternal *restrict ctx)
         return;
     }
 
-    SshKexHash h;
-    ssh_kexhash_init(&h, ssh_pkt[i].crypto_work, is512);
-    hash_string(&h, (const uint8_t *)s->v_c, s->v_c_len); // V_C
-    hash_string(&h, (const uint8_t *)s->v_s, s->v_s_len); // V_S
-    hash_string(&h, s->i_c, s->i_c_len);                  // I_C
-    hash_string(&h, s->i_s, s->i_s_len);                  // I_S
-    hash_string(&h, ks, ks_len);                          // K_S
+    uint8_t *work = ssh_pkt[i].crypto_work;
+    SshKexHash.init_args.is512 = is512;
+    SshKexHash.init(work);
+    hash_string(work, (const uint8_t *)s->v_c, s->v_c_len); // V_C
+    hash_string(work, (const uint8_t *)s->v_s, s->v_s_len); // V_S
+    hash_string(work, s->i_c, s->i_c_len);                  // I_C
+    hash_string(work, s->i_s, s->i_s_len);                  // I_S
+    hash_string(work, ks, ks_len);                          // K_S
     if (pub_is_string)
     {
-        hash_string(&h, cpub, cpub_len); // Q_C
-        hash_string(&h, spub, spub_len); // Q_S
+        hash_string(work, cpub, cpub_len); // Q_C
+        hash_string(work, spub, spub_len); // Q_S
     }
     else
     {
-        hash_mpint(&h, cpub, cpub_len); // e
-        hash_mpint(&h, spub, spub_len); // f
+        hash_mpint(work, cpub, cpub_len); // e
+        hash_mpint(work, spub, spub_len); // f
     }
     if (k_is_string)
     {
-        hash_string(&h, k_be, k_len); // hybrid: K is a fixed-length HASH output (RFC 4251 string)
+        hash_string(work, k_be, k_len); // hybrid: K is a fixed-length HASH output (RFC 4251 string)
     }
     else
     {
-        hash_mpint(&h, k_be, k_len); // classical: K is an mpint
+        hash_mpint(work, k_be, k_len); // classical: K is an mpint
     }
-    *out_len = ssh_kexhash_final(&h, out);
+    SshKexHash.final_args.out = out;
+    SshKexHash.final(work);
+    *out_len = SshKexHash.len;
     ctx->ns->i32 = 0;
     return;
 }
@@ -1293,11 +1322,14 @@ proto_bool ssh_hostkey_verify(uint8_t i, const uint8_t *ks, size_t ks_len, const
     {
     case SSH_HOSTKEY_ED25519:
         ok = parse_ed25519_pubkey(ks, (uint32_t)ks_len, pub.buf) && raw_len == 64 &&
-             protocore_ed25519_verify(work, pub.buf, h, h_len, raw);
+             (Ed25519.verify_args.pub = pub.buf, Ed25519.verify_args.msg = h,
+              Ed25519.verify_args.msg_len = h_len, Ed25519.verify_args.sig = raw, Ed25519.verify(work),
+              Ed25519.ok);
         break;
     case SSH_HOSTKEY_ECDSA_NISTP256:
         ok = parse_ecdsa_pubkey(ks, (uint32_t)ks_len, pub.buf) && parse_ecdsa_sig(raw, raw_len, ec_sig.buf) &&
-             protocore_ecdsa_p256_verify(pub.buf, work, h, h_len, ec_sig.buf);
+             (Ecdsa.verify_args.pub = pub.buf, Ecdsa.verify_args.msg = h, Ecdsa.verify_args.mlen = h_len,
+              Ecdsa.verify_args.sig = ec_sig.buf, Ecdsa.verify(work), Ecdsa.ok);
         break;
     case SSH_HOSTKEY_RSA_SHA256:
     case SSH_HOSTKEY_RSA_SHA512: {
@@ -1308,7 +1340,9 @@ proto_bool ssh_hostkey_verify(uint8_t i, const uint8_t *ks, size_t ks_len, const
             rh = PROTOCORE_RSA_HASH_SHA512;
         }
         ok = parse_rsa_pubkey(ks, (uint32_t)ks_len, n_be.buf, e_be.buf) &&
-             protocore_rsa_verify(n_be.buf, e_be.buf, work, h, h_len, raw, raw_len, rh) == 0;
+             (Rsa.verify_args.n = n_be.buf, Rsa.verify_args.e = e_be.buf, Rsa.verify_args.msg = h,
+              Rsa.verify_args.msg_len = h_len, Rsa.verify_args.sig = raw, Rsa.verify_args.sig_len = raw_len,
+              Rsa.verify_args.hash = rh, Rsa.verify(work), Rsa.ok);
         break;
     }
     }
@@ -1432,7 +1466,11 @@ static int sign_hash(uint8_t i, const uint8_t *H, size_t h_len, uint8_t *sig, si
         {
             return -1;
         }
-        protocore_ed25519_sign(ssh_pkt[i].crypto_work, sig, H, h_len, s_store.ed_seed);
+        Ed25519.sign_args.seed = s_store.ed_seed;
+        Ed25519.sign_args.msg = H;
+        Ed25519.sign_args.msg_len = h_len;
+        Ed25519.sign_args.sig = sig;
+        Ed25519.sign(ssh_pkt[i].crypto_work);
         *sig_len = 64;
         *sig_name = HOSTKEY_ED; // "ssh-ed25519"
         return 0;
@@ -1444,7 +1482,12 @@ static int sign_hash(uint8_t i, const uint8_t *H, size_t h_len, uint8_t *sig, si
         {
             return -1;
         }
-        if (!protocore_ecdsa_p256_sign(raw, ssh_pkt[i].crypto_work, H, h_len, s_store.ecdsa_priv))
+        Ecdsa.sign_args.msg = H;
+        Ecdsa.sign_args.mlen = h_len;
+        Ecdsa.sign_args.priv = s_store.ecdsa_priv;
+        Ecdsa.sign_args.sig = raw;
+        Ecdsa.sign(ssh_pkt[i].crypto_work);
+        if (!Ecdsa.ok)
         {
             return -1;
         }
@@ -1462,8 +1505,12 @@ static int sign_hash(uint8_t i, const uint8_t *H, size_t h_len, uint8_t *sig, si
     }
     // rsa-sha2-512 and rsa-sha2-256 share the one "ssh-rsa" key; the negotiated
     // algorithm only chooses the signature hash (RFC 8332).
-    const proto_bool sha512 = (ssh_sess[i].hostkey_alg == SSH_HOSTKEY_RSA_SHA512);
-    const protocore_rsa_hash rh = sha512 ? PROTOCORE_RSA_HASH_SHA512 : PROTOCORE_RSA_HASH_SHA256;
+    const proto_bool is_sha512 = (ssh_sess[i].hostkey_alg == SSH_HOSTKEY_RSA_SHA512);
+    protocore_rsa_hash rh = PROTOCORE_RSA_HASH_SHA256;
+    if (is_sha512)
+    {
+        rh = PROTOCORE_RSA_HASH_SHA512;
+    }
     if (!ssh_pkt_slot_storage(&ssh_pkt[i]))
     {
         return -1;
@@ -1473,7 +1520,11 @@ static int sign_hash(uint8_t i, const uint8_t *H, size_t h_len, uint8_t *sig, si
         return -1;
     }
     *sig_len = PROTOCORE_RSA_SIG_BYTES;
-    *sig_name = sha512 ? HOSTKEY_RSA_SHA512 : HOSTKEY_RSA_SHA256;
+    *sig_name = HOSTKEY_RSA_SHA256;
+    if (is_sha512)
+    {
+        *sig_name = HOSTKEY_RSA_SHA512;
+    }
     return 0;
 }
 
@@ -1526,8 +1577,12 @@ void ssh_kex_generate(struct SshTransportInternal *restrict ctx)
 #ifdef PROTOCORE_SSH_KEX_BENCH
         uint32_t kexgen_t0 = protocore_platform_micros();
 #endif
-        protocore_rand_fill(ssh_sess[i].ecdh_sk, 32);
-        protocore_x25519_base(ssh_sess[i].ecdh_pk, ssh_sess[i].ecdh_sk);
+        Rng.fill_args.out = ssh_sess[i].ecdh_sk;
+        Rng.fill_args.len = 32;
+        Rng.fill(protocore_rng_span());
+        Curve25519.x25519_base_args.scalar = ssh_sess[i].ecdh_sk;
+        Curve25519.x25519_base_args.out = ssh_sess[i].ecdh_pk;
+        Curve25519.x25519_base(ssh_pkt[i].crypto_work);
 #ifdef PROTOCORE_SSH_KEX_BENCH
         protocore_ssh_kex_bench.last_kexgen_us = (long long)(protocore_platform_micros() - kexgen_t0);
 #endif
@@ -1542,8 +1597,13 @@ void ssh_kex_generate(struct SshTransportInternal *restrict ctx)
         uint8_t qtmp[PROTOCORE_ECDSA_P256_PUB_LEN];
         for (int t = 0; t < 8; t++)
         { // hands back an invalid P-256 scalar, which no host build can provoke
-            protocore_rand_fill(ssh_sess[i].ecdh_sk, 32);
-            if (protocore_ecdsa_p256_pubkey(qtmp, ssh_sess[i].ecdh_sk))
+            Rng.fill_args.out = ssh_sess[i].ecdh_sk;
+            Rng.fill_args.len = 32;
+            Rng.fill(protocore_rng_span());
+            Ecdsa.pubkey_args.priv = ssh_sess[i].ecdh_sk;
+            Ecdsa.pubkey_args.pub = qtmp;
+            Ecdsa.pubkey(ssh_pkt[i].crypto_work);
+            if (Ecdsa.ok)
             {
                 ctx->ns->i32 = 0;
                 return; // valid scalar with overwhelming probability
@@ -1577,9 +1637,16 @@ static int hybrid_mlkem_x25519(uint8_t i, const uint8_t *payload, size_t len, ui
     const uint8_t *qc = payload + 5 + MLKEM768_EK_BYTES; // C_PK1: client X25519 public
 
     uint8_t m[32];
-    protocore_rand_fill(m, sizeof(m));
+    Rng.fill_args.out = m;
+    Rng.fill_args.len = sizeof(m);
+    Rng.fill(protocore_rng_span());
     uint8_t k_pq[32];
-    proto_bool ok = protocore_mlkem768_encaps(ek, m, s_reply, k_pq); // ciphertext -> s_reply[0..1087]
+    MlKem.encaps_args.ek = ek;
+    MlKem.encaps_args.m = m;
+    MlKem.encaps_args.ct = s_reply; // ciphertext -> s_reply[0..1087]
+    MlKem.encaps_args.ss = k_pq;
+    MlKem.encaps(ssh_pkt[i].crypto_work);
+    proto_bool ok = MlKem.ok;
     protocore_secure_wipe(m, sizeof(m));
     if (!ok)
     {
@@ -1587,7 +1654,10 @@ static int hybrid_mlkem_x25519(uint8_t i, const uint8_t *payload, size_t len, ui
     }
 
     uint8_t k_cl[32];
-    protocore_x25519(k_cl, ssh_sess[i].ecdh_sk, qc);
+    Curve25519.x25519_args.scalar = ssh_sess[i].ecdh_sk;
+    Curve25519.x25519_args.point = qc;
+    Curve25519.x25519_args.out = k_cl;
+    Curve25519.x25519(ssh_pkt[i].crypto_work);
     uint8_t zacc = 0;
     for (int b = 0; b < 32; b++)
     {
@@ -1607,11 +1677,16 @@ static int hybrid_mlkem_x25519(uint8_t i, const uint8_t *payload, size_t len, ui
         protocore_secure_wipe(k_cl, sizeof(k_cl));
         return -1;
     }
-    protocore_sha256_ctx hc;
-    protocore_sha256_init(&hc, ssh_pkt[i].crypto_work);
-    protocore_sha256_update(&hc, k_pq, sizeof(k_pq)); // K = SHA256(K_PQ || K_CL) (RFC 9370 concat combiner)
-    protocore_sha256_update(&hc, k_cl, sizeof(k_cl));
-    protocore_sha256_final(&hc, k_out);
+    uint8_t *hw = ssh_pkt[i].crypto_work;
+    Sha256.init(hw);
+    Sha256.update_args.data = k_pq; // K = SHA256(K_PQ || K_CL) (RFC 9370 concat combiner)
+    Sha256.update_args.len = sizeof(k_pq);
+    Sha256.update(hw);
+    Sha256.update_args.data = k_cl;
+    Sha256.update_args.len = sizeof(k_cl);
+    Sha256.update(hw);
+    Sha256.final_args.out = k_out;
+    Sha256.final(hw);
     protocore_secure_wipe(k_pq, sizeof(k_pq));
     protocore_secure_wipe(k_cl, sizeof(k_cl));
     return 0;
@@ -1640,10 +1715,16 @@ static int hybrid_sntrup761_x25519(uint8_t *work, uint8_t i, const uint8_t *payl
     const uint8_t *qc = payload + 5 + PROTOCORE_SNTRUP761_PK_BYTES; // C_PK1: client X25519 public
 
     uint8_t k_pq[PROTOCORE_SNTRUP761_SS_BYTES];
-    protocore_sntrup761_enc(work, pk, s_reply, k_pq); // ciphertext -> s_reply[0..1038], shared -> k_pq
+    Sntrup761.enc_args.pk = pk;
+    Sntrup761.enc_args.ct = s_reply; // ciphertext -> s_reply[0..1038]
+    Sntrup761.enc_args.ss = k_pq;
+    Sntrup761.enc(work);
 
     uint8_t k_cl[32];
-    protocore_x25519(k_cl, ssh_sess[i].ecdh_sk, qc);
+    Curve25519.x25519_args.scalar = ssh_sess[i].ecdh_sk;
+    Curve25519.x25519_args.point = qc;
+    Curve25519.x25519_args.out = k_cl;
+    Curve25519.x25519(work);
     uint8_t zacc = 0;
     for (int b = 0; b < 32; b++)
     {
@@ -1657,11 +1738,15 @@ static int hybrid_sntrup761_x25519(uint8_t *work, uint8_t i, const uint8_t *payl
     }
     mem.cpy(s_reply + PROTOCORE_SNTRUP761_CT_BYTES, ssh_sess[i].ecdh_pk, 32); // S_PK1: server X25519 public
 
-    protocore_sha512_ctx hc;
-    protocore_sha512_init(&hc, work);
-    protocore_sha512_update(&hc, k_pq, sizeof(k_pq)); // K = SHA512(K_PQ || K_CL) (RFC 9370 concat combiner)
-    protocore_sha512_update(&hc, k_cl, sizeof(k_cl));
-    protocore_sha512_final(&hc, k_out);
+    Sha512.init(work);
+    Sha512.update_args.data = k_pq; // K = SHA512(K_PQ || K_CL) (RFC 9370 concat combiner)
+    Sha512.update_args.len = sizeof(k_pq);
+    Sha512.update(work);
+    Sha512.update_args.data = k_cl;
+    Sha512.update_args.len = sizeof(k_cl);
+    Sha512.update(work);
+    Sha512.final_args.out = k_out;
+    Sha512.final(work);
     protocore_secure_wipe(k_pq, sizeof(k_pq));
     protocore_secure_wipe(k_cl, sizeof(k_cl));
     return 0;
@@ -1716,7 +1801,10 @@ void ssh_kexdh_handle(struct SshTransportInternal *restrict ctx)
             ctx->ns->i32 = -1;
             return;
         }
-        protocore_x25519(kk, s->ecdh_sk, qc);
+        Curve25519.x25519_args.scalar = s->ecdh_sk;
+        Curve25519.x25519_args.point = qc;
+        Curve25519.x25519_args.out = kk;
+        Curve25519.x25519(ssh_pkt[i].crypto_work);
         // Reject a low-order client point (all-zero shared secret) - RFC 7748 §6.1.
         uint8_t zacc = 0;
         for (int b = 0; b < 32; b++)
@@ -1786,9 +1874,18 @@ void ssh_kexdh_handle(struct SshTransportInternal *restrict ctx)
         }
         uint8_t qs[PROTOCORE_ECDSA_P256_PUB_LEN];
         uint8_t kk[PROTOCORE_ECDSA_P256_COORD_LEN];
-        // Re-derive our ephemeral public Q_S, then the shared secret. protocore_ecdsa_p256_ecdh validates
-        // Q_C is on-curve and the product is not the identity (RFC 5656 §4 point checks).
-        if (!protocore_ecdsa_p256_pubkey(qs, s->ecdh_sk) || !protocore_ecdsa_p256_ecdh(kk, qc, s->ecdh_sk))
+        // Re-derive our ephemeral public Q_S, then the shared secret. Ecdsa.ecdh validates Q_C is
+        // on-curve and the product is not the identity (RFC 5656 §4 point checks).
+        uint8_t *ecw = ssh_pkt[i].crypto_work;
+        Ecdsa.pubkey_args.priv = s->ecdh_sk;
+        Ecdsa.pubkey_args.pub = qs;
+        Ecdsa.pubkey(ecw);
+        proto_bool ec_ok = Ecdsa.ok;
+        Ecdsa.ecdh_args.peer_pub = qc;
+        Ecdsa.ecdh_args.priv = s->ecdh_sk;
+        Ecdsa.ecdh_args.shared_x = kk;
+        Ecdsa.ecdh(ecw);
+        if (!ec_ok || !Ecdsa.ok)
         {
             ctx->ns->i32 = -1;
             return;
@@ -1811,18 +1908,30 @@ void ssh_kexdh_handle(struct SshTransportInternal *restrict ctx)
             return;
         }
         protocore_bignum e;
-        bn_from_bytes(&e, e_be, 256);
-        if (bn_dh_validate(&e) != 0)
+        Bignum.from_bytes_args.out = &e;
+        Bignum.from_bytes_args.bytes = e_be;
+        Bignum.from_bytes_args.len = 256;
+        Bignum.from_bytes(ssh_pkt[i].crypto_work);
+        Bignum.validate_args.v = &e;
+        Bignum.dh_validate(ssh_pkt[i].crypto_work);
+        if (!Bignum.ok)
         {
             ctx->ns->i32 = -1;
             return;
         }
         protocore_bignum K;
-        bn_expmod_group14(&K, &e, ssh_dh[i].y);
-        bn_to_bytes(k_be, &K);
+        Bignum.expmod_args.out = &K;
+        Bignum.expmod_args.base = &e;
+        Bignum.expmod_args.exp = ssh_dh[i].y;
+        Bignum.expmod_group14(ssh_pkt[i].crypto_work);
+        Bignum.to_bytes_args.bytes = k_be;
+        Bignum.to_bytes_args.in = &K;
+        Bignum.to_bytes(ssh_pkt[i].crypto_work);
         protocore_secure_wipe(&K, sizeof(K));
         mem.cpy(cpub, e_be, 256);
-        bn_to_bytes(spub, ssh_dh[i].f);
+        Bignum.to_bytes_args.bytes = spub;
+        Bignum.to_bytes_args.in = ssh_dh[i].f;
+        Bignum.to_bytes(ssh_pkt[i].crypto_work);
     }
 
     // 2. Host-key blob K_S (per negotiated host-key algorithm).
@@ -1939,11 +2048,11 @@ void ssh_newkeys_complete(struct SshTransportInternal *restrict ctx)
         SshKeyMat *old = &ssh_keys[i][1u - ssh_sess[i].in.epoch];
         if (old->active && old->cipher_mode_c2s == SSH_CIPHER_AES256GCM)
         {
-            protocore_aesgcm_key_wipe((struct protocore_aesgcm_key *)(old->gcm_ctx_c2s));
+            AesGcm.key_wipe(old->gcm_ctx_c2s);
         }
         if (old->active && old->cipher_mode_s2c == SSH_CIPHER_AES256GCM)
         {
-            protocore_aesgcm_key_wipe((struct protocore_aesgcm_key *)(old->gcm_ctx_s2c));
+            AesGcm.key_wipe(old->gcm_ctx_s2c);
         }
         if (old->gcm_ctx_c2s != NULL)
         {
@@ -2082,6 +2191,7 @@ proto_bool ssh_pkt_slot_storage(SshPacketState *s)
     }
     s->tx_wire = base + SSH_OFF_WIRE;
     s->mac_work = base + SSH_OFF_MAC_WORK;
+    s->cipher_work = base + SSH_OFF_CIPHER_WORK;
     s->crypto_work = base + SSH_OFF_CRYPTO_WORK;
     s->rx_buf = base + SSH_OFF_RX_ASM;
     return PROTO_TRUE;
@@ -2097,19 +2207,31 @@ static void compute_mac_mode(uint8_t mac_mode, uint8_t *work, const uint8_t *mac
     write_u32_be(seq_be, seq_no);
     if (mac_mode == SSH_MAC_HMAC_SHA512 || mac_mode == SSH_MAC_HMAC_SHA512_ETM)
     {
-        protocore_hmac_sha512_ctx ctx;
-        protocore_hmac_sha512_init(&ctx, work, mac_key, 64);
-        protocore_hmac_sha512_update(&ctx, seq_be, 4);
-        protocore_hmac_sha512_update(&ctx, buf, buf_len);
-        protocore_hmac_sha512_final(&ctx, mac_out);
+        HmacSha512.key_args.key = mac_key;
+        HmacSha512.key_args.key_len = 64;
+        HmacSha512.init(work);
+        HmacSha512.update_args.data = seq_be;
+        HmacSha512.update_args.len = 4;
+        HmacSha512.update(work);
+        HmacSha512.update_args.data = buf;
+        HmacSha512.update_args.len = buf_len;
+        HmacSha512.update(work);
+        HmacSha512.final_args.out = mac_out;
+        HmacSha512.final(work);
     }
     else
     {
-        protocore_hmac_sha256_ctx ctx;
-        protocore_hmac_sha256_init(&ctx, work, mac_key, 32);
-        protocore_hmac_sha256_update(&ctx, seq_be, 4);
-        protocore_hmac_sha256_update(&ctx, buf, buf_len);
-        protocore_hmac_sha256_final(&ctx, mac_out);
+        HmacSha256.key_args.key = mac_key;
+        HmacSha256.key_args.key_len = 32;
+        HmacSha256.init(work);
+        HmacSha256.update_args.data = seq_be;
+        HmacSha256.update_args.len = 4;
+        HmacSha256.update(work);
+        HmacSha256.update_args.data = buf;
+        HmacSha256.update_args.len = buf_len;
+        HmacSha256.update(work);
+        HmacSha256.final_args.out = mac_out;
+        HmacSha256.final(work);
     }
 }
 
@@ -2128,11 +2250,13 @@ void ssh_pkt_init(uint8_t i)
     // never released, so it carries across to the next connection this slot serves.
     uint8_t *wire = s->tx_wire;
     uint8_t *macw = s->mac_work;
+    uint8_t *ciphw = s->cipher_work;
     uint8_t *kexw = s->crypto_work;
     uint8_t *rx = s->rx_buf;
     mem.set(s, 0, sizeof(*s)); // is_client defaults false = server role
     s->tx_wire = wire;
     s->mac_work = macw;
+    s->cipher_work = ciphw;
     s->crypto_work = kexw;
     s->rx_buf = rx;
 }
@@ -2249,13 +2373,13 @@ static inline const uint8_t *km_recv_aes_key(const SshKeyMat *km, proto_bool cli
 // GCM keeps a keyed context per direction rather than a raw key: the schedule is built once at install
 // (ssh_dh.c) and reused per packet, because standing one up costs ~9,200 cycles regardless of packet
 // size and would otherwise dominate small interactive traffic.
-static inline struct protocore_aesgcm_key *km_send_gcm(SshKeyMat *km, proto_bool cli)
+static inline uint8_t *km_send_gcm(SshKeyMat *km, proto_bool cli)
 {
-    return (struct protocore_aesgcm_key *)(cli ? km->gcm_ctx_c2s : km->gcm_ctx_s2c);
+    return cli ? km->gcm_ctx_c2s : km->gcm_ctx_s2c;
 }
-static inline struct protocore_aesgcm_key *km_recv_gcm(SshKeyMat *km, proto_bool cli)
+static inline uint8_t *km_recv_gcm(SshKeyMat *km, proto_bool cli)
 {
-    return (struct protocore_aesgcm_key *)(cli ? km->gcm_ctx_s2c : km->gcm_ctx_c2s);
+    return cli ? km->gcm_ctx_s2c : km->gcm_ctx_c2s;
 }
 static inline uint8_t *km_recv_aes_iv(SshKeyMat *km, proto_bool cli)
 {
@@ -2431,12 +2555,19 @@ int ssh_pkt_send_at(uint8_t i, uint8_t *out, size_t payload_len, size_t *out_len
     // Frame around the payload already sitting at out + SSH_WIRE_PAYLOAD_OFF.
     write_u32_be(out, (uint32_t)pkt_len);                // packet_length
     out[4] = (uint8_t)pad_len;                           // padding_length
-    protocore_rand_fill(out + 5 + payload_len, pad_len); // random padding
+    Rng.fill_args.out = out + 5 + payload_len;
+    Rng.fill_args.len = pad_len;
+    Rng.fill(protocore_rng_span()); // random padding
 
     if (chacha)
     {
         // Encrypt length (header key) + payload (main key) and append the Poly1305 tag.
-        protocore_chachapoly_encrypt(km_send_chacha(km, cli), s->seq_no_send, out, out, (uint32_t)pkt_len);
+        ChachaPoly.encrypt_args.key = km_send_chacha(km, cli);
+        ChachaPoly.encrypt_args.src = out;
+        ChachaPoly.encrypt_args.dest = out;
+        ChachaPoly.encrypt_args.seqnr = s->seq_no_send;
+        ChachaPoly.encrypt_args.payload_len = (uint32_t)pkt_len;
+        ChachaPoly.encrypt(s->cipher_work);
     }
     else if (gcm)
     {
@@ -2444,13 +2575,26 @@ int ssh_pkt_send_at(uint8_t i, uint8_t *out, size_t payload_len, size_t *out_len
         // place and append the 16-byte GCM tag. The context's invocation counter advances by one.
         // Seal in place (tag appended after the ciphertext), then advance the RFC 5647 invocation counter.
         uint8_t *iv = km_send_aes_iv(km, cli);
-        protocore_aesgcm_seal(km_send_gcm(km, cli), iv, out, 4, out + 4, pkt_len, out + 4, out + 4 + pkt_len);
-        protocore_aesgcm_iv_increment(iv);
+        AesGcm.seal_args.nonce = iv;
+        AesGcm.seal_args.aad = out;
+        AesGcm.seal_args.aad_len = 4;
+        AesGcm.seal_args.pt = out + 4;
+        AesGcm.seal_args.pt_len = pkt_len;
+        AesGcm.seal_args.ct_out = out + 4;
+        AesGcm.seal_args.tag_out = out + 4 + pkt_len;
+        AesGcm.seal(km_send_gcm(km, cli));
+        AesGcm.iv_args.iv = iv;
+        AesGcm.iv_increment(km_send_gcm(km, cli));
     }
     else if (etm)
     {
         // Encrypt-then-MAC: length stays in clear; encrypt the payload, then MAC over (length||ct).
-        protocore_aes256ctr_crypt(km_send_aes_key(km, cli), km_send_aes_iv(km, cli), out + 4, out + 4, pkt_len);
+        Aes256Ctr.crypt_args.key = km_send_aes_key(km, cli);
+        Aes256Ctr.crypt_args.counter = km_send_aes_iv(km, cli);
+        Aes256Ctr.crypt_args.in = out + 4;
+        Aes256Ctr.crypt_args.out = out + 4;
+        Aes256Ctr.crypt_args.len = pkt_len;
+        Aes256Ctr.crypt(s->cipher_work);
         compute_mac_mode(send_mac_mode, s->mac_work, km_send_mac(km, cli), s->seq_no_send, out, 4 + pkt_len,
                          out + 4 + pkt_len);
     }
@@ -2459,7 +2603,12 @@ int ssh_pkt_send_at(uint8_t i, uint8_t *out, size_t payload_len, size_t *out_len
         // Encrypt-and-MAC: MAC over plaintext (seq || unencrypted packet), then AES-256-CTR.
         uint8_t mac[64];
         compute_mac_mode(send_mac_mode, s->mac_work, km_send_mac(km, cli), s->seq_no_send, out, 4 + pkt_len, mac);
-        protocore_aes256ctr_crypt(km_send_aes_key(km, cli), km_send_aes_iv(km, cli), out, out, 4 + pkt_len);
+        Aes256Ctr.crypt_args.key = km_send_aes_key(km, cli);
+        Aes256Ctr.crypt_args.counter = km_send_aes_iv(km, cli);
+        Aes256Ctr.crypt_args.in = out;
+        Aes256Ctr.crypt_args.out = out;
+        Aes256Ctr.crypt_args.len = 4 + pkt_len;
+        Aes256Ctr.crypt(s->cipher_work);
         mem.cpy(out + 4 + pkt_len, mac, tag_len);
         protocore_secure_wipe(mac, sizeof(mac));
     }
@@ -2529,7 +2678,11 @@ static int ssh_recv_chachapoly(uint8_t i, SshPacketState *s, const SshKeyMat *km
     // chacha20-poly1305@openssh.com. Keyed by the sequence number, so decrypting the
     // length is stateless/repeatable - no cipher-state peek/restore is needed.
     const uint8_t *rk = km_recv_chacha(km, s->is_client); // recv: client s2c, server c2s
-    uint32_t pkt_len = protocore_chachapoly_get_length(rk, s->seq_no_recv, s->rx_buf);
+    ChachaPoly.length_args.key = rk;
+    ChachaPoly.length_args.enc_len = s->rx_buf;
+    ChachaPoly.length_args.seqnr = s->seq_no_recv;
+    ChachaPoly.get_length(s->cipher_work);
+    uint32_t pkt_len = ChachaPoly.length;
     // The whole packet must fit the reassembly region (RFC 4253 sec 6.1: 35000 bytes including the
     // tag), which is what rx_buf spans.
     if (pkt_len < 1 || pkt_len > SSH_RX_ASM_CAP - 4 - PROTOCORE_CHACHAPOLY_TAG_LEN)
@@ -2546,7 +2699,13 @@ static int ssh_recv_chachapoly(uint8_t i, SshPacketState *s, const SshKeyMat *km
 
     // Verify the Poly1305 tag over the ciphertext, then decrypt in place. The tag is checked before
     // a single byte is written, so a failure leaves the ciphertext untouched and no plaintext.
-    if (!protocore_chachapoly_decrypt(rk, s->seq_no_recv, s->rx_buf, s->rx_buf, pkt_len))
+    ChachaPoly.decrypt_args.key = rk;
+    ChachaPoly.decrypt_args.src = s->rx_buf;
+    ChachaPoly.decrypt_args.dest = s->rx_buf;
+    ChachaPoly.decrypt_args.seqnr = s->seq_no_recv;
+    ChachaPoly.decrypt_args.payload_len = pkt_len;
+    ChachaPoly.decrypt(s->cipher_work);
+    if (!ChachaPoly.ok)
     {
         protocore_secure_wipe(s->rx_buf, s->rx_len);
         s->rx_len = 0;
@@ -2620,8 +2779,15 @@ static int ssh_recv_aesgcm(uint8_t i, SshPacketState *s, SshKeyMat *km, ssh_msg_
 
     // Verify the GCM tag over (length || ciphertext), then decrypt. No plaintext on failure.
     uint8_t *iv = km_recv_aes_iv(km, s->is_client);
-    if (!protocore_aesgcm_open(km_recv_gcm(km, s->is_client), iv, s->rx_buf, 4, s->rx_buf + 4, pkt_len,
-                               s->rx_buf + 4 + pkt_len, scratch))
+    AesGcm.open_args.nonce = iv;
+    AesGcm.open_args.aad = s->rx_buf;
+    AesGcm.open_args.aad_len = 4;
+    AesGcm.open_args.ct = s->rx_buf + 4;
+    AesGcm.open_args.ct_len = pkt_len;
+    AesGcm.open_args.tag = s->rx_buf + 4 + pkt_len;
+    AesGcm.open_args.out = scratch;
+    AesGcm.open(km_recv_gcm(km, s->is_client));
+    if (!AesGcm.ok)
     {
         protocore_secure_wipe(scratch, scratch_sz);
         protocore_secure_wipe(s->rx_buf, s->rx_len);
@@ -2629,7 +2795,9 @@ static int ssh_recv_aesgcm(uint8_t i, SshPacketState *s, SshKeyMat *km, ssh_msg_
         protocore_plaintext_release(scratch_scope);
         return -1; // caller must close connection
     }
-    protocore_aesgcm_iv_increment(iv); // tag verified: advance the RFC 5647 invocation counter (recv success)
+    // Tag verified: advance the RFC 5647 invocation counter (recv success).
+    AesGcm.iv_args.iv = iv;
+    AesGcm.iv_increment(km_recv_gcm(km, s->is_client));
 
     if (s->seq_no_recv >= SSH_SEQ_CLOSE_THRESHOLD)
     {
@@ -2704,8 +2872,12 @@ static int ssh_recv_ctr_etm(uint8_t i, SshPacketState *s, SshKeyMat *km, ssh_msg
     // MAC verified -> decrypt in place (advances c2s_ctx by exactly pkt_len/16 blocks). The MAC
     // covered length || ciphertext, so nothing still needs the ciphertext and the packet is
     // unwrapped where it already sits.
-    protocore_aes256ctr_crypt(km_recv_aes_key(km, s->is_client), km_recv_aes_iv(km, s->is_client), s->rx_buf + 4,
-                              s->rx_buf + 4, pkt_len);
+    Aes256Ctr.crypt_args.key = km_recv_aes_key(km, s->is_client);
+    Aes256Ctr.crypt_args.counter = km_recv_aes_iv(km, s->is_client);
+    Aes256Ctr.crypt_args.in = s->rx_buf + 4;
+    Aes256Ctr.crypt_args.out = s->rx_buf + 4;
+    Aes256Ctr.crypt_args.len = pkt_len;
+    Aes256Ctr.crypt(s->cipher_work);
 
     // rx_buf + 4 = padding_length || payload || padding.
     uint8_t pad_len_byte = s->rx_buf[4];
@@ -2745,7 +2917,11 @@ static int ssh_recv_ctr_emac(uint8_t i, SshPacketState *s, SshKeyMat *km, ssh_ms
     // and no cipher state touches the stack (all working memory stays in the shared crypto scratch).
     const uint8_t *rk = km_recv_aes_key(km, s->is_client); // recv: client s2c, server c2s
     uint8_t *rctr = km_recv_aes_iv(km, s->is_client);
-    uint32_t pkt_len = protocore_aes256ctr_get_length(rk, rctr, s->rx_buf);
+    Aes256Ctr.get_length_args.key = rk;
+    Aes256Ctr.get_length_args.counter = rctr;
+    Aes256Ctr.get_length_args.enc4 = s->rx_buf;
+    Aes256Ctr.get_length(s->cipher_work);
+    uint32_t pkt_len = Aes256Ctr.length;
 
     // Validate length.  The encrypted portion (4 + pkt_len) must be a
     // whole number of AES blocks (RFC 4253 §6 padding guarantees this).
@@ -2771,7 +2947,12 @@ static int ssh_recv_ctr_emac(uint8_t i, SshPacketState *s, SshKeyMat *km, ssh_ms
     // counter by exactly enc_len/16 blocks and leaves it aligned on the next packet boundary. The
     // mac is sent in the clear past enc_len, so decrypting here does not disturb it.
     const uint8_t *rx_mac = s->rx_buf + enc_len;
-    protocore_aes256ctr_crypt(rk, rctr, s->rx_buf, s->rx_buf, enc_len);
+    Aes256Ctr.crypt_args.key = rk;
+    Aes256Ctr.crypt_args.counter = rctr;
+    Aes256Ctr.crypt_args.in = s->rx_buf;
+    Aes256Ctr.crypt_args.out = s->rx_buf;
+    Aes256Ctr.crypt_args.len = enc_len;
+    Aes256Ctr.crypt(s->cipher_work);
 
     // Verify MAC over seq_no || plaintext(rx_buf[0..enc_len)).
     uint8_t expected_mac[64];
@@ -3057,7 +3238,9 @@ int ssh_dh_generate(uint8_t i)
     // RFC 4253 §8 does not specify a minimum bit-length for y beyond requiring
     // it to be in [1, p-1].  Common practice is a full 2048-bit random value,
     // which ensures the discrete-log is as hard as the group order.
-    protocore_rand_fill((uint8_t *)dh->y->d, sizeof(protocore_bignum));
+    Rng.fill_args.out = (uint8_t *)dh->y->d;
+    Rng.fill_args.len = sizeof(protocore_bignum);
+    Rng.fill(protocore_rng_span());
 
     // Ensure y < p by clearing the two MSBs (conservative; not strictly
     // required since rejection sampling would also work, but a single mask
@@ -3067,7 +3250,10 @@ int ssh_dh_generate(uint8_t i)
     dh->y->d[0] |= 0x00000002u;
 
     // f = g^y mod p  (g = 2 for group-14)
-    bn_expmod_group14(dh->f, &group14_g, dh->y);
+    Bignum.expmod_args.out = dh->f;
+    Bignum.expmod_args.base = &group14_g;
+    Bignum.expmod_args.exp = dh->y;
+    Bignum.expmod_group14(ssh_pkt[i].crypto_work);
 
     return 0;
 }
@@ -3082,7 +3268,7 @@ int ssh_dh_generate(uint8_t i)
 // hash encodes K the same way (hash_mpint), so the KDF must too: if K has any
 // high-order zero bytes (~1/256 of handshakes) a spec-compliant peer strips them
 // and would otherwise derive different keys.
-static void hash_mpint_K(SshKexHash *h, const uint8_t K_be[256])
+static void hash_mpint_K(uint8_t *work, const uint8_t K_be[256])
 {
     size_t off = 0;
     while (off < 256 && K_be[off] == 0x00u)
@@ -3092,47 +3278,54 @@ static void hash_mpint_K(SshKexHash *h, const uint8_t K_be[256])
     if (off == 256) // K == 0: empty mpint (not reachable for a real DH secret)
     {
         uint8_t len_be[4] = {0, 0, 0, 0};
-        ssh_kexhash_update(h, len_be, 4);
+        hash_bytes(work, len_be, 4);
         return;
     }
     proto_bool pad = (K_be[off] & 0x80u) != 0;
-    uint32_t mlen = (uint32_t)(256 - off) + (pad ? 1u : 0u);
+    uint32_t mlen = (uint32_t)(256 - off);
+    if (pad)
+    {
+        mlen++;
+    }
     uint8_t len_be[4] = {(uint8_t)(mlen >> 24), (uint8_t)(mlen >> 16), (uint8_t)(mlen >> 8), (uint8_t)mlen};
-    ssh_kexhash_update(h, len_be, 4);
+    hash_bytes(work, len_be, 4);
     if (pad)
     {
         uint8_t zero = 0x00u;
-        ssh_kexhash_update(h, &zero, 1);
+        hash_bytes(work, &zero, 1);
     }
-    ssh_kexhash_update(h, K_be + off, 256 - off);
+    hash_bytes(work, K_be + off, 256 - off);
 }
 
 // Hybrid KEX: K is a fixed HASH output (32 for mlkem-sha256, 64 for sntrup761-sha512), hashed as a
 // plain SSH string (RFC 4251 §5) - length prefix then the bytes verbatim, NO mpint sign/strip. It
 // lives in the last @p klen octets of the right-aligned K_be buffer. H and this KDF encode K the same.
-static void hash_string_K(SshKexHash *h, const uint8_t K_be[256], size_t klen)
+static void hash_string_K(uint8_t *work, const uint8_t K_be[256], size_t klen)
 {
     uint8_t len_be[4] = {(uint8_t)(klen >> 24), (uint8_t)(klen >> 16), (uint8_t)(klen >> 8), (uint8_t)klen};
-    ssh_kexhash_update(h, len_be, 4);
-    ssh_kexhash_update(h, K_be + (256 - klen), klen);
+    hash_bytes(work, len_be, 4);
+    hash_bytes(work, K_be + (256 - klen), klen);
 }
 
-static inline void hash_K(SshKexHash *h, const uint8_t K_be[256], proto_bool k_is_string, size_t k_str_len)
+static inline void hash_K(uint8_t *work, const uint8_t K_be[256], proto_bool k_is_string, size_t k_str_len)
 {
     if (k_is_string)
     {
-        hash_string_K(h, K_be, k_str_len);
+        hash_string_K(work, K_be, k_str_len);
     }
     else
     {
-        hash_mpint_K(h, K_be);
+        hash_mpint_K(work, K_be);
     }
 }
 
 // The caller's region, split by offset the way the slot's own borrow is: the exchange hash works out
 // of the front, the K1 || K2 chain accumulates behind it. A caller hands in PROTOCORE_SSH_KDF_BORROW bytes.
 #define SSH_KDF_OFF_HASH 0u
-#define SSH_KDF_OFF_ACC (SSH_KDF_OFF_HASH + PROTOCORE_SHA512_BORROW)
+#define SSH_KDF_OFF_ACC (SSH_KDF_OFF_HASH + PROTOCORE_SSH_KEXHASH_BORROW)
+static_assert(SSH_KDF_OFF_ACC + SSH_KDF_MAX <= PROTOCORE_SSH_KDF_BORROW,
+              "PROTOCORE_SSH_KDF_BORROW is short of the exchange-hash region and the K1 || K2 chain - "
+              "raise it in protocore_config.h, which sums it into the secure arena");
 
 // RFC 4253 §7.2 key derivation extended to any length, over the KEX method's hash (SHA-256 or
 // SHA-512 via SshKexHash / @p is512):
@@ -3142,37 +3335,41 @@ static inline void hash_K(SshKexHash *h, const uint8_t K_be[256], proto_bool k_i
 // @p k_str_len octets (the KEX hash length). @p out_len up to SSH_KDF_MAX.
 void ssh_kdf_derive(const SshKdfInputs *in, char label, uint8_t *out, size_t out_len)
 {
-    const size_t blk = ssh_kexhash_len(in->is512); // 32 or 64
-    const size_t k_str_len = ssh_kexhash_len(in->is512);
     if (out_len > SSH_KDF_MAX)
     {
         out_len = SSH_KDF_MAX; // bounded: every negotiated algorithm needs <= 64 B today
     }
+    uint8_t *work = in->work + SSH_KDF_OFF_HASH;
     uint8_t *acc = in->work + SSH_KDF_OFF_ACC; // K1 || K2 || ... accumulated for the chain hash
     size_t have = 0;
 
-    SshKexHash h;
-    ssh_kexhash_init(&h, in->work, in->is512);
-    hash_K(&h, in->K_be, in->k_is_string, k_str_len);
-    ssh_kexhash_update(&h, in->H, in->h_len);
+    SshKexHash.init_args.is512 = in->is512;
+    SshKexHash.init(work);
+    const size_t blk = SshKexHash.len;       // 32 or 64, the bound hash's own length
+    const size_t k_str_len = SshKexHash.len; // a hybrid K is one HASH output wide
+    hash_K(work, in->K_be, in->k_is_string, k_str_len);
+    hash_bytes(work, in->H, in->h_len);
     uint8_t lbl = (uint8_t)label;
-    ssh_kexhash_update(&h, &lbl, 1);
-    ssh_kexhash_update(&h, in->session_id, in->sid_len);
-    ssh_kexhash_final(&h, acc); // acc[0..blk-1] = K1
+    hash_bytes(work, &lbl, 1);
+    hash_bytes(work, in->session_id, in->sid_len);
+    SshKexHash.final_args.out = acc; // acc[0..blk-1] = K1
+    SshKexHash.final(work);
     have = blk;
 
     // have + blk > SSH_KDF_MAX (loop exit via the right operand) is unreachable: blk is only ever 32 or
-    // 64 (ssh_kexhash_len(is512)) and SSH_KDF_MAX is 128, an exact multiple of both; out_len is already
+    // 64 (the bound hash's length) and SSH_KDF_MAX is 128, an exact multiple of both; out_len is already
     // clamped to <= SSH_KDF_MAX above, and have only grows in whole increments of blk starting at blk -
     // so whenever have < out_len (<= SSH_KDF_MAX) it is at most SSH_KDF_MAX - blk, and this half is
     // always true.
     while (have < out_len && have + blk <= SSH_KDF_MAX)
     {
-        ssh_kexhash_init(&h, in->work, in->is512);
-        hash_K(&h, in->K_be, in->k_is_string, k_str_len);
-        ssh_kexhash_update(&h, in->H, in->h_len);
-        ssh_kexhash_update(&h, acc, have); // all prior blocks
-        ssh_kexhash_final(&h, acc + have);
+        SshKexHash.init_args.is512 = in->is512;
+        SshKexHash.init(work);
+        hash_K(work, in->K_be, in->k_is_string, k_str_len);
+        hash_bytes(work, in->H, in->h_len);
+        hash_bytes(work, acc, have); // all prior blocks
+        SshKexHash.final_args.out = acc + have;
+        SshKexHash.final(work);
         have += blk;
     }
     mem.cpy(out, acc, out_len);
@@ -3221,7 +3418,8 @@ static void install_direction(SshKeyMat *km, const SshKdfInputs *in, proto_bool 
         // RFC 5647: this mode keeps only the schedule, so the key lands in aes_key - which GCM does not
         // otherwise use - becomes the keyed context, and is wiped. The nonce is the low 12 IV bytes.
         ssh_kdf_derive(in, key_label, aes_key, PROTOCORE_AES256CTR_KEY_LEN);
-        protocore_aesgcm_key_init(gcm_ctx, aes_key);
+        AesGcm.key_args.key = aes_key;
+        AesGcm.key_init(gcm_ctx);
         protocore_secure_wipe(aes_key, PROTOCORE_AES256CTR_KEY_LEN);
         return;
     }
@@ -3256,11 +3454,11 @@ void ssh_kex_install_keys(uint8_t i, const SshKdfInputs *in)
     // overwritten, after which the outgoing mode is no longer knowable.
     if (km->active && km->cipher_mode_c2s == SSH_CIPHER_AES256GCM)
     {
-        protocore_aesgcm_key_wipe((struct protocore_aesgcm_key *)(km->gcm_ctx_c2s));
+        AesGcm.key_wipe(km->gcm_ctx_c2s);
     }
     if (km->active && km->cipher_mode_s2c == SSH_CIPHER_AES256GCM)
     {
-        protocore_aesgcm_key_wipe((struct protocore_aesgcm_key *)(km->gcm_ctx_s2c));
+        AesGcm.key_wipe(km->gcm_ctx_s2c);
     }
     km->cipher_mode_c2s = s->cipher_alg_c2s;
     km->cipher_mode_s2c = s->cipher_alg_s2c;
@@ -3592,7 +3790,10 @@ proto_bool ssh_kex_shared_secret(const SshKexEphemeral *e, const uint8_t *peer_p
             return PROTO_FALSE;
         }
         uint8_t k32[32];
-        protocore_x25519(k32, e->priv, peer_pub);
+        Curve25519.x25519_args.scalar = e->priv;
+        Curve25519.x25519_args.point = peer_pub;
+        Curve25519.x25519_args.out = k32;
+        Curve25519.x25519(e->work);
         // Reject a low-order peer point (all-zero shared secret) - RFC 7748 sec 6.1.
         uint8_t zacc = 0;
         for (int b = 0; b < 32; b++)
@@ -3614,7 +3815,11 @@ proto_bool ssh_kex_shared_secret(const SshKexEphemeral *e, const uint8_t *peer_p
             return PROTO_FALSE;
         }
         uint8_t k32[PROTOCORE_ECDSA_P256_COORD_LEN];
-        if (!protocore_ecdsa_p256_ecdh(k32, peer_pub, e->priv))
+        Ecdsa.ecdh_args.peer_pub = peer_pub;
+        Ecdsa.ecdh_args.priv = e->priv;
+        Ecdsa.ecdh_args.shared_x = k32;
+        Ecdsa.ecdh(e->work);
+        if (!Ecdsa.ok)
         {
             return PROTO_FALSE;
         }
@@ -3624,14 +3829,27 @@ proto_bool ssh_kex_shared_secret(const SshKexEphemeral *e, const uint8_t *peer_p
     }
     case SSH_KEX_DH_GROUP14: {
         protocore_bignum f, x, K;
-        bn_from_bytes(&f, peer_pub, peer_pub_len);
-        if (bn_dh_validate(&f) != 0) // 0 = valid (1 < f < p-1)
+        Bignum.from_bytes_args.out = &f;
+        Bignum.from_bytes_args.bytes = peer_pub;
+        Bignum.from_bytes_args.len = peer_pub_len;
+        Bignum.from_bytes(e->work);
+        Bignum.validate_args.v = &f;
+        Bignum.dh_validate(e->work); // ok = valid (1 < f < p-1)
+        if (!Bignum.ok)
         {
             return PROTO_FALSE;
         }
-        bn_from_bytes(&x, e->priv, 32);
-        bn_expmod_group14(&K, &f, &x);
-        bn_to_bytes(k_be, &K);
+        Bignum.from_bytes_args.out = &x;
+        Bignum.from_bytes_args.bytes = e->priv;
+        Bignum.from_bytes_args.len = 32;
+        Bignum.from_bytes(e->work);
+        Bignum.expmod_args.out = &K;
+        Bignum.expmod_args.base = &f;
+        Bignum.expmod_args.exp = &x;
+        Bignum.expmod_group14(e->work);
+        Bignum.to_bytes_args.bytes = k_be;
+        Bignum.to_bytes_args.in = &K;
+        Bignum.to_bytes(e->work);
         protocore_secure_wipe(&x, sizeof(x));
         protocore_secure_wipe(&K, sizeof(K));
         return PROTO_TRUE;
@@ -3645,8 +3863,14 @@ proto_bool ssh_kex_shared_secret(const SshKexEphemeral *e, const uint8_t *peer_p
             return PROTO_FALSE;
         }
         uint8_t k_pq[32], k_cl[32];
-        protocore_mlkem768_decaps(e->hybrid_sk, peer_pub, k_pq);
-        protocore_x25519(k_cl, e->priv, peer_pub + MLKEM768_CT_BYTES);
+        MlKem.decaps_args.dk = e->hybrid_sk;
+        MlKem.decaps_args.ct = peer_pub;
+        MlKem.decaps_args.ss = k_pq;
+        MlKem.decaps(e->work);
+        Curve25519.x25519_args.scalar = e->priv;
+        Curve25519.x25519_args.point = peer_pub + MLKEM768_CT_BYTES;
+        Curve25519.x25519_args.out = k_cl;
+        Curve25519.x25519(e->work);
         // Reject a low-order peer point (all-zero shared secret) - RFC 7748 sec 6.1.
         uint8_t zacc = 0;
         for (int b = 0; b < 32; b++)
@@ -3659,11 +3883,15 @@ proto_bool ssh_kex_shared_secret(const SshKexEphemeral *e, const uint8_t *peer_p
             protocore_secure_wipe(k_cl, sizeof(k_cl));
             return PROTO_FALSE;
         }
-        protocore_sha256_ctx c;
-        protocore_sha256_init(&c, e->work);
-        protocore_sha256_update(&c, k_pq, 32);
-        protocore_sha256_update(&c, k_cl, 32);
-        protocore_sha256_final(&c, k_be + (256 - 32));
+        Sha256.init(e->work);
+        Sha256.update_args.data = k_pq;
+        Sha256.update_args.len = 32;
+        Sha256.update(e->work);
+        Sha256.update_args.data = k_cl;
+        Sha256.update_args.len = 32;
+        Sha256.update(e->work);
+        Sha256.final_args.out = k_be + (256 - 32);
+        Sha256.final(e->work);
         protocore_secure_wipe(k_pq, sizeof(k_pq));
         protocore_secure_wipe(k_cl, sizeof(k_cl));
         return PROTO_TRUE;
@@ -3678,8 +3906,14 @@ proto_bool ssh_kex_shared_secret(const SshKexEphemeral *e, const uint8_t *peer_p
             return PROTO_FALSE;
         }
         uint8_t k_pq[PROTOCORE_SNTRUP761_SS_BYTES], k_cl[32];
-        protocore_sntrup761_dec(e->work, e->hybrid_sk, peer_pub, k_pq);
-        protocore_x25519(k_cl, e->priv, peer_pub + PROTOCORE_SNTRUP761_CT_BYTES);
+        Sntrup761.dec_args.sk = e->hybrid_sk;
+        Sntrup761.dec_args.ct = peer_pub;
+        Sntrup761.dec_args.ss = k_pq;
+        Sntrup761.dec(e->work);
+        Curve25519.x25519_args.scalar = e->priv;
+        Curve25519.x25519_args.point = peer_pub + PROTOCORE_SNTRUP761_CT_BYTES;
+        Curve25519.x25519_args.out = k_cl;
+        Curve25519.x25519(e->work);
         // Reject a low-order peer point (all-zero shared secret) - RFC 7748 sec 6.1.
         uint8_t zacc = 0;
         for (int b = 0; b < 32; b++)
@@ -3692,11 +3926,15 @@ proto_bool ssh_kex_shared_secret(const SshKexEphemeral *e, const uint8_t *peer_p
             protocore_secure_wipe(k_cl, sizeof(k_cl));
             return PROTO_FALSE;
         }
-        protocore_sha512_ctx c;
-        protocore_sha512_init(&c, e->work);
-        protocore_sha512_update(&c, k_pq, sizeof(k_pq));
-        protocore_sha512_update(&c, k_cl, 32);
-        protocore_sha512_final(&c, k_be + (256 - 64));
+        Sha512.init(e->work);
+        Sha512.update_args.data = k_pq;
+        Sha512.update_args.len = sizeof(k_pq);
+        Sha512.update(e->work);
+        Sha512.update_args.data = k_cl;
+        Sha512.update_args.len = 32;
+        Sha512.update(e->work);
+        Sha512.final_args.out = k_be + (256 - 64);
+        Sha512.final(e->work);
         protocore_secure_wipe(k_pq, sizeof(k_pq));
         protocore_secure_wipe(k_cl, sizeof(k_cl));
         return PROTO_TRUE;
@@ -3837,17 +4075,32 @@ proto_bool ssh_pubkey_verify(uint8_t i, const char *pk_algo, const uint8_t *blob
     proto_bool sig_ok = PROTO_FALSE;
     if (is_ed)
     {
-        sig_ok = sig_len == 64 && protocore_ed25519_verify(work, ed_pub.buf, signed_data, signed_len, sig);
+        Ed25519.verify_args.pub = ed_pub.buf;
+        Ed25519.verify_args.msg = signed_data;
+        Ed25519.verify_args.msg_len = signed_len;
+        Ed25519.verify_args.sig = sig;
+        Ed25519.verify(work);
+        sig_ok = sig_len == 64 && Ed25519.ok;
     }
     else if (is_ecdsa)
     {
         protocore_span ec_sig = protocore_plaintext_span(PROTOCORE_ECDSA_P256_SIG_LEN, 4);
         sig_ok = span.ok(ec_sig) && parse_ecdsa_sig(sig, sig_len, ec_sig.buf) &&
-                 protocore_ecdsa_p256_verify(ec_pub.buf, work, signed_data, signed_len, ec_sig.buf);
+                 (Ecdsa.verify_args.pub = ec_pub.buf, Ecdsa.verify_args.msg = signed_data,
+                  Ecdsa.verify_args.mlen = signed_len, Ecdsa.verify_args.sig = ec_sig.buf, Ecdsa.verify(work),
+                  Ecdsa.ok);
     }
     else
     {
-        sig_ok = protocore_rsa_verify(n_be.buf, e_be.buf, work, signed_data, signed_len, sig, sig_len, rh) == 0;
+        Rsa.verify_args.n = n_be.buf;
+        Rsa.verify_args.e = e_be.buf;
+        Rsa.verify_args.msg = signed_data;
+        Rsa.verify_args.msg_len = signed_len;
+        Rsa.verify_args.sig = sig;
+        Rsa.verify_args.sig_len = sig_len;
+        Rsa.verify_args.hash = rh;
+        Rsa.verify(work);
+        sig_ok = Rsa.ok;
     }
     protocore_plaintext_release(mark);
     return sig_ok;
