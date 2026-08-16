@@ -143,9 +143,6 @@ typedef struct
     size_t out_cap; ///< how much room it has
 } TlsRecordOut;
 
-/** @brief The record layer's own calls, described only in record.c. */
-struct TlsRecordInternal;
-
 /**
  * @brief The record layer (RFC 8446 sec 5): the two record shapes and their keys.
  *
@@ -173,7 +170,6 @@ struct TlsRecordInternal;
  *      scan back past the zero padding for the real content type. Advances seq only on success. A
  *      record whose inner plaintext is all zeros has no content type and is refused (sec 5.4).
  * @var TlsRecordNs::keys_wipe  wipe the AEAD schedule and the IV; the storage stays the caller's
- * @var TlsRecordNs::internal   the calls that frame and protect a record
  *
  * No storage member: every call works in the caller's buffers and in the keys it was handed.
  */
@@ -189,14 +185,13 @@ typedef struct
     proto_bool ok;
     size_t n;
 
-    void (*keys_derive)(struct TlsRecordInternal *ctx);
-    void (*plaintext_build)(struct TlsRecordInternal *ctx);
-    void (*plaintext_parse)(struct TlsRecordInternal *ctx);
-    void (*protect)(struct TlsRecordInternal *ctx);
-    void (*unprotect)(struct TlsRecordInternal *ctx);
-    void (*keys_wipe)(struct TlsRecordInternal *ctx);
+    void (*const keys_derive)(uint8_t *restrict work);
+    void (*const plaintext_build)(uint8_t *restrict work);
+    void (*const plaintext_parse)(uint8_t *restrict work);
+    void (*const protect)(uint8_t *restrict work);
+    void (*const unprotect)(uint8_t *restrict work);
+    void (*const keys_wipe)(uint8_t *restrict work);
 
-    struct TlsRecordInternal *internal;
 } TlsRecordNs;
 
 /** @brief The one symbol this module exports. */

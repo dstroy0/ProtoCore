@@ -9,59 +9,54 @@
 #include "sse.h"
 #include "mmgr/protomem.h"
 #include "mmgr/protostr.h"
+#include "mmgr/secure.h"                                     // the persistent end this module's state is taken from
+#include "mmgr/span.h"                                       // span.ok: whether the pool had the bytes
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the slot a stream sends on
 
 SseConn protocore_sse_pool[MAX_SSE_CONNS];
 
-/**
- * @brief The pool's compile-time storage: the streams and the per-route subscribe handlers.
- *
- * A handler belongs here rather than in the route table: a route decides where a request goes, and
- * what runs once a client subscribes is this module's business. A route carries the id that names
- * the set. All BSS.
- */
-struct SseStorage
+// The per-route subscribe handlers and the framing buffer. A handler belongs here rather than in
+// the route table: a route decides where a request goes, and what runs once a client subscribes is
+// this module's business. A route carries the id that names the set. Only what is not derivable:
+// the regions live at fixed offsets in the caller's borrow, so the macro below computes them from
+// the pointer rather than the context storing them.
+typedef struct
 {
     SseConnectHandler on_connect[MAX_ROUTES]; ///< one subscribe handler per route
     uint8_t count;                            ///< how many routes recorded one
     char buf[SSE_BUF_SIZE];                   ///< where a write frames its record
-};
+} SseCtx;
 
-/**
- * @brief The pool's state and the calls that reach it - what SseNs points at.
- *
- * @var SseInternal::store  the subscribe handlers and the framing buffer
- * @var SseInternal::ns     the handle a caller sets a call's members on
- */
-struct SseInternal
+// The caller's borrow, split: the context at its offset. One pointer arrives and every region is
+// that pointer plus a compile-time offset, so the assert below proves the span covers them before
+// anything runs.
+#define SSE_OFF_CTX 0u
+static_assert(SSE_OFF_CTX + sizeof(SseCtx) <= PROTOCORE_SSE_BORROW,
+              "PROTOCORE_SSE_BORROW is short of the module context - raise it in protocore_config.h,"
+              " which sums it into its arena");
+
+// The region, at its offset in the caller's borrow.
+#define SSE_CTX(w) ((SseCtx *)(void *)((w) + SSE_OFF_CTX))
+
+static void route_add(uint8_t *restrict work)
 {
-    struct SseStorage *store;
-    SseNs *ns;
-};
-
-static struct SseStorage s_store;
-
-static struct SseInternal s_sse = {.store = &s_store, .ns = &Sse};
-
-static void route_add(struct SseInternal *restrict ctx)
-{
-    if (ctx->store->count >= MAX_ROUTES)
+    if (SSE_CTX(work)->count >= MAX_ROUTES)
     {
-        ctx->ns->u8 = PROTOCORE_SSE_NONE;
+        Sse.u8 = PROTOCORE_SSE_NONE;
         return;
     }
-    ctx->store->on_connect[ctx->store->count] = ctx->ns->route.on_connect;
-    ctx->ns->u8 = ctx->store->count++;
+    SSE_CTX(work)->on_connect[SSE_CTX(work)->count] = Sse.route.on_connect;
+    Sse.u8 = SSE_CTX(work)->count++;
 }
 
-static void route_connect(struct SseInternal *restrict ctx)
+static void route_connect(uint8_t *restrict work)
 {
-    ctx->ns->handler = (ctx->ns->id >= ctx->store->count) ? NULL : ctx->store->on_connect[ctx->ns->id];
+    Sse.handler = (Sse.id >= SSE_CTX(work)->count) ? NULL : SSE_CTX(work)->on_connect[Sse.id];
 }
 
-static void init(struct SseInternal *restrict ctx)
+static void init(uint8_t *restrict work)
 {
-    (void)ctx;
+    (void)work;
     for (int i = 0; i < MAX_SSE_CONNS; i++)
     {
         protocore_sse_pool[i] = (SseConn){0};
@@ -69,43 +64,46 @@ static void init(struct SseInternal *restrict ctx)
     }
 }
 
-static void alloc(struct SseInternal *restrict ctx)
+static void alloc(uint8_t *restrict work)
 {
-    ctx->ns->conn = NULL;
+    (void)work;
+    Sse.conn = NULL;
     for (int i = 0; i < MAX_SSE_CONNS; i++)
     {
         if (!protocore_sse_pool[i].active)
         {
             protocore_sse_pool[i] = (SseConn){0};
             protocore_sse_pool[i].protocore_sse_id = (uint8_t)i;
-            protocore_sse_pool[i].slot_id = ctx->ns->slot;
+            protocore_sse_pool[i].slot_id = Sse.slot;
             protocore_sse_pool[i].active = PROTO_TRUE;
-            str.copy(protocore_sse_pool[i].path, ctx->ns->route.path, sizeof(protocore_sse_pool[i].path));
+            str.copy(protocore_sse_pool[i].path, Sse.route.path, sizeof(protocore_sse_pool[i].path));
             protocore_sse_pool[i].path[MAX_PATH_LEN - 1] = '\0';
-            ctx->ns->conn = &protocore_sse_pool[i];
+            Sse.conn = &protocore_sse_pool[i];
             return;
         }
     }
 }
 
-static void find(struct SseInternal *restrict ctx)
+static void find(uint8_t *restrict work)
 {
-    ctx->ns->conn = NULL;
+    (void)work;
+    Sse.conn = NULL;
     for (int i = 0; i < MAX_SSE_CONNS; i++)
     {
-        if (protocore_sse_pool[i].active && protocore_sse_pool[i].slot_id == ctx->ns->slot)
+        if (protocore_sse_pool[i].active && protocore_sse_pool[i].slot_id == Sse.slot)
         {
-            ctx->ns->conn = &protocore_sse_pool[i];
+            Sse.conn = &protocore_sse_pool[i];
             return;
         }
     }
 }
 
-static void release(struct SseInternal *restrict ctx)
+static void release(uint8_t *restrict work)
 {
+    (void)work;
     for (int i = 0; i < MAX_SSE_CONNS; i++)
     {
-        if (protocore_sse_pool[i].active && protocore_sse_pool[i].slot_id == ctx->ns->slot)
+        if (protocore_sse_pool[i].active && protocore_sse_pool[i].slot_id == Sse.slot)
         {
             protocore_sse_pool[i] = (SseConn){0};
             protocore_sse_pool[i].protocore_sse_id = (uint8_t)i;
@@ -128,12 +126,13 @@ static inline proto_bool sse_append(char *buf, size_t n, size_t *pos, const char
     return PROTO_TRUE;
 }
 
-static void format(struct SseInternal *restrict ctx)
+static void format(uint8_t *restrict work)
 {
-    ctx->ns->n = 0;
-    char *buf = ctx->ns->out.buf;
-    const size_t n = ctx->ns->out.cap;
-    if (!ctx->ns->event_args.data || n == 0)
+    (void)work;
+    Sse.n = 0;
+    char *buf = Sse.out.buf;
+    const size_t n = Sse.out.cap;
+    if (!Sse.event_args.data || n == 0)
     {
         return;
     }
@@ -145,8 +144,8 @@ static void format(struct SseInternal *restrict ctx)
     // Bounded lengths (str.len, cap n): a field can never exceed the output buffer (an over-long value makes
     // the append fail and the record report 0), and str.len never reads past `n` if a value is unterminated.
     size_t pos = 0;
-    const char *event = ctx->ns->event_args.event;
-    const char *id = ctx->ns->event_args.event_id;
+    const char *event = Sse.event_args.event;
+    const char *id = Sse.event_args.event_id;
     if (event && (!sse_append(buf, n, &pos, "event: ", 7) || !sse_append(buf, n, &pos, event, str.len(event, n)) ||
                   !sse_append(buf, n, &pos, "\n", 1)))
     {
@@ -158,41 +157,57 @@ static void format(struct SseInternal *restrict ctx)
         return;
     }
     if (!sse_append(buf, n, &pos, "data: ", 6) ||
-        !sse_append(buf, n, &pos, ctx->ns->event_args.data, str.len(ctx->ns->event_args.data, n)) ||
+        !sse_append(buf, n, &pos, Sse.event_args.data, str.len(Sse.event_args.data, n)) ||
         !sse_append(buf, n, &pos, "\n\n", 2))
     {
         return;
     }
 
     buf[pos] = '\0'; // pos <= n-1 by construction, so the NUL always fits
-    ctx->ns->n = (int)pos;
+    Sse.n = (int)pos;
 }
 
-static void write_event(struct SseInternal *restrict ctx)
+static void write_event(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
-    ConnPool.slot = ctx->ns->stream->slot_id;
+    Sse.ok = PROTO_FALSE;
+    ConnPool.slot = Sse.stream->slot_id;
     ConnPool.active(ConnPool.internal);
     if (!ConnPool.ok)
     {
         return;
     }
 
-    ctx->ns->out.buf = ctx->store->buf;
-    ctx->ns->out.cap = sizeof(ctx->store->buf);
-    format(ctx);
-    if (ctx->ns->n <= 0)
+    Sse.out.buf = SSE_CTX(work)->buf;
+    Sse.out.cap = sizeof(SSE_CTX(work)->buf);
+    format(work);
+    if (Sse.n <= 0)
     {
         return;
     }
 
-    ConnPool.io.data = ctx->store->buf;
-    ConnPool.io.len = (proto_u16)ctx->ns->n;
+    ConnPool.io.data = SSE_CTX(work)->buf;
+    ConnPool.io.len = (proto_u16)Sse.n;
     ConnPool.send(ConnPool.internal);
-    ctx->ns->ok = PROTO_TRUE;
+    Sse.ok = PROTO_TRUE;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
+
+// Not an entry: an entry takes a borrow and this is where that borrow comes from.
+uint8_t *protocore_sse_span(void)
+{
+    static uint8_t *s_span;
+    if (s_span == NULL)
+    {
+        protocore_span sp = protocore_secure_persist_span(PROTOCORE_SSE_BORROW);
+        if (span.ok(sp))
+        {
+            s_span = sp.buf;
+        }
+    }
+    return s_span; // null while the pool was short, which every entry refuses
+}
+
 SseNs Sse = {.route_add = route_add,
              .route_connect = route_connect,
              .init = init,
@@ -200,5 +215,4 @@ SseNs Sse = {.route_add = route_add,
              .find = find,
              .free = release,
              .format = format,
-             .write = write_event,
-             .internal = &s_sse};
+             .write = write_event};

@@ -10,7 +10,7 @@
  */
 
 #include "network_drivers/presentation/ssh/transport/ssh_rsa.h"
-#include "core_setup/hal/nvs.h" // the host key is read from non-volatile storage
+#include "core_setup/hal/nvs.h"    // the host key is read from non-volatile storage
 #include "crypto/asymmetric/rsa.h" // Rsa: the signer, and the key widths
 #include "mmgr/protomem.h"
 #include "mmgr/secure.h"

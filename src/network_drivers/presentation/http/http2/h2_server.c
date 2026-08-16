@@ -6,12 +6,11 @@
  * @brief HTTP/2 engine <-> request-pipeline bridge - implementation. See protocore_h2_server.h.
  */
 
-#include "network_drivers/session/session.h" // the per-connection tables this reads
-#include "network_drivers/presentation/http/http2/h2_server.h"
-#include "mmgr/protomem.h"
-
 #if PROTOCORE_ENABLE_HTTP2 && PROTOCORE_ENABLE_TLS
 
+#include "network_drivers/presentation/http/http2/h2_server.h"
+#include "mmgr/protomem.h"
+#include "network_drivers/session/session.h" // the per-connection tables this reads
 #include "network_drivers/presentation/http/http2/h2_conn.h"
 #include "network_drivers/presentation/http/http_parser/http_parser.h"
 #include "network_drivers/tls/tls.h"
@@ -58,27 +57,40 @@ enum
  *
  * One named owner, unreachable from any other translation unit.
  */
-struct H2ServerStorage
+// The per-slot connection state and the header-block bits. Only what is not derivable: the
+// regions live at fixed offsets in the caller's borrow, so the macro below computes them from the
+// pointer rather than the context storing them.
+// One connection's slot: the bytes it owns and the header-block bits being judged on it. The
+// bytes are the connection's, drawn once and carried across a reuse, because the persistent end
+// is never given back.
+typedef struct
 {
-    H2Conn pool[MAX_CONNS];
-    uint8_t hmask[MAX_CONNS]; ///< per-slot header-block bits, cleared when the block is judged
-};
+    uint8_t hmask; ///< header-block bits, cleared when the block is judged
+} H2Slot;
 
-/**
- * @brief The engine's state and the calls that reach it - what H2ServerNs points at.
- *
- * @var H2ServerInternal::store  the per-slot connection state
- * @var H2ServerInternal::ns     the handle a caller sets a call's members on
- */
-struct H2ServerInternal
+// One slot per transport connection. Only what is not derivable: the region lives at a fixed
+// offset in the caller's borrow, so the macro below computes it from the pointer.
+typedef struct
 {
-    struct H2ServerStorage *store;
-    H2ServerNs *ns;
-};
+    H2Slot slot[MAX_CONNS];
+} H2ServerCtx;
 
-static PROTOCORE_H2_POOL_ATTR struct H2ServerStorage s_store;
+// The caller's borrow, split: the context at its offset. One pointer arrives and every region is
+// that pointer plus a compile-time offset, so the assert below proves the span covers them before
+// anything runs.
+#define H2_SERVER_OFF_CTX 0u
+static_assert(H2_SERVER_OFF_CTX + sizeof(H2ServerCtx) <= PROTOCORE_H2_SERVER_BORROW,
+              "PROTOCORE_H2_SERVER_BORROW is short of the module context - raise it in"
+              " protocore_config.h, which sums it into its arena");
 
-static struct H2ServerInternal s_h2 = {.store = &s_store, .ns = &H2Server};
+// The engine's bytes, stated at link time. Every width here is a compile-time constant, so the
+// storage is BSS the loader zeroes rather than something drawn at run time: one connection's borrow
+// per transport slot, and the slot table itself.
+static uint8_t s_conn[MAX_CONNS][PROTOCORE_H2_CONN_BORROW];
+static uint8_t s_work[PROTOCORE_H2_SERVER_BORROW];
+
+// The region, at its offset in the caller's borrow.
+#define H2_SERVER_CTX(w) ((H2ServerCtx *)(void *)((w) + H2_SERVER_OFF_CTX))
 
 // The bytes a field name may carry: an RFC 9110 token minus the uppercase letters RFC 9113 sec 8.2.1
 // forbids, so lowercase, digits and !#$%&'*+-.^_`|~ - one bit each over the 256 byte values. A byte
@@ -204,8 +216,15 @@ static void cb_write(void *io, const uint8_t *data, size_t len)
 static void cb_header(void *app, uint32_t stream_id, const char *n, size_t nl, const char *v, size_t vl)
 {
     (void)stream_id;
+    // The signature belongs to whoever dispatches this, so the borrow comes from the accessor
+    // rather than a parameter.
+    uint8_t *restrict work = protocore_h2_server_span();
+    if (work == NULL)
+    {
+        return;
+    }
     const uint8_t slot = (uint8_t)(uintptr_t)app;
-    uint8_t *mask = &s_store.hmask[slot];
+    uint8_t *mask = &H2_SERVER_CTX(work)->slot[slot].hmask;
     HttpReq *r = &http_pool[slot];
 
     if ((*mask & H2_HDR_BAD) != 0)
@@ -296,9 +315,16 @@ static void cb_header(void *app, uint32_t stream_id, const char *n, size_t nl, c
 static proto_bool cb_headers_end(void *app, uint32_t sid, proto_bool end_stream)
 {
     (void)end_stream;
+    // The signature belongs to whoever dispatches this, so the borrow comes from the accessor
+    // rather than a parameter.
+    uint8_t *restrict work = protocore_h2_server_span();
+    if (work == NULL)
+    {
+        return PROTO_FALSE;
+    }
     const uint8_t slot = (uint8_t)(uintptr_t)app;
-    const uint8_t mask = s_store.hmask[slot];
-    s_store.hmask[slot] = 0; // the block is judged here; the next one starts clean
+    const uint8_t mask = H2_SERVER_CTX(work)->slot[slot].hmask;
+    H2_SERVER_CTX(work)->slot[slot].hmask = 0; // the block is judged here; the next one starts clean
 
     // sec 8.3.1: ":method", ":scheme" and ":path" are all required, so the XOR of what arrived
     // against the required set is zero exactly when none of the three is missing.
@@ -325,9 +351,10 @@ static void cb_data(void *app, uint32_t stream_id, const uint8_t *data, size_t l
     r->body_bytes_read += len;
 }
 
-static void open_conn(struct H2ServerInternal *restrict ctx)
+static void open_conn(uint8_t *restrict work)
 {
-    const uint8_t slot = ctx->ns->slot;
+    (void)work;
+    const uint8_t slot = H2Server.slot;
     H2Callbacks cb;
     mem.set(&cb, 0, sizeof cb);
     cb.write = cb_write;
@@ -336,37 +363,49 @@ static void open_conn(struct H2ServerInternal *restrict ctx)
     cb.on_data = cb_data;
     cb.io = (void *)(uintptr_t)slot;
     cb.app = (void *)(uintptr_t)slot;
-    s_store.hmask[slot] = 0;
-    protocore_h2_conn_init(&s_store.pool[slot], &cb); // emits our SETTINGS through cb_write
+    H2_SERVER_CTX(work)->slot[slot].hmask = 0;
+    H2Conn.init_args.cb = &cb;
+    H2Conn.init(s_conn[slot]); // emits our SETTINGS through cb_write
     http_parser_reset(&http_pool[slot]);
 }
 
-static void data(struct H2ServerInternal *restrict ctx)
+static void data(uint8_t *restrict work)
 {
-    const uint8_t slot = ctx->ns->slot;
+    (void)work;
+    const uint8_t slot = H2Server.slot;
     uint8_t buf[512];
     int n;
     while ((n = protocore_tls_read(slot, buf, sizeof buf)) > 0)
     {
-        if (!protocore_h2_conn_recv(&s_store.pool[slot], buf, (size_t)n))
+        H2Conn.recv_args.data = buf;
+        H2Conn.recv_args.len = (size_t)n;
+        H2Conn.recv(s_conn[slot]);
+        if (!H2Conn.ok)
         {
-            protocore_h2_conn_goaway(&s_store.pool[slot], 1 /* PROTOCOL_ERROR */);
+            H2Conn.goaway_args.error = 1; // PROTOCOL_ERROR
+            H2Conn.goaway(s_conn[slot]);
             return;
         }
     }
 }
 
-static void respond(struct H2ServerInternal *restrict ctx)
+static void respond(uint8_t *restrict work)
 {
-    const uint8_t slot = ctx->ns->slot;
-    ctx->ns->ok = protocore_h2_conn_respond(&ctx->store->pool[slot], http_h2_stream[slot], ctx->ns->resp.code,
-                                            ctx->ns->resp.content_type, ctx->ns->resp.body, ctx->ns->resp.len);
+    const uint8_t slot = H2Server.slot;
+    H2Conn.respond_args.stream_id = http_h2_stream[slot];
+    H2Conn.respond_args.status = H2Server.resp.code;
+    H2Conn.respond_args.content_type = H2Server.resp.content_type;
+    H2Conn.respond_args.body = H2Server.resp.body;
+    H2Conn.respond_args.body_len = H2Server.resp.len;
+    H2Conn.respond(s_conn[slot]);
+    H2Server.ok = H2Conn.ok;
     http_parser_reset(&http_pool[slot]); // ready for the next stream; keep the connection open
 }
 
-static void close_conn(struct H2ServerInternal *restrict ctx)
+static void close_conn(uint8_t *restrict work)
 {
-    const uint8_t slot = ctx->ns->slot;
+    (void)work;
+    const uint8_t slot = H2Server.slot;
     http_h2[slot] = 0;
     http_h2_checked[slot] = 0;
     http_resp_sink[slot] = NULL;
@@ -380,11 +419,18 @@ proto_bool protocore_h2_server_respond(uint8_t slot, int code, const char *conte
     H2Server.resp.content_type = content_type;
     H2Server.resp.body = body;
     H2Server.resp.len = len;
-    respond(&s_h2);
+    respond(protocore_h2_server_span());
     return H2Server.ok;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-H2ServerNs H2Server = {.open = open_conn, .data = data, .respond = respond, .close = close_conn, .internal = &s_h2};
+
+// Not an entry: an entry takes a borrow and this is where that borrow comes from.
+uint8_t *protocore_h2_server_span(void)
+{
+    return s_work;
+}
+
+H2ServerNs H2Server = {.open = open_conn, .data = data, .respond = respond, .close = close_conn};
 
 #endif // PROTOCORE_ENABLE_HTTP2 && PROTOCORE_ENABLE_TLS

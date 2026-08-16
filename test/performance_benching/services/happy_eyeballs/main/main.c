@@ -29,7 +29,7 @@ void dbench_run(void)
     protocore_ip g6;
     Ip.args.text = "2606:4700::1";
     Ip.args.out = &g6;
-    Ip.parse(Ip.internal);                         // global IPv6
+    Ip.parse(Ip.internal);                                           // global IPv6
     protocore_ip g4 = protocore_ip_from_v4_octets(93, 184, 216, 34); // global IPv4
 
     // 3-address mixed template, v4-first: the sort must move the two v6 ahead, then interleave alternates.

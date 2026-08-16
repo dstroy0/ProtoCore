@@ -48,7 +48,8 @@ void dbench_run(void)
         volatile uint32_t sink = 0;
         volatile int jsink = 0;
 
-        DBENCH_OP("protocore_partition_kind app (ota)", 200000, sink += (uint32_t)protocore_partition_kind(app_type, app_sub)[0]);
+        DBENCH_OP("protocore_partition_kind app (ota)", 200000,
+                  sink += (uint32_t)protocore_partition_kind(app_type, app_sub)[0]);
         DBENCH_OP("protocore_partition_kind data (littlefs)", 200000,
                   sink += (uint32_t)protocore_partition_kind(dat_type, dat_sub)[0]);
 

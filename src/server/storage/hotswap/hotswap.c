@@ -129,8 +129,7 @@ void protocore_hotswap_begin(protocore_hotswap_mount mount, protocore_hotswap_un
     s_hs.present = present;
     s_hs.ctx = ctx;
     s_hs.begun = PROTO_TRUE;
-    protocore_hotswap_core_init(&s_hs.core, PROTOCORE_HOTSWAP_FAIL_THRESHOLD, PROTOCORE_HOTSWAP_PROBE_MS,
-                                Clock.ms);
+    protocore_hotswap_core_init(&s_hs.core, PROTOCORE_HOTSWAP_FAIL_THRESHOLD, PROTOCORE_HOTSWAP_PROBE_MS, Clock.ms);
 }
 
 void protocore_hotswap_set_event_cb(protocore_hotswap_event cb)

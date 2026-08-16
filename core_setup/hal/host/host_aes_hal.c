@@ -44,9 +44,9 @@ void protocore_aes_hw_setkey(const uint8_t *key, unsigned key_bytes)
         s_aes.keyed = PROTO_FALSE;
         return;
     }
-    const int nk = (int)(key_bytes / 4u);   // key words: 4, 6 or 8
+    const int nk = (int)(key_bytes / 4u); // key words: 4, 6 or 8
     protocore_aes_key_expand(key, nk, s_aes.rk);
-    s_aes.nr = nk + 6;                      // FIPS 197 table 2: rounds = Nk + 6
+    s_aes.nr = nk + 6; // FIPS 197 table 2: rounds = Nk + 6
     s_aes.keyed = PROTO_TRUE;
 }
 

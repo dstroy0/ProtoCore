@@ -28,8 +28,10 @@ static uint32_t g_work[(PROTOCORE_HMAC_SHA256_BORROW + 4) / 4];
 
 void setUp(void)
 {
-    protocore_csrf_reset();
-    protocore_csrf_set_secret(SECRET, sizeof(SECRET));
+    Csrf.reset(protocore_csrf_span());
+    Csrf.secret_args.secret = SECRET;
+    Csrf.secret_args.len = sizeof(SECRET);
+    Csrf.set_secret(protocore_csrf_span());
 }
 void tearDown(void)
 {
@@ -54,7 +56,10 @@ static void hex_of(const uint8_t *in, size_t n, char *out)
 void test_token_is_the_documented_hmac_over_the_nonce(void)
 {
     char token[CSRF_TOKEN_BUF];
-    TEST_ASSERT_TRUE(protocore_csrf_issue(token, sizeof(token)) > 0);
+    Csrf.issue_args.out = token;
+    Csrf.issue_args.cap = sizeof(token);
+    Csrf.issue(protocore_csrf_span());
+    TEST_ASSERT_TRUE(Csrf.n > 0);
 
     uint8_t nonce[CSRF_NONCE_BYTES] = {1, 0, 0, 0, 0, 0};
     char want_nonce[CSRF_NONCE_BYTES * 2 + 1];
@@ -73,8 +78,10 @@ void test_token_is_the_documented_hmac_over_the_nonce(void)
     hex_of(mac, CSRF_SIG_BYTES, want_sig);
     TEST_ASSERT_EQUAL_STRING(want_sig, &token[CSRF_NONCE_BYTES * 2 + 1]);
 
+    Csrf.verify_args.token = token;
+    Csrf.verify(protocore_csrf_span());
     // and the same token, hand-assembled from the two halves, verifies
-    TEST_ASSERT_TRUE(protocore_csrf_verify(token));
+    TEST_ASSERT_TRUE(Csrf.valid);
 }
 
 // The counter advances once per issue, so the second token names nonce 2 and the third nonce 3.
@@ -86,7 +93,10 @@ void test_the_nonce_counter_advances_by_one(void)
         uint8_t nonce[CSRF_NONCE_BYTES] = {(uint8_t)c, 0, 0, 0, 0, 0};
         char want[CSRF_NONCE_BYTES * 2 + 1];
         hex_of(nonce, sizeof(nonce), want);
-        TEST_ASSERT_TRUE(protocore_csrf_issue(t, sizeof(t)) > 0);
+        Csrf.issue_args.out = t;
+        Csrf.issue_args.cap = sizeof(t);
+        Csrf.issue(protocore_csrf_span());
+        TEST_ASSERT_TRUE(Csrf.n > 0);
         TEST_ASSERT_EQUAL_STRING_LEN(want, t, CSRF_NONCE_BYTES * 2);
     }
 }
@@ -96,7 +106,10 @@ void test_the_nonce_counter_advances_by_one(void)
 void test_the_token_shape_is_fixed(void)
 {
     char t[CSRF_TOKEN_BUF];
-    int n = protocore_csrf_issue(t, sizeof(t));
+    Csrf.issue_args.out = t;
+    Csrf.issue_args.cap = sizeof(t);
+    Csrf.issue(protocore_csrf_span());
+    int n = Csrf.n;
     TEST_ASSERT_EQUAL_INT(CSRF_NONCE_BYTES * 2 + 1 + CSRF_SIG_BYTES * 2, n);
     TEST_ASSERT_EQUAL_INT(n, (int)strlen(t));
     TEST_ASSERT_TRUE(n < CSRF_TOKEN_BUF);
@@ -123,8 +136,13 @@ void test_issued_tokens_verify(void)
     for (int i = 0; i < 8; i++)
     {
         char t[CSRF_TOKEN_BUF];
-        TEST_ASSERT_TRUE(protocore_csrf_issue(t, sizeof(t)) > 0);
-        TEST_ASSERT_TRUE(protocore_csrf_verify(t));
+        Csrf.issue_args.out = t;
+        Csrf.issue_args.cap = sizeof(t);
+        Csrf.issue(protocore_csrf_span());
+        TEST_ASSERT_TRUE(Csrf.n > 0);
+        Csrf.verify_args.token = t;
+        Csrf.verify(protocore_csrf_span());
+        TEST_ASSERT_TRUE(Csrf.valid);
     }
 }
 
@@ -132,11 +150,21 @@ void test_issued_tokens_verify(void)
 void test_successive_tokens_differ(void)
 {
     char a[CSRF_TOKEN_BUF], b[CSRF_TOKEN_BUF];
-    TEST_ASSERT_TRUE(protocore_csrf_issue(a, sizeof(a)) > 0);
-    TEST_ASSERT_TRUE(protocore_csrf_issue(b, sizeof(b)) > 0);
+    Csrf.issue_args.out = a;
+    Csrf.issue_args.cap = sizeof(a);
+    Csrf.issue(protocore_csrf_span());
+    TEST_ASSERT_TRUE(Csrf.n > 0);
+    Csrf.issue_args.out = b;
+    Csrf.issue_args.cap = sizeof(b);
+    Csrf.issue(protocore_csrf_span());
+    TEST_ASSERT_TRUE(Csrf.n > 0);
     TEST_ASSERT_TRUE(strcmp(a, b) != 0);
-    TEST_ASSERT_TRUE(protocore_csrf_verify(a));
-    TEST_ASSERT_TRUE(protocore_csrf_verify(b));
+    Csrf.verify_args.token = a;
+    Csrf.verify(protocore_csrf_span());
+    TEST_ASSERT_TRUE(Csrf.valid);
+    Csrf.verify_args.token = b;
+    Csrf.verify(protocore_csrf_span());
+    TEST_ASSERT_TRUE(Csrf.valid);
 }
 
 // Every single character of the signature is covered: flipping any one of them must fail. A
@@ -144,7 +172,10 @@ void test_successive_tokens_differ(void)
 void test_every_signature_character_is_checked(void)
 {
     char t[CSRF_TOKEN_BUF];
-    TEST_ASSERT_TRUE(protocore_csrf_issue(t, sizeof(t)) > 0);
+    Csrf.issue_args.out = t;
+    Csrf.issue_args.cap = sizeof(t);
+    Csrf.issue(protocore_csrf_span());
+    TEST_ASSERT_TRUE(Csrf.n > 0);
 
     for (int i = 0; i < CSRF_SIG_BYTES * 2; i++)
     {
@@ -152,9 +183,13 @@ void test_every_signature_character_is_checked(void)
         memcpy(tampered, t, sizeof(tampered));
         char *c = &tampered[CSRF_NONCE_BYTES * 2 + 1 + i];
         *c = (*c == 'a') ? 'b' : 'a';
-        TEST_ASSERT_FALSE_MESSAGE(protocore_csrf_verify(tampered), tampered);
+        Csrf.verify_args.token = tampered;
+        Csrf.verify(protocore_csrf_span());
+        TEST_ASSERT_FALSE_MESSAGE(Csrf.valid, tampered);
     }
-    TEST_ASSERT_TRUE(protocore_csrf_verify(t)); // the untouched token still verifies
+    Csrf.verify_args.token = t;
+    Csrf.verify(protocore_csrf_span());
+    TEST_ASSERT_TRUE(Csrf.valid); // the untouched token still verifies
 }
 
 // Every character of the nonce is covered too: the signature is over the nonce, so changing it
@@ -162,14 +197,19 @@ void test_every_signature_character_is_checked(void)
 void test_every_nonce_character_is_checked(void)
 {
     char t[CSRF_TOKEN_BUF];
-    TEST_ASSERT_TRUE(protocore_csrf_issue(t, sizeof(t)) > 0);
+    Csrf.issue_args.out = t;
+    Csrf.issue_args.cap = sizeof(t);
+    Csrf.issue(protocore_csrf_span());
+    TEST_ASSERT_TRUE(Csrf.n > 0);
 
     for (int i = 0; i < CSRF_NONCE_BYTES * 2; i++)
     {
         char tampered[CSRF_TOKEN_BUF];
         memcpy(tampered, t, sizeof(tampered));
         tampered[i] = (tampered[i] == 'a') ? 'b' : 'a';
-        TEST_ASSERT_FALSE_MESSAGE(protocore_csrf_verify(tampered), tampered);
+        Csrf.verify_args.token = tampered;
+        Csrf.verify(protocore_csrf_span());
+        TEST_ASSERT_FALSE_MESSAGE(Csrf.valid, tampered);
     }
 }
 
@@ -178,22 +218,39 @@ void test_every_nonce_character_is_checked(void)
 void test_a_token_is_bound_to_its_secret(void)
 {
     char t[CSRF_TOKEN_BUF];
-    TEST_ASSERT_TRUE(protocore_csrf_issue(t, sizeof(t)) > 0);
-    TEST_ASSERT_TRUE(protocore_csrf_verify(t));
+    Csrf.issue_args.out = t;
+    Csrf.issue_args.cap = sizeof(t);
+    Csrf.issue(protocore_csrf_span());
+    TEST_ASSERT_TRUE(Csrf.n > 0);
+    Csrf.verify_args.token = t;
+    Csrf.verify(protocore_csrf_span());
+    TEST_ASSERT_TRUE(Csrf.valid);
 
     uint8_t other[32];
     memset(other, 0xAB, sizeof(other));
-    protocore_csrf_set_secret(other, sizeof(other));
-    TEST_ASSERT_FALSE(protocore_csrf_verify(t));
+    Csrf.secret_args.secret = other;
+    Csrf.secret_args.len = sizeof(other);
+    Csrf.set_secret(protocore_csrf_span());
+    Csrf.verify_args.token = t;
+    Csrf.verify(protocore_csrf_span());
+    TEST_ASSERT_FALSE(Csrf.valid);
 
+    Csrf.reset(protocore_csrf_span());
     // the same nonce under the new secret is a different, valid token
-    protocore_csrf_reset();
-    protocore_csrf_set_secret(other, sizeof(other));
+    Csrf.ok;
+    Csrf.secret_args.secret = other;
+    Csrf.secret_args.len = sizeof(other);
+    Csrf.set_secret(protocore_csrf_span());
     char u[CSRF_TOKEN_BUF];
-    TEST_ASSERT_TRUE(protocore_csrf_issue(u, sizeof(u)) > 0);
+    Csrf.issue_args.out = u;
+    Csrf.issue_args.cap = sizeof(u);
+    Csrf.issue(protocore_csrf_span());
+    TEST_ASSERT_TRUE(Csrf.n > 0);
     TEST_ASSERT_EQUAL_STRING_LEN(t, u, CSRF_NONCE_BYTES * 2); // same nonce
-    TEST_ASSERT_TRUE(strcmp(t, u) != 0);                      // different signature
-    TEST_ASSERT_TRUE(protocore_csrf_verify(u));
+    Csrf.verify_args.token = u;
+    Csrf.verify(protocore_csrf_span());
+    TEST_ASSERT_TRUE(strcmp(t, u) != 0); // different signature
+    TEST_ASSERT_TRUE(Csrf.valid);
 }
 
 // RFC 2104 sec 3: a key longer than the block is pre-hashed rather than truncated. This module caps
@@ -207,39 +264,68 @@ void test_the_secret_is_capped_at_thirty_two_octets(void)
         long_key[i] = (uint8_t)i;
     }
 
-    protocore_csrf_reset();
-    protocore_csrf_set_secret(long_key, sizeof(long_key));
+    Csrf.reset(protocore_csrf_span());
+    Csrf.secret_args.secret = long_key;
+    Csrf.secret_args.len = sizeof(long_key);
+    Csrf.set_secret(protocore_csrf_span());
     char a[CSRF_TOKEN_BUF];
-    TEST_ASSERT_TRUE(protocore_csrf_issue(a, sizeof(a)) > 0);
+    Csrf.issue_args.out = a;
+    Csrf.issue_args.cap = sizeof(a);
+    Csrf.issue(protocore_csrf_span());
+    TEST_ASSERT_TRUE(Csrf.n > 0);
 
+    Csrf.reset(protocore_csrf_span());
     long_key[32] ^= 0xFFu; // an octet past the cap
-    protocore_csrf_reset();
-    protocore_csrf_set_secret(long_key, sizeof(long_key));
+    Csrf.ok;
+    Csrf.secret_args.secret = long_key;
+    Csrf.secret_args.len = sizeof(long_key);
+    Csrf.set_secret(protocore_csrf_span());
     char b[CSRF_TOKEN_BUF];
-    TEST_ASSERT_TRUE(protocore_csrf_issue(b, sizeof(b)) > 0);
+    Csrf.issue_args.out = b;
+    Csrf.issue_args.cap = sizeof(b);
+    Csrf.issue(protocore_csrf_span());
+    TEST_ASSERT_TRUE(Csrf.n > 0);
     TEST_ASSERT_EQUAL_STRING(a, b);
 
     // an octet inside the cap does change it
     long_key[31] ^= 0xFFu;
-    protocore_csrf_reset();
-    protocore_csrf_set_secret(long_key, sizeof(long_key));
+    Csrf.reset(protocore_csrf_span());
+    Csrf.secret_args.secret = long_key;
+    Csrf.secret_args.len = sizeof(long_key);
+    Csrf.set_secret(protocore_csrf_span());
     char c[CSRF_TOKEN_BUF];
-    TEST_ASSERT_TRUE(protocore_csrf_issue(c, sizeof(c)) > 0);
+    Csrf.issue_args.out = c;
+    Csrf.issue_args.cap = sizeof(c);
+    Csrf.issue(protocore_csrf_span());
+    TEST_ASSERT_TRUE(Csrf.n > 0);
     TEST_ASSERT_TRUE(strcmp(a, c) != 0);
 }
 
 // With no secret installed, issue and verify both fail closed rather than signing with zeros.
 void test_no_secret_fails_closed(void)
 {
-    protocore_csrf_reset();
+    Csrf.reset(protocore_csrf_span());
     char t[CSRF_TOKEN_BUF];
-    TEST_ASSERT_EQUAL_INT(0, protocore_csrf_issue(t, sizeof(t)));
-    TEST_ASSERT_FALSE(protocore_csrf_verify("010000000000.0102030405060708090a0b0c0d0e"));
+    Csrf.issue_args.out = t;
+    Csrf.issue_args.cap = sizeof(t);
+    Csrf.issue(protocore_csrf_span());
+    TEST_ASSERT_EQUAL_INT(0, Csrf.n);
+    Csrf.verify_args.token = "010000000000.0102030405060708090a0b0c0d0e";
+    Csrf.verify(protocore_csrf_span());
+    TEST_ASSERT_FALSE(Csrf.valid);
 
+    Csrf.secret_args.secret = SECRET;
+    Csrf.secret_args.len = sizeof(SECRET);
+    Csrf.set_secret(protocore_csrf_span());
     // a null secret pointer clears the length rather than leaving the previous secret installed
-    protocore_csrf_set_secret(SECRET, sizeof(SECRET));
-    protocore_csrf_set_secret(NULL, 5);
-    TEST_ASSERT_EQUAL_INT(0, protocore_csrf_issue(t, sizeof(t)));
+    Csrf.ok;
+    Csrf.secret_args.secret = NULL;
+    Csrf.secret_args.len = 5;
+    Csrf.set_secret(protocore_csrf_span());
+    Csrf.issue_args.out = t;
+    Csrf.issue_args.cap = sizeof(t);
+    Csrf.issue(protocore_csrf_span());
+    TEST_ASSERT_EQUAL_INT(0, Csrf.n);
 }
 
 // Reset restarts the counter as well as clearing the secret, so the first token after it is the
@@ -247,13 +333,24 @@ void test_no_secret_fails_closed(void)
 void test_reset_restarts_the_counter(void)
 {
     char first[CSRF_TOKEN_BUF], again[CSRF_TOKEN_BUF];
-    TEST_ASSERT_TRUE(protocore_csrf_issue(first, sizeof(first)) > 0);
-    TEST_ASSERT_TRUE(protocore_csrf_issue(again, sizeof(again)) > 0);
+    Csrf.issue_args.out = first;
+    Csrf.issue_args.cap = sizeof(first);
+    Csrf.issue(protocore_csrf_span());
+    TEST_ASSERT_TRUE(Csrf.n > 0);
+    Csrf.issue_args.out = again;
+    Csrf.issue_args.cap = sizeof(again);
+    Csrf.issue(protocore_csrf_span());
+    TEST_ASSERT_TRUE(Csrf.n > 0);
     TEST_ASSERT_TRUE(strcmp(first, again) != 0);
 
-    protocore_csrf_reset();
-    protocore_csrf_set_secret(SECRET, sizeof(SECRET));
-    TEST_ASSERT_TRUE(protocore_csrf_issue(again, sizeof(again)) > 0);
+    Csrf.reset(protocore_csrf_span());
+    Csrf.secret_args.secret = SECRET;
+    Csrf.secret_args.len = sizeof(SECRET);
+    Csrf.set_secret(protocore_csrf_span());
+    Csrf.issue_args.out = again;
+    Csrf.issue_args.cap = sizeof(again);
+    Csrf.issue(protocore_csrf_span());
+    TEST_ASSERT_TRUE(Csrf.n > 0);
     TEST_ASSERT_EQUAL_STRING(first, again);
 }
 
@@ -277,7 +374,9 @@ void test_malformed_tokens_are_refused(void)
     };
     for (size_t i = 0; i < sizeof(BAD) / sizeof(BAD[0]); i++)
     {
-        TEST_ASSERT_FALSE_MESSAGE(protocore_csrf_verify(BAD[i]), BAD[i] ? BAD[i] : "(null)");
+        Csrf.verify_args.token = BAD[i];
+        Csrf.verify(protocore_csrf_span());
+        TEST_ASSERT_FALSE_MESSAGE(Csrf.valid, BAD[i] ? BAD[i] : "(null)");
     }
 }
 
@@ -285,7 +384,9 @@ void test_malformed_tokens_are_refused(void)
 // silently rounded to a shorter nonce.
 void test_an_odd_length_nonce_is_refused(void)
 {
-    TEST_ASSERT_FALSE(protocore_csrf_verify("01000000000.0102030405060708090a0b0c0d0e"));
+    Csrf.verify_args.token = "01000000000.0102030405060708090a0b0c0d0e";
+    Csrf.verify(protocore_csrf_span());
+    TEST_ASSERT_FALSE(Csrf.valid);
 }
 
 // A buffer that cannot hold the whole token yields 0 and writes no partial token: half a token is a
@@ -296,10 +397,19 @@ void test_issue_refuses_a_short_buffer(void)
     for (size_t cap = 0; cap < CSRF_TOKEN_BUF; cap++)
     {
         memset(small, '#', sizeof(small));
-        TEST_ASSERT_EQUAL_INT(0, protocore_csrf_issue(small, cap));
+        Csrf.issue_args.out = small;
+        Csrf.issue_args.cap = cap;
+        Csrf.issue(protocore_csrf_span());
+        TEST_ASSERT_EQUAL_INT(0, Csrf.n);
     }
-    TEST_ASSERT_TRUE(protocore_csrf_issue(small, CSRF_TOKEN_BUF) > 0);
-    TEST_ASSERT_EQUAL_INT(0, protocore_csrf_issue(NULL, CSRF_TOKEN_BUF));
+    Csrf.issue_args.out = small;
+    Csrf.issue_args.cap = CSRF_TOKEN_BUF;
+    Csrf.issue(protocore_csrf_span());
+    TEST_ASSERT_TRUE(Csrf.n > 0);
+    Csrf.issue_args.out = NULL;
+    Csrf.issue_args.cap = CSRF_TOKEN_BUF;
+    Csrf.issue(protocore_csrf_span());
+    TEST_ASSERT_EQUAL_INT(0, Csrf.n);
 }
 
 // The verify path holds nothing across calls: the same token verifies repeatedly, and a refused one
@@ -307,10 +417,23 @@ void test_issue_refuses_a_short_buffer(void)
 void test_verify_holds_no_state(void)
 {
     char t[CSRF_TOKEN_BUF];
-    TEST_ASSERT_TRUE(protocore_csrf_issue(t, sizeof(t)) > 0);
-    TEST_ASSERT_TRUE(protocore_csrf_verify(t));
-    TEST_ASSERT_FALSE(protocore_csrf_verify("010000000000.00000000000000000000000000ff"));
-    TEST_ASSERT_TRUE(protocore_csrf_verify(t));
-    TEST_ASSERT_FALSE(protocore_csrf_verify("garbage"));
-    TEST_ASSERT_TRUE(protocore_csrf_verify(t));
+    Csrf.issue_args.out = t;
+    Csrf.issue_args.cap = sizeof(t);
+    Csrf.issue(protocore_csrf_span());
+    TEST_ASSERT_TRUE(Csrf.n > 0);
+    Csrf.verify_args.token = t;
+    Csrf.verify(protocore_csrf_span());
+    TEST_ASSERT_TRUE(Csrf.valid);
+    Csrf.verify_args.token = "010000000000.00000000000000000000000000ff";
+    Csrf.verify(protocore_csrf_span());
+    TEST_ASSERT_FALSE(Csrf.valid);
+    Csrf.verify_args.token = t;
+    Csrf.verify(protocore_csrf_span());
+    TEST_ASSERT_TRUE(Csrf.valid);
+    Csrf.verify_args.token = "garbage";
+    Csrf.verify(protocore_csrf_span());
+    TEST_ASSERT_FALSE(Csrf.valid);
+    Csrf.verify_args.token = t;
+    Csrf.verify(protocore_csrf_span());
+    TEST_ASSERT_TRUE(Csrf.valid);
 }

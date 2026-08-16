@@ -133,14 +133,14 @@ void test_null_regions_are_skipped(void)
     protocore_boot_regions r = armed(REGION_WORDS, REGION_WORDS);
     r.data_run = NULL;
     protocore_boot_init_memory(&r);
-    TEST_ASSERT_EQUAL_HEX32(0u, s_bss[1]);  // .bss still zeroed
+    TEST_ASSERT_EQUAL_HEX32(0u, s_bss[1]);    // .bss still zeroed
     TEST_ASSERT_EQUAL_HEX32(GUARD, s_dst[1]); // .data skipped
 
     arm_regions();
     r = armed(REGION_WORDS, REGION_WORDS);
     r.bss = NULL;
     protocore_boot_init_memory(&r);
-    TEST_ASSERT_EQUAL_HEX32(0x11110000u, s_dst[1]);  // .data still copied
+    TEST_ASSERT_EQUAL_HEX32(0x11110000u, s_dst[1]); // .data still copied
     TEST_ASSERT_EQUAL_HEX32(0xDEADBEEFu, s_bss[1]); // .bss skipped
 }
 

@@ -16,11 +16,10 @@
  * value is. Every PROTOCORE_RAND_RESEED_BYTES the seed is redrawn from the platform instead.
  */
 
-#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+#include "protocore_config.h" // the entry point: the enable gate below, the widths, and the platform's entropy source
 
 #if PROTOCORE_ENABLE_RNG
 
-#include "core_setup/board_profiles/protocore_platform.h" // protocore_platform_rand_fill: the entropy source
 #include "crypto/cipher/chacha20.h"
 #include "crypto/crypto_opt.h"
 #include "crypto/rng/rng.h"

@@ -18,8 +18,8 @@
 
 #if PROTOCORE_ENABLE_POLY1305
 
-#include "crypto/mac/poly1305.h"
 #include "crypto/crypto_opt.h"
+#include "crypto/mac/poly1305.h"
 #include "mmgr/protomem.h"
 
 // Poly1305 is a hot, pure-integer MAC (the other half of chacha20-poly1305). Like ChaCha it has no vector

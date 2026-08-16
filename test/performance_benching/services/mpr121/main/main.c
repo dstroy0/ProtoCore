@@ -44,7 +44,8 @@ void dbench_run(void)
         DBENCH_OP("protocore_mpr121_is_touched e7", 200000,
                   sinkb += protocore_mpr121_is_touched((uint16_t)(status_lo | (status_hi << 8)), 7) ? 1u : 0u);
         DBENCH_OP("pc_mpr121_prox+ovcf flags", 200000,
-                  sinkb += (protocore_mpr121_proximity(status_hi) ? 1u : 0u) + (protocore_mpr121_overcurrent(status_hi) ? 2u : 0u));
+                  sinkb += (protocore_mpr121_proximity(status_hi) ? 1u : 0u) +
+                           (protocore_mpr121_overcurrent(status_hi) ? 2u : 0u));
         DBENCH_OP("protocore_mpr121_word10 combine", 200000, sink16 += protocore_mpr121_word10(filt_lsb, filt_msb));
         DBENCH_OP("protocore_mpr121_build_init x12", 50000,
                   sinksz += protocore_mpr121_build_init(initbuf, sizeof(initbuf), MPR121_ELECTRODES, 12, 6));

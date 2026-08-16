@@ -68,27 +68,33 @@ void dbench_run(void)
         volatile bool bsink = false;
 
         // BSMcore encode/decode - the high-rate (10 Hz) safety kernel every BSM carries.
-        DBENCH_OP("protocore_j2735_bsm_core_encode", 50000, sink += protocore_j2735_bsm_core_encode(&bsm, out, sizeof(out)));
+        DBENCH_OP("protocore_j2735_bsm_core_encode", 50000,
+                  sink += protocore_j2735_bsm_core_encode(&bsm, out, sizeof(out)));
         {
             J2735BsmCore d;
-            DBENCH_OP("protocore_j2735_bsm_core_decode", 50000, bsink ^= protocore_j2735_bsm_core_decode(bsm_buf, bsm_n, &d));
+            DBENCH_OP("protocore_j2735_bsm_core_decode", 50000,
+                      bsink ^= protocore_j2735_bsm_core_decode(bsm_buf, bsm_n, &d));
         }
 
         // SPaT MovementState list (3 states) encode/decode.
-        DBENCH_OP("protocore_j2735_spat_encode x3", 30000, sink += protocore_j2735_spat_encode(spat, 3, out, sizeof(out)));
+        DBENCH_OP("protocore_j2735_spat_encode x3", 30000,
+                  sink += protocore_j2735_spat_encode(spat, 3, out, sizeof(out)));
         {
             J2735MovementState so[8];
             size_t sc = 0;
-            DBENCH_OP("protocore_j2735_spat_decode x3", 30000, bsink ^= protocore_j2735_spat_decode(spat_buf, spat_n, so, 8, &sc));
+            DBENCH_OP("protocore_j2735_spat_decode x3", 30000,
+                      bsink ^= protocore_j2735_spat_decode(spat_buf, spat_n, so, 8, &sc));
         }
 
         // MAP intersection geometry (3 lanes) encode/decode.
-        DBENCH_OP("protocore_j2735_map_encode x3", 30000, sink += protocore_j2735_map_encode(&isect, lanes, 3, out, sizeof(out)));
+        DBENCH_OP("protocore_j2735_map_encode x3", 30000,
+                  sink += protocore_j2735_map_encode(&isect, lanes, 3, out, sizeof(out)));
         {
             J2735MapIntersection di;
             J2735Lane lo[8];
             size_t lc = 0;
-            DBENCH_OP("protocore_j2735_map_decode x3", 30000, bsink ^= protocore_j2735_map_decode(map_buf, map_n, &di, lo, 8, &lc));
+            DBENCH_OP("protocore_j2735_map_decode x3", 30000,
+                      bsink ^= protocore_j2735_map_decode(map_buf, map_n, &di, lo, 8, &lc));
         }
 
         (void)sink;

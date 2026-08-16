@@ -62,48 +62,28 @@ static_assert(PROTOCORE_ENABLE_TLS_RPK,
 #define TLS_TERM_MAC (3 * TLS13_SECRET_LEN)    // the Finished MAC built, or the one expected
 #define TLS_TERM_HS_FIN (4 * TLS13_SECRET_LEN) // Transcript-Hash(CH..server Finished)
 
-/**
- * @brief The driver's state - what TlsConnNs points at.
- *
- * @var TlsConnInternal::ns  the handle a caller sets a call's members on
- * @var TlsConnInternal::c   the connection the steps below act on, taken from the handle per call
- */
-struct TlsConnInternal
-{
-    TlsConnNs *ns;
-    TlsConn *c;
-};
-
-static struct TlsConnInternal s_conn = {.ns = &TlsConnection, .c = NULL};
-
-// Point ctx->c at the connection the handle names.
-static void bind_conn(struct TlsConnInternal *restrict ctx)
-{
-    ctx->c = ctx->ns->conn;
-}
-
 // Fail the connection with an alert and report it as a driver error.
-static void fail(struct TlsConnInternal *restrict ctx, uint8_t alert)
+static void fail(uint8_t alert)
 {
-    ctx->c->state = TLS_CONN_FAILED;
-    ctx->c->alert = alert;
-    ctx->ns->i32 = -1;
+    TlsConnection.conn->state = TLS_CONN_FAILED;
+    TlsConnection.conn->alert = alert;
+    TlsConnection.i32 = -1;
 }
 
 // Fold a whole handshake message (header included) into the running Transcript-Hash.
-static void transcript_add(struct TlsConnInternal *restrict ctx, const uint8_t *msg, size_t len)
+static void transcript_add(const uint8_t *msg, size_t len)
 {
     Sha256.update_args.data = msg;
     Sha256.update_args.len = len;
-    Sha256.update(ctx->c->transcript);
+    Sha256.update(TlsConnection.conn->transcript);
 }
 
 // The Transcript-Hash so far into terms[off]. Finalizing compresses the padded blocks into a copy of
 // the state, so the running context is untouched and keeps taking messages.
-static void transcript_peek(struct TlsConnInternal *restrict ctx, size_t off)
+static void transcript_peek(size_t off)
 {
-    Sha256.final_args.out = ctx->c->terms + off;
-    Sha256.final(ctx->c->transcript);
+    Sha256.final_args.out = TlsConnection.conn->terms + off;
+    Sha256.final(TlsConnection.conn->transcript);
 }
 
 // The body length a handshake message header declares.
@@ -118,7 +98,7 @@ static void keys_derive(TlsRecordKeys *keys, const uint8_t *secret)
     TlsRecord.key.keys = keys;
     TlsRecord.key.cipher = TLS_CIPHER_AES_128_GCM_SHA256;
     TlsRecord.key.secret = secret;
-    TlsRecord.keys_derive(TlsRecord.internal);
+    TlsRecord.keys_derive(NULL);
 }
 
 // Seal one record under keys; bytes written to out, or 0.
@@ -131,7 +111,7 @@ static size_t record_seal(TlsRecordKeys *keys, uint8_t content_type, const uint8
     TlsRecord.sealed.pt_len = pt_len;
     TlsRecord.out_args.out = out;
     TlsRecord.out_args.out_cap = out_cap;
-    TlsRecord.protect(TlsRecord.internal);
+    TlsRecord.protect(NULL);
     return TlsRecord.n;
 }
 
@@ -145,30 +125,31 @@ static proto_bool record_open(TlsRecordKeys *keys, const uint8_t *rec, size_t re
     TlsRecord.sealed.info = info;
     TlsRecord.out_args.out = out;
     TlsRecord.out_args.out_cap = out_cap;
-    TlsRecord.unprotect(TlsRecord.internal);
+    TlsRecord.unprotect(NULL);
     return TlsRecord.ok;
 }
 
 // The Finished verify_data over base_secret and the transcript hash at off, into terms[TLS_TERM_MAC].
-static void finished_mac(struct TlsConnInternal *restrict ctx, const uint8_t *base_secret, size_t off)
+static void finished_mac(const uint8_t *base_secret, size_t off)
 {
-    Tls13Ks.bind.ks = &ctx->c->ks;
+    Tls13Ks.bind.ks = &TlsConnection.conn->ks;
     Tls13Ks.finished_args.base_secret = base_secret;
-    Tls13Ks.finished_args.transcript_hash = ctx->c->terms + off;
-    Tls13Ks.finished_args.out = ctx->c->terms + TLS_TERM_MAC;
-    Tls13Ks.finished_mac(Tls13Ks.internal);
+    Tls13Ks.finished_args.transcript_hash = TlsConnection.conn->terms + off;
+    Tls13Ks.finished_args.out = TlsConnection.conn->terms + TLS_TERM_MAC;
+    Tls13Ks.finished_mac(NULL);
 }
 
 // Fold the message standing in TX into the transcript and seal it under the handshake write keys.
 // Bytes written to out, or 0.
-static size_t emit_encrypted(struct TlsConnInternal *restrict ctx, size_t msg_len, uint8_t *out, size_t out_cap)
+static size_t emit_encrypted(size_t msg_len, uint8_t *out, size_t out_cap)
 {
     if (msg_len == 0)
     {
         return 0;
     }
-    transcript_add(ctx, ctx->c->tx, msg_len);
-    return record_seal(&ctx->c->hs_tx, PROTOCORE_TLS_CT_HANDSHAKE, ctx->c->tx, msg_len, out, out_cap);
+    transcript_add(TlsConnection.conn->tx, msg_len);
+    return record_seal(&TlsConnection.conn->hs_tx, PROTOCORE_TLS_CT_HANDSHAKE, TlsConnection.conn->tx, msg_len, out,
+                       out_cap);
 }
 
 // ---------------------------------------------------------------------------
@@ -177,11 +158,11 @@ static size_t emit_encrypted(struct TlsConnInternal *restrict ctx, size_t msg_le
 
 // The whole server answer to a ClientHello: ServerHello in the clear, then the encrypted flight.
 // Bytes written to out, or a negative alert-bearing failure, in ns->i32.
-static void server_flight(struct TlsConnInternal *restrict ctx)
+static void server_flight(uint8_t *restrict work)
 {
-    TlsConn *c = ctx->c;
-    uint8_t *out = ctx->ns->out_args.out;
-    const size_t out_cap = ctx->ns->out_args.out_cap;
+    TlsConn *c = TlsConnection.conn;
+    uint8_t *out = TlsConnection.out_args.out;
+    const size_t out_cap = TlsConnection.out_args.out_cap;
 
     Curve25519.x25519_base_args.scalar = c->cfg->ephemeral_priv;
     Curve25519.x25519_base_args.out = c->terms + TLS_TERM_SHARE;
@@ -199,88 +180,88 @@ static void server_flight(struct TlsConnInternal *restrict ctx)
         c->terms + TLS_TERM_SHARE, TLS13_SECRET_LEN, TLS_GROUP_X25519, PROTO_FALSE, NULL, 0);
     if (n == 0)
     {
-        fail(ctx, TLS_ALERT_INTERNAL_ERROR);
+        fail(TLS_ALERT_INTERNAL_ERROR);
         return;
     }
-    transcript_add(ctx, c->tx, n);
+    transcript_add(c->tx, n);
     TlsRecord.content_type = PROTOCORE_TLS_CT_HANDSHAKE;
     TlsRecord.plain.fragment = c->tx;
     TlsRecord.plain.frag_len = n;
     TlsRecord.out_args.out = out + off;
     TlsRecord.out_args.out_cap = out_cap - off;
-    TlsRecord.plaintext_build(TlsRecord.internal);
+    TlsRecord.plaintext_build(NULL);
     size_t w = TlsRecord.n;
     if (w == 0)
     {
-        fail(ctx, TLS_ALERT_INTERNAL_ERROR);
+        fail(TLS_ALERT_INTERNAL_ERROR);
         return;
     }
     off += w;
 
     // Everything from here is protected by the handshake traffic keys, keyed off CH..SH.
-    transcript_peek(ctx, TLS_TERM_HASH);
+    transcript_peek(TLS_TERM_HASH);
     Tls13Ks.bind.ks = &c->ks;
     Tls13Ks.step.ecdhe = c->terms + TLS_TERM_SECRET;
     Tls13Ks.step.ecdhe_len = TLS13_SECRET_LEN;
     Tls13Ks.step.ch_sh_hash = c->terms + TLS_TERM_HASH;
-    Tls13Ks.handshake(Tls13Ks.internal);
+    Tls13Ks.handshake(NULL);
     keys_derive(&c->hs_tx, c->ks.s + TLS13_KS_SERVER_HS);
     keys_derive(&c->hs_rx, c->ks.s + TLS13_KS_CLIENT_HS);
     c->hs_keys_ready = PROTO_TRUE;
 
     n = protocore_tls13_build_encrypted_extensions_empty(c->tx, PROTOCORE_TLS_CONN_MSG_CAP, PROTO_TRUE, c->alpn);
-    w = emit_encrypted(ctx, n, out + off, out_cap - off);
+    w = emit_encrypted(n, out + off, out_cap - off);
     if (w == 0)
     {
-        fail(ctx, TLS_ALERT_INTERNAL_ERROR);
+        fail(TLS_ALERT_INTERNAL_ERROR);
         return;
     }
     off += w;
 
     n = protocore_tls13_build_certificate_rpk(c->tx, PROTOCORE_TLS_CONN_MSG_CAP, c->cfg->ed25519_pub);
-    w = emit_encrypted(ctx, n, out + off, out_cap - off);
+    w = emit_encrypted(n, out + off, out_cap - off);
     if (w == 0)
     {
-        fail(ctx, TLS_ALERT_INTERNAL_ERROR);
+        fail(TLS_ALERT_INTERNAL_ERROR);
         return;
     }
     off += w;
 
     // CertificateVerify signs the transcript through the Certificate message.
-    transcript_peek(ctx, TLS_TERM_HASH);
+    transcript_peek(TLS_TERM_HASH);
     n = protocore_tls13_build_cert_verify(c->sign_work, c->tx, PROTOCORE_TLS_CONN_MSG_CAP, c->terms + TLS_TERM_HASH,
                                           c->cfg->ed25519_seed);
-    w = emit_encrypted(ctx, n, out + off, out_cap - off);
+    w = emit_encrypted(n, out + off, out_cap - off);
     if (w == 0)
     {
-        fail(ctx, TLS_ALERT_INTERNAL_ERROR);
+        fail(TLS_ALERT_INTERNAL_ERROR);
         return;
     }
     off += w;
 
     // Finished covers the transcript through CertificateVerify.
-    transcript_peek(ctx, TLS_TERM_HASH);
-    finished_mac(ctx, c->ks.s + TLS13_KS_SERVER_HS, TLS_TERM_HASH);
+    transcript_peek(TLS_TERM_HASH);
+    finished_mac(c->ks.s + TLS13_KS_SERVER_HS, TLS_TERM_HASH);
     n = protocore_tls13_build_finished(c->tx, PROTOCORE_TLS_CONN_MSG_CAP, c->terms + TLS_TERM_MAC);
-    w = emit_encrypted(ctx, n, out + off, out_cap - off);
+    w = emit_encrypted(n, out + off, out_cap - off);
     if (w == 0)
     {
-        fail(ctx, TLS_ALERT_INTERNAL_ERROR);
+        fail(TLS_ALERT_INTERNAL_ERROR);
         return;
     }
     off += w;
 
     // The application keys are keyed off CH..server Finished, which is the transcript right now.
-    transcript_peek(ctx, TLS_TERM_HS_FIN);
+    transcript_peek(TLS_TERM_HS_FIN);
     Tls13Ks.bind.ks = &c->ks;
     Tls13Ks.step.ch_sfin_hash = c->terms + TLS_TERM_HS_FIN;
-    Tls13Ks.master(Tls13Ks.internal);
+    Tls13Ks.master(NULL);
     keys_derive(&c->ap_tx, c->ks.s + TLS13_KS_SERVER_AP);
     keys_derive(&c->ap_rx, c->ks.s + TLS13_KS_CLIENT_AP);
     c->ap_keys_ready = PROTO_TRUE;
 
     c->state = TLS_CONN_WAIT_FINISHED;
-    ctx->ns->i32 = (int)off;
+    TlsConnection.i32 = (int)off;
 }
 
 // The first configured protocol that also appears in the client's ProtocolNameList, or NULL. The
@@ -315,12 +296,12 @@ static const char *alpn_select(const TlsConnConfig *cfg, const uint8_t *list, si
 }
 
 // A ClientHello arrived whole. Check it against the profile and answer it.
-static void server_on_client_hello(struct TlsConnInternal *restrict ctx, const uint8_t *msg, size_t len)
+static void server_on_client_hello(const uint8_t *msg, size_t len)
 {
-    TlsConn *c = ctx->c;
+    TlsConn *c = TlsConnection.conn;
     if (!protocore_tls13_parse_client_hello(msg, len, c->hello, PROTO_FALSE))
     {
-        fail(ctx, TLS_ALERT_DECODE_ERROR);
+        fail(TLS_ALERT_DECODE_ERROR);
         return;
     }
     // One profile: TLS 1.3, X25519 with the share up front, Ed25519. No HelloRetryRequest - the
@@ -328,7 +309,7 @@ static void server_on_client_hello(struct TlsConnInternal *restrict ctx, const u
     if (!c->hello->offers_tls13 || !c->hello->offers_x25519 || !c->hello->has_key_share || !c->hello->offers_ed25519 ||
         !c->hello->offers_aes128gcm_sha256)
     {
-        fail(ctx, TLS_ALERT_HANDSHAKE_FAILURE);
+        fail(TLS_ALERT_HANDSHAKE_FAILURE);
         return;
     }
     // ALPN (RFC 7301 sec 3.2): take the first configured protocol the client also offers. A client
@@ -336,31 +317,31 @@ static void server_on_client_hello(struct TlsConnInternal *restrict ctx, const u
     c->alpn = alpn_select(c->cfg, c->hello->alpn_list, c->hello->alpn_list_len);
     if (c->hello->alpn_list && c->cfg->alpn && !c->alpn)
     {
-        fail(ctx, TLS_ALERT_NO_APPLICATION_PROTOCOL);
+        fail(TLS_ALERT_NO_APPLICATION_PROTOCOL);
         return;
     }
-    transcript_add(ctx, msg, len);
-    server_flight(ctx);
+    transcript_add(msg, len);
+    server_flight(NULL);
 }
 
 // The client Finished closes the handshake: its MAC covers the transcript through server Finished.
-static void server_on_finished(struct TlsConnInternal *restrict ctx, const uint8_t *msg, size_t len)
+static void server_on_finished(const uint8_t *msg, size_t len)
 {
-    TlsConn *c = ctx->c;
+    TlsConn *c = TlsConnection.conn;
     if (msg[0] != TLS_HS_FINISHED || hs_body_len(msg) != TLS13_SECRET_LEN || len != TLS_HS_HDR_LEN + TLS13_SECRET_LEN)
     {
-        fail(ctx, TLS_ALERT_DECODE_ERROR);
+        fail(TLS_ALERT_DECODE_ERROR);
         return;
     }
-    finished_mac(ctx, c->ks.s + TLS13_KS_CLIENT_HS, TLS_TERM_HS_FIN);
+    finished_mac(c->ks.s + TLS13_KS_CLIENT_HS, TLS_TERM_HS_FIN);
     if (!protocore_ct_eq(c->terms + TLS_TERM_MAC, msg + TLS_HS_HDR_LEN, TLS13_SECRET_LEN))
     {
-        fail(ctx, TLS_ALERT_DECRYPT_ERROR);
+        fail(TLS_ALERT_DECRYPT_ERROR);
         return;
     }
-    transcript_add(ctx, msg, len);
+    transcript_add(msg, len);
     c->state = TLS_CONN_DONE;
-    ctx->ns->i32 = 0;
+    TlsConnection.i32 = 0;
 }
 
 // ---------------------------------------------------------------------------
@@ -370,9 +351,9 @@ static void server_on_finished(struct TlsConnInternal *restrict ctx, const uint8
 // The connection's persistent storage, split by offset. One borrow from the secure pool's
 // persistent end on first use, kept for the connection's life, so a connection that is initialised
 // again reuses the bytes it already holds.
-static proto_bool slot_storage(struct TlsConnInternal *restrict ctx)
+static proto_bool slot_storage(uint8_t *restrict work)
 {
-    TlsConn *c = ctx->c;
+    TlsConn *c = TlsConnection.conn;
     if (c->tx != NULL)
     {
         return PROTO_TRUE;
@@ -392,13 +373,12 @@ static proto_bool slot_storage(struct TlsConnInternal *restrict ctx)
     return PROTO_TRUE;
 }
 
-static void conn_init(struct TlsConnInternal *restrict ctx)
+static void conn_init(uint8_t *restrict work)
 {
-    bind_conn(ctx);
-    TlsConn *c = ctx->c;
-    if (!slot_storage(ctx))
+    TlsConn *c = TlsConnection.conn;
+    if (!slot_storage(work))
     {
-        ctx->ns->ok = PROTO_FALSE;
+        TlsConnection.ok = PROTO_FALSE;
         return;
     }
     // The bytes carry the previous tenant's key material; the pointers to them stay, or the next
@@ -412,8 +392,8 @@ static void conn_init(struct TlsConnInternal *restrict ctx)
     c->hs_keys_ready = PROTO_FALSE;
     c->ap_keys_ready = PROTO_FALSE;
     c->alert = 0;
-    c->cfg = ctx->ns->init_args.cfg;
-    c->role = ctx->ns->init_args.role;
+    c->cfg = TlsConnection.init_args.cfg;
+    c->role = TlsConnection.init_args.role;
     c->state = TLS_CONN_START;
     c->transcript = c->hash_work;
     Sha256.init(c->transcript);
@@ -421,42 +401,40 @@ static void conn_init(struct TlsConnInternal *restrict ctx)
     Tls13Ks.bind.kdf = &TLS13_KDF;
     Tls13Ks.bind.ks = &c->ks;
     Tls13Ks.bind.s = c->ks_work;
-    Tls13Ks.early(Tls13Ks.internal);
-    ctx->ns->ok = Tls13Ks.ok;
+    Tls13Ks.early(NULL);
+    TlsConnection.ok = Tls13Ks.ok;
 }
 
 // The client half needs the mirror of protocore_tls13_msg - a ClientHello builder and a ServerHello
 // parser - which that module does not have yet. Until it does, a client connection refuses.
-static void conn_start(struct TlsConnInternal *restrict ctx)
+static void conn_start(uint8_t *restrict work)
 {
-    bind_conn(ctx);
-    ctx->c->state = TLS_CONN_FAILED;
-    ctx->c->alert = TLS_ALERT_INTERNAL_ERROR;
-    ctx->ns->n = 0;
+    TlsConnection.conn->state = TLS_CONN_FAILED;
+    TlsConnection.conn->alert = TLS_ALERT_INTERNAL_ERROR;
+    TlsConnection.n = 0;
 }
 
 // The worker filled RX with one record and says how much. A ClientHello is in the clear, so it is
 // read where it lies; everything after it opens into TX, which builds nothing while a received
 // message stands in it.
-static void conn_process(struct TlsConnInternal *restrict ctx)
+static void conn_process(uint8_t *restrict work)
 {
-    bind_conn(ctx);
-    TlsConn *c = ctx->c;
-    const size_t rx_len = ctx->ns->io.rx_len;
+    TlsConn *c = TlsConnection.conn;
+    const size_t rx_len = TlsConnection.io.rx_len;
 
     if (c->state == TLS_CONN_FAILED || c->role == TLS_ROLE_CLIENT)
     {
-        ctx->ns->i32 = -1;
+        TlsConnection.i32 = -1;
         return;
     }
     TlsPlaintext pt = {0};
     TlsRecord.sealed.rec = c->rx;
     TlsRecord.sealed.rec_len = rx_len;
     TlsRecord.plain.view = &pt;
-    TlsRecord.plaintext_parse(TlsRecord.internal);
+    TlsRecord.plaintext_parse(NULL);
     if (TlsRecord.n == 0)
     {
-        fail(ctx, TLS_ALERT_DECODE_ERROR);
+        fail(TLS_ALERT_DECODE_ERROR);
         return;
     }
 
@@ -468,7 +446,7 @@ static void conn_process(struct TlsConnInternal *restrict ctx)
         TlsCiphertext info = {0};
         if (!record_open(&c->hs_rx, c->rx, rx_len, c->tx, PROTOCORE_TLS_CONN_MSG_CAP, &info))
         {
-            fail(ctx, TLS_ALERT_DECRYPT_ERROR);
+            fail(TLS_ALERT_DECRYPT_ERROR);
             return;
         }
         msg = c->tx;
@@ -478,7 +456,7 @@ static void conn_process(struct TlsConnInternal *restrict ctx)
 
     if (inner_type == PROTOCORE_TLS_CT_CHANGE_CIPHER_SPEC)
     {
-        ctx->ns->i32 = 0; // middlebox compatibility record, outside the transcript (sec 5)
+        TlsConnection.i32 = 0; // middlebox compatibility record, outside the transcript (sec 5)
         return;
     }
     // sec 6.2: a record that is not a handshake record here is premature application data or an
@@ -486,71 +464,67 @@ static void conn_process(struct TlsConnInternal *restrict ctx)
     // frame the message is a length past the message boundary, which sec 6 makes decode_error.
     if (inner_type != PROTOCORE_TLS_CT_HANDSHAKE)
     {
-        fail(ctx, TLS_ALERT_UNEXPECTED_MESSAGE);
+        fail(TLS_ALERT_UNEXPECTED_MESSAGE);
         return;
     }
     if (len < TLS_HS_HDR_LEN || len != TLS_HS_HDR_LEN + hs_body_len(msg))
     {
-        fail(ctx, TLS_ALERT_DECODE_ERROR);
+        fail(TLS_ALERT_DECODE_ERROR);
         return;
     }
     if (c->state == TLS_CONN_START && msg[0] == TLS_HS_CLIENT_HELLO)
     {
-        server_on_client_hello(ctx, msg, len);
+        server_on_client_hello(msg, len);
         return;
     }
     if (c->state == TLS_CONN_WAIT_FINISHED)
     {
-        server_on_finished(ctx, msg, len);
+        server_on_finished(msg, len);
         return;
     }
     // sec 4: a handshake message received in an unexpected order is unexpected_message.
-    fail(ctx, TLS_ALERT_UNEXPECTED_MESSAGE);
+    fail(TLS_ALERT_UNEXPECTED_MESSAGE);
 }
 
-static void conn_established(struct TlsConnInternal *restrict ctx)
+static void conn_established(uint8_t *restrict work)
 {
-    bind_conn(ctx);
-    ctx->ns->ok = (ctx->c->state == TLS_CONN_DONE);
+    TlsConnection.ok = (TlsConnection.conn->state == TLS_CONN_DONE);
 }
 
-static void conn_alert(struct TlsConnInternal *restrict ctx)
+static void conn_alert(uint8_t *restrict work)
 {
-    bind_conn(ctx);
-    ctx->ns->u8 = ctx->c->alert;
+    TlsConnection.u8 = TlsConnection.conn->alert;
 }
 
-static void conn_seal_app(struct TlsConnInternal *restrict ctx)
+static void conn_seal_app(uint8_t *restrict work)
 {
-    bind_conn(ctx);
-    ctx->ns->n = 0;
-    if (!ctx->c->ap_keys_ready)
+    TlsConnection.n = 0;
+    if (!TlsConnection.conn->ap_keys_ready)
     {
         return;
     }
-    ctx->ns->n = record_seal(&ctx->c->ap_tx, PROTOCORE_TLS_CT_APPLICATION_DATA, ctx->ns->io.data, ctx->ns->io.len,
-                             ctx->ns->out_args.out, ctx->ns->out_args.out_cap);
+    TlsConnection.n = record_seal(&TlsConnection.conn->ap_tx, PROTOCORE_TLS_CT_APPLICATION_DATA, TlsConnection.io.data,
+                                  TlsConnection.io.len, TlsConnection.out_args.out, TlsConnection.out_args.out_cap);
 }
 
-static void conn_open_app(struct TlsConnInternal *restrict ctx)
+static void conn_open_app(uint8_t *restrict work)
 {
-    bind_conn(ctx);
-    ctx->ns->ok = PROTO_FALSE;
-    if (!ctx->c->ap_keys_ready)
+    TlsConnection.ok = PROTO_FALSE;
+    if (!TlsConnection.conn->ap_keys_ready)
     {
         return;
     }
     TlsCiphertext info = {0};
-    if (!record_open(&ctx->c->ap_rx, ctx->ns->io.rec, ctx->ns->io.rec_len, ctx->ns->out_args.out,
-                     ctx->ns->out_args.out_cap, &info))
+    if (!record_open(&TlsConnection.conn->ap_rx, TlsConnection.io.rec, TlsConnection.io.rec_len,
+                     TlsConnection.out_args.out, TlsConnection.out_args.out_cap, &info))
     {
         return;
     }
-    if (ctx->ns->out_args.out_len)
+    if (TlsConnection.out_args.out_len)
     {
-        *ctx->ns->out_args.out_len = info.pt_len;
+        *TlsConnection.out_args.out_len = info.pt_len;
     }
-    ctx->ns->ok = (info.content_type == PROTOCORE_TLS_CT_APPLICATION_DATA);
+    TlsConnection.ok = (info.content_type == PROTOCORE_TLS_CT_APPLICATION_DATA);
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
@@ -560,7 +534,6 @@ TlsConnNs TlsConnection = {.init = conn_init,
                            .established = conn_established,
                            .alert = conn_alert,
                            .seal_app = conn_seal_app,
-                           .open_app = conn_open_app,
-                           .internal = &s_conn};
+                           .open_app = conn_open_app};
 
 #endif // PROTOCORE_TLS_SOFTWARE

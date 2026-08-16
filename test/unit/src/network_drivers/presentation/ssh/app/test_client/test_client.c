@@ -17,7 +17,6 @@ static void client_end(void)
     SshClient.end(SshClient.internal);
 }
 
-
 void setUp(void)
 {
 

@@ -29,8 +29,9 @@
 #ifndef PROTOCORE_SSE_H
 #define PROTOCORE_SSE_H
 
-#include "network_drivers/transport/tcp/tcp.h"
 #include "protocore_config.h"
+
+#if PROTOCORE_ENABLE_SSE
 
 PROTOCORE_BEGIN_DECLS
 
@@ -88,9 +89,6 @@ typedef struct
     size_t cap; ///< how much room it has
 } SseOutArgs;
 
-/** @brief The stream pool's own state and the calls that reach it, described only in sse.c. */
-struct SseInternal;
-
 // ---------------------------------------------------------------------------
 // SSE pool API
 // ---------------------------------------------------------------------------
@@ -123,7 +121,9 @@ struct SseInternal;
  * @var SseNs::free            release the stream bound to a TCP slot
  * @var SseNs::format          format one event record into out.buf, no transport
  * @var SseNs::write           format one event record and send it to the stream
- * @var SseNs::internal        the pool's state and the calls that reach it
+ *
+ * Every entry takes the module's borrow. How those bytes are carved is sse.c's and is never named
+ * here. ::protocore_sse_span is where a caller gets one.
  *
  * format emits `event: <event>\n` (if event), `id: <event_id>\n` (if event_id), then
  * `data: <data>\n\n` per the WHATWG event-stream format. It touches no connection state, so it is
@@ -146,21 +146,24 @@ typedef struct
     SseConn *conn;
     SseConnectHandler handler;
 
-    void (*route_add)(struct SseInternal *ctx);
-    void (*route_connect)(struct SseInternal *ctx);
-    void (*init)(struct SseInternal *ctx);
-    void (*alloc)(struct SseInternal *ctx);
-    void (*find)(struct SseInternal *ctx);
-    void (*free)(struct SseInternal *ctx);
-    void (*format)(struct SseInternal *ctx);
-    void (*write)(struct SseInternal *ctx);
-
-    struct SseInternal *internal;
+    void (*const route_add)(uint8_t *restrict work);
+    void (*const route_connect)(uint8_t *restrict work);
+    void (*const init)(uint8_t *restrict work);
+    void (*const alloc)(uint8_t *restrict work);
+    void (*const find)(uint8_t *restrict work);
+    void (*const free)(uint8_t *restrict work);
+    void (*const format)(uint8_t *restrict work);
+    void (*const write)(uint8_t *restrict work);
 } SseNs;
 
 /** @brief The one symbol this module exports. */
 extern SseNs Sse;
 
+/** @brief Not an entry: an entry takes a borrow and this is where that borrow comes from. */
+uint8_t *protocore_sse_span(void);
+
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_SSE
 
 #endif

@@ -24,7 +24,7 @@ void dbench_run(void)
         Sse.event_args.data = "{\"temp\":21.4,\"rh\":48}";
         Sse.event_args.event = "telemetry";
         Sse.event_args.event_id = "42";
-        DBENCH_OP("Sse.format (data+event+id)", 200000, Sse.format(Sse.internal); sink += Sse.n);
+        DBENCH_OP("Sse.format (data+event+id)", 200000, Sse.format(protocore_sse_span()); sink += Sse.n);
         (void)sink;
         DBENCH_DONE();
     }

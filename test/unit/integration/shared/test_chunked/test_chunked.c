@@ -191,8 +191,8 @@ void setUp()
         HttpConn.slot = i;
         HttpConn.reset(HttpConn.internal);
     }
-    Ws.init(Ws.internal);
-    Sse.init(Sse.internal);
+    Ws.init(protocore_ws_span());
+    Sse.init(protocore_sse_span());
     tcp_capture_reset();
     mock_sndbuf_set(MOCK_SNDBUF_DEFAULT);
     g_log_status = 0;

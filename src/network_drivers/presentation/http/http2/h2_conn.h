@@ -32,38 +32,17 @@ PROTOCORE_BEGIN_DECLS
 #include "network_drivers/presentation/http/http2/h2_frame.h"
 #include "network_drivers/presentation/http/http2/hpack.h"
 
-/** @brief Per-stream state (RFC 9113 sec 5.1, server side of a client-initiated stream). A
- *  mutually-exclusive internal lifecycle state, not a wire value. */
-typedef enum PROTO_ENUM_PACKED
-{
-    H2_ST_IDLE = 0,
-    H2_ST_OPEN,        ///< receiving (headers seen, no END_STREAM yet)
-    H2_ST_HALF_CLOSED, ///< client finished (END_STREAM); we may still respond
-    H2_ST_CLOSED,
-} H2StreamState;
-
-typedef struct
-{
-    uint32_t id;                   ///< stream identifier (0 = free slot)
-    H2StreamState state;           ///< lifecycle state
-    int32_t send_window;           ///< our remaining DATA flow window for this stream
-    proto_bool has_content_length; ///< the request declared a content-length
-    proto_bool content_length_bad; ///< that declaration was not a plain decimal number
-    uint32_t content_length;       ///< the declared value
-    uint32_t data_seen;            ///< DATA payload octets received on this stream
-} H2Stream;
-
 #define PROTOCORE_H2_FRAME_HDR_CAP 16u
 /**
  * @brief This module's draw on the plaintext pool, declared here and asserted in h2_conn.c.
  *
- * One borrow per connection from the pool's persistent end, split by offset into the frame payload
- * buffer, the header-block buffer, the HPACK emit scratch and the 9-octet frame header. Every region
- * is a power of two, so every offset after it is a multiple of one and the payload starts at the
- * span's own alignment. HTTP is what the plaintext pool is for, and the connection owns the bytes.
+ * One borrow per connection from the secure pool's persistent end, split by offset into the engine
+ * context, the frame payload buffer, the header-block buffer, the HPACK emit scratch and the
+ * 9-octet frame header. HTTP/2 runs over TLS, so the bytes are secure and the connection owns them.
  */
 #define PROTOCORE_H2_CONN_BORROW                                                                                       \
-    ((size_t)PROTOCORE_H2_MAX_FRAME + PROTOCORE_H2_HDR_BLOCK + PROTOCORE_H2_HDR_BLOCK + PROTOCORE_H2_FRAME_HDR_CAP)
+    ((size_t)PROTOCORE_H2_CONN_RECORD + PROTOCORE_H2_MAX_FRAME + PROTOCORE_H2_HDR_BLOCK + PROTOCORE_H2_HDR_BLOCK +     \
+     PROTOCORE_H2_FRAME_HDR_CAP)
 
 /** @brief Application callbacks the engine drives (all optional except write). */
 typedef struct
@@ -83,56 +62,71 @@ typedef struct
     void *app; ///< opaque, passed to the on_* callbacks
 } H2Callbacks;
 
-/** @brief One HTTP/2 connection's engine state (fixed storage, no heap). */
+/** @brief What ::H2ConnNs::init installs. */
 typedef struct
 {
-    uint8_t phase; ///< 0 = awaiting preface, 1 = running, 2 = closed
-    H2Callbacks cb;
+    const H2Callbacks *cb; ///< the callbacks the engine drives
+} H2ConnInitArgs;
 
-    // Inbound frame reassembly.
-    uint8_t *fhdr; ///< PROTOCORE_H2_FRAME_HDR_CAP bytes of the connection's borrow: the 9-octet frame header
-    uint8_t *fbuf; ///< PROTOCORE_H2_MAX_FRAME bytes of the connection's borrow: the payload after it
-    size_t fhave;  ///< bytes buffered for the current frame, header included
-    size_t pre;    ///< preface bytes matched so far
+/** @brief The inbound bytes ::H2ConnNs::recv feeds through the state machine. */
+typedef struct
+{
+    const uint8_t *data; ///< the bytes that arrived
+    size_t len;          ///< how many
+} H2ConnRecvArgs;
 
-    // Header-block reassembly (HEADERS + CONTINUATION); empty when a frame carries END_HEADERS.
-    uint8_t *hblock; ///< PROTOCORE_H2_HDR_BLOCK bytes of the connection's borrow
-    size_t hblock_len;
-    uint32_t hblock_stream;
-    proto_bool hblock_end_stream;
-    proto_bool hblock_trailers; ///< the block is a sec 8.1 trailer section, not the request
-    uint8_t hblock_frames;      ///< CONTINUATION frames this block has spanned
-    proto_bool in_header_block; ///< between a non-END_HEADERS HEADERS and its END_HEADERS CONTINUATION
+/** @brief RFC 9113 sec 8.3: what one HEADERS + DATA response carries. */
+typedef struct
+{
+    uint32_t stream_id;       ///< the stream it answers
+    int status;               ///< the status it carries
+    const char *content_type; ///< its media type, or NULL
+    const char *body;         ///< its body bytes
+    size_t body_len;          ///< how many
+} H2ConnRespondArgs;
 
-    HpackDynTable hdec; ///< HPACK decoder (peer's encoder state)
-    char *hscratch;     ///< PROTOCORE_H2_HDR_BLOCK bytes of the connection's borrow: HPACK per-header emit scratch
-
-    H2Settings peer;          ///< the peer's settings (affect how we send)
-    int32_t conn_send_window; ///< our connection-level DATA flow window
-
-    H2Stream streams[PROTOCORE_H2_MAX_STREAMS];
-    uint32_t last_peer_stream; ///< highest client (odd) stream id accepted
-} H2Conn;
-
-/** @brief Initialize a connection engine and send our initial SETTINGS via cb.write. */
-void protocore_h2_conn_init(H2Conn *c, const H2Callbacks *cb);
+/** @brief RFC 9113 sec 6.8: the error a graceful shutdown reports. */
+typedef struct
+{
+    uint32_t error; ///< the code the GOAWAY carries
+} H2ConnGoawayArgs;
 
 /**
- * @brief Feed inbound bytes. Drives the state machine, invokes callbacks, and writes control
- * frames. @return false on a fatal connection error (the caller sends GOAWAY and closes).
+ * @brief One HTTP/2 connection's engine (RFC 9113).
+ *
+ * A caller sets the members a call takes, invokes it through ::H2Conn, and reads the outcome off
+ * the same handle.
+ *
+ * @var H2ConnNs::init_args     the callbacks an init installs
+ * @var H2ConnNs::recv_args     the bytes a feed carries
+ * @var H2ConnNs::respond_args  what a serialized response carries
+ * @var H2ConnNs::goaway_args   the error a shutdown reports
+ * @var H2ConnNs::ok            a call's true/false outcome
+ * @var H2ConnNs::init     start the engine and send our initial SETTINGS through cb.write
+ * @var H2ConnNs::recv     feed inbound bytes; drives the machine, invokes callbacks, writes control frames
+ * @var H2ConnNs::respond  serialize HEADERS + DATA on a stream and close it
+ * @var H2ConnNs::goaway   send a GOAWAY to begin a graceful shutdown
+ *
+ * Every entry takes one connection's borrow. How those bytes are carved is h2_conn.c's and is
+ * never named here; ::PROTOCORE_H2_CONN_BORROW is how many a caller must hand over.
  */
-proto_bool protocore_h2_conn_recv(H2Conn *c, const uint8_t *data, size_t len);
+typedef struct
+{
+    H2ConnInitArgs init_args;       ///< the members ::H2ConnNs::init takes
+    H2ConnRecvArgs recv_args;       ///< the members ::H2ConnNs::recv takes
+    H2ConnRespondArgs respond_args; ///< the members ::H2ConnNs::respond takes
+    H2ConnGoawayArgs goaway_args;   ///< the members ::H2ConnNs::goaway takes
 
-/**
- * @brief Serialize a complete response (status + optional content-type + body) as a HEADERS
- * frame (HPACK) followed by a DATA frame on @p stream_id, and close the stream. @return false on
- * a bad stream / serialization overflow.
- */
-proto_bool protocore_h2_conn_respond(H2Conn *c, uint32_t stream_id, int status, const char *content_type,
-                                     const char *body, size_t body_len);
+    proto_bool ok; ///< a call's true/false outcome
 
-/** @brief Send a GOAWAY (last accepted stream, @p error) to begin a graceful shutdown. */
-void protocore_h2_conn_goaway(H2Conn *c, uint32_t error);
+    void (*const init)(uint8_t *restrict work);
+    void (*const recv)(uint8_t *restrict work);
+    void (*const respond)(uint8_t *restrict work);
+    void (*const goaway)(uint8_t *restrict work);
+} H2ConnNs;
+
+/** @brief The one symbol this module exports. */
+extern H2ConnNs H2Conn;
 
 PROTOCORE_END_DECLS
 

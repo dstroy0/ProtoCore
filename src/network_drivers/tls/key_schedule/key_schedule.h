@@ -121,9 +121,6 @@ typedef struct
     uint8_t *out;                   ///< 32-byte verify_data
 } Tls13FinishedArgs;
 
-/** @brief The schedule's own calls, described only in key_schedule.c. */
-struct Tls13KsInternal;
-
 /**
  * @brief The TLS 1.3 key schedule (RFC 8446 sec 7.1).
  *
@@ -141,7 +138,6 @@ struct Tls13KsInternal;
  * @var Tls13KsNs::handshake       step 2: handshake_secret and the handshake traffic secrets
  * @var Tls13KsNs::master          step 3: master_secret and the application traffic secrets
  * @var Tls13KsNs::finished_mac    the Finished verify_data (sec 4.4.4)
- * @var Tls13KsNs::internal        the calls that advance a schedule
  *
  * @ref Tls13KsBind::s is bytes the CONNECTION owns and holds for exactly as long as it lives, so the
  * schedule dies with it. It must arrive zeroed: TLS13_KS_ZEROS is the first extract's IKM and nothing
@@ -158,14 +154,13 @@ typedef struct
 
     proto_bool ok;
 
-    void (*expand_label)(struct Tls13KsInternal *ctx);
-    void (*derive_secret)(struct Tls13KsInternal *ctx);
-    void (*early)(struct Tls13KsInternal *ctx);
-    void (*handshake)(struct Tls13KsInternal *ctx);
-    void (*master)(struct Tls13KsInternal *ctx);
-    void (*finished_mac)(struct Tls13KsInternal *ctx);
+    void (*const expand_label)(uint8_t *restrict work);
+    void (*const derive_secret)(uint8_t *restrict work);
+    void (*const early)(uint8_t *restrict work);
+    void (*const handshake)(uint8_t *restrict work);
+    void (*const master)(uint8_t *restrict work);
+    void (*const finished_mac)(uint8_t *restrict work);
 
-    struct Tls13KsInternal *internal;
 } Tls13KsNs;
 
 /** @brief The one symbol this module exports. */

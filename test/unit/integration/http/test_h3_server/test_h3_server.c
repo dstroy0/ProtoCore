@@ -13,6 +13,7 @@
 #include "network_drivers/presentation/http/http3/quic_tp.h"
 #include "network_drivers/presentation/http/http3/quic_varint.h"
 #include "network_drivers/presentation/http/http3/tls13_msg.h"
+#include "network_drivers/session/session.h" // http_h3 / http_resp_sink: HTTP's per-slot state
 #include "network_drivers/tls/key_schedule/key_schedule.h"
 #include "network_drivers/transport/tcp/common.h"
 #include "network_drivers/transport/udp/server/server.h"
@@ -398,12 +399,12 @@ void test_h3_request_served_by_route()
     Tls13Ks.bind.kdf = &TLS13_KDF;
     Tls13Ks.bind.ks = &cks;
     Tls13Ks.bind.s = ks_store_408;
-    Tls13Ks.early(Tls13Ks.internal);
+    Tls13Ks.early(NULL);
     Tls13Ks.bind.ks = &cks;
     Tls13Ks.step.ecdhe = ecdhe;
     Tls13Ks.step.ecdhe_len = 32;
     Tls13Ks.step.ch_sh_hash = chsh;
-    Tls13Ks.handshake(Tls13Ks.internal);
+    Tls13Ks.handshake(NULL);
     QuicPacketKeys hs_s, hs_c, ap_s, ap_c;
     protocore_quic_keys_from_secret(tw, cks.s + TLS13_KS_SERVER_HS, &hs_s);
     protocore_quic_keys_from_secret(tw, cks.s + TLS13_KS_CLIENT_HS, &hs_c);
@@ -418,7 +419,7 @@ void test_h3_request_served_by_route()
     Sha256.final(t);
     Tls13Ks.bind.ks = &cks;
     Tls13Ks.step.ch_sfin_hash = chsf;
-    Tls13Ks.master(Tls13Ks.internal);
+    Tls13Ks.master(NULL);
     protocore_quic_keys_from_secret(tw, cks.s + TLS13_KS_SERVER_AP, &ap_s);
     protocore_quic_keys_from_secret(tw, cks.s + TLS13_KS_CLIENT_AP, &ap_c);
 
@@ -432,7 +433,7 @@ void test_h3_request_served_by_route()
     Tls13Ks.finished_args.base_secret = cks.s + TLS13_KS_CLIENT_HS;
     Tls13Ks.finished_args.transcript_hash = chsf;
     Tls13Ks.finished_args.out = cfin + 4;
-    Tls13Ks.finished_mac(Tls13Ks.internal);
+    Tls13Ks.finished_mac(NULL);
     uint8_t hfr[64];
     size_t hfl = protocore_quic_build_ack(hfr, sizeof(hfr), 0, 0, 0);
     hfl += protocore_quic_build_crypto(hfr + hfl, sizeof(hfr) - hfl, 0, cfin, sizeof(cfin));
@@ -456,9 +457,9 @@ void test_h3_request_served_by_route()
 
     TEST_ASSERT_TRUE(g_handler_ran);
     TEST_ASSERT_TRUE(response_ok(&ap_s));
-    TEST_ASSERT_EQUAL_UINT8(0, conn_pool[PROTOCORE_H3_DISPATCH_SLOT].h3);
+    TEST_ASSERT_EQUAL_UINT8(0, http_h3[PROTOCORE_H3_DISPATCH_SLOT]);
 
-    protocore_quic_server_stop();
+    QuicServer.stop(QuicServer.internal);
 }
 
 void test_h3_begin_edges()
@@ -530,7 +531,7 @@ void test_h3_dispatch_edges()
     protocore_h3_server_request(NULL, CID, 0, "GET", "/empty", "h3.test", NULL, 0);
     TEST_ASSERT_TRUE(g_empty_ran);
 
-    conn_pool[0].protocore_resp_sink = NULL;
+    http_resp_sink[0] = NULL;
     conn_pool[0].pcb = NULL;
     send_text(0, 200, "text/plain", "x");
     send_empty(0, 204);

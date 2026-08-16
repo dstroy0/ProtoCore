@@ -52,7 +52,8 @@ void dbench_run(void)
         DBENCH_OP("protocore_packml_execute_complete", 200000,
                   sink += (uint32_t)protocore_packml_execute_complete(PACK_ML_STATE_EXECUTE));
         // Full PackTags Status/Admin snapshot (reads the monotonic clock for the timer tags).
-        DBENCH_OP("protocore_packml_svc_status", 100000, (protocore_packml_svc_status(&st), sink += (uint32_t)st.state_current));
+        DBENCH_OP("protocore_packml_svc_status", 100000,
+                  (protocore_packml_svc_status(&st), sink += (uint32_t)st.state_current));
 
         (void)sink;
         DBENCH_DONE();

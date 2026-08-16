@@ -60,8 +60,11 @@
 #ifndef PROTOCORE_WEBSOCKET_H
 #define PROTOCORE_WEBSOCKET_H
 
-#include "network_drivers/transport/tcp/tcp.h"
 #include "protocore_config.h"
+
+#if PROTOCORE_ENABLE_WEBSOCKET
+
+PROTOCORE_BEGIN_DECLS
 
 #if PROTOCORE_ENABLE_WS_DEFLATE
 #include "network_drivers/presentation/codec/deflate/deflate.h"
@@ -150,6 +153,7 @@ typedef struct
 {
     uint8_t ws_id;     ///< Index into ws_pool[] (set at init).
     uint8_t slot_id;   ///< Owning TCP slot in conn_pool[].
+    uint8_t route_id;  ///< The handler set this channel was opened for.
     proto_bool active; ///< True when this entry is in use.
 
     WsParseState parse_state; ///< Current frame parser state.
@@ -229,9 +233,6 @@ typedef struct
     WsCloseCode code;       ///< the status code a close carries
 } WsFrameArgs;
 
-/** @brief The socket pool's own state and the calls that reach it, described only in websocket.c. */
-struct WsInternal;
-
 /**
  * @brief The WebSocket connections this server holds open (RFC 6455).
  *
@@ -273,7 +274,9 @@ struct WsInternal;
  * @var WsNs::send_frame       build and send one frame; server-to-client frames are never masked
  * @var WsNs::set_frag_size    the outbound fragmentation size (RFC 6455 sec 5.4)
  * @var WsNs::close            send a Close frame and mark the socket WS_CLOSED
- * @var WsNs::internal         the pool's state and the calls that reach it
+ *
+ * Every entry takes the module's borrow. How those bytes are carved is websocket.c's and is never
+ * named here. ::protocore_ws_span is where a caller gets one.
  *
  * A caller that needs immediate delivery flushes the connection itself after a send.
  */
@@ -297,27 +300,32 @@ typedef struct
     WsMessageHandler message_handler;
     WsCloseHandler close_handler;
 
-    void (*route_add)(struct WsInternal *ctx);
-    void (*route_connect)(struct WsInternal *ctx);
-    void (*route_message)(struct WsInternal *ctx);
-    void (*route_close)(struct WsInternal *ctx);
-    void (*init)(struct WsInternal *ctx);
-    void (*active)(struct WsInternal *ctx);
-    void (*payload_of)(struct WsInternal *ctx);
-    void (*alloc)(struct WsInternal *ctx);
-    void (*find)(struct WsInternal *ctx);
-    void (*free)(struct WsInternal *ctx);
-    void (*parse)(struct WsInternal *ctx);
-    void (*feed_byte)(struct WsInternal *ctx);
-    void (*reset_frame)(struct WsInternal *ctx);
-    void (*send_frame)(struct WsInternal *ctx);
-    void (*set_frag_size)(struct WsInternal *ctx);
-    void (*close)(struct WsInternal *ctx);
-
-    struct WsInternal *internal;
+    void (*const route_add)(uint8_t *restrict work);
+    void (*const route_connect)(uint8_t *restrict work);
+    void (*const route_message)(uint8_t *restrict work);
+    void (*const route_close)(uint8_t *restrict work);
+    void (*const init)(uint8_t *restrict work);
+    void (*const active)(uint8_t *restrict work);
+    void (*const payload_of)(uint8_t *restrict work);
+    void (*const alloc)(uint8_t *restrict work);
+    void (*const find)(uint8_t *restrict work);
+    void (*const free)(uint8_t *restrict work);
+    void (*const parse)(uint8_t *restrict work);
+    void (*const feed_byte)(uint8_t *restrict work);
+    void (*const reset_frame)(uint8_t *restrict work);
+    void (*const send_frame)(uint8_t *restrict work);
+    void (*const set_frag_size)(uint8_t *restrict work);
+    void (*const close)(uint8_t *restrict work);
 } WsNs;
 
 /** @brief The one symbol this module exports. */
 extern WsNs Ws;
+
+/** @brief Not an entry: an entry takes a borrow and this is where that borrow comes from. */
+uint8_t *protocore_ws_span(void);
+
+PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_WEBSOCKET
 
 #endif

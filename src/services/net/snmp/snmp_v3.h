@@ -48,7 +48,6 @@ PROTOCORE_BEGIN_DECLS
 #include "services/net/snmp/snmp_notify.h" // SnmpVarbind: the bindings a v3 notification carries
 #endif
 
-
 /** @brief msgAuthenticationParameters length: HMAC-SHA-256 truncated to 192 bits (RFC 7860 sec 4.1). */
 #define SNMP_V3_AUTH_PARAM_LEN 24
 /** @brief msgPrivacyParameters length: the 64-bit salt of RFC 3826 sec 3.1.2.1. */

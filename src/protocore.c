@@ -231,7 +231,9 @@ int32_t proto_begin(const WebServerConfig *cfg)
         Rng.fill_args.out = sec;
         Rng.fill_args.len = sizeof(sec);
         Rng.fill(protocore_rng_span());
-        protocore_csrf_set_secret(sec, sizeof(sec));
+        Csrf.secret_args.secret = sec;
+        Csrf.secret_args.len = sizeof(sec);
+        Csrf.set_secret(protocore_csrf_span());
     }
 #endif
     for (uint8_t i = 0; i < MAX_CONNS; i++)
@@ -240,10 +242,10 @@ int32_t proto_begin(const WebServerConfig *cfg)
         HttpConn.reset(HttpConn.internal);
     }
 #if PROTOCORE_ENABLE_WEBSOCKET
-    Ws.init(Ws.internal);
+    Ws.init(protocore_ws_span());
 #endif
 #if PROTOCORE_ENABLE_SSE
-    Sse.init(Sse.internal);
+    Sse.init(protocore_sse_span());
 #endif
     for (uint8_t i = 0; i < s_inst.listener_count; i++)
     {
@@ -383,10 +385,10 @@ void stop(void)
         HttpConn.reset(HttpConn.internal);
     }
 #if PROTOCORE_ENABLE_WEBSOCKET
-    Ws.init(Ws.internal);
+    Ws.init(protocore_ws_span());
 #endif
 #if PROTOCORE_ENABLE_SSE
-    Sse.init(Sse.internal);
+    Sse.init(protocore_sse_span());
 #endif
 }
 
@@ -517,7 +519,7 @@ void on_ws(const char *path, WsConnectHandler on_connect, WsMessageHandler on_me
     Ws.route.on_connect = on_connect;
     Ws.route.on_message = on_message;
     Ws.route.on_close = on_close;
-    Ws.route_add(Ws.internal);
+    Ws.route_add(protocore_ws_span());
     r->ws_id = Ws.u8;
 }
 #endif // PROTOCORE_ENABLE_WEBSOCKET
@@ -534,7 +536,7 @@ void on_sse(const char *path, SseConnectHandler on_connect)
     fill_route_base(r, path);
     r->type = ROUTE_SSE;
     Sse.route.on_connect = on_connect;
-    Sse.route_add(Sse.internal);
+    Sse.route_add(protocore_sse_span());
     r->sse_id = Sse.u8;
 }
 #endif // PROTOCORE_ENABLE_SSE
@@ -573,7 +575,7 @@ void ws_dispatch_message(const WsConn *ws)
             continue;
         }
         Ws.id = rt->ws_id;
-        Ws.route_message(Ws.internal);
+        Ws.route_message(protocore_ws_span());
         if (Ws.message_handler != NULL)
         {
             Ws.message_handler(ws->ws_id);
@@ -592,7 +594,7 @@ void ws_dispatch_close(const WsConn *ws)
             continue;
         }
         Ws.id = rt->ws_id;
-        Ws.route_close(Ws.internal);
+        Ws.route_close(protocore_ws_span());
         if (Ws.close_handler != NULL)
         {
             Ws.close_handler(ws->ws_id);

@@ -46,19 +46,23 @@ void dbench_run(void)
         volatile long sinkl = 0;
 
         // XOR checksum over the 60-byte sentence body: bulk op, so ns/byte and MB/s are reported.
-        DBENCH_BULK("protocore_nmea0183_checksum", 200000, body_len, sink8 += protocore_nmea0183_checksum(GGA_BODY, body_len));
+        DBENCH_BULK("protocore_nmea0183_checksum", 200000, body_len,
+                    sink8 += protocore_nmea0183_checksum(GGA_BODY, body_len));
         // Build `$<body>*HH\r\n` (checksum + framing) from the GGA body.
-        DBENCH_OP("protocore_nmea0183_build", 100000, sinksz += protocore_nmea0183_build(build_buf, sizeof(build_buf), GGA_BODY));
+        DBENCH_OP("protocore_nmea0183_build", 100000,
+                  sinksz += protocore_nmea0183_build(build_buf, sizeof(build_buf), GGA_BODY));
         // Full parse: guard + checksum validation + comma field split + talker/type derivation.
         DBENCH_OP("protocore_nmea0183_parse GGA", 50000, sinkb ^= protocore_nmea0183_parse(GGA, gga_len, &m));
         // Field-value helpers: decode field 2 ("4807.038") as float, field 7 ("08") as int.
         {
             float f = 0.0f;
-            DBENCH_OP("protocore_nmea0183_field_float", 100000, sinkb ^= protocore_nmea0183_field_float(&m, 2, &f); sinkf += f);
+            DBENCH_OP("protocore_nmea0183_field_float", 100000, sinkb ^= protocore_nmea0183_field_float(&m, 2, &f);
+                      sinkf += f);
         }
         {
             long v = 0;
-            DBENCH_OP("protocore_nmea0183_field_int", 100000, sinkb ^= protocore_nmea0183_field_int(&m, 7, &v); sinkl += v);
+            DBENCH_OP("protocore_nmea0183_field_int", 100000, sinkb ^= protocore_nmea0183_field_int(&m, 7, &v);
+                      sinkl += v);
         }
 
         (void)sink8;

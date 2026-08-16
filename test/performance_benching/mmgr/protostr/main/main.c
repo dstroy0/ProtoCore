@@ -61,13 +61,13 @@ void dbench_run(void)
         // times that chain with no candidate ever reaching a verify.
         DBENCH_OP("find 2B hit head", 2000,
                   sink += (uintptr_t)str.find(hay, HAY_LEN, "\r\n", sizeof("\r\n"), PROTO_FALSE));
-        DBENCH_OP("find 2B miss 32K", 2000,
-                  sink += (uintptr_t)str.find(hay, HAY_LEN, "zq", sizeof("zq"), PROTO_FALSE));
+        DBENCH_OP("find 2B miss 32K", 2000, sink += (uintptr_t)str.find(hay, HAY_LEN, "zq", sizeof("zq"), PROTO_FALSE));
         DBENCH_OP("find 3B miss 32K", 2000,
                   sink += (uintptr_t)str.find(hay, HAY_LEN, "zqx", sizeof("zqx"), PROTO_FALSE));
 
         // Past three: the anchor mask, then a candidate walked out of it per set lane.
-        DBENCH_OP("find 13B hit head", 2000, sink += (uintptr_t)str.find(hay, HAY_LEN, MARK, sizeof(MARK), PROTO_FALSE));
+        DBENCH_OP("find 13B hit head", 2000,
+                  sink += (uintptr_t)str.find(hay, HAY_LEN, MARK, sizeof(MARK), PROTO_FALSE));
         DBENCH_OP("find 13B miss 32K", 2000,
                   sink += (uintptr_t)str.find(hay, HAY_LEN, "X-Marker-Herz", sizeof("X-Marker-Herz"), PROTO_FALSE));
 

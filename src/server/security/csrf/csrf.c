@@ -3,38 +3,57 @@
 
 /**
  * @file csrf.c
- * @brief Stateless HMAC-signed CSRF token implementation (PROTOCORE_ENABLE_CSRF).
+ * @brief Stateless HMAC-signed CSRF token - implementation. See csrf.h.
  *
- * The token is `<nonce_hex>.<sig_hex>`; the signature is the first CSRF_SIG_BYTES
- * of HMAC-SHA256(secret, nonce). Verification recomputes the HMAC over the
- * embedded nonce and constant-time compares - no server-side session state.
+ * The context is this file's. The module's own borrow is split by offset into the secret and the
+ * nonce counter, then the region the nested HMAC-SHA256 runs out of. The secret is key material the
+ * caller keeps for the life of the program, so those bytes are the span it took once rather than
+ * storage declared here.
  */
 
-#include "csrf.h"
-#include "mmgr/protoframe.h" // the one frame engine
-#include "mmgr/protomem.h"
-#include "mmgr/protostr.h" // str: the bounded-run walks
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_CSRF
 
-#include "crypto/ct_eq.h" // protocore_ct_eq
+#include "crypto/ct_eq.h" // protocore_ct_eq: the constant-time signature compare
 #include "crypto/mac/hmac_sha256.h"
-#include "mmgr/secure.h" // the token MAC's working set, wiped on release
+#include "mmgr/protoframe.h" // the one frame engine
+#include "mmgr/protomem.h"
+#include "mmgr/protostr.h" // str: the bounded-run walks
+#include "mmgr/secure.h"   // the persistent end the secret is taken from
+#include "server/security/csrf/csrf.h"
 #include "shared/hex/hex.h"
+
+PROTOCORE_BEGIN_DECLS
 
 // nonce-hex "." signature-hex
 static const protocore_field CSRF_TOKEN[] = {
     PROTOCORE_STR, {PROTOCORE_FK_LIT, 0, 1, "."}, PROTOCORE_STR, PROTOCORE_END};
 
-// All CSRF state, owned by one instance (internal linkage): the HMAC secret and the
-// monotonic nonce counter, grouped so it is one named owner, unreachable cross-TU.
+// The one definition, private to this TU. It sits at CSRF_OFF_CTX in the caller's borrow, so its
+// size never leaves this file and no consumer can name it.
+//
+// Only what is not derivable: the secret, its length, and the monotonic nonce counter. The region
+// the nested HMAC runs out of lives at a fixed offset, so a macro computes it from the pointer.
 typedef struct
 {
     uint8_t secret[32];
     size_t secret_len;
     uint64_t counter;
 } CsrfCtx;
-static CsrfCtx s_csrf = {{0}, 0, 0};
+
+// The caller's borrow, split: the context, then the region the nested HMAC-SHA256 runs out of. That
+// one is driven through its own namespace, so this borrow carries a region for it rather than
+// naming any term of it.
+#define CSRF_OFF_CTX 0u
+#define CSRF_OFF_MAC (CSRF_OFF_CTX + sizeof(CsrfCtx))
+static_assert(CSRF_OFF_MAC + PROTOCORE_HMAC_SHA256_BORROW <= PROTOCORE_CSRF_BORROW,
+              "PROTOCORE_CSRF_BORROW is short of the secret, the counter and the nested HMAC borrow - raise "
+              "it in protocore_config.h, which derives PROTOCORE_SECURE_ARENA_SIZE from it");
+
+// The regions, at their offsets in the caller's borrow.
+#define CSRF_CTX(w) ((CsrfCtx *)(void *)((w) + CSRF_OFF_CTX))
+#define CSRF_MAC(w) ((w) + CSRF_OFF_MAC)
 
 // Lowercase hex of @p n bytes at @p in, plus a NUL, into @p out.
 static void hex_of(const uint8_t *in, uint32_t n, char *out)
@@ -47,78 +66,125 @@ static void hex_of(const uint8_t *in, uint32_t n, char *out)
 }
 
 // Hex of the truncated HMAC-SHA256(secret, nonce) into sig_hex (2*CSRF_SIG_BYTES + 1).
-static void sign_nonce(uint8_t *work, const CsrfCtx *c, const uint8_t *nonce, size_t nlen, char *sig_hex)
+static void sign_nonce(uint8_t *restrict work, const uint8_t *nonce, size_t nlen, char *sig_hex)
 {
+    const CsrfCtx *c = CSRF_CTX(work);
     uint8_t mac[PROTOCORE_HMAC_SHA256_LEN];
     HmacSha256.mac_args.key = c->secret;
     HmacSha256.mac_args.key_len = c->secret_len;
     HmacSha256.mac_args.data = nonce;
     HmacSha256.mac_args.len = nlen;
     HmacSha256.mac_args.out = mac;
-    HmacSha256.mac(work);
+    HmacSha256.mac(CSRF_MAC(work));
     hex_of(mac, CSRF_SIG_BYTES, sig_hex); // truncate the MAC to CSRF_SIG_BYTES
 }
 
-void protocore_csrf_set_secret(const uint8_t *secret, size_t len)
+// --- the program's shared issuer, beside the namespace not on it ------------
+
+// The one owned instance, private to this TU: the pointer to the bytes this module took for itself.
+// A caller that hands in its own borrow never reaches it.
+typedef struct
 {
-    if (!secret)
+    uint8_t *span; ///< PROTOCORE_CSRF_BORROW persistent bytes, or null while the pool was short
+} CsrfOwnCtx;
+static CsrfOwnCtx s_csrf;
+
+// Not an entry: an entry takes a borrow and this is where that borrow comes from. Stated flat, as
+// bn_expmod_group14 is stated beside BignumNs, so the namespace keeps the one shape every module has
+// - args in, ok out, every entry over the caller's bytes - and storage stays off it.
+uint8_t *protocore_csrf_span(void)
+{
+    if (s_csrf.span == NULL)
     {
-        s_csrf.secret_len = 0;
-        return;
+        protocore_span s = protocore_secure_persist_span(PROTOCORE_CSRF_BORROW);
+        if (span.ok(s))
+        {
+            s_csrf.span = s.buf;
+        }
     }
-    s_csrf.secret_len = len > sizeof(s_csrf.secret) ? sizeof(s_csrf.secret) : len;
-    mem.cpy(s_csrf.secret, secret, s_csrf.secret_len);
+    return s_csrf.span; // null while the pool was short, which every entry refuses
 }
 
-int protocore_csrf_issue(char *out, size_t cap)
+// --- the entries -----------------------------------------------------------
+
+static void csrf_set_secret(uint8_t *restrict work)
 {
-    if (s_csrf.secret_len == 0 || !out || cap < CSRF_TOKEN_BUF)
+    Csrf.ok = PROTO_FALSE;
+    if (!work)
     {
-        return 0;
+        return;
+    }
+    CsrfCtx *c = CSRF_CTX(work);
+    const uint8_t *secret = Csrf.secret_args.secret;
+    if (!secret)
+    {
+        c->secret_len = 0;
+        Csrf.ok = PROTO_TRUE;
+        return;
+    }
+    const size_t len = Csrf.secret_args.len;
+    c->secret_len = len > sizeof(c->secret) ? sizeof(c->secret) : len;
+    mem.cpy(c->secret, secret, c->secret_len);
+    Csrf.ok = PROTO_TRUE;
+}
+
+static void csrf_issue(uint8_t *restrict work)
+{
+    Csrf.ok = PROTO_FALSE;
+    Csrf.n = 0;
+    if (!work || !Csrf.issue_args.out || Csrf.issue_args.cap < CSRF_TOKEN_BUF)
+    {
+        return;
+    }
+    CsrfCtx *c = CSRF_CTX(work);
+    if (c->secret_len == 0)
+    {
+        return;
     }
 
     uint8_t nonce[CSRF_NONCE_BYTES];
-    uint64_t c = ++s_csrf.counter;
+    uint64_t n = ++c->counter;
     for (size_t i = 0; i < CSRF_NONCE_BYTES; i++)
     {
-        nonce[i] = (uint8_t)(c >> (8 * i));
+        nonce[i] = (uint8_t)(n >> (8 * i));
     }
 
     char nhex[CSRF_NONCE_BYTES * 2 + 1];
     char shex[CSRF_SIG_BYTES * 2 + 1];
     hex_of(nonce, CSRF_NONCE_BYTES, nhex);
-    // One borrow for this token's MAC, returned before the frame is built.
-    size_t mark = protocore_secure_mark();
-    protocore_span ws = protocore_secure_span(PROTOCORE_HMAC_SHA256_BORROW, _Alignof(uint32_t));
-    if (!span.ok(ws))
-    {
-        protocore_secure_release(mark);
-        return 0;
-    }
-    sign_nonce(ws.buf, &s_csrf, nonce, CSRF_NONCE_BYTES, shex);
-    protocore_secure_release(mark);
+    sign_nonce(work, nonce, CSRF_NONCE_BYTES, shex);
 
-    // The frame's contract is this function's contract: the length written, or 0 and out emptied.
-    return frame.build(out, cap, CSRF_TOKEN, (const protocore_fval[]){PROTOCORE_VSTR(nhex), PROTOCORE_VSTR(shex)}, 2);
+    // The frame's contract is this entry's contract: the length written, or 0 and out emptied.
+    Csrf.n = frame.build(Csrf.issue_args.out, Csrf.issue_args.cap, CSRF_TOKEN,
+                         (const protocore_fval[]){PROTOCORE_VSTR(nhex), PROTOCORE_VSTR(shex)}, 2);
+    Csrf.ok = (Csrf.n > 0);
 }
 
-proto_bool protocore_csrf_verify(const char *token)
+static void csrf_verify(uint8_t *restrict work)
 {
-    if (s_csrf.secret_len == 0 || !token)
+    Csrf.ok = PROTO_FALSE;
+    Csrf.valid = PROTO_FALSE;
+    const char *token = Csrf.verify_args.token;
+    if (!work || !token)
     {
-        return PROTO_FALSE;
+        return;
+    }
+    CsrfCtx *c = CSRF_CTX(work);
+    if (c->secret_len == 0)
+    {
+        return;
     }
 
     const char *dot = str.find(token, str.len(token, 0xFFFF) + 1u, ".", sizeof("."), PROTO_FALSE);
     if (!dot)
     {
-        return PROTO_FALSE;
+        return;
     }
 
     size_t nhexlen = (size_t)(dot - token);
     if (nhexlen != CSRF_NONCE_BYTES * 2)
     {
-        return PROTO_FALSE;
+        return;
     }
 
     uint8_t nonce[CSRF_NONCE_BYTES];
@@ -129,34 +195,37 @@ proto_bool protocore_csrf_verify(const char *token)
     Hex.decode(Hex.internal);
     if (Hex.i32 != CSRF_NONCE_BYTES)
     {
-        return PROTO_FALSE;
+        return;
     }
 
     const char *sig = dot + 1;
     if (str.len(sig, CSRF_SIG_BYTES * 2 + 1) != CSRF_SIG_BYTES * 2)
     {
-        return PROTO_FALSE;
+        return;
     }
 
     char expect[CSRF_SIG_BYTES * 2 + 1];
-    // One borrow for the MAC this compare rebuilds, returned before the answer.
-    size_t mark = protocore_secure_mark();
-    protocore_span ws = protocore_secure_span(PROTOCORE_HMAC_SHA256_BORROW, _Alignof(uint32_t));
-    if (!span.ok(ws))
-    {
-        protocore_secure_release(mark);
-        return PROTO_FALSE;
-    }
-    sign_nonce(ws.buf, &s_csrf, nonce, CSRF_NONCE_BYTES, expect);
-    protocore_secure_release(mark);
-    return protocore_ct_eq(sig, expect, CSRF_SIG_BYTES * 2);
+    sign_nonce(work, nonce, CSRF_NONCE_BYTES, expect);
+    Csrf.valid = protocore_ct_eq(sig, expect, CSRF_SIG_BYTES * 2);
+    Csrf.ok = PROTO_TRUE;
 }
 
-void protocore_csrf_reset(void)
+static void csrf_reset(uint8_t *restrict work)
 {
-    mem.set(s_csrf.secret, 0, sizeof(s_csrf.secret));
-    s_csrf.secret_len = 0;
-    s_csrf.counter = 0;
+    Csrf.ok = PROTO_FALSE;
+    if (!work)
+    {
+        return;
+    }
+    CsrfCtx *c = CSRF_CTX(work);
+    mem.set(c->secret, 0, sizeof(c->secret));
+    c->secret_len = 0;
+    c->counter = 0;
+    Csrf.ok = PROTO_TRUE;
 }
+
+CsrfNs Csrf = {.set_secret = csrf_set_secret, .issue = csrf_issue, .verify = csrf_verify, .reset = csrf_reset};
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_CSRF

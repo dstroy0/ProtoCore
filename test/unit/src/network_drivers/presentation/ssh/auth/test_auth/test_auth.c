@@ -7,7 +7,7 @@
 #include "network_drivers/presentation/ssh/auth/auth.h"
 #include "network_drivers/presentation/ssh/transport/transport.h"
 #include "server/clock/clock.h" // Clock.millis(): refresh the stamp auth.c judges the cooldown against
-#include <Arduino.h> // set_millis(): time travel past the change cooldown
+#include <Arduino.h>            // set_millis(): time travel past the change cooldown
 #include <stdint.h>
 #include <unity.h>
 
@@ -65,7 +65,6 @@ static int auth_build_success(uint8_t *out, size_t *out_len, size_t cap)
     return SshAuth.i32;
 }
 
-
 // The publickey USERAUTH_REQUEST body writer, reached through the auth namespace.
 static void auth_write_publickey_request(protocore_span *w, const uint8_t *sid, size_t sid_len, const char *user,
                                          const char *service, const char *pk_algo, const uint8_t *pk_blob,
@@ -81,7 +80,6 @@ static void auth_write_publickey_request(protocore_span *w, const uint8_t *sid, 
     SshAuth.userauth.pk_len = pk_len;
     SshAuth.write_publickey_request(SshAuth.internal);
 }
-
 
 // The userauth layer, reached through its namespace: set the members a call reads, invoke it, take
 // the outcome off the same handle.
@@ -125,7 +123,6 @@ static int auth_handle_request(uint8_t slot, const uint8_t *payload, size_t len,
     }
     return SshAuth.i32;
 }
-
 
 static proto_bool s_change_seen;
 static uint32_t s_clock;

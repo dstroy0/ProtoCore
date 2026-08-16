@@ -37,9 +37,10 @@ void dbench_run(void)
         volatile bool sinkb = false;
 
         DBENCH_OP("protocore_ocit_build SET u32", 200000,
-                  sinkn += protocore_ocit_build(OCIT_MSG_SET, 0x0102, 0x0003, OCIT_TYPE_UINT32, val32, sizeof(val32), out,
-                                         sizeof(out)));
-        DBENCH_OP("protocore_ocit_set_u16", 200000, sinkn += protocore_ocit_set_u16(0x00A0, 0x0005, 0xBEEF, out, sizeof(out)));
+                  sinkn += protocore_ocit_build(OCIT_MSG_SET, 0x0102, 0x0003, OCIT_TYPE_UINT32, val32, sizeof(val32),
+                                                out, sizeof(out)));
+        DBENCH_OP("protocore_ocit_set_u16", 200000,
+                  sinkn += protocore_ocit_set_u16(0x00A0, 0x0005, 0xBEEF, out, sizeof(out)));
 
         OcitMsg m;
         DBENCH_OP("protocore_ocit_parse", 200000, sinkb ^= protocore_ocit_parse(wire, sizeof(wire), &m));

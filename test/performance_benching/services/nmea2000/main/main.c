@@ -59,8 +59,8 @@ void dbench_run(void)
         DBENCH_OP("protocore_n2k_build_single", 50000,
                   sink += protocore_n2k_build_single(&out, 2, 0x01F200, 0x15, 0xFF, single_payload, 8));
         DBENCH_OP("protocore_n2k_fastpacket_build_frame", 50000,
-                  sink +=
-                  protocore_n2k_fastpacket_build_frame(&out, fp_seq, 1, 6, fp_pgn, fp_sa, 0xFF, fp_msg, sizeof(fp_msg)));
+                  sink += protocore_n2k_fastpacket_build_frame(&out, fp_seq, 1, 6, fp_pgn, fp_sa, 0xFF, fp_msg,
+                                                               sizeof(fp_msg)));
         // One op = reset + feed all 3 frames = a complete 20-octet message reassembly.
         DBENCH_OP(
             "protocore_n2k_fastpacket_feed x3 (reassy)", 20000, do {

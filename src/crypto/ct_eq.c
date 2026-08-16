@@ -17,8 +17,8 @@
 
 #if PROTOCORE_ENABLE_CT_EQ
 
-#include "crypto/ct_eq.h"
 #include "crypto/crypto_opt.h"
+#include "crypto/ct_eq.h"
 
 PROTOCORE_CRYPTO_HOT
 PROTOCORE_BEGIN_DECLS

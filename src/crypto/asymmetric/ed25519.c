@@ -28,9 +28,9 @@
 
 #if PROTOCORE_ENABLE_ED25519
 
-#include "crypto/asymmetric/ed25519.h"
 #include "crypto/asymmetric/curve25519.h" // protocore_gf + field ops (native / non-S3 path)
-#include "crypto/asymmetric/fe25519.h"    // MODMULT dies: canonical uint32[8] field on the RSA accelerator
+#include "crypto/asymmetric/ed25519.h"
+#include "crypto/asymmetric/fe25519.h" // MODMULT dies: canonical uint32[8] field on the RSA accelerator
 #include "crypto/crypto_opt.h"
 #include "crypto/ct_eq.h" // protocore_ct_eq
 #include "crypto/hash/sha512.h"

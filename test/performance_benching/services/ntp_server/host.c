@@ -42,8 +42,8 @@ int main(void)
         volatile size_t sink = 0;
         double ns = 0.0;
         HBENCH_NS(5000000,
-                  sink += protocore_ntp_server_build_response(req, sizeof(req), 2, PROTOCORE_NTP_REFID_LOCL, 0xE9A1B2C3u,
-                                                       0x80000000u, out, sizeof(out)),
+                  sink += protocore_ntp_server_build_response(req, sizeof(req), 2, PROTOCORE_NTP_REFID_LOCL,
+                                                              0xE9A1B2C3u, 0x80000000u, out, sizeof(out)),
                   ns);
         hbench_row("ntp", "build_response (48-octet)", ns,
                    (double)(PROTOCORE_NTP_PACKET_LEN * 2)); // request + reply moved

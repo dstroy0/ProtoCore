@@ -23,7 +23,6 @@ static size_t snmp_dispatch_pdu(const uint8_t *req, size_t req_len, proto_bool a
     return SnmpAgent.n;
 }
 
-
 // The BER codec, reached through its namespace. The cursor stays the caller's: several encodings
 // are open at once here, so each call names the one it acts on.
 static void ber_enc_init(BerEnc *e, uint8_t *buf, size_t cap)
@@ -150,7 +149,6 @@ static proto_bool ber_skip(BerDec *d, size_t len)
     return SnmpBer.ok;
 }
 
-
 // The SNMP agent, reached through its namespace: set the members a call takes, invoke it, read the
 // outcome off the same handle.
 static void snmp_init(const char *ro)
@@ -223,7 +221,6 @@ static size_t snmp_process(const uint8_t *req, size_t req_len, uint8_t *resp, si
     SnmpAgent.process(SnmpAgent.internal);
     return SnmpAgent.n;
 }
-
 
 static const uint32_t OID_SYSDESCR[] = {1, 3, 6, 1, 2, 1, 1, 1, 0};
 static const uint32_t OID_SYSUPTIME[] = {1, 3, 6, 1, 2, 1, 1, 3, 0};
@@ -306,8 +303,7 @@ static size_t build_req(uint8_t *buf, size_t cap, long version, const char *comm
     }
     else if (setval && setval->type == (uint8_t)SNMP_TAG_BER_OCTET_STRING)
     {
-        ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, (const uint8_t *)setval->str,
-                                       setval->str_len);
+        ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, (const uint8_t *)setval->str, setval->str_len);
     }
     else
     {
@@ -929,12 +925,10 @@ void test_dispatch_malformed_pdu()
     uint8_t resp[128];
 
     uint8_t junk[3] = {0xA0, 0x01, 0x05};
-    TEST_ASSERT_EQUAL_size_t(
-        0, snmp_dispatch_pdu(junk, sizeof(junk), PROTO_FALSE, PROTO_TRUE, resp, sizeof(resp)));
+    TEST_ASSERT_EQUAL_size_t(0, snmp_dispatch_pdu(junk, sizeof(junk), PROTO_FALSE, PROTO_TRUE, resp, sizeof(resp)));
 
     uint8_t bare[1] = {0xA0};
-    TEST_ASSERT_EQUAL_size_t(
-        0, snmp_dispatch_pdu(bare, sizeof(bare), PROTO_FALSE, PROTO_TRUE, resp, sizeof(resp)));
+    TEST_ASSERT_EQUAL_size_t(0, snmp_dispatch_pdu(bare, sizeof(bare), PROTO_FALSE, PROTO_TRUE, resp, sizeof(resp)));
 }
 
 static void inject(uint16_t port, const char *src_ip, uint16_t src_port, const uint8_t *data, size_t len)
@@ -1227,8 +1221,7 @@ void test_dispatch_truncated_pdu_fields()
     const size_t lens[] = {sizeof(no_field2), sizeof(no_field3), sizeof(no_vbl), sizeof(stub_vb)};
     for (unsigned i = 0; i < 4; i++)
     {
-        TEST_ASSERT_EQUAL_size_t(
-            0, snmp_dispatch_pdu(pdus[i], lens[i], PROTO_FALSE, PROTO_TRUE, out, sizeof(out)));
+        TEST_ASSERT_EQUAL_size_t(0, snmp_dispatch_pdu(pdus[i], lens[i], PROTO_FALSE, PROTO_TRUE, out, sizeof(out)));
     }
 }
 

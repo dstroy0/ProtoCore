@@ -30,11 +30,14 @@ void dbench_run(void)
 
         // TCP window sizing: scaling case (free=40000, reserve=8000 -> 32000/4 = 8000, in-band),
         // taken straight from test/test_netadapt (test_window_scales_with_heap).
-        DBENCH_OP("protocore_netadapt_window scale", 200000, sink32 += protocore_netadapt_window(40000, 8000, 1024, 16384));
+        DBENCH_OP("protocore_netadapt_window scale", 200000,
+                  sink32 += protocore_netadapt_window(40000, 8000, 1024, 16384));
         // Ceiling-clamp case (huge heap -> clamped to max_win); exercises the upper clamp branch.
-        DBENCH_OP("protocore_netadapt_window clamp", 200000, sink32 += protocore_netadapt_window(200000, 8000, 1024, 16384));
+        DBENCH_OP("protocore_netadapt_window clamp", 200000,
+                  sink32 += protocore_netadapt_window(200000, 8000, 1024, 16384));
         // Low-heap floor case (heap <= reserve -> min_win); exercises the early-return branch.
-        DBENCH_OP("protocore_netadapt_window floor", 200000, sink32 += protocore_netadapt_window(5000, 8000, 1024, 16384));
+        DBENCH_OP("protocore_netadapt_window floor", 200000,
+                  sink32 += protocore_netadapt_window(5000, 8000, 1024, 16384));
 
         // DHCP->static fallback: within budget (both triggers false - the full-check path).
         DBENCH_OP("protocore_netadapt_dhcp_fallback wait", 200000,

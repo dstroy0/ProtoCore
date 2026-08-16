@@ -16,8 +16,8 @@
 
 // The file-transfer request classifier, reached through the app-server namespace.
 static proto_bool classify_file_transfer_request(uint8_t slot, uint32_t channel, const uint8_t *rtype,
-                                                 uint32_t rtype_len, const uint8_t *payload, size_t len,
-                                                 size_t *off, proto_bool *accept)
+                                                 uint32_t rtype_len, const uint8_t *payload, size_t len, size_t *off,
+                                                 proto_bool *accept)
 {
     SshAppServer.slot = slot;
     SshAppServer.channel = channel;
@@ -39,7 +39,6 @@ static proto_bool classify_file_transfer_request(uint8_t slot, uint32_t channel,
     return SshAppServer.accept;
 }
 
-
 // The connection layer, reached through its namespace.
 static int chan_alloc(uint8_t slot)
 {
@@ -59,7 +58,6 @@ static void channel_set_scp_open_cb(SshScpOpenCb cb)
     SshConnection.scp_open_cb = cb;
     SshConnection.set_scp_open_cb(SshConnection.internal);
 }
-
 
 #if PROTOCORE_ENABLE_SSH_SFTP || PROTOCORE_ENABLE_SSH_SCP
 

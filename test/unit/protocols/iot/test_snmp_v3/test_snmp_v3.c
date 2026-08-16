@@ -15,8 +15,8 @@
 
 // USM key localization (RFC 3414 sec 2.6), reached through the crypto namespace. The hash borrows
 // the caller's scratch, so the work region is a member like everything else.
-static proto_bool snmp_localize_key(uint8_t *work, const char *password, const uint8_t *engine_id,
-                                    size_t engine_id_len, uint8_t *out)
+static proto_bool snmp_localize_key(uint8_t *work, const char *password, const uint8_t *engine_id, size_t engine_id_len,
+                                    uint8_t *out)
 {
     SnmpCrypto.work = work;
     SnmpCrypto.key.password = password;
@@ -94,7 +94,6 @@ static proto_bool snmp_inform_v3(const char *dst_ip, uint16_t port, uint32_t req
     SnmpV3.inform(SnmpV3.internal);
     return SnmpV3.ok;
 }
-
 
 // The BER codec, reached through its namespace. The cursor stays the caller's: several encodings
 // are open at once here, so each call names the one it acts on.
@@ -222,7 +221,6 @@ static proto_bool ber_skip(BerDec *d, size_t len)
     return SnmpBer.ok;
 }
 
-
 // The SNMP agent, reached through its namespace: set the members a call takes, invoke it, read the
 // outcome off the same handle.
 static void snmp_init(const char *ro)
@@ -309,7 +307,6 @@ static proto_bool snmp_aes_cfb(const uint8_t *key, const uint8_t *iv, const uint
     SnmpCrypto.aes_cfb128(SnmpCrypto.internal);
     return SnmpCrypto.ok;
 }
-
 
 static uint8_t tw[4096];
 

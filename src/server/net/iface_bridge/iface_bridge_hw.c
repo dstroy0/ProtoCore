@@ -11,10 +11,10 @@
 
 #if PROTOCORE_ENABLE_IFACE_BRIDGE
 
+#include "network_drivers/session/session.h"                 // Session.proto->add: the handler registration
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the accepted slot
 #include "network_drivers/transport/tcp/tcp.h"
 #include "server/clock/clock.h" // protocore_millis() pluggable monotonic clock
-#include "network_drivers/session/session.h" // Session.proto->add: the handler registration
 #include "server/core/proto_handler.h"
 
 #if PROTOCORE_HAS_BUS

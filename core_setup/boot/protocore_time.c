@@ -51,7 +51,7 @@ struct tm *gmtime_r(const time_t *epoch, struct tm *out)
 
     const int64_t z = days + 719468;
     const int64_t era = (z >= 0 ? z : z - 146096) / 146097;
-    const int64_t doe = z - era * 146097;                                     // [0, 146096]
+    const int64_t doe = z - era * 146097;                                      // [0, 146096]
     const int64_t yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365; // [0, 399]
     const int64_t doy = doe - (365 * yoe + yoe / 4 - yoe / 100);               // [0, 365]
     const int64_t mp = (5 * doy + 2) / 153;                                    // [0, 11], March = 0

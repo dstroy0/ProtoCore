@@ -18,9 +18,11 @@
 #include "server/core/proto_handler.h"                       // ProtoHandler (the L5 dispatch seam this registers into)
 #if PROTOCORE_ENABLE_WEBSOCKET
 #include "network_drivers/presentation/http/websocket/websocket.h" // Ws.find/Ws.free: a WS-upgraded slot must never be HTTP-parsed
+#include "network_drivers/session/ws/ws.h" // SessionWs.close: the channel teardown that informs the application
 #endif
 #if PROTOCORE_ENABLE_SSE
-#include "network_drivers/presentation/http/sse/sse.h" // Sse.free: release a stream when its HTTP slot closes or is reused
+#include "network_drivers/presentation/http/sse/sse.h" // Sse: the stream table
+#include "network_drivers/session/sse/sse.h"           // SessionSse.close: the stream teardown
 #endif
 #if PROTOCORE_ENABLE_TLS
 #include "network_drivers/tls/tls.h"
@@ -85,12 +87,14 @@ static void reset(struct HttpConnInternal *restrict ctx)
 static inline void http_release_upgrade_bindings(uint8_t slot_id)
 {
 #if PROTOCORE_ENABLE_WEBSOCKET
+    // The channel's close is the session layer's: it informs the application before the number is
+    // released (RFC 9293 sec 3.6 MUST-12), which a bare release does not.
     Ws.slot = slot_id;
-    Ws.free(Ws.internal);
+    SessionWs.close(NULL);
 #endif
 #if PROTOCORE_ENABLE_SSE
     Sse.slot = slot_id;
-    Sse.free(Sse.internal);
+    SessionSse.close(NULL);
 #endif
 }
 
@@ -124,7 +128,7 @@ static void parse(struct HttpConnInternal *restrict ctx)
     // slot" hold for every caller (the event-queue dispatch raced the WS pump and ate the first
     // frame's header byte, dropping the first connection after a reboot).
     Ws.slot = ctx->ns->slot;
-    Ws.find(Ws.internal);
+    Ws.find(protocore_ws_span());
     if (Ws.found)
     {
         return;
@@ -208,13 +212,13 @@ static void tls_data(uint8_t slot)
             http_h2[slot] = 1;
             http_resp_sink[slot] = protocore_h2_server_respond; // route responses through the h2 framer
             H2Server.slot = slot;
-            H2Server.open(H2Server.internal);
+            H2Server.open(protocore_h2_server_span());
         }
     }
     if (http_h2[slot])
     {
         H2Server.slot = slot;
-        H2Server.data(H2Server.internal);
+        H2Server.data(protocore_h2_server_span());
         return;
     }
 #endif
@@ -224,7 +228,7 @@ static void tls_data(uint8_t slot)
     // records and feeds the WS frame parser, dispatching each frame); leave the
     // ciphertext in the rx ring for it rather than feeding the HTTP parser here.
     Ws.slot = slot;
-    Ws.find(Ws.internal);
+    Ws.find(protocore_ws_span());
     if (Ws.found)
     {
         return;

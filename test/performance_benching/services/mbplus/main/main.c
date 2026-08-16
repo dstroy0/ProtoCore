@@ -41,7 +41,8 @@ void dbench_run(void)
         volatile bool sinkb = false;
 
         // CRC-16/X-25 FCS over the 9-byte check vector - bulk op, so we also get ns/byte + MB/s.
-        DBENCH_BULK("protocore_mbplus_crc (X-25)", 100000, sizeof(crc_vec), sink16 += protocore_mbplus_crc(crc_vec, sizeof(crc_vec)));
+        DBENCH_BULK("protocore_mbplus_crc (X-25)", 100000, sizeof(crc_vec),
+                    sink16 += protocore_mbplus_crc(crc_vec, sizeof(crc_vec)));
         // Build a full HDLC data frame (flags + addr + ctrl + payload + CRC).
         DBENCH_OP("protocore_mbplus_build (data+3B)", 50000,
                   sink += protocore_mbplus_build(5, MBPLUS_CTRL_DATA, payload, sizeof(payload), out, sizeof(out)));

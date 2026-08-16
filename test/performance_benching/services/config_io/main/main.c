@@ -41,12 +41,20 @@ static const char IMPORT_BLOB[] = "ssid=abc\nport=1234\nname=x\n";
 
 void dbench_run(void)
 {
+    ConfigStore.begin_args.ns = "bench";
+    ConfigStore.begin(protocore_config_store_span());
     // Seed the schema's values once, outside the timed loop (mirrors modbus's one-time
     // protocore_modbus_set_holding_reg() seeding) - the export bench below re-serializes these every call.
-    protocore_config_begin("bench");
-    protocore_config_set_str("ssid", "myssid");
-    protocore_config_set_u32("port", 8080);
-    protocore_config_set_str("name", "node1");
+    ConfigStore.ok;
+    ConfigStore.set_str_args.key = "ssid";
+    ConfigStore.set_str_args.val = "myssid";
+    ConfigStore.set_str(protocore_config_store_span());
+    ConfigStore.set_u32_args.key = "port";
+    ConfigStore.set_u32_args.val = 8080;
+    ConfigStore.set_u32(protocore_config_store_span());
+    ConfigStore.set_str_args.key = "name";
+    ConfigStore.set_str_args.val = "node1";
+    ConfigStore.set_str(protocore_config_store_span());
 
     static char buf[256];
 

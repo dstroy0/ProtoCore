@@ -343,7 +343,7 @@ void dav(const char *url_prefix, const protocore_mnt_backend *file_sys, const ch
     }
     fill_route_base(r, pat);
     r->type = ROUTE_DAV;
-    r->method = HTTP_GET;                                   // unused: WebDAV dispatch keys off the raw method token
+    r->method = HTTP_GET; // unused: WebDAV dispatch keys off the raw method token
     Mnt.args.backend = file_sys;
     Mnt.args.root = fs_root;
     Mnt.point_add(Mnt.internal); // null backend is legal: whatever is mounted

@@ -37,9 +37,6 @@ typedef struct
     size_t len;               ///< how many
 } H2RespArgs;
 
-/** @brief The engine's own state and the calls that reach it, described only in h2_server.c. */
-struct H2ServerInternal;
-
 /**
  * @brief The HTTP/2 engine (RFC 9113): one connection per transport slot.
  *
@@ -55,7 +52,9 @@ struct H2ServerInternal;
  *                           then ready the slot's HttpReq for the next stream; the connection stays
  *                           open
  * @var H2ServerNs::close    release per-slot state on connection close
- * @var H2ServerNs::internal the engine's state and the calls that reach it
+ *
+ * Every entry takes the module's borrow. How those bytes are carved is h2_server.c's and is
+ * never named here. ::protocore_h2_server_span is where a caller gets one.
  */
 typedef struct
 {
@@ -65,16 +64,18 @@ typedef struct
 
     proto_bool ok;
 
-    void (*open)(struct H2ServerInternal *ctx);
-    void (*data)(struct H2ServerInternal *ctx);
-    void (*respond)(struct H2ServerInternal *ctx);
-    void (*close)(struct H2ServerInternal *ctx);
+    void (*const open)(uint8_t *restrict work);
+    void (*const data)(uint8_t *restrict work);
+    void (*const respond)(uint8_t *restrict work);
+    void (*const close)(uint8_t *restrict work);
 
-    struct H2ServerInternal *internal;
 } H2ServerNs;
 
 /** @brief The one symbol this module exports. */
 extern H2ServerNs H2Server;
+
+/** @brief Not an entry: an entry takes a borrow and this is where that borrow comes from. */
+uint8_t *protocore_h2_server_span(void);
 
 /**
  * @brief The response sink the presentation layer installs at ALPN.

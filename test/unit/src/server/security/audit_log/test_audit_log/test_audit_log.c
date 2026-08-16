@@ -13,6 +13,7 @@
 // altered, and each of those cases would fail. The JSON string escaping is RFC 8259 sec 7.
 
 #include "crypto/hash/sha256.h"
+#include "server/clock/clock.h" // Clock.millis(): refresh the stamp a record carries
 #include "server/security/audit_log/audit_log.h"
 #include <string.h>
 
@@ -24,8 +25,10 @@ static uint32_t g_work[(PROTOCORE_SHA256_BORROW + 4) / 4];
 void setUp(void)
 {
     set_millis(0);
-    protocore_audit_reset();
-    protocore_audit_set_sink(NULL);
+    Clock.millis(Clock.internal); // refresh the stamp audit_log records with
+    AuditLog.reset(protocore_audit_log_span());
+    AuditLog.set_sink_args.sink = NULL;
+    AuditLog.set_sink(protocore_audit_log_span());
 }
 void tearDown(void)
 {
@@ -34,7 +37,9 @@ void tearDown(void)
 // The ring is the test's own storage, so a tamper case writes through the const view.
 static protocore_audit_entry *mutable_at(uint16_t i)
 {
-    return (protocore_audit_entry *)protocore_audit_at(i);
+    AuditLog.at_args.i = i;
+    AuditLog.at(protocore_audit_log_span());
+    return (protocore_audit_entry *)AuditLog.ptr;
 }
 
 static void put_le32(uint8_t out[4], uint32_t v)
@@ -86,9 +91,15 @@ void test_chain_hash_is_sha256_over_the_documented_fields(void)
     static const uint8_t GENESIS[PROTOCORE_AUDIT_HASH_LEN] = {0};
 
     set_millis(0x11223344u);
-    TEST_ASSERT_EQUAL_UINT32(1u, protocore_audit_append(PROTOCORE_AUDIT_AUTH, "login alice"));
+    Clock.millis(Clock.internal); // refresh the stamp audit_log records with
+    AuditLog.append_args.category = PROTOCORE_AUDIT_AUTH;
+    AuditLog.append_args.msg = "login alice";
+    AuditLog.append(protocore_audit_log_span());
+    TEST_ASSERT_EQUAL_UINT32(1u, AuditLog.ms);
 
-    const protocore_audit_entry *e = protocore_audit_at(0);
+    AuditLog.at_args.i = 0;
+    AuditLog.at(protocore_audit_log_span());
+    const protocore_audit_entry *e = AuditLog.ptr;
     TEST_ASSERT_NOT_NULL(e);
     TEST_ASSERT_EQUAL_UINT32(1u, e->seq);
     TEST_ASSERT_EQUAL_UINT32(0x11223344u, e->ts);
@@ -100,8 +111,14 @@ void test_chain_hash_is_sha256_over_the_documented_fields(void)
 
     // The second record chains the first's hash, not the genesis anchor.
     set_millis(0x55667788u);
-    TEST_ASSERT_EQUAL_UINT32(2u, protocore_audit_append(PROTOCORE_AUDIT_CONFIG, "set http_port=80"));
-    const protocore_audit_entry *f = protocore_audit_at(1);
+    Clock.millis(Clock.internal); // refresh the stamp audit_log records with
+    AuditLog.append_args.category = PROTOCORE_AUDIT_CONFIG;
+    AuditLog.append_args.msg = "set http_port=80";
+    AuditLog.append(protocore_audit_log_span());
+    TEST_ASSERT_EQUAL_UINT32(2u, AuditLog.ms);
+    AuditLog.at_args.i = 1;
+    AuditLog.at(protocore_audit_log_span());
+    const protocore_audit_entry *f = AuditLog.ptr;
     chain_hash(e->hash, f, want);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(want, f->hash, PROTOCORE_AUDIT_HASH_LEN);
 }
@@ -109,14 +126,32 @@ void test_chain_hash_is_sha256_over_the_documented_fields(void)
 // Sequence numbers are 1-based, monotonic, and each record keeps the message it was appended with.
 void test_seq_is_monotonic_from_one(void)
 {
-    TEST_ASSERT_EQUAL_UINT32(1u, protocore_audit_append(PROTOCORE_AUDIT_AUTH, "login alice"));
-    TEST_ASSERT_EQUAL_UINT32(2u, protocore_audit_append(PROTOCORE_AUDIT_AUTH_FAIL, "bad password bob"));
-    TEST_ASSERT_EQUAL_UINT32(3u, protocore_audit_append(PROTOCORE_AUDIT_CONFIG, "set http_port=80"));
-    TEST_ASSERT_EQUAL_UINT16(3u, protocore_audit_count());
-    TEST_ASSERT_EQUAL_STRING("login alice", protocore_audit_at(0)->msg);
-    TEST_ASSERT_EQUAL_STRING("set http_port=80", protocore_audit_at(2)->msg);
-    TEST_ASSERT_NULL(protocore_audit_at(3));
-    TEST_ASSERT_NULL(protocore_audit_at(0xFFFFu));
+    AuditLog.append_args.category = PROTOCORE_AUDIT_AUTH;
+    AuditLog.append_args.msg = "login alice";
+    AuditLog.append(protocore_audit_log_span());
+    TEST_ASSERT_EQUAL_UINT32(1u, AuditLog.ms);
+    AuditLog.append_args.category = PROTOCORE_AUDIT_AUTH_FAIL;
+    AuditLog.append_args.msg = "bad password bob";
+    AuditLog.append(protocore_audit_log_span());
+    TEST_ASSERT_EQUAL_UINT32(2u, AuditLog.ms);
+    AuditLog.append_args.category = PROTOCORE_AUDIT_CONFIG;
+    AuditLog.append_args.msg = "set http_port=80";
+    AuditLog.append(protocore_audit_log_span());
+    TEST_ASSERT_EQUAL_UINT32(3u, AuditLog.ms);
+    AuditLog.count(protocore_audit_log_span());
+    TEST_ASSERT_EQUAL_UINT16(3u, AuditLog.value);
+    AuditLog.at_args.i = 0;
+    AuditLog.at(protocore_audit_log_span());
+    TEST_ASSERT_EQUAL_STRING("login alice", AuditLog.ptr->msg);
+    AuditLog.at_args.i = 2;
+    AuditLog.at(protocore_audit_log_span());
+    TEST_ASSERT_EQUAL_STRING("set http_port=80", AuditLog.ptr->msg);
+    AuditLog.at_args.i = 3;
+    AuditLog.at(protocore_audit_log_span());
+    TEST_ASSERT_NULL(AuditLog.ptr);
+    AuditLog.at_args.i = 0xFFFFu;
+    AuditLog.at(protocore_audit_log_span());
+    TEST_ASSERT_NULL(AuditLog.ptr);
 }
 
 // An untouched chain verifies, and the out-parameter is left alone when it does.
@@ -124,19 +159,29 @@ void test_untouched_chain_verifies(void)
 {
     for (int i = 0; i < 10; i++)
     {
-        (void)protocore_audit_append(PROTOCORE_AUDIT_ACCESS, "GET /resource");
+        AuditLog.append_args.category = PROTOCORE_AUDIT_ACCESS;
+        AuditLog.append_args.msg = "GET /resource";
+        AuditLog.append(protocore_audit_log_span());
+        (void)AuditLog.ms;
     }
     uint32_t broken = 999u;
-    TEST_ASSERT_TRUE(protocore_audit_verify(&broken));
+    AuditLog.verify_args.first_broken_seq = &broken;
+    AuditLog.verify(protocore_audit_log_span());
+    TEST_ASSERT_TRUE(AuditLog.ok);
     TEST_ASSERT_EQUAL_UINT32(999u, broken);
-    TEST_ASSERT_TRUE(protocore_audit_verify(NULL)); // the out-parameter is optional
+    AuditLog.verify_args.first_broken_seq = NULL;
+    AuditLog.verify(protocore_audit_log_span());
+    TEST_ASSERT_TRUE(AuditLog.ok); // the out-parameter is optional
 }
 
 // An empty log is a complete chain of nothing, so it verifies.
 void test_empty_log_verifies(void)
 {
-    TEST_ASSERT_EQUAL_UINT16(0u, protocore_audit_count());
-    TEST_ASSERT_TRUE(protocore_audit_verify(NULL));
+    AuditLog.count(protocore_audit_log_span());
+    TEST_ASSERT_EQUAL_UINT16(0u, AuditLog.value);
+    AuditLog.verify_args.first_broken_seq = NULL;
+    AuditLog.verify(protocore_audit_log_span());
+    TEST_ASSERT_TRUE(AuditLog.ok);
 }
 
 // Every field the hash covers, altered one at a time: each must break the chain and each must be
@@ -145,44 +190,61 @@ void test_every_covered_field_is_tamper_evident(void)
 {
     for (int i = 0; i < 6; i++)
     {
-        (void)protocore_audit_append(PROTOCORE_AUDIT_SYSTEM, "tick");
+        AuditLog.append_args.category = PROTOCORE_AUDIT_SYSTEM;
+        AuditLog.append_args.msg = "tick";
+        AuditLog.append(protocore_audit_log_span());
+        (void)AuditLog.ms;
     }
 
     // the message
     strcpy(mutable_at(3)->msg, "EVIL");
     uint32_t broken = 0;
-    TEST_ASSERT_FALSE(protocore_audit_verify(&broken));
+    AuditLog.verify_args.first_broken_seq = &broken;
+    AuditLog.verify(protocore_audit_log_span());
+    TEST_ASSERT_FALSE(AuditLog.ok);
     TEST_ASSERT_EQUAL_UINT32(4u, broken);
     strcpy(mutable_at(3)->msg, "tick");
-    TEST_ASSERT_TRUE(protocore_audit_verify(NULL)); // restoring it restores the chain
+    AuditLog.verify_args.first_broken_seq = NULL;
+    AuditLog.verify(protocore_audit_log_span());
+    TEST_ASSERT_TRUE(AuditLog.ok); // restoring it restores the chain
 
     // the category
     mutable_at(1)->category = PROTOCORE_AUDIT_ADMIN;
     broken = 0;
-    TEST_ASSERT_FALSE(protocore_audit_verify(&broken));
+    AuditLog.verify_args.first_broken_seq = &broken;
+    AuditLog.verify(protocore_audit_log_span());
+    TEST_ASSERT_FALSE(AuditLog.ok);
     TEST_ASSERT_EQUAL_UINT32(2u, broken);
     mutable_at(1)->category = PROTOCORE_AUDIT_SYSTEM;
 
     // the timestamp
     mutable_at(2)->ts ^= 0x1000u;
     broken = 0;
-    TEST_ASSERT_FALSE(protocore_audit_verify(&broken));
+    AuditLog.verify_args.first_broken_seq = &broken;
+    AuditLog.verify(protocore_audit_log_span());
+    TEST_ASSERT_FALSE(AuditLog.ok);
     TEST_ASSERT_EQUAL_UINT32(3u, broken);
     mutable_at(2)->ts ^= 0x1000u;
 
     // the sequence number
     mutable_at(4)->seq += 1000u;
-    TEST_ASSERT_FALSE(protocore_audit_verify(NULL));
+    AuditLog.verify_args.first_broken_seq = NULL;
+    AuditLog.verify(protocore_audit_log_span());
+    TEST_ASSERT_FALSE(AuditLog.ok);
     mutable_at(4)->seq -= 1000u;
 
     // the stored hash itself
     mutable_at(0)->hash[0] ^= 0xFFu;
     broken = 0;
-    TEST_ASSERT_FALSE(protocore_audit_verify(&broken));
+    AuditLog.verify_args.first_broken_seq = &broken;
+    AuditLog.verify(protocore_audit_log_span());
+    TEST_ASSERT_FALSE(AuditLog.ok);
     TEST_ASSERT_EQUAL_UINT32(1u, broken);
     mutable_at(0)->hash[0] ^= 0xFFu;
 
-    TEST_ASSERT_TRUE(protocore_audit_verify(NULL));
+    AuditLog.verify_args.first_broken_seq = NULL;
+    AuditLog.verify(protocore_audit_log_span());
+    TEST_ASSERT_TRUE(AuditLog.ok);
 }
 
 // Reordering two records breaks the chain even though every record is individually genuine: the
@@ -191,23 +253,46 @@ void test_reordering_breaks_the_chain(void)
 {
     for (int i = 0; i < 5; i++)
     {
-        (void)protocore_audit_append(PROTOCORE_AUDIT_ACCESS, "a");
-        (void)protocore_audit_append(PROTOCORE_AUDIT_ADMIN, "b");
+        AuditLog.append_args.category = PROTOCORE_AUDIT_ACCESS;
+        AuditLog.append_args.msg = "a";
+        AuditLog.append(protocore_audit_log_span());
+        (void)AuditLog.ms;
+        AuditLog.append_args.category = PROTOCORE_AUDIT_ADMIN;
+        AuditLog.append_args.msg = "b";
+        AuditLog.append(protocore_audit_log_span());
+        (void)AuditLog.ms;
     }
-    protocore_audit_entry tmp = *protocore_audit_at(2);
-    *mutable_at(2) = *protocore_audit_at(5);
+    AuditLog.at_args.i = 2;
+    AuditLog.at(protocore_audit_log_span());
+    protocore_audit_entry tmp = *AuditLog.ptr;
+    AuditLog.at_args.i = 5;
+    AuditLog.at(protocore_audit_log_span());
+    *mutable_at(2) = *AuditLog.ptr;
     *mutable_at(5) = tmp;
-    TEST_ASSERT_FALSE(protocore_audit_verify(NULL));
+    AuditLog.verify_args.first_broken_seq = NULL;
+    AuditLog.verify(protocore_audit_log_span());
+    TEST_ASSERT_FALSE(AuditLog.ok);
 }
 
 // A record whose message repeats an earlier one still hashes differently, because the seq is
 // covered - otherwise two identical events would be interchangeable.
 void test_identical_messages_hash_differently(void)
 {
-    (void)protocore_audit_append(PROTOCORE_AUDIT_SYSTEM, "same");
-    (void)protocore_audit_append(PROTOCORE_AUDIT_SYSTEM, "same");
-    TEST_ASSERT_NOT_EQUAL(0,
-                          memcmp(protocore_audit_at(0)->hash, protocore_audit_at(1)->hash, PROTOCORE_AUDIT_HASH_LEN));
+    AuditLog.append_args.category = PROTOCORE_AUDIT_SYSTEM;
+    AuditLog.append_args.msg = "same";
+    AuditLog.append(protocore_audit_log_span());
+    (void)AuditLog.ms;
+    AuditLog.append_args.category = PROTOCORE_AUDIT_SYSTEM;
+    AuditLog.append_args.msg = "same";
+    AuditLog.append(protocore_audit_log_span());
+    (void)AuditLog.ms;
+    // One result member, so the first record is copied out before the second call overwrites it.
+    AuditLog.at_args.i = 0;
+    AuditLog.at(protocore_audit_log_span());
+    protocore_audit_entry first = *AuditLog.ptr;
+    AuditLog.at_args.i = 1;
+    AuditLog.at(protocore_audit_log_span());
+    TEST_ASSERT_NOT_EQUAL(0, memcmp(first.hash, AuditLog.ptr->hash, PROTOCORE_AUDIT_HASH_LEN));
 }
 
 // The ring is fixed: past its depth the oldest record is evicted, the retained window is capped, and
@@ -218,13 +303,23 @@ void test_the_retained_window_verifies_after_the_ring_wraps(void)
     const int extra = 8;
     for (int i = 0; i < PROTOCORE_AUDIT_LOG_ENTRIES + extra; i++)
     {
-        (void)protocore_audit_append(PROTOCORE_AUDIT_SYSTEM, "msg");
+        AuditLog.append_args.category = PROTOCORE_AUDIT_SYSTEM;
+        AuditLog.append_args.msg = "msg";
+        AuditLog.append(protocore_audit_log_span());
+        (void)AuditLog.ms;
     }
-    TEST_ASSERT_EQUAL_UINT16((uint16_t)PROTOCORE_AUDIT_LOG_ENTRIES, protocore_audit_count());
-    TEST_ASSERT_EQUAL_UINT32((uint32_t)(extra + 1), protocore_audit_at(0)->seq);
-    TEST_ASSERT_EQUAL_UINT32((uint32_t)(PROTOCORE_AUDIT_LOG_ENTRIES + extra),
-                             protocore_audit_at((uint16_t)(protocore_audit_count() - 1))->seq);
-    TEST_ASSERT_TRUE(protocore_audit_verify(NULL));
+    AuditLog.count(protocore_audit_log_span());
+    TEST_ASSERT_EQUAL_UINT16((uint16_t)PROTOCORE_AUDIT_LOG_ENTRIES, AuditLog.value);
+    AuditLog.at_args.i = 0;
+    AuditLog.at(protocore_audit_log_span());
+    TEST_ASSERT_EQUAL_UINT32((uint32_t)(extra + 1), AuditLog.ptr->seq);
+    AuditLog.count(protocore_audit_log_span());
+    AuditLog.at_args.i = (uint16_t)(AuditLog.value - 1);
+    AuditLog.at(protocore_audit_log_span());
+    TEST_ASSERT_EQUAL_UINT32((uint32_t)(PROTOCORE_AUDIT_LOG_ENTRIES + extra), AuditLog.ptr->seq);
+    AuditLog.verify_args.first_broken_seq = NULL;
+    AuditLog.verify(protocore_audit_log_span());
+    TEST_ASSERT_TRUE(AuditLog.ok);
 }
 
 // The anchor is what makes eviction safe: after a wrap the OLDEST retained record is still checked
@@ -233,13 +328,18 @@ void test_the_oldest_retained_record_is_still_anchored(void)
 {
     for (int i = 0; i < PROTOCORE_AUDIT_LOG_ENTRIES + 5; i++)
     {
-        (void)protocore_audit_append(PROTOCORE_AUDIT_SYSTEM, "x");
+        AuditLog.append_args.category = PROTOCORE_AUDIT_SYSTEM;
+        AuditLog.append_args.msg = "x";
+        AuditLog.append(protocore_audit_log_span());
+        (void)AuditLog.ms;
     }
     protocore_audit_entry *oldest = mutable_at(0);
     const uint32_t seq = oldest->seq;
     oldest->msg[0] = 'y';
     uint32_t broken = 0;
-    TEST_ASSERT_FALSE(protocore_audit_verify(&broken));
+    AuditLog.verify_args.first_broken_seq = &broken;
+    AuditLog.verify(protocore_audit_log_span());
+    TEST_ASSERT_FALSE(AuditLog.ok);
     TEST_ASSERT_EQUAL_UINT32(seq, broken);
 }
 
@@ -250,15 +350,29 @@ void test_a_long_message_is_truncated(void)
     memset(big, 'A', sizeof(big) - 1);
     big[sizeof(big) - 1] = '\0';
 
-    (void)protocore_audit_append(PROTOCORE_AUDIT_SYSTEM, big);
-    const protocore_audit_entry *e = protocore_audit_at(0);
+    AuditLog.append_args.category = PROTOCORE_AUDIT_SYSTEM;
+    AuditLog.append_args.msg = big;
+    AuditLog.append(protocore_audit_log_span());
+    (void)AuditLog.ms;
+    AuditLog.at_args.i = 0;
+    AuditLog.at(protocore_audit_log_span());
+    const protocore_audit_entry *e = AuditLog.ptr;
     TEST_ASSERT_EQUAL_UINT(PROTOCORE_AUDIT_MSG_LEN - 1u, (unsigned)strlen(e->msg));
-    TEST_ASSERT_TRUE(protocore_audit_verify(NULL));
+    AuditLog.verify_args.first_broken_seq = NULL;
+    AuditLog.verify(protocore_audit_log_span());
+    TEST_ASSERT_TRUE(AuditLog.ok);
 
+    AuditLog.append_args.category = PROTOCORE_AUDIT_SYSTEM;
+    AuditLog.append_args.msg = NULL;
+    AuditLog.append(protocore_audit_log_span());
     // a null message is an empty one, not a dereference
-    (void)protocore_audit_append(PROTOCORE_AUDIT_SYSTEM, NULL);
-    TEST_ASSERT_EQUAL_STRING("", protocore_audit_at(1)->msg);
-    TEST_ASSERT_TRUE(protocore_audit_verify(NULL));
+    (void)AuditLog.ms;
+    AuditLog.at_args.i = 1;
+    AuditLog.at(protocore_audit_log_span());
+    TEST_ASSERT_EQUAL_STRING("", AuditLog.ptr->msg);
+    AuditLog.verify_args.first_broken_seq = NULL;
+    AuditLog.verify(protocore_audit_log_span());
+    TEST_ASSERT_TRUE(AuditLog.ok);
 }
 
 // Reset empties the ring, restarts the sequence at 1, and returns the anchor to genesis - so the
@@ -266,20 +380,36 @@ void test_a_long_message_is_truncated(void)
 void test_reset_returns_the_chain_to_genesis(void)
 {
     set_millis(7u);
-    (void)protocore_audit_append(PROTOCORE_AUDIT_AUTH, "first");
+    Clock.millis(Clock.internal); // refresh the stamp audit_log records with
+    AuditLog.append_args.category = PROTOCORE_AUDIT_AUTH;
+    AuditLog.append_args.msg = "first";
+    AuditLog.append(protocore_audit_log_span());
+    (void)AuditLog.ms;
     uint8_t before[PROTOCORE_AUDIT_HASH_LEN];
-    memcpy(before, protocore_audit_at(0)->hash, PROTOCORE_AUDIT_HASH_LEN);
+    AuditLog.at_args.i = 0;
+    AuditLog.at(protocore_audit_log_span());
+    memcpy(before, AuditLog.ptr->hash, PROTOCORE_AUDIT_HASH_LEN);
 
     for (int i = 0; i < 4; i++)
     {
-        (void)protocore_audit_append(PROTOCORE_AUDIT_SYSTEM, "noise");
+        AuditLog.append_args.category = PROTOCORE_AUDIT_SYSTEM;
+        AuditLog.append_args.msg = "noise";
+        AuditLog.append(protocore_audit_log_span());
+        (void)AuditLog.ms;
     }
-    protocore_audit_reset();
-    TEST_ASSERT_EQUAL_UINT16(0u, protocore_audit_count());
+    AuditLog.reset(protocore_audit_log_span());
+    AuditLog.count(protocore_audit_log_span());
+    TEST_ASSERT_EQUAL_UINT16(0u, AuditLog.value);
 
     set_millis(7u);
-    TEST_ASSERT_EQUAL_UINT32(1u, protocore_audit_append(PROTOCORE_AUDIT_AUTH, "first"));
-    TEST_ASSERT_EQUAL_HEX8_ARRAY(before, protocore_audit_at(0)->hash, PROTOCORE_AUDIT_HASH_LEN);
+    Clock.millis(Clock.internal); // refresh the stamp audit_log records with
+    AuditLog.append_args.category = PROTOCORE_AUDIT_AUTH;
+    AuditLog.append_args.msg = "first";
+    AuditLog.append(protocore_audit_log_span());
+    TEST_ASSERT_EQUAL_UINT32(1u, AuditLog.ms);
+    AuditLog.at_args.i = 0;
+    AuditLog.at(protocore_audit_log_span());
+    TEST_ASSERT_EQUAL_HEX8_ARRAY(before, AuditLog.ptr->hash, PROTOCORE_AUDIT_HASH_LEN);
 }
 
 // The sink sees each record once, at append time, with the hash already set - which is what lets a
@@ -297,29 +427,53 @@ void test_the_sink_receives_the_complete_record(void)
 {
     g_sink_calls = 0;
     memset(&g_sink_last, 0, sizeof(g_sink_last));
-    protocore_audit_set_sink(capture);
+    AuditLog.set_sink_args.sink = capture;
+    AuditLog.set_sink(protocore_audit_log_span());
 
-    (void)protocore_audit_append(PROTOCORE_AUDIT_ADMIN, "reboot");
+    AuditLog.append_args.category = PROTOCORE_AUDIT_ADMIN;
+    AuditLog.append_args.msg = "reboot";
+    AuditLog.append(protocore_audit_log_span());
+    (void)AuditLog.ms;
     TEST_ASSERT_EQUAL_UINT16(1u, g_sink_calls);
     TEST_ASSERT_EQUAL_UINT32(1u, g_sink_last.seq);
     TEST_ASSERT_EQUAL_STRING("reboot", g_sink_last.msg);
-    TEST_ASSERT_EQUAL_HEX8_ARRAY(protocore_audit_at(0)->hash, g_sink_last.hash, PROTOCORE_AUDIT_HASH_LEN);
+    AuditLog.at_args.i = 0;
+    AuditLog.at(protocore_audit_log_span());
+    TEST_ASSERT_EQUAL_HEX8_ARRAY(AuditLog.ptr->hash, g_sink_last.hash, PROTOCORE_AUDIT_HASH_LEN);
 
-    protocore_audit_set_sink(NULL);
-    (void)protocore_audit_append(PROTOCORE_AUDIT_ADMIN, "again");
+    AuditLog.set_sink_args.sink = NULL;
+    AuditLog.set_sink(protocore_audit_log_span());
+    AuditLog.append_args.category = PROTOCORE_AUDIT_ADMIN;
+    AuditLog.append_args.msg = "again";
+    AuditLog.append(protocore_audit_log_span());
+    (void)AuditLog.ms;
     TEST_ASSERT_EQUAL_UINT16(1u, g_sink_calls); // detached
 }
 
 // The wire names of the standard categories, and the documented fallback for anything else.
 void test_category_names(void)
 {
-    TEST_ASSERT_EQUAL_STRING("system", protocore_audit_cat_name(PROTOCORE_AUDIT_SYSTEM));
-    TEST_ASSERT_EQUAL_STRING("auth", protocore_audit_cat_name(PROTOCORE_AUDIT_AUTH));
-    TEST_ASSERT_EQUAL_STRING("auth_fail", protocore_audit_cat_name(PROTOCORE_AUDIT_AUTH_FAIL));
-    TEST_ASSERT_EQUAL_STRING("access", protocore_audit_cat_name(PROTOCORE_AUDIT_ACCESS));
-    TEST_ASSERT_EQUAL_STRING("config", protocore_audit_cat_name(PROTOCORE_AUDIT_CONFIG));
-    TEST_ASSERT_EQUAL_STRING("admin", protocore_audit_cat_name(PROTOCORE_AUDIT_ADMIN));
-    TEST_ASSERT_EQUAL_STRING("system", protocore_audit_cat_name((protocore_audit_cat)200));
+    AuditLog.cat_name_args.category = PROTOCORE_AUDIT_SYSTEM;
+    AuditLog.cat_name(protocore_audit_log_span());
+    TEST_ASSERT_EQUAL_STRING("system", AuditLog.text);
+    AuditLog.cat_name_args.category = PROTOCORE_AUDIT_AUTH;
+    AuditLog.cat_name(protocore_audit_log_span());
+    TEST_ASSERT_EQUAL_STRING("auth", AuditLog.text);
+    AuditLog.cat_name_args.category = PROTOCORE_AUDIT_AUTH_FAIL;
+    AuditLog.cat_name(protocore_audit_log_span());
+    TEST_ASSERT_EQUAL_STRING("auth_fail", AuditLog.text);
+    AuditLog.cat_name_args.category = PROTOCORE_AUDIT_ACCESS;
+    AuditLog.cat_name(protocore_audit_log_span());
+    TEST_ASSERT_EQUAL_STRING("access", AuditLog.text);
+    AuditLog.cat_name_args.category = PROTOCORE_AUDIT_CONFIG;
+    AuditLog.cat_name(protocore_audit_log_span());
+    TEST_ASSERT_EQUAL_STRING("config", AuditLog.text);
+    AuditLog.cat_name_args.category = PROTOCORE_AUDIT_ADMIN;
+    AuditLog.cat_name(protocore_audit_log_span());
+    TEST_ASSERT_EQUAL_STRING("admin", AuditLog.text);
+    AuditLog.cat_name_args.category = (protocore_audit_cat)200;
+    AuditLog.cat_name(protocore_audit_log_span());
+    TEST_ASSERT_EQUAL_STRING("system", AuditLog.text);
 }
 
 // One record renders as a JSON object carrying seq, ts, the category name, the message, and the
@@ -327,12 +481,22 @@ void test_category_names(void)
 void test_format_renders_one_record(void)
 {
     set_millis(4242u);
-    (void)protocore_audit_append(PROTOCORE_AUDIT_AUTH_FAIL, "bad password");
+    Clock.millis(Clock.internal); // refresh the stamp audit_log records with
+    AuditLog.append_args.category = PROTOCORE_AUDIT_AUTH_FAIL;
+    AuditLog.append_args.msg = "bad password";
+    AuditLog.append(protocore_audit_log_span());
+    (void)AuditLog.ms;
 
     static const char HEAD[] = "{\"seq\":1,\"ts\":4242,\"cat\":\"auth_fail\",\"msg\":\"bad password\",\"hash\":\"";
 
     char out[512];
-    int n = protocore_audit_format(protocore_audit_at(0), out, sizeof(out));
+    AuditLog.at_args.i = 0;
+    AuditLog.at(protocore_audit_log_span());
+    AuditLog.format_args.entry = AuditLog.ptr;
+    AuditLog.format_args.out = out;
+    AuditLog.format_args.cap = sizeof(out);
+    AuditLog.format(protocore_audit_log_span());
+    int n = AuditLog.n;
     TEST_ASSERT_TRUE(n > 0);
     TEST_ASSERT_EQUAL_INT(n, (int)strlen(out));
     TEST_ASSERT_EQUAL_STRING_LEN(HEAD, out, sizeof(HEAD) - 1);
@@ -355,10 +519,19 @@ void test_format_renders_one_record(void)
 // inside a JSON string, or the message closes the string and the document becomes attacker-shaped.
 void test_format_escapes_the_message(void)
 {
-    (void)protocore_audit_append(PROTOCORE_AUDIT_SYSTEM, "a\"b\\c\nd\re\tf\x01g");
+    AuditLog.append_args.category = PROTOCORE_AUDIT_SYSTEM;
+    AuditLog.append_args.msg = "a\"b\\c\nd\re\tf\x01g";
+    AuditLog.append(protocore_audit_log_span());
+    (void)AuditLog.ms;
 
     char out[512];
-    TEST_ASSERT_TRUE(protocore_audit_format(protocore_audit_at(0), out, sizeof(out)) > 0);
+    AuditLog.at_args.i = 0;
+    AuditLog.at(protocore_audit_log_span());
+    AuditLog.format_args.entry = AuditLog.ptr;
+    AuditLog.format_args.out = out;
+    AuditLog.format_args.cap = sizeof(out);
+    AuditLog.format(protocore_audit_log_span());
+    TEST_ASSERT_TRUE(AuditLog.n > 0);
     TEST_ASSERT_NOT_NULL(strstr(out, "\\\"")); // "
     TEST_ASSERT_NOT_NULL(strstr(out, "\\\\")); // backslash
     TEST_ASSERT_NOT_NULL(strstr(out, "\\n"));
@@ -373,22 +546,53 @@ void test_format_escapes_the_message(void)
 // JSON line in a durable store is a record nothing can parse.
 void test_format_fails_closed_at_every_short_capacity(void)
 {
-    (void)protocore_audit_append(PROTOCORE_AUDIT_ACCESS, "GET /x");
+    AuditLog.append_args.category = PROTOCORE_AUDIT_ACCESS;
+    AuditLog.append_args.msg = "GET /x";
+    AuditLog.append(protocore_audit_log_span());
+    (void)AuditLog.ms;
     char full[512];
-    int need = protocore_audit_format(protocore_audit_at(0), full, sizeof(full));
+    AuditLog.at_args.i = 0;
+    AuditLog.at(protocore_audit_log_span());
+    AuditLog.format_args.entry = AuditLog.ptr;
+    AuditLog.format_args.out = full;
+    AuditLog.format_args.cap = sizeof(full);
+    AuditLog.format(protocore_audit_log_span());
+    int need = AuditLog.n;
     TEST_ASSERT_TRUE(need > 0);
 
     char small[512];
     for (int cap = 0; cap <= need; cap++)
     {
         memset(small, '#', sizeof(small));
-        TEST_ASSERT_EQUAL_INT(0, protocore_audit_format(protocore_audit_at(0), small, (size_t)cap));
+        AuditLog.at_args.i = 0;
+        AuditLog.at(protocore_audit_log_span());
+        AuditLog.format_args.entry = AuditLog.ptr;
+        AuditLog.format_args.out = small;
+        AuditLog.format_args.cap = (size_t)cap;
+        AuditLog.format(protocore_audit_log_span());
+        TEST_ASSERT_EQUAL_INT(0, AuditLog.n);
     }
+    AuditLog.at_args.i = 0;
+    AuditLog.at(protocore_audit_log_span());
+    AuditLog.format_args.entry = AuditLog.ptr;
+    AuditLog.format_args.out = small;
+    AuditLog.format_args.cap = (size_t)need + 1u;
+    AuditLog.format(protocore_audit_log_span());
     // one octet more than the text is exactly enough, for the NUL
-    TEST_ASSERT_EQUAL_INT(need, protocore_audit_format(protocore_audit_at(0), small, (size_t)need + 1u));
+    TEST_ASSERT_EQUAL_INT(need, AuditLog.n);
 
-    TEST_ASSERT_EQUAL_INT(0, protocore_audit_format(NULL, full, sizeof(full)));
-    TEST_ASSERT_EQUAL_INT(0, protocore_audit_format(protocore_audit_at(0), NULL, sizeof(full)));
+    AuditLog.format_args.entry = NULL;
+    AuditLog.format_args.out = full;
+    AuditLog.format_args.cap = sizeof(full);
+    AuditLog.format(protocore_audit_log_span());
+    TEST_ASSERT_EQUAL_INT(0, AuditLog.n);
+    AuditLog.at_args.i = 0;
+    AuditLog.at(protocore_audit_log_span());
+    AuditLog.format_args.entry = AuditLog.ptr;
+    AuditLog.format_args.out = NULL;
+    AuditLog.format_args.cap = sizeof(full);
+    AuditLog.format(protocore_audit_log_span());
+    TEST_ASSERT_EQUAL_INT(0, AuditLog.n);
 }
 
 // The dump reports the window and its integrity, and says which record broke when it is broken.
@@ -396,13 +600,19 @@ void test_dump_reports_integrity(void)
 {
     for (int i = 0; i < 3; i++)
     {
-        (void)protocore_audit_append(PROTOCORE_AUDIT_SYSTEM, "e");
+        AuditLog.append_args.category = PROTOCORE_AUDIT_SYSTEM;
+        AuditLog.append_args.msg = "e";
+        AuditLog.append(protocore_audit_log_span());
+        (void)AuditLog.ms;
     }
 
     static const char HEAD[] = "{\"intact\":true,\"count\":3,\"entries\":[";
 
     char out[2048];
-    int n = protocore_audit_dump_json(out, sizeof(out));
+    AuditLog.dump_json_args.out = out;
+    AuditLog.dump_json_args.cap = sizeof(out);
+    AuditLog.dump_json(protocore_audit_log_span());
+    int n = AuditLog.n;
     TEST_ASSERT_TRUE(n > 0);
     TEST_ASSERT_EQUAL_INT(n, (int)strlen(out));
     TEST_ASSERT_EQUAL_STRING_LEN(HEAD, out, sizeof(HEAD) - 1);
@@ -411,7 +621,10 @@ void test_dump_reports_integrity(void)
     TEST_ASSERT_NULL(strstr(out, "first_broken"));
 
     mutable_at(1)->msg[0] = 'Z';
-    n = protocore_audit_dump_json(out, sizeof(out));
+    AuditLog.dump_json_args.out = out;
+    AuditLog.dump_json_args.cap = sizeof(out);
+    AuditLog.dump_json(protocore_audit_log_span());
+    n = AuditLog.n;
     TEST_ASSERT_TRUE(n > 0);
     TEST_ASSERT_NOT_NULL(strstr(out, "\"intact\":false"));
     TEST_ASSERT_NOT_NULL(strstr(out, "\"first_broken\":2"));
@@ -423,26 +636,44 @@ void test_dump_fails_closed_at_every_short_capacity(void)
 {
     for (int i = 0; i < 3; i++)
     {
-        (void)protocore_audit_append(PROTOCORE_AUDIT_ADMIN, "e");
+        AuditLog.append_args.category = PROTOCORE_AUDIT_ADMIN;
+        AuditLog.append_args.msg = "e";
+        AuditLog.append(protocore_audit_log_span());
+        (void)AuditLog.ms;
     }
     char full[2048];
-    int need = protocore_audit_dump_json(full, sizeof(full));
+    AuditLog.dump_json_args.out = full;
+    AuditLog.dump_json_args.cap = sizeof(full);
+    AuditLog.dump_json(protocore_audit_log_span());
+    int need = AuditLog.n;
     TEST_ASSERT_TRUE(need > 0);
 
     char small[2048];
     for (int cap = 0; cap <= need; cap++)
     {
-        TEST_ASSERT_EQUAL_INT(0, protocore_audit_dump_json(small, (size_t)cap));
+        AuditLog.dump_json_args.out = small;
+        AuditLog.dump_json_args.cap = (size_t)cap;
+        AuditLog.dump_json(protocore_audit_log_span());
+        TEST_ASSERT_EQUAL_INT(0, AuditLog.n);
     }
-    TEST_ASSERT_EQUAL_INT(need, protocore_audit_dump_json(small, (size_t)need + 1u));
-    TEST_ASSERT_EQUAL_INT(0, protocore_audit_dump_json(NULL, sizeof(full)));
+    AuditLog.dump_json_args.out = small;
+    AuditLog.dump_json_args.cap = (size_t)need + 1u;
+    AuditLog.dump_json(protocore_audit_log_span());
+    TEST_ASSERT_EQUAL_INT(need, AuditLog.n);
+    AuditLog.dump_json_args.out = NULL;
+    AuditLog.dump_json_args.cap = sizeof(full);
+    AuditLog.dump_json(protocore_audit_log_span());
+    TEST_ASSERT_EQUAL_INT(0, AuditLog.n);
 }
 
 // An empty log still dumps a well-formed document with an empty entry array.
 void test_dump_of_an_empty_log(void)
 {
     char out[256];
-    int n = protocore_audit_dump_json(out, sizeof(out));
+    AuditLog.dump_json_args.out = out;
+    AuditLog.dump_json_args.cap = sizeof(out);
+    AuditLog.dump_json(protocore_audit_log_span());
+    int n = AuditLog.n;
     TEST_ASSERT_TRUE(n > 0);
     TEST_ASSERT_EQUAL_STRING("{\"intact\":true,\"count\":0,\"entries\":[]}", out);
 }

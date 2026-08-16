@@ -34,7 +34,6 @@ PROTOCORE_BEGIN_DECLS
 
 #include "shared/can/can.h"
 
-
 // Function-code COB-ID bases. The 11-bit id is (function-code | node-id); the node id is
 // 1..127 (0 = broadcast for NMT / SYNC / TIME). EMCY shares 0x080 with SYNC: SYNC is the
 // node-id == 0 case, EMCY is 0x081..0x0FF.

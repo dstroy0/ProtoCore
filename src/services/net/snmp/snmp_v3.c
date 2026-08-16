@@ -439,11 +439,11 @@ static size_t build_message(struct SnmpV3Internal *restrict ctx, long msg_id, pr
     {
         uint8_t mac[PROTOCORE_HMAC_SHA256_LEN];
         HmacSha256.mac_args.key = ctx->store->auth_key;
-    HmacSha256.mac_args.key_len = SNMP_USM_KEY_LEN;
-    HmacSha256.mac_args.data = resp;
-    HmacSha256.mac_args.len = total;
-    HmacSha256.mac_args.out = mac;
-    HmacSha256.mac(ctx->store->mac_work);
+        HmacSha256.mac_args.key_len = SNMP_USM_KEY_LEN;
+        HmacSha256.mac_args.data = resp;
+        HmacSha256.mac_args.len = total;
+        HmacSha256.mac_args.out = mac;
+        HmacSha256.mac(ctx->store->mac_work);
         mem.cpy(resp + sec_value_pos + auth_off, mac, SNMP_V3_AUTH_PARAM_LEN);
     }
     return total;

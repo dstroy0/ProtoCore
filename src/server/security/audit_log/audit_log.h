@@ -32,13 +32,16 @@
 #ifndef PROTOCORE_AUDIT_LOG_H
 #define PROTOCORE_AUDIT_LOG_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_AUDIT_LOG
 
 PROTOCORE_BEGIN_DECLS
 
-/** @brief SHA-256 chain-hash length per record. */
+// PROTOCORE_AUDIT_LOG_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums it
+// into its arena. A caller takes them once and passes the pointer to every call. How they are
+// carved is this module's and is never named here.
+
 #define PROTOCORE_AUDIT_HASH_LEN 32
 
 /** @brief Standard audit event categories (extend with your own values). */
@@ -65,59 +68,92 @@ typedef struct
 /** @brief Sink invoked once per record, at append time, for durable forwarding. */
 typedef void (*protocore_audit_sink_fn)(const protocore_audit_entry *entry);
 
-/** @brief Clear the ring, reset the sequence counter and the chain anchor to genesis. */
-void protocore_audit_reset(void);
+/** @brief What set_sink takes. */
+typedef struct
+{
+    protocore_audit_sink_fn sink;
+} AuditLogSetSinkArgs;
+
+/** @brief What append takes. */
+typedef struct
+{
+    protocore_audit_cat category;
+    const char *msg;
+} AuditLogAppendArgs;
+
+/** @brief What at takes. */
+typedef struct
+{
+    uint16_t i;
+} AuditLogAtArgs;
+
+/** @brief What verify takes. */
+typedef struct
+{
+    uint32_t *first_broken_seq;
+} AuditLogVerifyArgs;
+
+/** @brief What cat_name takes. */
+typedef struct
+{
+    protocore_audit_cat category;
+} AuditLogCatNameArgs;
+
+/** @brief What format takes. */
+typedef struct
+{
+    const protocore_audit_entry *entry;
+    char *out;
+    size_t cap;
+} AuditLogFormatArgs;
+
+/** @brief What dump_json takes. */
+typedef struct
+{
+    char *out;
+    size_t cap;
+} AuditLogDumpJsonArgs;
+typedef struct
+{
+    AuditLogSetSinkArgs set_sink_args;
+    AuditLogAppendArgs append_args;
+    AuditLogAtArgs at_args;
+    AuditLogVerifyArgs verify_args;
+    AuditLogCatNameArgs cat_name_args;
+    AuditLogFormatArgs format_args;
+    AuditLogDumpJsonArgs dump_json_args;
+
+    proto_bool ok;
+    uint32_t ms;
+    uint16_t value;
+    const protocore_audit_entry *ptr;
+    const char *text;
+    int n;
+
+    void (*const reset)(uint8_t *restrict work);
+    void (*const set_sink)(uint8_t *restrict work);
+    void (*const append)(uint8_t *restrict work);
+    void (*const count)(uint8_t *restrict work);
+    void (*const at)(uint8_t *restrict work);
+    void (*const verify)(uint8_t *restrict work);
+    void (*const cat_name)(uint8_t *restrict work);
+    void (*const format)(uint8_t *restrict work);
+    void (*const dump_json)(uint8_t *restrict work);
+} AuditLogNs;
+
+/** @brief The one symbol this module exports. */
+extern AuditLogNs AuditLog;
 
 /**
- * @brief Forward every future record to @p sink at append time (nullptr to detach).
+ * @brief The PROTOCORE_AUDIT_LOG_BORROW bytes this module's state lives in.
  *
- * The sink runs synchronously inside protocore_audit_append(); keep it short and
- * non-reentrant (do not call protocore_audit_append() from it).
- */
-void protocore_audit_set_sink(protocore_audit_sink_fn sink);
-
-/**
- * @brief Append a record and return its sequence number.
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
  *
- * @param category  ::protocore_audit_cat or a user-defined value.
- * @param msg       Null-terminated message (truncated to PROTOCORE_AUDIT_MSG_LEN-1).
- * @return the assigned monotonic sequence number.
+ * @return the span, or NULL while the pool was short - which every entry refuses.
  */
-uint32_t protocore_audit_append(protocore_audit_cat category, const char *msg);
-
-/** @brief Number of records currently retained in the ring (0 .. PROTOCORE_AUDIT_LOG_ENTRIES). */
-uint16_t protocore_audit_count(void);
-
-/** @brief Record @p i (0 = oldest retained .. count-1 = newest), or nullptr if out of range. */
-const protocore_audit_entry *protocore_audit_at(uint16_t i);
-
-/**
- * @brief Recompute the chain over the retained window and report integrity.
- *
- * @param first_broken_seq  if non-null, set to the seq of the first record whose
- *                          hash does not match when the chain is broken.
- * @return true if every retained record verifies against its predecessor.
- */
-proto_bool protocore_audit_verify(uint32_t *first_broken_seq);
-
-/** @brief Human-readable name for a standard ::protocore_audit_cat ("system" for unknown). */
-const char *protocore_audit_cat_name(protocore_audit_cat category);
-
-/**
- * @brief Render one record as a JSON object (hash as full 64-char hex).
- * @return characters written (excluding NUL), or 0 if @p cap is too small.
- */
-int protocore_audit_format(const protocore_audit_entry *entry, char *out, size_t cap);
-
-/**
- * @brief Dump the retained window as a JSON document for an endpoint.
- *
- * `{"intact":bool,"count":N,"entries":[ {record}, ... ]}` (plus "first_broken"
- * when the chain is broken).
- *
- * @return characters written (excluding NUL), or 0 if @p cap is too small.
- */
-int protocore_audit_dump_json(char *out, size_t cap);
+uint8_t *protocore_audit_log_span(void);
 
 PROTOCORE_END_DECLS
 

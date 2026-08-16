@@ -57,15 +57,14 @@ void dbench_run(void)
         // worst-droop min + counters.
         HwHealth.rail.m = &rail;
         HwHealth.rail.mv = 3050;
-        DBENCH_OP("HwHealth.rail_sample", 200000,
-                  HwHealth.rail_sample(HwHealth.internal); sink += (uint32_t)HwHealth.rail_verdict);
+        DBENCH_OP("HwHealth.rail_sample", 200000, HwHealth.rail_sample(HwHealth.internal);
+                  sink += (uint32_t)HwHealth.rail_verdict);
 
         // Serialize the monitor to the "/health" JSON fragment (strbuf u32 formatting).
         HwHealth.rail.m_ro = &rail;
         HwHealth.out_args.out = json;
         HwHealth.out_args.cap = sizeof(json);
-        DBENCH_OP("HwHealth.rail_json", 100000,
-                  HwHealth.rail_json(HwHealth.internal); sink += (uint32_t)HwHealth.n);
+        DBENCH_OP("HwHealth.rail_json", 100000, HwHealth.rail_json(HwHealth.internal); sink += (uint32_t)HwHealth.n);
 
         // Hysteretic SPI-clock backoff: feed a failing CRC result through the state machine.
         HwHealth.spi.s = &spi;
@@ -75,15 +74,15 @@ void dbench_run(void)
         // GPIO short-circuit test: drove high, read low -> shorted to ground.
         HwHealth.probe.driven_high = PROTO_TRUE;
         HwHealth.probe.read_high = PROTO_FALSE;
-        DBENCH_OP("HwHealth.gpio_short", 200000,
-                  HwHealth.gpio_short(HwHealth.internal); sink += (uint32_t)HwHealth.gpio_verdict);
+        DBENCH_OP("HwHealth.gpio_short", 200000, HwHealth.gpio_short(HwHealth.internal);
+                  sink += (uint32_t)HwHealth.gpio_verdict);
 
         // Cap-leakage: measured 90 ms vs 100 ms expected, 10% band (64-bit tolerance math).
         HwHealth.probe.measured_ms = 90;
         HwHealth.probe.expected_ms = 100;
         HwHealth.probe.tol_pct = 10;
-        DBENCH_OP("HwHealth.cap_leak", 200000,
-                  HwHealth.cap_leak(HwHealth.internal); sink += (uint32_t)HwHealth.cap_verdict);
+        DBENCH_OP("HwHealth.cap_leak", 200000, HwHealth.cap_leak(HwHealth.internal);
+                  sink += (uint32_t)HwHealth.cap_verdict);
 
         (void)sink;
         DBENCH_DONE();

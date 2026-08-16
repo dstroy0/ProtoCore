@@ -18,15 +18,23 @@ void dbench_run(void)
     // TLS 1.3 + 1.2 AEAD suites (client offered, server pinned).
     static const uint16_t offered[] = {0x1301, 0x1302, 0xC02F, 0xC030, 0x009C};
     static const uint16_t pinned[] = {0x1302, 0x1301, 0xC030};
+    static uint8_t tw[64]; // the borrow an entry takes and this module never reads
 
     for (;;)
     {
         DBENCH_BANNER("tls_policy");
         volatile uint32_t sink = 0;
-        DBENCH_OP("protocore_tls_negotiate_version", 200000,
-                  sink += protocore_tls_negotiate_version(0x0304, 0x0303, 0x0304));
-        DBENCH_OP("protocore_tls_select_cipher", 200000, sink += protocore_tls_select_cipher(offered, 5, pinned, 3));
-        DBENCH_OP("protocore_tls_is_aead", 200000, sink += protocore_tls_is_aead(0x1301));
+        TlsPolicy.negotiate_args.client_max = 0x0304;
+        TlsPolicy.negotiate_args.server_min = 0x0303;
+        TlsPolicy.negotiate_args.server_max = 0x0304;
+        DBENCH_OP("TlsPolicy.negotiate", 200000, (TlsPolicy.negotiate(tw), sink += TlsPolicy.version));
+        TlsPolicy.select_args.client_offered = offered;
+        TlsPolicy.select_args.n_client = 5;
+        TlsPolicy.select_args.server_pinned = pinned;
+        TlsPolicy.select_args.n_server = 3;
+        DBENCH_OP("TlsPolicy.select", 200000, (TlsPolicy.select(tw), sink += TlsPolicy.suite));
+        TlsPolicy.aead_args.suite = 0x1301;
+        DBENCH_OP("TlsPolicy.is_aead", 200000, (TlsPolicy.is_aead(tw), sink += TlsPolicy.aead));
         (void)sink;
         DBENCH_DONE();
     }

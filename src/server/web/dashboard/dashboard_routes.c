@@ -76,7 +76,7 @@ static void dash_ws_message(uint8_t ws_id)
     if (ws_id < MAX_WS_CONNS)
     {
         Ws.ws_id = ws_id;
-        Ws.payload_of(Ws.internal);
+        Ws.payload_of(protocore_ws_span());
         protocore_dashboard_dispatch_control(Ws.text);
     }
 }

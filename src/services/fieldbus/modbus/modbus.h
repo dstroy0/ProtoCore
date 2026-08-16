@@ -38,7 +38,6 @@
 
 PROTOCORE_BEGIN_DECLS
 
-
 /** @brief Modbus function codes (Modbus Application Protocol §6). */
 typedef enum PROTO_ENUM_PACKED
 {

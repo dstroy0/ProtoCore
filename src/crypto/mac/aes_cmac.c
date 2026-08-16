@@ -17,13 +17,11 @@
 
 #if PROTOCORE_ENABLE_AES_CMAC
 
-#if PROTOCORE_HAS_HW_AES
-#endif
 #if !PROTOCORE_HAS_HW_AES
 #include "crypto/cipher/aes_block.h" // native software AES-128 block
 #endif
-#include "crypto/mac/aes_cmac.h"
 #include "crypto/crypto_opt.h"
+#include "crypto/mac/aes_cmac.h"
 #include "mmgr/protomem.h"
 
 PROTOCORE_CRYPTO_HOT

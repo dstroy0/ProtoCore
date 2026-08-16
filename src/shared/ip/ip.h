@@ -52,7 +52,7 @@ typedef enum PROTO_ENUM_PACKED
 static_assert(sizeof(protocore_ip_scope) == 1, "protocore_ip_scope must stay one byte (PROTO_ENUM_PACKED)");
 
 /** @brief A v4 or v6 address in network (big-endian) byte order. */
-typedef struct
+typedef struct protocore_ip
 {
     protocore_ip_family family; ///< address family tag
     uint8_t bytes[16];          ///< network order; v4 uses the first 4

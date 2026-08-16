@@ -92,7 +92,8 @@ void dbench_run(void)
         OpcUaBrowseRequest br;
         if (bn > 0 && protocore_opcua_parse_browse(bq, bn, &br))
         {
-            browse_resp_len = protocore_opcua_build_browse_response(&br, srv_browse, 4, 0, browse_resp, sizeof(browse_resp));
+            browse_resp_len =
+                protocore_opcua_build_browse_response(&br, srv_browse, 4, 0, browse_resp, sizeof(browse_resp));
         }
     }
 
@@ -105,8 +106,10 @@ void dbench_run(void)
         // Request builders (little-endian encode into a caller buffer, then patch the frame size).
         DBENCH_OP("protocore_opcua_client_hello", 20000,
                   sink += protocore_opcua_client_hello("opc.tcp://host:4840", reqbuf, sizeof(reqbuf)));
-        DBENCH_OP("protocore_opcua_client_open", 20000, sink += protocore_opcua_client_open(&c, reqbuf, sizeof(reqbuf)));
-        DBENCH_OP("protocore_opcua_client_read x2", 20000, sink += protocore_opcua_client_read(&c, items, 2, reqbuf, sizeof(reqbuf)));
+        DBENCH_OP("protocore_opcua_client_open", 20000,
+                  sink += protocore_opcua_client_open(&c, reqbuf, sizeof(reqbuf)));
+        DBENCH_OP("protocore_opcua_client_read x2", 20000,
+                  sink += protocore_opcua_client_read(&c, items, 2, reqbuf, sizeof(reqbuf)));
 
         // Response parsers (validate the UACP + MSG envelope, then decode the service body).
         OpcUaVariant cvals[2];

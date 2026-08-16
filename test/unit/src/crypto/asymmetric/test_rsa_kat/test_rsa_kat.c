@@ -304,8 +304,7 @@ void test_rsa_sign_matches_openssl(void)
         Rsa.sign_args.d = d;
         Rsa.sign_args.msg = msg;
         Rsa.sign_args.msg_len = msg_len;
-        Rsa.sign_args.hash =
-            (strcmp(v->hash, "SHA-512") == 0) ? PROTOCORE_RSA_HASH_SHA512 : PROTOCORE_RSA_HASH_SHA256;
+        Rsa.sign_args.hash = (strcmp(v->hash, "SHA-512") == 0) ? PROTOCORE_RSA_HASH_SHA512 : PROTOCORE_RSA_HASH_SHA256;
         Rsa.sign_args.sig = got;
         Rsa.sign(g_work);
         TEST_ASSERT_TRUE_MESSAGE(Rsa.ok, v->hash);

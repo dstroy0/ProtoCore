@@ -29,51 +29,71 @@
 
 PROTOCORE_BEGIN_DECLS
 
-/** @brief One dynamic-table entry descriptor (its bytes live in the table's byte ring). */
-typedef struct
-{
-    uint16_t name_len; ///< header name length
-    uint16_t val_len;  ///< header value length
-    uint16_t ring_pos; ///< start of name||value in the byte ring
-} HpackEntry;
-
-/**
- * @brief Per-connection HPACK dynamic table (the peer encoder's state, tracked by our decoder).
- * FIFO: newest entry is dynamic index 62, oldest is evicted first. Fixed storage, no heap.
- */
-typedef struct
-{
-    uint32_t max_size; ///< negotiated maximum size in bytes (RFC 7541 sec 4.2)
-    uint32_t used;     ///< current size = sum of (name_len + val_len + 32) over entries
-    uint16_t ehead;    ///< descriptor ring: index one past the newest entry
-    uint16_t ecount;   ///< number of live entries
-    uint16_t rtail;    ///< byte ring: start of the oldest entry's bytes
-    uint16_t rused;    ///< byte ring: bytes in use
-    HpackEntry ent[PROTOCORE_HPACK_MAX_ENTRIES];
-    char ring[PROTOCORE_HPACK_TABLE_BYTES];
-} HpackDynTable;
-
 /** @brief Callback invoked for each decoded header; return false to abort the decode. */
 typedef proto_bool (*HpackEmitFn)(void *ctx, const char *name, size_t name_len, const char *value, size_t value_len);
 
-/** @brief Initialize a dynamic table to empty, max size @p max_bytes (0 = PROTOCORE_HPACK_TABLE_BYTES). */
-void protocore_hpack_dyn_init(HpackDynTable *t, uint32_t max_bytes);
+/** @brief RFC 7541 sec 4.2: the size a table is initialised to. */
+typedef struct
+{
+    uint32_t max_bytes; ///< the negotiated maximum, 0 = PROTOCORE_HPACK_TABLE_BYTES
+} HpackInitArgs;
+
+/** @brief RFC 7541 sec 3: the block a decode walks, and where each field is handed on. */
+typedef struct
+{
+    const uint8_t *block; ///< the header block
+    size_t len;           ///< how many bytes
+    char *scratch;        ///< holds one header's name+value during each emit
+    size_t scratch_cap;   ///< how much room it has
+    HpackEmitFn emit;     ///< run for each decoded field
+    void *ctx;            ///< passed to emit
+} HpackDecodeArgs;
+
+/** @brief RFC 7541 sec 6: the field an encode emits. */
+typedef struct
+{
+    uint8_t *out;      ///< where the field is written
+    size_t cap;        ///< how much room it has
+    const char *name;  ///< the field name
+    size_t name_len;   ///< how many bytes
+    const char *value; ///< the field value
+    size_t value_len;  ///< how many bytes
+} HpackEncodeArgs;
 
 /**
- * @brief Decode an HPACK header block, emitting each (name, value) via @p emit.
- * @param scratch     caller buffer that holds one header's name+value during each emit call.
- * @return true if the whole block decoded cleanly; false on any malformed input or overflow.
+ * @brief HPACK (RFC 7541): the peer encoder's dynamic table, and one field at a time.
+ *
+ * A caller sets the members a call takes, invokes it through ::Hpack, and reads the outcome off the
+ * same handle.
+ *
+ * @var HpackNs::init_args    the size a table is initialised to
+ * @var HpackNs::decode_args  the block a decode walks
+ * @var HpackNs::encode_args  the field an encode emits
+ * @var HpackNs::ok           whether the whole block decoded cleanly
+ * @var HpackNs::n            bytes an encode wrote, or 0 on overflow
+ * @var HpackNs::dyn_init      empty the table and set its maximum
+ * @var HpackNs::decode        decode a block, emitting each field
+ * @var HpackNs::encode_header encode one field
+ *
+ * Every entry takes the borrow the table lives in; ::PROTOCORE_HPACK_BORROW is how many bytes that
+ * is. The encode reads no table, so it takes the borrow and ignores it.
  */
-proto_bool protocore_hpack_decode(HpackDynTable *t, const uint8_t *block, size_t len, char *scratch, size_t scratch_cap,
-                                  HpackEmitFn emit, void *ctx);
+typedef struct
+{
+    HpackInitArgs init_args;     ///< the members ::HpackNs::dyn_init takes
+    HpackDecodeArgs decode_args; ///< the members ::HpackNs::decode takes
+    HpackEncodeArgs encode_args; ///< the members ::HpackNs::encode_header takes
 
-/**
- * @brief Encode one header field into @p out (server side: static-index a full or name match,
- * else literal-without-indexing; strings Huffman-coded when that is not longer).
- * @return bytes written, or 0 on overflow.
- */
-size_t protocore_hpack_encode_header(uint8_t *out, size_t cap, const char *name, size_t name_len, const char *value,
-                                     size_t value_len);
+    proto_bool ok; ///< whether the whole block decoded cleanly
+    size_t n;      ///< bytes an encode wrote, or 0 on overflow
+
+    void (*const dyn_init)(uint8_t *restrict work);
+    void (*const decode)(uint8_t *restrict work);
+    void (*const encode_header)(uint8_t *restrict work);
+} HpackNs;
+
+/** @brief The one symbol this module exports. */
+extern HpackNs Hpack;
 
 // The prefix-integer and Huffman primitives moved to protocore_hpack_prim.h (shared with QPACK).
 

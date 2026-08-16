@@ -6,50 +6,105 @@
  * @brief HTTP/3 application engine over QUIC streams (see protocore_h3_conn.h).
  */
 
-#include "network_drivers/presentation/http/http3/h3_conn.h"
-#include "mmgr/plaintext.h" // HTTP is plaintext; its streams borrow from that arena
-#include "mmgr/protomem.h"
-#include "mmgr/protostr.h"
-
 #if PROTOCORE_ENABLE_HTTP3
 
+
+#include "network_drivers/presentation/http/http3/h3_conn.h"
+#include "mmgr/protomem.h"
+#include "mmgr/protostr.h"
+#include "network_drivers/presentation/http/http3/h3_frame.h"
 #include "network_drivers/presentation/http/http3/qpack.h"
+#include "network_drivers/presentation/http/http3/quic_conn.h"
 #include "network_drivers/presentation/http/http3/quic_varint.h"
 
-// protocore_h3_conn_respond builds its response HEADERS frame from a fixed 256-byte QPACK block into a
+PROTOCORE_BEGIN_DECLS
+
+// HTTP/3 stream roles (a mutually-exclusive internal role, not a wire value).
+typedef enum PROTO_ENUM_PACKED
+{
+    H3_ROLE_FREE = 0,
+    H3_ROLE_REQUEST,   ///< client-initiated bidirectional request stream
+    H3_ROLE_CONTROL,   ///< client control stream (type 0x00)
+    H3_ROLE_QPACK_ENC, ///< client QPACK encoder stream (type 0x02)
+    H3_ROLE_QPACK_DEC, ///< client QPACK decoder stream (type 0x03)
+    H3_ROLE_OTHER_UNI, ///< an unknown unidirectional stream (drained/ignored)
+} H3StreamRole;
+
+// Per-stream state. The bytes it reassembles into are the span at a fixed offset, so only what is
+// not derivable lives here.
+typedef struct
+{
+    uint64_t id;          ///< stream id (UINT64_MAX = free)
+    H3StreamRole role;    ///< stream role
+    proto_bool type_read; ///< a unidirectional stream's type varint has been consumed
+    proto_bool responded; ///< a response has been sent on this request stream
+    uint8_t *buf;         ///< PROTOCORE_H3_STREAM_BUF bytes of the connection's span
+    size_t buf_len;
+    char *method;            ///< PROTOCORE_H3_METHOD_LEN bytes of the connection's span
+    char *path;              ///< PROTOCORE_H3_PATH_LEN bytes of the connection's span
+    char *authority;         ///< PROTOCORE_H3_AUTHORITY_LEN bytes of the connection's span
+    proto_bool have_headers; ///< a HEADERS frame has been decoded
+    size_t body_off;         ///< where the accumulated body begins within buf (after the last HEADERS)
+} H3Stream;
+
+// The one definition, private to this TU. It sits at H3_OFF_CTX in the caller's span, so its size
+// never leaves this file and no consumer can name it.
+typedef struct
+{
+    uint8_t *b;  ///< the connection's span, bound once and held for its life
+    uint8_t *qc; ///< the QUIC connection's context span, under this one
+    H3RequestFn on_request;
+    void *app;
+    H3Settings peer_settings;
+    proto_bool control_opened;     ///< our control + QPACK streams have been opened
+    proto_bool peer_settings_seen; ///< the peer's one SETTINGS frame has arrived (sec 6.2.1)
+    uint64_t next_uni_id;          ///< next server-initiated unidirectional stream id (3, 7, 11, ...)
+    H3Stream streams[PROTOCORE_H3_MAX_STREAMS];
+} H3ConnCtx;
+
+// The handle a caller sets a call's members on, and the connection the bound span holds.
+struct H3ConnInternal
+{
+    H3ConnCtx *c; ///< the connection, resolved from the bound span
+    H3ConnNs *ns; ///< the handle a caller sets a call's members on
+};
+
+// H3ConnNs::respond builds its response HEADERS frame from a fixed 256-byte QPACK block into a
 // PROTOCORE_H3_STREAM_BUF output buffer, which is why that builder's failure guard carries a coverage
 // exclusion. PROTOCORE_H3_STREAM_BUF is an overridable macro (h3_conn.h), so pin the relationship here
 // rather than let a shrunken buffer silently make the excluded path reachable: 256 bytes of QPACK
 // plus the frame's type + length varints (at most 8 each).
 static_assert(PROTOCORE_H3_STREAM_BUF >= 256 + 16,
               "PROTOCORE_H3_STREAM_BUF must hold a whole response HEADERS frame: the 256-byte QPACK field section "
-              "protocore_h3_conn_respond builds plus the H3 frame type and length varints");
+              "H3ConnNs::respond builds plus the H3 frame type and length varints");
 
-// The plaintext-pool term this file declares: one borrow per HTTP/3 connection, taken from the
-// persistent end on first use and held for the connection's life.
-static_assert(PROTOCORE_WORK_H3_CONN >= (size_t)PROTOCORE_QUIC_MAX_CONNS * PROTOCORE_H3_CONN_BORROW,
-              "PROTOCORE_WORK_H3_CONN must cover one reassembly + pseudo-header borrow per HTTP/3 stream on every "
-              "connection: raise it in protocore_config.h");
-
-// Offsets into the one borrow. Grouped by field, so each region's stride is a power of two.
-#define H3_OFF_BUF 0u
+// The caller's span, split: the context, then the streams grouped by field so each region's stride
+// is a power of two and stream i reaches its bytes with a shift rather than a multiply.
+#define H3_OFF_CTX 0u
+#define H3_OFF_BUF ((size_t)PROTOCORE_H3_CONN_CTX)
 #define H3_OFF_PATH (H3_OFF_BUF + (size_t)PROTOCORE_H3_MAX_STREAMS * PROTOCORE_H3_STREAM_BUF)
 #define H3_OFF_AUTHORITY (H3_OFF_PATH + (size_t)PROTOCORE_H3_MAX_STREAMS * PROTOCORE_H3_PATH_LEN)
 #define H3_OFF_METHOD (H3_OFF_AUTHORITY + (size_t)PROTOCORE_H3_MAX_STREAMS * PROTOCORE_H3_AUTHORITY_LEN)
+static_assert(sizeof(H3ConnCtx) <= PROTOCORE_H3_CONN_CTX,
+              "PROTOCORE_H3_CONN_CTX is short of the connection context - raise it in protocore_config.h, "
+              "which derives PROTOCORE_H3_CONN_BORROW and PROTOCORE_PLAINTEXT_ARENA_SIZE from it");
+static_assert(H3_OFF_METHOD + (size_t)PROTOCORE_H3_MAX_STREAMS * PROTOCORE_H3_METHOD_LEN <= PROTOCORE_H3_CONN_BORROW,
+              "PROTOCORE_H3_CONN_BORROW is short of the context and one reassembly + pseudo-header region per "
+              "stream - raise it in protocore_config.h, which derives PROTOCORE_PLAINTEXT_ARENA_SIZE from it");
+
+// The regions, at their offsets in the caller's span.
+#define H3_CTX(w) ((H3ConnCtx *)(void *)((w) + H3_OFF_CTX))
+// H3_OFF_CTX is 0, so a callback is handed back the span it was bound with.
+#define H3_SPAN(c) ((uint8_t *)(void *)(c))
 
 // The connection's bytes, split by offset over its streams. Idempotent: a connection initialised
 // again keeps the borrow it already holds, because the persistent end is never given back.
-static proto_bool h3_conn_slot_storage(H3Conn *h3)
+static proto_bool h3_conn_slot_storage(H3ConnCtx *h3)
 {
-    uint8_t *base = h3->streams[0].buf; // H3_OFF_BUF is 0, so the borrow is recoverable from it
+    uint8_t *base = h3->b;
     if (base == NULL)
     {
-        protocore_span b = protocore_plaintext_persist_span(PROTOCORE_H3_CONN_BORROW);
-        if (!span.ok(b))
-        {
-            return PROTO_FALSE;
-        }
-        base = b.buf;
+        return PROTO_FALSE;
     }
     for (size_t i = 0; i < PROTOCORE_H3_MAX_STREAMS; i++)
     {
@@ -61,7 +116,7 @@ static proto_bool h3_conn_slot_storage(H3Conn *h3)
     return PROTO_TRUE;
 }
 
-static H3Stream *protocore_h3_stream_get(H3Conn *h3, uint64_t id, proto_bool create)
+static H3Stream *protocore_h3_stream_get(H3ConnCtx *h3, uint64_t id, proto_bool create)
 {
     H3Stream *free_slot = NULL;
     for (size_t i = 0; i < PROTOCORE_H3_MAX_STREAMS; i++)
@@ -134,16 +189,18 @@ static proto_bool req_emit(void *ctx, const char *name, size_t nlen, const char 
 // Close the connection with an RFC 9114 sec 8.1 error code. HTTP/3 errors are the application's,
 // so they travel in a CONNECTION_CLOSE of type 0x1d; in the transport variant the same number
 // would name a completely different condition.
-static void h3_fail(H3Conn *h3, uint64_t error_code)
+static void h3_fail(H3ConnCtx *h3, uint64_t error_code)
 {
     if (h3->qc)
     {
-        protocore_quic_conn_close_app(h3->qc, error_code);
+        QuicConn.bind.ctx = h3->qc;
+        QuicConn.close_args.error_code = error_code;
+        QuicConn.close_app(QuicConn.internal);
     }
 }
 
 // Parse the accumulated request stream: decode HEADERS, coalesce DATA into a body, and dispatch.
-static void dispatch_request(H3Conn *h3, H3Stream *st)
+static void dispatch_request(H3ConnCtx *h3, H3Stream *st)
 {
     // The bytes this dispatch works out of: the coalesced body and what QPACK decodes through. They
     // live for the call, so they come from the transient end and go back at every exit.
@@ -219,7 +276,7 @@ static void dispatch_request(H3Conn *h3, H3Stream *st)
 
     if (st->have_headers && h3->on_request)
     {
-        h3->on_request(h3->app, h3, st->id, st->method, st->path, st->authority, body, body_len);
+        h3->on_request(h3->app, H3_SPAN(h3), st->id, st->method, st->path, st->authority, body, body_len);
     }
     protocore_plaintext_release(mark);
 }
@@ -236,7 +293,7 @@ static void append(H3Stream *st, const uint8_t *data, size_t len)
 
 // Read the leading stream-type varint of a uni stream and set st->role; consumes it from the buffer.
 // Returns false if more bytes are needed (nothing consumed).
-static proto_bool protocore_h3_classify_uni_stream(H3Conn *h3, H3Stream *st)
+static proto_bool protocore_h3_classify_uni_stream(H3ConnCtx *h3, H3Stream *st)
 {
     uint64_t type = 0;
     size_t c = 0;
@@ -276,7 +333,7 @@ static proto_bool protocore_h3_classify_uni_stream(H3Conn *h3, H3Stream *st)
 }
 
 // Parse whatever complete frames the control stream holds (SETTINGS first), consuming them.
-static void protocore_h3_consume_control(H3Conn *h3, H3Stream *st)
+static void protocore_h3_consume_control(H3ConnCtx *h3, H3Stream *st)
 {
     size_t off = 0;
     while (off < st->buf_len)
@@ -318,10 +375,9 @@ static void protocore_h3_consume_control(H3Conn *h3, H3Stream *st)
     st->buf_len -= off;
 }
 
-static void on_stream_data(void *app, struct QuicConn *, uint64_t stream_id, const uint8_t *data, size_t len,
-                           proto_bool fin)
+static void on_stream_data(void *app, uint8_t *, uint64_t stream_id, const uint8_t *data, size_t len, proto_bool fin)
 {
-    H3Conn *h3 = (H3Conn *)app;
+    H3ConnCtx *h3 = (H3ConnCtx *)app;
     H3Stream *st = protocore_h3_stream_get(h3, stream_id, PROTO_TRUE);
     if (!st)
     {
@@ -358,9 +414,9 @@ static void on_stream_data(void *app, struct QuicConn *, uint64_t stream_id, con
     }
 }
 
-static void on_handshake_done(void *app, struct QuicConn *qc)
+static void on_handshake_done(void *app, uint8_t *qc)
 {
-    H3Conn *h3 = (H3Conn *)app;
+    H3ConnCtx *h3 = (H3ConnCtx *)app;
     if (h3->control_opened)
     {
         return;
@@ -373,29 +429,44 @@ static void on_handshake_done(void *app, struct QuicConn *qc)
     static const uint64_t ids[] = {H3_SETTINGS_QPACK_MAX_TABLE_CAPACITY, H3_SETTINGS_QPACK_BLOCKED_STREAMS};
     static const uint64_t vals[] = {0, 0};
     p += protocore_h3_build_settings(buf + p, sizeof(buf) - p, ids, vals, 2);
-    protocore_quic_conn_stream_send(qc, 3, buf, p, PROTO_FALSE);
+    QuicConn.bind.ctx = qc;
+    QuicConn.stream_send_args.stream_id = 3;
+    QuicConn.stream_send_args.data = buf;
+    QuicConn.stream_send_args.len = p;
+    QuicConn.stream_send_args.fin = PROTO_FALSE;
+    QuicConn.stream_send(QuicConn.internal);
 
     // QPACK encoder (id 7, type 0x02) and decoder (id 11, type 0x03) streams: type byte only.
     uint8_t t;
     size_t n = protocore_quic_varint_encode(&t, 1, 0x02);
-    protocore_quic_conn_stream_send(qc, 7, &t, n, PROTO_FALSE);
+    QuicConn.bind.ctx = qc;
+    QuicConn.stream_send_args.stream_id = 7;
+    QuicConn.stream_send_args.data = &t;
+    QuicConn.stream_send_args.len = n;
+    QuicConn.stream_send_args.fin = PROTO_FALSE;
+    QuicConn.stream_send(QuicConn.internal);
     n = protocore_quic_varint_encode(&t, 1, 0x03);
-    protocore_quic_conn_stream_send(qc, 11, &t, n, PROTO_FALSE);
+    QuicConn.bind.ctx = qc;
+    QuicConn.stream_send_args.stream_id = 11;
+    QuicConn.stream_send_args.data = &t;
+    QuicConn.stream_send_args.len = n;
+    QuicConn.stream_send_args.fin = PROTO_FALSE;
+    QuicConn.stream_send(QuicConn.internal);
     h3->next_uni_id = 15;
 }
 
-void protocore_h3_conn_init(H3Conn *h3, struct QuicConn *qc, H3RequestFn on_request, void *app)
+static void h3_conn_open(H3ConnCtx *h3, uint8_t *qc, H3RequestFn on_request, void *app)
 {
-    uint8_t *base = h3->streams[0].buf; // the borrow is the connection's, not the call's
+    uint8_t *base = h3->b; // the span is the connection's, bound before this call
     mem.set(h3, 0, sizeof(*h3));
-    h3->streams[0].buf = base;
+    h3->b = base;
     if (!h3_conn_slot_storage(h3))
     {
         return; // no bytes to run out of; the connection answers nothing
     }
-    // The borrow carries the previous connection's requests; the pointers to it stay, or the next
-    // init would ask the persistent end for a second borrow it never gives back.
-    mem.set(h3->streams[0].buf, 0, PROTOCORE_H3_CONN_BORROW);
+    // The span carries the previous connection's requests; the context leads it, so only the stream
+    // regions past it are cleared.
+    mem.set(h3->b + H3_OFF_BUF, 0, PROTOCORE_H3_CONN_BORROW - H3_OFF_BUF);
     h3->qc = qc;
     h3->on_request = on_request;
     h3->app = app;
@@ -407,11 +478,13 @@ void protocore_h3_conn_init(H3Conn *h3, struct QuicConn *qc, H3RequestFn on_requ
     protocore_h3_settings_defaults(&h3->peer_settings);
 
     QuicConnCallbacks cb = {on_stream_data, on_handshake_done, h3};
-    qc->cb = cb;
+    QuicConn.bind.ctx = qc;
+    QuicConn.cb = cb;
+    QuicConn.callbacks(QuicConn.internal);
 }
 
-proto_bool protocore_h3_conn_respond(H3Conn *h3, uint64_t stream_id, int status, const char *content_type,
-                                     const uint8_t *body, size_t body_len)
+static proto_bool h3_conn_reply(H3ConnCtx *h3, uint64_t stream_id, int status, const char *content_type,
+                                const uint8_t *body, size_t body_len)
 {
     H3Stream *st = protocore_h3_stream_get(h3, stream_id, PROTO_FALSE);
     if (st)
@@ -485,9 +558,59 @@ proto_bool protocore_h3_conn_respond(H3Conn *h3, uint64_t stream_id, int status,
         }
         op += dn;
     }
-    const proto_bool sent = protocore_quic_conn_stream_send(h3->qc, stream_id, out, op, PROTO_TRUE) == op;
+    QuicConn.bind.ctx = h3->qc;
+    QuicConn.stream_send_args.stream_id = stream_id;
+    QuicConn.stream_send_args.data = out;
+    QuicConn.stream_send_args.len = op;
+    QuicConn.stream_send_args.fin = PROTO_TRUE;
+    QuicConn.stream_send(QuicConn.internal);
+    const proto_bool sent = (QuicConn.n == op);
     protocore_plaintext_release(mark);
     return sent;
 }
+
+// --- the entries -----------------------------------------------------------
+
+// The bound span, as this file's connection. Every entry starts here.
+static H3ConnCtx *h3_bound(struct H3ConnInternal *restrict ctx)
+{
+    if (!ctx || !ctx->ns->bind.b)
+    {
+        return NULL;
+    }
+    ctx->c = H3_CTX(ctx->ns->bind.b);
+    return ctx->c;
+}
+
+static void h3_conn_init(struct H3ConnInternal *restrict ctx)
+{
+    H3ConnCtx *h3 = h3_bound(ctx);
+    H3Conn.ok = PROTO_FALSE;
+    if (!h3 || !H3Conn.bind.qc)
+    {
+        return;
+    }
+    h3->b = H3Conn.bind.b; // survives the wipe inside h3_conn_open
+    h3_conn_open(h3, H3Conn.bind.qc, H3Conn.app_args.on_request, H3Conn.app_args.app);
+    H3Conn.ok = (h3->b != NULL);
+}
+
+static void h3_conn_respond(struct H3ConnInternal *restrict ctx)
+{
+    H3ConnCtx *h3 = h3_bound(ctx);
+    H3Conn.ok = PROTO_FALSE;
+    if (!h3)
+    {
+        return;
+    }
+    H3Conn.ok = h3_conn_reply(h3, H3Conn.respond_args.stream_id, H3Conn.respond_args.status,
+                              H3Conn.respond_args.content_type, H3Conn.respond_args.body, H3Conn.respond_args.body_len);
+}
+
+static struct H3ConnInternal s_h3 = {.ns = &H3Conn};
+
+H3ConnNs H3Conn = {.init = h3_conn_init, .respond = h3_conn_respond, .internal = &s_h3};
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HTTP3

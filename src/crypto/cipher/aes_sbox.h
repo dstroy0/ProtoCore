@@ -20,8 +20,6 @@
 
 #if PROTOCORE_ENABLE_AES_SBOX
 
-#include <stdint.h>
-
 PROTOCORE_BEGIN_DECLS
 
 // AES forward S-box (FIPS 197 Figure 7).

@@ -339,15 +339,14 @@ static proto_bool ee_has_rpk(const uint8_t *msg, size_t mlen)
 
 static const uint8_t SPKI_PREFIX[12] = {0x30, 0x2a, 0x30, 0x05, 0x06, 0x03, 0x2b, 0x65, 0x70, 0x03, 0x21, 0x00};
 
-
 static DtlsConn g_dtls;
 static DtlsConn g_dtls2;
 
 // Takes the caller's transcript and keeps feeding it. No caller reads it back afterwards, so this
 // runs on the context itself rather than the hand-rebased copy it used to fork.
-static void complete_handshake_from_flight(DtlsConn *conn, uint8_t *tr, uint16_t cfin_msg_seq,
-                                           const uint8_t *flight, size_t fl, const uint8_t *client_cid,
-                                           size_t client_cid_len, proto_bool expect_rpk)
+static void complete_handshake_from_flight(DtlsConn *conn, uint8_t *tr, uint16_t cfin_msg_seq, const uint8_t *flight,
+                                           size_t fl, const uint8_t *client_cid, size_t client_cid_len,
+                                           proto_bool expect_rpk)
 {
     size_t off = 0;
 
@@ -385,12 +384,12 @@ static void complete_handshake_from_flight(DtlsConn *conn, uint8_t *tr, uint16_t
     Tls13Ks.bind.kdf = &DTLS13_KDF;
     Tls13Ks.bind.ks = &cks;
     Tls13Ks.bind.s = ks_store_392;
-    Tls13Ks.early(Tls13Ks.internal);
+    Tls13Ks.early(NULL);
     Tls13Ks.bind.ks = &cks;
     Tls13Ks.step.ecdhe = ecdhe;
     Tls13Ks.step.ecdhe_len = 32;
     Tls13Ks.step.ch_sh_hash = h;
-    Tls13Ks.handshake(Tls13Ks.internal);
+    Tls13Ks.handshake(NULL);
 
     DtlsRecordKeys srv_read;
     DtlsRecord.keys_derive(&srv_read, DTLS_CIPHER_AES_128_GCM_SHA256, 2, cks.s + TLS13_KS_SERVER_HS);
@@ -442,7 +441,7 @@ static void complete_handshake_from_flight(DtlsConn *conn, uint8_t *tr, uint16_t
             Tls13Ks.finished_args.base_secret = cks.s + TLS13_KS_SERVER_HS;
             Tls13Ks.finished_args.transcript_hash = hcv;
             Tls13Ks.finished_args.out = expect;
-            Tls13Ks.finished_mac(Tls13Ks.internal);
+            Tls13Ks.finished_mac(NULL);
             TEST_ASSERT_EQUAL_MEMORY(expect, msg + 4, 32);
             seen_fin = 1;
         }
@@ -481,14 +480,14 @@ static void complete_handshake_from_flight(DtlsConn *conn, uint8_t *tr, uint16_t
     Sha256.final(tr);
     Tls13Ks.bind.ks = &cks;
     Tls13Ks.step.ch_sfin_hash = h_sfin;
-    Tls13Ks.master(Tls13Ks.internal);
+    Tls13Ks.master(NULL);
 
     uint8_t cfin_verify[32];
     Tls13Ks.bind.ks = &cks;
     Tls13Ks.finished_args.base_secret = cks.s + TLS13_KS_CLIENT_HS;
     Tls13Ks.finished_args.transcript_hash = h_sfin;
     Tls13Ks.finished_args.out = cfin_verify;
-    Tls13Ks.finished_mac(Tls13Ks.internal);
+    Tls13Ks.finished_mac(NULL);
     uint8_t cfin[64];
     size_t cfin_len = protocore_tls13_build_finished(cfin, sizeof(cfin), cfin_verify);
 
@@ -836,8 +835,7 @@ static void test_reject_no_tls13(void)
     TEST_ASSERT_EQUAL_UINT8(70, DtlsServer.alert(&g_dtls));
 }
 
-static int drive_server_flight(DtlsConn *conn, DtlsServerConfig *cfg, uint8_t **tr, uint8_t *flight,
-                               size_t flight_cap)
+static int drive_server_flight(DtlsConn *conn, DtlsServerConfig *cfg, uint8_t **tr, uint8_t *flight, size_t flight_cap)
 {
     uint8_t client_pub[32];
     Curve25519.x25519_base_args.out = client_pub;
@@ -962,12 +960,12 @@ static void test_pto_ack_cancels_retransmit(void)
     Tls13Ks.bind.kdf = &DTLS13_KDF;
     Tls13Ks.bind.ks = &cks;
     Tls13Ks.bind.s = ks_store_929;
-    Tls13Ks.early(Tls13Ks.internal);
+    Tls13Ks.early(NULL);
     Tls13Ks.bind.ks = &cks;
     Tls13Ks.step.ecdhe = ecdhe;
     Tls13Ks.step.ecdhe_len = 32;
     Tls13Ks.step.ch_sh_hash = h;
-    Tls13Ks.handshake(Tls13Ks.internal);
+    Tls13Ks.handshake(NULL);
     DtlsRecordKeys cli_write;
     DtlsRecord.keys_derive(&cli_write, DTLS_CIPHER_AES_128_GCM_SHA256, 2, cks.s + TLS13_KS_CLIENT_HS);
 
@@ -1072,12 +1070,12 @@ static proto_bool run_to_finished(DtlsConn *conn, DtlsServerConfig *cfg, ClientS
     Tls13Ks.bind.kdf = &DTLS13_KDF;
     Tls13Ks.bind.ks = &st->cks;
     Tls13Ks.bind.s = ks_store_1033;
-    Tls13Ks.early(Tls13Ks.internal);
+    Tls13Ks.early(NULL);
     Tls13Ks.bind.ks = &st->cks;
     Tls13Ks.step.ecdhe = ecdhe;
     Tls13Ks.step.ecdhe_len = 32;
     Tls13Ks.step.ch_sh_hash = h;
-    Tls13Ks.handshake(Tls13Ks.internal);
+    Tls13Ks.handshake(NULL);
     DtlsRecord.keys_derive(&st->srv_hs_read, DTLS_CIPHER_AES_128_GCM_SHA256, 2, st->cks.s + TLS13_KS_SERVER_HS);
     DtlsRecord.keys_derive(&st->cli_hs_write, DTLS_CIPHER_AES_128_GCM_SHA256, 2, st->cks.s + TLS13_KS_CLIENT_HS);
 
@@ -1113,7 +1111,7 @@ static proto_bool run_to_finished(DtlsConn *conn, DtlsServerConfig *cfg, ClientS
     Sha256.final(tr);
     Tls13Ks.bind.ks = &st->cks;
     Tls13Ks.step.ch_sfin_hash = h_sfin;
-    Tls13Ks.master(Tls13Ks.internal);
+    Tls13Ks.master(NULL);
     DtlsRecord.keys_derive(&st->cli_app_write, DTLS_CIPHER_AES_128_GCM_SHA256, 3, st->cks.s + TLS13_KS_CLIENT_AP);
     DtlsRecord.keys_derive(&st->cli_app_read, DTLS_CIPHER_AES_128_GCM_SHA256, 3, st->cks.s + TLS13_KS_SERVER_AP);
 
@@ -1122,7 +1120,7 @@ static proto_bool run_to_finished(DtlsConn *conn, DtlsServerConfig *cfg, ClientS
     Tls13Ks.finished_args.base_secret = st->cks.s + TLS13_KS_CLIENT_HS;
     Tls13Ks.finished_args.transcript_hash = h_sfin;
     Tls13Ks.finished_args.out = verify;
-    Tls13Ks.finished_mac(Tls13Ks.internal);
+    Tls13Ks.finished_mac(NULL);
     uint8_t cfin[64];
     size_t cfin_len = protocore_tls13_build_finished(cfin, sizeof(cfin), verify);
     if (cfin_len < 4)

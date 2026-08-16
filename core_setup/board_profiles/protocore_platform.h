@@ -223,7 +223,6 @@
 #endif
 #endif
 
-
 // SNTP has no vendor seam: network_drivers/application/ntp_service is the client on every target. It
 // asks a server over the UDP listener, keeps the epoch in its own state, and hands it out through
 // protocore_ntp_epoch(); nothing in libc moves.
@@ -330,10 +329,6 @@
 // trivially agrees and the tripwire is a no-op rather than a false alarm.
 uintptr_t protocore_platform_context_id(void);
 
-
-
-
-
 // The stored image's state, in the order a rollback walks it. These values are the library's own;
 // each arm maps its vendor's onto them, so a caller reads one set whatever it is running on.
 #define PROTOCORE_PLATFORM_IMG_NEW 0
@@ -342,9 +337,6 @@ uintptr_t protocore_platform_context_id(void);
 #define PROTOCORE_PLATFORM_IMG_INVALID 3
 #define PROTOCORE_PLATFORM_IMG_ABORTED 4
 #define PROTOCORE_PLATFORM_IMG_UNDEFINED 0xFF
-
-
-
 
 // ---------------------------------------------------------------------------
 // The target's scheduler and network stack, under our names

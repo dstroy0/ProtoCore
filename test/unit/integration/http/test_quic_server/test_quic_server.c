@@ -85,7 +85,8 @@ static void deliver(const uint8_t *dg, size_t len, const char *ip, uint16_t port
 static void run(uint32_t now_ms)
 {
     UdpListener.poll(UdpListener.internal);
-    protocore_quic_server_poll(now_ms);
+    QuicServer.now_ms = now_ms;
+    QuicServer.poll(QuicServer.internal);
     UdpListener.poll(UdpListener.internal);
     harvest();
 }
@@ -103,7 +104,13 @@ static void app_request(void *, uint32_t conn_id, uint64_t sid, const char *meth
 {
     strncpy(g_method, method, sizeof(g_method) - 1);
     strncpy(g_path, path, sizeof(g_path) - 1);
-    protocore_quic_server_respond(conn_id, sid, 200, "text/plain", (const uint8_t *)"hello h3", 8);
+    QuicServer.stream.conn_id = conn_id;
+    QuicServer.stream.stream_id = sid;
+    QuicServer.resp.status = 200;
+    QuicServer.resp.content_type = "text/plain";
+    QuicServer.resp.body = (const uint8_t *)"hello h3";
+    QuicServer.resp.body_len = 8;
+    QuicServer.respond(QuicServer.internal);
 }
 
 static void fill()
@@ -389,7 +396,12 @@ void test_quic_server_http3_get()
 
     QuicServerConfig scfg;
     config(&scfg, test_rng);
-    TEST_ASSERT_TRUE(protocore_quic_server_begin(H3_PORT, &scfg, app_request, NULL));
+    QuicServer.begin_args.port = H3_PORT;
+    QuicServer.begin_args.cfg = &scfg;
+    QuicServer.begin_args.on_request = app_request;
+    QuicServer.begin_args.app = NULL;
+    QuicServer.begin(QuicServer.internal);
+    TEST_ASSERT_TRUE(QuicServer.ok);
 
     QuicInitialSecrets init;
     protocore_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
@@ -415,7 +427,8 @@ void test_quic_server_http3_get()
                            &init.client, frames, fl);
 
     feed(dg, dl, "192.0.2.10", 40000, 0);
-    TEST_ASSERT_EQUAL_UINT8(1, protocore_quic_server_active_conns());
+    QuicServer.active_conns(QuicServer.internal);
+    TEST_ASSERT_EQUAL_UINT8(1, QuicServer.u8);
     TEST_ASSERT_GREATER_THAN(0, g_out_n);
 
     uint8_t plain[2048], sh[512], hsf[1024];
@@ -450,12 +463,12 @@ void test_quic_server_http3_get()
     Tls13Ks.bind.kdf = &TLS13_KDF;
     Tls13Ks.bind.ks = &cks;
     Tls13Ks.bind.s = ks_store_464;
-    Tls13Ks.early(Tls13Ks.internal);
+    Tls13Ks.early(NULL);
     Tls13Ks.bind.ks = &cks;
     Tls13Ks.step.ecdhe = ecdhe;
     Tls13Ks.step.ecdhe_len = sizeof(ecdhe);
     Tls13Ks.step.ch_sh_hash = chsh;
-    Tls13Ks.handshake(Tls13Ks.internal);
+    Tls13Ks.handshake(NULL);
     QuicPacketKeys hs_s, hs_c, ap_s, ap_c;
     protocore_quic_keys_from_secret(tw, cks.s + TLS13_KS_SERVER_HS, &hs_s);
     protocore_quic_keys_from_secret(tw, cks.s + TLS13_KS_CLIENT_HS, &hs_c);
@@ -470,7 +483,7 @@ void test_quic_server_http3_get()
     Sha256.final(t);
     Tls13Ks.bind.ks = &cks;
     Tls13Ks.step.ch_sfin_hash = chsf;
-    Tls13Ks.master(Tls13Ks.internal);
+    Tls13Ks.master(NULL);
     protocore_quic_keys_from_secret(tw, cks.s + TLS13_KS_SERVER_AP, &ap_s);
     protocore_quic_keys_from_secret(tw, cks.s + TLS13_KS_CLIENT_AP, &ap_c);
 
@@ -484,7 +497,7 @@ void test_quic_server_http3_get()
     Tls13Ks.finished_args.base_secret = cks.s + TLS13_KS_CLIENT_HS;
     Tls13Ks.finished_args.transcript_hash = chsf;
     Tls13Ks.finished_args.out = cfin + 4;
-    Tls13Ks.finished_mac(Tls13Ks.internal);
+    Tls13Ks.finished_mac(NULL);
     uint8_t hfr[64];
     size_t hfl = protocore_quic_build_ack(hfr, sizeof(hfr), 0, 0, 0);
     hfl += protocore_quic_build_crypto(hfr + hfl, sizeof(hfr) - hfl, 0, cfin, sizeof(cfin));
@@ -511,8 +524,9 @@ void test_quic_server_http3_get()
 
     TEST_ASSERT_TRUE(response_ok(&ap_s));
 
-    protocore_quic_server_stop();
-    TEST_ASSERT_EQUAL_UINT8(0, protocore_quic_server_active_conns());
+    QuicServer.stop(QuicServer.internal);
+    QuicServer.active_conns(QuicServer.internal);
+    TEST_ASSERT_EQUAL_UINT8(0, QuicServer.u8);
 }
 
 void test_idle_connection_reaped()
@@ -522,21 +536,29 @@ void test_idle_connection_reaped()
 
     QuicServerConfig scfg;
     config(&scfg, test_rng);
-    TEST_ASSERT_TRUE(protocore_quic_server_begin(H3_PORT, &scfg, app_request, NULL));
+    QuicServer.begin_args.port = H3_PORT;
+    QuicServer.begin_args.cfg = &scfg;
+    QuicServer.begin_args.on_request = app_request;
+    QuicServer.begin_args.app = NULL;
+    QuicServer.begin(QuicServer.internal);
+    TEST_ASSERT_TRUE(QuicServer.ok);
 
     uint8_t dg[1500];
     size_t dl = make_client_initial(dg, sizeof(dg));
     feed(dg, dl, "192.0.2.10", 40000, now);
-    TEST_ASSERT_EQUAL_UINT8(1, protocore_quic_server_active_conns());
+    QuicServer.active_conns(QuicServer.internal);
+    TEST_ASSERT_EQUAL_UINT8(1, QuicServer.u8);
 
     now += PROTOCORE_QUIC_IDLE_MS - 1;
     run(now);
-    TEST_ASSERT_EQUAL_UINT8(1, protocore_quic_server_active_conns());
+    QuicServer.active_conns(QuicServer.internal);
+    TEST_ASSERT_EQUAL_UINT8(1, QuicServer.u8);
     now += 2;
     run(now);
-    TEST_ASSERT_EQUAL_UINT8(0, protocore_quic_server_active_conns());
+    QuicServer.active_conns(QuicServer.internal);
+    TEST_ASSERT_EQUAL_UINT8(0, QuicServer.u8);
 
-    protocore_quic_server_stop();
+    QuicServer.stop(QuicServer.internal);
 }
 
 static void bulk_rng(uint8_t *out, size_t len)
@@ -561,25 +583,49 @@ void test_quic_server_input_guards()
 {
     fill();
 
-    TEST_ASSERT_FALSE(protocore_quic_server_begin(H3_PORT, NULL, app_request, NULL));
+    QuicServer.begin_args.port = H3_PORT;
+    QuicServer.begin_args.cfg = NULL;
+    QuicServer.begin_args.on_request = app_request;
+    QuicServer.begin_args.app = NULL;
+    QuicServer.begin(QuicServer.internal);
+    TEST_ASSERT_FALSE(QuicServer.ok);
     QuicServerConfig scfg;
     config(&scfg, NULL);
-    TEST_ASSERT_FALSE(protocore_quic_server_begin(H3_PORT, &scfg, app_request, NULL));
+    QuicServer.begin_args.port = H3_PORT;
+    QuicServer.begin_args.cfg = &scfg;
+    QuicServer.begin_args.on_request = app_request;
+    QuicServer.begin_args.app = NULL;
+    QuicServer.begin(QuicServer.internal);
+    TEST_ASSERT_FALSE(QuicServer.ok);
 
-    protocore_quic_server_stop();
-    protocore_quic_server_poll(0);
+    QuicServer.stop(QuicServer.internal);
+    QuicServer.now_ms = 0;
+    QuicServer.poll(QuicServer.internal);
 
     scfg.rng = test_rng;
-    TEST_ASSERT_TRUE(protocore_quic_server_begin(H3_PORT, &scfg, app_request, NULL));
+    QuicServer.begin_args.port = H3_PORT;
+    QuicServer.begin_args.cfg = &scfg;
+    QuicServer.begin_args.on_request = app_request;
+    QuicServer.begin_args.app = NULL;
+    QuicServer.begin(QuicServer.internal);
+    TEST_ASSERT_TRUE(QuicServer.ok);
 
     uint8_t one[1] = {0x40};
     feed(one, 0, "192.0.2.1", 1, 0);
     static uint8_t huge[PROTOCORE_QUIC_MAX_DATAGRAM + 1];
     feed(huge, sizeof(huge), "192.0.2.1", 1, 0);
-    TEST_ASSERT_EQUAL_UINT8(0, protocore_quic_server_active_conns());
+    QuicServer.active_conns(QuicServer.internal);
+    TEST_ASSERT_EQUAL_UINT8(0, QuicServer.u8);
     TEST_ASSERT_EQUAL_INT(0, (int)protocore_net_host_udp_sent());
 
-    TEST_ASSERT_FALSE(protocore_quic_server_respond(999999, 0, 200, "text/plain", NULL, 0));
+    QuicServer.stream.conn_id = 999999;
+    QuicServer.stream.stream_id = 0;
+    QuicServer.resp.status = 200;
+    QuicServer.resp.content_type = "text/plain";
+    QuicServer.resp.body = NULL;
+    QuicServer.resp.body_len = 0;
+    QuicServer.respond(QuicServer.internal);
+    TEST_ASSERT_FALSE(QuicServer.ok);
 
     uint8_t bad_long[1] = {0xC0};
     feed(bad_long, sizeof(bad_long), "192.0.2.1", 1, 0);
@@ -587,9 +633,10 @@ void test_quic_server_input_guards()
     feed(short_tiny, sizeof(short_tiny), "192.0.2.1", 1, 0);
     uint8_t short_unknown[1 + PROTOCORE_QUIC_SCID_LEN] = {0x40, 9, 9, 9, 9, 9, 9, 9, 9};
     feed(short_unknown, sizeof(short_unknown), "192.0.2.1", 1, 0);
-    TEST_ASSERT_EQUAL_UINT8(0, protocore_quic_server_active_conns());
+    QuicServer.active_conns(QuicServer.internal);
+    TEST_ASSERT_EQUAL_UINT8(0, QuicServer.u8);
 
-    protocore_quic_server_stop();
+    QuicServer.stop(QuicServer.internal);
 }
 
 void test_ingest_ring_drops_past_capacity()
@@ -597,7 +644,12 @@ void test_ingest_ring_drops_past_capacity()
     fill();
     QuicServerConfig scfg;
     config(&scfg, bulk_rng);
-    TEST_ASSERT_TRUE(protocore_quic_server_begin(H3_PORT, &scfg, app_request, NULL));
+    QuicServer.begin_args.port = H3_PORT;
+    QuicServer.begin_args.cfg = &scfg;
+    QuicServer.begin_args.on_request = app_request;
+    QuicServer.begin_args.app = NULL;
+    QuicServer.begin(QuicServer.internal);
+    TEST_ASSERT_TRUE(QuicServer.ok);
 
     uint8_t dcid_a[8] = {0xA0, 0xA1, 0xA2, 0xA3, 0xA4, 0xA5, 0xA6, 0xA7};
     uint8_t dcid_b[8] = {0xB0, 0xB1, 0xB2, 0xB3, 0xB4, 0xB5, 0xB6, 0xB7};
@@ -612,10 +664,16 @@ void test_ingest_ring_drops_past_capacity()
     }
     deliver(b, bl, "192.0.2.1", 1);
     run(0);
-    TEST_ASSERT_EQUAL_UINT8(2, protocore_quic_server_active_conns());
+    QuicServer.active_conns(QuicServer.internal);
+    TEST_ASSERT_EQUAL_UINT8(2, QuicServer.u8);
 
-    protocore_quic_server_stop();
-    TEST_ASSERT_TRUE(protocore_quic_server_begin(H3_PORT, &scfg, app_request, NULL));
+    QuicServer.stop(QuicServer.internal);
+    QuicServer.begin_args.port = H3_PORT;
+    QuicServer.begin_args.cfg = &scfg;
+    QuicServer.begin_args.on_request = app_request;
+    QuicServer.begin_args.app = NULL;
+    QuicServer.begin(QuicServer.internal);
+    TEST_ASSERT_TRUE(QuicServer.ok);
 
     deliver(a, al, "192.0.2.1", 1);
     for (int i = 0; i < PROTOCORE_QUIC_INGEST_RING; i++)
@@ -624,9 +682,10 @@ void test_ingest_ring_drops_past_capacity()
     }
     deliver(b, bl, "192.0.2.1", 1);
     run(0);
-    TEST_ASSERT_EQUAL_UINT8(1, protocore_quic_server_active_conns());
+    QuicServer.active_conns(QuicServer.internal);
+    TEST_ASSERT_EQUAL_UINT8(1, QuicServer.u8);
 
-    protocore_quic_server_stop();
+    QuicServer.stop(QuicServer.internal);
 }
 
 void test_quic_server_pool_full()
@@ -634,7 +693,12 @@ void test_quic_server_pool_full()
     fill();
     QuicServerConfig scfg;
     config(&scfg, bulk_rng);
-    TEST_ASSERT_TRUE(protocore_quic_server_begin(H3_PORT, &scfg, app_request, NULL));
+    QuicServer.begin_args.port = H3_PORT;
+    QuicServer.begin_args.cfg = &scfg;
+    QuicServer.begin_args.on_request = app_request;
+    QuicServer.begin_args.app = NULL;
+    QuicServer.begin(QuicServer.internal);
+    TEST_ASSERT_TRUE(QuicServer.ok);
 
     for (int i = 0; i <= PROTOCORE_QUIC_MAX_CONNS; i++)
     {
@@ -644,8 +708,9 @@ void test_quic_server_pool_full()
         deliver(dg, dl, "192.0.2.10", 40000);
     }
     run(0);
-    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_QUIC_MAX_CONNS, protocore_quic_server_active_conns());
-    protocore_quic_server_stop();
+    QuicServer.active_conns(QuicServer.internal);
+    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_QUIC_MAX_CONNS, QuicServer.u8);
+    QuicServer.stop(QuicServer.internal);
 }
 
 void test_quic_server_replies_to_the_captured_peer()
@@ -653,12 +718,18 @@ void test_quic_server_replies_to_the_captured_peer()
     fill();
     QuicServerConfig scfg;
     config(&scfg, test_rng);
-    TEST_ASSERT_TRUE(protocore_quic_server_begin(H3_PORT, &scfg, app_request, NULL));
+    QuicServer.begin_args.port = H3_PORT;
+    QuicServer.begin_args.cfg = &scfg;
+    QuicServer.begin_args.on_request = app_request;
+    QuicServer.begin_args.app = NULL;
+    QuicServer.begin(QuicServer.internal);
+    TEST_ASSERT_TRUE(QuicServer.ok);
 
     uint8_t dg[1500];
     size_t dl = make_client_initial(dg, sizeof(dg));
     feed(dg, dl, "255.255.255.255", 40009, 0);
-    TEST_ASSERT_EQUAL_UINT8(1, protocore_quic_server_active_conns());
+    QuicServer.active_conns(QuicServer.internal);
+    TEST_ASSERT_EQUAL_UINT8(1, QuicServer.u8);
 
     TEST_ASSERT_GREATER_THAN(0, (int)protocore_net_host_udp_count());
     const protocore_net_host_dgram *d = protocore_net_host_udp_at(0);
@@ -668,7 +739,7 @@ void test_quic_server_replies_to_the_captured_peer()
     TEST_ASSERT_EQUAL_UINT16(40009, d->dst_port);
     TEST_ASSERT_EQUAL_UINT16(H3_PORT, d->src_port);
 
-    protocore_quic_server_stop();
+    QuicServer.stop(QuicServer.internal);
 }
 
 void test_quic_server_unrenderable_peer_dropped()
@@ -676,16 +747,22 @@ void test_quic_server_unrenderable_peer_dropped()
     fill();
     QuicServerConfig scfg;
     config(&scfg, test_rng);
-    TEST_ASSERT_TRUE(protocore_quic_server_begin(H3_PORT, &scfg, app_request, NULL));
+    QuicServer.begin_args.port = H3_PORT;
+    QuicServer.begin_args.cfg = &scfg;
+    QuicServer.begin_args.on_request = app_request;
+    QuicServer.begin_args.app = NULL;
+    QuicServer.begin(QuicServer.internal);
+    TEST_ASSERT_TRUE(QuicServer.ok);
 
     uint8_t dg[1500];
     size_t dl = make_client_initial(dg, sizeof(dg));
     feed(dg, dl, NULL, 40000, 0);
 
-    TEST_ASSERT_EQUAL_UINT8(0, protocore_quic_server_active_conns());
+    QuicServer.active_conns(QuicServer.internal);
+    TEST_ASSERT_EQUAL_UINT8(0, QuicServer.u8);
     TEST_ASSERT_EQUAL_INT(0, (int)protocore_net_host_udp_sent());
 
-    protocore_quic_server_stop();
+    QuicServer.stop(QuicServer.internal);
 }
 
 void test_quic_server_respond_unknown_id_with_active_conn()
@@ -693,16 +770,29 @@ void test_quic_server_respond_unknown_id_with_active_conn()
     fill();
     QuicServerConfig scfg;
     config(&scfg, test_rng);
-    TEST_ASSERT_TRUE(protocore_quic_server_begin(H3_PORT, &scfg, app_request, NULL));
+    QuicServer.begin_args.port = H3_PORT;
+    QuicServer.begin_args.cfg = &scfg;
+    QuicServer.begin_args.on_request = app_request;
+    QuicServer.begin_args.app = NULL;
+    QuicServer.begin(QuicServer.internal);
+    TEST_ASSERT_TRUE(QuicServer.ok);
 
     uint8_t dg0[256];
     size_t dl0 = make_min_initial(dg0, sizeof(dg0), ODCID, sizeof(ODCID));
     feed(dg0, dl0, "192.0.2.10", 40000, 0);
-    TEST_ASSERT_EQUAL_UINT8(1, protocore_quic_server_active_conns());
+    QuicServer.active_conns(QuicServer.internal);
+    TEST_ASSERT_EQUAL_UINT8(1, QuicServer.u8);
 
-    TEST_ASSERT_FALSE(protocore_quic_server_respond(2, 0, 200, "text/plain", NULL, 0));
+    QuicServer.stream.conn_id = 2;
+    QuicServer.stream.stream_id = 0;
+    QuicServer.resp.status = 200;
+    QuicServer.resp.content_type = "text/plain";
+    QuicServer.resp.body = NULL;
+    QuicServer.resp.body_len = 0;
+    QuicServer.respond(QuicServer.internal);
+    TEST_ASSERT_FALSE(QuicServer.ok);
 
-    protocore_quic_server_stop();
+    QuicServer.stop(QuicServer.internal);
 }
 
 void test_quic_server_begin_default_port()
@@ -710,9 +800,14 @@ void test_quic_server_begin_default_port()
     fill();
     QuicServerConfig scfg;
     config(&scfg, test_rng);
-    TEST_ASSERT_TRUE(protocore_quic_server_begin(0, &scfg, app_request, NULL));
+    QuicServer.begin_args.port = 0;
+    QuicServer.begin_args.cfg = &scfg;
+    QuicServer.begin_args.on_request = app_request;
+    QuicServer.begin_args.app = NULL;
+    QuicServer.begin(QuicServer.internal);
+    TEST_ASSERT_TRUE(QuicServer.ok);
     TEST_ASSERT_NOT_NULL(protocore_net_host_udp_pcb(PROTOCORE_HTTP3_PORT));
-    protocore_quic_server_stop();
+    QuicServer.stop(QuicServer.internal);
 }
 
 void test_quic_server_route_header_edges()
@@ -720,12 +815,18 @@ void test_quic_server_route_header_edges()
     fill();
     QuicServerConfig scfg;
     config(&scfg, test_rng);
-    TEST_ASSERT_TRUE(protocore_quic_server_begin(H3_PORT, &scfg, app_request, NULL));
+    QuicServer.begin_args.port = H3_PORT;
+    QuicServer.begin_args.cfg = &scfg;
+    QuicServer.begin_args.on_request = app_request;
+    QuicServer.begin_args.app = NULL;
+    QuicServer.begin(QuicServer.internal);
+    TEST_ASSERT_TRUE(QuicServer.ok);
 
     uint8_t dg0[256];
     size_t dl0 = make_min_initial(dg0, sizeof(dg0), ODCID, sizeof(ODCID));
     feed(dg0, dl0, "192.0.2.10", 40000, 0);
-    TEST_ASSERT_EQUAL_UINT8(1, protocore_quic_server_active_conns());
+    QuicServer.active_conns(QuicServer.internal);
+    TEST_ASSERT_EQUAL_UINT8(1, QuicServer.u8);
 
     uint8_t short_dcid[4] = {0x11, 0x22, 0x33, 0x44};
     uint8_t hs_hdr[64];
@@ -748,7 +849,8 @@ void test_quic_server_route_header_edges()
     deliver(scid_hdr, scid_hdr_len, "192.0.2.13", 40003);
 
     run(0);
-    TEST_ASSERT_EQUAL_UINT8(1, protocore_quic_server_active_conns());
+    QuicServer.active_conns(QuicServer.internal);
+    TEST_ASSERT_EQUAL_UINT8(1, QuicServer.u8);
 
     uint8_t wrong_scid[1 + PROTOCORE_QUIC_SCID_LEN];
     wrong_scid[0] = 0x40;
@@ -757,9 +859,10 @@ void test_quic_server_route_header_edges()
         wrong_scid[1 + i] = (uint8_t)(0xEE + i);
     }
     feed(wrong_scid, sizeof(wrong_scid), "192.0.2.14", 40004, 0);
-    TEST_ASSERT_EQUAL_UINT8(1, protocore_quic_server_active_conns());
+    QuicServer.active_conns(QuicServer.internal);
+    TEST_ASSERT_EQUAL_UINT8(1, QuicServer.u8);
 
-    protocore_quic_server_stop();
+    QuicServer.stop(QuicServer.internal);
 }
 
 void test_quic_server_close_reaped_before_idle()
@@ -769,7 +872,12 @@ void test_quic_server_close_reaped_before_idle()
 
     QuicServerConfig scfg;
     config(&scfg, test_rng);
-    TEST_ASSERT_TRUE(protocore_quic_server_begin(H3_PORT, &scfg, app_request, NULL));
+    QuicServer.begin_args.port = H3_PORT;
+    QuicServer.begin_args.cfg = &scfg;
+    QuicServer.begin_args.on_request = app_request;
+    QuicServer.begin_args.app = NULL;
+    QuicServer.begin(QuicServer.internal);
+    TEST_ASSERT_TRUE(QuicServer.ok);
 
     QuicInitialSecrets init;
     protocore_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
@@ -780,7 +888,8 @@ void test_quic_server_close_reaped_before_idle()
     size_t dl0 = build_long(dg0, sizeof(dg0), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID),
                             0, &init.client, frames0, fl0);
     feed(dg0, dl0, "192.0.2.20", 40010, now);
-    TEST_ASSERT_EQUAL_UINT8(1, protocore_quic_server_active_conns());
+    QuicServer.active_conns(QuicServer.internal);
+    TEST_ASSERT_EQUAL_UINT8(1, QuicServer.u8);
 
     uint8_t cc_frames[64];
     size_t cc_len = protocore_quic_build_connection_close(cc_frames, sizeof(cc_frames), PROTO_FALSE, 0, 0, NULL, 0);
@@ -789,9 +898,10 @@ void test_quic_server_close_reaped_before_idle()
                             1, &init.client, cc_frames, cc_len);
     now += 5;
     feed(dg1, dl1, "192.0.2.20", 40010, now);
-    TEST_ASSERT_EQUAL_UINT8(0, protocore_quic_server_active_conns());
+    QuicServer.active_conns(QuicServer.internal);
+    TEST_ASSERT_EQUAL_UINT8(0, QuicServer.u8);
 
-    protocore_quic_server_stop();
+    QuicServer.stop(QuicServer.internal);
 }
 
 void test_quic_server_on_request_null()
@@ -800,7 +910,12 @@ void test_quic_server_on_request_null()
 
     QuicServerConfig scfg;
     config(&scfg, test_rng);
-    TEST_ASSERT_TRUE(protocore_quic_server_begin(H3_PORT, &scfg, NULL, NULL));
+    QuicServer.begin_args.port = H3_PORT;
+    QuicServer.begin_args.cfg = &scfg;
+    QuicServer.begin_args.on_request = NULL;
+    QuicServer.begin_args.app = NULL;
+    QuicServer.begin(QuicServer.internal);
+    TEST_ASSERT_TRUE(QuicServer.ok);
 
     QuicInitialSecrets init;
     protocore_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
@@ -826,7 +941,8 @@ void test_quic_server_on_request_null()
                            &init.client, frames, fl);
 
     feed(dg, dl, "192.0.2.10", 40000, 0);
-    TEST_ASSERT_EQUAL_UINT8(1, protocore_quic_server_active_conns());
+    QuicServer.active_conns(QuicServer.internal);
+    TEST_ASSERT_EQUAL_UINT8(1, QuicServer.u8);
     TEST_ASSERT_GREATER_THAN(0, g_out_n);
 
     uint8_t plain[2048], sh[512], hsf[1024];
@@ -861,12 +977,12 @@ void test_quic_server_on_request_null()
     Tls13Ks.bind.kdf = &TLS13_KDF;
     Tls13Ks.bind.ks = &cks;
     Tls13Ks.bind.s = ks_store_900;
-    Tls13Ks.early(Tls13Ks.internal);
+    Tls13Ks.early(NULL);
     Tls13Ks.bind.ks = &cks;
     Tls13Ks.step.ecdhe = ecdhe;
     Tls13Ks.step.ecdhe_len = sizeof(ecdhe);
     Tls13Ks.step.ch_sh_hash = chsh;
-    Tls13Ks.handshake(Tls13Ks.internal);
+    Tls13Ks.handshake(NULL);
     QuicPacketKeys hs_s, hs_c, ap_c;
     protocore_quic_keys_from_secret(tw, cks.s + TLS13_KS_SERVER_HS, &hs_s);
     protocore_quic_keys_from_secret(tw, cks.s + TLS13_KS_CLIENT_HS, &hs_c);
@@ -881,7 +997,7 @@ void test_quic_server_on_request_null()
     Sha256.final(t);
     Tls13Ks.bind.ks = &cks;
     Tls13Ks.step.ch_sfin_hash = chsf;
-    Tls13Ks.master(Tls13Ks.internal);
+    Tls13Ks.master(NULL);
     protocore_quic_keys_from_secret(tw, cks.s + TLS13_KS_CLIENT_AP, &ap_c);
 
     uint8_t ifr[64];
@@ -894,7 +1010,7 @@ void test_quic_server_on_request_null()
     Tls13Ks.finished_args.base_secret = cks.s + TLS13_KS_CLIENT_HS;
     Tls13Ks.finished_args.transcript_hash = chsf;
     Tls13Ks.finished_args.out = cfin + 4;
-    Tls13Ks.finished_mac(Tls13Ks.internal);
+    Tls13Ks.finished_mac(NULL);
     uint8_t hfr[64];
     size_t hfl = protocore_quic_build_ack(hfr, sizeof(hfr), 0, 0, 0);
     hfl += protocore_quic_build_crypto(hfr + hfl, sizeof(hfr) - hfl, 0, cfin, sizeof(cfin));
@@ -917,9 +1033,10 @@ void test_quic_server_on_request_null()
     feed(s1, s1l, "192.0.2.10", 40000, 0);
 
     TEST_ASSERT_EQUAL_STRING("", g_method);
-    TEST_ASSERT_EQUAL_UINT8(1, protocore_quic_server_active_conns());
+    QuicServer.active_conns(QuicServer.internal);
+    TEST_ASSERT_EQUAL_UINT8(1, QuicServer.u8);
 
-    protocore_quic_server_stop();
+    QuicServer.stop(QuicServer.internal);
 }
 
 int main(void)

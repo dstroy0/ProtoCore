@@ -12,11 +12,11 @@
  * other file can name.
  */
 
-#include "network_drivers/session/session.h" // the per-connection tables this reads
 #include "mmgr/membuild.h" // protocore_sb frame builder (replaces snprintf)
 #include "mmgr/protomem.h"
 #include "mmgr/protostr.h" // str.len: send_text measures the body it was handed
 #include "network_drivers/presentation/http/http.h"
+#include "network_drivers/session/session.h"                 // the per-connection tables this reads
 #include "network_drivers/transport/tcp/common.h"            // conn_pool, TcpConn/ConnState
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool.send: the bytes a response writes
 #include "network_drivers/transport/tcp/tcp.h"

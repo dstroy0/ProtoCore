@@ -132,8 +132,7 @@ def check(report):
                 bad.append("%s:%d: coveredBranches %d exceeds branchesToCover %d" % (path, num, nc, nb))
 
             if nlines is not None and num > nlines:
-                bad.append("%s: line %d cited, the file has %d - the report predates an edit"
-                           % (path, num, nlines))
+                bad.append("%s: line %d cited, the file has %d - the report predates an edit" % (path, num, nlines))
     return bad
 
 
@@ -152,8 +151,7 @@ def main():
     bad = check(report)
     if bad:
         rel = os.path.relpath(report, ROOT).replace("\\", "/")
-        print("%s: %d violation(s) of the SonarQube generic coverage format" % (rel, len(bad)),
-              file=sys.stderr)
+        print("%s: %d violation(s) of the SonarQube generic coverage format" % (rel, len(bad)), file=sys.stderr)
         for b in bad[:40]:
             print("  " + b, file=sys.stderr)
         if len(bad) > 40:

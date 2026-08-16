@@ -40,18 +40,18 @@ PROTOCORE_BEGIN_DECLS
 // so a macro computes it from the pointer rather than anything storing it.
 typedef struct
 {
-    const uint8_t *msg;      ///< the message the digest covers
-    size_t msg_len;          ///< its length
-    const uint32_t *x;       ///< left operand of the staged multiply
-    const uint32_t *y;       ///< right operand of the staged multiply
-    uint32_t *z;             ///< where the staged multiply lands
-    uint32_t mprime;         ///< -n^-1 mod 2^32, the accelerator's Montgomery constant
-    protocore_rsa_hash hash; ///< which digest, and which DigestInfo goes in front of it
-    protocore_bignum n;      ///< the modulus every multiply reduces against
-    protocore_bignum base;   ///< the value the ladder raises
-    protocore_bignum exp;    ///< the exponent the ladder walks
-    protocore_bignum acc;    ///< the accumulator, and the result
-    protocore_bignum rr;     ///< R^2 mod n, the accelerator's other Montgomery constant
+    const uint8_t *msg;                          ///< the message the digest covers
+    size_t msg_len;                              ///< its length
+    const uint32_t *x;                           ///< left operand of the staged multiply
+    const uint32_t *y;                           ///< right operand of the staged multiply
+    uint32_t *z;                                 ///< where the staged multiply lands
+    uint32_t mprime;                             ///< -n^-1 mod 2^32, the accelerator's Montgomery constant
+    protocore_rsa_hash hash;                     ///< which digest, and which DigestInfo goes in front of it
+    protocore_bignum n;                          ///< the modulus every multiply reduces against
+    protocore_bignum base;                       ///< the value the ladder raises
+    protocore_bignum exp;                        ///< the exponent the ladder walks
+    protocore_bignum acc;                        ///< the accumulator, and the result
+    protocore_bignum rr;                         ///< R^2 mod n, the accelerator's other Montgomery constant
     uint32_t prod[2 * PROTOCORE_BN_LIMBS];       ///< the double-width product a software multiply builds
     uint8_t digest[PROTOCORE_SHA512_DIGEST_LEN]; ///< the message digest, the selected algorithm's length
     uint8_t em[PROTOCORE_RSA_KEY_BYTES];         ///< the PKCS#1 v1.5 block the digest is encoded into

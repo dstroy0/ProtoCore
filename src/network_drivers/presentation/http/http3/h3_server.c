@@ -6,17 +6,14 @@
  * @brief The HTTP/3 request bridge. See h3_server.h.
  */
 
-#include "network_drivers/session/session.h" // the per-connection tables this reads
-#include "network_drivers/presentation/http/http3/h3_server.h"
-
 #if PROTOCORE_ENABLE_HTTP3
 
-#include "core_setup/board_profiles/protocore_platform.h"    // protocore_platform_rand_u32: the device TRNG
 #include "mmgr/protostr.h"                                   // str: the bounded-run walks
 #include "mmgr/rawmemcpy.h"                                  // raw.read: each field moves into the slot
 #include "network_drivers/presentation/http/http.h"          // Http.match_and_execute
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the reserved dispatch slot
-#include "protocore.h"                                       // http_pool, PROTOCORE_H3_DISPATCH_SLOT, http_reset
+#include "network_drivers/presentation/http/http3/h3_server.h"
+#include "network_drivers/session/session.h" // the per-connection tables this reads
 
 /**
  * @brief The bridge's state and the calls that reach it - what H3ServerNs points at.

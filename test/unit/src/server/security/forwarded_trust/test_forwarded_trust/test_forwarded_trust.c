@@ -15,12 +15,13 @@
 // bound rather than a fixed number.
 
 #include "server/security/forwarded_trust/forwarded_trust.h"
+#include "shared/ip/ip.h"
 
 #include <unity.h>
 
 void setUp(void)
 {
-    protocore_forwarded_trust_reset();
+    ForwardedTrust.reset(protocore_forwarded_trust_span());
 }
 void tearDown(void)
 {
@@ -49,62 +50,100 @@ static proto_bool same(const protocore_ip *a, const protocore_ip *b)
 void test_an_empty_table_trusts_nothing(void)
 {
     const protocore_ip peer = parsed("10.0.0.5");
-    TEST_ASSERT_FALSE(protocore_forwarded_trust_contains(&peer));
+    ForwardedTrust.contains_args.peer = &peer;
+    ForwardedTrust.contains(protocore_forwarded_trust_span());
+    TEST_ASSERT_FALSE(ForwardedTrust.ok);
 
     protocore_ip out;
-    TEST_ASSERT_FALSE(protocore_forwarded_effective_ip(&peer, "203.0.113.9", &out));
+    ForwardedTrust.protocore_forwarded_effective_ip_args.peer = &peer;
+    ForwardedTrust.protocore_forwarded_effective_ip_args.fwd_ip_str = "203.0.113.9";
+    ForwardedTrust.protocore_forwarded_effective_ip_args.out = &out;
+    ForwardedTrust.protocore_forwarded_effective_ip(protocore_forwarded_trust_span());
+    TEST_ASSERT_FALSE(ForwardedTrust.ok);
     TEST_ASSERT_TRUE(same(&peer, &out)); // the real TCP peer was kept
 }
 
 // RFC 4632 sec 3.1 CIDR containment, at and either side of the prefix boundary.
 void test_a_cidr_covers_its_block_and_nothing_else(void)
 {
-    TEST_ASSERT_TRUE(protocore_forwarded_trust_add_cidr("10.0.0.0/8"));
+    ForwardedTrust.add_cidr_args.cidr = "10.0.0.0/8";
+    ForwardedTrust.add_cidr(protocore_forwarded_trust_span());
+    TEST_ASSERT_TRUE(ForwardedTrust.ok);
 
     const protocore_ip inside_low = parsed("10.0.0.0");
     const protocore_ip inside_high = parsed("10.255.255.255");
     const protocore_ip below = parsed("9.255.255.255");
     const protocore_ip above = parsed("11.0.0.0");
-    TEST_ASSERT_TRUE(protocore_forwarded_trust_contains(&inside_low));
-    TEST_ASSERT_TRUE(protocore_forwarded_trust_contains(&inside_high));
-    TEST_ASSERT_FALSE(protocore_forwarded_trust_contains(&below));
-    TEST_ASSERT_FALSE(protocore_forwarded_trust_contains(&above));
+    ForwardedTrust.contains_args.peer = &inside_low;
+    ForwardedTrust.contains(protocore_forwarded_trust_span());
+    TEST_ASSERT_TRUE(ForwardedTrust.ok);
+    ForwardedTrust.contains_args.peer = &inside_high;
+    ForwardedTrust.contains(protocore_forwarded_trust_span());
+    TEST_ASSERT_TRUE(ForwardedTrust.ok);
+    ForwardedTrust.contains_args.peer = &below;
+    ForwardedTrust.contains(protocore_forwarded_trust_span());
+    TEST_ASSERT_FALSE(ForwardedTrust.ok);
+    ForwardedTrust.contains_args.peer = &above;
+    ForwardedTrust.contains(protocore_forwarded_trust_span());
+    TEST_ASSERT_FALSE(ForwardedTrust.ok);
 }
 
 // A bare address with no slash is a host route: exactly that address and no neighbour.
 void test_a_bare_address_is_a_host_route(void)
 {
-    TEST_ASSERT_TRUE(protocore_forwarded_trust_add_cidr("192.0.2.10"));
+    ForwardedTrust.add_cidr_args.cidr = "192.0.2.10";
+    ForwardedTrust.add_cidr(protocore_forwarded_trust_span());
+    TEST_ASSERT_TRUE(ForwardedTrust.ok);
 
     const protocore_ip exact = parsed("192.0.2.10");
     const protocore_ip neighbour = parsed("192.0.2.11");
-    TEST_ASSERT_TRUE(protocore_forwarded_trust_contains(&exact));
-    TEST_ASSERT_FALSE(protocore_forwarded_trust_contains(&neighbour));
+    ForwardedTrust.contains_args.peer = &exact;
+    ForwardedTrust.contains(protocore_forwarded_trust_span());
+    TEST_ASSERT_TRUE(ForwardedTrust.ok);
+    ForwardedTrust.contains_args.peer = &neighbour;
+    ForwardedTrust.contains(protocore_forwarded_trust_span());
+    TEST_ASSERT_FALSE(ForwardedTrust.ok);
 }
 
 // A v6 CIDR covers its own block and no v4 address, whatever the octets: the families are separate.
 void test_a_v6_cidr_covers_only_v6(void)
 {
-    TEST_ASSERT_TRUE(protocore_forwarded_trust_add_cidr("2001:db8::/32"));
+    ForwardedTrust.add_cidr_args.cidr = "2001:db8::/32";
+    ForwardedTrust.add_cidr(protocore_forwarded_trust_span());
+    TEST_ASSERT_TRUE(ForwardedTrust.ok);
 
     const protocore_ip inside = parsed("2001:db8:1234::1");
     const protocore_ip outside = parsed("2001:db9::1");
+    ForwardedTrust.contains_args.peer = &inside;
+    ForwardedTrust.contains(protocore_forwarded_trust_span());
     const protocore_ip four = parsed("32.1.13.184"); // the same leading octets, as v4
-    TEST_ASSERT_TRUE(protocore_forwarded_trust_contains(&inside));
-    TEST_ASSERT_FALSE(protocore_forwarded_trust_contains(&outside));
-    TEST_ASSERT_FALSE(protocore_forwarded_trust_contains(&four));
+    TEST_ASSERT_TRUE(ForwardedTrust.ok);
+    ForwardedTrust.contains_args.peer = &outside;
+    ForwardedTrust.contains(protocore_forwarded_trust_span());
+    TEST_ASSERT_FALSE(ForwardedTrust.ok);
+    ForwardedTrust.contains_args.peer = &four;
+    ForwardedTrust.contains(protocore_forwarded_trust_span());
+    TEST_ASSERT_FALSE(ForwardedTrust.ok);
 }
 
 // A /0 covers the whole family, which is what an operator writes to trust every upstream.
 void test_a_zero_prefix_covers_the_family(void)
 {
-    TEST_ASSERT_TRUE(protocore_forwarded_trust_add_cidr("0.0.0.0/0"));
+    ForwardedTrust.add_cidr_args.cidr = "0.0.0.0/0";
+    ForwardedTrust.add_cidr(protocore_forwarded_trust_span());
+    TEST_ASSERT_TRUE(ForwardedTrust.ok);
     const protocore_ip a = parsed("8.8.8.8");
     const protocore_ip b = parsed("198.51.100.1");
     const protocore_ip six = parsed("2001:db8::1");
-    TEST_ASSERT_TRUE(protocore_forwarded_trust_contains(&a));
-    TEST_ASSERT_TRUE(protocore_forwarded_trust_contains(&b));
-    TEST_ASSERT_FALSE(protocore_forwarded_trust_contains(&six)); // still not the other family
+    ForwardedTrust.contains_args.peer = &a;
+    ForwardedTrust.contains(protocore_forwarded_trust_span());
+    TEST_ASSERT_TRUE(ForwardedTrust.ok);
+    ForwardedTrust.contains_args.peer = &b;
+    ForwardedTrust.contains(protocore_forwarded_trust_span());
+    TEST_ASSERT_TRUE(ForwardedTrust.ok);
+    ForwardedTrust.contains_args.peer = &six;
+    ForwardedTrust.contains(protocore_forwarded_trust_span());
+    TEST_ASSERT_FALSE(ForwardedTrust.ok); // still not the other family
 }
 
 // Malformed CIDR text is refused, and refusing it leaves the table trusting nothing rather than
@@ -127,11 +166,15 @@ void test_malformed_cidr_text_is_refused(void)
     };
     for (size_t i = 0; i < sizeof(BAD) / sizeof(BAD[0]); i++)
     {
-        TEST_ASSERT_FALSE_MESSAGE(protocore_forwarded_trust_add_cidr(BAD[i]), BAD[i] ? BAD[i] : "(null)");
+        ForwardedTrust.add_cidr_args.cidr = BAD[i];
+        ForwardedTrust.add_cidr(protocore_forwarded_trust_span());
+        TEST_ASSERT_FALSE_MESSAGE(ForwardedTrust.ok, BAD[i] ? BAD[i] : "(null)");
     }
 
     const protocore_ip peer = parsed("10.0.0.5");
-    TEST_ASSERT_FALSE(protocore_forwarded_trust_contains(&peer));
+    ForwardedTrust.contains_args.peer = &peer;
+    ForwardedTrust.contains(protocore_forwarded_trust_span());
+    TEST_ASSERT_FALSE(ForwardedTrust.ok);
 }
 
 // The widest prefix each family allows is accepted, one wider is not.
@@ -140,19 +183,37 @@ void test_the_prefix_width_bound_per_family(void)
     const protocore_ip four = parsed("10.0.0.1");
     const protocore_ip six = parsed("2001:db8::1");
 
-    TEST_ASSERT_TRUE(protocore_forwarded_trust_add(&four, 32));
-    TEST_ASSERT_FALSE(protocore_forwarded_trust_add(&four, 33));
+    ForwardedTrust.add_args.network = &four;
+    ForwardedTrust.add_args.prefix_len = 32;
+    ForwardedTrust.add(protocore_forwarded_trust_span());
+    TEST_ASSERT_TRUE(ForwardedTrust.ok);
+    ForwardedTrust.add_args.network = &four;
+    ForwardedTrust.add_args.prefix_len = 33;
+    ForwardedTrust.add(protocore_forwarded_trust_span());
+    TEST_ASSERT_FALSE(ForwardedTrust.ok);
 
-    protocore_forwarded_trust_reset();
-    TEST_ASSERT_TRUE(protocore_forwarded_trust_add(&six, 128));
-    TEST_ASSERT_FALSE(protocore_forwarded_trust_add(&six, 129));
+    ForwardedTrust.reset(protocore_forwarded_trust_span());
+    ForwardedTrust.add_args.network = &six;
+    ForwardedTrust.add_args.prefix_len = 128;
+    ForwardedTrust.add(protocore_forwarded_trust_span());
+    TEST_ASSERT_TRUE(ForwardedTrust.ok);
+    ForwardedTrust.add_args.network = &six;
+    ForwardedTrust.add_args.prefix_len = 129;
+    ForwardedTrust.add(protocore_forwarded_trust_span());
+    TEST_ASSERT_FALSE(ForwardedTrust.ok);
 
     // an address with no family is not a network
     protocore_ip none;
     none.family = PROTOCORE_IP_NONE;
-    protocore_forwarded_trust_reset();
-    TEST_ASSERT_FALSE(protocore_forwarded_trust_add(&none, 0));
-    TEST_ASSERT_FALSE(protocore_forwarded_trust_add(NULL, 8));
+    ForwardedTrust.reset(protocore_forwarded_trust_span());
+    ForwardedTrust.add_args.network = &none;
+    ForwardedTrust.add_args.prefix_len = 0;
+    ForwardedTrust.add(protocore_forwarded_trust_span());
+    TEST_ASSERT_FALSE(ForwardedTrust.ok);
+    ForwardedTrust.add_args.network = NULL;
+    ForwardedTrust.add_args.prefix_len = 8;
+    ForwardedTrust.add(protocore_forwarded_trust_span());
+    TEST_ASSERT_FALSE(ForwardedTrust.ok);
 }
 
 // The table is bounded: past its capacity an add is refused rather than overwriting a rule the
@@ -162,34 +223,54 @@ void test_the_table_is_bounded(void)
     for (int i = 0; i < PROTOCORE_TRUSTED_PROXY_MAX; i++)
     {
         const protocore_ip net = protocore_ip_from_v4_octets(10, (uint8_t)i, 0, 0);
-        TEST_ASSERT_TRUE(protocore_forwarded_trust_add(&net, 16));
+        ForwardedTrust.add_args.network = &net;
+        ForwardedTrust.add_args.prefix_len = 16;
+        ForwardedTrust.add(protocore_forwarded_trust_span());
+        TEST_ASSERT_TRUE(ForwardedTrust.ok);
     }
     const protocore_ip extra = protocore_ip_from_v4_octets(10, (uint8_t)PROTOCORE_TRUSTED_PROXY_MAX, 0, 0);
-    TEST_ASSERT_FALSE(protocore_forwarded_trust_add(&extra, 16));
-    TEST_ASSERT_FALSE(protocore_forwarded_trust_contains(&extra));
+    ForwardedTrust.add_args.network = &extra;
+    ForwardedTrust.add_args.prefix_len = 16;
+    ForwardedTrust.add(protocore_forwarded_trust_span());
+    TEST_ASSERT_FALSE(ForwardedTrust.ok);
+    ForwardedTrust.contains_args.peer = &extra;
+    ForwardedTrust.contains(protocore_forwarded_trust_span());
+    TEST_ASSERT_FALSE(ForwardedTrust.ok);
 
     // the rules already installed are untouched
     const protocore_ip first = protocore_ip_from_v4_octets(10, 0, 0, 1);
-    TEST_ASSERT_TRUE(protocore_forwarded_trust_contains(&first));
+    ForwardedTrust.contains_args.peer = &first;
+    ForwardedTrust.contains(protocore_forwarded_trust_span());
+    TEST_ASSERT_TRUE(ForwardedTrust.ok);
 }
 
 // Reset empties the table, and after it the same peer is no longer trusted.
 void test_reset_empties_the_table(void)
 {
-    TEST_ASSERT_TRUE(protocore_forwarded_trust_add_cidr("10.0.0.0/8"));
+    ForwardedTrust.add_cidr_args.cidr = "10.0.0.0/8";
+    ForwardedTrust.add_cidr(protocore_forwarded_trust_span());
+    TEST_ASSERT_TRUE(ForwardedTrust.ok);
     const protocore_ip peer = parsed("10.1.2.3");
-    TEST_ASSERT_TRUE(protocore_forwarded_trust_contains(&peer));
+    ForwardedTrust.contains_args.peer = &peer;
+    ForwardedTrust.contains(protocore_forwarded_trust_span());
+    TEST_ASSERT_TRUE(ForwardedTrust.ok);
 
-    protocore_forwarded_trust_reset();
-    TEST_ASSERT_FALSE(protocore_forwarded_trust_contains(&peer));
-    TEST_ASSERT_TRUE(protocore_forwarded_trust_add_cidr("10.0.0.0/8")); // room again
+    ForwardedTrust.reset(protocore_forwarded_trust_span());
+    ForwardedTrust.contains_args.peer = &peer;
+    ForwardedTrust.contains(protocore_forwarded_trust_span());
+    TEST_ASSERT_FALSE(ForwardedTrust.ok);
+    ForwardedTrust.add_cidr_args.cidr = "10.0.0.0/8";
+    ForwardedTrust.add_cidr(protocore_forwarded_trust_span());
+    TEST_ASSERT_TRUE(ForwardedTrust.ok); // room again
 }
 
 // RFC 7239 sec 8.1: the header is client-controlled. A peer outside every trusted CIDR is a client,
 // so whatever it claims is discarded and its own TCP address is what the server acts on.
 void test_an_untrusted_peer_can_never_forge_a_client_address(void)
 {
-    TEST_ASSERT_TRUE(protocore_forwarded_trust_add_cidr("10.0.0.0/8"));
+    ForwardedTrust.add_cidr_args.cidr = "10.0.0.0/8";
+    ForwardedTrust.add_cidr(protocore_forwarded_trust_span());
+    TEST_ASSERT_TRUE(ForwardedTrust.ok);
 
     const protocore_ip attacker = parsed("203.0.113.9");
     static const char *const CLAIMS[] = {
@@ -202,7 +283,11 @@ void test_an_untrusted_peer_can_never_forge_a_client_address(void)
     for (size_t i = 0; i < sizeof(CLAIMS) / sizeof(CLAIMS[0]); i++)
     {
         protocore_ip out;
-        TEST_ASSERT_FALSE_MESSAGE(protocore_forwarded_effective_ip(&attacker, CLAIMS[i], &out), CLAIMS[i]);
+        ForwardedTrust.protocore_forwarded_effective_ip_args.peer = &attacker;
+        ForwardedTrust.protocore_forwarded_effective_ip_args.fwd_ip_str = CLAIMS[i];
+        ForwardedTrust.protocore_forwarded_effective_ip_args.out = &out;
+        ForwardedTrust.protocore_forwarded_effective_ip(protocore_forwarded_trust_span());
+        TEST_ASSERT_FALSE_MESSAGE(ForwardedTrust.ok, CLAIMS[i]);
         TEST_ASSERT_TRUE_MESSAGE(same(&attacker, &out), CLAIMS[i]);
     }
 }
@@ -210,15 +295,25 @@ void test_an_untrusted_peer_can_never_forge_a_client_address(void)
 // A trusted upstream's forwarded client IS believed, for both families.
 void test_a_trusted_upstream_is_believed(void)
 {
-    TEST_ASSERT_TRUE(protocore_forwarded_trust_add_cidr("10.0.0.0/8"));
+    ForwardedTrust.add_cidr_args.cidr = "10.0.0.0/8";
+    ForwardedTrust.add_cidr(protocore_forwarded_trust_span());
+    TEST_ASSERT_TRUE(ForwardedTrust.ok);
     const protocore_ip proxy = parsed("10.0.0.1");
 
     protocore_ip out;
-    TEST_ASSERT_TRUE(protocore_forwarded_effective_ip(&proxy, "203.0.113.9", &out));
+    ForwardedTrust.protocore_forwarded_effective_ip_args.peer = &proxy;
+    ForwardedTrust.protocore_forwarded_effective_ip_args.fwd_ip_str = "203.0.113.9";
+    ForwardedTrust.protocore_forwarded_effective_ip_args.out = &out;
+    ForwardedTrust.protocore_forwarded_effective_ip(protocore_forwarded_trust_span());
+    TEST_ASSERT_TRUE(ForwardedTrust.ok);
     const protocore_ip want4 = parsed("203.0.113.9");
     TEST_ASSERT_TRUE(same(&want4, &out));
 
-    TEST_ASSERT_TRUE(protocore_forwarded_effective_ip(&proxy, "2001:db8::5", &out));
+    ForwardedTrust.protocore_forwarded_effective_ip_args.peer = &proxy;
+    ForwardedTrust.protocore_forwarded_effective_ip_args.fwd_ip_str = "2001:db8::5";
+    ForwardedTrust.protocore_forwarded_effective_ip_args.out = &out;
+    ForwardedTrust.protocore_forwarded_effective_ip(protocore_forwarded_trust_span());
+    TEST_ASSERT_TRUE(ForwardedTrust.ok);
     const protocore_ip want6 = parsed("2001:db8::5");
     TEST_ASSERT_TRUE(same(&want6, &out));
 }
@@ -229,7 +324,9 @@ void test_a_trusted_upstream_is_believed(void)
 // falls back too.
 void test_a_trusted_upstream_with_no_usable_client_falls_back(void)
 {
-    TEST_ASSERT_TRUE(protocore_forwarded_trust_add_cidr("10.0.0.0/8"));
+    ForwardedTrust.add_cidr_args.cidr = "10.0.0.0/8";
+    ForwardedTrust.add_cidr(protocore_forwarded_trust_span());
+    TEST_ASSERT_TRUE(ForwardedTrust.ok);
     const protocore_ip proxy = parsed("10.0.0.1");
 
     static const char *const UNUSABLE[] = {
@@ -247,7 +344,11 @@ void test_a_trusted_upstream_with_no_usable_client_falls_back(void)
     {
         protocore_ip out;
         const char *what = UNUSABLE[i] ? UNUSABLE[i] : "(null)";
-        TEST_ASSERT_FALSE_MESSAGE(protocore_forwarded_effective_ip(&proxy, UNUSABLE[i], &out), what);
+        ForwardedTrust.protocore_forwarded_effective_ip_args.peer = &proxy;
+        ForwardedTrust.protocore_forwarded_effective_ip_args.fwd_ip_str = UNUSABLE[i];
+        ForwardedTrust.protocore_forwarded_effective_ip_args.out = &out;
+        ForwardedTrust.protocore_forwarded_effective_ip(protocore_forwarded_trust_span());
+        TEST_ASSERT_FALSE_MESSAGE(ForwardedTrust.ok, what);
         TEST_ASSERT_TRUE_MESSAGE(same(&proxy, &out), what);
     }
 }
@@ -256,44 +357,76 @@ void test_a_trusted_upstream_with_no_usable_client_falls_back(void)
 // value still acts on a real address rather than on whatever the buffer held.
 void test_the_destination_is_always_written(void)
 {
-    TEST_ASSERT_TRUE(protocore_forwarded_trust_add_cidr("10.0.0.0/8"));
+    ForwardedTrust.add_cidr_args.cidr = "10.0.0.0/8";
+    ForwardedTrust.add_cidr(protocore_forwarded_trust_span());
+    TEST_ASSERT_TRUE(ForwardedTrust.ok);
     const protocore_ip proxy = parsed("10.0.0.1");
     const protocore_ip direct = parsed("203.0.113.9");
 
     protocore_ip out;
     out.family = PROTOCORE_IP_V6;
-    TEST_ASSERT_TRUE(protocore_forwarded_effective_ip(&proxy, "198.51.100.4", &out));
+    ForwardedTrust.protocore_forwarded_effective_ip_args.peer = &proxy;
+    ForwardedTrust.protocore_forwarded_effective_ip_args.fwd_ip_str = "198.51.100.4";
+    ForwardedTrust.protocore_forwarded_effective_ip_args.out = &out;
+    ForwardedTrust.protocore_forwarded_effective_ip(protocore_forwarded_trust_span());
+    TEST_ASSERT_TRUE(ForwardedTrust.ok);
     TEST_ASSERT_EQUAL_INT(PROTOCORE_IP_V4, out.family);
 
     out.family = PROTOCORE_IP_V6;
-    TEST_ASSERT_FALSE(protocore_forwarded_effective_ip(&direct, "198.51.100.4", &out));
+    ForwardedTrust.protocore_forwarded_effective_ip_args.peer = &direct;
+    ForwardedTrust.protocore_forwarded_effective_ip_args.fwd_ip_str = "198.51.100.4";
+    ForwardedTrust.protocore_forwarded_effective_ip_args.out = &out;
+    ForwardedTrust.protocore_forwarded_effective_ip(protocore_forwarded_trust_span());
+    TEST_ASSERT_FALSE(ForwardedTrust.ok);
     TEST_ASSERT_TRUE(same(&direct, &out));
 
     // no peer at all leaves an address that names nothing, not a stale one
     out = direct;
-    TEST_ASSERT_FALSE(protocore_forwarded_effective_ip(NULL, "198.51.100.4", &out));
+    ForwardedTrust.protocore_forwarded_effective_ip_args.peer = NULL;
+    ForwardedTrust.protocore_forwarded_effective_ip_args.fwd_ip_str = "198.51.100.4";
+    ForwardedTrust.protocore_forwarded_effective_ip_args.out = &out;
+    ForwardedTrust.protocore_forwarded_effective_ip(protocore_forwarded_trust_span());
+    TEST_ASSERT_FALSE(ForwardedTrust.ok);
     TEST_ASSERT_EQUAL_INT(PROTOCORE_IP_NONE, out.family);
 
+    ForwardedTrust.protocore_forwarded_effective_ip_args.peer = &proxy;
+    ForwardedTrust.protocore_forwarded_effective_ip_args.fwd_ip_str = "198.51.100.4";
+    ForwardedTrust.protocore_forwarded_effective_ip_args.out = NULL;
+    ForwardedTrust.protocore_forwarded_effective_ip(protocore_forwarded_trust_span());
     // a null destination is refused rather than written through
-    TEST_ASSERT_FALSE(protocore_forwarded_effective_ip(&proxy, "198.51.100.4", NULL));
+    TEST_ASSERT_FALSE(ForwardedTrust.ok);
 }
 
 // Several upstream networks can be trusted at once, and a peer in any of them is trusted.
 void test_several_upstreams_are_all_trusted(void)
 {
     TEST_ASSERT_TRUE(PROTOCORE_TRUSTED_PROXY_MAX >= 2);
-    TEST_ASSERT_TRUE(protocore_forwarded_trust_add_cidr("10.0.0.0/8"));
-    TEST_ASSERT_TRUE(protocore_forwarded_trust_add_cidr("2001:db8::/32"));
+    ForwardedTrust.add_cidr_args.cidr = "10.0.0.0/8";
+    ForwardedTrust.add_cidr(protocore_forwarded_trust_span());
+    TEST_ASSERT_TRUE(ForwardedTrust.ok);
+    ForwardedTrust.add_cidr_args.cidr = "2001:db8::/32";
+    ForwardedTrust.add_cidr(protocore_forwarded_trust_span());
+    TEST_ASSERT_TRUE(ForwardedTrust.ok);
 
     const protocore_ip four = parsed("10.9.9.9");
     const protocore_ip six = parsed("2001:db8::99");
     const protocore_ip neither = parsed("198.51.100.1");
-    TEST_ASSERT_TRUE(protocore_forwarded_trust_contains(&four));
-    TEST_ASSERT_TRUE(protocore_forwarded_trust_contains(&six));
-    TEST_ASSERT_FALSE(protocore_forwarded_trust_contains(&neither));
+    ForwardedTrust.contains_args.peer = &four;
+    ForwardedTrust.contains(protocore_forwarded_trust_span());
+    TEST_ASSERT_TRUE(ForwardedTrust.ok);
+    ForwardedTrust.contains_args.peer = &six;
+    ForwardedTrust.contains(protocore_forwarded_trust_span());
+    TEST_ASSERT_TRUE(ForwardedTrust.ok);
+    ForwardedTrust.contains_args.peer = &neither;
+    ForwardedTrust.contains(protocore_forwarded_trust_span());
+    TEST_ASSERT_FALSE(ForwardedTrust.ok);
 
     protocore_ip out;
-    TEST_ASSERT_TRUE(protocore_forwarded_effective_ip(&six, "203.0.113.1", &out));
+    ForwardedTrust.protocore_forwarded_effective_ip_args.peer = &six;
+    ForwardedTrust.protocore_forwarded_effective_ip_args.fwd_ip_str = "203.0.113.1";
+    ForwardedTrust.protocore_forwarded_effective_ip_args.out = &out;
+    ForwardedTrust.protocore_forwarded_effective_ip(protocore_forwarded_trust_span());
+    TEST_ASSERT_TRUE(ForwardedTrust.ok);
     const protocore_ip want = parsed("203.0.113.1");
     TEST_ASSERT_TRUE(same(&want, &out));
 }
@@ -301,6 +434,10 @@ void test_several_upstreams_are_all_trusted(void)
 // A null peer is not a trusted upstream.
 void test_a_null_peer_is_not_trusted(void)
 {
-    TEST_ASSERT_TRUE(protocore_forwarded_trust_add_cidr("0.0.0.0/0"));
-    TEST_ASSERT_FALSE(protocore_forwarded_trust_contains(NULL));
+    ForwardedTrust.add_cidr_args.cidr = "0.0.0.0/0";
+    ForwardedTrust.add_cidr(protocore_forwarded_trust_span());
+    TEST_ASSERT_TRUE(ForwardedTrust.ok);
+    ForwardedTrust.contains_args.peer = NULL;
+    ForwardedTrust.contains(protocore_forwarded_trust_span());
+    TEST_ASSERT_FALSE(ForwardedTrust.ok);
 }

@@ -68,25 +68,25 @@ A docstring is a claim; treat one that disagrees with this table as the thing th
 
 Every one takes `--check` to assert the tracked file already matches, which is how CI detects drift.
 
-| Script                   | W   | Names                                                          |
-| ------------------------ | --- | -------------------------------------------------------------- |
-| `gen_dep_graph.py`       | W   | `test/dep_graph.json`, `compile_commands.json`                 |
-| `gen_readme_sections.py` |     | `README.md`, `footprints.json`                                 |
-| `gen_readme_intro.py`    |     | `README.md`, `test/TEST_REPORT.md`, `coverage.xml`             |
-| `gen_feature_tables.py`  |     | `docs/FEATURES.md`, `README.md`                                |
-| `gen_features_page.py`   | W   | `docs/FEATURES.md`                                             |
-| `gen_features_tree.py`   | W   | `docs/diagrams/features_map.svg`                               |
-| `gen_flag_deps.py`       |     | `docs/diagrams/flag_deps.svg`                                  |
-| `gen_hardware_ref.py`    |     | `docs/HARDWARE_HOOKUP.md`, `src/protocore_config.h`            |
-| `gen_interop_matrix.py`  |     | `docs/INTEROP_MATRIX.md`                                       |
-| `gen_api_flow.py`        |     | `docs/ARCHITECTURE.md`, `README.md`                            |
-| `gen_examples.py`        |     | `docs/EXAMPLES.md`, `README.md`                                |
-| `gen_configurator.py`    | W   | `docs/configurator.html` (the web configurator)                |
-| `gen_build_opt.py`       | W   | per-example `build_opt.h`                                      |
-| `gen_nav_groups.py`      | W   | the Sphinx/Doxygen sidebar grouping                            |
-| `decorate_changelog.py`  | W   | `docs/CHANGELOG.md`                                            |
-| `example_footprints.py`  | W   | `footprints.json`; builds each example                         |
-| `feature_budget.py`      | W   | flash budget per feature, from footprints                      |
+| Script                   | W   | Names                                               |
+| ------------------------ | --- | --------------------------------------------------- |
+| `gen_dep_graph.py`       | W   | `test/dep_graph.json`, `compile_commands.json`      |
+| `gen_readme_sections.py` |     | `README.md`, `footprints.json`                      |
+| `gen_readme_intro.py`    |     | `README.md`, `test/TEST_REPORT.md`, `coverage.xml`  |
+| `gen_feature_tables.py`  |     | `docs/FEATURES.md`, `README.md`                     |
+| `gen_features_page.py`   | W   | `docs/FEATURES.md`                                  |
+| `gen_features_tree.py`   | W   | `docs/diagrams/features_map.svg`                    |
+| `gen_flag_deps.py`       |     | `docs/diagrams/flag_deps.svg`                       |
+| `gen_hardware_ref.py`    |     | `docs/HARDWARE_HOOKUP.md`, `src/protocore_config.h` |
+| `gen_interop_matrix.py`  |     | `docs/INTEROP_MATRIX.md`                            |
+| `gen_api_flow.py`        |     | `docs/ARCHITECTURE.md`, `README.md`                 |
+| `gen_examples.py`        |     | `docs/EXAMPLES.md`, `README.md`                     |
+| `gen_configurator.py`    | W   | `docs/configurator.html` (the web configurator)     |
+| `gen_build_opt.py`       | W   | per-example `build_opt.h`                           |
+| `gen_nav_groups.py`      | W   | the Sphinx/Doxygen sidebar grouping                 |
+| `decorate_changelog.py`  | W   | `docs/CHANGELOG.md`                                 |
+| `example_footprints.py`  | W   | `footprints.json`; builds each example              |
+| `feature_budget.py`      | W   | flash budget per feature, from footprints           |
 
 ## coverage/
 

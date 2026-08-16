@@ -8,13 +8,13 @@
  * The one symbol this file exports is @ref Http.
  */
 
-#include "network_drivers/session/session.h" // the per-connection tables this reads
 #include "network_drivers/presentation/http/http.h"
 #include "mmgr/membuild.h"  // protocore_sb: the Allow list is appended, not formatted
 #include "mmgr/protostr.h"  // str: the bounded-run walks
 #include "mmgr/rawmemcpy.h" // raw.read: a captured segment moves into our own buffer
 #include "network_drivers/presentation/http/auth/auth.h"
 #include "network_drivers/presentation/http/route/http_route.h" // HttpRoutes
+#include "network_drivers/session/session.h"                    // the per-connection tables this reads
 #include "network_drivers/transport/tcp/common.h"               // TcpConn, conn_pool: the slots a response writes on
 #include "network_drivers/transport/tcp/protocol/protocol.h"    // ConnPool: the slot a response writes on
 #include "protocore.h"                                          // http_pool, and the request and route widths
@@ -572,7 +572,10 @@ static proto_bool protocore_csrf_gate(uint8_t slot_id, HttpReq *req, HttpMethod 
     if (method == HTTP_GET && str.eq(req->path, "/csrf", sizeof("/csrf"), PROTO_FALSE))
     {
         char tok[CSRF_TOKEN_BUF];
-        if (protocore_csrf_issue(tok, sizeof(tok)) > 0)
+        Csrf.issue_args.out = tok;
+        Csrf.issue_args.cap = sizeof(tok);
+        Csrf.issue(protocore_csrf_span());
+        if (Csrf.n > 0)
         {
             set_cookie(slot_id, "csrf", tok, "Path=/; SameSite=Strict");
             char body[CSRF_TOKEN_BUF + 16];
@@ -598,7 +601,9 @@ static proto_bool protocore_csrf_gate(uint8_t slot_id, HttpReq *req, HttpMethod 
     if (method == HTTP_POST || method == HTTP_PUT || method == HTTP_PATCH || method == HTTP_DELETE)
     {
         const char *tok = http_get_header(req, "X-CSRF-Token");
-        if (!tok || !protocore_csrf_verify(tok))
+        Csrf.verify_args.token = tok;
+        Csrf.verify(protocore_csrf_span());
+        if (!tok || !Csrf.valid)
         {
             send_text(slot_id, 403, PROTOCORE_MIME_TEXT_PLAIN, "CSRF token missing or invalid");
             return PROTO_TRUE;
@@ -631,11 +636,17 @@ static void handle_ws_route(uint8_t slot_id, HttpReq *req, HttpMethod method, co
         ws_send_version_required(slot_id);
         return;
     }
+    // RFC 6455 4.2.2 step 4, /resource name/: an id that names no handler set is a service this
+    // server does not provide, so answer 404 and abort the handshake. No connection is established,
+    // which 7.1.4 calls Closed.
+    if (r->ws_id == PROTOCORE_WS_NONE)
+    {
+        send_text(slot_id, 404, PROTOCORE_MIME_TEXT_PLAIN, "No such WebSocket service");
+        return;
+    }
     // A failed upgrade here means a malformed/oversized Sec-WebSocket-Key (a
     // client error, RFC 6455 4.2.1), so answer 400 rather than 503.
-    Ws.id = r->ws_id;
-    Ws.route_connect(Ws.internal);
-    if (!ws_do_upgrade(slot_id, req, Ws.connect_handler))
+    if (!ws_do_upgrade(slot_id, req, r->ws_id))
     {
         send_text(slot_id, 400, PROTOCORE_MIME_TEXT_PLAIN, "Bad WebSocket handshake");
     }
@@ -655,7 +666,10 @@ static proto_bool proto_authorize_request(uint8_t slot_id, HttpReq *req, const H
         char fbuf[PROTOCORE_IP_STR_MAX];
         const char *fwd = http_forwarded_client(req, fbuf, sizeof(fbuf), NULL) ? fbuf : NULL;
         protocore_ip eff;
-        protocore_forwarded_effective_ip(&cip, fwd, &eff);
+        ForwardedTrust.effective_ip_args.peer = &cip;
+        ForwardedTrust.effective_ip_args.fwd_ip_str = fwd;
+        ForwardedTrust.effective_ip_args.out = &eff;
+        ForwardedTrust.effective_ip(protocore_forwarded_trust_span());
         cip = eff;
     }
 #endif
@@ -727,9 +741,7 @@ static proto_bool dispatch_matched_route(uint8_t slot_id, HttpReq *req, HttpMeth
 #if PROTOCORE_ENABLE_SSE
     if (r->type == ROUTE_SSE)
     {
-        Sse.id = r->sse_id;
-        Sse.route_connect(Sse.internal);
-        if (!protocore_sse_do_upgrade(slot_id, req, Sse.handler))
+        if (!protocore_sse_do_upgrade(slot_id, req, r->sse_id))
         {
             send_text(slot_id, 503, PROTOCORE_MIME_TEXT_PLAIN, "Service Unavailable");
         }
@@ -922,7 +934,7 @@ static void poll_slot(struct HttpInternal *restrict ctx)
 #if PROTOCORE_ENABLE_WEBSOCKET
     // WebSocket slot - drain ring buffer and dispatch ready frames
     Ws.slot = i;
-    Ws.find(Ws.internal);
+    Ws.find(protocore_ws_span());
     WsConn *ws = Ws.found;
     if (ws)
     {
@@ -942,12 +954,12 @@ static void poll_slot(struct HttpInternal *restrict ctx)
                 {
                     Ws.conn = ws;
                     Ws.byte = tbuf[k];
-                    Ws.feed_byte(Ws.internal);
+                    Ws.feed_byte(protocore_ws_span());
                     if (ws->parse_state == WS_FRAME_READY)
                     {
                         ws_dispatch_message(ws);
                         Ws.conn = ws;
-                        Ws.reset_frame(Ws.internal);
+                        Ws.reset_frame(protocore_ws_span());
                     }
                     else if (ws->parse_state == WS_CLOSED || ws->parse_state == WS_ERROR)
                     {
@@ -963,7 +975,7 @@ static void poll_slot(struct HttpInternal *restrict ctx)
             {
                 ws_dispatch_close(ws);
                 Ws.slot = i;
-                Ws.free(Ws.internal);
+                Ws.free(protocore_ws_span());
                 ConnPool.slot = i;
                 ConnPool.abort_slot(ConnPool.internal); // transport owns TLS-free + detach + reset + RST
                 HttpConn.slot = i;
@@ -974,19 +986,19 @@ static void poll_slot(struct HttpInternal *restrict ctx)
 #endif // PROTOCORE_ENABLE_TLS
 
         Ws.conn = ws;
-        Ws.parse(Ws.internal);
+        Ws.parse(protocore_ws_span());
 
         if (ws->parse_state == WS_FRAME_READY)
         {
             ws_dispatch_message(ws);
             Ws.conn = ws;
-            Ws.reset_frame(Ws.internal);
+            Ws.reset_frame(protocore_ws_span());
         }
         else if (ws->parse_state == WS_CLOSED || ws->parse_state == WS_ERROR)
         {
             ws_dispatch_close(ws);
             Ws.slot = i;
-            Ws.free(Ws.internal);
+            Ws.free(protocore_ws_span());
             // RFC 6455 5.5.1: close the underlying TCP connection after the close
             // handshake. begin_close moves the slot out of CONN_ACTIVE so the
             // post-close bytes are NOT re-parsed as a new HTTP request (the
@@ -1003,7 +1015,7 @@ static void poll_slot(struct HttpInternal *restrict ctx)
 #if PROTOCORE_ENABLE_SSE
     // SSE slot - connection stays open, nothing to parse from client
     Sse.slot = i;
-    Sse.find(Sse.internal);
+    Sse.find(protocore_sse_span());
     if (Sse.conn)
     {
         return;

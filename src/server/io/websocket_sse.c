@@ -16,16 +16,17 @@
 #include "mmgr/protostr.h" // str.has: the permessage-deflate token in Sec-WebSocket-Extensions
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the slot a refusal is written on
 #include "network_drivers/transport/tcp/tcp.h"
-#include "protocore.h"
 #if PROTOCORE_ENABLE_WEBSOCKET
 #include "crypto/hash/sha1.h"
 #include "mmgr/secure.h" // the pool the digest borrow comes from
 #include "mmgr/span.h"   // protocore_span, span.ok
 #include "network_drivers/presentation/codec/base64/base64.h"
 #include "network_drivers/presentation/http/websocket/websocket.h"
+#include "network_drivers/session/ws/ws.h" // SessionWs: the channel this handshake opens
 #endif
 #if PROTOCORE_ENABLE_SSE
 #include "network_drivers/presentation/http/sse/sse.h"
+#include "network_drivers/session/sse/sse.h" // SessionSse: the stream this handshake opens
 #endif
 
 #if PROTOCORE_ENABLE_WEBSOCKET
@@ -125,7 +126,7 @@ void ws_send_version_required(uint8_t slot_id)
  * Does NOT close the TCP connection: the slot moves from HTTP parse ownership to WS frame parse
  * ownership.
  */
-proto_bool ws_do_upgrade(uint8_t slot_id, HttpReq *req, WsConnectHandler on_connect)
+proto_bool ws_do_upgrade(uint8_t slot_id, HttpReq *req, uint8_t route_id)
 {
     const char *client_key = http_get_header(req, "Sec-WebSocket-Key");
     if (!client_key)
@@ -184,23 +185,20 @@ proto_bool ws_do_upgrade(uint8_t slot_id, HttpReq *req, WsConnectHandler on_conn
     // Reset HTTP parser but keep the TCP slot -- WS owns it now
     http_parser_reset(&http_pool[slot_id]);
 
+    // The channel is the session layer's: it takes the number, binds it to this slot and runs the
+    // route's connect. This layer sent the handshake bytes.
     Ws.slot = slot_id;
-    Ws.alloc(Ws.internal);
-    WsConn *ws = Ws.found;
-    if (!ws)
+    Ws.id = route_id;
+#if PROTOCORE_ENABLE_WS_DEFLATE
+    Ws.pmd = pmd;
+#endif
+    SessionWs.open(NULL);
+    if (!SessionWs.ok)
     {
-        // No WS slot available -- abort the connection (transport owns the teardown)
+        // No channel available -- abort the connection (transport owns the teardown)
         ConnPool.slot = slot_id;
         ConnPool.abort_slot(ConnPool.internal);
         return PROTO_FALSE;
-    }
-
-#if PROTOCORE_ENABLE_WS_DEFLATE
-    ws->pmd = pmd;
-#endif
-    if (on_connect)
-    {
-        on_connect(ws->ws_id);
     }
 
     return PROTO_TRUE;
@@ -215,7 +213,7 @@ proto_bool ws_do_upgrade(uint8_t slot_id, HttpReq *req, WsConnectHandler on_conn
 /**
  * @brief Send the HTTP 200 + SSE headers and promote the slot to SSE mode.
  */
-proto_bool protocore_sse_do_upgrade(uint8_t slot_id, HttpReq *req, SseConnectHandler on_connect)
+proto_bool protocore_sse_do_upgrade(uint8_t slot_id, HttpReq *req, uint8_t route_id)
 {
     ConnPool.slot = slot_id;
     ConnPool.active(ConnPool.internal);
@@ -243,20 +241,17 @@ proto_bool protocore_sse_do_upgrade(uint8_t slot_id, HttpReq *req, SseConnectHan
     str.copy(path, req->path, sizeof(path));
     http_parser_reset(&http_pool[slot_id]);
 
+    // The stream is the session layer's: it takes the number, binds it to this connection and runs
+    // the route's connect. This layer sent the handshake bytes.
     Sse.slot = slot_id;
     Sse.route.path = path;
-    Sse.alloc(Sse.internal);
-    SseConn *sse = Sse.conn;
-    if (!sse)
+    Sse.id = route_id;
+    SessionSse.open(NULL);
+    if (!SessionSse.ok)
     {
         ConnPool.slot = slot_id;
         ConnPool.abort_slot(ConnPool.internal); // transport owns detach + reset + RST
         return PROTO_FALSE;
-    }
-
-    if (on_connect)
-    {
-        on_connect(sse->protocore_sse_id);
     }
 
     return PROTO_TRUE;
@@ -284,7 +279,7 @@ void ws_send_text(uint8_t ws_id, const char *text)
     Ws.frame.opcode = WS_OP_TEXT;
     Ws.frame.payload = (const uint8_t *)text;
     Ws.frame.len = len;
-    Ws.send_frame(Ws.internal);
+    Ws.send_frame(protocore_ws_span());
     if (Ws.ok)
     {
         // has itself checked protocore_conn_active(), and nothing between the two can tear the slot down
@@ -314,7 +309,7 @@ void ws_send_binary(uint8_t ws_id, const uint8_t *data, uint16_t len)
     Ws.frame.opcode = WS_OP_BINARY;
     Ws.frame.payload = data;
     Ws.frame.len = len;
-    Ws.send_frame(Ws.internal);
+    Ws.send_frame(protocore_ws_span());
     if (Ws.ok)
     {
         // connection, so the false half of this re-check is unreachable from a host test.
@@ -337,7 +332,7 @@ void ws_disconnect(uint8_t ws_id)
     WsConn *ws = &ws_pool[ws_id];
     Ws.conn = ws;
     Ws.frame.code = WS_CLOSE_NORMAL;
-    Ws.close(Ws.internal);
+    Ws.close(protocore_ws_span());
     ConnPool.slot = ws->slot_id;
     ConnPool.active(ConnPool.internal);
     if (ConnPool.ok)
@@ -365,7 +360,7 @@ void protocore_sse_send(uint8_t protocore_sse_id, const char *data, const char *
     Sse.event_args.data = data;
     Sse.event_args.event = event;
     Sse.event_args.event_id = id;
-    Sse.write(Sse.internal);
+    Sse.write(protocore_sse_span());
     if (Sse.ok)
     {
         // has itself checked protocore_conn_active(), so the slot is still live here.
@@ -396,7 +391,7 @@ void protocore_sse_broadcast(const char *path, const char *data, const char *eve
         Sse.event_args.data = data;
         Sse.event_args.event = event;
         Sse.event_args.event_id = id;
-        Sse.write(Sse.internal);
+        Sse.write(protocore_sse_span());
         if (Sse.ok)
         {
             // connection, so the false half of this re-check is unreachable from a host test.

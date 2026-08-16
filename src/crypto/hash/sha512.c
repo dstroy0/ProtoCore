@@ -19,9 +19,9 @@
 
 #if PROTOCORE_HAS_HW_SHA
 #endif
-#include "mmgr/endian.h" // protocore_rd64be / protocore_wr64be: the block reader and the digest writer
-#include "crypto/hash/sha512.h"
 #include "crypto/crypto_opt.h"
+#include "crypto/hash/sha512.h"
+#include "mmgr/endian.h" // protocore_rd64be / protocore_wr64be: the block reader and the digest writer
 #include "mmgr/protomem.h"
 
 PROTOCORE_CRYPTO_HOT
@@ -94,8 +94,8 @@ static const uint64_t H0[8] = {
 // the H and M banks are addressed as 32-bit words, so the counts are 16 and 32.
 static void sha512_block(uint64_t h[8], const uint8_t blk[PROTOCORE_SHA512_BLOCK_LEN])
 {
-    protocore_sha_hw_block(PROTOCORE_SHA_MODE_512, (uint32_t *)(void *)h, 16u, (const uint32_t *)(const void *)blk,
-                           32u, PROTO_FALSE);
+    protocore_sha_hw_block(PROTOCORE_SHA_MODE_512, (uint32_t *)(void *)h, 16u, (const uint32_t *)(const void *)blk, 32u,
+                           PROTO_FALSE);
 }
 #endif
 

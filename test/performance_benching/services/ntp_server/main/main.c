@@ -43,16 +43,16 @@ void dbench_run(void)
         volatile size_t sink = 0;
         // Full server reply build: stratum 3 relay advertising the local clock (LOCL).
         DBENCH_OP("protocore_ntp_server_build_response", 100000,
-                  sink += protocore_ntp_server_build_response(req, sizeof(req), 3, PROTOCORE_NTP_REFID_LOCL, secs, frac, out,
-                                                       sizeof(out)));
+                  sink += protocore_ntp_server_build_response(req, sizeof(req), 3, PROTOCORE_NTP_REFID_LOCL, secs, frac,
+                                                              out, sizeof(out)));
         // Same codec advertising a stratum-1 GPS reference clock (different stratum/refid inputs).
         DBENCH_OP("build_response gps stratum1", 100000,
-                  sink += protocore_ntp_server_build_response(req, sizeof(req), 1, PROTOCORE_NTP_REFID_GPS, secs, frac, out,
-                                                       sizeof(out)));
+                  sink += protocore_ntp_server_build_response(req, sizeof(req), 1, PROTOCORE_NTP_REFID_GPS, secs, frac,
+                                                              out, sizeof(out)));
         // Throughput view: the reply is a fixed 48-octet packet, so report ns/byte + MB/s.
         DBENCH_BULK("build_response throughput", 100000, PROTOCORE_NTP_PACKET_LEN,
-                    sink += protocore_ntp_server_build_response(req, sizeof(req), 3, PROTOCORE_NTP_REFID_LOCL, secs, frac, out,
-                                                         sizeof(out)));
+                    sink += protocore_ntp_server_build_response(req, sizeof(req), 3, PROTOCORE_NTP_REFID_LOCL, secs,
+                                                                frac, out, sizeof(out)));
         (void)sink;
         DBENCH_DONE();
     }

@@ -13,9 +13,9 @@
 
 #if PROTOCORE_ENABLE_NTRIP_CASTER
 
+#include "network_drivers/session/session.h"                 // Session.proto->add: the handler registration
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the accepted slot
 #include "network_drivers/transport/tcp/tcp.h"
-#include "network_drivers/session/session.h" // Session.proto->add: the handler registration
 #include "server/core/proto_handler.h"
 
 // One published mountpoint on a listener.

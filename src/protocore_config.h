@@ -4880,9 +4880,9 @@ from halves and is slower than the width it decomposes into"
  *
  * A policy layer on top of the mbedTLS-backed transport TLS (which already runs the 1.2 / 1.3 record +
  * handshake): server/security/tls_policy pins the version to an audited [min,max] and makes the negotiated
- * version observable (protocore_tls_negotiate_version / protocore_tls_version_name), and pins the cipher suites
- * to an audited allowlist selected by server preference (protocore_tls_select_cipher), with an AEAD-only
- * classifier (protocore_tls_is_aead) for a hardened profile. Pure, host-tested; the app feeds the results to
+ * version observable (::TlsPolicyNs::negotiate / ::TlsPolicyNs::name), and pins the cipher suites
+ * to an audited allowlist selected by server preference (::TlsPolicyNs::select), with an AEAD-only
+ * classifier (::TlsPolicyNs::is_aead) for a hardened profile. Pure, host-tested; the app feeds the results to
  * the mbedTLS config. Default off.
  */
 #ifndef PROTOCORE_ENABLE_TLS_POLICY
@@ -5816,6 +5816,16 @@ from halves and is slower than the width it decomposes into"
 #endif
 
 /**
+ * @brief The HPACK dynamic table one connection tracks for its peer's encoder.
+ *
+ * The entry descriptors and the byte ring they index into. The connection owns these bytes; the
+ * exact width is hpack.c's, and the static_assert there is what proves this covers it.
+ */
+#ifndef PROTOCORE_HPACK_BORROW
+#define PROTOCORE_HPACK_BORROW ((size_t)PROTOCORE_HPACK_MAX_ENTRIES * 8 + PROTOCORE_HPACK_TABLE_BYTES + 32)
+#endif
+
+/**
  * @brief Largest HTTP/2 frame we accept, in bytes (advertised as SETTINGS_MAX_FRAME_SIZE). RFC
  * 9113 requires accepting at least 16384; a whole frame is buffered for reassembly, so this
  * (plus the HPACK table) sets the per-HTTP/2-connection RAM. Range: [16384, 16777215].
@@ -6248,7 +6258,7 @@ from halves and is slower than the width it decomposes into"
  *
  * Default off. A forwarded header is client-spoofable, so it is honored only when the connection's
  * real TCP peer matches a configured trusted-proxy CIDR (register one with
- * `protocore_forwarded_trust_add_cidr("10.0.0.0/8")`). When set, the per-IP auth lockout keys on the
+ * `ForwardedTrust.add_cidr`). When set, the per-IP auth lockout keys on the
  * recovered original client address behind such a proxy instead of the proxy's shared TCP address, so
  * one abusive client cannot lock out every client behind the proxy, while a direct (untrusted) peer's
  * spoofed header is ignored. The accept-time throttle and the IP allowlist deliberately stay on the
@@ -6585,7 +6595,7 @@ from halves and is slower than the width it decomposes into"
 // it belongs with the stream bytes rather than in the secure arena. Proved against sizeof(H3ConnCtx)
 // by a static_assert in h3_conn.c.
 #ifndef PROTOCORE_H3_CONN_CTX
-#define PROTOCORE_H3_CONN_CTX 640
+#define PROTOCORE_H3_CONN_CTX 672
 #endif
 #ifndef PROTOCORE_H3_CONN_BORROW
 #define PROTOCORE_H3_CONN_BORROW                                                                                       \
@@ -6595,12 +6605,6 @@ from halves and is slower than the width it decomposes into"
 #endif
 #ifndef PROTOCORE_WORK_H3_CONN
 #define PROTOCORE_WORK_H3_CONN ((size_t)PROTOCORE_QUIC_MAX_CONNS * PROTOCORE_H3_CONN_BORROW)
-#endif
-
-#if PROTOCORE_ENABLE_HTTP2
-#define PROTOCORE_PLAINTEXT_WORK_H2CONN PROTOCORE_WORK_H2_CONN
-#else
-#define PROTOCORE_PLAINTEXT_WORK_H2CONN 0
 #endif
 
 // The QUIC transport under it takes its own borrow from the same end: the bytes it owes each stream
@@ -6622,8 +6626,7 @@ from halves and is slower than the width it decomposes into"
 #endif
 
 #ifndef PROTOCORE_PLAINTEXT_ARENA_SIZE
-#define PROTOCORE_PLAINTEXT_ARENA_SIZE                                                                                 \
-    (PROTOCORE_PLAINTEXT_SCRATCH + PROTOCORE_PLAINTEXT_WORK_H2CONN + PROTOCORE_PLAINTEXT_WORK_H3CONN + 256)
+#define PROTOCORE_PLAINTEXT_ARENA_SIZE (PROTOCORE_PLAINTEXT_SCRATCH + PROTOCORE_PLAINTEXT_WORK_H3CONN + 256)
 #endif
 
 /**
@@ -7181,6 +7184,133 @@ from halves and is slower than the width it decomposes into"
 #define PROTOCORE_SECURE_WORK_AUTH 0
 #endif
 
+// The SSE module's bytes: one subscribe handler per route and the buffer a write frames its record
+// in. Taken from the persistent end so it lasts the life of the program. Proved against the real
+// split by a static_assert in sse.c.
+#ifndef PROTOCORE_SSE_BORROW
+#define PROTOCORE_SSE_BORROW (MAX_ROUTES * 8 + SSE_BUF_SIZE + 32)
+#endif
+
+#if PROTOCORE_ENABLE_SSE
+#define PROTOCORE_SECURE_WORK_SSE PROTOCORE_SSE_BORROW
+#else
+#define PROTOCORE_SECURE_WORK_SSE 0
+#endif
+
+// The HTTP/2 engine's bytes: one connection record per transport slot and the per-slot
+// header-block bits. Taken from the persistent end so it lasts the life of the program. Proved
+// against the real split by a static_assert in h2_server.c.
+// One H2Conn: the frame and header-block cursors, the HPACK decoder table, the peer settings and
+// the stream table. The exact width is h2_conn.h's, which protocore_config.h cannot see, so the
+// static_assert in h2_server.c is what proves this covers it.
+#ifndef PROTOCORE_H2_CONN_RECORD
+#define PROTOCORE_H2_CONN_RECORD 32768
+#endif
+
+#ifndef PROTOCORE_H2_SERVER_BORROW
+#define PROTOCORE_H2_SERVER_BORROW ((size_t)MAX_CONNS * 16 + 64) // one pointer + one mask per slot
+#endif
+
+// HTTP/2 runs over TLS, so a connection's bytes are secure. The slot table holds the pointers;
+// the connections hold the bytes.
+#if PROTOCORE_ENABLE_HTTP2 && PROTOCORE_ENABLE_TLS
+#define PROTOCORE_SECURE_WORK_H2_SERVER                                                                                \
+    (PROTOCORE_H2_SERVER_BORROW +                                                                                      \
+     (size_t)MAX_CONNS * (PROTOCORE_H2_CONN_RECORD + PROTOCORE_H2_MAX_FRAME + 2 * PROTOCORE_H2_HDR_BLOCK + 16))
+#else
+#define PROTOCORE_SECURE_WORK_H2_SERVER 0
+#endif
+
+// The WebSocket module's bytes: one handler set per route, the scratch a slot's bytes are staged in
+// for the frame walk, and the outbound fragmentation size. Taken from the persistent end so it lasts
+// the life of the program. Proved against the real split by a static_assert in websocket.c.
+#ifndef PROTOCORE_WS_BORROW
+#define PROTOCORE_WS_BORROW (MAX_ROUTES * 24 + RX_BUF_SIZE + 32) // WsRoute is three handlers
+#endif
+
+#if PROTOCORE_ENABLE_WEBSOCKET
+#define PROTOCORE_SECURE_WORK_WS PROTOCORE_WS_BORROW
+#else
+#define PROTOCORE_SECURE_WORK_WS 0
+#endif
+
+// The CSRF issuer's bytes: its HMAC secret and nonce counter, then the region the nested
+// HMAC-SHA256 runs out of. Secure because the secret is key material, and taken from the persistent
+// end so it lasts the life of the program. Proved against the real split by a static_assert in csrf.c.
+#ifndef PROTOCORE_CSRF_BORROW
+#define PROTOCORE_CSRF_BORROW (64 + PROTOCORE_HMAC_SHA256_BORROW)
+#endif
+
+#if PROTOCORE_ENABLE_CSRF
+#define PROTOCORE_SECURE_WORK_CSRF PROTOCORE_CSRF_BORROW
+#else
+#define PROTOCORE_SECURE_WORK_CSRF 0
+#endif
+
+// The authentication lockout table: one bucket per recently-seen source address. Secure because a
+// bucket names who is being throttled, and taken from the persistent end so the table lasts the life
+// of the program. Proved against sizeof(LockoutCtx) by a static_assert in auth_lockout.c.
+#ifndef PROTOCORE_AUTH_LOCKOUT_BORROW
+#define PROTOCORE_AUTH_LOCKOUT_BORROW ((size_t)PROTOCORE_AUTH_LOCKOUT_SLOTS * 48u)
+#endif
+
+#if PROTOCORE_ENABLE_AUTH_LOCKOUT
+#define PROTOCORE_SECURE_WORK_LOCKOUT PROTOCORE_AUTH_LOCKOUT_BORROW
+#else
+#define PROTOCORE_SECURE_WORK_LOCKOUT 0
+#endif
+
+// The trusted-proxy table a forwarded header is honored against. Secure because it names which peers
+// may rewrite a client address, and taken from the persistent end so it lasts the life of the
+// program. Proved against the real table by a static_assert in forwarded_trust.c.
+#ifndef PROTOCORE_FORWARDED_TRUST_BORROW
+#define PROTOCORE_FORWARDED_TRUST_BORROW ((size_t)PROTOCORE_TRUSTED_PROXY_MAX * 32u)
+#endif
+
+#if PROTOCORE_ENABLE_FORWARDED_TRUST
+#define PROTOCORE_SECURE_WORK_FWDTRUST PROTOCORE_FORWARDED_TRUST_BORROW
+#else
+#define PROTOCORE_SECURE_WORK_FWDTRUST 0
+#endif
+
+// The audit ring: the retained records, their cursors, the chain anchor and the sink. Secure
+// because a record names who did what, and taken from the persistent end so the chain survives the
+// requests it spans. Proved against sizeof(AuditCtx) by a static_assert in audit_log.c.
+#ifndef PROTOCORE_AUDIT_LOG_BORROW
+#define PROTOCORE_AUDIT_LOG_BORROW                                                                                     \
+    ((size_t)PROTOCORE_AUDIT_LOG_ENTRIES * (PROTOCORE_AUDIT_MSG_LEN + PROTOCORE_AUDIT_HASH_LEN + 64u) + 128u)
+#endif
+
+#if PROTOCORE_ENABLE_AUDIT_LOG
+#define PROTOCORE_SECURE_WORK_AUDIT PROTOCORE_AUDIT_LOG_BORROW
+#else
+#define PROTOCORE_SECURE_WORK_AUDIT 0
+#endif
+
+// The web terminal's command callback, its WebSocket path and which slots are terminal browsers. Taken from the
+// persistent end so it outlives the connections it tracks. Proved by a static_assert in web_terminal.c.
+#ifndef PROTOCORE_WEB_TERMINAL_BORROW
+#define PROTOCORE_WEB_TERMINAL_BORROW (MAX_PATH_LEN + MAX_WS_CONNS + 32u)
+#endif
+
+#if PROTOCORE_ENABLE_WEB_TERMINAL
+#define PROTOCORE_SECURE_WORK_WEBTERM PROTOCORE_WEB_TERMINAL_BORROW
+#else
+#define PROTOCORE_SECURE_WORK_WEBTERM 0
+#endif
+
+// The config store's open namespace name. Secure because a namespace names where settings live, and taken from the
+// persistent end so it outlives the request that opened it. Proved by a static_assert in config_store.c.
+#ifndef PROTOCORE_CONFIG_STORE_BORROW
+#define PROTOCORE_CONFIG_STORE_BORROW (PROTOCORE_CONFIG_KEY_MAX + 32u)
+#endif
+
+#if PROTOCORE_ENABLE_CONFIG_STORE
+#define PROTOCORE_SECURE_WORK_CFGSTORE PROTOCORE_CONFIG_STORE_BORROW
+#else
+#define PROTOCORE_SECURE_WORK_CFGSTORE 0
+#endif
+
 #if PROTOCORE_TLS_SOFTWARE
 #define PROTOCORE_SECURE_WORK_TLSCONN PROTOCORE_WORK_TLS_CONN
 #else
@@ -7280,7 +7410,8 @@ from halves and is slower than the width it decomposes into"
      PROTOCORE_SECURE_WORK_CURVE25519 + PROTOCORE_SECURE_WORK_ED25519 + PROTOCORE_SECURE_WORK_ECDSA +                  \
      PROTOCORE_SECURE_WORK_RSA + PROTOCORE_SECURE_WORK_MLKEM + PROTOCORE_SECURE_WORK_SNTRUP761 +                       \
      PROTOCORE_SECURE_WORK_AES128GCM + PROTOCORE_WORK_ROUTE_TABLE + PROTOCORE_SECURE_WORK_AUTH +                       \
-     PROTOCORE_SECURE_WORK_RNG + PROTOCORE_SECURE_WORK_QUICCONN +                                                      \
+     PROTOCORE_SECURE_WORK_RNG + PROTOCORE_SECURE_WORK_QUICCONN + PROTOCORE_SECURE_WORK_WS +                           \
+     PROTOCORE_SECURE_WORK_SSE + PROTOCORE_SECURE_WORK_H2_SERVER + PROTOCORE_SECURE_WORK_CSRF +                        \
      256) // + 256: alignment round-up across the individual borrows
 #endif
 

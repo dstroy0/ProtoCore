@@ -44,12 +44,12 @@ void dbench_run(void)
 
         // Threshold evaluator - a handful of unsigned compares + bit-ORs; cheap, so large N.
         Guardrails.health = &clear;
-        DBENCH_OP("Guardrails.eval all-clear", 200000,
-                  Guardrails.eval(Guardrails.internal); sink8 += Guardrails.breaches);
+        DBENCH_OP("Guardrails.eval all-clear", 200000, Guardrails.eval(Guardrails.internal);
+                  sink8 += Guardrails.breaches);
 
         Guardrails.health = &breach;
-        DBENCH_OP("Guardrails.eval all-breach", 200000,
-                  Guardrails.eval(Guardrails.internal); sink8 += Guardrails.breaches);
+        DBENCH_OP("Guardrails.eval all-breach", 200000, Guardrails.eval(Guardrails.internal);
+                  sink8 += Guardrails.breaches);
 
         // JSON serializer - one snprintf of four uint32s; still cheap, moderate N.
         Guardrails.health = &clear;

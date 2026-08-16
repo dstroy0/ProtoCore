@@ -37,11 +37,15 @@
 #ifndef PROTOCORE_WEB_TERMINAL_H
 #define PROTOCORE_WEB_TERMINAL_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_WEB_TERMINAL
 
 PROTOCORE_BEGIN_DECLS
+
+// PROTOCORE_WEB_TERMINAL_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums it
+// into its arena. A caller takes them once and passes the pointer to every call. How they are
+// carved is this module's and is never named here.
 
 /**
  * @brief Callback for a line typed in a connected browser terminal.
@@ -50,51 +54,61 @@ PROTOCORE_BEGIN_DECLS
  */
 typedef void (*TermCommandCb)(const char *line, uint8_t client_id);
 
-/**
- * @brief Register the terminal page + WebSocket endpoint.
- *
- * Serves the HTML page at @p path (GET) and accepts the terminal WebSocket at
- * `<path>/ws`. Call before begin_http().
- *
- * @param path URL path for the page.
- */
-void protocore_web_terminal_begin(const char *path);
-
-/** @brief Install the command callback (browser -> device). Pass NULL to clear. */
-void protocore_web_terminal_on_command(TermCommandCb cb);
-
-/** @brief Broadcast text to every connected terminal browser (device -> browsers). */
-void protocore_web_terminal_print(const char *s);
-
-/** @brief Like print() but appends a newline. */
-void protocore_web_terminal_println(const char *s);
-
-/** @brief Number of browsers currently connected to the terminal. */
-uint8_t protocore_web_terminal_client_count(void);
-
-#else // PROTOCORE_ENABLE_WEB_TERMINAL == 0  -> no-op stubs
-
 typedef void (*TermCommandCb)(const char *line, uint8_t client_id);
-static inline void protocore_web_terminal_begin(const char *path)
+
+/** @brief What begin takes. */
+typedef struct
 {
-    (void)path;
-}
-static inline void protocore_web_terminal_on_command(TermCommandCb cb)
+    const char *path;
+} WebTerminalBeginArgs;
+
+/** @brief What on_command takes. */
+typedef struct
 {
-    (void)cb;
-}
-static inline void protocore_web_terminal_print(const char *s)
+    TermCommandCb cb;
+} WebTerminalOnCommandArgs;
+
+/** @brief What print takes. */
+typedef struct
 {
-    (void)s;
-}
-static inline void protocore_web_terminal_println(const char *s)
+    const char *s;
+} WebTerminalPrintArgs;
+
+/** @brief What println takes. */
+typedef struct
 {
-    (void)s;
-}
-static inline uint8_t protocore_web_terminal_client_count(void)
+    const char *s;
+} WebTerminalPrintlnArgs;
+typedef struct
 {
-    return 0;
-}
+    WebTerminalBeginArgs begin_args;
+    WebTerminalOnCommandArgs on_command_args;
+    WebTerminalPrintArgs print_args;
+    WebTerminalPrintlnArgs println_args;
+
+    proto_bool ok;
+    uint16_t value;
+
+    void (*const begin)(uint8_t *restrict work);
+    void (*const on_command)(uint8_t *restrict work);
+    void (*const print)(uint8_t *restrict work);
+    void (*const println)(uint8_t *restrict work);
+    void (*const client_count)(uint8_t *restrict work);
+} WebTerminalNs;
+
+/** @brief The one symbol this module exports. */
+extern WebTerminalNs WebTerminal;
+
+/**
+ * @brief The PROTOCORE_WEB_TERMINAL_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+uint8_t *protocore_web_terminal_span(void);
 
 PROTOCORE_END_DECLS
 

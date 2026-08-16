@@ -44,7 +44,6 @@ PROTOCORE_BEGIN_DECLS
 #include "server/storage/mnt.h" // protocore_mnt_backend - the store the log lives on
 #include "services/storage/wal/wal_store.h"
 
-
 /** @brief What the adapter needs to reach one open file: the store and the handle it returned. */
 typedef struct
 {
