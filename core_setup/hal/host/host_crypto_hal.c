@@ -55,8 +55,7 @@ void protocore_rsa_hw_release(void)
 // with the product keeps this O(words^2) machine words, which is what the peripheral's single-shot
 // MODMULT costs and what the ladders above this are written against - a bit-serial reduction would be
 // 32x the work per multiply and is what makes a 1,000-round X25519 iteration crawl.
-static void montmul(uint32_t *t, const uint32_t *a, const uint32_t *b, const uint32_t *m, uint32_t mprime,
-                    unsigned n)
+static void montmul(uint32_t *t, const uint32_t *a, const uint32_t *b, const uint32_t *m, uint32_t mprime, unsigned n)
 {
     uint32_t s[PROTOCORE_RSA_HOST_MAX_WORDS + 2] = {0};
     for (unsigned i = 0; i < n; i++)

@@ -663,12 +663,14 @@ static proto_bool json_get_bool(const char *json, const char *key, proto_bool *o
     {
         return PROTO_FALSE;
     }
-    if (str.starts(v, "true", 4, PROTO_FALSE) && (v[4] == '\0' || v[4] == ',' || v[4] == '}' || v[4] == ']' || is_ws(v[4])))
+    if (str.starts(v, "true", 4, PROTO_FALSE) &&
+        (v[4] == '\0' || v[4] == ',' || v[4] == '}' || v[4] == ']' || is_ws(v[4])))
     {
         *out = PROTO_TRUE;
         return PROTO_TRUE;
     }
-    if (str.starts(v, "false", 5, PROTO_FALSE) && (v[5] == '\0' || v[5] == ',' || v[5] == '}' || v[5] == ']' || is_ws(v[5])))
+    if (str.starts(v, "false", 5, PROTO_FALSE) &&
+        (v[5] == '\0' || v[5] == ',' || v[5] == '}' || v[5] == ']' || is_ws(v[5])))
     {
         *out = PROTO_FALSE;
         return PROTO_TRUE;

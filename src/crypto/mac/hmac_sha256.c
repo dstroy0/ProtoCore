@@ -22,17 +22,11 @@
 
 #if PROTOCORE_ENABLE_HMAC_SHA256
 
-#include "crypto/mac/hmac_sha256.h"
 #include "crypto/crypto_opt.h"
 #include "crypto/hash/sha256.h" // Sha256 - the digest this MAC drives, and its lengths
+#include "crypto/mac/hmac_sha256.h"
 #include "mmgr/protomem.h"
 
-// HMAC-SHA256 is HW-SHA-dominated; the only -O lever is its SW key-block glue. On the P4 that rides the per-die
-// -O3 default (whose win is -O3's loop-unroll parameter budget). The S3's ~4% O3 edge is the same parameter
-// class (bisected on-device: -fpeel-loops and -funswitch-loops both no-op), not a single transform, and not
-// worth -O3's code-size / miscompile baggage on a HW-dominated MAC - so the S3 keeps the -O2 default. Capturing
-// that 4% deliberately would take a source #pragma GCC unroll on the key-block loops (a code change, not a flag).
-// See crypto_opt.h caveat 1.
 PROTOCORE_CRYPTO_HOT
 PROTOCORE_BEGIN_DECLS
 

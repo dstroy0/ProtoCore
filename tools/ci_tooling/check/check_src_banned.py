@@ -84,8 +84,11 @@ BANS = [
     # Not preceded by `.` or `->`: a pimpl module publishes members by plain verb, so `Ws.free(...)`
     # and `Sse.free(...)` release a slot back to that module's own table and never reach the
     # allocator. Matching the bare token read every one of them as a heap call.
-    (re.compile(r"(?<![.>\w])(?:malloc|calloc|realloc|free|aligned_alloc)\s*\("), 2,
-     "heap allocation; use fixed BSS buffers"),
+    (
+        re.compile(r"(?<![.>\w])(?:malloc|calloc|realloc|free|aligned_alloc)\s*\("),
+        2,
+        "heap allocation; use fixed BSS buffers",
+    ),
     (
         re.compile(r"\b(?:atoi|atol|atoll|strtol|strtoll|strtoul|strtoull|strtod|strtof|qsort|srand|rand)\s*\("),
         2,
@@ -105,8 +108,7 @@ BANS = [
     # a member named `gmtime`, so `TimeCompat.gmtime(TimeCompat.internal)` fills a caller-supplied
     # `struct tm` and is the _r form. The one owner (shared/time_compat/time_compat.c) calls
     # gmtime_r / gmtime_s and is what this ban is guarding.
-    (re.compile(r"(?<![.>\w])(?:gmtime|localtime|ctime|asctime)\s*\("), 8,
-     "non-reentrant time; use the _r form"),
+    (re.compile(r"(?<![.>\w])(?:gmtime|localtime|ctime|asctime)\s*\("), 8, "non-reentrant time; use the _r form"),
     (re.compile("—"), 7, "em-dash; use a comma / parentheses / a linking word"),
     (re.compile(r"\bvirtual\b"), 22, _VIRTUAL_MSG),
     (re.compile(r"\b(?:class|struct)\s+\w+\s*:\s*(?:public|protected|private|virtual)\b"), 22, _INHERIT_MSG),
@@ -143,8 +145,9 @@ _MIDINC_MSG = "#include after the first function; hoist it above them"
 # and a forward declaration a later include needs both read as fine. A signature ends in `)` with an
 # optional trailing `{` (Allman puts the brace on the next line); `=` means an initializer and `;`
 # means a prototype, and neither defines anything.
-_FUNC_SIG = re.compile(r"^\s*(?!#)(?!typedef\b)(?!return\b)[A-Za-z_][\w\s\*&,<>:\[\]]*\([^;=]*\)"
-                       r"\s*(?:const)?\s*\{?\s*$")
+_FUNC_SIG = re.compile(
+    r"^\s*(?!#)(?!typedef\b)(?!return\b)[A-Za-z_][\w\s\*&,<>:\[\]]*\([^;=]*\)" r"\s*(?:const)?\s*\{?\s*$"
+)
 _ALLOW_LATE = "PROTOCORE_ALLOW_LATE_INCLUDE"
 _LINKAGE = re.compile(r"^\s*PROTO_(?:BEGIN|END)_DECLS\s*$")
 

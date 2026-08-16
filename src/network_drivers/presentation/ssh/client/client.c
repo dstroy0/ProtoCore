@@ -28,8 +28,8 @@
 #include "network_drivers/presentation/ssh/transport/ssh_rsa.h"     // rsa-sha2-256/512 host-key verify
 #include "network_drivers/presentation/ssh/transport/transport.h"
 #include "network_drivers/transport/tcp/client/client.h" // TcpClient: the dialed connection
-#include "network_drivers/transport/tcp/tcp.h" // protocore_client_*
-#include "server/clock/clock.h"                // protocore_millis, pcdelay
+#include "network_drivers/transport/tcp/tcp.h"           // protocore_client_*
+#include "server/clock/clock.h"                          // protocore_millis, pcdelay
 #include "shared/log/log.h"
 #if PROTOCORE_ENABLE_PQC_KEX
 #include "crypto/pqc/mlkem.h" // mlkem768x25519-sha256 hybrid (client: KeyGen + Decaps)
@@ -480,8 +480,7 @@ static proto_bool handle_server_kexinit(const uint8_t *p, size_t len)
         bytes.put(&w, SSH_MSG_KEXDH_INIT);
         bytes.put_be(&w, (uint32_t)clen, 4);
         bytes.raw(&w, hs->cpub, clen);
-        proto_bool ok =
-            span.ok(w) && (SshClient.payload = out, SshClient.len = w.pos, cli_send(&s_cli), SshClient.ok);
+        proto_bool ok = span.ok(w) && (SshClient.payload = out, SshClient.len = w.pos, cli_send(&s_cli), SshClient.ok);
         protocore_plaintext_release(mark);
         return ok;
     }
@@ -509,8 +508,7 @@ static proto_bool handle_server_kexinit(const uint8_t *p, size_t len)
         bytes.put(&w, SSH_MSG_KEXDH_INIT);
         bytes.put_be(&w, (uint32_t)clen, 4);
         bytes.raw(&w, hs->cpub, clen);
-        proto_bool ok =
-            span.ok(w) && (SshClient.payload = out, SshClient.len = w.pos, cli_send(&s_cli), SshClient.ok);
+        proto_bool ok = span.ok(w) && (SshClient.payload = out, SshClient.len = w.pos, cli_send(&s_cli), SshClient.ok);
         protocore_plaintext_release(mark);
         return ok;
     }

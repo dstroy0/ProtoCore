@@ -1322,9 +1322,8 @@ proto_bool ssh_hostkey_verify(uint8_t i, const uint8_t *ks, size_t ks_len, const
     {
     case SSH_HOSTKEY_ED25519:
         ok = parse_ed25519_pubkey(ks, (uint32_t)ks_len, pub.buf) && raw_len == 64 &&
-             (Ed25519.verify_args.pub = pub.buf, Ed25519.verify_args.msg = h,
-              Ed25519.verify_args.msg_len = h_len, Ed25519.verify_args.sig = raw, Ed25519.verify(work),
-              Ed25519.ok);
+             (Ed25519.verify_args.pub = pub.buf, Ed25519.verify_args.msg = h, Ed25519.verify_args.msg_len = h_len,
+              Ed25519.verify_args.sig = raw, Ed25519.verify(work), Ed25519.ok);
         break;
     case SSH_HOSTKEY_ECDSA_NISTP256:
         ok = parse_ecdsa_pubkey(ks, (uint32_t)ks_len, pub.buf) && parse_ecdsa_sig(raw, raw_len, ec_sig.buf) &&
@@ -2553,8 +2552,8 @@ int ssh_pkt_send_at(uint8_t i, uint8_t *out, size_t payload_len, size_t *out_len
     }
 
     // Frame around the payload already sitting at out + SSH_WIRE_PAYLOAD_OFF.
-    write_u32_be(out, (uint32_t)pkt_len);                // packet_length
-    out[4] = (uint8_t)pad_len;                           // padding_length
+    write_u32_be(out, (uint32_t)pkt_len); // packet_length
+    out[4] = (uint8_t)pad_len;            // padding_length
     Rng.fill_args.out = out + 5 + payload_len;
     Rng.fill_args.len = pad_len;
     Rng.fill(protocore_rng_span()); // random padding
@@ -4085,10 +4084,10 @@ proto_bool ssh_pubkey_verify(uint8_t i, const char *pk_algo, const uint8_t *blob
     else if (is_ecdsa)
     {
         protocore_span ec_sig = protocore_plaintext_span(PROTOCORE_ECDSA_P256_SIG_LEN, 4);
-        sig_ok = span.ok(ec_sig) && parse_ecdsa_sig(sig, sig_len, ec_sig.buf) &&
-                 (Ecdsa.verify_args.pub = ec_pub.buf, Ecdsa.verify_args.msg = signed_data,
-                  Ecdsa.verify_args.mlen = signed_len, Ecdsa.verify_args.sig = ec_sig.buf, Ecdsa.verify(work),
-                  Ecdsa.ok);
+        sig_ok =
+            span.ok(ec_sig) && parse_ecdsa_sig(sig, sig_len, ec_sig.buf) &&
+            (Ecdsa.verify_args.pub = ec_pub.buf, Ecdsa.verify_args.msg = signed_data,
+             Ecdsa.verify_args.mlen = signed_len, Ecdsa.verify_args.sig = ec_sig.buf, Ecdsa.verify(work), Ecdsa.ok);
     }
     else
     {

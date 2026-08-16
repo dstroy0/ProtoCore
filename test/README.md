@@ -137,10 +137,6 @@ The native test matrix has **397 environments**, one per feature, generated from
 | `native_dbm` | `PROTOCORE_ENABLE_WAL=1`, `PROTOCORE_ENABLE_DBM=1` | `unit/protocols/storage/test_dbm` | Log-structured hash key-value store on the WAL (services/storage/dbm): put/get/delete with an in-RAM open-addressed index and value data appended to the write-ahead log, plus index rebuild by replayin... |
 | `native_dds_rtps` | `PROTOCORE_ENABLE_DDS=1` | `unit/file_conversion/services/iot/dds/test_dds` | DDSI-RTPS Message framing codec (services/iot/dds), OMG DDSI-RTPS 2.5 formal/2022-04-01: the sec 9.4.4 20-octet Header (PROTOCOL_RTPS magic, ProtocolVersion, VendorId, GuidPrefix), the sec 9.4.5.1 Sub... |
 | `native_defer` | default | `unit/integration/session/test_defer` | test_defer against the native_stack_http stack. |
-<<<<<<< HEAD
-=======
-| `native_deflate` | `PROTOCORE_ENABLE_WS_DEFLATE=1`, `PROTOCORE_ENABLE_WEBSOCKET=1` | `unit/src/network_drivers/presentation/codec/deflate/test_deflate` | RFC 1951 DEFLATE core (the WebSocket permessage-deflate compressor). |
->>>>>>> 6218af9670c3c9780c77ecba3bc0ce2303559940
 | `native_device_id` | `PROTOCORE_ENABLE_DEVICE_ID=1`, `PROTOCORE_HAS_VENDOR_MAC=1` | `unit/src/server/signaling/test_device_id` | MAC-derived device UUID (server/signaling/device_id): RFC 4122 v5 from a MAC via SHA-1. |
 | `native_devicenet` | `PROTOCORE_ENABLE_DEVICENET=1` | `unit/src/services/fieldbus/devicenet/test_devicenet` | DeviceNet link-adaptation codec (services/fieldbus/devicenet): the 4-group 11-bit CAN id, explicit-message header octet, single-frame explicit messages, and the fragmentation reassembler (CIP over CAN... |
 | `native_df1` | `PROTOCORE_ENABLE_DF1=1` | `unit/src/services/fieldbus/df1/test_df1` | Allen-Bradley DF1 full-duplex frame codec (services/fieldbus/df1): BCC + CRC-16/ARC, the frame builder with DLE byte-stuffing, and the validating, un-stuffing parser. |
@@ -207,10 +203,6 @@ The native test matrix has **397 environments**, one per feature, generated from
 | `native_h3_e2e` | `PROTOCORE_ENABLE_HTTP3=1` | `unit/integration/http/test_h3_e2e` | End-to-end HTTP/3 capstone (network_drivers/presentation/http/http3): a QUIC client in the test completes the TLS 1.3 handshake against a quic_conn + h3_conn server, sends a real HTTP/3 GET (QPACK HEA... |
 | `native_h3_frame_rfc` | `PROTOCORE_ENABLE_HTTP3=1` | `unit/src/network_drivers/presentation/http/http3/test_h3_frame` | HTTP/3 framing (network_drivers/presentation/http/http3/h3_frame, RFC 9114 sec 7): the type+length varint header driven through all four sample varint sequences RFC 9000 Appendix A.1 publishes, the lo... |
 | `native_h3_server` | `PROTOCORE_ENABLE_HTTP3=1`, `PROTOCORE_HAS_NET_STACK=1` | `unit/integration/http/test_h3_server` | HTTP/3 dispatch bridge end-to-end through PC (the full Layer-7 app built with PROTOCORE_ENABLE_HTTP3=1): a QUIC client completes the handshake and sends an HTTP/3 GET, quic_server routes it to the res... |
-<<<<<<< HEAD
-=======
-| `native_h3frame` | `PROTOCORE_ENABLE_HTTP3=1` | `unit/src/network_drivers/presentation/http/http3/test_h3_frame` | HTTP/3 framing (network_drivers/presentation/http/http3/h3_frame, RFC 9114 sec 7): the type+length varint header parse/write (incl. |
->>>>>>> 6218af9670c3c9780c77ecba3bc0ce2303559940
 | `native_haas_mdc` | `PROTOCORE_ENABLE_HAAS_MDC=1` | `unit/file_conversion/services/machine_tool/haas_mdc/test_haas_mdc` | Haas Machine Data Collection (MDC) Q-command codec (services/machine_tool/haas_mdc): the ?Q query builders (Q100 serial, Q101 software version, Q102 model, Q104 mode, Q300 power-on time, Q500 program ... |
 | `native_happy_eyeballs` | `PROTOCORE_ENABLE_HAPPY_EYEBALLS=1` | `unit/src/network_drivers/transport/happy_eyeballs/test_happy_eyeballs` | Dual-stack Happy Eyeballs selection (network_drivers/transport/happy_eyeballs): RFC 6724 destination preference scoring, the candidate-list sort + RFC 8305 address-family interleave, and the Connectio... |
 | `native_hart` | `PROTOCORE_ENABLE_HART=1` | `unit/src/services/fieldbus/hart/test_hart` | HART / HART-IP codec (services/fieldbus/hart): the HART command frame (longitudinal XOR checksum, short + long addressing) build/parse and the 8-octet HART-IP message header. |
@@ -244,10 +236,6 @@ The native test matrix has **397 environments**, one per feature, generated from
 | `native_jwt_rfc7515` | `PROTOCORE_ENABLE_JWT=1` | `unit/src/services/security/jwt/test_jwt` | HS256 JWT verifier (services/security/jwt). |
 | `native_keepalive` | `PROTOCORE_ENFORCE_HOST_HEADER=0`, `PROTOCORE_ENABLE_KEEPALIVE=1`, `PROTOCORE_KEEPALIVE_MAX_REQUESTS=3`, `PROTOCORE_ENABLE_WEBSOCKET=1`, `PROTOCORE_ENABLE_SSE=1`, `PROTOCORE_HAS_NET_STACK=1` | `unit/integration/server/test_keepalive` | HTTP/1.1 keep-alive (persistent connections): full server built with PROTOCORE_ENABLE_KEEPALIVE=1; a small per-connection request cap makes the fairness-bound test fast. |
 | `native_l1_egress` | default | `unit/src/network_drivers/physical/test_net_egress` | Egress-interface reporting with no L1 backend (network_drivers/physical). |
-<<<<<<< HEAD
-=======
-| `native_l1_iface` | `PROTOCORE_PHY_MAX_IFACES=4`, `PROTOCORE_ENABLE_WEBSOCKET=1`, `PROTOCORE_ENABLE_SSE=1` | `unit/src/network_drivers/physical/test_iface` | The layer 1 interface registry (network_drivers/physical, the PhysicalNs iface_* calls): an interface is an id, a kind, and the callback that puts octets on the wire, and one device carries several of... |
->>>>>>> 6218af9670c3c9780c77ecba3bc0ce2303559940
 | `native_l1_link` | `PROTOCORE_PHYSICAL_HAS_BACKEND=1`, `PROTOCORE_ENABLE_ETHERNET=1`, `PROTOCORE_ENABLE_IPV6=1`, `PROTOCORE_ENABLE_RADIO_POWER=1`, `PROTOCORE_RADIO_WIFI_PS=2` | `unit/src/network_drivers/physical/test_phy` | Layer 1 driven through a real backend: the env declares PROTOCORE_PHYSICAL_HAS_BACKEND=1, so core_setup/hal/host/physical stands in for silicon instead of the no-op stubs in physical.c, and the link c... |
 | `native_ld2410` | `PROTOCORE_ENABLE_LD2410=1` | `unit/src/server/peripherals/ld2410/test_ld2410` | LD2410 mmWave radar codec (server/peripherals/ld2410): decoding a basic and an engineering-mode report frame, rejecting malformed frames, the byte-by-byte stream reassembler (resync past noise, split ... |
 | `native_ldc1614` | `PROTOCORE_ENABLE_LDC1614=1` | `unit/src/server/peripherals/ldc1614/test_ldc1614` | LDC1614 inductance-to-digital field sensor (server/peripherals/ldc1614): the 28-bit data combine + error flags, the frequency scale (data/2^28 * fref), and the single-channel config-sequence builder. |
@@ -299,18 +287,9 @@ The native test matrix has **397 environments**, one per feature, generated from
 | `native_ntlmssp` | `PROTOCORE_ENABLE_SMB=1` | `unit/src/network_drivers/application/smb/test_ntlmssp` | NTLMSSP message codec (network_drivers/application/smb/ntlmssp, MS-NLMP 2.2.1). |
 | `native_ntp_server` | `PROTOCORE_ENABLE_NTP_SERVER=1`, `PROTOCORE_ENABLE_TIME_SOURCE=1`, `PROTOCORE_HAS_NET_STACK=1` | `unit/file_conversion/network_drivers/application/ntp_server/test_ntp_server` | NTP/SNTP server (RFC 5905 server mode): the response codec (ntp_server_build_response) - version echo, mode/LI/stratum, origin-timestamp copy, reference/receive/transmit stamps, big-endian encoding, a... |
 | `native_ntp_service` | `PROTOCORE_ENABLE_NTP=1`, `PROTOCORE_HAS_NET_STACK=1` | `unit/src/network_drivers/application/ntp_service/test_ntp_service` | The SNTP client (network_drivers/application/ntp_service, RFC 4330), which is the client on every target: the mode-3 request it puts on the wire, the mode-4 reply it accepts, and the ones it refuses -... |
-<<<<<<< HEAD
-=======
-| `native_ntrip_caster` | `PROTOCORE_ENABLE_NTRIP_CASTER=1` | `unit/file_conversion/services/timing_position/gnss/test_ntrip_caster` | NTRIP caster protocol codec (services/timing_position/gnss/ntrip_caster): rover request parsing (mountpoint, NTRIP 1.0/2.0 version, HTTP Basic auth), the stream-accept / error responses, and the RTCM ... |
-| `native_nts` | `PROTOCORE_ENABLE_NTS=1` | `unit/file_conversion/network_drivers/application/nts/test_nts` | Network Time Security codec (network_drivers/application/nts, RFC 8915): the NTS-KE TLV records (build the standard request, parse a response) and the NTS NTP extension-field framing (unique id / cook... |
->>>>>>> 6218af9670c3c9780c77ecba3bc0ce2303559940
 | `native_nts_ke` | `PROTOCORE_ENABLE_NTS=1` | `unit/file_conversion/network_drivers/application/nts/test_nts` | Network Time Security wire codec (network_drivers/application/nts, RFC 8915). |
 | `native_oauth2_rfc6749` | `PROTOCORE_ENABLE_OAUTH2=1` | `unit/src/services/security/oauth2/test_oauth2` | OAuth 2.0 token-endpoint client (services/security/oauth2). |
 | `native_observability` | `PROTOCORE_ENABLE_OBSERVABILITY=1`, `PROTOCORE_HAS_NET_STACK=1` | `unit/integration/transport/test_observability` | Transport observability (PROTOCORE_ENABLE_OBSERVABILITY): the protocore_conn_on_event hook, by-reason counters, the live CONN_CLOSING gauge, and that the real lwIP callbacks (recv FIN / error / timeou... |
-<<<<<<< HEAD
-=======
-| `native_ocit` | `PROTOCORE_ENABLE_OCIT=1` | `unit/src/services/transportation/ocit/test_ocit` | OCIT-Outstations message codec (services/transportation/ocit): the object message ([msg-type][object-type][instance][data-type][value]) build + parse and the typed-value accessors. |
->>>>>>> 6218af9670c3c9780c77ecba3bc0ce2303559940
 | `native_ocit_msg` | `PROTOCORE_ENABLE_OCIT=1` | `unit/src/services/transportation/ocit/test_ocit` | OCIT-Outstations message codec (services/transportation/ocit): the object message [message-type][object-type:2][instance:2][data-type][value] build and parse, with the two 16-bit address fields assert... |
 | `native_oidc_rfc7515` | `PROTOCORE_ENABLE_OIDC=1` | `unit/src/services/security/oidc/test_oidc` | OpenID Connect RS256 ID Token verifier (services/security/oidc). |
 | `native_opcua` | `PROTOCORE_ENABLE_OPCUA=1` | `unit/src/services/fieldbus/opcua/test_opcua` | OPC UA Binary server core (services/fieldbus/opcua): the little-endian built-in type codec, NodeId encoding forms, the UACP header + Hello/Acknowledge/Error handshake, the OpenSecureChannel exchange, ... |
@@ -318,10 +297,6 @@ The native test matrix has **397 environments**, one per feature, generated from
 | `native_openadr` | `PROTOCORE_ENABLE_OPENADR=1` | `unit/src/services/energy/openadr/test_openadr` | OpenADR 3.0 JSON codec (services/energy/openadr): the event (programID + eventName + interval payloads) and report (VEN reading) JSON documents build, with escaping + a no-stdlib 3-decimal formatter. |
 | `native_ota` | `PROTOCORE_ENFORCE_HOST_HEADER=0`, `PROTOCORE_ENABLE_OTA=1` | `unit/integration/http/test_http_ota` | Parser streaming-body hook (OTA) - exercises http_parser with PROTOCORE_ENABLE_OTA=1 using a mock sink (no ESP32 Update dependency). |
 | `native_ota_rollback` | `PROTOCORE_ENABLE_OTA_ROLLBACK=1`, `PROTOCORE_HAS_VENDOR_OTA=1` | `unit/src/server/update/test_ota_rollback` | OTA rollback decision (server/update/ota_rollback): pure decision matrix host-tested; the esp_ota commit/rollback are ESP32-only. |
-<<<<<<< HEAD
-=======
-| `native_p256_kat` | default | `unit/src/crypto/asymmetric/test_ssh_ecdsa` | NIST P-256 for SSH (crypto/asymmetric/ecdsa.h): the RFC 6979 Appendix A.2.5 deterministic ECDSA/SHA-256 vectors (private scalar, public point, and the exact r \|\| s for the messages 'sample' and 'tes... |
->>>>>>> 6218af9670c3c9780c77ecba3bc0ce2303559940
 | `native_packml` | `PROTOCORE_ENABLE_PACKML=1` | `unit/src/services/machine_tool/packml/test_packml` | PackML / OMAC packaging-machine state model (services/machine_tool/packml), ISA-TR88.00.02: the pure 17-state transition engine (command / state-complete / execute-complete + command validity) and the... |
 | `native_partition` | `PROTOCORE_ENABLE_PARTITION_MONITOR=1` | `unit/src/server/storage/partition_monitor/test_partition_monitor` | Flash partition-map monitor (server/storage/partition_monitor core): the kind classifier + JSON serializer host-test here; the esp_partition walk is ESP32-only. |
 | `native_path_params` | `PROTOCORE_ENABLE_WEBSOCKET=1`, `PROTOCORE_ENABLE_SSE=1` | `unit/integration/transport/test_path_params` | test_path_params against the native_stack_http stack. |
@@ -356,10 +331,6 @@ The native test matrix has **397 environments**, one per feature, generated from
 | `native_quic_frame_rfc` | `PROTOCORE_ENABLE_HTTP3=1` | `unit/src/network_drivers/presentation/http/http3/test_quic_frame` | QUIC frame coding (network_drivers/presentation/http/http3/quic_frame, RFC 9000 sec 19): the Table 3 type assignments, the single-octet PADDING / PING / HANDSHAKE_DONE frames, the sec 19.3 ACK field o... |
 | `native_quic_packet_rfc` | `PROTOCORE_ENABLE_HTTP3=1` | `unit/src/network_drivers/presentation/http/http3/test_quic_packet` | QUIC packet headers and packet-number coding (network_drivers/presentation/http/http3/quic_packet, RFC 9000 sec 17): the client Initial, server Initial, Retry and short headers RFC 9001 Appendix A pri... |
 | `native_quic_server` | `PROTOCORE_ENABLE_HTTP3=1`, `PROTOCORE_HAS_NET_STACK=1` | `unit/integration/http/test_quic_server` | HTTP/3 server glue (network_drivers/presentation/http/http3/quic_server): the UDP-facing pool that routes datagrams by Destination Connection ID to a pool of QuicConn + H3Conn engines. |
-<<<<<<< HEAD
-=======
-| `native_quic_tls` | `PROTOCORE_ENABLE_HTTP3=1` | `unit/src/network_drivers/presentation/http/http3/test_quic_tls` | TLS 1.3 server handshake state machine for QUIC (network_drivers/presentation/http/http3/ quic_tls, RFC 9001 / RFC 8446): a full interop round-trip - drive the server with a hand-built ClientHello, ru... |
->>>>>>> 6218af9670c3c9780c77ecba3bc0ce2303559940
 | `native_quic_tls_pqc` | `PROTOCORE_ENABLE_HTTP3=1`, `PROTOCORE_ENABLE_PQC_KEX=1`, `PROTOCORE_WORKER_TASK_STACK=16384` | `unit/src/network_drivers/presentation/http/http3/test_quic_tls` | TLS 1.3 QUIC handshake with the X25519MLKEM768 post-quantum hybrid group (IANA 0x11ec, PROTOCORE_ENABLE_PQC_KEX=1): drives the server with a hybrid ClientHello, then verifies it as a conforming client... |
 | `native_quic_tls_rfc` | `PROTOCORE_ENABLE_HTTP3=1` | `unit/src/network_drivers/presentation/http/http3/test_quic_tls` | The TLS 1.3 server handshake state machine QUIC runs (network_drivers/presentation/http/http3/quic_tls, RFC 9001 / RFC 8446): a full interop round trip in which the test runs the client half - its own... |
 | `native_quic_tp` | `PROTOCORE_ENABLE_HTTP3=1` | `unit/src/network_drivers/presentation/http/http3/test_quic_tp` | QUIC transport parameters codec (network_drivers/presentation/http/http3/quic_tp, RFC 9000 sec 18): the sec 18.2 defaults, an encode/parse round-trip over the connection IDs + every varint parameter +... |
@@ -429,26 +400,13 @@ The native test matrix has **397 environments**, one per feature, generated from
 | `native_span` | default | `unit/src/mmgr/test_span` | The bounded byte region (mmgr/span.h): a pointer and the capacity that belongs to it, bound together. |
 | `native_sparkplug` | `PROTOCORE_ENABLE_SPARKPLUG=1` | `unit/src/services/iot/sparkplug/test_sparkplug` | Sparkplug B codec (services/iot/sparkplug): the topic builder + the Metric / Payload protobuf serializers (over the protobuf codec). |
 | `native_spnego` | `PROTOCORE_ENABLE_SMB=1` | `unit/src/network_drivers/application/smb/test_spnego` | SPNEGO DER wrapping of the NTLMSSP tokens (network_drivers/application/smb/spnego). |
-<<<<<<< HEAD
 | `native_sse` | `PROTOCORE_ENABLE_SSE=1`, `PROTOCORE_ENABLE_WEBSOCKET=1` | `unit/integration/http/test_sse` | test_sse against the native_stack_l46 stack. |
 | `native_ssh` | `PROTOCORE_SSH_MAX_CHANNELS=3`, `PROTOCORE_ENABLE_SSH=1`, `PROTOCORE_ENABLE_MNT=1`, `PROTOCORE_ENABLE_SSH_SFTP=1`, `PROTOCORE_ENABLE_SSH_SCP=1`, `PROTOCORE_ENABLE_WEBSOCKET=1`, `PROTOCORE_ENABLE_SSE=1`, `PROTOCORE_HAS_NET_STACK=1` | `unit/src/network_drivers/presentation/ssh/transport/test_extension`, `unit/src/network_drivers/presentation/ssh/transport/test_comp`, `unit/src/network_drivers/presentation/ssh/transport/test_zlib`, `unit/src/network_drivers/presentation/ssh/transport/test_inflate`, `unit/src/network_drivers/presentation/ssh/transport/test_phase_machine`, `unit/src/network_drivers/presentation/ssh/transport/test_transport`, `unit/src/network_drivers/presentation/ssh/test_ssh`, `unit/src/network_drivers/presentation/ssh/client/test_client`, `unit/src/network_drivers/presentation/ssh/app/test_client`, `unit/src/network_drivers/presentation/ssh/server/test_server`, `unit/src/network_drivers/presentation/ssh/network/test_network`, `unit/src/network_drivers/presentation/ssh/auth/test_auth`, `unit/src/network_drivers/presentation/ssh/connection/test_connection`, `unit/src/network_drivers/presentation/ssh/app/test_server` | SSH crypto layer (native software paths only, no mbedtls dependency); channels multiplexed (PROTOCORE_SSH_MAX_CHANNELS=3) to exercise routing; SFTP/SCP subsystem routing on (MNT satisfies the guard - ... |
-=======
-| `native_sqlite` | `PROTOCORE_ENABLE_SQLITE=1` | `unit/src/services/storage/sqlite/test_sqlite` | SQLite3 on-disk file-format reader (services/storage/sqlite): the 100-byte database header, the b-tree page header, the record varint, and record serial types, parsed by hand. |
-| `native_sse` | `PROTOCORE_ENABLE_SSE=1`, `PROTOCORE_ENABLE_WEBSOCKET=1` | `unit/integration/http/test_sse` | test_sse against the native_stack_l46 stack. |
-| `native_ssh` | `PROTOCORE_SSH_MAX_CHANNELS=3`, `PROTOCORE_ENABLE_SSH=1`, `PROTOCORE_ENABLE_MNT=1`, `PROTOCORE_ENABLE_SSH_SFTP=1`, `PROTOCORE_ENABLE_SSH_SCP=1`, `PROTOCORE_ENABLE_WEBSOCKET=1`, `PROTOCORE_ENABLE_SSE=1`, `PROTOCORE_HAS_NET_STACK=1` | `unit/src/network_drivers/presentation/ssh/transport/test_extension`, `unit/src/network_drivers/presentation/ssh/transport/test_comp`, `unit/src/network_drivers/presentation/ssh/transport/test_zlib`, `unit/src/network_drivers/presentation/ssh/transport/test_inflate`, `unit/src/network_drivers/presentation/ssh/transport/test_phase_machine`, `unit/src/network_drivers/presentation/ssh/transport/test_transport`, `unit/src/network_drivers/presentation/ssh/test_ssh`, `unit/src/network_drivers/presentation/ssh/client/test_client`, `unit/src/network_drivers/presentation/ssh/app/test_client`, `unit/src/network_drivers/presentation/ssh/server/test_server`, `unit/src/network_drivers/presentation/ssh/network/test_network`, `unit/src/network_drivers/presentation/ssh/auth/test_auth`, `unit/src/network_drivers/presentation/ssh/connection/test_connection`, `unit/src/network_drivers/presentation/ssh/app/test_server` | SSH crypto layer (native software paths only, no mbedtls dependency); channels multiplexed (PROTOCORE_SSH_MAX_CHANNELS=3) to exercise routing; SFTP/SCP subsystem routing on (MNT satisfies the guard - ... |
-| `native_ssh_aesgcm` | default | `unit/src/crypto/aead/test_ssh_aesgcm` | AES-256-GCM AEAD for aes256-gcm@openssh.com (RFC 5647) host-tested here: seal/open vs the NIST/McGrew AES-256-GCM Test Case 16 vector, tamper rejection, and the invocation-counter advance. |
-| `native_ssh_chachapoly` | default | `unit/src/crypto/cipher/test_ssh_chachapoly` | chacha20-poly1305@openssh.com AEAD (network_drivers/presentation/ssh): ChaCha20 vs RFC 8439 sec 2.3.2 block vector, Poly1305 vs RFC 8439 sec 2.5.2, and the OpenSSH construction (length decode, encrypt... |
->>>>>>> 6218af9670c3c9780c77ecba3bc0ce2303559940
 | `native_ssh_client` | `PROTOCORE_ENABLE_SSH=1`, `PROTOCORE_ENABLE_SSH_CLIENT=1`, `PROTOCORE_SSH_MAX_CHANNELS=4` | - | SSH client role (ssh/client/client.c) built per file: nothing else in the matrix compiles it. |
 | `native_ssh_comp` | `PROTOCORE_ENABLE_SSH=1`, `PROTOCORE_ENABLE_SSH_ZLIB=1`, `PROTOCORE_ENABLE_WS_DEFLATE=1`, `PROTOCORE_ENABLE_WEBSOCKET=1` | - | SSH s2c compression WIRING with the full SSH stack built with PROTOCORE_ENABLE_SSH_ZLIB=1: the compression owner (ssh_comp) + its NEWKEYS / USERAUTH_SUCCESS activation + the packet-layer compress path... |
 | `native_ssh_conn` | `PROTOCORE_ENABLE_SSH=1`, `PROTOCORE_HAS_NET_STACK=1` | `unit/src/network_drivers/presentation/ssh/connection/test_connection` | SSH wired through the real transport/session layers (PROTO_SSH byte-pump) |
 | `native_ssh_ecdsa` | default | `unit/src/crypto/asymmetric/test_ssh_ecdsa` | ECDSA P-256 for ecdsa-sha2-nistp256 (RFC 5656) host-tested on the software path: pubkey, deterministic sign, and verify pinned byte-exact to the RFC 6979 A.2.5 (P-256/SHA-256) vectors, plus tamper rej... |
-<<<<<<< HEAD
 | `native_ssh_ecdsa_hw` | `PROTOCORE_HAS_HW_ECC=1`, `PROTOCORE_RSA_MODMUL_HW=1` | `unit/src/crypto/asymmetric/test_ssh_ecdsa` | RFC 6979 and RFC 5903 a second time with the accelerated curve backend selected (PROTOCORE_HAS_HW_ECC + the MODMULT field layer), answered by the host RSA/MPI HAL so both arms run natively. |
-=======
-| `native_ssh_ed25519` | default | `unit/src/crypto/asymmetric/test_ssh_ed25519` | Modern SSH crypto KATs (curve25519-sha256 KEX + ssh-ed25519 host key / client auth): SHA-512 (FIPS 180-4), X25519 (RFC 7748), Ed25519 (RFC 8032). |
-| `native_ssh_epoch` | `PROTOCORE_SSH_MAX_CHANNELS=3`, `PROTOCORE_ENABLE_SSH=1`, `PROTOCORE_ENABLE_MNT=1`, `PROTOCORE_ENABLE_SSH_SFTP=1`, `PROTOCORE_ENABLE_SSH_SCP=1` | - | The RFC 4253 sec 7.3 key-epoch transitions: a derivation lands in the epoch neither direction reads, each direction moves on its own SSH_MSG_NEWKEYS, and the epoch both have left is released. |
->>>>>>> 6218af9670c3c9780c77ecba3bc0ce2303559940
 | `native_ssh_flow` | `PROTOCORE_ENABLE_SSH=1`, `PROTOCORE_HAS_NET_STACK=1` | `unit/src/network_drivers/presentation/ssh/connection/test_connection` | The RFC 4254 sec 5.2 channel window (ssh/connection/connection.c): the send cap is the smaller of the peer's window and its maximum packet size, a send decrements the window, an adjust increments it, ... |
 | `native_ssh_forward` | `PROTOCORE_ENABLE_SSH=1`, `PROTOCORE_SSH_PORT_FORWARD=1`, `PROTOCORE_SSH_MAX_CHANNELS=3`, `PROTOCORE_HAS_NET_STACK=1` | `unit/src/network_drivers/presentation/ssh/connection/test_connection` | The RFC 4254 sec 7 remote-forward owner (ssh/connection/connection.c, ssh -R). |
 | `native_ssh_hardened` | `PROTOCORE_ENABLE_SSH=1`, `PROTOCORE_SSH_ALLOW_PASSWORD=0` | - | SSH built with password auth disabled (publickey-only hardening) |
@@ -478,10 +436,6 @@ The native test matrix has **397 environments**, one per feature, generated from
 | `native_telemetry` | `PROTOCORE_ENABLE_TELEMETRY=1` | `unit/src/services/iot/telemetry/test_telemetry` | Telemetry math (services/iot/telemetry): moving-window stats, rate-of-change, and totalizer. |
 | `native_telnet` | `PROTOCORE_ENABLE_TELNET=1`, `PROTOCORE_HAS_NET_STACK=1` | `unit/integration/session/test_telnet` | Telnet server (RFC 854 IAC negotiation + line editing) wired through the real transport ring buffer; output checked via the tcp_write capture mock. |
 | `native_template` | `PROTOCORE_ENABLE_WEBSOCKET=1`, `PROTOCORE_ENABLE_SSE=1` | `unit/integration/transport/test_template` | test_template against the native_stack_http stack. |
-<<<<<<< HEAD
-=======
-| `native_thread` | `PROTOCORE_ENABLE_THREAD=1`, `PROTOCORE_THREAD_MAX_DATA=64` | `unit/src/services/radio/thread/test_thread` | Thread spinel / HDLC-lite codec (services/radio/thread), v5 radio plugin: the FCS (CRC-16/X-25) against its catalog check value (0x906E), an encode -> decode round trip, the byte-stuffing of reserved ... |
->>>>>>> 6218af9670c3c9780c77ecba3bc0ce2303559940
 | `native_time_compat` | default | `unit/src/shared/time_compat/test_time_compat` | Reentrant broken-down UTC (shared/time_compat): the seam over gmtime_r / gmtime_s, that it fills the caller's struct rather than a shared static, and the C field conventions (tm_year from 1900, tm_mon... |
 | `native_time_fallback` | `PROTOCORE_ENABLE_TIME_SOURCE=1` | `unit/src/services/timing_position/time_source/test_time_source` | Multi-source time fallback matrix (services/timing_position/time_source): ascending-priority query of the registered time sources, first-nonzero-wins fallback, that nothing below the source that answe... |
 | `native_tls13_kdf` | `PROTOCORE_ENABLE_HTTP3=1` | `unit/src/network_drivers/tls/key_schedule/test_tls13_kdf` | TLS 1.3 key schedule for the QUIC handshake (network_drivers/tls/tls13_kdf, RFC 8446 sec 7.1 / 4.4.4): Early/Handshake/Master secret Extract chain, client/server handshake + application traffic secret... |
@@ -507,24 +461,12 @@ The native test matrix has **397 environments**, one per feature, generated from
 | `native_wave_wsmp` | `PROTOCORE_ENABLE_WAVE=1` | `unit/src/services/transportation/wave/test_wave` | IEEE 1609 WAVE codec (services/transportation/wave): the PSID P-encoding at both ends of all four length classes, the 1609.3 WSMP header build and parse, and the 1609.2 secured-message envelope. |
 | `native_wearlevel` | `PROTOCORE_ENABLE_WEARLEVEL=1` | `unit/src/server/storage/test_wearlevel` | Flash wear-leveling slot selector (server/storage/wearlevel): least-worn pick (ties -> lowest index), saturating mark, and the wear-imbalance spread metric. |
 | `native_web_terminal` | `PROTOCORE_ENABLE_WEBSOCKET=1`, `PROTOCORE_ENABLE_SSE=1` | `unit/integration/transport/test_web_terminal` | test_web_terminal against the native_stack_http stack. |
-<<<<<<< HEAD
-=======
-| `native_webdav` | `PROTOCORE_ENABLE_WEBDAV=1`, `PROTOCORE_ENABLE_FILE_SERVING=1` | `unit/src/network_drivers/application/webdav/test_webdav` | WebDAV server core (RFC 4918): method classification, header parsing, XML escaping, and the 207 Multi-Status builder. |
->>>>>>> 6218af9670c3c9780c77ecba3bc0ce2303559940
 | `native_webdav_handler` | `BODY_BUF_SIZE=512`, `PROTOCORE_ENFORCE_HOST_HEADER=0`, `PROTOCORE_ENABLE_WEBDAV=1`, `PROTOCORE_ENABLE_FILE_SERVING=1`, `PROTOCORE_ENABLE_WEB_TERMINAL=1`, `PROTOCORE_ENABLE_WEBSOCKET=1`, `PROTOCORE_ENABLE_SSE=1`, `PROTOCORE_HAS_NET_STACK=1` | `unit/integration/http/test_webdav_handler` | WebDAV request handler over a directory-capable FS mock (recursive COPY/MOVE/DELETE) |
 | `native_webdav_wire` | `PROTOCORE_ENABLE_WEBDAV=1`, `PROTOCORE_ENABLE_FILE_SERVING=1` | `unit/src/network_drivers/application/webdav/test_webdav` | WebDAV wire core (network_drivers/application/webdav, RFC 4918). |
 | `native_webhook_json` | `PROTOCORE_ENABLE_WEBHOOK=1` | `unit/src/services/net/webhook/test_webhook` | Outbound webhook builders (services/net/webhook/webhook.c): the RFC 8259 section 4 object grammar and the section 7 escaping of the quotation mark and reverse solidus in the value1/value2/value3 conte... |
 | `native_websocket` | `PROTOCORE_ENABLE_WEBSOCKET=1`, `PROTOCORE_ENABLE_SSE=1` | `unit/integration/http/test_websocket` | test_websocket against the native_stack_l46 stack. |
-<<<<<<< HEAD
 | `native_workers` | `PROTOCORE_WORKER_COUNT=2`, `PROTOCORE_HAS_NET_STACK=1` | `unit/integration/transport/test_workers` | Core-partitioning invariant at N=2 (PROTOCORE_WORKER_COUNT=2): each worker reaps only its owned slots (check_timeouts ownership). |
 | `native_workers_stack` | `PROTOCORE_WORKER_COUNT=2`, `PROTOCORE_HAS_NET_STACK=1` | `unit/integration/transport/test_workers` | PROTOCORE_WORKER_COUNT=2 over the stack path, which nothing else compiles: native_tcp is single-worker and takes the other arm of listener_enqueue, so the multi-worker arm - the per-worker queue routi... |
-=======
-| `native_wifi_sniffer` | `PROTOCORE_ENABLE_WIFI_SNIFFER=1` | `unit/src/services/radio/wifi_sniffer/test_wifi_sniffer` | 802.11 sniffer / traffic analyzer (services/radio/wifi_sniffer): decode an 802.11 MAC header (frame-control type/subtype + flags, ToDS/FromDS-dependent addresses), tally frames by type, the RSSI-hyste... |
-| `native_wisun` | `PROTOCORE_ENABLE_WISUN=1` | `unit/src/services/radio/wisun/test_wisun` | Wi-SUN FAN border-router connector (services/radio/wisun): the CoAP client request builder (RFC 7252 header + Uri-Path options with extended-length + payload) and the FAN node registry (register / fin... |
-| `native_workers` | `PROTOCORE_WORKER_COUNT=2`, `PROTOCORE_HAS_NET_STACK=1` | `unit/integration/transport/test_workers` | Core-partitioning invariant at N=2 (PROTOCORE_WORKER_COUNT=2): each worker reaps only its owned slots (check_timeouts ownership). |
-| `native_workers_stack` | `PROTOCORE_WORKER_COUNT=2`, `PROTOCORE_HAS_NET_STACK=1` | `unit/integration/transport/test_workers` | PROTOCORE_WORKER_COUNT=2 over the stack path, which nothing else compiles: native_tcp is single-worker and takes the other arm of listener_enqueue, so the multi-worker arm - the per-worker queue routi... |
-| `native_ws_client` | `PROTOCORE_ENABLE_WS_CLIENT=1` | `unit/src/services/net/ws_client/test_ws_client` |  |
->>>>>>> 6218af9670c3c9780c77ecba3bc0ce2303559940
 | `native_ws_client_rfc6455` | `PROTOCORE_ENABLE_WS_CLIENT=1` | `unit/src/services/net/ws_client/test_ws_client` | WebSocket client codec (services/net/ws_client/ws_client.c) against RFC 6455: the section 1.3 and 4.2.2 \|Sec-WebSocket-Accept\| worked example, the section 4.1 opening handshake field lines and the 1... |
 | `native_ws_deflate` | `PROTOCORE_ENFORCE_HOST_HEADER=0`, `PROTOCORE_ENABLE_WS_DEFLATE=1`, `PROTOCORE_ENABLE_WEBSOCKET=1`, `PROTOCORE_ENABLE_SSE=1`, `PROTOCORE_HAS_NET_STACK=1` | `unit/integration/http/test_websocket` | WebSocket permessage-deflate (RFC 7692) inbound path wired through the real WS stack: handshake negotiation, the RSV1 frame path, and INFLATE delivery (with the table scratch borrowed from the shared ... |
 | `native_wycheproof_kat` | `PROTOCORE_ENABLE_HTTP3=1` | `unit/src/crypto/mac/test_crypto_kat` | Data-driven external known-answer tests for the shared crypto primitives: HMAC-SHA256/512, AEAD_AES_128_GCM (crypto/aead/aes128gcm.h), X25519, Ed25519 verify and sign, HKDF-SHA256 Extract and Expand, ... |
@@ -739,11 +681,7 @@ We test session and socket race conditions by interleaved function calling:
 
 <!-- BEGIN GENERATED test-directory (run test/harness.py readme gen) -->
 
-<<<<<<< HEAD
 A thorough directory of all **5280 test cases** across **336 suites**. Expand a suite to see its test cases, and a test case to see its objective and assertions.
-=======
-A thorough directory of all **5229 test cases** across **330 suites**. Expand a suite to see its test cases, and a test case to see its objective and assertions.
->>>>>>> 6218af9670c3c9780c77ecba3bc0ce2303559940
 
 <details>
 <summary><b>test_accept_gate (19 tests)</b></summary>
@@ -3236,13 +3174,13 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: The second record chains the first's hash, not the genesis anchor.
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_UINT32(1u, protocore_audit_append(PROTOCORE_AUDIT_AUTH, "login alice"));</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(1u, AuditLog.ms);</code>
       * <code>Assert not null (e)</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(1u, e-&gt;seq);</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(0x11223344u, e-&gt;ts);</code>
       * <code>Assert equal int (PROTOCORE_AUDIT_AUTH, e-&gt;category)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(want, e-&gt;hash, PROTOCORE_AUDIT_HASH_LEN);</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(2u, protocore_audit_append(PROTOCORE_AUDIT_CONFIG, "set http_port=80"));</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(2u, AuditLog.ms);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(want, f-&gt;hash, PROTOCORE_AUDIT_HASH_LEN);</code>
   </details>
 
@@ -3251,14 +3189,14 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Seq is monotonic from one
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_UINT32(1u, protocore_audit_append(PROTOCORE_AUDIT_AUTH, "login alice"));</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(2u, protocore_audit_append(PROTOCORE_AUDIT_AUTH_FAIL, "bad password bob"));</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(3u, protocore_audit_append(PROTOCORE_AUDIT_CONFIG, "set http_port=80"));</code>
-      * <code>TEST_ASSERT_EQUAL_UINT16(3u, protocore_audit_count());</code>
-      * <code>Assert equal string ("login alice", protocore_audit_at(0)-&gt;msg)</code>
-      * <code>Assert equal string ("set http_port=80", protocore_audit_at(2)-&gt;msg)</code>
-      * <code>Assert null (protocore_audit_at(3))</code>
-      * <code>Assert null (protocore_audit_at(0xFFFFu))</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(1u, AuditLog.ms);</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(2u, AuditLog.ms);</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(3u, AuditLog.ms);</code>
+      * <code>TEST_ASSERT_EQUAL_UINT16(3u, AuditLog.value);</code>
+      * <code>Assert equal string ("login alice", AuditLog.ptr-&gt;msg)</code>
+      * <code>Assert equal string ("set http_port=80", AuditLog.ptr-&gt;msg)</code>
+      * <code>Assert null (AuditLog.ptr)</code>
+      * <code>Assert null (AuditLog.ptr)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -3266,9 +3204,9 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Untouched chain verifies
     * **Assertions**:
-      * <code>Assert true (protocore_audit_verify(&broken))</code>
+      * <code>Assert true (AuditLog.ok)</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(999u, broken);</code>
-      * <code>Assert true (protocore_audit_verify(NULL))</code>
+      * <code>Assert true (AuditLog.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -3276,8 +3214,8 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Empty log verifies
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_UINT16(0u, protocore_audit_count());</code>
-      * <code>Assert true (protocore_audit_verify(NULL))</code>
+      * <code>TEST_ASSERT_EQUAL_UINT16(0u, AuditLog.value);</code>
+      * <code>Assert true (AuditLog.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -3285,17 +3223,17 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: the message
     * **Assertions**:
-      * <code>Assert false (protocore_audit_verify(&broken))</code>
+      * <code>Assert false (AuditLog.ok)</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(4u, broken);</code>
-      * <code>Assert true (protocore_audit_verify(NULL))</code>
-      * <code>Assert false (protocore_audit_verify(&broken))</code>
+      * <code>Assert true (AuditLog.ok)</code>
+      * <code>Assert false (AuditLog.ok)</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(2u, broken);</code>
-      * <code>Assert false (protocore_audit_verify(&broken))</code>
+      * <code>Assert false (AuditLog.ok)</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(3u, broken);</code>
-      * <code>Assert false (protocore_audit_verify(NULL))</code>
-      * <code>Assert false (protocore_audit_verify(&broken))</code>
+      * <code>Assert false (AuditLog.ok)</code>
+      * <code>Assert false (AuditLog.ok)</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(1u, broken);</code>
-      * <code>Assert true (protocore_audit_verify(NULL))</code>
+      * <code>Assert true (AuditLog.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -3303,15 +3241,15 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Reordering breaks the chain
     * **Assertions**:
-      * <code>Assert false (protocore_audit_verify(NULL))</code>
+      * <code>Assert false (AuditLog.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
-    <summary><b>test_identical_messages_hash_differently</b> &mdash; <i>Identical messages hash differently</i></summary>
+    <summary><b>test_identical_messages_hash_differently</b> &mdash; <i>One result member, so the first record is copied out before the second call overwrites it.</i></summary>
 
-    * **Objective**: Identical messages hash differently
+    * **Objective**: One result member, so the first record is copied out before the second call overwrites it.
     * **Assertions**:
-      * <code>TEST_ASSERT_NOT_EQUAL(0,</code>
+      * <code>Assert not equal (0, memcmp(first.hash, AuditLog.ptr-&gt;hash, PROTOCORE_AUDIT_HASH_LEN))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -3319,10 +3257,10 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: The retained window verifies after the ring wraps
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_UINT16((uint16_t)PROTOCORE_AUDIT_LOG_ENTRIES, protocore_audit_count());</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32((uint32_t)(extra + 1), protocore_audit_at(0)-&gt;seq);</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32((uint32_t)(PROTOCORE_AUDIT_LOG_ENTRIES + extra),</code>
-      * <code>Assert true (protocore_audit_verify(NULL))</code>
+      * <code>TEST_ASSERT_EQUAL_UINT16((uint16_t)PROTOCORE_AUDIT_LOG_ENTRIES, AuditLog.value);</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32((uint32_t)(extra + 1), AuditLog.ptr-&gt;seq);</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32((uint32_t)(PROTOCORE_AUDIT_LOG_ENTRIES + extra), AuditLog.ptr-&gt;seq);</code>
+      * <code>Assert true (AuditLog.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -3330,7 +3268,7 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: The oldest retained record is still anchored
     * **Assertions**:
-      * <code>Assert false (protocore_audit_verify(&broken))</code>
+      * <code>Assert false (AuditLog.ok)</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(seq, broken);</code>
   </details>
 
@@ -3340,9 +3278,9 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
     * **Objective**: a null message is an empty one, not a dereference
     * **Assertions**:
       * <code>Assert equal uint (PROTOCORE_AUDIT_MSG_LEN - 1u, (unsigned)strlen(e-&gt;msg))</code>
-      * <code>Assert true (protocore_audit_verify(NULL))</code>
-      * <code>Assert equal string ("", protocore_audit_at(1)-&gt;msg)</code>
-      * <code>Assert true (protocore_audit_verify(NULL))</code>
+      * <code>Assert true (AuditLog.ok)</code>
+      * <code>Assert equal string ("", AuditLog.ptr-&gt;msg)</code>
+      * <code>Assert true (AuditLog.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -3350,9 +3288,9 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Reset returns the chain to genesis
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_UINT16(0u, protocore_audit_count());</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(1u, protocore_audit_append(PROTOCORE_AUDIT_AUTH, "first"));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(before, protocore_audit_at(0)-&gt;hash, PROTOCORE_AUDIT_HASH_LEN);</code>
+      * <code>TEST_ASSERT_EQUAL_UINT16(0u, AuditLog.value);</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(1u, AuditLog.ms);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(before, AuditLog.ptr-&gt;hash, PROTOCORE_AUDIT_HASH_LEN);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -3363,7 +3301,7 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
       * <code>TEST_ASSERT_EQUAL_UINT16(1u, g_sink_calls);</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(1u, g_sink_last.seq);</code>
       * <code>Assert equal string ("reboot", g_sink_last.msg)</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(protocore_audit_at(0)-&gt;hash, g_sink_last.hash, PROTOCORE_AUDIT_HASH_LEN);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(AuditLog.ptr-&gt;hash, g_sink_last.hash, PROTOCORE_AUDIT_HASH_LEN);</code>
       * <code>TEST_ASSERT_EQUAL_UINT16(1u, g_sink_calls); // detached</code>
   </details>
 
@@ -3372,13 +3310,13 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Category names
     * **Assertions**:
-      * <code>Assert equal string ("system", protocore_audit_cat_name(PROTOCORE_AUDIT_SYSTEM))</code>
-      * <code>Assert equal string ("auth", protocore_audit_cat_name(PROTOCORE_AUDIT_AUTH))</code>
-      * <code>Assert equal string ("auth_fail", protocore_audit_cat_name(PROTOCORE_AUDIT_AUTH_FAIL))</code>
-      * <code>Assert equal string ("access", protocore_audit_cat_name(PROTOCORE_AUDIT_ACCESS))</code>
-      * <code>Assert equal string ("config", protocore_audit_cat_name(PROTOCORE_AUDIT_CONFIG))</code>
-      * <code>Assert equal string ("admin", protocore_audit_cat_name(PROTOCORE_AUDIT_ADMIN))</code>
-      * <code>Assert equal string ("system", protocore_audit_cat_name((protocore_audit_cat)200))</code>
+      * <code>Assert equal string ("system", AuditLog.text)</code>
+      * <code>Assert equal string ("auth", AuditLog.text)</code>
+      * <code>Assert equal string ("auth_fail", AuditLog.text)</code>
+      * <code>Assert equal string ("access", AuditLog.text)</code>
+      * <code>Assert equal string ("config", AuditLog.text)</code>
+      * <code>Assert equal string ("admin", AuditLog.text)</code>
+      * <code>Assert equal string ("system", AuditLog.text)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -3401,7 +3339,7 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: exactly two unescaped quotes surround the message, so the string is still one string
     * **Assertions**:
-      * <code>Assert true (protocore_audit_format(protocore_audit_at(0), out, sizeof(out)) &gt; 0)</code>
+      * <code>Assert true (AuditLog.n &gt; 0)</code>
       * <code>Assert not null (strstr(out, "\\\\\\""))</code>
       * <code>Assert not null (strstr(out, "\\\\\\\\"))</code>
       * <code>Assert not null (strstr(out, "\\\\n"))</code>
@@ -3417,10 +3355,10 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
     * **Objective**: one octet more than the text is exactly enough, for the NUL
     * **Assertions**:
       * <code>Assert true (need &gt; 0)</code>
-      * <code>Assert equal int (0, protocore_audit_format(protocore_audit_at(0), small, (size_t)cap))</code>
-      * <code>Assert equal int (need, protocore_audit_format(protocore_audit_at(0), small, (size_t)need + 1u))</code>
-      * <code>Assert equal int (0, protocore_audit_format(NULL, full, sizeof(full)))</code>
-      * <code>Assert equal int (0, protocore_audit_format(protocore_audit_at(0), NULL, sizeof(full)))</code>
+      * <code>Assert equal int (0, AuditLog.n)</code>
+      * <code>Assert equal int (need, AuditLog.n)</code>
+      * <code>Assert equal int (0, AuditLog.n)</code>
+      * <code>Assert equal int (0, AuditLog.n)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -3445,9 +3383,9 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
     * **Objective**: Dump fails closed at every short capacity
     * **Assertions**:
       * <code>Assert true (need &gt; 0)</code>
-      * <code>Assert equal int (0, protocore_audit_dump_json(small, (size_t)cap))</code>
-      * <code>Assert equal int (need, protocore_audit_dump_json(small, (size_t)need + 1u))</code>
-      * <code>Assert equal int (0, protocore_audit_dump_json(NULL, sizeof(full)))</code>
+      * <code>Assert equal int (0, AuditLog.n)</code>
+      * <code>Assert equal int (need, AuditLog.n)</code>
+      * <code>Assert equal int (0, AuditLog.n)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -4664,9 +4602,9 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
     * **Objective**: Null regions are skipped
     * **Assertions**:
       * <code>TEST_ASSERT_EQUAL_HEX32(GUARD, s_dst[1]);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX32(0u, s_bss[1]);  // .bss still zeroed</code>
+      * <code>TEST_ASSERT_EQUAL_HEX32(0u, s_bss[1]);    // .bss still zeroed</code>
       * <code>TEST_ASSERT_EQUAL_HEX32(GUARD, s_dst[1]); // .data skipped</code>
-      * <code>TEST_ASSERT_EQUAL_HEX32(0x11110000u, s_dst[1]);  // .data still copied</code>
+      * <code>TEST_ASSERT_EQUAL_HEX32(0x11110000u, s_dst[1]); // .data still copied</code>
       * <code>TEST_ASSERT_EQUAL_HEX32(0xDEADBEEFu, s_bss[1]); // .bss skipped</code>
   </details>
 
@@ -7928,11 +7866,11 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
     * **Objective**: Export import round trip
     * **Assertions**:
       * <code>Assert true (n &gt; 0)</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(0u, protocore_config_get_u32("port", 0));</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(0u, ConfigStore.ms);</code>
       * <code>Assert equal string ("", get_str("ssid"))</code>
       * <code>Assert equal int (3, protocore_config_import("t", SCHEMA, N, blob, strlen(blob)))</code>
       * <code>Assert equal string ("abc", get_str("ssid"))</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(4294967295u, protocore_config_get_u32("port", 0));</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(4294967295u, ConfigStore.ms);</code>
       * <code>Assert equal string ("a=b", get_str("name"))</code>
   </details>
 
@@ -7952,9 +7890,9 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
     * **Objective**: Import writes only keys the schema declares
     * **Assertions**:
       * <code>Assert equal int (2, protocore_config_import("t", SCHEMA, N, text, strlen(text)))</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(42u, protocore_config_get_u32("port", 0));</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(42u, ConfigStore.ms);</code>
       * <code>Assert equal string ("here", get_str("ssid"))</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(7u, protocore_config_get_u32("bogus", 7));</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(7u, ConfigStore.ms);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -7963,7 +7901,7 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
     * **Objective**: Import steps over a keyless schema entry
     * **Assertions**:
       * <code>Assert equal int (1, protocore_config_import("t", gapped, 2, text, strlen(text)))</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(7u, protocore_config_get_u32("zz", 0));</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(7u, ConfigStore.ms);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -7980,7 +7918,7 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
     * **Objective**: Import skips a line with no separator
     * **Assertions**:
       * <code>Assert equal int (1, protocore_config_import("t", SCHEMA, N, text, strlen(text)))</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(42u, protocore_config_get_u32("port", 0));</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(42u, ConfigStore.ms);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -8037,11 +7975,11 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: The returned count is the characters written, so it agrees with the string's own length.
     * **Assertions**:
-      * <code>Assert true (protocore_config_set_str("ssid", "my network"))</code>
+      * <code>Assert true (ConfigStore.ok)</code>
       * <code>Assert equal string ("my network", get_str("ssid", "?"))</code>
-      * <code>Assert true (protocore_config_set_str("ssid", "other"))</code>
+      * <code>Assert true (ConfigStore.ok)</code>
       * <code>Assert equal string ("other", get_str("ssid", "?"))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(5u, protocore_config_get_str("ssid", buf, sizeof(buf), ""));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(5u, ConfigStore.n);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -8049,12 +7987,12 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: U32 round trip
     * **Assertions**:
-      * <code>Assert true (protocore_config_set_u32("port", 0u))</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(0u, protocore_config_get_u32("port", 999u));</code>
-      * <code>Assert true (protocore_config_set_u32("port", 8080u))</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(8080u, protocore_config_get_u32("port", 999u));</code>
-      * <code>Assert true (protocore_config_set_u32("port", 4294967295u))</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(4294967295u, protocore_config_get_u32("port", 999u));</code>
+      * <code>Assert true (ConfigStore.ok)</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(0u, ConfigStore.ms);</code>
+      * <code>Assert true (ConfigStore.ok)</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(8080u, ConfigStore.ms);</code>
+      * <code>Assert true (ConfigStore.ok)</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(4294967295u, ConfigStore.ms);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -8062,8 +8000,8 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Blob round trip
     * **Assertions**:
-      * <code>Assert true (protocore_config_set_blob("psk", key, sizeof(key)))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(sizeof(key), protocore_config_get_blob("psk", out, sizeof(out)));</code>
+      * <code>Assert true (ConfigStore.ok)</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(sizeof(key), ConfigStore.n);</code>
       * <code>Assert equal memory (key, out, sizeof(key))</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(0xAA, out[5]); // nothing written past the blob's length</code>
   </details>
@@ -8074,8 +8012,8 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
     * **Objective**: A null default is the empty string, not a dereference.
     * **Assertions**:
       * <code>Assert equal string ("fallback", get_str("nothere", "fallback"))</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(4242u, protocore_config_get_u32("nothere", 4242u));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_config_get_blob("nothere", (uint8_t[8]){0}, 8));</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(4242u, ConfigStore.ms);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, ConfigStore.n);</code>
       * <code>Assert equal string ("", get_str("nothere", NULL))</code>
   </details>
 
@@ -8084,14 +8022,14 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Neither over-long key aliased onto the 15-character one, which still holds its own value.
     * **Assertions**:
-      * <code>Assert true (protocore_config_set_str("abcdefghijklmno", "fits"))</code>
+      * <code>Assert true (ConfigStore.ok)</code>
       * <code>Assert equal string ("fits", get_str("abcdefghijklmno", "?"))</code>
-      * <code>Assert false (protocore_config_set_str("abcdefghijklmnoP", "too long"))</code>
-      * <code>Assert false (protocore_config_set_str("abcdefghijklmnoQ", "too long"))</code>
-      * <code>Assert false (protocore_config_set_u32("abcdefghijklmnoP", 1u))</code>
+      * <code>Assert false (ConfigStore.ok)</code>
+      * <code>Assert false (ConfigStore.ok)</code>
+      * <code>Assert false (ConfigStore.ok)</code>
       * <code>Assert equal string ("fits", get_str("abcdefghijklmno", "?"))</code>
       * <code>Assert equal string ("?", get_str("abcdefghijklmnoP", "?"))</code>
-      * <code>Assert false (protocore_config_set_str("", "x"))</code>
+      * <code>Assert false (ConfigStore.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -8099,8 +8037,8 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Clearing one namespace leaves the other untouched.
     * **Assertions**:
-      * <code>Assert true (protocore_config_set_str("host", "ap"))</code>
-      * <code>Assert true (protocore_config_set_str("host", "gateway"))</code>
+      * <code>Assert true (ConfigStore.ok)</code>
+      * <code>Assert true (ConfigStore.ok)</code>
       * <code>Assert equal string ("gateway", get_str("host", "?"))</code>
       * <code>Assert equal string ("ap", get_str("host", "?"))</code>
       * <code>Assert equal string ("?", get_str("host", "?"))</code>
@@ -8112,13 +8050,13 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Erase drops one key and clear drops them all
     * **Assertions**:
-      * <code>Assert true (protocore_config_set_str("a", "1"))</code>
-      * <code>Assert true (protocore_config_set_str("b", "2"))</code>
-      * <code>Assert true (protocore_config_erase("a"))</code>
-      * <code>Assert false (protocore_config_erase("a"))</code>
+      * <code>Assert true (ConfigStore.ok)</code>
+      * <code>Assert true (ConfigStore.ok)</code>
+      * <code>Assert true (ConfigStore.ok)</code>
+      * <code>Assert false (ConfigStore.ok)</code>
       * <code>Assert equal string ("?", get_str("a", "?"))</code>
       * <code>Assert equal string ("2", get_str("b", "?"))</code>
-      * <code>Assert true (protocore_config_clear())</code>
+      * <code>Assert true (ConfigStore.ok)</code>
       * <code>Assert equal string ("?", get_str("b", "?"))</code>
   </details>
 
@@ -8127,13 +8065,13 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: The refused open did not leave "t" addressable, so the value is not reachable by accident.
     * **Assertions**:
-      * <code>Assert true (protocore_config_begin("t"))</code>
-      * <code>Assert true (protocore_config_set_str("k", "v"))</code>
-      * <code>Assert false (protocore_config_begin(NULL))</code>
-      * <code>Assert false (protocore_config_begin(""))</code>
-      * <code>Assert false (protocore_config_begin("abcdefghijklmnoP"))</code>
+      * <code>Assert true (ConfigStore.ok)</code>
+      * <code>Assert true (ConfigStore.ok)</code>
+      * <code>Assert false (ConfigStore.ok)</code>
+      * <code>Assert false (ConfigStore.ok)</code>
+      * <code>Assert false (ConfigStore.ok)</code>
       * <code>Assert equal string ("?", get_str("k", "?"))</code>
-      * <code>Assert true (protocore_config_begin("t"))</code>
+      * <code>Assert true (ConfigStore.ok)</code>
       * <code>Assert equal string ("v", get_str("k", "?"))</code>
   </details>
 
@@ -8142,7 +8080,7 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: The default is bounded the same way when the key is absent.
     * **Assertions**:
-      * <code>Assert true (protocore_config_set_str("ssid", "0123456789"))</code>
+      * <code>Assert true (ConfigStore.ok)</code>
       * <code>TEST_ASSERT_EQUAL_size_t(4u, n);</code>
       * <code>Assert equal string ("0123", small)</code>
       * <code>TEST_ASSERT_EQUAL_size_t(4u, n);</code>
@@ -8154,12 +8092,12 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: A read with no room is refused
     * **Assertions**:
-      * <code>Assert true (protocore_config_set_str("ssid", "value"))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_config_get_str("ssid", sentinel, 0, "d"));</code>
+      * <code>Assert true (ConfigStore.ok)</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, ConfigStore.n);</code>
       * <code>Assert equal char ('z', sentinel[0])</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_config_get_str("ssid", NULL, 8, "d"));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_config_get_blob("ssid", NULL, 8));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_config_get_blob("ssid", sentinel, 0));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, ConfigStore.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, ConfigStore.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, ConfigStore.n);</code>
       * <code>Assert equal char ('z', sentinel[0])</code>
   </details>
 
@@ -8168,8 +8106,8 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: A write with no value is refused
     * **Assertions**:
-      * <code>Assert false (protocore_config_set_str("ssid", NULL))</code>
-      * <code>Assert false (protocore_config_set_blob("psk", NULL, 4))</code>
+      * <code>Assert false (ConfigStore.ok)</code>
+      * <code>Assert false (ConfigStore.ok)</code>
       * <code>Assert equal string ("?", get_str("ssid", "?"))</code>
   </details>
 
@@ -8959,7 +8897,7 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Aes128gcm
     * **Assertions**:
-      * <code>TEST_ASSERT_FALSE_MESSAGE(</code>
+      * <code>Assert false message (gcm_open(key, iv, alen ? aad : NULL, alen, clen ? ct : NULL, clen, tag, opened)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY_MESSAGE(ct, sealed, clen, v-&gt;ct);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY_MESSAGE(tag, sealed + plen, 16, v-&gt;tag);</code>
       * <code>Assert true message (gcm_open(key, iv, alen ? aad : NULL, alen, sealed, plen, sealed + plen, opened)</code>
@@ -9071,11 +9009,11 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: and the same token, hand-assembled from the two halves, verifies
     * **Assertions**:
-      * <code>Assert true (protocore_csrf_issue(token, sizeof(token)) &gt; 0)</code>
+      * <code>Assert true (Csrf.n &gt; 0)</code>
       * <code>Assert equal string len (want_nonce, token, CSRF_NONCE_BYTES * 2)</code>
       * <code>Assert equal char ('.', token[CSRF_NONCE_BYTES * 2])</code>
       * <code>Assert equal string (want_sig, &token[CSRF_NONCE_BYTES * 2 + 1])</code>
-      * <code>Assert true (protocore_csrf_verify(token))</code>
+      * <code>Assert true (Csrf.valid)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -9083,7 +9021,7 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: The nonce counter advances by one
     * **Assertions**:
-      * <code>Assert true (protocore_csrf_issue(t, sizeof(t)) &gt; 0)</code>
+      * <code>Assert true (Csrf.n &gt; 0)</code>
       * <code>Assert equal string len (want, t, CSRF_NONCE_BYTES * 2)</code>
   </details>
 
@@ -9106,8 +9044,8 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Issued tokens verify
     * **Assertions**:
-      * <code>Assert true (protocore_csrf_issue(t, sizeof(t)) &gt; 0)</code>
-      * <code>Assert true (protocore_csrf_verify(t))</code>
+      * <code>Assert true (Csrf.n &gt; 0)</code>
+      * <code>Assert true (Csrf.valid)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -9115,11 +9053,11 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Successive tokens differ
     * **Assertions**:
-      * <code>Assert true (protocore_csrf_issue(a, sizeof(a)) &gt; 0)</code>
-      * <code>Assert true (protocore_csrf_issue(b, sizeof(b)) &gt; 0)</code>
+      * <code>Assert true (Csrf.n &gt; 0)</code>
+      * <code>Assert true (Csrf.n &gt; 0)</code>
       * <code>Assert true (strcmp(a, b) != 0)</code>
-      * <code>Assert true (protocore_csrf_verify(a))</code>
-      * <code>Assert true (protocore_csrf_verify(b))</code>
+      * <code>Assert true (Csrf.valid)</code>
+      * <code>Assert true (Csrf.valid)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -9127,9 +9065,9 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Every signature character is checked
     * **Assertions**:
-      * <code>Assert true (protocore_csrf_issue(t, sizeof(t)) &gt; 0)</code>
-      * <code>Assert false message (protocore_csrf_verify(tampered), tampered)</code>
-      * <code>Assert true (protocore_csrf_verify(t))</code>
+      * <code>Assert true (Csrf.n &gt; 0)</code>
+      * <code>Assert false message (Csrf.valid, tampered)</code>
+      * <code>Assert true (Csrf.valid)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -9137,8 +9075,8 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Every nonce character is checked
     * **Assertions**:
-      * <code>Assert true (protocore_csrf_issue(t, sizeof(t)) &gt; 0)</code>
-      * <code>Assert false message (protocore_csrf_verify(tampered), tampered)</code>
+      * <code>Assert true (Csrf.n &gt; 0)</code>
+      * <code>Assert false message (Csrf.valid, tampered)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -9146,13 +9084,13 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: the same nonce under the new secret is a different, valid token
     * **Assertions**:
-      * <code>Assert true (protocore_csrf_issue(t, sizeof(t)) &gt; 0)</code>
-      * <code>Assert true (protocore_csrf_verify(t))</code>
-      * <code>Assert false (protocore_csrf_verify(t))</code>
-      * <code>Assert true (protocore_csrf_issue(u, sizeof(u)) &gt; 0)</code>
+      * <code>Assert true (Csrf.n &gt; 0)</code>
+      * <code>Assert true (Csrf.valid)</code>
+      * <code>Assert false (Csrf.valid)</code>
+      * <code>Assert true (Csrf.n &gt; 0)</code>
       * <code>Assert equal string len (t, u, CSRF_NONCE_BYTES * 2)</code>
       * <code>Assert true (strcmp(t, u) != 0)</code>
-      * <code>Assert true (protocore_csrf_verify(u))</code>
+      * <code>Assert true (Csrf.valid)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -9160,10 +9098,10 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: an octet inside the cap does change it
     * **Assertions**:
-      * <code>Assert true (protocore_csrf_issue(a, sizeof(a)) &gt; 0)</code>
-      * <code>Assert true (protocore_csrf_issue(b, sizeof(b)) &gt; 0)</code>
+      * <code>Assert true (Csrf.n &gt; 0)</code>
+      * <code>Assert true (Csrf.n &gt; 0)</code>
       * <code>Assert equal string (a, b)</code>
-      * <code>Assert true (protocore_csrf_issue(c, sizeof(c)) &gt; 0)</code>
+      * <code>Assert true (Csrf.n &gt; 0)</code>
       * <code>Assert true (strcmp(a, c) != 0)</code>
   </details>
 
@@ -9172,9 +9110,9 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: a null secret pointer clears the length rather than leaving the previous secret installed
     * **Assertions**:
-      * <code>Assert equal int (0, protocore_csrf_issue(t, sizeof(t)))</code>
-      * <code>Assert false (protocore_csrf_verify("010000000000.0102030405060708090a0b0c0d0e"))</code>
-      * <code>Assert equal int (0, protocore_csrf_issue(t, sizeof(t)))</code>
+      * <code>Assert equal int (0, Csrf.n)</code>
+      * <code>Assert false (Csrf.valid)</code>
+      * <code>Assert equal int (0, Csrf.n)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -9182,10 +9120,10 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Reset restarts the counter
     * **Assertions**:
-      * <code>Assert true (protocore_csrf_issue(first, sizeof(first)) &gt; 0)</code>
-      * <code>Assert true (protocore_csrf_issue(again, sizeof(again)) &gt; 0)</code>
+      * <code>Assert true (Csrf.n &gt; 0)</code>
+      * <code>Assert true (Csrf.n &gt; 0)</code>
       * <code>Assert true (strcmp(first, again) != 0)</code>
-      * <code>Assert true (protocore_csrf_issue(again, sizeof(again)) &gt; 0)</code>
+      * <code>Assert true (Csrf.n &gt; 0)</code>
       * <code>Assert equal string (first, again)</code>
   </details>
 
@@ -9194,7 +9132,7 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Malformed tokens are refused
     * **Assertions**:
-      * <code>Assert false message (protocore_csrf_verify(BAD[i]), BAD[i] ? BAD[i] : "(null)")</code>
+      * <code>Assert false message (Csrf.valid, BAD[i] ? BAD[i] : "(null)")</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -9202,7 +9140,7 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: An odd length nonce is refused
     * **Assertions**:
-      * <code>Assert false (protocore_csrf_verify("01000000000.0102030405060708090a0b0c0d0e"))</code>
+      * <code>Assert false (Csrf.valid)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -9210,9 +9148,9 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Issue refuses a short buffer
     * **Assertions**:
-      * <code>Assert equal int (0, protocore_csrf_issue(small, cap))</code>
-      * <code>Assert true (protocore_csrf_issue(small, CSRF_TOKEN_BUF) &gt; 0)</code>
-      * <code>Assert equal int (0, protocore_csrf_issue(NULL, CSRF_TOKEN_BUF))</code>
+      * <code>Assert equal int (0, Csrf.n)</code>
+      * <code>Assert true (Csrf.n &gt; 0)</code>
+      * <code>Assert equal int (0, Csrf.n)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -9220,12 +9158,12 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Verify holds no state
     * **Assertions**:
-      * <code>Assert true (protocore_csrf_issue(t, sizeof(t)) &gt; 0)</code>
-      * <code>Assert true (protocore_csrf_verify(t))</code>
-      * <code>Assert false (protocore_csrf_verify("010000000000.00000000000000000000000000ff"))</code>
-      * <code>Assert true (protocore_csrf_verify(t))</code>
-      * <code>Assert false (protocore_csrf_verify("garbage"))</code>
-      * <code>Assert true (protocore_csrf_verify(t))</code>
+      * <code>Assert true (Csrf.n &gt; 0)</code>
+      * <code>Assert true (Csrf.valid)</code>
+      * <code>Assert false (Csrf.valid)</code>
+      * <code>Assert true (Csrf.valid)</code>
+      * <code>Assert false (Csrf.valid)</code>
+      * <code>Assert true (Csrf.valid)</code>
   </details>
 
 </details>
@@ -17331,8 +17269,8 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: An empty table trusts nothing
     * **Assertions**:
-      * <code>Assert false (protocore_forwarded_trust_contains(&peer))</code>
-      * <code>Assert false (protocore_forwarded_effective_ip(&peer, "203.0.113.9", &out))</code>
+      * <code>Assert false (ForwardedTrust.ok)</code>
+      * <code>Assert false (ForwardedTrust.ok)</code>
       * <code>Assert true (same(&peer, &out))</code>
   </details>
 
@@ -17341,11 +17279,11 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: A cidr covers its block and nothing else
     * **Assertions**:
-      * <code>Assert true (protocore_forwarded_trust_add_cidr("10.0.0.0/8"))</code>
-      * <code>Assert true (protocore_forwarded_trust_contains(&inside_low))</code>
-      * <code>Assert true (protocore_forwarded_trust_contains(&inside_high))</code>
-      * <code>Assert false (protocore_forwarded_trust_contains(&below))</code>
-      * <code>Assert false (protocore_forwarded_trust_contains(&above))</code>
+      * <code>Assert true (ForwardedTrust.ok)</code>
+      * <code>Assert true (ForwardedTrust.ok)</code>
+      * <code>Assert true (ForwardedTrust.ok)</code>
+      * <code>Assert false (ForwardedTrust.ok)</code>
+      * <code>Assert false (ForwardedTrust.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -17353,9 +17291,9 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: A bare address is a host route
     * **Assertions**:
-      * <code>Assert true (protocore_forwarded_trust_add_cidr("192.0.2.10"))</code>
-      * <code>Assert true (protocore_forwarded_trust_contains(&exact))</code>
-      * <code>Assert false (protocore_forwarded_trust_contains(&neighbour))</code>
+      * <code>Assert true (ForwardedTrust.ok)</code>
+      * <code>Assert true (ForwardedTrust.ok)</code>
+      * <code>Assert false (ForwardedTrust.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -17363,10 +17301,10 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: A v6 cidr covers only v6
     * **Assertions**:
-      * <code>Assert true (protocore_forwarded_trust_add_cidr("2001:db8::/32"))</code>
-      * <code>Assert true (protocore_forwarded_trust_contains(&inside))</code>
-      * <code>Assert false (protocore_forwarded_trust_contains(&outside))</code>
-      * <code>Assert false (protocore_forwarded_trust_contains(&four))</code>
+      * <code>Assert true (ForwardedTrust.ok)</code>
+      * <code>Assert true (ForwardedTrust.ok)</code>
+      * <code>Assert false (ForwardedTrust.ok)</code>
+      * <code>Assert false (ForwardedTrust.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -17374,10 +17312,10 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: A zero prefix covers the family
     * **Assertions**:
-      * <code>Assert true (protocore_forwarded_trust_add_cidr("0.0.0.0/0"))</code>
-      * <code>Assert true (protocore_forwarded_trust_contains(&a))</code>
-      * <code>Assert true (protocore_forwarded_trust_contains(&b))</code>
-      * <code>Assert false (protocore_forwarded_trust_contains(&six))</code>
+      * <code>Assert true (ForwardedTrust.ok)</code>
+      * <code>Assert true (ForwardedTrust.ok)</code>
+      * <code>Assert true (ForwardedTrust.ok)</code>
+      * <code>Assert false (ForwardedTrust.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -17385,8 +17323,8 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Malformed cidr text is refused
     * **Assertions**:
-      * <code>Assert false message (protocore_forwarded_trust_add_cidr(BAD[i]), BAD[i] ? BAD[i] : "(null)")</code>
-      * <code>Assert false (protocore_forwarded_trust_contains(&peer))</code>
+      * <code>Assert false message (ForwardedTrust.ok, BAD[i] ? BAD[i] : "(null)")</code>
+      * <code>Assert false (ForwardedTrust.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -17394,12 +17332,12 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: an address with no family is not a network
     * **Assertions**:
-      * <code>Assert true (protocore_forwarded_trust_add(&four, 32))</code>
-      * <code>Assert false (protocore_forwarded_trust_add(&four, 33))</code>
-      * <code>Assert true (protocore_forwarded_trust_add(&six, 128))</code>
-      * <code>Assert false (protocore_forwarded_trust_add(&six, 129))</code>
-      * <code>Assert false (protocore_forwarded_trust_add(&none, 0))</code>
-      * <code>Assert false (protocore_forwarded_trust_add(NULL, 8))</code>
+      * <code>Assert true (ForwardedTrust.ok)</code>
+      * <code>Assert false (ForwardedTrust.ok)</code>
+      * <code>Assert true (ForwardedTrust.ok)</code>
+      * <code>Assert false (ForwardedTrust.ok)</code>
+      * <code>Assert false (ForwardedTrust.ok)</code>
+      * <code>Assert false (ForwardedTrust.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -17407,10 +17345,10 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: the rules already installed are untouched
     * **Assertions**:
-      * <code>Assert true (protocore_forwarded_trust_add(&net, 16))</code>
-      * <code>Assert false (protocore_forwarded_trust_add(&extra, 16))</code>
-      * <code>Assert false (protocore_forwarded_trust_contains(&extra))</code>
-      * <code>Assert true (protocore_forwarded_trust_contains(&first))</code>
+      * <code>Assert true (ForwardedTrust.ok)</code>
+      * <code>Assert false (ForwardedTrust.ok)</code>
+      * <code>Assert false (ForwardedTrust.ok)</code>
+      * <code>Assert true (ForwardedTrust.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -17418,10 +17356,10 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Reset empties the table
     * **Assertions**:
-      * <code>Assert true (protocore_forwarded_trust_add_cidr("10.0.0.0/8"))</code>
-      * <code>Assert true (protocore_forwarded_trust_contains(&peer))</code>
-      * <code>Assert false (protocore_forwarded_trust_contains(&peer))</code>
-      * <code>Assert true (protocore_forwarded_trust_add_cidr("10.0.0.0/8"))</code>
+      * <code>Assert true (ForwardedTrust.ok)</code>
+      * <code>Assert true (ForwardedTrust.ok)</code>
+      * <code>Assert false (ForwardedTrust.ok)</code>
+      * <code>Assert true (ForwardedTrust.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -17429,8 +17367,8 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: An untrusted peer can never forge a client address
     * **Assertions**:
-      * <code>Assert true (protocore_forwarded_trust_add_cidr("10.0.0.0/8"))</code>
-      * <code>Assert false message (protocore_forwarded_effective_ip(&attacker, CLAIMS[i], &out), CLAIMS[i])</code>
+      * <code>Assert true (ForwardedTrust.ok)</code>
+      * <code>Assert false message (ForwardedTrust.ok, CLAIMS[i])</code>
       * <code>Assert true message (same(&attacker, &out), CLAIMS[i])</code>
   </details>
 
@@ -17439,10 +17377,10 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: A trusted upstream is believed
     * **Assertions**:
-      * <code>Assert true (protocore_forwarded_trust_add_cidr("10.0.0.0/8"))</code>
-      * <code>Assert true (protocore_forwarded_effective_ip(&proxy, "203.0.113.9", &out))</code>
+      * <code>Assert true (ForwardedTrust.ok)</code>
+      * <code>Assert true (ForwardedTrust.ok)</code>
       * <code>Assert true (same(&want4, &out))</code>
-      * <code>Assert true (protocore_forwarded_effective_ip(&proxy, "2001:db8::5", &out))</code>
+      * <code>Assert true (ForwardedTrust.ok)</code>
       * <code>Assert true (same(&want6, &out))</code>
   </details>
 
@@ -17451,8 +17389,8 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: A trusted upstream with no usable client falls back
     * **Assertions**:
-      * <code>Assert true (protocore_forwarded_trust_add_cidr("10.0.0.0/8"))</code>
-      * <code>Assert false message (protocore_forwarded_effective_ip(&proxy, UNUSABLE[i], &out), what)</code>
+      * <code>Assert true (ForwardedTrust.ok)</code>
+      * <code>Assert false message (ForwardedTrust.ok, what)</code>
       * <code>Assert true message (same(&proxy, &out), what)</code>
   </details>
 
@@ -17461,14 +17399,14 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: no peer at all leaves an address that names nothing, not a stale one
     * **Assertions**:
-      * <code>Assert true (protocore_forwarded_trust_add_cidr("10.0.0.0/8"))</code>
-      * <code>Assert true (protocore_forwarded_effective_ip(&proxy, "198.51.100.4", &out))</code>
+      * <code>Assert true (ForwardedTrust.ok)</code>
+      * <code>Assert true (ForwardedTrust.ok)</code>
       * <code>Assert equal int (PROTOCORE_IP_V4, out.family)</code>
-      * <code>Assert false (protocore_forwarded_effective_ip(&direct, "198.51.100.4", &out))</code>
+      * <code>Assert false (ForwardedTrust.ok)</code>
       * <code>Assert true (same(&direct, &out))</code>
-      * <code>Assert false (protocore_forwarded_effective_ip(NULL, "198.51.100.4", &out))</code>
+      * <code>Assert false (ForwardedTrust.ok)</code>
       * <code>Assert equal int (PROTOCORE_IP_NONE, out.family)</code>
-      * <code>Assert false (protocore_forwarded_effective_ip(&proxy, "198.51.100.4", NULL))</code>
+      * <code>Assert false (ForwardedTrust.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -17477,12 +17415,12 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
     * **Objective**: Several upstreams are all trusted
     * **Assertions**:
       * <code>Assert true (PROTOCORE_TRUSTED_PROXY_MAX &gt;= 2)</code>
-      * <code>Assert true (protocore_forwarded_trust_add_cidr("10.0.0.0/8"))</code>
-      * <code>Assert true (protocore_forwarded_trust_add_cidr("2001:db8::/32"))</code>
-      * <code>Assert true (protocore_forwarded_trust_contains(&four))</code>
-      * <code>Assert true (protocore_forwarded_trust_contains(&six))</code>
-      * <code>Assert false (protocore_forwarded_trust_contains(&neither))</code>
-      * <code>Assert true (protocore_forwarded_effective_ip(&six, "203.0.113.1", &out))</code>
+      * <code>Assert true (ForwardedTrust.ok)</code>
+      * <code>Assert true (ForwardedTrust.ok)</code>
+      * <code>Assert true (ForwardedTrust.ok)</code>
+      * <code>Assert true (ForwardedTrust.ok)</code>
+      * <code>Assert false (ForwardedTrust.ok)</code>
+      * <code>Assert true (ForwardedTrust.ok)</code>
       * <code>Assert true (same(&want, &out))</code>
   </details>
 
@@ -17491,8 +17429,8 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: A null peer is not trusted
     * **Assertions**:
-      * <code>Assert true (protocore_forwarded_trust_add_cidr("0.0.0.0/0"))</code>
-      * <code>Assert false (protocore_forwarded_trust_contains(NULL))</code>
+      * <code>Assert true (ForwardedTrust.ok)</code>
+      * <code>Assert false (ForwardedTrust.ok)</code>
   </details>
 
 </details>
@@ -19367,7 +19305,7 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
     * **Assertions**:
       * <code>Assert equal int (1, count_frames(cap.out, cap.out_len, H2_SETTINGS, &acks))</code>
       * <code>Assert equal int (0, acks)</code>
-      * <code>Assert true (protocore_h2_conn_recv(&g_conn, g_in, g_in_len))</code>
+      * <code>Assert true ((H2Conn.recv_args.data = g_in, H2Conn.recv_args.len = g_in_len, H2Conn.recv(g_conn), H2Conn.ok))</code>
       * <code>Assert equal int (4, (int)cap.req_headers.n)</code>
       * <code>Assert equal string (":method", cap.req_headers.f[0].name)</code>
       * <code>Assert equal string ("GET", cap.req_headers.f[0].value)</code>
@@ -19386,8 +19324,8 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Respond roundtrip
     * **Assertions**:
-      * <code>Assert true (protocore_h2_conn_recv(&g_conn, g_in, g_in_len))</code>
-      * <code>Assert true (protocore_h2_conn_respond(&g_conn, 1, 200, "text/plain", "hi", 2))</code>
+      * <code>Assert true ((H2Conn.recv_args.data = g_in, H2Conn.recv_args.len = g_in_len, H2Conn.recv(g_conn), H2Conn.ok))</code>
+      * <code>TEST_ASSERT_TRUE((H2Conn.respond_args.stream_id = 1, H2Conn.respond_args.status = 200,</code>
       * <code>Assert equal int (1, count_frames(cap.out, cap.out_len, H2_HEADERS, NULL))</code>
       * <code>Assert equal int (1, count_frames(cap.out, cap.out_len, H2_DATA, NULL))</code>
       * <code>Assert true (data_len + h.length &lt; BODY_MAX)</code>
@@ -19407,7 +19345,7 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Ping and split recv
     * **Assertions**:
-      * <code>Assert true (protocore_h2_conn_recv(&g_conn, &g_in[k], 1))</code>
+      * <code>Assert true ((H2Conn.recv_args.data = &g_in[k], H2Conn.recv_args.len = 1, H2Conn.recv(g_conn), H2Conn.ok))</code>
       * <code>Assert equal int (1, count_frames(cap.out, cap.out_len, H2_PING, &acks))</code>
       * <code>Assert equal int (1, acks)</code>
       * <code>Assert equal memory (op, &cap.out[i + 9], 8)</code>
@@ -19419,7 +19357,7 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Bad preface
     * **Assertions**:
-      * <code>Assert false (protocore_h2_conn_recv(&g_conn, junk, sizeof junk))</code>
+      * <code>TEST_ASSERT_FALSE(</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -19427,7 +19365,7 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: H2 headers padded priority
     * **Assertions**:
-      * <code>Assert true (feed_frame(&g_conn, H2_HEADERS, flags, 1, g_pl, n))</code>
+      * <code>Assert true (feed_frame(g_conn, H2_HEADERS, flags, 1, g_pl, n))</code>
       * <code>Assert equal int (4, (int)cap.req_headers.n)</code>
       * <code>Assert true (cap.last_end_stream)</code>
   </details>
@@ -19437,7 +19375,7 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: H2 headers pad overflow
     * **Assertions**:
-      * <code>Assert false (feed_frame(&g_conn, H2_HEADERS, H2_FLAG_PADDED | H2_FLAG_END_HEADERS, 1, pl, sizeof pl))</code>
+      * <code>Assert false (feed_frame(g_conn, H2_HEADERS, H2_FLAG_PADDED | H2_FLAG_END_HEADERS, 1, pl, sizeof pl))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -19464,7 +19402,7 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
       * <code>Assert equal string ("/", cap.req_headers.f[2].value)</code>
       * <code>Assert equal string (":authority", cap.req_headers.f[3].name)</code>
       * <code>Assert equal string ("www.example.com", cap.req_headers.f[3].value)</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(57, g_conn.hdec.used);</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(57, HPACK_CTX(H2_CONN_CTX(g_conn)-&gt;hdec)-&gt;used);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -19518,8 +19456,8 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: H2 stream table full rst
     * **Assertions**:
-      * <code>Assert true (protocore_h2_conn_recv(&g_conn, hf, hn))</code>
-      * <code>Assert true (protocore_h2_conn_recv(&g_conn, hf, hn))</code>
+      * <code>Assert true ((H2Conn.recv_args.data = hf, H2Conn.recv_args.len = hn, H2Conn.recv(g_conn), H2Conn.ok))</code>
+      * <code>Assert true ((H2Conn.recv_args.data = hf, H2Conn.recv_args.len = hn, H2Conn.recv(g_conn), H2Conn.ok))</code>
       * <code>Assert true (count_frames(cap.out, cap.out_len, H2_RST_STREAM, NULL) &gt;= 1)</code>
   </details>
 
@@ -19528,8 +19466,8 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: H2 continuation
     * **Assertions**:
-      * <code>Assert true (feed_frame(&g_conn, H2_HEADERS, 0, 1, block, half))</code>
-      * <code>Assert true (feed_frame(&g_conn, H2_CONTINUATION, H2_FLAG_END_HEADERS, 1, block + half, blen - half))</code>
+      * <code>Assert true (feed_frame(g_conn, H2_HEADERS, 0, 1, block, half))</code>
+      * <code>Assert true (feed_frame(g_conn, H2_CONTINUATION, H2_FLAG_END_HEADERS, 1, block + half, blen - half))</code>
       * <code>Assert equal int (4, (int)cap.req_headers.n)</code>
   </details>
 
@@ -19538,10 +19476,10 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: H2 continuation guards
     * **Assertions**:
-      * <code>Assert true (feed_frame(&g_conn, H2_HEADERS, 0, 1, block, blen / 2))</code>
-      * <code>Assert false (feed_frame(&g_conn, H2_CONTINUATION, H2_FLAG_END_HEADERS, 3, x, 4))</code>
-      * <code>Assert true (feed_frame(&g_conn, H2_HEADERS, 0, 1, block, blen / 2))</code>
-      * <code>Assert false (feed_frame(&g_conn, H2_DATA, 0, 1, d, 1))</code>
+      * <code>Assert true (feed_frame(g_conn, H2_HEADERS, 0, 1, block, blen / 2))</code>
+      * <code>Assert false (feed_frame(g_conn, H2_CONTINUATION, H2_FLAG_END_HEADERS, 3, x, 4))</code>
+      * <code>Assert true (feed_frame(g_conn, H2_HEADERS, 0, 1, block, blen / 2))</code>
+      * <code>Assert false (feed_frame(g_conn, H2_DATA, 0, 1, d, 1))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -19549,14 +19487,14 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: H2 data
     * **Assertions**:
-      * <code>Assert true (feed_frame(&g_conn, H2_DATA, H2_FLAG_END_STREAM, 1, body, 5))</code>
+      * <code>Assert true (feed_frame(g_conn, H2_DATA, H2_FLAG_END_STREAM, 1, body, 5))</code>
       * <code>Assert equal string ("hello", cap.body)</code>
       * <code>Assert true (cap.data_end)</code>
       * <code>Assert equal int (2, count_frames(cap.out, cap.out_len, H2_WINDOW_UPDATE, NULL))</code>
-      * <code>Assert true (feed_frame(&g_conn, H2_DATA, H2_FLAG_PADDED, 3, padded, sizeof padded))</code>
+      * <code>Assert true (feed_frame(g_conn, H2_DATA, H2_FLAG_PADDED, 3, padded, sizeof padded))</code>
       * <code>Assert equal string ("xy", cap.body)</code>
-      * <code>Assert false (feed_frame(&c2, H2_DATA, 0, 0, d, 1))</code>
-      * <code>Assert false (feed_frame(&c2, H2_DATA, H2_FLAG_PADDED, 1, bad, 2))</code>
+      * <code>Assert false (feed_frame(c2, H2_DATA, 0, 0, d, 1))</code>
+      * <code>Assert false (feed_frame(c2, H2_DATA, H2_FLAG_PADDED, 1, bad, 2))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -19564,9 +19502,9 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: H2 window update
     * **Assertions**:
-      * <code>Assert true (feed_frame(&g_conn, H2_WINDOW_UPDATE, 0, 0, inc, 4))</code>
-      * <code>Assert true (feed_frame(&g_conn, H2_WINDOW_UPDATE, 0, 1, inc, 4))</code>
-      * <code>Assert false (feed_frame(&g_conn, H2_WINDOW_UPDATE, 0, 0, bad, 3))</code>
+      * <code>Assert true (feed_frame(g_conn, H2_WINDOW_UPDATE, 0, 0, inc, 4))</code>
+      * <code>Assert true (feed_frame(g_conn, H2_WINDOW_UPDATE, 0, 1, inc, 4))</code>
+      * <code>Assert false (feed_frame(g_conn, H2_WINDOW_UPDATE, 0, 0, bad, 3))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -19574,9 +19512,9 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: H2 rst priority push
     * **Assertions**:
-      * <code>Assert true (feed_frame(&g_conn, H2_RST_STREAM, 0, 1, err, 4))</code>
-      * <code>Assert true (feed_frame(&g_conn, H2_PRIORITY, 0, 3, prio, 5))</code>
-      * <code>Assert false (feed_frame(&g_conn, H2_PUSH_PROMISE, H2_FLAG_END_HEADERS, 1, pp, 4))</code>
+      * <code>Assert true (feed_frame(g_conn, H2_RST_STREAM, 0, 1, err, 4))</code>
+      * <code>Assert true (feed_frame(g_conn, H2_PRIORITY, 0, 3, prio, 5))</code>
+      * <code>Assert false (feed_frame(g_conn, H2_PUSH_PROMISE, H2_FLAG_END_HEADERS, 1, pp, 4))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -19584,8 +19522,8 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: H2 goaway then ignore
     * **Assertions**:
-      * <code>Assert true (feed_frame(&g_conn, H2_GOAWAY, 0, 0, ga, 8))</code>
-      * <code>Assert true (protocore_h2_conn_recv(&g_conn, junk, sizeof junk))</code>
+      * <code>Assert true (feed_frame(g_conn, H2_GOAWAY, 0, 0, ga, 8))</code>
+      * <code>TEST_ASSERT_TRUE(</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -19593,8 +19531,8 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: H2 settings ack and bad
     * **Assertions**:
-      * <code>Assert true (feed_frame(&g_conn, H2_SETTINGS, H2_FLAG_ACK, 0, NULL, 0))</code>
-      * <code>Assert false (feed_frame(&g_conn, H2_SETTINGS, 0, 0, bad, 3))</code>
+      * <code>Assert true (feed_frame(g_conn, H2_SETTINGS, H2_FLAG_ACK, 0, NULL, 0))</code>
+      * <code>Assert false (feed_frame(g_conn, H2_SETTINGS, 0, 0, bad, 3))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -19602,8 +19540,8 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: H2 ping bad
     * **Assertions**:
-      * <code>Assert true (feed_frame(&g_conn, H2_PING, H2_FLAG_ACK, 0, p8, 8))</code>
-      * <code>Assert false (feed_frame(&g_conn, H2_PING, 0, 0, p4, 4))</code>
+      * <code>Assert true (feed_frame(g_conn, H2_PING, H2_FLAG_ACK, 0, p8, 8))</code>
+      * <code>Assert false (feed_frame(g_conn, H2_PING, 0, 0, p4, 4))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -19611,7 +19549,7 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: H2 frame too big
     * **Assertions**:
-      * <code>Assert false (protocore_h2_conn_recv(&g_conn, hh, 9))</code>
+      * <code>Assert false ((H2Conn.recv_args.data = hh, H2Conn.recv_args.len = 9, H2Conn.recv(g_conn), H2Conn.ok))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -19619,8 +19557,8 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: H2 respond paths and goaway
     * **Assertions**:
-      * <code>Assert false (protocore_h2_conn_respond(&g_conn, 99, 200, "text/plain", "x", 1))</code>
-      * <code>Assert true (protocore_h2_conn_respond(&g_conn, 1, 200, NULL, "0123456789", 10))</code>
+      * <code>TEST_ASSERT_FALSE((H2Conn.respond_args.stream_id = 99, H2Conn.respond_args.status = 200,</code>
+      * <code>TEST_ASSERT_TRUE((H2Conn.respond_args.stream_id = 1, H2Conn.respond_args.status = 200,</code>
       * <code>Assert true (count_frames(cap.out, cap.out_len, H2_DATA, NULL) &gt;= 3)</code>
       * <code>Assert equal int (1, count_frames(cap.out, cap.out_len, H2_GOAWAY, NULL))</code>
   </details>
@@ -19644,12 +19582,12 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: H2 continuation more
     * **Assertions**:
-      * <code>Assert true (feed_frame(&g_conn, H2_HEADERS, 0, 1, block, t))</code>
-      * <code>Assert true (feed_frame(&g_conn, H2_CONTINUATION, 0, 1, block + t, t))</code>
-      * <code>Assert true (feed_frame(&g_conn, H2_CONTINUATION, H2_FLAG_END_HEADERS, 1, block + 2 * t, blen - 2 * t))</code>
+      * <code>Assert true (feed_frame(g_conn, H2_HEADERS, 0, 1, block, t))</code>
+      * <code>Assert true (feed_frame(g_conn, H2_CONTINUATION, 0, 1, block + t, t))</code>
+      * <code>Assert true (feed_frame(g_conn, H2_CONTINUATION, H2_FLAG_END_HEADERS, 1, block + 2 * t, blen - 2 * t))</code>
       * <code>Assert equal int (4, (int)cap.req_headers.n)</code>
-      * <code>Assert true (feed_frame(&g_conn, H2_HEADERS, 0, 1, frag, sizeof frag))</code>
-      * <code>Assert false (feed_frame(&g_conn, H2_CONTINUATION, 0, 1, more, sizeof more))</code>
+      * <code>Assert true (feed_frame(g_conn, H2_HEADERS, 0, 1, frag, sizeof frag))</code>
+      * <code>Assert false (feed_frame(g_conn, H2_CONTINUATION, 0, 1, more, sizeof more))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -19657,7 +19595,7 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: H2 respond content type too big
     * **Assertions**:
-      * <code>Assert false (protocore_h2_conn_respond(&g_conn, 1, 200, big_ct, "x", 1))</code>
+      * <code>TEST_ASSERT_FALSE((H2Conn.respond_args.stream_id = 1, H2Conn.respond_args.status = 200,</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -19665,9 +19603,9 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: H2 null callbacks
     * **Assertions**:
-      * <code>Assert true (protocore_h2_conn_recv(&g_conn, g_in, g_in_len))</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(1, g_conn.last_peer_stream);</code>
-      * <code>Assert true (feed_frame(&g_conn, H2_DATA, H2_FLAG_END_STREAM, 1, body, 3))</code>
+      * <code>Assert true ((H2Conn.recv_args.data = g_in, H2Conn.recv_args.len = g_in_len, H2Conn.recv(g_conn), H2Conn.ok))</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(1, H2_CONN_CTX(g_conn)-&gt;last_peer_stream);</code>
+      * <code>Assert true (feed_frame(g_conn, H2_DATA, H2_FLAG_END_STREAM, 1, body, 3))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -19683,7 +19621,7 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: H2 continuation without headers
     * **Assertions**:
-      * <code>Assert false (feed_frame(&g_conn, H2_CONTINUATION, H2_FLAG_END_HEADERS, 1, x, 4))</code>
+      * <code>Assert false (feed_frame(g_conn, H2_CONTINUATION, H2_FLAG_END_HEADERS, 1, x, 4))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -19701,9 +19639,9 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: H2 window update on a closed stream is ignored
     * **Assertions**:
-      * <code>Assert true (feed_frame(&g_conn, H2_RST_STREAM, 0, 1, err, 4))</code>
-      * <code>Assert true (feed_frame(&g_conn, H2_WINDOW_UPDATE, 0, 1, inc, 4))</code>
-      * <code>TEST_ASSERT_EQUAL_INT32(before, g_conn.conn_send_window);</code>
+      * <code>Assert true (feed_frame(g_conn, H2_RST_STREAM, 0, 1, err, 4))</code>
+      * <code>Assert true (feed_frame(g_conn, H2_WINDOW_UPDATE, 0, 1, inc, 4))</code>
+      * <code>TEST_ASSERT_EQUAL_INT32(before, H2_CONN_CTX(g_conn)-&gt;conn_send_window);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -19711,11 +19649,11 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: H2 frame size and stream id rules
     * **Assertions**:
-      * <code>Assert false (feed_frame(&g_conn, H2_RST_STREAM, 0, 1, pad, 3))</code>
+      * <code>Assert false (feed_frame(g_conn, H2_RST_STREAM, 0, 1, pad, 3))</code>
       * <code>Assert false (fresh_feed(H2_PRIORITY, 0, 0, pad, 5))</code>
-      * <code>Assert true (feed_frame(&g_conn, H2_PRIORITY, 0, 1, pad, 4))</code>
+      * <code>Assert true (feed_frame(g_conn, H2_PRIORITY, 0, 1, pad, 4))</code>
       * <code>Assert equal int (1, count_frames(cap.out, cap.out_len, H2_RST_STREAM, NULL))</code>
-      * <code>Assert true (feed_frame(&g_conn, H2_PRIORITY, 0, 1, pad, 5))</code>
+      * <code>Assert true (feed_frame(g_conn, H2_PRIORITY, 0, 1, pad, 5))</code>
       * <code>Assert false (fresh_feed(H2_GOAWAY, 0, 0, pad, 7))</code>
       * <code>Assert false (fresh_feed(H2_GOAWAY, 0, 1, pad, 8))</code>
       * <code>Assert true (fresh_feed(H2_GOAWAY, 0, 0, pad, 8))</code>
@@ -19728,18 +19666,18 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: H2 content length must match the data
     * **Assertions**:
-      * <code>Assert true (feed_frame(&g_conn, H2_DATA, H2_FLAG_END_STREAM, 1, (const uint8_t *)"hello", 5))</code>
+      * <code>Assert true (feed_frame(g_conn, H2_DATA, H2_FLAG_END_STREAM, 1, (const uint8_t *)"hello", 5))</code>
       * <code>Assert equal int (0, count_frames(cap.out, cap.out_len, H2_RST_STREAM, NULL))</code>
       * <code>Assert equal string ("hello", cap.body)</code>
-      * <code>Assert true (feed_frame(&g_conn, H2_DATA, H2_FLAG_END_STREAM, 1, (const uint8_t *)"hello", 5))</code>
+      * <code>Assert true (feed_frame(g_conn, H2_DATA, H2_FLAG_END_STREAM, 1, (const uint8_t *)"hello", 5))</code>
       * <code>Assert equal int (1, count_frames(cap.out, cap.out_len, H2_RST_STREAM, NULL))</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)cap.body_len);</code>
-      * <code>Assert true (feed_frame(&g_conn, H2_DATA, 0, 1, (const uint8_t *)"hello", 5))</code>
+      * <code>Assert true (feed_frame(g_conn, H2_DATA, 0, 1, (const uint8_t *)"hello", 5))</code>
       * <code>Assert equal int (1, count_frames(cap.out, cap.out_len, H2_RST_STREAM, NULL))</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)cap.body_len);</code>
       * <code>TEST_ASSERT_TRUE(</code>
       * <code>Assert equal int (1, count_frames(cap.out, cap.out_len, H2_RST_STREAM, NULL))</code>
-      * <code>Assert true (feed_frame(&g_conn, H2_DATA, H2_FLAG_END_STREAM, 1, (const uint8_t *)"hello", 5))</code>
+      * <code>Assert true (feed_frame(g_conn, H2_DATA, H2_FLAG_END_STREAM, 1, (const uint8_t *)"hello", 5))</code>
       * <code>Assert equal int (1, count_frames(cap.out, cap.out_len, H2_RST_STREAM, NULL))</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)cap.body_len);</code>
   </details>
@@ -19749,7 +19687,7 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: H2 continuation flood is bounded
     * **Assertions**:
-      * <code>Assert true (protocore_h2_conn_recv(&g_conn, hf, hn))</code>
+      * <code>Assert true ((H2Conn.recv_args.data = hf, H2Conn.recv_args.len = hn, H2Conn.recv(g_conn), H2Conn.ok))</code>
       * <code>Assert true (refused)</code>
   </details>
 
@@ -19758,10 +19696,10 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: H2 data empty and unknown stream
     * **Assertions**:
-      * <code>Assert true (feed_frame(&g_conn, H2_DATA, 0, 1, NULL, 0))</code>
+      * <code>Assert true (feed_frame(g_conn, H2_DATA, 0, 1, NULL, 0))</code>
       * <code>Assert equal int (0, count_frames(cap.out, cap.out_len, H2_WINDOW_UPDATE, NULL))</code>
       * <code>Assert equal string ("", cap.body)</code>
-      * <code>Assert false (feed_frame(&g_conn, H2_DATA, H2_FLAG_END_STREAM, 5, d, 2))</code>
+      * <code>Assert false (feed_frame(g_conn, H2_DATA, H2_FLAG_END_STREAM, 5, d, 2))</code>
       * <code>Assert equal string ("", cap.body)</code>
       * <code>Assert false (cap.data_end)</code>
   </details>
@@ -19771,9 +19709,9 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: H2 data after end stream resets the stream
     * **Assertions**:
-      * <code>Assert true (feed_frame(&g_conn, H2_DATA, H2_FLAG_END_STREAM, 1, first, 2))</code>
+      * <code>Assert true (feed_frame(g_conn, H2_DATA, H2_FLAG_END_STREAM, 1, first, 2))</code>
       * <code>Assert equal string ("hi", cap.body)</code>
-      * <code>Assert true (feed_frame(&g_conn, H2_DATA, 0, 1, late, 3))</code>
+      * <code>Assert true (feed_frame(g_conn, H2_DATA, 0, 1, late, 3))</code>
       * <code>Assert equal string ("", cap.body)</code>
       * <code>Assert equal int (1, count_frames(cap.out, cap.out_len, H2_RST_STREAM, NULL))</code>
   </details>
@@ -19783,13 +19721,13 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: H2 window update zero and overflow
     * **Assertions**:
-      * <code>Assert true (feed_frame(&g_conn, H2_WINDOW_UPDATE, 0, 1, zero, 4))</code>
+      * <code>Assert true (feed_frame(g_conn, H2_WINDOW_UPDATE, 0, 1, zero, 4))</code>
       * <code>Assert equal int (1, count_frames(cap.out, cap.out_len, H2_RST_STREAM, NULL))</code>
-      * <code>Assert false (feed_frame(&g_conn, H2_WINDOW_UPDATE, 0, 0, zero, 4))</code>
-      * <code>Assert true (feed_frame(&g_conn, H2_WINDOW_UPDATE, 0, 1, big, 4))</code>
+      * <code>Assert false (feed_frame(g_conn, H2_WINDOW_UPDATE, 0, 0, zero, 4))</code>
+      * <code>Assert true (feed_frame(g_conn, H2_WINDOW_UPDATE, 0, 1, big, 4))</code>
       * <code>Assert equal int (1, count_frames(cap.out, cap.out_len, H2_RST_STREAM, NULL))</code>
-      * <code>Assert false (feed_frame(&g_conn, H2_WINDOW_UPDATE, 0, 0, big, 4))</code>
-      * <code>TEST_ASSERT_EQUAL_INT32(before, g_conn.conn_send_window);</code>
+      * <code>Assert false (feed_frame(g_conn, H2_WINDOW_UPDATE, 0, 0, big, 4))</code>
+      * <code>TEST_ASSERT_EQUAL_INT32(before, H2_CONN_CTX(g_conn)-&gt;conn_send_window);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -19797,9 +19735,9 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: H2 continuation after stream freed
     * **Assertions**:
-      * <code>Assert true (feed_frame(&g_conn, H2_HEADERS, 0, 1, block, half))</code>
-      * <code>Assert true (protocore_h2_conn_respond(&g_conn, 1, 200, NULL, "x", 1))</code>
-      * <code>Assert true (feed_frame(&g_conn, H2_CONTINUATION, H2_FLAG_END_HEADERS, 1, block + half, blen - half))</code>
+      * <code>Assert true (feed_frame(g_conn, H2_HEADERS, 0, 1, block, half))</code>
+      * <code>TEST_ASSERT_TRUE((H2Conn.respond_args.stream_id = 1, H2Conn.respond_args.status = 200,</code>
+      * <code>Assert true (feed_frame(g_conn, H2_CONTINUATION, H2_FLAG_END_HEADERS, 1, block + half, blen - half))</code>
       * <code>Assert equal int (4, (int)cap.req_headers.n)</code>
   </details>
 
@@ -19808,7 +19746,7 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: H2 respond default chunk size
     * **Assertions**:
-      * <code>Assert true (protocore_h2_conn_respond(&g_conn, 1, 200, NULL, body, sizeof body))</code>
+      * <code>TEST_ASSERT_TRUE((H2Conn.respond_args.stream_id = 1, H2Conn.respond_args.status = 200,</code>
       * <code>Assert equal int (1, count_frames(cap.out, cap.out_len, H2_DATA, NULL))</code>
   </details>
 
@@ -19817,9 +19755,9 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: H2 respond content length no room
     * **Assertions**:
-      * <code>Assert false (protocore_h2_conn_respond(&g_conn, 1, 200, ct, "hi", 2))</code>
+      * <code>TEST_ASSERT_FALSE((H2Conn.respond_args.stream_id = 1, H2Conn.respond_args.status = 200,</code>
       * <code>Assert equal int (0, count_frames(cap.out, cap.out_len, H2_HEADERS, NULL))</code>
-      * <code>Assert true (protocore_h2_conn_respond(&g_conn, 1, 200, "text/plain", "hi", 2))</code>
+      * <code>TEST_ASSERT_TRUE((H2Conn.respond_args.stream_id = 1, H2Conn.respond_args.status = 200,</code>
       * <code>Assert equal int (1, count_frames(cap.out, cap.out_len, H2_HEADERS, NULL))</code>
   </details>
 
@@ -19843,9 +19781,9 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Rfc9113 frame header layout
     * **Assertions**:
-      * <code>Assert equal uint (9u, protocore_h2_write_header(g_out, sizeof(g_out), 0x010203u, 0x04, 0x05, 0x06070809u))</code>
+      * <code>Assert equal uint (9u, (H2Frame.write_args.buf = g_out, H2Frame.write_args.cap = sizeof(g_out)</code>
       * <code>Assert equal memory (WANT, g_out, 9)</code>
-      * <code>Assert true (protocore_h2_parse_header(WANT, sizeof(WANT), &h))</code>
+      * <code>Assert true ((H2Frame.parse_args.buf = WANT, H2Frame.parse_args.len = sizeof(WANT), H2Frame.parse_header(NULL)</code>
       * <code>TEST_ASSERT_EQUAL_HEX32(0x010203u, h.length);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x04, h.type);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x05, h.flags);</code>
@@ -19857,9 +19795,9 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Rfc9113 reserved bit
     * **Assertions**:
-      * <code>Assert true (protocore_h2_parse_header(WITH_R, sizeof(WITH_R), &h))</code>
+      * <code>Assert true ((H2Frame.parse_args.buf = WITH_R, H2Frame.parse_args.len = sizeof(WITH_R)</code>
       * <code>TEST_ASSERT_EQUAL_HEX32(1u, h.stream_id);</code>
-      * <code>Assert equal uint (9u, protocore_h2_write_header(g_out, sizeof(g_out), 0, H2_DATA, 0, 0x80000001u))</code>
+      * <code>Assert equal uint (9u, (H2Frame.write_args.buf = g_out, H2Frame.write_args.cap = sizeof(g_out)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x00, g_out[5]);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x01, g_out[8]);</code>
   </details>
@@ -19869,13 +19807,13 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Rfc9113 length is 24 bits
     * **Assertions**:
-      * <code>Assert equal uint (9u, protocore_h2_write_header(g_out, sizeof(g_out), 0xFFFFFFu, H2_DATA, 0, 1))</code>
+      * <code>Assert equal uint (9u, (H2Frame.write_args.buf = g_out, H2Frame.write_args.cap = sizeof(g_out)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0xFF, g_out[0]);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0xFF, g_out[1]);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0xFF, g_out[2]);</code>
-      * <code>Assert equal uint (0u, protocore_h2_write_header(g_out, sizeof(g_out), 0x1000000u, H2_DATA, 0, 1))</code>
-      * <code>Assert equal uint (0u, protocore_h2_write_header(g_out, 8, 0, H2_DATA, 0, 1))</code>
-      * <code>Assert false (protocore_h2_parse_header(g_out, 8, &h))</code>
+      * <code>Assert equal uint (0u, (H2Frame.write_args.buf = g_out, H2Frame.write_args.cap = sizeof(g_out)</code>
+      * <code>TEST_ASSERT_EQUAL_UINT(0u,</code>
+      * <code>Assert false ((H2Frame.parse_args.buf = g_out, H2Frame.parse_args.len = 8, H2Frame.parse_header(NULL)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -19896,11 +19834,11 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: id 0x1 = 8192, then an unknown id 0xabcd
     * **Assertions**:
-      * <code>Assert false (protocore_h2_parse_settings(ODD, sizeof(ODD), &s))</code>
-      * <code>Assert true (protocore_h2_parse_settings(PAY, sizeof(PAY), &s))</code>
+      * <code>Assert false ((H2Frame.settings_args.payload = ODD, H2Frame.settings_args.len = sizeof(ODD)</code>
+      * <code>Assert true ((H2Frame.settings_args.payload = PAY, H2Frame.settings_args.len = sizeof(PAY)</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(8192u, s.header_table_size);</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(1u, s.enable_push); // untouched by the unknown entry</code>
-      * <code>Assert true (protocore_h2_parse_settings(PAY, 0, &s))</code>
+      * <code>TEST_ASSERT_TRUE((H2Frame.settings_args.payload = PAY, H2Frame.settings_args.len = 0, H2Frame.settings_args.s = &s,</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -19908,7 +19846,7 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Rfc9113 settings bounds
     * **Assertions**:
-      * <code>Assert equal int (CASES[i].want, protocore_h2_parse_settings(pay, sizeof(pay), &s))</code>
+      * <code>TEST_ASSERT_EQUAL_INT(CASES[i].want,</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -19917,12 +19855,12 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
     * **Objective**: Rfc9113 settings round trip
     * **Assertions**:
       * <code>Assert equal uint (9u + 18u, n)</code>
-      * <code>Assert true (protocore_h2_parse_header(g_out, n, &h))</code>
+      * <code>Assert true ((H2Frame.parse_args.buf = g_out, H2Frame.parse_args.len = n, H2Frame.parse_header(NULL)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(H2_SETTINGS, h.type);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x00, h.flags);</code>
       * <code>TEST_ASSERT_EQUAL_HEX32(0u, h.stream_id);</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(18u, h.length);</code>
-      * <code>Assert true (protocore_h2_parse_settings(g_out + 9, h.length, &s))</code>
+      * <code>TEST_ASSERT_TRUE((H2Frame.settings_args.payload = g_out + 9, H2Frame.settings_args.len = h.length,</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(100u, s.max_concurrent_streams);</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(1048576u, s.initial_window_size);</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(16384u, s.max_frame_size);</code>
@@ -19933,7 +19871,7 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Rfc9113 settings ack bytes
     * **Assertions**:
-      * <code>Assert equal uint (9u, protocore_h2_build_settings_ack(g_out, sizeof(g_out)))</code>
+      * <code>Assert equal uint (9u, (H2Frame.ack_args.buf = g_out, H2Frame.ack_args.cap = sizeof(g_out)</code>
       * <code>Assert equal memory (WANT, g_out, 9)</code>
   </details>
 
@@ -19942,7 +19880,7 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Rfc9113 window update bytes
     * **Assertions**:
-      * <code>Assert equal uint (13u, protocore_h2_build_window_update(g_out, sizeof(g_out), 1u, 0xFFFFFFFFu))</code>
+      * <code>Assert equal uint (13u, (H2Frame.window_args.buf = g_out, H2Frame.window_args.cap = sizeof(g_out)</code>
       * <code>Assert equal memory (WANT, g_out, 13)</code>
   </details>
 
@@ -19951,7 +19889,7 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Rfc9113 rst stream bytes
     * **Assertions**:
-      * <code>Assert equal uint (13u, protocore_h2_build_rst_stream(g_out, sizeof(g_out), 3u, H2_CANCEL))</code>
+      * <code>Assert equal uint (13u, (H2Frame.rst_args.buf = g_out, H2Frame.rst_args.cap = sizeof(g_out)</code>
       * <code>Assert equal memory (WANT, g_out, 13)</code>
       * <code>TEST_ASSERT_EQUAL_HEX32(0x08u, (uint32_t)H2_CANCEL);</code>
   </details>
@@ -19961,7 +19899,7 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Rfc9113 goaway bytes
     * **Assertions**:
-      * <code>Assert equal uint (17u, protocore_h2_build_goaway(g_out, sizeof(g_out), 0x8000000Fu, H2_ENHANCE_YOUR_CALM))</code>
+      * <code>TEST_ASSERT_EQUAL_UINT(17u,</code>
       * <code>Assert equal memory (WANT, g_out, 17)</code>
   </details>
 
@@ -19970,7 +19908,7 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Rfc9113 ping ack echoes the payload
     * **Assertions**:
-      * <code>Assert equal uint (17u, protocore_h2_build_ping_ack(g_out, sizeof(g_out), OPAQUE))</code>
+      * <code>Assert equal uint (17u, (H2Frame.ping_args.buf = g_out, H2Frame.ping_args.cap = sizeof(g_out)</code>
       * <code>Assert equal memory (WANT, g_out, 9)</code>
       * <code>Assert equal memory (OPAQUE, g_out + 9, 8)</code>
   </details>
@@ -19981,16 +19919,16 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
     * **Objective**: an empty DATA frame is a header and nothing else
     * **Assertions**:
       * <code>Assert equal uint (12u, n)</code>
-      * <code>Assert true (protocore_h2_parse_header(g_out, n, &h))</code>
+      * <code>Assert true ((H2Frame.parse_args.buf = g_out, H2Frame.parse_args.len = n, H2Frame.parse_header(NULL)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(H2_HEADERS, h.type);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(H2_FLAG_END_HEADERS, h.flags);</code>
       * <code>TEST_ASSERT_EQUAL_HEX32(5u, h.stream_id);</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(3u, h.length);</code>
       * <code>Assert equal memory (BLOCK, g_out + 9, 3)</code>
-      * <code>Assert true (protocore_h2_parse_header(g_out, n, &h))</code>
+      * <code>Assert true ((H2Frame.parse_args.buf = g_out, H2Frame.parse_args.len = n, H2Frame.parse_header(NULL)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(H2_FLAG_END_HEADERS | H2_FLAG_END_STREAM, h.flags);</code>
       * <code>Assert equal uint (11u, n)</code>
-      * <code>Assert true (protocore_h2_parse_header(g_out, n, &h))</code>
+      * <code>Assert true ((H2Frame.parse_args.buf = g_out, H2Frame.parse_args.len = n, H2Frame.parse_header(NULL)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(H2_DATA, h.type);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(H2_FLAG_END_STREAM, h.flags);</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(2u, h.length);</code>
@@ -20003,14 +19941,14 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Builders refuse a short destination
     * **Assertions**:
-      * <code>Assert equal uint (0u, protocore_h2_build_settings(g_out, 14, &ID, &VAL, 1))</code>
-      * <code>Assert equal uint (0u, protocore_h2_build_settings_ack(g_out, 8))</code>
-      * <code>Assert equal uint (0u, protocore_h2_build_window_update(g_out, 12, 1, 1))</code>
-      * <code>Assert equal uint (0u, protocore_h2_build_rst_stream(g_out, 12, 1, H2_NO_ERROR))</code>
-      * <code>Assert equal uint (0u, protocore_h2_build_goaway(g_out, 16, 1, H2_NO_ERROR))</code>
-      * <code>Assert equal uint (0u, protocore_h2_build_ping_ack(g_out, 16, OPAQUE))</code>
-      * <code>Assert equal uint (0u, protocore_h2_build_data(g_out, 10, 1, (const uint8_t *)"xx", 2, PROTO_FALSE))</code>
-      * <code>Assert equal uint (0u, protocore_h2_build_headers(g_out, 10, 1, (const uint8_t *)"xx", 2, PROTO_FALSE))</code>
+      * <code>TEST_ASSERT_EQUAL_UINT(0u, (H2Frame.build_settings_args.buf = g_out, H2Frame.build_settings_args.cap = 14,</code>
+      * <code>TEST_ASSERT_EQUAL_UINT(</code>
+      * <code>TEST_ASSERT_EQUAL_UINT(0u, (H2Frame.window_args.buf = g_out, H2Frame.window_args.cap = 12,</code>
+      * <code>TEST_ASSERT_EQUAL_UINT(0u, (H2Frame.rst_args.buf = g_out, H2Frame.rst_args.cap = 12, H2Frame.rst_args.stream_id = 1,</code>
+      * <code>TEST_ASSERT_EQUAL_UINT(0u, (H2Frame.goaway_args.buf = g_out, H2Frame.goaway_args.cap = 16,</code>
+      * <code>TEST_ASSERT_EQUAL_UINT(0u, (H2Frame.ping_args.buf = g_out, H2Frame.ping_args.cap = 16,</code>
+      * <code>TEST_ASSERT_EQUAL_UINT(0u,</code>
+      * <code>TEST_ASSERT_EQUAL_UINT(0u, (H2Frame.headers_args.buf = g_out, H2Frame.headers_args.cap = 10,</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -20170,7 +20108,7 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
       * <code>Assert equal string ("/index.html", g_path)</code>
       * <code>Assert equal string ("example.org", g_auth)</code>
       * <code>Assert equal uint (0, g_body_len)</code>
-      * <code>Assert true (protocore_h3_conn_respond(&g_h3, 0, 200, "text/plain", (const uint8_t *)"hello", 5))</code>
+      * <code>Assert true (H3Conn.ok)</code>
       * <code>Assert not null (st)</code>
       * <code>Assert true (protocore_h3_frame_parse(st-&gt;tx + off, st-&gt;tx_have - off, &fr))</code>
       * <code>Assert equal uint (5, (size_t)fr.length)</code>
@@ -20312,7 +20250,7 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: H3 respond no content type empty body
     * **Assertions**:
-      * <code>Assert true (protocore_h3_conn_respond(&g_h3, 0, 204, NULL, NULL, 0))</code>
+      * <code>Assert true (H3Conn.ok)</code>
       * <code>Assert not null (st)</code>
       * <code>Assert true (protocore_h3_frame_parse(st-&gt;tx + off, st-&gt;tx_have - off, &fr))</code>
       * <code>TEST_ASSERT_EQUAL_UINT64(H3_HEADERS, fr.type);</code>
@@ -20390,7 +20328,7 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Respond body too large
     * **Assertions**:
-      * <code>Assert false (protocore_h3_conn_respond(&g_h3, 0, 200, "text/plain", big, sizeof(big)))</code>
+      * <code>Assert false (H3Conn.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -20426,11 +20364,11 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 <summary><b>test_h3_e2e (1 tests)</b></summary>
 
   <details style="margin-left: 20px;">
-    <summary><b>test_http3_get_end_to_end</b> &mdash; <i>Http3 get end to end</i></summary>
+    <summary><b>test_http3_get_end_to_end</b> &mdash; <i>Drain: send is called until it reports nothing left, so the call is the condition.</i></summary>
 
-    * **Objective**: Http3 get end to end
+    * **Objective**: Drain: send is called until it reports nothing left, so the call is the condition.
     * **Assertions**:
-      * <code>Assert true (protocore_quic_conn_established(&qc))</code>
+      * <code>Assert true (QuicConn.established)</code>
       * <code>Assert equal string ("GET", g_method)</code>
       * <code>Assert equal string ("/hello", g_path)</code>
       * <code>Assert true (got)</code>
@@ -20624,7 +20562,7 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
       * <code>Assert true (server_pub_from_sh(sh, shl, server_pub))</code>
       * <code>Assert true (g_handler_ran)</code>
       * <code>Assert true (response_ok(&ap_s))</code>
-      * <code>TEST_ASSERT_EQUAL_UINT8(0, conn_pool[PROTOCORE_H3_DISPATCH_SLOT].h3);</code>
+      * <code>TEST_ASSERT_EQUAL_UINT8(0, http_h3[PROTOCORE_H3_DISPATCH_SLOT]);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -41733,19 +41671,19 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Full handshake and stream
     * **Assertions**:
-      * <code>Assert true (protocore_quic_conn_recv(&g_qc, dg, dl))</code>
+      * <code>Assert true (QuicConn.ok)</code>
       * <code>Assert true (sl &gt; 0)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(QUIC_LP_INITIAL, type);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(TLS_HS_SERVER_HELLO, sh[0]);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(QUIC_LP_HANDSHAKE, hstype);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(TLS_HS_ENCRYPTED_EXTENSIONS, hsflight[0]);</code>
-      * <code>Assert true (protocore_quic_conn_recv(&g_qc, idg, idl + hdl))</code>
-      * <code>Assert true (protocore_quic_conn_established(&g_qc))</code>
+      * <code>Assert true (QuicConn.ok)</code>
+      * <code>Assert true (QuicConn.established)</code>
       * <code>Assert true (g_hs_done)</code>
       * <code>Assert true (sl &gt; 0)</code>
       * <code>Assert not equal (SIZE_MAX, p2)</code>
       * <code>Assert true (saw_hs_done)</code>
-      * <code>Assert true (protocore_quic_conn_recv(&g_qc, s1, s1l))</code>
+      * <code>Assert true (QuicConn.ok)</code>
       * <code>TEST_ASSERT_EQUAL_UINT64(0, g_stream_id);</code>
       * <code>Assert equal uint (3, g_stream_len)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8_ARRAY("GET", g_stream_data, 3);</code>
@@ -41767,10 +41705,10 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
     * **Assertions**:
       * <code>Assert null (g_qc.cb.on_stream_data)</code>
       * <code>Assert null (g_qc.cb.on_handshake_done)</code>
-      * <code>Assert true (protocore_quic_conn_recv(&g_qc, dg, dl))</code>
+      * <code>Assert true (QuicConn.ok)</code>
       * <code>Assert equal uint (0, g_stream_len)</code>
-      * <code>Assert false (protocore_quic_conn_is_closed(&g_qc))</code>
-      * <code>Assert true (protocore_quic_conn_established(&g_qc2))</code>
+      * <code>Assert false (QuicConn.closed)</code>
+      * <code>Assert true (QuicConn.established)</code>
       * <code>Assert false (g_hs_done)</code>
   </details>
 
@@ -41779,15 +41717,15 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Quic conn stream duplicate and stale fin
     * **Assertions**:
-      * <code>Assert true (protocore_quic_conn_recv(&g_qc, dg, dl))</code>
+      * <code>Assert true (QuicConn.ok)</code>
       * <code>Assert equal uint (4, g_stream_len)</code>
-      * <code>Assert true (protocore_quic_conn_recv(&g_qc, dg, dl))</code>
+      * <code>Assert true (QuicConn.ok)</code>
       * <code>Assert equal uint (4, g_stream_len)</code>
-      * <code>Assert true (protocore_quic_conn_recv(&g_qc, dg, dl))</code>
+      * <code>Assert true (QuicConn.ok)</code>
       * <code>Assert false (g_stream_fin)</code>
-      * <code>Assert true (protocore_quic_conn_recv(&g_qc, dg, dl))</code>
+      * <code>Assert true (QuicConn.ok)</code>
       * <code>Assert true (g_stream_fin)</code>
-      * <code>Assert true (protocore_quic_conn_recv(&g_qc, dg, dl))</code>
+      * <code>Assert true (QuicConn.ok)</code>
       * <code>Assert false (g_stream_fin)</code>
   </details>
 
@@ -41796,16 +41734,16 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Quic conn frame dispatch variants
     * **Assertions**:
-      * <code>Assert true (protocore_quic_conn_recv(&g_qc, dg, dl))</code>
+      * <code>Assert true (QuicConn.ok)</code>
       * <code>TEST_ASSERT_EQUAL_INT64(5, g_qc.space[QUIC_ENC_INITIAL].largest_acked);</code>
       * <code>Assert false (g_qc.space[QUIC_ENC_INITIAL].ack_eliciting_rx)</code>
-      * <code>Assert true (protocore_quic_conn_recv(&g_qc, dg, dl))</code>
+      * <code>Assert true (QuicConn.ok)</code>
       * <code>TEST_ASSERT_EQUAL_INT64(5, g_qc.space[QUIC_ENC_INITIAL].largest_acked);</code>
-      * <code>Assert true (protocore_quic_conn_recv(&g_qc, dg, dl))</code>
-      * <code>Assert true (protocore_quic_conn_is_closed(&g_qc))</code>
+      * <code>Assert true (QuicConn.ok)</code>
+      * <code>Assert true (QuicConn.closed)</code>
       * <code>Assert false (g_qc.space[QUIC_ENC_INITIAL].ack_eliciting_rx)</code>
-      * <code>Assert true (protocore_quic_conn_recv(&g_qc, dg, dl))</code>
-      * <code>Assert false (protocore_quic_conn_is_closed(&g_qc))</code>
+      * <code>Assert true (QuicConn.ok)</code>
+      * <code>Assert false (QuicConn.closed)</code>
       * <code>Assert equal uint (0, g_stream_len)</code>
   </details>
 
@@ -41814,7 +41752,7 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Quic recv zero version
     * **Assertions**:
-      * <code>Assert false (protocore_quic_conn_recv(&g_qc, dg, dl))</code>
+      * <code>Assert false (QuicConn.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -41822,9 +41760,9 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Quic recv older packet number
     * **Assertions**:
-      * <code>Assert true (protocore_quic_conn_recv(&g_qc, dg, dl))</code>
+      * <code>Assert true (QuicConn.ok)</code>
       * <code>TEST_ASSERT_EQUAL_UINT64(5, g_qc.space[QUIC_ENC_INITIAL].largest_rx);</code>
-      * <code>Assert true (protocore_quic_conn_recv(&g_qc, dg, dl))</code>
+      * <code>Assert true (QuicConn.ok)</code>
       * <code>TEST_ASSERT_EQUAL_UINT64(5, g_qc.space[QUIC_ENC_INITIAL].largest_rx);</code>
   </details>
 
@@ -41833,8 +41771,8 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Quic recv short header decrypt failure
     * **Assertions**:
-      * <code>Assert false (protocore_quic_conn_recv(&g_qc, dg, dl))</code>
-      * <code>Assert false (protocore_quic_conn_is_closed(&g_qc))</code>
+      * <code>Assert false (QuicConn.ok)</code>
+      * <code>Assert false (QuicConn.closed)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -41844,12 +41782,12 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
     * **Assertions**:
       * <code>Assert true (g_qc.handshake_done_sent)</code>
       * <code>Assert false (g_qc.handshake_done_queued)</code>
-      * <code>Assert true (protocore_quic_conn_recv(&g_qc, dg, dl))</code>
+      * <code>Assert true (QuicConn.ok)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(QTLS_DONE, g_qc.tls.state);</code>
       * <code>Assert false (g_qc.handshake_done_queued)</code>
-      * <code>Assert false (protocore_quic_conn_is_closed(&g_qc))</code>
+      * <code>Assert false (QuicConn.closed)</code>
       * <code>Assert true (off &gt; 0)</code>
-      * <code>Assert true (protocore_quic_conn_recv(&g_qc, dg, dl))</code>
+      * <code>Assert true (QuicConn.ok)</code>
       * <code>TEST_ASSERT_EQUAL_UINT64(off + sizeof(frag), g_qc.space[QUIC_ENC_HANDSHAKE].crypto_rx_off);</code>
       * <code>Assert true (g_qc.handshake_done_queued)</code>
       * <code>Assert false (g_qc.handshake_done_sent)</code>
@@ -41864,7 +41802,7 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
       * <code>Assert true (g_qc.closed)</code>
       * <code>Assert true (g_qc.draining)</code>
       * <code>Assert false (g_qc.close_queued)</code>
-      * <code>Assert equal uint (0, protocore_quic_conn_send(&g_qc, out, sizeof out))</code>
+      * <code>Assert equal uint (0, QuicConn.n)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -41872,12 +41810,12 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Quic conn close queued then peer close
     * **Assertions**:
-      * <code>Assert equal uint (0, protocore_quic_conn_send(&g_qc, out, sizeof out))</code>
+      * <code>Assert equal uint (0, QuicConn.n)</code>
       * <code>Assert true (g_qc.close_queued)</code>
       * <code>Assert true (g_qc.draining)</code>
-      * <code>Assert true (protocore_quic_conn_send(&g_qc, out, sizeof out) &gt; 0)</code>
+      * <code>Assert true (QuicConn.n &gt; 0)</code>
       * <code>Assert true (g_qc.close_sent)</code>
-      * <code>Assert equal uint (0, protocore_quic_conn_send(&g_qc, out, sizeof out))</code>
+      * <code>Assert equal uint (0, QuicConn.n)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -41885,10 +41823,10 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Quic conn close send no room
     * **Assertions**:
-      * <code>Assert equal uint (0, protocore_quic_conn_send(&g_qc, tiny, sizeof tiny))</code>
+      * <code>Assert equal uint (0, QuicConn.n)</code>
       * <code>Assert false (g_qc.close_sent)</code>
       * <code>Assert false (g_qc.closed)</code>
-      * <code>Assert true (protocore_quic_conn_send(&g_qc, out, sizeof out) &gt; 0)</code>
+      * <code>Assert true (QuicConn.n &gt; 0)</code>
       * <code>Assert true (g_qc.close_sent)</code>
   </details>
 
@@ -41897,8 +41835,8 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Quic conn close level out of range
     * **Assertions**:
-      * <code>Assert true (protocore_quic_conn_send(&g_qc, out, sizeof out) &gt; 0)</code>
-      * <code>Assert true (protocore_quic_conn_is_closed(&g_qc))</code>
+      * <code>Assert true (QuicConn.n &gt; 0)</code>
+      * <code>Assert true (QuicConn.closed)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -41915,13 +41853,13 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Quic conn crypto flight fragmented
     * **Assertions**:
-      * <code>Assert true (protocore_quic_conn_recv(&g_qc, dg, dl))</code>
+      * <code>Assert true (QuicConn.ok)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(QTLS_WAIT_FINISHED, g_qc.tls.state);</code>
       * <code>Assert true (hs_flight_len &gt; PROTOCORE_QUIC_MAX_DATAGRAM)</code>
       * <code>Assert true (first &gt; 0)</code>
       * <code>Assert true (sent_after_first &gt; 0)</code>
       * <code>Assert true (sent_after_first &lt; hs_flight_len)</code>
-      * <code>Assert true (protocore_quic_conn_send(&g_qc, out, sizeof out) &gt; 0)</code>
+      * <code>Assert true (QuicConn.n &gt; 0)</code>
       * <code>TEST_ASSERT_EQUAL_UINT64(hs_flight_len, total);</code>
   </details>
 
@@ -41930,18 +41868,18 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Quic conn stream tx partitioning
     * **Assertions**:
-      * <code>Assert true (protocore_quic_conn_recv(&g_qc, sdg, sl))</code>
+      * <code>Assert true (QuicConn.ok)</code>
       * <code>Assert equal uint (sizeof(big), queued)</code>
       * <code>Assert not null (st)</code>
       * <code>Assert true (st-&gt;tx_sent &gt; 0)</code>
       * <code>Assert true (st-&gt;tx_sent &lt; st-&gt;tx_have)</code>
       * <code>TEST_ASSERT_EQUAL_UINT64(st-&gt;tx_sent, st-&gt;tx_off);</code>
       * <code>Assert false (st-&gt;tx_fin_sent)</code>
-      * <code>Assert true (protocore_quic_conn_send(&g_qc, out, sizeof out) &gt; 0)</code>
+      * <code>Assert true (QuicConn.n &gt; 0)</code>
       * <code>Assert equal uint (st-&gt;tx_have, st-&gt;tx_sent)</code>
       * <code>Assert true (st-&gt;tx_fin_sent)</code>
-      * <code>Assert equal uint (2, protocore_quic_conn_stream_send(&g_qc, 0, d, 2, PROTO_FALSE))</code>
-      * <code>Assert true (protocore_quic_conn_send(&g_qc, out, sizeof out) &gt; 0)</code>
+      * <code>Assert equal uint (2, QuicConn.n)</code>
+      * <code>Assert true (QuicConn.n &gt; 0)</code>
       * <code>Assert equal uint (before + 2, st-&gt;tx_sent)</code>
       * <code>Assert true (st-&gt;tx_fin_sent)</code>
   </details>
@@ -41951,11 +41889,11 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Quic conn stream tx datagram full
     * **Assertions**:
-      * <code>Assert equal uint (sizeof(payload)</code>
+      * <code>Assert equal uint (sizeof(payload), QuicConn.n)</code>
       * <code>Assert true (untouched &gt; 0)</code>
       * <code>Assert true (partial &gt; 0)</code>
       * <code>Assert equal uint (g_qc.streams[j].tx_have, g_qc.streams[j].tx_sent)</code>
-      * <code>Assert equal uint (0, protocore_quic_conn_send(&g_qc, out, sizeof out))</code>
+      * <code>Assert equal uint (0, QuicConn.n)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -41963,12 +41901,12 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Quic conn stream fin only
     * **Assertions**:
-      * <code>Assert equal uint (4, protocore_quic_conn_stream_send(&g_qc, 0, (const uint8_t *)"BODY", 4, PROTO_FALSE))</code>
-      * <code>Assert true (protocore_quic_conn_send(&g_qc, out, sizeof out) &gt; 0)</code>
+      * <code>Assert equal uint (4, QuicConn.n)</code>
+      * <code>Assert true (QuicConn.n &gt; 0)</code>
       * <code>Assert not null (st)</code>
       * <code>Assert equal uint (st-&gt;tx_have, st-&gt;tx_sent)</code>
       * <code>Assert false (st-&gt;tx_fin_sent)</code>
-      * <code>Assert equal uint (0, protocore_quic_conn_stream_send(&g_qc, 0, (const uint8_t *)"", 0, PROTO_TRUE))</code>
+      * <code>Assert equal uint (0, QuicConn.n)</code>
       * <code>Assert true (st-&gt;tx_fin)</code>
       * <code>Assert true (n &gt; 0)</code>
       * <code>Assert true (st-&gt;tx_fin_sent)</code>
@@ -41977,7 +41915,7 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
       * <code>Assert true (f.type &gt;= QUIC_FT_STREAM)</code>
       * <code>TEST_ASSERT_EQUAL_UINT64(0, f.stream.length);</code>
       * <code>Assert true (f.stream.fin)</code>
-      * <code>Assert equal uint (0, protocore_quic_conn_send(&g_qc, out, sizeof out))</code>
+      * <code>Assert equal uint (0, QuicConn.n)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -41996,9 +41934,9 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Quic conn stream send sentinel id
     * **Assertions**:
-      * <code>Assert equal uint (2, protocore_quic_conn_stream_send(&g_qc, UINT64_MAX, (const uint8_t *)"hi", 2, PROTO_TRUE))</code>
+      * <code>Assert equal uint (2, QuicConn.n)</code>
       * <code>TEST_ASSERT_EQUAL_UINT64(UINT64_MAX, g_qc.streams[i].id);</code>
-      * <code>Assert equal uint (0, protocore_quic_conn_send(&g_qc, out, sizeof out))</code>
+      * <code>Assert equal uint (0, QuicConn.n)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -42006,7 +41944,7 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Quic conn pto backoff ceiling
     * **Assertions**:
-      * <code>Assert true (protocore_quic_conn_send(&g_qc, out, sizeof out) &gt; 0)</code>
+      * <code>Assert true (QuicConn.n &gt; 0)</code>
       * <code>Assert true (g_qc.pto_armed)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(8, g_qc.pto_count);</code>
       * <code>Assert true (g_qc.pto_armed)</code>
@@ -42018,8 +41956,8 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Quic conn ack owed without rx
     * **Assertions**:
-      * <code>Assert equal uint (0, protocore_quic_conn_send(&g_qc, out, sizeof out))</code>
-      * <code>Assert equal uint (0, protocore_quic_conn_send(&g_qc, out, sizeof out))</code>
+      * <code>Assert equal uint (0, QuicConn.n)</code>
+      * <code>Assert equal uint (0, QuicConn.n)</code>
       * <code>Assert true (g_qc.space[QUIC_ENC_APP].ack_eliciting_rx)</code>
   </details>
 
@@ -42028,12 +41966,12 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Quic conn close level without keys
     * **Assertions**:
-      * <code>Assert true (protocore_quic_conn_recv(&g_qc, dg, dl))</code>
+      * <code>Assert true (QuicConn.ok)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(QTLS_START, g_qc.tls.state);</code>
       * <code>Assert true (g_qc.close_queued)</code>
       * <code>Assert false (g_qc.space[QUIC_ENC_APP].discarded)</code>
       * <code>Assert true (n &gt; 0)</code>
-      * <code>Assert true (protocore_quic_conn_is_closed(&g_qc))</code>
+      * <code>Assert true (QuicConn.closed)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(QUIC_LP_INITIAL, type);</code>
       * <code>Assert not equal (SIZE_MAX, pt)</code>
       * <code>Assert true (has_frame(plain, pt, QUIC_FT_CONNECTION_CLOSE))</code>
@@ -42044,9 +41982,9 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Quic conn is closed draining only
     * **Assertions**:
-      * <code>Assert false (protocore_quic_conn_is_closed(&g_qc))</code>
+      * <code>Assert false (QuicConn.closed)</code>
       * <code>Assert false (g_qc.closed)</code>
-      * <code>Assert true (protocore_quic_conn_is_closed(&g_qc))</code>
+      * <code>Assert true (QuicConn.closed)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -42067,11 +42005,11 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
     * **Objective**: Quic conn pto disarms when all acked
     * **Assertions**:
       * <code>Assert true (g_qc.pto_armed)</code>
-      * <code>Assert true (protocore_quic_conn_recv(&g_qc, dg, dl))</code>
+      * <code>Assert true (QuicConn.ok)</code>
       * <code>TEST_ASSERT_EQUAL_INT64(0, g_qc.space[QUIC_ENC_APP].largest_acked);</code>
       * <code>Assert false (g_qc.pto_armed)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(0, g_qc.pto_count);</code>
-      * <code>Assert false (protocore_quic_conn_is_closed(&g_qc))</code>
+      * <code>Assert false (QuicConn.closed)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -42091,16 +42029,16 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Pto retransmits flight
     * **Assertions**:
-      * <code>Assert true (protocore_quic_conn_recv(&g_qc, dg, dl))</code>
-      * <code>Assert true (protocore_quic_conn_send(&g_qc, sdg, sizeof(sdg)) &gt; 0)</code>
-      * <code>Assert equal uint (0, protocore_quic_conn_send(&g_qc, sdg, sizeof(sdg)))</code>
-      * <code>Assert equal uint (0, protocore_quic_conn_send(&g_qc, sdg, sizeof(sdg)))</code>
+      * <code>Assert true (QuicConn.ok)</code>
+      * <code>Assert true (QuicConn.n &gt; 0)</code>
+      * <code>Assert equal uint (0, QuicConn.n)</code>
+      * <code>Assert equal uint (0, QuicConn.n)</code>
       * <code>Assert true (sl2 &gt; 0)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(QUIC_LP_INITIAL, type);</code>
       * <code>Assert true (sh_len &gt; 0)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(TLS_HS_SERVER_HELLO, sh[0]);</code>
       * <code>Assert false (g_qc.pto_armed)</code>
-      * <code>Assert equal uint (0, protocore_quic_conn_send(&g_qc, sdg2, sizeof(sdg2)))</code>
+      * <code>Assert equal uint (0, QuicConn.n)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -42108,9 +42046,9 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Connection close api
     * **Assertions**:
-      * <code>Assert true (protocore_quic_conn_send(&g_qc, cdg, sizeof(cdg)) &gt; 0)</code>
-      * <code>Assert true (protocore_quic_conn_is_closed(&g_qc))</code>
-      * <code>Assert equal uint (0, protocore_quic_conn_send(&g_qc, cdg, sizeof(cdg)))</code>
+      * <code>Assert true (QuicConn.n &gt; 0)</code>
+      * <code>Assert true (QuicConn.closed)</code>
+      * <code>Assert equal uint (0, QuicConn.n)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -42123,8 +42061,8 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
       * <code>Assert not equal (SIZE_MAX, cpt)</code>
       * <code>TEST_ASSERT_EQUAL_UINT64(QUIC_ERR_FRAME_ENCODING, f.close.error_code);</code>
       * <code>Assert true (saw)</code>
-      * <code>Assert true (protocore_quic_conn_is_closed(&g_qc))</code>
-      * <code>Assert equal uint (0, protocore_quic_conn_send(&g_qc, cdg, sizeof(cdg)))</code>
+      * <code>Assert true (QuicConn.closed)</code>
+      * <code>Assert equal uint (0, QuicConn.n)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -42132,7 +42070,7 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Quic send amplification limited
     * **Assertions**:
-      * <code>Assert equal uint (0, protocore_quic_conn_send(&g_qc, out, sizeof(out)))</code>
+      * <code>Assert equal uint (0, QuicConn.n)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -42140,10 +42078,10 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Quic crypto out of order and dup
     * **Assertions**:
-      * <code>Assert true (protocore_quic_conn_recv(&g_qc, dg, dl))</code>
-      * <code>Assert false (protocore_quic_conn_is_closed(&g_qc))</code>
-      * <code>Assert true (protocore_quic_conn_recv(&g_qc, dg, dl))</code>
-      * <code>Assert true (protocore_quic_conn_recv(&g_qc, dg2, dl2))</code>
+      * <code>Assert true (QuicConn.ok)</code>
+      * <code>Assert false (QuicConn.closed)</code>
+      * <code>Assert true (QuicConn.ok)</code>
+      * <code>Assert true (QuicConn.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -42151,7 +42089,7 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Quic timeout when closed
     * **Assertions**:
-      * <code>Assert true (protocore_quic_conn_is_closed(&g_qc))</code>
+      * <code>Assert true (QuicConn.closed)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -42159,8 +42097,8 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Quic stream send table full
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_UINT(</code>
-      * <code>Assert equal uint (0, protocore_quic_conn_stream_send(&g_qc, 999, (const uint8_t *)"x", 1, PROTO_FALSE))</code>
+      * <code>Assert equal uint (2, QuicConn.n)</code>
+      * <code>Assert equal uint (0, QuicConn.n)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -42168,8 +42106,8 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Quic recv connection close
     * **Assertions**:
-      * <code>Assert true (protocore_quic_conn_is_closed(&g_qc))</code>
-      * <code>Assert false (protocore_quic_conn_recv(&g_qc, dg, dl))</code>
+      * <code>Assert true (QuicConn.closed)</code>
+      * <code>Assert false (QuicConn.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -42177,8 +42115,8 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Quic recv ping and max data
     * **Assertions**:
-      * <code>Assert true (protocore_quic_conn_recv(&g_qc, dg, dl))</code>
-      * <code>Assert false (protocore_quic_conn_is_closed(&g_qc))</code>
+      * <code>Assert true (QuicConn.ok)</code>
+      * <code>Assert false (QuicConn.closed)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -42186,7 +42124,7 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Quic recv bad version
     * **Assertions**:
-      * <code>Assert false (protocore_quic_conn_recv(&g_qc, dg, dl))</code>
+      * <code>Assert false (QuicConn.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -42194,7 +42132,7 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Quic recv unsupported long type
     * **Assertions**:
-      * <code>Assert false (protocore_quic_conn_recv(&g_qc, dg, dl))</code>
+      * <code>Assert false (QuicConn.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -42202,7 +42140,7 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Quic recv short before app keys
     * **Assertions**:
-      * <code>Assert false (protocore_quic_conn_recv(&g_qc, dg, dl))</code>
+      * <code>Assert false (QuicConn.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -42210,7 +42148,7 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Quic recv short too short
     * **Assertions**:
-      * <code>Assert false (protocore_quic_conn_recv(&g_qc, dg, sizeof(dg)))</code>
+      * <code>Assert false (QuicConn.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -42218,8 +42156,8 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Quic recv unprotect failure
     * **Assertions**:
-      * <code>Assert false (protocore_quic_conn_is_closed(&g_qc))</code>
-      * <code>Assert false (protocore_quic_conn_established(&g_qc))</code>
+      * <code>Assert false (QuicConn.closed)</code>
+      * <code>Assert false (QuicConn.established)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -42227,7 +42165,7 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Quic recv truncated long header
     * **Assertions**:
-      * <code>Assert false (protocore_quic_conn_recv(&g_qc, dg, sizeof(dg)))</code>
+      * <code>Assert false (QuicConn.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -42235,11 +42173,11 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Quic recv malformed initial headers
     * **Assertions**:
-      * <code>Assert false (protocore_quic_conn_recv(&g_qc, dg, hn + 1))</code>
-      * <code>Assert false (protocore_quic_conn_recv(&g_qc, dg, hn + 2))</code>
-      * <code>Assert false (protocore_quic_conn_recv(&g_qc, dg, hn + 2))</code>
-      * <code>Assert false (protocore_quic_conn_recv(&g_qc, dg, hn + 8))</code>
-      * <code>Assert false (protocore_quic_conn_recv(&g_qc, dg, 1450))</code>
+      * <code>Assert false (QuicConn.ok)</code>
+      * <code>Assert false (QuicConn.ok)</code>
+      * <code>Assert false (QuicConn.ok)</code>
+      * <code>Assert false (QuicConn.ok)</code>
+      * <code>Assert false (QuicConn.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -42247,8 +42185,8 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Quic recv handshake done frame
     * **Assertions**:
-      * <code>Assert true (protocore_quic_conn_recv(&g_qc, dg, dl))</code>
-      * <code>Assert false (protocore_quic_conn_is_closed(&g_qc))</code>
+      * <code>Assert true (QuicConn.ok)</code>
+      * <code>Assert false (QuicConn.closed)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -42258,7 +42196,7 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
     * **Assertions**:
       * <code>Assert equal uint (0, g_stream_len)</code>
       * <code>Assert true (g_stream_fin)</code>
-      * <code>Assert true (protocore_quic_conn_recv(&g_qc, dg, dl))</code>
+      * <code>Assert true (QuicConn.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -42266,9 +42204,9 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Quic conn crypto window clamp
     * **Assertions**:
-      * <code>Assert true (protocore_quic_conn_recv(&g_qc, dg, dl))</code>
-      * <code>Assert false (protocore_quic_conn_is_closed(&g_qc))</code>
-      * <code>Assert false (protocore_quic_conn_is_closed(&g_qc))</code>
+      * <code>Assert true (QuicConn.ok)</code>
+      * <code>Assert false (QuicConn.closed)</code>
+      * <code>Assert false (QuicConn.closed)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -42276,7 +42214,7 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Quic conn crypto error close
     * **Assertions**:
-      * <code>Assert true (protocore_quic_conn_send(&g_qc, out, sizeof out) &gt; 0)</code>
+      * <code>Assert true (QuicConn.n &gt; 0)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -42284,8 +42222,8 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Quic conn no keys build
     * **Assertions**:
-      * <code>Assert true (protocore_quic_conn_recv(&g_qc, dg, dl))</code>
-      * <code>Assert false (protocore_quic_conn_is_closed(&g_qc))</code>
+      * <code>Assert true (QuicConn.ok)</code>
+      * <code>Assert false (QuicConn.closed)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -42293,8 +42231,8 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Quic conn pto not yet
     * **Assertions**:
-      * <code>Assert true (protocore_quic_conn_send(&g_qc, out, sizeof out) &gt; 0)</code>
-      * <code>Assert false (protocore_quic_conn_is_closed(&g_qc))</code>
+      * <code>Assert true (QuicConn.n &gt; 0)</code>
+      * <code>Assert false (QuicConn.closed)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -42308,9 +42246,9 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Quic conn stream nothing to send
     * **Assertions**:
-      * <code>Assert equal uint (2, protocore_quic_conn_stream_send(&g_qc, 0, (const uint8_t *)"OK", 2, PROTO_TRUE))</code>
-      * <code>Assert true (protocore_quic_conn_send(&g_qc, out, sizeof out) &gt; 0)</code>
-      * <code>Assert false (protocore_quic_conn_is_closed(&g_qc))</code>
+      * <code>Assert equal uint (2, QuicConn.n)</code>
+      * <code>Assert true (QuicConn.n &gt; 0)</code>
+      * <code>Assert false (QuicConn.closed)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -42318,7 +42256,7 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Quic conn short header tiny cap
     * **Assertions**:
-      * <code>Assert false (protocore_quic_conn_is_closed(&g_qc))</code>
+      * <code>Assert false (QuicConn.closed)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -42326,8 +42264,8 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Quic conn close level fallback
     * **Assertions**:
-      * <code>Assert true (protocore_quic_conn_send(&g_qc, out, sizeof out) &gt; 0)</code>
-      * <code>Assert true (protocore_quic_conn_is_closed(&g_qc))</code>
+      * <code>Assert true (QuicConn.n &gt; 0)</code>
+      * <code>Assert true (QuicConn.closed)</code>
   </details>
 
 </details>
@@ -42340,7 +42278,7 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Fips197 aes128 block
     * **Assertions**:
-      * <code>Assert not null (aes)</code>
+      * <code>Assert true (span.ok(w))</code>
       * <code>Assert equal memory (want, out, 16)</code>
   </details>
 
@@ -42864,13 +42802,13 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Quic server http3 get
     * **Assertions**:
-      * <code>Assert true (protocore_quic_server_begin(H3_PORT, &scfg, app_request, NULL))</code>
-      * <code>TEST_ASSERT_EQUAL_UINT8(1, protocore_quic_server_active_conns());</code>
+      * <code>Assert true (QuicServer.ok)</code>
+      * <code>TEST_ASSERT_EQUAL_UINT8(1, QuicServer.u8);</code>
       * <code>Assert greater than (0, g_out_n)</code>
       * <code>Assert equal string ("GET", g_method)</code>
       * <code>Assert equal string ("/hello", g_path)</code>
       * <code>Assert true (response_ok(&ap_s))</code>
-      * <code>TEST_ASSERT_EQUAL_UINT8(0, protocore_quic_server_active_conns());</code>
+      * <code>TEST_ASSERT_EQUAL_UINT8(0, QuicServer.u8);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -42878,10 +42816,10 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Idle connection reaped
     * **Assertions**:
-      * <code>Assert true (protocore_quic_server_begin(H3_PORT, &scfg, app_request, NULL))</code>
-      * <code>TEST_ASSERT_EQUAL_UINT8(1, protocore_quic_server_active_conns());</code>
-      * <code>TEST_ASSERT_EQUAL_UINT8(1, protocore_quic_server_active_conns());</code>
-      * <code>TEST_ASSERT_EQUAL_UINT8(0, protocore_quic_server_active_conns());</code>
+      * <code>Assert true (QuicServer.ok)</code>
+      * <code>TEST_ASSERT_EQUAL_UINT8(1, QuicServer.u8);</code>
+      * <code>TEST_ASSERT_EQUAL_UINT8(1, QuicServer.u8);</code>
+      * <code>TEST_ASSERT_EQUAL_UINT8(0, QuicServer.u8);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -42889,13 +42827,13 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Quic server input guards
     * **Assertions**:
-      * <code>Assert false (protocore_quic_server_begin(H3_PORT, NULL, app_request, NULL))</code>
-      * <code>Assert false (protocore_quic_server_begin(H3_PORT, &scfg, app_request, NULL))</code>
-      * <code>Assert true (protocore_quic_server_begin(H3_PORT, &scfg, app_request, NULL))</code>
-      * <code>TEST_ASSERT_EQUAL_UINT8(0, protocore_quic_server_active_conns());</code>
+      * <code>Assert false (QuicServer.ok)</code>
+      * <code>Assert false (QuicServer.ok)</code>
+      * <code>Assert true (QuicServer.ok)</code>
+      * <code>TEST_ASSERT_EQUAL_UINT8(0, QuicServer.u8);</code>
       * <code>Assert equal int (0, (int)protocore_net_host_udp_sent())</code>
-      * <code>Assert false (protocore_quic_server_respond(999999, 0, 200, "text/plain", NULL, 0))</code>
-      * <code>TEST_ASSERT_EQUAL_UINT8(0, protocore_quic_server_active_conns());</code>
+      * <code>Assert false (QuicServer.ok)</code>
+      * <code>TEST_ASSERT_EQUAL_UINT8(0, QuicServer.u8);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -42903,10 +42841,10 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Ingest ring drops past capacity
     * **Assertions**:
-      * <code>Assert true (protocore_quic_server_begin(H3_PORT, &scfg, app_request, NULL))</code>
-      * <code>TEST_ASSERT_EQUAL_UINT8(2, protocore_quic_server_active_conns());</code>
-      * <code>Assert true (protocore_quic_server_begin(H3_PORT, &scfg, app_request, NULL))</code>
-      * <code>TEST_ASSERT_EQUAL_UINT8(1, protocore_quic_server_active_conns());</code>
+      * <code>Assert true (QuicServer.ok)</code>
+      * <code>TEST_ASSERT_EQUAL_UINT8(2, QuicServer.u8);</code>
+      * <code>Assert true (QuicServer.ok)</code>
+      * <code>TEST_ASSERT_EQUAL_UINT8(1, QuicServer.u8);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -42914,8 +42852,8 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Quic server pool full
     * **Assertions**:
-      * <code>Assert true (protocore_quic_server_begin(H3_PORT, &scfg, app_request, NULL))</code>
-      * <code>TEST_ASSERT_EQUAL_UINT8(PROTOCORE_QUIC_MAX_CONNS, protocore_quic_server_active_conns());</code>
+      * <code>Assert true (QuicServer.ok)</code>
+      * <code>TEST_ASSERT_EQUAL_UINT8(PROTOCORE_QUIC_MAX_CONNS, QuicServer.u8);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -42923,8 +42861,8 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Quic server replies to the captured peer
     * **Assertions**:
-      * <code>Assert true (protocore_quic_server_begin(H3_PORT, &scfg, app_request, NULL))</code>
-      * <code>TEST_ASSERT_EQUAL_UINT8(1, protocore_quic_server_active_conns());</code>
+      * <code>Assert true (QuicServer.ok)</code>
+      * <code>TEST_ASSERT_EQUAL_UINT8(1, QuicServer.u8);</code>
       * <code>Assert greater than (0, (int)protocore_net_host_udp_count())</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(PROTOCORE_NET_TYPE_V4, d-&gt;type);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(255, d-&gt;addr[0]);</code>
@@ -42938,8 +42876,8 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Quic server unrenderable peer dropped
     * **Assertions**:
-      * <code>Assert true (protocore_quic_server_begin(H3_PORT, &scfg, app_request, NULL))</code>
-      * <code>TEST_ASSERT_EQUAL_UINT8(0, protocore_quic_server_active_conns());</code>
+      * <code>Assert true (QuicServer.ok)</code>
+      * <code>TEST_ASSERT_EQUAL_UINT8(0, QuicServer.u8);</code>
       * <code>Assert equal int (0, (int)protocore_net_host_udp_sent())</code>
   </details>
 
@@ -42948,7 +42886,7 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Quic server begin default port
     * **Assertions**:
-      * <code>Assert true (protocore_quic_server_begin(0, &scfg, app_request, NULL))</code>
+      * <code>Assert true (QuicServer.ok)</code>
       * <code>Assert not null (protocore_net_host_udp_pcb(PROTOCORE_HTTP3_PORT))</code>
   </details>
 
@@ -42957,9 +42895,9 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Quic server respond unknown id with active conn
     * **Assertions**:
-      * <code>Assert true (protocore_quic_server_begin(H3_PORT, &scfg, app_request, NULL))</code>
-      * <code>TEST_ASSERT_EQUAL_UINT8(1, protocore_quic_server_active_conns());</code>
-      * <code>Assert false (protocore_quic_server_respond(2, 0, 200, "text/plain", NULL, 0))</code>
+      * <code>Assert true (QuicServer.ok)</code>
+      * <code>TEST_ASSERT_EQUAL_UINT8(1, QuicServer.u8);</code>
+      * <code>Assert false (QuicServer.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -42967,10 +42905,10 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Quic server route header edges
     * **Assertions**:
-      * <code>Assert true (protocore_quic_server_begin(H3_PORT, &scfg, app_request, NULL))</code>
-      * <code>TEST_ASSERT_EQUAL_UINT8(1, protocore_quic_server_active_conns());</code>
-      * <code>TEST_ASSERT_EQUAL_UINT8(1, protocore_quic_server_active_conns());</code>
-      * <code>TEST_ASSERT_EQUAL_UINT8(1, protocore_quic_server_active_conns());</code>
+      * <code>Assert true (QuicServer.ok)</code>
+      * <code>TEST_ASSERT_EQUAL_UINT8(1, QuicServer.u8);</code>
+      * <code>TEST_ASSERT_EQUAL_UINT8(1, QuicServer.u8);</code>
+      * <code>TEST_ASSERT_EQUAL_UINT8(1, QuicServer.u8);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -42978,9 +42916,9 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Quic server close reaped before idle
     * **Assertions**:
-      * <code>Assert true (protocore_quic_server_begin(H3_PORT, &scfg, app_request, NULL))</code>
-      * <code>TEST_ASSERT_EQUAL_UINT8(1, protocore_quic_server_active_conns());</code>
-      * <code>TEST_ASSERT_EQUAL_UINT8(0, protocore_quic_server_active_conns());</code>
+      * <code>Assert true (QuicServer.ok)</code>
+      * <code>TEST_ASSERT_EQUAL_UINT8(1, QuicServer.u8);</code>
+      * <code>TEST_ASSERT_EQUAL_UINT8(0, QuicServer.u8);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -42988,11 +42926,11 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Quic server on request null
     * **Assertions**:
-      * <code>Assert true (protocore_quic_server_begin(H3_PORT, &scfg, NULL, NULL))</code>
-      * <code>TEST_ASSERT_EQUAL_UINT8(1, protocore_quic_server_active_conns());</code>
+      * <code>Assert true (QuicServer.ok)</code>
+      * <code>TEST_ASSERT_EQUAL_UINT8(1, QuicServer.u8);</code>
       * <code>Assert greater than (0, g_out_n)</code>
       * <code>Assert equal string ("", g_method)</code>
-      * <code>TEST_ASSERT_EQUAL_UINT8(1, protocore_quic_server_active_conns());</code>
+      * <code>TEST_ASSERT_EQUAL_UINT8(1, QuicServer.u8);</code>
   </details>
 
 </details>
@@ -50953,7 +50891,7 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Dispatch truncated pdu fields
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, snmp_dispatch_pdu(pdus[i], lens[i], PROTO_FALSE, PROTO_TRUE, out, sizeof(out)));</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -51231,8 +51169,8 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Dispatch malformed pdu
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, snmp_dispatch_pdu(junk, sizeof(junk), PROTO_FALSE, PROTO_TRUE, resp, sizeof(resp)));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, snmp_dispatch_pdu(bare, sizeof(bare), PROTO_FALSE, PROTO_TRUE, resp, sizeof(resp)));</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -58631,7 +58569,7 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
       * <code>TEST_ASSERT_EQUAL_UINT8_ARRAY(expect, msg + 4, 32);</code>
       * <code>Assert equal uint (sizeof(FLIGHT), seen)</code>
       * <code>Assert equal uint (130u, clen)</code>
-      * <code>TEST_ASSERT_TRUE_MESSAGE(Ed25519.ok,</code>
+      * <code>Assert true message (Ed25519.ok, "the server's CertificateVerify did not verify under the key it presented")</code>
       * <code>Assert true (rec_len &gt; 0)</code>
       * <code>Assert equal int (0, feed(rec, rec_len))</code>
       * <code>Assert true message (server_established(), "the handshake did not complete")</code>
@@ -58766,10 +58704,10 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: both peers can do 1.3
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_HEX16(TLS_VERSION_1_3,</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(TLS_VERSION_1_2,</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(TLS_VERSION_1_3,</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(TLS_VERSION_1_2,</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(TLS_VERSION_1_3, TlsPolicy.version);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(TLS_VERSION_1_2, TlsPolicy.version);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(TLS_VERSION_1_3, TlsPolicy.version);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(TLS_VERSION_1_2, TlsPolicy.version);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -58777,8 +58715,8 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: A future client gets the server ceiling
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_HEX16(TLS_VERSION_1_3, protocore_tls_negotiate_version(0x0305, TLS_VERSION_1_2, TLS_VERSION_1_3));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(TLS_VERSION_1_2, protocore_tls_negotiate_version(0x03FF, TLS_VERSION_1_2, TLS_VERSION_1_2));</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(TLS_VERSION_1_3, TlsPolicy.version);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(TLS_VERSION_1_2, TlsPolicy.version);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -58786,11 +58724,11 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: a 1.2 client against a 1.3-only server has no overlap either
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_HEX16(0, protocore_tls_negotiate_version(0x0302, TLS_VERSION_1_2, TLS_VERSION_1_3));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(0, protocore_tls_negotiate_version(0x0301, TLS_VERSION_1_2, TLS_VERSION_1_3));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(0, protocore_tls_negotiate_version(0x0300, TLS_VERSION_1_2, TLS_VERSION_1_3));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(0, protocore_tls_negotiate_version(0x0000, TLS_VERSION_1_2, TLS_VERSION_1_3));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(0, protocore_tls_negotiate_version(TLS_VERSION_1_2, TLS_VERSION_1_3, TLS_VERSION_1_3));</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(0, TlsPolicy.version);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(0, TlsPolicy.version);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(0, TlsPolicy.version);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(0, TlsPolicy.version);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(0, TlsPolicy.version);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -58798,8 +58736,8 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: An inverted server range negotiates nothing
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_HEX16(0, protocore_tls_negotiate_version(TLS_VERSION_1_3, TLS_VERSION_1_3, TLS_VERSION_1_2));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(0, protocore_tls_negotiate_version(TLS_VERSION_1_2, TLS_VERSION_1_3, TLS_VERSION_1_2));</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(0, TlsPolicy.version);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(0, TlsPolicy.version);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -58817,12 +58755,12 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Version names
     * **Assertions**:
-      * <code>Assert equal string ("TLS 1.2", protocore_tls_version_name(TLS_VERSION_1_2))</code>
-      * <code>Assert equal string ("TLS 1.3", protocore_tls_version_name(TLS_VERSION_1_3))</code>
-      * <code>Assert equal string ("unknown", protocore_tls_version_name(0x0302))</code>
-      * <code>Assert equal string ("unknown", protocore_tls_version_name(0x0301))</code>
-      * <code>Assert equal string ("unknown", protocore_tls_version_name(0x0000))</code>
-      * <code>Assert equal string ("unknown", protocore_tls_version_name(0xFFFF))</code>
+      * <code>Assert equal string ("TLS 1.2", TlsPolicy.text)</code>
+      * <code>Assert equal string ("TLS 1.3", TlsPolicy.text)</code>
+      * <code>Assert equal string ("unknown", TlsPolicy.text)</code>
+      * <code>Assert equal string ("unknown", TlsPolicy.text)</code>
+      * <code>Assert equal string ("unknown", TlsPolicy.text)</code>
+      * <code>Assert equal string ("unknown", TlsPolicy.text)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -58830,10 +58768,10 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: the client's own order is ignored: the server's first pinned suite wins both times
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_HEX16(0x1301, protocore_tls_select_cipher(CLIENT_A, 3, PINNED, 3));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(0x1301, protocore_tls_select_cipher(CLIENT_B, 3, PINNED, 3));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(0xC02F, protocore_tls_select_cipher(CLIENT_C, 2, PINNED, 3));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(0xCCA8, protocore_tls_select_cipher(CLIENT_D, 1, PINNED, 3));</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(0x1301, TlsPolicy.suite);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(0x1301, TlsPolicy.suite);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(0xC02F, TlsPolicy.suite);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(0xCCA8, TlsPolicy.suite);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -58841,9 +58779,9 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: an empty list on either side is no overlap
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_HEX16(0, protocore_tls_select_cipher(LEGACY, 3, PINNED, 2));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(0, protocore_tls_select_cipher(LEGACY, 0, PINNED, 2));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(0, protocore_tls_select_cipher(LEGACY, 3, PINNED, 0));</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(0, TlsPolicy.suite);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(0, TlsPolicy.suite);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(0, TlsPolicy.suite);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -58851,9 +58789,9 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Selection refuses a null list
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_HEX16(0, protocore_tls_select_cipher(NULL, 1, PINNED, 1));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(0, protocore_tls_select_cipher(PINNED, 1, NULL, 1));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(0, protocore_tls_select_cipher(NULL, 0, NULL, 0));</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(0, TlsPolicy.suite);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(0, TlsPolicy.suite);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(0, TlsPolicy.suite);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -58871,15 +58809,15 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: The aead suites
     * **Assertions**:
-      * <code>Assert true (protocore_tls_is_aead(0x1301))</code>
-      * <code>Assert true (protocore_tls_is_aead(0x1302))</code>
-      * <code>Assert true (protocore_tls_is_aead(0x1303))</code>
-      * <code>Assert true (protocore_tls_is_aead(0xC02B))</code>
-      * <code>Assert true (protocore_tls_is_aead(0xC02C))</code>
-      * <code>Assert true (protocore_tls_is_aead(0xC02F))</code>
-      * <code>Assert true (protocore_tls_is_aead(0xC030))</code>
-      * <code>Assert true (protocore_tls_is_aead(0xCCA8))</code>
-      * <code>Assert true (protocore_tls_is_aead(0xCCA9))</code>
+      * <code>Assert true (TlsPolicy.aead)</code>
+      * <code>Assert true (TlsPolicy.aead)</code>
+      * <code>Assert true (TlsPolicy.aead)</code>
+      * <code>Assert true (TlsPolicy.aead)</code>
+      * <code>Assert true (TlsPolicy.aead)</code>
+      * <code>Assert true (TlsPolicy.aead)</code>
+      * <code>Assert true (TlsPolicy.aead)</code>
+      * <code>Assert true (TlsPolicy.aead)</code>
+      * <code>Assert true (TlsPolicy.aead)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -58887,18 +58825,18 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: a code point next to a pinned one is not pinned by proximity
     * **Assertions**:
-      * <code>Assert false (protocore_tls_is_aead(0x0000))</code>
-      * <code>Assert false (protocore_tls_is_aead(0x0005))</code>
-      * <code>Assert false (protocore_tls_is_aead(0x000A))</code>
-      * <code>Assert false (protocore_tls_is_aead(0x002F))</code>
-      * <code>Assert false (protocore_tls_is_aead(0x0035))</code>
-      * <code>Assert false (protocore_tls_is_aead(0x003C))</code>
-      * <code>Assert false (protocore_tls_is_aead(0xC013))</code>
-      * <code>Assert false (protocore_tls_is_aead(0xC027))</code>
-      * <code>Assert false (protocore_tls_is_aead(0xC02E))</code>
-      * <code>Assert false (protocore_tls_is_aead(0xC031))</code>
-      * <code>Assert false (protocore_tls_is_aead(0x1300))</code>
-      * <code>Assert false (protocore_tls_is_aead(0xFFFF))</code>
+      * <code>Assert false (TlsPolicy.aead)</code>
+      * <code>Assert false (TlsPolicy.aead)</code>
+      * <code>Assert false (TlsPolicy.aead)</code>
+      * <code>Assert false (TlsPolicy.aead)</code>
+      * <code>Assert false (TlsPolicy.aead)</code>
+      * <code>Assert false (TlsPolicy.aead)</code>
+      * <code>Assert false (TlsPolicy.aead)</code>
+      * <code>Assert false (TlsPolicy.aead)</code>
+      * <code>Assert false (TlsPolicy.aead)</code>
+      * <code>Assert false (TlsPolicy.aead)</code>
+      * <code>Assert false (TlsPolicy.aead)</code>
+      * <code>Assert false (TlsPolicy.aead)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -58907,7 +58845,7 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
     * **Objective**: An aead only pin can only select aead
     * **Assertions**:
       * <code>TEST_ASSERT_EQUAL_HEX16(0x1303, got); // the first pinned suite the client offered</code>
-      * <code>Assert true (protocore_tls_is_aead(got))</code>
+      * <code>Assert true (TlsPolicy.aead)</code>
   </details>
 
 </details>
@@ -62958,7 +62896,7 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Api inert before begin
     * **Assertions**:
-      * <code>Assert equal uint (0, protocore_web_terminal_client_count())</code>
+      * <code>Assert equal uint (0, WebTerminal.value)</code>
       * <code>TEST_ASSERT_EQUAL_size_t(0, strlen(tcp_captured()));</code>
   </details>
 
@@ -62978,10 +62916,10 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Ws upgrade tracks client
     * **Assertions**:
-      * <code>Assert equal uint (0, protocore_web_terminal_client_count())</code>
+      * <code>Assert equal uint (0, WebTerminal.value)</code>
       * <code>Assert not equal (0xFF, wid)</code>
       * <code>Assert not null (strstr(r, "101 Switching Protocols"))</code>
-      * <code>Assert equal uint (1, protocore_web_terminal_client_count())</code>
+      * <code>Assert equal uint (1, WebTerminal.value)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -63032,7 +62970,7 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: No broadcast without clients
     * **Assertions**:
-      * <code>Assert equal uint (0, protocore_web_terminal_client_count())</code>
+      * <code>Assert equal uint (0, WebTerminal.value)</code>
       * <code>Assert null (strstr(tcp_captured(), "nobody home"))</code>
   </details>
 
@@ -63041,8 +62979,8 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Close clears client
     * **Assertions**:
-      * <code>Assert equal uint (1, protocore_web_terminal_client_count())</code>
-      * <code>Assert equal uint (0, protocore_web_terminal_client_count())</code>
+      * <code>Assert equal uint (1, WebTerminal.value)</code>
+      * <code>Assert equal uint (0, WebTerminal.value)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -63085,9 +63023,9 @@ A thorough directory of all **5229 test cases** across **330 suites**. Expand a 
 
     * **Objective**: Stale client slot is skipped
     * **Assertions**:
-      * <code>Assert equal uint (1, protocore_web_terminal_client_count())</code>
+      * <code>Assert equal uint (1, WebTerminal.value)</code>
       * <code>Assert not null (ws)</code>
-      * <code>Assert equal uint (0, protocore_web_terminal_client_count())</code>
+      * <code>Assert equal uint (0, WebTerminal.value)</code>
       * <code>Assert null (strstr(tcp_captured(), "ghost"))</code>
   </details>
 

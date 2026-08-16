@@ -11,6 +11,7 @@
 #if PROTOCORE_ENABLE_CSRF
 #include "network_drivers/transport/tcp/tcp.h"
 #include "server/security/csrf/csrf.h"
+
 #endif
 
 static proto_bool handler_called = PROTO_FALSE;
@@ -36,14 +37,16 @@ void setUp()
         HttpConn.slot = i;
         HttpConn.reset(HttpConn.internal);
     }
-    Ws.init(Ws.internal);
-    Sse.init(Sse.internal);
+    Ws.init(protocore_ws_span());
+    Sse.init(protocore_sse_span());
     tcp_capture_reset();
 #if PROTOCORE_ENABLE_CSRF
 
     static const uint8_t protocore_csrf_key[16] = {0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x4b, 0x65,
                                                    0x79, 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36};
-    protocore_csrf_set_secret(protocore_csrf_key, sizeof(protocore_csrf_key));
+    Csrf.secret_args.secret = protocore_csrf_key;
+    Csrf.secret_args.len = sizeof(protocore_csrf_key);
+    Csrf.set_secret(protocore_csrf_span());
 #endif
 }
 
@@ -65,7 +68,9 @@ static void feed_unsafe(uint8_t slot, const char *method, const char *path)
     char reqbuf[256];
 #if PROTOCORE_ENABLE_CSRF
     char tok[CSRF_TOKEN_BUF];
-    protocore_csrf_issue(tok, sizeof(tok));
+    Csrf.issue_args.out = tok;
+    Csrf.issue_args.cap = sizeof(tok);
+    Csrf.issue(protocore_csrf_span());
     snprintf(reqbuf, sizeof(reqbuf), "%s %s HTTP/1.1\r\nX-CSRF-Token: %s\r\n\r\n", method, path, tok);
 #else
     snprintf(reqbuf, sizeof(reqbuf), "%s %s HTTP/1.1\r\n\r\n", method, path);
@@ -160,7 +165,7 @@ void test_head_on_post_only_route_405()
 void test_http_parse_skips_ws_upgraded_slot()
 {
     Ws.slot = 2;
-    Ws.alloc(Ws.internal);
+    Ws.alloc(protocore_ws_span());
     WsConn *ws = Ws.found;
     TEST_ASSERT_NOT_NULL(ws);
 
@@ -178,7 +183,7 @@ void test_http_parse_skips_ws_upgraded_slot()
 
     TEST_ASSERT_EQUAL_size_t(tail_before, c->rx_tail);
     Ws.slot = 2;
-    Ws.free(Ws.internal);
+    Ws.free(protocore_ws_span());
 }
 #endif
 

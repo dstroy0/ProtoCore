@@ -57,15 +57,15 @@ void dbench_run(void)
         CloudEvents.attr.datacontenttype = NULL;
         CloudEvents.data.json = NULL;
         CloudEvents.data.str = NULL;
-        DBENCH_OP("CloudEvents.build_structured min", 50000,
-                  CloudEvents.build_structured(CloudEvents.internal); sink += CloudEvents.n);
+        DBENCH_OP("CloudEvents.build_structured min", 50000, CloudEvents.build_structured(CloudEvents.internal);
+                  sink += CloudEvents.n);
 
         // Event carrying a pre-formatted JSON value as data (emitted verbatim, not escaped).
         CloudEvents.attr.id = "7";
         CloudEvents.attr.subject = "temp";
         CloudEvents.data.json = "{\"celsius\":23.5}";
-        DBENCH_OP("CloudEvents.build_structured json-data", 50000,
-                  CloudEvents.build_structured(CloudEvents.internal); sink += CloudEvents.n);
+        DBENCH_OP("CloudEvents.build_structured json-data", 50000, CloudEvents.build_structured(CloudEvents.internal);
+                  sink += CloudEvents.n);
 
         // Event carrying a plain string as data (JSON-escaped).
         CloudEvents.attr.id = "8";
@@ -73,12 +73,12 @@ void dbench_run(void)
         CloudEvents.attr.datacontenttype = "text/plain";
         CloudEvents.data.json = NULL;
         CloudEvents.data.str = "hi \"there\"";
-        DBENCH_OP("CloudEvents.build_structured str-data", 50000,
-                  CloudEvents.build_structured(CloudEvents.internal); sink += CloudEvents.n);
+        DBENCH_OP("CloudEvents.build_structured str-data", 50000, CloudEvents.build_structured(CloudEvents.internal);
+                  sink += CloudEvents.n);
 
         CloudEvents.msg.req = &http_pool[0];
-        DBENCH_OP("CloudEvents.read_binary", 50000,
-                  CloudEvents.read_binary(CloudEvents.internal); sinkb = CloudEvents.ok);
+        DBENCH_OP("CloudEvents.read_binary", 50000, CloudEvents.read_binary(CloudEvents.internal);
+                  sinkb = CloudEvents.ok);
 
         (void)sink;
         (void)sinkb;

@@ -1413,7 +1413,7 @@ char *protocore_resp_extra_hdr(uint8_t slot);
 
 #if PROTOCORE_ENABLE_WEBSOCKET
 /** @brief Perform the RFC 6455 101 handshake and hand the slot to the WS frame parser. */
-proto_bool ws_do_upgrade(uint8_t slot_id, HttpReq *req, WsConnectHandler on_connect);
+proto_bool ws_do_upgrade(uint8_t slot_id, HttpReq *req, uint8_t route_id);
 
 /** @brief Reject an unsupported Sec-WebSocket-Version with a 426 (RFC 6455 4.2.1) and close. */
 void ws_send_version_required(uint8_t slot_id);
@@ -1421,7 +1421,7 @@ void ws_send_version_required(uint8_t slot_id);
 
 #if PROTOCORE_ENABLE_SSE
 /** @brief Send the SSE 200 headers and promote the slot to server-sent-events mode. */
-proto_bool protocore_sse_do_upgrade(uint8_t slot_id, HttpReq *req, SseConnectHandler on_connect);
+proto_bool protocore_sse_do_upgrade(uint8_t slot_id, HttpReq *req, uint8_t route_id);
 #endif
 
 PROTOCORE_END_DECLS

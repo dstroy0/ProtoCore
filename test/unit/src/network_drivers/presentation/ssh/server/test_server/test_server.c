@@ -22,7 +22,6 @@ static const ProtoHandler *ssh_handler(void)
     return SshServer.handler;
 }
 
-
 // The remote-forward listener table, reached through the server namespace.
 static int rfwd_listener_open(uint16_t bind_port)
 {
@@ -36,7 +35,6 @@ static void rfwd_listener_close(int handle)
     SshServer.handle = handle;
     SshServer.rfwd_listener_close(SshServer.internal);
 }
-
 
 void setUp(void)
 {

@@ -992,8 +992,7 @@ size_t protocore_smb2_encrypt(uint16_t cipher, const uint8_t *key, const uint8_t
         ok = PROTO_TRUE;
         break;
     case SMB2_ENCRYPTION_AES128_CCM:
-    case SMB2_ENCRYPTION_AES256_CCM:
-    {
+    case SMB2_ENCRYPTION_AES256_CCM: {
         size_t mark = protocore_secure_mark();
         uint8_t *c = protocore_secure_span(PROTOCORE_AESCCM_BORROW, 8).buf;
         AesCcm.seal_args.key = key;
@@ -1010,7 +1009,7 @@ size_t protocore_smb2_encrypt(uint16_t cipher, const uint8_t *key, const uint8_t
         ok = AesCcm.ok;
         protocore_secure_release(mark);
     }
-        break;
+    break;
     default:
         return 0;
     }
@@ -1096,8 +1095,7 @@ size_t protocore_smb2_decrypt(uint16_t cipher, const uint8_t *key, const uint8_t
     }
     break;
     case SMB2_ENCRYPTION_AES128_CCM:
-    case SMB2_ENCRYPTION_AES256_CCM:
-    {
+    case SMB2_ENCRYPTION_AES256_CCM: {
         size_t mark = protocore_secure_mark();
         uint8_t *c = protocore_secure_span(PROTOCORE_AESCCM_BORROW, 8).buf;
         AesCcm.open_args.key = key;
@@ -1114,7 +1112,7 @@ size_t protocore_smb2_decrypt(uint16_t cipher, const uint8_t *key, const uint8_t
         ok = AesCcm.ok;
         protocore_secure_release(mark);
     }
-        break;
+    break;
     default:
         return 0;
     }

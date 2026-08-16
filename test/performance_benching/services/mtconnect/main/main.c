@@ -46,13 +46,14 @@ void dbench_run(void)
         volatile size_t sink = 0;
 
         // MTConnectStreams (`current`/`sample`): header + one Event, one Sample, one Condition.
-        DBENCH_OP("protocore_mtc_streams build", 20000, protocore_mtc_streams_begin(&s, buf, sizeof(buf), 1500, 42, "cnc1");
-                  protocore_mtc_streams_add(&s, PROTOCORE_MTC_EVENT, "Availability", "avail", 40, "2026-07-06T00:00:00Z",
-                                     "AVAILABLE");
-                  protocore_mtc_streams_add(&s, PROTOCORE_MTC_SAMPLE, "Position", "xpos", 41, "2026-07-06T00:00:01Z", "12.5");
-                  protocore_mtc_streams_add(&s, PROTOCORE_MTC_CONDITION, "SystemCondition", "sys", 42, "2026-07-06T00:00:02Z",
-                                     "Fault");
-                  sink += protocore_mtc_streams_end(&s));
+        DBENCH_OP(
+            "protocore_mtc_streams build", 20000, protocore_mtc_streams_begin(&s, buf, sizeof(buf), 1500, 42, "cnc1");
+            protocore_mtc_streams_add(&s, PROTOCORE_MTC_EVENT, "Availability", "avail", 40, "2026-07-06T00:00:00Z",
+                                      "AVAILABLE");
+            protocore_mtc_streams_add(&s, PROTOCORE_MTC_SAMPLE, "Position", "xpos", 41, "2026-07-06T00:00:01Z", "12.5");
+            protocore_mtc_streams_add(&s, PROTOCORE_MTC_CONDITION, "SystemCondition", "sys", 42, "2026-07-06T00:00:02Z",
+                                      "Fault");
+            sink += protocore_mtc_streams_end(&s));
 
         // MTConnectDevices (`probe`): the device model with three DataItems.
         DBENCH_OP("pc_mtc_devices probe build", 20000,
@@ -63,13 +64,15 @@ void dbench_run(void)
                   sink += protocore_mtc_devices_end(&s));
 
         // MTConnectAssets (`asset`): one CuttingTool with a ToolLife.
-        DBENCH_OP("pc_mtc_assets build", 20000, protocore_mtc_assets_begin(&s, buf, sizeof(buf), 1500, 2, 1024);
-                  protocore_mtc_assets_cutting_tool_begin(&s, "tool-1", "SN-42", "T17", "uuid-abc", "2026-07-09T00:00:00Z");
-                  protocore_mtc_assets_tool_life(&s, "MINUTES", "DOWN", "100", "42"); protocore_mtc_assets_cutting_tool_end(&s);
-                  sink += protocore_mtc_assets_end(&s));
+        DBENCH_OP(
+            "pc_mtc_assets build", 20000, protocore_mtc_assets_begin(&s, buf, sizeof(buf), 1500, 2, 1024);
+            protocore_mtc_assets_cutting_tool_begin(&s, "tool-1", "SN-42", "T17", "uuid-abc", "2026-07-09T00:00:00Z");
+            protocore_mtc_assets_tool_life(&s, "MINUTES", "DOWN", "100", "42");
+            protocore_mtc_assets_cutting_tool_end(&s); sink += protocore_mtc_assets_end(&s));
 
         // MTConnectError: header + one Error element.
-        DBENCH_OP("protocore_mtc_error build", 50000, sink += protocore_mtc_error(1500, "UNSUPPORTED", "bad path", buf, sizeof(buf)));
+        DBENCH_OP("protocore_mtc_error build", 50000,
+                  sink += protocore_mtc_error(1500, "UNSUPPORTED", "bad path", buf, sizeof(buf)));
 
         // Long-poll `sample` cursor: replay the whole retained window as an MTConnectStreams document.
         DBENCH_OP("protocore_mtc_sample_query", 20000,

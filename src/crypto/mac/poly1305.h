@@ -21,9 +21,6 @@
 
 #if PROTOCORE_ENABLE_POLY1305
 
-#include <stddef.h>
-#include <stdint.h>
-
 PROTOCORE_BEGIN_DECLS
 
 /** @brief Poly1305 one-time key length in bytes (r || s). */

@@ -57,8 +57,8 @@ void dbench_run(void)
 
         // ── framer throughput over a 256-byte payload block ────────────────────────────────────
         DBENCH_BULK("protocore_lsv2_build 256B", 100000, sizeof(big_payload),
-                    sink +=
-                    protocore_lsv2_build(buf, sizeof(buf), PROTOCORE_LSV2_CMD_FILE_SEND, big_payload, sizeof(big_payload)));
+                    sink += protocore_lsv2_build(buf, sizeof(buf), PROTOCORE_LSV2_CMD_FILE_SEND, big_payload,
+                                                 sizeof(big_payload)));
 
         // ── parse + response readers ───────────────────────────────────────────────────────────
         {

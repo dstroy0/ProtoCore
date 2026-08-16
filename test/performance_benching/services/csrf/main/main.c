@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // On-device CCOUNT microbenchmark for the stateless HMAC-signed CSRF token (server/security/csrf):
-// protocore_csrf_issue() builds a fresh `<nonce_hex>.<sig_hex>` token (HMAC-SHA256 over a 6-byte nonce,
-// truncated + hex-encoded) and protocore_csrf_verify() recomputes that HMAC and constant-time compares
+// Csrf.issue builds a fresh `<nonce_hex>.<sig_hex>` token (HMAC-SHA256 over a 6-byte nonce,
+// truncated + hex-encoded) and Csrf.verify recomputes that HMAC and constant-time compares
 // it - both pure (no Arduino, no sockets, no heap). Also bench the shared hex codec
 // (shared/hex/hex.h) the token layer builds on, since encode/decode of the nonce and
 // signature bytes is on the same hot path as issue/verify. Worked example for performance_benching/device/<service>/:
@@ -53,10 +53,15 @@ static int32_t hex_decode_nonce(const char *text, uint8_t *out)
 
 void dbench_run(void)
 {
-    protocore_csrf_set_secret(SECRET, sizeof(SECRET));
+    Csrf.secret_args.secret = SECRET;
+    Csrf.secret_args.len = sizeof(SECRET);
+    Csrf.set_secret(protocore_csrf_span());
 
     static char token[CSRF_TOKEN_BUF];
-    int tlen = protocore_csrf_issue(token, sizeof(token)); // seed a valid token for the verify bench
+    Csrf.issue_args.out = token;
+    Csrf.issue_args.cap = sizeof(token);
+    Csrf.issue(protocore_csrf_span()); // seed a valid token for the verify bench
+    int tlen = Csrf.n;
     (void)tlen;
 
     static const uint8_t raw6[CSRF_NONCE_BYTES] = {0xde, 0xad, 0xbe, 0xef, 0x01, 0x02};
@@ -70,8 +75,17 @@ void dbench_run(void)
         volatile int sinki = 0;
         volatile bool sinkb = false;
 
-        DBENCH_OP("protocore_csrf_issue", 20000, sinki += protocore_csrf_issue(token, sizeof(token)));
-        DBENCH_OP("protocore_csrf_verify", 20000, sinkb = protocore_csrf_verify(token));
+        Csrf.issue_args.out = token;
+        Csrf.issue_args.cap = sizeof(token);
+        DBENCH_OP("Csrf.issue", 20000, {
+            Csrf.issue(protocore_csrf_span());
+            sinki += Csrf.n;
+        });
+        Csrf.verify_args.token = token;
+        DBENCH_OP("Csrf.verify", 20000, {
+            Csrf.verify(protocore_csrf_span());
+            sinkb = Csrf.valid;
+        });
         DBENCH_OP("Hex.encode (6B nonce)", 50000, hex_encode_nonce(raw6, hex_out));
         DBENCH_OP("Hex.decode (6B nonce)", 50000, sinki += hex_decode_nonce(hex_out, bin_out));
 

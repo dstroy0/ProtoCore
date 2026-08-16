@@ -29,8 +29,8 @@ void setUp()
         HttpConn.slot = (uint8_t)i;
         HttpConn.reset(HttpConn.internal);
     }
-    Ws.init(Ws.internal);
-    Sse.init(Sse.internal);
+    Ws.init(protocore_ws_span());
+    Sse.init(protocore_sse_span());
     mock_mnt_reset();
     Mnt.args.backend = mock_mnt();
     Mnt.mount(Mnt.internal);

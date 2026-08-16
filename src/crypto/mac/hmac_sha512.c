@@ -23,9 +23,9 @@
 
 #if PROTOCORE_ENABLE_HMAC_SHA512
 
-#include "crypto/mac/hmac_sha512.h"
-#include "crypto/hash/sha512.h" // the Sha512 entries the inner and outer hashes run through
 #include "crypto/crypto_opt.h"
+#include "crypto/hash/sha512.h" // the Sha512 entries the inner and outer hashes run through
+#include "crypto/mac/hmac_sha512.h"
 #include "mmgr/protomem.h"
 
 PROTOCORE_CRYPTO_HOT
@@ -92,8 +92,7 @@ static void hmac_init(uint8_t *restrict work)
     }
     Hmac512Work *w = HMAC512_WORK(work);
     // ipad -> scratch (opad slot holds the padded key), opad -> the slot final reads it back from
-    build_key_block(HmacSha512.key_args.key, HmacSha512.key_args.key_len, w->ipad, 0x36u, w->opad,
-                    HMAC512_HASH(work));
+    build_key_block(HmacSha512.key_args.key, HmacSha512.key_args.key_len, w->ipad, 0x36u, w->opad, HMAC512_HASH(work));
     build_key_block(HmacSha512.key_args.key, HmacSha512.key_args.key_len, HMAC512_OKEY(work), 0x5cu, w->opad,
                     HMAC512_HASH(work));
 

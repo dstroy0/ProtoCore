@@ -39,8 +39,8 @@ void setUp()
         HttpConn.slot = i;
         HttpConn.reset(HttpConn.internal);
     }
-    Ws.init(Ws.internal);
-    Sse.init(Sse.internal);
+    Ws.init(protocore_ws_span());
+    Sse.init(protocore_sse_span());
     lfsm_format();
     Mnt.args.backend = lfsm();
     Mnt.mount(Mnt.internal);

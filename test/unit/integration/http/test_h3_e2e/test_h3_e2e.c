@@ -10,6 +10,7 @@
 #include "network_drivers/presentation/http/http3/quic_crypto.h"
 #include "network_drivers/presentation/http/http3/quic_frame.h"
 #include "network_drivers/presentation/http/http3/quic_packet.h"
+#include "network_drivers/presentation/http/http3/quic_tls.h"
 #include "network_drivers/presentation/http/http3/quic_varint.h"
 #include "network_drivers/presentation/http/http3/tls13_msg.h"
 #include "network_drivers/tls/key_schedule/key_schedule.h"
@@ -49,13 +50,19 @@ static const uint8_t CLIENT_SCID[4] = {0xc1, 0xc2, 0xc3, 0xc4};
 static const uint8_t SERVER_SCID[4] = {0x51, 0x52, 0x53, 0x54};
 
 static char g_method[16], g_path[64];
-static void app_request(void *app, H3Conn *h3, uint64_t sid, const char *method, const char *path, const char *,
+static void app_request(void *app, uint8_t *h3, uint64_t sid, const char *method, const char *path, const char *,
                         const uint8_t *, size_t)
 {
     (void)app;
     strncpy(g_method, method, sizeof(g_method) - 1);
     strncpy(g_path, path, sizeof(g_path) - 1);
-    protocore_h3_conn_respond(h3, sid, 200, "text/plain", (const uint8_t *)"hello h3", 8);
+    H3Conn.bind.b = h3; // the callback is handed the connection's span
+    H3Conn.respond_args.stream_id = sid;
+    H3Conn.respond_args.status = 200;
+    H3Conn.respond_args.content_type = "text/plain";
+    H3Conn.respond_args.body = (const uint8_t *)"hello h3";
+    H3Conn.respond_args.body_len = 8;
+    H3Conn.respond(H3Conn.internal);
 }
 
 static void fill()
@@ -230,11 +237,24 @@ void test_http3_get_end_to_end()
     cfg.params.initial_max_sd_bidi_remote = 262144;
     cfg.params.initial_max_streams_bidi = 8;
 
-    QuicConn qc;
-    protocore_quic_conn_init(&qc, &cfg, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), SERVER_SCID,
-                             sizeof(SERVER_SCID), NULL);
-    H3Conn h3;
-    protocore_h3_conn_init(&h3, &qc, app_request, NULL);
+    static uint8_t qc_ctx[PROTOCORE_QUIC_CONN_CTX_BORROW];
+    static uint8_t qc_b[PROTOCORE_QUIC_CONN_BORROW];
+    QuicConn.bind.ctx = qc_ctx;
+    QuicConn.bind.b = qc_b;
+    QuicConn.init_args.cfg = &cfg;
+    QuicConn.init_args.odcid = ODCID;
+    QuicConn.init_args.odcid_len = (uint8_t)(sizeof(ODCID));
+    QuicConn.init_args.peer_scid = CLIENT_SCID;
+    QuicConn.init_args.peer_scid_len = (uint8_t)(sizeof(CLIENT_SCID));
+    QuicConn.init_args.our_scid = SERVER_SCID;
+    QuicConn.init_args.our_scid_len = (uint8_t)(sizeof(SERVER_SCID));
+    QuicConn.init(QuicConn.internal);
+    static uint8_t h3_b[PROTOCORE_H3_CONN_BORROW];
+    H3Conn.bind.b = h3_b;
+    H3Conn.bind.qc = qc_ctx;
+    H3Conn.app_args.on_request = app_request;
+    H3Conn.app_args.app = NULL;
+    H3Conn.init(H3Conn.internal);
 
     QuicInitialSecrets init;
     protocore_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
@@ -258,10 +278,19 @@ void test_http3_get_end_to_end()
     uint8_t dg[1500];
     size_t dl = build_long(dg, sizeof(dg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
                            &init.client, frames, fl);
-    protocore_quic_conn_recv(&qc, dg, dl);
+    QuicConn.bind.ctx = qc_ctx;
+    QuicConn.bind.b = qc_b;
+    QuicConn.recv_args.datagram = dg;
+    QuicConn.recv_args.len = dl;
+    QuicConn.recv(QuicConn.internal);
 
     uint8_t sdg[1500], plain[2048], sh[512], hsf[1024];
-    size_t sl = protocore_quic_conn_send(&qc, sdg, sizeof(sdg));
+    QuicConn.bind.ctx = qc_ctx;
+    QuicConn.bind.b = qc_b;
+    QuicConn.send_args.out = sdg;
+    QuicConn.send_args.cap = sizeof(sdg);
+    QuicConn.send(QuicConn.internal);
+    size_t sl = QuicConn.n;
     size_t wire = 0;
     uint8_t ty = 0;
     size_t pt = open_long(sdg, sl, &init.server, plain, &wire, &ty);
@@ -293,12 +322,12 @@ void test_http3_get_end_to_end()
     Tls13Ks.bind.kdf = &TLS13_KDF;
     Tls13Ks.bind.ks = &cks;
     Tls13Ks.bind.s = ks_store_290;
-    Tls13Ks.early(Tls13Ks.internal);
+    Tls13Ks.early(NULL);
     Tls13Ks.bind.ks = &cks;
     Tls13Ks.step.ecdhe = ecdhe;
     Tls13Ks.step.ecdhe_len = 32;
     Tls13Ks.step.ch_sh_hash = chsh;
-    Tls13Ks.handshake(Tls13Ks.internal);
+    Tls13Ks.handshake(NULL);
     QuicPacketKeys hs_s, hs_c, ap_s, ap_c;
     protocore_quic_keys_from_secret(tw, cks.s + TLS13_KS_SERVER_HS, &hs_s);
     protocore_quic_keys_from_secret(tw, cks.s + TLS13_KS_CLIENT_HS, &hs_c);
@@ -313,7 +342,7 @@ void test_http3_get_end_to_end()
     Sha256.final(t);
     Tls13Ks.bind.ks = &cks;
     Tls13Ks.step.ch_sfin_hash = chsf;
-    Tls13Ks.master(Tls13Ks.internal);
+    Tls13Ks.master(NULL);
     protocore_quic_keys_from_secret(tw, cks.s + TLS13_KS_SERVER_AP, &ap_s);
     protocore_quic_keys_from_secret(tw, cks.s + TLS13_KS_CLIENT_AP, &ap_c);
 
@@ -327,18 +356,31 @@ void test_http3_get_end_to_end()
     Tls13Ks.finished_args.base_secret = cks.s + TLS13_KS_CLIENT_HS;
     Tls13Ks.finished_args.transcript_hash = chsf;
     Tls13Ks.finished_args.out = cfin + 4;
-    Tls13Ks.finished_mac(Tls13Ks.internal);
+    Tls13Ks.finished_mac(NULL);
     uint8_t hfr[64];
     size_t hfl = protocore_quic_build_ack(hfr, sizeof(hfr), 0, 0, 0);
     hfl += protocore_quic_build_crypto(hfr + hfl, sizeof(hfr) - hfl, 0, cfin, sizeof(cfin));
     size_t hdl = build_long(idg + idl, sizeof(idg) - idl, QUIC_LP_HANDSHAKE, ODCID, sizeof(ODCID), CLIENT_SCID,
                             sizeof(CLIENT_SCID), 0, &hs_c, hfr, hfl);
-    protocore_quic_conn_recv(&qc, idg, idl + hdl);
-    TEST_ASSERT_TRUE(protocore_quic_conn_established(&qc));
+    QuicConn.bind.ctx = qc_ctx;
+    QuicConn.bind.b = qc_b;
+    QuicConn.recv_args.datagram = idg;
+    QuicConn.recv_args.len = idl + hdl;
+    QuicConn.recv(QuicConn.internal);
+    QuicConn.bind.ctx = qc_ctx;
+    QuicConn.is_established(QuicConn.internal);
+    TEST_ASSERT_TRUE(QuicConn.established);
 
-    while ((sl = protocore_quic_conn_send(&qc, sdg, sizeof(sdg))) > 0)
+    QuicConn.bind.ctx = qc_ctx;
+    QuicConn.bind.b = qc_b;
+    // Drain: send is called until it reports nothing left, so the call is the condition.
+    do
     {
-    }
+        QuicConn.send_args.out = sdg;
+        QuicConn.send_args.cap = sizeof(sdg);
+        QuicConn.send(QuicConn.internal);
+        sl = QuicConn.n;
+    } while (sl > 0);
 
     uint8_t block[128];
     size_t bp = protocore_qpack_encode_prefix(block, sizeof(block));
@@ -351,14 +393,29 @@ void test_http3_get_end_to_end()
     size_t sfrl = protocore_quic_build_stream(sfr, sizeof(sfr), 0, 0, h3req, h3l, PROTO_TRUE);
     uint8_t s1[512];
     size_t s1l = build_short(s1, sizeof(s1), SERVER_SCID, sizeof(SERVER_SCID), 0, &ap_c, sfr, sfrl);
-    protocore_quic_conn_recv(&qc, s1, s1l);
+    QuicConn.bind.ctx = qc_ctx;
+    QuicConn.bind.b = qc_b;
+    QuicConn.recv_args.datagram = s1;
+    QuicConn.recv_args.len = s1l;
+    QuicConn.recv(QuicConn.internal);
 
     TEST_ASSERT_EQUAL_STRING("GET", g_method);
     TEST_ASSERT_EQUAL_STRING("/hello", g_path);
 
     proto_bool got = PROTO_FALSE;
-    while ((sl = protocore_quic_conn_send(&qc, sdg, sizeof(sdg))) > 0)
+    QuicConn.bind.ctx = qc_ctx;
+    QuicConn.bind.b = qc_b;
+    // Drain: send is called until it reports nothing left, so the call is the condition.
+    for (;;)
     {
+        QuicConn.send_args.out = sdg;
+        QuicConn.send_args.cap = sizeof(sdg);
+        QuicConn.send(QuicConn.internal);
+        sl = QuicConn.n;
+        if (sl == 0)
+        {
+            break;
+        }
         size_t off = 0;
         while (off < sl)
         {

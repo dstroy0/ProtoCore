@@ -28,49 +28,112 @@
 #ifndef PROTOCORE_CONFIG_STORE_H
 #define PROTOCORE_CONFIG_STORE_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_CONFIG_STORE
 
 PROTOCORE_BEGIN_DECLS
 
+// PROTOCORE_CONFIG_STORE_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums it
+// into its arena. A caller takes them once and passes the pointer to every call. How they are
+// carved is this module's and is never named here.
+
+/** @brief What begin takes. */
+typedef struct
+{
+    const char *ns;
+} ConfigStoreBeginArgs;
+
+/** @brief What set_str takes. */
+typedef struct
+{
+    const char *key;
+    const char *val;
+} ConfigStoreSetStrArgs;
+
+/** @brief What get_str takes. */
+typedef struct
+{
+    const char *key;
+    char *out;
+    size_t out_cap;
+    const char *def;
+} ConfigStoreGetStrArgs;
+
+/** @brief What set_u32 takes. */
+typedef struct
+{
+    const char *key;
+    uint32_t val;
+} ConfigStoreSetU32Args;
+
+/** @brief What get_u32 takes. */
+typedef struct
+{
+    const char *key;
+    uint32_t def;
+} ConfigStoreGetU32Args;
+
+/** @brief What set_blob takes. */
+typedef struct
+{
+    const char *key;
+    const void *data;
+    size_t len;
+} ConfigStoreSetBlobArgs;
+
+/** @brief What get_blob takes. */
+typedef struct
+{
+    const char *key;
+    void *out;
+    size_t out_cap;
+} ConfigStoreGetBlobArgs;
+
+/** @brief What erase takes. */
+typedef struct
+{
+    const char *key;
+} ConfigStoreEraseArgs;
+typedef struct
+{
+    ConfigStoreBeginArgs begin_args;
+    ConfigStoreSetStrArgs set_str_args;
+    ConfigStoreGetStrArgs get_str_args;
+    ConfigStoreSetU32Args set_u32_args;
+    ConfigStoreGetU32Args get_u32_args;
+    ConfigStoreSetBlobArgs set_blob_args;
+    ConfigStoreGetBlobArgs get_blob_args;
+    ConfigStoreEraseArgs erase_args;
+
+    proto_bool ok;
+    int n;
+    uint32_t ms;
+
+    void (*const begin)(uint8_t *restrict work);
+    void (*const set_str)(uint8_t *restrict work);
+    void (*const get_str)(uint8_t *restrict work);
+    void (*const set_u32)(uint8_t *restrict work);
+    void (*const get_u32)(uint8_t *restrict work);
+    void (*const set_blob)(uint8_t *restrict work);
+    void (*const get_blob)(uint8_t *restrict work);
+    void (*const erase)(uint8_t *restrict work);
+    void (*const clear)(uint8_t *restrict work);
+} ConfigStoreNs;
+
+/** @brief The one symbol this module exports. */
+extern ConfigStoreNs ConfigStore;
+
 /**
- * @brief Open a configuration namespace (e.g. "wifi", "net"). Call once before
- *        get/set. On ESP32 this opens the NVS namespace read-write.
- * @return true on success.
+ * @brief The PROTOCORE_CONFIG_STORE_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
  */
-proto_bool protocore_config_begin(const char *ns);
-
-/** @brief Store a string value. @return true on success. */
-proto_bool protocore_config_set_str(const char *key, const char *val);
-
-/**
- * @brief Read a string value into @p out (always null-terminated, bounded by
- *        @p out_cap). Returns @p def when the key is absent.
- * @return number of characters written (excluding the null terminator).
- */
-size_t protocore_config_get_str(const char *key, char *out, size_t out_cap, const char *def);
-
-/** @brief Store a `uint32_t` value. @return true on success. */
-proto_bool protocore_config_set_u32(const char *key, uint32_t val);
-
-/** @brief Read a `uint32_t` value, or @p def if the key is absent. */
-uint32_t protocore_config_get_u32(const char *key, uint32_t def);
-
-/** @brief Store a raw blob. @return true on success. */
-proto_bool protocore_config_set_blob(const char *key, const void *data, size_t len);
-
-/**
- * @brief Read a blob into @p out (bounded by @p out_cap).
- * @return number of bytes written (0 if the key is absent).
- */
-size_t protocore_config_get_blob(const char *key, void *out, size_t out_cap);
-
-/** @brief Erase a single key. @return true if the key existed. */
-proto_bool protocore_config_erase(const char *key);
-
-/** @brief Erase every key in the open namespace. @return true on success. */
-proto_bool protocore_config_clear(void);
+uint8_t *protocore_config_store_span(void);
 
 PROTOCORE_END_DECLS
 

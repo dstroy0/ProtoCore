@@ -17,11 +17,11 @@
 
 #include "crypto/hash/sha1.h"                                 // Sha1: the accept computation
 #include "crypto/rng/rng.h"                                   // Rng: the key and the Masking-key
-#include "mmgr/secure.h"                                      // the pool the digest borrow comes from
-#include "mmgr/span.h"                                        // protocore_span, span.ok
 #include "mmgr/membuild.h"                                    // protocore_sb: the request-line and its field lines
 #include "mmgr/protomem.h"                                    // mem.cpy / mem.cmp / mem.chr
 #include "mmgr/protostr.h"                                    // str.len / str.starts
+#include "mmgr/secure.h"                                      // the pool the digest borrow comes from
+#include "mmgr/span.h"                                        // protocore_span, span.ok
 #include "network_drivers/presentation/codec/base64/base64.h" // Base64.encode (RFC 4648)
 #include "server/clock/clock.h"                               // protocore_millis, pcdelay
 

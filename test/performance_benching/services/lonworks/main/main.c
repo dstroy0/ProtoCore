@@ -39,10 +39,12 @@ void dbench_run(void)
         volatile double sinkd = 0;
 
         DBENCH_OP("protocore_lon_build_nv (upd+2B)", 100000,
-                  sink += protocore_lon_build_nv(LON_MSG_NV_UPDATE, 0x1234, nv_value, sizeof(nv_value), out, sizeof(out)));
+                  sink +=
+                  protocore_lon_build_nv(LON_MSG_NV_UPDATE, 0x1234, nv_value, sizeof(nv_value), out, sizeof(out)));
 
         LonNv nv;
-        DBENCH_OP("protocore_lon_parse_nv", 200000, sink += protocore_lon_parse_nv(nv_pdu, sizeof(nv_pdu), &nv) ? 1u : 0u);
+        DBENCH_OP("protocore_lon_parse_nv", 200000,
+                  sink += protocore_lon_parse_nv(nv_pdu, sizeof(nv_pdu), &nv) ? 1u : 0u);
 
         DBENCH_OP("protocore_lon_snvt_temp_encode", 100000, protocore_lon_snvt_temp_encode(25.0, out));
         DBENCH_OP("protocore_lon_snvt_temp_decode", 200000, sinkd += protocore_lon_snvt_temp_decode(snvt_temp_val));
@@ -51,7 +53,8 @@ void dbench_run(void)
         {
             double pct = 0;
             uint8_t st = 0;
-            DBENCH_OP("protocore_lon_snvt_switch_decode", 200000, protocore_lon_snvt_switch_decode(snvt_switch_val, &pct, &st));
+            DBENCH_OP("protocore_lon_snvt_switch_decode", 200000,
+                      protocore_lon_snvt_switch_decode(snvt_switch_val, &pct, &st));
             sinkd += pct + st;
         }
 

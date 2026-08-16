@@ -48,7 +48,8 @@ void dbench_run(void)
         DBENCH_OP("protocore_openadr_event x8 intervals", 10000,
                   sink += protocore_openadr_event("program-1", "day-ahead", iv8, 8, out, sizeof(out)));
         DBENCH_OP("protocore_openadr_report reading", 20000,
-                  sink += protocore_openadr_report("program-1", "event-9", "meter-A", -2.5, 1720000000u, out, sizeof(out)));
+                  sink +=
+                  protocore_openadr_report("program-1", "event-9", "meter-A", -2.5, 1720000000u, out, sizeof(out)));
         (void)sink;
         DBENCH_DONE();
     }

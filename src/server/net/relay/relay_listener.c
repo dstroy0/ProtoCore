@@ -13,11 +13,11 @@
 #if PROTOCORE_ENABLE_RELAY
 
 #include "mmgr/protostr.h"
+#include "network_drivers/session/session.h"                 // Session.proto->add: the handler registration
+#include "network_drivers/transport/tcp/client/client.h"     // TcpClient: the dialed connection
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the accepted slot
-#include "network_drivers/transport/tcp/client/client.h" // TcpClient: the dialed connection
 #include "network_drivers/transport/tcp/tcp.h"
 #include "relay.h"
-#include "network_drivers/session/session.h" // Session.proto->add: the handler registration
 #include "server/core/proto_handler.h"
 #if PROTOCORE_ENABLE_RADIO_POWER
 #include "network_drivers/physical/radio_power.h" // keep the radio awake during a relayed transfer
@@ -199,8 +199,7 @@ static void service(uint8_t slot)
     const proto_bool origin_closed = TcpClient.ok;
     TcpClient.cid = br->origin_cid;
     TcpClient.available(TcpClient.internal);
-    if (origin_closed && TcpClient.n == 0 &&
-        br->relay.b2a_off >= br->relay.b2a_len)
+    if (origin_closed && TcpClient.n == 0 && br->relay.b2a_off >= br->relay.b2a_len)
     {
         teardown(br, PROTO_TRUE);
     }

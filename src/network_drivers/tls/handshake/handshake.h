@@ -69,9 +69,6 @@ typedef struct
     size_t *out_len; ///< where an open reports the plaintext length, or NULL
 } TlsConnOut;
 
-/** @brief The driver's own calls, described only in handshake.c. */
-struct TlsConnInternal;
-
 /**
  * @brief One TLS 1.3 handshake over a stream. ::TlsConn is the resource; this drives it.
  *
@@ -96,7 +93,6 @@ struct TlsConnInternal;
  * @var TlsConnNs::alert        the alert that ended the connection, or 0
  * @var TlsConnNs::seal_app     seal application data into one record; bytes written, or 0
  * @var TlsConnNs::open_app     open one received application record; false on an AEAD failure
- * @var TlsConnNs::internal     the connection in hand, and the calls that drive it
  *
  * No storage member: one secure-pool borrow per connection lives in ::TlsConn, taken by
  * @ref TlsConnNs::init and split by offset.
@@ -114,15 +110,14 @@ typedef struct
     int i32;
     uint8_t u8;
 
-    void (*init)(struct TlsConnInternal *ctx);
-    void (*start)(struct TlsConnInternal *ctx);
-    void (*process)(struct TlsConnInternal *ctx);
-    void (*established)(struct TlsConnInternal *ctx);
-    void (*alert)(struct TlsConnInternal *ctx);
-    void (*seal_app)(struct TlsConnInternal *ctx);
-    void (*open_app)(struct TlsConnInternal *ctx);
+    void (*const init)(uint8_t *restrict work);
+    void (*const start)(uint8_t *restrict work);
+    void (*const process)(uint8_t *restrict work);
+    void (*const established)(uint8_t *restrict work);
+    void (*const alert)(uint8_t *restrict work);
+    void (*const seal_app)(uint8_t *restrict work);
+    void (*const open_app)(uint8_t *restrict work);
 
-    struct TlsConnInternal *internal;
 } TlsConnNs;
 
 /** @brief The one symbol this module exports. */

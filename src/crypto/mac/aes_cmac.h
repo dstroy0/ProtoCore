@@ -25,9 +25,6 @@
 
 #if PROTOCORE_ENABLE_AES_CMAC
 
-#include <stddef.h>
-#include <stdint.h>
-
 PROTOCORE_BEGIN_DECLS
 
 /** @brief AES-128-CMAC output length (one AES block). */

@@ -67,8 +67,10 @@ void dbench_run(void)
                   protocore_nts_ke_record(true, NTS_KE_AEAD_ALGORITHM, aead_body, sizeof(aead_body), out, sizeof(out)));
         DBENCH_OP("protocore_nts_ke_parse request", 100000,
                   sink += protocore_nts_ke_parse(req, req_len, nts_ke_sink, (void *)&rec_count));
-        DBENCH_OP("protocore_nts_ef_unique_id 32B", 100000, sink += protocore_nts_ef_unique_id(uid, sizeof(uid), out, sizeof(out)));
-        DBENCH_OP("protocore_nts_ef_cookie 64B", 100000, sink += protocore_nts_ef_cookie(cookie, sizeof(cookie), out, sizeof(out)));
+        DBENCH_OP("protocore_nts_ef_unique_id 32B", 100000,
+                  sink += protocore_nts_ef_unique_id(uid, sizeof(uid), out, sizeof(out)));
+        DBENCH_OP("protocore_nts_ef_cookie 64B", 100000,
+                  sink += protocore_nts_ef_cookie(cookie, sizeof(cookie), out, sizeof(out)));
 
         (void)sink;
         (void)rec_count;

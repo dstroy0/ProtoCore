@@ -73,7 +73,6 @@ static uint8_t *net_payload_region(uint8_t ssh_slot, size_t *cap)
     return SshNetwork.region;
 }
 
-
 void setUp(void)
 {
     for (uint8_t i = 0; i < MAX_SSH_CONNS; i++)

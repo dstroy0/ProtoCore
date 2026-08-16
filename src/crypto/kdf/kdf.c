@@ -17,8 +17,8 @@
 
 #if PROTOCORE_ENABLE_KDF
 
-#include "crypto/kdf/kdf.h"
 #include "crypto/crypto_opt.h"
+#include "crypto/kdf/kdf.h"
 #include "crypto/mac/hmac_sha256.h"
 #include "mmgr/endian.h"
 #include "mmgr/protomem.h"

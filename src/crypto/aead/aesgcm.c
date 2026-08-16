@@ -319,9 +319,9 @@ static void aesgcm_open(uint8_t *restrict work)
     {
         return;
     }
-    AesGcm.ok = aesgcm_open_record(work, AesGcm.open_args.nonce, AesGcm.open_args.aad, AesGcm.open_args.aad_len,
-                                   AesGcm.open_args.ct, AesGcm.open_args.ct_len, AesGcm.open_args.tag,
-                                   AesGcm.open_args.out);
+    AesGcm.ok =
+        aesgcm_open_record(work, AesGcm.open_args.nonce, AesGcm.open_args.aad, AesGcm.open_args.aad_len,
+                           AesGcm.open_args.ct, AesGcm.open_args.ct_len, AesGcm.open_args.tag, AesGcm.open_args.out);
 }
 
 // Advance the RFC 5647 invocation counter: the low 8 bytes of the 12-byte nonce, big-endian; the 4-byte

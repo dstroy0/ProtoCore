@@ -67,8 +67,7 @@ typedef struct
 typedef struct
 {
     /** @brief In-order stream bytes arrived on @p stream_id (@p fin marks the final bytes). */
-    void (*on_stream_data)(void *app, uint8_t *qc, uint64_t stream_id, const uint8_t *data, size_t len,
-                           proto_bool fin);
+    void (*on_stream_data)(void *app, uint8_t *qc, uint64_t stream_id, const uint8_t *data, size_t len, proto_bool fin);
     /** @brief The handshake completed (client Finished verified); 1-RTT is open. */
     void (*on_handshake_done)(void *app, uint8_t *qc);
     void *app; ///< opaque, passed back to the callbacks
@@ -115,6 +114,13 @@ typedef struct
     proto_bool fin;      ///< finish the stream after these bytes
 } QuicConnStreamSendArgs;
 
+/** @brief A received Destination Connection ID, asked of a connection. */
+typedef struct
+{
+    const uint8_t *dcid; ///< the DCID the datagram carries
+    uint8_t dcid_len;    ///< its length; a short header's is the server's own SCID length
+} QuicConnOwnsArgs;
+
 /** @brief The error a close reports. */
 typedef struct
 {
@@ -156,6 +162,8 @@ struct QuicConnInternal;
  * @var QuicConnNs::send              build the next outbound datagram; @ref QuicConnNs::n is 0 when idle
  * @var QuicConnNs::on_timeout        drive loss recovery; call once per poll before @ref QuicConnNs::send
  * @var QuicConnNs::stream_send       queue bytes on a stream
+ * @var QuicConnNs::owns              whether this connection answers to a received DCID
+ * @var QuicConnNs::owns_args         a received Destination Connection ID, asked of a connection
  * @var QuicConnNs::close             queue a transport CONNECTION_CLOSE (RFC 9000 sec 19.19)
  * @var QuicConnNs::close_app         queue the application variant (0x1d), error code in the app's space
  * @var QuicConnNs::is_established    read the handshake state into @ref QuicConnNs::established
@@ -180,6 +188,7 @@ typedef struct
     QuicConnSendArgs send_args;
     QuicConnTimeoutArgs timeout_args;
     QuicConnStreamSendArgs stream_send_args;
+    QuicConnOwnsArgs owns_args;
     QuicConnCloseArgs close_args;
 
     proto_bool ok;
@@ -193,6 +202,7 @@ typedef struct
     void (*const send)(struct QuicConnInternal *ctx);
     void (*const on_timeout)(struct QuicConnInternal *ctx);
     void (*const stream_send)(struct QuicConnInternal *ctx);
+    void (*const owns)(struct QuicConnInternal *ctx);
     void (*const close)(struct QuicConnInternal *ctx);
     void (*const close_app)(struct QuicConnInternal *ctx);
     void (*const is_established)(struct QuicConnInternal *ctx);

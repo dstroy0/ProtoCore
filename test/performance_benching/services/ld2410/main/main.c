@@ -87,12 +87,15 @@ void dbench_run(void)
         DBENCH_BANNER("ld2410");
         volatile size_t sink = 0;
 
-        DBENCH_OP("protocore_ld2410_parse_report basic", 100000, sink += protocore_ld2410_parse_report(BASIC, sizeof(BASIC), &rep));
-        DBENCH_OP("protocore_ld2410_parse_report eng", 100000, sink += protocore_ld2410_parse_report(ENG, sizeof(ENG), &rep));
+        DBENCH_OP("protocore_ld2410_parse_report basic", 100000,
+                  sink += protocore_ld2410_parse_report(BASIC, sizeof(BASIC), &rep));
+        DBENCH_OP("protocore_ld2410_parse_report eng", 100000,
+                  sink += protocore_ld2410_parse_report(ENG, sizeof(ENG), &rep));
         // Per-byte UART reassembly throughput over a whole basic frame (reports ns/B, MB/s).
         DBENCH_BULK("protocore_ld2410_stream_push basic", 20000, sizeof(BASIC),
                     sink += feed_frame(&stream, BASIC, sizeof(BASIC), &rep));
-        DBENCH_OP("protocore_ld2410_parse_ack mac", 100000, sink += protocore_ld2410_parse_ack(MAC_ACK, sizeof(MAC_ACK), &ack));
+        DBENCH_OP("protocore_ld2410_parse_ack mac", 100000,
+                  sink += protocore_ld2410_parse_ack(MAC_ACK, sizeof(MAC_ACK), &ack));
         DBENCH_OP("protocore_ld2410_cmd_get_mac build", 100000, sink += protocore_ld2410_cmd_get_mac(cmd, sizeof(cmd)));
 
         (void)sink;

@@ -29,8 +29,8 @@ int main(void)
             protocore_mtc_streams_begin(&s, buf, sizeof(buf), 1500, 20, "cnc1");
             for (int i = 0; i < 20; i++)
             {
-                protocore_mtc_streams_add(&s, PROTOCORE_MTC_SAMPLE, "Position", "xpos", (uint64_t)i, "2026-07-09T00:00:00Z",
-                                   "12.5");
+                protocore_mtc_streams_add(&s, PROTOCORE_MTC_SAMPLE, "Position", "xpos", (uint64_t)i,
+                                          "2026-07-09T00:00:00Z", "12.5");
             }
             sink += protocore_mtc_streams_end(&s);
         },

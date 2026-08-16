@@ -21,46 +21,74 @@
 #ifndef PROTOCORE_FORWARDED_TRUST_H
 #define PROTOCORE_FORWARDED_TRUST_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_FORWARDED_TRUST
 
 PROTOCORE_BEGIN_DECLS
 
-#include "shared/ip/ip.h"
+// PROTOCORE_FORWARDED_TRUST_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums it
+// into its arena. A caller takes them once and passes the pointer to every call. How they are
+// carved is this module's and is never named here.
 
-/** @brief Empty the trusted-upstream table (trust no forwarded header). */
-void protocore_forwarded_trust_reset(void);
+/** @brief protocore_ip, as the caller already knows it. */
+struct protocore_ip;
+
+/** @brief What add takes. */
+typedef struct
+{
+    const struct protocore_ip *network;
+    uint8_t prefix_len;
+} ForwardedTrustAddArgs;
+
+/** @brief What add_cidr takes. */
+typedef struct
+{
+    const char *cidr;
+} ForwardedTrustAddCidrArgs;
+
+/** @brief What contains takes. */
+typedef struct
+{
+    const struct protocore_ip *peer;
+} ForwardedTrustContainsArgs;
+
+/** @brief What protocore_forwarded_effective_ip takes. */
+typedef struct
+{
+    const struct protocore_ip *peer;
+    const char *fwd_ip_str;
+    struct protocore_ip *out;
+} ForwardedTrustProtocoreForwardedEffectiveIpArgs;
+typedef struct
+{
+    ForwardedTrustAddArgs add_args;
+    ForwardedTrustAddCidrArgs add_cidr_args;
+    ForwardedTrustContainsArgs contains_args;
+    ForwardedTrustProtocoreForwardedEffectiveIpArgs protocore_forwarded_effective_ip_args;
+
+    proto_bool ok;
+
+    void (*const reset)(uint8_t *restrict work);
+    void (*const add)(uint8_t *restrict work);
+    void (*const add_cidr)(uint8_t *restrict work);
+    void (*const contains)(uint8_t *restrict work);
+    void (*const protocore_forwarded_effective_ip)(uint8_t *restrict work);
+} ForwardedTrustNs;
+
+/** @brief The one symbol this module exports. */
+extern ForwardedTrustNs ForwardedTrust;
 
 /**
- * @brief Add a trusted-upstream network.
- * @return true if added; false on a null / malformed-family @p network, an out-of-range @p prefix_len,
- *         or a full table (PROTOCORE_TRUSTED_PROXY_MAX).
- */
-proto_bool protocore_forwarded_trust_add(const protocore_ip *network, uint8_t prefix_len);
-
-/**
- * @brief Add a trusted-upstream network from a CIDR string ("10.0.0.0/8" / "2001:db8::/32"; a bare
- *        address is taken as a host route).
- * @return true if parsed and added; false otherwise.
- */
-proto_bool protocore_forwarded_trust_add_cidr(const char *cidr);
-
-/** @brief True if @p peer falls inside any trusted-upstream CIDR (always false when the table is empty). */
-proto_bool protocore_forwarded_trust_contains(const protocore_ip *peer);
-
-/**
- * @brief Resolve the effective client address behind a possibly-trusted proxy.
+ * @brief The PROTOCORE_FORWARDED_TRUST_BORROW bytes this module's state lives in.
  *
- * @p out is set to the forwarded client ONLY when @p peer is a trusted upstream AND @p fwd_ip_str is a
- * valid, specified address; otherwise @p out is set to @p peer. @p out is always written when non-null.
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
  *
- * @param peer        the connection's real TCP source address.
- * @param fwd_ip_str  the recovered forwarded client address text, or nullptr/"" if none was present.
- * @param out         receives the effective client address.
- * @return true if the forwarded client was honored; false if the real TCP peer was kept.
+ * @return the span, or NULL while the pool was short - which every entry refuses.
  */
-proto_bool protocore_forwarded_effective_ip(const protocore_ip *peer, const char *fwd_ip_str, protocore_ip *out);
+uint8_t *protocore_forwarded_trust_span(void);
 
 PROTOCORE_END_DECLS
 

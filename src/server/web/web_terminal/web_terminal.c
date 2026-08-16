@@ -8,9 +8,14 @@
 
 #include "server/web/web_terminal/web_terminal.h"
 #include "mmgr/membuild.h" // protocore_sb frame builder
+#include "mmgr/secure.h"   // the persistent end this module's state is taken from
 #include "protocore.h"     // MAX_PATH_LEN, MAX_WS_CONNS, HttpReq, send_text
 
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
 #if PROTOCORE_ENABLE_WEB_TERMINAL
+
+PROTOCORE_BEGIN_DECLS
 
 // Dependency (WEB_TERMINAL requires WEBSOCKET) is enforced centrally in protocore_config.h.
 
@@ -33,7 +38,16 @@ typedef struct
 
 // Static storage duration zero-initializes every field: cb is null, ws_path is empty, and no slot
 // is marked a terminal client until a WebSocket connects.
-static WebTerminalCtx s_term;
+// The caller's borrow, split: the context at its offset. One pointer arrives and every
+// region is that pointer plus a compile-time offset, so the assert below proves the span
+// covers them before anything runs.
+#define WEB_TERMINAL_OFF_CTX 0u
+static_assert(WEB_TERMINAL_OFF_CTX + sizeof(WebTerminalCtx) <= PROTOCORE_WEB_TERMINAL_BORROW,
+              "PROTOCORE_WEB_TERMINAL_BORROW is short of the module context - raise it in protocore_config.h, which\n"
+              " sums it into its arena");
+
+// The region, at its offset in the caller's borrow.
+#define WEB_TERMINAL_CTX(w) ((WebTerminalCtx *)(void *)((w) + WEB_TERMINAL_OFF_CTX))
 
 // ---- internal route handlers ----------------------------------------------
 
@@ -47,12 +61,19 @@ static void term_page_handler(uint8_t slot_id, HttpReq *req)
 
 static void term_ws_connect(uint8_t ws_id)
 {
+    // The signature belongs to whoever dispatches this, so the borrow comes from the accessor
+    // rather than a parameter.
+    uint8_t *restrict work = protocore_web_terminal_span();
+    if (work == NULL)
+    {
+        return;
+    }
     // ws_id always addresses a real pool slot: the WebSocket layer numbers ws_pool[i].ws_id = i for
     // i < MAX_WS_CONNS and dispatches every route callback as cb(ws->ws_id), so the bound check
     // cannot fail. Same reasoning for the ws_id checks in term_ws_message / term_ws_close below.
     if (ws_id < MAX_WS_CONNS)
     {
-        s_term.is_client[ws_id] = PROTO_TRUE;
+        WEB_TERMINAL_CTX(work)->is_client[ws_id] = PROTO_TRUE;
     }
     // As in term_page_handler: this handler is only reachable once begin() registered the route.
     ws_send_text(ws_id, "ProtoCore terminal ready\n");
@@ -60,66 +81,113 @@ static void term_ws_connect(uint8_t ws_id)
 
 static void term_ws_message(uint8_t ws_id)
 {
-    // Branch-excluded for the ws_id bound only (see term_ws_connect); the s_term.cb arms are both
+    // The signature belongs to whoever dispatches this, so the borrow comes from the accessor
+    // rather than a parameter.
+    uint8_t *restrict work = protocore_web_terminal_span();
+    if (work == NULL)
+    {
+        return;
+    }
+    // Branch-excluded for the ws_id bound only (see term_ws_connect); the cb arms are both
     // exercised by the suite (with and without a registered command callback).
-    if (s_term.cb && ws_id < MAX_WS_CONNS)
+    if (WEB_TERMINAL_CTX(work)->cb && ws_id < MAX_WS_CONNS)
     {
         Ws.ws_id = ws_id;
-        Ws.payload_of(Ws.internal);
-        s_term.cb(Ws.text, ws_id);
+        Ws.payload_of(protocore_ws_span());
+        WEB_TERMINAL_CTX(work)->cb(Ws.text, ws_id);
     }
 }
 
 static void term_ws_close(uint8_t ws_id)
 {
+    // The signature belongs to whoever dispatches this, so the borrow comes from the accessor
+    // rather than a parameter.
+    uint8_t *restrict work = protocore_web_terminal_span();
+    if (work == NULL)
+    {
+        return;
+    }
     if (ws_id < MAX_WS_CONNS)
     {
-        s_term.is_client[ws_id] = PROTO_FALSE;
+        WEB_TERMINAL_CTX(work)->is_client[ws_id] = PROTO_FALSE;
     }
 }
 
 // ---- public API -----------------------------------------------------------
 
-void protocore_web_terminal_begin(const char *path)
+// --- the program's shared state, beside the namespace not on it -------------
+
+// The one owned instance, private to this TU: the pointer to the bytes this module took for
+// itself. A caller that hands in its own borrow never reaches it.
+typedef struct
 {
+    uint8_t *span; ///< PROTOCORE_WEB_TERMINAL_BORROW persistent bytes, or null while the pool was short
+} WebTerminalOwnCtx;
+static WebTerminalOwnCtx s_own;
+
+// Not an entry: an entry takes a borrow and this is where that borrow comes from.
+uint8_t *protocore_web_terminal_span(void)
+{
+    if (s_own.span == NULL)
+    {
+        protocore_span sp = protocore_secure_persist_span(PROTOCORE_WEB_TERMINAL_BORROW);
+        if (span.ok(sp))
+        {
+            s_own.span = sp.buf;
+        }
+    }
+    return s_own.span; // null while the pool was short, which every entry refuses
+}
+
+static void web_terminal_begin(uint8_t *restrict work)
+{
+    (void)work;
+    const char *path = WebTerminal.begin_args.path;
+
     for (uint8_t i = 0; i < MAX_WS_CONNS; i++)
     {
-        s_term.is_client[i] = PROTO_FALSE;
+        WEB_TERMINAL_CTX(work)->is_client[i] = PROTO_FALSE;
     }
 
     if (!path || !path[0])
     {
         path = "/terminal";
     }
-    protocore_sb sb_ws_path = {s_term.ws_path, sizeof(s_term.ws_path), 0, PROTO_TRUE};
+    protocore_sb sb_ws_path = {WEB_TERMINAL_CTX(work)->ws_path, sizeof(WEB_TERMINAL_CTX(work)->ws_path), 0, PROTO_TRUE};
     Sb.put(&sb_ws_path, path);
     Sb.put(&sb_ws_path, "/ws");
     if (Sb.finish(&sb_ws_path) == 0)
     {
-        s_term.ws_path[0] = '\0';
+        WEB_TERMINAL_CTX(work)->ws_path[0] = '\0';
     }
 
     on_http(path, HTTP_GET, term_page_handler);
-    on_ws(s_term.ws_path, term_ws_connect, term_ws_message, term_ws_close);
+    on_ws(WEB_TERMINAL_CTX(work)->ws_path, term_ws_connect, term_ws_message, term_ws_close);
 }
 
-void protocore_web_terminal_on_command(TermCommandCb cb)
+static void web_terminal_on_command(uint8_t *restrict work)
 {
-    s_term.cb = cb;
+    (void)work;
+    TermCommandCb cb = WebTerminal.on_command_args.cb;
+
+    WEB_TERMINAL_CTX(work)->cb = cb;
 }
 
-void protocore_web_terminal_print(const char *s)
+static void web_terminal_print(uint8_t *restrict work)
 {
+    (void)work;
+    const char *s = WebTerminal.print_args.s;
+
     if (!s)
     {
         return;
     }
     for (uint8_t i = 0; i < MAX_WS_CONNS; i++)
     {
-        if (s_term.is_client[i])
+        if (WEB_TERMINAL_CTX(work)->is_client[i])
         {
             Ws.ws_id = i;
-            Ws.active(Ws.internal);
+            Ws.active(protocore_ws_span());
             if (Ws.ok)
             {
                 ws_send_text(i, s);
@@ -128,35 +196,52 @@ void protocore_web_terminal_print(const char *s)
     }
 }
 
-void protocore_web_terminal_println(const char *s)
+static void web_terminal_println(uint8_t *restrict work)
 {
+    (void)work;
+    const char *s = WebTerminal.println_args.s;
+
     char buf[TERM_TX_BUF_SIZE];
     protocore_sb sb_buf = {buf, sizeof(buf), 0, PROTO_TRUE};
     Sb.put(&sb_buf, s ? s : "");
     Sb.put(&sb_buf, "\n");
+    WebTerminal.print_args.s = buf;
+    web_terminal_print(work);
     if (Sb.finish(&sb_buf) == 0)
     {
         buf[0] = '\0';
     }
-    protocore_web_terminal_print(buf);
+    WebTerminal.ok;
 }
 
-uint8_t protocore_web_terminal_client_count()
+static void web_terminal_client_count(uint8_t *restrict work)
 {
+    (void)work;
+    WebTerminal.value = 0;
+
     uint8_t n = 0;
     for (uint8_t i = 0; i < MAX_WS_CONNS; i++)
     {
-        if (s_term.is_client[i])
+        if (WEB_TERMINAL_CTX(work)->is_client[i])
         {
             Ws.ws_id = i;
-            Ws.active(Ws.internal);
+            Ws.active(protocore_ws_span());
             if (Ws.ok)
             {
                 n++;
             }
         }
     }
-    return n;
+    WebTerminal.value = n;
+    return;
 }
+
+WebTerminalNs WebTerminal = {.begin = web_terminal_begin,
+                             .on_command = web_terminal_on_command,
+                             .print = web_terminal_print,
+                             .println = web_terminal_println,
+                             .client_count = web_terminal_client_count};
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_WEB_TERMINAL

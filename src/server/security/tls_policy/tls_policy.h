@@ -5,23 +5,26 @@
  * @file tls_policy.h
  * @brief TLS version negotiation + pinned cipher-suite policy (PROTOCORE_ENABLE_TLS_POLICY).
  *
- * The transport TLS layer (`network_drivers/tls`, mbedTLS-backed) already runs the record and handshake
- * and floors the version at TLS 1.2 - so both TLS 1.2 (RFC 5246) and TLS 1.3 (RFC 8446) are negotiated.
- * What the roadmap's TLS items add on top is a *policy*: pin the negotiated version to an audited
- * [min,max] range and make the chosen version observable, and pin the cipher suites to an audited
- * allowlist selected by server preference (AEAD-only for a hardened profile).
+ * The transport TLS layer already runs the record and handshake and floors the version at TLS 1.2,
+ * so both TLS 1.2 (RFC 5246) and TLS 1.3 (RFC 8446) are negotiated. What this adds on top is a
+ * policy: pin the negotiated version to an audited [min,max] range and make the chosen version
+ * observable, and pin the cipher suites to an audited allowlist selected by server preference
+ * (AEAD-only for a hardened profile).
  *
- * This is that pure policy core: `protocore_tls_negotiate_version` picks the version the way a server does
- * (the highest it supports not above the client's), `protocore_tls_version_name` names it for a status
- * endpoint, `protocore_tls_select_cipher` selects a suite by server preference from the offered set, and
- * `protocore_tls_is_aead` classifies a suite. Pure, host-testable; the app feeds the results to the mbedTLS
+ * The pure policy core: @ref TlsPolicyNs::negotiate picks the version the way a server does (the
+ * highest it supports not above the client's), @ref TlsPolicyNs::name names it for a status
+ * endpoint, @ref TlsPolicyNs::select picks a suite by server preference from the offered set, and
+ * @ref TlsPolicyNs::is_aead classifies one. Host-testable; the app feeds the results to the TLS
  * config. No heap, no stdlib.
+ *
+ * @author  Douglas Quigg (dstroy0)
+ * @date    2026
  */
 
 #ifndef PROTOCORE_TLS_POLICY_H
 #define PROTOCORE_TLS_POLICY_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_TLS_POLICY
 
@@ -31,27 +34,92 @@ PROTOCORE_BEGIN_DECLS
 #define TLS_VERSION_1_2 0x0303
 #define TLS_VERSION_1_3 0x0304
 
+// This module holds nothing between calls, so it carves no borrow and states none. An entry takes
+// one all the same, and never reads it, so every namespace in the tree is invoked the same way.
+
+/** @brief The client's offer and the server's supported range. */
+typedef struct
+{
+    uint16_t client_max; ///< the client's highest offered version
+    uint16_t server_min; ///< the lowest version this server accepts
+    uint16_t server_max; ///< the highest it supports
+} TlsPolicyNegotiateArgs;
+
+/** @brief The version word a name is asked for. */
+typedef struct
+{
+    uint16_t version; ///< the wire word
+} TlsPolicyNameArgs;
+
+/** @brief The offered suites, and the pinned list that orders the choice. */
+typedef struct
+{
+    const uint16_t *client_offered; ///< what the client sent
+    size_t n_client;                ///< how many
+    const uint16_t *server_pinned;  ///< the audited allowlist, in preference order
+    size_t n_server;                ///< how many
+} TlsPolicySelectArgs;
+
+/** @brief The suite a classification is asked about. */
+typedef struct
+{
+    uint16_t suite; ///< the wire id
+} TlsPolicyAeadArgs;
+
 /**
- * @brief Negotiate the TLS version like a server: the highest supported that is not above the client's.
- * @param client_max the client's highest offered version.
- * @param server_min / @param server_max the server's supported range.
- * @return the chosen version word, or 0 if there is no overlap (client too old).
+ * @brief TLS version and cipher-suite policy.
+ *
+ * A caller sets the members a call takes, invokes it through ::TlsPolicy with the bytes it runs out
+ * of, and reads the outcome off the same handle.
+ *
+ *   TlsPolicy.negotiate_args.client_max = TLS_VERSION_1_3;
+ *   TlsPolicy.negotiate_args.server_min = TLS_VERSION_1_2;
+ *   TlsPolicy.negotiate_args.server_max = TLS_VERSION_1_3;
+ *   TlsPolicy.negotiate(work);
+ *   // TlsPolicy.version is the chosen word, 0 when the ranges do not overlap
+ *
+ * @var TlsPolicyNs::negotiate_args  the client's offer and the server's supported range
+ * @var TlsPolicyNs::name_args       the version word a name is asked for
+ * @var TlsPolicyNs::select_args     the offered suites, and the pinned list that orders the choice
+ * @var TlsPolicyNs::aead_args       the suite a classification is asked about
+ * @var TlsPolicyNs::ok              a call's true/false outcome
+ * @var TlsPolicyNs::version         the negotiated version word, 0 when the ranges do not overlap
+ * @var TlsPolicyNs::suite           the selected suite id, 0 when none of the pinned suites was offered
+ * @var TlsPolicyNs::text            the version's human name: "TLS 1.2", "TLS 1.3", or "unknown"
+ * @var TlsPolicyNs::aead            whether the suite is one of the modern AEAD suites
+ * @var TlsPolicyNs::negotiate       the highest supported version not above the client's
+ * @var TlsPolicyNs::name            name a version word for a status endpoint
+ * @var TlsPolicyNs::select          the first pinned suite the client also offered (server preference)
+ * @var TlsPolicyNs::is_aead         classify a suite as GCM / ChaCha20-Poly1305 or not
+ *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing between
+ * calls, so there is no state to keep and nothing to wipe. The parameter is there so a caller drives
+ * every namespace the same way.
+ *
+ * No storage member and no context: a caller sets operands and reads @ref TlsPolicyNs::ok, and that
+ * is all the surface there is.
  */
-uint16_t protocore_tls_negotiate_version(uint16_t client_max, uint16_t server_min, uint16_t server_max);
+typedef struct
+{
+    TlsPolicyNegotiateArgs negotiate_args;
+    TlsPolicyNameArgs name_args;
+    TlsPolicySelectArgs select_args;
+    TlsPolicyAeadArgs aead_args;
 
-/** @brief A human name for a version word: "TLS 1.2", "TLS 1.3", or "unknown". */
-const char *protocore_tls_version_name(uint16_t version);
+    proto_bool ok;
+    uint16_t version;
+    uint16_t suite;
+    const char *text;
+    proto_bool aead;
 
-/**
- * @brief Select a cipher suite by server preference: the first suite in @p server_pinned (ordered by
- *        preference) that also appears in @p client_offered.
- * @return the selected suite id, or 0 if none of the pinned suites was offered.
- */
-uint16_t protocore_tls_select_cipher(const uint16_t *client_offered, size_t n_client, const uint16_t *server_pinned,
-                                     size_t n_server);
+    void (*const negotiate)(uint8_t *restrict work);
+    void (*const name)(uint8_t *restrict work);
+    void (*const select)(uint8_t *restrict work);
+    void (*const is_aead)(uint8_t *restrict work);
+} TlsPolicyNs;
 
-/** @brief True if @p suite is one of the modern AEAD suites (GCM / ChaCha20-Poly1305). */
-proto_bool protocore_tls_is_aead(uint16_t suite);
+/** @brief The one symbol this module exports. */
+extern TlsPolicyNs TlsPolicy;
 
 PROTOCORE_END_DECLS
 

@@ -187,7 +187,10 @@ void test_one_shot_matches_streaming(void)
 {
     static const char MSG[] = "The quick brown fox jumps over the lazy dog";
     uint8_t one[PROTOCORE_SHA256_DIGEST_LEN], streamed[PROTOCORE_SHA256_DIGEST_LEN];
-    Sha256.hash_args.data = (const uint8_t *)MSG; Sha256.hash_args.len = sizeof(MSG) - 1; Sha256.hash_args.out = one; Sha256.hash(g_work);
+    Sha256.hash_args.data = (const uint8_t *)MSG;
+    Sha256.hash_args.len = sizeof(MSG) - 1;
+    Sha256.hash_args.out = one;
+    Sha256.hash(g_work);
 
     Sha256.init(g_ctx_work);
     for (size_t i = 0; i < sizeof(MSG) - 1; i++)
@@ -203,12 +206,24 @@ void test_one_shot_matches_streaming(void)
 void test_distinct_messages_hash_differently(void)
 {
     uint8_t a[PROTOCORE_SHA256_DIGEST_LEN], b[PROTOCORE_SHA256_DIGEST_LEN];
-    Sha256.hash_args.data = (const uint8_t *)"abc"; Sha256.hash_args.len = 3; Sha256.hash_args.out = a; Sha256.hash(g_work);
-    Sha256.hash_args.data = (const uint8_t *)"abd"; Sha256.hash_args.len = 3; Sha256.hash_args.out = b; Sha256.hash(g_work);
+    Sha256.hash_args.data = (const uint8_t *)"abc";
+    Sha256.hash_args.len = 3;
+    Sha256.hash_args.out = a;
+    Sha256.hash(g_work);
+    Sha256.hash_args.data = (const uint8_t *)"abd";
+    Sha256.hash_args.len = 3;
+    Sha256.hash_args.out = b;
+    Sha256.hash(g_work);
     TEST_ASSERT_TRUE(memcmp(a, b, sizeof(a)) != 0);
 
-    Sha256.hash_args.data = (const uint8_t *)"abc"; Sha256.hash_args.len = 3; Sha256.hash_args.out = a; Sha256.hash(g_work);
-    Sha256.hash_args.data = (const uint8_t *)"abc\0"; Sha256.hash_args.len = 4; Sha256.hash_args.out = b; Sha256.hash(g_work);
+    Sha256.hash_args.data = (const uint8_t *)"abc";
+    Sha256.hash_args.len = 3;
+    Sha256.hash_args.out = a;
+    Sha256.hash(g_work);
+    Sha256.hash_args.data = (const uint8_t *)"abc\0";
+    Sha256.hash_args.len = 4;
+    Sha256.hash_args.out = b;
+    Sha256.hash(g_work);
     TEST_ASSERT_TRUE(memcmp(a, b, sizeof(a)) != 0);
 }
 
@@ -222,7 +237,13 @@ void test_block_length_constants(void)
 
     // 64 octets of TEST4 is one whole block; its digest must differ from the 63-octet prefix.
     uint8_t full[PROTOCORE_SHA256_DIGEST_LEN], short_[PROTOCORE_SHA256_DIGEST_LEN];
-    Sha256.hash_args.data = (const uint8_t *)TEST4; Sha256.hash_args.len = 64; Sha256.hash_args.out = full; Sha256.hash(g_work);
-    Sha256.hash_args.data = (const uint8_t *)TEST4; Sha256.hash_args.len = 63; Sha256.hash_args.out = short_; Sha256.hash(g_work);
+    Sha256.hash_args.data = (const uint8_t *)TEST4;
+    Sha256.hash_args.len = 64;
+    Sha256.hash_args.out = full;
+    Sha256.hash(g_work);
+    Sha256.hash_args.data = (const uint8_t *)TEST4;
+    Sha256.hash_args.len = 63;
+    Sha256.hash_args.out = short_;
+    Sha256.hash(g_work);
     TEST_ASSERT_TRUE(memcmp(full, short_, sizeof(full)) != 0);
 }

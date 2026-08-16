@@ -12,8 +12,8 @@
 #if PROTOCORE_ENABLE_SMB
 
 #include "crypto/hash/md.h" // Md: MD4, MD5 and HMAC-MD5
-#include "mmgr/secure.h"     // the pool the digest borrow comes from
-#include "mmgr/span.h"       // protocore_span, span.ok
+#include "mmgr/secure.h"    // the pool the digest borrow comes from
+#include "mmgr/span.h"      // protocore_span, span.ok
 
 void protocore_ntlm_nt_hash(const char *password, uint8_t nt_hash[16])
 {

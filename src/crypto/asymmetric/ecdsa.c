@@ -941,7 +941,6 @@ static void ecdsa_ecdh(uint8_t *restrict work)
     Ecdsa.ok = ok;
 }
 
-
 EcdsaNs Ecdsa = {.pubkey = ecdsa_pubkey, .sign = ecdsa_sign, .verify = ecdsa_verify, .ecdh = ecdsa_ecdh};
 
 PROTOCORE_END_DECLS

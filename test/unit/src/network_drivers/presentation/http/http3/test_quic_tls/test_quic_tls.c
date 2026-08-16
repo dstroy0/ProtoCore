@@ -308,12 +308,12 @@ void test_handshake_interop_round_trip(void)
     Tls13Ks.bind.kdf = &TLS13_KDF;
     Tls13Ks.bind.ks = &ks;
     Tls13Ks.bind.s = ks_store;
-    Tls13Ks.early(Tls13Ks.internal);
+    Tls13Ks.early(NULL);
     TEST_ASSERT_TRUE(Tls13Ks.ok);
     Tls13Ks.step.ecdhe = ecdhe;
     Tls13Ks.step.ecdhe_len = sizeof(ecdhe);
     Tls13Ks.step.ch_sh_hash = hash;
-    Tls13Ks.handshake(Tls13Ks.internal);
+    Tls13Ks.handshake(NULL);
 
     // the Handshake-level packet keys both ends derive from those secrets must agree
     QuicPacketKeys mine;
@@ -340,7 +340,7 @@ void test_handshake_interop_round_trip(void)
     Tls13Ks.finished_args.base_secret = ks.s + TLS13_KS_SERVER_HS;
     Tls13Ks.finished_args.transcript_hash = hash;
     Tls13Ks.finished_args.out = verify;
-    Tls13Ks.finished_mac(Tls13Ks.internal);
+    Tls13Ks.finished_mac(NULL);
     TEST_ASSERT_EQUAL_HEX8(TLS_HS_FINISHED, hs[fin_at]);
     TEST_ASSERT_EQUAL_UINT(4u + 32u, msg_len(hs + fin_at));
     TEST_ASSERT_EQUAL_MEMORY(verify, hs + fin_at + 4, 32);
@@ -354,7 +354,7 @@ void test_handshake_interop_round_trip(void)
     Tls13Ks.bind.ks = &ks;
     Tls13Ks.bind.s = ks_store;
     Tls13Ks.step.ch_sfin_hash = hash;
-    Tls13Ks.master(Tls13Ks.internal);
+    Tls13Ks.master(NULL);
     protocore_quic_keys_from_secret(keys_work, ks.s + TLS13_KS_CLIENT_AP, &mine);
     TEST_ASSERT_EQUAL_MEMORY(protocore_quic_tls_keys(&g_qt, QUIC_ENC_APP, PROTO_FALSE)->iv, mine.iv, 12);
     protocore_quic_keys_from_secret(keys_work, ks.s + TLS13_KS_SERVER_AP, &mine);
@@ -367,7 +367,7 @@ void test_handshake_interop_round_trip(void)
     Tls13Ks.finished_args.base_secret = ks.s + TLS13_KS_CLIENT_HS;
     Tls13Ks.finished_args.transcript_hash = hash;
     Tls13Ks.finished_args.out = cfin + 4;
-    Tls13Ks.finished_mac(Tls13Ks.internal);
+    Tls13Ks.finished_mac(NULL);
     cfin[0] = TLS_HS_FINISHED;
     cfin[1] = 0;
     cfin[2] = 0;

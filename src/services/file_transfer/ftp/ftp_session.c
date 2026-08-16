@@ -12,10 +12,10 @@
 
 #if PROTOCORE_ENABLE_FTP_SESSION
 
-#include "mmgr/protoframe.h"                                // protocore_field / protocore_fval: the log frames
-#include "mmgr/protostr.h"                                  // str.copy: the bounded host copy
-#include "network_drivers/transport/tcp/client/client.h"    // TcpClient: both connections
-#include "server/clock/clock.h"                             // Clock.ms: the reply deadline
+#include "mmgr/protoframe.h"                             // protocore_field / protocore_fval: the log frames
+#include "mmgr/protostr.h"                               // str.copy: the bounded host copy
+#include "network_drivers/transport/tcp/client/client.h" // TcpClient: both connections
+#include "server/clock/clock.h"                          // Clock.ms: the reply deadline
 #include "services/file_transfer/ftp/ftp.h"
 #include "shared/log/log.h"
 
@@ -391,8 +391,7 @@ protocore_ftp_state protocore_ftp_store(const FtpTarget *target, const char *rem
             s_ftp.step = (uint8_t)FTP_STEP_PASV;
             continue;
 
-        case FTP_STEP_PASV:
-        {
+        case FTP_STEP_PASV: {
             uint8_t ip[4] = {0, 0, 0, 0};
             st = ftp_await(&code, &rlen);
             if (st == PROTOCORE_FTP_BUSY)
@@ -426,13 +425,11 @@ protocore_ftp_state protocore_ftp_store(const FtpTarget *target, const char *rem
             s_ftp.step = (uint8_t)FTP_STEP_STREAM;
             continue;
 
-        case FTP_STEP_STREAM:
-        {
+        case FTP_STEP_STREAM: {
             proto_bool sent = PROTO_TRUE;
             while (s_ftp.off < total)
             {
-                const size_t want =
-                    (total - s_ftp.off < sizeof(s_ftp.chunk)) ? total - s_ftp.off : sizeof(s_ftp.chunk);
+                const size_t want = (total - s_ftp.off < sizeof(s_ftp.chunk)) ? total - s_ftp.off : sizeof(s_ftp.chunk);
                 const size_t got = src(ctx, s_ftp.off, s_ftp.chunk, want);
                 TcpClient.cid = s_ftp.data;
                 TcpClient.io.data = s_ftp.chunk;

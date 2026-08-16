@@ -27,8 +27,9 @@ static const size_t N = sizeof(SCHEMA) / sizeof(SCHEMA[0]);
 
 void setUp(void)
 {
-    protocore_config_begin("t");
-    protocore_config_clear();
+    ConfigStore.begin_args.ns = "t";
+    ConfigStore.begin(protocore_config_store_span());
+    ConfigStore.clear(protocore_config_store_span());
 }
 void tearDown(void)
 {
@@ -37,7 +38,11 @@ void tearDown(void)
 static const char *get_str(const char *key)
 {
     static char buf[64];
-    protocore_config_get_str(key, buf, sizeof(buf), "");
+    ConfigStore.get_str_args.key = key;
+    ConfigStore.get_str_args.out = buf;
+    ConfigStore.get_str_args.out_cap = sizeof(buf);
+    ConfigStore.get_str_args.def = "";
+    ConfigStore.get_str(protocore_config_store_span());
     return buf;
 }
 
@@ -45,9 +50,15 @@ static const char *get_str(const char *key)
 // schema order. The return is the character count, so it agrees with the text's own length.
 void test_export_writes_one_key_value_line_per_field(void)
 {
-    protocore_config_set_str("ssid", "myssid");
-    protocore_config_set_u32("port", 8080);
-    protocore_config_set_str("name", "node1");
+    ConfigStore.set_str_args.key = "ssid";
+    ConfigStore.set_str_args.val = "myssid";
+    ConfigStore.set_str(protocore_config_store_span());
+    ConfigStore.set_u32_args.key = "port";
+    ConfigStore.set_u32_args.val = 8080;
+    ConfigStore.set_u32(protocore_config_store_span());
+    ConfigStore.set_str_args.key = "name";
+    ConfigStore.set_str_args.val = "node1";
+    ConfigStore.set_str(protocore_config_store_span());
 
     char buf[256];
     int n = protocore_config_export("t", SCHEMA, N, buf, sizeof(buf));
@@ -70,21 +81,33 @@ void test_export_carries_every_field_even_when_unset(void)
 // 32-bit maximum, and a string holding the '=' the format splits on.
 void test_export_import_round_trip(void)
 {
-    protocore_config_set_str("ssid", "abc");
-    protocore_config_set_u32("port", 4294967295u);
-    protocore_config_set_str("name", "a=b");
+    ConfigStore.set_str_args.key = "ssid";
+    ConfigStore.set_str_args.val = "abc";
+    ConfigStore.set_str(protocore_config_store_span());
+    ConfigStore.set_u32_args.key = "port";
+    ConfigStore.set_u32_args.val = 4294967295u;
+    ConfigStore.set_u32(protocore_config_store_span());
+    ConfigStore.set_str_args.key = "name";
+    ConfigStore.set_str_args.val = "a=b";
+    ConfigStore.set_str(protocore_config_store_span());
 
     char blob[256];
     int n = protocore_config_export("t", SCHEMA, N, blob, sizeof(blob));
     TEST_ASSERT_TRUE(n > 0);
 
-    protocore_config_clear();
-    TEST_ASSERT_EQUAL_UINT32(0u, protocore_config_get_u32("port", 0));
+    ConfigStore.clear(protocore_config_store_span());
+    ConfigStore.get_u32_args.key = "port";
+    ConfigStore.get_u32_args.def = 0;
+    ConfigStore.get_u32(protocore_config_store_span());
+    TEST_ASSERT_EQUAL_UINT32(0u, ConfigStore.ms);
     TEST_ASSERT_EQUAL_STRING("", get_str("ssid"));
 
     TEST_ASSERT_EQUAL_INT(3, protocore_config_import("t", SCHEMA, N, blob, strlen(blob)));
     TEST_ASSERT_EQUAL_STRING("abc", get_str("ssid"));
-    TEST_ASSERT_EQUAL_UINT32(4294967295u, protocore_config_get_u32("port", 0));
+    ConfigStore.get_u32_args.key = "port";
+    ConfigStore.get_u32_args.def = 0;
+    ConfigStore.get_u32(protocore_config_store_span());
+    TEST_ASSERT_EQUAL_UINT32(4294967295u, ConfigStore.ms);
     TEST_ASSERT_EQUAL_STRING("a=b", get_str("name"));
 }
 
@@ -92,9 +115,15 @@ void test_export_import_round_trip(void)
 // second export is byte-identical to the first.
 void test_import_is_idempotent(void)
 {
-    protocore_config_set_str("ssid", "abc");
-    protocore_config_set_u32("port", 1234);
-    protocore_config_set_str("name", "x");
+    ConfigStore.set_str_args.key = "ssid";
+    ConfigStore.set_str_args.val = "abc";
+    ConfigStore.set_str(protocore_config_store_span());
+    ConfigStore.set_u32_args.key = "port";
+    ConfigStore.set_u32_args.val = 1234;
+    ConfigStore.set_u32(protocore_config_store_span());
+    ConfigStore.set_str_args.key = "name";
+    ConfigStore.set_str_args.val = "x";
+    ConfigStore.set_str(protocore_config_store_span());
 
     char first[256];
     (void)protocore_config_export("t", SCHEMA, N, first, sizeof(first));
@@ -114,9 +143,15 @@ void test_import_writes_only_keys_the_schema_declares(void)
 {
     const char *text = "port=42\nbogus=99\nssid=here\n";
     TEST_ASSERT_EQUAL_INT(2, protocore_config_import("t", SCHEMA, N, text, strlen(text)));
-    TEST_ASSERT_EQUAL_UINT32(42u, protocore_config_get_u32("port", 0));
+    ConfigStore.get_u32_args.key = "port";
+    ConfigStore.get_u32_args.def = 0;
+    ConfigStore.get_u32(protocore_config_store_span());
+    TEST_ASSERT_EQUAL_UINT32(42u, ConfigStore.ms);
     TEST_ASSERT_EQUAL_STRING("here", get_str("ssid"));
-    TEST_ASSERT_EQUAL_UINT32(7u, protocore_config_get_u32("bogus", 7));
+    ConfigStore.get_u32_args.key = "bogus";
+    ConfigStore.get_u32_args.def = 7;
+    ConfigStore.get_u32(protocore_config_store_span());
+    TEST_ASSERT_EQUAL_UINT32(7u, ConfigStore.ms);
 }
 
 // A schema entry with no key is skipped rather than dereferenced, so the entries after it are still
@@ -129,7 +164,10 @@ void test_import_steps_over_a_keyless_schema_entry(void)
     };
     const char *text = "zz=7\n";
     TEST_ASSERT_EQUAL_INT(1, protocore_config_import("t", gapped, 2, text, strlen(text)));
-    TEST_ASSERT_EQUAL_UINT32(7u, protocore_config_get_u32("zz", 0));
+    ConfigStore.get_u32_args.key = "zz";
+    ConfigStore.get_u32_args.def = 0;
+    ConfigStore.get_u32(protocore_config_store_span());
+    TEST_ASSERT_EQUAL_UINT32(7u, ConfigStore.ms);
 }
 
 // A field typed as neither a string nor a u32 has no setter to reach, so it is rejected rather than
@@ -149,7 +187,10 @@ void test_import_skips_a_line_with_no_separator(void)
 {
     const char *text = "bogus\n\nport=42";
     TEST_ASSERT_EQUAL_INT(1, protocore_config_import("t", SCHEMA, N, text, strlen(text)));
-    TEST_ASSERT_EQUAL_UINT32(42u, protocore_config_get_u32("port", 0));
+    ConfigStore.get_u32_args.key = "port";
+    ConfigStore.get_u32_args.def = 0;
+    ConfigStore.get_u32(protocore_config_store_span());
+    TEST_ASSERT_EQUAL_UINT32(42u, ConfigStore.ms);
 }
 
 // The line splits on the FIRST '=', so everything after it is the value, separators and all.
@@ -193,7 +234,9 @@ void test_import_drops_a_line_past_the_store_limits(void)
 // carrying some fields: a partial export restored elsewhere would silently drop the rest.
 void test_export_fails_closed_on_a_short_buffer(void)
 {
-    protocore_config_set_str("ssid", "value");
+    ConfigStore.set_str_args.key = "ssid";
+    ConfigStore.set_str_args.val = "value";
+    ConfigStore.set_str(protocore_config_store_span());
 
     char buf[4];
     TEST_ASSERT_EQUAL_INT(0, protocore_config_export("t", SCHEMA, N, buf, sizeof(buf)));

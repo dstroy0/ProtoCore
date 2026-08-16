@@ -10,13 +10,47 @@
  * and values never touch the heap; the dynamic table is a fixed byte ring with FIFO eviction.
  */
 
+#if PROTOCORE_ENABLE_HTTP2
+
+#include "network_drivers/presentation/codec/hpack_prim/hpack_prim.h" // shared prefix-int + Huffman
 #include "network_drivers/presentation/http/http2/hpack.h"
 #include "mmgr/protomem.h"
 #include "mmgr/protostr.h"
 
-#if PROTOCORE_ENABLE_HTTP2
+/** @brief One dynamic-table entry descriptor (its bytes live in the table's byte ring). */
+typedef struct
+{
+    uint16_t name_len; ///< header name length
+    uint16_t val_len;  ///< header value length
+    uint16_t ring_pos; ///< start of name||value in the byte ring
+} HpackEntry;
 
-#include "network_drivers/presentation/codec/hpack_prim/hpack_prim.h" // shared prefix-int + Huffman
+/**
+ * @brief Per-connection HPACK dynamic table (the peer encoder's state, tracked by our decoder).
+ * FIFO: newest entry is dynamic index 62, oldest is evicted first. Fixed storage, no heap.
+ */
+typedef struct
+{
+    uint32_t max_size; ///< negotiated maximum size in bytes (RFC 7541 sec 4.2)
+    uint32_t used;     ///< current size = sum of (name_len + val_len + 32) over entries
+    uint16_t ehead;    ///< descriptor ring: index one past the newest entry
+    uint16_t ecount;   ///< number of live entries
+    uint16_t rtail;    ///< byte ring: start of the oldest entry's bytes
+    uint16_t rused;    ///< byte ring: bytes in use
+    HpackEntry ent[PROTOCORE_HPACK_MAX_ENTRIES];
+    char ring[PROTOCORE_HPACK_TABLE_BYTES];
+} HpackDynTable;
+
+// The caller's borrow, split: the table at its offset. One pointer arrives and every region is
+// that pointer plus a compile-time offset, so the assert below proves the span covers it before
+// anything runs.
+#define HPACK_OFF_CTX 0u
+static_assert(HPACK_OFF_CTX + sizeof(HpackDynTable) <= PROTOCORE_HPACK_BORROW,
+              "PROTOCORE_HPACK_BORROW is short of the dynamic table - raise it in protocore_config.h,"
+              " which sums it into the connection that owns it");
+
+// The region, at its offset in the caller's borrow.
+#define HPACK_CTX(w) ((HpackDynTable *)(void *)((w) + HPACK_OFF_CTX))
 
 #define HPACK_BYTES PROTOCORE_HPACK_TABLE_BYTES
 #define HPACK_ENTS PROTOCORE_HPACK_MAX_ENTRIES
@@ -281,7 +315,7 @@ static proto_bool decode_literal(HpackDynTable *t, const uint8_t *block, size_t 
 
 // --- Public API ------------------------------------------------------------------------------
 
-void protocore_hpack_dyn_init(HpackDynTable *t, uint32_t max_bytes)
+static void hpack_dyn_init_run(HpackDynTable *t, uint32_t max_bytes)
 {
     mem.set(t, 0, sizeof(*t));
     t->max_size = max_bytes ? max_bytes : (uint32_t)HPACK_BYTES;
@@ -291,8 +325,8 @@ void protocore_hpack_dyn_init(HpackDynTable *t, uint32_t max_bytes)
     }
 }
 
-proto_bool protocore_hpack_decode(HpackDynTable *t, const uint8_t *block, size_t len, char *scratch, size_t scratch_cap,
-                                  HpackEmitFn emit, void *ctx)
+static proto_bool hpack_decode_run(HpackDynTable *t, const uint8_t *block, size_t len, char *scratch,
+                                   size_t scratch_cap, HpackEmitFn emit, void *ctx)
 {
     size_t pos = 0;
     while (pos < len)
@@ -349,8 +383,8 @@ proto_bool protocore_hpack_decode(HpackDynTable *t, const uint8_t *block, size_t
     return PROTO_TRUE;
 }
 
-size_t protocore_hpack_encode_header(uint8_t *out, size_t cap, const char *name, size_t name_len, const char *value,
-                                     size_t value_len)
+static size_t hpack_encode_header_run(uint8_t *out, size_t cap, const char *name, size_t name_len, const char *value,
+                                      size_t value_len)
 {
     int name_idx = 0;
     int full_idx = 0;
@@ -395,5 +429,29 @@ size_t protocore_hpack_encode_header(uint8_t *out, size_t cap, const char *name,
     }
     return o + vs;
 }
+
+// --- the entries ---
+
+static void hpack_dyn_init(uint8_t *restrict work)
+{
+    hpack_dyn_init_run(HPACK_CTX(work), Hpack.init_args.max_bytes);
+}
+
+static void hpack_decode(uint8_t *restrict work)
+{
+    Hpack.ok =
+        hpack_decode_run(HPACK_CTX(work), Hpack.decode_args.block, Hpack.decode_args.len, Hpack.decode_args.scratch,
+                         Hpack.decode_args.scratch_cap, Hpack.decode_args.emit, Hpack.decode_args.ctx);
+}
+
+static void hpack_encode_header(uint8_t *restrict work)
+{
+    (void)work;
+    Hpack.n = hpack_encode_header_run(Hpack.encode_args.out, Hpack.encode_args.cap, Hpack.encode_args.name,
+                                      Hpack.encode_args.name_len, Hpack.encode_args.value, Hpack.encode_args.value_len);
+}
+
+// Designated, so a member's position in the struct does not decide what it binds to.
+HpackNs Hpack = {.dyn_init = hpack_dyn_init, .decode = hpack_decode, .encode_header = hpack_encode_header};
 
 #endif // PROTOCORE_ENABLE_HTTP2

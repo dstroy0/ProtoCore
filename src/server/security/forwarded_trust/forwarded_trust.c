@@ -2,8 +2,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include "server/security/forwarded_trust/forwarded_trust.h"
+#include "mmgr/secure.h" // the persistent end this module's state is taken from
+#include "shared/ip/ip.h"
+
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_FORWARDED_TRUST
+
+PROTOCORE_BEGIN_DECLS
 
 typedef struct
 {
@@ -11,14 +17,25 @@ typedef struct
     uint8_t prefix_len;   // CIDR prefix length: 0..32 for v4, 0..128 for v6.
 } protocore_forwarded_trust_rule;
 
-// Trusted-upstream state, owned by one instance (internal linkage): the CIDR rule table and its
-// count (empty = trust no forwarded header). One named owner, unreachable from any other unit.
+// The CIDR rule table and its count (empty = trust no forwarded header). Only what is not
+// derivable: the region lives at a fixed offset in the caller's borrow, so the macro below computes
+// it from the pointer rather than the context storing it.
 typedef struct
 {
     protocore_forwarded_trust_rule rules[PROTOCORE_TRUSTED_PROXY_MAX];
     uint8_t count;
 } protocore_forwarded_trust_ctx;
-static protocore_forwarded_trust_ctx s_trust;
+// The caller's borrow, split: the context at its offset. One pointer arrives and every
+// region is that pointer plus a compile-time offset, so the assert below proves the span
+// covers them before anything runs.
+#define FORWARDED_TRUST_OFF_CTX 0u
+static_assert(
+    FORWARDED_TRUST_OFF_CTX + sizeof(protocore_forwarded_trust_ctx) <= PROTOCORE_FORWARDED_TRUST_BORROW,
+    "PROTOCORE_FORWARDED_TRUST_BORROW is short of the module context - raise it in protocore_config.h, which\n"
+    " sums it into its arena");
+
+// The region, at its offset in the caller's borrow.
+#define FORWARDED_TRUST_CTX(w) ((protocore_forwarded_trust_ctx *)(void *)((w) + FORWARDED_TRUST_OFF_CTX))
 
 // Read @p text as an address into @p out.
 static proto_bool ip_parse(const char *text, protocore_ip *out)
@@ -47,16 +64,47 @@ static proto_bool ip_none(const protocore_ip *ip)
     return Ip.ok;
 }
 
-void protocore_forwarded_trust_reset(void)
+// --- the program's shared state, beside the namespace not on it -------------
+
+// The one owned instance, private to this TU: the pointer to the bytes this module took for
+// itself. A caller that hands in its own borrow never reaches it.
+typedef struct
 {
-    s_trust.count = 0;
+    uint8_t *span; ///< PROTOCORE_FORWARDED_TRUST_BORROW persistent bytes, or null while the pool was short
+} ForwardedTrustOwnCtx;
+static ForwardedTrustOwnCtx s_own;
+
+// Not an entry: an entry takes a borrow and this is where that borrow comes from.
+uint8_t *protocore_forwarded_trust_span(void)
+{
+    if (s_own.span == NULL)
+    {
+        protocore_span sp = protocore_secure_persist_span(PROTOCORE_FORWARDED_TRUST_BORROW);
+        if (span.ok(sp))
+        {
+            s_own.span = sp.buf;
+        }
+    }
+    return s_own.span; // null while the pool was short, which every entry refuses
 }
 
-proto_bool protocore_forwarded_trust_add(const protocore_ip *network, uint8_t prefix_len)
+static void forwarded_trust_reset(uint8_t *restrict work)
 {
+    (void)work;
+
+    FORWARDED_TRUST_CTX(work)->count = 0;
+}
+
+static void forwarded_trust_add(uint8_t *restrict work)
+{
+    (void)work;
+    const protocore_ip *network = ForwardedTrust.add_args.network;
+    uint8_t prefix_len = ForwardedTrust.add_args.prefix_len;
+
     if (!network)
     {
-        return PROTO_FALSE;
+        ForwardedTrust.ok = PROTO_FALSE;
+        return;
     }
     int bits = -1; // stays negative for a family we do not recognize
     if (network->family == PROTOCORE_IP_V4)
@@ -69,23 +117,30 @@ proto_bool protocore_forwarded_trust_add(const protocore_ip *network, uint8_t pr
     }
     if (bits < 0 || prefix_len > (uint8_t)bits)
     {
-        return PROTO_FALSE; // reject a malformed family or an over-long prefix
+        ForwardedTrust.ok = PROTO_FALSE;
+        return; // reject a malformed family or an over-long prefix
     }
-    if (s_trust.count >= PROTOCORE_TRUSTED_PROXY_MAX)
+    if (FORWARDED_TRUST_CTX(work)->count >= PROTOCORE_TRUSTED_PROXY_MAX)
     {
-        return PROTO_FALSE;
+        ForwardedTrust.ok = PROTO_FALSE;
+        return;
     }
-    s_trust.rules[s_trust.count].network = *network;
-    s_trust.rules[s_trust.count].prefix_len = prefix_len;
-    s_trust.count++;
-    return PROTO_TRUE;
+    FORWARDED_TRUST_CTX(work)->rules[FORWARDED_TRUST_CTX(work)->count].network = *network;
+    FORWARDED_TRUST_CTX(work)->rules[FORWARDED_TRUST_CTX(work)->count].prefix_len = prefix_len;
+    FORWARDED_TRUST_CTX(work)->count++;
+    ForwardedTrust.ok = PROTO_TRUE;
+    return;
 }
 
-proto_bool protocore_forwarded_trust_add_cidr(const char *cidr)
+static void forwarded_trust_add_cidr(uint8_t *restrict work)
 {
+    (void)work;
+    const char *cidr = ForwardedTrust.add_cidr_args.cidr;
+
     if (!cidr)
     {
-        return PROTO_FALSE;
+        ForwardedTrust.ok = PROTO_FALSE;
+        return;
     }
 
     // Split "address/prefix" at the slash. The address half is copied into a bounded buffer (a CIDR
@@ -102,7 +157,8 @@ proto_bool protocore_forwarded_trust_add_cidr(const char *cidr)
         }
         if (n + 1 >= sizeof(addr))
         {
-            return PROTO_FALSE; // address text too long to be valid
+            ForwardedTrust.ok = PROTO_FALSE;
+            return; // address text too long to be valid
         }
         addr[n++] = *p;
     }
@@ -112,7 +168,8 @@ proto_bool protocore_forwarded_trust_add_cidr(const char *cidr)
     net.family = PROTOCORE_IP_NONE;
     if (!ip_parse(addr, &net))
     {
-        return PROTO_FALSE;
+        ForwardedTrust.ok = PROTO_FALSE;
+        return;
     }
 
     uint8_t width = (net.family == PROTOCORE_IP_V4) ? 32 : 128;
@@ -124,47 +181,67 @@ proto_bool protocore_forwarded_trust_add_cidr(const char *cidr)
         const char *p = slash + 1;
         if (!*p)
         {
-            return PROTO_FALSE;
+            ForwardedTrust.ok = PROTO_FALSE;
+            return;
         }
         for (; *p; p++)
         {
             if (*p < '0' || *p > '9')
             {
-                return PROTO_FALSE;
+                ForwardedTrust.ok = PROTO_FALSE;
+                return;
             }
             v = v * 10 + (uint32_t)(*p - '0');
             if (v > width)
             {
-                return PROTO_FALSE; // out of range for the family
+                ForwardedTrust.ok = PROTO_FALSE;
+                return; // out of range for the family
             }
         }
         prefix = (uint8_t)v;
     }
 
-    return protocore_forwarded_trust_add(&net, prefix);
+    ForwardedTrust.add_args.network = &net;
+    ForwardedTrust.add_args.prefix_len = prefix;
+    forwarded_trust_add(work);
+    ForwardedTrust.ok = ForwardedTrust.ok;
+    return;
 }
 
-proto_bool protocore_forwarded_trust_contains(const protocore_ip *peer)
+static void forwarded_trust_contains(uint8_t *restrict work)
 {
+    (void)work;
+    const protocore_ip *peer = ForwardedTrust.contains_args.peer;
+
     if (!peer)
     {
-        return PROTO_FALSE;
+        ForwardedTrust.ok = PROTO_FALSE;
+        return;
     }
-    for (uint8_t i = 0; i < s_trust.count; i++)
+    for (uint8_t i = 0; i < FORWARDED_TRUST_CTX(work)->count; i++)
     {
-        if (ip_in_prefix(peer, &s_trust.rules[i].network, s_trust.rules[i].prefix_len))
+        if (ip_in_prefix(peer, &FORWARDED_TRUST_CTX(work)->rules[i].network,
+                         FORWARDED_TRUST_CTX(work)->rules[i].prefix_len))
         {
-            return PROTO_TRUE;
+            ForwardedTrust.ok = PROTO_TRUE;
+            return;
         }
     }
-    return PROTO_FALSE;
+    ForwardedTrust.ok = PROTO_FALSE;
+    return;
 }
 
-proto_bool protocore_forwarded_effective_ip(const protocore_ip *peer, const char *fwd_ip_str, protocore_ip *out)
+static void forwarded_trust_protocore_forwarded_effective_ip(uint8_t *restrict work)
 {
+    (void)work;
+    const protocore_ip *peer = ForwardedTrust.protocore_forwarded_effective_ip_args.peer;
+    const char *fwd_ip_str = ForwardedTrust.protocore_forwarded_effective_ip_args.fwd_ip_str;
+    protocore_ip *out = ForwardedTrust.protocore_forwarded_effective_ip_args.out;
+
     if (!out)
     {
-        return PROTO_FALSE;
+        ForwardedTrust.ok = PROTO_FALSE;
+        return;
     }
     if (peer)
     {
@@ -175,24 +252,39 @@ proto_bool protocore_forwarded_effective_ip(const protocore_ip *peer, const char
         out->family = PROTOCORE_IP_NONE;
     }
 
-    if (!peer || !protocore_forwarded_trust_contains(peer))
+    ForwardedTrust.contains_args.peer = peer;
+    forwarded_trust_contains(work);
+    if (!peer || !ForwardedTrust.ok)
     {
-        return PROTO_FALSE; // peer is not a trusted upstream -> ignore the spoofable header
+        ForwardedTrust.ok = PROTO_FALSE;
+        return; // peer is not a trusted upstream -> ignore the spoofable header
     }
     if (!fwd_ip_str || !fwd_ip_str[0])
     {
-        return PROTO_FALSE; // no forwarded client present
+        ForwardedTrust.ok = PROTO_FALSE;
+        return; // no forwarded client present
     }
 
     protocore_ip fip;
     fip.family = PROTOCORE_IP_NONE;
     if (!ip_parse(fwd_ip_str, &fip) || ip_none(&fip))
     {
-        return PROTO_FALSE; // malformed / obfuscated / unspecified -> keep the proxy's address
+        ForwardedTrust.ok = PROTO_FALSE;
+        return; // malformed / obfuscated / unspecified -> keep the proxy's address
     }
 
     *out = fip;
-    return PROTO_TRUE;
+    ForwardedTrust.ok = PROTO_TRUE;
+    return;
 }
+
+ForwardedTrustNs ForwardedTrust = {.reset = forwarded_trust_reset,
+                                   .add = forwarded_trust_add,
+                                   .add_cidr = forwarded_trust_add_cidr,
+                                   .contains = forwarded_trust_contains,
+                                   .protocore_forwarded_effective_ip =
+                                       forwarded_trust_protocore_forwarded_effective_ip};
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_FORWARDED_TRUST

@@ -28,9 +28,6 @@
 
 #if PROTOCORE_ENABLE_CHACHA20
 
-#include <stddef.h>
-#include <stdint.h>
-
 PROTOCORE_BEGIN_DECLS
 
 /** @brief ChaCha20 key length in bytes. */

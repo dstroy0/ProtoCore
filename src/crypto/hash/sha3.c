@@ -10,8 +10,8 @@
 
 #if PROTOCORE_ENABLE_SHA3
 
-#include "crypto/hash/sha3.h"
 #include "crypto/crypto_opt.h"
+#include "crypto/hash/sha3.h"
 
 PROTOCORE_CRYPTO_HOT
 PROTOCORE_BEGIN_DECLS

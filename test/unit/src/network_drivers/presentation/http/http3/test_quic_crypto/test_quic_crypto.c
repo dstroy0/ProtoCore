@@ -125,14 +125,19 @@ static void same_aead_key(const uint8_t expect_key[16], uint8_t *derived_ctx)
 // The header-protection context likewise: compare the mask block it produces.
 static void same_hp_key(const uint8_t expect_key[16], uint8_t *derived_ctx)
 {
-    static uint8_t ref[PROTOCORE_WORK_AES128] __attribute__((aligned(8)));
+    static uint8_t ref[PROTOCORE_AES128GCM_BORROW] __attribute__((aligned(8)));
     uint8_t block[16] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
     uint8_t m1[16], m2[16];
-    protocore_aes128_init((struct protocore_aes128 *)(ref), expect_key);
-    protocore_aes128_encrypt_block((struct protocore_aes128 *)(ref), block, m1);
-    protocore_aes128_encrypt_block((struct protocore_aes128 *)(derived_ctx), block, m2);
+    Aes128Gcm.block_key_args.key = expect_key;
+    Aes128Gcm.block_init(ref);
+    Aes128Gcm.block_args.in = block;
+    Aes128Gcm.block_args.out = m1;
+    Aes128Gcm.block_encrypt(ref);
+    Aes128Gcm.block_args.in = block;
+    Aes128Gcm.block_args.out = m2;
+    Aes128Gcm.block_encrypt(derived_ctx);
     TEST_ASSERT_EQUAL_MEMORY(m1, m2, 16);
-    protocore_aes128_wipe((struct protocore_aes128 *)(ref));
+    Aes128Gcm.block_wipe(ref);
 }
 
 // FIPS 197 Appendix C.1 (AES-128) publishes one worked example: PLAINTEXT
@@ -146,11 +151,14 @@ void test_fips197_aes128_block(void)
     hx("69c4e0d86a7b0430d8cdb78070b4c55a", want, sizeof(want));
 
     size_t mark = protocore_secure_mark();
-    struct protocore_aes128 *aes = protocore_aes128_wants();
-    TEST_ASSERT_NOT_NULL(aes);
-    protocore_aes128_init(aes, key);
-    protocore_aes128_encrypt_block(aes, in, out);
-    protocore_aes128_wipe(aes);
+    protocore_span w = protocore_secure_span(PROTOCORE_AES128GCM_BORROW, 8);
+    TEST_ASSERT_TRUE(span.ok(w));
+    Aes128Gcm.block_key_args.key = key;
+    Aes128Gcm.block_init(w.buf);
+    Aes128Gcm.block_args.in = in;
+    Aes128Gcm.block_args.out = out;
+    Aes128Gcm.block_encrypt(w.buf);
+    Aes128Gcm.block_wipe(w.buf);
     protocore_secure_release(mark);
     TEST_ASSERT_EQUAL_MEMORY(want, out, 16);
 }
@@ -180,7 +188,7 @@ void test_gcm_test_case_4(void)
     Aes128Gcm.seal_args.pt_len = sizeof(pt);
     Aes128Gcm.seal_args.ct_out = sealed;
     Aes128Gcm.seal_args.tag_out = sealed + 60;
-    Aes128Gcm.seal(gcm(key);
+    Aes128Gcm.seal(gcm(key));
     TEST_ASSERT_EQUAL_MEMORY(want_ct, sealed, 60);
     TEST_ASSERT_EQUAL_MEMORY(want_tag, sealed + 60, 16);
 
@@ -192,7 +200,7 @@ void test_gcm_test_case_4(void)
     Aes128Gcm.open_args.ct_len = 60;
     Aes128Gcm.open_args.tag = sealed + 60;
     Aes128Gcm.open_args.out = opened;
-    Aes128Gcm.open(gcm(key);
+    Aes128Gcm.open(gcm(key));
     TEST_ASSERT_TRUE(Aes128Gcm.ok);
     TEST_ASSERT_EQUAL_MEMORY(pt, opened, 60);
 
@@ -205,7 +213,7 @@ void test_gcm_test_case_4(void)
     Aes128Gcm.open_args.ct_len = 60;
     Aes128Gcm.open_args.tag = sealed + 60;
     Aes128Gcm.open_args.out = opened;
-    Aes128Gcm.open(gcm(key);
+    Aes128Gcm.open(gcm(key));
     TEST_ASSERT_FALSE(Aes128Gcm.ok);
     // and one flipped associated-data bit likewise, since the header is authenticated too
     sealed[0] ^= 0x01;
@@ -217,7 +225,7 @@ void test_gcm_test_case_4(void)
     Aes128Gcm.open_args.ct_len = 60;
     Aes128Gcm.open_args.tag = sealed + 60;
     Aes128Gcm.open_args.out = opened;
-    Aes128Gcm.open(gcm(key);
+    Aes128Gcm.open(gcm(key));
     TEST_ASSERT_FALSE(Aes128Gcm.ok);
 }
 
@@ -276,8 +284,8 @@ void test_rfc9001_a1_packet_keys(void)
     TEST_ASSERT_EQUAL_MEMORY(siv, s.server.iv, 12);
     same_aead_key(ck, s.client.gcm);
     same_aead_key(sk, s.server.gcm);
-    same_hp_key(chp, s.client.hp);
-    same_hp_key(shp, s.server.hp);
+    same_hp_key(chp, s.client.gcm);
+    same_hp_key(shp, s.server.gcm);
 }
 
 // RFC 9001 A.3, whole. The unprotected header and the frames the server sends are printed there, as

@@ -41,8 +41,18 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", "..", ".."))
 CFG = os.path.join(ROOT, ".bumpversion.cfg")
 
-SKIP_DIRS = {".git", ".pio", ".pio_cov", "__pycache__", "node_modules", "managed_components",
-             "coverage_reports", ".mypy_cache", ".ruff_cache", ".codeql-local"}
+SKIP_DIRS = {
+    ".git",
+    ".pio",
+    ".pio_cov",
+    "__pycache__",
+    "node_modules",
+    "managed_components",
+    "coverage_reports",
+    ".mypy_cache",
+    ".ruff_cache",
+    ".codeql-local",
+}
 # Build output the toolchains write in place, named as .gitignore names them. `build` is only
 # output at these paths - tools/ci_tooling/build holds a script and stays in the scan.
 SKIP_PATHS = ("build", "docs/html", "docs/favicons/dist")
@@ -81,7 +91,7 @@ def version_hits(text, cur):
         if col > 0 and lines[li][col - 1] == "v":
             n += 1
             continue
-        if "version" in "\n".join(lines[max(0, li - KEY_LOOKBACK):li + 1]).lower():
+        if "version" in "\n".join(lines[max(0, li - KEY_LOOKBACK) : li + 1]).lower():
             n += 1
     return n
 
@@ -98,7 +108,7 @@ def check():
     for sec in cp.sections():
         if not sec.startswith("bumpversion:file:"):
             continue
-        rel = sec[len("bumpversion:file:"):]
+        rel = sec[len("bumpversion:file:") :]
         covered.add(rel)
         path = os.path.join(ROOT, *rel.split("/"))
         if not os.path.isfile(path):
@@ -111,8 +121,9 @@ def check():
         if n_search == 0:
             bad.append("%s: search string %r does not occur - a bump would silently skip it" % (rel, search))
         elif n_search != n_version:
-            bad.append("%s: %d occurrence(s) of %s lie outside the search string %r"
-                       % (rel, n_version - n_search, cur, search))
+            bad.append(
+                "%s: %d occurrence(s) of %s lie outside the search string %r" % (rel, n_version - n_search, cur, search)
+            )
 
     for dirpath, dirnames, filenames in os.walk(ROOT):
         dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
@@ -131,8 +142,10 @@ def check():
             except (OSError, ValueError):
                 continue
             if version_hits(text, cur):
-                bad.append("%s: carries version %s but is not in .bumpversion.cfg - add a "
-                           "[bumpversion:file:%s] entry" % (rel, cur, rel))
+                bad.append(
+                    "%s: carries version %s but is not in .bumpversion.cfg - add a "
+                    "[bumpversion:file:%s] entry" % (rel, cur, rel)
+                )
     return bad, cur
 
 

@@ -11,6 +11,7 @@
 #include "network_drivers/presentation/http/http_parser/http_parser.h"
 #include "network_drivers/transport/tcp/protocol/protocol.h"
 
+#include <stdio.h>
 #include <string.h>
 #include <unity.h>
 
@@ -82,7 +83,8 @@ static int out_count(uint8_t type, uint32_t *last_err)
     while (off + H2_FRAME_HEADER_LEN <= g_out_len)
     {
         H2FrameHeader h;
-        protocore_h2_parse_header(g_out + off, H2_FRAME_HEADER_LEN, &h);
+        (H2Frame.parse_args.buf = g_out + off, H2Frame.parse_args.len = H2_FRAME_HEADER_LEN, H2Frame.parse_header(NULL),
+         *(&h) = H2Frame.header, H2Frame.ok);
         if (off + H2_FRAME_HEADER_LEN + h.length > g_out_len)
         {
             break;
@@ -111,27 +113,35 @@ static void feed_request(const Hdr *fields, size_t n)
 {
     wire_reset();
     memset(&conn_pool[0], 0, sizeof conn_pool[0]);
+    printf("DIAG span=%p\n", (void *)protocore_h2_server_span());
     H2Server.slot = 0;
-    H2Server.open(H2Server.internal);
+    H2Server.open(protocore_h2_server_span());
+    printf("DIAG after open: g_out_len=%u g_in_len=%u\n", (unsigned)g_out_len, (unsigned)g_in_len);
     g_out_len = 0;
 
     uint8_t block[1024];
     size_t bo = 0;
     for (size_t i = 0; i < n; i++)
     {
-        bo += protocore_hpack_encode_header(block + bo, sizeof block - bo, fields[i].name, strlen(fields[i].name),
-                                            fields[i].value, strlen(fields[i].value));
+        bo += (Hpack.encode_args.out = block + bo, Hpack.encode_args.cap = sizeof block - bo,
+               Hpack.encode_args.name = fields[i].name, Hpack.encode_args.name_len = strlen(fields[i].name),
+               Hpack.encode_args.value = fields[i].value, Hpack.encode_args.value_len = strlen(fields[i].value),
+               Hpack.encode_header(NULL), Hpack.n);
     }
 
     uint8_t sf[9];
     in_add(H2_PREFACE, H2_PREFACE_LEN);
-    in_add(sf, protocore_h2_build_settings(sf, sizeof sf, NULL, NULL, 0));
+    in_add(sf, (H2Frame.build_settings_args.buf = sf, H2Frame.build_settings_args.cap = sizeof sf,
+                H2Frame.build_settings_args.ids = NULL, H2Frame.build_settings_args.vals = NULL,
+                H2Frame.build_settings_args.n = 0, H2Frame.build_settings(NULL), H2Frame.n));
 
     uint8_t hf[H2_FRAME_HEADER_LEN + sizeof block];
-    in_add(hf, protocore_h2_build_headers(hf, sizeof hf, 1, block, bo, PROTO_TRUE));
+    in_add(hf, (H2Frame.headers_args.buf = hf, H2Frame.headers_args.cap = sizeof hf, H2Frame.headers_args.stream_id = 1,
+                H2Frame.headers_args.block = block, H2Frame.headers_args.block_len = bo,
+                H2Frame.headers_args.end_stream = PROTO_TRUE, H2Frame.build_headers(NULL), H2Frame.n));
 
     H2Server.slot = 0;
-    H2Server.data(H2Server.internal);
+    H2Server.data(protocore_h2_server_span());
 }
 
 #define BASE3 {":method", "GET"}, {":scheme", "https"}, {":path", "/"}

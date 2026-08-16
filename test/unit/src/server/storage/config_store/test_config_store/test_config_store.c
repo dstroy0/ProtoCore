@@ -18,19 +18,26 @@
 static const char *get_str(const char *key, const char *def)
 {
     static char buf[64];
-    protocore_config_get_str(key, buf, sizeof(buf), def);
+    ConfigStore.get_str_args.key = key;
+    ConfigStore.get_str_args.out = buf;
+    ConfigStore.get_str_args.out_cap = sizeof(buf);
+    ConfigStore.get_str_args.def = def;
+    ConfigStore.get_str(protocore_config_store_span());
     return buf;
 }
 
 // clear only empties the namespace it is called on, so every namespace a case touches is emptied.
 void setUp(void)
 {
-    protocore_config_begin("wifi");
-    protocore_config_clear();
-    protocore_config_begin("net");
-    protocore_config_clear();
-    protocore_config_begin("t");
-    protocore_config_clear();
+    ConfigStore.begin_args.ns = "wifi";
+    ConfigStore.begin(protocore_config_store_span());
+    ConfigStore.clear(protocore_config_store_span());
+    ConfigStore.begin_args.ns = "net";
+    ConfigStore.begin(protocore_config_store_span());
+    ConfigStore.clear(protocore_config_store_span());
+    ConfigStore.begin_args.ns = "t";
+    ConfigStore.begin(protocore_config_store_span());
+    ConfigStore.clear(protocore_config_store_span());
 }
 void tearDown(void)
 {
@@ -40,28 +47,57 @@ void tearDown(void)
 // destination.
 void test_string_round_trip(void)
 {
-    TEST_ASSERT_TRUE(protocore_config_set_str("ssid", "my network"));
+    ConfigStore.set_str_args.key = "ssid";
+    ConfigStore.set_str_args.val = "my network";
+    ConfigStore.set_str(protocore_config_store_span());
+    TEST_ASSERT_TRUE(ConfigStore.ok);
     TEST_ASSERT_EQUAL_STRING("my network", get_str("ssid", "?"));
 
-    TEST_ASSERT_TRUE(protocore_config_set_str("ssid", "other"));
+    ConfigStore.set_str_args.key = "ssid";
+    ConfigStore.set_str_args.val = "other";
+    ConfigStore.set_str(protocore_config_store_span());
+    TEST_ASSERT_TRUE(ConfigStore.ok);
     TEST_ASSERT_EQUAL_STRING("other", get_str("ssid", "?"));
 
     // The returned count is the characters written, so it agrees with the string's own length.
     char buf[32];
-    TEST_ASSERT_EQUAL_size_t(5u, protocore_config_get_str("ssid", buf, sizeof(buf), ""));
+    ConfigStore.get_str_args.key = "ssid";
+    ConfigStore.get_str_args.out = buf;
+    ConfigStore.get_str_args.out_cap = sizeof(buf);
+    ConfigStore.get_str_args.def = "";
+    ConfigStore.get_str(protocore_config_store_span());
+    TEST_ASSERT_EQUAL_size_t(5u, ConfigStore.n);
 }
 
 // A u32 round-trips across the whole 32-bit range, including both ends.
 void test_u32_round_trip(void)
 {
-    TEST_ASSERT_TRUE(protocore_config_set_u32("port", 0u));
-    TEST_ASSERT_EQUAL_UINT32(0u, protocore_config_get_u32("port", 999u));
+    ConfigStore.set_u32_args.key = "port";
+    ConfigStore.set_u32_args.val = 0u;
+    ConfigStore.set_u32(protocore_config_store_span());
+    TEST_ASSERT_TRUE(ConfigStore.ok);
+    ConfigStore.get_u32_args.key = "port";
+    ConfigStore.get_u32_args.def = 999u;
+    ConfigStore.get_u32(protocore_config_store_span());
+    TEST_ASSERT_EQUAL_UINT32(0u, ConfigStore.ms);
 
-    TEST_ASSERT_TRUE(protocore_config_set_u32("port", 8080u));
-    TEST_ASSERT_EQUAL_UINT32(8080u, protocore_config_get_u32("port", 999u));
+    ConfigStore.set_u32_args.key = "port";
+    ConfigStore.set_u32_args.val = 8080u;
+    ConfigStore.set_u32(protocore_config_store_span());
+    TEST_ASSERT_TRUE(ConfigStore.ok);
+    ConfigStore.get_u32_args.key = "port";
+    ConfigStore.get_u32_args.def = 999u;
+    ConfigStore.get_u32(protocore_config_store_span());
+    TEST_ASSERT_EQUAL_UINT32(8080u, ConfigStore.ms);
 
-    TEST_ASSERT_TRUE(protocore_config_set_u32("port", 4294967295u));
-    TEST_ASSERT_EQUAL_UINT32(4294967295u, protocore_config_get_u32("port", 999u));
+    ConfigStore.set_u32_args.key = "port";
+    ConfigStore.set_u32_args.val = 4294967295u;
+    ConfigStore.set_u32(protocore_config_store_span());
+    TEST_ASSERT_TRUE(ConfigStore.ok);
+    ConfigStore.get_u32_args.key = "port";
+    ConfigStore.get_u32_args.def = 999u;
+    ConfigStore.get_u32(protocore_config_store_span());
+    TEST_ASSERT_EQUAL_UINT32(4294967295u, ConfigStore.ms);
 }
 
 // A blob round-trips byte for byte, embedded zeros and all - which is what distinguishes it from
@@ -69,11 +105,19 @@ void test_u32_round_trip(void)
 void test_blob_round_trip(void)
 {
     static const uint8_t key[] = {0xDE, 0xAD, 0x00, 0xBE, 0xEF};
-    TEST_ASSERT_TRUE(protocore_config_set_blob("psk", key, sizeof(key)));
+    ConfigStore.set_blob_args.key = "psk";
+    ConfigStore.set_blob_args.data = key;
+    ConfigStore.set_blob_args.len = sizeof(key);
+    ConfigStore.set_blob(protocore_config_store_span());
+    TEST_ASSERT_TRUE(ConfigStore.ok);
 
     uint8_t out[8];
     memset(out, 0xAA, sizeof(out));
-    TEST_ASSERT_EQUAL_size_t(sizeof(key), protocore_config_get_blob("psk", out, sizeof(out)));
+    ConfigStore.get_blob_args.key = "psk";
+    ConfigStore.get_blob_args.out = out;
+    ConfigStore.get_blob_args.out_cap = sizeof(out);
+    ConfigStore.get_blob(protocore_config_store_span());
+    TEST_ASSERT_EQUAL_size_t(sizeof(key), ConfigStore.n);
     TEST_ASSERT_EQUAL_MEMORY(key, out, sizeof(key));
     TEST_ASSERT_EQUAL_UINT8(0xAA, out[5]); // nothing written past the blob's length
 }
@@ -83,8 +127,15 @@ void test_blob_round_trip(void)
 void test_an_absent_key_reports_the_default(void)
 {
     TEST_ASSERT_EQUAL_STRING("fallback", get_str("nothere", "fallback"));
-    TEST_ASSERT_EQUAL_UINT32(4242u, protocore_config_get_u32("nothere", 4242u));
-    TEST_ASSERT_EQUAL_size_t(0u, protocore_config_get_blob("nothere", (uint8_t[8]){0}, 8));
+    ConfigStore.get_u32_args.key = "nothere";
+    ConfigStore.get_u32_args.def = 4242u;
+    ConfigStore.get_u32(protocore_config_store_span());
+    TEST_ASSERT_EQUAL_UINT32(4242u, ConfigStore.ms);
+    ConfigStore.get_blob_args.key = "nothere";
+    ConfigStore.get_blob_args.out = (uint8_t[8]){0};
+    ConfigStore.get_blob_args.out_cap = 8;
+    ConfigStore.get_blob(protocore_config_store_span());
+    TEST_ASSERT_EQUAL_size_t(0u, ConfigStore.n);
 
     // A null default is the empty string, not a dereference.
     TEST_ASSERT_EQUAL_STRING("", get_str("nothere", NULL));
@@ -95,54 +146,91 @@ void test_an_absent_key_reports_the_default(void)
 // onto one entry.
 void test_an_overlong_key_is_refused_not_truncated(void)
 {
-    TEST_ASSERT_TRUE(protocore_config_set_str("abcdefghijklmno", "fits")); // 15 characters
+    ConfigStore.set_str_args.key = "abcdefghijklmno";
+    ConfigStore.set_str_args.val = "fits";
+    ConfigStore.set_str(protocore_config_store_span());
+    TEST_ASSERT_TRUE(ConfigStore.ok); // 15 characters
     TEST_ASSERT_EQUAL_STRING("fits", get_str("abcdefghijklmno", "?"));
 
-    TEST_ASSERT_FALSE(protocore_config_set_str("abcdefghijklmnoP", "too long")); // 16
-    TEST_ASSERT_FALSE(protocore_config_set_str("abcdefghijklmnoQ", "too long"));
-    TEST_ASSERT_FALSE(protocore_config_set_u32("abcdefghijklmnoP", 1u));
+    ConfigStore.set_str_args.key = "abcdefghijklmnoP";
+    ConfigStore.set_str_args.val = "too long";
+    ConfigStore.set_str(protocore_config_store_span());
+    ConfigStore.set_str_args.key = "abcdefghijklmnoQ";
+    ConfigStore.set_str_args.val = "too long";
+    ConfigStore.set_str(protocore_config_store_span());
+    TEST_ASSERT_FALSE(ConfigStore.ok); // 16
+    TEST_ASSERT_FALSE(ConfigStore.ok);
+    ConfigStore.set_u32_args.key = "abcdefghijklmnoP";
+    ConfigStore.set_u32_args.val = 1u;
+    ConfigStore.set_u32(protocore_config_store_span());
+    TEST_ASSERT_FALSE(ConfigStore.ok);
 
     // Neither over-long key aliased onto the 15-character one, which still holds its own value.
     TEST_ASSERT_EQUAL_STRING("fits", get_str("abcdefghijklmno", "?"));
     TEST_ASSERT_EQUAL_STRING("?", get_str("abcdefghijklmnoP", "?"));
 
+    ConfigStore.set_str_args.key = "";
+    ConfigStore.set_str_args.val = "x";
+    ConfigStore.set_str(protocore_config_store_span());
     // An empty key names nothing.
-    TEST_ASSERT_FALSE(protocore_config_set_str("", "x"));
+    TEST_ASSERT_FALSE(ConfigStore.ok);
 }
 
 // A namespace is part of a key's identity, so the same key name in two namespaces holds two values
 // and neither read sees the other.
 void test_namespaces_hold_separate_values_for_one_key(void)
 {
-    protocore_config_begin("wifi");
-    TEST_ASSERT_TRUE(protocore_config_set_str("host", "ap"));
+    ConfigStore.begin_args.ns = "wifi";
+    ConfigStore.begin(protocore_config_store_span());
+    ConfigStore.set_str_args.key = "host";
+    ConfigStore.set_str_args.val = "ap";
+    ConfigStore.set_str(protocore_config_store_span());
+    TEST_ASSERT_TRUE(ConfigStore.ok);
 
-    protocore_config_begin("net");
-    TEST_ASSERT_TRUE(protocore_config_set_str("host", "gateway"));
+    ConfigStore.begin_args.ns = "net";
+    ConfigStore.begin(protocore_config_store_span());
+    ConfigStore.set_str_args.key = "host";
+    ConfigStore.set_str_args.val = "gateway";
+    ConfigStore.set_str(protocore_config_store_span());
+    TEST_ASSERT_TRUE(ConfigStore.ok);
     TEST_ASSERT_EQUAL_STRING("gateway", get_str("host", "?"));
 
-    protocore_config_begin("wifi");
+    ConfigStore.begin_args.ns = "wifi";
+    ConfigStore.begin(protocore_config_store_span());
     TEST_ASSERT_EQUAL_STRING("ap", get_str("host", "?"));
 
+    ConfigStore.clear(protocore_config_store_span());
     // Clearing one namespace leaves the other untouched.
-    protocore_config_clear();
+    ConfigStore.ok;
     TEST_ASSERT_EQUAL_STRING("?", get_str("host", "?"));
-    protocore_config_begin("net");
+    ConfigStore.begin_args.ns = "net";
+    ConfigStore.begin(protocore_config_store_span());
     TEST_ASSERT_EQUAL_STRING("gateway", get_str("host", "?"));
 }
 
 // erase drops one key and reports whether it was there; clear drops every key in the namespace.
 void test_erase_drops_one_key_and_clear_drops_them_all(void)
 {
-    TEST_ASSERT_TRUE(protocore_config_set_str("a", "1"));
-    TEST_ASSERT_TRUE(protocore_config_set_str("b", "2"));
+    ConfigStore.set_str_args.key = "a";
+    ConfigStore.set_str_args.val = "1";
+    ConfigStore.set_str(protocore_config_store_span());
+    TEST_ASSERT_TRUE(ConfigStore.ok);
+    ConfigStore.set_str_args.key = "b";
+    ConfigStore.set_str_args.val = "2";
+    ConfigStore.set_str(protocore_config_store_span());
+    TEST_ASSERT_TRUE(ConfigStore.ok);
 
-    TEST_ASSERT_TRUE(protocore_config_erase("a"));
-    TEST_ASSERT_FALSE(protocore_config_erase("a")); // already gone
+    ConfigStore.erase_args.key = "a";
+    ConfigStore.erase(protocore_config_store_span());
+    TEST_ASSERT_TRUE(ConfigStore.ok);
+    ConfigStore.erase_args.key = "a";
+    ConfigStore.erase(protocore_config_store_span());
+    TEST_ASSERT_FALSE(ConfigStore.ok); // already gone
     TEST_ASSERT_EQUAL_STRING("?", get_str("a", "?"));
     TEST_ASSERT_EQUAL_STRING("2", get_str("b", "?"));
 
-    TEST_ASSERT_TRUE(protocore_config_clear());
+    ConfigStore.clear(protocore_config_store_span());
+    TEST_ASSERT_TRUE(ConfigStore.ok);
     TEST_ASSERT_EQUAL_STRING("?", get_str("b", "?"));
 }
 
@@ -150,17 +238,30 @@ void test_erase_drops_one_key_and_clear_drops_them_all(void)
 // addressing nothing rather than a previous namespace.
 void test_an_unusable_namespace_is_refused(void)
 {
-    TEST_ASSERT_TRUE(protocore_config_begin("t"));
-    TEST_ASSERT_TRUE(protocore_config_set_str("k", "v"));
+    ConfigStore.begin_args.ns = "t";
+    ConfigStore.begin(protocore_config_store_span());
+    TEST_ASSERT_TRUE(ConfigStore.ok);
+    ConfigStore.set_str_args.key = "k";
+    ConfigStore.set_str_args.val = "v";
+    ConfigStore.set_str(protocore_config_store_span());
+    TEST_ASSERT_TRUE(ConfigStore.ok);
 
-    TEST_ASSERT_FALSE(protocore_config_begin(NULL));
-    TEST_ASSERT_FALSE(protocore_config_begin(""));
-    TEST_ASSERT_FALSE(protocore_config_begin("abcdefghijklmnoP")); // 16 characters
+    ConfigStore.begin_args.ns = NULL;
+    ConfigStore.begin(protocore_config_store_span());
+    TEST_ASSERT_FALSE(ConfigStore.ok);
+    ConfigStore.begin_args.ns = "";
+    ConfigStore.begin(protocore_config_store_span());
+    TEST_ASSERT_FALSE(ConfigStore.ok);
+    ConfigStore.begin_args.ns = "abcdefghijklmnoP";
+    ConfigStore.begin(protocore_config_store_span());
+    TEST_ASSERT_FALSE(ConfigStore.ok); // 16 characters
 
     // The refused open did not leave "t" addressable, so the value is not reachable by accident.
     TEST_ASSERT_EQUAL_STRING("?", get_str("k", "?"));
 
-    TEST_ASSERT_TRUE(protocore_config_begin("t"));
+    ConfigStore.begin_args.ns = "t";
+    ConfigStore.begin(protocore_config_store_span());
+    TEST_ASSERT_TRUE(ConfigStore.ok);
     TEST_ASSERT_EQUAL_STRING("v", get_str("k", "?"));
 }
 
@@ -168,17 +269,30 @@ void test_an_unusable_namespace_is_refused(void)
 // caller never reads past its own buffer.
 void test_a_short_destination_is_bounded_and_terminated(void)
 {
-    TEST_ASSERT_TRUE(protocore_config_set_str("ssid", "0123456789"));
+    ConfigStore.set_str_args.key = "ssid";
+    ConfigStore.set_str_args.val = "0123456789";
+    ConfigStore.set_str(protocore_config_store_span());
+    TEST_ASSERT_TRUE(ConfigStore.ok);
 
     char small[5];
     memset(small, 'Z', sizeof(small));
-    size_t n = protocore_config_get_str("ssid", small, sizeof(small), "");
+    ConfigStore.get_str_args.key = "ssid";
+    ConfigStore.get_str_args.out = small;
+    ConfigStore.get_str_args.out_cap = sizeof(small);
+    ConfigStore.get_str_args.def = "";
+    ConfigStore.get_str(protocore_config_store_span());
+    size_t n = ConfigStore.n;
     TEST_ASSERT_EQUAL_size_t(4u, n);
     TEST_ASSERT_EQUAL_STRING("0123", small);
 
     // The default is bounded the same way when the key is absent.
     memset(small, 'Z', sizeof(small));
-    n = protocore_config_get_str("nothere", small, sizeof(small), "0123456789");
+    ConfigStore.get_str_args.key = "nothere";
+    ConfigStore.get_str_args.out = small;
+    ConfigStore.get_str_args.out_cap = sizeof(small);
+    ConfigStore.get_str_args.def = "0123456789";
+    ConfigStore.get_str(protocore_config_store_span());
+    n = ConfigStore.n;
     TEST_ASSERT_EQUAL_size_t(4u, n);
     TEST_ASSERT_EQUAL_STRING("0123", small);
 }
@@ -186,22 +300,50 @@ void test_a_short_destination_is_bounded_and_terminated(void)
 // A read with no destination, or no room in it, writes nothing and reports nothing read.
 void test_a_read_with_no_room_is_refused(void)
 {
-    TEST_ASSERT_TRUE(protocore_config_set_str("ssid", "value"));
+    ConfigStore.set_str_args.key = "ssid";
+    ConfigStore.set_str_args.val = "value";
+    ConfigStore.set_str(protocore_config_store_span());
+    TEST_ASSERT_TRUE(ConfigStore.ok);
 
     char sentinel[4] = {'z', 'z', 'z', '\0'};
-    TEST_ASSERT_EQUAL_size_t(0u, protocore_config_get_str("ssid", sentinel, 0, "d"));
+    ConfigStore.get_str_args.key = "ssid";
+    ConfigStore.get_str_args.out = sentinel;
+    ConfigStore.get_str_args.out_cap = 0;
+    ConfigStore.get_str_args.def = "d";
+    ConfigStore.get_str(protocore_config_store_span());
+    TEST_ASSERT_EQUAL_size_t(0u, ConfigStore.n);
     TEST_ASSERT_EQUAL_CHAR('z', sentinel[0]);
-    TEST_ASSERT_EQUAL_size_t(0u, protocore_config_get_str("ssid", NULL, 8, "d"));
+    ConfigStore.get_str_args.key = "ssid";
+    ConfigStore.get_str_args.out = NULL;
+    ConfigStore.get_str_args.out_cap = 8;
+    ConfigStore.get_str_args.def = "d";
+    ConfigStore.get_str(protocore_config_store_span());
+    TEST_ASSERT_EQUAL_size_t(0u, ConfigStore.n);
 
-    TEST_ASSERT_EQUAL_size_t(0u, protocore_config_get_blob("ssid", NULL, 8));
-    TEST_ASSERT_EQUAL_size_t(0u, protocore_config_get_blob("ssid", sentinel, 0));
+    ConfigStore.get_blob_args.key = "ssid";
+    ConfigStore.get_blob_args.out = NULL;
+    ConfigStore.get_blob_args.out_cap = 8;
+    ConfigStore.get_blob(protocore_config_store_span());
+    TEST_ASSERT_EQUAL_size_t(0u, ConfigStore.n);
+    ConfigStore.get_blob_args.key = "ssid";
+    ConfigStore.get_blob_args.out = sentinel;
+    ConfigStore.get_blob_args.out_cap = 0;
+    ConfigStore.get_blob(protocore_config_store_span());
+    TEST_ASSERT_EQUAL_size_t(0u, ConfigStore.n);
     TEST_ASSERT_EQUAL_CHAR('z', sentinel[0]);
 }
 
 // A write with no value is refused rather than stored as something else.
 void test_a_write_with_no_value_is_refused(void)
 {
-    TEST_ASSERT_FALSE(protocore_config_set_str("ssid", NULL));
-    TEST_ASSERT_FALSE(protocore_config_set_blob("psk", NULL, 4));
+    ConfigStore.set_str_args.key = "ssid";
+    ConfigStore.set_str_args.val = NULL;
+    ConfigStore.set_str(protocore_config_store_span());
+    TEST_ASSERT_FALSE(ConfigStore.ok);
+    ConfigStore.set_blob_args.key = "psk";
+    ConfigStore.set_blob_args.data = NULL;
+    ConfigStore.set_blob_args.len = 4;
+    ConfigStore.set_blob(protocore_config_store_span());
+    TEST_ASSERT_FALSE(ConfigStore.ok);
     TEST_ASSERT_EQUAL_STRING("?", get_str("ssid", "?"));
 }

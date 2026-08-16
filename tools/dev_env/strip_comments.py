@@ -42,8 +42,8 @@ def strip(text):
             out.append(c)
             i += 1
             while i < n:
-                if text[i] == '\\':          # an escape can hide the closing quote
-                    out.append(text[i:i + 2])
+                if text[i] == "\\":  # an escape can hide the closing quote
+                    out.append(text[i : i + 2])
                     i += 2
                     continue
                 out.append(text[i])
@@ -52,29 +52,29 @@ def strip(text):
                     break
                 i += 1
             continue
-        if c == '/' and i + 1 < n and text[i + 1] == '/':
-            while i < n and text[i] != '\n':
+        if c == "/" and i + 1 < n and text[i + 1] == "/":
+            while i < n and text[i] != "\n":
                 i += 1
             continue
-        if c == '/' and i + 1 < n and text[i + 1] == '*':
+        if c == "/" and i + 1 < n and text[i + 1] == "*":
             i += 2
-            while i + 1 < n and not (text[i] == '*' and text[i + 1] == '/'):
-                if text[i] == '\n':
-                    out.append('\n')
+            while i + 1 < n and not (text[i] == "*" and text[i + 1] == "/"):
+                if text[i] == "\n":
+                    out.append("\n")
                 i += 1
             i += 2
             continue
         out.append(c)
         i += 1
-    return ''.join(out)
+    return "".join(out)
 
 
 def header_of(text):
     """The leading copyright / SPDX lines, if the file opens with them."""
     head = []
-    for line in text.split('\n'):
+    for line in text.split("\n"):
         s = line.strip()
-        if s.startswith('//') and ('Copyright' in s or 'SPDX' in s or s == '//'):
+        if s.startswith("//") and ("Copyright" in s or "SPDX" in s or s == "//"):
             head.append(line)
             continue
         break
@@ -83,19 +83,19 @@ def header_of(text):
 
 def rewrite(text, keep_header):
     head = header_of(text) if keep_header else []
-    body = '\n'.join(text.split('\n')[len(head):]) if head else text
+    body = "\n".join(text.split("\n")[len(head) :]) if head else text
     body = strip(body)
     out, blank = [], 0
-    for line in body.split('\n'):
-        if line.strip() == '':
+    for line in body.split("\n"):
+        if line.strip() == "":
             blank += 1
-            if blank > 1:                    # collapse the runs the removal leaves
+            if blank > 1:  # collapse the runs the removal leaves
                 continue
         else:
             blank = 0
         out.append(line.rstrip())
-    new = ('\n'.join(head) + '\n' if head else '') + '\n'.join(out).lstrip('\n')
-    return new if new.endswith('\n') else new + '\n'
+    new = ("\n".join(head) + "\n" if head else "") + "\n".join(out).lstrip("\n")
+    return new if new.endswith("\n") else new + "\n"
 
 
 def walk(paths, exts, excludes):
@@ -104,44 +104,46 @@ def walk(paths, exts, excludes):
             yield p
             continue
         for dp, _, fns in os.walk(p):
-            if any(x in dp.replace('\\', '/') for x in excludes):
+            if any(x in dp.replace("\\", "/") for x in excludes):
                 continue
             for f in sorted(fns):
                 if os.path.splitext(f)[1] in exts:
-                    q = os.path.join(dp, f).replace('\\', '/')
+                    q = os.path.join(dp, f).replace("\\", "/")
                     if not any(x in q for x in excludes):
                         yield q
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('paths', nargs='+')
-    ap.add_argument('--go', action='store_true', help='rewrite in place')
-    ap.add_argument('--ext', default='.c,.h')
-    ap.add_argument('--no-header', dest='keep_header', action='store_false')
-    ap.add_argument('--exclude', action='append', default=['__pycache__', '.pio', 'unity_runner.c'])
+    ap.add_argument("paths", nargs="+")
+    ap.add_argument("--go", action="store_true", help="rewrite in place")
+    ap.add_argument("--ext", default=".c,.h")
+    ap.add_argument("--no-header", dest="keep_header", action="store_false")
+    ap.add_argument("--exclude", action="append", default=["__pycache__", ".pio", "unity_runner.c"])
     a = ap.parse_args()
 
-    exts = set(a.ext.split(','))
+    exts = set(a.ext.split(","))
     files = changed = removed = 0
     for p in walk(a.paths, exts, a.exclude):
         files += 1
-        t = io.open(p, encoding='utf-8', errors='replace', newline='').read()
+        t = io.open(p, encoding="utf-8", errors="replace", newline="").read()
         new = rewrite(t, a.keep_header)
         if new == t:
             continue
         changed += 1
-        removed += t.count('\n') - new.count('\n')
+        removed += t.count("\n") - new.count("\n")
         if a.go:
-            io.open(p, 'w', encoding='utf-8', newline='').write(new)
+            io.open(p, "w", encoding="utf-8", newline="").write(new)
 
-    print('visited %d, would change %d, lines removed %d' % (files, changed, removed)
-          if not a.go else
-          'visited %d, changed %d, lines removed %d' % (files, changed, removed))
+    print(
+        "visited %d, would change %d, lines removed %d" % (files, changed, removed)
+        if not a.go
+        else "visited %d, changed %d, lines removed %d" % (files, changed, removed)
+    )
     if not a.go:
-        print('DRY RUN - pass --go to rewrite')
+        print("DRY RUN - pass --go to rewrite")
     return 0
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main())

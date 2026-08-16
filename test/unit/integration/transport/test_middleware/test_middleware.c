@@ -103,8 +103,8 @@ void setUp()
         HttpConn.slot = i;
         HttpConn.reset(HttpConn.internal);
     }
-    Ws.init(Ws.internal);
-    Sse.init(Sse.internal);
+    Ws.init(protocore_ws_span());
+    Sse.init(protocore_sse_span());
     tcp_capture_reset();
 
     g_handler_called = PROTO_FALSE;

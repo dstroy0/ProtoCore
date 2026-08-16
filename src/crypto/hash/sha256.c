@@ -22,8 +22,8 @@
 #if !PROTOCORE_HAS_HW_SHA
 #include "mmgr/endian.h" // native software SHA-256
 #endif
-#include "crypto/hash/sha256.h"
 #include "crypto/crypto_opt.h"
+#include "crypto/hash/sha256.h"
 #include "mmgr/protomem.h"
 
 PROTOCORE_CRYPTO_HOT

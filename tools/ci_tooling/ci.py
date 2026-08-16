@@ -32,8 +32,16 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), 
 
 # The generators the Feature Tables workflow runs, in its order: later ones read what earlier ones
 # wrote, so the sequence is part of the contract.
-GEN_DEFAULT = ["feature_tables", "readme_sections", "configurator", "flag_deps", "api_flow",
-               "build_opt", "examples", "nav_groups"]
+GEN_DEFAULT = [
+    "feature_tables",
+    "readme_sections",
+    "configurator",
+    "flag_deps",
+    "api_flow",
+    "build_opt",
+    "examples",
+    "nav_groups",
+]
 
 GEN = {
     "feature_tables": "generate.gen_feature_tables",
@@ -56,8 +64,17 @@ GEN = {
 }
 
 # The guards the Format Code workflow runs. src_banned takes --all there.
-CHECK_DEFAULT = ["owned_context", "test_coverage", "src_banned", "duplicate_symbols", "frame_specs",
-                 "coverage_xml", "version_sites", "version_stamps", "test_matrix"]
+CHECK_DEFAULT = [
+    "owned_context",
+    "test_coverage",
+    "src_banned",
+    "duplicate_symbols",
+    "frame_specs",
+    "coverage_xml",
+    "version_sites",
+    "version_stamps",
+    "test_matrix",
+]
 
 CHECK = {
     "owned_context": "check.check_owned_context",
@@ -143,10 +160,12 @@ def dispatch(table, names, extra=(), per_name_args=None):
 
 
 def cmd_list(a):
-    for title, table, default in (("generators (ci.py gen)", GEN, GEN_DEFAULT),
-                                  ("guards (ci.py check)", CHECK, CHECK_DEFAULT),
-                                  ("coverage (ci.py cov)", COV, None),
-                                  ("sonar (ci.py sonar)", SONAR, None)):
+    for title, table, default in (
+        ("generators (ci.py gen)", GEN, GEN_DEFAULT),
+        ("guards (ci.py check)", CHECK, CHECK_DEFAULT),
+        ("coverage (ci.py cov)", COV, None),
+        ("sonar (ci.py sonar)", SONAR, None),
+    ):
         print("\n%s" % title)
         for name in sorted(table):
             star = " *" if default and name in default else ""
@@ -199,8 +218,10 @@ def cmd_baseline(a):
     names = a.names or BASELINE_DEFAULT
     unknown = [n for n in names if n not in BASELINE_ARGS]
     if unknown:
-        print("not a ratcheted guard: %s (ratcheted: %s)" % (" ".join(unknown), " ".join(sorted(BASELINE_ARGS))),
-              file=sys.stderr)
+        print(
+            "not a ratcheted guard: %s (ratcheted: %s)" % (" ".join(unknown), " ".join(sorted(BASELINE_ARGS))),
+            file=sys.stderr,
+        )
         return 2
     return dispatch(CHECK, names, per_name_args=BASELINE_ARGS)
 
@@ -238,7 +259,7 @@ def cmd_fmt(a):
         # One process per batch: the whole list overflows a command line on Windows.
         rc = 0
         for i in range(0, len(files), 200):
-            p = subprocess.run([cf] + args + files[i:i + 200], cwd=ROOT)
+            p = subprocess.run([cf] + args + files[i : i + 200], cwd=ROOT)
             rc = rc or p.returncode
         print("%s clang-format (%d files)" % ("ok  " if rc == 0 else "FAIL", len(files)))
         rc_all = rc_all or rc
@@ -247,18 +268,28 @@ def cmd_fmt(a):
     if not npx:
         print("skip Prettier (npx not on PATH)")
     else:
-        p = subprocess.run([npx, "prettier@3.9.6", "--check" if a.check else "--write", "**/*.md"],
-                           cwd=ROOT, capture_output=True, text=True)
+        p = subprocess.run(
+            [npx, "prettier@3.9.6", "--check" if a.check else "--write", "**/*.md"],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+        )
         print("%s Prettier" % ("ok  " if p.returncode == 0 else "FAIL"))
         if p.returncode != 0:
             print(p.stdout.strip()[-2000:])
         rc_all = rc_all or p.returncode
 
-    py = [os.path.relpath(f, ROOT) for f in
-          subprocess.run(["git", "ls-files", "*.py"], cwd=ROOT, capture_output=True, text=True).stdout.split()]
+    py = [
+        os.path.relpath(f, ROOT)
+        for f in subprocess.run(["git", "ls-files", "*.py"], cwd=ROOT, capture_output=True, text=True).stdout.split()
+    ]
     if py:
-        p = subprocess.run([sys.executable, "-m", "black"] + (["--check", "--diff"] if a.check else []) + py,
-                           cwd=ROOT, capture_output=True, text=True)
+        p = subprocess.run(
+            [sys.executable, "-m", "black"] + (["--check", "--diff"] if a.check else []) + py,
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+        )
         print("%s black (%d files)" % ("ok  " if p.returncode == 0 else "FAIL", len(py)))
         if p.returncode != 0:
             print((p.stdout + p.stderr).strip()[-2000:])
@@ -267,8 +298,9 @@ def cmd_fmt(a):
 
 
 def build_parser():
-    ap = argparse.ArgumentParser(prog="ci.py", description=__doc__,
-                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        prog="ci.py", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     sub = ap.add_subparsers(dest="group", required=True)
 
     sub.add_parser("list", help="every operation, grouped").set_defaults(fn=cmd_list)

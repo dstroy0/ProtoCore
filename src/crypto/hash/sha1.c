@@ -16,9 +16,9 @@
 
 #if PROTOCORE_HAS_HW_SHA
 #endif
-#include "mmgr/endian.h" // the big-endian serializers the framing and the rounds step with
-#include "crypto/hash/sha1.h"
 #include "crypto/crypto_opt.h"
+#include "crypto/hash/sha1.h"
+#include "mmgr/endian.h" // the big-endian serializers the framing and the rounds step with
 #include "mmgr/protomem.h"
 
 PROTOCORE_CRYPTO_HOT
@@ -38,7 +38,6 @@ typedef struct Sha1Ctx
 static_assert(SHA1_OFF_PAD + 128u <= PROTOCORE_SHA1_BORROW,
               "PROTOCORE_SHA1_BORROW is short of the state and the padded final blocks - raise it in "
               "protocore_config.h, which sums it into the secure arena");
-
 
 #if PROTOCORE_HAS_HW_SHA
 
@@ -131,8 +130,7 @@ static void sha1_block(uint32_t h[5], const uint8_t block[64])
 
 // --- framing (one arm, both compressions) ----------------------------------
 
-static void sha1_run(uint8_t *restrict work, const uint8_t *data, size_t len,
-                     uint8_t digest[PROTOCORE_SHA1_DIGEST_LEN])
+static void sha1_run(uint8_t *restrict work, const uint8_t *data, size_t len, uint8_t digest[PROTOCORE_SHA1_DIGEST_LEN])
 {
     // State and padded blocks at their offsets in the caller's borrow.
     uint32_t *h = ((struct Sha1Ctx *)(void *)(work + SHA1_OFF_CTX))->h;

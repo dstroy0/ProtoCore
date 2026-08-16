@@ -15,21 +15,21 @@ static SseConn *sse_alloc(uint8_t slot, const char *path)
 {
     Sse.slot = slot;
     Sse.route.path = path;
-    Sse.alloc(Sse.internal);
+    Sse.alloc(protocore_sse_span());
     return Sse.conn;
 }
 
 static SseConn *sse_find(uint8_t slot)
 {
     Sse.slot = slot;
-    Sse.find(Sse.internal);
+    Sse.find(protocore_sse_span());
     return Sse.conn;
 }
 
 static void sse_free(uint8_t slot)
 {
     Sse.slot = slot;
-    Sse.free(Sse.internal);
+    Sse.free(protocore_sse_span());
 }
 
 static int sse_format(char *buf, size_t cap, const char *data, const char *event, const char *event_id)
@@ -39,7 +39,7 @@ static int sse_format(char *buf, size_t cap, const char *data, const char *event
     Sse.event_args.data = data;
     Sse.event_args.event = event;
     Sse.event_args.event_id = event_id;
-    Sse.format(Sse.internal);
+    Sse.format(protocore_sse_span());
     return Sse.n;
 }
 
@@ -49,14 +49,13 @@ static proto_bool sse_write(SseConn *stream, const char *data, const char *event
     Sse.event_args.data = data;
     Sse.event_args.event = event;
     Sse.event_args.event_id = event_id;
-    Sse.write(Sse.internal);
+    Sse.write(protocore_sse_span());
     return Sse.ok;
 }
 
-
 void setUp()
 {
-    Sse.init(Sse.internal);
+    Sse.init(protocore_sse_span());
     for (int i = 0; i < MAX_CONNS; i++)
     {
         conn_pool[i] = (TcpConn){0};

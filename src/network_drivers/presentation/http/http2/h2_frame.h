@@ -82,7 +82,7 @@ typedef struct
     uint32_t stream_id; ///< stream identifier (reserved bit cleared)
 } H2FrameHeader;
 
-/** @brief The six settings we track, with RFC defaults after protocore_h2_settings_defaults(). */
+/** @brief The six settings we track, with RFC defaults after ::H2FrameNs::settings_defaults. */
 typedef struct
 {
     uint32_t header_table_size;      ///< default 4096
@@ -93,38 +93,176 @@ typedef struct
     uint32_t max_header_list_size;   ///< default "unlimited" (0xFFFFFFFF here)
 } H2Settings;
 
-/** @brief Parse the 9-byte frame header at @p buf (needs >= 9 bytes). */
-proto_bool protocore_h2_parse_header(const uint8_t *buf, size_t len, H2FrameHeader *out);
+/** @brief RFC 9113 sec 4.1: the 9-octet header a parse reads. */
+typedef struct
+{
+    const uint8_t *buf; ///< the bytes to read
+    size_t len;         ///< how many are available
+} H2FrameParseArgs;
 
-/** @brief Write a 9-byte frame header. @return 9, or 0 on overflow / length too large. */
-size_t protocore_h2_write_header(uint8_t *out, size_t cap, uint32_t length, uint8_t type, uint8_t flags,
-                                 uint32_t stream_id);
+/** @brief RFC 9113 sec 4.1: the 9-octet header a write emits. */
+typedef struct
+{
+    uint8_t *buf;       ///< where the header is written
+    size_t cap;         ///< how much room it has
+    uint32_t length;    ///< the payload length it declares
+    uint8_t type;       ///< the frame type
+    uint8_t flags;      ///< the frame flags
+    uint32_t stream_id; ///< the stream it belongs to
+} H2FrameWriteArgs;
 
-/** @brief Fill @p s with the RFC 9113 default settings values. */
-void protocore_h2_settings_defaults(H2Settings *s);
-/** @brief Apply a SETTINGS payload (list of id:16 + value:32) to @p s. @return false if malformed. */
-proto_bool protocore_h2_parse_settings(const uint8_t *payload, size_t len, H2Settings *s);
+/** @brief The settings block a defaults fill or a parse applies to. */
+typedef struct
+{
+    const uint8_t *payload; ///< the SETTINGS payload to apply; unused by a defaults fill
+    size_t len;             ///< how many bytes it carries
+    H2Settings *s;          ///< the block written into
+} H2FrameSettingsArgs;
 
-// --- Frame builders (write a complete frame including its header) -----------------------------
+/** @brief RFC 9113 sec 6.5: the (id, value) pairs a SETTINGS frame carries. */
+typedef struct
+{
+    uint8_t *buf;         ///< where the frame is written
+    size_t cap;           ///< how much room it has
+    const uint16_t *ids;  ///< the parameter ids
+    const uint32_t *vals; ///< their values
+    size_t n;             ///< how many pairs
+} H2FrameBuildSettingsArgs;
 
-/** @brief SETTINGS frame from @p n (id, value) pairs (stream 0). */
-size_t protocore_h2_build_settings(uint8_t *out, size_t cap, const uint16_t *ids, const uint32_t *vals, size_t n);
-/** @brief Empty SETTINGS with the ACK flag (stream 0). */
-size_t protocore_h2_build_settings_ack(uint8_t *out, size_t cap);
-/** @brief WINDOW_UPDATE with a 31-bit @p increment on @p stream_id. */
-size_t protocore_h2_build_window_update(uint8_t *out, size_t cap, uint32_t stream_id, uint32_t increment);
-/** @brief RST_STREAM with @p error on @p stream_id. */
-size_t protocore_h2_build_rst_stream(uint8_t *out, size_t cap, uint32_t stream_id, uint32_t error);
-/** @brief GOAWAY (stream 0) with @p last_stream_id and @p error (no debug data). */
-size_t protocore_h2_build_goaway(uint8_t *out, size_t cap, uint32_t last_stream_id, uint32_t error);
-/** @brief PING with the ACK flag echoing the 8 opaque bytes (stream 0). */
-size_t protocore_h2_build_ping_ack(uint8_t *out, size_t cap, const uint8_t opaque[8]);
-/** @brief HEADERS frame carrying an HPACK @p block on @p stream_id (END_HEADERS always set). */
-size_t protocore_h2_build_headers(uint8_t *out, size_t cap, uint32_t stream_id, const uint8_t *block, size_t block_len,
-                                  proto_bool end_stream);
-/** @brief DATA frame carrying @p data on @p stream_id. */
-size_t protocore_h2_build_data(uint8_t *out, size_t cap, uint32_t stream_id, const uint8_t *data, size_t data_len,
-                               proto_bool end_stream);
+/** @brief Where a frame that carries nothing else is written. */
+typedef struct
+{
+    uint8_t *buf; ///< where the frame is written
+    size_t cap;   ///< how much room it has
+} H2FrameAckArgs;
+
+/** @brief RFC 9113 sec 6.9: the increment a WINDOW_UPDATE carries. */
+typedef struct
+{
+    uint8_t *buf;       ///< where the frame is written
+    size_t cap;         ///< how much room it has
+    uint32_t stream_id; ///< the stream it credits
+    uint32_t increment; ///< the 31-bit credit
+} H2FrameWindowArgs;
+
+/** @brief RFC 9113 sec 6.4: the error a RST_STREAM carries. */
+typedef struct
+{
+    uint8_t *buf;       ///< where the frame is written
+    size_t cap;         ///< how much room it has
+    uint32_t stream_id; ///< the stream it resets
+    uint32_t error;     ///< the code it reports
+} H2FrameRstArgs;
+
+/** @brief RFC 9113 sec 6.8: what a GOAWAY reports. */
+typedef struct
+{
+    uint8_t *buf;            ///< where the frame is written
+    size_t cap;              ///< how much room it has
+    uint32_t last_stream_id; ///< the highest stream that will be processed
+    uint32_t error;          ///< the code it reports
+} H2FrameGoawayArgs;
+
+/** @brief RFC 9113 sec 6.7: the opaque data a PING ACK echoes. */
+typedef struct
+{
+    uint8_t *buf;          ///< where the frame is written
+    size_t cap;            ///< how much room it has
+    const uint8_t *opaque; ///< the 8 octets echoed back
+} H2FramePingArgs;
+
+/** @brief RFC 9113 sec 6.2: the HPACK block a HEADERS frame carries. */
+typedef struct
+{
+    uint8_t *buf;          ///< where the frame is written
+    size_t cap;            ///< how much room it has
+    uint32_t stream_id;    ///< the stream it opens
+    const uint8_t *block;  ///< the HPACK block
+    size_t block_len;      ///< how many bytes
+    proto_bool end_stream; ///< whether it closes the stream
+} H2FrameHeadersArgs;
+
+/** @brief RFC 9113 sec 6.1: the payload a DATA frame carries. */
+typedef struct
+{
+    uint8_t *buf;          ///< where the frame is written
+    size_t cap;            ///< how much room it has
+    uint32_t stream_id;    ///< the stream it belongs to
+    const uint8_t *data;   ///< the payload
+    size_t data_len;       ///< how many bytes
+    proto_bool end_stream; ///< whether it closes the stream
+} H2FrameDataArgs;
+
+/**
+ * @brief HTTP/2 frame headers, settings and builders (RFC 9113 sec 4 and 6).
+ *
+ * A caller sets the members a call takes, invokes it through ::H2Frame, and reads the outcome off
+ * the same handle.
+ *
+ * @var H2FrameNs::parse_args      the bytes a header parse reads
+ * @var H2FrameNs::write_args      what a header write emits
+ * @var H2FrameNs::settings_args   the block a defaults fill or a settings parse writes
+ * @var H2FrameNs::build_settings_args  the pairs a SETTINGS frame carries
+ * @var H2FrameNs::ack_args        where a frame carrying nothing else is written
+ * @var H2FrameNs::window_args     the increment a WINDOW_UPDATE carries
+ * @var H2FrameNs::rst_args        the error a RST_STREAM carries
+ * @var H2FrameNs::goaway_args     what a GOAWAY reports
+ * @var H2FrameNs::ping_args       the opaque data a PING ACK echoes
+ * @var H2FrameNs::headers_args    the HPACK block a HEADERS frame carries
+ * @var H2FrameNs::data_args       the payload a DATA frame carries
+ * @var H2FrameNs::ok              whether a parse read a well-formed frame
+ * @var H2FrameNs::n               bytes a build wrote, or 0 on overflow
+ * @var H2FrameNs::header          the header a parse read
+ * @var H2FrameNs::parse_header       read the 9-octet header
+ * @var H2FrameNs::write_header       write the 9-octet header
+ * @var H2FrameNs::settings_defaults  fill a block with the RFC defaults
+ * @var H2FrameNs::parse_settings     apply a SETTINGS payload to a block
+ * @var H2FrameNs::build_settings     a SETTINGS frame from (id, value) pairs
+ * @var H2FrameNs::build_settings_ack an empty SETTINGS with the ACK flag
+ * @var H2FrameNs::build_window_update a WINDOW_UPDATE
+ * @var H2FrameNs::build_rst_stream   a RST_STREAM
+ * @var H2FrameNs::build_goaway       a GOAWAY
+ * @var H2FrameNs::build_ping_ack     a PING with the ACK flag
+ * @var H2FrameNs::build_headers      a HEADERS frame
+ * @var H2FrameNs::build_data         a DATA frame
+ *
+ * Every entry takes a borrow to keep one calling convention across the tree; this module reads and
+ * writes only the caller's buffers, so nothing is read through it.
+ */
+typedef struct
+{
+    H2FrameParseArgs parse_args;                  ///< the members ::H2FrameNs::parse_header takes
+    H2FrameWriteArgs write_args;                  ///< the members ::H2FrameNs::write_header takes
+    H2FrameSettingsArgs settings_args;            ///< the members the settings calls take
+    H2FrameBuildSettingsArgs build_settings_args; ///< the members ::H2FrameNs::build_settings takes
+    H2FrameAckArgs ack_args;                      ///< the members ::H2FrameNs::build_settings_ack takes
+    H2FrameWindowArgs window_args;                ///< the members ::H2FrameNs::build_window_update takes
+    H2FrameRstArgs rst_args;                      ///< the members ::H2FrameNs::build_rst_stream takes
+    H2FrameGoawayArgs goaway_args;                ///< the members ::H2FrameNs::build_goaway takes
+    H2FramePingArgs ping_args;                    ///< the members ::H2FrameNs::build_ping_ack takes
+    H2FrameHeadersArgs headers_args;              ///< the members ::H2FrameNs::build_headers takes
+    H2FrameDataArgs data_args;                    ///< the members ::H2FrameNs::build_data takes
+
+    proto_bool ok;        ///< whether a parse read a well-formed frame
+    size_t n;             ///< bytes a build wrote, or 0 on overflow
+    H2FrameHeader header; ///< the header a parse read
+
+    void (*const parse_header)(uint8_t *restrict work);
+    void (*const write_header)(uint8_t *restrict work);
+    void (*const settings_defaults)(uint8_t *restrict work);
+    void (*const parse_settings)(uint8_t *restrict work);
+    void (*const build_settings)(uint8_t *restrict work);
+    void (*const build_settings_ack)(uint8_t *restrict work);
+    void (*const build_window_update)(uint8_t *restrict work);
+    void (*const build_rst_stream)(uint8_t *restrict work);
+    void (*const build_goaway)(uint8_t *restrict work);
+    void (*const build_ping_ack)(uint8_t *restrict work);
+    void (*const build_headers)(uint8_t *restrict work);
+    void (*const build_data)(uint8_t *restrict work);
+} H2FrameNs;
+
+/** @brief The one symbol this module exports. */
+extern H2FrameNs H2Frame;
 
 PROTOCORE_END_DECLS
 

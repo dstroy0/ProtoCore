@@ -19,21 +19,7 @@
 #include "crypto/cipher/chacha20.h"
 #include "crypto/crypto_opt.h"
 
-// ChaCha20 is a hot, pure-integer (add/xor/rotate) keystream generator. The ESP32-S3 has no usable
-// vector path (its PIE unit has only a *saturating* 32-bit add, `ee.vadds.s32`; ChaCha needs modular
-// wrap-around, so it cannot be vectorized). The real lever is optimization level: the library ships at
-// the arduino framework's -Os, and ChaCha runs ~2.36x faster at -O2 (measured on-device, CCOUNT). It is
-// constant-time by structure (no secret-dependent branches), so forcing a higher level is side-channel
-// safe - see the caveats in crypto_opt.h. Byte-exact; the SIMD investigation is in docs/FEATURE_PERFORMANCE.md.
-//
-// Measured (crypto bench): ChaCha20's additional ~8.8% S3 win at -O3 is carried entirely by -funswitch-loops
-// (bisected on-device); pin just that transform on the -O2 floor. The P4 takes full -O3 via the per-die default
-// (its win is -O3's inline/unroll parameter budget, not one flag).
-#if defined(CONFIG_IDF_TARGET_ESP32S3) && CONFIG_IDF_TARGET_ESP32S3
-PROTOCORE_CRYPTO_HOT_UNSWITCH
-#else
 PROTOCORE_CRYPTO_HOT
-#endif
 
 PROTOCORE_BEGIN_DECLS
 

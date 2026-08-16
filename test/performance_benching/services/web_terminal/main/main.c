@@ -33,7 +33,8 @@ void dbench_run(void)
                 line, sizeof(line), BENCH_LINE,
                 (const protocore_fval[]){PROTOCORE_VU32(214u), PROTOCORE_VU32(48u), PROTOCORE_VU32(131072u)}, 3);
         });
-        DBENCH_OP("protocore_web_terminal_client_count", 200000, sink += protocore_web_terminal_client_count());
+        WebTerminal.client_count(protocore_web_terminal_span());
+        DBENCH_OP("protocore_web_terminal_client_count", 200000, sink += WebTerminal.value);
         (void)sink;
         DBENCH_DONE();
     }

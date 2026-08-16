@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // Host-side microbenchmark for the OPC UA Binary server codec (IEC 62541 / OPC UA Part 6): the UACP
-// Hello/Acknowledge handshake (protocore_opcua_parse_hello + protocore_opcua_build_ack, run on every new connection) and the
-// per-node DataValue Variant encode (protocore_ua_w_datavalue, the Read-service hot op). All pure (no sockets, no
-// heap); opcua_rx() (not benched here) references a few transport symbols, stubbed below. The device
-// number comes from the rig /bench endpoint; this host ns/op + MB/s is a relative baseline. Build + run:
+// Hello/Acknowledge handshake (protocore_opcua_parse_hello + protocore_opcua_build_ack, run on every new connection)
+// and the per-node DataValue Variant encode (protocore_ua_w_datavalue, the Read-service hot op). All pure (no sockets,
+// no heap); opcua_rx() (not benched here) references a few transport symbols, stubbed below. The device number comes
+// from the rig /bench endpoint; this host ns/op + MB/s is a relative baseline. Build + run:
 //   gcc -O2 -std=c11 -I. -Isrc -Itest/mocks -Itest/support -Itest/performance_benching/common
 //   -DPROTOCORE_ENABLE_OPCUA=1 test/performance_benching/services/opcua/host.c
 //   src/services/fieldbus/opcua/opcua.c src/mmgr/protomem.c src/mmgr/protostr.c -o /tmp/bo && /tmp/bo

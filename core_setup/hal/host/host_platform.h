@@ -38,8 +38,8 @@ void protocore_host_set_mac(const uint8_t mac[6]); ///< the burned-in address
 
 #if PROTOCORE_HAS_VENDOR_HEAP_INFO
 void protocore_host_set_heap(uint32_t free_now, uint32_t min_free, uint32_t total,
-                             uint32_t max_alloc);              ///< allocator figures
-void protocore_host_set_stack(uint32_t free_bytes);            ///< the calling task's untouched stack
+                             uint32_t max_alloc);   ///< allocator figures
+void protocore_host_set_stack(uint32_t free_bytes); ///< the calling task's untouched stack
 #endif
 
 #if PROTOCORE_HAS_VENDOR_PM

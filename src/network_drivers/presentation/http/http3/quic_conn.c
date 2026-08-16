@@ -6,14 +6,12 @@
  * @brief Stateful QUIC v1 server connection engine (see protocore_quic_conn.h).
  */
 
-#include "network_drivers/presentation/http/http3/quic_conn.h"
-#include "mmgr/plaintext.h" // the streams carry HTTP/3; their bytes borrow from that arena
-#include "mmgr/protomem.h"
-
 #if PROTOCORE_ENABLE_HTTP3
 
+#include "network_drivers/presentation/http/http3/quic_conn.h"
+#include "mmgr/protomem.h"
 #include "crypto/aead/aes128gcm.h" // PROTOCORE_AES128GCM_TAG_LEN
-#include "mmgr/secure.h"            // the context span is key material
+#include "mmgr/secure.h"           // the context span is key material
 #include "network_drivers/presentation/http/http3/quic_crypto.h"
 #include "network_drivers/presentation/http/http3/quic_frame.h"
 #include "network_drivers/presentation/http/http3/quic_packet.h"
@@ -112,8 +110,8 @@ static_assert(QUIC_OFF_CRYPTO + 3u * (size_t)PROTOCORE_QUIC_CRYPTO_RX <= PROTOCO
 // The handle a caller sets a call's members on, and the connection the bound span holds.
 struct QuicConnInternal
 {
-    QuicConnCtx *c;  ///< the connection, resolved from the bound context span
-    QuicConnNs *ns;  ///< the handle a caller sets a call's members on
+    QuicConnCtx *c; ///< the connection, resolved from the bound context span
+    QuicConnNs *ns; ///< the handle a caller sets a call's members on
 };
 
 // The regions, at their offsets in the caller's spans.
@@ -220,8 +218,8 @@ static QuicStream *stream_get(QuicConnCtx *qc, uint64_t id, proto_bool create)
 }
 
 static void quic_conn_open(QuicConnCtx *qc, const QuicTlsConfig *cfg, const uint8_t *odcid, uint8_t odcid_len,
-                              const uint8_t *peer_scid, uint8_t peer_scid_len, const uint8_t *our_scid,
-                              uint8_t our_scid_len, const QuicConnCallbacks *cb)
+                           const uint8_t *peer_scid, uint8_t peer_scid_len, const uint8_t *our_scid,
+                           uint8_t our_scid_len, const QuicConnCallbacks *cb)
 {
     uint8_t *b = qc->b; // the plaintext span is the connection's, bound before this call
     mem.set(qc, 0, sizeof(*qc));
@@ -377,8 +375,7 @@ static void handle_stream(QuicConnCtx *qc, const QuicFrame *f)
 }
 
 // Process the frames in one decrypted packet. Returns false on a fatal connection error.
-static proto_bool process_frames(QuicConnCtx *qc, int level, const uint8_t *p, size_t len,
-                                 proto_bool *ack_eliciting)
+static proto_bool process_frames(QuicConnCtx *qc, int level, const uint8_t *p, size_t len, proto_bool *ack_eliciting)
 {
     size_t off = 0;
     while (off < len)
@@ -1046,8 +1043,7 @@ static void quic_conn_timeout(QuicConnCtx *qc, uint32_t now_ms)
     qc->pto_deadline_ms = now_ms + pto_period(qc->pto_count);
 }
 
-static size_t quic_conn_stream_put(QuicConnCtx *qc, uint64_t stream_id, const uint8_t *data, size_t len,
-                                       proto_bool fin)
+static size_t quic_conn_stream_put(QuicConnCtx *qc, uint64_t stream_id, const uint8_t *data, size_t len, proto_bool fin)
 {
     QuicStream *st = stream_get(qc, stream_id, PROTO_TRUE);
     if (!st)
@@ -1187,6 +1183,30 @@ static void quic_conn_stream_send(struct QuicConnInternal *restrict ctx)
     QuicConn.ok = PROTO_TRUE;
 }
 
+// A datagram names its connection by DCID: a long header carries the id we chose (scid) or the one
+// the client first used (odcid); a short header carries the former alone. The ids are the context's,
+// so the match is asked here rather than read off it.
+static void quic_conn_owns(struct QuicConnInternal *restrict ctx)
+{
+    QuicConnCtx *qc = qc_bound(ctx);
+    QuicConn.ok = PROTO_FALSE;
+    const uint8_t *dcid = QuicConn.owns_args.dcid;
+    const uint8_t len = QuicConn.owns_args.dcid_len;
+    if (!qc || !dcid)
+    {
+        return;
+    }
+    if (len == qc->scid_len && mem.cmp(dcid, qc->scid, len) == 0)
+    {
+        QuicConn.ok = PROTO_TRUE;
+        return;
+    }
+    if (len == qc->odcid_len && mem.cmp(dcid, qc->odcid, len) == 0)
+    {
+        QuicConn.ok = PROTO_TRUE;
+    }
+}
+
 static void quic_conn_close(struct QuicConnInternal *restrict ctx)
 {
     QuicConnCtx *qc = qc_bound(ctx);
@@ -1241,6 +1261,7 @@ QuicConnNs QuicConn = {.init = quic_conn_init,
                        .send = quic_conn_send,
                        .on_timeout = quic_conn_on_timeout,
                        .stream_send = quic_conn_stream_send,
+                       .owns = quic_conn_owns,
                        .close = quic_conn_close,
                        .close_app = quic_conn_close_app,
                        .is_established = quic_conn_is_established,

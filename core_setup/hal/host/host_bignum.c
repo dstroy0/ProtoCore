@@ -138,8 +138,7 @@ void bn_expmod_group14(protocore_bignum *out, const protocore_bignum *base, cons
     {
         for (int b = 31; b >= 0; b--)
         {
-            protocore_rsa_modmul(w->acc.d, w->acc.d, w->acc.d, group14_p.d, s_bn.mprime, s_bn.rr.d,
-                                 PROTOCORE_BN_LIMBS);
+            protocore_rsa_modmul(w->acc.d, w->acc.d, w->acc.d, group14_p.d, s_bn.mprime, s_bn.rr.d, PROTOCORE_BN_LIMBS);
             if ((exp->d[i] >> b) & 1u)
             {
                 protocore_rsa_modmul(w->acc.d, w->acc.d, w->b.d, group14_p.d, s_bn.mprime, s_bn.rr.d,

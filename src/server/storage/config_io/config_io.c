@@ -65,7 +65,9 @@ int protocore_config_export(const char *ns, const protocore_cfg_field *fields, s
         return 0;
     }
     out[0] = '\0';
-    if (!fields || !protocore_config_begin(ns))
+    ConfigStore.begin_args.ns = ns;
+    ConfigStore.begin(protocore_config_store_span());
+    if (!fields || !ConfigStore.ok)
     {
         return 0; // host config_store backend's protocore_config_begin always returns true
     }
@@ -76,14 +78,20 @@ int protocore_config_export(const char *ns, const protocore_cfg_field *fields, s
         char val[PROTOCORE_VAL_MAX];
         if (fields[i].type == PROTOCORE_CFG_U32)
         {
+            ConfigStore.get_u32_args.key = fields[i].key;
+            ConfigStore.get_u32_args.def = 0;
+            ConfigStore.get_u32(protocore_config_store_span());
             // Fails closed to an empty string on its own, so there is no failure arm to write here.
-            frame.build(val, sizeof(val), CFG_U32,
-                        (const protocore_fval[]){PROTOCORE_VU32((uint32_t)protocore_config_get_u32(fields[i].key, 0))},
+            frame.build(val, sizeof(val), CFG_U32, (const protocore_fval[]){PROTOCORE_VU32((uint32_t)ConfigStore.ms)},
                         1);
         }
         else
         {
-            protocore_config_get_str(fields[i].key, val, sizeof(val), "");
+            ConfigStore.get_str_args.key = fields[i].key;
+            ConfigStore.get_str_args.out = val;
+            ConfigStore.get_str_args.out_cap = sizeof(val);
+            ConfigStore.get_str_args.def = "";
+            ConfigStore.get_str(protocore_config_store_span());
         }
 
         if (!append_kv(out, cap, &pos, fields[i].key, val))
@@ -106,18 +114,26 @@ static proto_bool config_apply_field(const protocore_cfg_field *fields, size_t n
     }
     if (t == PROTOCORE_CFG_U32)
     {
-        return protocore_config_set_u32(key, (uint32_t)str.to_ulong(val, NULL));
+        ConfigStore.set_u32_args.key = key;
+        ConfigStore.set_u32_args.val = (uint32_t)str.to_ulong(val, NULL);
+        ConfigStore.set_u32(protocore_config_store_span());
+        return ConfigStore.ok;
     }
     if (t == PROTOCORE_CFG_STR)
     {
-        return protocore_config_set_str(key, val);
+        ConfigStore.set_str_args.key = key;
+        ConfigStore.set_str_args.val = val;
+        ConfigStore.set_str(protocore_config_store_span());
+        return ConfigStore.ok;
     }
     return PROTO_FALSE;
 }
 
 int protocore_config_import(const char *ns, const protocore_cfg_field *fields, size_t n, const char *text, size_t len)
 {
-    if (!text || !fields || !protocore_config_begin(ns))
+    ConfigStore.begin_args.ns = ns;
+    ConfigStore.begin(protocore_config_store_span());
+    if (!text || !fields || !ConfigStore.ok)
     {
         return 0; // the host config_store backend's protocore_config_begin always returns true
     }

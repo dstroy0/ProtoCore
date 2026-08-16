@@ -2,20 +2,21 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file protocore_h3_conn.h
+ * @file h3_conn.h
  * @brief HTTP/3 application engine over QUIC streams (RFC 9114).
  *
- * Sits on top of the QUIC transport engine (protocore_quic_conn) and speaks HTTP/3: on the handshake
+ * Sits on top of the QUIC transport engine (::QuicConn) and speaks HTTP/3: on the handshake
  * completing it opens the server's unidirectional control stream (sending SETTINGS) and the two
  * QPACK encoder / decoder streams, reads the client's control stream, and on each client-initiated
  * bidirectional request stream reassembles the HTTP/3 frames - QPACK-decoding the HEADERS field
  * section into a request (method / path / authority + a small header set) and collecting the DATA
- * body - then hands the finished request to the application through a callback. protocore_h3_conn_respond()
- * serializes a response (HEADERS + DATA) back onto the request stream and finishes it.
+ * body - then hands the finished request to the application through a callback.
+ * @ref H3ConnNs::respond serializes a response (HEADERS + DATA) back onto the request stream and
+ * finishes it.
  *
  * QPACK is static-table only (we advertise QPACK_MAX_TABLE_CAPACITY = 0), so no dynamic-table state
  * is needed and the encoder / decoder streams carry only their stream-type byte. Fixed storage, no
- * heap; host-testable by feeding it decoded stream bytes through the protocore_quic_conn callback seam.
+ * heap; host-testable by feeding it decoded stream bytes through the ::QuicConn callback seam.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -24,91 +25,99 @@
 #ifndef PROTOCORE_H3_CONN_H
 #define PROTOCORE_H3_CONN_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_HTTP3
 
 PROTOCORE_BEGIN_DECLS
 
-#include "network_drivers/presentation/http/http3/h3_frame.h"
-#include "network_drivers/presentation/http/http3/quic_conn.h"
-
-struct H3Conn;
+// PROTOCORE_H3_CONN_BORROW - the bytes one connection runs out of - is stated in
+// protocore_config.h, which sums it into the plaintext arena. The connection carries no key
+// material, so its context leads that one span rather than taking a secure one of its own. A caller
+// takes the span once and binds it; how it is carved is this module's and is never named here.
 
 /**
  * @brief A completed request delivered to the application.
  * @param body / body_len  the request body (may be empty); valid only during the call.
  */
-typedef void (*H3RequestFn)(void *app, struct H3Conn *h3, uint64_t stream_id, const char *method, const char *path,
+typedef void (*H3RequestFn)(void *app, uint8_t *h3, uint64_t stream_id, const char *method, const char *path,
                             const char *authority, const uint8_t *body, size_t body_len);
 
-/** @brief HTTP/3 stream roles (a mutually-exclusive internal role, not a wire value). */
-typedef enum PROTO_ENUM_PACKED
-{
-    H3_ROLE_FREE = 0,
-    H3_ROLE_REQUEST,   ///< client-initiated bidirectional request stream
-    H3_ROLE_CONTROL,   ///< client control stream (type 0x00)
-    H3_ROLE_QPACK_ENC, ///< client QPACK encoder stream (type 0x02)
-    H3_ROLE_QPACK_DEC, ///< client QPACK decoder stream (type 0x03)
-    H3_ROLE_OTHER_UNI, ///< an unknown unidirectional stream (drained/ignored)
-} H3StreamRole;
-
-/** @brief Per-stream HTTP/3 state. */
+/** @brief The span a connection runs out of, and the QUIC transport under it. */
 typedef struct
 {
-    uint64_t id;          ///< stream id (UINT64_MAX = free)
-    H3StreamRole role;    ///< stream role
-    proto_bool type_read; ///< a unidirectional stream's type varint has been consumed
-    proto_bool responded; ///< a response has been sent on this request stream
-    uint8_t *buf;         ///< PROTOCORE_H3_STREAM_BUF bytes of the connection's borrow
-    size_t buf_len;
-    char *method;            ///< PROTOCORE_H3_METHOD_LEN bytes of the connection's borrow
-    char *path;              ///< PROTOCORE_H3_PATH_LEN bytes of the connection's borrow
-    char *authority;         ///< PROTOCORE_H3_AUTHORITY_LEN bytes of the connection's borrow
-    proto_bool have_headers; ///< a HEADERS frame has been decoded
-    size_t body_off;         ///< where the accumulated body begins within buf (after the last HEADERS)
-} H3Stream;
+    uint8_t *b;  ///< PROTOCORE_H3_CONN_BORROW plaintext bytes; the context, then the streams
+    uint8_t *qc; ///< the QUIC connection's context span (::QuicConnNs::bind, member ctx)
+} H3ConnBind;
 
-/**
- * @brief This module's draw on the plaintext pool, declared here and asserted in h3_conn.c.
- *
- * One borrow per connection from the pool's persistent end, grouped by field so every stride is a
- * power of two: PROTOCORE_H3_MAX_STREAMS reassembly buffers, then that many :path, :authority and :method
- * fields. HTTP is what the plaintext pool is for, and the connection is what owns the bytes.
- */
-#define PROTOCORE_H3_CONN_BORROW                                                                                       \
-    ((size_t)PROTOCORE_H3_MAX_STREAMS *                                                                                \
-     ((size_t)PROTOCORE_H3_STREAM_BUF + PROTOCORE_H3_PATH_LEN + PROTOCORE_H3_AUTHORITY_LEN + PROTOCORE_H3_METHOD_LEN))
-
-/** @brief One HTTP/3 connection (wraps a QuicConn). */
-typedef struct H3Conn
+/** @brief What the application is told about, and the opaque it is told with. */
+typedef struct
 {
-    struct QuicConn *qc;
-    H3RequestFn on_request;
-    void *app;
-    H3Settings peer_settings;
-    proto_bool control_opened;     ///< our control + QPACK streams have been opened
-    proto_bool peer_settings_seen; ///< the peer's one SETTINGS frame has arrived (sec 6.2.1)
-    uint64_t next_uni_id;          ///< next server-initiated unidirectional stream id (3, 7, 11, ...)
-    H3Stream streams[PROTOCORE_H3_MAX_STREAMS];
-} H3Conn;
+    H3RequestFn on_request; ///< invoked for each completed request
+    void *app;              ///< opaque, passed back to the callback
+} H3ConnAppArgs;
+
+/** @brief One response, serialized onto a request stream. */
+typedef struct
+{
+    uint64_t stream_id;       ///< the request stream it answers
+    int status;               ///< HTTP status code
+    const char *content_type; ///< optional; NULL omits the field
+    const uint8_t *body;      ///< the body (may be empty)
+    size_t body_len;          ///< its length
+} H3ConnRespondArgs;
+
+/** @brief The connection's own calls, described only in h3_conn.c. */
+struct H3ConnInternal;
 
 /**
- * @brief Initialize an HTTP/3 connection over @p qc.
+ * @brief HTTP/3 server connection (RFC 9114).
  *
- * Registers the QUIC stream / handshake callbacks on @p qc (so @p qc->cb is overwritten with this
- * engine's hooks; pass the app callback here instead). @p on_request is invoked for each completed
- * request.
+ * A caller binds the span and the QUIC connection under it, sets the members a call takes, invokes
+ * it through ::H3Conn, and reads the outcome off the same handle.
+ *
+ *   H3Conn.bind.b = byte_span;
+ *   H3Conn.bind.qc = quic_ctx_span;
+ *   H3Conn.app_args.on_request = on_request;
+ *   H3Conn.app_args.app = app;
+ *   H3Conn.init(H3Conn.internal);
+ *   H3Conn.respond_args.stream_id = id;
+ *   H3Conn.respond_args.status = 200;
+ *   H3Conn.respond(H3Conn.internal);
+ *
+ * @var H3ConnNs::bind          the span this connection runs out of, and the QUIC connection under it
+ * @var H3ConnNs::app_args      what the application is told about
+ * @var H3ConnNs::respond_args  one response, serialized onto a request stream
+ * @var H3ConnNs::ok            a call's true/false outcome
+ * @var H3ConnNs::init          open the connection and install its hooks on the bound QUIC connection
+ * @var H3ConnNs::respond       serialize HEADERS + DATA onto a request stream and finish it
+ *
+ * @ref H3ConnNs::init overwrites the bound QUIC connection's callbacks with this engine's hooks, so
+ * the application callback goes in @ref H3ConnNs::app_args rather than on the transport.
+ *
+ * The bound span is the CALLER's, at an address it knows. The caller releases it, and the pool wipes
+ * on release; this module neither takes it, holds it past the connection, nor releases it. The span
+ * IS the connection, so two connections are two spans and never collide.
+ *
+ * No storage member: a caller binds, sets operands and reads @ref H3ConnNs::ok, and that is all the
+ * surface there is.
  */
-void protocore_h3_conn_init(H3Conn *h3, struct QuicConn *qc, H3RequestFn on_request, void *app);
+typedef struct
+{
+    H3ConnBind bind;
+    H3ConnAppArgs app_args;
+    H3ConnRespondArgs respond_args;
 
-/**
- * @brief Serialize and send a response on @p stream_id: a HEADERS field section (QPACK) with
- * :status and optional content-type / content-length, then a DATA frame with @p body, and finish
- * the stream. @return false on a bad stream or serialization overflow.
- */
-proto_bool protocore_h3_conn_respond(H3Conn *h3, uint64_t stream_id, int status, const char *content_type,
-                                     const uint8_t *body, size_t body_len);
+    proto_bool ok;
+
+    void (*const init)(struct H3ConnInternal *ctx);
+    void (*const respond)(struct H3ConnInternal *ctx);
+
+    struct H3ConnInternal *internal;
+} H3ConnNs;
+
+/** @brief The one symbol this module exports. */
+extern H3ConnNs H3Conn;
 
 PROTOCORE_END_DECLS
 

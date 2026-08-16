@@ -26,9 +26,6 @@
 
 #if PROTOCORE_ENABLE_HMAC_SHA256
 
-#include <stddef.h>
-#include <stdint.h>
-
 PROTOCORE_BEGIN_DECLS
 
 /** @brief HMAC-SHA2-256 output length in bytes. */

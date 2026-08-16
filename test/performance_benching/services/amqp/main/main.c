@@ -64,8 +64,7 @@ void dbench_run(void)
 
         Amqp.in.buf = method_buf;
         Amqp.in.len = method_len;
-        DBENCH_OP("Amqp.parse_frame", 100000,
-                  Amqp.parse_frame(Amqp.internal); sink += Amqp.ok ? Amqp.consumed : 0);
+        DBENCH_OP("Amqp.parse_frame", 100000, Amqp.parse_frame(Amqp.internal); sink += Amqp.ok ? Amqp.consumed : 0);
 
         DBENCH_OP("Amqp.parse_method", 100000, Amqp.parse_method(Amqp.internal); sink += Amqp.ok ? 1 : 0);
 

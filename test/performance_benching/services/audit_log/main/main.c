@@ -28,34 +28,46 @@ void dbench_run(void)
 
     for (;;)
     {
-        protocore_audit_reset();
-        protocore_audit_set_sink(NULL);
+        AuditLog.reset(protocore_audit_log_span());
+        AuditLog.set_sink_args.sink = NULL;
+        AuditLog.set_sink(protocore_audit_log_span());
 
         DBENCH_BANNER("audit_log");
 
         volatile uint32_t sink32 = 0;
+        AuditLog.append_args.category = PROTOCORE_AUDIT_ACCESS;
+        AuditLog.append_args.msg = "GET /api/v1/sensors/42 200 OK from 10.0.0.5";
+        AuditLog.append(protocore_audit_log_span());
         // Append: SHA-256(prev_hash || seq || ts || category || msg) chained onto the ring
         // (ring wraps after PROTOCORE_AUDIT_LOG_ENTRIES records, exercising the moving-anchor eviction
         // path too) - the hot path a worker hits on every security-relevant event.
-        DBENCH_OP("protocore_audit_append", 5000,
-                  sink32 +=
-                  protocore_audit_append(PROTOCORE_AUDIT_ACCESS, "GET /api/v1/sensors/42 200 OK from 10.0.0.5"));
+        DBENCH_OP("protocore_audit_append", 5000, sink32 += AuditLog.ms);
 
         // Verify: recompute the chain hash over the full retained window (by now wrapped to
         // PROTOCORE_AUDIT_LOG_ENTRIES records) - one SHA-256 per retained record.
         volatile bool sinkb = false;
-        DBENCH_OP("protocore_audit_verify (full ring)", 500, sinkb += protocore_audit_verify(NULL));
+        AuditLog.verify_args.first_broken_seq = NULL;
+        AuditLog.verify(protocore_audit_log_span());
+        DBENCH_OP("protocore_audit_verify (full ring)", 500, sinkb += AuditLog.ok);
         (void)sinkb;
 
+        AuditLog.at_args.i = 0;
+        AuditLog.at(protocore_audit_log_span());
         // Format: render one retained record as a JSON object (hex hash + JSON-escaped msg).
-        const protocore_audit_entry *e = protocore_audit_at(0);
+        const protocore_audit_entry *e = AuditLog.ptr;
         volatile int sinki = 0;
-        DBENCH_OP("protocore_audit_format", 20000, sinki += protocore_audit_format(e, fmt_buf, sizeof(fmt_buf)));
+        AuditLog.format_args.entry = e;
+        AuditLog.format_args.out = fmt_buf;
+        AuditLog.format_args.cap = sizeof(fmt_buf);
+        AuditLog.format(protocore_audit_log_span());
+        DBENCH_OP("protocore_audit_format", 20000, sinki += AuditLog.n);
 
+        AuditLog.dump_json_args.out = dump_buf;
+        AuditLog.dump_json_args.cap = sizeof(dump_buf);
+        AuditLog.dump_json(protocore_audit_log_span());
         // Dump: verify + render the entire retained window as one JSON document (what an
         // endpoint handler would call to serve the audit log).
-        DBENCH_OP("protocore_audit_dump_json (full ring)", 1000,
-                  sinki += protocore_audit_dump_json(dump_buf, sizeof(dump_buf)));
+        DBENCH_OP("protocore_audit_dump_json (full ring)", 1000, sinki += AuditLog.n);
         (void)sinki;
         (void)sink32;
 

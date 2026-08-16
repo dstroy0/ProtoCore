@@ -18,11 +18,15 @@
 #include "mmgr/protostr.h" // str: the bounded-run walks
 #include "shared/hex/hex.h"
 
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
 #if PROTOCORE_ENABLE_AUDIT_LOG
 
 #include "crypto/hash/sha256.h"
 #include "mmgr/secure.h" // the chain hash's working set, wiped on release
 #include "server/clock/clock.h"
+
+PROTOCORE_BEGIN_DECLS
 
 // All audit-log state, owned by one instance (internal linkage): the record ring, its
 // head/count/seq cursors, the moving chain anchor, and the sink, grouped so it is one
@@ -36,7 +40,16 @@ typedef struct
     uint8_t anchor[PROTOCORE_AUDIT_HASH_LEN]; // prev-hash for the oldest retained record
     protocore_audit_sink_fn sink;
 } AuditCtx;
-static AuditCtx s_audit;
+// The caller's borrow, split: the context at its offset. One pointer arrives and every
+// region is that pointer plus a compile-time offset, so the assert below proves the span
+// covers them before anything runs.
+#define AUDIT_LOG_OFF_CTX 0u
+static_assert(AUDIT_LOG_OFF_CTX + sizeof(AuditCtx) <= PROTOCORE_AUDIT_LOG_BORROW,
+              "PROTOCORE_AUDIT_LOG_BORROW is short of the module context - raise it in protocore_config.h, which\n"
+              " sums it into its arena");
+
+// The region, at its offset in the caller's borrow.
+#define AUDIT_LOG_CTX(w) ((AuditCtx *)(void *)((w) + AUDIT_LOG_OFF_CTX))
 
 static inline uint16_t idx(const AuditCtx *c, uint16_t i)
 {
@@ -165,44 +178,81 @@ static size_t hex_hash(char *out, size_t pos, size_t cap, const uint8_t *h)
     return pos;
 }
 
-void protocore_audit_reset(void)
+// --- the program's shared state, beside the namespace not on it -------------
+
+// The one owned instance, private to this TU: the pointer to the bytes this module took for
+// itself. A caller that hands in its own borrow never reaches it.
+typedef struct
 {
-    s_audit.head = 0;
-    s_audit.count = 0;
-    s_audit.seq = 0;
-    mem.set(s_audit.anchor, 0, sizeof(s_audit.anchor)); // genesis
+    uint8_t *span; ///< PROTOCORE_AUDIT_LOG_BORROW persistent bytes, or null while the pool was short
+} AuditLogOwnCtx;
+static AuditLogOwnCtx s_own;
+
+// Not an entry: an entry takes a borrow and this is where that borrow comes from.
+uint8_t *protocore_audit_log_span(void)
+{
+    if (s_own.span == NULL)
+    {
+        protocore_span sp = protocore_secure_persist_span(PROTOCORE_AUDIT_LOG_BORROW);
+        if (span.ok(sp))
+        {
+            s_own.span = sp.buf;
+        }
+    }
+    return s_own.span; // null while the pool was short, which every entry refuses
 }
 
-void protocore_audit_set_sink(protocore_audit_sink_fn sink)
+static void audit_log_reset(uint8_t *restrict work)
 {
-    s_audit.sink = sink;
+    (void)work;
+
+    AUDIT_LOG_CTX(work)->head = 0;
+    AUDIT_LOG_CTX(work)->count = 0;
+    AUDIT_LOG_CTX(work)->seq = 0;
+    mem.set(AUDIT_LOG_CTX(work)->anchor, 0, sizeof(AUDIT_LOG_CTX(work)->anchor)); // genesis
 }
 
-uint32_t protocore_audit_append(protocore_audit_cat category, const char *msg)
+static void audit_log_set_sink(uint8_t *restrict work)
 {
+    (void)work;
+    protocore_audit_sink_fn sink = AuditLog.set_sink_args.sink;
+
+    AUDIT_LOG_CTX(work)->sink = sink;
+}
+
+static void audit_log_append(uint8_t *restrict work)
+{
+    (void)work;
+    AuditLog.ms = 0;
+    protocore_audit_cat category = AuditLog.append_args.category;
+    const char *msg = AuditLog.append_args.msg;
+
     // prev = hash of the current newest record (anchor if the ring is empty).
     uint8_t prev[PROTOCORE_AUDIT_HASH_LEN];
-    if (s_audit.count == 0)
+    if (AUDIT_LOG_CTX(work)->count == 0)
     {
-        mem.cpy(prev, s_audit.anchor, PROTOCORE_AUDIT_HASH_LEN);
+        mem.cpy(prev, AUDIT_LOG_CTX(work)->anchor, PROTOCORE_AUDIT_HASH_LEN);
     }
     else
     {
-        mem.cpy(prev, s_audit.ring[idx(&s_audit, (uint16_t)(s_audit.count - 1))].hash, PROTOCORE_AUDIT_HASH_LEN);
+        mem.cpy(prev,
+                AUDIT_LOG_CTX(work)->ring[idx(AUDIT_LOG_CTX(work), (uint16_t)(AUDIT_LOG_CTX(work)->count - 1))].hash,
+                PROTOCORE_AUDIT_HASH_LEN);
     }
 
     // Full ring: evict the oldest; its hash advances the chain anchor so the
     // retained window still verifies. (Eviction touches only the oldest, never
     // the newest we just read as prev.)
-    if (s_audit.count == PROTOCORE_AUDIT_LOG_ENTRIES)
+    if (AUDIT_LOG_CTX(work)->count == PROTOCORE_AUDIT_LOG_ENTRIES)
     {
-        mem.cpy(s_audit.anchor, s_audit.ring[s_audit.head].hash, PROTOCORE_AUDIT_HASH_LEN);
-        s_audit.head = (uint16_t)((s_audit.head + 1) % PROTOCORE_AUDIT_LOG_ENTRIES);
-        s_audit.count--;
+        mem.cpy(AUDIT_LOG_CTX(work)->anchor, AUDIT_LOG_CTX(work)->ring[AUDIT_LOG_CTX(work)->head].hash,
+                PROTOCORE_AUDIT_HASH_LEN);
+        AUDIT_LOG_CTX(work)->head = (uint16_t)((AUDIT_LOG_CTX(work)->head + 1) % PROTOCORE_AUDIT_LOG_ENTRIES);
+        AUDIT_LOG_CTX(work)->count--;
     }
 
-    protocore_audit_entry *e = &s_audit.ring[idx(&s_audit, s_audit.count)];
-    e->seq = ++s_audit.seq;
+    protocore_audit_entry *e = &AUDIT_LOG_CTX(work)->ring[idx(AUDIT_LOG_CTX(work), AUDIT_LOG_CTX(work)->count)];
+    e->seq = ++AUDIT_LOG_CTX(work)->seq;
     e->ts = Clock.ms;
     e->category = category;
     if (msg)
@@ -225,44 +275,59 @@ uint32_t protocore_audit_append(protocore_audit_cat category, const char *msg)
         }
         protocore_secure_release(mark);
     }
-    s_audit.count++;
+    AUDIT_LOG_CTX(work)->count++;
 
-    if (s_audit.sink)
+    if (AUDIT_LOG_CTX(work)->sink)
     {
-        s_audit.sink(e);
+        AUDIT_LOG_CTX(work)->sink(e);
     }
-    return e->seq;
+    AuditLog.ms = e->seq;
+    return;
 }
 
-uint16_t protocore_audit_count(void)
+static void audit_log_count(uint8_t *restrict work)
 {
-    return s_audit.count;
+    (void)work;
+    AuditLog.value = 0;
+
+    AuditLog.value = AUDIT_LOG_CTX(work)->count;
+    return;
 }
 
-const protocore_audit_entry *protocore_audit_at(uint16_t i)
+static void audit_log_at(uint8_t *restrict work)
 {
-    if (i >= s_audit.count)
+    (void)work;
+    AuditLog.ptr = 0;
+    uint16_t i = AuditLog.at_args.i;
+
+    if (i >= AUDIT_LOG_CTX(work)->count)
     {
-        return NULL;
+        AuditLog.ptr = NULL;
+        return;
     }
-    return &s_audit.ring[idx(&s_audit, i)];
+    AuditLog.ptr = &AUDIT_LOG_CTX(work)->ring[idx(AUDIT_LOG_CTX(work), i)];
+    return;
 }
 
-proto_bool protocore_audit_verify(uint32_t *first_broken_seq)
+static void audit_log_verify(uint8_t *restrict work)
 {
+    (void)work;
+    uint32_t *first_broken_seq = AuditLog.verify_args.first_broken_seq;
+
     // One borrow for the whole walk: the chain hash re-runs per entry out of the same bytes.
     size_t mark = protocore_secure_mark();
     protocore_span ws = protocore_secure_span(PROTOCORE_SHA256_BORROW, _Alignof(uint32_t));
     if (!span.ok(ws))
     {
         protocore_secure_release(mark);
-        return PROTO_FALSE;
+        AuditLog.ok = PROTO_FALSE;
+        return;
     }
     uint8_t expected[PROTOCORE_AUDIT_HASH_LEN];
-    mem.cpy(expected, s_audit.anchor, PROTOCORE_AUDIT_HASH_LEN);
-    for (uint16_t i = 0; i < s_audit.count; i++)
+    mem.cpy(expected, AUDIT_LOG_CTX(work)->anchor, PROTOCORE_AUDIT_HASH_LEN);
+    for (uint16_t i = 0; i < AUDIT_LOG_CTX(work)->count; i++)
     {
-        const protocore_audit_entry *e = &s_audit.ring[idx(&s_audit, i)];
+        const protocore_audit_entry *e = &AUDIT_LOG_CTX(work)->ring[idx(AUDIT_LOG_CTX(work), i)];
         uint8_t h[PROTOCORE_AUDIT_HASH_LEN];
         chain_hash(ws.buf, expected, e, h);
         if (mem.cmp(h, e->hash, PROTOCORE_AUDIT_HASH_LEN) != 0)
@@ -272,38 +337,57 @@ proto_bool protocore_audit_verify(uint32_t *first_broken_seq)
                 *first_broken_seq = e->seq;
             }
             protocore_secure_release(mark);
-            return PROTO_FALSE;
+            AuditLog.ok = PROTO_FALSE;
+            return;
         }
         mem.cpy(expected, e->hash, PROTOCORE_AUDIT_HASH_LEN);
     }
     protocore_secure_release(mark);
-    return PROTO_TRUE;
+    AuditLog.ok = PROTO_TRUE;
+    return;
 }
 
-const char *protocore_audit_cat_name(protocore_audit_cat category)
+static void audit_log_cat_name(uint8_t *restrict work)
 {
+    (void)work;
+    AuditLog.text = 0;
+    protocore_audit_cat category = AuditLog.cat_name_args.category;
+
     switch (category)
     {
     case PROTOCORE_AUDIT_AUTH:
-        return "auth";
+        AuditLog.text = "auth";
+        return;
     case PROTOCORE_AUDIT_AUTH_FAIL:
-        return "auth_fail";
+        AuditLog.text = "auth_fail";
+        return;
     case PROTOCORE_AUDIT_ACCESS:
-        return "access";
+        AuditLog.text = "access";
+        return;
     case PROTOCORE_AUDIT_CONFIG:
-        return "config";
+        AuditLog.text = "config";
+        return;
     case PROTOCORE_AUDIT_ADMIN:
-        return "admin";
+        AuditLog.text = "admin";
+        return;
     default:
-        return "system";
+        AuditLog.text = "system";
+        return;
     }
 }
 
-int protocore_audit_format(const protocore_audit_entry *e, char *out, size_t cap)
+static void audit_log_format(uint8_t *restrict work)
 {
+    (void)work;
+    AuditLog.n = 0;
+    const protocore_audit_entry *e = AuditLog.format_args.entry;
+    char *out = AuditLog.format_args.out;
+    size_t cap = AuditLog.format_args.cap;
+
     if (!e || !out || cap == 0)
     {
-        return 0;
+        AuditLog.n = 0;
+        return;
     }
     protocore_sb sb_out = {out, cap, 0, PROTO_TRUE};
     Sb.put(&sb_out, "{\"seq\":");
@@ -311,7 +395,9 @@ int protocore_audit_format(const protocore_audit_entry *e, char *out, size_t cap
     Sb.put(&sb_out, ",\"ts\":");
     Sb.u32(&sb_out, (uint32_t)((unsigned long)e->ts));
     Sb.put(&sb_out, ",\"cat\":\"");
-    Sb.put(&sb_out, protocore_audit_cat_name(e->category));
+    AuditLog.cat_name_args.category = e->category;
+    audit_log_cat_name(work);
+    Sb.put(&sb_out, AuditLog.text);
     Sb.put(&sb_out, "\",\"msg\":\"");
     int head = (int)Sb.finish(&sb_out);
     // Only head<0 is unreachable here: this format is fixed ("%lu%lu%s...", no floating point,
@@ -323,56 +409,71 @@ int protocore_audit_format(const protocore_audit_entry *e, char *out, size_t cap
     // excluding the whole line's branch data.
     if (head < 0 || (size_t)head >= cap)
     {
-        return 0;
+        AuditLog.n = 0;
+        return;
     }
     size_t pos = (size_t)head;
     pos = json_escape(out, pos, cap, e->msg);
     if (pos > cap)
     {
-        return 0;
+        AuditLog.n = 0;
+        return;
     }
     static const char mid[] = "\",\"hash\":\"";
     size_t mid_len = sizeof(mid) - 1;
     if (pos + mid_len > cap)
     {
-        return 0;
+        AuditLog.n = 0;
+        return;
     }
     mem.cpy(out + pos, mid, mid_len);
     pos += mid_len;
     pos = hex_hash(out, pos, cap, e->hash);
     if (pos > cap)
     {
-        return 0;
+        AuditLog.n = 0;
+        return;
     }
     if (pos + 2 > cap) // closing "} plus NUL space
     {
-        return 0;
+        AuditLog.n = 0;
+        return;
     }
     out[pos++] = '"';
     out[pos++] = '}';
     if (pos >= cap)
     {
-        return 0;
+        AuditLog.n = 0;
+        return;
     }
     out[pos] = '\0';
-    return (int)pos;
+    AuditLog.n = (int)pos;
+    return;
 }
 
-int protocore_audit_dump_json(char *out, size_t cap)
+static void audit_log_dump_json(uint8_t *restrict work)
 {
+    (void)work;
+    AuditLog.n = 0;
+    char *out = AuditLog.dump_json_args.out;
+    size_t cap = AuditLog.dump_json_args.cap;
+
     if (!out || cap == 0)
     {
-        return 0;
+        AuditLog.n = 0;
+        return;
     }
     uint32_t broken = 0;
-    proto_bool intact = protocore_audit_verify(&broken);
+    AuditLog.verify_args.first_broken_seq = &broken;
+    audit_log_verify(work);
+    proto_bool intact = AuditLog.ok;
 
     int head;
     if (intact)
     {
         protocore_sb sb_out2 = {out, cap, 0, PROTO_TRUE};
         Sb.put(&sb_out2, "{\"intact\":true,\"count\":");
-        Sb.u32(&sb_out2, (uint32_t)((unsigned)s_audit.count));
+        Sb.u32(&sb_out2, (uint32_t)((unsigned)AUDIT_LOG_CTX(work)->count));
         Sb.put(&sb_out2, ",\"entries\":[");
         head = (int)Sb.finish(&sb_out2);
     }
@@ -382,52 +483,74 @@ int protocore_audit_dump_json(char *out, size_t cap)
         Sb.put(&sb_out3, "{\"intact\":false,\"first_broken\":");
         Sb.u32(&sb_out3, (uint32_t)((unsigned long)broken));
         Sb.put(&sb_out3, ",\"count\":");
-        Sb.u32(&sb_out3, (uint32_t)((unsigned)s_audit.count));
+        Sb.u32(&sb_out3, (uint32_t)((unsigned)AUDIT_LOG_CTX(work)->count));
         Sb.put(&sb_out3, ",\"entries\":[");
         head = (int)Sb.finish(&sb_out3);
     }
     // Only head<0 is unreachable here, for the same reason as protocore_audit_format's identical guard:
     // both snprintf formats above are fixed ("%s...:[" with %u/%lu, no floating point, no wide
-    // chars), the args are always valid, and the produced text is bounded by s_audit.count's small
+    // chars), the args are always valid, and the produced text is bounded by AUDIT_LOG_CTX(work)->count's small
     // fixed max (PROTOCORE_AUDIT_LOG_ENTRIES), so it can never approach INT_MAX. The (size_t)head>=cap
     // arm IS reachable and tested (test_dump_fails_closed_all_stages's cap sweep); gcovr has no
     // sub-line exclusion granularity, so silencing the dead head<0 arm means excluding the whole
     // line's branch data.
     if (head < 0 || (size_t)head >= cap)
     {
-        return 0;
+        AuditLog.n = 0;
+        return;
     }
     size_t pos = (size_t)head;
 
-    for (uint16_t i = 0; i < s_audit.count; i++)
+    for (uint16_t i = 0; i < AUDIT_LOG_CTX(work)->count; i++)
     {
         if (i > 0)
         {
             if (pos + 1 > cap)
             {
-                return 0;
+                AuditLog.n = 0;
+                return;
             }
             out[pos++] = ',';
         }
-        int n = protocore_audit_format(&s_audit.ring[idx(&s_audit, i)], out + pos, cap - pos);
+        AuditLog.format_args.entry = &AUDIT_LOG_CTX(work)->ring[idx(AUDIT_LOG_CTX(work), i)];
+        AuditLog.format_args.out = out + pos;
+        AuditLog.format_args.cap = cap - pos;
+        audit_log_format(work);
+        int n = AuditLog.n;
         if (n <= 0)
         {
-            return 0;
+            AuditLog.n = 0;
+            return;
         }
         pos += (size_t)n;
     }
     if (pos + 2 > cap)
     {
-        return 0;
+        AuditLog.n = 0;
+        return;
     }
     out[pos++] = ']';
     out[pos++] = '}';
     if (pos >= cap)
     {
-        return 0;
+        AuditLog.n = 0;
+        return;
     }
     out[pos] = '\0';
-    return (int)pos;
+    AuditLog.n = (int)pos;
+    return;
 }
+
+AuditLogNs AuditLog = {.reset = audit_log_reset,
+                       .set_sink = audit_log_set_sink,
+                       .append = audit_log_append,
+                       .count = audit_log_count,
+                       .at = audit_log_at,
+                       .verify = audit_log_verify,
+                       .cat_name = audit_log_cat_name,
+                       .format = audit_log_format,
+                       .dump_json = audit_log_dump_json};
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_AUDIT_LOG

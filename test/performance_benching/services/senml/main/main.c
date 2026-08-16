@@ -39,7 +39,8 @@ static size_t senml_cbor(uint8_t *out, size_t cap, const SenmlRecord *recs, size
 void dbench_run(void)
 {
     static const SenmlRecord recs[3] = {
-        {"urn:dev:ow:10e2073a01080063:", true, 1720700000.0, "temp", "Cel", SENML_VALUE_NUMBER, 21.4, NULL, false, false, 0},
+        {"urn:dev:ow:10e2073a01080063:", true, 1720700000.0, "temp", "Cel", SENML_VALUE_NUMBER, 21.4, NULL, false,
+         false, 0},
         {NULL, false, 0, "humidity", "%RH", SENML_VALUE_NUMBER, 48.0, NULL, false, true, 10.0},
         {NULL, false, 0, "status", NULL, SENML_VALUE_STRING, 0, "ok", false, false, 0},
     };

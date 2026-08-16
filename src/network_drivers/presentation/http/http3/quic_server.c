@@ -11,8 +11,11 @@
 
 #if PROTOCORE_ENABLE_HTTP3
 
-#include "mmgr/ring.h" // protocore_atomic
+#include "mmgr/plaintext.h" // the two engines' byte spans
+#include "mmgr/ring.h"      // protocore_atomic
+#include "mmgr/secure.h"    // the QUIC context span is key material
 #include "network_drivers/presentation/http/http3/quic_packet.h"
+#include "network_drivers/presentation/http/http3/quic_tls.h" // QuicTlsConfig
 #include "network_drivers/presentation/http/http3/quic_tp.h"
 
 #include "network_drivers/transport/udp/server/server.h" // UdpListener: the bound port datagrams arrive on
@@ -59,9 +62,10 @@ typedef struct
 typedef struct
 {
     proto_bool used;
-    uint32_t id; ///< stable handle for protocore_quic_server_respond()
-    QuicConn qc;
-    H3Conn h3;
+    uint32_t id;  ///< stable handle for protocore_quic_server_respond()
+    uint8_t *qc;  ///< PROTOCORE_QUIC_CONN_CTX_BORROW secure bytes: the QUIC connection
+    uint8_t *qcb; ///< PROTOCORE_QUIC_CONN_BORROW plaintext bytes it owes its streams
+    uint8_t *h3;  ///< PROTOCORE_H3_CONN_BORROW plaintext bytes: the HTTP/3 connection
     char peer_ip[16];
     uint16_t peer_port;
     uint32_t last_ms; ///< protocore_millis() of the last datagram received (idle-reaping clock)
@@ -202,11 +206,13 @@ static QuicSlot *alloc_slot()
             // Both engines' borrows are bound to the slot, not to the connection on it: they are
             // carried across the zero, or every claim would draw a fresh one from an end that is
             // never given back. Each init wipes the bytes it just re-reached.
-            uint8_t *qc_bytes = s->qc.streams[0].tx;
-            uint8_t *h3_bytes = s->h3.streams[0].buf;
+            uint8_t *qc_ctx = s->qc;
+            uint8_t *qc_bytes = s->qcb;
+            uint8_t *h3_bytes = s->h3;
             mem.set(s, 0, sizeof *s);
-            s->qc.streams[0].tx = qc_bytes;
-            s->h3.streams[0].buf = h3_bytes;
+            s->qc = qc_ctx;
+            s->qcb = qc_bytes;
+            s->h3 = h3_bytes;
             s->used = PROTO_TRUE;
             s->id = s_quic.next_id++;
             if (s_quic.next_id == 0)
@@ -223,7 +229,7 @@ static QuicSlot *alloc_slot()
 }
 
 // The HTTP/3 engine surfaces a completed request here; forward it to the application by conn id.
-static void protocore_h3_on_request(void *app, H3Conn * /*h3*/, uint64_t stream_id, const char *method,
+static void protocore_h3_on_request(void *app, uint8_t * /*h3*/, uint64_t stream_id, const char *method,
                                     const char *path, const char *authority, const uint8_t *body, size_t body_len)
 {
     QuicSlot *s = (QuicSlot *)app;
@@ -265,11 +271,41 @@ static QuicSlot *open_conn(const QuicLongHeader *lh, const char *ip, uint16_t po
     uint8_t our_scid[PROTOCORE_QUIC_SCID_LEN];
     s_quic.cfg.rng(our_scid, sizeof our_scid);
 
+    // The slot's spans, taken once from each pool's persistent end and reused by every connection
+    // this slot carries. The context span is secure because the TLS handshake in it is key material.
+    if (s->qc == NULL)
+    {
+        protocore_span c = protocore_secure_persist_span(PROTOCORE_QUIC_CONN_CTX_BORROW);
+        protocore_span b = protocore_plaintext_persist_span(PROTOCORE_QUIC_CONN_BORROW);
+        protocore_span h = protocore_plaintext_persist_span(PROTOCORE_H3_CONN_BORROW);
+        if (!span.ok(c) || !span.ok(b) || !span.ok(h))
+        {
+            return NULL; // no bytes to run out of; the slot opens no connection
+        }
+        s->qc = c.buf;
+        s->qcb = b.buf;
+        s->h3 = h.buf;
+    }
+
     QuicConnCallbacks cb;
-    mem.set(&cb, 0, sizeof cb); // protocore_h3_conn_init installs the real callbacks
-    protocore_quic_conn_init(&s->qc, &tc, lh->dcid, lh->dcid_len, lh->scid, lh->scid_len, our_scid,
-                             PROTOCORE_QUIC_SCID_LEN, &cb);
-    protocore_h3_conn_init(&s->h3, &s->qc, protocore_h3_on_request, s);
+    mem.set(&cb, 0, sizeof cb); // H3Conn.init installs the real callbacks
+    QuicConn.bind.ctx = s->qc;
+    QuicConn.bind.b = s->qcb;
+    QuicConn.cb = cb;
+    QuicConn.init_args.cfg = &tc;
+    QuicConn.init_args.odcid = lh->dcid;
+    QuicConn.init_args.odcid_len = lh->dcid_len;
+    QuicConn.init_args.peer_scid = lh->scid;
+    QuicConn.init_args.peer_scid_len = lh->scid_len;
+    QuicConn.init_args.our_scid = our_scid;
+    QuicConn.init_args.our_scid_len = PROTOCORE_QUIC_SCID_LEN;
+    QuicConn.init(QuicConn.internal);
+
+    H3Conn.bind.b = s->h3;
+    H3Conn.bind.qc = s->qc;
+    H3Conn.app_args.on_request = protocore_h3_on_request;
+    H3Conn.app_args.app = s;
+    H3Conn.init(H3Conn.internal);
 
     copy_str(s->peer_ip, sizeof s->peer_ip, ip);
     s->peer_port = port;
@@ -301,8 +337,11 @@ static QuicSlot *route(const uint8_t *dg, size_t len, proto_bool *is_initial, Qu
             {
                 continue;
             }
-            if (cid_eq(lh_out->dcid, lh_out->dcid_len, s->qc.scid, s->qc.scid_len) ||
-                cid_eq(lh_out->dcid, lh_out->dcid_len, s->qc.odcid, s->qc.odcid_len))
+            QuicConn.bind.ctx = s->qc;
+            QuicConn.owns_args.dcid = lh_out->dcid;
+            QuicConn.owns_args.dcid_len = lh_out->dcid_len;
+            QuicConn.owns(QuicConn.internal);
+            if (QuicConn.ok)
             {
                 return s;
             }
@@ -321,10 +360,16 @@ static QuicSlot *route(const uint8_t *dg, size_t len, proto_bool *is_initial, Qu
     for (uint8_t i = 0; i < PROTOCORE_QUIC_MAX_CONNS; i++)
     {
         QuicSlot *s = &s_store.pool[i];
-        // scid_len is always PROTOCORE_QUIC_SCID_LEN (only this server sets it, at conn init above), so its
-        // != arm below is a defensive guard no host input can reach.
-        if (s->used && s->qc.scid_len == PROTOCORE_QUIC_SCID_LEN &&
-            mem.cmp(dg + 1, s->qc.scid, PROTOCORE_QUIC_SCID_LEN) == 0)
+        if (!s->used)
+        {
+            continue;
+        }
+        // A short header carries no length, so the id is read at the one length this server chooses.
+        QuicConn.bind.ctx = s->qc;
+        QuicConn.owns_args.dcid = dg + 1;
+        QuicConn.owns_args.dcid_len = PROTOCORE_QUIC_SCID_LEN;
+        QuicConn.owns(QuicConn.internal);
+        if (QuicConn.ok)
         {
             return s;
         }
@@ -342,15 +387,26 @@ static void flush_and_reap(uint32_t now_ms)
         {
             continue;
         }
-        protocore_quic_conn_on_timeout(&s->qc, now_ms); // retransmit a lost handshake flight (PTO)
-        size_t n;
-        while ((n = protocore_quic_conn_send(&s->qc, out, sizeof out)) > 0)
+        QuicConn.bind.ctx = s->qc;
+        QuicConn.bind.b = s->qcb;
+        QuicConn.timeout_args.now_ms = now_ms;
+        QuicConn.on_timeout(QuicConn.internal); // retransmit a lost handshake flight (PTO)
+        // Drained: send is called until it reports nothing left, so the call is the condition.
+        for (;;)
         {
-            server_send(s->peer_ip, s->peer_port, out, n);
+            QuicConn.send_args.out = out;
+            QuicConn.send_args.cap = sizeof out;
+            QuicConn.send(QuicConn.internal);
+            if (QuicConn.n == 0)
+            {
+                break;
+            }
+            server_send(s->peer_ip, s->peer_port, out, QuicConn.n);
         }
         // Reap a closed connection, or one idle past the timeout (wrap-safe delta) so a client that
         // never closes cannot leak the fixed pool.
-        if (protocore_quic_conn_is_closed(&s->qc) || (uint32_t)(now_ms - s->last_ms) >= PROTOCORE_QUIC_IDLE_MS)
+        QuicConn.is_closed(QuicConn.internal);
+        if (QuicConn.closed || (uint32_t)(now_ms - s->last_ms) >= PROTOCORE_QUIC_IDLE_MS)
         {
             s->used = PROTO_FALSE;
         }
@@ -423,7 +479,11 @@ static void poll(struct QuicServerInternal *restrict ctx)
             continue;
         }
         s->last_ms = now_ms; // liveness for idle reaping
-        protocore_quic_conn_recv(&s->qc, ig.data, ig.len);
+        QuicConn.bind.ctx = s->qc;
+        QuicConn.bind.b = s->qcb;
+        QuicConn.recv_args.datagram = ig.data;
+        QuicConn.recv_args.len = ig.len;
+        QuicConn.recv(QuicConn.internal);
     }
     flush_and_reap(now_ms);
 }
@@ -436,8 +496,15 @@ static void respond(struct QuicServerInternal *restrict ctx)
         ctx->ns->ok = PROTO_FALSE;
         return;
     }
-    ctx->ns->ok = protocore_h3_conn_respond(&s->h3, ctx->ns->stream.stream_id, ctx->ns->resp.status,
-                                            ctx->ns->resp.content_type, ctx->ns->resp.body, ctx->ns->resp.body_len);
+    H3Conn.bind.b = s->h3;
+    H3Conn.bind.qc = s->qc;
+    H3Conn.respond_args.stream_id = ctx->ns->stream.stream_id;
+    H3Conn.respond_args.status = ctx->ns->resp.status;
+    H3Conn.respond_args.content_type = ctx->ns->resp.content_type;
+    H3Conn.respond_args.body = ctx->ns->resp.body;
+    H3Conn.respond_args.body_len = ctx->ns->resp.body_len;
+    H3Conn.respond(H3Conn.internal);
+    ctx->ns->ok = H3Conn.ok;
 }
 
 static void active_conns(struct QuicServerInternal *restrict ctx)
@@ -470,12 +537,12 @@ static void stop(struct QuicServerInternal *restrict ctx)
 proto_bool protocore_quic_server_respond(uint32_t conn_id, uint64_t stream_id, int status, const char *content_type,
                                          const uint8_t *body, size_t body_len)
 {
-    QuicServer.conn_id = conn_id;
-    QuicServer.stream_id = stream_id;
-    QuicServer.status = status;
-    QuicServer.content_type = content_type;
-    QuicServer.body = body;
-    QuicServer.body_len = body_len;
+    QuicServer.stream.conn_id = conn_id;
+    QuicServer.stream.stream_id = stream_id;
+    QuicServer.resp.status = status;
+    QuicServer.resp.content_type = content_type;
+    QuicServer.resp.body = body;
+    QuicServer.resp.body_len = body_len;
     respond(&s_quic);
     return QuicServer.ok;
 }

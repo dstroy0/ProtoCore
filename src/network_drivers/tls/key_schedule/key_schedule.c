@@ -23,12 +23,6 @@ const Tls13Kdf DTLS13_KDF = {"dtls13"};
  *
  * @var Tls13KsInternal::ns  the handle a caller sets a call's members on
  */
-struct Tls13KsInternal
-{
-    Tls13KsNs *ns;
-};
-
-static struct Tls13KsInternal s_ks = {.ns = &Tls13Ks};
 
 // HKDF-Expand-Label(secret, label, "", out_len) under kdf's prefix.
 static void expand(const Tls13Kdf *kdf, uint8_t *work, const uint8_t *secret, const char *label, uint8_t *out,
@@ -56,26 +50,26 @@ static void derive(const Tls13Kdf *kdf, uint8_t *work, const uint8_t *secret, co
     Hkdf.expand_label_ctx(work);
 }
 
-static void ks_expand_label(struct Tls13KsInternal *restrict ctx)
+static void ks_expand_label(uint8_t *restrict work)
 {
-    expand(ctx->ns->bind.kdf, ctx->ns->derive_args.work, ctx->ns->derive_args.secret, ctx->ns->derive_args.label,
-           ctx->ns->derive_args.out, ctx->ns->derive_args.out_len);
+    expand(Tls13Ks.bind.kdf, Tls13Ks.derive_args.work, Tls13Ks.derive_args.secret, Tls13Ks.derive_args.label,
+           Tls13Ks.derive_args.out, Tls13Ks.derive_args.out_len);
 }
 
-static void ks_derive_secret(struct Tls13KsInternal *restrict ctx)
+static void ks_derive_secret(uint8_t *restrict work)
 {
-    derive(ctx->ns->bind.kdf, ctx->ns->derive_args.work, ctx->ns->derive_args.secret, ctx->ns->derive_args.label,
-           ctx->ns->derive_args.transcript_hash, ctx->ns->derive_args.out);
+    derive(Tls13Ks.bind.kdf, Tls13Ks.derive_args.work, Tls13Ks.derive_args.secret, Tls13Ks.derive_args.label,
+           Tls13Ks.derive_args.transcript_hash, Tls13Ks.derive_args.out);
 }
 
-static void ks_early(struct Tls13KsInternal *restrict ctx)
+static void ks_early(uint8_t *restrict work)
 {
-    Tls13KeySchedule *ks = ctx->ns->bind.ks;
-    ks->kdf = ctx->ns->bind.kdf;
-    ks->s = ctx->ns->bind.s;
+    Tls13KeySchedule *ks = Tls13Ks.bind.ks;
+    ks->kdf = Tls13Ks.bind.kdf;
+    ks->s = Tls13Ks.bind.s;
     if (ks->s == NULL)
     {
-        ctx->ns->ok = PROTO_FALSE;
+        Tls13Ks.ok = PROTO_FALSE;
         return;
     }
     // No PSK: Early Secret = HKDF-Extract(salt=0, IKM=0^Hash.length). HMAC zero-pads a short/absent
@@ -86,17 +80,17 @@ static void ks_early(struct Tls13KsInternal *restrict ctx)
     Hkdf.extract_args.ikm_len = TLS13_SECRET_LEN;
     Hkdf.extract_args.prk = ks->s + TLS13_KS_EARLY;
     Hkdf.extract(ks->s + TLS13_KS_WORK);
-    ctx->ns->ok = PROTO_TRUE;
+    Tls13Ks.ok = PROTO_TRUE;
 }
 
-static void ks_handshake(struct Tls13KsInternal *restrict ctx)
+static void ks_handshake(uint8_t *restrict work)
 {
-    Tls13KeySchedule *ks = ctx->ns->bind.ks;
+    Tls13KeySchedule *ks = Tls13Ks.bind.ks;
     if (ks->s == NULL)
     {
         return;
     }
-    const uint8_t *ch_sh_hash = ctx->ns->step.ch_sh_hash;
+    const uint8_t *ch_sh_hash = Tls13Ks.step.ch_sh_hash;
     // Handshake Secret = HKDF-Extract(Derive-Secret(Early, "derived", ""), (EC)DHE).
     Sha256.hash_args.data = NULL;
     Sha256.hash_args.len = 0;
@@ -106,8 +100,8 @@ static void ks_handshake(struct Tls13KsInternal *restrict ctx)
            ks->s + TLS13_KS_DERIVED);
     Hkdf.extract_args.salt = ks->s + TLS13_KS_DERIVED;
     Hkdf.extract_args.salt_len = TLS13_SECRET_LEN;
-    Hkdf.extract_args.ikm = ctx->ns->step.ecdhe;
-    Hkdf.extract_args.ikm_len = ctx->ns->step.ecdhe_len;
+    Hkdf.extract_args.ikm = Tls13Ks.step.ecdhe;
+    Hkdf.extract_args.ikm_len = Tls13Ks.step.ecdhe_len;
     Hkdf.extract_args.prk = ks->s + TLS13_KS_HANDSHAKE;
     Hkdf.extract(ks->s + TLS13_KS_WORK);
 
@@ -117,14 +111,14 @@ static void ks_handshake(struct Tls13KsInternal *restrict ctx)
            ks->s + TLS13_KS_SERVER_HS);
 }
 
-static void ks_master(struct Tls13KsInternal *restrict ctx)
+static void ks_master(uint8_t *restrict work)
 {
-    Tls13KeySchedule *ks = ctx->ns->bind.ks;
+    Tls13KeySchedule *ks = Tls13Ks.bind.ks;
     if (ks->s == NULL)
     {
         return;
     }
-    const uint8_t *ch_sfin_hash = ctx->ns->step.ch_sfin_hash;
+    const uint8_t *ch_sfin_hash = Tls13Ks.step.ch_sfin_hash;
     // Master Secret = HKDF-Extract(Derive-Secret(Handshake, "derived", ""), 0^Hash.length).
     Sha256.hash_args.data = NULL;
     Sha256.hash_args.len = 0;
@@ -145,21 +139,21 @@ static void ks_master(struct Tls13KsInternal *restrict ctx)
            ks->s + TLS13_KS_SERVER_AP);
 }
 
-static void ks_finished_mac(struct Tls13KsInternal *restrict ctx)
+static void ks_finished_mac(uint8_t *restrict work)
 {
-    Tls13KeySchedule *ks = ctx->ns->bind.ks;
+    Tls13KeySchedule *ks = Tls13Ks.bind.ks;
     if (ks->s == NULL)
     {
         return;
     }
     // finished_key = HKDF-Expand-Label(base_secret, "finished", "", L); verify_data = HMAC(fk, Hash).
     uint8_t *fk = ks->s + TLS13_KS_FINISHED_KEY;
-    expand(ks->kdf, ks->s + TLS13_KS_WORK, ctx->ns->finished_args.base_secret, "finished", fk, TLS13_SECRET_LEN);
+    expand(ks->kdf, ks->s + TLS13_KS_WORK, Tls13Ks.finished_args.base_secret, "finished", fk, TLS13_SECRET_LEN);
     HmacSha256.mac_args.key = fk;
     HmacSha256.mac_args.key_len = TLS13_SECRET_LEN;
-    HmacSha256.mac_args.data = ctx->ns->finished_args.transcript_hash;
+    HmacSha256.mac_args.data = Tls13Ks.finished_args.transcript_hash;
     HmacSha256.mac_args.len = TLS13_SECRET_LEN;
-    HmacSha256.mac_args.out = ctx->ns->finished_args.out;
+    HmacSha256.mac_args.out = Tls13Ks.finished_args.out;
     HmacSha256.mac(ks->s + TLS13_KS_WORK);
 }
 
@@ -168,7 +162,6 @@ Tls13KsNs Tls13Ks = {.expand_label = ks_expand_label,
                      .early = ks_early,
                      .handshake = ks_handshake,
                      .master = ks_master,
-                     .finished_mac = ks_finished_mac,
-                     .internal = &s_ks};
+                     .finished_mac = ks_finished_mac};
 
 #endif // PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_TLS_SOFTWARE

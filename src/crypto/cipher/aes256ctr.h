@@ -33,9 +33,6 @@
 
 #if PROTOCORE_ENABLE_AES256CTR
 
-#include <stddef.h>
-#include <stdint.h>
-
 PROTOCORE_BEGIN_DECLS
 
 /** @brief AES-256-CTR key length (bytes). */

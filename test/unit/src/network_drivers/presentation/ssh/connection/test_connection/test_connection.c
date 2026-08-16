@@ -101,7 +101,6 @@ static int channel_build_close(uint8_t slot, uint32_t channel, uint8_t *out, siz
     return SshConnection.i32;
 }
 
-
 // Per-channel flow control, reached through the connection namespace. The window struct stays the
 // caller's; only the call moves onto the handle.
 static proto_bool flow_recv_take(SshFlow *f, uint32_t n)
@@ -169,7 +168,6 @@ static void flow_peer_add(SshFlow *f, uint32_t add)
     SshConnection.flow_peer_add(SshConnection.internal);
 }
 
-
 // The connection layer, reached through its namespace.
 static int chan_alloc(uint8_t slot)
 {
@@ -204,7 +202,6 @@ static proto_bool pty_modes_valid(const uint8_t *modes, uint32_t modes_len, uint
     }
     return SshConnection.ok;
 }
-
 
 // A length-prefixed string, RFC 4251 sec 5: uint32 length, then that many bytes.
 static size_t put_str(uint8_t *p, size_t off, const char *s, uint32_t n)
