@@ -20,6 +20,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+static uint8_t cotp_work[16]; // the borrow an entry takes; Cotp never reads it
+
 void dbench_run(void)
 {
     // TPKT: wrap a 3-octet payload (mirrors test_tpkt_bytes).
@@ -29,7 +31,13 @@ void dbench_run(void)
     // COTP Data TPDU: 3-octet user data, EOT set (mirrors test_cotp_dt_bytes).
     static const uint8_t dt_data[] = {0x41, 0x42, 0x43}; // "ABC"
     static uint8_t dt_buf[16];
-    size_t dt_len = protocore_cotp_build_dt(dt_buf, sizeof(dt_buf), dt_data, sizeof(dt_data), true);
+    Cotp.build_dt_args.buf = dt_buf;
+    Cotp.build_dt_args.cap = sizeof(dt_buf);
+    Cotp.build_dt_args.data = dt_data;
+    Cotp.build_dt_args.data_len = sizeof(dt_data);
+    Cotp.build_dt_args.eot = true;
+    Cotp.build_dt(cotp_work);
+    size_t dt_len = Cotp.n;
 
     // COTP Connection Request: plain (mirrors test_cotp_cr_bytes).
     static uint8_t cr_buf[32];
@@ -44,30 +52,59 @@ void dbench_run(void)
         DBENCH_BANNER("cotp");
         volatile size_t sink = 0;
 
-        DBENCH_OP("protocore_tpkt_build", 100000,
-                  sink += protocore_tpkt_build(tpkt_buf, sizeof(tpkt_buf), tpkt_payload, sizeof(tpkt_payload)));
+        Cotp.tpkt_build_args.buf = tpkt_buf;
+        Cotp.tpkt_build_args.cap = sizeof(tpkt_buf);
+        Cotp.tpkt_build_args.payload = tpkt_payload;
+        Cotp.tpkt_build_args.payload_len = sizeof(tpkt_payload);
+        DBENCH_OP("Cotp.tpkt_build", 100000,
+                  sink += (Cotp.tpkt_build(cotp_work), Cotp.n));
 
         {
             const uint8_t *payload;
             size_t payload_len, consumed;
             const size_t tpkt_len = TPKT_HEADER_SIZE + sizeof(tpkt_payload); // 4 + 3 = 7
-            DBENCH_OP("protocore_tpkt_parse", 100000,
-                      sink += protocore_tpkt_parse(tpkt_buf, tpkt_len, &payload, &payload_len, &consumed));
+            Cotp.tpkt_parse_args.buf = tpkt_buf;
+            Cotp.tpkt_parse_args.len = tpkt_len;
+            Cotp.tpkt_parse_args.payload = &payload;
+            Cotp.tpkt_parse_args.payload_len = &payload_len;
+            Cotp.tpkt_parse_args.consumed = &consumed;
+            DBENCH_OP("Cotp.tpkt_parse", 100000,
+                      sink += (Cotp.tpkt_parse(cotp_work), Cotp.ok));
         }
 
-        DBENCH_OP("protocore_cotp_build_dt", 100000,
-                  sink += protocore_cotp_build_dt(dt_buf, sizeof(dt_buf), dt_data, sizeof(dt_data), true));
+        Cotp.build_dt_args.buf = dt_buf;
+        Cotp.build_dt_args.cap = sizeof(dt_buf);
+        Cotp.build_dt_args.data = dt_data;
+        Cotp.build_dt_args.data_len = sizeof(dt_data);
+        Cotp.build_dt_args.eot = true;
+        DBENCH_OP("Cotp.build_dt", 100000,
+                  sink += (Cotp.build_dt(cotp_work), Cotp.n));
 
-        DBENCH_OP("protocore_cotp_build_cr", 100000,
-                  sink += protocore_cotp_build_cr(cr_buf, sizeof(cr_buf), 0x0001, 0x0A, NULL, 0));
+        Cotp.build_cr_args.buf = cr_buf;
+        Cotp.build_cr_args.cap = sizeof(cr_buf);
+        Cotp.build_cr_args.src_ref = 0x0001;
+        Cotp.build_cr_args.tpdu_size_code = 0x0A;
+        Cotp.build_cr_args.extra_params = NULL;
+        Cotp.build_cr_args.extra_len = 0;
+        DBENCH_OP("Cotp.build_cr", 100000,
+                  sink += (Cotp.build_cr(cotp_work), Cotp.n));
 
-        DBENCH_OP("protocore_cotp_build_cr+tsaps", 100000,
+        Cotp.build_cr_args.buf = cr_tsap_buf;
+        Cotp.build_cr_args.cap = sizeof(cr_tsap_buf);
+        Cotp.build_cr_args.src_ref = 0x0002;
+        Cotp.build_cr_args.tpdu_size_code = 0x0A;
+        Cotp.build_cr_args.extra_params = tsaps;
+        Cotp.build_cr_args.extra_len = sizeof(tsaps);
+        DBENCH_OP("Cotp.build_cr+tsaps", 100000,
                   sink +=
-                  protocore_cotp_build_cr(cr_tsap_buf, sizeof(cr_tsap_buf), 0x0002, 0x0A, tsaps, sizeof(tsaps)));
+                  (Cotp.build_cr(cotp_work), Cotp.n));
 
         {
             CotpHeader h;
-            DBENCH_OP("protocore_cotp_parse (DT)", 100000, sink += protocore_cotp_parse(dt_buf, dt_len, &h));
+            Cotp.parse_args.buf = dt_buf;
+            Cotp.parse_args.len = dt_len;
+            Cotp.parse_args.out = &h;
+            DBENCH_OP("Cotp.parse (DT)", 100000, sink += (Cotp.parse(cotp_work), Cotp.ok));
         }
 
         (void)sink;

@@ -14,6 +14,8 @@
 
 #include <unity.h>
 
+static uint8_t directnet_work[16]; // the borrow an entry takes; Directnet never reads it
+
 void setUp(void)
 {
 }
@@ -44,11 +46,20 @@ void test_lrc_block_xors_to_zero(void)
     static const uint8_t BODY[] = {0x31, 0x32, 0x33, 0x17};
     uint8_t block[5];
     memcpy(block, BODY, sizeof(BODY));
-    block[4] = protocore_dnet_lrc(BODY, sizeof(BODY));
-    TEST_ASSERT_EQUAL_HEX8(0x00u, protocore_dnet_lrc(block, sizeof(block)));
+    Directnet.lrc_args.bytes = BODY;
+    Directnet.lrc_args.len = sizeof(BODY);
+    Directnet.lrc(directnet_work);
+    block[4] = Directnet.value;
+    Directnet.lrc_args.bytes = block;
+    Directnet.lrc_args.len = sizeof(block);
+    Directnet.lrc(directnet_work);
+    TEST_ASSERT_EQUAL_HEX8(0x00u, Directnet.value);
 
     // An empty span has no octets to fold, so its LRC is the identity element.
-    TEST_ASSERT_EQUAL_HEX8(0x00u, protocore_dnet_lrc(BODY, 0));
+    Directnet.lrc_args.bytes = BODY;
+    Directnet.lrc_args.len = 0;
+    Directnet.lrc(directnet_work);
+    TEST_ASSERT_EQUAL_HEX8(0x00u, Directnet.value);
 }
 
 // Read 2 blocks at V-memory address 0x0040 from station 1. The header layout is
@@ -61,7 +72,14 @@ void test_header_frame(void)
 {
     static const uint8_t WANT[12] = {0x01, '0', '1', '0', '0', '0', '4', '0', '0', '2', 0x17, 0x20};
     uint8_t out[16];
-    TEST_ASSERT_EQUAL_size_t(sizeof(WANT), protocore_dnet_header(1, DNET_READ, 0x0040, 2, out, sizeof(out)));
+    Directnet.header_args.slave = 1;
+    Directnet.header_args.type = DNET_READ;
+    Directnet.header_args.address = 0x0040;
+    Directnet.header_args.blocks = 2;
+    Directnet.header_args.out = out;
+    Directnet.header_args.cap = sizeof(out);
+    Directnet.header(directnet_work);
+    TEST_ASSERT_EQUAL_size_t(sizeof(WANT), Directnet.n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, out, sizeof(WANT));
 }
 
@@ -70,11 +88,21 @@ void test_header_frame(void)
 void test_header_hex_digits_are_uppercase(void)
 {
     uint8_t out[16];
-    TEST_ASSERT_EQUAL_size_t(12u, protocore_dnet_header(0xAB, DNET_WRITE, 0xCDEF, 0xFA, out, sizeof(out)));
+    Directnet.header_args.slave = 0xAB;
+    Directnet.header_args.type = DNET_WRITE;
+    Directnet.header_args.address = 0xCDEF;
+    Directnet.header_args.blocks = 0xFA;
+    Directnet.header_args.out = out;
+    Directnet.header_args.cap = sizeof(out);
+    Directnet.header(directnet_work);
+    TEST_ASSERT_EQUAL_size_t(12u, Directnet.n);
     static const uint8_t BODY[10] = {'A', 'B', '8', 'C', 'D', 'E', 'F', 'F', 'A', 0x17};
     TEST_ASSERT_EQUAL_HEX8_ARRAY(BODY, out + 1, sizeof(BODY));
     // The whole framed block, LRC included, folds to zero.
-    TEST_ASSERT_EQUAL_HEX8(0x00u, protocore_dnet_lrc(out + 1, 11));
+    Directnet.lrc_args.bytes = out + 1;
+    Directnet.lrc_args.len = 11;
+    Directnet.lrc(directnet_work);
+    TEST_ASSERT_EQUAL_HEX8(0x00u, Directnet.value);
 }
 
 // A data frame is STX + data + ETX + LRC, and the LRC covers data..ETX. For "ABCD":
@@ -84,7 +112,12 @@ void test_data_frame(void)
     static const uint8_t PAYLOAD[4] = {'A', 'B', 'C', 'D'};
     static const uint8_t WANT[7] = {0x02, 'A', 'B', 'C', 'D', 0x03, 0x07};
     uint8_t out[16];
-    TEST_ASSERT_EQUAL_size_t(sizeof(WANT), protocore_dnet_data(PAYLOAD, sizeof(PAYLOAD), out, sizeof(out)));
+    Directnet.data_args.data = PAYLOAD;
+    Directnet.data_args.data_len = sizeof(PAYLOAD);
+    Directnet.data_args.out = out;
+    Directnet.data_args.cap = sizeof(out);
+    Directnet.data(directnet_work);
+    TEST_ASSERT_EQUAL_size_t(sizeof(WANT), Directnet.n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, out, sizeof(WANT));
 }
 
@@ -95,12 +128,22 @@ void test_data_frame_round_trip(void)
     for (size_t n = 0; n <= sizeof(PAYLOAD); n++)
     {
         uint8_t frame[16];
-        size_t len = protocore_dnet_data(n ? PAYLOAD : NULL, n, frame, sizeof(frame));
+        Directnet.data_args.data = n ? PAYLOAD : NULL;
+        Directnet.data_args.data_len = n;
+        Directnet.data_args.out = frame;
+        Directnet.data_args.cap = sizeof(frame);
+        Directnet.data(directnet_work);
+        size_t len = Directnet.n;
         TEST_ASSERT_EQUAL_size_t(n + 3u, len);
 
         const uint8_t *data = NULL;
         size_t data_len = 123;
-        TEST_ASSERT_TRUE(protocore_dnet_data_parse(frame, len, &data, &data_len));
+        Directnet.data_parse_args.frame = frame;
+        Directnet.data_parse_args.len = len;
+        Directnet.data_parse_args.data = &data;
+        Directnet.data_parse_args.data_len = &data_len;
+        Directnet.data_parse(directnet_work);
+        TEST_ASSERT_TRUE(Directnet.ok);
         TEST_ASSERT_EQUAL_size_t(n, data_len);
         if (n)
         {
@@ -118,14 +161,29 @@ void test_data_parse_optional_outputs(void)
 {
     static const uint8_t PAYLOAD[4] = {'A', 'B', 'C', 'D'};
     uint8_t frame[16];
-    size_t len = protocore_dnet_data(PAYLOAD, sizeof(PAYLOAD), frame, sizeof(frame));
+    Directnet.data_args.data = PAYLOAD;
+    Directnet.data_args.data_len = sizeof(PAYLOAD);
+    Directnet.data_args.out = frame;
+    Directnet.data_args.cap = sizeof(frame);
+    Directnet.data(directnet_work);
+    size_t len = Directnet.n;
 
     size_t data_len = 0;
-    TEST_ASSERT_TRUE(protocore_dnet_data_parse(frame, len, NULL, &data_len));
+    Directnet.data_parse_args.frame = frame;
+    Directnet.data_parse_args.len = len;
+    Directnet.data_parse_args.data = NULL;
+    Directnet.data_parse_args.data_len = &data_len;
+    Directnet.data_parse(directnet_work);
+    TEST_ASSERT_TRUE(Directnet.ok);
     TEST_ASSERT_EQUAL_size_t(4u, data_len);
 
     const uint8_t *data = NULL;
-    TEST_ASSERT_TRUE(protocore_dnet_data_parse(frame, len, &data, NULL));
+    Directnet.data_parse_args.frame = frame;
+    Directnet.data_parse_args.len = len;
+    Directnet.data_parse_args.data = &data;
+    Directnet.data_parse_args.data_len = NULL;
+    Directnet.data_parse(directnet_work);
+    TEST_ASSERT_TRUE(Directnet.ok);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(PAYLOAD, data, 4);
 }
 
@@ -135,7 +193,12 @@ void test_single_octet_corruption_is_refused(void)
 {
     static const uint8_t PAYLOAD[4] = {0x11, 0x22, 0x33, 0x44};
     uint8_t frame[16];
-    size_t len = protocore_dnet_data(PAYLOAD, sizeof(PAYLOAD), frame, sizeof(frame));
+    Directnet.data_args.data = PAYLOAD;
+    Directnet.data_args.data_len = sizeof(PAYLOAD);
+    Directnet.data_args.out = frame;
+    Directnet.data_args.cap = sizeof(frame);
+    Directnet.data(directnet_work);
+    size_t len = Directnet.n;
     for (size_t i = 0; i < len; i++)
     {
         uint8_t bad[16];
@@ -143,7 +206,12 @@ void test_single_octet_corruption_is_refused(void)
         bad[i] ^= 0x01;
         const uint8_t *data;
         size_t data_len;
-        TEST_ASSERT_FALSE(protocore_dnet_data_parse(bad, len, &data, &data_len));
+        Directnet.data_parse_args.frame = bad;
+        Directnet.data_parse_args.len = len;
+        Directnet.data_parse_args.data = &data;
+        Directnet.data_parse_args.data_len = &data_len;
+        Directnet.data_parse(directnet_work);
+        TEST_ASSERT_FALSE(Directnet.ok);
     }
 }
 
@@ -154,15 +222,35 @@ void test_data_parse_rejects_bad_framing(void)
     size_t data_len;
 
     static const uint8_t NO_STX[4] = {0x00, 0x11, 0x03, 0x11 ^ 0x03};
-    TEST_ASSERT_FALSE(protocore_dnet_data_parse(NO_STX, sizeof(NO_STX), &data, &data_len));
+    Directnet.data_parse_args.frame = NO_STX;
+    Directnet.data_parse_args.len = sizeof(NO_STX);
+    Directnet.data_parse_args.data = &data;
+    Directnet.data_parse_args.data_len = &data_len;
+    Directnet.data_parse(directnet_work);
+    TEST_ASSERT_FALSE(Directnet.ok);
 
     static const uint8_t NO_ETX[4] = {0x02, 0x11, 0x22, 0x33};
-    TEST_ASSERT_FALSE(protocore_dnet_data_parse(NO_ETX, sizeof(NO_ETX), &data, &data_len));
+    Directnet.data_parse_args.frame = NO_ETX;
+    Directnet.data_parse_args.len = sizeof(NO_ETX);
+    Directnet.data_parse_args.data = &data;
+    Directnet.data_parse_args.data_len = &data_len;
+    Directnet.data_parse(directnet_work);
+    TEST_ASSERT_FALSE(Directnet.ok);
 
     static const uint8_t TOO_SHORT[2] = {0x02, 0x03};
-    TEST_ASSERT_FALSE(protocore_dnet_data_parse(TOO_SHORT, sizeof(TOO_SHORT), &data, &data_len));
+    Directnet.data_parse_args.frame = TOO_SHORT;
+    Directnet.data_parse_args.len = sizeof(TOO_SHORT);
+    Directnet.data_parse_args.data = &data;
+    Directnet.data_parse_args.data_len = &data_len;
+    Directnet.data_parse(directnet_work);
+    TEST_ASSERT_FALSE(Directnet.ok);
 
-    TEST_ASSERT_FALSE(protocore_dnet_data_parse(NULL, 5, &data, &data_len));
+    Directnet.data_parse_args.frame = NULL;
+    Directnet.data_parse_args.len = 5;
+    Directnet.data_parse_args.data = &data;
+    Directnet.data_parse_args.data_len = &data_len;
+    Directnet.data_parse(directnet_work);
+    TEST_ASSERT_FALSE(Directnet.ok);
 }
 
 // A buffer that cannot hold the whole frame yields 0 rather than a truncated one: a short frame is
@@ -172,12 +260,53 @@ void test_builders_refuse_a_short_buffer(void)
     uint8_t out[16];
     static const uint8_t PAYLOAD[4] = {'A', 'B', 'C', 'D'};
 
-    TEST_ASSERT_EQUAL_size_t(0u, protocore_dnet_header(1, DNET_READ, 0x40, 2, out, 11)); // needs 12
-    TEST_ASSERT_EQUAL_size_t(12u, protocore_dnet_header(1, DNET_READ, 0x40, 2, out, 12));
-    TEST_ASSERT_EQUAL_size_t(0u, protocore_dnet_header(1, DNET_READ, 0x40, 2, NULL, sizeof(out)));
+    Directnet.header_args.slave = 1;
+    Directnet.header_args.type = DNET_READ;
+    Directnet.header_args.address = 0x40;
+    Directnet.header_args.blocks = 2;
+    Directnet.header_args.out = out;
+    Directnet.header_args.cap = 11;
+    Directnet.header(directnet_work);
+    TEST_ASSERT_EQUAL_size_t(0u, Directnet.n); // needs 12
+    Directnet.header_args.slave = 1;
+    Directnet.header_args.type = DNET_READ;
+    Directnet.header_args.address = 0x40;
+    Directnet.header_args.blocks = 2;
+    Directnet.header_args.out = out;
+    Directnet.header_args.cap = 12;
+    Directnet.header(directnet_work);
+    TEST_ASSERT_EQUAL_size_t(12u, Directnet.n);
+    Directnet.header_args.slave = 1;
+    Directnet.header_args.type = DNET_READ;
+    Directnet.header_args.address = 0x40;
+    Directnet.header_args.blocks = 2;
+    Directnet.header_args.out = NULL;
+    Directnet.header_args.cap = sizeof(out);
+    Directnet.header(directnet_work);
+    TEST_ASSERT_EQUAL_size_t(0u, Directnet.n);
 
-    TEST_ASSERT_EQUAL_size_t(0u, protocore_dnet_data(PAYLOAD, 4, out, 6)); // needs 7
-    TEST_ASSERT_EQUAL_size_t(7u, protocore_dnet_data(PAYLOAD, 4, out, 7));
-    TEST_ASSERT_EQUAL_size_t(0u, protocore_dnet_data(PAYLOAD, 4, NULL, sizeof(out)));
-    TEST_ASSERT_EQUAL_size_t(0u, protocore_dnet_data(NULL, 4, out, sizeof(out)));
+    Directnet.data_args.data = PAYLOAD;
+    Directnet.data_args.data_len = 4;
+    Directnet.data_args.out = out;
+    Directnet.data_args.cap = 6;
+    Directnet.data(directnet_work);
+    TEST_ASSERT_EQUAL_size_t(0u, Directnet.n); // needs 7
+    Directnet.data_args.data = PAYLOAD;
+    Directnet.data_args.data_len = 4;
+    Directnet.data_args.out = out;
+    Directnet.data_args.cap = 7;
+    Directnet.data(directnet_work);
+    TEST_ASSERT_EQUAL_size_t(7u, Directnet.n);
+    Directnet.data_args.data = PAYLOAD;
+    Directnet.data_args.data_len = 4;
+    Directnet.data_args.out = NULL;
+    Directnet.data_args.cap = sizeof(out);
+    Directnet.data(directnet_work);
+    TEST_ASSERT_EQUAL_size_t(0u, Directnet.n);
+    Directnet.data_args.data = NULL;
+    Directnet.data_args.data_len = 4;
+    Directnet.data_args.out = out;
+    Directnet.data_args.cap = sizeof(out);
+    Directnet.data(directnet_work);
+    TEST_ASSERT_EQUAL_size_t(0u, Directnet.n);
 }

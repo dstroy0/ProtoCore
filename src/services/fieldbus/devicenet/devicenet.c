@@ -6,57 +6,94 @@
  * @brief DeviceNet link-adaptation codec (pure, host-tested).
  */
 
-#include "services/fieldbus/devicenet/devicenet.h"
-#include "mmgr/protomem.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_DEVICENET
 
-proto_bool protocore_devicenet_encode_id(uint32_t *id, DeviceNetGroup group, uint8_t msg_id, uint8_t mac_id)
+#include "mmgr/protomem.h"
+#include "services/fieldbus/devicenet/devicenet.h"
+#include "shared/can/can.h"
+
+PROTOCORE_BEGIN_DECLS
+
+// The entries this file calls before reaching their definitions.
+// --- the entries -----------------------------------------------------------
+
+// No context and no borrow: every operand is the caller's. The borrow an entry takes is
+// never read.
+
+static void devicenet_encode_id(uint8_t *restrict work);
+static void devicenet_frag_octet(uint8_t *restrict work);
+static void devicenet_frag_reset(uint8_t *restrict work);
+static void devicenet_msg_header(uint8_t *restrict work);
+
+static void devicenet_encode_id(uint8_t *restrict work)
 {
+    (void)work;
+    uint32_t *id = Devicenet.encode_id_args.id;
+    DeviceNetGroup group = Devicenet.encode_id_args.group;
+    uint8_t msg_id = Devicenet.encode_id_args.msg_id;
+    uint8_t mac_id = Devicenet.encode_id_args.mac_id;
+
     if (!id || mac_id > DEVICENET_MAC_MASK)
     {
-        return PROTO_FALSE;
+        Devicenet.ok = PROTO_FALSE;
+        return;
     }
     switch (group)
     {
     case DEVICENET_GROUP_1:
         if (msg_id > 0x0Fu)
         {
-            return PROTO_FALSE;
+            Devicenet.ok = PROTO_FALSE;
+            return;
         }
         *id = DEVICENET_G1_BASE | ((uint32_t)msg_id << 6) | mac_id;
-        return PROTO_TRUE;
+        Devicenet.ok = PROTO_TRUE;
+        return;
     case DEVICENET_GROUP_2:
         if (msg_id > 0x07u)
         {
-            return PROTO_FALSE;
+            Devicenet.ok = PROTO_FALSE;
+            return;
         }
         *id = DEVICENET_G2_BASE | ((uint32_t)mac_id << 3) | msg_id;
-        return PROTO_TRUE;
+        Devicenet.ok = PROTO_TRUE;
+        return;
     case DEVICENET_GROUP_3:
         if (msg_id > 0x06u) // msg id 7 puts the identifier at 0x7C0+, which is Group 4's range
         {
-            return PROTO_FALSE;
+            Devicenet.ok = PROTO_FALSE;
+            return;
         }
         *id = DEVICENET_G3_BASE | ((uint32_t)msg_id << 6) | mac_id;
-        return PROTO_TRUE;
+        Devicenet.ok = PROTO_TRUE;
+        return;
     case DEVICENET_GROUP_4:
         if (msg_id > 0x2Fu) // Group 4 has no MAC id; message ids 0x00..0x2F
         {
-            return PROTO_FALSE;
+            Devicenet.ok = PROTO_FALSE;
+            return;
         }
         *id = DEVICENET_G4_BASE | msg_id;
-        return PROTO_TRUE;
+        Devicenet.ok = PROTO_TRUE;
+        return;
     default:
-        return PROTO_FALSE;
+        Devicenet.ok = PROTO_FALSE;
+        return;
     }
 }
 
-proto_bool protocore_devicenet_decode_id(uint32_t can_id, DeviceNetId *out)
+static void devicenet_decode_id(uint8_t *restrict work)
 {
+    (void)work;
+    uint32_t can_id = Devicenet.decode_id_args.can_id;
+    DeviceNetId *out = Devicenet.decode_id_args.out;
+
     if (!out)
     {
-        return PROTO_FALSE;
+        Devicenet.ok = PROTO_FALSE;
+        return;
     }
     uint32_t id = can_id & PROTOCORE_CAN_STD_ID_MASK;
     if (id < DEVICENET_G2_BASE) // Group 1: 0 MsgID(4) MAC(6)
@@ -64,98 +101,154 @@ proto_bool protocore_devicenet_decode_id(uint32_t can_id, DeviceNetId *out)
         out->group = DEVICENET_GROUP_1;
         out->msg_id = (uint8_t)((id >> 6) & 0x0Fu);
         out->mac_id = (uint8_t)(id & DEVICENET_MAC_MASK);
-        return PROTO_TRUE;
+        Devicenet.ok = PROTO_TRUE;
+        return;
     }
     if (id < DEVICENET_G3_BASE) // Group 2: 10 MAC(6) MsgID(3)
     {
         out->group = DEVICENET_GROUP_2;
         out->mac_id = (uint8_t)((id >> 3) & DEVICENET_MAC_MASK);
         out->msg_id = (uint8_t)(id & 0x07u);
-        return PROTO_TRUE;
+        Devicenet.ok = PROTO_TRUE;
+        return;
     }
     if (id < DEVICENET_G4_BASE) // Group 3: 11 MsgID(3) MAC(6)
     {
         out->group = DEVICENET_GROUP_3;
         out->msg_id = (uint8_t)((id >> 6) & 0x07u);
         out->mac_id = (uint8_t)(id & DEVICENET_MAC_MASK);
-        return PROTO_TRUE;
+        Devicenet.ok = PROTO_TRUE;
+        return;
     }
     if (id <= 0x7EFu) // Group 4: 11111 MsgID(6)
     {
         out->group = DEVICENET_GROUP_4;
         out->msg_id = (uint8_t)(id & 0x3Fu);
         out->mac_id = 0;
-        return PROTO_TRUE;
+        Devicenet.ok = PROTO_TRUE;
+        return;
     }
-    return PROTO_FALSE; // 0x7F0..0x7FF are invalid identifiers
+    Devicenet.ok = PROTO_FALSE; // 0x7F0..0x7FF are invalid identifiers
 }
 
-uint8_t protocore_devicenet_msg_header(proto_bool frag, proto_bool xid, uint8_t mac_id)
+static void devicenet_msg_header(uint8_t *restrict work)
 {
-    return (uint8_t)((frag ? DEVICENET_HDR_FRAG : 0u) | (xid ? DEVICENET_HDR_XID : 0u) | (mac_id & DEVICENET_MAC_MASK));
+    (void)work;
+    proto_bool frag = Devicenet.msg_header_args.frag;
+    proto_bool xid = Devicenet.msg_header_args.xid;
+    uint8_t mac_id = Devicenet.msg_header_args.mac_id;
+
+    Devicenet.value =
+        (uint8_t)((frag ? DEVICENET_HDR_FRAG : 0u) | (xid ? DEVICENET_HDR_XID : 0u) | (mac_id & DEVICENET_MAC_MASK));
 }
 
-uint8_t protocore_devicenet_frag_octet(uint8_t type, uint8_t count)
+static void devicenet_frag_octet(uint8_t *restrict work)
 {
-    return (uint8_t)((type & DEVICENET_FRAG_TYPE_MASK) | (count & DEVICENET_FRAG_COUNT_MASK));
+    (void)work;
+    uint8_t type = Devicenet.frag_octet_args.type;
+    uint8_t count = Devicenet.frag_octet_args.count;
+
+    Devicenet.value = (uint8_t)((type & DEVICENET_FRAG_TYPE_MASK) | (count & DEVICENET_FRAG_COUNT_MASK));
 }
 
-proto_bool protocore_devicenet_build_explicit(CanFrame *out, DeviceNetGroup group, uint8_t msg_id, uint8_t mac_id,
-                                              const uint8_t *body, uint8_t body_len)
+static void devicenet_build_explicit(uint8_t *restrict work)
 {
+    CanFrame *out = Devicenet.build_explicit_args.out;
+    DeviceNetGroup group = Devicenet.build_explicit_args.group;
+    uint8_t msg_id = Devicenet.build_explicit_args.msg_id;
+    uint8_t mac_id = Devicenet.build_explicit_args.mac_id;
+    const uint8_t *body = Devicenet.build_explicit_args.body;
+    uint8_t body_len = Devicenet.build_explicit_args.body_len;
+
     if (!out || body_len > 7 || (body_len && !body)) // 1 header octet + up to 7 body octets
     {
-        return PROTO_FALSE;
+        Devicenet.ok = PROTO_FALSE;
+        return;
     }
     uint32_t id;
-    if (!protocore_devicenet_encode_id(&id, group, msg_id, mac_id))
+    Devicenet.encode_id_args.id = &id;
+    Devicenet.encode_id_args.group = group;
+    Devicenet.encode_id_args.msg_id = msg_id;
+    Devicenet.encode_id_args.mac_id = mac_id;
+    devicenet_encode_id(work);
+    if (!Devicenet.ok)
     {
-        return PROTO_FALSE;
+        Devicenet.ok = PROTO_FALSE;
+        return;
     }
     out->id = id;
     out->extended = PROTO_FALSE;
     out->rtr = PROTO_FALSE;
     out->dlc = (uint8_t)(1 + body_len);
     mem.set(out->data, 0, sizeof(out->data));
-    out->data[0] = protocore_devicenet_msg_header(PROTO_FALSE, PROTO_FALSE, mac_id); // not fragmented
+    Devicenet.msg_header_args.frag = PROTO_FALSE;
+    Devicenet.msg_header_args.xid = PROTO_FALSE;
+    Devicenet.msg_header_args.mac_id = mac_id;
+    devicenet_msg_header(work);
+    out->data[0] = Devicenet.value; // not fragmented
     if (body_len)
     {
         mem.cpy(out->data + 1, body, body_len);
     }
-    return PROTO_TRUE;
+    Devicenet.ok = PROTO_TRUE;
 }
 
-proto_bool protocore_devicenet_build_fragment(CanFrame *out, DeviceNetGroup group, uint8_t msg_id, uint8_t mac_id,
-                                              proto_bool xid, uint8_t frag_type, uint8_t frag_count,
-                                              const uint8_t *data, uint8_t data_len)
+static void devicenet_build_fragment(uint8_t *restrict work)
 {
+    CanFrame *out = Devicenet.build_fragment_args.out;
+    DeviceNetGroup group = Devicenet.build_fragment_args.group;
+    uint8_t msg_id = Devicenet.build_fragment_args.msg_id;
+    uint8_t mac_id = Devicenet.build_fragment_args.mac_id;
+    proto_bool xid = Devicenet.build_fragment_args.xid;
+    uint8_t frag_type = Devicenet.build_fragment_args.frag_type;
+    uint8_t frag_count = Devicenet.build_fragment_args.frag_count;
+    const uint8_t *data = Devicenet.build_fragment_args.data;
+    uint8_t data_len = Devicenet.build_fragment_args.data_len;
+
     // 1 header octet + 1 fragmentation octet + up to 6 data octets fill the 8-octet CAN frame.
     if (!out || data_len > 6 || (data_len && !data) || (frag_type & (uint8_t)~DEVICENET_FRAG_TYPE_MASK) ||
         (frag_count & (uint8_t)~DEVICENET_FRAG_COUNT_MASK))
     {
-        return PROTO_FALSE;
+        Devicenet.ok = PROTO_FALSE;
+        return;
     }
     uint32_t id;
-    if (!protocore_devicenet_encode_id(&id, group, msg_id, mac_id))
+    Devicenet.encode_id_args.id = &id;
+    Devicenet.encode_id_args.group = group;
+    Devicenet.encode_id_args.msg_id = msg_id;
+    Devicenet.encode_id_args.mac_id = mac_id;
+    devicenet_encode_id(work);
+    if (!Devicenet.ok)
     {
-        return PROTO_FALSE;
+        Devicenet.ok = PROTO_FALSE;
+        return;
     }
     out->id = id;
     out->extended = PROTO_FALSE;
     out->rtr = PROTO_FALSE;
     out->dlc = (uint8_t)(2 + data_len);
     mem.set(out->data, 0, sizeof(out->data));
-    out->data[0] = protocore_devicenet_msg_header(PROTO_TRUE, xid, mac_id); // FRAG set
-    out->data[1] = protocore_devicenet_frag_octet(frag_type, frag_count);
+    Devicenet.msg_header_args.frag = PROTO_TRUE;
+    Devicenet.msg_header_args.xid = xid;
+    Devicenet.msg_header_args.mac_id = mac_id;
+    devicenet_msg_header(work);
+    out->data[0] = Devicenet.value; // FRAG set
+    Devicenet.frag_octet_args.type = frag_type;
+    Devicenet.frag_octet_args.count = frag_count;
+    devicenet_frag_octet(work);
+    out->data[1] = Devicenet.value;
     if (data_len)
     {
         mem.cpy(out->data + 2, data, data_len);
     }
-    return PROTO_TRUE;
+    Devicenet.ok = PROTO_TRUE;
 }
 
-void protocore_devicenet_frag_reset(DeviceNetFragRx *rx)
+static void devicenet_frag_reset(uint8_t *restrict work)
 {
+    (void)work;
+    DeviceNetFragRx *rx = Devicenet.frag_reset_args.rx;
+
     if (rx)
     {
         mem.set(rx, 0, sizeof(*rx));
@@ -183,25 +276,34 @@ static proto_bool frag_append(DeviceNetFragRx *rx, const uint8_t *p, uint8_t n)
     return PROTO_TRUE;
 }
 
-DeviceNetFragResult protocore_devicenet_frag_feed(DeviceNetFragRx *rx, const uint8_t *body, uint8_t body_len)
+static void devicenet_frag_feed(uint8_t *restrict work)
 {
+    DeviceNetFragRx *rx = Devicenet.frag_feed_args.rx;
+    const uint8_t *body = Devicenet.frag_feed_args.body;
+    uint8_t body_len = Devicenet.frag_feed_args.body_len;
+
     if (!rx || !body || body_len < 1)
     {
-        return DEVICENET_FRAG_IGNORED;
+        Devicenet.frag = DEVICENET_FRAG_IGNORED;
+        return;
     }
 
     if (!(body[0] & DEVICENET_HDR_FRAG)) // a complete, non-fragmented message in one frame
     {
-        protocore_devicenet_frag_reset(rx);
+        Devicenet.frag_reset_args.rx = rx;
+        devicenet_frag_reset(work);
         if (body_len > 1 && !frag_append(rx, body + 1, (uint8_t)(body_len - 1)))
         {
-            return DEVICENET_FRAG_ERR;
+            Devicenet.frag = DEVICENET_FRAG_ERR;
+            return;
         }
-        return DEVICENET_FRAG_COMPLETE;
+        Devicenet.frag = DEVICENET_FRAG_COMPLETE;
+        return;
     }
     if (body_len < 2)
     {
-        return DEVICENET_FRAG_ERR; // FRAG set but no fragmentation octet
+        Devicenet.frag = DEVICENET_FRAG_ERR; // FRAG set but no fragmentation octet
+        return;
     }
     uint8_t type = body[1] & DEVICENET_FRAG_TYPE_MASK;
     uint8_t count = body[1] & DEVICENET_FRAG_COUNT_MASK;
@@ -211,43 +313,68 @@ DeviceNetFragResult protocore_devicenet_frag_feed(DeviceNetFragRx *rx, const uin
     switch (type)
     {
     case DEVICENET_FRAG_FIRST:
-        protocore_devicenet_frag_reset(rx);
+        Devicenet.frag_reset_args.rx = rx;
+        devicenet_frag_reset(work);
         rx->active = PROTO_TRUE;
         rx->next_count = (uint8_t)((count + 1u) & DEVICENET_FRAG_COUNT_MASK);
         if (data_len && !frag_append(rx, data, data_len))
         {
-            return DEVICENET_FRAG_ERR;
+            Devicenet.frag = DEVICENET_FRAG_ERR;
+            return;
         }
-        return DEVICENET_FRAG_STARTED;
+        Devicenet.frag = DEVICENET_FRAG_STARTED;
+        return;
     case DEVICENET_FRAG_MIDDLE:
         if (!rx->active || count != rx->next_count)
         {
-            protocore_devicenet_frag_reset(rx);
-            return DEVICENET_FRAG_ERR;
+            Devicenet.frag_reset_args.rx = rx;
+            devicenet_frag_reset(work);
+            Devicenet.frag = DEVICENET_FRAG_ERR;
+            return;
         }
         if (data_len && !frag_append(rx, data, data_len))
         {
-            protocore_devicenet_frag_reset(rx);
-            return DEVICENET_FRAG_ERR;
+            Devicenet.frag_reset_args.rx = rx;
+            devicenet_frag_reset(work);
+            Devicenet.frag = DEVICENET_FRAG_ERR;
+            return;
         }
         rx->next_count = (uint8_t)((count + 1u) & DEVICENET_FRAG_COUNT_MASK);
-        return DEVICENET_FRAG_PROGRESS;
+        Devicenet.frag = DEVICENET_FRAG_PROGRESS;
+        return;
     case DEVICENET_FRAG_LAST:
         if (!rx->active || count != rx->next_count)
         {
-            protocore_devicenet_frag_reset(rx);
-            return DEVICENET_FRAG_ERR;
+            Devicenet.frag_reset_args.rx = rx;
+            devicenet_frag_reset(work);
+            Devicenet.frag = DEVICENET_FRAG_ERR;
+            return;
         }
         if (data_len && !frag_append(rx, data, data_len))
         {
-            protocore_devicenet_frag_reset(rx);
-            return DEVICENET_FRAG_ERR;
+            Devicenet.frag_reset_args.rx = rx;
+            devicenet_frag_reset(work);
+            Devicenet.frag = DEVICENET_FRAG_ERR;
+            return;
         }
         rx->active = PROTO_FALSE;
-        return DEVICENET_FRAG_COMPLETE;
+        Devicenet.frag = DEVICENET_FRAG_COMPLETE;
+        return;
     default: // DEVICENET_FRAG_ACK is flow control, not data
-        return DEVICENET_FRAG_IGNORED;
+        Devicenet.frag = DEVICENET_FRAG_IGNORED;
+        return;
     }
 }
+
+DevicenetNs Devicenet = {.encode_id = devicenet_encode_id,
+                         .decode_id = devicenet_decode_id,
+                         .msg_header = devicenet_msg_header,
+                         .frag_octet = devicenet_frag_octet,
+                         .build_explicit = devicenet_build_explicit,
+                         .build_fragment = devicenet_build_fragment,
+                         .frag_reset = devicenet_frag_reset,
+                         .frag_feed = devicenet_frag_feed};
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_DEVICENET

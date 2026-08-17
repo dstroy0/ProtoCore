@@ -7,7 +7,7 @@
 // heap, no bus). Same shape as performance_benching/device/modbus: a pure protocol codec with no hardware involved,
 // so every call here exercises the real production code path. The physical CAN transaction (ESP32
 // TWAI peripheral or an MCP2515 over SPI) is explicitly out of scope - this rig has no CAN
-// transceiver attached, and protocore_devicenet_* never touches the bus itself, only the CanFrame struct
+// transceiver attached, and Devicenet.* never touches the bus itself, only the CanFrame struct
 // (shared/can/can.h) and its own reassembly buffer.
 //
 // Build/flash (JTAG-capable S3 over its USB-Serial/JTAG port):
@@ -16,10 +16,13 @@
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
 #include "services/fieldbus/devicenet/devicenet.h"
+#include "shared/can/can.h"
 
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+
+static uint8_t devicenet_work[16]; // the borrow an entry takes; Devicenet never reads it
 
 void dbench_run(void)
 {
@@ -30,9 +33,18 @@ void dbench_run(void)
 
     // Three-frame fragmentation roundtrip, 14 octets of reassembled data
     // (test_devicenet.cpp: test_frag_reassembly_roundtrip).
-    const uint8_t f0[8] = {0x80 | 0x21, protocore_devicenet_frag_octet(DEVICENET_FRAG_FIRST, 0), 1, 2, 3, 4, 5, 6};
-    const uint8_t f1[8] = {0x80 | 0x21, protocore_devicenet_frag_octet(DEVICENET_FRAG_MIDDLE, 1), 7, 8, 9, 10, 11, 12};
-    const uint8_t f2[4] = {0x80 | 0x21, protocore_devicenet_frag_octet(DEVICENET_FRAG_LAST, 2), 13, 14};
+    Devicenet.frag_octet_args.type = DEVICENET_FRAG_FIRST;
+    Devicenet.frag_octet_args.count = 0;
+    Devicenet.frag_octet(devicenet_work);
+    const uint8_t f0[8] = {0x80 | 0x21, Devicenet.value, 1, 2, 3, 4, 5, 6};
+    Devicenet.frag_octet_args.type = DEVICENET_FRAG_MIDDLE;
+    Devicenet.frag_octet_args.count = 1;
+    Devicenet.frag_octet(devicenet_work);
+    const uint8_t f1[8] = {0x80 | 0x21, Devicenet.value, 7, 8, 9, 10, 11, 12};
+    Devicenet.frag_octet_args.type = DEVICENET_FRAG_LAST;
+    Devicenet.frag_octet_args.count = 2;
+    Devicenet.frag_octet(devicenet_work);
+    const uint8_t f2[4] = {0x80 | 0x21, Devicenet.value, 13, 14};
 
     for (;;)
     {
@@ -45,21 +57,47 @@ void dbench_run(void)
         CanFrame frame;
         DeviceNetFragRx rx;
 
-        DBENCH_OP("protocore_devicenet_encode_id", 100000,
+        Devicenet.encode_id_args.id = &id;
+        Devicenet.encode_id_args.group = DEVICENET_GROUP_2;
+        Devicenet.encode_id_args.msg_id = DEVICENET_G2_UNCONNECTED_EXPLICIT_REQ;
+        Devicenet.encode_id_args.mac_id = 0x21;
+        DBENCH_OP("Devicenet.encode_id", 100000,
                   sinkb |=
-                  protocore_devicenet_encode_id(&id, DEVICENET_GROUP_2, DEVICENET_G2_UNCONNECTED_EXPLICIT_REQ, 0x21));
-        DBENCH_OP("protocore_devicenet_decode_id", 100000, sinkb |= protocore_devicenet_decode_id(decode_test_id, &d));
-        DBENCH_OP("protocore_devicenet_msg_header", 200000, sink8 += protocore_devicenet_msg_header(true, false, 0x21));
-        DBENCH_OP("protocore_devicenet_frag_octet", 200000,
-                  sink8 += protocore_devicenet_frag_octet(DEVICENET_FRAG_LAST, 5));
-        DBENCH_OP("protocore_devicenet_build_explicit", 100000,
-                  sinkb |= protocore_devicenet_build_explicit(&frame, DEVICENET_GROUP_2,
-                                                              DEVICENET_G2_UNCONNECTED_EXPLICIT_REQ, 0x21, cip, 3));
+                  (Devicenet.encode_id(devicenet_work), Devicenet.ok));
+        Devicenet.decode_id_args.can_id = decode_test_id;
+        Devicenet.decode_id_args.out = &d;
+        DBENCH_OP("Devicenet.decode_id", 100000, sinkb |= (Devicenet.decode_id(devicenet_work), Devicenet.ok));
+        Devicenet.msg_header_args.frag = true;
+        Devicenet.msg_header_args.xid = false;
+        Devicenet.msg_header_args.mac_id = 0x21;
+        DBENCH_OP("Devicenet.msg_header", 200000, sink8 += (Devicenet.msg_header(devicenet_work), Devicenet.value));
+        Devicenet.frag_octet_args.type = DEVICENET_FRAG_LAST;
+        Devicenet.frag_octet_args.count = 5;
+        DBENCH_OP("Devicenet.frag_octet", 200000,
+                  sink8 += (Devicenet.frag_octet(devicenet_work), Devicenet.value));
+        Devicenet.build_explicit_args.out = &frame;
+        Devicenet.build_explicit_args.group = DEVICENET_GROUP_2;
+        Devicenet.build_explicit_args.msg_id = DEVICENET_G2_UNCONNECTED_EXPLICIT_REQ;
+        Devicenet.build_explicit_args.mac_id = 0x21;
+        Devicenet.build_explicit_args.body = cip;
+        Devicenet.build_explicit_args.body_len = 3;
+        DBENCH_OP("Devicenet.build_explicit", 100000,
+                  sinkb |= (Devicenet.build_explicit(devicenet_work), Devicenet.ok));
         // 3-frame reassembly per iteration: reset + FIRST + MIDDLE + LAST, 14 octets of payload data.
-        DBENCH_BULK("protocore_devicenet_frag_feed (3-frame reasm)", 50000, 14,
-                    (protocore_devicenet_frag_reset(&rx), protocore_devicenet_frag_feed(&rx, f0, sizeof(f0)),
-                     protocore_devicenet_frag_feed(&rx, f1, sizeof(f1)),
-                     protocore_devicenet_frag_feed(&rx, f2, sizeof(f2))));
+        Devicenet.frag_reset_args.rx = &rx;
+        Devicenet.frag_feed_args.rx = &rx;
+        Devicenet.frag_feed_args.body = f0;
+        Devicenet.frag_feed_args.body_len = sizeof(f0);
+        Devicenet.frag_feed_args.rx = &rx;
+        Devicenet.frag_feed_args.body = f1;
+        Devicenet.frag_feed_args.body_len = sizeof(f1);
+        Devicenet.frag_feed_args.rx = &rx;
+        Devicenet.frag_feed_args.body = f2;
+        Devicenet.frag_feed_args.body_len = sizeof(f2);
+        DBENCH_BULK("Devicenet.frag_feed (3-frame reasm)", 50000, 14,
+                    ((Devicenet.frag_reset(devicenet_work), Devicenet.ok), (Devicenet.frag_feed(devicenet_work), Devicenet.frag),
+                     (Devicenet.frag_feed(devicenet_work), Devicenet.frag),
+                     (Devicenet.frag_feed(devicenet_work), Devicenet.frag)));
 
         (void)sinkb;
         (void)sink8;

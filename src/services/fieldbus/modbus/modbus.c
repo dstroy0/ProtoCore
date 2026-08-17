@@ -20,6 +20,7 @@
 // bitfields, the holding / input registers, and the write callback, grouped so it is one
 // named owner, unreachable from any other translation unit.
 #if PROTOCORE_HAS_NET_STACK
+#include "network_drivers/transport/tcp/common.h"            // TcpConn, conn_pool: the slot a frame arrives on
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the accepted slot
 #include "network_drivers/transport/tcp/tcp.h"
 #include "server/core/proto_handler.h"

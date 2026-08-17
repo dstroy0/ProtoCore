@@ -6,10 +6,14 @@
  * @brief CIP message request builder + response parser (pure, host-tested; constants per Wireshark).
  */
 
-#include "services/fieldbus/cip/cip.h"
-#include "mmgr/protomem.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_CIP
+
+#include "mmgr/protomem.h"
+#include "services/fieldbus/cip/cip.h"
+
+PROTOCORE_BEGIN_DECLS
 
 // Write one logical segment (class/instance/attribute) for @p id; 8-bit when it fits, else
 // 16-bit (segment byte + pad + LE value). Returns the octets written (2 or 4), or 0 if it
@@ -37,24 +41,43 @@ static size_t write_segment(uint8_t *p, size_t cap, uint8_t logical_type, uint16
     return 4;
 }
 
-size_t protocore_cip_build_epath(uint8_t *buf, size_t cap, uint16_t class_id, uint16_t instance_id,
-                                 uint16_t attribute_id, proto_bool with_attribute)
+// The entries this file calls before reaching their definitions.
+// --- the entries -----------------------------------------------------------
+
+// No context and no borrow: every operand is the caller's. The borrow an entry takes is
+// never read.
+
+static void cip_build_epath(uint8_t *restrict work);
+static void cip_build_request(uint8_t *restrict work);
+
+static void cip_build_epath(uint8_t *restrict work)
 {
+    (void)work;
+    uint8_t *buf = Cip.build_epath_args.buf;
+    size_t cap = Cip.build_epath_args.cap;
+    uint16_t class_id = Cip.build_epath_args.class_id;
+    uint16_t instance_id = Cip.build_epath_args.instance_id;
+    uint16_t attribute_id = Cip.build_epath_args.attribute_id;
+    proto_bool with_attribute = Cip.build_epath_args.with_attribute;
+
     if (!buf)
     {
-        return 0;
+        Cip.n = 0;
+        return;
     }
     size_t p = 0;
     size_t s = write_segment(buf + p, cap - p, CIP_SEG_CLASS, class_id);
     if (!s)
     {
-        return 0;
+        Cip.n = 0;
+        return;
     }
     p += s;
     s = write_segment(buf + p, cap - p, CIP_SEG_INSTANCE, instance_id);
     if (!s)
     {
-        return 0;
+        Cip.n = 0;
+        return;
     }
     p += s;
     if (with_attribute)
@@ -62,25 +85,36 @@ size_t protocore_cip_build_epath(uint8_t *buf, size_t cap, uint16_t class_id, ui
         s = write_segment(buf + p, cap - p, CIP_SEG_ATTRIBUTE, attribute_id);
         if (!s)
         {
-            return 0;
+            Cip.n = 0;
+            return;
         }
         p += s;
     }
-    return p;
+    Cip.n = p;
 }
 
-size_t protocore_cip_build_request(uint8_t *buf, size_t cap, uint8_t service, const uint8_t *epath, size_t epath_len,
-                                   const uint8_t *data, size_t data_len)
+static void cip_build_request(uint8_t *restrict work)
 {
+    (void)work;
+    uint8_t *buf = Cip.build_request_args.buf;
+    size_t cap = Cip.build_request_args.cap;
+    uint8_t service = Cip.build_request_args.service;
+    const uint8_t *epath = Cip.build_request_args.epath;
+    size_t epath_len = Cip.build_request_args.epath_len;
+    const uint8_t *data = Cip.build_request_args.data;
+    size_t data_len = Cip.build_request_args.data_len;
+
     // EPATH must be whole 16-bit words and fit the 1-octet word count.
     if (!buf || !epath || (epath_len & 1) || (epath_len / 2) > 0xFF || (data_len && !data))
     {
-        return 0;
+        Cip.n = 0;
+        return;
     }
     size_t total = 2 + epath_len + data_len; // service + path size + EPATH + data
     if (total > cap)
     {
-        return 0;
+        Cip.n = 0;
+        return;
     }
     size_t p = 0;
     buf[p++] = service;
@@ -92,49 +126,117 @@ size_t protocore_cip_build_request(uint8_t *buf, size_t cap, uint8_t service, co
         mem.cpy(buf + p, data, data_len);
         p += data_len;
     }
-    return p;
+    Cip.n = p;
 }
 
-size_t protocore_cip_build_get_attr_single(uint8_t *buf, size_t cap, uint16_t class_id, uint16_t instance_id,
-                                           uint16_t attribute_id)
+static void cip_build_get_attr_single(uint8_t *restrict work)
 {
+    uint8_t *buf = Cip.build_get_attr_single_args.buf;
+    size_t cap = Cip.build_get_attr_single_args.cap;
+    uint16_t class_id = Cip.build_get_attr_single_args.class_id;
+    uint16_t instance_id = Cip.build_get_attr_single_args.instance_id;
+    uint16_t attribute_id = Cip.build_get_attr_single_args.attribute_id;
+
     uint8_t epath[12];
-    size_t elen = protocore_cip_build_epath(epath, sizeof(epath), class_id, instance_id, attribute_id, PROTO_TRUE);
+    Cip.build_epath_args.buf = epath;
+    Cip.build_epath_args.cap = sizeof(epath);
+    Cip.build_epath_args.class_id = class_id;
+    Cip.build_epath_args.instance_id = instance_id;
+    Cip.build_epath_args.attribute_id = attribute_id;
+    Cip.build_epath_args.with_attribute = PROTO_TRUE;
+    cip_build_epath(work);
+    size_t elen = Cip.n;
     if (!elen)
     {
-        return 0;
+        Cip.n = 0;
+        return;
     }
-    return protocore_cip_build_request(buf, cap, CIP_SC_GET_ATTR_SINGLE, epath, elen, NULL, 0);
+    Cip.build_request_args.buf = buf;
+    Cip.build_request_args.cap = cap;
+    Cip.build_request_args.service = CIP_SC_GET_ATTR_SINGLE;
+    Cip.build_request_args.epath = epath;
+    Cip.build_request_args.epath_len = elen;
+    Cip.build_request_args.data = NULL;
+    Cip.build_request_args.data_len = 0;
+    cip_build_request(work);
 }
 
-size_t protocore_cip_build_get_attr_all(uint8_t *buf, size_t cap, uint16_t class_id, uint16_t instance_id)
+static void cip_build_get_attr_all(uint8_t *restrict work)
 {
+    uint8_t *buf = Cip.build_get_attr_all_args.buf;
+    size_t cap = Cip.build_get_attr_all_args.cap;
+    uint16_t class_id = Cip.build_get_attr_all_args.class_id;
+    uint16_t instance_id = Cip.build_get_attr_all_args.instance_id;
+
     uint8_t epath[8]; // class + instance logical segments only (no attribute), worst case 4B each
-    size_t elen = protocore_cip_build_epath(epath, sizeof(epath), class_id, instance_id, 0, PROTO_FALSE);
+    Cip.build_epath_args.buf = epath;
+    Cip.build_epath_args.cap = sizeof(epath);
+    Cip.build_epath_args.class_id = class_id;
+    Cip.build_epath_args.instance_id = instance_id;
+    Cip.build_epath_args.attribute_id = 0;
+    Cip.build_epath_args.with_attribute = PROTO_FALSE;
+    cip_build_epath(work);
+    size_t elen = Cip.n;
     if (!elen)
     {
-        return 0;
+        Cip.n = 0;
+        return;
     }
-    return protocore_cip_build_request(buf, cap, CIP_SC_GET_ATTR_ALL, epath, elen, NULL, 0);
+    Cip.build_request_args.buf = buf;
+    Cip.build_request_args.cap = cap;
+    Cip.build_request_args.service = CIP_SC_GET_ATTR_ALL;
+    Cip.build_request_args.epath = epath;
+    Cip.build_request_args.epath_len = elen;
+    Cip.build_request_args.data = NULL;
+    Cip.build_request_args.data_len = 0;
+    cip_build_request(work);
 }
 
-size_t protocore_cip_build_set_attr_single(uint8_t *buf, size_t cap, uint16_t class_id, uint16_t instance_id,
-                                           uint16_t attribute_id, const uint8_t *value, size_t value_len)
+static void cip_build_set_attr_single(uint8_t *restrict work)
 {
+    uint8_t *buf = Cip.build_set_attr_single_args.buf;
+    size_t cap = Cip.build_set_attr_single_args.cap;
+    uint16_t class_id = Cip.build_set_attr_single_args.class_id;
+    uint16_t instance_id = Cip.build_set_attr_single_args.instance_id;
+    uint16_t attribute_id = Cip.build_set_attr_single_args.attribute_id;
+    const uint8_t *value = Cip.build_set_attr_single_args.value;
+    size_t value_len = Cip.build_set_attr_single_args.value_len;
+
     uint8_t epath[12];
-    size_t elen = protocore_cip_build_epath(epath, sizeof(epath), class_id, instance_id, attribute_id, PROTO_TRUE);
+    Cip.build_epath_args.buf = epath;
+    Cip.build_epath_args.cap = sizeof(epath);
+    Cip.build_epath_args.class_id = class_id;
+    Cip.build_epath_args.instance_id = instance_id;
+    Cip.build_epath_args.attribute_id = attribute_id;
+    Cip.build_epath_args.with_attribute = PROTO_TRUE;
+    cip_build_epath(work);
+    size_t elen = Cip.n;
     if (!elen)
     {
-        return 0;
+        Cip.n = 0;
+        return;
     }
-    return protocore_cip_build_request(buf, cap, CIP_SC_SET_ATTR_SINGLE, epath, elen, value, value_len);
+    Cip.build_request_args.buf = buf;
+    Cip.build_request_args.cap = cap;
+    Cip.build_request_args.service = CIP_SC_SET_ATTR_SINGLE;
+    Cip.build_request_args.epath = epath;
+    Cip.build_request_args.epath_len = elen;
+    Cip.build_request_args.data = value;
+    Cip.build_request_args.data_len = value_len;
+    cip_build_request(work);
 }
 
-proto_bool protocore_cip_parse_response(const uint8_t *buf, size_t len, CipResponse *out)
+static void cip_parse_response(uint8_t *restrict work)
 {
+    (void)work;
+    const uint8_t *buf = Cip.parse_response_args.buf;
+    size_t len = Cip.parse_response_args.len;
+    CipResponse *out = Cip.parse_response_args.out;
+
     if (!buf || !out || len < 4) // service + reserved + general status + additional-status size
     {
-        return PROTO_FALSE;
+        Cip.ok = PROTO_FALSE;
+        return;
     }
     out->service = buf[0];
     out->general_status = buf[2];
@@ -142,11 +244,21 @@ proto_bool protocore_cip_parse_response(const uint8_t *buf, size_t len, CipRespo
     size_t data_start = 4 + (size_t)addl_words * 2;
     if (data_start > len)
     {
-        return PROTO_FALSE;
+        Cip.ok = PROTO_FALSE;
+        return;
     }
     out->data = buf + data_start;
     out->data_len = len - data_start;
-    return PROTO_TRUE;
+    Cip.ok = PROTO_TRUE;
 }
+
+CipNs Cip = {.build_epath = cip_build_epath,
+             .build_request = cip_build_request,
+             .build_get_attr_single = cip_build_get_attr_single,
+             .build_get_attr_all = cip_build_get_attr_all,
+             .build_set_attr_single = cip_build_set_attr_single,
+             .parse_response = cip_parse_response};
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_CIP

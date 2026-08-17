@@ -22,6 +22,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+static uint8_t cip_work[16]; // the borrow an entry takes; Cip never reads it
+
 void dbench_run(void)
 {
     // class 1 / instance 1 / attribute 7 -> all 8-bit logical segments.
@@ -43,19 +45,48 @@ void dbench_run(void)
         volatile size_t sink = 0;
         CipResponse r;
 
-        DBENCH_OP("protocore_cip_build_epath 8bit", 100000,
-                  sink += protocore_cip_build_epath(epath8, sizeof(epath8), 0x01, 0x01, 0x07, true));
-        DBENCH_OP("protocore_cip_build_epath 16bit", 100000,
-                  sink += protocore_cip_build_epath(epath16, sizeof(epath16), 0x0100, 0x01, 0, false));
-        DBENCH_OP("protocore_cip_build_get_attr_single", 100000,
-                  sink += protocore_cip_build_get_attr_single(req, sizeof(req), 0x01, 0x01, 0x07));
-        DBENCH_OP("protocore_cip_build_request (SET)", 100000,
-                  sink += protocore_cip_build_request(req, sizeof(req), CIP_SC_SET_ATTR_SINGLE, set_epath,
-                                                      sizeof(set_epath), set_data, sizeof(set_data)));
-        DBENCH_OP("protocore_cip_parse_response ok", 100000,
-                  sink += protocore_cip_parse_response(resp_ok, sizeof(resp_ok), &r) ? 1 : 0);
-        DBENCH_OP("protocore_cip_parse_response addl", 100000,
-                  sink += protocore_cip_parse_response(resp_addl, sizeof(resp_addl), &r) ? 1 : 0);
+        Cip.build_epath_args.buf = epath8;
+        Cip.build_epath_args.cap = sizeof(epath8);
+        Cip.build_epath_args.class_id = 0x01;
+        Cip.build_epath_args.instance_id = 0x01;
+        Cip.build_epath_args.attribute_id = 0x07;
+        Cip.build_epath_args.with_attribute = true;
+        DBENCH_OP("Cip.build_epath 8bit", 100000,
+                  sink += (Cip.build_epath(cip_work), Cip.n));
+        Cip.build_epath_args.buf = epath16;
+        Cip.build_epath_args.cap = sizeof(epath16);
+        Cip.build_epath_args.class_id = 0x0100;
+        Cip.build_epath_args.instance_id = 0x01;
+        Cip.build_epath_args.attribute_id = 0;
+        Cip.build_epath_args.with_attribute = false;
+        DBENCH_OP("Cip.build_epath 16bit", 100000,
+                  sink += (Cip.build_epath(cip_work), Cip.n));
+        Cip.build_get_attr_single_args.buf = req;
+        Cip.build_get_attr_single_args.cap = sizeof(req);
+        Cip.build_get_attr_single_args.class_id = 0x01;
+        Cip.build_get_attr_single_args.instance_id = 0x01;
+        Cip.build_get_attr_single_args.attribute_id = 0x07;
+        DBENCH_OP("Cip.build_get_attr_single", 100000,
+                  sink += (Cip.build_get_attr_single(cip_work), Cip.n));
+        Cip.build_request_args.buf = req;
+        Cip.build_request_args.cap = sizeof(req);
+        Cip.build_request_args.service = CIP_SC_SET_ATTR_SINGLE;
+        Cip.build_request_args.epath = set_epath;
+        Cip.build_request_args.epath_len = sizeof(set_epath);
+        Cip.build_request_args.data = set_data;
+        Cip.build_request_args.data_len = sizeof(set_data);
+        DBENCH_OP("Cip.build_request (SET)", 100000,
+                  sink += (Cip.build_request(cip_work), Cip.n));
+        Cip.parse_response_args.buf = resp_ok;
+        Cip.parse_response_args.len = sizeof(resp_ok);
+        Cip.parse_response_args.out = &r;
+        DBENCH_OP("Cip.parse_response ok", 100000,
+                  sink += (Cip.parse_response(cip_work), Cip.ok) ? 1 : 0);
+        Cip.parse_response_args.buf = resp_addl;
+        Cip.parse_response_args.len = sizeof(resp_addl);
+        Cip.parse_response_args.out = &r;
+        DBENCH_OP("Cip.parse_response addl", 100000,
+                  sink += (Cip.parse_response(cip_work), Cip.ok) ? 1 : 0);
         (void)sink;
 
         DBENCH_DONE();

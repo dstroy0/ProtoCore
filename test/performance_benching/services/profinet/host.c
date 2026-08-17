@@ -17,6 +17,8 @@
 #include <stdint.h>
 #include <string.h>
 
+static uint8_t profinet_work[16]; // the borrow an entry takes; Profinet never reads it
+
 static void walk_cb(uint8_t option, uint8_t suboption, const uint8_t *value, size_t value_len, void *arg)
 {
     (void)option;
@@ -30,12 +32,25 @@ int main(void)
     // A DCP Identify response naming the station "et200sp" (a NameOfStation block).
     const char *name = "et200sp";
     uint8_t blocks[64];
-    size_t blen = protocore_pn_dcp_block(PN_DCP_OPT_DEVICE, PN_DCP_SUB_DEV_NAME_OF_STATION, (const uint8_t *)name,
-                                         strlen(name), blocks, sizeof(blocks));
+    Profinet.dcp_block_args.option = PN_DCP_OPT_DEVICE;
+    Profinet.dcp_block_args.suboption = PN_DCP_SUB_DEV_NAME_OF_STATION;
+    Profinet.dcp_block_args.value = (const uint8_t *)name;
+    Profinet.dcp_block_args.value_len = strlen(name);
+    Profinet.dcp_block_args.out = blocks;
+    Profinet.dcp_block_args.cap = sizeof(blocks);
+    Profinet.dcp_block(profinet_work);
+    size_t blen = Profinet.n;
     uint8_t hdr[16];
-    size_t hlen =
-        protocore_pn_dcp_header(PN_FRAMEID_DCP_IDENT_RES, PN_DCP_SERVICE_IDENTIFY, PN_DCP_TYPE_RESPONSE_SUCCESS,
-                                0x12345678u, 0, (uint16_t)blen, hdr, sizeof(hdr));
+    Profinet.dcp_header_args.frame_id = PN_FRAMEID_DCP_IDENT_RES;
+    Profinet.dcp_header_args.service_id = PN_DCP_SERVICE_IDENTIFY;
+    Profinet.dcp_header_args.service_type = PN_DCP_TYPE_RESPONSE_SUCCESS;
+    Profinet.dcp_header_args.xid = 0x12345678u;
+    Profinet.dcp_header_args.response_delay = 0;
+    Profinet.dcp_header_args.data_length = (uint16_t)blen;
+    Profinet.dcp_header_args.out = hdr;
+    Profinet.dcp_header_args.cap = sizeof(hdr);
+    Profinet.dcp_header(profinet_work);
+    size_t hlen = Profinet.n;
 
     hbench_header();
 
@@ -44,11 +59,16 @@ int main(void)
         uint8_t buf[16];
         volatile size_t sink = 0;
         double ns = 0.0;
-        HBENCH_NS(5000000,
-                  sink += protocore_pn_dcp_header(PN_FRAMEID_DCP_IDENT_RES, PN_DCP_SERVICE_IDENTIFY,
-                                                  PN_DCP_TYPE_RESPONSE_SUCCESS, 0x12345678u, 0, (uint16_t)blen, buf,
-                                                  sizeof(buf)),
-                  ns);
+        Profinet.dcp_header_args.frame_id = PN_FRAMEID_DCP_IDENT_RES;
+        Profinet.dcp_header_args.service_id = PN_DCP_SERVICE_IDENTIFY;
+        Profinet.dcp_header_args.service_type = PN_DCP_TYPE_RESPONSE_SUCCESS;
+        Profinet.dcp_header_args.xid = 0x12345678u;
+        Profinet.dcp_header_args.response_delay = 0;
+        Profinet.dcp_header_args.data_length = (uint16_t)blen;
+        Profinet.dcp_header_args.out = buf;
+        Profinet.dcp_header_args.cap = sizeof(buf);
+        Profinet.dcp_header(profinet_work);
+        HBENCH_NS(5000000, sink += Profinet.n, ns);
         hbench_row("profinet", "dcp_header (build)", ns, (double)hlen);
         (void)sink;
     }
@@ -61,7 +81,11 @@ int main(void)
             10000000,
             {
                 PnDcpHeader out;
-                if (protocore_pn_dcp_parse_header(hdr, hlen, &out))
+                Profinet.dcp_parse_header_args.frame = hdr;
+                Profinet.dcp_parse_header_args.len = hlen;
+                Profinet.dcp_parse_header_args.out = &out;
+                Profinet.dcp_parse_header(profinet_work);
+                if (Profinet.ok)
                 {
                     sink += out.data_length + out.xid;
                 }
@@ -80,7 +104,12 @@ int main(void)
             10000000,
             {
                 size_t acc = 0;
-                if (protocore_pn_dcp_walk(blocks, blen, walk_cb, &acc))
+                Profinet.dcp_walk_args.blocks = blocks;
+                Profinet.dcp_walk_args.len = blen;
+                Profinet.dcp_walk_args.cb = walk_cb;
+                Profinet.dcp_walk_args.arg = &acc;
+                Profinet.dcp_walk(profinet_work);
+                if (Profinet.ok)
                 {
                     sink += acc;
                 }

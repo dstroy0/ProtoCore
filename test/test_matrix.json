@@ -3161,15 +3161,26 @@
     },
     "native_j1939": {
       "desc": "SAE J1939 codec (services/fieldbus/j1939): 29-bit id encode/decode (PDU1 + PDU2), single-frame\nmessages, Request PGN, Address Claimed + NAME, and the Transport Protocol (BAM + TP.DT)\nreassembler, over the shared CAN frame. Pure host tests.",
-      "flags": ["-DPROTOCORE_ENABLE_J1939=1", "-DUNITY_INCLUDE_DOUBLE"],
+      "flags": [
+        "-DPROTOCORE_ENABLE_J1939=1",
+        "-DUNITY_INCLUDE_DOUBLE"
+      ],
       "src": [
         "+<services/fieldbus/j1939/j1939.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<mmgr/plaintext.c>",
+        "+<mmgr/span.c>",
+        "+<mmgr/arena.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
-      "tests": ["unit/src/services/fieldbus/j1939/test_j1939"],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "tests": [
+        "unit/src/services/fieldbus/j1939/test_j1939"
+      ],
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
     },
     "native_j2735_uper": {
       "desc": "SAE J2735 V2X codec (services/transportation/j2735): the ASN.1 UPER primitive layer against ITU-T X.691 clause 13 (a constrained whole number is the offset from the lower bound in ceil(log2(range)) bits, MSB-first, no inter-field padding) and the BSMcore / SPaT MovementState / MAP intersection encode and decode. The load-bearing case is the 162-bit / 21-octet BSMcore layout asserted against a hand-written bit string. Pure host tests.",
@@ -3832,16 +3843,26 @@
     },
     "native_marine_nmea2000": {
       "desc": "NMEA 2000 codec (services/timing_position/nmea2000): the Fast Packet transport (frame count from the 6 + 7n split, the sequence and frame counters packed in the control octet, split and byte-for-byte reassembly up to 223 octets, out-of-order and foreign-sequence rejection, bounds), single-frame build over the J1939 29-bit identifier, and the typed PGN decoders with their documented scalings and not-available sentinels (position, COG/SOG, engine rapid and dynamic, wind, depth, heading, attitude, temperature Kelvin-to-Celsius, battery). NMEA 2000 is not a public document, so expectations are properties plus the scalings the header states.",
-      "flags": ["-DPROTOCORE_ENABLE_NMEA2000=1"],
+      "flags": [
+        "-DPROTOCORE_ENABLE_NMEA2000=1"
+      ],
       "src": [
         "+<services/timing_position/nmea2000/nmea2000.c>",
         "+<services/fieldbus/j1939/j1939.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<mmgr/plaintext.c>",
+        "+<mmgr/span.c>",
+        "+<mmgr/arena.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
-      "tests": ["unit/src/services/timing_position/nmea2000/test_nmea2000"],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "tests": [
+        "unit/src/services/timing_position/nmea2000/test_nmea2000"
+      ],
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
     },
     "native_nrf24": {
       "desc": "nRF24L01+ driver (services/radio/nrf24), v5 radio plugin: the Nordic SPI command protocol\n(STATUS shifted out first, W/R_REGISTER, W_TX/R_RX_PAYLOAD, write-1-to-clear) exercised\nagainst a mock chip - init / send (padded to the static width) / tx-done / set-rx / recv\n(pipe-addressed). Pure host tests; the RF link needs the module.",
@@ -4419,10 +4440,17 @@
         "+<shared/hex/hex.c>",
         "+<mmgr/float_bits.c>",
         "+<crypto/mac/ghash.c>",
-        "+<crypto/aead/aes128gcm.c>"
+        "+<crypto/aead/aes128gcm.c>",
+        "+<network_drivers/transport/tcp/protocol/protocol.c>",
+        "+<network_drivers/transport/tcp/server/server.c>",
+        "+<network_drivers/transport/tcp/lower/lower.c>"
       ],
-      "tests": ["unit/src/network_drivers/application/smb/test_pentest"],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "tests": [
+        "unit/src/network_drivers/application/smb/test_pentest"
+      ],
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
     },
     "native_phy": {
       "desc": "Layer 1 driven through a REAL backend: the env declares PROTOCORE_PHYSICAL_HAS_BACKEND=1,\nso and core_setup/hal/host/physical stands in for silicon instead of the\nno-op stubs in physical.c. Nothing else in the tree builds that backend, and without it every L1\nreadout answers empty - which means a caller that mishandles a live link reads exactly like one\nthat works, and no assertion can tell them apart. Here the link actually comes up: the station\nassociates and reports its SSID, channel and a negative dBm RSSI; the softAP takes its own address\nwithout stealing the route; Ethernet then takes the default route from the station, the way a\nstack picks one when both are up. That is also the only way to separate the same-signature members\na stub build cannot - eth->init from eth->ready, ip6->init from ip6->ready, and link->mac from\nlink->egress_mac, which return DIFFERENT addresses once a wired link carries traffic. Addresses\nare RFC 5737 TEST-NET-1 and RFC 3849 2001:db8::/32, the MACs are checked for the IEEE 802 U/L and\nI/G bits, the SSID cap is IEEE 802.11-2020 9.4.2.2's 32 octets, and a global IPv6 address is\nchecked not to be an RFC 4291 sec 2.5.6 link-local. PROTOCORE_RADIO_WIFI_PS is set to max modem so the\nkeep-awake refcount is provable: the first busy_hold forces sleep off and the balancing release\nrestores the configured mode, which is indistinguishable from the held state at the default of 0.\nThis is the only env that compiles radio_power.c's backend arm at all.",
@@ -5973,15 +6001,25 @@
     },
     "native_simatic": {
       "desc": "Siemens SIMATIC serial (services/fieldbus/simatic): 3964R block framing (DLE-double + XOR BCC)\n+ the 3964R link state machine (STX/DLE handshake, NAK/QVZ retry, ZVZ timeout, priority\narbitration) + RK512 SEND/FETCH/reaction telegram build/parse (big-endian words). Pure host tests.",
-      "flags": ["-DPROTOCORE_ENABLE_SIMATIC=1"],
+      "flags": [
+        "-DPROTOCORE_ENABLE_SIMATIC=1"
+      ],
       "src": [
         "+<services/fieldbus/simatic/simatic.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<mmgr/plaintext.c>",
+        "+<mmgr/span.c>",
+        "+<mmgr/arena.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
-      "tests": ["unit/src/services/fieldbus/simatic/test_simatic"],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "tests": [
+        "unit/src/services/fieldbus/simatic/test_simatic"
+      ],
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
     },
     "native_sleep_sched": {
       "desc": "Dynamic sleep-cycle scheduler (server/sleep_sched): the wrap-safe idle->sleep-window\ndecision core with a doubling ramp clamped to a ceiling. Pure host tests, synthetic clock.",

@@ -13,9 +13,12 @@
 // read out of the encoder.
 
 #include "services/fieldbus/canopen/canopen.h"
+#include "shared/can/can.h"
 #include <string.h>
 
 #include <unity.h>
+
+static uint8_t canopen_work[16]; // the borrow an entry takes; Canopen never reads it
 
 void setUp(void)
 {
@@ -58,7 +61,12 @@ void test_predefined_connection_set(void)
 void test_expedited_sdo_upload_of_the_identity_vendor_id(void)
 {
     CanFrame req;
-    TEST_ASSERT_TRUE(protocore_canopen_build_sdo_read(&req, 5, 0x1018u, 1));
+    Canopen.build_sdo_read_args.out = &req;
+    Canopen.build_sdo_read_args.node_id = 5;
+    Canopen.build_sdo_read_args.index = 0x1018u;
+    Canopen.build_sdo_read_args.sub = 1;
+    Canopen.build_sdo_read(canopen_work);
+    TEST_ASSERT_TRUE(Canopen.ok);
     TEST_ASSERT_EQUAL_HEX32(0x605u, req.id);
     TEST_ASSERT_FALSE(req.extended);
     TEST_ASSERT_EQUAL_UINT8(8u, req.dlc);
@@ -74,7 +82,10 @@ void test_expedited_sdo_upload_of_the_identity_vendor_id(void)
     memcpy(resp.data, RESP, 8);
 
     CanopenSdoResponse out;
-    TEST_ASSERT_TRUE(protocore_canopen_parse_sdo_response(&resp, &out));
+    Canopen.parse_sdo_response_args.f = &resp;
+    Canopen.parse_sdo_response_args.out = &out;
+    Canopen.parse_sdo_response(canopen_work);
+    TEST_ASSERT_TRUE(Canopen.ok);
     TEST_ASSERT_EQUAL_HEX16(0x1018u, out.index);
     TEST_ASSERT_EQUAL_UINT8(1u, out.sub);
     TEST_ASSERT_FALSE(out.is_abort);
@@ -102,7 +113,14 @@ void test_sdo_expedited_download_encodes_the_unused_octet_count(void)
     for (size_t i = 0; i < sizeof(CASES) / sizeof(CASES[0]); i++)
     {
         CanFrame f;
-        TEST_ASSERT_TRUE(protocore_canopen_build_sdo_write(&f, 0x7F, 0x6040u, 0, DATA, CASES[i].len));
+        Canopen.build_sdo_write_args.out = &f;
+        Canopen.build_sdo_write_args.node_id = 0x7F;
+        Canopen.build_sdo_write_args.index = 0x6040u;
+        Canopen.build_sdo_write_args.sub = 0;
+        Canopen.build_sdo_write_args.data = DATA;
+        Canopen.build_sdo_write_args.len = CASES[i].len;
+        Canopen.build_sdo_write(canopen_work);
+        TEST_ASSERT_TRUE(Canopen.ok);
         TEST_ASSERT_EQUAL_HEX32(0x600u + 0x7Fu, f.id);
         TEST_ASSERT_EQUAL_HEX8(CASES[i].cmd, f.data[0]);
         TEST_ASSERT_EQUAL_HEX8(0x40u, f.data[1]); // 0x6040 little-endian
@@ -123,30 +141,74 @@ void test_sdo_expedited_download_encodes_the_unused_octet_count(void)
         f.data[0] = (uint8_t)(0x40u | (((uint8_t)(4u - len)) << 2) | 0x03u);
         f.data[4] = 0xAA;
         CanopenSdoResponse out;
-        TEST_ASSERT_TRUE(protocore_canopen_parse_sdo_response(&f, &out));
+        Canopen.parse_sdo_response_args.f = &f;
+        Canopen.parse_sdo_response_args.out = &out;
+        Canopen.parse_sdo_response(canopen_work);
+        TEST_ASSERT_TRUE(Canopen.ok);
         TEST_ASSERT_TRUE(out.expedited);
         TEST_ASSERT_EQUAL_UINT8(len, out.len);
     }
 
     CanFrame f;
-    TEST_ASSERT_FALSE(protocore_canopen_build_sdo_write(&f, 1, 0x1000u, 0, DATA, 0)); // expedited carries 1..4
-    TEST_ASSERT_FALSE(protocore_canopen_build_sdo_write(&f, 1, 0x1000u, 0, DATA, 5));
-    TEST_ASSERT_FALSE(protocore_canopen_build_sdo_write(&f, 1, 0x1000u, 0, NULL, 2));
-    TEST_ASSERT_FALSE(protocore_canopen_build_sdo_read(&f, 0, 0x1000u, 0));   // node 0 is not an SDO server
-    TEST_ASSERT_FALSE(protocore_canopen_build_sdo_read(&f, 128, 0x1000u, 0)); // node ids are 1..127
+    Canopen.build_sdo_write_args.out = &f;
+    Canopen.build_sdo_write_args.node_id = 1;
+    Canopen.build_sdo_write_args.index = 0x1000u;
+    Canopen.build_sdo_write_args.sub = 0;
+    Canopen.build_sdo_write_args.data = DATA;
+    Canopen.build_sdo_write_args.len = 0;
+    Canopen.build_sdo_write(canopen_work);
+    TEST_ASSERT_FALSE(Canopen.ok); // expedited carries 1..4
+    Canopen.build_sdo_write_args.out = &f;
+    Canopen.build_sdo_write_args.node_id = 1;
+    Canopen.build_sdo_write_args.index = 0x1000u;
+    Canopen.build_sdo_write_args.sub = 0;
+    Canopen.build_sdo_write_args.data = DATA;
+    Canopen.build_sdo_write_args.len = 5;
+    Canopen.build_sdo_write(canopen_work);
+    TEST_ASSERT_FALSE(Canopen.ok);
+    Canopen.build_sdo_write_args.out = &f;
+    Canopen.build_sdo_write_args.node_id = 1;
+    Canopen.build_sdo_write_args.index = 0x1000u;
+    Canopen.build_sdo_write_args.sub = 0;
+    Canopen.build_sdo_write_args.data = NULL;
+    Canopen.build_sdo_write_args.len = 2;
+    Canopen.build_sdo_write(canopen_work);
+    TEST_ASSERT_FALSE(Canopen.ok);
+    Canopen.build_sdo_read_args.out = &f;
+    Canopen.build_sdo_read_args.node_id = 0;
+    Canopen.build_sdo_read_args.index = 0x1000u;
+    Canopen.build_sdo_read_args.sub = 0;
+    Canopen.build_sdo_read(canopen_work);
+    TEST_ASSERT_FALSE(Canopen.ok); // node 0 is not an SDO server
+    Canopen.build_sdo_read_args.out = &f;
+    Canopen.build_sdo_read_args.node_id = 128;
+    Canopen.build_sdo_read_args.index = 0x1000u;
+    Canopen.build_sdo_read_args.sub = 0;
+    Canopen.build_sdo_read(canopen_work);
+    TEST_ASSERT_FALSE(Canopen.ok); // node ids are 1..127
 }
 
 // An abort is command specifier 4 (0x80) with the 32-bit abort code little-endian in data[4..7].
 void test_sdo_abort_carries_the_code_little_endian(void)
 {
     CanFrame f;
-    TEST_ASSERT_TRUE(protocore_canopen_build_sdo_abort(&f, 3, 0x1018u, 9, CANOPEN_ABORT_NO_SUBINDEX, PROTO_FALSE));
+    Canopen.build_sdo_abort_args.out = &f;
+    Canopen.build_sdo_abort_args.node_id = 3;
+    Canopen.build_sdo_abort_args.index = 0x1018u;
+    Canopen.build_sdo_abort_args.sub = 9;
+    Canopen.build_sdo_abort_args.abort_code = CANOPEN_ABORT_NO_SUBINDEX;
+    Canopen.build_sdo_abort_args.to_server = PROTO_FALSE;
+    Canopen.build_sdo_abort(canopen_work);
+    TEST_ASSERT_TRUE(Canopen.ok);
     TEST_ASSERT_EQUAL_HEX32(0x583u, f.id);                                           // server -> client
     static const uint8_t WANT[8] = {0x80, 0x18, 0x10, 0x09, 0x11, 0x00, 0x09, 0x06}; // 0x06090011
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, f.data, 8);
 
     CanopenSdoResponse out;
-    TEST_ASSERT_TRUE(protocore_canopen_parse_sdo_response(&f, &out));
+    Canopen.parse_sdo_response_args.f = &f;
+    Canopen.parse_sdo_response_args.out = &out;
+    Canopen.parse_sdo_response(canopen_work);
+    TEST_ASSERT_TRUE(Canopen.ok);
     TEST_ASSERT_TRUE(out.is_abort);
     TEST_ASSERT_EQUAL_HEX32(CANOPEN_ABORT_NO_SUBINDEX, out.abort_code);
     TEST_ASSERT_EQUAL_HEX16(0x1018u, out.index);
@@ -154,7 +216,14 @@ void test_sdo_abort_carries_the_code_little_endian(void)
     TEST_ASSERT_EQUAL_UINT8(0u, out.len);
 
     // to_server picks the client -> server COB-ID instead.
-    TEST_ASSERT_TRUE(protocore_canopen_build_sdo_abort(&f, 3, 0x1018u, 9, CANOPEN_ABORT_NO_OBJECT, PROTO_TRUE));
+    Canopen.build_sdo_abort_args.out = &f;
+    Canopen.build_sdo_abort_args.node_id = 3;
+    Canopen.build_sdo_abort_args.index = 0x1018u;
+    Canopen.build_sdo_abort_args.sub = 9;
+    Canopen.build_sdo_abort_args.abort_code = CANOPEN_ABORT_NO_OBJECT;
+    Canopen.build_sdo_abort_args.to_server = PROTO_TRUE;
+    Canopen.build_sdo_abort(canopen_work);
+    TEST_ASSERT_TRUE(Canopen.ok);
     TEST_ASSERT_EQUAL_HEX32(0x603u, f.id);
     TEST_ASSERT_EQUAL_HEX8(0x00u, f.data[4]); // 0x06020000
     TEST_ASSERT_EQUAL_HEX8(0x02u, f.data[6]);
@@ -173,7 +242,10 @@ void test_sdo_download_acknowledgement(void)
     memcpy(f.data, ACK, 8);
 
     CanopenSdoResponse out;
-    TEST_ASSERT_TRUE(protocore_canopen_parse_sdo_response(&f, &out));
+    Canopen.parse_sdo_response_args.f = &f;
+    Canopen.parse_sdo_response_args.out = &out;
+    Canopen.parse_sdo_response(canopen_work);
+    TEST_ASSERT_TRUE(Canopen.ok);
     TEST_ASSERT_FALSE(out.is_abort);
     TEST_ASSERT_FALSE(out.is_upload);
     TEST_ASSERT_FALSE(out.expedited);
@@ -182,30 +254,50 @@ void test_sdo_download_acknowledgement(void)
 
     // A command specifier the server never sends (1 = client download) is refused.
     f.data[0] = 0x20;
-    TEST_ASSERT_FALSE(protocore_canopen_parse_sdo_response(&f, &out));
+    Canopen.parse_sdo_response_args.f = &f;
+    Canopen.parse_sdo_response_args.out = &out;
+    Canopen.parse_sdo_response(canopen_work);
+    TEST_ASSERT_FALSE(Canopen.ok);
 
     // An SDO response must arrive on 0x580 + node with a nonzero node.
     f.data[0] = 0x60;
     f.id = CANOPEN_COB_SDO_RX + 10;
-    TEST_ASSERT_FALSE(protocore_canopen_parse_sdo_response(&f, &out));
+    Canopen.parse_sdo_response_args.f = &f;
+    Canopen.parse_sdo_response_args.out = &out;
+    Canopen.parse_sdo_response(canopen_work);
+    TEST_ASSERT_FALSE(Canopen.ok);
     f.id = CANOPEN_COB_SDO_TX;
-    TEST_ASSERT_FALSE(protocore_canopen_parse_sdo_response(&f, &out));
+    Canopen.parse_sdo_response_args.f = &f;
+    Canopen.parse_sdo_response_args.out = &out;
+    Canopen.parse_sdo_response(canopen_work);
+    TEST_ASSERT_FALSE(Canopen.ok);
     f.id = CANOPEN_COB_SDO_TX + 10;
     f.dlc = 7;
-    TEST_ASSERT_FALSE(protocore_canopen_parse_sdo_response(&f, &out));
+    Canopen.parse_sdo_response_args.f = &f;
+    Canopen.parse_sdo_response_args.out = &out;
+    Canopen.parse_sdo_response(canopen_work);
+    TEST_ASSERT_FALSE(Canopen.ok);
 }
 
 // NMT node control is COB-ID 0 with two octets: the command, then the addressed node (0 = all).
 void test_nmt_node_control(void)
 {
     CanFrame f;
-    TEST_ASSERT_TRUE(protocore_canopen_build_nmt(&f, CANOPEN_NMT_START, 0));
+    Canopen.build_nmt_args.out = &f;
+    Canopen.build_nmt_args.command = CANOPEN_NMT_START;
+    Canopen.build_nmt_args.node_id = 0;
+    Canopen.build_nmt(canopen_work);
+    TEST_ASSERT_TRUE(Canopen.ok);
     TEST_ASSERT_EQUAL_HEX32(0x000u, f.id);
     TEST_ASSERT_EQUAL_UINT8(2u, f.dlc);
     TEST_ASSERT_EQUAL_HEX8(0x01u, f.data[0]);
     TEST_ASSERT_EQUAL_UINT8(0u, f.data[1]);
 
-    TEST_ASSERT_TRUE(protocore_canopen_build_nmt(&f, CANOPEN_NMT_RESET_COMM, 42));
+    Canopen.build_nmt_args.out = &f;
+    Canopen.build_nmt_args.command = CANOPEN_NMT_RESET_COMM;
+    Canopen.build_nmt_args.node_id = 42;
+    Canopen.build_nmt(canopen_work);
+    TEST_ASSERT_TRUE(Canopen.ok);
     TEST_ASSERT_EQUAL_HEX8(0x82u, f.data[0]);
     TEST_ASSERT_EQUAL_UINT8(42u, f.data[1]);
 
@@ -215,11 +307,22 @@ void test_nmt_node_control(void)
     TEST_ASSERT_EQUAL_HEX8(0x81u, CANOPEN_NMT_RESET_NODE);
     TEST_ASSERT_EQUAL_HEX8(0x82u, CANOPEN_NMT_RESET_COMM);
 
-    TEST_ASSERT_FALSE(protocore_canopen_build_nmt(&f, CANOPEN_NMT_START, 128));
-    TEST_ASSERT_FALSE(protocore_canopen_build_nmt(NULL, CANOPEN_NMT_START, 1));
+    Canopen.build_nmt_args.out = &f;
+    Canopen.build_nmt_args.command = CANOPEN_NMT_START;
+    Canopen.build_nmt_args.node_id = 128;
+    Canopen.build_nmt(canopen_work);
+    TEST_ASSERT_FALSE(Canopen.ok);
+    Canopen.build_nmt_args.out = NULL;
+    Canopen.build_nmt_args.command = CANOPEN_NMT_START;
+    Canopen.build_nmt_args.node_id = 1;
+    Canopen.build_nmt(canopen_work);
+    TEST_ASSERT_FALSE(Canopen.ok);
 
     CanopenMsg m;
-    TEST_ASSERT_TRUE(protocore_canopen_parse(&f, &m));
+    Canopen.parse_args.f = &f;
+    Canopen.parse_args.out = &m;
+    Canopen.parse(canopen_work);
+    TEST_ASSERT_TRUE(Canopen.ok);
     TEST_ASSERT_EQUAL_INT(CANOPEN_T_NMT, m.type);
     TEST_ASSERT_EQUAL_UINT8(0u, m.node_id);
 }
@@ -229,19 +332,30 @@ void test_nmt_node_control(void)
 void test_sync_and_emcy_share_a_function_code(void)
 {
     CanFrame sync;
-    TEST_ASSERT_TRUE(protocore_canopen_build_sync(&sync));
+    Canopen.build_sync_args.out = &sync;
+    Canopen.build_sync(canopen_work);
+    TEST_ASSERT_TRUE(Canopen.ok);
     TEST_ASSERT_EQUAL_HEX32(0x080u, sync.id);
     TEST_ASSERT_EQUAL_UINT8(0u, sync.dlc);
 
     CanopenMsg m;
-    TEST_ASSERT_TRUE(protocore_canopen_parse(&sync, &m));
+    Canopen.parse_args.f = &sync;
+    Canopen.parse_args.out = &m;
+    Canopen.parse(canopen_work);
+    TEST_ASSERT_TRUE(Canopen.ok);
     TEST_ASSERT_EQUAL_INT(CANOPEN_T_SYNC, m.type);
     TEST_ASSERT_EQUAL_UINT8(0u, m.node_id);
 
     static const uint8_t MSEF[5] = {0x01, 0x02, 0x03, 0x04, 0x05};
     CanFrame emcy;
     // 0x8130 = the "communication error / bus off" emergency error code
-    TEST_ASSERT_TRUE(protocore_canopen_build_emcy(&emcy, 4, 0x8130u, 0x11, MSEF));
+    Canopen.build_emcy_args.out = &emcy;
+    Canopen.build_emcy_args.node_id = 4;
+    Canopen.build_emcy_args.error_code = 0x8130u;
+    Canopen.build_emcy_args.error_reg = 0x11;
+    Canopen.build_emcy_args.msef = MSEF;
+    Canopen.build_emcy(canopen_work);
+    TEST_ASSERT_TRUE(Canopen.ok);
     TEST_ASSERT_EQUAL_HEX32(0x084u, emcy.id);
     TEST_ASSERT_EQUAL_UINT8(8u, emcy.dlc);
     TEST_ASSERT_EQUAL_HEX8(0x30u, emcy.data[0]); // error code little-endian
@@ -249,14 +363,23 @@ void test_sync_and_emcy_share_a_function_code(void)
     TEST_ASSERT_EQUAL_HEX8(0x11u, emcy.data[2]); // object 0x1001 error register
     TEST_ASSERT_EQUAL_HEX8_ARRAY(MSEF, emcy.data + 3, 5);
 
-    TEST_ASSERT_TRUE(protocore_canopen_parse(&emcy, &m));
+    Canopen.parse_args.f = &emcy;
+    Canopen.parse_args.out = &m;
+    Canopen.parse(canopen_work);
+    TEST_ASSERT_TRUE(Canopen.ok);
     TEST_ASSERT_EQUAL_INT(CANOPEN_T_EMCY, m.type);
     TEST_ASSERT_EQUAL_UINT8(4u, m.node_id);
 
     uint8_t node = 0, reg = 0;
     uint16_t code = 0;
     uint8_t got[5];
-    TEST_ASSERT_TRUE(protocore_canopen_parse_emcy(&emcy, &node, &code, &reg, got));
+    Canopen.parse_emcy_args.f = &emcy;
+    Canopen.parse_emcy_args.node_id = &node;
+    Canopen.parse_emcy_args.error_code = &code;
+    Canopen.parse_emcy_args.error_reg = &reg;
+    Canopen.parse_emcy_args.msef = got;
+    Canopen.parse_emcy(canopen_work);
+    TEST_ASSERT_TRUE(Canopen.ok);
     TEST_ASSERT_EQUAL_UINT8(4u, node);
     TEST_ASSERT_EQUAL_HEX16(0x8130u, code);
     TEST_ASSERT_EQUAL_HEX8(0x11u, reg);
@@ -265,8 +388,20 @@ void test_sync_and_emcy_share_a_function_code(void)
     // A SYNC frame is never an EMCY, whatever its length.
     sync.dlc = 8;
     memset(sync.data, 0, 8);
-    TEST_ASSERT_FALSE(protocore_canopen_parse_emcy(&sync, &node, &code, &reg, got));
-    TEST_ASSERT_FALSE(protocore_canopen_build_emcy(&emcy, 0, 0, 0, MSEF));
+    Canopen.parse_emcy_args.f = &sync;
+    Canopen.parse_emcy_args.node_id = &node;
+    Canopen.parse_emcy_args.error_code = &code;
+    Canopen.parse_emcy_args.error_reg = &reg;
+    Canopen.parse_emcy_args.msef = got;
+    Canopen.parse_emcy(canopen_work);
+    TEST_ASSERT_FALSE(Canopen.ok);
+    Canopen.build_emcy_args.out = &emcy;
+    Canopen.build_emcy_args.node_id = 0;
+    Canopen.build_emcy_args.error_code = 0;
+    Canopen.build_emcy_args.error_reg = 0;
+    Canopen.build_emcy_args.msef = MSEF;
+    Canopen.build_emcy(canopen_work);
+    TEST_ASSERT_FALSE(Canopen.ok);
 }
 
 // The heartbeat is 0x700 + node with one octet of NMT state; bit 7 is the boot toggle and is masked
@@ -274,23 +409,43 @@ void test_sync_and_emcy_share_a_function_code(void)
 void test_heartbeat_state_and_toggle_bit(void)
 {
     CanFrame f;
-    TEST_ASSERT_TRUE(protocore_canopen_build_heartbeat(&f, 0x7F, CANOPEN_STATE_OPERATIONAL));
+    Canopen.build_heartbeat_args.out = &f;
+    Canopen.build_heartbeat_args.node_id = 0x7F;
+    Canopen.build_heartbeat_args.state = CANOPEN_STATE_OPERATIONAL;
+    Canopen.build_heartbeat(canopen_work);
+    TEST_ASSERT_TRUE(Canopen.ok);
     TEST_ASSERT_EQUAL_HEX32(0x77Fu, f.id); // 0x700 + 127
     TEST_ASSERT_EQUAL_UINT8(1u, f.dlc);
     TEST_ASSERT_EQUAL_HEX8(0x05u, f.data[0]);
 
     uint8_t node = 0, state = 0xFF;
-    TEST_ASSERT_TRUE(protocore_canopen_parse_heartbeat(&f, &node, &state));
+    Canopen.parse_heartbeat_args.f = &f;
+    Canopen.parse_heartbeat_args.node_id = &node;
+    Canopen.parse_heartbeat_args.state = &state;
+    Canopen.parse_heartbeat(canopen_work);
+    TEST_ASSERT_TRUE(Canopen.ok);
     TEST_ASSERT_EQUAL_UINT8(0x7Fu, node);
     TEST_ASSERT_EQUAL_HEX8(CANOPEN_STATE_OPERATIONAL, state);
 
     f.data[0] = (uint8_t)(0x80u | CANOPEN_STATE_OPERATIONAL);
-    TEST_ASSERT_TRUE(protocore_canopen_parse_heartbeat(&f, &node, &state));
+    Canopen.parse_heartbeat_args.f = &f;
+    Canopen.parse_heartbeat_args.node_id = &node;
+    Canopen.parse_heartbeat_args.state = &state;
+    Canopen.parse_heartbeat(canopen_work);
+    TEST_ASSERT_TRUE(Canopen.ok);
     TEST_ASSERT_EQUAL_HEX8(CANOPEN_STATE_OPERATIONAL, state);
 
     // Boot-up is the state-0 heartbeat a node emits on entering Pre-operational.
-    TEST_ASSERT_TRUE(protocore_canopen_build_heartbeat(&f, 1, CANOPEN_STATE_BOOTUP));
-    TEST_ASSERT_TRUE(protocore_canopen_parse_heartbeat(&f, &node, &state));
+    Canopen.build_heartbeat_args.out = &f;
+    Canopen.build_heartbeat_args.node_id = 1;
+    Canopen.build_heartbeat_args.state = CANOPEN_STATE_BOOTUP;
+    Canopen.build_heartbeat(canopen_work);
+    TEST_ASSERT_TRUE(Canopen.ok);
+    Canopen.parse_heartbeat_args.f = &f;
+    Canopen.parse_heartbeat_args.node_id = &node;
+    Canopen.parse_heartbeat_args.state = &state;
+    Canopen.parse_heartbeat(canopen_work);
+    TEST_ASSERT_TRUE(Canopen.ok);
     TEST_ASSERT_EQUAL_HEX8(0x00u, state);
 
     TEST_ASSERT_EQUAL_HEX8(0x00u, CANOPEN_STATE_BOOTUP);
@@ -298,14 +453,30 @@ void test_heartbeat_state_and_toggle_bit(void)
     TEST_ASSERT_EQUAL_HEX8(0x05u, CANOPEN_STATE_OPERATIONAL);
     TEST_ASSERT_EQUAL_HEX8(0x7Fu, CANOPEN_STATE_PRE_OP);
 
-    TEST_ASSERT_FALSE(protocore_canopen_build_heartbeat(&f, 0, CANOPEN_STATE_OPERATIONAL));
-    TEST_ASSERT_FALSE(protocore_canopen_build_heartbeat(&f, 128, CANOPEN_STATE_OPERATIONAL));
+    Canopen.build_heartbeat_args.out = &f;
+    Canopen.build_heartbeat_args.node_id = 0;
+    Canopen.build_heartbeat_args.state = CANOPEN_STATE_OPERATIONAL;
+    Canopen.build_heartbeat(canopen_work);
+    TEST_ASSERT_FALSE(Canopen.ok);
+    Canopen.build_heartbeat_args.out = &f;
+    Canopen.build_heartbeat_args.node_id = 128;
+    Canopen.build_heartbeat_args.state = CANOPEN_STATE_OPERATIONAL;
+    Canopen.build_heartbeat(canopen_work);
+    TEST_ASSERT_FALSE(Canopen.ok);
 
     CanFrame other = f;
     other.id = CANOPEN_COB_SDO_TX + 1;
-    TEST_ASSERT_FALSE(protocore_canopen_parse_heartbeat(&other, &node, &state));
+    Canopen.parse_heartbeat_args.f = &other;
+    Canopen.parse_heartbeat_args.node_id = &node;
+    Canopen.parse_heartbeat_args.state = &state;
+    Canopen.parse_heartbeat(canopen_work);
+    TEST_ASSERT_FALSE(Canopen.ok);
     other.id = CANOPEN_COB_HEARTBEAT; // node 0 is not a heartbeat producer
-    TEST_ASSERT_FALSE(protocore_canopen_parse_heartbeat(&other, &node, &state));
+    Canopen.parse_heartbeat_args.f = &other;
+    Canopen.parse_heartbeat_args.node_id = &node;
+    Canopen.parse_heartbeat_args.state = &state;
+    Canopen.parse_heartbeat(canopen_work);
+    TEST_ASSERT_FALSE(Canopen.ok);
 }
 
 // TIME_OF_DAY is a 28-bit millisecond-after-midnight field plus 16 bits of days since 1984-01-01,
@@ -317,36 +488,62 @@ void test_heartbeat_state_and_toggle_bit(void)
 void test_time_of_day(void)
 {
     CanFrame f;
-    TEST_ASSERT_TRUE(protocore_canopen_build_time(&f, 86399999u, 5844u));
+    Canopen.build_time_args.out = &f;
+    Canopen.build_time_args.ms_since_midnight = 86399999u;
+    Canopen.build_time_args.days_since_1984 = 5844u;
+    Canopen.build_time(canopen_work);
+    TEST_ASSERT_TRUE(Canopen.ok);
     TEST_ASSERT_EQUAL_HEX32(0x100u, f.id);
     TEST_ASSERT_EQUAL_UINT8(CANOPEN_TIME_LEN, f.dlc);
     static const uint8_t WANT[6] = {0xFF, 0x5B, 0x26, 0x05, 0xD4, 0x16}; // 5844 = 0x16D4
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, f.data, 6);
 
     CanopenTime t;
-    TEST_ASSERT_TRUE(protocore_canopen_parse_time(&f, &t));
+    Canopen.parse_time_args.f = &f;
+    Canopen.parse_time_args.out = &t;
+    Canopen.parse_time(canopen_work);
+    TEST_ASSERT_TRUE(Canopen.ok);
     TEST_ASSERT_EQUAL_UINT32(86399999u, t.ms_since_midnight);
     TEST_ASSERT_EQUAL_UINT16(5844u, t.days_since_1984);
 
     // The four reserved bits never reach the wire, and never come back off it.
-    TEST_ASSERT_TRUE(protocore_canopen_build_time(&f, 0xF0000001u, 1));
+    Canopen.build_time_args.out = &f;
+    Canopen.build_time_args.ms_since_midnight = 0xF0000001u;
+    Canopen.build_time_args.days_since_1984 = 1;
+    Canopen.build_time(canopen_work);
+    TEST_ASSERT_TRUE(Canopen.ok);
     TEST_ASSERT_EQUAL_HEX8(0x00u, f.data[3]);
-    TEST_ASSERT_TRUE(protocore_canopen_parse_time(&f, &t));
+    Canopen.parse_time_args.f = &f;
+    Canopen.parse_time_args.out = &t;
+    Canopen.parse_time(canopen_work);
+    TEST_ASSERT_TRUE(Canopen.ok);
     TEST_ASSERT_EQUAL_UINT32(1u, t.ms_since_midnight);
 
     f.data[3] = 0xF0; // a peer that left them set
-    TEST_ASSERT_TRUE(protocore_canopen_parse_time(&f, &t));
+    Canopen.parse_time_args.f = &f;
+    Canopen.parse_time_args.out = &t;
+    Canopen.parse_time(canopen_work);
+    TEST_ASSERT_TRUE(Canopen.ok);
     TEST_ASSERT_EQUAL_UINT32(1u, t.ms_since_midnight);
 
     CanopenMsg m;
-    TEST_ASSERT_TRUE(protocore_canopen_parse(&f, &m));
+    Canopen.parse_args.f = &f;
+    Canopen.parse_args.out = &m;
+    Canopen.parse(canopen_work);
+    TEST_ASSERT_TRUE(Canopen.ok);
     TEST_ASSERT_EQUAL_INT(CANOPEN_T_TIME, m.type);
 
     f.dlc = 5; // shorter than the TIME_OF_DAY structure
-    TEST_ASSERT_FALSE(protocore_canopen_parse_time(&f, &t));
+    Canopen.parse_time_args.f = &f;
+    Canopen.parse_time_args.out = &t;
+    Canopen.parse_time(canopen_work);
+    TEST_ASSERT_FALSE(Canopen.ok);
     f.dlc = CANOPEN_TIME_LEN;
     f.id = CANOPEN_COB_SYNC;
-    TEST_ASSERT_FALSE(protocore_canopen_parse_time(&f, &t));
+    Canopen.parse_time_args.f = &f;
+    Canopen.parse_time_args.out = &t;
+    Canopen.parse_time(canopen_work);
+    TEST_ASSERT_FALSE(Canopen.ok);
 }
 
 // Each PDO number has its own base and the classifier reports which one a frame belongs to.
@@ -360,31 +557,85 @@ void test_pdo_bases_and_classification(void)
     {
         CanFrame f;
         CanopenMsg m;
-        TEST_ASSERT_TRUE(protocore_canopen_build_tpdo(&f, n, 9, DATA, 8));
+        Canopen.build_tpdo_args.out = &f;
+        Canopen.build_tpdo_args.pdo_num = n;
+        Canopen.build_tpdo_args.node_id = 9;
+        Canopen.build_tpdo_args.data = DATA;
+        Canopen.build_tpdo_args.len = 8;
+        Canopen.build_tpdo(canopen_work);
+        TEST_ASSERT_TRUE(Canopen.ok);
         TEST_ASSERT_EQUAL_HEX32(TX[n - 1] + 9u, f.id);
         TEST_ASSERT_EQUAL_UINT8(8u, f.dlc);
         TEST_ASSERT_EQUAL_HEX8_ARRAY(DATA, f.data, 8);
-        TEST_ASSERT_TRUE(protocore_canopen_parse(&f, &m));
+        Canopen.parse_args.f = &f;
+        Canopen.parse_args.out = &m;
+        Canopen.parse(canopen_work);
+        TEST_ASSERT_TRUE(Canopen.ok);
         TEST_ASSERT_EQUAL_INT(CANOPEN_T_TPDO, m.type);
         TEST_ASSERT_EQUAL_UINT8(n, m.pdo_num);
         TEST_ASSERT_EQUAL_UINT8(9u, m.node_id);
 
-        TEST_ASSERT_TRUE(protocore_canopen_build_rpdo(&f, n, 9, DATA, 2));
+        Canopen.build_rpdo_args.out = &f;
+        Canopen.build_rpdo_args.pdo_num = n;
+        Canopen.build_rpdo_args.node_id = 9;
+        Canopen.build_rpdo_args.data = DATA;
+        Canopen.build_rpdo_args.len = 2;
+        Canopen.build_rpdo(canopen_work);
+        TEST_ASSERT_TRUE(Canopen.ok);
         TEST_ASSERT_EQUAL_HEX32(RX[n - 1] + 9u, f.id);
         TEST_ASSERT_EQUAL_UINT8(2u, f.dlc);
-        TEST_ASSERT_TRUE(protocore_canopen_parse(&f, &m));
+        Canopen.parse_args.f = &f;
+        Canopen.parse_args.out = &m;
+        Canopen.parse(canopen_work);
+        TEST_ASSERT_TRUE(Canopen.ok);
         TEST_ASSERT_EQUAL_INT(CANOPEN_T_RPDO, m.type);
         TEST_ASSERT_EQUAL_UINT8(n, m.pdo_num);
     }
 
     CanFrame f;
-    TEST_ASSERT_FALSE(protocore_canopen_build_tpdo(&f, 0, 9, DATA, 8)); // PDO numbers are 1..4
-    TEST_ASSERT_FALSE(protocore_canopen_build_tpdo(&f, 5, 9, DATA, 8));
-    TEST_ASSERT_FALSE(protocore_canopen_build_tpdo(&f, 1, 9, DATA, 9)); // classic CAN carries 8
-    TEST_ASSERT_FALSE(protocore_canopen_build_rpdo(&f, 1, 0, DATA, 8));
-    TEST_ASSERT_FALSE(protocore_canopen_build_rpdo(&f, 1, 9, NULL, 4));
+    Canopen.build_tpdo_args.out = &f;
+    Canopen.build_tpdo_args.pdo_num = 0;
+    Canopen.build_tpdo_args.node_id = 9;
+    Canopen.build_tpdo_args.data = DATA;
+    Canopen.build_tpdo_args.len = 8;
+    Canopen.build_tpdo(canopen_work);
+    TEST_ASSERT_FALSE(Canopen.ok); // PDO numbers are 1..4
+    Canopen.build_tpdo_args.out = &f;
+    Canopen.build_tpdo_args.pdo_num = 5;
+    Canopen.build_tpdo_args.node_id = 9;
+    Canopen.build_tpdo_args.data = DATA;
+    Canopen.build_tpdo_args.len = 8;
+    Canopen.build_tpdo(canopen_work);
+    TEST_ASSERT_FALSE(Canopen.ok);
+    Canopen.build_tpdo_args.out = &f;
+    Canopen.build_tpdo_args.pdo_num = 1;
+    Canopen.build_tpdo_args.node_id = 9;
+    Canopen.build_tpdo_args.data = DATA;
+    Canopen.build_tpdo_args.len = 9;
+    Canopen.build_tpdo(canopen_work);
+    TEST_ASSERT_FALSE(Canopen.ok); // classic CAN carries 8
+    Canopen.build_rpdo_args.out = &f;
+    Canopen.build_rpdo_args.pdo_num = 1;
+    Canopen.build_rpdo_args.node_id = 0;
+    Canopen.build_rpdo_args.data = DATA;
+    Canopen.build_rpdo_args.len = 8;
+    Canopen.build_rpdo(canopen_work);
+    TEST_ASSERT_FALSE(Canopen.ok);
+    Canopen.build_rpdo_args.out = &f;
+    Canopen.build_rpdo_args.pdo_num = 1;
+    Canopen.build_rpdo_args.node_id = 9;
+    Canopen.build_rpdo_args.data = NULL;
+    Canopen.build_rpdo_args.len = 4;
+    Canopen.build_rpdo(canopen_work);
+    TEST_ASSERT_FALSE(Canopen.ok);
     // A zero-length PDO is legal.
-    TEST_ASSERT_TRUE(protocore_canopen_build_tpdo(&f, 1, 9, NULL, 0));
+    Canopen.build_tpdo_args.out = &f;
+    Canopen.build_tpdo_args.pdo_num = 1;
+    Canopen.build_tpdo_args.node_id = 9;
+    Canopen.build_tpdo_args.data = NULL;
+    Canopen.build_tpdo_args.len = 0;
+    Canopen.build_tpdo(canopen_work);
+    TEST_ASSERT_TRUE(Canopen.ok);
     TEST_ASSERT_EQUAL_UINT8(0u, f.dlc);
 }
 
@@ -394,22 +645,44 @@ void test_classifier_rejects_extended_and_unknown(void)
 {
     CanFrame f;
     CanopenMsg m;
-    TEST_ASSERT_TRUE(protocore_canopen_build_heartbeat(&f, 1, CANOPEN_STATE_OPERATIONAL));
+    Canopen.build_heartbeat_args.out = &f;
+    Canopen.build_heartbeat_args.node_id = 1;
+    Canopen.build_heartbeat_args.state = CANOPEN_STATE_OPERATIONAL;
+    Canopen.build_heartbeat(canopen_work);
+    TEST_ASSERT_TRUE(Canopen.ok);
     f.extended = PROTO_TRUE;
-    TEST_ASSERT_FALSE(protocore_canopen_parse(&f, &m));
+    Canopen.parse_args.f = &f;
+    Canopen.parse_args.out = &m;
+    Canopen.parse(canopen_work);
+    TEST_ASSERT_FALSE(Canopen.ok);
     f.extended = PROTO_FALSE;
-    TEST_ASSERT_TRUE(protocore_canopen_parse(&f, &m));
+    Canopen.parse_args.f = &f;
+    Canopen.parse_args.out = &m;
+    Canopen.parse(canopen_work);
+    TEST_ASSERT_TRUE(Canopen.ok);
 
     f.id = 0x781u; // function code 0x780 is not in the pre-defined connection set
-    TEST_ASSERT_TRUE(protocore_canopen_parse(&f, &m));
+    Canopen.parse_args.f = &f;
+    Canopen.parse_args.out = &m;
+    Canopen.parse(canopen_work);
+    TEST_ASSERT_TRUE(Canopen.ok);
     TEST_ASSERT_EQUAL_INT(CANOPEN_T_UNKNOWN, m.type);
 
     f.id = 0x180u; // a PDO base with node 0 addresses nobody
-    TEST_ASSERT_TRUE(protocore_canopen_parse(&f, &m));
+    Canopen.parse_args.f = &f;
+    Canopen.parse_args.out = &m;
+    Canopen.parse(canopen_work);
+    TEST_ASSERT_TRUE(Canopen.ok);
     TEST_ASSERT_EQUAL_INT(CANOPEN_T_UNKNOWN, m.type);
 
-    TEST_ASSERT_FALSE(protocore_canopen_parse(NULL, &m));
-    TEST_ASSERT_FALSE(protocore_canopen_parse(&f, NULL));
+    Canopen.parse_args.f = NULL;
+    Canopen.parse_args.out = &m;
+    Canopen.parse(canopen_work);
+    TEST_ASSERT_FALSE(Canopen.ok);
+    Canopen.parse_args.f = &f;
+    Canopen.parse_args.out = NULL;
+    Canopen.parse(canopen_work);
+    TEST_ASSERT_FALSE(Canopen.ok);
 }
 
 // A segmented transfer starts with an initiate naming the object and the total size (e = 0, s = 1,
@@ -417,11 +690,23 @@ void test_classifier_rejects_extended_and_unknown(void)
 void test_segmented_download_initiate(void)
 {
     CanFrame f;
-    TEST_ASSERT_TRUE(protocore_canopen_build_sdo_download_init(&f, 2, 0x1008u, 0, 17));
+    Canopen.build_sdo_download_init_args.out = &f;
+    Canopen.build_sdo_download_init_args.node_id = 2;
+    Canopen.build_sdo_download_init_args.index = 0x1008u;
+    Canopen.build_sdo_download_init_args.sub = 0;
+    Canopen.build_sdo_download_init_args.total_size = 17;
+    Canopen.build_sdo_download_init(canopen_work);
+    TEST_ASSERT_TRUE(Canopen.ok);
     TEST_ASSERT_EQUAL_HEX32(0x602u, f.id);
     static const uint8_t WANT[8] = {0x21, 0x08, 0x10, 0x00, 0x11, 0x00, 0x00, 0x00}; // 17 = 0x11
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, f.data, 8);
-    TEST_ASSERT_FALSE(protocore_canopen_build_sdo_download_init(&f, 0, 0x1008u, 0, 17));
+    Canopen.build_sdo_download_init_args.out = &f;
+    Canopen.build_sdo_download_init_args.node_id = 0;
+    Canopen.build_sdo_download_init_args.index = 0x1008u;
+    Canopen.build_sdo_download_init_args.sub = 0;
+    Canopen.build_sdo_download_init_args.total_size = 17;
+    Canopen.build_sdo_download_init(canopen_work);
+    TEST_ASSERT_FALSE(Canopen.ok);
 }
 
 // A segment octet is  t (bit 4) | n (bits 3..1) | c (bit 0), where n counts the UNUSED octets of
@@ -432,35 +717,101 @@ void test_segment_command_octet_layout(void)
     static const uint8_t SEVEN[7] = {1, 2, 3, 4, 5, 6, 7};
     CanFrame f;
 
-    TEST_ASSERT_TRUE(protocore_canopen_build_sdo_download_segment(&f, 2, PROTO_FALSE, SEVEN, 7, PROTO_FALSE));
+    Canopen.build_sdo_download_segment_args.out = &f;
+    Canopen.build_sdo_download_segment_args.node_id = 2;
+    Canopen.build_sdo_download_segment_args.toggle = PROTO_FALSE;
+    Canopen.build_sdo_download_segment_args.data = SEVEN;
+    Canopen.build_sdo_download_segment_args.len = 7;
+    Canopen.build_sdo_download_segment_args.last = PROTO_FALSE;
+    Canopen.build_sdo_download_segment(canopen_work);
+    TEST_ASSERT_TRUE(Canopen.ok);
     TEST_ASSERT_EQUAL_HEX8(0x00u, f.data[0]);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(SEVEN, f.data + 1, 7);
 
-    TEST_ASSERT_TRUE(protocore_canopen_build_sdo_download_segment(&f, 2, PROTO_TRUE, SEVEN, 7, PROTO_FALSE));
+    Canopen.build_sdo_download_segment_args.out = &f;
+    Canopen.build_sdo_download_segment_args.node_id = 2;
+    Canopen.build_sdo_download_segment_args.toggle = PROTO_TRUE;
+    Canopen.build_sdo_download_segment_args.data = SEVEN;
+    Canopen.build_sdo_download_segment_args.len = 7;
+    Canopen.build_sdo_download_segment_args.last = PROTO_FALSE;
+    Canopen.build_sdo_download_segment(canopen_work);
+    TEST_ASSERT_TRUE(Canopen.ok);
     TEST_ASSERT_EQUAL_HEX8(0x10u, f.data[0]);
 
-    TEST_ASSERT_TRUE(protocore_canopen_build_sdo_download_segment(&f, 2, PROTO_FALSE, SEVEN, 3, PROTO_TRUE));
+    Canopen.build_sdo_download_segment_args.out = &f;
+    Canopen.build_sdo_download_segment_args.node_id = 2;
+    Canopen.build_sdo_download_segment_args.toggle = PROTO_FALSE;
+    Canopen.build_sdo_download_segment_args.data = SEVEN;
+    Canopen.build_sdo_download_segment_args.len = 3;
+    Canopen.build_sdo_download_segment_args.last = PROTO_TRUE;
+    Canopen.build_sdo_download_segment(canopen_work);
+    TEST_ASSERT_TRUE(Canopen.ok);
     TEST_ASSERT_EQUAL_HEX8(0x09u, f.data[0]);
 
     proto_bool toggle = PROTO_TRUE, last = PROTO_FALSE;
     uint8_t data[7], len = 0;
-    TEST_ASSERT_TRUE(protocore_canopen_parse_sdo_segment(&f, &toggle, data, &len, &last));
+    Canopen.parse_sdo_segment_args.f = &f;
+    Canopen.parse_sdo_segment_args.toggle = &toggle;
+    Canopen.parse_sdo_segment_args.data = data;
+    Canopen.parse_sdo_segment_args.len = &len;
+    Canopen.parse_sdo_segment_args.last = &last;
+    Canopen.parse_sdo_segment(canopen_work);
+    TEST_ASSERT_TRUE(Canopen.ok);
     TEST_ASSERT_FALSE(toggle);
     TEST_ASSERT_TRUE(last);
     TEST_ASSERT_EQUAL_UINT8(3u, len);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(SEVEN, data, 3);
 
     // An upload segment request is command specifier 3, so it is not a segment frame.
-    TEST_ASSERT_TRUE(protocore_canopen_build_sdo_upload_segment_req(&f, 2, PROTO_TRUE));
+    Canopen.build_sdo_upload_segment_req_args.out = &f;
+    Canopen.build_sdo_upload_segment_req_args.node_id = 2;
+    Canopen.build_sdo_upload_segment_req_args.toggle = PROTO_TRUE;
+    Canopen.build_sdo_upload_segment_req(canopen_work);
+    TEST_ASSERT_TRUE(Canopen.ok);
     TEST_ASSERT_EQUAL_HEX8(0x70u, f.data[0]); // (3 << 5) | 0x10
-    TEST_ASSERT_FALSE(protocore_canopen_parse_sdo_segment(&f, &toggle, data, &len, &last));
-    TEST_ASSERT_TRUE(protocore_canopen_build_sdo_upload_segment_req(&f, 2, PROTO_FALSE));
+    Canopen.parse_sdo_segment_args.f = &f;
+    Canopen.parse_sdo_segment_args.toggle = &toggle;
+    Canopen.parse_sdo_segment_args.data = data;
+    Canopen.parse_sdo_segment_args.len = &len;
+    Canopen.parse_sdo_segment_args.last = &last;
+    Canopen.parse_sdo_segment(canopen_work);
+    TEST_ASSERT_FALSE(Canopen.ok);
+    Canopen.build_sdo_upload_segment_req_args.out = &f;
+    Canopen.build_sdo_upload_segment_req_args.node_id = 2;
+    Canopen.build_sdo_upload_segment_req_args.toggle = PROTO_FALSE;
+    Canopen.build_sdo_upload_segment_req(canopen_work);
+    TEST_ASSERT_TRUE(Canopen.ok);
     TEST_ASSERT_EQUAL_HEX8(0x60u, f.data[0]);
 
-    TEST_ASSERT_FALSE(protocore_canopen_build_sdo_download_segment(&f, 2, PROTO_FALSE, SEVEN, 0, PROTO_FALSE));
-    TEST_ASSERT_FALSE(protocore_canopen_build_sdo_download_segment(&f, 2, PROTO_FALSE, SEVEN, 8, PROTO_FALSE));
-    TEST_ASSERT_FALSE(protocore_canopen_build_sdo_download_segment(&f, 2, PROTO_FALSE, NULL, 4, PROTO_FALSE));
-    TEST_ASSERT_FALSE(protocore_canopen_build_sdo_upload_segment_req(&f, 128, PROTO_FALSE));
+    Canopen.build_sdo_download_segment_args.out = &f;
+    Canopen.build_sdo_download_segment_args.node_id = 2;
+    Canopen.build_sdo_download_segment_args.toggle = PROTO_FALSE;
+    Canopen.build_sdo_download_segment_args.data = SEVEN;
+    Canopen.build_sdo_download_segment_args.len = 0;
+    Canopen.build_sdo_download_segment_args.last = PROTO_FALSE;
+    Canopen.build_sdo_download_segment(canopen_work);
+    TEST_ASSERT_FALSE(Canopen.ok);
+    Canopen.build_sdo_download_segment_args.out = &f;
+    Canopen.build_sdo_download_segment_args.node_id = 2;
+    Canopen.build_sdo_download_segment_args.toggle = PROTO_FALSE;
+    Canopen.build_sdo_download_segment_args.data = SEVEN;
+    Canopen.build_sdo_download_segment_args.len = 8;
+    Canopen.build_sdo_download_segment_args.last = PROTO_FALSE;
+    Canopen.build_sdo_download_segment(canopen_work);
+    TEST_ASSERT_FALSE(Canopen.ok);
+    Canopen.build_sdo_download_segment_args.out = &f;
+    Canopen.build_sdo_download_segment_args.node_id = 2;
+    Canopen.build_sdo_download_segment_args.toggle = PROTO_FALSE;
+    Canopen.build_sdo_download_segment_args.data = NULL;
+    Canopen.build_sdo_download_segment_args.len = 4;
+    Canopen.build_sdo_download_segment_args.last = PROTO_FALSE;
+    Canopen.build_sdo_download_segment(canopen_work);
+    TEST_ASSERT_FALSE(Canopen.ok);
+    Canopen.build_sdo_upload_segment_req_args.out = &f;
+    Canopen.build_sdo_upload_segment_req_args.node_id = 128;
+    Canopen.build_sdo_upload_segment_req_args.toggle = PROTO_FALSE;
+    Canopen.build_sdo_upload_segment_req(canopen_work);
+    TEST_ASSERT_FALSE(Canopen.ok);
 }
 
 // Reassembly accepts segments only while the toggle alternates 0,1,0,1 and stops on the last one.
@@ -471,35 +822,104 @@ void test_segmented_upload_reassembly(void)
                                     0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10};
     uint8_t buf[32];
     CanopenSdoReasm r;
-    protocore_canopen_sdo_reasm_init(&r, buf, sizeof(buf));
+    Canopen.sdo_reasm_init_args.r = &r;
+    Canopen.sdo_reasm_init_args.buf = buf;
+    Canopen.sdo_reasm_init_args.cap = sizeof(buf);
+    Canopen.sdo_reasm_init(canopen_work);
     TEST_ASSERT_FALSE(r.expect_toggle); // the first segment carries toggle 0
     TEST_ASSERT_FALSE(r.done);
 
-    TEST_ASSERT_TRUE(protocore_canopen_sdo_reasm_feed(&r, SRC, 7, PROTO_FALSE, PROTO_FALSE));
-    TEST_ASSERT_TRUE(protocore_canopen_sdo_reasm_feed(&r, SRC + 7, 7, PROTO_TRUE, PROTO_FALSE));
-    TEST_ASSERT_TRUE(protocore_canopen_sdo_reasm_feed(&r, SRC + 14, 3, PROTO_FALSE, PROTO_TRUE));
+    Canopen.sdo_reasm_feed_args.r = &r;
+    Canopen.sdo_reasm_feed_args.data = SRC;
+    Canopen.sdo_reasm_feed_args.len = 7;
+    Canopen.sdo_reasm_feed_args.toggle = PROTO_FALSE;
+    Canopen.sdo_reasm_feed_args.last = PROTO_FALSE;
+    Canopen.sdo_reasm_feed(canopen_work);
+    TEST_ASSERT_TRUE(Canopen.ok);
+    Canopen.sdo_reasm_feed_args.r = &r;
+    Canopen.sdo_reasm_feed_args.data = SRC + 7;
+    Canopen.sdo_reasm_feed_args.len = 7;
+    Canopen.sdo_reasm_feed_args.toggle = PROTO_TRUE;
+    Canopen.sdo_reasm_feed_args.last = PROTO_FALSE;
+    Canopen.sdo_reasm_feed(canopen_work);
+    TEST_ASSERT_TRUE(Canopen.ok);
+    Canopen.sdo_reasm_feed_args.r = &r;
+    Canopen.sdo_reasm_feed_args.data = SRC + 14;
+    Canopen.sdo_reasm_feed_args.len = 3;
+    Canopen.sdo_reasm_feed_args.toggle = PROTO_FALSE;
+    Canopen.sdo_reasm_feed_args.last = PROTO_TRUE;
+    Canopen.sdo_reasm_feed(canopen_work);
+    TEST_ASSERT_TRUE(Canopen.ok);
     TEST_ASSERT_TRUE(r.done);
     TEST_ASSERT_EQUAL_size_t(17u, r.len);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(SRC, buf, 17);
 
     // Nothing is accepted after the last segment.
-    TEST_ASSERT_FALSE(protocore_canopen_sdo_reasm_feed(&r, SRC, 1, PROTO_TRUE, PROTO_FALSE));
+    Canopen.sdo_reasm_feed_args.r = &r;
+    Canopen.sdo_reasm_feed_args.data = SRC;
+    Canopen.sdo_reasm_feed_args.len = 1;
+    Canopen.sdo_reasm_feed_args.toggle = PROTO_TRUE;
+    Canopen.sdo_reasm_feed_args.last = PROTO_FALSE;
+    Canopen.sdo_reasm_feed(canopen_work);
+    TEST_ASSERT_FALSE(Canopen.ok);
 
     // A repeated toggle is the CiA 301 "toggle bit not alternated" condition and is refused.
-    protocore_canopen_sdo_reasm_init(&r, buf, sizeof(buf));
-    TEST_ASSERT_TRUE(protocore_canopen_sdo_reasm_feed(&r, SRC, 7, PROTO_FALSE, PROTO_FALSE));
-    TEST_ASSERT_FALSE(protocore_canopen_sdo_reasm_feed(&r, SRC + 7, 7, PROTO_FALSE, PROTO_FALSE));
+    Canopen.sdo_reasm_init_args.r = &r;
+    Canopen.sdo_reasm_init_args.buf = buf;
+    Canopen.sdo_reasm_init_args.cap = sizeof(buf);
+    Canopen.sdo_reasm_init(canopen_work);
+    Canopen.sdo_reasm_feed_args.r = &r;
+    Canopen.sdo_reasm_feed_args.data = SRC;
+    Canopen.sdo_reasm_feed_args.len = 7;
+    Canopen.sdo_reasm_feed_args.toggle = PROTO_FALSE;
+    Canopen.sdo_reasm_feed_args.last = PROTO_FALSE;
+    Canopen.sdo_reasm_feed(canopen_work);
+    TEST_ASSERT_TRUE(Canopen.ok);
+    Canopen.sdo_reasm_feed_args.r = &r;
+    Canopen.sdo_reasm_feed_args.data = SRC + 7;
+    Canopen.sdo_reasm_feed_args.len = 7;
+    Canopen.sdo_reasm_feed_args.toggle = PROTO_FALSE;
+    Canopen.sdo_reasm_feed_args.last = PROTO_FALSE;
+    Canopen.sdo_reasm_feed(canopen_work);
+    TEST_ASSERT_FALSE(Canopen.ok);
     TEST_ASSERT_EQUAL_size_t(7u, r.len); // the refused segment did not land
     TEST_ASSERT_EQUAL_HEX32(0x05030000u, CANOPEN_ABORT_TOGGLE);
 
     // A segment that will not fit is refused rather than truncated into the buffer.
     uint8_t tiny[8];
-    protocore_canopen_sdo_reasm_init(&r, tiny, sizeof(tiny));
-    TEST_ASSERT_TRUE(protocore_canopen_sdo_reasm_feed(&r, SRC, 7, PROTO_FALSE, PROTO_FALSE));
-    TEST_ASSERT_FALSE(protocore_canopen_sdo_reasm_feed(&r, SRC + 7, 7, PROTO_TRUE, PROTO_FALSE));
+    Canopen.sdo_reasm_init_args.r = &r;
+    Canopen.sdo_reasm_init_args.buf = tiny;
+    Canopen.sdo_reasm_init_args.cap = sizeof(tiny);
+    Canopen.sdo_reasm_init(canopen_work);
+    Canopen.sdo_reasm_feed_args.r = &r;
+    Canopen.sdo_reasm_feed_args.data = SRC;
+    Canopen.sdo_reasm_feed_args.len = 7;
+    Canopen.sdo_reasm_feed_args.toggle = PROTO_FALSE;
+    Canopen.sdo_reasm_feed_args.last = PROTO_FALSE;
+    Canopen.sdo_reasm_feed(canopen_work);
+    TEST_ASSERT_TRUE(Canopen.ok);
+    Canopen.sdo_reasm_feed_args.r = &r;
+    Canopen.sdo_reasm_feed_args.data = SRC + 7;
+    Canopen.sdo_reasm_feed_args.len = 7;
+    Canopen.sdo_reasm_feed_args.toggle = PROTO_TRUE;
+    Canopen.sdo_reasm_feed_args.last = PROTO_FALSE;
+    Canopen.sdo_reasm_feed(canopen_work);
+    TEST_ASSERT_FALSE(Canopen.ok);
     TEST_ASSERT_EQUAL_size_t(7u, r.len);
 
-    protocore_canopen_sdo_reasm_init(&r, NULL, 0);
-    TEST_ASSERT_FALSE(protocore_canopen_sdo_reasm_feed(&r, SRC, 1, PROTO_FALSE, PROTO_FALSE));
-    protocore_canopen_sdo_reasm_init(NULL, buf, sizeof(buf)); // must not fault
+    Canopen.sdo_reasm_init_args.r = &r;
+    Canopen.sdo_reasm_init_args.buf = NULL;
+    Canopen.sdo_reasm_init_args.cap = 0;
+    Canopen.sdo_reasm_init(canopen_work);
+    Canopen.sdo_reasm_feed_args.r = &r;
+    Canopen.sdo_reasm_feed_args.data = SRC;
+    Canopen.sdo_reasm_feed_args.len = 1;
+    Canopen.sdo_reasm_feed_args.toggle = PROTO_FALSE;
+    Canopen.sdo_reasm_feed_args.last = PROTO_FALSE;
+    Canopen.sdo_reasm_feed(canopen_work);
+    TEST_ASSERT_FALSE(Canopen.ok);
+    Canopen.sdo_reasm_init_args.r = NULL;
+    Canopen.sdo_reasm_init_args.buf = buf;
+    Canopen.sdo_reasm_init_args.cap = sizeof(buf);
+    Canopen.sdo_reasm_init(canopen_work); // must not fault
 }

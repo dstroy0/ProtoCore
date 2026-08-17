@@ -1753,9 +1753,9 @@ from halves and is slower than the width it decomposes into"
  *
  * Default off. A zero-heap codec for the heavy-duty-vehicle / agriculture / marine / genset
  * CAN higher-layer protocol over 29-bit extended frames (`shared/can/can.h`):
- * `protocore_j1939_encode_id` / `protocore_j1939_decode_id` pack and unpack the priority / PGN / SA / DA
- * identifier (PDU1 peer + PDU2 broadcast), `protocore_j1939_build_message` emits single frames,
- * `protocore_j1939_build_request` / `protocore_j1939_build_address_claim` (+ `protocore_j1939_build_name`) handle the
+ * `J1939.encode_id` / `J1939.decode_id` pack and unpack the priority / PGN / SA / DA
+ * identifier (PDU1 peer + PDU2 broadcast), `J1939.build_message` emits single frames,
+ * `J1939.build_request` / `J1939.build_address_claim` (+ `J1939.build_name`) handle the
  * Request PGN and Address Claimed messages, and the Transport Protocol (BAM announce +
  * TP.DT packets) reassembles multi-packet messages up to `PROTOCORE_J1939_TP_MAX` octets. Pure
  * codec, host-tested. Drive it from the ESP32 TWAI peripheral or an MCP2515 over SPI.
@@ -1768,11 +1768,11 @@ from halves and is slower than the width it decomposes into"
  * @brief DeviceNet link-adaptation codec (`services/devicenet`).
  *
  * Default off. The CAN-specific layer of "CIP over CAN": the 11-bit DeviceNet identifier as a
- * Message Group (1..4) + Message ID + MAC ID (`protocore_devicenet_encode_id` / `protocore_devicenet_decode_id`),
+ * Message Group (1..4) + Message ID + MAC ID (`Devicenet.encode_id` / `Devicenet.decode_id`),
  * the explicit-message header octet, single-frame explicit messages, and the fragmentation
- * protocol with a reassembler (`protocore_devicenet_frag_feed`) for bodies longer than one CAN frame.
+ * protocol with a reassembler (`Devicenet.frag_feed`) for bodies longer than one CAN frame.
  * The CIP application layer (services / EPATH / data) is the same one EtherNet/IP uses, so
- * build the body with the existing `protocore_cip_*` functions (`PROTOCORE_ENABLE_CIP`). Pure codec,
+ * build the body with the existing `Cip.*` functions (`PROTOCORE_ENABLE_CIP`). Pure codec,
  * host-tested. Drive it from the ESP32 TWAI peripheral or an MCP2515 over SPI.
  */
 #ifndef PROTOCORE_ENABLE_DEVICENET
@@ -1962,9 +1962,9 @@ from halves and is slower than the width it decomposes into"
  * @brief Omron FINS frame codec (`services/fins`).
  *
  * Default off. A zero-heap command/response builder + parser for the Factory Interface
- * Network Service (FINS/UDP): `protocore_fins_build_command` / `protocore_fins_build_memory_area_read` emit the
- * 10-octet routing header + command code + parameters, and `protocore_fins_parse_command` /
- * `protocore_fins_parse_response` read them back (the response end code MRES/SRES included). Talks to
+ * Network Service (FINS/UDP): `Fins.build_command` / `Fins.build_memory_area_read` emit the
+ * 10-octet routing header + command code + parameters, and `Fins.parse_command` /
+ * `Fins.parse_response` read them back (the response end code MRES/SRES included). Talks to
  * an Omron PLC over the shipped UDP transport (UdpClient.sendto). Pure codec, host-tested.
  */
 #ifndef PROTOCORE_ENABLE_FINS
@@ -1975,9 +1975,9 @@ from halves and is slower than the width it decomposes into"
  * @brief Omron Host Link (C-mode) frame codec (`services/hostlink`).
  *
  * Default off. A zero-heap ASCII command/response codec for the Omron serial host-link
- * protocol (the RS-232/485 sibling of FINS): `protocore_hostlink_build` emits `@UU` + header code +
- * text + FCS + `*`CR, and `protocore_hostlink_parse` FCS-validates and splits a frame
- * (`protocore_hostlink_end_code` reads a response's end code). FCS is the 8-bit XOR from `@` through
+ * protocol (the RS-232/485 sibling of FINS): `Hostlink.build` emits `@UU` + header code +
+ * text + FCS + `*`CR, and `Hostlink.parse` FCS-validates and splits a frame
+ * (`Hostlink.end_code` reads a response's end code). FCS is the 8-bit XOR from `@` through
  * the text. Pure codec, host-tested; the serial transport is the application's.
  */
 #ifndef PROTOCORE_ENABLE_HOSTLINK
@@ -2137,9 +2137,9 @@ from halves and is slower than the width it decomposes into"
  * @brief Allen-Bradley DF1 full-duplex frame codec (`services/df1`).
  *
  * Default off. A zero-heap framing + DLE byte-stuffing + BCC/CRC codec for the Rockwell
- * serial PLC data-link layer (pub. 1770-6.5.16): `protocore_df1_build_frame` wraps application data in
+ * serial PLC data-link layer (pub. 1770-6.5.16): `Df1.build_frame` wraps application data in
  * `DLE STX ... DLE ETX` with a doubled-DLE escape and a BCC (2's complement of the data sum)
- * or CRC-16 (over the data + ETX, low byte first), and `protocore_df1_parse_frame` validates the check
+ * or CRC-16 (over the data + ETX, low byte first), and `Df1.parse_frame` validates the check
  * and un-stuffs the data. Pure codec, host-tested; the application header is the app's.
  */
 #ifndef PROTOCORE_ENABLE_DF1
@@ -2165,23 +2165,25 @@ from halves and is slower than the width it decomposes into"
 #define PROTOCORE_SIMATIC_BLOCK_MAX 256
 #endif
 
-/** @brief 3964R QVZ (Quittungsverzugszeit): handshake acknowledge-delay timeout, ms. */
+/** @brief 3964R QVZ (Quittungsverzugszeit): handshake acknowledge-delay timeout, ms.
+ *         Siemens AcknDelayTime, default 16#07D0. */
 #ifndef PROTOCORE_SIMATIC_QVZ_MS
 #define PROTOCORE_SIMATIC_QVZ_MS 2000
 #endif
 
-/** @brief 3964R ZVZ (Zeichenverzugszeit): inter-character timeout while receiving a block, ms. */
+/** @brief 3964R ZVZ (Zeichenverzugszeit): inter-character timeout while receiving a block, ms.
+ *         Siemens CharacterDelayTime, default 16#00DC. */
 #ifndef PROTOCORE_SIMATIC_ZVZ_MS
-#define PROTOCORE_SIMATIC_ZVZ_MS 200
+#define PROTOCORE_SIMATIC_ZVZ_MS 220
 #endif
 
 /**
  * @brief TPKT (RFC 1006) + COTP (X.224 class 0) frame codec (`services/cotp`).
  *
  * Default off. A zero-heap "ISO transport on TCP" framing codec - the reusable foundation
- * under S7comm and IEC 61850 MMS. `protocore_tpkt_build` / `protocore_tpkt_parse` handle the 4-octet TPKT
- * envelope; `protocore_cotp_build_dt` wraps user data in a Data TPDU, `protocore_cotp_build_cr` builds a
- * Connection Request (with the TPDU-size parameter + caller TSAP params), and `protocore_cotp_parse`
+ * under S7comm and IEC 61850 MMS. `Cotp.tpkt_build` / `Cotp.tpkt_parse` handle the 4-octet TPKT
+ * envelope; `Cotp.build_dt` wraps user data in a Data TPDU, `Cotp.build_cr` builds a
+ * Connection Request (with the TPDU-size parameter + caller TSAP params), and `Cotp.parse`
  * reports the TPDU type and the DT data / CR-CC refs. Pure codec, host-tested.
  */
 #ifndef PROTOCORE_ENABLE_COTP
@@ -2192,9 +2194,9 @@ from halves and is slower than the width it decomposes into"
  * @brief Siemens S7comm PDU codec (`services/s7comm`).
  *
  * Default off. A zero-heap builder + parser for the S7-300/400 communication PDUs carried
- * inside a COTP Data TPDU (PROTOCORE_ENABLE_COTP) over ISO-on-TCP (port 102): `protocore_s7_build_setup`
- * (Setup Communication), `protocore_s7_build_read_request` (Read Var, S7-ANY items over DB/I/Q/M),
- * `protocore_s7_parse_header`, and `protocore_s7_read_next_item` (the response data items, honoring the
+ * inside a COTP Data TPDU (PROTOCORE_ENABLE_COTP) over ISO-on-TCP (port 102): `S7comm.build_setup`
+ * (Setup Communication), `S7comm.build_read_request` (Read Var, S7-ANY items over DB/I/Q/M),
+ * `S7comm.parse_header`, and `S7comm.read_next_item` (the response data items, honoring the
  * length-in-bits transport sizes + even-item padding). Constants verified against the
  * Wireshark S7comm dissector. Pure codec, host-tested; wrap the PDU with COTP + TPKT.
  */
@@ -2273,8 +2275,8 @@ from halves and is slower than the width it decomposes into"
  * @brief BACnet/IP BVLC + NPDU codec (`services/bacnet`).
  *
  * Default off. A zero-heap framing codec for the ASHRAE 135 building-automation network
- * layer over UDP (47808): `protocore_bvlc_build` / `protocore_bvlc_parse` handle the BVLC envelope (type 0x81,
- * function, length), and `protocore_npdu_build` / `protocore_npdu_parse` handle the NPDU (version + NPCI control
+ * layer over UDP (47808): `Bacnet.bvlc_build` / `Bacnet.bvlc_parse` handle the BVLC envelope (type 0x81,
+ * function, length), and `Bacnet.npdu_build` / `Bacnet.npdu_parse` handle the NPDU (version + NPCI control
  * + optional DNET/DADR destination addressing + hop count) and slice the APDU. The APDU
  * (application-layer services / object model) layers on top. Pure codec, host-tested.
  */
@@ -2286,10 +2288,10 @@ from halves and is slower than the width it decomposes into"
  * @brief EtherNet/IP encapsulation codec (`services/enip`).
  *
  * Default off. A zero-heap builder + parser for the ODVA EtherNet/IP encapsulation layer
- * (TCP/UDP 44818) that carries CIP: `protocore_eip_build` / `protocore_eip_parse` handle the 24-octet header
+ * (TCP/UDP 44818) that carries CIP: `Enip.build` / `Enip.parse` handle the 24-octet header
  * (little-endian command / length / session handle / status / sender context / options),
- * `protocore_eip_build_register_session` opens a session, and `protocore_eip_build_send_rr_data` /
- * `protocore_eip_parse_send_rr_data` wrap + unwrap a CIP message as an unconnected message (Common
+ * `Enip.build_register_session` opens a session, and `Enip.build_send_rr_data` /
+ * `Enip.parse_send_rr_data` wrap + unwrap a CIP message as an unconnected message (Common
  * Packet Format: Null Address + Unconnected Data items). Commands + CPF item types verified
  * against the Wireshark ENIP dissector. Pure codec, host-tested; the CIP message is the app's.
  */
@@ -2315,11 +2317,11 @@ from halves and is slower than the width it decomposes into"
  * @brief CIP (Common Industrial Protocol) message codec (`services/cip`).
  *
  * Default off. A zero-heap CIP request builder + response parser for the message that rides
- * inside an EtherNet/IP Unconnected Data item (PROTOCORE_ENABLE_ENIP): `protocore_cip_build_epath` (the
- * class/instance/attribute logical-segment EPATH), `protocore_cip_build_request` /
- * `protocore_cip_build_get_attr_single`, and `protocore_cip_parse_response` (service / general status / data).
+ * inside an EtherNet/IP Unconnected Data item (PROTOCORE_ENABLE_ENIP): `Cip.build_epath` (the
+ * class/instance/attribute logical-segment EPATH), `Cip.build_request` /
+ * `Cip.build_get_attr_single`, and `Cip.parse_response` (service / general status / data).
  * Service codes + the logical-segment encoding verified against the Wireshark CIP dissector.
- * Pure codec, host-tested; wrap the request with `protocore_eip_build_send_rr_data` for a working read.
+ * Pure codec, host-tested; wrap the request with `Enip.build_send_rr_data` for a working read.
  */
 #ifndef PROTOCORE_ENABLE_CIP
 #define PROTOCORE_ENABLE_CIP 0
@@ -3759,7 +3761,7 @@ from halves and is slower than the width it decomposes into"
  * @brief Opt-in raw Layer-2 Ethernet frame codec (PROTOCORE_ENABLE_RAWL2).
  *
  * When set, services/fieldbus/rawl2 builds/parses Ethernet II + 802.1Q VLAN frames (no FCS - the MAC appends it;
- * protocore_eth_fcs is provided for the cases that need it), so the app can inject/receive arbitrary L2
+ * Rawl2.fcs is provided for the cases that need it), so the app can inject/receive arbitrary L2
  * frames through the vendor L2 transmit path - the basis for the raw-L2 industrial protocols
  * (PROFINET DCP, GOOSE, POWERLINK). Pure codec, host-tested. Default off.
  */
@@ -6708,8 +6710,35 @@ from halves and is slower than the width it decomposes into"
 #define PROTOCORE_PLAINTEXT_WORK_ROBOTICS 0
 #endif
 
+// The SIMATIC helper operands: the block being walked with its length, position and BCC variant,
+// and on the receive side the caller's link plus the byte that arrived and when. No key material,
+// so the plaintext end. Proved against sizeof(SimaticCtx) by a static_assert in simatic.c.
+#ifndef PROTOCORE_SIMATIC_BORROW
+#define PROTOCORE_SIMATIC_BORROW 48
+#endif
+
+#if PROTOCORE_ENABLE_SIMATIC
+#define PROTOCORE_PLAINTEXT_WORK_SIMATIC PROTOCORE_SIMATIC_BORROW
+#else
+#define PROTOCORE_PLAINTEXT_WORK_SIMATIC 0
+#endif
+
+// The J1939 frame-builder operands: the CanFrame being filled, its PGN, priority, source and
+// destination addresses and its data length - the widest set any one entry hands its private
+// helper. No key material, so the plaintext end. Proved against sizeof(J1939Ctx) by a static_assert
+// in j1939.c.
+#ifndef PROTOCORE_J1939_BORROW
+#define PROTOCORE_J1939_BORROW 16
+#endif
+
+#if PROTOCORE_NEED_J1939
+#define PROTOCORE_PLAINTEXT_WORK_J1939 PROTOCORE_J1939_BORROW
+#else
+#define PROTOCORE_PLAINTEXT_WORK_J1939 0
+#endif
+
 #ifndef PROTOCORE_PLAINTEXT_ARENA_SIZE
-#define PROTOCORE_PLAINTEXT_ARENA_SIZE                                                                                     (PROTOCORE_PLAINTEXT_SCRATCH + PROTOCORE_PLAINTEXT_WORK_H3CONN + PROTOCORE_PLAINTEXT_WORK_EDGEPROXY + PROTOCORE_PLAINTEXT_WORK_EUROMAP77 + PROTOCORE_PLAINTEXT_WORK_UMATI + PROTOCORE_PLAINTEXT_WORK_ROBOTICS + 256)
+#define PROTOCORE_PLAINTEXT_ARENA_SIZE                                                                                     (PROTOCORE_PLAINTEXT_SCRATCH + PROTOCORE_PLAINTEXT_WORK_H3CONN + PROTOCORE_PLAINTEXT_WORK_EDGEPROXY + PROTOCORE_PLAINTEXT_WORK_EUROMAP77 + PROTOCORE_PLAINTEXT_WORK_UMATI + PROTOCORE_PLAINTEXT_WORK_ROBOTICS + PROTOCORE_PLAINTEXT_WORK_J1939 + PROTOCORE_PLAINTEXT_WORK_SIMATIC + 256)
 #endif
 
 /**

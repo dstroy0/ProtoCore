@@ -10,7 +10,7 @@
  * industrial protocols (PROFINET DCP, IEC 61850 GOOSE, POWERLINK, SERCOS) and for custom management /
  * proprietary MAC framing. On device the bytes go out through the vendor L2 transmit path
  * (wired or Wi-Fi); the MAC normally appends the FCS, so the builder emits the frame
- * without it and `protocore_eth_fcs` is provided for the cases that need it.
+ * without it and `Rawl2.fcs` is provided for the cases that need it.
  *
  *   Ethernet II:  [dst MAC 6][src MAC 6][ethertype 2][payload]
  *   802.1Q:       [dst 6][src 6][0x8100][TCI 2][ethertype 2][payload]
@@ -21,11 +21,15 @@
 #ifndef PROTOCORE_RAWL2_H
 #define PROTOCORE_RAWL2_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_RAWL2
 
 PROTOCORE_BEGIN_DECLS
+
+// This module holds nothing between calls, so it carves no borrow and states none. An entry
+// takes one all the same, and never reads it, so every namespace in the tree is invoked the
+// same way.
 
 // Ethernet II framing sizes + ethertypes.
 #define ETH_ALEN 6            ///< MAC address length.
@@ -37,24 +41,6 @@ PROTOCORE_BEGIN_DECLS
 #define ETHERTYPE_PROFINET 0x8892 ///< PROFINET RT / DCP.
 #define ETHERTYPE_GOOSE 0x88B8    ///< IEC 61850 GOOSE.
 #define ETHERTYPE_POWERLINK 0x88AB
-
-/**
- * @brief Build an Ethernet II frame (no FCS).
- * @return the frame length (14 + payload_len), or 0 if it won't fit or a pointer is null.
- */
-size_t protocore_eth_build(const uint8_t *dst, const uint8_t *src, uint16_t ethertype, const uint8_t *payload,
-                           size_t payload_len, uint8_t *out, size_t cap);
-
-/**
- * @brief Build an 802.1Q VLAN-tagged Ethernet frame (no FCS).
- * @param pcp   priority code point (0..7).
- * @param dei   drop-eligible indicator.
- * @param vid   VLAN id (0..4095).
- * @return the frame length (18 + payload_len), or 0 on overflow.
- */
-size_t protocore_eth_build_vlan(const uint8_t *dst, const uint8_t *src, uint8_t pcp, proto_bool dei, uint16_t vid,
-                                uint16_t ethertype, const uint8_t *payload, size_t payload_len, uint8_t *out,
-                                size_t cap);
 
 /** @brief A parsed Ethernet frame (pointers into the input). */
 typedef struct
@@ -69,11 +55,99 @@ typedef struct
     size_t payload_len;
 } EthFrame;
 
-/** @brief Parse an Ethernet II / 802.1Q frame (FCS not expected). @return true if well-formed. */
-proto_bool protocore_eth_parse(const uint8_t *frame, size_t len, EthFrame *out);
+/** @brief What build takes: dst, src, ethertype, payload, ... */
+typedef struct
+{
+    const uint8_t *dst;
+    const uint8_t *src;
+    uint16_t ethertype;
+    const uint8_t *payload;
+    size_t payload_len;
+    uint8_t *out;
+    size_t cap;
+} Rawl2BuildArgs;
 
-/** @brief IEEE 802.3 frame check sequence (CRC-32, reflected, init 0xFFFFFFFF, xorout 0xFFFFFFFF). */
-uint32_t protocore_eth_fcs(const uint8_t *bytes, size_t len);
+/** @brief What build_vlan takes: dst, src, pcp, dei, vid, ethertype, ... */
+typedef struct
+{
+    const uint8_t *dst;
+    const uint8_t *src;
+    uint8_t pcp;    ///< priority code point (0..7)
+    proto_bool dei; ///< drop-eligible indicator
+    uint16_t vid;   ///< VLAN id (0..4095)
+    uint16_t ethertype;
+    const uint8_t *payload;
+    size_t payload_len;
+    uint8_t *out;
+    size_t cap;
+} Rawl2BuildVlanArgs;
+
+/** @brief What parse takes: frame, len, out. */
+typedef struct
+{
+    const uint8_t *frame;
+    size_t len;
+    EthFrame *out;
+} Rawl2ParseArgs;
+
+/** @brief What fcs takes: bytes, len. */
+typedef struct
+{
+    const uint8_t *bytes;
+    size_t len;
+} Rawl2FcsArgs;
+
+/**
+ * @brief Raw Layer-2 Ethernet frame codec (PROTOCORE_ENABLE_RAWL2).
+ *
+ * A caller sets the members a call takes, invokes it through ::Rawl2 with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   Rawl2.build_args.dst = ...;
+ *   Rawl2.build_args.src = ...;
+ *   Rawl2.build_args.ethertype = ...;
+ *   Rawl2.build_args.payload = ...;
+ *   Rawl2.build_args.payload_len = ...;
+ *   Rawl2.build_args.out = ...;
+ *   Rawl2.build_args.cap = ...;
+ *   Rawl2.build(work);
+ *   // Rawl2.n is what the call reports
+ *
+ * @var Rawl2Ns::build_args  what build takes: dst, src, ethertype, payload,
+ * @var Rawl2Ns::build_vlan_args  what build_vlan takes: dst, src, pcp, dei, vid, ethertype,
+ * @var Rawl2Ns::parse_args  what parse takes: frame, len, out
+ * @var Rawl2Ns::fcs_args  what fcs takes: bytes, len
+ * @var Rawl2Ns::ok  a call's true/false outcome
+ * @var Rawl2Ns::n  the frame length (14 + payload_len), or 0 if it won't fit or a ...
+ * @var Rawl2Ns::u32  what a call reports
+ * @var Rawl2Ns::build  build an Ethernet II frame (no FCS)
+ * @var Rawl2Ns::build_vlan  build an 802.1Q VLAN-tagged Ethernet frame (no FCS)
+ * @var Rawl2Ns::parse  parse an Ethernet II / 802.1Q frame (FCS not expected). true if ...
+ * @var Rawl2Ns::fcs  IEEE 802.3 frame check sequence (CRC-32, reflected, init ...
+ *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
+ * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
+ * a caller drives every namespace the same way.
+ */
+typedef struct
+{
+    Rawl2BuildArgs build_args;
+    Rawl2BuildVlanArgs build_vlan_args;
+    Rawl2ParseArgs parse_args;
+    Rawl2FcsArgs fcs_args;
+
+    proto_bool ok;
+    size_t n;
+    uint32_t u32;
+
+    void (*const build)(uint8_t *restrict work);
+    void (*const build_vlan)(uint8_t *restrict work);
+    void (*const parse)(uint8_t *restrict work);
+    void (*const fcs)(uint8_t *restrict work);
+} Rawl2Ns;
+
+/** @brief The one symbol this module exports. */
+extern Rawl2Ns Rawl2;
 
 PROTOCORE_END_DECLS
 

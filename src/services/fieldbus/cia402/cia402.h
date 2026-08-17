@@ -22,13 +22,15 @@
 #ifndef PROTOCORE_CIA402_H
 #define PROTOCORE_CIA402_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_CIA402
 
 PROTOCORE_BEGIN_DECLS
 
-#include "services/fieldbus/canopen/canopen.h"
+// This module holds nothing between calls, so it carves no borrow and states none. An entry
+// takes one all the same, and never reads it, so every namespace in the tree is invoked the
+// same way.
 
 // --- object dictionary indices (sub-index 0 unless noted); the comment gives the CANopen type ---
 #define CIA402_OD_ERROR_CODE 0x603Fu         ///< u16   last error code
@@ -47,47 +49,6 @@ PROTOCORE_BEGIN_DECLS
 #define CIA402_OD_PROFILE_DECEL 0x6084u      ///< u32   profile deceleration
 #define CIA402_OD_TARGET_VELOCITY 0x60FFu    ///< i32   target velocity (PV / CSV)
 #define CIA402_OD_SUPPORTED_MODES 0x6502u    ///< u32   supported drive modes bitfield
-
-/// Modes of Operation (object 0x6060 / 0x6061). Cast only at the wire byte.
-typedef enum PROTO_ENUM_PACKED
-{
-    CIA402_MODE_NO_MODE = 0,
-    CIA402_MODE_PROFILE_POSITION = 1,      ///< PP
-    CIA402_MODE_VELOCITY = 2,              ///< VL (frequency-converter CIA402_MODE_VELOCITY)
-    CIA402_MODE_PROFILE_VELOCITY = 3,      ///< PV
-    CIA402_MODE_PROFILE_TORQUE = 4,        ///< TQ
-    CIA402_MODE_HOMING = 6,                ///< HM
-    CIA402_MODE_INTERPOLATED_POSITION = 7, ///< IP
-    CIA402_MODE_CYCLIC_SYNC_POSITION = 8,  ///< CSP
-    CIA402_MODE_CYCLIC_SYNC_VELOCITY = 9,  ///< CSV
-    CIA402_MODE_CYCLIC_SYNC_TORQUE = 10,   ///< CST
-} Cia402Mode;
-
-/// The eight power-state-machine states decoded from the Statusword.
-typedef enum PROTO_ENUM_PACKED
-{
-    CIA402_STATE_NOT_READY_TO_SWITCH_ON,
-    CIA402_STATE_SWITCH_ON_DISABLED,
-    CIA402_STATE_READY_TO_SWITCH_ON,
-    CIA402_STATE_SWITCHED_ON,
-    CIA402_STATE_OPERATION_ENABLED,
-    CIA402_STATE_QUICK_STOP_ACTIVE,
-    CIA402_STATE_FAULT_REACTION_ACTIVE,
-    CIA402_STATE_FAULT,
-    CIA402_STATE_UNKNOWN, ///< Statusword matched no defined state
-} Cia402State;
-
-/// State-machine transition commands issued via the Controlword.
-typedef enum PROTO_ENUM_PACKED
-{
-    CIA402_COMMAND_SHUTDOWN,          ///< -> Ready to switch on
-    CIA402_COMMAND_SWITCH_ON,         ///< -> Switched on
-    CIA402_COMMAND_ENABLE_OPERATION,  ///< -> Operation enabled
-    CIA402_COMMAND_DISABLE_VOLTAGE,   ///< -> Switch on disabled
-    CIA402_COMMAND_QUICK_STOP,        ///< -> Quick stop active
-    CIA402_COMMAND_DISABLE_OPERATION, ///< -> Switched on
-    CIA402_COMMAND_FAULT_RESET,       ///< clear a fault (rising edge of bit 7)
-} Cia402Command;
 
 /// Controlword bit masks (object 0x6040).
 #define CIA402_CW_SWITCH_ON 0x0001
@@ -109,20 +70,6 @@ typedef enum PROTO_ENUM_PACKED
 #define CIA402_SW_REMOTE 0x0200
 #define CIA402_SW_TARGET_REACHED 0x0400
 #define CIA402_SW_INTERNAL_LIMIT 0x0800
-
-// --- state machine (pure value logic; no CAN needed) ---
-
-/// Decode the drive's power state from a Statusword (per the CiA 402 mask/value table).
-Cia402State protocore_cia402_state(uint16_t statusword);
-
-/// The Controlword value that requests transition @p cmd. Fault-reset is 0x0080 and must be a
-/// rising edge on bit 7 (clear it on the next cycle).
-uint16_t protocore_cia402_controlword(Cia402Command cmd);
-
-/// Given the drive's current @p state, the Controlword to command the next step toward Operation
-/// Enabled (fault -> reset, switch-on-disabled -> shutdown, ready -> switch on, switched-on ->
-/// enable). Returns 0x000F once already enabled. Drives the "bring the axis live" bring-up loop.
-uint16_t protocore_cia402_enable_sequence(Cia402State state);
 
 /// @return true if the Statusword's Target Reached flag (bit 10) is set.
 static inline proto_bool protocore_cia402_target_reached(uint16_t sw)
@@ -155,37 +102,230 @@ static inline proto_bool protocore_cia402_internal_limit(uint16_t sw)
     return (sw & CIA402_SW_INTERNAL_LIMIT) != 0;
 }
 
-// --- CANopen SDO setters (expedited download to the object); fill *out, return false on bad arg ---
+typedef enum PROTO_ENUM_PACKED
+{
+    CIA402_MODE_NO_MODE = 0,
+    CIA402_MODE_PROFILE_POSITION = 1,      ///< PP
+    CIA402_MODE_VELOCITY = 2,              ///< VL (frequency-converter CIA402_MODE_VELOCITY)
+    CIA402_MODE_PROFILE_VELOCITY = 3,      ///< PV
+    CIA402_MODE_PROFILE_TORQUE = 4,        ///< TQ
+    CIA402_MODE_HOMING = 6,                ///< HM
+    CIA402_MODE_INTERPOLATED_POSITION = 7, ///< IP
+    CIA402_MODE_CYCLIC_SYNC_POSITION = 8,  ///< CSP
+    CIA402_MODE_CYCLIC_SYNC_VELOCITY = 9,  ///< CSV
+    CIA402_MODE_CYCLIC_SYNC_TORQUE = 10,   ///< CST
+} Cia402Mode;
 
-/// SDO-write the Controlword (0x6040, u16) on @p node.
-proto_bool protocore_cia402_sdo_set_controlword(CanFrame *out, uint8_t node, uint16_t controlword);
-/// SDO-write the requested Mode of Operation (0x6060, i8) on @p node.
-proto_bool protocore_cia402_sdo_set_mode(CanFrame *out, uint8_t node, Cia402Mode mode);
-/// SDO-write Target Position (0x607A, i32) on @p node.
-proto_bool protocore_cia402_sdo_set_target_position(CanFrame *out, uint8_t node, int32_t position);
-/// SDO-write Target Velocity (0x60FF, i32) on @p node.
-proto_bool protocore_cia402_sdo_set_target_velocity(CanFrame *out, uint8_t node, int32_t velocity);
-/// SDO-write Target Torque (0x6071, i16) on @p node.
-proto_bool protocore_cia402_sdo_set_target_torque(CanFrame *out, uint8_t node, int16_t torque);
+typedef enum PROTO_ENUM_PACKED
+{
+    CIA402_STATE_NOT_READY_TO_SWITCH_ON,
+    CIA402_STATE_SWITCH_ON_DISABLED,
+    CIA402_STATE_READY_TO_SWITCH_ON,
+    CIA402_STATE_SWITCHED_ON,
+    CIA402_STATE_OPERATION_ENABLED,
+    CIA402_STATE_QUICK_STOP_ACTIVE,
+    CIA402_STATE_FAULT_REACTION_ACTIVE,
+    CIA402_STATE_FAULT,
+    CIA402_STATE_UNKNOWN, ///< Statusword matched no defined state
+} Cia402State;
 
-/// SDO-read request for any drive object (thin wrapper over protocore_canopen_build_sdo_read).
-proto_bool protocore_cia402_sdo_read(CanFrame *out, uint8_t node, uint16_t index, uint8_t sub);
+typedef enum PROTO_ENUM_PACKED
+{
+    CIA402_COMMAND_SHUTDOWN,          ///< -> Ready to switch on
+    CIA402_COMMAND_SWITCH_ON,         ///< -> Switched on
+    CIA402_COMMAND_ENABLE_OPERATION,  ///< -> Operation enabled
+    CIA402_COMMAND_DISABLE_VOLTAGE,   ///< -> Switch on disabled
+    CIA402_COMMAND_QUICK_STOP,        ///< -> Quick stop active
+    CIA402_COMMAND_DISABLE_OPERATION, ///< -> Switched on
+    CIA402_COMMAND_FAULT_RESET,       ///< clear a fault (rising edge of bit 7)
+} Cia402Command;
 
-/// Decode an SDO upload response into a 16-bit object value (e.g. the Statusword). @p want_index,
-/// if non-zero, must match the response's index. Returns false on an abort / wrong / short reply.
-proto_bool protocore_cia402_sdo_get_u16(const CanFrame *f, uint16_t want_index, uint16_t *value);
-/// Decode an SDO upload response into a signed 32-bit value (position / velocity actual).
-proto_bool protocore_cia402_sdo_get_i32(const CanFrame *f, uint16_t want_index, int32_t *value);
+#include "shared/can/can.h" // CanFrame: the type a parameter points at
 
-// --- PDO packing for cyclic operation (the common default mappings) ---
+/** @brief What state takes: statusword. */
+typedef struct
+{
+    uint16_t statusword;
+} Cia402StateArgs;
 
-/// Pack an RPDO payload = Controlword (u16 LE) + Target (i32 LE) = 6 octets (a typical CSP/PP
-/// RPDO map). Returns the octet count, or 0 if cap < 6.
-size_t protocore_cia402_pack_command(uint8_t *buf, size_t cap, uint16_t controlword, int32_t target);
+/** @brief What controlword takes: cmd. */
+typedef struct
+{
+    Cia402Command cmd;
+} Cia402ControlwordArgs;
 
-/// Unpack a TPDO payload = Statusword (u16 LE) + Actual (i32 LE) into @p statusword / @p actual
-/// (a typical CSP/PP TPDO map). Returns false if len < 6.
-proto_bool protocore_cia402_unpack_status(const uint8_t *buf, size_t len, uint16_t *statusword, int32_t *actual);
+/** @brief What enable_sequence takes: state. */
+typedef struct
+{
+    Cia402State state;
+} Cia402EnableSequenceArgs;
+
+/** @brief What sdo_set_controlword takes: out, node, controlword. */
+typedef struct
+{
+    CanFrame *out;
+    uint8_t node;
+    uint16_t controlword;
+} Cia402SdoSetControlwordArgs;
+
+/** @brief What sdo_set_mode takes: out, node, mode. */
+typedef struct
+{
+    CanFrame *out;
+    uint8_t node;
+    Cia402Mode mode;
+} Cia402SdoSetModeArgs;
+
+/** @brief What sdo_set_target_position takes: out, node, position. */
+typedef struct
+{
+    CanFrame *out;
+    uint8_t node;
+    int32_t position;
+} Cia402SdoSetTargetPositionArgs;
+
+/** @brief What sdo_set_target_velocity takes: out, node, velocity. */
+typedef struct
+{
+    CanFrame *out;
+    uint8_t node;
+    int32_t velocity;
+} Cia402SdoSetTargetVelocityArgs;
+
+/** @brief What sdo_set_target_torque takes: out, node, torque. */
+typedef struct
+{
+    CanFrame *out;
+    uint8_t node;
+    int16_t torque;
+} Cia402SdoSetTargetTorqueArgs;
+
+/** @brief What sdo_read takes: out, node, index, sub. */
+typedef struct
+{
+    CanFrame *out;
+    uint8_t node;
+    uint16_t index;
+    uint8_t sub;
+} Cia402SdoReadArgs;
+
+/** @brief What sdo_get_u16 takes: f, want_index, value. */
+typedef struct
+{
+    const CanFrame *f;
+    uint16_t want_index;
+    uint16_t *value;
+} Cia402SdoGetU16Args;
+
+/** @brief What sdo_get_i32 takes: f, want_index, value. */
+typedef struct
+{
+    const CanFrame *f;
+    uint16_t want_index;
+    int32_t *value;
+} Cia402SdoGetI32Args;
+
+/** @brief What pack_command takes: buf, cap, controlword, target. */
+typedef struct
+{
+    uint8_t *buf;
+    size_t cap;
+    uint16_t controlword;
+    int32_t target;
+} Cia402PackCommandArgs;
+
+/** @brief What unpack_status takes: buf, len, statusword, actual. */
+typedef struct
+{
+    const uint8_t *buf;
+    size_t len;
+    uint16_t *statusword;
+    int32_t *actual;
+} Cia402UnpackStatusArgs;
+
+/**
+ * @brief CiA 402 / IEC 61800-7-201 drive + motion profile (PROTOCORE_ENABLE_CIA402) over CANopen.
+ *
+ * A caller sets the members a call takes, invokes it through ::Cia402 with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   Cia402.state_args.statusword = ...;
+ *   Cia402.state(work);
+ *   // Cia402.value is what the call reports
+ *
+ * @var Cia402Ns::state_args  what state takes: statusword
+ * @var Cia402Ns::controlword_args  what controlword takes: cmd
+ * @var Cia402Ns::enable_sequence_args  what enable_sequence takes: state
+ * @var Cia402Ns::sdo_set_controlword_args  what sdo_set_controlword takes: out, node, controlword
+ * @var Cia402Ns::sdo_set_mode_args  what sdo_set_mode takes: out, node, mode
+ * @var Cia402Ns::sdo_set_target_position_args  what sdo_set_target_position takes: out, node, position
+ * @var Cia402Ns::sdo_set_target_velocity_args  what sdo_set_target_velocity takes: out, node, velocity
+ * @var Cia402Ns::sdo_set_target_torque_args  what sdo_set_target_torque takes: out, node, torque
+ * @var Cia402Ns::sdo_read_args  what sdo_read takes: out, node, index, sub
+ * @var Cia402Ns::sdo_get_u16_args  what sdo_get_u16 takes: f, want_index, value
+ * @var Cia402Ns::sdo_get_i32_args  what sdo_get_i32 takes: f, want_index, value
+ * @var Cia402Ns::pack_command_args  what pack_command takes: buf, cap, controlword, target
+ * @var Cia402Ns::unpack_status_args  what unpack_status takes: buf, len, statusword, actual
+ * @var Cia402Ns::ok  a call's true/false outcome
+ * @var Cia402Ns::value  the value a call reports
+ * @var Cia402Ns::u16  what a call reports
+ * @var Cia402Ns::n  the count a call reports
+ * @var Cia402Ns::state  state
+ * @var Cia402Ns::controlword  controlword
+ * @var Cia402Ns::enable_sequence  enable_sequence
+ * @var Cia402Ns::sdo_set_controlword  sdo_set_controlword
+ * @var Cia402Ns::sdo_set_mode  sdo_set_mode
+ * @var Cia402Ns::sdo_set_target_position  sdo_set_target_position
+ * @var Cia402Ns::sdo_set_target_velocity  sdo_set_target_velocity
+ * @var Cia402Ns::sdo_set_target_torque  sdo_set_target_torque
+ * @var Cia402Ns::sdo_read  sdo_read
+ * @var Cia402Ns::sdo_get_u16  sdo_get_u16
+ * @var Cia402Ns::sdo_get_i32  sdo_get_i32
+ * @var Cia402Ns::pack_command  pack_command
+ * @var Cia402Ns::unpack_status  unpack_status
+ *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
+ * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
+ * a caller drives every namespace the same way.
+ */
+typedef struct
+{
+    Cia402StateArgs state_args;
+    Cia402ControlwordArgs controlword_args;
+    Cia402EnableSequenceArgs enable_sequence_args;
+    Cia402SdoSetControlwordArgs sdo_set_controlword_args;
+    Cia402SdoSetModeArgs sdo_set_mode_args;
+    Cia402SdoSetTargetPositionArgs sdo_set_target_position_args;
+    Cia402SdoSetTargetVelocityArgs sdo_set_target_velocity_args;
+    Cia402SdoSetTargetTorqueArgs sdo_set_target_torque_args;
+    Cia402SdoReadArgs sdo_read_args;
+    Cia402SdoGetU16Args sdo_get_u16_args;
+    Cia402SdoGetI32Args sdo_get_i32_args;
+    Cia402PackCommandArgs pack_command_args;
+    Cia402UnpackStatusArgs unpack_status_args;
+
+    proto_bool ok;
+    Cia402State value;
+    uint16_t u16;
+    size_t n;
+
+    void (*const state)(uint8_t *restrict work);
+    void (*const controlword)(uint8_t *restrict work);
+    void (*const enable_sequence)(uint8_t *restrict work);
+    void (*const sdo_set_controlword)(uint8_t *restrict work);
+    void (*const sdo_set_mode)(uint8_t *restrict work);
+    void (*const sdo_set_target_position)(uint8_t *restrict work);
+    void (*const sdo_set_target_velocity)(uint8_t *restrict work);
+    void (*const sdo_set_target_torque)(uint8_t *restrict work);
+    void (*const sdo_read)(uint8_t *restrict work);
+    void (*const sdo_get_u16)(uint8_t *restrict work);
+    void (*const sdo_get_i32)(uint8_t *restrict work);
+    void (*const pack_command)(uint8_t *restrict work);
+    void (*const unpack_status)(uint8_t *restrict work);
+} Cia402Ns;
+
+/** @brief The one symbol this module exports. */
+extern Cia402Ns Cia402;
 
 PROTOCORE_END_DECLS
 

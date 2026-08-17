@@ -17,6 +17,8 @@
 #include <stdint.h>
 #include <string.h>
 
+static uint8_t enip_work[16]; // the borrow an entry takes; Enip never reads it
+
 int main(void)
 {
     // A SendRRData frame carrying an 8-octet CIP message (a typical unconnected explicit request).
@@ -28,25 +30,41 @@ int main(void)
     h.status = EIP_STATUS_SUCCESS;
     h.options = 0;
     uint8_t frame[64];
-    size_t frame_len = protocore_eip_build(frame, sizeof(frame), &h, cip, sizeof(cip));
+    Enip.build_args.buf = frame;
+    Enip.build_args.cap = sizeof(frame);
+    Enip.build_args.h = &h;
+    Enip.build_args.data = cip;
+    Enip.build_args.data_len = sizeof(cip);
+    Enip.build(enip_work);
+    size_t frame_len = Enip.n;
 
     uint8_t rs[64];
     const uint8_t ctx[8] = {1, 2, 3, 4, 5, 6, 7, 8};
-    size_t rs_len = protocore_eip_build_register_session(rs, sizeof(rs), ctx);
+    Enip.build_register_session_args.buf = rs;
+    Enip.build_register_session_args.cap = sizeof(rs);
+    Enip.build_register_session_args.sender_context = ctx;
+    Enip.build_register_session(enip_work);
+    size_t rs_len = Enip.n;
 
     hbench_header();
 
-    // protocore_eip_build: lay down the 24-octet encapsulation header + command data (the transmit op).
+    // Enip.build: lay down the 24-octet encapsulation header + command data (the transmit op).
     {
         uint8_t buf[64];
         volatile size_t sink = 0;
         double ns = 0.0;
-        HBENCH_NS(5000000, sink += protocore_eip_build(buf, sizeof(buf), &h, cip, sizeof(cip)), ns);
-        hbench_row("enip", "protocore_eip_build (encap)", ns, (double)frame_len);
+        Enip.build_args.buf = buf;
+        Enip.build_args.cap = sizeof(buf);
+        Enip.build_args.h = &h;
+        Enip.build_args.data = cip;
+        Enip.build_args.data_len = sizeof(cip);
+        Enip.build(enip_work);
+        HBENCH_NS(5000000, sink += Enip.n, ns);
+        hbench_row("enip", "Enip.build (encap)", ns, (double)frame_len);
         (void)sink;
     }
 
-    // protocore_eip_parse: validate the encapsulation header (command/length/status) + slice the command data (receive
+    // Enip.parse: validate the encapsulation header (command/length/status) + slice the command data (receive
     // op; this is the parser the fuzz attack targets - a length lie must not over-read past the 24-octet header).
     {
         volatile size_t sink = 0;
@@ -57,22 +75,32 @@ int main(void)
                 EipHeader out;
                 const uint8_t *data = NULL;
                 size_t dlen = 0;
-                if (protocore_eip_parse(frame, frame_len, &out, &data, &dlen))
+                Enip.parse_args.buf = frame;
+                Enip.parse_args.len = frame_len;
+                Enip.parse_args.out = &out;
+                Enip.parse_args.data = &data;
+                Enip.parse_args.data_len = &dlen;
+                Enip.parse(enip_work);
+                if (Enip.ok)
                 {
                     sink += dlen + out.command;
                 }
             },
             ns);
-        hbench_row("enip", "protocore_eip_parse (encap)", ns, (double)frame_len);
+        hbench_row("enip", "Enip.parse (encap)", ns, (double)frame_len);
         (void)sink;
     }
 
-    // protocore_eip_build_register_session: the session-open handshake frame (fixed 28 octets).
+    // Enip.build_register_session: the session-open handshake frame (fixed 28 octets).
     {
         uint8_t buf[64];
         volatile size_t sink = 0;
         double ns = 0.0;
-        HBENCH_NS(5000000, sink += protocore_eip_build_register_session(buf, sizeof(buf), ctx), ns);
+        Enip.build_register_session_args.buf = buf;
+        Enip.build_register_session_args.cap = sizeof(buf);
+        Enip.build_register_session_args.sender_context = ctx;
+        Enip.build_register_session(enip_work);
+        HBENCH_NS(5000000, sink += Enip.n, ns);
         hbench_row("enip", "register_session (build)", ns, (double)rs_len);
         (void)sink;
     }

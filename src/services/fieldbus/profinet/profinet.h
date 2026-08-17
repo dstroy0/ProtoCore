@@ -21,11 +21,15 @@
 #ifndef PROTOCORE_PROFINET_H
 #define PROTOCORE_PROFINET_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_PROFINET
 
 PROTOCORE_BEGIN_DECLS
+
+// This module holds nothing between calls, so it carves no borrow and states none. An entry
+// takes one all the same, and never reads it, so every namespace in the tree is invoked the
+// same way.
 
 #define PN_FRAMEID_DCP_HELLO 0xFEFC
 #define PN_FRAMEID_DCP_GETSET 0xFEFD
@@ -45,24 +49,6 @@ PROTOCORE_BEGIN_DECLS
 #define PN_DCP_SUB_ALL 0xFF
 #define PN_DCP_HDR_LEN 12 ///< frameID(2) + the 10-octet DCP header
 
-/**
- * @brief Build a DCP frame header into @p out (>= PN_DCP_HDR_LEN bytes). @return 12, or 0 if it will not fit.
- * @param response_delay ResponseDelayFactor: the window a device randomizes its Identify response over,
- *                       in units of 10 ms; 0 on every unicast PDU and on every response.
- * @param data_length the total length of the DCP blocks that follow (filled into the header).
- */
-size_t protocore_pn_dcp_header(uint16_t frame_id, uint8_t service_id, uint8_t service_type, uint32_t xid,
-                               uint16_t response_delay, uint16_t data_length, uint8_t *out, size_t cap);
-
-/**
- * @brief Append a DCP block `[option][suboption][blockLength][value...]` (no blockInfo).
- * @return the block length written (4 + value_len, padded to even per DCP), or 0 on overflow.
- *
- * DCP blocks are padded to an even length with a 0x00 filler octet that is NOT counted in blockLength.
- */
-size_t protocore_pn_dcp_block(uint8_t option, uint8_t suboption, const uint8_t *value, size_t value_len, uint8_t *out,
-                              size_t cap);
-
 /** @brief A parsed DCP frame header. */
 typedef struct
 {
@@ -74,18 +60,102 @@ typedef struct
     uint16_t data_length;
 } PnDcpHeader;
 
-/** @brief Parse the DCP header. @return true if @p len >= PN_DCP_HDR_LEN. */
-proto_bool protocore_pn_dcp_parse_header(const uint8_t *frame, size_t len, PnDcpHeader *out);
-
 /** @brief One DCP block surfaced by protocore_pn_dcp_walk. */
 typedef void (*protocore_pn_dcp_block_cb)(uint8_t option, uint8_t suboption, const uint8_t *value, size_t value_len,
                                           void *arg);
 
+/** @brief What dcp_header takes: frame_id, service_id, service_type, ... */
+typedef struct
+{
+    uint16_t frame_id;
+    uint8_t service_id;
+    uint8_t service_type;
+    uint32_t xid;
+    uint16_t response_delay; ///< ResponseDelayFactor: the window a device randomizes its Identify response over, in
+                             ///< units of ...
+    uint16_t data_length;    ///< the total length of the DCP blocks that follow (filled into the header)
+    uint8_t *out;
+    size_t cap;
+} ProfinetDcpHeaderArgs;
+
+/** @brief What dcp_block takes: option, suboption, value, value_len, ... */
+typedef struct
+{
+    uint8_t option;
+    uint8_t suboption;
+    const uint8_t *value;
+    size_t value_len;
+    uint8_t *out;
+    size_t cap;
+} ProfinetDcpBlockArgs;
+
+/** @brief What dcp_parse_header takes: frame, len, out. */
+typedef struct
+{
+    const uint8_t *frame;
+    size_t len;
+    PnDcpHeader *out;
+} ProfinetDcpParseHeaderArgs;
+
+/** @brief What dcp_walk takes: blocks, len, cb, arg. */
+typedef struct
+{
+    const uint8_t *blocks;
+    size_t len;
+    protocore_pn_dcp_block_cb cb;
+    void *arg;
+} ProfinetDcpWalkArgs;
+
 /**
- * @brief Walk the DCP blocks after the header (@p blocks points at header+10, @p len = dataLength).
- * @return true if every block fits; invokes @p cb per block (value excludes the even-pad filler).
+ * @brief PROFINET DCP (Discovery and Configuration Protocol) frame codec (PROTOCORE_ENABLE_PROFINET).
+ *
+ * A caller sets the members a call takes, invokes it through ::Profinet with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   Profinet.dcp_header_args.frame_id = ...;
+ *   Profinet.dcp_header_args.service_id = ...;
+ *   Profinet.dcp_header_args.service_type = ...;
+ *   Profinet.dcp_header_args.xid = ...;
+ *   Profinet.dcp_header_args.response_delay = ...;
+ *   Profinet.dcp_header_args.data_length = ...;
+ *   Profinet.dcp_header_args.out = ...;
+ *   Profinet.dcp_header_args.cap = ...;
+ *   Profinet.dcp_header(work);
+ *   // Profinet.n is what the call reports
+ *
+ * @var ProfinetNs::dcp_header_args  what dcp_header takes: frame_id, service_id, service_type,
+ * @var ProfinetNs::dcp_block_args  what dcp_block takes: option, suboption, value, value_len,
+ * @var ProfinetNs::dcp_parse_header_args  what dcp_parse_header takes: frame, len, out
+ * @var ProfinetNs::dcp_walk_args  what dcp_walk takes: blocks, len, cb, arg
+ * @var ProfinetNs::ok  true if every block fits; invokes cb per block (value excludes the ...
+ * @var ProfinetNs::n  the block length written (4 + value_len, padded to even per DCP), ...
+ * @var ProfinetNs::dcp_header  build a DCP frame header into out (>= PN_DCP_HDR_LEN bytes). 12, or ...
+ * @var ProfinetNs::dcp_block  append a DCP block `[option][suboption][blockLength][value...]` (no ...
+ * @var ProfinetNs::dcp_parse_header  parse the DCP header. true if len >= PN_DCP_HDR_LEN
+ * @var ProfinetNs::dcp_walk  walk the DCP blocks after the header (blocks points at header+10, ...
+ *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
+ * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
+ * a caller drives every namespace the same way.
  */
-proto_bool protocore_pn_dcp_walk(const uint8_t *blocks, size_t len, protocore_pn_dcp_block_cb cb, void *arg);
+typedef struct
+{
+    ProfinetDcpHeaderArgs dcp_header_args;
+    ProfinetDcpBlockArgs dcp_block_args;
+    ProfinetDcpParseHeaderArgs dcp_parse_header_args;
+    ProfinetDcpWalkArgs dcp_walk_args;
+
+    proto_bool ok;
+    size_t n;
+
+    void (*const dcp_header)(uint8_t *restrict work);
+    void (*const dcp_block)(uint8_t *restrict work);
+    void (*const dcp_parse_header)(uint8_t *restrict work);
+    void (*const dcp_walk)(uint8_t *restrict work);
+} ProfinetNs;
+
+/** @brief The one symbol this module exports. */
+extern ProfinetNs Profinet;
 
 PROTOCORE_END_DECLS
 

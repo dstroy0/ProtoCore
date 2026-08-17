@@ -35,11 +35,15 @@
 #ifndef PROTOCORE_MELSEC_H
 #define PROTOCORE_MELSEC_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_MELSEC
 
 PROTOCORE_BEGIN_DECLS
+
+// This module holds nothing between calls, so it carves no borrow and states none. An entry
+// takes one all the same, and never reads it, so every namespace in the tree is invoked the
+// same way.
 
 #define MELSEC_3E_REQ_SUBHEADER0 0x50 ///< request subheader (sent 0x50 then 0x00)
 #define MELSEC_3E_REQ_SUBHEADER1 0x00
@@ -79,27 +83,6 @@ PROTOCORE_BEGIN_DECLS
 #define MELSEC_3E_RES_DATA_OFFSET 11   ///< offset of the response read data (after the end code)
 #define MELSEC_ENDCODE_LEN 2           ///< end-code octets (counted inside the data length)
 
-/**
- * @brief Build a binary 3E batch-read (word units) request.
- * @param device_code      MELSEC_DEV_* (or a raw device code).
- * @param head_device      starting device number (24-bit).
- * @param points           number of word points to read.
- * @param monitoring_timer the CPU monitoring timer (units of 250 ms; 0 = wait indefinitely).
- * @return total octets written (21), or 0 on overflow / bad input.
- */
-size_t protocore_melsec_build_read(uint8_t *buf, size_t cap, uint8_t device_code, uint32_t head_device, uint16_t points,
-                                   uint16_t monitoring_timer);
-
-/**
- * @brief Build a binary 3E batch-write (word units) request: the same device / head / points parameters as
- *        the read (command 0x1401), followed by @p data_len octets of write data (two little-endian octets
- *        per word point).
- * @return total octets written (21 + @p data_len), or 0 on a null data pointer with a nonzero length, an
- *         over-large data length, or an overflow.
- */
-size_t protocore_melsec_build_write(uint8_t *buf, size_t cap, uint8_t device_code, uint32_t head_device,
-                                    uint16_t points, uint16_t monitoring_timer, const uint8_t *data, size_t data_len);
-
 /** @brief A parsed 3E response. @ref data points INTO the source buffer (LE word values). */
 typedef struct
 {
@@ -108,8 +91,83 @@ typedef struct
     size_t data_len;
 } MelsecResponse;
 
-/** @brief Parse + validate a binary 3E response (subheader 0xD0 0x00, length, end code, data). */
-proto_bool protocore_melsec_parse_response(const uint8_t *buf, size_t len, MelsecResponse *out);
+/** @brief What build_read takes: buf, cap, device_code, head_device, ... */
+typedef struct
+{
+    uint8_t *buf;
+    size_t cap;
+    uint8_t device_code;       ///< MELSEC_DEV_* (or a raw device code)
+    uint32_t head_device;      ///< starting device number (24-bit)
+    uint16_t points;           ///< number of word points to read
+    uint16_t monitoring_timer; ///< the CPU monitoring timer (units of 250 ms; 0 = wait indefinitely)
+} MelsecBuildReadArgs;
+
+/** @brief What build_write takes: buf, cap, device_code, head_device, ... */
+typedef struct
+{
+    uint8_t *buf;
+    size_t cap;
+    uint8_t device_code;
+    uint32_t head_device;
+    uint16_t points;
+    uint16_t monitoring_timer;
+    const uint8_t *data;
+    size_t data_len;
+} MelsecBuildWriteArgs;
+
+/** @brief What parse_response takes: buf, len, out. */
+typedef struct
+{
+    const uint8_t *buf;
+    size_t len;
+    MelsecResponse *out;
+} MelsecParseResponseArgs;
+
+/**
+ * @brief Mitsubishi MELSEC MC protocol (binary 3E frame) codec (PROTOCORE_ENABLE_MELSEC) - zero-heap batch-read request
+ * builder + response parser for MELSEC PLCs over TCP/UDP.
+ *
+ * A caller sets the members a call takes, invokes it through ::Melsec with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   Melsec.build_read_args.buf = ...;
+ *   Melsec.build_read_args.cap = ...;
+ *   Melsec.build_read_args.device_code = ...;
+ *   Melsec.build_read_args.head_device = ...;
+ *   Melsec.build_read_args.points = ...;
+ *   Melsec.build_read_args.monitoring_timer = ...;
+ *   Melsec.build_read(work);
+ *   // Melsec.n is what the call reports
+ *
+ * @var MelsecNs::build_read_args  what build_read takes: buf, cap, device_code, head_device,
+ * @var MelsecNs::build_write_args  what build_write takes: buf, cap, device_code, head_device,
+ * @var MelsecNs::parse_response_args  what parse_response takes: buf, len, out
+ * @var MelsecNs::ok  a call's true/false outcome
+ * @var MelsecNs::n  total octets written (21), or 0 on overflow / bad input
+ * @var MelsecNs::build_read  build a binary 3E batch-read (word units) request
+ * @var MelsecNs::build_write  build a binary 3E batch-write (word units) request: the same device ...
+ * @var MelsecNs::parse_response  parse + validate a binary 3E response (subheader 0xD0 0x00, length, ...
+ *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
+ * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
+ * a caller drives every namespace the same way.
+ */
+typedef struct
+{
+    MelsecBuildReadArgs build_read_args;
+    MelsecBuildWriteArgs build_write_args;
+    MelsecParseResponseArgs parse_response_args;
+
+    proto_bool ok;
+    size_t n;
+
+    void (*const build_read)(uint8_t *restrict work);
+    void (*const build_write)(uint8_t *restrict work);
+    void (*const parse_response)(uint8_t *restrict work);
+} MelsecNs;
+
+/** @brief The one symbol this module exports. */
+extern MelsecNs Melsec;
 
 PROTOCORE_END_DECLS
 

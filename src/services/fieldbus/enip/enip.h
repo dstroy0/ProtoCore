@@ -29,11 +29,15 @@
 #ifndef PROTOCORE_ENIP_H
 #define PROTOCORE_ENIP_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_ENIP
 
 PROTOCORE_BEGIN_DECLS
+
+// This module holds nothing between calls, so it carves no borrow and states none. An entry
+// takes one all the same, and never reads it, so every namespace in the tree is invoked the
+// same way.
 
 #define EIP_HEADER_SIZE 24
 
@@ -66,40 +70,6 @@ typedef struct
     uint32_t options;
 } EipHeader;
 
-/** @brief Build the encapsulation header + command data. Returns total octets, or 0. */
-size_t protocore_eip_build(uint8_t *buf, size_t cap, const EipHeader *h, const uint8_t *data, size_t data_len);
-
-/** @brief Parse the encapsulation header and slice the command data. */
-proto_bool protocore_eip_parse(const uint8_t *buf, size_t len, EipHeader *out, const uint8_t **data, size_t *data_len);
-
-/** @brief Build a RegisterSession request (protocol version 1). @p sender_context may be null (zeros). */
-size_t protocore_eip_build_register_session(uint8_t *buf, size_t cap, const uint8_t sender_context[8]);
-
-/**
- * @brief Build an UnRegisterSession request that closes @p session_handle (no command-specific data).
- * @p sender_context may be null (zeros).
- */
-size_t protocore_eip_build_unregister_session(uint8_t *buf, size_t cap, uint32_t session_handle,
-                                              const uint8_t sender_context[8]);
-
-/**
- * @brief Build a SendRRData request wrapping @p cip as an unconnected message (Null Address
- *        item + Unconnected Data item).
- */
-size_t protocore_eip_build_send_rr_data(uint8_t *buf, size_t cap, uint32_t session_handle,
-                                        const uint8_t sender_context[8], uint16_t timeout, const uint8_t *cip,
-                                        size_t protocore_cip_len);
-
-/** @brief From a SendRRData command-data block, extract the Unconnected Data item (the CIP reply). */
-proto_bool protocore_eip_parse_send_rr_data(const uint8_t *data, size_t data_len, const uint8_t **cip,
-                                            size_t *protocore_cip_len);
-
-/**
- * @brief Build a ListIdentity request (command 0x0063, no command-specific data) - the broadcast an
- *        originator sends to enumerate EtherNet/IP devices on a subnet. @p sender_context may be null (zeros).
- */
-size_t protocore_eip_build_list_identity(uint8_t *buf, size_t cap, const uint8_t sender_context[8]);
-
 /** @brief The device identity decoded from a ListIdentity response item. @ref product_name points INTO the
  *  source buffer and is NOT NUL-terminated. The 16-octet CIP socket address is skipped (its sin_* fields are
  *  network-order, unlike the little-endian encapsulation, so this codec does not reinterpret them). */
@@ -118,12 +88,144 @@ typedef struct
     uint8_t state; ///< device state
 } EipIdentity;
 
+/** @brief What build takes: buf, cap, h, data, data_len. */
+typedef struct
+{
+    uint8_t *buf;
+    size_t cap;
+    const EipHeader *h;
+    const uint8_t *data;
+    size_t data_len;
+} EnipBuildArgs;
+
+/** @brief What parse takes: buf, len, out, data, data_len. */
+typedef struct
+{
+    const uint8_t *buf;
+    size_t len;
+    EipHeader *out;
+    const uint8_t **data;
+    size_t *data_len;
+} EnipParseArgs;
+
+/** @brief What build_register_session takes: buf, cap, sender_context. */
+typedef struct
+{
+    uint8_t *buf;
+    size_t cap;
+    const uint8_t *sender_context; ///< 8 bytes.
+} EnipBuildRegisterSessionArgs;
+
+/** @brief What build_unregister_session takes: buf, cap, ... */
+typedef struct
+{
+    uint8_t *buf;
+    size_t cap;
+    uint32_t session_handle;
+    const uint8_t *sender_context; ///< 8 bytes.
+} EnipBuildUnregisterSessionArgs;
+
+/** @brief What build_send_rr_data takes: buf, cap, session_handle, ... */
+typedef struct
+{
+    uint8_t *buf;
+    size_t cap;
+    uint32_t session_handle;
+    const uint8_t *sender_context; ///< 8 bytes.
+    uint16_t timeout;
+    const uint8_t *cip;
+    size_t cip_len;
+} EnipBuildSendRrDataArgs;
+
+/** @brief What parse_send_rr_data takes: data, data_len, cip, cip_len. */
+typedef struct
+{
+    const uint8_t *data;
+    size_t data_len;
+    const uint8_t **cip;
+    size_t *cip_len;
+} EnipParseSendRrDataArgs;
+
+/** @brief What build_list_identity takes: buf, cap, sender_context. */
+typedef struct
+{
+    uint8_t *buf;
+    size_t cap;
+    const uint8_t *sender_context; ///< 8 bytes.
+} EnipBuildListIdentityArgs;
+
+/** @brief What parse_list_identity takes: data, data_len, out. */
+typedef struct
+{
+    const uint8_t *data;
+    size_t data_len;
+    EipIdentity *out;
+} EnipParseListIdentityArgs;
+
 /**
- * @brief Parse a ListIdentity response command-data block (the octets after the encapsulation header): walk
- *        the CPF items for the List Identity item (0x000C) and decode its little-endian identity fields.
- * @return true iff a well-formed List Identity item is present and its declared length covers all fields.
+ * @brief EtherNet/IP encapsulation codec (PROTOCORE_ENABLE_ENIP) - zero-heap builder + parser for the ODVA EtherNet/IP
+ * encapsulation layer (TCP/UDP 44818), the transport that carries CIP.
+ *
+ * A caller sets the members a call takes, invokes it through ::Enip with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   Enip.build_args.buf = ...;
+ *   Enip.build_args.cap = ...;
+ *   Enip.build_args.h = ...;
+ *   Enip.build_args.data = ...;
+ *   Enip.build_args.data_len = ...;
+ *   Enip.build(work);
+ *   // Enip.n is what the call reports
+ *
+ * @var EnipNs::build_args  what build takes: buf, cap, h, data, data_len
+ * @var EnipNs::parse_args  what parse takes: buf, len, out, data, data_len
+ * @var EnipNs::build_register_session_args  what build_register_session takes: buf, cap, sender_context
+ * @var EnipNs::build_unregister_session_args  what build_unregister_session takes: buf, cap,
+ * @var EnipNs::build_send_rr_data_args  what build_send_rr_data takes: buf, cap, session_handle,
+ * @var EnipNs::parse_send_rr_data_args  what parse_send_rr_data takes: data, data_len, cip, cip_len
+ * @var EnipNs::build_list_identity_args  what build_list_identity takes: buf, cap, sender_context
+ * @var EnipNs::parse_list_identity_args  what parse_list_identity takes: data, data_len, out
+ * @var EnipNs::ok  true iff a well-formed List Identity item is present and its ...
+ * @var EnipNs::n  the count a call reports
+ * @var EnipNs::build  build the encapsulation header + command data. Returns total ...
+ * @var EnipNs::parse  parse the encapsulation header and slice the command data
+ * @var EnipNs::build_register_session  build a RegisterSession request (protocol version 1). ...
+ * @var EnipNs::build_unregister_session  build an UnRegisterSession request that closes session_handle (no ...
+ * @var EnipNs::build_send_rr_data  build a SendRRData request wrapping cip as an unconnected message ...
+ * @var EnipNs::parse_send_rr_data  from a SendRRData command-data block, extract the Unconnected Data ...
+ * @var EnipNs::build_list_identity  build a ListIdentity request (command 0x0063, no command-specific ...
+ * @var EnipNs::parse_list_identity  parse a ListIdentity response command-data block (the octets after ...
+ *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
+ * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
+ * a caller drives every namespace the same way.
  */
-proto_bool protocore_eip_parse_list_identity(const uint8_t *data, size_t data_len, EipIdentity *out);
+typedef struct
+{
+    EnipBuildArgs build_args;
+    EnipParseArgs parse_args;
+    EnipBuildRegisterSessionArgs build_register_session_args;
+    EnipBuildUnregisterSessionArgs build_unregister_session_args;
+    EnipBuildSendRrDataArgs build_send_rr_data_args;
+    EnipParseSendRrDataArgs parse_send_rr_data_args;
+    EnipBuildListIdentityArgs build_list_identity_args;
+    EnipParseListIdentityArgs parse_list_identity_args;
+
+    proto_bool ok;
+    size_t n;
+
+    void (*const build)(uint8_t *restrict work);
+    void (*const parse)(uint8_t *restrict work);
+    void (*const build_register_session)(uint8_t *restrict work);
+    void (*const build_unregister_session)(uint8_t *restrict work);
+    void (*const build_send_rr_data)(uint8_t *restrict work);
+    void (*const parse_send_rr_data)(uint8_t *restrict work);
+    void (*const build_list_identity)(uint8_t *restrict work);
+    void (*const parse_list_identity)(uint8_t *restrict work);
+} EnipNs;
+
+/** @brief The one symbol this module exports. */
+extern EnipNs Enip;
 
 PROTOCORE_END_DECLS
 

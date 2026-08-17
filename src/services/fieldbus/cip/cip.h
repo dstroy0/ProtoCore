@@ -18,7 +18,7 @@
  * GeneralStatus(1)  AdditionalStatusSize(1, words)  [additional status]  ServiceData`.
  *
  * Service codes + the logical-segment encoding are verified against the Wireshark CIP
- * dissector. This codec is the CIP message; wrap it with `protocore_eip_build_send_rr_data`.
+ * dissector. This codec is the CIP message; wrap it with `Enip.build_send_rr_data`.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -27,11 +27,15 @@
 #ifndef PROTOCORE_CIP_H
 #define PROTOCORE_CIP_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_CIP
 
 PROTOCORE_BEGIN_DECLS
+
+// This module holds nothing between calls, so it carves no borrow and states none. An entry
+// takes one all the same, and never reads it, so every namespace in the tree is invoked the
+// same way.
 
 // Common service codes.
 #define CIP_SC_GET_ATTR_ALL 0x01
@@ -51,37 +55,6 @@ PROTOCORE_BEGIN_DECLS
 
 #define CIP_STATUS_SUCCESS 0x00 ///< General Status: success
 
-/**
- * @brief Build a class/instance[/attribute] EPATH (logical segments) into @p buf.
- * @param with_attribute include the attribute segment.
- * @return EPATH length in octets (always even / word-aligned), or 0 on overflow.
- */
-size_t protocore_cip_build_epath(uint8_t *buf, size_t cap, uint16_t class_id, uint16_t instance_id,
-                                 uint16_t attribute_id, proto_bool with_attribute);
-
-/** @brief Build a CIP request: service + path size (words) + EPATH + service data. */
-size_t protocore_cip_build_request(uint8_t *buf, size_t cap, uint8_t service, const uint8_t *epath, size_t epath_len,
-                                   const uint8_t *data, size_t data_len);
-
-/** @brief Build a Get_Attribute_Single request for class/instance/attribute. */
-size_t protocore_cip_build_get_attr_single(uint8_t *buf, size_t cap, uint16_t class_id, uint16_t instance_id,
-                                           uint16_t attribute_id);
-
-/**
- * @brief Build a Get_Attributes_All request for class/instance: service 0x01 over a class/instance EPATH with
- *        no attribute segment and no service data - reads every attribute of the object at once (e.g. the
- *        whole Identity object). @return the request length, or 0 on overflow.
- */
-size_t protocore_cip_build_get_attr_all(uint8_t *buf, size_t cap, uint16_t class_id, uint16_t instance_id);
-
-/**
- * @brief Build a Set_Attribute_Single request for class/instance/attribute carrying @p value_len octets of
- *        attribute data (the value to write).
- * @return the request length, or 0 on a null value with a nonzero length, or an overflow.
- */
-size_t protocore_cip_build_set_attr_single(uint8_t *buf, size_t cap, uint16_t class_id, uint16_t instance_id,
-                                           uint16_t attribute_id, const uint8_t *value, size_t value_len);
-
 /** @brief A parsed CIP response. @ref data points INTO the source buffer. */
 typedef struct
 {
@@ -91,8 +64,125 @@ typedef struct
     size_t data_len;
 } CipResponse;
 
-/** @brief Parse a CIP response (service + status + additional status + data). */
-proto_bool protocore_cip_parse_response(const uint8_t *buf, size_t len, CipResponse *out);
+/** @brief What build_epath takes: buf, cap, class_id, instance_id, ... */
+typedef struct
+{
+    uint8_t *buf;
+    size_t cap;
+    uint16_t class_id;
+    uint16_t instance_id;
+    uint16_t attribute_id;
+    proto_bool with_attribute; ///< include the attribute segment
+} CipBuildEpathArgs;
+
+/** @brief What build_request takes: buf, cap, service, epath, ... */
+typedef struct
+{
+    uint8_t *buf;
+    size_t cap;
+    uint8_t service;
+    const uint8_t *epath;
+    size_t epath_len;
+    const uint8_t *data;
+    size_t data_len;
+} CipBuildRequestArgs;
+
+/** @brief What build_get_attr_single takes: buf, cap, class_id, ... */
+typedef struct
+{
+    uint8_t *buf;
+    size_t cap;
+    uint16_t class_id;
+    uint16_t instance_id;
+    uint16_t attribute_id;
+} CipBuildGetAttrSingleArgs;
+
+/** @brief What build_get_attr_all takes: buf, cap, class_id, ... */
+typedef struct
+{
+    uint8_t *buf;
+    size_t cap;
+    uint16_t class_id;
+    uint16_t instance_id;
+} CipBuildGetAttrAllArgs;
+
+/** @brief What build_set_attr_single takes: buf, cap, class_id, ... */
+typedef struct
+{
+    uint8_t *buf;
+    size_t cap;
+    uint16_t class_id;
+    uint16_t instance_id;
+    uint16_t attribute_id;
+    const uint8_t *value;
+    size_t value_len;
+} CipBuildSetAttrSingleArgs;
+
+/** @brief What parse_response takes: buf, len, out. */
+typedef struct
+{
+    const uint8_t *buf;
+    size_t len;
+    CipResponse *out;
+} CipParseResponseArgs;
+
+/**
+ * @brief CIP (Common Industrial Protocol) message codec (PROTOCORE_ENABLE_CIP) - zero-heap request builder + response
+ * parser for the message that rides inside an EtherNet/IP Unconnected Data item (services/fieldbus/enip).
+ *
+ * A caller sets the members a call takes, invokes it through ::Cip with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   Cip.build_epath_args.buf = ...;
+ *   Cip.build_epath_args.cap = ...;
+ *   Cip.build_epath_args.class_id = ...;
+ *   Cip.build_epath_args.instance_id = ...;
+ *   Cip.build_epath_args.attribute_id = ...;
+ *   Cip.build_epath_args.with_attribute = ...;
+ *   Cip.build_epath(work);
+ *   // Cip.n is what the call reports
+ *
+ * @var CipNs::build_epath_args  what build_epath takes: buf, cap, class_id, instance_id,
+ * @var CipNs::build_request_args  what build_request takes: buf, cap, service, epath,
+ * @var CipNs::build_get_attr_single_args  what build_get_attr_single takes: buf, cap, class_id,
+ * @var CipNs::build_get_attr_all_args  what build_get_attr_all takes: buf, cap, class_id,
+ * @var CipNs::build_set_attr_single_args  what build_set_attr_single takes: buf, cap, class_id,
+ * @var CipNs::parse_response_args  what parse_response takes: buf, len, out
+ * @var CipNs::ok  a call's true/false outcome
+ * @var CipNs::n  EPATH length in octets (always even / word-aligned), or 0 on ...
+ * @var CipNs::build_epath  build a class/instance[/attribute] EPATH (logical segments) into buf
+ * @var CipNs::build_request  build a CIP request: service + path size (words) + EPATH + service ...
+ * @var CipNs::build_get_attr_single  build a Get_Attribute_Single request for class/instance/attribute
+ * @var CipNs::build_get_attr_all  build a Get_Attributes_All request for class/instance: service 0x01 ...
+ * @var CipNs::build_set_attr_single  build a Set_Attribute_Single request for class/instance/attribute ...
+ * @var CipNs::parse_response  parse a CIP response (service + status + additional status + data)
+ *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
+ * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
+ * a caller drives every namespace the same way.
+ */
+typedef struct
+{
+    CipBuildEpathArgs build_epath_args;
+    CipBuildRequestArgs build_request_args;
+    CipBuildGetAttrSingleArgs build_get_attr_single_args;
+    CipBuildGetAttrAllArgs build_get_attr_all_args;
+    CipBuildSetAttrSingleArgs build_set_attr_single_args;
+    CipParseResponseArgs parse_response_args;
+
+    proto_bool ok;
+    size_t n;
+
+    void (*const build_epath)(uint8_t *restrict work);
+    void (*const build_request)(uint8_t *restrict work);
+    void (*const build_get_attr_single)(uint8_t *restrict work);
+    void (*const build_get_attr_all)(uint8_t *restrict work);
+    void (*const build_set_attr_single)(uint8_t *restrict work);
+    void (*const parse_response)(uint8_t *restrict work);
+} CipNs;
+
+/** @brief The one symbol this module exports. */
+extern CipNs Cip;
 
 PROTOCORE_END_DECLS
 

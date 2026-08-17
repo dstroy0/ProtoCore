@@ -6,10 +6,14 @@
  * @brief Siemens S7comm PDU builder + parser (pure, host-tested; constants per Wireshark).
  */
 
-#include "services/fieldbus/s7comm/s7comm.h"
-#include "mmgr/protomem.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_S7COMM
+
+#include "mmgr/protomem.h"
+#include "services/fieldbus/s7comm/s7comm.h"
+
+PROTOCORE_BEGIN_DECLS
 
 static size_t put16(uint8_t *p, uint16_t v)
 {
@@ -36,18 +40,32 @@ static size_t write_job_header(uint8_t *buf, uint16_t pdu_ref, uint16_t param_le
     return p; // 10
 }
 
-size_t protocore_s7_build_setup(uint8_t *buf, size_t cap, uint16_t pdu_ref, uint16_t max_amq_calling,
-                                uint16_t max_amq_called, uint16_t pdu_size)
+// --- the entries -----------------------------------------------------------
+
+// No context and no borrow: every operand is the caller's. The borrow an entry takes is
+// never read.
+
+static void s7comm_build_setup(uint8_t *restrict work)
 {
+    (void)work;
+    uint8_t *buf = S7comm.build_setup_args.buf;
+    size_t cap = S7comm.build_setup_args.cap;
+    uint16_t pdu_ref = S7comm.build_setup_args.pdu_ref;
+    uint16_t max_amq_calling = S7comm.build_setup_args.max_amq_calling;
+    uint16_t max_amq_called = S7comm.build_setup_args.max_amq_called;
+    uint16_t pdu_size = S7comm.build_setup_args.pdu_size;
+
     if (!buf)
     {
-        return 0;
+        S7comm.n = 0;
+        return;
     }
     const uint16_t param_len = 8;
     size_t total = 10 + param_len;
     if (total > cap)
     {
-        return 0;
+        S7comm.n = 0;
+        return;
     }
     size_t p = write_job_header(buf, pdu_ref, param_len, 0);
     buf[p++] = S7_FUNC_SETUP_COMM;
@@ -55,20 +73,29 @@ size_t protocore_s7_build_setup(uint8_t *buf, size_t cap, uint16_t pdu_ref, uint
     p += put16(buf + p, max_amq_calling);
     p += put16(buf + p, max_amq_called);
     p += put16(buf + p, pdu_size);
-    return p;
+    S7comm.n = p;
 }
 
-size_t protocore_s7_build_read_request(uint8_t *buf, size_t cap, uint16_t pdu_ref, const S7ReadItem *items, size_t n)
+static void s7comm_build_read_request(uint8_t *restrict work)
 {
+    (void)work;
+    uint8_t *buf = S7comm.build_read_request_args.buf;
+    size_t cap = S7comm.build_read_request_args.cap;
+    uint16_t pdu_ref = S7comm.build_read_request_args.pdu_ref;
+    const S7ReadItem *items = S7comm.build_read_request_args.items;
+    size_t n = S7comm.build_read_request_args.n;
+
     if (!buf || !items || n == 0 || n > 0xFF)
     {
-        return 0;
+        S7comm.n = 0;
+        return;
     }
     uint16_t param_len = (uint16_t)(2 + 12 * n); // func + count + items
     size_t total = 10 + param_len;
     if (total > cap)
     {
-        return 0;
+        S7comm.n = 0;
+        return;
     }
     size_t p = write_job_header(buf, pdu_ref, param_len, 0);
     buf[p++] = S7_FUNC_READ_VAR;
@@ -88,11 +115,11 @@ size_t protocore_s7_build_read_request(uint8_t *buf, size_t cap, uint16_t pdu_re
         buf[p++] = (uint8_t)(addr >> 8);
         buf[p++] = (uint8_t)(addr & 0xFF);
     }
-    return p;
+    S7comm.n = p;
 }
 
 // The 2-octet data-item length is expressed in bits for the bit/byte/int data transport sizes, else in bytes
-// (the inverse of protocore_s7_read_next_item's decode).
+// (the inverse of S7comm.read_next_item's decode).
 static uint16_t s7_data_wire_len(uint8_t data_transport_size, uint16_t data_len)
 {
     if (data_transport_size == S7_DTS_BIT || data_transport_size == S7_DTS_BYTE || data_transport_size == S7_DTS_INT)
@@ -102,11 +129,19 @@ static uint16_t s7_data_wire_len(uint8_t data_transport_size, uint16_t data_len)
     return data_len;
 }
 
-size_t protocore_s7_build_write_request(uint8_t *buf, size_t cap, uint16_t pdu_ref, const S7WriteItem *items, size_t n)
+static void s7comm_build_write_request(uint8_t *restrict work)
 {
+    (void)work;
+    uint8_t *buf = S7comm.build_write_request_args.buf;
+    size_t cap = S7comm.build_write_request_args.cap;
+    uint16_t pdu_ref = S7comm.build_write_request_args.pdu_ref;
+    const S7WriteItem *items = S7comm.build_write_request_args.items;
+    size_t n = S7comm.build_write_request_args.n;
+
     if (!buf || !items || n == 0 || n > 0xFF)
     {
-        return 0;
+        S7comm.n = 0;
+        return;
     }
     uint16_t param_len = (uint16_t)(2 + 12 * n); // func + count + item specs (same 12-octet spec as a read)
     // Sum the data section: each item is a 4-octet data header + the value bytes, even-padded except the last.
@@ -115,7 +150,8 @@ size_t protocore_s7_build_write_request(uint8_t *buf, size_t cap, uint16_t pdu_r
     {
         if (items[i].data_len && !items[i].data)
         {
-            return 0;
+            S7comm.n = 0;
+            return;
         }
         size_t item_bytes = 4 + items[i].data_len;
         if (i + 1 < n && (items[i].data_len & 1)) // pad every item but the last to an even length
@@ -126,12 +162,14 @@ size_t protocore_s7_build_write_request(uint8_t *buf, size_t cap, uint16_t pdu_r
     }
     if (data_len > 0xFFFF)
     {
-        return 0;
+        S7comm.n = 0;
+        return;
     }
     size_t total = 10 + param_len + data_len;
     if (total > cap)
     {
-        return 0;
+        S7comm.n = 0;
+        return;
     }
 
     size_t p = write_job_header(buf, pdu_ref, param_len, (uint16_t)data_len);
@@ -168,18 +206,25 @@ size_t protocore_s7_build_write_request(uint8_t *buf, size_t cap, uint16_t pdu_r
             buf[p++] = 0x00;
         }
     }
-    return p;
+    S7comm.n = p;
 }
 
-proto_bool protocore_s7_parse_header(const uint8_t *buf, size_t len, S7Header *out)
+static void s7comm_parse_header(uint8_t *restrict work)
 {
+    (void)work;
+    const uint8_t *buf = S7comm.parse_header_args.buf;
+    size_t len = S7comm.parse_header_args.len;
+    S7Header *out = S7comm.parse_header_args.out;
+
     if (!buf || !out || len < 10)
     {
-        return PROTO_FALSE;
+        S7comm.ok = PROTO_FALSE;
+        return;
     }
     if (buf[0] != S7_PROTOCOL_ID)
     {
-        return PROTO_FALSE;
+        S7comm.ok = PROTO_FALSE;
+        return;
     }
     out->rosctr = buf[1];
     out->pdu_ref = get16(buf + 4);
@@ -193,30 +238,40 @@ proto_bool protocore_s7_parse_header(const uint8_t *buf, size_t len, S7Header *o
     {
         if (len < 12)
         {
-            return PROTO_FALSE;
+            S7comm.ok = PROTO_FALSE;
+            return;
         }
         out->error_class = buf[10];
         out->error_code = buf[11];
     }
     if (out->header_len + (size_t)out->param_len + (size_t)out->data_len > len)
     {
-        return PROTO_FALSE; // not fully buffered
+        S7comm.ok = PROTO_FALSE;
+        return; // not fully buffered
     }
     out->param = buf + out->header_len;
     out->data = out->param + out->param_len;
-    return PROTO_TRUE;
+    S7comm.ok = PROTO_TRUE;
 }
 
-proto_bool protocore_s7_read_next_item(const uint8_t *data, size_t data_len, size_t *offset, S7DataItem *out)
+static void s7comm_read_next_item(uint8_t *restrict work)
 {
+    (void)work;
+    const uint8_t *data = S7comm.read_next_item_args.data;
+    size_t data_len = S7comm.read_next_item_args.data_len;
+    size_t *offset = S7comm.read_next_item_args.offset;
+    S7DataItem *out = S7comm.read_next_item_args.out;
+
     if (!data || !offset || !out)
     {
-        return PROTO_FALSE;
+        S7comm.ok = PROTO_FALSE;
+        return;
     }
     size_t o = *offset;
     if (o + 4 > data_len) // return code + transport size + 2-octet length
     {
-        return PROTO_FALSE;
+        S7comm.ok = PROTO_FALSE;
+        return;
     }
     out->return_code = data[o];
     out->transport_size = data[o + 1];
@@ -235,7 +290,8 @@ proto_bool protocore_s7_read_next_item(const uint8_t *data, size_t data_len, siz
 
     if (o + 4 + bytes > data_len)
     {
-        return PROTO_FALSE;
+        S7comm.ok = PROTO_FALSE;
+        return;
     }
     out->data = data + o + 4;
     out->data_len = bytes;
@@ -247,7 +303,15 @@ proto_bool protocore_s7_read_next_item(const uint8_t *data, size_t data_len, siz
         o++;
     }
     *offset = o;
-    return PROTO_TRUE;
+    S7comm.ok = PROTO_TRUE;
 }
+
+S7commNs S7comm = {.build_setup = s7comm_build_setup,
+                   .build_read_request = s7comm_build_read_request,
+                   .build_write_request = s7comm_build_write_request,
+                   .parse_header = s7comm_parse_header,
+                   .read_next_item = s7comm_read_next_item};
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_S7COMM

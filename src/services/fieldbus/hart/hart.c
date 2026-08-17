@@ -6,37 +6,64 @@
  * @brief HART / HART-IP protocol codec (see hart.h).
  */
 
-#include "services/fieldbus/hart/hart.h"
-#include "mmgr/protomem.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_HART
 
-uint8_t protocore_hart_checksum(const uint8_t *bytes, size_t len)
+#include "mmgr/protomem.h"
+#include "services/fieldbus/hart/hart.h"
+
+PROTOCORE_BEGIN_DECLS
+
+// The entries this file calls before reaching their definitions.
+// --- the entries -----------------------------------------------------------
+
+// No context and no borrow: every operand is the caller's. The borrow an entry takes is
+// never read.
+
+static void hart_checksum(uint8_t *restrict work);
+
+static void hart_checksum(uint8_t *restrict work)
 {
+    (void)work;
+    const uint8_t *bytes = Hart.checksum_args.bytes;
+    size_t len = Hart.checksum_args.len;
+
     uint8_t x = 0;
     for (size_t i = 0; i < len; i++)
     {
         x ^= bytes[i];
     }
-    return x;
+    Hart.value = x;
 }
 
-size_t protocore_hart_build(uint8_t delimiter, const uint8_t *addr, size_t addr_len, uint8_t command,
-                            const uint8_t *data, size_t data_len, uint8_t *out, size_t cap)
+static void hart_build(uint8_t *restrict work)
 {
+    uint8_t delimiter = Hart.build_args.delimiter;
+    const uint8_t *addr = Hart.build_args.addr;
+    size_t addr_len = Hart.build_args.addr_len;
+    uint8_t command = Hart.build_args.command;
+    const uint8_t *data = Hart.build_args.data;
+    size_t data_len = Hart.build_args.data_len;
+    uint8_t *out = Hart.build_args.out;
+    size_t cap = Hart.build_args.cap;
+
     if (addr_len != 1 && addr_len != 5)
     {
-        return 0;
+        Hart.n = 0;
+        return;
     }
     if (!addr || (data_len && !data))
     {
-        return 0;
+        Hart.n = 0;
+        return;
     }
     // delimiter + addr + command + byte-count + data + checksum
     size_t n = 1 + addr_len + 1 + 1 + data_len + 1;
     if (n > cap || data_len > 0xFF)
     {
-        return 0;
+        Hart.n = 0;
+        return;
     }
 
     size_t i = 0;
@@ -50,23 +77,32 @@ size_t protocore_hart_build(uint8_t delimiter, const uint8_t *addr, size_t addr_
         mem.cpy(out + i, data, data_len);
         i += data_len;
     }
-    out[i] = protocore_hart_checksum(out, i); // XOR over delimiter..last data byte
+    Hart.checksum_args.bytes = out;
+    Hart.checksum_args.len = i;
+    hart_checksum(work);
+    out[i] = Hart.value; // XOR over delimiter..last data byte
     i++;
-    return i;
+    Hart.n = i;
 }
 
-proto_bool protocore_hart_parse(const uint8_t *frame, size_t len, HartFrame *out)
+static void hart_parse(uint8_t *restrict work)
 {
+    const uint8_t *frame = Hart.parse_args.frame;
+    size_t len = Hart.parse_args.len;
+    HartFrame *out = Hart.parse_args.out;
+
     if (!frame || !out)
     {
-        return PROTO_FALSE;
+        Hart.ok = PROTO_FALSE;
+        return;
     }
     size_t addr_len = (frame[0] & HART_DELIM_LONG_ADDR) ? 5 : 1;
     // delimiter + addr + command + byte-count + checksum = minimum with no data
     size_t min = 1 + addr_len + 1 + 1 + 1;
     if (len < min)
     {
-        return PROTO_FALSE;
+        Hart.ok = PROTO_FALSE;
+        return;
     }
 
     size_t bc_idx = 1 + addr_len + 1; // index of the byte-count field
@@ -74,13 +110,18 @@ proto_bool protocore_hart_parse(const uint8_t *frame, size_t len, HartFrame *out
     size_t expect = 1 + addr_len + 1 + 1 + byte_count + 1; // full frame incl checksum
     if (len < expect)
     {
-        return PROTO_FALSE;
+        Hart.ok = PROTO_FALSE;
+        return;
     }
 
-    uint8_t want = protocore_hart_checksum(frame, expect - 1);
+    Hart.checksum_args.bytes = frame;
+    Hart.checksum_args.len = expect - 1;
+    hart_checksum(work);
+    uint8_t want = Hart.value;
     if (want != frame[expect - 1])
     {
-        return PROTO_FALSE;
+        Hart.ok = PROTO_FALSE;
+        return;
     }
 
     out->delimiter = frame[0];
@@ -90,15 +131,24 @@ proto_bool protocore_hart_parse(const uint8_t *frame, size_t len, HartFrame *out
     out->byte_count = byte_count;
     out->data = byte_count ? (frame + bc_idx + 1) : NULL;
     out->data_len = byte_count;
-    return PROTO_TRUE;
+    Hart.ok = PROTO_TRUE;
 }
 
-size_t protocore_hartip_build_header(uint8_t msg_type, uint8_t msg_id, uint8_t status, uint16_t seq, uint16_t total_len,
-                                     uint8_t *out, size_t cap)
+static void hart_ip_build_header(uint8_t *restrict work)
 {
+    (void)work;
+    uint8_t msg_type = Hart.ip_build_header_args.msg_type;
+    uint8_t msg_id = Hart.ip_build_header_args.msg_id;
+    uint8_t status = Hart.ip_build_header_args.status;
+    uint16_t seq = Hart.ip_build_header_args.seq;
+    uint16_t total_len = Hart.ip_build_header_args.total_len;
+    uint8_t *out = Hart.ip_build_header_args.out;
+    size_t cap = Hart.ip_build_header_args.cap;
+
     if (cap < HARTIP_HEADER_LEN || !out)
     {
-        return 0;
+        Hart.n = 0;
+        return;
     }
     out[0] = 1; // HART-IP protocol version
     out[1] = msg_type;
@@ -108,19 +158,26 @@ size_t protocore_hartip_build_header(uint8_t msg_type, uint8_t msg_id, uint8_t s
     out[5] = (uint8_t)seq;
     out[6] = (uint8_t)(total_len >> 8);
     out[7] = (uint8_t)total_len;
-    return HARTIP_HEADER_LEN;
+    Hart.n = HARTIP_HEADER_LEN;
 }
 
-proto_bool protocore_hartip_parse_header(const uint8_t *buf, size_t len, HartIpHeader *out)
+static void hart_ip_parse_header(uint8_t *restrict work)
 {
+    (void)work;
+    const uint8_t *buf = Hart.ip_parse_header_args.buf;
+    size_t len = Hart.ip_parse_header_args.len;
+    HartIpHeader *out = Hart.ip_parse_header_args.out;
+
     if (!buf || !out || len < HARTIP_HEADER_LEN)
     {
-        return PROTO_FALSE;
+        Hart.ok = PROTO_FALSE;
+        return;
     }
     uint16_t total = (uint16_t)((buf[6] << 8) | buf[7]);
     if (total < HARTIP_HEADER_LEN || total > len) // the byte count must include the header and be present
     {
-        return PROTO_FALSE;
+        Hart.ok = PROTO_FALSE;
+        return;
     }
     out->version = buf[0];
     out->msg_type = buf[1];
@@ -130,7 +187,15 @@ proto_bool protocore_hartip_parse_header(const uint8_t *buf, size_t len, HartIpH
     out->total_len = total;
     out->payload_len = (size_t)(total - HARTIP_HEADER_LEN);
     out->payload = out->payload_len ? buf + HARTIP_HEADER_LEN : NULL;
-    return PROTO_TRUE;
+    Hart.ok = PROTO_TRUE;
 }
+
+HartNs Hart = {.checksum = hart_checksum,
+               .build = hart_build,
+               .parse = hart_parse,
+               .ip_build_header = hart_ip_build_header,
+               .ip_parse_header = hart_ip_parse_header};
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HART

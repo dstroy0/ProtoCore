@@ -21,6 +21,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+static uint8_t profinet_work[16]; // the borrow an entry takes; Profinet never reads it
+
 // No-op block sink for protocore_pn_dcp_walk: counts into a volatile so the walk is not optimized away.
 // Mirrors the host test's `collect` callback but without the bookkeeping (nothing here touches the
 // wire or any transport - the walk is pure CPU work).
@@ -38,10 +40,22 @@ void dbench_run(void)
     // from test/test_profinet: DEVICE/NameOfStation "plc" (odd -> even-padded) + IP/IPParameter "ABCD").
     static uint8_t body[64];
     size_t body_len = 0;
-    body_len += protocore_pn_dcp_block(PN_DCP_OPT_DEVICE, PN_DCP_SUB_DEV_NAME_OF_STATION, (const uint8_t *)"plc", 3,
-                                       body + body_len, sizeof(body) - body_len);
-    body_len += protocore_pn_dcp_block(PN_DCP_OPT_IP, PN_DCP_SUB_IP_PARAM, (const uint8_t *)"ABCD", 4, body + body_len,
-                                       sizeof(body) - body_len);
+    Profinet.dcp_block_args.option = PN_DCP_OPT_DEVICE;
+    Profinet.dcp_block_args.suboption = PN_DCP_SUB_DEV_NAME_OF_STATION;
+    Profinet.dcp_block_args.value = (const uint8_t *)"plc";
+    Profinet.dcp_block_args.value_len = 3;
+    Profinet.dcp_block_args.out = body + body_len;
+    Profinet.dcp_block_args.cap = sizeof(body) - body_len;
+    Profinet.dcp_block(profinet_work);
+    body_len += Profinet.n;
+    Profinet.dcp_block_args.option = PN_DCP_OPT_IP;
+    Profinet.dcp_block_args.suboption = PN_DCP_SUB_IP_PARAM;
+    Profinet.dcp_block_args.value = (const uint8_t *)"ABCD";
+    Profinet.dcp_block_args.value_len = 4;
+    Profinet.dcp_block_args.out = body + body_len;
+    Profinet.dcp_block_args.cap = sizeof(body) - body_len;
+    Profinet.dcp_block(profinet_work);
+    body_len += Profinet.n;
 
     // A known-good Identify-request header (from test/test_profinet test_header_roundtrip) to parse.
     static const uint8_t ident_hdr[] = {0xFE, 0xFE, 0x05, 0x00, 0x11, 0x22, 0x33, 0x44, 0x00, 0x00, 0x00, 0x08};
@@ -55,16 +69,35 @@ void dbench_run(void)
         volatile size_t sink = 0;
         PnDcpHeader h;
 
-        DBENCH_OP("protocore_pn_dcp_header (Identify)", 200000,
-                  sink += protocore_pn_dcp_header(PN_FRAMEID_DCP_IDENT_REQ, PN_DCP_SERVICE_IDENTIFY,
-                                                  PN_DCP_TYPE_REQUEST, 0x11223344, 0, 8, hdr_out, sizeof(hdr_out)));
-        DBENCH_OP("protocore_pn_dcp_block (NameOfStation)", 200000,
-                  sink += protocore_pn_dcp_block(PN_DCP_OPT_DEVICE, PN_DCP_SUB_DEV_NAME_OF_STATION,
-                                                 (const uint8_t *)"plc", 3, blk_out, sizeof(blk_out)));
-        DBENCH_OP("protocore_pn_dcp_parse_header", 200000,
-                  sink += (size_t)protocore_pn_dcp_parse_header(ident_hdr, sizeof(ident_hdr), &h));
-        DBENCH_OP("protocore_pn_dcp_walk (2 blocks)", 100000,
-                  sink += (size_t)protocore_pn_dcp_walk(body, body_len, walk_sink, NULL));
+        Profinet.dcp_header_args.frame_id = PN_FRAMEID_DCP_IDENT_REQ;
+        Profinet.dcp_header_args.service_id = PN_DCP_SERVICE_IDENTIFY;
+        Profinet.dcp_header_args.service_type = PN_DCP_TYPE_REQUEST;
+        Profinet.dcp_header_args.xid = 0x11223344;
+        Profinet.dcp_header_args.response_delay = 0;
+        Profinet.dcp_header_args.data_length = 8;
+        Profinet.dcp_header_args.out = hdr_out;
+        Profinet.dcp_header_args.cap = sizeof(hdr_out);
+        DBENCH_OP("Profinet.dcp_header (Identify)", 200000,
+                  sink += (Profinet.dcp_header(profinet_work), Profinet.n));
+        Profinet.dcp_block_args.option = PN_DCP_OPT_DEVICE;
+        Profinet.dcp_block_args.suboption = PN_DCP_SUB_DEV_NAME_OF_STATION;
+        Profinet.dcp_block_args.value = (const uint8_t *)"plc";
+        Profinet.dcp_block_args.value_len = 3;
+        Profinet.dcp_block_args.out = blk_out;
+        Profinet.dcp_block_args.cap = sizeof(blk_out);
+        DBENCH_OP("Profinet.dcp_block (NameOfStation)", 200000,
+                  sink += (Profinet.dcp_block(profinet_work), Profinet.n));
+        Profinet.dcp_parse_header_args.frame = ident_hdr;
+        Profinet.dcp_parse_header_args.len = sizeof(ident_hdr);
+        Profinet.dcp_parse_header_args.out = &h;
+        DBENCH_OP("Profinet.dcp_parse_header", 200000,
+                  sink += (size_t)(Profinet.dcp_parse_header(profinet_work), Profinet.ok));
+        Profinet.dcp_walk_args.blocks = body;
+        Profinet.dcp_walk_args.len = body_len;
+        Profinet.dcp_walk_args.cb = walk_sink;
+        Profinet.dcp_walk_args.arg = NULL;
+        DBENCH_OP("Profinet.dcp_walk (2 blocks)", 100000,
+                  sink += (size_t)(Profinet.dcp_walk(profinet_work), Profinet.ok));
 
         (void)sink;
         DBENCH_DONE();

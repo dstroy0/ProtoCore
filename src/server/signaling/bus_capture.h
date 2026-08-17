@@ -45,13 +45,12 @@ PROTOCORE_BEGIN_DECLS
 /** @brief Sink for one captured CAN frame (already decoded into a ::CanFrame). */
 typedef void (*bus_capture_sink_fn)(const CanFrame *frame);
 
-/** @brief CanFrame, as the caller already knows it. */
-struct CanFrame;
+#include "shared/can/can.h" // CanFrame: the type a parameter points at
 
 /** @brief What can_to_socketcan takes: f, out, cap. */
 typedef struct
 {
-    const struct CanFrame *f;
+    const CanFrame *f;
     uint8_t *out;
     size_t cap;
 } BusCaptureCanToSocketcanArgs;

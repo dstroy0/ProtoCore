@@ -20,6 +20,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+static uint8_t fins_work[16]; // the borrow an entry takes; Fins never reads it
+
 static FinsHeader make_header()
 {
     FinsHeader h = {};
@@ -46,8 +48,15 @@ void dbench_run(void)
     // Pre-build a command frame once so the parse benches have real, known-good bytes to chew on
     // (same bytes as test_build_command_bytes / test_parse_command in test/test_fins).
     uint8_t parse_src[32];
-    size_t parse_src_len =
-        protocore_fins_build_command(parse_src, sizeof(parse_src), &h, 0x01, 0x01, params, sizeof(params));
+    Fins.build_command_args.buf = parse_src;
+    Fins.build_command_args.cap = sizeof(parse_src);
+    Fins.build_command_args.h = &h;
+    Fins.build_command_args.mrc = 0x01;
+    Fins.build_command_args.src = 0x01;
+    Fins.build_command_args.params = params;
+    Fins.build_command_args.params_len = sizeof(params);
+    Fins.build_command(fins_work);
+    size_t parse_src_len = Fins.n;
 
     // A normal-completion response frame (same bytes as test_parse_response_ok).
     const uint8_t resp_ok[] = {
@@ -64,15 +73,35 @@ void dbench_run(void)
         FinsCommand cmd_out;
         FinsResponse resp_out;
 
-        DBENCH_OP("protocore_fins_build_command", 50000,
+        Fins.build_command_args.buf = cmd_buf;
+        Fins.build_command_args.cap = sizeof(cmd_buf);
+        Fins.build_command_args.h = &h;
+        Fins.build_command_args.mrc = 0x05;
+        Fins.build_command_args.src = 0x01;
+        Fins.build_command_args.params = params;
+        Fins.build_command_args.params_len = sizeof(params);
+        DBENCH_OP("Fins.build_command", 50000,
                   sink +=
-                  protocore_fins_build_command(cmd_buf, sizeof(cmd_buf), &h, 0x05, 0x01, params, sizeof(params)));
-        DBENCH_OP("protocore_fins_build_memory_area_read", 50000,
-                  sink += protocore_fins_build_memory_area_read(mar_buf, sizeof(mar_buf), &h, 0xB0, 100, 0, 10));
-        DBENCH_OP("protocore_fins_parse_command", 50000,
-                  sink += protocore_fins_parse_command(parse_src, parse_src_len, &cmd_out) ? 1 : 0);
-        DBENCH_OP("protocore_fins_parse_response", 50000,
-                  sink += protocore_fins_parse_response(resp_ok, sizeof(resp_ok), &resp_out) ? 1 : 0);
+                  (Fins.build_command(fins_work), Fins.n));
+        Fins.build_memory_area_read_args.buf = mar_buf;
+        Fins.build_memory_area_read_args.cap = sizeof(mar_buf);
+        Fins.build_memory_area_read_args.h = &h;
+        Fins.build_memory_area_read_args.area = 0xB0;
+        Fins.build_memory_area_read_args.address = 100;
+        Fins.build_memory_area_read_args.bit = 0;
+        Fins.build_memory_area_read_args.count = 10;
+        DBENCH_OP("Fins.build_memory_area_read", 50000,
+                  sink += (Fins.build_memory_area_read(fins_work), Fins.n));
+        Fins.parse_command_args.buf = parse_src;
+        Fins.parse_command_args.len = parse_src_len;
+        Fins.parse_command_args.out = &cmd_out;
+        DBENCH_OP("Fins.parse_command", 50000,
+                  sink += (Fins.parse_command(fins_work), Fins.ok) ? 1 : 0);
+        Fins.parse_response_args.buf = resp_ok;
+        Fins.parse_response_args.len = sizeof(resp_ok);
+        Fins.parse_response_args.out = &resp_out;
+        DBENCH_OP("Fins.parse_response", 50000,
+                  sink += (Fins.parse_response(fins_work), Fins.ok) ? 1 : 0);
         (void)sink;
 
         DBENCH_DONE();

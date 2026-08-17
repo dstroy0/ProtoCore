@@ -36,6 +36,8 @@
 
 #include <unity.h>
 
+static uint8_t cclink_work[16]; // the borrow an entry takes; Cclink never reads it
+
 void setUp(void)
 {
 }
@@ -58,18 +60,33 @@ void tearDown(void)
 void test_checksum_is_the_low_byte_of_the_sum(void)
 {
     static const uint8_t WRAPS[3] = {0x01, 0x01, 0xFE};
-    TEST_ASSERT_EQUAL_HEX8(0x00u, protocore_cclink_sum(WRAPS, sizeof(WRAPS)));
+    Cclink.sum_args.bytes = WRAPS;
+    Cclink.sum_args.len = sizeof(WRAPS);
+    Cclink.sum(cclink_work);
+    TEST_ASSERT_EQUAL_HEX8(0x00u, Cclink.value);
 
     static const uint8_t PAIR[2] = {0xFF, 0x01};
-    TEST_ASSERT_EQUAL_HEX8(0x00u, protocore_cclink_sum(PAIR, sizeof(PAIR)));
+    Cclink.sum_args.bytes = PAIR;
+    Cclink.sum_args.len = sizeof(PAIR);
+    Cclink.sum(cclink_work);
+    TEST_ASSERT_EQUAL_HEX8(0x00u, Cclink.value);
 
     static const uint8_t TWO_MAX[2] = {0xFF, 0xFF};
-    TEST_ASSERT_EQUAL_HEX8(0xFEu, protocore_cclink_sum(TWO_MAX, sizeof(TWO_MAX)));
+    Cclink.sum_args.bytes = TWO_MAX;
+    Cclink.sum_args.len = sizeof(TWO_MAX);
+    Cclink.sum(cclink_work);
+    TEST_ASSERT_EQUAL_HEX8(0xFEu, Cclink.value);
 
-    TEST_ASSERT_EQUAL_HEX8(0x00u, protocore_cclink_sum(WRAPS, 0));
+    Cclink.sum_args.bytes = WRAPS;
+    Cclink.sum_args.len = 0;
+    Cclink.sum(cclink_work);
+    TEST_ASSERT_EQUAL_HEX8(0x00u, Cclink.value);
 
     static const uint8_t BODY[8] = {0x05, 0x5A, 0xA5, 0x00, 0x34, 0x12, 0x78, 0x56};
-    TEST_ASSERT_EQUAL_HEX8(0x18u, protocore_cclink_sum(BODY, sizeof(BODY)));
+    Cclink.sum_args.bytes = BODY;
+    Cclink.sum_args.len = sizeof(BODY);
+    Cclink.sum(cclink_work);
+    TEST_ASSERT_EQUAL_HEX8(0x18u, Cclink.value);
 }
 
 // The frame is the arguments in cclink.h's documented order followed by the checksum computed
@@ -82,7 +99,16 @@ void test_frame_is_the_arguments_in_order_plus_the_checksum(void)
     uint8_t buf[16];
     memset(buf, 0xEE, sizeof(buf));
 
-    size_t n = protocore_cclink_build(5, CMD_A, BITS, sizeof(BITS), WORDS, sizeof(WORDS), buf, sizeof(buf));
+    Cclink.build_args.station = 5;
+    Cclink.build_args.command = CMD_A;
+    Cclink.build_args.bits = BITS;
+    Cclink.build_args.bit_len = sizeof(BITS);
+    Cclink.build_args.words = WORDS;
+    Cclink.build_args.word_len = sizeof(WORDS);
+    Cclink.build_args.out = buf;
+    Cclink.build_args.cap = sizeof(buf);
+    Cclink.build(cclink_work);
+    size_t n = Cclink.n;
     TEST_ASSERT_EQUAL_size_t(2u + 2u + 4u + 1u, n);
 
     static const uint8_t WANT[9] = {0x05, 0x5A, 0xA5, 0x00, 0x34, 0x12, 0x78, 0x56, 0x18};
@@ -96,19 +122,44 @@ void test_build_parse_round_trip(void)
     static const uint8_t BITS[2] = {0xA5, 0x5A};
     static const uint8_t WORDS[4] = {0x34, 0x12, 0x78, 0x56};
     uint8_t buf[16];
-    size_t n = protocore_cclink_build(63, CMD_B, BITS, sizeof(BITS), WORDS, sizeof(WORDS), buf, sizeof(buf));
+    Cclink.build_args.station = 63;
+    Cclink.build_args.command = CMD_B;
+    Cclink.build_args.bits = BITS;
+    Cclink.build_args.bit_len = sizeof(BITS);
+    Cclink.build_args.words = WORDS;
+    Cclink.build_args.word_len = sizeof(WORDS);
+    Cclink.build_args.out = buf;
+    Cclink.build_args.cap = sizeof(buf);
+    Cclink.build(cclink_work);
+    size_t n = Cclink.n;
 
     CcLinkFrame f;
-    TEST_ASSERT_TRUE(protocore_cclink_parse(buf, n, &f));
+    Cclink.parse_args.frame = buf;
+    Cclink.parse_args.len = n;
+    Cclink.parse_args.out = &f;
+    Cclink.parse(cclink_work);
+    TEST_ASSERT_TRUE(Cclink.ok);
     TEST_ASSERT_EQUAL_UINT8(63u, f.station);
     TEST_ASSERT_EQUAL_HEX8(CMD_B, f.command);
     TEST_ASSERT_EQUAL_size_t(6u, f.payload_len);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(BITS, f.payload, 2);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WORDS, f.payload + 2, 4);
 
-    TEST_ASSERT_TRUE(protocore_cclink_get_bit(f.payload, 2, 0));
-    TEST_ASSERT_EQUAL_UINT16(0x1234u, protocore_cclink_get_word(f.payload + 2, 4, 0));
-    TEST_ASSERT_EQUAL_UINT16(0x5678u, protocore_cclink_get_word(f.payload + 2, 4, 1));
+    Cclink.get_bit_args.bits = f.payload;
+    Cclink.get_bit_args.bit_len = 2;
+    Cclink.get_bit_args.index = 0;
+    Cclink.get_bit(cclink_work);
+    TEST_ASSERT_TRUE(Cclink.ok);
+    Cclink.get_word_args.words = f.payload + 2;
+    Cclink.get_word_args.word_len = 4;
+    Cclink.get_word_args.index = 0;
+    Cclink.get_word(cclink_work);
+    TEST_ASSERT_EQUAL_UINT16(0x1234u, Cclink.u16);
+    Cclink.get_word_args.words = f.payload + 2;
+    Cclink.get_word_args.word_len = 4;
+    Cclink.get_word_args.index = 1;
+    Cclink.get_word(cclink_work);
+    TEST_ASSERT_EQUAL_UINT16(0x5678u, Cclink.u16);
 }
 
 // The command octet is carried, not interpreted: every one of the 256 values survives the trip,
@@ -119,9 +170,22 @@ void test_every_command_octet_survives_the_round_trip(void)
     CcLinkFrame f;
     for (unsigned cmd = 0; cmd < 256u; cmd++)
     {
-        size_t n = protocore_cclink_build(1, (uint8_t)cmd, NULL, 0, NULL, 0, buf, sizeof(buf));
+        Cclink.build_args.station = 1;
+        Cclink.build_args.command = (uint8_t)cmd;
+        Cclink.build_args.bits = NULL;
+        Cclink.build_args.bit_len = 0;
+        Cclink.build_args.words = NULL;
+        Cclink.build_args.word_len = 0;
+        Cclink.build_args.out = buf;
+        Cclink.build_args.cap = sizeof(buf);
+        Cclink.build(cclink_work);
+        size_t n = Cclink.n;
         TEST_ASSERT_EQUAL_size_t(3u, n);
-        TEST_ASSERT_TRUE(protocore_cclink_parse(buf, n, &f));
+        Cclink.parse_args.frame = buf;
+        Cclink.parse_args.len = n;
+        Cclink.parse_args.out = &f;
+        Cclink.parse(cclink_work);
+        TEST_ASSERT_TRUE(Cclink.ok);
         TEST_ASSERT_EQUAL_HEX8((uint8_t)cmd, f.command);
     }
 }
@@ -142,18 +206,35 @@ void test_any_single_octet_change_fails_verification(void)
 {
     static const uint8_t BITS[3] = {0x11, 0x22, 0x33};
     uint8_t buf[16];
-    size_t n = protocore_cclink_build(7, CMD_A, BITS, sizeof(BITS), NULL, 0, buf, sizeof(buf));
+    Cclink.build_args.station = 7;
+    Cclink.build_args.command = CMD_A;
+    Cclink.build_args.bits = BITS;
+    Cclink.build_args.bit_len = sizeof(BITS);
+    Cclink.build_args.words = NULL;
+    Cclink.build_args.word_len = 0;
+    Cclink.build_args.out = buf;
+    Cclink.build_args.cap = sizeof(buf);
+    Cclink.build(cclink_work);
+    size_t n = Cclink.n;
     TEST_ASSERT_EQUAL_size_t(6u, n);
 
     CcLinkFrame f;
-    TEST_ASSERT_TRUE(protocore_cclink_parse(buf, n, &f));
+    Cclink.parse_args.frame = buf;
+    Cclink.parse_args.len = n;
+    Cclink.parse_args.out = &f;
+    Cclink.parse(cclink_work);
+    TEST_ASSERT_TRUE(Cclink.ok);
 
     for (size_t i = 0; i < n; i++)
     {
         uint8_t bad[16];
         memcpy(bad, buf, n);
         bad[i] ^= 0x01;
-        TEST_ASSERT_FALSE_MESSAGE(protocore_cclink_parse(bad, n, &f), "flipped octet accepted");
+        Cclink.parse_args.frame = bad;
+        Cclink.parse_args.len = n;
+        Cclink.parse_args.out = &f;
+        Cclink.parse(cclink_work);
+        TEST_ASSERT_FALSE_MESSAGE(Cclink.ok, "flipped octet accepted");
     }
 }
 
@@ -167,17 +248,37 @@ void test_bit_addressing_matches_the_documented_index_arithmetic(void)
                                        PROTO_FALSE, PROTO_TRUE,  PROTO_FALSE, PROTO_TRUE};
     for (size_t i = 0; i < 8; i++)
     {
-        TEST_ASSERT_EQUAL_INT_MESSAGE(WANT[i], protocore_cclink_get_bit(bits, 2, i) ? 1 : 0, "bit order");
+        Cclink.get_bit_args.bits = bits;
+        Cclink.get_bit_args.bit_len = 2;
+        Cclink.get_bit_args.index = i;
+        Cclink.get_bit(cclink_work);
+        TEST_ASSERT_EQUAL_INT_MESSAGE(WANT[i], Cclink.ok ? 1 : 0, "bit order");
     }
 
-    protocore_cclink_set_bit(bits, 2, 8, PROTO_TRUE);
+    Cclink.set_bit_args.bits = bits;
+    Cclink.set_bit_args.bit_len = 2;
+    Cclink.set_bit_args.index = 8;
+    Cclink.set_bit_args.value = PROTO_TRUE;
+    Cclink.set_bit(cclink_work);
     TEST_ASSERT_EQUAL_HEX8(0x01u, bits[1]);
-    TEST_ASSERT_TRUE(protocore_cclink_get_bit(bits, 2, 8));
+    Cclink.get_bit_args.bits = bits;
+    Cclink.get_bit_args.bit_len = 2;
+    Cclink.get_bit_args.index = 8;
+    Cclink.get_bit(cclink_work);
+    TEST_ASSERT_TRUE(Cclink.ok);
 
-    protocore_cclink_set_bit(bits, 2, 15, PROTO_TRUE);
+    Cclink.set_bit_args.bits = bits;
+    Cclink.set_bit_args.bit_len = 2;
+    Cclink.set_bit_args.index = 15;
+    Cclink.set_bit_args.value = PROTO_TRUE;
+    Cclink.set_bit(cclink_work);
     TEST_ASSERT_EQUAL_HEX8(0x81u, bits[1]);
 
-    protocore_cclink_set_bit(bits, 2, 8, PROTO_FALSE);
+    Cclink.set_bit_args.bits = bits;
+    Cclink.set_bit_args.bit_len = 2;
+    Cclink.set_bit_args.index = 8;
+    Cclink.set_bit_args.value = PROTO_FALSE;
+    Cclink.set_bit(cclink_work);
     TEST_ASSERT_EQUAL_HEX8(0x80u, bits[1]);
     TEST_ASSERT_EQUAL_HEX8(0xA5u, bits[0]);
 }
@@ -190,17 +291,29 @@ void test_bit_accessors_round_trip_over_a_block(void)
     memset(bits, 0, sizeof(bits));
     for (size_t i = 0; i < 32; i++)
     {
-        protocore_cclink_set_bit(bits, sizeof(bits), i, (i % 3) == 0 ? PROTO_TRUE : PROTO_FALSE);
+        Cclink.set_bit_args.bits = bits;
+        Cclink.set_bit_args.bit_len = sizeof(bits);
+        Cclink.set_bit_args.index = i;
+        Cclink.set_bit_args.value = (i % 3) == 0 ? PROTO_TRUE : PROTO_FALSE;
+        Cclink.set_bit(cclink_work);
     }
     for (size_t i = 0; i < 32; i++)
     {
         proto_bool want = ((i % 3) == 0) ? PROTO_TRUE : PROTO_FALSE;
-        TEST_ASSERT_EQUAL_INT(want ? 1 : 0, protocore_cclink_get_bit(bits, sizeof(bits), i) ? 1 : 0);
+        Cclink.get_bit_args.bits = bits;
+        Cclink.get_bit_args.bit_len = sizeof(bits);
+        Cclink.get_bit_args.index = i;
+        Cclink.get_bit(cclink_work);
+        TEST_ASSERT_EQUAL_INT(want ? 1 : 0, Cclink.ok ? 1 : 0);
     }
 
     for (size_t i = 0; i < 32; i++)
     {
-        protocore_cclink_set_bit(bits, sizeof(bits), i, PROTO_FALSE);
+        Cclink.set_bit_args.bits = bits;
+        Cclink.set_bit_args.bit_len = sizeof(bits);
+        Cclink.set_bit_args.index = i;
+        Cclink.set_bit_args.value = PROTO_FALSE;
+        Cclink.set_bit(cclink_work);
     }
     static const uint8_t ZERO[4] = {0, 0, 0, 0};
     TEST_ASSERT_EQUAL_HEX8_ARRAY(ZERO, bits, 4);
@@ -215,9 +328,21 @@ void test_bit_accessors_round_trip_over_a_block(void)
 void test_word_accessor_is_little_endian(void)
 {
     static const uint8_t WORDS[6] = {0x34, 0x12, 0xFF, 0xFF, 0x00, 0x80};
-    TEST_ASSERT_EQUAL_HEX16(0x1234u, protocore_cclink_get_word(WORDS, sizeof(WORDS), 0));
-    TEST_ASSERT_EQUAL_HEX16(0xFFFFu, protocore_cclink_get_word(WORDS, sizeof(WORDS), 1));
-    TEST_ASSERT_EQUAL_HEX16(0x8000u, protocore_cclink_get_word(WORDS, sizeof(WORDS), 2));
+    Cclink.get_word_args.words = WORDS;
+    Cclink.get_word_args.word_len = sizeof(WORDS);
+    Cclink.get_word_args.index = 0;
+    Cclink.get_word(cclink_work);
+    TEST_ASSERT_EQUAL_HEX16(0x1234u, Cclink.u16);
+    Cclink.get_word_args.words = WORDS;
+    Cclink.get_word_args.word_len = sizeof(WORDS);
+    Cclink.get_word_args.index = 1;
+    Cclink.get_word(cclink_work);
+    TEST_ASSERT_EQUAL_HEX16(0xFFFFu, Cclink.u16);
+    Cclink.get_word_args.words = WORDS;
+    Cclink.get_word_args.word_len = sizeof(WORDS);
+    Cclink.get_word_args.index = 2;
+    Cclink.get_word(cclink_work);
+    TEST_ASSERT_EQUAL_HEX16(0x8000u, Cclink.u16);
 }
 
 // Bounds: the last in-range bit of a 2-byte block is 15, the last whole word of a 4-byte block is 1,
@@ -225,21 +350,61 @@ void test_word_accessor_is_little_endian(void)
 void test_accessors_refuse_out_of_range(void)
 {
     uint8_t bits[2] = {0xFF, 0xFF};
-    TEST_ASSERT_TRUE(protocore_cclink_get_bit(bits, 2, 15));
-    TEST_ASSERT_FALSE(protocore_cclink_get_bit(bits, 2, 16));
-    TEST_ASSERT_FALSE(protocore_cclink_get_bit(bits, 2, 999));
-    TEST_ASSERT_FALSE(protocore_cclink_get_bit(NULL, 2, 0));
+    Cclink.get_bit_args.bits = bits;
+    Cclink.get_bit_args.bit_len = 2;
+    Cclink.get_bit_args.index = 15;
+    Cclink.get_bit(cclink_work);
+    TEST_ASSERT_TRUE(Cclink.ok);
+    Cclink.get_bit_args.bits = bits;
+    Cclink.get_bit_args.bit_len = 2;
+    Cclink.get_bit_args.index = 16;
+    Cclink.get_bit(cclink_work);
+    TEST_ASSERT_FALSE(Cclink.ok);
+    Cclink.get_bit_args.bits = bits;
+    Cclink.get_bit_args.bit_len = 2;
+    Cclink.get_bit_args.index = 999;
+    Cclink.get_bit(cclink_work);
+    TEST_ASSERT_FALSE(Cclink.ok);
+    Cclink.get_bit_args.bits = NULL;
+    Cclink.get_bit_args.bit_len = 2;
+    Cclink.get_bit_args.index = 0;
+    Cclink.get_bit(cclink_work);
+    TEST_ASSERT_FALSE(Cclink.ok);
 
-    protocore_cclink_set_bit(bits, 2, 16, PROTO_FALSE);
+    Cclink.set_bit_args.bits = bits;
+    Cclink.set_bit_args.bit_len = 2;
+    Cclink.set_bit_args.index = 16;
+    Cclink.set_bit_args.value = PROTO_FALSE;
+    Cclink.set_bit(cclink_work);
     TEST_ASSERT_EQUAL_HEX8(0xFFu, bits[0]);
     TEST_ASSERT_EQUAL_HEX8(0xFFu, bits[1]);
-    protocore_cclink_set_bit(NULL, 2, 0, PROTO_TRUE);
+    Cclink.set_bit_args.bits = NULL;
+    Cclink.set_bit_args.bit_len = 2;
+    Cclink.set_bit_args.index = 0;
+    Cclink.set_bit_args.value = PROTO_TRUE;
+    Cclink.set_bit(cclink_work);
 
     static const uint8_t WORDS[4] = {0x11, 0x22, 0x33, 0x44};
-    TEST_ASSERT_EQUAL_HEX16(0x4433u, protocore_cclink_get_word(WORDS, 4, 1));
-    TEST_ASSERT_EQUAL_HEX16(0u, protocore_cclink_get_word(WORDS, 4, 2));
-    TEST_ASSERT_EQUAL_HEX16(0u, protocore_cclink_get_word(WORDS, 3, 1));
-    TEST_ASSERT_EQUAL_HEX16(0u, protocore_cclink_get_word(NULL, 4, 0));
+    Cclink.get_word_args.words = WORDS;
+    Cclink.get_word_args.word_len = 4;
+    Cclink.get_word_args.index = 1;
+    Cclink.get_word(cclink_work);
+    TEST_ASSERT_EQUAL_HEX16(0x4433u, Cclink.u16);
+    Cclink.get_word_args.words = WORDS;
+    Cclink.get_word_args.word_len = 4;
+    Cclink.get_word_args.index = 2;
+    Cclink.get_word(cclink_work);
+    TEST_ASSERT_EQUAL_HEX16(0u, Cclink.u16);
+    Cclink.get_word_args.words = WORDS;
+    Cclink.get_word_args.word_len = 3;
+    Cclink.get_word_args.index = 1;
+    Cclink.get_word(cclink_work);
+    TEST_ASSERT_EQUAL_HEX16(0u, Cclink.u16);
+    Cclink.get_word_args.words = NULL;
+    Cclink.get_word_args.word_len = 4;
+    Cclink.get_word_args.index = 0;
+    Cclink.get_word(cclink_work);
+    TEST_ASSERT_EQUAL_HEX16(0u, Cclink.u16);
 }
 
 // cclink.h bounds the station at 0..63 and returns 0 rather than writing past @p cap. The smallest
@@ -250,16 +415,88 @@ void test_build_refusals(void)
     static const uint8_t DATA[4] = {1, 2, 3, 4};
     uint8_t buf[16];
 
-    TEST_ASSERT_EQUAL_size_t(0u, protocore_cclink_build(64, CMD_A, NULL, 0, NULL, 0, buf, sizeof(buf)));
-    TEST_ASSERT_EQUAL_size_t(0u, protocore_cclink_build(255, CMD_A, NULL, 0, NULL, 0, buf, sizeof(buf)));
-    TEST_ASSERT_EQUAL_size_t(3u, protocore_cclink_build(63, CMD_A, NULL, 0, NULL, 0, buf, sizeof(buf)));
+    Cclink.build_args.station = 64;
+    Cclink.build_args.command = CMD_A;
+    Cclink.build_args.bits = NULL;
+    Cclink.build_args.bit_len = 0;
+    Cclink.build_args.words = NULL;
+    Cclink.build_args.word_len = 0;
+    Cclink.build_args.out = buf;
+    Cclink.build_args.cap = sizeof(buf);
+    Cclink.build(cclink_work);
+    TEST_ASSERT_EQUAL_size_t(0u, Cclink.n);
+    Cclink.build_args.station = 255;
+    Cclink.build_args.command = CMD_A;
+    Cclink.build_args.bits = NULL;
+    Cclink.build_args.bit_len = 0;
+    Cclink.build_args.words = NULL;
+    Cclink.build_args.word_len = 0;
+    Cclink.build_args.out = buf;
+    Cclink.build_args.cap = sizeof(buf);
+    Cclink.build(cclink_work);
+    TEST_ASSERT_EQUAL_size_t(0u, Cclink.n);
+    Cclink.build_args.station = 63;
+    Cclink.build_args.command = CMD_A;
+    Cclink.build_args.bits = NULL;
+    Cclink.build_args.bit_len = 0;
+    Cclink.build_args.words = NULL;
+    Cclink.build_args.word_len = 0;
+    Cclink.build_args.out = buf;
+    Cclink.build_args.cap = sizeof(buf);
+    Cclink.build(cclink_work);
+    TEST_ASSERT_EQUAL_size_t(3u, Cclink.n);
 
-    TEST_ASSERT_EQUAL_size_t(0u, protocore_cclink_build(1, CMD_A, NULL, 0, NULL, 0, NULL, sizeof(buf)));
-    TEST_ASSERT_EQUAL_size_t(0u, protocore_cclink_build(1, CMD_A, NULL, 3, NULL, 0, buf, sizeof(buf)));
-    TEST_ASSERT_EQUAL_size_t(0u, protocore_cclink_build(1, CMD_A, NULL, 0, NULL, 3, buf, sizeof(buf)));
+    Cclink.build_args.station = 1;
+    Cclink.build_args.command = CMD_A;
+    Cclink.build_args.bits = NULL;
+    Cclink.build_args.bit_len = 0;
+    Cclink.build_args.words = NULL;
+    Cclink.build_args.word_len = 0;
+    Cclink.build_args.out = NULL;
+    Cclink.build_args.cap = sizeof(buf);
+    Cclink.build(cclink_work);
+    TEST_ASSERT_EQUAL_size_t(0u, Cclink.n);
+    Cclink.build_args.station = 1;
+    Cclink.build_args.command = CMD_A;
+    Cclink.build_args.bits = NULL;
+    Cclink.build_args.bit_len = 3;
+    Cclink.build_args.words = NULL;
+    Cclink.build_args.word_len = 0;
+    Cclink.build_args.out = buf;
+    Cclink.build_args.cap = sizeof(buf);
+    Cclink.build(cclink_work);
+    TEST_ASSERT_EQUAL_size_t(0u, Cclink.n);
+    Cclink.build_args.station = 1;
+    Cclink.build_args.command = CMD_A;
+    Cclink.build_args.bits = NULL;
+    Cclink.build_args.bit_len = 0;
+    Cclink.build_args.words = NULL;
+    Cclink.build_args.word_len = 3;
+    Cclink.build_args.out = buf;
+    Cclink.build_args.cap = sizeof(buf);
+    Cclink.build(cclink_work);
+    TEST_ASSERT_EQUAL_size_t(0u, Cclink.n);
 
-    TEST_ASSERT_EQUAL_size_t(0u, protocore_cclink_build(1, CMD_A, DATA, 4, DATA, 4, buf, 10));
-    TEST_ASSERT_EQUAL_size_t(11u, protocore_cclink_build(1, CMD_A, DATA, 4, DATA, 4, buf, 11));
+    Cclink.build_args.station = 1;
+    Cclink.build_args.command = CMD_A;
+    Cclink.build_args.bits = DATA;
+    Cclink.build_args.bit_len = 4;
+    Cclink.build_args.words = DATA;
+    Cclink.build_args.word_len = 4;
+    Cclink.build_args.out = buf;
+    Cclink.build_args.cap = 10;
+    Cclink.build(cclink_work);
+    TEST_ASSERT_EQUAL_size_t(0u, Cclink.n);
+    Cclink.build_args.station = 1;
+    Cclink.build_args.command = CMD_A;
+    Cclink.build_args.bits = DATA;
+    Cclink.build_args.bit_len = 4;
+    Cclink.build_args.words = DATA;
+    Cclink.build_args.word_len = 4;
+    Cclink.build_args.out = buf;
+    Cclink.build_args.cap = 11;
+    Cclink.build(cclink_work);
+    TEST_ASSERT_EQUAL_size_t(11u, Cclink.n);
 }
 
 // A frame shorter than station + command + checksum cannot be one, and a payload-free frame reports
@@ -267,20 +504,49 @@ void test_build_refusals(void)
 void test_parse_refusals_and_the_empty_payload(void)
 {
     uint8_t buf[8];
-    size_t n = protocore_cclink_build(3, CMD_B, NULL, 0, NULL, 0, buf, sizeof(buf));
+    Cclink.build_args.station = 3;
+    Cclink.build_args.command = CMD_B;
+    Cclink.build_args.bits = NULL;
+    Cclink.build_args.bit_len = 0;
+    Cclink.build_args.words = NULL;
+    Cclink.build_args.word_len = 0;
+    Cclink.build_args.out = buf;
+    Cclink.build_args.cap = sizeof(buf);
+    Cclink.build(cclink_work);
+    size_t n = Cclink.n;
     TEST_ASSERT_EQUAL_size_t(3u, n);
 
     CcLinkFrame f;
-    TEST_ASSERT_TRUE(protocore_cclink_parse(buf, n, &f));
+    Cclink.parse_args.frame = buf;
+    Cclink.parse_args.len = n;
+    Cclink.parse_args.out = &f;
+    Cclink.parse(cclink_work);
+    TEST_ASSERT_TRUE(Cclink.ok);
     TEST_ASSERT_EQUAL_UINT8(3u, f.station);
     TEST_ASSERT_EQUAL_HEX8(CMD_B, f.command);
     TEST_ASSERT_EQUAL_size_t(0u, f.payload_len);
     TEST_ASSERT_NULL(f.payload);
 
-    TEST_ASSERT_FALSE(protocore_cclink_parse(buf, 2, &f));
-    TEST_ASSERT_FALSE(protocore_cclink_parse(buf, 0, &f));
-    TEST_ASSERT_FALSE(protocore_cclink_parse(NULL, n, &f));
-    TEST_ASSERT_FALSE(protocore_cclink_parse(buf, n, NULL));
+    Cclink.parse_args.frame = buf;
+    Cclink.parse_args.len = 2;
+    Cclink.parse_args.out = &f;
+    Cclink.parse(cclink_work);
+    TEST_ASSERT_FALSE(Cclink.ok);
+    Cclink.parse_args.frame = buf;
+    Cclink.parse_args.len = 0;
+    Cclink.parse_args.out = &f;
+    Cclink.parse(cclink_work);
+    TEST_ASSERT_FALSE(Cclink.ok);
+    Cclink.parse_args.frame = NULL;
+    Cclink.parse_args.len = n;
+    Cclink.parse_args.out = &f;
+    Cclink.parse(cclink_work);
+    TEST_ASSERT_FALSE(Cclink.ok);
+    Cclink.parse_args.frame = buf;
+    Cclink.parse_args.len = n;
+    Cclink.parse_args.out = NULL;
+    Cclink.parse(cclink_work);
+    TEST_ASSERT_FALSE(Cclink.ok);
 }
 
 // Either half of the process image may be absent, and the length follows the same
@@ -290,19 +556,61 @@ void test_bit_only_and_word_only_exchanges(void)
     static const uint8_t WORDS[4] = {0x01, 0x02, 0x03, 0x04};
     uint8_t buf[16];
 
-    size_t n = protocore_cclink_build(2, CMD_A, NULL, 0, WORDS, sizeof(WORDS), buf, sizeof(buf));
+    Cclink.build_args.station = 2;
+    Cclink.build_args.command = CMD_A;
+    Cclink.build_args.bits = NULL;
+    Cclink.build_args.bit_len = 0;
+    Cclink.build_args.words = WORDS;
+    Cclink.build_args.word_len = sizeof(WORDS);
+    Cclink.build_args.out = buf;
+    Cclink.build_args.cap = sizeof(buf);
+    Cclink.build(cclink_work);
+    size_t n = Cclink.n;
     TEST_ASSERT_EQUAL_size_t(2u + 0u + 4u + 1u, n);
     CcLinkFrame f;
-    TEST_ASSERT_TRUE(protocore_cclink_parse(buf, n, &f));
+    Cclink.parse_args.frame = buf;
+    Cclink.parse_args.len = n;
+    Cclink.parse_args.out = &f;
+    Cclink.parse(cclink_work);
+    TEST_ASSERT_TRUE(Cclink.ok);
     TEST_ASSERT_EQUAL_size_t(4u, f.payload_len);
-    TEST_ASSERT_EQUAL_HEX16(0x0201u, protocore_cclink_get_word(f.payload, f.payload_len, 0));
+    Cclink.get_word_args.words = f.payload;
+    Cclink.get_word_args.word_len = f.payload_len;
+    Cclink.get_word_args.index = 0;
+    Cclink.get_word(cclink_work);
+    TEST_ASSERT_EQUAL_HEX16(0x0201u, Cclink.u16);
 
     static const uint8_t BITS[1] = {0x81};
-    n = protocore_cclink_build(2, CMD_A, BITS, sizeof(BITS), NULL, 0, buf, sizeof(buf));
+    Cclink.build_args.station = 2;
+    Cclink.build_args.command = CMD_A;
+    Cclink.build_args.bits = BITS;
+    Cclink.build_args.bit_len = sizeof(BITS);
+    Cclink.build_args.words = NULL;
+    Cclink.build_args.word_len = 0;
+    Cclink.build_args.out = buf;
+    Cclink.build_args.cap = sizeof(buf);
+    Cclink.build(cclink_work);
+    n = Cclink.n;
     TEST_ASSERT_EQUAL_size_t(2u + 1u + 0u + 1u, n);
-    TEST_ASSERT_TRUE(protocore_cclink_parse(buf, n, &f));
+    Cclink.parse_args.frame = buf;
+    Cclink.parse_args.len = n;
+    Cclink.parse_args.out = &f;
+    Cclink.parse(cclink_work);
+    TEST_ASSERT_TRUE(Cclink.ok);
     TEST_ASSERT_EQUAL_size_t(1u, f.payload_len);
-    TEST_ASSERT_TRUE(protocore_cclink_get_bit(f.payload, f.payload_len, 0));
-    TEST_ASSERT_TRUE(protocore_cclink_get_bit(f.payload, f.payload_len, 7));
-    TEST_ASSERT_FALSE(protocore_cclink_get_bit(f.payload, f.payload_len, 1));
+    Cclink.get_bit_args.bits = f.payload;
+    Cclink.get_bit_args.bit_len = f.payload_len;
+    Cclink.get_bit_args.index = 0;
+    Cclink.get_bit(cclink_work);
+    TEST_ASSERT_TRUE(Cclink.ok);
+    Cclink.get_bit_args.bits = f.payload;
+    Cclink.get_bit_args.bit_len = f.payload_len;
+    Cclink.get_bit_args.index = 7;
+    Cclink.get_bit(cclink_work);
+    TEST_ASSERT_TRUE(Cclink.ok);
+    Cclink.get_bit_args.bits = f.payload;
+    Cclink.get_bit_args.bit_len = f.payload_len;
+    Cclink.get_bit_args.index = 1;
+    Cclink.get_bit(cclink_work);
+    TEST_ASSERT_FALSE(Cclink.ok);
 }
