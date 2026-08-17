@@ -164,6 +164,48 @@ eq(
     "void t(void)\n{\n    Ns.entry(w);\n    TEST_ASSERT_EQUAL_INT(3, Ns.n);\n}\n",
 )
 
+# 13. a `#if` / `#endif` bounds the arm. The walk back used to run past both and land the staging in
+# the PREVIOUS arm, so the call ran under another capability's gate and the read ran under none.
+src8 = (
+    "void t(void)\n"
+    "{\n"
+    "#if A\n"
+    "    reg(one());\n"
+    "#endif\n"
+    "#if B\n"
+    "    reg(old_call());\n"
+    "#endif\n"
+    "}\n"
+)
+pos8 = src8.index("old_call")
+end8 = N.close_paren(src8, pos8 + len("old_call("))
+eq(
+    "staging stays inside its own #if arm",
+    N.rewrite(src8, pos8, end8, ["Ns.entry(w);"], "Ns.ptr"),
+    "void t(void)\n{\n#if A\n    reg(one());\n#endif\n#if B\n    Ns.entry(w);\n    reg(Ns.ptr);\n#endif\n}\n",
+)
+
+# 13b. the first statement of an arm has the directive directly above it and nothing else
+src8b = "void t(void)\n{\n#if B\n    reg(old_call());\n#endif\n}\n"
+pos8b = src8b.index("old_call")
+end8b = N.close_paren(src8b, pos8b + len("old_call("))
+eq(
+    "first statement in an arm hoists below the #if",
+    N.rewrite(src8b, pos8b, end8b, ["Ns.entry(w);"], "Ns.ptr"),
+    "void t(void)\n{\n#if B\n    Ns.entry(w);\n    reg(Ns.ptr);\n#endif\n}\n",
+)
+
+# 13c. a plain statement above the call is still where the staging goes: a directive is a boundary,
+# not a magnet
+src8c = "void t(void)\n{\n    int a = 1;\n    reg(old_call());\n}\n"
+pos8c = src8c.index("old_call")
+end8c = N.close_paren(src8c, pos8c + len("old_call("))
+eq(
+    "no directive, no change",
+    N.rewrite(src8c, pos8c, end8c, ["Ns.entry(w);"], "Ns.ptr"),
+    "void t(void)\n{\n    int a = 1;\n    Ns.entry(w);\n    reg(Ns.ptr);\n}\n",
+)
+
 print()
 print("FAILURES:", fails)
 sys.exit(1 if fails else 0)

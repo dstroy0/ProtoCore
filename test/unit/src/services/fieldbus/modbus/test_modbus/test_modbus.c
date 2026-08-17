@@ -17,7 +17,7 @@
 
 void setUp(void)
 {
-    protocore_modbus_server_init();
+    Modbus.server_init(protocore_modbus_span());
 }
 void tearDown(void)
 {
@@ -39,7 +39,12 @@ static size_t run_pdu(const uint8_t *pdu, size_t pdu_len, const uint8_t **out_pd
     adu[6] = 0x07; // Unit Identifier
     memcpy(adu + 7, pdu, pdu_len);
 
-    size_t n = protocore_modbus_process_adu(adu, 7 + pdu_len, g_resp, sizeof(g_resp));
+    Modbus.process_adu_args.req = adu;
+    Modbus.process_adu_args.req_len = 7 + pdu_len;
+    Modbus.process_adu_args.resp = g_resp;
+    Modbus.process_adu_args.protocore_resp_cap = sizeof(g_resp);
+    Modbus.process_adu(protocore_modbus_span());
+    size_t n = Modbus.n;
     if (n == 0)
     {
         return 0;
@@ -63,7 +68,9 @@ static void load_coils(uint16_t start, uint16_t qty, const uint8_t *packed)
 {
     for (uint16_t i = 0; i < qty; i++)
     {
-        protocore_modbus_set_coil((uint16_t)(start + i), (packed[i >> 3] >> (i & 7)) & 1u);
+        Modbus.set_coil_args.addr = (uint16_t)(start + i);
+        Modbus.set_coil_args.on = (packed[i >> 3] >> (i & 7)) & 1u;
+        Modbus.set_coil(protocore_modbus_span());
     }
 }
 
@@ -71,7 +78,9 @@ static void load_discrete(uint16_t start, uint16_t qty, const uint8_t *packed)
 {
     for (uint16_t i = 0; i < qty; i++)
     {
-        protocore_modbus_set_discrete_input((uint16_t)(start + i), (packed[i >> 3] >> (i & 7)) & 1u);
+        Modbus.set_discrete_input_args.addr = (uint16_t)(start + i);
+        Modbus.set_discrete_input_args.on = (packed[i >> 3] >> (i & 7)) & 1u;
+        Modbus.set_discrete_input(protocore_modbus_span());
     }
 }
 
@@ -99,16 +108,24 @@ void test_map_published_pdu_examples(void)
     TEST_ASSERT_EQUAL_HEX8_ARRAY(RSP_2, rsp, sizeof(RSP_2));
 
     // section 6.3, "read registers 108-110": 022Bh (555), 0000h (0), 0064h (100).
-    protocore_modbus_set_holding_reg(0x006B, 0x022B);
-    protocore_modbus_set_holding_reg(0x006C, 0x0000);
-    protocore_modbus_set_holding_reg(0x006D, 0x0064);
+    Modbus.set_holding_reg_args.addr = 0x006B;
+    Modbus.set_holding_reg_args.value = 0x022B;
+    Modbus.set_holding_reg(protocore_modbus_span());
+    Modbus.set_holding_reg_args.addr = 0x006C;
+    Modbus.set_holding_reg_args.value = 0x0000;
+    Modbus.set_holding_reg(protocore_modbus_span());
+    Modbus.set_holding_reg_args.addr = 0x006D;
+    Modbus.set_holding_reg_args.value = 0x0064;
+    Modbus.set_holding_reg(protocore_modbus_span());
     static const uint8_t REQ_3[5] = {0x03, 0x00, 0x6B, 0x00, 0x03};
     static const uint8_t RSP_3[8] = {0x03, 0x06, 0x02, 0x2B, 0x00, 0x00, 0x00, 0x64};
     TEST_ASSERT_EQUAL_UINT(sizeof(RSP_3), run_pdu(REQ_3, sizeof(REQ_3), &rsp));
     TEST_ASSERT_EQUAL_HEX8_ARRAY(RSP_3, rsp, sizeof(RSP_3));
 
     // section 6.4, "read input register 9": contents 000Ah (10 decimal).
-    protocore_modbus_set_input_reg(0x0008, 0x000A);
+    Modbus.set_input_reg_args.addr = 0x0008;
+    Modbus.set_input_reg_args.value = 0x000A;
+    Modbus.set_input_reg(protocore_modbus_span());
     static const uint8_t REQ_4[5] = {0x04, 0x00, 0x08, 0x00, 0x01};
     static const uint8_t RSP_4[4] = {0x04, 0x02, 0x00, 0x0A};
     TEST_ASSERT_EQUAL_UINT(sizeof(RSP_4), run_pdu(REQ_4, sizeof(REQ_4), &rsp));
@@ -118,13 +135,17 @@ void test_map_published_pdu_examples(void)
     static const uint8_t REQ_5[5] = {0x05, 0x00, 0xAC, 0xFF, 0x00};
     TEST_ASSERT_EQUAL_UINT(sizeof(REQ_5), run_pdu(REQ_5, sizeof(REQ_5), &rsp));
     TEST_ASSERT_EQUAL_HEX8_ARRAY(REQ_5, rsp, sizeof(REQ_5));
-    TEST_ASSERT_TRUE(protocore_modbus_get_coil(0x00AC));
+    Modbus.get_coil_args.addr = 0x00AC;
+    Modbus.get_coil(protocore_modbus_span());
+    TEST_ASSERT_TRUE(Modbus.ok);
 
     // section 6.6, "write register 2 to 0003h": the normal response echoes the request.
     static const uint8_t REQ_6[5] = {0x06, 0x00, 0x01, 0x00, 0x03};
     TEST_ASSERT_EQUAL_UINT(sizeof(REQ_6), run_pdu(REQ_6, sizeof(REQ_6), &rsp));
     TEST_ASSERT_EQUAL_HEX8_ARRAY(REQ_6, rsp, sizeof(REQ_6));
-    TEST_ASSERT_EQUAL_HEX16(0x0003, protocore_modbus_get_holding_reg(0x0001));
+    Modbus.get_holding_reg_args.addr = 0x0001;
+    Modbus.get_holding_reg(protocore_modbus_span());
+    TEST_ASSERT_EQUAL_HEX16(0x0003, Modbus.value);
 
     // section 6.11, "write a series of 10 coils starting at coil 20": data CD 01, and the response
     // is the function code, starting address and quantity only.
@@ -139,7 +160,9 @@ void test_map_published_pdu_examples(void)
     static const uint8_t WANT_BITS[10] = {1, 0, 1, 1, 0, 0, 1, 1, 1, 0};
     for (uint16_t i = 0; i < 10; i++)
     {
-        TEST_ASSERT_EQUAL_INT(WANT_BITS[i], protocore_modbus_get_coil((uint16_t)(0x0013 + i)) ? 1 : 0);
+        Modbus.get_coil_args.addr = (uint16_t)(0x0013 + i);
+        Modbus.get_coil(protocore_modbus_span());
+        TEST_ASSERT_EQUAL_INT(WANT_BITS[i], Modbus.ok ? 1 : 0);
     }
 
     // section 6.12, "write two registers starting at 2 to 000A and 0102 hex".
@@ -147,8 +170,12 @@ void test_map_published_pdu_examples(void)
     static const uint8_t RSP_16[5] = {0x10, 0x00, 0x01, 0x00, 0x02};
     TEST_ASSERT_EQUAL_UINT(sizeof(RSP_16), run_pdu(REQ_16, sizeof(REQ_16), &rsp));
     TEST_ASSERT_EQUAL_HEX8_ARRAY(RSP_16, rsp, sizeof(RSP_16));
-    TEST_ASSERT_EQUAL_HEX16(0x000A, protocore_modbus_get_holding_reg(0x0001));
-    TEST_ASSERT_EQUAL_HEX16(0x0102, protocore_modbus_get_holding_reg(0x0002));
+    Modbus.get_holding_reg_args.addr = 0x0001;
+    Modbus.get_holding_reg(protocore_modbus_span());
+    TEST_ASSERT_EQUAL_HEX16(0x000A, Modbus.value);
+    Modbus.get_holding_reg_args.addr = 0x0002;
+    Modbus.get_holding_reg(protocore_modbus_span());
+    TEST_ASSERT_EQUAL_HEX16(0x0102, Modbus.value);
 
     // section 7, the exception example: a Read Coils of address 04A1h (1185) that does not exist in
     // the server answers function code 81h with exception code 02 (ILLEGAL DATA ADDRESS).
@@ -246,16 +273,22 @@ void test_address_plus_quantity_boundary(void)
 void test_write_single_coil_value_is_ff00_or_0000(void)
 {
     const uint8_t *rsp = NULL;
-    protocore_modbus_set_coil(5, PROTO_TRUE);
+    Modbus.set_coil_args.addr = 5;
+    Modbus.set_coil_args.on = PROTO_TRUE;
+    Modbus.set_coil(protocore_modbus_span());
 
     static const uint8_t OFF[5] = {0x05, 0x00, 0x05, 0x00, 0x00};
     TEST_ASSERT_EQUAL_UINT(5u, run_pdu(OFF, sizeof(OFF), &rsp));
-    TEST_ASSERT_FALSE(protocore_modbus_get_coil(5));
+    Modbus.get_coil_args.addr = 5;
+    Modbus.get_coil(protocore_modbus_span());
+    TEST_ASSERT_FALSE(Modbus.ok);
 
     static const uint8_t ILLEGAL[5] = {0x05, 0x00, 0x05, 0x00, 0x01};
     TEST_ASSERT_EQUAL_UINT(2u, run_pdu(ILLEGAL, sizeof(ILLEGAL), &rsp));
     TEST_ASSERT_EQUAL_HEX8(MODBUS_EX_ILLEGAL_DATA_VALUE, rsp[1]);
-    TEST_ASSERT_FALSE(protocore_modbus_get_coil(5)); // "will not affect the coil"
+    Modbus.get_coil_args.addr = 5;
+    Modbus.get_coil(protocore_modbus_span());
+    TEST_ASSERT_FALSE(Modbus.ok); // "will not affect the coil"
 }
 
 // Modbus Application Protocol V1.1b3 figures 21-22: the Byte Count must equal the quantity's own
@@ -300,11 +333,15 @@ void test_write_multiple_quantity_limits(void)
 void test_mask_write_register(void)
 {
     const uint8_t *rsp = NULL;
-    protocore_modbus_set_holding_reg(4, 0x0012);
+    Modbus.set_holding_reg_args.addr = 4;
+    Modbus.set_holding_reg_args.value = 0x0012;
+    Modbus.set_holding_reg(protocore_modbus_span());
     static const uint8_t REQ[7] = {0x16, 0x00, 0x04, 0x00, 0xF2, 0x00, 0x25};
     TEST_ASSERT_EQUAL_UINT(sizeof(REQ), run_pdu(REQ, sizeof(REQ), &rsp));
     TEST_ASSERT_EQUAL_HEX8_ARRAY(REQ, rsp, sizeof(REQ));
-    TEST_ASSERT_EQUAL_HEX16(0x0017, protocore_modbus_get_holding_reg(4));
+    Modbus.get_holding_reg_args.addr = 4;
+    Modbus.get_holding_reg(protocore_modbus_span());
+    TEST_ASSERT_EQUAL_HEX16(0x0017, Modbus.value);
 }
 
 // Modbus Application Protocol V1.1b3 section 6.17: the published example reads six registers
@@ -317,7 +354,9 @@ void test_read_write_multiple_registers(void)
     static const uint16_t READ_BACK[6] = {0x00FE, 0x0ACD, 0x0001, 0x0003, 0x000D, 0x00FF};
     for (uint16_t i = 0; i < 6; i++)
     {
-        protocore_modbus_set_holding_reg((uint16_t)(0x0003 + i), READ_BACK[i]);
+        Modbus.set_holding_reg_args.addr = (uint16_t)(0x0003 + i);
+        Modbus.set_holding_reg_args.value = READ_BACK[i];
+        Modbus.set_holding_reg(protocore_modbus_span());
     }
     static const uint8_t REQ[16] = {0x17, 0x00, 0x03, 0x00, 0x06, 0x00, 0x0E, 0x00,
                                     0x03, 0x06, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF};
@@ -326,12 +365,18 @@ void test_read_write_multiple_registers(void)
     TEST_ASSERT_EQUAL_HEX8_ARRAY(RSP, rsp, sizeof(RSP));
     for (uint16_t i = 0; i < 3; i++)
     {
-        TEST_ASSERT_EQUAL_HEX16(0x00FF, protocore_modbus_get_holding_reg((uint16_t)(0x000E + i)));
+        Modbus.get_holding_reg_args.addr = (uint16_t)(0x000E + i);
+        Modbus.get_holding_reg(protocore_modbus_span());
+        TEST_ASSERT_EQUAL_HEX16(0x00FF, Modbus.value);
     }
 
     // an overlapping transaction reads what the write in the same PDU just placed there
-    protocore_modbus_set_holding_reg(20, 0x1111);
-    protocore_modbus_set_holding_reg(21, 0x2222);
+    Modbus.set_holding_reg_args.addr = 20;
+    Modbus.set_holding_reg_args.value = 0x1111;
+    Modbus.set_holding_reg(protocore_modbus_span());
+    Modbus.set_holding_reg_args.addr = 21;
+    Modbus.set_holding_reg_args.value = 0x2222;
+    Modbus.set_holding_reg(protocore_modbus_span());
     static const uint8_t OVERLAP[14] = {0x17, 0x00, 0x14, 0x00, 0x02, 0x00, 0x14,
                                         0x00, 0x02, 0x04, 0x00, 0xAA, 0x00, 0xBB};
     static const uint8_t WANT[6] = {0x17, 0x04, 0x00, 0xAA, 0x00, 0xBB};
@@ -347,25 +392,50 @@ void test_mbap_header_validation(void)
     // Read Holding Registers, address 0, one register: MBAP Length 0006h = unit id + a 5-octet PDU.
     uint8_t adu[16] = {0x00, 0x01, 0x00, 0x00, 0x00, 0x06, 0x01, 0x03, 0x00, 0x00, 0x00, 0x01};
     uint8_t out[MODBUS_ADU_MAX];
-    TEST_ASSERT_EQUAL_UINT(11u, protocore_modbus_process_adu(adu, 12, out, sizeof(out))); // MBAP + 4
+    Modbus.process_adu_args.req = adu;
+    Modbus.process_adu_args.req_len = 12;
+    Modbus.process_adu_args.resp = out;
+    Modbus.process_adu_args.protocore_resp_cap = sizeof(out);
+    Modbus.process_adu(protocore_modbus_span());
+    TEST_ASSERT_EQUAL_UINT(11u, Modbus.n); // MBAP + 4
 
     uint8_t bad[16];
     memcpy(bad, adu, sizeof(adu));
     bad[3] = 0x01; // Protocol Identifier is not 0
-    TEST_ASSERT_EQUAL_UINT(0u, protocore_modbus_process_adu(bad, 12, out, sizeof(out)));
+    Modbus.process_adu_args.req = bad;
+    Modbus.process_adu_args.req_len = 12;
+    Modbus.process_adu_args.resp = out;
+    Modbus.process_adu_args.protocore_resp_cap = sizeof(out);
+    Modbus.process_adu(protocore_modbus_span());
+    TEST_ASSERT_EQUAL_UINT(0u, Modbus.n);
 
     memcpy(bad, adu, sizeof(adu));
     bad[5] = 0x20; // Length claims more octets than the frame carries
-    TEST_ASSERT_EQUAL_UINT(0u, protocore_modbus_process_adu(bad, 12, out, sizeof(out)));
+    Modbus.process_adu_args.req = bad;
+    Modbus.process_adu_args.req_len = 12;
+    Modbus.process_adu_args.resp = out;
+    Modbus.process_adu_args.protocore_resp_cap = sizeof(out);
+    Modbus.process_adu(protocore_modbus_span());
+    TEST_ASSERT_EQUAL_UINT(0u, Modbus.n);
 
     memcpy(bad, adu, sizeof(adu));
     bad[5] = 0x01; // Length below the unit id + one function code octet
-    TEST_ASSERT_EQUAL_UINT(0u, protocore_modbus_process_adu(bad, 12, out, sizeof(out)));
+    Modbus.process_adu_args.req = bad;
+    Modbus.process_adu_args.req_len = 12;
+    Modbus.process_adu_args.resp = out;
+    Modbus.process_adu_args.protocore_resp_cap = sizeof(out);
+    Modbus.process_adu(protocore_modbus_span());
+    TEST_ASSERT_EQUAL_UINT(0u, Modbus.n);
 
     // a frame shorter than MBAP + a function code is not addressable at all
     for (size_t n = 0; n < 8; n++)
     {
-        TEST_ASSERT_EQUAL_UINT(0u, protocore_modbus_process_adu(adu, n, out, sizeof(out)));
+        Modbus.process_adu_args.req = adu;
+        Modbus.process_adu_args.req_len = n;
+        Modbus.process_adu_args.resp = out;
+        Modbus.process_adu_args.protocore_resp_cap = sizeof(out);
+        Modbus.process_adu(protocore_modbus_span());
+        TEST_ASSERT_EQUAL_UINT(0u, Modbus.n);
     }
 }
 
@@ -386,7 +456,8 @@ static void write_cb(uint8_t fc, uint16_t start, uint16_t count)
 
 void test_write_callback_reports_each_write(void)
 {
-    protocore_modbus_on_write(write_cb);
+    Modbus.on_write_args.cb = write_cb;
+    Modbus.on_write(protocore_modbus_span());
     g_cb_hits = 0;
 
     static const uint8_t COIL[5] = {0x05, 0x00, 0x09, 0xFF, 0x00};
@@ -409,27 +480,52 @@ void test_write_callback_reports_each_write(void)
     TEST_ASSERT_EQUAL_UINT(2u, run_pdu(REJECT, sizeof(REJECT), NULL));
     TEST_ASSERT_EQUAL_INT(2, g_cb_hits);
 
-    protocore_modbus_on_write(NULL);
+    Modbus.on_write_args.cb = NULL;
+    Modbus.on_write(protocore_modbus_span());
 }
 
 // The data model refuses out-of-range addresses instead of writing past its tables, and
 // protocore_modbus_server_init() zeroes every one of them.
 void test_data_model_bounds_and_reset(void)
 {
-    protocore_modbus_set_coil(PROTOCORE_MODBUS_COILS, PROTO_TRUE);
-    protocore_modbus_set_discrete_input(PROTOCORE_MODBUS_DISCRETE_INPUTS, PROTO_TRUE);
-    protocore_modbus_set_holding_reg(PROTOCORE_MODBUS_HOLDING_REGS, 0xBEEF);
-    protocore_modbus_set_input_reg(PROTOCORE_MODBUS_INPUT_REGS, 0xBEEF);
-    TEST_ASSERT_FALSE(protocore_modbus_get_coil(PROTOCORE_MODBUS_COILS));
-    TEST_ASSERT_FALSE(protocore_modbus_get_discrete_input(PROTOCORE_MODBUS_DISCRETE_INPUTS));
-    TEST_ASSERT_EQUAL_HEX16(0, protocore_modbus_get_holding_reg(PROTOCORE_MODBUS_HOLDING_REGS));
-    TEST_ASSERT_EQUAL_HEX16(0, protocore_modbus_get_input_reg(PROTOCORE_MODBUS_INPUT_REGS));
+    Modbus.set_coil_args.addr = PROTOCORE_MODBUS_COILS;
+    Modbus.set_coil_args.on = PROTO_TRUE;
+    Modbus.set_coil(protocore_modbus_span());
+    Modbus.set_discrete_input_args.addr = PROTOCORE_MODBUS_DISCRETE_INPUTS;
+    Modbus.set_discrete_input_args.on = PROTO_TRUE;
+    Modbus.set_discrete_input(protocore_modbus_span());
+    Modbus.set_holding_reg_args.addr = PROTOCORE_MODBUS_HOLDING_REGS;
+    Modbus.set_holding_reg_args.value = 0xBEEF;
+    Modbus.set_holding_reg(protocore_modbus_span());
+    Modbus.set_input_reg_args.addr = PROTOCORE_MODBUS_INPUT_REGS;
+    Modbus.set_input_reg_args.value = 0xBEEF;
+    Modbus.set_input_reg(protocore_modbus_span());
+    Modbus.get_coil_args.addr = PROTOCORE_MODBUS_COILS;
+    Modbus.get_coil(protocore_modbus_span());
+    TEST_ASSERT_FALSE(Modbus.ok);
+    Modbus.get_discrete_input_args.addr = PROTOCORE_MODBUS_DISCRETE_INPUTS;
+    Modbus.get_discrete_input(protocore_modbus_span());
+    TEST_ASSERT_FALSE(Modbus.ok);
+    Modbus.get_holding_reg_args.addr = PROTOCORE_MODBUS_HOLDING_REGS;
+    Modbus.get_holding_reg(protocore_modbus_span());
+    TEST_ASSERT_EQUAL_HEX16(0, Modbus.value);
+    Modbus.get_input_reg_args.addr = PROTOCORE_MODBUS_INPUT_REGS;
+    Modbus.get_input_reg(protocore_modbus_span());
+    TEST_ASSERT_EQUAL_HEX16(0, Modbus.value);
 
-    protocore_modbus_set_coil(1, PROTO_TRUE);
-    protocore_modbus_set_holding_reg(1, 0x1234);
-    protocore_modbus_server_init();
-    TEST_ASSERT_FALSE(protocore_modbus_get_coil(1));
-    TEST_ASSERT_EQUAL_HEX16(0, protocore_modbus_get_holding_reg(1));
+    Modbus.set_coil_args.addr = 1;
+    Modbus.set_coil_args.on = PROTO_TRUE;
+    Modbus.set_coil(protocore_modbus_span());
+    Modbus.set_holding_reg_args.addr = 1;
+    Modbus.set_holding_reg_args.value = 0x1234;
+    Modbus.set_holding_reg(protocore_modbus_span());
+    Modbus.server_init(protocore_modbus_span());
+    Modbus.get_coil_args.addr = 1;
+    Modbus.get_coil(protocore_modbus_span());
+    TEST_ASSERT_FALSE(Modbus.ok);
+    Modbus.get_holding_reg_args.addr = 1;
+    Modbus.get_holding_reg(protocore_modbus_span());
+    TEST_ASSERT_EQUAL_HEX16(0, Modbus.value);
 }
 
 // MODBUS over Serial Line V1.02 section 2.5.1: the RTU ADU is
@@ -454,7 +550,9 @@ static uint16_t rtu_crc(const uint8_t *p, size_t n)
 
 void test_rtu_frame_round_trip(void)
 {
-    protocore_modbus_set_holding_reg(0, 0x1234);
+    Modbus.set_holding_reg_args.addr = 0;
+    Modbus.set_holding_reg_args.value = 0x1234;
+    Modbus.set_holding_reg(protocore_modbus_span());
 
     uint8_t req[8] = {0x11, 0x03, 0x00, 0x00, 0x00, 0x01};
     uint16_t crc = rtu_crc(req, 6);
@@ -462,7 +560,13 @@ void test_rtu_frame_round_trip(void)
     req[7] = (uint8_t)(crc >> 8);
 
     uint8_t resp[MODBUS_ADU_MAX];
-    size_t n = protocore_modbus_rtu_process_adu(req, sizeof(req), resp, sizeof(resp), 0x11);
+    Modbus.rtu_process_adu_args.req = req;
+    Modbus.rtu_process_adu_args.req_len = sizeof(req);
+    Modbus.rtu_process_adu_args.resp = resp;
+    Modbus.rtu_process_adu_args.protocore_resp_cap = sizeof(resp);
+    Modbus.rtu_process_adu_args.my_addr = 0x11;
+    Modbus.rtu_process_adu(protocore_modbus_span());
+    size_t n = Modbus.n;
     TEST_ASSERT_EQUAL_UINT(7u, n); // addr + fc + byte count + 2 data + 2 CRC
     TEST_ASSERT_EQUAL_HEX8(0x11, resp[0]);
     TEST_ASSERT_EQUAL_HEX8(0x03, resp[1]);
@@ -485,19 +589,39 @@ void test_rtu_crc_address_and_broadcast(void)
     uint16_t crc = rtu_crc(bad, 6);
     bad[6] = (uint8_t)((crc & 0xFF) ^ 0x01); // one bit wrong
     bad[7] = (uint8_t)(crc >> 8);
-    TEST_ASSERT_EQUAL_UINT(0u, protocore_modbus_rtu_process_adu(bad, sizeof(bad), resp, sizeof(resp), 0x11));
+    Modbus.rtu_process_adu_args.req = bad;
+    Modbus.rtu_process_adu_args.req_len = sizeof(bad);
+    Modbus.rtu_process_adu_args.resp = resp;
+    Modbus.rtu_process_adu_args.protocore_resp_cap = sizeof(resp);
+    Modbus.rtu_process_adu_args.my_addr = 0x11;
+    Modbus.rtu_process_adu(protocore_modbus_span());
+    TEST_ASSERT_EQUAL_UINT(0u, Modbus.n);
 
     uint8_t other[8] = {0x12, 0x03, 0x00, 0x00, 0x00, 0x01};
     crc = rtu_crc(other, 6);
     other[6] = (uint8_t)(crc & 0xFF);
     other[7] = (uint8_t)(crc >> 8);
-    TEST_ASSERT_EQUAL_UINT(0u, protocore_modbus_rtu_process_adu(other, sizeof(other), resp, sizeof(resp), 0x11));
+    Modbus.rtu_process_adu_args.req = other;
+    Modbus.rtu_process_adu_args.req_len = sizeof(other);
+    Modbus.rtu_process_adu_args.resp = resp;
+    Modbus.rtu_process_adu_args.protocore_resp_cap = sizeof(resp);
+    Modbus.rtu_process_adu_args.my_addr = 0x11;
+    Modbus.rtu_process_adu(protocore_modbus_span());
+    TEST_ASSERT_EQUAL_UINT(0u, Modbus.n);
 
     uint8_t bcast[8] = {0x00, 0x06, 0x00, 0x03, 0xAB, 0xCD};
     crc = rtu_crc(bcast, 6);
     bcast[6] = (uint8_t)(crc & 0xFF);
     bcast[7] = (uint8_t)(crc >> 8);
-    TEST_ASSERT_EQUAL_UINT(0u, protocore_modbus_rtu_process_adu(bcast, sizeof(bcast), resp, sizeof(resp), 0x11));
-    TEST_ASSERT_EQUAL_HEX16(0xABCD, protocore_modbus_get_holding_reg(3)); // executed all the same
+    Modbus.rtu_process_adu_args.req = bcast;
+    Modbus.rtu_process_adu_args.req_len = sizeof(bcast);
+    Modbus.rtu_process_adu_args.resp = resp;
+    Modbus.rtu_process_adu_args.protocore_resp_cap = sizeof(resp);
+    Modbus.rtu_process_adu_args.my_addr = 0x11;
+    Modbus.rtu_process_adu(protocore_modbus_span());
+    TEST_ASSERT_EQUAL_UINT(0u, Modbus.n);
+    Modbus.get_holding_reg_args.addr = 3;
+    Modbus.get_holding_reg(protocore_modbus_span());
+    TEST_ASSERT_EQUAL_HEX16(0xABCD, Modbus.value); // executed all the same
 }
 #endif // PROTOCORE_ENABLE_MODBUS_RTU
