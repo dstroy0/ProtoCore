@@ -1,6 +1,6 @@
 import os, sys
 
-sys.path.insert(0, r"C:\Users\Douglas\.claude\jobs\2bafe6f6\tmp")
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.stdout.reconfigure(encoding="utf-8")
 import nsconv as N
 
@@ -79,6 +79,90 @@ try:
     eq("loop condition refused", "converted", "refused")
 except ValueError:
     eq("loop condition refused", "refused", "refused")
+
+# 9. a trailing comment on the PREVIOUS statement is text: the statement start is the call's own
+# line, so the staging does not land above the statement before it
+src4 = "void t(void)\n{\n    fill(1); // the oldest slot\n\n    old_call(a);\n}\n"
+pos4 = src4.index("old_call")
+end4 = N.close_paren(src4, pos4 + len("old_call("))
+eq(
+    "trailing comment does not move the statement start",
+    N.rewrite(src4, pos4, end4, ["Ns.args.a = a;", "Ns.entry(w);"], "Ns.ok"),
+    "void t(void)\n{\n    fill(1); // the oldest slot\n\n    Ns.args.a = a;\n    Ns.entry(w);\n}\n",
+)
+
+# 10. and neither does a block comment sitting between the two statements
+src5 = "void t(void)\n{\n    fill(1);\n    /* the oldest slot */\n    old_call(a);\n}\n"
+pos5 = src5.index("old_call")
+end5 = N.close_paren(src5, pos5 + len("old_call("))
+eq(
+    "block comment does not move the statement start",
+    N.rewrite(src5, pos5, end5, ["Ns.entry(w);"], "Ns.ok"),
+    "void t(void)\n{\n    fill(1);\n    /* the oldest slot */\n    Ns.entry(w);\n}\n",
+)
+
+# 11. a call inside a macro that re-evaluates its argument is refused: hoisting it above DBENCH_OP
+# would time an addition and call the entry once
+src6 = 'void t(void)\n{\n    DBENCH_OP("x", 200000, sink += old_call(a));\n}\n'
+pos6 = src6.index("old_call")
+end6 = N.close_paren(src6, pos6 + len("old_call("))
+try:
+    N.rewrite(src6, pos6, end6, ["Ns.entry(w);"], "Ns.n")
+    eq("repeating macro refused", "converted", "refused")
+except ValueError:
+    eq("repeating macro refused", "refused", "refused")
+
+# 11a. the right operand of || is refused: `if (!r8(REG, &irq) || !old_call(irq))` fills irq in the
+# left operand and reads it in the right, so a hoisted call sees the value from before the read
+src6a = "void t(void)\n{\n    if (!r8(REG, &irq) || !old_call(irq))\n    {\n        return;\n    }\n}\n"
+pos6a = src6a.index("old_call")
+end6a = N.close_paren(src6a, pos6a + len("old_call("))
+try:
+    N.rewrite(src6a, pos6a, end6a, ["Ns.entry(w);"], "Ns.ok")
+    eq("short-circuit right operand refused", "converted", "refused")
+except ValueError:
+    eq("short-circuit right operand refused", "refused", "refused")
+
+# 11a2. and && the same way
+src6c = "void t(void)\n{\n    if (ready() && old_call(a))\n    {\n        return;\n    }\n}\n"
+pos6c = src6c.index("old_call")
+end6c = N.close_paren(src6c, pos6c + len("old_call("))
+try:
+    N.rewrite(src6c, pos6c, end6c, ["Ns.entry(w);"], "Ns.ok")
+    eq("short-circuit && right operand refused", "converted", "refused")
+except ValueError:
+    eq("short-circuit && right operand refused", "refused", "refused")
+
+# 11a3. but the LEFT operand has nothing before it to be gated by, so it still converts
+src6d = "void t(void)\n{\n    if (old_call(a) || fallback())\n    {\n        return;\n    }\n}\n"
+pos6d = src6d.index("old_call")
+end6d = N.close_paren(src6d, pos6d + len("old_call("))
+eq(
+    "short-circuit left operand still converts",
+    N.rewrite(src6d, pos6d, end6d, ["Ns.entry(w);"], "Ns.ok"),
+    "void t(void)\n{\n    Ns.entry(w);\n    if (Ns.ok || fallback())\n    {\n        return;\n    }\n}\n",
+)
+
+# 11b. DBENCH_BULK hands its expr to the same DBENCH_CYCLES loop, and was missed once: a bench came
+# out with the entry hoisted above it, timing `sink += Ns.n`
+src6b = 'void t(void)\n{\n    DBENCH_BULK("x", 50000, 21, sink += old_call(a));\n}\n'
+pos6b = src6b.index("old_call")
+end6b = N.close_paren(src6b, pos6b + len("old_call("))
+try:
+    N.rewrite(src6b, pos6b, end6b, ["Ns.entry(w);"], "Ns.n")
+    eq("DBENCH_BULK refused", "converted", "refused")
+except ValueError:
+    eq("DBENCH_BULK refused", "refused", "refused")
+
+# 12. and a TEST_ASSERT, which evaluates its argument once, is still converted
+src7 = 'void t(void)\n{\n    TEST_ASSERT_EQUAL_INT(3, old_call(a));\n}\n'
+pos7 = src7.index("old_call")
+end7 = N.close_paren(src7, pos7 + len("old_call("))
+eq(
+    "single-evaluation macro still converts",
+    N.rewrite(src7, pos7, end7, ["Ns.entry(w);"], "Ns.n"),
+    "void t(void)\n{\n    Ns.entry(w);\n    TEST_ASSERT_EQUAL_INT(3, Ns.n);\n}\n",
+)
 
 print()
 print("FAILURES:", fails)

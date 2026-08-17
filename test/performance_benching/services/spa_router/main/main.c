@@ -13,6 +13,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+static uint8_t spa_router_work[16]; // the borrow an entry takes; SpaRouter never reads it
+
 void dbench_run(void)
 {
     static const protocore_ui_fragment frags[3] = {
@@ -29,10 +31,18 @@ void dbench_run(void)
         static char out[128];
         DBENCH_OP("protocore_ui_stream (3 fragments)", 100000, {
             protocore_ui_stream s;
-            protocore_ui_stream_begin(&s, frags, 3, NULL);
+            SpaRouter.ui_stream_begin_args.s = &s;
+            SpaRouter.ui_stream_begin_args.frags = frags;
+            SpaRouter.ui_stream_begin_args.count = 3;
+            SpaRouter.ui_stream_begin_args.ctx = NULL;
+            SpaRouter.ui_stream_begin(spa_router_work);
             while (!protocore_ui_stream_done(&s))
             {
-                sink += protocore_ui_stream_next(&s, out, sizeof(out));
+                SpaRouter.ui_stream_next_args.s = &s;
+                SpaRouter.ui_stream_next_args.out = out;
+                SpaRouter.ui_stream_next_args.cap = sizeof(out);
+                SpaRouter.ui_stream_next(spa_router_work);
+                sink += SpaRouter.n;
             }
         });
         (void)sink;

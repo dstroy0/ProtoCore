@@ -36,11 +36,15 @@
 #ifndef PROTOCORE_HOTSWAP_H
 #define PROTOCORE_HOTSWAP_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_HOTSWAP
 
 PROTOCORE_BEGIN_DECLS
+
+// PROTOCORE_HOTSWAP_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
+// it into its arena. A caller takes them once and passes the pointer to every call. How they
+// are carved is this module's and is never named here.
 
 /** @brief Where a removable volume currently stands. */
 typedef enum PROTO_ENUM_PACKED
@@ -49,10 +53,6 @@ typedef enum PROTO_ENUM_PACKED
     STORAGE_STATE_READY = 1,   ///< mounted and healthy.
     STORAGE_STATE_FAULTED = 2, ///< was mounted, I/O is failing; unmounted and awaiting a remount probe.
 } StorageState;
-
-// ---------------------------------------------------------------------------
-// Host-testable core
-// ---------------------------------------------------------------------------
 
 /** @brief The whole state machine. Pure: it decides, the binding acts. */
 typedef struct
@@ -66,89 +66,181 @@ typedef struct
     uint32_t faults;            ///< times a healthy volume was declared faulted.
 } HotswapCore;
 
-/**
- * @brief Initialize to ABSENT at @p now.
- * @param fail_threshold consecutive I/O errors that declare the medium gone; clamped to >= 1.
- *
- * Starting ABSENT rather than READY is the safe default: nothing may touch the volume until a probe
- * has actually mounted it.
- */
-void protocore_hotswap_core_init(HotswapCore *c, uint8_t fail_threshold, uint32_t probe_interval_ms, uint32_t now);
-
-/**
- * @brief Report one filesystem outcome.
- *
- * A success while READY clears the failure run. A failure extends it, and on reaching the threshold
- * the volume becomes FAULTED. Outcomes reported while not READY are ignored - a caller honoring
- * ready() should not have been touching the volume, and a failure there is already accounted for.
- *
- * @return true if the state changed (so the binding knows to unmount + notify).
- */
-proto_bool protocore_hotswap_core_io(HotswapCore *c, proto_bool ok);
-
-/**
- * @brief Is a (re)mount probe due at @p now?
- *
- * Only while not READY, and only once per probe_interval_ms - so a missing card costs one cheap
- * check every interval instead of a mount storm. Wrap-safe across a millis() rollover.
- */
-proto_bool protocore_hotswap_core_due(const HotswapCore *c, uint32_t now);
-
-/**
- * @brief Report what a probe found.
- * @param present true if a medium appears to be there (card-detect, or "assume yes" without one).
- * @param mounted true if the mount actually succeeded.
- *
- * Present-but-unmountable stays ABSENT rather than READY: a card that will not mount is not storage.
- * @return true if the state changed.
- */
-proto_bool protocore_hotswap_core_probe(HotswapCore *c, proto_bool present, proto_bool mounted, uint32_t now);
-
-// ---------------------------------------------------------------------------
-// Binding
-// ---------------------------------------------------------------------------
-
 /** @brief Mount the volume. @return true on success. */
 typedef proto_bool (*protocore_hotswap_mount)(void *ctx);
+
 /** @brief Drop the mount and any handles it owns. Must tolerate being called when not mounted. */
 typedef void (*protocore_hotswap_unmount)(void *ctx);
+
 /** @brief Optional card-detect probe. nullptr means "assume present and let the mount decide". */
 typedef proto_bool (*protocore_hotswap_present)(void *ctx);
+
 /** @brief Fired on every state change, so an app can log it or light an LED. */
 typedef void (*protocore_hotswap_event)(StorageState from, StorageState to, void *ctx);
 
-/** @brief Install the callbacks and reset to ABSENT. A first poll will attempt the mount. */
-void protocore_hotswap_begin(protocore_hotswap_mount mount, protocore_hotswap_unmount unmount,
-                             protocore_hotswap_present present, void *ctx);
+/** @brief What core_init takes: c, fail_threshold, probe_interval_ms, ... */
+typedef struct
+{
+    HotswapCore *c;
+    uint8_t
+        fail_threshold; ///< consecutive I/O errors that declare the medium gone; clamped to >= 1. Starting ABSENT ...
+    uint32_t probe_interval_ms;
+    uint32_t now;
+} HotswapCoreInitArgs;
 
-/** @brief Install (or clear, with nullptr) the state-change callback. */
-void protocore_hotswap_set_event_cb(protocore_hotswap_event cb);
+/** @brief What core_io takes: c, ok. */
+typedef struct
+{
+    HotswapCore *c;
+    proto_bool ok;
+} HotswapCoreIoArgs;
 
-/** @brief Run the state machine: probe when due, unmount on a fresh fault. Cheap; call each loop. */
-void protocore_hotswap_poll(void);
-void protocore_hotswap_poll_at(uint32_t now);
+/** @brief What core_due takes: c, now. */
+typedef struct
+{
+    const HotswapCore *c;
+    uint32_t now;
+} HotswapCoreDueArgs;
+
+/** @brief What core_probe takes: c, present, mounted, now. */
+typedef struct
+{
+    HotswapCore *c;
+    proto_bool present; ///< true if a medium appears to be there (card-detect, or "assume yes" without one)
+    proto_bool mounted; ///< true if the mount actually succeeded. Present-but-unmountable stays ABSENT rather than ...
+    uint32_t now;
+} HotswapCoreProbeArgs;
+
+/** @brief What begin takes: mount, unmount, present, ctx. */
+typedef struct
+{
+    protocore_hotswap_mount mount;
+    protocore_hotswap_unmount unmount;
+    protocore_hotswap_present present;
+    void *ctx;
+} HotswapBeginArgs;
+
+/** @brief What set_event_cb takes: cb. */
+typedef struct
+{
+    protocore_hotswap_event cb;
+} HotswapSetEventCbArgs;
+
+/** @brief What poll_at takes: now. */
+typedef struct
+{
+    uint32_t now;
+} HotswapPollAtArgs;
+
+/** @brief What io takes: ok. */
+typedef struct
+{
+    proto_bool ok;
+} HotswapIoArgs;
+
+/** @brief What state_name takes: s. */
+typedef struct
+{
+    StorageState s;
+} HotswapStateNameArgs;
+
+/** @brief What json takes: out, cap. */
+typedef struct
+{
+    char *out;
+    size_t cap;
+} HotswapJsonArgs;
 
 /**
- * @brief Is it safe to touch the filesystem right now?
+ * @brief Safeties for removable storage that can vanish mid-write (PROTOCORE_ENABLE_HOTSWAP).
  *
- * The gate every caller checks first. False whenever the volume is ABSENT or FAULTED.
+ * A caller sets the members a call takes, invokes it through ::Hotswap with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   Hotswap.core_init_args.c = ...;
+ *   Hotswap.core_init_args.fail_threshold = ...;
+ *   Hotswap.core_init_args.probe_interval_ms = ...;
+ *   Hotswap.core_init_args.now = ...;
+ *   Hotswap.core_init(work);
+ *
+ * @var HotswapNs::core_init_args  what core_init takes: c, fail_threshold, probe_interval_ms,
+ * @var HotswapNs::core_io_args  what core_io takes: c, ok
+ * @var HotswapNs::core_due_args  what core_due takes: c, now
+ * @var HotswapNs::core_probe_args  what core_probe takes: c, present, mounted, now
+ * @var HotswapNs::begin_args  what begin takes: mount, unmount, present, ctx
+ * @var HotswapNs::set_event_cb_args  what set_event_cb takes: cb
+ * @var HotswapNs::poll_at_args  what poll_at takes: now
+ * @var HotswapNs::io_args  what io takes: ok
+ * @var HotswapNs::state_name_args  what state_name takes: s
+ * @var HotswapNs::json_args  what json takes: out, cap
+ * @var HotswapNs::ok  true if the state changed (so the binding knows to unmount + notify)
+ * @var HotswapNs::value  the value a call reports
+ * @var HotswapNs::text  the string a call reports
+ * @var HotswapNs::n  length written (excl NUL), or 0 on overflow
+ * @var HotswapNs::core_init  initialize to ABSENT at now
+ * @var HotswapNs::core_io  report one filesystem outcome. A success while READY clears the ...
+ * @var HotswapNs::core_due  is a (re)mount probe due at now? Only while not READY, and only ...
+ * @var HotswapNs::core_probe  report what a probe found
+ * @var HotswapNs::begin  install the callbacks and reset to ABSENT. A first poll will ...
+ * @var HotswapNs::set_event_cb  install (or clear, with nullptr) the state-change callback
+ * @var HotswapNs::poll  run the state machine: probe when due, unmount on a fresh fault. ...
+ * @var HotswapNs::poll_at  poll_at
+ * @var HotswapNs::ready  is it safe to touch the filesystem right now? The gate every caller ...
+ * @var HotswapNs::io  report a filesystem outcome; unmounts and notifies if this is the ...
+ * @var HotswapNs::state  current state
+ * @var HotswapNs::state_name  short name for s ("absent" / "ready" / "faulted"), for logs and JSON
+ * @var HotswapNs::json  serialize as `{"storage":"ready","mounts":N,"faults":N}` for a ...
+ *
+ * @c work is PROTOCORE_HOTSWAP_BORROW bytes the CALLER took, at an address it knows. It arrives
+ * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
+ * carved is this module's and is never named here.
  */
-proto_bool protocore_hotswap_ready(void);
+typedef struct
+{
+    HotswapCoreInitArgs core_init_args;
+    HotswapCoreIoArgs core_io_args;
+    HotswapCoreDueArgs core_due_args;
+    HotswapCoreProbeArgs core_probe_args;
+    HotswapBeginArgs begin_args;
+    HotswapSetEventCbArgs set_event_cb_args;
+    HotswapPollAtArgs poll_at_args;
+    HotswapIoArgs io_args;
+    HotswapStateNameArgs state_name_args;
+    HotswapJsonArgs json_args;
 
-/** @brief Report a filesystem outcome; unmounts and notifies if this is the failure that faults it. */
-void protocore_hotswap_io(proto_bool ok);
+    proto_bool ok;
+    StorageState value;
+    const char *text;
+    size_t n;
 
-/** @brief Current state. */
-StorageState protocore_hotswap_state(void);
+    void (*const core_init)(uint8_t *restrict work);
+    void (*const core_io)(uint8_t *restrict work);
+    void (*const core_due)(uint8_t *restrict work);
+    void (*const core_probe)(uint8_t *restrict work);
+    void (*const begin)(uint8_t *restrict work);
+    void (*const set_event_cb)(uint8_t *restrict work);
+    void (*const poll)(uint8_t *restrict work);
+    void (*const poll_at)(uint8_t *restrict work);
+    void (*const ready)(uint8_t *restrict work);
+    void (*const io)(uint8_t *restrict work);
+    void (*const state)(uint8_t *restrict work);
+    void (*const state_name)(uint8_t *restrict work);
+    void (*const json)(uint8_t *restrict work);
+} HotswapNs;
 
-/** @brief Short name for @p s ("absent" / "ready" / "faulted"), for logs and JSON. */
-const char *protocore_hotswap_state_name(StorageState s);
+/** @brief The one symbol this module exports. */
+extern HotswapNs Hotswap;
 
 /**
- * @brief Serialize as `{"storage":"ready","mounts":N,"faults":N}` for a /health panel.
- * @return length written (excl NUL), or 0 on overflow.
+ * @brief The PROTOCORE_HOTSWAP_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
  */
-size_t protocore_hotswap_json(char *out, size_t cap);
+uint8_t *protocore_hotswap_span(void);
 
 PROTOCORE_END_DECLS
 

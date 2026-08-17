@@ -114,6 +114,8 @@ typedef struct
  * @var SseNs::conn        the stream an alloc or a find reports, or NULL
  * @var SseNs::handler     the subscribe handler a lookup reports, or NULL
  * @var SseNs::route_add       record one route's subscribe handler
+ * @var SseNs::route_reset     empty the handler table; a route holds the id an add returned, so
+ *                            this empties with the routes
  * @var SseNs::route_connect   the subscribe handler an id names
  * @var SseNs::init            set every pool slot inactive; called once from begin()
  * @var SseNs::alloc           take a stream and bind it to a TCP slot
@@ -147,6 +149,7 @@ typedef struct
     SseConnectHandler handler;
 
     void (*const route_add)(uint8_t *restrict work);
+    void (*const route_reset)(uint8_t *restrict work);
     void (*const route_connect)(uint8_t *restrict work);
     void (*const init)(uint8_t *restrict work);
     void (*const alloc)(uint8_t *restrict work);

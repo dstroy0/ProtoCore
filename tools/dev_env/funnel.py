@@ -24,7 +24,10 @@ import re
 
 from codemask import code_mask
 
-STATIC_CTX = re.compile(r"^static\s+(?P<type>\w+)\s+(?P<name>s_\w+)\s*;\s*$", re.M)
+# The module's context, with or without an initializer. Matching only the bare `static T s_x;`
+# form reported a module with an initialized context as holding no state at all, which produced a
+# conversion that left the context in BSS and carved no borrow.
+STATIC_CTX = re.compile(r"^static\s+(?P<type>\w+)\s+(?P<name>s_\w+)\s*(?P<init>=[^;]*)?;\s*$", re.M | re.S)
 FUNC = re.compile(r"^(?P<head>(?:static\s+)?[A-Za-z_][\w \t\*]*?\b(?P<name>\w+)\s*\((?P<params>[^;{]*)\))\s*\{", re.M)
 
 
@@ -137,6 +140,15 @@ def funnel(src, module, borrow, notes):
     if not m:
         notes.append("no file-static context to funnel")
         return src
+    # A borrow arrives zeroed, so an initialized context has a default the move would silently
+    # drop. Where that default belongs - an init entry, a first-use path, a constant the entries
+    # read - is the module's call, not this tool's, so it refuses and says what it saw.
+    if m.group("init"):
+        notes.append(
+            "REFUSED: %s carries an initializer (%s). A borrow arrives zeroed, so move the default "
+            "into an entry first, then re-run." % (m.group("name"), " ".join(m.group("init").split())[:80])
+        )
+        return src
     ctype, cname = m.group("type"), m.group("name")
     PRE = module.upper()
 
@@ -158,23 +170,30 @@ def funnel(src, module, borrow, notes):
     src = re.sub(r"(?<![\w.>])%s\s*\." % re.escape(cname), "%s_CTX(work)->" % PRE, src)
     src = re.sub(r"(?<![\w.>])&%s(?![\w])" % re.escape(cname), "%s_CTX(work)" % PRE, src)
 
-    # a helper that reaches the context needs the borrow to reach it with
-    mask = code_mask(src)
-    touched = []
-    for f in _funcs(src, mask):
-        a, b = _body(src, f, mask)
-        if ("%s_CTX(work)" % PRE) in src[a:b] and "work" not in f.group("params"):
-            touched.append((f.group("name"), _address_taken(src, f.group("name"), mask, f.start("name"))))
-
+    # A function that reaches the context needs the borrow to reach it with - and so does a
+    # function that only passes the borrow on to one that does. Threading a helper puts `work` in
+    # its callers, so the scan repeats until no body names a `work` it was never given; one pass
+    # left the callers of a threaded helper referencing an identifier that is not there.
     threaded, callbacks = [], []
-    for name, is_cb in touched:
+    for _ in range(64):
         mask = code_mask(src)
-        if is_cb:
-            src = _take_span(src, name, module, mask, notes)
-            callbacks.append(name)
-        else:
-            src = _thread(src, name, mask)
-            threaded.append(name)
+        touched = []
+        for f in _funcs(src, mask):
+            a, b = _body(src, f, mask)
+            if f.group("name") in threaded or f.group("name") in callbacks:
+                continue
+            if re.search(r"(?<![\w.>])work(?![\w])", src[a:b]) and "work" not in f.group("params"):
+                touched.append((f.group("name"), _address_taken(src, f.group("name"), mask, f.start("name"))))
+        if not touched:
+            break
+        for name, is_cb in touched:
+            mask = code_mask(src)
+            if is_cb:
+                src = _take_span(src, name, module, mask, notes)
+                callbacks.append(name)
+            else:
+                src = _thread(src, name, mask)
+                threaded.append(name)
 
     src = _drop_void_work(src, PRE, code_mask(src))
 

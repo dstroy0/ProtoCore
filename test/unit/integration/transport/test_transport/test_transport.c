@@ -9,6 +9,16 @@
 #include "shared/ip/ip.h"
 #include <string.h>
 #include <unity.h>
+#include "server/clock/clock.h"
+
+// Move the virtual clock and take the pass stamp. service_once() reads the source once per pass,
+// before anything reads the time, and every module measures against that stamp; a case that drives
+// a module directly is standing in for the pass, so it takes the stamp the pass would have.
+static void set_now_ms(uint32_t ms)
+{
+    set_millis(ms);
+    Clock.millis(Clock.internal);
+}
 
 static protocore_ip v4w(uint32_t host_order)
 {
@@ -18,8 +28,8 @@ static protocore_ip v4w(uint32_t host_order)
 
 void setUp()
 {
-    set_millis(0);
-    ConnPool.life.cfg = NULL;
+    set_now_ms(0);
+    ConnPool.life.conn_timeout_ms = CONN_TIMEOUT_MS;
     ConnPool.init(ConnPool.internal);
     TcpListener.idx = 0;
     TcpListener.bind.port = 80;
@@ -27,7 +37,6 @@ void setUp()
     TcpListener.bind.tls = PROTO_FALSE;
     TcpListener.add(TcpListener.internal);
 
-    TcpListener.i32;
 }
 
 void tearDown()
@@ -130,7 +139,7 @@ void test_event_types_are_distinct()
 void test_timeout_does_not_fire_on_free_slot()
 {
     conn_pool[0].state = CONN_FREE;
-    set_millis(CONN_TIMEOUT_MS + 1);
+    set_now_ms(CONN_TIMEOUT_MS + 1);
     ConnPool.life.worker_id = 0;
     ConnPool.check_timeouts(ConnPool.internal);
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
@@ -141,7 +150,7 @@ void test_timeout_does_not_fire_before_deadline()
     conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].pcb = NULL;
     conn_pool[0].last_activity_ms = 0;
-    set_millis(CONN_TIMEOUT_MS - 1);
+    set_now_ms(CONN_TIMEOUT_MS - 1);
     ConnPool.life.worker_id = 0;
     ConnPool.check_timeouts(ConnPool.internal);
     TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)conn_pool[0].state);
@@ -152,7 +161,7 @@ void test_timeout_fires_at_deadline()
     conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].pcb = NULL;
     conn_pool[0].last_activity_ms = 0;
-    set_millis(CONN_TIMEOUT_MS);
+    set_now_ms(CONN_TIMEOUT_MS);
     ConnPool.life.worker_id = 0;
     ConnPool.check_timeouts(ConnPool.internal);
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
@@ -169,7 +178,7 @@ void test_timeout_fires_only_on_stale_slots()
     conn_pool[1].pcb = NULL;
     conn_pool[1].last_activity_ms = CONN_TIMEOUT_MS;
 
-    set_millis(CONN_TIMEOUT_MS);
+    set_now_ms(CONN_TIMEOUT_MS);
     ConnPool.life.worker_id = 0;
     ConnPool.check_timeouts(ConnPool.internal);
 
@@ -187,7 +196,7 @@ void test_active_send_not_reaped()
     conn_pool[1].pcb = NULL;
     conn_pool[1].last_activity_ms = 0;
 
-    set_millis(CONN_TIMEOUT_MS + 10);
+    set_now_ms(CONN_TIMEOUT_MS + 10);
     ConnPool.slot = 0;
     ConnPool.touch_active(ConnPool.internal);
     ConnPool.life.worker_id = 0;
@@ -199,20 +208,18 @@ void test_active_send_not_reaped()
 
 void test_pool_init_applies_custom_config()
 {
-    WebServerConfig cfg = {0};
-    cfg.conn_timeout_ms = 12345;
-    ConnPool.life.cfg = &cfg;
+    ConnPool.life.conn_timeout_ms = 12345;
     ConnPool.init(ConnPool.internal);
     ConnPool.timeout_ms(ConnPool.internal);
 
     TEST_ASSERT_EQUAL_UINT32(12345, ConnPool.u32);
-    ConnPool.life.cfg = NULL;
+    ConnPool.life.conn_timeout_ms = CONN_TIMEOUT_MS;
     ConnPool.init(ConnPool.internal);
 }
 
 void test_init_succeeds_on_native()
 {
-    ConnPool.life.cfg = NULL;
+    ConnPool.life.conn_timeout_ms = CONN_TIMEOUT_MS;
     ConnPool.init(ConnPool.internal);
     TcpListener.idx = 0;
     TcpListener.bind.port = 80;
@@ -388,7 +395,7 @@ void stress_all_slots_timeout_simultaneously()
         conn_pool[i].last_activity_ms = 0;
     }
 
-    set_millis(CONN_TIMEOUT_MS);
+    set_now_ms(CONN_TIMEOUT_MS);
     ConnPool.life.worker_id = 0;
     ConnPool.check_timeouts(ConnPool.internal);
 
@@ -411,7 +418,7 @@ void stress_timeout_arm_recover_cycle()
             conn_pool[i].last_activity_ms = 0;
         }
 
-        set_millis((uint32_t)(CONN_TIMEOUT_MS * (cycle + 1)));
+        set_now_ms((uint32_t)(CONN_TIMEOUT_MS * (cycle + 1)));
         ConnPool.life.worker_id = 0;
         ConnPool.check_timeouts(ConnPool.internal);
 
@@ -433,7 +440,7 @@ void stress_check_timeouts_high_call_rate()
     conn_pool[2].last_activity_ms = CONN_TIMEOUT_MS;
     conn_pool[3].state = CONN_FREE;
 
-    set_millis(CONN_TIMEOUT_MS);
+    set_now_ms(CONN_TIMEOUT_MS);
 
     for (int i = 0; i < 2000; i++)
     {
@@ -1343,14 +1350,14 @@ void test_check_timeouts_reaps_stale_closing_slots()
     ConnPool.set_state(ConnPool.internal);
     conn_pool[1].last_activity_ms = 0;
 
-    set_millis(PROTOCORE_CLOSING_TIMEOUT_MS - 1);
+    set_now_ms(PROTOCORE_CLOSING_TIMEOUT_MS - 1);
     ConnPool.life.worker_id = 0;
     ConnPool.check_timeouts(ConnPool.internal);
     TEST_ASSERT_EQUAL(CONN_CLOSING, (ConnState)conn_pool[0].state);
     TEST_ASSERT_EQUAL(CONN_CLOSING, (ConnState)conn_pool[1].state);
 
     int before = mock_abort_call_count();
-    set_millis(PROTOCORE_CLOSING_TIMEOUT_MS);
+    set_now_ms(PROTOCORE_CLOSING_TIMEOUT_MS);
     ConnPool.life.worker_id = 0;
     ConnPool.check_timeouts(ConnPool.internal);
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
@@ -1370,7 +1377,7 @@ void test_check_timeouts_detaches_and_aborts_a_real_pcb()
     conn_pool[0].last_activity_ms = 0;
 
     int before = mock_abort_call_count();
-    set_millis(CONN_TIMEOUT_MS);
+    set_now_ms(CONN_TIMEOUT_MS);
     ConnPool.life.worker_id = 0;
     ConnPool.check_timeouts(ConnPool.internal);
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
@@ -1385,7 +1392,7 @@ void test_touch_active_bounds_and_state_guard()
 
     conn_pool[0].state = CONN_FREE;
     conn_pool[0].last_activity_ms = 111;
-    set_millis(999);
+    set_now_ms(999);
     ConnPool.slot = 0;
     ConnPool.touch_active(ConnPool.internal);
     TEST_ASSERT_EQUAL_UINT32(111, conn_pool[0].last_activity_ms);
@@ -1498,7 +1505,7 @@ void test_recv_cb_accepts_and_copies_a_two_pbuf_segment()
     conn_pool[0].rx_head = 0;
     conn_pool[0].rx_tail = 0;
     conn_pool[0].last_activity_ms = 0;
-    set_millis(4242);
+    set_now_ms(4242);
 
     uint8_t part1[3] = {'a', 'b', 'c'};
     uint8_t part2[2] = {'d', 'e'};
@@ -1530,7 +1537,7 @@ void test_recv_cb_accepts_and_copies_a_two_pbuf_segment()
     seg3.len = 1;
     seg3.tot_len = 1;
     seg3.next = NULL;
-    set_millis(5000);
+    set_now_ms(5000);
     TEST_ASSERT_EQUAL_INT(PROTOCORE_NET_OK, lowlevel_recv_cb(&conn_pool[0], &fake, &seg3, PROTOCORE_NET_OK));
 }
 
@@ -1545,7 +1552,7 @@ void test_recv_cb_zero_clock_and_zero_length_segment_edge_cases()
     ConnPool.set_state(ConnPool.internal);
     conn_pool[0].rx_head = 0;
     conn_pool[0].rx_tail = 0;
-    set_millis(0);
+    set_now_ms(0);
 
     uint8_t byte = 'z';
     protocore_pbuf seg = {0};
@@ -1575,7 +1582,7 @@ void test_sent_cb_null_active_and_closing()
     ConnPool.st = CONN_ACTIVE;
     ConnPool.set_state(ConnPool.internal);
     conn_pool[0].last_activity_ms = 0;
-    set_millis(777);
+    set_now_ms(777);
     TEST_ASSERT_EQUAL_INT(PROTOCORE_NET_OK, lowlevel_sent_cb(&conn_pool[0], &fake, 10));
     TEST_ASSERT_EQUAL_UINT32(777, conn_pool[0].last_activity_ms);
     TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)conn_pool[0].state);
@@ -1662,7 +1669,7 @@ void test_accept_cb_rejects_when_pool_full()
 void test_accept_cb_claims_slot_and_wires_connection()
 {
     protocore_pcb fake = {0};
-    set_millis(9001);
+    set_now_ms(9001);
 
     TEST_ASSERT_EQUAL_INT(PROTOCORE_NET_OK, listener_accept_cb((void *)(uintptr_t)0, &fake, PROTOCORE_NET_OK));
 

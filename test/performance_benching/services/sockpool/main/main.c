@@ -13,6 +13,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+static uint8_t sockpool_work[16]; // the borrow an entry takes; Sockpool never reads it
+
 #define POOL_N 8
 
 void dbench_run(void)
@@ -24,18 +26,34 @@ void dbench_run(void)
     {
         DBENCH_BANNER("sockpool");
         volatile uint32_t sink = 0;
-        protocore_sockpool_init(&pool, slots, POOL_N);
+        Sockpool.init_args.p = &pool;
+        Sockpool.init_args.slots = slots;
+        Sockpool.init_args.n = POOL_N;
+        Sockpool.init(sockpool_work);
         uint32_t id = 1, now = 0;
         // A churn of acquires: fills, then steadily recycles the LRU slot.
-        DBENCH_OP("protocore_sockpool_acquire (LRU)", 200000, {
+        DBENCH_OP("Sockpool.acquire (LRU)", 200000, {
             size_t idx = 0;
             uint32_t evicted = 0;
-            sink += (uint32_t)protocore_sockpool_acquire(&pool, id++, now++, &idx, &evicted);
+            Sockpool.acquire_args.p = &pool;
+            Sockpool.acquire_args.id = id++;
+            Sockpool.acquire_args.now = now++;
+            Sockpool.acquire_args.idx = &idx;
+            Sockpool.acquire_args.evicted_id = &evicted;
+            Sockpool.acquire(sockpool_work);
+            sink += (uint32_t)Sockpool.acq;
         });
         size_t fidx = 0;
-        DBENCH_OP("protocore_sockpool_find", 200000, sink += protocore_sockpool_find(&pool, id - 4, &fidx));
-        DBENCH_OP("protocore_sockpool_touch", 200000, {
-            protocore_sockpool_touch(&pool, 0, now++);
+        Sockpool.find_args.p = &pool;
+        Sockpool.find_args.id = id - 4;
+        Sockpool.find_args.idx = &fidx;
+        // The entry call stays inside DBENCH_OP so the timed loop measures the lookup itself.
+        DBENCH_OP("Sockpool.find", 200000, (Sockpool.find(sockpool_work), sink += Sockpool.ok));
+        DBENCH_OP("Sockpool.touch", 200000, {
+            Sockpool.touch_args.p = &pool;
+            Sockpool.touch_args.idx = 0;
+            Sockpool.touch_args.now = now++;
+            Sockpool.touch(sockpool_work);
             sink += now;
         });
         (void)sink;

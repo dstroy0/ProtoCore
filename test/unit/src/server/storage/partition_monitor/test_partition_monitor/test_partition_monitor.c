@@ -18,6 +18,8 @@
 
 #include <unity.h>
 
+static uint8_t partition_monitor_work[16]; // the borrow an entry takes; PartitionMonitor never reads it
+
 void setUp(void)
 {
 }
@@ -44,38 +46,95 @@ static protocore_partition_info part(const char *label, uint8_t type, uint8_t su
 void test_kind_matches_the_esp_idf_subtype_registry(void)
 {
     // Type 0x00 (APP).
-    TEST_ASSERT_EQUAL_STRING("factory", protocore_partition_kind(0x00, 0x00));
-    TEST_ASSERT_EQUAL_STRING("ota", protocore_partition_kind(0x00, 0x10));  // OTA_0
-    TEST_ASSERT_EQUAL_STRING("ota", protocore_partition_kind(0x00, 0x1F));  // OTA_15
-    TEST_ASSERT_EQUAL_STRING("test", protocore_partition_kind(0x00, 0x20)); // APP_TEST
+    PartitionMonitor.kind_args.type = 0x00;
+    PartitionMonitor.kind_args.subtype = 0x00;
+    PartitionMonitor.kind(partition_monitor_work);
+    TEST_ASSERT_EQUAL_STRING("factory", PartitionMonitor.text);
+    PartitionMonitor.kind_args.type = 0x00;
+    PartitionMonitor.kind_args.subtype = 0x10;
+    PartitionMonitor.kind(partition_monitor_work);
+    TEST_ASSERT_EQUAL_STRING("ota", PartitionMonitor.text); // OTA_0
+    PartitionMonitor.kind_args.type = 0x00;
+    PartitionMonitor.kind_args.subtype = 0x1F;
+    PartitionMonitor.kind(partition_monitor_work);
+    TEST_ASSERT_EQUAL_STRING("ota", PartitionMonitor.text); // OTA_15
+    PartitionMonitor.kind_args.type = 0x00;
+    PartitionMonitor.kind_args.subtype = 0x20;
+    PartitionMonitor.kind(partition_monitor_work);
+    TEST_ASSERT_EQUAL_STRING("test", PartitionMonitor.text); // APP_TEST
 
     // Either side of the OTA run: 0x0F is below OTA_0 and 0x21 is above APP_TEST, so neither is an
     // OTA slot and both fall through to the generic app name.
-    TEST_ASSERT_EQUAL_STRING("app", protocore_partition_kind(0x00, 0x0F));
-    TEST_ASSERT_EQUAL_STRING("app", protocore_partition_kind(0x00, 0x21));
+    PartitionMonitor.kind_args.type = 0x00;
+    PartitionMonitor.kind_args.subtype = 0x0F;
+    PartitionMonitor.kind(partition_monitor_work);
+    TEST_ASSERT_EQUAL_STRING("app", PartitionMonitor.text);
+    PartitionMonitor.kind_args.type = 0x00;
+    PartitionMonitor.kind_args.subtype = 0x21;
+    PartitionMonitor.kind(partition_monitor_work);
+    TEST_ASSERT_EQUAL_STRING("app", PartitionMonitor.text);
 
     // Type 0x01 (DATA).
-    TEST_ASSERT_EQUAL_STRING("otadata", protocore_partition_kind(0x01, 0x00));
-    TEST_ASSERT_EQUAL_STRING("phy", protocore_partition_kind(0x01, 0x01));
-    TEST_ASSERT_EQUAL_STRING("nvs", protocore_partition_kind(0x01, 0x02));
-    TEST_ASSERT_EQUAL_STRING("coredump", protocore_partition_kind(0x01, 0x03));
-    TEST_ASSERT_EQUAL_STRING("nvs_keys", protocore_partition_kind(0x01, 0x04));
-    TEST_ASSERT_EQUAL_STRING("fat", protocore_partition_kind(0x01, 0x81));
-    TEST_ASSERT_EQUAL_STRING("spiffs", protocore_partition_kind(0x01, 0x82));
-    TEST_ASSERT_EQUAL_STRING("littlefs", protocore_partition_kind(0x01, 0x83));
+    PartitionMonitor.kind_args.type = 0x01;
+    PartitionMonitor.kind_args.subtype = 0x00;
+    PartitionMonitor.kind(partition_monitor_work);
+    TEST_ASSERT_EQUAL_STRING("otadata", PartitionMonitor.text);
+    PartitionMonitor.kind_args.type = 0x01;
+    PartitionMonitor.kind_args.subtype = 0x01;
+    PartitionMonitor.kind(partition_monitor_work);
+    TEST_ASSERT_EQUAL_STRING("phy", PartitionMonitor.text);
+    PartitionMonitor.kind_args.type = 0x01;
+    PartitionMonitor.kind_args.subtype = 0x02;
+    PartitionMonitor.kind(partition_monitor_work);
+    TEST_ASSERT_EQUAL_STRING("nvs", PartitionMonitor.text);
+    PartitionMonitor.kind_args.type = 0x01;
+    PartitionMonitor.kind_args.subtype = 0x03;
+    PartitionMonitor.kind(partition_monitor_work);
+    TEST_ASSERT_EQUAL_STRING("coredump", PartitionMonitor.text);
+    PartitionMonitor.kind_args.type = 0x01;
+    PartitionMonitor.kind_args.subtype = 0x04;
+    PartitionMonitor.kind(partition_monitor_work);
+    TEST_ASSERT_EQUAL_STRING("nvs_keys", PartitionMonitor.text);
+    PartitionMonitor.kind_args.type = 0x01;
+    PartitionMonitor.kind_args.subtype = 0x81;
+    PartitionMonitor.kind(partition_monitor_work);
+    TEST_ASSERT_EQUAL_STRING("fat", PartitionMonitor.text);
+    PartitionMonitor.kind_args.type = 0x01;
+    PartitionMonitor.kind_args.subtype = 0x82;
+    PartitionMonitor.kind(partition_monitor_work);
+    TEST_ASSERT_EQUAL_STRING("spiffs", PartitionMonitor.text);
+    PartitionMonitor.kind_args.type = 0x01;
+    PartitionMonitor.kind_args.subtype = 0x83;
+    PartitionMonitor.kind(partition_monitor_work);
+    TEST_ASSERT_EQUAL_STRING("littlefs", PartitionMonitor.text);
 
     // Registry entries this build names no kind for still report a kind rather than nothing.
-    TEST_ASSERT_EQUAL_STRING("data", protocore_partition_kind(0x01, 0x05)); // EFUSE_EM
-    TEST_ASSERT_EQUAL_STRING("data", protocore_partition_kind(0x01, 0x06)); // DATA_UNDEFINED
-    TEST_ASSERT_EQUAL_STRING("data", protocore_partition_kind(0x01, 0x80)); // ESPHTTPD
+    PartitionMonitor.kind_args.type = 0x01;
+    PartitionMonitor.kind_args.subtype = 0x05;
+    PartitionMonitor.kind(partition_monitor_work);
+    TEST_ASSERT_EQUAL_STRING("data", PartitionMonitor.text); // EFUSE_EM
+    PartitionMonitor.kind_args.type = 0x01;
+    PartitionMonitor.kind_args.subtype = 0x06;
+    PartitionMonitor.kind(partition_monitor_work);
+    TEST_ASSERT_EQUAL_STRING("data", PartitionMonitor.text); // DATA_UNDEFINED
+    PartitionMonitor.kind_args.type = 0x01;
+    PartitionMonitor.kind_args.subtype = 0x80;
+    PartitionMonitor.kind(partition_monitor_work);
+    TEST_ASSERT_EQUAL_STRING("data", PartitionMonitor.text); // ESPHTTPD
 }
 
 // A type that is neither APP nor DATA is classified by its subtype against the data table, since
 // only type 0x00 is treated as an application partition.
 void test_a_non_app_type_is_classified_as_data(void)
 {
-    TEST_ASSERT_EQUAL_STRING("nvs", protocore_partition_kind(0x02, 0x02));
-    TEST_ASSERT_EQUAL_STRING("data", protocore_partition_kind(0xFF, 0xFF));
+    PartitionMonitor.kind_args.type = 0x02;
+    PartitionMonitor.kind_args.subtype = 0x02;
+    PartitionMonitor.kind(partition_monitor_work);
+    TEST_ASSERT_EQUAL_STRING("nvs", PartitionMonitor.text);
+    PartitionMonitor.kind_args.type = 0xFF;
+    PartitionMonitor.kind_args.subtype = 0xFF;
+    PartitionMonitor.kind(partition_monitor_work);
+    TEST_ASSERT_EQUAL_STRING("data", PartitionMonitor.text);
 }
 
 // RFC 8259 sec 4 object and sec 5 array: one object per partition inside a single "partitions"
@@ -88,7 +147,12 @@ void test_report_is_an_rfc8259_document(void)
     parts[1] = part("storage", 0x01, 0x83, 0x290000u, 0x170000u, PROTO_FALSE);
 
     char out[512];
-    int32_t n = protocore_partition_json(parts, 2, out, sizeof(out));
+    PartitionMonitor.json_args.parts = parts;
+    PartitionMonitor.json_args.count = 2;
+    PartitionMonitor.json_args.out = out;
+    PartitionMonitor.json_args.cap = sizeof(out);
+    PartitionMonitor.json(partition_monitor_work);
+    int32_t n = PartitionMonitor.n;
     TEST_ASSERT_EQUAL_STRING("{\"partitions\":["
                              "{\"label\":\"app0\",\"kind\":\"ota\",\"type\":0,\"subtype\":16,"
                              "\"addr\":65536,\"size\":1310720,\"running\":true},"
@@ -107,7 +171,12 @@ void test_an_empty_table_is_still_an_array(void)
     parts[0] = part("x", 0x00, 0x00, 0u, 0u, PROTO_FALSE);
 
     char out[64];
-    int32_t n = protocore_partition_json(parts, 0, out, sizeof(out));
+    PartitionMonitor.json_args.parts = parts;
+    PartitionMonitor.json_args.count = 0;
+    PartitionMonitor.json_args.out = out;
+    PartitionMonitor.json_args.cap = sizeof(out);
+    PartitionMonitor.json(partition_monitor_work);
+    int32_t n = PartitionMonitor.n;
     TEST_ASSERT_EQUAL_STRING("{\"partitions\":[]}", out);
     TEST_ASSERT_EQUAL_INT32((int32_t)strlen(out), n);
 }
@@ -120,7 +189,12 @@ void test_numbers_span_the_whole_32_bit_range(void)
     parts[0] = part("nvs", 0x01, 0x02, 0u, 4294967295u, PROTO_FALSE);
 
     char out[256];
-    (void)protocore_partition_json(parts, 1, out, sizeof(out));
+    PartitionMonitor.json_args.parts = parts;
+    PartitionMonitor.json_args.count = 1;
+    PartitionMonitor.json_args.out = out;
+    PartitionMonitor.json_args.cap = sizeof(out);
+    PartitionMonitor.json(partition_monitor_work);
+    (void)PartitionMonitor.n;
     TEST_ASSERT_EQUAL_STRING("{\"partitions\":["
                              "{\"label\":\"nvs\",\"kind\":\"nvs\",\"type\":1,\"subtype\":2,"
                              "\"addr\":0,\"size\":4294967295,\"running\":false}"
@@ -136,7 +210,12 @@ void test_a_label_is_escaped_per_rfc8259_section_7(void)
     parts[0] = part("a\"b\\c", 0x01, 0x02, 0u, 0u, PROTO_FALSE);
 
     char out[256];
-    (void)protocore_partition_json(parts, 1, out, sizeof(out));
+    PartitionMonitor.json_args.parts = parts;
+    PartitionMonitor.json_args.count = 1;
+    PartitionMonitor.json_args.out = out;
+    PartitionMonitor.json_args.cap = sizeof(out);
+    PartitionMonitor.json(partition_monitor_work);
+    (void)PartitionMonitor.n;
     TEST_ASSERT_NOT_NULL(strstr(out, "\"label\":\"a\\\"b\\\\c\""));
 }
 
@@ -149,16 +228,31 @@ void test_a_short_buffer_fails_closed(void)
     parts[1] = part("storage", 0x01, 0x83, 0x290000u, 0x170000u, PROTO_FALSE);
 
     char full[512];
-    int32_t n = protocore_partition_json(parts, 2, full, sizeof(full));
+    PartitionMonitor.json_args.parts = parts;
+    PartitionMonitor.json_args.count = 2;
+    PartitionMonitor.json_args.out = full;
+    PartitionMonitor.json_args.cap = sizeof(full);
+    PartitionMonitor.json(partition_monitor_work);
+    int32_t n = PartitionMonitor.n;
     TEST_ASSERT_TRUE(n > 0);
 
     // One byte short of the whole document, and short enough to fail on the opening frame.
     char tight[512];
-    TEST_ASSERT_EQUAL_INT32(0, protocore_partition_json(parts, 2, tight, (uint32_t)n));
+    PartitionMonitor.json_args.parts = parts;
+    PartitionMonitor.json_args.count = 2;
+    PartitionMonitor.json_args.out = tight;
+    PartitionMonitor.json_args.cap = (uint32_t)n;
+    PartitionMonitor.json(partition_monitor_work);
+    TEST_ASSERT_EQUAL_INT32(0, PartitionMonitor.n);
     TEST_ASSERT_EQUAL_STRING("", tight);
 
     char tiny[8];
-    TEST_ASSERT_EQUAL_INT32(0, protocore_partition_json(parts, 2, tiny, sizeof(tiny)));
+    PartitionMonitor.json_args.parts = parts;
+    PartitionMonitor.json_args.count = 2;
+    PartitionMonitor.json_args.out = tiny;
+    PartitionMonitor.json_args.cap = sizeof(tiny);
+    PartitionMonitor.json(partition_monitor_work);
+    TEST_ASSERT_EQUAL_INT32(0, PartitionMonitor.n);
     TEST_ASSERT_EQUAL_STRING("", tiny);
 }
 
@@ -169,12 +263,27 @@ void test_missing_arguments_are_refused(void)
     parts[0] = part("nvs", 0x01, 0x02, 0u, 0u, PROTO_FALSE);
 
     char out[128];
-    TEST_ASSERT_EQUAL_INT32(0, protocore_partition_json(parts, 1, NULL, sizeof(out)));
-    TEST_ASSERT_EQUAL_INT32(0, protocore_partition_json(NULL, 1, out, sizeof(out)));
+    PartitionMonitor.json_args.parts = parts;
+    PartitionMonitor.json_args.count = 1;
+    PartitionMonitor.json_args.out = NULL;
+    PartitionMonitor.json_args.cap = sizeof(out);
+    PartitionMonitor.json(partition_monitor_work);
+    TEST_ASSERT_EQUAL_INT32(0, PartitionMonitor.n);
+    PartitionMonitor.json_args.parts = NULL;
+    PartitionMonitor.json_args.count = 1;
+    PartitionMonitor.json_args.out = out;
+    PartitionMonitor.json_args.cap = sizeof(out);
+    PartitionMonitor.json(partition_monitor_work);
+    TEST_ASSERT_EQUAL_INT32(0, PartitionMonitor.n);
     TEST_ASSERT_EQUAL_STRING("", out);
 
     char sentinel[8] = {'z', '\0'};
-    TEST_ASSERT_EQUAL_INT32(0, protocore_partition_json(parts, 1, sentinel, 0));
+    PartitionMonitor.json_args.parts = parts;
+    PartitionMonitor.json_args.count = 1;
+    PartitionMonitor.json_args.out = sentinel;
+    PartitionMonitor.json_args.cap = 0;
+    PartitionMonitor.json(partition_monitor_work);
+    TEST_ASSERT_EQUAL_INT32(0, PartitionMonitor.n);
     TEST_ASSERT_EQUAL_CHAR('z', sentinel[0]);
 }
 
@@ -183,7 +292,16 @@ void test_missing_arguments_are_refused(void)
 void test_the_flash_walk_reports_nothing_off_target(void)
 {
     protocore_partition_info out[4];
-    TEST_ASSERT_EQUAL_UINT8(0, protocore_partition_collect(out, 4));
-    TEST_ASSERT_EQUAL_UINT8(0, protocore_partition_collect(NULL, 4));
-    TEST_ASSERT_EQUAL_UINT8(0, protocore_partition_collect(out, 0));
+    PartitionMonitor.collect_args.out = out;
+    PartitionMonitor.collect_args.max = 4;
+    PartitionMonitor.collect(partition_monitor_work);
+    TEST_ASSERT_EQUAL_UINT8(0, PartitionMonitor.u8);
+    PartitionMonitor.collect_args.out = NULL;
+    PartitionMonitor.collect_args.max = 4;
+    PartitionMonitor.collect(partition_monitor_work);
+    TEST_ASSERT_EQUAL_UINT8(0, PartitionMonitor.u8);
+    PartitionMonitor.collect_args.out = out;
+    PartitionMonitor.collect_args.max = 0;
+    PartitionMonitor.collect(partition_monitor_work);
+    TEST_ASSERT_EQUAL_UINT8(0, PartitionMonitor.u8);
 }

@@ -17,6 +17,12 @@
 
 #if PROTOCORE_ENABLE_RCWL0516
 
+#if !PROTOCORE_HAS_GPIO
+#error                                                                                                                 \
+    "ProtoCore: PROTOCORE_ENABLE_RCWL0516 needs a GPIO seam. Provide one in core_setup/hal/<vendor>, or turn the driver\
+ off - there is no software stand-in for a part on the other end of a wire."
+#endif
+
 // Elapsed-time test, wrap-safe across a Clock.ms rollover (unsigned arithmetic is modulo 2^32).
 // A limit of 0 is always satisfied, which is what disables debounce / hold.
 static inline proto_bool elapsed(uint32_t now, uint32_t since, uint32_t limit)
@@ -104,20 +110,30 @@ void protocore_rcwl0516_core_init(PresenceCore *c, uint32_t now)
 // Binding
 // ---------------------------------------------------------------------------
 
-#if PROTOCORE_HAS_GPIO
-
 // All RCWL-0516 binding state, owned by one instance (internal linkage): the presence core and the
 // pin it samples, grouped so it is one named owner unreachable from any other translation unit.
 typedef struct
 {
     PresenceCore core;
     int pin;
+    proto_bool begun; ///< begin() ran; until it has, the pin reports -1
 } Rcwl0516Ctx;
-static Rcwl0516Ctx s_rcwl = {.pin = -1};
+static Rcwl0516Ctx s_rcwl;
+
+// The pin, or -1 for "there is none" - which is what a failed or absent begin() reports, the way a
+// main() reports failure. Stated here rather than as an initializer on the declaration so the
+// context carries none and can live in a borrow that arrives zeroed. It takes a flag rather than a
+// sentinel value because pin 0 is a real pin, so zero cannot mean "unset". A caller that hands
+// begin() a negative pin still lands on -1 here, and the poll below still refuses.
+static int dev_pin(void)
+{
+    return s_rcwl.begun ? s_rcwl.pin : -1;
+}
 
 proto_bool protocore_rcwl0516_begin(int out_pin)
 {
     s_rcwl.pin = out_pin;
+    s_rcwl.begun = PROTO_TRUE;
     protocore_platform_gpio_mode((uint8_t)(out_pin),
                                  PROTOCORE_GPIO_IN); // the module drives OUT actively; no pull needed
     protocore_rcwl0516_core_init(&s_rcwl.core, Clock.ms);
@@ -126,12 +142,13 @@ proto_bool protocore_rcwl0516_begin(int out_pin)
 
 proto_bool protocore_rcwl0516_poll()
 {
-    if (s_rcwl.pin < 0)
+    const int pin = dev_pin();
+    if (pin < 0)
     {
         return PROTO_FALSE;
     }
-    protocore_presence_core_update(
-        &s_rcwl.core, protocore_platform_gpio_read((uint8_t)(s_rcwl.pin)) == PROTOCORE_GPIO_HIGH, Clock.ms);
+    protocore_presence_core_update(&s_rcwl.core, protocore_platform_gpio_read((uint8_t)(pin)) == PROTOCORE_GPIO_HIGH,
+                                   Clock.ms);
     return protocore_presence_take_event(&s_rcwl.core);
 }
 
@@ -139,25 +156,5 @@ proto_bool protocore_rcwl0516_present()
 {
     return protocore_presence_core_get(&s_rcwl.core);
 }
-
-#else // no pin seam
-
-proto_bool protocore_rcwl0516_begin(int out_pin)
-{
-    (void)out_pin;
-    return PROTO_FALSE;
-}
-
-proto_bool protocore_rcwl0516_poll()
-{
-    return PROTO_FALSE;
-}
-
-proto_bool protocore_rcwl0516_present()
-{
-    return PROTO_FALSE;
-}
-
-#endif // PROTOCORE_HAS_GPIO
 
 #endif // PROTOCORE_ENABLE_RCWL0516

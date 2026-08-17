@@ -27,40 +27,104 @@
 #ifndef PROTOCORE_PN532_H
 #define PROTOCORE_PN532_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_PN532
 
 PROTOCORE_BEGIN_DECLS
 
-/** @brief Frame identifier: host -> PN532. */
+// This module holds nothing between calls, so it carves no borrow and states none. An entry
+// takes one all the same, and never reads it, so every namespace in the tree is invoked the
+// same way.
+
 #define PN532_TFI_HOST 0xD4
-/** @brief Frame identifier: PN532 -> host. */
+
 #define PN532_TFI_PN532 0xD5
 
-/**
- * @brief Assemble a normal information frame carrying @p tfi + @p data into @p out.
- * @return the total frame length, or 0 if it would not fit @p cap or @p len exceeds
- *         PROTOCORE_PN532_MAX_DATA.
- */
-uint16_t protocore_pn532_build_frame(uint8_t tfi, const uint8_t *data, uint8_t len, uint8_t *out, uint16_t cap);
+/** @brief What build_frame takes: tfi, data, len, out, cap. */
+typedef struct
+{
+    uint8_t tfi;
+    const uint8_t *data;
+    uint8_t len;
+    uint8_t *out;
+    uint16_t cap;
+} Pn532BuildFrameArgs;
+
+/** @brief What parse_frame takes: raw, len, tfi, pdata, pdata_len. */
+typedef struct
+{
+    const uint8_t *raw;
+    uint16_t len;
+    uint8_t *tfi;
+    const uint8_t **pdata;
+    uint8_t *pdata_len;
+} Pn532ParseFrameArgs;
+
+/** @brief What is_ack takes: raw, len. */
+typedef struct
+{
+    const uint8_t *raw;
+    uint16_t len;
+} Pn532IsAckArgs;
+
+/** @brief What build_ack takes: out, cap. */
+typedef struct
+{
+    uint8_t *out;
+    uint16_t cap;
+} Pn532BuildAckArgs;
 
 /**
- * @brief Frame one normal information frame from the front of @p raw and verify LCS + DCS.
- * @param[out] tfi       set to the frame identifier.
- * @param[out] pdata     set to the first PData byte (points into @p raw).
- * @param[out] pdata_len set to the PData length (LEN - 1).
- * @return the frame length consumed (> 0), 0 if more bytes are needed, or -1 if @p raw[0]
- *         does not start a valid frame (wrong preamble / start / LCS / DCS / over-length).
+ * @brief PN532 NFC frame codec (PROTOCORE_ENABLE_PN532) - NXP PN532 NFC/RFID controller. The command-frame protocol of
+ * ...
+ *
+ * A caller sets the members a call takes, invokes it through ::Pn532 with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   Pn532.build_frame_args.tfi = ...;
+ *   Pn532.build_frame_args.data = ...;
+ *   Pn532.build_frame_args.len = ...;
+ *   Pn532.build_frame_args.out = ...;
+ *   Pn532.build_frame_args.cap = ...;
+ *   Pn532.build_frame(work);
+ *   // Pn532.len is what the call reports
+ *
+ * @var Pn532Ns::build_frame_args  what build_frame takes: tfi, data, len, out, cap
+ * @var Pn532Ns::parse_frame_args  what parse_frame takes: raw, len, tfi, pdata, pdata_len
+ * @var Pn532Ns::is_ack_args  what is_ack takes: raw, len
+ * @var Pn532Ns::build_ack_args  what build_ack takes: out, cap
+ * @var Pn532Ns::ok  a call's true/false outcome
+ * @var Pn532Ns::len  the total frame length, or 0 if it would not fit cap or len exceeds ...
+ * @var Pn532Ns::n  the frame length consumed (> 0), 0 if more bytes are needed, or -1 ...
+ * @var Pn532Ns::build_frame  assemble a normal information frame carrying tfi + data into out
+ * @var Pn532Ns::parse_frame  frame one normal information frame from the front of raw and verify ...
+ * @var Pn532Ns::is_ack  true if raw starts with a PN532 ACK frame (00 00 FF 00 FF 00)
+ * @var Pn532Ns::build_ack  write the 6-byte ACK frame into out. 6, or 0 if cap < 6
+ *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
+ * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
+ * a caller drives every namespace the same way.
  */
-int protocore_pn532_parse_frame(const uint8_t *raw, uint16_t len, uint8_t *tfi, const uint8_t **pdata,
-                                uint8_t *pdata_len);
+typedef struct
+{
+    Pn532BuildFrameArgs build_frame_args;
+    Pn532ParseFrameArgs parse_frame_args;
+    Pn532IsAckArgs is_ack_args;
+    Pn532BuildAckArgs build_ack_args;
 
-/** @brief True if @p raw starts with a PN532 ACK frame (00 00 FF 00 FF 00). */
-proto_bool protocore_pn532_is_ack(const uint8_t *raw, uint16_t len);
+    proto_bool ok;
+    uint16_t len;
+    int n;
 
-/** @brief Write the 6-byte ACK frame into @p out. @return 6, or 0 if @p cap < 6. */
-uint16_t protocore_pn532_build_ack(uint8_t *out, uint16_t cap);
+    void (*const build_frame)(uint8_t *restrict work);
+    void (*const parse_frame)(uint8_t *restrict work);
+    void (*const is_ack)(uint8_t *restrict work);
+    void (*const build_ack)(uint8_t *restrict work);
+} Pn532Ns;
+
+/** @brief The one symbol this module exports. */
+extern Pn532Ns Pn532;
 
 PROTOCORE_END_DECLS
 

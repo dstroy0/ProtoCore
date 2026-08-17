@@ -6,9 +6,11 @@
  * @brief QUIC variable-length integer coding - implementation. See protocore_quic_varint.h.
  */
 
-#include "network_drivers/presentation/http/http3/quic_varint.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_HTTP3
+
+#include "network_drivers/presentation/http/http3/quic_varint.h"
 
 size_t protocore_quic_varint_len(uint64_t value)
 {

@@ -11,6 +11,15 @@
 #include "server/core/proto_handler.h"
 #include <unity.h>
 
+// Move the virtual clock and take the pass stamp. service_once() reads the source once per pass,
+// before anything reads the time, and every module measures against that stamp; a case that drives
+// a module directly is standing in for the pass, so it takes the stamp the pass would have.
+static void set_now_ms(uint32_t ms)
+{
+    set_millis(ms);
+    Clock.millis(Clock.internal);
+}
+
 static void push_to_slot(uint8_t slot, const char *data)
 {
     TcpConn *s = &conn_pool[slot];
@@ -24,9 +33,9 @@ static void push_to_slot(uint8_t slot, const char *data)
 
 void setUp()
 {
-    set_millis(0);
+    set_now_ms(0);
     queue_stage_reset();
-    ConnPool.life.cfg = NULL;
+    ConnPool.life.conn_timeout_ms = CONN_TIMEOUT_MS;
     ConnPool.init(ConnPool.internal);
     TcpListener.idx = 0;
     TcpListener.bind.port = 80;
@@ -74,7 +83,7 @@ void test_reset_clears_mid_parse_state()
 void test_tick_fires_check_timeouts_stale_slot_freed()
 {
     conn_pool[0].last_activity_ms = 0;
-    set_millis(CONN_TIMEOUT_MS);
+    set_now_ms(CONN_TIMEOUT_MS);
     Session.worker_id = 0;
     Session.tick(Session.internal);
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
@@ -83,7 +92,7 @@ void test_tick_fires_check_timeouts_stale_slot_freed()
 void test_tick_does_not_free_fresh_connection()
 {
     conn_pool[0].last_activity_ms = 0;
-    set_millis(CONN_TIMEOUT_MS - 1);
+    set_now_ms(CONN_TIMEOUT_MS - 1);
     Session.worker_id = 0;
     Session.tick(Session.internal);
     TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)conn_pool[0].state);
@@ -92,7 +101,7 @@ void test_tick_does_not_free_fresh_connection()
 void test_fn_tick_timeout_before_event_drain_ordering()
 {
     conn_pool[1].last_activity_ms = 0;
-    set_millis(CONN_TIMEOUT_MS);
+    set_now_ms(CONN_TIMEOUT_MS);
     Session.worker_id = 0;
     Session.tick(Session.internal);
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[1].state);
@@ -109,7 +118,7 @@ void test_fn_tick_only_active_slots_expire()
     conn_pool[3].state = CONN_ACTIVE;
     conn_pool[3].last_activity_ms = CONN_TIMEOUT_MS;
 
-    set_millis(CONN_TIMEOUT_MS);
+    set_now_ms(CONN_TIMEOUT_MS);
     Session.worker_id = 0;
     Session.tick(Session.internal);
 
@@ -119,9 +128,9 @@ void test_fn_tick_only_active_slots_expire()
     TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)conn_pool[3].state);
 }
 
-void stress_1000_idle_ticks_stable()
+void test_stress_1000_idle_ticks_stable()
 {
-    set_millis(0);
+    set_now_ms(0);
     for (int i = 0; i < 1000; i++)
     {
         Session.worker_id = 0;
@@ -133,7 +142,7 @@ void stress_1000_idle_ticks_stable()
     }
 }
 
-void stress_timeout_all_slots_10_cycles()
+void test_stress_timeout_all_slots_10_cycles()
 {
     for (int cycle = 0; cycle < 10; cycle++)
     {
@@ -143,7 +152,7 @@ void stress_timeout_all_slots_10_cycles()
             conn_pool[i].pcb = NULL;
             conn_pool[i].last_activity_ms = 0;
         }
-        set_millis((uint32_t)(CONN_TIMEOUT_MS * (cycle + 1)));
+        set_now_ms((uint32_t)(CONN_TIMEOUT_MS * (cycle + 1)));
         Session.worker_id = 0;
         Session.tick(Session.internal);
         for (int i = 0; i < MAX_CONNS; i++)
@@ -153,7 +162,7 @@ void stress_timeout_all_slots_10_cycles()
     }
 }
 
-void stress_mixed_fresh_stale_slots_many_ticks()
+void test_stress_mixed_fresh_stale_slots_many_ticks()
 {
     conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].last_activity_ms = 0;
@@ -164,7 +173,7 @@ void stress_mixed_fresh_stale_slots_many_ticks()
     conn_pool[3].state = CONN_ACTIVE;
     conn_pool[3].last_activity_ms = CONN_TIMEOUT_MS;
 
-    set_millis(CONN_TIMEOUT_MS);
+    set_now_ms(CONN_TIMEOUT_MS);
     for (int tick = 0; tick < 200; tick++)
     {
         Session.worker_id = 0;
@@ -372,11 +381,11 @@ void test_tick_skips_active_listener_with_null_queue()
     TEST_PASS();
 }
 
-void race_external_free_between_ticks()
+void test_race_external_free_between_ticks()
 {
     conn_pool[0].last_activity_ms = 0;
 
-    set_millis(CONN_TIMEOUT_MS);
+    set_now_ms(CONN_TIMEOUT_MS);
     Session.worker_id = 0;
     Session.tick(Session.internal);
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
@@ -387,10 +396,10 @@ void race_external_free_between_ticks()
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
 }
 
-void race_activity_update_saves_slot_from_timeout()
+void test_race_activity_update_saves_slot_from_timeout()
 {
     conn_pool[0].last_activity_ms = 0;
-    set_millis(CONN_TIMEOUT_MS - 1);
+    set_now_ms(CONN_TIMEOUT_MS - 1);
 
     Session.worker_id = 0;
 
@@ -399,20 +408,20 @@ void race_activity_update_saves_slot_from_timeout()
 
     conn_pool[0].last_activity_ms = CONN_TIMEOUT_MS - 1;
 
-    set_millis(CONN_TIMEOUT_MS);
+    set_now_ms(CONN_TIMEOUT_MS);
     Session.worker_id = 0;
     Session.tick(Session.internal);
     TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)conn_pool[0].state);
 }
 
-void race_all_expire_then_idle_tick()
+void test_race_all_expire_then_idle_tick()
 {
     for (int i = 0; i < MAX_CONNS; i++)
     {
         conn_pool[i].state = CONN_ACTIVE;
         conn_pool[i].last_activity_ms = 0;
     }
-    set_millis(CONN_TIMEOUT_MS);
+    set_now_ms(CONN_TIMEOUT_MS);
     Session.worker_id = 0;
     Session.tick(Session.internal);
     for (int i = 0; i < MAX_CONNS; i++)
@@ -429,13 +438,13 @@ void race_all_expire_then_idle_tick()
     }
 }
 
-void race_millis_wraparound_no_spurious_timeout()
+void test_race_millis_wraparound_no_spurious_timeout()
 {
 
     conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].last_activity_ms = 0xFFFFFFFF - 100u;
 
-    set_millis((uint32_t)(CONN_TIMEOUT_MS - 200));
+    set_now_ms((uint32_t)(CONN_TIMEOUT_MS - 200));
     Session.worker_id = 0;
     Session.tick(Session.internal);
 
@@ -453,7 +462,7 @@ static void stage_data_evt(uint8_t slot)
 void test_first_data_event_arms_the_request_deadline()
 {
     http_req_start_ms[0] = 0;
-    set_millis(4242);
+    set_now_ms(4242);
     stage_data_evt(0);
     Session.worker_id = 0;
     Session.tick(Session.internal);
@@ -463,12 +472,12 @@ void test_first_data_event_arms_the_request_deadline()
 void test_a_request_already_under_way_keeps_its_arm()
 {
     http_req_start_ms[0] = 0;
-    set_millis(4242);
+    set_now_ms(4242);
     stage_data_evt(0);
     Session.worker_id = 0;
     Session.tick(Session.internal);
 
-    set_millis(9999);
+    set_now_ms(9999);
     stage_data_evt(0);
     Session.worker_id = 0;
     Session.tick(Session.internal);
@@ -478,7 +487,7 @@ void test_a_request_already_under_way_keeps_its_arm()
 void test_a_zero_stamp_still_reads_as_armed()
 {
     http_req_start_ms[0] = 0;
-    set_millis(0);
+    set_now_ms(0);
     stage_data_evt(0);
     Session.worker_id = 0;
     Session.tick(Session.internal);

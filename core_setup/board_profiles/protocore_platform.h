@@ -922,6 +922,30 @@ int protocore_platform_bt_release(void);
 uint8_t protocore_platform_img_state(void); ///< the running image's state, PROTOCORE_PLATFORM_IMG_*
 void protocore_platform_img_commit(void);   ///< mark it valid and cancel the pending rollback
 void protocore_platform_img_rollback(void); ///< mark it invalid and reboot into the previous one
+
+/** @brief Longest partition label a walk carries, terminator included. */
+#define PROTOCORE_PLATFORM_PARTITION_LABEL_MAX 17
+
+/** @brief One entry of the flash partition table, in the library's own shape rather than a vendor's. */
+typedef struct
+{
+    char label[PROTOCORE_PLATFORM_PARTITION_LABEL_MAX]; ///< the name the table gives it
+    uint32_t address;                                   ///< offset in flash
+    uint32_t size;                                      ///< bytes it spans
+    uint8_t type;                                       ///< the table's type code
+    uint8_t subtype;                                    ///< the table's subtype code
+    uint8_t running;                                    ///< this is the image currently executing
+} protocore_platform_partition;
+
+/**
+ * @brief Walk the partition table into @p out, at most @p max entries.
+ *
+ * The walk is the vendor's - only the SDK knows how the table is stored - so it lives beside the
+ * vendor's other seams rather than in src/, which never includes a vendor header.
+ *
+ * @return entries written. 0 where the part has no partition table to walk.
+ */
+uint8_t protocore_platform_partition_walk(protocore_platform_partition *out, uint8_t max);
 #endif
 #if PROTOCORE_HAS_VENDOR_COREDUMP
 /** @brief Backtrace frames a crash summary carries. */

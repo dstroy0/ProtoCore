@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // On-device CCOUNT microbenchmark for the network-adaptation decision core (server/net/netadapt):
-// protocore_netadapt_window() sizes the TCP receive window / RX buffer from the free heap (reserve +
-// quarter-of-spare, clamped to [min,max]) and protocore_netadapt_dhcp_fallback() decides when to stop
+// Netadapt.window sizes the TCP receive window / RX buffer from the free heap (reserve +
+// quarter-of-spare, clamped to [min,max]) and Netadapt.dhcp_fallback decides when to stop
 // waiting on DHCP and switch to a static IP. Both are pure integer decisions - zero heap, no stdlib,
 // no lwIP/netif touched - so like performance_benching/device/modbus (a pure codec) every call here exercises the
 // real production path. There is no peripheral/transport half to stub: the app applies the results
@@ -22,29 +22,44 @@
 
 void dbench_run(void)
 {
+    static uint8_t netadapt_work[16]; // the borrow an entry takes; Netadapt never reads it
+
     for (;;)
     {
         DBENCH_BANNER("netadapt");
         volatile uint32_t sink32 = 0;
         volatile uint32_t sinkb = 0;
 
+        // The entry call stays inside DBENCH_OP so the timed loop measures the decision, not the
+        // read that follows it. The args are staged once: they do not change across iterations.
+        Netadapt.window_args.reserve = 8000;
+        Netadapt.window_args.min_win = 1024;
+        Netadapt.window_args.max_win = 16384;
+
         // TCP window sizing: scaling case (free=40000, reserve=8000 -> 32000/4 = 8000, in-band),
         // taken straight from test/test_netadapt (test_window_scales_with_heap).
-        DBENCH_OP("protocore_netadapt_window scale", 200000,
-                  sink32 += protocore_netadapt_window(40000, 8000, 1024, 16384));
+        Netadapt.window_args.free_heap = 40000;
+        DBENCH_OP("Netadapt.window scale", 200000, (Netadapt.window(netadapt_work), sink32 += Netadapt.u32));
         // Ceiling-clamp case (huge heap -> clamped to max_win); exercises the upper clamp branch.
-        DBENCH_OP("protocore_netadapt_window clamp", 200000,
-                  sink32 += protocore_netadapt_window(200000, 8000, 1024, 16384));
+        Netadapt.window_args.free_heap = 200000;
+        DBENCH_OP("Netadapt.window clamp", 200000, (Netadapt.window(netadapt_work), sink32 += Netadapt.u32));
         // Low-heap floor case (heap <= reserve -> min_win); exercises the early-return branch.
-        DBENCH_OP("protocore_netadapt_window floor", 200000,
-                  sink32 += protocore_netadapt_window(5000, 8000, 1024, 16384));
+        Netadapt.window_args.free_heap = 5000;
+        DBENCH_OP("Netadapt.window floor", 200000, (Netadapt.window(netadapt_work), sink32 += Netadapt.u32));
+
+        Netadapt.dhcp_fallback_args.timeout_ms = 10000;
+        Netadapt.dhcp_fallback_args.max_attempts = 5;
 
         // DHCP->static fallback: within budget (both triggers false - the full-check path).
-        DBENCH_OP("protocore_netadapt_dhcp_fallback wait", 200000,
-                  sinkb += protocore_netadapt_dhcp_fallback(9000, 1, 10000, 5) ? 1u : 0u);
+        Netadapt.dhcp_fallback_args.elapsed_ms = 9000;
+        Netadapt.dhcp_fallback_args.attempts = 1;
+        DBENCH_OP("Netadapt.dhcp_fallback wait", 200000,
+                  (Netadapt.dhcp_fallback(netadapt_work), sinkb += Netadapt.ok ? 1u : 0u));
         // Fallback fires on the attempt budget.
-        DBENCH_OP("protocore_netadapt_dhcp_fallback trip", 200000,
-                  sinkb += protocore_netadapt_dhcp_fallback(1000, 5, 10000, 5) ? 1u : 0u);
+        Netadapt.dhcp_fallback_args.elapsed_ms = 1000;
+        Netadapt.dhcp_fallback_args.attempts = 5;
+        DBENCH_OP("Netadapt.dhcp_fallback trip", 200000,
+                  (Netadapt.dhcp_fallback(netadapt_work), sinkb += Netadapt.ok ? 1u : 0u));
 
         (void)sink32;
         (void)sinkb;

@@ -9,33 +9,74 @@
  * credentials persist through hal/nvs.h.
  */
 
-#include "provisioning_service.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_PROVISIONING
+
 #include "mmgr/protomem.h"
-#include "mmgr/protostr.h"      // str: the bounded-run walks
+#include "mmgr/protostr.h" // str: the bounded-run walks
+#include "mmgr/secure.h"   // the persistent end this module's state is taken from
+#include "provisioning_service.h"
 #include "server/clock/clock.h" // pcdelay
 #include "shared/hex/hex.h"
 #include "shared/mime/mime.h"
 
 // ---------------------------------------------------------------------------
-// Form-field parser (always compiled; the only non-trivial logic, unit-tested).
+// Form-field parser: the only non-trivial pure logic here, and what the unit tests drive.
 // ---------------------------------------------------------------------------
 
-#if PROTOCORE_ENABLE_PROVISIONING && PROTOCORE_HAS_VENDOR_NVS
 #include "core_setup/hal/nvs.h" // the credentials outlive the reboot that applies them
 #include "network_drivers/application/web_assets.h"
 #include "network_drivers/physical/physical.h"
-#include "network_drivers/transport/udp/udp.h"
+#include "network_drivers/transport/udp/server/server.h" // UdpListener: the catch-all DNS binds a port
 #include "protocore.h"
-#endif
-proto_bool protocore_prov_form_field(const char *body, const char *key, char *out, size_t cap)
+
+PROTOCORE_BEGIN_DECLS
+
+// The entries this file calls before reaching their definitions.
+
+// --- the program's shared state, beside the namespace not on it -------------
+
+// The one owned instance, private to this TU: the pointer to the bytes this module took for
+// itself. A caller that hands in its own borrow never reaches it.
+typedef struct
 {
+    uint8_t *span; ///< PROTOCORE_PROVISIONING_BORROW persistent bytes, or null while the pool was short
+} ProvOwnCtx;
+static ProvOwnCtx s_own;
+
+// Not an entry: an entry takes a borrow and this is where that borrow comes from.
+uint8_t *protocore_provisioning_service_span(void)
+{
+    if (s_own.span == NULL)
+    {
+        protocore_span sp = protocore_secure_persist_span(PROTOCORE_PROVISIONING_BORROW);
+        if (span.ok(sp))
+        {
+            s_own.span = sp.buf;
+        }
+    }
+    return s_own.span; // null while the pool was short, which every entry refuses
+}
+
+static void provisioning_service_form_field(uint8_t *restrict work);
+
+static void provisioning_service_form_field(uint8_t *restrict work)
+{
+    (void)work;
+    const char *body = Prov.form_field_args.body;
+    const char *key = Prov.form_field_args.key;
+    char *out = Prov.form_field_args.out;
+    size_t cap = Prov.form_field_args.cap;
+
     if (out && cap)
     {
         out[0] = '\0';
     }
     if (!body || !key || !out || cap == 0)
     {
-        return PROTO_FALSE;
+        Prov.ok = PROTO_FALSE;
+        return;
     }
 
     size_t blen = 0;
@@ -56,7 +97,8 @@ proto_bool protocore_prov_form_field(const char *body, const char *key, char *ou
     }
     if (!val)
     {
-        return PROTO_FALSE;
+        Prov.ok = PROTO_FALSE;
+        return;
     }
 
     size_t o = 0;
@@ -95,14 +137,12 @@ proto_bool protocore_prov_form_field(const char *body, const char *key, char *ou
         }
     }
     out[o] = '\0';
-    return PROTO_TRUE;
+    Prov.ok = PROTO_TRUE;
 }
 
 // ---------------------------------------------------------------------------
-// ESP32 captive portal (softAP + lwIP UDP DNS + form/save routes)
+// The captive portal: softAP + a catch-all UDP DNS + the form / save routes
 // ---------------------------------------------------------------------------
-
-#if PROTOCORE_ENABLE_PROVISIONING && PROTOCORE_HAS_VENDOR_NVS
 
 // All provisioning-service state, owned by one instance (internal linkage): the server handle
 // and the softAP IP the captive-portal DNS answers with. Grouped so it is one named owner,
@@ -111,7 +151,26 @@ typedef struct
 {
     uint8_t ap_ip[4];
 } ProvCtx;
-static ProvCtx s_prov = {.ap_ip = {192, 168, 4, 1}};
+// The caller's borrow, split: the context at its offset. One pointer arrives and every
+// region is that pointer plus a compile-time offset, so the assert below proves the span
+// covers them before anything runs.
+#define PROVISIONING_SERVICE_OFF_CTX 0u
+static_assert(PROVISIONING_SERVICE_OFF_CTX + sizeof(ProvCtx) <= PROTOCORE_PROVISIONING_BORROW,
+              "PROTOCORE_PROVISIONING_BORROW is short of the module context - raise it in protocore_config.h, which"
+              " sums it into its arena");
+
+// The region, at its offset in the caller's borrow.
+#define PROVISIONING_SERVICE_CTX(w) ((ProvCtx *)(void *)((w) + PROVISIONING_SERVICE_OFF_CTX))
+
+// One octet of the softAP address the catch-all DNS answers with. All-zero is "begin() has not
+// stamped one yet", which reads as the 192.168.4.1 a softAP comes up on - stated here rather than as
+// an initializer so the context carries none and can live in a borrow that arrives zeroed.
+static uint8_t ap_octet(uint8_t *restrict work, uint32_t i)
+{
+    static const uint8_t softap_default[4] = {192, 168, 4, 1};
+    const uint8_t *ip = PROVISIONING_SERVICE_CTX(work)->ap_ip;
+    return (ip[0] || ip[1] || ip[2] || ip[3]) ? ip[i] : softap_default[i];
+}
 
 // The NVS namespace + credential keys (PROTOCORE_PROV_NVS_NAMESPACE / _KEY_SSID / _KEY_PSK) live in
 // protocore_config.h under PROTOCORE_ENABLE_PROVISIONING so a deployment can override them; used across
@@ -120,6 +179,14 @@ static ProvCtx s_prov = {.ap_ip = {192, 168, 4, 1}};
 // Catch-all DNS: answer every query with our softAP IP (captive-portal hijack).
 static void prov_dns_recv(const uint8_t *req, size_t qlen, const struct protocore_udp_peer *peer, void *ctx)
 {
+    // The signature belongs to whoever dispatches this, so the borrow comes from the
+    // accessor rather than a parameter.
+    uint8_t *restrict work = protocore_provisioning_service_span();
+    if (work == NULL)
+    {
+        return;
+    }
+
     (void)ctx;
     if (qlen < 12)
     {
@@ -164,16 +231,25 @@ static void prov_dns_recv(const uint8_t *req, size_t qlen, const struct protocor
     resp[n++] = 0x3C; // TTL 60s
     resp[n++] = 0x00;
     resp[n++] = 0x04; // RDLENGTH 4
-    resp[n++] = s_prov.ap_ip[0];
-    resp[n++] = s_prov.ap_ip[1];
-    resp[n++] = s_prov.ap_ip[2];
-    resp[n++] = s_prov.ap_ip[3];
+    resp[n++] = ap_octet(work, 0);
+    resp[n++] = ap_octet(work, 1);
+    resp[n++] = ap_octet(work, 2);
+    resp[n++] = ap_octet(work, 3);
 
-    Udp.listener->reply(peer, resp, n);
+    UdpListener.peer_args.peer = peer;
+    UdpListener.send_args.data = resp;
+    UdpListener.send_args.len = n;
+    UdpListener.reply(UdpListener.internal);
 }
 
-proto_bool protocore_provisioning_load(char *ssid, size_t ssid_cap, char *psk, size_t psk_cap)
+static void provisioning_service_load(uint8_t *restrict work)
 {
+    (void)work;
+    char *ssid = Prov.load_args.ssid;
+    size_t ssid_cap = Prov.load_args.ssid_cap;
+    char *psk = Prov.load_args.psk;
+    size_t psk_cap = Prov.load_args.psk_cap;
+
     if (ssid && ssid_cap)
     {
         ssid[0] = '\0';
@@ -185,18 +261,21 @@ proto_bool protocore_provisioning_load(char *ssid, size_t ssid_cap, char *psk, s
     if (!ssid || ssid_cap == 0 ||
         protocore_nvs_get_str(PROTOCORE_PROV_NVS_NAMESPACE, PROTOCORE_PROV_KEY_SSID, ssid, ssid_cap) == 0)
     {
-        return PROTO_FALSE;
+        Prov.ok = PROTO_FALSE;
+        return;
     }
     if (psk && psk_cap)
     {
         (void)protocore_nvs_get_str(PROTOCORE_PROV_NVS_NAMESPACE, PROTOCORE_PROV_KEY_PSK, psk,
                                     psk_cap); // an open AP has none
     }
-    return PROTO_TRUE;
+    Prov.ok = PROTO_TRUE;
 }
 
-void protocore_provisioning_clear(void)
+static void provisioning_service_clear(uint8_t *restrict work)
 {
+    (void)work;
+
     (void)protocore_nvs_clear(PROTOCORE_PROV_NVS_NAMESPACE);
 }
 
@@ -208,12 +287,27 @@ static void prov_form_handler(uint8_t slot_id, HttpReq *req)
 
 static void prov_save_handler(uint8_t slot_id, HttpReq *req)
 {
+    // The signature belongs to whoever dispatches this, so the borrow comes from the
+    // accessor rather than a parameter.
+    uint8_t *restrict work = protocore_provisioning_service_span();
+    if (work == NULL)
+    {
+        return;
+    }
+
     char ssid[33];
     char psk[64];
-    proto_bool have_ssid =
-        protocore_prov_form_field((const char *)req->body, PROTOCORE_PROV_KEY_SSID, ssid, sizeof(ssid)) &&
-        ssid[0] != '\0';
-    protocore_prov_form_field((const char *)req->body, PROTOCORE_PROV_KEY_PSK, psk, sizeof(psk));
+    Prov.form_field_args.body = (const char *)req->body;
+    Prov.form_field_args.key = PROTOCORE_PROV_KEY_SSID;
+    Prov.form_field_args.out = ssid;
+    Prov.form_field_args.cap = sizeof(ssid);
+    provisioning_service_form_field(work);
+    proto_bool have_ssid = Prov.ok && ssid[0] != '\0';
+    Prov.form_field_args.body = (const char *)req->body;
+    Prov.form_field_args.key = PROTOCORE_PROV_KEY_PSK;
+    Prov.form_field_args.out = psk;
+    Prov.form_field_args.cap = sizeof(psk);
+    provisioning_service_form_field(work);
     if (!have_ssid)
     {
         send_text(slot_id, 400, PROTOCORE_MIME_TEXT_PLAIN, "SSID required");
@@ -226,46 +320,36 @@ static void prov_save_handler(uint8_t slot_id, HttpReq *req)
     protocore_platform_restart();
 }
 
-void protocore_provisioning_begin(const char *ap_ssid)
+static void provisioning_service_begin(uint8_t *restrict work)
 {
+    const char *ap_ssid = Prov.begin_args.ap_ssid;
+
     Physical.wifi.ssid = ap_ssid;
     Physical.wifi.password = NULL;
     Physical.wifi_ap_init(Physical.internal); // AP mode is implied by which bring-up you call
     Physical.wifi_ap_ip(Physical.internal);
     uint32_t ip = Physical.u32; // network byte order
-    s_prov.ap_ip[0] = (uint8_t)(ip & 0xFF);
-    s_prov.ap_ip[1] = (uint8_t)((ip >> 8) & 0xFF);
-    s_prov.ap_ip[2] = (uint8_t)((ip >> 16) & 0xFF);
-    s_prov.ap_ip[3] = (uint8_t)((ip >> 24) & 0xFF);
+    PROVISIONING_SERVICE_CTX(work)->ap_ip[0] = (uint8_t)(ip & 0xFF);
+    PROVISIONING_SERVICE_CTX(work)->ap_ip[1] = (uint8_t)((ip >> 8) & 0xFF);
+    PROVISIONING_SERVICE_CTX(work)->ap_ip[2] = (uint8_t)((ip >> 16) & 0xFF);
+    PROVISIONING_SERVICE_CTX(work)->ap_ip[3] = (uint8_t)((ip >> 24) & 0xFF);
 
     // Catch-all DNS on UDP/53 via the transport-layer UDP service (callback-driven).
-    Udp.listener->listen(53, prov_dns_recv, NULL);
+    UdpListener.port = 53;
+    UdpListener.bind.handler = prov_dns_recv;
+    UdpListener.bind.handler_ctx = NULL;
+    UdpListener.bind.group_ip = NULL;
+    UdpListener.listen(UdpListener.internal);
 
     on_http("/save", HTTP_POST, prov_save_handler);
     on_http("/*", HTTP_GET, prov_form_handler); // any other path -> the form
 }
 
-#else // disabled / non-Arduino: stubs (form-field parser above stays available)
+ProvNs Prov = {.form_field = provisioning_service_form_field,
+               .load = provisioning_service_load,
+               .begin = provisioning_service_begin,
+               .clear = provisioning_service_clear};
 
-proto_bool protocore_provisioning_load(char *ssid, size_t ssid_cap, char *psk, size_t psk_cap)
-{
-    if (ssid && ssid_cap)
-    {
-        ssid[0] = '\0';
-    }
-    if (psk && psk_cap)
-    {
-        psk[0] = '\0';
-    }
-    return PROTO_FALSE;
-}
-// The host stub: the Arduino build registers routes via on_http(); there is nothing to do here.
-void protocore_provisioning_begin(const char *ap_ssid)
-{
-    (void)ap_ssid;
-}
-void protocore_provisioning_clear()
-{
-}
+PROTOCORE_END_DECLS
 
-#endif // PROTOCORE_ENABLE_PROVISIONING && PROTOCORE_HAS_VENDOR_NVS
+#endif // PROTOCORE_ENABLE_PROVISIONING

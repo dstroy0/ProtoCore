@@ -6,7 +6,7 @@
  * @brief HTTP/2 binary framing - implementation. See protocore_h2_frame.h.
  */
 
-
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_HTTP2
 

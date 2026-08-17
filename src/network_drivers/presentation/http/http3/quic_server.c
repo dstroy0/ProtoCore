@@ -6,10 +6,12 @@
  * @brief HTTP/3 server glue - implementation. See protocore_quic_server.h.
  */
 
-#include "network_drivers/presentation/http/http3/quic_server.h"
-#include "mmgr/protomem.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_HTTP3
+
+#include "network_drivers/presentation/http/http3/quic_server.h"
+#include "mmgr/protomem.h"
 
 #include "mmgr/plaintext.h" // the two engines' byte spans
 #include "mmgr/ring.h"      // protocore_atomic

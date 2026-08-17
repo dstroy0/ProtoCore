@@ -6,12 +6,28 @@
  * @brief CDN edge-cache tier - server glue. See edge_cache_proxy.h.
  */
 
-#include "server/web/edge_cache/edge_cache_proxy.h"
-#include "mmgr/membuild.h" // protocore_sb frame builder
-#include "mmgr/protomem.h"
-#include "mmgr/protostr.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_EDGE_CACHE
+
+#include "mmgr/membuild.h"  // protocore_sb frame builder
+#include "mmgr/plaintext.h" // the persistent end the cached bytes are taken from
+#include "mmgr/protomem.h"
+#include "mmgr/protostr.h"
+#include "mmgr/secure.h" // and the secure end the TLS half is taken from
+#include "network_drivers/presentation/http/httpcache/httpcache.h"
+#include "server/web/edge_cache/edge_cache.h"
+#include "server/web/edge_cache/edge_cache_proxy.h"
+#include "services/storage/dbm/dbm.h"
+#include "shared/http_date/http_date.h"
+
+static uint8_t edge_cache_work[16]; // the borrow an entry takes; EdgeCache never reads it
+
+static uint8_t edge_mesh_work[16]; // the borrow an entry takes; EdgeMesh never reads it
+
+static uint8_t edge_cache_sd_work[16]; // the borrow an entry takes; EdgeCacheSd never reads it
+
+static uint8_t edge_fetch_work[16]; // the borrow an entry takes; EdgeFetch never reads it
 
 #include "network_drivers/presentation/http/http.h"                    // Http.set_edge_poll
 #include "network_drivers/presentation/http/http_parser/http_parser.h" // HttpReq, http_get_header, http_pool
@@ -22,6 +38,8 @@
 #include "protocore.h"                                                 // PC, Middleware, MwResult, ChunkSource
 #include "server/clock/clock.h"                                        // protocore_millis
 #include "server/web/edge_cache/edge_fetch.h"
+PROTOCORE_BEGIN_DECLS
+
 #if PROTOCORE_ENABLE_DBM
 #include "server/web/edge_cache/edge_cache_sd.h" // L2 SD tier
 #endif
@@ -63,7 +81,8 @@ typedef struct
     EdgeEntry *reval_entry;              // the stale entry being revalidated (nullptr for a plain miss)
     const EdgeFetchTransport *transport; // plaintext or TLS transport, chosen per route at start_fetch
     char canon[PROTOCORE_EDGE_KEY_MAX];
-    EdgeRouteMap *route;     // the origin route (stable in s_ctx.maps) - lets the origin fetch begin later
+    EdgeRouteMap
+        *route; // the origin route (stable in EDGE_CACHE_PROXY_CTX(work)->maps) - lets the origin fetch begin later
     char path[MAX_PATH_LEN]; // request path/query captured at mw time (http_pool[slot] is reused by poll time)
     char query[MAX_QUERY_LEN];
 #if PROTOCORE_ENABLE_EDGE_MESH
@@ -111,6 +130,43 @@ typedef struct
 } MeshConn;
 #endif
 
+#if PROTOCORE_ENABLE_EDGE_ORIGIN_TLS
+// The TLS half, apart from the rest: these name the client-TLS session an https origin fetch runs
+// over, so they take a SECURE borrow. Everything below is cached origin bytes, route maps and
+// per-connection scratch, and takes the plaintext borrow beside it - the split quic_server makes.
+typedef struct
+{
+    EdgeFetchTransport transport_tls; // TLS binding over protocore_tls_csess, used for https routes
+    int tls_cid;                      // underlying protocore_client cid of the in-flight TLS fetch (singleton session)
+    proto_bool tls_peer_closed;       // latched when the TLS session reports closed / errored
+    proto_bool tls_ready;             // the handshake completed, so the session carries application bytes
+} EdgeProxyTlsCtx;
+
+// The one owned instance of the pointer to those bytes, private to this TU.
+typedef struct
+{
+    uint8_t *span; ///< PROTOCORE_EDGE_PROXY_TLS_BORROW secure bytes, or null while the pool was short
+} EdgeProxyTlsOwnCtx;
+static EdgeProxyTlsOwnCtx s_tls_own;
+
+// Not an entry: the TLS members are reached through this, the way an entry reaches its borrow.
+static EdgeProxyTlsCtx *edge_tls(void)
+{
+    if (s_tls_own.span == NULL)
+    {
+        protocore_span sp = protocore_secure_persist_span(PROTOCORE_EDGE_PROXY_TLS_BORROW);
+        if (span.ok(sp))
+        {
+            s_tls_own.span = sp.buf;
+        }
+    }
+    return (EdgeProxyTlsCtx *)(void *)s_tls_own.span; // null while the pool was short
+}
+static_assert(sizeof(EdgeProxyTlsCtx) <= PROTOCORE_EDGE_PROXY_TLS_BORROW,
+              "PROTOCORE_EDGE_PROXY_TLS_BORROW is short of the TLS context - raise it in protocore_config.h,"
+              " which sums it into its arena");
+#endif // PROTOCORE_ENABLE_EDGE_ORIGIN_TLS
+
 // The single owned file-static: all of this subsystem's mutable state.
 typedef struct
 {
@@ -121,12 +177,6 @@ typedef struct
     EdgePending pending[MAX_CONNS];
     EdgeServeCursor serve[MAX_CONNS];
     EdgeFetchTransport transport;
-#if PROTOCORE_ENABLE_EDGE_ORIGIN_TLS
-    EdgeFetchTransport transport_tls; // TLS binding over protocore_tls_csess, used for https routes
-    int tls_cid;                      // underlying protocore_client cid of the in-flight TLS fetch (singleton session)
-    proto_bool tls_peer_closed;       // latched when the TLS session reports closed / errored
-    proto_bool tls_ready;             // the handshake completed, so the session carries application bytes
-#endif
     char reqbuf[MAX_PATH_LEN + MAX_QUERY_LEN + 256]; // scratch for one origin request line (freed by send)
 #if PROTOCORE_ENABLE_RANGE
     // The client's Range header, captured per slot at middleware time. serve_hit runs for a miss/stale
@@ -145,16 +195,38 @@ typedef struct
     proto_bool mesh_registered;              // the PROTO_MESH serving handler is installed
 #endif
 } EdgeCacheProxyCtx;
-static EdgeCacheProxyCtx s_ctx;
+// The caller's borrow, split: the context at its offset. One pointer arrives and every
+// region is that pointer plus a compile-time offset, so the assert below proves the span
+// covers them before anything runs.
+#define EDGE_CACHE_PROXY_OFF_CTX 0u
+static_assert(EDGE_CACHE_PROXY_OFF_CTX + sizeof(EdgeCacheProxyCtx) <= PROTOCORE_EDGE_PROXY_BORROW,
+              "PROTOCORE_EDGE_PROXY_BORROW is short of the module context - raise it in protocore_config.h, which"
+              " sums it into its arena");
+
+// The region, at its offset in the caller's borrow.
+#define EDGE_CACHE_PROXY_CTX(w) ((EdgeCacheProxyCtx *)(void *)((w) + EDGE_CACHE_PROXY_OFF_CTX))
 
 #if PROTOCORE_ENABLE_DBM
 // L1 write-back hook: spill an evicted victim to L2 (edge_sd_put skips no-validator / oversize entries).
 static void edge_on_evict(void *ctx, const EdgeEntry *victim)
 {
-    (void)ctx;
-    if (s_ctx.l2 && edge_sd_put(s_ctx.l2, victim, s_ctx.sd_buf, sizeof(s_ctx.sd_buf)))
+    // The signature belongs to whoever dispatches this, so the borrow comes from the
+    // accessor rather than a parameter.
+    uint8_t *restrict work = protocore_edge_cache_proxy_span();
+    if (work == NULL)
     {
-        s_ctx.store.stats.l2_spills++;
+        return;
+    }
+
+    (void)ctx;
+    EdgeCacheSd.put_args.db = EDGE_CACHE_PROXY_CTX(work)->l2;
+    EdgeCacheSd.put_args.e = victim;
+    EdgeCacheSd.put_args.scratch = EDGE_CACHE_PROXY_CTX(work)->sd_buf;
+    EdgeCacheSd.put_args.scratch_cap = sizeof(EDGE_CACHE_PROXY_CTX(work)->sd_buf);
+    EdgeCacheSd.put(edge_cache_sd_work);
+    if (EDGE_CACHE_PROXY_CTX(work)->l2 && EdgeCacheSd.ok)
+    {
+        EDGE_CACHE_PROXY_CTX(work)->store.stats.l2_spills++;
     }
 }
 #endif
@@ -217,7 +289,7 @@ static int edge_tls_bio_send(void *ctx, const unsigned char *buf, size_t len)
 {
     (void)ctx;
     size_t cap = len > 0xFFFF ? 0xFFFF : len;
-    TcpClient.cid = s_ctx.tls_cid;
+    TcpClient.cid = edge_tls()->tls_cid;
     TcpClient.io.data = buf;
     TcpClient.io.len = cap;
     TcpClient.send(TcpClient.internal);
@@ -226,14 +298,14 @@ static int edge_tls_bio_send(void *ctx, const unsigned char *buf, size_t len)
 static int edge_tls_bio_recv(void *ctx, unsigned char *buf, size_t len)
 {
     (void)ctx;
-    TcpClient.cid = s_ctx.tls_cid;
+    TcpClient.cid = edge_tls()->tls_cid;
     TcpClient.io.buf = buf;
     TcpClient.io.cap = len;
     TcpClient.read(TcpClient.internal);
     size_t n = TcpClient.n;
     if (n == 0)
     {
-        TcpClient.cid = s_ctx.tls_cid;
+        TcpClient.cid = edge_tls()->tls_cid;
         TcpClient.is_closed(TcpClient.internal);
         return TcpClient.ok ? 0 : PROTOCORE_PLATFORM_TLS_WANT_READ;
     }
@@ -247,21 +319,21 @@ static int t_tls_open(void *c, const char *host, uint16_t port, uint32_t timeout
     TcpClient.dial.port = port;
     TcpClient.dial.timeout_ms = timeout;
     TcpClient.open(TcpClient.internal);
-    s_ctx.tls_cid = TcpClient.i32;
-    if (s_ctx.tls_cid < 0)
+    edge_tls()->tls_cid = TcpClient.i32;
+    if (edge_tls()->tls_cid < 0)
     {
         return -1;
     }
-    s_ctx.tls_peer_closed = PROTO_FALSE;
-    s_ctx.tls_ready = PROTO_FALSE;
+    edge_tls()->tls_peer_closed = PROTO_FALSE;
+    edge_tls()->tls_ready = PROTO_FALSE;
     if (!protocore_tls_client_session_begin(host, edge_tls_bio_send, edge_tls_bio_recv))
     {
-        TcpClient.cid = s_ctx.tls_cid;
+        TcpClient.cid = edge_tls()->tls_cid;
         TcpClient.close(TcpClient.internal);
-        s_ctx.tls_cid = -1;
+        edge_tls()->tls_cid = -1;
         return -1;
     }
-    return s_ctx.tls_cid;
+    return edge_tls()->tls_cid;
 }
 
 // Step the TCP open, then the handshake, one flight per call. The BIO reads the wire ring, so a
@@ -276,19 +348,19 @@ static proto_bool t_tls_connected(void *c, int cid)
     {
         return PROTO_FALSE;
     }
-    if (s_ctx.tls_ready)
+    if (edge_tls()->tls_ready)
     {
         return PROTO_TRUE;
     }
     int h = protocore_tls_client_session_handshake();
     if (h == 1)
     {
-        s_ctx.tls_ready = PROTO_TRUE;
+        edge_tls()->tls_ready = PROTO_TRUE;
         return PROTO_TRUE;
     }
     if (h < 0)
     {
-        s_ctx.tls_peer_closed = PROTO_TRUE;
+        edge_tls()->tls_peer_closed = PROTO_TRUE;
     }
     return PROTO_FALSE;
 }
@@ -305,7 +377,7 @@ static size_t t_tls_read(void *c, int cid, uint8_t *b, size_t cap)
     int n = protocore_tls_client_session_read(b, cap);
     if (n < 0)
     {
-        s_ctx.tls_peer_closed = PROTO_TRUE; // close_notify / decrypt error -> report closed via t_tls_closed
+        edge_tls()->tls_peer_closed = PROTO_TRUE; // close_notify / decrypt error -> report closed via t_tls_closed
     }
     return n > 0 ? (size_t)n : 0;
 }
@@ -314,7 +386,7 @@ static proto_bool t_tls_closed(void *c, int cid)
     (void)c;
     TcpClient.cid = cid;
     TcpClient.is_closed(TcpClient.internal);
-    return s_ctx.tls_peer_closed || TcpClient.ok;
+    return edge_tls()->tls_peer_closed || TcpClient.ok;
 }
 static void t_tls_close(void *c, int cid)
 {
@@ -322,8 +394,8 @@ static void t_tls_close(void *c, int cid)
     protocore_tls_client_session_end();
     TcpClient.cid = cid;
     TcpClient.close(TcpClient.internal);
-    s_ctx.tls_cid = -1;
-    s_ctx.tls_ready = PROTO_FALSE;
+    edge_tls()->tls_cid = -1;
+    edge_tls()->tls_ready = PROTO_FALSE;
 }
 #endif // PROTOCORE_ENABLE_EDGE_ORIGIN_TLS
 
@@ -333,27 +405,28 @@ static const char *req_lookup(void *ctx, const char *name)
     return http_get_header((const HttpReq *)ctx, name);
 }
 
-static EdgeRouteMap *map_match(const char *path)
+static EdgeRouteMap *map_match(uint8_t *restrict work, const char *path)
 {
     for (int i = 0; i < PROTOCORE_EDGE_MAP_MAX; i++)
     {
-        if (!s_ctx.maps[i].used)
+        if (!EDGE_CACHE_PROXY_CTX(work)->maps[i].used)
         {
             continue;
         }
-        if (str.starts(path, s_ctx.maps[i].prefix, sizeof(s_ctx.maps[i].prefix), PROTO_FALSE))
+        if (str.starts(path, EDGE_CACHE_PROXY_CTX(work)->maps[i].prefix,
+                       sizeof(EDGE_CACHE_PROXY_CTX(work)->maps[i].prefix), PROTO_FALSE))
         {
-            return &s_ctx.maps[i];
+            return &EDGE_CACHE_PROXY_CTX(work)->maps[i];
         }
     }
     return NULL;
 }
 
-static int alloc_fetch()
+static int alloc_fetch(uint8_t *restrict work)
 {
     for (int i = 0; i < PROTOCORE_EDGE_FETCH_SLOTS; i++)
     {
-        if (!s_ctx.fetches[i].used)
+        if (!EDGE_CACHE_PROXY_CTX(work)->fetches[i].used)
         {
             return i;
         }
@@ -365,6 +438,14 @@ static int alloc_fetch()
 // transient passthrough entry (key ""). A dropped connection leaves the transient LRU-reclaimable.
 static size_t edge_chunk_source(uint8_t *buf, size_t cap, void *ctx)
 {
+    // The signature belongs to whoever dispatches this, so the borrow comes from the
+    // accessor rather than a parameter.
+    uint8_t *restrict work = protocore_edge_cache_proxy_span();
+    if (work == NULL)
+    {
+        return 0; // no borrow, so no bytes: the chunked body ends here
+    }
+
     EdgeServeCursor *c = (EdgeServeCursor *)ctx;
     if (!c->active || !c->entry)
     {
@@ -376,7 +457,9 @@ static size_t edge_chunk_source(uint8_t *buf, size_t cap, void *ctx)
         c->active = PROTO_FALSE;
         if (c->entry->key[0] == '\0') // transient passthrough entry -> free its slot
         {
-            edge_store_free_entry(&s_ctx.store, c->entry);
+            EdgeCache.store_free_entry_args.s = &EDGE_CACHE_PROXY_CTX(work)->store;
+            EdgeCache.store_free_entry_args.e = c->entry;
+            EdgeCache.store_free_entry(edge_cache_work);
         }
         c->entry = NULL;
         return 0;
@@ -389,9 +472,9 @@ static size_t edge_chunk_source(uint8_t *buf, size_t cap, void *ctx)
 
 // Serve a cache entry, replaying its validators + Age, tagged with @p xcache. A client `Range` request
 // (PROTOCORE_ENABLE_RANGE) is answered with a 206 window (or 416 if unsatisfiable); otherwise a full 200.
-static void serve_hit(uint8_t slot, EdgeEntry *e, uint32_t now, const char *xcache)
+static void serve_hit(uint8_t *restrict work, uint8_t slot, EdgeEntry *e, uint32_t now, const char *xcache)
 {
-    EdgeServeCursor *c = &s_ctx.serve[slot];
+    EdgeServeCursor *c = &EDGE_CACHE_PROXY_CTX(work)->serve[slot];
     c->active = PROTO_TRUE;
     c->entry = e;
     c->off = 0;
@@ -399,7 +482,8 @@ static void serve_hit(uint8_t slot, EdgeEntry *e, uint32_t now, const char *xcac
     int status = 200;
 
 #if PROTOCORE_ENABLE_RANGE
-    const char *range = s_ctx.range_hdr[slot]; // captured at mw time (http_pool[slot] is stale post-fetch)
+    const char *range =
+        EDGE_CACHE_PROXY_CTX(work)->range_hdr[slot]; // captured at mw time (http_pool[slot] is stale post-fetch)
     if (range[0])
     {
         size_t rs = 0;
@@ -457,7 +541,11 @@ static void serve_hit(uint8_t slot, EdgeEntry *e, uint32_t now, const char *xcac
     {
         proto_add_response_header(slot, "Content-Encoding", e->content_encoding);
     }
-    long age = edge_current_age(e->initial_age, e->insert_ms, now);
+    EdgeCache.current_age_args.initial_age = e->initial_age;
+    EdgeCache.current_age_args.insert_ms = e->insert_ms;
+    EdgeCache.current_age_args.now_ms = now;
+    EdgeCache.current_age(edge_cache_work);
+    long age = EdgeCache.secs;
     if (age < 0)
     {
         age = 0;
@@ -476,22 +564,36 @@ static void serve_hit(uint8_t slot, EdgeEntry *e, uint32_t now, const char *xcac
 
 // Serve a non-cacheable / non-200 origin response through a transient unindexed store slot, so the
 // serve source outlives the fetch (which the caller frees) and no-store content is never re-served.
-static void serve_passthrough(uint8_t slot, EdgeFetch *f)
+static void serve_passthrough(uint8_t *restrict work, uint8_t slot, EdgeFetch *f)
 {
-    EdgeEntry *e = edge_store_alloc(&s_ctx.store, "", ""); // key "" -> never matched by a lookup
+    EdgeCache.store_alloc_args.s = &EDGE_CACHE_PROXY_CTX(work)->store;
+    EdgeCache.store_alloc_args.canon = "";
+    EdgeCache.store_alloc_args.vary_key = "";
+    EdgeCache.store_alloc(edge_cache_work);
+    EdgeEntry *e = EdgeCache.entry; // key "" -> never matched by a lookup
     if (!e)
     {
         send_text(slot, 502, PROTOCORE_MIME_TEXT_PLAIN, "Bad Gateway");
         return;
     }
-    s_ctx.store.stats.stores--; // a transient is not a cache store
+    EDGE_CACHE_PROXY_CTX(work)->store.stats.stores--; // a transient is not a cache store
     e->status = f->status;
-    if (!edge_header_value((const char *)f->buf, f->head_len, "Content-Type", e->content_type, sizeof(e->content_type)))
+    EdgeCache.header_value_args.hdrs = (const char *)f->buf;
+    EdgeCache.header_value_args.len = f->head_len;
+    EdgeCache.header_value_args.name = "Content-Type";
+    EdgeCache.header_value_args.out = e->content_type;
+    EdgeCache.header_value_args.out_cap = sizeof(e->content_type);
+    EdgeCache.header_value(edge_cache_work);
+    if (!EdgeCache.ok)
     {
         str.copy(e->content_type, "application/octet-stream", sizeof(e->content_type));
     }
-    edge_header_value((const char *)f->buf, f->head_len, "Content-Encoding", e->content_encoding,
-                      sizeof(e->content_encoding));
+    EdgeCache.header_value_args.hdrs = (const char *)f->buf;
+    EdgeCache.header_value_args.len = f->head_len;
+    EdgeCache.header_value_args.name = "Content-Encoding";
+    EdgeCache.header_value_args.out = e->content_encoding;
+    EdgeCache.header_value_args.out_cap = sizeof(e->content_encoding);
+    EdgeCache.header_value(edge_cache_work);
     size_t bl = f->body_len;
     if (bl > PROTOCORE_EDGE_BODY_MAX)
     {
@@ -500,7 +602,7 @@ static void serve_passthrough(uint8_t slot, EdgeFetch *f)
     mem.cpy(e->body, f->buf + f->body_off, bl);
     e->body_len = (uint16_t)bl;
 
-    EdgeServeCursor *c = &s_ctx.serve[slot];
+    EdgeServeCursor *c = &EDGE_CACHE_PROXY_CTX(work)->serve[slot];
     c->active = PROTO_TRUE;
     c->entry = e;
     c->off = 0;
@@ -515,27 +617,56 @@ static void serve_passthrough(uint8_t slot, EdgeFetch *f)
 }
 
 // Store a cacheable 200 response into a fresh entry and serve it.
-static void store_response(uint8_t slot, EdgeFetchSlot *fs, HttpReq *req, const protocore_cache_control *cc,
-                           const char *vary_hdr, uint32_t now)
+static void store_response(uint8_t *restrict work, uint8_t slot, EdgeFetchSlot *fs, HttpReq *req,
+                           const protocore_cache_control *cc, const char *vary_hdr, uint32_t now)
 {
     EdgeFetch *f = &fs->f;
     const char *head = (const char *)f->buf;
     size_t head_len = f->head_len;
 
     char vary_vals[PROTOCORE_EDGE_VARY_MAX];
-    edge_vary_serialize(vary_hdr[0] ? vary_hdr : NULL, req_lookup, req, vary_vals, sizeof(vary_vals));
+    EdgeCache.vary_serialize_args.vary_header = vary_hdr[0] ? vary_hdr : NULL;
+    EdgeCache.vary_serialize_args.lookup = req_lookup;
+    EdgeCache.vary_serialize_args.ctx = req;
+    EdgeCache.vary_serialize_args.out = vary_vals;
+    EdgeCache.vary_serialize_args.out_cap = sizeof(vary_vals);
+    EdgeCache.vary_serialize(edge_cache_work);
 
-    EdgeEntry *e = edge_store_alloc(&s_ctx.store, fs->canon, vary_vals);
+    EdgeCache.store_alloc_args.s = &EDGE_CACHE_PROXY_CTX(work)->store;
+    EdgeCache.store_alloc_args.canon = fs->canon;
+    EdgeCache.store_alloc_args.vary_key = vary_vals;
+    EdgeCache.store_alloc(edge_cache_work);
+    EdgeEntry *e = EdgeCache.entry;
     if (!e)
     {
-        serve_passthrough(slot, f);
+        serve_passthrough(work, slot, f);
         return;
     }
     e->status = 200;
-    edge_header_value(head, head_len, "Content-Type", e->content_type, sizeof(e->content_type));
-    edge_header_value(head, head_len, "Content-Encoding", e->content_encoding, sizeof(e->content_encoding));
-    edge_header_value(head, head_len, "ETag", e->etag, sizeof(e->etag));
-    edge_header_value(head, head_len, "Last-Modified", e->last_modified, sizeof(e->last_modified));
+    EdgeCache.header_value_args.hdrs = head;
+    EdgeCache.header_value_args.len = head_len;
+    EdgeCache.header_value_args.name = "Content-Type";
+    EdgeCache.header_value_args.out = e->content_type;
+    EdgeCache.header_value_args.out_cap = sizeof(e->content_type);
+    EdgeCache.header_value(edge_cache_work);
+    EdgeCache.header_value_args.hdrs = head;
+    EdgeCache.header_value_args.len = head_len;
+    EdgeCache.header_value_args.name = "Content-Encoding";
+    EdgeCache.header_value_args.out = e->content_encoding;
+    EdgeCache.header_value_args.out_cap = sizeof(e->content_encoding);
+    EdgeCache.header_value(edge_cache_work);
+    EdgeCache.header_value_args.hdrs = head;
+    EdgeCache.header_value_args.len = head_len;
+    EdgeCache.header_value_args.name = "ETag";
+    EdgeCache.header_value_args.out = e->etag;
+    EdgeCache.header_value_args.out_cap = sizeof(e->etag);
+    EdgeCache.header_value(edge_cache_work);
+    EdgeCache.header_value_args.hdrs = head;
+    EdgeCache.header_value_args.len = head_len;
+    EdgeCache.header_value_args.name = "Last-Modified";
+    EdgeCache.header_value_args.out = e->last_modified;
+    EdgeCache.header_value_args.out_cap = sizeof(e->last_modified);
+    EdgeCache.header_value(edge_cache_work);
     size_t vhl = str.len(vary_hdr, sizeof(e->vary_names));
     if (vary_hdr[0] && vhl < sizeof(e->vary_names))
     {
@@ -549,26 +680,53 @@ static void store_response(uint8_t slot, EdgeFetchSlot *fs, HttpReq *req, const 
     }
     mem.cpy(e->body, f->buf + f->body_off, bl);
     e->body_len = (uint16_t)bl;
-    s_ctx.store.stats.bytes_stored += bl;
+    EDGE_CACHE_PROXY_CTX(work)->store.stats.bytes_stored += bl;
 
     int64_t date = -1;
     int64_t expires = -1;
     int64_t last_mod = -1;
     int32_t age = 0;
     char v[64];
-    if (edge_header_value(head, head_len, "Date", v, sizeof(v)))
+    EdgeCache.header_value_args.hdrs = head;
+    EdgeCache.header_value_args.len = head_len;
+    EdgeCache.header_value_args.name = "Date";
+    EdgeCache.header_value_args.out = v;
+    EdgeCache.header_value_args.out_cap = sizeof(v);
+    EdgeCache.header_value(edge_cache_work);
+    if (EdgeCache.ok)
     {
-        date = edge_parse_http_date(v, str.len(v, sizeof(v)));
+        EdgeCache.parse_http_date_args.s = v;
+        EdgeCache.parse_http_date_args.len = str.len(v, sizeof(v));
+        EdgeCache.parse_http_date(edge_cache_work);
+        date = EdgeCache.epoch;
     }
-    if (edge_header_value(head, head_len, "Expires", v, sizeof(v)))
+    EdgeCache.header_value_args.hdrs = head;
+    EdgeCache.header_value_args.len = head_len;
+    EdgeCache.header_value_args.name = "Expires";
+    EdgeCache.header_value_args.out = v;
+    EdgeCache.header_value_args.out_cap = sizeof(v);
+    EdgeCache.header_value(edge_cache_work);
+    if (EdgeCache.ok)
     {
-        expires = edge_parse_http_date(v, str.len(v, sizeof(v)));
+        EdgeCache.parse_http_date_args.s = v;
+        EdgeCache.parse_http_date_args.len = str.len(v, sizeof(v));
+        EdgeCache.parse_http_date(edge_cache_work);
+        expires = EdgeCache.epoch;
     }
     if (e->last_modified[0])
     {
-        last_mod = edge_parse_http_date(e->last_modified, str.len(e->last_modified, sizeof(e->last_modified)));
+        EdgeCache.parse_http_date_args.s = e->last_modified;
+        EdgeCache.parse_http_date_args.len = str.len(e->last_modified, sizeof(e->last_modified));
+        EdgeCache.parse_http_date(edge_cache_work);
+        last_mod = EdgeCache.epoch;
     }
-    if (edge_header_value(head, head_len, "Age", v, sizeof(v)))
+    EdgeCache.header_value_args.hdrs = head;
+    EdgeCache.header_value_args.len = head_len;
+    EdgeCache.header_value_args.name = "Age";
+    EdgeCache.header_value_args.out = v;
+    EdgeCache.header_value_args.out_cap = sizeof(v);
+    EdgeCache.header_value(edge_cache_work);
+    if (EdgeCache.ok)
     {
         // Clamp every digit so the accumulator stays at or below INT32_MAX and the next multiply-add
         // stays inside int64_t however many digits the origin sent.
@@ -583,12 +741,21 @@ static void store_response(uint8_t slot, EdgeFetchSlot *fs, HttpReq *req, const 
         }
         age = (int32_t)a;
     }
-    edge_entry_set_freshness(e, cc, /*shared=*/PROTO_TRUE, date, expires, last_mod, age, /*response_time=*/-1, now);
-    serve_hit(slot, e, now, "MISS");
+    EdgeCache.entry_set_freshness_args.e = e;
+    EdgeCache.entry_set_freshness_args.cc = cc;
+    EdgeCache.entry_set_freshness_args.shared = /*shared=*/PROTO_TRUE;
+    EdgeCache.entry_set_freshness_args.date_epoch = date;
+    EdgeCache.entry_set_freshness_args.expires_epoch = expires;
+    EdgeCache.entry_set_freshness_args.last_modified_epoch = last_mod;
+    EdgeCache.entry_set_freshness_args.age_hdr = age;
+    EdgeCache.entry_set_freshness_args.response_time_epoch = /*response_time=*/-1;
+    EdgeCache.entry_set_freshness_args.now_ms = now;
+    EdgeCache.entry_set_freshness(edge_cache_work);
+    serve_hit(work, slot, e, now, "MISS");
 }
 
 // A completed origin fetch: revalidation 304 / store 200 / pass through anything else.
-static void on_fetch_done(uint8_t slot, EdgeFetchSlot *fs, uint32_t now)
+static void on_fetch_done(uint8_t *restrict work, uint8_t slot, EdgeFetchSlot *fs, uint32_t now)
 {
     EdgeFetch *f = &fs->f;
     const char *head = (const char *)f->buf;
@@ -597,9 +764,14 @@ static void on_fetch_done(uint8_t slot, EdgeFetchSlot *fs, uint32_t now)
 
     if (fs->revalidate && f->status == 304 && fs->reval_entry)
     {
-        edge_apply_304(fs->reval_entry, head, head_len, -1, now);
-        s_ctx.store.stats.revalidations_304++;
-        serve_hit(slot, fs->reval_entry, now, "REVALIDATED");
+        EdgeCache.apply_304_args.e = fs->reval_entry;
+        EdgeCache.apply_304_args.new_hdrs = head;
+        EdgeCache.apply_304_args.hdr_len = head_len;
+        EdgeCache.apply_304_args.response_time_epoch = -1;
+        EdgeCache.apply_304_args.now_ms = now;
+        EdgeCache.apply_304(edge_cache_work);
+        EDGE_CACHE_PROXY_CTX(work)->store.stats.revalidations_304++;
+        serve_hit(work, slot, fs->reval_entry, now, "REVALIDATED");
         return;
     }
     if (f->status == 200)
@@ -607,27 +779,46 @@ static void on_fetch_done(uint8_t slot, EdgeFetchSlot *fs, uint32_t now)
         protocore_cache_control cc;
         cache_control_init(&cc);
         char v[128];
-        if (edge_header_value(head, head_len, "Cache-Control", v, sizeof(v)))
+        EdgeCache.header_value_args.hdrs = head;
+        EdgeCache.header_value_args.len = head_len;
+        EdgeCache.header_value_args.name = "Cache-Control";
+        EdgeCache.header_value_args.out = v;
+        EdgeCache.header_value_args.out_cap = sizeof(v);
+        EdgeCache.header_value(edge_cache_work);
+        if (EdgeCache.ok)
         {
             cache_control_parse(v, str.len(v, sizeof(v)), &cc);
         }
         char vary_hdr[PROTOCORE_EDGE_VARY_MAX];
         vary_hdr[0] = '\0';
-        edge_header_value(head, head_len, "Vary", vary_hdr, sizeof(vary_hdr));
-        if (edge_is_storeable(200, "GET", &cc, vary_hdr[0] ? vary_hdr : NULL, f->body_len))
+        EdgeCache.header_value_args.hdrs = head;
+        EdgeCache.header_value_args.len = head_len;
+        EdgeCache.header_value_args.name = "Vary";
+        EdgeCache.header_value_args.out = vary_hdr;
+        EdgeCache.header_value_args.out_cap = sizeof(vary_hdr);
+        EdgeCache.header_value(edge_cache_work);
+        EdgeCache.is_storeable_args.status = 200;
+        EdgeCache.is_storeable_args.method = "GET";
+        EdgeCache.is_storeable_args.cc = &cc;
+        EdgeCache.is_storeable_args.vary_header = vary_hdr[0] ? vary_hdr : NULL;
+        EdgeCache.is_storeable_args.body_len = f->body_len;
+        EdgeCache.is_storeable(edge_cache_work);
+        if (EdgeCache.ok)
         {
             if (fs->revalidate && fs->reval_entry) // 200 on a revalidation replaces the stale entry
             {
-                edge_store_free_entry(&s_ctx.store, fs->reval_entry);
-                s_ctx.store.stats.replaces_200++;
+                EdgeCache.store_free_entry_args.s = &EDGE_CACHE_PROXY_CTX(work)->store;
+                EdgeCache.store_free_entry_args.e = fs->reval_entry;
+                EdgeCache.store_free_entry(edge_cache_work);
+                EDGE_CACHE_PROXY_CTX(work)->store.stats.replaces_200++;
             }
-            store_response(slot, fs, req, &cc, vary_hdr, now);
+            store_response(work, slot, fs, req, &cc, vary_hdr, now);
             return;
         }
-        serve_passthrough(slot, f); // 200 but not storeable
+        serve_passthrough(work, slot, f); // 200 but not storeable
         return;
     }
-    serve_passthrough(slot, f); // non-200 status
+    serve_passthrough(work, slot, f); // non-200 status
 }
 
 // Forward decls for the seam functions installed by protocore_edge_cache_enable().
@@ -637,10 +828,10 @@ static proto_bool edge_cache_poll(uint8_t slot);
 // Build + begin the origin fetch for @p fs from its captured route/path/query (so it can begin either
 // immediately at mw time or later, after the mesh phase exhausts its peers). Picks the plaintext or TLS
 // transport; a revalidation adds the conditional headers. @return false if no fetch could start (fail open).
-static proto_bool begin_origin_fetch(EdgeFetchSlot *fs, uint32_t now)
+static proto_bool begin_origin_fetch(uint8_t *restrict work, EdgeFetchSlot *fs, uint32_t now)
 {
     EdgeRouteMap *m = fs->route;
-    const EdgeFetchTransport *tport = &s_ctx.transport;
+    const EdgeFetchTransport *tport = &EDGE_CACHE_PROXY_CTX(work)->transport;
 #if PROTOCORE_ENABLE_EDGE_ORIGIN_TLS
     if (m->https)
     {
@@ -648,16 +839,20 @@ static proto_bool begin_origin_fetch(EdgeFetchSlot *fs, uint32_t now)
         {
             return PROTO_FALSE; // the shared client-TLS session is busy -> fail open (never tear down a live one)
         }
-        tport = &s_ctx.transport_tls;
+        tport = &edge_tls()->transport_tls;
     }
 #endif
     char cond[192];
     cond[0] = '\0';
     if (fs->reval_entry)
     {
-        edge_build_conditional(fs->reval_entry, cond, sizeof(cond));
+        EdgeCache.build_conditional_args.e = fs->reval_entry;
+        EdgeCache.build_conditional_args.out = cond;
+        EdgeCache.build_conditional_args.cap = sizeof(cond);
+        EdgeCache.build_conditional(edge_cache_work);
     }
-    protocore_sb sb_reqbuf = {s_ctx.reqbuf, sizeof(s_ctx.reqbuf), 0, PROTO_TRUE};
+    protocore_sb sb_reqbuf = {EDGE_CACHE_PROXY_CTX(work)->reqbuf, sizeof(EDGE_CACHE_PROXY_CTX(work)->reqbuf), 0,
+                              PROTO_TRUE};
     Sb.put(&sb_reqbuf, "GET ");
     Sb.put(&sb_reqbuf, fs->path);
     Sb.put(&sb_reqbuf, fs->query[0] ? "?" : "");
@@ -668,14 +863,23 @@ static proto_bool begin_origin_fetch(EdgeFetchSlot *fs, uint32_t now)
     Sb.put(&sb_reqbuf, cond);
     Sb.put(&sb_reqbuf, "\r\n");
     int rl = (int)Sb.finish(&sb_reqbuf);
-    if (rl <= 0 || (size_t)rl >= sizeof(s_ctx.reqbuf))
+    if (rl <= 0 || (size_t)rl >= sizeof(EDGE_CACHE_PROXY_CTX(work)->reqbuf))
     {
         return PROTO_FALSE;
     }
-    edge_fetch_begin(&fs->f, tport, m->origin_host, m->origin_port, s_ctx.reqbuf, (size_t)rl, now);
+    EdgeFetcher.begin_args.f = &fs->f;
+    EdgeFetcher.begin_args.t = tport;
+    EdgeFetcher.begin_args.host = m->origin_host;
+    EdgeFetcher.begin_args.port = m->origin_port;
+    EdgeFetcher.begin_args.request = EDGE_CACHE_PROXY_CTX(work)->reqbuf;
+    EdgeFetcher.begin_args.req_len = (size_t)rl;
+    EdgeFetcher.begin_args.now_ms = now;
+    EdgeFetcher.begin(edge_fetch_work);
     if (fs->f.st == EDGE_FETCH_STATUS_FAILED)
     {
-        edge_fetch_end(&fs->f, tport);
+        EdgeFetcher.end_args.f = &fs->f;
+        EdgeFetcher.end_args.t = tport;
+        EdgeFetcher.end(edge_fetch_work);
         return PROTO_FALSE;
     }
     fs->transport = tport;
@@ -683,12 +887,12 @@ static proto_bool begin_origin_fetch(EdgeFetchSlot *fs, uint32_t now)
 }
 
 #if PROTOCORE_ENABLE_EDGE_MESH
-static int mesh_peer_count()
+static int mesh_peer_count(uint8_t *restrict work)
 {
     int n = 0;
     for (int i = 0; i < PROTOCORE_MESH_MAX_PEERS; i++)
     {
-        if (s_ctx.peers[i].used)
+        if (EDGE_CACHE_PROXY_CTX(work)->peers[i].used)
         {
             n++;
         }
@@ -697,13 +901,13 @@ static int mesh_peer_count()
 }
 
 // The @p n-th used peer in slot order, or nullptr.
-static MeshPeer *mesh_peer_nth(int n)
+static MeshPeer *mesh_peer_nth(uint8_t *restrict work, int n)
 {
     for (int i = 0; i < PROTOCORE_MESH_MAX_PEERS; i++)
     {
-        if (s_ctx.peers[i].used && n-- == 0)
+        if (EDGE_CACHE_PROXY_CTX(work)->peers[i].used && n-- == 0)
         {
-            return &s_ctx.peers[i];
+            return &EDGE_CACHE_PROXY_CTX(work)->peers[i];
         }
     }
     return NULL;
@@ -742,50 +946,71 @@ static void mesh_snapshot_headers(const HttpReq *req, char *out, size_t cap)
 #endif
 
 // Begin the mesh query against the peer at fs->peer_idx. @return false if there is no such peer.
-static proto_bool mesh_begin_peer(EdgeFetchSlot *fs, uint32_t now)
+static proto_bool mesh_begin_peer(uint8_t *restrict work, EdgeFetchSlot *fs, uint32_t now)
 {
-    MeshPeer *p = mesh_peer_nth(fs->peer_idx);
+    MeshPeer *p = mesh_peer_nth(work, fs->peer_idx);
     if (!p)
     {
         return PROTO_FALSE;
     }
-    edge_mesh_fetch_begin(&fs->mf, &s_ctx.transport, p->host, p->port, fs->mreq, fs->mreq_len, fs->f.buf,
-                          sizeof(fs->f.buf), now);
+    EdgeMesh.fetch_begin_args.m = &fs->mf;
+    EdgeMesh.fetch_begin_args.t = &EDGE_CACHE_PROXY_CTX(work)->transport;
+    EdgeMesh.fetch_begin_args.host = p->host;
+    EdgeMesh.fetch_begin_args.port = p->port;
+    EdgeMesh.fetch_begin_args.request = fs->mreq;
+    EdgeMesh.fetch_begin_args.req_len = fs->mreq_len;
+    EdgeMesh.fetch_begin_args.buf = fs->f.buf;
+    EdgeMesh.fetch_begin_args.cap = sizeof(fs->f.buf);
+    EdgeMesh.fetch_begin_args.now_ms = now;
+    EdgeMesh.fetch_begin(edge_mesh_work);
     return PROTO_TRUE;
 }
 
 // A peer HIT: rehydrate the entry into a fresh L1 slot, verify it matches the request, and serve it as fresh
 // (age propagated). @return true if it was served; false (freeing the slot) if corrupt / wrong / already stale.
-static proto_bool mesh_store_and_serve(uint8_t slot, EdgeFetchSlot *fs, uint32_t now)
+static proto_bool mesh_store_and_serve(uint8_t *restrict work, uint8_t slot, EdgeFetchSlot *fs, uint32_t now)
 {
-    EdgeEntry *e = edge_store_alloc(&s_ctx.store, fs->canon, "");
+    EdgeCache.store_alloc_args.s = &EDGE_CACHE_PROXY_CTX(work)->store;
+    EdgeCache.store_alloc_args.canon = fs->canon;
+    EdgeCache.store_alloc_args.vary_key = "";
+    EdgeCache.store_alloc(edge_cache_work);
+    EdgeEntry *e = EdgeCache.entry;
     if (!e)
     {
         return PROTO_FALSE;
     }
-    if (!edge_mesh_deserialize_entry(s_ctx.store.digest_work, fs->mf.buf + fs->mf.entry_off, fs->mf.entry_len, e,
-                                     now) ||
-        !str.eq(e->key, fs->canon, sizeof(fs->canon), PROTO_FALSE) || !edge_entry_fresh(e, now))
+    EdgeMesh.deserialize_entry_args.entry_buf = EDGE_CACHE_PROXY_CTX(work)->store.digest_work;
+    EdgeMesh.deserialize_entry_args.buf = fs->mf.buf + fs->mf.entry_off;
+    EdgeMesh.deserialize_entry_args.len = fs->mf.entry_len;
+    EdgeMesh.deserialize_entry_args.e = e;
+    EdgeMesh.deserialize_entry_args.now_ms = now;
+    EdgeMesh.deserialize_entry(edge_mesh_work);
+    EdgeCache.entry_fresh_args.e = e;
+    EdgeCache.entry_fresh_args.now_ms = now;
+    EdgeCache.entry_fresh(edge_cache_work);
+    if (!EdgeMesh.ok || !str.eq(e->key, fs->canon, sizeof(fs->canon), PROTO_FALSE) || !EdgeCache.ok)
     {
-        edge_store_free_entry(&s_ctx.store, e);
+        EdgeCache.store_free_entry_args.s = &EDGE_CACHE_PROXY_CTX(work)->store;
+        EdgeCache.store_free_entry_args.e = e;
+        EdgeCache.store_free_entry(edge_cache_work);
         return PROTO_FALSE;
     }
-    s_ctx.store.stats.bytes_stored += e->body_len;
-    serve_hit(slot, e, now, "MESH");
+    EDGE_CACHE_PROXY_CTX(work)->store.stats.bytes_stored += e->body_len;
+    serve_hit(work, slot, e, now, "MESH");
     return PROTO_TRUE;
 }
 
 // The current peer query ended without a served hit: try the next sibling, else begin the origin fetch.
 // @return true if the slot still owns work (mesh continues or origin began); false = give up.
-static proto_bool mesh_advance_or_origin(EdgeFetchSlot *fs, uint32_t now)
+static proto_bool mesh_advance_or_origin(uint8_t *restrict work, EdgeFetchSlot *fs, uint32_t now)
 {
     fs->peer_idx++;
-    if (mesh_begin_peer(fs, now))
+    if (mesh_begin_peer(work, fs, now))
     {
         return PROTO_TRUE; // querying the next sibling (still MESH phase)
     }
-    s_ctx.store.stats.mesh_misses++;
-    if (begin_origin_fetch(fs, now))
+    EDGE_CACHE_PROXY_CTX(work)->store.stats.mesh_misses++;
+    if (begin_origin_fetch(work, fs, now))
     {
         fs->phase = EDGE_FETCH_PHASE_ORIGIN;
         return PROTO_TRUE;
@@ -794,15 +1019,15 @@ static proto_bool mesh_advance_or_origin(EdgeFetchSlot *fs, uint32_t now)
 }
 #endif // PROTOCORE_ENABLE_EDGE_MESH
 
-static proto_bool start_fetch(uint8_t slot, HttpReq *req, EdgeRouteMap *m, const char *canon, EdgeEntry *reval,
-                              uint32_t now)
+static proto_bool start_fetch(uint8_t *restrict work, uint8_t slot, HttpReq *req, EdgeRouteMap *m, const char *canon,
+                              EdgeEntry *reval, uint32_t now)
 {
-    int fi = alloc_fetch();
+    int fi = alloc_fetch(work);
     if (fi < 0)
     {
         return PROTO_FALSE;
     }
-    EdgeFetchSlot *fs = &s_ctx.fetches[fi];
+    EdgeFetchSlot *fs = &EDGE_CACHE_PROXY_CTX(work)->fetches[fi];
     fs->client_slot = slot;
     fs->revalidate = (reval != NULL);
     fs->reval_entry = reval;
@@ -813,50 +1038,77 @@ static proto_bool start_fetch(uint8_t slot, HttpReq *req, EdgeRouteMap *m, const
 
 #if PROTOCORE_ENABLE_EDGE_MESH
     // On a full miss (not a revalidation) with >= 1 sibling, query the mesh before the origin.
-    if (!reval && mesh_peer_count() > 0)
+    if (!reval && mesh_peer_count(work) > 0)
     {
         uint8_t digest[32];
-        edge_key_digest(s_ctx.store.digest_work, canon, str.len(canon, PROTOCORE_EDGE_KEY_MAX), digest);
-        mesh_snapshot_headers(req, s_ctx.mesh_hdrs, sizeof(s_ctx.mesh_hdrs));
-        fs->mreq_len = edge_mesh_build_request(digest, canon, s_ctx.mesh_hdrs, fs->mreq, sizeof(fs->mreq));
+        EdgeCache.key_digest_args.digest_work = EDGE_CACHE_PROXY_CTX(work)->store.digest_work;
+        EdgeCache.key_digest_args.canon = canon;
+        EdgeCache.key_digest_args.len = str.len(canon, PROTOCORE_EDGE_KEY_MAX);
+        EdgeCache.key_digest_args.digest = digest;
+        EdgeCache.key_digest(edge_cache_work);
+        mesh_snapshot_headers(req, EDGE_CACHE_PROXY_CTX(work)->mesh_hdrs,
+                              sizeof(EDGE_CACHE_PROXY_CTX(work)->mesh_hdrs));
+        EdgeMesh.build_request_args.digest = digest;
+        EdgeMesh.build_request_args.canon = canon;
+        EdgeMesh.build_request_args.req_hdrs = EDGE_CACHE_PROXY_CTX(work)->mesh_hdrs;
+        EdgeMesh.build_request_args.out = fs->mreq;
+        EdgeMesh.build_request_args.cap = sizeof(fs->mreq);
+        EdgeMesh.build_request(edge_mesh_work);
+        fs->mreq_len = EdgeMesh.n;
         fs->peer_idx = 0;
-        if (fs->mreq_len > 0 && mesh_begin_peer(fs, now))
+        if (fs->mreq_len > 0 && mesh_begin_peer(work, fs, now))
         {
             fs->phase = EDGE_FETCH_PHASE_MESH;
             fs->used = PROTO_TRUE;
-            s_ctx.pending[slot].active = PROTO_TRUE;
-            s_ctx.pending[slot].fetch_idx = (uint8_t)fi;
+            EDGE_CACHE_PROXY_CTX(work)->pending[slot].active = PROTO_TRUE;
+            EDGE_CACHE_PROXY_CTX(work)->pending[slot].fetch_idx = (uint8_t)fi;
             return PROTO_TRUE;
         }
     }
     fs->phase = EDGE_FETCH_PHASE_ORIGIN;
 #endif
-    if (!begin_origin_fetch(fs, now))
+    if (!begin_origin_fetch(work, fs, now))
     {
         return PROTO_FALSE; // fs->used stays false -> the slot is reclaimed
     }
     fs->used = PROTO_TRUE;
-    s_ctx.pending[slot].active = PROTO_TRUE;
-    s_ctx.pending[slot].fetch_idx = (uint8_t)fi;
+    EDGE_CACHE_PROXY_CTX(work)->pending[slot].active = PROTO_TRUE;
+    EDGE_CACHE_PROXY_CTX(work)->pending[slot].fetch_idx = (uint8_t)fi;
     return PROTO_TRUE;
 }
 
 #if PROTOCORE_ENABLE_DBM
 // Promote a reboot-surviving entry from L2 into a fresh L1 slot, forced stale so the caller revalidates it
 // (the monotonic insert time is meaningless across a reboot). @return the promoted entry, or nullptr.
-static EdgeEntry *try_promote_l2(const char *canon, uint32_t now)
+static EdgeEntry *try_promote_l2(uint8_t *restrict work, const char *canon, uint32_t now)
 {
     uint8_t digest[32];
-    edge_key_digest(s_ctx.store.digest_work, canon, str.len(canon, PROTOCORE_EDGE_KEY_MAX), digest);
-    EdgeEntry *e = edge_store_alloc(&s_ctx.store, canon, ""); // may evict + write-back an L1 victim first
+    EdgeCache.key_digest_args.digest_work = EDGE_CACHE_PROXY_CTX(work)->store.digest_work;
+    EdgeCache.key_digest_args.canon = canon;
+    EdgeCache.key_digest_args.len = str.len(canon, PROTOCORE_EDGE_KEY_MAX);
+    EdgeCache.key_digest_args.digest = digest;
+    EdgeCache.key_digest(edge_cache_work);
+    EdgeCache.store_alloc_args.s = &EDGE_CACHE_PROXY_CTX(work)->store;
+    EdgeCache.store_alloc_args.canon = canon;
+    EdgeCache.store_alloc_args.vary_key = "";
+    EdgeCache.store_alloc(edge_cache_work);
+    EdgeEntry *e = EdgeCache.entry; // may evict + write-back an L1 victim first
     if (!e)
     {
         return NULL;
     }
-    if (!edge_sd_get(s_ctx.store.digest_work, s_ctx.l2, digest, e, s_ctx.sd_buf, sizeof(s_ctx.sd_buf)) ||
-        !str.eq(e->key, canon, sizeof(e->key), PROTO_FALSE))
+    EdgeCacheSd.get_args.entry_buf = EDGE_CACHE_PROXY_CTX(work)->store.digest_work;
+    EdgeCacheSd.get_args.db = EDGE_CACHE_PROXY_CTX(work)->l2;
+    EdgeCacheSd.get_args.digest = digest;
+    EdgeCacheSd.get_args.e = e;
+    EdgeCacheSd.get_args.scratch = EDGE_CACHE_PROXY_CTX(work)->sd_buf;
+    EdgeCacheSd.get_args.scratch_cap = sizeof(EDGE_CACHE_PROXY_CTX(work)->sd_buf);
+    EdgeCacheSd.get(edge_cache_sd_work);
+    if (!EdgeCacheSd.ok || !str.eq(e->key, canon, sizeof(e->key), PROTO_FALSE))
     {
-        edge_store_free_entry(&s_ctx.store, e); // L2 miss or digest collision -> not promoted
+        EdgeCache.store_free_entry_args.s = &EDGE_CACHE_PROXY_CTX(work)->store;
+        EdgeCache.store_free_entry_args.e = e;
+        EdgeCache.store_free_entry(edge_cache_work); // L2 miss or digest collision -> not promoted
         return NULL;
     }
     e->lifetime_s = 0; // force stale: freshness is untrustworthy across a reboot -> caller revalidates
@@ -865,7 +1117,7 @@ static EdgeEntry *try_promote_l2(const char *canon, uint32_t now)
     e->age_hdr = 0;
     e->insert_ms = now;
     e->last_used_ms = now;
-    s_ctx.store.stats.l2_promotes++;
+    EDGE_CACHE_PROXY_CTX(work)->store.stats.l2_promotes++;
     return e;
 }
 #endif
@@ -874,9 +1126,17 @@ static EdgeEntry *try_promote_l2(const char *canon, uint32_t now)
 // fall through (fail open).
 static MwResult edge_cache_mw(uint8_t slot, HttpReq *req)
 {
+    // The signature belongs to whoever dispatches this, so the borrow comes from the
+    // accessor rather than a parameter.
+    uint8_t *restrict work = protocore_edge_cache_proxy_span();
+    if (work == NULL)
+    {
+        return MW_NEXT; // no borrow, so no caching: the request goes on to the route it asked for
+    }
+
     // `registered` is the whole test now: it was always the real question, and the stored server
     // pointer it was AND-ed with was set by the same call that set it.
-    if (!s_ctx.registered || slot >= MAX_CONNS)
+    if (!EDGE_CACHE_PROXY_CTX(work)->registered || slot >= MAX_CONNS)
     {
         return MW_NEXT;
     }
@@ -890,7 +1150,7 @@ static MwResult edge_cache_mw(uint8_t slot, HttpReq *req)
     {
         return MW_NEXT; // never cache authorized/private requests
     }
-    EdgeRouteMap *m = map_match(req->path);
+    EdgeRouteMap *m = map_match(work, req->path);
     if (!m)
     {
         return MW_NEXT; // not a mapped origin
@@ -902,7 +1162,15 @@ static MwResult edge_cache_mw(uint8_t slot, HttpReq *req)
         host = "";
     }
     char canon[PROTOCORE_EDGE_KEY_MAX];
-    if (edge_key_canon("GET", host, req->path, req->query, /*include_query=*/PROTO_TRUE, canon, sizeof(canon)) == 0)
+    EdgeCache.key_canon_args.method = "GET";
+    EdgeCache.key_canon_args.host = host;
+    EdgeCache.key_canon_args.path = req->path;
+    EdgeCache.key_canon_args.query = req->query;
+    EdgeCache.key_canon_args.include_query = /*include_query=*/PROTO_TRUE;
+    EdgeCache.key_canon_args.out = canon;
+    EdgeCache.key_canon_args.out_cap = sizeof(canon);
+    EdgeCache.key_canon(edge_cache_work);
+    if (EdgeCache.n == 0)
     {
         return MW_NEXT; // key too long -> uncacheable, fail open
     }
@@ -911,26 +1179,39 @@ static MwResult edge_cache_mw(uint8_t slot, HttpReq *req)
     // Capture the Range header now, while http_pool[slot] is the client request: a miss serves from the
     // poll after the async fetch has reused that buffer, so serve_hit resolves the window against this copy.
     const char *rh = http_get_header(req, "Range");
-    str.copy(s_ctx.range_hdr[slot], rh ? rh : "", sizeof(s_ctx.range_hdr[slot]));
+    str.copy(EDGE_CACHE_PROXY_CTX(work)->range_hdr[slot], rh ? rh : "",
+             sizeof(EDGE_CACHE_PROXY_CTX(work)->range_hdr[slot]));
 #endif
 
     uint32_t now = Clock.ms;
-    EdgeEntry *e = edge_store_find(&s_ctx.store, canon, req_lookup, req, now);
-    if (e && edge_entry_fresh(e, now))
+    EdgeCache.store_find_args.s = &EDGE_CACHE_PROXY_CTX(work)->store;
+    EdgeCache.store_find_args.canon = canon;
+    EdgeCache.store_find_args.lookup = req_lookup;
+    EdgeCache.store_find_args.ctx = req;
+    EdgeCache.store_find_args.now_ms = now;
+    EdgeCache.store_find(edge_cache_work);
+    EdgeEntry *e = EdgeCache.entry;
+    EdgeCache.entry_fresh_args.e = e;
+    EdgeCache.entry_fresh_args.now_ms = now;
+    EdgeCache.entry_fresh(edge_cache_work);
+    if (e && EdgeCache.ok)
     {
-        s_ctx.store.stats.hits++;
-        serve_hit(slot, e, now, "HIT");
+        EDGE_CACHE_PROXY_CTX(work)->store.stats.hits++;
+        serve_hit(work, slot, e, now, "HIT");
         return MW_HALT;
     }
 #if PROTOCORE_ENABLE_DBM
-    if (!e && s_ctx.l2) // L1 miss: try promoting a reboot-surviving entry from L2 (force-stale -> revalidate)
+    if (!e && EDGE_CACHE_PROXY_CTX(work)
+                  ->l2) // L1 miss: try promoting a reboot-surviving entry from L2 (force-stale -> revalidate)
     {
-        e = try_promote_l2(canon, now);
+        e = try_promote_l2(work, canon, now);
     }
 #endif
-    s_ctx.store.stats.misses++;
-    EdgeEntry *reval = (e && edge_entry_has_validator(e)) ? e : NULL;
-    if (!start_fetch(slot, req, m, canon, reval, now))
+    EDGE_CACHE_PROXY_CTX(work)->store.stats.misses++;
+    EdgeCache.entry_has_validator_args.e = e;
+    EdgeCache.entry_has_validator(edge_cache_work);
+    EdgeEntry *reval = (e && EdgeCache.ok) ? e : NULL;
+    if (!start_fetch(work, slot, req, m, canon, reval, now))
     {
         return MW_NEXT; // no fetch slot / origin open failed -> fail open to normal dispatch
     }
@@ -941,12 +1222,20 @@ static MwResult edge_cache_mw(uint8_t slot, HttpReq *req)
 // owns the slot.
 static proto_bool edge_cache_poll(uint8_t slot)
 {
-    if (slot >= MAX_CONNS || !s_ctx.pending[slot].active)
+    // The signature belongs to whoever dispatches this, so the borrow comes from the
+    // accessor rather than a parameter.
+    uint8_t *restrict work = protocore_edge_cache_proxy_span();
+    if (work == NULL)
+    {
+        return PROTO_FALSE; // no borrow, so no fetch is in flight on this slot
+    }
+
+    if (slot >= MAX_CONNS || !EDGE_CACHE_PROXY_CTX(work)->pending[slot].active)
     {
         return PROTO_FALSE;
     }
-    uint8_t fi = s_ctx.pending[slot].fetch_idx;
-    EdgeFetchSlot *fs = &s_ctx.fetches[fi];
+    uint8_t fi = EDGE_CACHE_PROXY_CTX(work)->pending[slot].fetch_idx;
+    EdgeFetchSlot *fs = &EDGE_CACHE_PROXY_CTX(work)->fetches[fi];
     uint32_t now = Clock.ms;
 
 #if PROTOCORE_ENABLE_EDGE_MESH
@@ -956,32 +1245,40 @@ static proto_bool edge_cache_poll(uint8_t slot)
         ConnPool.active(ConnPool.internal);
         if (!ConnPool.ok) // client vanished mid-query: abort
         {
-            edge_mesh_fetch_end(&fs->mf, &s_ctx.transport);
+            EdgeMesh.fetch_end_args.m = &fs->mf;
+            EdgeMesh.fetch_end_args.t = &EDGE_CACHE_PROXY_CTX(work)->transport;
+            EdgeMesh.fetch_end(edge_mesh_work);
             fs->used = PROTO_FALSE;
-            s_ctx.pending[slot].active = PROTO_FALSE;
+            EDGE_CACHE_PROXY_CTX(work)->pending[slot].active = PROTO_FALSE;
             return PROTO_TRUE;
         }
-        EdgeMeshStatus ms = edge_mesh_fetch_pump(&fs->mf, &s_ctx.transport, now);
+        EdgeMesh.fetch_pump_args.m = &fs->mf;
+        EdgeMesh.fetch_pump_args.t = &EDGE_CACHE_PROXY_CTX(work)->transport;
+        EdgeMesh.fetch_pump_args.now_ms = now;
+        EdgeMesh.fetch_pump(edge_mesh_work);
+        EdgeMeshStatus ms = EdgeMesh.status;
         if (ms == EDGE_MESH_STATUS_PENDING)
         {
             return PROTO_TRUE; // still querying this sibling
         }
-        proto_bool served = (ms == EDGE_MESH_STATUS_HIT) && mesh_store_and_serve(slot, fs, now);
-        edge_mesh_fetch_end(&fs->mf, &s_ctx.transport);
+        proto_bool served = (ms == EDGE_MESH_STATUS_HIT) && mesh_store_and_serve(work, slot, fs, now);
+        EdgeMesh.fetch_end_args.m = &fs->mf;
+        EdgeMesh.fetch_end_args.t = &EDGE_CACHE_PROXY_CTX(work)->transport;
+        EdgeMesh.fetch_end(edge_mesh_work);
         if (served)
         {
-            s_ctx.store.stats.mesh_hits++;
+            EDGE_CACHE_PROXY_CTX(work)->store.stats.mesh_hits++;
             fs->used = PROTO_FALSE;
-            s_ctx.pending[slot].active = PROTO_FALSE;
+            EDGE_CACHE_PROXY_CTX(work)->pending[slot].active = PROTO_FALSE;
             return PROTO_TRUE;
         }
-        if (mesh_advance_or_origin(fs, now)) // try the next sibling, else begin the origin fetch
+        if (mesh_advance_or_origin(work, fs, now)) // try the next sibling, else begin the origin fetch
         {
             return PROTO_TRUE;
         }
         send_text(slot, 502, PROTOCORE_MIME_TEXT_PLAIN, "Bad Gateway"); // no sibling + origin start failed
         fs->used = PROTO_FALSE;
-        s_ctx.pending[slot].active = PROTO_FALSE;
+        EDGE_CACHE_PROXY_CTX(work)->pending[slot].active = PROTO_FALSE;
         return PROTO_TRUE;
     }
 #endif
@@ -991,13 +1288,19 @@ static proto_bool edge_cache_poll(uint8_t slot)
     ConnPool.active(ConnPool.internal);
     if (!ConnPool.ok) // client vanished mid-fetch: abort
     {
-        edge_fetch_end(&fs->f, tport);
+        EdgeFetcher.end_args.f = &fs->f;
+        EdgeFetcher.end_args.t = tport;
+        EdgeFetcher.end(edge_fetch_work);
         fs->used = PROTO_FALSE;
-        s_ctx.pending[slot].active = PROTO_FALSE;
+        EDGE_CACHE_PROXY_CTX(work)->pending[slot].active = PROTO_FALSE;
         return PROTO_TRUE;
     }
 
-    EdgeFetchStatus st = edge_fetch_pump(&fs->f, tport, now);
+    EdgeFetcher.pump_args.f = &fs->f;
+    EdgeFetcher.pump_args.t = tport;
+    EdgeFetcher.pump_args.now_ms = now;
+    EdgeFetcher.pump(edge_fetch_work);
+    EdgeFetchStatus st = EdgeFetcher.status;
     if (st == EDGE_FETCH_STATUS_PENDING)
     {
         return PROTO_TRUE; // still receiving; owns the slot
@@ -1005,19 +1308,21 @@ static proto_bool edge_cache_poll(uint8_t slot)
 
     if (st == EDGE_FETCH_STATUS_DONE)
     {
-        on_fetch_done(slot, fs, now);
+        on_fetch_done(work, slot, fs, now);
     }
     else if (st == EDGE_FETCH_STATUS_FAILED && fs->revalidate && fs->reval_entry)
     {
-        serve_hit(slot, fs->reval_entry, now, "STALE"); // stale-if-error: serve the last good copy
+        serve_hit(work, slot, fs->reval_entry, now, "STALE"); // stale-if-error: serve the last good copy
     }
     else // FAILED miss / OVERSIZE
     {
         send_text(slot, 502, PROTOCORE_MIME_TEXT_PLAIN, "Bad Gateway");
     }
-    edge_fetch_end(&fs->f, tport);
+    EdgeFetcher.end_args.f = &fs->f;
+    EdgeFetcher.end_args.t = tport;
+    EdgeFetcher.end(edge_fetch_work);
     fs->used = PROTO_FALSE;
-    s_ctx.pending[slot].active = PROTO_FALSE;
+    EDGE_CACHE_PROXY_CTX(work)->pending[slot].active = PROTO_FALSE;
     return PROTO_TRUE;
 }
 
@@ -1057,19 +1362,27 @@ typedef struct
 } MeshLookupCtx;
 static const char *mesh_hdr_lookup(void *ctx, const char *name)
 {
+    // The signature belongs to whoever dispatches this, so the borrow comes from the
+    // accessor rather than a parameter.
+    uint8_t *restrict work = protocore_edge_cache_proxy_span();
+    if (work == NULL)
+    {
+        return NULL; // no borrow, so no header is found
+    }
+
     MeshLookupCtx *lc = (MeshLookupCtx *)ctx;
     size_t nl = str.len(name, MAX_KEY_LEN);
     const char *p = lc->blob;
     while (*p)
     {
-        const char *rs =
-            str.find(p, sizeof(s_ctx.mesh_hdrs) - (size_t)(p - lc->blob), "\x1e", sizeof("\x1e"), PROTO_FALSE);
+        const char *rs = str.find(p, sizeof(EDGE_CACHE_PROXY_CTX(work)->mesh_hdrs) - (size_t)(p - lc->blob), "\x1e",
+                                  sizeof("\x1e"), PROTO_FALSE);
         if (!rs)
         {
             break;
         }
-        const char *us = str.find(rs + 1, sizeof(s_ctx.mesh_hdrs) - (size_t)(rs + 1 - lc->blob), "\x1f", sizeof("\x1f"),
-                                  PROTO_FALSE);
+        const char *us = str.find(rs + 1, sizeof(EDGE_CACHE_PROXY_CTX(work)->mesh_hdrs) - (size_t)(rs + 1 - lc->blob),
+                                  "\x1f", sizeof("\x1f"), PROTO_FALSE);
         if (!us)
         {
             break;
@@ -1090,38 +1403,61 @@ static const char *mesh_hdr_lookup(void *ctx, const char *name)
     return NULL;
 }
 
-static MeshConn *mesh_conn_by_slot(uint8_t slot)
+static MeshConn *mesh_conn_by_slot(uint8_t *restrict work, uint8_t slot)
 {
     for (int i = 0; i < PROTOCORE_MESH_MAX_CONNS; i++)
     {
-        if (s_ctx.mesh_conns[i].active && s_ctx.mesh_conns[i].conn_slot == slot)
+        if (EDGE_CACHE_PROXY_CTX(work)->mesh_conns[i].active &&
+            EDGE_CACHE_PROXY_CTX(work)->mesh_conns[i].conn_slot == slot)
         {
-            return &s_ctx.mesh_conns[i];
+            return &EDGE_CACHE_PROXY_CTX(work)->mesh_conns[i];
         }
     }
     return NULL;
 }
 
 // Build the response for a parsed request into mc->outbuf: a HIT carrying a fresh local variant, else a MISS.
-static void mesh_answer(MeshConn *mc, const uint8_t digest[32], const char *canon, uint32_t now)
+static void mesh_answer(uint8_t *restrict work, MeshConn *mc, const uint8_t digest[32], const char *canon, uint32_t now)
 {
     proto_bool hit = PROTO_FALSE;
     uint8_t verify[32];
-    edge_key_digest(s_ctx.store.digest_work, canon, str.len(canon, PROTOCORE_EDGE_KEY_MAX), verify);
+    EdgeCache.key_digest_args.digest_work = EDGE_CACHE_PROXY_CTX(work)->store.digest_work;
+    EdgeCache.key_digest_args.canon = canon;
+    EdgeCache.key_digest_args.len = str.len(canon, PROTOCORE_EDGE_KEY_MAX);
+    EdgeCache.key_digest_args.digest = verify;
+    EdgeCache.key_digest(edge_cache_work);
     if (mem.cmp(verify, digest, 32) == 0) // integrity: the canonical key must hash to the advertised digest
     {
         MeshLookupCtx lc;
-        lc.blob = s_ctx.mesh_hdrs;
-        EdgeEntry *e = edge_store_find(&s_ctx.store, canon, mesh_hdr_lookup, &lc, now);
-        if (e && edge_entry_fresh(e, now))
+        lc.blob = EDGE_CACHE_PROXY_CTX(work)->mesh_hdrs;
+        EdgeCache.store_find_args.s = &EDGE_CACHE_PROXY_CTX(work)->store;
+        EdgeCache.store_find_args.canon = canon;
+        EdgeCache.store_find_args.lookup = mesh_hdr_lookup;
+        EdgeCache.store_find_args.ctx = &lc;
+        EdgeCache.store_find_args.now_ms = now;
+        EdgeCache.store_find(edge_cache_work);
+        EdgeEntry *e = EdgeCache.entry;
+        EdgeCache.entry_fresh_args.e = e;
+        EdgeCache.entry_fresh_args.now_ms = now;
+        EdgeCache.entry_fresh(edge_cache_work);
+        if (e && EdgeCache.ok)
         {
-            long age = edge_current_age(e->initial_age, e->insert_ms, now);
+            EdgeCache.current_age_args.initial_age = e->initial_age;
+            EdgeCache.current_age_args.insert_ms = e->insert_ms;
+            EdgeCache.current_age_args.now_ms = now;
+            EdgeCache.current_age(edge_cache_work);
+            long age = EdgeCache.secs;
             if (age < 0)
             {
                 age = 0;
             }
             // Serialize the entry directly after the 6-byte response header to avoid a large stack temp.
-            size_t fn = edge_mesh_serialize_entry(e, age, mc->outbuf + 6, sizeof(mc->outbuf) - 6);
+            EdgeMesh.serialize_entry_args.e = e;
+            EdgeMesh.serialize_entry_args.current_age = age;
+            EdgeMesh.serialize_entry_args.out = mc->outbuf + 6;
+            EdgeMesh.serialize_entry_args.cap = sizeof(mc->outbuf) - 6;
+            EdgeMesh.serialize_entry(edge_mesh_work);
+            size_t fn = EdgeMesh.n;
             if (fn > 0 && fn <= 0xFFFFu)
             {
                 mc->outbuf[0] = PROTOCORE_EDGE_MESH_MAGIC0;
@@ -1137,7 +1473,13 @@ static void mesh_answer(MeshConn *mc, const uint8_t digest[32], const char *cano
     }
     if (!hit)
     {
-        mc->out_len = (uint16_t)edge_mesh_build_response(PROTO_FALSE, NULL, 0, mc->outbuf, sizeof(mc->outbuf));
+        EdgeMesh.build_response_args.hit = PROTO_FALSE;
+        EdgeMesh.build_response_args.entry = NULL;
+        EdgeMesh.build_response_args.entry_len = 0;
+        EdgeMesh.build_response_args.out = mc->outbuf;
+        EdgeMesh.build_response_args.cap = sizeof(mc->outbuf);
+        EdgeMesh.build_response(edge_mesh_work);
+        mc->out_len = (uint16_t)EdgeMesh.n;
     }
     mc->out_off = 0;
     mc->responded = PROTO_TRUE;
@@ -1151,7 +1493,7 @@ static void mesh_serve_end(MeshConn *mc)
 }
 
 // Drive one serve connection: accumulate the request, answer it, then page the response out with backpressure.
-static void mesh_serve_pump(MeshConn *mc)
+static void mesh_serve_pump(uint8_t *restrict work, MeshConn *mc)
 {
     uint8_t slot = mc->conn_slot;
     if (!mc->responded)
@@ -1168,8 +1510,15 @@ static void mesh_serve_pump(MeshConn *mc)
         }
         uint8_t digest[32];
         char canon[PROTOCORE_EDGE_KEY_MAX];
-        EdgeMeshParse p = edge_mesh_parse_request(mc->reqbuf, mc->req_len, digest, canon, sizeof(canon),
-                                                  s_ctx.mesh_hdrs, sizeof(s_ctx.mesh_hdrs));
+        EdgeMesh.parse_request_args.buf = mc->reqbuf;
+        EdgeMesh.parse_request_args.len = mc->req_len;
+        EdgeMesh.parse_request_args.digest_out = digest;
+        EdgeMesh.parse_request_args.canon_out = canon;
+        EdgeMesh.parse_request_args.canon_cap = sizeof(canon);
+        EdgeMesh.parse_request_args.hdrs_out = EDGE_CACHE_PROXY_CTX(work)->mesh_hdrs;
+        EdgeMesh.parse_request_args.hdrs_cap = sizeof(EDGE_CACHE_PROXY_CTX(work)->mesh_hdrs);
+        EdgeMesh.parse_request(edge_mesh_work);
+        EdgeMeshParse p = EdgeMesh.parse;
         if (p == EDGE_MESH_PARSE_INCOMPLETE)
         {
             if (mc->req_len >= sizeof(mc->reqbuf))
@@ -1183,7 +1532,7 @@ static void mesh_serve_pump(MeshConn *mc)
             mesh_serve_end(mc); // malformed
             return;
         }
-        mesh_answer(mc, digest, canon, Clock.ms);
+        mesh_answer(work, mc, digest, canon, Clock.ms);
     }
     while (mc->out_off < mc->out_len)
     {
@@ -1219,11 +1568,19 @@ static void mesh_serve_pump(MeshConn *mc)
 
 static void mesh_on_accept(uint8_t slot)
 {
+    // The signature belongs to whoever dispatches this, so the borrow comes from the
+    // accessor rather than a parameter.
+    uint8_t *restrict work = protocore_edge_cache_proxy_span();
+    if (work == NULL)
+    {
+        return;
+    }
+
     for (int i = 0; i < PROTOCORE_MESH_MAX_CONNS; i++)
     {
-        if (!s_ctx.mesh_conns[i].active)
+        if (!EDGE_CACHE_PROXY_CTX(work)->mesh_conns[i].active)
         {
-            MeshConn *mc = &s_ctx.mesh_conns[i];
+            MeshConn *mc = &EDGE_CACHE_PROXY_CTX(work)->mesh_conns[i];
             mc->active = PROTO_TRUE;
             mc->conn_slot = slot;
             mc->req_len = 0;
@@ -1239,31 +1596,55 @@ static void mesh_on_accept(uint8_t slot)
 
 static void mesh_on_data(uint8_t slot)
 {
-    MeshConn *mc = mesh_conn_by_slot(slot);
+    // The signature belongs to whoever dispatches this, so the borrow comes from the
+    // accessor rather than a parameter.
+    uint8_t *restrict work = protocore_edge_cache_proxy_span();
+    if (work == NULL)
+    {
+        return;
+    }
+
+    MeshConn *mc = mesh_conn_by_slot(work, slot);
     if (mc)
     {
-        mesh_serve_pump(mc);
+        mesh_serve_pump(work, mc);
     }
 }
 
 static void mesh_on_poll(uint8_t slot)
 {
+    // The signature belongs to whoever dispatches this, so the borrow comes from the
+    // accessor rather than a parameter.
+    uint8_t *restrict work = protocore_edge_cache_proxy_span();
+    if (work == NULL)
+    {
+        return;
+    }
+
     ConnPool.slot = slot;
     ConnPool.active(ConnPool.internal);
     if (!ConnPool.ok)
     {
         return;
     }
-    MeshConn *mc = mesh_conn_by_slot(slot);
+    MeshConn *mc = mesh_conn_by_slot(work, slot);
     if (mc)
     {
-        mesh_serve_pump(mc);
+        mesh_serve_pump(work, mc);
     }
 }
 
 static void mesh_on_close(uint8_t slot)
 {
-    MeshConn *mc = mesh_conn_by_slot(slot);
+    // The signature belongs to whoever dispatches this, so the borrow comes from the
+    // accessor rather than a parameter.
+    uint8_t *restrict work = protocore_edge_cache_proxy_span();
+    if (work == NULL)
+    {
+        return;
+    }
+
+    MeshConn *mc = mesh_conn_by_slot(work, slot);
     if (mc)
     {
         mc->active = PROTO_FALSE; // the transport owns the closing slot
@@ -1278,79 +1659,114 @@ static const ProtoHandler s_mesh_handler = {
 
 // --- public API ----------------------------------------------------------------------------------
 
-void protocore_edge_cache_enable(void)
+// --- the program's shared state, beside the namespace not on it -------------
+
+// The one owned instance, private to this TU: the pointer to the bytes this module took for
+// itself. A caller that hands in its own borrow never reaches it.
+typedef struct
 {
-    edge_store_init(&s_ctx.store);
+    uint8_t *span; ///< PROTOCORE_EDGE_PROXY_BORROW persistent PLAINTEXT bytes, or null while the pool was short
+} EdgeProxyOwnCtx;
+static EdgeProxyOwnCtx s_own;
+
+// Not an entry: an entry takes a borrow and this is where that borrow comes from.
+uint8_t *protocore_edge_cache_proxy_span(void)
+{
+    if (s_own.span == NULL)
+    {
+        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_EDGE_PROXY_BORROW);
+        if (span.ok(sp))
+        {
+            s_own.span = sp.buf;
+        }
+    }
+    return s_own.span; // null while the pool was short, which every entry refuses
+}
+
+static void edge_cache_proxy_enable(uint8_t *restrict work)
+{
+
+    EdgeCache.store_init_args.s = &EDGE_CACHE_PROXY_CTX(work)->store;
+    EdgeCache.store_init(edge_cache_work);
     for (int i = 0; i < PROTOCORE_EDGE_FETCH_SLOTS; i++)
     {
-        s_ctx.fetches[i].used = PROTO_FALSE;
-        s_ctx.fetches[i].f.cid = -1;
+        EDGE_CACHE_PROXY_CTX(work)->fetches[i].used = PROTO_FALSE;
+        EDGE_CACHE_PROXY_CTX(work)->fetches[i].f.cid = -1;
     }
     for (int i = 0; i < MAX_CONNS; i++)
     {
-        s_ctx.pending[i].active = PROTO_FALSE;
-        s_ctx.serve[i].active = PROTO_FALSE;
-        s_ctx.serve[i].entry = NULL;
+        EDGE_CACHE_PROXY_CTX(work)->pending[i].active = PROTO_FALSE;
+        EDGE_CACHE_PROXY_CTX(work)->serve[i].active = PROTO_FALSE;
+        EDGE_CACHE_PROXY_CTX(work)->serve[i].entry = NULL;
 #if PROTOCORE_ENABLE_RANGE
-        s_ctx.range_hdr[i][0] = '\0';
+        EDGE_CACHE_PROXY_CTX(work)->range_hdr[i][0] = '\0';
 #endif
     }
-    s_ctx.transport.open = t_open;
-    s_ctx.transport.connected = t_connected;
-    s_ctx.transport.send = t_send;
-    s_ctx.transport.read = t_read;
-    s_ctx.transport.closed = t_closed;
-    s_ctx.transport.close = t_close;
-    s_ctx.transport.ctx = NULL;
+    EDGE_CACHE_PROXY_CTX(work)->transport.open = t_open;
+    EDGE_CACHE_PROXY_CTX(work)->transport.connected = t_connected;
+    EDGE_CACHE_PROXY_CTX(work)->transport.send = t_send;
+    EDGE_CACHE_PROXY_CTX(work)->transport.read = t_read;
+    EDGE_CACHE_PROXY_CTX(work)->transport.closed = t_closed;
+    EDGE_CACHE_PROXY_CTX(work)->transport.close = t_close;
+    EDGE_CACHE_PROXY_CTX(work)->transport.ctx = NULL;
 #if PROTOCORE_ENABLE_EDGE_ORIGIN_TLS
-    s_ctx.transport_tls.open = t_tls_open;
-    s_ctx.transport_tls.connected = t_tls_connected;
-    s_ctx.transport_tls.send = t_tls_send;
-    s_ctx.transport_tls.read = t_tls_read;
-    s_ctx.transport_tls.closed = t_tls_closed;
-    s_ctx.transport_tls.close = t_tls_close;
-    s_ctx.transport_tls.ctx = NULL;
-    s_ctx.tls_cid = -1;
-    s_ctx.tls_peer_closed = PROTO_FALSE;
-    s_ctx.tls_ready = PROTO_FALSE;
+    edge_tls()->transport_tls.open = t_tls_open;
+    edge_tls()->transport_tls.connected = t_tls_connected;
+    edge_tls()->transport_tls.send = t_tls_send;
+    edge_tls()->transport_tls.read = t_tls_read;
+    edge_tls()->transport_tls.closed = t_tls_closed;
+    edge_tls()->transport_tls.close = t_tls_close;
+    edge_tls()->transport_tls.ctx = NULL;
+    edge_tls()->tls_cid = -1;
+    edge_tls()->tls_peer_closed = PROTO_FALSE;
+    edge_tls()->tls_ready = PROTO_FALSE;
 #endif
 #if PROTOCORE_ENABLE_DBM
-    s_ctx.store.on_evict = s_ctx.l2 ? edge_on_evict : NULL; // re-arm write-back after edge_store_init
-    s_ctx.store.evict_ctx = NULL;
+    EDGE_CACHE_PROXY_CTX(work)->store.on_evict =
+        EDGE_CACHE_PROXY_CTX(work)->l2 ? edge_on_evict : NULL; // re-arm write-back after edge_store_init
+    EDGE_CACHE_PROXY_CTX(work)->store.evict_ctx = NULL;
 #endif
 #if PROTOCORE_ENABLE_EDGE_MESH
     for (int i = 0; i < PROTOCORE_MESH_MAX_CONNS; i++)
     {
-        s_ctx.mesh_conns[i].active = PROTO_FALSE;
+        EDGE_CACHE_PROXY_CTX(work)->mesh_conns[i].active = PROTO_FALSE;
     }
 #endif
-    if (!s_ctx.registered)
+    if (!EDGE_CACHE_PROXY_CTX(work)->registered)
     {
         use(edge_cache_mw);
         Http.edge_poll = edge_cache_poll;
         Http.set_edge_poll(Http.internal);
-        s_ctx.registered = PROTO_TRUE;
+        EDGE_CACHE_PROXY_CTX(work)->registered = PROTO_TRUE;
     }
 }
 
 #if PROTOCORE_ENABLE_DBM
-void protocore_edge_cache_bind_sd(struct protocore_dbm *dbm)
+static void edge_cache_proxy_bind_sd(uint8_t *restrict work)
 {
-    s_ctx.l2 = dbm;
-    s_ctx.store.on_evict = dbm ? edge_on_evict : NULL;
-    s_ctx.store.evict_ctx = NULL;
+    struct protocore_dbm *dbm = EdgeProxy.bind_sd_args.dbm;
+
+    EDGE_CACHE_PROXY_CTX(work)->l2 = dbm;
+    EDGE_CACHE_PROXY_CTX(work)->store.on_evict = dbm ? edge_on_evict : NULL;
+    EDGE_CACHE_PROXY_CTX(work)->store.evict_ctx = NULL;
 }
 #endif
 
-proto_bool protocore_edge_cache_map(const char *path_prefix, const char *origin_base_url)
+static void edge_cache_proxy_map(uint8_t *restrict work)
 {
+    const char *path_prefix = EdgeProxy.map_args.path_prefix;
+    const char *origin_base_url = EdgeProxy.map_args.origin_base_url;
+
     if (!path_prefix || !origin_base_url)
     {
-        return PROTO_FALSE;
+        EdgeProxy.ok = PROTO_FALSE;
+        return;
     }
-    if (str.len(path_prefix, sizeof(s_ctx.maps[0].prefix)) >= sizeof(s_ctx.maps[0].prefix))
+    if (str.len(path_prefix, sizeof(EDGE_CACHE_PROXY_CTX(work)->maps[0].prefix)) >=
+        sizeof(EDGE_CACHE_PROXY_CTX(work)->maps[0].prefix))
     {
-        return PROTO_FALSE;
+        EdgeProxy.ok = PROTO_FALSE;
+        return;
     }
     char host[PROTOCORE_EDGE_ORIGIN_URL_MAX];
     char ignore_path[256];
@@ -1362,145 +1778,218 @@ proto_bool protocore_edge_cache_map(const char *path_prefix, const char *origin_
     HttpClient.parse_target_uri(HttpClient.internal);
     if (!HttpClient.ok)
     {
-        return PROTO_FALSE;
+        EdgeProxy.ok = PROTO_FALSE;
+        return;
     }
     const proto_bool https = HttpClient.target.https;
     const uint16_t port = HttpClient.target.port;
 #if !PROTOCORE_ENABLE_EDGE_ORIGIN_TLS
     if (https)
     {
-        return PROTO_FALSE; // plaintext origins only unless PROTOCORE_ENABLE_EDGE_ORIGIN_TLS is set
+        EdgeProxy.ok = PROTO_FALSE;
+        return; // plaintext origins only unless PROTOCORE_ENABLE_EDGE_ORIGIN_TLS is set
     }
 #endif
     for (int i = 0; i < PROTOCORE_EDGE_MAP_MAX; i++)
     {
-        if (s_ctx.maps[i].used)
+        if (EDGE_CACHE_PROXY_CTX(work)->maps[i].used)
         {
             continue;
         }
-        str.copy(s_ctx.maps[i].prefix, path_prefix, sizeof(s_ctx.maps[i].prefix));
-        str.copy(s_ctx.maps[i].origin_host, host, sizeof(s_ctx.maps[i].origin_host));
-        s_ctx.maps[i].origin_port = port;
-        s_ctx.maps[i].https = https;
-        s_ctx.maps[i].used = PROTO_TRUE;
-        return PROTO_TRUE;
+        str.copy(EDGE_CACHE_PROXY_CTX(work)->maps[i].prefix, path_prefix,
+                 sizeof(EDGE_CACHE_PROXY_CTX(work)->maps[i].prefix));
+        str.copy(EDGE_CACHE_PROXY_CTX(work)->maps[i].origin_host, host,
+                 sizeof(EDGE_CACHE_PROXY_CTX(work)->maps[i].origin_host));
+        EDGE_CACHE_PROXY_CTX(work)->maps[i].origin_port = port;
+        EDGE_CACHE_PROXY_CTX(work)->maps[i].https = https;
+        EDGE_CACHE_PROXY_CTX(work)->maps[i].used = PROTO_TRUE;
+        EdgeProxy.ok = PROTO_TRUE;
+        return;
     }
-    return PROTO_FALSE; // map table full
+    EdgeProxy.ok = PROTO_FALSE; // map table full
 }
 
 #if PROTOCORE_ENABLE_EDGE_ORIGIN_TLS
-void protocore_edge_cache_set_origin_ca(const uint8_t *ca_pem, size_t len)
+static void edge_cache_proxy_set_origin_ca(uint8_t *restrict work)
 {
+    (void)work;
+    const uint8_t *ca_pem = EdgeProxy.set_origin_ca_args.ca_pem;
+    size_t len = EdgeProxy.set_origin_ca_args.len;
+
     protocore_tls_client_set_ca(ca_pem, len); // shared client-TLS trust store (also used by MQTTS/wss/HTTP client)
 }
-void protocore_edge_cache_set_origin_pin(const uint8_t sha256[32])
+static void edge_cache_proxy_set_origin_pin(uint8_t *restrict work)
 {
+    (void)work;
+    const uint8_t *sha256 = EdgeProxy.set_origin_pin_args.sha256;
+
     protocore_tls_client_set_pin(sha256);
 }
 #endif
 
 #if PROTOCORE_ENABLE_EDGE_MESH
-proto_bool protocore_edge_cache_add_peer(const char *host, uint16_t port)
+static void edge_cache_proxy_add_peer(uint8_t *restrict work)
 {
+    const char *host = EdgeProxy.add_peer_args.host;
+    uint16_t port = EdgeProxy.add_peer_args.port;
+
     if (!host)
     {
-        return PROTO_FALSE;
+        EdgeProxy.ok = PROTO_FALSE;
+        return;
     }
     size_t hl = str.len(host, PROTOCORE_MESH_HOST_MAX + 1);
     if (hl == 0 || hl >= PROTOCORE_MESH_HOST_MAX)
     {
-        return PROTO_FALSE;
+        EdgeProxy.ok = PROTO_FALSE;
+        return;
     }
     for (int i = 0; i < PROTOCORE_MESH_MAX_PEERS; i++)
     {
-        if (!s_ctx.peers[i].used)
+        if (!EDGE_CACHE_PROXY_CTX(work)->peers[i].used)
         {
-            mem.cpy(s_ctx.peers[i].host, host, hl + 1);
-            s_ctx.peers[i].port = port;
-            s_ctx.peers[i].used = PROTO_TRUE;
-            return PROTO_TRUE;
+            mem.cpy(EDGE_CACHE_PROXY_CTX(work)->peers[i].host, host, hl + 1);
+            EDGE_CACHE_PROXY_CTX(work)->peers[i].port = port;
+            EDGE_CACHE_PROXY_CTX(work)->peers[i].used = PROTO_TRUE;
+            EdgeProxy.ok = PROTO_TRUE;
+            return;
         }
     }
-    return PROTO_FALSE; // peer table full
+    EdgeProxy.ok = PROTO_FALSE; // peer table full
 }
 
-void protocore_edge_cache_mesh_serve(void)
+static void edge_cache_proxy_mesh_serve(uint8_t *restrict work)
 {
-    if (!s_ctx.mesh_registered)
+
+    if (!EDGE_CACHE_PROXY_CTX(work)->mesh_registered)
     {
         Session.proto->proto = PROTO_MESH;
         Session.proto->h = &s_mesh_handler;
         Session.proto->add(Session.proto->internal);
-        s_ctx.mesh_registered = PROTO_TRUE;
+        EDGE_CACHE_PROXY_CTX(work)->mesh_registered = PROTO_TRUE;
     }
 }
 #endif // PROTOCORE_ENABLE_EDGE_MESH
 
-void protocore_edge_cache_reset(void)
+static void edge_cache_proxy_reset(uint8_t *restrict work)
 {
-    edge_store_init(&s_ctx.store);
+
+    EdgeCache.store_init_args.s = &EDGE_CACHE_PROXY_CTX(work)->store;
+    EdgeCache.store_init(edge_cache_work);
 #if PROTOCORE_ENABLE_DBM
-    if (s_ctx.l2)
+    if (EDGE_CACHE_PROXY_CTX(work)->l2)
     {
-        edge_sd_purge_all(s_ctx.l2);
-        s_ctx.store.on_evict = edge_on_evict; // edge_store_init cleared it - re-arm the write-back hook
+        EdgeCacheSd.purge_all_args.db = EDGE_CACHE_PROXY_CTX(work)->l2;
+        EdgeCacheSd.purge_all(edge_cache_sd_work);
+        EDGE_CACHE_PROXY_CTX(work)->store.on_evict =
+            edge_on_evict; // edge_store_init cleared it - re-arm the write-back hook
     }
 #endif
     for (int i = 0; i < PROTOCORE_EDGE_MAP_MAX; i++)
     {
-        s_ctx.maps[i].used = PROTO_FALSE;
+        EDGE_CACHE_PROXY_CTX(work)->maps[i].used = PROTO_FALSE;
     }
 #if PROTOCORE_ENABLE_EDGE_MESH
     for (int i = 0; i < PROTOCORE_MESH_MAX_PEERS; i++)
     {
-        s_ctx.peers[i].used = PROTO_FALSE;
+        EDGE_CACHE_PROXY_CTX(work)->peers[i].used = PROTO_FALSE;
     }
 #endif
 }
 
-proto_bool protocore_edge_cache_purge(const char *canonical_key)
+static void edge_cache_proxy_purge(uint8_t *restrict work)
 {
+    const char *canonical_key = EdgeProxy.purge_args.canonical_key;
+
     if (!canonical_key)
     {
-        return PROTO_FALSE;
+        EdgeProxy.ok = PROTO_FALSE;
+        return;
     }
-    proto_bool purged = edge_store_purge(&s_ctx.store, canonical_key) > 0;
+    EdgeCache.store_purge_args.s = &EDGE_CACHE_PROXY_CTX(work)->store;
+    EdgeCache.store_purge_args.canon = canonical_key;
+    EdgeCache.store_purge(edge_cache_work);
+    proto_bool purged = EdgeCache.count > 0;
 #if PROTOCORE_ENABLE_DBM
-    if (s_ctx.l2)
+    if (EDGE_CACHE_PROXY_CTX(work)->l2)
     {
         uint8_t digest[32];
-        edge_key_digest(s_ctx.store.digest_work, canonical_key, str.len(canonical_key, PROTOCORE_EDGE_KEY_MAX), digest);
-        if (edge_sd_del(s_ctx.l2, digest))
+        EdgeCache.key_digest_args.digest_work = EDGE_CACHE_PROXY_CTX(work)->store.digest_work;
+        EdgeCache.key_digest_args.canon = canonical_key;
+        EdgeCache.key_digest_args.len = str.len(canonical_key, PROTOCORE_EDGE_KEY_MAX);
+        EdgeCache.key_digest_args.digest = digest;
+        EdgeCache.key_digest(edge_cache_work);
+        EdgeCacheSd.del_args.db = EDGE_CACHE_PROXY_CTX(work)->l2;
+        EdgeCacheSd.del_args.digest = digest;
+        EdgeCacheSd.del(edge_cache_sd_work);
+        if (EdgeCacheSd.ok)
         {
             purged = PROTO_TRUE;
         }
     }
 #endif
-    return purged;
+    EdgeProxy.ok = purged;
 }
 
-uint32_t protocore_edge_cache_purge_prefix(const char *path_prefix)
+static void edge_cache_proxy_purge_prefix(uint8_t *restrict work)
 {
+    const char *path_prefix = EdgeProxy.purge_prefix_args.path_prefix;
+
     if (!path_prefix)
     {
-        return 0;
+        EdgeProxy.n = 0;
+        return;
     }
-    uint32_t n = edge_store_purge_prefix(&s_ctx.store, path_prefix);
+    EdgeCache.store_purge_prefix_args.s = &EDGE_CACHE_PROXY_CTX(work)->store;
+    EdgeCache.store_purge_prefix_args.prefix = path_prefix;
+    EdgeCache.store_purge_prefix(edge_cache_work);
+    uint32_t n = EdgeCache.count;
 #if PROTOCORE_ENABLE_DBM
-    if (s_ctx.l2)
+    if (EDGE_CACHE_PROXY_CTX(work)->l2)
     {
-        n += edge_sd_purge_prefix(s_ctx.l2, path_prefix, s_ctx.sd_buf, sizeof(s_ctx.sd_buf));
+        EdgeCacheSd.purge_prefix_args.db = EDGE_CACHE_PROXY_CTX(work)->l2;
+        EdgeCacheSd.purge_prefix_args.path_prefix = path_prefix;
+        EdgeCacheSd.purge_prefix_args.scratch = EDGE_CACHE_PROXY_CTX(work)->sd_buf;
+        EdgeCacheSd.purge_prefix_args.scratch_cap = sizeof(EDGE_CACHE_PROXY_CTX(work)->sd_buf);
+        EdgeCacheSd.purge_prefix(edge_cache_sd_work);
+        n += EdgeCacheSd.count;
     }
 #endif
-    return n;
+    EdgeProxy.n = n;
 }
 
-void protocore_edge_cache_stats(EdgeCacheStats *out)
+static void edge_cache_proxy_stats(uint8_t *restrict work)
 {
+    EdgeCacheStats *out = EdgeProxy.stats_args.out;
+
     if (out)
     {
-        *out = s_ctx.store.stats;
+        *out = EDGE_CACHE_PROXY_CTX(work)->store.stats;
     }
 }
+
+EdgeProxyNs EdgeProxy = {.enable = edge_cache_proxy_enable,
+                         .map = edge_cache_proxy_map,
+#if PROTOCORE_ENABLE_EDGE_ORIGIN_TLS
+                         .set_origin_ca = edge_cache_proxy_set_origin_ca,
+#endif
+#if PROTOCORE_ENABLE_EDGE_ORIGIN_TLS
+                         .set_origin_pin = edge_cache_proxy_set_origin_pin,
+#endif
+#if PROTOCORE_ENABLE_DBM
+                         .bind_sd = edge_cache_proxy_bind_sd,
+#endif
+#if PROTOCORE_ENABLE_EDGE_MESH
+                         .add_peer = edge_cache_proxy_add_peer,
+#endif
+#if PROTOCORE_ENABLE_EDGE_MESH
+                         .mesh_serve = edge_cache_proxy_mesh_serve,
+#endif
+                         .reset = edge_cache_proxy_reset,
+                         .purge = edge_cache_proxy_purge,
+                         .purge_prefix = edge_cache_proxy_purge_prefix,
+                         .stats = edge_cache_proxy_stats};
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_EDGE_CACHE

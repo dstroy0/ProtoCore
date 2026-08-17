@@ -27,14 +27,19 @@
 #ifndef PROTOCORE_TLS13_MSG_H
 #define PROTOCORE_TLS13_MSG_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if (PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_TLS_SOFTWARE)
 
 PROTOCORE_BEGIN_DECLS
+
+
+
+
 
 // Shared by the HTTP/3 (QUIC) handshake and the DTLS 1.3 handshake: both carry the same TLS 1.3
 // messages, so this module compiles for either. The DTLS-specific additions (HelloRetryRequest, the
 // cookie extension, the sec 4.4.1 message_hash) are used by the DTLS handshake but are valid TLS 1.3.
-#if (PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_TLS_SOFTWARE)
 
 /** @brief TLS handshake message types (RFC 8446 sec 4). */
 #define TLS_HS_CLIENT_HELLO 1

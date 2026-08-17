@@ -259,6 +259,8 @@ typedef struct
  * @var WsNs::message_handler  the message handler an id names, or NULL
  * @var WsNs::close_handler    the close handler an id names, or NULL
  * @var WsNs::route_add        record one route's handlers
+ * @var WsNs::route_reset      empty the handler table; a route holds the id an add returned, so
+ *                             this empties with the routes
  * @var WsNs::route_connect    the connect handler an id names
  * @var WsNs::route_message    the message handler an id names
  * @var WsNs::route_close      the close handler an id names
@@ -301,6 +303,7 @@ typedef struct
     WsCloseHandler close_handler;
 
     void (*const route_add)(uint8_t *restrict work);
+    void (*const route_reset)(uint8_t *restrict work);
     void (*const route_connect)(uint8_t *restrict work);
     void (*const route_message)(uint8_t *restrict work);
     void (*const route_close)(uint8_t *restrict work);

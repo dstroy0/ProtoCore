@@ -26,59 +26,150 @@
 #ifndef PROTOCORE_MPR121_H
 #define PROTOCORE_MPR121_H
 
-#include "protocore_config.h" // the entry point: protocore_types.h for the widths and PROTOCORE_INLINE
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_MPR121
 
 PROTOCORE_BEGIN_DECLS
 
-/** @brief Sense electrodes on the MPR121 (ELE0..ELE11). */
+// PROTOCORE_MPR121_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
+// it into its arena. A caller takes them once and passes the pointer to every call. How they
+// are carved is this module's and is never named here.
+
 #define MPR121_ELECTRODES 12
 
-/** @brief Largest init sequence in bytes: (17 fixed + 2*12 threshold) pairs * 2 bytes. */
 #define MPR121_INIT_MAX 82
 
+/** @brief What touched takes: status_lo, status_hi. */
+typedef struct
+{
+    uint8_t status_lo;
+    uint8_t status_hi;
+} Mpr121TouchedArgs;
+
+/** @brief What is_touched takes: mask, e. */
+typedef struct
+{
+    uint16_t mask;
+    uint8_t e;
+} Mpr121IsTouchedArgs;
+
+/** @brief What proximity takes: status_hi. */
+typedef struct
+{
+    uint8_t status_hi;
+} Mpr121ProximityArgs;
+
+/** @brief What overcurrent takes: status_hi. */
+typedef struct
+{
+    uint8_t status_hi;
+} Mpr121OvercurrentArgs;
+
+/** @brief What word10 takes: lsb, msb. */
+typedef struct
+{
+    uint8_t lsb;
+    uint8_t msb;
+} Mpr121Word10Args;
+
+/** @brief What build_init takes: buf, cap, n_electrodes, touch_thr, ... */
+typedef struct
+{
+    uint8_t *buf;
+    size_t cap;
+    uint8_t n_electrodes;
+    uint8_t touch_thr;
+    uint8_t release_thr;
+} Mpr121BuildInitArgs;
+
+/** @brief What begin takes: addr. */
+typedef struct
+{
+    uint8_t addr;
+} Mpr121BeginArgs;
+
+/** @brief What read_filtered takes: e. */
+typedef struct
+{
+    uint8_t e;
+} Mpr121ReadFilteredArgs;
+
 /**
- * @brief Decode the 12-electrode touch bitmask from the two status registers (0x00 low, 0x01
- * high). Bit i (0..11) is set when electrode i is touched; proximity (bit 12) and the
- * over-current flag are masked out (see ::protocore_mpr121_proximity / ::protocore_mpr121_overcurrent).
- */
-uint16_t protocore_mpr121_touched(uint8_t status_lo, uint8_t status_hi);
-
-/** @brief True if electrode @p e (0..11) is touched in a mask from ::protocore_mpr121_touched. */
-proto_bool protocore_mpr121_is_touched(uint16_t mask, uint8_t e);
-
-/** @brief True if the proximity electrode (status bit 12) is active. */
-proto_bool protocore_mpr121_proximity(uint8_t status_hi);
-
-/** @brief True if the over-current flag (status bit 15) is set (wiring fault / short). */
-proto_bool protocore_mpr121_overcurrent(uint8_t status_hi);
-
-/** @brief Combine a little-endian LSB/MSB register pair into a 10-bit value (filtered/baseline). */
-uint16_t protocore_mpr121_word10(uint8_t lsb, uint8_t msb);
-
-/**
- * @brief Build the MPR121 bring-up sequence as consecutive `(register, value)` byte pairs.
+ * @brief NXP MPR121 12-channel capacitive-touch controller codec (PROTOCORE_ENABLE_MPR121).
  *
- * Emits: soft reset, ECR stop, the NXP rising/falling/touched filter defaults, per-electrode
- * touch/release thresholds for @p n_electrodes, debounce, CONFIG1/CONFIG2, and finally the ECR
- * that enables @p n_electrodes with baseline tracking. Replay each pair as an I2C register
- * write, in order (the ECR-start pair must be written last).
- * @return the number of bytes written (pairs * 2), or 0 if @p cap is too small / args invalid.
+ * A caller sets the members a call takes, invokes it through ::Mpr121 with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   Mpr121.touched_args.status_lo = ...;
+ *   Mpr121.touched_args.status_hi = ...;
+ *   Mpr121.touched(work);
+ *   // Mpr121.value is what the call reports
+ *
+ * @var Mpr121Ns::touched_args  what touched takes: status_lo, status_hi
+ * @var Mpr121Ns::is_touched_args  what is_touched takes: mask, e
+ * @var Mpr121Ns::proximity_args  what proximity takes: status_hi
+ * @var Mpr121Ns::overcurrent_args  what overcurrent takes: status_hi
+ * @var Mpr121Ns::word10_args  what word10 takes: lsb, msb
+ * @var Mpr121Ns::build_init_args  what build_init takes: buf, cap, n_electrodes, touch_thr,
+ * @var Mpr121Ns::begin_args  what begin takes: addr
+ * @var Mpr121Ns::read_filtered_args  what read_filtered takes: e
+ * @var Mpr121Ns::ok  a call's true/false outcome
+ * @var Mpr121Ns::value  the value a call reports
+ * @var Mpr121Ns::n  the number of bytes written (pairs * 2), or 0 if cap is too small / ...
+ * @var Mpr121Ns::touched  decode the 12-electrode touch bitmask from the two status registers ...
+ * @var Mpr121Ns::is_touched  true if electrode e (0..11) is touched in a mask from ...
+ * @var Mpr121Ns::proximity  true if the proximity electrode (status bit 12) is active
+ * @var Mpr121Ns::overcurrent  true if the over-current flag (status bit 15) is set (wiring fault ...
+ * @var Mpr121Ns::word10  combine a little-endian LSB/MSB register pair into a 10-bit value ...
+ * @var Mpr121Ns::build_init  build the MPR121 bring-up sequence as consecutive `(register, ...
+ * @var Mpr121Ns::begin  reset + configure the MPR121 at addr over I2C. true if it ...
+ * @var Mpr121Ns::read_touched  read the current 12-electrode touch bitmask (0 if the device is ...
+ * @var Mpr121Ns::read_filtered  read electrode e's 10-bit filtered capacitance value
+ *
+ * @c work is PROTOCORE_MPR121_BORROW bytes the CALLER took, at an address it knows. It arrives
+ * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
+ * carved is this module's and is never named here.
  */
-size_t protocore_mpr121_build_init(uint8_t *buf, size_t cap, uint8_t n_electrodes, uint8_t touch_thr,
-                                   uint8_t release_thr);
+typedef struct
+{
+    Mpr121TouchedArgs touched_args;
+    Mpr121IsTouchedArgs is_touched_args;
+    Mpr121ProximityArgs proximity_args;
+    Mpr121OvercurrentArgs overcurrent_args;
+    Mpr121Word10Args word10_args;
+    Mpr121BuildInitArgs build_init_args;
+    Mpr121BeginArgs begin_args;
+    Mpr121ReadFilteredArgs read_filtered_args;
 
-// --- ESP32 binding (the shared I2C bus owner) -------------------------
+    proto_bool ok;
+    uint16_t value;
+    size_t n;
 
-/** @brief Reset + configure the MPR121 at @p addr over I2C. @return true if it acknowledged. */
-proto_bool protocore_mpr121_begin(uint8_t addr);
+    void (*const touched)(uint8_t *restrict work);
+    void (*const is_touched)(uint8_t *restrict work);
+    void (*const proximity)(uint8_t *restrict work);
+    void (*const overcurrent)(uint8_t *restrict work);
+    void (*const word10)(uint8_t *restrict work);
+    void (*const build_init)(uint8_t *restrict work);
+    void (*const begin)(uint8_t *restrict work);
+    void (*const read_touched)(uint8_t *restrict work);
+    void (*const read_filtered)(uint8_t *restrict work);
+} Mpr121Ns;
 
-/** @brief Read the current 12-electrode touch bitmask (0 if the device is absent). */
-uint16_t protocore_mpr121_read_touched(void);
+/** @brief The one symbol this module exports. */
+extern Mpr121Ns Mpr121;
 
-/** @brief Read electrode @p e's 10-bit filtered capacitance value. */
-uint16_t protocore_mpr121_read_filtered(uint8_t e);
+/**
+ * @brief The PROTOCORE_MPR121_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+uint8_t *protocore_mpr121_span(void);
 
 PROTOCORE_END_DECLS
 

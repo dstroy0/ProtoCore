@@ -23,16 +23,16 @@
 #ifndef PROTOCORE_H2_CONN_H
 #define PROTOCORE_H2_CONN_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_HTTP2
 
 PROTOCORE_BEGIN_DECLS
 
-#include "network_drivers/presentation/http/http2/h2_frame.h"
-#include "network_drivers/presentation/http/http2/hpack.h"
 
 #define PROTOCORE_H2_FRAME_HDR_CAP 16u
+/** @brief The widest frame a received frame provokes us to send: a header plus 8 opaque bytes. */
+#define PROTOCORE_H2_CTL_FRAME_MAX 17u
 /**
  * @brief This module's draw on the plaintext pool, declared here and asserted in h2_conn.c.
  *

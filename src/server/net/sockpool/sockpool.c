@@ -6,12 +6,26 @@
  * @brief Dynamic socket recycling: an LRU connection-slot pool (see sockpool.h).
  */
 
-#include "server/net/sockpool/sockpool.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_SOCKPOOL
 
-void protocore_sockpool_init(SockPool *p, SockSlot *slots, size_t n)
+#include "server/net/sockpool/sockpool.h"
+
+PROTOCORE_BEGIN_DECLS
+
+// --- the entries -----------------------------------------------------------
+
+// No context and no borrow: every operand is the caller's. The borrow an entry takes is
+// never read.
+
+static void sockpool_init(uint8_t *restrict work)
 {
+    (void)work;
+    SockPool *p = Sockpool.init_args.p;
+    SockSlot *slots = Sockpool.init_args.slots;
+    size_t n = Sockpool.init_args.n;
+
     if (!p)
     {
         return;
@@ -26,11 +40,19 @@ void protocore_sockpool_init(SockPool *p, SockSlot *slots, size_t n)
     }
 }
 
-SockAcq protocore_sockpool_acquire(SockPool *p, uint32_t id, uint32_t now, size_t *idx, uint32_t *evicted_id)
+static void sockpool_acquire(uint8_t *restrict work)
 {
+    (void)work;
+    SockPool *p = Sockpool.acquire_args.p;
+    uint32_t id = Sockpool.acquire_args.id;
+    uint32_t now = Sockpool.acquire_args.now;
+    size_t *idx = Sockpool.acquire_args.idx;
+    uint32_t *evicted_id = Sockpool.acquire_args.evicted_id;
+
     if (!p || !p->slots || p->n == 0)
     {
-        return SOCK_ACQ_FAIL;
+        Sockpool.acq = SOCK_ACQ_FAIL;
+        return;
     }
 
     // Prefer a free slot.
@@ -45,7 +67,8 @@ SockAcq protocore_sockpool_acquire(SockPool *p, uint32_t id, uint32_t now, size_
             {
                 *idx = i;
             }
-            return SOCK_ACQ_FREE;
+            Sockpool.acq = SOCK_ACQ_FREE;
+            return;
         }
     }
 
@@ -68,11 +91,16 @@ SockAcq protocore_sockpool_acquire(SockPool *p, uint32_t id, uint32_t now, size_
     {
         *idx = lru;
     }
-    return SOCK_ACQ_RECYCLED;
+    Sockpool.acq = SOCK_ACQ_RECYCLED;
 }
 
-void protocore_sockpool_touch(SockPool *p, size_t idx, uint32_t now)
+static void sockpool_touch(uint8_t *restrict work)
 {
+    (void)work;
+    SockPool *p = Sockpool.touch_args.p;
+    size_t idx = Sockpool.touch_args.idx;
+    uint32_t now = Sockpool.touch_args.now;
+
     if (!p || !p->slots || idx >= p->n)
     {
         return;
@@ -83,21 +111,32 @@ void protocore_sockpool_touch(SockPool *p, size_t idx, uint32_t now)
     }
 }
 
-proto_bool protocore_sockpool_release(SockPool *p, size_t idx)
+static void sockpool_release(uint8_t *restrict work)
 {
+    (void)work;
+    SockPool *p = Sockpool.release_args.p;
+    size_t idx = Sockpool.release_args.idx;
+
     if (!p || !p->slots || idx >= p->n || !p->slots[idx].in_use)
     {
-        return PROTO_FALSE;
+        Sockpool.ok = PROTO_FALSE;
+        return;
     }
     p->slots[idx].in_use = PROTO_FALSE;
-    return PROTO_TRUE;
+    Sockpool.ok = PROTO_TRUE;
 }
 
-proto_bool protocore_sockpool_find(const SockPool *p, uint32_t id, size_t *idx)
+static void sockpool_find(uint8_t *restrict work)
 {
+    (void)work;
+    const SockPool *p = Sockpool.find_args.p;
+    uint32_t id = Sockpool.find_args.id;
+    size_t *idx = Sockpool.find_args.idx;
+
     if (!p || !p->slots)
     {
-        return PROTO_FALSE;
+        Sockpool.ok = PROTO_FALSE;
+        return;
     }
     for (size_t i = 0; i < p->n; i++)
     {
@@ -107,17 +146,22 @@ proto_bool protocore_sockpool_find(const SockPool *p, uint32_t id, size_t *idx)
             {
                 *idx = i;
             }
-            return PROTO_TRUE;
+            Sockpool.ok = PROTO_TRUE;
+            return;
         }
     }
-    return PROTO_FALSE;
+    Sockpool.ok = PROTO_FALSE;
 }
 
-size_t protocore_sockpool_in_use(const SockPool *p)
+static void sockpool_in_use(uint8_t *restrict work)
 {
+    (void)work;
+    const SockPool *p = Sockpool.in_use_args.p;
+
     if (!p || !p->slots)
     {
-        return 0;
+        Sockpool.n = 0;
+        return;
     }
     size_t c = 0;
     for (size_t i = 0; i < p->n; i++)
@@ -127,7 +171,16 @@ size_t protocore_sockpool_in_use(const SockPool *p)
             c++;
         }
     }
-    return c;
+    Sockpool.n = c;
 }
+
+SockpoolNs Sockpool = {.init = sockpool_init,
+                       .acquire = sockpool_acquire,
+                       .touch = sockpool_touch,
+                       .release = sockpool_release,
+                       .find = sockpool_find,
+                       .in_use = sockpool_in_use};
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SOCKPOOL

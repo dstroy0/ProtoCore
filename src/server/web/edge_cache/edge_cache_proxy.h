@@ -18,86 +18,170 @@
 #ifndef PROTOCORE_EDGE_CACHE_PROXY_H
 #define PROTOCORE_EDGE_CACHE_PROXY_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_EDGE_CACHE
 
 PROTOCORE_BEGIN_DECLS
 
-#include "server/web/edge_cache/edge_cache.h" // EdgeCacheStats
+// PROTOCORE_EDGE_PROXY_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
+// it into its arena. A caller takes them once and passes the pointer to every call. How they
+// are carved is this module's and is never named here.
 
-/**
- * @brief Enable the edge cache on @p server: register the cache middleware + the async-fetch poll hook,
- *        bind the origin transport to protocore_client, and clear the L1 store. Call once.
- */
-void protocore_edge_cache_enable(void);
+/** @brief EdgeCacheStats, as the caller already knows it. */
+struct EdgeCacheStats;
 
-/**
- * @brief Map a request path prefix to an upstream origin (e.g. "/cdn/" -> "http://origin.local").
- *
- * A cacheable GET/HEAD under @p path_prefix is fetched from the origin host + the full request path. An
- * `https://` origin is fetched over TLS when PROTOCORE_ENABLE_EDGE_ORIGIN_TLS is set, otherwise rejected.
- * @return false if the map table is full, an argument overflows, or the origin URL is https (TLS off) /
- * malformed.
- */
-proto_bool protocore_edge_cache_map(const char *path_prefix, const char *origin_base_url);
+/** @brief What map takes: path_prefix, origin_base_url. */
+typedef struct
+{
+    const char *path_prefix;
+    const char *origin_base_url;
+} EdgeProxyMapArgs;
 
 #if PROTOCORE_ENABLE_EDGE_ORIGIN_TLS
-/**
- * @brief Set the CA used to verify a TLS (`https://`) origin (PEM incl. NUL, or DER). Without a CA the
- *        origin fetch is encrypt-only (no authentication - MITM-able); a CA switches to full chain +
- *        hostname verification. NOTE: the client-TLS trust store is shared, so this CA also applies to
- *        MQTTS / wss / the HTTP client. Pass nullptr to clear. Call before the first https fetch.
- */
-void protocore_edge_cache_set_origin_ca(const uint8_t *ca_pem, size_t len);
+/** @brief What set_origin_ca takes: ca_pem, len. */
+typedef struct
+{
+    const uint8_t *ca_pem;
+    size_t len;
+} EdgeProxySetOriginCaArgs;
+#endif
 
-/** @brief Pin the origin cert by the SHA-256 of its DER (32 bytes); nullptr clears. Also shared client-wide. */
-void protocore_edge_cache_set_origin_pin(const uint8_t sha256[32]);
+#if PROTOCORE_ENABLE_EDGE_ORIGIN_TLS
+/** @brief What set_origin_pin takes: sha256. */
+typedef struct
+{
+    const uint8_t *sha256; ///< 32 bytes.
+} EdgeProxySetOriginPinArgs;
 #endif
 
 #if PROTOCORE_ENABLE_DBM
-struct protocore_dbm;
-/**
- * @brief Bind an L2 persistent tier: an opened dbm handle (on a mounted WAL store, SD-backed on device)
- *        the cache spills evicted L1 entries to and promotes them back from - so the cached set survives
- *        a reboot. Pass nullptr to detach. Call after ::protocore_edge_cache_enable.
- *
- * Only entries carrying a validator are spilled (a promoted entry is force-revalidated, since the
- * monotonic clock resets across a reboot). The dbm should be dedicated to the cache.
- */
-void protocore_edge_cache_bind_sd(struct protocore_dbm *dbm);
+/** @brief What bind_sd takes: dbm. */
+typedef struct
+{
+    struct protocore_dbm *dbm;
+} EdgeProxyBindSdArgs;
 #endif
 
 #if PROTOCORE_ENABLE_EDGE_MESH
-/**
- * @brief Add a sibling peer to query on a full local miss before hitting the origin (mesh sibling cache).
- *
- * On a cold miss the cache asks each configured peer (in order, first hit wins) over a plaintext
- * ProtoConn::PROTO_MESH link and, if a peer holds a fresh copy, pulls and serves it (age propagated) without
- * hitting the origin. @p host is a sibling's address, @p port the port it serves PROTO_MESH on. @return false
- * if the peer table is full or @p host is empty / too long. Pull-only: no push, no invalidation.
- */
-proto_bool protocore_edge_cache_add_peer(const char *host, uint16_t port);
-
-/**
- * @brief Serve sibling queries: register the PROTO_MESH handler so this node answers a peer's content-addressed
- *        request from its LOCAL cache (one hop - never re-queries this node's own origin or peers). Open the
- *        port first with `listen(port, ProtoConn::PROTO_MESH)`. Call once.
- */
-void protocore_edge_cache_mesh_serve(void);
+/** @brief What add_peer takes: host, port. */
+typedef struct
+{
+    const char *host;
+    uint16_t port;
+} EdgeProxyAddPeerArgs;
 #endif
 
-/** @brief Clear the L1 store, the L2 store (if bound), all route maps, and (mesh) the peer list. */
-void protocore_edge_cache_reset(void);
+/** @brief What purge takes: canonical_key. */
+typedef struct
+{
+    const char *canonical_key;
+} EdgeProxyPurgeArgs;
 
-/** @brief Invalidate a single canonical key. @return true if an entry was purged. */
-proto_bool protocore_edge_cache_purge(const char *canonical_key);
+/** @brief What purge_prefix takes: path_prefix. */
+typedef struct
+{
+    const char *path_prefix;
+} EdgeProxyPurgePrefixArgs;
 
-/** @brief Invalidate every entry whose request path begins with @p prefix. @return the count purged. */
-uint32_t protocore_edge_cache_purge_prefix(const char *path_prefix);
+/** @brief What stats takes: out. */
+typedef struct
+{
+    struct EdgeCacheStats *out;
+} EdgeProxyStatsArgs;
 
-/** @brief Snapshot the cache counters. */
-void protocore_edge_cache_stats(EdgeCacheStats *out);
+/**
+ * @brief CDN edge-cache tier - server glue (PROTOCORE_ENABLE_EDGE_CACHE).
+ *
+ * A caller sets the members a call takes, invokes it through ::EdgeProxy with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   EdgeProxy.enable(work);
+ *
+ * @var EdgeProxyNs::map_args  what map takes: path_prefix, origin_base_url
+ * @var EdgeProxyNs::set_origin_ca_args  what set_origin_ca takes: ca_pem, len
+ * @var EdgeProxyNs::set_origin_pin_args  what set_origin_pin takes: sha256
+ * @var EdgeProxyNs::bind_sd_args  what bind_sd takes: dbm
+ * @var EdgeProxyNs::add_peer_args  what add_peer takes: host, port
+ * @var EdgeProxyNs::purge_args  what purge takes: canonical_key
+ * @var EdgeProxyNs::purge_prefix_args  what purge_prefix takes: path_prefix
+ * @var EdgeProxyNs::stats_args  what stats takes: out
+ * @var EdgeProxyNs::ok  false if the map table is full, an argument overflows, or the ...
+ * @var EdgeProxyNs::n  the count a call reports
+ * @var EdgeProxyNs::enable  enable the edge cache on server: register the cache middleware + ...
+ * @var EdgeProxyNs::map  map a request path prefix to an upstream origin (e.g. "/cdn/" -> ...
+ * @var EdgeProxyNs::set_origin_ca  set the CA used to verify a TLS (`https://`) origin (PEM incl. NUL, ...
+ * @var EdgeProxyNs::set_origin_pin  pin the origin cert by the SHA-256 of its DER (32 bytes); nullptr ...
+ * @var EdgeProxyNs::bind_sd  bind an L2 persistent tier: an opened dbm handle (on a mounted WAL ...
+ * @var EdgeProxyNs::add_peer  add a sibling peer to query on a full local miss before hitting the ...
+ * @var EdgeProxyNs::mesh_serve  serve sibling queries: register the PROTO_MESH handler so this node ...
+ * @var EdgeProxyNs::reset  clear the L1 store, the L2 store (if bound), all route maps, and ...
+ * @var EdgeProxyNs::purge  invalidate a single canonical key. true if an entry was purged
+ * @var EdgeProxyNs::purge_prefix  invalidate every entry whose request path begins with prefix. the ...
+ * @var EdgeProxyNs::stats  snapshot the cache counters
+ *
+ * @c work is PROTOCORE_EDGE_PROXY_BORROW bytes the CALLER took, at an address it knows. It arrives
+ * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
+ * carved is this module's and is never named here.
+ */
+typedef struct
+{
+    EdgeProxyMapArgs map_args;
+#if PROTOCORE_ENABLE_EDGE_ORIGIN_TLS
+    EdgeProxySetOriginCaArgs set_origin_ca_args;
+#endif
+#if PROTOCORE_ENABLE_EDGE_ORIGIN_TLS
+    EdgeProxySetOriginPinArgs set_origin_pin_args;
+#endif
+#if PROTOCORE_ENABLE_DBM
+    EdgeProxyBindSdArgs bind_sd_args;
+#endif
+#if PROTOCORE_ENABLE_EDGE_MESH
+    EdgeProxyAddPeerArgs add_peer_args;
+#endif
+    EdgeProxyPurgeArgs purge_args;
+    EdgeProxyPurgePrefixArgs purge_prefix_args;
+    EdgeProxyStatsArgs stats_args;
+
+    proto_bool ok;
+    uint32_t n;
+
+    void (*const enable)(uint8_t *restrict work);
+    void (*const map)(uint8_t *restrict work);
+#if PROTOCORE_ENABLE_EDGE_ORIGIN_TLS
+    void (*const set_origin_ca)(uint8_t *restrict work);
+#endif
+#if PROTOCORE_ENABLE_EDGE_ORIGIN_TLS
+    void (*const set_origin_pin)(uint8_t *restrict work);
+#endif
+#if PROTOCORE_ENABLE_DBM
+    void (*const bind_sd)(uint8_t *restrict work);
+#endif
+#if PROTOCORE_ENABLE_EDGE_MESH
+    void (*const add_peer)(uint8_t *restrict work);
+#endif
+#if PROTOCORE_ENABLE_EDGE_MESH
+    void (*const mesh_serve)(uint8_t *restrict work);
+#endif
+    void (*const reset)(uint8_t *restrict work);
+    void (*const purge)(uint8_t *restrict work);
+    void (*const purge_prefix)(uint8_t *restrict work);
+    void (*const stats)(uint8_t *restrict work);
+} EdgeProxyNs;
+
+/** @brief The one symbol this module exports. */
+extern EdgeProxyNs EdgeProxy;
+
+/**
+ * @brief The PROTOCORE_EDGE_PROXY_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+uint8_t *protocore_edge_cache_proxy_span(void);
 
 PROTOCORE_END_DECLS
 

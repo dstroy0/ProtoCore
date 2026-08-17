@@ -46,19 +46,20 @@
 #ifndef PROTOCORE_HMMD_H
 #define PROTOCORE_HMMD_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_HMMD
 
 PROTOCORE_BEGIN_DECLS
 
-/** @brief Range gates the HMMD reports energy for (gate 0..15). */
+// PROTOCORE_HMMD_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
+// it into its arena. A caller takes them once and passes the pointer to every call. How they
+// are carved is this module's and is never named here.
+
 #define PROTOCORE_HMMD_GATES 16
 
-/** @brief Intra-frame length of a report: detect(1) + distance(2) + 16 gates x 2. */
 #define PROTOCORE_HMMD_REPORT_LEN 35
 
-/** @brief Largest assembled frame: header(4) + len(2) + payload(35) + footer(4). */
 #define PROTOCORE_HMMD_FRAME_MAX 45
 
 /** @brief A decoded HMMD target report. */
@@ -68,14 +69,6 @@ typedef struct
     uint16_t distance_cm;                       ///< target distance (cm); meaningless unless detected.
     uint16_t gate_energy[PROTOCORE_HMMD_GATES]; ///< per-gate energy, gate 0..15.
 } HmmdReport;
-
-/**
- * @brief Decode one whole HMMD report frame (header `F4 F3 F2 F1` .. footer `F8 F7 F6 F5`).
- * Pure - no I/O. Validates the header, the footer, and that the intra-frame length is exactly
- * @ref PROTOCORE_HMMD_REPORT_LEN and frames the buffer.
- * @return true on a valid frame; false on any mismatch or a short buffer.
- */
-proto_bool protocore_hmmd_parse_report(const uint8_t *frame, size_t len, HmmdReport *out);
 
 /** @brief Byte-by-byte report-frame reassembler (fixed buffer, resyncs on noise). */
 typedef struct
@@ -87,55 +80,6 @@ typedef struct
     uint8_t phase;                         ///< 0 sync, 1 length, 2 body
 } HmmdStream;
 
-/** @brief Reset a stream to the syncing state. */
-void protocore_hmmd_stream_reset(HmmdStream *s);
-
-/**
- * @brief Feed one received octet. When it completes a valid report frame, fills @p out and returns
- * true; otherwise false (still syncing / mid-frame / bad frame - it resyncs).
- */
-proto_bool protocore_hmmd_stream_push(HmmdStream *s, uint8_t byte, HmmdReport *out);
-
-/** @brief true if @p r shows a target. */
-proto_bool protocore_hmmd_present(const HmmdReport *r);
-
-/** @brief Target distance (cm), or 0 when nothing is detected. */
-uint16_t protocore_hmmd_distance_cm(const HmmdReport *r);
-
-// --- Config-command encoders (build a full `FD FC FB FA` .. `04 03 02 01` frame) ---------------
-// Each returns the frame length written, or 0 if @p cap is too small. Commands other than
-// open/close must be bracketed by open/close command mode.
-
-/**
- * @brief Build an arbitrary command frame: @p word plus @p vlen octets of @p value.
- *
- * The named encoders below are thin wrappers over this. It is public because the module's register
- * and parameter maps are larger than the handful of commands worth naming here.
- */
-size_t protocore_hmmd_cmd_build(uint8_t *buf, size_t cap, uint16_t word, const uint8_t *value, size_t vlen);
-
-/** @brief "Open command mode" (word 0x00FF, value 0x0001). */
-size_t protocore_hmmd_cmd_open(uint8_t *buf, size_t cap);
-/** @brief "Close command mode" (word 0x00FE, no value). */
-size_t protocore_hmmd_cmd_close(uint8_t *buf, size_t cap);
-/** @brief Read the radar firmware version (word 0x0000). */
-size_t protocore_hmmd_cmd_read_firmware(uint8_t *buf, size_t cap);
-/** @brief Read the module serial number (word 0x0011). */
-size_t protocore_hmmd_cmd_read_serial(uint8_t *buf, size_t cap);
-/** @brief Read the parameter configuration (word 0x0008). */
-size_t protocore_hmmd_cmd_read_config(uint8_t *buf, size_t cap);
-
-/**
- * @brief Read a register (word 0x0002), with @p vlen octets of caller-supplied selector @p value.
- *
- * The selector payload is passed through verbatim rather than modelled: the reference this codec was
- * built against does not specify the register map, so inventing a layout here would be a guess. The
- * framing is exact; what goes in the value is the caller's per their module documentation.
- */
-size_t protocore_hmmd_cmd_read_register(uint8_t *buf, size_t cap, const uint8_t *value, size_t vlen);
-
-// --- Command-ACK decoding ----------------------------------------------------------------------
-
 /** @brief A decoded command-ACK frame. @ref payload points into the caller's frame (not copied). */
 typedef struct
 {
@@ -144,35 +88,224 @@ typedef struct
     size_t payload_len;     ///< octets at @ref payload.
 } HmmdAck;
 
-/**
- * @brief Decode one command-ACK frame (header, intra-frame length, footer and length agreement all
- *        checked). @return false if @p frame is not a well-formed ACK.
- *
- * The ACK's payload is handed back whole rather than split into a status word: the reference only
- * establishes that the ACK echoes the request's command octet, so how many leading octets are a
- * status is not something this codec asserts.
- */
-proto_bool protocore_hmmd_parse_ack(const uint8_t *frame, size_t len, HmmdAck *out);
+/** @brief What parse_report takes: frame, len, out. */
+typedef struct
+{
+    const uint8_t *frame;
+    size_t len;
+    HmmdReport *out;
+} HmmdParseReportArgs;
+
+/** @brief What stream_reset takes: s. */
+typedef struct
+{
+    HmmdStream *s;
+} HmmdStreamResetArgs;
+
+/** @brief What stream_push takes: s, byte, out. */
+typedef struct
+{
+    HmmdStream *s;
+    uint8_t byte;
+    HmmdReport *out;
+} HmmdStreamPushArgs;
+
+/** @brief What present takes: r. */
+typedef struct
+{
+    const HmmdReport *r;
+} HmmdPresentArgs;
+
+/** @brief What distance_cm takes: r. */
+typedef struct
+{
+    const HmmdReport *r;
+} HmmdDistanceCmArgs;
+
+/** @brief What cmd_build takes: buf, cap, word, value, vlen. */
+typedef struct
+{
+    uint8_t *buf;
+    size_t cap;
+    uint16_t word;
+    const uint8_t *value;
+    size_t vlen;
+} HmmdCmdBuildArgs;
+
+/** @brief What cmd_open takes: buf, cap. */
+typedef struct
+{
+    uint8_t *buf;
+    size_t cap;
+} HmmdCmdOpenArgs;
+
+/** @brief What cmd_close takes: buf, cap. */
+typedef struct
+{
+    uint8_t *buf;
+    size_t cap;
+} HmmdCmdCloseArgs;
+
+/** @brief What cmd_read_firmware takes: buf, cap. */
+typedef struct
+{
+    uint8_t *buf;
+    size_t cap;
+} HmmdCmdReadFirmwareArgs;
+
+/** @brief What cmd_read_serial takes: buf, cap. */
+typedef struct
+{
+    uint8_t *buf;
+    size_t cap;
+} HmmdCmdReadSerialArgs;
+
+/** @brief What cmd_read_config takes: buf, cap. */
+typedef struct
+{
+    uint8_t *buf;
+    size_t cap;
+} HmmdCmdReadConfigArgs;
+
+/** @brief What cmd_read_register takes: buf, cap, value, vlen. */
+typedef struct
+{
+    uint8_t *buf;
+    size_t cap;
+    const uint8_t *value;
+    size_t vlen;
+} HmmdCmdReadRegisterArgs;
+
+/** @brief What parse_ack takes: frame, len, out. */
+typedef struct
+{
+    const uint8_t *frame;
+    size_t len;
+    HmmdAck *out;
+} HmmdParseAckArgs;
+
+/** @brief What ack_matches takes: ack, word. */
+typedef struct
+{
+    const HmmdAck *ack;
+    uint16_t word;
+} HmmdAckMatchesArgs;
+
+/** @brief What begin takes: rx_pin, tx_pin. */
+typedef struct
+{
+    int rx_pin;
+    int tx_pin;
+} HmmdBeginArgs;
 
 /**
- * @brief True if @p ack is the reply to request @p word.
+ * @brief Waveshare HMMD 24 GHz mmWave human micro-motion radar codec (PROTOCORE_ENABLE_HMMD). The HMMD (Waveshare's ...
  *
- * Matches on the low octet, which is what the reference verifies. This family conventionally sets
- * bit 8 in the reply (0x0008 -> 0x0108), but that is not asserted here.
+ * A caller sets the members a call takes, invokes it through ::Hmmd with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   Hmmd.parse_report_args.frame = ...;
+ *   Hmmd.parse_report_args.len = ...;
+ *   Hmmd.parse_report_args.out = ...;
+ *   Hmmd.parse_report(work);
+ *   // Hmmd.ok is what the call reports
+ *
+ * @var HmmdNs::parse_report_args  what parse_report takes: frame, len, out
+ * @var HmmdNs::stream_reset_args  what stream_reset takes: s
+ * @var HmmdNs::stream_push_args  what stream_push takes: s, byte, out
+ * @var HmmdNs::present_args  what present takes: r
+ * @var HmmdNs::distance_cm_args  what distance_cm takes: r
+ * @var HmmdNs::cmd_build_args  what cmd_build takes: buf, cap, word, value, vlen
+ * @var HmmdNs::cmd_open_args  what cmd_open takes: buf, cap
+ * @var HmmdNs::cmd_close_args  what cmd_close takes: buf, cap
+ * @var HmmdNs::cmd_read_firmware_args  what cmd_read_firmware takes: buf, cap
+ * @var HmmdNs::cmd_read_serial_args  what cmd_read_serial takes: buf, cap
+ * @var HmmdNs::cmd_read_config_args  what cmd_read_config takes: buf, cap
+ * @var HmmdNs::cmd_read_register_args  what cmd_read_register takes: buf, cap, value, vlen
+ * @var HmmdNs::parse_ack_args  what parse_ack takes: frame, len, out
+ * @var HmmdNs::ack_matches_args  what ack_matches takes: ack, word
+ * @var HmmdNs::begin_args  what begin takes: rx_pin, tx_pin
+ * @var HmmdNs::ok  true on a valid frame; false on any mismatch or a short buffer
+ * @var HmmdNs::cm  what a call reports
+ * @var HmmdNs::n  the count a call reports
+ * @var HmmdNs::report  what a call reports
+ * @var HmmdNs::parse_report  decode one whole HMMD report frame (header `F4 F3 F2 F1` .. footer ...
+ * @var HmmdNs::stream_reset  reset a stream to the syncing state
+ * @var HmmdNs::stream_push  feed one received octet. When it completes a valid report frame, ...
+ * @var HmmdNs::present  true if r shows a target
+ * @var HmmdNs::distance_cm  target distance (cm), or 0 when nothing is detected
+ * @var HmmdNs::cmd_build  build an arbitrary command frame: word plus vlen octets of value. ...
+ * @var HmmdNs::cmd_open  "Open command mode" (word 0x00FF, value 0x0001)
+ * @var HmmdNs::cmd_close  "Close command mode" (word 0x00FE, no value)
+ * @var HmmdNs::cmd_read_firmware  read the radar firmware version (word 0x0000)
+ * @var HmmdNs::cmd_read_serial  read the module serial number (word 0x0011)
+ * @var HmmdNs::cmd_read_config  read the parameter configuration (word 0x0008)
+ * @var HmmdNs::cmd_read_register  read a register (word 0x0002), with vlen octets of caller-supplied ...
+ * @var HmmdNs::parse_ack  decode one command-ACK frame (header, intra-frame length, footer ...
+ * @var HmmdNs::ack_matches  true if ack is the reply to request word. Matches on the low octet, ...
+ * @var HmmdNs::begin  open PROTOCORE_HMMD_UART at PROTOCORE_HMMD_BAUD on rx_pin / tx_pin. ...
+ * @var HmmdNs::poll  pump the UART through the stream. true if a fresh report was decoded
+ * @var HmmdNs::last  the most recently decoded report, or NULL before the first one ...
+ *
+ * @c work is PROTOCORE_HMMD_BORROW bytes the CALLER took, at an address it knows. It arrives
+ * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
+ * carved is this module's and is never named here.
  */
-proto_bool protocore_hmmd_ack_matches(const HmmdAck *ack, uint16_t word);
+typedef struct
+{
+    HmmdParseReportArgs parse_report_args;
+    HmmdStreamResetArgs stream_reset_args;
+    HmmdStreamPushArgs stream_push_args;
+    HmmdPresentArgs present_args;
+    HmmdDistanceCmArgs distance_cm_args;
+    HmmdCmdBuildArgs cmd_build_args;
+    HmmdCmdOpenArgs cmd_open_args;
+    HmmdCmdCloseArgs cmd_close_args;
+    HmmdCmdReadFirmwareArgs cmd_read_firmware_args;
+    HmmdCmdReadSerialArgs cmd_read_serial_args;
+    HmmdCmdReadConfigArgs cmd_read_config_args;
+    HmmdCmdReadRegisterArgs cmd_read_register_args;
+    HmmdParseAckArgs parse_ack_args;
+    HmmdAckMatchesArgs ack_matches_args;
+    HmmdBeginArgs begin_args;
 
-// --- Binding (no-ops with no bus seam) ----------------------------------------------------------
+    proto_bool ok;
+    uint16_t cm;
+    size_t n;
+    const HmmdReport *report;
 
-/** @brief Open PROTOCORE_HMMD_UART at PROTOCORE_HMMD_BAUD on @p rx_pin / @p tx_pin. @return true where the UART opened.
+    void (*const parse_report)(uint8_t *restrict work);
+    void (*const stream_reset)(uint8_t *restrict work);
+    void (*const stream_push)(uint8_t *restrict work);
+    void (*const present)(uint8_t *restrict work);
+    void (*const distance_cm)(uint8_t *restrict work);
+    void (*const cmd_build)(uint8_t *restrict work);
+    void (*const cmd_open)(uint8_t *restrict work);
+    void (*const cmd_close)(uint8_t *restrict work);
+    void (*const cmd_read_firmware)(uint8_t *restrict work);
+    void (*const cmd_read_serial)(uint8_t *restrict work);
+    void (*const cmd_read_config)(uint8_t *restrict work);
+    void (*const cmd_read_register)(uint8_t *restrict work);
+    void (*const parse_ack)(uint8_t *restrict work);
+    void (*const ack_matches)(uint8_t *restrict work);
+    void (*const begin)(uint8_t *restrict work);
+    void (*const poll)(uint8_t *restrict work);
+    void (*const last)(uint8_t *restrict work);
+} HmmdNs;
+
+/** @brief The one symbol this module exports. */
+extern HmmdNs Hmmd;
+
+/**
+ * @brief The PROTOCORE_HMMD_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
  */
-proto_bool protocore_hmmd_begin(int rx_pin, int tx_pin);
-
-/** @brief Pump the UART through the stream. @return true if a fresh report was decoded. */
-proto_bool protocore_hmmd_poll(void);
-
-/** @brief The most recently decoded report, or NULL before the first one arrives. */
-const HmmdReport *protocore_hmmd_last(void);
+uint8_t *protocore_hmmd_span(void);
 
 PROTOCORE_END_DECLS
 

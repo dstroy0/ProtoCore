@@ -6,10 +6,12 @@
  * @brief QUIC packet headers and packet-number coding - implementation. See protocore_quic_packet.h.
  */
 
-#include "network_drivers/presentation/http/http3/quic_packet.h"
-#include "mmgr/protomem.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_HTTP3
+
+#include "network_drivers/presentation/http/http3/quic_packet.h"
+#include "mmgr/protomem.h"
 
 static uint32_t rd_be32(const uint8_t *p)
 {

@@ -29,71 +29,144 @@
 #ifndef PROTOCORE_EDGE_CACHE_SD_H
 #define PROTOCORE_EDGE_CACHE_SD_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-// The entry serialize/deserialize below is the shared byte codec for an EdgeEntry (used by both the L2 SD
-// tier and the mesh sibling link), so it compiles whenever the edge cache is on; the dbm-backed put/get/purge
-// helpers further down need the persistence tier and stay gated on PROTOCORE_ENABLE_DBM.
 #if PROTOCORE_ENABLE_EDGE_CACHE
 
-#include "server/web/edge_cache/edge_cache.h"
+PROTOCORE_BEGIN_DECLS
+
+// This module holds nothing between calls, so it carves no borrow and states none. An entry
+// takes one all the same, and never reads it, so every namespace in the tree is invoked the
+// same way.
+
+/** @brief EdgeEntry, as the caller already knows it. */
+struct EdgeEntry;
+
+/** @brief What serialize takes: e, out, cap. */
+typedef struct
+{
+    const struct EdgeEntry *e;
+    uint8_t *out;
+    size_t cap;
+} EdgeCacheSdSerializeArgs;
+
+/** @brief What deserialize takes: entry_buf, buf, len, e. */
+typedef struct
+{
+    uint8_t *entry_buf; ///< scratch the entry is decoded into
+    const uint8_t *buf;
+    size_t len;
+    struct EdgeEntry *e;
+} EdgeCacheSdDeserializeArgs;
+
+/** @brief What put takes: db, e, scratch, scratch_cap. */
+typedef struct
+{
+    struct protocore_dbm *db;
+    const struct EdgeEntry *e;
+    uint8_t *scratch;
+    size_t scratch_cap;
+} EdgeCacheSdPutArgs;
+
+/** @brief What get takes: entry_buf, db, digest, e, scratch, scratch_cap. */
+typedef struct
+{
+    uint8_t *entry_buf; ///< scratch the entry is decoded into
+    struct protocore_dbm *db;
+    const uint8_t *digest; ///< 32 bytes.
+    struct EdgeEntry *e;
+    uint8_t *scratch;
+    size_t scratch_cap;
+} EdgeCacheSdGetArgs;
+
+/** @brief What del takes: db, digest. */
+typedef struct
+{
+    struct protocore_dbm *db;
+    const uint8_t *digest; ///< 32 bytes.
+} EdgeCacheSdDelArgs;
+
+/** @brief What purge_prefix takes: db, path_prefix, scratch, ... */
+typedef struct
+{
+    struct protocore_dbm *db;
+    const char *path_prefix;
+    uint8_t *scratch;
+    size_t scratch_cap;
+} EdgeCacheSdPurgePrefixArgs;
+
+/** @brief What purge_all takes: db. */
+typedef struct
+{
+    struct protocore_dbm *db;
+} EdgeCacheSdPurgeAllArgs;
+
+/**
+ * @brief CDN edge-cache tier - L2 SD persistence (PROTOCORE_ENABLE_EDGE_CACHE && PROTOCORE_ENABLE_DBM). The persistent
+ * ...
+ *
+ * A caller sets the members a call takes, invokes it through ::EdgeCacheSd with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   EdgeCacheSd.serialize_args.e = ...;
+ *   EdgeCacheSd.serialize_args.out = ...;
+ *   EdgeCacheSd.serialize_args.cap = ...;
+ *   EdgeCacheSd.serialize(work);
+ *   // EdgeCacheSd.n is what the call reports
+ *
+ * @var EdgeCacheSdNs::serialize_args  what serialize takes: e, out, cap
+ * @var EdgeCacheSdNs::deserialize_args  what deserialize takes: entry_buf, buf, len, e
+ * @var EdgeCacheSdNs::put_args  what put takes: db, e, scratch, scratch_cap
+ * @var EdgeCacheSdNs::get_args  what get takes: entry_buf, db, digest, e, scratch, scratch_cap
+ * @var EdgeCacheSdNs::del_args  what del takes: db, digest
+ * @var EdgeCacheSdNs::purge_prefix_args  what purge_prefix takes: db, path_prefix, scratch,
+ * @var EdgeCacheSdNs::purge_all_args  what purge_all takes: db
+ * @var EdgeCacheSdNs::ok  false on a short/corrupt/oversized buffer or a version mismatch ...
+ * @var EdgeCacheSdNs::n  the byte length written, or 0 if it would not fit cap. ...
+ * @var EdgeCacheSdNs::count  what a call reports
+ * @var EdgeCacheSdNs::serialize  serialize e's response metadata + body into out (little-endian, ...
+ * @var EdgeCacheSdNs::deserialize  rehydrate an entry from buf (as produced by ::edge_sd_serialize) ...
+ * @var EdgeCacheSdNs::put  write e back to the L2 store (keyed by its digest), using scratch ...
+ * @var EdgeCacheSdNs::get  promote the entry stored under digest from L2 into e (via scratch)
+ * @var EdgeCacheSdNs::del  drop the L2 entry stored under digest. true if one existed
+ * @var EdgeCacheSdNs::purge_prefix  drop every L2 entry whose stored request path begins with prefix ...
+ * @var EdgeCacheSdNs::purge_all  drop every L2 entry. the number purged
+ *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
+ * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
+ * a caller drives every namespace the same way.
+ */
+typedef struct
+{
+    EdgeCacheSdSerializeArgs serialize_args;
+    EdgeCacheSdDeserializeArgs deserialize_args;
+    EdgeCacheSdPutArgs put_args;
+    EdgeCacheSdGetArgs get_args;
+    EdgeCacheSdDelArgs del_args;
+    EdgeCacheSdPurgePrefixArgs purge_prefix_args;
+    EdgeCacheSdPurgeAllArgs purge_all_args;
+
+    proto_bool ok;
+    size_t n;
+    uint32_t count;
+
+    void (*const serialize)(uint8_t *restrict work);
+    void (*const deserialize)(uint8_t *restrict work);
+    // The store operations are the only part that needs a key/value database behind it, so they
+    // are the only part the flag gates. The codec above is pure and is always here.
 #if PROTOCORE_ENABLE_DBM
-#include "services/storage/dbm/dbm.h" // dbm handle type for the L2 put/get/purge helpers below
+    void (*const put)(uint8_t *restrict work);
+    void (*const get)(uint8_t *restrict work);
+    void (*const del)(uint8_t *restrict work);
+    void (*const purge_prefix)(uint8_t *restrict work);
+    void (*const purge_all)(uint8_t *restrict work);
 #endif
+} EdgeCacheSdNs;
 
-/**
- * @brief Worst-case serialized value size of one entry (every metadata string full + a max-size body).
- *
- * Size the scratch buffer with this. A serialized entry only fits in dbm when this (or the actual, often
- * smaller, size) is <= PROTOCORE_DBM_VAL_MAX - otherwise the entry stays L1-only (::edge_sd_put returns false).
- */
+/** @brief The one symbol this module exports. */
+extern EdgeCacheSdNs EdgeCacheSd;
 
-/**
- * @brief Serialize @p e's response metadata + body into @p out (little-endian, versioned).
- * @return the byte length written, or 0 if it would not fit @p cap. Freshness/age fields are intentionally
- *         not persisted (a promoted entry is force-revalidated, so they are always recomputed).
- */
-size_t edge_sd_serialize(const EdgeEntry *e, uint8_t *out, size_t cap);
-
-/**
- * @brief Rehydrate an entry from @p buf (as produced by ::edge_sd_serialize) into @p e.
- *
- * Fills only the content fields (key, digest, status, content-type, validators, encoding, Vary, body); the
- * caller owns @p e's LRU linkage, used flag, and freshness (which it sets to force a revalidation).
- * @return false on a short/corrupt/oversized buffer or a version mismatch (fails closed, no partial write
- *         of the body).
- */
-proto_bool edge_sd_deserialize(uint8_t *work, const uint8_t *buf, size_t len, EdgeEntry *e);
-
-#if PROTOCORE_ENABLE_DBM
-
-/**
- * @brief Write @p e back to the L2 store (keyed by its digest), using @p scratch to serialize.
- * @return true if it was spilled; false if @p e carries no validator, or its serialization does not fit
- *         @p scratch / PROTOCORE_DBM_VAL_MAX, or the dbm write fails (the entry simply stays L1-only).
- */
-proto_bool edge_sd_put(struct protocore_dbm *db, const EdgeEntry *e, uint8_t *scratch, size_t scratch_cap);
-
-/**
- * @brief Promote the entry stored under @p digest from L2 into @p e (via @p scratch).
- * @return true on a hit that deserialized cleanly; false on an L2 miss or a corrupt value.
- */
-proto_bool edge_sd_get(uint8_t *work, struct protocore_dbm *db, const uint8_t digest[32], EdgeEntry *e,
-                       uint8_t *scratch, size_t scratch_cap);
-
-/** @brief Drop the L2 entry stored under @p digest. @return true if one existed. */
-proto_bool edge_sd_del(struct protocore_dbm *db, const uint8_t digest[32]);
-
-/**
- * @brief Drop every L2 entry whose stored request path begins with @p prefix (via @p scratch to read each
- *        value's canonical key). @return the number purged.
- */
-uint32_t edge_sd_purge_prefix(struct protocore_dbm *db, const char *path_prefix, uint8_t *scratch, size_t scratch_cap);
-
-/** @brief Drop every L2 entry. @return the number purged. */
-uint32_t edge_sd_purge_all(struct protocore_dbm *db);
-
-#endif // PROTOCORE_ENABLE_DBM
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_EDGE_CACHE
 

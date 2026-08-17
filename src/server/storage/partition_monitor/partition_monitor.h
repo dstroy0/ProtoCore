@@ -19,11 +19,15 @@
 #ifndef PROTOCORE_PARTITION_MONITOR_H
 #define PROTOCORE_PARTITION_MONITOR_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_PARTITION_MONITOR
 
 PROTOCORE_BEGIN_DECLS
+
+// This module holds nothing between calls, so it carves no borrow and states none. An entry
+// takes one all the same, and never reads it, so every namespace in the tree is invoked the
+// same way.
 
 /** @brief One flash partition entry. */
 typedef struct
@@ -36,31 +40,84 @@ typedef struct
     proto_bool running; ///< true for the currently-running app partition.
 } protocore_partition_info;
 
-// ---------------------------------------------------------------------------
-// Host-testable core
-// ---------------------------------------------------------------------------
+/** @brief What kind takes: type, subtype. */
+typedef struct
+{
+    uint8_t type;
+    uint8_t subtype;
+} PartitionMonitorKindArgs;
 
-/** @brief Human name for a partition type/subtype (e.g. "factory", "ota", "nvs", "littlefs"). */
-const char *protocore_partition_kind(uint8_t type, uint8_t subtype);
+/** @brief What json takes: parts, count, out, cap. */
+typedef struct
+{
+    const protocore_partition_info *parts;
+    uint8_t count;
+    char *out;
+    uint32_t cap;
+} PartitionMonitorJsonArgs;
+
+/** @brief What collect takes: out, max. */
+typedef struct
+{
+    protocore_partition_info *out;
+    uint8_t max;
+} PartitionMonitorCollectArgs;
+
+/** @brief What begin takes: path. */
+typedef struct
+{
+    const char *path;
+} PartitionMonitorBeginArgs;
 
 /**
- * @brief Serialize a partition array as JSON `{"partitions":[...]}` into @p out.
- * @return characters written, or 0 if @p cap is too small.
+ * @brief Flash partition-map monitor (PROTOCORE_ENABLE_PARTITION_MONITOR). Reports the device's flash partition table
+ * ...
+ *
+ * A caller sets the members a call takes, invokes it through ::PartitionMonitor with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   PartitionMonitor.kind_args.type = ...;
+ *   PartitionMonitor.kind_args.subtype = ...;
+ *   PartitionMonitor.kind(work);
+ *   // PartitionMonitor.text is what the call reports
+ *
+ * @var PartitionMonitorNs::kind_args  what kind takes: type, subtype
+ * @var PartitionMonitorNs::json_args  what json takes: parts, count, out, cap
+ * @var PartitionMonitorNs::collect_args  what collect takes: out, max
+ * @var PartitionMonitorNs::begin_args  what begin takes: path
+ * @var PartitionMonitorNs::ok  a call's true/false outcome
+ * @var PartitionMonitorNs::text  the string a call reports
+ * @var PartitionMonitorNs::n  characters written, or 0 if cap is too small
+ * @var PartitionMonitorNs::u8  number of partitions written (<= max)
+ * @var PartitionMonitorNs::kind  human name for a partition type/subtype (e.g. "factory", "ota", ...
+ * @var PartitionMonitorNs::json  serialize a partition array as JSON `{"partitions":[...]}` into out
+ * @var PartitionMonitorNs::collect  walk the flash partition table into out (ESP32; 0 on host builds)
+ * @var PartitionMonitorNs::begin  serve the partition map as JSON at path (GET). Default "/partitions"
+ *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
+ * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
+ * a caller drives every namespace the same way.
  */
-int32_t protocore_partition_json(const protocore_partition_info *parts, uint8_t count, char *out, uint32_t cap);
+typedef struct
+{
+    PartitionMonitorKindArgs kind_args;
+    PartitionMonitorJsonArgs json_args;
+    PartitionMonitorCollectArgs collect_args;
+    PartitionMonitorBeginArgs begin_args;
 
-/**
- * @brief Walk the flash partition table into @p out (ESP32; 0 on host builds).
- * @return number of partitions written (<= @p max).
- */
-uint8_t protocore_partition_collect(protocore_partition_info *out, uint8_t max);
+    proto_bool ok;
+    const char *text;
+    int32_t n;
+    uint8_t u8;
 
-// ---------------------------------------------------------------------------
-// Server integration
-// ---------------------------------------------------------------------------
+    void (*const kind)(uint8_t *restrict work);
+    void (*const json)(uint8_t *restrict work);
+    void (*const collect)(uint8_t *restrict work);
+    void (*const begin)(uint8_t *restrict work);
+} PartitionMonitorNs;
 
-/** @brief Serve the partition map as JSON at @p path (GET). Default "/partitions". */
-void protocore_partition_monitor_begin(const char *path);
+/** @brief The one symbol this module exports. */
+extern PartitionMonitorNs PartitionMonitor;
 
 PROTOCORE_END_DECLS
 

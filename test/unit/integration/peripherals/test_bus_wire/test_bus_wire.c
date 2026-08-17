@@ -31,21 +31,34 @@ static void test_sht3x_read_wire(void)
     uint8_t reply[6];
     reply[0] = 0x66;
     reply[1] = 0x66;
-    reply[2] = protocore_sht3x_crc8(&reply[0], 2);
+    Sht3x.crc8_args.data = &reply[0];
+    Sht3x.crc8_args.len = 2;
+    Sht3x.crc8(protocore_sht3x_span());
+    reply[2] = Sht3x.crc;
     reply[3] = 0x80;
     reply[4] = 0x00;
-    reply[5] = protocore_sht3x_crc8(&reply[3], 2);
+    Sht3x.crc8_args.data = &reply[3];
+    Sht3x.crc8_args.len = 2;
+    Sht3x.crc8(protocore_sht3x_span());
+    reply[5] = Sht3x.crc;
     protocore_bus_host_preload(reply, sizeof(reply));
 
     int32_t t = 0;
     int32_t rh = 0;
-    TEST_ASSERT_TRUE(protocore_sht3x_read(&t, &rh));
+    Sht3x.read_args.temp_mc = &t;
+    Sht3x.read_args.rh_mpct = &rh;
+    Sht3x.read(protocore_sht3x_span());
+    TEST_ASSERT_TRUE(Sht3x.ok);
 
     const uint8_t want[2] = {(uint8_t)(SHT3X_CMD_SINGLE_HIGH >> 8), (uint8_t)(SHT3X_CMD_SINGLE_HIGH & 0xFF)};
     expect_tx(want, sizeof(want), "sht3x measurement command");
 
-    TEST_ASSERT_EQUAL_INT32(protocore_sht3x_temp_mc(0x6666), t);
-    TEST_ASSERT_EQUAL_INT32(protocore_sht3x_rh_mpct(0x8000), rh);
+    Sht3x.temp_mc_args.raw = 0x6666;
+    Sht3x.temp_mc(protocore_sht3x_span());
+    TEST_ASSERT_EQUAL_INT32(Sht3x.milli, t);
+    Sht3x.rh_mpct_args.raw = 0x8000;
+    Sht3x.rh_mpct(protocore_sht3x_span());
+    TEST_ASSERT_EQUAL_INT32(Sht3x.milli, rh);
 }
 
 static void test_sht3x_bad_crc_rejected(void)
@@ -54,12 +67,19 @@ static void test_sht3x_bad_crc_rejected(void)
     protocore_bus_host_preload(reply, sizeof(reply));
     int32_t t = 0;
     int32_t rh = 0;
-    TEST_ASSERT_FALSE(protocore_sht3x_read(&t, &rh));
+    Sht3x.read_args.temp_mc = &t;
+    Sht3x.read_args.rh_mpct = &rh;
+    Sht3x.read(protocore_sht3x_span());
+    TEST_ASSERT_FALSE(Sht3x.ok);
 }
 
 static void test_pca9685_set_pwm_wire(void)
 {
-    TEST_ASSERT_TRUE(protocore_pca9685_set_pwm(3, 0, 2048));
+    Pca9685.set_pwm_args.channel = 3;
+    Pca9685.set_pwm_args.on = 0;
+    Pca9685.set_pwm_args.off = 2048;
+    Pca9685.set_pwm(protocore_pca9685_span());
+    TEST_ASSERT_TRUE(Pca9685.ok);
     const uint8_t want[5] = {(uint8_t)(PCA9685_REG_LED0_ON_L + 4 * 3), 0x00, 0x00, (uint8_t)(2048 & 0xFF),
                              (uint8_t)((2048 >> 8) & 0x1F)};
     expect_tx(want, sizeof(want), "pca9685 channel 3 write");
@@ -67,15 +87,25 @@ static void test_pca9685_set_pwm_wire(void)
 
 static void test_pca9685_servo_wire(void)
 {
-    TEST_ASSERT_TRUE(protocore_pca9685_set_servo_us(0, 1500));
-    uint16_t off = protocore_pca9685_us_to_count(1500, PROTOCORE_PCA9685_FREQ);
+    Pca9685.set_servo_us_args.channel = 0;
+    Pca9685.set_servo_us_args.microseconds = 1500;
+    Pca9685.set_servo_us(protocore_pca9685_span());
+    TEST_ASSERT_TRUE(Pca9685.ok);
+    Pca9685.us_to_count_args.microseconds = 1500;
+    Pca9685.us_to_count_args.freq_hz = PROTOCORE_PCA9685_FREQ;
+    Pca9685.us_to_count(protocore_pca9685_span());
+    uint16_t off = Pca9685.count;
     const uint8_t want[5] = {PCA9685_REG_LED0_ON_L, 0x00, 0x00, (uint8_t)(off & 0xFF), (uint8_t)((off >> 8) & 0x1F)};
     expect_tx(want, sizeof(want), "pca9685 servo write");
 }
 
 static void test_ina219_wire_is_big_endian(void)
 {
-    TEST_ASSERT_TRUE(protocore_ina219_begin(0x40, 100, 100));
+    Ina219.begin_args.addr = 0x40;
+    Ina219.begin_args.current_lsb_ua = 100;
+    Ina219.begin_args.shunt_mohm = 100;
+    Ina219.begin(protocore_ina219_span());
+    TEST_ASSERT_TRUE(Ina219.ok);
 
     TEST_ASSERT_GREATER_OR_EQUAL_UINT32(1, protocore_bus_host_count());
     uint32_t n = 0;
@@ -83,7 +113,10 @@ static void test_ina219_wire_is_big_endian(void)
     TEST_ASSERT_EQUAL_UINT32(3, n);
     TEST_ASSERT_EQUAL_HEX8(INA219_REG_CALIBRATION, first[0]);
     uint16_t cal = (uint16_t)(((uint16_t)first[1] << 8) | first[2]);
-    TEST_ASSERT_EQUAL_UINT16(protocore_ina219_calibration(100, 100), cal);
+    Ina219.calibration_args.current_lsb_ua = 100;
+    Ina219.calibration_args.shunt_mohm = 100;
+    Ina219.calibration(protocore_ina219_span());
+    TEST_ASSERT_EQUAL_UINT16(Ina219.cal, cal);
 
     for (uint32_t i = 0; i < protocore_bus_host_count(); i++)
     {
@@ -96,49 +129,76 @@ static void test_rtc_read_wire(void)
     const uint8_t regs[7] = {0x05, 0x04, 0x03, 0x02, 0x02, 0x01, 0x24};
     protocore_bus_host_preload(regs, sizeof(regs));
 
-    uint32_t epoch = protocore_rtc_read_epoch();
+    Rtc.read_epoch(protocore_rtc_span());
+    uint32_t epoch = Rtc.epoch;
 
     const uint8_t want[1] = {0x00};
     expect_tx(want, sizeof(want), "rtc register pointer");
 
     uint32_t expect = 0;
-    TEST_ASSERT_TRUE(protocore_rtc_regs_to_epoch(regs, &expect));
+    Rtc.regs_to_epoch_args.regs = regs;
+    Rtc.regs_to_epoch_args.epoch = &expect;
+    Rtc.regs_to_epoch(protocore_rtc_span());
+    TEST_ASSERT_TRUE(Rtc.ok);
     TEST_ASSERT_EQUAL_UINT32(expect, epoch);
 }
 
 static void test_rtc_set_wire(void)
 {
     uint32_t epoch = 1700000000u;
-    TEST_ASSERT_TRUE(protocore_rtc_set_epoch(epoch));
+    Rtc.set_epoch_args.epoch = epoch;
+    Rtc.set_epoch(protocore_rtc_span());
+    TEST_ASSERT_TRUE(Rtc.ok);
 
     uint8_t want[8];
     want[0] = 0x00;
-    protocore_rtc_epoch_to_regs(epoch, &want[1]);
+    Rtc.epoch_to_regs_args.epoch = epoch;
+    Rtc.epoch_to_regs_args.regs = &want[1];
+    Rtc.epoch_to_regs(protocore_rtc_span());
     expect_tx(want, sizeof(want), "rtc set");
 }
 
 static void test_smbus_pec_on_the_wire(void)
 {
-    protocore_smbus_set_pec(PROTO_TRUE);
-    TEST_ASSERT_TRUE(protocore_smbus_write_byte(0x2A, 0x10, 0x5A));
+    Smbus.set_pec_args.on = PROTO_TRUE;
+    Smbus.set_pec(protocore_smbus_span());
+    Smbus.write_byte_args.addr = 0x2A;
+    Smbus.write_byte_args.cmd = 0x10;
+    Smbus.write_byte_args.value = 0x5A;
+    Smbus.write_byte(protocore_smbus_span());
+    TEST_ASSERT_TRUE(Smbus.ok);
 
     const uint8_t payload[2] = {0x10, 0x5A};
-    const uint8_t want[3] = {0x10, 0x5A, protocore_smbus_pec_write(0x2A, payload, sizeof(payload))};
+    Smbus.pec_write_args.addr = 0x2A;
+    Smbus.pec_write_args.payload = payload;
+    Smbus.pec_write_args.len = sizeof(payload);
+    Smbus.pec_write(protocore_smbus_span());
+    const uint8_t want[3] = {0x10, 0x5A, Smbus.value};
     expect_tx(want, sizeof(want), "smbus write byte with pec");
-    protocore_smbus_set_pec(PROTO_FALSE);
+    Smbus.set_pec_args.on = PROTO_FALSE;
+    Smbus.set_pec(protocore_smbus_span());
 }
 
 static void test_smbus_without_pec(void)
 {
-    protocore_smbus_set_pec(PROTO_FALSE);
-    TEST_ASSERT_TRUE(protocore_smbus_write_byte(0x2A, 0x10, 0x5A));
+    Smbus.set_pec_args.on = PROTO_FALSE;
+    Smbus.set_pec(protocore_smbus_span());
+    Smbus.write_byte_args.addr = 0x2A;
+    Smbus.write_byte_args.cmd = 0x10;
+    Smbus.write_byte_args.value = 0x5A;
+    Smbus.write_byte(protocore_smbus_span());
+    TEST_ASSERT_TRUE(Smbus.ok);
     const uint8_t want[2] = {0x10, 0x5A};
     expect_tx(want, sizeof(want), "smbus write byte without pec");
 }
 
 static void test_smbus_word_is_little_endian(void)
 {
-    TEST_ASSERT_TRUE(protocore_smbus_write_word(0x2A, 0x20, 0xBEEF));
+    Smbus.write_word_args.addr = 0x2A;
+    Smbus.write_word_args.cmd = 0x20;
+    Smbus.write_word_args.value = 0xBEEF;
+    Smbus.write_word(protocore_smbus_span());
+    TEST_ASSERT_TRUE(Smbus.ok);
     const uint8_t want[3] = {0x20, 0xEF, 0xBE};
     expect_tx(want, sizeof(want), "smbus write word");
 }
@@ -148,7 +208,11 @@ static void test_smbus_read_word_wire(void)
     const uint8_t reply[2] = {0xEF, 0xBE};
     protocore_bus_host_preload(reply, sizeof(reply));
     uint16_t v = 0;
-    TEST_ASSERT_TRUE(protocore_smbus_read_word(0x2A, 0x20, &v));
+    Smbus.read_word_args.addr = 0x2A;
+    Smbus.read_word_args.cmd = 0x20;
+    Smbus.read_word_args.out = &v;
+    Smbus.read_word(protocore_smbus_span());
+    TEST_ASSERT_TRUE(Smbus.ok);
     TEST_ASSERT_EQUAL_HEX16(0xBEEF, v);
     const uint8_t want[1] = {0x20};
     expect_tx(want, sizeof(want), "smbus read word command");
@@ -168,8 +232,16 @@ static void test_i2c_scan_probes_every_address(void)
 
 static void test_transfers_carry_their_address(void)
 {
-    TEST_ASSERT_TRUE(protocore_pca9685_set_pwm(0, 0, 0));
-    TEST_ASSERT_TRUE(protocore_smbus_write_byte(0x2A, 0x10, 0x5A));
+    Pca9685.set_pwm_args.channel = 0;
+    Pca9685.set_pwm_args.on = 0;
+    Pca9685.set_pwm_args.off = 0;
+    Pca9685.set_pwm(protocore_pca9685_span());
+    TEST_ASSERT_TRUE(Pca9685.ok);
+    Smbus.write_byte_args.addr = 0x2A;
+    Smbus.write_byte_args.cmd = 0x10;
+    Smbus.write_byte_args.value = 0x5A;
+    Smbus.write_byte(protocore_smbus_span());
+    TEST_ASSERT_TRUE(Smbus.ok);
 
     TEST_ASSERT_EQUAL_UINT32(2, protocore_bus_host_count());
     TEST_ASSERT_EQUAL_UINT16(PROTOCORE_PCA9685_I2C_ADDR, protocore_bus_host_txn_at(0)->target);
@@ -181,7 +253,8 @@ static void test_rtc_read_is_one_transaction(void)
 {
     const uint8_t regs[7] = {0x05, 0x04, 0x03, 0x02, 0x02, 0x01, 0x24};
     protocore_bus_host_preload(regs, sizeof(regs));
-    (void)protocore_rtc_read_epoch();
+    Rtc.read_epoch(protocore_rtc_span());
+    (void)Rtc.epoch;
 
     TEST_ASSERT_EQUAL_UINT32(1, protocore_bus_host_count());
     const protocore_bus_host_rec *t = protocore_bus_host_txn_at(0);
@@ -191,7 +264,10 @@ static void test_rtc_read_is_one_transaction(void)
 
 static void test_pca9685_begin_settles_the_oscillator(void)
 {
-    TEST_ASSERT_TRUE(protocore_pca9685_begin(PROTOCORE_PCA9685_I2C_ADDR, PROTOCORE_PCA9685_FREQ));
+    Pca9685.begin_args.addr = PROTOCORE_PCA9685_I2C_ADDR;
+    Pca9685.begin_args.freq_hz = PROTOCORE_PCA9685_FREQ;
+    Pca9685.begin(protocore_pca9685_span());
+    TEST_ASSERT_TRUE(Pca9685.ok);
 
     TEST_ASSERT_EQUAL_UINT32(5, protocore_bus_host_count());
     uint32_t gap = protocore_bus_host_gap_us(2, 3);
@@ -202,7 +278,9 @@ static void test_failure_propagates(void)
 {
     protocore_bus_host_fail_next(1);
     int32_t mv = 0;
-    TEST_ASSERT_FALSE(protocore_ina219_read_bus_mv(&mv));
+    Ina219.read_bus_mv_args.millivolts = &mv;
+    Ina219.read_bus_mv(protocore_ina219_span());
+    TEST_ASSERT_FALSE(Ina219.ok);
 }
 
 static void test_spi_wire(void)

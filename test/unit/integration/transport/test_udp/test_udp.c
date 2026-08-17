@@ -18,7 +18,6 @@ static const protocore_ip *addr(const char *s)
     Ip.args.text = s;
     Ip.args.out = &a;
     Ip.parse(Ip.internal);
-    Ip.ok;
     return &a;
 }
 

@@ -7,10 +7,13 @@
  *        connection to an origin protocore_client connection via the pure relay engine.
  */
 
-#include "relay_listener.h"
-#include "mmgr/protomem.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_RELAY
+
+#include "mmgr/protomem.h"
+#include "mmgr/secure.h" // the persistent end this module's state is taken from
+#include "relay_listener.h"
 
 #include "mmgr/protostr.h"
 #include "network_drivers/session/session.h"                 // Session.proto->add: the handler registration
@@ -19,9 +22,13 @@
 #include "network_drivers/transport/tcp/tcp.h"
 #include "relay.h"
 #include "server/core/proto_handler.h"
+PROTOCORE_BEGIN_DECLS
+
 #if PROTOCORE_ENABLE_RADIO_POWER
 #include "network_drivers/physical/radio_power.h" // keep the radio awake during a relayed transfer
 #endif
+
+static uint8_t relay_work[16]; // the borrow an entry takes; Relay never reads it
 
 // One published front port -> origin.
 typedef struct
@@ -49,37 +56,46 @@ typedef struct
     RelayBridge bridges[PROTOCORE_RELAY_MAX_CONNS];
     proto_bool registered;
 } RelayListenerCtx;
-static RelayListenerCtx s_ctx;
+// The caller's borrow, split: the context at its offset. One pointer arrives and every
+// region is that pointer plus a compile-time offset, so the assert below proves the span
+// covers them before anything runs.
+#define RELAY_LISTENER_OFF_CTX 0u
+static_assert(RELAY_LISTENER_OFF_CTX + sizeof(RelayListenerCtx) <= PROTOCORE_RELAY_LISTENER_BORROW,
+              "PROTOCORE_RELAY_LISTENER_BORROW is short of the module context - raise it in protocore_config.h, which"
+              " sums it into its arena");
 
-static RelayBind *bind_by_listener(uint8_t lid)
+// The region, at its offset in the caller's borrow.
+#define RELAY_LISTENER_CTX(w) ((RelayListenerCtx *)(void *)((w) + RELAY_LISTENER_OFF_CTX))
+
+static RelayBind *bind_by_listener(uint8_t *restrict work, uint8_t lid)
 {
     for (int i = 0; i < PROTOCORE_RELAY_MAX_PUBLISH; i++)
     {
-        if (s_ctx.binds[i].active && s_ctx.binds[i].listener_id == lid)
+        if (RELAY_LISTENER_CTX(work)->binds[i].active && RELAY_LISTENER_CTX(work)->binds[i].listener_id == lid)
         {
-            return &s_ctx.binds[i];
+            return &RELAY_LISTENER_CTX(work)->binds[i];
         }
     }
     return NULL;
 }
 
-static RelayBridge *bridge_by_conn(uint8_t slot)
+static RelayBridge *bridge_by_conn(uint8_t *restrict work, uint8_t slot)
 {
     for (int i = 0; i < PROTOCORE_RELAY_MAX_CONNS; i++)
     {
-        if (s_ctx.bridges[i].active && s_ctx.bridges[i].conn_slot == slot)
+        if (RELAY_LISTENER_CTX(work)->bridges[i].active && RELAY_LISTENER_CTX(work)->bridges[i].conn_slot == slot)
         {
-            return &s_ctx.bridges[i];
+            return &RELAY_LISTENER_CTX(work)->bridges[i];
         }
     }
     return NULL;
 }
 
-static int bridge_find_free()
+static int bridge_find_free(uint8_t *restrict work)
 {
     for (int i = 0; i < PROTOCORE_RELAY_MAX_CONNS; i++)
     {
-        if (!s_ctx.bridges[i].active)
+        if (!RELAY_LISTENER_CTX(work)->bridges[i].active)
         {
             return i;
         }
@@ -169,9 +185,9 @@ static void teardown(RelayBridge *br, proto_bool close_inbound)
 }
 
 // Pump the bridge one pass and tear it down if the origin ended or the pump errored.
-static void service(uint8_t slot)
+static void service(uint8_t *restrict work, uint8_t slot)
 {
-    RelayBridge *br = bridge_by_conn(slot);
+    RelayBridge *br = bridge_by_conn(work, slot);
     if (!br)
     {
         return;
@@ -182,7 +198,9 @@ static void service(uint8_t slot)
     for (int pass = 0; pass < PROTOCORE_RELAY_DRAIN_MAX; pass++)
     {
         uint32_t moved = br->relay.bytes_a2b + br->relay.bytes_b2a;
-        protocore_relay_status st = protocore_relay_step(&br->relay);
+        Relay.step_args.r = &br->relay;
+        Relay.step(relay_work);
+        protocore_relay_status st = Relay.status;
         if (st == PROTOCORE_RELAY_ERROR || st == PROTOCORE_RELAY_DONE)
         {
             teardown(br, PROTO_TRUE);
@@ -207,16 +225,24 @@ static void service(uint8_t slot)
 
 static void relay_on_accept(uint8_t slot)
 {
+    // The signature belongs to whoever dispatches this, so the borrow comes from the
+    // accessor rather than a parameter.
+    uint8_t *restrict work = protocore_relay_listener_span();
+    if (work == NULL)
+    {
+        return;
+    }
+
     ConnPool.slot = slot;
     ConnPool.listener_id(ConnPool.internal);
-    RelayBind *bd = bind_by_listener(ConnPool.u8);
+    RelayBind *bd = bind_by_listener(work, ConnPool.u8);
     if (!bd)
     {
         ConnPool.slot = slot;
         ConnPool.close(ConnPool.internal); // no origin published for this listener
         return;
     }
-    int idx = bridge_find_free();
+    int idx = bridge_find_free(work);
     if (idx < 0)
     {
         ConnPool.slot = slot;
@@ -237,13 +263,16 @@ static void relay_on_accept(uint8_t slot)
         ConnPool.close(ConnPool.internal); // no free client slot
         return;
     }
-    RelayBridge *br = &s_ctx.bridges[idx];
+    RelayBridge *br = &RELAY_LISTENER_CTX(work)->bridges[idx];
     br->active = PROTO_TRUE;
     br->conn_slot = slot;
     br->origin_cid = cid;
     protocore_relay_end a = {a_recv, a_send, NULL, br};
     protocore_relay_end b = {b_recv, b_send, NULL, br};
-    protocore_relay_init(&br->relay, &a, &b);
+    Relay.init_args.r = &br->relay;
+    Relay.init_args.client = &a;
+    Relay.init_args.origin = &b;
+    Relay.init(relay_work);
 #if PROTOCORE_ENABLE_RADIO_POWER
     Radio.busy_hold(Radio.internal); // hold the radio awake for the life of this bridge
 #endif
@@ -251,23 +280,47 @@ static void relay_on_accept(uint8_t slot)
 
 static void relay_on_data(uint8_t slot)
 {
-    service(slot);
+    // The signature belongs to whoever dispatches this, so the borrow comes from the
+    // accessor rather than a parameter.
+    uint8_t *restrict work = protocore_relay_listener_span();
+    if (work == NULL)
+    {
+        return;
+    }
+
+    service(work, slot);
 }
 
 static void relay_on_poll(uint8_t slot)
 {
+    // The signature belongs to whoever dispatches this, so the borrow comes from the
+    // accessor rather than a parameter.
+    uint8_t *restrict work = protocore_relay_listener_span();
+    if (work == NULL)
+    {
+        return;
+    }
+
     ConnPool.slot = slot;
     ConnPool.active(ConnPool.internal);
     if (!ConnPool.ok)
     {
         return;
     }
-    service(slot);
+    service(work, slot);
 }
 
 static void relay_on_close(uint8_t slot)
 {
-    RelayBridge *br = bridge_by_conn(slot);
+    // The signature belongs to whoever dispatches this, so the borrow comes from the
+    // accessor rather than a parameter.
+    uint8_t *restrict work = protocore_relay_listener_span();
+    if (work == NULL)
+    {
+        return;
+    }
+
+    RelayBridge *br = bridge_by_conn(work, slot);
     if (br)
     {
         teardown(br, PROTO_FALSE); // the transport already owns the closing inbound slot
@@ -279,21 +332,51 @@ static void relay_on_close(uint8_t slot)
 static const ProtoHandler s_relay_handler = {
     .on_accept = relay_on_accept, .on_data = relay_on_data, .on_close = relay_on_close, .on_poll = relay_on_poll};
 
-proto_bool protocore_relay_publish(uint8_t listener_id, const char *origin_host, uint16_t origin_port)
+// --- the program's shared state, beside the namespace not on it -------------
+
+// The one owned instance, private to this TU: the pointer to the bytes this module took for
+// itself. A caller that hands in its own borrow never reaches it.
+typedef struct
 {
+    uint8_t *span; ///< PROTOCORE_RELAY_LISTENER_BORROW persistent bytes, or null while the pool was short
+} RelayListenerOwnCtx;
+static RelayListenerOwnCtx s_own;
+
+// Not an entry: an entry takes a borrow and this is where that borrow comes from.
+uint8_t *protocore_relay_listener_span(void)
+{
+    if (s_own.span == NULL)
+    {
+        protocore_span sp = protocore_secure_persist_span(PROTOCORE_RELAY_LISTENER_BORROW);
+        if (span.ok(sp))
+        {
+            s_own.span = sp.buf;
+        }
+    }
+    return s_own.span; // null while the pool was short, which every entry refuses
+}
+
+static void relay_listener_publish(uint8_t *restrict work)
+{
+    uint8_t listener_id = RelayListener.publish_args.listener_id;
+    const char *origin_host = RelayListener.publish_args.origin_host;
+    uint16_t origin_port = RelayListener.publish_args.origin_port;
+
     if (!origin_host)
     {
-        return PROTO_FALSE;
+        RelayListener.ok = PROTO_FALSE;
+        return;
     }
     size_t hl = str.len(origin_host, PROTOCORE_RELAY_HOST_MAX + 1);
     if (hl == 0 || hl >= PROTOCORE_RELAY_HOST_MAX)
     {
-        return PROTO_FALSE;
+        RelayListener.ok = PROTO_FALSE;
+        return;
     }
     int idx = -1;
     for (int i = 0; i < PROTOCORE_RELAY_MAX_PUBLISH; i++)
     {
-        if (!s_ctx.binds[i].active)
+        if (!RELAY_LISTENER_CTX(work)->binds[i].active)
         {
             idx = i;
             break;
@@ -301,38 +384,44 @@ proto_bool protocore_relay_publish(uint8_t listener_id, const char *origin_host,
     }
     if (idx < 0)
     {
-        return PROTO_FALSE;
+        RelayListener.ok = PROTO_FALSE;
+        return;
     }
-    s_ctx.binds[idx].active = PROTO_TRUE;
-    s_ctx.binds[idx].listener_id = listener_id;
-    mem.cpy(s_ctx.binds[idx].host, origin_host, hl + 1);
-    s_ctx.binds[idx].port = origin_port;
-    if (!s_ctx.registered)
+    RELAY_LISTENER_CTX(work)->binds[idx].active = PROTO_TRUE;
+    RELAY_LISTENER_CTX(work)->binds[idx].listener_id = listener_id;
+    mem.cpy(RELAY_LISTENER_CTX(work)->binds[idx].host, origin_host, hl + 1);
+    RELAY_LISTENER_CTX(work)->binds[idx].port = origin_port;
+    if (!RELAY_LISTENER_CTX(work)->registered)
     {
         Session.proto->proto = PROTO_RELAY;
         Session.proto->h = &s_relay_handler;
         Session.proto->add(Session.proto->internal);
-        s_ctx.registered = PROTO_TRUE;
+        RELAY_LISTENER_CTX(work)->registered = PROTO_TRUE;
     }
-    return PROTO_TRUE;
+    RelayListener.ok = PROTO_TRUE;
 }
 
-void protocore_relay_listener_reset(void)
+static void relay_listener_reset(uint8_t *restrict work)
 {
+
     for (int i = 0; i < PROTOCORE_RELAY_MAX_PUBLISH; i++)
     {
-        s_ctx.binds[i].active = PROTO_FALSE;
+        RELAY_LISTENER_CTX(work)->binds[i].active = PROTO_FALSE;
     }
     for (int i = 0; i < PROTOCORE_RELAY_MAX_CONNS; i++)
     {
-        if (s_ctx.bridges[i].active)
+        if (RELAY_LISTENER_CTX(work)->bridges[i].active)
         {
-            s_ctx.bridges[i].active = PROTO_FALSE;
+            RELAY_LISTENER_CTX(work)->bridges[i].active = PROTO_FALSE;
 #if PROTOCORE_ENABLE_RADIO_POWER
             Radio.busy_release(Radio.internal); // balance the hold taken when the bridge was opened
 #endif
         }
     }
 }
+
+RelayListenerNs RelayListener = {.publish = relay_listener_publish, .reset = relay_listener_reset};
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_RELAY

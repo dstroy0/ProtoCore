@@ -9,22 +9,40 @@
  * (LEN + LCS) & 0xFF == 0 and (TFI + sum(PData) + DCS) & 0xFF == 0 (PN532 User Manual).
  */
 
-#include "server/peripherals/pn532/pn532.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_PN532
 
+#include "server/peripherals/pn532/pn532.h"
+
+PROTOCORE_BEGIN_DECLS
+
 static const uint8_t ACK[6] = {0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00};
 
-uint16_t protocore_pn532_build_frame(uint8_t tfi, const uint8_t *data, uint8_t len, uint8_t *out, uint16_t cap)
+// --- the entries -----------------------------------------------------------
+
+// No context and no borrow: every operand is the caller's. The borrow an entry takes is
+// never read.
+
+static void pn532_build_frame(uint8_t *restrict work)
 {
+    (void)work;
+    uint8_t tfi = Pn532.build_frame_args.tfi;
+    const uint8_t *data = Pn532.build_frame_args.data;
+    uint8_t len = Pn532.build_frame_args.len;
+    uint8_t *out = Pn532.build_frame_args.out;
+    uint16_t cap = Pn532.build_frame_args.cap;
+
     if (!out || len > PROTOCORE_PN532_MAX_DATA || (data == NULL && len > 0))
     {
-        return 0;
+        Pn532.len = 0;
+        return;
     }
     uint16_t total = (uint16_t)(8 + len); // preamble+start(3) + LEN+LCS(2) + TFI + data + DCS + postamble
     if (total > cap)
     {
-        return 0;
+        Pn532.len = 0;
+        return;
     }
     uint8_t frame_len = (uint8_t)(1 + len); // TFI + PData
     out[0] = 0x00;
@@ -41,41 +59,54 @@ uint16_t protocore_pn532_build_frame(uint8_t tfi, const uint8_t *data, uint8_t l
     }
     out[6 + len] = (uint8_t)(0x100 - sum); // DCS: TFI + sum(PData) + DCS == 0
     out[7 + len] = 0x00;                   // postamble
-    return total;
+    Pn532.len = total;
 }
 
-int protocore_pn532_parse_frame(const uint8_t *raw, uint16_t len, uint8_t *tfi, const uint8_t **pdata,
-                                uint8_t *pdata_len)
+static void pn532_parse_frame(uint8_t *restrict work)
 {
+    (void)work;
+    const uint8_t *raw = Pn532.parse_frame_args.raw;
+    uint16_t len = Pn532.parse_frame_args.len;
+    uint8_t *tfi = Pn532.parse_frame_args.tfi;
+    const uint8_t **pdata = Pn532.parse_frame_args.pdata;
+    uint8_t *pdata_len = Pn532.parse_frame_args.pdata_len;
+
     if (!raw || len < 1)
     {
-        return 0;
+        Pn532.n = 0;
+        return;
     }
     if (raw[0] != 0x00)
     {
-        return -1; // preamble
+        Pn532.n = -1;
+        return; // preamble
     }
     if (len < 5)
     {
-        return 0; // need 00 00 FF LEN LCS
+        Pn532.n = 0;
+        return; // need 00 00 FF LEN LCS
     }
     if (raw[1] != 0x00 || raw[2] != 0xFF)
     {
-        return -1; // start code
+        Pn532.n = -1;
+        return; // start code
     }
     uint8_t frame_len = raw[3];
     if ((uint8_t)(frame_len + raw[4]) != 0)
     {
-        return -1; // length checksum
+        Pn532.n = -1;
+        return; // length checksum
     }
     if (frame_len == 0 || frame_len > PROTOCORE_PN532_MAX_DATA + 1)
     {
-        return -1; // no TFI, or implausible length
+        Pn532.n = -1;
+        return; // no TFI, or implausible length
     }
     uint16_t total = (uint16_t)(7 + frame_len);
     if (len < total)
     {
-        return 0; // wait for TFI + PData + DCS + postamble
+        Pn532.n = 0;
+        return; // wait for TFI + PData + DCS + postamble
     }
     uint8_t sum = 0;
     for (uint8_t i = 0; i < frame_len; i++)
@@ -84,7 +115,8 @@ int protocore_pn532_parse_frame(const uint8_t *raw, uint16_t len, uint8_t *tfi, 
     }
     if ((uint8_t)(sum + raw[5 + frame_len]) != 0)
     {
-        return -1; // data checksum
+        Pn532.n = -1;
+        return; // data checksum
     }
     if (tfi)
     {
@@ -98,36 +130,54 @@ int protocore_pn532_parse_frame(const uint8_t *raw, uint16_t len, uint8_t *tfi, 
     {
         *pdata_len = (uint8_t)(frame_len - 1);
     }
-    return (int)total;
+    Pn532.n = (int)total;
 }
 
-proto_bool protocore_pn532_is_ack(const uint8_t *raw, uint16_t len)
+static void pn532_is_ack(uint8_t *restrict work)
 {
+    (void)work;
+    const uint8_t *raw = Pn532.is_ack_args.raw;
+    uint16_t len = Pn532.is_ack_args.len;
+
     if (!raw || len < 6)
     {
-        return PROTO_FALSE;
+        Pn532.ok = PROTO_FALSE;
+        return;
     }
     for (uint8_t i = 0; i < 6; i++)
     {
         if (raw[i] != ACK[i])
         {
-            return PROTO_FALSE;
+            Pn532.ok = PROTO_FALSE;
+            return;
         }
     }
-    return PROTO_TRUE;
+    Pn532.ok = PROTO_TRUE;
 }
 
-uint16_t protocore_pn532_build_ack(uint8_t *out, uint16_t cap)
+static void pn532_build_ack(uint8_t *restrict work)
 {
+    (void)work;
+    uint8_t *out = Pn532.build_ack_args.out;
+    uint16_t cap = Pn532.build_ack_args.cap;
+
     if (!out || cap < 6)
     {
-        return 0;
+        Pn532.len = 0;
+        return;
     }
     for (uint8_t i = 0; i < 6; i++)
     {
         out[i] = ACK[i];
     }
-    return 6;
+    Pn532.len = 6;
 }
+
+Pn532Ns Pn532 = {.build_frame = pn532_build_frame,
+                 .parse_frame = pn532_parse_frame,
+                 .is_ack = pn532_is_ack,
+                 .build_ack = pn532_build_ack};
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_PN532

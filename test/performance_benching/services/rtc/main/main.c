@@ -28,7 +28,9 @@ void dbench_run(void)
         DBENCH_OP("protocore_rtc_regs_to_epoch", 200000, sink += protocore_rtc_regs_to_epoch(regs, &epoch));
         uint8_t out[RTC_REG_COUNT];
         DBENCH_OP("protocore_rtc_epoch_to_regs", 200000, {
-            protocore_rtc_epoch_to_regs(1751632496u, out);
+            Rtc.epoch_to_regs_args.epoch = 1751632496u;
+            Rtc.epoch_to_regs_args.regs = out;
+            Rtc.epoch_to_regs(protocore_rtc_span());
             sink += out[0];
         });
         (void)sink;

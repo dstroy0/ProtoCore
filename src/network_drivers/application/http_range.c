@@ -82,7 +82,13 @@ int http_parse_byte_range(const char *hdr, size_t size, size_t *out_start, size_
         }
         if (size == 0)
         {
-            return -1;
+            // RFC 9110 sec 14.1.2: "When a selected representation has zero length, the only
+            // satisfiable form of range-spec in a GET request is a suffix-range with a non-zero
+            // suffix-length." So this is satisfiable and 416 would be wrong. It covers zero bytes,
+            // which an inclusive [start, end] cannot express, so the caller is told there is no
+            // usable range and serves the whole (empty) representation with 200 - which is what
+            // sec 14.2 permits a server to do with any Range it does not act on.
+            return 0;
         }
         start = (end >= size) ? 0 : (size - end);
         end = size - 1;

@@ -23,22 +23,36 @@
 
 void dbench_run(void)
 {
+    // The bytes the module runs out of, taken once. Every entry below is called with it.
+    uint8_t *w = protocore_ina219_span();
+
     for (;;)
     {
         DBENCH_BANNER("ina219");
         volatile int32_t sink32 = 0;
         volatile uint16_t sink16 = 0;
 
+        // The arguments are set outside the timed expression and the entry is called inside it, so
+        // what is timed is one call and not the staging that precedes it.
+
         // Bus voltage: register 0x19C8 -> 3300 mV (value in bits [15:3], LSB 4 mV, low status bits ignored).
-        DBENCH_OP("protocore_ina219_bus_mv", 200000, sink32 += protocore_ina219_bus_mv(0x19C8));
+        Ina219.bus_mv_args.raw = 0x19C8;
+        DBENCH_OP("Ina219.bus_mv", 200000, (Ina219.bus_mv(w), sink32 += Ina219.value));
         // Shunt voltage: signed raw 320 -> 3200 uV (LSB 10 uV).
-        DBENCH_OP("protocore_ina219_shunt_uv", 200000, sink32 += protocore_ina219_shunt_uv((int16_t)320));
+        Ina219.shunt_uv_args.raw = (int16_t)320;
+        DBENCH_OP("Ina219.shunt_uv", 200000, (Ina219.shunt_uv(w), sink32 += Ina219.value));
         // Calibration register: 100 uA/bit LSB, 100 mohm shunt -> 4096 (32-bit divide, clamped to 16 bits).
-        DBENCH_OP("protocore_ina219_calibration", 200000, sink16 += protocore_ina219_calibration(100, 100));
+        Ina219.calibration_args.current_lsb_ua = 100;
+        Ina219.calibration_args.shunt_mohm = 100;
+        DBENCH_OP("Ina219.calibration", 200000, (Ina219.calibration(w), sink16 += Ina219.cal));
         // Current scale: raw 1000 * 100 uA/bit -> 100000 uA (100 mA), 64-bit intermediate.
-        DBENCH_OP("protocore_ina219_current_ua", 200000, sink32 += protocore_ina219_current_ua((int16_t)1000, 100));
+        Ina219.current_ua_args.raw = (int16_t)1000;
+        Ina219.current_ua_args.current_lsb_ua = 100;
+        DBENCH_OP("Ina219.current_ua", 200000, (Ina219.current_ua(w), sink32 += Ina219.value));
         // Power scale: raw 500 * 20 * 100 uA/bit -> 1000000 uW (1 W), 64-bit intermediate.
-        DBENCH_OP("protocore_ina219_power_uw", 200000, sink32 += protocore_ina219_power_uw((int16_t)500, 100));
+        Ina219.power_uw_args.raw = (int16_t)500;
+        Ina219.power_uw_args.current_lsb_ua = 100;
+        DBENCH_OP("Ina219.power_uw", 200000, (Ina219.power_uw(w), sink32 += Ina219.value));
 
         (void)sink32;
         (void)sink16;

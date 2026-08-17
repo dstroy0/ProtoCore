@@ -55,11 +55,16 @@ static void hmmd_build_report(uint8_t *f, uint8_t detect, uint16_t dist, uint16_
 static int hmmd_reassemble(const uint8_t *frame, HmmdReport *out)
 {
     HmmdStream s;
-    protocore_hmmd_stream_reset(&s);
+    Hmmd.stream_reset_args.s = &s;
+    Hmmd.stream_reset(protocore_hmmd_span());
     int n = 0;
     for (int i = 0; i < PROTOCORE_HMMD_FRAME_MAX; i++)
     {
-        if (protocore_hmmd_stream_push(&s, frame[i], out))
+        Hmmd.stream_push_args.s = &s;
+        Hmmd.stream_push_args.byte = frame[i];
+        Hmmd.stream_push_args.out = out;
+        Hmmd.stream_push(protocore_hmmd_span());
+        if (Hmmd.ok)
         {
             n++;
         }
@@ -88,14 +93,24 @@ void dbench_run(void)
         volatile bool bsink = false;
 
         // parse a whole report frame (header/footer/length checks + 16 gate energies) - bulk over 45B
-        DBENCH_BULK("protocore_hmmd_parse_report", 100000, sizeof(REPORT),
-                    bsink ^= protocore_hmmd_parse_report(REPORT, sizeof(REPORT), &r));
+        Hmmd.parse_report_args.frame = REPORT;
+        Hmmd.parse_report_args.len = sizeof(REPORT);
+        Hmmd.parse_report_args.out = &r;
+        // Each entry call stays inside its DBENCH_OP / DBENCH_BULK so the timed loop measures the
+        // codec, not the read that follows it. Args that do not vary are staged once, above.
+        DBENCH_BULK("Hmmd.parse_report", 100000, sizeof(REPORT),
+                    (Hmmd.parse_report(protocore_hmmd_span()), bsink ^= Hmmd.ok));
         // reassemble one full frame octet-by-octet through the resyncing stream (reset + 45 pushes)
-        DBENCH_OP("protocore_hmmd_stream_push x45", 20000, sink += hmmd_reassemble(REPORT, &r));
+        DBENCH_OP("Hmmd.stream_push x45", 20000, sink += hmmd_reassemble(REPORT, &r));
         // build a full open-command-mode frame (FD FC FB FA .. 04 03 02 01)
-        DBENCH_OP("protocore_hmmd_cmd_open", 100000, sink += protocore_hmmd_cmd_open(cmd, sizeof(cmd)));
+        Hmmd.cmd_open_args.buf = cmd;
+        Hmmd.cmd_open_args.cap = sizeof(cmd);
+        DBENCH_OP("Hmmd.cmd_open", 100000, (Hmmd.cmd_open(protocore_hmmd_span()), sink += Hmmd.n));
         // decode one command-ACK frame
-        DBENCH_OP("protocore_hmmd_parse_ack", 100000, bsink ^= protocore_hmmd_parse_ack(ACK, sizeof(ACK), &a));
+        Hmmd.parse_ack_args.frame = ACK;
+        Hmmd.parse_ack_args.len = sizeof(ACK);
+        Hmmd.parse_ack_args.out = &a;
+        DBENCH_OP("Hmmd.parse_ack", 100000, (Hmmd.parse_ack(protocore_hmmd_span()), bsink ^= Hmmd.ok));
 
         (void)sink;
         (void)bsink;

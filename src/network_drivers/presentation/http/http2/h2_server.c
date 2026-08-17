@@ -6,6 +6,8 @@
  * @brief HTTP/2 engine <-> request-pipeline bridge - implementation. See protocore_h2_server.h.
  */
 
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
 #if PROTOCORE_ENABLE_HTTP2 && PROTOCORE_ENABLE_TLS
 
 #include "network_drivers/presentation/http/http2/h2_server.h"

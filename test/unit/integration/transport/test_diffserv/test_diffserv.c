@@ -119,7 +119,7 @@ static void test_listen_set_dscp_override_and_sentinel()
 
 static void test_accept_cb_applies_per_listener_dscp_override()
 {
-    ConnPool.life.cfg = NULL;
+    ConnPool.life.conn_timeout_ms = CONN_TIMEOUT_MS;
     ConnPool.init(ConnPool.internal);
     TcpListener.idx = 0;
     TcpListener.bind.port = 8080;
@@ -142,7 +142,7 @@ static void test_accept_cb_applies_per_listener_dscp_override()
 
 static void test_accept_cb_falls_back_to_server_default_dscp()
 {
-    ConnPool.life.cfg = NULL;
+    ConnPool.life.conn_timeout_ms = CONN_TIMEOUT_MS;
     ConnPool.init(ConnPool.internal);
     TcpListener.idx = 0;
     TcpListener.bind.port = 8080;
@@ -162,7 +162,7 @@ static void test_accept_cb_falls_back_to_server_default_dscp()
 
 static void test_accept_cb_skips_tos_write_at_best_effort()
 {
-    ConnPool.life.cfg = NULL;
+    ConnPool.life.conn_timeout_ms = CONN_TIMEOUT_MS;
     ConnPool.init(ConnPool.internal);
     TcpListener.idx = 0;
     TcpListener.bind.port = 8080;

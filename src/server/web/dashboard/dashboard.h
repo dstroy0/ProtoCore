@@ -24,11 +24,15 @@
 #ifndef PROTOCORE_DASHBOARD_H
 #define PROTOCORE_DASHBOARD_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_DASHBOARD
 
 PROTOCORE_BEGIN_DECLS
+
+// PROTOCORE_DASHBOARD_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
+// it into its arena. A caller takes them once and passes the pointer to every call. How they
+// are carved is this module's and is never named here.
 
 /** @brief Widget rendering / interaction style. */
 typedef enum PROTO_ENUM_PACKED
@@ -59,56 +63,135 @@ typedef struct
     const char *unit;           ///< unit suffix shown by the widget (may be "").
 } protocore_widget;
 
-// ---------------------------------------------------------------------------
-// Host-testable core (no server dependency)
-// ---------------------------------------------------------------------------
+/** @brief What configure takes: widgets, count. */
+typedef struct
+{
+    const protocore_widget *widgets;
+    uint8_t count;
+} DashboardConfigureArgs;
 
-/** @brief Bind the widget table and reset every value to 0. */
-void protocore_dashboard_configure(const protocore_widget *widgets, uint8_t count);
+/** @brief What set takes: key, value. */
+typedef struct
+{
+    const char *key;
+    float value;
+} DashboardSetArgs;
 
-/** @brief Set a widget's current value by key. @return false if the key is unknown. */
-proto_bool protocore_dashboard_set(const char *key, float value);
+/** @brief What layout_json takes: out, cap. */
+typedef struct
+{
+    char *out;
+    uint32_t cap;
+} DashboardLayoutJsonArgs;
+
+/** @brief What values_json takes: out, cap. */
+typedef struct
+{
+    char *out;
+    uint32_t cap;
+} DashboardValuesJsonArgs;
+
+/** @brief What on_control takes: cb. */
+typedef struct
+{
+    protocore_control_cb cb;
+} DashboardOnControlArgs;
+
+/** @brief What parse_control takes: msg, key_out, key_cap, value_out. */
+typedef struct
+{
+    const char *msg;
+    char *key_out;
+    size_t key_cap;
+    float *value_out;
+} DashboardParseControlArgs;
+
+/** @brief What dispatch_control takes: msg. */
+typedef struct
+{
+    const char *msg;
+} DashboardDispatchControlArgs;
+
+/** @brief What begin takes: path, widgets, count. */
+typedef struct
+{
+    const char *path;
+    const protocore_widget *widgets;
+    uint8_t count;
+} DashboardBeginArgs;
 
 /**
- * @brief Serialize the widget layout as a JSON array into @p out.
- * @return number of characters written, or 0 if @p cap is too small.
- */
-int32_t protocore_dashboard_layout_json(char *out, uint32_t cap);
-
-/**
- * @brief Serialize the current values as a JSON object {key:value,...} into @p out.
- * @return number of characters written, or 0 if @p cap is too small.
- */
-int32_t protocore_dashboard_values_json(char *out, uint32_t cap);
-
-/** @brief Register the callback invoked when a control widget sends a value. */
-void protocore_dashboard_on_control(protocore_control_cb cb);
-
-/**
- * @brief Parse a control message `{"k":"<key>","v":<number>}` from the page.
- * @return true if well-formed; writes the key (bounded by @p key_cap) and value.
- */
-proto_bool protocore_dashboard_parse_control(const char *msg, char *key_out, size_t key_cap, float *value_out);
-
-/**
- * @brief Parse a control message and invoke the registered control callback.
- * @return true if the message parsed and a callback was set.
- */
-proto_bool protocore_dashboard_dispatch_control(const char *msg);
-
-// ---------------------------------------------------------------------------
-// Server integration
-// ---------------------------------------------------------------------------
-
-/**
- * @brief Serve the dashboard at @p path (page, layout JSON, and SSE value stream).
+ * @brief Real-time SVG telemetry dashboard (PROTOCORE_ENABLE_DASHBOARD).
  *
- * Calls protocore_dashboard_configure(@p widgets, @p count). Default path "/dashboard".
+ * A caller sets the members a call takes, invokes it through ::Dashboard with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   Dashboard.configure_args.widgets = ...;
+ *   Dashboard.configure_args.count = ...;
+ *   Dashboard.configure(work);
+ *
+ * @var DashboardNs::configure_args  what configure takes: widgets, count
+ * @var DashboardNs::set_args  what set takes: key, value
+ * @var DashboardNs::layout_json_args  what layout_json takes: out, cap
+ * @var DashboardNs::values_json_args  what values_json takes: out, cap
+ * @var DashboardNs::on_control_args  what on_control takes: cb
+ * @var DashboardNs::parse_control_args  what parse_control takes: msg, key_out, key_cap, value_out
+ * @var DashboardNs::dispatch_control_args  what dispatch_control takes: msg
+ * @var DashboardNs::begin_args  what begin takes: path, widgets, count
+ * @var DashboardNs::ok  true if well-formed; writes the key (bounded by key_cap) and value
+ * @var DashboardNs::value  number of characters written, or 0 if cap is too small
+ * @var DashboardNs::configure  bind the widget table and reset every value to 0
+ * @var DashboardNs::set  set a widget's current value by key. false if the key is unknown
+ * @var DashboardNs::layout_json  serialize the widget layout as a JSON array into out
+ * @var DashboardNs::values_json  serialize the current values as a JSON object {key:value,...} into ...
+ * @var DashboardNs::on_control  register the callback invoked when a control widget sends a value
+ * @var DashboardNs::parse_control  parse a control message `{"k":"<key>","v":<number>}` from the page
+ * @var DashboardNs::dispatch_control  parse a control message and invoke the registered control callback
+ * @var DashboardNs::begin  serve the dashboard at path (page, layout JSON, and SSE value ...
+ * @var DashboardNs::publish  broadcast the current values to all SSE subscribers (after ...
+ *
+ * @c work is PROTOCORE_DASHBOARD_BORROW bytes the CALLER took, at an address it knows. It arrives
+ * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
+ * carved is this module's and is never named here.
  */
-void protocore_dashboard_begin(const char *path, const protocore_widget *widgets, uint8_t count);
+typedef struct
+{
+    DashboardConfigureArgs configure_args;
+    DashboardSetArgs set_args;
+    DashboardLayoutJsonArgs layout_json_args;
+    DashboardValuesJsonArgs values_json_args;
+    DashboardOnControlArgs on_control_args;
+    DashboardParseControlArgs parse_control_args;
+    DashboardDispatchControlArgs dispatch_control_args;
+    DashboardBeginArgs begin_args;
 
-/** @brief Broadcast the current values to all SSE subscribers (after protocore_dashboard_set()). */
-void protocore_dashboard_publish();
+    proto_bool ok;
+    int32_t value;
+
+    void (*const configure)(uint8_t *restrict work);
+    void (*const set)(uint8_t *restrict work);
+    void (*const layout_json)(uint8_t *restrict work);
+    void (*const values_json)(uint8_t *restrict work);
+    void (*const on_control)(uint8_t *restrict work);
+    void (*const parse_control)(uint8_t *restrict work);
+    void (*const dispatch_control)(uint8_t *restrict work);
+    void (*const begin)(uint8_t *restrict work);
+    void (*const publish)(uint8_t *restrict work);
+} DashboardNs;
+
+/** @brief The one symbol this module exports. */
+extern DashboardNs Dashboard;
+
+/**
+ * @brief The PROTOCORE_DASHBOARD_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+uint8_t *protocore_dashboard_span(void);
 
 PROTOCORE_END_DECLS
 

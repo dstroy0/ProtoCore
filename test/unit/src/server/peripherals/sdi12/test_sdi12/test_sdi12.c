@@ -18,6 +18,8 @@
 
 #include <unity.h>
 
+static uint8_t sdi12_work[16]; // the borrow an entry takes; Sdi12 never reads it
+
 void setUp(void)
 {
 }
@@ -40,11 +42,21 @@ void test_spec_crc_vectors(void)
     for (size_t i = 0; i < 6; i++)
     {
         const size_t n = strlen(CASES[i]);
-        TEST_ASSERT_TRUE_MESSAGE(protocore_sdi12_check_crc(CASES[i], n), CASES[i]);
+        Sdi12.check_crc_args.resp = CASES[i];
+        Sdi12.check_crc_args.len = n;
+        Sdi12.check_crc(sdi12_work);
+        TEST_ASSERT_TRUE_MESSAGE(Sdi12.ok, CASES[i]);
 
         // and the encoder reproduces those same three octets from the data before them
         char enc[SDI12_CRC_CHARS];
-        protocore_sdi12_crc_encode(protocore_sdi12_crc16((const uint8_t *)CASES[i], n - SDI12_CRC_CHARS), enc);
+        // The checksum is captured before the encode: both report through the one namespace.
+        Sdi12.crc16_args.data = (const uint8_t *)CASES[i];
+        Sdi12.crc16_args.len = n - SDI12_CRC_CHARS;
+        Sdi12.crc16(sdi12_work);
+        const uint16_t crc = Sdi12.crc;
+        Sdi12.crc_encode_args.crc = crc;
+        Sdi12.crc_encode_args.out = enc;
+        Sdi12.crc_encode(sdi12_work);
         TEST_ASSERT_EQUAL_CHAR_ARRAY(CASES[i] + n - SDI12_CRC_CHARS, enc, SDI12_CRC_CHARS);
     }
 }
@@ -58,12 +70,17 @@ void test_spec_crc_vectors(void)
 void test_crc16_arc_check_value(void)
 {
     static const uint8_t CHECK[9] = {'1', '2', '3', '4', '5', '6', '7', '8', '9'};
-    TEST_ASSERT_EQUAL_HEX16(0xBB3D, protocore_sdi12_crc16(CHECK, sizeof(CHECK)));
+    Sdi12.crc16_args.data = CHECK;
+    Sdi12.crc16_args.len = sizeof(CHECK);
+    Sdi12.crc16(sdi12_work);
+    TEST_ASSERT_EQUAL_HEX16(0xBB3D, Sdi12.crc);
     TEST_ASSERT_EQUAL_HEX16(0xA001, SDI12_CRC_POLY);
     TEST_ASSERT_EQUAL_INT(3, SDI12_CRC_CHARS);
 
     char enc[SDI12_CRC_CHARS];
-    protocore_sdi12_crc_encode(0xBB3D, enc);
+    Sdi12.crc_encode_args.crc = 0xBB3D;
+    Sdi12.crc_encode_args.out = enc;
+    Sdi12.crc_encode(sdi12_work);
     TEST_ASSERT_EQUAL_CHAR('K', enc[0]);
     TEST_ASSERT_EQUAL_CHAR('l', enc[1]);
     TEST_ASSERT_EQUAL_CHAR('}', enc[2]);
@@ -77,7 +94,9 @@ void test_crc_encoding_is_always_printable(void)
     for (size_t i = 0; i < 5; i++)
     {
         char enc[SDI12_CRC_CHARS];
-        protocore_sdi12_crc_encode(CRCS[i], enc);
+        Sdi12.crc_encode_args.crc = CRCS[i];
+        Sdi12.crc_encode_args.out = enc;
+        Sdi12.crc_encode(sdi12_work);
         for (int c = 0; c < SDI12_CRC_CHARS; c++)
         {
             TEST_ASSERT_TRUE((uint8_t)enc[c] >= 0x40 && (uint8_t)enc[c] <= 0x7F);
@@ -94,20 +113,41 @@ void test_corrupt_data_fails_the_crc(void)
 {
     char resp[32];
     strcpy(resp, "0+3.14OqZ");
-    TEST_ASSERT_TRUE(protocore_sdi12_check_crc(resp, 9));
+    Sdi12.check_crc_args.resp = resp;
+    Sdi12.check_crc_args.len = 9;
+    Sdi12.check_crc(sdi12_work);
+    TEST_ASSERT_TRUE(Sdi12.ok);
 
     // section 4.4.12.2 puts the CRC before the <CR><LF>, which the check trims
     strcpy(resp, "0+3.14OqZ\r\n");
-    TEST_ASSERT_TRUE(protocore_sdi12_check_crc(resp, 11));
+    Sdi12.check_crc_args.resp = resp;
+    Sdi12.check_crc_args.len = 11;
+    Sdi12.check_crc(sdi12_work);
+    TEST_ASSERT_TRUE(Sdi12.ok);
 
     strcpy(resp, "0+3.15OqZ"); // one data digit moved
-    TEST_ASSERT_FALSE(protocore_sdi12_check_crc(resp, 9));
+    Sdi12.check_crc_args.resp = resp;
+    Sdi12.check_crc_args.len = 9;
+    Sdi12.check_crc(sdi12_work);
+    TEST_ASSERT_FALSE(Sdi12.ok);
     strcpy(resp, "0+3.14OqY"); // one CRC octet moved
-    TEST_ASSERT_FALSE(protocore_sdi12_check_crc(resp, 9));
+    Sdi12.check_crc_args.resp = resp;
+    Sdi12.check_crc_args.len = 9;
+    Sdi12.check_crc(sdi12_work);
+    TEST_ASSERT_FALSE(Sdi12.ok);
 
-    TEST_ASSERT_FALSE(protocore_sdi12_check_crc(NULL, 9));
-    TEST_ASSERT_FALSE(protocore_sdi12_check_crc("OqZ", 3));  // CRC but no data octet
-    TEST_ASSERT_FALSE(protocore_sdi12_check_crc("\r\n", 2)); // nothing left after the trim
+    Sdi12.check_crc_args.resp = NULL;
+    Sdi12.check_crc_args.len = 9;
+    Sdi12.check_crc(sdi12_work);
+    TEST_ASSERT_FALSE(Sdi12.ok);
+    Sdi12.check_crc_args.resp = "OqZ";
+    Sdi12.check_crc_args.len = 3;
+    Sdi12.check_crc(sdi12_work);
+    TEST_ASSERT_FALSE(Sdi12.ok); // CRC but no data octet
+    Sdi12.check_crc_args.resp = "\r\n";
+    Sdi12.check_crc_args.len = 2;
+    Sdi12.check_crc(sdi12_work);
+    TEST_ASSERT_FALSE(Sdi12.ok); // nothing left after the trim
 }
 
 // Table 5: the basic command set. Every command starts with the address and ends with '!'.
@@ -115,32 +155,69 @@ void test_spec_command_set(void)
 {
     char buf[16];
 
-    TEST_ASSERT_EQUAL_size_t(2, protocore_sdi12_build_ack(buf, sizeof(buf), '0'));
+    Sdi12.build_ack_args.buf = buf;
+    Sdi12.build_ack_args.cap = sizeof(buf);
+    Sdi12.build_ack_args.addr = '0';
+    Sdi12.build_ack(sdi12_work);
+    TEST_ASSERT_EQUAL_size_t(2, Sdi12.n);
     TEST_ASSERT_EQUAL_STRING("0!", buf); // section 4.4.1.1 example
-    protocore_sdi12_build_ack(buf, sizeof(buf), '1');
+    Sdi12.build_ack_args.buf = buf;
+    Sdi12.build_ack_args.cap = sizeof(buf);
+    Sdi12.build_ack_args.addr = '1';
+    Sdi12.build_ack(sdi12_work);
     TEST_ASSERT_EQUAL_STRING("1!", buf);
 
-    TEST_ASSERT_EQUAL_size_t(3, protocore_sdi12_build_identify(buf, sizeof(buf), '0'));
+    Sdi12.build_identify_args.buf = buf;
+    Sdi12.build_identify_args.cap = sizeof(buf);
+    Sdi12.build_identify_args.addr = '0';
+    Sdi12.build_identify(sdi12_work);
+    TEST_ASSERT_EQUAL_size_t(3, Sdi12.n);
     TEST_ASSERT_EQUAL_STRING("0I!", buf);
 
-    protocore_sdi12_build_measure(buf, sizeof(buf), '0', PROTO_FALSE);
+    Sdi12.build_measure_args.buf = buf;
+    Sdi12.build_measure_args.cap = sizeof(buf);
+    Sdi12.build_measure_args.addr = '0';
+    Sdi12.build_measure_args.with_crc = PROTO_FALSE;
+    Sdi12.build_measure(sdi12_work);
     TEST_ASSERT_EQUAL_STRING("0M!", buf);
-    protocore_sdi12_build_measure(buf, sizeof(buf), '0', PROTO_TRUE);
+    Sdi12.build_measure_args.buf = buf;
+    Sdi12.build_measure_args.cap = sizeof(buf);
+    Sdi12.build_measure_args.addr = '0';
+    Sdi12.build_measure_args.with_crc = PROTO_TRUE;
+    Sdi12.build_measure(sdi12_work);
     TEST_ASSERT_EQUAL_STRING("0MC!", buf); // section 4.4.12: the letter with a C appended
 
-    protocore_sdi12_build_concurrent(buf, sizeof(buf), '1', PROTO_FALSE);
+    Sdi12.build_concurrent_args.buf = buf;
+    Sdi12.build_concurrent_args.cap = sizeof(buf);
+    Sdi12.build_concurrent_args.addr = '1';
+    Sdi12.build_concurrent_args.with_crc = PROTO_FALSE;
+    Sdi12.build_concurrent(sdi12_work);
     TEST_ASSERT_EQUAL_STRING("1C!", buf);
-    protocore_sdi12_build_concurrent(buf, sizeof(buf), '1', PROTO_TRUE);
+    Sdi12.build_concurrent_args.buf = buf;
+    Sdi12.build_concurrent_args.cap = sizeof(buf);
+    Sdi12.build_concurrent_args.addr = '1';
+    Sdi12.build_concurrent_args.with_crc = PROTO_TRUE;
+    Sdi12.build_concurrent(sdi12_work);
     TEST_ASSERT_EQUAL_STRING("1CC!", buf);
 
-    protocore_sdi12_build_verify(buf, sizeof(buf), '7');
+    Sdi12.build_verify_args.buf = buf;
+    Sdi12.build_verify_args.cap = sizeof(buf);
+    Sdi12.build_verify_args.addr = '7';
+    Sdi12.build_verify(sdi12_work);
     TEST_ASSERT_EQUAL_STRING("7V!", buf);
 
-    protocore_sdi12_build_change_address(buf, sizeof(buf), '0', '5');
+    Sdi12.build_change_address_args.buf = buf;
+    Sdi12.build_change_address_args.cap = sizeof(buf);
+    Sdi12.build_change_address_args.addr = '0';
+    Sdi12.build_change_address_args.new_addr = '5';
+    Sdi12.build_change_address(sdi12_work);
     TEST_ASSERT_EQUAL_STRING("0A5!", buf); // Table 8, aAb!
 
     // section 4.4.3: '?' is the wild card address used with the acknowledge active command
-    TEST_ASSERT_EQUAL_size_t(2, protocore_sdi12_build_query_address(buf, sizeof(buf)));
+    Sdi12.build_query_address_args.buf = buf;
+    Sdi12.build_query_address_args.cap = sizeof(buf);
+    Sdi12.build_query_address(sdi12_work);
+    TEST_ASSERT_EQUAL_size_t(2, Sdi12.n);
     TEST_ASSERT_EQUAL_STRING("?!", buf);
 }
 
@@ -153,37 +230,117 @@ void test_spec_indexed_commands(void)
     for (uint8_t d = 0; d <= 9; d++)
     {
         char want[5] = {'0', 'D', (char)('0' + d), '!', '\0'};
-        TEST_ASSERT_EQUAL_size_t(4, protocore_sdi12_build_data(buf, sizeof(buf), '0', d));
+        Sdi12.build_data_args.buf = buf;
+        Sdi12.build_data_args.cap = sizeof(buf);
+        Sdi12.build_data_args.addr = '0';
+        Sdi12.build_data_args.d_index = d;
+        Sdi12.build_data(sdi12_work);
+        TEST_ASSERT_EQUAL_size_t(4, Sdi12.n);
         TEST_ASSERT_EQUAL_STRING(want, buf);
     }
     // section 4.4.8: the send data commands stop at D9
-    TEST_ASSERT_EQUAL_size_t(0, protocore_sdi12_build_data(buf, sizeof(buf), '0', 10));
+    Sdi12.build_data_args.buf = buf;
+    Sdi12.build_data_args.cap = sizeof(buf);
+    Sdi12.build_data_args.addr = '0';
+    Sdi12.build_data_args.d_index = 10;
+    Sdi12.build_data(sdi12_work);
+    TEST_ASSERT_EQUAL_size_t(0, Sdi12.n);
 
-    protocore_sdi12_build_measure_additional(buf, sizeof(buf), '0', 1, PROTO_FALSE);
+    Sdi12.build_measure_additional_args.buf = buf;
+    Sdi12.build_measure_additional_args.cap = sizeof(buf);
+    Sdi12.build_measure_additional_args.addr = '0';
+    Sdi12.build_measure_additional_args.m_index = 1;
+    Sdi12.build_measure_additional_args.with_crc = PROTO_FALSE;
+    Sdi12.build_measure_additional(sdi12_work);
     TEST_ASSERT_EQUAL_STRING("0M1!", buf);
-    protocore_sdi12_build_measure_additional(buf, sizeof(buf), '3', 9, PROTO_FALSE);
+    Sdi12.build_measure_additional_args.buf = buf;
+    Sdi12.build_measure_additional_args.cap = sizeof(buf);
+    Sdi12.build_measure_additional_args.addr = '3';
+    Sdi12.build_measure_additional_args.m_index = 9;
+    Sdi12.build_measure_additional_args.with_crc = PROTO_FALSE;
+    Sdi12.build_measure_additional(sdi12_work);
     TEST_ASSERT_EQUAL_STRING("3M9!", buf);
-    protocore_sdi12_build_measure_additional(buf, sizeof(buf), '1', 2, PROTO_TRUE);
+    Sdi12.build_measure_additional_args.buf = buf;
+    Sdi12.build_measure_additional_args.cap = sizeof(buf);
+    Sdi12.build_measure_additional_args.addr = '1';
+    Sdi12.build_measure_additional_args.m_index = 2;
+    Sdi12.build_measure_additional_args.with_crc = PROTO_TRUE;
+    Sdi12.build_measure_additional(sdi12_work);
     TEST_ASSERT_EQUAL_STRING("1MC2!", buf);
 
-    protocore_sdi12_build_concurrent_additional(buf, sizeof(buf), '0', 1, PROTO_FALSE);
+    Sdi12.build_concurrent_additional_args.buf = buf;
+    Sdi12.build_concurrent_additional_args.cap = sizeof(buf);
+    Sdi12.build_concurrent_additional_args.addr = '0';
+    Sdi12.build_concurrent_additional_args.c_index = 1;
+    Sdi12.build_concurrent_additional_args.with_crc = PROTO_FALSE;
+    Sdi12.build_concurrent_additional(sdi12_work);
     TEST_ASSERT_EQUAL_STRING("0C1!", buf);
-    protocore_sdi12_build_concurrent_additional(buf, sizeof(buf), '2', 4, PROTO_TRUE);
+    Sdi12.build_concurrent_additional_args.buf = buf;
+    Sdi12.build_concurrent_additional_args.cap = sizeof(buf);
+    Sdi12.build_concurrent_additional_args.addr = '2';
+    Sdi12.build_concurrent_additional_args.c_index = 4;
+    Sdi12.build_concurrent_additional_args.with_crc = PROTO_TRUE;
+    Sdi12.build_concurrent_additional(sdi12_work);
     TEST_ASSERT_EQUAL_STRING("2CC4!", buf);
 
-    protocore_sdi12_build_continuous(buf, sizeof(buf), '0', 0, PROTO_FALSE);
+    Sdi12.build_continuous_args.buf = buf;
+    Sdi12.build_continuous_args.cap = sizeof(buf);
+    Sdi12.build_continuous_args.addr = '0';
+    Sdi12.build_continuous_args.r_index = 0;
+    Sdi12.build_continuous_args.with_crc = PROTO_FALSE;
+    Sdi12.build_continuous(sdi12_work);
     TEST_ASSERT_EQUAL_STRING("0R0!", buf);
-    protocore_sdi12_build_continuous(buf, sizeof(buf), '2', 5, PROTO_FALSE);
+    Sdi12.build_continuous_args.buf = buf;
+    Sdi12.build_continuous_args.cap = sizeof(buf);
+    Sdi12.build_continuous_args.addr = '2';
+    Sdi12.build_continuous_args.r_index = 5;
+    Sdi12.build_continuous_args.with_crc = PROTO_FALSE;
+    Sdi12.build_continuous(sdi12_work);
     TEST_ASSERT_EQUAL_STRING("2R5!", buf);
-    protocore_sdi12_build_continuous(buf, sizeof(buf), '1', 3, PROTO_TRUE);
+    Sdi12.build_continuous_args.buf = buf;
+    Sdi12.build_continuous_args.cap = sizeof(buf);
+    Sdi12.build_continuous_args.addr = '1';
+    Sdi12.build_continuous_args.r_index = 3;
+    Sdi12.build_continuous_args.with_crc = PROTO_TRUE;
+    Sdi12.build_continuous(sdi12_work);
     TEST_ASSERT_EQUAL_STRING("1RC3!", buf);
 
     // Table 5 gives M and C indices 1..9 (index 0 is the base aM! / aC!) and R indices 0..9.
-    TEST_ASSERT_EQUAL_size_t(0, protocore_sdi12_build_measure_additional(buf, sizeof(buf), '0', 0, PROTO_FALSE));
-    TEST_ASSERT_EQUAL_size_t(0, protocore_sdi12_build_measure_additional(buf, sizeof(buf), '0', 10, PROTO_FALSE));
-    TEST_ASSERT_EQUAL_size_t(0, protocore_sdi12_build_concurrent_additional(buf, sizeof(buf), '0', 0, PROTO_FALSE));
-    TEST_ASSERT_EQUAL_size_t(0, protocore_sdi12_build_concurrent_additional(buf, sizeof(buf), '0', 10, PROTO_FALSE));
-    TEST_ASSERT_EQUAL_size_t(0, protocore_sdi12_build_continuous(buf, sizeof(buf), '0', 10, PROTO_FALSE));
+    Sdi12.build_measure_additional_args.buf = buf;
+    Sdi12.build_measure_additional_args.cap = sizeof(buf);
+    Sdi12.build_measure_additional_args.addr = '0';
+    Sdi12.build_measure_additional_args.m_index = 0;
+    Sdi12.build_measure_additional_args.with_crc = PROTO_FALSE;
+    Sdi12.build_measure_additional(sdi12_work);
+    TEST_ASSERT_EQUAL_size_t(0, Sdi12.n);
+    Sdi12.build_measure_additional_args.buf = buf;
+    Sdi12.build_measure_additional_args.cap = sizeof(buf);
+    Sdi12.build_measure_additional_args.addr = '0';
+    Sdi12.build_measure_additional_args.m_index = 10;
+    Sdi12.build_measure_additional_args.with_crc = PROTO_FALSE;
+    Sdi12.build_measure_additional(sdi12_work);
+    TEST_ASSERT_EQUAL_size_t(0, Sdi12.n);
+    Sdi12.build_concurrent_additional_args.buf = buf;
+    Sdi12.build_concurrent_additional_args.cap = sizeof(buf);
+    Sdi12.build_concurrent_additional_args.addr = '0';
+    Sdi12.build_concurrent_additional_args.c_index = 0;
+    Sdi12.build_concurrent_additional_args.with_crc = PROTO_FALSE;
+    Sdi12.build_concurrent_additional(sdi12_work);
+    TEST_ASSERT_EQUAL_size_t(0, Sdi12.n);
+    Sdi12.build_concurrent_additional_args.buf = buf;
+    Sdi12.build_concurrent_additional_args.cap = sizeof(buf);
+    Sdi12.build_concurrent_additional_args.addr = '0';
+    Sdi12.build_concurrent_additional_args.c_index = 10;
+    Sdi12.build_concurrent_additional_args.with_crc = PROTO_FALSE;
+    Sdi12.build_concurrent_additional(sdi12_work);
+    TEST_ASSERT_EQUAL_size_t(0, Sdi12.n);
+    Sdi12.build_continuous_args.buf = buf;
+    Sdi12.build_continuous_args.cap = sizeof(buf);
+    Sdi12.build_continuous_args.addr = '0';
+    Sdi12.build_continuous_args.r_index = 10;
+    Sdi12.build_continuous_args.with_crc = PROTO_FALSE;
+    Sdi12.build_continuous(sdi12_work);
+    TEST_ASSERT_EQUAL_size_t(0, Sdi12.n);
 }
 
 // Table 9: the aM! response is atttn, ttt the seconds until the data is ready and n the number of
@@ -208,8 +365,13 @@ void test_spec_measurement_responses(void)
         char addr = 0;
         uint16_t ready = 0xFFFF;
         uint8_t n = 0xFF;
-        TEST_ASSERT_TRUE_MESSAGE(protocore_sdi12_parse_measure(CASES[i].resp, strlen(CASES[i].resp), &addr, &ready, &n),
-                                 CASES[i].resp);
+        Sdi12.parse_measure_args.resp = CASES[i].resp;
+        Sdi12.parse_measure_args.len = strlen(CASES[i].resp);
+        Sdi12.parse_measure_args.addr = &addr;
+        Sdi12.parse_measure_args.ready_sec = &ready;
+        Sdi12.parse_measure_args.num_values = &n;
+        Sdi12.parse_measure(sdi12_work);
+        TEST_ASSERT_TRUE_MESSAGE(Sdi12.ok, CASES[i].resp);
         TEST_ASSERT_EQUAL_CHAR(CASES[i].addr, addr);
         TEST_ASSERT_EQUAL_UINT16(CASES[i].ready, ready);
         TEST_ASSERT_EQUAL_UINT8(CASES[i].values, n);
@@ -223,13 +385,25 @@ void test_spec_concurrent_response_has_two_count_digits(void)
     char addr = 0;
     uint16_t ready = 0;
     uint8_t n = 0;
-    TEST_ASSERT_TRUE(protocore_sdi12_parse_measure("001320\r\n", 8, &addr, &ready, &n));
+    Sdi12.parse_measure_args.resp = "001320\r\n";
+    Sdi12.parse_measure_args.len = 8;
+    Sdi12.parse_measure_args.addr = &addr;
+    Sdi12.parse_measure_args.ready_sec = &ready;
+    Sdi12.parse_measure_args.num_values = &n;
+    Sdi12.parse_measure(sdi12_work);
+    TEST_ASSERT_TRUE(Sdi12.ok);
     TEST_ASSERT_EQUAL_CHAR('0', addr);
     TEST_ASSERT_EQUAL_UINT16(13, ready);
     TEST_ASSERT_EQUAL_UINT8(20, n);
 
     // and the ttt field keeps its full three-digit range
-    TEST_ASSERT_TRUE(protocore_sdi12_parse_measure("099901\r\n", 8, NULL, &ready, &n));
+    Sdi12.parse_measure_args.resp = "099901\r\n";
+    Sdi12.parse_measure_args.len = 8;
+    Sdi12.parse_measure_args.addr = NULL;
+    Sdi12.parse_measure_args.ready_sec = &ready;
+    Sdi12.parse_measure_args.num_values = &n;
+    Sdi12.parse_measure(sdi12_work);
+    TEST_ASSERT_TRUE(Sdi12.ok);
     TEST_ASSERT_EQUAL_UINT16(999, ready);
     TEST_ASSERT_EQUAL_UINT8(1, n);
 }
@@ -241,12 +415,42 @@ void test_measurement_response_edges(void)
     char addr = 0;
     uint16_t ready = 0;
     uint8_t n = 0;
-    TEST_ASSERT_TRUE(protocore_sdi12_parse_measure("00122\r\n", 7, NULL, NULL, NULL));
+    Sdi12.parse_measure_args.resp = "00122\r\n";
+    Sdi12.parse_measure_args.len = 7;
+    Sdi12.parse_measure_args.addr = NULL;
+    Sdi12.parse_measure_args.ready_sec = NULL;
+    Sdi12.parse_measure_args.num_values = NULL;
+    Sdi12.parse_measure(sdi12_work);
+    TEST_ASSERT_TRUE(Sdi12.ok);
 
-    TEST_ASSERT_FALSE(protocore_sdi12_parse_measure(NULL, 7, &addr, &ready, &n));
-    TEST_ASSERT_FALSE(protocore_sdi12_parse_measure("012", 3, &addr, &ready, &n));   // shorter than atttn
-    TEST_ASSERT_FALSE(protocore_sdi12_parse_measure("0X122", 5, &addr, &ready, &n)); // non-digit in ttt
-    TEST_ASSERT_FALSE(protocore_sdi12_parse_measure("0120X", 5, &addr, &ready, &n)); // non-digit count
+    Sdi12.parse_measure_args.resp = NULL;
+    Sdi12.parse_measure_args.len = 7;
+    Sdi12.parse_measure_args.addr = &addr;
+    Sdi12.parse_measure_args.ready_sec = &ready;
+    Sdi12.parse_measure_args.num_values = &n;
+    Sdi12.parse_measure(sdi12_work);
+    TEST_ASSERT_FALSE(Sdi12.ok);
+    Sdi12.parse_measure_args.resp = "012";
+    Sdi12.parse_measure_args.len = 3;
+    Sdi12.parse_measure_args.addr = &addr;
+    Sdi12.parse_measure_args.ready_sec = &ready;
+    Sdi12.parse_measure_args.num_values = &n;
+    Sdi12.parse_measure(sdi12_work);
+    TEST_ASSERT_FALSE(Sdi12.ok); // shorter than atttn
+    Sdi12.parse_measure_args.resp = "0X122";
+    Sdi12.parse_measure_args.len = 5;
+    Sdi12.parse_measure_args.addr = &addr;
+    Sdi12.parse_measure_args.ready_sec = &ready;
+    Sdi12.parse_measure_args.num_values = &n;
+    Sdi12.parse_measure(sdi12_work);
+    TEST_ASSERT_FALSE(Sdi12.ok); // non-digit in ttt
+    Sdi12.parse_measure_args.resp = "0120X";
+    Sdi12.parse_measure_args.len = 5;
+    Sdi12.parse_measure_args.addr = &addr;
+    Sdi12.parse_measure_args.ready_sec = &ready;
+    Sdi12.parse_measure_args.num_values = &n;
+    Sdi12.parse_measure(sdi12_work);
+    TEST_ASSERT_FALSE(Sdi12.ok); // non-digit count
 }
 
 // Table 11: a value is pd.d - a polarity sign, digits, an optional decimal point, digits. The sign
@@ -258,12 +462,24 @@ void test_spec_data_responses(void)
     size_t n = 0;
 
     // 4.4.8.2 / 4.4.8.4 a: one value
-    TEST_ASSERT_TRUE(protocore_sdi12_parse_values("0+3.14\r\n", 8, v, 8, &n));
+    Sdi12.parse_values_args.resp = "0+3.14\r\n";
+    Sdi12.parse_values_args.len = 8;
+    Sdi12.parse_values_args.out = v;
+    Sdi12.parse_values_args.max = 8;
+    Sdi12.parse_values_args.n = &n;
+    Sdi12.parse_values(sdi12_work);
+    TEST_ASSERT_TRUE(Sdi12.ok);
     TEST_ASSERT_EQUAL_size_t(1, n);
     TEST_ASSERT_FLOAT_WITHIN(0.0001f, 3.14f, v[0]);
 
     // 4.4.8.4 b: three values
-    TEST_ASSERT_TRUE(protocore_sdi12_parse_values("0+3.14+2.718+1.414\r\n", 20, v, 8, &n));
+    Sdi12.parse_values_args.resp = "0+3.14+2.718+1.414\r\n";
+    Sdi12.parse_values_args.len = 20;
+    Sdi12.parse_values_args.out = v;
+    Sdi12.parse_values_args.max = 8;
+    Sdi12.parse_values_args.n = &n;
+    Sdi12.parse_values(sdi12_work);
+    TEST_ASSERT_TRUE(Sdi12.ok);
     TEST_ASSERT_EQUAL_size_t(3, n);
     TEST_ASSERT_FLOAT_WITHIN(0.0001f, 3.14f, v[0]);
     TEST_ASSERT_FLOAT_WITHIN(0.0001f, 2.718f, v[1]);
@@ -271,13 +487,25 @@ void test_spec_data_responses(void)
 
     // 4.4.8.4 c, first group: six values
     const char *six = "0+1.11+2.22+3.33+4.44+5.55+6.66\r\n";
-    TEST_ASSERT_TRUE(protocore_sdi12_parse_values(six, strlen(six), v, 8, &n));
+    Sdi12.parse_values_args.resp = six;
+    Sdi12.parse_values_args.len = strlen(six);
+    Sdi12.parse_values_args.out = v;
+    Sdi12.parse_values_args.max = 8;
+    Sdi12.parse_values_args.n = &n;
+    Sdi12.parse_values(sdi12_work);
+    TEST_ASSERT_TRUE(Sdi12.ok);
     TEST_ASSERT_EQUAL_size_t(6, n);
     TEST_ASSERT_FLOAT_WITHIN(0.0001f, 1.11f, v[0]);
     TEST_ASSERT_FLOAT_WITHIN(0.0001f, 6.66f, v[5]);
 
     // a negative value, since Table 11's polarity sign is either + or -
-    TEST_ASSERT_TRUE(protocore_sdi12_parse_values("0+3.14-2.5+0.001\r\n", 18, v, 8, &n));
+    Sdi12.parse_values_args.resp = "0+3.14-2.5+0.001\r\n";
+    Sdi12.parse_values_args.len = 18;
+    Sdi12.parse_values_args.out = v;
+    Sdi12.parse_values_args.max = 8;
+    Sdi12.parse_values_args.n = &n;
+    Sdi12.parse_values(sdi12_work);
+    TEST_ASSERT_TRUE(Sdi12.ok);
     TEST_ASSERT_EQUAL_size_t(3, n);
     TEST_ASSERT_FLOAT_WITHIN(0.0001f, 3.14f, v[0]);
     TEST_ASSERT_FLOAT_WITHIN(0.0001f, -2.5f, v[1]);
@@ -291,7 +519,13 @@ void test_values_ignore_the_appended_crc(void)
     float v[8];
     size_t n = 0;
     const char *resp = "0+3.14+2.718+1.414Ipz\r\n"; // section 4.4.12.3 b
-    TEST_ASSERT_TRUE(protocore_sdi12_parse_values(resp, strlen(resp), v, 8, &n));
+    Sdi12.parse_values_args.resp = resp;
+    Sdi12.parse_values_args.len = strlen(resp);
+    Sdi12.parse_values_args.out = v;
+    Sdi12.parse_values_args.max = 8;
+    Sdi12.parse_values_args.n = &n;
+    Sdi12.parse_values(sdi12_work);
+    TEST_ASSERT_TRUE(Sdi12.ok);
     TEST_ASSERT_EQUAL_size_t(3, n);
     TEST_ASSERT_FLOAT_WITHIN(0.0001f, 1.414f, v[2]);
 }
@@ -301,23 +535,65 @@ void test_values_are_bounded(void)
 {
     float v[8];
     size_t n = 0;
-    TEST_ASSERT_TRUE(protocore_sdi12_parse_values("0+1+2+3\r\n", 9, v, 2, &n));
+    Sdi12.parse_values_args.resp = "0+1+2+3\r\n";
+    Sdi12.parse_values_args.len = 9;
+    Sdi12.parse_values_args.out = v;
+    Sdi12.parse_values_args.max = 2;
+    Sdi12.parse_values_args.n = &n;
+    Sdi12.parse_values(sdi12_work);
+    TEST_ASSERT_TRUE(Sdi12.ok);
     TEST_ASSERT_EQUAL_size_t(2, n);
     TEST_ASSERT_FLOAT_WITHIN(0.0001f, 1.0f, v[0]);
     TEST_ASSERT_FLOAT_WITHIN(0.0001f, 2.0f, v[1]);
 
-    TEST_ASSERT_TRUE(protocore_sdi12_parse_values("0+1.5", 5, v, 8, &n));
+    Sdi12.parse_values_args.resp = "0+1.5";
+    Sdi12.parse_values_args.len = 5;
+    Sdi12.parse_values_args.out = v;
+    Sdi12.parse_values_args.max = 8;
+    Sdi12.parse_values_args.n = &n;
+    Sdi12.parse_values(sdi12_work);
+    TEST_ASSERT_TRUE(Sdi12.ok);
     TEST_ASSERT_EQUAL_size_t(1, n);
 
-    TEST_ASSERT_TRUE(protocore_sdi12_parse_values("0\r\n", 3, v, 8, &n)); // an aborted measurement
+    Sdi12.parse_values_args.resp = "0\r\n";
+    Sdi12.parse_values_args.len = 3;
+    Sdi12.parse_values_args.out = v;
+    Sdi12.parse_values_args.max = 8;
+    Sdi12.parse_values_args.n = &n;
+    Sdi12.parse_values(sdi12_work);
+    TEST_ASSERT_TRUE(Sdi12.ok); // an aborted measurement
     TEST_ASSERT_EQUAL_size_t(0, n);
 
-    TEST_ASSERT_FALSE(protocore_sdi12_parse_values(NULL, 3, v, 8, &n));
-    TEST_ASSERT_FALSE(protocore_sdi12_parse_values("0+1", 3, NULL, 8, &n));
-    TEST_ASSERT_FALSE(protocore_sdi12_parse_values("0+1", 3, v, 8, NULL));
+    Sdi12.parse_values_args.resp = NULL;
+    Sdi12.parse_values_args.len = 3;
+    Sdi12.parse_values_args.out = v;
+    Sdi12.parse_values_args.max = 8;
+    Sdi12.parse_values_args.n = &n;
+    Sdi12.parse_values(sdi12_work);
+    TEST_ASSERT_FALSE(Sdi12.ok);
+    Sdi12.parse_values_args.resp = "0+1";
+    Sdi12.parse_values_args.len = 3;
+    Sdi12.parse_values_args.out = NULL;
+    Sdi12.parse_values_args.max = 8;
+    Sdi12.parse_values_args.n = &n;
+    Sdi12.parse_values(sdi12_work);
+    TEST_ASSERT_FALSE(Sdi12.ok);
+    Sdi12.parse_values_args.resp = "0+1";
+    Sdi12.parse_values_args.len = 3;
+    Sdi12.parse_values_args.out = v;
+    Sdi12.parse_values_args.max = 8;
+    Sdi12.parse_values_args.n = NULL;
+    Sdi12.parse_values(sdi12_work);
+    TEST_ASSERT_FALSE(Sdi12.ok);
 
     // a sign with no digits after it is not a value
-    TEST_ASSERT_TRUE(protocore_sdi12_parse_values("0-X+2.5\r\n", 9, v, 8, &n));
+    Sdi12.parse_values_args.resp = "0-X+2.5\r\n";
+    Sdi12.parse_values_args.len = 9;
+    Sdi12.parse_values_args.out = v;
+    Sdi12.parse_values_args.max = 8;
+    Sdi12.parse_values_args.n = &n;
+    Sdi12.parse_values(sdi12_work);
+    TEST_ASSERT_TRUE(Sdi12.ok);
     TEST_ASSERT_EQUAL_size_t(1, n);
     TEST_ASSERT_FLOAT_WITHIN(0.0001f, 2.5f, v[0]);
 }
@@ -331,7 +607,11 @@ void test_spec_identify_field_widths(void)
     // vendor and model space-padded to their widths, the way the spec pads short values
     const char *resp = "013ACMEINC SNS1001.0";
     TEST_ASSERT_EQUAL_size_t(20, strlen(resp));
-    TEST_ASSERT_TRUE(protocore_sdi12_parse_identify(resp, strlen(resp), &id));
+    Sdi12.parse_identify_args.resp = resp;
+    Sdi12.parse_identify_args.len = strlen(resp);
+    Sdi12.parse_identify_args.out = &id;
+    Sdi12.parse_identify(sdi12_work);
+    TEST_ASSERT_TRUE(Sdi12.ok);
     TEST_ASSERT_EQUAL_CHAR('0', id.addr);
     TEST_ASSERT_EQUAL_STRING("13", id.sdi_version);
     TEST_ASSERT_EQUAL_STRING("ACMEINC ", id.vendor);
@@ -340,7 +620,11 @@ void test_spec_identify_field_widths(void)
 
     // Table 7's optional field, up to 13 characters, follows the 20 and is not part of any field
     const char *with_opt = "114MYVENDORMODEL92.5SERIAL0001";
-    TEST_ASSERT_TRUE(protocore_sdi12_parse_identify(with_opt, strlen(with_opt), &id));
+    Sdi12.parse_identify_args.resp = with_opt;
+    Sdi12.parse_identify_args.len = strlen(with_opt);
+    Sdi12.parse_identify_args.out = &id;
+    Sdi12.parse_identify(sdi12_work);
+    TEST_ASSERT_TRUE(Sdi12.ok);
     TEST_ASSERT_EQUAL_CHAR('1', id.addr);
     TEST_ASSERT_EQUAL_STRING("14", id.sdi_version);
     TEST_ASSERT_EQUAL_STRING("MYVENDOR", id.vendor);
@@ -348,9 +632,21 @@ void test_spec_identify_field_widths(void)
     TEST_ASSERT_EQUAL_STRING("2.5", id.sensor_version);
 
     // one octet short of the fixed part is refused rather than filled from past the buffer
-    TEST_ASSERT_FALSE(protocore_sdi12_parse_identify(resp, 19, &id));
-    TEST_ASSERT_FALSE(protocore_sdi12_parse_identify(NULL, 20, &id));
-    TEST_ASSERT_FALSE(protocore_sdi12_parse_identify(resp, 20, NULL));
+    Sdi12.parse_identify_args.resp = resp;
+    Sdi12.parse_identify_args.len = 19;
+    Sdi12.parse_identify_args.out = &id;
+    Sdi12.parse_identify(sdi12_work);
+    TEST_ASSERT_FALSE(Sdi12.ok);
+    Sdi12.parse_identify_args.resp = NULL;
+    Sdi12.parse_identify_args.len = 20;
+    Sdi12.parse_identify_args.out = &id;
+    Sdi12.parse_identify(sdi12_work);
+    TEST_ASSERT_FALSE(Sdi12.ok);
+    Sdi12.parse_identify_args.resp = resp;
+    Sdi12.parse_identify_args.len = 20;
+    Sdi12.parse_identify_args.out = NULL;
+    Sdi12.parse_identify(sdi12_work);
+    TEST_ASSERT_FALSE(Sdi12.ok);
 }
 
 // A command is written whole and NUL-terminated, or not at all: half a command on a 1200-baud line
@@ -359,10 +655,30 @@ void test_build_refuses_a_short_buffer(void)
 {
     char buf[16];
     buf[0] = 'x';
-    TEST_ASSERT_EQUAL_size_t(0, protocore_sdi12_build(NULL, sizeof(buf), '0', "M"));
-    TEST_ASSERT_EQUAL_size_t(0, protocore_sdi12_build(buf, sizeof(buf), '0', NULL));
-    TEST_ASSERT_EQUAL_size_t(0, protocore_sdi12_build(buf, 3, '0', "M")); // "0M!" plus the NUL needs 4
+    Sdi12.build_args.buf = NULL;
+    Sdi12.build_args.cap = sizeof(buf);
+    Sdi12.build_args.addr = '0';
+    Sdi12.build_args.body = "M";
+    Sdi12.build(sdi12_work);
+    TEST_ASSERT_EQUAL_size_t(0, Sdi12.n);
+    Sdi12.build_args.buf = buf;
+    Sdi12.build_args.cap = sizeof(buf);
+    Sdi12.build_args.addr = '0';
+    Sdi12.build_args.body = NULL;
+    Sdi12.build(sdi12_work);
+    TEST_ASSERT_EQUAL_size_t(0, Sdi12.n);
+    Sdi12.build_args.buf = buf;
+    Sdi12.build_args.cap = 3;
+    Sdi12.build_args.addr = '0';
+    Sdi12.build_args.body = "M";
+    Sdi12.build(sdi12_work);
+    TEST_ASSERT_EQUAL_size_t(0, Sdi12.n); // "0M!" plus the NUL needs 4
     TEST_ASSERT_EQUAL_CHAR('x', buf[0]);
-    TEST_ASSERT_EQUAL_size_t(3, protocore_sdi12_build(buf, 4, '0', "M"));
+    Sdi12.build_args.buf = buf;
+    Sdi12.build_args.cap = 4;
+    Sdi12.build_args.addr = '0';
+    Sdi12.build_args.body = "M";
+    Sdi12.build(sdi12_work);
+    TEST_ASSERT_EQUAL_size_t(3, Sdi12.n);
     TEST_ASSERT_EQUAL_STRING("0M!", buf);
 }

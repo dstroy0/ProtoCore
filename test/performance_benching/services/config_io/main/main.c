@@ -39,13 +39,14 @@ static const size_t N_FIELDS = sizeof(SCHEMA) / sizeof(SCHEMA[0]);
 // spec-conformant "key=value" lines rather than invented data.
 static const char IMPORT_BLOB[] = "ssid=abc\nport=1234\nname=x\n";
 
+static uint8_t config_io_work[16]; // the borrow an entry takes; ConfigIo never reads it
+
 void dbench_run(void)
 {
     ConfigStore.begin_args.ns = "bench";
     ConfigStore.begin(protocore_config_store_span());
     // Seed the schema's values once, outside the timed loop (mirrors modbus's one-time
     // protocore_modbus_set_holding_reg() seeding) - the export bench below re-serializes these every call.
-    ConfigStore.ok;
     ConfigStore.set_str_args.key = "ssid";
     ConfigStore.set_str_args.val = "myssid";
     ConfigStore.set_str(protocore_config_store_span());
@@ -62,12 +63,22 @@ void dbench_run(void)
     {
         DBENCH_BANNER("config_io");
         volatile size_t sink = 0;
+        // The entry call stays inside DBENCH_OP so the timed loop measures the NVS round trip, not
+        // the read that follows it. The args do not vary, so they are staged once.
         // Reopens NVS + 3 reads per call; small N bounds real flash latency, not just CPU cycles.
-        DBENCH_OP("protocore_config_export", 50,
-                  sink += protocore_config_export("bench", SCHEMA, N_FIELDS, buf, sizeof(buf)));
+        ConfigIo.export_args.ns = "bench";
+        ConfigIo.export_args.fields = SCHEMA;
+        ConfigIo.export_args.n = N_FIELDS;
+        ConfigIo.export_args.out = buf;
+        ConfigIo.export_args.cap = sizeof(buf);
+        DBENCH_OP("ConfigIo.export", 50, (ConfigIo.export(config_io_work), sink += ConfigIo.n));
         // Reopens NVS + 3 writes per call (real flash commits); smaller N than export.
-        DBENCH_OP("protocore_config_import", 20,
-                  sink += protocore_config_import("bench", SCHEMA, N_FIELDS, IMPORT_BLOB, sizeof(IMPORT_BLOB) - 1));
+        ConfigIo.import_args.ns = "bench";
+        ConfigIo.import_args.fields = SCHEMA;
+        ConfigIo.import_args.n = N_FIELDS;
+        ConfigIo.import_args.text = IMPORT_BLOB;
+        ConfigIo.import_args.len = sizeof(IMPORT_BLOB) - 1;
+        DBENCH_OP("ConfigIo.import", 20, (ConfigIo.import(config_io_work), sink += ConfigIo.n));
         (void)sink;
         DBENCH_DONE();
     }

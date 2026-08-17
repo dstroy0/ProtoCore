@@ -10,15 +10,22 @@
  * begin / update / final form walks them in place, so nothing is copied to checksum it.
  */
 
-#include "server/peripherals/smbus.h"
-#include "protocore_config.h"
-#include "shared/crc/crc.h" // PROTOCORE_CRC8_SMBUS: the PEC polynomial, host-tested in test_crc
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_SMBUS
 
-#if PROTOCORE_HAS_BUS
-#include "server/peripherals/i2c.h"
+#if !PROTOCORE_HAS_BUS
+#error                                                                                                                 \
+    "ProtoCore: PROTOCORE_ENABLE_SMBUS needs a bus master (an I2C master). Provide one in core_setup/hal/<vendor>, or\
+ turn the driver off - there is no software stand-in for a part on the other end of a bus."
 #endif
+
+#include "mmgr/secure.h" // the persistent end this module's state is taken from
+#include "server/peripherals/i2c.h"
+#include "server/peripherals/smbus.h"
+#include "shared/crc/crc.h" // PROTOCORE_CRC8_SMBUS: the PEC polynomial, host-tested in test_crc
+
+PROTOCORE_BEGIN_DECLS
 
 // Two address bytes, a command, a count, the block, and the PEC: the longest byte sequence any
 // shape puts on the wire or checksums.
@@ -32,11 +39,54 @@ typedef struct
     proto_bool pec;
     uint8_t frame[PROTOCORE_SMBUS_FRAME_MAX];
 } SmbusCtx;
-static SmbusCtx s_smb = {.pec = PROTO_FALSE, .frame = {0}};
+// The caller's borrow, split: the context at its offset. One pointer arrives and every
+// region is that pointer plus a compile-time offset, so the assert below proves the span
+// covers them before anything runs.
+#define SMBUS_OFF_CTX 0u
+static_assert(SMBUS_OFF_CTX + sizeof(SmbusCtx) <= PROTOCORE_SMBUS_BORROW,
+              "PROTOCORE_SMBUS_BORROW is short of the module context - raise it in protocore_config.h, which"
+              " sums it into its arena");
 
-uint8_t protocore_smbus_addr_byte(uint8_t addr, uint8_t rw)
+// The region, at its offset in the caller's borrow.
+#define SMBUS_CTX(w) ((SmbusCtx *)(void *)((w) + SMBUS_OFF_CTX))
+
+// The entries this file calls before reaching their definitions.
+
+// --- the program's shared state, beside the namespace not on it -------------
+
+// The one owned instance, private to this TU: the pointer to the bytes this module took for
+// itself. A caller that hands in its own borrow never reaches it.
+typedef struct
 {
-    return (uint8_t)(((addr & 0x7Fu) << 1) | (rw & 1u));
+    uint8_t *span; ///< PROTOCORE_SMBUS_BORROW persistent bytes, or null while the pool was short
+} SmbusOwnCtx;
+static SmbusOwnCtx s_own;
+
+// Not an entry: an entry takes a borrow and this is where that borrow comes from.
+uint8_t *protocore_smbus_span(void)
+{
+    if (s_own.span == NULL)
+    {
+        protocore_span sp = protocore_secure_persist_span(PROTOCORE_SMBUS_BORROW);
+        if (span.ok(sp))
+        {
+            s_own.span = sp.buf;
+        }
+    }
+    return s_own.span; // null while the pool was short, which every entry refuses
+}
+
+static void smbus_addr_byte(uint8_t *restrict work);
+static void smbus_pec_read(uint8_t *restrict work);
+static void smbus_pec_write(uint8_t *restrict work);
+
+static void smbus_addr_byte(uint8_t *restrict work)
+{
+    (void)work;
+    uint8_t addr = Smbus.addr_byte_args.addr;
+    uint8_t rw = Smbus.addr_byte_args.rw;
+
+    Smbus.value = (uint8_t)(((addr & 0x7Fu) << 1) | (rw & 1u));
 }
 
 // The register a PEC starts from.
@@ -67,21 +117,40 @@ static uint8_t pec_final(uint32_t crc)
     return (uint8_t)Crc.value;
 }
 
-uint8_t protocore_smbus_pec_write(uint8_t addr, const uint8_t *payload, size_t len)
+static void smbus_pec_write(uint8_t *restrict work)
 {
-    uint8_t a = protocore_smbus_addr_byte(addr, PROTOCORE_SMBUS_WRITE);
+    uint8_t addr = Smbus.pec_write_args.addr;
+    const uint8_t *payload = Smbus.pec_write_args.payload;
+    size_t len = Smbus.pec_write_args.len;
+
+    Smbus.addr_byte_args.addr = addr;
+    Smbus.addr_byte_args.rw = PROTOCORE_SMBUS_WRITE;
+    smbus_addr_byte(work);
+    uint8_t a = Smbus.value;
     uint32_t c = pec_fold(pec_begin(), &a, 1);
     if (payload != NULL && len > 0)
     {
         c = pec_fold(c, payload, len);
     }
-    return pec_final(c);
+    Smbus.value = pec_final(c);
 }
 
-uint8_t protocore_smbus_pec_read(uint8_t addr, const uint8_t *sent, size_t slen, const uint8_t *got, size_t glen)
+static void smbus_pec_read(uint8_t *restrict work)
 {
-    uint8_t aw = protocore_smbus_addr_byte(addr, PROTOCORE_SMBUS_WRITE);
-    uint8_t ar = protocore_smbus_addr_byte(addr, PROTOCORE_SMBUS_READ);
+    uint8_t addr = Smbus.pec_read_args.addr;
+    const uint8_t *sent = Smbus.pec_read_args.sent;
+    size_t slen = Smbus.pec_read_args.slen;
+    const uint8_t *got = Smbus.pec_read_args.got;
+    size_t glen = Smbus.pec_read_args.glen;
+
+    Smbus.addr_byte_args.addr = addr;
+    Smbus.addr_byte_args.rw = PROTOCORE_SMBUS_WRITE;
+    smbus_addr_byte(work);
+    uint8_t aw = Smbus.value;
+    Smbus.addr_byte_args.addr = addr;
+    Smbus.addr_byte_args.rw = PROTOCORE_SMBUS_READ;
+    smbus_addr_byte(work);
+    uint8_t ar = Smbus.value;
     uint32_t c = pec_fold(pec_begin(), &aw, 1);
     if (sent != NULL && slen > 0)
     {
@@ -92,338 +161,345 @@ uint8_t protocore_smbus_pec_read(uint8_t addr, const uint8_t *sent, size_t slen,
     {
         c = pec_fold(c, got, glen);
     }
-    return pec_final(c);
+    Smbus.value = pec_final(c);
 }
 
-void protocore_smbus_set_pec(proto_bool on)
+static void smbus_set_pec(uint8_t *restrict work)
 {
-    s_smb.pec = on;
+    proto_bool on = Smbus.set_pec_args.on;
+
+    SMBUS_CTX(work)->pec = on;
 }
 
-proto_bool protocore_smbus_pec_enabled(void)
+static void smbus_pec_enabled(uint8_t *restrict work)
 {
-    return s_smb.pec;
+
+    Smbus.ok = SMBUS_CTX(work)->pec;
 }
 
-#if PROTOCORE_HAS_BUS
-
-proto_bool protocore_smbus_begin(void)
+static void smbus_begin(uint8_t *restrict work)
 {
-    return protocore_i2c_begin();
+    (void)work;
+
+    Smbus.ok = protocore_i2c_begin();
 }
 
 // Put @p n composed bytes on the wire, appending the PEC over them when it is on.
-static proto_bool put(uint8_t addr, size_t n)
+static proto_bool put(uint8_t *restrict work, uint8_t addr, size_t n)
 {
-    if (s_smb.pec)
+    if (SMBUS_CTX(work)->pec)
     {
-        s_smb.frame[n] = protocore_smbus_pec_write(addr, s_smb.frame, n);
+        Smbus.pec_write_args.addr = addr;
+        Smbus.pec_write_args.payload = SMBUS_CTX(work)->frame;
+        Smbus.pec_write_args.len = n;
+        smbus_pec_write(work);
+        SMBUS_CTX(work)->frame[n] = Smbus.value;
         n++;
     }
-    return protocore_i2c_write(addr, s_smb.frame, n);
+    return protocore_i2c_write(addr, SMBUS_CTX(work)->frame, n);
 }
 
 // Read @p n bytes answering the @p slen bytes already composed in the frame, checking the PEC that
 // follows them when it is on. The reply lands at frame[slen] so the sent and received spans stay
 // separate for the checksum.
-static proto_bool take(uint8_t addr, size_t slen, size_t n)
+static proto_bool take(uint8_t *restrict work, uint8_t addr, size_t slen, size_t n)
 {
-    size_t want = s_smb.pec ? n + 1u : n;
-    if (slen + want > sizeof(s_smb.frame))
+    size_t want = SMBUS_CTX(work)->pec ? n + 1u : n;
+    if (slen + want > sizeof(SMBUS_CTX(work)->frame))
     {
         return PROTO_FALSE;
     }
-    if (!protocore_i2c_write_read(addr, s_smb.frame, slen, &s_smb.frame[slen], want))
+    if (!protocore_i2c_write_read(addr, SMBUS_CTX(work)->frame, slen, &SMBUS_CTX(work)->frame[slen], want))
     {
         return PROTO_FALSE;
     }
-    if (!s_smb.pec)
+    if (!SMBUS_CTX(work)->pec)
     {
         return PROTO_TRUE;
     }
-    uint8_t want_pec = protocore_smbus_pec_read(addr, s_smb.frame, slen, &s_smb.frame[slen], n);
-    return s_smb.frame[slen + n] == want_pec;
+    Smbus.pec_read_args.addr = addr;
+    Smbus.pec_read_args.sent = SMBUS_CTX(work)->frame;
+    Smbus.pec_read_args.slen = slen;
+    Smbus.pec_read_args.got = &SMBUS_CTX(work)->frame[slen];
+    Smbus.pec_read_args.glen = n;
+    smbus_pec_read(work);
+    uint8_t want_pec = Smbus.value;
+    return SMBUS_CTX(work)->frame[slen + n] == want_pec;
 }
 
-proto_bool protocore_smbus_quick(uint8_t addr, uint8_t rw)
+static void smbus_quick(uint8_t *restrict work)
 {
+    uint8_t addr = Smbus.quick_args.addr;
+    uint8_t rw = Smbus.quick_args.rw;
+
     // The direction bit is the whole payload, so this is an address cycle and nothing else. A
     // quick command carries no PEC: there are no data bytes for one to cover.
-    return (rw & 1u) != 0 ? protocore_i2c_read(addr, s_smb.frame, 0) : protocore_i2c_probe(addr);
+    Smbus.ok = (rw & 1u) != 0 ? protocore_i2c_read(addr, SMBUS_CTX(work)->frame, 0) : protocore_i2c_probe(addr);
 }
 
-proto_bool protocore_smbus_send_byte(uint8_t addr, uint8_t value)
+static void smbus_send_byte(uint8_t *restrict work)
 {
-    s_smb.frame[0] = value;
-    return put(addr, 1);
+    uint8_t addr = Smbus.send_byte_args.addr;
+    uint8_t value = Smbus.send_byte_args.value;
+
+    SMBUS_CTX(work)->frame[0] = value;
+    Smbus.ok = put(work, addr, 1);
 }
 
-proto_bool protocore_smbus_receive_byte(uint8_t addr, uint8_t *out)
+static void smbus_receive_byte(uint8_t *restrict work)
 {
+    uint8_t addr = Smbus.receive_byte_args.addr;
+    uint8_t *out = Smbus.receive_byte_args.out;
+
     if (out == NULL)
     {
-        return PROTO_FALSE;
+        Smbus.ok = PROTO_FALSE;
+        return;
     }
     // No command goes out, so the PEC covers the read address byte and the data alone.
-    size_t want = s_smb.pec ? 2u : 1u;
-    if (!protocore_i2c_read(addr, s_smb.frame, want))
+    size_t want = SMBUS_CTX(work)->pec ? 2u : 1u;
+    if (!protocore_i2c_read(addr, SMBUS_CTX(work)->frame, want))
     {
-        return PROTO_FALSE;
+        Smbus.ok = PROTO_FALSE;
+        return;
     }
-    if (s_smb.pec && s_smb.frame[1] != protocore_smbus_pec_read(addr, NULL, 0, s_smb.frame, 1))
+    // The checksum is computed inside the branch, not beside it: staged above the test it would run
+    // whether or not the PEC is on, which is a CRC the original never took.
+    if (SMBUS_CTX(work)->pec)
     {
-        return PROTO_FALSE;
+        Smbus.pec_read_args.addr = addr;
+        Smbus.pec_read_args.sent = NULL;
+        Smbus.pec_read_args.slen = 0;
+        Smbus.pec_read_args.got = SMBUS_CTX(work)->frame;
+        Smbus.pec_read_args.glen = 1;
+        smbus_pec_read(work);
+        if (SMBUS_CTX(work)->frame[1] != Smbus.value)
+        {
+            Smbus.ok = PROTO_FALSE;
+            return;
+        }
     }
-    *out = s_smb.frame[0];
-    return PROTO_TRUE;
+    *out = SMBUS_CTX(work)->frame[0];
+    Smbus.ok = PROTO_TRUE;
 }
 
-proto_bool protocore_smbus_write_byte(uint8_t addr, uint8_t cmd, uint8_t value)
+static void smbus_write_byte(uint8_t *restrict work)
 {
-    s_smb.frame[0] = cmd;
-    s_smb.frame[1] = value;
-    return put(addr, 2);
+    uint8_t addr = Smbus.write_byte_args.addr;
+    uint8_t cmd = Smbus.write_byte_args.cmd;
+    uint8_t value = Smbus.write_byte_args.value;
+
+    SMBUS_CTX(work)->frame[0] = cmd;
+    SMBUS_CTX(work)->frame[1] = value;
+    Smbus.ok = put(work, addr, 2);
 }
 
-proto_bool protocore_smbus_read_byte(uint8_t addr, uint8_t cmd, uint8_t *out)
+static void smbus_read_byte(uint8_t *restrict work)
 {
+    uint8_t addr = Smbus.read_byte_args.addr;
+    uint8_t cmd = Smbus.read_byte_args.cmd;
+    uint8_t *out = Smbus.read_byte_args.out;
+
     if (out == NULL)
     {
-        return PROTO_FALSE;
+        Smbus.ok = PROTO_FALSE;
+        return;
     }
-    s_smb.frame[0] = cmd;
-    if (!take(addr, 1, 1))
+    SMBUS_CTX(work)->frame[0] = cmd;
+    if (!take(work, addr, 1, 1))
     {
-        return PROTO_FALSE;
+        Smbus.ok = PROTO_FALSE;
+        return;
     }
-    *out = s_smb.frame[1];
-    return PROTO_TRUE;
+    *out = SMBUS_CTX(work)->frame[1];
+    Smbus.ok = PROTO_TRUE;
 }
 
-proto_bool protocore_smbus_write_word(uint8_t addr, uint8_t cmd, uint16_t value)
+static void smbus_write_word(uint8_t *restrict work)
 {
-    s_smb.frame[0] = cmd;
-    s_smb.frame[1] = (uint8_t)(value & 0xFFu); // low byte first, per the protocol
-    s_smb.frame[2] = (uint8_t)(value >> 8);
-    return put(addr, 3);
+    uint8_t addr = Smbus.write_word_args.addr;
+    uint8_t cmd = Smbus.write_word_args.cmd;
+    uint16_t value = Smbus.write_word_args.value;
+
+    SMBUS_CTX(work)->frame[0] = cmd;
+    SMBUS_CTX(work)->frame[1] = (uint8_t)(value & 0xFFu); // low byte first, per the protocol
+    SMBUS_CTX(work)->frame[2] = (uint8_t)(value >> 8);
+    Smbus.ok = put(work, addr, 3);
 }
 
-proto_bool protocore_smbus_read_word(uint8_t addr, uint8_t cmd, uint16_t *out)
+static void smbus_read_word(uint8_t *restrict work)
 {
+    uint8_t addr = Smbus.read_word_args.addr;
+    uint8_t cmd = Smbus.read_word_args.cmd;
+    uint16_t *out = Smbus.read_word_args.out;
+
     if (out == NULL)
     {
-        return PROTO_FALSE;
+        Smbus.ok = PROTO_FALSE;
+        return;
     }
-    s_smb.frame[0] = cmd;
-    if (!take(addr, 1, 2))
+    SMBUS_CTX(work)->frame[0] = cmd;
+    if (!take(work, addr, 1, 2))
     {
-        return PROTO_FALSE;
+        Smbus.ok = PROTO_FALSE;
+        return;
     }
-    *out = (uint16_t)((uint16_t)s_smb.frame[1] | ((uint16_t)s_smb.frame[2] << 8));
-    return PROTO_TRUE;
+    *out = (uint16_t)((uint16_t)SMBUS_CTX(work)->frame[1] | ((uint16_t)SMBUS_CTX(work)->frame[2] << 8));
+    Smbus.ok = PROTO_TRUE;
 }
 
-proto_bool protocore_smbus_write_block(uint8_t addr, uint8_t cmd, const uint8_t *buf, size_t len)
+static void smbus_write_block(uint8_t *restrict work)
 {
+    uint8_t addr = Smbus.write_block_args.addr;
+    uint8_t cmd = Smbus.write_block_args.cmd;
+    const uint8_t *buf = Smbus.write_block_args.buf;
+    size_t len = Smbus.write_block_args.len;
+
     if (buf == NULL || len == 0 || len > PROTOCORE_SMBUS_BLOCK_MAX)
     {
-        return PROTO_FALSE;
+        Smbus.ok = PROTO_FALSE;
+        return;
     }
-    s_smb.frame[0] = cmd;
-    s_smb.frame[1] = (uint8_t)len; // the count byte the protocol puts in front of the payload
+    SMBUS_CTX(work)->frame[0] = cmd;
+    SMBUS_CTX(work)->frame[1] = (uint8_t)len; // the count byte the protocol puts in front of the payload
     for (size_t i = 0; i < len; i++)
     {
-        s_smb.frame[2 + i] = buf[i];
+        SMBUS_CTX(work)->frame[2 + i] = buf[i];
     }
-    return put(addr, 2 + len);
+    Smbus.ok = put(work, addr, 2 + len);
 }
 
-proto_bool protocore_smbus_read_block(uint8_t addr, uint8_t cmd, uint8_t *out, size_t cap, size_t *len)
+static void smbus_read_block(uint8_t *restrict work)
 {
+    uint8_t addr = Smbus.read_block_args.addr;
+    uint8_t cmd = Smbus.read_block_args.cmd;
+    uint8_t *out = Smbus.read_block_args.out;
+    size_t cap = Smbus.read_block_args.cap;
+    size_t *len = Smbus.read_block_args.len;
+
     if (out == NULL || len == NULL)
     {
-        return PROTO_FALSE;
+        Smbus.ok = PROTO_FALSE;
+        return;
     }
     *len = 0;
-    s_smb.frame[0] = cmd;
+    SMBUS_CTX(work)->frame[0] = cmd;
     // The count arrives before the payload, so the length is read first and the payload after it.
-    if (!protocore_i2c_write_read(addr, s_smb.frame, 1, &s_smb.frame[1], 1))
+    if (!protocore_i2c_write_read(addr, SMBUS_CTX(work)->frame, 1, &SMBUS_CTX(work)->frame[1], 1))
     {
-        return PROTO_FALSE;
+        Smbus.ok = PROTO_FALSE;
+        return;
     }
-    size_t n = s_smb.frame[1];
+    size_t n = SMBUS_CTX(work)->frame[1];
     if (n == 0 || n > PROTOCORE_SMBUS_BLOCK_MAX || n > cap)
     {
-        return PROTO_FALSE;
+        Smbus.ok = PROTO_FALSE;
+        return;
     }
-    if (!take(addr, 1, n + 1u))
+    if (!take(work, addr, 1, n + 1u))
     {
-        return PROTO_FALSE;
+        Smbus.ok = PROTO_FALSE;
+        return;
     }
     // frame[1] is the count the part repeated; the payload follows it.
     for (size_t i = 0; i < n; i++)
     {
-        out[i] = s_smb.frame[2 + i];
+        out[i] = SMBUS_CTX(work)->frame[2 + i];
     }
     *len = n;
-    return PROTO_TRUE;
+    Smbus.ok = PROTO_TRUE;
 }
 
-proto_bool protocore_smbus_process_call(uint8_t addr, uint8_t cmd, uint16_t value, uint16_t *out)
+static void smbus_process_call(uint8_t *restrict work)
 {
+    uint8_t addr = Smbus.process_call_args.addr;
+    uint8_t cmd = Smbus.process_call_args.cmd;
+    uint16_t value = Smbus.process_call_args.value;
+    uint16_t *out = Smbus.process_call_args.out;
+
     if (out == NULL)
     {
-        return PROTO_FALSE;
+        Smbus.ok = PROTO_FALSE;
+        return;
     }
-    s_smb.frame[0] = cmd;
-    s_smb.frame[1] = (uint8_t)(value & 0xFFu);
-    s_smb.frame[2] = (uint8_t)(value >> 8);
-    if (!take(addr, 3, 2))
+    SMBUS_CTX(work)->frame[0] = cmd;
+    SMBUS_CTX(work)->frame[1] = (uint8_t)(value & 0xFFu);
+    SMBUS_CTX(work)->frame[2] = (uint8_t)(value >> 8);
+    if (!take(work, addr, 3, 2))
     {
-        return PROTO_FALSE;
+        Smbus.ok = PROTO_FALSE;
+        return;
     }
-    *out = (uint16_t)((uint16_t)s_smb.frame[3] | ((uint16_t)s_smb.frame[4] << 8));
-    return PROTO_TRUE;
+    *out = (uint16_t)((uint16_t)SMBUS_CTX(work)->frame[3] | ((uint16_t)SMBUS_CTX(work)->frame[4] << 8));
+    Smbus.ok = PROTO_TRUE;
 }
 
-proto_bool protocore_smbus_block_process_call(uint8_t addr, uint8_t cmd, const uint8_t *buf, size_t len, uint8_t *out,
-                                              size_t cap, size_t *out_len)
+static void smbus_block_process_call(uint8_t *restrict work)
 {
+    uint8_t addr = Smbus.block_process_call_args.addr;
+    uint8_t cmd = Smbus.block_process_call_args.cmd;
+    const uint8_t *buf = Smbus.block_process_call_args.buf;
+    size_t len = Smbus.block_process_call_args.len;
+    uint8_t *out = Smbus.block_process_call_args.out;
+    size_t cap = Smbus.block_process_call_args.cap;
+    size_t *out_len = Smbus.block_process_call_args.out_len;
+
     if (buf == NULL || out == NULL || out_len == NULL || len == 0 || len > PROTOCORE_SMBUS_BLOCK_MAX)
     {
-        return PROTO_FALSE;
+        Smbus.ok = PROTO_FALSE;
+        return;
     }
     *out_len = 0;
-    s_smb.frame[0] = cmd;
-    s_smb.frame[1] = (uint8_t)len;
+    SMBUS_CTX(work)->frame[0] = cmd;
+    SMBUS_CTX(work)->frame[1] = (uint8_t)len;
     for (size_t i = 0; i < len; i++)
     {
-        s_smb.frame[2 + i] = buf[i];
+        SMBUS_CTX(work)->frame[2 + i] = buf[i];
     }
     size_t slen = 2 + len;
     // The reply opens with its own count byte, so one is read before the payload it sizes.
-    if (!protocore_i2c_write_read(addr, s_smb.frame, slen, &s_smb.frame[slen], 1))
+    if (!protocore_i2c_write_read(addr, SMBUS_CTX(work)->frame, slen, &SMBUS_CTX(work)->frame[slen], 1))
     {
-        return PROTO_FALSE;
+        Smbus.ok = PROTO_FALSE;
+        return;
     }
-    size_t n = s_smb.frame[slen];
-    if (n == 0 || n > PROTOCORE_SMBUS_BLOCK_MAX || n > cap || slen + n + 2u > sizeof(s_smb.frame))
+    size_t n = SMBUS_CTX(work)->frame[slen];
+    if (n == 0 || n > PROTOCORE_SMBUS_BLOCK_MAX || n > cap || slen + n + 2u > sizeof(SMBUS_CTX(work)->frame))
     {
-        return PROTO_FALSE;
+        Smbus.ok = PROTO_FALSE;
+        return;
     }
-    if (!take(addr, slen, n + 1u))
+    if (!take(work, addr, slen, n + 1u))
     {
-        return PROTO_FALSE;
+        Smbus.ok = PROTO_FALSE;
+        return;
     }
     for (size_t i = 0; i < n; i++)
     {
-        out[i] = s_smb.frame[slen + 1 + i];
+        out[i] = SMBUS_CTX(work)->frame[slen + 1 + i];
     }
     *out_len = n;
-    return PROTO_TRUE;
+    Smbus.ok = PROTO_TRUE;
 }
 
-#else // no bus seam. The PEC above is host-tested.
+SmbusNs Smbus = {.addr_byte = smbus_addr_byte,
+                 .pec_write = smbus_pec_write,
+                 .pec_read = smbus_pec_read,
+                 .set_pec = smbus_set_pec,
+                 .pec_enabled = smbus_pec_enabled,
+                 .begin = smbus_begin,
+                 .quick = smbus_quick,
+                 .send_byte = smbus_send_byte,
+                 .receive_byte = smbus_receive_byte,
+                 .write_byte = smbus_write_byte,
+                 .read_byte = smbus_read_byte,
+                 .write_word = smbus_write_word,
+                 .read_word = smbus_read_word,
+                 .write_block = smbus_write_block,
+                 .read_block = smbus_read_block,
+                 .process_call = smbus_process_call,
+                 .block_process_call = smbus_block_process_call};
 
-proto_bool protocore_smbus_begin(void)
-{
-    return PROTO_FALSE;
-}
-
-proto_bool protocore_smbus_quick(uint8_t addr, uint8_t rw)
-{
-    (void)addr;
-    (void)rw;
-    return PROTO_FALSE;
-}
-
-proto_bool protocore_smbus_send_byte(uint8_t addr, uint8_t value)
-{
-    (void)addr;
-    (void)value;
-    return PROTO_FALSE;
-}
-
-proto_bool protocore_smbus_receive_byte(uint8_t addr, uint8_t *out)
-{
-    (void)addr;
-    (void)out;
-    return PROTO_FALSE;
-}
-
-proto_bool protocore_smbus_write_byte(uint8_t addr, uint8_t cmd, uint8_t value)
-{
-    (void)addr;
-    (void)cmd;
-    (void)value;
-    return PROTO_FALSE;
-}
-
-proto_bool protocore_smbus_read_byte(uint8_t addr, uint8_t cmd, uint8_t *out)
-{
-    (void)addr;
-    (void)cmd;
-    (void)out;
-    return PROTO_FALSE;
-}
-
-proto_bool protocore_smbus_write_word(uint8_t addr, uint8_t cmd, uint16_t value)
-{
-    (void)addr;
-    (void)cmd;
-    (void)value;
-    return PROTO_FALSE;
-}
-
-proto_bool protocore_smbus_read_word(uint8_t addr, uint8_t cmd, uint16_t *out)
-{
-    (void)addr;
-    (void)cmd;
-    (void)out;
-    return PROTO_FALSE;
-}
-
-proto_bool protocore_smbus_write_block(uint8_t addr, uint8_t cmd, const uint8_t *buf, size_t len)
-{
-    (void)addr;
-    (void)cmd;
-    (void)buf;
-    (void)len;
-    return PROTO_FALSE;
-}
-
-proto_bool protocore_smbus_read_block(uint8_t addr, uint8_t cmd, uint8_t *out, size_t cap, size_t *len)
-{
-    (void)addr;
-    (void)cmd;
-    (void)out;
-    (void)cap;
-    (void)len;
-    return PROTO_FALSE;
-}
-
-proto_bool protocore_smbus_process_call(uint8_t addr, uint8_t cmd, uint16_t value, uint16_t *out)
-{
-    (void)addr;
-    (void)cmd;
-    (void)value;
-    (void)out;
-    return PROTO_FALSE;
-}
-
-proto_bool protocore_smbus_block_process_call(uint8_t addr, uint8_t cmd, const uint8_t *buf, size_t len, uint8_t *out,
-                                              size_t cap, size_t *out_len)
-{
-    (void)addr;
-    (void)cmd;
-    (void)buf;
-    (void)len;
-    (void)out;
-    (void)cap;
-    (void)out_len;
-    return PROTO_FALSE;
-}
-
-#endif // PROTOCORE_HAS_BUS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SMBUS

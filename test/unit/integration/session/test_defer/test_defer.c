@@ -17,12 +17,11 @@ static void inc(void *arg)
 
 void setUp()
 {
-    ConnPool.life.cfg = NULL;
+    ConnPool.life.conn_timeout_ms = CONN_TIMEOUT_MS;
     ConnPool.init(ConnPool.internal);
     g_ran = 0;
     Workers.pump = NULL;
     Workers.start(Workers.internal);
-    Workers.ok;
 }
 void tearDown()
 {

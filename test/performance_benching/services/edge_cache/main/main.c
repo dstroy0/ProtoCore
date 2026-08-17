@@ -15,13 +15,17 @@
 // then open the port to capture the repeating "DB ..." lines (each run repeats every ~5 s, so a
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
+#include "network_drivers/presentation/http/httpcache/httpcache.h"
 #include "server/web/edge_cache/edge_cache.h"
+#include "shared/http_date/http_date.h"
 
 #include <strings.h>
 
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+
+static uint8_t edge_cache_work[16]; // the borrow an entry takes; EdgeCache never reads it
 
 static uint8_t tw[4096]; // test-side working bytes for the crypto entry points
 
@@ -68,13 +72,24 @@ void dbench_run(void)
     static uint8_t digest[32];
 
     // Canonical key built once; edge_key_digest is benched over its real length below.
-    size_t key_len =
-        edge_key_canon("GET", "Example.COM", "/a/b", "x=1", /*include_query=*/true, key_out, sizeof(key_out));
+    EdgeCache.key_canon_args.method = "GET";
+    EdgeCache.key_canon_args.host = "Example.COM";
+    EdgeCache.key_canon_args.path = "/a/b";
+    EdgeCache.key_canon_args.query = "x=1";
+    EdgeCache.key_canon_args.include_query = /*include_query=*/true;
+    EdgeCache.key_canon_args.out = key_out;
+    EdgeCache.key_canon_args.out_cap = sizeof(key_out);
+    EdgeCache.key_canon(edge_cache_work);
+    size_t key_len = EdgeCache.n;
 
     // L1 store primed with one entry so edge_store_lookup exercises a real hit, not a full-table miss scan.
     static EdgeCacheStore store;
-    edge_store_init(&store);
-    edge_store_alloc(&store, "GET\nh\n/a", "");
+    EdgeCache.store_init_args.s = &store;
+    EdgeCache.store_init(edge_cache_work);
+    EdgeCache.store_alloc_args.s = &store;
+    EdgeCache.store_alloc_args.canon = "GET\nh\n/a";
+    EdgeCache.store_alloc_args.vary_key = "";
+    EdgeCache.store_alloc(edge_cache_work);
 
     for (;;)
     {
@@ -89,7 +104,12 @@ void dbench_run(void)
         DBENCH_OP("edge_parse_http_date (IMF)", 100000, sink64 += edge_parse_http_date(IMF_DATE, strlen(IMF_DATE)));
         DBENCH_OP("edge_key_canon", 100000,
                   sinksz = edge_key_canon("GET", "Example.COM", "/a/b", "x=1", true, key_out, sizeof(key_out)));
-        DBENCH_BULK("edge_key_digest (tw,SHA-256)", 2000, key_len, edge_key_digest(tw, key_out, key_len, digest));
+        EdgeCache.key_digest_args.digest_work = tw;
+        EdgeCache.key_digest_args.canon = key_out;
+        EdgeCache.key_digest_args.len = key_len;
+        EdgeCache.key_digest_args.digest = digest;
+        DBENCH_BULK("edge_key_digest (tw,SHA-256)", 2000, key_len,
+                    (EdgeCache.key_digest(edge_cache_work), EdgeCache.ok));
         DBENCH_OP("edge_vary_serialize", 50000,
                   sinkb = edge_vary_serialize("Accept-Encoding, Accept-Language", vary_lookup, NULL, vary_out,
                                               sizeof(vary_out)));

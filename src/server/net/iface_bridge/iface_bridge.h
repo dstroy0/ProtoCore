@@ -28,19 +28,19 @@
 #ifndef PROTOCORE_IFACE_BRIDGE_H
 #define PROTOCORE_IFACE_BRIDGE_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
+#include "shared/ip/ip.h"     // the complete type a public struct below holds by value
 
 #if PROTOCORE_ENABLE_IFACE_BRIDGE
 
 PROTOCORE_BEGIN_DECLS
 
-#include "shared/ip/ip.h" // protocore_ip (carry the full bind address, never a flattened one)
-
-// PROTOCORE_BRIDGE_MAX_RULES is defined in protocore_config.h (the config owner).
+// PROTOCORE_IFACE_BRIDGE_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
+// it into its arena. A caller takes them once and passes the pointer to every call. How they
+// are carved is this module's and is never named here.
 
 #define PROTOCORE_BRIDGE_TXN_HDR 4 ///< transaction frame header: write_len(2) + read_len(2), big-endian
 
-/// Which hardware bus a rule targets.
 typedef enum PROTO_ENUM_PACKED
 {
     BRIDGE_BUS_UART = 0,
@@ -48,22 +48,18 @@ typedef enum PROTO_ENUM_PACKED
     BRIDGE_BUS_I2C = 2
 } BridgeBus;
 
-/// How socket bytes map to bus activity.
 typedef enum PROTO_ENUM_PACKED
 {
     BRIDGE_MODE_STREAM = 0,     ///< raw bidirectional passthrough (UART)
     BRIDGE_MODE_TRANSACTION = 1 ///< framed write-then-read (SPI / I2C; also usable for UART)
 } BridgeMode;
 
-/// The transport a rule listens on (matches the value stored on the wire; kept generic to avoid a hard
-/// dependency on ProtoConn here in the pure core).
 typedef enum PROTO_ENUM_PACKED
 {
     BRIDGE_PROTO_TCP = 0,
     BRIDGE_PROTO_UDP = 1
 } BridgeProto;
 
-/// One hardware endpoint a network port is bridged to.
 typedef struct
 {
     BridgeBus bus;
@@ -75,7 +71,6 @@ typedef struct
     uint8_t bit_order; ///< 0 = MSB-first, 1 = LSB-first (SPI only)
 } BridgeTarget;
 
-/// A single address:port -> bus mapping.
 typedef struct
 {
     protocore_ip listen_ip; ///< bind address (x.x.x.x / [v6]); family PROTOCORE_IP_NONE = any interface
@@ -85,47 +80,113 @@ typedef struct
     proto_bool used;
 } BridgeRule;
 
-// ---------------------------------------------------------------------------------------------
-// Rule table (zero heap; register before begin()). Pure - host-testable.
-// ---------------------------------------------------------------------------------------------
+/** @brief What add takes: rule. */
+typedef struct
+{
+    const BridgeRule *rule;
+} IfaceBridgeAddArgs;
 
-/// Remove all rules.
-void protocore_iface_bridge_clear();
+/** @brief What map takes: ip, port, proto, target. */
+typedef struct
+{
+    const char *ip;
+    uint16_t port;
+    BridgeProto proto;
+    const BridgeTarget *target;
+} IfaceBridgeMapArgs;
 
-/// Register a rule. Returns false if the table is full or a rule already binds the same port+proto.
-proto_bool protocore_iface_bridge_add(const BridgeRule *rule);
+/** @brief What find takes: port, proto. */
+typedef struct
+{
+    uint16_t port;
+    BridgeProto proto;
+} IfaceBridgeFindArgs;
 
-/// Convenience: build + add a rule in one call. @p ip may be NULL for "any interface". Returns false on
-/// a bad address, a full table, or a duplicate port+proto.
-proto_bool protocore_iface_bridge_map(const char *ip, uint16_t port, BridgeProto proto, const BridgeTarget *target);
+/** @brief What txn_parse takes: buf, len, write_len, read_len, ... */
+typedef struct
+{
+    const uint8_t *buf;
+    size_t len;
+    uint16_t *write_len;
+    uint16_t *read_len;
+    const uint8_t **write_data;
+} IfaceBridgeTxnParseArgs;
 
-/// Find the rule bound to @p port + @p proto, or NULL. This is the listener-dispatch lookup.
-const BridgeRule *protocore_iface_bridge_find(uint16_t port, BridgeProto proto);
-
-/// Number of registered rules.
-uint8_t protocore_iface_bridge_count();
-
-// ---------------------------------------------------------------------------------------------
-// Transaction frame codec (pure). write_len / read_len are big-endian.
-// ---------------------------------------------------------------------------------------------
+/** @brief What txn_build takes: out, cap, write_data, write_len, ... */
+typedef struct
+{
+    uint8_t *out;
+    size_t cap;
+    const uint8_t *write_data;
+    uint16_t write_len;
+    uint16_t read_len;
+} IfaceBridgeTxnBuildArgs;
 
 /**
- * @brief Parse a transaction request from a socket buffer.
+ * @brief User-defined address:port -> hardware-bus translation (PROTOCORE_ENABLE_IFACE_BRIDGE). A configurable "device
+ * ...
  *
- * On a complete frame, sets @p write_len / @p read_len, points @p write_data at the write payload inside
- * @p buf, and returns the total bytes the frame occupies (header + write payload). Returns 0 when @p buf
- * does not yet hold the whole frame (the caller should read more), so a partial header or a partial write
- * payload both yield 0.
+ * A caller sets the members a call takes, invokes it through ::IfaceBridge with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   IfaceBridge.clear(work);
+ *
+ * @var IfaceBridgeNs::add_args  what add takes: rule
+ * @var IfaceBridgeNs::map_args  what map takes: ip, port, proto, target
+ * @var IfaceBridgeNs::find_args  what find takes: port, proto
+ * @var IfaceBridgeNs::txn_parse_args  what txn_parse takes: buf, len, write_len, read_len,
+ * @var IfaceBridgeNs::txn_build_args  what txn_build takes: out, cap, write_data, write_len,
+ * @var IfaceBridgeNs::ok  a call's true/false outcome
+ * @var IfaceBridgeNs::rule  what a call reports
+ * @var IfaceBridgeNs::u8  what a call reports
+ * @var IfaceBridgeNs::n  bytes written, or 0 if out is too small
+ * @var IfaceBridgeNs::clear  clear
+ * @var IfaceBridgeNs::add  add
+ * @var IfaceBridgeNs::map  map
+ * @var IfaceBridgeNs::find  find
+ * @var IfaceBridgeNs::count  count
+ * @var IfaceBridgeNs::txn_parse  parse a transaction request from a socket buffer. On a complete ...
+ * @var IfaceBridgeNs::txn_build  build a transaction request frame (header + write payload) into out
+ *
+ * @c work is PROTOCORE_IFACE_BRIDGE_BORROW bytes the CALLER took, at an address it knows. It arrives
+ * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
+ * carved is this module's and is never named here.
  */
-size_t protocore_iface_bridge_txn_parse(const uint8_t *buf, size_t len, uint16_t *write_len, uint16_t *read_len,
-                                        const uint8_t **write_data);
+typedef struct
+{
+    IfaceBridgeAddArgs add_args;
+    IfaceBridgeMapArgs map_args;
+    IfaceBridgeFindArgs find_args;
+    IfaceBridgeTxnParseArgs txn_parse_args;
+    IfaceBridgeTxnBuildArgs txn_build_args;
+
+    proto_bool ok;
+    const BridgeRule *rule;
+    uint8_t u8;
+    size_t n;
+
+    void (*const clear)(uint8_t *restrict work);
+    void (*const add)(uint8_t *restrict work);
+    void (*const map)(uint8_t *restrict work);
+    void (*const find)(uint8_t *restrict work);
+    void (*const count)(uint8_t *restrict work);
+    void (*const txn_parse)(uint8_t *restrict work);
+    void (*const txn_build)(uint8_t *restrict work);
+} IfaceBridgeNs;
+
+/** @brief The one symbol this module exports. */
+extern IfaceBridgeNs IfaceBridge;
 
 /**
- * @brief Build a transaction request frame (header + write payload) into @p out.
- * @return bytes written, or 0 if @p out is too small.
+ * @brief The PROTOCORE_IFACE_BRIDGE_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
  */
-size_t protocore_iface_bridge_txn_build(uint8_t *out, size_t cap, const uint8_t *write_data, uint16_t write_len,
-                                        uint16_t read_len);
+uint8_t *protocore_iface_bridge_span(void);
 
 PROTOCORE_END_DECLS
 

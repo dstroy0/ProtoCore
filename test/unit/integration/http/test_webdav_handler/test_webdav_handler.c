@@ -790,12 +790,20 @@ void test_webdav_status_text_table()
     };
     for (size_t i = 0; i < sizeof(expect) / sizeof(expect[0]); i++)
     {
-        TEST_ASSERT_EQUAL_STRING(expect[i].phrase, Http.status_text(expect[i].code));
+        Http.code = expect[i].code;
+        Http.status_text(Http.internal);
+        TEST_ASSERT_EQUAL_STRING(expect[i].phrase, Http.text);
     }
 
-    TEST_ASSERT_EQUAL_STRING("Unknown", Http.status_text(299));
-    TEST_ASSERT_EQUAL_STRING("Unknown", Http.status_text(0));
-    TEST_ASSERT_EQUAL_STRING("Unknown", Http.status_text(-1));
+    // A code the table has no phrase for reads "Unknown" rather than an empty string, so a response
+    // line is always well formed.
+    static const int unknown[3] = {299, 0, -1};
+    for (size_t i = 0; i < 3u; i++)
+    {
+        Http.code = unknown[i];
+        Http.status_text(Http.internal);
+        TEST_ASSERT_EQUAL_STRING("Unknown", Http.text);
+    }
 }
 
 void test_webdav_join_root_slash_with_empty_subpath()

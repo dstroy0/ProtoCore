@@ -20,6 +20,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+static uint8_t dmx_work[16]; // the borrow an entry takes; Dmx never reads it
+
 void dbench_run(void)
 {
     // A full 512-channel DMX512 universe (dimmer data, start code 0x00).
@@ -33,8 +35,14 @@ void dbench_run(void)
     // Build a GET DEVICE_INFO RDM packet (no parameter data) - see test_rdm_get_roundtrip().
     RdmPacket get_p;
     memset(&get_p, 0, sizeof(get_p));
-    get_p.dest_uid = protocore_rdm_uid(0x4444, 0x00000001);
-    get_p.src_uid = protocore_rdm_uid(0x7A70, 0x000000AA);
+    Dmx.rdm_uid_args.manufacturer = 0x4444;
+    Dmx.rdm_uid_args.device = 0x00000001;
+    Dmx.rdm_uid(dmx_work);
+    get_p.dest_uid = Dmx.uid;
+    Dmx.rdm_uid_args.manufacturer = 0x7A70;
+    Dmx.rdm_uid_args.device = 0x000000AA;
+    Dmx.rdm_uid(dmx_work);
+    get_p.src_uid = Dmx.uid;
     get_p.tn = 5;
     get_p.port_id = 1;
     get_p.msg_count = 0;
@@ -47,8 +55,14 @@ void dbench_run(void)
     // test_rdm_set_with_data().
     RdmPacket set_p;
     memset(&set_p, 0, sizeof(set_p));
-    set_p.dest_uid = protocore_rdm_uid(0x4444, 0x00000001);
-    set_p.src_uid = protocore_rdm_uid(0x7A70, 0x000000AA);
+    Dmx.rdm_uid_args.manufacturer = 0x4444;
+    Dmx.rdm_uid_args.device = 0x00000001;
+    Dmx.rdm_uid(dmx_work);
+    set_p.dest_uid = Dmx.uid;
+    Dmx.rdm_uid_args.manufacturer = 0x7A70;
+    Dmx.rdm_uid_args.device = 0x000000AA;
+    Dmx.rdm_uid(dmx_work);
+    set_p.src_uid = Dmx.uid;
     set_p.tn = 9;
     set_p.port_id = 1;
     set_p.cc = RDM_CC_SET;
@@ -57,8 +71,20 @@ void dbench_run(void)
 
     static uint8_t rdm_get_buf[64];
     static uint8_t rdm_set_buf[64];
-    size_t rdm_get_len = protocore_rdm_build(rdm_get_buf, sizeof(rdm_get_buf), &get_p, NULL, 0);
-    size_t rdm_set_len = protocore_rdm_build(rdm_set_buf, sizeof(rdm_set_buf), &set_p, start_addr, 2);
+    Dmx.rdm_build_args.buf = rdm_get_buf;
+    Dmx.rdm_build_args.cap = sizeof(rdm_get_buf);
+    Dmx.rdm_build_args.p = &get_p;
+    Dmx.rdm_build_args.pdata = NULL;
+    Dmx.rdm_build_args.pdl = 0;
+    Dmx.rdm_build(dmx_work);
+    size_t rdm_get_len = Dmx.n;
+    Dmx.rdm_build_args.buf = rdm_set_buf;
+    Dmx.rdm_build_args.cap = sizeof(rdm_set_buf);
+    Dmx.rdm_build_args.p = &set_p;
+    Dmx.rdm_build_args.pdata = start_addr;
+    Dmx.rdm_build_args.pdl = 2;
+    Dmx.rdm_build(dmx_work);
+    size_t rdm_set_len = Dmx.n;
 
     static uint8_t rdm_build_scratch[64];
     RdmPacket parsed;
@@ -72,22 +98,47 @@ void dbench_run(void)
         volatile uint64_t sink64 = 0;
         volatile bool sinkb = false;
 
-        DBENCH_BULK("protocore_dmx_build (512ch)", 20000, sizeof(dmx_frame),
-                    sink +=
-                    protocore_dmx_build(dmx_frame, sizeof(dmx_frame), DMX_SC_DIMMER, channels, DMX_MAX_CHANNELS));
-        DBENCH_OP("protocore_dmx_get_channel", 100000,
-                  sink8 += protocore_dmx_get_channel(dmx_frame, sizeof(dmx_frame), 256));
-        DBENCH_OP("protocore_rdm_uid", 200000, sink64 += protocore_rdm_uid(0x4444, 0x00000001));
-        DBENCH_BULK("protocore_rdm_checksum", 50000, rdm_set_len,
-                    sink16 += protocore_rdm_checksum(rdm_set_buf, rdm_set_len));
-        DBENCH_OP("protocore_rdm_build (GET, pdl 0)", 50000,
-                  sink += protocore_rdm_build(rdm_build_scratch, sizeof(rdm_build_scratch), &get_p, NULL, 0));
-        DBENCH_OP("protocore_rdm_build (SET, pdl 2)", 50000,
-                  sink += protocore_rdm_build(rdm_build_scratch, sizeof(rdm_build_scratch), &set_p, start_addr, 2));
-        DBENCH_OP("protocore_rdm_parse (GET, pdl 0)", 50000,
-                  sinkb = protocore_rdm_parse(rdm_get_buf, rdm_get_len, &parsed, NULL));
-        DBENCH_OP("protocore_rdm_parse (SET, pdl 2)", 50000,
-                  sinkb = protocore_rdm_parse(rdm_set_buf, rdm_set_len, &parsed, NULL));
+        Dmx.build_args.buf = dmx_frame;
+        Dmx.build_args.cap = sizeof(dmx_frame);
+        Dmx.build_args.start_code = DMX_SC_DIMMER;
+        Dmx.build_args.channels = channels;
+        Dmx.build_args.n = DMX_MAX_CHANNELS;
+        // Every entry call stays inside its DBENCH_OP / DBENCH_BULK so the timed loop measures the
+        // codec, not the read that follows it. Args that do not vary are staged once, above.
+        DBENCH_BULK("Dmx.build (512ch)", 20000, sizeof(dmx_frame), (Dmx.build(dmx_work), sink += Dmx.n));
+
+        Dmx.get_channel_args.buf = dmx_frame;
+        Dmx.get_channel_args.len = sizeof(dmx_frame);
+        Dmx.get_channel_args.ch = 256;
+        DBENCH_OP("Dmx.get_channel", 100000, (Dmx.get_channel(dmx_work), sink8 += Dmx.u8));
+
+        Dmx.rdm_uid_args.manufacturer = 0x4444;
+        Dmx.rdm_uid_args.device = 0x00000001;
+        DBENCH_OP("Dmx.rdm_uid", 200000, (Dmx.rdm_uid(dmx_work), sink64 += Dmx.uid));
+
+        Dmx.rdm_checksum_args.buf = rdm_set_buf;
+        Dmx.rdm_checksum_args.len = rdm_set_len;
+        DBENCH_BULK("Dmx.rdm_checksum", 50000, rdm_set_len, (Dmx.rdm_checksum(dmx_work), sink16 += Dmx.checksum));
+
+        Dmx.rdm_build_args.buf = rdm_build_scratch;
+        Dmx.rdm_build_args.cap = sizeof(rdm_build_scratch);
+        Dmx.rdm_build_args.p = &get_p;
+        Dmx.rdm_build_args.pdata = NULL;
+        Dmx.rdm_build_args.pdl = 0;
+        DBENCH_OP("Dmx.rdm_build (GET, pdl 0)", 50000, (Dmx.rdm_build(dmx_work), sink += Dmx.n));
+        Dmx.rdm_build_args.p = &set_p;
+        Dmx.rdm_build_args.pdata = start_addr;
+        Dmx.rdm_build_args.pdl = 2;
+        DBENCH_OP("Dmx.rdm_build (SET, pdl 2)", 50000, (Dmx.rdm_build(dmx_work), sink += Dmx.n));
+
+        Dmx.rdm_parse_args.buf = rdm_get_buf;
+        Dmx.rdm_parse_args.len = rdm_get_len;
+        Dmx.rdm_parse_args.out = &parsed;
+        Dmx.rdm_parse_args.consumed = NULL;
+        DBENCH_OP("Dmx.rdm_parse (GET, pdl 0)", 50000, (Dmx.rdm_parse(dmx_work), sinkb = Dmx.ok));
+        Dmx.rdm_parse_args.buf = rdm_set_buf;
+        Dmx.rdm_parse_args.len = rdm_set_len;
+        DBENCH_OP("Dmx.rdm_parse (SET, pdl 2)", 50000, (Dmx.rdm_parse(dmx_work), sinkb = Dmx.ok));
 
         (void)sink;
         (void)sink8;

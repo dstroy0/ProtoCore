@@ -9,14 +9,22 @@
  * for any date and needs no lookup tables or stdlib time functions.
  */
 
-#include "server/peripherals/rtc/rtc.h"
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_RTC
 
-#if PROTOCORE_HAS_BUS
-#include "server/peripherals/i2c.h"
+#if !PROTOCORE_HAS_BUS
+#error                                                                                                                 \
+    "ProtoCore: PROTOCORE_ENABLE_RTC needs a bus master (an I2C master). Provide one in core_setup/hal/<vendor>, or\
+ turn the driver off - there is no software stand-in for a part on the other end of a bus."
 #endif
+
+#include "mmgr/secure.h" // the persistent end this module's state is taken from
+#include "server/peripherals/i2c.h"
+#include "server/peripherals/rtc/rtc.h"
+
+PROTOCORE_BEGIN_DECLS
+
 static int bcd2int(uint8_t b)
 {
     return (b >> 4) * 10 + (b & 0x0F);
@@ -54,11 +62,46 @@ static void civil_from_days(long z, int *y, int *m, int *d)
     *y = (int)(yy + (*m <= 2));
 }
 
-proto_bool protocore_rtc_regs_to_epoch(const uint8_t r[RTC_REG_COUNT], uint32_t *epoch)
+// The entries this file calls before reaching their definitions.
+
+// --- the program's shared state, beside the namespace not on it -------------
+
+// The one owned instance, private to this TU: the pointer to the bytes this module took for
+// itself. A caller that hands in its own borrow never reaches it.
+typedef struct
 {
+    uint8_t *span; ///< PROTOCORE_I2C_DEVICE_BORROW persistent bytes, or null while the pool was short
+} RtcOwnCtx;
+static RtcOwnCtx s_own;
+
+// Not an entry: an entry takes a borrow and this is where that borrow comes from.
+uint8_t *protocore_rtc_span(void)
+{
+    if (s_own.span == NULL)
+    {
+        protocore_span sp = protocore_secure_persist_span(PROTOCORE_I2C_DEVICE_BORROW);
+        if (span.ok(sp))
+        {
+            s_own.span = sp.buf;
+        }
+    }
+    return s_own.span; // null while the pool was short, which every entry refuses
+}
+
+static void rtc_epoch_to_regs(uint8_t *restrict work);
+static void rtc_read_epoch(uint8_t *restrict work);
+static void rtc_regs_to_epoch(uint8_t *restrict work);
+
+static void rtc_regs_to_epoch(uint8_t *restrict work)
+{
+    (void)work;
+    const uint8_t *r = Rtc.regs_to_epoch_args.regs;
+    uint32_t *epoch = Rtc.regs_to_epoch_args.epoch;
+
     if (!r || !epoch)
     {
-        return PROTO_FALSE;
+        Rtc.ok = PROTO_FALSE;
+        return;
     }
     int sec = bcd2int(r[0] & 0x7F); // mask the DS1307 clock-halt bit
     int min = bcd2int(r[1] & 0x7F);
@@ -68,7 +111,8 @@ proto_bool protocore_rtc_regs_to_epoch(const uint8_t r[RTC_REG_COUNT], uint32_t 
         int h12 = bcd2int(r[2] & 0x1F);
         if (h12 < 1 || h12 > 12)
         {
-            return PROTO_FALSE;
+            Rtc.ok = PROTO_FALSE;
+            return;
         }
         proto_bool pm = (r[2] & 0x20) != 0;
         hour = (h12 % 12) + (pm ? 12 : 0);
@@ -82,7 +126,8 @@ proto_bool protocore_rtc_regs_to_epoch(const uint8_t r[RTC_REG_COUNT], uint32_t 
     int year = 2000 + bcd2int(r[6]);
     if (sec > 59 || min > 59 || hour > 23 || date < 1 || date > 31 || month < 1 || month > 12)
     {
-        return PROTO_FALSE;
+        Rtc.ok = PROTO_FALSE;
+        return;
     }
     // int64: days*86400 exceeds a 32-bit long (Windows host and ESP32 both) past ~2038.
     int64_t t = (int64_t)days_from_civil(year, month, date) * 86400 + hour * 3600 + min * 60 + sec;
@@ -90,14 +135,19 @@ proto_bool protocore_rtc_regs_to_epoch(const uint8_t r[RTC_REG_COUNT], uint32_t 
     // is always >= 2000, so days_from_civil (and t) is always positive;
     // t > 0xFFFFFFFF (year rollover past 2106) is real and tested below
     {
-        return PROTO_FALSE;
+        Rtc.ok = PROTO_FALSE;
+        return;
     }
     *epoch = (uint32_t)t;
-    return PROTO_TRUE;
+    Rtc.ok = PROTO_TRUE;
 }
 
-void protocore_rtc_epoch_to_regs(uint32_t epoch, uint8_t r[RTC_REG_COUNT])
+static void rtc_epoch_to_regs(uint8_t *restrict work)
 {
+    (void)work;
+    uint32_t epoch = Rtc.epoch_to_regs_args.epoch;
+    uint8_t *r = Rtc.epoch_to_regs_args.regs;
+
     long days = (long)(epoch / 86400u);
     int rem = (int)(epoch % 86400u);
     int y = 0;
@@ -117,8 +167,6 @@ void protocore_rtc_epoch_to_regs(uint32_t epoch, uint8_t r[RTC_REG_COUNT])
 // I2C binding
 // ---------------------------------------------------------------------------
 
-#if PROTOCORE_HAS_BUS
-
 // All RTC I2C-binding state, owned by one instance (internal linkage): the bus frame, which is a
 // register-pointer byte followed by the seven time registers. It is a member rather than a local
 // because a transfer is composed in place, and eight bytes is the widest this part moves.
@@ -126,57 +174,66 @@ typedef struct
 {
     uint8_t frame[1 + RTC_REG_COUNT];
 } RtcCtx;
-static RtcCtx s_rtc = {.frame = {0}};
+// The caller's borrow, split: the context at its offset. One pointer arrives and every
+// region is that pointer plus a compile-time offset, so the assert below proves the span
+// covers them before anything runs.
+#define RTC_OFF_CTX 0u
+static_assert(RTC_OFF_CTX + sizeof(RtcCtx) <= PROTOCORE_I2C_DEVICE_BORROW,
+              "PROTOCORE_I2C_DEVICE_BORROW is short of the module context - raise it in protocore_config.h, which"
+              " sums it into its arena");
 
-proto_bool protocore_rtc_begin(void)
+// The region, at its offset in the caller's borrow.
+#define RTC_CTX(w) ((RtcCtx *)(void *)((w) + RTC_OFF_CTX))
+
+static void rtc_begin(uint8_t *restrict work)
 {
+    (void)work;
+
     protocore_i2c_begin();
-    return PROTO_TRUE;
+    Rtc.ok = PROTO_TRUE;
 }
 
-uint32_t protocore_rtc_read_epoch(void)
+static void rtc_read_epoch(uint8_t *restrict work)
 {
+
     uint8_t reg = 0x00; // register 0: seconds
-    if (!protocore_i2c_write_read(PROTOCORE_RTC_I2C_ADDR, &reg, 1, s_rtc.frame, RTC_REG_COUNT))
+    if (!protocore_i2c_write_read(PROTOCORE_RTC_I2C_ADDR, &reg, 1, RTC_CTX(work)->frame, RTC_REG_COUNT))
     {
-        return 0;
+        Rtc.epoch = 0;
+        return;
     }
     uint32_t e = 0;
-    return protocore_rtc_regs_to_epoch(s_rtc.frame, &e) ? e : 0;
+    Rtc.regs_to_epoch_args.regs = RTC_CTX(work)->frame;
+    Rtc.regs_to_epoch_args.epoch = &e;
+    rtc_regs_to_epoch(work);
+    Rtc.epoch = Rtc.ok ? e : 0;
 }
 
-proto_bool protocore_rtc_set_epoch(uint32_t epoch)
+static void rtc_set_epoch(uint8_t *restrict work)
 {
-    s_rtc.frame[0] = 0x00; // point at register 0, then the seven registers follow it
-    protocore_rtc_epoch_to_regs(epoch, &s_rtc.frame[1]);
-    return protocore_i2c_write(PROTOCORE_RTC_I2C_ADDR, s_rtc.frame, sizeof(s_rtc.frame));
+    uint32_t epoch = Rtc.set_epoch_args.epoch;
+
+    RTC_CTX(work)->frame[0] = 0x00; // point at register 0, then the seven registers follow it
+    Rtc.epoch_to_regs_args.epoch = epoch;
+    Rtc.epoch_to_regs_args.regs = &RTC_CTX(work)->frame[1];
+    rtc_epoch_to_regs(work);
+    Rtc.ok = protocore_i2c_write(PROTOCORE_RTC_I2C_ADDR, RTC_CTX(work)->frame, sizeof(RTC_CTX(work)->frame));
 }
 
-uint32_t protocore_rtc_time_source(void)
+static void rtc_time_source(uint8_t *restrict work)
 {
-    return protocore_rtc_read_epoch();
+    (void)work;
+
+    rtc_read_epoch(work);
 }
 
-#else // no bus seam. The BCD<->epoch conversions above are host-tested.
+RtcNs Rtc = {.regs_to_epoch = rtc_regs_to_epoch,
+             .epoch_to_regs = rtc_epoch_to_regs,
+             .begin = rtc_begin,
+             .read_epoch = rtc_read_epoch,
+             .set_epoch = rtc_set_epoch,
+             .time_source = rtc_time_source};
 
-proto_bool protocore_rtc_begin(void)
-{
-    return PROTO_TRUE;
-}
-uint32_t protocore_rtc_read_epoch(void)
-{
-    return 0;
-}
-proto_bool protocore_rtc_set_epoch(uint32_t epoch)
-{
-    (void)epoch;
-    return PROTO_FALSE;
-}
-uint32_t protocore_rtc_time_source(void)
-{
-    return 0;
-}
-
-#endif // PROTOCORE_HAS_BUS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_RTC

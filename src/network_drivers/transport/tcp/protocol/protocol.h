@@ -53,11 +53,11 @@ typedef struct
     size_t count;     ///< bytes a peek copies, or a consume drops
 } ConnIoArgs;
 
-/** @brief What a pool lifecycle call reads: the config it comes up from, and whose slots it sweeps. */
+/** @brief What a pool lifecycle call reads: the idle deadline it sweeps against, and whose slots. */
 typedef struct
 {
-    const WebServerConfig *cfg; ///< the config init reads
-    int worker_id;              ///< whose slots the sweep reaps
+    proto_u32 conn_timeout_ms; ///< milliseconds of inactivity before the sweep closes a slot
+    int worker_id;             ///< whose slots the sweep reaps
 } ConnLifeArgs;
 
 #if PROTOCORE_ENABLE_OBSERVABILITY
@@ -90,7 +90,7 @@ struct ConnPoolInternal;
  * @var ConnPoolNs::data       bytes for a send
  * @var ConnPoolNs::len        how many
  * @var ConnPoolNs::pcb        the control block a raw call acts on
- * @var ConnPoolNs::cfg        the config init reads
+ * @var ConnPoolNs::conn_timeout_ms  the idle deadline init loads
  * @var ConnPoolNs::worker_id  whose slots the sweep reaps
  * @var ConnPoolNs::out        where the peer address is written
  * @var ConnPoolNs::evt        the event an enqueue posts
@@ -121,7 +121,7 @@ struct ConnPoolInternal;
  * @var ConnPoolNs::closing_check     finalize it if it has
  * @var ConnPoolNs::begin_close       enter the dwell that precedes the close
  * @var ConnPoolNs::enqueue           post an event to the owning listener's queue
- * @var ConnPoolNs::init              bring the pool up from cfg
+ * @var ConnPoolNs::init              bring the pool up on the idle deadline it was given
  * @var ConnPoolNs::stop              take every slot down
  * @var ConnPoolNs::active_count      how many slots are live
  * @var ConnPoolNs::remote_ip         the peer address of a slot

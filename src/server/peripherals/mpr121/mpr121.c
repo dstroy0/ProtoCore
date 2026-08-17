@@ -10,46 +10,110 @@
  * and an electrode-config (ECR) that enables the electrodes with baseline tracking.
  */
 
-#include "server/peripherals/mpr121/mpr121.h"
-#include "mmgr/protomem.h"
-#include "protocore_config.h"
-#include "server/clock/clock.h" // pcdelay
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_MPR121
 
-#if PROTOCORE_HAS_BUS
-#include "server/peripherals/i2c.h"
+#if !PROTOCORE_HAS_BUS
+#error                                                                                                                 \
+    "ProtoCore: PROTOCORE_ENABLE_MPR121 needs a bus master (an I2C master). Provide one in core_setup/hal/<vendor>, or\
+ turn the driver off - there is no software stand-in for a part on the other end of a bus."
 #endif
-uint16_t protocore_mpr121_touched(uint8_t status_lo, uint8_t status_hi)
+
+#include "mmgr/protomem.h"
+#include "mmgr/secure.h"        // the persistent end this module's state is taken from
+#include "server/clock/clock.h" // pcdelay
+#include "server/peripherals/i2c.h"
+#include "server/peripherals/mpr121/mpr121.h"
+
+PROTOCORE_BEGIN_DECLS
+
+// The entries this file calls before reaching their definitions.
+
+// --- the program's shared state, beside the namespace not on it -------------
+
+// The one owned instance, private to this TU: the pointer to the bytes this module took for
+// itself. A caller that hands in its own borrow never reaches it.
+typedef struct
 {
-    return (uint16_t)(((uint16_t)status_lo | ((uint16_t)status_hi << 8)) & 0x0FFF);
+    uint8_t *span; ///< PROTOCORE_MPR121_BORROW persistent bytes, or null while the pool was short
+} Mpr121OwnCtx;
+static Mpr121OwnCtx s_own;
+
+// Not an entry: an entry takes a borrow and this is where that borrow comes from.
+uint8_t *protocore_mpr121_span(void)
+{
+    if (s_own.span == NULL)
+    {
+        protocore_span sp = protocore_secure_persist_span(PROTOCORE_MPR121_BORROW);
+        if (span.ok(sp))
+        {
+            s_own.span = sp.buf;
+        }
+    }
+    return s_own.span; // null while the pool was short, which every entry refuses
 }
 
-proto_bool protocore_mpr121_is_touched(uint16_t mask, uint8_t e)
+static void mpr121_build_init(uint8_t *restrict work);
+static void mpr121_touched(uint8_t *restrict work);
+static void mpr121_word10(uint8_t *restrict work);
+
+static void mpr121_touched(uint8_t *restrict work)
 {
-    return e < MPR121_ELECTRODES && (mask & (uint16_t)(1u << e)) != 0;
+    (void)work;
+    uint8_t status_lo = Mpr121.touched_args.status_lo;
+    uint8_t status_hi = Mpr121.touched_args.status_hi;
+
+    Mpr121.value = (uint16_t)(((uint16_t)status_lo | ((uint16_t)status_hi << 8)) & 0x0FFF);
 }
 
-proto_bool protocore_mpr121_proximity(uint8_t status_hi)
+static void mpr121_is_touched(uint8_t *restrict work)
 {
-    return (status_hi & 0x10) != 0; // status bit 12
+    (void)work;
+    uint16_t mask = Mpr121.is_touched_args.mask;
+    uint8_t e = Mpr121.is_touched_args.e;
+
+    Mpr121.ok = e < MPR121_ELECTRODES && (mask & (uint16_t)(1u << e)) != 0;
 }
 
-proto_bool protocore_mpr121_overcurrent(uint8_t status_hi)
+static void mpr121_proximity(uint8_t *restrict work)
 {
-    return (status_hi & 0x80) != 0; // status bit 15
+    (void)work;
+    uint8_t status_hi = Mpr121.proximity_args.status_hi;
+
+    Mpr121.ok = (status_hi & 0x10) != 0; // status bit 12
 }
 
-uint16_t protocore_mpr121_word10(uint8_t lsb, uint8_t msb)
+static void mpr121_overcurrent(uint8_t *restrict work)
 {
-    return (uint16_t)(((uint16_t)lsb | ((uint16_t)msb << 8)) & 0x03FF);
+    (void)work;
+    uint8_t status_hi = Mpr121.overcurrent_args.status_hi;
+
+    Mpr121.ok = (status_hi & 0x80) != 0; // status bit 15
 }
 
-size_t protocore_mpr121_build_init(uint8_t *buf, size_t cap, uint8_t n, uint8_t touch_thr, uint8_t release_thr)
+static void mpr121_word10(uint8_t *restrict work)
 {
+    (void)work;
+    uint8_t lsb = Mpr121.word10_args.lsb;
+    uint8_t msb = Mpr121.word10_args.msb;
+
+    Mpr121.value = (uint16_t)(((uint16_t)lsb | ((uint16_t)msb << 8)) & 0x03FF);
+}
+
+static void mpr121_build_init(uint8_t *restrict work)
+{
+    (void)work;
+    uint8_t *buf = Mpr121.build_init_args.buf;
+    size_t cap = Mpr121.build_init_args.cap;
+    uint8_t n = Mpr121.build_init_args.n_electrodes;
+    uint8_t touch_thr = Mpr121.build_init_args.touch_thr;
+    uint8_t release_thr = Mpr121.build_init_args.release_thr;
+
     if (!buf || n == 0 || n > MPR121_ELECTRODES)
     {
-        return 0;
+        Mpr121.n = 0;
+        return;
     }
     // Reset, ECR-stop, then the rising / falling / touched baseline-filter defaults.
     static const uint8_t fixed[] = {
@@ -65,7 +129,8 @@ size_t protocore_mpr121_build_init(uint8_t *buf, size_t cap, uint8_t n, uint8_t 
     size_t need = sizeof(fixed) + (size_t)n * 4 + 8;
     if (cap < need)
     {
-        return 0;
+        Mpr121.n = 0;
+        return;
     }
     size_t i = sizeof(fixed);
     mem.cpy(buf, fixed, sizeof(fixed));
@@ -84,14 +149,12 @@ size_t protocore_mpr121_build_init(uint8_t *buf, size_t cap, uint8_t n, uint8_t 
     buf[i++] = 0x20; // CONFIG2
     buf[i++] = 0x5E;
     buf[i++] = (uint8_t)(0x80 | n); // ECR: CL=baseline tracking, ELE_EN=n (written last)
-    return i;
+    Mpr121.n = i;
 }
 
 // ---------------------------------------------------------------------------
 // I2C binding
 // ---------------------------------------------------------------------------
-
-#if PROTOCORE_HAS_BUS
 
 // All MPR121 I2C-binding state, owned by one instance (internal linkage): the device address, the
 // register-pair frame, and the bring-up sequence buffer, so it is one named owner, unreachable
@@ -104,84 +167,114 @@ typedef struct
     uint8_t frame[2];
     uint8_t init[MPR121_INIT_MAX];
 } Mpr121Ctx;
-static Mpr121Ctx s_mpr = {.addr = PROTOCORE_MPR121_I2C_ADDR, .frame = {0}, .init = {0}};
+// The caller's borrow, split: the context at its offset. One pointer arrives and every
+// region is that pointer plus a compile-time offset, so the assert below proves the span
+// covers them before anything runs.
+#define MPR121_OFF_CTX 0u
+static_assert(MPR121_OFF_CTX + sizeof(Mpr121Ctx) <= PROTOCORE_MPR121_BORROW,
+              "PROTOCORE_MPR121_BORROW is short of the module context - raise it in protocore_config.h, which"
+              " sums it into its arena");
 
-static proto_bool wr(uint8_t reg, uint8_t val)
+// The region, at its offset in the caller's borrow.
+#define MPR121_CTX(w) ((Mpr121Ctx *)(void *)((w) + MPR121_OFF_CTX))
+
+// Zero is "no address set yet", which is the default address - stated here rather than on the
+// declaration so the context carries no initializer and can live in a borrow that arrives zeroed.
+// begin() applies the same default to the address it is handed.
+static uint8_t dev_addr(uint8_t *restrict work)
 {
-    s_mpr.frame[0] = reg;
-    s_mpr.frame[1] = val;
-    return protocore_i2c_write(s_mpr.addr, s_mpr.frame, sizeof(s_mpr.frame));
+    return MPR121_CTX(work)->addr ? MPR121_CTX(work)->addr : (uint8_t)PROTOCORE_MPR121_I2C_ADDR;
 }
 
-static proto_bool rd(uint8_t reg, uint8_t *out, uint8_t n)
+static proto_bool wr(uint8_t *restrict work, uint8_t reg, uint8_t val)
 {
-    return protocore_i2c_write_read(s_mpr.addr, &reg, 1, out, n);
+    MPR121_CTX(work)->frame[0] = reg;
+    MPR121_CTX(work)->frame[1] = val;
+    return protocore_i2c_write(dev_addr(work), MPR121_CTX(work)->frame, sizeof(MPR121_CTX(work)->frame));
 }
 
-proto_bool protocore_mpr121_begin(uint8_t addr)
+static proto_bool rd(uint8_t *restrict work, uint8_t reg, uint8_t *out, uint8_t n)
 {
-    s_mpr.addr = addr ? addr : (uint8_t)PROTOCORE_MPR121_I2C_ADDR;
+    return protocore_i2c_write_read(dev_addr(work), &reg, 1, out, n);
+}
+
+static void mpr121_begin(uint8_t *restrict work)
+{
+    uint8_t addr = Mpr121.begin_args.addr;
+
+    MPR121_CTX(work)->addr = addr ? addr : (uint8_t)PROTOCORE_MPR121_I2C_ADDR;
     protocore_i2c_begin();
-    size_t n = protocore_mpr121_build_init(s_mpr.init, sizeof(s_mpr.init), MPR121_ELECTRODES,
-                                           PROTOCORE_MPR121_TOUCH_THRESHOLD, PROTOCORE_MPR121_RELEASE_THRESHOLD);
+    Mpr121.build_init_args.buf = MPR121_CTX(work)->init;
+    Mpr121.build_init_args.cap = sizeof(MPR121_CTX(work)->init);
+    Mpr121.build_init_args.n_electrodes = MPR121_ELECTRODES;
+    Mpr121.build_init_args.touch_thr = PROTOCORE_MPR121_TOUCH_THRESHOLD;
+    Mpr121.build_init_args.release_thr = PROTOCORE_MPR121_RELEASE_THRESHOLD;
+    mpr121_build_init(work);
+    size_t n = Mpr121.n;
     if (n == 0)
     {
-        return PROTO_FALSE;
+        Mpr121.ok = PROTO_FALSE;
+        return;
     }
-    if (!wr(s_mpr.init[0], s_mpr.init[1])) // soft reset first; then let the chip settle
+    if (!wr(work, MPR121_CTX(work)->init[0], MPR121_CTX(work)->init[1])) // soft reset first; then let the chip settle
     {
-        return PROTO_FALSE;
+        Mpr121.ok = PROTO_FALSE;
+        return;
     }
     pcdelay(1);
     for (size_t i = 2; i + 1 < n; i += 2)
     {
-        if (!wr(s_mpr.init[i], s_mpr.init[i + 1]))
+        if (!wr(work, MPR121_CTX(work)->init[i], MPR121_CTX(work)->init[i + 1]))
         {
-            return PROTO_FALSE;
+            Mpr121.ok = PROTO_FALSE;
+            return;
         }
     }
-    return PROTO_TRUE;
+    Mpr121.ok = PROTO_TRUE;
 }
 
-uint16_t protocore_mpr121_read_touched(void)
+static void mpr121_read_touched(uint8_t *restrict work)
 {
-    if (!rd(0x00, s_mpr.frame, 2))
+
+    if (!rd(work, 0x00, MPR121_CTX(work)->frame, 2))
     {
-        return 0;
+        Mpr121.value = 0;
+        return;
     }
-    return protocore_mpr121_touched(s_mpr.frame[0], s_mpr.frame[1]);
+    Mpr121.touched_args.status_lo = MPR121_CTX(work)->frame[0];
+    Mpr121.touched_args.status_hi = MPR121_CTX(work)->frame[1];
+    mpr121_touched(work);
 }
 
-uint16_t protocore_mpr121_read_filtered(uint8_t e)
+static void mpr121_read_filtered(uint8_t *restrict work)
 {
+    uint8_t e = Mpr121.read_filtered_args.e;
+
     if (e >= MPR121_ELECTRODES)
     {
-        return 0;
+        Mpr121.value = 0;
+        return;
     }
-    if (!rd((uint8_t)(0x04 + 2 * e), s_mpr.frame, 2))
+    if (!rd(work, (uint8_t)(0x04 + 2 * e), MPR121_CTX(work)->frame, 2))
     {
-        return 0;
+        Mpr121.value = 0;
+        return;
     }
-    return protocore_mpr121_word10(s_mpr.frame[0], s_mpr.frame[1]);
+    Mpr121.word10_args.lsb = MPR121_CTX(work)->frame[0];
+    Mpr121.word10_args.msb = MPR121_CTX(work)->frame[1];
+    mpr121_word10(work);
 }
 
-#else // no bus seam. The decode + init-sequence builder above are host-tested.
+Mpr121Ns Mpr121 = {.touched = mpr121_touched,
+                   .is_touched = mpr121_is_touched,
+                   .proximity = mpr121_proximity,
+                   .overcurrent = mpr121_overcurrent,
+                   .word10 = mpr121_word10,
+                   .build_init = mpr121_build_init,
+                   .begin = mpr121_begin,
+                   .read_touched = mpr121_read_touched,
+                   .read_filtered = mpr121_read_filtered};
 
-proto_bool protocore_mpr121_begin(uint8_t addr)
-{
-    (void)addr;
-    return PROTO_FALSE;
-}
-uint16_t protocore_mpr121_read_touched(void)
-{
-    return 0;
-}
-uint16_t protocore_mpr121_read_filtered(uint8_t e)
-{
-    (void)e;
-    return 0;
-}
-
-#endif // PROTOCORE_HAS_BUS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_MPR121

@@ -10,6 +10,8 @@
  * and values never touch the heap; the dynamic table is a fixed byte ring with FIFO eviction.
  */
 
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
 #if PROTOCORE_ENABLE_HTTP2
 
 #include "network_drivers/presentation/codec/hpack_prim/hpack_prim.h" // shared prefix-int + Huffman

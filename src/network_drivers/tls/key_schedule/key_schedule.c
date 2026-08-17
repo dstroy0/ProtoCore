@@ -6,9 +6,11 @@
  * @brief TLS 1.3 key schedule (RFC 8446 sec 7.1). See key_schedule.h.
  */
 
-#include "network_drivers/tls/key_schedule/key_schedule.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if (PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_TLS_SOFTWARE)
+
+#include "network_drivers/tls/key_schedule/key_schedule.h"
 
 #include "crypto/hash/sha256.h"
 #include "crypto/kdf/hkdf.h"

@@ -6,6 +6,8 @@
 
 #include <unity.h>
 
+static uint8_t relay_work[16]; // the borrow an entry takes; Relay never reads it
+
 void setUp()
 {
 }
@@ -93,7 +95,9 @@ static protocore_relay_status run_relay(protocore_relay *r, int max_steps)
 {
     for (int i = 0; i < max_steps; i++)
     {
-        protocore_relay_status st = protocore_relay_step(r);
+        Relay.step_args.r = r;
+        Relay.step(relay_work);
+        protocore_relay_status st = Relay.status;
         if (st != PROTOCORE_RELAY_RUNNING)
         {
             return st;
@@ -109,7 +113,10 @@ void test_bidirectional()
     sock_init(&b, "hi from origin", 14, PROTO_TRUE);
     protocore_relay_end ea = end_of(&a), eb = end_of(&b);
     protocore_relay r;
-    protocore_relay_init(&r, &ea, &eb);
+    Relay.init_args.r = &r;
+    Relay.init_args.client = &ea;
+    Relay.init_args.origin = &eb;
+    Relay.init(relay_work);
 
     TEST_ASSERT_EQUAL_INT(PROTOCORE_RELAY_DONE, run_relay(&r, 64));
     TEST_ASSERT_EQUAL_size_t(17, b.out_len);
@@ -133,7 +140,10 @@ void test_backpressure()
     b.send_cap = 7;
     protocore_relay_end ea = end_of(&a), eb = end_of(&b);
     protocore_relay r;
-    protocore_relay_init(&r, &ea, &eb);
+    Relay.init_args.r = &r;
+    Relay.init_args.client = &ea;
+    Relay.init_args.origin = &eb;
+    Relay.init(relay_work);
 
     TEST_ASSERT_EQUAL_INT(PROTOCORE_RELAY_DONE, run_relay(&r, 1000));
     TEST_ASSERT_EQUAL_size_t(1000, b.out_len);
@@ -153,12 +163,17 @@ void test_half_close_shutdown()
     a.send_cap = 64;
     protocore_relay_end ea = end_of(&a), eb = end_of(&b);
     protocore_relay r;
-    protocore_relay_init(&r, &ea, &eb);
+    Relay.init_args.r = &r;
+    Relay.init_args.client = &ea;
+    Relay.init_args.origin = &eb;
+    Relay.init(relay_work);
 
     protocore_relay_status st = PROTOCORE_RELAY_RUNNING;
     for (int i = 0; i < 10 && !r.b_shut_sent; i++)
     {
-        st = protocore_relay_step(&r);
+        Relay.step_args.r = &r;
+        Relay.step(relay_work);
+        st = Relay.status;
     }
     TEST_ASSERT_TRUE(r.b_shut_sent);
     TEST_ASSERT_TRUE(b.shutdown_called);
@@ -180,12 +195,17 @@ void test_send_error()
     b.fail_send = PROTO_TRUE;
     protocore_relay_end ea = end_of(&a), eb = end_of(&b);
     protocore_relay r;
-    protocore_relay_init(&r, &ea, &eb);
+    Relay.init_args.r = &r;
+    Relay.init_args.client = &ea;
+    Relay.init_args.origin = &eb;
+    Relay.init(relay_work);
 
     protocore_relay_status st = PROTOCORE_RELAY_RUNNING;
     for (int i = 0; i < 8 && st == PROTOCORE_RELAY_RUNNING; i++)
     {
-        st = protocore_relay_step(&r);
+        Relay.step_args.r = &r;
+        Relay.step(relay_work);
+        st = Relay.status;
     }
     TEST_ASSERT_EQUAL_INT(PROTOCORE_RELAY_ERROR, st);
 }
@@ -198,7 +218,10 @@ void test_one_way_idle_then_close()
     sock_init(&b, NULL, 0, PROTO_TRUE);
     protocore_relay_end ea = end_of(&a), eb = end_of(&b);
     protocore_relay r;
-    protocore_relay_init(&r, &ea, &eb);
+    Relay.init_args.r = &r;
+    Relay.init_args.client = &ea;
+    Relay.init_args.origin = &eb;
+    Relay.init(relay_work);
 
     TEST_ASSERT_EQUAL_INT(PROTOCORE_RELAY_DONE, run_relay(&r, 32));
     TEST_ASSERT_EQUAL_size_t(18, b.out_len);
@@ -212,14 +235,23 @@ void test_note_eof_out_of_band()
     sock_init(&b, "world", 5, PROTO_FALSE);
     protocore_relay_end ea = end_of(&a), eb = end_of(&b);
     protocore_relay r;
-    protocore_relay_init(&r, &ea, &eb);
+    Relay.init_args.r = &r;
+    Relay.init_args.client = &ea;
+    Relay.init_args.origin = &eb;
+    Relay.init(relay_work);
 
-    TEST_ASSERT_EQUAL_INT(PROTOCORE_RELAY_RUNNING, protocore_relay_step(&r));
+    Relay.step_args.r = &r;
+    Relay.step(relay_work);
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_RELAY_RUNNING, Relay.status);
     TEST_ASSERT_EQUAL_MEMORY("hello", b.out, 5);
     TEST_ASSERT_EQUAL_MEMORY("world", a.out, 5);
 
-    protocore_relay_note_eof(&r, PROTO_FALSE);
-    protocore_relay_note_eof(&r, PROTO_TRUE);
+    Relay.note_eof_args.r = &r;
+    Relay.note_eof_args.origin = PROTO_FALSE;
+    Relay.note_eof(relay_work);
+    Relay.note_eof_args.r = &r;
+    Relay.note_eof_args.origin = PROTO_TRUE;
+    Relay.note_eof(relay_work);
     TEST_ASSERT_EQUAL_INT(PROTOCORE_RELAY_DONE, run_relay(&r, 8));
     TEST_ASSERT_TRUE(a.shutdown_called);
     TEST_ASSERT_TRUE(b.shutdown_called);
@@ -232,19 +264,28 @@ void test_zero_length_read_no_progress()
     sock_init(&b, NULL, 0, PROTO_FALSE);
     protocore_relay_end ea = end_of(&a), eb = end_of(&b);
     protocore_relay r;
-    protocore_relay_init(&r, &ea, &eb);
+    Relay.init_args.r = &r;
+    Relay.init_args.client = &ea;
+    Relay.init_args.origin = &eb;
+    Relay.init(relay_work);
 
     for (int i = 0; i < 5; i++)
     {
-        TEST_ASSERT_EQUAL_INT(PROTOCORE_RELAY_RUNNING, protocore_relay_step(&r));
+        Relay.step_args.r = &r;
+        Relay.step(relay_work);
+        TEST_ASSERT_EQUAL_INT(PROTOCORE_RELAY_RUNNING, Relay.status);
     }
     TEST_ASSERT_EQUAL_UINT32(0, r.bytes_a2b);
     TEST_ASSERT_EQUAL_UINT32(0, r.bytes_b2a);
     TEST_ASSERT_EQUAL_size_t(0, a.out_len);
     TEST_ASSERT_EQUAL_size_t(0, b.out_len);
 
-    protocore_relay_note_eof(&r, PROTO_FALSE);
-    protocore_relay_note_eof(&r, PROTO_TRUE);
+    Relay.note_eof_args.r = &r;
+    Relay.note_eof_args.origin = PROTO_FALSE;
+    Relay.note_eof(relay_work);
+    Relay.note_eof_args.r = &r;
+    Relay.note_eof_args.origin = PROTO_TRUE;
+    Relay.note_eof(relay_work);
     TEST_ASSERT_EQUAL_INT(PROTOCORE_RELAY_DONE, run_relay(&r, 8));
 }
 
@@ -261,13 +302,20 @@ void test_flush_send_error()
     b.send_cap = 10;
     protocore_relay_end ea = end_of(&a), eb = end_of(&b);
     protocore_relay r;
-    protocore_relay_init(&r, &ea, &eb);
+    Relay.init_args.r = &r;
+    Relay.init_args.client = &ea;
+    Relay.init_args.origin = &eb;
+    Relay.init(relay_work);
 
-    TEST_ASSERT_EQUAL_INT(PROTOCORE_RELAY_RUNNING, protocore_relay_step(&r));
+    Relay.step_args.r = &r;
+    Relay.step(relay_work);
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_RELAY_RUNNING, Relay.status);
     TEST_ASSERT_TRUE(r.a2b_off < r.a2b_len);
 
     b.fail_send = PROTO_TRUE;
-    TEST_ASSERT_EQUAL_INT(PROTOCORE_RELAY_ERROR, protocore_relay_step(&r));
+    Relay.step_args.r = &r;
+    Relay.step(relay_work);
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_RELAY_ERROR, Relay.status);
 }
 
 void test_send_error_reverse_direction()
@@ -278,9 +326,14 @@ void test_send_error_reverse_direction()
     a.fail_send = PROTO_TRUE;
     protocore_relay_end ea = end_of(&a), eb = end_of(&b);
     protocore_relay r;
-    protocore_relay_init(&r, &ea, &eb);
+    Relay.init_args.r = &r;
+    Relay.init_args.client = &ea;
+    Relay.init_args.origin = &eb;
+    Relay.init(relay_work);
 
-    TEST_ASSERT_EQUAL_INT(PROTOCORE_RELAY_ERROR, protocore_relay_step(&r));
+    Relay.step_args.r = &r;
+    Relay.step(relay_work);
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_RELAY_ERROR, Relay.status);
 }
 
 void test_null_argument_guards()
@@ -291,13 +344,26 @@ void test_null_argument_guards()
     protocore_relay_end ea = end_of(&a), eb = end_of(&b);
     protocore_relay r;
 
-    protocore_relay_init(NULL, &ea, &eb);
-    protocore_relay_init(&r, NULL, &eb);
-    protocore_relay_init(&r, &ea, NULL);
+    Relay.init_args.r = NULL;
+    Relay.init_args.client = &ea;
+    Relay.init_args.origin = &eb;
+    Relay.init(relay_work);
+    Relay.init_args.r = &r;
+    Relay.init_args.client = NULL;
+    Relay.init_args.origin = &eb;
+    Relay.init(relay_work);
+    Relay.init_args.r = &r;
+    Relay.init_args.client = &ea;
+    Relay.init_args.origin = NULL;
+    Relay.init(relay_work);
 
-    TEST_ASSERT_EQUAL_INT(PROTOCORE_RELAY_ERROR, protocore_relay_step(NULL));
+    Relay.step_args.r = NULL;
+    Relay.step(relay_work);
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_RELAY_ERROR, Relay.status);
 
-    protocore_relay_note_eof(NULL, PROTO_FALSE);
+    Relay.note_eof_args.r = NULL;
+    Relay.note_eof_args.origin = PROTO_FALSE;
+    Relay.note_eof(relay_work);
 }
 
 void test_shutdown_null_seam()
@@ -309,7 +375,10 @@ void test_shutdown_null_seam()
     protocore_relay_end eb = end_of(&b);
     eb.shutdown = NULL;
     protocore_relay r;
-    protocore_relay_init(&r, &ea, &eb);
+    Relay.init_args.r = &r;
+    Relay.init_args.client = &ea;
+    Relay.init_args.origin = &eb;
+    Relay.init(relay_work);
 
     TEST_ASSERT_EQUAL_INT(PROTOCORE_RELAY_DONE, run_relay(&r, 16));
     TEST_ASSERT_FALSE(r.b_shut_sent);
@@ -331,13 +400,20 @@ void test_note_eof_with_backlog_pending()
     b.send_cap = 5;
     protocore_relay_end ea = end_of(&a), eb = end_of(&b);
     protocore_relay r;
-    protocore_relay_init(&r, &ea, &eb);
+    Relay.init_args.r = &r;
+    Relay.init_args.client = &ea;
+    Relay.init_args.origin = &eb;
+    Relay.init(relay_work);
 
-    TEST_ASSERT_EQUAL_INT(PROTOCORE_RELAY_RUNNING, protocore_relay_step(&r));
+    Relay.step_args.r = &r;
+    Relay.step(relay_work);
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_RELAY_RUNNING, Relay.status);
     TEST_ASSERT_EQUAL_size_t(5, r.a2b_off);
     TEST_ASSERT_EQUAL_size_t(20, r.a2b_len);
 
-    protocore_relay_note_eof(&r, PROTO_FALSE);
+    Relay.note_eof_args.r = &r;
+    Relay.note_eof_args.origin = PROTO_FALSE;
+    Relay.note_eof(relay_work);
     TEST_ASSERT_FALSE(r.a2b_done);
 
     TEST_ASSERT_EQUAL_INT(PROTOCORE_RELAY_DONE, run_relay(&r, 16));

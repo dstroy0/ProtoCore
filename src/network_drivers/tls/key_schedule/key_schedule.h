@@ -27,13 +27,14 @@
 #ifndef PROTOCORE_TLS_KEY_SCHEDULE_H
 #define PROTOCORE_TLS_KEY_SCHEDULE_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if (PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_TLS_SOFTWARE)
 
 PROTOCORE_BEGIN_DECLS
 
 // Shared by the HTTP/3 (QUIC) handshake and the DTLS 1.3 handshake - both run the same TLS 1.3 key
 // schedule (see protocore_tls13_msg.h for the matching guard on the message layer).
-#if (PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_TLS_SOFTWARE)
 
 /** @brief SHA-256 secret length; every TLS 1.3 secret here is 32 bytes. */
 #define TLS13_SECRET_LEN PROTOCORE_TLS13_SECRET_LEN

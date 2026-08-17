@@ -66,7 +66,11 @@ void test_report_fields_round_trip(void)
 
     HmmdReport r;
     memset(&r, 0xEE, sizeof(r));
-    TEST_ASSERT_TRUE(protocore_hmmd_parse_report(frame, sizeof(frame), &r));
+    Hmmd.parse_report_args.frame = frame;
+    Hmmd.parse_report_args.len = sizeof(frame);
+    Hmmd.parse_report_args.out = &r;
+    Hmmd.parse_report(protocore_hmmd_span());
+    TEST_ASSERT_TRUE(Hmmd.ok);
     TEST_ASSERT_EQUAL_UINT8(1u, r.detected);
     TEST_ASSERT_EQUAL_UINT16(0x0123u, r.distance_cm);
     for (int i = 0; i < PROTOCORE_HMMD_GATES; i++)
@@ -79,7 +83,11 @@ void test_report_fields_round_trip(void)
     memcpy(swapped, frame, sizeof(frame));
     swapped[7] = frame[8];
     swapped[8] = frame[7];
-    TEST_ASSERT_TRUE(protocore_hmmd_parse_report(swapped, sizeof(swapped), &r));
+    Hmmd.parse_report_args.frame = swapped;
+    Hmmd.parse_report_args.len = sizeof(swapped);
+    Hmmd.parse_report_args.out = &r;
+    Hmmd.parse_report(protocore_hmmd_span());
+    TEST_ASSERT_TRUE(Hmmd.ok);
     TEST_ASSERT_EQUAL_UINT16(0x2301u, r.distance_cm);
 }
 
@@ -91,25 +99,51 @@ void test_detection_flag_is_exactly_one(void)
     HmmdReport r;
 
     build_report(frame, 0x01u, 250u, GATES);
-    TEST_ASSERT_TRUE(protocore_hmmd_parse_report(frame, sizeof(frame), &r));
+    Hmmd.parse_report_args.frame = frame;
+    Hmmd.parse_report_args.len = sizeof(frame);
+    Hmmd.parse_report_args.out = &r;
+    Hmmd.parse_report(protocore_hmmd_span());
+    TEST_ASSERT_TRUE(Hmmd.ok);
     TEST_ASSERT_EQUAL_UINT8(1u, r.detected);
-    TEST_ASSERT_TRUE(protocore_hmmd_present(&r));
-    TEST_ASSERT_EQUAL_UINT16(250u, protocore_hmmd_distance_cm(&r));
+    Hmmd.present_args.r = &r;
+    Hmmd.present(protocore_hmmd_span());
+    TEST_ASSERT_TRUE(Hmmd.ok);
+    Hmmd.distance_cm_args.r = &r;
+    Hmmd.distance_cm(protocore_hmmd_span());
+    TEST_ASSERT_EQUAL_UINT16(250u, Hmmd.cm);
 
     build_report(frame, 0x00u, 250u, GATES);
-    TEST_ASSERT_TRUE(protocore_hmmd_parse_report(frame, sizeof(frame), &r));
+    Hmmd.parse_report_args.frame = frame;
+    Hmmd.parse_report_args.len = sizeof(frame);
+    Hmmd.parse_report_args.out = &r;
+    Hmmd.parse_report(protocore_hmmd_span());
+    TEST_ASSERT_TRUE(Hmmd.ok);
     TEST_ASSERT_EQUAL_UINT8(0u, r.detected);
-    TEST_ASSERT_FALSE(protocore_hmmd_present(&r));
+    Hmmd.present_args.r = &r;
+    Hmmd.present(protocore_hmmd_span());
+    TEST_ASSERT_FALSE(Hmmd.ok);
     // no target means no distance, whatever the payload carried
-    TEST_ASSERT_EQUAL_UINT16(0u, protocore_hmmd_distance_cm(&r));
+    Hmmd.distance_cm_args.r = &r;
+    Hmmd.distance_cm(protocore_hmmd_span());
+    TEST_ASSERT_EQUAL_UINT16(0u, Hmmd.cm);
 
     build_report(frame, 0x02u, 250u, GATES);
-    TEST_ASSERT_TRUE(protocore_hmmd_parse_report(frame, sizeof(frame), &r));
+    Hmmd.parse_report_args.frame = frame;
+    Hmmd.parse_report_args.len = sizeof(frame);
+    Hmmd.parse_report_args.out = &r;
+    Hmmd.parse_report(protocore_hmmd_span());
+    TEST_ASSERT_TRUE(Hmmd.ok);
     TEST_ASSERT_EQUAL_UINT8(0u, r.detected);
-    TEST_ASSERT_FALSE(protocore_hmmd_present(&r));
+    Hmmd.present_args.r = &r;
+    Hmmd.present(protocore_hmmd_span());
+    TEST_ASSERT_FALSE(Hmmd.ok);
 
-    TEST_ASSERT_FALSE(protocore_hmmd_present(NULL));
-    TEST_ASSERT_EQUAL_UINT16(0u, protocore_hmmd_distance_cm(NULL));
+    Hmmd.present_args.r = NULL;
+    Hmmd.present(protocore_hmmd_span());
+    TEST_ASSERT_FALSE(Hmmd.ok);
+    Hmmd.distance_cm_args.r = NULL;
+    Hmmd.distance_cm(protocore_hmmd_span());
+    TEST_ASSERT_EQUAL_UINT16(0u, Hmmd.cm);
 }
 
 // Header: "the header, footer, and the length agreeing with the buffer are the whole of the
@@ -120,32 +154,68 @@ void test_malformed_report_frames_are_refused(void)
     uint8_t bad[PROTOCORE_HMMD_FRAME_MAX];
     HmmdReport r;
     build_report(good, 1u, 100u, GATES);
-    TEST_ASSERT_TRUE(protocore_hmmd_parse_report(good, sizeof(good), &r));
+    Hmmd.parse_report_args.frame = good;
+    Hmmd.parse_report_args.len = sizeof(good);
+    Hmmd.parse_report_args.out = &r;
+    Hmmd.parse_report(protocore_hmmd_span());
+    TEST_ASSERT_TRUE(Hmmd.ok);
 
-    TEST_ASSERT_FALSE(protocore_hmmd_parse_report(NULL, sizeof(good), &r));
-    TEST_ASSERT_FALSE(protocore_hmmd_parse_report(good, sizeof(good), NULL));
+    Hmmd.parse_report_args.frame = NULL;
+    Hmmd.parse_report_args.len = sizeof(good);
+    Hmmd.parse_report_args.out = &r;
+    Hmmd.parse_report(protocore_hmmd_span());
+    TEST_ASSERT_FALSE(Hmmd.ok);
+    Hmmd.parse_report_args.frame = good;
+    Hmmd.parse_report_args.len = sizeof(good);
+    Hmmd.parse_report_args.out = NULL;
+    Hmmd.parse_report(protocore_hmmd_span());
+    TEST_ASSERT_FALSE(Hmmd.ok);
     // this module emits exactly one report length, so a shorter or longer buffer is not one
-    TEST_ASSERT_FALSE(protocore_hmmd_parse_report(good, PROTOCORE_HMMD_FRAME_MAX - 1u, &r));
-    TEST_ASSERT_FALSE(protocore_hmmd_parse_report(good, 0u, &r));
+    Hmmd.parse_report_args.frame = good;
+    Hmmd.parse_report_args.len = PROTOCORE_HMMD_FRAME_MAX - 1u;
+    Hmmd.parse_report_args.out = &r;
+    Hmmd.parse_report(protocore_hmmd_span());
+    TEST_ASSERT_FALSE(Hmmd.ok);
+    Hmmd.parse_report_args.frame = good;
+    Hmmd.parse_report_args.len = 0u;
+    Hmmd.parse_report_args.out = &r;
+    Hmmd.parse_report(protocore_hmmd_span());
+    TEST_ASSERT_FALSE(Hmmd.ok);
 
     for (size_t k = 0; k < 4u; k++)
     {
         memcpy(bad, good, sizeof(good));
         bad[k] ^= 0xFFu; // header octet
-        TEST_ASSERT_FALSE(protocore_hmmd_parse_report(bad, sizeof(bad), &r));
+        Hmmd.parse_report_args.frame = bad;
+        Hmmd.parse_report_args.len = sizeof(bad);
+        Hmmd.parse_report_args.out = &r;
+        Hmmd.parse_report(protocore_hmmd_span());
+        TEST_ASSERT_FALSE(Hmmd.ok);
 
         memcpy(bad, good, sizeof(good));
         bad[41u + k] ^= 0xFFu; // footer octet
-        TEST_ASSERT_FALSE(protocore_hmmd_parse_report(bad, sizeof(bad), &r));
+        Hmmd.parse_report_args.frame = bad;
+        Hmmd.parse_report_args.len = sizeof(bad);
+        Hmmd.parse_report_args.out = &r;
+        Hmmd.parse_report(protocore_hmmd_span());
+        TEST_ASSERT_FALSE(Hmmd.ok);
     }
 
     memcpy(bad, good, sizeof(good));
     bad[4] = 34u; // an intra-frame length other than 35
-    TEST_ASSERT_FALSE(protocore_hmmd_parse_report(bad, sizeof(bad), &r));
+    Hmmd.parse_report_args.frame = bad;
+    Hmmd.parse_report_args.len = sizeof(bad);
+    Hmmd.parse_report_args.out = &r;
+    Hmmd.parse_report(protocore_hmmd_span());
+    TEST_ASSERT_FALSE(Hmmd.ok);
 
     memcpy(bad, good, sizeof(good));
     bad[5] = 0x01u; // 35 in the low octet plus 0x0100 in the high one
-    TEST_ASSERT_FALSE(protocore_hmmd_parse_report(bad, sizeof(bad), &r));
+    Hmmd.parse_report_args.frame = bad;
+    Hmmd.parse_report_args.len = sizeof(bad);
+    Hmmd.parse_report_args.out = &r;
+    Hmmd.parse_report(protocore_hmmd_span());
+    TEST_ASSERT_FALSE(Hmmd.ok);
 }
 
 // The reassembler must find a frame in a stream that starts mid-noise, must not report until the
@@ -157,19 +227,32 @@ void test_stream_resyncs_past_noise_and_reports_once(void)
     HmmdStream s;
     HmmdReport r;
     build_report(frame, 1u, 0x0321u, GATES);
-    protocore_hmmd_stream_reset(&s);
+    Hmmd.stream_reset_args.s = &s;
+    Hmmd.stream_reset(protocore_hmmd_span());
 
     for (int round = 0; round < 2; round++)
     {
         for (size_t i = 0; i < sizeof(NOISE); i++)
         {
-            TEST_ASSERT_FALSE(protocore_hmmd_stream_push(&s, NOISE[i], &r));
+            Hmmd.stream_push_args.s = &s;
+            Hmmd.stream_push_args.byte = NOISE[i];
+            Hmmd.stream_push_args.out = &r;
+            Hmmd.stream_push(protocore_hmmd_span());
+            TEST_ASSERT_FALSE(Hmmd.ok);
         }
         for (size_t i = 0; i + 1u < sizeof(frame); i++)
         {
-            TEST_ASSERT_FALSE_MESSAGE(protocore_hmmd_stream_push(&s, frame[i], &r), "reported before the last octet");
+            Hmmd.stream_push_args.s = &s;
+            Hmmd.stream_push_args.byte = frame[i];
+            Hmmd.stream_push_args.out = &r;
+            Hmmd.stream_push(protocore_hmmd_span());
+            TEST_ASSERT_FALSE_MESSAGE(Hmmd.ok, "reported before the last octet");
         }
-        TEST_ASSERT_TRUE(protocore_hmmd_stream_push(&s, frame[sizeof(frame) - 1u], &r));
+        Hmmd.stream_push_args.s = &s;
+        Hmmd.stream_push_args.byte = frame[sizeof(frame) - 1u];
+        Hmmd.stream_push_args.out = &r;
+        Hmmd.stream_push(protocore_hmmd_span());
+        TEST_ASSERT_TRUE(Hmmd.ok);
         TEST_ASSERT_EQUAL_UINT16(0x0321u, r.distance_cm);
         TEST_ASSERT_EQUAL_UINT8(1u, r.detected);
     }
@@ -184,17 +267,30 @@ void test_stream_handles_a_partial_header_before_the_real_one(void)
     HmmdStream s;
     HmmdReport r;
     build_report(frame, 1u, 77u, GATES);
-    protocore_hmmd_stream_reset(&s);
+    Hmmd.stream_reset_args.s = &s;
+    Hmmd.stream_reset(protocore_hmmd_span());
 
     for (size_t i = 0; i < sizeof(PARTIAL); i++)
     {
-        TEST_ASSERT_FALSE(protocore_hmmd_stream_push(&s, PARTIAL[i], &r));
+        Hmmd.stream_push_args.s = &s;
+        Hmmd.stream_push_args.byte = PARTIAL[i];
+        Hmmd.stream_push_args.out = &r;
+        Hmmd.stream_push(protocore_hmmd_span());
+        TEST_ASSERT_FALSE(Hmmd.ok);
     }
     for (size_t i = 0; i + 1u < sizeof(frame); i++)
     {
-        TEST_ASSERT_FALSE(protocore_hmmd_stream_push(&s, frame[i], &r));
+        Hmmd.stream_push_args.s = &s;
+        Hmmd.stream_push_args.byte = frame[i];
+        Hmmd.stream_push_args.out = &r;
+        Hmmd.stream_push(protocore_hmmd_span());
+        TEST_ASSERT_FALSE(Hmmd.ok);
     }
-    TEST_ASSERT_TRUE(protocore_hmmd_stream_push(&s, frame[sizeof(frame) - 1u], &r));
+    Hmmd.stream_push_args.s = &s;
+    Hmmd.stream_push_args.byte = frame[sizeof(frame) - 1u];
+    Hmmd.stream_push_args.out = &r;
+    Hmmd.stream_push(protocore_hmmd_span());
+    TEST_ASSERT_TRUE(Hmmd.ok);
     TEST_ASSERT_EQUAL_UINT16(77u, r.distance_cm);
 }
 
@@ -207,20 +303,33 @@ void test_stream_drops_an_absurd_length_and_recovers(void)
     HmmdStream s;
     HmmdReport r;
     build_report(frame, 1u, 42u, GATES);
-    protocore_hmmd_stream_reset(&s);
+    Hmmd.stream_reset_args.s = &s;
+    Hmmd.stream_reset(protocore_hmmd_span());
 
     for (size_t i = 0; i < sizeof(HUGE); i++)
     {
-        TEST_ASSERT_FALSE(protocore_hmmd_stream_push(&s, HUGE[i], &r));
+        Hmmd.stream_push_args.s = &s;
+        Hmmd.stream_push_args.byte = HUGE[i];
+        Hmmd.stream_push_args.out = &r;
+        Hmmd.stream_push(protocore_hmmd_span());
+        TEST_ASSERT_FALSE(Hmmd.ok);
     }
     TEST_ASSERT_EQUAL_UINT16(0u, s.pos);
     TEST_ASSERT_EQUAL_UINT8(0u, s.phase);
 
     for (size_t i = 0; i + 1u < sizeof(frame); i++)
     {
-        TEST_ASSERT_FALSE(protocore_hmmd_stream_push(&s, frame[i], &r));
+        Hmmd.stream_push_args.s = &s;
+        Hmmd.stream_push_args.byte = frame[i];
+        Hmmd.stream_push_args.out = &r;
+        Hmmd.stream_push(protocore_hmmd_span());
+        TEST_ASSERT_FALSE(Hmmd.ok);
     }
-    TEST_ASSERT_TRUE(protocore_hmmd_stream_push(&s, frame[sizeof(frame) - 1u], &r));
+    Hmmd.stream_push_args.s = &s;
+    Hmmd.stream_push_args.byte = frame[sizeof(frame) - 1u];
+    Hmmd.stream_push_args.out = &r;
+    Hmmd.stream_push(protocore_hmmd_span());
+    TEST_ASSERT_TRUE(Hmmd.ok);
     TEST_ASSERT_EQUAL_UINT16(42u, r.distance_cm);
 }
 
@@ -235,16 +344,29 @@ void test_stream_drops_a_bad_frame_and_keeps_going(void)
     memcpy(bad, good, sizeof(good));
     bad[44] = 0x00u; // broken footer
 
-    protocore_hmmd_stream_reset(&s);
+    Hmmd.stream_reset_args.s = &s;
+    Hmmd.stream_reset(protocore_hmmd_span());
     for (size_t i = 0; i < sizeof(bad); i++)
     {
-        TEST_ASSERT_FALSE(protocore_hmmd_stream_push(&s, bad[i], &r));
+        Hmmd.stream_push_args.s = &s;
+        Hmmd.stream_push_args.byte = bad[i];
+        Hmmd.stream_push_args.out = &r;
+        Hmmd.stream_push(protocore_hmmd_span());
+        TEST_ASSERT_FALSE(Hmmd.ok);
     }
     for (size_t i = 0; i + 1u < sizeof(good); i++)
     {
-        TEST_ASSERT_FALSE(protocore_hmmd_stream_push(&s, good[i], &r));
+        Hmmd.stream_push_args.s = &s;
+        Hmmd.stream_push_args.byte = good[i];
+        Hmmd.stream_push_args.out = &r;
+        Hmmd.stream_push(protocore_hmmd_span());
+        TEST_ASSERT_FALSE(Hmmd.ok);
     }
-    TEST_ASSERT_TRUE(protocore_hmmd_stream_push(&s, good[sizeof(good) - 1u], &r));
+    Hmmd.stream_push_args.s = &s;
+    Hmmd.stream_push_args.byte = good[sizeof(good) - 1u];
+    Hmmd.stream_push_args.out = &r;
+    Hmmd.stream_push(protocore_hmmd_span());
+    TEST_ASSERT_TRUE(Hmmd.ok);
     TEST_ASSERT_EQUAL_UINT16(55u, r.distance_cm);
 }
 
@@ -252,10 +374,20 @@ void test_stream_null_arguments_are_refused(void)
 {
     HmmdStream s;
     HmmdReport r;
-    protocore_hmmd_stream_reset(&s);
-    TEST_ASSERT_FALSE(protocore_hmmd_stream_push(NULL, 0xF4u, &r));
-    TEST_ASSERT_FALSE(protocore_hmmd_stream_push(&s, 0xF4u, NULL));
-    protocore_hmmd_stream_reset(NULL); // must not fault
+    Hmmd.stream_reset_args.s = &s;
+    Hmmd.stream_reset(protocore_hmmd_span());
+    Hmmd.stream_push_args.s = NULL;
+    Hmmd.stream_push_args.byte = 0xF4u;
+    Hmmd.stream_push_args.out = &r;
+    Hmmd.stream_push(protocore_hmmd_span());
+    TEST_ASSERT_FALSE(Hmmd.ok);
+    Hmmd.stream_push_args.s = &s;
+    Hmmd.stream_push_args.byte = 0xF4u;
+    Hmmd.stream_push_args.out = NULL;
+    Hmmd.stream_push(protocore_hmmd_span());
+    TEST_ASSERT_FALSE(Hmmd.ok);
+    Hmmd.stream_reset_args.s = NULL;
+    Hmmd.stream_reset(protocore_hmmd_span()); // must not fault
 }
 
 // HLK-LD2410 Serial communication protocol V1.02, Tables 2 and 3: header FD FC FB FA, a 2-octet
@@ -269,12 +401,18 @@ void test_ld2410_v102_published_command_envelope(void)
     // 2.2.1: word 0x00FF, value 0x0001, so the frame data length is 4
     static const uint8_t OPEN[14] = {0xFD, 0xFC, 0xFB, 0xFA, 0x04, 0x00, 0xFF,
                                      0x00, 0x01, 0x00, 0x04, 0x03, 0x02, 0x01};
-    TEST_ASSERT_EQUAL_size_t(14u, protocore_hmmd_cmd_open(buf, sizeof(buf)));
+    Hmmd.cmd_open_args.buf = buf;
+    Hmmd.cmd_open_args.cap = sizeof(buf);
+    Hmmd.cmd_open(protocore_hmmd_span());
+    TEST_ASSERT_EQUAL_size_t(14u, Hmmd.n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(OPEN, buf, 14u);
 
     // 2.2.2: word 0x00FE, no value, so the frame data length is 2
     static const uint8_t CLOSE[12] = {0xFD, 0xFC, 0xFB, 0xFA, 0x02, 0x00, 0xFE, 0x00, 0x04, 0x03, 0x02, 0x01};
-    TEST_ASSERT_EQUAL_size_t(12u, protocore_hmmd_cmd_close(buf, sizeof(buf)));
+    Hmmd.cmd_close_args.buf = buf;
+    Hmmd.cmd_close_args.cap = sizeof(buf);
+    Hmmd.cmd_close(protocore_hmmd_span());
+    TEST_ASSERT_EQUAL_size_t(12u, Hmmd.n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(CLOSE, buf, 12u);
 }
 
@@ -285,22 +423,36 @@ void test_named_command_words(void)
     uint8_t buf[32];
 
     static const uint8_t FIRMWARE[12] = {0xFD, 0xFC, 0xFB, 0xFA, 0x02, 0x00, 0x00, 0x00, 0x04, 0x03, 0x02, 0x01};
-    TEST_ASSERT_EQUAL_size_t(12u, protocore_hmmd_cmd_read_firmware(buf, sizeof(buf)));
+    Hmmd.cmd_read_firmware_args.buf = buf;
+    Hmmd.cmd_read_firmware_args.cap = sizeof(buf);
+    Hmmd.cmd_read_firmware(protocore_hmmd_span());
+    TEST_ASSERT_EQUAL_size_t(12u, Hmmd.n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(FIRMWARE, buf, 12u);
 
     static const uint8_t SERIAL[12] = {0xFD, 0xFC, 0xFB, 0xFA, 0x02, 0x00, 0x11, 0x00, 0x04, 0x03, 0x02, 0x01};
-    TEST_ASSERT_EQUAL_size_t(12u, protocore_hmmd_cmd_read_serial(buf, sizeof(buf)));
+    Hmmd.cmd_read_serial_args.buf = buf;
+    Hmmd.cmd_read_serial_args.cap = sizeof(buf);
+    Hmmd.cmd_read_serial(protocore_hmmd_span());
+    TEST_ASSERT_EQUAL_size_t(12u, Hmmd.n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(SERIAL, buf, 12u);
 
     static const uint8_t CONFIG[12] = {0xFD, 0xFC, 0xFB, 0xFA, 0x02, 0x00, 0x08, 0x00, 0x04, 0x03, 0x02, 0x01};
-    TEST_ASSERT_EQUAL_size_t(12u, protocore_hmmd_cmd_read_config(buf, sizeof(buf)));
+    Hmmd.cmd_read_config_args.buf = buf;
+    Hmmd.cmd_read_config_args.cap = sizeof(buf);
+    Hmmd.cmd_read_config(protocore_hmmd_span());
+    TEST_ASSERT_EQUAL_size_t(12u, Hmmd.n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(CONFIG, buf, 12u);
 
     // The register selector is passed through verbatim and counts toward the frame data length.
     static const uint8_t SEL[3] = {0xAA, 0xBB, 0xCC};
     static const uint8_t REGISTER[15] = {0xFD, 0xFC, 0xFB, 0xFA, 0x05, 0x00, 0x02, 0x00,
                                          0xAA, 0xBB, 0xCC, 0x04, 0x03, 0x02, 0x01};
-    TEST_ASSERT_EQUAL_size_t(15u, protocore_hmmd_cmd_read_register(buf, sizeof(buf), SEL, sizeof(SEL)));
+    Hmmd.cmd_read_register_args.buf = buf;
+    Hmmd.cmd_read_register_args.cap = sizeof(buf);
+    Hmmd.cmd_read_register_args.value = SEL;
+    Hmmd.cmd_read_register_args.vlen = sizeof(SEL);
+    Hmmd.cmd_read_register(protocore_hmmd_span());
+    TEST_ASSERT_EQUAL_size_t(15u, Hmmd.n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(REGISTER, buf, 15u);
 }
 
@@ -313,7 +465,13 @@ void test_command_length_field_tracks_the_value(void)
     uint8_t buf[32];
     for (size_t vlen = 0u; vlen <= sizeof(VALUE); vlen++)
     {
-        size_t n = protocore_hmmd_cmd_build(buf, sizeof(buf), 0x1234u, vlen ? VALUE : NULL, vlen);
+        Hmmd.cmd_build_args.buf = buf;
+        Hmmd.cmd_build_args.cap = sizeof(buf);
+        Hmmd.cmd_build_args.word = 0x1234u;
+        Hmmd.cmd_build_args.value = vlen ? VALUE : NULL;
+        Hmmd.cmd_build_args.vlen = vlen;
+        Hmmd.cmd_build(protocore_hmmd_span());
+        size_t n = Hmmd.n;
         TEST_ASSERT_EQUAL_size_t(12u + vlen, n);
         TEST_ASSERT_EQUAL_HEX8((uint8_t)((2u + vlen) & 0xFFu), buf[4]);
         TEST_ASSERT_EQUAL_HEX8((uint8_t)((2u + vlen) >> 8), buf[5]);
@@ -332,16 +490,60 @@ void test_command_builder_fails_closed(void)
 {
     uint8_t buf[32];
     static const uint8_t VALUE[2] = {0x01, 0x00};
-    TEST_ASSERT_EQUAL_size_t(0u, protocore_hmmd_cmd_build(NULL, sizeof(buf), 0x00FFu, VALUE, 2u));
-    TEST_ASSERT_EQUAL_size_t(0u, protocore_hmmd_cmd_build(buf, 13u, 0x00FFu, VALUE, 2u)); // needs 14
-    TEST_ASSERT_EQUAL_size_t(14u, protocore_hmmd_cmd_build(buf, 14u, 0x00FFu, VALUE, 2u));
-    TEST_ASSERT_EQUAL_size_t(0u, protocore_hmmd_cmd_build(buf, sizeof(buf), 0x00FFu, NULL, 2u)); // no value to copy
-    TEST_ASSERT_EQUAL_size_t(0u, protocore_hmmd_cmd_open(buf, 13u));
-    TEST_ASSERT_EQUAL_size_t(0u, protocore_hmmd_cmd_close(buf, 11u));
-    TEST_ASSERT_EQUAL_size_t(0u, protocore_hmmd_cmd_read_firmware(buf, 11u));
-    TEST_ASSERT_EQUAL_size_t(0u, protocore_hmmd_cmd_read_serial(buf, 11u));
-    TEST_ASSERT_EQUAL_size_t(0u, protocore_hmmd_cmd_read_config(buf, 11u));
-    TEST_ASSERT_EQUAL_size_t(0u, protocore_hmmd_cmd_read_register(buf, 11u, NULL, 0u));
+    Hmmd.cmd_build_args.buf = NULL;
+    Hmmd.cmd_build_args.cap = sizeof(buf);
+    Hmmd.cmd_build_args.word = 0x00FFu;
+    Hmmd.cmd_build_args.value = VALUE;
+    Hmmd.cmd_build_args.vlen = 2u;
+    Hmmd.cmd_build(protocore_hmmd_span());
+    TEST_ASSERT_EQUAL_size_t(0u, Hmmd.n);
+    Hmmd.cmd_build_args.buf = buf;
+    Hmmd.cmd_build_args.cap = 13u;
+    Hmmd.cmd_build_args.word = 0x00FFu;
+    Hmmd.cmd_build_args.value = VALUE;
+    Hmmd.cmd_build_args.vlen = 2u;
+    Hmmd.cmd_build(protocore_hmmd_span());
+    TEST_ASSERT_EQUAL_size_t(0u, Hmmd.n); // needs 14
+    Hmmd.cmd_build_args.buf = buf;
+    Hmmd.cmd_build_args.cap = 14u;
+    Hmmd.cmd_build_args.word = 0x00FFu;
+    Hmmd.cmd_build_args.value = VALUE;
+    Hmmd.cmd_build_args.vlen = 2u;
+    Hmmd.cmd_build(protocore_hmmd_span());
+    TEST_ASSERT_EQUAL_size_t(14u, Hmmd.n);
+    Hmmd.cmd_build_args.buf = buf;
+    Hmmd.cmd_build_args.cap = sizeof(buf);
+    Hmmd.cmd_build_args.word = 0x00FFu;
+    Hmmd.cmd_build_args.value = NULL;
+    Hmmd.cmd_build_args.vlen = 2u;
+    Hmmd.cmd_build(protocore_hmmd_span());
+    TEST_ASSERT_EQUAL_size_t(0u, Hmmd.n); // no value to copy
+    Hmmd.cmd_open_args.buf = buf;
+    Hmmd.cmd_open_args.cap = 13u;
+    Hmmd.cmd_open(protocore_hmmd_span());
+    TEST_ASSERT_EQUAL_size_t(0u, Hmmd.n);
+    Hmmd.cmd_close_args.buf = buf;
+    Hmmd.cmd_close_args.cap = 11u;
+    Hmmd.cmd_close(protocore_hmmd_span());
+    TEST_ASSERT_EQUAL_size_t(0u, Hmmd.n);
+    Hmmd.cmd_read_firmware_args.buf = buf;
+    Hmmd.cmd_read_firmware_args.cap = 11u;
+    Hmmd.cmd_read_firmware(protocore_hmmd_span());
+    TEST_ASSERT_EQUAL_size_t(0u, Hmmd.n);
+    Hmmd.cmd_read_serial_args.buf = buf;
+    Hmmd.cmd_read_serial_args.cap = 11u;
+    Hmmd.cmd_read_serial(protocore_hmmd_span());
+    TEST_ASSERT_EQUAL_size_t(0u, Hmmd.n);
+    Hmmd.cmd_read_config_args.buf = buf;
+    Hmmd.cmd_read_config_args.cap = 11u;
+    Hmmd.cmd_read_config(protocore_hmmd_span());
+    TEST_ASSERT_EQUAL_size_t(0u, Hmmd.n);
+    Hmmd.cmd_read_register_args.buf = buf;
+    Hmmd.cmd_read_register_args.cap = 11u;
+    Hmmd.cmd_read_register_args.value = NULL;
+    Hmmd.cmd_read_register_args.vlen = 0u;
+    Hmmd.cmd_read_register(protocore_hmmd_span());
+    TEST_ASSERT_EQUAL_size_t(0u, Hmmd.n);
 }
 
 // An ACK rides the same envelope, so a frame this codec built is a frame this codec parses: the
@@ -352,26 +554,52 @@ void test_ack_decodes_the_command_word_and_payload(void)
     HmmdAck a;
 
     // The open command as its own echo: word 0x00FF, two payload octets.
-    TEST_ASSERT_EQUAL_size_t(14u, protocore_hmmd_cmd_open(buf, sizeof(buf)));
-    TEST_ASSERT_TRUE(protocore_hmmd_parse_ack(buf, 14u, &a));
+    Hmmd.cmd_open_args.buf = buf;
+    Hmmd.cmd_open_args.cap = sizeof(buf);
+    Hmmd.cmd_open(protocore_hmmd_span());
+    TEST_ASSERT_EQUAL_size_t(14u, Hmmd.n);
+    Hmmd.parse_ack_args.frame = buf;
+    Hmmd.parse_ack_args.len = 14u;
+    Hmmd.parse_ack_args.out = &a;
+    Hmmd.parse_ack(protocore_hmmd_span());
+    TEST_ASSERT_TRUE(Hmmd.ok);
     TEST_ASSERT_EQUAL_HEX16(0x00FFu, a.command);
     TEST_ASSERT_EQUAL_size_t(2u, a.payload_len);
     TEST_ASSERT_EQUAL_HEX8(0x01u, a.payload[0]);
     TEST_ASSERT_EQUAL_HEX8(0x00u, a.payload[1]);
 
     // A word-only frame has no payload at all.
-    TEST_ASSERT_EQUAL_size_t(12u, protocore_hmmd_cmd_close(buf, sizeof(buf)));
-    TEST_ASSERT_TRUE(protocore_hmmd_parse_ack(buf, 12u, &a));
+    Hmmd.cmd_close_args.buf = buf;
+    Hmmd.cmd_close_args.cap = sizeof(buf);
+    Hmmd.cmd_close(protocore_hmmd_span());
+    TEST_ASSERT_EQUAL_size_t(12u, Hmmd.n);
+    Hmmd.parse_ack_args.frame = buf;
+    Hmmd.parse_ack_args.len = 12u;
+    Hmmd.parse_ack_args.out = &a;
+    Hmmd.parse_ack(protocore_hmmd_span());
+    TEST_ASSERT_TRUE(Hmmd.ok);
     TEST_ASSERT_EQUAL_HEX16(0x00FEu, a.command);
     TEST_ASSERT_EQUAL_size_t(0u, a.payload_len);
     TEST_ASSERT_NULL(a.payload);
 
     // Header: the reply matches on the low octet, so this family's convention of setting bit 8 in
     // the reply still matches the request it answers.
-    TEST_ASSERT_TRUE(protocore_hmmd_ack_matches(&a, 0x00FEu));
-    TEST_ASSERT_TRUE(protocore_hmmd_ack_matches(&a, 0x01FEu));
-    TEST_ASSERT_FALSE(protocore_hmmd_ack_matches(&a, 0x00FFu));
-    TEST_ASSERT_FALSE(protocore_hmmd_ack_matches(NULL, 0x00FEu));
+    Hmmd.ack_matches_args.ack = &a;
+    Hmmd.ack_matches_args.word = 0x00FEu;
+    Hmmd.ack_matches(protocore_hmmd_span());
+    TEST_ASSERT_TRUE(Hmmd.ok);
+    Hmmd.ack_matches_args.ack = &a;
+    Hmmd.ack_matches_args.word = 0x01FEu;
+    Hmmd.ack_matches(protocore_hmmd_span());
+    TEST_ASSERT_TRUE(Hmmd.ok);
+    Hmmd.ack_matches_args.ack = &a;
+    Hmmd.ack_matches_args.word = 0x00FFu;
+    Hmmd.ack_matches(protocore_hmmd_span());
+    TEST_ASSERT_FALSE(Hmmd.ok);
+    Hmmd.ack_matches_args.ack = NULL;
+    Hmmd.ack_matches_args.word = 0x00FEu;
+    Hmmd.ack_matches(protocore_hmmd_span());
+    TEST_ASSERT_FALSE(Hmmd.ok);
 }
 
 // The ACK envelope's own guards: header, the declared length framing the buffer exactly, the
@@ -381,37 +609,84 @@ void test_malformed_ack_frames_are_refused(void)
     uint8_t good[14];
     uint8_t bad[14];
     HmmdAck a;
-    TEST_ASSERT_EQUAL_size_t(14u, protocore_hmmd_cmd_open(good, sizeof(good)));
-    TEST_ASSERT_TRUE(protocore_hmmd_parse_ack(good, sizeof(good), &a));
+    Hmmd.cmd_open_args.buf = good;
+    Hmmd.cmd_open_args.cap = sizeof(good);
+    Hmmd.cmd_open(protocore_hmmd_span());
+    TEST_ASSERT_EQUAL_size_t(14u, Hmmd.n);
+    Hmmd.parse_ack_args.frame = good;
+    Hmmd.parse_ack_args.len = sizeof(good);
+    Hmmd.parse_ack_args.out = &a;
+    Hmmd.parse_ack(protocore_hmmd_span());
+    TEST_ASSERT_TRUE(Hmmd.ok);
 
-    TEST_ASSERT_FALSE(protocore_hmmd_parse_ack(NULL, sizeof(good), &a));
-    TEST_ASSERT_FALSE(protocore_hmmd_parse_ack(good, sizeof(good), NULL));
-    TEST_ASSERT_FALSE(protocore_hmmd_parse_ack(good, 11u, &a)); // shorter than the smallest ACK
-    TEST_ASSERT_FALSE(protocore_hmmd_parse_ack(good, 13u, &a)); // the declared length overruns
+    Hmmd.parse_ack_args.frame = NULL;
+    Hmmd.parse_ack_args.len = sizeof(good);
+    Hmmd.parse_ack_args.out = &a;
+    Hmmd.parse_ack(protocore_hmmd_span());
+    TEST_ASSERT_FALSE(Hmmd.ok);
+    Hmmd.parse_ack_args.frame = good;
+    Hmmd.parse_ack_args.len = sizeof(good);
+    Hmmd.parse_ack_args.out = NULL;
+    Hmmd.parse_ack(protocore_hmmd_span());
+    TEST_ASSERT_FALSE(Hmmd.ok);
+    Hmmd.parse_ack_args.frame = good;
+    Hmmd.parse_ack_args.len = 11u;
+    Hmmd.parse_ack_args.out = &a;
+    Hmmd.parse_ack(protocore_hmmd_span());
+    TEST_ASSERT_FALSE(Hmmd.ok); // shorter than the smallest ACK
+    Hmmd.parse_ack_args.frame = good;
+    Hmmd.parse_ack_args.len = 13u;
+    Hmmd.parse_ack_args.out = &a;
+    Hmmd.parse_ack(protocore_hmmd_span());
+    TEST_ASSERT_FALSE(Hmmd.ok); // the declared length overruns
 
     for (size_t k = 0; k < 4u; k++)
     {
         memcpy(bad, good, sizeof(good));
         bad[k] ^= 0xFFu;
-        TEST_ASSERT_FALSE(protocore_hmmd_parse_ack(bad, sizeof(bad), &a));
+        Hmmd.parse_ack_args.frame = bad;
+        Hmmd.parse_ack_args.len = sizeof(bad);
+        Hmmd.parse_ack_args.out = &a;
+        Hmmd.parse_ack(protocore_hmmd_span());
+        TEST_ASSERT_FALSE(Hmmd.ok);
 
         memcpy(bad, good, sizeof(good));
         bad[10u + k] ^= 0xFFu;
-        TEST_ASSERT_FALSE(protocore_hmmd_parse_ack(bad, sizeof(bad), &a));
+        Hmmd.parse_ack_args.frame = bad;
+        Hmmd.parse_ack_args.len = sizeof(bad);
+        Hmmd.parse_ack_args.out = &a;
+        Hmmd.parse_ack(protocore_hmmd_span());
+        TEST_ASSERT_FALSE(Hmmd.ok);
     }
 
     memcpy(bad, good, sizeof(good));
     bad[4] = 0x01u; // below the two octets of the command word
-    TEST_ASSERT_FALSE(protocore_hmmd_parse_ack(bad, sizeof(bad), &a));
+    Hmmd.parse_ack_args.frame = bad;
+    Hmmd.parse_ack_args.len = sizeof(bad);
+    Hmmd.parse_ack_args.out = &a;
+    Hmmd.parse_ack(protocore_hmmd_span());
+    TEST_ASSERT_FALSE(Hmmd.ok);
 
     memcpy(bad, good, sizeof(good));
     bad[4] = 0x06u; // a length the buffer cannot hold
-    TEST_ASSERT_FALSE(protocore_hmmd_parse_ack(bad, sizeof(bad), &a));
+    Hmmd.parse_ack_args.frame = bad;
+    Hmmd.parse_ack_args.len = sizeof(bad);
+    Hmmd.parse_ack_args.out = &a;
+    Hmmd.parse_ack(protocore_hmmd_span());
+    TEST_ASSERT_FALSE(Hmmd.ok);
 
     // The report and command envelopes never accept each other's frames.
     uint8_t report[PROTOCORE_HMMD_FRAME_MAX];
     build_report(report, 1u, 10u, GATES);
-    TEST_ASSERT_FALSE(protocore_hmmd_parse_ack(report, sizeof(report), &a));
+    Hmmd.parse_ack_args.frame = report;
+    Hmmd.parse_ack_args.len = sizeof(report);
+    Hmmd.parse_ack_args.out = &a;
+    Hmmd.parse_ack(protocore_hmmd_span());
+    TEST_ASSERT_FALSE(Hmmd.ok);
     HmmdReport r;
-    TEST_ASSERT_FALSE(protocore_hmmd_parse_report(good, sizeof(good), &r));
+    Hmmd.parse_report_args.frame = good;
+    Hmmd.parse_report_args.len = sizeof(good);
+    Hmmd.parse_report_args.out = &r;
+    Hmmd.parse_report(protocore_hmmd_span());
+    TEST_ASSERT_FALSE(Hmmd.ok);
 }

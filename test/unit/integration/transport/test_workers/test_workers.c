@@ -11,7 +11,7 @@
 
 void setUp(void)
 {
-    ConnPool.life.cfg = NULL;
+    ConnPool.life.conn_timeout_ms = CONN_TIMEOUT_MS;
     ConnPool.init(ConnPool.internal);
 }
 void tearDown(void)
@@ -132,7 +132,7 @@ void test_listener_worker_queues_init_and_lookup(void)
 void test_enqueue_routes_by_slot_owner_and_rejects_bad_owner(void)
 {
     TcpListener.worker_queues_init(TcpListener.internal);
-    ConnPool.life.cfg = NULL;
+    ConnPool.life.conn_timeout_ms = CONN_TIMEOUT_MS;
     ConnPool.init(ConnPool.internal);
 
     conn_pool[0].owner = 1;
@@ -158,7 +158,7 @@ void test_enqueue_routes_by_slot_owner_and_rejects_bad_owner(void)
 
 void test_accept_cb_round_robins_slot_owner(void)
 {
-    ConnPool.life.cfg = NULL;
+    ConnPool.life.conn_timeout_ms = CONN_TIMEOUT_MS;
     ConnPool.init(ConnPool.internal);
     TcpListener.idx = 0;
     TcpListener.bind.port = 80;
@@ -183,7 +183,7 @@ void test_accept_cb_round_robins_slot_owner(void)
 
 void test_dynamic_listener_creates_worker_queues(void)
 {
-    ConnPool.life.cfg = NULL;
+    ConnPool.life.conn_timeout_ms = CONN_TIMEOUT_MS;
     ConnPool.init(ConnPool.internal);
     TcpListener.bind.port = 2;
     TcpListener.bind.proto = 4444;

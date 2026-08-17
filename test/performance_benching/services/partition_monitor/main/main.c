@@ -20,6 +20,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+static uint8_t partition_monitor_work[16]; // the borrow an entry takes; PartitionMonitor never reads it
+
 void dbench_run(void)
 {
     // A realistic ESP32-S3 dual-OTA partition table (labels/types/subtypes/offsets/sizes straight
@@ -54,9 +56,18 @@ void dbench_run(void)
                   sink += (uint32_t)protocore_partition_kind(dat_type, dat_sub)[0]);
 
         // Serializer throughput: report MB/s over the JSON produced for the full 7-entry table.
-        int jlen = protocore_partition_json(table, count, buf, sizeof(buf));
+        PartitionMonitor.json_args.parts = table;
+        PartitionMonitor.json_args.count = count;
+        PartitionMonitor.json_args.out = buf;
+        PartitionMonitor.json_args.cap = sizeof(buf);
+        PartitionMonitor.json(partition_monitor_work);
+        int jlen = PartitionMonitor.n;
+        PartitionMonitor.json_args.parts = table;
+        PartitionMonitor.json_args.count = count;
+        PartitionMonitor.json_args.out = buf;
+        PartitionMonitor.json_args.cap = sizeof(buf);
         DBENCH_BULK("protocore_partition_json (7 parts)", 20000, (jlen > 0 ? (size_t)jlen : 1),
-                    jsink += protocore_partition_json(table, count, buf, sizeof(buf)));
+                    (PartitionMonitor.json(partition_monitor_work), jsink += PartitionMonitor.n));
 
         (void)sink;
         (void)jsink;

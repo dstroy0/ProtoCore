@@ -15,6 +15,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+static uint8_t sdi12_work[16]; // the borrow an entry takes; Sdi12 never reads it
+
 void dbench_run(void)
 {
     // aM! response: "0" + "012" (12 s) + "2" (2 values); aD0! values response (from test/test_sdi12).
@@ -27,18 +29,33 @@ void dbench_run(void)
         DBENCH_BANNER("sdi12");
         volatile size_t sink = 0;
         static char buf[32];
-        DBENCH_OP("protocore_sdi12_build_measure (CRC)", 200000,
-                  sink += protocore_sdi12_build_measure(buf, sizeof(buf), '3', true));
+        // Every entry call stays inside DBENCH_OP so the timed loop measures the codec, not the
+        // read that follows it. The args do not vary across iterations, so they are staged once.
+        Sdi12.build_measure_args.buf = buf;
+        Sdi12.build_measure_args.cap = sizeof(buf);
+        Sdi12.build_measure_args.addr = '3';
+        Sdi12.build_measure_args.with_crc = PROTO_TRUE;
+        DBENCH_OP("Sdi12.build_measure (CRC)", 200000, (Sdi12.build_measure(sdi12_work), sink += Sdi12.n));
         char addr;
         uint16_t ready;
         uint8_t nval;
-        DBENCH_OP("protocore_sdi12_parse_measure", 200000,
-                  sink += protocore_sdi12_parse_measure(measure_resp, sizeof(measure_resp) - 1, &addr, &ready, &nval));
+        Sdi12.parse_measure_args.resp = measure_resp;
+        Sdi12.parse_measure_args.len = sizeof(measure_resp) - 1;
+        Sdi12.parse_measure_args.addr = &addr;
+        Sdi12.parse_measure_args.ready_sec = &ready;
+        Sdi12.parse_measure_args.num_values = &nval;
+        DBENCH_OP("Sdi12.parse_measure", 200000, (Sdi12.parse_measure(sdi12_work), sink += Sdi12.ok));
         float vals[8];
         size_t n;
-        DBENCH_OP("protocore_sdi12_parse_values", 200000,
-                  sink += protocore_sdi12_parse_values(values_resp, sizeof(values_resp) - 1, vals, 8, &n));
-        DBENCH_BULK("protocore_sdi12_crc16", 200000, 11, sink += protocore_sdi12_crc16(crcbuf, 11));
+        Sdi12.parse_values_args.resp = values_resp;
+        Sdi12.parse_values_args.len = sizeof(values_resp) - 1;
+        Sdi12.parse_values_args.out = vals;
+        Sdi12.parse_values_args.max = 8;
+        Sdi12.parse_values_args.n = &n;
+        DBENCH_OP("Sdi12.parse_values", 200000, (Sdi12.parse_values(sdi12_work), sink += Sdi12.ok));
+        Sdi12.crc16_args.data = crcbuf;
+        Sdi12.crc16_args.len = 11;
+        DBENCH_BULK("Sdi12.crc16", 200000, 11, (Sdi12.crc16(sdi12_work), sink += Sdi12.crc));
         (void)sink;
         DBENCH_DONE();
     }

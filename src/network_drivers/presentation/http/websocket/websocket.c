@@ -15,10 +15,14 @@
  * - Pong  -> silently discarded (keepalive response, no action needed).
  */
 
-#include "websocket.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_WEBSOCKET
+
 #include "mmgr/protomem.h"
 #include "mmgr/secure.h"                                     // the persistent end this module's state is taken from
 #include "mmgr/span.h"                                       // span.ok: whether the pool had the bytes
+#include "network_drivers/presentation/http/websocket/websocket.h"
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the slot a frame goes out on
 #include "shared/utf8/utf8.h"
 
@@ -175,6 +179,14 @@ static void route_add(uint8_t *restrict work)
     w->on_message = Ws.route.on_message;
     w->on_close = Ws.route.on_close;
     Ws.u8 = WS_CTX(work)->route_count++;
+}
+
+// Empty the handler table. A route holds the id an add returned, so this belongs with whatever
+// empties the routes - otherwise every re-registration appends a set nothing can reach any more,
+// and the table, which is bounded, fills and starts refusing.
+static void route_reset(uint8_t *restrict work)
+{
+    WS_CTX(work)->route_count = 0;
 }
 
 static void route_connect(uint8_t *restrict work)
@@ -803,6 +815,7 @@ uint8_t *protocore_ws_span(void)
 }
 
 WsNs Ws = {.route_add = route_add,
+           .route_reset = route_reset,
            .route_connect = route_connect,
            .route_message = route_message,
            .route_close = route_close,
@@ -818,3 +831,5 @@ WsNs Ws = {.route_add = route_add,
            .send_frame = send_frame,
            .set_frag_size = set_frag_size,
            .close = close_socket};
+
+#endif // PROTOCORE_ENABLE_WEBSOCKET

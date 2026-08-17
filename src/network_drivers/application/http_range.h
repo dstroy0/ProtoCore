@@ -27,8 +27,10 @@ PROTOCORE_BEGIN_DECLS
  *
  * Supported forms: "bytes=A-B", "bytes=A-" (A to end), "bytes=-N" (last N bytes). A start past
  * SIZE_MAX saturates (never wraps) so it resolves as past-EOF. @return:
- *   - 0  no usable Range header (caller sends a full 200) - absent, malformed, trailing garbage, or a
- *        multi-range request (RFC 7233 sec 3.1 permits ignoring it),
+ *   - 0  no usable Range header (caller sends a full 200) - absent, malformed, trailing garbage, a
+ *        multi-range request (RFC 7233 sec 3.1 permits ignoring it), or a suffix-range against a
+ *        zero-length representation, which RFC 9110 sec 14.1.2 calls satisfiable but which covers
+ *        zero bytes and so has no inclusive [start, end] to report,
  *   - 1  a satisfiable range (writes the inclusive [*out_start, *out_end]),
  *   - -1 a syntactically valid but unsatisfiable range (caller sends 416).
  */

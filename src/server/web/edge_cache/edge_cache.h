@@ -17,99 +17,20 @@
 #ifndef PROTOCORE_EDGE_CACHE_H
 #define PROTOCORE_EDGE_CACHE_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_EDGE_CACHE
 
 PROTOCORE_BEGIN_DECLS
 
-#include "network_drivers/presentation/http/httpcache/httpcache.h" // protocore_cache_control, cache_freshness_lifetime
-#include "shared/http_date/http_date.h"                            // PROTOCORE_HTTP_DATE_MAX (the stored-date floor)
-
-// --- raw response header-block field access ------------------------------------------------------
-
-/**
- * @brief Copy the value of header @p name from a raw HTTP response head (status line + CRLF headers)
- *        into @p out, OWS-trimmed and NUL-terminated.
- *
- * Case-insensitive name match; the first occurrence wins. Fails (returns false, @p out emptied) if the
- * header is absent or its value would not fit @p out_cap (never truncates a validator).
- */
-proto_bool edge_header_value(const char *hdrs, size_t len, const char *name, char *out, size_t out_cap);
-
-// --- HTTP-date <-> epoch (RFC 9110 sec 5.6.7: IMF-fixdate, obsolete RFC 850, asctime) -------------
-
-/** @brief Parse an HTTP-date to epoch seconds (UTC), or return -1 if it does not parse. */
-int64_t edge_parse_http_date(const char *s, size_t len);
-
-// --- freshness (RFC 9111 sec 4.2) ----------------------------------------------------------------
-
-/**
- * @brief Freshness lifetime in seconds, or -1 when none is explicit (caller applies a heuristic).
- *
- * Wraps ::cache_freshness_lifetime and computes its `Expires - Date` from the two response epochs
- * locally (a difference of two origin-supplied times - valid with no local wall clock). @p date_epoch
- * and @p expires_epoch are -1 when the header was absent.
- */
-long edge_freshness_lifetime(const protocore_cache_control *cc, proto_bool shared, int64_t date_epoch,
-                             int64_t expires_epoch);
-
-/**
- * @brief Heuristic freshness (RFC 9111 sec 4.2.2): 10% of (Date - Last-Modified), or -1 if either
- *        epoch is absent / not ordered.
- */
-long edge_heuristic_lifetime(int64_t date_epoch, int64_t last_modified_epoch);
-
-/**
- * @brief Corrected initial age at store time (RFC 9111 sec 4.2.3).
- *
- * @p response_time_epoch < 0 (no wall clock) falls back to @p age_hdr alone; @p age_hdr < 0 is 0.
- */
-long edge_initial_age(int32_t age_hdr, int64_t date_epoch, int64_t response_time_epoch);
-
-/** @brief Current age = @p initial_age + resident time, taken from the monotonic clock (wrap-safe). */
-long edge_current_age(long initial_age, uint32_t insert_ms, uint32_t now_ms);
-
-/** @brief Fresh iff a lifetime is known (>= 0) and the current age has not reached it. */
-proto_bool edge_is_fresh_at(long lifetime, long current_age);
-
-// --- cache key + digest + Vary -------------------------------------------------------------------
-
-/**
- * @brief Build the canonical cache key `METHOD "\n" host "\n" path [ "\n" query ]` (host lowercased)
- *        into @p out.
- *
- * @return the key length (excluding NUL), or 0 if it would overflow @p out_cap (caller treats 0 as
- *         non-cacheable and fails open).
- */
-size_t edge_key_canon(const char *method, const char *host, const char *path, const char *query,
-                      proto_bool include_query, char *out, size_t out_cap);
-
-/** @brief SHA-256 of the canonical key -> @p digest[32] (doubles as the L2 dbm key). */
-void edge_key_digest(uint8_t *work, const char *canon, size_t len, uint8_t digest[32]);
-
-/** @brief Request-header lookup used to build the Vary secondary key; return nullptr when absent. */
-typedef const char *(*EdgeHdrLookup)(void *ctx, const char *name);
-
-/**
- * @brief Serialize a request's values for each field-name in a response `Vary` header into @p out
- *        (a stable, order-preserving key for the Vary secondary match).
- *
- * Two requests select the same stored variant iff their serialized strings are equal. An empty / absent
- * Vary writes "" and returns true. Returns false if Vary is "*" (uncacheable) or it would overflow.
- */
-proto_bool edge_vary_serialize(const char *vary_header, EdgeHdrLookup lookup, void *ctx, char *out, size_t out_cap);
-
-// --- L1 RAM store: entries, LRU, TTL, purge ------------------------------------------------------
+// This module holds nothing between calls, so it carves no borrow and states none. An entry
+// takes one all the same, and never reads it, so every namespace in the tree is invoked the
+// same way.
 
 #define PROTOCORE_EDGE_LRU_NONE 0xFFFFu
 
-/** @brief One cached object (fixed-size, zero-heap). */
-/* PROTOCORE_EDGE_LASTMOD_MAX is a knob, but its floor is the protocol's: a stored date that
- * cannot hold an IMF-fixdate is a date that silently vanishes. */
-#if PROTOCORE_EDGE_LASTMOD_MAX < PROTOCORE_HTTP_DATE_MAX
-#error "PROTOCORE_EDGE_LASTMOD_MAX must be >= PROTOCORE_HTTP_DATE_MAX (RFC 7231 IMF-fixdate + NUL)"
-#endif
+/** @brief Request-header lookup used to build the Vary secondary key; return nullptr when absent. */
+typedef const char *(*EdgeHdrLookup)(void *ctx, const char *name);
 
 typedef struct
 {
@@ -178,86 +99,347 @@ typedef struct
     uint8_t digest_work[PROTOCORE_SHA256_BORROW];
 } EdgeCacheStore;
 
-/** @brief Reset a store to empty. */
-void edge_store_init(EdgeCacheStore *s);
+/** @brief protocore_cache_control, as the caller already knows it. */
+struct protocore_cache_control;
+
+/** @brief What header_value takes: hdrs, len, name, out, out_cap. */
+typedef struct
+{
+    const char *hdrs;
+    size_t len;
+    const char *name;
+    char *out;
+    size_t out_cap;
+} EdgeCacheHeaderValueArgs;
+
+/** @brief What parse_http_date takes: s, len. */
+typedef struct
+{
+    const char *s;
+    size_t len;
+} EdgeCacheParseHttpDateArgs;
+
+/** @brief What freshness_lifetime takes: cc, shared, date_epoch, ... */
+typedef struct
+{
+    const struct protocore_cache_control *cc;
+    proto_bool shared;
+    int64_t date_epoch;
+    int64_t expires_epoch;
+} EdgeCacheFreshnessLifetimeArgs;
+
+/** @brief What heuristic_lifetime takes: date_epoch, ... */
+typedef struct
+{
+    int64_t date_epoch;
+    int64_t last_modified_epoch;
+} EdgeCacheHeuristicLifetimeArgs;
+
+/** @brief What initial_age takes: age_hdr, date_epoch, ... */
+typedef struct
+{
+    int32_t age_hdr;
+    int64_t date_epoch;
+    int64_t response_time_epoch;
+} EdgeCacheInitialAgeArgs;
+
+/** @brief What current_age takes: initial_age, insert_ms, now_ms. */
+typedef struct
+{
+    long initial_age;
+    uint32_t insert_ms;
+    uint32_t now_ms;
+} EdgeCacheCurrentAgeArgs;
+
+/** @brief What is_fresh_at takes: lifetime, current_age. */
+typedef struct
+{
+    long lifetime;
+    long current_age;
+} EdgeCacheIsFreshAtArgs;
+
+/** @brief What key_canon takes: method, host, path, query, ... */
+typedef struct
+{
+    const char *method;
+    const char *host;
+    const char *path;
+    const char *query;
+    proto_bool include_query;
+    char *out;
+    size_t out_cap;
+} EdgeCacheKeyCanonArgs;
+
+/** @brief What key_digest takes: digest_work, canon, len, digest. */
+typedef struct
+{
+    uint8_t *digest_work;
+    const char *canon;
+    size_t len;
+    uint8_t *digest; ///< 32 bytes.
+} EdgeCacheKeyDigestArgs;
+
+/** @brief What vary_serialize takes: vary_header, lookup, ctx, out, ... */
+typedef struct
+{
+    const char *vary_header;
+    EdgeHdrLookup lookup;
+    void *ctx;
+    char *out;
+    size_t out_cap;
+} EdgeCacheVarySerializeArgs;
+
+/** @brief What store_init takes: s. */
+typedef struct
+{
+    EdgeCacheStore *s;
+} EdgeCacheStoreInitArgs;
+
+/** @brief What store_alloc takes: s, canon, vary_key. */
+typedef struct
+{
+    EdgeCacheStore *s;
+    const char *canon;
+    const char *vary_key;
+} EdgeCacheStoreAllocArgs;
+
+/** @brief What store_lookup takes: s, canon, vary_key, now_ms. */
+typedef struct
+{
+    EdgeCacheStore *s;
+    const char *canon;
+    const char *vary_key;
+    uint32_t now_ms;
+} EdgeCacheStoreLookupArgs;
+
+/** @brief What store_find takes: s, canon, lookup, ctx, now_ms. */
+typedef struct
+{
+    EdgeCacheStore *s;
+    const char *canon;
+    EdgeHdrLookup lookup;
+    void *ctx;
+    uint32_t now_ms;
+} EdgeCacheStoreFindArgs;
+
+/** @brief What entry_set_freshness takes: e, cc, shared, date_epoch, ... */
+typedef struct
+{
+    EdgeEntry *e;
+    const struct protocore_cache_control *cc;
+    proto_bool shared;
+    int64_t date_epoch;
+    int64_t expires_epoch;
+    int64_t last_modified_epoch;
+    int32_t age_hdr;
+    int64_t response_time_epoch;
+    uint32_t now_ms;
+} EdgeCacheEntrySetFreshnessArgs;
+
+/** @brief What entry_has_validator takes: e. */
+typedef struct
+{
+    const EdgeEntry *e;
+} EdgeCacheEntryHasValidatorArgs;
+
+/** @brief What entry_fresh takes: e, now_ms. */
+typedef struct
+{
+    const EdgeEntry *e;
+    uint32_t now_ms;
+} EdgeCacheEntryFreshArgs;
+
+/** @brief What store_sweep takes: s, now_ms. */
+typedef struct
+{
+    EdgeCacheStore *s;
+    uint32_t now_ms;
+} EdgeCacheStoreSweepArgs;
+
+/** @brief What store_purge takes: s, canon. */
+typedef struct
+{
+    EdgeCacheStore *s;
+    const char *canon;
+} EdgeCacheStorePurgeArgs;
+
+/** @brief What store_purge_prefix takes: s, prefix. */
+typedef struct
+{
+    EdgeCacheStore *s;
+    const char *prefix;
+} EdgeCacheStorePurgePrefixArgs;
+
+/** @brief What store_free_entry takes: s, e. */
+typedef struct
+{
+    EdgeCacheStore *s;
+    const EdgeEntry *e;
+} EdgeCacheStoreFreeEntryArgs;
+
+/** @brief What is_storeable takes: status, method, cc, vary_header, ... */
+typedef struct
+{
+    int status;
+    const char *method;
+    const struct protocore_cache_control *cc;
+    const char *vary_header;
+    size_t body_len;
+} EdgeCacheIsStoreableArgs;
+
+/** @brief What build_conditional takes: e, out, cap. */
+typedef struct
+{
+    const EdgeEntry *e;
+    char *out;
+    size_t cap;
+} EdgeCacheBuildConditionalArgs;
+
+/** @brief What apply_304 takes: e, new_hdrs, hdr_len, ... */
+typedef struct
+{
+    EdgeEntry *e;
+    const char *new_hdrs;
+    size_t hdr_len;
+    int64_t response_time_epoch;
+    uint32_t now_ms;
+} EdgeCacheApply304Args;
 
 /**
- * @brief Reserve a slot for @p canon / @p vary_key, evicting the LRU entry if the pool is full.
+ * @brief CDN edge-cache tier - pure engine (PROTOCORE_ENABLE_EDGE_CACHE). The caching reverse-proxy edge that ...
  *
- * The returned entry has its key/digest/vary set, is marked used, and is linked at the MRU end; the
- * caller fills status/body/validators/freshness. Returns nullptr only if @p canon would not fit
- * `PROTOCORE_EDGE_KEY_MAX` (non-cacheable). Bumps `stores` (and `evictions` if it displaced an entry).
- */
-EdgeEntry *edge_store_alloc(EdgeCacheStore *s, const char *canon, const char *vary_key);
-
-/**
- * @brief Find the entry for @p canon whose stored Vary values equal @p vary_key; touch it to MRU.
- * @return the entry, or nullptr on a miss. Freshness is the caller's decision (see ::edge_entry_fresh).
- */
-EdgeEntry *edge_store_lookup(EdgeCacheStore *s, const char *canon, const char *vary_key, uint32_t now_ms);
-
-/**
- * @brief Vary-aware lookup: find the entry for @p canon whose stored `Vary` field-name list, serialized
- *        against the current request (via @p lookup), matches the values seen at store time.
+ * A caller sets the members a call takes, invokes it through ::EdgeCache with the bytes it runs
+ * out of, and reads the outcome off the same handle.
  *
- * This resolves the secondary key the caller cannot precompute (the Vary names come from the stored
- * response). @return the matching variant (touched to MRU), or nullptr.
- */
-EdgeEntry *edge_store_find(EdgeCacheStore *s, const char *canon, EdgeHdrLookup lookup, void *ctx, uint32_t now_ms);
-
-/** @brief Resolve and store an entry's freshness (lifetime with heuristic / default fallback + age). */
-void edge_entry_set_freshness(EdgeEntry *e, const protocore_cache_control *cc, proto_bool shared, int64_t date_epoch,
-                              int64_t expires_epoch, int64_t last_modified_epoch, int32_t age_hdr,
-                              int64_t response_time_epoch, uint32_t now_ms);
-
-/** @brief True if the entry carries a validator (ETag or Last-Modified) usable for revalidation. */
-proto_bool edge_entry_has_validator(const EdgeEntry *e);
-
-/** @brief True if the entry is still fresh at @p now_ms. */
-proto_bool edge_entry_fresh(const EdgeEntry *e, uint32_t now_ms);
-
-/**
- * @brief Drop entries that are both stale AND unrevalidatable (no validator) - pure dead weight.
- * @return the number evicted. Revalidatable stale entries are kept (they can still 304-refresh).
- */
-uint32_t edge_store_sweep(EdgeCacheStore *s, uint32_t now_ms);
-
-/** @brief Purge every variant stored under the exact canonical key @p canon. @return count purged. */
-uint32_t edge_store_purge(EdgeCacheStore *s, const char *canon);
-
-/** @brief Purge every entry whose request path begins with @p prefix. @return count purged. */
-uint32_t edge_store_purge_prefix(EdgeCacheStore *s, const char *prefix);
-
-/** @brief Unlink @p e and free its slot (no stat bump). Used to release a transient passthrough entry. */
-void edge_store_free_entry(EdgeCacheStore *s, const EdgeEntry *e);
-
-// --- storeability (RFC 9111 sec 3) ---------------------------------------------------------------
-
-/**
- * @brief May a response be stored? GET + 200 + not no-store/private + not `Vary: *` + body fits.
+ *   EdgeCache.header_value_args.hdrs = ...;
+ *   EdgeCache.header_value_args.len = ...;
+ *   EdgeCache.header_value_args.name = ...;
+ *   EdgeCache.header_value_args.out = ...;
+ *   EdgeCache.header_value_args.out_cap = ...;
+ *   EdgeCache.header_value(work);
+ *   // EdgeCache.ok is what the call reports
  *
- * @p vary_header may be nullptr. Authorization handling is the caller's (private requests bypass first).
- */
-proto_bool edge_is_storeable(int status, const char *method, const protocore_cache_control *cc, const char *vary_header,
-                             size_t body_len);
-
-// --- conditional revalidation (RFC 9111 sec 4.3) -------------------------------------------------
-
-/**
- * @brief Build the conditional-request header lines for revalidating @p e (`If-None-Match` from its
- *        ETag and/or `If-Modified-Since` from its Last-Modified), into @p out.
- * @return bytes written (0 if the entry carries no validator, or on overflow).
- */
-size_t edge_build_conditional(const EdgeEntry *e, char *out, size_t cap);
-
-/**
- * @brief Apply an origin `304 Not Modified` to a stored entry: recompute its freshness from the 304
- *        response headers and adopt any validators it carried, keeping the stored body (RFC 9111 4.3.4).
+ * @var EdgeCacheNs::header_value_args  what header_value takes: hdrs, len, name, out, out_cap
+ * @var EdgeCacheNs::parse_http_date_args  what parse_http_date takes: s, len
+ * @var EdgeCacheNs::freshness_lifetime_args  what freshness_lifetime takes: cc, shared, date_epoch,
+ * @var EdgeCacheNs::heuristic_lifetime_args  what heuristic_lifetime takes: date_epoch,
+ * @var EdgeCacheNs::initial_age_args  what initial_age takes: age_hdr, date_epoch,
+ * @var EdgeCacheNs::current_age_args  what current_age takes: initial_age, insert_ms, now_ms
+ * @var EdgeCacheNs::is_fresh_at_args  what is_fresh_at takes: lifetime, current_age
+ * @var EdgeCacheNs::key_canon_args  what key_canon takes: method, host, path, query,
+ * @var EdgeCacheNs::key_digest_args  what key_digest takes: digest_work, canon, len, digest
+ * @var EdgeCacheNs::vary_serialize_args  what vary_serialize takes: vary_header, lookup, ctx, out,
+ * @var EdgeCacheNs::store_init_args  what store_init takes: s
+ * @var EdgeCacheNs::store_alloc_args  what store_alloc takes: s, canon, vary_key
+ * @var EdgeCacheNs::store_lookup_args  what store_lookup takes: s, canon, vary_key, now_ms
+ * @var EdgeCacheNs::store_find_args  what store_find takes: s, canon, lookup, ctx, now_ms
+ * @var EdgeCacheNs::entry_set_freshness_args  what entry_set_freshness takes: e, cc, shared, date_epoch,
+ * @var EdgeCacheNs::entry_has_validator_args  what entry_has_validator takes: e
+ * @var EdgeCacheNs::entry_fresh_args  what entry_fresh takes: e, now_ms
+ * @var EdgeCacheNs::store_sweep_args  what store_sweep takes: s, now_ms
+ * @var EdgeCacheNs::store_purge_args  what store_purge takes: s, canon
+ * @var EdgeCacheNs::store_purge_prefix_args  what store_purge_prefix takes: s, prefix
+ * @var EdgeCacheNs::store_free_entry_args  what store_free_entry takes: s, e
+ * @var EdgeCacheNs::is_storeable_args  what is_storeable takes: status, method, cc, vary_header,
+ * @var EdgeCacheNs::build_conditional_args  what build_conditional takes: e, out, cap
+ * @var EdgeCacheNs::apply_304_args  what apply_304 takes: e, new_hdrs, hdr_len,
+ * @var EdgeCacheNs::ok  a call's true/false outcome
+ * @var EdgeCacheNs::epoch  what a call reports
+ * @var EdgeCacheNs::secs  what a call reports
+ * @var EdgeCacheNs::n  the key length (excluding NUL), or 0 if it would overflow out_cap ...
+ * @var EdgeCacheNs::entry  the entry, or nullptr on a miss. Freshness is the caller's decision ...
+ * @var EdgeCacheNs::count  the number evicted. Revalidatable stale entries are kept (they can ...
+ * @var EdgeCacheNs::header_value  copy the value of header name from a raw HTTP response head (status ...
+ * @var EdgeCacheNs::parse_http_date  parse an HTTP-date to epoch seconds (UTC), or return -1 if it does ...
+ * @var EdgeCacheNs::freshness_lifetime  freshness lifetime in seconds, or -1 when none is explicit (caller ...
+ * @var EdgeCacheNs::heuristic_lifetime  heuristic freshness (RFC 9111 sec 4.2.2): 10% of (Date - ...
+ * @var EdgeCacheNs::initial_age  corrected initial age at store time (RFC 9111 sec 4.2.3)
+ * @var EdgeCacheNs::current_age  current age = initial_age + resident time, taken from the monotonic ...
+ * @var EdgeCacheNs::is_fresh_at  fresh iff a lifetime is known (>= 0) and the current age has not ...
+ * @var EdgeCacheNs::key_canon  build the canonical cache key `METHOD "\n" host "\n" path [ "\n" ...
+ * @var EdgeCacheNs::key_digest  SHA-256 of the canonical key -> digest[32] (doubles as the L2 dbm ...
+ * @var EdgeCacheNs::vary_serialize  serialize a request's values for each field-name in a response ...
+ * @var EdgeCacheNs::store_init  reset a store to empty
+ * @var EdgeCacheNs::store_alloc  reserve a slot for canon / vary_key, evicting the LRU entry if the ...
+ * @var EdgeCacheNs::store_lookup  find the entry for canon whose stored Vary values equal vary_key; ...
+ * @var EdgeCacheNs::store_find  vary-aware lookup: find the entry for canon whose stored `Vary` ...
+ * @var EdgeCacheNs::entry_set_freshness  resolve and store an entry's freshness (lifetime with heuristic / ...
+ * @var EdgeCacheNs::entry_has_validator  true if the entry carries a validator (ETag or Last-Modified) ...
+ * @var EdgeCacheNs::entry_fresh  true if the entry is still fresh at now_ms
+ * @var EdgeCacheNs::store_sweep  drop entries that are both stale AND unrevalidatable (no validator) ...
+ * @var EdgeCacheNs::store_purge  purge every variant stored under the exact canonical key canon. ...
+ * @var EdgeCacheNs::store_purge_prefix  purge every entry whose request path begins with prefix. count ...
+ * @var EdgeCacheNs::store_free_entry  unlink e and free its slot (no stat bump). Used to release a ...
+ * @var EdgeCacheNs::is_storeable  may a response be stored? GET + 200 + not no-store/private + not ...
+ * @var EdgeCacheNs::build_conditional  build the conditional-request header lines for revalidating e ...
+ * @var EdgeCacheNs::apply_304  apply an origin `304 Not Modified` to a stored entry: recompute its ...
  *
- * @p new_hdrs / @p hdr_len are the 304 response head; @p response_time_epoch is when it arrived (-1 with
- * no wall clock); @p now_ms is the monotonic clock.
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
+ * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
+ * a caller drives every namespace the same way.
  */
-void edge_apply_304(EdgeEntry *e, const char *new_hdrs, size_t hdr_len, int64_t response_time_epoch, uint32_t now_ms);
+typedef struct
+{
+    EdgeCacheHeaderValueArgs header_value_args;
+    EdgeCacheParseHttpDateArgs parse_http_date_args;
+    EdgeCacheFreshnessLifetimeArgs freshness_lifetime_args;
+    EdgeCacheHeuristicLifetimeArgs heuristic_lifetime_args;
+    EdgeCacheInitialAgeArgs initial_age_args;
+    EdgeCacheCurrentAgeArgs current_age_args;
+    EdgeCacheIsFreshAtArgs is_fresh_at_args;
+    EdgeCacheKeyCanonArgs key_canon_args;
+    EdgeCacheKeyDigestArgs key_digest_args;
+    EdgeCacheVarySerializeArgs vary_serialize_args;
+    EdgeCacheStoreInitArgs store_init_args;
+    EdgeCacheStoreAllocArgs store_alloc_args;
+    EdgeCacheStoreLookupArgs store_lookup_args;
+    EdgeCacheStoreFindArgs store_find_args;
+    EdgeCacheEntrySetFreshnessArgs entry_set_freshness_args;
+    EdgeCacheEntryHasValidatorArgs entry_has_validator_args;
+    EdgeCacheEntryFreshArgs entry_fresh_args;
+    EdgeCacheStoreSweepArgs store_sweep_args;
+    EdgeCacheStorePurgeArgs store_purge_args;
+    EdgeCacheStorePurgePrefixArgs store_purge_prefix_args;
+    EdgeCacheStoreFreeEntryArgs store_free_entry_args;
+    EdgeCacheIsStoreableArgs is_storeable_args;
+    EdgeCacheBuildConditionalArgs build_conditional_args;
+    EdgeCacheApply304Args apply_304_args;
+
+    proto_bool ok;
+    int64_t epoch;
+    long secs;
+    size_t n;
+    EdgeEntry *entry;
+    uint32_t count;
+
+    void (*const header_value)(uint8_t *restrict work);
+    void (*const parse_http_date)(uint8_t *restrict work);
+    void (*const freshness_lifetime)(uint8_t *restrict work);
+    void (*const heuristic_lifetime)(uint8_t *restrict work);
+    void (*const initial_age)(uint8_t *restrict work);
+    void (*const current_age)(uint8_t *restrict work);
+    void (*const is_fresh_at)(uint8_t *restrict work);
+    void (*const key_canon)(uint8_t *restrict work);
+    void (*const key_digest)(uint8_t *restrict work);
+    void (*const vary_serialize)(uint8_t *restrict work);
+    void (*const store_init)(uint8_t *restrict work);
+    void (*const store_alloc)(uint8_t *restrict work);
+    void (*const store_lookup)(uint8_t *restrict work);
+    void (*const store_find)(uint8_t *restrict work);
+    void (*const entry_set_freshness)(uint8_t *restrict work);
+    void (*const entry_has_validator)(uint8_t *restrict work);
+    void (*const entry_fresh)(uint8_t *restrict work);
+    void (*const store_sweep)(uint8_t *restrict work);
+    void (*const store_purge)(uint8_t *restrict work);
+    void (*const store_purge_prefix)(uint8_t *restrict work);
+    void (*const store_free_entry)(uint8_t *restrict work);
+    void (*const is_storeable)(uint8_t *restrict work);
+    void (*const build_conditional)(uint8_t *restrict work);
+    void (*const apply_304)(uint8_t *restrict work);
+} EdgeCacheNs;
+
+/** @brief The one symbol this module exports. */
+extern EdgeCacheNs EdgeCache;
 
 PROTOCORE_END_DECLS
 

@@ -22,6 +22,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+static uint8_t pn532_work[16]; // the borrow an entry takes; Pn532 never reads it
+
 void dbench_run(void)
 {
     // Host -> PN532 GetFirmwareVersion (command 0x02); the documented frame is 00 00 FF 02 FE D4 02 2A 00.
@@ -39,19 +41,34 @@ void dbench_run(void)
         volatile int isink = 0;
         volatile bool bsink = false;
 
-        // Build the GetFirmwareVersion command frame (LEN/LCS + TFI + DCS + postamble).
-        DBENCH_OP("protocore_pn532_build_frame gfv", 200000,
-                  sink += protocore_pn532_build_frame(PN532_TFI_HOST, cmd_gfv, 1, out, sizeof(out)));
+        // Build the GetFirmwareVersion command frame (LEN/LCS + TFI + DCS + postamble). The entry
+        // call stays inside DBENCH_OP so the timed loop measures the framing, not the read.
+        Pn532.build_frame_args.tfi = PN532_TFI_HOST;
+        Pn532.build_frame_args.data = cmd_gfv;
+        Pn532.build_frame_args.len = 1;
+        Pn532.build_frame_args.out = out;
+        Pn532.build_frame_args.cap = sizeof(out);
+        DBENCH_OP("Pn532.build_frame gfv", 200000, (Pn532.build_frame(pn532_work), sink += Pn532.len));
         // Frame + verify the GetFirmwareVersion response (LCS + DCS checks over 5 PData bytes).
         DBENCH_OP("protocore_pn532_parse_frame gfv resp", 200000, {
             uint8_t tfi = 0;
             const uint8_t *pd = NULL;
             uint8_t pdlen = 0;
-            isink += protocore_pn532_parse_frame(resp_gfv, sizeof(resp_gfv), &tfi, &pd, &pdlen);
+            Pn532.parse_frame_args.raw = resp_gfv;
+            Pn532.parse_frame_args.len = sizeof(resp_gfv);
+            Pn532.parse_frame_args.tfi = &tfi;
+            Pn532.parse_frame_args.pdata = &pd;
+            Pn532.parse_frame_args.pdata_len = &pdlen;
+            Pn532.parse_frame(pn532_work);
+            isink += Pn532.n;
         });
         // ACK detect (6-byte compare) and ACK build.
-        DBENCH_OP("protocore_pn532_is_ack", 200000, bsink ^= protocore_pn532_is_ack(ack, sizeof(ack)));
-        DBENCH_OP("protocore_pn532_build_ack", 200000, sink += protocore_pn532_build_ack(out, sizeof(out)));
+        Pn532.is_ack_args.raw = ack;
+        Pn532.is_ack_args.len = sizeof(ack);
+        DBENCH_OP("Pn532.is_ack", 200000, (Pn532.is_ack(pn532_work), bsink ^= Pn532.ok));
+        Pn532.build_ack_args.out = out;
+        Pn532.build_ack_args.cap = sizeof(out);
+        DBENCH_OP("Pn532.build_ack", 200000, (Pn532.build_ack(pn532_work), sink += Pn532.len));
 
         (void)sink;
         (void)isink;

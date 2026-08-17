@@ -3300,13 +3300,13 @@ from halves and is slower than the width it decomposes into"
 #endif
 
 /** @brief Default INA219 current LSB in microamps per bit (calibration input). The fallback when
- *         protocore_ina219_begin() is passed 0. 100 uA/bit with a 100 mohm shunt -> a 2 A full-scale range. */
+ *         Ina219.begin is passed 0. 100 uA/bit with a 100 mohm shunt -> a 2 A full-scale range. */
 #ifndef PROTOCORE_INA219_CURRENT_LSB_UA
 #define PROTOCORE_INA219_CURRENT_LSB_UA 100
 #endif
 
 /** @brief Default INA219 shunt resistance in milliohms (calibration input). The fallback when
- *         protocore_ina219_begin() is passed 0. 100 mohm is the common breakout value. */
+ *         Ina219.begin is passed 0. 100 mohm is the common breakout value. */
 #ifndef PROTOCORE_INA219_SHUNT_MOHM
 #define PROTOCORE_INA219_SHUNT_MOHM 100
 #endif
@@ -4219,6 +4219,14 @@ from halves and is slower than the width it decomposes into"
 #if PROTOCORE_ENABLE_EDGE_ORIGIN_TLS && !PROTOCORE_ENABLE_EDGE_ORIGIN_TLS_NEEDS_TLS
 #error "ProtoCore: PROTOCORE_ENABLE_EDGE_ORIGIN_TLS needs PROTOCORE_ENABLE_TLS"
 #endif
+// An https origin runs the record engine's BIO, and PROTOCORE_PLATFORM_TLS_WANT_READ / _WANT_WRITE
+// are only defined where an engine exists - the values are taken from it rather than restated. Named
+// here rather than left to surface as an undeclared identifier inside the fetch path.
+#if PROTOCORE_ENABLE_EDGE_ORIGIN_TLS && !PROTOCORE_HAS_VENDOR_TLS
+#error                                                                                                                 \
+    "ProtoCore: PROTOCORE_ENABLE_EDGE_ORIGIN_TLS needs a TLS engine (PROTOCORE_HAS_VENDOR_TLS). Provide one in\
+ core_setup/hal/<vendor>, or map plaintext http origins only."
+#endif
 /* Derived sizing for the edge cache. Macros, not constexpr: PROTOCORE_EDGE_FETCH_BUF's default is
  * computed from PROTOCORE_EDGE_MESH_RESP_MAX below and the requirement is enforced with an #error,
  * and the preprocessor can evaluate neither `constexpr` nor `sizeof`. SRCBANNED rule 18. */
@@ -4822,6 +4830,11 @@ from halves and is slower than the width it decomposes into"
 #define PROTOCORE_ENABLE_FDC2214 0
 #endif
 
+/** @brief I2C address of the FDC2214, set by the ADDR pin: 0x2A when it is low, 0x2B when it is high. */
+#ifndef PROTOCORE_FDC2214_I2C_ADDR
+#define PROTOCORE_FDC2214_I2C_ADDR 0x2A
+#endif
+
 /**
  * @brief Opt-in LDC1614 inductance-to-digital field sensor (PROTOCORE_ENABLE_LDC1614).
  *
@@ -4836,6 +4849,11 @@ from halves and is slower than the width it decomposes into"
 #define PROTOCORE_ENABLE_LDC1614 0
 #endif
 
+/** @brief I2C address of the LDC1614, set by the ADDR pin: 0x2A when it is low, 0x2B when it is high. */
+#ifndef PROTOCORE_LDC1614_I2C_ADDR
+#define PROTOCORE_LDC1614_I2C_ADDR 0x2A
+#endif
+
 /**
  * @brief Opt-in VL53L0X optical time-of-flight ranging sensor (PROTOCORE_ENABLE_VL53L0X).
  *
@@ -4847,6 +4865,12 @@ from halves and is slower than the width it decomposes into"
  */
 #ifndef PROTOCORE_ENABLE_VL53L0X
 #define PROTOCORE_ENABLE_VL53L0X 0
+#endif
+
+/** @brief I2C address of the VL53L0X. DS11555 gives the device address as 0x52, which is the 8-bit
+ *         form with the R/W bit in it; on a 7-bit API that is 0x29. */
+#ifndef PROTOCORE_VL53L0X_I2C_ADDR
+#define PROTOCORE_VL53L0X_I2C_ADDR 0x29
 #endif
 
 /**
@@ -6625,8 +6649,25 @@ from halves and is slower than the width it decomposes into"
 #define PROTOCORE_PLAINTEXT_WORK_H3CONN 0
 #endif
 
+// The edge cache's state, split across both pools the way a QUIC connection is. The L1 response
+// store, the route maps, the fetch slots and the per-connection scratch are cached origin bytes and
+// carry nothing secret, so they take the PLAINTEXT borrow. Measured at 18168 bytes with the default
+// widths and 26128 with the mesh, L2 and range arms all on, which is what this number covers; the
+// static_assert refuses a build it is short of. Only the TLS half is secure, below. A literal rather
+// than a formula because the terms are edge_cache.h's, which this file is included by rather than
+// includes; proved against sizeof(EdgeCacheProxyCtx) by a static_assert in edge_cache_proxy.c.
+#ifndef PROTOCORE_EDGE_PROXY_BORROW
+#define PROTOCORE_EDGE_PROXY_BORROW 28672
+#endif
+
+#if PROTOCORE_ENABLE_EDGE_CACHE
+#define PROTOCORE_PLAINTEXT_WORK_EDGEPROXY PROTOCORE_EDGE_PROXY_BORROW
+#else
+#define PROTOCORE_PLAINTEXT_WORK_EDGEPROXY 0
+#endif
+
 #ifndef PROTOCORE_PLAINTEXT_ARENA_SIZE
-#define PROTOCORE_PLAINTEXT_ARENA_SIZE (PROTOCORE_PLAINTEXT_SCRATCH + PROTOCORE_PLAINTEXT_WORK_H3CONN + 256)
+#define PROTOCORE_PLAINTEXT_ARENA_SIZE                                                                                     (PROTOCORE_PLAINTEXT_SCRATCH + PROTOCORE_PLAINTEXT_WORK_H3CONN + PROTOCORE_PLAINTEXT_WORK_EDGEPROXY + 256)
 #endif
 
 /**
@@ -7311,6 +7352,271 @@ from halves and is slower than the width it decomposes into"
 #define PROTOCORE_SECURE_WORK_CFGSTORE 0
 #endif
 
+// The relay listener's table: the published front-port binds, and one live bridge per relayed
+// connection - each carrying the relay engine's two PROTOCORE_RELAY_BUF carry buffers. Taken from
+// the persistent end so a bridge outlives the poll ticks it spans. Proved against
+// sizeof(RelayListenerCtx) by a static_assert in relay_listener.c.
+#ifndef PROTOCORE_RELAY_LISTENER_BORROW
+#define PROTOCORE_RELAY_LISTENER_BORROW                                                                                \
+    ((size_t)PROTOCORE_RELAY_MAX_PUBLISH * (PROTOCORE_RELAY_HOST_MAX + 16u) +                                          \
+     (size_t)PROTOCORE_RELAY_MAX_CONNS * (2u * PROTOCORE_RELAY_BUF + 128u) + 64u)
+#endif
+
+#if PROTOCORE_ENABLE_RELAY
+#define PROTOCORE_SECURE_WORK_RELAYLISTEN PROTOCORE_RELAY_LISTENER_BORROW
+#else
+#define PROTOCORE_SECURE_WORK_RELAYLISTEN 0
+#endif
+
+// The southbound gateway's table: one entry per published radio port with its rate-limit window,
+// plus the northbound sink, the topic prefix and the counters. Taken from the persistent end so a
+// published port outlives the frames it carries. Proved against sizeof(GatewayCtx) by a
+// static_assert in gateway.c.
+#ifndef PROTOCORE_GATEWAY_BORROW
+#define PROTOCORE_GATEWAY_BORROW ((size_t)PROTOCORE_GW_MAX_PORTS * 32u + 128u)
+#endif
+
+#if PROTOCORE_ENABLE_GATEWAY
+#define PROTOCORE_SECURE_WORK_GATEWAY PROTOCORE_GATEWAY_BORROW
+#else
+#define PROTOCORE_SECURE_WORK_GATEWAY 0
+#endif
+
+// The interface bridge's rule table: one address:port -> bus mapping per rule, each carrying a
+// bind address and the bus target it forwards to. Taken from the persistent end so a published
+// rule outlives the connections it serves. Proved against sizeof(BridgeCtx) by a static_assert in
+// iface_bridge.c.
+#ifndef PROTOCORE_IFACE_BRIDGE_BORROW
+#define PROTOCORE_IFACE_BRIDGE_BORROW ((size_t)PROTOCORE_BRIDGE_MAX_RULES * 64u + 64u)
+#endif
+
+#if PROTOCORE_ENABLE_IFACE_BRIDGE
+#define PROTOCORE_SECURE_WORK_IFACEBRIDGE PROTOCORE_IFACE_BRIDGE_BORROW
+#else
+#define PROTOCORE_SECURE_WORK_IFACEBRIDGE 0
+#endif
+
+// The bridge glue's state: which listener each rule is published on, whether the handler and the
+// shared SPI bus are up, and the one chunk a STREAM target moves per pump. Taken from the
+// persistent end so a published bind outlives the connections it serves. Proved against
+// sizeof(BridgeGlueCtx) by a static_assert in iface_bridge_hw.c.
+#ifndef PROTOCORE_IFACE_BRIDGE_HW_BORROW
+#define PROTOCORE_IFACE_BRIDGE_HW_BORROW                                                                               \
+    ((size_t)PROTOCORE_BRIDGE_MAX_RULES * 16u + PROTOCORE_BRIDGE_STREAM_CHUNK + 64u)
+#endif
+
+#if PROTOCORE_ENABLE_IFACE_BRIDGE
+#define PROTOCORE_SECURE_WORK_IFACEBRIDGEHW PROTOCORE_IFACE_BRIDGE_HW_BORROW
+#else
+#define PROTOCORE_SECURE_WORK_IFACEBRIDGEHW 0
+#endif
+
+// The edge cache's TLS half: the transport binding, the client cid of the in-flight https fetch, and
+// the two session flags. Secure rather than plaintext because these name the client-TLS session the
+// fetch runs over; the 18 KB of cached origin bytes beside them is the plaintext borrow
+// (PROTOCORE_EDGE_PROXY_BORROW). Proved against sizeof(EdgeProxyTlsCtx) by a static_assert in
+// edge_cache_proxy.c.
+#ifndef PROTOCORE_EDGE_PROXY_TLS_BORROW
+#define PROTOCORE_EDGE_PROXY_TLS_BORROW 128
+#endif
+
+#if PROTOCORE_ENABLE_EDGE_CACHE && PROTOCORE_ENABLE_EDGE_ORIGIN_TLS
+#define PROTOCORE_SECURE_WORK_EDGEPROXYTLS PROTOCORE_EDGE_PROXY_TLS_BORROW
+#else
+#define PROTOCORE_SECURE_WORK_EDGEPROXYTLS 0
+#endif
+
+// The WebDAV handler's state: the accessor root it resolves every path against, the 207 Multi-Status
+// build buffer (PROTOCORE_WEBDAV_BUF_SIZE), one directory entry's name for the Depth-1 listing
+// (PROTOCORE_FILESYSTEM_PATH_MAX), one streaming-PUT destination per connection slot, and the
+// server-global lock table (PROTOCORE_DAV_LOCK_MAX entries of path + token). Taken from the
+// persistent end so a lock outlives the request that took it. A literal rather than a formula
+// because the lock terms are webdav.h's, which this file is included by rather than includes;
+// proved against sizeof(DavCtx) by a static_assert in webdav_handler.c.
+#ifndef PROTOCORE_WEBDAV_BORROW
+#define PROTOCORE_WEBDAV_BORROW 4096
+#endif
+
+#if PROTOCORE_ENABLE_WEBDAV
+#define PROTOCORE_SECURE_WORK_WEBDAV PROTOCORE_WEBDAV_BORROW
+#else
+#define PROTOCORE_SECURE_WORK_WEBDAV 0
+#endif
+
+// The provisioning service's state: the softAP address the captive-portal DNS answers with, stamped
+// by begin() from the interface the radio actually came up on. Taken from the persistent end so it
+// outlives the DNS callbacks that read it. Proved against sizeof(ProvCtx) by a static_assert in
+// provisioning_service.c.
+#ifndef PROTOCORE_PROVISIONING_BORROW
+#define PROTOCORE_PROVISIONING_BORROW 32
+#endif
+
+#if PROTOCORE_ENABLE_PROVISIONING
+#define PROTOCORE_SECURE_WORK_PROVISIONING PROTOCORE_PROVISIONING_BORROW
+#else
+#define PROTOCORE_SECURE_WORK_PROVISIONING 0
+#endif
+
+// The hot-swap binding: the state machine (state, failure run and threshold, probe interval and
+// stamp, mount and fault counts) plus the four callbacks the application registered and the context
+// it passes back. Taken from the persistent end so a volume's state survives the polls that watch
+// it. A literal rather than a formula because the terms are hotswap.h's, which this file is
+// included by rather than includes; proved against sizeof(HotswapCtx) by a static_assert in
+// hotswap.c.
+#ifndef PROTOCORE_HOTSWAP_BORROW
+#define PROTOCORE_HOTSWAP_BORROW 128
+#endif
+
+#if PROTOCORE_ENABLE_HOTSWAP
+#define PROTOCORE_SECURE_WORK_HOTSWAP PROTOCORE_HOTSWAP_BORROW
+#else
+#define PROTOCORE_SECURE_WORK_HOTSWAP 0
+#endif
+
+// The SMBus transaction state: whether the Packet Error Code is on, and the frame a transaction is
+// composed in - two address bytes, a command, a count, a 32-octet block and the PEC, which is the
+// longest sequence any shape puts on the wire. Taken from the persistent end so the PEC setting
+// outlives the transactions that use it. A literal rather than a formula because the terms are
+// smbus.h's, which this file is included by rather than includes; proved against sizeof(SmbusCtx)
+// by a static_assert in smbus.c.
+#ifndef PROTOCORE_SMBUS_BORROW
+#define PROTOCORE_SMBUS_BORROW 64
+#endif
+
+#if PROTOCORE_ENABLE_SMBUS
+#define PROTOCORE_SECURE_WORK_SMBUS PROTOCORE_SMBUS_BORROW
+#else
+#define PROTOCORE_SECURE_WORK_SMBUS 0
+#endif
+
+// The MPR121's I2C binding: the device address, the two-octet register frame, and the bring-up
+// sequence (MPR121_INIT_MAX register/value pairs, written one pair at a time). Taken from the
+// persistent end so the address set at begin() outlives the reads that use it. A literal rather
+// than a formula because the terms are mpr121.h's, which this file is included by rather than
+// includes; proved against sizeof(Mpr121Ctx) by a static_assert in mpr121.c.
+#ifndef PROTOCORE_MPR121_BORROW
+#define PROTOCORE_MPR121_BORROW 128
+#endif
+
+#if PROTOCORE_ENABLE_MPR121
+#define PROTOCORE_SECURE_WORK_MPR121 PROTOCORE_MPR121_BORROW
+#else
+#define PROTOCORE_SECURE_WORK_MPR121 0
+#endif
+
+// The HMMD radar's UART binding: the frame reassembler (a 45-octet frame plus its cursor), the last
+// decoded report (detect, distance and 16 gate energies), and the 64-octet chunk a poll reads into.
+// Taken from the persistent end so a frame split across polls reassembles. A literal rather than a
+// formula because the terms are hmmd.h's, which this file is included by rather than includes;
+// proved against sizeof(HmmdCtx) by a static_assert in hmmd.c.
+#ifndef PROTOCORE_HMMD_BORROW
+#define PROTOCORE_HMMD_BORROW 256
+#endif
+
+#if PROTOCORE_ENABLE_HMMD
+#define PROTOCORE_SECURE_WORK_HMMD PROTOCORE_HMMD_BORROW
+#else
+#define PROTOCORE_SECURE_WORK_HMMD 0
+#endif
+
+// The LD2410 radar's UART binding: the frame reassembler (a 72-octet frame plus its cursor), the
+// last decoded report with its 9 gate energies, the 64-octet receive chunk and the 16-octet command
+// frame. Taken from the persistent end so a frame split across polls reassembles. A literal rather
+// than a formula because the terms are ld2410's own; proved against sizeof(Ld2410Ctx) by a
+// static_assert in ld2410.c.
+#ifndef PROTOCORE_LD2410_BORROW
+#define PROTOCORE_LD2410_BORROW 320
+#endif
+
+#if PROTOCORE_ENABLE_LD2410
+#define PROTOCORE_SECURE_WORK_LD2410 PROTOCORE_LD2410_BORROW
+#else
+#define PROTOCORE_SECURE_WORK_LD2410 0
+#endif
+
+// The dashboard's state: the widget table the application registered, the current value per widget,
+// the inbound-control callback, and the two route paths begin() composes - the SSE stream and the
+// control socket, one MAX_PATH_LEN each. Taken from the persistent end so the layout outlives the
+// requests that render it. Proved against sizeof(DashboardCtx) by a static_assert in dashboard.c.
+#ifndef PROTOCORE_DASHBOARD_BORROW
+#define PROTOCORE_DASHBOARD_BORROW ((size_t)PROTOCORE_DASHBOARD_MAX_WIDGETS * 4u + 2u * MAX_PATH_LEN + 64u)
+#endif
+
+#if PROTOCORE_ENABLE_DASHBOARD
+#define PROTOCORE_SECURE_WORK_DASHBOARD PROTOCORE_DASHBOARD_BORROW
+#else
+#define PROTOCORE_SECURE_WORK_DASHBOARD 0
+#endif
+
+// An I2C peripheral binding: the device address and the widest bus frame the part moves. Taken
+// from the persistent end so the address set at begin() outlives the transfers that use it. One
+// size covers them all - the widest frame here is a register byte plus a 16-bit value - and each
+// module's own static_assert proves its context against it.
+#ifndef PROTOCORE_I2C_DEVICE_BORROW
+#define PROTOCORE_I2C_DEVICE_BORROW 32
+#endif
+
+#if PROTOCORE_ENABLE_ADS1115
+#define PROTOCORE_SECURE_WORK_ADS1115 PROTOCORE_I2C_DEVICE_BORROW
+#else
+#define PROTOCORE_SECURE_WORK_ADS1115 0
+#endif
+
+#if PROTOCORE_ENABLE_INA219
+#define PROTOCORE_SECURE_WORK_INA219 PROTOCORE_I2C_DEVICE_BORROW
+#else
+#define PROTOCORE_SECURE_WORK_INA219 0
+#endif
+
+#if PROTOCORE_ENABLE_PCA9685
+#define PROTOCORE_SECURE_WORK_PCA9685 PROTOCORE_I2C_DEVICE_BORROW
+#else
+#define PROTOCORE_SECURE_WORK_PCA9685 0
+#endif
+
+#if PROTOCORE_ENABLE_FDC2214
+#define PROTOCORE_SECURE_WORK_FDC2214 PROTOCORE_I2C_DEVICE_BORROW
+#else
+#define PROTOCORE_SECURE_WORK_FDC2214 0
+#endif
+
+#if PROTOCORE_ENABLE_LDC1614
+#define PROTOCORE_SECURE_WORK_LDC1614 PROTOCORE_I2C_DEVICE_BORROW
+#else
+#define PROTOCORE_SECURE_WORK_LDC1614 0
+#endif
+
+#if PROTOCORE_ENABLE_VL53L0X
+#define PROTOCORE_SECURE_WORK_VL53L0X PROTOCORE_I2C_DEVICE_BORROW
+#else
+#define PROTOCORE_SECURE_WORK_VL53L0X 0
+#endif
+
+#if PROTOCORE_ENABLE_RTC
+#define PROTOCORE_SECURE_WORK_RTC PROTOCORE_I2C_DEVICE_BORROW
+#else
+#define PROTOCORE_SECURE_WORK_RTC 0
+#endif
+
+#if PROTOCORE_ENABLE_SHT3X
+#define PROTOCORE_SECURE_WORK_SHT3X PROTOCORE_I2C_DEVICE_BORROW
+#else
+#define PROTOCORE_SECURE_WORK_SHT3X 0
+#endif
+
+// The bus capture's binding: the frame sink a capture delivers to, and whether one is running.
+// Taken from the persistent end so the binding outlives the poll ticks it spans. Proved against
+// sizeof(BusCaptureCtx) by a static_assert in bus_capture.c.
+#ifndef PROTOCORE_BUS_CAPTURE_BORROW
+#define PROTOCORE_BUS_CAPTURE_BORROW 32u
+#endif
+
+#if PROTOCORE_ENABLE_BUS_CAPTURE
+#define PROTOCORE_SECURE_WORK_BUSCAPTURE PROTOCORE_BUS_CAPTURE_BORROW
+#else
+#define PROTOCORE_SECURE_WORK_BUSCAPTURE 0
+#endif
+
 #if PROTOCORE_TLS_SOFTWARE
 #define PROTOCORE_SECURE_WORK_TLSCONN PROTOCORE_WORK_TLS_CONN
 #else
@@ -7412,6 +7718,18 @@ from halves and is slower than the width it decomposes into"
      PROTOCORE_SECURE_WORK_AES128GCM + PROTOCORE_WORK_ROUTE_TABLE + PROTOCORE_SECURE_WORK_AUTH +                       \
      PROTOCORE_SECURE_WORK_RNG + PROTOCORE_SECURE_WORK_QUICCONN + PROTOCORE_SECURE_WORK_WS +                           \
      PROTOCORE_SECURE_WORK_SSE + PROTOCORE_SECURE_WORK_H2_SERVER + PROTOCORE_SECURE_WORK_CSRF +                        \
+     PROTOCORE_SECURE_WORK_LOCKOUT + PROTOCORE_SECURE_WORK_FWDTRUST + PROTOCORE_SECURE_WORK_AUDIT +                    \
+     PROTOCORE_SECURE_WORK_WEBTERM + PROTOCORE_SECURE_WORK_CFGSTORE + PROTOCORE_SECURE_WORK_RELAYLISTEN +              \
+     PROTOCORE_SECURE_WORK_GATEWAY + PROTOCORE_SECURE_WORK_IFACEBRIDGE +                                               \
+     PROTOCORE_SECURE_WORK_IFACEBRIDGEHW + PROTOCORE_SECURE_WORK_BUSCAPTURE + PROTOCORE_SECURE_WORK_HMMD +             \
+     PROTOCORE_SECURE_WORK_LD2410 + PROTOCORE_SECURE_WORK_DASHBOARD + PROTOCORE_SECURE_WORK_ADS1115 +                  \
+     PROTOCORE_SECURE_WORK_RTC + PROTOCORE_SECURE_WORK_SHT3X + PROTOCORE_SECURE_WORK_INA219 +                          \
+     PROTOCORE_SECURE_WORK_PCA9685 + PROTOCORE_SECURE_WORK_MPR121 +                                                    \
+     PROTOCORE_SECURE_WORK_FDC2214 +                                                                                   \
+     PROTOCORE_SECURE_WORK_LDC1614 +                                                                                   \
+     PROTOCORE_SECURE_WORK_VL53L0X + PROTOCORE_SECURE_WORK_SMBUS + PROTOCORE_SECURE_WORK_HOTSWAP +                     \
+     PROTOCORE_SECURE_WORK_PROVISIONING + PROTOCORE_SECURE_WORK_WEBDAV +                                               \
+     PROTOCORE_SECURE_WORK_EDGEPROXYTLS +                                                                              \
      256) // + 256: alignment round-up across the individual borrows
 #endif
 
@@ -7483,23 +7801,6 @@ from halves and is slower than the width it decomposes into"
 //   - crypto_work[] is zeroed via protocore_secure_wipe() after every use so that
 //     bignum intermediates (including partial products that contain key
 //     material) do not persist in memory.
-
-// ---------------------------------------------------------------------------
-// Runtime configuration struct
-// ---------------------------------------------------------------------------
-
-/**
- * @brief Runtime-tunable server parameters.
- *
- * Can be declared as `const PROGMEM` (flash) or as a mutable variable (RAM).
- * Pass a pointer to proto_begin() / begin_http() / begin_tls(), which hand it
- * to Tcp.conn->init().
- */
-typedef struct WebServerConfig
-{
-    /** Milliseconds of inactivity before a connection is force-closed. */
-    proto_u32 conn_timeout_ms;
-} WebServerConfig;
 
 // ---------------------------------------------------------------------------
 // Protocol identifier

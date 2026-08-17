@@ -6,6 +6,10 @@
  * @brief Server-Sent Events connection pool implementation.
  */
 
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_SSE
+
 #include "sse.h"
 #include "mmgr/protomem.h"
 #include "mmgr/protostr.h"
@@ -47,6 +51,14 @@ static void route_add(uint8_t *restrict work)
     }
     SSE_CTX(work)->on_connect[SSE_CTX(work)->count] = Sse.route.on_connect;
     Sse.u8 = SSE_CTX(work)->count++;
+}
+
+// Empty the handler table. A route holds the id an add returned, so this belongs with whatever
+// empties the routes - otherwise every re-registration appends a handler nothing can reach any
+// more, and the table, which is bounded, fills and starts refusing.
+static void route_reset(uint8_t *restrict work)
+{
+    SSE_CTX(work)->count = 0;
 }
 
 static void route_connect(uint8_t *restrict work)
@@ -209,6 +221,7 @@ uint8_t *protocore_sse_span(void)
 }
 
 SseNs Sse = {.route_add = route_add,
+             .route_reset = route_reset,
              .route_connect = route_connect,
              .init = init,
              .alloc = alloc,
@@ -216,3 +229,5 @@ SseNs Sse = {.route_add = route_add,
              .free = release,
              .format = format,
              .write = write_event};
+
+#endif // PROTOCORE_ENABLE_SSE

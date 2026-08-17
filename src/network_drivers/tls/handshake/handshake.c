@@ -6,10 +6,13 @@
  * @brief TLS 1.3 handshake driver over the stream record layer. See handshake.h.
  */
 
-#include "network_drivers/tls/handshake/handshake.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_TLS_SOFTWARE
 
+#include "network_drivers/tls/handshake/handshake.h"
+
+#include "crypto/hash/sha256.h"           // Sha256: the running Transcript-Hash
 #include "crypto/asymmetric/curve25519.h" // protocore_x25519, protocore_x25519_base
 #include "crypto/ct_eq.h"                 // protocore_ct_eq: the Finished compare
 #include "mmgr/protostr.h"                // str.len: the ALPN protocol name lengths
@@ -295,6 +298,52 @@ static const char *alpn_select(const TlsConnConfig *cfg, const uint8_t *list, si
     return NULL;
 }
 
+// RFC 8446 sec 4.1.4: the parameters are acceptable but the ClientHello does not carry enough to
+// proceed, so the answer is a HelloRetryRequest naming the group whose share is wanted. sec 4.4.1:
+// ClientHello1 leaves the transcript as a synthetic message_hash, so the running hash restarts over
+// that stand-in before the HelloRetryRequest is folded in.
+static void server_hello_retry(const uint8_t *msg, size_t len)
+{
+    TlsConn *c = TlsConnection.conn;
+
+    transcript_add(msg, len);
+    transcript_peek(TLS_TERM_HASH);
+    Sha256.init(c->transcript);
+    size_t n = protocore_tls13_build_message_hash(c->tx, PROTOCORE_TLS_CONN_MSG_CAP, c->terms + TLS_TERM_HASH);
+    if (n == 0)
+    {
+        fail(TLS_ALERT_INTERNAL_ERROR);
+        return;
+    }
+    transcript_add(c->tx, n);
+
+    // No cookie: the stream side has a connection to bind the retry to, so there is nothing to
+    // carry the return-routability check a datagram transport needs.
+    n = protocore_tls13_build_hello_retry_request(c->tx, PROTOCORE_TLS_CONN_MSG_CAP, c->hello->session_id,
+                                                  c->hello->session_id_len, TLS_GROUP_X25519, NULL, 0, PROTO_FALSE);
+    if (n == 0)
+    {
+        fail(TLS_ALERT_INTERNAL_ERROR);
+        return;
+    }
+    transcript_add(c->tx, n);
+
+    // A HelloRetryRequest travels as TLSPlaintext, like the ServerHello it shares its format with.
+    TlsRecord.content_type = PROTOCORE_TLS_CT_HANDSHAKE;
+    TlsRecord.plain.fragment = c->tx;
+    TlsRecord.plain.frag_len = n;
+    TlsRecord.out_args.out = TlsConnection.out_args.out;
+    TlsRecord.out_args.out_cap = TlsConnection.out_args.out_cap;
+    TlsRecord.plaintext_build(NULL);
+    if (TlsRecord.n == 0)
+    {
+        fail(TLS_ALERT_INTERNAL_ERROR);
+        return;
+    }
+    c->hrr_sent = PROTO_TRUE;
+    TlsConnection.i32 = (int)TlsRecord.n;
+}
+
 // A ClientHello arrived whole. Check it against the profile and answer it.
 static void server_on_client_hello(const uint8_t *msg, size_t len)
 {
@@ -304,12 +353,24 @@ static void server_on_client_hello(const uint8_t *msg, size_t len)
         fail(TLS_ALERT_DECODE_ERROR);
         return;
     }
-    // One profile: TLS 1.3, X25519 with the share up front, Ed25519. No HelloRetryRequest - the
-    // stream side has no cookie to bind, so a client that omits the share is refused.
-    if (!c->hello->offers_tls13 || !c->hello->offers_x25519 || !c->hello->has_key_share || !c->hello->offers_ed25519 ||
+    // One profile: TLS 1.3, X25519, Ed25519. sec 4.1.1: no overlap in the parameters themselves is
+    // a handshake_failure.
+    if (!c->hello->offers_tls13 || !c->hello->offers_x25519 || !c->hello->offers_ed25519 ||
         !c->hello->offers_aes128gcm_sha256)
     {
         fail(TLS_ALERT_HANDSHAKE_FAILURE);
+        return;
+    }
+    // sec 4.1.1: the group is acceptable and the share is absent, which is the HelloRetryRequest
+    // case, not a failure. sec 4.1.4: a second one on the same connection never happens.
+    if (!c->hello->has_key_share)
+    {
+        if (c->hrr_sent)
+        {
+            fail(TLS_ALERT_UNEXPECTED_MESSAGE);
+            return;
+        }
+        server_hello_retry(msg, len);
         return;
     }
     // ALPN (RFC 7301 sec 3.2): take the first configured protocol the client also offers. A client

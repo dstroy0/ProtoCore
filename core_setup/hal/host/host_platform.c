@@ -303,6 +303,15 @@ void protocore_platform_img_rollback(void)
     s_hp.img_rolled_back = 1;
     s_hp.img_state = PROTOCORE_PLATFORM_IMG_INVALID;
 }
+
+uint8_t protocore_platform_partition_walk(protocore_platform_partition *out, uint8_t max)
+{
+    // The host has no flash and no partition table, so the walk reports none rather than inventing
+    // entries a caller would then serve as though they described real storage.
+    (void)out;
+    (void)max;
+    return 0;
+}
 #endif
 
 #if PROTOCORE_HAS_VENDOR_COREDUMP

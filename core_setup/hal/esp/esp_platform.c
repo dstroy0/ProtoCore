@@ -152,6 +152,38 @@ void protocore_platform_img_rollback(void)
 {
     esp_ota_mark_app_invalid_rollback_and_reboot(); // does not return
 }
+
+#include "esp_partition.h"
+
+uint8_t protocore_platform_partition_walk(protocore_platform_partition *out, uint8_t max)
+{
+    if (!out || max == 0)
+    {
+        return 0;
+    }
+    const esp_partition_t *running = esp_ota_get_running_partition();
+    uint8_t n = 0;
+    esp_partition_iterator_t it = esp_partition_find(ESP_PARTITION_TYPE_ANY, ESP_PARTITION_SUBTYPE_ANY, NULL);
+    for (; it != NULL && n < max; it = esp_partition_next(it))
+    {
+        const esp_partition_t *p = esp_partition_get(it);
+        protocore_platform_partition *d = &out[n++];
+        size_t i = 0;
+        while (i + 1 < sizeof(d->label) && p->label[i])
+        {
+            d->label[i] = p->label[i];
+            i++;
+        }
+        d->label[i] = '\0';
+        d->type = (uint8_t)p->type;
+        d->subtype = (uint8_t)p->subtype;
+        d->address = p->address;
+        d->size = p->size;
+        d->running = (uint8_t)(running != NULL && p->address == running->address);
+    }
+    esp_partition_iterator_release(it);
+    return n;
+}
 #endif // PROTOCORE_HAS_VENDOR_OTA
 
 #if PROTOCORE_HAS_VENDOR_COREDUMP

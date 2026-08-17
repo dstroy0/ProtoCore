@@ -6,8 +6,9 @@
  * @brief HTTP/3 application engine over QUIC streams (see protocore_h3_conn.h).
  */
 
-#if PROTOCORE_ENABLE_HTTP3
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
+#if PROTOCORE_ENABLE_HTTP3
 
 #include "network_drivers/presentation/http/http3/h3_conn.h"
 #include "mmgr/protomem.h"
@@ -85,12 +86,16 @@ static_assert(PROTOCORE_H3_STREAM_BUF >= 256 + 16,
 #define H3_OFF_PATH (H3_OFF_BUF + (size_t)PROTOCORE_H3_MAX_STREAMS * PROTOCORE_H3_STREAM_BUF)
 #define H3_OFF_AUTHORITY (H3_OFF_PATH + (size_t)PROTOCORE_H3_MAX_STREAMS * PROTOCORE_H3_PATH_LEN)
 #define H3_OFF_METHOD (H3_OFF_AUTHORITY + (size_t)PROTOCORE_H3_MAX_STREAMS * PROTOCORE_H3_AUTHORITY_LEN)
+#define H3_OFF_BODY (H3_OFF_METHOD + (size_t)PROTOCORE_H3_MAX_STREAMS * PROTOCORE_H3_METHOD_LEN)
+#define H3_OFF_QPACK (H3_OFF_BODY + (size_t)PROTOCORE_H3_STREAM_BUF)
+#define H3_OFF_BLOCK (H3_OFF_QPACK + (size_t)PROTOCORE_H3_QPACK_SCRATCH)
+#define H3_OFF_OUT (H3_OFF_BLOCK + (size_t)PROTOCORE_H3_QPACK_BLOCK)
 static_assert(sizeof(H3ConnCtx) <= PROTOCORE_H3_CONN_CTX,
               "PROTOCORE_H3_CONN_CTX is short of the connection context - raise it in protocore_config.h, "
               "which derives PROTOCORE_H3_CONN_BORROW and PROTOCORE_PLAINTEXT_ARENA_SIZE from it");
-static_assert(H3_OFF_METHOD + (size_t)PROTOCORE_H3_MAX_STREAMS * PROTOCORE_H3_METHOD_LEN <= PROTOCORE_H3_CONN_BORROW,
-              "PROTOCORE_H3_CONN_BORROW is short of the context and one reassembly + pseudo-header region per "
-              "stream - raise it in protocore_config.h, which derives PROTOCORE_PLAINTEXT_ARENA_SIZE from it");
+static_assert(H3_OFF_OUT + (size_t)PROTOCORE_H3_STREAM_BUF <= PROTOCORE_H3_CONN_BORROW,
+              "PROTOCORE_H3_CONN_BORROW is short of the context, one reassembly + pseudo-header region per "
+              "stream, and the body and QPACK regions a dispatch reads - raise it in protocore_config.h");
 
 // The regions, at their offsets in the caller's span.
 #define H3_CTX(w) ((H3ConnCtx *)(void *)((w) + H3_OFF_CTX))
@@ -204,17 +209,8 @@ static void dispatch_request(H3ConnCtx *h3, H3Stream *st)
 {
     // The bytes this dispatch works out of: the coalesced body and what QPACK decodes through. They
     // live for the call, so they come from the transient end and go back at every exit.
-    const size_t mark = protocore_plaintext_mark();
-    protocore_span bs = protocore_plaintext_span(PROTOCORE_H3_STREAM_BUF, 4);
-    protocore_span sc = protocore_plaintext_span(PROTOCORE_H3_QPACK_SCRATCH, 4);
-    if (!span.ok(bs) || !span.ok(sc))
-    {
-        protocore_plaintext_release(mark);
-        h3_fail(h3, H3_INTERNAL_ERROR);
-        return;
-    }
-    uint8_t *body = bs.buf;
-    char *scratch = (char *)sc.buf;
+    uint8_t *body = h3->b + H3_OFF_BODY;
+    char *scratch = (char *)(h3->b + H3_OFF_QPACK);
     size_t body_len = 0;
 
     size_t off = 0;
@@ -236,13 +232,11 @@ static void dispatch_request(H3ConnCtx *h3, H3Stream *st)
         // previously skipped over as if the frame were an unknown type.
         if (fr.type == H3_SETTINGS || fr.type == H3_GOAWAY || fr.type == H3_MAX_PUSH_ID || fr.type == H3_CANCEL_PUSH)
         {
-            protocore_plaintext_release(mark);
             h3_fail(h3, H3_FRAME_UNEXPECTED);
             return;
         }
         if (fr.type == H3_DATA && !st->have_headers)
         {
-            protocore_plaintext_release(mark);
             h3_fail(h3, H3_FRAME_UNEXPECTED);
             return;
         }
@@ -278,7 +272,6 @@ static void dispatch_request(H3ConnCtx *h3, H3Stream *st)
     {
         h3->on_request(h3->app, H3_SPAN(h3), st->id, st->method, st->path, st->authority, body, body_len);
     }
-    protocore_plaintext_release(mark);
 }
 
 static void append(H3Stream *st, const uint8_t *data, size_t len)
@@ -494,16 +487,8 @@ static proto_bool h3_conn_reply(H3ConnCtx *h3, uint64_t stream_id, int status, c
 
     // The bytes this response is built out of: the QPACK field section and the frames carrying it.
     // Both live for the call.
-    const size_t mark = protocore_plaintext_mark();
-    protocore_span bl = protocore_plaintext_span(PROTOCORE_H3_QPACK_BLOCK, 4);
-    protocore_span ob = protocore_plaintext_span(PROTOCORE_H3_STREAM_BUF, 4);
-    if (!span.ok(bl) || !span.ok(ob))
-    {
-        protocore_plaintext_release(mark);
-        return PROTO_FALSE;
-    }
-    uint8_t *block = bl.buf;
-    uint8_t *out = ob.buf;
+    uint8_t *block = h3->b + H3_OFF_BLOCK;
+    uint8_t *out = h3->b + H3_OFF_OUT;
 
     // QPACK field section: prefix + :status + optional content-type + content-length.
     size_t bp = protocore_qpack_encode_prefix(block, PROTOCORE_H3_QPACK_BLOCK);
@@ -544,7 +529,6 @@ static proto_bool h3_conn_reply(H3ConnCtx *h3, uint64_t stream_id, int status, c
     size_t op = protocore_h3_build_headers(out, PROTOCORE_H3_STREAM_BUF, block, bp);
     if (!op)
     {
-        protocore_plaintext_release(mark);
         return PROTO_FALSE;
         // fits
     }
@@ -553,7 +537,6 @@ static proto_bool h3_conn_reply(H3ConnCtx *h3, uint64_t stream_id, int status, c
         size_t dn = protocore_h3_build_data(out + op, PROTOCORE_H3_STREAM_BUF - op, body, body_len);
         if (!dn)
         {
-            protocore_plaintext_release(mark);
             return PROTO_FALSE;
         }
         op += dn;
@@ -565,7 +548,6 @@ static proto_bool h3_conn_reply(H3ConnCtx *h3, uint64_t stream_id, int status, c
     QuicConn.stream_send_args.fin = PROTO_TRUE;
     QuicConn.stream_send(QuicConn.internal);
     const proto_bool sent = (QuicConn.n == op);
-    protocore_plaintext_release(mark);
     return sent;
 }
 

@@ -7,15 +7,22 @@
  *        and the UART / SPI / I2C transfers. The rule table and frame codec live in the pure core.
  */
 
-#include "server/net/iface_bridge/iface_bridge_hw.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_IFACE_BRIDGE
+
+#include "mmgr/secure.h" // the persistent end this module's state is taken from
+#include "server/net/iface_bridge/iface_bridge.h"
+#include "server/net/iface_bridge/iface_bridge_hw.h"
+#include "shared/ip/ip.h"
 
 #include "network_drivers/session/session.h"                 // Session.proto->add: the handler registration
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the accepted slot
 #include "network_drivers/transport/tcp/tcp.h"
 #include "server/clock/clock.h" // protocore_millis() pluggable monotonic clock
 #include "server/core/proto_handler.h"
+
+PROTOCORE_BEGIN_DECLS
 
 #if PROTOCORE_HAS_BUS
 #include "server/peripherals/i2c.h"  // the shared I2C bus owner
@@ -42,18 +49,27 @@ typedef struct
     proto_bool spi_begun;                          ///< the shared SPI bus has been brought up (once)
     uint8_t stream[PROTOCORE_BRIDGE_STREAM_CHUNK]; ///< the chunk a STREAM target moves per pump
 } BridgeGlueCtx;
-static BridgeGlueCtx s_ctx;
+// The caller's borrow, split: the context at its offset. One pointer arrives and every
+// region is that pointer plus a compile-time offset, so the assert below proves the span
+// covers them before anything runs.
+#define IFACE_BRIDGE_HW_OFF_CTX 0u
+static_assert(IFACE_BRIDGE_HW_OFF_CTX + sizeof(BridgeGlueCtx) <= PROTOCORE_IFACE_BRIDGE_HW_BORROW,
+              "PROTOCORE_IFACE_BRIDGE_HW_BORROW is short of the module context - raise it in protocore_config.h, which"
+              " sums it into its arena");
 
-static const BridgeRule *rule_for_slot(uint8_t slot)
+// The region, at its offset in the caller's borrow.
+#define IFACE_BRIDGE_HW_CTX(w) ((BridgeGlueCtx *)(void *)((w) + IFACE_BRIDGE_HW_OFF_CTX))
+
+static const BridgeRule *rule_for_slot(uint8_t *restrict work, uint8_t slot)
 {
     ConnPool.slot = slot;
     ConnPool.listener_id(ConnPool.internal);
     uint8_t lid = ConnPool.u8;
     for (int i = 0; i < PROTOCORE_BRIDGE_MAX_RULES; i++)
     {
-        if (s_ctx.binds[i].active && s_ctx.binds[i].listener_id == lid)
+        if (IFACE_BRIDGE_HW_CTX(work)->binds[i].active && IFACE_BRIDGE_HW_CTX(work)->binds[i].listener_id == lid)
         {
-            return s_ctx.binds[i].rule;
+            return IFACE_BRIDGE_HW_CTX(work)->binds[i].rule;
         }
     }
     return NULL;
@@ -68,7 +84,7 @@ static const BridgeRule *rule_for_slot(uint8_t slot)
 
 // Bring the target's bus up once at publish. UART opens at its baud on the unit's default pins;
 // SPI parks the CS gpio high and starts the shared bus once; I2C uses the shared bus owner.
-static void bus_begin(const BridgeTarget *t)
+static void bus_begin(uint8_t *restrict work, const BridgeTarget *t)
 {
     switch (t->bus)
     {
@@ -77,10 +93,10 @@ static void bus_begin(const BridgeTarget *t)
         break;
     case BRIDGE_BUS_SPI:
         protocore_spi_cs_idle((uint8_t)(t->addr_cs));
-        if (!s_ctx.spi_begun)
+        if (!IFACE_BRIDGE_HW_CTX(work)->spi_begun)
         {
             (void)protocore_spi_begin();
-            s_ctx.spi_begun = PROTO_TRUE;
+            IFACE_BRIDGE_HW_CTX(work)->spi_begun = PROTO_TRUE;
         }
         break;
     case BRIDGE_BUS_I2C:
@@ -145,31 +161,32 @@ static proto_bool bus_txn(const BridgeTarget *t, const uint8_t *wbuf, uint16_t w
 }
 
 // STREAM: pipe socket RX -> UART (called from on_data).
-static void stream_sock_to_uart(uint8_t slot, const BridgeTarget *t)
+static void stream_sock_to_uart(uint8_t *restrict work, uint8_t slot, const BridgeTarget *t)
 {
     for (;;)
     {
         ConnPool.slot = slot;
-        ConnPool.io.buf = s_ctx.stream;
-        ConnPool.io.cap = sizeof s_ctx.stream;
+        ConnPool.io.buf = IFACE_BRIDGE_HW_CTX(work)->stream;
+        ConnPool.io.cap = sizeof IFACE_BRIDGE_HW_CTX(work)->stream;
         ConnPool.read(ConnPool.internal);
         const size_t n = ConnPool.n;
         if (n == 0)
         {
             break;
         }
-        (void)protocore_uart_write(t->unit, s_ctx.stream, n);
+        (void)protocore_uart_write(t->unit, IFACE_BRIDGE_HW_CTX(work)->stream, n);
     }
 }
 
 // STREAM: pipe UART RX -> socket (called from on_poll).
-static void stream_uart_to_sock(uint8_t slot, const BridgeTarget *t)
+static void stream_uart_to_sock(uint8_t *restrict work, uint8_t slot, const BridgeTarget *t)
 {
     // The driver ISR refills the UART ring independently of this loop, so the chunk count is what ends
     // the poll slice: at sustained line rate the available count never falls to zero on its own.
     for (uint8_t i = 0; i < PROTOCORE_BRIDGE_MAX_DRAIN && protocore_uart_available(t->unit) > 0; i++)
     {
-        size_t n = protocore_uart_read(t->unit, s_ctx.stream, sizeof s_ctx.stream, 0);
+        size_t n = protocore_uart_read(t->unit, IFACE_BRIDGE_HW_CTX(work)->stream,
+                                       sizeof IFACE_BRIDGE_HW_CTX(work)->stream, 0);
         if (n == 0)
         {
             return;
@@ -179,7 +196,7 @@ static void stream_uart_to_sock(uint8_t slot, const BridgeTarget *t)
         if (ConnPool.ok)
         {
             ConnPool.slot = slot;
-            ConnPool.io.data = s_ctx.stream;
+            ConnPool.io.data = IFACE_BRIDGE_HW_CTX(work)->stream;
             ConnPool.io.len = (proto_u16)n;
             ConnPool.send(ConnPool.internal);
         }
@@ -188,7 +205,7 @@ static void stream_uart_to_sock(uint8_t slot, const BridgeTarget *t)
 
 #else // no bus seam. The codec + rule table are host-tested elsewhere.
 
-static void bus_begin(const BridgeTarget *t)
+static void bus_begin(work, const BridgeTarget *t)
 {
     (void)t;
 }
@@ -201,12 +218,12 @@ static proto_bool bus_txn(const BridgeTarget *t, const uint8_t *wbuf, uint16_t w
     (void)rlen;
     return PROTO_FALSE;
 }
-static void stream_sock_to_uart(uint8_t slot, const BridgeTarget *t)
+static void stream_sock_to_uart(work, uint8_t slot, const BridgeTarget *t)
 {
     (void)slot;
     (void)t;
 }
-static void stream_uart_to_sock(uint8_t slot, const BridgeTarget *t)
+static void stream_uart_to_sock(work, uint8_t slot, const BridgeTarget *t)
 {
     (void)slot;
     (void)t;
@@ -257,7 +274,13 @@ static void service_txn(uint8_t slot, const BridgeTarget *t)
         uint16_t pw = 0;
         uint16_t pr = 0;
         const uint8_t *wd = NULL;
-        if (protocore_iface_bridge_txn_parse(frame, need, &pw, &pr, &wd) != need)
+        IfaceBridge.txn_parse_args.buf = frame;
+        IfaceBridge.txn_parse_args.len = need;
+        IfaceBridge.txn_parse_args.write_len = &pw;
+        IfaceBridge.txn_parse_args.read_len = &pr;
+        IfaceBridge.txn_parse_args.write_data = &wd;
+        IfaceBridge.txn_parse(protocore_iface_bridge_span());
+        if (IfaceBridge.n != need)
         {
             ConnPool.slot = slot;
             ConnPool.close(ConnPool.internal); // codec disagreed with the header - drop the connection
@@ -290,7 +313,15 @@ static void service_txn(uint8_t slot, const BridgeTarget *t)
 
 static void bridge_on_accept(uint8_t slot)
 {
-    if (!rule_for_slot(slot))
+    // The signature belongs to whoever dispatches this, so the borrow comes from the
+    // accessor rather than a parameter.
+    uint8_t *restrict work = protocore_iface_bridge_hw_span();
+    if (work == NULL)
+    {
+        return;
+    }
+
+    if (!rule_for_slot(work, slot))
     {
         ConnPool.slot = slot;
         ConnPool.close(ConnPool.internal); // no rule published for this listener
@@ -299,7 +330,15 @@ static void bridge_on_accept(uint8_t slot)
 
 static void bridge_on_data(uint8_t slot)
 {
-    const BridgeRule *r = rule_for_slot(slot);
+    // The signature belongs to whoever dispatches this, so the borrow comes from the
+    // accessor rather than a parameter.
+    uint8_t *restrict work = protocore_iface_bridge_hw_span();
+    if (work == NULL)
+    {
+        return;
+    }
+
+    const BridgeRule *r = rule_for_slot(work, slot);
     if (!r)
     {
         ConnPool.slot = slot;
@@ -308,7 +347,7 @@ static void bridge_on_data(uint8_t slot)
     }
     if (r->target.mode == BRIDGE_MODE_STREAM)
     {
-        stream_sock_to_uart(slot, &r->target);
+        stream_sock_to_uart(work, slot, &r->target);
     }
     else
     {
@@ -318,18 +357,26 @@ static void bridge_on_data(uint8_t slot)
 
 static void bridge_on_poll(uint8_t slot)
 {
+    // The signature belongs to whoever dispatches this, so the borrow comes from the
+    // accessor rather than a parameter.
+    uint8_t *restrict work = protocore_iface_bridge_hw_span();
+    if (work == NULL)
+    {
+        return;
+    }
+
     ConnPool.slot = slot;
     ConnPool.active(ConnPool.internal);
     if (!ConnPool.ok)
     {
         return;
     }
-    const BridgeRule *r = rule_for_slot(slot);
+    const BridgeRule *r = rule_for_slot(work, slot);
     if (!r || r->target.mode != BRIDGE_MODE_STREAM)
     {
         return; // transaction mode is request-driven; nothing to pump on poll
     }
-    stream_uart_to_sock(slot, &r->target);
+    stream_uart_to_sock(work, slot, &r->target);
 }
 
 static void bridge_on_close(uint8_t slot)
@@ -344,26 +391,65 @@ static void bridge_on_close(uint8_t slot)
 static const ProtoHandler s_bridge_handler = {
     .on_accept = bridge_on_accept, .on_data = bridge_on_data, .on_close = bridge_on_close, .on_poll = bridge_on_poll};
 
-proto_bool protocore_iface_bridge_publish(uint8_t listener_id, uint16_t port, BridgeProto proto,
-                                          const BridgeTarget *target)
+// --- the program's shared state, beside the namespace not on it -------------
+
+// The one owned instance, private to this TU: the pointer to the bytes this module took for
+// itself. A caller that hands in its own borrow never reaches it.
+typedef struct
 {
+    uint8_t *span; ///< PROTOCORE_IFACE_BRIDGE_HW_BORROW persistent bytes, or null while the pool was short
+} IfaceBridgeHwOwnCtx;
+static IfaceBridgeHwOwnCtx s_own;
+
+// Not an entry: an entry takes a borrow and this is where that borrow comes from.
+uint8_t *protocore_iface_bridge_hw_span(void)
+{
+    if (s_own.span == NULL)
+    {
+        protocore_span sp = protocore_secure_persist_span(PROTOCORE_IFACE_BRIDGE_HW_BORROW);
+        if (span.ok(sp))
+        {
+            s_own.span = sp.buf;
+        }
+    }
+    return s_own.span; // null while the pool was short, which every entry refuses
+}
+
+static void iface_bridge_hw_publish(uint8_t *restrict work)
+{
+    uint8_t listener_id = IfaceBridgeHw.publish_args.listener_id;
+    uint16_t port = IfaceBridgeHw.publish_args.port;
+    BridgeProto proto = IfaceBridgeHw.publish_args.proto;
+    const BridgeTarget *target = IfaceBridgeHw.publish_args.target;
+
     if (!target)
     {
-        return PROTO_FALSE;
+        IfaceBridgeHw.ok = PROTO_FALSE;
+        return;
     }
-    if (!protocore_iface_bridge_map(NULL, port, proto, target)) // store + validate + dedupe in the pure table
+    IfaceBridge.map_args.ip = NULL;
+    IfaceBridge.map_args.port = port;
+    IfaceBridge.map_args.proto = proto;
+    IfaceBridge.map_args.target = target;
+    IfaceBridge.map(protocore_iface_bridge_span());
+    if (!IfaceBridge.ok) // store + validate + dedupe in the pure table
     {
-        return PROTO_FALSE;
+        IfaceBridgeHw.ok = PROTO_FALSE;
+        return;
     }
-    const BridgeRule *rule = protocore_iface_bridge_find(port, proto);
+    IfaceBridge.find_args.port = port;
+    IfaceBridge.find_args.proto = proto;
+    IfaceBridge.find(protocore_iface_bridge_span());
+    const BridgeRule *rule = IfaceBridge.rule;
     if (!rule)
     {
-        return PROTO_FALSE;
+        IfaceBridgeHw.ok = PROTO_FALSE;
+        return;
     }
     int idx = -1;
     for (int i = 0; i < PROTOCORE_BRIDGE_MAX_RULES; i++)
     {
-        if (!s_ctx.binds[i].active)
+        if (!IFACE_BRIDGE_HW_CTX(work)->binds[i].active)
         {
             idx = i;
             break;
@@ -371,29 +457,35 @@ proto_bool protocore_iface_bridge_publish(uint8_t listener_id, uint16_t port, Br
     }
     if (idx < 0)
     {
-        return PROTO_FALSE;
+        IfaceBridgeHw.ok = PROTO_FALSE;
+        return;
     }
-    s_ctx.binds[idx].active = PROTO_TRUE;
-    s_ctx.binds[idx].listener_id = listener_id;
-    s_ctx.binds[idx].rule = rule;
-    bus_begin(&rule->target);
-    if (!s_ctx.registered)
+    IFACE_BRIDGE_HW_CTX(work)->binds[idx].active = PROTO_TRUE;
+    IFACE_BRIDGE_HW_CTX(work)->binds[idx].listener_id = listener_id;
+    IFACE_BRIDGE_HW_CTX(work)->binds[idx].rule = rule;
+    bus_begin(work, &rule->target);
+    if (!IFACE_BRIDGE_HW_CTX(work)->registered)
     {
         Session.proto->proto = PROTO_BRIDGE;
         Session.proto->h = &s_bridge_handler;
         Session.proto->add(Session.proto->internal);
-        s_ctx.registered = PROTO_TRUE;
+        IFACE_BRIDGE_HW_CTX(work)->registered = PROTO_TRUE;
     }
-    return PROTO_TRUE;
+    IfaceBridgeHw.ok = PROTO_TRUE;
 }
 
-void protocore_iface_bridge_listener_reset(void)
+static void iface_bridge_hw_reset(uint8_t *restrict work)
 {
+
     for (int i = 0; i < PROTOCORE_BRIDGE_MAX_RULES; i++)
     {
-        s_ctx.binds[i].active = PROTO_FALSE;
+        IFACE_BRIDGE_HW_CTX(work)->binds[i].active = PROTO_FALSE;
     }
-    protocore_iface_bridge_clear();
+    IfaceBridge.clear(protocore_iface_bridge_span());
 }
+
+IfaceBridgeHwNs IfaceBridgeHw = {.publish = iface_bridge_hw_publish, .reset = iface_bridge_hw_reset};
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_IFACE_BRIDGE

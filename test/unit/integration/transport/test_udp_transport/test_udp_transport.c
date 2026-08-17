@@ -16,7 +16,6 @@ static const protocore_ip *addr(const char *s)
     Ip.args.text = s;
     Ip.args.out = &a;
     Ip.parse(Ip.internal);
-    Ip.ok;
     return &a;
 }
 
@@ -40,7 +39,6 @@ static void on_datagram(const uint8_t *data, size_t len, const struct protocore_
     UdpListener.peer_args.port_out = &g_src_port;
     UdpListener.peer_addr(UdpListener.internal);
 
-    UdpListener.ok;
 }
 
 static void inject(uint16_t port, const char *src_ip, uint16_t src_port, const uint8_t *data, size_t len)
@@ -481,7 +479,6 @@ static void reply_handler(const uint8_t *data, size_t len, const struct protocor
     UdpListener.send_args.len = 5;
     UdpListener.reply(UdpListener.internal);
 
-    UdpListener.ok;
 }
 
 void test_send_paths_are_captured()

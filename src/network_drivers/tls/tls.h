@@ -17,7 +17,9 @@
 #ifndef PROTOCORE_TLS_H
 #define PROTOCORE_TLS_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_TLS_SOFTWARE
 
 PROTOCORE_BEGIN_DECLS
 
@@ -25,9 +27,7 @@ PROTOCORE_BEGIN_DECLS
 // The connection resource (RFC 8446): what a handshake and a record layer act on
 // ---------------------------------------------------------------------------
 // This file owns the connection; handshake/ drives it and record/ frames for it.
-#if PROTOCORE_TLS_SOFTWARE
 
-#include "crypto/hash/sha256.h"
 #include "network_drivers/presentation/http/http3/tls13_msg.h"
 #include "network_drivers/tls/key_schedule/key_schedule.h"
 #include "network_drivers/tls/record/record.h"
@@ -94,6 +94,7 @@ typedef struct
     TlsRecordKeys hs_rx;      ///< handshake traffic keys, this end reading
     TlsRecordKeys ap_tx;      ///< application traffic keys, this end writing
     TlsRecordKeys ap_rx;      ///< application traffic keys, this end reading
+    proto_bool hrr_sent;      ///< a HelloRetryRequest has been answered on this connection (sec 4.1.4)
     proto_bool hs_keys_ready; ///< the handshake traffic keys are installed
     proto_bool ap_keys_ready; ///< the application traffic keys are installed
 

@@ -167,7 +167,7 @@ void setUp(void)
 {
     memset(g_mark, 0, sizeof(g_mark));
     set_millis(0);
-    ConnPool.life.cfg = NULL;
+    ConnPool.life.conn_timeout_ms = CONN_TIMEOUT_MS;
     ConnPool.init(ConnPool.internal);
     for (int i = 0; i < MAX_CONNS; i++)
     {

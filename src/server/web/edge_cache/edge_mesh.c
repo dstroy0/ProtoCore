@@ -6,11 +6,21 @@
  * @brief CDN edge-cache tier - mesh sibling-cache wire codec + async peer-query engine. See edge_mesh.h.
  */
 
-#include "server/web/edge_cache/edge_mesh.h"
-#include "mmgr/protomem.h"
-#include "mmgr/protostr.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_EDGE_MESH
+
+#include "mmgr/protomem.h"
+#include "mmgr/protostr.h"
+#include "server/web/edge_cache/edge_cache.h"
+#include "server/web/edge_cache/edge_cache_sd.h"
+#include "server/web/edge_cache/edge_fetch.h"
+#include "server/web/edge_cache/edge_mesh.h"
+#include "services/storage/dbm/dbm.h"
+
+static uint8_t edge_cache_sd_work[16]; // the borrow an entry takes; EdgeCacheSd never reads it
+
+PROTOCORE_BEGIN_DECLS
 
 static void put_u16(uint8_t *p, uint16_t v)
 {
@@ -70,12 +80,27 @@ static proto_bool magic_bad(const uint8_t *buf, size_t len)
 
 // --- frame codec ---------------------------------------------------------------------------------
 
-size_t edge_mesh_build_request(const uint8_t digest[32], const char *canon, const char *req_hdrs, uint8_t *out,
-                               size_t cap)
+// The entries this file calls before reaching their definitions.
+// --- the entries -----------------------------------------------------------
+
+// No context and no borrow: every operand is the caller's. The borrow an entry takes is
+// never read.
+
+static void edge_mesh_parse_response(uint8_t *restrict work);
+
+static void edge_mesh_build_request(uint8_t *restrict work)
 {
+    (void)work;
+    const uint8_t *digest = EdgeMesh.build_request_args.digest;
+    const char *canon = EdgeMesh.build_request_args.canon;
+    const char *req_hdrs = EdgeMesh.build_request_args.req_hdrs;
+    uint8_t *out = EdgeMesh.build_request_args.out;
+    size_t cap = EdgeMesh.build_request_args.cap;
+
     if (!digest || !canon || !out)
     {
-        return 0;
+        EdgeMesh.n = 0;
+        return;
     }
     const char *hdrs = req_hdrs ? req_hdrs : "";
     size_t kl = str.len(canon, PROTOCORE_EDGE_KEY_MAX);
@@ -86,12 +111,14 @@ size_t edge_mesh_build_request(const uint8_t digest[32], const char *canon, cons
     // below honest if either cap is ever raised.
     if (kl > 0xFFFFu || hl > 0xFFFFu)
     {
-        return 0;
+        EdgeMesh.n = 0;
+        return;
     }
     size_t need = 2 + 1 + 1 + 32 + 2 + kl + 2 + hl;
     if (need > cap)
     {
-        return 0;
+        EdgeMesh.n = 0;
+        return;
     }
     size_t pos = 0;
     out[pos++] = PROTOCORE_EDGE_MESH_MAGIC0;
@@ -108,60 +135,78 @@ size_t edge_mesh_build_request(const uint8_t digest[32], const char *canon, cons
     pos += 2;
     mem.cpy(out + pos, hdrs, hl);
     pos += hl;
-    return pos;
+    EdgeMesh.n = pos;
 }
 
-EdgeMeshParse edge_mesh_parse_request(const uint8_t *buf, size_t len, uint8_t digest_out[32], char *canon_out,
-                                      size_t canon_cap, char *hdrs_out, size_t hdrs_cap)
+static void edge_mesh_parse_request(uint8_t *restrict work)
 {
+    (void)work;
+    const uint8_t *buf = EdgeMesh.parse_request_args.buf;
+    size_t len = EdgeMesh.parse_request_args.len;
+    uint8_t *digest_out = EdgeMesh.parse_request_args.digest_out;
+    char *canon_out = EdgeMesh.parse_request_args.canon_out;
+    size_t canon_cap = EdgeMesh.parse_request_args.canon_cap;
+    char *hdrs_out = EdgeMesh.parse_request_args.hdrs_out;
+    size_t hdrs_cap = EdgeMesh.parse_request_args.hdrs_cap;
+
     if (magic_bad(buf, len))
     {
-        return EDGE_MESH_PARSE_MALFORMED;
+        EdgeMesh.parse = EDGE_MESH_PARSE_MALFORMED;
+        return;
     }
     if (len < 4)
     {
-        return EDGE_MESH_PARSE_INCOMPLETE;
+        EdgeMesh.parse = EDGE_MESH_PARSE_INCOMPLETE;
+        return;
     }
     if (buf[3] != PROTOCORE_EDGE_MESH_OP_GET)
     {
-        return EDGE_MESH_PARSE_MALFORMED;
+        EdgeMesh.parse = EDGE_MESH_PARSE_MALFORMED;
+        return;
     }
     size_t pos = 4;
     if (pos + 32 > len)
     {
-        return EDGE_MESH_PARSE_INCOMPLETE;
+        EdgeMesh.parse = EDGE_MESH_PARSE_INCOMPLETE;
+        return;
     }
     size_t digest_off = pos;
     pos += 32;
     if (pos + 2 > len)
     {
-        return EDGE_MESH_PARSE_INCOMPLETE;
+        EdgeMesh.parse = EDGE_MESH_PARSE_INCOMPLETE;
+        return;
     }
     uint16_t kl = get_u16(buf + pos);
     pos += 2;
     if (kl >= canon_cap)
     {
-        return EDGE_MESH_PARSE_MALFORMED; // cannot fit the destination key buffer
+        EdgeMesh.parse = EDGE_MESH_PARSE_MALFORMED;
+        return; // cannot fit the destination key buffer
     }
     if (pos + kl > len)
     {
-        return EDGE_MESH_PARSE_INCOMPLETE;
+        EdgeMesh.parse = EDGE_MESH_PARSE_INCOMPLETE;
+        return;
     }
     size_t key_off = pos;
     pos += kl;
     if (pos + 2 > len)
     {
-        return EDGE_MESH_PARSE_INCOMPLETE;
+        EdgeMesh.parse = EDGE_MESH_PARSE_INCOMPLETE;
+        return;
     }
     uint16_t hl = get_u16(buf + pos);
     pos += 2;
     if (hl >= hdrs_cap)
     {
-        return EDGE_MESH_PARSE_MALFORMED;
+        EdgeMesh.parse = EDGE_MESH_PARSE_MALFORMED;
+        return;
     }
     if (pos + hl > len)
     {
-        return EDGE_MESH_PARSE_INCOMPLETE;
+        EdgeMesh.parse = EDGE_MESH_PARSE_INCOMPLETE;
+        return;
     }
     size_t hdrs_off = pos;
     if (digest_out)
@@ -178,14 +223,22 @@ EdgeMeshParse edge_mesh_parse_request(const uint8_t *buf, size_t len, uint8_t di
         mem.cpy(hdrs_out, buf + hdrs_off, hl);
         hdrs_out[hl] = '\0';
     }
-    return EDGE_MESH_PARSE_HIT; // a complete, valid request
+    EdgeMesh.parse = EDGE_MESH_PARSE_HIT;
+    return; // a complete, valid request
 }
 
-size_t edge_mesh_serialize_entry(const EdgeEntry *e, long current_age, uint8_t *out, size_t cap)
+static void edge_mesh_serialize_entry(uint8_t *restrict work)
 {
+    (void)work;
+    const EdgeEntry *e = EdgeMesh.serialize_entry_args.e;
+    long current_age = EdgeMesh.serialize_entry_args.current_age;
+    uint8_t *out = EdgeMesh.serialize_entry_args.out;
+    size_t cap = EdgeMesh.serialize_entry_args.cap;
+
     if (!e || !out || cap < PROTOCORE_EDGE_MESH_TRAILER)
     {
-        return 0;
+        EdgeMesh.n = 0;
+        return;
     }
     if (current_age < 0)
     {
@@ -196,28 +249,47 @@ size_t edge_mesh_serialize_entry(const EdgeEntry *e, long current_age, uint8_t *
     put_u32(out + 16, (uint32_t)(e->lifetime_s < 0 ? 0 : e->lifetime_s));
     put_u32(out + 20, (uint32_t)(e->age_hdr < 0 ? 0 : e->age_hdr));
     put_u32(out + 24, (uint32_t)current_age);
-    size_t n = edge_sd_serialize(e, out + PROTOCORE_EDGE_MESH_TRAILER, cap - PROTOCORE_EDGE_MESH_TRAILER);
+    EdgeCacheSd.serialize_args.e = e;
+    EdgeCacheSd.serialize_args.out = out + PROTOCORE_EDGE_MESH_TRAILER;
+    EdgeCacheSd.serialize_args.cap = cap - PROTOCORE_EDGE_MESH_TRAILER;
+    EdgeCacheSd.serialize(edge_cache_sd_work);
+    size_t n = EdgeCacheSd.n;
     if (n == 0)
     {
-        return 0;
+        EdgeMesh.n = 0;
+        return;
     }
-    return PROTOCORE_EDGE_MESH_TRAILER + n;
+    EdgeMesh.n = PROTOCORE_EDGE_MESH_TRAILER + n;
 }
 
-proto_bool edge_mesh_deserialize_entry(uint8_t *work, const uint8_t *buf, size_t len, EdgeEntry *e, uint32_t now_ms)
+static void edge_mesh_deserialize_entry(uint8_t *restrict work)
 {
+    (void)work;
+    uint8_t *entry_buf = EdgeMesh.deserialize_entry_args.entry_buf;
+    const uint8_t *buf = EdgeMesh.deserialize_entry_args.buf;
+    size_t len = EdgeMesh.deserialize_entry_args.len;
+    EdgeEntry *e = EdgeMesh.deserialize_entry_args.e;
+    uint32_t now_ms = EdgeMesh.deserialize_entry_args.now_ms;
+
     if (!buf || !e || len < PROTOCORE_EDGE_MESH_TRAILER)
     {
-        return PROTO_FALSE;
+        EdgeMesh.ok = PROTO_FALSE;
+        return;
     }
     int64_t date = get_i64(buf + 0);
     int64_t expires = get_i64(buf + 8);
     uint32_t lifetime = get_u32(buf + 16);
     uint32_t age_hdr = get_u32(buf + 20);
     uint32_t current_age = get_u32(buf + 24);
-    if (!edge_sd_deserialize(work, buf + PROTOCORE_EDGE_MESH_TRAILER, len - PROTOCORE_EDGE_MESH_TRAILER, e))
+    EdgeCacheSd.deserialize_args.entry_buf = entry_buf;
+    EdgeCacheSd.deserialize_args.buf = buf + PROTOCORE_EDGE_MESH_TRAILER;
+    EdgeCacheSd.deserialize_args.len = len - PROTOCORE_EDGE_MESH_TRAILER;
+    EdgeCacheSd.deserialize_args.e = e;
+    EdgeCacheSd.deserialize(edge_cache_sd_work);
+    if (!EdgeCacheSd.ok)
     {
-        return PROTO_FALSE;
+        EdgeMesh.ok = PROTO_FALSE;
+        return;
     }
     e->date_epoch = date;
     e->expires_epoch = expires;
@@ -226,14 +298,22 @@ proto_bool edge_mesh_deserialize_entry(uint8_t *work, const uint8_t *buf, size_t
     e->initial_age = (long)current_age; // the sender's age at transfer -> receiver keeps propagating it
     e->insert_ms = now_ms;
     e->last_used_ms = now_ms;
-    return PROTO_TRUE;
+    EdgeMesh.ok = PROTO_TRUE;
 }
 
-size_t edge_mesh_build_response(proto_bool hit, const uint8_t *entry, size_t entry_len, uint8_t *out, size_t cap)
+static void edge_mesh_build_response(uint8_t *restrict work)
 {
+    (void)work;
+    proto_bool hit = EdgeMesh.build_response_args.hit;
+    const uint8_t *entry = EdgeMesh.build_response_args.entry;
+    size_t entry_len = EdgeMesh.build_response_args.entry_len;
+    uint8_t *out = EdgeMesh.build_response_args.out;
+    size_t cap = EdgeMesh.build_response_args.cap;
+
     if (!out || cap < 4)
     {
-        return 0;
+        EdgeMesh.n = 0;
+        return;
     }
     size_t pos = 0;
     out[pos++] = PROTOCORE_EDGE_MESH_MAGIC0;
@@ -244,47 +324,61 @@ size_t edge_mesh_build_response(proto_bool hit, const uint8_t *entry, size_t ent
     {
         if (!entry || entry_len == 0 || entry_len > 0xFFFFu || pos + 2 + entry_len > cap)
         {
-            return 0;
+            EdgeMesh.n = 0;
+            return;
         }
         put_u16(out + pos, (uint16_t)entry_len);
         pos += 2;
         mem.cpy(out + pos, entry, entry_len);
         pos += entry_len;
     }
-    return pos;
+    EdgeMesh.n = pos;
 }
 
-EdgeMeshParse edge_mesh_parse_response(const uint8_t *buf, size_t len, size_t *entry_off, size_t *entry_len)
+static void edge_mesh_parse_response(uint8_t *restrict work)
 {
+    (void)work;
+    const uint8_t *buf = EdgeMesh.parse_response_args.buf;
+    size_t len = EdgeMesh.parse_response_args.len;
+    size_t *entry_off = EdgeMesh.parse_response_args.entry_off;
+    size_t *entry_len = EdgeMesh.parse_response_args.entry_len;
+
     if (magic_bad(buf, len))
     {
-        return EDGE_MESH_PARSE_MALFORMED;
+        EdgeMesh.parse = EDGE_MESH_PARSE_MALFORMED;
+        return;
     }
     if (len < 4)
     {
-        return EDGE_MESH_PARSE_INCOMPLETE;
+        EdgeMesh.parse = EDGE_MESH_PARSE_INCOMPLETE;
+        return;
     }
     uint8_t status = buf[3];
     if (status == 0)
     {
-        return EDGE_MESH_PARSE_MISS;
+        EdgeMesh.parse = EDGE_MESH_PARSE_MISS;
+        return;
     }
     if (status != 1)
     {
-        return EDGE_MESH_PARSE_MALFORMED;
+        EdgeMesh.parse = EDGE_MESH_PARSE_MALFORMED;
+        return;
     }
     if (len < 6)
     {
-        return EDGE_MESH_PARSE_INCOMPLETE;
+        EdgeMesh.parse = EDGE_MESH_PARSE_INCOMPLETE;
+        return;
     }
     uint16_t el = get_u16(buf + 4);
     if (el == 0)
     {
-        return EDGE_MESH_PARSE_MALFORMED;
+        EdgeMesh.parse = EDGE_MESH_PARSE_MALFORMED;
+        return;
     }
     if (len < (size_t)6 + el)
     {
-        return EDGE_MESH_PARSE_INCOMPLETE;
+        EdgeMesh.parse = EDGE_MESH_PARSE_INCOMPLETE;
+        return;
     }
     if (entry_off)
     {
@@ -294,14 +388,24 @@ EdgeMeshParse edge_mesh_parse_response(const uint8_t *buf, size_t len, size_t *e
     {
         *entry_len = el;
     }
-    return EDGE_MESH_PARSE_HIT;
+    EdgeMesh.parse = EDGE_MESH_PARSE_HIT;
 }
 
 // --- async requester engine ----------------------------------------------------------------------
 
-void edge_mesh_fetch_begin(EdgeMeshFetch *m, const EdgeFetchTransport *t, const char *host, uint16_t port,
-                           const uint8_t *request, size_t req_len, uint8_t *buf, size_t cap, uint32_t now_ms)
+static void edge_mesh_fetch_begin(uint8_t *restrict work)
 {
+    (void)work;
+    EdgeMeshFetch *m = EdgeMesh.fetch_begin_args.m;
+    const EdgeFetchTransport *t = EdgeMesh.fetch_begin_args.t;
+    const char *host = EdgeMesh.fetch_begin_args.host;
+    uint16_t port = EdgeMesh.fetch_begin_args.port;
+    const uint8_t *request = EdgeMesh.fetch_begin_args.request;
+    size_t req_len = EdgeMesh.fetch_begin_args.req_len;
+    uint8_t *buf = EdgeMesh.fetch_begin_args.buf;
+    size_t cap = EdgeMesh.fetch_begin_args.cap;
+    uint32_t now_ms = EdgeMesh.fetch_begin_args.now_ms;
+
     m->st = EDGE_MESH_STATUS_PENDING;
     m->cid = -1;
     m->start_ms = now_ms;
@@ -331,21 +435,29 @@ void edge_mesh_fetch_begin(EdgeMeshFetch *m, const EdgeFetchTransport *t, const 
     }
 }
 
-EdgeMeshStatus edge_mesh_fetch_pump(EdgeMeshFetch *m, const EdgeFetchTransport *t, uint32_t now_ms)
+static void edge_mesh_fetch_pump(uint8_t *restrict work)
 {
+    (void)work;
+    EdgeMeshFetch *m = EdgeMesh.fetch_pump_args.m;
+    const EdgeFetchTransport *t = EdgeMesh.fetch_pump_args.t;
+    uint32_t now_ms = EdgeMesh.fetch_pump_args.now_ms;
+
     if (m->st != EDGE_MESH_STATUS_PENDING)
     {
-        return m->st;
+        EdgeMesh.status = m->st;
+        return;
     }
     if (!t || m->cid < 0)
     {
         m->st = EDGE_MESH_STATUS_FAILED;
-        return m->st;
+        EdgeMesh.status = m->st;
+        return;
     }
     if (now_ms - m->start_ms > PROTOCORE_MESH_QUERY_MS)
     {
         m->st = EDGE_MESH_STATUS_FAILED; // query deadline
-        return m->st;
+        EdgeMesh.status = m->st;
+        return;
     }
 
     if (m->got < m->cap)
@@ -355,7 +467,12 @@ EdgeMeshStatus edge_mesh_fetch_pump(EdgeMeshFetch *m, const EdgeFetchTransport *
 
     size_t eoff = 0;
     size_t elen = 0;
-    EdgeMeshParse p = edge_mesh_parse_response(m->buf, m->got, &eoff, &elen);
+    EdgeMesh.parse_response_args.buf = m->buf;
+    EdgeMesh.parse_response_args.len = m->got;
+    EdgeMesh.parse_response_args.entry_off = &eoff;
+    EdgeMesh.parse_response_args.entry_len = &elen;
+    edge_mesh_parse_response(work);
+    EdgeMeshParse p = EdgeMesh.parse;
     if (p == EDGE_MESH_PARSE_HIT)
     {
         m->entry_off = eoff;
@@ -374,16 +491,32 @@ EdgeMeshStatus edge_mesh_fetch_pump(EdgeMeshFetch *m, const EdgeFetchTransport *
     {
         m->st = EDGE_MESH_STATUS_FAILED; // buffer full still short, or peer closed before a complete frame
     }
-    return m->st;
+    EdgeMesh.status = m->st;
 }
 
-void edge_mesh_fetch_end(EdgeMeshFetch *m, const EdgeFetchTransport *t)
+static void edge_mesh_fetch_end(uint8_t *restrict work)
 {
+    (void)work;
+    EdgeMeshFetch *m = EdgeMesh.fetch_end_args.m;
+    const EdgeFetchTransport *t = EdgeMesh.fetch_end_args.t;
+
     if (m->cid >= 0 && t)
     {
         t->close(t->ctx, m->cid);
     }
     m->cid = -1;
 }
+
+EdgeMeshNs EdgeMesh = {.build_request = edge_mesh_build_request,
+                       .parse_request = edge_mesh_parse_request,
+                       .serialize_entry = edge_mesh_serialize_entry,
+                       .deserialize_entry = edge_mesh_deserialize_entry,
+                       .build_response = edge_mesh_build_response,
+                       .parse_response = edge_mesh_parse_response,
+                       .fetch_begin = edge_mesh_fetch_begin,
+                       .fetch_pump = edge_mesh_fetch_pump,
+                       .fetch_end = edge_mesh_fetch_end};
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_EDGE_MESH

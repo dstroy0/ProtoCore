@@ -201,7 +201,6 @@ void test_namespaces_hold_separate_values_for_one_key(void)
 
     ConfigStore.clear(protocore_config_store_span());
     // Clearing one namespace leaves the other untouched.
-    ConfigStore.ok;
     TEST_ASSERT_EQUAL_STRING("?", get_str("host", "?"));
     ConfigStore.begin_args.ns = "net";
     ConfigStore.begin(protocore_config_store_span());

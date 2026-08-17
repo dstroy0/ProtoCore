@@ -47,6 +47,19 @@
 // headers state their own; an extern "C" already inside one nests harmlessly.
 PROTOCORE_BEGIN_DECLS
 
+/**
+ * @brief Runtime-tunable server parameters.
+ *
+ * Can be declared as `const PROGMEM` (flash) or as a mutable variable (RAM).
+ * Pass a pointer to proto_begin() / begin_http() / begin_tls(), which hand it
+ * to Tcp.conn->init().
+ */
+typedef struct WebServerConfig
+{
+    /** Milliseconds of inactivity before a connection is force-closed. */
+    proto_u32 conn_timeout_ms;
+} WebServerConfig;
+
 // Ordered by layer, so a header only needs what is above it. A gate is the feature's own
 // PROTOCORE_ENABLE_, never a parent's: PROTOCORE_ENABLE_<A>_NEEDS_<B> already makes a child unsettable alone.
 #include "shared/log/log.h"

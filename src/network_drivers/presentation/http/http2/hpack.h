@@ -23,7 +23,7 @@
 #ifndef PROTOCORE_HPACK_H
 #define PROTOCORE_HPACK_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_HTTP2
 
