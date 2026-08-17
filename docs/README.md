@@ -1460,6 +1460,7 @@ guards at compile time.
 | `PROTOCORE_INA219_I2C_ADDR` | `0x40` | I2C address of the INA219 (0x40 default; the A0/A1 pins select 0x40..0x4F). |
 | `PROTOCORE_INA219_SHUNT_MOHM` | `100` | Default INA219 shunt resistance in milliohms (calibration input). |
 | `PROTOCORE_IP_ALLOWLIST_SLOTS` | `8` | Number of CIDR rules the source-IP allowlist can hold (BSS table). |
+| `PROTOCORE_J1939_BORROW` | `16` |  |
 | `PROTOCORE_JWT_MAX_LEN` | `512` | Maximum accepted JWT length in bytes (header.payload.signature). |
 | `PROTOCORE_KEEPALIVE_MAX_REQUESTS` | `100` | Maximum requests served on one keep-alive connection before it is closed. |
 | `PROTOCORE_LD2410_BAUD` | `256000` | LD2410 UART baud rate (the module's fixed factory default is 256000). |
@@ -1554,8 +1555,9 @@ guards at compile time.
 | `PROTOCORE_SHT3X_I2C_ADDR` | `0x44` | I2C address of the SHT3x (0x44 with ADDR low; 0x45 with ADDR high). |
 | `PROTOCORE_SIGFOX_MAX_PAYLOAD` | `12` | Maximum Sigfox uplink payload (the network caps a message at 12 bytes). |
 | `PROTOCORE_SIMATIC_BLOCK_MAX` | `256` | 3964R block-body buffer size (built/received bytes: DLE-stuffed payload + DLE ETX + BCC). |
+| `PROTOCORE_SIMATIC_BORROW` | `48` |  |
 | `PROTOCORE_SIMATIC_QVZ_MS` | `2000` | 3964R QVZ (Quittungsverzugszeit): handshake acknowledge-delay timeout, ms. |
-| `PROTOCORE_SIMATIC_ZVZ_MS` | `200` | 3964R ZVZ (Zeichenverzugszeit): inter-character timeout while receiving a block, ms. |
+| `PROTOCORE_SIMATIC_ZVZ_MS` | `220` | 3964R ZVZ (Zeichenverzugszeit): inter-character timeout while receiving a block, ms. |
 | `PROTOCORE_SMBUS_BORROW` | `64` |  |
 | `PROTOCORE_SMB_BUF` | `1024` | SMB2 client work-buffer size (bytes) for smb_client's request/response framing. |
 | `PROTOCORE_SMTP_CT_BUF_SIZE` | `4096` | Ciphertext receive-ring size for SMTPS, bytes (only used when the message is TLS). |
