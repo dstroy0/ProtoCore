@@ -119,6 +119,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`338300d`](https://github.com/dstroy0/ProtoCore/commit/338300dee9eaa8c62690174110d8cf37123912ea))
 - update CHANGELOG.md [skip ci] ([`2ca9ff5`](https://github.com/dstroy0/ProtoCore/commit/2ca9ff5bf4cbb526750c3a2b663579c3245818a8))
 - bump github/codeql-action from 4.37.6 to 4.37.7 ([`e9695ec`](https://github.com/dstroy0/ProtoCore/commit/e9695ec1882b89c998df96470d8b88642a59f33c))
 - update CHANGELOG.md [skip ci] ([`dee1771`](https://github.com/dstroy0/ProtoCore/commit/dee17711c9ce0d446b8a9d0946008658e9b15008))
@@ -377,6 +378,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- (housekeeping): pimpl phase 3, public handles, internal ctx, fix tests ([`51f77d2`](https://github.com/dstroy0/ProtoCore/commit/51f77d28000d651760462d80d1e27d5e9f6aae7e))
 - Merge branch 'main' of https://github.com/dstroy0/ProtoCore ([`50a22d0`](https://github.com/dstroy0/ProtoCore/commit/50a22d0ce8423e5cb1146aa8cb1098801979903a))
 - (housekeeping): pimpl phase 3, public handles, internal ctx, fix tests ([`88f18c9`](https://github.com/dstroy0/ProtoCore/commit/88f18c955c6b277fc673fd74a32944083caf2873))
 - Merge Dependabot #26: build(deps): bump github/codeql-action from 4.37.6 to 4.37.7 ([`2a82821`](https://github.com/dstroy0/ProtoCore/commit/2a828210adc07780e91c4d57acdd498c8d47d66d))
@@ -461,6 +463,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`c976fea`](https://github.com/dstroy0/ProtoCore/commit/c976fea85fb1e80ffce463119253f38dc3fc5dfb))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`4b0073f`](https://github.com/dstroy0/ProtoCore/commit/4b0073f00f7999fb71820ea846538a101c53c4eb))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`b33d8d0`](https://github.com/dstroy0/ProtoCore/commit/b33d8d0879797d12992cc4a61f4bf0d17d9bc2c2))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`ef4d95c`](https://github.com/dstroy0/ProtoCore/commit/ef4d95cb83f9efd3bbb7a556c616e6e268d29a58))
