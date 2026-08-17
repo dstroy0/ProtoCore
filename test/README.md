@@ -30885,17 +30885,17 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(RSP_4, rsp, sizeof(RSP_4));</code>
       * <code>Assert equal uint (sizeof(REQ_5), run_pdu(REQ_5, sizeof(REQ_5), &rsp))</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(REQ_5, rsp, sizeof(REQ_5));</code>
-      * <code>Assert true (protocore_modbus_get_coil(0x00AC))</code>
+      * <code>Assert true (Modbus.ok)</code>
       * <code>Assert equal uint (sizeof(REQ_6), run_pdu(REQ_6, sizeof(REQ_6), &rsp))</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(REQ_6, rsp, sizeof(REQ_6));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(0x0003, protocore_modbus_get_holding_reg(0x0001));</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(0x0003, Modbus.value);</code>
       * <code>Assert equal uint (sizeof(RSP_15), run_pdu(REQ_15, sizeof(REQ_15), &rsp))</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(RSP_15, rsp, sizeof(RSP_15));</code>
-      * <code>Assert equal int (WANT_BITS[i], protocore_modbus_get_coil((uint16_t)(0x0013 + i)) ? 1 : 0)</code>
+      * <code>Assert equal int (WANT_BITS[i], Modbus.ok ? 1 : 0)</code>
       * <code>Assert equal uint (sizeof(RSP_16), run_pdu(REQ_16, sizeof(REQ_16), &rsp))</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(RSP_16, rsp, sizeof(RSP_16));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(0x000A, protocore_modbus_get_holding_reg(0x0001));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(0x0102, protocore_modbus_get_holding_reg(0x0002));</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(0x000A, Modbus.value);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(0x0102, Modbus.value);</code>
       * <code>Assert equal uint (sizeof(RSP_EX), run_pdu(REQ_EX, sizeof(REQ_EX), &rsp))</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(RSP_EX, rsp, sizeof(RSP_EX));</code>
   </details>
@@ -30943,10 +30943,10 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
     * **Objective**: Write single coil value is ff00 or 0000
     * **Assertions**:
       * <code>Assert equal uint (5u, run_pdu(OFF, sizeof(OFF), &rsp))</code>
-      * <code>Assert false (protocore_modbus_get_coil(5))</code>
+      * <code>Assert false (Modbus.ok)</code>
       * <code>Assert equal uint (2u, run_pdu(ILLEGAL, sizeof(ILLEGAL), &rsp))</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(MODBUS_EX_ILLEGAL_DATA_VALUE, rsp[1]);</code>
-      * <code>Assert false (protocore_modbus_get_coil(5))</code>
+      * <code>Assert false (Modbus.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -30980,7 +30980,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
     * **Assertions**:
       * <code>Assert equal uint (sizeof(REQ), run_pdu(REQ, sizeof(REQ), &rsp))</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(REQ, rsp, sizeof(REQ));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(0x0017, protocore_modbus_get_holding_reg(4));</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(0x0017, Modbus.value);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -30990,7 +30990,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
     * **Assertions**:
       * <code>Assert equal uint (sizeof(RSP), run_pdu(REQ, sizeof(REQ), &rsp))</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(RSP, rsp, sizeof(RSP));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(0x00FF, protocore_modbus_get_holding_reg((uint16_t)(0x000E + i)));</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(0x00FF, Modbus.value);</code>
       * <code>Assert equal uint (sizeof(WANT), run_pdu(OVERLAP, sizeof(OVERLAP), &rsp))</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, rsp, sizeof(WANT));</code>
   </details>
@@ -31000,11 +31000,11 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Read Holding Registers, address 0, one register: MBAP Length 0006h = unit id + a 5-octet PDU.
     * **Assertions**:
-      * <code>Assert equal uint (11u, protocore_modbus_process_adu(adu, 12, out, sizeof(out)))</code>
-      * <code>Assert equal uint (0u, protocore_modbus_process_adu(bad, 12, out, sizeof(out)))</code>
-      * <code>Assert equal uint (0u, protocore_modbus_process_adu(bad, 12, out, sizeof(out)))</code>
-      * <code>Assert equal uint (0u, protocore_modbus_process_adu(bad, 12, out, sizeof(out)))</code>
-      * <code>Assert equal uint (0u, protocore_modbus_process_adu(adu, n, out, sizeof(out)))</code>
+      * <code>Assert equal uint (11u, Modbus.n)</code>
+      * <code>Assert equal uint (0u, Modbus.n)</code>
+      * <code>Assert equal uint (0u, Modbus.n)</code>
+      * <code>Assert equal uint (0u, Modbus.n)</code>
+      * <code>Assert equal uint (0u, Modbus.n)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -31031,12 +31031,12 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Data model bounds and reset
     * **Assertions**:
-      * <code>Assert false (protocore_modbus_get_coil(PROTOCORE_MODBUS_COILS))</code>
-      * <code>Assert false (protocore_modbus_get_discrete_input(PROTOCORE_MODBUS_DISCRETE_INPUTS))</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(0, protocore_modbus_get_holding_reg(PROTOCORE_MODBUS_HOLDING_REGS));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(0, protocore_modbus_get_input_reg(PROTOCORE_MODBUS_INPUT_REGS));</code>
-      * <code>Assert false (protocore_modbus_get_coil(1))</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(0, protocore_modbus_get_holding_reg(1));</code>
+      * <code>Assert false (Modbus.ok)</code>
+      * <code>Assert false (Modbus.ok)</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(0, Modbus.value);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(0, Modbus.value);</code>
+      * <code>Assert false (Modbus.ok)</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(0, Modbus.value);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -31059,10 +31059,10 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Rtu crc address and broadcast
     * **Assertions**:
-      * <code>Assert equal uint (0u, protocore_modbus_rtu_process_adu(bad, sizeof(bad), resp, sizeof(resp), 0x11))</code>
-      * <code>Assert equal uint (0u, protocore_modbus_rtu_process_adu(other, sizeof(other), resp, sizeof(resp), 0x11))</code>
-      * <code>Assert equal uint (0u, protocore_modbus_rtu_process_adu(bcast, sizeof(bcast), resp, sizeof(resp), 0x11))</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(0xABCD, protocore_modbus_get_holding_reg(3)); // executed all the same</code>
+      * <code>Assert equal uint (0u, Modbus.n)</code>
+      * <code>Assert equal uint (0u, Modbus.n)</code>
+      * <code>Assert equal uint (0u, Modbus.n)</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(0xABCD, Modbus.value); // executed all the same</code>
   </details>
 
 </details>
@@ -31084,10 +31084,10 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Build rejects bad args
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(0, protocore_modbus_build_read(0x06, 1, 1, 0, 2, adu, sizeof(adu)));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, protocore_modbus_build_read(0x03, 1, 1, 0, 0, adu, sizeof(adu)));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, protocore_modbus_build_read(0x03, 1, 1, 0, 200, adu, sizeof(adu)));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, protocore_modbus_build_read(0x03, 1, 1, 0, 2, adu, 4));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, ModbusMaster.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, ModbusMaster.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, ModbusMaster.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, ModbusMaster.n);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -31118,7 +31118,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Parse short frame fails
     * **Assertions**:
-      * <code>Assert equal int (-1, protocore_modbus_parse_response(buf, sizeof(buf), NULL, 0, NULL))</code>
+      * <code>Assert equal int (-1, ModbusMaster.i32)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -31126,7 +31126,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Build null out and input fc
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(0, protocore_modbus_build_read(0x03, 1, 1, 0, 2, NULL, 16));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, ModbusMaster.n);</code>
       * <code>TEST_ASSERT_EQUAL_size_t(12, n);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x04, adu[7]);</code>
   </details>
@@ -31136,7 +31136,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Parse null adu
     * **Assertions**:
-      * <code>Assert equal int (-1, protocore_modbus_parse_response(NULL, 12, regs, 4, &ex))</code>
+      * <code>Assert equal int (-1, ModbusMaster.i32)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -31144,8 +31144,8 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Parse bad protocol id
     * **Assertions**:
-      * <code>Assert equal int (-1, protocore_modbus_parse_response(adu, sizeof(adu), regs, 4, &ex))</code>
-      * <code>Assert equal int (-1, protocore_modbus_parse_response(adu, sizeof(adu), regs, 4, &ex))</code>
+      * <code>Assert equal int (-1, ModbusMaster.i32)</code>
+      * <code>Assert equal int (-1, ModbusMaster.i32)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -31153,7 +31153,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Parse unexpected function
     * **Assertions**:
-      * <code>Assert equal int (-1, protocore_modbus_parse_response(adu, sizeof(adu), regs, 4, &ex))</code>
+      * <code>Assert equal int (-1, ModbusMaster.i32)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -31161,7 +31161,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Parse exception null out
     * **Assertions**:
-      * <code>Assert equal int (0, protocore_modbus_parse_response(adu, sizeof(adu), regs, 4, NULL))</code>
+      * <code>Assert equal int (0, ModbusMaster.i32)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -31169,8 +31169,8 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Parse bad byte count
     * **Assertions**:
-      * <code>Assert equal int (-1, protocore_modbus_parse_response(odd, sizeof(odd), regs, 4, &ex))</code>
-      * <code>Assert equal int (-1, protocore_modbus_parse_response(truncated, sizeof(truncated), regs, 4, &ex))</code>
+      * <code>Assert equal int (-1, ModbusMaster.i32)</code>
+      * <code>Assert equal int (-1, ModbusMaster.i32)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -31212,7 +31212,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
       * <code>Assert equal int (1, w)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(0, ex);</code>
       * <code>TEST_ASSERT_EQUAL_HEX16(7, addr);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(0x5A5A, protocore_modbus_get_holding_reg(7));</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(0x5A5A, Modbus.value);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -31233,9 +31233,9 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
       * <code>Assert equal int (3, w)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(0, ex);</code>
       * <code>TEST_ASSERT_EQUAL_HEX16(30, start);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(0xDEAD, protocore_modbus_get_holding_reg(30));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(0xBEEF, protocore_modbus_get_holding_reg(31));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(0xF00D, protocore_modbus_get_holding_reg(32));</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(0xDEAD, Modbus.value);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(0xBEEF, Modbus.value);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(0xF00D, Modbus.value);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -31243,13 +31243,13 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Build write rejects bad args
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(0, protocore_modbus_build_write_single(1, 1, 0, 5, NULL, 16));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, protocore_modbus_build_write_single(1, 1, 0, 5, adu, 4));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, protocore_modbus_build_write_multiple(1, 1, 0, vals, 2, NULL, 32));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, protocore_modbus_build_write_multiple(1, 1, 0, NULL, 2, adu, 32));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, protocore_modbus_build_write_multiple(1, 1, 0, vals, 0, adu, 32));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, protocore_modbus_build_write_multiple(1, 1, 0, vals, 124, adu, 300));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, protocore_modbus_build_write_multiple(1, 1, 0, vals, 2, adu, 16));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, ModbusMaster.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, ModbusMaster.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, ModbusMaster.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, ModbusMaster.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, ModbusMaster.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, ModbusMaster.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, ModbusMaster.n);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -31257,13 +31257,13 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Parse write response edges
     * **Assertions**:
-      * <code>Assert equal int (0, protocore_modbus_parse_write_response(exc, sizeof(exc), &addr, &ex))</code>
+      * <code>Assert equal int (0, ModbusMaster.i32)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(0x02, ex);</code>
       * <code>TEST_ASSERT_EQUAL_HEX16(0, addr);</code>
-      * <code>Assert equal int (-1, protocore_modbus_parse_write_response(shortf, sizeof(shortf), &addr, &ex))</code>
-      * <code>Assert equal int (-1, protocore_modbus_parse_write_response(badfc, sizeof(badfc), &addr, &ex))</code>
-      * <code>Assert equal int (-1, protocore_modbus_parse_write_response(badproto, sizeof(badproto), &addr, &ex))</code>
-      * <code>Assert equal int (-1, protocore_modbus_parse_write_response(NULL, 12, &addr, &ex))</code>
+      * <code>Assert equal int (-1, ModbusMaster.i32)</code>
+      * <code>Assert equal int (-1, ModbusMaster.i32)</code>
+      * <code>Assert equal int (-1, ModbusMaster.i32)</code>
+      * <code>Assert equal int (-1, ModbusMaster.i32)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -31307,7 +31307,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
       * <code>Assert equal int (1, wrote)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(0, ex);</code>
       * <code>TEST_ASSERT_EQUAL_HEX16(5, addr);</code>
-      * <code>Assert true (protocore_modbus_get_coil(5))</code>
+      * <code>Assert true (Modbus.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -31322,7 +31322,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
       * <code>TEST_ASSERT_EQUAL_HEX8(0x0B, req[14]);</code>
       * <code>Assert equal int (12, wrote)</code>
       * <code>TEST_ASSERT_EQUAL_HEX16(0, addr);</code>
-      * <code>TEST_ASSERT_EQUAL_UINT8(pattern[a], protocore_modbus_get_coil(a) ? 1 : 0);</code>
+      * <code>TEST_ASSERT_EQUAL_UINT8(pattern[a], Modbus.ok ? 1 : 0);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -31330,16 +31330,16 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Bit build and parse guards
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(0, protocore_modbus_build_read_bits(0x03, 1, 1, 0, 8, adu, sizeof(adu)));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, protocore_modbus_build_read_bits(0x01, 1, 1, 0, 0, adu, sizeof(adu)));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, protocore_modbus_build_read_bits(0x01, 1, 1, 0, 2001, adu, sizeof(adu)));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, protocore_modbus_build_read_bits(0x01, 1, 1, 0, 8, NULL, 16));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, protocore_modbus_build_write_single_coil(1, 1, 0, PROTO_TRUE, NULL, 16));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, protocore_modbus_build_write_multiple_coils(1, 1, 0, NULL, 4, adu, sizeof(adu)));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, protocore_modbus_build_write_multiple_coils(1, 1, 0, bits, 0, adu, sizeof(adu)));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, protocore_modbus_build_write_multiple_coils(1, 1, 0, bits, 1969, adu, sizeof(adu)));</code>
-      * <code>Assert equal int (-1, protocore_modbus_parse_read_bits_response(resp, 11, 4, out, sizeof(out), &ex))</code>
-      * <code>Assert equal int (0, protocore_modbus_parse_read_bits_response(exc, sizeof(exc), 4, out, sizeof(out), &ex))</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, ModbusMaster.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, ModbusMaster.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, ModbusMaster.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, ModbusMaster.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, ModbusMaster.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, ModbusMaster.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, ModbusMaster.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, ModbusMaster.n);</code>
+      * <code>Assert equal int (-1, ModbusMaster.i32)</code>
+      * <code>Assert equal int (0, ModbusMaster.i32)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(0x02, ex);</code>
   </details>
 
@@ -31355,7 +31355,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
       * <code>TEST_ASSERT_EQUAL_HEX16(10, addr);</code>
       * <code>TEST_ASSERT_EQUAL_HEX16(0xF0FF, andm);</code>
       * <code>TEST_ASSERT_EQUAL_HEX16(0x0500, orm);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(0x1534, protocore_modbus_get_holding_reg(10));</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(0x1534, Modbus.value);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -31369,7 +31369,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
       * <code>TEST_ASSERT_EQUAL_UINT8(0, ex);</code>
       * <code>TEST_ASSERT_EQUAL_HEX16(0xAAAA, regs[0]);</code>
       * <code>TEST_ASSERT_EQUAL_HEX16(0xBBBB, regs[1]);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(0xBBBB, protocore_modbus_get_holding_reg(21));</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(0xBBBB, Modbus.value);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -31377,17 +31377,17 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Fc16 17 guards
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(0, protocore_modbus_build_mask_write(1, 1, 0, 0, 0, NULL, 16));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, protocore_modbus_build_mask_write(1, 1, 0, 0, 0, adu, 8));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, protocore_modbus_build_read_write_multiple(1, 1, 0, 2, 0, NULL, 2, adu, sizeof(adu)));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, protocore_modbus_build_read_write_multiple(1, 1, 0, 0, 0, vals, 2, adu, sizeof(adu)));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, protocore_modbus_build_read_write_multiple(1, 1, 0, 126, 0, vals, 2, adu, sizeof(adu)));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, protocore_modbus_build_read_write_multiple(1, 1, 0, 2, 0, vals, 0, adu, sizeof(adu)));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, protocore_modbus_build_read_write_multiple(1, 1, 0, 2, 0, vals, 122, adu, sizeof(adu)));</code>
-      * <code>Assert equal int (0, protocore_modbus_parse_mask_write_response(resp, pn, NULL, NULL, NULL, &ex))</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, ModbusMaster.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, ModbusMaster.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, ModbusMaster.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, ModbusMaster.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, ModbusMaster.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, ModbusMaster.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, ModbusMaster.n);</code>
+      * <code>Assert equal int (0, ModbusMaster.i32)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(MODBUS_EX_ILLEGAL_DATA_ADDRESS, ex);</code>
-      * <code>TEST_ASSERT_EQUAL_INT(-1,</code>
-      * <code>Assert equal int (-1, protocore_modbus_parse_mask_write_response(badfc, sizeof(badfc), NULL, NULL, NULL, &ex))</code>
+      * <code>Assert equal int (-1, ModbusMaster.i32)</code>
+      * <code>Assert equal int (-1, ModbusMaster.i32)</code>
   </details>
 
 </details>
@@ -47636,7 +47636,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
     * **Objective**: Write single round trip
     * **Assertions**:
       * <code>Assert equal int (SB_OK, sb_write("plc", 8, 0x4242))</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(0x4242, protocore_modbus_get_holding_reg(8));</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(0x4242, Modbus.value);</code>
       * <code>Assert equal int (SB_OK, sb_read("plc", 8, &v))</code>
       * <code>TEST_ASSERT_EQUAL_INT32(0x4242, v);</code>
   </details>
