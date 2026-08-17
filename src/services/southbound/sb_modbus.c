@@ -8,6 +8,8 @@
 
 #include "services/southbound/sb_modbus.h"
 
+static uint8_t modbus_master_work[16]; // the borrow an entry takes; ModbusMaster never reads it
+
 #if PROTOCORE_ENABLE_SOUTHBOUND && PROTOCORE_ENABLE_MODBUS_MASTER
 
 #include "services/fieldbus/modbus/modbus_master.h"
@@ -39,8 +41,15 @@ static int sb_modbus_read_span(protocore_sb_modbus_ctx *c, uint32_t first, int32
     }
 
     uint8_t req[12];
-    size_t rn =
-        protocore_modbus_build_read((uint8_t)c->fc, c->txid++, c->unit, (uint16_t)first, (uint16_t)n, req, sizeof(req));
+    ModbusMaster.build_read_args.fc = (uint8_t)c->fc;
+    ModbusMaster.build_read_args.txid = c->txid++;
+    ModbusMaster.build_read_args.unit = c->unit;
+    ModbusMaster.build_read_args.start = (uint16_t)first;
+    ModbusMaster.build_read_args.count = (uint16_t)n;
+    ModbusMaster.build_read_args.out = req;
+    ModbusMaster.build_read_args.cap = sizeof(req);
+    ModbusMaster.build_read(modbus_master_work);
+    size_t rn = ModbusMaster.n;
     if (rn == 0)
     {
         return SB_ERR_ARG;
@@ -55,7 +64,13 @@ static int sb_modbus_read_span(protocore_sb_modbus_ctx *c, uint32_t first, int32
 
     uint16_t regs[125];
     uint8_t ex = 0;
-    int got = protocore_modbus_parse_response(resp, (size_t)pn, regs, n, &ex);
+    ModbusMaster.parse_response_args.adu = resp;
+    ModbusMaster.parse_response_args.len = (size_t)pn;
+    ModbusMaster.parse_response_args.regs_out = regs;
+    ModbusMaster.parse_response_args.max_regs = n;
+    ModbusMaster.parse_response_args.exception_out = &ex;
+    ModbusMaster.parse_response(modbus_master_work);
+    int got = ModbusMaster.i32;
     if (got < 0)
     {
         return SB_ERR_ARG; // malformed / short frame
@@ -101,7 +116,12 @@ static int sb_modbus_write_txn(protocore_sb_modbus_ctx *c, const uint8_t *req, s
         return pn; // transport error, propagated unchanged
     }
     uint8_t ex = 0;
-    int w = protocore_modbus_parse_write_response(resp, (size_t)pn, NULL, &ex);
+    ModbusMaster.parse_write_response_args.adu = resp;
+    ModbusMaster.parse_write_response_args.len = (size_t)pn;
+    ModbusMaster.parse_write_response_args.addr_out = NULL;
+    ModbusMaster.parse_write_response_args.exception_out = &ex;
+    ModbusMaster.parse_write_response(modbus_master_work);
+    int w = ModbusMaster.i32;
     if (w < 0)
     {
         return SB_ERR_ARG; // malformed / short frame
@@ -122,8 +142,14 @@ static int sb_modbus_write(void *vctx, uint32_t point, int32_t value)
         return SB_ERR_ARG;
     }
     uint8_t req[12];
-    size_t rn =
-        protocore_modbus_build_write_single(c->txid++, c->unit, (uint16_t)point, (uint16_t)value, req, sizeof(req));
+    ModbusMaster.build_write_single_args.txid = c->txid++;
+    ModbusMaster.build_write_single_args.unit = c->unit;
+    ModbusMaster.build_write_single_args.addr = (uint16_t)point;
+    ModbusMaster.build_write_single_args.value = (uint16_t)value;
+    ModbusMaster.build_write_single_args.out = req;
+    ModbusMaster.build_write_single_args.cap = sizeof(req);
+    ModbusMaster.build_write_single(modbus_master_work);
+    size_t rn = ModbusMaster.n;
     if (rn == 0)
     {
         return SB_ERR_ARG;
@@ -154,8 +180,15 @@ static int sb_modbus_write_block(void *vctx, uint32_t first, const int32_t *in, 
         vals[i] = (uint16_t)in[i];
     }
     uint8_t req[13 + 2 * 123];
-    size_t rn =
-        protocore_modbus_build_write_multiple(c->txid++, c->unit, (uint16_t)first, vals, (uint16_t)n, req, sizeof(req));
+    ModbusMaster.build_write_multiple_args.txid = c->txid++;
+    ModbusMaster.build_write_multiple_args.unit = c->unit;
+    ModbusMaster.build_write_multiple_args.start = (uint16_t)first;
+    ModbusMaster.build_write_multiple_args.values = vals;
+    ModbusMaster.build_write_multiple_args.count = (uint16_t)n;
+    ModbusMaster.build_write_multiple_args.out = req;
+    ModbusMaster.build_write_multiple_args.cap = sizeof(req);
+    ModbusMaster.build_write_multiple(modbus_master_work);
+    size_t rn = ModbusMaster.n;
     if (rn == 0)
     {
         return SB_ERR_ARG;

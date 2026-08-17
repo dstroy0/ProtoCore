@@ -126,13 +126,28 @@ def _brace_is_compound_literal(s, brace, mask):
     return not (k >= 0 and (s[k].isalnum() or s[k] == "_"))
 
 
+def _line_is_directive(s, nl):
+    """True when the line ending at the newline `nl` is a preprocessor directive.
+
+    A directive continued with a trailing backslash carries the whole run, so the first line of the
+    run is the one tested.
+    """
+    while True:
+        b = s.rfind("\n", 0, nl) + 1
+        line = s[b:nl].rstrip("\r")
+        if b == 0 or not s[b - 2 : b - 1] == "\\":
+            return line.lstrip().startswith("#")
+        nl = b - 1
+
+
 def statement_start(s, pos, mask=None):
     """Index of the first non-space character of the statement containing pos.
 
-    Walks back to the nearest ';', '{', '}' or ':' at nesting depth zero, stepping over any '(' or
-    '[' that opened before pos (a call or macro argument list the position sits inside - the
-    statement began before it). Comment and literal bytes are text, not syntax: an apostrophe in
-    "Setter's" is not a char literal and parens in prose do not nest, so both are skipped.
+    Walks back to the nearest ';', '{', '}', ':' or preprocessor directive line at nesting depth
+    zero, stepping over any '(' or '[' that opened before pos (a call or macro argument list the
+    position sits inside - the statement began before it). Comment and literal bytes are text, not
+    syntax: an apostrophe in "Setter's" is not a char literal and parens in prose do not nest, so
+    both are skipped.
     """
     if mask is None:
         mask = code_mask(s)
@@ -142,6 +157,8 @@ def statement_start(s, pos, mask=None):
             i -= 1
             continue
         c = s[i - 1]
+        if c == "\n" and depth == 0 and _line_is_directive(s, i - 1):
+            break  # a `#if` / `#endif` bounds the arm: a statement does not start on its far side
         if c in ")]":
             depth += 1
         elif c in "([":

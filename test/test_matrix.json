@@ -3646,10 +3646,18 @@
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/swar.c>",
-        "+<shared/crc/crc.c>"
+        "+<shared/crc/crc.c>",
+        "+<mmgr/plaintext.c>",
+        "+<mmgr/span.c>",
+        "+<mmgr/arena.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
-      "tests": ["unit/src/services/fieldbus/modbus/test_modbus"],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "tests": [
+        "unit/src/services/fieldbus/modbus/test_modbus"
+      ],
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
     },
     "native_modbus_master": {
       "desc": "Modbus master codec + scanner (services/fieldbus/modbus/modbus_master): build read\nrequests, parse responses; host-tested as a round-trip against the slave codec.",
@@ -3663,9 +3671,15 @@
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/swar.c>",
-        "+<shared/crc/crc.c>"
+        "+<shared/crc/crc.c>",
+        "+<mmgr/plaintext.c>",
+        "+<mmgr/span.c>",
+        "+<mmgr/arena.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
-      "tests": ["unit/integration/fieldbus/test_modbus_master"]
+      "tests": [
+        "unit/integration/fieldbus/test_modbus_master"
+      ]
     },
     "native_mpr121": {
       "desc": "MPR121 12-channel capacitive touch (server/peripherals/mpr121): decoding the two touch-status registers (ELEPROX at D4 and OVCF at D7 sit above the twelve electrodes), the 10-bit filtered-data pair, the AN3944 bring-up sequence builder, and programming a part end to end - the suite reads the registers back off the device model in core_setup/hal/host/devices/, where section 5.1 discards any configuration write made outside Stop Mode.",
@@ -5626,9 +5640,15 @@
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/swar.c>",
         "+<shared/crc/crc.c>",
-        "+<mmgr/protostr.c>"
+        "+<mmgr/protostr.c>",
+        "+<mmgr/plaintext.c>",
+        "+<mmgr/span.c>",
+        "+<mmgr/arena.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
-      "tests": ["unit/integration/net/test_sb_modbus"]
+      "tests": [
+        "unit/integration/net/test_sb_modbus"
+      ]
     },
     "native_scp": {
       "desc": "SCP (RCP) protocol wire codec (network_drivers/application/scp): parse an `scp -t/-f <path>` exec command into its\nsink/source role + target, parse + build the `C<mode> <size> <name>` control line (octal mode, decimal\nsize, name; malformed lines rejected), and the ack byte constants. Pure host tests.",

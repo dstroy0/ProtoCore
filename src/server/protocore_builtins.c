@@ -51,7 +51,8 @@ void protocore_register_builtins(void)
 #endif
 #endif
 #if PROTOCORE_NEED_MODBUS
-    register_if(PROTO_MODBUS, protocore_modbus_protocore_handler());
+    Modbus.handler(protocore_modbus_span());
+    register_if(PROTO_MODBUS, Modbus.ptr);
 #endif
 #if PROTOCORE_ENABLE_OPCUA
     register_if(PROTO_OPCUA, protocore_opcua_protocore_handler());

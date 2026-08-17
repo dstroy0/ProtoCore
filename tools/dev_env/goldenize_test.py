@@ -12,6 +12,7 @@ from goldenize import (  # noqa: E402
     drop_self_assign,
     drop_void_work,
     dropped_names,
+    dropped_tag_decls,
     enclosing_has_work,
     first_sentence,
     land_returns,
@@ -219,6 +220,29 @@ check(
 check(
     "a name that only appears in a comment does not count as defined",
     dropped_names(SPEC, "// #define GONE 2\n", ""),
+    [],
+)
+
+# A bare tag declaration is neither a #define nor a function, so the catch-all above misses it, and
+# the tag survives in the new header as a pointer member's type - declared at member scope.
+check(
+    "a dropped forward declaration the new header still names is reported",
+    dropped_tag_decls("struct ProtoHandler;\n", "    const struct ProtoHandler *ptr;\n"),
+    ["ProtoHandler"],
+)
+check(
+    "one the new header carries across is not reported",
+    dropped_tag_decls("struct ProtoHandler;\n", "struct ProtoHandler;\n    const struct ProtoHandler *ptr;\n"),
+    [],
+)
+check(
+    "one the new header no longer names at all is not reported",
+    dropped_tag_decls("struct ProtoHandler;\n", "    size_t n;\n"),
+    [],
+)
+check(
+    "a declaration that is only prose does not count",
+    dropped_tag_decls("// struct ProtoHandler;\n", "    const struct ProtoHandler *ptr;\n"),
     [],
 )
 

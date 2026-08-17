@@ -626,6 +626,27 @@ def dropped_names(spec, original, regenerated):
     return out
 
 
+TAG_DECL = re.compile(r"^[ \t]*(struct|union|enum)[ \t]+(\w+)[ \t]*;", re.M)
+
+
+def dropped_tag_decls(original, regenerated):
+    """Tags the old header declared, that the new one uses without declaring.
+
+    `struct ProtoHandler;` is neither a #define nor a function, so dropped_names does not see it,
+    and the tag still appears in the new header as the pointer member's type - which declares it
+    with member scope instead of file scope. modbus.h carried one for the Layer 5 dispatch record.
+    """
+    have = {m.group(2) for m in TAG_DECL.finditer(strip_comments(regenerated))}
+    out = []
+    for m in TAG_DECL.finditer(strip_comments(original)):
+        tag = m.group(2)
+        if tag in have or tag in out:
+            continue
+        if re.search(r"\b%s\s+%s\b" % (m.group(1), re.escape(tag)), regenerated):
+            out.append(tag)
+    return out
+
+
 def strip_comments(s):
     """The text with comments blanked, so a name mentioned only in prose does not count as defined."""
     mask = code_mask(s)
@@ -1138,13 +1159,13 @@ def restructure_source(spec):
     s = s[:end] + defn + "\n\nPROTOCORE_END_DECLS\n\n" + s[end:]
     # the golden file shape is the same pass `shape` runs, so it runs here rather than being a
     # second command a conversion can forget: config alone above the gate, everything else below
-    s, how = shape_text(s, p)
+    s, how = shape_text(s, p, spec.get("gate"))
     notes.append("shape: " + how)
     emit(p, s)
     return notes
 
 
-GATE = re.compile(r"^#if\s+\(?PROTOCORE_(?:ENABLE|TLS|HAS)_\w+[^\n]*$", re.M)
+GATE = re.compile(r"^#if\s+\(?PROTOCORE_(?:ENABLE|NEED|TLS|HAS)_\w+[^\n]*$", re.M)
 CONFIG_INC = '#include "protocore_config.h" // the entry point: the enable gate below, and the widths\n'
 
 
@@ -1181,15 +1202,22 @@ def shape_file(p):
     return how
 
 
-def shape_text(s, p):
+def shape_text(s, p, gate=None):
     """Put a file's includes, and everything else, where the golden puts them.
 
     Above the gate: the config include, and nothing else. A source that includes its own header up
     there is reaching for the enable flag through the module instead of through the config, and a
     context or a static_assert up there is compiled when the capability is off.
+
+    `gate` names the module's own enable macro. Without it the first `#if PROTOCORE_*` in the file
+    is taken, and an inner capability arm that opens before the gate is hoisted in its place:
+    modbus.c's `#if PROTOCORE_HAS_NET_STACK` went to the top and swallowed the includes and the
+    real gate, so a host build compiled the data model with its header cut out.
     """
     orig = s
-    g = GATE.search(s)
+    g = re.search(r"^#if\s+\(?%s\b[^\n]*$" % re.escape(gate), s, re.M) if gate else None
+    if not g:
+        g = GATE.search(s)
     if not g:
         return s, "no enable gate"
 
@@ -1372,6 +1400,8 @@ def main():
         regenerated = gen_header(spec, original)
         for name in dropped_names(spec, original, regenerated):
             print("   NOTE dropped from the header: %s" % name)
+        for tag in dropped_tag_decls(original, regenerated):
+            print("   NOTE the forward declaration of `%s` went, and the new header still names it" % tag)
         emit(hp, regenerated)
         print("source:", spec["source"])
         notes = restructure_source(spec)

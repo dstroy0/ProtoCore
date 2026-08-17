@@ -46,7 +46,7 @@ void dbench_run(void)
     ConfigStore.begin_args.ns = "bench";
     ConfigStore.begin(protocore_config_store_span());
     // Seed the schema's values once, outside the timed loop (mirrors modbus's one-time
-    // protocore_modbus_set_holding_reg() seeding) - the export bench below re-serializes these every call.
+    // Modbus.set_holding_reg seeding) - the export bench below re-serializes these every call.
     ConfigStore.set_str_args.key = "ssid";
     ConfigStore.set_str_args.val = "myssid";
     ConfigStore.set_str(protocore_config_store_span());
