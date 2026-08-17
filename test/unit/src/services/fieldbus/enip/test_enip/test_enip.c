@@ -15,6 +15,8 @@
 
 #include <unity.h>
 
+static uint8_t enip_work[16]; // the borrow an entry takes; Enip never reads it
+
 void setUp(void)
 {
 }
@@ -67,12 +69,20 @@ void test_register_session_octets(void)
         0x00, 0x00,                                     // options flags
     };
     uint8_t buf[64];
-    TEST_ASSERT_EQUAL_size_t(sizeof(WANT), protocore_eip_build_register_session(buf, sizeof(buf), CTX));
+    Enip.build_register_session_args.buf = buf;
+    Enip.build_register_session_args.cap = sizeof(buf);
+    Enip.build_register_session_args.sender_context = CTX;
+    Enip.build_register_session(enip_work);
+    TEST_ASSERT_EQUAL_size_t(sizeof(WANT), Enip.n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, buf, sizeof(WANT));
 
     // A null context is the same request with eight zero octets.
     static const uint8_t ZEROS[8] = {0};
-    TEST_ASSERT_EQUAL_size_t(28u, protocore_eip_build_register_session(buf, sizeof(buf), NULL));
+    Enip.build_register_session_args.buf = buf;
+    Enip.build_register_session_args.cap = sizeof(buf);
+    Enip.build_register_session_args.sender_context = NULL;
+    Enip.build_register_session(enip_work);
+    TEST_ASSERT_EQUAL_size_t(28u, Enip.n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(ZEROS, buf + 12, 8);
 }
 
@@ -82,11 +92,20 @@ void test_headers_without_command_data(void)
 {
     uint8_t buf[64];
 
-    TEST_ASSERT_EQUAL_size_t(24u, protocore_eip_build_unregister_session(buf, sizeof(buf), 0x11223344u, CTX));
+    Enip.build_unregister_session_args.buf = buf;
+    Enip.build_unregister_session_args.cap = sizeof(buf);
+    Enip.build_unregister_session_args.session_handle = 0x11223344u;
+    Enip.build_unregister_session_args.sender_context = CTX;
+    Enip.build_unregister_session(enip_work);
+    TEST_ASSERT_EQUAL_size_t(24u, Enip.n);
     static const uint8_t UNREG[8] = {0x66, 0x00, 0x00, 0x00, 0x44, 0x33, 0x22, 0x11};
     TEST_ASSERT_EQUAL_HEX8_ARRAY(UNREG, buf, sizeof(UNREG)); // command, length 0, handle little-endian
 
-    TEST_ASSERT_EQUAL_size_t(24u, protocore_eip_build_list_identity(buf, sizeof(buf), CTX));
+    Enip.build_list_identity_args.buf = buf;
+    Enip.build_list_identity_args.cap = sizeof(buf);
+    Enip.build_list_identity_args.sender_context = CTX;
+    Enip.build_list_identity(enip_work);
+    TEST_ASSERT_EQUAL_size_t(24u, Enip.n);
     static const uint8_t LISTID[8] = {0x63, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     TEST_ASSERT_EQUAL_HEX8_ARRAY(LISTID, buf, sizeof(LISTID));
 }
@@ -114,7 +133,15 @@ void test_send_rr_data_common_packet_format(void)
         0x0E, 0x03, 0x20, 0x01,                         // the CIP message
     };
     uint8_t buf[64];
-    size_t n = protocore_eip_build_send_rr_data(buf, sizeof(buf), 0x87654321u, CTX, 10, CIP, sizeof(CIP));
+    Enip.build_send_rr_data_args.buf = buf;
+    Enip.build_send_rr_data_args.cap = sizeof(buf);
+    Enip.build_send_rr_data_args.session_handle = 0x87654321u;
+    Enip.build_send_rr_data_args.sender_context = CTX;
+    Enip.build_send_rr_data_args.timeout = 10;
+    Enip.build_send_rr_data_args.cip = CIP;
+    Enip.build_send_rr_data_args.cip_len = sizeof(CIP);
+    Enip.build_send_rr_data(enip_work);
+    size_t n = Enip.n;
     TEST_ASSERT_EQUAL_size_t(sizeof(WANT), n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, buf, sizeof(WANT));
 
@@ -122,14 +149,25 @@ void test_send_rr_data_common_packet_format(void)
     EipHeader h;
     const uint8_t *data = NULL;
     size_t data_len = 0;
-    TEST_ASSERT_TRUE(protocore_eip_parse(buf, n, &h, &data, &data_len));
+    Enip.parse_args.buf = buf;
+    Enip.parse_args.len = n;
+    Enip.parse_args.out = &h;
+    Enip.parse_args.data = &data;
+    Enip.parse_args.data_len = &data_len;
+    Enip.parse(enip_work);
+    TEST_ASSERT_TRUE(Enip.ok);
     TEST_ASSERT_EQUAL_HEX16(EIP_CMD_SEND_RR_DATA, h.command);
     TEST_ASSERT_EQUAL_HEX32(0x87654321u, h.session_handle);
     TEST_ASSERT_EQUAL_size_t(20u, data_len);
 
     const uint8_t *cip = NULL;
     size_t cip_len = 0;
-    TEST_ASSERT_TRUE(protocore_eip_parse_send_rr_data(data, data_len, &cip, &cip_len));
+    Enip.parse_send_rr_data_args.data = data;
+    Enip.parse_send_rr_data_args.data_len = data_len;
+    Enip.parse_send_rr_data_args.cip = &cip;
+    Enip.parse_send_rr_data_args.cip_len = &cip_len;
+    Enip.parse_send_rr_data(enip_work);
+    TEST_ASSERT_TRUE(Enip.ok);
     TEST_ASSERT_EQUAL_size_t(sizeof(CIP), cip_len);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(CIP, cip, sizeof(CIP));
 }
@@ -148,13 +186,25 @@ void test_header_round_trip(void)
 
     static const uint8_t DATA[3] = {0xAA, 0xBB, 0xCC};
     uint8_t buf[64];
-    size_t n = protocore_eip_build(buf, sizeof(buf), &h, DATA, sizeof(DATA));
+    Enip.build_args.buf = buf;
+    Enip.build_args.cap = sizeof(buf);
+    Enip.build_args.h = &h;
+    Enip.build_args.data = DATA;
+    Enip.build_args.data_len = sizeof(DATA);
+    Enip.build(enip_work);
+    size_t n = Enip.n;
     TEST_ASSERT_EQUAL_size_t(27u, n);
 
     EipHeader got;
     const uint8_t *data = NULL;
     size_t data_len = 0;
-    TEST_ASSERT_TRUE(protocore_eip_parse(buf, n, &got, &data, &data_len));
+    Enip.parse_args.buf = buf;
+    Enip.parse_args.len = n;
+    Enip.parse_args.out = &got;
+    Enip.parse_args.data = &data;
+    Enip.parse_args.data_len = &data_len;
+    Enip.parse(enip_work);
+    TEST_ASSERT_TRUE(Enip.ok);
     TEST_ASSERT_EQUAL_HEX16(h.command, got.command);
     TEST_ASSERT_EQUAL_UINT16(3u, got.length);
     TEST_ASSERT_EQUAL_HEX32(h.session_handle, got.session_handle);
@@ -175,14 +225,44 @@ void test_parse_refuses_a_truncated_message(void)
     h.command = EIP_CMD_SEND_RR_DATA;
 
     uint8_t buf[64];
-    size_t n = protocore_eip_build(buf, sizeof(buf), &h, DATA, sizeof(DATA));
+    Enip.build_args.buf = buf;
+    Enip.build_args.cap = sizeof(buf);
+    Enip.build_args.h = &h;
+    Enip.build_args.data = DATA;
+    Enip.build_args.data_len = sizeof(DATA);
+    Enip.build(enip_work);
+    size_t n = Enip.n;
     TEST_ASSERT_EQUAL_size_t(32u, n);
 
     EipHeader got;
-    TEST_ASSERT_TRUE(protocore_eip_parse(buf, n, &got, NULL, NULL));
-    TEST_ASSERT_FALSE(protocore_eip_parse(buf, n - 1, &got, NULL, NULL)); // one octet short
-    TEST_ASSERT_FALSE(protocore_eip_parse(buf, 23, &got, NULL, NULL));    // shorter than the header
-    TEST_ASSERT_FALSE(protocore_eip_parse(NULL, n, &got, NULL, NULL));
+    Enip.parse_args.buf = buf;
+    Enip.parse_args.len = n;
+    Enip.parse_args.out = &got;
+    Enip.parse_args.data = NULL;
+    Enip.parse_args.data_len = NULL;
+    Enip.parse(enip_work);
+    TEST_ASSERT_TRUE(Enip.ok);
+    Enip.parse_args.buf = buf;
+    Enip.parse_args.len = n - 1;
+    Enip.parse_args.out = &got;
+    Enip.parse_args.data = NULL;
+    Enip.parse_args.data_len = NULL;
+    Enip.parse(enip_work);
+    TEST_ASSERT_FALSE(Enip.ok); // one octet short
+    Enip.parse_args.buf = buf;
+    Enip.parse_args.len = 23;
+    Enip.parse_args.out = &got;
+    Enip.parse_args.data = NULL;
+    Enip.parse_args.data_len = NULL;
+    Enip.parse(enip_work);
+    TEST_ASSERT_FALSE(Enip.ok); // shorter than the header
+    Enip.parse_args.buf = NULL;
+    Enip.parse_args.len = n;
+    Enip.parse_args.out = &got;
+    Enip.parse_args.data = NULL;
+    Enip.parse_args.data_len = NULL;
+    Enip.parse(enip_work);
+    TEST_ASSERT_FALSE(Enip.ok);
 }
 
 // A ListIdentity reply item, laid out from Volume 2's identity-item field table:
@@ -228,7 +308,11 @@ void test_list_identity_item(void)
 
     EipIdentity id;
     memset(&id, 0, sizeof(id));
-    TEST_ASSERT_TRUE(protocore_eip_parse_list_identity(block, sizeof(block), &id));
+    Enip.parse_list_identity_args.data = block;
+    Enip.parse_list_identity_args.data_len = sizeof(block);
+    Enip.parse_list_identity_args.out = &id;
+    Enip.parse_list_identity(enip_work);
+    TEST_ASSERT_TRUE(Enip.ok);
     TEST_ASSERT_EQUAL_HEX16(0x0001u, id.protocol_version);
     TEST_ASSERT_EQUAL_HEX16(0x0001u, id.vendor_id);
     TEST_ASSERT_EQUAL_HEX16(0x000Cu, id.device_type);
@@ -243,7 +327,11 @@ void test_list_identity_item(void)
 
     // An item whose declared length stops short of the name is refused, not read past.
     block[4] = 33;
-    TEST_ASSERT_FALSE(protocore_eip_parse_list_identity(block, sizeof(block), &id));
+    Enip.parse_list_identity_args.data = block;
+    Enip.parse_list_identity_args.data_len = sizeof(block);
+    Enip.parse_list_identity_args.out = &id;
+    Enip.parse_list_identity(enip_work);
+    TEST_ASSERT_FALSE(Enip.ok);
 }
 
 // A CPF block holding no item of the wanted type is a refusal, not a silent zero-length slice.
@@ -260,13 +348,28 @@ void test_cpf_walk_refuses_a_missing_item(void)
     };
     const uint8_t *cip = (const uint8_t *)1;
     size_t cip_len = 99;
-    TEST_ASSERT_FALSE(protocore_eip_parse_send_rr_data(DATA, 14, &cip, &cip_len));
+    Enip.parse_send_rr_data_args.data = DATA;
+    Enip.parse_send_rr_data_args.data_len = 14;
+    Enip.parse_send_rr_data_args.cip = &cip;
+    Enip.parse_send_rr_data_args.cip_len = &cip_len;
+    Enip.parse_send_rr_data(enip_work);
+    TEST_ASSERT_FALSE(Enip.ok);
 
     // An item whose declared length runs past the block is refused too.
     static const uint8_t OVERRUN[12] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0xB2, 0x00, 0xFF, 0x00};
-    TEST_ASSERT_FALSE(protocore_eip_parse_send_rr_data(OVERRUN, sizeof(OVERRUN), &cip, &cip_len));
+    Enip.parse_send_rr_data_args.data = OVERRUN;
+    Enip.parse_send_rr_data_args.data_len = sizeof(OVERRUN);
+    Enip.parse_send_rr_data_args.cip = &cip;
+    Enip.parse_send_rr_data_args.cip_len = &cip_len;
+    Enip.parse_send_rr_data(enip_work);
+    TEST_ASSERT_FALSE(Enip.ok);
 
-    TEST_ASSERT_FALSE(protocore_eip_parse_send_rr_data(DATA, 7, &cip, &cip_len)); // shorter than the CPF preamble
+    Enip.parse_send_rr_data_args.data = DATA;
+    Enip.parse_send_rr_data_args.data_len = 7;
+    Enip.parse_send_rr_data_args.cip = &cip;
+    Enip.parse_send_rr_data_args.cip_len = &cip_len;
+    Enip.parse_send_rr_data(enip_work);
+    TEST_ASSERT_FALSE(Enip.ok); // shorter than the CPF preamble
 }
 
 // A buffer that cannot hold header plus command data yields 0 rather than a partial message.
@@ -275,16 +378,70 @@ void test_builders_refuse_a_short_buffer(void)
     uint8_t buf[64];
     static const uint8_t CIP[4] = {0x0E, 0x03, 0x20, 0x01};
 
-    TEST_ASSERT_EQUAL_size_t(0u, protocore_eip_build_register_session(buf, 27, CTX));
-    TEST_ASSERT_EQUAL_size_t(28u, protocore_eip_build_register_session(buf, 28, CTX));
-    TEST_ASSERT_EQUAL_size_t(0u, protocore_eip_build_list_identity(buf, 23, CTX));
-    TEST_ASSERT_EQUAL_size_t(0u, protocore_eip_build_send_rr_data(buf, 43, 1u, CTX, 10, CIP, sizeof(CIP)));
-    TEST_ASSERT_EQUAL_size_t(44u, protocore_eip_build_send_rr_data(buf, 44, 1u, CTX, 10, CIP, sizeof(CIP)));
-    TEST_ASSERT_EQUAL_size_t(0u, protocore_eip_build_send_rr_data(buf, sizeof(buf), 1u, CTX, 10, NULL, 4));
+    Enip.build_register_session_args.buf = buf;
+    Enip.build_register_session_args.cap = 27;
+    Enip.build_register_session_args.sender_context = CTX;
+    Enip.build_register_session(enip_work);
+    TEST_ASSERT_EQUAL_size_t(0u, Enip.n);
+    Enip.build_register_session_args.buf = buf;
+    Enip.build_register_session_args.cap = 28;
+    Enip.build_register_session_args.sender_context = CTX;
+    Enip.build_register_session(enip_work);
+    TEST_ASSERT_EQUAL_size_t(28u, Enip.n);
+    Enip.build_list_identity_args.buf = buf;
+    Enip.build_list_identity_args.cap = 23;
+    Enip.build_list_identity_args.sender_context = CTX;
+    Enip.build_list_identity(enip_work);
+    TEST_ASSERT_EQUAL_size_t(0u, Enip.n);
+    Enip.build_send_rr_data_args.buf = buf;
+    Enip.build_send_rr_data_args.cap = 43;
+    Enip.build_send_rr_data_args.session_handle = 1u;
+    Enip.build_send_rr_data_args.sender_context = CTX;
+    Enip.build_send_rr_data_args.timeout = 10;
+    Enip.build_send_rr_data_args.cip = CIP;
+    Enip.build_send_rr_data_args.cip_len = sizeof(CIP);
+    Enip.build_send_rr_data(enip_work);
+    TEST_ASSERT_EQUAL_size_t(0u, Enip.n);
+    Enip.build_send_rr_data_args.buf = buf;
+    Enip.build_send_rr_data_args.cap = 44;
+    Enip.build_send_rr_data_args.session_handle = 1u;
+    Enip.build_send_rr_data_args.sender_context = CTX;
+    Enip.build_send_rr_data_args.timeout = 10;
+    Enip.build_send_rr_data_args.cip = CIP;
+    Enip.build_send_rr_data_args.cip_len = sizeof(CIP);
+    Enip.build_send_rr_data(enip_work);
+    TEST_ASSERT_EQUAL_size_t(44u, Enip.n);
+    Enip.build_send_rr_data_args.buf = buf;
+    Enip.build_send_rr_data_args.cap = sizeof(buf);
+    Enip.build_send_rr_data_args.session_handle = 1u;
+    Enip.build_send_rr_data_args.sender_context = CTX;
+    Enip.build_send_rr_data_args.timeout = 10;
+    Enip.build_send_rr_data_args.cip = NULL;
+    Enip.build_send_rr_data_args.cip_len = 4;
+    Enip.build_send_rr_data(enip_work);
+    TEST_ASSERT_EQUAL_size_t(0u, Enip.n);
 
     EipHeader h;
     memset(&h, 0, sizeof(h));
-    TEST_ASSERT_EQUAL_size_t(0u, protocore_eip_build(NULL, sizeof(buf), &h, NULL, 0));
-    TEST_ASSERT_EQUAL_size_t(0u, protocore_eip_build(buf, sizeof(buf), NULL, NULL, 0));
-    TEST_ASSERT_EQUAL_size_t(0u, protocore_eip_build(buf, sizeof(buf), &h, NULL, 4));
+    Enip.build_args.buf = NULL;
+    Enip.build_args.cap = sizeof(buf);
+    Enip.build_args.h = &h;
+    Enip.build_args.data = NULL;
+    Enip.build_args.data_len = 0;
+    Enip.build(enip_work);
+    TEST_ASSERT_EQUAL_size_t(0u, Enip.n);
+    Enip.build_args.buf = buf;
+    Enip.build_args.cap = sizeof(buf);
+    Enip.build_args.h = NULL;
+    Enip.build_args.data = NULL;
+    Enip.build_args.data_len = 0;
+    Enip.build(enip_work);
+    TEST_ASSERT_EQUAL_size_t(0u, Enip.n);
+    Enip.build_args.buf = buf;
+    Enip.build_args.cap = sizeof(buf);
+    Enip.build_args.h = &h;
+    Enip.build_args.data = NULL;
+    Enip.build_args.data_len = 4;
+    Enip.build(enip_work);
+    TEST_ASSERT_EQUAL_size_t(0u, Enip.n);
 }

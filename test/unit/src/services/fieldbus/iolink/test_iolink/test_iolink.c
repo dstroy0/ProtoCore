@@ -18,6 +18,8 @@
 
 #include <unity.h>
 
+static uint8_t iolink_work[16]; // the borrow an entry takes; Iolink never reads it
+
 void setUp(void)
 {
 }
@@ -37,18 +39,47 @@ void test_mc_octet_fields(void)
     TEST_ASSERT_EQUAL_UINT8(3u, IOL_CH_ISDU);
 
     // read, Page channel, address 0: 1 000 0 0000 -> 0x80 | (1 << 5) = 0xA0
-    TEST_ASSERT_EQUAL_HEX8(0xA0u, protocore_iol_mc(PROTO_TRUE, IOL_CH_PAGE, 0));
+    Iolink.mc_args.read = PROTO_TRUE;
+    Iolink.mc_args.channel = IOL_CH_PAGE;
+    Iolink.mc_args.address = 0;
+    Iolink.mc(iolink_work);
+    TEST_ASSERT_EQUAL_HEX8(0xA0u, Iolink.value);
     // write, ISDU channel, address 0x1F: (3 << 5) | 0x1F = 0x60 | 0x1F = 0x7F
-    TEST_ASSERT_EQUAL_HEX8(0x7Fu, protocore_iol_mc(PROTO_FALSE, IOL_CH_ISDU, 0x1F));
+    Iolink.mc_args.read = PROTO_FALSE;
+    Iolink.mc_args.channel = IOL_CH_ISDU;
+    Iolink.mc_args.address = 0x1F;
+    Iolink.mc(iolink_work);
+    TEST_ASSERT_EQUAL_HEX8(0x7Fu, Iolink.value);
     // the address field is five bits, so bit 5 of a wider argument never leaks into the channel
-    TEST_ASSERT_EQUAL_HEX8(0x00u, protocore_iol_mc(PROTO_FALSE, IOL_CH_PROCESS, 0x20));
+    Iolink.mc_args.read = PROTO_FALSE;
+    Iolink.mc_args.channel = IOL_CH_PROCESS;
+    Iolink.mc_args.address = 0x20;
+    Iolink.mc(iolink_work);
+    TEST_ASSERT_EQUAL_HEX8(0x00u, Iolink.value);
 
     // Every field comes back out of every octet.
     for (unsigned v = 0; v < 256u; v++)
     {
         uint8_t mc = (uint8_t)v;
-        TEST_ASSERT_EQUAL_HEX8(mc, protocore_iol_mc(protocore_iol_mc_is_read(mc), protocore_iol_mc_channel(mc),
-                                                    protocore_iol_mc_address(mc)));
+        // One namespace, one result member, so each field is taken into a local before the next
+        // call lands on it.
+        Iolink.mc_is_read_args.mc = mc;
+        Iolink.mc_is_read(iolink_work);
+        const proto_bool read = Iolink.ok;
+
+        Iolink.mc_channel_args.mc = mc;
+        Iolink.mc_channel(iolink_work);
+        const uint8_t channel = Iolink.value;
+
+        Iolink.mc_address_args.mc = mc;
+        Iolink.mc_address(iolink_work);
+        const uint8_t address = Iolink.value;
+
+        Iolink.mc_args.read = read;
+        Iolink.mc_args.channel = channel;
+        Iolink.mc_args.address = address;
+        Iolink.mc(iolink_work);
+        TEST_ASSERT_EQUAL_HEX8(mc, Iolink.value);
     }
 }
 
@@ -62,12 +93,27 @@ void test_ckt_octet_fields(void)
     TEST_ASSERT_EQUAL_UINT8(1u, IOL_MSEQ_TYPE_1);
     TEST_ASSERT_EQUAL_UINT8(2u, IOL_MSEQ_TYPE_2);
 
-    TEST_ASSERT_EQUAL_HEX8(0x00u, protocore_iol_ckt(IOL_MSEQ_TYPE_0, 0));
-    TEST_ASSERT_EQUAL_HEX8(0x40u, protocore_iol_ckt(IOL_MSEQ_TYPE_1, 0));
-    TEST_ASSERT_EQUAL_HEX8(0x80u, protocore_iol_ckt(IOL_MSEQ_TYPE_2, 0));
-    TEST_ASSERT_EQUAL_HEX8(0x7Fu, protocore_iol_ckt(IOL_MSEQ_TYPE_1, 0x3F));
+    Iolink.ckt_args.mseq_type = IOL_MSEQ_TYPE_0;
+    Iolink.ckt_args.checksum6 = 0;
+    Iolink.ckt(iolink_work);
+    TEST_ASSERT_EQUAL_HEX8(0x00u, Iolink.value);
+    Iolink.ckt_args.mseq_type = IOL_MSEQ_TYPE_1;
+    Iolink.ckt_args.checksum6 = 0;
+    Iolink.ckt(iolink_work);
+    TEST_ASSERT_EQUAL_HEX8(0x40u, Iolink.value);
+    Iolink.ckt_args.mseq_type = IOL_MSEQ_TYPE_2;
+    Iolink.ckt_args.checksum6 = 0;
+    Iolink.ckt(iolink_work);
+    TEST_ASSERT_EQUAL_HEX8(0x80u, Iolink.value);
+    Iolink.ckt_args.mseq_type = IOL_MSEQ_TYPE_1;
+    Iolink.ckt_args.checksum6 = 0x3F;
+    Iolink.ckt(iolink_work);
+    TEST_ASSERT_EQUAL_HEX8(0x7Fu, Iolink.value);
     // The checksum argument is six bits: a wider one never overwrites the type.
-    TEST_ASSERT_EQUAL_HEX8(0x40u, protocore_iol_ckt(IOL_MSEQ_TYPE_1, 0xC0));
+    Iolink.ckt_args.mseq_type = IOL_MSEQ_TYPE_1;
+    Iolink.ckt_args.checksum6 = 0xC0;
+    Iolink.ckt(iolink_work);
+    TEST_ASSERT_EQUAL_HEX8(0x40u, Iolink.value);
 }
 
 // Figure A.3: the CKS octet carries the Event flag in bit 7 (Table A.6), the PD status in bit 6
@@ -77,11 +123,31 @@ void test_cks_octet_fields(void)
     TEST_ASSERT_EQUAL_HEX8(0x80u, IOL_CKS_EVENT);
     TEST_ASSERT_EQUAL_HEX8(0x40u, IOL_CKS_PD_INVALID);
 
-    TEST_ASSERT_EQUAL_HEX8(0x00u, protocore_iol_cks(PROTO_FALSE, PROTO_FALSE, 0));
-    TEST_ASSERT_EQUAL_HEX8(0x80u, protocore_iol_cks(PROTO_TRUE, PROTO_FALSE, 0));
-    TEST_ASSERT_EQUAL_HEX8(0x40u, protocore_iol_cks(PROTO_FALSE, PROTO_TRUE, 0));
-    TEST_ASSERT_EQUAL_HEX8(0xC0u, protocore_iol_cks(PROTO_TRUE, PROTO_TRUE, 0));
-    TEST_ASSERT_EQUAL_HEX8(0xFFu, protocore_iol_cks(PROTO_TRUE, PROTO_TRUE, 0x3F));
+    Iolink.cks_args.event = PROTO_FALSE;
+    Iolink.cks_args.pd_invalid = PROTO_FALSE;
+    Iolink.cks_args.checksum6 = 0;
+    Iolink.cks(iolink_work);
+    TEST_ASSERT_EQUAL_HEX8(0x00u, Iolink.value);
+    Iolink.cks_args.event = PROTO_TRUE;
+    Iolink.cks_args.pd_invalid = PROTO_FALSE;
+    Iolink.cks_args.checksum6 = 0;
+    Iolink.cks(iolink_work);
+    TEST_ASSERT_EQUAL_HEX8(0x80u, Iolink.value);
+    Iolink.cks_args.event = PROTO_FALSE;
+    Iolink.cks_args.pd_invalid = PROTO_TRUE;
+    Iolink.cks_args.checksum6 = 0;
+    Iolink.cks(iolink_work);
+    TEST_ASSERT_EQUAL_HEX8(0x40u, Iolink.value);
+    Iolink.cks_args.event = PROTO_TRUE;
+    Iolink.cks_args.pd_invalid = PROTO_TRUE;
+    Iolink.cks_args.checksum6 = 0;
+    Iolink.cks(iolink_work);
+    TEST_ASSERT_EQUAL_HEX8(0xC0u, Iolink.value);
+    Iolink.cks_args.event = PROTO_TRUE;
+    Iolink.cks_args.pd_invalid = PROTO_TRUE;
+    Iolink.cks_args.checksum6 = 0x3F;
+    Iolink.cks(iolink_work);
+    TEST_ASSERT_EQUAL_HEX8(0xFFu, Iolink.value);
 }
 
 // A TYPE_0 master read message is MC then CKT (Figure A.5). Reading address 0 of the Page channel:
@@ -99,15 +165,33 @@ void test_cks_octet_fields(void)
 void test_type0_read_checksum(void)
 {
     uint8_t msg[2];
-    msg[0] = protocore_iol_mc(PROTO_TRUE, IOL_CH_PAGE, 0);
-    msg[1] = protocore_iol_ckt(IOL_MSEQ_TYPE_0, 0);
+    Iolink.mc_args.read = PROTO_TRUE;
+    Iolink.mc_args.channel = IOL_CH_PAGE;
+    Iolink.mc_args.address = 0;
+    Iolink.mc(iolink_work);
+    msg[0] = Iolink.value;
+    Iolink.ckt_args.mseq_type = IOL_MSEQ_TYPE_0;
+    Iolink.ckt_args.checksum6 = 0;
+    Iolink.ckt(iolink_work);
+    msg[1] = Iolink.value;
     TEST_ASSERT_EQUAL_HEX8(0xA0u, msg[0]);
     TEST_ASSERT_EQUAL_HEX8(0x00u, msg[1]);
 
-    TEST_ASSERT_EQUAL_HEX8(0x21u, protocore_iol_checksum6(msg, sizeof(msg)));
-    TEST_ASSERT_EQUAL_HEX8(0x21u, protocore_iol_finalize(msg, sizeof(msg), 1));
+    Iolink.checksum6_args.msg = msg;
+    Iolink.checksum6_args.len = sizeof(msg);
+    Iolink.checksum6(iolink_work);
+    TEST_ASSERT_EQUAL_HEX8(0x21u, Iolink.value);
+    Iolink.finalize_args.msg = msg;
+    Iolink.finalize_args.len = sizeof(msg);
+    Iolink.finalize_args.check_idx = 1;
+    Iolink.finalize(iolink_work);
+    TEST_ASSERT_EQUAL_HEX8(0x21u, Iolink.value);
     TEST_ASSERT_EQUAL_HEX8(0x21u, msg[1]);
-    TEST_ASSERT_TRUE(protocore_iol_verify(msg, sizeof(msg), 1));
+    Iolink.verify_args.msg = msg;
+    Iolink.verify_args.len = sizeof(msg);
+    Iolink.verify_args.check_idx = 1;
+    Iolink.verify(iolink_work);
+    TEST_ASSERT_TRUE(Iolink.ok);
 }
 
 // A TYPE_0 master write message is MC, CKT, then one octet of On-request Data.
@@ -121,13 +205,28 @@ void test_type0_read_checksum(void)
 void test_type0_write_checksum(void)
 {
     uint8_t msg[3];
-    msg[0] = protocore_iol_mc(PROTO_FALSE, IOL_CH_ISDU, 0x05);
-    msg[1] = protocore_iol_ckt(IOL_MSEQ_TYPE_1, 0);
+    Iolink.mc_args.read = PROTO_FALSE;
+    Iolink.mc_args.channel = IOL_CH_ISDU;
+    Iolink.mc_args.address = 0x05;
+    Iolink.mc(iolink_work);
+    msg[0] = Iolink.value;
+    Iolink.ckt_args.mseq_type = IOL_MSEQ_TYPE_1;
+    Iolink.ckt_args.checksum6 = 0;
+    Iolink.ckt(iolink_work);
+    msg[1] = Iolink.value;
     msg[2] = 0xAA;
     TEST_ASSERT_EQUAL_HEX8(0x65u, msg[0]);
 
-    TEST_ASSERT_EQUAL_HEX8(0x45u, protocore_iol_finalize(msg, sizeof(msg), 1));
-    TEST_ASSERT_TRUE(protocore_iol_verify(msg, sizeof(msg), 1));
+    Iolink.finalize_args.msg = msg;
+    Iolink.finalize_args.len = sizeof(msg);
+    Iolink.finalize_args.check_idx = 1;
+    Iolink.finalize(iolink_work);
+    TEST_ASSERT_EQUAL_HEX8(0x45u, Iolink.value);
+    Iolink.verify_args.msg = msg;
+    Iolink.verify_args.len = sizeof(msg);
+    Iolink.verify_args.check_idx = 1;
+    Iolink.verify(iolink_work);
+    TEST_ASSERT_TRUE(Iolink.ok);
 }
 
 // The Device reply carries its checksum in the CKS octet, so the same procedure runs with the
@@ -141,11 +240,23 @@ void test_device_reply_checksum(void)
 {
     uint8_t msg[2];
     msg[0] = 0x5A;
-    msg[1] = protocore_iol_cks(PROTO_TRUE, PROTO_FALSE, 0);
+    Iolink.cks_args.event = PROTO_TRUE;
+    Iolink.cks_args.pd_invalid = PROTO_FALSE;
+    Iolink.cks_args.checksum6 = 0;
+    Iolink.cks(iolink_work);
+    msg[1] = Iolink.value;
     TEST_ASSERT_EQUAL_HEX8(0x80u, msg[1]);
 
-    TEST_ASSERT_EQUAL_HEX8(0x8Au, protocore_iol_finalize(msg, sizeof(msg), 1));
-    TEST_ASSERT_TRUE(protocore_iol_verify(msg, sizeof(msg), 1));
+    Iolink.finalize_args.msg = msg;
+    Iolink.finalize_args.len = sizeof(msg);
+    Iolink.finalize_args.check_idx = 1;
+    Iolink.finalize(iolink_work);
+    TEST_ASSERT_EQUAL_HEX8(0x8Au, Iolink.value);
+    Iolink.verify_args.msg = msg;
+    Iolink.verify_args.len = sizeof(msg);
+    Iolink.verify_args.check_idx = 1;
+    Iolink.verify(iolink_work);
+    TEST_ASSERT_TRUE(Iolink.ok);
     // Finalizing preserved the Event flag rather than overwriting the whole octet.
     TEST_ASSERT_EQUAL_HEX8(IOL_CKS_EVENT, (uint8_t)(msg[1] & IOL_CHECK_HIGH_MASK));
 }
@@ -167,8 +278,16 @@ void test_finalize_then_verify(void)
                     msg[i] = (uint8_t)(0x11u * (i + 1u));
                 }
                 msg[idx] = HIGH[h];
-                (void)protocore_iol_finalize(msg, len, idx);
-                TEST_ASSERT_TRUE(protocore_iol_verify(msg, len, idx));
+                Iolink.finalize_args.msg = msg;
+                Iolink.finalize_args.len = len;
+                Iolink.finalize_args.check_idx = idx;
+                Iolink.finalize(iolink_work);
+                (void)Iolink.value;
+                Iolink.verify_args.msg = msg;
+                Iolink.verify_args.len = len;
+                Iolink.verify_args.check_idx = idx;
+                Iolink.verify(iolink_work);
+                TEST_ASSERT_TRUE(Iolink.ok);
                 TEST_ASSERT_EQUAL_HEX8(HIGH[h], (uint8_t)(msg[idx] & IOL_CHECK_HIGH_MASK));
             }
         }
@@ -181,13 +300,28 @@ void test_finalize_then_verify(void)
 void test_single_bit_corruption_is_refused(void)
 {
     uint8_t good[5];
-    good[0] = protocore_iol_mc(PROTO_TRUE, IOL_CH_PROCESS, 0x03);
-    good[1] = protocore_iol_ckt(IOL_MSEQ_TYPE_2, 0);
+    Iolink.mc_args.read = PROTO_TRUE;
+    Iolink.mc_args.channel = IOL_CH_PROCESS;
+    Iolink.mc_args.address = 0x03;
+    Iolink.mc(iolink_work);
+    good[0] = Iolink.value;
+    Iolink.ckt_args.mseq_type = IOL_MSEQ_TYPE_2;
+    Iolink.ckt_args.checksum6 = 0;
+    Iolink.ckt(iolink_work);
+    good[1] = Iolink.value;
     good[2] = 0x12;
     good[3] = 0x34;
     good[4] = 0x56;
-    (void)protocore_iol_finalize(good, sizeof(good), 1);
-    TEST_ASSERT_TRUE(protocore_iol_verify(good, sizeof(good), 1));
+    Iolink.finalize_args.msg = good;
+    Iolink.finalize_args.len = sizeof(good);
+    Iolink.finalize_args.check_idx = 1;
+    Iolink.finalize(iolink_work);
+    (void)Iolink.value;
+    Iolink.verify_args.msg = good;
+    Iolink.verify_args.len = sizeof(good);
+    Iolink.verify_args.check_idx = 1;
+    Iolink.verify(iolink_work);
+    TEST_ASSERT_TRUE(Iolink.ok);
 
     for (size_t i = 0; i < sizeof(good); i++)
     {
@@ -196,7 +330,11 @@ void test_single_bit_corruption_is_refused(void)
             uint8_t bad[5];
             memcpy(bad, good, sizeof(good));
             bad[i] ^= (uint8_t)(1u << bit);
-            TEST_ASSERT_FALSE(protocore_iol_verify(bad, sizeof(bad), 1));
+            Iolink.verify_args.msg = bad;
+            Iolink.verify_args.len = sizeof(bad);
+            Iolink.verify_args.check_idx = 1;
+            Iolink.verify(iolink_work);
+            TEST_ASSERT_FALSE(Iolink.ok);
         }
     }
 }
@@ -205,10 +343,26 @@ void test_single_bit_corruption_is_refused(void)
 void test_bounds_are_refused(void)
 {
     uint8_t msg[2] = {0xA0, 0x00};
-    TEST_ASSERT_EQUAL_HEX8(0x00u, protocore_iol_finalize(msg, 2, 2));
-    TEST_ASSERT_EQUAL_HEX8(0x00u, protocore_iol_finalize(NULL, 2, 0));
-    TEST_ASSERT_FALSE(protocore_iol_verify(msg, 2, 2));
-    TEST_ASSERT_FALSE(protocore_iol_verify(NULL, 2, 0));
+    Iolink.finalize_args.msg = msg;
+    Iolink.finalize_args.len = 2;
+    Iolink.finalize_args.check_idx = 2;
+    Iolink.finalize(iolink_work);
+    TEST_ASSERT_EQUAL_HEX8(0x00u, Iolink.value);
+    Iolink.finalize_args.msg = NULL;
+    Iolink.finalize_args.len = 2;
+    Iolink.finalize_args.check_idx = 0;
+    Iolink.finalize(iolink_work);
+    TEST_ASSERT_EQUAL_HEX8(0x00u, Iolink.value);
+    Iolink.verify_args.msg = msg;
+    Iolink.verify_args.len = 2;
+    Iolink.verify_args.check_idx = 2;
+    Iolink.verify(iolink_work);
+    TEST_ASSERT_FALSE(Iolink.ok);
+    Iolink.verify_args.msg = NULL;
+    Iolink.verify_args.len = 2;
+    Iolink.verify_args.check_idx = 0;
+    Iolink.verify(iolink_work);
+    TEST_ASSERT_FALSE(Iolink.ok);
     // The message was not touched by the refused calls.
     TEST_ASSERT_EQUAL_HEX8(0xA0u, msg[0]);
     TEST_ASSERT_EQUAL_HEX8(0x00u, msg[1]);

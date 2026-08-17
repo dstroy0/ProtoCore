@@ -6,44 +6,70 @@
  * @brief BACnet/IP BVLC + NPDU builder + parser (pure, host-tested).
  */
 
-#include "services/fieldbus/bacnet/bacnet.h"
-#include "mmgr/protomem.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_BACNET
 
-size_t protocore_bvlc_build(uint8_t *buf, size_t cap, uint8_t function, const uint8_t *npdu, size_t protocore_npdu_len)
+#include "mmgr/protomem.h"
+#include "services/fieldbus/bacnet/bacnet.h"
+
+PROTOCORE_BEGIN_DECLS
+
+// --- the entries -----------------------------------------------------------
+
+// No context and no borrow: every operand is the caller's. The borrow an entry takes is
+// never read.
+
+static void bacnet_bvlc_build(uint8_t *restrict work)
 {
-    if (!buf || (protocore_npdu_len && !npdu))
+    (void)work;
+    uint8_t *buf = Bacnet.bvlc_build_args.buf;
+    size_t cap = Bacnet.bvlc_build_args.cap;
+    uint8_t function = Bacnet.bvlc_build_args.function;
+    const uint8_t *npdu = Bacnet.bvlc_build_args.npdu;
+    size_t npdu_len = Bacnet.bvlc_build_args.npdu_len;
+
+    if (!buf || (npdu_len && !npdu))
     {
-        return 0;
+        Bacnet.n = 0;
+        return;
     }
-    size_t total = BVLC_HEADER_SIZE + protocore_npdu_len;
+    size_t total = BVLC_HEADER_SIZE + npdu_len;
     if (total > 0xFFFF || total > cap)
     {
-        return 0;
+        Bacnet.n = 0;
+        return;
     }
     buf[0] = BVLC_TYPE_BIP;
     buf[1] = function;
     buf[2] = (uint8_t)(total >> 8); // length, big-endian, the whole BVLL
     buf[3] = (uint8_t)(total & 0xFF);
-    if (protocore_npdu_len)
+    if (npdu_len)
     {
-        mem.cpy(buf + BVLC_HEADER_SIZE, npdu, protocore_npdu_len);
+        mem.cpy(buf + BVLC_HEADER_SIZE, npdu, npdu_len);
     }
-    return total;
+    Bacnet.n = total;
 }
 
-proto_bool protocore_bvlc_parse(const uint8_t *buf, size_t len, uint8_t *function, const uint8_t **npdu,
-                                size_t *protocore_npdu_len)
+static void bacnet_bvlc_parse(uint8_t *restrict work)
 {
+    (void)work;
+    const uint8_t *buf = Bacnet.bvlc_parse_args.buf;
+    size_t len = Bacnet.bvlc_parse_args.len;
+    uint8_t *function = Bacnet.bvlc_parse_args.function;
+    const uint8_t **npdu = Bacnet.bvlc_parse_args.npdu;
+    size_t *npdu_len = Bacnet.bvlc_parse_args.npdu_len;
+
     if (!buf || len < BVLC_HEADER_SIZE || buf[0] != BVLC_TYPE_BIP)
     {
-        return PROTO_FALSE;
+        Bacnet.ok = PROTO_FALSE;
+        return;
     }
     size_t total = ((size_t)buf[2] << 8) | buf[3];
     if (total < BVLC_HEADER_SIZE || total > len)
     {
-        return PROTO_FALSE;
+        Bacnet.ok = PROTO_FALSE;
+        return;
     }
     if (function)
     {
@@ -53,20 +79,32 @@ proto_bool protocore_bvlc_parse(const uint8_t *buf, size_t len, uint8_t *functio
     {
         *npdu = buf + BVLC_HEADER_SIZE;
     }
-    if (protocore_npdu_len)
+    if (npdu_len)
     {
-        *protocore_npdu_len = total - BVLC_HEADER_SIZE;
+        *npdu_len = total - BVLC_HEADER_SIZE;
     }
-    return PROTO_TRUE;
+    Bacnet.ok = PROTO_TRUE;
 }
 
-size_t protocore_npdu_build(uint8_t *buf, size_t cap, proto_bool expecting_reply, uint8_t priority, proto_bool has_dest,
-                            uint16_t dnet, const uint8_t *dadr, uint8_t dadr_len, uint8_t hop_count,
-                            const uint8_t *apdu, size_t apdu_len)
+static void bacnet_npdu_build(uint8_t *restrict work)
 {
+    (void)work;
+    uint8_t *buf = Bacnet.npdu_build_args.buf;
+    size_t cap = Bacnet.npdu_build_args.cap;
+    proto_bool expecting_reply = Bacnet.npdu_build_args.expecting_reply;
+    uint8_t priority = Bacnet.npdu_build_args.priority;
+    proto_bool has_dest = Bacnet.npdu_build_args.has_dest;
+    uint16_t dnet = Bacnet.npdu_build_args.dnet;
+    const uint8_t *dadr = Bacnet.npdu_build_args.dadr;
+    uint8_t dadr_len = Bacnet.npdu_build_args.dadr_len;
+    uint8_t hop_count = Bacnet.npdu_build_args.hop_count;
+    const uint8_t *apdu = Bacnet.npdu_build_args.apdu;
+    size_t apdu_len = Bacnet.npdu_build_args.apdu_len;
+
     if (!buf || (apdu_len && !apdu) || (dadr_len && !dadr))
     {
-        return 0;
+        Bacnet.n = 0;
+        return;
     }
     size_t need = 2 + apdu_len; // version + control + apdu
     if (has_dest)
@@ -75,7 +113,8 @@ size_t protocore_npdu_build(uint8_t *buf, size_t cap, proto_bool expecting_reply
     }
     if (need > cap)
     {
-        return 0;
+        Bacnet.n = 0;
+        return;
     }
 
     size_t p = 0;
@@ -107,14 +146,20 @@ size_t protocore_npdu_build(uint8_t *buf, size_t cap, proto_bool expecting_reply
         mem.cpy(buf + p, apdu, apdu_len);
         p += apdu_len;
     }
-    return p;
+    Bacnet.n = p;
 }
 
-proto_bool protocore_npdu_parse(const uint8_t *buf, size_t len, NpduInfo *out)
+static void bacnet_npdu_parse(uint8_t *restrict work)
 {
+    (void)work;
+    const uint8_t *buf = Bacnet.npdu_parse_args.buf;
+    size_t len = Bacnet.npdu_parse_args.len;
+    NpduInfo *out = Bacnet.npdu_parse_args.out;
+
     if (!buf || !out || len < 2 || buf[0] != NPDU_VERSION)
     {
-        return PROTO_FALSE;
+        Bacnet.ok = PROTO_FALSE;
+        return;
     }
     uint8_t control = buf[1];
     size_t p = 2;
@@ -131,41 +176,46 @@ proto_bool protocore_npdu_parse(const uint8_t *buf, size_t len, NpduInfo *out)
     {
         if (p + 3 > len)
         {
-            return PROTO_FALSE;
+            Bacnet.ok = PROTO_FALSE;
+            return;
         }
         out->dnet = (uint16_t)((buf[p] << 8) | buf[p + 1]);
         uint8_t dlen = buf[p + 2];
         p += 3 + dlen;
         if (p > len)
         {
-            return PROTO_FALSE;
+            Bacnet.ok = PROTO_FALSE;
+            return;
         }
     }
     if (out->src_present)
     {
         if (p + 3 > len)
         {
-            return PROTO_FALSE;
+            Bacnet.ok = PROTO_FALSE;
+            return;
         }
         out->snet = (uint16_t)((buf[p] << 8) | buf[p + 1]);
         uint8_t slen = buf[p + 2];
         p += 3 + slen;
         if (p > len)
         {
-            return PROTO_FALSE;
+            Bacnet.ok = PROTO_FALSE;
+            return;
         }
     }
     if (out->dest_present) // the hop count follows the source fields
     {
         if (p + 1 > len)
         {
-            return PROTO_FALSE;
+            Bacnet.ok = PROTO_FALSE;
+            return;
         }
         out->hop_count = buf[p++];
     }
     out->apdu = buf + p;
     out->apdu_len = len - p;
-    return PROTO_TRUE;
+    Bacnet.ok = PROTO_TRUE;
 }
 
 // Encode a BACnet tagged unsigned integer (tag octet = tag-number<<4 | class | length), using the minimal
@@ -200,12 +250,19 @@ static size_t bacnet_put_tagged_uint(uint8_t *buf, uint8_t tag_number, uint32_t 
     return p;
 }
 
-size_t protocore_apdu_build_who_is(uint8_t *buf, size_t cap, uint32_t low_limit, uint32_t high_limit,
-                                   proto_bool has_limits)
+static void bacnet_apdu_build_who_is(uint8_t *restrict work)
 {
+    (void)work;
+    uint8_t *buf = Bacnet.apdu_build_who_is_args.buf;
+    size_t cap = Bacnet.apdu_build_who_is_args.cap;
+    uint32_t low_limit = Bacnet.apdu_build_who_is_args.low_limit;
+    uint32_t high_limit = Bacnet.apdu_build_who_is_args.high_limit;
+    proto_bool has_limits = Bacnet.apdu_build_who_is_args.has_limits;
+
     if (!buf)
     {
-        return 0;
+        Bacnet.n = 0;
+        return;
     }
     uint8_t tmp[16]; // worst case: 2 header + 2 * (1 tag + 3 value) = 10
     size_t p = 0;
@@ -215,25 +272,35 @@ size_t protocore_apdu_build_who_is(uint8_t *buf, size_t cap, uint32_t low_limit,
     {
         if (low_limit > BACNET_MAX_INSTANCE || high_limit > BACNET_MAX_INSTANCE || low_limit > high_limit)
         {
-            return 0;
+            Bacnet.n = 0;
+            return;
         }
         p += bacnet_put_tagged_uint(tmp + p, 0, low_limit, PROTO_TRUE);
         p += bacnet_put_tagged_uint(tmp + p, 1, high_limit, PROTO_TRUE);
     }
     if (cap < p)
     {
-        return 0;
+        Bacnet.n = 0;
+        return;
     }
     mem.cpy(buf, tmp, p);
-    return p;
+    Bacnet.n = p;
 }
 
-size_t protocore_apdu_build_i_am(uint8_t *buf, size_t cap, uint32_t device_instance, uint32_t max_apdu,
-                                 uint8_t segmentation, uint16_t vendor_id)
+static void bacnet_apdu_build_i_am(uint8_t *restrict work)
 {
+    (void)work;
+    uint8_t *buf = Bacnet.apdu_build_i_am_args.buf;
+    size_t cap = Bacnet.apdu_build_i_am_args.cap;
+    uint32_t device_instance = Bacnet.apdu_build_i_am_args.device_instance;
+    uint32_t max_apdu = Bacnet.apdu_build_i_am_args.max_apdu;
+    uint8_t segmentation = Bacnet.apdu_build_i_am_args.segmentation;
+    uint16_t vendor_id = Bacnet.apdu_build_i_am_args.vendor_id;
+
     if (!buf || device_instance > BACNET_MAX_INSTANCE || segmentation > 3)
     {
-        return 0;
+        Bacnet.n = 0;
+        return;
     }
     uint8_t tmp[24]; // worst case: 2 header + 5 oid + 5 max-apdu + 2 seg + 5 vendor = 19
     size_t p = 0;
@@ -252,18 +319,28 @@ size_t protocore_apdu_build_i_am(uint8_t *buf, size_t cap, uint32_t device_insta
     p += bacnet_put_tagged_uint(tmp + p, 2, vendor_id, PROTO_FALSE); // vendor id (unsigned)
     if (cap < p)
     {
-        return 0;
+        Bacnet.n = 0;
+        return;
     }
     mem.cpy(buf, tmp, p);
-    return p;
+    Bacnet.n = p;
 }
 
-size_t protocore_apdu_build_read_property(uint8_t *buf, size_t cap, uint8_t invoke_id, uint8_t max_resp,
-                                          uint16_t object_type, uint32_t object_instance, uint32_t property_id)
+static void bacnet_apdu_build_read_property(uint8_t *restrict work)
 {
+    (void)work;
+    uint8_t *buf = Bacnet.apdu_build_read_property_args.buf;
+    size_t cap = Bacnet.apdu_build_read_property_args.cap;
+    uint8_t invoke_id = Bacnet.apdu_build_read_property_args.invoke_id;
+    uint8_t max_resp = Bacnet.apdu_build_read_property_args.max_resp;
+    uint16_t object_type = Bacnet.apdu_build_read_property_args.object_type;
+    uint32_t object_instance = Bacnet.apdu_build_read_property_args.object_instance;
+    uint32_t property_id = Bacnet.apdu_build_read_property_args.property_id;
+
     if (!buf || object_instance > BACNET_MAX_INSTANCE || object_type > 0x3FFu) // object type is 10 bits
     {
-        return 0;
+        Bacnet.n = 0;
+        return;
     }
     uint8_t tmp[16]; // 4 header + 5 object-id (tag + 4) + 5 property (tag + <= 4) = 14 worst case
     size_t p = 0;
@@ -282,10 +359,11 @@ size_t protocore_apdu_build_read_property(uint8_t *buf, size_t cap, uint8_t invo
     p += bacnet_put_tagged_uint(tmp + p, 1, property_id, PROTO_TRUE);
     if (cap < p)
     {
-        return 0;
+        Bacnet.n = 0;
+        return;
     }
     mem.cpy(buf, tmp, p);
-    return p;
+    Bacnet.n = p;
 }
 
 // Confirmed-Request APDU header: flags + the max-segs/max-apdu octet + invoke id, then a segment
@@ -344,11 +422,17 @@ static proto_bool apdu_parse_complex_ack(const uint8_t *apdu, size_t len, Bacnet
     return PROTO_TRUE;
 }
 
-proto_bool protocore_apdu_parse(const uint8_t *apdu, size_t len, BacnetApdu *out)
+static void bacnet_apdu_parse(uint8_t *restrict work)
 {
+    (void)work;
+    const uint8_t *apdu = Bacnet.apdu_parse_args.apdu;
+    size_t len = Bacnet.apdu_parse_args.len;
+    BacnetApdu *out = Bacnet.apdu_parse_args.out;
+
     if (!apdu || !out || len < 1)
     {
-        return PROTO_FALSE;
+        Bacnet.ok = PROTO_FALSE;
+        return;
     }
     mem.set(out, 0, sizeof(*out));
     out->pdu_type = (uint8_t)(apdu[0] >> 4);
@@ -358,20 +442,23 @@ proto_bool protocore_apdu_parse(const uint8_t *apdu, size_t len, BacnetApdu *out
     case BACNET_PDU_CONFIRMED_REQUEST:
         if (!apdu_parse_confirmed_request(apdu, len, out, &p))
         {
-            return PROTO_FALSE;
+            Bacnet.ok = PROTO_FALSE;
+            return;
         }
         break;
     case BACNET_PDU_UNCONFIRMED_REQUEST:
         if (len < p + 1)
         {
-            return PROTO_FALSE;
+            Bacnet.ok = PROTO_FALSE;
+            return;
         }
         out->service_choice = apdu[p++];
         break;
     case BACNET_PDU_SIMPLE_ACK:
         if (len < p + 2) // invoke id + service-ACK choice
         {
-            return PROTO_FALSE;
+            Bacnet.ok = PROTO_FALSE;
+            return;
         }
         out->invoke_id = apdu[p++];
         out->service_choice = apdu[p++];
@@ -379,15 +466,28 @@ proto_bool protocore_apdu_parse(const uint8_t *apdu, size_t len, BacnetApdu *out
     case BACNET_PDU_COMPLEX_ACK:
         if (!apdu_parse_complex_ack(apdu, len, out, &p))
         {
-            return PROTO_FALSE;
+            Bacnet.ok = PROTO_FALSE;
+            return;
         }
         break;
     default:
-        return PROTO_FALSE; // segment-ack / error / reject / abort are not decoded here
+        Bacnet.ok = PROTO_FALSE; // segment-ack / error / reject / abort are not decoded here
+        return;
     }
     out->service_data = (p < len) ? apdu + p : NULL;
     out->service_data_len = len - p;
-    return PROTO_TRUE;
+    Bacnet.ok = PROTO_TRUE;
 }
+
+BacnetNs Bacnet = {.bvlc_build = bacnet_bvlc_build,
+                   .bvlc_parse = bacnet_bvlc_parse,
+                   .npdu_build = bacnet_npdu_build,
+                   .npdu_parse = bacnet_npdu_parse,
+                   .apdu_parse = bacnet_apdu_parse,
+                   .apdu_build_who_is = bacnet_apdu_build_who_is,
+                   .apdu_build_i_am = bacnet_apdu_build_i_am,
+                   .apdu_build_read_property = bacnet_apdu_build_read_property};
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_BACNET

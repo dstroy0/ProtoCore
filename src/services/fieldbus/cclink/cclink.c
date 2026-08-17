@@ -6,32 +6,58 @@
  * @brief CC-Link cyclic fieldbus frame codec (see cclink.h).
  */
 
-#include "services/fieldbus/cclink/cclink.h"
-#include "mmgr/protomem.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_CCLINK
 
-uint8_t protocore_cclink_sum(const uint8_t *bytes, size_t len)
+#include "mmgr/protomem.h"
+#include "services/fieldbus/cclink/cclink.h"
+
+PROTOCORE_BEGIN_DECLS
+
+// The entries this file calls before reaching their definitions.
+// --- the entries -----------------------------------------------------------
+
+// No context and no borrow: every operand is the caller's. The borrow an entry takes is
+// never read.
+
+static void cclink_sum(uint8_t *restrict work);
+
+static void cclink_sum(uint8_t *restrict work)
 {
+    (void)work;
+    const uint8_t *bytes = Cclink.sum_args.bytes;
+    size_t len = Cclink.sum_args.len;
+
     uint8_t sum = 0;
     for (size_t i = 0; i < len; i++)
     {
         sum = (uint8_t)(sum + bytes[i]);
     }
-    return sum;
+    Cclink.value = sum;
 }
 
-size_t protocore_cclink_build(uint8_t station, uint8_t command, const uint8_t *bits, size_t bit_len,
-                              const uint8_t *words, size_t word_len, uint8_t *out, size_t cap)
+static void cclink_build(uint8_t *restrict work)
 {
+    uint8_t station = Cclink.build_args.station;
+    uint8_t command = Cclink.build_args.command;
+    const uint8_t *bits = Cclink.build_args.bits;
+    size_t bit_len = Cclink.build_args.bit_len;
+    const uint8_t *words = Cclink.build_args.words;
+    size_t word_len = Cclink.build_args.word_len;
+    uint8_t *out = Cclink.build_args.out;
+    size_t cap = Cclink.build_args.cap;
+
     if (!out || (bit_len && !bits) || (word_len && !words) || station > 63)
     {
-        return 0;
+        Cclink.n = 0;
+        return;
     }
     size_t n = 2 + bit_len + word_len + 1;
     if (n > cap)
     {
-        return 0;
+        Cclink.n = 0;
+        return;
     }
     size_t i = 0;
     out[i++] = station;
@@ -46,40 +72,64 @@ size_t protocore_cclink_build(uint8_t station, uint8_t command, const uint8_t *b
         mem.cpy(out + i, words, word_len);
         i += word_len;
     }
-    out[i] = protocore_cclink_sum(out, i); // checksum over station..last data
+    Cclink.sum_args.bytes = out;
+    Cclink.sum_args.len = i;
+    cclink_sum(work);
+    out[i] = Cclink.value; // checksum over station..last data
     i++;
-    return i;
+    Cclink.n = i;
 }
 
-proto_bool protocore_cclink_parse(const uint8_t *frame, size_t len, CcLinkFrame *out)
+static void cclink_parse(uint8_t *restrict work)
 {
+    const uint8_t *frame = Cclink.parse_args.frame;
+    size_t len = Cclink.parse_args.len;
+    CcLinkFrame *out = Cclink.parse_args.out;
+
     if (!frame || !out || len < 3) // station + command + checksum
     {
-        return PROTO_FALSE;
+        Cclink.ok = PROTO_FALSE;
+        return;
     }
     size_t body = len - 1;
-    if (protocore_cclink_sum(frame, body) != frame[body])
+    Cclink.sum_args.bytes = frame;
+    Cclink.sum_args.len = body;
+    cclink_sum(work);
+    if (Cclink.value != frame[body])
     {
-        return PROTO_FALSE;
+        Cclink.ok = PROTO_FALSE;
+        return;
     }
     out->station = frame[0];
     out->command = frame[1];
     out->payload = (body > 2) ? (frame + 2) : NULL;
     out->payload_len = body - 2;
-    return PROTO_TRUE;
+    Cclink.ok = PROTO_TRUE;
 }
 
-proto_bool protocore_cclink_get_bit(const uint8_t *bits, size_t bit_len, size_t index)
+static void cclink_get_bit(uint8_t *restrict work)
 {
+    (void)work;
+    const uint8_t *bits = Cclink.get_bit_args.bits;
+    size_t bit_len = Cclink.get_bit_args.bit_len;
+    size_t index = Cclink.get_bit_args.index;
+
     if (!bits || index / 8 >= bit_len)
     {
-        return PROTO_FALSE;
+        Cclink.ok = PROTO_FALSE;
+        return;
     }
-    return (bits[index / 8] >> (index % 8)) & 1u;
+    Cclink.ok = (bits[index / 8] >> (index % 8)) & 1u;
 }
 
-void protocore_cclink_set_bit(uint8_t *bits, size_t bit_len, size_t index, proto_bool value)
+static void cclink_set_bit(uint8_t *restrict work)
 {
+    (void)work;
+    uint8_t *bits = Cclink.set_bit_args.bits;
+    size_t bit_len = Cclink.set_bit_args.bit_len;
+    size_t index = Cclink.set_bit_args.index;
+    proto_bool value = Cclink.set_bit_args.value;
+
     if (!bits || index / 8 >= bit_len)
     {
         return;
@@ -95,14 +145,29 @@ void protocore_cclink_set_bit(uint8_t *bits, size_t bit_len, size_t index, proto
     }
 }
 
-uint16_t protocore_cclink_get_word(const uint8_t *words, size_t word_len, size_t index)
+static void cclink_get_word(uint8_t *restrict work)
 {
+    (void)work;
+    const uint8_t *words = Cclink.get_word_args.words;
+    size_t word_len = Cclink.get_word_args.word_len;
+    size_t index = Cclink.get_word_args.index;
+
     size_t off = index * 2;
     if (!words || off + 1 >= word_len)
     {
-        return 0;
+        Cclink.u16 = 0;
+        return;
     }
-    return (uint16_t)(words[off] | (words[off + 1] << 8)); // little-endian
+    Cclink.u16 = (uint16_t)(words[off] | (words[off + 1] << 8)); // little-endian
 }
+
+CclinkNs Cclink = {.sum = cclink_sum,
+                   .build = cclink_build,
+                   .parse = cclink_parse,
+                   .get_bit = cclink_get_bit,
+                   .set_bit = cclink_set_bit,
+                   .get_word = cclink_get_word};
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_CCLINK

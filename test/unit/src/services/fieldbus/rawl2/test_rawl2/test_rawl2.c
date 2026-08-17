@@ -15,6 +15,8 @@
 
 #include <unity.h>
 
+static uint8_t rawl2_work[16]; // the borrow an entry takes; Rawl2 never reads it
+
 void setUp(void)
 {
 }
@@ -46,7 +48,15 @@ void test_ethernet_ii_header_layout(void)
 {
     static const uint8_t PAYLOAD[4] = {0xDE, 0xAD, 0xBE, 0xEF};
     uint8_t out[64];
-    size_t n = protocore_eth_build(DST, SRC, ETHERTYPE_IPV4, PAYLOAD, sizeof(PAYLOAD), out, sizeof(out));
+    Rawl2.build_args.dst = DST;
+    Rawl2.build_args.src = SRC;
+    Rawl2.build_args.ethertype = ETHERTYPE_IPV4;
+    Rawl2.build_args.payload = PAYLOAD;
+    Rawl2.build_args.payload_len = sizeof(PAYLOAD);
+    Rawl2.build_args.out = out;
+    Rawl2.build_args.cap = sizeof(out);
+    Rawl2.build(rawl2_work);
+    size_t n = Rawl2.n;
     TEST_ASSERT_EQUAL_UINT(ETH_HDR_LEN + sizeof(PAYLOAD), n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(DST, out, ETH_ALEN);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(SRC, out + ETH_ALEN, ETH_ALEN);
@@ -55,7 +65,11 @@ void test_ethernet_ii_header_layout(void)
     TEST_ASSERT_EQUAL_HEX8_ARRAY(PAYLOAD, out + ETH_HDR_LEN, sizeof(PAYLOAD));
 
     EthFrame f;
-    TEST_ASSERT_TRUE(protocore_eth_parse(out, n, &f));
+    Rawl2.parse_args.frame = out;
+    Rawl2.parse_args.len = n;
+    Rawl2.parse_args.out = &f;
+    Rawl2.parse(rawl2_work);
+    TEST_ASSERT_TRUE(Rawl2.ok);
     TEST_ASSERT_FALSE(f.vlan);
     TEST_ASSERT_EQUAL_HEX16(ETHERTYPE_IPV4, f.ethertype);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(DST, f.dst, ETH_ALEN);
@@ -70,8 +84,18 @@ void test_8021q_tag_layout(void)
 {
     static const uint8_t PAYLOAD[2] = {0xAA, 0xBB};
     uint8_t out[64];
-    size_t n = protocore_eth_build_vlan(DST, SRC, 6, PROTO_TRUE, 0x0ABC, ETHERTYPE_PROFINET, PAYLOAD, sizeof(PAYLOAD),
-                                        out, sizeof(out));
+    Rawl2.build_vlan_args.dst = DST;
+    Rawl2.build_vlan_args.src = SRC;
+    Rawl2.build_vlan_args.pcp = 6;
+    Rawl2.build_vlan_args.dei = PROTO_TRUE;
+    Rawl2.build_vlan_args.vid = 0x0ABC;
+    Rawl2.build_vlan_args.ethertype = ETHERTYPE_PROFINET;
+    Rawl2.build_vlan_args.payload = PAYLOAD;
+    Rawl2.build_vlan_args.payload_len = sizeof(PAYLOAD);
+    Rawl2.build_vlan_args.out = out;
+    Rawl2.build_vlan_args.cap = sizeof(out);
+    Rawl2.build_vlan(rawl2_work);
+    size_t n = Rawl2.n;
     TEST_ASSERT_EQUAL_UINT(ETH_VLAN_HDR_LEN + sizeof(PAYLOAD), n);
     TEST_ASSERT_EQUAL_HEX8(0x81, out[12]);
     TEST_ASSERT_EQUAL_HEX8(0x00, out[13]);
@@ -82,7 +106,11 @@ void test_8021q_tag_layout(void)
     TEST_ASSERT_EQUAL_HEX8(0x92, out[17]);
 
     EthFrame f;
-    TEST_ASSERT_TRUE(protocore_eth_parse(out, n, &f));
+    Rawl2.parse_args.frame = out;
+    Rawl2.parse_args.len = n;
+    Rawl2.parse_args.out = &f;
+    Rawl2.parse(rawl2_work);
+    TEST_ASSERT_TRUE(Rawl2.ok);
     TEST_ASSERT_TRUE(f.vlan);
     TEST_ASSERT_EQUAL_UINT8(6, f.pcp);
     TEST_ASSERT_EQUAL_UINT16(0x0ABC, f.vid);
@@ -100,9 +128,23 @@ void test_vlan_tci_field_widths(void)
 
     for (uint8_t pcp = 0; pcp < 8; pcp++)
     {
-        TEST_ASSERT_EQUAL_UINT(ETH_VLAN_HDR_LEN, protocore_eth_build_vlan(DST, SRC, pcp, PROTO_FALSE, 0x0FFF,
-                                                                          ETHERTYPE_IPV4, NULL, 0, out, sizeof(out)));
-        TEST_ASSERT_TRUE(protocore_eth_parse(out, ETH_VLAN_HDR_LEN, &f));
+        Rawl2.build_vlan_args.dst = DST;
+        Rawl2.build_vlan_args.src = SRC;
+        Rawl2.build_vlan_args.pcp = pcp;
+        Rawl2.build_vlan_args.dei = PROTO_FALSE;
+        Rawl2.build_vlan_args.vid = 0x0FFF;
+        Rawl2.build_vlan_args.ethertype = ETHERTYPE_IPV4;
+        Rawl2.build_vlan_args.payload = NULL;
+        Rawl2.build_vlan_args.payload_len = 0;
+        Rawl2.build_vlan_args.out = out;
+        Rawl2.build_vlan_args.cap = sizeof(out);
+        Rawl2.build_vlan(rawl2_work);
+        TEST_ASSERT_EQUAL_UINT(ETH_VLAN_HDR_LEN, Rawl2.n);
+        Rawl2.parse_args.frame = out;
+        Rawl2.parse_args.len = ETH_VLAN_HDR_LEN;
+        Rawl2.parse_args.out = &f;
+        Rawl2.parse(rawl2_work);
+        TEST_ASSERT_TRUE(Rawl2.ok);
         TEST_ASSERT_EQUAL_UINT8(pcp, f.pcp);
         TEST_ASSERT_EQUAL_UINT16(0x0FFF, f.vid);
     }
@@ -110,16 +152,40 @@ void test_vlan_tci_field_widths(void)
     static const uint16_t VIDS[5] = {0, 1, 100, 4094, 4095};
     for (size_t i = 0; i < 5; i++)
     {
-        TEST_ASSERT_EQUAL_UINT(ETH_VLAN_HDR_LEN, protocore_eth_build_vlan(DST, SRC, 0, PROTO_FALSE, VIDS[i],
-                                                                          ETHERTYPE_IPV4, NULL, 0, out, sizeof(out)));
-        TEST_ASSERT_TRUE(protocore_eth_parse(out, ETH_VLAN_HDR_LEN, &f));
+        Rawl2.build_vlan_args.dst = DST;
+        Rawl2.build_vlan_args.src = SRC;
+        Rawl2.build_vlan_args.pcp = 0;
+        Rawl2.build_vlan_args.dei = PROTO_FALSE;
+        Rawl2.build_vlan_args.vid = VIDS[i];
+        Rawl2.build_vlan_args.ethertype = ETHERTYPE_IPV4;
+        Rawl2.build_vlan_args.payload = NULL;
+        Rawl2.build_vlan_args.payload_len = 0;
+        Rawl2.build_vlan_args.out = out;
+        Rawl2.build_vlan_args.cap = sizeof(out);
+        Rawl2.build_vlan(rawl2_work);
+        TEST_ASSERT_EQUAL_UINT(ETH_VLAN_HDR_LEN, Rawl2.n);
+        Rawl2.parse_args.frame = out;
+        Rawl2.parse_args.len = ETH_VLAN_HDR_LEN;
+        Rawl2.parse_args.out = &f;
+        Rawl2.parse(rawl2_work);
+        TEST_ASSERT_TRUE(Rawl2.ok);
         TEST_ASSERT_EQUAL_UINT16(VIDS[i], f.vid);
         TEST_ASSERT_EQUAL_UINT8(0, f.pcp);
     }
 
     // the DEI is bit 12 of the TCI and belongs to neither the PCP nor the VID
-    TEST_ASSERT_EQUAL_UINT(ETH_VLAN_HDR_LEN, protocore_eth_build_vlan(DST, SRC, 0, PROTO_TRUE, 0, ETHERTYPE_IPV4, NULL,
-                                                                      0, out, sizeof(out)));
+    Rawl2.build_vlan_args.dst = DST;
+    Rawl2.build_vlan_args.src = SRC;
+    Rawl2.build_vlan_args.pcp = 0;
+    Rawl2.build_vlan_args.dei = PROTO_TRUE;
+    Rawl2.build_vlan_args.vid = 0;
+    Rawl2.build_vlan_args.ethertype = ETHERTYPE_IPV4;
+    Rawl2.build_vlan_args.payload = NULL;
+    Rawl2.build_vlan_args.payload_len = 0;
+    Rawl2.build_vlan_args.out = out;
+    Rawl2.build_vlan_args.cap = sizeof(out);
+    Rawl2.build_vlan(rawl2_work);
+    TEST_ASSERT_EQUAL_UINT(ETH_VLAN_HDR_LEN, Rawl2.n);
     TEST_ASSERT_EQUAL_HEX8(0x10, out[14]);
     TEST_ASSERT_EQUAL_HEX8(0x00, out[15]);
 }
@@ -136,13 +202,39 @@ void test_tagged_and_untagged_stay_distinct(void)
 
     for (size_t i = 0; i < 5; i++)
     {
-        size_t pn = protocore_eth_build(DST, SRC, TYPES[i], PAYLOAD, sizeof(PAYLOAD), plain, sizeof(plain));
-        size_t tn = protocore_eth_build_vlan(DST, SRC, 5, PROTO_FALSE, 42, TYPES[i], PAYLOAD, sizeof(PAYLOAD), tagged,
-                                             sizeof(tagged));
+        Rawl2.build_args.dst = DST;
+        Rawl2.build_args.src = SRC;
+        Rawl2.build_args.ethertype = TYPES[i];
+        Rawl2.build_args.payload = PAYLOAD;
+        Rawl2.build_args.payload_len = sizeof(PAYLOAD);
+        Rawl2.build_args.out = plain;
+        Rawl2.build_args.cap = sizeof(plain);
+        Rawl2.build(rawl2_work);
+        size_t pn = Rawl2.n;
+        Rawl2.build_vlan_args.dst = DST;
+        Rawl2.build_vlan_args.src = SRC;
+        Rawl2.build_vlan_args.pcp = 5;
+        Rawl2.build_vlan_args.dei = PROTO_FALSE;
+        Rawl2.build_vlan_args.vid = 42;
+        Rawl2.build_vlan_args.ethertype = TYPES[i];
+        Rawl2.build_vlan_args.payload = PAYLOAD;
+        Rawl2.build_vlan_args.payload_len = sizeof(PAYLOAD);
+        Rawl2.build_vlan_args.out = tagged;
+        Rawl2.build_vlan_args.cap = sizeof(tagged);
+        Rawl2.build_vlan(rawl2_work);
+        size_t tn = Rawl2.n;
         TEST_ASSERT_EQUAL_UINT(tn, pn + 4); // the tag is exactly four octets longer
 
-        TEST_ASSERT_TRUE(protocore_eth_parse(plain, pn, &a));
-        TEST_ASSERT_TRUE(protocore_eth_parse(tagged, tn, &b));
+        Rawl2.parse_args.frame = plain;
+        Rawl2.parse_args.len = pn;
+        Rawl2.parse_args.out = &a;
+        Rawl2.parse(rawl2_work);
+        TEST_ASSERT_TRUE(Rawl2.ok);
+        Rawl2.parse_args.frame = tagged;
+        Rawl2.parse_args.len = tn;
+        Rawl2.parse_args.out = &b;
+        Rawl2.parse(rawl2_work);
+        TEST_ASSERT_TRUE(Rawl2.ok);
         TEST_ASSERT_FALSE(a.vlan);
         TEST_ASSERT_TRUE(b.vlan);
         TEST_ASSERT_EQUAL_HEX16(TYPES[i], a.ethertype);
@@ -157,16 +249,25 @@ void test_tagged_and_untagged_stay_distinct(void)
 void test_fcs_published_check_value(void)
 {
     static const uint8_t CHECK[9] = {'1', '2', '3', '4', '5', '6', '7', '8', '9'};
-    TEST_ASSERT_EQUAL_HEX32(0xCBF43926u, protocore_eth_fcs(CHECK, sizeof(CHECK)));
+    Rawl2.fcs_args.bytes = CHECK;
+    Rawl2.fcs_args.len = sizeof(CHECK);
+    Rawl2.fcs(rawl2_work);
+    TEST_ASSERT_EQUAL_HEX32(0xCBF43926u, Rawl2.u32);
 
     // the empty message: init FFFFFFFF with no octets folded in, then the final XOR of FFFFFFFF
-    TEST_ASSERT_EQUAL_HEX32(0x00000000u, protocore_eth_fcs(CHECK, 0));
+    Rawl2.fcs_args.bytes = CHECK;
+    Rawl2.fcs_args.len = 0;
+    Rawl2.fcs(rawl2_work);
+    TEST_ASSERT_EQUAL_HEX32(0x00000000u, Rawl2.u32);
 
     // a single flipped bit anywhere changes the FCS, which is the whole point of carrying one
     uint8_t flipped[9];
     memcpy(flipped, CHECK, sizeof(CHECK));
     flipped[4] ^= 0x01;
-    TEST_ASSERT_TRUE(protocore_eth_fcs(flipped, sizeof(flipped)) != 0xCBF43926u);
+    Rawl2.fcs_args.bytes = flipped;
+    Rawl2.fcs_args.len = sizeof(flipped);
+    Rawl2.fcs(rawl2_work);
+    TEST_ASSERT_TRUE(Rawl2.u32 != 0xCBF43926u);
 }
 
 // A frame shorter than its own header is not a frame; a tagged frame cut inside the tag is not one
@@ -176,25 +277,68 @@ void test_parse_refuses_a_short_frame(void)
     uint8_t out[64];
     EthFrame f;
 
-    size_t n = protocore_eth_build(DST, SRC, ETHERTYPE_IPV4, NULL, 0, out, sizeof(out));
+    Rawl2.build_args.dst = DST;
+    Rawl2.build_args.src = SRC;
+    Rawl2.build_args.ethertype = ETHERTYPE_IPV4;
+    Rawl2.build_args.payload = NULL;
+    Rawl2.build_args.payload_len = 0;
+    Rawl2.build_args.out = out;
+    Rawl2.build_args.cap = sizeof(out);
+    Rawl2.build(rawl2_work);
+    size_t n = Rawl2.n;
     TEST_ASSERT_EQUAL_UINT(ETH_HDR_LEN, n);
     for (size_t i = 0; i < ETH_HDR_LEN; i++)
     {
-        TEST_ASSERT_FALSE(protocore_eth_parse(out, i, &f));
+        Rawl2.parse_args.frame = out;
+        Rawl2.parse_args.len = i;
+        Rawl2.parse_args.out = &f;
+        Rawl2.parse(rawl2_work);
+        TEST_ASSERT_FALSE(Rawl2.ok);
     }
-    TEST_ASSERT_TRUE(protocore_eth_parse(out, ETH_HDR_LEN, &f));
+    Rawl2.parse_args.frame = out;
+    Rawl2.parse_args.len = ETH_HDR_LEN;
+    Rawl2.parse_args.out = &f;
+    Rawl2.parse(rawl2_work);
+    TEST_ASSERT_TRUE(Rawl2.ok);
     TEST_ASSERT_EQUAL_UINT(0u, f.payload_len);
 
-    n = protocore_eth_build_vlan(DST, SRC, 0, PROTO_FALSE, 1, ETHERTYPE_IPV4, NULL, 0, out, sizeof(out));
+    Rawl2.build_vlan_args.dst = DST;
+    Rawl2.build_vlan_args.src = SRC;
+    Rawl2.build_vlan_args.pcp = 0;
+    Rawl2.build_vlan_args.dei = PROTO_FALSE;
+    Rawl2.build_vlan_args.vid = 1;
+    Rawl2.build_vlan_args.ethertype = ETHERTYPE_IPV4;
+    Rawl2.build_vlan_args.payload = NULL;
+    Rawl2.build_vlan_args.payload_len = 0;
+    Rawl2.build_vlan_args.out = out;
+    Rawl2.build_vlan_args.cap = sizeof(out);
+    Rawl2.build_vlan(rawl2_work);
+    n = Rawl2.n;
     TEST_ASSERT_EQUAL_UINT(ETH_VLAN_HDR_LEN, n);
     for (size_t i = ETH_HDR_LEN; i < ETH_VLAN_HDR_LEN; i++)
     {
-        TEST_ASSERT_FALSE(protocore_eth_parse(out, i, &f)); // the tag says more is coming
+        Rawl2.parse_args.frame = out;
+        Rawl2.parse_args.len = i;
+        Rawl2.parse_args.out = &f;
+        Rawl2.parse(rawl2_work);
+        TEST_ASSERT_FALSE(Rawl2.ok); // the tag says more is coming
     }
-    TEST_ASSERT_TRUE(protocore_eth_parse(out, ETH_VLAN_HDR_LEN, &f));
+    Rawl2.parse_args.frame = out;
+    Rawl2.parse_args.len = ETH_VLAN_HDR_LEN;
+    Rawl2.parse_args.out = &f;
+    Rawl2.parse(rawl2_work);
+    TEST_ASSERT_TRUE(Rawl2.ok);
 
-    TEST_ASSERT_FALSE(protocore_eth_parse(NULL, ETH_HDR_LEN, &f));
-    TEST_ASSERT_FALSE(protocore_eth_parse(out, ETH_HDR_LEN, NULL));
+    Rawl2.parse_args.frame = NULL;
+    Rawl2.parse_args.len = ETH_HDR_LEN;
+    Rawl2.parse_args.out = &f;
+    Rawl2.parse(rawl2_work);
+    TEST_ASSERT_FALSE(Rawl2.ok);
+    Rawl2.parse_args.frame = out;
+    Rawl2.parse_args.len = ETH_HDR_LEN;
+    Rawl2.parse_args.out = NULL;
+    Rawl2.parse(rawl2_work);
+    TEST_ASSERT_FALSE(Rawl2.ok);
 }
 
 // A builder given less room than the frame needs writes nothing, and a null address or a nonzero
@@ -206,22 +350,92 @@ void test_build_refuses_bad_arguments(void)
 
     for (size_t cap = 0; cap < ETH_HDR_LEN + sizeof(PAYLOAD); cap++)
     {
-        TEST_ASSERT_EQUAL_UINT(0u, protocore_eth_build(DST, SRC, ETHERTYPE_IPV4, PAYLOAD, sizeof(PAYLOAD), out, cap));
+        Rawl2.build_args.dst = DST;
+        Rawl2.build_args.src = SRC;
+        Rawl2.build_args.ethertype = ETHERTYPE_IPV4;
+        Rawl2.build_args.payload = PAYLOAD;
+        Rawl2.build_args.payload_len = sizeof(PAYLOAD);
+        Rawl2.build_args.out = out;
+        Rawl2.build_args.cap = cap;
+        Rawl2.build(rawl2_work);
+        TEST_ASSERT_EQUAL_UINT(0u, Rawl2.n);
     }
     for (size_t cap = 0; cap < ETH_VLAN_HDR_LEN + sizeof(PAYLOAD); cap++)
     {
-        TEST_ASSERT_EQUAL_UINT(0u, protocore_eth_build_vlan(DST, SRC, 0, PROTO_FALSE, 1, ETHERTYPE_IPV4, PAYLOAD,
-                                                            sizeof(PAYLOAD), out, cap));
+        Rawl2.build_vlan_args.dst = DST;
+        Rawl2.build_vlan_args.src = SRC;
+        Rawl2.build_vlan_args.pcp = 0;
+        Rawl2.build_vlan_args.dei = PROTO_FALSE;
+        Rawl2.build_vlan_args.vid = 1;
+        Rawl2.build_vlan_args.ethertype = ETHERTYPE_IPV4;
+        Rawl2.build_vlan_args.payload = PAYLOAD;
+        Rawl2.build_vlan_args.payload_len = sizeof(PAYLOAD);
+        Rawl2.build_vlan_args.out = out;
+        Rawl2.build_vlan_args.cap = cap;
+        Rawl2.build_vlan(rawl2_work);
+        TEST_ASSERT_EQUAL_UINT(0u, Rawl2.n);
     }
 
-    TEST_ASSERT_EQUAL_UINT(0u, protocore_eth_build(NULL, SRC, ETHERTYPE_IPV4, NULL, 0, out, sizeof(out)));
-    TEST_ASSERT_EQUAL_UINT(0u, protocore_eth_build(DST, NULL, ETHERTYPE_IPV4, NULL, 0, out, sizeof(out)));
-    TEST_ASSERT_EQUAL_UINT(0u, protocore_eth_build(DST, SRC, ETHERTYPE_IPV4, NULL, 0, NULL, sizeof(out)));
-    TEST_ASSERT_EQUAL_UINT(0u, protocore_eth_build(DST, SRC, ETHERTYPE_IPV4, NULL, 4, out, sizeof(out)));
-    TEST_ASSERT_EQUAL_UINT(
-        0u, protocore_eth_build_vlan(NULL, SRC, 0, PROTO_FALSE, 1, ETHERTYPE_IPV4, NULL, 0, out, sizeof(out)));
-    TEST_ASSERT_EQUAL_UINT(
-        0u, protocore_eth_build_vlan(DST, SRC, 0, PROTO_FALSE, 1, ETHERTYPE_IPV4, NULL, 4, out, sizeof(out)));
+    Rawl2.build_args.dst = NULL;
+    Rawl2.build_args.src = SRC;
+    Rawl2.build_args.ethertype = ETHERTYPE_IPV4;
+    Rawl2.build_args.payload = NULL;
+    Rawl2.build_args.payload_len = 0;
+    Rawl2.build_args.out = out;
+    Rawl2.build_args.cap = sizeof(out);
+    Rawl2.build(rawl2_work);
+    TEST_ASSERT_EQUAL_UINT(0u, Rawl2.n);
+    Rawl2.build_args.dst = DST;
+    Rawl2.build_args.src = NULL;
+    Rawl2.build_args.ethertype = ETHERTYPE_IPV4;
+    Rawl2.build_args.payload = NULL;
+    Rawl2.build_args.payload_len = 0;
+    Rawl2.build_args.out = out;
+    Rawl2.build_args.cap = sizeof(out);
+    Rawl2.build(rawl2_work);
+    TEST_ASSERT_EQUAL_UINT(0u, Rawl2.n);
+    Rawl2.build_args.dst = DST;
+    Rawl2.build_args.src = SRC;
+    Rawl2.build_args.ethertype = ETHERTYPE_IPV4;
+    Rawl2.build_args.payload = NULL;
+    Rawl2.build_args.payload_len = 0;
+    Rawl2.build_args.out = NULL;
+    Rawl2.build_args.cap = sizeof(out);
+    Rawl2.build(rawl2_work);
+    TEST_ASSERT_EQUAL_UINT(0u, Rawl2.n);
+    Rawl2.build_args.dst = DST;
+    Rawl2.build_args.src = SRC;
+    Rawl2.build_args.ethertype = ETHERTYPE_IPV4;
+    Rawl2.build_args.payload = NULL;
+    Rawl2.build_args.payload_len = 4;
+    Rawl2.build_args.out = out;
+    Rawl2.build_args.cap = sizeof(out);
+    Rawl2.build(rawl2_work);
+    TEST_ASSERT_EQUAL_UINT(0u, Rawl2.n);
+    Rawl2.build_vlan_args.dst = NULL;
+    Rawl2.build_vlan_args.src = SRC;
+    Rawl2.build_vlan_args.pcp = 0;
+    Rawl2.build_vlan_args.dei = PROTO_FALSE;
+    Rawl2.build_vlan_args.vid = 1;
+    Rawl2.build_vlan_args.ethertype = ETHERTYPE_IPV4;
+    Rawl2.build_vlan_args.payload = NULL;
+    Rawl2.build_vlan_args.payload_len = 0;
+    Rawl2.build_vlan_args.out = out;
+    Rawl2.build_vlan_args.cap = sizeof(out);
+    Rawl2.build_vlan(rawl2_work);
+    TEST_ASSERT_EQUAL_UINT(0u, Rawl2.n);
+    Rawl2.build_vlan_args.dst = DST;
+    Rawl2.build_vlan_args.src = SRC;
+    Rawl2.build_vlan_args.pcp = 0;
+    Rawl2.build_vlan_args.dei = PROTO_FALSE;
+    Rawl2.build_vlan_args.vid = 1;
+    Rawl2.build_vlan_args.ethertype = ETHERTYPE_IPV4;
+    Rawl2.build_vlan_args.payload = NULL;
+    Rawl2.build_vlan_args.payload_len = 4;
+    Rawl2.build_vlan_args.out = out;
+    Rawl2.build_vlan_args.cap = sizeof(out);
+    Rawl2.build_vlan(rawl2_work);
+    TEST_ASSERT_EQUAL_UINT(0u, Rawl2.n);
 }
 
 // A payload of any length up to the buffer comes back byte for byte, tagged or not.
@@ -237,19 +451,45 @@ void test_payload_round_trip(void)
 
     for (size_t len = 0; len <= sizeof(payload); len++)
     {
-        size_t n = protocore_eth_build(DST, SRC, ETHERTYPE_GOOSE, len ? payload : NULL, len, out, sizeof(out));
+        Rawl2.build_args.dst = DST;
+        Rawl2.build_args.src = SRC;
+        Rawl2.build_args.ethertype = ETHERTYPE_GOOSE;
+        Rawl2.build_args.payload = len ? payload : NULL;
+        Rawl2.build_args.payload_len = len;
+        Rawl2.build_args.out = out;
+        Rawl2.build_args.cap = sizeof(out);
+        Rawl2.build(rawl2_work);
+        size_t n = Rawl2.n;
         TEST_ASSERT_EQUAL_UINT(ETH_HDR_LEN + len, n);
-        TEST_ASSERT_TRUE(protocore_eth_parse(out, n, &f));
+        Rawl2.parse_args.frame = out;
+        Rawl2.parse_args.len = n;
+        Rawl2.parse_args.out = &f;
+        Rawl2.parse(rawl2_work);
+        TEST_ASSERT_TRUE(Rawl2.ok);
         TEST_ASSERT_EQUAL_UINT(len, f.payload_len);
         if (len)
         {
             TEST_ASSERT_EQUAL_HEX8_ARRAY(payload, f.payload, len);
         }
 
-        n = protocore_eth_build_vlan(DST, SRC, 3, PROTO_FALSE, 7, ETHERTYPE_GOOSE, len ? payload : NULL, len, out,
-                                     sizeof(out));
+        Rawl2.build_vlan_args.dst = DST;
+        Rawl2.build_vlan_args.src = SRC;
+        Rawl2.build_vlan_args.pcp = 3;
+        Rawl2.build_vlan_args.dei = PROTO_FALSE;
+        Rawl2.build_vlan_args.vid = 7;
+        Rawl2.build_vlan_args.ethertype = ETHERTYPE_GOOSE;
+        Rawl2.build_vlan_args.payload = len ? payload : NULL;
+        Rawl2.build_vlan_args.payload_len = len;
+        Rawl2.build_vlan_args.out = out;
+        Rawl2.build_vlan_args.cap = sizeof(out);
+        Rawl2.build_vlan(rawl2_work);
+        n = Rawl2.n;
         TEST_ASSERT_EQUAL_UINT(ETH_VLAN_HDR_LEN + len, n);
-        TEST_ASSERT_TRUE(protocore_eth_parse(out, n, &f));
+        Rawl2.parse_args.frame = out;
+        Rawl2.parse_args.len = n;
+        Rawl2.parse_args.out = &f;
+        Rawl2.parse(rawl2_work);
+        TEST_ASSERT_TRUE(Rawl2.ok);
         TEST_ASSERT_EQUAL_UINT(len, f.payload_len);
         if (len)
         {

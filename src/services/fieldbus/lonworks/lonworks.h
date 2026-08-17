@@ -10,10 +10,11 @@
  * PDUs over UDP so a device speaks LON without a Neuron chip. This codec builds/parses the LonTalk
  * application-layer message a network-variable update carries:
  *
- *   [msg-code : 1][nv-selector : 2 (14-bit, big-endian)][value...]
+ *   [1 d sel13..8 : 1][sel7..0 : 1][value...]
  *
- * where the message code identifies a NetVar update (`0x80 | direction`), the selector addresses the
- * bound network variable, and the value is the SNVT-encoded data. It also provides the two most-common
+ * where bit 7 marks the APDU a network variable message, `d` is the direction (1 outgoing, 0 incoming),
+ * and the remaining six bits join the second octet to form the 14-bit selector that addresses the bound
+ * network variable. The value is the SNVT-encoded data. It also provides the two most-common
  * SNVT scalar encodings from the LONMARK SNVT master list: **SNVT_temp** (index 39, tenths of a degree
  * Celsius above -274) and **SNVT_switch** (index 95, a level 0..100 % in 0.5 % steps + a state), so an
  * app reads/writes those without a full SNVT table. Pure, zero heap, no stdlib, host-testable; the
@@ -23,27 +24,23 @@
 #ifndef PROTOCORE_LONWORKS_H
 #define PROTOCORE_LONWORKS_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_LONWORKS
 
 PROTOCORE_BEGIN_DECLS
 
-// LonTalk NV message codes + selector limit: wire values, so integer constants in a struct.
-#define LON_MSG_NV_UPDATE 0x80     ///< network-variable update message code (base).
-#define LON_MSG_NV_POLL 0x81       ///< network-variable poll (request).
-#define LON_NV_SELECTOR_MAX 0x3FFF ///< the NV selector is 14 bits.
+// This module holds nothing between calls, so it carves no borrow and states none. An entry
+// takes one all the same, and never reads it, so every namespace in the tree is invoked the
+// same way.
 
-/**
- * @brief Build a LonTalk NV-update application PDU: [msg-code][selector:2][value...].
- * @param msg_code    LON_MSG_NV_UPDATE / LON_MSG_NV_POLL.
- * @param selector    the 14-bit NV selector (0..0x3FFF).
- * @param value       the SNVT-encoded value (may be null if value_len == 0).
- * @param value_len   value length.
- * @return the PDU length (3 + value_len), or 0 on overflow / bad args.
- */
-size_t protocore_lon_build_nv(uint8_t msg_code, uint16_t selector, const uint8_t *value, size_t value_len, uint8_t *out,
-                              size_t cap);
+// LonTalk NV header fields: wire values, so integer constants in a struct.
+#define LON_NV_HDR_LEN 2           ///< the NV APDU header is two octets.
+#define LON_NV_TYPE_MASK 0xC0      ///< octet 0 bits 7..6: the message bit and the direction bit.
+#define LON_NV_SEL_HI_MASK 0x3F    ///< octet 0 bits 5..0: selector bits 13..8.
+#define LON_MSG_NV_UPDATE 0x80     ///< message bit set, direction incoming: `1 0 000000`.
+#define LON_MSG_NV_POLL 0x81       ///< message bit set, direction incoming, selector bit 0 set.
+#define LON_NV_SELECTOR_MAX 0x3FFF ///< the NV selector is 14 bits.
 
 /** @brief A parsed LonTalk NV PDU (value points into the input). */
 typedef struct
@@ -54,18 +51,112 @@ typedef struct
     size_t value_len;
 } LonNv;
 
-/** @brief Parse a LonTalk NV PDU. @return true if @p len >= 3. */
-proto_bool protocore_lon_parse_nv(const uint8_t *pdu, size_t len, LonNv *out);
+/** @brief What build_nv takes: msg_code, selector, value, value_len, ... */
+typedef struct
+{
+    uint8_t msg_code;     ///< supplies bits 7..6; its low bits are the caller's and are dropped
+    uint16_t selector;    ///< the 14-bit NV selector (0..0x3FFF)
+    const uint8_t *value; ///< the SNVT-encoded value (may be null if value_len == 0)
+    size_t value_len;     ///< value length
+    uint8_t *out;
+    size_t cap;
+} LonworksBuildNvArgs;
 
-/** @brief Encode degrees C as the 2-byte big-endian SNVT_temp raw: (celsius * 10) + 2740, 0..65535. */
-void protocore_lon_snvt_temp_encode(double celsius, uint8_t out[2]);
-/** @brief Decode a SNVT_temp 2-byte value to degrees C: (raw - 2740) / 10. */
-double protocore_lon_snvt_temp_decode(const uint8_t in[2]);
+/** @brief What parse_nv takes: pdu, len, out. */
+typedef struct
+{
+    const uint8_t *pdu;
+    size_t len;
+    LonNv *out;
+} LonworksParseNvArgs;
 
-/** @brief Encode a SNVT_switch (value 0..100 % in 0.5 % steps, state 0 OFF / 1 ON / 0xFF NULL). */
-void protocore_lon_snvt_switch_encode(double percent, uint8_t state, uint8_t out[2]);
-/** @brief Decode a SNVT_switch 2-byte value (percent out via @p percent, state via @p state). */
-void protocore_lon_snvt_switch_decode(const uint8_t in[2], double *percent, uint8_t *state);
+/** @brief What snvt_temp_encode takes: celsius, out. */
+typedef struct
+{
+    double celsius;
+    uint8_t *out; ///< 2 bytes.
+} LonworksSnvtTempEncodeArgs;
+
+/** @brief What snvt_temp_decode takes: in. */
+typedef struct
+{
+    const uint8_t *in; ///< 2 bytes.
+} LonworksSnvtTempDecodeArgs;
+
+/** @brief What snvt_switch_encode takes: percent, state, out. */
+typedef struct
+{
+    double percent;
+    uint8_t state;
+    uint8_t *out; ///< 2 bytes.
+} LonworksSnvtSwitchEncodeArgs;
+
+/** @brief What snvt_switch_decode takes: in, percent, state. */
+typedef struct
+{
+    const uint8_t *in; ///< 2 bytes.
+    double *percent;
+    uint8_t *state;
+} LonworksSnvtSwitchDecodeArgs;
+
+/**
+ * @brief LonWorks / LON-IP (ISO/IEC 14908) network-variable codec (PROTOCORE_ENABLE_LONWORKS).
+ *
+ * A caller sets the members a call takes, invokes it through ::Lonworks with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   Lonworks.build_nv_args.msg_code = ...;
+ *   Lonworks.build_nv_args.selector = ...;
+ *   Lonworks.build_nv_args.value = ...;
+ *   Lonworks.build_nv_args.value_len = ...;
+ *   Lonworks.build_nv_args.out = ...;
+ *   Lonworks.build_nv_args.cap = ...;
+ *   Lonworks.build_nv(work);
+ *   // Lonworks.n is what the call reports
+ *
+ * @var LonworksNs::build_nv_args  what build_nv takes: msg_code, selector, value, value_len,
+ * @var LonworksNs::parse_nv_args  what parse_nv takes: pdu, len, out
+ * @var LonworksNs::snvt_temp_encode_args  what snvt_temp_encode takes: celsius, out
+ * @var LonworksNs::snvt_temp_decode_args  what snvt_temp_decode takes: in
+ * @var LonworksNs::snvt_switch_encode_args  what snvt_switch_encode takes: percent, state, out
+ * @var LonworksNs::snvt_switch_decode_args  what snvt_switch_decode takes: in, percent, state
+ * @var LonworksNs::ok  a call's true/false outcome
+ * @var LonworksNs::n  the PDU length (2 + value_len), or 0 on overflow / bad args
+ * @var LonworksNs::value  the value a call reports
+ * @var LonworksNs::build_nv  build a LonTalk NV application PDU: ...
+ * @var LonworksNs::parse_nv  parse a LonTalk NV PDU. true if len >= 3
+ * @var LonworksNs::snvt_temp_encode  encode degrees C as the 2-byte big-endian SNVT_temp raw: (celsius * ...
+ * @var LonworksNs::snvt_temp_decode  decode a SNVT_temp 2-byte value to degrees C: (raw - 2740) / 10
+ * @var LonworksNs::snvt_switch_encode  encode a SNVT_switch (value 0..100 % in 0.5 % steps, state 0 OFF / ...
+ * @var LonworksNs::snvt_switch_decode  decode a SNVT_switch 2-byte value (percent out via percent, state ...
+ *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
+ * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
+ * a caller drives every namespace the same way.
+ */
+typedef struct
+{
+    LonworksBuildNvArgs build_nv_args;
+    LonworksParseNvArgs parse_nv_args;
+    LonworksSnvtTempEncodeArgs snvt_temp_encode_args;
+    LonworksSnvtTempDecodeArgs snvt_temp_decode_args;
+    LonworksSnvtSwitchEncodeArgs snvt_switch_encode_args;
+    LonworksSnvtSwitchDecodeArgs snvt_switch_decode_args;
+
+    proto_bool ok;
+    size_t n;
+    double value;
+
+    void (*const build_nv)(uint8_t *restrict work);
+    void (*const parse_nv)(uint8_t *restrict work);
+    void (*const snvt_temp_encode)(uint8_t *restrict work);
+    void (*const snvt_temp_decode)(uint8_t *restrict work);
+    void (*const snvt_switch_encode)(uint8_t *restrict work);
+    void (*const snvt_switch_decode)(uint8_t *restrict work);
+} LonworksNs;
+
+/** @brief The one symbol this module exports. */
+extern LonworksNs Lonworks;
 
 PROTOCORE_END_DECLS
 

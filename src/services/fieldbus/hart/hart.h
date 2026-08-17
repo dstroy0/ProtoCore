@@ -23,11 +23,15 @@
 #ifndef PROTOCORE_HART_H
 #define PROTOCORE_HART_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_HART
 
 PROTOCORE_BEGIN_DECLS
+
+// This module holds nothing between calls, so it carves no borrow and states none. An entry
+// takes one all the same, and never reads it, so every namespace in the tree is invoked the
+// same way.
 
 /** @brief HART frame delimiter frame-type bits (low 3 bits) + long-address bit (bit 7). Wire values,
  *  the LONG_ADDR bit is OR'd in, so integer constants in a namespacing struct (cast-free). */
@@ -46,24 +50,6 @@ PROTOCORE_BEGIN_DECLS
 #define HARTIP_ID_TOKEN_PDU 3 ///< a HART token-passing PDU (a HART frame) is the payload.
 #define HARTIP_HEADER_LEN 8
 
-/** @brief Longitudinal XOR checksum of @p len bytes (the HART frame check byte). */
-uint8_t protocore_hart_checksum(const uint8_t *bytes, size_t len);
-
-/**
- * @brief Build a HART command frame (no preamble - the transport prepends the 0xFF sync bytes).
- * @param delimiter frame delimiter (e.g. HART_DELIM_STX, OR HART_DELIM_LONG_ADDR for long addressing).
- * @param addr      address bytes (1 for short, 5 for long).
- * @param addr_len  1 or 5.
- * @param command   HART command number.
- * @param data      data bytes (may be null when data_len == 0).
- * @param data_len  number of data bytes (also the frame's byte-count field).
- * @param out       output buffer.
- * @param cap       capacity of @p out.
- * @return the frame length written, or 0 if it would not fit or addr_len is invalid.
- */
-size_t protocore_hart_build(uint8_t delimiter, const uint8_t *addr, size_t addr_len, uint8_t command,
-                            const uint8_t *data, size_t data_len, uint8_t *out, size_t cap);
-
 /** @brief A parsed HART frame (pointers into the input buffer). */
 typedef struct
 {
@@ -75,24 +61,6 @@ typedef struct
     const uint8_t *data;
     size_t data_len;
 } HartFrame;
-
-/**
- * @brief Validate + parse a HART frame (checksum checked).
- * @return true if the frame is well-formed and the checksum matches; fills @p out.
- */
-proto_bool protocore_hart_parse(const uint8_t *frame, size_t len, HartFrame *out);
-
-/**
- * @brief Build the 8-octet HART-IP message header into @p out (>= 8 bytes).
- * @param msg_type    HARTIP_MSG_*.
- * @param msg_id      HARTIP_ID_*.
- * @param status      status byte (0 in a request).
- * @param seq         sequence number.
- * @param total_len   total message length including this header (header + payload).
- * @return 8, or 0 if @p cap < 8.
- */
-size_t protocore_hartip_build_header(uint8_t msg_type, uint8_t msg_id, uint8_t status, uint16_t seq, uint16_t total_len,
-                                     uint8_t *out, size_t cap);
 
 /** @brief A parsed HART-IP message header + payload slice (the payload points into the input buffer). */
 typedef struct
@@ -107,12 +75,104 @@ typedef struct
     size_t payload_len;     ///< payload length (total_len - 8)
 } HartIpHeader;
 
+/** @brief What checksum takes: bytes, len. */
+typedef struct
+{
+    const uint8_t *bytes;
+    size_t len;
+} HartChecksumArgs;
+
+/** @brief What build takes: delimiter, addr, addr_len, command, data, ... */
+typedef struct
+{
+    uint8_t delimiter;   ///< frame delimiter (e.g. HART_DELIM_STX, OR HART_DELIM_LONG_ADDR for long addressing)
+    const uint8_t *addr; ///< address bytes (1 for short, 5 for long)
+    size_t addr_len;     ///< 1 or 5
+    uint8_t command;     ///< HART command number
+    const uint8_t *data; ///< data bytes (may be null when data_len == 0)
+    size_t data_len;     ///< number of data bytes (also the frame's byte-count field)
+    uint8_t *out;        ///< output buffer
+    size_t cap;          ///< capacity of out
+} HartBuildArgs;
+
+/** @brief What parse takes: frame, len, out. */
+typedef struct
+{
+    const uint8_t *frame;
+    size_t len;
+    HartFrame *out;
+} HartParseArgs;
+
+/** @brief What ip_build_header takes: msg_type, msg_id, status, seq, ... */
+typedef struct
+{
+    uint8_t msg_type;   ///< HARTIP_MSG_*
+    uint8_t msg_id;     ///< HARTIP_ID_*
+    uint8_t status;     ///< status byte (0 in a request)
+    uint16_t seq;       ///< sequence number
+    uint16_t total_len; ///< total message length including this header (header + payload)
+    uint8_t *out;
+    size_t cap;
+} HartIpBuildHeaderArgs;
+
+/** @brief What ip_parse_header takes: buf, len, out. */
+typedef struct
+{
+    const uint8_t *buf;
+    size_t len;
+    HartIpHeader *out;
+} HartIpParseHeaderArgs;
+
 /**
- * @brief Parse an 8-octet HART-IP message header and expose its payload slice (e.g. the token-passing PDU).
- * @return true iff @p len >= 8 and the declared total length is 8..len (the whole message is present); false
- *         on a short buffer, a total length below the header, or a truncated message.
+ * @brief HART / HART-IP process-instrument protocol codec (PROTOCORE_ENABLE_HART).
+ *
+ * A caller sets the members a call takes, invokes it through ::Hart with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   Hart.checksum_args.bytes = ...;
+ *   Hart.checksum_args.len = ...;
+ *   Hart.checksum(work);
+ *   // Hart.value is what the call reports
+ *
+ * @var HartNs::checksum_args  what checksum takes: bytes, len
+ * @var HartNs::build_args  what build takes: delimiter, addr, addr_len, command, data,
+ * @var HartNs::parse_args  what parse takes: frame, len, out
+ * @var HartNs::ip_build_header_args  what ip_build_header takes: msg_type, msg_id, status, seq,
+ * @var HartNs::ip_parse_header_args  what ip_parse_header takes: buf, len, out
+ * @var HartNs::ok  true if the frame is well-formed and the checksum matches; fills out
+ * @var HartNs::value  the value a call reports
+ * @var HartNs::n  the frame length written, or 0 if it would not fit or addr_len is ...
+ * @var HartNs::checksum  longitudinal XOR checksum of len bytes (the HART frame check byte)
+ * @var HartNs::build  build a HART command frame (no preamble - the transport prepends ...
+ * @var HartNs::parse  validate + parse a HART frame (checksum checked)
+ * @var HartNs::ip_build_header  build the 8-octet HART-IP message header into out (>= 8 bytes)
+ * @var HartNs::ip_parse_header  parse an 8-octet HART-IP message header and expose its payload ...
+ *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
+ * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
+ * a caller drives every namespace the same way.
  */
-proto_bool protocore_hartip_parse_header(const uint8_t *buf, size_t len, HartIpHeader *out);
+typedef struct
+{
+    HartChecksumArgs checksum_args;
+    HartBuildArgs build_args;
+    HartParseArgs parse_args;
+    HartIpBuildHeaderArgs ip_build_header_args;
+    HartIpParseHeaderArgs ip_parse_header_args;
+
+    proto_bool ok;
+    uint8_t value;
+    size_t n;
+
+    void (*const checksum)(uint8_t *restrict work);
+    void (*const build)(uint8_t *restrict work);
+    void (*const parse)(uint8_t *restrict work);
+    void (*const ip_build_header)(uint8_t *restrict work);
+    void (*const ip_parse_header)(uint8_t *restrict work);
+} HartNs;
+
+/** @brief The one symbol this module exports. */
+extern HartNs Hart;
 
 PROTOCORE_END_DECLS
 

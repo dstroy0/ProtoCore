@@ -6,19 +6,35 @@
  * @brief Allen-Bradley DF1 full-duplex frame builder + parser (pure, host-tested).
  */
 
-#include "services/fieldbus/df1/df1.h"
-#include "shared/crc/crc.h" // PROTOCORE_CRC16_ARC
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_DF1
 
-uint8_t protocore_df1_bcc(const uint8_t *data, size_t len)
+#include "services/fieldbus/df1/df1.h"
+#include "shared/crc/crc.h" // PROTOCORE_CRC16_ARC
+
+PROTOCORE_BEGIN_DECLS
+
+// The entries this file calls before reaching their definitions.
+// --- the entries -----------------------------------------------------------
+
+// No context and no borrow: every operand is the caller's. The borrow an entry takes is
+// never read.
+
+static void df1_bcc(uint8_t *restrict work);
+
+static void df1_bcc(uint8_t *restrict work)
 {
+    (void)work;
+    const uint8_t *data = Df1.bcc_args.data;
+    size_t len = Df1.bcc_args.len;
+
     uint8_t s = 0;
     for (size_t i = 0; i < len; i++)
     {
         s = (uint8_t)(s + data[i]);
     }
-    return (uint8_t)(0u - s); // 2's complement (modulo 256)
+    Df1.value = (uint8_t)(0u - s); // 2's complement (modulo 256)
 }
 
 // DF1's block check is the reflected CRC-16 (poly 0xA001 = reflect(0x8005), init 0, no final XOR), cataloged
@@ -40,20 +56,31 @@ static uint16_t df1_crc_data_plus_etx(const uint8_t *data, size_t len, uint8_t e
     return (uint16_t)Crc.value;
 }
 
-uint16_t protocore_df1_crc(const uint8_t *data, size_t len)
+static void df1_crc(uint8_t *restrict work)
 {
+    (void)work;
+    const uint8_t *data = Df1.crc_args.data;
+    size_t len = Df1.crc_args.len;
+
     Crc.args.params = &PROTOCORE_CRC16_ARC;
     Crc.args.data = data;
     Crc.args.len = len;
     Crc.compute(Crc.internal);
-    return (uint16_t)Crc.value;
+    Df1.u16 = (uint16_t)Crc.value;
 }
 
-size_t protocore_df1_build_frame(uint8_t *buf, size_t cap, const uint8_t *data, size_t data_len, Df1Check check)
+static void df1_build_frame(uint8_t *restrict work)
 {
+    uint8_t *buf = Df1.build_frame_args.buf;
+    size_t cap = Df1.build_frame_args.cap;
+    const uint8_t *data = Df1.build_frame_args.data;
+    size_t data_len = Df1.build_frame_args.data_len;
+    Df1Check check = Df1.build_frame_args.check;
+
     if (!buf || (data_len && !data))
     {
-        return 0;
+        Df1.n = 0;
+        return;
     }
     size_t stuffed = data_len;
     for (size_t i = 0; i < data_len; i++)
@@ -67,7 +94,8 @@ size_t protocore_df1_build_frame(uint8_t *buf, size_t cap, const uint8_t *data, 
     size_t total = 2 + stuffed + 2 + checklen; // DLE STX + data + DLE ETX + check
     if (total > cap)
     {
-        return 0;
+        Df1.n = 0;
+        return;
     }
 
     size_t p = 0;
@@ -92,22 +120,33 @@ size_t protocore_df1_build_frame(uint8_t *buf, size_t cap, const uint8_t *data, 
     }
     else
     {
-        buf[p++] = protocore_df1_bcc(data, data_len); // BCC excludes the ETX
+        Df1.bcc_args.data = data;
+        Df1.bcc_args.len = data_len;
+        df1_bcc(work);
+        buf[p++] = Df1.value; // BCC excludes the ETX
     }
-    return p;
+    Df1.n = p;
 }
 
-proto_bool protocore_df1_parse_frame(const uint8_t *buf, size_t len, Df1Check check, uint8_t *out, size_t out_cap,
-                                     size_t *out_len)
+static void df1_parse_frame(uint8_t *restrict work)
 {
+    const uint8_t *buf = Df1.parse_frame_args.buf;
+    size_t len = Df1.parse_frame_args.len;
+    Df1Check check = Df1.parse_frame_args.check;
+    uint8_t *out = Df1.parse_frame_args.out;
+    size_t out_cap = Df1.parse_frame_args.out_cap;
+    size_t *out_len = Df1.parse_frame_args.out_len;
+
     size_t checklen = (check == DF1_CHECK_CRC) ? 2 : 1;
     if (!buf || !out || len < 4 + checklen) // DLE STX DLE ETX + check
     {
-        return PROTO_FALSE;
+        Df1.ok = PROTO_FALSE;
+        return;
     }
     if (buf[0] != DF1_DLE || buf[1] != DF1_STX)
     {
-        return PROTO_FALSE;
+        Df1.ok = PROTO_FALSE;
+        return;
     }
 
     size_t i = 2;
@@ -119,14 +158,16 @@ proto_bool protocore_df1_parse_frame(const uint8_t *buf, size_t len, Df1Check ch
         {
             if (i + 1 >= len)
             {
-                return PROTO_FALSE;
+                Df1.ok = PROTO_FALSE;
+                return;
             }
             uint8_t next = buf[i + 1];
             if (next == DF1_DLE) // doubled DLE -> one 0x10 data byte
             {
                 if (o >= out_cap)
                 {
-                    return PROTO_FALSE;
+                    Df1.ok = PROTO_FALSE;
+                    return;
                 }
                 out[o++] = DF1_DLE;
                 i += 2;
@@ -139,52 +180,66 @@ proto_bool protocore_df1_parse_frame(const uint8_t *buf, size_t len, Df1Check ch
             }
             else
             {
-                return PROTO_FALSE; // an unexpected control symbol inside the data
+                Df1.ok = PROTO_FALSE;
+                return; // an unexpected control symbol inside the data
             }
         }
         else
         {
             if (o >= out_cap)
             {
-                return PROTO_FALSE;
+                Df1.ok = PROTO_FALSE;
+                return;
             }
             out[o++] = buf[i++];
         }
     }
     if (!ended)
     {
-        return PROTO_FALSE;
+        Df1.ok = PROTO_FALSE;
+        return;
     }
 
     if (check == DF1_CHECK_CRC)
     {
         if (i + 2 > len)
         {
-            return PROTO_FALSE;
+            Df1.ok = PROTO_FALSE;
+            return;
         }
         uint16_t c = df1_crc_data_plus_etx(out, o, DF1_ETX);
         uint16_t got = (uint16_t)(buf[i] | ((uint16_t)buf[i + 1] << 8)); // low byte first
         if (c != got)
         {
-            return PROTO_FALSE;
+            Df1.ok = PROTO_FALSE;
+            return;
         }
     }
     else
     {
         if (i + 1 > len)
         {
-            return PROTO_FALSE;
+            Df1.ok = PROTO_FALSE;
+            return;
         }
-        if (protocore_df1_bcc(out, o) != buf[i])
+        Df1.bcc_args.data = out;
+        Df1.bcc_args.len = o;
+        df1_bcc(work);
+        if (Df1.value != buf[i])
         {
-            return PROTO_FALSE;
+            Df1.ok = PROTO_FALSE;
+            return;
         }
     }
     if (out_len)
     {
         *out_len = o;
     }
-    return PROTO_TRUE;
+    Df1.ok = PROTO_TRUE;
 }
+
+Df1Ns Df1 = {.bcc = df1_bcc, .crc = df1_crc, .build_frame = df1_build_frame, .parse_frame = df1_parse_frame};
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_DF1

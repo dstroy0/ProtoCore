@@ -20,7 +20,7 @@
  * is padded to an even length except the last.
  *
  * Constants and the length rule are verified against the Wireshark S7comm dissector. This
- * codec produces / consumes the S7 PDU; wrap it with `protocore_cotp_build_dt` + `protocore_tpkt_build`.
+ * codec produces / consumes the S7 PDU; wrap it with `Cotp.build_dt` + `Cotp.tpkt_build`.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -29,11 +29,15 @@
 #ifndef PROTOCORE_S7COMM_H
 #define PROTOCORE_S7COMM_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_S7COMM
 
 PROTOCORE_BEGIN_DECLS
+
+// This module holds nothing between calls, so it carves no borrow and states none. An entry
+// takes one all the same, and never reads it, so every namespace in the tree is invoked the
+// same way.
 
 #define S7_PROTOCOL_ID 0x32 ///< constant first octet of every S7comm PDU
 
@@ -78,10 +82,6 @@ PROTOCORE_BEGIN_DECLS
 #define S7_SYNTAX_S7ANY 0x10 ///< S7-ANY address syntax id
 #define S7_RET_OK 0xFF       ///< data item return code: success
 
-/** @brief Build a Setup Communication job. Returns the PDU length, or 0 on overflow. */
-size_t protocore_s7_build_setup(uint8_t *buf, size_t cap, uint16_t pdu_ref, uint16_t max_amq_calling,
-                                uint16_t max_amq_called, uint16_t pdu_size);
-
 /** @brief One Read Var item (an S7-ANY pointer). */
 typedef struct
 {
@@ -91,9 +91,6 @@ typedef struct
     uint8_t transport_size; ///< S7_TS_* (element type)
     uint16_t count;         ///< number of elements
 } S7ReadItem;
-
-/** @brief Build a Read Var job for @p n items. Returns the PDU length, or 0 on overflow. */
-size_t protocore_s7_build_read_request(uint8_t *buf, size_t cap, uint16_t pdu_ref, const S7ReadItem *items, size_t n);
 
 /** @brief One Write Var item: an S7-ANY pointer (as for a read) plus the value bytes to write. */
 typedef struct
@@ -107,15 +104,6 @@ typedef struct
     const uint8_t *data;         ///< value bytes to write
     uint16_t data_len;           ///< value length in BYTES
 } S7WriteItem;
-
-/**
- * @brief Build a Write Var job (function 0x05) for @p n items. Mirrors the read request's parameter (the same
- *        12-octet S7-ANY item specs) and appends a data section: per item a return code (0x00) + data
- *        transport size + a 2-octet length + the value bytes, each item padded to an even length except the
- *        last. The length field is in BITS for the bit/byte/int data transport sizes (3/4/5) and in BYTES
- *        otherwise, matching protocore_s7_read_next_item. @return the PDU length, or 0 on overflow / bad input.
- */
-size_t protocore_s7_build_write_request(uint8_t *buf, size_t cap, uint16_t pdu_ref, const S7WriteItem *items, size_t n);
 
 /** @brief A parsed S7comm header. @ref param / @ref data point INTO the source buffer. */
 typedef struct
@@ -131,9 +119,6 @@ typedef struct
     const uint8_t *data;
 } S7Header;
 
-/** @brief Parse + validate an S7comm header (protocol id, lengths). */
-proto_bool protocore_s7_parse_header(const uint8_t *buf, size_t len, S7Header *out);
-
 /** @brief One Read Var response data item. @ref data points INTO the source buffer. */
 typedef struct
 {
@@ -143,13 +128,107 @@ typedef struct
     size_t data_len;        ///< value length in BYTES (the bit length is converted)
 } S7DataItem;
 
+/** @brief What build_setup takes: buf, cap, pdu_ref, max_amq_calling, ... */
+typedef struct
+{
+    uint8_t *buf;
+    size_t cap;
+    uint16_t pdu_ref;
+    uint16_t max_amq_calling;
+    uint16_t max_amq_called;
+    uint16_t pdu_size;
+} S7commBuildSetupArgs;
+
+/** @brief What build_read_request takes: buf, cap, pdu_ref, items, n. */
+typedef struct
+{
+    uint8_t *buf;
+    size_t cap;
+    uint16_t pdu_ref;
+    const S7ReadItem *items;
+    size_t n;
+} S7commBuildReadRequestArgs;
+
+/** @brief What build_write_request takes: buf, cap, pdu_ref, items, n. */
+typedef struct
+{
+    uint8_t *buf;
+    size_t cap;
+    uint16_t pdu_ref;
+    const S7WriteItem *items;
+    size_t n;
+} S7commBuildWriteRequestArgs;
+
+/** @brief What parse_header takes: buf, len, out. */
+typedef struct
+{
+    const uint8_t *buf;
+    size_t len;
+    S7Header *out;
+} S7commParseHeaderArgs;
+
+/** @brief What read_next_item takes: data, data_len, offset, out. */
+typedef struct
+{
+    const uint8_t *data; ///< the S7Header data pointer; data_len its data_len
+    size_t data_len;
+    size_t *offset; ///< in/out cursor, start at 0; advanced past the item (and its even-pad)
+    S7DataItem *out;
+} S7commReadNextItemArgs;
+
 /**
- * @brief Read the next Read Var response data item from the data section.
- * @param data     the @ref S7Header data pointer; @param data_len its data_len.
- * @param offset   in/out cursor, start at 0; advanced past the item (and its even-pad).
- * @return true on a complete item; false at end-of-section or on truncation.
+ * @brief Siemens S7comm PDU codec (PROTOCORE_ENABLE_S7COMM) - zero-heap builder + parser for the S7-300/400
+ * communication PDUs, carried inside a COTP Data TPDU (services/fieldbus/cotp) over ISO-on-TCP (port 102).
+ *
+ * A caller sets the members a call takes, invokes it through ::S7comm with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   S7comm.build_setup_args.buf = ...;
+ *   S7comm.build_setup_args.cap = ...;
+ *   S7comm.build_setup_args.pdu_ref = ...;
+ *   S7comm.build_setup_args.max_amq_calling = ...;
+ *   S7comm.build_setup_args.max_amq_called = ...;
+ *   S7comm.build_setup_args.pdu_size = ...;
+ *   S7comm.build_setup(work);
+ *   // S7comm.n is what the call reports
+ *
+ * @var S7commNs::build_setup_args  what build_setup takes: buf, cap, pdu_ref, max_amq_calling,
+ * @var S7commNs::build_read_request_args  what build_read_request takes: buf, cap, pdu_ref, items, n
+ * @var S7commNs::build_write_request_args  what build_write_request takes: buf, cap, pdu_ref, items, n
+ * @var S7commNs::parse_header_args  what parse_header takes: buf, len, out
+ * @var S7commNs::read_next_item_args  what read_next_item takes: data, data_len, offset, out
+ * @var S7commNs::ok  true on a complete item; false at end-of-section or on truncation
+ * @var S7commNs::n  the count a call reports
+ * @var S7commNs::build_setup  build a Setup Communication job. Returns the PDU length, or 0 on ...
+ * @var S7commNs::build_read_request  build a Read Var job for n items. Returns the PDU length, or 0 on ...
+ * @var S7commNs::build_write_request  build a Write Var job (function 0x05) for n items. Mirrors the read ...
+ * @var S7commNs::parse_header  parse + validate an S7comm header (protocol id, lengths)
+ * @var S7commNs::read_next_item  read the next Read Var response data item from the data section
+ *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
+ * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
+ * a caller drives every namespace the same way.
  */
-proto_bool protocore_s7_read_next_item(const uint8_t *data, size_t data_len, size_t *offset, S7DataItem *out);
+typedef struct
+{
+    S7commBuildSetupArgs build_setup_args;
+    S7commBuildReadRequestArgs build_read_request_args;
+    S7commBuildWriteRequestArgs build_write_request_args;
+    S7commParseHeaderArgs parse_header_args;
+    S7commReadNextItemArgs read_next_item_args;
+
+    proto_bool ok;
+    size_t n;
+
+    void (*const build_setup)(uint8_t *restrict work);
+    void (*const build_read_request)(uint8_t *restrict work);
+    void (*const build_write_request)(uint8_t *restrict work);
+    void (*const parse_header)(uint8_t *restrict work);
+    void (*const read_next_item)(uint8_t *restrict work);
+} S7commNs;
+
+/** @brief The one symbol this module exports. */
+extern S7commNs S7comm;
 
 PROTOCORE_END_DECLS
 

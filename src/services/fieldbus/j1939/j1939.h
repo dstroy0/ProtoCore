@@ -27,11 +27,15 @@
 #ifndef PROTOCORE_J1939_H
 #define PROTOCORE_J1939_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_NEED_J1939
 
-#include "shared/can/can.h"
+PROTOCORE_BEGIN_DECLS
+
+// PROTOCORE_J1939_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
+// it into its arena. A caller takes them once and passes the pointer to every call. How they
+// are carved is this module's and is never named here.
 
 // Well-known PGNs and addresses.
 #define J1939_PGN_TP_CM 0x00EC00u         ///< Transport Protocol - Connection Management (60416)
@@ -50,6 +54,18 @@
 #define J1939_TP_CM_ABORT 0xFFu   ///< Connection Abort
 
 #define J1939_TP_DT_LEN 7u ///< data octets carried per TP.DT packet (1 seq byte + 7 data)
+
+#define J1939_PGN_EEC1 0x00F004u ///< Electronic Engine Controller 1 (61444): engine speed + torque
+#define J1939_PGN_ET1 0x00FEEEu  ///< Engine Temperature 1 (65262): coolant / fuel / oil temperature
+#define J1939_PGN_LFE 0x00FEF2u  ///< Fuel Economy (65266): fuel rate + instantaneous / average economy
+#define J1939_PGN_AMB 0x00FEF5u  ///< Ambient Conditions (65269): barometric pressure + air / road temperatures
+#define J1939_PGN_IC1 0x00FEF6u  ///< Inlet/Exhaust Conditions 1 (65270): boost + intake / exhaust + filter pressures
+#define J1939_PGN_VD 0x00FEE0u   ///< Vehicle Distance (65248): trip + total vehicle distance
+#define J1939_PGN_CCVS 0x00FEF1u ///< Cruise Control/Vehicle Speed (65265): wheel-based vehicle speed + cruise state
+#define J1939_PGN_DM1 0x00FECAu  ///< Active Diagnostic Trouble Codes (65226): lamp status + DTC list
+
+/** @brief Sentinel percent-torque value meaning "not available". */
+#define J1939_TORQUE_NA ((int16_t)0x7FFF)
 
 /** @brief A decoded J1939 identifier. */
 typedef struct
@@ -86,65 +102,6 @@ typedef struct
     uint8_t buf[PROTOCORE_J1939_TP_MAX];
 } J1939TpRx;
 
-// --- identifier ---
-
-/** @brief Encode a 29-bit J1939 id. @p da is used only for a PDU1 (PF < 240) PGN. */
-proto_bool protocore_j1939_encode_id(uint32_t *id, uint8_t priority, uint32_t pgn, uint8_t sa, uint8_t da);
-
-/** @brief Decode a 29-bit J1939 id into its fields. */
-proto_bool protocore_j1939_decode_id(uint32_t id, J1939Id *out);
-
-// --- single-frame messages ---
-
-/** @brief Build a single-frame (<= 8 octet) J1939 message. */
-proto_bool protocore_j1939_build_message(CanFrame *out, uint8_t priority, uint32_t pgn, uint8_t sa, uint8_t da,
-                                         const uint8_t *data, uint8_t len);
-
-/** @brief Build a Request-PGN frame asking @p da for @p requested_pgn. */
-proto_bool protocore_j1939_build_request(CanFrame *out, uint8_t sa, uint8_t da, uint32_t requested_pgn);
-
-/** @brief Build an Address-Claimed frame announcing @p sa with the 64-bit @p name. */
-proto_bool protocore_j1939_build_address_claim(CanFrame *out, uint8_t sa, uint64_t name);
-
-/** @brief Compose a 64-bit J1939 NAME from its fields (see J1939-81). */
-uint64_t protocore_j1939_build_name(proto_bool arbitrary_address_capable, uint8_t industry_group,
-                                    uint8_t vehicle_system_instance, uint8_t vehicle_system, uint8_t function,
-                                    uint8_t function_instance, uint8_t ecu_instance, uint16_t manufacturer_code,
-                                    uint32_t identity_number);
-
-// --- transport protocol (multi-packet) ---
-
-/** @brief Octet count -> TP packet count (ceil(size / 7)). */
-uint8_t protocore_j1939_tp_num_packets(uint16_t total_size);
-
-/** @brief Build the BAM (broadcast) TP.CM announce frame for @p pgn / @p total_size. */
-proto_bool protocore_j1939_build_bam_cm(CanFrame *out, uint8_t sa, uint32_t pgn, uint16_t total_size);
-
-/** @brief Build TP.DT data packet @p seq (1-based) carrying @p chunk_len (1..7) octets. */
-proto_bool protocore_j1939_build_tp_dt(CanFrame *out, uint8_t sa, uint8_t da, uint8_t seq, const uint8_t *chunk,
-                                       uint8_t chunk_len);
-
-/** @brief Reset a reassembly context to idle. */
-void protocore_j1939_tp_reset(J1939TpRx *rx);
-
-/** @brief Feed a received frame to the reassembler; see @ref J1939TpResult. */
-J1939TpResult protocore_j1939_tp_feed(J1939TpRx *rx, const CanFrame *f);
-
-// --- typed decoders for common engine PGNs (SAE J1939-71) ---
-//
-// These lift a raw single-frame CAN message into engineering units, applying the J1939 scale + offset and
-// the "not available" ranges (a 1-octet SPN is valid 0x00..0xFA, a 2-octet SPN 0x0000..0xFAFF; the rest
-// is error / not-available and clears the corresponding valid flag).
-
-#define J1939_PGN_EEC1 0x00F004u ///< Electronic Engine Controller 1 (61444): engine speed + torque
-#define J1939_PGN_ET1 0x00FEEEu  ///< Engine Temperature 1 (65262): coolant / fuel / oil temperature
-#define J1939_PGN_LFE 0x00FEF2u  ///< Fuel Economy (65266): fuel rate + instantaneous / average economy
-#define J1939_PGN_AMB 0x00FEF5u  ///< Ambient Conditions (65269): barometric pressure + air / road temperatures
-#define J1939_PGN_IC1 0x00FEF6u  ///< Inlet/Exhaust Conditions 1 (65270): boost + intake / exhaust + filter pressures
-#define J1939_PGN_VD 0x00FEE0u   ///< Vehicle Distance (65248): trip + total vehicle distance
-#define J1939_PGN_CCVS 0x00FEF1u ///< Cruise Control/Vehicle Speed (65265): wheel-based vehicle speed + cruise state
-#define J1939_PGN_DM1 0x00FECAu  ///< Active Diagnostic Trouble Codes (65226): lamp status + DTC list
-
 /** @brief Decoded EEC1 (PGN 61444). Percent-torque fields are @ref J1939_TORQUE_NA when not available. */
 typedef struct
 {
@@ -154,9 +111,6 @@ typedef struct
     proto_bool engine_speed_valid;     ///< false when the raw speed is in the not-available range
     float engine_speed_rpm;            ///< engine speed (rpm, 0.125 rpm/bit)
 } J1939Eec1;
-
-/** @brief Sentinel percent-torque value meaning "not available". */
-#define J1939_TORQUE_NA ((int16_t)0x7FFF)
 
 /** @brief Decoded ET1 (PGN 65262). Each temperature has its own validity flag. */
 typedef struct
@@ -168,18 +122,6 @@ typedef struct
     proto_bool oil_valid;
     float oil_temp_c; ///< engine oil temperature (degC, 0.03125 degC/bit, -273 offset)
 } J1939Et1;
-
-/**
- * @brief Decode an EEC1 (PGN 61444) single frame into @p out.
- * @return true iff @p f decodes to PGN 61444 and carries 8 data octets; false otherwise.
- */
-proto_bool protocore_j1939_decode_eec1(const CanFrame *f, J1939Eec1 *out);
-
-/**
- * @brief Decode an ET1 (PGN 65262) single frame into @p out.
- * @return true iff @p f decodes to PGN 65262 and carries 8 data octets; false otherwise.
- */
-proto_bool protocore_j1939_decode_et1(const CanFrame *f, J1939Et1 *out);
 
 /** @brief Decoded LFE (PGN 65266). Each value has its own validity flag (cleared for a not-available raw). */
 typedef struct
@@ -193,12 +135,6 @@ typedef struct
     proto_bool throttle_valid;
     float throttle_pct; ///< throttle valve 1 position (percent, 0.4 %/bit)
 } J1939Lfe;
-
-/**
- * @brief Decode an LFE (PGN 65266) single frame into @p out.
- * @return true iff @p f decodes to PGN 65266 and carries 8 data octets; false otherwise.
- */
-proto_bool protocore_j1939_decode_lfe(const CanFrame *f, J1939Lfe *out);
 
 /** @brief Decoded AMB (PGN 65269). Each measurement has its own validity flag (cleared for a
  *  not-available raw). Barometric pressure is a 1-octet SPN; the temperatures are 2-octet except the
@@ -216,12 +152,6 @@ typedef struct
     proto_bool road_temp_valid;
     float road_temp_c; ///< road surface temperature (degC, 0.03125 degC/bit, -273 offset) - SPN 79
 } J1939Amb;
-
-/**
- * @brief Decode an AMB (PGN 65269) single frame into @p out.
- * @return true iff @p f decodes to PGN 65269 and carries 8 data octets; false otherwise.
- */
-proto_bool protocore_j1939_decode_amb(const CanFrame *f, J1939Amb *out);
 
 /** @brief Decoded IC1 (PGN 65270). Each measurement has its own validity flag (cleared for a
  *  not-available raw). Exhaust gas temperature is a 2-octet SPN; the rest are 1-octet. */
@@ -243,12 +173,6 @@ typedef struct
     float coolant_filter_kpa; ///< coolant filter differential pressure (kPa, 0.5 kPa/bit) - SPN 112
 } J1939Ic1;
 
-/**
- * @brief Decode an IC1 (PGN 65270) single frame into @p out.
- * @return true iff @p f decodes to PGN 65270 and carries 8 data octets; false otherwise.
- */
-proto_bool protocore_j1939_decode_ic1(const CanFrame *f, J1939Ic1 *out);
-
 /** @brief Decoded VD (PGN 65248). The distances are held as double: at 0.125 km/bit a 32-bit odometer
  *  spans hundreds of millions of km, beyond float's ~7-digit precision. */
 typedef struct
@@ -258,12 +182,6 @@ typedef struct
     proto_bool total_valid;
     double total_km; ///< total vehicle distance (km, 0.125 km/bit) - SPN 245
 } J1939Vd;
-
-/**
- * @brief Decode a VD (PGN 65248) single frame into @p out.
- * @return true iff @p f decodes to PGN 65248 and carries 8 data octets; false otherwise.
- */
-proto_bool protocore_j1939_decode_vd(const CanFrame *f, J1939Vd *out);
 
 /** @brief Decoded CCVS (PGN 65265): the wheel-based vehicle speed plus the cruise-control-active state.
  *  Only the two signals with cross-source-verified positions are decoded; the many discrete switches in
@@ -275,12 +193,6 @@ typedef struct
     uint8_t
         cruise_active; ///< cruise control active state, a 2-bit value (0 off / 1 active / 2 error / 3 n/a) - SPN 595
 } J1939Ccvs;
-
-/**
- * @brief Decode a CCVS (PGN 65265) single frame into @p out.
- * @return true iff @p f decodes to PGN 65265 and carries 8 data octets; false otherwise.
- */
-proto_bool protocore_j1939_decode_ccvs(const CanFrame *f, J1939Ccvs *out);
 
 /** @brief One decoded Diagnostic Trouble Code (J1939-73 SPN conversion method 4). */
 typedef struct
@@ -301,14 +213,292 @@ typedef struct
     uint8_t dtc_count;     ///< number of active DTCs decoded into the caller's array
 } J1939Dm1;
 
-/**
- * @brief Decode a DM1 (PGN 65226) body: the lamp-status octet, the flash-status octet, then 4-octet DTCs.
- *        DM1 may arrive single-frame or reassembled over the Transport Protocol, so this takes the raw body
- *        (a frame's data[] or a TP buffer). An all-zero DTC (the "no active fault" placeholder) is skipped.
- * @param out_dtcs  caller array receiving up to @p max decoded DTCs (may be null to only read the lamps).
- * @return true iff @p len is at least 2 octets (the two status octets); false otherwise.
- */
-proto_bool protocore_j1939_decode_dm1(const uint8_t *body, size_t len, J1939Dm1 *out, J1939Dtc *out_dtcs, size_t max);
+#include "shared/can/can.h" // CanFrame: the type a parameter points at
 
-#endif // PROTOCORE_NEED_J1939
+/** @brief What encode_id takes: id, priority, pgn, sa, da. */
+typedef struct
+{
+    uint32_t *id;
+    uint8_t priority;
+    uint32_t pgn;
+    uint8_t sa;
+    uint8_t da;
+} J1939EncodeIdArgs;
+
+/** @brief What decode_id takes: id, out. */
+typedef struct
+{
+    uint32_t id;
+    J1939Id *out;
+} J1939DecodeIdArgs;
+
+/** @brief What build_message takes: out, priority, pgn, sa, da, data, ... */
+typedef struct
+{
+    CanFrame *out;
+    uint8_t priority;
+    uint32_t pgn;
+    uint8_t sa;
+    uint8_t da;
+    const uint8_t *data;
+    uint8_t len;
+} J1939BuildMessageArgs;
+
+/** @brief What build_request takes: out, sa, da, requested_pgn. */
+typedef struct
+{
+    CanFrame *out;
+    uint8_t sa;
+    uint8_t da;
+    uint32_t requested_pgn;
+} J1939BuildRequestArgs;
+
+/** @brief What build_address_claim takes: out, sa, name. */
+typedef struct
+{
+    CanFrame *out;
+    uint8_t sa;
+    uint64_t name;
+} J1939BuildAddressClaimArgs;
+
+/** @brief What build_name takes: arbitrary_address_capable, ... */
+typedef struct
+{
+    proto_bool arbitrary_address_capable;
+    uint8_t industry_group;
+    uint8_t vehicle_system_instance;
+    uint8_t vehicle_system;
+    uint8_t function;
+    uint8_t function_instance;
+    uint8_t ecu_instance;
+    uint16_t manufacturer_code;
+    uint32_t identity_number;
+} J1939BuildNameArgs;
+
+/** @brief What tp_num_packets takes: total_size. */
+typedef struct
+{
+    uint16_t total_size;
+} J1939TpNumPacketsArgs;
+
+/** @brief What build_bam_cm takes: out, sa, pgn, total_size. */
+typedef struct
+{
+    CanFrame *out;
+    uint8_t sa;
+    uint32_t pgn;
+    uint16_t total_size;
+} J1939BuildBamCmArgs;
+
+/** @brief What build_tp_dt takes: out, sa, da, seq, chunk, chunk_len. */
+typedef struct
+{
+    CanFrame *out;
+    uint8_t sa;
+    uint8_t da;
+    uint8_t seq;
+    const uint8_t *chunk;
+    uint8_t chunk_len;
+} J1939BuildTpDtArgs;
+
+/** @brief What tp_reset takes: rx. */
+typedef struct
+{
+    J1939TpRx *rx;
+} J1939TpResetArgs;
+
+/** @brief What tp_feed takes: rx, f. */
+typedef struct
+{
+    J1939TpRx *rx;
+    const CanFrame *f;
+} J1939TpFeedArgs;
+
+/** @brief What decode_eec1 takes: f, out. */
+typedef struct
+{
+    const CanFrame *f;
+    J1939Eec1 *out;
+} J1939DecodeEec1Args;
+
+/** @brief What decode_et1 takes: f, out. */
+typedef struct
+{
+    const CanFrame *f;
+    J1939Et1 *out;
+} J1939DecodeEt1Args;
+
+/** @brief What decode_lfe takes: f, out. */
+typedef struct
+{
+    const CanFrame *f;
+    J1939Lfe *out;
+} J1939DecodeLfeArgs;
+
+/** @brief What decode_amb takes: f, out. */
+typedef struct
+{
+    const CanFrame *f;
+    J1939Amb *out;
+} J1939DecodeAmbArgs;
+
+/** @brief What decode_ic1 takes: f, out. */
+typedef struct
+{
+    const CanFrame *f;
+    J1939Ic1 *out;
+} J1939DecodeIc1Args;
+
+/** @brief What decode_vd takes: f, out. */
+typedef struct
+{
+    const CanFrame *f;
+    J1939Vd *out;
+} J1939DecodeVdArgs;
+
+/** @brief What decode_ccvs takes: f, out. */
+typedef struct
+{
+    const CanFrame *f;
+    J1939Ccvs *out;
+} J1939DecodeCcvsArgs;
+
+/** @brief What decode_dm1 takes: body, len, out, out_dtcs, max. */
+typedef struct
+{
+    const uint8_t *body;
+    size_t len;
+    J1939Dm1 *out;
+    J1939Dtc *out_dtcs; ///< caller array receiving up to max decoded DTCs (may be null to only read the lamps)
+    size_t max;
+} J1939DecodeDm1Args;
+
+/**
+ * @brief SAE J1939 message codec (PROTOCORE_ENABLE_J1939) - the heavy-duty-vehicle / agriculture / marine / genset CAN
+ * higher-layer protocol, over 29-bit extended CAN frames.
+ *
+ * A caller sets the members a call takes, invokes it through ::J1939 with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   J1939.encode_id_args.id = ...;
+ *   J1939.encode_id_args.priority = ...;
+ *   J1939.encode_id_args.pgn = ...;
+ *   J1939.encode_id_args.sa = ...;
+ *   J1939.encode_id_args.da = ...;
+ *   J1939.encode_id(work);
+ *   // J1939.ok is what the call reports
+ *
+ * @var J1939Ns::encode_id_args  what encode_id takes: id, priority, pgn, sa, da
+ * @var J1939Ns::decode_id_args  what decode_id takes: id, out
+ * @var J1939Ns::build_message_args  what build_message takes: out, priority, pgn, sa, da, data,
+ * @var J1939Ns::build_request_args  what build_request takes: out, sa, da, requested_pgn
+ * @var J1939Ns::build_address_claim_args  what build_address_claim takes: out, sa, name
+ * @var J1939Ns::build_name_args  what build_name takes: arbitrary_address_capable,
+ * @var J1939Ns::tp_num_packets_args  what tp_num_packets takes: total_size
+ * @var J1939Ns::build_bam_cm_args  what build_bam_cm takes: out, sa, pgn, total_size
+ * @var J1939Ns::build_tp_dt_args  what build_tp_dt takes: out, sa, da, seq, chunk, chunk_len
+ * @var J1939Ns::tp_reset_args  what tp_reset takes: rx
+ * @var J1939Ns::tp_feed_args  what tp_feed takes: rx, f
+ * @var J1939Ns::decode_eec1_args  what decode_eec1 takes: f, out
+ * @var J1939Ns::decode_et1_args  what decode_et1 takes: f, out
+ * @var J1939Ns::decode_lfe_args  what decode_lfe takes: f, out
+ * @var J1939Ns::decode_amb_args  what decode_amb takes: f, out
+ * @var J1939Ns::decode_ic1_args  what decode_ic1 takes: f, out
+ * @var J1939Ns::decode_vd_args  what decode_vd takes: f, out
+ * @var J1939Ns::decode_ccvs_args  what decode_ccvs takes: f, out
+ * @var J1939Ns::decode_dm1_args  what decode_dm1 takes: body, len, out, out_dtcs, max
+ * @var J1939Ns::ok  true iff f decodes to PGN 61444 and carries 8 data octets; false ...
+ * @var J1939Ns::value  the value a call reports
+ * @var J1939Ns::u8  what a call reports
+ * @var J1939Ns::tp  what a call reports
+ * @var J1939Ns::encode_id  encode a 29-bit J1939 id. da is used only for a PDU1 (PF < 240) PGN
+ * @var J1939Ns::decode_id  decode a 29-bit J1939 id into its fields
+ * @var J1939Ns::build_message  build a single-frame (<= 8 octet) J1939 message
+ * @var J1939Ns::build_request  build a Request-PGN frame asking da for requested_pgn
+ * @var J1939Ns::build_address_claim  build an Address-Claimed frame announcing sa with the 64-bit name
+ * @var J1939Ns::build_name  compose a 64-bit J1939 NAME from its fields (see J1939-81)
+ * @var J1939Ns::tp_num_packets  octet count -> TP packet count (ceil(size / 7))
+ * @var J1939Ns::build_bam_cm  build the BAM (broadcast) TP.CM announce frame for pgn / total_size
+ * @var J1939Ns::build_tp_dt  build TP.DT data packet seq (1-based) carrying chunk_len (1..7) ...
+ * @var J1939Ns::tp_reset  reset a reassembly context to idle
+ * @var J1939Ns::tp_feed  feed a received frame to the reassembler; see J1939TpResult
+ * @var J1939Ns::decode_eec1  decode an EEC1 (PGN 61444) single frame into out
+ * @var J1939Ns::decode_et1  decode an ET1 (PGN 65262) single frame into out
+ * @var J1939Ns::decode_lfe  decode an LFE (PGN 65266) single frame into out
+ * @var J1939Ns::decode_amb  decode an AMB (PGN 65269) single frame into out
+ * @var J1939Ns::decode_ic1  decode an IC1 (PGN 65270) single frame into out
+ * @var J1939Ns::decode_vd  decode a VD (PGN 65248) single frame into out
+ * @var J1939Ns::decode_ccvs  decode a CCVS (PGN 65265) single frame into out
+ * @var J1939Ns::decode_dm1  decode a DM1 (PGN 65226) body: the lamp-status octet, the ...
+ *
+ * @c work is PROTOCORE_J1939_BORROW bytes the CALLER took, at an address it knows. It arrives
+ * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
+ * carved is this module's and is never named here.
+ */
+typedef struct
+{
+    J1939EncodeIdArgs encode_id_args;
+    J1939DecodeIdArgs decode_id_args;
+    J1939BuildMessageArgs build_message_args;
+    J1939BuildRequestArgs build_request_args;
+    J1939BuildAddressClaimArgs build_address_claim_args;
+    J1939BuildNameArgs build_name_args;
+    J1939TpNumPacketsArgs tp_num_packets_args;
+    J1939BuildBamCmArgs build_bam_cm_args;
+    J1939BuildTpDtArgs build_tp_dt_args;
+    J1939TpResetArgs tp_reset_args;
+    J1939TpFeedArgs tp_feed_args;
+    J1939DecodeEec1Args decode_eec1_args;
+    J1939DecodeEt1Args decode_et1_args;
+    J1939DecodeLfeArgs decode_lfe_args;
+    J1939DecodeAmbArgs decode_amb_args;
+    J1939DecodeIc1Args decode_ic1_args;
+    J1939DecodeVdArgs decode_vd_args;
+    J1939DecodeCcvsArgs decode_ccvs_args;
+    J1939DecodeDm1Args decode_dm1_args;
+
+    proto_bool ok;
+    uint64_t value;
+    uint8_t u8;
+    J1939TpResult tp;
+
+    void (*const encode_id)(uint8_t *restrict work);
+    void (*const decode_id)(uint8_t *restrict work);
+    void (*const build_message)(uint8_t *restrict work);
+    void (*const build_request)(uint8_t *restrict work);
+    void (*const build_address_claim)(uint8_t *restrict work);
+    void (*const build_name)(uint8_t *restrict work);
+    void (*const tp_num_packets)(uint8_t *restrict work);
+    void (*const build_bam_cm)(uint8_t *restrict work);
+    void (*const build_tp_dt)(uint8_t *restrict work);
+    void (*const tp_reset)(uint8_t *restrict work);
+    void (*const tp_feed)(uint8_t *restrict work);
+    void (*const decode_eec1)(uint8_t *restrict work);
+    void (*const decode_et1)(uint8_t *restrict work);
+    void (*const decode_lfe)(uint8_t *restrict work);
+    void (*const decode_amb)(uint8_t *restrict work);
+    void (*const decode_ic1)(uint8_t *restrict work);
+    void (*const decode_vd)(uint8_t *restrict work);
+    void (*const decode_ccvs)(uint8_t *restrict work);
+    void (*const decode_dm1)(uint8_t *restrict work);
+} J1939Ns;
+
+/** @brief The one symbol this module exports. */
+extern J1939Ns J1939;
+
+/**
+ * @brief The PROTOCORE_J1939_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+uint8_t *protocore_j1939_span(void);
+
+PROTOCORE_END_DECLS
+
+#endif //
+
 #endif // PROTOCORE_J1939_H

@@ -7,15 +7,59 @@
  */
 
 #include "services/fieldbus/j1939/j1939.h"
+#include "mmgr/plaintext.h" // the persistent end this module's state is taken from
 #include "mmgr/protomem.h"
+#include "shared/can/can.h"
+
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_NEED_J1939
 
-proto_bool protocore_j1939_encode_id(uint32_t *id, uint8_t priority, uint32_t pgn, uint8_t sa, uint8_t da)
+PROTOCORE_BEGIN_DECLS
+
+// The entries this file calls before reaching their definitions.
+
+// --- the program's shared state, beside the namespace not on it -------------
+
+// The one owned instance, private to this TU: the pointer to the bytes this module took for
+// itself. A caller that hands in its own borrow never reaches it.
+typedef struct
 {
+    uint8_t *span; ///< PROTOCORE_J1939_BORROW persistent bytes, or null while the pool was short
+} J1939OwnCtx;
+static J1939OwnCtx s_own;
+
+// Not an entry: an entry takes a borrow and this is where that borrow comes from.
+uint8_t *protocore_j1939_span(void)
+{
+    if (s_own.span == NULL)
+    {
+        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_J1939_BORROW);
+        if (span.ok(sp))
+        {
+            s_own.span = sp.buf;
+        }
+    }
+    return s_own.span; // null while the pool was short, which every entry refuses
+}
+
+static void j1939_decode_id(uint8_t *restrict work);
+static void j1939_tp_num_packets(uint8_t *restrict work);
+static void j1939_tp_reset(uint8_t *restrict work);
+
+static void j1939_encode_id(uint8_t *restrict work)
+{
+    (void)work;
+    uint32_t *id = J1939.encode_id_args.id;
+    uint8_t priority = J1939.encode_id_args.priority;
+    uint32_t pgn = J1939.encode_id_args.pgn;
+    uint8_t sa = J1939.encode_id_args.sa;
+    uint8_t da = J1939.encode_id_args.da;
+
     if (!id || priority > 7 || pgn > 0x3FFFFu)
     {
-        return PROTO_FALSE;
+        J1939.ok = PROTO_FALSE;
+        return;
     }
     uint8_t edp = (uint8_t)((pgn >> 17) & 1u);
     uint8_t dp = (uint8_t)((pgn >> 16) & 1u);
@@ -25,14 +69,19 @@ proto_bool protocore_j1939_encode_id(uint32_t *id, uint8_t priority, uint32_t pg
     uint8_t ps = (pf < J1939_PDU2_THRESHOLD) ? da : (uint8_t)(pgn & 0xFFu);
     *id = ((uint32_t)(priority & 7u) << 26) | ((uint32_t)edp << 25) | ((uint32_t)dp << 24) | ((uint32_t)pf << 16) |
           ((uint32_t)ps << 8) | (uint32_t)sa;
-    return PROTO_TRUE;
+    J1939.ok = PROTO_TRUE;
 }
 
-proto_bool protocore_j1939_decode_id(uint32_t id, J1939Id *out)
+static void j1939_decode_id(uint8_t *restrict work)
 {
+    (void)work;
+    uint32_t id = J1939.decode_id_args.id;
+    J1939Id *out = J1939.decode_id_args.out;
+
     if (!out)
     {
-        return PROTO_FALSE;
+        J1939.ok = PROTO_FALSE;
+        return;
     }
     id &= PROTOCORE_CAN_EXT_ID_MASK;
     out->priority = (uint8_t)((id >> 26) & 7u);
@@ -52,67 +101,131 @@ proto_bool protocore_j1939_decode_id(uint32_t id, J1939Id *out)
         out->da = J1939_ADDR_GLOBAL;
         out->pgn = ((uint32_t)edp << 17) | ((uint32_t)dp << 16) | ((uint32_t)out->pf << 8) | out->ps;
     }
-    return PROTO_TRUE;
+    J1939.ok = PROTO_TRUE;
 }
 
-// Fill a CanFrame as a 29-bit extended frame.
-static proto_bool ext_frame(CanFrame *f, uint8_t priority, uint32_t pgn, uint8_t sa, uint8_t da, uint8_t dlc)
+// The operands the private helper below reads, all of them: the widest set any one caller supplies.
+typedef struct
+{
+    CanFrame *f;      ///< the frame being filled
+    uint32_t pgn;     ///< its parameter group number
+    uint8_t priority; ///< its 3-bit priority
+    uint8_t sa;       ///< its source address
+    uint8_t da;       ///< its destination address
+    uint8_t dlc;      ///< its data length
+} J1939Ctx;
+// The caller's borrow, split: the context at its offset. One pointer arrives and every
+// region is that pointer plus a compile-time offset, so the assert below proves the span
+// covers them before anything runs.
+#define J1939_OFF_CTX 0u
+static_assert(J1939_OFF_CTX + sizeof(J1939Ctx) <= PROTOCORE_J1939_BORROW,
+              "PROTOCORE_J1939_BORROW is short of the module context - raise it in protocore_config.h, which"
+              " sums it into its arena");
+
+// The region, at its offset in the caller's borrow.
+#define J1939_CTX(w) ((J1939Ctx *)(void *)((w) + J1939_OFF_CTX))
+
+// Fill a CanFrame as a 29-bit extended frame, from the operands on the context.
+static proto_bool ext_frame(uint8_t *restrict work)
 {
     uint32_t id;
-    if (!protocore_j1939_encode_id(&id, priority, pgn, sa, da))
+    J1939.encode_id_args.id = &id;
+    J1939.encode_id_args.priority = J1939_CTX(work)->priority;
+    J1939.encode_id_args.pgn = J1939_CTX(work)->pgn;
+    J1939.encode_id_args.sa = J1939_CTX(work)->sa;
+    J1939.encode_id_args.da = J1939_CTX(work)->da;
+    j1939_encode_id(work);
+    if (!J1939.ok)
     {
         return PROTO_FALSE;
     }
-    f->id = id;
-    f->extended = PROTO_TRUE;
-    f->rtr = PROTO_FALSE;
-    f->dlc = dlc;
-    mem.set(f->data, 0xFF, sizeof(f->data)); // J1939 pads unused octets with 0xFF (not available)
+    J1939_CTX(work)->f->id = id;
+    J1939_CTX(work)->f->extended = PROTO_TRUE;
+    J1939_CTX(work)->f->rtr = PROTO_FALSE;
+    J1939_CTX(work)->f->dlc = J1939_CTX(work)->dlc;
+    mem.set(J1939_CTX(work)->f->data, 0xFF,
+            sizeof(J1939_CTX(work)->f->data)); // J1939 pads unused octets with 0xFF (not available)
     return PROTO_TRUE;
 }
 
-proto_bool protocore_j1939_build_message(CanFrame *out, uint8_t priority, uint32_t pgn, uint8_t sa, uint8_t da,
-                                         const uint8_t *data, uint8_t len)
+static void j1939_build_message(uint8_t *restrict work)
 {
+    CanFrame *out = J1939.build_message_args.out;
+    uint8_t priority = J1939.build_message_args.priority;
+    uint32_t pgn = J1939.build_message_args.pgn;
+    uint8_t sa = J1939.build_message_args.sa;
+    uint8_t da = J1939.build_message_args.da;
+    const uint8_t *data = J1939.build_message_args.data;
+    uint8_t len = J1939.build_message_args.len;
+
     if (!out || len > PROTOCORE_CAN_MAX_DLC || (len && !data))
     {
-        return PROTO_FALSE;
+        J1939.ok = PROTO_FALSE;
+        return;
     }
-    if (!ext_frame(out, priority, pgn, sa, da, len))
+    J1939_CTX(work)->f = out;
+    J1939_CTX(work)->priority = priority;
+    J1939_CTX(work)->pgn = pgn;
+    J1939_CTX(work)->sa = sa;
+    J1939_CTX(work)->da = da;
+    J1939_CTX(work)->dlc = len;
+    if (!ext_frame(work))
     {
-        return PROTO_FALSE;
+        J1939.ok = PROTO_FALSE;
+        return;
     }
     if (len)
     {
         mem.cpy(out->data, data, len);
     }
-    return PROTO_TRUE;
+    J1939.ok = PROTO_TRUE;
 }
 
-proto_bool protocore_j1939_build_request(CanFrame *out, uint8_t sa, uint8_t da, uint32_t requested_pgn)
+static void j1939_build_request(uint8_t *restrict work)
 {
+    CanFrame *out = J1939.build_request_args.out;
+    uint8_t sa = J1939.build_request_args.sa;
+    uint8_t da = J1939.build_request_args.da;
+    uint32_t requested_pgn = J1939.build_request_args.requested_pgn;
+
     if (!out || requested_pgn > 0x3FFFFu)
     {
-        return PROTO_FALSE;
+        J1939.ok = PROTO_FALSE;
+        return;
     }
     // Request PGN (priority 6): 3-octet little-endian requested PGN.
-    if (!ext_frame(out, 6, J1939_PGN_REQUEST, sa, da, 3))
+    J1939_CTX(work)->f = out;
+    J1939_CTX(work)->priority = 6;
+    J1939_CTX(work)->pgn = J1939_PGN_REQUEST;
+    J1939_CTX(work)->sa = sa;
+    J1939_CTX(work)->da = da;
+    J1939_CTX(work)->dlc = 3;
+    if (!ext_frame(work))
     // J1939_PGN_REQUEST (<=0x3FFFF), encode can't fail
     {
-        return PROTO_FALSE;
+        J1939.ok = PROTO_FALSE;
+        return;
         // can't fail
     }
     out->data[0] = (uint8_t)requested_pgn;
     out->data[1] = (uint8_t)(requested_pgn >> 8);
     out->data[2] = (uint8_t)(requested_pgn >> 16);
-    return PROTO_TRUE;
+    J1939.ok = PROTO_TRUE;
 }
 
-uint64_t protocore_j1939_build_name(proto_bool arbitrary_address_capable, uint8_t industry_group,
-                                    uint8_t vehicle_system_instance, uint8_t vehicle_system, uint8_t function,
-                                    uint8_t function_instance, uint8_t ecu_instance, uint16_t manufacturer_code,
-                                    uint32_t identity_number)
+static void j1939_build_name(uint8_t *restrict work)
 {
+    (void)work;
+    proto_bool arbitrary_address_capable = J1939.build_name_args.arbitrary_address_capable;
+    uint8_t industry_group = J1939.build_name_args.industry_group;
+    uint8_t vehicle_system_instance = J1939.build_name_args.vehicle_system_instance;
+    uint8_t vehicle_system = J1939.build_name_args.vehicle_system;
+    uint8_t function = J1939.build_name_args.function;
+    uint8_t function_instance = J1939.build_name_args.function_instance;
+    uint8_t ecu_instance = J1939.build_name_args.ecu_instance;
+    uint16_t manufacturer_code = J1939.build_name_args.manufacturer_code;
+    uint32_t identity_number = J1939.build_name_args.identity_number;
+
     // NAME bit layout (J1939-81), LSB first:
     //  [0..20] identity number, [21..31] manufacturer code, [32..34] ECU instance,
     //  [35..39] function instance, [40..47] function, [48] reserved, [49..55] vehicle system,
@@ -127,92 +240,146 @@ uint64_t protocore_j1939_build_name(proto_bool arbitrary_address_capable, uint8_
     n |= (uint64_t)(vehicle_system_instance & 0xFu) << 56;
     n |= (uint64_t)(industry_group & 0x7u) << 60;
     n |= (uint64_t)(arbitrary_address_capable ? 1u : 0u) << 63;
-    return n;
+    J1939.value = n;
 }
 
-proto_bool protocore_j1939_build_address_claim(CanFrame *out, uint8_t sa, uint64_t name)
+static void j1939_build_address_claim(uint8_t *restrict work)
 {
+    CanFrame *out = J1939.build_address_claim_args.out;
+    uint8_t sa = J1939.build_address_claim_args.sa;
+    uint64_t name = J1939.build_address_claim_args.name;
+
     // Address Claimed (priority 6, broadcast): NAME as 8 octets, little-endian.
-    if (!ext_frame(out, 6, J1939_PGN_ADDRESS_CLAIM, sa, J1939_ADDR_GLOBAL, 8))
+    J1939_CTX(work)->f = out;
+    J1939_CTX(work)->priority = 6;
+    J1939_CTX(work)->pgn = J1939_PGN_ADDRESS_CLAIM;
+    J1939_CTX(work)->sa = sa;
+    J1939_CTX(work)->da = J1939_ADDR_GLOBAL;
+    J1939_CTX(work)->dlc = 8;
+    if (!ext_frame(work))
     // priority 6 + PGN_ADDRESS_CLAIM
     // (<=0x3FFFF), encode can't fail
     {
-        return PROTO_FALSE;
+        J1939.ok = PROTO_FALSE;
+        return;
         // encode can't fail
     }
     for (int i = 0; i < 8; i++)
     {
         out->data[i] = (uint8_t)(name >> (8 * i));
     }
-    return PROTO_TRUE;
+    J1939.ok = PROTO_TRUE;
 }
 
-uint8_t protocore_j1939_tp_num_packets(uint16_t total_size)
+static void j1939_tp_num_packets(uint8_t *restrict work)
 {
-    return (uint8_t)((total_size + (J1939_TP_DT_LEN - 1)) / J1939_TP_DT_LEN);
+    (void)work;
+    uint16_t total_size = J1939.tp_num_packets_args.total_size;
+
+    J1939.u8 = (uint8_t)((total_size + (J1939_TP_DT_LEN - 1)) / J1939_TP_DT_LEN);
 }
 
-proto_bool protocore_j1939_build_bam_cm(CanFrame *out, uint8_t sa, uint32_t pgn, uint16_t total_size)
+static void j1939_build_bam_cm(uint8_t *restrict work)
 {
+    CanFrame *out = J1939.build_bam_cm_args.out;
+    uint8_t sa = J1939.build_bam_cm_args.sa;
+    uint32_t pgn = J1939.build_bam_cm_args.pgn;
+    uint16_t total_size = J1939.build_bam_cm_args.total_size;
+
     if (!out || total_size < 9 || total_size > PROTOCORE_J1939_TP_MAX || pgn > 0x3FFFFu)
     {
-        return PROTO_FALSE; // BAM is for 9..1785 octet messages
+        J1939.ok = PROTO_FALSE; // BAM is for 9..1785 octet messages
+        return;
     }
-    if (!ext_frame(out, 7, J1939_PGN_TP_CM, sa, J1939_ADDR_GLOBAL, 8))
+    J1939_CTX(work)->f = out;
+    J1939_CTX(work)->priority = 7;
+    J1939_CTX(work)->pgn = J1939_PGN_TP_CM;
+    J1939_CTX(work)->sa = sa;
+    J1939_CTX(work)->da = J1939_ADDR_GLOBAL;
+    J1939_CTX(work)->dlc = 8;
+    if (!ext_frame(work))
     // 7 + J1939_PGN_TP_CM (<=0x3FFFF), encode
     // can't fail
     {
-        return PROTO_FALSE;
+        J1939.ok = PROTO_FALSE;
+        return;
         // can't fail
     }
     out->data[0] = J1939_TP_CM_BAM;
     out->data[1] = (uint8_t)total_size; // message size, little-endian
     out->data[2] = (uint8_t)(total_size >> 8);
-    out->data[3] = protocore_j1939_tp_num_packets(total_size); // total packets
-    out->data[4] = 0xFF;                                       // reserved
-    out->data[5] = (uint8_t)pgn;                               // transported PGN, little-endian
+    J1939.tp_num_packets_args.total_size = total_size;
+    j1939_tp_num_packets(work);
+    out->data[3] = J1939.u8;     // total packets
+    out->data[4] = 0xFF;         // reserved
+    out->data[5] = (uint8_t)pgn; // transported PGN, little-endian
     out->data[6] = (uint8_t)(pgn >> 8);
     out->data[7] = (uint8_t)(pgn >> 16);
-    return PROTO_TRUE;
+    J1939.ok = PROTO_TRUE;
 }
 
-proto_bool protocore_j1939_build_tp_dt(CanFrame *out, uint8_t sa, uint8_t da, uint8_t seq, const uint8_t *chunk,
-                                       uint8_t chunk_len)
+static void j1939_build_tp_dt(uint8_t *restrict work)
 {
+    CanFrame *out = J1939.build_tp_dt_args.out;
+    uint8_t sa = J1939.build_tp_dt_args.sa;
+    uint8_t da = J1939.build_tp_dt_args.da;
+    uint8_t seq = J1939.build_tp_dt_args.seq;
+    const uint8_t *chunk = J1939.build_tp_dt_args.chunk;
+    uint8_t chunk_len = J1939.build_tp_dt_args.chunk_len;
+
     if (!out || seq == 0 || chunk_len == 0 || chunk_len > J1939_TP_DT_LEN || !chunk)
     {
-        return PROTO_FALSE;
+        J1939.ok = PROTO_FALSE;
+        return;
     }
-    if (!ext_frame(out, 7, J1939_PGN_TP_DT, sa, da, 8))
+    J1939_CTX(work)->f = out;
+    J1939_CTX(work)->priority = 7;
+    J1939_CTX(work)->pgn = J1939_PGN_TP_DT;
+    J1939_CTX(work)->sa = sa;
+    J1939_CTX(work)->da = da;
+    J1939_CTX(work)->dlc = 8;
+    if (!ext_frame(work))
     // J1939_PGN_TP_DT (<=0x3FFFF), encode can't fail
     {
-        return PROTO_FALSE;
+        J1939.ok = PROTO_FALSE;
+        return;
         // can't fail
     }
     out->data[0] = seq;                       // sequence number, 1-based
     mem.cpy(out->data + 1, chunk, chunk_len); // remaining octets stay 0xFF padding
-    return PROTO_TRUE;
+    J1939.ok = PROTO_TRUE;
 }
 
-void protocore_j1939_tp_reset(J1939TpRx *rx)
+static void j1939_tp_reset(uint8_t *restrict work)
 {
+    (void)work;
+    J1939TpRx *rx = J1939.tp_reset_args.rx;
+
     if (rx)
     {
         mem.set(rx, 0, sizeof(*rx));
     }
 }
 
-J1939TpResult protocore_j1939_tp_feed(J1939TpRx *rx, const CanFrame *f)
+static void j1939_tp_feed(uint8_t *restrict work)
 {
+    J1939TpRx *rx = J1939.tp_feed_args.rx;
+    const CanFrame *f = J1939.tp_feed_args.f;
+
     if (!rx || !f || !f->extended)
     {
-        return J1939_TP_IGNORED;
+        J1939.tp = J1939_TP_IGNORED;
+        return;
     }
     J1939Id id;
-    if (!protocore_j1939_decode_id(f->id, &id))
+    J1939.decode_id_args.id = f->id;
+    J1939.decode_id_args.out = &id;
+    j1939_decode_id(work);
+    if (!J1939.ok)
     // is non-null
     {
-        return J1939_TP_IGNORED;
+        J1939.tp = J1939_TP_IGNORED;
+        return;
         // &id is non-null
     }
 
@@ -221,14 +388,25 @@ J1939TpResult protocore_j1939_tp_feed(J1939TpRx *rx, const CanFrame *f)
         uint8_t control = f->data[0];
         if (control != J1939_TP_CM_BAM && control != J1939_TP_CM_RTS)
         {
-            return J1939_TP_IGNORED; // CTS / EOM / Abort are not receiver-side session starts
+            J1939.tp = J1939_TP_IGNORED; // CTS / EOM / Abort are not receiver-side session starts
+            return;
         }
         uint16_t total = (uint16_t)(f->data[1] | (f->data[2] << 8));
         uint8_t packets = f->data[3];
         uint32_t pgn = (uint32_t)f->data[5] | ((uint32_t)f->data[6] << 8) | ((uint32_t)f->data[7] << 16);
-        if (total < 9 || total > PROTOCORE_J1939_TP_MAX || packets != protocore_j1939_tp_num_packets(total))
+        if (total < 9 || total > PROTOCORE_J1939_TP_MAX)
         {
-            return J1939_TP_ERROR;
+            J1939.tp = J1939_TP_ERROR;
+            return;
+        }
+        // Split from the bounds above rather than hoisted above them: the packet count is only
+        // defined for a size in range.
+        J1939.tp_num_packets_args.total_size = total;
+        j1939_tp_num_packets(work);
+        if (packets != J1939.u8)
+        {
+            J1939.tp = J1939_TP_ERROR;
+            return;
         }
         rx->active = PROTO_TRUE;
         rx->sa = id.sa;
@@ -237,20 +415,24 @@ J1939TpResult protocore_j1939_tp_feed(J1939TpRx *rx, const CanFrame *f)
         rx->num_packets = packets;
         rx->next_seq = 1;
         rx->received = 0;
-        return J1939_TP_STARTED;
+        J1939.tp = J1939_TP_STARTED;
+        return;
     }
 
     if (id.pgn == J1939_PGN_TP_DT && f->dlc >= 1)
     {
         if (!rx->active || id.sa != rx->sa)
         {
-            return J1939_TP_IGNORED;
+            J1939.tp = J1939_TP_IGNORED;
+            return;
         }
         uint8_t seq = f->data[0];
         if (seq != rx->next_seq)
         {
-            protocore_j1939_tp_reset(rx);
-            return J1939_TP_ERROR; // out-of-sequence: abort the session
+            J1939.tp_reset_args.rx = rx;
+            j1939_tp_reset(work);
+            J1939.tp = J1939_TP_ERROR; // out-of-sequence: abort the session
+            return;
         }
         uint16_t remaining = (uint16_t)(rx->total_size - rx->received);
         uint8_t take = remaining < J1939_TP_DT_LEN ? (uint8_t)remaining : (uint8_t)J1939_TP_DT_LEN;
@@ -260,26 +442,36 @@ J1939TpResult protocore_j1939_tp_feed(J1939TpRx *rx, const CanFrame *f)
         if (rx->received >= rx->total_size)
         {
             rx->active = PROTO_FALSE;
-            return J1939_TP_COMPLETE;
+            J1939.tp = J1939_TP_COMPLETE;
+            return;
         }
-        return J1939_TP_PROGRESS;
+        J1939.tp = J1939_TP_PROGRESS;
+        return;
     }
 
-    return J1939_TP_IGNORED;
+    J1939.tp = J1939_TP_IGNORED;
 }
 
 // --- typed decoders (SAE J1939-71) ---
 
-proto_bool protocore_j1939_decode_eec1(const CanFrame *f, J1939Eec1 *out)
+static void j1939_decode_eec1(uint8_t *restrict work)
 {
+    const CanFrame *f = J1939.decode_eec1_args.f;
+    J1939Eec1 *out = J1939.decode_eec1_args.out;
+
     if (!f || !out || f->dlc < 8)
     {
-        return PROTO_FALSE;
+        J1939.ok = PROTO_FALSE;
+        return;
     }
     J1939Id id;
-    if (!protocore_j1939_decode_id(f->id, &id) || id.pgn != J1939_PGN_EEC1)
+    J1939.decode_id_args.id = f->id;
+    J1939.decode_id_args.out = &id;
+    j1939_decode_id(work);
+    if (!J1939.ok || id.pgn != J1939_PGN_EEC1)
     {
-        return PROTO_FALSE;
+        J1939.ok = PROTO_FALSE;
+        return;
     }
     out->torque_mode = (uint8_t)(f->data[0] & 0x0Fu);
     // percent torque: raw 0..250 maps to -125..+125 %; 0xFB..0xFF is error / not-available.
@@ -288,19 +480,27 @@ proto_bool protocore_j1939_decode_eec1(const CanFrame *f, J1939Eec1 *out)
     uint16_t raw = (uint16_t)(f->data[3] | ((uint16_t)f->data[4] << 8)); // little-endian
     out->engine_speed_valid = (raw <= 0xFAFFu);                          // >= 0xFB00 is error / not-available
     out->engine_speed_rpm = (float)raw * 0.125f;
-    return PROTO_TRUE;
+    J1939.ok = PROTO_TRUE;
 }
 
-proto_bool protocore_j1939_decode_et1(const CanFrame *f, J1939Et1 *out)
+static void j1939_decode_et1(uint8_t *restrict work)
 {
+    const CanFrame *f = J1939.decode_et1_args.f;
+    J1939Et1 *out = J1939.decode_et1_args.out;
+
     if (!f || !out || f->dlc < 8)
     {
-        return PROTO_FALSE;
+        J1939.ok = PROTO_FALSE;
+        return;
     }
     J1939Id id;
-    if (!protocore_j1939_decode_id(f->id, &id) || id.pgn != J1939_PGN_ET1)
+    J1939.decode_id_args.id = f->id;
+    J1939.decode_id_args.out = &id;
+    j1939_decode_id(work);
+    if (!J1939.ok || id.pgn != J1939_PGN_ET1)
     {
-        return PROTO_FALSE;
+        J1939.ok = PROTO_FALSE;
+        return;
     }
     out->coolant_valid = (f->data[0] <= 0xFAu);
     out->coolant_temp_c = (float)((int)f->data[0] - 40); // 1 degC/bit, -40 offset
@@ -309,19 +509,27 @@ proto_bool protocore_j1939_decode_et1(const CanFrame *f, J1939Et1 *out)
     uint16_t oilraw = (uint16_t)(f->data[2] | ((uint16_t)f->data[3] << 8));
     out->oil_valid = (oilraw <= 0xFAFFu);
     out->oil_temp_c = (float)oilraw * 0.03125f - 273.0f; // 0.03125 degC/bit, -273 offset
-    return PROTO_TRUE;
+    J1939.ok = PROTO_TRUE;
 }
 
-proto_bool protocore_j1939_decode_lfe(const CanFrame *f, J1939Lfe *out)
+static void j1939_decode_lfe(uint8_t *restrict work)
 {
+    const CanFrame *f = J1939.decode_lfe_args.f;
+    J1939Lfe *out = J1939.decode_lfe_args.out;
+
     if (!f || !out || f->dlc < 8)
     {
-        return PROTO_FALSE;
+        J1939.ok = PROTO_FALSE;
+        return;
     }
     J1939Id id;
-    if (!protocore_j1939_decode_id(f->id, &id) || id.pgn != J1939_PGN_LFE)
+    J1939.decode_id_args.id = f->id;
+    J1939.decode_id_args.out = &id;
+    j1939_decode_id(work);
+    if (!J1939.ok || id.pgn != J1939_PGN_LFE)
     {
-        return PROTO_FALSE;
+        J1939.ok = PROTO_FALSE;
+        return;
     }
     uint16_t fr = (uint16_t)(f->data[0] | ((uint16_t)f->data[1] << 8)); // SPN 183, 0.05 L/h/bit
     out->fuel_rate_valid = (fr <= 0xFAFFu);
@@ -334,19 +542,27 @@ proto_bool protocore_j1939_decode_lfe(const CanFrame *f, J1939Lfe *out)
     out->avg_econ_kmpl = (float)ae * (1.0f / 512.0f);
     out->throttle_valid = (f->data[6] <= 0xFAu); // SPN 51, 0.4 %/bit
     out->throttle_pct = (float)f->data[6] * 0.4f;
-    return PROTO_TRUE;
+    J1939.ok = PROTO_TRUE;
 }
 
-proto_bool protocore_j1939_decode_amb(const CanFrame *f, J1939Amb *out)
+static void j1939_decode_amb(uint8_t *restrict work)
 {
+    const CanFrame *f = J1939.decode_amb_args.f;
+    J1939Amb *out = J1939.decode_amb_args.out;
+
     if (!f || !out || f->dlc < 8)
     {
-        return PROTO_FALSE;
+        J1939.ok = PROTO_FALSE;
+        return;
     }
     J1939Id id;
-    if (!protocore_j1939_decode_id(f->id, &id) || id.pgn != J1939_PGN_AMB)
+    J1939.decode_id_args.id = f->id;
+    J1939.decode_id_args.out = &id;
+    j1939_decode_id(work);
+    if (!J1939.ok || id.pgn != J1939_PGN_AMB)
     {
-        return PROTO_FALSE;
+        J1939.ok = PROTO_FALSE;
+        return;
     }
     out->baro_valid = (f->data[0] <= 0xFAu); // SPN 108, 0.5 kPa/bit
     out->baro_kpa = (float)f->data[0] * 0.5f;
@@ -361,19 +577,27 @@ proto_bool protocore_j1939_decode_amb(const CanFrame *f, J1939Amb *out)
     uint16_t road = (uint16_t)(f->data[6] | ((uint16_t)f->data[7] << 8)); // SPN 79
     out->road_temp_valid = (road <= 0xFAFFu);
     out->road_temp_c = (float)road * 0.03125f - 273.0f;
-    return PROTO_TRUE;
+    J1939.ok = PROTO_TRUE;
 }
 
-proto_bool protocore_j1939_decode_ic1(const CanFrame *f, J1939Ic1 *out)
+static void j1939_decode_ic1(uint8_t *restrict work)
 {
+    const CanFrame *f = J1939.decode_ic1_args.f;
+    J1939Ic1 *out = J1939.decode_ic1_args.out;
+
     if (!f || !out || f->dlc < 8)
     {
-        return PROTO_FALSE;
+        J1939.ok = PROTO_FALSE;
+        return;
     }
     J1939Id id;
-    if (!protocore_j1939_decode_id(f->id, &id) || id.pgn != J1939_PGN_IC1)
+    J1939.decode_id_args.id = f->id;
+    J1939.decode_id_args.out = &id;
+    j1939_decode_id(work);
+    if (!J1939.ok || id.pgn != J1939_PGN_IC1)
     {
-        return PROTO_FALSE;
+        J1939.ok = PROTO_FALSE;
+        return;
     }
     out->trap_inlet_valid = (f->data[0] <= 0xFAu); // SPN 81, 0.5 kPa/bit
     out->trap_inlet_kpa = (float)f->data[0] * 0.5f;
@@ -390,19 +614,27 @@ proto_bool protocore_j1939_decode_ic1(const CanFrame *f, J1939Ic1 *out)
     out->exhaust_temp_c = (float)egt * 0.03125f - 273.0f; // 0.03125 degC/bit, -273 offset
     out->coolant_filter_valid = (f->data[7] <= 0xFAu);    // SPN 112, 0.5 kPa/bit
     out->coolant_filter_kpa = (float)f->data[7] * 0.5f;
-    return PROTO_TRUE;
+    J1939.ok = PROTO_TRUE;
 }
 
-proto_bool protocore_j1939_decode_vd(const CanFrame *f, J1939Vd *out)
+static void j1939_decode_vd(uint8_t *restrict work)
 {
+    const CanFrame *f = J1939.decode_vd_args.f;
+    J1939Vd *out = J1939.decode_vd_args.out;
+
     if (!f || !out || f->dlc < 8)
     {
-        return PROTO_FALSE;
+        J1939.ok = PROTO_FALSE;
+        return;
     }
     J1939Id id;
-    if (!protocore_j1939_decode_id(f->id, &id) || id.pgn != J1939_PGN_VD)
+    J1939.decode_id_args.id = f->id;
+    J1939.decode_id_args.out = &id;
+    j1939_decode_id(work);
+    if (!J1939.ok || id.pgn != J1939_PGN_VD)
     {
-        return PROTO_FALSE;
+        J1939.ok = PROTO_FALSE;
+        return;
     }
     // SPN 244 trip distance + SPN 245 total distance: 4-octet little-endian, 0.125 km/bit.
     uint32_t trip = (uint32_t)f->data[0] | ((uint32_t)f->data[1] << 8) | ((uint32_t)f->data[2] << 16) |
@@ -413,19 +645,27 @@ proto_bool protocore_j1939_decode_vd(const CanFrame *f, J1939Vd *out)
                      ((uint32_t)f->data[7] << 24);
     out->total_valid = (total <= 0xFAFFFFFFu);
     out->total_km = (double)total * 0.125;
-    return PROTO_TRUE;
+    J1939.ok = PROTO_TRUE;
 }
 
-proto_bool protocore_j1939_decode_ccvs(const CanFrame *f, J1939Ccvs *out)
+static void j1939_decode_ccvs(uint8_t *restrict work)
 {
+    const CanFrame *f = J1939.decode_ccvs_args.f;
+    J1939Ccvs *out = J1939.decode_ccvs_args.out;
+
     if (!f || !out || f->dlc < 8)
     {
-        return PROTO_FALSE;
+        J1939.ok = PROTO_FALSE;
+        return;
     }
     J1939Id id;
-    if (!protocore_j1939_decode_id(f->id, &id) || id.pgn != J1939_PGN_CCVS)
+    J1939.decode_id_args.id = f->id;
+    J1939.decode_id_args.out = &id;
+    j1939_decode_id(work);
+    if (!J1939.ok || id.pgn != J1939_PGN_CCVS)
     {
-        return PROTO_FALSE;
+        J1939.ok = PROTO_FALSE;
+        return;
     }
     // SPN 84 Wheel-Based Vehicle Speed: bytes 2-3, little-endian, 1/256 km/h per bit, 0 offset.
     uint16_t ws = (uint16_t)(f->data[1] | ((uint16_t)f->data[2] << 8));
@@ -433,14 +673,22 @@ proto_bool protocore_j1939_decode_ccvs(const CanFrame *f, J1939Ccvs *out)
     out->wheel_speed_kmh = (float)ws * (1.0f / 256.0f);
     // SPN 595 Cruise Control Active: byte 4, bits 1-2 (the low 2 bits) - a 2-bit state.
     out->cruise_active = (uint8_t)(f->data[3] & 0x03u);
-    return PROTO_TRUE;
+    J1939.ok = PROTO_TRUE;
 }
 
-proto_bool protocore_j1939_decode_dm1(const uint8_t *body, size_t len, J1939Dm1 *out, J1939Dtc *out_dtcs, size_t max)
+static void j1939_decode_dm1(uint8_t *restrict work)
 {
+    (void)work;
+    const uint8_t *body = J1939.decode_dm1_args.body;
+    size_t len = J1939.decode_dm1_args.len;
+    J1939Dm1 *out = J1939.decode_dm1_args.out;
+    J1939Dtc *out_dtcs = J1939.decode_dm1_args.out_dtcs;
+    size_t max = J1939.decode_dm1_args.max;
+
     if (!body || !out || len < 2) // the lamp-status + flash-status octets
     {
-        return PROTO_FALSE;
+        J1939.ok = PROTO_FALSE;
+        return;
     }
     // Lamp status (J1939-73): 2 bits each, protect (0-1) / amber (2-3) / red-stop (4-5) / MIL (6-7).
     out->protect = (uint8_t)(body[0] & 0x03u);
@@ -473,7 +721,29 @@ proto_bool protocore_j1939_decode_dm1(const uint8_t *body, size_t len, J1939Dm1 
         stored++;
     }
     out->dtc_count = stored;
-    return PROTO_TRUE;
+    J1939.ok = PROTO_TRUE;
 }
+
+J1939Ns J1939 = {.encode_id = j1939_encode_id,
+                 .decode_id = j1939_decode_id,
+                 .build_message = j1939_build_message,
+                 .build_request = j1939_build_request,
+                 .build_address_claim = j1939_build_address_claim,
+                 .build_name = j1939_build_name,
+                 .tp_num_packets = j1939_tp_num_packets,
+                 .build_bam_cm = j1939_build_bam_cm,
+                 .build_tp_dt = j1939_build_tp_dt,
+                 .tp_reset = j1939_tp_reset,
+                 .tp_feed = j1939_tp_feed,
+                 .decode_eec1 = j1939_decode_eec1,
+                 .decode_et1 = j1939_decode_et1,
+                 .decode_lfe = j1939_decode_lfe,
+                 .decode_amb = j1939_decode_amb,
+                 .decode_ic1 = j1939_decode_ic1,
+                 .decode_vd = j1939_decode_vd,
+                 .decode_ccvs = j1939_decode_ccvs,
+                 .decode_dm1 = j1939_decode_dm1};
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_NEED_J1939

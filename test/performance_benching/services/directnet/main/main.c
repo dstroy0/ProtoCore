@@ -21,6 +21,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+static uint8_t directnet_work[16]; // the borrow an entry takes; Directnet never reads it
+
 void dbench_run(void)
 {
     // Header/enquiry frame: slave 1, READ, V-memory address 0x0040, 2 blocks (matches
@@ -29,7 +31,12 @@ void dbench_run(void)
     // Data frame: STX + "ABCD" + ETX + LRC (matches test_data_frame_roundtrip).
     static const uint8_t payload[4] = {'A', 'B', 'C', 'D'};
     static uint8_t data_frame[16];
-    size_t data_frame_len = protocore_dnet_data(payload, sizeof(payload), data_frame, sizeof(data_frame));
+    Directnet.data_args.data = payload;
+    Directnet.data_args.data_len = sizeof(payload);
+    Directnet.data_args.out = data_frame;
+    Directnet.data_args.cap = sizeof(data_frame);
+    Directnet.data(directnet_work);
+    size_t data_frame_len = Directnet.n;
 
     // Buffer for the standalone LRC bulk bench (10 bytes of frame body).
     static const uint8_t lrc_buf[10] = {'0', '1', 0x30, '0', '0', '4', '0', '0', '2', DNET_ETB};
@@ -41,20 +48,36 @@ void dbench_run(void)
         volatile size_t sinkz = 0;
         volatile bool sinkb = false;
 
-        DBENCH_BULK("protocore_dnet_lrc", 100000, sizeof(lrc_buf),
-                    sink8 += protocore_dnet_lrc(lrc_buf, sizeof(lrc_buf)));
+        Directnet.lrc_args.bytes = lrc_buf;
+        Directnet.lrc_args.len = sizeof(lrc_buf);
+        DBENCH_BULK("Directnet.lrc", 100000, sizeof(lrc_buf),
+                    sink8 += (Directnet.lrc(directnet_work), Directnet.value));
 
-        DBENCH_OP("protocore_dnet_header build", 100000,
-                  sinkz += protocore_dnet_header(1, DNET_READ, 0x0040, 2, hdr, sizeof(hdr)));
+        Directnet.header_args.slave = 1;
+        Directnet.header_args.type = DNET_READ;
+        Directnet.header_args.address = 0x0040;
+        Directnet.header_args.blocks = 2;
+        Directnet.header_args.out = hdr;
+        Directnet.header_args.cap = sizeof(hdr);
+        DBENCH_OP("Directnet.header build", 100000,
+                  sinkz += (Directnet.header(directnet_work), Directnet.n));
 
-        DBENCH_OP("protocore_dnet_data build (4B)", 100000,
-                  sinkz += protocore_dnet_data(payload, sizeof(payload), data_frame, sizeof(data_frame)));
+        Directnet.data_args.data = payload;
+        Directnet.data_args.data_len = sizeof(payload);
+        Directnet.data_args.out = data_frame;
+        Directnet.data_args.cap = sizeof(data_frame);
+        DBENCH_OP("Directnet.data build (4B)", 100000,
+                  sinkz += (Directnet.data(directnet_work), Directnet.n));
 
         {
             const uint8_t *d = NULL;
             size_t dl = 0;
-            DBENCH_OP("protocore_dnet_data_parse", 100000,
-                      sinkb = protocore_dnet_data_parse(data_frame, data_frame_len, &d, &dl));
+            Directnet.data_parse_args.frame = data_frame;
+            Directnet.data_parse_args.len = data_frame_len;
+            Directnet.data_parse_args.data = &d;
+            Directnet.data_parse_args.data_len = &dl;
+            DBENCH_OP("Directnet.data_parse", 100000,
+                      sinkb = (Directnet.data_parse(directnet_work), Directnet.ok));
         }
 
         (void)sink8;

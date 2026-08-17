@@ -16,6 +16,8 @@
 #include <stdint.h>
 #include <string.h>
 
+static uint8_t s7comm_work[16]; // the borrow an entry takes; S7comm never reads it
+
 int main(void)
 {
     // A 3-item Read Var job (two DB reads + a flag bit) - a realistic PLC poll.
@@ -25,31 +27,50 @@ int main(void)
         {S7_AREA_FLAGS, 0, 0, S7_TS_BIT, 1},
     };
     uint8_t req[256];
-    size_t req_len = protocore_s7_build_read_request(req, sizeof(req), 0x0002, items, 3);
+    S7comm.build_read_request_args.buf = req;
+    S7comm.build_read_request_args.cap = sizeof(req);
+    S7comm.build_read_request_args.pdu_ref = 0x0002;
+    S7comm.build_read_request_args.items = items;
+    S7comm.build_read_request_args.n = 3;
+    S7comm.build_read_request(s7comm_work);
+    size_t req_len = S7comm.n;
 
     hbench_header();
 
-    // protocore_s7_build_setup: the Setup-Communication job (negotiate AMQ + PDU size) - once per connection.
+    // S7comm.build_setup: the Setup-Communication job (negotiate AMQ + PDU size) - once per connection.
     {
         uint8_t buf[64];
         volatile size_t sink = 0;
         double ns = 0.0;
-        HBENCH_NS(5000000, sink += protocore_s7_build_setup(buf, sizeof(buf), 0x0001, 1, 1, 480), ns);
+        S7comm.build_setup_args.buf = buf;
+        S7comm.build_setup_args.cap = sizeof(buf);
+        S7comm.build_setup_args.pdu_ref = 0x0001;
+        S7comm.build_setup_args.max_amq_calling = 1;
+        S7comm.build_setup_args.max_amq_called = 1;
+        S7comm.build_setup_args.pdu_size = 480;
+        S7comm.build_setup(s7comm_work);
+        HBENCH_NS(5000000, sink += S7comm.n, ns);
         hbench_row("s7comm", "build_setup", ns, (double)(sink ? 22.0 : 0.0));
         (void)sink;
     }
 
-    // protocore_s7_build_read_request: frame an N-item Read Var job (S7-ANY pointers) - the PLC-poll transmit op.
+    // S7comm.build_read_request: frame an N-item Read Var job (S7-ANY pointers) - the PLC-poll transmit op.
     {
         uint8_t buf[256];
         volatile size_t sink = 0;
         double ns = 0.0;
-        HBENCH_NS(2000000, sink += protocore_s7_build_read_request(buf, sizeof(buf), 0x0002, items, 3), ns);
+        S7comm.build_read_request_args.buf = buf;
+        S7comm.build_read_request_args.cap = sizeof(buf);
+        S7comm.build_read_request_args.pdu_ref = 0x0002;
+        S7comm.build_read_request_args.items = items;
+        S7comm.build_read_request_args.n = 3;
+        S7comm.build_read_request(s7comm_work);
+        HBENCH_NS(2000000, sink += S7comm.n, ns);
         hbench_row("s7comm", "build_read_request (3)", ns, (double)req_len);
         (void)sink;
     }
 
-    // protocore_s7_parse_header: validate the protocol id + ROSCTR + lengths and slice param/data - the receive op.
+    // S7comm.parse_header: validate the protocol id + ROSCTR + lengths and slice param/data - the receive op.
     {
         volatile size_t sink = 0;
         double ns = 0.0;
@@ -57,7 +78,11 @@ int main(void)
             10000000,
             {
                 S7Header h;
-                if (protocore_s7_parse_header(req, req_len, &h))
+                S7comm.parse_header_args.buf = req;
+                S7comm.parse_header_args.len = req_len;
+                S7comm.parse_header_args.out = &h;
+                S7comm.parse_header(s7comm_work);
+                if (S7comm.ok)
                 {
                     sink += h.header_len;
                 }

@@ -21,6 +21,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+static uint8_t hart_work[16]; // the borrow an entry takes; Hart never reads it
+
 void dbench_run(void)
 {
     // Command 0 (read unique id), STX, primary-master short address 0x80, no data -> [02 80 00 00 82].
@@ -33,8 +35,16 @@ void dbench_run(void)
     // benches run over real, spec-conformant bytes (cmd 0x2A, data 11 22 33 - the roundtrip vector).
     static const uint8_t parse_data[3] = {0x11, 0x22, 0x33};
     static uint8_t parse_frame[16];
-    size_t parse_len = protocore_hart_build(HART_DELIM_STX, &addr_short, 1, 0x2A, parse_data, sizeof(parse_data),
-                                            parse_frame, sizeof(parse_frame));
+    Hart.build_args.delimiter = HART_DELIM_STX;
+    Hart.build_args.addr = &addr_short;
+    Hart.build_args.addr_len = 1;
+    Hart.build_args.command = 0x2A;
+    Hart.build_args.data = parse_data;
+    Hart.build_args.data_len = sizeof(parse_data);
+    Hart.build_args.out = parse_frame;
+    Hart.build_args.cap = sizeof(parse_frame);
+    Hart.build(hart_work);
+    size_t parse_len = Hart.n;
 
     static uint8_t out[64];
 
@@ -46,26 +56,52 @@ void dbench_run(void)
         volatile bool sinkb = false;
 
         // Build a short-address command 0 frame (no data).
-        DBENCH_OP("protocore_hart_build short cmd0", 100000,
-                  sink += protocore_hart_build(HART_DELIM_STX, &addr_short, 1, 0x00, NULL, 0, out, sizeof(out)));
+        Hart.build_args.delimiter = HART_DELIM_STX;
+        Hart.build_args.addr = &addr_short;
+        Hart.build_args.addr_len = 1;
+        Hart.build_args.command = 0x00;
+        Hart.build_args.data = NULL;
+        Hart.build_args.data_len = 0;
+        Hart.build_args.out = out;
+        Hart.build_args.cap = sizeof(out);
+        DBENCH_OP("Hart.build short cmd0", 100000,
+                  sink += (Hart.build(hart_work), Hart.n));
 
         // Build a long-address (5-byte) command 3 frame.
-        DBENCH_OP("protocore_hart_build long addr", 100000,
-                  sink += protocore_hart_build((uint8_t)(HART_DELIM_STX | HART_DELIM_LONG_ADDR), addr_long, 5, 0x03,
-                                               NULL, 0, out, sizeof(out)));
+        Hart.build_args.delimiter = (uint8_t)(HART_DELIM_STX | HART_DELIM_LONG_ADDR);
+        Hart.build_args.addr = addr_long;
+        Hart.build_args.addr_len = 5;
+        Hart.build_args.command = 0x03;
+        Hart.build_args.data = NULL;
+        Hart.build_args.data_len = 0;
+        Hart.build_args.out = out;
+        Hart.build_args.cap = sizeof(out);
+        DBENCH_OP("Hart.build long addr", 100000,
+                  sink += (Hart.build(hart_work), Hart.n));
 
         // Parse + checksum-verify a known-good short-address frame with data.
         HartFrame f;
-        DBENCH_OP("protocore_hart_parse w/data", 100000, sinkb ^= protocore_hart_parse(parse_frame, parse_len, &f));
+        Hart.parse_args.frame = parse_frame;
+        Hart.parse_args.len = parse_len;
+        Hart.parse_args.out = &f;
+        DBENCH_OP("Hart.parse w/data", 100000, sinkb ^= (Hart.parse(hart_work), Hart.ok));
 
         // Longitudinal XOR checksum over the full frame's byte span (bulk throughput).
-        DBENCH_BULK("protocore_hart_checksum", 100000, parse_len,
-                    sink8 ^= protocore_hart_checksum(parse_frame, parse_len));
+        Hart.checksum_args.bytes = parse_frame;
+        Hart.checksum_args.len = parse_len;
+        DBENCH_BULK("Hart.checksum", 100000, parse_len,
+                    sink8 ^= (Hart.checksum(hart_work), Hart.value));
 
         // Build the 8-octet HART-IP message header.
-        DBENCH_OP("protocore_hartip_build_header", 200000,
-                  sink += protocore_hartip_build_header(HARTIP_MSG_REQUEST, HARTIP_ID_TOKEN_PDU, 0, 0x1234, 13, out,
-                                                        sizeof(out)));
+        Hart.ip_build_header_args.msg_type = HARTIP_MSG_REQUEST;
+        Hart.ip_build_header_args.msg_id = HARTIP_ID_TOKEN_PDU;
+        Hart.ip_build_header_args.status = 0;
+        Hart.ip_build_header_args.seq = 0x1234;
+        Hart.ip_build_header_args.total_len = 13;
+        Hart.ip_build_header_args.out = out;
+        Hart.ip_build_header_args.cap = sizeof(out);
+        DBENCH_OP("Hart.ip_build_header", 200000,
+                  sink += (Hart.ip_build_header(hart_work), Hart.n));
 
         (void)sink;
         (void)sink8;

@@ -8,7 +8,16 @@ an entry never touches the borrow in an entry that threads it into every helper 
 import sys
 
 sys.path.insert(0, __file__.rsplit("goldenize_test.py", 1)[0])
-from goldenize import drop_void_work, first_sentence, land_returns, module_macros  # noqa: E402
+from goldenize import (  # noqa: E402
+    drop_self_assign,
+    drop_void_work,
+    dropped_names,
+    enclosing_has_work,
+    first_sentence,
+    land_returns,
+    module_inlines,
+    module_macros,
+)
 
 FAIL = 0
 
@@ -158,6 +167,84 @@ check(
     "a // comment for something else does not travel",
     module_macros("// about the type.\ntypedef int T;\n\n#define A 1\n", ""),
     ["#define A 1"],
+)
+
+
+# A self-call is rewritten as `<module>_<entry>(work)`, so the function it sits in has to have one.
+# profibus's three telegram parsers are private helpers taking (frame, len, out), and the call
+# written into them named an identifier that was not declared.
+ENTRY = "static void profibus_build_sd1(uint8_t *restrict work)\n{\n    protocore_pb_fcs(body, 3);\n}\n"
+HELPER = "static proto_bool pb_parse_sd1(const uint8_t *frame, size_t len, PbTelegram *out)\n{\n    protocore_pb_fcs(body, 3);\n}\n"
+check("an entry has the borrow to pass on", enclosing_has_work(ENTRY, ENTRY.index("protocore_pb_fcs")), True)
+check("a private helper does not", enclosing_has_work(HELPER, HELPER.index("protocore_pb_fcs")), False)
+check(
+    "the helper after an entry is still read as the helper",
+    enclosing_has_work(ENTRY + "\n" + HELPER, (ENTRY + "\n" + HELPER).rindex("protocore_pb_fcs")),
+    False,
+)
+check(
+    "the entry after a helper is still read as the entry",
+    enclosing_has_work(HELPER + "\n" + ENTRY, (HELPER + "\n" + ENTRY).rindex("protocore_pb_fcs")),
+    True,
+)
+
+
+# A header's `static inline` helpers emit no external symbol, so the one-symbol rule holds and they
+# belong in the regenerated header. Six went missing out of cia402.h and only the linker noticed.
+INL = "/// true if bit 10 is set.\nstatic inline proto_bool ok(uint16_t sw)\n{\n    return (sw & 0x400) != 0;\n}\n"
+check("a static inline comes across with its comment", module_inlines(INL), [INL.strip()])
+check(
+    "one in a comment is prose, not a definition",
+    module_inlines("/* static inline proto_bool gone(void) { return 0; } */\n"),
+    [],
+)
+check(
+    "two in a row are two blocks",
+    len(module_inlines(INL + INL.replace("ok(", "ok2("))),
+    2,
+)
+
+# The catch-all: whatever the tool failed to carry across is named rather than silently lost.
+SPEC = {"entries": [{"flat": "protocore_x_build"}]}
+check(
+    "a name the regenerated header lost is reported",
+    dropped_names(SPEC, "#define KEEP 1\n#define GONE 2\nsize_t protocore_x_build(int a);\n", "#define KEEP 1\n"),
+    ["GONE"],
+)
+check(
+    "a converted entry is not reported",
+    dropped_names(SPEC, "size_t protocore_x_build(int a);\n", "void (*const build)(uint8_t *restrict work);"),
+    [],
+)
+check(
+    "a name that only appears in a comment does not count as defined",
+    dropped_names(SPEC, "// #define GONE 2\n", ""),
+    [],
+)
+
+# A comment after `return X;` describes X, so it lands on the assignment, not on the bare return.
+check(
+    "a returned value's comment travels with the value",
+    land_returns("    if (a)\n    {\n        return ERR; // no octet\n    }\n    return OK;\n", "D", "frag"),
+    "    if (a)\n    {\n        D.frag = ERR; // no octet\n        return;\n    }\n    D.frag = OK;\n",
+)
+
+# `return other_entry(...); // why` lands as the call and then Obj.n = Obj.n, which is dead. The
+# comment describes the call, so it moves onto it; enip carried two of these.
+check(
+    "a self-assignment with a trailing comment goes, and the comment rides up",
+    drop_self_assign("    enip_build(work);\n    Enip.n = Enip.n; // no command-specific data\n", "Enip"),
+    "    enip_build(work); // no command-specific data\n",
+)
+check(
+    "a self-assignment with no comment still just goes",
+    drop_self_assign("    enip_build(work);\n    Enip.n = Enip.n;\n", "Enip"),
+    "    enip_build(work);\n",
+)
+check(
+    "a real assignment between two members stays",
+    drop_self_assign("    Enip.n = Enip.value;\n", "Enip"),
+    "    Enip.n = Enip.value;\n",
 )
 
 print("\nFAILURES: %d" % FAIL)

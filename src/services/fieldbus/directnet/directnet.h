@@ -22,11 +22,15 @@
 #ifndef PROTOCORE_DIRECTNET_H
 #define PROTOCORE_DIRECTNET_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_DIRECTNET
 
 PROTOCORE_BEGIN_DECLS
+
+// This module holds nothing between calls, so it carves no borrow and states none. An entry
+// takes one all the same, and never reads it, so every namespace in the tree is invoked the
+// same way.
 
 /** @brief DirectNET control bytes: wire values compared/emitted, so integer constants in a struct. */
 #define DNET_ENQ 0x05
@@ -40,30 +44,88 @@ PROTOCORE_BEGIN_DECLS
 #define DNET_READ 0x30  ///< request type: read ('0').
 #define DNET_WRITE 0x38 ///< request type: write ('8').
 
-/** @brief Longitudinal XOR checksum (the DirectNET LRC) over @p len bytes. */
-uint8_t protocore_dnet_lrc(const uint8_t *bytes, size_t len);
+/** @brief What lrc takes: bytes, len. */
+typedef struct
+{
+    const uint8_t *bytes;
+    size_t len;
+} DirectnetLrcArgs;
+
+/** @brief What header takes: slave, type, address, blocks, out, cap. */
+typedef struct
+{
+    uint8_t slave;    ///< station number 0..99 (emitted as two ASCII-hex digits)
+    uint8_t type;     ///< DNET_READ or DNET_WRITE
+    uint16_t address; ///< V-memory octal address, emitted as 4 ASCII-hex digits
+    uint8_t blocks;   ///< number of data blocks, emitted as 2 ASCII-hex digits
+    uint8_t *out;
+    size_t cap;
+} DirectnetHeaderArgs;
+
+/** @brief What data takes: data, data_len, out, cap. */
+typedef struct
+{
+    const uint8_t *data;
+    size_t data_len;
+    uint8_t *out;
+    size_t cap;
+} DirectnetDataArgs;
+
+/** @brief What data_parse takes: frame, len, data, data_len. */
+typedef struct
+{
+    const uint8_t *frame;
+    size_t len;
+    const uint8_t **data;
+    size_t *data_len;
+} DirectnetDataParseArgs;
 
 /**
- * @brief Build a DirectNET header frame: SOH + [slave][type][addr:4hex][blocks:2hex] + ETB + LRC.
- * @param slave   station number 0..99 (emitted as two ASCII-hex digits).
- * @param type    DNET_READ or DNET_WRITE.
- * @param address V-memory octal address, emitted as 4 ASCII-hex digits.
- * @param blocks  number of data blocks, emitted as 2 ASCII-hex digits.
- * @return the frame length, or 0 on overflow. The LRC covers slave..ETB.
+ * @brief AutomationDirect / Koyo DirectNET serial frame codec (PROTOCORE_ENABLE_DIRECTNET).
+ *
+ * A caller sets the members a call takes, invokes it through ::Directnet with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   Directnet.lrc_args.bytes = ...;
+ *   Directnet.lrc_args.len = ...;
+ *   Directnet.lrc(work);
+ *   // Directnet.value is what the call reports
+ *
+ * @var DirectnetNs::lrc_args  what lrc takes: bytes, len
+ * @var DirectnetNs::header_args  what header takes: slave, type, address, blocks, out, cap
+ * @var DirectnetNs::data_args  what data takes: data, data_len, out, cap
+ * @var DirectnetNs::data_parse_args  what data_parse takes: frame, len, data, data_len
+ * @var DirectnetNs::ok  true if it is well-formed and the LRC matches; sets data / data_len ...
+ * @var DirectnetNs::value  the value a call reports
+ * @var DirectnetNs::n  the frame length, or 0 on overflow. The LRC covers slave..ETB
+ * @var DirectnetNs::lrc  longitudinal XOR checksum (the DirectNET LRC) over len bytes
+ * @var DirectnetNs::header  build a DirectNET header frame: SOH + ...
+ * @var DirectnetNs::data  build a DirectNET data frame: STX + data + ETX + LRC. The LRC ...
+ * @var DirectnetNs::data_parse  validate a DirectNET data frame (STX..ETX + LRC) and expose its ...
+ *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
+ * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
+ * a caller drives every namespace the same way.
  */
-size_t protocore_dnet_header(uint8_t slave, uint8_t type, uint16_t address, uint8_t blocks, uint8_t *out, size_t cap);
+typedef struct
+{
+    DirectnetLrcArgs lrc_args;
+    DirectnetHeaderArgs header_args;
+    DirectnetDataArgs data_args;
+    DirectnetDataParseArgs data_parse_args;
 
-/**
- * @brief Build a DirectNET data frame: STX + data + ETX + LRC. The LRC covers data..ETX.
- * @return the frame length (1 + data_len + 1 + 1), or 0 on overflow.
- */
-size_t protocore_dnet_data(const uint8_t *data, size_t data_len, uint8_t *out, size_t cap);
+    proto_bool ok;
+    uint8_t value;
+    size_t n;
 
-/**
- * @brief Validate a DirectNET data frame (STX..ETX + LRC) and expose its payload.
- * @return true if it is well-formed and the LRC matches; sets @p data / @p data_len (pointers into @p frame).
- */
-proto_bool protocore_dnet_data_parse(const uint8_t *frame, size_t len, const uint8_t **data, size_t *data_len);
+    void (*const lrc)(uint8_t *restrict work);
+    void (*const header)(uint8_t *restrict work);
+    void (*const data)(uint8_t *restrict work);
+    void (*const data_parse)(uint8_t *restrict work);
+} DirectnetNs;
+
+/** @brief The one symbol this module exports. */
+extern DirectnetNs Directnet;
 
 PROTOCORE_END_DECLS
 

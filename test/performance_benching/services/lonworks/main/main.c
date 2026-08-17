@@ -20,13 +20,17 @@
 #include <stddef.h>
 #include <stdint.h>
 
+static uint8_t lonworks_work[16]; // the borrow an entry takes; Lonworks never reads it
+
 void dbench_run(void)
 {
     // Known-good, spec-conformant literals lifted from test/test_lonworks/test_lonworks.cpp:
     // an NV-update carrying a 2-byte SNVT value to 14-bit selector 0x1234.
     static const uint8_t nv_value[2] = {0xAB, 0xCD};
-    // The wire PDU that protocore_lon_build_nv() produces for that update: [0x80][0x12 0x34][0xAB 0xCD].
-    static const uint8_t nv_pdu[5] = {LON_MSG_NV_UPDATE, 0x12, 0x34, 0xAB, 0xCD};
+    // The wire PDU that protocore_lon_build_nv() produces for that update: the message bit and the
+    // direction bit off LON_MSG_NV_UPDATE with selector bits 13..8, then bits 7..0, then the value.
+    // 0x80 | (0x1234 >> 8) = 0x92.
+    static const uint8_t nv_pdu[4] = {0x92, 0x34, 0xAB, 0xCD};
     static uint8_t out[16];
     // A SNVT_temp value encoding 25.0 C, and a SNVT_switch value encoding 50% / state 1.
     static const uint8_t snvt_temp_val[2] = {0x74, 0x77}; // (25 + 273.15)*100 = 29815 = 0x7477
@@ -38,23 +42,41 @@ void dbench_run(void)
         volatile size_t sink = 0;
         volatile double sinkd = 0;
 
-        DBENCH_OP("protocore_lon_build_nv (upd+2B)", 100000,
+        Lonworks.build_nv_args.msg_code = LON_MSG_NV_UPDATE;
+        Lonworks.build_nv_args.selector = 0x1234;
+        Lonworks.build_nv_args.value = nv_value;
+        Lonworks.build_nv_args.value_len = sizeof(nv_value);
+        Lonworks.build_nv_args.out = out;
+        Lonworks.build_nv_args.cap = sizeof(out);
+        DBENCH_OP("Lonworks.build_nv (upd+2B)", 100000,
                   sink +=
-                  protocore_lon_build_nv(LON_MSG_NV_UPDATE, 0x1234, nv_value, sizeof(nv_value), out, sizeof(out)));
+                  (Lonworks.build_nv(lonworks_work), Lonworks.n));
 
         LonNv nv;
-        DBENCH_OP("protocore_lon_parse_nv", 200000,
-                  sink += protocore_lon_parse_nv(nv_pdu, sizeof(nv_pdu), &nv) ? 1u : 0u);
+        Lonworks.parse_nv_args.pdu = nv_pdu;
+        Lonworks.parse_nv_args.len = sizeof(nv_pdu);
+        Lonworks.parse_nv_args.out = &nv;
+        DBENCH_OP("Lonworks.parse_nv", 200000,
+                  sink += (Lonworks.parse_nv(lonworks_work), Lonworks.ok) ? 1u : 0u);
 
-        DBENCH_OP("protocore_lon_snvt_temp_encode", 100000, protocore_lon_snvt_temp_encode(25.0, out));
-        DBENCH_OP("protocore_lon_snvt_temp_decode", 200000, sinkd += protocore_lon_snvt_temp_decode(snvt_temp_val));
+        Lonworks.snvt_temp_encode_args.celsius = 25.0;
+        Lonworks.snvt_temp_encode_args.out = out;
+        DBENCH_OP("Lonworks.snvt_temp_encode", 100000, (Lonworks.snvt_temp_encode(lonworks_work), Lonworks.ok));
+        Lonworks.snvt_temp_decode_args.in = snvt_temp_val;
+        DBENCH_OP("Lonworks.snvt_temp_decode", 200000, sinkd += (Lonworks.snvt_temp_decode(lonworks_work), Lonworks.value));
 
-        DBENCH_OP("protocore_lon_snvt_switch_encode", 100000, protocore_lon_snvt_switch_encode(50.0, 1, out));
+        Lonworks.snvt_switch_encode_args.percent = 50.0;
+        Lonworks.snvt_switch_encode_args.state = 1;
+        Lonworks.snvt_switch_encode_args.out = out;
+        DBENCH_OP("Lonworks.snvt_switch_encode", 100000, (Lonworks.snvt_switch_encode(lonworks_work), Lonworks.ok));
         {
             double pct = 0;
             uint8_t st = 0;
-            DBENCH_OP("protocore_lon_snvt_switch_decode", 200000,
-                      protocore_lon_snvt_switch_decode(snvt_switch_val, &pct, &st));
+            Lonworks.snvt_switch_decode_args.in = snvt_switch_val;
+            Lonworks.snvt_switch_decode_args.percent = &pct;
+            Lonworks.snvt_switch_decode_args.state = &st;
+            DBENCH_OP("Lonworks.snvt_switch_decode", 200000,
+                      (Lonworks.snvt_switch_decode(lonworks_work), Lonworks.ok));
             sinkd += pct + st;
         }
 

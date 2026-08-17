@@ -25,11 +25,15 @@
 #ifndef PROTOCORE_BACNET_H
 #define PROTOCORE_BACNET_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_BACNET
 
 PROTOCORE_BEGIN_DECLS
+
+// This module holds nothing between calls, so it carves no borrow and states none. An entry
+// takes one all the same, and never reads it, so every namespace in the tree is invoked the
+// same way.
 
 #define BVLC_TYPE_BIP 0x81 ///< BVLC Type: BACnet/IP
 #define BVLC_HEADER_SIZE 4 ///< type + function + 2-octet length
@@ -56,45 +60,6 @@ PROTOCORE_BEGIN_DECLS
 #define NPDU_PRIO_URGENT 0x01
 #define NPDU_PRIO_CRITICAL 0x02
 #define NPDU_PRIO_LIFE_SAFETY 0x03
-
-// ---- BVLC ----
-
-/** @brief Wrap an NPDU in a BVLC envelope. Returns total octets, or 0 on overflow. */
-size_t protocore_bvlc_build(uint8_t *buf, size_t cap, uint8_t function, const uint8_t *npdu, size_t protocore_npdu_len);
-
-/** @brief Parse a BVLC envelope; reports the function and the NPDU slice. */
-proto_bool protocore_bvlc_parse(const uint8_t *buf, size_t len, uint8_t *function, const uint8_t **npdu,
-                                size_t *protocore_npdu_len);
-
-// ---- NPDU ----
-
-/**
- * @brief Build an NPDU carrying @p apdu. With @p has_dest, the destination addressing
- *        (DNET / DLEN / DADR) and the hop count are emitted (DLEN 0 + @p dnet 0xFFFF is a
- *        remote/global broadcast).
- */
-size_t protocore_npdu_build(uint8_t *buf, size_t cap, proto_bool expecting_reply, uint8_t priority, proto_bool has_dest,
-                            uint16_t dnet, const uint8_t *dadr, uint8_t dadr_len, uint8_t hop_count,
-                            const uint8_t *apdu, size_t apdu_len);
-
-/** @brief A parsed NPDU. @ref apdu points INTO the source buffer. */
-typedef struct
-{
-    uint8_t control;
-    proto_bool network_message; ///< control & 0x80
-    proto_bool dest_present;
-    uint16_t dnet;
-    proto_bool src_present;
-    uint16_t snet;
-    uint8_t hop_count; ///< valid when dest_present
-    const uint8_t *apdu;
-    size_t apdu_len;
-} NpduInfo;
-
-/** @brief Parse + validate an NPDU (version, control, optional addressing) and slice the APDU. */
-proto_bool protocore_npdu_parse(const uint8_t *buf, size_t len, NpduInfo *out);
-
-// --- APDU header (the application layer sliced out by protocore_npdu_parse) ---
 
 // PDU types (the high nibble of the first APDU octet).
 #define BACNET_PDU_CONFIRMED_REQUEST 0
@@ -133,7 +98,21 @@ proto_bool protocore_npdu_parse(const uint8_t *buf, size_t len, NpduInfo *out);
 #define BACNET_PROP_OBJECT_NAME 77   ///< object-name property
 #define BACNET_PROP_PRESENT_VALUE 85 ///< present-value property
 
-/** @brief A decoded APDU header (from protocore_apdu_parse). Service data points INTO the source buffer. */
+/** @brief A parsed NPDU. @ref apdu points INTO the source buffer. */
+typedef struct
+{
+    uint8_t control;
+    proto_bool network_message; ///< control & 0x80
+    proto_bool dest_present;
+    uint16_t dnet;
+    proto_bool src_present;
+    uint16_t snet;
+    uint8_t hop_count; ///< valid when dest_present
+    const uint8_t *apdu;
+    size_t apdu_len;
+} NpduInfo;
+
+/** @brief A decoded APDU header (from Bacnet.apdu_parse). Service data points INTO the source buffer. */
 typedef struct
 {
     uint8_t pdu_type;            ///< PDU type (BACNET_PDU_*)
@@ -146,43 +125,155 @@ typedef struct
     size_t service_data_len;     ///< octets remaining after the header
 } BacnetApdu;
 
-/**
- * @brief Decode an APDU header (PDU type, flags, invoke id, service choice) and slice the service data.
- * @return true iff @p len covers the header for a supported PDU type (confirmed / unconfirmed request,
- *         simple / complex ACK); false for a short buffer or an unsupported type (segment-ack / error /
- *         reject / abort).
- */
-proto_bool protocore_apdu_parse(const uint8_t *apdu, size_t len, BacnetApdu *out);
+/** @brief What bvlc_build takes: buf, cap, function, npdu, npdu_len. */
+typedef struct
+{
+    uint8_t *buf;
+    size_t cap;
+    uint8_t function;
+    const uint8_t *npdu;
+    size_t npdu_len;
+} BacnetBvlcBuildArgs;
+
+/** @brief What bvlc_parse takes: buf, len, function, npdu, npdu_len. */
+typedef struct
+{
+    const uint8_t *buf;
+    size_t len;
+    uint8_t *function;
+    const uint8_t **npdu;
+    size_t *npdu_len;
+} BacnetBvlcParseArgs;
+
+/** @brief What npdu_build takes: buf, cap, expecting_reply, priority, ... */
+typedef struct
+{
+    uint8_t *buf;
+    size_t cap;
+    proto_bool expecting_reply;
+    uint8_t priority;
+    proto_bool has_dest;
+    uint16_t dnet;
+    const uint8_t *dadr;
+    uint8_t dadr_len;
+    uint8_t hop_count;
+    const uint8_t *apdu;
+    size_t apdu_len;
+} BacnetNpduBuildArgs;
+
+/** @brief What npdu_parse takes: buf, len, out. */
+typedef struct
+{
+    const uint8_t *buf;
+    size_t len;
+    NpduInfo *out;
+} BacnetNpduParseArgs;
+
+/** @brief What apdu_parse takes: apdu, len, out. */
+typedef struct
+{
+    const uint8_t *apdu;
+    size_t len;
+    BacnetApdu *out;
+} BacnetApduParseArgs;
+
+/** @brief What apdu_build_who_is takes: buf, cap, low_limit, ... */
+typedef struct
+{
+    uint8_t *buf;
+    size_t cap;
+    uint32_t low_limit;
+    uint32_t high_limit;
+    proto_bool has_limits;
+} BacnetApduBuildWhoIsArgs;
+
+/** @brief What apdu_build_i_am takes: buf, cap, device_instance, ... */
+typedef struct
+{
+    uint8_t *buf;
+    size_t cap;
+    uint32_t device_instance;
+    uint32_t max_apdu;
+    uint8_t segmentation;
+    uint16_t vendor_id;
+} BacnetApduBuildIAmArgs;
+
+/** @brief What apdu_build_read_property takes: buf, cap, invoke_id, ... */
+typedef struct
+{
+    uint8_t *buf;
+    size_t cap;
+    uint8_t invoke_id;
+    uint8_t max_resp;
+    uint16_t object_type;
+    uint32_t object_instance;
+    uint32_t property_id;
+} BacnetApduBuildReadPropertyArgs;
 
 /**
- * @brief Build a Who-Is unconfirmed-request APDU (service choice 8). With @p has_limits, the device-instance
- *        search range is appended as context-tagged unsigned ints (tag 0 = low limit, tag 1 = high limit, each
- *        encoded minimal-length); without it, the APDU is the 2-octet unbounded form that every device answers.
- * @return the APDU length, or 0 on overflow, a limit above BACNET_MAX_INSTANCE, or low > high.
+ * @brief BACnet/IP BVLC + NPDU codec (PROTOCORE_ENABLE_BACNET) - zero-heap framing for the ASHRAE 135
+ * building-automation network layer over UDP (default port 47808).
+ *
+ * A caller sets the members a call takes, invokes it through ::Bacnet with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   Bacnet.bvlc_build_args.buf = ...;
+ *   Bacnet.bvlc_build_args.cap = ...;
+ *   Bacnet.bvlc_build_args.function = ...;
+ *   Bacnet.bvlc_build_args.npdu = ...;
+ *   Bacnet.bvlc_build_args.npdu_len = ...;
+ *   Bacnet.bvlc_build(work);
+ *   // Bacnet.n is what the call reports
+ *
+ * @var BacnetNs::bvlc_build_args  what bvlc_build takes: buf, cap, function, npdu, npdu_len
+ * @var BacnetNs::bvlc_parse_args  what bvlc_parse takes: buf, len, function, npdu, npdu_len
+ * @var BacnetNs::npdu_build_args  what npdu_build takes: buf, cap, expecting_reply, priority,
+ * @var BacnetNs::npdu_parse_args  what npdu_parse takes: buf, len, out
+ * @var BacnetNs::apdu_parse_args  what apdu_parse takes: apdu, len, out
+ * @var BacnetNs::apdu_build_who_is_args  what apdu_build_who_is takes: buf, cap, low_limit,
+ * @var BacnetNs::apdu_build_i_am_args  what apdu_build_i_am takes: buf, cap, device_instance,
+ * @var BacnetNs::apdu_build_read_property_args  what apdu_build_read_property takes: buf, cap, invoke_id,
+ * @var BacnetNs::ok  true iff len covers the header for a supported PDU type (confirmed ...
+ * @var BacnetNs::n  the APDU length, or 0 on overflow, a limit above ...
+ * @var BacnetNs::bvlc_build  wrap an NPDU in a BVLC envelope. Returns total octets, or 0 on ...
+ * @var BacnetNs::bvlc_parse  parse a BVLC envelope; reports the function and the NPDU slice
+ * @var BacnetNs::npdu_build  build an NPDU carrying apdu. With has_dest, the destination ...
+ * @var BacnetNs::npdu_parse  parse + validate an NPDU (version, control, optional addressing) ...
+ * @var BacnetNs::apdu_parse  decode an APDU header (PDU type, flags, invoke id, service choice) ...
+ * @var BacnetNs::apdu_build_who_is  build a Who-Is unconfirmed-request APDU (service choice 8). With ...
+ * @var BacnetNs::apdu_build_i_am  build an I-Am unconfirmed-request APDU (service choice 0) - a ...
+ * @var BacnetNs::apdu_build_read_property  build a ReadProperty confirmed-request APDU (service choice 12) - ...
+ *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
+ * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
+ * a caller drives every namespace the same way.
  */
-size_t protocore_apdu_build_who_is(uint8_t *buf, size_t cap, uint32_t low_limit, uint32_t high_limit,
-                                   proto_bool has_limits);
+typedef struct
+{
+    BacnetBvlcBuildArgs bvlc_build_args;
+    BacnetBvlcParseArgs bvlc_parse_args;
+    BacnetNpduBuildArgs npdu_build_args;
+    BacnetNpduParseArgs npdu_parse_args;
+    BacnetApduParseArgs apdu_parse_args;
+    BacnetApduBuildWhoIsArgs apdu_build_who_is_args;
+    BacnetApduBuildIAmArgs apdu_build_i_am_args;
+    BacnetApduBuildReadPropertyArgs apdu_build_read_property_args;
 
-/**
- * @brief Build an I-Am unconfirmed-request APDU (service choice 0) - a device's answer to Who-Is. Carries the
- *        device object identifier (@p device_instance, object type Device), the max APDU length accepted, the
- *        segmentation-supported enumeration (0..3), and the vendor id, each as an application-tagged value.
- * @return the APDU length, or 0 on overflow, @p device_instance above BACNET_MAX_INSTANCE, or @p segmentation > 3.
- */
-size_t protocore_apdu_build_i_am(uint8_t *buf, size_t cap, uint32_t device_instance, uint32_t max_apdu,
-                                 uint8_t segmentation, uint16_t vendor_id);
+    proto_bool ok;
+    size_t n;
 
-/**
- * @brief Build a ReadProperty confirmed-request APDU (service choice 12) - the BACnet workhorse a client sends to
- *        read one property of one object. Frames the confirmed-request header (unsegmented; @p invoke_id and the
- *        @p max_resp octet - the max-segments-accepted / max-APDU-length-accepted field the peer echoes limits
- *        against), then the object identifier as context tag 0 ((@p object_type << 22) | @p object_instance, a
- *        4-octet field) and the property identifier as context tag 1 (an enumerated value, minimal-length). The
- *        optional property-array-index (context tag 2) is not emitted - it applies only to array-typed properties.
- * @return the APDU length, or 0 on overflow, @p object_instance above BACNET_MAX_INSTANCE, or @p object_type > 0x3FF.
- */
-size_t protocore_apdu_build_read_property(uint8_t *buf, size_t cap, uint8_t invoke_id, uint8_t max_resp,
-                                          uint16_t object_type, uint32_t object_instance, uint32_t property_id);
+    void (*const bvlc_build)(uint8_t *restrict work);
+    void (*const bvlc_parse)(uint8_t *restrict work);
+    void (*const npdu_build)(uint8_t *restrict work);
+    void (*const npdu_parse)(uint8_t *restrict work);
+    void (*const apdu_parse)(uint8_t *restrict work);
+    void (*const apdu_build_who_is)(uint8_t *restrict work);
+    void (*const apdu_build_i_am)(uint8_t *restrict work);
+    void (*const apdu_build_read_property)(uint8_t *restrict work);
+} BacnetNs;
+
+/** @brief The one symbol this module exports. */
+extern BacnetNs Bacnet;
 
 PROTOCORE_END_DECLS
 

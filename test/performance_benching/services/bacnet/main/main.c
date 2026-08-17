@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // On-device CCOUNT microbenchmark for the BACnet/IP BVLC + NPDU codec (services/fieldbus/bacnet):
-// protocore_bvlc_build()/protocore_bvlc_parse() frame and slice the Annex J BVLL envelope (type + function +
-// big-endian length), and protocore_npdu_build()/protocore_npdu_parse() frame and slice the Clause 6 NPDU
+// Bacnet.bvlc_build/Bacnet.bvlc_parse frame and slice the Annex J BVLL envelope (type + function +
+// big-endian length), and Bacnet.npdu_build/Bacnet.npdu_parse frame and slice the Clause 6 NPDU
 // header (version + NPCI control, with optional DNET/DADR/hop-count addressing) around an APDU -
 // all pure (no sockets, no heap). Worked example for performance_benching/device/<service>/: a pure protocol codec
 // with no hardware involved, so every call here exercises the real production code path (contrast
@@ -19,6 +19,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+
+static uint8_t bacnet_work[16]; // the borrow an entry takes; Bacnet never reads it
 
 void dbench_run(void)
 {
@@ -45,31 +47,63 @@ void dbench_run(void)
         volatile size_t sinkz = 0;
         volatile bool sinkb = false;
 
-        DBENCH_OP("protocore_bvlc_build", 50000,
-                  sinkz += protocore_bvlc_build(bvlc_buf, sizeof(bvlc_buf), BVLC_FUNC_ORIGINAL_UNICAST, npdu_local,
-                                                sizeof(npdu_local)));
+        Bacnet.bvlc_build_args.buf = bvlc_buf;
+        Bacnet.bvlc_build_args.cap = sizeof(bvlc_buf);
+        Bacnet.bvlc_build_args.function = BVLC_FUNC_ORIGINAL_UNICAST;
+        Bacnet.bvlc_build_args.npdu = npdu_local;
+        Bacnet.bvlc_build_args.npdu_len = sizeof(npdu_local);
+        DBENCH_OP("Bacnet.bvlc_build", 50000,
+                  sinkz += (Bacnet.bvlc_build(bacnet_work), Bacnet.n));
 
         {
             uint8_t func;
             const uint8_t *p;
             size_t plen;
-            DBENCH_OP("protocore_bvlc_parse", 50000,
-                      sinkb = protocore_bvlc_parse(bvlc_buf, sizeof(bvlc_buf), &func, &p, &plen));
+            Bacnet.bvlc_parse_args.buf = bvlc_buf;
+            Bacnet.bvlc_parse_args.len = sizeof(bvlc_buf);
+            Bacnet.bvlc_parse_args.function = &func;
+            Bacnet.bvlc_parse_args.npdu = &p;
+            Bacnet.bvlc_parse_args.npdu_len = &plen;
+            DBENCH_OP("Bacnet.bvlc_parse", 50000,
+                      sinkb = (Bacnet.bvlc_parse(bacnet_work), Bacnet.ok));
         }
 
-        DBENCH_OP("protocore_npdu_build local", 50000,
-                  sinkz += protocore_npdu_build(npdu_buf, sizeof(npdu_buf), false, NPDU_PRIO_NORMAL, false, 0, NULL, 0,
-                                                0, apdu_local, sizeof(apdu_local)));
+        Bacnet.npdu_build_args.buf = npdu_buf;
+        Bacnet.npdu_build_args.cap = sizeof(npdu_buf);
+        Bacnet.npdu_build_args.expecting_reply = false;
+        Bacnet.npdu_build_args.priority = NPDU_PRIO_NORMAL;
+        Bacnet.npdu_build_args.has_dest = false;
+        Bacnet.npdu_build_args.dnet = 0;
+        Bacnet.npdu_build_args.dadr = NULL;
+        Bacnet.npdu_build_args.dadr_len = 0;
+        Bacnet.npdu_build_args.hop_count = 0;
+        Bacnet.npdu_build_args.apdu = apdu_local;
+        Bacnet.npdu_build_args.apdu_len = sizeof(apdu_local);
+        DBENCH_OP("Bacnet.npdu_build local", 50000,
+                  sinkz += (Bacnet.npdu_build(bacnet_work), Bacnet.n));
 
-        DBENCH_OP("protocore_npdu_build routed", 50000,
+        Bacnet.npdu_build_args.buf = npdu_buf;
+        Bacnet.npdu_build_args.cap = sizeof(npdu_buf);
+        Bacnet.npdu_build_args.expecting_reply = true;
+        Bacnet.npdu_build_args.priority = NPDU_PRIO_NORMAL;
+        Bacnet.npdu_build_args.has_dest = true;
+        Bacnet.npdu_build_args.dnet = 0x0005;
+        Bacnet.npdu_build_args.dadr = dadr_routed;
+        Bacnet.npdu_build_args.dadr_len = sizeof(dadr_routed);
+        Bacnet.npdu_build_args.hop_count = 0xFF;
+        Bacnet.npdu_build_args.apdu = apdu_routed;
+        Bacnet.npdu_build_args.apdu_len = sizeof(apdu_routed);
+        DBENCH_OP("Bacnet.npdu_build routed", 50000,
                   sinkz +=
-                  protocore_npdu_build(npdu_buf, sizeof(npdu_buf), true, NPDU_PRIO_NORMAL, true, 0x0005, dadr_routed,
-                                       sizeof(dadr_routed), 0xFF, apdu_routed, sizeof(apdu_routed)));
+                  (Bacnet.npdu_build(bacnet_work), Bacnet.n));
 
         {
             NpduInfo info;
-            DBENCH_OP("protocore_npdu_parse dest+src", 50000,
-                      sinkb = protocore_npdu_parse(npdu_full, sizeof(npdu_full), &info));
+            Bacnet.npdu_parse_args.buf = npdu_full;
+            Bacnet.npdu_parse_args.len = sizeof(npdu_full);
+            Bacnet.npdu_parse_args.out = &info;
+            DBENCH_OP("Bacnet.npdu_parse dest+src", 50000,
+                      sinkb = (Bacnet.npdu_parse(bacnet_work), Bacnet.ok));
         }
 
         (void)sinkz;

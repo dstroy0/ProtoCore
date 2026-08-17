@@ -26,13 +26,15 @@
 #ifndef PROTOCORE_CANOPEN_H
 #define PROTOCORE_CANOPEN_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_CANOPEN
 
 PROTOCORE_BEGIN_DECLS
 
-#include "shared/can/can.h"
+// This module holds nothing between calls, so it carves no borrow and states none. An entry
+// takes one all the same, and never reads it, so every namespace in the tree is invoked the
+// same way.
 
 // Function-code COB-ID bases. The 11-bit id is (function-code | node-id); the node id is
 // 1..127 (0 = broadcast for NMT / SYNC / TIME). EMCY shares 0x080 with SYNC: SYNC is the
@@ -82,6 +84,15 @@ PROTOCORE_BEGIN_DECLS
 #define CANOPEN_ABORT_NO_SUBINDEX 0x06090011u ///< sub-index does not exist
 #define CANOPEN_ABORT_GENERAL 0x08000000u     ///< general error
 
+/** @brief Octets in a TIME message (CiA 301 TIME_OF_DAY: 4-octet ms + 2-octet days). */
+#define CANOPEN_TIME_LEN 6
+
+/** @brief The ms-after-midnight field is 28 bits; the top 4 bits of the U32 are reserved. */
+#define CANOPEN_TIME_MS_MASK 0x0FFFFFFFu
+
+/** @brief Octets of object data a single SDO segment carries. */
+#define CANOPEN_SDO_SEG_DATA 7
+
 /** @brief CANopen message classes (the function decoded from the COB-ID). */
 typedef enum PROTO_ENUM_PACKED
 {
@@ -118,11 +129,6 @@ typedef struct
     uint8_t len;          ///< expedited payload length 0..4
 } CanopenSdoResponse;
 
-/** @brief Octets in a TIME message (CiA 301 TIME_OF_DAY: 4-octet ms + 2-octet days). */
-#define CANOPEN_TIME_LEN 6
-/** @brief The ms-after-midnight field is 28 bits; the top 4 bits of the U32 are reserved. */
-#define CANOPEN_TIME_MS_MASK 0x0FFFFFFFu
-
 /** @brief Decoded CANopen TIME_OF_DAY (the TIME message payload, CiA 301 §7.2.6). The CANopen epoch is
  *  January 1, 1984, so @c days_since_1984 plus @c ms_since_midnight locate an absolute instant. */
 typedef struct
@@ -130,96 +136,6 @@ typedef struct
     uint32_t ms_since_midnight; ///< milliseconds after midnight (28-bit; 0..86'399'999)
     uint16_t days_since_1984;   ///< days since January 1, 1984
 } CanopenTime;
-
-// --- builders: fill *out and return true; false on a bad argument ---
-
-/** @brief NMT node-control frame. @p node_id 0 addresses all nodes. */
-proto_bool protocore_canopen_build_nmt(CanFrame *out, uint8_t command, uint8_t node_id);
-
-/** @brief SYNC frame (zero-length, broadcast). */
-proto_bool protocore_canopen_build_sync(CanFrame *out);
-
-/** @brief TIME frame (broadcast): the TIME_OF_DAY (@p ms_since_midnight masked to 28 bits, days since
- *  1984). */
-proto_bool protocore_canopen_build_time(CanFrame *out, uint32_t ms_since_midnight, uint16_t days_since_1984);
-
-/** @brief Heartbeat / boot-up frame for @p node_id reporting @p state. */
-proto_bool protocore_canopen_build_heartbeat(CanFrame *out, uint8_t node_id, uint8_t state);
-
-/** @brief Emergency (EMCY) frame: 16-bit error code (LE), error register, 5 manufacturer octets. */
-proto_bool protocore_canopen_build_emcy(CanFrame *out, uint8_t node_id, uint16_t error_code, uint8_t error_reg,
-                                        const uint8_t msef[5]);
-
-/** @brief Transmit-PDO frame (@p pdo_num 1..4): up to 8 raw mapped octets. */
-proto_bool protocore_canopen_build_tpdo(CanFrame *out, uint8_t pdo_num, uint8_t node_id, const uint8_t *data,
-                                        uint8_t len);
-
-/** @brief Receive-PDO frame (@p pdo_num 1..4): up to 8 raw mapped octets. */
-proto_bool protocore_canopen_build_rpdo(CanFrame *out, uint8_t pdo_num, uint8_t node_id, const uint8_t *data,
-                                        uint8_t len);
-
-/** @brief SDO expedited upload (read) request for object @p index / @p sub on @p node_id. */
-proto_bool protocore_canopen_build_sdo_read(CanFrame *out, uint8_t node_id, uint16_t index, uint8_t sub);
-
-/** @brief SDO expedited download (write) of @p len (1..4) octets to @p index / @p sub. */
-proto_bool protocore_canopen_build_sdo_write(CanFrame *out, uint8_t node_id, uint16_t index, uint8_t sub,
-                                             const uint8_t *data, uint8_t len);
-
-/** @brief SDO abort frame. @p to_server true => client->server (0x600), false => server->client (0x580). */
-proto_bool protocore_canopen_build_sdo_abort(CanFrame *out, uint8_t node_id, uint16_t index, uint8_t sub,
-                                             uint32_t abort_code, proto_bool to_server);
-
-// --- parsers ---
-
-/** @brief Classify any frame by COB-ID into its CANopen function + node. */
-proto_bool protocore_canopen_parse(const CanFrame *f, CanopenMsg *out);
-
-/** @brief Decode an EMCY frame (must be a 0x080+node, 8-octet frame). */
-proto_bool protocore_canopen_parse_emcy(const CanFrame *f, uint8_t *node_id, uint16_t *error_code, uint8_t *error_reg,
-                                        uint8_t msef[5]);
-
-/** @brief Decode a heartbeat frame (0x700+node, 1 octet). */
-proto_bool protocore_canopen_parse_heartbeat(const CanFrame *f, uint8_t *node_id, uint8_t *state);
-
-/** @brief Decode a TIME frame (0x100, 6 octets) into @p out. @return true iff @p f is the TIME COB with at
- *  least 6 data octets; the reserved top 4 bits of the ms field are masked off. */
-proto_bool protocore_canopen_parse_time(const CanFrame *f, CanopenTime *out);
-
-/** @brief Decode an SDO server response (0x580+node): upload data, download ack, or abort. */
-proto_bool protocore_canopen_parse_sdo_response(const CanFrame *f, CanopenSdoResponse *out);
-
-// --- segmented SDO (CiA 301 §7.2.4.3): transfers larger than the 4-octet expedited limit ---
-//
-// A segmented transfer is: an initiate frame carrying the object + total size, then a run of segment
-// frames each carrying up to 7 octets with a toggle bit that alternates 0,1,0,1 and a last-segment flag.
-
-/** @brief Octets of object data a single SDO segment carries. */
-#define CANOPEN_SDO_SEG_DATA 7
-
-/**
- * @brief Build a segmented SDO download (write) initiate: names the object and the total byte count that
- *        the following segments will carry (client -> server, 0x600+node).
- */
-proto_bool protocore_canopen_build_sdo_download_init(CanFrame *out, uint8_t node_id, uint16_t index, uint8_t sub,
-                                                     uint32_t total_size);
-
-/**
- * @brief Build a segmented SDO download segment carrying @p len (1..7) octets of object data.
- * @param toggle the toggle bit for this segment (0 for the first, then alternating).
- * @param last   true on the final segment.
- */
-proto_bool protocore_canopen_build_sdo_download_segment(CanFrame *out, uint8_t node_id, proto_bool toggle,
-                                                        const uint8_t *data, uint8_t len, proto_bool last);
-
-/** @brief Build a segmented SDO upload segment request (client asks the server for the next segment). */
-proto_bool protocore_canopen_build_sdo_upload_segment_req(CanFrame *out, uint8_t node_id, proto_bool toggle);
-
-/**
- * @brief Decode an SDO segment frame (either direction) into its toggle, data, length, and last flag.
- * @return true iff @p f is an 8-octet frame whose command specifier is the segment form (high 3 bits 0).
- */
-proto_bool protocore_canopen_parse_sdo_segment(const CanFrame *f, proto_bool *toggle, uint8_t *data, uint8_t *len,
-                                               proto_bool *last);
 
 /** @brief Segmented-upload reassembly state (accumulates segment data into a caller buffer). */
 typedef struct
@@ -231,16 +147,306 @@ typedef struct
     proto_bool done;          ///< set once the last segment is accepted
 } CanopenSdoReasm;
 
-/** @brief Begin a segmented-upload reassembly with a caller-owned buffer. */
-void protocore_canopen_sdo_reasm_init(CanopenSdoReasm *r, uint8_t *buf, size_t cap);
+#include "shared/can/can.h" // CanFrame: the type a parameter points at
+
+/** @brief What build_nmt takes: out, command, node_id. */
+typedef struct
+{
+    CanFrame *out;
+    uint8_t command;
+    uint8_t node_id;
+} CanopenBuildNmtArgs;
+
+/** @brief What build_sync takes: out. */
+typedef struct
+{
+    CanFrame *out;
+} CanopenBuildSyncArgs;
+
+/** @brief What build_time takes: out, ms_since_midnight, ... */
+typedef struct
+{
+    CanFrame *out;
+    uint32_t ms_since_midnight;
+    uint16_t days_since_1984;
+} CanopenBuildTimeArgs;
+
+/** @brief What build_heartbeat takes: out, node_id, state. */
+typedef struct
+{
+    CanFrame *out;
+    uint8_t node_id;
+    uint8_t state;
+} CanopenBuildHeartbeatArgs;
+
+/** @brief What build_emcy takes: out, node_id, error_code, error_reg, ... */
+typedef struct
+{
+    CanFrame *out;
+    uint8_t node_id;
+    uint16_t error_code;
+    uint8_t error_reg;
+    const uint8_t *msef; ///< 5 bytes.
+} CanopenBuildEmcyArgs;
+
+/** @brief What build_tpdo takes: out, pdo_num, node_id, data, len. */
+typedef struct
+{
+    CanFrame *out;
+    uint8_t pdo_num;
+    uint8_t node_id;
+    const uint8_t *data;
+    uint8_t len;
+} CanopenBuildTpdoArgs;
+
+/** @brief What build_rpdo takes: out, pdo_num, node_id, data, len. */
+typedef struct
+{
+    CanFrame *out;
+    uint8_t pdo_num;
+    uint8_t node_id;
+    const uint8_t *data;
+    uint8_t len;
+} CanopenBuildRpdoArgs;
+
+/** @brief What build_sdo_read takes: out, node_id, index, sub. */
+typedef struct
+{
+    CanFrame *out;
+    uint8_t node_id;
+    uint16_t index;
+    uint8_t sub;
+} CanopenBuildSdoReadArgs;
+
+/** @brief What build_sdo_write takes: out, node_id, index, sub, data, ... */
+typedef struct
+{
+    CanFrame *out;
+    uint8_t node_id;
+    uint16_t index;
+    uint8_t sub;
+    const uint8_t *data;
+    uint8_t len;
+} CanopenBuildSdoWriteArgs;
+
+/** @brief What build_sdo_abort takes: out, node_id, index, sub, ... */
+typedef struct
+{
+    CanFrame *out;
+    uint8_t node_id;
+    uint16_t index;
+    uint8_t sub;
+    uint32_t abort_code;
+    proto_bool to_server;
+} CanopenBuildSdoAbortArgs;
+
+/** @brief What parse takes: f, out. */
+typedef struct
+{
+    const CanFrame *f;
+    CanopenMsg *out;
+} CanopenParseArgs;
+
+/** @brief What parse_emcy takes: f, node_id, error_code, error_reg, ... */
+typedef struct
+{
+    const CanFrame *f;
+    uint8_t *node_id;
+    uint16_t *error_code;
+    uint8_t *error_reg;
+    uint8_t *msef; ///< 5 bytes.
+} CanopenParseEmcyArgs;
+
+/** @brief What parse_heartbeat takes: f, node_id, state. */
+typedef struct
+{
+    const CanFrame *f;
+    uint8_t *node_id;
+    uint8_t *state;
+} CanopenParseHeartbeatArgs;
+
+/** @brief What parse_time takes: f, out. */
+typedef struct
+{
+    const CanFrame *f;
+    CanopenTime *out;
+} CanopenParseTimeArgs;
+
+/** @brief What parse_sdo_response takes: f, out. */
+typedef struct
+{
+    const CanFrame *f;
+    CanopenSdoResponse *out;
+} CanopenParseSdoResponseArgs;
+
+/** @brief What build_sdo_download_init takes: out, node_id, index, ... */
+typedef struct
+{
+    CanFrame *out;
+    uint8_t node_id;
+    uint16_t index;
+    uint8_t sub;
+    uint32_t total_size;
+} CanopenBuildSdoDownloadInitArgs;
+
+/** @brief What build_sdo_download_segment takes: out, node_id, ... */
+typedef struct
+{
+    CanFrame *out;
+    uint8_t node_id;
+    proto_bool toggle; ///< the toggle bit for this segment (0 for the first, then alternating)
+    const uint8_t *data;
+    uint8_t len;
+    proto_bool last; ///< true on the final segment
+} CanopenBuildSdoDownloadSegmentArgs;
+
+/** @brief What build_sdo_upload_segment_req takes: out, node_id, ... */
+typedef struct
+{
+    CanFrame *out;
+    uint8_t node_id;
+    proto_bool toggle;
+} CanopenBuildSdoUploadSegmentReqArgs;
+
+/** @brief What parse_sdo_segment takes: f, toggle, data, len, last. */
+typedef struct
+{
+    const CanFrame *f;
+    proto_bool *toggle;
+    uint8_t *data;
+    uint8_t *len;
+    proto_bool *last;
+} CanopenParseSdoSegmentArgs;
+
+/** @brief What sdo_reasm_init takes: r, buf, cap. */
+typedef struct
+{
+    CanopenSdoReasm *r;
+    uint8_t *buf;
+    size_t cap;
+} CanopenSdoReasmInitArgs;
+
+/** @brief What sdo_reasm_feed takes: r, data, len, toggle, last. */
+typedef struct
+{
+    CanopenSdoReasm *r;
+    const uint8_t *data;
+    uint8_t len;
+    proto_bool toggle;
+    proto_bool last;
+} CanopenSdoReasmFeedArgs;
 
 /**
- * @brief Feed one decoded upload segment into the reassembler (append @p len octets).
- * @return true on success (sets @c done on the last segment); false on a toggle mismatch or a buffer
- *         overflow.
+ * @brief CANopen (CiA 301) application-layer message codec (PROTOCORE_ENABLE_CANOPEN).
+ *
+ * A caller sets the members a call takes, invokes it through ::Canopen with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   Canopen.build_nmt_args.out = ...;
+ *   Canopen.build_nmt_args.command = ...;
+ *   Canopen.build_nmt_args.node_id = ...;
+ *   Canopen.build_nmt(work);
+ *   // Canopen.ok is what the call reports
+ *
+ * @var CanopenNs::build_nmt_args  what build_nmt takes: out, command, node_id
+ * @var CanopenNs::build_sync_args  what build_sync takes: out
+ * @var CanopenNs::build_time_args  what build_time takes: out, ms_since_midnight,
+ * @var CanopenNs::build_heartbeat_args  what build_heartbeat takes: out, node_id, state
+ * @var CanopenNs::build_emcy_args  what build_emcy takes: out, node_id, error_code, error_reg,
+ * @var CanopenNs::build_tpdo_args  what build_tpdo takes: out, pdo_num, node_id, data, len
+ * @var CanopenNs::build_rpdo_args  what build_rpdo takes: out, pdo_num, node_id, data, len
+ * @var CanopenNs::build_sdo_read_args  what build_sdo_read takes: out, node_id, index, sub
+ * @var CanopenNs::build_sdo_write_args  what build_sdo_write takes: out, node_id, index, sub, data,
+ * @var CanopenNs::build_sdo_abort_args  what build_sdo_abort takes: out, node_id, index, sub,
+ * @var CanopenNs::parse_args  what parse takes: f, out
+ * @var CanopenNs::parse_emcy_args  what parse_emcy takes: f, node_id, error_code, error_reg,
+ * @var CanopenNs::parse_heartbeat_args  what parse_heartbeat takes: f, node_id, state
+ * @var CanopenNs::parse_time_args  what parse_time takes: f, out
+ * @var CanopenNs::parse_sdo_response_args  what parse_sdo_response takes: f, out
+ * @var CanopenNs::build_sdo_download_init_args  what build_sdo_download_init takes: out, node_id, index,
+ * @var CanopenNs::build_sdo_download_segment_args  what build_sdo_download_segment takes: out, node_id,
+ * @var CanopenNs::build_sdo_upload_segment_req_args  what build_sdo_upload_segment_req takes: out, node_id,
+ * @var CanopenNs::parse_sdo_segment_args  what parse_sdo_segment takes: f, toggle, data, len, last
+ * @var CanopenNs::sdo_reasm_init_args  what sdo_reasm_init takes: r, buf, cap
+ * @var CanopenNs::sdo_reasm_feed_args  what sdo_reasm_feed takes: r, data, len, toggle, last
+ * @var CanopenNs::ok  true iff f is an 8-octet frame whose command specifier is the ...
+ * @var CanopenNs::build_nmt  NMT node-control frame. node_id 0 addresses all nodes
+ * @var CanopenNs::build_sync  SYNC frame (zero-length, broadcast)
+ * @var CanopenNs::build_time  TIME frame (broadcast): the TIME_OF_DAY (ms_since_midnight masked ...
+ * @var CanopenNs::build_heartbeat  heartbeat / boot-up frame for node_id reporting state
+ * @var CanopenNs::build_emcy  emergency (EMCY) frame: 16-bit error code (LE), error register, 5 ...
+ * @var CanopenNs::build_tpdo  Transmit-PDO frame (pdo_num 1..4): up to 8 raw mapped octets
+ * @var CanopenNs::build_rpdo  Receive-PDO frame (pdo_num 1..4): up to 8 raw mapped octets
+ * @var CanopenNs::build_sdo_read  SDO expedited upload (read) request for object index / sub on ...
+ * @var CanopenNs::build_sdo_write  SDO expedited download (write) of len (1..4) octets to index / sub
+ * @var CanopenNs::build_sdo_abort  SDO abort frame. to_server true => client->server (0x600), false => ...
+ * @var CanopenNs::parse  classify any frame by COB-ID into its CANopen function + node
+ * @var CanopenNs::parse_emcy  decode an EMCY frame (must be a 0x080+node, 8-octet frame)
+ * @var CanopenNs::parse_heartbeat  decode a heartbeat frame (0x700+node, 1 octet)
+ * @var CanopenNs::parse_time  decode a TIME frame (0x100, 6 octets) into out. true iff f is the ...
+ * @var CanopenNs::parse_sdo_response  decode an SDO server response (0x580+node): upload data, download ...
+ * @var CanopenNs::build_sdo_download_init  build a segmented SDO download (write) initiate: names the object ...
+ * @var CanopenNs::build_sdo_download_segment  build a segmented SDO download segment carrying len (1..7) octets ...
+ * @var CanopenNs::build_sdo_upload_segment_req  build a segmented SDO upload segment request (client asks the ...
+ * @var CanopenNs::parse_sdo_segment  decode an SDO segment frame (either direction) into its toggle, ...
+ * @var CanopenNs::sdo_reasm_init  begin a segmented-upload reassembly with a caller-owned buffer
+ * @var CanopenNs::sdo_reasm_feed  feed one decoded upload segment into the reassembler (append len ...
+ *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
+ * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
+ * a caller drives every namespace the same way.
  */
-proto_bool protocore_canopen_sdo_reasm_feed(CanopenSdoReasm *r, const uint8_t *data, uint8_t len, proto_bool toggle,
-                                            proto_bool last);
+typedef struct
+{
+    CanopenBuildNmtArgs build_nmt_args;
+    CanopenBuildSyncArgs build_sync_args;
+    CanopenBuildTimeArgs build_time_args;
+    CanopenBuildHeartbeatArgs build_heartbeat_args;
+    CanopenBuildEmcyArgs build_emcy_args;
+    CanopenBuildTpdoArgs build_tpdo_args;
+    CanopenBuildRpdoArgs build_rpdo_args;
+    CanopenBuildSdoReadArgs build_sdo_read_args;
+    CanopenBuildSdoWriteArgs build_sdo_write_args;
+    CanopenBuildSdoAbortArgs build_sdo_abort_args;
+    CanopenParseArgs parse_args;
+    CanopenParseEmcyArgs parse_emcy_args;
+    CanopenParseHeartbeatArgs parse_heartbeat_args;
+    CanopenParseTimeArgs parse_time_args;
+    CanopenParseSdoResponseArgs parse_sdo_response_args;
+    CanopenBuildSdoDownloadInitArgs build_sdo_download_init_args;
+    CanopenBuildSdoDownloadSegmentArgs build_sdo_download_segment_args;
+    CanopenBuildSdoUploadSegmentReqArgs build_sdo_upload_segment_req_args;
+    CanopenParseSdoSegmentArgs parse_sdo_segment_args;
+    CanopenSdoReasmInitArgs sdo_reasm_init_args;
+    CanopenSdoReasmFeedArgs sdo_reasm_feed_args;
+
+    proto_bool ok;
+
+    void (*const build_nmt)(uint8_t *restrict work);
+    void (*const build_sync)(uint8_t *restrict work);
+    void (*const build_time)(uint8_t *restrict work);
+    void (*const build_heartbeat)(uint8_t *restrict work);
+    void (*const build_emcy)(uint8_t *restrict work);
+    void (*const build_tpdo)(uint8_t *restrict work);
+    void (*const build_rpdo)(uint8_t *restrict work);
+    void (*const build_sdo_read)(uint8_t *restrict work);
+    void (*const build_sdo_write)(uint8_t *restrict work);
+    void (*const build_sdo_abort)(uint8_t *restrict work);
+    void (*const parse)(uint8_t *restrict work);
+    void (*const parse_emcy)(uint8_t *restrict work);
+    void (*const parse_heartbeat)(uint8_t *restrict work);
+    void (*const parse_time)(uint8_t *restrict work);
+    void (*const parse_sdo_response)(uint8_t *restrict work);
+    void (*const build_sdo_download_init)(uint8_t *restrict work);
+    void (*const build_sdo_download_segment)(uint8_t *restrict work);
+    void (*const build_sdo_upload_segment_req)(uint8_t *restrict work);
+    void (*const parse_sdo_segment)(uint8_t *restrict work);
+    void (*const sdo_reasm_init)(uint8_t *restrict work);
+    void (*const sdo_reasm_feed)(uint8_t *restrict work);
+} CanopenNs;
+
+/** @brief The one symbol this module exports. */
+extern CanopenNs Canopen;
 
 PROTOCORE_END_DECLS
 

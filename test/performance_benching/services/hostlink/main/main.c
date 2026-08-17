@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // On-device CCOUNT microbenchmark for the Omron Host Link (C-mode) frame codec (services/fieldbus/hostlink):
-// the FCS (an 8-bit XOR over the ASCII body), the command builder (protocore_hostlink_build: @UU + header +
-// text + FCS + *CR), the FCS-validating parser (protocore_hostlink_parse), and the response end-code reader
-// (protocore_hostlink_end_code). Every operation here is pure - no heap, no sockets, no UART - so this is
+// the FCS (an 8-bit XOR over the ASCII body), the command builder (Hostlink.build: @UU + header +
+// text + FCS + *CR), the FCS-validating parser (Hostlink.parse), and the response end-code reader
+// (Hostlink.end_code). Every operation here is pure - no heap, no sockets, no UART - so this is
 // like performance_benching/device/modbus, a pure protocol codec where each call exercises the real production code
 // path. The RS-232/485 serial transport is the application's responsibility and is deliberately out
 // of scope (nothing is wired to this rig); only the deterministic CPU-side framing is benched.
@@ -20,6 +20,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+static uint8_t hostlink_work[16]; // the borrow an entry takes; Hostlink never reads it
+
 void dbench_run(void)
 {
     // Known-good, spec-conformant vectors straight out of test/test_hostlink/test_hostlink.cpp.
@@ -28,7 +30,14 @@ void dbench_run(void)
     const size_t body_len = sizeof(body) - 1; // exclude the NUL
 
     static char frame[32];
-    const size_t frame_len = protocore_hostlink_build(frame, sizeof(frame), 0, "RD", "00000010", 8);
+    Hostlink.build_args.buf = frame;
+    Hostlink.build_args.cap = sizeof(frame);
+    Hostlink.build_args.node = 0;
+    Hostlink.build_args.header_code = "RD";
+    Hostlink.build_args.text = "00000010";
+    Hostlink.build_args.text_len = 8;
+    Hostlink.build(hostlink_work);
+    const size_t frame_len = Hostlink.n;
 
     static char outbuf[32];
 
@@ -38,20 +47,37 @@ void dbench_run(void)
         volatile uint32_t sink = 0;
 
         // FCS: 8-bit XOR over the ASCII body (throughput over the frame body bytes).
-        DBENCH_BULK("protocore_hostlink_fcs", 100000, body_len, sink += protocore_hostlink_fcs(body, body_len));
+        Hostlink.fcs_args.data = body;
+        Hostlink.fcs_args.len = body_len;
+        DBENCH_BULK("Hostlink.fcs", 100000, body_len, sink += (Hostlink.fcs(hostlink_work), Hostlink.value));
 
         // Build a full DM-read command frame (@UU + header + text + FCS + *CR).
-        DBENCH_OP("protocore_hostlink_build RD", 100000,
-                  sink += protocore_hostlink_build(outbuf, sizeof(outbuf), 0, "RD", "00000010", 8));
+        Hostlink.build_args.buf = outbuf;
+        Hostlink.build_args.cap = sizeof(outbuf);
+        Hostlink.build_args.node = 0;
+        Hostlink.build_args.header_code = "RD";
+        Hostlink.build_args.text = "00000010";
+        Hostlink.build_args.text_len = 8;
+        DBENCH_OP("Hostlink.build RD", 100000,
+                  sink += (Hostlink.build(hostlink_work), Hostlink.n));
 
         // Parse + FCS-validate a complete frame.
         HostlinkFrame f;
-        DBENCH_OP("protocore_hostlink_parse", 100000, sink += protocore_hostlink_parse(frame, frame_len, &f));
+        Hostlink.parse_args.buf = frame;
+        Hostlink.parse_args.len = frame_len;
+        Hostlink.parse_args.out = &f;
+        DBENCH_OP("Hostlink.parse", 100000, sink += (Hostlink.parse(hostlink_work), Hostlink.ok));
 
         // Read the response end code (first 2 text chars) off an already-parsed frame.
-        (void)protocore_hostlink_parse(frame, frame_len, &f);
+        Hostlink.parse_args.buf = frame;
+        Hostlink.parse_args.len = frame_len;
+        Hostlink.parse_args.out = &f;
+        Hostlink.parse(hostlink_work);
+        (void)Hostlink.ok;
         uint8_t code = 0;
-        DBENCH_OP("protocore_hostlink_end_code", 200000, sink += protocore_hostlink_end_code(&f, &code));
+        Hostlink.end_code_args.f = &f;
+        Hostlink.end_code_args.code = &code;
+        DBENCH_OP("Hostlink.end_code", 200000, sink += (Hostlink.end_code(hostlink_work), Hostlink.ok));
 
         (void)sink;
         DBENCH_DONE();

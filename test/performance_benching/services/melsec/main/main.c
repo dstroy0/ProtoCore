@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // On-device CCOUNT microbenchmark for the Mitsubishi MELSEC MC binary 3E codec (services/fieldbus/melsec):
-// protocore_melsec_build_read() emits a QnA-compatible batch-read request (little-endian subheader 0x5000,
-// command 0x0401, 24-bit head device + device code) into a caller buffer, and protocore_melsec_parse_response()
+// Melsec.build_read emits a QnA-compatible batch-read request (little-endian subheader 0x5000,
+// command 0x0401, 24-bit head device + device code) into a caller buffer, and Melsec.parse_response
 // validates a 0xD000 response subheader/length/end-code and returns a view onto the read payload - both
 // pure (no sockets, no heap). Like performance_benching/device/modbus, this is a pure protocol codec with no hardware
 // involved, so every call here exercises the real production code path; the TCP/UDP send half is the
@@ -19,6 +19,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+
+static uint8_t melsec_work[16]; // the borrow an entry takes; Melsec never reads it
 
 void dbench_run(void)
 {
@@ -43,12 +45,21 @@ void dbench_run(void)
 
         // Batch-read request build: read 5 words of D100 (data register), monitoring timer 0x0010 -
         // the exact args from test_melsec's test_build_read_bytes. Cheap pure builder -> large N.
-        DBENCH_OP("protocore_melsec_build_read D100 x5", 200000,
-                  sink += protocore_melsec_build_read(req, sizeof(req), MELSEC_DEV_D, 100, 5, 0x0010));
+        Melsec.build_read_args.buf = req;
+        Melsec.build_read_args.cap = sizeof(req);
+        Melsec.build_read_args.device_code = MELSEC_DEV_D;
+        Melsec.build_read_args.head_device = 100;
+        Melsec.build_read_args.points = 5;
+        Melsec.build_read_args.monitoring_timer = 0x0010;
+        DBENCH_OP("Melsec.build_read D100 x5", 200000,
+                  sink += (Melsec.build_read(melsec_work), Melsec.n));
 
         // Response parse + validate over the known-good 0xD000 frame. Cheap pure parser -> large N.
-        DBENCH_OP("protocore_melsec_parse_response ok", 200000,
-                  sinkb ^= protocore_melsec_parse_response(resp_ok, sizeof(resp_ok), &parsed));
+        Melsec.parse_response_args.buf = resp_ok;
+        Melsec.parse_response_args.len = sizeof(resp_ok);
+        Melsec.parse_response_args.out = &parsed;
+        DBENCH_OP("Melsec.parse_response ok", 200000,
+                  sinkb ^= (Melsec.parse_response(melsec_work), Melsec.ok));
 
         (void)sink;
         (void)sinkb;

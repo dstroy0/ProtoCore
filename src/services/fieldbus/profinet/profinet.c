@@ -6,17 +6,36 @@
  * @brief PROFINET DCP frame codec (see profinet.h).
  */
 
-#include "services/fieldbus/profinet/profinet.h"
-#include "mmgr/protomem.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_PROFINET
 
-size_t protocore_pn_dcp_header(uint16_t frame_id, uint8_t service_id, uint8_t service_type, uint32_t xid,
-                               uint16_t response_delay, uint16_t data_length, uint8_t *out, size_t cap)
+#include "mmgr/protomem.h"
+#include "services/fieldbus/profinet/profinet.h"
+
+PROTOCORE_BEGIN_DECLS
+
+// --- the entries -----------------------------------------------------------
+
+// No context and no borrow: every operand is the caller's. The borrow an entry takes is
+// never read.
+
+static void profinet_dcp_header(uint8_t *restrict work)
 {
+    (void)work;
+    uint16_t frame_id = Profinet.dcp_header_args.frame_id;
+    uint8_t service_id = Profinet.dcp_header_args.service_id;
+    uint8_t service_type = Profinet.dcp_header_args.service_type;
+    uint32_t xid = Profinet.dcp_header_args.xid;
+    uint16_t response_delay = Profinet.dcp_header_args.response_delay;
+    uint16_t data_length = Profinet.dcp_header_args.data_length;
+    uint8_t *out = Profinet.dcp_header_args.out;
+    size_t cap = Profinet.dcp_header_args.cap;
+
     if (!out || cap < PN_DCP_HDR_LEN)
     {
-        return 0;
+        Profinet.n = 0;
+        return;
     }
     out[0] = (uint8_t)(frame_id >> 8);
     out[1] = (uint8_t)frame_id;
@@ -30,21 +49,30 @@ size_t protocore_pn_dcp_header(uint16_t frame_id, uint8_t service_id, uint8_t se
     out[9] = (uint8_t)response_delay;
     out[10] = (uint8_t)(data_length >> 8);
     out[11] = (uint8_t)data_length;
-    return PN_DCP_HDR_LEN;
+    Profinet.n = PN_DCP_HDR_LEN;
 }
 
-size_t protocore_pn_dcp_block(uint8_t option, uint8_t suboption, const uint8_t *value, size_t value_len, uint8_t *out,
-                              size_t cap)
+static void profinet_dcp_block(uint8_t *restrict work)
 {
+    (void)work;
+    uint8_t option = Profinet.dcp_block_args.option;
+    uint8_t suboption = Profinet.dcp_block_args.suboption;
+    const uint8_t *value = Profinet.dcp_block_args.value;
+    size_t value_len = Profinet.dcp_block_args.value_len;
+    uint8_t *out = Profinet.dcp_block_args.out;
+    size_t cap = Profinet.dcp_block_args.cap;
+
     if (!out || (value_len && !value) || value_len > 0xFFFF)
     {
-        return 0;
+        Profinet.n = 0;
+        return;
     }
     proto_bool pad = (value_len & 1) != 0; // pad to an even total length
     size_t n = 4 + value_len + (pad ? 1 : 0);
     if (n > cap)
     {
-        return 0;
+        Profinet.n = 0;
+        return;
     }
     out[0] = option;
     out[1] = suboption;
@@ -58,14 +86,20 @@ size_t protocore_pn_dcp_block(uint8_t option, uint8_t suboption, const uint8_t *
     {
         out[4 + value_len] = 0x00;
     }
-    return n;
+    Profinet.n = n;
 }
 
-proto_bool protocore_pn_dcp_parse_header(const uint8_t *frame, size_t len, PnDcpHeader *out)
+static void profinet_dcp_parse_header(uint8_t *restrict work)
 {
+    (void)work;
+    const uint8_t *frame = Profinet.dcp_parse_header_args.frame;
+    size_t len = Profinet.dcp_parse_header_args.len;
+    PnDcpHeader *out = Profinet.dcp_parse_header_args.out;
+
     if (!frame || !out || len < PN_DCP_HDR_LEN)
     {
-        return PROTO_FALSE;
+        Profinet.ok = PROTO_FALSE;
+        return;
     }
     out->frame_id = (uint16_t)((frame[0] << 8) | frame[1]);
     out->service_id = frame[2];
@@ -73,11 +107,17 @@ proto_bool protocore_pn_dcp_parse_header(const uint8_t *frame, size_t len, PnDcp
     out->xid = ((uint32_t)frame[4] << 24) | ((uint32_t)frame[5] << 16) | ((uint32_t)frame[6] << 8) | frame[7];
     out->response_delay = (uint16_t)((frame[8] << 8) | frame[9]);
     out->data_length = (uint16_t)((frame[10] << 8) | frame[11]);
-    return PROTO_TRUE;
+    Profinet.ok = PROTO_TRUE;
 }
 
-proto_bool protocore_pn_dcp_walk(const uint8_t *blocks, size_t len, protocore_pn_dcp_block_cb cb, void *arg)
+static void profinet_dcp_walk(uint8_t *restrict work)
 {
+    (void)work;
+    const uint8_t *blocks = Profinet.dcp_walk_args.blocks;
+    size_t len = Profinet.dcp_walk_args.len;
+    protocore_pn_dcp_block_cb cb = Profinet.dcp_walk_args.cb;
+    void *arg = Profinet.dcp_walk_args.arg;
+
     size_t off = 0;
     while (off + 4 <= len)
     {
@@ -86,7 +126,8 @@ proto_bool protocore_pn_dcp_walk(const uint8_t *blocks, size_t len, protocore_pn
         uint16_t blen = (uint16_t)((blocks[off + 2] << 8) | blocks[off + 3]);
         if (off + 4 + blen > len)
         {
-            return PROTO_FALSE;
+            Profinet.ok = PROTO_FALSE;
+            return;
         }
         if (cb)
         {
@@ -95,7 +136,14 @@ proto_bool protocore_pn_dcp_walk(const uint8_t *blocks, size_t len, protocore_pn
         size_t adv = 4 + blen + ((blen & 1) ? 1 : 0); // skip the even-pad filler
         off += adv;
     }
-    return PROTO_TRUE;
+    Profinet.ok = PROTO_TRUE;
 }
+
+ProfinetNs Profinet = {.dcp_header = profinet_dcp_header,
+                       .dcp_block = profinet_dcp_block,
+                       .dcp_parse_header = profinet_dcp_parse_header,
+                       .dcp_walk = profinet_dcp_walk};
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_PROFINET

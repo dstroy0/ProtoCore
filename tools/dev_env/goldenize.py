@@ -82,6 +82,70 @@ DECL = re.compile(
     re.M,
 )
 
+# A width, as a member name, for when two entries want the same one at different types. Keyed by the
+# return type so the name says what it holds.
+WIDTH_MEMBER = {
+    "uint8_t": "u8",
+    "uint16_t": "u16",
+    "uint32_t": "u32",
+    "uint64_t": "u64",
+    "int8_t": "i8",
+    "int16_t": "i16",
+    "int32_t": "i32",
+    "int64_t": "i64",
+    "size_t": "n",
+    "float": "f32",
+    "double": "f64",
+}
+
+
+def resolve_result_collisions(entries, notes):
+    """One member name per type. Two entries that landed on the same name at DIFFERENT types would
+    share one declaration, so the wider one is silently truncated to the narrower - a get_word
+    reporting 0x1234 as 0x34. The second and later types get a width-derived name instead.
+    """
+    seen = {}  # member -> the type that claimed it
+    for e in entries:
+        r = e.get("result")
+        if not r:
+            continue
+        rtype = e["result_type"]
+        if seen.setdefault(r, rtype) == rtype:
+            continue
+        alt = WIDTH_MEMBER.get(rtype)
+        # stderr, because scan's stdout is the spec JSON and a caller pipes it.
+        if not alt or seen.get(alt, rtype) != rtype:
+            notes.append("%s returns %s and cannot share the '%s' member; name it in the spec" % (e["entry"], rtype, r))
+            print("   NOTE " + notes[-1], file=sys.stderr)
+            continue
+        notes.append(
+            "%s returns %s, so it reports on '%s' rather than sharing '%s' with a %s"
+            % (e["entry"], rtype, alt, r, seen[r])
+        )
+        print("   NOTE " + notes[-1], file=sys.stderr)
+        e["result"] = alt
+        seen[alt] = rtype
+    flag_unit_results(entries, notes)
+    return entries
+
+
+# member names that state a unit rather than a width, so they only read correctly on a module whose
+# value carries that unit
+UNIT_MEMBER = {"ms": "milliseconds"}
+
+
+def flag_unit_results(entries, notes):
+    """Report a default result member that names a unit. RESULT maps uint32_t to 'ms', which reads as
+    milliseconds on every uint32_t an entry returns, CRCs and counts included.
+    """
+    for e in entries:
+        unit = UNIT_MEMBER.get(e.get("result"))
+        if unit:
+            notes.append("%s reports on '%s', which names %s; set it in the spec if it holds something else"
+                         % (e["entry"], e["result"], unit))
+            print("   NOTE " + notes[-1], file=sys.stderr)
+
+
 # a return type -> the namespace member its value lands in
 RESULT = {
     "void": None,
@@ -121,6 +185,25 @@ BUILTIN = {
     "intptr_t",
     "ptrdiff_t",
 }
+
+
+def defining_header(name):
+    """The header under src/ that defines @p name as a typedef, or "" if none does.
+
+    A `struct X;` declaration only names the same type when X is a struct TAG. CanFrame is a typedef
+    of an anonymous struct, so `struct CanFrame *` is a different, incomplete type, and every args
+    member declared that way took the wrong pointer - a warning under gcc, an error where the
+    benches build with -Werror.
+    """
+    pat = re.compile(r"\}\s*%s\s*;|typedef\s+[\w ]*\b%s\b\s*;" % (re.escape(name), re.escape(name)))
+    for base, _dirs, files in os.walk(os.path.join(R, "src")):
+        for f in files:
+            if not f.endswith(".h"):
+                continue
+            p = os.path.join(base, f)
+            if pat.search(io.open(p, encoding="utf-8", errors="ignore").read()):
+                return os.path.relpath(p, os.path.join(R, "src")).replace("\\", "/")
+    return ""
 
 
 def foreign_types(spec):
@@ -186,6 +269,26 @@ def module_types(header_text):
         if re.search(r"\}\s*\w+(Args|Ns|Bind)\s*;\s*$", t):
             continue  # generated shapes, not the module's own
         out.append(t)
+    return out
+
+
+def module_inlines(header_text):
+    """The `static inline` helpers the header defined, with the comment above each.
+
+    These emit no external symbol, so the one-symbol rule still holds and they belong in the
+    regenerated header. Regenerating without them deleted six one-line Statusword predicates out of
+    cia402.h, which showed up only as a link error from the suite that called them.
+    """
+    out, mask = [], code_mask(header_text)
+    for m in re.finditer(r"^static\s+inline\b", header_text, re.M):
+        if not mask[m.start()]:
+            continue
+        brace = header_text.find("{", m.end())
+        if brace == -1:
+            continue
+        end = typedef_end(header_text, brace)
+        doc = comment_above(header_text, m.start())
+        out.append(((doc + "\n") if doc else "") + header_text[m.start() : end].strip())
     return out
 
 
@@ -352,7 +455,8 @@ def sentence(text, fallback):
 def scan(hpath):
     s = io.open(hpath, encoding="utf-8").read()
     mod = os.path.splitext(os.path.basename(hpath))[0]
-    gate = re.search(r"^#if\s+(PROTOCORE_ENABLE_\w+)", s, re.M)
+    # ENABLE_ is the usual spelling, NEED_ the one a module gated by "some caller wants it" uses.
+    gate = re.search(r"^#if\s+(PROTOCORE_(?:ENABLE|NEED)_\w+)", s, re.M)
     entries = []
     for m in DECL.finditer(s):
         ret = re.sub(r"\s+", " ", m.group("ret")).strip()
@@ -408,11 +512,13 @@ def scan(hpath):
     # A module with no file-static context holds nothing between calls, so it carves no borrow,
     # states none, and needs no span accessor - tls_policy is the shape. That is read off the .c
     # rather than chosen: the state is there or it is not.
+    collide_notes = []
     cpath = hpath[:-1] + "c"
     csrc = io.open(cpath, encoding="utf-8").read() if os.path.exists(cpath) else ""
     return {
         "macros": module_macros(s, re.search(r"#ifndef (\w+)", s).group(1) if re.search(r"#ifndef (\w+)", s) else ""),
         "types": module_types(s),
+        "inlines": module_inlines(s),
         "suites": suites,
         "moved_includes": moved,
         "module": mod,
@@ -426,7 +532,7 @@ def scan(hpath):
         "held_includes": held,
         "owns_state": bool(find_context(csrc)),
         "brief": first_sentence(doc_tags(doc_above(s, s.find("#ifndef")))[0]),
-        "entries": entries,
+        "entries": resolve_result_collisions(entries, collide_notes),
     }
 
 
@@ -487,6 +593,45 @@ def ns_doc(spec, args_types, results):
     return out
 
 
+def require_gate(spec):
+    """Refuse a spec with no enable gate rather than writing `#if` with nothing after it.
+
+    The gate is read off the header, so an empty one means the pattern did not match what this
+    module actually uses - j1939 is gated on PROTOCORE_NEED_J1939. Guessing produces a header that
+    cannot preprocess, which is a worse answer than stopping here.
+    """
+    if not spec.get("gate"):
+        raise SystemExit(
+            "spec has no gate: the header's `#if PROTOCORE_..._<MOD>` was not recognized.\n"
+            "  State it in the spec as \"gate\": \"PROTOCORE_ENABLE_<MOD>\" (or NEED) and run gen again."
+        )
+
+
+def dropped_names(spec, original, regenerated):
+    """Names the old header defined that the new one does not, other than the entries it converted.
+
+    A regenerated header is assembled from the parts the tool recognizes, so a part it does not
+    recognize is not rewritten, it is deleted. Six `static inline` predicates went that way out of
+    cia402.h and the only sign was a link error. Reported by name, so the next one is seen here.
+    """
+    flat = {e["flat"] for e in spec["entries"]}
+    defined = re.compile(r"^(?:#[ \t]*define[ \t]+(\w+)|.*?\b(\w+)\s*\([^;]*\)\s*(?:\{|;))", re.M)
+    out = []
+    for m in defined.finditer(strip_comments(original)):
+        name = m.group(1) or m.group(2)
+        if not name or name in flat or name in out:
+            continue
+        if not re.search(r"(?<![\w])%s(?![\w])" % re.escape(name), regenerated):
+            out.append(name)
+    return out
+
+
+def strip_comments(s):
+    """The text with comments blanked, so a name mentioned only in prose does not count as defined."""
+    mask = code_mask(s)
+    return "".join(c if mask[i] or c == "\n" else " " for i, c in enumerate(s))
+
+
 def gen_header(spec, original):
     """Rebuild the header: keep its file comment, replace everything inside the gate."""
     obj, ns = spec["object"], spec["ns"]
@@ -498,9 +643,18 @@ def gen_header(spec, original):
         if t not in spec.get("drop_types", []):
             lines.append(t)
             lines.append("")
+    for t in spec.get("inlines", []):
+        lines.append(t)
+        lines.append("")
     for t in foreign_types(spec):
-        lines.append("/** @brief %s, as the caller already knows it. */" % t)
-        lines.append("struct %s;" % t)
+        # A typedef cannot be forward-declared, so its own header comes in; only a struct tag takes
+        # the declaration.
+        where = defining_header(t)
+        if where:
+            lines.append('#include "%s" // %s: the type a parameter points at' % (where, t))
+        else:
+            lines.append("/** @brief %s, as the caller already knows it. */" % t)
+            lines.append("struct %s;" % t)
         lines.append("")
     args_types = []
     for e in spec["entries"]:
@@ -515,7 +669,9 @@ def gen_header(spec, original):
         for p in e["params"]:
             t = p["type"]
             base = t.replace("const", " ").replace("*", " ").strip()
-            if base in fw:
+            # Only where the declaration above is a struct tag. Where the type came in by include it
+            # is already spelled correctly, and prefixing `struct` would name a different type.
+            if base in fw and not defining_header(base):
                 t = t.replace(base, "struct " + base)
             # A parameter's array declarator is a pointer - `uint8_t out[2]` is `uint8_t *out`.
             # Copying the bound onto a struct member makes a real array, which cannot be assigned,
@@ -620,7 +776,7 @@ def rewrite_calls(spec, roots=("src", "test")):
                 s = io.open(p, encoding="utf-8", errors="replace").read()
                 if not pat.search(s):
                     continue
-                at, n = 0, 0
+                at, n, before = 0, 0, len(skipped)
                 mask = code_mask(s)
                 while True:
                     m = pat.search(s, at)
@@ -655,13 +811,16 @@ def rewrite_calls(spec, roots=("src", "test")):
                     except ValueError as ex:
                         skipped.append((rel, s[: m.start()].count("\n") + 1, str(ex)))
                         at = m.end()
-                if n:
+                # A file whose every call site was skipped still gets the include and the borrow: the
+                # hand conversion those skips ask for names both, and a benchmark whose calls all sit
+                # inside DBENCH_OP is exactly that file.
+                if n or len(skipped) > before:
                     for inc in spec.get("moved_includes", []):
                         if inc not in s:
                             k = s.index("#include")
                             s = s[:k] + "#include %s\n" % inc + s[k:]
                     s = declare_work(s, spec)
-                    print("   %-72s %d" % (rel, n))
+                    print("   %-72s %d%s" % (rel, n, "" if n else "  (all skipped; borrow declared)"))
                     emit(p, s)
                     total += n
     return total, skipped
@@ -697,6 +856,32 @@ def declare_work(s, spec):
     return s[:k] + decl + s[k:]
 
 
+def drop_self_assign(s, obj):
+    """Take out `Obj.x = Obj.x;`, moving a trailing comment onto the call above it."""
+    s = re.sub(
+        r"(?m)^([ \t]*\w+\(work\);)[ \t]*\r?\n[ \t]*%s\.(\w+) = %s\.\2;[ \t]*(//[^\n]*?)[ \t]*\r?\n"
+        % (re.escape(obj), re.escape(obj)),
+        lambda m: "%s %s\n" % (m.group(1), m.group(3)),
+        s,
+    )
+    return re.sub(r"(?m)^[ \t]*%s\.(\w+) = %s\.\1;[ \t]*\r?\n" % (re.escape(obj), re.escape(obj)), "", s)
+
+
+def enclosing_has_work(s, pos):
+    """True when the function the call at pos sits in takes a `work` parameter.
+
+    An entry takes the borrow, so a self-call inside one passes it straight on. A module's own
+    private helper does not, and `helper(work)` written there names an identifier that is not
+    declared. profibus's three telegram parsers are that shape.
+    """
+    prev = s.rfind("\n}", 0, pos)  # a definition ends at a brace in column 1
+    head = s[prev + 2 : pos] if prev >= 0 else s[:pos]
+    m = None
+    for m in re.finditer(r"^[\w][\w \t\*]*\s[\*]?\w+\s*\(([^;{)]*)\)\s*\{", head, re.M):
+        pass  # the last one that opened is the one this call is inside
+    return bool(m) and "work" in m.group(1)
+
+
 def land_returns(body, obj, result):
     """`return X;` becomes the result member assigned, then a bare `return;` at the original
     indentation. The one at the very end of the body goes: falling off a void entry is the same
@@ -716,11 +901,15 @@ def land_returns(body, obj, result):
         while j < len(body) and not (body[j] == ";" and bmask[j]):
             j += 1
         value = body[mm.end() : j].strip()
+        # A comment after the `;` describes the value, so it travels with it onto the assignment
+        # rather than staying behind on a bare `return;` that says nothing.
+        tail = re.match(r"[ \t]*(//[^\n]*?)[ \t]*(?=\n)", body[j + 1 :])
         if j < len(body) and value:
-            spans.append((mm.start(), j + 1, value))
-    for a, b, value in reversed(spans):
+            spans.append((mm.start(), j + 1 + (tail.end() if tail else 0), value, tail.group(1) if tail else ""))
+    for a, b, value, note in reversed(spans):
         indent = re.match(r"[ \t]*", body[body.rfind("\n", 0, a) + 1 :]).group(0)
-        body = body[:a] + "%s.%s = %s;\n%sreturn;" % (obj, result, value, indent) + body[b:]
+        lead = "%s.%s = %s;%s" % (obj, result, value, " " + note if note else "")
+        body = body[:a] + "%s\n%sreturn;" % (lead, indent) + body[b:]
     mt = re.search(r"\n[ \t]*return;[ \t]*(//[^\n]*?)[ \t]*\n?\s*$", body)
     if mt:
         body = body[: mt.start()].rstrip() + " " + mt.group(1) + "\n"
@@ -865,6 +1054,14 @@ def restructure_source(spec):
             notes.append("%s: self-call arity %d != %d" % (e["flat"], len(a), len(e["params"])))
             at = m.end()
             continue
+        if not enclosing_has_work(s, m.start()):
+            notes.append(
+                "%s self-call at line %d is inside a helper with no `work` parameter; give the helper "
+                "`uint8_t *restrict work` and read its operands off the Ns args"
+                % (e["flat"], s[: m.start()].count(chr(10)) + 1)
+            )
+            at = m.end()
+            continue
         staging = ["%s.%s_args.%s = %s;" % (obj, e["entry"], q["name"], v) for q, v in zip(e["params"], a)]
         staging.append("%s_%s(work);" % (spec["module"], e["entry"]))
         try:
@@ -877,8 +1074,10 @@ def restructure_source(spec):
             at = m.end()
 
     # `return other_entry(...);` becomes the staging, the call, and then the result member assigned
-    # to itself - the value is already where the caller reads it. Drop the self-assignment.
-    s = re.sub(r"(?m)^[ \t]*%s\.(\w+) = %s\.\1;[ \t]*\r?\n" % (re.escape(obj), re.escape(obj)), "", s)
+    # to itself - the value is already where the caller reads it. Drop the self-assignment. A comment
+    # the return carried describes the call, so it rides up onto it rather than going with the line;
+    # enip's `return protocore_eip_build(...); // no command-specific data` is the shape.
+    s = drop_self_assign(s, obj)
 
     # An entry this file calls before the definition it sits above needs a prototype: without one
     # the call is an implicit declaration with external linkage, and the `static` definition below
@@ -1129,7 +1328,7 @@ def main():
         else:
             print("funnelled:", arg, "->", borrow)
             emit(p, out)
-        for x in notes:
+        for x in dict.fromkeys(notes):  # one line per distinct note: a rescan re-reports each skip
             print("   NOTE", x)
         return 0
     if cmd == "scan":
@@ -1168,11 +1367,15 @@ def main():
             spec.setdefault("span", "%s_work" % spec["module"])
         hp = os.path.join(R, spec["header"].replace("/", os.sep))
         original = io.open(hp, encoding="utf-8").read()
+        require_gate(spec)
         print("header:", spec["header"])
-        emit(hp, gen_header(spec, original))
+        regenerated = gen_header(spec, original)
+        for name in dropped_names(spec, original, regenerated):
+            print("   NOTE dropped from the header: %s" % name)
+        emit(hp, regenerated)
         print("source:", spec["source"])
         notes = restructure_source(spec)
-        for x in notes:
+        for x in dict.fromkeys(notes):  # one line per distinct note: a rescan re-reports each skip
             print("   NOTE", x)
         print("call sites:")
         total, skipped = rewrite_calls(spec)

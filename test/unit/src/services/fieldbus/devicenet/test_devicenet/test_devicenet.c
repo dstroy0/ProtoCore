@@ -12,9 +12,12 @@
 // outside its own group collides with another group's traffic on a live segment.
 
 #include "services/fieldbus/devicenet/devicenet.h"
+#include "shared/can/can.h"
 #include <string.h>
 
 #include <unity.h>
+
+static uint8_t devicenet_work[16]; // the borrow an entry takes; Devicenet never reads it
 
 void setUp(void)
 {
@@ -71,12 +74,19 @@ void test_group_ranges_match_the_identifier_allocation(void)
     for (size_t i = 0; i < sizeof(EDGES) / sizeof(EDGES[0]); i++)
     {
         uint32_t id = 0xFFFFFFFFu;
-        TEST_ASSERT_TRUE_MESSAGE(protocore_devicenet_encode_id(&id, EDGES[i].group, EDGES[i].msg_id, EDGES[i].mac_id),
-                                 "encode refused a legal identifier");
+        Devicenet.encode_id_args.id = &id;
+        Devicenet.encode_id_args.group = EDGES[i].group;
+        Devicenet.encode_id_args.msg_id = EDGES[i].msg_id;
+        Devicenet.encode_id_args.mac_id = EDGES[i].mac_id;
+        Devicenet.encode_id(devicenet_work);
+        TEST_ASSERT_TRUE_MESSAGE(Devicenet.ok, "encode refused a legal identifier");
         TEST_ASSERT_EQUAL_HEX32(EDGES[i].id, id);
 
         DeviceNetId out;
-        TEST_ASSERT_TRUE(protocore_devicenet_decode_id(id, &out));
+        Devicenet.decode_id_args.can_id = id;
+        Devicenet.decode_id_args.out = &out;
+        Devicenet.decode_id(devicenet_work);
+        TEST_ASSERT_TRUE(Devicenet.ok);
         TEST_ASSERT_EQUAL_INT_MESSAGE(EDGES[i].group, out.group, "identifier decoded into the wrong group");
         TEST_ASSERT_EQUAL_UINT8(EDGES[i].msg_id, out.msg_id);
         if (EDGES[i].group != DEVICENET_GROUP_4) // Group 4 carries no MAC id
@@ -92,11 +102,26 @@ void test_group_ranges_match_the_identifier_allocation(void)
 void test_group_three_message_id_seven_has_no_identifier(void)
 {
     uint32_t id = 0;
-    TEST_ASSERT_TRUE(protocore_devicenet_encode_id(&id, DEVICENET_GROUP_3, 6, 63));
+    Devicenet.encode_id_args.id = &id;
+    Devicenet.encode_id_args.group = DEVICENET_GROUP_3;
+    Devicenet.encode_id_args.msg_id = 6;
+    Devicenet.encode_id_args.mac_id = 63;
+    Devicenet.encode_id(devicenet_work);
+    TEST_ASSERT_TRUE(Devicenet.ok);
     TEST_ASSERT_EQUAL_HEX32(0x7BFu, id); // the top of Group 3
 
-    TEST_ASSERT_FALSE(protocore_devicenet_encode_id(&id, DEVICENET_GROUP_3, 7, 0));
-    TEST_ASSERT_FALSE(protocore_devicenet_encode_id(&id, DEVICENET_GROUP_3, 7, 63));
+    Devicenet.encode_id_args.id = &id;
+    Devicenet.encode_id_args.group = DEVICENET_GROUP_3;
+    Devicenet.encode_id_args.msg_id = 7;
+    Devicenet.encode_id_args.mac_id = 0;
+    Devicenet.encode_id(devicenet_work);
+    TEST_ASSERT_FALSE(Devicenet.ok);
+    Devicenet.encode_id_args.id = &id;
+    Devicenet.encode_id_args.group = DEVICENET_GROUP_3;
+    Devicenet.encode_id_args.msg_id = 7;
+    Devicenet.encode_id_args.mac_id = 63;
+    Devicenet.encode_id(devicenet_work);
+    TEST_ASSERT_FALSE(Devicenet.ok);
 }
 
 // Everything the encoder emits must decode back to the group, message id and MAC id it was given.
@@ -108,9 +133,17 @@ void test_identifier_round_trip(void)
         {
             uint32_t id;
             DeviceNetId out;
-            TEST_ASSERT_TRUE(protocore_devicenet_encode_id(&id, DEVICENET_GROUP_1, (uint8_t)msg, (uint8_t)mac));
+            Devicenet.encode_id_args.id = &id;
+            Devicenet.encode_id_args.group = DEVICENET_GROUP_1;
+            Devicenet.encode_id_args.msg_id = (uint8_t)msg;
+            Devicenet.encode_id_args.mac_id = (uint8_t)mac;
+            Devicenet.encode_id(devicenet_work);
+            TEST_ASSERT_TRUE(Devicenet.ok);
             TEST_ASSERT_TRUE(id <= 0x3FFu);
-            TEST_ASSERT_TRUE(protocore_devicenet_decode_id(id, &out));
+            Devicenet.decode_id_args.can_id = id;
+            Devicenet.decode_id_args.out = &out;
+            Devicenet.decode_id(devicenet_work);
+            TEST_ASSERT_TRUE(Devicenet.ok);
             TEST_ASSERT_EQUAL_INT(DEVICENET_GROUP_1, out.group);
             TEST_ASSERT_EQUAL_UINT8((uint8_t)msg, out.msg_id);
             TEST_ASSERT_EQUAL_UINT8((uint8_t)mac, out.mac_id);
@@ -122,9 +155,17 @@ void test_identifier_round_trip(void)
         {
             uint32_t id;
             DeviceNetId out;
-            TEST_ASSERT_TRUE(protocore_devicenet_encode_id(&id, DEVICENET_GROUP_2, (uint8_t)msg, (uint8_t)mac));
+            Devicenet.encode_id_args.id = &id;
+            Devicenet.encode_id_args.group = DEVICENET_GROUP_2;
+            Devicenet.encode_id_args.msg_id = (uint8_t)msg;
+            Devicenet.encode_id_args.mac_id = (uint8_t)mac;
+            Devicenet.encode_id(devicenet_work);
+            TEST_ASSERT_TRUE(Devicenet.ok);
             TEST_ASSERT_TRUE(id >= 0x400u && id <= 0x5FFu);
-            TEST_ASSERT_TRUE(protocore_devicenet_decode_id(id, &out));
+            Devicenet.decode_id_args.can_id = id;
+            Devicenet.decode_id_args.out = &out;
+            Devicenet.decode_id(devicenet_work);
+            TEST_ASSERT_TRUE(Devicenet.ok);
             TEST_ASSERT_EQUAL_INT(DEVICENET_GROUP_2, out.group);
             TEST_ASSERT_EQUAL_UINT8((uint8_t)msg, out.msg_id);
             TEST_ASSERT_EQUAL_UINT8((uint8_t)mac, out.mac_id);
@@ -136,9 +177,17 @@ void test_identifier_round_trip(void)
         {
             uint32_t id;
             DeviceNetId out;
-            TEST_ASSERT_TRUE(protocore_devicenet_encode_id(&id, DEVICENET_GROUP_3, (uint8_t)msg, (uint8_t)mac));
+            Devicenet.encode_id_args.id = &id;
+            Devicenet.encode_id_args.group = DEVICENET_GROUP_3;
+            Devicenet.encode_id_args.msg_id = (uint8_t)msg;
+            Devicenet.encode_id_args.mac_id = (uint8_t)mac;
+            Devicenet.encode_id(devicenet_work);
+            TEST_ASSERT_TRUE(Devicenet.ok);
             TEST_ASSERT_TRUE(id >= 0x600u && id <= 0x7BFu);
-            TEST_ASSERT_TRUE(protocore_devicenet_decode_id(id, &out));
+            Devicenet.decode_id_args.can_id = id;
+            Devicenet.decode_id_args.out = &out;
+            Devicenet.decode_id(devicenet_work);
+            TEST_ASSERT_TRUE(Devicenet.ok);
             TEST_ASSERT_EQUAL_INT(DEVICENET_GROUP_3, out.group);
             TEST_ASSERT_EQUAL_UINT8((uint8_t)msg, out.msg_id);
             TEST_ASSERT_EQUAL_UINT8((uint8_t)mac, out.mac_id);
@@ -148,9 +197,17 @@ void test_identifier_round_trip(void)
     {
         uint32_t id;
         DeviceNetId out;
-        TEST_ASSERT_TRUE(protocore_devicenet_encode_id(&id, DEVICENET_GROUP_4, (uint8_t)msg, 0));
+        Devicenet.encode_id_args.id = &id;
+        Devicenet.encode_id_args.group = DEVICENET_GROUP_4;
+        Devicenet.encode_id_args.msg_id = (uint8_t)msg;
+        Devicenet.encode_id_args.mac_id = 0;
+        Devicenet.encode_id(devicenet_work);
+        TEST_ASSERT_TRUE(Devicenet.ok);
         TEST_ASSERT_TRUE(id >= 0x7C0u && id <= 0x7EFu);
-        TEST_ASSERT_TRUE(protocore_devicenet_decode_id(id, &out));
+        Devicenet.decode_id_args.can_id = id;
+        Devicenet.decode_id_args.out = &out;
+        Devicenet.decode_id(devicenet_work);
+        TEST_ASSERT_TRUE(Devicenet.ok);
         TEST_ASSERT_EQUAL_INT(DEVICENET_GROUP_4, out.group);
         TEST_ASSERT_EQUAL_UINT8((uint8_t)msg, out.msg_id);
     }
@@ -161,17 +218,37 @@ void test_identifier_round_trip(void)
 void test_duplicate_mac_id_check_identifier(void)
 {
     uint32_t id = 0;
-    TEST_ASSERT_TRUE(protocore_devicenet_encode_id(&id, DEVICENET_GROUP_2, DEVICENET_G2_DUP_MAC_CHECK, 0));
+    Devicenet.encode_id_args.id = &id;
+    Devicenet.encode_id_args.group = DEVICENET_GROUP_2;
+    Devicenet.encode_id_args.msg_id = DEVICENET_G2_DUP_MAC_CHECK;
+    Devicenet.encode_id_args.mac_id = 0;
+    Devicenet.encode_id(devicenet_work);
+    TEST_ASSERT_TRUE(Devicenet.ok);
     TEST_ASSERT_EQUAL_HEX32(0x407u, id);
 
-    TEST_ASSERT_TRUE(protocore_devicenet_encode_id(&id, DEVICENET_GROUP_2, DEVICENET_G2_DUP_MAC_CHECK, 63));
+    Devicenet.encode_id_args.id = &id;
+    Devicenet.encode_id_args.group = DEVICENET_GROUP_2;
+    Devicenet.encode_id_args.msg_id = DEVICENET_G2_DUP_MAC_CHECK;
+    Devicenet.encode_id_args.mac_id = 63;
+    Devicenet.encode_id(devicenet_work);
+    TEST_ASSERT_TRUE(Devicenet.ok);
     TEST_ASSERT_EQUAL_HEX32(0x5FFu, id);
 
     // A master's explicit request to slave MAC 5: 0x400 | (5 << 3) | 4 = 0x42C.
-    TEST_ASSERT_TRUE(protocore_devicenet_encode_id(&id, DEVICENET_GROUP_2, DEVICENET_G2_UNCONNECTED_EXPLICIT_REQ, 5));
+    Devicenet.encode_id_args.id = &id;
+    Devicenet.encode_id_args.group = DEVICENET_GROUP_2;
+    Devicenet.encode_id_args.msg_id = DEVICENET_G2_UNCONNECTED_EXPLICIT_REQ;
+    Devicenet.encode_id_args.mac_id = 5;
+    Devicenet.encode_id(devicenet_work);
+    TEST_ASSERT_TRUE(Devicenet.ok);
     TEST_ASSERT_EQUAL_HEX32(0x42Cu, id);
     // The slave's response on message id 3: 0x400 | (5 << 3) | 3 = 0x42B.
-    TEST_ASSERT_TRUE(protocore_devicenet_encode_id(&id, DEVICENET_GROUP_2, DEVICENET_G2_EXPLICIT_RESPONSE, 5));
+    Devicenet.encode_id_args.id = &id;
+    Devicenet.encode_id_args.group = DEVICENET_GROUP_2;
+    Devicenet.encode_id_args.msg_id = DEVICENET_G2_EXPLICIT_RESPONSE;
+    Devicenet.encode_id_args.mac_id = 5;
+    Devicenet.encode_id(devicenet_work);
+    TEST_ASSERT_TRUE(Devicenet.ok);
     TEST_ASSERT_EQUAL_HEX32(0x42Bu, id);
 }
 
@@ -179,44 +256,137 @@ void test_duplicate_mac_id_check_identifier(void)
 void test_invalid_identifiers_and_fields(void)
 {
     DeviceNetId out;
-    TEST_ASSERT_TRUE(protocore_devicenet_decode_id(0x7EFu, &out));
-    TEST_ASSERT_FALSE(protocore_devicenet_decode_id(0x7F0u, &out));
-    TEST_ASSERT_FALSE(protocore_devicenet_decode_id(0x7FFu, &out));
-    TEST_ASSERT_FALSE(protocore_devicenet_decode_id(0x600u, NULL));
+    Devicenet.decode_id_args.can_id = 0x7EFu;
+    Devicenet.decode_id_args.out = &out;
+    Devicenet.decode_id(devicenet_work);
+    TEST_ASSERT_TRUE(Devicenet.ok);
+    Devicenet.decode_id_args.can_id = 0x7F0u;
+    Devicenet.decode_id_args.out = &out;
+    Devicenet.decode_id(devicenet_work);
+    TEST_ASSERT_FALSE(Devicenet.ok);
+    Devicenet.decode_id_args.can_id = 0x7FFu;
+    Devicenet.decode_id_args.out = &out;
+    Devicenet.decode_id(devicenet_work);
+    TEST_ASSERT_FALSE(Devicenet.ok);
+    Devicenet.decode_id_args.can_id = 0x600u;
+    Devicenet.decode_id_args.out = NULL;
+    Devicenet.decode_id(devicenet_work);
+    TEST_ASSERT_FALSE(Devicenet.ok);
 
     uint32_t id;
-    TEST_ASSERT_FALSE(protocore_devicenet_encode_id(NULL, DEVICENET_GROUP_1, 0, 0));
-    TEST_ASSERT_FALSE(protocore_devicenet_encode_id(&id, DEVICENET_GROUP_1, 0, 64));    // MAC is 6 bits
-    TEST_ASSERT_FALSE(protocore_devicenet_encode_id(&id, DEVICENET_GROUP_1, 16, 0));    // Group 1 msg id is 4 bits
-    TEST_ASSERT_FALSE(protocore_devicenet_encode_id(&id, DEVICENET_GROUP_2, 8, 0));     // Group 2 msg id is 3 bits
-    TEST_ASSERT_FALSE(protocore_devicenet_encode_id(&id, DEVICENET_GROUP_4, 0x30u, 0)); // Group 4 tops out at 0x2F
-    TEST_ASSERT_FALSE(protocore_devicenet_encode_id(&id, (DeviceNetGroup)0, 0, 0));
-    TEST_ASSERT_FALSE(protocore_devicenet_encode_id(&id, (DeviceNetGroup)5, 0, 0));
+    Devicenet.encode_id_args.id = NULL;
+    Devicenet.encode_id_args.group = DEVICENET_GROUP_1;
+    Devicenet.encode_id_args.msg_id = 0;
+    Devicenet.encode_id_args.mac_id = 0;
+    Devicenet.encode_id(devicenet_work);
+    TEST_ASSERT_FALSE(Devicenet.ok);
+    Devicenet.encode_id_args.id = &id;
+    Devicenet.encode_id_args.group = DEVICENET_GROUP_1;
+    Devicenet.encode_id_args.msg_id = 0;
+    Devicenet.encode_id_args.mac_id = 64;
+    Devicenet.encode_id(devicenet_work);
+    TEST_ASSERT_FALSE(Devicenet.ok); // MAC is 6 bits
+    Devicenet.encode_id_args.id = &id;
+    Devicenet.encode_id_args.group = DEVICENET_GROUP_1;
+    Devicenet.encode_id_args.msg_id = 16;
+    Devicenet.encode_id_args.mac_id = 0;
+    Devicenet.encode_id(devicenet_work);
+    TEST_ASSERT_FALSE(Devicenet.ok); // Group 1 msg id is 4 bits
+    Devicenet.encode_id_args.id = &id;
+    Devicenet.encode_id_args.group = DEVICENET_GROUP_2;
+    Devicenet.encode_id_args.msg_id = 8;
+    Devicenet.encode_id_args.mac_id = 0;
+    Devicenet.encode_id(devicenet_work);
+    TEST_ASSERT_FALSE(Devicenet.ok); // Group 2 msg id is 3 bits
+    Devicenet.encode_id_args.id = &id;
+    Devicenet.encode_id_args.group = DEVICENET_GROUP_4;
+    Devicenet.encode_id_args.msg_id = 0x30u;
+    Devicenet.encode_id_args.mac_id = 0;
+    Devicenet.encode_id(devicenet_work);
+    TEST_ASSERT_FALSE(Devicenet.ok); // Group 4 tops out at 0x2F
+    Devicenet.encode_id_args.id = &id;
+    Devicenet.encode_id_args.group = (DeviceNetGroup)0;
+    Devicenet.encode_id_args.msg_id = 0;
+    Devicenet.encode_id_args.mac_id = 0;
+    Devicenet.encode_id(devicenet_work);
+    TEST_ASSERT_FALSE(Devicenet.ok);
+    Devicenet.encode_id_args.id = &id;
+    Devicenet.encode_id_args.group = (DeviceNetGroup)5;
+    Devicenet.encode_id_args.msg_id = 0;
+    Devicenet.encode_id_args.mac_id = 0;
+    Devicenet.encode_id(devicenet_work);
+    TEST_ASSERT_FALSE(Devicenet.ok);
 }
 
 // The explicit-message header octet is FRAG | XID | MAC id, with the MAC clipped to its 6 bits.
 void test_message_header_octet(void)
 {
-    TEST_ASSERT_EQUAL_HEX8(0x00u, protocore_devicenet_msg_header(PROTO_FALSE, PROTO_FALSE, 0));
-    TEST_ASSERT_EQUAL_HEX8(0x05u, protocore_devicenet_msg_header(PROTO_FALSE, PROTO_FALSE, 5));
-    TEST_ASSERT_EQUAL_HEX8(0x45u, protocore_devicenet_msg_header(PROTO_FALSE, PROTO_TRUE, 5));
-    TEST_ASSERT_EQUAL_HEX8(0x85u, protocore_devicenet_msg_header(PROTO_TRUE, PROTO_FALSE, 5));
-    TEST_ASSERT_EQUAL_HEX8(0xC5u, protocore_devicenet_msg_header(PROTO_TRUE, PROTO_TRUE, 5));
-    TEST_ASSERT_EQUAL_HEX8(0x3Fu, protocore_devicenet_msg_header(PROTO_FALSE, PROTO_FALSE, 63));
+    Devicenet.msg_header_args.frag = PROTO_FALSE;
+    Devicenet.msg_header_args.xid = PROTO_FALSE;
+    Devicenet.msg_header_args.mac_id = 0;
+    Devicenet.msg_header(devicenet_work);
+    TEST_ASSERT_EQUAL_HEX8(0x00u, Devicenet.value);
+    Devicenet.msg_header_args.frag = PROTO_FALSE;
+    Devicenet.msg_header_args.xid = PROTO_FALSE;
+    Devicenet.msg_header_args.mac_id = 5;
+    Devicenet.msg_header(devicenet_work);
+    TEST_ASSERT_EQUAL_HEX8(0x05u, Devicenet.value);
+    Devicenet.msg_header_args.frag = PROTO_FALSE;
+    Devicenet.msg_header_args.xid = PROTO_TRUE;
+    Devicenet.msg_header_args.mac_id = 5;
+    Devicenet.msg_header(devicenet_work);
+    TEST_ASSERT_EQUAL_HEX8(0x45u, Devicenet.value);
+    Devicenet.msg_header_args.frag = PROTO_TRUE;
+    Devicenet.msg_header_args.xid = PROTO_FALSE;
+    Devicenet.msg_header_args.mac_id = 5;
+    Devicenet.msg_header(devicenet_work);
+    TEST_ASSERT_EQUAL_HEX8(0x85u, Devicenet.value);
+    Devicenet.msg_header_args.frag = PROTO_TRUE;
+    Devicenet.msg_header_args.xid = PROTO_TRUE;
+    Devicenet.msg_header_args.mac_id = 5;
+    Devicenet.msg_header(devicenet_work);
+    TEST_ASSERT_EQUAL_HEX8(0xC5u, Devicenet.value);
+    Devicenet.msg_header_args.frag = PROTO_FALSE;
+    Devicenet.msg_header_args.xid = PROTO_FALSE;
+    Devicenet.msg_header_args.mac_id = 63;
+    Devicenet.msg_header(devicenet_work);
+    TEST_ASSERT_EQUAL_HEX8(0x3Fu, Devicenet.value);
     // A MAC id wider than six bits cannot reach the flag bits.
-    TEST_ASSERT_EQUAL_HEX8(0x3Fu, protocore_devicenet_msg_header(PROTO_FALSE, PROTO_FALSE, 0xFF));
+    Devicenet.msg_header_args.frag = PROTO_FALSE;
+    Devicenet.msg_header_args.xid = PROTO_FALSE;
+    Devicenet.msg_header_args.mac_id = 0xFF;
+    Devicenet.msg_header(devicenet_work);
+    TEST_ASSERT_EQUAL_HEX8(0x3Fu, Devicenet.value);
 }
 
 // The fragmentation octet is type in the top two bits, a modulo-64 count in the low six.
 void test_fragmentation_octet(void)
 {
-    TEST_ASSERT_EQUAL_HEX8(0x00u, protocore_devicenet_frag_octet(DEVICENET_FRAG_FIRST, 0));
-    TEST_ASSERT_EQUAL_HEX8(0x41u, protocore_devicenet_frag_octet(DEVICENET_FRAG_MIDDLE, 1));
-    TEST_ASSERT_EQUAL_HEX8(0x82u, protocore_devicenet_frag_octet(DEVICENET_FRAG_LAST, 2));
-    TEST_ASSERT_EQUAL_HEX8(0xFFu, protocore_devicenet_frag_octet(DEVICENET_FRAG_ACK, 63));
+    Devicenet.frag_octet_args.type = DEVICENET_FRAG_FIRST;
+    Devicenet.frag_octet_args.count = 0;
+    Devicenet.frag_octet(devicenet_work);
+    TEST_ASSERT_EQUAL_HEX8(0x00u, Devicenet.value);
+    Devicenet.frag_octet_args.type = DEVICENET_FRAG_MIDDLE;
+    Devicenet.frag_octet_args.count = 1;
+    Devicenet.frag_octet(devicenet_work);
+    TEST_ASSERT_EQUAL_HEX8(0x41u, Devicenet.value);
+    Devicenet.frag_octet_args.type = DEVICENET_FRAG_LAST;
+    Devicenet.frag_octet_args.count = 2;
+    Devicenet.frag_octet(devicenet_work);
+    TEST_ASSERT_EQUAL_HEX8(0x82u, Devicenet.value);
+    Devicenet.frag_octet_args.type = DEVICENET_FRAG_ACK;
+    Devicenet.frag_octet_args.count = 63;
+    Devicenet.frag_octet(devicenet_work);
+    TEST_ASSERT_EQUAL_HEX8(0xFFu, Devicenet.value);
     // Neither field can overflow into the other.
-    TEST_ASSERT_EQUAL_HEX8(0x80u, protocore_devicenet_frag_octet(DEVICENET_FRAG_LAST, 64));
-    TEST_ASSERT_EQUAL_HEX8(0x3Fu, protocore_devicenet_frag_octet(0x3Fu, 63));
+    Devicenet.frag_octet_args.type = DEVICENET_FRAG_LAST;
+    Devicenet.frag_octet_args.count = 64;
+    Devicenet.frag_octet(devicenet_work);
+    TEST_ASSERT_EQUAL_HEX8(0x80u, Devicenet.value);
+    Devicenet.frag_octet_args.type = 0x3Fu;
+    Devicenet.frag_octet_args.count = 63;
+    Devicenet.frag_octet(devicenet_work);
+    TEST_ASSERT_EQUAL_HEX8(0x3Fu, Devicenet.value);
 }
 
 // A whole explicit message in one frame: the header octet then the CIP request, with FRAG clear.
@@ -225,8 +395,14 @@ void test_single_frame_explicit_message(void)
 {
     static const uint8_t CIP[6] = {0x0E, 0x02, 0x20, 0x01, 0x24, 0x01};
     CanFrame f;
-    TEST_ASSERT_TRUE(protocore_devicenet_build_explicit(&f, DEVICENET_GROUP_2, DEVICENET_G2_UNCONNECTED_EXPLICIT_REQ, 5,
-                                                        CIP, sizeof(CIP)));
+    Devicenet.build_explicit_args.out = &f;
+    Devicenet.build_explicit_args.group = DEVICENET_GROUP_2;
+    Devicenet.build_explicit_args.msg_id = DEVICENET_G2_UNCONNECTED_EXPLICIT_REQ;
+    Devicenet.build_explicit_args.mac_id = 5;
+    Devicenet.build_explicit_args.body = CIP;
+    Devicenet.build_explicit_args.body_len = sizeof(CIP);
+    Devicenet.build_explicit(devicenet_work);
+    TEST_ASSERT_TRUE(Devicenet.ok);
     TEST_ASSERT_EQUAL_HEX32(0x42Cu, f.id);
     TEST_ASSERT_FALSE(f.extended);
     TEST_ASSERT_FALSE(f.rtr);
@@ -236,16 +412,58 @@ void test_single_frame_explicit_message(void)
 
     // The header octet plus the body must fit the 8-octet CAN payload.
     static const uint8_t SEVEN[7] = {1, 2, 3, 4, 5, 6, 7};
-    TEST_ASSERT_TRUE(protocore_devicenet_build_explicit(&f, DEVICENET_GROUP_2, 4, 5, SEVEN, 7));
+    Devicenet.build_explicit_args.out = &f;
+    Devicenet.build_explicit_args.group = DEVICENET_GROUP_2;
+    Devicenet.build_explicit_args.msg_id = 4;
+    Devicenet.build_explicit_args.mac_id = 5;
+    Devicenet.build_explicit_args.body = SEVEN;
+    Devicenet.build_explicit_args.body_len = 7;
+    Devicenet.build_explicit(devicenet_work);
+    TEST_ASSERT_TRUE(Devicenet.ok);
     TEST_ASSERT_EQUAL_UINT8(8u, f.dlc);
     static const uint8_t EIGHT[8] = {1, 2, 3, 4, 5, 6, 7, 8};
-    TEST_ASSERT_FALSE(protocore_devicenet_build_explicit(&f, DEVICENET_GROUP_2, 4, 5, EIGHT, 8));
+    Devicenet.build_explicit_args.out = &f;
+    Devicenet.build_explicit_args.group = DEVICENET_GROUP_2;
+    Devicenet.build_explicit_args.msg_id = 4;
+    Devicenet.build_explicit_args.mac_id = 5;
+    Devicenet.build_explicit_args.body = EIGHT;
+    Devicenet.build_explicit_args.body_len = 8;
+    Devicenet.build_explicit(devicenet_work);
+    TEST_ASSERT_FALSE(Devicenet.ok);
 
-    TEST_ASSERT_TRUE(protocore_devicenet_build_explicit(&f, DEVICENET_GROUP_2, 4, 5, NULL, 0));
+    Devicenet.build_explicit_args.out = &f;
+    Devicenet.build_explicit_args.group = DEVICENET_GROUP_2;
+    Devicenet.build_explicit_args.msg_id = 4;
+    Devicenet.build_explicit_args.mac_id = 5;
+    Devicenet.build_explicit_args.body = NULL;
+    Devicenet.build_explicit_args.body_len = 0;
+    Devicenet.build_explicit(devicenet_work);
+    TEST_ASSERT_TRUE(Devicenet.ok);
     TEST_ASSERT_EQUAL_UINT8(1u, f.dlc);
-    TEST_ASSERT_FALSE(protocore_devicenet_build_explicit(NULL, DEVICENET_GROUP_2, 4, 5, CIP, 6));
-    TEST_ASSERT_FALSE(protocore_devicenet_build_explicit(&f, DEVICENET_GROUP_2, 4, 5, NULL, 3));
-    TEST_ASSERT_FALSE(protocore_devicenet_build_explicit(&f, DEVICENET_GROUP_2, 8, 5, CIP, 6)); // bad msg id
+    Devicenet.build_explicit_args.out = NULL;
+    Devicenet.build_explicit_args.group = DEVICENET_GROUP_2;
+    Devicenet.build_explicit_args.msg_id = 4;
+    Devicenet.build_explicit_args.mac_id = 5;
+    Devicenet.build_explicit_args.body = CIP;
+    Devicenet.build_explicit_args.body_len = 6;
+    Devicenet.build_explicit(devicenet_work);
+    TEST_ASSERT_FALSE(Devicenet.ok);
+    Devicenet.build_explicit_args.out = &f;
+    Devicenet.build_explicit_args.group = DEVICENET_GROUP_2;
+    Devicenet.build_explicit_args.msg_id = 4;
+    Devicenet.build_explicit_args.mac_id = 5;
+    Devicenet.build_explicit_args.body = NULL;
+    Devicenet.build_explicit_args.body_len = 3;
+    Devicenet.build_explicit(devicenet_work);
+    TEST_ASSERT_FALSE(Devicenet.ok);
+    Devicenet.build_explicit_args.out = &f;
+    Devicenet.build_explicit_args.group = DEVICENET_GROUP_2;
+    Devicenet.build_explicit_args.msg_id = 8;
+    Devicenet.build_explicit_args.mac_id = 5;
+    Devicenet.build_explicit_args.body = CIP;
+    Devicenet.build_explicit_args.body_len = 6;
+    Devicenet.build_explicit(devicenet_work);
+    TEST_ASSERT_FALSE(Devicenet.ok); // bad msg id
 }
 
 // A fragment frame is header octet + fragmentation octet + up to 6 data octets: the two overhead
@@ -254,32 +472,105 @@ void test_fragment_frame_layout(void)
 {
     static const uint8_t SIX[6] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66};
     CanFrame f;
-    TEST_ASSERT_TRUE(protocore_devicenet_build_fragment(&f, DEVICENET_GROUP_2, 4, 5, PROTO_TRUE, DEVICENET_FRAG_FIRST,
-                                                        0, SIX, sizeof(SIX)));
+    Devicenet.build_fragment_args.out = &f;
+    Devicenet.build_fragment_args.group = DEVICENET_GROUP_2;
+    Devicenet.build_fragment_args.msg_id = 4;
+    Devicenet.build_fragment_args.mac_id = 5;
+    Devicenet.build_fragment_args.xid = PROTO_TRUE;
+    Devicenet.build_fragment_args.frag_type = DEVICENET_FRAG_FIRST;
+    Devicenet.build_fragment_args.frag_count = 0;
+    Devicenet.build_fragment_args.data = SIX;
+    Devicenet.build_fragment_args.data_len = sizeof(SIX);
+    Devicenet.build_fragment(devicenet_work);
+    TEST_ASSERT_TRUE(Devicenet.ok);
     TEST_ASSERT_EQUAL_HEX32(0x42Cu, f.id);
     TEST_ASSERT_EQUAL_UINT8(8u, f.dlc);
     TEST_ASSERT_EQUAL_HEX8(0xC5u, f.data[0]); // FRAG | XID | MAC 5
     TEST_ASSERT_EQUAL_HEX8(0x00u, f.data[1]); // FIRST, count 0
     TEST_ASSERT_EQUAL_HEX8_ARRAY(SIX, f.data + 2, 6);
 
-    TEST_ASSERT_TRUE(
-        protocore_devicenet_build_fragment(&f, DEVICENET_GROUP_2, 4, 5, PROTO_FALSE, DEVICENET_FRAG_LAST, 3, SIX, 2));
+    Devicenet.build_fragment_args.out = &f;
+    Devicenet.build_fragment_args.group = DEVICENET_GROUP_2;
+    Devicenet.build_fragment_args.msg_id = 4;
+    Devicenet.build_fragment_args.mac_id = 5;
+    Devicenet.build_fragment_args.xid = PROTO_FALSE;
+    Devicenet.build_fragment_args.frag_type = DEVICENET_FRAG_LAST;
+    Devicenet.build_fragment_args.frag_count = 3;
+    Devicenet.build_fragment_args.data = SIX;
+    Devicenet.build_fragment_args.data_len = 2;
+    Devicenet.build_fragment(devicenet_work);
+    TEST_ASSERT_TRUE(Devicenet.ok);
     TEST_ASSERT_EQUAL_UINT8(4u, f.dlc);
     TEST_ASSERT_EQUAL_HEX8(0x85u, f.data[0]); // FRAG set, XID clear
     TEST_ASSERT_EQUAL_HEX8(0x83u, f.data[1]); // LAST, count 3
 
     static const uint8_t SEVEN[7] = {1, 2, 3, 4, 5, 6, 7};
-    TEST_ASSERT_FALSE(protocore_devicenet_build_fragment(&f, DEVICENET_GROUP_2, 4, 5, PROTO_FALSE, DEVICENET_FRAG_FIRST,
-                                                         0, SEVEN, 7));
-    TEST_ASSERT_FALSE(protocore_devicenet_build_fragment(&f, DEVICENET_GROUP_2, 4, 5, PROTO_FALSE, 0x10u, 0, SIX, 6));
-    TEST_ASSERT_FALSE(
-        protocore_devicenet_build_fragment(&f, DEVICENET_GROUP_2, 4, 5, PROTO_FALSE, DEVICENET_FRAG_FIRST, 64, SIX, 6));
-    TEST_ASSERT_FALSE(
-        protocore_devicenet_build_fragment(&f, DEVICENET_GROUP_2, 4, 5, PROTO_FALSE, DEVICENET_FRAG_FIRST, 0, NULL, 4));
-    TEST_ASSERT_FALSE(protocore_devicenet_build_fragment(NULL, DEVICENET_GROUP_2, 4, 5, PROTO_FALSE,
-                                                         DEVICENET_FRAG_FIRST, 0, SIX, 6));
-    TEST_ASSERT_FALSE(
-        protocore_devicenet_build_fragment(&f, DEVICENET_GROUP_2, 8, 5, PROTO_FALSE, DEVICENET_FRAG_FIRST, 0, SIX, 6));
+    Devicenet.build_fragment_args.out = &f;
+    Devicenet.build_fragment_args.group = DEVICENET_GROUP_2;
+    Devicenet.build_fragment_args.msg_id = 4;
+    Devicenet.build_fragment_args.mac_id = 5;
+    Devicenet.build_fragment_args.xid = PROTO_FALSE;
+    Devicenet.build_fragment_args.frag_type = DEVICENET_FRAG_FIRST;
+    Devicenet.build_fragment_args.frag_count = 0;
+    Devicenet.build_fragment_args.data = SEVEN;
+    Devicenet.build_fragment_args.data_len = 7;
+    Devicenet.build_fragment(devicenet_work);
+    TEST_ASSERT_FALSE(Devicenet.ok);
+    Devicenet.build_fragment_args.out = &f;
+    Devicenet.build_fragment_args.group = DEVICENET_GROUP_2;
+    Devicenet.build_fragment_args.msg_id = 4;
+    Devicenet.build_fragment_args.mac_id = 5;
+    Devicenet.build_fragment_args.xid = PROTO_FALSE;
+    Devicenet.build_fragment_args.frag_type = 0x10u;
+    Devicenet.build_fragment_args.frag_count = 0;
+    Devicenet.build_fragment_args.data = SIX;
+    Devicenet.build_fragment_args.data_len = 6;
+    Devicenet.build_fragment(devicenet_work);
+    TEST_ASSERT_FALSE(Devicenet.ok);
+    Devicenet.build_fragment_args.out = &f;
+    Devicenet.build_fragment_args.group = DEVICENET_GROUP_2;
+    Devicenet.build_fragment_args.msg_id = 4;
+    Devicenet.build_fragment_args.mac_id = 5;
+    Devicenet.build_fragment_args.xid = PROTO_FALSE;
+    Devicenet.build_fragment_args.frag_type = DEVICENET_FRAG_FIRST;
+    Devicenet.build_fragment_args.frag_count = 64;
+    Devicenet.build_fragment_args.data = SIX;
+    Devicenet.build_fragment_args.data_len = 6;
+    Devicenet.build_fragment(devicenet_work);
+    TEST_ASSERT_FALSE(Devicenet.ok);
+    Devicenet.build_fragment_args.out = &f;
+    Devicenet.build_fragment_args.group = DEVICENET_GROUP_2;
+    Devicenet.build_fragment_args.msg_id = 4;
+    Devicenet.build_fragment_args.mac_id = 5;
+    Devicenet.build_fragment_args.xid = PROTO_FALSE;
+    Devicenet.build_fragment_args.frag_type = DEVICENET_FRAG_FIRST;
+    Devicenet.build_fragment_args.frag_count = 0;
+    Devicenet.build_fragment_args.data = NULL;
+    Devicenet.build_fragment_args.data_len = 4;
+    Devicenet.build_fragment(devicenet_work);
+    TEST_ASSERT_FALSE(Devicenet.ok);
+    Devicenet.build_fragment_args.out = NULL;
+    Devicenet.build_fragment_args.group = DEVICENET_GROUP_2;
+    Devicenet.build_fragment_args.msg_id = 4;
+    Devicenet.build_fragment_args.mac_id = 5;
+    Devicenet.build_fragment_args.xid = PROTO_FALSE;
+    Devicenet.build_fragment_args.frag_type = DEVICENET_FRAG_FIRST;
+    Devicenet.build_fragment_args.frag_count = 0;
+    Devicenet.build_fragment_args.data = SIX;
+    Devicenet.build_fragment_args.data_len = 6;
+    Devicenet.build_fragment(devicenet_work);
+    TEST_ASSERT_FALSE(Devicenet.ok);
+    Devicenet.build_fragment_args.out = &f;
+    Devicenet.build_fragment_args.group = DEVICENET_GROUP_2;
+    Devicenet.build_fragment_args.msg_id = 8;
+    Devicenet.build_fragment_args.mac_id = 5;
+    Devicenet.build_fragment_args.xid = PROTO_FALSE;
+    Devicenet.build_fragment_args.frag_type = DEVICENET_FRAG_FIRST;
+    Devicenet.build_fragment_args.frag_count = 0;
+    Devicenet.build_fragment_args.data = SIX;
+    Devicenet.build_fragment_args.data_len = 6;
+    Devicenet.build_fragment(devicenet_work);
+    TEST_ASSERT_FALSE(Devicenet.ok);
 }
 
 // A message with FRAG clear is complete in one frame, and the reassembled body excludes the header
@@ -288,20 +579,42 @@ void test_unfragmented_message_completes_immediately(void)
 {
     static const uint8_t BODY[5] = {0x05, 0x0E, 0x02, 0x20, 0x01}; // header octet + 4 body octets
     DeviceNetFragRx rx;
-    protocore_devicenet_frag_reset(&rx);
-    TEST_ASSERT_EQUAL_INT(DEVICENET_FRAG_COMPLETE, protocore_devicenet_frag_feed(&rx, BODY, sizeof(BODY)));
+    Devicenet.frag_reset_args.rx = &rx;
+    Devicenet.frag_reset(devicenet_work);
+    Devicenet.frag_feed_args.rx = &rx;
+    Devicenet.frag_feed_args.body = BODY;
+    Devicenet.frag_feed_args.body_len = sizeof(BODY);
+    Devicenet.frag_feed(devicenet_work);
+    TEST_ASSERT_EQUAL_INT(DEVICENET_FRAG_COMPLETE, Devicenet.frag);
     TEST_ASSERT_EQUAL_UINT16(4u, rx.len);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(BODY + 1, rx.buf, 4);
 
     // A header octet alone is a complete, empty message.
     static const uint8_t BARE[1] = {0x05};
-    TEST_ASSERT_EQUAL_INT(DEVICENET_FRAG_COMPLETE, protocore_devicenet_frag_feed(&rx, BARE, 1));
+    Devicenet.frag_feed_args.rx = &rx;
+    Devicenet.frag_feed_args.body = BARE;
+    Devicenet.frag_feed_args.body_len = 1;
+    Devicenet.frag_feed(devicenet_work);
+    TEST_ASSERT_EQUAL_INT(DEVICENET_FRAG_COMPLETE, Devicenet.frag);
     TEST_ASSERT_EQUAL_UINT16(0u, rx.len);
 
-    TEST_ASSERT_EQUAL_INT(DEVICENET_FRAG_IGNORED, protocore_devicenet_frag_feed(&rx, BODY, 0));
-    TEST_ASSERT_EQUAL_INT(DEVICENET_FRAG_IGNORED, protocore_devicenet_frag_feed(&rx, NULL, 5));
-    TEST_ASSERT_EQUAL_INT(DEVICENET_FRAG_IGNORED, protocore_devicenet_frag_feed(NULL, BODY, 5));
-    protocore_devicenet_frag_reset(NULL); // must not fault
+    Devicenet.frag_feed_args.rx = &rx;
+    Devicenet.frag_feed_args.body = BODY;
+    Devicenet.frag_feed_args.body_len = 0;
+    Devicenet.frag_feed(devicenet_work);
+    TEST_ASSERT_EQUAL_INT(DEVICENET_FRAG_IGNORED, Devicenet.frag);
+    Devicenet.frag_feed_args.rx = &rx;
+    Devicenet.frag_feed_args.body = NULL;
+    Devicenet.frag_feed_args.body_len = 5;
+    Devicenet.frag_feed(devicenet_work);
+    TEST_ASSERT_EQUAL_INT(DEVICENET_FRAG_IGNORED, Devicenet.frag);
+    Devicenet.frag_feed_args.rx = NULL;
+    Devicenet.frag_feed_args.body = BODY;
+    Devicenet.frag_feed_args.body_len = 5;
+    Devicenet.frag_feed(devicenet_work);
+    TEST_ASSERT_EQUAL_INT(DEVICENET_FRAG_IGNORED, Devicenet.frag);
+    Devicenet.frag_reset_args.rx = NULL;
+    Devicenet.frag_reset(devicenet_work); // must not fault
 }
 
 // A fragmented message: the fragment counts must run 0, 1, 2, ... and the reassembled body is the
@@ -312,22 +625,62 @@ void test_fragmented_message_reassembly(void)
     static const uint8_t SRC[14] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D};
     CanFrame f;
     DeviceNetFragRx rx;
-    protocore_devicenet_frag_reset(&rx);
+    Devicenet.frag_reset_args.rx = &rx;
+    Devicenet.frag_reset(devicenet_work);
 
-    TEST_ASSERT_TRUE(
-        protocore_devicenet_build_fragment(&f, DEVICENET_GROUP_2, 4, 5, PROTO_FALSE, DEVICENET_FRAG_FIRST, 0, SRC, 6));
-    TEST_ASSERT_EQUAL_INT(DEVICENET_FRAG_STARTED, protocore_devicenet_frag_feed(&rx, f.data, f.dlc));
+    Devicenet.build_fragment_args.out = &f;
+    Devicenet.build_fragment_args.group = DEVICENET_GROUP_2;
+    Devicenet.build_fragment_args.msg_id = 4;
+    Devicenet.build_fragment_args.mac_id = 5;
+    Devicenet.build_fragment_args.xid = PROTO_FALSE;
+    Devicenet.build_fragment_args.frag_type = DEVICENET_FRAG_FIRST;
+    Devicenet.build_fragment_args.frag_count = 0;
+    Devicenet.build_fragment_args.data = SRC;
+    Devicenet.build_fragment_args.data_len = 6;
+    Devicenet.build_fragment(devicenet_work);
+    TEST_ASSERT_TRUE(Devicenet.ok);
+    Devicenet.frag_feed_args.rx = &rx;
+    Devicenet.frag_feed_args.body = f.data;
+    Devicenet.frag_feed_args.body_len = f.dlc;
+    Devicenet.frag_feed(devicenet_work);
+    TEST_ASSERT_EQUAL_INT(DEVICENET_FRAG_STARTED, Devicenet.frag);
     TEST_ASSERT_TRUE(rx.active);
     TEST_ASSERT_EQUAL_UINT8(1u, rx.next_count);
 
-    TEST_ASSERT_TRUE(protocore_devicenet_build_fragment(&f, DEVICENET_GROUP_2, 4, 5, PROTO_FALSE, DEVICENET_FRAG_MIDDLE,
-                                                        1, SRC + 6, 6));
-    TEST_ASSERT_EQUAL_INT(DEVICENET_FRAG_PROGRESS, protocore_devicenet_frag_feed(&rx, f.data, f.dlc));
+    Devicenet.build_fragment_args.out = &f;
+    Devicenet.build_fragment_args.group = DEVICENET_GROUP_2;
+    Devicenet.build_fragment_args.msg_id = 4;
+    Devicenet.build_fragment_args.mac_id = 5;
+    Devicenet.build_fragment_args.xid = PROTO_FALSE;
+    Devicenet.build_fragment_args.frag_type = DEVICENET_FRAG_MIDDLE;
+    Devicenet.build_fragment_args.frag_count = 1;
+    Devicenet.build_fragment_args.data = SRC + 6;
+    Devicenet.build_fragment_args.data_len = 6;
+    Devicenet.build_fragment(devicenet_work);
+    TEST_ASSERT_TRUE(Devicenet.ok);
+    Devicenet.frag_feed_args.rx = &rx;
+    Devicenet.frag_feed_args.body = f.data;
+    Devicenet.frag_feed_args.body_len = f.dlc;
+    Devicenet.frag_feed(devicenet_work);
+    TEST_ASSERT_EQUAL_INT(DEVICENET_FRAG_PROGRESS, Devicenet.frag);
     TEST_ASSERT_EQUAL_UINT8(2u, rx.next_count);
 
-    TEST_ASSERT_TRUE(protocore_devicenet_build_fragment(&f, DEVICENET_GROUP_2, 4, 5, PROTO_FALSE, DEVICENET_FRAG_LAST,
-                                                        2, SRC + 12, 2));
-    TEST_ASSERT_EQUAL_INT(DEVICENET_FRAG_COMPLETE, protocore_devicenet_frag_feed(&rx, f.data, f.dlc));
+    Devicenet.build_fragment_args.out = &f;
+    Devicenet.build_fragment_args.group = DEVICENET_GROUP_2;
+    Devicenet.build_fragment_args.msg_id = 4;
+    Devicenet.build_fragment_args.mac_id = 5;
+    Devicenet.build_fragment_args.xid = PROTO_FALSE;
+    Devicenet.build_fragment_args.frag_type = DEVICENET_FRAG_LAST;
+    Devicenet.build_fragment_args.frag_count = 2;
+    Devicenet.build_fragment_args.data = SRC + 12;
+    Devicenet.build_fragment_args.data_len = 2;
+    Devicenet.build_fragment(devicenet_work);
+    TEST_ASSERT_TRUE(Devicenet.ok);
+    Devicenet.frag_feed_args.rx = &rx;
+    Devicenet.frag_feed_args.body = f.data;
+    Devicenet.frag_feed_args.body_len = f.dlc;
+    Devicenet.frag_feed(devicenet_work);
+    TEST_ASSERT_EQUAL_INT(DEVICENET_FRAG_COMPLETE, Devicenet.frag);
     TEST_ASSERT_FALSE(rx.active);
     TEST_ASSERT_EQUAL_UINT16(14u, rx.len);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(SRC, rx.buf, 14);
@@ -344,34 +697,71 @@ void test_reassembly_refusals(void)
     DeviceNetFragRx rx;
 
     // A middle fragment with no first one is an error.
-    protocore_devicenet_frag_reset(&rx);
-    TEST_ASSERT_EQUAL_INT(DEVICENET_FRAG_ERR, protocore_devicenet_frag_feed(&rx, MIDDLE_1, sizeof(MIDDLE_1)));
+    Devicenet.frag_reset_args.rx = &rx;
+    Devicenet.frag_reset(devicenet_work);
+    Devicenet.frag_feed_args.rx = &rx;
+    Devicenet.frag_feed_args.body = MIDDLE_1;
+    Devicenet.frag_feed_args.body_len = sizeof(MIDDLE_1);
+    Devicenet.frag_feed(devicenet_work);
+    TEST_ASSERT_EQUAL_INT(DEVICENET_FRAG_ERR, Devicenet.frag);
     TEST_ASSERT_EQUAL_UINT16(0u, rx.len);
 
     // A last fragment with no first one is an error too.
-    protocore_devicenet_frag_reset(&rx);
-    TEST_ASSERT_EQUAL_INT(DEVICENET_FRAG_ERR, protocore_devicenet_frag_feed(&rx, LAST_2, sizeof(LAST_2)));
+    Devicenet.frag_reset_args.rx = &rx;
+    Devicenet.frag_reset(devicenet_work);
+    Devicenet.frag_feed_args.rx = &rx;
+    Devicenet.frag_feed_args.body = LAST_2;
+    Devicenet.frag_feed_args.body_len = sizeof(LAST_2);
+    Devicenet.frag_feed(devicenet_work);
+    TEST_ASSERT_EQUAL_INT(DEVICENET_FRAG_ERR, Devicenet.frag);
 
     // A skipped count aborts the message rather than splicing the wrong octets in.
-    protocore_devicenet_frag_reset(&rx);
-    TEST_ASSERT_EQUAL_INT(DEVICENET_FRAG_STARTED, protocore_devicenet_frag_feed(&rx, FIRST, sizeof(FIRST)));
-    TEST_ASSERT_EQUAL_INT(DEVICENET_FRAG_ERR, protocore_devicenet_frag_feed(&rx, MIDDLE_2, sizeof(MIDDLE_2)));
+    Devicenet.frag_reset_args.rx = &rx;
+    Devicenet.frag_reset(devicenet_work);
+    Devicenet.frag_feed_args.rx = &rx;
+    Devicenet.frag_feed_args.body = FIRST;
+    Devicenet.frag_feed_args.body_len = sizeof(FIRST);
+    Devicenet.frag_feed(devicenet_work);
+    TEST_ASSERT_EQUAL_INT(DEVICENET_FRAG_STARTED, Devicenet.frag);
+    Devicenet.frag_feed_args.rx = &rx;
+    Devicenet.frag_feed_args.body = MIDDLE_2;
+    Devicenet.frag_feed_args.body_len = sizeof(MIDDLE_2);
+    Devicenet.frag_feed(devicenet_work);
+    TEST_ASSERT_EQUAL_INT(DEVICENET_FRAG_ERR, Devicenet.frag);
     TEST_ASSERT_FALSE(rx.active);
     TEST_ASSERT_EQUAL_UINT16(0u, rx.len);
 
     // FRAG set with no fragmentation octet at all.
     static const uint8_t STUB[1] = {0x85};
-    protocore_devicenet_frag_reset(&rx);
-    TEST_ASSERT_EQUAL_INT(DEVICENET_FRAG_ERR, protocore_devicenet_frag_feed(&rx, STUB, sizeof(STUB)));
+    Devicenet.frag_reset_args.rx = &rx;
+    Devicenet.frag_reset(devicenet_work);
+    Devicenet.frag_feed_args.rx = &rx;
+    Devicenet.frag_feed_args.body = STUB;
+    Devicenet.frag_feed_args.body_len = sizeof(STUB);
+    Devicenet.frag_feed(devicenet_work);
+    TEST_ASSERT_EQUAL_INT(DEVICENET_FRAG_ERR, Devicenet.frag);
 
     // An acknowledge fragment is flow control and contributes no data.
     static const uint8_t ACK[2] = {0x85, 0xC1};
-    protocore_devicenet_frag_reset(&rx);
-    TEST_ASSERT_EQUAL_INT(DEVICENET_FRAG_STARTED, protocore_devicenet_frag_feed(&rx, FIRST, sizeof(FIRST)));
-    TEST_ASSERT_EQUAL_INT(DEVICENET_FRAG_IGNORED, protocore_devicenet_frag_feed(&rx, ACK, sizeof(ACK)));
+    Devicenet.frag_reset_args.rx = &rx;
+    Devicenet.frag_reset(devicenet_work);
+    Devicenet.frag_feed_args.rx = &rx;
+    Devicenet.frag_feed_args.body = FIRST;
+    Devicenet.frag_feed_args.body_len = sizeof(FIRST);
+    Devicenet.frag_feed(devicenet_work);
+    TEST_ASSERT_EQUAL_INT(DEVICENET_FRAG_STARTED, Devicenet.frag);
+    Devicenet.frag_feed_args.rx = &rx;
+    Devicenet.frag_feed_args.body = ACK;
+    Devicenet.frag_feed_args.body_len = sizeof(ACK);
+    Devicenet.frag_feed(devicenet_work);
+    TEST_ASSERT_EQUAL_INT(DEVICENET_FRAG_IGNORED, Devicenet.frag);
     TEST_ASSERT_EQUAL_UINT16(6u, rx.len); // unchanged by the acknowledge
     TEST_ASSERT_TRUE(rx.active);
-    TEST_ASSERT_EQUAL_INT(DEVICENET_FRAG_PROGRESS, protocore_devicenet_frag_feed(&rx, MIDDLE_1, sizeof(MIDDLE_1)));
+    Devicenet.frag_feed_args.rx = &rx;
+    Devicenet.frag_feed_args.body = MIDDLE_1;
+    Devicenet.frag_feed_args.body_len = sizeof(MIDDLE_1);
+    Devicenet.frag_feed(devicenet_work);
+    TEST_ASSERT_EQUAL_INT(DEVICENET_FRAG_PROGRESS, Devicenet.frag);
     TEST_ASSERT_EQUAL_UINT16(12u, rx.len);
 }
 
@@ -384,15 +774,28 @@ void test_a_new_first_fragment_restarts_the_message(void)
     static const uint8_t LAST_1[4] = {0x85, 0x81, 0xCC, 0xDD};
     DeviceNetFragRx rx;
 
-    protocore_devicenet_frag_reset(&rx);
-    TEST_ASSERT_EQUAL_INT(DEVICENET_FRAG_STARTED, protocore_devicenet_frag_feed(&rx, FIRST, sizeof(FIRST)));
+    Devicenet.frag_reset_args.rx = &rx;
+    Devicenet.frag_reset(devicenet_work);
+    Devicenet.frag_feed_args.rx = &rx;
+    Devicenet.frag_feed_args.body = FIRST;
+    Devicenet.frag_feed_args.body_len = sizeof(FIRST);
+    Devicenet.frag_feed(devicenet_work);
+    TEST_ASSERT_EQUAL_INT(DEVICENET_FRAG_STARTED, Devicenet.frag);
     TEST_ASSERT_EQUAL_UINT16(6u, rx.len);
 
-    TEST_ASSERT_EQUAL_INT(DEVICENET_FRAG_STARTED, protocore_devicenet_frag_feed(&rx, FIRST_AGAIN, sizeof(FIRST_AGAIN)));
+    Devicenet.frag_feed_args.rx = &rx;
+    Devicenet.frag_feed_args.body = FIRST_AGAIN;
+    Devicenet.frag_feed_args.body_len = sizeof(FIRST_AGAIN);
+    Devicenet.frag_feed(devicenet_work);
+    TEST_ASSERT_EQUAL_INT(DEVICENET_FRAG_STARTED, Devicenet.frag);
     TEST_ASSERT_EQUAL_UINT16(2u, rx.len);
     TEST_ASSERT_EQUAL_HEX8(0xAAu, rx.buf[0]);
 
-    TEST_ASSERT_EQUAL_INT(DEVICENET_FRAG_COMPLETE, protocore_devicenet_frag_feed(&rx, LAST_1, sizeof(LAST_1)));
+    Devicenet.frag_feed_args.rx = &rx;
+    Devicenet.frag_feed_args.body = LAST_1;
+    Devicenet.frag_feed_args.body_len = sizeof(LAST_1);
+    Devicenet.frag_feed(devicenet_work);
+    TEST_ASSERT_EQUAL_INT(DEVICENET_FRAG_COMPLETE, Devicenet.frag);
     static const uint8_t WANT[4] = {0xAA, 0xBB, 0xCC, 0xDD};
     TEST_ASSERT_EQUAL_UINT16(4u, rx.len);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, rx.buf, 4);
@@ -405,13 +808,26 @@ void test_fragment_count_wraps_at_sixty_four(void)
     static const uint8_t MIDDLE_0[4] = {0x85, 0x40, 0x33, 0x44}; // MIDDLE with count 0
     static const uint8_t LAST_1[4] = {0x85, 0x81, 0x55, 0x66};
     DeviceNetFragRx rx;
-    protocore_devicenet_frag_reset(&rx);
+    Devicenet.frag_reset_args.rx = &rx;
+    Devicenet.frag_reset(devicenet_work);
 
-    TEST_ASSERT_EQUAL_INT(DEVICENET_FRAG_STARTED, protocore_devicenet_frag_feed(&rx, FIRST_63, sizeof(FIRST_63)));
+    Devicenet.frag_feed_args.rx = &rx;
+    Devicenet.frag_feed_args.body = FIRST_63;
+    Devicenet.frag_feed_args.body_len = sizeof(FIRST_63);
+    Devicenet.frag_feed(devicenet_work);
+    TEST_ASSERT_EQUAL_INT(DEVICENET_FRAG_STARTED, Devicenet.frag);
     TEST_ASSERT_EQUAL_UINT8(0u, rx.next_count); // (63 + 1) mod 64
-    TEST_ASSERT_EQUAL_INT(DEVICENET_FRAG_PROGRESS, protocore_devicenet_frag_feed(&rx, MIDDLE_0, sizeof(MIDDLE_0)));
+    Devicenet.frag_feed_args.rx = &rx;
+    Devicenet.frag_feed_args.body = MIDDLE_0;
+    Devicenet.frag_feed_args.body_len = sizeof(MIDDLE_0);
+    Devicenet.frag_feed(devicenet_work);
+    TEST_ASSERT_EQUAL_INT(DEVICENET_FRAG_PROGRESS, Devicenet.frag);
     TEST_ASSERT_EQUAL_UINT8(1u, rx.next_count);
-    TEST_ASSERT_EQUAL_INT(DEVICENET_FRAG_COMPLETE, protocore_devicenet_frag_feed(&rx, LAST_1, sizeof(LAST_1)));
+    Devicenet.frag_feed_args.rx = &rx;
+    Devicenet.frag_feed_args.body = LAST_1;
+    Devicenet.frag_feed_args.body_len = sizeof(LAST_1);
+    Devicenet.frag_feed(devicenet_work);
+    TEST_ASSERT_EQUAL_INT(DEVICENET_FRAG_COMPLETE, Devicenet.frag);
     static const uint8_t WANT[6] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66};
     TEST_ASSERT_EQUAL_UINT16(6u, rx.len);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, rx.buf, 6);

@@ -14,6 +14,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+static uint8_t rawl2_work[16]; // the borrow an entry takes; Rawl2 never reads it
+
 void dbench_run(void)
 {
     static const uint8_t DST[6] = {0x01, 0x80, 0xC2, 0x00, 0x00, 0x0E};
@@ -24,23 +26,65 @@ void dbench_run(void)
         payload[i] = (uint8_t)(i * 7 + 1);
     }
     static uint8_t frame[128], vframe[128];
-    size_t flen = protocore_eth_build(DST, SRC, 0x88B8, payload, sizeof(payload), frame, sizeof(frame));
-    protocore_eth_build_vlan(DST, SRC, 5, false, 100, 0x0800, payload, sizeof(payload), vframe, sizeof(vframe));
+    Rawl2.build_args.dst = DST;
+    Rawl2.build_args.src = SRC;
+    Rawl2.build_args.ethertype = 0x88B8;
+    Rawl2.build_args.payload = payload;
+    Rawl2.build_args.payload_len = sizeof(payload);
+    Rawl2.build_args.out = frame;
+    Rawl2.build_args.cap = sizeof(frame);
+    Rawl2.build(rawl2_work);
+    size_t flen = Rawl2.n;
+    Rawl2.build_vlan_args.dst = DST;
+    Rawl2.build_vlan_args.src = SRC;
+    Rawl2.build_vlan_args.pcp = 5;
+    Rawl2.build_vlan_args.dei = false;
+    Rawl2.build_vlan_args.vid = 100;
+    Rawl2.build_vlan_args.ethertype = 0x0800;
+    Rawl2.build_vlan_args.payload = payload;
+    Rawl2.build_vlan_args.payload_len = sizeof(payload);
+    Rawl2.build_vlan_args.out = vframe;
+    Rawl2.build_vlan_args.cap = sizeof(vframe);
+    Rawl2.build_vlan(rawl2_work);
 
     for (;;)
     {
         DBENCH_BANNER("rawl2");
         volatile size_t sink = 0;
         static uint8_t out[128];
-        DBENCH_OP("protocore_eth_build (64B payload)", 200000,
-                  sink += protocore_eth_build(DST, SRC, 0x88B8, payload, sizeof(payload), out, sizeof(out)));
-        DBENCH_OP("protocore_eth_build_vlan (64B)", 200000,
-                  sink += protocore_eth_build_vlan(DST, SRC, 5, false, 100, 0x0800, payload, sizeof(payload), out,
-                                                   sizeof(out)));
+        Rawl2.build_args.dst = DST;
+        Rawl2.build_args.src = SRC;
+        Rawl2.build_args.ethertype = 0x88B8;
+        Rawl2.build_args.payload = payload;
+        Rawl2.build_args.payload_len = sizeof(payload);
+        Rawl2.build_args.out = out;
+        Rawl2.build_args.cap = sizeof(out);
+        DBENCH_OP("Rawl2.build (64B payload)", 200000,
+                  sink += (Rawl2.build(rawl2_work), Rawl2.n));
+        Rawl2.build_vlan_args.dst = DST;
+        Rawl2.build_vlan_args.src = SRC;
+        Rawl2.build_vlan_args.pcp = 5;
+        Rawl2.build_vlan_args.dei = false;
+        Rawl2.build_vlan_args.vid = 100;
+        Rawl2.build_vlan_args.ethertype = 0x0800;
+        Rawl2.build_vlan_args.payload = payload;
+        Rawl2.build_vlan_args.payload_len = sizeof(payload);
+        Rawl2.build_vlan_args.out = out;
+        Rawl2.build_vlan_args.cap = sizeof(out);
+        DBENCH_OP("Rawl2.build_vlan (64B)", 200000,
+                  sink += (Rawl2.build_vlan(rawl2_work), Rawl2.n));
         EthFrame ef;
-        DBENCH_OP("protocore_eth_parse", 200000, sink += protocore_eth_parse(frame, flen, &ef));
-        DBENCH_OP("protocore_eth_parse (vlan)", 200000, sink += protocore_eth_parse(vframe, flen + 4, &ef));
-        DBENCH_BULK("protocore_eth_fcs (CRC-32)", 50000, flen, sink += protocore_eth_fcs(frame, flen));
+        Rawl2.parse_args.frame = frame;
+        Rawl2.parse_args.len = flen;
+        Rawl2.parse_args.out = &ef;
+        DBENCH_OP("Rawl2.parse", 200000, sink += (Rawl2.parse(rawl2_work), Rawl2.ok));
+        Rawl2.parse_args.frame = vframe;
+        Rawl2.parse_args.len = flen + 4;
+        Rawl2.parse_args.out = &ef;
+        DBENCH_OP("Rawl2.parse (vlan)", 200000, sink += (Rawl2.parse(rawl2_work), Rawl2.ok));
+        Rawl2.fcs_args.bytes = frame;
+        Rawl2.fcs_args.len = flen;
+        DBENCH_BULK("Rawl2.fcs (CRC-32)", 50000, flen, sink += (Rawl2.fcs(rawl2_work), Rawl2.u32));
         (void)sink;
         DBENCH_DONE();
     }

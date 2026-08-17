@@ -16,10 +16,13 @@
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
 #include "services/fieldbus/canopen/canopen.h"
+#include "shared/can/can.h"
 
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+
+static uint8_t canopen_work[16]; // the borrow an entry takes; Canopen never reads it
 
 void dbench_run(void)
 {
@@ -31,7 +34,12 @@ void dbench_run(void)
 
     // Pre-built frame for the EMCY parse bench (same shape as test_emcy_roundtrip).
     static CanFrame emcy_frame;
-    protocore_canopen_build_emcy(&emcy_frame, 3, 0x8130, 0x11, msef);
+    Canopen.build_emcy_args.out = &emcy_frame;
+    Canopen.build_emcy_args.node_id = 3;
+    Canopen.build_emcy_args.error_code = 0x8130;
+    Canopen.build_emcy_args.error_reg = 0x11;
+    Canopen.build_emcy_args.msef = msef;
+    Canopen.build_emcy(canopen_work);
 
     // COB-ID classifier bench frame: TPDO1 + node 10 (test_parse_all_function_codes).
     static CanFrame classify_frame;
@@ -60,18 +68,41 @@ void dbench_run(void)
         uint16_t code = 0;
         CanopenSdoResponse resp;
 
-        DBENCH_OP("protocore_canopen_build_heartbeat", 100000,
-                  sink += (int)protocore_canopen_build_heartbeat(&f, 10, CANOPEN_STATE_OPERATIONAL));
-        DBENCH_OP("protocore_canopen_build_emcy", 100000,
-                  sink += (int)protocore_canopen_build_emcy(&f, 3, 0x8130, 0x11, msef));
-        DBENCH_OP("protocore_canopen_build_sdo_write", 100000,
-                  sink += (int)protocore_canopen_build_sdo_write(&f, 5, 0x6040, 0, sdo_val, 2));
-        DBENCH_OP("protocore_canopen_parse (classify)", 100000,
-                  sink += (int)protocore_canopen_parse(&classify_frame, &msg));
-        DBENCH_OP("protocore_canopen_parse_emcy", 100000,
-                  sink += (int)protocore_canopen_parse_emcy(&emcy_frame, &node, &code, &reg, out_msef));
-        DBENCH_OP("protocore_canopen_parse_sdo_response", 100000,
-                  sink += (int)protocore_canopen_parse_sdo_response(&sdo_resp_frame, &resp));
+        Canopen.build_heartbeat_args.out = &f;
+        Canopen.build_heartbeat_args.node_id = 10;
+        Canopen.build_heartbeat_args.state = CANOPEN_STATE_OPERATIONAL;
+        DBENCH_OP("Canopen.build_heartbeat", 100000,
+                  sink += (int)(Canopen.build_heartbeat(canopen_work), Canopen.ok));
+        Canopen.build_emcy_args.out = &f;
+        Canopen.build_emcy_args.node_id = 3;
+        Canopen.build_emcy_args.error_code = 0x8130;
+        Canopen.build_emcy_args.error_reg = 0x11;
+        Canopen.build_emcy_args.msef = msef;
+        DBENCH_OP("Canopen.build_emcy", 100000,
+                  sink += (int)(Canopen.build_emcy(canopen_work), Canopen.ok));
+        Canopen.build_sdo_write_args.out = &f;
+        Canopen.build_sdo_write_args.node_id = 5;
+        Canopen.build_sdo_write_args.index = 0x6040;
+        Canopen.build_sdo_write_args.sub = 0;
+        Canopen.build_sdo_write_args.data = sdo_val;
+        Canopen.build_sdo_write_args.len = 2;
+        DBENCH_OP("Canopen.build_sdo_write", 100000,
+                  sink += (int)(Canopen.build_sdo_write(canopen_work), Canopen.ok));
+        Canopen.parse_args.f = &classify_frame;
+        Canopen.parse_args.out = &msg;
+        DBENCH_OP("Canopen.parse (classify)", 100000,
+                  sink += (int)(Canopen.parse(canopen_work), Canopen.ok));
+        Canopen.parse_emcy_args.f = &emcy_frame;
+        Canopen.parse_emcy_args.node_id = &node;
+        Canopen.parse_emcy_args.error_code = &code;
+        Canopen.parse_emcy_args.error_reg = &reg;
+        Canopen.parse_emcy_args.msef = out_msef;
+        DBENCH_OP("Canopen.parse_emcy", 100000,
+                  sink += (int)(Canopen.parse_emcy(canopen_work), Canopen.ok));
+        Canopen.parse_sdo_response_args.f = &sdo_resp_frame;
+        Canopen.parse_sdo_response_args.out = &resp;
+        DBENCH_OP("Canopen.parse_sdo_response", 100000,
+                  sink += (int)(Canopen.parse_sdo_response(canopen_work), Canopen.ok));
         (void)sink;
         DBENCH_DONE();
     }

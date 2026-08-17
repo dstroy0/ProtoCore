@@ -29,11 +29,15 @@
 #ifndef PROTOCORE_MBUS_H
 #define PROTOCORE_MBUS_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_MBUS
 
 PROTOCORE_BEGIN_DECLS
+
+// This module holds nothing between calls, so it carves no borrow and states none. An entry
+// takes one all the same, and never reads it, so every namespace in the tree is invoked the
+// same way.
 
 #define MBUS_START_SHORT 0x10u ///< short-frame start octet
 #define MBUS_START_LONG 0x68u  ///< long / control-frame start octet
@@ -55,6 +59,22 @@ PROTOCORE_BEGIN_DECLS
 
 #define MBUS_MAX_DATA 252u ///< max user-data octets (L is one octet; 255 - 3)
 
+#define MBUS_VAR_HEADER_LEN 12u ///< octets of the fixed header preceding the records in a CI=0x72 response
+
+// Common medium / device-type codes (EN 13757-3 §6.4).
+#define MBUS_MEDIUM_OTHER 0x00u
+#define MBUS_MEDIUM_OIL 0x01u
+#define MBUS_MEDIUM_ELECTRICITY 0x02u
+#define MBUS_MEDIUM_GAS 0x03u
+#define MBUS_MEDIUM_HEAT_OUTLET 0x04u
+#define MBUS_MEDIUM_STEAM 0x05u
+#define MBUS_MEDIUM_WARM_WATER 0x06u
+#define MBUS_MEDIUM_WATER 0x07u
+#define MBUS_MEDIUM_HEAT_COST 0x08u
+#define MBUS_MEDIUM_HEAT_INLET 0x0Cu
+#define MBUS_MEDIUM_HEAT_COOLING 0x0Du
+#define MBUS_MEDIUM_COLD_WATER 0x16u
+
 /** @brief M-Bus frame kinds. */
 typedef enum PROTO_ENUM_PACKED
 {
@@ -75,7 +95,6 @@ typedef struct
     uint8_t data_len;    ///< user-data length (long only)
 } MbusFrame;
 
-// DIF data-field coding (low nibble of the DIF). The decoded fixed lengths are in octets.
 typedef enum PROTO_ENUM_PACKED
 {
     MBUS_DIF_NONE = 0x0,     ///< no data
@@ -106,62 +125,6 @@ typedef struct
     uint8_t data_len;    ///< value length in octets
 } MbusRecord;
 
-// --- builders: write into @p buf (cap), return frame length or 0 on overflow ---
-
-/** @brief Single-character acknowledge (0xE5). */
-size_t protocore_mbus_build_ack(uint8_t *buf, size_t cap);
-
-/** @brief Short frame: 10 C A CS 16. */
-size_t protocore_mbus_build_short(uint8_t *buf, size_t cap, uint8_t c, uint8_t a);
-
-/** @brief Long frame: 68 L L 68 C A CI [data] CS 16. @p data_len 0 builds a control frame. */
-size_t protocore_mbus_build_long(uint8_t *buf, size_t cap, uint8_t c, uint8_t a, uint8_t ci, const uint8_t *data,
-                                 uint8_t data_len);
-
-/** @brief Convenience: a SND_NKE (link reset) short frame to address @p a. */
-size_t protocore_mbus_build_snd_nke(uint8_t *buf, size_t cap, uint8_t a);
-
-/** @brief Convenience: a REQ_UD2 short frame to address @p a (@p fcb toggles the FCB bit). */
-size_t protocore_mbus_build_req_ud2(uint8_t *buf, size_t cap, uint8_t a, proto_bool fcb);
-
-/** @brief Convenience: a REQ_UD1 (class-1 / alarm data request) short frame to address @p a (@p fcb toggles
- *  the FCB bit). Where REQ_UD2 fetches routine class-2 data, REQ_UD1 fetches class-1 (alarm) data. */
-size_t protocore_mbus_build_req_ud1(uint8_t *buf, size_t cap, uint8_t a, proto_bool fcb);
-
-// --- parser ---
-
-/**
- * @brief Parse one M-Bus frame from @p buf. Validates the start/stop octets, the doubled
- * length, and the checksum. On success fills @p out and sets @p consumed to the frame length.
- */
-proto_bool protocore_mbus_parse(const uint8_t *buf, size_t len, MbusFrame *out, size_t *consumed);
-
-// --- variable-data records (DIF / VIF) ---
-
-/** @brief Map a DIF low-nibble coding to its fixed data length (0 for variable / none). */
-uint8_t protocore_mbus_dif_data_len(uint8_t coding);
-
-/**
- * @brief Walk one data record at @p *pos within a long-frame body (the octets after CI).
- * Skips DIFE / VIFE extension chains, decodes the data length (incl. the LVAR variable form),
- * and advances @p *pos past the record. Returns false at the end of data or on overflow.
- */
-proto_bool protocore_mbus_record_next(const uint8_t *body, size_t len, size_t *pos, MbusRecord *out);
-
-// --- record value + unit decoding ---
-
-/**
- * @brief Decode a record's value as a signed 64-bit integer (the integer and BCD DIF codings).
- *
- * Integer codings are little-endian and sign-extended; BCD codings are little-endian octets of two
- * digits, with a 0xF most-significant nibble marking a negative value. @return false for a real / variable
- * / no-data coding, or an invalid BCD nibble.
- */
-proto_bool protocore_mbus_record_value_int(const MbusRecord *r, int64_t *out);
-
-/** @brief Decode a record's value as an IEEE-754 float (only the REAL32 DIF coding). @return false otherwise. */
-proto_bool protocore_mbus_record_value_real(const MbusRecord *r, float *out);
-
 /** @brief Physical unit a VIF decodes to (the common EN 13757-3 measurement ranges). */
 typedef enum PROTO_ENUM_PACKED
 {
@@ -178,37 +141,6 @@ typedef enum PROTO_ENUM_PACKED
     MBUS_UNIT_BAR,      ///< pressure, bar
 } MbusUnit;
 
-/**
- * @brief Decode a VIF octet into its unit and the base-10 exponent applied to the raw value.
- *
- * Covers the common EN 13757-3 main-table measurement ranges (energy, volume, mass, power, volume flow,
- * temperature, pressure). The physical value is (raw value) * 10^(@p exp10) in @p unit.
- * @return true for a decoded measurement VIF; false (unit UNKNOWN) for one outside those ranges.
- */
-proto_bool protocore_mbus_vif_decode(uint8_t vif, MbusUnit *unit, int8_t *exp10);
-
-// --- variable-data-structure fixed header (EN 13757-3): the 12 octets before the data records ---
-//
-// A CI = MBUS_CI_RSP_VARIABLE (0x72) long-frame body opens with a fixed header identifying the meter -
-// its secondary-address serial, manufacturer, version, and medium - then the access / status / signature,
-// and only then the DIF/VIF data records that protocore_mbus_record_next walks.
-
-#define MBUS_VAR_HEADER_LEN 12u ///< octets of the fixed header preceding the records in a CI=0x72 response
-
-// Common medium / device-type codes (EN 13757-3 §6.4).
-#define MBUS_MEDIUM_OTHER 0x00u
-#define MBUS_MEDIUM_OIL 0x01u
-#define MBUS_MEDIUM_ELECTRICITY 0x02u
-#define MBUS_MEDIUM_GAS 0x03u
-#define MBUS_MEDIUM_HEAT_OUTLET 0x04u
-#define MBUS_MEDIUM_STEAM 0x05u
-#define MBUS_MEDIUM_WARM_WATER 0x06u
-#define MBUS_MEDIUM_WATER 0x07u
-#define MBUS_MEDIUM_HEAT_COST 0x08u
-#define MBUS_MEDIUM_HEAT_INLET 0x0Cu
-#define MBUS_MEDIUM_HEAT_COOLING 0x0Du
-#define MBUS_MEDIUM_COLD_WATER 0x16u
-
 /** @brief The decoded EN 13757-3 variable-data-structure fixed header. */
 typedef struct
 {
@@ -222,12 +154,196 @@ typedef struct
     uint16_t signature;        ///< signature word (usually 0)
 } MbusVarHeader;
 
+/** @brief What build_ack takes: buf, cap. */
+typedef struct
+{
+    uint8_t *buf;
+    size_t cap;
+} MbusBuildAckArgs;
+
+/** @brief What build_short takes: buf, cap, c, a. */
+typedef struct
+{
+    uint8_t *buf;
+    size_t cap;
+    uint8_t c;
+    uint8_t a;
+} MbusBuildShortArgs;
+
+/** @brief What build_long takes: buf, cap, c, a, ci, data, data_len. */
+typedef struct
+{
+    uint8_t *buf;
+    size_t cap;
+    uint8_t c;
+    uint8_t a;
+    uint8_t ci;
+    const uint8_t *data;
+    uint8_t data_len;
+} MbusBuildLongArgs;
+
+/** @brief What build_snd_nke takes: buf, cap, a. */
+typedef struct
+{
+    uint8_t *buf;
+    size_t cap;
+    uint8_t a;
+} MbusBuildSndNkeArgs;
+
+/** @brief What build_req_ud2 takes: buf, cap, a, fcb. */
+typedef struct
+{
+    uint8_t *buf;
+    size_t cap;
+    uint8_t a;
+    proto_bool fcb;
+} MbusBuildReqUd2Args;
+
+/** @brief What build_req_ud1 takes: buf, cap, a, fcb. */
+typedef struct
+{
+    uint8_t *buf;
+    size_t cap;
+    uint8_t a;
+    proto_bool fcb;
+} MbusBuildReqUd1Args;
+
+/** @brief What parse takes: buf, len, out, consumed. */
+typedef struct
+{
+    const uint8_t *buf;
+    size_t len;
+    MbusFrame *out;
+    size_t *consumed;
+} MbusParseArgs;
+
+/** @brief What dif_data_len takes: coding. */
+typedef struct
+{
+    uint8_t coding;
+} MbusDifDataLenArgs;
+
+/** @brief What record_next takes: body, len, pos, out. */
+typedef struct
+{
+    const uint8_t *body;
+    size_t len;
+    size_t *pos;
+    MbusRecord *out;
+} MbusRecordNextArgs;
+
+/** @brief What record_value_int takes: r, out. */
+typedef struct
+{
+    const MbusRecord *r;
+    int64_t *out;
+} MbusRecordValueIntArgs;
+
+/** @brief What record_value_real takes: r, out. */
+typedef struct
+{
+    const MbusRecord *r;
+    float *out;
+} MbusRecordValueRealArgs;
+
+/** @brief What vif_decode takes: vif, unit, exp10. */
+typedef struct
+{
+    uint8_t vif;
+    MbusUnit *unit;
+    int8_t *exp10;
+} MbusVifDecodeArgs;
+
+/** @brief What parse_var_header takes: body, len, out. */
+typedef struct
+{
+    const uint8_t *body;
+    size_t len;
+    MbusVarHeader *out;
+} MbusParseVarHeaderArgs;
+
 /**
- * @brief Decode the 12-octet variable-data-structure fixed header (the header that precedes the data records
- *        in a CI = MBUS_CI_RSP_VARIABLE (0x72) long-frame body) into @p out.
- * @return true iff @p len is at least 12 octets and the identification number is valid BCD; false otherwise.
+ * @brief Wired M-Bus (Meter-Bus, EN 13757-2/-3) frame codec (PROTOCORE_ENABLE_MBUS).
+ *
+ * A caller sets the members a call takes, invokes it through ::Mbus with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   Mbus.build_ack_args.buf = ...;
+ *   Mbus.build_ack_args.cap = ...;
+ *   Mbus.build_ack(work);
+ *   // Mbus.n is what the call reports
+ *
+ * @var MbusNs::build_ack_args  what build_ack takes: buf, cap
+ * @var MbusNs::build_short_args  what build_short takes: buf, cap, c, a
+ * @var MbusNs::build_long_args  what build_long takes: buf, cap, c, a, ci, data, data_len
+ * @var MbusNs::build_snd_nke_args  what build_snd_nke takes: buf, cap, a
+ * @var MbusNs::build_req_ud2_args  what build_req_ud2 takes: buf, cap, a, fcb
+ * @var MbusNs::build_req_ud1_args  what build_req_ud1 takes: buf, cap, a, fcb
+ * @var MbusNs::parse_args  what parse takes: buf, len, out, consumed
+ * @var MbusNs::dif_data_len_args  what dif_data_len takes: coding
+ * @var MbusNs::record_next_args  what record_next takes: body, len, pos, out
+ * @var MbusNs::record_value_int_args  what record_value_int takes: r, out
+ * @var MbusNs::record_value_real_args  what record_value_real takes: r, out
+ * @var MbusNs::vif_decode_args  what vif_decode takes: vif, unit, exp10
+ * @var MbusNs::parse_var_header_args  what parse_var_header takes: body, len, out
+ * @var MbusNs::ok  true for a decoded measurement VIF; false (unit UNKNOWN) for one ...
+ * @var MbusNs::n  the count a call reports
+ * @var MbusNs::value  the value a call reports
+ * @var MbusNs::build_ack  single-character acknowledge (0xE5)
+ * @var MbusNs::build_short  short frame: 10 C A CS 16
+ * @var MbusNs::build_long  long frame: 68 L L 68 C A CI [data] CS 16. data_len 0 builds a ...
+ * @var MbusNs::build_snd_nke  convenience: a SND_NKE (link reset) short frame to address a
+ * @var MbusNs::build_req_ud2  convenience: a REQ_UD2 short frame to address a (fcb toggles the ...
+ * @var MbusNs::build_req_ud1  convenience: a REQ_UD1 (class-1 / alarm data request) short frame ...
+ * @var MbusNs::parse  parse one M-Bus frame from buf. Validates the start/stop octets, ...
+ * @var MbusNs::dif_data_len  map a DIF low-nibble coding to its fixed data length (0 for ...
+ * @var MbusNs::record_next  walk one data record at *pos within a long-frame body (the octets ...
+ * @var MbusNs::record_value_int  decode a record's value as a signed 64-bit integer (the integer and ...
+ * @var MbusNs::record_value_real  decode a record's value as an IEEE-754 float (only the REAL32 DIF ...
+ * @var MbusNs::vif_decode  decode a VIF octet into its unit and the base-10 exponent applied ...
+ * @var MbusNs::parse_var_header  decode the 12-octet variable-data-structure fixed header (the ...
+ *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
+ * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
+ * a caller drives every namespace the same way.
  */
-proto_bool protocore_mbus_parse_var_header(const uint8_t *body, size_t len, MbusVarHeader *out);
+typedef struct
+{
+    MbusBuildAckArgs build_ack_args;
+    MbusBuildShortArgs build_short_args;
+    MbusBuildLongArgs build_long_args;
+    MbusBuildSndNkeArgs build_snd_nke_args;
+    MbusBuildReqUd2Args build_req_ud2_args;
+    MbusBuildReqUd1Args build_req_ud1_args;
+    MbusParseArgs parse_args;
+    MbusDifDataLenArgs dif_data_len_args;
+    MbusRecordNextArgs record_next_args;
+    MbusRecordValueIntArgs record_value_int_args;
+    MbusRecordValueRealArgs record_value_real_args;
+    MbusVifDecodeArgs vif_decode_args;
+    MbusParseVarHeaderArgs parse_var_header_args;
+
+    proto_bool ok;
+    size_t n;
+    uint8_t value;
+
+    void (*const build_ack)(uint8_t *restrict work);
+    void (*const build_short)(uint8_t *restrict work);
+    void (*const build_long)(uint8_t *restrict work);
+    void (*const build_snd_nke)(uint8_t *restrict work);
+    void (*const build_req_ud2)(uint8_t *restrict work);
+    void (*const build_req_ud1)(uint8_t *restrict work);
+    void (*const parse)(uint8_t *restrict work);
+    void (*const dif_data_len)(uint8_t *restrict work);
+    void (*const record_next)(uint8_t *restrict work);
+    void (*const record_value_int)(uint8_t *restrict work);
+    void (*const record_value_real)(uint8_t *restrict work);
+    void (*const vif_decode)(uint8_t *restrict work);
+    void (*const parse_var_header)(uint8_t *restrict work);
+} MbusNs;
+
+/** @brief The one symbol this module exports. */
+extern MbusNs Mbus;
 
 PROTOCORE_END_DECLS
 
