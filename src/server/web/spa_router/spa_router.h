@@ -36,11 +36,15 @@
 #ifndef PROTOCORE_SPA_ROUTER_H
 #define PROTOCORE_SPA_ROUTER_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_SPA_ROUTER
 
 PROTOCORE_BEGIN_DECLS
+
+// This module holds nothing between calls, so it carves no borrow and states none. An entry
+// takes one all the same, and never reads it, so every namespace in the tree is invoked the
+// same way.
 
 /** @brief What to do with a request path. */
 typedef enum PROTO_ENUM_PACKED
@@ -51,20 +55,6 @@ typedef enum PROTO_ENUM_PACKED
     PROTOCORE_SPA_SERVE_FALLBACK, ///< a client route the SPA cannot serve: serve the no-JS control page.
 } protocore_spa_action;
 
-/** @brief True if the last path segment has a file extension (a '.' after the last '/'). */
-proto_bool protocore_spa_has_extension(const char *path);
-
-/**
- * @brief Decide how to route @p path for a single-page app.
- * @param path       the request path (e.g. "/devices/42", "/app.js", "/api/state").
- * @param api_prefix a prefix whose paths pass through to handlers (e.g. "/api/"); null/empty = none.
- * @return the routing action.
- *
- * "/" (or empty) serves the shell. A path starting with @p api_prefix passes through. A path whose last
- * segment has an extension serves the file; otherwise the shell.
- */
-protocore_spa_action protocore_spa_route(const char *path, const char *api_prefix);
-
 /** @brief What the server currently knows about its ability to serve the SPA. */
 typedef struct
 {
@@ -73,20 +63,6 @@ typedef struct
     proto_bool client_scripting; ///< will the client run the SPA (false = text browser, curl, no-JS)?
     proto_bool degraded;         ///< force the plain control page (recovery mode, failsafe, low memory).
 } protocore_spa_ctx;
-
-/**
- * @brief Decide how to route @p path, choosing the fallback HMI when the SPA cannot serve it.
- *
- * Same rules as protocore_spa_route(), with one addition: a request that would serve the shell serves the
- * fallback instead when the shell is unavailable, the client will not run it, or the device is
- * degraded. Asset and API handling are unchanged - in particular the API keeps passing through, so
- * the fallback page's own controls still work.
- */
-protocore_spa_action protocore_spa_route_ex(const char *path, const protocore_spa_ctx *ctx);
-
-// ---------------------------------------------------------------------------
-// Conditional UI streaming
-// ---------------------------------------------------------------------------
 
 /** @brief Predicate deciding whether a fragment is part of this render. */
 typedef proto_bool (*protocore_ui_when_fn)(void *ctx);
@@ -110,26 +86,103 @@ typedef struct
     proto_bool done;
 } protocore_ui_stream;
 
-/**
- * @brief Start streaming @p frags, evaluating each predicate against @p ctx.
- *
- * Predicates run as the stream reaches each fragment, not all up front, so a long render reflects
- * the state that holds when it gets there.
- */
-void protocore_ui_stream_begin(protocore_ui_stream *s, const protocore_ui_fragment *frags, size_t count, void *ctx);
+/** @brief What has_extension takes: path. */
+typedef struct
+{
+    const char *path;
+} SpaRouterHasExtensionArgs;
+
+/** @brief What route takes: path, api_prefix. */
+typedef struct
+{
+    const char *path;       ///< the request path (e.g. "/devices/42", "/app.js", "/api/state")
+    const char *api_prefix; ///< a prefix whose paths pass through to handlers (e.g. "/api/"); null/empty = none
+} SpaRouterRouteArgs;
+
+/** @brief What route_ex takes: path, ctx. */
+typedef struct
+{
+    const char *path;
+    const protocore_spa_ctx *ctx;
+} SpaRouterRouteExArgs;
+
+/** @brief What ui_stream_begin takes: s, frags, count, ctx. */
+typedef struct
+{
+    protocore_ui_stream *s;
+    const protocore_ui_fragment *frags;
+    size_t count;
+    void *ctx;
+} SpaRouterUiStreamBeginArgs;
+
+/** @brief What ui_stream_next takes: s, out, cap. */
+typedef struct
+{
+    protocore_ui_stream *s;
+    char *out;
+    size_t cap;
+} SpaRouterUiStreamNextArgs;
+
+/** @brief What ui_stream_done takes: s. */
+typedef struct
+{
+    const protocore_ui_stream *s;
+} SpaRouterUiStreamDoneArgs;
 
 /**
- * @brief Emit up to @p cap bytes of the remaining included fragments into @p out.
+ * @brief Single-page-app micro-routing + conditional UI streaming (PROTOCORE_ENABLE_SPA_ROUTER). A single-page web UI
+ * ...
  *
- * Skips fragments whose predicate is false and resumes a partially emitted one, so the caller may
- * use any buffer size - including one smaller than a single fragment.
+ * A caller sets the members a call takes, invokes it through ::SpaRouter with the bytes it runs
+ * out of, and reads the outcome off the same handle.
  *
- * @return bytes written; 0 when the stream is finished (or on bad args).
+ *   SpaRouter.has_extension_args.path = ...;
+ *   SpaRouter.has_extension(work);
+ *   // SpaRouter.ok is what the call reports
+ *
+ * @var SpaRouterNs::has_extension_args  what has_extension takes: path
+ * @var SpaRouterNs::route_args  what route takes: path, api_prefix
+ * @var SpaRouterNs::route_ex_args  what route_ex takes: path, ctx
+ * @var SpaRouterNs::ui_stream_begin_args  what ui_stream_begin takes: s, frags, count, ctx
+ * @var SpaRouterNs::ui_stream_next_args  what ui_stream_next takes: s, out, cap
+ * @var SpaRouterNs::ui_stream_done_args  what ui_stream_done takes: s
+ * @var SpaRouterNs::ok  a call's true/false outcome
+ * @var SpaRouterNs::action  the routing action. "/" (or empty) serves the shell. A path ...
+ * @var SpaRouterNs::n  bytes written; 0 when the stream is finished (or on bad args)
+ * @var SpaRouterNs::has_extension  true if the last path segment has a file extension (a '.' after the ...
+ * @var SpaRouterNs::route  decide how to route path for a single-page app
+ * @var SpaRouterNs::route_ex  decide how to route path, choosing the fallback HMI when the SPA ...
+ * @var SpaRouterNs::ui_stream_begin  start streaming frags, evaluating each predicate against ctx. ...
+ * @var SpaRouterNs::ui_stream_next  emit up to cap bytes of the remaining included fragments into out. ...
+ * @var SpaRouterNs::ui_stream_done  true once every included fragment has been emitted
+ *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
+ * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
+ * a caller drives every namespace the same way.
  */
-size_t protocore_ui_stream_next(protocore_ui_stream *s, char *out, size_t cap);
+typedef struct
+{
+    SpaRouterHasExtensionArgs has_extension_args;
+    SpaRouterRouteArgs route_args;
+    SpaRouterRouteExArgs route_ex_args;
+    SpaRouterUiStreamBeginArgs ui_stream_begin_args;
+    SpaRouterUiStreamNextArgs ui_stream_next_args;
+    SpaRouterUiStreamDoneArgs ui_stream_done_args;
 
-/** @brief True once every included fragment has been emitted. */
-proto_bool protocore_ui_stream_done(const protocore_ui_stream *s);
+    proto_bool ok;
+    protocore_spa_action action;
+    size_t n;
+
+    void (*const has_extension)(uint8_t *restrict work);
+    void (*const route)(uint8_t *restrict work);
+    void (*const route_ex)(uint8_t *restrict work);
+    void (*const ui_stream_begin)(uint8_t *restrict work);
+    void (*const ui_stream_next)(uint8_t *restrict work);
+    void (*const ui_stream_done)(uint8_t *restrict work);
+} SpaRouterNs;
+
+/** @brief The one symbol this module exports. */
+extern SpaRouterNs SpaRouter;
 
 PROTOCORE_END_DECLS
 

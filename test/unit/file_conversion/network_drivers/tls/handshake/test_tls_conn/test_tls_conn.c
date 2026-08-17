@@ -90,7 +90,11 @@ static uint8_t g_srv_out[2048];
 
 static uint8_t g_cli_ks_bytes[PROTOCORE_TLS13_KS_BORROW] __attribute__((aligned(8)));
 static uint8_t g_cli_hash_work[PROTOCORE_SHA256_BORROW] __attribute__((aligned(4)));
-static uint8_t g_sign_work[PROTOCORE_SHA512_BORROW] __attribute__((aligned(8)));
+// Handed to Curve25519, Ed25519 and SHA-512 in turn, so it is sized for the widest of them:
+// PROTOCORE_ED25519_BORROW is 768 + PROTOCORE_SHA512_BORROW, above PROTOCORE_CURVE25519_BORROW.
+static uint8_t g_sign_work[PROTOCORE_ED25519_BORROW > PROTOCORE_CURVE25519_BORROW
+                               ? PROTOCORE_ED25519_BORROW
+                               : PROTOCORE_CURVE25519_BORROW] __attribute__((aligned(8)));
 static Tls13KeySchedule g_cli_ks;
 static uint8_t *g_cli_transcript;
 static TlsRecordKeys g_cli_hs_rx;

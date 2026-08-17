@@ -33,6 +33,8 @@
 
 #include <unity.h>
 
+static uint8_t ad9238_work[16]; // the borrow an entry takes; Ad9238 never reads it
+
 void setUp(void)
 {
 }
@@ -44,7 +46,12 @@ void tearDown(void)
 static uint16_t word_of(proto_bool read, uint16_t addr, uint8_t nbytes)
 {
     uint8_t w[2] = {0xA5u, 0x5Au};
-    TEST_ASSERT_TRUE(protocore_ad9238_build_instruction(read, addr, nbytes, w));
+    Ad9238.build_instruction_args.read = read;
+    Ad9238.build_instruction_args.reg_addr = addr;
+    Ad9238.build_instruction_args.nbytes = nbytes;
+    Ad9238.build_instruction_args.out2 = w;
+    Ad9238.build_instruction(ad9238_work);
+    TEST_ASSERT_TRUE(Ad9238.ok);
     return (uint16_t)(((uint16_t)w[0] << 8) | w[1]);
 }
 
@@ -88,11 +95,35 @@ void test_an877_word_length_is_w1w0_plus_one(void)
 void test_an877_address_field_is_thirteen_bits(void)
 {
     uint8_t w[2];
-    TEST_ASSERT_TRUE(protocore_ad9238_build_instruction(PROTO_FALSE, 0x1FFFu, 1u, w));
-    TEST_ASSERT_FALSE(protocore_ad9238_build_instruction(PROTO_FALSE, 0x2000u, 1u, w));
-    TEST_ASSERT_FALSE(protocore_ad9238_build_instruction(PROTO_TRUE, 0xFFFFu, 1u, w));
-    TEST_ASSERT_EQUAL_size_t(0u, protocore_ad9238_build_write(0x2000u, 0x00u, w, 3u));
-    TEST_ASSERT_EQUAL_size_t(0u, protocore_ad9238_build_read(0x2000u, w, 2u));
+    Ad9238.build_instruction_args.read = PROTO_FALSE;
+    Ad9238.build_instruction_args.reg_addr = 0x1FFFu;
+    Ad9238.build_instruction_args.nbytes = 1u;
+    Ad9238.build_instruction_args.out2 = w;
+    Ad9238.build_instruction(ad9238_work);
+    TEST_ASSERT_TRUE(Ad9238.ok);
+    Ad9238.build_instruction_args.read = PROTO_FALSE;
+    Ad9238.build_instruction_args.reg_addr = 0x2000u;
+    Ad9238.build_instruction_args.nbytes = 1u;
+    Ad9238.build_instruction_args.out2 = w;
+    Ad9238.build_instruction(ad9238_work);
+    TEST_ASSERT_FALSE(Ad9238.ok);
+    Ad9238.build_instruction_args.read = PROTO_TRUE;
+    Ad9238.build_instruction_args.reg_addr = 0xFFFFu;
+    Ad9238.build_instruction_args.nbytes = 1u;
+    Ad9238.build_instruction_args.out2 = w;
+    Ad9238.build_instruction(ad9238_work);
+    TEST_ASSERT_FALSE(Ad9238.ok);
+    Ad9238.build_write_args.reg_addr = 0x2000u;
+    Ad9238.build_write_args.value = 0x00u;
+    Ad9238.build_write_args.out = w;
+    Ad9238.build_write_args.cap = 3u;
+    Ad9238.build_write(ad9238_work);
+    TEST_ASSERT_EQUAL_size_t(0u, Ad9238.n);
+    Ad9238.build_read_args.reg_addr = 0x2000u;
+    Ad9238.build_read_args.out = w;
+    Ad9238.build_read_args.cap = 2u;
+    Ad9238.build_read(ad9238_work);
+    TEST_ASSERT_EQUAL_size_t(0u, Ad9238.n);
 }
 
 // AN-877 READ/WRITE: "The first bit in the stream is the read/write indicator bit (R/W). When this
@@ -117,7 +148,10 @@ void test_an877_read_write_bit_is_the_only_difference(void)
 void test_an877_transfer_register_write(void)
 {
     uint8_t out[4] = {0u, 0u, 0u, 0xEEu};
-    TEST_ASSERT_EQUAL_size_t(3u, protocore_ad9238_build_transfer(out, sizeof(out)));
+    Ad9238.build_transfer_args.out = out;
+    Ad9238.build_transfer_args.cap = sizeof(out);
+    Ad9238.build_transfer(ad9238_work);
+    TEST_ASSERT_EQUAL_size_t(3u, Ad9238.n);
     TEST_ASSERT_EQUAL_HEX8(0x00u, out[0]);
     TEST_ASSERT_EQUAL_HEX8(0xFFu, out[1]);
     TEST_ASSERT_EQUAL_HEX8(0x01u, out[2]);
@@ -142,7 +176,11 @@ void test_an877_configuration_chip_id_and_grade_addresses(void)
 void test_an877_chip_id_read_transaction(void)
 {
     uint8_t out[3] = {0u, 0u, 0xEEu};
-    TEST_ASSERT_EQUAL_size_t(2u, protocore_ad9238_build_read(0x001u, out, sizeof(out)));
+    Ad9238.build_read_args.reg_addr = 0x001u;
+    Ad9238.build_read_args.out = out;
+    Ad9238.build_read_args.cap = sizeof(out);
+    Ad9238.build_read(ad9238_work);
+    TEST_ASSERT_EQUAL_size_t(2u, Ad9238.n);
     TEST_ASSERT_EQUAL_HEX8(0x80u, out[0]);
     TEST_ASSERT_EQUAL_HEX8(0x01u, out[1]);
     TEST_ASSERT_EQUAL_HEX8(0xEEu, out[2]);
@@ -157,7 +195,12 @@ void test_an877_chip_id_read_transaction(void)
 void test_an877_output_mode_write_transaction(void)
 {
     uint8_t out[4] = {0u, 0u, 0u, 0xEEu};
-    TEST_ASSERT_EQUAL_size_t(3u, protocore_ad9238_build_write(0x014u, 0x01u, out, sizeof(out)));
+    Ad9238.build_write_args.reg_addr = 0x014u;
+    Ad9238.build_write_args.value = 0x01u;
+    Ad9238.build_write_args.out = out;
+    Ad9238.build_write_args.cap = sizeof(out);
+    Ad9238.build_write(ad9238_work);
+    TEST_ASSERT_EQUAL_size_t(3u, Ad9238.n);
     TEST_ASSERT_EQUAL_HEX8(0x00u, out[0]);
     TEST_ASSERT_EQUAL_HEX8(0x14u, out[1]);
     TEST_ASSERT_EQUAL_HEX8(0x01u, out[2]);
@@ -193,9 +236,24 @@ void test_an877_output_test_mode_codes(void)
 void test_byte_counts_outside_one_to_four_are_refused(void)
 {
     uint8_t w[2];
-    TEST_ASSERT_FALSE(protocore_ad9238_build_instruction(PROTO_FALSE, 0x0000u, 0u, w));
-    TEST_ASSERT_FALSE(protocore_ad9238_build_instruction(PROTO_FALSE, 0x0000u, 5u, w));
-    TEST_ASSERT_FALSE(protocore_ad9238_build_instruction(PROTO_FALSE, 0x0000u, 255u, w));
+    Ad9238.build_instruction_args.read = PROTO_FALSE;
+    Ad9238.build_instruction_args.reg_addr = 0x0000u;
+    Ad9238.build_instruction_args.nbytes = 0u;
+    Ad9238.build_instruction_args.out2 = w;
+    Ad9238.build_instruction(ad9238_work);
+    TEST_ASSERT_FALSE(Ad9238.ok);
+    Ad9238.build_instruction_args.read = PROTO_FALSE;
+    Ad9238.build_instruction_args.reg_addr = 0x0000u;
+    Ad9238.build_instruction_args.nbytes = 5u;
+    Ad9238.build_instruction_args.out2 = w;
+    Ad9238.build_instruction(ad9238_work);
+    TEST_ASSERT_FALSE(Ad9238.ok);
+    Ad9238.build_instruction_args.read = PROTO_FALSE;
+    Ad9238.build_instruction_args.reg_addr = 0x0000u;
+    Ad9238.build_instruction_args.nbytes = 255u;
+    Ad9238.build_instruction_args.out2 = w;
+    Ad9238.build_instruction(ad9238_work);
+    TEST_ASSERT_FALSE(Ad9238.ok);
 }
 
 // A builder that cannot write the whole transaction writes none of it: a partial instruction word is
@@ -203,13 +261,42 @@ void test_byte_counts_outside_one_to_four_are_refused(void)
 void test_null_and_undersized_buffers_fail_closed(void)
 {
     uint8_t out[3];
-    TEST_ASSERT_FALSE(protocore_ad9238_build_instruction(PROTO_FALSE, 0x0000u, 1u, NULL));
-    TEST_ASSERT_EQUAL_size_t(0u, protocore_ad9238_build_write(0x0009u, 0x01u, NULL, 3u));
-    TEST_ASSERT_EQUAL_size_t(0u, protocore_ad9238_build_write(0x0009u, 0x01u, out, 2u));
-    TEST_ASSERT_EQUAL_size_t(0u, protocore_ad9238_build_read(0x0009u, NULL, 2u));
-    TEST_ASSERT_EQUAL_size_t(0u, protocore_ad9238_build_read(0x0009u, out, 1u));
-    TEST_ASSERT_EQUAL_size_t(0u, protocore_ad9238_build_transfer(NULL, 3u));
-    TEST_ASSERT_EQUAL_size_t(0u, protocore_ad9238_build_transfer(out, 2u));
+    Ad9238.build_instruction_args.read = PROTO_FALSE;
+    Ad9238.build_instruction_args.reg_addr = 0x0000u;
+    Ad9238.build_instruction_args.nbytes = 1u;
+    Ad9238.build_instruction_args.out2 = NULL;
+    Ad9238.build_instruction(ad9238_work);
+    TEST_ASSERT_FALSE(Ad9238.ok);
+    Ad9238.build_write_args.reg_addr = 0x0009u;
+    Ad9238.build_write_args.value = 0x01u;
+    Ad9238.build_write_args.out = NULL;
+    Ad9238.build_write_args.cap = 3u;
+    Ad9238.build_write(ad9238_work);
+    TEST_ASSERT_EQUAL_size_t(0u, Ad9238.n);
+    Ad9238.build_write_args.reg_addr = 0x0009u;
+    Ad9238.build_write_args.value = 0x01u;
+    Ad9238.build_write_args.out = out;
+    Ad9238.build_write_args.cap = 2u;
+    Ad9238.build_write(ad9238_work);
+    TEST_ASSERT_EQUAL_size_t(0u, Ad9238.n);
+    Ad9238.build_read_args.reg_addr = 0x0009u;
+    Ad9238.build_read_args.out = NULL;
+    Ad9238.build_read_args.cap = 2u;
+    Ad9238.build_read(ad9238_work);
+    TEST_ASSERT_EQUAL_size_t(0u, Ad9238.n);
+    Ad9238.build_read_args.reg_addr = 0x0009u;
+    Ad9238.build_read_args.out = out;
+    Ad9238.build_read_args.cap = 1u;
+    Ad9238.build_read(ad9238_work);
+    TEST_ASSERT_EQUAL_size_t(0u, Ad9238.n);
+    Ad9238.build_transfer_args.out = NULL;
+    Ad9238.build_transfer_args.cap = 3u;
+    Ad9238.build_transfer(ad9238_work);
+    TEST_ASSERT_EQUAL_size_t(0u, Ad9238.n);
+    Ad9238.build_transfer_args.out = out;
+    Ad9238.build_transfer_args.cap = 2u;
+    Ad9238.build_transfer(ad9238_work);
+    TEST_ASSERT_EQUAL_size_t(0u, Ad9238.n);
 }
 
 // Every named register addresses a different byte, and every one fits the 13-bit field, so a write to
@@ -228,7 +315,12 @@ void test_named_register_addresses_are_distinct(void)
     {
         TEST_ASSERT_TRUE(REG[i] <= 0x1FFFu);
         uint8_t out[3];
-        TEST_ASSERT_EQUAL_size_t(3u, protocore_ad9238_build_write(REG[i], 0x00u, out, sizeof(out)));
+        Ad9238.build_write_args.reg_addr = REG[i];
+        Ad9238.build_write_args.value = 0x00u;
+        Ad9238.build_write_args.out = out;
+        Ad9238.build_write_args.cap = sizeof(out);
+        Ad9238.build_write(ad9238_work);
+        TEST_ASSERT_EQUAL_size_t(3u, Ad9238.n);
         uint16_t word = (uint16_t)(((uint16_t)out[0] << 8) | out[1]);
         TEST_ASSERT_EQUAL_HEX16(REG[i], (uint16_t)(word & 0x1FFFu));
         for (size_t j = i + 1; j < n; j++)

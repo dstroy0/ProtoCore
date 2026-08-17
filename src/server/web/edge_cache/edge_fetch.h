@@ -18,11 +18,15 @@
 #ifndef PROTOCORE_EDGE_FETCH_H
 #define PROTOCORE_EDGE_FETCH_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_EDGE_CACHE
 
 PROTOCORE_BEGIN_DECLS
+
+// This module holds nothing between calls, so it carves no borrow and states none. An entry
+// takes one all the same, and never reads it, so every namespace in the tree is invoked the
+// same way.
 
 /** @brief The origin transport, bound to protocore_client on the device and a mock in host tests. */
 typedef struct
@@ -61,32 +65,91 @@ typedef struct
     uint8_t buf[PROTOCORE_EDGE_FETCH_BUF];
 } EdgeFetch;
 
+/** @brief What begin takes: f, t, host, port, request, req_len, now_ms. */
+typedef struct
+{
+    EdgeFetch *f;
+    const EdgeFetchTransport *t;
+    const char *host;
+    uint16_t port;
+    const void *request;
+    size_t req_len;
+    uint32_t now_ms;
+} EdgeFetchBeginArgs;
+
+/** @brief What pump takes: f, t, now_ms. */
+typedef struct
+{
+    EdgeFetch *f;
+    const EdgeFetchTransport *t;
+    uint32_t now_ms;
+} EdgeFetchPumpArgs;
+
+/** @brief What end takes: f, t. */
+typedef struct
+{
+    EdgeFetch *f;
+    const EdgeFetchTransport *t;
+} EdgeFetchEndArgs;
+
+/** @brief What edge_resp_complete takes: buf, len, conn_closed, ... */
+typedef struct
+{
+    const uint8_t *buf;
+    size_t len;
+    proto_bool conn_closed;
+    size_t *head_len;
+} EdgeFetchEdgeRespCompleteArgs;
+
 /**
- * @brief Open the origin connection and park @p request; begin the fetch. Sets @p st to PENDING, or
- *        FAILED when no slot is free or the request does not fit the buffer.
+ * @brief CDN edge-cache tier - async origin-fetch engine (PROTOCORE_ENABLE_EDGE_CACHE). A non-blocking origin fetch:
+ * ...
  *
- * The connection is not up when this returns, so the request is copied into the fetch's own buffer -
- * nothing has arrived to occupy it yet - and edge_fetch_pump() sends it on the first pump that finds
- * the transport connected. Nothing of the caller's has to outlive the call.
+ * A caller sets the members a call takes, invokes it through ::EdgeFetcher with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   EdgeFetcher.begin_args.f = ...;
+ *   EdgeFetcher.begin_args.t = ...;
+ *   EdgeFetcher.begin_args.host = ...;
+ *   EdgeFetcher.begin_args.port = ...;
+ *   EdgeFetcher.begin_args.request = ...;
+ *   EdgeFetcher.begin_args.req_len = ...;
+ *   EdgeFetcher.begin_args.now_ms = ...;
+ *   EdgeFetcher.begin(work);
+ *
+ * @var EdgeFetchNs::begin_args  what begin takes: f, t, host, port, request, req_len, now_ms
+ * @var EdgeFetchNs::pump_args  what pump takes: f, t, now_ms
+ * @var EdgeFetchNs::end_args  what end takes: f, t
+ * @var EdgeFetchNs::edge_resp_complete_args  what edge_resp_complete takes: buf, len, conn_closed,
+ * @var EdgeFetchNs::ok  a call's true/false outcome
+ * @var EdgeFetchNs::status  what a call reports
+ * @var EdgeFetchNs::begin  open the origin connection and park request; begin the fetch. Sets ...
+ * @var EdgeFetchNs::pump  drain available bytes and advance. On DONE the response is parsed ...
+ * @var EdgeFetchNs::end  release the transport connection (idempotent)
+ * @var EdgeFetchNs::edge_resp_complete  is the accumulated response complete? (headers terminated + body ...
+ *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
+ * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
+ * a caller drives every namespace the same way.
  */
-void edge_fetch_begin(EdgeFetch *f, const EdgeFetchTransport *t, const char *host, uint16_t port, const void *request,
-                      size_t req_len, uint32_t now_ms);
+typedef struct
+{
+    EdgeFetchBeginArgs begin_args;
+    EdgeFetchPumpArgs pump_args;
+    EdgeFetchEndArgs end_args;
+    EdgeFetchEdgeRespCompleteArgs edge_resp_complete_args;
 
-/**
- * @brief Drain available bytes and advance. On DONE the response is parsed (chunked bodies decoded in
- *        place); honors `PROTOCORE_EDGE_FETCH_TIMEOUT_MS`. @return the current status.
- */
-EdgeFetchStatus edge_fetch_pump(EdgeFetch *f, const EdgeFetchTransport *t, uint32_t now_ms);
+    proto_bool ok;
+    EdgeFetchStatus status;
 
-/** @brief Release the transport connection (idempotent). */
-void edge_fetch_end(EdgeFetch *f, const EdgeFetchTransport *t);
+    void (*const begin)(uint8_t *restrict work);
+    void (*const pump)(uint8_t *restrict work);
+    void (*const end)(uint8_t *restrict work);
+    void (*const edge_resp_complete)(uint8_t *restrict work);
+} EdgeFetchNs;
 
-/**
- * @brief Is the accumulated response complete? (headers terminated + body per Content-Length / chunked
- *        terminator / connection close). Sets @p head_len to the header-block length (0 if not yet whole).
- *        Pure - host-testable without a transport.
- */
-proto_bool edge_resp_complete(const uint8_t *buf, size_t len, proto_bool conn_closed, size_t *head_len);
+/** @brief The one symbol this module exports. */
+extern EdgeFetchNs EdgeFetcher;
 
 PROTOCORE_END_DECLS
 

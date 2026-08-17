@@ -10,13 +10,18 @@
 
 #if PROTOCORE_ENABLE_SEN0192
 
+#if !PROTOCORE_HAS_GPIO
+#error                                                                                                                 \
+    "ProtoCore: PROTOCORE_ENABLE_SEN0192 needs a GPIO seam. Provide one in core_setup/hal/<vendor>, or turn the driver\
+ off - there is no software stand-in for a part on the other end of a wire."
+#endif
+
 // ---------------------------------------------------------------------------
 // Pure presence state machine (host-tested).
 // ---------------------------------------------------------------------------
 
-#if PROTOCORE_HAS_GPIO
 #include "server/clock/clock.h" // Clock.millis
-#endif
+
 void protocore_sen0192_motion_init(Sen0192Motion *m, uint32_t hold_ms, proto_bool active_high)
 {
     m->present = PROTO_FALSE;
@@ -74,19 +79,28 @@ uint32_t protocore_sen0192_motion_active_age_ms(const Sen0192Motion *m, uint32_t
 // Pin binding
 // ---------------------------------------------------------------------------
 
-#if PROTOCORE_HAS_GPIO
-
 // The SEN0192 binding state, owned by one instance (internal linkage): the presence tracker and the pin.
 typedef struct
 {
     Sen0192Motion motion;
     int pin;
+    proto_bool begun; ///< begin() ran; until it has, the pin reports -1
 } Sen0192Ctx;
-static Sen0192Ctx s_sen = {.pin = -1};
+static Sen0192Ctx s_sen;
+
+// The pin, or -1 for "there is none" - which is what a failed or absent begin() reports, the way a
+// main() reports failure. Stated here rather than as an initializer on the declaration so the
+// context carries none and can live in a borrow that arrives zeroed. It takes a flag rather than a
+// sentinel value because pin 0 is a real pin, so zero cannot mean "unset".
+static int dev_pin(void)
+{
+    return s_sen.begun ? s_sen.pin : -1;
+}
 
 proto_bool protocore_sen0192_begin(void)
 {
     s_sen.pin = PROTOCORE_SEN0192_PIN;
+    s_sen.begun = PROTO_TRUE;
     protocore_platform_gpio_mode((uint8_t)(s_sen.pin), PROTOCORE_GPIO_IN);
     protocore_sen0192_motion_init(&s_sen.motion, PROTOCORE_SEN0192_HOLD_MS, PROTOCORE_SEN0192_ACTIVE_HIGH != 0);
     return PROTO_TRUE;
@@ -94,11 +108,12 @@ proto_bool protocore_sen0192_begin(void)
 
 proto_bool protocore_sen0192_poll(void)
 {
-    if (s_sen.pin < 0)
+    const int pin = dev_pin();
+    if (pin < 0)
     {
         return PROTO_FALSE;
     }
-    proto_bool level = protocore_platform_gpio_read((uint8_t)(s_sen.pin)) != 0;
+    proto_bool level = protocore_platform_gpio_read((uint8_t)(pin)) != 0;
     return protocore_sen0192_motion_update(&s_sen.motion, level, Clock.ms);
 }
 
@@ -112,26 +127,5 @@ uint32_t protocore_sen0192_motion_count(void)
 {
     return protocore_sen0192_motion_events(&s_sen.motion);
 }
-
-#else // no pin seam. The presence state machine above is host-tested.
-
-proto_bool protocore_sen0192_begin(void)
-{
-    return PROTO_FALSE;
-}
-proto_bool protocore_sen0192_poll(void)
-{
-    return PROTO_FALSE;
-}
-proto_bool protocore_sen0192_present(void)
-{
-    return PROTO_FALSE;
-}
-uint32_t protocore_sen0192_motion_count(void)
-{
-    return 0;
-}
-
-#endif // PROTOCORE_HAS_GPIO
 
 #endif // PROTOCORE_ENABLE_SEN0192

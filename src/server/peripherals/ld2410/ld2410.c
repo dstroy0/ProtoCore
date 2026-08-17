@@ -12,11 +12,15 @@
  *   command: FD FC FB FA | len(2) | word(2) | [value] | 04 03 02 01
  */
 
-#include "server/peripherals/ld2410/ld2410.h"
-#include "mmgr/protomem.h"
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_LD2410
+
+#include "mmgr/protomem.h"
+#include "mmgr/secure.h" // the persistent end this module's state is taken from
+#include "server/peripherals/ld2410/ld2410.h"
+
+PROTOCORE_BEGIN_DECLS
 
 #if PROTOCORE_HAS_BUS
 #include "server/peripherals/uart.h" // the shared UART owner
@@ -63,24 +67,67 @@ static size_t cmd_frame(uint8_t *buf, size_t cap, uint16_t word, const uint8_t *
     return i;
 }
 
-proto_bool protocore_ld2410_parse_report(const uint8_t *f, size_t len, Ld2410Report *out)
+// The entries this file calls before reaching their definitions.
+
+// --- the program's shared state, beside the namespace not on it -------------
+
+// The one owned instance, private to this TU: the pointer to the bytes this module took for
+// itself. A caller that hands in its own borrow never reaches it.
+typedef struct
 {
+    uint8_t *span; ///< PROTOCORE_LD2410_BORROW persistent bytes, or null while the pool was short
+} Ld2410OwnCtx;
+static Ld2410OwnCtx s_own;
+
+// Not an entry: an entry takes a borrow and this is where that borrow comes from.
+uint8_t *protocore_ld2410_span(void)
+{
+    if (s_own.span == NULL)
+    {
+        protocore_span sp = protocore_secure_persist_span(PROTOCORE_LD2410_BORROW);
+        if (span.ok(sp))
+        {
+            s_own.span = sp.buf;
+        }
+    }
+    return s_own.span; // null while the pool was short, which every entry refuses
+}
+
+static void ld2410_cmd_config_enable(uint8_t *restrict work);
+static void ld2410_cmd_config_end(uint8_t *restrict work);
+static void ld2410_cmd_engineering(uint8_t *restrict work);
+static void ld2410_cmd_restart(uint8_t *restrict work);
+static void ld2410_parse_report(uint8_t *restrict work);
+static void ld2410_stream_push(uint8_t *restrict work);
+static void ld2410_stream_reset(uint8_t *restrict work);
+
+static void ld2410_parse_report(uint8_t *restrict work)
+{
+    (void)work;
+    const uint8_t *f = Ld2410.parse_report_args.frame;
+    size_t len = Ld2410.parse_report_args.len;
+    Ld2410Report *out = Ld2410.parse_report_args.out;
+
     if (!f || !out || len < (size_t)(6 + LEN_BASIC + 4))
     {
-        return PROTO_FALSE;
+        Ld2410.ok = PROTO_FALSE;
+        return;
     }
     if (mem.cmp(f, HDR, 4) != 0)
     {
-        return PROTO_FALSE;
+        Ld2410.ok = PROTO_FALSE;
+        return;
     }
     uint16_t dl = rd16(f + 4);
     if ((size_t)(6 + dl + 4) != len)
     {
-        return PROTO_FALSE; // length field must frame the buffer exactly
+        Ld2410.ok = PROTO_FALSE;
+        return; // length field must frame the buffer exactly
     }
     if (mem.cmp(f + 6 + dl, FTR, 4) != 0)
     {
-        return PROTO_FALSE;
+        Ld2410.ok = PROTO_FALSE;
+        return;
     }
 
     const uint8_t *p = f + 6;
@@ -90,7 +137,8 @@ proto_bool protocore_ld2410_parse_report(const uint8_t *f, size_t len, Ld2410Rep
     {
         if (dl != LEN_BASIC)
         {
-            return PROTO_FALSE;
+            Ld2410.ok = PROTO_FALSE;
+            return;
         }
         r.engineering = 0;
     }
@@ -98,17 +146,20 @@ proto_bool protocore_ld2410_parse_report(const uint8_t *f, size_t len, Ld2410Rep
     {
         if (dl != LEN_ENGINEERING)
         {
-            return PROTO_FALSE;
+            Ld2410.ok = PROTO_FALSE;
+            return;
         }
         r.engineering = 1;
     }
     else
     {
-        return PROTO_FALSE; // unknown data type
+        Ld2410.ok = PROTO_FALSE;
+        return; // unknown data type
     }
     if (p[1] != 0xAA)
     {
-        return PROTO_FALSE; // intra-frame head marker
+        Ld2410.ok = PROTO_FALSE;
+        return; // intra-frame head marker
     }
 
     r.state = p[2];
@@ -134,27 +185,37 @@ proto_bool protocore_ld2410_parse_report(const uint8_t *f, size_t len, Ld2410Rep
         r.out_pin = p[32];
         if (p[33] != 0x55)
         {
-            return PROTO_FALSE; // tail
+            Ld2410.ok = PROTO_FALSE;
+            return; // tail
         }
     }
     else if (p[11] != 0x55)
     {
-        return PROTO_FALSE; // tail
+        Ld2410.ok = PROTO_FALSE;
+        return; // tail
     }
     *out = r;
-    return PROTO_TRUE;
+    Ld2410.ok = PROTO_TRUE;
 }
 
-void protocore_ld2410_stream_reset(Ld2410Stream *s)
+static void ld2410_stream_reset(uint8_t *restrict work)
 {
+    (void)work;
+    Ld2410Stream *s = Ld2410.stream_reset_args.s;
+
     s->pos = 0;
     s->total = 0;
     s->hdr_match = 0;
     s->phase = 0;
 }
 
-proto_bool protocore_ld2410_stream_push(Ld2410Stream *s, uint8_t b, Ld2410Report *out)
+static void ld2410_stream_push(uint8_t *restrict work)
 {
+    (void)work;
+    Ld2410Stream *s = Ld2410.stream_push_args.s;
+    uint8_t b = Ld2410.stream_push_args.byte;
+    Ld2410Report *out = Ld2410.stream_push_args.out;
+
     switch (s->phase)
     {
     case 0: // sync on the 4-byte header (bytes are distinct, so resync restarts at most at [0])
@@ -175,7 +236,8 @@ proto_bool protocore_ld2410_stream_push(Ld2410Stream *s, uint8_t b, Ld2410Report
                 s->buf[0] = b;
             }
         }
-        return PROTO_FALSE;
+        Ld2410.ok = PROTO_FALSE;
+        return;
     case 1: // little-endian length field
         s->buf[s->pos++] = b;
         if (s->pos == 6)
@@ -184,141 +246,209 @@ proto_bool protocore_ld2410_stream_push(Ld2410Stream *s, uint8_t b, Ld2410Report
             uint32_t total = 6u + (uint32_t)rd16(s->buf + 4) + 4u;
             if (total > LD2410_FRAME_MAX)
             {
-                protocore_ld2410_stream_reset(s); // absurd length: drop and resync
-                return PROTO_FALSE;
+                Ld2410.stream_reset_args.s = s;
+                ld2410_stream_reset(work); // absurd length: drop and resync
+                Ld2410.ok = PROTO_FALSE;
+                return;
             }
             s->total = (uint16_t)total;
             s->phase = 2;
         }
-        return PROTO_FALSE;
+        Ld2410.ok = PROTO_FALSE;
+        return;
     default: // body + footer
         s->buf[s->pos++] = b;
         if (s->pos >= s->total)
         {
-            proto_bool ok = protocore_ld2410_parse_report(s->buf, s->total, out);
-            protocore_ld2410_stream_reset(s);
-            return ok;
+            Ld2410.parse_report_args.frame = s->buf;
+            Ld2410.parse_report_args.len = s->total;
+            Ld2410.parse_report_args.out = out;
+            ld2410_parse_report(work);
+            proto_bool ok = Ld2410.ok;
+            Ld2410.stream_reset_args.s = s;
+            ld2410_stream_reset(work);
+            Ld2410.ok = ok;
+            return;
         }
-        return PROTO_FALSE;
+        Ld2410.ok = PROTO_FALSE;
+        return;
     }
 }
 
-proto_bool protocore_ld2410_present(const Ld2410Report *r)
+static void ld2410_present(uint8_t *restrict work)
 {
-    return r && r->state != LD2410_STATE_NONE;
+    (void)work;
+    const Ld2410Report *r = Ld2410.present_args.r;
+
+    Ld2410.ok = r && r->state != LD2410_STATE_NONE;
 }
 
-uint16_t protocore_ld2410_distance_cm(const Ld2410Report *r)
+static void ld2410_distance_cm(uint8_t *restrict work)
 {
+    (void)work;
+    const Ld2410Report *r = Ld2410.distance_cm_args.r;
+
     if (!r)
     {
-        return 0;
+        Ld2410.cm = 0;
+        return;
     }
     if (r->state == LD2410_STATE_MOVING || r->state == LD2410_STATE_BOTH)
     {
-        return r->moving_cm;
+        Ld2410.cm = r->moving_cm;
+        return;
     }
     if (r->state == LD2410_STATE_STATIC)
     {
-        return r->static_cm;
+        Ld2410.cm = r->static_cm;
+        return;
     }
-    return 0;
+    Ld2410.cm = 0;
 }
 
-size_t protocore_ld2410_cmd_config_enable(uint8_t *buf, size_t cap)
+static void ld2410_cmd_config_enable(uint8_t *restrict work)
 {
+    (void)work;
+    uint8_t *buf = Ld2410.cmd_config_enable_args.buf;
+    size_t cap = Ld2410.cmd_config_enable_args.cap;
+
     static const uint8_t v[2] = {0x01, 0x00}; // value 0x0001
-    return cmd_frame(buf, cap, 0x00FF, v, 2);
+    Ld2410.n = cmd_frame(buf, cap, 0x00FF, v, 2);
 }
-size_t protocore_ld2410_cmd_config_end(uint8_t *buf, size_t cap)
+static void ld2410_cmd_config_end(uint8_t *restrict work)
 {
-    return cmd_frame(buf, cap, 0x00FE, NULL, 0);
+    (void)work;
+    uint8_t *buf = Ld2410.cmd_config_end_args.buf;
+    size_t cap = Ld2410.cmd_config_end_args.cap;
+
+    Ld2410.n = cmd_frame(buf, cap, 0x00FE, NULL, 0);
 }
-size_t protocore_ld2410_cmd_engineering(uint8_t *buf, size_t cap, proto_bool on)
+static void ld2410_cmd_engineering(uint8_t *restrict work)
 {
-    return cmd_frame(buf, cap, on ? 0x0062 : 0x0063, NULL, 0);
+    (void)work;
+    uint8_t *buf = Ld2410.cmd_engineering_args.buf;
+    size_t cap = Ld2410.cmd_engineering_args.cap;
+    proto_bool on = Ld2410.cmd_engineering_args.on;
+
+    Ld2410.n = cmd_frame(buf, cap, on ? 0x0062 : 0x0063, NULL, 0);
 }
-size_t protocore_ld2410_cmd_restart(uint8_t *buf, size_t cap)
+static void ld2410_cmd_restart(uint8_t *restrict work)
 {
-    return cmd_frame(buf, cap, 0x00A3, NULL, 0);
+    (void)work;
+    uint8_t *buf = Ld2410.cmd_restart_args.buf;
+    size_t cap = Ld2410.cmd_restart_args.cap;
+
+    Ld2410.n = cmd_frame(buf, cap, 0x00A3, NULL, 0);
 }
 
 // --- LD2410B-only ----------------------------------------------------------
-size_t protocore_ld2410_cmd_bluetooth(uint8_t *buf, size_t cap, proto_bool on)
+static void ld2410_cmd_bluetooth(uint8_t *restrict work)
 {
+    (void)work;
+    uint8_t *buf = Ld2410.cmd_bluetooth_args.buf;
+    size_t cap = Ld2410.cmd_bluetooth_args.cap;
+    proto_bool on = Ld2410.cmd_bluetooth_args.on;
+
     const uint8_t v[2] = {(uint8_t)(on ? 0x01 : 0x00), 0x00}; // value 0x0001 on / 0x0000 off
-    return cmd_frame(buf, cap, 0x00A4, v, 2);
+    Ld2410.n = cmd_frame(buf, cap, 0x00A4, v, 2);
 }
 
-size_t protocore_ld2410_cmd_get_mac(uint8_t *buf, size_t cap)
+static void ld2410_cmd_get_mac(uint8_t *restrict work)
 {
+    (void)work;
+    uint8_t *buf = Ld2410.cmd_get_mac_args.buf;
+    size_t cap = Ld2410.cmd_get_mac_args.cap;
+
     static const uint8_t v[2] = {0x01, 0x00}; // value 0x0001
-    return cmd_frame(buf, cap, 0x00A5, v, 2);
+    Ld2410.n = cmd_frame(buf, cap, 0x00A5, v, 2);
 }
 
-size_t protocore_ld2410_cmd_set_bt_password(uint8_t *buf, size_t cap, const char password[6])
+static void ld2410_cmd_set_bt_password(uint8_t *restrict work)
 {
+    (void)work;
+    uint8_t *buf = Ld2410.cmd_set_bt_password_args.buf;
+    size_t cap = Ld2410.cmd_set_bt_password_args.cap;
+    const char *password = Ld2410.cmd_set_bt_password_args.password;
+
     if (!password)
     {
-        return 0;
+        Ld2410.n = 0;
+        return;
     }
     // Exactly 6 octets, natural order - the spec's worked example sends "HiLink" as 48 69 4C 69 6E 6B.
     const uint8_t v[6] = {(uint8_t)password[0], (uint8_t)password[1], (uint8_t)password[2],
                           (uint8_t)password[3], (uint8_t)password[4], (uint8_t)password[5]};
-    return cmd_frame(buf, cap, 0x00A9, v, 6);
+    Ld2410.n = cmd_frame(buf, cap, 0x00A9, v, 6);
 }
 
 // --- command-ACK decoding --------------------------------------------------
-proto_bool protocore_ld2410_parse_ack(const uint8_t *f, size_t len, Ld2410Ack *out)
+static void ld2410_parse_ack(uint8_t *restrict work)
 {
+    (void)work;
+    const uint8_t *f = Ld2410.parse_ack_args.frame;
+    size_t len = Ld2410.parse_ack_args.len;
+    Ld2410Ack *out = Ld2410.parse_ack_args.out;
+
     // layout: four header bytes, two length bytes, two command-word bytes, two status bytes, optional data, four footer
     // bytes
     if (!f || !out || len < 14)
     {
-        return PROTO_FALSE;
+        Ld2410.ok = PROTO_FALSE;
+        return;
     }
     for (int k = 0; k < 4; k++)
     {
         if (f[k] != CMD_HDR[k])
         {
-            return PROTO_FALSE;
+            Ld2410.ok = PROTO_FALSE;
+            return;
         }
     }
     size_t dl = (size_t)f[4] | ((size_t)f[5] << 8); // intra-frame length: word + status + data
     if (dl < 4 || len != 4 + 2 + dl + 4)
     {
-        return PROTO_FALSE; // the declared length must account for exactly this frame
+        Ld2410.ok = PROTO_FALSE;
+        return; // the declared length must account for exactly this frame
     }
     for (int k = 0; k < 4; k++)
     {
         if (f[6 + dl + k] != CMD_FTR[k])
         {
-            return PROTO_FALSE;
+            Ld2410.ok = PROTO_FALSE;
+            return;
         }
     }
     out->command = (uint16_t)((uint16_t)f[6] | ((uint16_t)f[7] << 8));
     out->status = (uint16_t)((uint16_t)f[8] | ((uint16_t)f[9] << 8));
     out->payload_len = dl - 4;
     out->payload = out->payload_len ? f + 10 : NULL;
-    return PROTO_TRUE;
+    Ld2410.ok = PROTO_TRUE;
 }
 
-proto_bool protocore_ld2410_ack_ok(const Ld2410Ack *ack)
+static void ld2410_ack_ok(uint8_t *restrict work)
 {
-    return ack && ack->status == 0;
+    (void)work;
+    const Ld2410Ack *ack = Ld2410.ack_ok_args.ack;
+
+    Ld2410.ok = ack && ack->status == 0;
 }
 
-proto_bool protocore_ld2410_ack_mac(const Ld2410Ack *ack, uint8_t mac[6])
+static void ld2410_ack_mac(uint8_t *restrict work)
 {
+    (void)work;
+    const Ld2410Ack *ack = Ld2410.ack_mac_args.ack;
+    uint8_t *mac = Ld2410.ack_mac_args.mac;
+
     if (!ack || !mac || ack->command != 0x01A5 || ack->status != 0 || ack->payload_len < 6 || !ack->payload)
     {
-        return PROTO_FALSE;
+        Ld2410.ok = PROTO_FALSE;
+        return;
     }
     for (int k = 0; k < 6; k++)
     {
         mac[k] = ack->payload[k];
     }
-    return PROTO_TRUE;
+    Ld2410.ok = PROTO_TRUE;
 }
 
 // ---------------------------------------------------------------------------
@@ -346,58 +476,100 @@ typedef struct
     uint8_t rx[LD2410_RX_CHUNK];
     uint8_t cmd[LD2410_CMD_MAX];
 } Ld2410Ctx;
-static Ld2410Ctx s_ld;
+// The caller's borrow, split: the context at its offset. One pointer arrives and every
+// region is that pointer plus a compile-time offset, so the assert below proves the span
+// covers them before anything runs.
+#define LD2410_OFF_CTX 0u
+static_assert(LD2410_OFF_CTX + sizeof(Ld2410Ctx) <= PROTOCORE_LD2410_BORROW,
+              "PROTOCORE_LD2410_BORROW is short of the module context - raise it in protocore_config.h, which"
+              " sums it into its arena");
 
-proto_bool protocore_ld2410_begin(int rx_pin, int tx_pin)
+// The region, at its offset in the caller's borrow.
+#define LD2410_CTX(w) ((Ld2410Ctx *)(void *)((w) + LD2410_OFF_CTX))
+
+static void ld2410_begin(uint8_t *restrict work)
 {
-    protocore_ld2410_stream_reset(&s_ld.stream);
-    s_ld.have = PROTO_FALSE;
-    return protocore_uart_begin((uint8_t)PROTOCORE_LD2410_UART, PROTOCORE_LD2410_BAUD, rx_pin, tx_pin);
+    int rx_pin = Ld2410.begin_args.rx_pin;
+    int tx_pin = Ld2410.begin_args.tx_pin;
+
+    Ld2410.stream_reset_args.s = &LD2410_CTX(work)->stream;
+    ld2410_stream_reset(work);
+    LD2410_CTX(work)->have = PROTO_FALSE;
+    Ld2410.ok = protocore_uart_begin((uint8_t)PROTOCORE_LD2410_UART, PROTOCORE_LD2410_BAUD, rx_pin, tx_pin);
 }
 
-proto_bool protocore_ld2410_poll(void)
+static void ld2410_poll(uint8_t *restrict work)
 {
+
     proto_bool fresh = PROTO_FALSE;
-    size_t n = protocore_uart_read((uint8_t)PROTOCORE_LD2410_UART, s_ld.rx, sizeof(s_ld.rx), 0);
+    size_t n =
+        protocore_uart_read((uint8_t)PROTOCORE_LD2410_UART, LD2410_CTX(work)->rx, sizeof(LD2410_CTX(work)->rx), 0);
     for (size_t i = 0; i < n; i++)
     {
         Ld2410Report r;
-        if (protocore_ld2410_stream_push(&s_ld.stream, s_ld.rx[i], &r))
+        Ld2410.stream_push_args.s = &LD2410_CTX(work)->stream;
+        Ld2410.stream_push_args.byte = LD2410_CTX(work)->rx[i];
+        Ld2410.stream_push_args.out = &r;
+        ld2410_stream_push(work);
+        if (Ld2410.ok)
         {
-            s_ld.last = r;
-            s_ld.have = PROTO_TRUE;
+            LD2410_CTX(work)->last = r;
+            LD2410_CTX(work)->have = PROTO_TRUE;
             fresh = PROTO_TRUE;
         }
     }
-    return fresh;
+    Ld2410.ok = fresh;
 }
 
-const Ld2410Report *protocore_ld2410_last(void)
+static void ld2410_last(uint8_t *restrict work)
 {
-    return s_ld.have ? &s_ld.last : NULL;
+
+    Ld2410.report = LD2410_CTX(work)->have ? &LD2410_CTX(work)->last : NULL;
 }
 
 // A configuration change is three frames: open the config window, carry the change, close it.
 // Each is built into the owned command buffer and put on the wire before the next is built.
-static proto_bool send_cmd(size_t n)
+static proto_bool send_cmd(uint8_t *restrict work, size_t n)
 {
-    return n > 0 && protocore_uart_write((uint8_t)PROTOCORE_LD2410_UART, s_ld.cmd, n);
+    return n > 0 && protocore_uart_write((uint8_t)PROTOCORE_LD2410_UART, LD2410_CTX(work)->cmd, n);
 }
 
-proto_bool protocore_ld2410_set_engineering(proto_bool on)
+static void ld2410_set_engineering(uint8_t *restrict work)
 {
-    proto_bool ok = send_cmd(protocore_ld2410_cmd_config_enable(s_ld.cmd, sizeof(s_ld.cmd)));
-    ok &= send_cmd(protocore_ld2410_cmd_engineering(s_ld.cmd, sizeof(s_ld.cmd), on));
-    ok &= send_cmd(protocore_ld2410_cmd_config_end(s_ld.cmd, sizeof(s_ld.cmd)));
-    return ok;
+    proto_bool on = Ld2410.set_engineering_args.on;
+
+    Ld2410.cmd_config_enable_args.buf = LD2410_CTX(work)->cmd;
+    Ld2410.cmd_config_enable_args.cap = sizeof(LD2410_CTX(work)->cmd);
+    ld2410_cmd_config_enable(work);
+    proto_bool ok = send_cmd(work, Ld2410.n);
+    Ld2410.cmd_engineering_args.buf = LD2410_CTX(work)->cmd;
+    Ld2410.cmd_engineering_args.cap = sizeof(LD2410_CTX(work)->cmd);
+    Ld2410.cmd_engineering_args.on = on;
+    ld2410_cmd_engineering(work);
+    ok &= send_cmd(work, Ld2410.n);
+    Ld2410.cmd_config_end_args.buf = LD2410_CTX(work)->cmd;
+    Ld2410.cmd_config_end_args.cap = sizeof(LD2410_CTX(work)->cmd);
+    ld2410_cmd_config_end(work);
+    ok &= send_cmd(work, Ld2410.n);
+    Ld2410.ok = ok;
 }
 
-proto_bool protocore_ld2410_restart(void)
+static void ld2410_restart(uint8_t *restrict work)
 {
-    proto_bool ok = send_cmd(protocore_ld2410_cmd_config_enable(s_ld.cmd, sizeof(s_ld.cmd)));
-    ok &= send_cmd(protocore_ld2410_cmd_restart(s_ld.cmd, sizeof(s_ld.cmd)));
-    ok &= send_cmd(protocore_ld2410_cmd_config_end(s_ld.cmd, sizeof(s_ld.cmd)));
-    return ok;
+
+    Ld2410.cmd_config_enable_args.buf = LD2410_CTX(work)->cmd;
+    Ld2410.cmd_config_enable_args.cap = sizeof(LD2410_CTX(work)->cmd);
+    ld2410_cmd_config_enable(work);
+    proto_bool ok = send_cmd(work, Ld2410.n);
+    Ld2410.cmd_restart_args.buf = LD2410_CTX(work)->cmd;
+    Ld2410.cmd_restart_args.cap = sizeof(LD2410_CTX(work)->cmd);
+    ld2410_cmd_restart(work);
+    ok &= send_cmd(work, Ld2410.n);
+    Ld2410.cmd_config_end_args.buf = LD2410_CTX(work)->cmd;
+    Ld2410.cmd_config_end_args.cap = sizeof(LD2410_CTX(work)->cmd);
+    ld2410_cmd_config_end(work);
+    ok &= send_cmd(work, Ld2410.n);
+    Ld2410.ok = ok;
 }
 
 #else // no bus seam. The codec above is host-tested.
@@ -427,5 +599,28 @@ proto_bool protocore_ld2410_restart(void)
 }
 
 #endif // PROTOCORE_HAS_BUS
+
+Ld2410Ns Ld2410 = {.parse_report = ld2410_parse_report,
+                   .stream_reset = ld2410_stream_reset,
+                   .stream_push = ld2410_stream_push,
+                   .present = ld2410_present,
+                   .distance_cm = ld2410_distance_cm,
+                   .cmd_config_enable = ld2410_cmd_config_enable,
+                   .cmd_config_end = ld2410_cmd_config_end,
+                   .cmd_engineering = ld2410_cmd_engineering,
+                   .cmd_restart = ld2410_cmd_restart,
+                   .cmd_bluetooth = ld2410_cmd_bluetooth,
+                   .cmd_get_mac = ld2410_cmd_get_mac,
+                   .cmd_set_bt_password = ld2410_cmd_set_bt_password,
+                   .parse_ack = ld2410_parse_ack,
+                   .ack_ok = ld2410_ack_ok,
+                   .ack_mac = ld2410_ack_mac,
+                   .begin = ld2410_begin,
+                   .poll = ld2410_poll,
+                   .last = ld2410_last,
+                   .set_engineering = ld2410_set_engineering,
+                   .restart = ld2410_restart};
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_LD2410

@@ -23,7 +23,7 @@
 #if defined(_WIN32)
 #define PROTOCORE_HOST_SHARED __declspec(selectany)
 #else
-#define PROTOCORE_HOST_SHARED PROTOCORE_HOST_SHARED
+#define PROTOCORE_HOST_SHARED __attribute__((weak))
 #endif
 #endif
 

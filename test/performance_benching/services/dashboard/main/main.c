@@ -38,16 +38,25 @@ static void noop_control_cb(const char *, float)
 
 void dbench_run(void)
 {
-    protocore_dashboard_configure(kWidgets, 2);
-    protocore_dashboard_on_control(noop_control_cb);
-    protocore_dashboard_set("temp", 23.5f);
-    protocore_dashboard_set("count", 7.0f);
+    Dashboard.configure_args.widgets = kWidgets;
+    Dashboard.configure_args.count = 2;
+    Dashboard.configure(protocore_dashboard_span());
+    Dashboard.on_control_args.cb = noop_control_cb;
+    Dashboard.on_control(protocore_dashboard_span());
+    Dashboard.set_args.key = "temp";
+    Dashboard.set_args.value = 23.5f;
+    Dashboard.set(protocore_dashboard_span());
+    Dashboard.set_args.key = "count";
+    Dashboard.set_args.value = 7.0f;
+    Dashboard.set(protocore_dashboard_span());
 
     static char layout_buf[512];
     static char values_buf[256];
     static char key_out[32];
     static const char kControlMsg[] = "{\"k\":\"temp\",\"v\":3.5}";
     float parsed_value = 0.0f;
+    // The bytes the module runs out of, taken once. Every entry below is called with it.
+    uint8_t *w = protocore_dashboard_span();
 
     for (;;)
     {
@@ -55,15 +64,24 @@ void dbench_run(void)
         volatile bool sinkb = false;
         volatile int sinki = 0;
 
-        DBENCH_OP("protocore_dashboard_set", 100000, sinkb = protocore_dashboard_set("temp", 23.5f));
-        DBENCH_OP("protocore_dashboard_layout_json", 20000,
-                  sinki += protocore_dashboard_layout_json(layout_buf, sizeof(layout_buf)));
-        DBENCH_OP("protocore_dashboard_values_json", 50000,
-                  sinki += protocore_dashboard_values_json(values_buf, sizeof(values_buf)));
-        DBENCH_OP("protocore_dashboard_parse_control", 50000,
-                  sinkb = protocore_dashboard_parse_control(kControlMsg, key_out, sizeof(key_out), &parsed_value));
-        DBENCH_OP("protocore_dashboard_dispatch_control", 50000,
-                  sinkb = protocore_dashboard_dispatch_control(kControlMsg));
+        // The arguments are set outside the timed expression and the entry is called inside it, so
+        // what is timed is one call and not the staging that precedes it.
+        Dashboard.set_args.key = "temp";
+        Dashboard.set_args.value = 23.5f;
+        DBENCH_OP("Dashboard.set", 100000, (Dashboard.set(w), sinkb = Dashboard.ok));
+        Dashboard.layout_json_args.out = layout_buf;
+        Dashboard.layout_json_args.cap = sizeof(layout_buf);
+        DBENCH_OP("Dashboard.layout_json", 20000, (Dashboard.layout_json(w), sinki += Dashboard.value));
+        Dashboard.values_json_args.out = values_buf;
+        Dashboard.values_json_args.cap = sizeof(values_buf);
+        DBENCH_OP("Dashboard.values_json", 50000, (Dashboard.values_json(w), sinki += Dashboard.value));
+        Dashboard.parse_control_args.msg = kControlMsg;
+        Dashboard.parse_control_args.key_out = key_out;
+        Dashboard.parse_control_args.key_cap = sizeof(key_out);
+        Dashboard.parse_control_args.value_out = &parsed_value;
+        DBENCH_OP("Dashboard.parse_control", 50000, (Dashboard.parse_control(w), sinkb = Dashboard.ok));
+        Dashboard.dispatch_control_args.msg = kControlMsg;
+        DBENCH_OP("Dashboard.dispatch_control", 50000, (Dashboard.dispatch_control(w), sinkb = Dashboard.ok));
 
         (void)sinkb;
         (void)sinki;

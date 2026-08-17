@@ -62,5 +62,35 @@ check("its address is still passed bare", 'on_ws("/p", cb_hit);' in out)
 
 check("(void)work dropped where work is read", "(void)work;" not in out)
 
+# A caller that only passes the borrow on still needs one: threading a helper puts `work` into its
+# callers, and a single pass left them naming an identifier they had never been given.
+CHAIN = (
+    "typedef struct\n{\n    int n;\n} BarCtx;\n"
+    "static BarCtx s_bar;\n\n"
+    "static int inner(int k)\n{\n    return s_bar.n + k;\n}\n\n"
+    "static int middle(int k)\n{\n    return inner(k);\n}\n\n"
+    "static int outer(int k)\n{\n    return middle(k);\n}\n"
+)
+chain = funnel(CHAIN, "bar", "PROTOCORE_BAR_BORROW", [])
+print()
+check("chain: the helper takes the borrow", "static int inner(uint8_t *restrict work, int k)" in chain)
+check("chain: its caller takes it too", "static int middle(uint8_t *restrict work, int k)" in chain)
+check("chain: and its caller's caller", "static int outer(uint8_t *restrict work, int k)" in chain)
+check("chain: both call sites pass it", "inner(work, k)" in chain and "middle(work, k)" in chain)
+
+# An initialized context is state, and its default would be lost in a zeroed borrow: seen, and
+# refused, rather than reported as a module that holds nothing.
+INIT = (
+    "typedef struct\n{\n    const char *prefix;\n} GwCtx;\n"
+    'static GwCtx s_gw = {.prefix = "pc"};\n\n'
+    "static int rd(void)\n{\n    return s_gw.prefix[0];\n}\n"
+)
+inotes = []
+iout = funnel(INIT, "gw", "PROTOCORE_GW_BORROW", inotes)
+print()
+check("initialized context is seen as state", "no file-static context" not in " ".join(inotes))
+check("initialized context is refused", any(n.startswith("REFUSED:") for n in inotes))
+check("and the file is left alone", iout == INIT)
+
 print("\nFAILURES: %d" % FAIL)
 sys.exit(1 if FAIL else 0)

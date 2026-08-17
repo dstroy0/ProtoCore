@@ -27,11 +27,15 @@
 #ifndef PROTOCORE_RELAY_H
 #define PROTOCORE_RELAY_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_RELAY
 
 PROTOCORE_BEGIN_DECLS
+
+// This module holds nothing between calls, so it carves no borrow and states none. An entry
+// takes one all the same, and never reads it, so every namespace in the tree is invoked the
+// same way.
 
 /** @brief protocore_relay_step() outcome. */
 typedef enum PROTO_ENUM_PACKED
@@ -88,30 +92,68 @@ typedef struct
     uint32_t bytes_b2a;     ///< bytes relayed b->a (observability)
 } protocore_relay;
 
-/**
- * @brief Initialize a relay between @p client (the inbound connection) and @p origin (the outbound
- *        connection to the internal service). Both ends are copied.
- */
-void protocore_relay_init(protocore_relay *r, const protocore_relay_end *client, const protocore_relay_end *origin);
+/** @brief What init takes: r, client, origin. */
+typedef struct
+{
+    protocore_relay *r;
+    const protocore_relay_end *client;
+    const protocore_relay_end *origin;
+} RelayInitArgs;
+
+/** @brief What step takes: r. */
+typedef struct
+{
+    protocore_relay *r;
+} RelayStepArgs;
+
+/** @brief What note_eof takes: r, origin. */
+typedef struct
+{
+    protocore_relay *r;
+    proto_bool origin; ///< false for the client (inbound) side, true for the origin (outbound) side
+} RelayNoteEofArgs;
 
 /**
- * @brief Do one non-blocking pass: flush any pending bytes and read more, in both directions.
- * @return a ::protocore_relay_status. Call repeatedly (per poll tick) until DONE or ERROR, then close both.
+ * @brief TCP relay / DNAT port forwarding (PROTOCORE_ENABLE_RELAY) - a bidirectional byte pump. Publishes an internal
+ * ...
+ *
+ * A caller sets the members a call takes, invokes it through ::Relay with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   Relay.init_args.r = ...;
+ *   Relay.init_args.client = ...;
+ *   Relay.init_args.origin = ...;
+ *   Relay.init(work);
+ *
+ * @var RelayNs::init_args  what init takes: r, client, origin
+ * @var RelayNs::step_args  what step takes: r
+ * @var RelayNs::note_eof_args  what note_eof takes: r, origin
+ * @var RelayNs::ok  a call's true/false outcome
+ * @var RelayNs::status  a ::protocore_relay_status. Call repeatedly (per poll tick) until ...
+ * @var RelayNs::init  initialize a relay between client (the inbound connection) and ...
+ * @var RelayNs::step  do one non-blocking pass: flush any pending bytes and read more, in ...
+ * @var RelayNs::note_eof  signal that a peer's send side has closed, when the transport ...
+ *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
+ * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
+ * a caller drives every namespace the same way.
  */
-protocore_relay_status protocore_relay_step(protocore_relay *r);
+typedef struct
+{
+    RelayInitArgs init_args;
+    RelayStepArgs step_args;
+    RelayNoteEofArgs note_eof_args;
 
-/**
- * @brief Signal that a peer's send side has closed, when the transport reports EOF out of band (a
- *        close callback) rather than through @c recv returning < 0.
- *
- * Some transports (e.g. the server's `protocore_conn`, which delivers a close as an `on_close` event, not
- * as a short read) cannot report EOF via the recv seam. Call this from that event so the direction
- * that peer sources finishes cleanly: the bytes already buffered are still flushed, then the opposite
- * peer's `shutdown` fires and the relay reaches DONE once both directions have finished.
- *
- * @param origin false for the client (inbound) side, true for the origin (outbound) side.
- */
-void protocore_relay_note_eof(protocore_relay *r, proto_bool origin);
+    proto_bool ok;
+    protocore_relay_status status;
+
+    void (*const init)(uint8_t *restrict work);
+    void (*const step)(uint8_t *restrict work);
+    void (*const note_eof)(uint8_t *restrict work);
+} RelayNs;
+
+/** @brief The one symbol this module exports. */
+extern RelayNs Relay;
 
 PROTOCORE_END_DECLS
 

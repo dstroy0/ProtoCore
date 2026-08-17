@@ -16,11 +16,39 @@ Everything the harness can do is a subcommand here, so `harness.py -h` is the wh
   run           build and run test envs natively (no pio); --pio runs them through `pio test`
   bare          cross-compile the core, and boot it on the part under QEMU
   bench         the microbenchmark matrix
-  runners gen   generate a suite's Unity runner (the logic the pre-build hook calls)
+  runners gen   the bridge to Unity's generate_test_runner.rb: what makes a suite runnable
   keys ensure   put the SSH test host key in place
   readme gen    refresh the generated sections of test/README.md
   report merge  overlay a partial TEST_REPORT.md onto the committed one
   report stable print TEST_REPORT.md with per-run timing blanked out
+
+WRITING A TEST is four steps, all of them here:
+
+  1. write test/<mirror>/test_<name>/test_<name>.c - file-scope `void test_<case>(void)`
+     functions plus setUp/tearDown. The mirror path is the module's: src/a/b/c.c is tested
+     from test/unit/src/a/b/test_c/, and `env add` refuses a suite that sits anywhere else.
+  2. harness.py runners gen <suite dir>   -> Unity's generator writes unity_runner.c beside it
+  3. harness.py env add <env> --after <anchor> --src <the .c files it needs>
+  4. harness.py run <env>
+
+Step 2 is the one with teeth: Unity's generator registers `void test_*` and NOTHING else, and a
+function it walks past is not an error - the suite just passes without ever running it. `runners
+gen` names any such function rather than letting the silence stand. Step 3 also wires the
+pre-build hook (extra_scripts: pre:test/gen_test_runners.py), so step 2 re-runs on every build.
+
+A DRIVER FOR A PART ON A BUS is not tested by priming bytes. core_setup/hal/host/devices/ holds a
+device model per part, written from its datasheet with the section beside every constant, and the
+host bus consults it by address:
+
+    #include "devices/ads1115_device.h"
+    static protocore_ads1115_dev s_part;
+    protocore_ads1115_dev_place(&s_part, PROTOCORE_ADS1115_I2C_ADDR); // resets it, puts it on the bus
+    s_part.ain_uv[0] = 1000000;                                      // 1.000 V on AIN0
+
+The driver then composes its own transfers and the model answers them with its own arithmetic, so
+a read is the part's response to what was written rather than a queue filled in transfer order.
+protocore_bus_host_preload still works for a part that has no model yet; a model, once attached,
+takes precedence for that address. protocore_bus_host_detach_all() empties the table.
 
 Every test activity starts here. `bare` and `bench` are separate matrices in their own files
 (test/bare.py, test/performance_benching/bench.py) because they answer different questions, but
@@ -258,11 +286,27 @@ def cmd_env_add(a):
         if why:
             print(why)
             return 1
+        if a.base and a.clone:
+            print("--base and --clone are alternatives: extend a stack, or copy one env's src")
+            return 1
+        if a.base and a.base.replace("env:", "") not in envs:
+            print("base env not found:", a.base)
+            return 1
         src = list(envs[a.clone]["src"]) if a.clone else (["-<*>"] if a.only else [])
         flags = list(envs[a.clone].get("flags", [])) if a.clone else []
         src += ["+<%s>" % p for p in a.src if "+<%s>" % p not in src]
         flags += [f for f in a.flags if f not in flags]
-        entry = {"desc": a.desc, "flags": flags, "src": src, "tests": list(tests)}
+        # A --base env EXTENDS a stack: it inherits that stack's flags and build_src_filter through
+        # platformio, so it states only what it adds. Copying the stack's src instead (--clone)
+        # loses the ini-level inheritance the stack's own children rely on.
+        entry = {"desc": a.desc}
+        if a.base:
+            entry["base"] = a.base if a.base.startswith("env:") else "env:" + a.base
+        if flags or not a.base:
+            entry["flags"] = flags
+        if src or not a.base:
+            entry["src"] = src
+        entry["tests"] = list(tests)
         if a.extra_scripts:
             entry["extra_scripts"] = list(a.extra_scripts)
         text = splice_after(text, a.after, a.name, entry)
@@ -309,6 +353,14 @@ def cmd_env_update(a):
         merge("extra_scripts", a.extra_scripts, a.drop_extra_scripts)
         if a.desc is not None:
             entry["desc"] = a.desc
+        if a.base is not None:
+            if a.base == "":
+                entry.pop("base", None)  # stand alone again
+            else:
+                if a.base not in envs:
+                    print("base env not found:", a.base)
+                    return 1
+                entry["base"] = "env:" + a.base
         if entry == envs[a.name]:
             print("no change:", a.name)
             return 0
@@ -1018,18 +1070,56 @@ def find_unity_generator(libdeps=None, envname=None):
     return None
 
 
-def generate_runner(suite_dir, libdeps=None, envname=None):
-    """Emit suite_dir/unity_runner.c from the one source that holds the cases."""
+# What Unity's generate_test_runner.rb collects, and the shape a case has to have to be collected.
+# A function that does not match is not an error to the generator - it is simply never registered,
+# so the suite passes while the case never ran. That silence is what the reports below break.
+UNITY_CASE = re.compile(r"^[ \t]*void[ \t]+(test_\w+)[ \t]*\([ \t]*(?:void)?[ \t]*\)", re.M)
+NEAR_MISS = re.compile(r"^[ \t]*void[ \t]+(\w+)[ \t]*\([ \t]*(?:void)?[ \t]*\)[ \t]*\r?\n[ \t]*\{", re.M)
+NOT_A_CASE = ("setUp", "tearDown", "main", "suiteSetUp", "suiteTearDown")
+
+
+def runner_cases(path):
+    """The cases Unity's generator will register in @p path, and the ones it will walk past."""
+    s = open(path, encoding="utf-8").read()
+    found = UNITY_CASE.findall(s)
+    missed = [n for n in NEAR_MISS.findall(s) if n not in found and n not in NOT_A_CASE]
+    return found, missed
+
+
+def suite_source(suite_dir):
+    """The one .c in a suite that holds its cases, or None."""
     if not os.path.isdir(suite_dir):
         return None
-    sources = [
-        f
-        for f in sorted(os.listdir(suite_dir))
-        if f.endswith(".c")
-        and f != GENERATED_RUNNER
-        and "void test_" in open(os.path.join(suite_dir, f), encoding="utf-8").read()
-    ]
+    for f in sorted(os.listdir(suite_dir)):
+        p = os.path.join(suite_dir, f)
+        if f.endswith(".c") and f != GENERATED_RUNNER and runner_cases(p)[0]:
+            return p
+    return None
+
+
+def generate_runner(suite_dir, libdeps=None, envname=None):
+    """Emit suite_dir/unity_runner.c from the one source that holds the cases.
+
+    This is the bridge to Unity's generate_test_runner.rb: it is what turns a suite source into a
+    runnable test, so writing a test means writing the cases and then coming through here.
+    """
+    if not os.path.isdir(suite_dir):
+        return None
+    candidates = [f for f in sorted(os.listdir(suite_dir)) if f.endswith(".c") and f != GENERATED_RUNNER]
+    sources = [f for f in candidates if runner_cases(os.path.join(suite_dir, f))[0]]
     if not sources:
+        # A .c with no collectable case is the common way a new suite silently does nothing.
+        for f in candidates:
+            _, missed = runner_cases(os.path.join(suite_dir, f))
+            if missed:
+                raise SystemExit(
+                    "runners: %s holds no case Unity's generator will register.\n"
+                    "  It collects file-scope `void test_<name>(void)` and nothing else, so these\n"
+                    "  are walked past and never run: %s\n"
+                    "  Rename each to test_<name> - a case the generator skips costs coverage in\n"
+                    "  silence, because the suite still passes."
+                    % (os.path.relpath(os.path.join(suite_dir, f), ROOT), ", ".join(missed))
+                )
         return None
     # The generator takes one input file and emits one main(), so a suite whose cases are spread
     # across several sources cannot be registered from any single one of them. Refused here rather
@@ -1060,7 +1150,25 @@ def cmd_runners_gen(a):
     for d in a.suite:
         full = d if os.path.isabs(d) else os.path.join(ROOT, d)
         out = generate_runner(full)
-        print(("generated " + os.path.relpath(out, ROOT)) if out else ("no cases in " + d))
+        if not out:
+            print(
+                "no runner for %s\n"
+                "  This is the bridge to Unity's generate_test_runner.rb, and it found nothing to\n"
+                "  register. A suite is <dir>/test_<name>.c holding file-scope\n"
+                "  `void test_<case>(void)` functions plus setUp/tearDown; the generator collects\n"
+                "  those and writes %s beside them.\n"
+                "  Write the cases first, then run this, then `harness.py run <env>`." % (d, GENERATED_RUNNER)
+            )
+            continue
+        src = suite_source(full)
+        cases, missed = runner_cases(src) if src else ([], [])
+        print("generated %s (%d cases)" % (os.path.relpath(out, ROOT), len(cases)))
+        if missed:
+            print(
+                "  NOT REGISTERED, and so never run: %s\n"
+                "  Unity's generator collects file-scope `void test_<name>(void)` only. Rename each\n"
+                "  to test_<name>, or the suite passes without them." % ", ".join(missed)
+            )
     return 0
 
 
@@ -1979,7 +2087,13 @@ def build_parser():
     p.add_argument("name")
     p.add_argument("--after", required=True, help="env to insert after")
     p.add_argument("--tests", nargs="+", default=[], help="test_filter entries; derived from --src when omitted")
-    p.add_argument("--clone", help="env whose flags and src to start from")
+    p.add_argument("--clone", help="env whose flags and src to COPY (the new env stands alone)")
+    p.add_argument(
+        "--base",
+        help="stack env to EXTEND (e.g. native_stack_l46): its flags and build_src_filter are "
+        "inherited through the ini, so the new env states only what it adds. Use this, not "
+        "--clone, when the module needs a whole stack built around it.",
+    )
     p.add_argument("--src", nargs="*", default=[], help="repo-relative .c paths to build")
     # Attached form, one per flag: --flags=-DPROTOCORE_ENABLE_X=1 (a bare -D reads as an option).
     p.add_argument("--flags", action="append", default=[], metavar="=-DNAME=VALUE")
@@ -2001,6 +2115,14 @@ def build_parser():
     p.add_argument("--extra-scripts", nargs="*", default=[], dest="extra_scripts")
     p.add_argument("--drop-extra-scripts", nargs="*", default=[], dest="drop_extra_scripts")
     p.add_argument("--desc", default=None)
+    p.add_argument(
+        "--base",
+        default=None,
+        help="stack env to EXTEND from now on (e.g. native_stack_http): its flags and "
+        "build_src_filter are inherited through the ini, so this env states only what it adds. "
+        'Pass "" to stand alone again. Use this when a module stops being gated out and starts '
+        "needing the stack built around it.",
+    )
     p.set_defaults(fn=cmd_env_update)
 
     p = env.add_parser("remove", help="cut envs out of the matrix")
@@ -2057,7 +2179,23 @@ def build_parser():
     b.add_argument("rest", nargs=argparse.REMAINDER, metavar="...")
     b.set_defaults(fn=cmd_bench)
 
-    p = sub.add_parser("run", help="build and run test envs natively (no pio)")
+    p = sub.add_parser(
+        "run",
+        help="build and run test envs natively (no pio)",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=(
+            "driving one env's binary by hand:\n"
+            "  harness.py run --debug <env>            build -g -O0; the binary stays at\n"
+            "                                         .pio/native/<env>.exe\n"
+            "  .pio/native/<env>.exe                   run it directly and read its output\n"
+            "  gdb -batch -ex run -ex bt .pio/native/<env>.exe\n"
+            "                                         backtrace where it died\n"
+            "\n"
+            "A crash reports as exit=3221225477 (0xC0000005) with no Unity output, because the\n"
+            "process dies before the first case prints. The backtrace names the line; the frame\n"
+            "above it is usually the caller that handed over the wrong buffer.\n"
+        ),
+    )
     p.add_argument("envs", nargs="*")
     p.add_argument("-j", "--jobs", type=int, default=os.cpu_count() or 4)
     p.add_argument("-v", "--verbose", action="store_true")
@@ -2076,8 +2214,17 @@ def build_parser():
     p.set_defaults(fn=cmd_run, group="run", cmd="")
 
     # runners / keys / report -------------------------------------------
-    runners = sub.add_parser("runners", help="Unity runner generation").add_subparsers(dest="cmd", required=True)
-    p = runners.add_parser("gen")
+    runners = sub.add_parser(
+        "runners", help="the bridge to Unity's generate_test_runner.rb - what makes a suite runnable"
+    ).add_subparsers(dest="cmd", required=True)
+    p = runners.add_parser(
+        "gen",
+        help="write a suite's unity_runner.c",
+        description="Run Unity's generate_test_runner.rb over a suite's source and write "
+        "unity_runner.c beside it. This is step 2 of writing a test (see `harness.py help`): the "
+        "generator registers file-scope `void test_<case>(void)` and nothing else, so any function "
+        "that only looks like a case is named here rather than silently never running.",
+    )
     p.add_argument("suite", nargs="+", help="suite directories, repo-relative")
     p.set_defaults(fn=cmd_runners_gen)
 

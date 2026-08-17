@@ -6,6 +6,8 @@
  * @brief The HTTP/3 request bridge. See h3_server.h.
  */
 
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
 #if PROTOCORE_ENABLE_HTTP3
 
 #include "mmgr/protostr.h"                                   // str: the bounded-run walks

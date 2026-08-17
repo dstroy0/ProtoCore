@@ -14,6 +14,7 @@
 #include "mmgr/membuild.h"
 #include "mmgr/protomem.h"
 #include "mmgr/protostr.h" // str.has: the permessage-deflate token in Sec-WebSocket-Extensions
+#include "network_drivers/presentation/http/http_parser/http_parser.h" // HttpReq, http_pool: the request being upgraded
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the slot a refusal is written on
 #include "network_drivers/transport/tcp/tcp.h"
 #if PROTOCORE_ENABLE_WEBSOCKET

@@ -16,7 +16,7 @@
 void setUp()
 {
     protocore_net_host_reset();
-    ConnPool.life.cfg = NULL;
+    ConnPool.life.conn_timeout_ms = CONN_TIMEOUT_MS;
     ConnPool.init(ConnPool.internal);
     TcpListener.idx = 0;
     TcpListener.bind.port = PORT;

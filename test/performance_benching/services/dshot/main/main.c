@@ -23,6 +23,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+static uint8_t dshot_work[16]; // the borrow an entry takes; Dshot never reads it
+
 void dbench_run(void)
 {
     // Known-good vectors lifted straight from test/test_dshot/test_dshot.cpp.
@@ -41,17 +43,33 @@ void dbench_run(void)
         volatile uint32_t sink32 = 0;
         volatile bool sinkb = false;
 
-        DBENCH_OP("protocore_dshot_encode std", 200000, sink16 += protocore_dshot_encode(kValue, false, false));
-        DBENCH_OP("protocore_dshot_encode bidir", 200000, sink16 += protocore_dshot_encode(kValue, true, true));
+        // Every entry call stays inside DBENCH_OP so the timed loop measures the codec, not the
+        // read that follows it. The args do not vary across iterations, so they are staged once.
+        Dshot.encode_args.value11 = kValue;
+        Dshot.encode_args.telemetry = PROTO_FALSE;
+        Dshot.encode_args.bidirectional = PROTO_FALSE;
+        DBENCH_OP("Dshot.encode std", 200000, (Dshot.encode(dshot_work), sink16 += Dshot.frame));
+        Dshot.encode_args.telemetry = PROTO_TRUE;
+        Dshot.encode_args.bidirectional = PROTO_TRUE;
+        DBENCH_OP("Dshot.encode bidir", 200000, (Dshot.encode(dshot_work), sink16 += Dshot.frame));
 
         uint16_t val = 0;
-        bool tel = false;
-        DBENCH_OP("protocore_dshot_decode std", 200000, sinkb |= protocore_dshot_decode(kFrameStd, &val, &tel, false));
-        DBENCH_OP("protocore_dshot_decode bidir", 200000,
-                  sinkb |= protocore_dshot_decode(kFrameBidir, &val, &tel, true));
+        proto_bool tel = PROTO_FALSE;
+        Dshot.decode_args.frame = kFrameStd;
+        Dshot.decode_args.value11 = &val;
+        Dshot.decode_args.telemetry = &tel;
+        Dshot.decode_args.bidirectional = PROTO_FALSE;
+        DBENCH_OP("Dshot.decode std", 200000, (Dshot.decode(dshot_work), sinkb |= Dshot.ok));
+        Dshot.decode_args.frame = kFrameBidir;
+        Dshot.decode_args.bidirectional = PROTO_TRUE;
+        DBENCH_OP("Dshot.decode bidir", 200000, (Dshot.decode(dshot_work), sinkb |= Dshot.ok));
 
-        DBENCH_OP("protocore_dshot_bit_ns", 200000, sink32 += protocore_dshot_bit_ns(600, true));
-        DBENCH_OP("protocore_esc_pwm_ns", 200000, sink32 += protocore_esc_pwm_ns(500, PROTOCORE_ESC_ONESHOT125));
+        Dshot.bit_ns_args.rate_kbit = 600;
+        Dshot.bit_ns_args.bit = PROTO_TRUE;
+        DBENCH_OP("Dshot.bit_ns", 200000, (Dshot.bit_ns(dshot_work), sink32 += Dshot.ns));
+        Dshot.esc_pwm_ns_args.throttle_1000 = 500;
+        Dshot.esc_pwm_ns_args.mode = PROTOCORE_ESC_ONESHOT125;
+        DBENCH_OP("Dshot.esc_pwm_ns", 200000, (Dshot.esc_pwm_ns(dshot_work), sink32 += Dshot.ns));
 
         (void)sink16;
         (void)sink32;

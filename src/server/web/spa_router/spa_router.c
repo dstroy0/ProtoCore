@@ -6,17 +6,34 @@
  * @brief Single-page-app micro-routing decision (see spa_router.h).
  */
 
-#include "server/web/spa_router/spa_router.h"
-#include "mmgr/protomem.h"
-#include "mmgr/protostr.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_SPA_ROUTER
 
-proto_bool protocore_spa_has_extension(const char *path)
+#include "mmgr/protomem.h"
+#include "mmgr/protostr.h"
+#include "server/web/spa_router/spa_router.h"
+
+PROTOCORE_BEGIN_DECLS
+
+// The entries this file calls before reaching their definitions.
+// --- the entries -----------------------------------------------------------
+
+// No context and no borrow: every operand is the caller's. The borrow an entry takes is
+// never read.
+
+static void spa_router_has_extension(uint8_t *restrict work);
+static void spa_router_route(uint8_t *restrict work);
+
+static void spa_router_has_extension(uint8_t *restrict work)
 {
+    (void)work;
+    const char *path = SpaRouter.has_extension_args.path;
+
     if (!path)
     {
-        return PROTO_FALSE;
+        SpaRouter.ok = PROTO_FALSE;
+        return;
     }
     // The last '/' opens the final segment, the last '.' inside it marks the extension. find runs
     // forward, so each search resumes past its hit and the last one to return is the rightmost; a
@@ -44,14 +61,19 @@ proto_bool protocore_spa_has_extension(const char *path)
         dot = hit;
         q = hit + 1;
     }
-    return dot && dot != seg && dot[1] != '\0';
+    SpaRouter.ok = dot && dot != seg && dot[1] != '\0';
 }
 
-protocore_spa_action protocore_spa_route(const char *path, const char *api_prefix)
+static void spa_router_route(uint8_t *restrict work)
 {
+    (void)work;
+    const char *path = SpaRouter.route_args.path;
+    const char *api_prefix = SpaRouter.route_args.api_prefix;
+
     if (!path || path[0] == '\0' || (path[0] == '/' && path[1] == '\0'))
     {
-        return PROTOCORE_SPA_SERVE_SHELL; // "" or "/" -> the app shell
+        SpaRouter.action = PROTOCORE_SPA_SERVE_SHELL;
+        return; // "" or "/" -> the app shell
     }
 
     if (api_prefix && api_prefix[0])
@@ -59,41 +81,62 @@ protocore_spa_action protocore_spa_route(const char *path, const char *api_prefi
         size_t pl = str.len(api_prefix, MAX_PATH_LEN + 1);
         if (str.starts(path, api_prefix, pl, PROTO_FALSE))
         {
-            return PROTOCORE_SPA_PASSTHROUGH; // "/api/..." -> handlers
+            SpaRouter.action = PROTOCORE_SPA_PASSTHROUGH;
+            return; // "/api/..." -> handlers
         }
     }
 
-    return protocore_spa_has_extension(path) ? PROTOCORE_SPA_SERVE_FILE : PROTOCORE_SPA_SERVE_SHELL;
+    SpaRouter.has_extension_args.path = path;
+    spa_router_has_extension(work);
+    SpaRouter.action = SpaRouter.ok ? PROTOCORE_SPA_SERVE_FILE : PROTOCORE_SPA_SERVE_SHELL;
 }
 
-protocore_spa_action protocore_spa_route_ex(const char *path, const protocore_spa_ctx *ctx)
+static void spa_router_route_ex(uint8_t *restrict work)
 {
+    (void)work;
+    const char *path = SpaRouter.route_ex_args.path;
+    const protocore_spa_ctx *ctx = SpaRouter.route_ex_args.ctx;
+
     if (!ctx)
     {
-        return protocore_spa_route(path, NULL);
+        SpaRouter.route_args.path = path;
+        SpaRouter.route_args.api_prefix = NULL;
+        spa_router_route(work);
+        return;
     }
 
-    protocore_spa_action a = protocore_spa_route(path, ctx->api_prefix);
+    SpaRouter.route_args.path = path;
+    SpaRouter.route_args.api_prefix = ctx->api_prefix;
+    spa_router_route(work);
+    protocore_spa_action a = SpaRouter.action;
     // Only the shell decision can degrade. An asset request still resolves to the file (the caller
     // reports a real 404 if it is missing), and the API must keep passing through - the fallback
     // page posts to those same endpoints, so cutting them off would make it useless.
     if (a != PROTOCORE_SPA_SERVE_SHELL)
     {
-        return a;
+        SpaRouter.action = a;
+        return;
     }
     if (!ctx->shell_available || !ctx->client_scripting || ctx->degraded)
     {
-        return PROTOCORE_SPA_SERVE_FALLBACK;
+        SpaRouter.action = PROTOCORE_SPA_SERVE_FALLBACK;
+        return;
     }
-    return a;
+    SpaRouter.action = a;
 }
 
 // ---------------------------------------------------------------------------
 // Conditional UI streaming
 // ---------------------------------------------------------------------------
 
-void protocore_ui_stream_begin(protocore_ui_stream *s, const protocore_ui_fragment *frags, size_t count, void *ctx)
+static void spa_router_ui_stream_begin(uint8_t *restrict work)
 {
+    (void)work;
+    protocore_ui_stream *s = SpaRouter.ui_stream_begin_args.s;
+    const protocore_ui_fragment *frags = SpaRouter.ui_stream_begin_args.frags;
+    size_t count = SpaRouter.ui_stream_begin_args.count;
+    void *ctx = SpaRouter.ui_stream_begin_args.ctx;
+
     if (!s)
     {
         return;
@@ -106,11 +149,17 @@ void protocore_ui_stream_begin(protocore_ui_stream *s, const protocore_ui_fragme
     s->done = (s->count == 0);
 }
 
-size_t protocore_ui_stream_next(protocore_ui_stream *s, char *out, size_t cap)
+static void spa_router_ui_stream_next(uint8_t *restrict work)
 {
+    (void)work;
+    protocore_ui_stream *s = SpaRouter.ui_stream_next_args.s;
+    char *out = SpaRouter.ui_stream_next_args.out;
+    size_t cap = SpaRouter.ui_stream_next_args.cap;
+
     if (!s || !out || cap == 0 || s->done)
     {
-        return 0;
+        SpaRouter.n = 0;
+        return;
     }
 
     size_t written = 0;
@@ -145,12 +194,24 @@ size_t protocore_ui_stream_next(protocore_ui_stream *s, char *out, size_t cap)
     {
         s->done = PROTO_TRUE;
     }
-    return written;
+    SpaRouter.n = written;
 }
 
-proto_bool protocore_ui_stream_done(const protocore_ui_stream *s)
+static void spa_router_ui_stream_done(uint8_t *restrict work)
 {
-    return !s || s->done;
+    (void)work;
+    const protocore_ui_stream *s = SpaRouter.ui_stream_done_args.s;
+
+    SpaRouter.ok = !s || s->done;
 }
+
+SpaRouterNs SpaRouter = {.has_extension = spa_router_has_extension,
+                         .route = spa_router_route,
+                         .route_ex = spa_router_route_ex,
+                         .ui_stream_begin = spa_router_ui_stream_begin,
+                         .ui_stream_next = spa_router_ui_stream_next,
+                         .ui_stream_done = spa_router_ui_stream_done};
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SPA_ROUTER

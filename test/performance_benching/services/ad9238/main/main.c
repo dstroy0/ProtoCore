@@ -25,6 +25,7 @@ void dbench_run(void)
 {
     static uint8_t out3[3];
     static uint8_t out2[2];
+    static uint8_t ad9238_work[16]; // the borrow an entry takes; Ad9238 never reads it
 
     for (;;)
     {
@@ -32,14 +33,28 @@ void dbench_run(void)
         volatile bool sinkb = false;
         volatile size_t sinkz = 0;
 
-        DBENCH_OP("protocore_ad9238_build_instruction", 200000,
-                  sinkb = protocore_ad9238_build_instruction(false, (uint16_t)AD9238_REG_POWER_DOWN, 1, out2));
-        DBENCH_OP("protocore_ad9238_build_write", 200000,
-                  sinkz += protocore_ad9238_build_write((uint16_t)AD9238_REG_POWER_DOWN, 0x01, out3, sizeof(out3)));
-        DBENCH_OP("protocore_ad9238_build_read", 200000,
-                  sinkz += protocore_ad9238_build_read((uint16_t)AD9238_REG_CHIP_ID, out2, sizeof(out2)));
-        DBENCH_OP("protocore_ad9238_build_transfer", 200000,
-                  sinkz += protocore_ad9238_build_transfer(out3, sizeof(out3)));
+        // Each entry call stays inside DBENCH_OP so the timed loop measures the encode, not the
+        // read that follows it. The args do not change across iterations, so they are staged once.
+        Ad9238.build_instruction_args.read = PROTO_FALSE;
+        Ad9238.build_instruction_args.reg_addr = (uint16_t)AD9238_REG_POWER_DOWN;
+        Ad9238.build_instruction_args.nbytes = 1;
+        Ad9238.build_instruction_args.out2 = out2;
+        DBENCH_OP("Ad9238.build_instruction", 200000, (Ad9238.build_instruction(ad9238_work), sinkb = Ad9238.ok));
+
+        Ad9238.build_write_args.reg_addr = (uint16_t)AD9238_REG_POWER_DOWN;
+        Ad9238.build_write_args.value = 0x01;
+        Ad9238.build_write_args.out = out3;
+        Ad9238.build_write_args.cap = sizeof(out3);
+        DBENCH_OP("Ad9238.build_write", 200000, (Ad9238.build_write(ad9238_work), sinkz += Ad9238.n));
+
+        Ad9238.build_read_args.reg_addr = (uint16_t)AD9238_REG_CHIP_ID;
+        Ad9238.build_read_args.out = out2;
+        Ad9238.build_read_args.cap = sizeof(out2);
+        DBENCH_OP("Ad9238.build_read", 200000, (Ad9238.build_read(ad9238_work), sinkz += Ad9238.n));
+
+        Ad9238.build_transfer_args.out = out3;
+        Ad9238.build_transfer_args.cap = sizeof(out3);
+        DBENCH_OP("Ad9238.build_transfer", 200000, (Ad9238.build_transfer(ad9238_work), sinkz += Ad9238.n));
 
         (void)sinkb;
         (void)sinkz;

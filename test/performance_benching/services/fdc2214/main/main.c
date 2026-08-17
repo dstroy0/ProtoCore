@@ -35,6 +35,8 @@ void dbench_run(void)
     static const uint16_t rcount = 0xFFFF;
     static const uint16_t settlecount = 0x0400;
     static uint8_t cfg[FDC2214_CONFIG_MAX];
+    // The bytes the module runs out of, taken once. Every entry below is called with it.
+    uint8_t *w = protocore_fdc2214_span();
 
     for (;;)
     {
@@ -43,12 +45,21 @@ void dbench_run(void)
         volatile uint8_t sink8 = 0;
         volatile uint64_t sink64 = 0;
         volatile size_t sinksz = 0;
-        DBENCH_OP("protocore_fdc2214_data", 200000, sink32 += protocore_fdc2214_data(msb_reg, lsb_reg));
-        DBENCH_OP("protocore_fdc2214_error", 200000, sink8 += protocore_fdc2214_error(msb_reg));
-        DBENCH_OP("protocore_fdc2214_sensor_freq_hz", 200000,
-                  sink64 += protocore_fdc2214_sensor_freq_hz(data28, fref_hz));
-        DBENCH_BULK("protocore_fdc2214_build_config", 50000, FDC2214_CONFIG_MAX,
-                    sinksz += protocore_fdc2214_build_config(cfg, sizeof(cfg), rcount, settlecount));
+        // The arguments are set outside the timed expression and the entry is called inside it, so
+        // what is timed is one call and not the staging that precedes it.
+        Fdc2214.data_args.msb_reg = msb_reg;
+        Fdc2214.data_args.lsb_reg = lsb_reg;
+        DBENCH_OP("Fdc2214.data", 200000, (Fdc2214.data(w), sink32 += Fdc2214.value));
+        Fdc2214.error_args.msb_reg = msb_reg;
+        DBENCH_OP("Fdc2214.error", 200000, (Fdc2214.error(w), sink8 += Fdc2214.flags));
+        Fdc2214.sensor_freq_hz_args.data28 = data28;
+        Fdc2214.sensor_freq_hz_args.fref_hz = fref_hz;
+        DBENCH_OP("Fdc2214.sensor_freq_hz", 200000, (Fdc2214.sensor_freq_hz(w), sink64 += Fdc2214.hz));
+        Fdc2214.build_config_args.buf = cfg;
+        Fdc2214.build_config_args.cap = sizeof(cfg);
+        Fdc2214.build_config_args.rcount = rcount;
+        Fdc2214.build_config_args.settlecount = settlecount;
+        DBENCH_BULK("Fdc2214.build_config", 50000, FDC2214_CONFIG_MAX, (Fdc2214.build_config(w), sinksz += Fdc2214.n));
         (void)sink32;
         (void)sink8;
         (void)sink64;

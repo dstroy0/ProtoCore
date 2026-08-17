@@ -6,35 +6,85 @@
  * @brief VL53L0X time-of-flight ranging codec + ESP32 binding (see vl53l0x.h).
  */
 
-#include "server/peripherals/vl53l0x/vl53l0x.h"
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_VL53L0X
 
-#if PROTOCORE_HAS_BUS
-#include "server/peripherals/i2c.h"
+#if !PROTOCORE_HAS_BUS
+#error                                                                                                                 \
+    "ProtoCore: PROTOCORE_ENABLE_VL53L0X needs a bus master (an I2C master). Provide one in core_setup/hal/<vendor>, or\
+ turn the driver off - there is no software stand-in for a part on the other end of a bus."
 #endif
-uint16_t protocore_vl53l0x_range_mm(uint8_t hi, uint8_t lo)
+
+#include "mmgr/secure.h" // the persistent end this module's state is taken from
+#include "server/peripherals/i2c.h"
+#include "server/peripherals/vl53l0x/vl53l0x.h"
+
+PROTOCORE_BEGIN_DECLS
+
+// The entries this file calls before reaching their definitions.
+
+// --- the program's shared state, beside the namespace not on it -------------
+
+// The one owned instance, private to this TU: the pointer to the bytes this module took for
+// itself. A caller that hands in its own borrow never reaches it.
+typedef struct
 {
-    return (uint16_t)((hi << 8) | lo);
+    uint8_t *span; ///< PROTOCORE_I2C_DEVICE_BORROW persistent bytes, or null while the pool was short
+} Vl53l0xOwnCtx;
+static Vl53l0xOwnCtx s_own;
+
+// Not an entry: an entry takes a borrow and this is where that borrow comes from.
+uint8_t *protocore_vl53l0x_span(void)
+{
+    if (s_own.span == NULL)
+    {
+        protocore_span sp = protocore_secure_persist_span(PROTOCORE_I2C_DEVICE_BORROW);
+        if (span.ok(sp))
+        {
+            s_own.span = sp.buf;
+        }
+    }
+    return s_own.span; // null while the pool was short, which every entry refuses
 }
 
-proto_bool protocore_vl53l0x_data_ready(uint8_t interrupt_status)
+static void vl53l0x_range_mm(uint8_t *restrict work);
+static void vl53l0x_range_status(uint8_t *restrict work);
+static void vl53l0x_range_valid(uint8_t *restrict work);
+
+static void vl53l0x_range_mm(uint8_t *restrict work)
 {
-    return (interrupt_status & 0x07) != 0;
+    (void)work;
+    uint8_t hi = Vl53l0x.range_mm_args.hi;
+    uint8_t lo = Vl53l0x.range_mm_args.lo;
+
+    Vl53l0x.mm = (uint16_t)((hi << 8) | lo);
 }
 
-uint8_t protocore_vl53l0x_range_status(uint8_t range_status_reg)
+static void vl53l0x_data_ready(uint8_t *restrict work)
 {
-    return (uint8_t)((range_status_reg >> 3) & 0x0F);
+    (void)work;
+    uint8_t interrupt_status = Vl53l0x.data_ready_args.interrupt_status;
+
+    Vl53l0x.ok = (interrupt_status & 0x07) != 0;
 }
 
-proto_bool protocore_vl53l0x_range_valid(uint8_t range_status_reg)
+static void vl53l0x_range_status(uint8_t *restrict work)
 {
-    return protocore_vl53l0x_range_status(range_status_reg) == VL53L0X_RANGE_VALID;
+    (void)work;
+    uint8_t range_status_reg = Vl53l0x.range_status_args.range_status_reg;
+
+    Vl53l0x.status = (uint8_t)((range_status_reg >> 3) & 0x0F);
 }
 
-#if PROTOCORE_HAS_BUS
+static void vl53l0x_range_valid(uint8_t *restrict work)
+{
+    uint8_t range_status_reg = Vl53l0x.range_valid_args.range_status_reg;
+
+    Vl53l0x.range_status_args.range_status_reg = range_status_reg;
+    vl53l0x_range_status(work);
+    Vl53l0x.ok = Vl53l0x.status == VL53L0X_RANGE_VALID;
+}
 
 // All VL53L0X I2C-binding state, owned by one instance (internal linkage): the device address, the
 // register-pair frame, and the result block, so it is one named owner, unreachable from any other
@@ -47,58 +97,105 @@ typedef struct
     uint8_t frame[2];
     uint8_t result[12];
 } Vl53l0xCtx;
-static Vl53l0xCtx s_vl = {.addr = 0x29, .frame = {0}, .result = {0}};
+// The caller's borrow, split: the context at its offset. One pointer arrives and every
+// region is that pointer plus a compile-time offset, so the assert below proves the span
+// covers them before anything runs.
+#define VL53L0X_OFF_CTX 0u
+static_assert(VL53L0X_OFF_CTX + sizeof(Vl53l0xCtx) <= PROTOCORE_I2C_DEVICE_BORROW,
+              "PROTOCORE_I2C_DEVICE_BORROW is short of the module context - raise it in protocore_config.h, which"
+              " sums it into its arena");
 
-static proto_bool w8(uint8_t reg, uint8_t val)
+// The region, at its offset in the caller's borrow.
+#define VL53L0X_CTX(w) ((Vl53l0xCtx *)(void *)((w) + VL53L0X_OFF_CTX))
+
+// Zero is "no address set yet", which is the address the part answers to out of reset - stated
+// here rather than on the declaration so the context carries no initializer and can live in a
+// borrow that arrives zeroed. begin() applies the same default to the address it is handed.
+static uint8_t dev_addr(uint8_t *restrict work)
 {
-    s_vl.frame[0] = reg;
-    s_vl.frame[1] = val;
-    return protocore_i2c_write(s_vl.addr, s_vl.frame, sizeof(s_vl.frame));
+    return VL53L0X_CTX(work)->addr ? VL53L0X_CTX(work)->addr : (uint8_t)PROTOCORE_VL53L0X_I2C_ADDR;
 }
 
-static proto_bool r8(uint8_t reg, uint8_t *val)
+static proto_bool w8(uint8_t *restrict work, uint8_t reg, uint8_t val)
 {
-    return protocore_i2c_write_read(s_vl.addr, &reg, 1, val, 1);
+    VL53L0X_CTX(work)->frame[0] = reg;
+    VL53L0X_CTX(work)->frame[1] = val;
+    return protocore_i2c_write(dev_addr(work), VL53L0X_CTX(work)->frame, sizeof(VL53L0X_CTX(work)->frame));
 }
 
-static proto_bool rn(uint8_t reg, uint8_t *buf, uint8_t n)
+static proto_bool r8(uint8_t *restrict work, uint8_t reg, uint8_t *val)
 {
-    return protocore_i2c_write_read(s_vl.addr, &reg, 1, buf, n);
+    return protocore_i2c_write_read(dev_addr(work), &reg, 1, val, 1);
 }
 
-proto_bool protocore_vl53l0x_begin(uint8_t addr)
+static proto_bool rn(uint8_t *restrict work, uint8_t reg, uint8_t *buf, uint8_t n)
 {
+    return protocore_i2c_write_read(dev_addr(work), &reg, 1, buf, n);
+}
+
+static void vl53l0x_begin(uint8_t *restrict work)
+{
+    uint8_t addr = Vl53l0x.begin_args.addr;
+
     protocore_i2c_begin();
-    s_vl.addr = addr;
+    VL53L0X_CTX(work)->addr = addr ? addr : (uint8_t)PROTOCORE_VL53L0X_I2C_ADDR;
     uint8_t id = 0;
-    if (!r8(VL53L0X_REG_IDENTIFICATION_MODEL_ID, &id) || id != VL53L0X_MODEL_ID)
+    if (!r8(work, VL53L0X_REG_IDENTIFICATION_MODEL_ID, &id) || id != VL53L0X_MODEL_ID)
     {
-        return PROTO_FALSE;
+        Vl53l0x.ok = PROTO_FALSE;
+        return;
     }
-    return w8(VL53L0X_REG_SYSRANGE_START, 0x02); // continuous back-to-back ranging
+    Vl53l0x.ok = w8(work, VL53L0X_REG_SYSRANGE_START, 0x02); // continuous back-to-back ranging
 }
 
-proto_bool protocore_vl53l0x_read_mm(uint16_t *mm)
+static void vl53l0x_read_mm(uint8_t *restrict work)
 {
+    uint16_t *mm = Vl53l0x.read_mm_args.mm;
+
     if (!mm)
     {
-        return PROTO_FALSE;
+        Vl53l0x.ok = PROTO_FALSE;
+        return;
     }
+    // The read fills irq and the test reads it, so the two are separate statements: staged above
+    // the transfer, data_ready would run on the byte from before it.
     uint8_t irq = 0;
-    if (!r8(VL53L0X_REG_RESULT_INTERRUPT_STATUS, &irq) || !protocore_vl53l0x_data_ready(irq))
+    if (!r8(work, VL53L0X_REG_RESULT_INTERRUPT_STATUS, &irq))
     {
-        return PROTO_FALSE;
+        Vl53l0x.ok = PROTO_FALSE;
+        return;
     }
-    if (!rn(VL53L0X_REG_RESULT_RANGE_STATUS, s_vl.result, (uint8_t)sizeof(s_vl.result)))
+    Vl53l0x.data_ready_args.interrupt_status = irq;
+    vl53l0x_data_ready(work);
+    if (!Vl53l0x.ok)
     {
-        return PROTO_FALSE;
+        Vl53l0x.ok = PROTO_FALSE;
+        return;
     }
-    proto_bool valid = protocore_vl53l0x_range_valid(s_vl.result[0]);
-    *mm = protocore_vl53l0x_range_mm(s_vl.result[10], s_vl.result[11]); // distance at RESULT_RANGE_STATUS + 10/11
-    (void)w8(VL53L0X_REG_SYSTEM_INTERRUPT_CLEAR, 0x01);
-    return valid;
+    if (!rn(work, VL53L0X_REG_RESULT_RANGE_STATUS, VL53L0X_CTX(work)->result,
+            (uint8_t)sizeof(VL53L0X_CTX(work)->result)))
+    {
+        Vl53l0x.ok = PROTO_FALSE;
+        return;
+    }
+    Vl53l0x.range_valid_args.range_status_reg = VL53L0X_CTX(work)->result[0];
+    vl53l0x_range_valid(work);
+    proto_bool valid = Vl53l0x.ok;
+    Vl53l0x.range_mm_args.hi = VL53L0X_CTX(work)->result[10];
+    Vl53l0x.range_mm_args.lo = VL53L0X_CTX(work)->result[11];
+    vl53l0x_range_mm(work);
+    *mm = Vl53l0x.mm; // distance at RESULT_RANGE_STATUS + 10/11
+    (void)w8(work, VL53L0X_REG_SYSTEM_INTERRUPT_CLEAR, 0x01);
+    Vl53l0x.ok = valid;
 }
 
-#endif // PROTOCORE_HAS_BUS
+Vl53l0xNs Vl53l0x = {.range_mm = vl53l0x_range_mm,
+                     .data_ready = vl53l0x_data_ready,
+                     .range_status = vl53l0x_range_status,
+                     .range_valid = vl53l0x_range_valid,
+                     .begin = vl53l0x_begin,
+                     .read_mm = vl53l0x_read_mm};
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_VL53L0X

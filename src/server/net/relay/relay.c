@@ -6,10 +6,14 @@
  * @brief TCP relay / DNAT byte pump implementation (see relay.h).
  */
 
-#include "relay.h"
-#include "mmgr/protomem.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_RELAY
+
+#include "mmgr/protomem.h"
+#include "relay.h"
+
+PROTOCORE_BEGIN_DECLS
 
 // Read one non-blocking chunk from src and forward it to dst. Sets *src_eof on a src seam error;
 // returns -1 on a dst send error, else 0. A zero-length read leaves the buffers untouched.
@@ -91,8 +95,18 @@ static int pump(protocore_relay_end *src, protocore_relay_end *dst, uint8_t *buf
     return 0;
 }
 
-void protocore_relay_init(protocore_relay *r, const protocore_relay_end *client, const protocore_relay_end *origin)
+// --- the entries -----------------------------------------------------------
+
+// No context and no borrow: every operand is the caller's. The borrow an entry takes is
+// never read.
+
+static void relay_init(uint8_t *restrict work)
 {
+    (void)work;
+    protocore_relay *r = Relay.init_args.r;
+    const protocore_relay_end *client = Relay.init_args.client;
+    const protocore_relay_end *origin = Relay.init_args.origin;
+
     if (!r || !client || !origin)
     {
         return;
@@ -102,30 +116,40 @@ void protocore_relay_init(protocore_relay *r, const protocore_relay_end *client,
     r->b = *origin;
 }
 
-protocore_relay_status protocore_relay_step(protocore_relay *r)
+static void relay_step(uint8_t *restrict work)
 {
+    (void)work;
+    protocore_relay *r = Relay.step_args.r;
+
     if (!r)
     {
-        return PROTOCORE_RELAY_ERROR;
+        Relay.status = PROTOCORE_RELAY_ERROR;
+        return;
     }
     // a -> b: dst is b, so b's shutdown fires when this direction finishes
     if (pump(&r->a, &r->b, r->buf_a2b, &r->a2b_len, &r->a2b_off, &r->a_eof, &r->a2b_done, &r->b_shut_sent,
              &r->bytes_a2b) < 0)
     {
-        return PROTOCORE_RELAY_ERROR;
+        Relay.status = PROTOCORE_RELAY_ERROR;
+        return;
     }
     // b -> a: dst is a
     if (pump(&r->b, &r->a, r->buf_b2a, &r->b2a_len, &r->b2a_off, &r->b_eof, &r->b2a_done, &r->a_shut_sent,
              &r->bytes_b2a) < 0)
     {
-        return PROTOCORE_RELAY_ERROR;
+        Relay.status = PROTOCORE_RELAY_ERROR;
+        return;
     }
 
-    return (r->a2b_done && r->b2a_done) ? PROTOCORE_RELAY_DONE : PROTOCORE_RELAY_RUNNING;
+    Relay.status = (r->a2b_done && r->b2a_done) ? PROTOCORE_RELAY_DONE : PROTOCORE_RELAY_RUNNING;
 }
 
-void protocore_relay_note_eof(protocore_relay *r, proto_bool origin)
+static void relay_note_eof(uint8_t *restrict work)
 {
+    (void)work;
+    protocore_relay *r = Relay.note_eof_args.r;
+    proto_bool origin = Relay.note_eof_args.origin;
+
     if (!r)
     {
         return;
@@ -140,5 +164,9 @@ void protocore_relay_note_eof(protocore_relay *r, proto_bool origin)
         r->a_eof = PROTO_TRUE;
     }
 }
+
+RelayNs Relay = {.init = relay_init, .step = relay_step, .note_eof = relay_note_eof};
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_RELAY

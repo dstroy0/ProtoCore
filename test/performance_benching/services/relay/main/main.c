@@ -14,6 +14,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+static uint8_t relay_work[16]; // the borrow an entry takes; Relay never reads it
+
 // A mock end: recv fills the buffer (never EOF, so the relay keeps pumping), send is a sink.
 static int mock_recv(void *, uint8_t *buf, size_t cap)
 {
@@ -39,8 +41,13 @@ void dbench_run(void)
     {
         DBENCH_BANNER("relay");
         volatile int sink = 0;
-        protocore_relay_init(&r, &client, &origin);
-        DBENCH_OP("protocore_relay_step (pump both dirs)", 200000, sink += (int)protocore_relay_step(&r));
+        Relay.init_args.r = &r;
+        Relay.init_args.client = &client;
+        Relay.init_args.origin = &origin;
+        Relay.init(relay_work);
+        Relay.step_args.r = &r;
+        // The entry call stays inside DBENCH_OP so the timed loop measures the pump, not the read.
+        DBENCH_OP("Relay.step (pump both dirs)", 200000, (Relay.step(relay_work), sink += (int)Relay.status));
         (void)sink;
         DBENCH_DONE();
     }

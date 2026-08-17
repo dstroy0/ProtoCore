@@ -60,7 +60,6 @@ struct ConnPoolStorage
  * @var ConnPoolInternal::data             bytes for a send
  * @var ConnPoolInternal::len              how many
  * @var ConnPoolInternal::pcb              the control block a raw call acts on
- * @var ConnPoolInternal::cfg              the config init reads
  * @var ConnPoolInternal::worker_id        whose slots the sweep reaps
  * @var ConnPoolInternal::out              where the peer address is written
  * @var ConnPoolInternal::evt              the event an enqueue posts
@@ -579,7 +578,7 @@ static void protocore_conn_enqueue(TcpConn *slot, const TcpEvt *evt)
 
 static void init(struct ConnPoolInternal *restrict ctx)
 {
-    ctx->conn_timeout_ms = (ctx->ns->life.cfg != NULL) ? ctx->ns->life.cfg->conn_timeout_ms : CONN_TIMEOUT_MS;
+    ctx->conn_timeout_ms = ctx->ns->life.conn_timeout_ms;
     // The template lives in storage and the copy runs before any listener is accepting, so the
     // non-atomic struct assignment over the atomic members races nothing.
     for (int i = 0; i < MAX_CONNS; i++)

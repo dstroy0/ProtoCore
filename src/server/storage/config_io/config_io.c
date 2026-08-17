@@ -9,14 +9,18 @@
  * backend), so the whole serialize / parse round-trip is host-tested.
  */
 
-#include "server/storage/config_io/config_io.h"
-#include "mmgr/protoframe.h" // the one frame engine
-#include "mmgr/protomem.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_CONFIG_IO
 
+#include "mmgr/protoframe.h" // the one frame engine
+#include "mmgr/protomem.h"
+#include "server/storage/config_io/config_io.h"
+
 #include "mmgr/protostr.h"
 #include "server/storage/config_store/config_store.h"
+
+PROTOCORE_BEGIN_DECLS
 
 // An exported u32 field is one number.
 static const protocore_field CFG_U32[] = {PROTOCORE_U32, PROTOCORE_END};
@@ -58,18 +62,32 @@ static proto_bool append_kv(char *out, size_t cap, size_t *pos, const char *key,
     return PROTO_TRUE;
 }
 
-int protocore_config_export(const char *ns, const protocore_cfg_field *fields, size_t n, char *out, size_t cap)
+// --- the entries -----------------------------------------------------------
+
+// No context and no borrow: every operand is the caller's. The borrow an entry takes is
+// never read.
+
+static void config_io_export(uint8_t *restrict work)
 {
+    (void)work;
+    const char *ns = ConfigIo.export_args.ns;
+    const protocore_cfg_field *fields = ConfigIo.export_args.fields;
+    size_t n = ConfigIo.export_args.n;
+    char *out = ConfigIo.export_args.out;
+    size_t cap = ConfigIo.export_args.cap;
+
     if (!out || cap == 0)
     {
-        return 0;
+        ConfigIo.n = 0;
+        return;
     }
     out[0] = '\0';
     ConfigStore.begin_args.ns = ns;
     ConfigStore.begin(protocore_config_store_span());
     if (!fields || !ConfigStore.ok)
     {
-        return 0; // host config_store backend's protocore_config_begin always returns true
+        ConfigIo.n = 0;
+        return; // host config_store backend's protocore_config_begin always returns true
     }
 
     size_t pos = 0;
@@ -97,10 +115,11 @@ int protocore_config_export(const char *ns, const protocore_cfg_field *fields, s
         if (!append_kv(out, cap, &pos, fields[i].key, val))
         {
             out[0] = '\0';
-            return 0; // fail closed on overflow
+            ConfigIo.n = 0;
+            return; // fail closed on overflow
         }
     }
-    return (int)pos;
+    ConfigIo.n = (int)pos;
 }
 
 // Set one key=val pair against the field table; returns true iff a matching field was found and its
@@ -129,13 +148,21 @@ static proto_bool config_apply_field(const protocore_cfg_field *fields, size_t n
     return PROTO_FALSE;
 }
 
-int protocore_config_import(const char *ns, const protocore_cfg_field *fields, size_t n, const char *text, size_t len)
+static void config_io_import(uint8_t *restrict work)
 {
+    (void)work;
+    const char *ns = ConfigIo.import_args.ns;
+    const protocore_cfg_field *fields = ConfigIo.import_args.fields;
+    size_t n = ConfigIo.import_args.n;
+    const char *text = ConfigIo.import_args.text;
+    size_t len = ConfigIo.import_args.len;
+
     ConfigStore.begin_args.ns = ns;
     ConfigStore.begin(protocore_config_store_span());
     if (!text || !fields || !ConfigStore.ok)
     {
-        return 0; // the host config_store backend's protocore_config_begin always returns true
+        ConfigIo.n = 0;
+        return; // the host config_store backend's protocore_config_begin always returns true
     }
 
     int count = 0;
@@ -178,7 +205,11 @@ int protocore_config_import(const char *ns, const protocore_cfg_field *fields, s
         }
         i = eol + 1; // skip the newline
     }
-    return count;
+    ConfigIo.n = count;
 }
+
+ConfigIoNs ConfigIo = {.export = config_io_export, .import = config_io_import};
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_CONFIG_IO

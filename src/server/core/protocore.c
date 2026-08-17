@@ -132,6 +132,16 @@ void protocore_server_reset(void)
     Auth.reset(Auth.internal);
 #endif
     Mnt.reset(Mnt.internal); // the same, for the mount id a static or DAV route holds
+#if PROTOCORE_ENABLE_WEBSOCKET
+    // And again for the ws / sse handler sets: a route holds the id route_add returned, so the
+    // tables empty with the routes. Left behind, each re-registration appends a set no route can
+    // reach, and both tables are bounded - they fill, route_add starts refusing, and an upgrade
+    // then records no handlers at all.
+    Ws.route_reset(protocore_ws_span());
+#endif
+#if PROTOCORE_ENABLE_SSE
+    Sse.route_reset(protocore_sse_span());
+#endif
     protocore_resp_reset();
     protocore_middleware_reset();
     Signal.reset(Signal.internal);
@@ -208,7 +218,10 @@ int32_t proto_begin(const WebServerConfig *cfg)
     {
         return (int32_t)PROTOCORE_ERR_NO_LISTENERS;
     }
-    ConnPool.life.cfg = cfg;
+    // The connection's idle deadline is its lifetime, which this layer owns; the pool is told the
+    // number rather than handed the config to read it out of.
+    Session.conn_timeout_ms = (cfg != NULL) ? cfg->conn_timeout_ms : CONN_TIMEOUT_MS;
+    ConnPool.life.conn_timeout_ms = Session.conn_timeout_ms;
     ConnPool.init(ConnPool.internal);
 #if PROTOCORE_ENABLE_AUTH
     {
@@ -631,6 +644,7 @@ void service_once(int worker_id)
     // The iteration's stamp. One read of the source per pass, before anything reads the time, so
     // every step of the pass measures against the same instant. A caller that needs the live value
     // - a latency measurement, an elapsed time - calls Clock.millis() again and reads the delta.
+    Clock.millis(Clock.internal);
 
     // Install HTTP's poll so the dispatch loop below pumps it through the uniform
     // ProtoHandler.on_poll seam (see http_poll_slot). Done here rather than only in begin() so a

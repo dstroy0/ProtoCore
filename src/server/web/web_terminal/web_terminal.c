@@ -211,7 +211,6 @@ static void web_terminal_println(uint8_t *restrict work)
     {
         buf[0] = '\0';
     }
-    WebTerminal.ok;
 }
 
 static void web_terminal_client_count(uint8_t *restrict work)

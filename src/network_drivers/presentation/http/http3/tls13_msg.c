@@ -6,17 +6,17 @@
  * @brief TLS 1.3 handshake messages for the QUIC handshake (see protocore_tls13_msg.h).
  */
 
-#include "network_drivers/presentation/http/http3/tls13_msg.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if (PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_TLS_SOFTWARE)
 
-#include "crypto/asymmetric/ed25519.h"
-#include "mmgr/protomem.h"
-#include "mmgr/protostr.h" // str.len: the selected ProtocolName's length
 #if PROTOCORE_ENABLE_PQC_KEX
 #include "crypto/pqc/mlkem.h" // MLKEM768_EK_BYTES (X25519MLKEM768 share sizing)
 #endif
-
+#include "crypto/asymmetric/ed25519.h"
+#include "mmgr/protomem.h"
+#include "mmgr/protostr.h" // str.len: the selected ProtocolName's length
+#include "network_drivers/presentation/http/http3/tls13_msg.h"
 // TLS extension types used here (RFC 8446 sec 4.2 + RFC 9001).
 #define TLS_EXT_SERVER_NAME 0x0000
 #define TLS_EXT_SUPPORTED_GROUPS 0x000a

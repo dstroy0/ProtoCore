@@ -31,36 +31,65 @@ void dbench_run(void)
     static HotswapCore absent; // parked not-READY so due() exercises the wrap-safe unsigned delta
     static HotswapCore scratch;
     static char json[64];
+    // The bytes the module runs out of, taken once. Every entry below is called with it.
+    uint8_t *w = protocore_hotswap_span();
 
     for (;;)
     {
         // Re-establish the known states at the top of each run.
-        protocore_hotswap_core_init(&ready, 3, 2000, 100000);
-        protocore_hotswap_core_probe(&ready, true, true, 100000); // -> READY
-        protocore_hotswap_core_init(&absent, 3, 2000, 100000);    // stays ABSENT
+        Hotswap.core_init_args.c = &ready;
+        Hotswap.core_init_args.fail_threshold = 3;
+        Hotswap.core_init_args.probe_interval_ms = 2000;
+        Hotswap.core_init_args.now = 100000;
+        Hotswap.core_init(protocore_hotswap_span());
+        Hotswap.core_probe_args.c = &ready;
+        Hotswap.core_probe_args.present = true;
+        Hotswap.core_probe_args.mounted = true;
+        Hotswap.core_probe_args.now = 100000;
+        Hotswap.core_probe(protocore_hotswap_span()); // -> READY
+        Hotswap.core_init_args.c = &absent;
+        Hotswap.core_init_args.fail_threshold = 3;
+        Hotswap.core_init_args.probe_interval_ms = 2000;
+        Hotswap.core_init_args.now = 100000;
+        Hotswap.core_init(protocore_hotswap_span()); // stays ABSENT
 
         DBENCH_BANNER("hotswap");
         volatile uint32_t sink = 0;
 
         // The steady-state per-write outcome: a success while READY clears the failure run and keeps
         // the volume READY, so this is the exact branch a healthy filesystem write takes every time.
-        DBENCH_OP("protocore_hotswap_core_io ok", 200000, sink += protocore_hotswap_core_io(&ready, true) ? 1u : 0u);
+        // The arguments are set outside the timed expression and the entry is called inside it, so
+        // what is timed is one call and not the staging that precedes it.
+        Hotswap.core_io_args.c = &ready;
+        Hotswap.core_io_args.ok = true;
+        DBENCH_OP("Hotswap.core_io ok", 200000, (Hotswap.core_io(w), sink += Hotswap.ok ? 1u : 0u));
 
         // A redundant probe of an already-mounted volume: the full mount-decision work with no
         // transition, so it stays READY and repeats identically.
-        DBENCH_OP("protocore_hotswap_core_probe mount", 200000,
-                  sink += protocore_hotswap_core_probe(&ready, true, true, 100000) ? 1u : 0u);
+        Hotswap.core_probe_args.c = &ready;
+        Hotswap.core_probe_args.present = true;
+        Hotswap.core_probe_args.mounted = true;
+        Hotswap.core_probe_args.now = 100000;
+        DBENCH_OP("Hotswap.core_probe mount", 200000, (Hotswap.core_probe(w), sink += Hotswap.ok ? 1u : 0u));
 
         // The cheap per-loop "is a remount due?" check; a not-READY core reaches the wrap-safe
         // (now - last_probe_ms) >= interval delta rather than the READY early-out.
-        DBENCH_OP("protocore_hotswap_core_due", 200000, sink += protocore_hotswap_core_due(&absent, 105000) ? 1u : 0u);
+        Hotswap.core_due_args.c = &absent;
+        Hotswap.core_due_args.now = 105000;
+        DBENCH_OP("Hotswap.core_due", 200000, (Hotswap.core_due(w), sink += Hotswap.ok ? 1u : 0u));
 
         // Cold init of a fresh core (clamps the threshold, back-dates the first probe).
-        DBENCH_OP("protocore_hotswap_core_init", 200000, protocore_hotswap_core_init(&scratch, 3, 2000, 100000));
+        Hotswap.core_init_args.c = &scratch;
+        Hotswap.core_init_args.fail_threshold = 3;
+        Hotswap.core_init_args.probe_interval_ms = 2000;
+        Hotswap.core_init_args.now = 100000;
+        DBENCH_OP("Hotswap.core_init", 200000, Hotswap.core_init(w));
 
         // The /health serializer: snprintf of `{"storage":..,"mounts":N,"faults":N}` from the owned
         // singleton - the heaviest pure op here, hence the smaller N.
-        DBENCH_OP("protocore_hotswap_json", 50000, sink += protocore_hotswap_json(json, sizeof(json)));
+        Hotswap.json_args.out = json;
+        Hotswap.json_args.cap = sizeof(json);
+        DBENCH_OP("Hotswap.json", 50000, (Hotswap.json(w), sink += Hotswap.n));
 
         (void)sink;
         DBENCH_DONE();

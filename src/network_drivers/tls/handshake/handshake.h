@@ -36,11 +36,11 @@
 #ifndef PROTOCORE_TLS_HANDSHAKE_H
 #define PROTOCORE_TLS_HANDSHAKE_H
 
-#include "protocore_config.h"
-
-PROTOCORE_BEGIN_DECLS
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_TLS_SOFTWARE
+
+PROTOCORE_BEGIN_DECLS
 
 #include "network_drivers/tls/tls.h" // TlsConn, TlsConnConfig, TlsRole: the resource this drives
 

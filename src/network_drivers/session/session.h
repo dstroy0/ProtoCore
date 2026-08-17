@@ -78,6 +78,9 @@ struct SessionInternal;
  * A caller sets the members a call takes and invokes it through ::Session.
  *
  * @var SessionNs::worker_id  which worker is turning: whose slots it sweeps and whose queue it drains
+ * @var SessionNs::conn_timeout_ms
+ *                            milliseconds of inactivity before a connection is closed, applied by
+ *                            the sweep this layer drives
  * @var SessionNs::tick       drive the layer for one loop iteration: sweep, drain, dispatch
  * @var SessionNs::proto      the protocol registry a connection is dispatched through
  * @var SessionNs::workers    the worker tasks that turn the pipeline, their deferred-callback
@@ -91,6 +94,7 @@ struct SessionInternal;
 typedef struct
 {
     int worker_id;
+    proto_u32 conn_timeout_ms;
 
     void (*tick)(struct SessionInternal *ctx);
     ProtoRegistryNs *proto;

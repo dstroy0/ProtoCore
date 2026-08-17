@@ -187,6 +187,7 @@ static void server_tick(struct SessionInternal *restrict ctx)
      * sweeps only the slots it owns.
      */
     ConnPool.life.worker_id = ctx->ns->worker_id;
+    ConnPool.life.conn_timeout_ms = ctx->ns->conn_timeout_ms;
     ConnPool.check_timeouts(ConnPool.internal);
 
 #if PROTOCORE_NEED_UDP

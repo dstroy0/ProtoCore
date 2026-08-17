@@ -6,18 +6,19 @@
  * @brief TLS 1.3 server handshake state machine for QUIC (see protocore_quic_tls.h).
  */
 
-#include "network_drivers/presentation/http/http3/quic_tls.h"
-#include "crypto/ct_eq.h" // protocore_ct_eq: the Finished compare
-#include "mmgr/protomem.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_HTTP3
 
-#include "crypto/asymmetric/curve25519.h"
-#include "network_drivers/presentation/http/http3/tls13_msg.h"
 #if PROTOCORE_ENABLE_PQC_KEX
 #include "crypto/pqc/mlkem.h" // MlKem (X25519MLKEM768 hybrid)
 #endif
-
+#include "network_drivers/presentation/http/http3/quic_tls.h"
+#include "crypto/hash/sha256.h" // Sha256: the transcript this handshake keeps
+#include "crypto/ct_eq.h" // protocore_ct_eq: the Finished compare
+#include "mmgr/protomem.h"
+#include "crypto/asymmetric/curve25519.h"
+#include "network_drivers/presentation/http/http3/tls13_msg.h"
 // TLS alert codes we may raise (RFC 8446 sec 6).
 #define TLS_ALERT_UNEXPECTED_MESSAGE 10
 #define TLS_ALERT_HANDSHAKE_FAILURE 40
@@ -67,7 +68,7 @@ static void ks_finished(QuicTls *qt, const uint8_t *base_secret, const uint8_t *
     Tls13Ks.finished_args.base_secret = base_secret;
     Tls13Ks.finished_args.transcript_hash = transcript_hash;
     Tls13Ks.finished_args.out = out;
-    Tls13Ks.finished_mac(Tls13Ks.internal);
+    Tls13Ks.finished_mac(NULL);
 }
 
 // The running Transcript-Hash so far. Finalizing compresses the padded blocks into a copy of the
@@ -272,11 +273,11 @@ static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t m
     uint8_t hash[32];
     snapshot_hash(qt->transcript, hash);
     ks_bind(qt);
-    Tls13Ks.early(Tls13Ks.internal);
+    Tls13Ks.early(NULL);
     Tls13Ks.step.ecdhe = ecdhe;
     Tls13Ks.step.ecdhe_len = ecdhe_len;
     Tls13Ks.step.ch_sh_hash = hash;
-    Tls13Ks.handshake(Tls13Ks.internal);
+    Tls13Ks.handshake(NULL);
     protocore_quic_keys_from_secret(qt->keys_work, qt->ks.s + TLS13_KS_CLIENT_HS, &qt->hs_client);
     protocore_quic_keys_from_secret(qt->keys_work, qt->ks.s + TLS13_KS_SERVER_HS, &qt->hs_server);
     qt->hs_keys_ready = PROTO_TRUE;
@@ -327,7 +328,7 @@ static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t m
     snapshot_hash(qt->transcript, qt->hs_finished_hash);
     ks_bind(qt);
     Tls13Ks.step.ch_sfin_hash = qt->hs_finished_hash;
-    Tls13Ks.master(Tls13Ks.internal);
+    Tls13Ks.master(NULL);
     protocore_quic_keys_from_secret(qt->keys_work, qt->ks.s + TLS13_KS_CLIENT_AP, &qt->ap_client);
     protocore_quic_keys_from_secret(qt->keys_work, qt->ks.s + TLS13_KS_SERVER_AP, &qt->ap_server);
     qt->ap_keys_ready = PROTO_TRUE;

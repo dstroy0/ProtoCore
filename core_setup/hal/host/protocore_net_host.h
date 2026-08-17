@@ -51,7 +51,7 @@
 #if defined(_WIN32)
 #define PROTOCORE_HOST_SHARED __declspec(selectany)
 #else
-#define PROTOCORE_HOST_SHARED PROTOCORE_HOST_SHARED
+#define PROTOCORE_HOST_SHARED __attribute__((weak))
 #endif
 #endif
 
@@ -277,6 +277,93 @@ static inline int protocore_platform_spi_txn_ext(uint8_t host, uint32_t hz, uint
     return protocore_platform_spi_txn(host, hz, bit_order, mode, tx, rx, len);
 }
 
+// ---------------------------------------------------------------------------
+// Device models
+// ---------------------------------------------------------------------------
+//
+// A part attached to an address answers its own transfers. The capture above says what the core
+// drove out; a model says what comes back, computed from the bytes this transfer carried, so a
+// read is the part's response to what the driver just wrote rather than a queue filled in
+// transfer order. Each model lives in its own header under devices/ and holds its register file
+// in a context the suite owns.
+
+#ifndef PROTOCORE_BUS_HOST_MAX_DEV
+#define PROTOCORE_BUS_HOST_MAX_DEV 8
+#endif
+
+// One transfer as the part sees it: wlen bytes arrived, rlen are wanted back. Returns how many it
+// supplied; the seam zero-fills the rest.
+typedef uint32_t (*protocore_bus_host_dev_fn)(void *ctx, const uint8_t *w, uint32_t wlen, uint8_t *r, uint32_t rlen);
+
+typedef struct
+{
+    protocore_bus_host_dev_fn txn; /**< null in a free slot */
+    void *ctx;                     /**< the model's register file, owned by whoever attached it */
+    uint16_t addr;
+    uint8_t kind; /**< PROTOCORE_BUS_HOST_I2C / _SPI / _UART */
+} protocore_bus_host_dev;
+
+PROTOCORE_HOST_SHARED protocore_bus_host_dev protocore_bus_host_dev_tbl[PROTOCORE_BUS_HOST_MAX_DEV];
+
+/** @brief The model at one address on one bus, or null. */
+static inline protocore_bus_host_dev *protocore_bus_host_dev_at(uint8_t kind, uint16_t addr)
+{
+    for (uint32_t i = 0; i < PROTOCORE_BUS_HOST_MAX_DEV; i++)
+    {
+        protocore_bus_host_dev *d = &protocore_bus_host_dev_tbl[i];
+        if (d->txn && d->kind == kind && d->addr == addr)
+        {
+            return d;
+        }
+    }
+    return 0;
+}
+
+/** @brief Put a model at one address, replacing any already there. 0 when the table is full. */
+static inline int protocore_bus_host_attach(uint8_t kind, uint16_t addr, void *ctx, protocore_bus_host_dev_fn txn)
+{
+    protocore_bus_host_dev *d = protocore_bus_host_dev_at(kind, addr);
+    for (uint32_t i = 0; i < PROTOCORE_BUS_HOST_MAX_DEV && d == 0; i++)
+    {
+        if (protocore_bus_host_dev_tbl[i].txn == 0)
+        {
+            d = &protocore_bus_host_dev_tbl[i];
+        }
+    }
+    if (d == 0)
+    {
+        return 0;
+    }
+    d->kind = kind;
+    d->addr = addr;
+    d->ctx = ctx;
+    d->txn = txn;
+    return 1;
+}
+
+/** @brief Take every model off every bus. */
+static inline void protocore_bus_host_detach_all(void)
+{
+    for (uint32_t i = 0; i < PROTOCORE_BUS_HOST_MAX_DEV; i++)
+    {
+        protocore_bus_host_dev_tbl[i].txn = 0;
+    }
+}
+
+// What a transfer reads back: the model at that address if one is attached, otherwise the
+// preloaded queue, zero-filled to the length asked for either way. A write is the same call with
+// rlen 0, which is how a model sees the bytes written to it.
+static inline void protocore_bus_host_answer(uint8_t kind, uint16_t addr, const uint8_t *w, uint32_t wlen, uint8_t *r,
+                                             uint32_t rlen)
+{
+    protocore_bus_host_dev *d = protocore_bus_host_dev_at(kind, addr);
+    uint32_t got = d ? d->txn(d->ctx, w, wlen, r, rlen) : protocore_bus_host_drain(r, rlen);
+    while (got < rlen)
+    {
+        r[got++] = 0;
+    }
+}
+
 // I2C. The address a transfer went to is recorded ahead of its payload, so a suite can tell one
 // device's traffic from another's on a shared bus.
 #define PROTOCORE_I2C_ADDR_10BIT 0x8000u
@@ -301,7 +388,12 @@ static inline int protocore_platform_i2c_write(uint8_t bus, uint16_t addr, const
     (void)bus;
     (void)ms;
     protocore_bus_host_last_addr = addr;
-    return protocore_bus_host_record(PROTOCORE_BUS_HOST_I2C, addr, buf, len, 0);
+    if (!protocore_bus_host_record(PROTOCORE_BUS_HOST_I2C, addr, buf, len, 0))
+    {
+        return 0;
+    }
+    protocore_bus_host_answer(PROTOCORE_BUS_HOST_I2C, addr, buf, len, 0, 0);
+    return 1;
 }
 static inline int protocore_platform_i2c_read(uint8_t bus, uint16_t addr, uint8_t *buf, uint32_t len, uint32_t ms)
 {
@@ -312,11 +404,7 @@ static inline int protocore_platform_i2c_read(uint8_t bus, uint16_t addr, uint8_
     {
         return 0;
     }
-    uint32_t got = protocore_bus_host_drain(buf, len);
-    while (got < len)
-    {
-        buf[got++] = 0;
-    }
+    protocore_bus_host_answer(PROTOCORE_BUS_HOST_I2C, addr, 0, 0, buf, len);
     return 1;
 }
 static inline int protocore_platform_i2c_write_read(uint8_t bus, uint16_t addr, const uint8_t *w, uint32_t wlen,
@@ -329,11 +417,7 @@ static inline int protocore_platform_i2c_write_read(uint8_t bus, uint16_t addr, 
     {
         return 0;
     }
-    uint32_t got = protocore_bus_host_drain(r, rlen);
-    while (got < rlen)
-    {
-        r[got++] = 0;
-    }
+    protocore_bus_host_answer(PROTOCORE_BUS_HOST_I2C, addr, w, wlen, r, rlen);
     return 1;
 }
 static inline int protocore_platform_i2c_set_clock(uint8_t bus, uint32_t hz)
@@ -342,15 +426,18 @@ static inline int protocore_platform_i2c_set_clock(uint8_t bus, uint32_t hz)
     (void)hz;
     return 1;
 }
-// A probe is an address cycle with no payload. Nothing answers on the host, so a scan finds
-// nothing unless a suite drives the addresses itself.
+// A probe is an address cycle with no payload. An attached model answers it; a bare address does
+// not, so a scan finds exactly the parts a suite put on the bus.
 static inline int protocore_platform_i2c_probe(uint8_t bus, uint16_t addr, uint32_t ms)
 {
     (void)bus;
     (void)ms;
     protocore_bus_host_last_addr = addr;
-    (void)protocore_bus_host_record(PROTOCORE_BUS_HOST_I2C, addr, 0, 0, 0);
-    return 0; /* nothing answers on a host bus */
+    if (!protocore_bus_host_record(PROTOCORE_BUS_HOST_I2C, addr, 0, 0, 0))
+    {
+        return 0;
+    }
+    return protocore_bus_host_dev_at(PROTOCORE_BUS_HOST_I2C, addr) != 0;
 }
 static inline int protocore_platform_i2c_recover(uint8_t bus, int sda, int scl)
 {
@@ -546,6 +633,32 @@ static inline uint32_t protocore_platform_cycles(void)
     }
     uint64_t ns = (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;
     return (uint32_t)((ns * PROTOCORE_HOST_CYCLE_MHZ) / 1000ull);
+}
+
+// ---------------------------------------------------------------------------
+// Reboot
+// ---------------------------------------------------------------------------
+//
+// On silicon this does not return: the vendor arm is esp_restart(). A host process cannot restart
+// itself and must not exit, or the suite that asked for it dies before it can assert anything - so
+// the request is recorded and the caller carries on. What a test wants to know is that the core
+// asked, and how many times.
+
+PROTOCORE_HOST_SHARED uint32_t protocore_host_restarts;
+
+static inline void protocore_platform_restart(void)
+{
+    protocore_host_restarts++;
+}
+
+/** @brief How many times the core has asked for a reboot since the last reset. */
+static inline uint32_t protocore_host_restart_count(void)
+{
+    return protocore_host_restarts;
+}
+static inline void protocore_host_restart_reset(void)
+{
+    protocore_host_restarts = 0;
 }
 
 // ---------------------------------------------------------------------------

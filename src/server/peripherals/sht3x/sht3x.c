@@ -6,63 +6,135 @@
  * @brief Sensirion SHT3x temperature / humidity codec - implementation. See sht3x.h.
  */
 
-#include "server/peripherals/sht3x/sht3x.h"
-#include "protocore_config.h"
-#include "server/clock/clock.h" // pcdelay
-#include "shared/crc/crc.h"     // PROTOCORE_CRC8_NRSC5
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_SHT3X
 
-#if PROTOCORE_HAS_BUS
-#include "mmgr/endian.h" // endian.wr16be: the commands and words are big-endian
-#include "server/peripherals/i2c.h"
+#if !PROTOCORE_HAS_BUS
+#error                                                                                                                 \
+    "ProtoCore: PROTOCORE_ENABLE_SHT3X needs a bus master (an I2C master). Provide one in core_setup/hal/<vendor>, or\
+ turn the driver off - there is no software stand-in for a part on the other end of a bus."
 #endif
-uint8_t protocore_sht3x_crc8(const uint8_t *data, size_t len)
+
+#include "mmgr/endian.h"        // endian.wr16be: the commands and words are big-endian
+#include "mmgr/secure.h"        // the persistent end this module's state is taken from
+#include "server/clock/clock.h" // pcdelay
+#include "server/peripherals/i2c.h"
+#include "server/peripherals/sht3x/sht3x.h"
+#include "shared/crc/crc.h" // PROTOCORE_CRC8_NRSC5
+
+PROTOCORE_BEGIN_DECLS
+
+// The entries this file calls before reaching their definitions.
+
+// --- the program's shared state, beside the namespace not on it -------------
+
+// The one owned instance, private to this TU: the pointer to the bytes this module took for
+// itself. A caller that hands in its own borrow never reaches it.
+typedef struct
 {
+    uint8_t *span; ///< PROTOCORE_I2C_DEVICE_BORROW persistent bytes, or null while the pool was short
+} Sht3xOwnCtx;
+static Sht3xOwnCtx s_own;
+
+// Not an entry: an entry takes a borrow and this is where that borrow comes from.
+uint8_t *protocore_sht3x_span(void)
+{
+    if (s_own.span == NULL)
+    {
+        protocore_span sp = protocore_secure_persist_span(PROTOCORE_I2C_DEVICE_BORROW);
+        if (span.ok(sp))
+        {
+            s_own.span = sp.buf;
+        }
+    }
+    return s_own.span; // null while the pool was short, which every entry refuses
+}
+
+static void sht3x_crc8(uint8_t *restrict work);
+static void sht3x_parse(uint8_t *restrict work);
+static void sht3x_rh_mpct(uint8_t *restrict work);
+static void sht3x_temp_mc(uint8_t *restrict work);
+
+static void sht3x_crc8(uint8_t *restrict work)
+{
+    (void)work;
+    const uint8_t *data = Sht3x.crc8_args.data;
+    size_t len = Sht3x.crc8_args.len;
+
     // The Sensirion CRC-8 is the cataloge's CRC-8/NRSC-5 (poly 0x31, init 0xFF, no reflection, no final XOR).
     Crc.args.params = &PROTOCORE_CRC8_NRSC5;
     Crc.args.data = data;
     Crc.args.len = len;
     Crc.compute(Crc.internal);
-    return (uint8_t)Crc.value;
+    Sht3x.crc = (uint8_t)Crc.value;
 }
 
-int32_t protocore_sht3x_temp_mc(uint16_t raw)
+static void sht3x_temp_mc(uint8_t *restrict work)
 {
+    (void)work;
+    uint16_t raw = Sht3x.temp_mc_args.raw;
+
     // T[C] = -45 + 175 * raw / 65535, in milli-degrees (64-bit to avoid overflow).
-    return (int32_t)(-45000 + (int64_t)175000 * raw / 65535);
+    Sht3x.milli = (int32_t)(-45000 + (int64_t)175000 * raw / 65535);
 }
 
-int32_t protocore_sht3x_rh_mpct(uint16_t raw)
+static void sht3x_rh_mpct(uint8_t *restrict work)
 {
+    (void)work;
+    uint16_t raw = Sht3x.rh_mpct_args.raw;
+
     int32_t v = (int32_t)((int64_t)100000 * raw / 65535); // RH[%] = 100 * raw / 65535
-    return v > 100000 ? 100000 : v;
+    Sht3x.milli = v > 100000 ? 100000 : v;
 }
 
-proto_bool protocore_sht3x_parse(const uint8_t resp[6], int32_t *temp_mc, int32_t *rh_mpct)
+static void sht3x_parse(uint8_t *restrict work)
 {
-    if (!resp || protocore_sht3x_crc8(resp, 2) != resp[2] || protocore_sht3x_crc8(resp + 3, 2) != resp[5])
+    (void)work;
+    const uint8_t *resp = Sht3x.parse_args.resp;
+    int32_t *temp_mc = Sht3x.parse_args.temp_mc;
+    int32_t *rh_mpct = Sht3x.parse_args.rh_mpct;
+
+    if (!resp)
     {
-        return PROTO_FALSE;
+        Sht3x.ok = PROTO_FALSE;
+        return;
+    }
+    // Each checksum is captured before the next runs: both report through the one namespace, so
+    // testing them in a single expression would test the second one twice.
+    Sht3x.crc8_args.data = resp;
+    Sht3x.crc8_args.len = 2;
+    sht3x_crc8(work);
+    const uint8_t crc_t = Sht3x.crc;
+    Sht3x.crc8_args.data = resp + 3;
+    Sht3x.crc8_args.len = 2;
+    sht3x_crc8(work);
+    const uint8_t crc_h = Sht3x.crc;
+    if (crc_t != resp[2] || crc_h != resp[5])
+    {
+        Sht3x.ok = PROTO_FALSE;
+        return;
     }
     uint16_t traw = (uint16_t)(((uint16_t)resp[0] << 8) | resp[1]);
     uint16_t hraw = (uint16_t)(((uint16_t)resp[3] << 8) | resp[4]);
     if (temp_mc)
     {
-        *temp_mc = protocore_sht3x_temp_mc(traw);
+        Sht3x.temp_mc_args.raw = traw;
+        sht3x_temp_mc(work);
+        *temp_mc = Sht3x.milli;
     }
     if (rh_mpct)
     {
-        *rh_mpct = protocore_sht3x_rh_mpct(hraw);
+        Sht3x.rh_mpct_args.raw = hraw;
+        sht3x_rh_mpct(work);
+        *rh_mpct = Sht3x.milli;
     }
-    return PROTO_TRUE;
+    Sht3x.ok = PROTO_TRUE;
 }
 
 // ---------------------------------------------------------------------------
 // I2C binding
 // ---------------------------------------------------------------------------
-
-#if PROTOCORE_HAS_BUS
 
 // All SHT3x I2C-binding state, owned by one instance (internal linkage): the device address and
 // the bus frame, so it is one named owner, unreachable from any other translation unit. The frame
@@ -73,52 +145,72 @@ typedef struct
     uint8_t addr;
     uint8_t frame[6];
 } Sht3xCtx;
-static Sht3xCtx s_sht = {.addr = PROTOCORE_SHT3X_I2C_ADDR};
+// The caller's borrow, split: the context at its offset. One pointer arrives and every
+// region is that pointer plus a compile-time offset, so the assert below proves the span
+// covers them before anything runs.
+#define SHT3X_OFF_CTX 0u
+static_assert(SHT3X_OFF_CTX + sizeof(Sht3xCtx) <= PROTOCORE_I2C_DEVICE_BORROW,
+              "PROTOCORE_I2C_DEVICE_BORROW is short of the module context - raise it in protocore_config.h, which"
+              " sums it into its arena");
+
+// The region, at its offset in the caller's borrow.
+#define SHT3X_CTX(w) ((Sht3xCtx *)(void *)((w) + SHT3X_OFF_CTX))
+
+// Zero is "no address set yet", which is the default address - stated here rather than on the
+// declaration so the context carries no initializer and can live in a borrow that arrives zeroed.
+// begin() applies the same default to the address it is handed.
+static uint8_t dev_addr(uint8_t *restrict work)
+{
+    return SHT3X_CTX(work)->addr ? SHT3X_CTX(work)->addr : (uint8_t)PROTOCORE_SHT3X_I2C_ADDR;
+}
 
 // A command is a bare 16-bit word, big-endian, with no register byte in front of it.
-static proto_bool send_cmd(uint16_t cmd)
+static proto_bool send_cmd(uint8_t *restrict work, uint16_t cmd)
 {
-    (void)endian.wr16be(s_sht.frame, cmd);
-    return protocore_i2c_write(s_sht.addr, s_sht.frame, 2);
+    (void)endian.wr16be(SHT3X_CTX(work)->frame, cmd);
+    return protocore_i2c_write(dev_addr(work), SHT3X_CTX(work)->frame, 2);
 }
 
-proto_bool protocore_sht3x_begin(uint8_t addr)
+static void sht3x_begin(uint8_t *restrict work)
 {
-    s_sht.addr = addr ? addr : (uint8_t)PROTOCORE_SHT3X_I2C_ADDR;
+    uint8_t addr = Sht3x.begin_args.addr;
+
+    SHT3X_CTX(work)->addr = addr ? addr : (uint8_t)PROTOCORE_SHT3X_I2C_ADDR;
     protocore_i2c_begin();
-    proto_bool ok = send_cmd(SHT3X_CMD_SOFT_RESET);
+    proto_bool ok = send_cmd(work, SHT3X_CMD_SOFT_RESET);
     pcdelay(2); // soft reset completes in < 1.5 ms
-    return ok;
+    Sht3x.ok = ok;
 }
 
-proto_bool protocore_sht3x_read(int32_t *temp_mc, int32_t *rh_mpct)
+static void sht3x_read(uint8_t *restrict work)
 {
-    if (!send_cmd(SHT3X_CMD_SINGLE_HIGH))
+    int32_t *temp_mc = Sht3x.read_args.temp_mc;
+    int32_t *rh_mpct = Sht3x.read_args.rh_mpct;
+
+    if (!send_cmd(work, SHT3X_CMD_SINGLE_HIGH))
     {
-        return PROTO_FALSE;
+        Sht3x.ok = PROTO_FALSE;
+        return;
     }
     pcdelay(20); // a high-repeatability measurement completes in < 15 ms
-    if (!protocore_i2c_read(s_sht.addr, s_sht.frame, sizeof(s_sht.frame)))
+    if (!protocore_i2c_read(dev_addr(work), SHT3X_CTX(work)->frame, sizeof(SHT3X_CTX(work)->frame)))
     {
-        return PROTO_FALSE;
+        Sht3x.ok = PROTO_FALSE;
+        return;
     }
-    return protocore_sht3x_parse(s_sht.frame, temp_mc, rh_mpct);
+    Sht3x.parse_args.resp = SHT3X_CTX(work)->frame;
+    Sht3x.parse_args.temp_mc = temp_mc;
+    Sht3x.parse_args.rh_mpct = rh_mpct;
+    sht3x_parse(work);
 }
 
-#else // no bus seam. The CRC + conversion above are host-tested.
+Sht3xNs Sht3x = {.crc8 = sht3x_crc8,
+                 .temp_mc = sht3x_temp_mc,
+                 .rh_mpct = sht3x_rh_mpct,
+                 .parse = sht3x_parse,
+                 .begin = sht3x_begin,
+                 .read = sht3x_read};
 
-proto_bool protocore_sht3x_begin(uint8_t addr)
-{
-    (void)addr;
-    return PROTO_FALSE;
-}
-proto_bool protocore_sht3x_read(int32_t *temp_mc, int32_t *rh_mpct)
-{
-    (void)temp_mc;
-    (void)rh_mpct;
-    return PROTO_FALSE;
-}
-
-#endif // PROTOCORE_HAS_BUS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SHT3X

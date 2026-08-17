@@ -30,31 +30,73 @@
 #ifndef PROTOCORE_IFACE_BRIDGE_HW_H
 #define PROTOCORE_IFACE_BRIDGE_HW_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_IFACE_BRIDGE
 
 PROTOCORE_BEGIN_DECLS
 
-#include "server/net/iface_bridge/iface_bridge.h"
+// PROTOCORE_IFACE_BRIDGE_HW_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
+// it into its arena. A caller takes them once and passes the pointer to every call. How they
+// are carved is this module's and is never named here.
+
+/** @brief BridgeTarget, as the caller already knows it. */
+struct BridgeTarget;
+
+/** @brief What publish takes: listener_id, port, proto, target. */
+typedef struct
+{
+    uint8_t listener_id;               ///< the id returned by `server.listen(port, ProtoConn::PROTO_BRIDGE)`
+    uint16_t port;                     ///< the same listen port (the dispatch key into the rule table)
+    BridgeProto proto;                 ///< TCP or UDP (matches how the listener was opened)
+    const struct BridgeTarget *target; ///< the UART / SPI / I2C endpoint (copied into the rule)
+} IfaceBridgeHwPublishArgs;
 
 /**
- * @brief Bind a PROTO_BRIDGE listener to a hardware target and install the handler (first call).
+ * @brief Bus glue for the interface bridge (PROTOCORE_ENABLE_IFACE_BRIDGE): the PROTO_BRIDGE listener that wires an ...
  *
- * Registers the rule in the pure table (protocore_iface_bridge_map), records the listener_id -> rule binding used to
- * dispatch accepted connections, and brings up the bus (UART open / SPI CS pin / I2C).
+ * A caller sets the members a call takes, invokes it through ::IfaceBridgeHw with the bytes it runs
+ * out of, and reads the outcome off the same handle.
  *
- * @param listener_id  the id returned by `server.listen(port, ProtoConn::PROTO_BRIDGE)`.
- * @param port         the same listen port (the dispatch key into the rule table).
- * @param proto        TCP or UDP (matches how the listener was opened).
- * @param target       the UART / SPI / I2C endpoint (copied into the rule).
- * @return true; false if @p target is null, the rule table is full, or the port+proto is already bound.
+ *   IfaceBridgeHw.publish_args.listener_id = ...;
+ *   IfaceBridgeHw.publish_args.port = ...;
+ *   IfaceBridgeHw.publish_args.proto = ...;
+ *   IfaceBridgeHw.publish_args.target = ...;
+ *   IfaceBridgeHw.publish(work);
+ *   // IfaceBridgeHw.ok is what the call reports
+ *
+ * @var IfaceBridgeHwNs::publish_args  what publish takes: listener_id, port, proto, target
+ * @var IfaceBridgeHwNs::ok  true; false if target is null, the rule table is full, or the ...
+ * @var IfaceBridgeHwNs::publish  bind a PROTO_BRIDGE listener to a hardware target and install the ...
+ * @var IfaceBridgeHwNs::reset  clear all listener bindings and rules (start from empty)
+ *
+ * @c work is PROTOCORE_IFACE_BRIDGE_HW_BORROW bytes the CALLER took, at an address it knows. It arrives
+ * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
+ * carved is this module's and is never named here.
  */
-proto_bool protocore_iface_bridge_publish(uint8_t listener_id, uint16_t port, BridgeProto proto,
-                                          const BridgeTarget *target);
+typedef struct
+{
+    IfaceBridgeHwPublishArgs publish_args;
 
-/** @brief Clear all listener bindings and rules (start from empty). */
-void protocore_iface_bridge_listener_reset(void);
+    proto_bool ok;
+
+    void (*const publish)(uint8_t *restrict work);
+    void (*const reset)(uint8_t *restrict work);
+} IfaceBridgeHwNs;
+
+/** @brief The one symbol this module exports. */
+extern IfaceBridgeHwNs IfaceBridgeHw;
+
+/**
+ * @brief The PROTOCORE_IFACE_BRIDGE_HW_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+uint8_t *protocore_iface_bridge_hw_span(void);
 
 PROTOCORE_END_DECLS
 

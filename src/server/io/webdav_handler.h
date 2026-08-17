@@ -16,36 +16,67 @@
 #ifndef PROTOCORE_WEBDAV_HANDLER_H
 #define PROTOCORE_WEBDAV_HANDLER_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_WEBDAV
 
-#include "network_drivers/presentation/http/http_parser/http_parser.h" // HttpReq
-#include "network_drivers/presentation/http/route/http_route.h"        // HttpRoute (by pointer)
-
 PROTOCORE_BEGIN_DECLS
 
-/** @brief If @p req matches a ROUTE_DAV mount, handle it as WebDAV and return true. */
-proto_bool try_serve_dav(uint8_t slot_id, HttpReq *req);
+// PROTOCORE_WEBDAV_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
+// it into its arena. A caller takes them once and passes the pointer to every call. How they
+// are carved is this module's and is never named here.
 
-/** @brief Dispatch a WebDAV request against the mount @p r (resolves the FS path, then the method). */
-void serve_dav_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r);
+/** @brief HttpReq, as the caller already knows it. */
+struct HttpReq;
 
-/** @brief Send a bodyless WebDAV status with optional extra header lines (each ending in CRLF). */
-void dav_send_status(uint8_t slot_id, int code, const char *extra_headers);
+/** @brief What try_serve_dav takes: slot_id, req. */
+typedef struct
+{
+    uint8_t slot_id;
+    struct HttpReq *req;
+} DavTryServeDavArgs;
 
-#if PROTOCORE_ENABLE_STREAM_BODY
+/**
+ * @brief WebDAV request handling against a mounted filesystem (RFC 4918).
+ *
+ * A caller sets the members a call takes, invokes it through ::Dav with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   Dav.try_serve_dav_args.slot_id = ...;
+ *   Dav.try_serve_dav_args.req = ...;
+ *   Dav.try_serve_dav(work);
+ *   // Dav.ok is what the call reports
+ *
+ * @var DavNs::try_serve_dav_args  what try_serve_dav takes: slot_id, req
+ * @var DavNs::ok  a call's true/false outcome
+ * @var DavNs::try_serve_dav  if req matches a ROUTE_DAV mount, handle it as WebDAV and return ...
+ *
+ * @c work is PROTOCORE_WEBDAV_BORROW bytes the CALLER took, at an address it knows. It arrives
+ * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
+ * carved is this module's and is never named here.
+ */
+typedef struct
+{
+    DavTryServeDavArgs try_serve_dav_args;
 
-/** @brief Stream-begin hook: if @p req is a PUT under a DAV mount, open the file and stream the body. */
-proto_bool dav_stream_put_begin(HttpReq *req);
+    proto_bool ok;
 
-/** @brief Stream-data hook: write one body chunk to @p req's slot's DAV PUT file. */
-void dav_stream_put_data(HttpReq *req, const uint8_t *data, size_t len);
+    void (*const try_serve_dav)(uint8_t *restrict work);
+} DavNs;
 
-/** @brief Stream-abort hook: close the half-written PUT file if the transfer is torn down early. */
-void dav_put_abort_tramp(HttpReq *req);
+/** @brief The one symbol this module exports. */
+extern DavNs Dav;
 
-#endif // PROTOCORE_ENABLE_STREAM_BODY
+/**
+ * @brief The PROTOCORE_WEBDAV_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+uint8_t *protocore_webdav_handler_span(void);
 
 PROTOCORE_END_DECLS
 

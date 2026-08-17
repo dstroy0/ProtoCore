@@ -22,11 +22,12 @@
 #ifndef PROTOCORE_H2_SERVER_H
 #define PROTOCORE_H2_SERVER_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_HTTP2 && PROTOCORE_ENABLE_TLS
 
 PROTOCORE_BEGIN_DECLS
 
-#if PROTOCORE_ENABLE_HTTP2 && PROTOCORE_ENABLE_TLS
 
 /** @brief RFC 9113 sec 8.3: what one HEADERS + DATA response carries. */
 typedef struct

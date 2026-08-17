@@ -237,7 +237,6 @@ void test_a_token_is_bound_to_its_secret(void)
 
     Csrf.reset(protocore_csrf_span());
     // the same nonce under the new secret is a different, valid token
-    Csrf.ok;
     Csrf.secret_args.secret = other;
     Csrf.secret_args.len = sizeof(other);
     Csrf.set_secret(protocore_csrf_span());
@@ -276,7 +275,6 @@ void test_the_secret_is_capped_at_thirty_two_octets(void)
 
     Csrf.reset(protocore_csrf_span());
     long_key[32] ^= 0xFFu; // an octet past the cap
-    Csrf.ok;
     Csrf.secret_args.secret = long_key;
     Csrf.secret_args.len = sizeof(long_key);
     Csrf.set_secret(protocore_csrf_span());
@@ -318,7 +316,6 @@ void test_no_secret_fails_closed(void)
     Csrf.secret_args.len = sizeof(SECRET);
     Csrf.set_secret(protocore_csrf_span());
     // a null secret pointer clears the length rather than leaving the previous secret installed
-    Csrf.ok;
     Csrf.secret_args.secret = NULL;
     Csrf.secret_args.len = 5;
     Csrf.set_secret(protocore_csrf_span());

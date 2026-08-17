@@ -9,8 +9,18 @@
 #include "network_drivers/presentation/http/websocket/websocket.h"
 #endif
 #include "network_drivers/transport/tcp/tcp.h"
+#include "server/clock/clock.h"
 #include <string.h>
 #include <unity.h>
+
+// Move the virtual clock and take the pass stamp. service_once() reads the source once per pass,
+// before anything reads the time, and every module measures against that stamp; a case that drives
+// a module directly is standing in for the pass, so it takes the stamp the pass would have.
+static void set_now_ms(uint32_t ms)
+{
+    set_millis(ms);
+    Clock.millis(Clock.internal);
+}
 
 static void push(uint8_t slot, const char *data)
 {
@@ -729,7 +739,7 @@ void race_aba_slot_reuse_fresh_timestamp()
     conn_pool[0].pcb = NULL;
     conn_pool[0].last_activity_ms = T_OLD;
 
-    set_millis(T_DEAD);
+    set_now_ms(T_DEAD);
     ConnPool.life.worker_id = 0;
     ConnPool.check_timeouts(ConnPool.internal);
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
@@ -737,7 +747,7 @@ void race_aba_slot_reuse_fresh_timestamp()
     conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].last_activity_ms = T_NEW;
 
-    set_millis(T_NEW);
+    set_now_ms(T_NEW);
     ConnPool.life.worker_id = 0;
     ConnPool.check_timeouts(ConnPool.internal);
     TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)conn_pool[0].state);
@@ -746,7 +756,7 @@ void race_aba_slot_reuse_fresh_timestamp()
 void race_double_free_is_nop()
 {
     conn_pool[0].state = CONN_FREE;
-    set_millis(CONN_TIMEOUT_MS * 10);
+    set_now_ms(CONN_TIMEOUT_MS * 10);
     ConnPool.life.worker_id = 0;
     ConnPool.check_timeouts(ConnPool.internal);
     ConnPool.life.worker_id = 0;
@@ -884,14 +894,17 @@ static void test_poll_fn(uint8_t slot)
 void test_fn_poll_trampoline_noop_before_install()
 {
     s_poll_seen_slot = 0xFF;
-    http_protocore_handler()->on_poll(2);
+    HttpConn.proto_handler(HttpConn.internal);
+    HttpConn.handler->on_poll(2);
     TEST_ASSERT_EQUAL(0xFF, s_poll_seen_slot);
 }
 
 void test_fn_poll_trampoline_calls_installed_fn()
 {
-    http_protocore_set_poll(test_poll_fn);
-    http_protocore_handler()->on_poll(3);
+    HttpConn.poll = test_poll_fn;
+    HttpConn.set_poll(HttpConn.internal);
+    HttpConn.proto_handler(HttpConn.internal);
+    HttpConn.handler->on_poll(3);
     TEST_ASSERT_EQUAL(3, s_poll_seen_slot);
 }
 

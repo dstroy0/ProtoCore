@@ -10,9 +10,11 @@
  * connection standing on it.
  */
 
-#include "network_drivers/tls/tls.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_TLS_SOFTWARE
+
+#include "network_drivers/tls/tls.h"
 
 // One connection per slot, indexed by it. BSS, so a slot costs no allocator.
 static TlsConn s_conns[MAX_CONNS];

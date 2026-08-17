@@ -79,34 +79,35 @@ void dbench_run(void)
         ForwardedTrust.reset(protocore_forwarded_trust_span());
         // Populate the table with both trusted upstreams (not benched) for the per-request hot
         // paths below - this fills the default 2-slot PROTOCORE_TRUSTED_PROXY_MAX table exactly.
-        ForwardedTrust.ok;
         ForwardedTrust.add_cidr_args.cidr = "10.0.0.0/8";
         ForwardedTrust.add_cidr(protocore_forwarded_trust_span());
         ForwardedTrust.add_cidr_args.cidr = "2001:db8::/32";
         ForwardedTrust.add_cidr(protocore_forwarded_trust_span());
 
         ForwardedTrust.contains_args.peer = &v4_in;
-        ForwardedTrust.contains(protocore_forwarded_trust_span());
         // Hot path: the per-request trusted-upstream membership test (hit and miss).
-        DBENCH_OP("protocore_forwarded_trust_contains (v4 hit)", 200000, sinkb ^= ForwardedTrust.ok);
+        DBENCH_OP("protocore_forwarded_trust_contains (v4 hit)", 200000,
+                  (ForwardedTrust.contains(protocore_forwarded_trust_span()), sinkb ^= ForwardedTrust.ok));
         ForwardedTrust.contains_args.peer = &v4_out;
-        ForwardedTrust.contains(protocore_forwarded_trust_span());
-        DBENCH_OP("protocore_forwarded_trust_contains (v4 miss)", 200000, sinkb ^= ForwardedTrust.ok);
+        DBENCH_OP("protocore_forwarded_trust_contains (v4 miss)", 200000,
+                  (ForwardedTrust.contains(protocore_forwarded_trust_span()), sinkb ^= ForwardedTrust.ok));
 
         protocore_ip out;
         ForwardedTrust.protocore_forwarded_effective_ip_args.peer = &trusted_proxy;
         ForwardedTrust.protocore_forwarded_effective_ip_args.fwd_ip_str = fwd_client_str;
         ForwardedTrust.protocore_forwarded_effective_ip_args.out = &out;
-        ForwardedTrust.protocore_forwarded_effective_ip(protocore_forwarded_trust_span());
         // Hot path: a trusted proxy's valid forwarded client is honored.
-        DBENCH_OP("protocore_forwarded_effective_ip (honored)", 100000, sinkb ^= ForwardedTrust.ok);
+        DBENCH_OP("protocore_forwarded_effective_ip (honored)", 100000,
+                  (ForwardedTrust.protocore_forwarded_effective_ip(protocore_forwarded_trust_span()),
+                   sinkb ^= ForwardedTrust.ok));
         ForwardedTrust.protocore_forwarded_effective_ip_args.peer = &attacker;
         ForwardedTrust.protocore_forwarded_effective_ip_args.fwd_ip_str = fwd_spoof_str;
         ForwardedTrust.protocore_forwarded_effective_ip_args.out = &out;
-        ForwardedTrust.protocore_forwarded_effective_ip(protocore_forwarded_trust_span());
         // THE security property: an untrusted (direct) peer's forwarded header is ignored - no
         // spoofing an abuse-prevention lockout onto a victim's address.
-        DBENCH_OP("protocore_forwarded_effective_ip (untrusted, spoof blocked)", 100000, sinkb ^= ForwardedTrust.ok);
+        DBENCH_OP("protocore_forwarded_effective_ip (untrusted, spoof blocked)", 100000,
+                  (ForwardedTrust.protocore_forwarded_effective_ip(protocore_forwarded_trust_span()),
+                   sinkb ^= ForwardedTrust.ok));
         (void)sinkb;
 
         DBENCH_DONE();

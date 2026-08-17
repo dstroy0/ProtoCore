@@ -35,7 +35,6 @@ static protocore_ip v6(const char *s)
     Ip.args.text = s;
     Ip.args.out = &ip;
     Ip.parse(Ip.internal);
-    Ip.ok;
     return ip;
 }
 
@@ -400,7 +399,7 @@ void test_clock_custom_and_revert(void)
 
 void test_accept_cb_global_throttle_rejects_over_budget()
 {
-    ConnPool.life.cfg = NULL;
+    ConnPool.life.conn_timeout_ms = CONN_TIMEOUT_MS;
     ConnPool.init(ConnPool.internal);
     TcpListener.accept_throttle_reset(TcpListener.internal);
     TcpListener.per_ip_throttle_reset(TcpListener.internal);
@@ -421,7 +420,7 @@ void test_accept_cb_global_throttle_rejects_over_budget()
 
 void test_accept_cb_ip_allowlist_allows_when_empty()
 {
-    ConnPool.life.cfg = NULL;
+    ConnPool.life.conn_timeout_ms = CONN_TIMEOUT_MS;
     ConnPool.init(ConnPool.internal);
     TcpListener.accept_throttle_reset(TcpListener.internal);
     TcpListener.per_ip_throttle_reset(TcpListener.internal);
@@ -435,7 +434,7 @@ void test_accept_cb_ip_allowlist_allows_when_empty()
 
 void test_accept_cb_ip_allowlist_rejects_once_a_rule_exists()
 {
-    ConnPool.life.cfg = NULL;
+    ConnPool.life.conn_timeout_ms = CONN_TIMEOUT_MS;
     ConnPool.init(ConnPool.internal);
     TcpListener.accept_throttle_reset(TcpListener.internal);
     TcpListener.per_ip_throttle_reset(TcpListener.internal);

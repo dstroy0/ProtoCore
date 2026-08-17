@@ -23,57 +23,61 @@
 #ifndef PROTOCORE_DMX_H
 #define PROTOCORE_DMX_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_DMX
 
 PROTOCORE_BEGIN_DECLS
 
-#define DMX_MAX_CHANNELS 512u ///< slots per DMX512 universe
-#define DMX_SC_DIMMER 0x00u   ///< start code for standard dimmer data
+// This module holds nothing between calls, so it carves no borrow and states none. An entry
+// takes one all the same, and never reads it, so every namespace in the tree is invoked the
+// same way.
 
-#define RDM_SC 0xCCu     ///< RDM start code (SC_RDM)
+#define DMX_MAX_CHANNELS 512u ///< slots per DMX512 universe
+
+#define DMX_SC_DIMMER 0x00u ///< start code for standard dimmer data
+
+#define RDM_SC 0xCCu ///< RDM start code (SC_RDM)
+
 #define RDM_SUB_SC 0x01u ///< RDM sub-start code (SC_SUB_MESSAGE)
+
 #define RDM_OVERHEAD 26u ///< full packet octets with PDL 0 (24-octet message + 2 checksum)
 
-// RDM command classes.
 #define RDM_CC_DISCOVERY 0x10u
+
 #define RDM_CC_DISCOVERY_RESPONSE 0x11u
+
 #define RDM_CC_GET 0x20u
+
 #define RDM_CC_GET_RESPONSE 0x21u
+
 #define RDM_CC_SET 0x30u
+
 #define RDM_CC_SET_RESPONSE 0x31u
 
-// RDM response types (carried in the port-id / response-type octet of a response).
 #define RDM_RESPONSE_ACK 0x00u
+
 #define RDM_RESPONSE_ACK_TIMER 0x01u
+
 #define RDM_RESPONSE_NACK_REASON 0x02u
+
 #define RDM_RESPONSE_ACK_OVERFLOW 0x03u
 
-// A few common RDM parameter ids (PIDs).
 #define RDM_PID_DISC_UNIQUE_BRANCH 0x0001u
+
 #define RDM_PID_DISC_MUTE 0x0002u
+
 #define RDM_PID_DISC_UN_MUTE 0x0003u
+
 #define RDM_PID_SUPPORTED_PARAMETERS 0x0050u
+
 #define RDM_PID_DEVICE_INFO 0x0060u
+
 #define RDM_PID_DMX_START_ADDRESS 0x00F0u
+
 #define RDM_PID_IDENTIFY_DEVICE 0x1000u
 
-// --- DMX512 ---
-
-/**
- * @brief Assemble a DMX512 packet body: [start code][channel slots]. @p n <= 512.
- * Returns the byte count (1 + n) or 0 on overflow. The break is the transport's job.
- */
-size_t protocore_dmx_build(uint8_t *buf, size_t cap, uint8_t start_code, const uint8_t *channels, uint16_t n);
-
-/**
- * @brief Read channel @p ch (1-based, per DMX convention) from a received packet body.
- * Returns the slot value, or 0 if @p ch is out of range / not present.
- */
-uint8_t protocore_dmx_get_channel(const uint8_t *buf, size_t len, uint16_t ch);
-
-// --- RDM (ANSI E1.20) ---
+#define PROTOCORE_RDM_DEVICE_INFO_PDL 19 ///< octets in a DEVICE_INFO (PID 0x0060) GET-response parameter block
 
 /** @brief A parsed / to-be-built RDM packet. UIDs are 48-bit (manufacturer<<32 | device). */
 typedef struct
@@ -89,45 +93,6 @@ typedef struct
     uint8_t pdl;          ///< parameter data length
     const uint8_t *pdata; ///< parameter data (points into the parsed buffer); nullptr when pdl 0
 } RdmPacket;
-
-/** @brief Compose a 48-bit RDM UID from a manufacturer id and a device id. */
-uint64_t protocore_rdm_uid(uint16_t manufacturer, uint32_t device);
-
-/** @brief 16-bit additive checksum over @p len octets (RDM message block). */
-uint16_t protocore_rdm_checksum(const uint8_t *buf, size_t len);
-
-/**
- * @brief Build a full RDM packet (incl. the trailing 16-bit checksum) from @p p and its
- * parameter data. Returns the total length (26 + pdl) or 0 on overflow.
- */
-size_t protocore_rdm_build(uint8_t *buf, size_t cap, const RdmPacket *p, const uint8_t *pdata, uint8_t pdl);
-
-/**
- * @brief Parse an RDM packet: validates the start codes, the message length vs PDL, and the
- * checksum. Fills @p out and @p consumed (the whole packet length).
- */
-proto_bool protocore_rdm_parse(const uint8_t *buf, size_t len, RdmPacket *out, size_t *consumed);
-
-/**
- * @brief Decode a DISC_UNIQUE_BRANCH discovery response into the responder's 48-bit UID. This reply is not a
- *        normal RDM packet: it is an optional 0xFE preamble (0..7 octets) + a 0xAA separator, then the 6 UID
- *        octets each sent as two copies OR'd with 0xAA / 0x55, then a 2-octet checksum sent the same way.
- *        Each original octet is recovered as the AND of its two encoded copies, and the checksum (the 16-bit
- *        additive sum of the 12 encoded UID octets) is verified.
- * @return true iff the separator is present, the 16 encoded octets fit, and the checksum matches.
- */
-proto_bool protocore_rdm_decode_disc_response(const uint8_t *buf, size_t len, uint64_t *uid);
-
-/**
- * @brief Build the DISC_UNIQUE_BRANCH discovery response a responder sends for its 48-bit @p uid (the
- *        complement of protocore_rdm_decode_disc_response): @p preamble_len octets of 0xFE (0..7) + the 0xAA
- *        separator + the 6 UID octets each as two copies OR'd with 0xAA / 0x55 + the 2-octet checksum (the
- *        16-bit additive sum of the 12 encoded UID octets) sent the same way.
- * @return octets written (@p preamble_len + 17), or 0 on a null buffer, @p preamble_len > 7, or overflow.
- */
-size_t protocore_rdm_build_disc_response(uint8_t *buf, size_t cap, uint64_t uid, uint8_t preamble_len);
-
-#define PROTOCORE_RDM_DEVICE_INFO_PDL 19 ///< octets in a DEVICE_INFO (PID 0x0060) GET-response parameter block
 
 /** @brief Decoded DEVICE_INFO (PID 0x0060) parameter data - the descriptor every RDM responder must
  *  answer, carrying the fields a controller needs to patch and identify the device. */
@@ -146,21 +111,168 @@ typedef struct
     uint8_t sensor_count;         ///< number of sensors
 } RdmDeviceInfo;
 
-/**
- * @brief Pack a DEVICE_INFO (PID 0x0060) GET-response parameter block from @p info into @p pdata: the
- *        19-octet big-endian descriptor (protocol version, device model, product category, software
- *        version, DMX footprint / personality / start address, sub-device and sensor counts). Hand the
- *        result to protocore_rdm_build as the pdata of a GET-response with pid RDM_PID_DEVICE_INFO.
- * @return PROTOCORE_RDM_DEVICE_INFO_PDL (19), or 0 on a null argument or @p cap < 19.
- */
-size_t protocore_rdm_build_device_info(uint8_t *pdata, size_t cap, const RdmDeviceInfo *info);
+/** @brief What build takes: buf, cap, start_code, channels, n. */
+typedef struct
+{
+    uint8_t *buf;
+    size_t cap;
+    uint8_t start_code;
+    const uint8_t *channels;
+    uint16_t n;
+} DmxBuildArgs;
+
+/** @brief What get_channel takes: buf, len, ch. */
+typedef struct
+{
+    const uint8_t *buf;
+    size_t len;
+    uint16_t ch;
+} DmxGetChannelArgs;
+
+/** @brief What rdm_uid takes: manufacturer, device. */
+typedef struct
+{
+    uint16_t manufacturer;
+    uint32_t device;
+} DmxRdmUidArgs;
+
+/** @brief What rdm_checksum takes: buf, len. */
+typedef struct
+{
+    const uint8_t *buf;
+    size_t len;
+} DmxRdmChecksumArgs;
+
+/** @brief What rdm_build takes: buf, cap, p, pdata, pdl. */
+typedef struct
+{
+    uint8_t *buf;
+    size_t cap;
+    const RdmPacket *p;
+    const uint8_t *pdata;
+    uint8_t pdl;
+} DmxRdmBuildArgs;
+
+/** @brief What rdm_parse takes: buf, len, out, consumed. */
+typedef struct
+{
+    const uint8_t *buf;
+    size_t len;
+    RdmPacket *out;
+    size_t *consumed;
+} DmxRdmParseArgs;
+
+/** @brief What rdm_decode_disc_response takes: buf, len, uid. */
+typedef struct
+{
+    const uint8_t *buf;
+    size_t len;
+    uint64_t *uid;
+} DmxRdmDecodeDiscResponseArgs;
+
+/** @brief What rdm_build_disc_response takes: buf, cap, uid, ... */
+typedef struct
+{
+    uint8_t *buf;
+    size_t cap;
+    uint64_t uid;
+    uint8_t preamble_len;
+} DmxRdmBuildDiscResponseArgs;
+
+/** @brief What rdm_build_device_info takes: pdata, cap, info. */
+typedef struct
+{
+    uint8_t *pdata;
+    size_t cap;
+    const RdmDeviceInfo *info;
+} DmxRdmBuildDeviceInfoArgs;
+
+/** @brief What rdm_parse_device_info takes: pdata, pdl, out. */
+typedef struct
+{
+    const uint8_t *pdata;
+    uint8_t pdl;
+    RdmDeviceInfo *out;
+} DmxRdmParseDeviceInfoArgs;
 
 /**
- * @brief Decode a DEVICE_INFO (PID 0x0060) GET-response parameter block into @p out (the complement of
- *        protocore_rdm_build_device_info).
- * @return true iff @p pdl is at least 19 octets; false on a null argument or a short block.
+ * @brief DMX512 framing + RDM (ANSI E1.20) management codec (PROTOCORE_ENABLE_DMX). DMX512 (lighting / stage control
+ * ...
+ *
+ * A caller sets the members a call takes, invokes it through ::Dmx with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   Dmx.build_args.buf = ...;
+ *   Dmx.build_args.cap = ...;
+ *   Dmx.build_args.start_code = ...;
+ *   Dmx.build_args.channels = ...;
+ *   Dmx.build_args.n = ...;
+ *   Dmx.build(work);
+ *   // Dmx.n is what the call reports
+ *
+ * @var DmxNs::build_args  what build takes: buf, cap, start_code, channels, n
+ * @var DmxNs::get_channel_args  what get_channel takes: buf, len, ch
+ * @var DmxNs::rdm_uid_args  what rdm_uid takes: manufacturer, device
+ * @var DmxNs::rdm_checksum_args  what rdm_checksum takes: buf, len
+ * @var DmxNs::rdm_build_args  what rdm_build takes: buf, cap, p, pdata, pdl
+ * @var DmxNs::rdm_parse_args  what rdm_parse takes: buf, len, out, consumed
+ * @var DmxNs::rdm_decode_disc_response_args  what rdm_decode_disc_response takes: buf, len, uid
+ * @var DmxNs::rdm_build_disc_response_args  what rdm_build_disc_response takes: buf, cap, uid,
+ * @var DmxNs::rdm_build_device_info_args  what rdm_build_device_info takes: pdata, cap, info
+ * @var DmxNs::rdm_parse_device_info_args  what rdm_parse_device_info takes: pdata, pdl, out
+ * @var DmxNs::ok  true iff the separator is present, the 16 encoded octets fit, and ...
+ * @var DmxNs::n  octets written (preamble_len + 17), or 0 on a null buffer, ...
+ * @var DmxNs::u8  what a call reports
+ * @var DmxNs::uid  what a call reports
+ * @var DmxNs::checksum  what a call reports
+ * @var DmxNs::build  assemble a DMX512 packet body: [start code][channel slots]. n <= ...
+ * @var DmxNs::get_channel  read channel ch (1-based, per DMX convention) from a received ...
+ * @var DmxNs::rdm_uid  compose a 48-bit RDM UID from a manufacturer id and a device id
+ * @var DmxNs::rdm_checksum  16-bit additive checksum over len octets (RDM message block)
+ * @var DmxNs::rdm_build  build a full RDM packet (incl. the trailing 16-bit checksum) from p ...
+ * @var DmxNs::rdm_parse  parse an RDM packet: validates the start codes, the message length ...
+ * @var DmxNs::rdm_decode_disc_response  decode a DISC_UNIQUE_BRANCH discovery response into the responder's ...
+ * @var DmxNs::rdm_build_disc_response  build the DISC_UNIQUE_BRANCH discovery response a responder sends ...
+ * @var DmxNs::rdm_build_device_info  pack a DEVICE_INFO (PID 0x0060) GET-response parameter block from ...
+ * @var DmxNs::rdm_parse_device_info  decode a DEVICE_INFO (PID 0x0060) GET-response parameter block into ...
+ *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
+ * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
+ * a caller drives every namespace the same way.
  */
-proto_bool protocore_rdm_parse_device_info(const uint8_t *pdata, uint8_t pdl, RdmDeviceInfo *out);
+typedef struct
+{
+    DmxBuildArgs build_args;
+    DmxGetChannelArgs get_channel_args;
+    DmxRdmUidArgs rdm_uid_args;
+    DmxRdmChecksumArgs rdm_checksum_args;
+    DmxRdmBuildArgs rdm_build_args;
+    DmxRdmParseArgs rdm_parse_args;
+    DmxRdmDecodeDiscResponseArgs rdm_decode_disc_response_args;
+    DmxRdmBuildDiscResponseArgs rdm_build_disc_response_args;
+    DmxRdmBuildDeviceInfoArgs rdm_build_device_info_args;
+    DmxRdmParseDeviceInfoArgs rdm_parse_device_info_args;
+
+    proto_bool ok;
+    size_t n;
+    uint8_t u8;
+    uint64_t uid;
+    uint16_t checksum;
+
+    void (*const build)(uint8_t *restrict work);
+    void (*const get_channel)(uint8_t *restrict work);
+    void (*const rdm_uid)(uint8_t *restrict work);
+    void (*const rdm_checksum)(uint8_t *restrict work);
+    void (*const rdm_build)(uint8_t *restrict work);
+    void (*const rdm_parse)(uint8_t *restrict work);
+    void (*const rdm_decode_disc_response)(uint8_t *restrict work);
+    void (*const rdm_build_disc_response)(uint8_t *restrict work);
+    void (*const rdm_build_device_info)(uint8_t *restrict work);
+    void (*const rdm_parse_device_info)(uint8_t *restrict work);
+} DmxNs;
+
+/** @brief The one symbol this module exports. */
+extern DmxNs Dmx;
 
 PROTOCORE_END_DECLS
 

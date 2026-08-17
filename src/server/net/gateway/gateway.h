@@ -32,11 +32,15 @@
 #ifndef PROTOCORE_GATEWAY_H
 #define PROTOCORE_GATEWAY_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_GATEWAY
 
 PROTOCORE_BEGIN_DECLS
+
+// PROTOCORE_GATEWAY_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
+// it into its arena. A caller takes them once and passes the pointer to every call. How they
+// are carved is this module's and is never named here.
 
 /** @brief Southbound radio / bus kind a port bridges (informational + topic hint). */
 typedef enum PROTO_ENUM_PACKED
@@ -105,53 +109,124 @@ typedef struct
     uint32_t down_dropped; ///< downlinks dropped (bad port / no tx / refused)
 } protocore_gateway_stats;
 
-/** @brief Clear all ports, the uplink sink, the topic prefix, and stats. */
-void protocore_gateway_reset(void);
+/** @brief What add_port takes: cfg. */
+typedef struct
+{
+    const protocore_gateway_port_config *cfg;
+} GatewayAddPortArgs;
+
+/** @brief What set_uplink_cb takes: fn, ctx. */
+typedef struct
+{
+    protocore_gateway_uplink_fn fn;
+    void *ctx;
+} GatewaySetUplinkCbArgs;
+
+/** @brief What set_topic_prefix takes: prefix. */
+typedef struct
+{
+    const char *prefix;
+} GatewaySetTopicPrefixArgs;
+
+/** @brief What uplink takes: port_id, src_addr, payload, len, rssi. */
+typedef struct
+{
+    uint8_t port_id;
+    uint16_t src_addr;
+    const uint8_t *payload;
+    uint16_t len;
+    int16_t rssi;
+} GatewayUplinkArgs;
+
+/** @brief What downlink takes: port_id, dst_addr, payload, len. */
+typedef struct
+{
+    uint8_t port_id;
+    uint16_t dst_addr;
+    const uint8_t *payload;
+    uint16_t len;
+} GatewayDownlinkArgs;
+
+/** @brief What topic takes: msg, buf, buflen. */
+typedef struct
+{
+    const protocore_gateway_msg *msg;
+    char *buf;
+    uint16_t buflen;
+} GatewayTopicArgs;
+
+/** @brief What get_stats takes: out. */
+typedef struct
+{
+    protocore_gateway_stats *out;
+} GatewayGetStatsArgs;
 
 /**
- * @brief Register a southbound port.
- * @return true; false if @p cfg is null, the id is already registered, or the table is
- *         full (PROTOCORE_GW_MAX_PORTS).
- */
-proto_bool protocore_gateway_add_port(const protocore_gateway_port_config *cfg);
-
-/** @brief Install the northbound publish callback (required to publish anything). */
-void protocore_gateway_set_uplink_cb(protocore_gateway_uplink_fn fn, void *ctx);
-
-/** @brief Set the topic prefix used by protocore_gateway_topic() (caller-owned string; default "gw"). */
-void protocore_gateway_set_topic_prefix(const char *prefix);
-
-/**
- * @brief Bridge a received southbound frame northbound: envelope it and publish.
+ * @brief Radio / wireless gateway bridge (PROTOCORE_ENABLE_GATEWAY) - the v5 southbound-to- northbound bridge. The ...
  *
- * Applies the port's uplink rate cap, then calls the uplink callback. Fail-closed: an
- * unknown port, no installed sink, an exceeded cap, or a callback returning false drops
- * the frame (counted), never blocks.
- * @return true if published.
- */
-proto_bool protocore_gateway_uplink(uint8_t port_id, uint16_t src_addr, const uint8_t *payload, uint16_t len,
-                                    int16_t rssi);
-
-/**
- * @brief Bridge a northbound command southbound: transmit it on @p port_id's radio.
- * @return true if the port's transmit callback accepted it; false drops (counted).
- */
-proto_bool protocore_gateway_downlink(uint8_t port_id, uint16_t dst_addr, const uint8_t *payload, uint16_t len);
-
-/**
- * @brief Format a northbound routing key `<prefix>/<port>/<addr>` for @p msg into @p buf.
- * @return the string length written (excluding the NUL), or 0 if @p buf is too small.
- */
-uint16_t protocore_gateway_topic(const protocore_gateway_msg *msg, char *buf, uint16_t buflen);
-
-/**
- * @brief Copy the current gateway counters into @p out.
+ * A caller sets the members a call takes, invokes it through ::Gateway with the bytes it runs
+ * out of, and reads the outcome off the same handle.
  *
- * The uplink rate window reads protocore_millis() (server/clock/clock.h), the library's one time source.
- * A caller that needs to drive it - a test stepping the window - installs its own clock with
- * protocore_set_clock(), which governs every module at once.
+ *   Gateway.reset(work);
+ *
+ * @var GatewayNs::add_port_args  what add_port takes: cfg
+ * @var GatewayNs::set_uplink_cb_args  what set_uplink_cb takes: fn, ctx
+ * @var GatewayNs::set_topic_prefix_args  what set_topic_prefix takes: prefix
+ * @var GatewayNs::uplink_args  what uplink takes: port_id, src_addr, payload, len, rssi
+ * @var GatewayNs::downlink_args  what downlink takes: port_id, dst_addr, payload, len
+ * @var GatewayNs::topic_args  what topic takes: msg, buf, buflen
+ * @var GatewayNs::get_stats_args  what get_stats takes: out
+ * @var GatewayNs::ok  true; false if cfg is null, the id is already registered, or the ...
+ * @var GatewayNs::n  the string length written (excluding the NUL), or 0 if buf is too ...
+ * @var GatewayNs::reset  clear all ports, the uplink sink, the topic prefix, and stats
+ * @var GatewayNs::add_port  register a southbound port
+ * @var GatewayNs::set_uplink_cb  install the northbound publish callback (required to publish ...
+ * @var GatewayNs::set_topic_prefix  set the topic prefix used by protocore_gateway_topic() ...
+ * @var GatewayNs::uplink  bridge a received southbound frame northbound: envelope it and ...
+ * @var GatewayNs::downlink  bridge a northbound command southbound: transmit it on port_id's ...
+ * @var GatewayNs::topic  format a northbound routing key `<prefix>/<port>/<addr>` for msg ...
+ * @var GatewayNs::get_stats  copy the current gateway counters into out. The uplink rate window ...
+ *
+ * @c work is PROTOCORE_GATEWAY_BORROW bytes the CALLER took, at an address it knows. It arrives
+ * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
+ * carved is this module's and is never named here.
  */
-void protocore_gateway_get_stats(protocore_gateway_stats *out);
+typedef struct
+{
+    GatewayAddPortArgs add_port_args;
+    GatewaySetUplinkCbArgs set_uplink_cb_args;
+    GatewaySetTopicPrefixArgs set_topic_prefix_args;
+    GatewayUplinkArgs uplink_args;
+    GatewayDownlinkArgs downlink_args;
+    GatewayTopicArgs topic_args;
+    GatewayGetStatsArgs get_stats_args;
+
+    proto_bool ok;
+    uint16_t n;
+
+    void (*const reset)(uint8_t *restrict work);
+    void (*const add_port)(uint8_t *restrict work);
+    void (*const set_uplink_cb)(uint8_t *restrict work);
+    void (*const set_topic_prefix)(uint8_t *restrict work);
+    void (*const uplink)(uint8_t *restrict work);
+    void (*const downlink)(uint8_t *restrict work);
+    void (*const topic)(uint8_t *restrict work);
+    void (*const get_stats)(uint8_t *restrict work);
+} GatewayNs;
+
+/** @brief The one symbol this module exports. */
+extern GatewayNs Gateway;
+
+/**
+ * @brief The PROTOCORE_GATEWAY_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+uint8_t *protocore_gateway_span(void);
 
 PROTOCORE_END_DECLS
 

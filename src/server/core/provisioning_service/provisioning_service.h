@@ -12,7 +12,7 @@
  * `Physical.wifi_ap_init`, the library UDP transport, and the platform's key/value store; compiled
  * to stubs when disabled or when the platform carries no such store.
  *
- * The form-field parser (protocore_prov_form_field) is always compiled and is the
+ * The form-field parser (Prov.form_field) is the pure half of this module and is the
  * only non-trivial logic, so it is unit-tested off-target.
  *
  * @author  Douglas Quigg (dstroy0)
@@ -22,48 +22,93 @@
 #ifndef PROTOCORE_PROVISIONING_H
 #define PROTOCORE_PROVISIONING_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_PROVISIONING
 
 PROTOCORE_BEGIN_DECLS
 
-/**
- * @brief Extract and URL-decode a field from an x-www-form-urlencoded body.
- *
- * Finds `@p key=` in @p body (matching only whole field names, i.e. at the
- * start or just after `&`), copies its value up to the next `&` or end into
- * @p out, decoding `+` to space and `%XX` hex escapes. Always null-terminates.
- *
- * @param body  Form body (e.g. "ssid=My+AP&psk=p%40ss").
- * @param key   Field name (e.g. "ssid").
- * @param out   Destination buffer.
- * @param cap   Capacity of @p out (>= 1).
- * @return true if the field was found, false otherwise (out set to "").
- */
-proto_bool protocore_prov_form_field(const char *body, const char *key, char *out, size_t cap);
+// PROTOCORE_PROVISIONING_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
+// it into its arena. A caller takes them once and passes the pointer to every call. How they
+// are carved is this module's and is never named here.
+
+/** @brief What form_field takes: body, key, out, cap. */
+typedef struct
+{
+    const char *body; ///< Form body (e.g. "ssid=My+AP&psk=p%40ss")
+    const char *key;  ///< Field name (e.g. "ssid")
+    char *out;        ///< Destination buffer
+    size_t cap;       ///< Capacity of out (>= 1)
+} ProvFormFieldArgs;
+
+/** @brief What load takes: ssid, ssid_cap, psk, psk_cap. */
+typedef struct
+{
+    char *ssid;      ///< Destination for the stored SSID (always null-terminated)
+    size_t ssid_cap; ///< Capacity of ssid
+    char *psk;       ///< Destination for the stored passphrase (always null-terminated)
+    size_t psk_cap;  ///< Capacity of psk
+} ProvLoadArgs;
+
+/** @brief What begin takes: ap_ssid. */
+typedef struct
+{
+    const char *ap_ssid;
+} ProvBeginArgs;
 
 /**
- * @brief Load stored WiFi credentials from NVS.
- * @param ssid      Destination for the stored SSID (always null-terminated).
- * @param ssid_cap  Capacity of @p ssid.
- * @param psk       Destination for the stored passphrase (always null-terminated).
- * @param psk_cap   Capacity of @p psk.
- * @return true if a non-empty SSID is stored (the app should connect in STA mode).
+ * @brief First-boot WiFi provisioning via a captive portal (PROTOCORE_ENABLE_PROVISIONING).
+ *
+ * A caller sets the members a call takes, invokes it through ::Prov with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   Prov.form_field_args.body = ...;
+ *   Prov.form_field_args.key = ...;
+ *   Prov.form_field_args.out = ...;
+ *   Prov.form_field_args.cap = ...;
+ *   Prov.form_field(work);
+ *   // Prov.ok is what the call reports
+ *
+ * @var ProvNs::form_field_args  what form_field takes: body, key, out, cap
+ * @var ProvNs::load_args  what load takes: ssid, ssid_cap, psk, psk_cap
+ * @var ProvNs::begin_args  what begin takes: ap_ssid
+ * @var ProvNs::ok  true if the field was found, false otherwise (out set to "")
+ * @var ProvNs::form_field  extract and URL-decode a field from an x-www-form-urlencoded body. ...
+ * @var ProvNs::load  load stored WiFi credentials from NVS
+ * @var ProvNs::begin  start the captive portal: softAP ap_ssid + catch-all DNS + form ...
+ * @var ProvNs::clear  erase stored credentials (forces re-provisioning on next boot)
+ *
+ * @c work is PROTOCORE_PROVISIONING_BORROW bytes the CALLER took, at an address it knows. It arrives
+ * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
+ * carved is this module's and is never named here.
  */
-proto_bool protocore_provisioning_load(char *ssid, size_t ssid_cap, char *psk, size_t psk_cap);
+typedef struct
+{
+    ProvFormFieldArgs form_field_args;
+    ProvLoadArgs load_args;
+    ProvBeginArgs begin_args;
+
+    proto_bool ok;
+
+    void (*const form_field)(uint8_t *restrict work);
+    void (*const load)(uint8_t *restrict work);
+    void (*const begin)(uint8_t *restrict work);
+    void (*const clear)(uint8_t *restrict work);
+} ProvNs;
+
+/** @brief The one symbol this module exports. */
+extern ProvNs Prov;
 
 /**
- * @brief Start the captive portal: softAP @p ap_ssid + catch-all DNS + form routes.
+ * @brief The PROTOCORE_PROVISIONING_BORROW bytes this module's state lives in.
  *
- * Registers a catch-all `GET` route (the credentials form) and `POST /save` (persist + reboot)
- * on @p server. The catch-all DNS responder runs from a transport-layer UDP callback,
- * so no per-loop servicing is required. Call after begin().
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
  */
-void protocore_provisioning_begin(const char *ap_ssid);
-
-/** @brief Erase stored credentials (forces re-provisioning on next boot). */
-void protocore_provisioning_clear(void);
+uint8_t *protocore_provisioning_service_span(void);
 
 PROTOCORE_END_DECLS
 

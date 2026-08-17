@@ -270,13 +270,19 @@ void test_range_start_after_end_unsatisfiable()
     TEST_ASSERT_NULL(strstr(r, "206"));
 }
 
+// RFC 9110 sec 14.1.2: "When a selected representation has zero length, the only satisfiable form
+// of range-spec in a GET request is a suffix-range with a non-zero suffix-length." So a 416 here
+// would refuse a range the standard calls satisfiable. It covers zero bytes, which no inclusive
+// byte range names, so the server serves the whole (empty) representation - sec 14.2 lets a server
+// ignore a Range it does not act on, and a 200 with an empty body is that.
 void test_range_suffix_on_empty_file()
 {
     TEST_ASSERT_TRUE(lfsm_write_text("/data.bin", ""));
     request("bytes=-4");
     const char *r = tcp_captured();
-    TEST_ASSERT_NOT_NULL(strstr(r, "416 Range Not Satisfiable"));
+    TEST_ASSERT_NULL(strstr(r, "416 Range Not Satisfiable"));
     TEST_ASSERT_NULL(strstr(r, "206"));
+    TEST_ASSERT_NOT_NULL(strstr(r, "200 OK"));
 }
 
 void test_serve_file_connection_gone()

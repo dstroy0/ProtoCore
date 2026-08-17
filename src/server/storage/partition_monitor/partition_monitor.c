@@ -10,57 +10,85 @@
  * dependency lives here - the route is in partition_monitor_routes.cpp.
  */
 
-#include "server/storage/partition_monitor/partition_monitor.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_PARTITION_MONITOR
 
+#include "server/storage/partition_monitor/partition_monitor.h"
+
 #include "mmgr/protoframe.h"
 #include "mmgr/protostr.h"
+#include "protocore.h" // on_http: the route table the begin entry installs on
 
-// esp_partition type/subtype constants (mirrors esp_partition_type_t/subtype_t so
-// the classifier stays pure and host-testable without the IDF headers).
-#if PROTOCORE_HAS_VENDOR_OTA
-#include <esp_ota_ops.h>
-#include <esp_partition.h>
-#endif
-const char *protocore_partition_kind(uint8_t type, uint8_t subtype)
+PROTOCORE_BEGIN_DECLS
+
+// The type/subtype codes the classifier reads are the partition table's own, mirrored here as
+// plain numbers so this file stays pure and host-testable. No vendor header: the table walk is a
+// platform seam (protocore_platform_partition_walk), and the vendor's headers live beside it in
+// core_setup/hal/.
+// The entries this file calls before reaching their definitions.
+// --- the entries -----------------------------------------------------------
+
+// No context and no borrow: every operand is the caller's. The borrow an entry takes is
+// never read.
+
+static void partition_monitor_kind(uint8_t *restrict work);
+
+static void partition_monitor_kind(uint8_t *restrict work)
 {
+    (void)work;
+    uint8_t type = PartitionMonitor.kind_args.type;
+    uint8_t subtype = PartitionMonitor.kind_args.subtype;
+
     if (type == 0) // ESP_PARTITION_TYPE_APP
     {
         if (subtype == 0x00)
         {
-            return "factory";
+            PartitionMonitor.text = "factory";
+            return;
         }
         if (subtype >= 0x10 && subtype <= 0x1F)
         {
-            return "ota";
+            PartitionMonitor.text = "ota";
+            return;
         }
         if (subtype == 0x20)
         {
-            return "test";
+            PartitionMonitor.text = "test";
+            return;
         }
-        return "app";
+        PartitionMonitor.text = "app";
+        return;
     }
     switch (subtype) // ESP_PARTITION_TYPE_DATA
     {
     case 0x00:
-        return "otadata";
+        PartitionMonitor.text = "otadata";
+        return;
     case 0x01:
-        return "phy";
+        PartitionMonitor.text = "phy";
+        return;
     case 0x02:
-        return "nvs";
+        PartitionMonitor.text = "nvs";
+        return;
     case 0x03:
-        return "coredump";
+        PartitionMonitor.text = "coredump";
+        return;
     case 0x04:
-        return "nvs_keys";
+        PartitionMonitor.text = "nvs_keys";
+        return;
     case 0x81:
-        return "fat";
+        PartitionMonitor.text = "fat";
+        return;
     case 0x82:
-        return "spiffs";
+        PartitionMonitor.text = "spiffs";
+        return;
     case 0x83:
-        return "littlefs";
+        PartitionMonitor.text = "littlefs";
+        return;
     default:
-        return "data";
+        PartitionMonitor.text = "data";
+        return;
     }
 }
 
@@ -89,38 +117,50 @@ static const protocore_field PART_ENTRY[] = {
 };
 static const protocore_field PART_CLOSE[] = {{PROTOCORE_FK_LIT, 0, 2, "]}"}, PROTOCORE_END};
 
-int32_t protocore_partition_json(const protocore_partition_info *parts, uint8_t count, char *out, uint32_t cap)
+static void partition_monitor_json(uint8_t *restrict work)
 {
+    (void)work;
+    const protocore_partition_info *parts = PartitionMonitor.json_args.parts;
+    uint8_t count = PartitionMonitor.json_args.count;
+    char *out = PartitionMonitor.json_args.out;
+    uint32_t cap = PartitionMonitor.json_args.cap;
+
     if (!out || cap == 0)
     {
-        return 0;
+        PartitionMonitor.n = 0;
+        return;
     }
     out[0] = '\0';
     if (!parts)
     {
-        return 0;
+        PartitionMonitor.n = 0;
+        return;
     }
     // Each arm empties the buffer before reporting 0: a frame that did not fit leaves the document
     // open, and a caller measuring the buffer instead of reading the count would ship the fragment.
     if (frame.append(out, cap, PART_OPEN, NULL, 0) == 0)
     {
         out[0] = '\0';
-        return 0;
+        PartitionMonitor.n = 0;
+        return;
     }
     for (uint8_t i = 0; i < count; i++)
     {
         const protocore_partition_info *p = &parts[i];
-        if (frame.append(
-                out, cap, PART_ENTRY,
-                (const protocore_fval[]){PROTOCORE_VSTR(PROTOCORE_JSON_SEP[!!i]), PROTOCORE_VJSON(p->label),
-                                         PROTOCORE_VJSON(protocore_partition_kind(p->type, p->subtype)),
-                                         PROTOCORE_VU32((uint32_t)p->type), PROTOCORE_VU32((uint32_t)p->subtype),
-                                         PROTOCORE_VU32((uint32_t)p->address), PROTOCORE_VU32((uint32_t)p->size),
-                                         PROTOCORE_VSTR(p->running ? "true" : "false")},
-                8) == 0)
+        PartitionMonitor.kind_args.type = p->type;
+        PartitionMonitor.kind_args.subtype = p->subtype;
+        partition_monitor_kind(work);
+        if (frame.append(out, cap, PART_ENTRY,
+                         (const protocore_fval[]){
+                             PROTOCORE_VSTR(PROTOCORE_JSON_SEP[!!i]), PROTOCORE_VJSON(p->label),
+                             PROTOCORE_VJSON(PartitionMonitor.text), PROTOCORE_VU32((uint32_t)p->type),
+                             PROTOCORE_VU32((uint32_t)p->subtype), PROTOCORE_VU32((uint32_t)p->address),
+                             PROTOCORE_VU32((uint32_t)p->size), PROTOCORE_VSTR(p->running ? "true" : "false")},
+                         8) == 0)
         {
             out[0] = '\0';
-            return 0;
+            PartitionMonitor.n = 0;
+            return;
         }
     }
     size_t n = frame.append(out, cap, PART_CLOSE, NULL, 0);
@@ -128,45 +168,73 @@ int32_t protocore_partition_json(const protocore_partition_info *parts, uint8_t 
     {
         out[0] = '\0';
     }
-    return (int32_t)n;
+    PartitionMonitor.n = (int32_t)n;
 }
+
+// The table walk is the vendor's, so it is reached through the platform seam rather than through a
+// vendor header: the vendor's headers live beside its implementation in core_setup/hal/.
 
 #if PROTOCORE_HAS_VENDOR_OTA
-
-uint8_t protocore_partition_collect(protocore_partition_info *out, uint8_t max)
+// A part whose SDK owns a partition table: walk it through the seam and translate each entry into
+// the shape this module publishes.
+static void partition_monitor_collect(uint8_t *restrict work)
 {
+    (void)work;
+    protocore_partition_info *out = PartitionMonitor.collect_args.out;
+    const uint8_t max = PartitionMonitor.collect_args.max;
+
+    PartitionMonitor.u8 = 0;
     if (!out || max == 0)
     {
-        return 0;
+        return;
     }
-    const esp_partition_t *running = esp_ota_get_running_partition();
-    uint8_t n = 0;
-    esp_partition_iterator_t it = esp_partition_find(ESP_PARTITION_TYPE_ANY, ESP_PARTITION_SUBTYPE_ANY, NULL);
-    for (; it != NULL && n < max; it = esp_partition_next(it))
+    protocore_platform_partition tbl[PROTOCORE_PARTITION_MAX];
+    const uint8_t want = max < PROTOCORE_PARTITION_MAX ? max : PROTOCORE_PARTITION_MAX;
+    const uint8_t n = protocore_platform_partition_walk(tbl, want);
+    for (uint8_t i = 0; i < n; i++)
     {
-        const esp_partition_t *p = esp_partition_get(it);
-        protocore_partition_info *d = &out[n++];
-        (void)str.copy(d->label, p->label, sizeof(d->label));
+        protocore_partition_info *d = &out[i];
+        (void)str.copy(d->label, tbl[i].label, sizeof(d->label));
         d->label[sizeof(d->label) - 1] = '\0';
-        d->type = (uint8_t)p->type;
-        d->subtype = (uint8_t)p->subtype;
-        d->address = p->address;
-        d->size = p->size;
-        d->running = (running != NULL && p->address == running->address);
+        d->type = tbl[i].type;
+        d->subtype = tbl[i].subtype;
+        d->address = tbl[i].address;
+        d->size = tbl[i].size;
+        d->running = tbl[i].running ? PROTO_TRUE : PROTO_FALSE;
     }
-    esp_partition_iterator_release(it);
-    return n;
+    PartitionMonitor.u8 = n;
 }
+#endif
 
-#else // host build - no flash
-
-uint8_t protocore_partition_collect(protocore_partition_info *out, uint8_t max)
+#if !PROTOCORE_HAS_VENDOR_OTA
+// A part with no partition table reports none, rather than inventing entries a caller would then
+// serve as though they described real storage.
+static void partition_monitor_collect(uint8_t *restrict work)
 {
-    (void)out;
-    (void)max;
-    return 0;
+    (void)work;
+    PartitionMonitor.u8 = 0;
+}
+#endif
+
+// The handler is partition_monitor_routes.c's - it is the arm with an HTTP surface to serve on -
+// and the entry that installs it is here, with the rest of the namespace.
+void partition_route_handler(uint8_t slot_id, HttpReq *req);
+
+// Install the route the handler answers on. Under the module's own gate: a build without the
+// monitor has neither this entry nor the handler.
+static void partition_monitor_begin(uint8_t *restrict work)
+{
+    (void)work;
+    const char *path = PartitionMonitor.begin_args.path;
+
+    on_http((path && path[0]) ? path : "/partitions", HTTP_GET, partition_route_handler);
 }
 
-#endif // PROTOCORE_HAS_VENDOR_OTA
+PartitionMonitorNs PartitionMonitor = {.kind = partition_monitor_kind,
+                                       .json = partition_monitor_json,
+                                       .collect = partition_monitor_collect,
+                                       .begin = partition_monitor_begin};
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_PARTITION_MONITOR

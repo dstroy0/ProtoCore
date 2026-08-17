@@ -26,7 +26,7 @@ static void on_event(uint8_t slot, ConnState olds, ConnState news, protocore_con
 void setUp()
 {
     set_millis(0);
-    ConnPool.life.cfg = NULL;
+    ConnPool.life.conn_timeout_ms = CONN_TIMEOUT_MS;
     ConnPool.init(ConnPool.internal);
     TcpListener.idx = 0;
     TcpListener.bind.port = 80;

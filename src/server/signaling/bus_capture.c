@@ -9,16 +9,52 @@
  * seam, so the framing and the drain loop run the same on a host with the seam mocked.
  */
 
-#include "server/signaling/bus_capture.h"
-#include "core_setup/board_profiles/protocore_platform.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_BUS_CAPTURE
 
-size_t can_to_socketcan(const CanFrame *f, uint8_t *out, size_t cap)
+#include "core_setup/board_profiles/protocore_platform.h"
+#include "mmgr/secure.h" // the persistent end this module's state is taken from
+#include "server/signaling/bus_capture.h"
+#include "shared/pcap/pcap.h"
+
+PROTOCORE_BEGIN_DECLS
+
+// --- the program's shared state, beside the namespace not on it -------------
+
+// The one owned instance, private to this TU: the pointer to the bytes this module took for
+// itself. A caller that hands in its own borrow never reaches it.
+typedef struct
 {
+    uint8_t *span; ///< PROTOCORE_BUS_CAPTURE_BORROW persistent bytes, or null while the pool was short
+} BusCaptureOwnCtx;
+static BusCaptureOwnCtx s_own;
+
+// Not an entry: an entry takes a borrow and this is where that borrow comes from.
+uint8_t *protocore_bus_capture_span(void)
+{
+    if (s_own.span == NULL)
+    {
+        protocore_span sp = protocore_secure_persist_span(PROTOCORE_BUS_CAPTURE_BORROW);
+        if (span.ok(sp))
+        {
+            s_own.span = sp.buf;
+        }
+    }
+    return s_own.span; // null while the pool was short, which every entry refuses
+}
+
+static void bus_capture_can_to_socketcan(uint8_t *restrict work)
+{
+    (void)work;
+    const CanFrame *f = BusCapture.can_to_socketcan_args.f;
+    uint8_t *out = BusCapture.can_to_socketcan_args.out;
+    size_t cap = BusCapture.can_to_socketcan_args.cap;
+
     if (!f || !out || cap < PROTOCORE_SOCKETCAN_FRAME_LEN)
     {
-        return 0;
+        BusCapture.n = 0;
+        return;
     }
 
     uint32_t id = f->id & (f->extended ? PROTOCORE_CAN_EXT_ID_MASK : PROTOCORE_CAN_STD_ID_MASK);
@@ -45,7 +81,7 @@ size_t can_to_socketcan(const CanFrame *f, uint8_t *out, size_t cap)
     {
         out[8 + i] = (i < dlc && !f->rtr) ? f->data[i] : 0;
     }
-    return PROTOCORE_SOCKETCAN_FRAME_LEN;
+    BusCapture.n = PROTOCORE_SOCKETCAN_FRAME_LEN;
 }
 
 // --- Controller binding ------------------------------------------------------------------
@@ -58,22 +94,38 @@ typedef struct
     bus_capture_sink_fn sink;
     proto_bool running;
 } BusCaptureCtx;
-static BusCaptureCtx s_bus;
+// The caller's borrow, split: the context at its offset. One pointer arrives and every
+// region is that pointer plus a compile-time offset, so the assert below proves the span
+// covers them before anything runs.
+#define BUS_CAPTURE_OFF_CTX 0u
+static_assert(BUS_CAPTURE_OFF_CTX + sizeof(BusCaptureCtx) <= PROTOCORE_BUS_CAPTURE_BORROW,
+              "PROTOCORE_BUS_CAPTURE_BORROW is short of the module context - raise it in protocore_config.h, which"
+              " sums it into its arena");
 
-proto_bool bus_capture_begin(int tx_pin, int rx_pin, uint32_t bitrate, bus_capture_sink_fn sink)
+// The region, at its offset in the caller's borrow.
+#define BUS_CAPTURE_CTX(w) ((BusCaptureCtx *)(void *)((w) + BUS_CAPTURE_OFF_CTX))
+
+static void bus_capture_begin(uint8_t *restrict work)
 {
+    int tx_pin = BusCapture.begin_args.tx_pin;
+    int rx_pin = BusCapture.begin_args.rx_pin;
+    uint32_t bitrate = BusCapture.begin_args.bitrate;
+    bus_capture_sink_fn sink = BusCapture.begin_args.sink;
+
     if (!sink || !protocore_platform_can_open(tx_pin, rx_pin, bitrate))
     {
-        return PROTO_FALSE;
+        BusCapture.ok = PROTO_FALSE;
+        return;
     }
-    s_bus.sink = sink;
-    s_bus.running = PROTO_TRUE;
-    return PROTO_TRUE;
+    BUS_CAPTURE_CTX(work)->sink = sink;
+    BUS_CAPTURE_CTX(work)->running = PROTO_TRUE;
+    BusCapture.ok = PROTO_TRUE;
 }
 
-void bus_capture_poll(void)
+static void bus_capture_poll(uint8_t *restrict work)
 {
-    if (!s_bus.running || !s_bus.sink)
+
+    if (!BUS_CAPTURE_CTX(work)->running || !BUS_CAPTURE_CTX(work)->sink)
     {
         return;
     }
@@ -89,19 +141,20 @@ void bus_capture_poll(void)
         {
             f.data[i] = (i < f.dlc) ? m.data[i] : 0;
         }
-        s_bus.sink(&f);
+        BUS_CAPTURE_CTX(work)->sink(&f);
     }
 }
 
-void bus_capture_end(void)
+static void bus_capture_end(uint8_t *restrict work)
 {
-    if (!s_bus.running)
+
+    if (!BUS_CAPTURE_CTX(work)->running)
     {
         return;
     }
     protocore_platform_can_close();
-    s_bus.running = PROTO_FALSE;
-    s_bus.sink = NULL;
+    BUS_CAPTURE_CTX(work)->running = PROTO_FALSE;
+    BUS_CAPTURE_CTX(work)->sink = NULL;
 }
 
 #else // no controller seam to open
@@ -124,5 +177,12 @@ void bus_capture_end(void)
 }
 
 #endif // PROTOCORE_HAS_VENDOR_CAN
+
+BusCaptureNs BusCapture = {.can_to_socketcan = bus_capture_can_to_socketcan,
+                           .begin = bus_capture_begin,
+                           .poll = bus_capture_poll,
+                           .end = bus_capture_end};
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_BUS_CAPTURE

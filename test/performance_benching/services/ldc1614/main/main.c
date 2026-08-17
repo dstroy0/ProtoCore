@@ -33,6 +33,8 @@ void dbench_run(void)
     const uint32_t data28 = 1u << 27;
     const uint32_t fref_hz = 40000000u;
     static uint8_t cfg[LDC1614_CONFIG_MAX];
+    // The bytes the module runs out of, taken once. Every entry below is called with it.
+    uint8_t *w = protocore_ldc1614_span();
 
     for (;;)
     {
@@ -42,13 +44,23 @@ void dbench_run(void)
         volatile uint64_t sink64 = 0;
         volatile size_t sinksz = 0;
 
-        DBENCH_OP("protocore_ldc1614_data (28b combine)", 200000, sink32 += protocore_ldc1614_data(msb_reg, lsb_reg));
-        DBENCH_OP("protocore_ldc1614_error (flag nibble)", 200000, sink8 += protocore_ldc1614_error(msb_reg));
-        DBENCH_OP("protocore_ldc1614_sensor_freq_hz", 200000,
-                  sink64 += protocore_ldc1614_sensor_freq_hz(data28, fref_hz));
+        // The arguments are set outside the timed expression and the entry is called inside it, so
+        // what is timed is one call and not the staging that precedes it.
+        Ldc1614.data_args.msb_reg = msb_reg;
+        Ldc1614.data_args.lsb_reg = lsb_reg;
+        DBENCH_OP("Ldc1614.data (28b combine)", 200000, (Ldc1614.data(w), sink32 += Ldc1614.value));
+        Ldc1614.error_args.msb_reg = msb_reg;
+        DBENCH_OP("Ldc1614.error (flag nibble)", 200000, (Ldc1614.error(w), sink8 += Ldc1614.flags));
+        Ldc1614.sensor_freq_hz_args.data28 = data28;
+        Ldc1614.sensor_freq_hz_args.fref_hz = fref_hz;
+        DBENCH_OP("Ldc1614.sensor_freq_hz", 200000, (Ldc1614.sensor_freq_hz(w), sink64 += Ldc1614.hz));
         // Config builder emits 21 bytes (7 register writes * 3 bytes) - benched as a bulk producer.
-        DBENCH_BULK("protocore_ldc1614_build_config", 100000, LDC1614_CONFIG_MAX,
-                    sinksz += protocore_ldc1614_build_config(cfg, sizeof(cfg), 0xFFFF, 0x0400));
+        Ldc1614.build_config_args.buf = cfg;
+        Ldc1614.build_config_args.cap = sizeof(cfg);
+        Ldc1614.build_config_args.rcount = 0xFFFF;
+        Ldc1614.build_config_args.settlecount = 0x0400;
+        DBENCH_BULK("Ldc1614.build_config", 100000, LDC1614_CONFIG_MAX,
+                    (Ldc1614.build_config(w), sinksz += Ldc1614.n));
 
         (void)sink32;
         (void)sink8;

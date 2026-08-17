@@ -6,9 +6,11 @@
  * @brief TLS 1.3 record layer over a reliable stream (RFC 8446 sec 5). See record.h.
  */
 
-#include "network_drivers/tls/record/record.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_TLS_SOFTWARE
+
+#include "network_drivers/tls/record/record.h"
 
 #include "crypto/aead/aes128gcm.h" // Aes128Gcm - the record AEAD, and its key and nonce lengths
 #include "mmgr/protomem.h"         // mem.cpy / mem.zero

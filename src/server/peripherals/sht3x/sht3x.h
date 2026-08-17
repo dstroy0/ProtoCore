@@ -26,47 +26,135 @@
 #ifndef PROTOCORE_SHT3X_H
 #define PROTOCORE_SHT3X_H
 
-#include "protocore_config.h" // the entry point: protocore_types.h for the widths and PROTOCORE_INLINE
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_SHT3X
 
 PROTOCORE_BEGIN_DECLS
 
-// Single-shot measurement commands (16-bit, sent most-significant byte first).
+// PROTOCORE_I2C_DEVICE_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
+// it into its arena. A caller takes them once and passes the pointer to every call. How they
+// are carved is this module's and is never named here.
+
 #define SHT3X_CMD_SINGLE_HIGH 0x2400 ///< high repeatability, no clock stretching
-#define SHT3X_CMD_SINGLE_MED 0x240B  ///< medium repeatability
-#define SHT3X_CMD_SINGLE_LOW 0x2416  ///< low repeatability
-#define SHT3X_CMD_SOFT_RESET 0x30A2  ///< soft reset
+
+#define SHT3X_CMD_SINGLE_MED 0x240B ///< medium repeatability
+
+#define SHT3X_CMD_SINGLE_LOW 0x2416 ///< low repeatability
+
+#define SHT3X_CMD_SOFT_RESET 0x30A2 ///< soft reset
+
 #define SHT3X_CMD_READ_STATUS 0xF32D ///< read the status register
-#define SHT3X_CMD_HEATER_ON 0x306D   ///< enable the on-chip heater
-#define SHT3X_CMD_HEATER_OFF 0x3066  ///< disable the on-chip heater
 
-/** @brief Sensirion CRC-8 (poly 0x31, init 0xFF) over @p len bytes. */
-uint8_t protocore_sht3x_crc8(const uint8_t *data, size_t len);
+#define SHT3X_CMD_HEATER_ON 0x306D ///< enable the on-chip heater
 
-/** @brief Convert a raw 16-bit temperature tick to milli-degrees Celsius. */
-int32_t protocore_sht3x_temp_mc(uint16_t raw);
+#define SHT3X_CMD_HEATER_OFF 0x3066 ///< disable the on-chip heater
 
-/** @brief Convert a raw 16-bit humidity tick to milli-percent relative humidity (0..100000). */
-int32_t protocore_sht3x_rh_mpct(uint16_t raw);
+/** @brief What crc8 takes: data, len. */
+typedef struct
+{
+    const uint8_t *data;
+    size_t len;
+} Sht3xCrc8Args;
+
+/** @brief What temp_mc takes: raw. */
+typedef struct
+{
+    uint16_t raw;
+} Sht3xTempMcArgs;
+
+/** @brief What rh_mpct takes: raw. */
+typedef struct
+{
+    uint16_t raw;
+} Sht3xRhMpctArgs;
+
+/** @brief What parse takes: resp, temp_mc, rh_mpct. */
+typedef struct
+{
+    const uint8_t *resp; ///< 6 bytes.
+    int32_t *temp_mc;
+    int32_t *rh_mpct;
+} Sht3xParseArgs;
+
+/** @brief What begin takes: addr. */
+typedef struct
+{
+    uint8_t addr;
+} Sht3xBeginArgs;
+
+/** @brief What read takes: temp_mc, rh_mpct. */
+typedef struct
+{
+    int32_t *temp_mc;
+    int32_t *rh_mpct;
+} Sht3xReadArgs;
 
 /**
- * @brief Decode a six-byte single-shot response (T msb/lsb/crc, RH msb/lsb/crc). Verifies both
- * CRC-8 words, then fills @p temp_mc and @p rh_mpct (either may be null).
- * @return false if a CRC does not match (a corrupt read).
+ * @brief Sensirion SHT3x temperature / humidity sensor codec (PROTOCORE_ENABLE_SHT3X). The SHT3x (SHT30 / SHT31 / ...
+ *
+ * A caller sets the members a call takes, invokes it through ::Sht3x with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   Sht3x.crc8_args.data = ...;
+ *   Sht3x.crc8_args.len = ...;
+ *   Sht3x.crc8(work);
+ *   // Sht3x.crc is what the call reports
+ *
+ * @var Sht3xNs::crc8_args  what crc8 takes: data, len
+ * @var Sht3xNs::temp_mc_args  what temp_mc takes: raw
+ * @var Sht3xNs::rh_mpct_args  what rh_mpct takes: raw
+ * @var Sht3xNs::parse_args  what parse takes: resp, temp_mc, rh_mpct
+ * @var Sht3xNs::begin_args  what begin takes: addr
+ * @var Sht3xNs::read_args  what read takes: temp_mc, rh_mpct
+ * @var Sht3xNs::ok  false if a CRC does not match (a corrupt read)
+ * @var Sht3xNs::crc  what a call reports
+ * @var Sht3xNs::milli  what a call reports
+ * @var Sht3xNs::crc8  sensirion CRC-8 (poly 0x31, init 0xFF) over len bytes
+ * @var Sht3xNs::temp_mc  convert a raw 16-bit temperature tick to milli-degrees Celsius
+ * @var Sht3xNs::rh_mpct  convert a raw 16-bit humidity tick to milli-percent relative ...
+ * @var Sht3xNs::parse  decode a six-byte single-shot response (T msb/lsb/crc, RH ...
+ * @var Sht3xNs::begin  soft-reset the SHT3x at addr over I2C. true if it acknowledged
+ * @var Sht3xNs::read  trigger a single-shot high-repeatability measurement, read + verify ...
+ *
+ * @c work is PROTOCORE_I2C_DEVICE_BORROW bytes the CALLER took, at an address it knows. It arrives
+ * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
+ * carved is this module's and is never named here.
  */
-proto_bool protocore_sht3x_parse(const uint8_t resp[6], int32_t *temp_mc, int32_t *rh_mpct);
+typedef struct
+{
+    Sht3xCrc8Args crc8_args;
+    Sht3xTempMcArgs temp_mc_args;
+    Sht3xRhMpctArgs rh_mpct_args;
+    Sht3xParseArgs parse_args;
+    Sht3xBeginArgs begin_args;
+    Sht3xReadArgs read_args;
 
-// --- ESP32 binding (I2C via Wire) ------------------------------------
+    proto_bool ok;
+    uint8_t crc;
+    int32_t milli;
 
-/** @brief Soft-reset the SHT3x at @p addr over I2C. @return true if it acknowledged. */
-proto_bool protocore_sht3x_begin(uint8_t addr);
+    void (*const crc8)(uint8_t *restrict work);
+    void (*const temp_mc)(uint8_t *restrict work);
+    void (*const rh_mpct)(uint8_t *restrict work);
+    void (*const parse)(uint8_t *restrict work);
+    void (*const begin)(uint8_t *restrict work);
+    void (*const read)(uint8_t *restrict work);
+} Sht3xNs;
+
+/** @brief The one symbol this module exports. */
+extern Sht3xNs Sht3x;
 
 /**
- * @brief Trigger a single-shot high-repeatability measurement, read + verify the six bytes, and
- * return the temperature (milli-C) and humidity (milli-%RH). @return false on I2C or CRC error.
+ * @brief The PROTOCORE_I2C_DEVICE_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
  */
-proto_bool protocore_sht3x_read(int32_t *temp_mc, int32_t *rh_mpct);
+uint8_t *protocore_sht3x_span(void);
 
 PROTOCORE_END_DECLS
 

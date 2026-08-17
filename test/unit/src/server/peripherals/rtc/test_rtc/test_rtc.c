@@ -47,7 +47,10 @@ static uint32_t epoch_of(int y, int mo, int d, int h, int mi, int s)
     uint8_t r[RTC_REG_COUNT];
     uint32_t e = 0;
     regs24(r, y, mo, d, h, mi, s);
-    TEST_ASSERT_TRUE(protocore_rtc_regs_to_epoch(r, &e));
+    Rtc.regs_to_epoch_args.regs = r;
+    Rtc.regs_to_epoch_args.epoch = &e;
+    Rtc.regs_to_epoch(protocore_rtc_span());
+    TEST_ASSERT_TRUE(Rtc.ok);
     return e;
 }
 
@@ -111,7 +114,10 @@ void test_twelve_hour_encoding(void)
         uint32_t got = 0;
         regs24(r, 2000, 1, 1, 0, 0, 0);
         r[2] = (uint8_t)(0x40 | (CASES[i].pm ? 0x20 : 0x00) | bcd(CASES[i].h12));
-        TEST_ASSERT_TRUE(protocore_rtc_regs_to_epoch(r, &got));
+        Rtc.regs_to_epoch_args.regs = r;
+        Rtc.regs_to_epoch_args.epoch = &got;
+        Rtc.regs_to_epoch(protocore_rtc_span());
+        TEST_ASSERT_TRUE(Rtc.ok);
         TEST_ASSERT_EQUAL_UINT32(946684800u + (uint32_t)CASES[i].hour24 * 3600u, got);
     }
 }
@@ -125,11 +131,17 @@ void test_clock_halt_and_century_bits_are_masked(void)
     uint32_t plain = 0;
     uint32_t flagged = 0;
     regs24(r, 2024, 6, 15, 10, 30, 45);
-    TEST_ASSERT_TRUE(protocore_rtc_regs_to_epoch(r, &plain));
+    Rtc.regs_to_epoch_args.regs = r;
+    Rtc.regs_to_epoch_args.epoch = &plain;
+    Rtc.regs_to_epoch(protocore_rtc_span());
+    TEST_ASSERT_TRUE(Rtc.ok);
 
     r[0] |= 0x80; // DS1307 CH
     r[5] |= 0x80; // DS3231 century
-    TEST_ASSERT_TRUE(protocore_rtc_regs_to_epoch(r, &flagged));
+    Rtc.regs_to_epoch_args.regs = r;
+    Rtc.regs_to_epoch_args.epoch = &flagged;
+    Rtc.regs_to_epoch(protocore_rtc_span());
+    TEST_ASSERT_TRUE(Rtc.ok);
     TEST_ASSERT_EQUAL_UINT32(plain, flagged);
 }
 
@@ -142,41 +154,77 @@ void test_out_of_range_fields_are_refused(void)
 
     regs24(r, 2020, 1, 1, 0, 0, 0);
     r[0] = bcd(60); // seconds 00-59
-    TEST_ASSERT_FALSE(protocore_rtc_regs_to_epoch(r, &e));
+    Rtc.regs_to_epoch_args.regs = r;
+    Rtc.regs_to_epoch_args.epoch = &e;
+    Rtc.regs_to_epoch(protocore_rtc_span());
+    TEST_ASSERT_FALSE(Rtc.ok);
 
     regs24(r, 2020, 1, 1, 0, 0, 0);
     r[1] = bcd(60); // minutes 00-59
-    TEST_ASSERT_FALSE(protocore_rtc_regs_to_epoch(r, &e));
+    Rtc.regs_to_epoch_args.regs = r;
+    Rtc.regs_to_epoch_args.epoch = &e;
+    Rtc.regs_to_epoch(protocore_rtc_span());
+    TEST_ASSERT_FALSE(Rtc.ok);
 
     regs24(r, 2020, 1, 1, 0, 0, 0);
     r[2] = bcd(24); // hours 00-23 in 24-hour mode
-    TEST_ASSERT_FALSE(protocore_rtc_regs_to_epoch(r, &e));
+    Rtc.regs_to_epoch_args.regs = r;
+    Rtc.regs_to_epoch_args.epoch = &e;
+    Rtc.regs_to_epoch(protocore_rtc_span());
+    TEST_ASSERT_FALSE(Rtc.ok);
 
     regs24(r, 2020, 1, 1, 0, 0, 0);
     r[2] = (uint8_t)(0x40 | bcd(13)); // hours 1-12 in 12-hour mode
-    TEST_ASSERT_FALSE(protocore_rtc_regs_to_epoch(r, &e));
+    Rtc.regs_to_epoch_args.regs = r;
+    Rtc.regs_to_epoch_args.epoch = &e;
+    Rtc.regs_to_epoch(protocore_rtc_span());
+    TEST_ASSERT_FALSE(Rtc.ok);
     r[2] = (uint8_t)(0x40 | bcd(0));
-    TEST_ASSERT_FALSE(protocore_rtc_regs_to_epoch(r, &e));
+    Rtc.regs_to_epoch_args.regs = r;
+    Rtc.regs_to_epoch_args.epoch = &e;
+    Rtc.regs_to_epoch(protocore_rtc_span());
+    TEST_ASSERT_FALSE(Rtc.ok);
 
     regs24(r, 2020, 1, 1, 0, 0, 0);
     r[4] = 0; // date 01-31
-    TEST_ASSERT_FALSE(protocore_rtc_regs_to_epoch(r, &e));
+    Rtc.regs_to_epoch_args.regs = r;
+    Rtc.regs_to_epoch_args.epoch = &e;
+    Rtc.regs_to_epoch(protocore_rtc_span());
+    TEST_ASSERT_FALSE(Rtc.ok);
     r[4] = bcd(32);
-    TEST_ASSERT_FALSE(protocore_rtc_regs_to_epoch(r, &e));
+    Rtc.regs_to_epoch_args.regs = r;
+    Rtc.regs_to_epoch_args.epoch = &e;
+    Rtc.regs_to_epoch(protocore_rtc_span());
+    TEST_ASSERT_FALSE(Rtc.ok);
 
     regs24(r, 2020, 1, 1, 0, 0, 0);
     r[5] = 0; // month 01-12
-    TEST_ASSERT_FALSE(protocore_rtc_regs_to_epoch(r, &e));
+    Rtc.regs_to_epoch_args.regs = r;
+    Rtc.regs_to_epoch_args.epoch = &e;
+    Rtc.regs_to_epoch(protocore_rtc_span());
+    TEST_ASSERT_FALSE(Rtc.ok);
     r[5] = bcd(13);
-    TEST_ASSERT_FALSE(protocore_rtc_regs_to_epoch(r, &e));
+    Rtc.regs_to_epoch_args.regs = r;
+    Rtc.regs_to_epoch_args.epoch = &e;
+    Rtc.regs_to_epoch(protocore_rtc_span());
+    TEST_ASSERT_FALSE(Rtc.ok);
 
     // an all-zero read, which is what an absent or never-set part looks like
     memset(r, 0, sizeof(r));
-    TEST_ASSERT_FALSE(protocore_rtc_regs_to_epoch(r, &e));
+    Rtc.regs_to_epoch_args.regs = r;
+    Rtc.regs_to_epoch_args.epoch = &e;
+    Rtc.regs_to_epoch(protocore_rtc_span());
+    TEST_ASSERT_FALSE(Rtc.ok);
 
     regs24(r, 2020, 1, 1, 0, 0, 0);
-    TEST_ASSERT_FALSE(protocore_rtc_regs_to_epoch(NULL, &e));
-    TEST_ASSERT_FALSE(protocore_rtc_regs_to_epoch(r, NULL));
+    Rtc.regs_to_epoch_args.regs = NULL;
+    Rtc.regs_to_epoch_args.epoch = &e;
+    Rtc.regs_to_epoch(protocore_rtc_span());
+    TEST_ASSERT_FALSE(Rtc.ok);
+    Rtc.regs_to_epoch_args.regs = r;
+    Rtc.regs_to_epoch_args.epoch = NULL;
+    Rtc.regs_to_epoch(protocore_rtc_span());
+    TEST_ASSERT_FALSE(Rtc.ok);
 }
 
 // The registers are BCD, not binary: the tens go in the high nibble. A binary write of 2024-06-15
@@ -185,7 +233,9 @@ void test_epoch_to_regs_is_bcd_and_24_hour(void)
 {
     uint8_t r[RTC_REG_COUNT];
     // 946684800 + 45296 is 2000-01-01 12:34:56 (see test_time_of_day_adds_to_the_date)
-    protocore_rtc_epoch_to_regs(946684800u + 45296u, r);
+    Rtc.epoch_to_regs_args.epoch = 946684800u + 45296u;
+    Rtc.epoch_to_regs_args.regs = r;
+    Rtc.epoch_to_regs(protocore_rtc_span());
     TEST_ASSERT_EQUAL_HEX8(0x56, r[0]);
     TEST_ASSERT_EQUAL_HEX8(0x34, r[1]);
     TEST_ASSERT_EQUAL_HEX8(0x12, r[2]);
@@ -196,7 +246,9 @@ void test_epoch_to_regs_is_bcd_and_24_hour(void)
     TEST_ASSERT_EQUAL_UINT8(0, r[5] & 0x80); // century bit clear
 
     // 23:00 must set the 20-hour bit (bit 5) that 24-hour mode gives that position, not the PM flag
-    protocore_rtc_epoch_to_regs(946684800u + 23u * 3600u, r);
+    Rtc.epoch_to_regs_args.epoch = 946684800u + 23u * 3600u;
+    Rtc.epoch_to_regs_args.regs = r;
+    Rtc.epoch_to_regs(protocore_rtc_span());
     TEST_ASSERT_EQUAL_HEX8(0x23, r[2]);
     TEST_ASSERT_EQUAL_UINT8(0, r[2] & 0x40);
 }
@@ -209,12 +261,16 @@ void test_day_of_week_from_the_epoch(void)
     for (uint32_t i = 0; i < 8; i++)
     {
         uint8_t r[RTC_REG_COUNT];
-        protocore_rtc_epoch_to_regs(i * 86400u, r);
+        Rtc.epoch_to_regs_args.epoch = i * 86400u;
+        Rtc.epoch_to_regs_args.regs = r;
+        Rtc.epoch_to_regs(protocore_rtc_span());
         TEST_ASSERT_EQUAL_UINT8(WANT[i], r[3]);
     }
     // 2000-01-01 was a Saturday: 10957 days after a Thursday, 10957 mod 7 = 2, Thu + 2 = Sat = 6.
     uint8_t r[RTC_REG_COUNT];
-    protocore_rtc_epoch_to_regs(946684800u, r);
+    Rtc.epoch_to_regs_args.epoch = 946684800u;
+    Rtc.epoch_to_regs_args.regs = r;
+    Rtc.epoch_to_regs(protocore_rtc_span());
     TEST_ASSERT_EQUAL_UINT8(6, r[3]);
 }
 
@@ -228,8 +284,13 @@ void test_round_trip_over_the_register_range(void)
     {
         uint8_t r[RTC_REG_COUNT];
         uint32_t back = 0;
-        protocore_rtc_epoch_to_regs(e, r);
-        TEST_ASSERT_TRUE(protocore_rtc_regs_to_epoch(r, &back));
+        Rtc.epoch_to_regs_args.epoch = e;
+        Rtc.epoch_to_regs_args.regs = r;
+        Rtc.epoch_to_regs(protocore_rtc_span());
+        Rtc.regs_to_epoch_args.regs = r;
+        Rtc.regs_to_epoch_args.epoch = &back;
+        Rtc.regs_to_epoch(protocore_rtc_span());
+        TEST_ASSERT_TRUE(Rtc.ok);
         TEST_ASSERT_EQUAL_UINT32(e, back);
     }
     // and the last second the year register can express: 2099-12-31 23:59:59.

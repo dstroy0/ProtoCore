@@ -204,7 +204,6 @@ static void forwarded_trust_add_cidr(uint8_t *restrict work)
     ForwardedTrust.add_args.network = &net;
     ForwardedTrust.add_args.prefix_len = prefix;
     forwarded_trust_add(work);
-    ForwardedTrust.ok = ForwardedTrust.ok;
     return;
 }
 

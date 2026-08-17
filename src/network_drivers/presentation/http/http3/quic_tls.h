@@ -31,13 +31,12 @@
 #ifndef PROTOCORE_QUIC_TLS_H
 #define PROTOCORE_QUIC_TLS_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_HTTP3
 
 PROTOCORE_BEGIN_DECLS
 
-#include "crypto/hash/sha256.h"
 #include "network_drivers/presentation/http/http3/quic_crypto.h"
 #include "network_drivers/presentation/http/http3/quic_tp.h"
 #include "network_drivers/tls/key_schedule/key_schedule.h"

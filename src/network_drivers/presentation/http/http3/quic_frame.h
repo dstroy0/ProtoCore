@@ -21,7 +21,7 @@
 #ifndef PROTOCORE_QUIC_FRAME_H
 #define PROTOCORE_QUIC_FRAME_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_HTTP3
 

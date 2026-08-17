@@ -23,6 +23,8 @@
 void dbench_run(void)
 {
     static uint8_t buf[5];
+    // The bytes the module runs out of, taken once. Every entry below is called with it.
+    uint8_t *w = protocore_pca9685_span();
 
     for (;;)
     {
@@ -31,15 +33,26 @@ void dbench_run(void)
         volatile uint32_t sink16 = 0;
         volatile size_t sinkn = 0;
 
+        // The arguments are set outside the timed expression and the entry is called inside it, so
+        // what is timed is one call and not the staging that precedes it.
+
         // PRESCALE for the classic 50 Hz servo frequency: round(25e6/(4096*freq))-1, clamped 3..255.
-        DBENCH_OP("protocore_pca9685_prescale 50Hz", 200000, sink8 += protocore_pca9685_prescale(50));
+        Pca9685.prescale_args.freq_hz = 50;
+        DBENCH_OP("Pca9685.prescale 50Hz", 200000, (Pca9685.prescale(w), sink8 += Pca9685.value));
         // Channel register base (LED_ON_L = 0x06 + 4*ch); channel 15 -> 0x42.
-        DBENCH_OP("protocore_pca9685_channel_reg ch15", 200000, sink8 += protocore_pca9685_channel_reg(15));
+        Pca9685.channel_reg_args.channel = 15;
+        DBENCH_OP("Pca9685.channel_reg ch15", 200000, (Pca9685.channel_reg(w), sink8 += Pca9685.value));
         // Servo mid pulse (1.5 ms of a 20 ms/50 Hz period) -> 12-bit OFF count (307).
-        DBENCH_OP("protocore_pca9685_us_to_count 1500us", 200000, sink16 += protocore_pca9685_us_to_count(1500, 50));
+        Pca9685.us_to_count_args.microseconds = 1500;
+        Pca9685.us_to_count_args.freq_hz = 50;
+        DBENCH_OP("Pca9685.us_to_count 1500us", 200000, (Pca9685.us_to_count(w), sink16 += Pca9685.count));
         // 5-byte channel PWM write: [reg, ON_L, ON_H, OFF_L, OFF_H], counts 12-bit little-endian.
-        DBENCH_OP("protocore_pca9685_set_pwm_bytes ch0", 200000,
-                  sinkn += protocore_pca9685_set_pwm_bytes(buf, sizeof(buf), 0, 0, 307));
+        Pca9685.set_pwm_bytes_args.buf = buf;
+        Pca9685.set_pwm_bytes_args.cap = sizeof(buf);
+        Pca9685.set_pwm_bytes_args.channel = 0;
+        Pca9685.set_pwm_bytes_args.on = 0;
+        Pca9685.set_pwm_bytes_args.off = 307;
+        DBENCH_OP("Pca9685.set_pwm_bytes ch0", 200000, (Pca9685.set_pwm_bytes(w), sinkn += Pca9685.n));
 
         (void)sink8;
         (void)sink16;

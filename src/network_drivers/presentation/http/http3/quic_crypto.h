@@ -29,13 +29,12 @@
 #ifndef PROTOCORE_QUIC_CRYPTO_H
 #define PROTOCORE_QUIC_CRYPTO_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_HTTP3
 
 PROTOCORE_BEGIN_DECLS
 
-#include "crypto/aead/aes128gcm.h" // Aes128Gcm, PROTOCORE_AES128GCM_BORROW
 #include "crypto/kdf/hkdf.h"       // PROTOCORE_HKDF_HASH_LEN
 
 /** @brief The client/server packet-protection secrets for one QUIC encryption level. */

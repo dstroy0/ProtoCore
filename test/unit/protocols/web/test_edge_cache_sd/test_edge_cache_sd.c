@@ -1,15 +1,21 @@
 // ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
+#include "network_drivers/presentation/http/httpcache/httpcache.h"
 #include "server/web/edge_cache/edge_cache.h"
 #include "server/web/edge_cache/edge_cache_sd.h"
 #include "services/storage/dbm/dbm.h"
 #include "services/storage/wal/wal_store.h"
+#include "shared/http_date/http_date.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
 #include <unity.h>
+
+static uint8_t edge_cache_work[16]; // the borrow an entry takes; EdgeCache never reads it
+
+static uint8_t edge_cache_sd_work[16]; // the borrow an entry takes; EdgeCacheSd never reads it
 
 static uint8_t tw[4096];
 
@@ -98,7 +104,11 @@ static void fill_entry(EdgeEntry *e, const char *canon, const char *etag, const 
 {
     memset(e, 0, sizeof(*e));
     strncpy(e->key, canon, sizeof(e->key) - 1);
-    edge_key_digest(tw, e->key, strlen(e->key), e->digest);
+    EdgeCache.key_digest_args.digest_work = tw;
+    EdgeCache.key_digest_args.canon = e->key;
+    EdgeCache.key_digest_args.len = strlen(e->key);
+    EdgeCache.key_digest_args.digest = e->digest;
+    EdgeCache.key_digest(edge_cache_work);
     e->status = 200;
     strncpy(e->content_type, "text/plain", sizeof(e->content_type) - 1);
     strncpy(e->etag, etag, sizeof(e->etag) - 1);
@@ -121,7 +131,11 @@ void test_serialize_roundtrip_all_fields(void)
     char canon[PROTOCORE_EDGE_KEY_MAX];
     mkcanon(canon, sizeof(canon), "/cdn/img.png?w=64");
     strncpy(in.key, canon, sizeof(in.key) - 1);
-    edge_key_digest(tw, in.key, strlen(in.key), in.digest);
+    EdgeCache.key_digest_args.digest_work = tw;
+    EdgeCache.key_digest_args.canon = in.key;
+    EdgeCache.key_digest_args.len = strlen(in.key);
+    EdgeCache.key_digest_args.digest = in.digest;
+    EdgeCache.key_digest(edge_cache_work);
     in.status = 200;
     strncpy(in.content_type, "image/png", sizeof(in.content_type) - 1);
     strncpy(in.etag, "\"v1-abc\"", sizeof(in.etag) - 1);
@@ -137,12 +151,21 @@ void test_serialize_roundtrip_all_fields(void)
     memcpy(in.body, body, sizeof(body));
     in.body_len = sizeof(body);
 
-    size_t n = edge_sd_serialize(&in, g_scratch, sizeof(g_scratch));
+    EdgeCacheSd.serialize_args.e = &in;
+    EdgeCacheSd.serialize_args.out = g_scratch;
+    EdgeCacheSd.serialize_args.cap = sizeof(g_scratch);
+    EdgeCacheSd.serialize(edge_cache_sd_work);
+    size_t n = EdgeCacheSd.n;
     TEST_ASSERT_TRUE(n > 0);
 
     EdgeEntry out;
     memset(&out, 0xEE, sizeof(out));
-    TEST_ASSERT_TRUE(edge_sd_deserialize(tw, g_scratch, n, &out));
+    EdgeCacheSd.deserialize_args.entry_buf = tw;
+    EdgeCacheSd.deserialize_args.buf = g_scratch;
+    EdgeCacheSd.deserialize_args.len = n;
+    EdgeCacheSd.deserialize_args.e = &out;
+    EdgeCacheSd.deserialize(edge_cache_sd_work);
+    TEST_ASSERT_TRUE(EdgeCacheSd.ok);
 
     TEST_ASSERT_EQUAL_STRING(in.key, out.key);
     TEST_ASSERT_EQUAL_INT(in.status, out.status);
@@ -169,10 +192,19 @@ void test_serialize_max_body(void)
     mkcanon(canon, sizeof(canon), "/cdn/big.bin");
     fill_entry(&in, canon, "\"big\"", body, PROTOCORE_EDGE_BODY_MAX);
 
-    size_t n = edge_sd_serialize(&in, g_scratch, sizeof(g_scratch));
+    EdgeCacheSd.serialize_args.e = &in;
+    EdgeCacheSd.serialize_args.out = g_scratch;
+    EdgeCacheSd.serialize_args.cap = sizeof(g_scratch);
+    EdgeCacheSd.serialize(edge_cache_sd_work);
+    size_t n = EdgeCacheSd.n;
     TEST_ASSERT_TRUE(n > 0);
     EdgeEntry out;
-    TEST_ASSERT_TRUE(edge_sd_deserialize(tw, g_scratch, n, &out));
+    EdgeCacheSd.deserialize_args.entry_buf = tw;
+    EdgeCacheSd.deserialize_args.buf = g_scratch;
+    EdgeCacheSd.deserialize_args.len = n;
+    EdgeCacheSd.deserialize_args.e = &out;
+    EdgeCacheSd.deserialize(edge_cache_sd_work);
+    TEST_ASSERT_TRUE(EdgeCacheSd.ok);
     TEST_ASSERT_EQUAL_UINT16(PROTOCORE_EDGE_BODY_MAX, out.body_len);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(body, out.body, PROTOCORE_EDGE_BODY_MAX);
 }
@@ -186,7 +218,11 @@ void test_serialize_too_small_scratch_fails(void)
     mkcanon(canon, sizeof(canon), "/cdn/x");
     fill_entry(&in, canon, "\"e\"", body, sizeof(body));
     uint8_t tiny[16];
-    TEST_ASSERT_EQUAL_UINT(0, edge_sd_serialize(&in, tiny, sizeof(tiny)));
+    EdgeCacheSd.serialize_args.e = &in;
+    EdgeCacheSd.serialize_args.out = tiny;
+    EdgeCacheSd.serialize_args.cap = sizeof(tiny);
+    EdgeCacheSd.serialize(edge_cache_sd_work);
+    TEST_ASSERT_EQUAL_UINT(0, EdgeCacheSd.n);
 }
 
 void test_deserialize_corrupt_fails_closed(void)
@@ -195,16 +231,35 @@ void test_deserialize_corrupt_fails_closed(void)
     char canon[PROTOCORE_EDGE_KEY_MAX];
     mkcanon(canon, sizeof(canon), "/cdn/y");
     fill_entry(&in, canon, "\"e\"", (const uint8_t *)"hello", 5);
-    size_t n = edge_sd_serialize(&in, g_scratch, sizeof(g_scratch));
+    EdgeCacheSd.serialize_args.e = &in;
+    EdgeCacheSd.serialize_args.out = g_scratch;
+    EdgeCacheSd.serialize_args.cap = sizeof(g_scratch);
+    EdgeCacheSd.serialize(edge_cache_sd_work);
+    size_t n = EdgeCacheSd.n;
     TEST_ASSERT_TRUE(n > 0);
 
     EdgeEntry out;
     uint8_t bad = g_scratch[0];
     g_scratch[0] = 0x42;
-    TEST_ASSERT_FALSE(edge_sd_deserialize(tw, g_scratch, n, &out));
+    EdgeCacheSd.deserialize_args.entry_buf = tw;
+    EdgeCacheSd.deserialize_args.buf = g_scratch;
+    EdgeCacheSd.deserialize_args.len = n;
+    EdgeCacheSd.deserialize_args.e = &out;
+    EdgeCacheSd.deserialize(edge_cache_sd_work);
+    TEST_ASSERT_FALSE(EdgeCacheSd.ok);
     g_scratch[0] = bad;
-    TEST_ASSERT_FALSE(edge_sd_deserialize(tw, g_scratch, 2, &out));
-    TEST_ASSERT_FALSE(edge_sd_deserialize(tw, g_scratch, n - 3, &out));
+    EdgeCacheSd.deserialize_args.entry_buf = tw;
+    EdgeCacheSd.deserialize_args.buf = g_scratch;
+    EdgeCacheSd.deserialize_args.len = 2;
+    EdgeCacheSd.deserialize_args.e = &out;
+    EdgeCacheSd.deserialize(edge_cache_sd_work);
+    TEST_ASSERT_FALSE(EdgeCacheSd.ok);
+    EdgeCacheSd.deserialize_args.entry_buf = tw;
+    EdgeCacheSd.deserialize_args.buf = g_scratch;
+    EdgeCacheSd.deserialize_args.len = n - 3;
+    EdgeCacheSd.deserialize_args.e = &out;
+    EdgeCacheSd.deserialize(edge_cache_sd_work);
+    TEST_ASSERT_FALSE(EdgeCacheSd.ok);
 }
 
 void test_put_get_roundtrip(void)
@@ -214,11 +269,23 @@ void test_put_get_roundtrip(void)
     char canon[PROTOCORE_EDGE_KEY_MAX];
     mkcanon(canon, sizeof(canon), "/cdn/a.txt");
     fill_entry(&in, canon, "\"a1\"", (const uint8_t *)"payload-A", 9);
-    TEST_ASSERT_TRUE(edge_sd_put(&g_db, &in, g_scratch, sizeof(g_scratch)));
+    EdgeCacheSd.put_args.db = &g_db;
+    EdgeCacheSd.put_args.e = &in;
+    EdgeCacheSd.put_args.scratch = g_scratch;
+    EdgeCacheSd.put_args.scratch_cap = sizeof(g_scratch);
+    EdgeCacheSd.put(edge_cache_sd_work);
+    TEST_ASSERT_TRUE(EdgeCacheSd.ok);
 
     EdgeEntry out;
     memset(&out, 0, sizeof(out));
-    TEST_ASSERT_TRUE(edge_sd_get(tw, &g_db, in.digest, &out, g_scratch, sizeof(g_scratch)));
+    EdgeCacheSd.get_args.entry_buf = tw;
+    EdgeCacheSd.get_args.db = &g_db;
+    EdgeCacheSd.get_args.digest = in.digest;
+    EdgeCacheSd.get_args.e = &out;
+    EdgeCacheSd.get_args.scratch = g_scratch;
+    EdgeCacheSd.get_args.scratch_cap = sizeof(g_scratch);
+    EdgeCacheSd.get(edge_cache_sd_work);
+    TEST_ASSERT_TRUE(EdgeCacheSd.ok);
     TEST_ASSERT_EQUAL_STRING(canon, out.key);
     TEST_ASSERT_EQUAL_STRING("\"a1\"", out.etag);
     TEST_ASSERT_EQUAL_UINT16(9, out.body_len);
@@ -228,7 +295,14 @@ void test_put_get_roundtrip(void)
     char c2[PROTOCORE_EDGE_KEY_MAX];
     mkcanon(c2, sizeof(c2), "/cdn/never");
     fill_entry(&in2, c2, "\"n\"", (const uint8_t *)"x", 1);
-    TEST_ASSERT_FALSE(edge_sd_get(tw, &g_db, in2.digest, &out, g_scratch, sizeof(g_scratch)));
+    EdgeCacheSd.get_args.entry_buf = tw;
+    EdgeCacheSd.get_args.db = &g_db;
+    EdgeCacheSd.get_args.digest = in2.digest;
+    EdgeCacheSd.get_args.e = &out;
+    EdgeCacheSd.get_args.scratch = g_scratch;
+    EdgeCacheSd.get_args.scratch_cap = sizeof(g_scratch);
+    EdgeCacheSd.get(edge_cache_sd_work);
+    TEST_ASSERT_FALSE(EdgeCacheSd.ok);
 }
 
 void test_no_validator_not_spilled(void)
@@ -239,10 +313,22 @@ void test_no_validator_not_spilled(void)
     mkcanon(canon, sizeof(canon), "/cdn/novalidator");
     fill_entry(&in, canon, "", (const uint8_t *)"body", 4);
     in.last_modified[0] = '\0';
-    TEST_ASSERT_FALSE(edge_sd_put(&g_db, &in, g_scratch, sizeof(g_scratch)));
+    EdgeCacheSd.put_args.db = &g_db;
+    EdgeCacheSd.put_args.e = &in;
+    EdgeCacheSd.put_args.scratch = g_scratch;
+    EdgeCacheSd.put_args.scratch_cap = sizeof(g_scratch);
+    EdgeCacheSd.put(edge_cache_sd_work);
+    TEST_ASSERT_FALSE(EdgeCacheSd.ok);
 
     EdgeEntry out;
-    TEST_ASSERT_FALSE(edge_sd_get(tw, &g_db, in.digest, &out, g_scratch, sizeof(g_scratch)));
+    EdgeCacheSd.get_args.entry_buf = tw;
+    EdgeCacheSd.get_args.db = &g_db;
+    EdgeCacheSd.get_args.digest = in.digest;
+    EdgeCacheSd.get_args.e = &out;
+    EdgeCacheSd.get_args.scratch = g_scratch;
+    EdgeCacheSd.get_args.scratch_cap = sizeof(g_scratch);
+    EdgeCacheSd.get(edge_cache_sd_work);
+    TEST_ASSERT_FALSE(EdgeCacheSd.ok);
 }
 
 void test_oversize_body_stays_l1_only(void)
@@ -255,16 +341,30 @@ void test_oversize_body_stays_l1_only(void)
     char canon[PROTOCORE_EDGE_KEY_MAX];
     mkcanon(canon, sizeof(canon), "/cdn/toobig");
     fill_entry(&in, canon, "\"big\"", body, PROTOCORE_EDGE_BODY_MAX);
-    size_t serialized = edge_sd_serialize(&in, g_scratch, sizeof(g_scratch));
+    EdgeCacheSd.serialize_args.e = &in;
+    EdgeCacheSd.serialize_args.out = g_scratch;
+    EdgeCacheSd.serialize_args.cap = sizeof(g_scratch);
+    EdgeCacheSd.serialize(edge_cache_sd_work);
+    size_t serialized = EdgeCacheSd.n;
     TEST_ASSERT_TRUE(serialized > PROTOCORE_DBM_VAL_MAX);
-    TEST_ASSERT_FALSE(edge_sd_put(&g_db, &in, g_scratch, sizeof(g_scratch)));
+    EdgeCacheSd.put_args.db = &g_db;
+    EdgeCacheSd.put_args.e = &in;
+    EdgeCacheSd.put_args.scratch = g_scratch;
+    EdgeCacheSd.put_args.scratch_cap = sizeof(g_scratch);
+    EdgeCacheSd.put(edge_cache_sd_work);
+    TEST_ASSERT_FALSE(EdgeCacheSd.ok);
 }
 
 static uint32_t g_spills = 0;
 static void spill_cb(void *ctx, const EdgeEntry *v)
 {
     (void)ctx;
-    if (edge_sd_put((struct protocore_dbm *)ctx, v, g_scratch, sizeof(g_scratch)))
+    EdgeCacheSd.put_args.db = (struct protocore_dbm *)ctx;
+    EdgeCacheSd.put_args.e = v;
+    EdgeCacheSd.put_args.scratch = g_scratch;
+    EdgeCacheSd.put_args.scratch_cap = sizeof(g_scratch);
+    EdgeCacheSd.put(edge_cache_sd_work);
+    if (EdgeCacheSd.ok)
     {
         g_spills++;
     }
@@ -274,7 +374,11 @@ static EdgeEntry *store_mk(EdgeCacheStore *s, const char *path, const char *etag
 {
     char canon[PROTOCORE_EDGE_KEY_MAX];
     mkcanon(canon, sizeof(canon), path);
-    EdgeEntry *e = edge_store_alloc(s, canon, "");
+    EdgeCache.store_alloc_args.s = s;
+    EdgeCache.store_alloc_args.canon = canon;
+    EdgeCache.store_alloc_args.vary_key = "";
+    EdgeCache.store_alloc(edge_cache_work);
+    EdgeEntry *e = EdgeCache.entry;
     TEST_ASSERT_NOT_NULL(e);
     e->status = 200;
     strncpy(e->content_type, "text/plain", sizeof(e->content_type) - 1);
@@ -290,14 +394,19 @@ void test_spill_on_evict_and_promote(void)
     fresh();
     g_spills = 0;
     EdgeCacheStore store;
-    edge_store_init(&store);
+    EdgeCache.store_init_args.s = &store;
+    EdgeCache.store_init(edge_cache_work);
     store.on_evict = spill_cb;
     store.evict_ctx = &g_db;
 
     char first_canon[PROTOCORE_EDGE_KEY_MAX];
     mkcanon(first_canon, sizeof(first_canon), "/cdn/e0");
     uint8_t first_digest[32];
-    edge_key_digest(tw, first_canon, strlen(first_canon), first_digest);
+    EdgeCache.key_digest_args.digest_work = tw;
+    EdgeCache.key_digest_args.canon = first_canon;
+    EdgeCache.key_digest_args.len = strlen(first_canon);
+    EdgeCache.key_digest_args.digest = first_digest;
+    EdgeCache.key_digest(edge_cache_work);
 
     for (int i = 0; i < PROTOCORE_EDGE_CACHE_SLOTS; i++)
     {
@@ -312,15 +421,33 @@ void test_spill_on_evict_and_promote(void)
     TEST_ASSERT_EQUAL_UINT32(1, g_spills);
 
     EdgeEntry out;
-    TEST_ASSERT_TRUE(edge_sd_get(tw, &g_db, first_digest, &out, g_scratch, sizeof(g_scratch)));
+    EdgeCacheSd.get_args.entry_buf = tw;
+    EdgeCacheSd.get_args.db = &g_db;
+    EdgeCacheSd.get_args.digest = first_digest;
+    EdgeCacheSd.get_args.e = &out;
+    EdgeCacheSd.get_args.scratch = g_scratch;
+    EdgeCacheSd.get_args.scratch_cap = sizeof(g_scratch);
+    EdgeCacheSd.get(edge_cache_sd_work);
+    TEST_ASSERT_TRUE(EdgeCacheSd.ok);
     TEST_ASSERT_EQUAL_STRING(first_canon, out.key);
     TEST_ASSERT_EQUAL_STRING("\"e0\"", out.etag);
 
     char last_canon[PROTOCORE_EDGE_KEY_MAX];
     mkcanon(last_canon, sizeof(last_canon), "/cdn/eN");
     uint8_t last_digest[32];
-    edge_key_digest(tw, last_canon, strlen(last_canon), last_digest);
-    TEST_ASSERT_FALSE(edge_sd_get(tw, &g_db, last_digest, &out, g_scratch, sizeof(g_scratch)));
+    EdgeCache.key_digest_args.digest_work = tw;
+    EdgeCache.key_digest_args.canon = last_canon;
+    EdgeCache.key_digest_args.len = strlen(last_canon);
+    EdgeCache.key_digest_args.digest = last_digest;
+    EdgeCache.key_digest(edge_cache_work);
+    EdgeCacheSd.get_args.entry_buf = tw;
+    EdgeCacheSd.get_args.db = &g_db;
+    EdgeCacheSd.get_args.digest = last_digest;
+    EdgeCacheSd.get_args.e = &out;
+    EdgeCacheSd.get_args.scratch = g_scratch;
+    EdgeCacheSd.get_args.scratch_cap = sizeof(g_scratch);
+    EdgeCacheSd.get(edge_cache_sd_work);
+    TEST_ASSERT_FALSE(EdgeCacheSd.ok);
 }
 
 void test_transient_entry_not_spilled(void)
@@ -328,13 +455,18 @@ void test_transient_entry_not_spilled(void)
     fresh();
     g_spills = 0;
     EdgeCacheStore store;
-    edge_store_init(&store);
+    EdgeCache.store_init_args.s = &store;
+    EdgeCache.store_init(edge_cache_work);
     store.on_evict = spill_cb;
     store.evict_ctx = &g_db;
 
     for (int i = 0; i <= PROTOCORE_EDGE_CACHE_SLOTS; i++)
     {
-        EdgeEntry *e = edge_store_alloc(&store, "", "");
+        EdgeCache.store_alloc_args.s = &store;
+        EdgeCache.store_alloc_args.canon = "";
+        EdgeCache.store_alloc_args.vary_key = "";
+        EdgeCache.store_alloc(edge_cache_work);
+        EdgeEntry *e = EdgeCache.entry;
         TEST_ASSERT_NOT_NULL(e);
         e->body_len = 4;
         memcpy(e->body, "data", 4);
@@ -350,12 +482,24 @@ void test_survives_reboot(void)
     mkcanon(canon, sizeof(canon), "/cdn/persist");
     fill_entry(&in, canon, "\"p9\"", (const uint8_t *)"survive-me", 10);
     strncpy(in.last_modified, "Wed, 01 Jan 2025 00:00:00 GMT", sizeof(in.last_modified) - 1);
-    TEST_ASSERT_TRUE(edge_sd_put(&g_db, &in, g_scratch, sizeof(g_scratch)));
+    EdgeCacheSd.put_args.db = &g_db;
+    EdgeCacheSd.put_args.e = &in;
+    EdgeCacheSd.put_args.scratch = g_scratch;
+    EdgeCacheSd.put_args.scratch_cap = sizeof(g_scratch);
+    EdgeCacheSd.put(edge_cache_sd_work);
+    TEST_ASSERT_TRUE(EdgeCacheSd.ok);
     TEST_ASSERT_TRUE(protocore_dbm_sync(&g_db));
 
     TEST_ASSERT_TRUE(reboot());
     EdgeEntry out;
-    TEST_ASSERT_TRUE(edge_sd_get(tw, &g_db, in.digest, &out, g_scratch, sizeof(g_scratch)));
+    EdgeCacheSd.get_args.entry_buf = tw;
+    EdgeCacheSd.get_args.db = &g_db;
+    EdgeCacheSd.get_args.digest = in.digest;
+    EdgeCacheSd.get_args.e = &out;
+    EdgeCacheSd.get_args.scratch = g_scratch;
+    EdgeCacheSd.get_args.scratch_cap = sizeof(g_scratch);
+    EdgeCacheSd.get(edge_cache_sd_work);
+    TEST_ASSERT_TRUE(EdgeCacheSd.ok);
     TEST_ASSERT_EQUAL_STRING(canon, out.key);
     TEST_ASSERT_EQUAL_STRING("\"p9\"", out.etag);
     TEST_ASSERT_EQUAL_STRING("Wed, 01 Jan 2025 00:00:00 GMT", out.last_modified);
@@ -370,11 +514,29 @@ void test_del(void)
     char canon[PROTOCORE_EDGE_KEY_MAX];
     mkcanon(canon, sizeof(canon), "/cdn/del");
     fill_entry(&in, canon, "\"d\"", (const uint8_t *)"gone", 4);
-    TEST_ASSERT_TRUE(edge_sd_put(&g_db, &in, g_scratch, sizeof(g_scratch)));
-    TEST_ASSERT_TRUE(edge_sd_del(&g_db, in.digest));
+    EdgeCacheSd.put_args.db = &g_db;
+    EdgeCacheSd.put_args.e = &in;
+    EdgeCacheSd.put_args.scratch = g_scratch;
+    EdgeCacheSd.put_args.scratch_cap = sizeof(g_scratch);
+    EdgeCacheSd.put(edge_cache_sd_work);
+    TEST_ASSERT_TRUE(EdgeCacheSd.ok);
+    EdgeCacheSd.del_args.db = &g_db;
+    EdgeCacheSd.del_args.digest = in.digest;
+    EdgeCacheSd.del(edge_cache_sd_work);
+    TEST_ASSERT_TRUE(EdgeCacheSd.ok);
     EdgeEntry out;
-    TEST_ASSERT_FALSE(edge_sd_get(tw, &g_db, in.digest, &out, g_scratch, sizeof(g_scratch)));
-    TEST_ASSERT_FALSE(edge_sd_del(&g_db, in.digest));
+    EdgeCacheSd.get_args.entry_buf = tw;
+    EdgeCacheSd.get_args.db = &g_db;
+    EdgeCacheSd.get_args.digest = in.digest;
+    EdgeCacheSd.get_args.e = &out;
+    EdgeCacheSd.get_args.scratch = g_scratch;
+    EdgeCacheSd.get_args.scratch_cap = sizeof(g_scratch);
+    EdgeCacheSd.get(edge_cache_sd_work);
+    TEST_ASSERT_FALSE(EdgeCacheSd.ok);
+    EdgeCacheSd.del_args.db = &g_db;
+    EdgeCacheSd.del_args.digest = in.digest;
+    EdgeCacheSd.del(edge_cache_sd_work);
+    TEST_ASSERT_FALSE(EdgeCacheSd.ok);
 }
 
 static void put_path(const char *path)
@@ -383,7 +545,12 @@ static void put_path(const char *path)
     char canon[PROTOCORE_EDGE_KEY_MAX];
     mkcanon(canon, sizeof(canon), path);
     fill_entry(&in, canon, "\"v\"", (const uint8_t *)"x", 1);
-    TEST_ASSERT_TRUE(edge_sd_put(&g_db, &in, g_scratch, sizeof(g_scratch)));
+    EdgeCacheSd.put_args.db = &g_db;
+    EdgeCacheSd.put_args.e = &in;
+    EdgeCacheSd.put_args.scratch = g_scratch;
+    EdgeCacheSd.put_args.scratch_cap = sizeof(g_scratch);
+    EdgeCacheSd.put(edge_cache_sd_work);
+    TEST_ASSERT_TRUE(EdgeCacheSd.ok);
 }
 static proto_bool has_path(const char *path)
 {
@@ -391,7 +558,14 @@ static proto_bool has_path(const char *path)
     char canon[PROTOCORE_EDGE_KEY_MAX];
     mkcanon(canon, sizeof(canon), path);
     fill_entry(&in, canon, "\"v\"", (const uint8_t *)"x", 1);
-    return edge_sd_get(tw, &g_db, in.digest, &out, g_scratch, sizeof(g_scratch));
+    EdgeCacheSd.get_args.entry_buf = tw;
+    EdgeCacheSd.get_args.db = &g_db;
+    EdgeCacheSd.get_args.digest = in.digest;
+    EdgeCacheSd.get_args.e = &out;
+    EdgeCacheSd.get_args.scratch = g_scratch;
+    EdgeCacheSd.get_args.scratch_cap = sizeof(g_scratch);
+    EdgeCacheSd.get(edge_cache_sd_work);
+    return EdgeCacheSd.ok;
 }
 
 void test_purge_prefix(void)
@@ -400,7 +574,12 @@ void test_purge_prefix(void)
     put_path("/cdn/a");
     put_path("/cdn/b");
     put_path("/other/c");
-    TEST_ASSERT_EQUAL_UINT32(2, edge_sd_purge_prefix(&g_db, "/cdn/", g_scratch, sizeof(g_scratch)));
+    EdgeCacheSd.purge_prefix_args.db = &g_db;
+    EdgeCacheSd.purge_prefix_args.path_prefix = "/cdn/";
+    EdgeCacheSd.purge_prefix_args.scratch = g_scratch;
+    EdgeCacheSd.purge_prefix_args.scratch_cap = sizeof(g_scratch);
+    EdgeCacheSd.purge_prefix(edge_cache_sd_work);
+    TEST_ASSERT_EQUAL_UINT32(2, EdgeCacheSd.count);
     TEST_ASSERT_FALSE(has_path("/cdn/a"));
     TEST_ASSERT_FALSE(has_path("/cdn/b"));
     TEST_ASSERT_TRUE(has_path("/other/c"));
@@ -418,7 +597,12 @@ void test_purge_prefix_multipass(void)
         put_path(path);
     }
     put_path("/keep/one");
-    TEST_ASSERT_EQUAL_UINT32((uint32_t)N, edge_sd_purge_prefix(&g_db, "/cdn/", g_scratch, sizeof(g_scratch)));
+    EdgeCacheSd.purge_prefix_args.db = &g_db;
+    EdgeCacheSd.purge_prefix_args.path_prefix = "/cdn/";
+    EdgeCacheSd.purge_prefix_args.scratch = g_scratch;
+    EdgeCacheSd.purge_prefix_args.scratch_cap = sizeof(g_scratch);
+    EdgeCacheSd.purge_prefix(edge_cache_sd_work);
+    TEST_ASSERT_EQUAL_UINT32((uint32_t)N, EdgeCacheSd.count);
     for (int i = 0; i < N; i++)
     {
         snprintf(path, sizeof(path), "/cdn/p%d", i);
@@ -433,7 +617,9 @@ void test_purge_all(void)
     put_path("/cdn/a");
     put_path("/cdn/b");
     put_path("/x/y");
-    TEST_ASSERT_EQUAL_UINT32(3, edge_sd_purge_all(&g_db));
+    EdgeCacheSd.purge_all_args.db = &g_db;
+    EdgeCacheSd.purge_all(edge_cache_sd_work);
+    TEST_ASSERT_EQUAL_UINT32(3, EdgeCacheSd.count);
     TEST_ASSERT_FALSE(has_path("/cdn/a"));
     TEST_ASSERT_FALSE(has_path("/x/y"));
 }
@@ -449,7 +635,9 @@ void test_shared_dbm_foreign_value_untouched(void)
     TEST_ASSERT_TRUE(protocore_dbm_put(&g_db, (const char *)foreign_key, 32, foreign_val, sizeof(foreign_val)));
     put_path("/cdn/mine");
 
-    TEST_ASSERT_EQUAL_UINT32(1, edge_sd_purge_all(&g_db));
+    EdgeCacheSd.purge_all_args.db = &g_db;
+    EdgeCacheSd.purge_all(edge_cache_sd_work);
+    TEST_ASSERT_EQUAL_UINT32(1, EdgeCacheSd.count);
     TEST_ASSERT_FALSE(has_path("/cdn/mine"));
     uint8_t out[16];
     TEST_ASSERT_EQUAL_INT(16, protocore_dbm_get(&g_db, (const char *)foreign_key, 32, out, sizeof(out)));
@@ -470,18 +658,42 @@ void test_serialize_null_guards_and_every_overflow_point(void)
             "gzip\x1f",
             sizeof(in.vary_vals) - 1);
 
-    TEST_ASSERT_EQUAL_UINT(0, edge_sd_serialize(NULL, g_scratch, sizeof(g_scratch)));
-    TEST_ASSERT_EQUAL_UINT(0, edge_sd_serialize(&in, NULL, sizeof(g_scratch)));
-    TEST_ASSERT_EQUAL_UINT(0, edge_sd_serialize(&in, g_scratch, 2));
+    EdgeCacheSd.serialize_args.e = NULL;
+    EdgeCacheSd.serialize_args.out = g_scratch;
+    EdgeCacheSd.serialize_args.cap = sizeof(g_scratch);
+    EdgeCacheSd.serialize(edge_cache_sd_work);
+    TEST_ASSERT_EQUAL_UINT(0, EdgeCacheSd.n);
+    EdgeCacheSd.serialize_args.e = &in;
+    EdgeCacheSd.serialize_args.out = NULL;
+    EdgeCacheSd.serialize_args.cap = sizeof(g_scratch);
+    EdgeCacheSd.serialize(edge_cache_sd_work);
+    TEST_ASSERT_EQUAL_UINT(0, EdgeCacheSd.n);
+    EdgeCacheSd.serialize_args.e = &in;
+    EdgeCacheSd.serialize_args.out = g_scratch;
+    EdgeCacheSd.serialize_args.cap = 2;
+    EdgeCacheSd.serialize(edge_cache_sd_work);
+    TEST_ASSERT_EQUAL_UINT(0, EdgeCacheSd.n);
 
-    size_t n = edge_sd_serialize(&in, g_scratch, sizeof(g_scratch));
+    EdgeCacheSd.serialize_args.e = &in;
+    EdgeCacheSd.serialize_args.out = g_scratch;
+    EdgeCacheSd.serialize_args.cap = sizeof(g_scratch);
+    EdgeCacheSd.serialize(edge_cache_sd_work);
+    size_t n = EdgeCacheSd.n;
     TEST_ASSERT_TRUE(n > 3);
 
     for (size_t cap = 3; cap < n; cap++)
     {
-        TEST_ASSERT_EQUAL_UINT(0, edge_sd_serialize(&in, g_scratch, cap));
+        EdgeCacheSd.serialize_args.e = &in;
+        EdgeCacheSd.serialize_args.out = g_scratch;
+        EdgeCacheSd.serialize_args.cap = cap;
+        EdgeCacheSd.serialize(edge_cache_sd_work);
+        TEST_ASSERT_EQUAL_UINT(0, EdgeCacheSd.n);
     }
-    TEST_ASSERT_EQUAL_UINT(n, edge_sd_serialize(&in, g_scratch, n));
+    EdgeCacheSd.serialize_args.e = &in;
+    EdgeCacheSd.serialize_args.out = g_scratch;
+    EdgeCacheSd.serialize_args.cap = n;
+    EdgeCacheSd.serialize(edge_cache_sd_work);
+    TEST_ASSERT_EQUAL_UINT(n, EdgeCacheSd.n);
 }
 
 void test_deserialize_null_guards_and_every_truncation(void)
@@ -497,19 +709,43 @@ void test_deserialize_null_guards_and_every_truncation(void)
             "accept-encoding\x1e"
             "br\x1f",
             sizeof(in.vary_vals) - 1);
-    size_t n = edge_sd_serialize(&in, g_scratch, sizeof(g_scratch));
+    EdgeCacheSd.serialize_args.e = &in;
+    EdgeCacheSd.serialize_args.out = g_scratch;
+    EdgeCacheSd.serialize_args.cap = sizeof(g_scratch);
+    EdgeCacheSd.serialize(edge_cache_sd_work);
+    size_t n = EdgeCacheSd.n;
     TEST_ASSERT_TRUE(n > 0);
 
     EdgeEntry out;
     memset(&out, 0, sizeof(out));
-    TEST_ASSERT_FALSE(edge_sd_deserialize(tw, NULL, n, &out));
-    TEST_ASSERT_FALSE(edge_sd_deserialize(tw, g_scratch, n, NULL));
+    EdgeCacheSd.deserialize_args.entry_buf = tw;
+    EdgeCacheSd.deserialize_args.buf = NULL;
+    EdgeCacheSd.deserialize_args.len = n;
+    EdgeCacheSd.deserialize_args.e = &out;
+    EdgeCacheSd.deserialize(edge_cache_sd_work);
+    TEST_ASSERT_FALSE(EdgeCacheSd.ok);
+    EdgeCacheSd.deserialize_args.entry_buf = tw;
+    EdgeCacheSd.deserialize_args.buf = g_scratch;
+    EdgeCacheSd.deserialize_args.len = n;
+    EdgeCacheSd.deserialize_args.e = NULL;
+    EdgeCacheSd.deserialize(edge_cache_sd_work);
+    TEST_ASSERT_FALSE(EdgeCacheSd.ok);
 
     for (size_t l = 0; l < n; l++)
     {
-        TEST_ASSERT_FALSE(edge_sd_deserialize(tw, g_scratch, l, &out));
+        EdgeCacheSd.deserialize_args.entry_buf = tw;
+        EdgeCacheSd.deserialize_args.buf = g_scratch;
+        EdgeCacheSd.deserialize_args.len = l;
+        EdgeCacheSd.deserialize_args.e = &out;
+        EdgeCacheSd.deserialize(edge_cache_sd_work);
+        TEST_ASSERT_FALSE(EdgeCacheSd.ok);
     }
-    TEST_ASSERT_TRUE(edge_sd_deserialize(tw, g_scratch, n, &out));
+    EdgeCacheSd.deserialize_args.entry_buf = tw;
+    EdgeCacheSd.deserialize_args.buf = g_scratch;
+    EdgeCacheSd.deserialize_args.len = n;
+    EdgeCacheSd.deserialize_args.e = &out;
+    EdgeCacheSd.deserialize(edge_cache_sd_work);
+    TEST_ASSERT_TRUE(EdgeCacheSd.ok);
     TEST_ASSERT_EQUAL_STRING(canon, out.key);
 }
 
@@ -525,7 +761,12 @@ void test_deserialize_rejects_field_longer_than_its_slot(void)
     buf[4] = (uint8_t)(PROTOCORE_EDGE_KEY_MAX >> 8);
     EdgeEntry out;
     memset(&out, 0, sizeof(out));
-    TEST_ASSERT_FALSE(edge_sd_deserialize(tw, buf, sizeof(buf), &out));
+    EdgeCacheSd.deserialize_args.entry_buf = tw;
+    EdgeCacheSd.deserialize_args.buf = buf;
+    EdgeCacheSd.deserialize_args.len = sizeof(buf);
+    EdgeCacheSd.deserialize_args.e = &out;
+    EdgeCacheSd.deserialize(edge_cache_sd_work);
+    TEST_ASSERT_FALSE(EdgeCacheSd.ok);
 }
 
 void test_deserialize_rejects_oversize_body_length(void)
@@ -534,14 +775,23 @@ void test_deserialize_rejects_oversize_body_length(void)
     char canon[PROTOCORE_EDGE_KEY_MAX];
     mkcanon(canon, sizeof(canon), "/cdn/blen");
     fill_entry(&in, canon, "\"b\"", (const uint8_t *)"z", 1);
-    size_t n = edge_sd_serialize(&in, g_scratch, sizeof(g_scratch));
+    EdgeCacheSd.serialize_args.e = &in;
+    EdgeCacheSd.serialize_args.out = g_scratch;
+    EdgeCacheSd.serialize_args.cap = sizeof(g_scratch);
+    EdgeCacheSd.serialize(edge_cache_sd_work);
+    size_t n = EdgeCacheSd.n;
     TEST_ASSERT_TRUE(n > 3);
 
     g_scratch[n - 3] = 0xFF;
     g_scratch[n - 2] = 0xFF;
     EdgeEntry out;
     memset(&out, 0, sizeof(out));
-    TEST_ASSERT_FALSE(edge_sd_deserialize(tw, g_scratch, n, &out));
+    EdgeCacheSd.deserialize_args.entry_buf = tw;
+    EdgeCacheSd.deserialize_args.buf = g_scratch;
+    EdgeCacheSd.deserialize_args.len = n;
+    EdgeCacheSd.deserialize_args.e = &out;
+    EdgeCacheSd.deserialize(edge_cache_sd_work);
+    TEST_ASSERT_FALSE(EdgeCacheSd.ok);
 }
 
 void test_dbm_api_null_guards(void)
@@ -554,23 +804,94 @@ void test_dbm_api_null_guards(void)
     mkcanon(canon, sizeof(canon), "/cdn/guards");
     fill_entry(&in, canon, "\"g\"", (const uint8_t *)"v", 1);
 
-    TEST_ASSERT_FALSE(edge_sd_put(NULL, &in, g_scratch, sizeof(g_scratch)));
-    TEST_ASSERT_FALSE(edge_sd_put(&g_db, NULL, g_scratch, sizeof(g_scratch)));
-    TEST_ASSERT_FALSE(edge_sd_put(&g_db, &in, NULL, sizeof(g_scratch)));
-    TEST_ASSERT_FALSE(edge_sd_put(&g_db, &in, g_scratch, 8));
+    EdgeCacheSd.put_args.db = NULL;
+    EdgeCacheSd.put_args.e = &in;
+    EdgeCacheSd.put_args.scratch = g_scratch;
+    EdgeCacheSd.put_args.scratch_cap = sizeof(g_scratch);
+    EdgeCacheSd.put(edge_cache_sd_work);
+    TEST_ASSERT_FALSE(EdgeCacheSd.ok);
+    EdgeCacheSd.put_args.db = &g_db;
+    EdgeCacheSd.put_args.e = NULL;
+    EdgeCacheSd.put_args.scratch = g_scratch;
+    EdgeCacheSd.put_args.scratch_cap = sizeof(g_scratch);
+    EdgeCacheSd.put(edge_cache_sd_work);
+    TEST_ASSERT_FALSE(EdgeCacheSd.ok);
+    EdgeCacheSd.put_args.db = &g_db;
+    EdgeCacheSd.put_args.e = &in;
+    EdgeCacheSd.put_args.scratch = NULL;
+    EdgeCacheSd.put_args.scratch_cap = sizeof(g_scratch);
+    EdgeCacheSd.put(edge_cache_sd_work);
+    TEST_ASSERT_FALSE(EdgeCacheSd.ok);
+    EdgeCacheSd.put_args.db = &g_db;
+    EdgeCacheSd.put_args.e = &in;
+    EdgeCacheSd.put_args.scratch = g_scratch;
+    EdgeCacheSd.put_args.scratch_cap = 8;
+    EdgeCacheSd.put(edge_cache_sd_work);
+    TEST_ASSERT_FALSE(EdgeCacheSd.ok);
 
-    TEST_ASSERT_FALSE(edge_sd_get(tw, NULL, in.digest, &out, g_scratch, sizeof(g_scratch)));
-    TEST_ASSERT_FALSE(edge_sd_get(tw, &g_db, NULL, &out, g_scratch, sizeof(g_scratch)));
-    TEST_ASSERT_FALSE(edge_sd_get(tw, &g_db, in.digest, NULL, g_scratch, sizeof(g_scratch)));
-    TEST_ASSERT_FALSE(edge_sd_get(tw, &g_db, in.digest, &out, NULL, sizeof(g_scratch)));
+    EdgeCacheSd.get_args.entry_buf = tw;
+    EdgeCacheSd.get_args.db = NULL;
+    EdgeCacheSd.get_args.digest = in.digest;
+    EdgeCacheSd.get_args.e = &out;
+    EdgeCacheSd.get_args.scratch = g_scratch;
+    EdgeCacheSd.get_args.scratch_cap = sizeof(g_scratch);
+    EdgeCacheSd.get(edge_cache_sd_work);
+    TEST_ASSERT_FALSE(EdgeCacheSd.ok);
+    EdgeCacheSd.get_args.entry_buf = tw;
+    EdgeCacheSd.get_args.db = &g_db;
+    EdgeCacheSd.get_args.digest = NULL;
+    EdgeCacheSd.get_args.e = &out;
+    EdgeCacheSd.get_args.scratch = g_scratch;
+    EdgeCacheSd.get_args.scratch_cap = sizeof(g_scratch);
+    EdgeCacheSd.get(edge_cache_sd_work);
+    TEST_ASSERT_FALSE(EdgeCacheSd.ok);
+    EdgeCacheSd.get_args.entry_buf = tw;
+    EdgeCacheSd.get_args.db = &g_db;
+    EdgeCacheSd.get_args.digest = in.digest;
+    EdgeCacheSd.get_args.e = NULL;
+    EdgeCacheSd.get_args.scratch = g_scratch;
+    EdgeCacheSd.get_args.scratch_cap = sizeof(g_scratch);
+    EdgeCacheSd.get(edge_cache_sd_work);
+    TEST_ASSERT_FALSE(EdgeCacheSd.ok);
+    EdgeCacheSd.get_args.entry_buf = tw;
+    EdgeCacheSd.get_args.db = &g_db;
+    EdgeCacheSd.get_args.digest = in.digest;
+    EdgeCacheSd.get_args.e = &out;
+    EdgeCacheSd.get_args.scratch = NULL;
+    EdgeCacheSd.get_args.scratch_cap = sizeof(g_scratch);
+    EdgeCacheSd.get(edge_cache_sd_work);
+    TEST_ASSERT_FALSE(EdgeCacheSd.ok);
 
-    TEST_ASSERT_FALSE(edge_sd_del(NULL, in.digest));
-    TEST_ASSERT_FALSE(edge_sd_del(&g_db, NULL));
+    EdgeCacheSd.del_args.db = NULL;
+    EdgeCacheSd.del_args.digest = in.digest;
+    EdgeCacheSd.del(edge_cache_sd_work);
+    TEST_ASSERT_FALSE(EdgeCacheSd.ok);
+    EdgeCacheSd.del_args.db = &g_db;
+    EdgeCacheSd.del_args.digest = NULL;
+    EdgeCacheSd.del(edge_cache_sd_work);
+    TEST_ASSERT_FALSE(EdgeCacheSd.ok);
 
-    TEST_ASSERT_EQUAL_UINT32(0, edge_sd_purge_prefix(NULL, "/cdn/", g_scratch, sizeof(g_scratch)));
-    TEST_ASSERT_EQUAL_UINT32(0, edge_sd_purge_prefix(&g_db, NULL, g_scratch, sizeof(g_scratch)));
-    TEST_ASSERT_EQUAL_UINT32(0, edge_sd_purge_prefix(&g_db, "/cdn/", NULL, sizeof(g_scratch)));
-    TEST_ASSERT_EQUAL_UINT32(0, edge_sd_purge_all(NULL));
+    EdgeCacheSd.purge_prefix_args.db = NULL;
+    EdgeCacheSd.purge_prefix_args.path_prefix = "/cdn/";
+    EdgeCacheSd.purge_prefix_args.scratch = g_scratch;
+    EdgeCacheSd.purge_prefix_args.scratch_cap = sizeof(g_scratch);
+    EdgeCacheSd.purge_prefix(edge_cache_sd_work);
+    TEST_ASSERT_EQUAL_UINT32(0, EdgeCacheSd.count);
+    EdgeCacheSd.purge_prefix_args.db = &g_db;
+    EdgeCacheSd.purge_prefix_args.path_prefix = NULL;
+    EdgeCacheSd.purge_prefix_args.scratch = g_scratch;
+    EdgeCacheSd.purge_prefix_args.scratch_cap = sizeof(g_scratch);
+    EdgeCacheSd.purge_prefix(edge_cache_sd_work);
+    TEST_ASSERT_EQUAL_UINT32(0, EdgeCacheSd.count);
+    EdgeCacheSd.purge_prefix_args.db = &g_db;
+    EdgeCacheSd.purge_prefix_args.path_prefix = "/cdn/";
+    EdgeCacheSd.purge_prefix_args.scratch = NULL;
+    EdgeCacheSd.purge_prefix_args.scratch_cap = sizeof(g_scratch);
+    EdgeCacheSd.purge_prefix(edge_cache_sd_work);
+    TEST_ASSERT_EQUAL_UINT32(0, EdgeCacheSd.count);
+    EdgeCacheSd.purge_all_args.db = NULL;
+    EdgeCacheSd.purge_all(edge_cache_sd_work);
+    TEST_ASSERT_EQUAL_UINT32(0, EdgeCacheSd.count);
 }
 
 void test_purge_skips_foreign_and_unreadable_records(void)
@@ -589,7 +910,9 @@ void test_purge_skips_foreign_and_unreadable_records(void)
     TEST_ASSERT_TRUE(protocore_dbm_put(&g_db, (const char *)stub_key, 32, stub, sizeof(stub)));
 
     put_path("/cdn/real");
-    TEST_ASSERT_EQUAL_UINT32(1, edge_sd_purge_all(&g_db));
+    EdgeCacheSd.purge_all_args.db = &g_db;
+    EdgeCacheSd.purge_all(edge_cache_sd_work);
+    TEST_ASSERT_EQUAL_UINT32(1, EdgeCacheSd.count);
 
     uint8_t v[8];
     TEST_ASSERT_EQUAL_INT(1, protocore_dbm_get(&g_db, "short-key", 9, v, sizeof(v)));
@@ -604,21 +927,44 @@ void test_purge_prefix_skips_key_without_a_path(void)
     EdgeEntry odd;
     memset(&odd, 0, sizeof(odd));
     strncpy(odd.key, "malformed-key", sizeof(odd.key) - 1);
-    edge_key_digest(tw, odd.key, strlen(odd.key), odd.digest);
+    EdgeCache.key_digest_args.digest_work = tw;
+    EdgeCache.key_digest_args.canon = odd.key;
+    EdgeCache.key_digest_args.len = strlen(odd.key);
+    EdgeCache.key_digest_args.digest = odd.digest;
+    EdgeCache.key_digest(edge_cache_work);
     odd.status = 200;
     strncpy(odd.etag, "\"o\"", sizeof(odd.etag) - 1);
     memcpy(odd.body, "x", 1);
     odd.body_len = 1;
-    TEST_ASSERT_TRUE(edge_sd_put(&g_db, &odd, g_scratch, sizeof(g_scratch)));
+    EdgeCacheSd.put_args.db = &g_db;
+    EdgeCacheSd.put_args.e = &odd;
+    EdgeCacheSd.put_args.scratch = g_scratch;
+    EdgeCacheSd.put_args.scratch_cap = sizeof(g_scratch);
+    EdgeCacheSd.put(edge_cache_sd_work);
+    TEST_ASSERT_TRUE(EdgeCacheSd.ok);
     put_path("/cdn/keepme");
 
-    TEST_ASSERT_EQUAL_UINT32(0, edge_sd_purge_prefix(&g_db, "malformed", g_scratch, sizeof(g_scratch)));
+    EdgeCacheSd.purge_prefix_args.db = &g_db;
+    EdgeCacheSd.purge_prefix_args.path_prefix = "malformed";
+    EdgeCacheSd.purge_prefix_args.scratch = g_scratch;
+    EdgeCacheSd.purge_prefix_args.scratch_cap = sizeof(g_scratch);
+    EdgeCacheSd.purge_prefix(edge_cache_sd_work);
+    TEST_ASSERT_EQUAL_UINT32(0, EdgeCacheSd.count);
     EdgeEntry out;
     memset(&out, 0, sizeof(out));
-    TEST_ASSERT_TRUE(edge_sd_get(tw, &g_db, odd.digest, &out, g_scratch, sizeof(g_scratch)));
+    EdgeCacheSd.get_args.entry_buf = tw;
+    EdgeCacheSd.get_args.db = &g_db;
+    EdgeCacheSd.get_args.digest = odd.digest;
+    EdgeCacheSd.get_args.e = &out;
+    EdgeCacheSd.get_args.scratch = g_scratch;
+    EdgeCacheSd.get_args.scratch_cap = sizeof(g_scratch);
+    EdgeCacheSd.get(edge_cache_sd_work);
+    TEST_ASSERT_TRUE(EdgeCacheSd.ok);
     TEST_ASSERT_TRUE(has_path("/cdn/keepme"));
 
-    TEST_ASSERT_EQUAL_UINT32(2, edge_sd_purge_all(&g_db));
+    EdgeCacheSd.purge_all_args.db = &g_db;
+    EdgeCacheSd.purge_all(edge_cache_sd_work);
+    TEST_ASSERT_EQUAL_UINT32(2, EdgeCacheSd.count);
 }
 
 void test_purge_counts_only_the_deletes_that_were_logged(void)
@@ -654,7 +1000,9 @@ void test_purge_counts_only_the_deletes_that_were_logged(void)
     TEST_ASSERT_EQUAL_UINT64(leave, room);
     const uint32_t live = protocore_dbm_count(&g_db);
 
-    TEST_ASSERT_EQUAL_UINT32(1, edge_sd_purge_all(&g_db));
+    EdgeCacheSd.purge_all_args.db = &g_db;
+    EdgeCacheSd.purge_all(edge_cache_sd_work);
+    TEST_ASSERT_EQUAL_UINT32(1, EdgeCacheSd.count);
     TEST_ASSERT_EQUAL_UINT32(live - 1, protocore_dbm_count(&g_db));
     TEST_ASSERT_TRUE(has_path("/cdn/f0") != has_path("/cdn/f1"));
 }

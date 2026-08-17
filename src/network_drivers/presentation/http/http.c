@@ -18,6 +18,7 @@
 #include "network_drivers/transport/tcp/common.h"               // TcpConn, conn_pool: the slots a response writes on
 #include "network_drivers/transport/tcp/protocol/protocol.h"    // ConnPool: the slot a response writes on
 #include "protocore.h"                                          // http_pool, and the request and route widths
+#include "server/io/webdav_handler.h" // Dav: a DAV mount is intercepted before the route loop
 #if PROTOCORE_ENABLE_AUTH_LOCKOUT
 #include "server/clock/clock.h" // protocore_millis() stamps the attempt the lockout counts
 #include "server/security/auth_lockout/auth_lockout.h"
@@ -830,7 +831,10 @@ static void match_and_execute(struct HttpInternal *restrict ctx)
     // A WebDAV mount owns its whole subtree and every method on it (including
     // PROPFIND/MKCOL/etc., which Http.parse_method() does not recognize), so intercept
     // before the unknown-method 501 and the normal route loop.
-    if (try_serve_dav(slot_id, req))
+    Dav.try_serve_dav_args.slot_id = slot_id;
+    Dav.try_serve_dav_args.req = req;
+    Dav.try_serve_dav(protocore_webdav_handler_span());
+    if (Dav.ok)
     {
         return;
     }

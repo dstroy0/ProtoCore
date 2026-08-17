@@ -52,30 +52,59 @@ void test_datasheet_register_map(void)
 void test_datasheet_register_ids_and_data_layout(void)
 {
     // every flag set over a 12-bit field of 0x123: the data is the field alone.
-    TEST_ASSERT_EQUAL_HEX32(0x01234567u, protocore_ldc1614_data(0xF123, 0x4567));
-    TEST_ASSERT_EQUAL_HEX8(0x0F, protocore_ldc1614_error(0xF123));
+    Ldc1614.data_args.msb_reg = 0xF123;
+    Ldc1614.data_args.lsb_reg = 0x4567;
+    Ldc1614.data(protocore_ldc1614_span());
+    TEST_ASSERT_EQUAL_HEX32(0x01234567u, Ldc1614.value);
+    Ldc1614.error_args.msb_reg = 0xF123;
+    Ldc1614.error(protocore_ldc1614_span());
+    TEST_ASSERT_EQUAL_HEX8(0x0F, Ldc1614.flags);
 
     // no flag set: the same data, and no flags.
-    TEST_ASSERT_EQUAL_HEX32(0x01234567u, protocore_ldc1614_data(0x0123, 0x4567));
-    TEST_ASSERT_EQUAL_HEX8(0x00, protocore_ldc1614_error(0x0123));
+    Ldc1614.data_args.msb_reg = 0x0123;
+    Ldc1614.data_args.lsb_reg = 0x4567;
+    Ldc1614.data(protocore_ldc1614_span());
+    TEST_ASSERT_EQUAL_HEX32(0x01234567u, Ldc1614.value);
+    Ldc1614.error_args.msb_reg = 0x0123;
+    Ldc1614.error(protocore_ldc1614_span());
+    TEST_ASSERT_EQUAL_HEX8(0x00, Ldc1614.flags);
 
     // each flag alone, at the bit Table 1 names it at.
-    TEST_ASSERT_EQUAL_HEX8(0x08, protocore_ldc1614_error(0x8000)); // ERR_UR0, bit 15
-    TEST_ASSERT_EQUAL_HEX8(0x04, protocore_ldc1614_error(0x4000)); // ERR_OR0, bit 14
-    TEST_ASSERT_EQUAL_HEX8(0x02, protocore_ldc1614_error(0x2000)); // ERR_WD0, bit 13
-    TEST_ASSERT_EQUAL_HEX8(0x01, protocore_ldc1614_error(0x1000)); // ERR_AE0, bit 12
+    Ldc1614.error_args.msb_reg = 0x8000;
+    Ldc1614.error(protocore_ldc1614_span());
+    TEST_ASSERT_EQUAL_HEX8(0x08, Ldc1614.flags); // ERR_UR0, bit 15
+    Ldc1614.error_args.msb_reg = 0x4000;
+    Ldc1614.error(protocore_ldc1614_span());
+    TEST_ASSERT_EQUAL_HEX8(0x04, Ldc1614.flags); // ERR_OR0, bit 14
+    Ldc1614.error_args.msb_reg = 0x2000;
+    Ldc1614.error(protocore_ldc1614_span());
+    TEST_ASSERT_EQUAL_HEX8(0x02, Ldc1614.flags); // ERR_WD0, bit 13
+    Ldc1614.error_args.msb_reg = 0x1000;
+    Ldc1614.error(protocore_ldc1614_span());
+    TEST_ASSERT_EQUAL_HEX8(0x01, Ldc1614.flags); // ERR_AE0, bit 12
     // bit 11 is the top data bit, not a flag.
-    TEST_ASSERT_EQUAL_HEX8(0x00, protocore_ldc1614_error(0x0800));
+    Ldc1614.error_args.msb_reg = 0x0800;
+    Ldc1614.error(protocore_ldc1614_span());
+    TEST_ASSERT_EQUAL_HEX8(0x00, Ldc1614.flags);
 }
 
 // Table 37 notes: DATAx 0x000'0000 is the under-range condition and 0xFFF'FFFF the over-range one,
 // so both sentinels must survive the combine exactly.
 void test_range_sentinels_round_trip(void)
 {
-    TEST_ASSERT_EQUAL_HEX32(0x0000000u, protocore_ldc1614_data(0x0000, 0x0000));
-    TEST_ASSERT_EQUAL_HEX32(0xFFFFFFFu, protocore_ldc1614_data(0x0FFF, 0xFFFF));
+    Ldc1614.data_args.msb_reg = 0x0000;
+    Ldc1614.data_args.lsb_reg = 0x0000;
+    Ldc1614.data(protocore_ldc1614_span());
+    TEST_ASSERT_EQUAL_HEX32(0x0000000u, Ldc1614.value);
+    Ldc1614.data_args.msb_reg = 0x0FFF;
+    Ldc1614.data_args.lsb_reg = 0xFFFF;
+    Ldc1614.data(protocore_ldc1614_span());
+    TEST_ASSERT_EQUAL_HEX32(0xFFFFFFFu, Ldc1614.value);
     // the flags above a full-scale field do not push the result past 28 bits.
-    TEST_ASSERT_EQUAL_HEX32(0xFFFFFFFu, protocore_ldc1614_data(0xFFFF, 0xFFFF));
+    Ldc1614.data_args.msb_reg = 0xFFFF;
+    Ldc1614.data_args.lsb_reg = 0xFFFF;
+    Ldc1614.data(protocore_ldc1614_span());
+    TEST_ASSERT_EQUAL_HEX32(0xFFFFFFFu, Ldc1614.value);
 }
 
 // Equation 4 with FREF_DIVIDER and FIN_DIVIDER at 1: f_SENSOR = f_REF * DATA / 2^28.
@@ -85,13 +114,28 @@ void test_range_sentinels_round_trip(void)
 //     since 40e6 * (2^28 - 1) = 40e6 * 2^28 - 40e6, and 40e6 / 2^28 < 1 so the shift takes one off.
 void test_equation4_sensor_frequency(void)
 {
-    TEST_ASSERT_EQUAL_UINT64(20000000ULL, protocore_ldc1614_sensor_freq_hz(1u << 27, 40000000u));
-    TEST_ASSERT_EQUAL_UINT64(10000000ULL, protocore_ldc1614_sensor_freq_hz(1u << 26, 40000000u));
-    TEST_ASSERT_EQUAL_UINT64(39999999ULL, protocore_ldc1614_sensor_freq_hz(0x0FFFFFFFu, 40000000u));
+    Ldc1614.sensor_freq_hz_args.data28 = 1u << 27;
+    Ldc1614.sensor_freq_hz_args.fref_hz = 40000000u;
+    Ldc1614.sensor_freq_hz(protocore_ldc1614_span());
+    TEST_ASSERT_EQUAL_UINT64(20000000ULL, Ldc1614.hz);
+    Ldc1614.sensor_freq_hz_args.data28 = 1u << 26;
+    Ldc1614.sensor_freq_hz_args.fref_hz = 40000000u;
+    Ldc1614.sensor_freq_hz(protocore_ldc1614_span());
+    TEST_ASSERT_EQUAL_UINT64(10000000ULL, Ldc1614.hz);
+    Ldc1614.sensor_freq_hz_args.data28 = 0x0FFFFFFFu;
+    Ldc1614.sensor_freq_hz_args.fref_hz = 40000000u;
+    Ldc1614.sensor_freq_hz(protocore_ldc1614_span());
+    TEST_ASSERT_EQUAL_UINT64(39999999ULL, Ldc1614.hz);
     // under-range data is zero frequency, whatever the reference.
-    TEST_ASSERT_EQUAL_UINT64(0ULL, protocore_ldc1614_sensor_freq_hz(0u, 40000000u));
+    Ldc1614.sensor_freq_hz_args.data28 = 0u;
+    Ldc1614.sensor_freq_hz_args.fref_hz = 40000000u;
+    Ldc1614.sensor_freq_hz(protocore_ldc1614_span());
+    TEST_ASSERT_EQUAL_UINT64(0ULL, Ldc1614.hz);
     // the product exceeds 32 bits long before the shift, so a 32-bit intermediate would wrap here.
-    TEST_ASSERT_EQUAL_UINT64(17500000ULL, protocore_ldc1614_sensor_freq_hz(1u << 27, 35000000u));
+    Ldc1614.sensor_freq_hz_args.data28 = 1u << 27;
+    Ldc1614.sensor_freq_hz_args.fref_hz = 35000000u;
+    Ldc1614.sensor_freq_hz(protocore_ldc1614_span());
+    TEST_ASSERT_EQUAL_UINT64(17500000ULL, Ldc1614.hz);
 }
 
 // The bring-up writes each register Figure 14 names, at its own address, as (reg, msb, lsb) triples,
@@ -99,7 +143,12 @@ void test_equation4_sensor_frequency(void)
 void test_build_config_writes_the_datasheet_registers_in_order(void)
 {
     uint8_t buf[LDC1614_CONFIG_MAX];
-    TEST_ASSERT_EQUAL_size_t(21, protocore_ldc1614_build_config(buf, sizeof(buf), 0xFFFF, 0x0400));
+    Ldc1614.build_config_args.buf = buf;
+    Ldc1614.build_config_args.cap = sizeof(buf);
+    Ldc1614.build_config_args.rcount = 0xFFFF;
+    Ldc1614.build_config_args.settlecount = 0x0400;
+    Ldc1614.build_config(protocore_ldc1614_span());
+    TEST_ASSERT_EQUAL_size_t(21, Ldc1614.n);
 
     static const uint8_t ORDER[7] = {
         LDC1614_REG_RCOUNT_CH0,
@@ -128,7 +177,12 @@ void test_build_config_writes_the_datasheet_registers_in_order(void)
 void test_build_config_honors_the_reserved_fields(void)
 {
     uint8_t buf[LDC1614_CONFIG_MAX];
-    TEST_ASSERT_EQUAL_size_t(21, protocore_ldc1614_build_config(buf, sizeof(buf), 0xFFFF, 0x0400));
+    Ldc1614.build_config_args.buf = buf;
+    Ldc1614.build_config_args.cap = sizeof(buf);
+    Ldc1614.build_config_args.rcount = 0xFFFF;
+    Ldc1614.build_config_args.settlecount = 0x0400;
+    Ldc1614.build_config(protocore_ldc1614_span());
+    TEST_ASSERT_EQUAL_size_t(21, Ldc1614.n);
 
     const uint16_t clock_dividers = (uint16_t)(((uint16_t)buf[7] << 8) | buf[8]);
     const uint16_t mux = (uint16_t)(((uint16_t)buf[16] << 8) | buf[17]);
@@ -155,12 +209,27 @@ void test_build_config_refuses_a_short_buffer(void)
 {
     uint8_t small[LDC1614_CONFIG_MAX - 1];
     small[0] = 0xAA;
-    TEST_ASSERT_EQUAL_size_t(0, protocore_ldc1614_build_config(small, sizeof(small), 0xFFFF, 0x0400));
+    Ldc1614.build_config_args.buf = small;
+    Ldc1614.build_config_args.cap = sizeof(small);
+    Ldc1614.build_config_args.rcount = 0xFFFF;
+    Ldc1614.build_config_args.settlecount = 0x0400;
+    Ldc1614.build_config(protocore_ldc1614_span());
+    TEST_ASSERT_EQUAL_size_t(0, Ldc1614.n);
     TEST_ASSERT_EQUAL_HEX8(0xAA, small[0]); // untouched
-    TEST_ASSERT_EQUAL_size_t(0, protocore_ldc1614_build_config(small, 0, 0xFFFF, 0x0400));
+    Ldc1614.build_config_args.buf = small;
+    Ldc1614.build_config_args.cap = 0;
+    Ldc1614.build_config_args.rcount = 0xFFFF;
+    Ldc1614.build_config_args.settlecount = 0x0400;
+    Ldc1614.build_config(protocore_ldc1614_span());
+    TEST_ASSERT_EQUAL_size_t(0, Ldc1614.n);
 }
 
 void test_build_config_refuses_a_null_buffer(void)
 {
-    TEST_ASSERT_EQUAL_size_t(0, protocore_ldc1614_build_config(NULL, LDC1614_CONFIG_MAX, 0xFFFF, 0x0400));
+    Ldc1614.build_config_args.buf = NULL;
+    Ldc1614.build_config_args.cap = LDC1614_CONFIG_MAX;
+    Ldc1614.build_config_args.rcount = 0xFFFF;
+    Ldc1614.build_config_args.settlecount = 0x0400;
+    Ldc1614.build_config(protocore_ldc1614_span());
+    TEST_ASSERT_EQUAL_size_t(0, Ldc1614.n);
 }

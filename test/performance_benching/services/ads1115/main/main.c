@@ -19,14 +19,24 @@
 
 void dbench_run(void)
 {
+    // The bytes the module runs out of, taken once. Every entry below is called with it.
+    uint8_t *w = protocore_ads1115_span();
+
     for (;;)
     {
         DBENCH_BANNER("ads1115");
         volatile uint16_t sink16 = 0;
         volatile int32_t sink32 = 0;
-        DBENCH_OP("protocore_ads1115_config_single", 200000,
-                  sink16 += protocore_ads1115_config_single(0, ADS1115_GAIN_1, ADS1115_DR_128));
-        DBENCH_OP("protocore_ads1115_raw_to_uv", 200000, sink32 += protocore_ads1115_raw_to_uv(16384, ADS1115_GAIN_2));
+
+        // The arguments are set outside the timed expression and the entry is called inside it, so
+        // what is timed is one call and not the staging that precedes it.
+        Ads1115.config_single_args.channel = 0;
+        Ads1115.config_single_args.gain = ADS1115_GAIN_1;
+        Ads1115.config_single_args.dr = ADS1115_DR_128;
+        DBENCH_OP("Ads1115.config_single", 200000, (Ads1115.config_single(w), sink16 += Ads1115.word));
+        Ads1115.raw_to_uv_args.raw = 16384;
+        Ads1115.raw_to_uv_args.gain = ADS1115_GAIN_2;
+        DBENCH_OP("Ads1115.raw_to_uv", 200000, (Ads1115.raw_to_uv(w), sink32 += Ads1115.uv));
         (void)sink16;
         (void)sink32;
         DBENCH_DONE();

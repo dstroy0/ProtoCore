@@ -6,6 +6,8 @@
 
 #include <unity.h>
 
+static uint8_t edge_fetch_work[16]; // the borrow an entry takes; EdgeFetch never reads it
+
 void setUp()
 {
 }
@@ -91,7 +93,10 @@ static EdgeFetchStatus run_fetch(EdgeFetch *f, const EdgeFetchTransport *t, uint
 {
     for (int i = 0; i < 100000 && f->st == EDGE_FETCH_STATUS_PENDING; i++)
     {
-        edge_fetch_pump(f, t, now);
+        EdgeFetcher.pump_args.f = f;
+        EdgeFetcher.pump_args.t = t;
+        EdgeFetcher.pump_args.now_ms = now;
+        EdgeFetcher.pump(edge_fetch_work);
     }
     return f->st;
 }
@@ -102,7 +107,14 @@ static void test_fetch_content_length()
     MockOrigin m = {(const uint8_t *)R, strlen(R), 0, 4, PROTO_TRUE, 7};
     EdgeFetchTransport t = make_transport(&m);
     EdgeFetch f;
-    edge_fetch_begin(&f, &t, "h", 80, "GET / HTTP/1.1\r\n\r\n", 18, 1000);
+    EdgeFetcher.begin_args.f = &f;
+    EdgeFetcher.begin_args.t = &t;
+    EdgeFetcher.begin_args.host = "h";
+    EdgeFetcher.begin_args.port = 80;
+    EdgeFetcher.begin_args.request = "GET / HTTP/1.1\r\n\r\n";
+    EdgeFetcher.begin_args.req_len = 18;
+    EdgeFetcher.begin_args.now_ms = 1000;
+    EdgeFetcher.begin(edge_fetch_work);
     TEST_ASSERT_EQUAL(EDGE_FETCH_STATUS_DONE, run_fetch(&f, &t, 1000));
     TEST_ASSERT_EQUAL_INT(200, f.status);
     TEST_ASSERT_EQUAL_UINT(5, f.body_len);
@@ -116,7 +128,14 @@ static void test_fetch_chunked()
     MockOrigin m = {(const uint8_t *)R, strlen(R), 0, 3, PROTO_TRUE, 9};
     EdgeFetchTransport t = make_transport(&m);
     EdgeFetch f;
-    edge_fetch_begin(&f, &t, "h", 80, "GET / HTTP/1.1\r\n\r\n", 18, 1000);
+    EdgeFetcher.begin_args.f = &f;
+    EdgeFetcher.begin_args.t = &t;
+    EdgeFetcher.begin_args.host = "h";
+    EdgeFetcher.begin_args.port = 80;
+    EdgeFetcher.begin_args.request = "GET / HTTP/1.1\r\n\r\n";
+    EdgeFetcher.begin_args.req_len = 18;
+    EdgeFetcher.begin_args.now_ms = 1000;
+    EdgeFetcher.begin(edge_fetch_work);
     TEST_ASSERT_EQUAL(EDGE_FETCH_STATUS_DONE, run_fetch(&f, &t, 1000));
     TEST_ASSERT_EQUAL_INT(200, f.status);
     TEST_ASSERT_EQUAL_UINT(11, f.body_len);
@@ -129,7 +148,14 @@ static void test_fetch_close_delimited()
     MockOrigin m = {(const uint8_t *)R, strlen(R), 0, 0, PROTO_TRUE, 5};
     EdgeFetchTransport t = make_transport(&m);
     EdgeFetch f;
-    edge_fetch_begin(&f, &t, "h", 80, "GET / HTTP/1.1\r\n\r\n", 18, 1000);
+    EdgeFetcher.begin_args.f = &f;
+    EdgeFetcher.begin_args.t = &t;
+    EdgeFetcher.begin_args.host = "h";
+    EdgeFetcher.begin_args.port = 80;
+    EdgeFetcher.begin_args.request = "GET / HTTP/1.1\r\n\r\n";
+    EdgeFetcher.begin_args.req_len = 18;
+    EdgeFetcher.begin_args.now_ms = 1000;
+    EdgeFetcher.begin(edge_fetch_work);
     TEST_ASSERT_EQUAL(EDGE_FETCH_STATUS_DONE, run_fetch(&f, &t, 1000));
     TEST_ASSERT_EQUAL_INT(200, f.status);
     TEST_ASSERT_EQUAL_MEMORY("body-till-close", f.buf + f.body_off, 15);
@@ -145,7 +171,14 @@ static void test_fetch_oversize()
     MockOrigin m = {big, sizeof(big), 0, 0, PROTO_FALSE, 3};
     EdgeFetchTransport t = make_transport(&m);
     EdgeFetch f;
-    edge_fetch_begin(&f, &t, "h", 80, "GET / HTTP/1.1\r\n\r\n", 18, 1000);
+    EdgeFetcher.begin_args.f = &f;
+    EdgeFetcher.begin_args.t = &t;
+    EdgeFetcher.begin_args.host = "h";
+    EdgeFetcher.begin_args.port = 80;
+    EdgeFetcher.begin_args.request = "GET / HTTP/1.1\r\n\r\n";
+    EdgeFetcher.begin_args.req_len = 18;
+    EdgeFetcher.begin_args.now_ms = 1000;
+    EdgeFetcher.begin(edge_fetch_work);
     TEST_ASSERT_EQUAL(EDGE_FETCH_STATUS_OVERSIZE, run_fetch(&f, &t, 1000));
 }
 
@@ -155,9 +188,24 @@ static void test_fetch_timeout()
     MockOrigin m = {(const uint8_t *)R, strlen(R), 0, 0, PROTO_FALSE, 2};
     EdgeFetchTransport t = make_transport(&m);
     EdgeFetch f;
-    edge_fetch_begin(&f, &t, "h", 80, "GET / HTTP/1.1\r\n\r\n", 18, 1000);
-    TEST_ASSERT_EQUAL(EDGE_FETCH_STATUS_PENDING, edge_fetch_pump(&f, &t, 1000));
-    TEST_ASSERT_EQUAL(EDGE_FETCH_STATUS_FAILED, edge_fetch_pump(&f, &t, 1000 + PROTOCORE_EDGE_FETCH_TIMEOUT_MS));
+    EdgeFetcher.begin_args.f = &f;
+    EdgeFetcher.begin_args.t = &t;
+    EdgeFetcher.begin_args.host = "h";
+    EdgeFetcher.begin_args.port = 80;
+    EdgeFetcher.begin_args.request = "GET / HTTP/1.1\r\n\r\n";
+    EdgeFetcher.begin_args.req_len = 18;
+    EdgeFetcher.begin_args.now_ms = 1000;
+    EdgeFetcher.begin(edge_fetch_work);
+    EdgeFetcher.pump_args.f = &f;
+    EdgeFetcher.pump_args.t = &t;
+    EdgeFetcher.pump_args.now_ms = 1000;
+    EdgeFetcher.pump(edge_fetch_work);
+    TEST_ASSERT_EQUAL(EDGE_FETCH_STATUS_PENDING, EdgeFetcher.status);
+    EdgeFetcher.pump_args.f = &f;
+    EdgeFetcher.pump_args.t = &t;
+    EdgeFetcher.pump_args.now_ms = 1000 + PROTOCORE_EDGE_FETCH_TIMEOUT_MS;
+    EdgeFetcher.pump(edge_fetch_work);
+    TEST_ASSERT_EQUAL(EDGE_FETCH_STATUS_FAILED, EdgeFetcher.status);
 }
 
 static void test_fetch_open_fail()
@@ -165,7 +213,14 @@ static void test_fetch_open_fail()
     MockOrigin m = {(const uint8_t *)"", 0, 0, 0, PROTO_FALSE, -1};
     EdgeFetchTransport t = make_transport(&m);
     EdgeFetch f;
-    edge_fetch_begin(&f, &t, "h", 80, "GET / HTTP/1.1\r\n\r\n", 18, 1000);
+    EdgeFetcher.begin_args.f = &f;
+    EdgeFetcher.begin_args.t = &t;
+    EdgeFetcher.begin_args.host = "h";
+    EdgeFetcher.begin_args.port = 80;
+    EdgeFetcher.begin_args.request = "GET / HTTP/1.1\r\n\r\n";
+    EdgeFetcher.begin_args.req_len = 18;
+    EdgeFetcher.begin_args.now_ms = 1000;
+    EdgeFetcher.begin(edge_fetch_work);
     TEST_ASSERT_EQUAL(EDGE_FETCH_STATUS_FAILED, f.st);
 }
 
@@ -173,22 +228,57 @@ static void test_resp_complete_unit()
 {
     size_t hl = 0;
     const char *partial = "HTTP/1.1 200 OK\r\nContent-Len";
-    TEST_ASSERT_FALSE(edge_resp_complete((const uint8_t *)partial, strlen(partial), PROTO_FALSE, &hl));
+    EdgeFetcher.edge_resp_complete_args.buf = (const uint8_t *)partial;
+    EdgeFetcher.edge_resp_complete_args.len = strlen(partial);
+    EdgeFetcher.edge_resp_complete_args.conn_closed = PROTO_FALSE;
+    EdgeFetcher.edge_resp_complete_args.head_len = &hl;
+    EdgeFetcher.edge_resp_complete(edge_fetch_work);
+    TEST_ASSERT_FALSE(EdgeFetcher.ok);
     TEST_ASSERT_EQUAL_UINT(0, hl);
 
     const char *cl = "HTTP/1.1 200 OK\r\nContent-Length: 3\r\n\r\nabc";
-    TEST_ASSERT_TRUE(edge_resp_complete((const uint8_t *)cl, strlen(cl), PROTO_FALSE, &hl));
+    EdgeFetcher.edge_resp_complete_args.buf = (const uint8_t *)cl;
+    EdgeFetcher.edge_resp_complete_args.len = strlen(cl);
+    EdgeFetcher.edge_resp_complete_args.conn_closed = PROTO_FALSE;
+    EdgeFetcher.edge_resp_complete_args.head_len = &hl;
+    EdgeFetcher.edge_resp_complete(edge_fetch_work);
+    TEST_ASSERT_TRUE(EdgeFetcher.ok);
     const char *cl_short = "HTTP/1.1 200 OK\r\nContent-Length: 3\r\n\r\nab";
-    TEST_ASSERT_FALSE(edge_resp_complete((const uint8_t *)cl_short, strlen(cl_short), PROTO_FALSE, &hl));
+    EdgeFetcher.edge_resp_complete_args.buf = (const uint8_t *)cl_short;
+    EdgeFetcher.edge_resp_complete_args.len = strlen(cl_short);
+    EdgeFetcher.edge_resp_complete_args.conn_closed = PROTO_FALSE;
+    EdgeFetcher.edge_resp_complete_args.head_len = &hl;
+    EdgeFetcher.edge_resp_complete(edge_fetch_work);
+    TEST_ASSERT_FALSE(EdgeFetcher.ok);
 
     const char *ch_inc = "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n5\r\nhello\r\n";
-    TEST_ASSERT_FALSE(edge_resp_complete((const uint8_t *)ch_inc, strlen(ch_inc), PROTO_FALSE, &hl));
+    EdgeFetcher.edge_resp_complete_args.buf = (const uint8_t *)ch_inc;
+    EdgeFetcher.edge_resp_complete_args.len = strlen(ch_inc);
+    EdgeFetcher.edge_resp_complete_args.conn_closed = PROTO_FALSE;
+    EdgeFetcher.edge_resp_complete_args.head_len = &hl;
+    EdgeFetcher.edge_resp_complete(edge_fetch_work);
+    TEST_ASSERT_FALSE(EdgeFetcher.ok);
     const char *ch_ok = "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n5\r\nhello\r\n0\r\n\r\n";
-    TEST_ASSERT_TRUE(edge_resp_complete((const uint8_t *)ch_ok, strlen(ch_ok), PROTO_FALSE, &hl));
+    EdgeFetcher.edge_resp_complete_args.buf = (const uint8_t *)ch_ok;
+    EdgeFetcher.edge_resp_complete_args.len = strlen(ch_ok);
+    EdgeFetcher.edge_resp_complete_args.conn_closed = PROTO_FALSE;
+    EdgeFetcher.edge_resp_complete_args.head_len = &hl;
+    EdgeFetcher.edge_resp_complete(edge_fetch_work);
+    TEST_ASSERT_TRUE(EdgeFetcher.ok);
 
     const char *cd = "HTTP/1.1 200 OK\r\n\r\nsome body";
-    TEST_ASSERT_FALSE(edge_resp_complete((const uint8_t *)cd, strlen(cd), PROTO_FALSE, &hl));
-    TEST_ASSERT_TRUE(edge_resp_complete((const uint8_t *)cd, strlen(cd), PROTO_TRUE, &hl));
+    EdgeFetcher.edge_resp_complete_args.buf = (const uint8_t *)cd;
+    EdgeFetcher.edge_resp_complete_args.len = strlen(cd);
+    EdgeFetcher.edge_resp_complete_args.conn_closed = PROTO_FALSE;
+    EdgeFetcher.edge_resp_complete_args.head_len = &hl;
+    EdgeFetcher.edge_resp_complete(edge_fetch_work);
+    TEST_ASSERT_FALSE(EdgeFetcher.ok);
+    EdgeFetcher.edge_resp_complete_args.buf = (const uint8_t *)cd;
+    EdgeFetcher.edge_resp_complete_args.len = strlen(cd);
+    EdgeFetcher.edge_resp_complete_args.conn_closed = PROTO_TRUE;
+    EdgeFetcher.edge_resp_complete_args.head_len = &hl;
+    EdgeFetcher.edge_resp_complete(edge_fetch_work);
+    TEST_ASSERT_TRUE(EdgeFetcher.ok);
 }
 
 static void test_fetch_send_fail()
@@ -197,9 +287,20 @@ static void test_fetch_send_fail()
     m.send_fail = PROTO_TRUE;
     EdgeFetchTransport t = make_transport(&m);
     EdgeFetch f;
-    edge_fetch_begin(&f, &t, "h", 80, "GET / HTTP/1.1\r\n\r\n", 18, 1000);
+    EdgeFetcher.begin_args.f = &f;
+    EdgeFetcher.begin_args.t = &t;
+    EdgeFetcher.begin_args.host = "h";
+    EdgeFetcher.begin_args.port = 80;
+    EdgeFetcher.begin_args.request = "GET / HTTP/1.1\r\n\r\n";
+    EdgeFetcher.begin_args.req_len = 18;
+    EdgeFetcher.begin_args.now_ms = 1000;
+    EdgeFetcher.begin(edge_fetch_work);
     TEST_ASSERT_EQUAL(EDGE_FETCH_STATUS_PENDING, f.st);
-    TEST_ASSERT_EQUAL(EDGE_FETCH_STATUS_FAILED, edge_fetch_pump(&f, &t, 1000));
+    EdgeFetcher.pump_args.f = &f;
+    EdgeFetcher.pump_args.t = &t;
+    EdgeFetcher.pump_args.now_ms = 1000;
+    EdgeFetcher.pump(edge_fetch_work);
+    TEST_ASSERT_EQUAL(EDGE_FETCH_STATUS_FAILED, EdgeFetcher.status);
     TEST_ASSERT_EQUAL_INT(4, f.cid);
 }
 
@@ -209,20 +310,40 @@ static void test_fetch_end_releases_once()
     MockOrigin m = {(const uint8_t *)R, strlen(R), 0, 0, PROTO_TRUE, 11};
     EdgeFetchTransport t = make_transport(&m);
     EdgeFetch f;
-    edge_fetch_begin(&f, &t, "h", 80, "GET / HTTP/1.1\r\n\r\n", 18, 1000);
+    EdgeFetcher.begin_args.f = &f;
+    EdgeFetcher.begin_args.t = &t;
+    EdgeFetcher.begin_args.host = "h";
+    EdgeFetcher.begin_args.port = 80;
+    EdgeFetcher.begin_args.request = "GET / HTTP/1.1\r\n\r\n";
+    EdgeFetcher.begin_args.req_len = 18;
+    EdgeFetcher.begin_args.now_ms = 1000;
+    EdgeFetcher.begin(edge_fetch_work);
     TEST_ASSERT_EQUAL(EDGE_FETCH_STATUS_DONE, run_fetch(&f, &t, 1000));
-    edge_fetch_end(&f, &t);
+    EdgeFetcher.end_args.f = &f;
+    EdgeFetcher.end_args.t = &t;
+    EdgeFetcher.end(edge_fetch_work);
     TEST_ASSERT_EQUAL_INT(1, m.close_calls);
     TEST_ASSERT_EQUAL_INT(11, m.last_closed);
     TEST_ASSERT_EQUAL_INT(-1, f.cid);
-    edge_fetch_end(&f, &t);
+    EdgeFetcher.end_args.f = &f;
+    EdgeFetcher.end_args.t = &t;
+    EdgeFetcher.end(edge_fetch_work);
     TEST_ASSERT_EQUAL_INT(1, m.close_calls);
 
     MockOrigin m2 = {(const uint8_t *)"", 0, 0, 0, PROTO_FALSE, -1};
     EdgeFetchTransport t2 = make_transport(&m2);
     EdgeFetch f2;
-    edge_fetch_begin(&f2, &t2, "h", 80, "GET / HTTP/1.1\r\n\r\n", 18, 1000);
-    edge_fetch_end(&f2, &t2);
+    EdgeFetcher.begin_args.f = &f2;
+    EdgeFetcher.begin_args.t = &t2;
+    EdgeFetcher.begin_args.host = "h";
+    EdgeFetcher.begin_args.port = 80;
+    EdgeFetcher.begin_args.request = "GET / HTTP/1.1\r\n\r\n";
+    EdgeFetcher.begin_args.req_len = 18;
+    EdgeFetcher.begin_args.now_ms = 1000;
+    EdgeFetcher.begin(edge_fetch_work);
+    EdgeFetcher.end_args.f = &f2;
+    EdgeFetcher.end_args.t = &t2;
+    EdgeFetcher.end(edge_fetch_work);
     TEST_ASSERT_EQUAL_INT(0, m2.close_calls);
 }
 
@@ -232,10 +353,21 @@ static void test_fetch_pump_after_terminal_is_inert()
     MockOrigin m = {(const uint8_t *)R, strlen(R), 0, 0, PROTO_TRUE, 6};
     EdgeFetchTransport t = make_transport(&m);
     EdgeFetch f;
-    edge_fetch_begin(&f, &t, "h", 80, "GET / HTTP/1.1\r\n\r\n", 18, 1000);
+    EdgeFetcher.begin_args.f = &f;
+    EdgeFetcher.begin_args.t = &t;
+    EdgeFetcher.begin_args.host = "h";
+    EdgeFetcher.begin_args.port = 80;
+    EdgeFetcher.begin_args.request = "GET / HTTP/1.1\r\n\r\n";
+    EdgeFetcher.begin_args.req_len = 18;
+    EdgeFetcher.begin_args.now_ms = 1000;
+    EdgeFetcher.begin(edge_fetch_work);
     TEST_ASSERT_EQUAL(EDGE_FETCH_STATUS_DONE, run_fetch(&f, &t, 1000));
     size_t got_before = f.got;
-    TEST_ASSERT_EQUAL(EDGE_FETCH_STATUS_DONE, edge_fetch_pump(&f, &t, 9999999));
+    EdgeFetcher.pump_args.f = &f;
+    EdgeFetcher.pump_args.t = &t;
+    EdgeFetcher.pump_args.now_ms = 9999999;
+    EdgeFetcher.pump(edge_fetch_work);
+    TEST_ASSERT_EQUAL(EDGE_FETCH_STATUS_DONE, EdgeFetcher.status);
     TEST_ASSERT_EQUAL_UINT(got_before, f.got);
 }
 
@@ -245,7 +377,14 @@ static void test_fetch_malformed_status_line()
     MockOrigin m = {(const uint8_t *)R, strlen(R), 0, 0, PROTO_TRUE, 3};
     EdgeFetchTransport t = make_transport(&m);
     EdgeFetch f;
-    edge_fetch_begin(&f, &t, "h", 80, "GET / HTTP/1.1\r\n\r\n", 18, 1000);
+    EdgeFetcher.begin_args.f = &f;
+    EdgeFetcher.begin_args.t = &t;
+    EdgeFetcher.begin_args.host = "h";
+    EdgeFetcher.begin_args.port = 80;
+    EdgeFetcher.begin_args.request = "GET / HTTP/1.1\r\n\r\n";
+    EdgeFetcher.begin_args.req_len = 18;
+    EdgeFetcher.begin_args.now_ms = 1000;
+    EdgeFetcher.begin(edge_fetch_work);
     TEST_ASSERT_EQUAL(EDGE_FETCH_STATUS_FAILED, run_fetch(&f, &t, 1000));
 }
 
@@ -255,26 +394,62 @@ static void test_fetch_closed_before_complete()
     MockOrigin m = {(const uint8_t *)R, strlen(R), 0, 0, PROTO_TRUE, 8};
     EdgeFetchTransport t = make_transport(&m);
     EdgeFetch f;
-    edge_fetch_begin(&f, &t, "h", 80, "GET / HTTP/1.1\r\n\r\n", 18, 1000);
-    TEST_ASSERT_EQUAL(EDGE_FETCH_STATUS_FAILED, edge_fetch_pump(&f, &t, 1000));
+    EdgeFetcher.begin_args.f = &f;
+    EdgeFetcher.begin_args.t = &t;
+    EdgeFetcher.begin_args.host = "h";
+    EdgeFetcher.begin_args.port = 80;
+    EdgeFetcher.begin_args.request = "GET / HTTP/1.1\r\n\r\n";
+    EdgeFetcher.begin_args.req_len = 18;
+    EdgeFetcher.begin_args.now_ms = 1000;
+    EdgeFetcher.begin(edge_fetch_work);
+    EdgeFetcher.pump_args.f = &f;
+    EdgeFetcher.pump_args.t = &t;
+    EdgeFetcher.pump_args.now_ms = 1000;
+    EdgeFetcher.pump(edge_fetch_work);
+    TEST_ASSERT_EQUAL(EDGE_FETCH_STATUS_FAILED, EdgeFetcher.status);
 }
 
 static void test_chunked_hex_sizes()
 {
     size_t hl = 0;
     const char *lower = "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\na\r\n0123456789\r\n0\r\n\r\n";
-    TEST_ASSERT_TRUE(edge_resp_complete((const uint8_t *)lower, strlen(lower), PROTO_FALSE, &hl));
+    EdgeFetcher.edge_resp_complete_args.buf = (const uint8_t *)lower;
+    EdgeFetcher.edge_resp_complete_args.len = strlen(lower);
+    EdgeFetcher.edge_resp_complete_args.conn_closed = PROTO_FALSE;
+    EdgeFetcher.edge_resp_complete_args.head_len = &hl;
+    EdgeFetcher.edge_resp_complete(edge_fetch_work);
+    TEST_ASSERT_TRUE(EdgeFetcher.ok);
     const char *upper = "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\nB\r\n0123456789a\r\n0\r\n\r\n";
-    TEST_ASSERT_TRUE(edge_resp_complete((const uint8_t *)upper, strlen(upper), PROTO_FALSE, &hl));
+    EdgeFetcher.edge_resp_complete_args.buf = (const uint8_t *)upper;
+    EdgeFetcher.edge_resp_complete_args.len = strlen(upper);
+    EdgeFetcher.edge_resp_complete_args.conn_closed = PROTO_FALSE;
+    EdgeFetcher.edge_resp_complete_args.head_len = &hl;
+    EdgeFetcher.edge_resp_complete(edge_fetch_work);
+    TEST_ASSERT_TRUE(EdgeFetcher.ok);
 
     const char *no_lf = "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n1f";
-    TEST_ASSERT_FALSE(edge_resp_complete((const uint8_t *)no_lf, strlen(no_lf), PROTO_FALSE, &hl));
+    EdgeFetcher.edge_resp_complete_args.buf = (const uint8_t *)no_lf;
+    EdgeFetcher.edge_resp_complete_args.len = strlen(no_lf);
+    EdgeFetcher.edge_resp_complete_args.conn_closed = PROTO_FALSE;
+    EdgeFetcher.edge_resp_complete_args.head_len = &hl;
+    EdgeFetcher.edge_resp_complete(edge_fetch_work);
+    TEST_ASSERT_FALSE(EdgeFetcher.ok);
 
     const char *short_data = "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n5\r\nhel";
-    TEST_ASSERT_FALSE(edge_resp_complete((const uint8_t *)short_data, strlen(short_data), PROTO_FALSE, &hl));
+    EdgeFetcher.edge_resp_complete_args.buf = (const uint8_t *)short_data;
+    EdgeFetcher.edge_resp_complete_args.len = strlen(short_data);
+    EdgeFetcher.edge_resp_complete_args.conn_closed = PROTO_FALSE;
+    EdgeFetcher.edge_resp_complete_args.head_len = &hl;
+    EdgeFetcher.edge_resp_complete(edge_fetch_work);
+    TEST_ASSERT_FALSE(EdgeFetcher.ok);
 
     const char *not_hex = "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\nzz\r\n";
-    TEST_ASSERT_FALSE(edge_resp_complete((const uint8_t *)not_hex, strlen(not_hex), PROTO_FALSE, &hl));
+    EdgeFetcher.edge_resp_complete_args.buf = (const uint8_t *)not_hex;
+    EdgeFetcher.edge_resp_complete_args.len = strlen(not_hex);
+    EdgeFetcher.edge_resp_complete_args.conn_closed = PROTO_FALSE;
+    EdgeFetcher.edge_resp_complete_args.head_len = &hl;
+    EdgeFetcher.edge_resp_complete(edge_fetch_work);
+    TEST_ASSERT_FALSE(EdgeFetcher.ok);
 }
 
 static void test_chunked_trailers()
@@ -282,33 +457,73 @@ static void test_chunked_trailers()
     size_t hl = 0;
     const char *trailers = "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n"
                            "5\r\nhello\r\n0\r\nX-Checksum: abc\r\nX-Extra: 1\r\n\r\n";
-    TEST_ASSERT_TRUE(edge_resp_complete((const uint8_t *)trailers, strlen(trailers), PROTO_FALSE, &hl));
+    EdgeFetcher.edge_resp_complete_args.buf = (const uint8_t *)trailers;
+    EdgeFetcher.edge_resp_complete_args.len = strlen(trailers);
+    EdgeFetcher.edge_resp_complete_args.conn_closed = PROTO_FALSE;
+    EdgeFetcher.edge_resp_complete_args.head_len = &hl;
+    EdgeFetcher.edge_resp_complete(edge_fetch_work);
+    TEST_ASSERT_TRUE(EdgeFetcher.ok);
 
     const char *cut = "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n"
                       "5\r\nhello\r\n0\r\nX-Checksum: abc\r\n";
-    TEST_ASSERT_FALSE(edge_resp_complete((const uint8_t *)cut, strlen(cut), PROTO_FALSE, &hl));
+    EdgeFetcher.edge_resp_complete_args.buf = (const uint8_t *)cut;
+    EdgeFetcher.edge_resp_complete_args.len = strlen(cut);
+    EdgeFetcher.edge_resp_complete_args.conn_closed = PROTO_FALSE;
+    EdgeFetcher.edge_resp_complete_args.head_len = &hl;
+    EdgeFetcher.edge_resp_complete(edge_fetch_work);
+    TEST_ASSERT_FALSE(EdgeFetcher.ok);
 
     const char *unterminated = "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n"
                                "0\r\nX-Checksum: abc";
-    TEST_ASSERT_FALSE(edge_resp_complete((const uint8_t *)unterminated, strlen(unterminated), PROTO_FALSE, &hl));
+    EdgeFetcher.edge_resp_complete_args.buf = (const uint8_t *)unterminated;
+    EdgeFetcher.edge_resp_complete_args.len = strlen(unterminated);
+    EdgeFetcher.edge_resp_complete_args.conn_closed = PROTO_FALSE;
+    EdgeFetcher.edge_resp_complete_args.head_len = &hl;
+    EdgeFetcher.edge_resp_complete(edge_fetch_work);
+    TEST_ASSERT_FALSE(EdgeFetcher.ok);
 
     const char *at_end = "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n0\r\n";
-    TEST_ASSERT_FALSE(edge_resp_complete((const uint8_t *)at_end, strlen(at_end), PROTO_FALSE, &hl));
+    EdgeFetcher.edge_resp_complete_args.buf = (const uint8_t *)at_end;
+    EdgeFetcher.edge_resp_complete_args.len = strlen(at_end);
+    EdgeFetcher.edge_resp_complete_args.conn_closed = PROTO_FALSE;
+    EdgeFetcher.edge_resp_complete_args.head_len = &hl;
+    EdgeFetcher.edge_resp_complete(edge_fetch_work);
+    TEST_ASSERT_FALSE(EdgeFetcher.ok);
 
     const char *bare_cr = "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n0\r\n\rX\r\n\r\n";
-    TEST_ASSERT_TRUE(edge_resp_complete((const uint8_t *)bare_cr, strlen(bare_cr), PROTO_FALSE, &hl));
+    EdgeFetcher.edge_resp_complete_args.buf = (const uint8_t *)bare_cr;
+    EdgeFetcher.edge_resp_complete_args.len = strlen(bare_cr);
+    EdgeFetcher.edge_resp_complete_args.conn_closed = PROTO_FALSE;
+    EdgeFetcher.edge_resp_complete_args.head_len = &hl;
+    EdgeFetcher.edge_resp_complete(edge_fetch_work);
+    TEST_ASSERT_TRUE(EdgeFetcher.ok);
 }
 
 static void test_head_end_near_miss_separators()
 {
     size_t hl = 0;
     const char *lone_cr = "HTTP/1.1 200 OK\rX: y\r\n";
-    TEST_ASSERT_FALSE(edge_resp_complete((const uint8_t *)lone_cr, strlen(lone_cr), PROTO_FALSE, &hl));
+    EdgeFetcher.edge_resp_complete_args.buf = (const uint8_t *)lone_cr;
+    EdgeFetcher.edge_resp_complete_args.len = strlen(lone_cr);
+    EdgeFetcher.edge_resp_complete_args.conn_closed = PROTO_FALSE;
+    EdgeFetcher.edge_resp_complete_args.head_len = &hl;
+    EdgeFetcher.edge_resp_complete(edge_fetch_work);
+    TEST_ASSERT_FALSE(EdgeFetcher.ok);
     TEST_ASSERT_EQUAL_UINT(0, hl);
     const char *crlf_cr = "HTTP/1.1 200 OK\r\n\rX";
-    TEST_ASSERT_FALSE(edge_resp_complete((const uint8_t *)crlf_cr, strlen(crlf_cr), PROTO_FALSE, &hl));
+    EdgeFetcher.edge_resp_complete_args.buf = (const uint8_t *)crlf_cr;
+    EdgeFetcher.edge_resp_complete_args.len = strlen(crlf_cr);
+    EdgeFetcher.edge_resp_complete_args.conn_closed = PROTO_FALSE;
+    EdgeFetcher.edge_resp_complete_args.head_len = &hl;
+    EdgeFetcher.edge_resp_complete(edge_fetch_work);
+    TEST_ASSERT_FALSE(EdgeFetcher.ok);
     const char *lflf = "HTTP/1.1 200 OK\n\nbody";
-    TEST_ASSERT_FALSE(edge_resp_complete((const uint8_t *)lflf, strlen(lflf), PROTO_FALSE, &hl));
+    EdgeFetcher.edge_resp_complete_args.buf = (const uint8_t *)lflf;
+    EdgeFetcher.edge_resp_complete_args.len = strlen(lflf);
+    EdgeFetcher.edge_resp_complete_args.conn_closed = PROTO_FALSE;
+    EdgeFetcher.edge_resp_complete_args.head_len = &hl;
+    EdgeFetcher.edge_resp_complete(edge_fetch_work);
+    TEST_ASSERT_FALSE(EdgeFetcher.ok);
 }
 
 static void test_unusable_framing_headers_fall_through()
@@ -316,31 +531,76 @@ static void test_unusable_framing_headers_fall_through()
     size_t hl = 0;
 
     const char *bad_cl = "HTTP/1.1 200 OK\r\nContent-Length: abc\r\n\r\nbody";
-    TEST_ASSERT_FALSE(edge_resp_complete((const uint8_t *)bad_cl, strlen(bad_cl), PROTO_FALSE, &hl));
-    TEST_ASSERT_TRUE(edge_resp_complete((const uint8_t *)bad_cl, strlen(bad_cl), PROTO_TRUE, &hl));
+    EdgeFetcher.edge_resp_complete_args.buf = (const uint8_t *)bad_cl;
+    EdgeFetcher.edge_resp_complete_args.len = strlen(bad_cl);
+    EdgeFetcher.edge_resp_complete_args.conn_closed = PROTO_FALSE;
+    EdgeFetcher.edge_resp_complete_args.head_len = &hl;
+    EdgeFetcher.edge_resp_complete(edge_fetch_work);
+    TEST_ASSERT_FALSE(EdgeFetcher.ok);
+    EdgeFetcher.edge_resp_complete_args.buf = (const uint8_t *)bad_cl;
+    EdgeFetcher.edge_resp_complete_args.len = strlen(bad_cl);
+    EdgeFetcher.edge_resp_complete_args.conn_closed = PROTO_TRUE;
+    EdgeFetcher.edge_resp_complete_args.head_len = &hl;
+    EdgeFetcher.edge_resp_complete(edge_fetch_work);
+    TEST_ASSERT_TRUE(EdgeFetcher.ok);
 
     const char *cl_junk = "HTTP/1.1 200 OK\r\nContent-Length: 4bogus\r\n\r\nabcd";
-    TEST_ASSERT_TRUE(edge_resp_complete((const uint8_t *)cl_junk, strlen(cl_junk), PROTO_FALSE, &hl));
+    EdgeFetcher.edge_resp_complete_args.buf = (const uint8_t *)cl_junk;
+    EdgeFetcher.edge_resp_complete_args.len = strlen(cl_junk);
+    EdgeFetcher.edge_resp_complete_args.conn_closed = PROTO_FALSE;
+    EdgeFetcher.edge_resp_complete_args.head_len = &hl;
+    EdgeFetcher.edge_resp_complete(edge_fetch_work);
+    TEST_ASSERT_TRUE(EdgeFetcher.ok);
 
     const char *te_gzip = "HTTP/1.1 200 OK\r\nTransfer-Encoding: gzip\r\n\r\nrawbytes";
-    TEST_ASSERT_FALSE(edge_resp_complete((const uint8_t *)te_gzip, strlen(te_gzip), PROTO_FALSE, &hl));
-    TEST_ASSERT_TRUE(edge_resp_complete((const uint8_t *)te_gzip, strlen(te_gzip), PROTO_TRUE, &hl));
+    EdgeFetcher.edge_resp_complete_args.buf = (const uint8_t *)te_gzip;
+    EdgeFetcher.edge_resp_complete_args.len = strlen(te_gzip);
+    EdgeFetcher.edge_resp_complete_args.conn_closed = PROTO_FALSE;
+    EdgeFetcher.edge_resp_complete_args.head_len = &hl;
+    EdgeFetcher.edge_resp_complete(edge_fetch_work);
+    TEST_ASSERT_FALSE(EdgeFetcher.ok);
+    EdgeFetcher.edge_resp_complete_args.buf = (const uint8_t *)te_gzip;
+    EdgeFetcher.edge_resp_complete_args.len = strlen(te_gzip);
+    EdgeFetcher.edge_resp_complete_args.conn_closed = PROTO_TRUE;
+    EdgeFetcher.edge_resp_complete_args.head_len = &hl;
+    EdgeFetcher.edge_resp_complete(edge_fetch_work);
+    TEST_ASSERT_TRUE(EdgeFetcher.ok);
 }
 
 static void test_transfer_encoding_case_and_length_bounds()
 {
     size_t hl = 0;
     const char *mixed = "HTTP/1.1 200 OK\r\nTransfer-Encoding: ChUnKeD\r\n\r\n0\r\n\r\n";
-    TEST_ASSERT_TRUE(edge_resp_complete((const uint8_t *)mixed, strlen(mixed), PROTO_FALSE, &hl));
+    EdgeFetcher.edge_resp_complete_args.buf = (const uint8_t *)mixed;
+    EdgeFetcher.edge_resp_complete_args.len = strlen(mixed);
+    EdgeFetcher.edge_resp_complete_args.conn_closed = PROTO_FALSE;
+    EdgeFetcher.edge_resp_complete_args.head_len = &hl;
+    EdgeFetcher.edge_resp_complete(edge_fetch_work);
+    TEST_ASSERT_TRUE(EdgeFetcher.ok);
 
     const char *punct = "HTTP/1.1 200 OK\r\nTransfer-Encoding: x-1_2, chunked\r\n\r\n0\r\n\r\n";
-    TEST_ASSERT_TRUE(edge_resp_complete((const uint8_t *)punct, strlen(punct), PROTO_FALSE, &hl));
+    EdgeFetcher.edge_resp_complete_args.buf = (const uint8_t *)punct;
+    EdgeFetcher.edge_resp_complete_args.len = strlen(punct);
+    EdgeFetcher.edge_resp_complete_args.conn_closed = PROTO_FALSE;
+    EdgeFetcher.edge_resp_complete_args.head_len = &hl;
+    EdgeFetcher.edge_resp_complete(edge_fetch_work);
+    TEST_ASSERT_TRUE(EdgeFetcher.ok);
 
     const char *overlong = "HTTP/1.1 200 OK\r\n"
                            "Transfer-Encoding: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa, chunked\r\n"
                            "\r\nbody";
-    TEST_ASSERT_FALSE(edge_resp_complete((const uint8_t *)overlong, strlen(overlong), PROTO_FALSE, &hl));
-    TEST_ASSERT_TRUE(edge_resp_complete((const uint8_t *)overlong, strlen(overlong), PROTO_TRUE, &hl));
+    EdgeFetcher.edge_resp_complete_args.buf = (const uint8_t *)overlong;
+    EdgeFetcher.edge_resp_complete_args.len = strlen(overlong);
+    EdgeFetcher.edge_resp_complete_args.conn_closed = PROTO_FALSE;
+    EdgeFetcher.edge_resp_complete_args.head_len = &hl;
+    EdgeFetcher.edge_resp_complete(edge_fetch_work);
+    TEST_ASSERT_FALSE(EdgeFetcher.ok);
+    EdgeFetcher.edge_resp_complete_args.buf = (const uint8_t *)overlong;
+    EdgeFetcher.edge_resp_complete_args.len = strlen(overlong);
+    EdgeFetcher.edge_resp_complete_args.conn_closed = PROTO_TRUE;
+    EdgeFetcher.edge_resp_complete_args.head_len = &hl;
+    EdgeFetcher.edge_resp_complete(edge_fetch_work);
+    TEST_ASSERT_TRUE(EdgeFetcher.ok);
 }
 
 int main()

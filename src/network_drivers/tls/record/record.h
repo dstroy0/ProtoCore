@@ -35,12 +35,13 @@
 #ifndef PROTOCORE_TLS_RECORD_H
 #define PROTOCORE_TLS_RECORD_H
 
-#include "crypto/aead/aes128gcm.h" // Aes128Gcm, PROTOCORE_AES128GCM_BORROW
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_TLS_SOFTWARE
 
 PROTOCORE_BEGIN_DECLS
 
-#if PROTOCORE_TLS_SOFTWARE
+#include "crypto/aead/aes128gcm.h" // Aes128Gcm, PROTOCORE_AES128GCM_BORROW
 
 /** @name Record content types (RFC 8446 sec 5).
  *  Shared by the TLSPlaintext `type` field and the TLSInnerPlaintext trailing content type. */

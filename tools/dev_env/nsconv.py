@@ -166,12 +166,88 @@ def statement_start(s, pos, mask=None):
         elif depth == 0 and c in ";:":
             break
         i -= 1
-    while i < len(s) and s[i] in " \t\r\n":
-        i += 1
+    # Forward to the statement's own first character. A comment between the separator and the
+    # statement is text, so it is stepped over: stopping on it puts the statement start on the
+    # PREVIOUS line, and the staging hoisted there lands above the statement before this one.
+    while i < len(s):
+        if s[i] in " \t\r\n":
+            i += 1
+        elif s[i : i + 2] == "//":
+            i = s.find("\n", i)
+            if i == -1:
+                return len(s)
+        elif s[i : i + 2] == "/*":
+            j = s.find("*/", i + 2)
+            i = len(s) if j == -1 else j + 2
+        else:
+            break
     return i
 
 
 LOOP = re.compile(r"\b(while|for)\s*\($")
+
+
+def after_short_circuit(s, pos, mask=None):
+    """True when the call at pos sits to the right of an `&&` or `||` in the same statement.
+
+    Hoisting it above the statement runs it before the operand that gates it, and unconditionally.
+    `if (!r8(REG, &irq) || !data_ready(irq))` is the shape: r8 fills irq and the right operand reads
+    it, so a hoisted data_ready sees the value from before the read - and runs even when r8 already
+    decided the answer.
+    """
+    if mask is None:
+        mask = code_mask(s)
+    depth = 0
+    i = pos - 1
+    while i >= 0:
+        if not mask[i]:
+            i -= 1
+            continue
+        c = s[i]
+        if c in ")]}":
+            depth += 1
+        elif c in "([{":
+            if depth == 0:
+                break  # out to the enclosing call or condition: no operator gated us
+            depth -= 1
+        elif depth == 0 and c in "&|" and i > 0 and s[i - 1] == c:
+            return True
+        elif depth == 0 and c == ";":
+            break
+        i -= 1
+    return False
+
+# Macros that evaluate an argument more than once. Hoisting a call out of one of these is the
+# loop-condition mistake wearing a macro: DBENCH_OP(label, n, expr) runs expr n times to time it,
+# so a call lifted above it is measured once and the benchmark then times an addition. DBENCH_BULK
+# hands its expr to the same DBENCH_CYCLES loop and was missed, which is how one bench came out
+# timing `sink += Ns.n`.
+REPEATING = ("DBENCH_OP", "DBENCH_BULK", "DBENCH_CYCLES")
+
+
+def in_repeating_macro(s, pos, mask=None):
+    """True when the call at pos is inside an argument of a macro that re-evaluates it."""
+    if mask is None:
+        mask = code_mask(s)
+    i, depth = pos, 0
+    while i > 0:
+        if not mask[i - 1]:
+            i -= 1
+            continue
+        c = s[i - 1]
+        if c in ")]":
+            depth += 1
+        elif c in "([":
+            if depth == 0:
+                head = re.search(r"(\w+)\s*$", s[: i - 1])
+                if c == "(" and head and head.group(1) in REPEATING:
+                    return True
+            else:
+                depth -= 1
+        elif depth == 0 and c in ";{}":
+            break
+        i -= 1
+    return False
 
 
 def in_loop_condition(s, pos, mask=None):
@@ -228,6 +304,13 @@ def rewrite(s, call_start, call_end, staging, value, pattern=None, mask=None):
         mask = code_mask(s)
     if in_loop_condition(s, call_start, mask):
         raise ValueError("call is a loop condition; rewrite it by hand")
+    if in_repeating_macro(s, call_start, mask):
+        raise ValueError("call is inside a macro that re-evaluates it; rewrite it by hand as (Entry(w), read)")
+    if after_short_circuit(s, call_start, mask):
+        raise ValueError(
+            "call is the right operand of && or ||; hoisting runs it before the operand "
+            "that gates it, and unconditionally. Rewrite it by hand"
+        )
     # Two calls to the same namespace in one statement cannot both be hoisted: the namespace has one
     # result member, so the first value is overwritten by the second and both reads see the last.
     # memcmp(f(0)->h, f(1)->h, n) would silently compare a value with itself.

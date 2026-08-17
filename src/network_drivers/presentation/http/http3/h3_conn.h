@@ -25,7 +25,7 @@
 #ifndef PROTOCORE_H3_CONN_H
 #define PROTOCORE_H3_CONN_H
 
-#include "protocore_config.h" // the entry point: protocore_types.h for the widths
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_HTTP3
 

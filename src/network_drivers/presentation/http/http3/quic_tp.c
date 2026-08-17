@@ -6,10 +6,12 @@
  * @brief QUIC transport parameters codec (see protocore_quic_tp.h).
  */
 
-#include "network_drivers/presentation/http/http3/quic_tp.h"
-#include "mmgr/protomem.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_HTTP3
+
+#include "network_drivers/presentation/http/http3/quic_tp.h"
+#include "mmgr/protomem.h"
 
 #include "network_drivers/presentation/http/http3/quic_varint.h"
 

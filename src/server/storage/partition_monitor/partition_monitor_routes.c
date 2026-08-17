@@ -11,6 +11,8 @@
 
 #include "server/storage/partition_monitor/partition_monitor.h"
 
+static uint8_t partition_monitor_work[16]; // the borrow an entry takes; PartitionMonitor never reads it
+
 #if PROTOCORE_ENABLE_PARTITION_MONITOR
 
 #include "protocore.h"
@@ -23,20 +25,25 @@ typedef struct
 } PartitionRoutesCtx;
 static PartitionRoutesCtx s_partr;
 
-static void partition_handler(uint8_t slot_id, HttpReq *req)
+// External linkage: the entry that installs this route is in partition_monitor.c, with the rest of
+// the namespace, so the whole surface is one initializer.
+void partition_route_handler(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
     protocore_partition_info parts[PROTOCORE_PARTITION_MAX];
-    uint8_t n = protocore_partition_collect(parts, PROTOCORE_PARTITION_MAX);
+    PartitionMonitor.collect_args.out = parts;
+    PartitionMonitor.collect_args.max = PROTOCORE_PARTITION_MAX;
+    PartitionMonitor.collect(partition_monitor_work);
+    uint8_t n = PartitionMonitor.u8;
     char buf[PROTOCORE_PARTITION_JSON_BUF];
-    protocore_partition_json(parts, n, buf, sizeof(buf));
+    PartitionMonitor.json_args.parts = parts;
+    PartitionMonitor.json_args.count = n;
+    PartitionMonitor.json_args.out = buf;
+    PartitionMonitor.json_args.cap = sizeof(buf);
+    PartitionMonitor.json(partition_monitor_work);
     // No instance test: a handler only runs because begin() registered its route.
     send_text(slot_id, 200, PROTOCORE_MIME_JSON, buf);
 }
 
-void protocore_partition_monitor_begin(const char *path)
-{
-    on_http((path && path[0]) ? path : "/partitions", HTTP_GET, partition_handler);
-}
 
 #endif // PROTOCORE_ENABLE_PARTITION_MONITOR

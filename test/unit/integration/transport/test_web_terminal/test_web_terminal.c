@@ -63,7 +63,6 @@ void setUp()
     {
         return;
     }
-    WebTerminal.ok;
     WebTerminal.on_command_args.cb = on_cmd;
     WebTerminal.on_command(protocore_web_terminal_span());
 }

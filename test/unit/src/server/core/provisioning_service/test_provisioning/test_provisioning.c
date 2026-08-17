@@ -14,6 +14,11 @@
 // break - and a decoder that reproduces those two is decoding, not guessing.
 
 #include "server/core/provisioning_service/provisioning_service.h"
+
+#include "core_setup/hal/nvs.h"                          // the store the save / load / clear paths use
+#include "network_drivers/physical/physical.h"            // what begin() asked the radio for
+#include "network_drivers/transport/udp/server/server.h"  // the port the catch-all DNS bound
+
 #include <string.h>
 
 #include <unity.h>
@@ -30,7 +35,12 @@ static char g_val[64];
 // Read @p key out of @p body and return the decoded value, so each case reads as one assertion.
 static const char *field(const char *body, const char *key)
 {
-    TEST_ASSERT_TRUE_MESSAGE(protocore_prov_form_field(body, key, g_val, sizeof(g_val)), key);
+    Prov.form_field_args.body = body;
+    Prov.form_field_args.key = key;
+    Prov.form_field_args.out = g_val;
+    Prov.form_field_args.cap = sizeof(g_val);
+    Prov.form_field(protocore_provisioning_service_span());
+    TEST_ASSERT_TRUE_MESSAGE(Prov.ok, key);
     return g_val;
 }
 
@@ -87,9 +97,19 @@ void test_pairs_are_separated_by_ampersand(void)
 void test_an_empty_value_is_still_a_present_field(void)
 {
     char v[8];
-    TEST_ASSERT_TRUE(protocore_prov_form_field("ssid=&psk=x", "ssid", v, sizeof(v)));
+    Prov.form_field_args.body = "ssid=&psk=x";
+    Prov.form_field_args.key = "ssid";
+    Prov.form_field_args.out = v;
+    Prov.form_field_args.cap = sizeof(v);
+    Prov.form_field(protocore_provisioning_service_span());
+    TEST_ASSERT_TRUE(Prov.ok);
     TEST_ASSERT_EQUAL_STRING("", v);
-    TEST_ASSERT_FALSE(protocore_prov_form_field("ssid=x", "psk", v, sizeof(v)));
+    Prov.form_field_args.body = "ssid=x";
+    Prov.form_field_args.key = "psk";
+    Prov.form_field_args.out = v;
+    Prov.form_field_args.cap = sizeof(v);
+    Prov.form_field(protocore_provisioning_service_span());
+    TEST_ASSERT_FALSE(Prov.ok);
     TEST_ASSERT_EQUAL_STRING("", v);
 }
 
@@ -117,12 +137,22 @@ void test_an_incomplete_triplet_is_not_decoded(void)
 void test_the_value_is_bounded_and_terminated(void)
 {
     char v[4];
-    TEST_ASSERT_TRUE(protocore_prov_form_field("ssid=abcdef", "ssid", v, sizeof(v)));
+    Prov.form_field_args.body = "ssid=abcdef";
+    Prov.form_field_args.key = "ssid";
+    Prov.form_field_args.out = v;
+    Prov.form_field_args.cap = sizeof(v);
+    Prov.form_field(protocore_provisioning_service_span());
+    TEST_ASSERT_TRUE(Prov.ok);
     TEST_ASSERT_EQUAL_STRING("abc", v);
     TEST_ASSERT_EQUAL_size_t(3u, strlen(v));
 
     char one[1];
-    TEST_ASSERT_TRUE(protocore_prov_form_field("ssid=abcdef", "ssid", one, sizeof(one)));
+    Prov.form_field_args.body = "ssid=abcdef";
+    Prov.form_field_args.key = "ssid";
+    Prov.form_field_args.out = one;
+    Prov.form_field_args.cap = sizeof(one);
+    Prov.form_field(protocore_provisioning_service_span());
+    TEST_ASSERT_TRUE(Prov.ok);
     TEST_ASSERT_EQUAL_STRING("", one);
 }
 
@@ -130,26 +160,50 @@ void test_null_arguments_and_zero_capacity_are_refused(void)
 {
     char v[8];
     v[0] = 'x';
-    TEST_ASSERT_FALSE(protocore_prov_form_field(NULL, "ssid", v, sizeof(v)));
+    Prov.form_field_args.body = NULL;
+    Prov.form_field_args.key = "ssid";
+    Prov.form_field_args.out = v;
+    Prov.form_field_args.cap = sizeof(v);
+    Prov.form_field(protocore_provisioning_service_span());
+    TEST_ASSERT_FALSE(Prov.ok);
     TEST_ASSERT_EQUAL_STRING("", v);
-    TEST_ASSERT_FALSE(protocore_prov_form_field("ssid=x", NULL, v, sizeof(v)));
-    TEST_ASSERT_FALSE(protocore_prov_form_field("ssid=x", "ssid", NULL, sizeof(v)));
+    Prov.form_field_args.body = "ssid=x";
+    Prov.form_field_args.key = NULL;
+    Prov.form_field_args.out = v;
+    Prov.form_field_args.cap = sizeof(v);
+    Prov.form_field(protocore_provisioning_service_span());
+    TEST_ASSERT_FALSE(Prov.ok);
+    Prov.form_field_args.body = "ssid=x";
+    Prov.form_field_args.key = "ssid";
+    Prov.form_field_args.out = NULL;
+    Prov.form_field_args.cap = sizeof(v);
+    Prov.form_field(protocore_provisioning_service_span());
+    TEST_ASSERT_FALSE(Prov.ok);
     v[0] = 'x';
-    TEST_ASSERT_FALSE(protocore_prov_form_field("ssid=x", "ssid", v, 0));
+    Prov.form_field_args.body = "ssid=x";
+    Prov.form_field_args.key = "ssid";
+    Prov.form_field_args.out = v;
+    Prov.form_field_args.cap = 0;
+    Prov.form_field(protocore_provisioning_service_span());
+    TEST_ASSERT_FALSE(Prov.ok);
     TEST_ASSERT_EQUAL_CHAR('x', v[0]); // zero capacity writes nothing, not even a terminator
 }
 
-// There is no key/value store off-target, so a load reports no stored credentials and empties both
-// destinations rather than leaving whatever the caller had there.
-void test_the_host_credential_store_holds_nothing(void)
+// An empty store reports no stored credentials and empties both destinations rather than leaving
+// whatever the caller had there. clear() first, so this does not depend on what ran before it.
+void test_an_empty_credential_store_reports_nothing(void)
 {
+    Prov.clear(protocore_provisioning_service_span());
     char ssid[8] = "x";
     char psk[8] = "y";
-    TEST_ASSERT_FALSE(protocore_provisioning_load(ssid, sizeof(ssid), psk, sizeof(psk)));
+    Prov.load_args.ssid = ssid;
+    Prov.load_args.ssid_cap = sizeof(ssid);
+    Prov.load_args.psk = psk;
+    Prov.load_args.psk_cap = sizeof(psk);
+    Prov.load(protocore_provisioning_service_span());
+    TEST_ASSERT_FALSE(Prov.ok);
     TEST_ASSERT_EQUAL_STRING("", ssid);
     TEST_ASSERT_EQUAL_STRING("", psk);
-    protocore_provisioning_clear();
-    protocore_provisioning_begin("TestAP");
 }
 
 // A destination is only written through when it has both a pointer and room, so each of the two
@@ -157,10 +211,112 @@ void test_the_host_credential_store_holds_nothing(void)
 void test_load_writes_only_the_destinations_it_was_given(void)
 {
     char psk[8] = "y";
-    TEST_ASSERT_FALSE(protocore_provisioning_load(NULL, 8, psk, 0));
+    Prov.load_args.ssid = NULL;
+    Prov.load_args.ssid_cap = 8;
+    Prov.load_args.psk = psk;
+    Prov.load_args.psk_cap = 0;
+    Prov.load(protocore_provisioning_service_span());
+    TEST_ASSERT_FALSE(Prov.ok);
     TEST_ASSERT_EQUAL_STRING("y", psk);
 
     char ssid[8] = "z";
-    TEST_ASSERT_FALSE(protocore_provisioning_load(ssid, 0, NULL, 8));
+    Prov.load_args.ssid = ssid;
+    Prov.load_args.ssid_cap = 0;
+    Prov.load_args.psk = NULL;
+    Prov.load_args.psk_cap = 8;
+    Prov.load(protocore_provisioning_service_span());
+    TEST_ASSERT_FALSE(Prov.ok);
     TEST_ASSERT_EQUAL_STRING("z", ssid);
+}
+
+// ---------------------------------------------------------------------------
+// The portal half
+// ---------------------------------------------------------------------------
+//
+// These were unreachable until the module stopped being keyed on PROTOCORE_HAS_VENDOR_NVS: every
+// seam it uses already had a host arm (hal/nvs.h -> host_nvs.c, Physical.wifi_ap_* ->
+// physical_mock.c, protocore_platform_restart -> the host counter), so the vendor condition was
+// compiling working code out of the host build and putting a stub in its place.
+
+// What the save path stores is what the load path returns. The store is the same hal/nvs.h the
+// ESP arm uses, so this is the round trip and not a stand-in for it.
+void test_saved_credentials_load_back(void)
+{
+    Prov.clear(protocore_provisioning_service_span());
+    TEST_ASSERT_TRUE(protocore_nvs_put_str(PROTOCORE_PROV_NVS_NAMESPACE, PROTOCORE_PROV_KEY_SSID, "some-network"));
+    TEST_ASSERT_TRUE(protocore_nvs_put_str(PROTOCORE_PROV_NVS_NAMESPACE, PROTOCORE_PROV_KEY_PSK, "a secret"));
+
+    char ssid[33] = {0};
+    char psk[64] = {0};
+    Prov.load_args.ssid = ssid;
+    Prov.load_args.ssid_cap = sizeof(ssid);
+    Prov.load_args.psk = psk;
+    Prov.load_args.psk_cap = sizeof(psk);
+    Prov.load(protocore_provisioning_service_span());
+    TEST_ASSERT_TRUE(Prov.ok);
+    TEST_ASSERT_EQUAL_STRING("some-network", ssid);
+    TEST_ASSERT_EQUAL_STRING("a secret", psk);
+}
+
+// An open access point has no passphrase, so a stored SSID on its own is still a usable credential
+// and the PSK destination comes back empty rather than stale.
+void test_an_ssid_without_a_passphrase_still_loads(void)
+{
+    Prov.clear(protocore_provisioning_service_span());
+    TEST_ASSERT_TRUE(protocore_nvs_put_str(PROTOCORE_PROV_NVS_NAMESPACE, PROTOCORE_PROV_KEY_SSID, "open-ap"));
+
+    char ssid[33] = {0};
+    char psk[64] = "leftover";
+    Prov.load_args.ssid = ssid;
+    Prov.load_args.ssid_cap = sizeof(ssid);
+    Prov.load_args.psk = psk;
+    Prov.load_args.psk_cap = sizeof(psk);
+    Prov.load(protocore_provisioning_service_span());
+    TEST_ASSERT_TRUE(Prov.ok);
+    TEST_ASSERT_EQUAL_STRING("open-ap", ssid);
+    TEST_ASSERT_EQUAL_STRING("", psk);
+}
+
+// clear() drops the namespace, so credentials that loaded a moment ago stop loading. This is what
+// puts a device back into provisioning.
+void test_clear_takes_the_credentials_away(void)
+{
+    TEST_ASSERT_TRUE(protocore_nvs_put_str(PROTOCORE_PROV_NVS_NAMESPACE, PROTOCORE_PROV_KEY_SSID, "some-network"));
+    char ssid[33] = {0};
+    Prov.load_args.ssid = ssid;
+    Prov.load_args.ssid_cap = sizeof(ssid);
+    Prov.load_args.psk = NULL;
+    Prov.load_args.psk_cap = 0;
+    Prov.load(protocore_provisioning_service_span());
+    TEST_ASSERT_TRUE(Prov.ok);
+
+    Prov.clear(protocore_provisioning_service_span());
+    Prov.load_args.ssid = ssid;
+    Prov.load_args.ssid_cap = sizeof(ssid);
+    Prov.load_args.psk = NULL;
+    Prov.load_args.psk_cap = 0;
+    Prov.load(protocore_provisioning_service_span());
+    TEST_ASSERT_FALSE(Prov.ok);
+    TEST_ASSERT_EQUAL_STRING("", ssid);
+}
+
+// begin() brings the softAP up under the name it was given and binds the catch-all DNS. The host
+// arm of Physical records the AP it was asked for, so the name that reached the radio is assertable.
+void test_begin_raises_the_softap_under_the_name_it_was_given(void)
+{
+    Prov.begin_args.ap_ssid = "ProtoCore-Setup";
+    Prov.begin(protocore_provisioning_service_span());
+    TEST_ASSERT_EQUAL_STRING("ProtoCore-Setup", Physical.wifi.ssid);
+    TEST_ASSERT_NULL(Physical.wifi.password); // a provisioning AP is open, or nobody can reach it
+}
+
+// The catch-all DNS binds UDP/53: that is the whole hijack, and a portal that bound anything else
+// would leave a client's queries going to the real resolver it cannot reach.
+void test_begin_binds_the_catch_all_dns_on_port_53(void)
+{
+    Prov.begin_args.ap_ssid = "ProtoCore-Setup";
+    Prov.begin(protocore_provisioning_service_span());
+    TEST_ASSERT_EQUAL_UINT16(53, UdpListener.port);
+    TEST_ASSERT_NOT_NULL(UdpListener.bind.handler);
+    TEST_ASSERT_NULL(UdpListener.bind.group_ip); // a catch-all, not a multicast join
 }

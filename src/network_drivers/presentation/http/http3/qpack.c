@@ -10,6 +10,8 @@
  * we encode only against the static table and reject any dynamic-table reference on decode.
  */
 
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
 #if PROTOCORE_ENABLE_HTTP3
 
 #include "network_drivers/presentation/codec/hpack_prim/hpack_prim.h" // shared prefix-int + Huffman

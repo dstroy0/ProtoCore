@@ -15,6 +15,7 @@
 // ISO 11898-1 fixes the identifier widths the flags select between: 11 bits standard, 29 extended.
 
 #include "server/signaling/bus_capture.h"
+#include "shared/pcap/pcap.h"
 #include <string.h>
 
 #include <unity.h>
@@ -60,7 +61,11 @@ void test_the_socketcan_layout_is_the_published_one(void)
 
     uint8_t out[PROTOCORE_SOCKETCAN_FRAME_LEN];
     memset(out, 0xEE, sizeof(out));
-    TEST_ASSERT_EQUAL_UINT(PROTOCORE_SOCKETCAN_FRAME_LEN, can_to_socketcan(&f, out, sizeof(out)));
+    BusCapture.can_to_socketcan_args.f = &f;
+    BusCapture.can_to_socketcan_args.out = out;
+    BusCapture.can_to_socketcan_args.cap = sizeof(out);
+    BusCapture.can_to_socketcan(protocore_bus_capture_span());
+    TEST_ASSERT_EQUAL_UINT(PROTOCORE_SOCKETCAN_FRAME_LEN, BusCapture.n);
 
     static const uint8_t WANT[PROTOCORE_SOCKETCAN_FRAME_LEN] = {
         0x00, 0x00, 0x01, 0x23,                        // can_id, big-endian, no flags
@@ -100,21 +105,37 @@ void test_the_identifier_width_and_the_extended_flag(void)
     uint8_t out[PROTOCORE_SOCKETCAN_FRAME_LEN];
 
     CanFrame std = frame_of(0x7FF, PROTO_FALSE, PROTO_FALSE, 0);
-    TEST_ASSERT_EQUAL_UINT(PROTOCORE_SOCKETCAN_FRAME_LEN, can_to_socketcan(&std, out, sizeof(out)));
+    BusCapture.can_to_socketcan_args.f = &std;
+    BusCapture.can_to_socketcan_args.out = out;
+    BusCapture.can_to_socketcan_args.cap = sizeof(out);
+    BusCapture.can_to_socketcan(protocore_bus_capture_span());
+    TEST_ASSERT_EQUAL_UINT(PROTOCORE_SOCKETCAN_FRAME_LEN, BusCapture.n);
     TEST_ASSERT_EQUAL_HEX32(0x000007FFu, id_word(out));
 
     CanFrame ext = frame_of(0x1FFFFFFFu, PROTO_TRUE, PROTO_FALSE, 0);
-    TEST_ASSERT_EQUAL_UINT(PROTOCORE_SOCKETCAN_FRAME_LEN, can_to_socketcan(&ext, out, sizeof(out)));
+    BusCapture.can_to_socketcan_args.f = &ext;
+    BusCapture.can_to_socketcan_args.out = out;
+    BusCapture.can_to_socketcan_args.cap = sizeof(out);
+    BusCapture.can_to_socketcan(protocore_bus_capture_span());
+    TEST_ASSERT_EQUAL_UINT(PROTOCORE_SOCKETCAN_FRAME_LEN, BusCapture.n);
     TEST_ASSERT_EQUAL_HEX32(PROTOCORE_CAN_EFF_FLAG | 0x1FFFFFFFu, id_word(out));
 
     // an 11-bit frame carrying a wider id keeps only the 11 bits, and sets no flag
     CanFrame wide_std = frame_of(0x1FFFFFFFu, PROTO_FALSE, PROTO_FALSE, 0);
-    TEST_ASSERT_EQUAL_UINT(PROTOCORE_SOCKETCAN_FRAME_LEN, can_to_socketcan(&wide_std, out, sizeof(out)));
+    BusCapture.can_to_socketcan_args.f = &wide_std;
+    BusCapture.can_to_socketcan_args.out = out;
+    BusCapture.can_to_socketcan_args.cap = sizeof(out);
+    BusCapture.can_to_socketcan(protocore_bus_capture_span());
+    TEST_ASSERT_EQUAL_UINT(PROTOCORE_SOCKETCAN_FRAME_LEN, BusCapture.n);
     TEST_ASSERT_EQUAL_HEX32(0x000007FFu, id_word(out));
 
     // a 29-bit frame carrying a wider id keeps only the 29 bits under the flag
     CanFrame wide_ext = frame_of(0xFFFFFFFFu, PROTO_TRUE, PROTO_FALSE, 0);
-    TEST_ASSERT_EQUAL_UINT(PROTOCORE_SOCKETCAN_FRAME_LEN, can_to_socketcan(&wide_ext, out, sizeof(out)));
+    BusCapture.can_to_socketcan_args.f = &wide_ext;
+    BusCapture.can_to_socketcan_args.out = out;
+    BusCapture.can_to_socketcan_args.cap = sizeof(out);
+    BusCapture.can_to_socketcan(protocore_bus_capture_span());
+    TEST_ASSERT_EQUAL_UINT(PROTOCORE_SOCKETCAN_FRAME_LEN, BusCapture.n);
     TEST_ASSERT_EQUAL_HEX32(PROTOCORE_CAN_EFF_FLAG | 0x1FFFFFFFu, id_word(out));
 }
 
@@ -124,7 +145,11 @@ void test_a_remote_frame_sets_its_flag_and_carries_no_data(void)
 {
     uint8_t out[PROTOCORE_SOCKETCAN_FRAME_LEN];
     CanFrame rtr = frame_of(0x100, PROTO_FALSE, PROTO_TRUE, 8);
-    TEST_ASSERT_EQUAL_UINT(PROTOCORE_SOCKETCAN_FRAME_LEN, can_to_socketcan(&rtr, out, sizeof(out)));
+    BusCapture.can_to_socketcan_args.f = &rtr;
+    BusCapture.can_to_socketcan_args.out = out;
+    BusCapture.can_to_socketcan_args.cap = sizeof(out);
+    BusCapture.can_to_socketcan(protocore_bus_capture_span());
+    TEST_ASSERT_EQUAL_UINT(PROTOCORE_SOCKETCAN_FRAME_LEN, BusCapture.n);
 
     TEST_ASSERT_EQUAL_HEX32(PROTOCORE_CAN_RTR_FLAG | 0x100u, id_word(out));
     TEST_ASSERT_EQUAL_UINT8(8u, out[4]);
@@ -135,7 +160,11 @@ void test_a_remote_frame_sets_its_flag_and_carries_no_data(void)
 
     // both flags together, on an extended remote frame
     CanFrame both = frame_of(0x1ABCDEFu, PROTO_TRUE, PROTO_TRUE, 4);
-    TEST_ASSERT_EQUAL_UINT(PROTOCORE_SOCKETCAN_FRAME_LEN, can_to_socketcan(&both, out, sizeof(out)));
+    BusCapture.can_to_socketcan_args.f = &both;
+    BusCapture.can_to_socketcan_args.out = out;
+    BusCapture.can_to_socketcan_args.cap = sizeof(out);
+    BusCapture.can_to_socketcan(protocore_bus_capture_span());
+    TEST_ASSERT_EQUAL_UINT(PROTOCORE_SOCKETCAN_FRAME_LEN, BusCapture.n);
     TEST_ASSERT_EQUAL_HEX32(PROTOCORE_CAN_EFF_FLAG | PROTOCORE_CAN_RTR_FLAG | 0x1ABCDEFu, id_word(out));
 }
 
@@ -147,7 +176,11 @@ void test_the_length_is_clamped_to_eight(void)
     for (uint8_t n = 0; n <= 20u; n++)
     {
         CanFrame f = frame_of(0x200, PROTO_FALSE, PROTO_FALSE, n);
-        TEST_ASSERT_EQUAL_UINT(PROTOCORE_SOCKETCAN_FRAME_LEN, can_to_socketcan(&f, out, sizeof(out)));
+        BusCapture.can_to_socketcan_args.f = &f;
+        BusCapture.can_to_socketcan_args.out = out;
+        BusCapture.can_to_socketcan_args.cap = sizeof(out);
+        BusCapture.can_to_socketcan(protocore_bus_capture_span());
+        TEST_ASSERT_EQUAL_UINT(PROTOCORE_SOCKETCAN_FRAME_LEN, BusCapture.n);
         const uint8_t want = n > PROTOCORE_CAN_MAX_DLC ? (uint8_t)PROTOCORE_CAN_MAX_DLC : n;
         TEST_ASSERT_EQUAL_UINT8(want, out[4]);
         // exactly want octets of payload, the rest zero
@@ -165,7 +198,11 @@ void test_the_reserved_octets_are_zeroed(void)
     uint8_t out[PROTOCORE_SOCKETCAN_FRAME_LEN];
     memset(out, 0xFF, sizeof(out));
     CanFrame f = frame_of(0x321, PROTO_TRUE, PROTO_FALSE, 8);
-    TEST_ASSERT_EQUAL_UINT(PROTOCORE_SOCKETCAN_FRAME_LEN, can_to_socketcan(&f, out, sizeof(out)));
+    BusCapture.can_to_socketcan_args.f = &f;
+    BusCapture.can_to_socketcan_args.out = out;
+    BusCapture.can_to_socketcan_args.cap = sizeof(out);
+    BusCapture.can_to_socketcan(protocore_bus_capture_span());
+    TEST_ASSERT_EQUAL_UINT(PROTOCORE_SOCKETCAN_FRAME_LEN, BusCapture.n);
     TEST_ASSERT_EQUAL_HEX8(0x00, out[5]);
     TEST_ASSERT_EQUAL_HEX8(0x00, out[6]);
     TEST_ASSERT_EQUAL_HEX8(0x00, out[7]);
@@ -177,7 +214,11 @@ void test_the_identifier_is_big_endian(void)
 {
     uint8_t out[PROTOCORE_SOCKETCAN_FRAME_LEN];
     CanFrame f = frame_of(0x0A0B0C0Du & PROTOCORE_CAN_EXT_ID_MASK, PROTO_TRUE, PROTO_FALSE, 0);
-    TEST_ASSERT_EQUAL_UINT(PROTOCORE_SOCKETCAN_FRAME_LEN, can_to_socketcan(&f, out, sizeof(out)));
+    BusCapture.can_to_socketcan_args.f = &f;
+    BusCapture.can_to_socketcan_args.out = out;
+    BusCapture.can_to_socketcan_args.cap = sizeof(out);
+    BusCapture.can_to_socketcan(protocore_bus_capture_span());
+    TEST_ASSERT_EQUAL_UINT(PROTOCORE_SOCKETCAN_FRAME_LEN, BusCapture.n);
     // 0x0A0B0C0D & 0x1FFFFFFF = 0x0A0B0C0D, with the EFF flag on top
     TEST_ASSERT_EQUAL_HEX8(0x8A, out[0]);
     TEST_ASSERT_EQUAL_HEX8(0x0B, out[1]);
@@ -195,13 +236,21 @@ void test_a_short_buffer_writes_nothing(void)
     for (size_t cap = 0; cap < PROTOCORE_SOCKETCAN_FRAME_LEN; cap++)
     {
         memset(out, 0xEE, sizeof(out));
-        TEST_ASSERT_EQUAL_UINT(0u, can_to_socketcan(&f, out, cap));
+        BusCapture.can_to_socketcan_args.f = &f;
+        BusCapture.can_to_socketcan_args.out = out;
+        BusCapture.can_to_socketcan_args.cap = cap;
+        BusCapture.can_to_socketcan(protocore_bus_capture_span());
+        TEST_ASSERT_EQUAL_UINT(0u, BusCapture.n);
         for (size_t i = 0; i < sizeof(out); i++)
         {
             TEST_ASSERT_EQUAL_HEX8(0xEE, out[i]);
         }
     }
-    TEST_ASSERT_EQUAL_UINT(PROTOCORE_SOCKETCAN_FRAME_LEN, can_to_socketcan(&f, out, PROTOCORE_SOCKETCAN_FRAME_LEN));
+    BusCapture.can_to_socketcan_args.f = &f;
+    BusCapture.can_to_socketcan_args.out = out;
+    BusCapture.can_to_socketcan_args.cap = PROTOCORE_SOCKETCAN_FRAME_LEN;
+    BusCapture.can_to_socketcan(protocore_bus_capture_span());
+    TEST_ASSERT_EQUAL_UINT(PROTOCORE_SOCKETCAN_FRAME_LEN, BusCapture.n);
 }
 
 // A null frame or a null destination produces nothing rather than a dereference.
@@ -209,8 +258,16 @@ void test_null_arguments_are_refused(void)
 {
     uint8_t out[PROTOCORE_SOCKETCAN_FRAME_LEN];
     CanFrame f = frame_of(0x123, PROTO_FALSE, PROTO_FALSE, 3);
-    TEST_ASSERT_EQUAL_UINT(0u, can_to_socketcan(NULL, out, sizeof(out)));
-    TEST_ASSERT_EQUAL_UINT(0u, can_to_socketcan(&f, NULL, sizeof(out)));
+    BusCapture.can_to_socketcan_args.f = NULL;
+    BusCapture.can_to_socketcan_args.out = out;
+    BusCapture.can_to_socketcan_args.cap = sizeof(out);
+    BusCapture.can_to_socketcan(protocore_bus_capture_span());
+    TEST_ASSERT_EQUAL_UINT(0u, BusCapture.n);
+    BusCapture.can_to_socketcan_args.f = &f;
+    BusCapture.can_to_socketcan_args.out = NULL;
+    BusCapture.can_to_socketcan_args.cap = sizeof(out);
+    BusCapture.can_to_socketcan(protocore_bus_capture_span());
+    TEST_ASSERT_EQUAL_UINT(0u, BusCapture.n);
 }
 
 // The framer holds nothing: the same frame produces the same record every time, and a frame
@@ -224,9 +281,21 @@ void test_the_framer_holds_nothing(void)
     CanFrame f = frame_of(0x123, PROTO_FALSE, PROTO_FALSE, 3);
     CanFrame g = frame_of(0x1FFFFFFFu, PROTO_TRUE, PROTO_TRUE, 8);
 
-    (void)can_to_socketcan(&f, a, sizeof(a));
-    (void)can_to_socketcan(&g, other, sizeof(other));
-    (void)can_to_socketcan(&f, b, sizeof(b));
+    BusCapture.can_to_socketcan_args.f = &f;
+    BusCapture.can_to_socketcan_args.out = a;
+    BusCapture.can_to_socketcan_args.cap = sizeof(a);
+    BusCapture.can_to_socketcan(protocore_bus_capture_span());
+    (void)BusCapture.n;
+    BusCapture.can_to_socketcan_args.f = &g;
+    BusCapture.can_to_socketcan_args.out = other;
+    BusCapture.can_to_socketcan_args.cap = sizeof(other);
+    BusCapture.can_to_socketcan(protocore_bus_capture_span());
+    (void)BusCapture.n;
+    BusCapture.can_to_socketcan_args.f = &f;
+    BusCapture.can_to_socketcan_args.out = b;
+    BusCapture.can_to_socketcan_args.cap = sizeof(b);
+    BusCapture.can_to_socketcan(protocore_bus_capture_span());
+    (void)BusCapture.n;
     TEST_ASSERT_EQUAL_HEX8_ARRAY(a, b, sizeof(a));
 }
 
@@ -236,8 +305,16 @@ static void records_differ(const CanFrame *x, const CanFrame *y)
 {
     uint8_t a[PROTOCORE_SOCKETCAN_FRAME_LEN];
     uint8_t b[PROTOCORE_SOCKETCAN_FRAME_LEN];
-    TEST_ASSERT_EQUAL_UINT(PROTOCORE_SOCKETCAN_FRAME_LEN, can_to_socketcan(x, a, sizeof(a)));
-    TEST_ASSERT_EQUAL_UINT(PROTOCORE_SOCKETCAN_FRAME_LEN, can_to_socketcan(y, b, sizeof(b)));
+    BusCapture.can_to_socketcan_args.f = x;
+    BusCapture.can_to_socketcan_args.out = a;
+    BusCapture.can_to_socketcan_args.cap = sizeof(a);
+    BusCapture.can_to_socketcan(protocore_bus_capture_span());
+    TEST_ASSERT_EQUAL_UINT(PROTOCORE_SOCKETCAN_FRAME_LEN, BusCapture.n);
+    BusCapture.can_to_socketcan_args.f = y;
+    BusCapture.can_to_socketcan_args.out = b;
+    BusCapture.can_to_socketcan_args.cap = sizeof(b);
+    BusCapture.can_to_socketcan(protocore_bus_capture_span());
+    TEST_ASSERT_EQUAL_UINT(PROTOCORE_SOCKETCAN_FRAME_LEN, BusCapture.n);
     TEST_ASSERT_NOT_EQUAL(0, memcmp(a, b, sizeof(a)));
 }
 
@@ -270,7 +347,12 @@ void test_every_frame_field_reaches_the_record(void)
 // never started is safe rather than a walk through a null sink.
 void test_a_capture_with_no_sink_is_refused(void)
 {
-    TEST_ASSERT_FALSE(bus_capture_begin(4, 5, 500000u, NULL));
-    bus_capture_poll();
-    bus_capture_end();
+    BusCapture.begin_args.tx_pin = 4;
+    BusCapture.begin_args.rx_pin = 5;
+    BusCapture.begin_args.bitrate = 500000u;
+    BusCapture.begin_args.sink = NULL;
+    BusCapture.begin(protocore_bus_capture_span());
+    TEST_ASSERT_FALSE(BusCapture.ok);
+    BusCapture.poll(protocore_bus_capture_span());
+    BusCapture.end(protocore_bus_capture_span());
 }

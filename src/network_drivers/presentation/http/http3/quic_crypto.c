@@ -6,10 +6,12 @@
  * @brief QUIC packet protection and Initial secrets (see quic_crypto.h).
  */
 
-#include "network_drivers/presentation/http/http3/quic_crypto.h"
-#include "mmgr/protomem.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_HTTP3
+
+#include "network_drivers/presentation/http/http3/quic_crypto.h"
+#include "mmgr/protomem.h"
 
 #include "crypto/aead/aes128gcm.h"
 #include "crypto/kdf/hkdf.h"

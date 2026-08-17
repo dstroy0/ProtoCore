@@ -6,59 +6,115 @@
  * @brief AD9238 SPI configuration-port codec - implementation.
  */
 
-#include "server/peripherals/ad9238/ad9238.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_AD9238
 
-proto_bool protocore_ad9238_build_instruction(proto_bool read, uint16_t reg_addr, uint8_t nbytes, uint8_t out2[2])
+#include "server/peripherals/ad9238/ad9238.h"
+
+PROTOCORE_BEGIN_DECLS
+
+// --- the entries -----------------------------------------------------------
+
+// No context and no borrow: every operand is the caller's. The borrow an entry takes is
+// never read.
+
+static void ad9238_build_instruction(uint8_t *restrict work)
 {
+    (void)work;
+    proto_bool read = Ad9238.build_instruction_args.read;
+    uint16_t reg_addr = Ad9238.build_instruction_args.reg_addr;
+    uint8_t nbytes = Ad9238.build_instruction_args.nbytes;
+    uint8_t *out2 = Ad9238.build_instruction_args.out2;
+
     if (!out2 || nbytes == 0 || nbytes > 4 || reg_addr > 0x1FFF)
     {
-        return PROTO_FALSE;
+        Ad9238.ok = PROTO_FALSE;
+        return;
     }
     uint16_t w1w0 = (uint16_t)(nbytes - 1) & 0x3;
     uint16_t word = (uint16_t)((read ? 0x8000u : 0x0000u) | (w1w0 << 13) | (reg_addr & 0x1FFFu));
     out2[0] = (uint8_t)(word >> 8);
     out2[1] = (uint8_t)(word & 0xFF);
-    return PROTO_TRUE;
+    Ad9238.ok = PROTO_TRUE;
 }
 
-size_t protocore_ad9238_build_write(uint16_t reg_addr, uint8_t value, uint8_t *out, size_t cap)
+static void ad9238_build_write(uint8_t *restrict work)
 {
+    (void)work;
+    uint16_t reg_addr = Ad9238.build_write_args.reg_addr;
+    uint8_t value = Ad9238.build_write_args.value;
+    uint8_t *out = Ad9238.build_write_args.out;
+    size_t cap = Ad9238.build_write_args.cap;
+
     if (!out || cap < 3)
     {
-        return 0;
+        Ad9238.n = 0;
+        return;
     }
     uint8_t hdr[2];
-    if (!protocore_ad9238_build_instruction(PROTO_FALSE, reg_addr, 1, hdr))
+    Ad9238.build_instruction_args.read = PROTO_FALSE;
+    Ad9238.build_instruction_args.reg_addr = reg_addr;
+    Ad9238.build_instruction_args.nbytes = 1;
+    Ad9238.build_instruction_args.out2 = hdr;
+    ad9238_build_instruction(work);
+    if (!Ad9238.ok)
     {
-        return 0;
+        Ad9238.n = 0;
+        return;
     }
     out[0] = hdr[0];
     out[1] = hdr[1];
     out[2] = value;
-    return 3;
+    Ad9238.n = 3;
 }
 
-size_t protocore_ad9238_build_read(uint16_t reg_addr, uint8_t *out, size_t cap)
+static void ad9238_build_read(uint8_t *restrict work)
 {
+    (void)work;
+    uint16_t reg_addr = Ad9238.build_read_args.reg_addr;
+    uint8_t *out = Ad9238.build_read_args.out;
+    size_t cap = Ad9238.build_read_args.cap;
+
     if (!out || cap < 2)
     {
-        return 0;
+        Ad9238.n = 0;
+        return;
     }
     uint8_t hdr[2];
-    if (!protocore_ad9238_build_instruction(PROTO_TRUE, reg_addr, 1, hdr))
+    Ad9238.build_instruction_args.read = PROTO_TRUE;
+    Ad9238.build_instruction_args.reg_addr = reg_addr;
+    Ad9238.build_instruction_args.nbytes = 1;
+    Ad9238.build_instruction_args.out2 = hdr;
+    ad9238_build_instruction(work);
+    if (!Ad9238.ok)
     {
-        return 0;
+        Ad9238.n = 0;
+        return;
     }
     out[0] = hdr[0];
     out[1] = hdr[1];
-    return 2;
+    Ad9238.n = 2;
 }
 
-size_t protocore_ad9238_build_transfer(uint8_t *out, size_t cap)
+static void ad9238_build_transfer(uint8_t *restrict work)
 {
-    return protocore_ad9238_build_write((uint16_t)AD9238_REG_DEVICE_UPDATE, 0x01, out, cap);
+    (void)work;
+    uint8_t *out = Ad9238.build_transfer_args.out;
+    size_t cap = Ad9238.build_transfer_args.cap;
+
+    Ad9238.build_write_args.reg_addr = (uint16_t)AD9238_REG_DEVICE_UPDATE;
+    Ad9238.build_write_args.value = 0x01;
+    Ad9238.build_write_args.out = out;
+    Ad9238.build_write_args.cap = cap;
+    ad9238_build_write(work);
 }
+
+Ad9238Ns Ad9238 = {.build_instruction = ad9238_build_instruction,
+                   .build_write = ad9238_build_write,
+                   .build_read = ad9238_build_read,
+                   .build_transfer = ad9238_build_transfer};
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_AD9238

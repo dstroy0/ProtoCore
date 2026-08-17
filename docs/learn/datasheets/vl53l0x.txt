@@ -1,0 +1,1442 @@
+Product status link                                                     VL53L0X
+       VL53L0X
+                                                                                             Datasheet
+
+                                                       Time-of-Flight ranging sensor
+
+                     Features
+
+                     Fully integrated miniature module
+                     · 940 nm laser VCSEL (vertical-cavity surface-emitting laser)
+                     · VCSEL driver
+                     · Ranging sensor with advanced embedded microcontroller
+                     · 4.4 x 2.4 x 1.0 mm
+
+                     Fast, accurate distance ranging
+                     · Measures absolute range up to 2 m
+                     · The reported range is independent of the target reflectance
+                     · Advanced embedded optical crosstalk compensation to simplify cover glass
+
+                             selection
+
+                     Eye safety
+                     · Class 1 laser device compliant with latest standard IEC 60825-1:2014 - 3rd
+
+                             edition
+
+                     Easy integration
+                     · Single reflowable component
+                     · No additional optics
+                     · Single power supply
+                     · I²C interface for device control and data transfer
+                     · Xshutdown (reset) and interrupt GPIO
+                     · Programmable I²C address
+
+                     Application
+
+                     · Access control (system activation and presence detection)
+                     · Robotics (collision avoidance, wall tracking, and cliff detection)
+                     · Home appliance and home automation
+                     · Inventory management and liquid level monitoring
+
+                     Description
+
+                     The VL53L0X is a Time-of-Flight (ToF) laser-ranging module housed in the smallest
+                     package on the market today, providing accurate distance measurement whatever
+                     the target reflectance, unlike conventional technologies. It can measure absolute
+                     distances up to 2 m, setting a new benchmark in ranging performance levels,
+                     opening the door to various new applications.
+                     The VL53L0X integrates a leading-edge SPAD array (single photon avalanche
+                     diodes) and embeds ST's second generation FlightSense patented technology.
+                     The VL53L0X's 940 nm VCSEL emitter (vertical cavity surface-emitting laser), is
+                     totally invisible to the human eye, coupled with internal physical infrared filters, it
+                     enables longer ranging distances, higher immunity to ambient light, and better
+                     robustness to cover glass optical crosstalk.
+
+DS11555 - Rev 6 - June 2024                                                  www.st.com
+For further information contact your local STMicroelectronics sales office.
+                                                                                           VL53L0X
+
+                                                                             Acronyms and abbreviations
+
+1                Acronyms and abbreviations
+
+                                       Table 1. Acronymas and abbreviations
+
+                 Acronym/abbreviation                         Definition
+                              API             application programming interface
+                               cal
+                             ESD                              calibration
+                              FoV                     electrostatic discharge
+
+                         FW BOOT                             field of view
+                       HW STANDBY                          firmware boot
+                                                         hardware standby
+                              I²C             inter-integrated circuit (serial bus)
+                             MSB                        most significant bit
+                             NVM                       non-volatile memory
+                             PCB                       printed circuit board
+                              PVT              power, voltage, and temperature
+                              RIT                    return ignore threshold
+                              SCL                         serial clock line
+                             SDA                           serial data line
+                       SW STANDBY                        software standby
+                            SPAD                single photon avalanche diode
+                              ToF                          Time-of-Flight
+                            VCSEL            vertical-cavity surface-emitting laser
+                             VHV                         very high voltage
+
+DS11555 - Rev 6                                                                      page 2/38
+                                                                                           VL53L0X
+
+                                                                                                Overview
+
+2                Overview
+
+2.1              Technical specification
+
+                                                  Table 2. Technical specification
+
+                                    Feature                                                Detail
+                                    Package                                          Optical LGA12
+                                                                                    4.4 x 2.4 x 1 mm
+                                       Size
+                              Operating voltage                                        2.6 to 3.5 V
+                           Operating temperature                                       -20 to 70°C
+
+                               Infrared emitter                                           940 nm
+                                                                       Up to 400 kHz (fast mode) serial bus
+                                        I²C
+                                                                                     Address: 0x52
+
+2.2              System block diagram
+
+                                                  Figure 1. VL53L0X block diagram
+
+                                                       VL53L0X module
+
+                           GND                      VL53L0X silicon                 AVDD
+                           SDA                                                      XSHUT
+                           SCL                          Detection array             GPIO1
+
+                                                         Single Photon
+                                                  Avalanche Diode (SPAD)
+
+                                                  Non Volatile  ROM
+                                                    Memory      RAM
+
+                                                  Microcontroller
+
+                                                     Advanced
+                                                   Ranging Core
+
+                                                   VCSEL Driver
+
+                 AVSSVCSEL                        IR+           IR-                 AVDDVCSEL
+
+                                                                940nm
+
+DS11555 - Rev 6                                                                                              page 3/38
+                                                                                                               VL53L0X
+
+                                                                                                                    Overview
+
+2.3              Device pinout
+
+Note:            The following figure shows the pinout of the VL53L0X (see also Section 7: Outline drawings).
+Note:
+                             Figure 2. VL53L0X pinout (bottom view)
+
+                                          GND3
+
+                             GPIO1 7      6     5 XSHUT
+
+                             DNC 8              4 GND2
+
+                             SDA 9              3 GND
+
+                             SCL 10             2 AVSSVCSEL
+
+                             AVDD 11      12    1 AVDDVCSEL
+
+                                          GND4
+
+                             Table 3. VL53L0X pin description
+
+                 Pin number  Signal name  Signal type                              Signal description
+                        1    AVDDVCSEL       Supply             VCSEL supply, to be connected to main supply
+                        2    AVSSVCSEL                          VCSEL ground, to be connected to main ground
+                        3                    Ground
+                        4         GND                                   To be connected to the main ground
+                        5        GND2
+                        6       XSHUT         Digital input                Xshutdown pin, active low
+                        7        GND3            Ground             To be connected to the main ground
+                        8        GPIO1                               Interrupt output. Open drain output
+                        9         DNC        Digital output         Do not connect, must be left floating
+                       10         SDA         Digital input
+                       11          SCL    Digital input/output                     I²C serial data
+                       12        AVDD         Digital input                    I²C serial clock input
+                                 GND4                           Supply, to be connected to the main supply
+                                                 Supply             To be connected to the main ground
+                                                 Ground
+
+                 AVSSVCSEL and GND are ground pins that can be connected in the application schematics.
+
+                 GND2, GND3, and GND4 are standard pins that are forced to the ground domain in the application schematics.
+                 This is to avoid possible instabilities, which might arise if set in other states.
+
+DS11555 - Rev 6                                                                                                page 4/38
+                                                                                                      VL53L0X
+
+                                                                                                           Overview
+
+2.4              Application schematic
+
+                 The following figure shows the application schematic of the VL53L0X.
+
+                                            Figure 3. VL53L0X schematic
+
+                       IOVDD
+
+                                                                                                AVDD
+
+                                        5   XSHUT AVDDVCSEL                            1
+
+                 HOST                   7   GPIO1  AVDD                                11       4.7µF
+                                        9                                              2 100nF
+                                            SDA AVSSVCSEL
+
+                                        10  SCL    GND                                 3
+
+                                        8   DNC    GND2                                4
+
+                                                   GND3                                6
+
+                                            VL53L0X GND4 12
+
+Note:            Capacitors on the external supply AVDD should be placed as close as possible to the AVDDVCSEL and
+Note:            AVSSVCSEL module pins.
+
+Note:            The external pull-up resistor values can be found in the I²C-bus specification. Pull-ups are typically fitted only
+Note:            once per bus, near the host. Recommended values for pull-up resistors for an AVDD of 2.8 V and a 400 kHz I²C
+Note:            clock are 1.5 k to 2 kOhms
+
+                 The XSHUT pin must always be driven to avoid leakage current. A pull-up is needed if the host state is not
+                 known. XSHUT is needed to use hardware standby mode (there is no I²C communication).
+
+                 The recommended value of the XSHUT and GPIO1 pull-ups is 10 kOhms.
+
+                 The GPIO1 should be left unconnected if not used.
+
+DS11555 - Rev 6                                                                                        page 5/38
+                                                                                                                  VL53L0X
+
+                                                                                                          Functional description
+
+3                Functional description
+
+3.1              System functional description
+
+                 Figure 4. VL53L0X system functional description shows the system level functional description. The host
+                 customer application controls the VL53L0X device using an API (application programming interface).
+
+                 The API exposes to the customer application a set of high level functions that allow control of the VL53L0X
+                 firmware (FW). Functions include initialization/calibration, ranging start/stop, choice of accuracy, and choice of
+                 ranging mode.
+
+                 The API is a turnkey solution. It consists of a set of C functions which enables fast development of end user
+                 applications, without the complication of direct multiple register access. The API is structured in a way that it can
+                 be compiled on any kind of platform through a well isolated platform layer.
+
+                 The API package allows the user to fully benefit from the VL53L0X capabilities.
+
+                 A detailed description of the API is available in the VL53L0X API user manual (UM2039).
+
+                 VL53L0X FW fully manages the hardware (HW) register accesses.
+
+                 Section 3.2: Firmware state machine description details the firmware state machine.
+
+                              Figure 4. VL53L0X system functional description
+
+                              HOST                                              VL53L0X
+
+                 Customer           VL53L0X                                     Firmware                  Hardware
+                 Application           API
+                                                I2C
+
+DS11555 - Rev 6                                                                                                           page 6/38
+                                                                                                             VL53L0X
+
+                                                                                                     Functional description
+
+3.2              Firmware state machine description
+
+                 The following figure shows the device state machine.
+
+                             Figure 5. Firmware state machine
+
+                                      Power Off
+
+                 Host applies AVDD                                     Host removes AVDD
+
+                                      Hw Standby
+
+                 Host raises XSHUT                                     Host lowers XSHUT
+
+                                      Fw Initial Boot
+
+                 Host initiates STOP  Sw Standby                       Automatic move to SW standby
+                 Continuous Timed
+                                                                       Host initiates START
+
+                                      Range Mode
+
+                                      Continuous                                             Single
+
+                 Range Meas           Range Meas                       Range Meas
+
+                 Inter-Meas                                            Next start starts
+                  Standby                                              automatically after
+                                                                       the last has finished
+
+                 Inter-measurement
+                 period not completed
+
+DS11555 - Rev 6                                                                                      page 7/38
+                                                                            VL53L0X
+
+                                                                    Functional description
+
+3.3              Customer manufacturing calibration flow
+
+                 Figure 6. Customer manufacturing calibration flow shows the recommended calibration flow that should be
+                 applied at customer and factory level, once only. This flow takes into account all parameters (cover glass,
+                 temperature, and voltage) from the application.
+
+                 Figure 6. Customer manufacturing calibration flow
+
+DS11555 - Rev 6                                                     page 8/38
+                                                                                         VL53L0X
+
+                                                                                 Functional description
+
+3.3.1            SPAD and temperature calibration
+3.3.2
+                 To optimize the dynamics of the system, the reference SPADs have to be calibrated. Reference SPAD calibration
+                 needs to be done only once during the initial manufacturing calibration. The calibration data should then be stored
+                 on the host.
+
+                 Temperature calibration is the calibration of two parameters (VHV and phase cal) which are temperature
+                 dependent. These two parameters are used to set the device sensitivity. Calibration should be performed during
+                 initial manufacturing calibration. It must be performed again when the temperature varies more than 8°C
+                 compared to the initial calibration temperature.
+
+                 For more details on SPAD and temperature calibration, refer to the VL53L0X API user manual (UM2039).
+
+                 Ranging offset calibration
+
+                 Ranging offset is characterized by the mean offset, which is the centering of the measurement versus the real
+                 distance.
+
+                 Offset calibration should be performed at the factory for optimal performance. It is recommended at 10 cm. The
+                 offset calibration should consider:
+
+                 ·  The supply voltage and temperature.
+
+                 ·  The protective cover glass above the VL53L0X module.
+
+                                                         Figure 7. Range offset
+
+3.3.3            Crosstalk calibration
+                 Crosstalk is defined as the signal return from the cover glass. The magnitude of the crosstalk depends on the type
+                 of glass and air gap. Crosstalk results in a range error. This is proportional to the ratio of the crosstalk to the
+                 signal return from the target.
+
+                                                                     Figure 8. Crosstalk compensation
+
+                 The full offset and crosstalk calibration procedures are described in the VL53L0X API user manual (UM2039).
+
+DS11555 - Rev 6                                                                  page 9/38
+                                                                                    VL53L0X
+
+                                                                            Functional description
+
+3.4              Ranging operating modes
+
+                 There are three ranging modes available in the API:
+
+                 1. Single ranging
+                     Ranging is performed only once after the API function is called. The system returns to SW standby
+                     automatically.
+
+                 2. Continuous ranging.
+                     Ranging is performed in a continuous way after the API function is called. As soon as the measurement is
+                     finished, another one is started without delay. The user has to stop the ranging to return to SW standby. The
+                     last measurement is completed before stopping.
+
+                 3. Timed ranging.
+                     Ranging is performed in a continuous way after the API function is called. When a measurement is finished,
+                     another one is started after a user-defined delay. This delay (intermeasurement period) can be defined
+                     through the API.
+
+                 The user has to stop the ranging to return to SW standby.
+
+                 If the stop request comes during a range measurement, the measurement is completed before stopping. If it
+                 happens during an intermeasurement period, the range measurement stops immediately.
+
+3.5              Ranging profiles
+
+                 There are four different ranging profiles available via the API example code. Customers can create their own
+                 ranging profile dependent on their use case and performance requirements. For more details, refer to the
+                 VL53L0X API user manual (UM2039).
+
+                 ·  Default mode
+
+                 ·  High speed
+
+                 ·  High accuracy
+
+                 ·  Long range
+
+3.6              Ranging profile phases
+
+                 Each range profile consists of three consecutive phases:
+
+                 ·  Initialization and load calibration data
+
+                 ·  Ranging
+
+                 ·  Digital housekeeping
+
+DS11555 - Rev 6                                                                                                         page 10/38
+                                                                                             VL53L0X
+
+                                                                                                                       Functional description
+
+                 Figure 9. Typical initialization/ranging/housekeeping phases
+
+3.6.1            Initialization and load calibration data phase
+3.6.2            The initialization and calibration phase is performed before the first ranging, or after a device reset (see
+                 Figure 9. Typical initialization/ranging/housekeeping phases). The user may then have to repeat the temperature
+                 calibration phase in a periodic way, depending on the use case.
+                 For more details on the calibration functions, refer to the VL53L0X API user manual (UM2039).
+
+                 Ranging phase
+                 The ranging phase consists of a range setup, and then a range measurement.
+                 During the ranging operation, several VCSEL infrared pulses are emitted. They are hen reflected back by the
+                 target object, and detected by the receiving array. The photo detector used inside VL53L0X uses advanced
+                 ultrafast SPAD technology, which is protected by several patents.
+                 The typical timing budget for a range is 33 ms using init/ranging/housekeeping (see Figure 12. Ranging
+                 sequence). The actual range measurement takes 23 ms (see Figure 9. Typical initialization/ranging/housekeeping
+                 phases). The minimum range measurement period is 8 ms.
+
+DS11555 - Rev 6  page 11/38
+                                                                                                  VL53L0X
+
+                                                                                          Functional description
+
+3.6.3            Digital housekeeping
+
+3.7              Digital processing (housekeeping) is the last operation inside the ranging sequence that computes, validates, or
+3.8              rejects a ranging measurement. Part of this processing is performed internally while the other part is executed on
+                 the host by the API.
+
+                 At the end of the digital processing, the ranging distance is computed by VL53L0X itself. If the distance cannot be
+                 measured (for example, a weak signal, or no target), a corresponding error code is provided.
+
+                 The following functions are performed on the device itself:
+
+                 ·  Signal value check (weak signal)
+
+                 ·  Offset correction
+
+                 ·  Crosstalk correction (in case of cover glass)
+
+                 ·  Final ranging value computation
+
+                 The above functions are performed while the API performs the following:
+
+                 ·  RIT check (signal check versus crosstalk)
+
+                 ·  Sigma check (accuracy condition)
+
+                 ·  Final ranging state computation
+
+                 If the user wants to enhance the ranging accuracy, some extra processing (which is not part of the API) can be
+                 carried out by the host. For example, rolling average, hysteresis or any kind of filtering.
+
+                 Getting the data: Interrupt or polling
+
+                 The user can get the final data using a polling or an interrupt mechanism.
+
+                 Polling mode
+                 The user has to check the status of the ongoing measurement by polling an API function.
+
+                 Interrupt mode
+                 An interrupt pin (GPIO1) sends an interrupt to the host when a new measurement is available.
+                 The description of these two modes is available in the VL53L0X API user manual (UM2039).
+
+                 Device programming and control
+
+                 The I²C is the physical control interface of the device. It is described in Section 4: Control interface.
+
+                 A software layer (API) is also provided to control the device. The API is described in the VL53L0X API user
+                 manual (UM2039).
+
+DS11555 - Rev 6                                                                                                page 12/38
+3.9                                                                                                                   VL53L0X
+
+Note:                                                                                                                                                       Functional description
+
+                 Power sequence
+
+                 There are two options available for device power-up and boot sequence.
+                 In all cases, XSHUT is raised only when AVDD is tied on.
+
+                 Option 1
+                 The XSHUT pin is connected and controlled from the host.
+                 This option optimizes power consumption. The device can be completely powered off when not used, and then
+                 woken up through the host (using the XSHUT pin).
+                 Hardware standby mode is the period when the AVDD is present and the XSHUT is low.
+
+                                                                Figure 10. Power-up and boot sequence
+
+Note:            tBOOT is 1.2 ms maximum.
+
+                 Option 2
+                 The host does not control the XSHUT pin. This pin is tied to AVDD through a pull-up resistor.
+                 When the XSHUT pin is not controlled, the power-up sequence is as shown in the following figure. In this case,
+                 the device goes automatically to software standby after a firmware boot, without entering hardware standby.
+
+                                             Figure 11. Power-up and boot sequence with XSHUT not controlled
+
+Note:            tBOOT is 1.2 ms maximum.
+
+DS11555 - Rev 6                            page 13/38
+                                                                        VL53L0X
+
+                                                                Functional description
+
+3.10             Ranging sequence
+
+                                   Figure 12. Ranging sequence
+
+Note:            The ttiming_budget is a parameter set by the user, using a dedicated driver function. The default value is 33 ms.
+
+DS11555 - Rev 6                                                 page 14/38
+                                                                                                               VL53L0X
+
+                                                                                                            Control interface
+
+4                Control interface
+
+                 This section specifies the control interface. The I²C interface uses two signals: serial data line (SDA) and serial
+                 clock line (SCL). Each device connected to the bus uses a unique address and a simple controller/target
+                 relationship exists.
+
+                 Both SDA and SCL lines are connected to a positive supply voltage using pull-up resistors located on the host.
+                 Lines are only actively driven low. A high condition occurs when lines are floating and the pull-up resistors pull
+                 lines up. When no data is transmitted both lines are high.
+
+                 Clock signal generation is performed by the controller device. The controller device initiates data transfer. The I²C
+                 bus has a maximum speed of 400 kbits/s and uses a default device address of 0x52.
+
+                                              Figure 13. Data transfer protocol
+
+                      Start condition                                                          Acknowledge
+
+                 SDA
+
+                                    MSB                                            LSB
+                                        1
+                 SCL  S                       2     34     5              6     7  8           P
+
+                                                                                        Ac/Am
+
+                                                    Address or data byte                Stop condition
+
+                 Information is packed in 8-bit packets (bytes) and is always followed by an acknowledge bit, Ac for the VL53L0X
+                 acknowledge and Am for the controller acknowledge (host bus controller). The internal data are produced by
+                 sampling SDA at a rising edge of SCL. The external data must be stable during the high period of SCL. The
+                 exceptions to this are start (S) or stop (P) conditions when SDA falls or rises respectively, while SCL is high.
+                 A message contains a series of bytes preceded by a start condition, and followed by either a stop or repeated
+                 start (another start condition but without a preceding stop condition), followed by another message. The first byte
+                 contains the device address (0x52) and also specifies the data direction. If the least significant bit is low (that is,
+                 0x52) the message is a controller write-to-the-target. If the LSB is set (that is, 0x53) then the message is a
+                 controller read-from-the-target.
+
+                                                                    Figure 14. I²C device address: 0x52
+
+                                    MSBit                                             LSBit
+
+                                           0     1  0   1     0              0     1 R/W
+
+                 All serial interface communications with the Time-of-Flight sensor must begin with a start condition. The VL53L0X
+                 module acknowledges the receipt of a valid address by driving the SDA wire low. The state of the read/write bit
+                 (LSB of the address byte) is stored and the next byte of data, sampled from SDA, can be interpreted. During a
+                 write sequence, the second byte received provides an 8-bit index, which points to one of the internal 8-bit
+                 registers.
+
+DS11555 - Rev 6                                                                                             page 15/38
+                                                    VL53L0X
+
+                                                 Control interface
+
+                 Figure 15. Data format (write)
+
+                 As data are received by the target, they are written bit by bit to a serial/parallel register. After each data byte has
+                 been received by the target, an acknowledge is generated, the data are then stored in the internal register
+                 addressed by the current index.
+                 During a read message, the contents of the register addressed by the current index is read out in the byte
+                 following the device address byte. The contents of this register are parallel loaded into the serial/parallel register
+                 and clocked out of the device by the falling edge of SCL.
+
+                                                                        Figure 16. Data format (read)
+
+                 At the end of each byte, in both read and write message sequences, an acknowledge is issued by the receiving
+                 device (that is, the VL53L0X for a write, and the host for a read).
+                 A message can only be terminated by the bus controller, either by issuing a stop condition or by a negative
+                 acknowledge (that is, not pulling the SDA line low) after reading a complete byte during a read operation.
+                 The interface also supports auto increment indexing. After the first data byte has been transferred, the index is
+                 automatically incremented by 1. The controller can therefore send data bytes continuously to the target until the
+                 target fails to provide an acknowledge, or the controller terminates the write communication with a stop condition.
+                 If the auto increment feature is used, the controller does not have to send address indexes to accompany the data
+                 bytes.
+
+                                                                Figure 17. Data format (sequential write)
+
+DS11555 - Rev 6                                  page 16/38
+                                                                                        VL53L0X
+
+                                                                                     Control interface
+
+                          Figure 18. Data format (sequential read)
+
+4.1              I²C interface - timing characteristics
+
+                 Timing characteristics are shown in the following table. Refer to Figure 19. I²C timing characteristics for an
+                 explanation of the parameters used.
+
+                 Timings are given for all PVT conditions.
+
+                          Table 4. I²C interface - timing characteristics
+
+                 Symbol   Parameter                       Minimum  Typical  Maximum  Unit
+
+                 FI2C     Operating frequency (standard   0        --       400 (1)  kHz
+                                    and fast mode)
+
+                 tLOW     Clock pulse width low           1.6      --       --       s
+
+                 tHIGH    Clock pulse width high          0.6      --       --
+
+                 tSP      Pulse width of spikes that are  --       --       50       ns
+                          suppressed by the input filter
+
+                 tBUF     Bus free time between           1.3      --       --       ms
+                               transmissions
+
+                 tHD.STA  Start hold time                 0.26     --       --
+
+                 tSU.STA  Start setup time                0.26     --       --       s
+
+                 tHD.DAT  Data in hold time               0        --       0.9
+
+                 tSU.DAT  Data in setup time              50       --       --
+
+                 tR       SCL/SDA rise time               --       --       120      ns
+
+                 tF       SCL/SDA fall time               --       --       120
+
+                 tSU.STO  Stop setup time                 0.6      --       --       s
+
+                 Ci/o     Input/output capacitance (SDA)  --       --       10
+
+                 Cin      Input capacitance (SCL)         --       --       4        pF
+
+                 CL       Load capacitance                --       125      400
+
+                 1. The maximum bus speed is also limited by the combination of a 400 pF load capacitance and a pull-up resistor. Refer to the
+                      I²C specification for further information
+
+DS11555 - Rev 6                                                                      page 17/38
+                                                                                                                              VL53L0X
+
+                                                                                                                           Control interface
+
+                                        Figure 19. I²C timing characteristics
+
+                      stop start                                                        start                     stop
+
+                 SDA                                                 ...           VIH
+                                                                                   VIL
+
+                           tBUF         tLOW tR                      tF                                  tHD.STA
+
+                 SCL  VIH                                                     ...
+                      VIL
+
+                           tHD.STA                   tHD.DAT  tHIGH  tSU.DAT            tSU.STA                   tSU.STO
+
+                                                 IL or VIH.
+
+4.2              All timings are measured from either VIL or VIH.
+
+Note:            I²C interface - reference registers
+
+                 The registers shown in the table below can be used to validate the user I²C interface.
+
+                      Address           Table 5. Reference registers
+                        0xC0
+                        0xC1                                                After fresh reset, without the API loaded
+                        0xC2                                                                         0xEE
+                        0X51                                                                         0xAA
+                        0x61                                                                          0x10
+                                                                                                    0x0099
+                                                                                                    0x0000
+
+                 The I²C read/writes can be 8, 16, or 32-bit. Multibyte read/writes are always addressed in ascending order with
+                 the MSB first as shown in the following table.
+
+                                        Table 6. 32-bit register example
+
+                      Register address                                                  Byte
+                            Address                                                     MSB
+
+                          Address + 1                                                     ...
+                          Address + 2                                                     ...
+                          Address + 3                                                   LSB
+
+DS11555 - Rev 6                                                                                                            page 18/38
+                                                                                                                  VL53L0X
+
+                                                                                                       Electrical characteristics
+
+5                Electrical characteristics
+
+5.1              Absolute maximum ratings
+
+                 Warning:        Stresses above those listed in the following table may cause permanent damage to the
+                                 device. These are stress ratings only. Functional operation of the device is not implied at
+                                 these or any other conditions above those indicated in the operational sections of the
+                                 specification. Exposure to absolute maximum rating conditions for extended periods may
+                                 affect device reliability.
+
+                                               Table 7. Absolute maximum ratings
+
+                 Parameter                                    Min.        Typ.                   Max.       Unit
+
+                 AVDD                                         -0.5        --                     3.6        V
+
+                 SCL, SDA, XSHUT, and GPIO1
+
+5.2              Recommended operating conditions
+
+                 There are no power supply sequencing requirements. The I/Os may be high, low, or floating when AVDD is
+                 applied. The I/Os are internally failsafe with no diode connecting them to AVDD.
+
+                                            Table 8. Recommended operating conditions
+
+                                 Parameter                          Min.        Typ.                  Max.  Unit
+
+                           Voltage (AVDD)                           2.6         2.8                    3.5
+
+                 IO (IOVDD) (1)             Standard mode           1.6         1.8                    1.9     V
+
+                                            2V8 mode (2) (3)        2.6         2.8                    3.5
+
+                 Normal operating temperature                       -20         --                     70   °C
+
+                 1. XSHUT should be high only when AVDD is on.
+
+                 2. SDA, SCL, XSHUT, and GPIO1 high levels have to be equal to AVDD in 2V8 mode.
+
+                 3. The default API mode is 1V8. 2V8 mode is programmable using the device settings loaded by the API. For more details
+                      refer to the VL53L0X API user manual (UM2039).
+
+5.3              Electrostatic discharge
+
+                 The VL53L0X is compliant with the ESD values presented in the following table.
+
+                        Parameter              Table 9. ESD performances                                   Conditions
+                   Human body model                        Specification                         ± 2 kV, 1500 ohms, 100 pF
+                 Charged device model                       JS-001-2012
+                                                           JESD22-C101                                       ± 500 V
+
+DS11555 - Rev 6                                                                                             page 19/38
+                                                                                                               VL53L0X
+
+                                                                                                    Electrical characteristics
+
+5.4              Current consumption
+5.5
+                                      Table 10. Consumption at ambient temperature
+
+                 All current consumption values include silicon process variations. Temperature and voltage are nominal conditions (23°C and
+                 2.8 V). All values include AVDD and AVDDVCSEL.
+
+                         Parameter                            Min.        Typ.                Max.             Unit
+
+                         HW STANDBY                           3           5                   7
+
+                 SW STANDBY (2V8 mode) (1)                    4           6                   9                A
+
+                 Timed ranging intermeasurement               --          16                  --
+
+                 Active ranging average consumption           --          19                  --
+                         (including VCSEL) (2) (3)
+                                                                                                               mA
+                 Average power consumption at 10 Hz
+                      with 33 ms ranging sequence             --          --                  20
+
+                 1. In standard mode (1V8), pull-ups have to be modified. Then the SW STANDBY consumption is increased by 0.6 µA.
+                 2. Active ranging is an average value, measured using the default API settings (33 ms timing budget).
+                 3. Peak current (including VCSEL) can reach 40 mA.
+
+                 Digital input and output
+
+                                            Table 11. Digital I/O electrical characteristics
+
+                 Symbol              Parameter                      Min.               Typ.         Max.                           Unit
+                                                                                        --
+                                                              Interrupt pin (GPIO1)     --
+
+                 VIL                Low level input voltage         --                              0.3 IOVDD
+                                                                                                         --
+                 VIH                High level input voltage        0.7 IOVDD                            0.4
+
+                 VOL     Low level output voltage (IOUT = 4         --                                   --                          V
+                                             mA)                                                                                   MHz
+                                                                                                        108
+                 VOH     High level output voltage (IOUT = 4        IOVDD-0.4
+                                             mA)
+
+                 FGPIO   Operating frequency (CLOAD = 20            0
+                                              pF)
+
+                                                              I²C interface (SDA/SCL)
+
+                 VIL                Low level input voltage         -0.5                            0.6
+
+                 VIH                High level input voltage        1.12                            3.5                            V
+
+                 VOL     Low level output voltage (IOUT = 4         --                              0.4
+                          mA in standard and fast modes)
+
+                 IIL/IH              Leakage current (1)            --                               10
+                                                                                                                        A
+                                     Leakage current (2)            --
+                                                                                                    0.15
+
+                 1. AVDD = 0 V
+                 2. AVDD = 2.85 V, and I/O voltage = 1.8 V
+
+DS11555 - Rev 6                                                                                                page 20/38
+                                                                                                                 VL53L0X
+
+                                                                                                                 Performance
+
+6                Performance
+
+6.1              Measurement conditions
+
+                 In all the measurement tables of this document, it is considered that the full FoV is covered.
+
+                 The VL53L0X system FoV is 25°.
+
+                 Reflectance targets are standard ones (gray 17% N4.74 and White 88% N9.5 Munsell charts).
+
+                 Unless mentioned, the device is controlled through the API using the default settings. Refer to the VL53L0X API
+                 user manual (UM2039) for API setting descriptions.
+
+                                                 Figure 20. Typical ranging (default mode)
+
+DS11555 - Rev 6                                                                                                  page 21/38
+                                                               VL53L0X
+
+                                                               Performance
+
+                 Figure 21. Typical ranging - long range mode
+
+DS11555 - Rev 6                                                page 22/38
+                                                                                                                 VL53L0X
+
+                                                                                                                 Performance
+
+6.2              Maximum ranging distance
+
+6.3              The table below shows the ranging specification for the VL53L0X bare module. This is without a cover glass, at
+                 room temperature (23°C), and with nominal voltage (2.8 V).
+6.3.1
+                    Table 12. Maximum ranging capabilities with a 33 ms timing budget
+
+                    Target reflectance level, full FoV                 Conditions          Indoor (1)   Outdoor (1)
+
+                    White target (88%)                                  Typical            200 cm+ (2)           80 cm
+                                                                       Minimum               120 cm              60 cm
+
+                    Gray target (17%)                                   Typical            80 cm                 50 cm
+                                                                       Minimum             70 cm                 40 cm
+
+                 1. Indoor corresponds to no infrared. Outdoor overcast corresponds to a parasitic noise of 10 kcps/SPAD for the VL53L0X
+                      module. For reference, this corresponds to a 1.2 W/m² at 940 nm, and is equivalent to 5 klx daylight, while ranging on a gray
+                      17% chart at 40 cm.
+
+                 2. Using a long range API profile.
+
+                 Measurement conditions
+
+                 ·  Target reflectance used: Gray (17%), White (88%)
+
+                 ·  Nominal voltage (2.8 V) and temperature (23°C)
+
+                 ·  All distances are for a complete FoV covered (FoV = 25°)
+
+                 All distances mentioned in the above table are guaranteed for a minimum detection rate of 94% (up to 100%).
+                 The detection rate is the worst case percentage of measurements that return a valid measurement when the
+                 target is detected.
+
+                 Ranging accuracy
+
+                 Standard deviation
+
+                 The ranging accuracy can be characterized by the standard deviation. It includes measure-to-measure and part-
+                 to-part (silicon) dispersion.
+
+                                                        Table 13. Ranging accuracy
+
+                    Target reflectance level, full FoV           Indoor (no infrared)                   Outdoor
+
+                              White target (88%)        Distance       33 ms 66 ms         Distance 33 ms        66 ms
+                               Gray target (17%)                                                                   6%
+                                                        At 120 cm      4%              3%  At 60 cm     7%         9%
+
+                                                        At 70 cm       7%              6%  At 40 cm     12%
+
+                 Measurement conditions
+
+                 ·  Target reflectance used: Gray (17%), White (88%)
+
+                 ·  Offset correction done at 10 cm from sensor
+
+                 ·  Indoor: No infrared
+
+                 ·  Outdoor: 5 klx equivalent sunlight (10 kcps/SPAD)
+
+                 ·  Nominal voltage (2.8 V) and temperature (23°C)
+
+                 ·  All distances are for a complete FoV covered (FoV = 25°)
+
+                 ·  Detection rate is considered at 94% minimum
+
+DS11555 - Rev 6                                                                                                  page 23/38
+                                                                                                                  VL53L0X
+
+                                                                                                                  Performance
+
+6.3.2            Range profile examples
+6.3.3
+                 The following table shows the typical performance for the four example ranging profiles, as per
+                 Section 6.1: Measurement conditions.
+
+                                                        Table 14. Range profiles
+
+                 Range profile      Range timing budget       Typical performance                         Typical application
+                 Default mode                 30 ms
+                 High accuracy                200 ms             1.2 m, accuracy as per                           Standard
+                   Long range                 33 ms           Table 13. Ranging accuracy
+
+                   High speed                 20 ms           1.2 m, accuracy < ±3%                       Precise measurement
+
+                                                                 1.2 m, accuracy as per   Long ranging, only for dark
+                                                              Table 13. Ranging accuracy        conditions (no IR)
+
+                                                              1.2 m, accuracy ±5%         High speed where accuracy is
+                                                                                                     not a priority
+
+                 Ranging offset error
+
+                 The table below shows how range offset may drift over distance, voltage, and temperature. We assumes that the
+                 offset has been calibrated at 10 cm. See the VL53L0X API user manual (UM2039) for details on offset calibration.
+
+                                                        Table 15. Range profiles
+
+                                    Nominal conditions        Measure point          Typical offset from  Maximum offset from
+                                                                                            nominal                nominal
+                 Ranging distance   Offset calibration at 10  White 120 cm (indoor)
+                                           cm ("zero")         Gray 70 cm (indoor)              --                    <3%
+                    Voltage drift                             White 60 cm (outdoor)
+                 Temperature drift             2.8 V          Gray 40 cm (outdoor)          ±10 mm                 ±15 mm
+                                               23°C                                         ±10 mm                 ±30 mm
+                                                                   2.6 V to 3.5 V
+                                                                   -20°C to 70°C
+
+DS11555 - Rev 6                                                                                                             page 24/38
+VL53L0X                                                                                                                                                                                                                                                                                                                               page 25/38
+
+     Outline drawings                                                                                                                                                                                                                           REV.                                           REVISION TABLE              DATE
+                                                                                                                                                                                                                                                  1                                          DESCRIPTION               05/02/2016
+                                                                                                                                                                                                                                                  2                                         INITIAL RELEASE            04/05/2016
+                                                                                                                                                                                                                                                                                      DRAWING TITLE UPDATE
+
+                                                                                                      0.20                       0.40            0.05                                                                 0.50
+                                                                                                                                                                                                                IN 12 POS.
+
+                                                                                                                                                                                                            11 10                               9                                  8  7      AREA RESERVED
+                                                                                                                                                                                                                                                                                             FOR MARKING
+
+                                                                                                                                                                                             1.60 ±0.03
+
+                                         Figure 22. Outline drawing (1/3)            2.40 ±0.05                                                                                                             12                                                                        6
+                                                                                                1.20
+                                                                                                                                                                                                     0.80   1                                2  3                                  4  5
+
+                                                                                                                                                       PIN 1                         +0.05           0.25
+                                                                                                                                                                                   1 - 0.10              0
+
+                                                                                                                                                                                             0.15 ±0.10
+
+                                                                                           0.665                           3                                                                                0.35 ±0.10
+                                                                                                                     4.40 ±0.05                                                                                0.08
+                                                                                                                                                                                                                   0
+                                                                                                                                                                                                                                 0.80
+                                                                                                                                                                                                                                              1.60
+                                                                                                                                                                                                                                                            2.40
+                                                                                                                                                                                                                                                                          3.20
+
+                                                                                                                                                                                                                                                                                                               CONNECTION TABLE
+
+                                                                                                                                                                                                                                                                                                               PAD  FUNCTION
+                                                                                                                                                                                                                                                                                                               No.
+
+                                                                                                                                                                                                                                                                                                               1    AVDDVCSEL
+
+                                                                                                                                                                                                            PWB SOLDER PATTERN                                                                                 2    AVSSVCSEL
+                                                                                                                                                                                                                       3.70
+                                                                                                                                                                                                                                                                                                               3       GND
+                                                                                                                                                                                             0.50
+                                                                                                                                                                                             0.80                                                                                                              4       GND2
+
+                                                                                                                                                                                                                                       1.85                                                                    5       XSHUT
+
+                                                                                                                                                                                   0.80                                                                                                                        6       GND3
+                                                                                                                                                                                       0.50
+                                                                                                                                                                                                                                                                                                               7       GPIO1
+                                                                                                                                                                                                                                                                       0.25
+                                                                                                                                                                                                                                                                             2.10                              8       DNC
+
+                       Outline drawings                                    NOTES:                                                                                                                                                                                                                              9       SDA
+
+                                                                           1. DIMENSIONS SHOWN WITH                  ARE INSPECTION DIMENSIONS.                                                                                                                                                                10      SCL
+                                                                           2. SUBSTRATE WILL ALWAYS BE INSIDE THE MODULE OUTLINE DIMENSIONS.
+                                                                           3. UNSPECIFIED RADII 0.05.                                                                                                                                            0.08
+                                                                                                                                                                                                                                                                                                               11      AVDD
+                                                                                                                                                                                                                                                Date
+                                                                           Tolerances, unless otherwise stated                   Interpret drawing per BS8888, Material                                                                             2 FEB 2016                                                 12      GND4
+                                                                                                                                 3RD Angle Projection
+                                                                           Linear                                                                                                                                                               Part No.                                 All dimensions  Do Not Scale  Scale
+                                                                           0 Place Decimals 0 ±0.05                                                                        Finish                                                                  DM00266747                            in mm
+                                                                           1 Place Decimals 0.0 ±0.05                                                                                                                                                                                                                     20:1
+
+                                                                           2 Place Decimals 0.00 ±0.05                                                                                                                                                                                STMicroelectronics
+                                                                           Angular                    ±0.25 degrees                                                                                                                                                                   Imaging Division
+                                                                           Diameter                   +0.05
+                                                                           Position  0.10                                                                                                                                                                                             Title                            Sheet
+                                                                                                                                                                                                                                                                                             VL53L0X & LINER MODULE                3
+                                                                           Surface Finish 1.6 microns                                                                                                                                                                                             OUTLINE DRAWING       1 OF
+
+                       7                                                                                                                                                                                                                                                                                                              DS11555 - Rev 6
+VL53L0X                                                                                                                                                                                                                                                   page 26/38
+
+     Outline drawings                                                                                                                                                                                                                REV        1
+
+                       Figure 23. Outline drawing (2/3)                                                                               25°               35°
+
+                                                                                      COLLECTOR                                                                                  EMITTER
+                                                                                      EXCLUSION CONE                                                                             EXCLUSION CONE
+                                                                                                                                                                              0.40 OF CONE
+                                                                                                    0.20 OF CONE                                                             AT DATUM 'A'
+                                                                                                   AT DATUM 'A'
+
+                                                         EXCLUSION CONE DATA:
+                                                         THE TWO CONES SHOWN ON THIS SHEET REPRESENT
+                                                         VOLUMES INTO WHICH THE USERS' EQUIPMENT
+                                                         HOUSING SHOULD NOT ENTER.
+
+                                                         Tolerances, unless otherwise stated          Interpret drawing per BS8888, Material
+                                                                                                      3RD Angle Projection
+                                                         Linear                                                                                                                                                  All dimensions  Do Not Scale   Scale
+                                                         0 Place Decimals 0 ±0.05                                                               Finish                                                           in mm
+                                                         1 Place Decimals 0.0 ±0.05                                                                                                                                                                20:1
+
+                                                         2 Place Decimals 0.00 ±0.05                                                                                                             Date            STMicroelectronics
+                                                         Angular         ±0.25 degrees                                                                                                               2 FEB 2016  Imaging Division
+                                                         Diameter        +0.05
+                                                         Position  0.10                                                                                                                          Part No.        Title  VL53L0X & LINER MODULE  Sheet
+                                                                                                                                                                                                     DM00266747              OUTLINE DRAWING           3
+                                                         Surface Finish 1.6 microns                                                                                                                                                              2 OF
+
+                                                                                                                                                                                                                                                          DS11555 - Rev 6
+VL53L0X                                                                                                                                                                                                                             REV        1         page 27/38
+
+     Outline drawings
+
+                       Figure 24. Outline drawing - option with liner (3/3)            0.15 ±0.15  0.20 ±0.20     4
+
+                                                                                                                                                                                                                       SCALE 20:1
+
+                                                                                       2.92
+
+                                                                                                     R0.20        PROTECTIVE LINER                                 0.046
+                                                                                                   IN 4 POS.                                                                              1.05
+
+                                                                             Tolerances, unless otherwise stated  Interpret drawing per BS8888, Material
+                                                                                                                  3RD Angle Projection
+                                                                             Linear                                                                                                                             All dimensions  Do Not Scale   Scale
+                                                                             0 Place Decimals 0 ±0.05                                                      Finish                                               in mm
+                                                                             1 Place Decimals 0.0 ±0.05                                                                                                                                           30:1
+
+                                                                             2 Place Decimals 0.00 ±0.05                                                                                        Date            STMicroelectronics
+                                                                             Angular               ±0.25 degrees                                                                                    2 FEB 2016  Imaging Division
+                                                                             Diameter              +0.05
+                                                                             Position  0.10                                                                                                     Part No.        Title  VL53L0X & LINER MODULE  Sheet
+                                                                                                                                                                                                   DM00266747               OUTLINE DRAWING           3
+                                                                             Surface Finish 1.6 microns                                                                                                                                         3 OF
+
+                                                                                                                                                                                                                                                         DS11555 - Rev 6
+                                                                              VL53L0X
+
+                                                                               Laser safety
+
+8                Laser safety
+
+Caution:         This product contains a laser emitter and corresponding drive circuitry. The laser output is designed to meet
+                 Class 1 laser safety limits under all reasonably foreseeable conditions including single faults in compliance with
+                 IEC 60825-1:2014.
+
+                 Do not increase the laser output power by any means. Do not use any optics to focus the laser beam.
+
+                 Use of controls or adjustments, or performance of procedures other than those specified herein may result in
+                 hazardous radiation exposure.
+
+                                              Figure 25. Class 1 laser label
+
+                 This product complies with:
+
+                 ·  IEC 60825-1:2014
+
+                 ·  21 CFR 1040.10 and 1040.11, except for conformance with IEC 60825-1:2014 as described in the laser
+
+                    notice number 56, dated May 8, 2019.
+
+                 ·  EN 60825-1:2014 including EN 60825-1:2014/A11:2021
+
+                 ·  EN 50689:2021, however STMicroelectronics does not guarantee compliance with the requirement of
+
+                    clause 5 from EN50689 regarding child appealing products. If designing a child appealing product, contact
+
+                    STMicroelectronics' technical application support.
+
+DS11555 - Rev 6                                                               page 28/38
+                                                                                                                   VL53L0X
+
+                                                                                                          Packaging and labeling
+
+9                Packaging and labeling
+
+9.1              Product marking
+9.2
+                 A two line product marking is applied on the backside of the module (on the substrate). The first line is the silicon
+9.3              product code, and the second line, the internal tracking code.
+
+Note:            Inner box labeling
+
+                 The labeling follows the STMicroelectronics' standard packing acceptance specification.
+
+                 The following information is on the inner box label:
+
+                 ·  Assembly site
+
+                 ·  Sales type
+
+                 ·  Quantity
+
+                 ·  Trace code
+
+                 ·  Marking
+
+                 ·  Bulk ID number
+
+                 Packing
+
+                 At customer/subcontractor level, it is recommended to mount the VL53L0X in a clean environment to avoid
+                 foreign material deposition.
+
+                 To help avoid any foreign material contamination at phone assembly level the modules are shipped in a tape and
+                 reel format. The packaging is vacuum-sealed and includes a desiccant.
+
+                 For sensors with the liner option, the liner must be removed during assembly of the customer device, just before
+                 mounting the cover glass. The liner is compliant with a reflow at 260°C (as per JEDEC-STD-020E).
+
+DS11555 - Rev 6                                                                                           page 29/38
+9.3.1                                                                                                                 VL53L0X
+
+                                                                                                                                                           Packaging and labeling
+
+                 Tape outline drawing
+                 The pictures below show the tape outline drawings for modules without and with liner. The pin1 of the module is
+                 referenced by a red star in the figures.
+
+                                                Figure 26. Tape outline drawing - option modules without liner
+
+                 Figure 27. Tape outline drawing - option modules with liner
+
+DS11555 - Rev 6                                                               page 30/38
+                                                                                                       VL53L0X
+
+                                                                                              Packaging and labeling
+
+9.4              Pb-free solder reflow process
+
+Note:            Table 16. Recommended solder profile and Figure 28. Solder profile show the recommended and maximum
+                 values for the solder profile.
+
+                 Customers have to tune the reflow profile depending on the PCB, solder paste, and material used. We expect
+                 customers to follow the recommended reflow profile, which is specifically tuned for the VL53L0X package.
+
+                 If a customer must perform a reflow profile, which is different from the recommended one, the new profile must be
+                 qualified by the customer at their own risk. This is especially true for peaks >240°C. In any case, the profile must
+                 be within the "maximum" profile limit described in Table 16. Recommended solder profile.
+
+                 Temperatures mentioned in the table below are measured at the top of the VL53L0X package.
+
+                                                Table 16. Recommended solder profile
+
+                              Parameters        Recommended                Maximum            Unit
+                 Minimum temperature (TS min)           130
+                 Maximum temperature (TS max)           200                           150
+                                                                                                                           °C
+                    Time ts (TS min to TS max)        90-110
+                           Temperature (TL)             217                           200
+                                Time (tL)             55-65
+                                Ramp up                   2                           60-120  s
+
+                        Temperature (Tp-10)              --                           217     °C
+                              Time (tp-10)
+                                Ramp up                 240                           55-65   s
+                                                         30
+                       Peak temperature (Tp)             -4                           3       °C/s
+                              Time to peak
+                                                                                      250     °C
+                      Ramp down (peak to TL)
+                                                                                      10      s
+
+                                                                                      3       °C/s
+
+                                                                           260 max            °C
+
+                                                                                      300     s
+
+                                                                                      -6      °C/s
+
+                                                Figure 28. Solder profile
+
+Note:            The component should be limited to a maximum of three passes through this solder profile.
+Note:
+                 As the VL53L0X package is not sealed, only a dry reflow process should be used (such as convection reflow).
+Note:            Vapor phase reflow is not suitable for this type of optical component.
+
+                 The VL53L0X is an optical component and should be treated carefully. This typically includes using a `no wash'
+                 assembly process.
+
+DS11555 - Rev 6                                                                               page 31/38
+                                                                                                 VL53L0X
+
+                                                                                        Packaging and labeling
+
+9.5              Handling and storage precautions
+
+9.5.1            Shock precaution
+                 Sensor modules house numerous internal components that are susceptible to shock damage. If a unit is subject
+9.5.2            to excessive shock, it must be rejected even if no apparent damage is visible. For example, if it is dropped on the
+                 floor, or if a tray/reel of units is dropped on the floor.
+9.5.3
+9.5.4            Part handling
+                 Handling must be done with nonmarring, ESD, safe carbon, plastic, or TeflonTM tweezers. Ranging modules are
+9.6              susceptible to damage or contamination. The customer is advised to use a clean assembly process after
+                 removing the tape from the parts, and until a protective cover glass is mounted.
+
+                 Compression force
+                 A maximum compressive load of 25 N should be applied on the module.
+
+                 Moisture sensitivity level
+                 Moisture sensitivity is level 3 (MSL) as described in IPC/JEDEC JSTD-020-C.
+
+                 Storage temperature conditions
+
+                                        Table 17. Recommended storage conditions
+
+                        Parameter       Min.  Typ.                                Max.  Unit
+                 Temperature (storage)
+                                        -40   --                                  85    °C
+
+DS11555 - Rev 6                                                                         page 32/38
+                                             VL53L0X
+
+                                      Package information
+
+10               Package information
+
+                 In order to meet environmental requirements, ST offers these devices in different grades of ECOPACK packages,
+                 depending on their level of environmental compliance. ECOPACK specifications, grade definitions and product
+                 status are available at: www.st.com. ECOPACK is an ST trademark.
+
+DS11555 - Rev 6                       page 33/38
+11               Ordering information                                           VL53L0X
+
+                    Order codes        Table 18. Order codes               Ordering information
+                 VL53L0CXV0DH/1                    Package
+                 VL53L0CXV9DH/1                                        Packing
+                                         Optical LGA12 with liner   Tape and reel
+                                       Optical LGA12 without liner  Tape and reel
+
+DS11555 - Rev 6                                                     page 34/38
+                                                                                           VL53L0X
+
+                                                                                    Ordering information
+
+Revision history                               Table 19. Document revision history
+
+                                       Date    Version                                                Changes
+                                  30-May-2016      1
+                                  09-Apr-2018      2    Initial release
+                                  12-Oct-2021      3
+                                  29-Nov-2022      4    Updated document title
+                                  08-Dec-2022      5    Updated Features
+                                                        Small text changes to Description.
+                                  03-Jun-2023      6    Removed note from Section 3.6.2: Ranging phase.
+                                                        Added text before Figure 24. Outline drawing - option with liner (3/3).
+
+                                                        Section 4: Control interface: Replaced "camera module" with "Time-of-Flight"
+                                                        sensor.
+
+                                                        Updated Figure 22. Outline drawing (1/3), Figure 23. Outline drawing (2/3),
+                                                        and Figure 24. Outline drawing - option with liner (3/3).
+                                                        Added a note before Figure 24. Outline drawing - option with liner (3/3).
+                                                        Updated Section 9.3.1: Tape outline drawing.
+
+                                                        Updated document title.
+                                                        Updated Application.
+                                                        Removed "new generation" from the Description.
+
+                                                        Updated Section 1: Acronyms and abbreviations.
+                                                        Updated Section 5.5: Digital input and output.
+                                                        Removed the note before Figure 24. Outline drawing - option with liner (3/3),
+                                                        and updated the title of this drawing.
+                                                        Updated Section 8: Laser safety.
+                                                        Removed Figure 26: Example of marking.
+                                                        Updated Section 9.3: Packing.
+                                                        Updated Section 9.3.1: Tape outline drawing.
+                                                        Updated Section 11: Ordering information.
+                                                        Master and slave replaced by controller and target respectively
+
+DS11555 - Rev 6                                                                     page 35/38
+                                                                                                                    VL53L0X
+
+                                                                                                                                                                                    Contents
+
+Contents
+
+1 Acronyms and abbreviations . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 2
+2 Overview . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .3
+
+       2.1 Technical specification . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 3
+       2.2 System block diagram . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 3
+       2.3 Device pinout . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 4
+       2.4 Application schematic . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 5
+3 Functional description . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 6
+       3.1 System functional description . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 6
+       3.2 Firmware state machine description . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 7
+       3.3 Customer manufacturing calibration flow . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 8
+
+                  3.3.1 SPAD and temperature calibration . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 9
+                  3.3.2 Ranging offset calibration . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 9
+                  3.3.3 Crosstalk calibration . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 9
+       3.4 Ranging operating modes . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 10
+       3.5 Ranging profiles . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 10
+       3.6 Ranging profile phases. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 10
+                  3.6.1 Initialization and load calibration data phase . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 11
+                  3.6.2 Ranging phase . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 11
+                  3.6.3 Digital housekeeping. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 12
+       3.7 Getting the data: Interrupt or polling . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 12
+       3.8 Device programming and control . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 12
+       3.9 Power sequence . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 13
+       3.10 Ranging sequence . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 14
+
+4 Control interface. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .15
+       4.1 I²C interface - timing characteristics . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 17
+       4.2 I²C interface - reference registers . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 18
+
+5 Electrical characteristics. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .19
+       5.1 Absolute maximum ratings. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 19
+       5.2 Recommended operating conditions . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 19
+       5.3 Electrostatic discharge . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 19
+       5.4 Current consumption . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 20
+       5.5 Digital input and output. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 20
+
+6 Performance. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .21
+       6.1 Measurement conditions . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 21
+
+DS11555 - Rev 6  page 36/38
+                                                                                                                    VL53L0X
+
+                                                                                                                                                                                    Contents
+
+       6.2 Maximum ranging distance . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 23
+       6.3 Ranging accuracy . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 23
+
+                  6.3.1 Standard deviation . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 23
+                  6.3.2 Range profile examples . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 24
+                  6.3.3 Ranging offset error . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 24
+
+7 Outline drawings . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .25
+8 Laser safety . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .28
+9 Packaging and labeling . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .29
+
+       9.1 Product marking . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 29
+       9.2 Inner box labeling . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 29
+       9.3 Packing. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 29
+
+                  9.3.1 Tape outline drawing . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 30
+       9.4 Pb-free solder reflow process . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 31
+       9.5 Handling and storage precautions . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 32
+
+                  9.5.1 Shock precaution . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 32
+                  9.5.2 Part handling. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 32
+                  9.5.3 Compression force . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 32
+                  9.5.4 Moisture sensitivity level . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 32
+       9.6 Storage temperature conditions . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 32
+
+10 Package information. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .33
+11 Ordering information . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .34
+Revision history . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .35
+
+DS11555 - Rev 6  page 37/38
+                                                                                                                   VL53L0X
+
+                                                                           IMPORTANT NOTICE ­ READ CAREFULLY
+STMicroelectronics NV and its subsidiaries ("ST") reserve the right to make changes, corrections, enhancements, modifications, and improvements to ST
+products and/or to this document at any time without notice. Purchasers should obtain the latest relevant information on ST products before placing orders. ST
+products are sold pursuant to ST's terms and conditions of sale in place at the time of order acknowledgment.
+Purchasers are solely responsible for the choice, selection, and use of ST products and ST assumes no liability for application assistance or the design of
+purchasers' products.
+No license, express or implied, to any intellectual property right is granted by ST herein.
+Resale of ST products with provisions different from the information set forth herein shall void any warranty granted by ST for such product.
+ST and the ST logo are trademarks of ST. For additional information about ST trademarks, refer to www.st.com/trademarks. All other product or service names
+are the property of their respective owners.
+Information in this document supersedes and replaces information previously supplied in any prior versions of this document.
+
+                                                                          © 2024 STMicroelectronics ­ All rights reserved
+
+DS11555 - Rev 6  page 38/38
+
