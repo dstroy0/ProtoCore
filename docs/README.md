@@ -558,8 +558,6 @@ src/
 │   │   │   ├── modbus.h
 │   │   │   ├── modbus_master.c
 │   │   │   └── modbus_master.h
-│   │   ├── opcua/  (opcua.h, opcua.c)
-│   │   ├── opcua_client/  (opcua_client.h, opcua_client.c)
 │   │   ├── powerlink/  (powerlink.h, powerlink.c)
 │   │   ├── profibus/  (profibus.h, profibus.c)
 │   │   ├── profinet/  (profinet.h, profinet.c)
@@ -620,16 +618,13 @@ src/
 │   │   │   ├── dnc.h
 │   │   │   ├── dnc_stream.c
 │   │   │   └── dnc_stream.h
-│   │   ├── euromap77/  (euromap77.h, euromap77.c)
 │   │   ├── fanuc_j519/  (fanuc_j519.h, fanuc_j519.c)
 │   │   ├── focas/  (focas.h, focas.c)
 │   │   ├── haas_mdc/  (haas_mdc.h, haas_mdc.c)
 │   │   ├── lsv2/  (lsv2.h, lsv2.c)
 │   │   ├── mtconnect/  (mtconnect.h, mtconnect.c)
 │   │   ├── packml/  (packml.h, packml.c)
-│   │   ├── robotics/  (robotics.h, robotics.c)
-│   │   ├── safety_scl/  (safety_scl.h, safety_scl.c)
-│   │   └── umati/  (umati.h, umati.c)
+│   │   └── safety_scl/  (safety_scl.h, safety_scl.c)
 │   ├── net/
 │   │   ├── flow_export/  (flow_export.h, flow_export.c)
 │   │   ├── http_client/  (http_client.h, http_client.c)
@@ -648,6 +643,14 @@ src/
 │   │   ├── syslog/  (syslog.h, syslog.c)
 │   │   ├── webhook/  (webhook.h, webhook.c)
 │   │   └── ws_client/  (ws_client.h, ws_client.c)
+│   ├── opcua/
+│   │   ├── models/
+│   │   │   ├── euromap77/  (euromap77.h, euromap77.c)
+│   │   │   ├── robotics/  (robotics.h, robotics.c)
+│   │   │   └── umati/  (umati.h, umati.c)
+│   │   ├── opcua_client/  (opcua_client.h, opcua_client.c)
+│   │   ├── opcua.c
+│   │   └── opcua.h
 │   ├── radio/
 │   │   ├── ble_gatt/  (ble_gatt.h, ble_gatt.c)
 │   │   ├── cc1101/  (cc1101.h, cc1101.c)
@@ -1407,6 +1410,7 @@ guards at compile time.
 | `PROTOCORE_ENFORCE_HOST_HEADER` | `1` | Enforce the RFC 7230 §5.4 Host-header requirement (default on). |
 | `PROTOCORE_ENOCEAN_MAX_DATA` | `512` | Reject an ESP3 telegram whose declared data length exceeds this (framing sanity). |
 | `PROTOCORE_ETH_W5500` | `0` |  |
+| `PROTOCORE_EUROMAP77_BORROW` | `16` |  |
 | `PROTOCORE_EXC_COREDUMP_CHUNK` | `512` | Chunk the core-dump image is streamed out of flash in. |
 | `PROTOCORE_FAILSAFE_MAX_LIFELINES` | `8` | Max monitored lifelines in the fail-safe registry (static, zero-heap). |
 | `PROTOCORE_FDC2214_I2C_ADDR` | `0x2A` | I2C address of the FDC2214, set by the ADDR pin: 0x2A when it is low, 0x2B when it is high. |
@@ -1533,6 +1537,7 @@ guards at compile time.
 | `PROTOCORE_RELAY_MAX_PUBLISH` | `4` | Max published relay ports (bind table size) for the relay listener. |
 | `PROTOCORE_REQUEST_TIMEOUT_MS` | `10000` | Request-header read deadline in milliseconds (slow-loris defense). |
 | `PROTOCORE_ROBOTICS_AXES` | `6` | Number of Axes the robotics MotionDevice exposes (default 6; must fit PROTOCORE_OPCUA_REF_MAX). |
+| `PROTOCORE_ROBOTICS_BORROW` | `128` |  |
 | `PROTOCORE_ROBOTICS_NS` | `1` | NamespaceIndex the robotics MotionDeviceSystem nodes live at (default 1). |
 | `PROTOCORE_RTC_I2C_ADDR` | `0x68` | I2C address of the RTC (DS1307/DS3231 are fixed at 0x68). |
 | `PROTOCORE_SCPI_ERR_QUEUE` | `8` | SCPI error/event queue depth (entries). |
@@ -1602,6 +1607,7 @@ guards at compile time.
 | `PROTOCORE_UDP_RX_BUF_SIZE` | `1472` | Largest UDP datagram a bound port accepts, in bytes. |
 | `PROTOCORE_UDP_RX_RING` | `2048` | Per-slot UDP receive ring, in bytes. |
 | `PROTOCORE_UDP_TELEMETRY_BUF` | `256` | Stack buffer for one telemetry line (bytes). |
+| `PROTOCORE_UMATI_BORROW` | `16` |  |
 | `PROTOCORE_UMATI_NS` | `1` | NamespaceIndex the umati MachineTool nodes live at (default 1). |
 | `PROTOCORE_VL53L0X_I2C_ADDR` | `0x29` | I2C address of the VL53L0X. |
 | `PROTOCORE_WEBDAV_BORROW` | `4096` |  |
