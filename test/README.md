@@ -1175,7 +1175,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
     * **Objective**: Header round trip
     * **Assertions**:
       * <code>TEST_ASSERT_EQUAL_size_t((size_t)ADS_HDR_LEN, n);</code>
-      * <code>Assert true (protocore_ads_parse_ams_header(buf, n, &h))</code>
+      * <code>Assert true (Ads.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(r.target.net_id, h.target.net_id, ADS_NET_ID_LEN);</code>
       * <code>TEST_ASSERT_EQUAL_UINT16(851u, h.target.port);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(r.source.net_id, h.source.net_id, ADS_NET_ID_LEN);</code>
@@ -1194,11 +1194,11 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
     * **Objective**: index group 0x4020 (%M flag memory), offset 0x20, length 3, then the data
     * **Assertions**:
       * <code>TEST_ASSERT_EQUAL_size_t((size_t)ADS_HDR_LEN + 12u + 3u, n);</code>
-      * <code>Assert true (protocore_ads_parse_ams_header(buf, n, &h))</code>
+      * <code>Assert true (Ads.ok)</code>
       * <code>Assert equal int (ADS_COMMAND_WRITE, h.cmd)</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(15u, h.data_len); // 12 + 3</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(PAYLOAD, h.data, 15);</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_ads_build_write(buf, sizeof(buf), &r, 0, 0, NULL, 4)); // len without data</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Ads.n); // len without data</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -1207,7 +1207,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
     * **Objective**: Read write symbol by name
     * **Assertions**:
       * <code>TEST_ASSERT_EQUAL_size_t((size_t)ADS_HDR_LEN + 16u + 8u, n);</code>
-      * <code>Assert true (protocore_ads_parse_ams_header(buf, n, &h))</code>
+      * <code>Assert true (Ads.ok)</code>
       * <code>Assert equal int (ADS_COMMAND_READ_WRITE, h.cmd)</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(24u, h.data_len);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(PAYLOAD, h.data, 24);</code>
@@ -1219,7 +1219,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
     * **Objective**: AdsState 5 = Run, DeviceState 0, Length 0, all little-endian
     * **Assertions**:
       * <code>TEST_ASSERT_EQUAL_size_t((size_t)ADS_HDR_LEN + 8u, n);</code>
-      * <code>Assert true (protocore_ads_parse_ams_header(buf, n, &h))</code>
+      * <code>Assert true (Ads.ok)</code>
       * <code>Assert equal int (ADS_COMMAND_WRITE_CONTROL, h.cmd)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(PAYLOAD, h.data, 8);</code>
       * <code>Assert equal int (5, ADS_STATE_RUN)</code>
@@ -1231,13 +1231,13 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
     * **Objective**: 0xF005, offset 0x11, length 2, mode 4 (server on change), max delay 0,
     * **Assertions**:
       * <code>TEST_ASSERT_EQUAL_size_t((size_t)ADS_HDR_LEN + 40u, n);</code>
-      * <code>Assert true (protocore_ads_parse_ams_header(buf, n, &h))</code>
+      * <code>Assert true (Ads.ok)</code>
       * <code>Assert equal int (ADS_COMMAND_ADD_NOTIFICATION, h.cmd)</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(40u, h.data_len);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(PAYLOAD, h.data, 40);</code>
       * <code>Assert equal int (4, ADS_TRANS_MODE_SERVER_ON_CHANGE)</code>
       * <code>TEST_ASSERT_EQUAL_size_t((size_t)ADS_HDR_LEN + 4u, n);</code>
-      * <code>Assert true (protocore_ads_parse_ams_header(buf, n, &h))</code>
+      * <code>Assert true (Ads.ok)</code>
       * <code>Assert equal int (ADS_COMMAND_DEL_NOTIFICATION, h.cmd)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(HANDLE, h.data, 4);</code>
   </details>
@@ -1247,16 +1247,16 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: An error result: ADS error 0x00000706 (invalid index group / symbol not found).
     * **Assertions**:
-      * <code>Assert true (protocore_ads_parse_read(RESP, sizeof(RESP), &res))</code>
+      * <code>Assert true (Ads.ok)</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(0u, res.result);</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(4u, res.len);</code>
       * <code>Assert equal ptr (RESP + 8, res.data)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(RESP + 8, res.data, 4);</code>
-      * <code>Assert true (protocore_ads_parse_read(ERR, sizeof(ERR), &res))</code>
+      * <code>Assert true (Ads.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX32(0x00000706u, res.result);</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(0u, res.len);</code>
-      * <code>Assert false (protocore_ads_parse_read(LIES, sizeof(LIES), &res))</code>
-      * <code>Assert false (protocore_ads_parse_read(RESP, 7, &res))</code>
+      * <code>Assert false (Ads.ok)</code>
+      * <code>Assert false (Ads.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -1264,14 +1264,14 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Parse read state response
     * **Assertions**:
-      * <code>Assert true (protocore_ads_parse_read_state(RESP, sizeof(RESP), &st))</code>
+      * <code>Assert true (Ads.ok)</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(0u, st.result);</code>
       * <code>TEST_ASSERT_EQUAL_UINT16(ADS_STATE_RUN, st.protocore_ads_state);</code>
       * <code>TEST_ASSERT_EQUAL_UINT16(1u, st.device_state);</code>
-      * <code>Assert false (protocore_ads_parse_read_state(RESP, 7, &st))</code>
-      * <code>Assert true (protocore_ads_parse_result(RESP, sizeof(RESP), &result))</code>
+      * <code>Assert false (Ads.ok)</code>
+      * <code>Assert true (Ads.ok)</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(0u, result);</code>
-      * <code>Assert false (protocore_ads_parse_result(RESP, 3, &result))</code>
+      * <code>Assert false (Ads.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -1279,14 +1279,14 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Parse device info terminates a full name
     * **Assertions**:
-      * <code>Assert true (protocore_ads_parse_read_device_info(RESP, sizeof(RESP), &info))</code>
+      * <code>Assert true (Ads.ok)</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(0u, info.result);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(3u, info.version_major);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(1u, info.version_minor);</code>
       * <code>TEST_ASSERT_EQUAL_UINT16(4111u, info.version_build);</code>
       * <code>Assert equal string ("TwinCAT3PlcRuntm", info.device_name)</code>
       * <code>TEST_ASSERT_EQUAL_size_t(16u, strlen(info.device_name));</code>
-      * <code>Assert false (protocore_ads_parse_read_device_info(RESP, 23, &info))</code>
+      * <code>Assert false (Ads.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -1294,10 +1294,10 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Parse add notification response
     * **Assertions**:
-      * <code>Assert true (protocore_ads_parse_add_notification(RESP, sizeof(RESP), &result, &handle))</code>
+      * <code>Assert true (Ads.ok)</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(0u, result);</code>
       * <code>TEST_ASSERT_EQUAL_HEX32(0x87654321u, handle);</code>
-      * <code>Assert false (protocore_ads_parse_add_notification(RESP, 7, &result, &handle))</code>
+      * <code>Assert false (Ads.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -1305,15 +1305,15 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: A sample size that runs off the end aborts the walk instead of reading past the buffer.
     * **Assertions**:
-      * <code>Assert true (protocore_ads_parse_notification(NOTE, sizeof(NOTE), on_sample, NULL))</code>
+      * <code>Assert true (Ads.ok)</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(2u, g_calls);</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(10u, g_handles[0]);</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(11u, g_handles[1]);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x11u, g_first_sample);</code>
       * <code>TEST_ASSERT_EQUAL_HEX64(0x019DB1DED53E8000ull, g_stamp);</code>
-      * <code>Assert false (protocore_ads_parse_notification(TRUNC, sizeof(TRUNC), on_sample, NULL))</code>
+      * <code>Assert false (Ads.ok)</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(0u, g_calls);</code>
-      * <code>Assert false (protocore_ads_parse_notification(NOTE, 7, on_sample, NULL))</code>
+      * <code>Assert false (Ads.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -1321,13 +1321,13 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Malformed framing is refused
     * **Assertions**:
-      * <code>Assert false (protocore_ads_parse_ams_header(bad, n, &h))</code>
-      * <code>Assert false (protocore_ads_parse_ams_header(bad, n, &h))</code>
-      * <code>Assert false (protocore_ads_parse_ams_header(bad, n, &h))</code>
-      * <code>Assert false (protocore_ads_parse_ams_header(bad, n, &h))</code>
-      * <code>Assert false (protocore_ads_parse_ams_header(buf, (size_t)ADS_HDR_LEN - 1, &h))</code>
-      * <code>Assert false (protocore_ads_parse_ams_header(NULL, n, &h))</code>
-      * <code>Assert false (protocore_ads_parse_ams_header(buf, n, NULL))</code>
+      * <code>Assert false (Ads.ok)</code>
+      * <code>Assert false (Ads.ok)</code>
+      * <code>Assert false (Ads.ok)</code>
+      * <code>Assert false (Ads.ok)</code>
+      * <code>Assert false (Ads.ok)</code>
+      * <code>Assert false (Ads.ok)</code>
+      * <code>Assert false (Ads.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -1335,10 +1335,10 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Builders refuse a short buffer
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_ads_build_read_device_info(buf, (size_t)ADS_HDR_LEN - 1, &r));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_ads_build_read(buf, (size_t)ADS_HDR_LEN + 11u, &r, 0, 0, 4));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_ads_build_read_device_info(NULL, sizeof(buf), &r));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_ads_build_read_device_info(buf, sizeof(buf), NULL));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Ads.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Ads.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Ads.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Ads.n);</code>
   </details>
 
 </details>
@@ -3976,11 +3976,11 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
       * <code>TEST_ASSERT_EQUAL_size_t(10u, n);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, frame[2]); // 10 = 0x000A, big-endian</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x0Au, frame[3]);</code>
-      * <code>Assert true (protocore_bvlc_parse(frame, n, &function, &slice, &slice_len))</code>
+      * <code>Assert true (Bacnet.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(BVLC_FUNC_ORIGINAL_UNICAST, function);</code>
       * <code>TEST_ASSERT_EQUAL_size_t(sizeof(NPDU), slice_len);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(NPDU, slice, sizeof(NPDU));</code>
-      * <code>Assert true (protocore_bvlc_parse(padded, n + 8, &function, &slice, &slice_len))</code>
+      * <code>Assert true (Bacnet.ok)</code>
       * <code>TEST_ASSERT_EQUAL_size_t(sizeof(NPDU), slice_len);</code>
   </details>
 
@@ -3989,14 +3989,14 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Bvlc refusals
     * **Assertions**:
-      * <code>Assert false (protocore_bvlc_parse(frame, sizeof(frame), &function, &slice, &slice_len))</code>
-      * <code>Assert false (protocore_bvlc_parse(frame, sizeof(frame), &function, &slice, &slice_len))</code>
-      * <code>Assert false (protocore_bvlc_parse(frame, sizeof(frame), &function, &slice, &slice_len))</code>
-      * <code>Assert false (protocore_bvlc_parse(frame, 3, &function, &slice, &slice_len))</code>
-      * <code>Assert false (protocore_bvlc_parse(NULL, sizeof(frame), &function, &slice, &slice_len))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_bvlc_build(out, 5, BVLC_FUNC_ORIGINAL_UNICAST, frame, 4)); // 4+4 &gt; 5</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_bvlc_build(NULL, sizeof(out), BVLC_FUNC_ORIGINAL_UNICAST, frame, 4));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_bvlc_build(out, sizeof(out), BVLC_FUNC_ORIGINAL_UNICAST, NULL, 4));</code>
+      * <code>Assert false (Bacnet.ok)</code>
+      * <code>Assert false (Bacnet.ok)</code>
+      * <code>Assert false (Bacnet.ok)</code>
+      * <code>Assert false (Bacnet.ok)</code>
+      * <code>Assert false (Bacnet.ok)</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Bacnet.n); // 4+4 &gt; 5</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Bacnet.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Bacnet.n);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -4019,7 +4019,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
     * **Assertions**:
       * <code>TEST_ASSERT_EQUAL_size_t(9u, n);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, buf, 9);</code>
-      * <code>Assert true (protocore_npdu_parse(buf, n, &info))</code>
+      * <code>Assert true (Bacnet.ok)</code>
       * <code>Assert true (info.dest_present)</code>
       * <code>Assert false (info.src_present)</code>
       * <code>Assert false (info.network_message)</code>
@@ -4034,7 +4034,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Hop count follows the source fields
     * **Assertions**:
-      * <code>Assert true (protocore_npdu_parse(NPDU, sizeof(NPDU), &info))</code>
+      * <code>Assert true (Bacnet.ok)</code>
       * <code>Assert true (info.dest_present)</code>
       * <code>Assert true (info.src_present)</code>
       * <code>TEST_ASSERT_EQUAL_HEX16(0x0005u, info.dnet);</code>
@@ -4050,15 +4050,15 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Npdu refusals
     * **Assertions**:
-      * <code>Assert false (protocore_npdu_parse(BAD_VERSION, sizeof(BAD_VERSION), &info))</code>
-      * <code>Assert false (protocore_npdu_parse(SHORT_DEST, sizeof(SHORT_DEST), &info))</code>
-      * <code>Assert false (protocore_npdu_parse(LYING_DLEN, sizeof(LYING_DLEN), &info))</code>
-      * <code>Assert false (protocore_npdu_parse(NO_HOP, sizeof(NO_HOP), &info))</code>
-      * <code>Assert false (protocore_npdu_parse(SHORT_SRC, sizeof(SHORT_SRC), &info))</code>
-      * <code>Assert false (protocore_npdu_parse(BAD_VERSION, 1, &info))</code>
-      * <code>Assert false (protocore_npdu_parse(NULL, 4, &info))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_npdu_build(out, 3, PROTO_FALSE, 0, PROTO_FALSE, 0, NULL, 0, 0, APDU, 2));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(</code>
+      * <code>Assert false (Bacnet.ok)</code>
+      * <code>Assert false (Bacnet.ok)</code>
+      * <code>Assert false (Bacnet.ok)</code>
+      * <code>Assert false (Bacnet.ok)</code>
+      * <code>Assert false (Bacnet.ok)</code>
+      * <code>Assert false (Bacnet.ok)</code>
+      * <code>Assert false (Bacnet.ok)</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Bacnet.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Bacnet.n);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -4066,7 +4066,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Network layer message is flagged
     * **Assertions**:
-      * <code>Assert true (protocore_npdu_parse(NPDU, sizeof(NPDU), &info))</code>
+      * <code>Assert true (Bacnet.ok)</code>
       * <code>Assert true (info.network_message)</code>
       * <code>Assert false (info.dest_present)</code>
       * <code>TEST_ASSERT_EQUAL_size_t(2u, info.apdu_len);</code>
@@ -4081,10 +4081,10 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, buf, 6);</code>
       * <code>TEST_ASSERT_EQUAL_size_t(8u, n);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(WIDE, buf, 8);</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_apdu_build_who_is(buf, sizeof(buf), 0, BACNET_MAX_INSTANCE + 1, PROTO_TRUE));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_apdu_build_who_is(buf, sizeof(buf), 100, 1, PROTO_TRUE));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_apdu_build_who_is(buf, 5, 1, 100, PROTO_TRUE));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_apdu_build_who_is(NULL, sizeof(buf), 0, 0, PROTO_FALSE));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Bacnet.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Bacnet.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Bacnet.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Bacnet.n);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -4096,10 +4096,10 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, buf, 15);</code>
       * <code>TEST_ASSERT_EQUAL_size_t(13u, n);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(SMALL, buf, 13);</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_apdu_build_i_am(buf, sizeof(buf), BACNET_MAX_INSTANCE + 1, 50, 0, 7));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_apdu_build_i_am(buf, sizeof(buf), 0, 50, 4, 7)); // segmentation is 0..3</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_apdu_build_i_am(buf, 12, 0, 50, 3, 7));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_apdu_build_i_am(NULL, sizeof(buf), 0, 50, 0, 7));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Bacnet.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Bacnet.n); // segmentation is 0..3</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Bacnet.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Bacnet.n);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -4113,10 +4113,10 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
       * <code>Assert equal int (12, BACNET_SVC_CONF_READ_PROPERTY)</code>
       * <code>TEST_ASSERT_EQUAL_size_t(11u, n);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(TOP, buf, 11);</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_apdu_build_read_property(buf, sizeof(buf), 1, 0, 0x400u, 5, 85));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_apdu_build_read_property(buf, 10, 1, 0, 0, 5, 85));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_apdu_build_read_property(NULL, sizeof(buf), 1, 0, 0, 5, 85));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Bacnet.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Bacnet.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Bacnet.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Bacnet.n);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -4124,7 +4124,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Apdu header parse per pdu type
     * **Assertions**:
-      * <code>Assert true (protocore_apdu_parse(CONF, sizeof(CONF), &a))</code>
+      * <code>Assert true (Bacnet.ok)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(BACNET_PDU_CONFIRMED_REQUEST, a.pdu_type);</code>
       * <code>Assert true (a.sa)</code>
       * <code>Assert false (a.segmented)</code>
@@ -4132,16 +4132,16 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
       * <code>TEST_ASSERT_EQUAL_UINT8(12u, a.service_choice);</code>
       * <code>TEST_ASSERT_EQUAL_size_t(2u, a.service_data_len);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0xAAu, a.service_data[0]);</code>
-      * <code>Assert true (protocore_apdu_parse(UNCONF, sizeof(UNCONF), &a))</code>
+      * <code>Assert true (Bacnet.ok)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(BACNET_PDU_UNCONFIRMED_REQUEST, a.pdu_type);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(BACNET_SVC_UN_WHO_IS, a.service_choice);</code>
       * <code>TEST_ASSERT_EQUAL_size_t(0u, a.service_data_len);</code>
       * <code>Assert null (a.service_data)</code>
-      * <code>Assert true (protocore_apdu_parse(SIMPLE_ACK, sizeof(SIMPLE_ACK), &a))</code>
+      * <code>Assert true (Bacnet.ok)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(BACNET_PDU_SIMPLE_ACK, a.pdu_type);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(42u, a.invoke_id);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(15u, a.service_choice);</code>
-      * <code>Assert true (protocore_apdu_parse(COMPLEX_ACK, sizeof(COMPLEX_ACK), &a))</code>
+      * <code>Assert true (Bacnet.ok)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(BACNET_PDU_COMPLEX_ACK, a.pdu_type);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(42u, a.invoke_id);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(12u, a.service_choice);</code>
@@ -4153,19 +4153,19 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: confirmed request, SEG \| MOR set: flags, max-resp, invoke, sequence, window, choice, data
     * **Assertions**:
-      * <code>Assert true (protocore_apdu_parse(SEG_REQ, sizeof(SEG_REQ), &a))</code>
+      * <code>Assert true (Bacnet.ok)</code>
       * <code>Assert true (a.segmented)</code>
       * <code>Assert true (a.more_follows)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(42u, a.invoke_id);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(12u, a.service_choice);</code>
       * <code>TEST_ASSERT_EQUAL_size_t(2u, a.service_data_len);</code>
-      * <code>Assert true (protocore_apdu_parse(SEG_ACK, sizeof(SEG_ACK), &a))</code>
+      * <code>Assert true (Bacnet.ok)</code>
       * <code>Assert true (a.segmented)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(42u, a.invoke_id);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(12u, a.service_choice);</code>
       * <code>TEST_ASSERT_EQUAL_size_t(0u, a.service_data_len);</code>
-      * <code>Assert false (protocore_apdu_parse(SEG_REQ, 5, &a))</code>
-      * <code>Assert false (protocore_apdu_parse(SEG_ACK, 4, &a))</code>
+      * <code>Assert false (Bacnet.ok)</code>
+      * <code>Assert false (Bacnet.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -4173,16 +4173,16 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Unsupported pdu types and short buffers
     * **Assertions**:
-      * <code>Assert false (protocore_apdu_parse(SEGMENT_ACK, sizeof(SEGMENT_ACK), &a))</code>
-      * <code>Assert false (protocore_apdu_parse(ERROR_PDU, sizeof(ERROR_PDU), &a))</code>
-      * <code>Assert false (protocore_apdu_parse(REJECT, sizeof(REJECT), &a))</code>
-      * <code>Assert false (protocore_apdu_parse(ABORT, sizeof(ABORT), &a))</code>
-      * <code>Assert false (protocore_apdu_parse(CONF, 2, &a))</code>
-      * <code>Assert false (protocore_apdu_parse(CONF, 3, &a))</code>
-      * <code>Assert true (protocore_apdu_parse(CONF, 4, &a))</code>
-      * <code>Assert false (protocore_apdu_parse(CONF, 0, &a))</code>
-      * <code>Assert false (protocore_apdu_parse(NULL, 4, &a))</code>
-      * <code>Assert false (protocore_apdu_parse(CONF, 4, NULL))</code>
+      * <code>Assert false (Bacnet.ok)</code>
+      * <code>Assert false (Bacnet.ok)</code>
+      * <code>Assert false (Bacnet.ok)</code>
+      * <code>Assert false (Bacnet.ok)</code>
+      * <code>Assert false (Bacnet.ok)</code>
+      * <code>Assert false (Bacnet.ok)</code>
+      * <code>Assert true (Bacnet.ok)</code>
+      * <code>Assert false (Bacnet.ok)</code>
+      * <code>Assert false (Bacnet.ok)</code>
+      * <code>Assert false (Bacnet.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -4190,12 +4190,12 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Datagram round trip
     * **Assertions**:
-      * <code>Assert true (protocore_bvlc_parse(frame, flen, &function, &slice, &slice_len))</code>
+      * <code>Assert true (Bacnet.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(BVLC_FUNC_ORIGINAL_BROADCAST, function);</code>
-      * <code>Assert true (protocore_npdu_parse(slice, slice_len, &info))</code>
+      * <code>Assert true (Bacnet.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX16(0xFFFFu, info.dnet);</code>
       * <code>TEST_ASSERT_EQUAL_size_t(alen, info.apdu_len);</code>
-      * <code>Assert true (protocore_apdu_parse(info.apdu, info.apdu_len, &a))</code>
+      * <code>Assert true (Bacnet.ok)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(BACNET_PDU_UNCONFIRMED_REQUEST, a.pdu_type);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(BACNET_SVC_UN_WHO_IS, a.service_choice);</code>
       * <code>TEST_ASSERT_EQUAL_size_t(4u, a.service_data_len); // the two context-tagged limits</code>
@@ -5405,12 +5405,12 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Expedited sdo upload of the identity vendor id
     * **Assertions**:
-      * <code>Assert true (protocore_canopen_build_sdo_read(&req, 5, 0x1018u, 1))</code>
+      * <code>Assert true (Canopen.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX32(0x605u, req.id);</code>
       * <code>Assert false (req.extended)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(8u, req.dlc);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, req.data, 8);</code>
-      * <code>Assert true (protocore_canopen_parse_sdo_response(&resp, &out))</code>
+      * <code>Assert true (Canopen.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX16(0x1018u, out.index);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(1u, out.sub);</code>
       * <code>Assert false (out.is_abort)</code>
@@ -5425,21 +5425,21 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: The upload response side reads the same n back out.
     * **Assertions**:
-      * <code>Assert true (protocore_canopen_build_sdo_write(&f, 0x7F, 0x6040u, 0, DATA, CASES[i].len))</code>
+      * <code>Assert true (Canopen.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX32(0x600u + 0x7Fu, f.id);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(CASES[i].cmd, f.data[0]);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x40u, f.data[1]); // 0x6040 little-endian</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x60u, f.data[2]);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(0u, f.data[3]);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(DATA, f.data + 4, CASES[i].len);</code>
-      * <code>Assert true (protocore_canopen_parse_sdo_response(&f, &out))</code>
+      * <code>Assert true (Canopen.ok)</code>
       * <code>Assert true (out.expedited)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(len, out.len);</code>
-      * <code>Assert false (protocore_canopen_build_sdo_write(&f, 1, 0x1000u, 0, DATA, 0))</code>
-      * <code>Assert false (protocore_canopen_build_sdo_write(&f, 1, 0x1000u, 0, DATA, 5))</code>
-      * <code>Assert false (protocore_canopen_build_sdo_write(&f, 1, 0x1000u, 0, NULL, 2))</code>
-      * <code>Assert false (protocore_canopen_build_sdo_read(&f, 0, 0x1000u, 0))</code>
-      * <code>Assert false (protocore_canopen_build_sdo_read(&f, 128, 0x1000u, 0))</code>
+      * <code>Assert false (Canopen.ok)</code>
+      * <code>Assert false (Canopen.ok)</code>
+      * <code>Assert false (Canopen.ok)</code>
+      * <code>Assert false (Canopen.ok)</code>
+      * <code>Assert false (Canopen.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -5447,16 +5447,16 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: to_server picks the client -> server COB-ID instead.
     * **Assertions**:
-      * <code>Assert true (protocore_canopen_build_sdo_abort(&f, 3, 0x1018u, 9, CANOPEN_ABORT_NO_SUBINDEX, PROTO_FALSE))</code>
+      * <code>Assert true (Canopen.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX32(0x583u, f.id);                                           // server -&gt; client</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, f.data, 8);</code>
-      * <code>Assert true (protocore_canopen_parse_sdo_response(&f, &out))</code>
+      * <code>Assert true (Canopen.ok)</code>
       * <code>Assert true (out.is_abort)</code>
       * <code>TEST_ASSERT_EQUAL_HEX32(CANOPEN_ABORT_NO_SUBINDEX, out.abort_code);</code>
       * <code>TEST_ASSERT_EQUAL_HEX16(0x1018u, out.index);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(9u, out.sub);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(0u, out.len);</code>
-      * <code>Assert true (protocore_canopen_build_sdo_abort(&f, 3, 0x1018u, 9, CANOPEN_ABORT_NO_OBJECT, PROTO_TRUE))</code>
+      * <code>Assert true (Canopen.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX32(0x603u, f.id);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, f.data[4]); // 0x06020000</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x02u, f.data[6]);</code>
@@ -5468,16 +5468,16 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: A command specifier the server never sends (1 = client download) is refused.
     * **Assertions**:
-      * <code>Assert true (protocore_canopen_parse_sdo_response(&f, &out))</code>
+      * <code>Assert true (Canopen.ok)</code>
       * <code>Assert false (out.is_abort)</code>
       * <code>Assert false (out.is_upload)</code>
       * <code>Assert false (out.expedited)</code>
       * <code>TEST_ASSERT_EQUAL_HEX16(0x6040u, out.index);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(0u, out.len);</code>
-      * <code>Assert false (protocore_canopen_parse_sdo_response(&f, &out))</code>
-      * <code>Assert false (protocore_canopen_parse_sdo_response(&f, &out))</code>
-      * <code>Assert false (protocore_canopen_parse_sdo_response(&f, &out))</code>
-      * <code>Assert false (protocore_canopen_parse_sdo_response(&f, &out))</code>
+      * <code>Assert false (Canopen.ok)</code>
+      * <code>Assert false (Canopen.ok)</code>
+      * <code>Assert false (Canopen.ok)</code>
+      * <code>Assert false (Canopen.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -5485,12 +5485,12 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Nmt node control
     * **Assertions**:
-      * <code>Assert true (protocore_canopen_build_nmt(&f, CANOPEN_NMT_START, 0))</code>
+      * <code>Assert true (Canopen.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX32(0x000u, f.id);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(2u, f.dlc);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x01u, f.data[0]);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(0u, f.data[1]);</code>
-      * <code>Assert true (protocore_canopen_build_nmt(&f, CANOPEN_NMT_RESET_COMM, 42))</code>
+      * <code>Assert true (Canopen.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x82u, f.data[0]);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(42u, f.data[1]);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x01u, CANOPEN_NMT_START);</code>
@@ -5498,9 +5498,9 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
       * <code>TEST_ASSERT_EQUAL_HEX8(0x80u, CANOPEN_NMT_PRE_OP);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x81u, CANOPEN_NMT_RESET_NODE);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x82u, CANOPEN_NMT_RESET_COMM);</code>
-      * <code>Assert false (protocore_canopen_build_nmt(&f, CANOPEN_NMT_START, 128))</code>
-      * <code>Assert false (protocore_canopen_build_nmt(NULL, CANOPEN_NMT_START, 1))</code>
-      * <code>Assert true (protocore_canopen_parse(&f, &m))</code>
+      * <code>Assert false (Canopen.ok)</code>
+      * <code>Assert false (Canopen.ok)</code>
+      * <code>Assert true (Canopen.ok)</code>
       * <code>Assert equal int (CANOPEN_T_NMT, m.type)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(0u, m.node_id);</code>
   </details>
@@ -5510,29 +5510,29 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: 0x8130 = the "communication error / bus off" emergency error code
     * **Assertions**:
-      * <code>Assert true (protocore_canopen_build_sync(&sync))</code>
+      * <code>Assert true (Canopen.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX32(0x080u, sync.id);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(0u, sync.dlc);</code>
-      * <code>Assert true (protocore_canopen_parse(&sync, &m))</code>
+      * <code>Assert true (Canopen.ok)</code>
       * <code>Assert equal int (CANOPEN_T_SYNC, m.type)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(0u, m.node_id);</code>
-      * <code>Assert true (protocore_canopen_build_emcy(&emcy, 4, 0x8130u, 0x11, MSEF))</code>
+      * <code>Assert true (Canopen.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX32(0x084u, emcy.id);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(8u, emcy.dlc);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x30u, emcy.data[0]); // error code little-endian</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x81u, emcy.data[1]);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x11u, emcy.data[2]); // object 0x1001 error register</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(MSEF, emcy.data + 3, 5);</code>
-      * <code>Assert true (protocore_canopen_parse(&emcy, &m))</code>
+      * <code>Assert true (Canopen.ok)</code>
       * <code>Assert equal int (CANOPEN_T_EMCY, m.type)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(4u, m.node_id);</code>
-      * <code>Assert true (protocore_canopen_parse_emcy(&emcy, &node, &code, &reg, got))</code>
+      * <code>Assert true (Canopen.ok)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(4u, node);</code>
       * <code>TEST_ASSERT_EQUAL_HEX16(0x8130u, code);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x11u, reg);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(MSEF, got, 5);</code>
-      * <code>Assert false (protocore_canopen_parse_emcy(&sync, &node, &code, &reg, got))</code>
-      * <code>Assert false (protocore_canopen_build_emcy(&emcy, 0, 0, 0, MSEF))</code>
+      * <code>Assert false (Canopen.ok)</code>
+      * <code>Assert false (Canopen.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -5540,26 +5540,26 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Boot-up is the state-0 heartbeat a node emits on entering Pre-operational.
     * **Assertions**:
-      * <code>Assert true (protocore_canopen_build_heartbeat(&f, 0x7F, CANOPEN_STATE_OPERATIONAL))</code>
+      * <code>Assert true (Canopen.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX32(0x77Fu, f.id); // 0x700 + 127</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(1u, f.dlc);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x05u, f.data[0]);</code>
-      * <code>Assert true (protocore_canopen_parse_heartbeat(&f, &node, &state))</code>
+      * <code>Assert true (Canopen.ok)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(0x7Fu, node);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(CANOPEN_STATE_OPERATIONAL, state);</code>
-      * <code>Assert true (protocore_canopen_parse_heartbeat(&f, &node, &state))</code>
+      * <code>Assert true (Canopen.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(CANOPEN_STATE_OPERATIONAL, state);</code>
-      * <code>Assert true (protocore_canopen_build_heartbeat(&f, 1, CANOPEN_STATE_BOOTUP))</code>
-      * <code>Assert true (protocore_canopen_parse_heartbeat(&f, &node, &state))</code>
+      * <code>Assert true (Canopen.ok)</code>
+      * <code>Assert true (Canopen.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, state);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, CANOPEN_STATE_BOOTUP);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x04u, CANOPEN_STATE_STOPPED);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x05u, CANOPEN_STATE_OPERATIONAL);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x7Fu, CANOPEN_STATE_PRE_OP);</code>
-      * <code>Assert false (protocore_canopen_build_heartbeat(&f, 0, CANOPEN_STATE_OPERATIONAL))</code>
-      * <code>Assert false (protocore_canopen_build_heartbeat(&f, 128, CANOPEN_STATE_OPERATIONAL))</code>
-      * <code>Assert false (protocore_canopen_parse_heartbeat(&other, &node, &state))</code>
-      * <code>Assert false (protocore_canopen_parse_heartbeat(&other, &node, &state))</code>
+      * <code>Assert false (Canopen.ok)</code>
+      * <code>Assert false (Canopen.ok)</code>
+      * <code>Assert false (Canopen.ok)</code>
+      * <code>Assert false (Canopen.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -5567,23 +5567,23 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: The four reserved bits never reach the wire, and never come back off it.
     * **Assertions**:
-      * <code>Assert true (protocore_canopen_build_time(&f, 86399999u, 5844u))</code>
+      * <code>Assert true (Canopen.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX32(0x100u, f.id);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(CANOPEN_TIME_LEN, f.dlc);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, f.data, 6);</code>
-      * <code>Assert true (protocore_canopen_parse_time(&f, &t))</code>
+      * <code>Assert true (Canopen.ok)</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(86399999u, t.ms_since_midnight);</code>
       * <code>TEST_ASSERT_EQUAL_UINT16(5844u, t.days_since_1984);</code>
-      * <code>Assert true (protocore_canopen_build_time(&f, 0xF0000001u, 1))</code>
+      * <code>Assert true (Canopen.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, f.data[3]);</code>
-      * <code>Assert true (protocore_canopen_parse_time(&f, &t))</code>
+      * <code>Assert true (Canopen.ok)</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(1u, t.ms_since_midnight);</code>
-      * <code>Assert true (protocore_canopen_parse_time(&f, &t))</code>
+      * <code>Assert true (Canopen.ok)</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(1u, t.ms_since_midnight);</code>
-      * <code>Assert true (protocore_canopen_parse(&f, &m))</code>
+      * <code>Assert true (Canopen.ok)</code>
       * <code>Assert equal int (CANOPEN_T_TIME, m.type)</code>
-      * <code>Assert false (protocore_canopen_parse_time(&f, &t))</code>
-      * <code>Assert false (protocore_canopen_parse_time(&f, &t))</code>
+      * <code>Assert false (Canopen.ok)</code>
+      * <code>Assert false (Canopen.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -5591,26 +5591,26 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: A zero-length PDO is legal.
     * **Assertions**:
-      * <code>Assert true (protocore_canopen_build_tpdo(&f, n, 9, DATA, 8))</code>
+      * <code>Assert true (Canopen.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX32(TX[n - 1] + 9u, f.id);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(8u, f.dlc);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(DATA, f.data, 8);</code>
-      * <code>Assert true (protocore_canopen_parse(&f, &m))</code>
+      * <code>Assert true (Canopen.ok)</code>
       * <code>Assert equal int (CANOPEN_T_TPDO, m.type)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(n, m.pdo_num);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(9u, m.node_id);</code>
-      * <code>Assert true (protocore_canopen_build_rpdo(&f, n, 9, DATA, 2))</code>
+      * <code>Assert true (Canopen.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX32(RX[n - 1] + 9u, f.id);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(2u, f.dlc);</code>
-      * <code>Assert true (protocore_canopen_parse(&f, &m))</code>
+      * <code>Assert true (Canopen.ok)</code>
       * <code>Assert equal int (CANOPEN_T_RPDO, m.type)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(n, m.pdo_num);</code>
-      * <code>Assert false (protocore_canopen_build_tpdo(&f, 0, 9, DATA, 8))</code>
-      * <code>Assert false (protocore_canopen_build_tpdo(&f, 5, 9, DATA, 8))</code>
-      * <code>Assert false (protocore_canopen_build_tpdo(&f, 1, 9, DATA, 9))</code>
-      * <code>Assert false (protocore_canopen_build_rpdo(&f, 1, 0, DATA, 8))</code>
-      * <code>Assert false (protocore_canopen_build_rpdo(&f, 1, 9, NULL, 4))</code>
-      * <code>Assert true (protocore_canopen_build_tpdo(&f, 1, 9, NULL, 0))</code>
+      * <code>Assert false (Canopen.ok)</code>
+      * <code>Assert false (Canopen.ok)</code>
+      * <code>Assert false (Canopen.ok)</code>
+      * <code>Assert false (Canopen.ok)</code>
+      * <code>Assert false (Canopen.ok)</code>
+      * <code>Assert true (Canopen.ok)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(0u, f.dlc);</code>
   </details>
 
@@ -5619,15 +5619,15 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Classifier rejects extended and unknown
     * **Assertions**:
-      * <code>Assert true (protocore_canopen_build_heartbeat(&f, 1, CANOPEN_STATE_OPERATIONAL))</code>
-      * <code>Assert false (protocore_canopen_parse(&f, &m))</code>
-      * <code>Assert true (protocore_canopen_parse(&f, &m))</code>
-      * <code>Assert true (protocore_canopen_parse(&f, &m))</code>
+      * <code>Assert true (Canopen.ok)</code>
+      * <code>Assert false (Canopen.ok)</code>
+      * <code>Assert true (Canopen.ok)</code>
+      * <code>Assert true (Canopen.ok)</code>
       * <code>Assert equal int (CANOPEN_T_UNKNOWN, m.type)</code>
-      * <code>Assert true (protocore_canopen_parse(&f, &m))</code>
+      * <code>Assert true (Canopen.ok)</code>
       * <code>Assert equal int (CANOPEN_T_UNKNOWN, m.type)</code>
-      * <code>Assert false (protocore_canopen_parse(NULL, &m))</code>
-      * <code>Assert false (protocore_canopen_parse(&f, NULL))</code>
+      * <code>Assert false (Canopen.ok)</code>
+      * <code>Assert false (Canopen.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -5635,10 +5635,10 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Segmented download initiate
     * **Assertions**:
-      * <code>Assert true (protocore_canopen_build_sdo_download_init(&f, 2, 0x1008u, 0, 17))</code>
+      * <code>Assert true (Canopen.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX32(0x602u, f.id);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, f.data, 8);</code>
-      * <code>Assert false (protocore_canopen_build_sdo_download_init(&f, 0, 0x1008u, 0, 17))</code>
+      * <code>Assert false (Canopen.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -5646,27 +5646,27 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: An upload segment request is command specifier 3, so it is not a segment frame.
     * **Assertions**:
-      * <code>Assert true (protocore_canopen_build_sdo_download_segment(&f, 2, PROTO_FALSE, SEVEN, 7, PROTO_FALSE))</code>
+      * <code>Assert true (Canopen.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, f.data[0]);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(SEVEN, f.data + 1, 7);</code>
-      * <code>Assert true (protocore_canopen_build_sdo_download_segment(&f, 2, PROTO_TRUE, SEVEN, 7, PROTO_FALSE))</code>
+      * <code>Assert true (Canopen.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x10u, f.data[0]);</code>
-      * <code>Assert true (protocore_canopen_build_sdo_download_segment(&f, 2, PROTO_FALSE, SEVEN, 3, PROTO_TRUE))</code>
+      * <code>Assert true (Canopen.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x09u, f.data[0]);</code>
-      * <code>Assert true (protocore_canopen_parse_sdo_segment(&f, &toggle, data, &len, &last))</code>
+      * <code>Assert true (Canopen.ok)</code>
       * <code>Assert false (toggle)</code>
       * <code>Assert true (last)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(3u, len);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(SEVEN, data, 3);</code>
-      * <code>Assert true (protocore_canopen_build_sdo_upload_segment_req(&f, 2, PROTO_TRUE))</code>
+      * <code>Assert true (Canopen.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x70u, f.data[0]); // (3 &lt;&lt; 5) | 0x10</code>
-      * <code>Assert false (protocore_canopen_parse_sdo_segment(&f, &toggle, data, &len, &last))</code>
-      * <code>Assert true (protocore_canopen_build_sdo_upload_segment_req(&f, 2, PROTO_FALSE))</code>
+      * <code>Assert false (Canopen.ok)</code>
+      * <code>Assert true (Canopen.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x60u, f.data[0]);</code>
-      * <code>Assert false (protocore_canopen_build_sdo_download_segment(&f, 2, PROTO_FALSE, SEVEN, 0, PROTO_FALSE))</code>
-      * <code>Assert false (protocore_canopen_build_sdo_download_segment(&f, 2, PROTO_FALSE, SEVEN, 8, PROTO_FALSE))</code>
-      * <code>Assert false (protocore_canopen_build_sdo_download_segment(&f, 2, PROTO_FALSE, NULL, 4, PROTO_FALSE))</code>
-      * <code>Assert false (protocore_canopen_build_sdo_upload_segment_req(&f, 128, PROTO_FALSE))</code>
+      * <code>Assert false (Canopen.ok)</code>
+      * <code>Assert false (Canopen.ok)</code>
+      * <code>Assert false (Canopen.ok)</code>
+      * <code>Assert false (Canopen.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -5676,21 +5676,21 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
     * **Assertions**:
       * <code>Assert false (r.expect_toggle)</code>
       * <code>Assert false (r.done)</code>
-      * <code>Assert true (protocore_canopen_sdo_reasm_feed(&r, SRC, 7, PROTO_FALSE, PROTO_FALSE))</code>
-      * <code>Assert true (protocore_canopen_sdo_reasm_feed(&r, SRC + 7, 7, PROTO_TRUE, PROTO_FALSE))</code>
-      * <code>Assert true (protocore_canopen_sdo_reasm_feed(&r, SRC + 14, 3, PROTO_FALSE, PROTO_TRUE))</code>
+      * <code>Assert true (Canopen.ok)</code>
+      * <code>Assert true (Canopen.ok)</code>
+      * <code>Assert true (Canopen.ok)</code>
       * <code>Assert true (r.done)</code>
       * <code>TEST_ASSERT_EQUAL_size_t(17u, r.len);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(SRC, buf, 17);</code>
-      * <code>Assert false (protocore_canopen_sdo_reasm_feed(&r, SRC, 1, PROTO_TRUE, PROTO_FALSE))</code>
-      * <code>Assert true (protocore_canopen_sdo_reasm_feed(&r, SRC, 7, PROTO_FALSE, PROTO_FALSE))</code>
-      * <code>Assert false (protocore_canopen_sdo_reasm_feed(&r, SRC + 7, 7, PROTO_FALSE, PROTO_FALSE))</code>
+      * <code>Assert false (Canopen.ok)</code>
+      * <code>Assert true (Canopen.ok)</code>
+      * <code>Assert false (Canopen.ok)</code>
       * <code>TEST_ASSERT_EQUAL_size_t(7u, r.len); // the refused segment did not land</code>
       * <code>TEST_ASSERT_EQUAL_HEX32(0x05030000u, CANOPEN_ABORT_TOGGLE);</code>
-      * <code>Assert true (protocore_canopen_sdo_reasm_feed(&r, SRC, 7, PROTO_FALSE, PROTO_FALSE))</code>
-      * <code>Assert false (protocore_canopen_sdo_reasm_feed(&r, SRC + 7, 7, PROTO_TRUE, PROTO_FALSE))</code>
+      * <code>Assert true (Canopen.ok)</code>
+      * <code>Assert false (Canopen.ok)</code>
       * <code>TEST_ASSERT_EQUAL_size_t(7u, r.len);</code>
-      * <code>Assert false (protocore_canopen_sdo_reasm_feed(&r, SRC, 1, PROTO_FALSE, PROTO_FALSE))</code>
+      * <code>Assert false (Canopen.ok)</code>
   </details>
 
 </details>
@@ -6096,11 +6096,11 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Checksum is the low byte of the sum
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, protocore_cclink_sum(WRAPS, sizeof(WRAPS)));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, protocore_cclink_sum(PAIR, sizeof(PAIR)));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0xFEu, protocore_cclink_sum(TWO_MAX, sizeof(TWO_MAX)));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, protocore_cclink_sum(WRAPS, 0));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x18u, protocore_cclink_sum(BODY, sizeof(BODY)));</code>
+      * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, Cclink.value);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, Cclink.value);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX8(0xFEu, Cclink.value);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, Cclink.value);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX8(0x18u, Cclink.value);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -6118,15 +6118,15 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Build parse round trip
     * **Assertions**:
-      * <code>Assert true (protocore_cclink_parse(buf, n, &f))</code>
+      * <code>Assert true (Cclink.ok)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(63u, f.station);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(CMD_B, f.command);</code>
       * <code>TEST_ASSERT_EQUAL_size_t(6u, f.payload_len);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(BITS, f.payload, 2);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(WORDS, f.payload + 2, 4);</code>
-      * <code>Assert true (protocore_cclink_get_bit(f.payload, 2, 0))</code>
-      * <code>TEST_ASSERT_EQUAL_UINT16(0x1234u, protocore_cclink_get_word(f.payload + 2, 4, 0));</code>
-      * <code>TEST_ASSERT_EQUAL_UINT16(0x5678u, protocore_cclink_get_word(f.payload + 2, 4, 1));</code>
+      * <code>Assert true (Cclink.ok)</code>
+      * <code>TEST_ASSERT_EQUAL_UINT16(0x1234u, Cclink.u16);</code>
+      * <code>TEST_ASSERT_EQUAL_UINT16(0x5678u, Cclink.u16);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -6135,7 +6135,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
     * **Objective**: Every command octet survives the round trip
     * **Assertions**:
       * <code>TEST_ASSERT_EQUAL_size_t(3u, n);</code>
-      * <code>Assert true (protocore_cclink_parse(buf, n, &f))</code>
+      * <code>Assert true (Cclink.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8((uint8_t)cmd, f.command);</code>
   </details>
 
@@ -6155,8 +6155,8 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
     * **Objective**: Any single octet change fails verification
     * **Assertions**:
       * <code>TEST_ASSERT_EQUAL_size_t(6u, n);</code>
-      * <code>Assert true (protocore_cclink_parse(buf, n, &f))</code>
-      * <code>Assert false message (protocore_cclink_parse(bad, n, &f), "flipped octet accepted")</code>
+      * <code>Assert true (Cclink.ok)</code>
+      * <code>Assert false message (Cclink.ok, "flipped octet accepted")</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -6164,9 +6164,9 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Bit addressing matches the documented index arithmetic
     * **Assertions**:
-      * <code>Assert equal int message (WANT[i], protocore_cclink_get_bit(bits, 2, i) ? 1 : 0, "bit order")</code>
+      * <code>Assert equal int message (WANT[i], Cclink.ok ? 1 : 0, "bit order")</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x01u, bits[1]);</code>
-      * <code>Assert true (protocore_cclink_get_bit(bits, 2, 8))</code>
+      * <code>Assert true (Cclink.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x81u, bits[1]);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x80u, bits[1]);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0xA5u, bits[0]);</code>
@@ -6177,7 +6177,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Bit accessors round trip over a block
     * **Assertions**:
-      * <code>Assert equal int (want ? 1 : 0, protocore_cclink_get_bit(bits, sizeof(bits), i) ? 1 : 0)</code>
+      * <code>Assert equal int (want ? 1 : 0, Cclink.ok ? 1 : 0)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(ZERO, bits, 4);</code>
   </details>
 
@@ -6186,9 +6186,9 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Word accessor is little endian
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_HEX16(0x1234u, protocore_cclink_get_word(WORDS, sizeof(WORDS), 0));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(0xFFFFu, protocore_cclink_get_word(WORDS, sizeof(WORDS), 1));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(0x8000u, protocore_cclink_get_word(WORDS, sizeof(WORDS), 2));</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(0x1234u, Cclink.u16);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(0xFFFFu, Cclink.u16);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(0x8000u, Cclink.u16);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -6196,16 +6196,16 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Accessors refuse out of range
     * **Assertions**:
-      * <code>Assert true (protocore_cclink_get_bit(bits, 2, 15))</code>
-      * <code>Assert false (protocore_cclink_get_bit(bits, 2, 16))</code>
-      * <code>Assert false (protocore_cclink_get_bit(bits, 2, 999))</code>
-      * <code>Assert false (protocore_cclink_get_bit(NULL, 2, 0))</code>
+      * <code>Assert true (Cclink.ok)</code>
+      * <code>Assert false (Cclink.ok)</code>
+      * <code>Assert false (Cclink.ok)</code>
+      * <code>Assert false (Cclink.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0xFFu, bits[0]);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0xFFu, bits[1]);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(0x4433u, protocore_cclink_get_word(WORDS, 4, 1));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(0u, protocore_cclink_get_word(WORDS, 4, 2));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(0u, protocore_cclink_get_word(WORDS, 3, 1));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(0u, protocore_cclink_get_word(NULL, 4, 0));</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(0x4433u, Cclink.u16);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(0u, Cclink.u16);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(0u, Cclink.u16);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(0u, Cclink.u16);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -6213,14 +6213,14 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Build refusals
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_cclink_build(64, CMD_A, NULL, 0, NULL, 0, buf, sizeof(buf)));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_cclink_build(255, CMD_A, NULL, 0, NULL, 0, buf, sizeof(buf)));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(3u, protocore_cclink_build(63, CMD_A, NULL, 0, NULL, 0, buf, sizeof(buf)));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_cclink_build(1, CMD_A, NULL, 0, NULL, 0, NULL, sizeof(buf)));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_cclink_build(1, CMD_A, NULL, 3, NULL, 0, buf, sizeof(buf)));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_cclink_build(1, CMD_A, NULL, 0, NULL, 3, buf, sizeof(buf)));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_cclink_build(1, CMD_A, DATA, 4, DATA, 4, buf, 10));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(11u, protocore_cclink_build(1, CMD_A, DATA, 4, DATA, 4, buf, 11));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Cclink.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Cclink.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(3u, Cclink.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Cclink.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Cclink.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Cclink.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Cclink.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(11u, Cclink.n);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -6229,15 +6229,15 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
     * **Objective**: Parse refusals and the empty payload
     * **Assertions**:
       * <code>TEST_ASSERT_EQUAL_size_t(3u, n);</code>
-      * <code>Assert true (protocore_cclink_parse(buf, n, &f))</code>
+      * <code>Assert true (Cclink.ok)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(3u, f.station);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(CMD_B, f.command);</code>
       * <code>TEST_ASSERT_EQUAL_size_t(0u, f.payload_len);</code>
       * <code>Assert null (f.payload)</code>
-      * <code>Assert false (protocore_cclink_parse(buf, 2, &f))</code>
-      * <code>Assert false (protocore_cclink_parse(buf, 0, &f))</code>
-      * <code>Assert false (protocore_cclink_parse(NULL, n, &f))</code>
-      * <code>Assert false (protocore_cclink_parse(buf, n, NULL))</code>
+      * <code>Assert false (Cclink.ok)</code>
+      * <code>Assert false (Cclink.ok)</code>
+      * <code>Assert false (Cclink.ok)</code>
+      * <code>Assert false (Cclink.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -6246,15 +6246,15 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
     * **Objective**: Bit only and word only exchanges
     * **Assertions**:
       * <code>TEST_ASSERT_EQUAL_size_t(2u + 0u + 4u + 1u, n);</code>
-      * <code>Assert true (protocore_cclink_parse(buf, n, &f))</code>
+      * <code>Assert true (Cclink.ok)</code>
       * <code>TEST_ASSERT_EQUAL_size_t(4u, f.payload_len);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(0x0201u, protocore_cclink_get_word(f.payload, f.payload_len, 0));</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(0x0201u, Cclink.u16);</code>
       * <code>TEST_ASSERT_EQUAL_size_t(2u + 1u + 0u + 1u, n);</code>
-      * <code>Assert true (protocore_cclink_parse(buf, n, &f))</code>
+      * <code>Assert true (Cclink.ok)</code>
       * <code>TEST_ASSERT_EQUAL_size_t(1u, f.payload_len);</code>
-      * <code>Assert true (protocore_cclink_get_bit(f.payload, f.payload_len, 0))</code>
-      * <code>Assert true (protocore_cclink_get_bit(f.payload, f.payload_len, 7))</code>
-      * <code>Assert false (protocore_cclink_get_bit(f.payload, f.payload_len, 1))</code>
+      * <code>Assert true (Cclink.ok)</code>
+      * <code>Assert true (Cclink.ok)</code>
+      * <code>Assert false (Cclink.ok)</code>
   </details>
 
 </details>
@@ -6463,8 +6463,8 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Statusword mask value table
     * **Assertions**:
-      * <code>Assert equal int message (ROWS[i].state, protocore_cia402_state(bare), "bare statusword")</code>
-      * <code>Assert equal int message (ROWS[i].state, protocore_cia402_state(decorated), "don't-care bits set")</code>
+      * <code>Assert equal int message (ROWS[i].state, Cia402.value, "bare statusword")</code>
+      * <code>Assert equal int message (ROWS[i].state, Cia402.value, "don't-care bits set")</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -6472,10 +6472,10 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: The same pair with a realistic upper byte: voltage enabled, remote, target reached.
     * **Assertions**:
-      * <code>Assert equal int (CIA402_STATE_OPERATION_ENABLED, protocore_cia402_state(0x0027u))</code>
-      * <code>Assert equal int (CIA402_STATE_QUICK_STOP_ACTIVE, protocore_cia402_state(0x0007u))</code>
-      * <code>Assert equal int (CIA402_STATE_OPERATION_ENABLED, protocore_cia402_state(0x0637u))</code>
-      * <code>Assert equal int (CIA402_STATE_QUICK_STOP_ACTIVE, protocore_cia402_state(0x0617u))</code>
+      * <code>Assert equal int (CIA402_STATE_OPERATION_ENABLED, Cia402.value)</code>
+      * <code>Assert equal int (CIA402_STATE_QUICK_STOP_ACTIVE, Cia402.value)</code>
+      * <code>Assert equal int (CIA402_STATE_OPERATION_ENABLED, Cia402.value)</code>
+      * <code>Assert equal int (CIA402_STATE_QUICK_STOP_ACTIVE, Cia402.value)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -6483,10 +6483,10 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Unmatched statusword is unknown
     * **Assertions**:
-      * <code>Assert equal int (CIA402_STATE_UNKNOWN, protocore_cia402_state(0x0041u))</code>
-      * <code>Assert equal int (CIA402_STATE_UNKNOWN, protocore_cia402_state(0x0002u))</code>
-      * <code>Assert equal int (CIA402_STATE_UNKNOWN, protocore_cia402_state(0x0004u))</code>
-      * <code>Assert equal int (CIA402_STATE_UNKNOWN, protocore_cia402_state(0x0043u))</code>
+      * <code>Assert equal int (CIA402_STATE_UNKNOWN, Cia402.value)</code>
+      * <code>Assert equal int (CIA402_STATE_UNKNOWN, Cia402.value)</code>
+      * <code>Assert equal int (CIA402_STATE_UNKNOWN, Cia402.value)</code>
+      * <code>Assert equal int (CIA402_STATE_UNKNOWN, Cia402.value)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -6513,18 +6513,18 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Disable Voltage clears the enable-voltage bit; Quick Stop keeps voltage but clears the
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_HEX16(CIA402_CW_ENABLE_VOLTAGE | CIA402_CW_QUICK_STOP,</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(0x0006u, protocore_cia402_controlword(CIA402_COMMAND_SHUTDOWN));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(CIA402_CW_SWITCH_ON | CIA402_CW_ENABLE_VOLTAGE | CIA402_CW_QUICK_STOP,</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(0x0007u, protocore_cia402_controlword(CIA402_COMMAND_SWITCH_ON));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(0x000Fu, protocore_cia402_controlword(CIA402_COMMAND_ENABLE_OPERATION));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(CIA402_CW_SWITCH_ON | CIA402_CW_ENABLE_VOLTAGE | CIA402_CW_QUICK_STOP |</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(0x0000u, protocore_cia402_controlword(CIA402_COMMAND_DISABLE_VOLTAGE));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(0x0002u, protocore_cia402_controlword(CIA402_COMMAND_QUICK_STOP));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(0u, protocore_cia402_controlword(CIA402_COMMAND_QUICK_STOP) & CIA402_CW_QUICK_STOP);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(0x0007u, protocore_cia402_controlword(CIA402_COMMAND_DISABLE_OPERATION));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(CIA402_CW_FAULT_RESET, protocore_cia402_controlword(CIA402_COMMAND_FAULT_RESET));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(0x0080u, protocore_cia402_controlword(CIA402_COMMAND_FAULT_RESET));</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(CIA402_CW_ENABLE_VOLTAGE | CIA402_CW_QUICK_STOP, Cia402.u16);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(0x0006u, Cia402.u16);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(CIA402_CW_SWITCH_ON | CIA402_CW_ENABLE_VOLTAGE | CIA402_CW_QUICK_STOP, Cia402.u16);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(0x0007u, Cia402.u16);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(0x000Fu, Cia402.u16);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(0x0000u, Cia402.u16);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(0x0002u, Cia402.u16);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(0u, Cia402.u16 & CIA402_CW_QUICK_STOP);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(0x0007u, Cia402.u16);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(CIA402_CW_FAULT_RESET, Cia402.u16);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(0x0080u, Cia402.u16);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -6532,16 +6532,16 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: A fault must be reset before the sequence can restart.
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_HEX16(0x0006u, protocore_cia402_enable_sequence(CIA402_STATE_SWITCH_ON_DISABLED));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(0x0007u, protocore_cia402_enable_sequence(CIA402_STATE_READY_TO_SWITCH_ON));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(0x000Fu, protocore_cia402_enable_sequence(CIA402_STATE_SWITCHED_ON));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(0x000Fu, protocore_cia402_enable_sequence(CIA402_STATE_OPERATION_ENABLED));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(0x000Fu, protocore_cia402_enable_sequence(CIA402_STATE_QUICK_STOP_ACTIVE));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(0x0080u, protocore_cia402_enable_sequence(CIA402_STATE_FAULT));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(0x0080u, protocore_cia402_enable_sequence(CIA402_STATE_FAULT_REACTION_ACTIVE));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(0x0000u, protocore_cia402_enable_sequence(CIA402_STATE_NOT_READY_TO_SWITCH_ON));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(0x0000u, protocore_cia402_enable_sequence(CIA402_STATE_UNKNOWN));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(WANT[i], protocore_cia402_enable_sequence(protocore_cia402_state(WALK[i])));</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(0x0006u, Cia402.u16);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(0x0007u, Cia402.u16);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(0x000Fu, Cia402.u16);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(0x000Fu, Cia402.u16);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(0x000Fu, Cia402.u16);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(0x0080u, Cia402.u16);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(0x0080u, Cia402.u16);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(0x0000u, Cia402.u16);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(0x0000u, Cia402.u16);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(WANT[i], Cia402.u16);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -6549,22 +6549,22 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: -1000 as a 32-bit two's complement is 0x100000000 - 1000 = 0xFFFFFC18, little-endian.
     * **Assertions**:
-      * <code>Assert true (protocore_cia402_sdo_set_controlword(&f, 5, 0x000Fu))</code>
+      * <code>Assert true (Cia402.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX32(0x605u, f.id);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(CW, f.data, 8);</code>
-      * <code>Assert true (protocore_cia402_sdo_set_mode(&f, 5, CIA402_MODE_CYCLIC_SYNC_POSITION))</code>
+      * <code>Assert true (Cia402.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(MODE, f.data, 8);</code>
-      * <code>Assert true (protocore_cia402_sdo_set_target_position(&f, 5, -1000))</code>
+      * <code>Assert true (Cia402.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(POS, f.data, 8);</code>
-      * <code>Assert true (protocore_cia402_sdo_set_target_velocity(&f, 5, 100000))</code>
+      * <code>Assert true (Cia402.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(VEL, f.data, 8);</code>
-      * <code>Assert true (protocore_cia402_sdo_set_target_torque(&f, 5, -500))</code>
+      * <code>Assert true (Cia402.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(TRQ, f.data, 8);</code>
-      * <code>Assert true (protocore_cia402_sdo_read(&f, 5, CIA402_OD_STATUSWORD, 0))</code>
+      * <code>Assert true (Cia402.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(RD, f.data, 8);</code>
-      * <code>Assert false (protocore_cia402_sdo_set_controlword(&f, 0, 0x000Fu))</code>
-      * <code>Assert false (protocore_cia402_sdo_set_controlword(&f, 128, 0x000Fu))</code>
-      * <code>Assert false (protocore_cia402_sdo_read(&f, 0, CIA402_OD_STATUSWORD, 0))</code>
+      * <code>Assert false (Cia402.ok)</code>
+      * <code>Assert false (Cia402.ok)</code>
+      * <code>Assert false (Cia402.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -6572,16 +6572,16 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: A zero want_index accepts whatever object the reply names.
     * **Assertions**:
-      * <code>Assert true (protocore_cia402_sdo_get_u16(&f, CIA402_OD_STATUSWORD, &value))</code>
+      * <code>Assert true (Cia402.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX16(0x0637u, value);</code>
-      * <code>Assert equal int (CIA402_STATE_OPERATION_ENABLED, protocore_cia402_state(value))</code>
-      * <code>Assert true (protocore_cia402_sdo_get_u16(&f, 0, &value))</code>
+      * <code>Assert equal int (CIA402_STATE_OPERATION_ENABLED, Cia402.value)</code>
+      * <code>Assert true (Cia402.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX16(0x0637u, value);</code>
-      * <code>Assert false (protocore_cia402_sdo_get_u16(&f, CIA402_OD_ERROR_CODE, &value))</code>
-      * <code>Assert false (protocore_cia402_sdo_get_u16(&f, CIA402_OD_STATUSWORD, NULL))</code>
-      * <code>TEST_ASSERT_TRUE(protocore_canopen_build_sdo_abort(&abort_frame, 5, CIA402_OD_STATUSWORD, 0,</code>
-      * <code>Assert false (protocore_cia402_sdo_get_u16(&abort_frame, CIA402_OD_STATUSWORD, &value))</code>
-      * <code>Assert false (protocore_cia402_sdo_get_u16(&narrow, CIA402_OD_STATUSWORD, &value))</code>
+      * <code>Assert false (Cia402.ok)</code>
+      * <code>Assert false (Cia402.ok)</code>
+      * <code>Assert true (Canopen.ok)</code>
+      * <code>Assert false (Cia402.ok)</code>
+      * <code>Assert false (Cia402.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -6589,13 +6589,13 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: A two-octet reply cannot carry a 32-bit object.
     * **Assertions**:
-      * <code>Assert true (protocore_cia402_sdo_get_i32(&f, CIA402_OD_POSITION_ACTUAL, &value))</code>
+      * <code>Assert true (Cia402.ok)</code>
       * <code>TEST_ASSERT_EQUAL_INT32(-1000, value);</code>
-      * <code>Assert true (protocore_cia402_sdo_get_i32(&f, CIA402_OD_VELOCITY_ACTUAL, &value))</code>
+      * <code>Assert true (Cia402.ok)</code>
       * <code>TEST_ASSERT_EQUAL_INT32(-2147483647 - 1, value);</code>
-      * <code>Assert false (protocore_cia402_sdo_get_i32(&f, CIA402_OD_POSITION_ACTUAL, &value))</code>
-      * <code>Assert false (protocore_cia402_sdo_get_i32(&f, 0, NULL))</code>
-      * <code>Assert false (protocore_cia402_sdo_get_i32(&narrow, CIA402_OD_POSITION_ACTUAL, &value))</code>
+      * <code>Assert false (Cia402.ok)</code>
+      * <code>Assert false (Cia402.ok)</code>
+      * <code>Assert false (Cia402.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -6606,20 +6606,20 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
       * <code>TEST_ASSERT_EQUAL_size_t(6u, n);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, buf, 6);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0xEEu, buf[6]);</code>
-      * <code>Assert true (protocore_cia402_unpack_status(buf, n, &sw, &actual))</code>
+      * <code>Assert true (Cia402.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX16(0x000Fu, sw);</code>
       * <code>TEST_ASSERT_EQUAL_INT32(-1000, actual);</code>
-      * <code>Assert true (protocore_cia402_unpack_status(TPDO, sizeof(TPDO), &sw, &actual))</code>
+      * <code>Assert true (Cia402.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX16(0x0637u, sw);</code>
       * <code>TEST_ASSERT_EQUAL_INT32(2147483647, actual);</code>
-      * <code>Assert equal int (CIA402_STATE_OPERATION_ENABLED, protocore_cia402_state(sw))</code>
+      * <code>Assert equal int (CIA402_STATE_OPERATION_ENABLED, Cia402.value)</code>
       * <code>Assert true (protocore_cia402_target_reached(sw))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_cia402_pack_command(buf, 5, 0x000Fu, 0));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_cia402_pack_command(NULL, sizeof(buf), 0x000Fu, 0));</code>
-      * <code>Assert false (protocore_cia402_unpack_status(TPDO, 5, &sw, &actual))</code>
-      * <code>Assert false (protocore_cia402_unpack_status(NULL, 6, &sw, &actual))</code>
-      * <code>Assert false (protocore_cia402_unpack_status(TPDO, 6, NULL, &actual))</code>
-      * <code>Assert false (protocore_cia402_unpack_status(TPDO, 6, &sw, NULL))</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Cia402.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Cia402.n);</code>
+      * <code>Assert false (Cia402.ok)</code>
+      * <code>Assert false (Cia402.ok)</code>
+      * <code>Assert false (Cia402.ok)</code>
+      * <code>Assert false (Cia402.ok)</code>
   </details>
 
 </details>
@@ -6704,7 +6704,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
       * <code>TEST_ASSERT_EQUAL_size_t(13u, n);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, buf, 13);</code>
       * <code>TEST_ASSERT_EQUAL_size_t(8u, n);</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_cip_build_set_attr_single(buf, sizeof(buf), 1, 1, 7, NULL, 4));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Cip.n);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -6712,14 +6712,14 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Vendor ID 0x004D returned as a UINT, little-endian.
     * **Assertions**:
-      * <code>Assert true (protocore_cip_parse_response(RESP, sizeof(RESP), &r))</code>
+      * <code>Assert true (Cip.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x8Eu, r.service);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(CIP_SC_GET_ATTR_SINGLE | CIP_REPLY_FLAG, r.service);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(CIP_STATUS_SUCCESS, r.general_status);</code>
       * <code>TEST_ASSERT_EQUAL_size_t(2u, r.data_len);</code>
       * <code>Assert equal ptr (RESP + 4, r.data)</code>
       * <code>TEST_ASSERT_EQUAL_HEX16(0x004Du, (uint16_t)(r.data[0] | ((uint16_t)r.data[1] &lt;&lt; 8)));</code>
-      * <code>Assert true (protocore_cip_parse_response(ACK, sizeof(ACK), &r))</code>
+      * <code>Assert true (Cip.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(CIP_SC_SET_ATTR_SINGLE | CIP_REPLY_FLAG, r.service);</code>
       * <code>TEST_ASSERT_EQUAL_size_t(0u, r.data_len);</code>
   </details>
@@ -6729,15 +6729,15 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: General status 0x1F (vendor specific error) with two words of additional status.
     * **Assertions**:
-      * <code>Assert true (protocore_cip_parse_response(RESP, sizeof(RESP), &r))</code>
+      * <code>Assert true (Cip.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x1Fu, r.general_status);</code>
       * <code>TEST_ASSERT_EQUAL_size_t(2u, r.data_len); // 10 - (4 + 2*2)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0xAAu, r.data[0]);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0xBBu, r.data[1]);</code>
-      * <code>Assert true (protocore_cip_parse_response(ONE, sizeof(ONE), &r))</code>
+      * <code>Assert true (Cip.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x05u, r.general_status);</code>
       * <code>TEST_ASSERT_EQUAL_size_t(0u, r.data_len);</code>
-      * <code>Assert false (protocore_cip_parse_response(LIES, sizeof(LIES), &r))</code>
+      * <code>Assert false (Cip.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -6745,11 +6745,11 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Response refusals
     * **Assertions**:
-      * <code>Assert true (protocore_cip_parse_response(RESP, 4, &r))</code>
-      * <code>Assert false (protocore_cip_parse_response(RESP, 3, &r))</code>
-      * <code>Assert false (protocore_cip_parse_response(RESP, 0, &r))</code>
-      * <code>Assert false (protocore_cip_parse_response(NULL, 4, &r))</code>
-      * <code>Assert false (protocore_cip_parse_response(RESP, 4, NULL))</code>
+      * <code>Assert true (Cip.ok)</code>
+      * <code>Assert false (Cip.ok)</code>
+      * <code>Assert false (Cip.ok)</code>
+      * <code>Assert false (Cip.ok)</code>
+      * <code>Assert false (Cip.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -6757,12 +6757,12 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: 7 octets of capacity cannot hold the 8-octet request.
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(8u,</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u,</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u,</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u,</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u,</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_cip_build_request(buf, 7, CIP_SC_GET_ATTR_SINGLE, EPATH, 6, NULL, 0));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(8u, Cip.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Cip.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Cip.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Cip.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Cip.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Cip.n);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -6770,14 +6770,14 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Epath refuses a short buffer
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_cip_build_epath(epath, 1, 1, 1, 1, PROTO_FALSE)); // class needs 2</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_cip_build_epath(epath, 3, 1, 1, 1, PROTO_TRUE));  // instance needs 2 more</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_cip_build_epath(epath, 5, 1, 1, 1, PROTO_TRUE));  // attribute needs 2 more</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(6u, protocore_cip_build_epath(epath, 6, 1, 1, 1, PROTO_TRUE));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_cip_build_epath(epath, 3, 0x0100u, 1, 1, PROTO_FALSE)); // wide needs 4</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_cip_build_epath(NULL, sizeof(epath), 1, 1, 1, PROTO_TRUE));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_cip_build_get_attr_single(out, 7, 1, 1, 1));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_cip_build_get_attr_all(out, 5, 1, 1));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Cip.n); // class needs 2</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Cip.n); // instance needs 2 more</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Cip.n); // attribute needs 2 more</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(6u, Cip.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Cip.n); // wide needs 4</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Cip.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Cip.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Cip.n);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -6786,7 +6786,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
     * **Objective**: Service and reply service differ only by the reply bit
     * **Assertions**:
       * <code>TEST_ASSERT_EQUAL_size_t(8u, n);</code>
-      * <code>Assert true (protocore_cip_parse_response(resp, 6, &r))</code>
+      * <code>Assert true (Cip.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(req[0], (uint8_t)(r.service & (uint8_t)~CIP_REPLY_FLAG));</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(CIP_REPLY_FLAG, (uint8_t)(r.service & CIP_REPLY_FLAG));</code>
   </details>
@@ -8750,7 +8750,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
       * <code>TEST_ASSERT_EQUAL_size_t(8u, n);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, frame[2]);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x08u, frame[3]);</code>
-      * <code>Assert true (protocore_tpkt_parse(frame, n, &slice, &slice_len, &consumed))</code>
+      * <code>Assert true (Cotp.ok)</code>
       * <code>TEST_ASSERT_EQUAL_size_t(4u, slice_len);</code>
       * <code>TEST_ASSERT_EQUAL_size_t(8u, consumed);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(PAYLOAD, slice, 4);</code>
@@ -8763,10 +8763,10 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
     * **Assertions**:
       * <code>TEST_ASSERT_EQUAL_size_t(7u, n);</code>
       * <code>TEST_ASSERT_EQUAL_size_t(9u, m);</code>
-      * <code>Assert true (protocore_tpkt_parse(stream, n + m, &slice, &slice_len, &consumed))</code>
+      * <code>Assert true (Cotp.ok)</code>
       * <code>TEST_ASSERT_EQUAL_size_t(7u, consumed); // trimmed to the first packet, not the whole read</code>
       * <code>TEST_ASSERT_EQUAL_size_t(3u, slice_len);</code>
-      * <code>Assert true (protocore_tpkt_parse(stream + consumed, n + m - consumed, &slice, &slice_len, &consumed))</code>
+      * <code>Assert true (Cotp.ok)</code>
       * <code>TEST_ASSERT_EQUAL_size_t(9u, consumed);</code>
       * <code>TEST_ASSERT_EQUAL_size_t(5u, slice_len);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(B, slice, 5);</code>
@@ -8777,15 +8777,15 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Tpkt refusals
     * **Assertions**:
-      * <code>Assert true (protocore_tpkt_parse(frame, 8, &slice, &slice_len, &consumed))</code>
-      * <code>Assert false (protocore_tpkt_parse(frame, 7, &slice, &slice_len, &consumed))</code>
-      * <code>Assert false (protocore_tpkt_parse(frame, 8, &slice, &slice_len, &consumed))</code>
-      * <code>Assert false (protocore_tpkt_parse(frame, 8, &slice, &slice_len, &consumed))</code>
-      * <code>Assert false (protocore_tpkt_parse(frame, 3, &slice, &slice_len, &consumed))</code>
-      * <code>Assert false (protocore_tpkt_parse(NULL, 8, &slice, &slice_len, &consumed))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_tpkt_build(out, 8, PAYLOAD, sizeof(PAYLOAD))); // 4+5 &gt; 8</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_tpkt_build(NULL, sizeof(out), PAYLOAD, sizeof(PAYLOAD)));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_tpkt_build(out, sizeof(out), NULL, 2));</code>
+      * <code>Assert true (Cotp.ok)</code>
+      * <code>Assert false (Cotp.ok)</code>
+      * <code>Assert false (Cotp.ok)</code>
+      * <code>Assert false (Cotp.ok)</code>
+      * <code>Assert false (Cotp.ok)</code>
+      * <code>Assert false (Cotp.ok)</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Cotp.n); // 4+5 &gt; 8</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Cotp.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Cotp.n);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -8795,17 +8795,17 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
     * **Assertions**:
       * <code>TEST_ASSERT_EQUAL_size_t(7u, n);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, buf, 7);</code>
-      * <code>Assert true (protocore_cotp_parse(buf, n, &h))</code>
+      * <code>Assert true (Cotp.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(COTP_DT, h.code);</code>
       * <code>Assert true (h.eot)</code>
       * <code>TEST_ASSERT_EQUAL_size_t(4u, h.data_len);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(DATA, h.data, 4);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, buf[2]);</code>
-      * <code>Assert true (protocore_cotp_parse(buf, n, &h))</code>
+      * <code>Assert true (Cotp.ok)</code>
       * <code>Assert false (h.eot)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_cotp_build_dt(buf, 2, DATA, sizeof(DATA), PROTO_TRUE));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_cotp_build_dt(NULL, sizeof(buf), DATA, sizeof(DATA), PROTO_TRUE));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_cotp_build_dt(buf, sizeof(buf), NULL, 4, PROTO_TRUE));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Cotp.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Cotp.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Cotp.n);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -8816,13 +8816,13 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
       * <code>TEST_ASSERT_EQUAL_size_t(10u, n);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, buf, 10);</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(1024u, 1u &lt;&lt; buf[9]);</code>
-      * <code>Assert true (protocore_cotp_parse(buf, n, &h))</code>
+      * <code>Assert true (Cotp.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(COTP_CR, h.code);</code>
       * <code>TEST_ASSERT_EQUAL_HEX16(0x0000u, h.dst_ref);</code>
       * <code>TEST_ASSERT_EQUAL_HEX16(0x0001u, h.src_ref);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x12u, buf[4]);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x34u, buf[5]);</code>
-      * <code>Assert true (protocore_cotp_parse(buf, n, &h))</code>
+      * <code>Assert true (Cotp.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX16(0x1234u, h.src_ref);</code>
   </details>
 
@@ -8836,8 +8836,8 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(TSAPS, cr + 10, 8);</code>
       * <code>TEST_ASSERT_EQUAL_size_t(22u, flen);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, frame, 22);</code>
-      * <code>Assert true (protocore_tpkt_parse(frame, flen, &slice, &slice_len, &consumed))</code>
-      * <code>Assert true (protocore_cotp_parse(slice, slice_len, &h))</code>
+      * <code>Assert true (Cotp.ok)</code>
+      * <code>Assert true (Cotp.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(COTP_CR, h.code);</code>
       * <code>TEST_ASSERT_EQUAL_HEX16(0x0001u, h.src_ref);</code>
   </details>
@@ -8849,20 +8849,20 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
     * **Assertions**:
       * <code>TEST_ASSERT_EQUAL_size_t(10u, n);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, buf, 10);</code>
-      * <code>Assert true (protocore_cotp_parse(buf, n, &h))</code>
+      * <code>Assert true (Cotp.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(COTP_CC, h.code);</code>
       * <code>TEST_ASSERT_EQUAL_HEX16(0x1234u, h.dst_ref);</code>
       * <code>TEST_ASSERT_EQUAL_HEX16(0xABCDu, h.src_ref);</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(10u, protocore_cotp_build_cr(cr, sizeof(cr), 0x0055u, 0x0Au, NULL, 0));</code>
-      * <code>Assert true (protocore_cotp_parse(cr, 10, &req))</code>
-      * <code>Assert true (protocore_cotp_parse(buf, n, &h))</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(10u, Cotp.n);</code>
+      * <code>Assert true (Cotp.ok)</code>
+      * <code>Assert true (Cotp.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX16(req.src_ref, h.dst_ref);</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_cotp_build_cc(buf, 9, 1, 2, 0x0Au, NULL, 0));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_cotp_build_cc(NULL, sizeof(buf), 1, 2, 0x0Au, NULL, 0));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_cotp_build_cc(buf, sizeof(buf), 1, 2, 0x0Au, NULL, 4));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_cotp_build_cr(buf, 9, 1, 0x0Au, NULL, 0));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_cotp_build_cr(NULL, sizeof(buf), 1, 0x0Au, NULL, 0));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_cotp_build_cr(buf, sizeof(buf), 1, 0x0Au, NULL, 4));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Cotp.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Cotp.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Cotp.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Cotp.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Cotp.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Cotp.n);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -8870,13 +8870,13 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: A credit in the low nibble does not change the type.
     * **Assertions**:
-      * <code>Assert true (protocore_cotp_parse(DR, sizeof(DR), &h))</code>
+      * <code>Assert true (Cotp.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(COTP_DR, h.code);</code>
       * <code>TEST_ASSERT_EQUAL_size_t(0u, h.data_len);</code>
       * <code>Assert null (h.data)</code>
-      * <code>Assert true (protocore_cotp_parse(ER, sizeof(ER), &h))</code>
+      * <code>Assert true (Cotp.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(COTP_ER, h.code);</code>
-      * <code>Assert true (protocore_cotp_parse(DT_WITH_CDT, sizeof(DT_WITH_CDT), &h))</code>
+      * <code>Assert true (Cotp.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(COTP_DT, h.code);</code>
       * <code>TEST_ASSERT_EQUAL_size_t(1u, h.data_len);</code>
   </details>
@@ -8886,13 +8886,13 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Cotp refusals
     * **Assertions**:
-      * <code>Assert false (protocore_cotp_parse(LI_ZERO, sizeof(LI_ZERO), &h))</code>
-      * <code>Assert false (protocore_cotp_parse(LI_TOO_BIG, sizeof(LI_TOO_BIG), &h))</code>
-      * <code>Assert false (protocore_cotp_parse(DT_SHORT, sizeof(DT_SHORT), &h))</code>
-      * <code>Assert false (protocore_cotp_parse(CR_SHORT, sizeof(CR_SHORT), &h))</code>
-      * <code>Assert false (protocore_cotp_parse(ONE, sizeof(ONE), &h))</code>
-      * <code>Assert false (protocore_cotp_parse(NULL, 3, &h))</code>
-      * <code>Assert false (protocore_cotp_parse(LI_ZERO, 3, NULL))</code>
+      * <code>Assert false (Cotp.ok)</code>
+      * <code>Assert false (Cotp.ok)</code>
+      * <code>Assert false (Cotp.ok)</code>
+      * <code>Assert false (Cotp.ok)</code>
+      * <code>Assert false (Cotp.ok)</code>
+      * <code>Assert false (Cotp.ok)</code>
+      * <code>Assert false (Cotp.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -8901,9 +8901,9 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
     * **Objective**: Stack round trip
     * **Assertions**:
       * <code>TEST_ASSERT_EQUAL_size_t(4u + 3u + 10u, flen);</code>
-      * <code>Assert true (protocore_tpkt_parse(frame, flen, &slice, &slice_len, &consumed))</code>
+      * <code>Assert true (Cotp.ok)</code>
       * <code>TEST_ASSERT_EQUAL_size_t(flen, consumed);</code>
-      * <code>Assert true (protocore_cotp_parse(slice, slice_len, &h))</code>
+      * <code>Assert true (Cotp.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(COTP_DT, h.code);</code>
       * <code>Assert true (h.eot)</code>
       * <code>TEST_ASSERT_EQUAL_size_t(sizeof(S7), h.data_len);</code>
@@ -10371,9 +10371,9 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Group ranges match the identifier allocation
     * **Assertions**:
-      * <code>Assert true message (protocore_devicenet_encode_id(&id, EDGES[i].group, EDGES[i].msg_id, EDGES[i].mac_id)</code>
+      * <code>Assert true message (Devicenet.ok, "encode refused a legal identifier")</code>
       * <code>TEST_ASSERT_EQUAL_HEX32(EDGES[i].id, id);</code>
-      * <code>Assert true (protocore_devicenet_decode_id(id, &out))</code>
+      * <code>Assert true (Devicenet.ok)</code>
       * <code>Assert equal int message (EDGES[i].group, out.group, "identifier decoded into the wrong group")</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(EDGES[i].msg_id, out.msg_id);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(EDGES[i].mac_id, out.mac_id);</code>
@@ -10384,10 +10384,10 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Group three message id seven has no identifier
     * **Assertions**:
-      * <code>Assert true (protocore_devicenet_encode_id(&id, DEVICENET_GROUP_3, 6, 63))</code>
+      * <code>Assert true (Devicenet.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX32(0x7BFu, id); // the top of Group 3</code>
-      * <code>Assert false (protocore_devicenet_encode_id(&id, DEVICENET_GROUP_3, 7, 0))</code>
-      * <code>Assert false (protocore_devicenet_encode_id(&id, DEVICENET_GROUP_3, 7, 63))</code>
+      * <code>Assert false (Devicenet.ok)</code>
+      * <code>Assert false (Devicenet.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -10395,27 +10395,27 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Identifier round trip
     * **Assertions**:
-      * <code>Assert true (protocore_devicenet_encode_id(&id, DEVICENET_GROUP_1, (uint8_t)msg, (uint8_t)mac))</code>
+      * <code>Assert true (Devicenet.ok)</code>
       * <code>Assert true (id &lt;= 0x3FFu)</code>
-      * <code>Assert true (protocore_devicenet_decode_id(id, &out))</code>
+      * <code>Assert true (Devicenet.ok)</code>
       * <code>Assert equal int (DEVICENET_GROUP_1, out.group)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8((uint8_t)msg, out.msg_id);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8((uint8_t)mac, out.mac_id);</code>
-      * <code>Assert true (protocore_devicenet_encode_id(&id, DEVICENET_GROUP_2, (uint8_t)msg, (uint8_t)mac))</code>
+      * <code>Assert true (Devicenet.ok)</code>
       * <code>Assert true (id &gt;= 0x400u && id &lt;= 0x5FFu)</code>
-      * <code>Assert true (protocore_devicenet_decode_id(id, &out))</code>
+      * <code>Assert true (Devicenet.ok)</code>
       * <code>Assert equal int (DEVICENET_GROUP_2, out.group)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8((uint8_t)msg, out.msg_id);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8((uint8_t)mac, out.mac_id);</code>
-      * <code>Assert true (protocore_devicenet_encode_id(&id, DEVICENET_GROUP_3, (uint8_t)msg, (uint8_t)mac))</code>
+      * <code>Assert true (Devicenet.ok)</code>
       * <code>Assert true (id &gt;= 0x600u && id &lt;= 0x7BFu)</code>
-      * <code>Assert true (protocore_devicenet_decode_id(id, &out))</code>
+      * <code>Assert true (Devicenet.ok)</code>
       * <code>Assert equal int (DEVICENET_GROUP_3, out.group)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8((uint8_t)msg, out.msg_id);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8((uint8_t)mac, out.mac_id);</code>
-      * <code>Assert true (protocore_devicenet_encode_id(&id, DEVICENET_GROUP_4, (uint8_t)msg, 0))</code>
+      * <code>Assert true (Devicenet.ok)</code>
       * <code>Assert true (id &gt;= 0x7C0u && id &lt;= 0x7EFu)</code>
-      * <code>Assert true (protocore_devicenet_decode_id(id, &out))</code>
+      * <code>Assert true (Devicenet.ok)</code>
       * <code>Assert equal int (DEVICENET_GROUP_4, out.group)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8((uint8_t)msg, out.msg_id);</code>
   </details>
@@ -10425,13 +10425,13 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: A master's explicit request to slave MAC 5: 0x400 \| (5 << 3) \| 4 = 0x42C.
     * **Assertions**:
-      * <code>Assert true (protocore_devicenet_encode_id(&id, DEVICENET_GROUP_2, DEVICENET_G2_DUP_MAC_CHECK, 0))</code>
+      * <code>Assert true (Devicenet.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX32(0x407u, id);</code>
-      * <code>Assert true (protocore_devicenet_encode_id(&id, DEVICENET_GROUP_2, DEVICENET_G2_DUP_MAC_CHECK, 63))</code>
+      * <code>Assert true (Devicenet.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX32(0x5FFu, id);</code>
-      * <code>Assert true (protocore_devicenet_encode_id(&id, DEVICENET_GROUP_2, DEVICENET_G2_UNCONNECTED_EXPLICIT_REQ, 5))</code>
+      * <code>Assert true (Devicenet.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX32(0x42Cu, id);</code>
-      * <code>Assert true (protocore_devicenet_encode_id(&id, DEVICENET_GROUP_2, DEVICENET_G2_EXPLICIT_RESPONSE, 5))</code>
+      * <code>Assert true (Devicenet.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX32(0x42Bu, id);</code>
   </details>
 
@@ -10440,17 +10440,17 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Invalid identifiers and fields
     * **Assertions**:
-      * <code>Assert true (protocore_devicenet_decode_id(0x7EFu, &out))</code>
-      * <code>Assert false (protocore_devicenet_decode_id(0x7F0u, &out))</code>
-      * <code>Assert false (protocore_devicenet_decode_id(0x7FFu, &out))</code>
-      * <code>Assert false (protocore_devicenet_decode_id(0x600u, NULL))</code>
-      * <code>Assert false (protocore_devicenet_encode_id(NULL, DEVICENET_GROUP_1, 0, 0))</code>
-      * <code>Assert false (protocore_devicenet_encode_id(&id, DEVICENET_GROUP_1, 0, 64))</code>
-      * <code>Assert false (protocore_devicenet_encode_id(&id, DEVICENET_GROUP_1, 16, 0))</code>
-      * <code>Assert false (protocore_devicenet_encode_id(&id, DEVICENET_GROUP_2, 8, 0))</code>
-      * <code>Assert false (protocore_devicenet_encode_id(&id, DEVICENET_GROUP_4, 0x30u, 0))</code>
-      * <code>Assert false (protocore_devicenet_encode_id(&id, (DeviceNetGroup)0, 0, 0))</code>
-      * <code>Assert false (protocore_devicenet_encode_id(&id, (DeviceNetGroup)5, 0, 0))</code>
+      * <code>Assert true (Devicenet.ok)</code>
+      * <code>Assert false (Devicenet.ok)</code>
+      * <code>Assert false (Devicenet.ok)</code>
+      * <code>Assert false (Devicenet.ok)</code>
+      * <code>Assert false (Devicenet.ok)</code>
+      * <code>Assert false (Devicenet.ok)</code>
+      * <code>Assert false (Devicenet.ok)</code>
+      * <code>Assert false (Devicenet.ok)</code>
+      * <code>Assert false (Devicenet.ok)</code>
+      * <code>Assert false (Devicenet.ok)</code>
+      * <code>Assert false (Devicenet.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -10458,13 +10458,13 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: A MAC id wider than six bits cannot reach the flag bits.
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, protocore_devicenet_msg_header(PROTO_FALSE, PROTO_FALSE, 0));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x05u, protocore_devicenet_msg_header(PROTO_FALSE, PROTO_FALSE, 5));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x45u, protocore_devicenet_msg_header(PROTO_FALSE, PROTO_TRUE, 5));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x85u, protocore_devicenet_msg_header(PROTO_TRUE, PROTO_FALSE, 5));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0xC5u, protocore_devicenet_msg_header(PROTO_TRUE, PROTO_TRUE, 5));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x3Fu, protocore_devicenet_msg_header(PROTO_FALSE, PROTO_FALSE, 63));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x3Fu, protocore_devicenet_msg_header(PROTO_FALSE, PROTO_FALSE, 0xFF));</code>
+      * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, Devicenet.value);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX8(0x05u, Devicenet.value);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX8(0x45u, Devicenet.value);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX8(0x85u, Devicenet.value);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX8(0xC5u, Devicenet.value);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX8(0x3Fu, Devicenet.value);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX8(0x3Fu, Devicenet.value);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -10472,12 +10472,12 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Neither field can overflow into the other.
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, protocore_devicenet_frag_octet(DEVICENET_FRAG_FIRST, 0));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x41u, protocore_devicenet_frag_octet(DEVICENET_FRAG_MIDDLE, 1));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x82u, protocore_devicenet_frag_octet(DEVICENET_FRAG_LAST, 2));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0xFFu, protocore_devicenet_frag_octet(DEVICENET_FRAG_ACK, 63));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x80u, protocore_devicenet_frag_octet(DEVICENET_FRAG_LAST, 64));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x3Fu, protocore_devicenet_frag_octet(0x3Fu, 63));</code>
+      * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, Devicenet.value);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX8(0x41u, Devicenet.value);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX8(0x82u, Devicenet.value);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX8(0xFFu, Devicenet.value);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX8(0x80u, Devicenet.value);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX8(0x3Fu, Devicenet.value);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -10485,21 +10485,21 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: The header octet plus the body must fit the 8-octet CAN payload.
     * **Assertions**:
-      * <code>TEST_ASSERT_TRUE(protocore_devicenet_build_explicit(&f, DEVICENET_GROUP_2, DEVICENET_G2_UNCONNECTED_EXPLICIT_REQ, 5,</code>
+      * <code>Assert true (Devicenet.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX32(0x42Cu, f.id);</code>
       * <code>Assert false (f.extended)</code>
       * <code>Assert false (f.rtr)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(7u, f.dlc);       // 1 header octet + 6 body octets</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x05u, f.data[0]); // FRAG clear, XID clear, MAC 5</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(CIP, f.data + 1, 6);</code>
-      * <code>Assert true (protocore_devicenet_build_explicit(&f, DEVICENET_GROUP_2, 4, 5, SEVEN, 7))</code>
+      * <code>Assert true (Devicenet.ok)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(8u, f.dlc);</code>
-      * <code>Assert false (protocore_devicenet_build_explicit(&f, DEVICENET_GROUP_2, 4, 5, EIGHT, 8))</code>
-      * <code>Assert true (protocore_devicenet_build_explicit(&f, DEVICENET_GROUP_2, 4, 5, NULL, 0))</code>
+      * <code>Assert false (Devicenet.ok)</code>
+      * <code>Assert true (Devicenet.ok)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(1u, f.dlc);</code>
-      * <code>Assert false (protocore_devicenet_build_explicit(NULL, DEVICENET_GROUP_2, 4, 5, CIP, 6))</code>
-      * <code>Assert false (protocore_devicenet_build_explicit(&f, DEVICENET_GROUP_2, 4, 5, NULL, 3))</code>
-      * <code>Assert false (protocore_devicenet_build_explicit(&f, DEVICENET_GROUP_2, 8, 5, CIP, 6))</code>
+      * <code>Assert false (Devicenet.ok)</code>
+      * <code>Assert false (Devicenet.ok)</code>
+      * <code>Assert false (Devicenet.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -10507,22 +10507,22 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Fragment frame layout
     * **Assertions**:
-      * <code>TEST_ASSERT_TRUE(protocore_devicenet_build_fragment(&f, DEVICENET_GROUP_2, 4, 5, PROTO_TRUE, DEVICENET_FRAG_FIRST,</code>
+      * <code>Assert true (Devicenet.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX32(0x42Cu, f.id);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(8u, f.dlc);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0xC5u, f.data[0]); // FRAG | XID | MAC 5</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, f.data[1]); // FIRST, count 0</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(SIX, f.data + 2, 6);</code>
-      * <code>TEST_ASSERT_TRUE(</code>
+      * <code>Assert true (Devicenet.ok)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(4u, f.dlc);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x85u, f.data[0]); // FRAG set, XID clear</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x83u, f.data[1]); // LAST, count 3</code>
-      * <code>TEST_ASSERT_FALSE(protocore_devicenet_build_fragment(&f, DEVICENET_GROUP_2, 4, 5, PROTO_FALSE, DEVICENET_FRAG_FIRST,</code>
-      * <code>Assert false (protocore_devicenet_build_fragment(&f, DEVICENET_GROUP_2, 4, 5, PROTO_FALSE, 0x10u, 0, SIX, 6))</code>
-      * <code>TEST_ASSERT_FALSE(</code>
-      * <code>TEST_ASSERT_FALSE(</code>
-      * <code>TEST_ASSERT_FALSE(protocore_devicenet_build_fragment(NULL, DEVICENET_GROUP_2, 4, 5, PROTO_FALSE,</code>
-      * <code>TEST_ASSERT_FALSE(</code>
+      * <code>Assert false (Devicenet.ok)</code>
+      * <code>Assert false (Devicenet.ok)</code>
+      * <code>Assert false (Devicenet.ok)</code>
+      * <code>Assert false (Devicenet.ok)</code>
+      * <code>Assert false (Devicenet.ok)</code>
+      * <code>Assert false (Devicenet.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -10530,14 +10530,14 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: A header octet alone is a complete, empty message.
     * **Assertions**:
-      * <code>Assert equal int (DEVICENET_FRAG_COMPLETE, protocore_devicenet_frag_feed(&rx, BODY, sizeof(BODY)))</code>
+      * <code>Assert equal int (DEVICENET_FRAG_COMPLETE, Devicenet.frag)</code>
       * <code>TEST_ASSERT_EQUAL_UINT16(4u, rx.len);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(BODY + 1, rx.buf, 4);</code>
-      * <code>Assert equal int (DEVICENET_FRAG_COMPLETE, protocore_devicenet_frag_feed(&rx, BARE, 1))</code>
+      * <code>Assert equal int (DEVICENET_FRAG_COMPLETE, Devicenet.frag)</code>
       * <code>TEST_ASSERT_EQUAL_UINT16(0u, rx.len);</code>
-      * <code>Assert equal int (DEVICENET_FRAG_IGNORED, protocore_devicenet_frag_feed(&rx, BODY, 0))</code>
-      * <code>Assert equal int (DEVICENET_FRAG_IGNORED, protocore_devicenet_frag_feed(&rx, NULL, 5))</code>
-      * <code>Assert equal int (DEVICENET_FRAG_IGNORED, protocore_devicenet_frag_feed(NULL, BODY, 5))</code>
+      * <code>Assert equal int (DEVICENET_FRAG_IGNORED, Devicenet.frag)</code>
+      * <code>Assert equal int (DEVICENET_FRAG_IGNORED, Devicenet.frag)</code>
+      * <code>Assert equal int (DEVICENET_FRAG_IGNORED, Devicenet.frag)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -10545,15 +10545,15 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Fragmented message reassembly
     * **Assertions**:
-      * <code>TEST_ASSERT_TRUE(</code>
-      * <code>Assert equal int (DEVICENET_FRAG_STARTED, protocore_devicenet_frag_feed(&rx, f.data, f.dlc))</code>
+      * <code>Assert true (Devicenet.ok)</code>
+      * <code>Assert equal int (DEVICENET_FRAG_STARTED, Devicenet.frag)</code>
       * <code>Assert true (rx.active)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(1u, rx.next_count);</code>
-      * <code>TEST_ASSERT_TRUE(protocore_devicenet_build_fragment(&f, DEVICENET_GROUP_2, 4, 5, PROTO_FALSE, DEVICENET_FRAG_MIDDLE,</code>
-      * <code>Assert equal int (DEVICENET_FRAG_PROGRESS, protocore_devicenet_frag_feed(&rx, f.data, f.dlc))</code>
+      * <code>Assert true (Devicenet.ok)</code>
+      * <code>Assert equal int (DEVICENET_FRAG_PROGRESS, Devicenet.frag)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(2u, rx.next_count);</code>
-      * <code>TEST_ASSERT_TRUE(protocore_devicenet_build_fragment(&f, DEVICENET_GROUP_2, 4, 5, PROTO_FALSE, DEVICENET_FRAG_LAST,</code>
-      * <code>Assert equal int (DEVICENET_FRAG_COMPLETE, protocore_devicenet_frag_feed(&rx, f.data, f.dlc))</code>
+      * <code>Assert true (Devicenet.ok)</code>
+      * <code>Assert equal int (DEVICENET_FRAG_COMPLETE, Devicenet.frag)</code>
       * <code>Assert false (rx.active)</code>
       * <code>TEST_ASSERT_EQUAL_UINT16(14u, rx.len);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(SRC, rx.buf, 14);</code>
@@ -10564,19 +10564,19 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: A middle fragment with no first one is an error.
     * **Assertions**:
-      * <code>Assert equal int (DEVICENET_FRAG_ERR, protocore_devicenet_frag_feed(&rx, MIDDLE_1, sizeof(MIDDLE_1)))</code>
+      * <code>Assert equal int (DEVICENET_FRAG_ERR, Devicenet.frag)</code>
       * <code>TEST_ASSERT_EQUAL_UINT16(0u, rx.len);</code>
-      * <code>Assert equal int (DEVICENET_FRAG_ERR, protocore_devicenet_frag_feed(&rx, LAST_2, sizeof(LAST_2)))</code>
-      * <code>Assert equal int (DEVICENET_FRAG_STARTED, protocore_devicenet_frag_feed(&rx, FIRST, sizeof(FIRST)))</code>
-      * <code>Assert equal int (DEVICENET_FRAG_ERR, protocore_devicenet_frag_feed(&rx, MIDDLE_2, sizeof(MIDDLE_2)))</code>
+      * <code>Assert equal int (DEVICENET_FRAG_ERR, Devicenet.frag)</code>
+      * <code>Assert equal int (DEVICENET_FRAG_STARTED, Devicenet.frag)</code>
+      * <code>Assert equal int (DEVICENET_FRAG_ERR, Devicenet.frag)</code>
       * <code>Assert false (rx.active)</code>
       * <code>TEST_ASSERT_EQUAL_UINT16(0u, rx.len);</code>
-      * <code>Assert equal int (DEVICENET_FRAG_ERR, protocore_devicenet_frag_feed(&rx, STUB, sizeof(STUB)))</code>
-      * <code>Assert equal int (DEVICENET_FRAG_STARTED, protocore_devicenet_frag_feed(&rx, FIRST, sizeof(FIRST)))</code>
-      * <code>Assert equal int (DEVICENET_FRAG_IGNORED, protocore_devicenet_frag_feed(&rx, ACK, sizeof(ACK)))</code>
+      * <code>Assert equal int (DEVICENET_FRAG_ERR, Devicenet.frag)</code>
+      * <code>Assert equal int (DEVICENET_FRAG_STARTED, Devicenet.frag)</code>
+      * <code>Assert equal int (DEVICENET_FRAG_IGNORED, Devicenet.frag)</code>
       * <code>TEST_ASSERT_EQUAL_UINT16(6u, rx.len); // unchanged by the acknowledge</code>
       * <code>Assert true (rx.active)</code>
-      * <code>Assert equal int (DEVICENET_FRAG_PROGRESS, protocore_devicenet_frag_feed(&rx, MIDDLE_1, sizeof(MIDDLE_1)))</code>
+      * <code>Assert equal int (DEVICENET_FRAG_PROGRESS, Devicenet.frag)</code>
       * <code>TEST_ASSERT_EQUAL_UINT16(12u, rx.len);</code>
   </details>
 
@@ -10585,12 +10585,12 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: A new first fragment restarts the message
     * **Assertions**:
-      * <code>Assert equal int (DEVICENET_FRAG_STARTED, protocore_devicenet_frag_feed(&rx, FIRST, sizeof(FIRST)))</code>
+      * <code>Assert equal int (DEVICENET_FRAG_STARTED, Devicenet.frag)</code>
       * <code>TEST_ASSERT_EQUAL_UINT16(6u, rx.len);</code>
-      * <code>Assert equal int (DEVICENET_FRAG_STARTED, protocore_devicenet_frag_feed(&rx, FIRST_AGAIN, sizeof(FIRST_AGAIN)))</code>
+      * <code>Assert equal int (DEVICENET_FRAG_STARTED, Devicenet.frag)</code>
       * <code>TEST_ASSERT_EQUAL_UINT16(2u, rx.len);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0xAAu, rx.buf[0]);</code>
-      * <code>Assert equal int (DEVICENET_FRAG_COMPLETE, protocore_devicenet_frag_feed(&rx, LAST_1, sizeof(LAST_1)))</code>
+      * <code>Assert equal int (DEVICENET_FRAG_COMPLETE, Devicenet.frag)</code>
       * <code>TEST_ASSERT_EQUAL_UINT16(4u, rx.len);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, rx.buf, 4);</code>
   </details>
@@ -10600,11 +10600,11 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Fragment count wraps at sixty four
     * **Assertions**:
-      * <code>Assert equal int (DEVICENET_FRAG_STARTED, protocore_devicenet_frag_feed(&rx, FIRST_63, sizeof(FIRST_63)))</code>
+      * <code>Assert equal int (DEVICENET_FRAG_STARTED, Devicenet.frag)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(0u, rx.next_count); // (63 + 1) mod 64</code>
-      * <code>Assert equal int (DEVICENET_FRAG_PROGRESS, protocore_devicenet_frag_feed(&rx, MIDDLE_0, sizeof(MIDDLE_0)))</code>
+      * <code>Assert equal int (DEVICENET_FRAG_PROGRESS, Devicenet.frag)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(1u, rx.next_count);</code>
-      * <code>Assert equal int (DEVICENET_FRAG_COMPLETE, protocore_devicenet_frag_feed(&rx, LAST_1, sizeof(LAST_1)))</code>
+      * <code>Assert equal int (DEVICENET_FRAG_COMPLETE, Devicenet.frag)</code>
       * <code>TEST_ASSERT_EQUAL_UINT16(6u, rx.len);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, rx.buf, 6);</code>
   </details>
@@ -10629,9 +10629,9 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: The initial value is zero and there is no final XOR, so an empty message CRCs to zero.
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_HEX16(0xBB3Du, protocore_df1_crc(CHECK, sizeof(CHECK)));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(0x0000u, protocore_df1_crc(CHECK, 0));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(0x0000u, protocore_df1_crc(ZERO, 1));</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(0xBB3Du, Df1.u16);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(0x0000u, Df1.u16);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX16(0x0000u, Df1.u16);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -10641,9 +10641,9 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
     * **Assertions**:
       * <code>TEST_ASSERT_EQUAL_HEX8(0x9Au, bcc); // 0x100 - 0x66</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, (uint8_t)(0x66u + bcc));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, protocore_df1_bcc(ZERO_SUM, sizeof(ZERO_SUM)));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, protocore_df1_bcc(ZERO_SUM, 0));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, (uint8_t)(sum + protocore_df1_bcc(LONG, sizeof(LONG))));</code>
+      * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, Df1.value);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, Df1.value);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, (uint8_t)(sum + Df1.value));</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -10654,7 +10654,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
       * <code>TEST_ASSERT_EQUAL_size_t(2u + 12u + 2u + 1u, n);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, buf, 17);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0xEEu, buf[17]);</code>
-      * <code>Assert true (protocore_df1_parse_frame(buf, n, DF1_CHECK_BCC, out, sizeof(out), &out_len))</code>
+      * <code>Assert true (Df1.ok)</code>
       * <code>TEST_ASSERT_EQUAL_size_t(sizeof(DATA), out_len);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(DATA, out, sizeof(DATA));</code>
   </details>
@@ -10669,8 +10669,8 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
       * <code>TEST_ASSERT_EQUAL_HEX8(0x03u, buf[6]);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8((uint8_t)(want & 0xFFu), buf[7]); // low byte first</code>
       * <code>TEST_ASSERT_EQUAL_HEX8((uint8_t)(want &gt;&gt; 8), buf[8]);</code>
-      * <code>Assert true (want != protocore_df1_crc(DATA, sizeof(DATA)))</code>
-      * <code>Assert true (protocore_df1_parse_frame(buf, n, DF1_CHECK_CRC, out, sizeof(out), &out_len))</code>
+      * <code>Assert true (want != Df1.u16)</code>
+      * <code>Assert true (Df1.ok)</code>
       * <code>TEST_ASSERT_EQUAL_size_t(3u, out_len);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(DATA, out, 3);</code>
   </details>
@@ -10682,12 +10682,12 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
     * **Assertions**:
       * <code>TEST_ASSERT_EQUAL_size_t(10u, n); // 2 + (3 data + 2 stuffing) + 2 + 1</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, buf, 10);</code>
-      * <code>Assert true (protocore_df1_parse_frame(buf, n, DF1_CHECK_BCC, out, sizeof(out), &out_len))</code>
+      * <code>Assert true (Df1.ok)</code>
       * <code>TEST_ASSERT_EQUAL_size_t(3u, out_len);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(DATA, out, 3);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(protocore_df1_bcc(DATA, sizeof(DATA)), buf[n - 1]);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX8(Df1.value, buf[n - 1]);</code>
       * <code>TEST_ASSERT_EQUAL_size_t(7u, n);</code>
-      * <code>Assert true (protocore_df1_parse_frame(buf, n, DF1_CHECK_BCC, out, sizeof(out), &out_len))</code>
+      * <code>Assert true (Df1.ok)</code>
       * <code>TEST_ASSERT_EQUAL_size_t(2u, out_len);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(WITH_ETX, out, 2);</code>
   </details>
@@ -10698,11 +10698,11 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
     * **Objective**: Round trip over every octet value
     * **Assertions**:
       * <code>TEST_ASSERT_EQUAL_size_t(2u + 256u + 1u + 2u + 1u, n); // one DLE in the range, so one stuffing octet</code>
-      * <code>Assert true (protocore_df1_parse_frame(buf, n, DF1_CHECK_BCC, out, sizeof(out), &out_len))</code>
+      * <code>Assert true (Df1.ok)</code>
       * <code>TEST_ASSERT_EQUAL_size_t(sizeof(data), out_len);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(data, out, sizeof(data));</code>
       * <code>TEST_ASSERT_EQUAL_size_t(2u + 256u + 1u + 2u + 2u, n);</code>
-      * <code>Assert true (protocore_df1_parse_frame(buf, n, DF1_CHECK_CRC, out, sizeof(out), &out_len))</code>
+      * <code>Assert true (Df1.ok)</code>
       * <code>TEST_ASSERT_EQUAL_size_t(sizeof(data), out_len);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(data, out, sizeof(data));</code>
   </details>
@@ -10714,10 +10714,10 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
     * **Assertions**:
       * <code>TEST_ASSERT_EQUAL_size_t(5u, n);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, buf, 5);</code>
-      * <code>Assert true (protocore_df1_parse_frame(buf, n, DF1_CHECK_BCC, out, sizeof(out), &out_len))</code>
+      * <code>Assert true (Df1.ok)</code>
       * <code>TEST_ASSERT_EQUAL_size_t(0u, out_len);</code>
       * <code>TEST_ASSERT_EQUAL_size_t(6u, n);</code>
-      * <code>Assert true (protocore_df1_parse_frame(buf, n, DF1_CHECK_CRC, out, sizeof(out), &out_len))</code>
+      * <code>Assert true (Df1.ok)</code>
       * <code>TEST_ASSERT_EQUAL_size_t(0u, out_len);</code>
   </details>
 
@@ -10727,8 +10727,8 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
     * **Objective**: The same for the CRC form.
     * **Assertions**:
       * <code>TEST_ASSERT_EQUAL_size_t(9u, n);</code>
-      * <code>Assert false message (protocore_df1_parse_frame(bad, n, DF1_CHECK_BCC, out, sizeof(out), &out_len)</code>
-      * <code>Assert false message (protocore_df1_parse_frame(bad, n, DF1_CHECK_CRC, out, sizeof(out), &out_len)</code>
+      * <code>Assert false message (Df1.ok, "corrupted octet accepted")</code>
+      * <code>Assert false message (Df1.ok, "corrupted octet accepted")</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -10736,15 +10736,15 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: A DLE followed by something that is neither DLE nor ETX is an unexpected control symbol.
     * **Assertions**:
-      * <code>Assert false (protocore_df1_parse_frame(NO_STX, sizeof(NO_STX), DF1_CHECK_BCC, out, sizeof(out), &out_len))</code>
-      * <code>Assert false (protocore_df1_parse_frame(NO_DLE, sizeof(NO_DLE), DF1_CHECK_BCC, out, sizeof(out), &out_len))</code>
-      * <code>Assert false (protocore_df1_parse_frame(NO_ETX, sizeof(NO_ETX), DF1_CHECK_BCC, out, sizeof(out), &out_len))</code>
-      * <code>TEST_ASSERT_FALSE(</code>
-      * <code>TEST_ASSERT_FALSE(</code>
-      * <code>Assert false (protocore_df1_parse_frame(STUB, sizeof(STUB), DF1_CHECK_BCC, out, sizeof(out), &out_len))</code>
-      * <code>Assert false (protocore_df1_parse_frame(STUB, 5, DF1_CHECK_CRC, out, sizeof(out), &out_len))</code>
-      * <code>Assert false (protocore_df1_parse_frame(NULL, 8, DF1_CHECK_BCC, out, sizeof(out), &out_len))</code>
-      * <code>Assert false (protocore_df1_parse_frame(STUB, sizeof(STUB), DF1_CHECK_BCC, NULL, sizeof(out), &out_len))</code>
+      * <code>Assert false (Df1.ok)</code>
+      * <code>Assert false (Df1.ok)</code>
+      * <code>Assert false (Df1.ok)</code>
+      * <code>Assert false (Df1.ok)</code>
+      * <code>Assert false (Df1.ok)</code>
+      * <code>Assert false (Df1.ok)</code>
+      * <code>Assert false (Df1.ok)</code>
+      * <code>Assert false (Df1.ok)</code>
+      * <code>Assert false (Df1.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -10753,18 +10753,18 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
     * **Objective**: A doubled DLE takes one octet of the destination, not two.
     * **Assertions**:
       * <code>TEST_ASSERT_EQUAL_size_t(9u, n);</code>
-      * <code>Assert false (protocore_df1_parse_frame(buf, n, DF1_CHECK_BCC, small, sizeof(small), &out_len))</code>
-      * <code>Assert true (protocore_df1_parse_frame(buf, n, DF1_CHECK_BCC, exact, sizeof(exact), &out_len))</code>
+      * <code>Assert false (Df1.ok)</code>
+      * <code>Assert true (Df1.ok)</code>
       * <code>TEST_ASSERT_EQUAL_size_t(4u, out_len);</code>
       * <code>TEST_ASSERT_EQUAL_size_t(9u, n); // 2 + 4 + 2 + 1</code>
-      * <code>Assert true (protocore_df1_parse_frame(buf, n, DF1_CHECK_BCC, two, sizeof(two), &out_len))</code>
+      * <code>Assert true (Df1.ok)</code>
       * <code>TEST_ASSERT_EQUAL_size_t(2u, out_len);</code>
-      * <code>Assert false (protocore_df1_parse_frame(buf, n, DF1_CHECK_BCC, one, sizeof(one), &out_len))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_df1_build_frame(buf, 8, DATA, sizeof(DATA), DF1_CHECK_BCC));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(9u, protocore_df1_build_frame(buf, 9, DATA, sizeof(DATA), DF1_CHECK_BCC));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_df1_build_frame(buf, 9, DATA, sizeof(DATA), DF1_CHECK_CRC)); // needs 10</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_df1_build_frame(NULL, sizeof(buf), DATA, sizeof(DATA), DF1_CHECK_BCC));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_df1_build_frame(buf, sizeof(buf), NULL, 4, DF1_CHECK_BCC));</code>
+      * <code>Assert false (Df1.ok)</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Df1.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(9u, Df1.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Df1.n); // needs 10</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Df1.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Df1.n);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -10772,7 +10772,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Out len is optional
     * **Assertions**:
-      * <code>Assert true (protocore_df1_parse_frame(buf, n, DF1_CHECK_CRC, out, sizeof(out), NULL))</code>
+      * <code>Assert true (Df1.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(DATA, out, 2);</code>
   </details>
 
@@ -11035,8 +11035,8 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: An empty span has no octets to fold, so its LRC is the identity element.
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, protocore_dnet_lrc(block, sizeof(block)));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, protocore_dnet_lrc(BODY, 0));</code>
+      * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, Directnet.value);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, Directnet.value);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -11044,7 +11044,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Header frame
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(sizeof(WANT), protocore_dnet_header(1, DNET_READ, 0x0040, 2, out, sizeof(out)));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(sizeof(WANT), Directnet.n);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, out, sizeof(WANT));</code>
   </details>
 
@@ -11053,9 +11053,9 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: The whole framed block, LRC included, folds to zero.
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(12u, protocore_dnet_header(0xAB, DNET_WRITE, 0xCDEF, 0xFA, out, sizeof(out)));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(12u, Directnet.n);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(BODY, out + 1, sizeof(BODY));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, protocore_dnet_lrc(out + 1, 11));</code>
+      * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, Directnet.value);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -11063,7 +11063,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Data frame
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(sizeof(WANT), protocore_dnet_data(PAYLOAD, sizeof(PAYLOAD), out, sizeof(out)));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(sizeof(WANT), Directnet.n);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, out, sizeof(WANT));</code>
   </details>
 
@@ -11073,7 +11073,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
     * **Objective**: Data frame round trip
     * **Assertions**:
       * <code>TEST_ASSERT_EQUAL_size_t(n + 3u, len);</code>
-      * <code>Assert true (protocore_dnet_data_parse(frame, len, &data, &data_len))</code>
+      * <code>Assert true (Directnet.ok)</code>
       * <code>TEST_ASSERT_EQUAL_size_t(n, data_len);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(PAYLOAD, data, n);</code>
       * <code>Assert null (data)</code>
@@ -11084,9 +11084,9 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Data parse optional outputs
     * **Assertions**:
-      * <code>Assert true (protocore_dnet_data_parse(frame, len, NULL, &data_len))</code>
+      * <code>Assert true (Directnet.ok)</code>
       * <code>TEST_ASSERT_EQUAL_size_t(4u, data_len);</code>
-      * <code>Assert true (protocore_dnet_data_parse(frame, len, &data, NULL))</code>
+      * <code>Assert true (Directnet.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(PAYLOAD, data, 4);</code>
   </details>
 
@@ -11095,7 +11095,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Single octet corruption is refused
     * **Assertions**:
-      * <code>Assert false (protocore_dnet_data_parse(bad, len, &data, &data_len))</code>
+      * <code>Assert false (Directnet.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -11103,10 +11103,10 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Data parse rejects bad framing
     * **Assertions**:
-      * <code>Assert false (protocore_dnet_data_parse(NO_STX, sizeof(NO_STX), &data, &data_len))</code>
-      * <code>Assert false (protocore_dnet_data_parse(NO_ETX, sizeof(NO_ETX), &data, &data_len))</code>
-      * <code>Assert false (protocore_dnet_data_parse(TOO_SHORT, sizeof(TOO_SHORT), &data, &data_len))</code>
-      * <code>Assert false (protocore_dnet_data_parse(NULL, 5, &data, &data_len))</code>
+      * <code>Assert false (Directnet.ok)</code>
+      * <code>Assert false (Directnet.ok)</code>
+      * <code>Assert false (Directnet.ok)</code>
+      * <code>Assert false (Directnet.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -11114,13 +11114,13 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Builders refuse a short buffer
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_dnet_header(1, DNET_READ, 0x40, 2, out, 11)); // needs 12</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(12u, protocore_dnet_header(1, DNET_READ, 0x40, 2, out, 12));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_dnet_header(1, DNET_READ, 0x40, 2, NULL, sizeof(out)));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_dnet_data(PAYLOAD, 4, out, 6)); // needs 7</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(7u, protocore_dnet_data(PAYLOAD, 4, out, 7));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_dnet_data(PAYLOAD, 4, NULL, sizeof(out)));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_dnet_data(NULL, 4, out, sizeof(out)));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Directnet.n); // needs 12</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(12u, Directnet.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Directnet.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Directnet.n); // needs 7</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(7u, Directnet.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Directnet.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Directnet.n);</code>
   </details>
 
 </details>
@@ -14620,9 +14620,9 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: A null context is the same request with eight zero octets.
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(sizeof(WANT), protocore_eip_build_register_session(buf, sizeof(buf), CTX));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(sizeof(WANT), Enip.n);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, buf, sizeof(WANT));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(28u, protocore_eip_build_register_session(buf, sizeof(buf), NULL));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(28u, Enip.n);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(ZEROS, buf + 12, 8);</code>
   </details>
 
@@ -14631,9 +14631,9 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Headers without command data
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(24u, protocore_eip_build_unregister_session(buf, sizeof(buf), 0x11223344u, CTX));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(24u, Enip.n);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(UNREG, buf, sizeof(UNREG)); // command, length 0, handle little-endian</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(24u, protocore_eip_build_list_identity(buf, sizeof(buf), CTX));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(24u, Enip.n);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(LISTID, buf, sizeof(LISTID));</code>
   </details>
 
@@ -14644,11 +14644,11 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
     * **Assertions**:
       * <code>TEST_ASSERT_EQUAL_size_t(sizeof(WANT), n);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, buf, sizeof(WANT));</code>
-      * <code>Assert true (protocore_eip_parse(buf, n, &h, &data, &data_len))</code>
+      * <code>Assert true (Enip.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX16(EIP_CMD_SEND_RR_DATA, h.command);</code>
       * <code>TEST_ASSERT_EQUAL_HEX32(0x87654321u, h.session_handle);</code>
       * <code>TEST_ASSERT_EQUAL_size_t(20u, data_len);</code>
-      * <code>Assert true (protocore_eip_parse_send_rr_data(data, data_len, &cip, &cip_len))</code>
+      * <code>Assert true (Enip.ok)</code>
       * <code>TEST_ASSERT_EQUAL_size_t(sizeof(CIP), cip_len);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(CIP, cip, sizeof(CIP));</code>
   </details>
@@ -14659,7 +14659,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
     * **Objective**: Header round trip
     * **Assertions**:
       * <code>TEST_ASSERT_EQUAL_size_t(27u, n);</code>
-      * <code>Assert true (protocore_eip_parse(buf, n, &got, &data, &data_len))</code>
+      * <code>Assert true (Enip.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX16(h.command, got.command);</code>
       * <code>TEST_ASSERT_EQUAL_UINT16(3u, got.length);</code>
       * <code>TEST_ASSERT_EQUAL_HEX32(h.session_handle, got.session_handle);</code>
@@ -14676,10 +14676,10 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
     * **Objective**: Parse refuses a truncated message
     * **Assertions**:
       * <code>TEST_ASSERT_EQUAL_size_t(32u, n);</code>
-      * <code>Assert true (protocore_eip_parse(buf, n, &got, NULL, NULL))</code>
-      * <code>Assert false (protocore_eip_parse(buf, n - 1, &got, NULL, NULL))</code>
-      * <code>Assert false (protocore_eip_parse(buf, 23, &got, NULL, NULL))</code>
-      * <code>Assert false (protocore_eip_parse(NULL, n, &got, NULL, NULL))</code>
+      * <code>Assert true (Enip.ok)</code>
+      * <code>Assert false (Enip.ok)</code>
+      * <code>Assert false (Enip.ok)</code>
+      * <code>Assert false (Enip.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -14687,7 +14687,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: item[2..17] is the 16-octet socket address; left zero, the codec does not reinterpret it.
     * **Assertions**:
-      * <code>Assert true (protocore_eip_parse_list_identity(block, sizeof(block), &id))</code>
+      * <code>Assert true (Enip.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX16(0x0001u, id.protocol_version);</code>
       * <code>TEST_ASSERT_EQUAL_HEX16(0x0001u, id.vendor_id);</code>
       * <code>TEST_ASSERT_EQUAL_HEX16(0x000Cu, id.device_type);</code>
@@ -14699,7 +14699,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
       * <code>TEST_ASSERT_EQUAL_UINT8((uint8_t)sizeof(NAME), id.product_name_len);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(NAME, (const uint8_t *)id.product_name, sizeof(NAME));</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x03u, id.state);</code>
-      * <code>Assert false (protocore_eip_parse_list_identity(block, sizeof(block), &id))</code>
+      * <code>Assert false (Enip.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -14707,9 +14707,9 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: interface handle(4) + timeout(2) + count(2)=1 + a Connected Data item carrying two octets.
     * **Assertions**:
-      * <code>Assert false (protocore_eip_parse_send_rr_data(DATA, 14, &cip, &cip_len))</code>
-      * <code>Assert false (protocore_eip_parse_send_rr_data(OVERRUN, sizeof(OVERRUN), &cip, &cip_len))</code>
-      * <code>Assert false (protocore_eip_parse_send_rr_data(DATA, 7, &cip, &cip_len))</code>
+      * <code>Assert false (Enip.ok)</code>
+      * <code>Assert false (Enip.ok)</code>
+      * <code>Assert false (Enip.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -14717,15 +14717,15 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Builders refuse a short buffer
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_eip_build_register_session(buf, 27, CTX));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(28u, protocore_eip_build_register_session(buf, 28, CTX));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_eip_build_list_identity(buf, 23, CTX));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_eip_build_send_rr_data(buf, 43, 1u, CTX, 10, CIP, sizeof(CIP)));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(44u, protocore_eip_build_send_rr_data(buf, 44, 1u, CTX, 10, CIP, sizeof(CIP)));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_eip_build_send_rr_data(buf, sizeof(buf), 1u, CTX, 10, NULL, 4));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_eip_build(NULL, sizeof(buf), &h, NULL, 0));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_eip_build(buf, sizeof(buf), NULL, NULL, 0));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_eip_build(buf, sizeof(buf), &h, NULL, 4));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Enip.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(28u, Enip.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Enip.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Enip.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(44u, Enip.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Enip.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Enip.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Enip.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Enip.n);</code>
   </details>
 
 </details>
@@ -16619,11 +16619,11 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Operating mode commands
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(15u, protocore_fins_build_run(buf, sizeof(buf), &h, FINS_RUN_MODE_RUN));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(15u, Fins.n);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(RUN, buf + FINS_HEADER_SIZE, sizeof(RUN));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(15u, protocore_fins_build_run(buf, sizeof(buf), &h, FINS_RUN_MODE_MONITOR));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(15u, Fins.n);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x02u, buf[14]);</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(12u, protocore_fins_build_stop(buf, sizeof(buf), &h));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(12u, Fins.n);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(STOP, buf + FINS_HEADER_SIZE, sizeof(STOP));</code>
   </details>
 
@@ -16633,7 +16633,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
     * **Objective**: Header round trip
     * **Assertions**:
       * <code>TEST_ASSERT_EQUAL_size_t(15u, n);</code>
-      * <code>Assert true (protocore_fins_parse_command(buf, n, &c))</code>
+      * <code>Assert true (Fins.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(h.icf, c.header.icf);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(h.rsv, c.header.rsv);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(h.gct, c.header.gct);</code>
@@ -16655,7 +16655,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Response end code
     * **Assertions**:
-      * <code>Assert true (protocore_fins_parse_response(OK, sizeof(OK), &r))</code>
+      * <code>Assert true (Fins.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(FINS_ICF_RESPONSE, r.header.icf);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x01u, r.mrc);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x01u, r.src);</code>
@@ -16664,7 +16664,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
       * <code>TEST_ASSERT_EQUAL_size_t(2u, r.data_len);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x12u, r.data[0]);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x34u, r.data[1]);</code>
-      * <code>Assert true (protocore_fins_parse_response(err, sizeof(err), &r))</code>
+      * <code>Assert true (Fins.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x11u, r.mres);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x01u, r.sres);</code>
       * <code>TEST_ASSERT_EQUAL_size_t(0u, r.data_len);</code>
@@ -16675,16 +16675,16 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Parsers refuse short frames
     * **Assertions**:
-      * <code>Assert false (protocore_fins_parse_command(buf, 11, &c))</code>
-      * <code>Assert true (protocore_fins_parse_command(buf, 12, &c))</code>
+      * <code>Assert false (Fins.ok)</code>
+      * <code>Assert true (Fins.ok)</code>
       * <code>TEST_ASSERT_EQUAL_size_t(0u, c.params_len);</code>
-      * <code>Assert false (protocore_fins_parse_command(NULL, 12, &c))</code>
-      * <code>Assert false (protocore_fins_parse_command(buf, 12, NULL))</code>
-      * <code>Assert false (protocore_fins_parse_response(buf, 13, &r))</code>
-      * <code>Assert true (protocore_fins_parse_response(buf, 14, &r))</code>
+      * <code>Assert false (Fins.ok)</code>
+      * <code>Assert false (Fins.ok)</code>
+      * <code>Assert false (Fins.ok)</code>
+      * <code>Assert true (Fins.ok)</code>
       * <code>TEST_ASSERT_EQUAL_size_t(0u, r.data_len);</code>
-      * <code>Assert false (protocore_fins_parse_response(NULL, 14, &r))</code>
-      * <code>Assert false (protocore_fins_parse_response(buf, 14, NULL))</code>
+      * <code>Assert false (Fins.ok)</code>
+      * <code>Assert false (Fins.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -16692,15 +16692,15 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: The prefix fits but the write data does not: still 0, not a headerless partial write.
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_fins_build_memory_area_read(buf, 17, &h, FINS_AREA_DM_WORD, 100, 0, 10));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(18u, protocore_fins_build_memory_area_read(buf, 18, &h, FINS_AREA_DM_WORD, 100, 0, 10));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_fins_build_stop(buf, 11, &h));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_fins_build_run(buf, 14, &h, FINS_RUN_MODE_RUN));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_fins_build_command(NULL, sizeof(buf), &h, 1, 1, NULL, 0));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_fins_build_command(buf, sizeof(buf), NULL, 1, 1, NULL, 0));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_fins_build_command(buf, sizeof(buf), &h, 1, 1, NULL, 3));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Fins.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(18u, Fins.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Fins.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Fins.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Fins.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Fins.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Fins.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Fins.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Fins.n);</code>
   </details>
 
 </details>
@@ -21348,7 +21348,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
     * **Assertions**:
       * <code>TEST_ASSERT_EQUAL_size_t(sizeof(WANT), n);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, out, sizeof(WANT));</code>
-      * <code>Assert true (protocore_hart_parse(WANT, sizeof(WANT), &f))</code>
+      * <code>Assert true (Hart.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x02u, f.delimiter);</code>
       * <code>TEST_ASSERT_EQUAL_size_t(1u, f.addr_len);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x80u, f.addr[0]);</code>
@@ -21363,8 +21363,8 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
     * **Objective**: delimiter + 5 address + command + byte count + 6 data + check = 15.
     * **Assertions**:
       * <code>TEST_ASSERT_EQUAL_size_t(15u, n);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, protocore_hart_checksum(out, n));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, protocore_hart_checksum(DATA, 0));</code>
+      * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, Hart.value);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, Hart.value);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -21374,15 +21374,15 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
     * **Assertions**:
       * <code>TEST_ASSERT_EQUAL_size_t(11u, n); // 1 + 5 + 1 + 1 + 2 + 1</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x82u, out[0]);</code>
-      * <code>Assert true (protocore_hart_parse(out, n, &f))</code>
+      * <code>Assert true (Hart.ok)</code>
       * <code>TEST_ASSERT_EQUAL_size_t(5u, f.addr_len);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(ADDR5, f.addr, 5);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(3u, f.command);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(2u, f.byte_count);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(DATA, f.data, 2);</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_hart_build(HART_DELIM_STX, ADDR5, 2, 0, NULL, 0, out, sizeof(out)));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_hart_build(HART_DELIM_STX, ADDR5, 0, 0, NULL, 0, out, sizeof(out)));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_hart_build(HART_DELIM_STX, NULL, 1, 0, NULL, 0, out, sizeof(out)));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Hart.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Hart.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Hart.n);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -21391,7 +21391,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
     * **Objective**: Frame round trip
     * **Assertions**:
       * <code>TEST_ASSERT_EQUAL_size_t(n + 5u, len);</code>
-      * <code>Assert true (protocore_hart_parse(out, len, &f))</code>
+      * <code>Assert true (Hart.ok)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8((uint8_t)n, f.byte_count);</code>
       * <code>TEST_ASSERT_EQUAL_size_t(n, f.data_len);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(DATA, f.data, n);</code>
@@ -21403,7 +21403,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: The byte-count octet re-lengths the frame rather than breaking parity, so it is covered
     * **Assertions**:
-      * <code>Assert false (protocore_hart_parse(bad, len, &f))</code>
+      * <code>Assert false (Hart.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -21412,11 +21412,11 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
     * **Objective**: Parse refuses a truncated frame
     * **Assertions**:
       * <code>TEST_ASSERT_EQUAL_size_t(9u, len);</code>
-      * <code>Assert true (protocore_hart_parse(frame, len, &f))</code>
-      * <code>Assert false (protocore_hart_parse(frame, len - 1, &f))</code>
-      * <code>Assert false (protocore_hart_parse(frame, 4, &f))</code>
-      * <code>Assert false (protocore_hart_parse(NULL, len, &f))</code>
-      * <code>Assert false (protocore_hart_parse(frame, len, NULL))</code>
+      * <code>Assert true (Hart.ok)</code>
+      * <code>Assert false (Hart.ok)</code>
+      * <code>Assert false (Hart.ok)</code>
+      * <code>Assert false (Hart.ok)</code>
+      * <code>Assert false (Hart.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -21424,10 +21424,10 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Hartip header octets
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(8u, Hart.n);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, out, sizeof(WANT));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_hartip_build_header(0, 0, 0, 0, 8, out, 7));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_hartip_build_header(0, 0, 0, 0, 8, NULL, sizeof(out)));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Hart.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Hart.n);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -21435,8 +21435,8 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: The sliced payload is itself a valid HART frame.
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(8u, protocore_hartip_build_header(HARTIP_MSG_REQUEST, HARTIP_ID_TOKEN_PDU, 0, 1,</code>
-      * <code>Assert true (protocore_hartip_parse_header(msg, 13, &h))</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(8u, Hart.n);</code>
+      * <code>Assert true (Hart.ok)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(1u, h.version);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(HARTIP_MSG_REQUEST, h.msg_type);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(HARTIP_ID_TOKEN_PDU, h.msg_id);</code>
@@ -21445,7 +21445,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
       * <code>TEST_ASSERT_EQUAL_UINT16(13u, h.total_len);</code>
       * <code>TEST_ASSERT_EQUAL_size_t(sizeof(PDU), h.payload_len);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(PDU, h.payload, sizeof(PDU));</code>
-      * <code>Assert true (protocore_hart_parse(h.payload, h.payload_len, &f))</code>
+      * <code>Assert true (Hart.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, f.command);</code>
   </details>
 
@@ -21454,14 +21454,14 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Hartip refuses impossible byte counts
     * **Assertions**:
-      * <code>Assert false (protocore_hartip_parse_header(msg, 16, &h))</code>
-      * <code>Assert true (protocore_hartip_parse_header(msg, 16, &h))</code>
+      * <code>Assert false (Hart.ok)</code>
+      * <code>Assert true (Hart.ok)</code>
       * <code>TEST_ASSERT_EQUAL_size_t(0u, h.payload_len);</code>
       * <code>Assert null (h.payload)</code>
-      * <code>Assert false (protocore_hartip_parse_header(msg, 16, &h))</code>
-      * <code>Assert false (protocore_hartip_parse_header(msg, 7, &h))</code>
-      * <code>Assert false (protocore_hartip_parse_header(NULL, 16, &h))</code>
-      * <code>Assert false (protocore_hartip_parse_header(msg, 16, NULL))</code>
+      * <code>Assert false (Hart.ok)</code>
+      * <code>Assert false (Hart.ok)</code>
+      * <code>Assert false (Hart.ok)</code>
+      * <code>Assert false (Hart.ok)</code>
   </details>
 
 </details>
@@ -22243,11 +22243,11 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: '@' ^ '0' ^ '0' = 0x40 ^ 0x30 ^ 0x30 = 0x40
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, protocore_hostlink_fcs("", 0));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x40u, protocore_hostlink_fcs("@", 1));   // '@' = 0x40</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, protocore_hostlink_fcs("@@", 2));  // a pair cancels</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x40u, protocore_hostlink_fcs("@@@", 3)); // an odd count does not</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x40u, protocore_hostlink_fcs("@00", 3));</code>
+      * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, Hostlink.value);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX8(0x40u, Hostlink.value); // '@' = 0x40</code>
+      * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, Hostlink.value); // a pair cancels</code>
+      * <code>TEST_ASSERT_EQUAL_HEX8(0x40u, Hostlink.value); // an odd count does not</code>
+      * <code>TEST_ASSERT_EQUAL_HEX8(0x40u, Hostlink.value);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -22274,21 +22274,21 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Read response words
     * **Assertions**:
-      * <code>Assert true (protocore_hostlink_parse(RESP, strlen(RESP), &f))</code>
+      * <code>Assert true (Hostlink.ok)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(0u, f.node);</code>
       * <code>Assert equal string ("RD", f.header_code)</code>
       * <code>TEST_ASSERT_EQUAL_size_t(14u, f.text_len); // "00" + three 4-character words</code>
-      * <code>Assert true (protocore_hostlink_end_code(&f, &code))</code>
+      * <code>Assert true (Hostlink.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, code); // 00 = normal completion</code>
-      * <code>Assert true (protocore_hostlink_read_word(&f, 0, &w))</code>
+      * <code>Assert true (Hostlink.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX16(0x1234u, w);</code>
-      * <code>Assert true (protocore_hostlink_read_word(&f, 1, &w))</code>
+      * <code>Assert true (Hostlink.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX16(0x5678u, w);</code>
-      * <code>Assert true (protocore_hostlink_read_word(&f, 2, &w))</code>
+      * <code>Assert true (Hostlink.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX16(0x9ABCu, w);</code>
-      * <code>Assert false (protocore_hostlink_read_word(&f, 3, &w))</code>
-      * <code>Assert false (protocore_hostlink_read_word(&f, 0, NULL))</code>
-      * <code>Assert false (protocore_hostlink_read_word(NULL, 0, &w))</code>
+      * <code>Assert false (Hostlink.ok)</code>
+      * <code>Assert false (Hostlink.ok)</code>
+      * <code>Assert false (Hostlink.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -22299,12 +22299,12 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
       * <code>TEST_ASSERT_EQUAL_size_t(15u, n);</code>
       * <code>Assert equal char ('0' + (node / 10), buf[1])</code>
       * <code>Assert equal char ('0' + (node % 10), buf[2])</code>
-      * <code>Assert true (protocore_hostlink_parse(buf, n, &f))</code>
+      * <code>Assert true (Hostlink.ok)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(node, f.node);</code>
       * <code>Assert equal string ("RD", f.header_code)</code>
       * <code>TEST_ASSERT_EQUAL_size_t(strlen(TEXT), f.text_len);</code>
       * <code>Assert equal memory (TEXT, f.text, strlen(TEXT))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_hostlink_build(buf, sizeof(buf), 100, "RD", TEXT, strlen(TEXT)));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Hostlink.n);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -22314,8 +22314,8 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
     * **Assertions**:
       * <code>TEST_ASSERT_EQUAL_size_t(10u, n);</code>
       * <code>Assert equal string ("@00RDx2E*\\r", buf)</code>
-      * <code>Assert true (protocore_hostlink_parse(buf, n, &f))</code>
-      * <code>Assert true (protocore_hostlink_parse(LOWER, strlen(LOWER), &f))</code>
+      * <code>Assert true (Hostlink.ok)</code>
+      * <code>Assert true (Hostlink.ok)</code>
       * <code>TEST_ASSERT_EQUAL_size_t(1u, f.text_len);</code>
       * <code>Assert equal char ('x', f.text[0])</code>
   </details>
@@ -22325,7 +22325,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Single character corruption is refused
     * **Assertions**:
-      * <code>Assert false (protocore_hostlink_parse(bad, n, &f))</code>
+      * <code>Assert false (Hostlink.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -22333,9 +22333,9 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Parse rejects bad framing
     * **Assertions**:
-      * <code>Assert false message (protocore_hostlink_parse(BAD[i], strlen(BAD[i]), &f), BAD[i])</code>
-      * <code>Assert false (protocore_hostlink_parse(NULL, 17, &f))</code>
-      * <code>Assert false (protocore_hostlink_parse("@00RD0000001057*\\r", 17, NULL))</code>
+      * <code>Assert false message (Hostlink.ok, BAD[i])</code>
+      * <code>Assert false (Hostlink.ok)</code>
+      * <code>Assert false (Hostlink.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -22343,14 +22343,14 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: "@00RD" alone: the response has no end code at all.
     * **Assertions**:
-      * <code>Assert true (protocore_hostlink_parse(EMPTY, strlen(EMPTY), &f))</code>
+      * <code>Assert true (Hostlink.ok)</code>
       * <code>TEST_ASSERT_EQUAL_size_t(0u, f.text_len);</code>
-      * <code>Assert false (protocore_hostlink_end_code(&f, &code))</code>
-      * <code>Assert true (protocore_hostlink_parse(NOT_HEX, strlen(NOT_HEX), &f))</code>
-      * <code>Assert false (protocore_hostlink_end_code(&f, &code))</code>
-      * <code>Assert false (protocore_hostlink_end_code(NULL, &code))</code>
-      * <code>Assert true (protocore_hostlink_parse(buf, n, &f))</code>
-      * <code>Assert true (protocore_hostlink_end_code(&f, &code))</code>
+      * <code>Assert false (Hostlink.ok)</code>
+      * <code>Assert true (Hostlink.ok)</code>
+      * <code>Assert false (Hostlink.ok)</code>
+      * <code>Assert false (Hostlink.ok)</code>
+      * <code>Assert true (Hostlink.ok)</code>
+      * <code>Assert true (Hostlink.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x1Au, code);</code>
   </details>
 
@@ -22359,21 +22359,21 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Builders refuse a short buffer
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_hostlink_build_read(buf, 17, 0, 0, 10)); // 17 frame + NUL needs 18</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(17u, protocore_hostlink_build_read(buf, 18, 0, 0, 10));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_hostlink_build_read(buf, sizeof(buf), 0, 10000, 1)); // address &gt; 9999</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_hostlink_build_read(buf, sizeof(buf), 0, 0, 0));     // zero words</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_hostlink_build_read(buf, sizeof(buf), 0, 0, 10000)); // count &gt; 9999</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_hostlink_build_write(buf, 21, 0, 100, WORDS, 2)); // 21 frame + NUL needs 22</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(21u, protocore_hostlink_build_write(buf, 22, 0, 100, WORDS, 2));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_hostlink_build_write(buf, sizeof(buf), 0, 100, WORDS, 0));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_hostlink_build_write(buf, sizeof(buf), 0, 100, NULL, 1));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_hostlink_build_write(NULL, sizeof(buf), 0, 100, WORDS, 1));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_hostlink_build_write(buf, sizeof(buf), 100, 100, WORDS, 1));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_hostlink_build(NULL, sizeof(buf), 0, "RD", "", 0));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_hostlink_build(buf, sizeof(buf), 0, NULL, "", 0));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_hostlink_build(buf, sizeof(buf), 0, "R", "", 0)); // one header character</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_hostlink_build(buf, sizeof(buf), 0, "RD", NULL, 4));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Hostlink.n); // 17 frame + NUL needs 18</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(17u, Hostlink.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Hostlink.n); // address &gt; 9999</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Hostlink.n); // zero words</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Hostlink.n); // count &gt; 9999</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Hostlink.n); // 21 frame + NUL needs 22</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(21u, Hostlink.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Hostlink.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Hostlink.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Hostlink.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Hostlink.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Hostlink.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Hostlink.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Hostlink.n); // one header character</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Hostlink.n);</code>
   </details>
 
 </details>
@@ -26007,10 +26007,10 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
       * <code>TEST_ASSERT_EQUAL_UINT8(1u, IOL_CH_PAGE);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(2u, IOL_CH_DIAGNOSIS);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(3u, IOL_CH_ISDU);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0xA0u, protocore_iol_mc(PROTO_TRUE, IOL_CH_PAGE, 0));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x7Fu, protocore_iol_mc(PROTO_FALSE, IOL_CH_ISDU, 0x1F));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, protocore_iol_mc(PROTO_FALSE, IOL_CH_PROCESS, 0x20));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(mc, protocore_iol_mc(protocore_iol_mc_is_read(mc), protocore_iol_mc_channel(mc),</code>
+      * <code>TEST_ASSERT_EQUAL_HEX8(0xA0u, Iolink.value);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX8(0x7Fu, Iolink.value);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, Iolink.value);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX8(mc, Iolink.value);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -26023,11 +26023,11 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
       * <code>TEST_ASSERT_EQUAL_UINT8(0u, IOL_MSEQ_TYPE_0);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(1u, IOL_MSEQ_TYPE_1);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(2u, IOL_MSEQ_TYPE_2);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, protocore_iol_ckt(IOL_MSEQ_TYPE_0, 0));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x40u, protocore_iol_ckt(IOL_MSEQ_TYPE_1, 0));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x80u, protocore_iol_ckt(IOL_MSEQ_TYPE_2, 0));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x7Fu, protocore_iol_ckt(IOL_MSEQ_TYPE_1, 0x3F));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x40u, protocore_iol_ckt(IOL_MSEQ_TYPE_1, 0xC0));</code>
+      * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, Iolink.value);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX8(0x40u, Iolink.value);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX8(0x80u, Iolink.value);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX8(0x7Fu, Iolink.value);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX8(0x40u, Iolink.value);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -26037,11 +26037,11 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
     * **Assertions**:
       * <code>TEST_ASSERT_EQUAL_HEX8(0x80u, IOL_CKS_EVENT);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x40u, IOL_CKS_PD_INVALID);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, protocore_iol_cks(PROTO_FALSE, PROTO_FALSE, 0));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x80u, protocore_iol_cks(PROTO_TRUE, PROTO_FALSE, 0));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x40u, protocore_iol_cks(PROTO_FALSE, PROTO_TRUE, 0));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0xC0u, protocore_iol_cks(PROTO_TRUE, PROTO_TRUE, 0));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0xFFu, protocore_iol_cks(PROTO_TRUE, PROTO_TRUE, 0x3F));</code>
+      * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, Iolink.value);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX8(0x80u, Iolink.value);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX8(0x40u, Iolink.value);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX8(0xC0u, Iolink.value);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX8(0xFFu, Iolink.value);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -26051,10 +26051,10 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
     * **Assertions**:
       * <code>TEST_ASSERT_EQUAL_HEX8(0xA0u, msg[0]);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, msg[1]);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x21u, protocore_iol_checksum6(msg, sizeof(msg)));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x21u, protocore_iol_finalize(msg, sizeof(msg), 1));</code>
+      * <code>TEST_ASSERT_EQUAL_HEX8(0x21u, Iolink.value);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX8(0x21u, Iolink.value);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x21u, msg[1]);</code>
-      * <code>Assert true (protocore_iol_verify(msg, sizeof(msg), 1))</code>
+      * <code>Assert true (Iolink.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -26063,8 +26063,8 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
     * **Objective**: Type0 write checksum
     * **Assertions**:
       * <code>TEST_ASSERT_EQUAL_HEX8(0x65u, msg[0]);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x45u, protocore_iol_finalize(msg, sizeof(msg), 1));</code>
-      * <code>Assert true (protocore_iol_verify(msg, sizeof(msg), 1))</code>
+      * <code>TEST_ASSERT_EQUAL_HEX8(0x45u, Iolink.value);</code>
+      * <code>Assert true (Iolink.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -26073,8 +26073,8 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
     * **Objective**: Finalizing preserved the Event flag rather than overwriting the whole octet.
     * **Assertions**:
       * <code>TEST_ASSERT_EQUAL_HEX8(0x80u, msg[1]);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x8Au, protocore_iol_finalize(msg, sizeof(msg), 1));</code>
-      * <code>Assert true (protocore_iol_verify(msg, sizeof(msg), 1))</code>
+      * <code>TEST_ASSERT_EQUAL_HEX8(0x8Au, Iolink.value);</code>
+      * <code>Assert true (Iolink.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(IOL_CKS_EVENT, (uint8_t)(msg[1] & IOL_CHECK_HIGH_MASK));</code>
   </details>
 
@@ -26083,7 +26083,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Finalize then verify
     * **Assertions**:
-      * <code>Assert true (protocore_iol_verify(msg, len, idx))</code>
+      * <code>Assert true (Iolink.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(HIGH[h], (uint8_t)(msg[idx] & IOL_CHECK_HIGH_MASK));</code>
   </details>
 
@@ -26092,8 +26092,8 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Single bit corruption is refused
     * **Assertions**:
-      * <code>Assert true (protocore_iol_verify(good, sizeof(good), 1))</code>
-      * <code>Assert false (protocore_iol_verify(bad, sizeof(bad), 1))</code>
+      * <code>Assert true (Iolink.ok)</code>
+      * <code>Assert false (Iolink.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -26101,10 +26101,10 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: The message was not touched by the refused calls.
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, protocore_iol_finalize(msg, 2, 2));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, protocore_iol_finalize(NULL, 2, 0));</code>
-      * <code>Assert false (protocore_iol_verify(msg, 2, 2))</code>
-      * <code>Assert false (protocore_iol_verify(NULL, 2, 0))</code>
+      * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, Iolink.value);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, Iolink.value);</code>
+      * <code>Assert false (Iolink.ok)</code>
+      * <code>Assert false (Iolink.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0xA0u, msg[0]);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, msg[1]);</code>
   </details>
@@ -26514,9 +26514,9 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: The requested PGN is three octets, little-endian: 0x00F004 -> 04 F0 00.
     * **Assertions**:
-      * <code>Assert true (protocore_j1939_encode_id(&id, 3, J1939_PGN_EEC1, 0x00, J1939_ADDR_GLOBAL))</code>
+      * <code>Assert true (J1939.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX32(0x0CF00400u, id);</code>
-      * <code>Assert true (protocore_j1939_build_request(&f, 0xF9, J1939_ADDR_GLOBAL, J1939_PGN_EEC1))</code>
+      * <code>Assert true (J1939.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX32(0x18EAFFF9u, f.id);</code>
       * <code>Assert true (f.extended)</code>
       * <code>Assert false (f.rtr)</code>
@@ -26524,12 +26524,12 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
       * <code>TEST_ASSERT_EQUAL_HEX8(0x04u, f.data[0]);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0xF0u, f.data[1]);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, f.data[2]);</code>
-      * <code>Assert true (protocore_j1939_build_address_claim(&f, 0x80, 0u))</code>
+      * <code>Assert true (J1939.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX32(0x18EEFF80u, f.id);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(8u, f.dlc);</code>
-      * <code>Assert true (protocore_j1939_build_bam_cm(&f, 0x00, J1939_PGN_EEC1, 16))</code>
+      * <code>Assert true (J1939.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX32(0x1CECFF00u, f.id);</code>
-      * <code>Assert true (protocore_j1939_build_tp_dt(&f, 0x00, J1939_ADDR_GLOBAL, 1, CHUNK, sizeof(CHUNK)))</code>
+      * <code>Assert true (J1939.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX32(0x1CEBFF00u, f.id);</code>
   </details>
 
@@ -26538,27 +26538,27 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: PF 0xEF: the last PDU1 format. The PGN's low octet is dropped and the destination takes it.
     * **Assertions**:
-      * <code>Assert true (protocore_j1939_encode_id(&id, 6, 0x00EF00u, 0x11, 0x22))</code>
-      * <code>Assert true (protocore_j1939_decode_id(id, &d))</code>
+      * <code>Assert true (J1939.ok)</code>
+      * <code>Assert true (J1939.ok)</code>
       * <code>Assert true (d.pdu1)</code>
       * <code>TEST_ASSERT_EQUAL_HEX32(0x00EF00u, d.pgn);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x22u, d.da);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x22u, d.ps);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x11u, d.sa);</code>
-      * <code>Assert true (protocore_j1939_encode_id(&id, 6, 0x00F004u, 0x11, 0x22))</code>
-      * <code>Assert true (protocore_j1939_decode_id(id, &d))</code>
+      * <code>Assert true (J1939.ok)</code>
+      * <code>Assert true (J1939.ok)</code>
       * <code>Assert false (d.pdu1)</code>
       * <code>TEST_ASSERT_EQUAL_HEX32(0x00F004u, d.pgn);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(J1939_ADDR_GLOBAL, d.da);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x04u, d.ps);</code>
-      * <code>Assert true (protocore_j1939_encode_id(&id, 0, 0x3FF00u, 0x33, J1939_ADDR_GLOBAL))</code>
-      * <code>Assert true (protocore_j1939_decode_id(id, &d))</code>
+      * <code>Assert true (J1939.ok)</code>
+      * <code>Assert true (J1939.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX32(0x3FF00u, d.pgn);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(0u, d.priority);</code>
-      * <code>Assert false (protocore_j1939_encode_id(&id, 8, J1939_PGN_EEC1, 0, 0))</code>
-      * <code>Assert false (protocore_j1939_encode_id(&id, 0, 0x40000u, 0, 0))</code>
-      * <code>Assert false (protocore_j1939_encode_id(NULL, 0, J1939_PGN_EEC1, 0, 0))</code>
-      * <code>Assert false (protocore_j1939_decode_id(id, NULL))</code>
+      * <code>Assert false (J1939.ok)</code>
+      * <code>Assert false (J1939.ok)</code>
+      * <code>Assert false (J1939.ok)</code>
+      * <code>Assert false (J1939.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -26566,17 +26566,17 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Bit 48 is reserved and no field reaches it.
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_HEX64(0x00000000001FFFFFull, protocore_j1939_build_name(0, 0, 0, 0, 0, 0, 0, 0, 0x1FFFFF));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(0x00000000FFE00000ull, protocore_j1939_build_name(0, 0, 0, 0, 0, 0, 0, 0x7FF, 0));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(0x0000000700000000ull, protocore_j1939_build_name(0, 0, 0, 0, 0, 0, 7, 0, 0));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(0x000000F800000000ull, protocore_j1939_build_name(0, 0, 0, 0, 0, 0x1F, 0, 0, 0));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(0x0000FF0000000000ull, protocore_j1939_build_name(0, 0, 0, 0, 0xFF, 0, 0, 0, 0));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(0x00FE000000000000ull, protocore_j1939_build_name(0, 0, 0, 0x7F, 0, 0, 0, 0, 0));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(0x0F00000000000000ull, protocore_j1939_build_name(0, 0, 0x0F, 0, 0, 0, 0, 0, 0));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(0x7000000000000000ull, protocore_j1939_build_name(0, 7, 0, 0, 0, 0, 0, 0, 0));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(0x8000000000000000ull, protocore_j1939_build_name(1, 0, 0, 0, 0, 0, 0, 0, 0));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(0xFFFEFFFFFFFFFFFFull,</code>
-      * <code>Assert true (protocore_j1939_build_address_claim(&f, 0x80, 0x0123456789ABCDEFull))</code>
+      * <code>TEST_ASSERT_EQUAL_HEX64(0x00000000001FFFFFull, J1939.value);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX64(0x00000000FFE00000ull, J1939.value);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX64(0x0000000700000000ull, J1939.value);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX64(0x000000F800000000ull, J1939.value);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX64(0x0000FF0000000000ull, J1939.value);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX64(0x00FE000000000000ull, J1939.value);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX64(0x0F00000000000000ull, J1939.value);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX64(0x7000000000000000ull, J1939.value);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX64(0x8000000000000000ull, J1939.value);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX64(0xFFFEFFFFFFFFFFFFull, J1939.value);</code>
+      * <code>Assert true (J1939.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(LE, f.data, sizeof(LE));</code>
   </details>
 
@@ -26585,14 +26585,14 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Single frame padding
     * **Assertions**:
-      * <code>Assert true (protocore_j1939_build_message(&f, 3, J1939_PGN_EEC1, 0x00, J1939_ADDR_GLOBAL, DATA, 3))</code>
+      * <code>Assert true (J1939.ok)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(3u, f.dlc);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(DATA, f.data, 3);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0xFFu, f.data[3]);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0xFFu, f.data[7]);</code>
-      * <code>Assert false (protocore_j1939_build_message(&f, 3, J1939_PGN_EEC1, 0, 0xFF, DATA, 9))</code>
-      * <code>Assert false (protocore_j1939_build_message(&f, 3, J1939_PGN_EEC1, 0, 0xFF, NULL, 3))</code>
-      * <code>Assert false (protocore_j1939_build_message(NULL, 3, J1939_PGN_EEC1, 0, 0xFF, DATA, 3))</code>
+      * <code>Assert false (J1939.ok)</code>
+      * <code>Assert false (J1939.ok)</code>
+      * <code>Assert false (J1939.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -26600,17 +26600,17 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: BAM is for messages the single frame cannot carry: 9 octets up to the reassembly limit.
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_UINT8(2u, protocore_j1939_tp_num_packets(9));  // 7 + 2</code>
-      * <code>TEST_ASSERT_EQUAL_UINT8(2u, protocore_j1939_tp_num_packets(14)); // exactly two full packets</code>
-      * <code>TEST_ASSERT_EQUAL_UINT8(3u, protocore_j1939_tp_num_packets(15));</code>
-      * <code>TEST_ASSERT_EQUAL_UINT8(3u, protocore_j1939_tp_num_packets(16));</code>
-      * <code>Assert true (protocore_j1939_build_bam_cm(&f, 0x20, J1939_PGN_DM1, 16))</code>
+      * <code>TEST_ASSERT_EQUAL_UINT8(2u, J1939.u8); // 7 + 2</code>
+      * <code>TEST_ASSERT_EQUAL_UINT8(2u, J1939.u8); // exactly two full packets</code>
+      * <code>TEST_ASSERT_EQUAL_UINT8(3u, J1939.u8);</code>
+      * <code>TEST_ASSERT_EQUAL_UINT8(3u, J1939.u8);</code>
+      * <code>Assert true (J1939.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, f.data, sizeof(WANT));</code>
-      * <code>Assert false (protocore_j1939_build_bam_cm(&f, 0x20, J1939_PGN_DM1, 8))</code>
-      * <code>Assert true (protocore_j1939_build_bam_cm(&f, 0x20, J1939_PGN_DM1, 9))</code>
-      * <code>Assert true (protocore_j1939_build_bam_cm(&f, 0x20, J1939_PGN_DM1, PROTOCORE_J1939_TP_MAX))</code>
-      * <code>Assert false (protocore_j1939_build_bam_cm(&f, 0x20, J1939_PGN_DM1, PROTOCORE_J1939_TP_MAX + 1))</code>
-      * <code>Assert false (protocore_j1939_build_bam_cm(NULL, 0x20, J1939_PGN_DM1, 16))</code>
+      * <code>Assert false (J1939.ok)</code>
+      * <code>Assert true (J1939.ok)</code>
+      * <code>Assert true (J1939.ok)</code>
+      * <code>Assert false (J1939.ok)</code>
+      * <code>Assert false (J1939.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -26618,12 +26618,12 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Transport protocol reassembly
     * **Assertions**:
-      * <code>Assert true (protocore_j1939_build_bam_cm(&f, 0x20, J1939_PGN_DM1, (uint16_t)sizeof(MSG)))</code>
-      * <code>Assert equal int (J1939_TP_STARTED, protocore_j1939_tp_feed(&rx, &f))</code>
+      * <code>Assert true (J1939.ok)</code>
+      * <code>Assert equal int (J1939_TP_STARTED, J1939.tp)</code>
       * <code>TEST_ASSERT_EQUAL_UINT16(sizeof(MSG), rx.total_size);</code>
       * <code>TEST_ASSERT_EQUAL_HEX32(J1939_PGN_DM1, rx.pgn);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x20u, rx.sa);</code>
-      * <code>Assert true (protocore_j1939_build_tp_dt(&f, 0x20, J1939_ADDR_GLOBAL, seq, MSG + sent, chunk))</code>
+      * <code>Assert true (J1939.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(seq, f.data[0]);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(8u, f.dlc); // always eight octets on the wire</code>
       * <code>Assert equal int (sent &lt; sizeof(MSG) ? J1939_TP_PROGRESS : J1939_TP_COMPLETE, r)</code>
@@ -26636,25 +26636,25 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: A packet from a different source is ignored, not merged.
     * **Assertions**:
-      * <code>Assert true (protocore_j1939_build_bam_cm(&f, 0x20, J1939_PGN_DM1, 16))</code>
-      * <code>Assert equal int (J1939_TP_STARTED, protocore_j1939_tp_feed(&rx, &f))</code>
-      * <code>Assert true (protocore_j1939_build_tp_dt(&f, 0x21, J1939_ADDR_GLOBAL, 1, MSG, 7))</code>
-      * <code>Assert equal int (J1939_TP_IGNORED, protocore_j1939_tp_feed(&rx, &f))</code>
-      * <code>Assert true (protocore_j1939_build_tp_dt(&f, 0x20, J1939_ADDR_GLOBAL, 2, MSG, 7))</code>
-      * <code>Assert equal int (J1939_TP_ERROR, protocore_j1939_tp_feed(&rx, &f))</code>
+      * <code>Assert true (J1939.ok)</code>
+      * <code>Assert equal int (J1939_TP_STARTED, J1939.tp)</code>
+      * <code>Assert true (J1939.ok)</code>
+      * <code>Assert equal int (J1939_TP_IGNORED, J1939.tp)</code>
+      * <code>Assert true (J1939.ok)</code>
+      * <code>Assert equal int (J1939_TP_ERROR, J1939.tp)</code>
       * <code>Assert false (rx.active)</code>
-      * <code>Assert true (protocore_j1939_build_tp_dt(&f, 0x20, J1939_ADDR_GLOBAL, 1, MSG, 7))</code>
-      * <code>Assert equal int (J1939_TP_IGNORED, protocore_j1939_tp_feed(&rx, &f))</code>
-      * <code>Assert true (protocore_j1939_build_bam_cm(&f, 0x20, J1939_PGN_DM1, 16))</code>
-      * <code>Assert equal int (J1939_TP_ERROR, protocore_j1939_tp_feed(&rx, &f))</code>
-      * <code>Assert true (protocore_j1939_build_bam_cm(&f, 0x20, J1939_PGN_DM1, 16))</code>
-      * <code>Assert equal int (J1939_TP_IGNORED, protocore_j1939_tp_feed(&rx, &f))</code>
-      * <code>Assert true (protocore_j1939_build_bam_cm(&f, 0x20, J1939_PGN_DM1, 16))</code>
-      * <code>Assert equal int (J1939_TP_IGNORED, protocore_j1939_tp_feed(&rx, &f))</code>
-      * <code>Assert false (protocore_j1939_build_tp_dt(&f, 0x20, 0xFF, 0, CHUNK, 7))</code>
-      * <code>Assert false (protocore_j1939_build_tp_dt(&f, 0x20, 0xFF, 1, CHUNK, 8))</code>
-      * <code>Assert false (protocore_j1939_build_tp_dt(&f, 0x20, 0xFF, 1, CHUNK, 0))</code>
-      * <code>Assert false (protocore_j1939_build_tp_dt(&f, 0x20, 0xFF, 1, NULL, 7))</code>
+      * <code>Assert true (J1939.ok)</code>
+      * <code>Assert equal int (J1939_TP_IGNORED, J1939.tp)</code>
+      * <code>Assert true (J1939.ok)</code>
+      * <code>Assert equal int (J1939_TP_ERROR, J1939.tp)</code>
+      * <code>Assert true (J1939.ok)</code>
+      * <code>Assert equal int (J1939_TP_IGNORED, J1939.tp)</code>
+      * <code>Assert true (J1939.ok)</code>
+      * <code>Assert equal int (J1939_TP_IGNORED, J1939.tp)</code>
+      * <code>Assert false (J1939.ok)</code>
+      * <code>Assert false (J1939.ok)</code>
+      * <code>Assert false (J1939.ok)</code>
+      * <code>Assert false (J1939.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -26662,18 +26662,18 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: A 1-octet SPN is valid to 0xFA and a 2-octet one to 0xFAFF; above that is not available.
     * **Assertions**:
-      * <code>Assert true (protocore_j1939_decode_eec1(&f, &e))</code>
+      * <code>Assert true (J1939.ok)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(3u, e.torque_mode);</code>
       * <code>TEST_ASSERT_EQUAL_INT16(0, e.drivers_demand_torque_pct); // raw 125 -&gt; 0 %</code>
       * <code>TEST_ASSERT_EQUAL_INT16(125, e.actual_engine_torque_pct);</code>
       * <code>Assert true (e.engine_speed_valid)</code>
       * <code>Assert equal float (1250.0f, e.engine_speed_rpm)</code>
-      * <code>Assert true (protocore_j1939_decode_eec1(&f, &e))</code>
+      * <code>Assert true (J1939.ok)</code>
       * <code>TEST_ASSERT_EQUAL_INT16(J1939_TORQUE_NA, e.drivers_demand_torque_pct);</code>
       * <code>TEST_ASSERT_EQUAL_INT16(J1939_TORQUE_NA, e.actual_engine_torque_pct);</code>
       * <code>Assert false (e.engine_speed_valid)</code>
-      * <code>Assert false (protocore_j1939_decode_eec1(&f, &e))</code>
-      * <code>Assert false (protocore_j1939_decode_eec1(&f, &e))</code>
+      * <code>Assert false (J1939.ok)</code>
+      * <code>Assert false (J1939.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -26681,7 +26681,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Decode et1
     * **Assertions**:
-      * <code>Assert true (protocore_j1939_decode_et1(&f, &t))</code>
+      * <code>Assert true (J1939.ok)</code>
       * <code>Assert true (t.coolant_valid)</code>
       * <code>Assert equal float (40.0f, t.coolant_temp_c)</code>
       * <code>Assert true (t.fuel_valid)</code>
@@ -26695,7 +26695,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Decode ccvs
     * **Assertions**:
-      * <code>Assert true (protocore_j1939_decode_ccvs(&f, &c))</code>
+      * <code>Assert true (J1939.ok)</code>
       * <code>Assert true (c.speed_valid)</code>
       * <code>Assert equal float (25.0f, c.wheel_speed_kmh)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(1u, c.cruise_active);</code>
@@ -26706,11 +26706,11 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: 0xFAFFFFFF is still a reading: 4211081215 * 0.125 = 526385151.875 km.
     * **Assertions**:
-      * <code>Assert true (protocore_j1939_decode_vd(&f, &v))</code>
+      * <code>Assert true (J1939.ok)</code>
       * <code>Assert true (v.trip_valid)</code>
       * <code>Assert equal double (1000.0, v.trip_km)</code>
       * <code>Assert false (v.total_valid)</code>
-      * <code>Assert true (protocore_j1939_decode_vd(&f, &v))</code>
+      * <code>Assert true (J1939.ok)</code>
       * <code>Assert true (v.trip_valid)</code>
       * <code>Assert equal double (526385151.875, v.trip_km)</code>
   </details>
@@ -26720,14 +26720,14 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Decode lfe amb ic1
     * **Assertions**:
-      * <code>Assert true (protocore_j1939_decode_lfe(&f, &l))</code>
+      * <code>Assert true (J1939.ok)</code>
       * <code>Assert true (l.fuel_rate_valid)</code>
       * <code>Assert equal float (50.0f, l.fuel_rate_lph)</code>
       * <code>Assert equal float (1.0f, l.instant_econ_kmpl)</code>
       * <code>Assert equal float (1.0f, l.avg_econ_kmpl)</code>
       * <code>Assert true (l.throttle_valid)</code>
       * <code>Assert equal float (50.0f, l.throttle_pct)</code>
-      * <code>Assert true (protocore_j1939_decode_amb(&f, &a))</code>
+      * <code>Assert true (J1939.ok)</code>
       * <code>Assert true (a.baro_valid)</code>
       * <code>Assert equal float (100.0f, a.baro_kpa)</code>
       * <code>Assert equal float (20.0f, a.cab_temp_c)</code>
@@ -26735,7 +26735,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
       * <code>Assert true (a.inlet_temp_valid)</code>
       * <code>Assert equal float (25.0f, a.inlet_temp_c)</code>
       * <code>Assert equal float (20.0f, a.road_temp_c)</code>
-      * <code>Assert true (protocore_j1939_decode_ic1(&f, &i))</code>
+      * <code>Assert true (J1939.ok)</code>
       * <code>Assert equal float (100.0f, i.trap_inlet_kpa)</code>
       * <code>Assert true (i.boost_valid)</code>
       * <code>Assert equal float (200.0f, i.boost_kpa)</code>
@@ -26751,7 +26751,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: 0x54 = 01 01 01 00: MIL 1, red stop 1, amber 1, protect 0.
     * **Assertions**:
-      * <code>Assert true (protocore_j1939_decode_dm1(BODY, sizeof(BODY), &d, dtc, 4))</code>
+      * <code>Assert true (J1939.ok)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(1u, d.mil);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(1u, d.red_stop);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(1u, d.amber_warning);</code>
@@ -26765,14 +26765,14 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
       * <code>TEST_ASSERT_EQUAL_UINT8(3u, dtc[1].fmi);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(1u, dtc[1].cm);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(2u, dtc[1].oc);</code>
-      * <code>Assert true (protocore_j1939_decode_dm1(NONE, sizeof(NONE), &d, dtc, 4))</code>
+      * <code>Assert true (J1939.ok)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(0u, d.dtc_count);</code>
-      * <code>Assert true (protocore_j1939_decode_dm1(BODY, 2, &d, NULL, 0))</code>
+      * <code>Assert true (J1939.ok)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(0u, d.dtc_count);</code>
-      * <code>Assert false (protocore_j1939_decode_dm1(BODY, 1, &d, dtc, 4))</code>
-      * <code>Assert false (protocore_j1939_decode_dm1(NULL, 10, &d, dtc, 4))</code>
-      * <code>Assert false (protocore_j1939_decode_dm1(BODY, 10, NULL, dtc, 4))</code>
-      * <code>Assert true (protocore_j1939_decode_dm1(BODY, sizeof(BODY), &d, dtc, 1))</code>
+      * <code>Assert false (J1939.ok)</code>
+      * <code>Assert false (J1939.ok)</code>
+      * <code>Assert false (J1939.ok)</code>
+      * <code>Assert true (J1939.ok)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(1u, d.dtc_count);</code>
   </details>
 
@@ -28466,7 +28466,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Lontalk nv header is two octets
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(2u + sizeof(VALUE), Lonworks.n);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x80u, (uint8_t)(out[0] & 0x80u));</code>
       * <code>TEST_ASSERT_EQUAL_HEX16(0x1234u, (uint16_t)(((uint16_t)(out[0] & 0x3Fu) &lt;&lt; 8) | out[1]));</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(VALUE, out + 2, sizeof(VALUE));</code>
@@ -28477,7 +28477,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Lontalk parse reads the two octet header
     * **Assertions**:
-      * <code>Assert true (protocore_lon_parse_nv(PDU, sizeof(PDU), &nv))</code>
+      * <code>Assert true (Lonworks.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX16(0x1234u, nv.selector);</code>
       * <code>TEST_ASSERT_EQUAL_size_t(2u, nv.value_len);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(PDU + 2, nv.value, 2);</code>
@@ -28488,7 +28488,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Lontalk a poll response is header only
     * **Assertions**:
-      * <code>Assert true (protocore_lon_parse_nv(PDU, sizeof(PDU), &nv))</code>
+      * <code>Assert true (Lonworks.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX16(0x1234u, nv.selector);</code>
       * <code>TEST_ASSERT_EQUAL_size_t(0u, nv.value_len);</code>
   </details>
@@ -28498,10 +28498,10 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Nv selector bounds and round trip
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_lon_build_nv(LON_MSG_NV_UPDATE, 0x4000u, NULL, 0, out, sizeof(out)));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_lon_build_nv(LON_MSG_NV_UPDATE, 0xFFFFu, NULL, 0, out, sizeof(out)));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Lonworks.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Lonworks.n);</code>
       * <code>Assert true (n != 0u)</code>
-      * <code>Assert true (protocore_lon_parse_nv(out, n, &nv))</code>
+      * <code>Assert true (Lonworks.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX16((uint16_t)s, nv.selector);</code>
   </details>
 
@@ -28511,7 +28511,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
     * **Objective**: Nv value round trip
     * **Assertions**:
       * <code>Assert true (n != 0u)</code>
-      * <code>Assert true (protocore_lon_parse_nv(out, n, &nv))</code>
+      * <code>Assert true (Lonworks.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX16(0x2AAAu, nv.selector);</code>
       * <code>TEST_ASSERT_EQUAL_size_t(sizeof(VALUE), nv.value_len);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(VALUE, nv.value, sizeof(VALUE));</code>
@@ -28522,9 +28522,9 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Snvt temp published scaling
     * **Assertions**:
-      * <code>Assert equal double (-274.0, protocore_lon_snvt_temp_decode(MIN))</code>
-      * <code>Assert equal double (0.0, protocore_lon_snvt_temp_decode(ZERO_C))</code>
-      * <code>Assert equal double (6279.5, protocore_lon_snvt_temp_decode(MAX))</code>
+      * <code>Assert equal double (-274.0, Lonworks.value)</code>
+      * <code>Assert equal double (0.0, Lonworks.value)</code>
+      * <code>Assert equal double (6279.5, Lonworks.value)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(MIN, enc, 2);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(ZERO_C, enc, 2);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(MAX, enc, 2);</code>
@@ -28540,10 +28540,10 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
     * **Assertions**:
       * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, enc[0]);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, enc[1]);</code>
-      * <code>Assert equal double (-274.0, protocore_lon_snvt_temp_decode(enc))</code>
+      * <code>Assert equal double (-274.0, Lonworks.value)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0xFFu, enc[0]);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0xFFu, enc[1]);</code>
-      * <code>Assert equal double (6279.5, protocore_lon_snvt_temp_decode(enc))</code>
+      * <code>Assert equal double (6279.5, Lonworks.value)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(in, back, 2);</code>
   </details>
 
@@ -28582,12 +28582,12 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
     * **Objective**: Guards
     * **Assertions**:
       * <code>Assert true (n != 0u)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_lon_build_nv(LON_MSG_NV_UPDATE, 1, VALUE, sizeof(VALUE), out, n - 1u));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_lon_build_nv(LON_MSG_NV_UPDATE, 1, VALUE, sizeof(VALUE), NULL, sizeof(out)));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_lon_build_nv(LON_MSG_NV_UPDATE, 1, NULL, sizeof(VALUE), out, sizeof(out)));</code>
-      * <code>Assert false (protocore_lon_parse_nv(out, 1, &nv))</code>
-      * <code>Assert false (protocore_lon_parse_nv(NULL, n, &nv))</code>
-      * <code>Assert false (protocore_lon_parse_nv(out, n, NULL))</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Lonworks.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Lonworks.n);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0u, Lonworks.n);</code>
+      * <code>Assert false (Lonworks.ok)</code>
+      * <code>Assert false (Lonworks.ok)</code>
+      * <code>Assert false (Lonworks.ok)</code>
   </details>
 
 </details>
@@ -29289,14 +29289,14 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Record 1: DIF 03 = 24-bit integer, VIF 13 = volume 10^(3-6) m3, i.e. litres.
     * **Assertions**:
-      * <code>Assert true (protocore_mbus_parse(RSP_UD, sizeof(RSP_UD), &f, &used))</code>
+      * <code>Assert true (Mbus.ok)</code>
       * <code>Assert equal uint (sizeof(RSP_UD), used)</code>
       * <code>Assert equal int (MBUS_FRAME_LONG, f.type)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x08, f.c);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x02, f.a);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(MBUS_CI_RSP_VARIABLE, f.ci);</code>
       * <code>Assert equal uint (0x1F - 3, f.data_len)</code>
-      * <code>Assert true (protocore_mbus_parse_var_header(f.data, f.data_len, &h))</code>
+      * <code>Assert true (Mbus.ok)</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(12345678u, h.id);</code>
       * <code>TEST_ASSERT_EQUAL_HEX16(0x4024, h.manufacturer_raw);</code>
       * <code>Assert equal string ("PAD", h.manufacturer)</code>
@@ -29305,38 +29305,38 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
       * <code>TEST_ASSERT_EQUAL_UINT8(0x55, h.access_no);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(0x00, h.status);</code>
       * <code>TEST_ASSERT_EQUAL_UINT16(0x0000, h.signature);</code>
-      * <code>Assert true (protocore_mbus_record_next(body, body_len, &pos, &r))</code>
+      * <code>Assert true (Mbus.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x03, r.dif);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(MBUS_DIF_INT24, r.coding);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x13, r.vif);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(3, r.data_len);</code>
-      * <code>Assert true (protocore_mbus_record_value_int(&r, &v))</code>
+      * <code>Assert true (Mbus.ok)</code>
       * <code>TEST_ASSERT_EQUAL_INT64(12565, v);</code>
-      * <code>Assert true (protocore_mbus_vif_decode(r.vif, &unit, &exp10))</code>
+      * <code>Assert true (Mbus.ok)</code>
       * <code>Assert equal int (MBUS_UNIT_M3, unit)</code>
       * <code>TEST_ASSERT_EQUAL_INT8(-3, exp10);</code>
-      * <code>Assert true (protocore_mbus_record_next(body, body_len, &pos, &r))</code>
+      * <code>Assert true (Mbus.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0xDA, r.dif);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(MBUS_DIF_BCD4, r.coding);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x3B, r.vif);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(2, r.data_len);</code>
-      * <code>Assert true (protocore_mbus_record_value_int(&r, &v))</code>
+      * <code>Assert true (Mbus.ok)</code>
       * <code>TEST_ASSERT_EQUAL_INT64(113, v);</code>
-      * <code>Assert true (protocore_mbus_vif_decode(r.vif, &unit, &exp10))</code>
+      * <code>Assert true (Mbus.ok)</code>
       * <code>Assert equal int (MBUS_UNIT_M3_PER_H, unit)</code>
       * <code>TEST_ASSERT_EQUAL_INT8(-3, exp10);</code>
-      * <code>Assert true (protocore_mbus_record_next(body, body_len, &pos, &r))</code>
+      * <code>Assert true (Mbus.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x8B, r.dif);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(MBUS_DIF_BCD6, r.coding);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x04, r.vif);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(3, r.data_len);</code>
-      * <code>Assert true (protocore_mbus_record_value_int(&r, &v))</code>
+      * <code>Assert true (Mbus.ok)</code>
       * <code>TEST_ASSERT_EQUAL_INT64(21837, v);</code>
-      * <code>Assert true (protocore_mbus_vif_decode(r.vif, &unit, &exp10))</code>
+      * <code>Assert true (Mbus.ok)</code>
       * <code>Assert equal int (MBUS_UNIT_WH, unit)</code>
       * <code>TEST_ASSERT_EQUAL_INT8(1, exp10);</code>
       * <code>Assert equal uint (body_len, pos)</code>
-      * <code>Assert false (protocore_mbus_record_next(body, body_len, &pos, &r))</code>
+      * <code>Assert false (Mbus.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -29344,9 +29344,9 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Single character ack
     * **Assertions**:
-      * <code>Assert equal uint (1u, protocore_mbus_build_ack(buf, sizeof(buf)))</code>
+      * <code>Assert equal uint (1u, Mbus.n)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0xE5, buf[0]);</code>
-      * <code>Assert true (protocore_mbus_parse(buf, 1, &f, &used))</code>
+      * <code>Assert true (Mbus.ok)</code>
       * <code>Assert equal int (MBUS_FRAME_ACK, f.type)</code>
       * <code>Assert equal uint (1u, used)</code>
   </details>
@@ -29356,9 +29356,9 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Snd nke short frame
     * **Assertions**:
-      * <code>Assert equal uint (5u, protocore_mbus_build_snd_nke(buf, sizeof(buf), 0x05))</code>
+      * <code>Assert equal uint (5u, Mbus.n)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, buf, 5);</code>
-      * <code>Assert true (protocore_mbus_parse(buf, 5, &f, NULL))</code>
+      * <code>Assert true (Mbus.ok)</code>
       * <code>Assert equal int (MBUS_FRAME_SHORT, f.type)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(MBUS_C_SND_NKE, f.c);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x05, f.a);</code>
@@ -29369,13 +29369,13 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Req ud fcb toggles bit5
     * **Assertions**:
-      * <code>Assert equal uint (5u, protocore_mbus_build_req_ud2(a, sizeof(a), 0x01, PROTO_FALSE))</code>
-      * <code>Assert equal uint (5u, protocore_mbus_build_req_ud2(b, sizeof(b), 0x01, PROTO_TRUE))</code>
+      * <code>Assert equal uint (5u, Mbus.n)</code>
+      * <code>Assert equal uint (5u, Mbus.n)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x5B, a[1]);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x7B, b[1]);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x20, (uint8_t)(a[1] ^ b[1]));</code>
-      * <code>Assert equal uint (5u, protocore_mbus_build_req_ud1(a, sizeof(a), 0x01, PROTO_FALSE))</code>
-      * <code>Assert equal uint (5u, protocore_mbus_build_req_ud1(b, sizeof(b), 0x01, PROTO_TRUE))</code>
+      * <code>Assert equal uint (5u, Mbus.n)</code>
+      * <code>Assert equal uint (5u, Mbus.n)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x5A, a[1]);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x7A, b[1]);</code>
   </details>
@@ -29387,7 +29387,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
     * **Assertions**:
       * <code>Assert equal uint (9u, n)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, buf, 9);</code>
-      * <code>Assert true (protocore_mbus_parse(buf, n, &f, NULL))</code>
+      * <code>Assert true (Mbus.ok)</code>
       * <code>Assert equal int (MBUS_FRAME_LONG, f.type)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(0, f.data_len);</code>
       * <code>Assert null (f.data)</code>
@@ -29407,11 +29407,11 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Parse refuses a damaged frame
     * **Assertions**:
-      * <code>Assert false (protocore_mbus_parse(f, sizeof(RSP_UD), &out, NULL))</code>
-      * <code>Assert false (protocore_mbus_parse(f, sizeof(RSP_UD), &out, NULL))</code>
-      * <code>Assert false (protocore_mbus_parse(f, sizeof(RSP_UD), &out, NULL))</code>
-      * <code>Assert false (protocore_mbus_parse(SHORT_BAD, 5, &out, NULL))</code>
-      * <code>Assert false (protocore_mbus_parse(UNKNOWN_START, 5, &out, NULL))</code>
+      * <code>Assert false (Mbus.ok)</code>
+      * <code>Assert false (Mbus.ok)</code>
+      * <code>Assert false (Mbus.ok)</code>
+      * <code>Assert false (Mbus.ok)</code>
+      * <code>Assert false (Mbus.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -29419,7 +29419,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Parse refuses a truncated frame
     * **Assertions**:
-      * <code>Assert false (protocore_mbus_parse(RSP_UD, n, &out, NULL))</code>
+      * <code>Assert false (Mbus.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -29427,23 +29427,23 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: only the low nibble selects the coding; the function / storage bits above it do not
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_UINT8(0, protocore_mbus_dif_data_len(MBUS_DIF_NONE));</code>
-      * <code>TEST_ASSERT_EQUAL_UINT8(1, protocore_mbus_dif_data_len(MBUS_DIF_INT8));</code>
-      * <code>TEST_ASSERT_EQUAL_UINT8(2, protocore_mbus_dif_data_len(MBUS_DIF_INT16));</code>
-      * <code>TEST_ASSERT_EQUAL_UINT8(3, protocore_mbus_dif_data_len(MBUS_DIF_INT24));</code>
-      * <code>TEST_ASSERT_EQUAL_UINT8(4, protocore_mbus_dif_data_len(MBUS_DIF_INT32));</code>
-      * <code>TEST_ASSERT_EQUAL_UINT8(4, protocore_mbus_dif_data_len(MBUS_DIF_REAL32));</code>
-      * <code>TEST_ASSERT_EQUAL_UINT8(6, protocore_mbus_dif_data_len(MBUS_DIF_INT48));</code>
-      * <code>TEST_ASSERT_EQUAL_UINT8(8, protocore_mbus_dif_data_len(MBUS_DIF_INT64));</code>
-      * <code>TEST_ASSERT_EQUAL_UINT8(0, protocore_mbus_dif_data_len(MBUS_DIF_READOUT));</code>
-      * <code>TEST_ASSERT_EQUAL_UINT8(1, protocore_mbus_dif_data_len(MBUS_DIF_BCD2));</code>
-      * <code>TEST_ASSERT_EQUAL_UINT8(2, protocore_mbus_dif_data_len(MBUS_DIF_BCD4));</code>
-      * <code>TEST_ASSERT_EQUAL_UINT8(3, protocore_mbus_dif_data_len(MBUS_DIF_BCD6));</code>
-      * <code>TEST_ASSERT_EQUAL_UINT8(4, protocore_mbus_dif_data_len(MBUS_DIF_BCD8));</code>
-      * <code>TEST_ASSERT_EQUAL_UINT8(0, protocore_mbus_dif_data_len(MBUS_DIF_VARIABLE));</code>
-      * <code>TEST_ASSERT_EQUAL_UINT8(6, protocore_mbus_dif_data_len(MBUS_DIF_BCD12));</code>
-      * <code>TEST_ASSERT_EQUAL_UINT8(0, protocore_mbus_dif_data_len(MBUS_DIF_SPECIAL));</code>
-      * <code>TEST_ASSERT_EQUAL_UINT8(2, protocore_mbus_dif_data_len(0x42));</code>
+      * <code>TEST_ASSERT_EQUAL_UINT8(0, Mbus.value);</code>
+      * <code>TEST_ASSERT_EQUAL_UINT8(1, Mbus.value);</code>
+      * <code>TEST_ASSERT_EQUAL_UINT8(2, Mbus.value);</code>
+      * <code>TEST_ASSERT_EQUAL_UINT8(3, Mbus.value);</code>
+      * <code>TEST_ASSERT_EQUAL_UINT8(4, Mbus.value);</code>
+      * <code>TEST_ASSERT_EQUAL_UINT8(4, Mbus.value);</code>
+      * <code>TEST_ASSERT_EQUAL_UINT8(6, Mbus.value);</code>
+      * <code>TEST_ASSERT_EQUAL_UINT8(8, Mbus.value);</code>
+      * <code>TEST_ASSERT_EQUAL_UINT8(0, Mbus.value);</code>
+      * <code>TEST_ASSERT_EQUAL_UINT8(1, Mbus.value);</code>
+      * <code>TEST_ASSERT_EQUAL_UINT8(2, Mbus.value);</code>
+      * <code>TEST_ASSERT_EQUAL_UINT8(3, Mbus.value);</code>
+      * <code>TEST_ASSERT_EQUAL_UINT8(4, Mbus.value);</code>
+      * <code>TEST_ASSERT_EQUAL_UINT8(0, Mbus.value);</code>
+      * <code>TEST_ASSERT_EQUAL_UINT8(6, Mbus.value);</code>
+      * <code>TEST_ASSERT_EQUAL_UINT8(0, Mbus.value);</code>
+      * <code>TEST_ASSERT_EQUAL_UINT8(2, Mbus.value);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -29451,13 +29451,13 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: the extension bit is bit 7 and carries no unit information, so setting it changes nothing
     * **Assertions**:
-      * <code>Assert true (protocore_mbus_vif_decode(CASES[i].vif, &u, &e))</code>
+      * <code>Assert true (Mbus.ok)</code>
       * <code>Assert equal int (CASES[i].unit, u)</code>
       * <code>TEST_ASSERT_EQUAL_INT8(CASES[i].exp10, e);</code>
-      * <code>Assert true (protocore_mbus_vif_decode((uint8_t)(CASES[i].vif | 0x80u), &u2, &e2))</code>
+      * <code>Assert true (Mbus.ok)</code>
       * <code>Assert equal int (CASES[i].unit, u2)</code>
       * <code>TEST_ASSERT_EQUAL_INT8(CASES[i].exp10, e2);</code>
-      * <code>Assert false (protocore_mbus_vif_decode(0x6C, &u, NULL))</code>
+      * <code>Assert false (Mbus.ok)</code>
       * <code>Assert equal int (MBUS_UNIT_UNKNOWN, u)</code>
   </details>
 
@@ -29466,11 +29466,11 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Bcd decoding and sign
     * **Assertions**:
-      * <code>Assert true (protocore_mbus_record_value_int(&r, &v))</code>
+      * <code>Assert true (Mbus.ok)</code>
       * <code>TEST_ASSERT_EQUAL_INT64(563412, v);</code>
-      * <code>Assert true (protocore_mbus_record_value_int(&r, &v))</code>
+      * <code>Assert true (Mbus.ok)</code>
       * <code>TEST_ASSERT_EQUAL_INT64(-63412, v);</code>
-      * <code>Assert false (protocore_mbus_record_value_int(&r, &v))</code>
+      * <code>Assert false (Mbus.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -29478,13 +29478,13 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Integer decoding is little endian and signed
     * **Assertions**:
-      * <code>Assert true (protocore_mbus_record_value_int(&r, &v))</code>
+      * <code>Assert true (Mbus.ok)</code>
       * <code>TEST_ASSERT_EQUAL_INT64(0x1234, v);</code>
-      * <code>Assert true (protocore_mbus_record_value_int(&r, &v))</code>
+      * <code>Assert true (Mbus.ok)</code>
       * <code>TEST_ASSERT_EQUAL_INT64(-1, v);</code>
-      * <code>Assert true (protocore_mbus_record_value_int(&r, &v))</code>
+      * <code>Assert true (Mbus.ok)</code>
       * <code>TEST_ASSERT_EQUAL_INT64(-32768, v);</code>
-      * <code>Assert true (protocore_mbus_record_value_int(&r32, &v))</code>
+      * <code>Assert true (Mbus.ok)</code>
       * <code>TEST_ASSERT_EQUAL_INT64(0x12345678, v);</code>
   </details>
 
@@ -29493,10 +29493,10 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Real32 record
     * **Assertions**:
-      * <code>Assert true (protocore_mbus_record_value_real(&r, &f))</code>
+      * <code>Assert true (Mbus.ok)</code>
       * <code>Assert equal float (1.0f, f)</code>
-      * <code>Assert false (protocore_mbus_record_value_int(&r, &v))</code>
-      * <code>Assert false (protocore_mbus_record_value_real(&i, &f))</code>
+      * <code>Assert false (Mbus.ok)</code>
+      * <code>Assert false (Mbus.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -29504,13 +29504,13 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Variable length record
     * **Assertions**:
-      * <code>Assert true (protocore_mbus_record_next(BODY, sizeof(BODY), &pos, &r))</code>
+      * <code>Assert true (Mbus.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(MBUS_DIF_VARIABLE, r.coding);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(4, r.data_len);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8('A', r.data[0]);</code>
-      * <code>Assert true (protocore_mbus_record_next(BODY, sizeof(BODY), &pos, &r))</code>
+      * <code>Assert true (Mbus.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(MBUS_DIF_INT8, r.coding);</code>
-      * <code>Assert true (protocore_mbus_record_value_int(&r, &v))</code>
+      * <code>Assert true (Mbus.ok)</code>
       * <code>TEST_ASSERT_EQUAL_INT64(42, v);</code>
       * <code>Assert equal uint (sizeof(BODY), pos)</code>
   </details>
@@ -29520,9 +29520,9 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Record walk refuses an overrun
     * **Assertions**:
-      * <code>Assert false (protocore_mbus_record_next(SHORT_BODY, sizeof(SHORT_BODY), &pos, &r))</code>
-      * <code>Assert false (protocore_mbus_record_next(DANGLING_DIFE, sizeof(DANGLING_DIFE), &pos, &r))</code>
-      * <code>Assert false (protocore_mbus_record_next(NO_VIF, sizeof(NO_VIF), &pos, &r))</code>
+      * <code>Assert false (Mbus.ok)</code>
+      * <code>Assert false (Mbus.ok)</code>
+      * <code>Assert false (Mbus.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -29530,7 +29530,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Manufacturer code packing
     * **Assertions**:
-      * <code>Assert true (protocore_mbus_parse_var_header(body, sizeof(body), &h))</code>
+      * <code>Assert true (Mbus.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX16(0x0443, h.manufacturer_raw);</code>
       * <code>Assert equal string ("ABC", h.manufacturer)</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(0u, h.id);</code>
@@ -29541,9 +29541,9 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Var header bounds and bcd validation
     * **Assertions**:
-      * <code>Assert true (protocore_mbus_parse_var_header(body, MBUS_VAR_HEADER_LEN, &h))</code>
-      * <code>Assert false (protocore_mbus_parse_var_header(body, MBUS_VAR_HEADER_LEN - 1, &h))</code>
-      * <code>Assert false (protocore_mbus_parse_var_header(body, MBUS_VAR_HEADER_LEN, &h))</code>
+      * <code>Assert true (Mbus.ok)</code>
+      * <code>Assert false (Mbus.ok)</code>
+      * <code>Assert false (Mbus.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -29551,12 +29551,12 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: MBDOC48 5.2: user data is 0..252 octets, since L is one octet and counts C + A + CI as well
     * **Assertions**:
-      * <code>Assert equal uint (0u, protocore_mbus_build_ack(buf, 0))</code>
-      * <code>Assert equal uint (0u, protocore_mbus_build_short(buf, 4, MBUS_C_SND_NKE, 0x01))</code>
-      * <code>Assert equal uint (0u, protocore_mbus_build_long(buf, 8, 0x53, 0x01, 0x51, NULL, 0))</code>
-      * <code>Assert equal uint (261u, protocore_mbus_build_long(buf, sizeof(buf), 0x53, 0x01, 0x51, big, MBUS_MAX_DATA))</code>
-      * <code>Assert equal uint (0u, protocore_mbus_build_long(buf, sizeof(buf), 0x53, 0x01, 0x51, big, MBUS_MAX_DATA + 1))</code>
-      * <code>Assert equal uint (0u, protocore_mbus_build_long(buf, sizeof(buf), 0x53, 0x01, 0x51, NULL, 4))</code>
+      * <code>Assert equal uint (0u, Mbus.n)</code>
+      * <code>Assert equal uint (0u, Mbus.n)</code>
+      * <code>Assert equal uint (0u, Mbus.n)</code>
+      * <code>Assert equal uint (261u, Mbus.n)</code>
+      * <code>Assert equal uint (0u, Mbus.n)</code>
+      * <code>Assert equal uint (0u, Mbus.n)</code>
   </details>
 
 </details>
@@ -29911,7 +29911,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
     * **Assertions**:
       * <code>Assert equal uint (MELSEC_3E_READ_REQ_LEN, n)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(MITSUBISHI_REQ, buf, MELSEC_3E_READ_REQ_LEN);</code>
-      * <code>Assert true (protocore_melsec_parse_response(MITSUBISHI_RES, sizeof(MITSUBISHI_RES), &r))</code>
+      * <code>Assert true (Melsec.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX16(MELSEC_ENDCODE_OK, r.end_code);</code>
       * <code>Assert equal uint (4u, r.data_len)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(MITSUBISHI_RES + MELSEC_3E_RES_DATA_OFFSET, r.data, 4);</code>
@@ -29922,13 +29922,13 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: the head device number field is 24 bits wide, so its top octet carries bits 16..23
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_UINT(MELSEC_3E_READ_REQ_LEN,</code>
+      * <code>Assert equal uint (MELSEC_3E_READ_REQ_LEN, Melsec.n)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(TAIL, buf + 15, 6);</code>
-      * <code>TEST_ASSERT_EQUAL_UINT(MELSEC_3E_READ_REQ_LEN,</code>
+      * <code>Assert equal uint (MELSEC_3E_READ_REQ_LEN, Melsec.n)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0xFF, buf[15]);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0xFF, buf[16]);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0xFF, buf[17]);</code>
-      * <code>TEST_ASSERT_EQUAL_UINT(MELSEC_3E_READ_REQ_LEN,</code>
+      * <code>Assert equal uint (MELSEC_3E_READ_REQ_LEN, Melsec.n)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x64, buf[15]);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x00, buf[16]);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x00, buf[17]);</code>
@@ -29949,7 +29949,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
       * <code>TEST_ASSERT_EQUAL_HEX8(0xC1, MELSEC_DEV_TS); // timer contact TS</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0xC5, MELSEC_DEV_CN); // counter current value CN</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0xC4, MELSEC_DEV_CS); // counter contact CS</code>
-      * <code>TEST_ASSERT_EQUAL_UINT(MELSEC_3E_READ_REQ_LEN,</code>
+      * <code>Assert equal uint (MELSEC_3E_READ_REQ_LEN, Melsec.n)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(CODES[i], buf[18]);</code>
   </details>
 
@@ -29958,7 +29958,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Request data length counts from the monitoring timer
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_UINT(MELSEC_3E_READ_REQ_LEN,</code>
+      * <code>Assert equal uint (MELSEC_3E_READ_REQ_LEN, Melsec.n)</code>
       * <code>TEST_ASSERT_EQUAL_UINT16(MELSEC_3E_READ_REQ_DATA_LEN, declared);</code>
       * <code>Assert equal uint (MELSEC_3E_READ_REQ_LEN, 9u + declared)</code>
   </details>
@@ -29975,7 +29975,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
       * <code>TEST_ASSERT_EQUAL_HEX8(0x00, buf[13]); // subcommand 0000h (word units)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x00, buf[14]);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(DATA, buf + MELSEC_3E_READ_REQ_LEN, sizeof(DATA));</code>
-      * <code>TEST_ASSERT_EQUAL_UINT(MELSEC_3E_READ_REQ_LEN,</code>
+      * <code>Assert equal uint (MELSEC_3E_READ_REQ_LEN, Melsec.n)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(rd, buf, 7);           // subheader + access route</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(rd + 15, buf + 15, 6); // head device + code + points</code>
   </details>
@@ -29994,10 +29994,10 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Monitoring timer is little endian
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_UINT(MELSEC_3E_READ_REQ_LEN,</code>
+      * <code>Assert equal uint (MELSEC_3E_READ_REQ_LEN, Melsec.n)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x34, buf[9]);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x12, buf[10]);</code>
-      * <code>TEST_ASSERT_EQUAL_UINT(MELSEC_3E_READ_REQ_LEN,</code>
+      * <code>Assert equal uint (MELSEC_3E_READ_REQ_LEN, Melsec.n)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x00, buf[9]);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x00, buf[10]);</code>
   </details>
@@ -30007,8 +30007,8 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Response subheader is checked
     * **Assertions**:
-      * <code>Assert false (protocore_melsec_parse_response(bad, sizeof(bad), &r))</code>
-      * <code>Assert false (protocore_melsec_parse_response(bad, sizeof(bad), &r))</code>
+      * <code>Assert false (Melsec.ok)</code>
+      * <code>Assert false (Melsec.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -30016,7 +30016,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Error end code response
     * **Assertions**:
-      * <code>Assert true (protocore_melsec_parse_response(ERR, sizeof(ERR), &r))</code>
+      * <code>Assert true (Melsec.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX16(0xC051, r.end_code);</code>
       * <code>Assert equal uint (0u, r.data_len)</code>
   </details>
@@ -30026,9 +30026,9 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: a frame shorter than subheader..end code cannot be parsed at all
     * **Assertions**:
-      * <code>Assert false (protocore_melsec_parse_response(bad, sizeof(bad), &r))</code>
-      * <code>Assert false (protocore_melsec_parse_response(bad, sizeof(bad), &r))</code>
-      * <code>Assert false (protocore_melsec_parse_response(MITSUBISHI_RES, n, &r))</code>
+      * <code>Assert false (Melsec.ok)</code>
+      * <code>Assert false (Melsec.ok)</code>
+      * <code>Assert false (Melsec.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -30036,13 +30036,13 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: the request-length field is 16 bits, so the write data cannot exceed 0xFFFF minus the fixed 12
     * **Assertions**:
-      * <code>Assert equal uint (0u, protocore_melsec_build_read(buf, cap, MELSEC_DEV_D, 0, 1, 0))</code>
-      * <code>Assert equal uint (0u, protocore_melsec_build_read(NULL, sizeof(buf), MELSEC_DEV_D, 0, 1, 0))</code>
-      * <code>TEST_ASSERT_EQUAL_UINT(</code>
-      * <code>Assert equal uint (0u, protocore_melsec_build_write(buf, sizeof(buf), MELSEC_DEV_D, 0, 2, 0, NULL, 4))</code>
-      * <code>Assert equal uint (0u, protocore_melsec_build_write(buf, sizeof(buf)</code>
-      * <code>Assert false (protocore_melsec_parse_response(NULL, sizeof(MITSUBISHI_RES), &r))</code>
-      * <code>Assert false (protocore_melsec_parse_response(MITSUBISHI_RES, sizeof(MITSUBISHI_RES), NULL))</code>
+      * <code>Assert equal uint (0u, Melsec.n)</code>
+      * <code>Assert equal uint (0u, Melsec.n)</code>
+      * <code>Assert equal uint (0u, Melsec.n)</code>
+      * <code>Assert equal uint (0u, Melsec.n)</code>
+      * <code>Assert equal uint (0u, Melsec.n)</code>
+      * <code>Assert false (Melsec.ok)</code>
+      * <code>Assert false (Melsec.ok)</code>
   </details>
 
 </details>
@@ -40451,10 +40451,10 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Fcs is the arithmetic sum with carries discarded
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x4E, protocore_pb_fcs(A, 3));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x00, protocore_pb_fcs(B, 3));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x01, protocore_pb_fcs(C, 4));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x00, protocore_pb_fcs(A, 0));</code>
+      * <code>TEST_ASSERT_EQUAL_HEX8(0x4E, Profibus.value);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX8(0x00, Profibus.value);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX8(0x01, Profibus.value);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX8(0x00, Profibus.value);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -40462,9 +40462,9 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Sd1 telegram
     * **Assertions**:
-      * <code>Assert equal uint (6u, protocore_pb_build_sd1(0x03, 0x02, 0x49, out, sizeof(out)))</code>
+      * <code>Assert equal uint (6u, Profibus.n)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, out, sizeof(WANT));</code>
-      * <code>Assert true (protocore_pb_parse(WANT, sizeof(WANT), &t))</code>
+      * <code>Assert true (Profibus.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(PB_SD1, t.sd);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x03, t.da);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x02, t.sa);</code>
@@ -40478,9 +40478,9 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Sd2 telegram
     * **Assertions**:
-      * <code>Assert equal uint (13u, protocore_pb_build_sd2(0x05, 0x02, 0x6C, PDU, sizeof(PDU), out, sizeof(out)))</code>
+      * <code>Assert equal uint (13u, Profibus.n)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, out, sizeof(WANT));</code>
-      * <code>Assert true (protocore_pb_parse(WANT, sizeof(WANT), &t))</code>
+      * <code>Assert true (Profibus.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(PB_SD2, t.sd);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x05, t.da);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x02, t.sa);</code>
@@ -40494,9 +40494,9 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Sd3 telegram
     * **Assertions**:
-      * <code>Assert equal uint (14u, protocore_pb_build_sd3(0x05, 0x02, 0x7D, EIGHT, out, sizeof(out)))</code>
+      * <code>Assert equal uint (14u, Profibus.n)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, out, sizeof(WANT));</code>
-      * <code>Assert true (protocore_pb_parse(WANT, sizeof(WANT), &t))</code>
+      * <code>Assert true (Profibus.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(PB_SD3, t.sd);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x05, t.da);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x02, t.sa);</code>
@@ -40510,14 +40510,14 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Frame control macros build the derived telegrams
     * **Assertions**:
-      * <code>Assert equal uint (6u, protocore_pb_build_sd1(0x03, 0x02, 0x49, a, sizeof(a)))</code>
-      * <code>Assert equal uint (6u, protocore_pb_build_sd1(0x03, 0x02, PB_FC_REQUEST_FDL_STATUS, b, sizeof(b)))</code>
+      * <code>Assert equal uint (6u, Profibus.n)</code>
+      * <code>Assert equal uint (6u, Profibus.n)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(a, b, 6);</code>
-      * <code>Assert equal uint (13u, protocore_pb_build_sd2(0x05, 0x02, 0x6C, PDU, sizeof(PDU), a, sizeof(a)))</code>
-      * <code>Assert equal uint (13u, protocore_pb_build_sd2(0x05, 0x02, PB_FC_SRD_LOW, PDU, sizeof(PDU), b, sizeof(b)))</code>
+      * <code>Assert equal uint (13u, Profibus.n)</code>
+      * <code>Assert equal uint (13u, Profibus.n)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(a, b, 13);</code>
-      * <code>Assert equal uint (14u, protocore_pb_build_sd3(0x05, 0x02, 0x7D, EIGHT, a, sizeof(a)))</code>
-      * <code>Assert equal uint (14u, protocore_pb_build_sd3(0x05, 0x02, PB_FC_SRD_HIGH, EIGHT, b, sizeof(b)))</code>
+      * <code>Assert equal uint (14u, Profibus.n)</code>
+      * <code>Assert equal uint (14u, Profibus.n)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(a, b, 14);</code>
   </details>
 
@@ -40530,11 +40530,11 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
       * <code>TEST_ASSERT_EQUAL_HEX8((uint8_t)(3 + dl), out[1]);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(out[1], out[2]);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(PB_SD2, out[3]);</code>
-      * <code>Assert true (protocore_pb_parse(out, n, &t))</code>
+      * <code>Assert true (Profibus.ok)</code>
       * <code>Assert equal uint (dl, t.data_len)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(data, t.data, dl);</code>
-      * <code>Assert equal uint (255u, protocore_pb_build_sd2(0x03, 0x02, 0x6C, data, 246, out, sizeof(out)))</code>
-      * <code>Assert equal uint (0u, protocore_pb_build_sd2(0x03, 0x02, 0x6C, data, 247, out, sizeof(out)))</code>
+      * <code>Assert equal uint (255u, Profibus.n)</code>
+      * <code>Assert equal uint (0u, Profibus.n)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -40542,8 +40542,8 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: SD2 LE=3 LEr=3 SD2 DA=0x7F SA=0x02 FC=0x49, FCS = 127 + 2 + 73 = 202 = 0xCA, ED.
     * **Assertions**:
-      * <code>Assert equal uint (0u, protocore_pb_build_sd2(0x7F, 0x02, 0x49, NULL, 0, out, sizeof(out)))</code>
-      * <code>Assert false (protocore_pb_parse(LE_THREE, sizeof(LE_THREE), &t))</code>
+      * <code>Assert equal uint (0u, Profibus.n)</code>
+      * <code>Assert false (Profibus.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -40551,10 +40551,10 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Parse refuses a malformed frame
     * **Assertions**:
-      * <code>Assert false (protocore_pb_parse(f, sizeof(SD2), &t))</code>
-      * <code>Assert false (protocore_pb_parse(f, sizeof(SD2), &t))</code>
-      * <code>Assert false (protocore_pb_parse(SD4, sizeof(SD4), &t))</code>
-      * <code>Assert false (protocore_pb_parse(UNKNOWN, sizeof(UNKNOWN), &t))</code>
+      * <code>Assert false (Profibus.ok)</code>
+      * <code>Assert false (Profibus.ok)</code>
+      * <code>Assert false (Profibus.ok)</code>
+      * <code>Assert false (Profibus.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -40562,10 +40562,10 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Parse refuses a truncated telegram
     * **Assertions**:
-      * <code>Assert false (protocore_pb_parse(SD2, n, &t))</code>
-      * <code>Assert false (protocore_pb_parse(SD3, n, &t))</code>
-      * <code>Assert false (protocore_pb_parse(NULL, 6, &t))</code>
-      * <code>Assert false (protocore_pb_parse(SD2, sizeof(SD2), NULL))</code>
+      * <code>Assert false (Profibus.ok)</code>
+      * <code>Assert false (Profibus.ok)</code>
+      * <code>Assert false (Profibus.ok)</code>
+      * <code>Assert false (Profibus.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -40573,12 +40573,12 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Builders refuse a short buffer
     * **Assertions**:
-      * <code>Assert equal uint (0u, protocore_pb_build_sd1(0x03, 0x02, 0x49, out, cap))</code>
-      * <code>Assert equal uint (0u, protocore_pb_build_sd2(0x05, 0x02, 0x6C, PDU, sizeof(PDU), out, cap))</code>
-      * <code>Assert equal uint (0u, protocore_pb_build_sd3(0x05, 0x02, 0x7D, EIGHT, out, cap))</code>
-      * <code>Assert equal uint (0u, protocore_pb_build_sd1(0x03, 0x02, 0x49, NULL, sizeof(out)))</code>
-      * <code>Assert equal uint (0u, protocore_pb_build_sd2(0x05, 0x02, 0x6C, NULL, 4, out, sizeof(out)))</code>
-      * <code>Assert equal uint (0u, protocore_pb_build_sd3(0x05, 0x02, 0x7D, NULL, out, sizeof(out)))</code>
+      * <code>Assert equal uint (0u, Profibus.n)</code>
+      * <code>Assert equal uint (0u, Profibus.n)</code>
+      * <code>Assert equal uint (0u, Profibus.n)</code>
+      * <code>Assert equal uint (0u, Profibus.n)</code>
+      * <code>Assert equal uint (0u, Profibus.n)</code>
+      * <code>Assert equal uint (0u, Profibus.n)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -40587,7 +40587,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
     * **Objective**: Address octets round trip
     * **Assertions**:
       * <code>Assert equal uint (6u, n)</code>
-      * <code>Assert true (protocore_pb_parse(out, n, &t))</code>
+      * <code>Assert true (Profibus.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8((uint8_t)da, t.da);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8((uint8_t)(255 - da), t.sa);</code>
   </details>
@@ -40628,7 +40628,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
     * **Assertions**:
       * <code>Assert equal uint (PN_DCP_HDR_LEN, n)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, out, PN_DCP_HDR_LEN);</code>
-      * <code>Assert true (protocore_pn_dcp_parse_header(out, n, &h))</code>
+      * <code>Assert true (Profinet.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX16(PN_FRAMEID_DCP_IDENT_REQ, h.frame_id);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(PN_DCP_SERVICE_IDENTIFY, h.service_id);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(PN_DCP_TYPE_REQUEST, h.service_type);</code>
@@ -40642,16 +40642,16 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Dcp header field widths
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_UINT(PN_DCP_HDR_LEN,</code>
-      * <code>Assert true (protocore_pn_dcp_parse_header(out, PN_DCP_HDR_LEN, &h))</code>
+      * <code>Assert equal uint (PN_DCP_HDR_LEN, Profinet.n)</code>
+      * <code>Assert true (Profinet.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX16(0xFFFF, h.frame_id);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0xFF, h.service_id);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0xFF, h.service_type);</code>
       * <code>TEST_ASSERT_EQUAL_HEX32(0xFFFFFFFFu, h.xid);</code>
       * <code>TEST_ASSERT_EQUAL_UINT16(0xFFFF, h.response_delay);</code>
       * <code>TEST_ASSERT_EQUAL_UINT16(0xFFFF, h.data_length);</code>
-      * <code>Assert equal uint (PN_DCP_HDR_LEN, protocore_pn_dcp_header(0, 0, 0, 0, 0, 0, out, sizeof(out)))</code>
-      * <code>Assert true (protocore_pn_dcp_parse_header(out, PN_DCP_HDR_LEN, &h))</code>
+      * <code>Assert equal uint (PN_DCP_HDR_LEN, Profinet.n)</code>
+      * <code>Assert true (Profinet.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX32(0u, h.xid);</code>
       * <code>TEST_ASSERT_EQUAL_UINT16(0, h.data_length);</code>
   </details>
@@ -40679,7 +40679,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
     * **Objective**: Dcp walk steps over the pad
     * **Assertions**:
       * <code>Assert equal uint (8u + 10u + 16u, off)</code>
-      * <code>Assert true (protocore_pn_dcp_walk(blocks, off, collect, NULL))</code>
+      * <code>Assert true (Profinet.ok)</code>
       * <code>Assert equal int (3, g_walk.n)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(PN_DCP_OPT_DEVICE, g_walk.option[0]);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(PN_DCP_SUB_DEV_NAME_OF_STATION, g_walk.suboption[0]);</code>
@@ -40699,14 +40699,14 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
     * **Objective**: Identify response frame
     * **Assertions**:
       * <code>Assert equal uint (PN_DCP_HDR_LEN, hlen)</code>
-      * <code>Assert true (protocore_pn_dcp_parse_header(frame, hlen + blen, &h))</code>
+      * <code>Assert true (Profinet.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX16(PN_FRAMEID_DCP_IDENT_RES, h.frame_id);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(PN_DCP_TYPE_RESPONSE_SUCCESS, h.service_type);</code>
       * <code>TEST_ASSERT_EQUAL_HEX32(0x12345678u, h.xid);</code>
       * <code>TEST_ASSERT_EQUAL_UINT16(0, h.response_delay); // zero on a response</code>
       * <code>TEST_ASSERT_EQUAL_UINT16((uint16_t)blen, h.data_length);</code>
       * <code>Assert equal uint (hlen + h.data_length, hlen + blen)</code>
-      * <code>Assert true (protocore_pn_dcp_walk(frame + hlen, h.data_length, collect, NULL))</code>
+      * <code>Assert true (Profinet.ok)</code>
       * <code>Assert equal int (2, g_walk.n)</code>
       * <code>Assert equal uint (7u, g_walk.len[0])</code>
       * <code>Assert equal uint (12u, g_walk.len[1])</code>
@@ -40717,11 +40717,11 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: a trailing fragment shorter than a block header is simply the end of the blocks
     * **Assertions**:
-      * <code>Assert false (protocore_pn_dcp_walk(OVERRUN, sizeof(OVERRUN), collect, NULL))</code>
-      * <code>Assert true (protocore_pn_dcp_walk(TRAILING, sizeof(TRAILING), collect, NULL))</code>
+      * <code>Assert false (Profinet.ok)</code>
+      * <code>Assert true (Profinet.ok)</code>
       * <code>Assert equal int (1, g_walk.n)</code>
-      * <code>Assert true (protocore_pn_dcp_walk(TRAILING, 8, NULL, NULL))</code>
-      * <code>Assert false (protocore_pn_dcp_walk(OVERRUN, sizeof(OVERRUN), NULL, NULL))</code>
+      * <code>Assert true (Profinet.ok)</code>
+      * <code>Assert false (Profinet.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -40729,16 +40729,16 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Bounds refusals
     * **Assertions**:
-      * <code>Assert equal uint (0u, protocore_pn_dcp_header(0xFEFE, 5, 0, 0, 0, 0, out, cap))</code>
-      * <code>Assert equal uint (0u, protocore_pn_dcp_header(0xFEFE, 5, 0, 0, 0, 0, NULL, sizeof(out)))</code>
-      * <code>Assert equal uint (0u, protocore_pn_dcp_block(2, 2, VALUE, sizeof(VALUE), out, cap))</code>
-      * <code>Assert equal uint (8u, protocore_pn_dcp_block(2, 2, VALUE, sizeof(VALUE), out, 8))</code>
-      * <code>Assert equal uint (0u, protocore_pn_dcp_block(2, 2, NULL, 4, out, sizeof(out)))</code>
-      * <code>Assert equal uint (0u, protocore_pn_dcp_block(2, 2, VALUE, sizeof(VALUE), NULL, sizeof(out)))</code>
-      * <code>Assert false (protocore_pn_dcp_parse_header(frame, n, &h))</code>
-      * <code>Assert true (protocore_pn_dcp_parse_header(frame, PN_DCP_HDR_LEN, &h))</code>
-      * <code>Assert false (protocore_pn_dcp_parse_header(NULL, PN_DCP_HDR_LEN, &h))</code>
-      * <code>Assert false (protocore_pn_dcp_parse_header(frame, PN_DCP_HDR_LEN, NULL))</code>
+      * <code>Assert equal uint (0u, Profinet.n)</code>
+      * <code>Assert equal uint (0u, Profinet.n)</code>
+      * <code>Assert equal uint (0u, Profinet.n)</code>
+      * <code>Assert equal uint (8u, Profinet.n)</code>
+      * <code>Assert equal uint (0u, Profinet.n)</code>
+      * <code>Assert equal uint (0u, Profinet.n)</code>
+      * <code>Assert false (Profinet.ok)</code>
+      * <code>Assert true (Profinet.ok)</code>
+      * <code>Assert false (Profinet.ok)</code>
+      * <code>Assert false (Profinet.ok)</code>
   </details>
 
 </details>
@@ -44675,7 +44675,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
       * <code>TEST_ASSERT_EQUAL_HEX8(0x08, out[12]); // big-endian on the wire</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x00, out[13]);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(PAYLOAD, out + ETH_HDR_LEN, sizeof(PAYLOAD));</code>
-      * <code>Assert true (protocore_eth_parse(out, n, &f))</code>
+      * <code>Assert true (Rawl2.ok)</code>
       * <code>Assert false (f.vlan)</code>
       * <code>TEST_ASSERT_EQUAL_HEX16(ETHERTYPE_IPV4, f.ethertype);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(DST, f.dst, ETH_ALEN);</code>
@@ -44696,7 +44696,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
       * <code>TEST_ASSERT_EQUAL_HEX8(0xBC, out[15]);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x88, out[16]);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x92, out[17]);</code>
-      * <code>Assert true (protocore_eth_parse(out, n, &f))</code>
+      * <code>Assert true (Rawl2.ok)</code>
       * <code>Assert true (f.vlan)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(6, f.pcp);</code>
       * <code>TEST_ASSERT_EQUAL_UINT16(0x0ABC, f.vid);</code>
@@ -44710,15 +44710,15 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: the DEI is bit 12 of the TCI and belongs to neither the PCP nor the VID
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_UINT(ETH_VLAN_HDR_LEN, protocore_eth_build_vlan(DST, SRC, pcp, PROTO_FALSE, 0x0FFF,</code>
-      * <code>Assert true (protocore_eth_parse(out, ETH_VLAN_HDR_LEN, &f))</code>
+      * <code>Assert equal uint (ETH_VLAN_HDR_LEN, Rawl2.n)</code>
+      * <code>Assert true (Rawl2.ok)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(pcp, f.pcp);</code>
       * <code>TEST_ASSERT_EQUAL_UINT16(0x0FFF, f.vid);</code>
-      * <code>TEST_ASSERT_EQUAL_UINT(ETH_VLAN_HDR_LEN, protocore_eth_build_vlan(DST, SRC, 0, PROTO_FALSE, VIDS[i],</code>
-      * <code>Assert true (protocore_eth_parse(out, ETH_VLAN_HDR_LEN, &f))</code>
+      * <code>Assert equal uint (ETH_VLAN_HDR_LEN, Rawl2.n)</code>
+      * <code>Assert true (Rawl2.ok)</code>
       * <code>TEST_ASSERT_EQUAL_UINT16(VIDS[i], f.vid);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(0, f.pcp);</code>
-      * <code>TEST_ASSERT_EQUAL_UINT(ETH_VLAN_HDR_LEN, protocore_eth_build_vlan(DST, SRC, 0, PROTO_TRUE, 0, ETHERTYPE_IPV4, NULL,</code>
+      * <code>Assert equal uint (ETH_VLAN_HDR_LEN, Rawl2.n)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x10, out[14]);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x00, out[15]);</code>
   </details>
@@ -44729,8 +44729,8 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
     * **Objective**: Tagged and untagged stay distinct
     * **Assertions**:
       * <code>Assert equal uint (tn, pn + 4)</code>
-      * <code>Assert true (protocore_eth_parse(plain, pn, &a))</code>
-      * <code>Assert true (protocore_eth_parse(tagged, tn, &b))</code>
+      * <code>Assert true (Rawl2.ok)</code>
+      * <code>Assert true (Rawl2.ok)</code>
       * <code>Assert false (a.vlan)</code>
       * <code>Assert true (b.vlan)</code>
       * <code>TEST_ASSERT_EQUAL_HEX16(TYPES[i], a.ethertype);</code>
@@ -44744,9 +44744,9 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: the empty message: init FFFFFFFF with no octets folded in, then the final XOR of FFFFFFFF
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_HEX32(0xCBF43926u, protocore_eth_fcs(CHECK, sizeof(CHECK)));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX32(0x00000000u, protocore_eth_fcs(CHECK, 0));</code>
-      * <code>Assert true (protocore_eth_fcs(flipped, sizeof(flipped)) != 0xCBF43926u)</code>
+      * <code>TEST_ASSERT_EQUAL_HEX32(0xCBF43926u, Rawl2.u32);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX32(0x00000000u, Rawl2.u32);</code>
+      * <code>Assert true (Rawl2.u32 != 0xCBF43926u)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -44755,14 +44755,14 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
     * **Objective**: Parse refuses a short frame
     * **Assertions**:
       * <code>Assert equal uint (ETH_HDR_LEN, n)</code>
-      * <code>Assert false (protocore_eth_parse(out, i, &f))</code>
-      * <code>Assert true (protocore_eth_parse(out, ETH_HDR_LEN, &f))</code>
+      * <code>Assert false (Rawl2.ok)</code>
+      * <code>Assert true (Rawl2.ok)</code>
       * <code>Assert equal uint (0u, f.payload_len)</code>
       * <code>Assert equal uint (ETH_VLAN_HDR_LEN, n)</code>
-      * <code>Assert false (protocore_eth_parse(out, i, &f))</code>
-      * <code>Assert true (protocore_eth_parse(out, ETH_VLAN_HDR_LEN, &f))</code>
-      * <code>Assert false (protocore_eth_parse(NULL, ETH_HDR_LEN, &f))</code>
-      * <code>Assert false (protocore_eth_parse(out, ETH_HDR_LEN, NULL))</code>
+      * <code>Assert false (Rawl2.ok)</code>
+      * <code>Assert true (Rawl2.ok)</code>
+      * <code>Assert false (Rawl2.ok)</code>
+      * <code>Assert false (Rawl2.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -44770,14 +44770,14 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Build refuses bad arguments
     * **Assertions**:
-      * <code>Assert equal uint (0u, protocore_eth_build(DST, SRC, ETHERTYPE_IPV4, PAYLOAD, sizeof(PAYLOAD), out, cap))</code>
-      * <code>TEST_ASSERT_EQUAL_UINT(0u, protocore_eth_build_vlan(DST, SRC, 0, PROTO_FALSE, 1, ETHERTYPE_IPV4, PAYLOAD,</code>
-      * <code>Assert equal uint (0u, protocore_eth_build(NULL, SRC, ETHERTYPE_IPV4, NULL, 0, out, sizeof(out)))</code>
-      * <code>Assert equal uint (0u, protocore_eth_build(DST, NULL, ETHERTYPE_IPV4, NULL, 0, out, sizeof(out)))</code>
-      * <code>Assert equal uint (0u, protocore_eth_build(DST, SRC, ETHERTYPE_IPV4, NULL, 0, NULL, sizeof(out)))</code>
-      * <code>Assert equal uint (0u, protocore_eth_build(DST, SRC, ETHERTYPE_IPV4, NULL, 4, out, sizeof(out)))</code>
-      * <code>TEST_ASSERT_EQUAL_UINT(</code>
-      * <code>TEST_ASSERT_EQUAL_UINT(</code>
+      * <code>Assert equal uint (0u, Rawl2.n)</code>
+      * <code>Assert equal uint (0u, Rawl2.n)</code>
+      * <code>Assert equal uint (0u, Rawl2.n)</code>
+      * <code>Assert equal uint (0u, Rawl2.n)</code>
+      * <code>Assert equal uint (0u, Rawl2.n)</code>
+      * <code>Assert equal uint (0u, Rawl2.n)</code>
+      * <code>Assert equal uint (0u, Rawl2.n)</code>
+      * <code>Assert equal uint (0u, Rawl2.n)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -44786,11 +44786,11 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
     * **Objective**: Payload round trip
     * **Assertions**:
       * <code>Assert equal uint (ETH_HDR_LEN + len, n)</code>
-      * <code>Assert true (protocore_eth_parse(out, n, &f))</code>
+      * <code>Assert true (Rawl2.ok)</code>
       * <code>Assert equal uint (len, f.payload_len)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(payload, f.payload, len);</code>
       * <code>Assert equal uint (ETH_VLAN_HDR_LEN + len, n)</code>
-      * <code>Assert true (protocore_eth_parse(out, n, &f))</code>
+      * <code>Assert true (Rawl2.ok)</code>
       * <code>Assert equal uint (len, f.payload_len)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(payload, f.payload, len);</code>
   </details>
@@ -47181,7 +47181,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
     * **Assertions**:
       * <code>Assert equal uint (18u, n)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, buf, 18);</code>
-      * <code>Assert true (protocore_s7_parse_header(buf, n, &h))</code>
+      * <code>Assert true (S7comm.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(S7_ROSCTR_JOB, h.rosctr);</code>
       * <code>TEST_ASSERT_EQUAL_HEX16(0x0400, h.pdu_ref);</code>
       * <code>TEST_ASSERT_EQUAL_UINT16(8, h.param_len);</code>
@@ -47197,7 +47197,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
     * **Assertions**:
       * <code>Assert equal uint (10u + 2u + 12u, n)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, buf, 24);</code>
-      * <code>Assert true (protocore_s7_parse_header(buf, n, &h))</code>
+      * <code>Assert true (S7comm.ok)</code>
       * <code>TEST_ASSERT_EQUAL_UINT16(14, h.param_len);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(S7_FUNC_READ_VAR, h.param[0]);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(1, h.param[1]);</code>
@@ -47209,7 +47209,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
     * **Objective**: Read request multiple items
     * **Assertions**:
       * <code>Assert equal uint (10u + 2u + 36u, n)</code>
-      * <code>Assert true (protocore_s7_parse_header(buf, n, &h))</code>
+      * <code>Assert true (S7comm.ok)</code>
       * <code>TEST_ASSERT_EQUAL_UINT16(38, h.param_len);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(3, h.param[1]);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x12, spec[0]);</code>
@@ -47227,20 +47227,20 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: one BYTE item of four octets: length 4 * 8 = 32 bits
     * **Assertions**:
-      * <code>Assert true (protocore_s7_read_next_item(BITS_LEN, sizeof(BITS_LEN), &off, &it))</code>
+      * <code>Assert true (S7comm.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(S7_RET_OK, it.return_code);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(S7_DTS_BYTE, it.transport_size);</code>
       * <code>Assert equal uint (4u, it.data_len)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x11, it.data[0]);</code>
       * <code>Assert equal uint (sizeof(BITS_LEN), off)</code>
-      * <code>Assert true (protocore_s7_read_next_item(ONE_BIT, sizeof(ONE_BIT), &off, &it))</code>
+      * <code>Assert true (S7comm.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(S7_DTS_BIT, it.transport_size);</code>
       * <code>Assert equal uint (1u, it.data_len)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x01, it.data[0]);</code>
-      * <code>Assert true (protocore_s7_read_next_item(REAL, sizeof(REAL), &off, &it))</code>
+      * <code>Assert true (S7comm.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(S7_DTS_REAL, it.transport_size);</code>
       * <code>Assert equal uint (4u, it.data_len)</code>
-      * <code>Assert true (protocore_s7_read_next_item(OCTET, sizeof(OCTET), &off, &it))</code>
+      * <code>Assert true (S7comm.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(S7_DTS_OCTET, it.transport_size);</code>
       * <code>Assert equal uint (3u, it.data_len)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8('a', it.data[0]);</code>
@@ -47251,19 +47251,19 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: an odd-length LAST item carries no pad, so the section ends exactly on its value
     * **Assertions**:
-      * <code>Assert true (protocore_s7_read_next_item(TWO_ITEMS, sizeof(TWO_ITEMS), &off, &it))</code>
+      * <code>Assert true (S7comm.ok)</code>
       * <code>Assert equal uint (1u, it.data_len)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0xAA, it.data[0]);</code>
       * <code>Assert equal uint (6u, off)</code>
-      * <code>Assert true (protocore_s7_read_next_item(TWO_ITEMS, sizeof(TWO_ITEMS), &off, &it))</code>
+      * <code>Assert true (S7comm.ok)</code>
       * <code>Assert equal uint (2u, it.data_len)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0xBB, it.data[0]);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0xCC, it.data[1]);</code>
       * <code>Assert equal uint (sizeof(TWO_ITEMS), off)</code>
-      * <code>Assert false (protocore_s7_read_next_item(TWO_ITEMS, sizeof(TWO_ITEMS), &off, &it))</code>
-      * <code>Assert true (protocore_s7_read_next_item(LAST_ODD, sizeof(LAST_ODD), &off, &it))</code>
+      * <code>Assert false (S7comm.ok)</code>
+      * <code>Assert true (S7comm.ok)</code>
       * <code>Assert equal uint (sizeof(LAST_ODD), off)</code>
-      * <code>Assert false (protocore_s7_read_next_item(LAST_ODD, sizeof(LAST_ODD), &off, &it))</code>
+      * <code>Assert false (S7comm.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -47272,7 +47272,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
     * **Objective**: parameter 2 + 24, data (4 + 1 + 1 pad) + (4 + 4) = 14, header 10
     * **Assertions**:
       * <code>Assert equal uint (10u + 26u + 14u, n)</code>
-      * <code>Assert true (protocore_s7_parse_header(buf, n, &h))</code>
+      * <code>Assert true (S7comm.ok)</code>
       * <code>TEST_ASSERT_EQUAL_UINT16(26, h.param_len);</code>
       * <code>TEST_ASSERT_EQUAL_UINT16(14, h.data_len);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(S7_FUNC_WRITE_VAR, h.param[0]);</code>
@@ -47282,14 +47282,14 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
       * <code>TEST_ASSERT_EQUAL_UINT16(8, (uint16_t)((h.data[2] &lt;&lt; 8) | h.data[3]));</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(S7_DTS_REAL, h.data[7]);</code>
       * <code>TEST_ASSERT_EQUAL_UINT16(4, (uint16_t)((h.data[8] &lt;&lt; 8) | h.data[9]));</code>
-      * <code>Assert true (protocore_s7_read_next_item(h.data, h.data_len, &off, &it))</code>
+      * <code>Assert true (S7comm.ok)</code>
       * <code>Assert equal uint (1u, it.data_len)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0xAA, it.data[0]);</code>
-      * <code>Assert true (protocore_s7_read_next_item(h.data, h.data_len, &off, &it))</code>
+      * <code>Assert true (S7comm.ok)</code>
       * <code>Assert equal uint (4u, it.data_len)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(V2, it.data, 4);</code>
       * <code>Assert equal uint (h.data_len, off)</code>
-      * <code>Assert equal uint (10u + 26u, protocore_s7_build_read_request(rd, sizeof(rd), 0x0600, READ_SPEC, 2))</code>
+      * <code>Assert equal uint (10u + 26u, S7comm.n)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(rd + 12, buf + 12, 24);</code>
   </details>
 
@@ -47298,7 +47298,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: a plain Ack response is the other 12-octet ROSCTR
     * **Assertions**:
-      * <code>Assert true (protocore_s7_parse_header(ACK_DATA, sizeof(ACK_DATA), &h))</code>
+      * <code>Assert true (S7comm.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(S7_ROSCTR_ACK_DATA, h.rosctr);</code>
       * <code>Assert equal uint (12u, h.header_len)</code>
       * <code>TEST_ASSERT_EQUAL_UINT16(2, h.param_len);</code>
@@ -47308,9 +47308,9 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
       * <code>Assert equal ptr (ACK_DATA + 12, h.param)</code>
       * <code>Assert equal ptr (ACK_DATA + 14, h.data)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(S7_FUNC_READ_VAR, h.param[0]);</code>
-      * <code>Assert true (protocore_s7_read_next_item(h.data, h.data_len, &off, &it))</code>
+      * <code>Assert true (S7comm.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0xAA, it.data[0]);</code>
-      * <code>Assert true (protocore_s7_parse_header(ACK, sizeof(ACK), &h))</code>
+      * <code>Assert true (S7comm.ok)</code>
       * <code>Assert equal uint (12u, h.header_len)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x81, h.error_class);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x04, h.error_code);</code>
@@ -47321,15 +47321,15 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: an Ack_Data truncated inside its own error code
     * **Assertions**:
-      * <code>Assert equal uint (18u, protocore_s7_build_setup(buf, sizeof(buf), 1, 1, 1, 480))</code>
-      * <code>Assert true (protocore_s7_parse_header(buf, 18, &h))</code>
-      * <code>Assert false (protocore_s7_parse_header(buf, 18, &h))</code>
-      * <code>Assert false (protocore_s7_parse_header(buf, 18, &h))</code>
-      * <code>Assert false (protocore_s7_parse_header(buf, 18, &h))</code>
-      * <code>Assert false (protocore_s7_parse_header(buf, n, &h))</code>
-      * <code>Assert false (protocore_s7_parse_header(SHORT_ACK, sizeof(SHORT_ACK), &h))</code>
-      * <code>Assert false (protocore_s7_parse_header(NULL, 18, &h))</code>
-      * <code>Assert false (protocore_s7_parse_header(buf, 18, NULL))</code>
+      * <code>Assert equal uint (18u, S7comm.n)</code>
+      * <code>Assert true (S7comm.ok)</code>
+      * <code>Assert false (S7comm.ok)</code>
+      * <code>Assert false (S7comm.ok)</code>
+      * <code>Assert false (S7comm.ok)</code>
+      * <code>Assert false (S7comm.ok)</code>
+      * <code>Assert false (S7comm.ok)</code>
+      * <code>Assert false (S7comm.ok)</code>
+      * <code>Assert false (S7comm.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -47337,12 +47337,12 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Read item refuses an overrun
     * **Assertions**:
-      * <code>Assert false (protocore_s7_read_next_item(OVER, sizeof(OVER), &off, &it))</code>
-      * <code>Assert false (protocore_s7_read_next_item(OVER_BITS, sizeof(OVER_BITS), &off, &it))</code>
-      * <code>Assert false (protocore_s7_read_next_item(STUB, sizeof(STUB), &off, &it))</code>
-      * <code>Assert false (protocore_s7_read_next_item(NULL, 4, &off, &it))</code>
-      * <code>Assert false (protocore_s7_read_next_item(STUB, 4, NULL, &it))</code>
-      * <code>Assert false (protocore_s7_read_next_item(STUB, 4, &off, NULL))</code>
+      * <code>Assert false (S7comm.ok)</code>
+      * <code>Assert false (S7comm.ok)</code>
+      * <code>Assert false (S7comm.ok)</code>
+      * <code>Assert false (S7comm.ok)</code>
+      * <code>Assert false (S7comm.ok)</code>
+      * <code>Assert false (S7comm.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -47350,17 +47350,17 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Builders refuse bad arguments
     * **Assertions**:
-      * <code>Assert equal uint (0u, protocore_s7_build_setup(buf, cap, 1, 1, 1, 480))</code>
-      * <code>Assert equal uint (0u, protocore_s7_build_setup(NULL, sizeof(buf), 1, 1, 1, 480))</code>
-      * <code>Assert equal uint (0u, protocore_s7_build_read_request(buf, cap, 1, READ_ONE, 1))</code>
-      * <code>Assert equal uint (0u, protocore_s7_build_read_request(buf, sizeof(buf), 1, READ_ONE, 0))</code>
-      * <code>Assert equal uint (0u, protocore_s7_build_read_request(buf, sizeof(buf), 1, NULL, 1))</code>
-      * <code>Assert equal uint (0u, protocore_s7_build_read_request(NULL, sizeof(buf), 1, READ_ONE, 1))</code>
-      * <code>Assert equal uint (0u, protocore_s7_build_write_request(buf, cap, 1, WRITE_ONE, 1))</code>
-      * <code>Assert equal uint (30u, protocore_s7_build_write_request(buf, 30, 1, WRITE_ONE, 1))</code>
-      * <code>Assert equal uint (0u, protocore_s7_build_write_request(buf, sizeof(buf), 1, WRITE_ONE, 0))</code>
-      * <code>Assert equal uint (0u, protocore_s7_build_write_request(NULL, sizeof(buf), 1, WRITE_ONE, 1))</code>
-      * <code>Assert equal uint (0u, protocore_s7_build_write_request(buf, sizeof(buf), 1, NULL_DATA, 1))</code>
+      * <code>Assert equal uint (0u, S7comm.n)</code>
+      * <code>Assert equal uint (0u, S7comm.n)</code>
+      * <code>Assert equal uint (0u, S7comm.n)</code>
+      * <code>Assert equal uint (0u, S7comm.n)</code>
+      * <code>Assert equal uint (0u, S7comm.n)</code>
+      * <code>Assert equal uint (0u, S7comm.n)</code>
+      * <code>Assert equal uint (0u, S7comm.n)</code>
+      * <code>Assert equal uint (30u, S7comm.n)</code>
+      * <code>Assert equal uint (0u, S7comm.n)</code>
+      * <code>Assert equal uint (0u, S7comm.n)</code>
+      * <code>Assert equal uint (0u, S7comm.n)</code>
   </details>
 
 </details>
@@ -49744,7 +49744,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
     * **Assertions**:
       * <code>Assert equal uint (sizeof(WANT), n)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, buf, sizeof(WANT));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x10, protocore_3964r_bcc(WANT, sizeof(WANT) - 1));</code>
+      * <code>TEST_ASSERT_EQUAL_HEX8(0x10, Simatic.value);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -49752,8 +49752,8 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Doubled dle is checksum neutral
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x00, protocore_3964r_bcc(PAIR, sizeof(PAIR)));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x00, protocore_3964r_bcc(PAIR, 0)); // empty range: the zero seed</code>
+      * <code>TEST_ASSERT_EQUAL_HEX8(0x00, Simatic.value);</code>
+      * <code>TEST_ASSERT_EQUAL_HEX8(0x00, Simatic.value); // empty range: the zero seed</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -49771,7 +49771,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
     * **Objective**: Block round trip is transparent
     * **Assertions**:
       * <code>Assert not equal (0, n)</code>
-      * <code>Assert true (protocore_3964r_parse_block(blk, n, with_bcc, out, sizeof(out), &olen))</code>
+      * <code>Assert true (Simatic.ok)</code>
       * <code>Assert equal uint (6u, olen)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(PAYLOADS[i], out, 6);</code>
   </details>
@@ -49781,7 +49781,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Single bit flip changes the bcc
     * **Assertions**:
-      * <code>Assert not equal (good, protocore_3964r_bcc(copy, sizeof(copy)))</code>
+      * <code>Assert not equal (good, Simatic.value)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -49789,8 +49789,8 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Parse refuses a wrong bcc
     * **Assertions**:
-      * <code>Assert true (protocore_3964r_parse_block(blk, n, PROTO_TRUE, out, sizeof(out), &olen))</code>
-      * <code>Assert false (protocore_3964r_parse_block(blk, n, PROTO_TRUE, out, sizeof(out), &olen))</code>
+      * <code>Assert true (Simatic.ok)</code>
+      * <code>Assert false (Simatic.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -49798,10 +49798,10 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Parse refuses bad framing
     * **Assertions**:
-      * <code>Assert false (protocore_3964r_parse_block(DANGLING, sizeof(DANGLING), PROTO_FALSE, out, sizeof(out), &olen))</code>
-      * <code>Assert false (protocore_3964r_parse_block(ILLEGAL, sizeof(ILLEGAL), PROTO_FALSE, out, sizeof(out), &olen))</code>
-      * <code>Assert false (protocore_3964r_parse_block(NO_END, sizeof(NO_END), PROTO_FALSE, out, sizeof(out), &olen))</code>
-      * <code>Assert false (protocore_3964r_parse_block(NO_BCC, sizeof(NO_BCC), PROTO_TRUE, out, sizeof(out), &olen))</code>
+      * <code>Assert false (Simatic.ok)</code>
+      * <code>Assert false (Simatic.ok)</code>
+      * <code>Assert false (Simatic.ok)</code>
+      * <code>Assert false (Simatic.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -49809,14 +49809,14 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: exactly the room the block needs, then one byte short of it
     * **Assertions**:
-      * <code>Assert false (protocore_3964r_parse_block(blk, n, PROTO_TRUE, small, sizeof(small), &olen))</code>
-      * <code>Assert equal uint (7u, protocore_3964r_build_block(tight, sizeof(tight), DATA, sizeof(DATA), PROTO_TRUE))</code>
-      * <code>Assert equal uint (0u, protocore_3964r_build_block(tight, 6, DATA, sizeof(DATA), PROTO_TRUE))</code>
-      * <code>Assert equal uint (0u, protocore_3964r_build_block(NULL, 16, DATA, sizeof(DATA), PROTO_TRUE))</code>
-      * <code>Assert equal uint (0u, protocore_3964r_build_block(blk, sizeof(blk), NULL, 4, PROTO_TRUE))</code>
-      * <code>Assert false (protocore_3964r_parse_block(NULL, 4, PROTO_TRUE, small, sizeof(small), &olen))</code>
-      * <code>Assert false (protocore_3964r_parse_block(blk, n, PROTO_TRUE, NULL, 4, &olen))</code>
-      * <code>Assert false (protocore_3964r_parse_block(blk, n, PROTO_TRUE, small, sizeof(small), NULL))</code>
+      * <code>Assert false (Simatic.ok)</code>
+      * <code>Assert equal uint (7u, Simatic.n)</code>
+      * <code>Assert equal uint (0u, Simatic.n)</code>
+      * <code>Assert equal uint (0u, Simatic.n)</code>
+      * <code>Assert equal uint (0u, Simatic.n)</code>
+      * <code>Assert false (Simatic.ok)</code>
+      * <code>Assert false (Simatic.ok)</code>
+      * <code>Assert false (Simatic.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -49824,13 +49824,13 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Send handshake order
     * **Assertions**:
-      * <code>Assert true (protocore_3964r_send(&ctx, DATA, sizeof(DATA), 0))</code>
+      * <code>Assert true (Simatic.ok)</code>
       * <code>Assert equal uint (1u, g_tx_n)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(SIMATIC_STX, g_tx[0]);</code>
-      * <code>Assert false (protocore_3964r_idle(&ctx))</code>
+      * <code>Assert false (Simatic.ok)</code>
       * <code>Assert equal uint (sizeof(WANT), g_tx_n)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, g_tx, sizeof(WANT));</code>
-      * <code>Assert true (protocore_3964r_idle(&ctx))</code>
+      * <code>Assert true (Simatic.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -49845,7 +49845,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
       * <code>Assert equal int (1, g_rx_calls)</code>
       * <code>Assert equal uint (sizeof(DATA), g_rx_n)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(DATA, g_rx, sizeof(DATA));</code>
-      * <code>Assert true (protocore_3964r_idle(&ctx))</code>
+      * <code>Assert true (Simatic.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -49856,7 +49856,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
       * <code>Assert equal uint (2u, g_tx_n)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(SIMATIC_NAK, g_tx[1]);</code>
       * <code>Assert equal int (0, g_rx_calls)</code>
-      * <code>Assert true (protocore_3964r_idle(&ctx))</code>
+      * <code>Assert true (Simatic.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -49864,10 +49864,10 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Priority arbitration on an stx collision
     * **Assertions**:
-      * <code>Assert true (protocore_3964r_send(&low, DATA, sizeof(DATA), 0))</code>
+      * <code>Assert true (Simatic.ok)</code>
       * <code>Assert equal uint (2u, g_tx_n)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(SIMATIC_DLE, g_tx[1]); // yielded: answered ready</code>
-      * <code>Assert true (protocore_3964r_send(&high, DATA, sizeof(DATA), 0))</code>
+      * <code>Assert true (Simatic.ok)</code>
       * <code>Assert equal uint (1u, g_tx_n)</code>
   </details>
 
@@ -49876,8 +49876,8 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Block nak retries are bounded
     * **Assertions**:
-      * <code>Assert true (protocore_3964r_send(&ctx, DATA, sizeof(DATA), 0))</code>
-      * <code>Assert true (protocore_3964r_idle(&ctx))</code>
+      * <code>Assert true (Simatic.ok)</code>
+      * <code>Assert true (Simatic.ok)</code>
       * <code>Assert equal int (SIMATIC_MAX_BLOCK_RETRY, stx_count)</code>
   </details>
 
@@ -49886,9 +49886,9 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Qvz timeout retries then gives up
     * **Assertions**:
-      * <code>Assert true (protocore_3964r_send(&ctx, DATA, sizeof(DATA), 0))</code>
+      * <code>Assert true (Simatic.ok)</code>
       * <code>Assert equal uint (1u, g_tx_n)</code>
-      * <code>Assert true (protocore_3964r_idle(&ctx))</code>
+      * <code>Assert true (Simatic.ok)</code>
       * <code>Assert equal uint ((size_t)SIMATIC_MAX_CONN_RETRY, g_tx_n)</code>
   </details>
 
@@ -49897,9 +49897,9 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Zvz inter character timeout naks
     * **Assertions**:
-      * <code>Assert false (protocore_3964r_idle(&ctx))</code>
+      * <code>Assert false (Simatic.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(SIMATIC_NAK, g_tx[g_tx_n - 1]);</code>
-      * <code>Assert true (protocore_3964r_idle(&ctx))</code>
+      * <code>Assert true (Simatic.ok)</code>
       * <code>Assert equal int (0, g_rx_calls)</code>
   </details>
 
@@ -49908,9 +49908,9 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Send refuses when busy or unframeable
     * **Assertions**:
-      * <code>Assert true (protocore_3964r_send(&ctx, DATA, sizeof(DATA), 0))</code>
-      * <code>Assert false (protocore_3964r_send(&ctx, DATA, sizeof(DATA), 0))</code>
-      * <code>Assert false (protocore_3964r_send(&ctx, big, sizeof(big), 0))</code>
+      * <code>Assert true (Simatic.ok)</code>
+      * <code>Assert false (Simatic.ok)</code>
+      * <code>Assert false (Simatic.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -49918,9 +49918,9 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Init is idle and null callbacks are safe
     * **Assertions**:
-      * <code>Assert true (protocore_3964r_idle(&ctx))</code>
-      * <code>Assert true (protocore_3964r_send(&ctx, DATA, sizeof(DATA), 0))</code>
-      * <code>Assert true (protocore_3964r_idle(&ctx))</code>
+      * <code>Assert true (Simatic.ok)</code>
+      * <code>Assert true (Simatic.ok)</code>
+      * <code>Assert true (Simatic.ok)</code>
       * <code>Assert equal uint (0u, g_tx_n)</code>
   </details>
 
@@ -49929,7 +49929,7 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Tick while idle does nothing
     * **Assertions**:
-      * <code>Assert true (protocore_3964r_idle(&ctx))</code>
+      * <code>Assert true (Simatic.ok)</code>
       * <code>Assert equal uint (0u, g_tx_n)</code>
   </details>
 
@@ -49955,13 +49955,13 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
     * **Objective**: Rk512 header round trip
     * **Assertions**:
       * <code>Assert equal uint (8u, n)</code>
-      * <code>Assert true (protocore_rk512_parse_header(buf, n, &h))</code>
+      * <code>Assert true (Simatic.ok)</code>
       * <code>Assert equal int (RK512_CMD_FETCH, h.cmd)</code>
       * <code>Assert equal int (AREAS[i], h.area)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8((uint8_t)i, h.dbnr);</code>
       * <code>TEST_ASSERT_EQUAL_HEX16(0xBEEF, h.addr);</code>
       * <code>TEST_ASSERT_EQUAL_HEX16(0x00FF, h.count);</code>
-      * <code>Assert true (protocore_rk512_parse_header(buf, sn, &h))</code>
+      * <code>Assert true (Simatic.ok)</code>
       * <code>Assert equal int (RK512_CMD_SEND, h.cmd)</code>
       * <code>TEST_ASSERT_EQUAL_UINT16(1u, h.count);</code>
   </details>
@@ -49971,15 +49971,15 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: a non-zero status is a big-endian word like every other
     * **Assertions**:
-      * <code>Assert equal uint (3u, protocore_rk512_build_reaction(buf, sizeof(buf), 0))</code>
-      * <code>Assert true (protocore_rk512_parse_reaction(buf, 3, &status, &data, &dlen))</code>
+      * <code>Assert equal uint (3u, Simatic.n)</code>
+      * <code>Assert true (Simatic.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX16(0x0000, status);</code>
       * <code>Assert null (data)</code>
       * <code>Assert equal uint (0u, dlen)</code>
-      * <code>Assert equal uint (3u, protocore_rk512_build_reaction(buf, sizeof(buf), 0x1234))</code>
+      * <code>Assert equal uint (3u, Simatic.n)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x12, buf[1]);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x34, buf[2]);</code>
-      * <code>Assert true (protocore_rk512_parse_reaction(buf, 5, &status, &data, &dlen))</code>
+      * <code>Assert true (Simatic.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX16(0x1234, status);</code>
       * <code>Assert equal uint (2u, dlen)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0xAA, data[0]);</code>
@@ -49991,14 +49991,14 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Rk512 parsers fail closed
     * **Assertions**:
-      * <code>Assert false (protocore_rk512_parse_header(buf, short_len, &h))</code>
-      * <code>Assert false (protocore_rk512_parse_header(buf, n, &h))</code>
-      * <code>Assert false (protocore_rk512_parse_header(buf, n, &h))</code>
-      * <code>Assert false (protocore_rk512_parse_header(buf, n, &h))</code>
-      * <code>Assert false (protocore_rk512_parse_header(NULL, n, &h))</code>
-      * <code>Assert false (protocore_rk512_parse_header(buf, n, NULL))</code>
-      * <code>Assert false (protocore_rk512_parse_reaction(buf, 2, &status, NULL, NULL))</code>
-      * <code>Assert false (protocore_rk512_parse_reaction(buf, 3, &status, NULL, NULL))</code>
+      * <code>Assert false (Simatic.ok)</code>
+      * <code>Assert false (Simatic.ok)</code>
+      * <code>Assert false (Simatic.ok)</code>
+      * <code>Assert false (Simatic.ok)</code>
+      * <code>Assert false (Simatic.ok)</code>
+      * <code>Assert false (Simatic.ok)</code>
+      * <code>Assert false (Simatic.ok)</code>
+      * <code>Assert false (Simatic.ok)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -50006,16 +50006,16 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
 
     * **Objective**: Rk512 builders refuse a short buffer
     * **Assertions**:
-      * <code>Assert equal uint (12u, protocore_rk512_build_send(buf, 12, RK512_AREA_DB, 0, 0, W, 2))</code>
-      * <code>Assert equal uint (0u, protocore_rk512_build_send(buf, 11, RK512_AREA_DB, 0, 0, W, 2))</code>
-      * <code>Assert equal uint (0u, protocore_rk512_build_send(buf, 16, RK512_AREA_DB, 0, 0, NULL, 2))</code>
-      * <code>Assert equal uint (0u, protocore_rk512_build_send(NULL, 16, RK512_AREA_DB, 0, 0, W, 2))</code>
-      * <code>Assert equal uint (8u, protocore_rk512_build_fetch(buf, 8, RK512_AREA_DB, 0, 0, 1))</code>
-      * <code>Assert equal uint (0u, protocore_rk512_build_fetch(buf, 7, RK512_AREA_DB, 0, 0, 1))</code>
-      * <code>Assert equal uint (0u, protocore_rk512_build_fetch(NULL, 8, RK512_AREA_DB, 0, 0, 1))</code>
-      * <code>Assert equal uint (3u, protocore_rk512_build_reaction(buf, 3, 0))</code>
-      * <code>Assert equal uint (0u, protocore_rk512_build_reaction(buf, 2, 0))</code>
-      * <code>Assert equal uint (0u, protocore_rk512_build_reaction(NULL, 3, 0))</code>
+      * <code>Assert equal uint (12u, Simatic.n)</code>
+      * <code>Assert equal uint (0u, Simatic.n)</code>
+      * <code>Assert equal uint (0u, Simatic.n)</code>
+      * <code>Assert equal uint (0u, Simatic.n)</code>
+      * <code>Assert equal uint (8u, Simatic.n)</code>
+      * <code>Assert equal uint (0u, Simatic.n)</code>
+      * <code>Assert equal uint (0u, Simatic.n)</code>
+      * <code>Assert equal uint (3u, Simatic.n)</code>
+      * <code>Assert equal uint (0u, Simatic.n)</code>
+      * <code>Assert equal uint (0u, Simatic.n)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -50025,10 +50025,10 @@ A thorough directory of all **5393 test cases** across **339 suites**. Expand a 
     * **Assertions**:
       * <code>Assert equal uint (12u, tn)</code>
       * <code>Assert not equal (0, bn)</code>
-      * <code>Assert true (protocore_3964r_parse_block(blk, bn, PROTO_TRUE, out, sizeof(out), &olen))</code>
+      * <code>Assert true (Simatic.ok)</code>
       * <code>Assert equal uint (tn, olen)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(tel, out, tn);</code>
-      * <code>Assert true (protocore_rk512_parse_header(out, olen, &h))</code>
+      * <code>Assert true (Simatic.ok)</code>
       * <code>TEST_ASSERT_EQUAL_HEX16(0x0010, h.addr);</code>
       * <code>TEST_ASSERT_EQUAL_HEX16(2, h.count);</code>
   </details>
