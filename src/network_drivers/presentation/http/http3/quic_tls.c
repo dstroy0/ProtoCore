@@ -223,6 +223,13 @@ static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t m
         Curve25519.x25519_args.point = ch.client_x25519;
         Curve25519.x25519_args.out = x_ss;
         Curve25519.x25519(qt->sign_work);
+        if (!Curve25519.ok)
+        {
+            // RFC 8446 sec 7.4.2: the shared secret came out all-zero, so the client's key share was
+            // a point of small order and the secret is a constant it chose. Abort (RFC 7748 sec 6.1).
+            fail(qt, TLS_ALERT_ILLEGAL_PARAMETER);
+            return PROTO_FALSE;
+        }
         Curve25519.x25519_base_args.scalar = qt->cfg.ephemeral_priv;
         Curve25519.x25519_base_args.out = server_pub;
         Curve25519.x25519_base(qt->sign_work);
@@ -242,6 +249,13 @@ static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t m
         Curve25519.x25519_args.point = ch.client_x25519;
         Curve25519.x25519_args.out = ecdhe;
         Curve25519.x25519(qt->sign_work);
+        if (!Curve25519.ok)
+        {
+            // RFC 8446 sec 7.4.2: the shared secret came out all-zero, so the client's key share was
+            // a point of small order and the secret is a constant it chose. Abort (RFC 7748 sec 6.1).
+            fail(qt, TLS_ALERT_ILLEGAL_PARAMETER);
+            return PROTO_FALSE;
+        }
         Curve25519.x25519_base_args.scalar = qt->cfg.ephemeral_priv;
         Curve25519.x25519_base_args.out = server_share;
         Curve25519.x25519_base(qt->sign_work);

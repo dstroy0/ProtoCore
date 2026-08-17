@@ -561,7 +561,18 @@ static void curve25519_x25519(uint8_t *restrict work)
         return;
     }
     x25519_mult(work, Curve25519.x25519_args.out, Curve25519.x25519_args.scalar, Curve25519.x25519_args.point);
-    Curve25519.ok = PROTO_TRUE;
+
+    // RFC 7748 sec 6.1: the function produces the all-zero value when it operates on a point of small
+    // order, and RFC 8446 sec 7.4.2 makes checking for that and aborting a MUST. Reported here rather
+    // than at each caller, so a shared secret a peer can force to a known constant never leaves this
+    // function as ok. The check ORs the bytes together, which is the method RFC 7748 gives: it
+    // eliminates the standard side channel a comparison would open.
+    uint8_t any = 0;
+    for (uint32_t i = 0; i < 32u; i++)
+    {
+        any = (uint8_t)(any | Curve25519.x25519_args.out[i]);
+    }
+    Curve25519.ok = any != 0;
 }
 
 // The standard base point is written into the borrow and multiplied by the same body: u = 9, the rest
