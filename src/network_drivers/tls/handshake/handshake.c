@@ -50,6 +50,7 @@ static_assert(PROTOCORE_ENABLE_TLS_RPK,
 // RFC 8446 sec 6.2 alerts this driver raises.
 #define TLS_ALERT_UNEXPECTED_MESSAGE 10
 #define TLS_ALERT_HANDSHAKE_FAILURE 40
+#define TLS_ALERT_ILLEGAL_PARAMETER 47
 #define TLS_ALERT_DECODE_ERROR 50
 #define TLS_ALERT_DECRYPT_ERROR 51
 #define TLS_ALERT_INTERNAL_ERROR 80
@@ -174,6 +175,13 @@ static void server_flight(uint8_t *restrict work)
     Curve25519.x25519_args.point = c->hello->client_x25519;
     Curve25519.x25519_args.out = c->terms + TLS_TERM_SECRET;
     Curve25519.x25519(c->sign_work);
+    if (!Curve25519.ok)
+    {
+        // RFC 8446 sec 7.4.2: the shared secret came out all-zero, so the client's key share was a
+        // point of small order and the secret is a constant it chose. Abort (RFC 7748 sec 6.1).
+        fail(TLS_ALERT_ILLEGAL_PARAMETER);
+        return;
+    }
 
     size_t off = 0;
 

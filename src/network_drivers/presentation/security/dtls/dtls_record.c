@@ -66,7 +66,7 @@ static void expand_label(uint8_t *work, const uint8_t *secret, const char *label
     Tls13Ks.derive_args.label = label;
     Tls13Ks.derive_args.out = out;
     Tls13Ks.derive_args.out_len = out_len;
-    Tls13Ks.expand_label(Tls13Ks.internal);
+    Tls13Ks.expand_label(NULL);
 }
 
 static void protocore_dtls_record_keys_derive(DtlsRecordKeys *out, DtlsCipher cipher, uint16_t epoch,

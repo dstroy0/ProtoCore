@@ -49,12 +49,22 @@ static uint32_t test_clock()
     return g_ms;
 }
 
+// Move time the way a service pass does: the source advances, then ONE read stamps Clock.ms, which
+// is what every reader in the library sees. Clock.set_ms installs the source and does NOT stamp, so
+// advancing g_ms alone leaves the connection polling the same instant and no PTO ever elapses.
+static void advance_ms(uint32_t by)
+{
+    g_ms += by;
+    Clock.millis(Clock.internal);
+}
+
 void setUp()
 {
     g_ms = 0;
     Clock.src.fn = test_clock;
     Clock.src.ticks_per_second = 1000;
     Clock.set_ms(Clock.internal);
+    Clock.millis(Clock.internal); // set_ms installs the source; this is what stamps Clock.ms from it
 }
 void tearDown()
 {
@@ -346,7 +356,7 @@ static DtlsConn g_dtls2;
 // runs on the context itself rather than the hand-rebased copy it used to fork.
 static void complete_handshake_from_flight(DtlsConn *conn, uint8_t *tr, uint16_t cfin_msg_seq, const uint8_t *flight,
                                            size_t fl, const uint8_t *client_cid, size_t client_cid_len,
-                                           proto_bool expect_rpk)
+                                           proto_bool expect_rpk, uint64_t first_seq)
 {
     size_t off = 0;
 
@@ -396,7 +406,7 @@ static void complete_handshake_from_flight(DtlsConn *conn, uint8_t *tr, uint16_t
 
     uint8_t cert_pub[32];
     proto_bool have_cert = PROTO_FALSE;
-    uint64_t exp_seq = 0;
+    uint64_t exp_seq = first_seq;
     int seen_fin = 0;
     while (off < fl)
     {
@@ -588,7 +598,7 @@ static void test_full_handshake(void)
     int fl = DtlsServer.process(&g_dtls, ch_rec, ch_rl, flight, sizeof(flight));
     TEST_ASSERT_TRUE(fl > 0);
 
-    complete_handshake_from_flight(&g_dtls, tr, 1, flight, (size_t)fl, NULL, 0, PROTO_FALSE);
+    complete_handshake_from_flight(&g_dtls, tr, 1, flight, (size_t)fl, NULL, 0, PROTO_FALSE, 0);
 }
 
 static void test_full_handshake_rpk(void)
@@ -628,7 +638,7 @@ static void test_full_handshake_rpk(void)
     int fl = DtlsServer.process(&g_dtls, ch_rec, ch_rl, flight, sizeof(flight));
     TEST_ASSERT_TRUE(fl > 0);
 
-    complete_handshake_from_flight(&g_dtls, tr, 1, flight, (size_t)fl, NULL, 0, PROTO_TRUE);
+    complete_handshake_from_flight(&g_dtls, tr, 1, flight, (size_t)fl, NULL, 0, PROTO_TRUE, 0);
 }
 
 static void test_cid_handshake(void)
@@ -675,7 +685,8 @@ static void test_cid_handshake(void)
     TEST_ASSERT_TRUE((ep2[0] & 0x10) != 0);
     TEST_ASSERT_EQUAL_MEMORY(client_cid, ep2 + 1, sizeof(client_cid));
 
-    complete_handshake_from_flight(&g_dtls, tr, 1, flight, (size_t)fl, client_cid, sizeof(client_cid), PROTO_FALSE);
+    complete_handshake_from_flight(&g_dtls, tr, 1, flight, (size_t)fl, client_cid, sizeof(client_cid), PROTO_FALSE,
+                                   0);
 }
 
 static void test_hrr_group_renegotiation(void)
@@ -760,7 +771,7 @@ static void test_hrr_group_renegotiation(void)
     int fl = DtlsServer.process(&g_dtls, r2, r2l, flight, sizeof(flight));
     TEST_ASSERT_TRUE(fl > 0);
 
-    complete_handshake_from_flight(&g_dtls, tr, 2, flight, (size_t)fl, NULL, 0, PROTO_FALSE);
+    complete_handshake_from_flight(&g_dtls, tr, 2, flight, (size_t)fl, NULL, 0, PROTO_FALSE, 0);
 }
 
 static void test_hrr_retry_without_cookie_rejected(void)
@@ -844,7 +855,8 @@ static int drive_server_flight(DtlsConn *conn, DtlsServerConfig *cfg, uint8_t **
     DtlsServer.init(conn, cfg, NULL, 0);
     uint8_t ch[256];
     size_t ch_len = build_client_hello(ch, client_pub);
-    *tr = tw;
+    *tr = tw_tr; // NOT tw: that is the shared work borrow every other call here is handed, and
+                 // the next one to take it would overwrite the running transcript
     Sha256.init(*tr);
     Sha256.update_args.data = ch;
     Sha256.update_args.len = ch_len;
@@ -876,12 +888,28 @@ static void test_pto_retransmit_and_recovery(void)
     uint8_t rflight[2048];
     TEST_ASSERT_EQUAL_INT(0, DtlsServer.on_timeout(&g_dtls, rflight, sizeof(rflight)));
 
-    g_ms += PROTOCORE_DTLS_PTO_INITIAL_MS;
+    advance_ms(PROTOCORE_DTLS_PTO_INITIAL_MS);
     int rfl = DtlsServer.on_timeout(&g_dtls, rflight, sizeof(rflight));
     TEST_ASSERT_TRUE(rfl > 0);
     TEST_ASSERT_EQUAL_INT((int)(PROTOCORE_DTLS_PTO_INITIAL_MS * 2), DtlsServer.timeout_ms(&g_dtls));
 
-    complete_handshake_from_flight(&g_dtls, tr, 1, rflight, (size_t)rfl, NULL, 0, PROTO_FALSE);
+    // RFC 9147 sec 4.2 computes the per-record nonce from the sequence number, so a retransmission
+    // carries NEW sequence numbers rather than repeating the first flight's - repeating them would
+    // reuse an AES-GCM nonce under the same key. Count what the first flight already spent, and the
+    // walk below then proves the retransmit continues past it rather than starting over.
+    DtlsPlaintext fpt;
+    size_t fskip = DtlsRecord.plaintext_parse(flight, (size_t)fl, &fpt); // the ServerHello goes out in the clear
+    TEST_ASSERT_TRUE(fskip > 0);
+    uint64_t sent = 0;
+    for (size_t o = fskip; o < (size_t)fl;)
+    {
+        size_t rl = ct_record_len(flight + o, (size_t)fl - o, 0);
+        TEST_ASSERT_TRUE(rl > 0);
+        sent++;
+        o += rl;
+    }
+    TEST_ASSERT_TRUE(sent > 0);
+    complete_handshake_from_flight(&g_dtls, tr, 1, rflight, (size_t)rfl, NULL, 0, PROTO_FALSE, sent);
     TEST_ASSERT_EQUAL_INT(-1, DtlsServer.timeout_ms(&g_dtls));
 }
 
@@ -901,11 +929,11 @@ static void test_pto_backoff_and_giveup(void)
     TEST_ASSERT_EQUAL_INT(1000, DtlsServer.timeout_ms(&g_dtls));
     for (int i = 0; i < PROTOCORE_DTLS_MAX_RETRANSMITS; i++)
     {
-        g_ms += PROTOCORE_DTLS_PTO_MAX_MS + 1000;
+        advance_ms(PROTOCORE_DTLS_PTO_MAX_MS + 1000);
         TEST_ASSERT_TRUE(DtlsServer.on_timeout(&g_dtls, rflight, sizeof(rflight)) > 0);
         TEST_ASSERT_EQUAL_INT(PTO_MS[i], DtlsServer.timeout_ms(&g_dtls));
     }
-    g_ms += PROTOCORE_DTLS_PTO_MAX_MS + 1000;
+    advance_ms(PROTOCORE_DTLS_PTO_MAX_MS + 1000);
     TEST_ASSERT_EQUAL_INT(-1, DtlsServer.on_timeout(&g_dtls, rflight, sizeof(rflight)));
     TEST_ASSERT_EQUAL_INT(-1, DtlsServer.timeout_ms(&g_dtls));
     TEST_ASSERT_EQUAL_INT(-1, DtlsServer.process(&g_dtls, rflight, 1, rflight, sizeof(rflight)));
@@ -1452,7 +1480,7 @@ static void test_retransmit_out_cap_too_small(void)
     uint8_t flight[2048];
     TEST_ASSERT_TRUE(drive_server_flight(&g_dtls, &cfg, &tr, flight, sizeof(flight)) > 0);
 
-    g_ms += PROTOCORE_DTLS_PTO_INITIAL_MS;
+    advance_ms(PROTOCORE_DTLS_PTO_INITIAL_MS);
     uint8_t tiny[32];
     TEST_ASSERT_EQUAL_INT(-1, DtlsServer.on_timeout(&g_dtls, tiny, sizeof(tiny)));
 }
@@ -1475,7 +1503,7 @@ static void test_timer_idle_when_done_or_failed(void)
     TEST_ASSERT_TRUE(run_to_finished(&g_dtls, &cfg, &st));
     TEST_ASSERT_TRUE(feed_client_finished(&g_dtls, &st, 0, out, sizeof(out)) > 0);
     TEST_ASSERT_TRUE(DtlsServer.established(&g_dtls));
-    g_ms += PROTOCORE_DTLS_PTO_MAX_MS;
+    advance_ms(PROTOCORE_DTLS_PTO_MAX_MS);
     TEST_ASSERT_EQUAL_INT(-1, DtlsServer.timeout_ms(&g_dtls));
     TEST_ASSERT_EQUAL_INT(0, DtlsServer.on_timeout(&g_dtls, out, sizeof(out)));
 
@@ -2059,7 +2087,7 @@ static void test_timer_stopped_by_done_state(void)
     TEST_ASSERT_TRUE(DtlsServer.established(&g_dtls));
 
     g_dtls.awaiting_reply = PROTO_TRUE;
-    g_ms += PROTOCORE_DTLS_PTO_MAX_MS;
+    advance_ms(PROTOCORE_DTLS_PTO_MAX_MS);
     TEST_ASSERT_EQUAL_INT(-1, DtlsServer.timeout_ms(&g_dtls));
     TEST_ASSERT_EQUAL_INT(0, DtlsServer.on_timeout(&g_dtls, out, sizeof(out)));
     TEST_ASSERT_EQUAL_UINT8(0, DtlsServer.alert(&g_dtls));

@@ -360,6 +360,12 @@ static int handle_client_hello(DtlsConn *c, const uint8_t *msg, size_t msg_len, 
     Curve25519.x25519_args.point = ch.client_x25519;
     Curve25519.x25519_args.out = ecdhe;
     Curve25519.x25519(c->sign_work);
+    if (!Curve25519.ok)
+    {
+        // RFC 8446 sec 7.4.2: the shared secret came out all-zero, so the peer's key share was a
+        // point of small order and the secret is a constant it chose. Abort (RFC 7748 sec 6.1).
+        return fail(c, ALERT_ILLEGAL_PARAMETER);
+    }
     Curve25519.x25519_base_args.scalar = c->cfg.ephemeral_priv;
     Curve25519.x25519_base_args.out = server_share;
     Curve25519.x25519_base(c->sign_work);
@@ -393,12 +399,12 @@ static int handle_client_hello(DtlsConn *c, const uint8_t *msg, size_t msg_len, 
     Tls13Ks.bind.kdf = &DTLS13_KDF;
     Tls13Ks.bind.ks = &c->ks;
     Tls13Ks.bind.s = c->ks_store;
-    Tls13Ks.early(Tls13Ks.internal);
+    Tls13Ks.early(NULL);
     Tls13Ks.bind.ks = &c->ks;
     Tls13Ks.step.ecdhe = ecdhe;
     Tls13Ks.step.ch_sh_hash = hash;
     Tls13Ks.step.ecdhe_len = 32;
-    Tls13Ks.handshake(Tls13Ks.internal);
+    Tls13Ks.handshake(NULL);
     protocore_secure_wipe(ecdhe, sizeof(ecdhe)); // every epoch-2 and epoch-3 key derives from these 32 bytes
     DtlsRecord.keys_derive(&c->ep2_srv, DTLS_CIPHER_AES_128_GCM_SHA256, 2, c->ks.s + TLS13_KS_SERVER_HS);
     DtlsRecord.keys_derive(&c->ep2_cli, DTLS_CIPHER_AES_128_GCM_SHA256, 2, c->ks.s + TLS13_KS_CLIENT_HS);
@@ -476,7 +482,7 @@ static int handle_client_hello(DtlsConn *c, const uint8_t *msg, size_t msg_len, 
     Tls13Ks.finished_args.base_secret = c->ks.s + TLS13_KS_SERVER_HS;
     Tls13Ks.finished_args.transcript_hash = hash;
     Tls13Ks.finished_args.out = verify;
-    Tls13Ks.finished_mac(Tls13Ks.internal);
+    Tls13Ks.finished_mac(NULL);
     n = protocore_tls13_build_finished(c->msgbuf, sizeof(c->msgbuf), verify);
     Sha256.update_args.data = c->msgbuf;
     Sha256.update_args.len = n;
@@ -491,7 +497,7 @@ static int handle_client_hello(DtlsConn *c, const uint8_t *msg, size_t msg_len, 
     snapshot(c->transcript, c->hs_finished_hash);
     Tls13Ks.bind.ks = &c->ks;
     Tls13Ks.step.ch_sfin_hash = c->hs_finished_hash;
-    Tls13Ks.master(Tls13Ks.internal);
+    Tls13Ks.master(NULL);
     DtlsRecord.keys_derive(&c->ep3_srv, DTLS_CIPHER_AES_128_GCM_SHA256, 3, c->ks.s + TLS13_KS_SERVER_AP);
     DtlsRecord.keys_derive(&c->ep3_cli, DTLS_CIPHER_AES_128_GCM_SHA256, 3, c->ks.s + TLS13_KS_CLIENT_AP);
     c->ep3_ready = PROTO_TRUE;
@@ -518,7 +524,7 @@ static int handle_client_finished(DtlsConn *c, const uint8_t *msg, size_t msg_le
     Tls13Ks.finished_args.base_secret = c->ks.s + TLS13_KS_CLIENT_HS;
     Tls13Ks.finished_args.transcript_hash = c->hs_finished_hash;
     Tls13Ks.finished_args.out = c->ks.s + TLS13_KS_VERIFY;
-    Tls13Ks.finished_mac(Tls13Ks.internal);
+    Tls13Ks.finished_mac(NULL);
     if (!protocore_ct_eq(c->ks.s + TLS13_KS_VERIFY, msg + 4, TLS13_SECRET_LEN))
     {
         return fail(c, ALERT_DECRYPT_ERROR);
