@@ -119,6 +119,8 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- bump github/codeql-action from 4.37.6 to 4.37.7 ([`e9695ec`](https://github.com/dstroy0/ProtoCore/commit/e9695ec1882b89c998df96470d8b88642a59f33c))
+- update CHANGELOG.md [skip ci] ([`dee1771`](https://github.com/dstroy0/ProtoCore/commit/dee17711c9ce0d446b8a9d0946008658e9b15008))
 - update CHANGELOG.md [skip ci] ([`5f48890`](https://github.com/dstroy0/ProtoCore/commit/5f4889044030b3ebe1265002c11337765f36573b))
 - update CHANGELOG.md [skip ci] ([`0fb78e4`](https://github.com/dstroy0/ProtoCore/commit/0fb78e4ca53a3fa2cddc01da3645e55d2867f6fd))
 - update CHANGELOG.md [skip ci] ([`2d6d939`](https://github.com/dstroy0/ProtoCore/commit/2d6d939e51692d719f2f430cf9b474beabf0cd86))
@@ -374,6 +376,8 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- Merge Dependabot #26: build(deps): bump github/codeql-action from 4.37.6 to 4.37.7 ([`2a82821`](https://github.com/dstroy0/ProtoCore/commit/2a828210adc07780e91c4d57acdd498c8d47d66d))
+- (housekeeping): pimpl phase 3, public handles, internal ctx, fix tests ([`9fe8aee`](https://github.com/dstroy0/ProtoCore/commit/9fe8aee4aab2118eb2b93b88cc50c3136d25deff))
 - Merge branch 'main' of https://github.com/dstroy0/ProtoCore ([`ba1189a`](https://github.com/dstroy0/ProtoCore/commit/ba1189a23506c1a081096e7c0c896711615e42f5))
 - (housekeeping): pimpl phase 3, public handles, internal ctx, fix tls tests ([`898f4a8`](https://github.com/dstroy0/ProtoCore/commit/898f4a86eee506d7782f89fd9d03bf719da955ad))
 - Merge branch 'main' of https://github.com/dstroy0/ProtoCore ([`728de1e`](https://github.com/dstroy0/ProtoCore/commit/728de1eee724d8df1e7dec2dc12c4ea36bfdae6e))
