@@ -22,7 +22,7 @@
 #include "services/fieldbus/modbus/modbus.h"
 #endif
 #if PROTOCORE_ENABLE_OPCUA
-#include "services/fieldbus/opcua/opcua.h"
+#include "services/opcua/opcua.h"
 #endif
 
 // Registers @p h for @p proto when the module supplied one; modbus / opcua return NULL on host builds.

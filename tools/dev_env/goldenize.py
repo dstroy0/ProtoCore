@@ -189,24 +189,83 @@ def module_types(header_text):
     return out
 
 
-# just the directive and its line continuations. A doc block above it is left where it is: pulling
-# it in with re.DOTALL swallowed everything between blocks.
+# just the directive and its line continuations. The doc block above it is taken by doc_above, which
+# anchors on the */ directly above: re.DOTALL here swallowed everything between blocks.
 MACRO = re.compile(r"^#[ \t]*define[ \t]+(\w+)[^\n]*(?:\\\n[^\n]*)*", re.M)
 
 
-def module_macros(header_text, guard):
-    """The constants the module's header published: lengths, caps, wire values.
+def comment_above(s, at):
+    """The comment immediately above the line starting at @p at: a /** */ block, or a run of //.
 
-    Regenerating the header must not delete these either - a consumer sizes its buffers with them.
-    The include guard and anything the config owns are skipped.
+    A table of wire values is usually introduced once for the whole group rather than per entry, so
+    the // form matters as much as the doxygen one - taking only the latter drops the sentence that
+    says what the table IS.
     """
-    out = []
+    doc = doc_above(s, at)
+    if doc:
+        return doc
+    lines = []
+    i = N.line_start(s, at)
+    while i > 0:
+        prev_end = i - 1
+        # A doxygen block can sit above the // run - one names the group, the other explains it.
+        if s[:prev_end].rstrip().endswith("*/"):
+            block = doc_above(s, prev_end)
+            if block:
+                lines.insert(0, block)
+            break
+        prev = N.line_start(s, prev_end)
+        text = s[prev:prev_end]
+        if not text.lstrip().startswith("//"):
+            break
+        lines.insert(0, text.rstrip())
+        i = prev
+    return "\n".join(lines)
+
+
+def module_macros(header_text, guard):
+    """The constants the module's header published: lengths, caps, wire values - each contiguous run
+    kept as one block, with the comment that introduces it.
+
+    Regenerating the header must not delete these either: a consumer sizes its buffers with them,
+    and reads what they mean off the comment above them. A run is kept together because a table of
+    wire values is one thing, not five - splitting it and spacing the parts out loses that it was a
+    table at all. The include guard and anything the config owns are skipped.
+    """
+    runs, prev_end = [], None
     for m in MACRO.finditer(header_text):
         name = m.group(1)
         if name == guard or name.endswith("_BORROW"):
+            prev_end = None  # a skipped define breaks the run
             continue
-        out.append(m.group(0).strip())
-    return out
+        # Contiguous means nothing but ONE newline between this define and the last one kept: a
+        # blank line is how the header says the next define is a different thing.
+        gap = header_text[prev_end : m.start()] if prev_end is not None else None
+        if gap is not None and gap.strip() == "" and gap.count("\n") <= 1:
+            runs[-1].append(m.group(0).strip())
+        else:
+            head = comment_above(header_text, m.start())
+            runs.append([head] if head else [])
+            runs[-1].append(m.group(0).strip())
+        prev_end = m.end()
+    return ["\n".join(r) for r in runs]
+
+
+# Which persistent end the module's own bytes come from. protocore_config.h states the rule beside
+# PROTOCORE_QUIC_CONN_CTX_BORROW: key material takes the secure end, everything else the plaintext
+# one. The scanner cannot read which a module holds, so it writes "secure" and the spec is edited.
+POOLS = {
+    "secure": {
+        "call": "protocore_secure_persist_span",
+        "include": '#include "mmgr/secure.h"',
+        "why": "// the persistent end this module's key material is taken from",
+    },
+    "plaintext": {
+        "call": "protocore_plaintext_persist_span",
+        "include": '#include "mmgr/plaintext.h"',
+        "why": "// the persistent end this module's state is taken from",
+    },
+}
 
 
 def camel(mod):
@@ -363,6 +422,7 @@ def scan(hpath):
         "header": os.path.relpath(hpath, R).replace("\\", "/"),
         "source": os.path.relpath(hpath, R).replace("\\", "/")[:-1] + "c",
         "borrow": "PROTOCORE_%s_BORROW" % mod.upper(),
+        "pool": "secure",
         "held_includes": held,
         "owns_state": bool(find_context(csrc)),
         "brief": first_sentence(doc_tags(doc_above(s, s.find("#ifndef")))[0]),
@@ -844,6 +904,7 @@ def restructure_source(spec):
                 + s[first.start() :]
             )
     elif spec.get("span") and spec["span"].split("(")[0] not in s:
+        pool = POOLS[spec.get("pool", "secure")]
         accessor = (
             "\n// --- the program's shared state, beside the namespace not on it -------------\n\n"
             "// The one owned instance, private to this TU: the pointer to the bytes this module took for\n"
@@ -854,16 +915,16 @@ def restructure_source(spec):
             "// Not an entry: an entry takes a borrow and this is where that borrow comes from.\n"
             "uint8_t *%s\n{\n"
             "    if (s_own.span == NULL)\n    {\n"
-            "        protocore_span sp = protocore_secure_persist_span(%s);\n"
+            "        protocore_span sp = %s(%s);\n"
             "        if (span.ok(sp))\n        {\n            s_own.span = sp.buf;\n        }\n    }\n"
             "    return s_own.span; // null while the pool was short, which every entry refuses\n}\n\n"
-        ) % (spec["borrow"], obj, obj, spec["span"].replace("()", "(void)"), spec["borrow"])
+        ) % (spec["borrow"], obj, obj, spec["span"].replace("()", "(void)"), pool["call"], spec["borrow"])
         first = re.search(r"^static void %s_\w+\(uint8_t \*restrict work\)" % spec["module"], s, re.M)
         if first:
             s = s[: first.start()] + accessor + s[first.start() :]
-        if '#include "mmgr/secure.h"' not in s:
+        if pool["include"] not in s:
             k = s.index("#include")
-            s = s[:k] + '#include "mmgr/secure.h" // the persistent end this module\'s state is taken from\n' + s[k:]
+            s = s[:k] + pool["include"] + " " + pool["why"] + "\n" + s[k:]
 
     # the point of the shape: the context moves into the borrow, with offsets and an assert
     s = funnel(s, spec["module"], spec["borrow"], notes)
@@ -1124,7 +1185,8 @@ def main():
             print("NEXT: state %s in protocore_config.h and sum it into the arena, then" % spec["borrow"])
             print(
                 "      add the pool the span comes from to every env that builds this module:\n"
-                "      harness.py env update <env> --src mmgr/secure.c mmgr/span.c mmgr/arena.c"
+                "      harness.py env update <env> --src mmgr/%s.c mmgr/span.c mmgr/arena.c"
+                % spec.get("pool", "secure")
             )
         else:
             print("NEXT: nothing - this module holds no state, so it carves no borrow")

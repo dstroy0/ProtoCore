@@ -143,7 +143,15 @@ static inline size_t protocore_net_pcap_packet(const protocore_net_host_dgram *d
  */
 static inline size_t protocore_net_pcap_render(uint8_t *out, size_t cap)
 {
-    if (!out || protocore_pcap_global_header(out, cap, PROTOCORE_DLT_RAW) == 0)
+    if (!out)
+    {
+        return 0;
+    }
+    Pcap.args.out = out;
+    Pcap.args.cap = cap;
+    Pcap.args.linktype = PROTOCORE_DLT_RAW;
+    Pcap.global_header(Pcap.internal);
+    if (Pcap.n == 0)
     {
         return 0;
     }
@@ -161,8 +169,13 @@ static inline size_t protocore_net_pcap_render(uint8_t *out, size_t cap)
         {
             return 0;
         }
-        protocore_pcap_record_header(out + w, cap - w, d->ms / 1000u, (d->ms % 1000u) * 1000u, (uint32_t)n,
-                                     (uint32_t)n);
+        Pcap.args.out = out + w;
+        Pcap.args.cap = cap - w;
+        Pcap.rec.ts_sec = d->ms / 1000u;
+        Pcap.rec.ts_usec = (d->ms % 1000u) * 1000u;
+        Pcap.rec.caplen = (uint32_t)n;
+        Pcap.rec.origlen = (uint32_t)n;
+        Pcap.record_header(Pcap.internal);
         w += PROTOCORE_PCAP_REC_HDR_LEN + n;
     }
     return w;

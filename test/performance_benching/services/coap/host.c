@@ -38,9 +38,15 @@ static void h_info(const CoapRequest *req, CoapResponse *resp)
 
 int main(void)
 {
-    protocore_coap_server_reset();
-    protocore_coap_server_add_resource("/info", COAP_ALLOW_GET, h_info);
-    protocore_coap_server_add_resource("/a/b/c", COAP_ALLOW_GET, h_info);
+    Coap.reset(Coap.internal);
+    Coap.resource.path = "/info";
+    Coap.resource.methods = COAP_ALLOW_GET;
+    Coap.resource.handler = h_info;
+    Coap.add_resource(Coap.internal);
+    Coap.resource.path = "/a/b/c";
+    Coap.resource.methods = COAP_ALLOW_GET;
+    Coap.resource.handler = h_info;
+    Coap.add_resource(Coap.internal);
 
     // A CON GET /info: ver=1 type=CON tkl=4, code=0.01 GET, MID, 4-byte token, Uri-Path "info".
     const uint8_t get_info[] = {0x44, 0x01, 0x12, 0x34, 0xAA, 0xBB, 0xCC, 0xDD, 0xB4, 'i', 'n', 'f', 'o'};
@@ -54,14 +60,24 @@ int main(void)
     {
         volatile size_t sink = 0;
         double ns = 0.0;
-        HBENCH_NS(1000000, sink += protocore_coap_server_process(get_info, sizeof(get_info), resp, sizeof(resp)), ns);
+        Coap.msg.req = get_info;
+        Coap.msg.req_len = sizeof(get_info);
+        Coap.msg.resp = resp;
+        Coap.msg.resp_cap = sizeof(resp);
+        Coap.process(Coap.internal);
+        HBENCH_NS(1000000, sink += Coap.n, ns);
         hbench_row("coap", "process GET /info", ns, (double)sizeof(get_info));
         (void)sink;
     }
     {
         volatile size_t sink = 0;
         double ns = 0.0;
-        HBENCH_NS(1000000, sink += protocore_coap_server_process(get_abc, sizeof(get_abc), resp, sizeof(resp)), ns);
+        Coap.msg.req = get_abc;
+        Coap.msg.req_len = sizeof(get_abc);
+        Coap.msg.resp = resp;
+        Coap.msg.resp_cap = sizeof(resp);
+        Coap.process(Coap.internal);
+        HBENCH_NS(1000000, sink += Coap.n, ns);
         hbench_row("coap", "process GET /a/b/c", ns, (double)sizeof(get_abc));
         (void)sink;
     }

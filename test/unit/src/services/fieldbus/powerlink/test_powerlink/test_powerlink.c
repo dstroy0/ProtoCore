@@ -15,6 +15,8 @@
 
 #include <unity.h>
 
+static uint8_t powerlink_work[16]; // the borrow an entry takes; Powerlink never reads it
+
 void setUp(void)
 {
 }
@@ -40,13 +42,21 @@ void test_epsg_message_type_ids(void)
 void test_soc_frame(void)
 {
     uint8_t out[16];
-    size_t n = protocore_epl_soc(EPL_NODE_MN, out, sizeof(out));
+    Powerlink.soc_args.source = EPL_NODE_MN;
+    Powerlink.soc_args.out = out;
+    Powerlink.soc_args.cap = sizeof(out);
+    Powerlink.soc(powerlink_work);
+    size_t n = Powerlink.n;
     TEST_ASSERT_EQUAL_UINT(3u, n);
     static const uint8_t WANT[3] = {EPL_MSG_SOC, EPL_NODE_BROADCAST, EPL_NODE_MN};
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, out, 3);
 
     EplFrame f;
-    TEST_ASSERT_TRUE(protocore_epl_parse(out, n, &f));
+    Powerlink.parse_args.frame = out;
+    Powerlink.parse_args.len = n;
+    Powerlink.parse_args.out = &f;
+    Powerlink.parse(powerlink_work);
+    TEST_ASSERT_TRUE(Powerlink.ok);
     TEST_ASSERT_EQUAL_HEX8(EPL_MSG_SOC, f.msg_type);
     TEST_ASSERT_EQUAL_HEX8(EPL_NODE_BROADCAST, f.dest);
     TEST_ASSERT_EQUAL_HEX8(EPL_NODE_MN, f.source);
@@ -60,7 +70,14 @@ void test_preq_frame(void)
 {
     static const uint8_t PDO[4] = {0xDE, 0xAD, 0xBE, 0xEF};
     uint8_t out[16];
-    size_t n = protocore_epl_preq(7, EPL_NODE_MN, PDO, sizeof(PDO), out, sizeof(out));
+    Powerlink.preq_args.dest_cn = 7;
+    Powerlink.preq_args.source = EPL_NODE_MN;
+    Powerlink.preq_args.pdo = PDO;
+    Powerlink.preq_args.pdo_len = sizeof(PDO);
+    Powerlink.preq_args.out = out;
+    Powerlink.preq_args.cap = sizeof(out);
+    Powerlink.preq(powerlink_work);
+    size_t n = Powerlink.n;
     TEST_ASSERT_EQUAL_UINT(3u + sizeof(PDO), n);
     TEST_ASSERT_EQUAL_HEX8(EPL_MSG_PREQ, out[0]);
     TEST_ASSERT_EQUAL_HEX8(7, out[1]); // unicast to the CN
@@ -68,7 +85,11 @@ void test_preq_frame(void)
     TEST_ASSERT_EQUAL_HEX8_ARRAY(PDO, out + 3, sizeof(PDO));
 
     EplFrame f;
-    TEST_ASSERT_TRUE(protocore_epl_parse(out, n, &f));
+    Powerlink.parse_args.frame = out;
+    Powerlink.parse_args.len = n;
+    Powerlink.parse_args.out = &f;
+    Powerlink.parse(powerlink_work);
+    TEST_ASSERT_TRUE(Powerlink.ok);
     TEST_ASSERT_EQUAL_HEX8(EPL_MSG_PREQ, f.msg_type);
     TEST_ASSERT_EQUAL_HEX8(7, f.dest);
     TEST_ASSERT_EQUAL_UINT(sizeof(PDO), f.payload_len);
@@ -82,14 +103,24 @@ void test_pres_frame(void)
 {
     static const uint8_t PDO[2] = {0x12, 0x34};
     uint8_t out[16];
-    size_t n = protocore_epl_pres(7, PDO, sizeof(PDO), out, sizeof(out));
+    Powerlink.pres_args.source_cn = 7;
+    Powerlink.pres_args.pdo = PDO;
+    Powerlink.pres_args.pdo_len = sizeof(PDO);
+    Powerlink.pres_args.out = out;
+    Powerlink.pres_args.cap = sizeof(out);
+    Powerlink.pres(powerlink_work);
+    size_t n = Powerlink.n;
     TEST_ASSERT_EQUAL_UINT(5u, n);
     TEST_ASSERT_EQUAL_HEX8(EPL_MSG_PRES, out[0]);
     TEST_ASSERT_EQUAL_HEX8(EPL_NODE_BROADCAST, out[1]);
     TEST_ASSERT_EQUAL_HEX8(7, out[2]);
 
     EplFrame f;
-    TEST_ASSERT_TRUE(protocore_epl_parse(out, n, &f));
+    Powerlink.parse_args.frame = out;
+    Powerlink.parse_args.len = n;
+    Powerlink.parse_args.out = &f;
+    Powerlink.parse(powerlink_work);
+    TEST_ASSERT_TRUE(Powerlink.ok);
     TEST_ASSERT_EQUAL_HEX8(7, f.source);
     TEST_ASSERT_EQUAL_HEX8(EPL_NODE_BROADCAST, f.dest);
 }
@@ -99,13 +130,25 @@ void test_pres_frame(void)
 void test_soa_frame(void)
 {
     uint8_t out[16];
-    size_t n = protocore_epl_soa(EPL_NODE_MN, NULL, 0, out, sizeof(out));
+    Powerlink.soa_args.source = EPL_NODE_MN;
+    Powerlink.soa_args.payload = NULL;
+    Powerlink.soa_args.payload_len = 0;
+    Powerlink.soa_args.out = out;
+    Powerlink.soa_args.cap = sizeof(out);
+    Powerlink.soa(powerlink_work);
+    size_t n = Powerlink.n;
     TEST_ASSERT_EQUAL_UINT(3u, n);
     static const uint8_t BARE[3] = {EPL_MSG_SOA, EPL_NODE_BROADCAST, EPL_NODE_MN};
     TEST_ASSERT_EQUAL_HEX8_ARRAY(BARE, out, 3);
 
     static const uint8_t FIELDS[3] = {0x05, 0x01, 0x20}; // NMT status, requested service, target
-    n = protocore_epl_soa(EPL_NODE_MN, FIELDS, sizeof(FIELDS), out, sizeof(out));
+    Powerlink.soa_args.source = EPL_NODE_MN;
+    Powerlink.soa_args.payload = FIELDS;
+    Powerlink.soa_args.payload_len = sizeof(FIELDS);
+    Powerlink.soa_args.out = out;
+    Powerlink.soa_args.cap = sizeof(out);
+    Powerlink.soa(powerlink_work);
+    n = Powerlink.n;
     TEST_ASSERT_EQUAL_UINT(6u, n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(FIELDS, out + 3, sizeof(FIELDS));
 }
@@ -117,14 +160,28 @@ void test_asnd_frame(void)
     static const uint8_t SERVICE[3] = {0x01, 0xAA, 0xBB}; // service id + service data
     uint8_t out[16];
 
-    size_t n = protocore_epl_asnd(1, 240, SERVICE, sizeof(SERVICE), out, sizeof(out));
+    Powerlink.asnd_args.dest = 1;
+    Powerlink.asnd_args.source = 240;
+    Powerlink.asnd_args.payload = SERVICE;
+    Powerlink.asnd_args.payload_len = sizeof(SERVICE);
+    Powerlink.asnd_args.out = out;
+    Powerlink.asnd_args.cap = sizeof(out);
+    Powerlink.asnd(powerlink_work);
+    size_t n = Powerlink.n;
     TEST_ASSERT_EQUAL_UINT(6u, n);
     TEST_ASSERT_EQUAL_HEX8(EPL_MSG_ASND, out[0]);
     TEST_ASSERT_EQUAL_HEX8(1, out[1]);
     TEST_ASSERT_EQUAL_HEX8(240, out[2]);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(SERVICE, out + 3, sizeof(SERVICE));
 
-    n = protocore_epl_asnd(EPL_NODE_BROADCAST, 5, SERVICE, sizeof(SERVICE), out, sizeof(out));
+    Powerlink.asnd_args.dest = EPL_NODE_BROADCAST;
+    Powerlink.asnd_args.source = 5;
+    Powerlink.asnd_args.payload = SERVICE;
+    Powerlink.asnd_args.payload_len = sizeof(SERVICE);
+    Powerlink.asnd_args.out = out;
+    Powerlink.asnd_args.cap = sizeof(out);
+    Powerlink.asnd(powerlink_work);
+    n = Powerlink.n;
     TEST_ASSERT_EQUAL_UINT(6u, n);
     TEST_ASSERT_EQUAL_HEX8(EPL_NODE_BROADCAST, out[1]);
 }
@@ -145,11 +202,23 @@ void test_build_parse_round_trip(void)
         for (size_t len = 0; len <= sizeof(payload); len++)
         {
             uint8_t out[64];
-            size_t n = protocore_epl_build(TYPES[t], 0x2A, 0xF0, len ? payload : NULL, len, out, sizeof(out));
+            Powerlink.build_args.msg_type = TYPES[t];
+            Powerlink.build_args.dest = 0x2A;
+            Powerlink.build_args.source = 0xF0;
+            Powerlink.build_args.payload = len ? payload : NULL;
+            Powerlink.build_args.payload_len = len;
+            Powerlink.build_args.out = out;
+            Powerlink.build_args.cap = sizeof(out);
+            Powerlink.build(powerlink_work);
+            size_t n = Powerlink.n;
             TEST_ASSERT_EQUAL_UINT(3u + len, n);
 
             EplFrame f;
-            TEST_ASSERT_TRUE(protocore_epl_parse(out, n, &f));
+            Powerlink.parse_args.frame = out;
+            Powerlink.parse_args.len = n;
+            Powerlink.parse_args.out = &f;
+            Powerlink.parse(powerlink_work);
+            TEST_ASSERT_TRUE(Powerlink.ok);
             TEST_ASSERT_EQUAL_HEX8(TYPES[t], f.msg_type);
             TEST_ASSERT_EQUAL_HEX8(0x2A, f.dest);
             TEST_ASSERT_EQUAL_HEX8(0xF0, f.source);
@@ -172,7 +241,11 @@ void test_parse_refuses_an_undefined_message_type(void)
     for (size_t i = 0; i < sizeof(UNDEFINED); i++)
     {
         uint8_t frame[4] = {UNDEFINED[i], EPL_NODE_BROADCAST, EPL_NODE_MN, 0x00};
-        TEST_ASSERT_FALSE_MESSAGE(protocore_epl_parse(frame, sizeof(frame), &f), "undefined message type accepted");
+        Powerlink.parse_args.frame = frame;
+        Powerlink.parse_args.len = sizeof(frame);
+        Powerlink.parse_args.out = &f;
+        Powerlink.parse(powerlink_work);
+        TEST_ASSERT_FALSE_MESSAGE(Powerlink.ok, "undefined message type accepted");
     }
 }
 
@@ -183,11 +256,27 @@ void test_parse_refuses_a_short_frame(void)
     EplFrame f;
     for (size_t n = 0; n < 3; n++)
     {
-        TEST_ASSERT_FALSE(protocore_epl_parse(FRAME, n, &f));
+        Powerlink.parse_args.frame = FRAME;
+        Powerlink.parse_args.len = n;
+        Powerlink.parse_args.out = &f;
+        Powerlink.parse(powerlink_work);
+        TEST_ASSERT_FALSE(Powerlink.ok);
     }
-    TEST_ASSERT_TRUE(protocore_epl_parse(FRAME, 3, &f));
-    TEST_ASSERT_FALSE(protocore_epl_parse(NULL, 3, &f));
-    TEST_ASSERT_FALSE(protocore_epl_parse(FRAME, 3, NULL));
+    Powerlink.parse_args.frame = FRAME;
+    Powerlink.parse_args.len = 3;
+    Powerlink.parse_args.out = &f;
+    Powerlink.parse(powerlink_work);
+    TEST_ASSERT_TRUE(Powerlink.ok);
+    Powerlink.parse_args.frame = NULL;
+    Powerlink.parse_args.len = 3;
+    Powerlink.parse_args.out = &f;
+    Powerlink.parse(powerlink_work);
+    TEST_ASSERT_FALSE(Powerlink.ok);
+    Powerlink.parse_args.frame = FRAME;
+    Powerlink.parse_args.len = 3;
+    Powerlink.parse_args.out = NULL;
+    Powerlink.parse(powerlink_work);
+    TEST_ASSERT_FALSE(Powerlink.ok);
 }
 
 // A builder given less room than the 3-octet header plus the payload writes nothing and reports 0,
@@ -199,18 +288,73 @@ void test_build_refuses_bad_arguments(void)
 
     for (size_t cap = 0; cap < 3 + sizeof(PDO); cap++)
     {
-        TEST_ASSERT_EQUAL_UINT(0u, protocore_epl_build(EPL_MSG_PREQ, 1, 240, PDO, sizeof(PDO), out, cap));
+        Powerlink.build_args.msg_type = EPL_MSG_PREQ;
+        Powerlink.build_args.dest = 1;
+        Powerlink.build_args.source = 240;
+        Powerlink.build_args.payload = PDO;
+        Powerlink.build_args.payload_len = sizeof(PDO);
+        Powerlink.build_args.out = out;
+        Powerlink.build_args.cap = cap;
+        Powerlink.build(powerlink_work);
+        TEST_ASSERT_EQUAL_UINT(0u, Powerlink.n);
     }
-    TEST_ASSERT_EQUAL_UINT(7u, protocore_epl_build(EPL_MSG_PREQ, 1, 240, PDO, sizeof(PDO), out, 7));
+    Powerlink.build_args.msg_type = EPL_MSG_PREQ;
+    Powerlink.build_args.dest = 1;
+    Powerlink.build_args.source = 240;
+    Powerlink.build_args.payload = PDO;
+    Powerlink.build_args.payload_len = sizeof(PDO);
+    Powerlink.build_args.out = out;
+    Powerlink.build_args.cap = 7;
+    Powerlink.build(powerlink_work);
+    TEST_ASSERT_EQUAL_UINT(7u, Powerlink.n);
 
-    TEST_ASSERT_EQUAL_UINT(0u, protocore_epl_build(EPL_MSG_PREQ, 1, 240, NULL, 4, out, sizeof(out)));
-    TEST_ASSERT_EQUAL_UINT(0u, protocore_epl_build(EPL_MSG_SOC, 255, 240, NULL, 0, NULL, sizeof(out)));
+    Powerlink.build_args.msg_type = EPL_MSG_PREQ;
+    Powerlink.build_args.dest = 1;
+    Powerlink.build_args.source = 240;
+    Powerlink.build_args.payload = NULL;
+    Powerlink.build_args.payload_len = 4;
+    Powerlink.build_args.out = out;
+    Powerlink.build_args.cap = sizeof(out);
+    Powerlink.build(powerlink_work);
+    TEST_ASSERT_EQUAL_UINT(0u, Powerlink.n);
+    Powerlink.build_args.msg_type = EPL_MSG_SOC;
+    Powerlink.build_args.dest = 255;
+    Powerlink.build_args.source = 240;
+    Powerlink.build_args.payload = NULL;
+    Powerlink.build_args.payload_len = 0;
+    Powerlink.build_args.out = NULL;
+    Powerlink.build_args.cap = sizeof(out);
+    Powerlink.build(powerlink_work);
+    TEST_ASSERT_EQUAL_UINT(0u, Powerlink.n);
 
     // the convenience builders inherit the same refusal
-    TEST_ASSERT_EQUAL_UINT(0u, protocore_epl_soc(EPL_NODE_MN, out, 2));
-    TEST_ASSERT_EQUAL_UINT(0u, protocore_epl_pres(7, PDO, sizeof(PDO), out, 6));
-    TEST_ASSERT_EQUAL_UINT(0u, protocore_epl_soa(EPL_NODE_MN, PDO, sizeof(PDO), out, 6));
-    TEST_ASSERT_EQUAL_UINT(0u, protocore_epl_asnd(1, 240, PDO, sizeof(PDO), out, 6));
+    Powerlink.soc_args.source = EPL_NODE_MN;
+    Powerlink.soc_args.out = out;
+    Powerlink.soc_args.cap = 2;
+    Powerlink.soc(powerlink_work);
+    TEST_ASSERT_EQUAL_UINT(0u, Powerlink.n);
+    Powerlink.pres_args.source_cn = 7;
+    Powerlink.pres_args.pdo = PDO;
+    Powerlink.pres_args.pdo_len = sizeof(PDO);
+    Powerlink.pres_args.out = out;
+    Powerlink.pres_args.cap = 6;
+    Powerlink.pres(powerlink_work);
+    TEST_ASSERT_EQUAL_UINT(0u, Powerlink.n);
+    Powerlink.soa_args.source = EPL_NODE_MN;
+    Powerlink.soa_args.payload = PDO;
+    Powerlink.soa_args.payload_len = sizeof(PDO);
+    Powerlink.soa_args.out = out;
+    Powerlink.soa_args.cap = 6;
+    Powerlink.soa(powerlink_work);
+    TEST_ASSERT_EQUAL_UINT(0u, Powerlink.n);
+    Powerlink.asnd_args.dest = 1;
+    Powerlink.asnd_args.source = 240;
+    Powerlink.asnd_args.payload = PDO;
+    Powerlink.asnd_args.payload_len = sizeof(PDO);
+    Powerlink.asnd_args.out = out;
+    Powerlink.asnd_args.cap = 6;
+    Powerlink.asnd(powerlink_work);
+    TEST_ASSERT_EQUAL_UINT(0u, Powerlink.n);
 }
 
 // One isochronous cycle as EPSG DS 301 section 4.2.4 schedules it: the MN multicasts a SoC, polls
@@ -221,29 +365,68 @@ void test_isochronous_cycle_sequence(void)
     uint8_t buf[32];
     EplFrame f;
 
-    TEST_ASSERT_EQUAL_UINT(3u, protocore_epl_soc(EPL_NODE_MN, buf, sizeof(buf)));
-    TEST_ASSERT_TRUE(protocore_epl_parse(buf, 3, &f));
+    Powerlink.soc_args.source = EPL_NODE_MN;
+    Powerlink.soc_args.out = buf;
+    Powerlink.soc_args.cap = sizeof(buf);
+    Powerlink.soc(powerlink_work);
+    TEST_ASSERT_EQUAL_UINT(3u, Powerlink.n);
+    Powerlink.parse_args.frame = buf;
+    Powerlink.parse_args.len = 3;
+    Powerlink.parse_args.out = &f;
+    Powerlink.parse(powerlink_work);
+    TEST_ASSERT_TRUE(Powerlink.ok);
     TEST_ASSERT_EQUAL_HEX8(EPL_MSG_SOC, f.msg_type);
 
     for (uint8_t cn = 1; cn <= 3; cn++)
     {
         uint8_t outputs[2] = {cn, (uint8_t)(cn * 2)};
-        size_t n = protocore_epl_preq(cn, EPL_NODE_MN, outputs, sizeof(outputs), buf, sizeof(buf));
-        TEST_ASSERT_TRUE(protocore_epl_parse(buf, n, &f));
+        Powerlink.preq_args.dest_cn = cn;
+        Powerlink.preq_args.source = EPL_NODE_MN;
+        Powerlink.preq_args.pdo = outputs;
+        Powerlink.preq_args.pdo_len = sizeof(outputs);
+        Powerlink.preq_args.out = buf;
+        Powerlink.preq_args.cap = sizeof(buf);
+        Powerlink.preq(powerlink_work);
+        size_t n = Powerlink.n;
+        Powerlink.parse_args.frame = buf;
+        Powerlink.parse_args.len = n;
+        Powerlink.parse_args.out = &f;
+        Powerlink.parse(powerlink_work);
+        TEST_ASSERT_TRUE(Powerlink.ok);
         TEST_ASSERT_EQUAL_HEX8(EPL_MSG_PREQ, f.msg_type);
         TEST_ASSERT_EQUAL_HEX8(cn, f.dest);
         TEST_ASSERT_EQUAL_HEX8(EPL_NODE_MN, f.source);
 
         uint8_t inputs[2] = {(uint8_t)(cn + 100), 0};
-        n = protocore_epl_pres(cn, inputs, sizeof(inputs), buf, sizeof(buf));
-        TEST_ASSERT_TRUE(protocore_epl_parse(buf, n, &f));
+        Powerlink.pres_args.source_cn = cn;
+        Powerlink.pres_args.pdo = inputs;
+        Powerlink.pres_args.pdo_len = sizeof(inputs);
+        Powerlink.pres_args.out = buf;
+        Powerlink.pres_args.cap = sizeof(buf);
+        Powerlink.pres(powerlink_work);
+        n = Powerlink.n;
+        Powerlink.parse_args.frame = buf;
+        Powerlink.parse_args.len = n;
+        Powerlink.parse_args.out = &f;
+        Powerlink.parse(powerlink_work);
+        TEST_ASSERT_TRUE(Powerlink.ok);
         TEST_ASSERT_EQUAL_HEX8(EPL_MSG_PRES, f.msg_type);
         TEST_ASSERT_EQUAL_HEX8(cn, f.source);
         TEST_ASSERT_EQUAL_HEX8(EPL_NODE_BROADCAST, f.dest);
         TEST_ASSERT_EQUAL_HEX8((uint8_t)(cn + 100), f.payload[0]);
     }
 
-    TEST_ASSERT_EQUAL_UINT(3u, protocore_epl_soa(EPL_NODE_MN, NULL, 0, buf, sizeof(buf)));
-    TEST_ASSERT_TRUE(protocore_epl_parse(buf, 3, &f));
+    Powerlink.soa_args.source = EPL_NODE_MN;
+    Powerlink.soa_args.payload = NULL;
+    Powerlink.soa_args.payload_len = 0;
+    Powerlink.soa_args.out = buf;
+    Powerlink.soa_args.cap = sizeof(buf);
+    Powerlink.soa(powerlink_work);
+    TEST_ASSERT_EQUAL_UINT(3u, Powerlink.n);
+    Powerlink.parse_args.frame = buf;
+    Powerlink.parse_args.len = 3;
+    Powerlink.parse_args.out = &f;
+    Powerlink.parse(powerlink_work);
+    TEST_ASSERT_TRUE(Powerlink.ok);
     TEST_ASSERT_EQUAL_HEX8(EPL_MSG_SOA, f.msg_type);
 }

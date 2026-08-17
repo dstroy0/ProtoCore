@@ -8,11 +8,11 @@
 // from the rig /bench endpoint; this host ns/op + MB/s is a relative baseline. Build + run:
 //   gcc -O2 -std=c11 -I. -Isrc -Itest/mocks -Itest/support -Itest/performance_benching/common
 //   -DPROTOCORE_ENABLE_OPCUA=1 test/performance_benching/services/opcua/host.c
-//   src/services/fieldbus/opcua/opcua.c src/mmgr/protomem.c src/mmgr/protostr.c -o /tmp/bo && /tmp/bo
+//   src/services/opcua/opcua.c src/mmgr/protomem.c src/mmgr/protostr.c -o /tmp/bo && /tmp/bo
 
 #define PROTOCORE_ENABLE_OPCUA 1
 #include "network_drivers/transport/tcp/tcp.h" // TcpConn / conn_pool type (for the stubs)
-#include "services/fieldbus/opcua/opcua.h"
+#include "services/opcua/opcua.h"
 
 #include "host_bench.h"
 #include <stdbool.h>

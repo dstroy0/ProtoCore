@@ -23,12 +23,13 @@
 
 void protocore_exc_cd_present(struct ExcDecoderInternal *restrict ctx)
 {
-    ExcCoreDump *out = ctx->ns->dump.img;
+    (void)ctx; // the namespace below IS the module's one symbol; the handle names nothing else
+    ExcCoreDump *out = Exc.dump.img;
 
     // The seam reports what is stored only once it verifies, so a torn write from a crash mid-dump
     // is reported as absent rather than handed on as a valid image.
     uint32_t size = protocore_platform_crashdump_size();
-    ctx->ns->ok = PROTO_FALSE;
+    Exc.ok = PROTO_FALSE;
     if (size == 0)
     {
         return;
@@ -38,14 +39,15 @@ void protocore_exc_cd_present(struct ExcDecoderInternal *restrict ctx)
         out->addr = 0; // the image's location is the platform's, and does not cross the seam
         out->size = size;
     }
-    ctx->ns->ok = PROTO_TRUE;
+    Exc.ok = PROTO_TRUE;
 }
 
 void protocore_exc_cd_summary(struct ExcDecoderInternal *restrict ctx)
 {
-    ExcInfo *out = ctx->ns->parse_args.info;
+    (void)ctx; // the namespace below IS the module's one symbol; the handle names nothing else
+    ExcInfo *out = Exc.parse_args.info;
 
-    ctx->ns->ok = PROTO_FALSE;
+    Exc.ok = PROTO_FALSE;
     if (!out)
     {
         return;
@@ -80,36 +82,38 @@ void protocore_exc_cd_summary(struct ExcDecoderInternal *restrict ctx)
         out->frames[i].sp = 0; // not part of the summary
     }
     out->frame_count = depth;
-    ctx->ns->ok = PROTO_TRUE;
+    Exc.ok = PROTO_TRUE;
 }
 
 void protocore_exc_cd_read(struct ExcDecoderInternal *restrict ctx)
 {
-    void *buf = ctx->ns->dump.buf;
-    const size_t len = ctx->ns->dump.len;
+    (void)ctx; // the namespace below IS the module's one symbol; the handle names nothing else
+    void *buf = Exc.dump.buf;
+    const size_t len = Exc.dump.len;
 
-    ctx->ns->ok = PROTO_FALSE;
+    Exc.ok = PROTO_FALSE;
     if (!buf)
     {
         return;
     }
     if (len == 0)
     {
-        ctx->ns->ok = PROTO_TRUE;
+        Exc.ok = PROTO_TRUE;
         return;
     }
     // The seam refuses a range that runs past the image rather than returning whatever follows it.
-    ctx->ns->ok = protocore_platform_crashdump_read((uint32_t)ctx->ns->dump.offset, (uint8_t *)buf, (uint32_t)len)
+    Exc.ok = protocore_platform_crashdump_read((uint32_t)Exc.dump.offset, (uint8_t *)buf, (uint32_t)len)
                       ? PROTO_TRUE
                       : PROTO_FALSE;
 }
 
 void protocore_exc_cd_save(struct ExcDecoderInternal *restrict ctx)
 {
-    const protocore_mnt_backend *file_sys = ctx->ns->dump.file_sys;
-    const char *path = ctx->ns->dump.path;
+    (void)ctx; // the namespace below IS the module's one symbol; the handle names nothing else
+    const protocore_mnt_backend *file_sys = Exc.dump.file_sys;
+    const char *path = Exc.dump.path;
 
-    ctx->ns->ok = PROTO_FALSE;
+    Exc.ok = PROTO_FALSE;
     if (!file_sys || !path || path[0] == '\0')
     {
         return;
@@ -146,12 +150,13 @@ void protocore_exc_cd_save(struct ExcDecoderInternal *restrict ctx)
     {
         (void)file_sys->remove(path); // never leave a half-written dump that looks complete
     }
-    ctx->ns->ok = ok;
+    Exc.ok = ok;
 }
 
 void protocore_exc_cd_erase(struct ExcDecoderInternal *restrict ctx)
 {
-    ctx->ns->ok = protocore_platform_crashdump_erase() ? PROTO_TRUE : PROTO_FALSE;
+    (void)ctx; // the namespace below IS the module's one symbol; the handle names nothing else
+    Exc.ok = protocore_platform_crashdump_erase() ? PROTO_TRUE : PROTO_FALSE;
 }
 
 #endif // PROTOCORE_ENABLE_EXC_DECODER && PROTOCORE_HAS_VENDOR_COREDUMP

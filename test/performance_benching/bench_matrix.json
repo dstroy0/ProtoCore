@@ -1741,8 +1741,8 @@
         "src/mmgr/span.c",
         "src/mmgr/swar.c",
         "src/server/clock/clock.c",
-        "src/services/fieldbus/opcua/opcua.c",
-        "src/services/machine_tool/euromap77/euromap77.c",
+        "src/services/opcua/opcua.c",
+        "src/services/opcua/models/euromap77/euromap77.c",
         "src/shared/hex/hex.c"
       ]
     },
@@ -3222,7 +3222,7 @@
         "src/mmgr/span.c",
         "src/mmgr/swar.c",
         "src/server/clock/clock.c",
-        "src/services/fieldbus/opcua/opcua.c",
+        "src/services/opcua/opcua.c",
         "src/shared/hex/hex.c"
       ]
     },
@@ -3246,8 +3246,8 @@
         "src/mmgr/span.c",
         "src/mmgr/swar.c",
         "src/server/clock/clock.c",
-        "src/services/fieldbus/opcua/opcua.c",
-        "src/services/fieldbus/opcua_client/opcua_client.c",
+        "src/services/opcua/opcua.c",
+        "src/services/opcua/opcua_client/opcua_client.c",
         "src/shared/hex/hex.c"
       ]
     },
@@ -3667,8 +3667,8 @@
         "src/mmgr/span.c",
         "src/mmgr/swar.c",
         "src/server/clock/clock.c",
-        "src/services/fieldbus/opcua/opcua.c",
-        "src/services/machine_tool/robotics/robotics.c",
+        "src/services/opcua/opcua.c",
+        "src/services/opcua/models/robotics/robotics.c",
         "src/shared/hex/hex.c"
       ]
     },
@@ -4298,8 +4298,8 @@
         "src/mmgr/span.c",
         "src/mmgr/swar.c",
         "src/server/clock/clock.c",
-        "src/services/fieldbus/opcua/opcua.c",
-        "src/services/machine_tool/umati/umati.c",
+        "src/services/opcua/opcua.c",
+        "src/services/opcua/models/umati/umati.c",
         "src/shared/hex/hex.c"
       ]
     },

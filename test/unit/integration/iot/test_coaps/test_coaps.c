@@ -47,8 +47,11 @@ static void h_temp(const CoapRequest *req, CoapResponse *resp)
 
 void setUp()
 {
-    protocore_coap_server_reset();
-    protocore_coap_server_add_resource("/temp", COAP_ALLOW_GET, h_temp);
+    Coap.reset(Coap.internal);
+    Coap.resource.path = "/temp";
+    Coap.resource.methods = COAP_ALLOW_GET;
+    Coap.resource.handler = h_temp;
+    Coap.add_resource(Coap.internal);
 }
 void tearDown()
 {
@@ -317,7 +320,13 @@ static void test_coap_over_dtls(void)
     TEST_ASSERT_TRUE(ar > 0);
 
     uint8_t out[256];
-    int on = protocore_coaps_process(&g_dtls, app_rec, ar, out, sizeof(out));
+    Coaps.conn = &g_dtls;
+    Coaps.dgram.data = app_rec;
+    Coaps.dgram.len = ar;
+    Coaps.dgram.out = out;
+    Coaps.dgram.out_cap = sizeof(out);
+    Coaps.process(Coaps.internal);
+    int on = Coaps.i32;
     TEST_ASSERT_TRUE(on > 0);
 
     uint8_t coap_resp[256];
@@ -345,8 +354,20 @@ static void test_coap_over_dtls_replay_dropped(void)
     size_t ar = DtlsRecord.protect(&cli_app_write, 0, PROTOCORE_DTLS_CT_APPLICATION_DATA, coap_get, sizeof(coap_get),
                                    app_rec, sizeof(app_rec), NULL, 0);
     uint8_t out[256];
-    TEST_ASSERT_TRUE(protocore_coaps_process(&g_dtls, app_rec, ar, out, sizeof(out)) > 0);
-    TEST_ASSERT_EQUAL_INT(0, protocore_coaps_process(&g_dtls, app_rec, ar, out, sizeof(out)));
+    Coaps.conn = &g_dtls;
+    Coaps.dgram.data = app_rec;
+    Coaps.dgram.len = ar;
+    Coaps.dgram.out = out;
+    Coaps.dgram.out_cap = sizeof(out);
+    Coaps.process(Coaps.internal);
+    TEST_ASSERT_TRUE(Coaps.i32 > 0);
+    Coaps.conn = &g_dtls;
+    Coaps.dgram.data = app_rec;
+    Coaps.dgram.len = ar;
+    Coaps.dgram.out = out;
+    Coaps.dgram.out_cap = sizeof(out);
+    Coaps.process(Coaps.internal);
+    TEST_ASSERT_EQUAL_INT(0, Coaps.i32);
 }
 
 static void test_coaps_no_coap_response(void)
@@ -361,7 +382,13 @@ static void test_coaps_no_coap_response(void)
     TEST_ASSERT_TRUE(ar > 0);
 
     uint8_t out[256];
-    TEST_ASSERT_EQUAL_INT(0, protocore_coaps_process(&g_dtls, app_rec, ar, out, sizeof(out)));
+    Coaps.conn = &g_dtls;
+    Coaps.dgram.data = app_rec;
+    Coaps.dgram.len = ar;
+    Coaps.dgram.out = out;
+    Coaps.dgram.out_cap = sizeof(out);
+    Coaps.process(Coaps.internal);
+    TEST_ASSERT_EQUAL_INT(0, Coaps.i32);
 }
 
 static void test_coaps_non_app_record(void)
@@ -371,8 +398,20 @@ static void test_coaps_non_app_record(void)
 
     uint8_t out[256];
     uint8_t byte[1] = {0x16};
-    TEST_ASSERT_EQUAL_INT(0, protocore_coaps_process(&g_dtls, byte, 0, out, sizeof(out)));
-    TEST_ASSERT_EQUAL_INT(0, protocore_coaps_process(&g_dtls, byte, 1, out, sizeof(out)));
+    Coaps.conn = &g_dtls;
+    Coaps.dgram.data = byte;
+    Coaps.dgram.len = 0;
+    Coaps.dgram.out = out;
+    Coaps.dgram.out_cap = sizeof(out);
+    Coaps.process(Coaps.internal);
+    TEST_ASSERT_EQUAL_INT(0, Coaps.i32);
+    Coaps.conn = &g_dtls;
+    Coaps.dgram.data = byte;
+    Coaps.dgram.len = 1;
+    Coaps.dgram.out = out;
+    Coaps.dgram.out_cap = sizeof(out);
+    Coaps.process(Coaps.internal);
+    TEST_ASSERT_EQUAL_INT(0, Coaps.i32);
     TEST_ASSERT_TRUE(DtlsServer.established(&g_dtls));
 }
 
@@ -386,7 +425,13 @@ static void test_coaps_wrong_epoch_record(void)
     rec[0] = 0x22;
 
     uint8_t out[64];
-    TEST_ASSERT_EQUAL_INT(0, protocore_coaps_process(&g_dtls, rec, sizeof(rec), out, sizeof(out)));
+    Coaps.conn = &g_dtls;
+    Coaps.dgram.data = rec;
+    Coaps.dgram.len = sizeof(rec);
+    Coaps.dgram.out = out;
+    Coaps.dgram.out_cap = sizeof(out);
+    Coaps.process(Coaps.internal);
+    TEST_ASSERT_EQUAL_INT(0, Coaps.i32);
 }
 
 static void test_coaps_forwards_handshake(void)
@@ -421,7 +466,13 @@ static void test_coaps_forwards_handshake(void)
 
     TEST_ASSERT_FALSE(DtlsServer.established(&g_dtls));
     uint8_t flight[2048];
-    int fl = protocore_coaps_process(&g_dtls, ch_rec, ch_rl, flight, sizeof(flight));
+    Coaps.conn = &g_dtls;
+    Coaps.dgram.data = ch_rec;
+    Coaps.dgram.len = ch_rl;
+    Coaps.dgram.out = flight;
+    Coaps.dgram.out_cap = sizeof(flight);
+    Coaps.process(Coaps.internal);
+    int fl = Coaps.i32;
     TEST_ASSERT_TRUE(fl > 0);
 }
 

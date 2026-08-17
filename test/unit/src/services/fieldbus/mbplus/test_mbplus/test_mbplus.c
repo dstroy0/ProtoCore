@@ -16,6 +16,8 @@
 
 #include <unity.h>
 
+static uint8_t mbplus_work[16]; // the borrow an entry takes; Mbplus never reads it
+
 void setUp(void)
 {
 }
@@ -27,9 +29,15 @@ void tearDown(void)
 void test_published_check_value(void)
 {
     static const uint8_t CHECK[9] = {'1', '2', '3', '4', '5', '6', '7', '8', '9'};
-    TEST_ASSERT_EQUAL_HEX16(0x906Eu, protocore_mbplus_crc(CHECK, sizeof(CHECK)));
+    Mbplus.crc_args.bytes = CHECK;
+    Mbplus.crc_args.len = sizeof(CHECK);
+    Mbplus.crc(mbplus_work);
+    TEST_ASSERT_EQUAL_HEX16(0x906Eu, Mbplus.value);
     // init=0xffff and xorout=0xffff cancel over an empty message.
-    TEST_ASSERT_EQUAL_HEX16(0x0000u, protocore_mbplus_crc(CHECK, 0));
+    Mbplus.crc_args.bytes = CHECK;
+    Mbplus.crc_args.len = 0;
+    Mbplus.crc(mbplus_work);
+    TEST_ASSERT_EQUAL_HEX16(0x0000u, Mbplus.value);
 }
 
 // ISO/IEC 13239 fixes the HDLC flag octet, and a Modbus Plus segment carries stations 1..64.
@@ -47,7 +55,14 @@ void test_frame_layout(void)
 {
     static const uint8_t PAYLOAD[3] = {0x03, 0x00, 0x01}; // a Modbus read-holding-registers stub
     uint8_t out[16];
-    size_t n = protocore_mbplus_build(5, MBPLUS_CTRL_DATA, PAYLOAD, sizeof(PAYLOAD), out, sizeof(out));
+    Mbplus.build_args.address = 5;
+    Mbplus.build_args.control = MBPLUS_CTRL_DATA;
+    Mbplus.build_args.payload = PAYLOAD;
+    Mbplus.build_args.payload_len = sizeof(PAYLOAD);
+    Mbplus.build_args.out = out;
+    Mbplus.build_args.cap = sizeof(out);
+    Mbplus.build(mbplus_work);
+    size_t n = Mbplus.n;
     TEST_ASSERT_EQUAL_size_t(9u, n); // 1 + 1 + 1 + 3 + 2 + 1
 
     TEST_ASSERT_EQUAL_HEX8(0x7Eu, out[0]);
@@ -56,13 +71,20 @@ void test_frame_layout(void)
     TEST_ASSERT_EQUAL_HEX8_ARRAY(PAYLOAD, out + 3, sizeof(PAYLOAD));
     TEST_ASSERT_EQUAL_HEX8(0x7Eu, out[8]);
 
-    uint16_t crc = protocore_mbplus_crc(out + 1, 5); // address + control + payload
-    TEST_ASSERT_EQUAL_HEX8((uint8_t)crc, out[6]);    // low octet first, the HDLC order
+    Mbplus.crc_args.bytes = out + 1;
+    Mbplus.crc_args.len = 5;
+    Mbplus.crc(mbplus_work);
+    uint16_t crc = Mbplus.value;                  // address + control + payload
+    TEST_ASSERT_EQUAL_HEX8((uint8_t)crc, out[6]); // low octet first, the HDLC order
     TEST_ASSERT_EQUAL_HEX8((uint8_t)(crc >> 8), out[7]);
 
     MbPlusFrame f;
     memset(&f, 0, sizeof(f));
-    TEST_ASSERT_TRUE(protocore_mbplus_parse(out, n, &f));
+    Mbplus.parse_args.frame = out;
+    Mbplus.parse_args.len = n;
+    Mbplus.parse_args.out = &f;
+    Mbplus.parse(mbplus_work);
+    TEST_ASSERT_TRUE(Mbplus.ok);
     TEST_ASSERT_EQUAL_HEX8(5u, f.address);
     TEST_ASSERT_EQUAL_HEX8(MBPLUS_CTRL_DATA, f.control);
     TEST_ASSERT_EQUAL_size_t(sizeof(PAYLOAD), f.payload_len);
@@ -73,13 +95,24 @@ void test_frame_layout(void)
 void test_token_frame_has_no_payload(void)
 {
     uint8_t out[16];
-    size_t n = protocore_mbplus_build(1, MBPLUS_CTRL_TOKEN, NULL, 0, out, sizeof(out));
+    Mbplus.build_args.address = 1;
+    Mbplus.build_args.control = MBPLUS_CTRL_TOKEN;
+    Mbplus.build_args.payload = NULL;
+    Mbplus.build_args.payload_len = 0;
+    Mbplus.build_args.out = out;
+    Mbplus.build_args.cap = sizeof(out);
+    Mbplus.build(mbplus_work);
+    size_t n = Mbplus.n;
     TEST_ASSERT_EQUAL_size_t(6u, n);
     TEST_ASSERT_EQUAL_HEX8(MBPLUS_CTRL_TOKEN, out[2]);
 
     MbPlusFrame f;
     memset(&f, 0, sizeof(f));
-    TEST_ASSERT_TRUE(protocore_mbplus_parse(out, n, &f));
+    Mbplus.parse_args.frame = out;
+    Mbplus.parse_args.len = n;
+    Mbplus.parse_args.out = &f;
+    Mbplus.parse(mbplus_work);
+    TEST_ASSERT_TRUE(Mbplus.ok);
     TEST_ASSERT_EQUAL_HEX8(1u, f.address);
     TEST_ASSERT_EQUAL_HEX8(MBPLUS_CTRL_TOKEN, f.control);
     TEST_ASSERT_EQUAL_size_t(0u, f.payload_len);
@@ -95,12 +128,23 @@ void test_round_trip(void)
         for (size_t len = 0; len <= sizeof(PAYLOAD); len += 4)
         {
             uint8_t frame[24];
-            size_t n = protocore_mbplus_build(addr, MBPLUS_CTRL_DATA, len ? PAYLOAD : NULL, len, frame, sizeof(frame));
+            Mbplus.build_args.address = addr;
+            Mbplus.build_args.control = MBPLUS_CTRL_DATA;
+            Mbplus.build_args.payload = len ? PAYLOAD : NULL;
+            Mbplus.build_args.payload_len = len;
+            Mbplus.build_args.out = frame;
+            Mbplus.build_args.cap = sizeof(frame);
+            Mbplus.build(mbplus_work);
+            size_t n = Mbplus.n;
             TEST_ASSERT_EQUAL_size_t(len + 6u, n);
 
             MbPlusFrame f;
             memset(&f, 0, sizeof(f));
-            TEST_ASSERT_TRUE(protocore_mbplus_parse(frame, n, &f));
+            Mbplus.parse_args.frame = frame;
+            Mbplus.parse_args.len = n;
+            Mbplus.parse_args.out = &f;
+            Mbplus.parse(mbplus_work);
+            TEST_ASSERT_TRUE(Mbplus.ok);
             TEST_ASSERT_EQUAL_HEX8(addr, f.address);
             TEST_ASSERT_EQUAL_size_t(len, f.payload_len);
             if (len)
@@ -117,7 +161,14 @@ void test_single_bit_corruption_is_refused(void)
 {
     static const uint8_t PAYLOAD[4] = {0x11, 0x22, 0x33, 0x44};
     uint8_t frame[16];
-    size_t len = protocore_mbplus_build(9, MBPLUS_CTRL_DATA, PAYLOAD, sizeof(PAYLOAD), frame, sizeof(frame));
+    Mbplus.build_args.address = 9;
+    Mbplus.build_args.control = MBPLUS_CTRL_DATA;
+    Mbplus.build_args.payload = PAYLOAD;
+    Mbplus.build_args.payload_len = sizeof(PAYLOAD);
+    Mbplus.build_args.out = frame;
+    Mbplus.build_args.cap = sizeof(frame);
+    Mbplus.build(mbplus_work);
+    size_t len = Mbplus.n;
 
     for (size_t i = 1; i + 1 < len; i++) // everything between the two flags
     {
@@ -127,7 +178,11 @@ void test_single_bit_corruption_is_refused(void)
             memcpy(bad, frame, len);
             bad[i] ^= (uint8_t)(1u << bit);
             MbPlusFrame f;
-            TEST_ASSERT_FALSE(protocore_mbplus_parse(bad, len, &f));
+            Mbplus.parse_args.frame = bad;
+            Mbplus.parse_args.len = len;
+            Mbplus.parse_args.out = &f;
+            Mbplus.parse(mbplus_work);
+            TEST_ASSERT_FALSE(Mbplus.ok);
         }
     }
 }
@@ -137,22 +192,53 @@ void test_parse_rejects_bad_framing(void)
 {
     static const uint8_t PAYLOAD[2] = {0xAA, 0xBB};
     uint8_t frame[16];
-    size_t len = protocore_mbplus_build(3, MBPLUS_CTRL_DATA, PAYLOAD, sizeof(PAYLOAD), frame, sizeof(frame));
+    Mbplus.build_args.address = 3;
+    Mbplus.build_args.control = MBPLUS_CTRL_DATA;
+    Mbplus.build_args.payload = PAYLOAD;
+    Mbplus.build_args.payload_len = sizeof(PAYLOAD);
+    Mbplus.build_args.out = frame;
+    Mbplus.build_args.cap = sizeof(frame);
+    Mbplus.build(mbplus_work);
+    size_t len = Mbplus.n;
     MbPlusFrame f;
-    TEST_ASSERT_TRUE(protocore_mbplus_parse(frame, len, &f));
+    Mbplus.parse_args.frame = frame;
+    Mbplus.parse_args.len = len;
+    Mbplus.parse_args.out = &f;
+    Mbplus.parse(mbplus_work);
+    TEST_ASSERT_TRUE(Mbplus.ok);
 
     uint8_t bad[16];
     memcpy(bad, frame, len);
     bad[0] = 0x00;
-    TEST_ASSERT_FALSE(protocore_mbplus_parse(bad, len, &f)); // no opening flag
+    Mbplus.parse_args.frame = bad;
+    Mbplus.parse_args.len = len;
+    Mbplus.parse_args.out = &f;
+    Mbplus.parse(mbplus_work);
+    TEST_ASSERT_FALSE(Mbplus.ok); // no opening flag
 
     memcpy(bad, frame, len);
     bad[len - 1] = 0x00;
-    TEST_ASSERT_FALSE(protocore_mbplus_parse(bad, len, &f)); // no closing flag
+    Mbplus.parse_args.frame = bad;
+    Mbplus.parse_args.len = len;
+    Mbplus.parse_args.out = &f;
+    Mbplus.parse(mbplus_work);
+    TEST_ASSERT_FALSE(Mbplus.ok); // no closing flag
 
-    TEST_ASSERT_FALSE(protocore_mbplus_parse(frame, 5, &f)); // shorter than the smallest frame
-    TEST_ASSERT_FALSE(protocore_mbplus_parse(NULL, len, &f));
-    TEST_ASSERT_FALSE(protocore_mbplus_parse(frame, len, NULL));
+    Mbplus.parse_args.frame = frame;
+    Mbplus.parse_args.len = 5;
+    Mbplus.parse_args.out = &f;
+    Mbplus.parse(mbplus_work);
+    TEST_ASSERT_FALSE(Mbplus.ok); // shorter than the smallest frame
+    Mbplus.parse_args.frame = NULL;
+    Mbplus.parse_args.len = len;
+    Mbplus.parse_args.out = &f;
+    Mbplus.parse(mbplus_work);
+    TEST_ASSERT_FALSE(Mbplus.ok);
+    Mbplus.parse_args.frame = frame;
+    Mbplus.parse_args.len = len;
+    Mbplus.parse_args.out = NULL;
+    Mbplus.parse(mbplus_work);
+    TEST_ASSERT_FALSE(Mbplus.ok);
 }
 
 // The token walks 1, 2, ... max, then back to 1, so N steps from any station return to it and no
@@ -173,18 +259,33 @@ void test_token_ring_rotation(void)
                 TEST_ASSERT_TRUE(at >= 1 && at <= max);
                 TEST_ASSERT_EQUAL_UINT8(0u, seen[at]); // no station twice in one lap
                 seen[at] = 1;
-                at = protocore_mbplus_next_token(at, max);
+                Mbplus.next_token_args.current = at;
+                Mbplus.next_token_args.max_station = max;
+                Mbplus.next_token(mbplus_work);
+                at = Mbplus.value;
             }
             TEST_ASSERT_EQUAL_UINT8(start, at); // a full lap returns the token to its start
         }
     }
 
     // The wrap itself, and the fail-safe when no station is active.
-    TEST_ASSERT_EQUAL_UINT8(2u, protocore_mbplus_next_token(1, MBPLUS_MAX_STATION));
-    TEST_ASSERT_EQUAL_UINT8(1u, protocore_mbplus_next_token(MBPLUS_MAX_STATION, MBPLUS_MAX_STATION));
-    TEST_ASSERT_EQUAL_UINT8(1u, protocore_mbplus_next_token(0, 0));
+    Mbplus.next_token_args.current = 1;
+    Mbplus.next_token_args.max_station = MBPLUS_MAX_STATION;
+    Mbplus.next_token(mbplus_work);
+    TEST_ASSERT_EQUAL_UINT8(2u, Mbplus.value);
+    Mbplus.next_token_args.current = MBPLUS_MAX_STATION;
+    Mbplus.next_token_args.max_station = MBPLUS_MAX_STATION;
+    Mbplus.next_token(mbplus_work);
+    TEST_ASSERT_EQUAL_UINT8(1u, Mbplus.value);
+    Mbplus.next_token_args.current = 0;
+    Mbplus.next_token_args.max_station = 0;
+    Mbplus.next_token(mbplus_work);
+    TEST_ASSERT_EQUAL_UINT8(1u, Mbplus.value);
     // A station above the segment's highest active one hands the token back to the first.
-    TEST_ASSERT_EQUAL_UINT8(1u, protocore_mbplus_next_token(50, 8));
+    Mbplus.next_token_args.current = 50;
+    Mbplus.next_token_args.max_station = 8;
+    Mbplus.next_token(mbplus_work);
+    TEST_ASSERT_EQUAL_UINT8(1u, Mbplus.value);
 }
 
 // Station 0 and station 65 are off the segment, and a buffer that cannot hold the whole frame
@@ -194,12 +295,61 @@ void test_build_refuses_bad_arguments(void)
     static const uint8_t PAYLOAD[2] = {0xAA, 0xBB};
     uint8_t out[16];
 
-    TEST_ASSERT_EQUAL_size_t(0u, protocore_mbplus_build(0, MBPLUS_CTRL_DATA, PAYLOAD, 2, out, sizeof(out)));
-    TEST_ASSERT_EQUAL_size_t(8u, protocore_mbplus_build(1, MBPLUS_CTRL_DATA, PAYLOAD, 2, out, sizeof(out)));
-    TEST_ASSERT_EQUAL_size_t(8u, protocore_mbplus_build(64, MBPLUS_CTRL_DATA, PAYLOAD, 2, out, sizeof(out)));
-    TEST_ASSERT_EQUAL_size_t(0u, protocore_mbplus_build(65, MBPLUS_CTRL_DATA, PAYLOAD, 2, out, sizeof(out)));
+    Mbplus.build_args.address = 0;
+    Mbplus.build_args.control = MBPLUS_CTRL_DATA;
+    Mbplus.build_args.payload = PAYLOAD;
+    Mbplus.build_args.payload_len = 2;
+    Mbplus.build_args.out = out;
+    Mbplus.build_args.cap = sizeof(out);
+    Mbplus.build(mbplus_work);
+    TEST_ASSERT_EQUAL_size_t(0u, Mbplus.n);
+    Mbplus.build_args.address = 1;
+    Mbplus.build_args.control = MBPLUS_CTRL_DATA;
+    Mbplus.build_args.payload = PAYLOAD;
+    Mbplus.build_args.payload_len = 2;
+    Mbplus.build_args.out = out;
+    Mbplus.build_args.cap = sizeof(out);
+    Mbplus.build(mbplus_work);
+    TEST_ASSERT_EQUAL_size_t(8u, Mbplus.n);
+    Mbplus.build_args.address = 64;
+    Mbplus.build_args.control = MBPLUS_CTRL_DATA;
+    Mbplus.build_args.payload = PAYLOAD;
+    Mbplus.build_args.payload_len = 2;
+    Mbplus.build_args.out = out;
+    Mbplus.build_args.cap = sizeof(out);
+    Mbplus.build(mbplus_work);
+    TEST_ASSERT_EQUAL_size_t(8u, Mbplus.n);
+    Mbplus.build_args.address = 65;
+    Mbplus.build_args.control = MBPLUS_CTRL_DATA;
+    Mbplus.build_args.payload = PAYLOAD;
+    Mbplus.build_args.payload_len = 2;
+    Mbplus.build_args.out = out;
+    Mbplus.build_args.cap = sizeof(out);
+    Mbplus.build(mbplus_work);
+    TEST_ASSERT_EQUAL_size_t(0u, Mbplus.n);
 
-    TEST_ASSERT_EQUAL_size_t(0u, protocore_mbplus_build(1, MBPLUS_CTRL_DATA, PAYLOAD, 2, out, 7));
-    TEST_ASSERT_EQUAL_size_t(0u, protocore_mbplus_build(1, MBPLUS_CTRL_DATA, PAYLOAD, 2, NULL, sizeof(out)));
-    TEST_ASSERT_EQUAL_size_t(0u, protocore_mbplus_build(1, MBPLUS_CTRL_DATA, NULL, 2, out, sizeof(out)));
+    Mbplus.build_args.address = 1;
+    Mbplus.build_args.control = MBPLUS_CTRL_DATA;
+    Mbplus.build_args.payload = PAYLOAD;
+    Mbplus.build_args.payload_len = 2;
+    Mbplus.build_args.out = out;
+    Mbplus.build_args.cap = 7;
+    Mbplus.build(mbplus_work);
+    TEST_ASSERT_EQUAL_size_t(0u, Mbplus.n);
+    Mbplus.build_args.address = 1;
+    Mbplus.build_args.control = MBPLUS_CTRL_DATA;
+    Mbplus.build_args.payload = PAYLOAD;
+    Mbplus.build_args.payload_len = 2;
+    Mbplus.build_args.out = NULL;
+    Mbplus.build_args.cap = sizeof(out);
+    Mbplus.build(mbplus_work);
+    TEST_ASSERT_EQUAL_size_t(0u, Mbplus.n);
+    Mbplus.build_args.address = 1;
+    Mbplus.build_args.control = MBPLUS_CTRL_DATA;
+    Mbplus.build_args.payload = NULL;
+    Mbplus.build_args.payload_len = 2;
+    Mbplus.build_args.out = out;
+    Mbplus.build_args.cap = sizeof(out);
+    Mbplus.build(mbplus_work);
+    TEST_ASSERT_EQUAL_size_t(0u, Mbplus.n);
 }

@@ -5495,7 +5495,7 @@ _Host tests for the OpenID Connect RS256 ID Token verifier (services/security/oi
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Host tests for the OPC UA Binary server core (services/fieldbus/opcua/opcua.h)._
+_Host tests for the OPC UA Binary server core (services/opcua/opcua.h)._
 
 |   # | Test                                            | Status | Description                              |
 | --: | :---------------------------------------------- | :----: | :--------------------------------------- |
@@ -7372,7 +7372,7 @@ _Host tests for the Layer 2 roam decision (network_drivers/datalink/roaming.h)._
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Host tests for the OPC UA for Robotics model (services/machine_tool/robotics/robotics.h)._
+_Host tests for the OPC UA for Robotics model (services/opcua/models/robotics/robotics.h)._
 
 |   # | Test                                                     | Status | Description                                       |
 | --: | :------------------------------------------------------- | :----: | :------------------------------------------------ |
@@ -9458,7 +9458,7 @@ _Host tests for the line protocol caster (services/iot/udp_telemetry/udp_telemet
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-_Host tests for the umati / OPC UA for Machine Tools model (services/machine_tool/umati/umati.h)._
+_Host tests for the umati / OPC UA for Machine Tools model (services/opcua/models/umati/umati.h)._
 
 |   # | Test                                             | Status | Description                               |
 | --: | :----------------------------------------------- | :----: | :---------------------------------------- |

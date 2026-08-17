@@ -7,8 +7,8 @@
 //
 // Build/flash:  idf.py -C test/performance_benching/robotics -t upload --upload-port COM7
 #include "device_bench.h"
-#include "services/fieldbus/opcua/opcua.h"
-#include "services/machine_tool/robotics/robotics.h"
+#include "services/opcua/models/robotics/robotics.h"
+#include "services/opcua/opcua.h"
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -38,7 +38,8 @@ void dbench_run(void)
     g_mds.controller.sw_revision = "4.2.0";
     g_mds.safety.operational_mode = ROBOTICS_MODE_AUTOMATIC;
     g_mds.safety.protective_stop = true;
-    protocore_robotics_bind(&g_mds);
+    Robotics.bind_args.mds = &g_mds;
+    Robotics.bind(protocore_robotics_span());
 
     for (;;)
     {

@@ -497,6 +497,7 @@
         "+<server/core/worker.c>",
         "+<mmgr/arena.c>",
         "+<network_drivers/transport/tcp/client/client.c>",
+        "+<core_setup/hal/portable/portable_platform.c>",
         "+<network_drivers/network/dns/dns_resolver.c>",
         "+<network_drivers/network/dns/dns_wire.c>",
         "+<network_drivers/network/dns/dns.c>",
@@ -644,12 +645,15 @@
         "+<mmgr/span.c>",
         "+<mmgr/swar.c>",
         "+<shared/hex/hex.c>",
-        "+<crypto/aead/aes128gcm.c>"
+        "+<crypto/aead/aes128gcm.c>",
+        "+<crypto/mac/ghash.c>"
       ],
-      "tests": ["unit/integration/iot/test_coaps"]
+      "tests": [
+        "unit/integration/iot/test_coaps"
+      ]
     },
     "native_coaps_server": {
-      "desc": "CoAP-over-DTLS server front-end (services/iot/coap/coaps_server): the per-peer DtlsConn pool +\ningest/poll seam on top of protocore_coaps_process(). An in-test DTLS 1.3 client drives the server only through\ncoaps_server_ingest() and an output sink, exercising peer-address routing, the handshake + CoAP\nexchange, the poll-driven retransmission timer (RFC 9147 sec 5.8), and idle-connection reaping. Two\nsimultaneous peers are routed to their own connections. Pure host tests.",
+      "desc": "CoAP-over-DTLS server front-end (services/iot/coap/coaps_server), the PROTOCORE_HAS_NET_STACK arm: the\nper-peer DtlsConn pool + poll seam on top of protocore_coaps_process(), reached the way the target reaches it.\nAn in-test DTLS 1.3 client drives the server through the host UDP driver, which calls the recv callback the\ncore armed, and its replies are read out of that driver's send capture; each turn of the loop polls the\nUdpListener then the server, in session.c's order. Exercises peer-address routing, the handshake + CoAP\nexchange, the poll-driven retransmission timer (RFC 9147 sec 5.8), idle-connection reaping and a refused\nsend. Two simultaneous peers are routed to their own connections. The seam-only cases live in\nnative_coaps_server_nostack, which builds the other arm. Pure host tests.",
       "flags": [
         "-DPROTOCORE_ENABLE_DTLS=1",
         "-DPROTOCORE_ENABLE_COAP=1",
@@ -693,6 +697,54 @@
         "+<crypto/aead/aes128gcm.c>"
       ],
       "tests": ["unit/integration/iot/test_coaps_server"]
+    },
+    
+    "native_coaps_server_nostack": {
+      "desc": "CoAP-over-DTLS server front-end (services/iot/coap/coaps_server), the arm with no network stack: the\nsame suite, driven through the injection seam that arm has instead of a receive path.\ncoaps_server_ingest queues a datagram and an installed out-sink takes every reply, so ring_push's own\nrefusals - a zero-length datagram, an over-long one, an ingest ring already full, an address that will\nnot render - are read off the answer ingest reports, which udp_ingest_cb discards on the other arm.\nPROTOCORE_HAS_NET_STACK is absent here because this env IS the other arm of it; native_coaps_server\nbuilds the one where it is set. Pure host tests.",
+      "flags": [
+        "-DPROTOCORE_ENABLE_DTLS=1",
+        "-DPROTOCORE_ENABLE_COAP=1"
+      ],
+      "src": [
+        "+<services/iot/coap/coaps_server.c>",
+        "+<services/iot/coap/coaps.c>",
+        "+<services/iot/coap/coap.c>",
+        "+<network_drivers/transport/udp/udp.c>",
+        "+<network_drivers/transport/udp/server/server.c>",
+        "+<network_drivers/transport/net_addr/net_addr.c>",
+        "+<network_drivers/transport/udp/client/client.c>",
+        "+<shared/ip/ip.c>",
+        "+<network_drivers/presentation/security/dtls/dtls_conn.c>",
+        "+<network_drivers/presentation/security/dtls/dtls_record.c>",
+        "+<network_drivers/presentation/security/dtls/dtls_handshake.c>",
+        "+<network_drivers/presentation/http/http3/tls13_msg.c>",
+        "+<network_drivers/tls/key_schedule/key_schedule.c>",
+        "+<crypto/kdf/hkdf.c>",
+        "+<crypto/hash/sha256.c>",
+        "+<crypto/mac/hmac_sha256.c>",
+        "+<crypto/hash/sha512.c>",
+        "+<crypto/asymmetric/curve25519.c>",
+        "+<crypto/asymmetric/ed25519.c>",
+        "+<mmgr/arena.c>",
+        "+<mmgr/secure.c>",
+        "+<mmgr/plaintext.c>",
+        "+<server/core/worker.c>",
+        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<server/clock/clock.c>",
+        "+<mmgr/protomem.c>",
+        "+<mmgr/bytes.c>",
+        "+<mmgr/endian.c>",
+        "+<mmgr/protostr.c>",
+        "+<mmgr/rawmemcpy.c>",
+        "+<mmgr/span.c>",
+        "+<mmgr/swar.c>",
+        "+<shared/hex/hex.c>",
+        "+<crypto/mac/ghash.c>",
+        "+<crypto/aead/aes128gcm.c>"
+      ],
+      "tests": [
+        "unit/integration/iot/test_coaps_server"
+      ]
     },
     "native_codeql": {
       "desc": "CodeQL coverage env: the full app compiled with every new feature flag ON so\nCodeQL traces the integration paths (CSRF / lockout / allowlist gates,\npermessage-deflate) AND the new service modules, which the per-feature envs scan\nonly in isolation. Built (--without-testing) by the CodeQL workflow; one test\nin the filter is enough to pull in the whole src set.",
@@ -796,8 +848,8 @@
         "+<services/iot/graphql/graphql.c>",
         "+<services/radio/espnow/espnow.c>",
         "+<services/security/oauth2/oauth2.c>",
-        "+<services/fieldbus/opcua/opcua.c>",
-        "+<services/fieldbus/opcua_client/opcua_client.c>",
+        "+<services/opcua/opcua.c>",
+        "+<services/opcua/opcua_client/opcua_client.c>",
         "+<crypto/asymmetric/rsa.c>",
         "+<network_drivers/presentation/ssh/transport/ssh_rsa.c>",
         "+<crypto/asymmetric/bignum.c>",
@@ -907,10 +959,15 @@
         "+<shared/log/log.c>",
         "+<shared/pcap/pcap.c>",
         "+<shared/time_compat/time_compat.c>",
-        "+<mmgr/float_bits.c>"
+        "+<mmgr/float_bits.c>",
+        "+<server/core/exc_coredump.c>"
       ],
-      "tests": ["unit/integration/fieldbus/test_dispatch"],
-      "extra_scripts": ["pre:test/ensure_test_keys.py"]
+      "tests": [
+        "unit/integration/fieldbus/test_dispatch"
+      ],
+      "extra_scripts": [
+        "pre:test/ensure_test_keys.py"
+      ]
     },
     "native_compliance": {
       "desc": "RFC-compliance suite: builds with all enforcement at production defaults\n(PROTOCORE_ENFORCE_HOST_HEADER=1) and exercises the strict behaviors.",
@@ -1898,20 +1955,28 @@
       "extra_scripts": ["pre:test/gen_test_runners.py"]
     },
     "native_euromap77": {
-      "desc": "EUROMAP 77 (OPC 40077) IMM_MES_Interface model (services/machine_tool/euromap77) - OPC UA for injection\nmolding machines. The Browse hierarchy + the Read resolver over a bound EmImm, including the\nUInt64 production counters, are host-tested here. Requires the OPC UA codec. No heap, no stdlib.",
-      "flags": ["-DPROTOCORE_ENABLE_OPCUA=1", "-DPROTOCORE_ENABLE_EUROMAP77=1"],
+      "desc": "EUROMAP 77 (OPC 40077) IMM_MES_Interface model (services/machine_tool/euromap77) - OPC UA for injection\nmolding machines. The Browse hierarchy + the Read resolver over a bound EmImm, including the\nUInt64 production counters, are host-tested here against the published NodeSet. The suite includes\neuromap77.c so the Read and Browse resolvers are reachable - they answer the OPC UA server's handler\ncontract rather than this module's API - which is why the env does not build that .c itself.\nRequires the OPC UA codec. No heap, no stdlib.",
+      "flags": [
+        "-DPROTOCORE_ENABLE_OPCUA=1",
+        "-DPROTOCORE_ENABLE_EUROMAP77=1"
+      ],
       "src": [
-        "+<services/fieldbus/opcua/opcua.c>",
-        "+<services/machine_tool/euromap77/euromap77.c>",
+        "+<services/opcua/opcua.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/swar.c>",
-        "+<mmgr/protostr.c>"
+        "+<mmgr/protostr.c>",
+        "+<mmgr/plaintext.c>",
+        "+<mmgr/span.c>",
+        "+<mmgr/arena.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
-        "unit/file_conversion/services/machine_tool/euromap77/test_euromap77"
+        "unit/file_conversion/services/opcua/models/euromap77/test_euromap77"
       ],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
     },
     "native_exc_decoder": {
       "desc": "ESP32 panic / exception decoder (server/exc_decoder): parse a captured Guru Meditation\ndump (cause, register PC + EXCVADDR, backtrace PC:SP frames) into a structured ExcInfo and serialize it\nas JSON for a live /exception panel; tolerates missing fields + a trailing corruption marker. Pure host tests.",
@@ -3993,13 +4058,13 @@
       "desc": "OPC UA Binary server core (services/fieldbus/opcua): the little-endian built-in type codec, NodeId encoding forms, the UACP header + Hello/Acknowledge/Error handshake, the OpenSecureChannel exchange, the MSG envelope and the CreateSession / ActivateSession / GetEndpoints / Read / Write / Browse / CloseSession / ServiceFault responses, plus Variant and DataValue. Anchored on OPC UA Part 6 sec. 5.2.2 (published byte encodings, the NodeId table) and sec. 7.1.2 (UACP), Part 4 sec. 5.5 / 5.6 / 5.8 / 5.10, and the OPC Foundation NodeIds.csv + StatusCode.csv registry values. Pure host tests.",
       "flags": ["-DPROTOCORE_ENABLE_OPCUA=1"],
       "src": [
-        "+<services/fieldbus/opcua/opcua.c>",
+        "+<services/opcua/opcua.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/swar.c>",
         "+<mmgr/protostr.c>"
       ],
-      "tests": ["unit/src/services/fieldbus/opcua/test_opcua"],
+      "tests": ["unit/src/services/opcua/test_opcua"],
       "extra_scripts": ["pre:test/gen_test_runners.py"]
     },
     "native_opcua_client": {
@@ -4008,14 +4073,14 @@
         "-DPROTOCORE_ENABLE_OPCUA_CLIENT=1"
       ],
       "src": [
-        "+<services/fieldbus/opcua/opcua.c>",
-        "+<services/fieldbus/opcua_client/opcua_client.c>",
+        "+<services/opcua/opcua.c>",
+        "+<services/opcua/opcua_client/opcua_client.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/swar.c>",
         "+<mmgr/protostr.c>"
       ],
-      "tests": ["unit/integration/fieldbus/test_opcua_client"],
+      "tests": ["unit/integration/opcua/test_opcua_client"],
       "desc": ""
     },
     "native_openadr": {
@@ -4301,7 +4366,7 @@
         "+<crypto/hash/sha1.c>",
         "+<services/storage/sqlite/sqlite_format.c>",
         "+<services/iot/redis_resp/redis_resp.c>",
-        "+<services/fieldbus/opcua/opcua.c>",
+        "+<services/opcua/opcua.c>",
         "+<services/iot/graphql/graphql.c>",
         "+<network_drivers/network/dns/dns_server.c>",
         "+<network_drivers/network/dns/dns_wire.c>",
@@ -5436,17 +5501,28 @@
     },
     "native_robotics": {
       "desc": "OPC UA for Robotics (OPC 40010-1) MotionDeviceSystem model (services/machine_tool/robotics) - the Browse\nhierarchy + the Read resolver over a bound RoboticsMotionDeviceSystem, including the parametric\nAxes, are host-tested here. Requires the OPC UA codec. No heap, no stdlib.",
-      "flags": ["-DPROTOCORE_ENABLE_OPCUA=1", "-DPROTOCORE_ENABLE_ROBOTICS=1"],
+      "flags": [
+        "-DPROTOCORE_ENABLE_OPCUA=1",
+        "-DPROTOCORE_ENABLE_ROBOTICS=1"
+      ],
       "src": [
-        "+<services/fieldbus/opcua/opcua.c>",
-        "+<services/machine_tool/robotics/robotics.c>",
+        "+<services/opcua/opcua.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/swar.c>",
-        "+<mmgr/protostr.c>"
+        "+<mmgr/protostr.c>",
+        "+<mmgr/plaintext.c>",
+        "+<mmgr/span.c>",
+        "+<mmgr/arena.c>",
+        "+<mmgr/secure.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
-      "tests": ["unit/src/services/machine_tool/robotics/test_robotics"],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "tests": [
+        "unit/src/services/opcua/models/robotics/test_robotics"
+      ],
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
     },
     "native_rtc": {
       "desc": "DS1307/DS3231 RTC conversions (server/peripherals/rtc): BCD time registers <-> Unix epoch in\n24- and 12-hour encodings, leap years, clock-halt/century bit masks, range validation,\nand a round-trip over the 2000-2099 range. Pure - the I2C read/write is ESP32-only.",
@@ -8036,7 +8112,9 @@
     },
     "native_udp": {
       "desc": "The UDP path a stack drives, run on the host against the pcb driver in core_setup/hal/host. Covers udp_listener + udp_client against the\nhost pcb driver: the receive ring, both send paths reaching the wire in the call that makes them,\nNetAddr carrying v4 and v6 both ways, the pbuf pool refusing, and the datagrams the core handed to the stack read back as a DLT_RAW libpcap\ncapture with synthesized IP and UDP headers (core_setup/hal/host/protocore_net_pcap.h).",
-      "flags": ["-DPROTOCORE_HAS_NET_STACK=1"],
+      "flags": [
+        "-DPROTOCORE_HAS_NET_STACK=1"
+      ],
       "src": [
         "+<network_drivers/transport/udp/server/server.c>",
         "+<network_drivers/transport/net_addr/net_addr.c>",
@@ -8049,9 +8127,12 @@
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/span.c>",
         "+<mmgr/swar.c>",
-        "+<shared/hex/hex.c>"
+        "+<shared/hex/hex.c>",
+        "+<shared/pcap/pcap.c>"
       ],
-      "tests": ["unit/integration/transport/test_udp"]
+      "tests": [
+        "unit/integration/transport/test_udp"
+      ]
     },
     "native_udp_telemetry": {
       "desc": "UDP telemetry line builder (services/iot/udp_telemetry): InfluxDB line-protocol\nformatting, host-tested. The UDP cast is ESP32-only (#ifdef ARDUINO).",
@@ -8092,17 +8173,28 @@
     },
     "native_umati": {
       "desc": "umati / OPC UA for Machine Tools (OPC 40501-1) MachineTool model (services/machine_tool/umati) - the\nBrowse hierarchy + the Read resolver over a bound UmatiMachineTool are host-tested here.\nRequires the OPC UA codec. No heap, no stdlib.",
-      "flags": ["-DPROTOCORE_ENABLE_OPCUA=1", "-DPROTOCORE_ENABLE_UMATI=1"],
+      "flags": [
+        "-DPROTOCORE_ENABLE_OPCUA=1",
+        "-DPROTOCORE_ENABLE_UMATI=1"
+      ],
       "src": [
-        "+<services/fieldbus/opcua/opcua.c>",
-        "+<services/machine_tool/umati/umati.c>",
+        "+<services/opcua/opcua.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/swar.c>",
-        "+<mmgr/protostr.c>"
+        "+<mmgr/protostr.c>",
+        "+<mmgr/plaintext.c>",
+        "+<mmgr/span.c>",
+        "+<mmgr/arena.c>",
+        "+<mmgr/secure.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
-      "tests": ["unit/src/services/machine_tool/umati/test_umati"],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "tests": [
+        "unit/src/services/opcua/models/umati/test_umati"
+      ],
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
     },
     "native_upload": {
       "desc": "Streaming file upload: POST body -> FS file via the parser streaming hook.\nSmall BODY_BUF_SIZE exercises multi-chunk streaming; the mock FS captures the\nwritten bytes (core_setup/hal/host/FS.h write-capture).",

@@ -23350,7 +23350,7 @@
   "native_web_terminal",
   "native_webdav_handler"
  ],
- "src/services/fieldbus/opcua/opcua.c": [
+ "src/services/opcua/opcua.c": [
   "native_euromap77",
   "native_opcua",
   "native_opcua_client",
@@ -23358,7 +23358,7 @@
   "native_robotics",
   "native_umati"
  ],
- "src/services/fieldbus/opcua/opcua.h": [
+ "src/services/opcua/opcua.h": [
   "native_application",
   "native_auth",
   "native_chunked",
@@ -23391,10 +23391,10 @@
   "native_web_terminal",
   "native_webdav_handler"
  ],
- "src/services/fieldbus/opcua_client/opcua_client.c": [
+ "src/services/opcua/opcua_client/opcua_client.c": [
   "native_opcua_client"
  ],
- "src/services/fieldbus/opcua_client/opcua_client.h": [
+ "src/services/opcua/opcua_client/opcua_client.h": [
   "native_application",
   "native_auth",
   "native_chunked",
@@ -24704,10 +24704,10 @@
   "native_web_terminal",
   "native_webdav_handler"
  ],
- "src/services/machine_tool/euromap77/euromap77.c": [
+ "src/services/opcua/models/euromap77/euromap77.c": [
   "native_euromap77"
  ],
- "src/services/machine_tool/euromap77/euromap77.h": [
+ "src/services/opcua/models/euromap77/euromap77.h": [
   "native_application",
   "native_auth",
   "native_chunked",
@@ -24921,10 +24921,10 @@
   "native_web_terminal",
   "native_webdav_handler"
  ],
- "src/services/machine_tool/robotics/robotics.c": [
+ "src/services/opcua/models/robotics/robotics.c": [
   "native_robotics"
  ],
- "src/services/machine_tool/robotics/robotics.h": [
+ "src/services/opcua/models/robotics/robotics.h": [
   "native_application",
   "native_auth",
   "native_chunked",
@@ -24983,10 +24983,10 @@
   "native_web_terminal",
   "native_webdav_handler"
  ],
- "src/services/machine_tool/umati/umati.c": [
+ "src/services/opcua/models/umati/umati.c": [
   "native_umati"
  ],
- "src/services/machine_tool/umati/umati.h": [
+ "src/services/opcua/models/umati/umati.h": [
   "native_application",
   "native_auth",
   "native_chunked",

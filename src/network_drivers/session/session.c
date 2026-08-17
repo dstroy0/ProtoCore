@@ -99,6 +99,12 @@ static void proto_register(struct ProtoRegistryInternal *restrict ctx)
 
 static void proto_get(struct ProtoRegistryInternal *restrict ctx)
 {
+    // The protocol asked for, read before the bootstrap below can touch it. Registering the
+    // built-ins runs back through THIS namespace - protocore_builtins.c sets Protocols.proto once
+    // per entry - so a lookup that read ctx->ns->proto afterwards would answer for whichever
+    // protocol happened to register last instead of the one the caller named.
+    const ProtoConn want = ctx->ns->proto;
+
     // Install the built-ins on first lookup so dispatch works before begin() (the native test
     // harness drives server_tick() directly). The list itself lives in protocore_builtins.c -
     // this dispatcher names no protocol; it just knows PROTO_HTTP is always registered, and
@@ -106,11 +112,11 @@ static void proto_get(struct ProtoRegistryInternal *restrict ctx)
     if (!s_store.proto_handlers[(unsigned)PROTO_HTTP])
     {
         protocore_register_builtins();
+        ctx->ns->proto = want; // the handle names what the caller asked for, not the last built-in
     }
     // No implicit fallback: a slot must carry an explicit, registered protocol.
     // PROTO_NONE and any unregistered protocol resolve to NULL (event dropped).
-    ctx->ns->handler =
-        ((unsigned)ctx->ns->proto < PROTO_MAX_HANDLERS) ? s_store.proto_handlers[(unsigned)ctx->ns->proto] : NULL;
+    ctx->ns->handler = ((unsigned)want < PROTO_MAX_HANDLERS) ? s_store.proto_handlers[(unsigned)want] : NULL;
 }
 
 // Dispatch one drained event to its slot's protocol handler. Shared by the

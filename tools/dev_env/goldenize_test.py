@@ -8,7 +8,7 @@ an entry never touches the borrow in an entry that threads it into every helper 
 import sys
 
 sys.path.insert(0, __file__.rsplit("goldenize_test.py", 1)[0])
-from goldenize import drop_void_work, first_sentence, land_returns  # noqa: E402
+from goldenize import drop_void_work, first_sentence, land_returns, module_macros  # noqa: E402
 
 FAIL = 0
 
@@ -101,6 +101,63 @@ check(
     "the word return inside a comment is prose, not code",
     land_returns("\n    // the last one to return wins\n    return raw;\n", "Mod", "value"),
     "\n    // the last one to return wins\n    Mod.value = raw;\n",
+)
+
+print("module_macros: a macro carries the doc block above it")
+check(
+    "the block directly above comes with the define",
+    module_macros('/** @brief What it is. */\n#define A_URI "x"\n', ""),
+    ['/** @brief What it is. */\n#define A_URI "x"'],
+)
+check(
+    "a define with nothing above it is just the define",
+    module_macros('#define A_URI "x"\n', ""),
+    ['#define A_URI "x"'],
+)
+check(
+    "two documented defines keep their own blocks, not each other's",
+    module_macros('/** first. */\n#define A 1\n\n/** second. */\n#define B 2\n', ""),
+    ["/** first. */\n#define A 1", "/** second. */\n#define B 2"],
+)
+check(
+    "a block that documents something else does not travel to the define below it",
+    module_macros("/** a type. */\ntypedef int T;\n\n#define A 1\n", ""),
+    ["#define A 1"],
+)
+check(
+    "the include guard is still skipped, doc block or not",
+    module_macros("/** the guard. */\n#define PROTOCORE_X_H\n#define A 1\n", "PROTOCORE_X_H"),
+    ["#define A 1"],
+)
+check(
+    "a contiguous run stays one block, not one block each",
+    module_macros("#define A 1\n#define B 2\n#define C 3\n", ""),
+    ["#define A 1\n#define B 2\n#define C 3"],
+)
+check(
+    "a blank line ends the run",
+    module_macros("#define A 1\n#define B 2\n\n#define C 3\n", ""),
+    ["#define A 1\n#define B 2", "#define C 3"],
+)
+check(
+    "a // comment introducing a table comes with it",
+    module_macros("// wire values, compared and emitted.\n#define A 1\n#define B 2\n", ""),
+    ["// wire values, compared and emitted.\n#define A 1\n#define B 2"],
+)
+check(
+    "several // lines all come",
+    module_macros("// one.\n// two.\n#define A 1\n", ""),
+    ["// one.\n// two.\n#define A 1"],
+)
+check(
+    "a doxygen line above the // run comes too",
+    module_macros("/** the table. */\n// how it is used.\n#define A 1\n", ""),
+    ["/** the table. */\n// how it is used.\n#define A 1"],
+)
+check(
+    "a // comment for something else does not travel",
+    module_macros("// about the type.\ntypedef int T;\n\n#define A 1\n", ""),
+    ["#define A 1"],
 )
 
 print("\nFAILURES: %d" % FAIL)

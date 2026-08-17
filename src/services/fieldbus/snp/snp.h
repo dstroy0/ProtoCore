@@ -20,11 +20,15 @@
 #ifndef PROTOCORE_SNP_H
 #define PROTOCORE_SNP_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_SNP
 
 PROTOCORE_BEGIN_DECLS
+
+// This module holds nothing between calls, so it carves no borrow and states none. An entry
+// takes one all the same, and never reads it, so every namespace in the tree is invoked the
+// same way.
 
 /** @brief SNP control bytes (subset). */
 // SNP control bytes: wire values compared/emitted, so integer constants in a namespacing struct.
@@ -34,20 +38,6 @@ PROTOCORE_BEGIN_DECLS
 #define SNP_SOH 0x01 ///< start of header (a request/response frame).
 #define SNP_EOT 0x04 ///< end of transmission.
 
-/**
- * @brief Block Check Code over @p len bytes (GFK-0582D p. 7-62).
- *
- * Seeded at zero; each byte is exclusive-ORed into the accumulator, which is then rotated left one
- * bit with the top bit wrapping into the bottom.
- */
-uint8_t protocore_snp_bcc(const uint8_t *bytes, size_t len);
-
-/**
- * @brief Build an SNP frame: [control][length][data...][BCC]. length is the data byte count.
- * @return the frame length (2 + data_len + 1), or 0 on overflow / bad args (data_len > 255).
- */
-size_t protocore_snp_build(uint8_t control, const uint8_t *data, size_t data_len, uint8_t *out, size_t cap);
-
 /** @brief A parsed SNP frame (data points into the input). */
 typedef struct
 {
@@ -56,8 +46,73 @@ typedef struct
     size_t data_len;
 } SnpFrame;
 
-/** @brief Validate the BCC and parse an SNP frame. @return true if the BCC matches and it is well-formed. */
-proto_bool protocore_snp_parse(const uint8_t *frame, size_t len, SnpFrame *out);
+/** @brief What bcc takes: bytes, len. */
+typedef struct
+{
+    const uint8_t *bytes;
+    size_t len;
+} SnpBccArgs;
+
+/** @brief What build takes: control, data, data_len, out, cap. */
+typedef struct
+{
+    uint8_t control;
+    const uint8_t *data;
+    size_t data_len;
+    uint8_t *out;
+    size_t cap;
+} SnpBuildArgs;
+
+/** @brief What parse takes: frame, len, out. */
+typedef struct
+{
+    const uint8_t *frame;
+    size_t len;
+    SnpFrame *out;
+} SnpParseArgs;
+
+/**
+ * @brief GE Fanuc SNP (Series Ninety Protocol) serial frame codec (PROTOCORE_ENABLE_SNP).
+ *
+ * A caller sets the members a call takes, invokes it through ::Snp with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   Snp.bcc_args.bytes = ...;
+ *   Snp.bcc_args.len = ...;
+ *   Snp.bcc(work);
+ *   // Snp.value is what the call reports
+ *
+ * @var SnpNs::bcc_args  what bcc takes: bytes, len
+ * @var SnpNs::build_args  what build takes: control, data, data_len, out, cap
+ * @var SnpNs::parse_args  what parse takes: frame, len, out
+ * @var SnpNs::ok  a call's true/false outcome
+ * @var SnpNs::value  the value a call reports
+ * @var SnpNs::n  the frame length (2 + data_len + 1), or 0 on overflow / bad args ...
+ * @var SnpNs::bcc  block Check Code over len bytes (GFK-0582D p. 7-62). Seeded at ...
+ * @var SnpNs::build  build an SNP frame: [control][length][data...][BCC]. length is the ...
+ * @var SnpNs::parse  validate the BCC and parse an SNP frame. true if the BCC matches ...
+ *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
+ * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
+ * a caller drives every namespace the same way.
+ */
+typedef struct
+{
+    SnpBccArgs bcc_args;
+    SnpBuildArgs build_args;
+    SnpParseArgs parse_args;
+
+    proto_bool ok;
+    uint8_t value;
+    size_t n;
+
+    void (*const bcc)(uint8_t *restrict work);
+    void (*const build)(uint8_t *restrict work);
+    void (*const parse)(uint8_t *restrict work);
+} SnpNs;
+
+/** @brief The one symbol this module exports. */
+extern SnpNs Snp;
 
 PROTOCORE_END_DECLS
 

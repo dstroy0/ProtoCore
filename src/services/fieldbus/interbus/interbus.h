@@ -22,41 +22,87 @@
 #ifndef PROTOCORE_INTERBUS_H
 #define PROTOCORE_INTERBUS_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_INTERBUS
 
 PROTOCORE_BEGIN_DECLS
 
+// This module holds nothing between calls, so it carves no borrow and states none. An entry
+// takes one all the same, and never reads it, so every namespace in the tree is invoked the
+// same way.
+
 /** @brief the loopback word that opens a summation frame. */
 #define PROTOCORE_INTERBUS_LOOPBACK 0xFFFF
 
-/** @brief CRC-16/CCITT-FALSE (the INTERBUS FCS) over @p len bytes. */
-uint16_t protocore_interbus_fcs(const uint8_t *bytes, size_t len);
+/** @brief What fcs takes: bytes, len. */
+typedef struct
+{
+    const uint8_t *bytes;
+    size_t len;
+} InterbusFcsArgs;
+
+/** @brief What build takes: words, word_count, out, cap. */
+typedef struct
+{
+    const uint16_t *words; ///< the concatenated device data words (big-endian on the wire)
+    size_t word_count;     ///< number of 16-bit words across all device slices
+    uint8_t *out;          ///< output byte buffer
+    size_t cap;            ///< its capacity
+} InterbusBuildArgs;
+
+/** @brief What parse takes: frame, len, out_words, max_words, ... */
+typedef struct
+{
+    const uint8_t *frame; ///< the received frame
+    size_t len;           ///< its length
+    uint16_t *out_words;  ///< buffer for the decoded 16-bit words
+    size_t max_words;     ///< its capacity (in words)
+    size_t *out_count;    ///< set to the number of words decoded
+} InterbusParseArgs;
 
 /**
- * @brief Assemble a summation frame from per-device 16-bit word slices.
- * @param words     the concatenated device data words (big-endian on the wire).
- * @param word_count number of 16-bit words across all device slices.
- * @param out       output byte buffer.
- * @param cap       its capacity.
- * @return the frame length (2 + word_count*2 + 2), or 0 on overflow.
+ * @brief INTERBUS summation-frame fieldbus codec (PROTOCORE_ENABLE_INTERBUS).
  *
- * Layout: loopback(2) + words(word_count*2, big-endian) + FCS(2). The FCS covers loopback + words.
+ * A caller sets the members a call takes, invokes it through ::Interbus with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   Interbus.fcs_args.bytes = ...;
+ *   Interbus.fcs_args.len = ...;
+ *   Interbus.fcs(work);
+ *   // Interbus.value is what the call reports
+ *
+ * @var InterbusNs::fcs_args  what fcs takes: bytes, len
+ * @var InterbusNs::build_args  what build takes: words, word_count, out, cap
+ * @var InterbusNs::parse_args  what parse takes: frame, len, out_words, max_words,
+ * @var InterbusNs::ok  true if the loopback word + FCS are valid and the words fit ...
+ * @var InterbusNs::value  the value a call reports
+ * @var InterbusNs::n  the frame length (2 + word_count*2 + 2), or 0 on overflow. Layout: ...
+ * @var InterbusNs::fcs  CRC-16/CCITT-FALSE (the INTERBUS FCS) over len bytes
+ * @var InterbusNs::build  assemble a summation frame from per-device 16-bit word slices
+ * @var InterbusNs::parse  disassemble a summation frame back into device data words
+ *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
+ * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
+ * a caller drives every namespace the same way.
  */
-size_t protocore_interbus_build(const uint16_t *words, size_t word_count, uint8_t *out, size_t cap);
+typedef struct
+{
+    InterbusFcsArgs fcs_args;
+    InterbusBuildArgs build_args;
+    InterbusParseArgs parse_args;
 
-/**
- * @brief Disassemble a summation frame back into device data words.
- * @param frame     the received frame.
- * @param len       its length.
- * @param out_words buffer for the decoded 16-bit words.
- * @param max_words its capacity (in words).
- * @param out_count set to the number of words decoded.
- * @return true if the loopback word + FCS are valid and the words fit @p max_words.
- */
-proto_bool protocore_interbus_parse(const uint8_t *frame, size_t len, uint16_t *out_words, size_t max_words,
-                                    size_t *out_count);
+    proto_bool ok;
+    uint16_t value;
+    size_t n;
+
+    void (*const fcs)(uint8_t *restrict work);
+    void (*const build)(uint8_t *restrict work);
+    void (*const parse)(uint8_t *restrict work);
+} InterbusNs;
+
+/** @brief The one symbol this module exports. */
+extern InterbusNs Interbus;
 
 PROTOCORE_END_DECLS
 

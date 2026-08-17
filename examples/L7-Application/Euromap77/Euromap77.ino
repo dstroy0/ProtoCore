@@ -28,7 +28,7 @@
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
-#include "services/machine_tool/euromap77/euromap77.h"
+#include "services/opcua/models/euromap77/euromap77.h"
 #include <math.h>
 
 static const char *SSID = "YOUR_SSID";

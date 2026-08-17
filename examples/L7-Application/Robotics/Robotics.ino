@@ -28,7 +28,7 @@
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
-#include "services/machine_tool/robotics/robotics.h"
+#include "services/opcua/models/robotics/robotics.h"
 #include <math.h>
 
 static const char *SSID = "YOUR_SSID";

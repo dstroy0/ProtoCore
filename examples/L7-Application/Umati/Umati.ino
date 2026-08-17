@@ -27,7 +27,7 @@
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
-#include "services/machine_tool/umati/umati.h"
+#include "services/opcua/models/umati/umati.h"
 #include <math.h>
 
 static const char *SSID = "YOUR_SSID";
