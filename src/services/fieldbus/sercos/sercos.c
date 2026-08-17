@@ -6,18 +6,39 @@
  * @brief SERCOS III telegram + IDN codec (see sercos.h).
  */
 
-#include "services/fieldbus/sercos/sercos.h"
-#include "mmgr/protomem.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_SERCOS
 
-uint16_t protocore_sercos_idn(proto_bool is_product, uint8_t param_set, uint16_t data_block)
+#include "mmgr/protomem.h"
+#include "services/fieldbus/sercos/sercos.h"
+
+PROTOCORE_BEGIN_DECLS
+
+// --- the entries -----------------------------------------------------------
+
+// No context and no borrow: every operand is the caller's. The borrow an entry takes is
+// never read.
+
+static void sercos_idn(uint8_t *restrict work)
 {
-    return (uint16_t)(((is_product ? 1u : 0u) << 15) | ((uint32_t)(param_set & 0x7) << 12) | (data_block & 0x0FFF));
+    (void)work;
+    proto_bool is_product = Sercos.idn_args.is_product;
+    uint8_t param_set = Sercos.idn_args.param_set;
+    uint16_t data_block = Sercos.idn_args.data_block;
+
+    Sercos.value =
+        (uint16_t)(((is_product ? 1u : 0u) << 15) | ((uint32_t)(param_set & 0x7) << 12) | (data_block & 0x0FFF));
 }
 
-void protocore_sercos_idn_parse(uint16_t idn, proto_bool *is_product, uint8_t *param_set, uint16_t *data_block)
+static void sercos_idn_parse(uint8_t *restrict work)
 {
+    (void)work;
+    uint16_t idn = Sercos.idn_parse_args.idn;
+    proto_bool *is_product = Sercos.idn_parse_args.is_product;
+    uint8_t *param_set = Sercos.idn_parse_args.param_set;
+    uint16_t *data_block = Sercos.idn_parse_args.data_block;
+
     if (is_product)
     {
         *is_product = (idn & 0x8000) != 0;
@@ -32,17 +53,27 @@ void protocore_sercos_idn_parse(uint16_t idn, proto_bool *is_product, uint8_t *p
     }
 }
 
-size_t protocore_sercos_build(uint8_t type, uint8_t phase, uint16_t cycle, const uint8_t *data, size_t data_len,
-                              uint8_t *out, size_t cap)
+static void sercos_build(uint8_t *restrict work)
 {
+    (void)work;
+    uint8_t type = Sercos.build_args.type;
+    uint8_t phase = Sercos.build_args.phase;
+    uint16_t cycle = Sercos.build_args.cycle;
+    const uint8_t *data = Sercos.build_args.data;
+    size_t data_len = Sercos.build_args.data_len;
+    uint8_t *out = Sercos.build_args.out;
+    size_t cap = Sercos.build_args.cap;
+
     if (!out || (data_len && !data) || (type != SERCOS_TEL_MDT && type != SERCOS_TEL_AT))
     {
-        return 0;
+        Sercos.n = 0;
+        return;
     }
     size_t n = SERCOS_HDR_LEN + data_len;
     if (n > cap)
     {
-        return 0;
+        Sercos.n = 0;
+        return;
     }
     out[0] = type;
     out[1] = phase;
@@ -52,25 +83,36 @@ size_t protocore_sercos_build(uint8_t type, uint8_t phase, uint16_t cycle, const
     {
         mem.cpy(out + SERCOS_HDR_LEN, data, data_len);
     }
-    return n;
+    Sercos.n = n;
 }
 
-proto_bool protocore_sercos_parse(const uint8_t *frame, size_t len, SercosTelegram *out)
+static void sercos_parse(uint8_t *restrict work)
 {
+    (void)work;
+    const uint8_t *frame = Sercos.parse_args.frame;
+    size_t len = Sercos.parse_args.len;
+    SercosTelegram *out = Sercos.parse_args.out;
+
     if (!frame || !out || len < SERCOS_HDR_LEN)
     {
-        return PROTO_FALSE;
+        Sercos.ok = PROTO_FALSE;
+        return;
     }
     if (frame[0] != SERCOS_TEL_MDT && frame[0] != SERCOS_TEL_AT)
     {
-        return PROTO_FALSE;
+        Sercos.ok = PROTO_FALSE;
+        return;
     }
     out->type = frame[0];
     out->phase = frame[1];
     out->cycle = (uint16_t)(frame[2] | (frame[3] << 8));
     out->data = (len > SERCOS_HDR_LEN) ? (frame + SERCOS_HDR_LEN) : NULL;
     out->data_len = len - SERCOS_HDR_LEN;
-    return PROTO_TRUE;
+    Sercos.ok = PROTO_TRUE;
 }
+
+SercosNs Sercos = {.idn = sercos_idn, .idn_parse = sercos_idn_parse, .build = sercos_build, .parse = sercos_parse};
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SERCOS

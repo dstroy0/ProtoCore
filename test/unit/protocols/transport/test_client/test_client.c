@@ -1,18 +1,29 @@
 // ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
+#include "network_drivers/network/dns/dns_resolver.h"
 #include "network_drivers/network/network.h"
 #include "network_drivers/transport/tcp/client/client.h"
 #include "network_drivers/transport/tcp/tcp.h"
+#include "server/clock/clock.h"
 #include <string.h>
 #include <unity.h>
 
 #define HOST "192.168.1.10"
 
+// Moves the virtual clock and takes the reading the library compares against: Clock.ms is a stamp
+// Clock.millis leaves behind, not a read of the source.
+static void advance_ms(uint32_t by)
+{
+    set_millis(millis() + by);
+    Clock.millis(Clock.internal);
+}
+
 void setUp()
 {
     protocore_net_host_reset();
     tcp_capture_reset();
+    Clock.millis(Clock.internal);
 }
 void tearDown()
 {
@@ -32,11 +43,12 @@ static protocore_pcb *dialed(uint16_t port)
 
 void test_the_dial_resolves_a_literal()
 {
-    uint32_t ip = 0;
     TEST_ASSERT_NOT_NULL(network.dns);
-    TEST_ASSERT_NOT_NULL(network.dns->resolver);
-    TEST_ASSERT_EQUAL_INT(PROTOCORE_DNS_READY, network.dns->resolver->resolve(HOST, &ip));
-    TEST_ASSERT_EQUAL_HEX32(0xC0A8010Au, ip);
+    TEST_ASSERT_NOT_NULL(network.dns->internal);
+    Resolver.query.host = HOST;
+    Resolver.resolve(Resolver.internal);
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_DNS_READY, Resolver.state);
+    TEST_ASSERT_EQUAL_HEX32(0xC0A8010Au, Resolver.u32);
 }
 
 void test_open_connects_and_reports_the_slot()
@@ -79,7 +91,7 @@ void test_open_refuses_a_bad_host_and_a_refused_connect()
     TcpClient.cid = bad;
     TcpClient.connected(TcpClient.internal);
     TEST_ASSERT_FALSE(TcpClient.ok);
-    set_millis(millis() + 11);
+    advance_ms(11);
     TcpClient.cid = bad;
     TcpClient.is_closed(TcpClient.internal);
     TEST_ASSERT_TRUE(TcpClient.ok);

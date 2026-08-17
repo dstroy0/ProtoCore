@@ -8,8 +8,8 @@
 //
 // Build/flash:  idf.py -C test/performance_benching/umati -t upload --upload-port COM7
 #include "device_bench.h"
-#include "services/fieldbus/opcua/opcua.h"
-#include "services/machine_tool/umati/umati.h"
+#include "services/opcua/models/umati/umati.h"
+#include "services/opcua/opcua.h"
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -39,7 +39,8 @@ void dbench_run(void)
     g_mt.axis_z.actual_position = 42.0;
     g_mt.active_program = "PART_A.NC";
     g_mt.produced_part_count = 7;
-    protocore_umati_bind(&g_mt);
+    Umati.bind_args.mt = &g_mt;
+    Umati.bind(protocore_umati_span());
 
     for (;;)
     {

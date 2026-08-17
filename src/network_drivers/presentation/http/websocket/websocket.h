@@ -290,6 +290,11 @@ typedef struct
     WsConn *conn;       ///< the socket a call acts on, when it takes one by pointer
     uint8_t byte;       ///< one already-plaintext byte for the frame state machine
     uint16_t frag_size; ///< the outbound fragmentation size in payload bytes; 0 = off
+#if PROTOCORE_ENABLE_WS_DEFLATE
+    proto_bool pmd; ///< what an alloc records on the new connection: RFC 7692 permessage-deflate,
+                    ///< as the handshake negotiated it. The layer that read the Sec-WebSocket-
+                    ///< Extensions header is the only one that knows, so it states it here.
+#endif
 
     WsRouteArgs route; ///< the handlers one route records
     WsFrameArgs frame; ///< one frame's type, payload and close status

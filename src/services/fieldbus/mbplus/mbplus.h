@@ -20,33 +20,21 @@
 #ifndef PROTOCORE_MBPLUS_H
 #define PROTOCORE_MBPLUS_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_MBPLUS
 
 PROTOCORE_BEGIN_DECLS
+
+// This module holds nothing between calls, so it carves no borrow and states none. An entry
+// takes one all the same, and never reads it, so every namespace in the tree is invoked the
+// same way.
 
 // Modbus Plus HDLC wire constants: integer values compared/emitted, in a namespacing struct.
 #define MBPLUS_FLAG 0x7E       ///< HDLC frame delimiter.
 #define MBPLUS_MAX_STATION 64  ///< stations 1..64 on a Modbus Plus segment.
 #define MBPLUS_CTRL_DATA 0x00  ///< data frame control.
 #define MBPLUS_CTRL_TOKEN 0x01 ///< token pass control.
-
-/** @brief CRC-16/X-25 (the Modbus Plus HDLC FCS) over @p len bytes. */
-uint16_t protocore_mbplus_crc(const uint8_t *bytes, size_t len);
-
-/**
- * @brief Build a Modbus Plus HDLC frame: 7E addr ctrl [payload] CRClo CRChi 7E.
- * @param address  the destination station (1..64).
- * @param control  MBPLUS_CTRL_DATA / MBPLUS_CTRL_TOKEN.
- * @param payload  the routing path + Modbus PDU (may be null if payload_len == 0).
- * @param payload_len its length.
- * @return the frame length (1 + 1 + 1 + payload_len + 2 + 1), or 0 on overflow / bad args.
- *
- * The CRC covers address + control + payload (not the flags).
- */
-size_t protocore_mbplus_build(uint8_t address, uint8_t control, const uint8_t *payload, size_t payload_len,
-                              uint8_t *out, size_t cap);
 
 /** @brief A parsed Modbus Plus frame (payload points into the input). */
 typedef struct
@@ -57,16 +45,85 @@ typedef struct
     size_t payload_len;
 } MbPlusFrame;
 
-/** @brief Validate the flags + CRC and parse a Modbus Plus frame. @return true if well-formed. */
-proto_bool protocore_mbplus_parse(const uint8_t *frame, size_t len, MbPlusFrame *out);
+/** @brief What crc takes: bytes, len. */
+typedef struct
+{
+    const uint8_t *bytes;
+    size_t len;
+} MbplusCrcArgs;
+
+/** @brief What build takes: address, control, payload, payload_len, ... */
+typedef struct
+{
+    uint8_t address;        ///< the destination station (1..64)
+    uint8_t control;        ///< MBPLUS_CTRL_DATA / MBPLUS_CTRL_TOKEN
+    const uint8_t *payload; ///< the routing path + Modbus PDU (may be null if payload_len == 0)
+    size_t payload_len;     ///< its length
+    uint8_t *out;
+    size_t cap;
+} MbplusBuildArgs;
+
+/** @brief What parse takes: frame, len, out. */
+typedef struct
+{
+    const uint8_t *frame;
+    size_t len;
+    MbPlusFrame *out;
+} MbplusParseArgs;
+
+/** @brief What next_token takes: current, max_station. */
+typedef struct
+{
+    uint8_t current;     ///< this station's address (1..max_station)
+    uint8_t max_station; ///< the highest active station on the segment
+} MbplusNextTokenArgs;
 
 /**
- * @brief Compute the next token holder in the logical ring.
- * @param current      this station's address (1..max_station).
- * @param max_station  the highest active station on the segment.
- * @return the next station address, wrapping from max_station back to 1.
+ * @brief Modbus Plus HDLC token-bus frame codec (PROTOCORE_ENABLE_MBPLUS).
+ *
+ * A caller sets the members a call takes, invokes it through ::Mbplus with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   Mbplus.crc_args.bytes = ...;
+ *   Mbplus.crc_args.len = ...;
+ *   Mbplus.crc(work);
+ *   // Mbplus.value is what the call reports
+ *
+ * @var MbplusNs::crc_args  what crc takes: bytes, len
+ * @var MbplusNs::build_args  what build takes: address, control, payload, payload_len,
+ * @var MbplusNs::parse_args  what parse takes: frame, len, out
+ * @var MbplusNs::next_token_args  what next_token takes: current, max_station
+ * @var MbplusNs::ok  a call's true/false outcome
+ * @var MbplusNs::value  the next station address, wrapping from max_station back to 1
+ * @var MbplusNs::n  the frame length (1 + 1 + 1 + payload_len + 2 + 1), or 0 on ...
+ * @var MbplusNs::crc  CRC-16/X-25 (the Modbus Plus HDLC FCS) over len bytes
+ * @var MbplusNs::build  build a Modbus Plus HDLC frame: 7E addr ctrl [payload] CRClo CRChi ...
+ * @var MbplusNs::parse  validate the flags + CRC and parse a Modbus Plus frame. true if ...
+ * @var MbplusNs::next_token  compute the next token holder in the logical ring
+ *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
+ * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
+ * a caller drives every namespace the same way.
  */
-uint8_t protocore_mbplus_next_token(uint8_t current, uint8_t max_station);
+typedef struct
+{
+    MbplusCrcArgs crc_args;
+    MbplusBuildArgs build_args;
+    MbplusParseArgs parse_args;
+    MbplusNextTokenArgs next_token_args;
+
+    proto_bool ok;
+    uint16_t value;
+    size_t n;
+
+    void (*const crc)(uint8_t *restrict work);
+    void (*const build)(uint8_t *restrict work);
+    void (*const parse)(uint8_t *restrict work);
+    void (*const next_token)(uint8_t *restrict work);
+} MbplusNs;
+
+/** @brief The one symbol this module exports. */
+extern MbplusNs Mbplus;
 
 PROTOCORE_END_DECLS
 

@@ -101,6 +101,9 @@ static void alloc(uint8_t *restrict work)
             ws_pool[i].ws_id = (uint8_t)i;
             ws_pool[i].slot_id = Ws.slot;
             ws_pool[i].route_id = Ws.id;
+#if PROTOCORE_ENABLE_WS_DEFLATE
+            ws_pool[i].pmd = Ws.pmd; // what the handshake negotiated, which nothing else can know
+#endif
             ws_pool[i].active = PROTO_TRUE;
             ws_pool[i].parse_state = WS_HEADER1;
             Ws.found = &ws_pool[i];

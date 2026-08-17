@@ -300,6 +300,43 @@ void test_protocore_get_out_of_range_returns_null()
     TEST_ASSERT_NULL(Protocols.handler);
 }
 
+// The very first lookup also bootstraps the built-in handlers, and that bootstrap runs back through
+// THIS namespace - protocore_builtins.c sets Protocols.proto once per entry. A lookup that read
+// Protocols.proto after it would answer for whichever protocol registered last, so the first
+// request a server ever dispatched went to the wrong handler and produced nothing. Only the first
+// lookup was affected: every one after it skips the bootstrap.
+// The first lookup of a server's life also bootstraps the built-in handlers, and that bootstrap
+// runs back through THIS namespace: protocore_builtins.c registers each built-in by setting
+// Protocols.proto and calling add. A lookup that read Protocols.proto afterwards answered for
+// whichever protocol registered last instead of the one asked for - so the first request a server
+// ever dispatched went to the wrong handler and produced nothing, and every request after it was
+// fine. Asking for a protocol no built-in owns makes that visible whatever the build compiles in.
+void test_the_bootstrapping_lookup_still_answers_for_the_protocol_asked_for()
+{
+    static const ProtoHandler mine = {NULL, NULL, NULL, NULL};
+    const ProtoConn asked = (ProtoConn)(PROTO_MAX_HANDLERS - 1); // in range, and no built-in claims it
+
+    Protocols.proto = asked;
+    Protocols.h = &mine;
+    Protocols.add(Protocols.internal);
+
+    // PROTO_HTTP's entry is the sentinel the bootstrap keys on, so clearing it puts the registry
+    // back where it is before that first lookup.
+    Protocols.proto = PROTO_HTTP;
+    Protocols.h = NULL;
+    Protocols.add(Protocols.internal);
+
+    Protocols.proto = asked;
+    Protocols.get(Protocols.internal);
+    TEST_ASSERT_EQUAL_PTR(&mine, Protocols.handler);
+    TEST_ASSERT_EQUAL_UINT32((uint32_t)asked, (uint32_t)Protocols.proto);
+
+    // and the bootstrap still happened: PROTO_HTTP is registered again.
+    Protocols.proto = PROTO_HTTP;
+    Protocols.get(Protocols.internal);
+    TEST_ASSERT_NOT_NULL(Protocols.handler);
+}
+
 void test_dispatch_drops_unregistered_protocol_event()
 {
     conn_pool[0].proto = PROTO_NONE;

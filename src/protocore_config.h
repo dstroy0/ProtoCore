@@ -5291,8 +5291,8 @@ from halves and is slower than the width it decomposes into"
  * @brief EUROMAP 77 (OPC 40077) - OPC UA for injection moulding machines (IMM <-> MES) (PROTOCORE_ENABLE_EUROMAP77).
  *
  * Default off. Requires PROTOCORE_ENABLE_OPCUA (builds on the OPC UA Binary server). services/machine_tool/euromap77
- * exposes the EUROMAP 77 IMM_MES_Interface companion model (OPC 40077, namespace
- * `http://www.euromap.org/euromap77/`, enums from EUROMAP 83 / OPC 40083): a fixed node hierarchy -
+ * exposes the EUROMAP 77 IMM_MES_Interface companion model (OPC 40077, ModelUri
+ * `http://opcfoundation.org/UA/PlasticsRubber/IMM2MES/`, enums from EUROMAP 83 / OPC 40083): a fixed node hierarchy -
  * MachineInformation, MachineStatus, and Jobs (ActiveJob + ActiveJobValues with the UInt64 production
  * counters) - served through the OPC UA Browse + Read resolvers out of a caller-owned EmImm struct you
  * refresh each loop. Faithful BrowseNames + a read-only monitoring model any OPC UA client browses and
@@ -6666,8 +6666,50 @@ from halves and is slower than the width it decomposes into"
 #define PROTOCORE_PLAINTEXT_WORK_EDGEPROXY 0
 #endif
 
+// The EUROMAP 77 model state: the pointer to the caller-owned EmImm the resolvers read out of.
+// Plaintext because a machine model carries no key material, and taken from the persistent end so
+// the bind done before begin() outlives every Read and Browse that follows it. A literal rather than
+// a formula because the term is euromap77.h's, which this file is included by rather than includes;
+// proved against sizeof(EuroMap77Ctx) by a static_assert in euromap77.c.
+#ifndef PROTOCORE_EUROMAP77_BORROW
+#define PROTOCORE_EUROMAP77_BORROW 16
+#endif
+
+#if PROTOCORE_ENABLE_EUROMAP77
+#define PROTOCORE_PLAINTEXT_WORK_EUROMAP77 PROTOCORE_EUROMAP77_BORROW
+#else
+#define PROTOCORE_PLAINTEXT_WORK_EUROMAP77 0
+#endif
+
+// The umati model state: the pointer to the caller-owned UmatiMachineTool the resolvers read out of,
+// and the NamespaceIndex the OPC UA server gave this model's URI. Plaintext for the same reason as
+// EUROMAP 77 above, and taken from the persistent end so the bind done before begin() outlives every
+// Read and Browse. Proved against sizeof(UmatiCtx) by a static_assert in umati.c.
+#ifndef PROTOCORE_UMATI_BORROW
+#define PROTOCORE_UMATI_BORROW 16
+#endif
+
+#if PROTOCORE_ENABLE_UMATI
+#define PROTOCORE_PLAINTEXT_WORK_UMATI PROTOCORE_UMATI_BORROW
+#else
+#define PROTOCORE_PLAINTEXT_WORK_UMATI 0
+#endif
+
+// The robotics model state: as umati's, plus the per-axis BrowseName table the Browse hands out by
+// pointer - PROTOCORE_ROBOTICS_AXES names of "Axis_" plus up to two digits. Proved against
+// sizeof(RoboticsCtx) by a static_assert in robotics.c.
+#ifndef PROTOCORE_ROBOTICS_BORROW
+#define PROTOCORE_ROBOTICS_BORROW 128
+#endif
+
+#if PROTOCORE_ENABLE_ROBOTICS
+#define PROTOCORE_PLAINTEXT_WORK_ROBOTICS PROTOCORE_ROBOTICS_BORROW
+#else
+#define PROTOCORE_PLAINTEXT_WORK_ROBOTICS 0
+#endif
+
 #ifndef PROTOCORE_PLAINTEXT_ARENA_SIZE
-#define PROTOCORE_PLAINTEXT_ARENA_SIZE                                                                                     (PROTOCORE_PLAINTEXT_SCRATCH + PROTOCORE_PLAINTEXT_WORK_H3CONN + PROTOCORE_PLAINTEXT_WORK_EDGEPROXY + 256)
+#define PROTOCORE_PLAINTEXT_ARENA_SIZE                                                                                     (PROTOCORE_PLAINTEXT_SCRATCH + PROTOCORE_PLAINTEXT_WORK_H3CONN + PROTOCORE_PLAINTEXT_WORK_EDGEPROXY + PROTOCORE_PLAINTEXT_WORK_EUROMAP77 + PROTOCORE_PLAINTEXT_WORK_UMATI + PROTOCORE_PLAINTEXT_WORK_ROBOTICS + 256)
 #endif
 
 /**
@@ -8518,6 +8560,13 @@ static_assert((unsigned)PROTO_UDP < PROTO_MAX_HANDLERS, "PROTO_MAX_HANDLERS must
 #ifndef PROTOCORE_AUDIT_MSG_LEN
 #define PROTOCORE_AUDIT_MSG_LEN 48 ///< Max message bytes per record (truncated to fit).
 #endif
+/**
+ * @brief Octets of each record's chain hash: the SHA-256 digest width.
+ *
+ * Not a knob. Each record hashes SHA-256(prev_hash || seq || ts || category || msg_len || msg), so
+ * the width is the digest's and any other value breaks the chain a verify walks.
+ */
+#define PROTOCORE_AUDIT_HASH_LEN 32
 #endif // PROTOCORE_ENABLE_AUDIT_LOG
 
 #if PROTOCORE_ENABLE_DEVICENET

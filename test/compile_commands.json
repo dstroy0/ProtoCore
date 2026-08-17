@@ -648,16 +648,16 @@
     "output": ".pio/build/native_swar/src/services/radio/espnow/espnow.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/services/fieldbus/opcua/opcua.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/services/fieldbus/opcua/opcua.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/services/opcua/opcua.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/services/opcua/opcua.c",
     "directory": "@ROOT@",
-    "file": "src/services/fieldbus/opcua/opcua.c",
-    "output": ".pio/build/native_swar/src/services/fieldbus/opcua/opcua.o"
+    "file": "src/services/opcua/opcua.c",
+    "output": ".pio/build/native_swar/src/services/opcua/opcua.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/services/machine_tool/euromap77/euromap77.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/services/machine_tool/euromap77/euromap77.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/services/opcua/models/euromap77/euromap77.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/services/opcua/models/euromap77/euromap77.c",
     "directory": "@ROOT@",
-    "file": "src/services/machine_tool/euromap77/euromap77.c",
-    "output": ".pio/build/native_swar/src/services/machine_tool/euromap77/euromap77.o"
+    "file": "src/services/opcua/models/euromap77/euromap77.c",
+    "output": ".pio/build/native_swar/src/services/opcua/models/euromap77/euromap77.o"
   },
   {
     "command": "/usr/bin/gcc -o .pio/build/native_swar/src/server/exc_decoder.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/server/core/exc_decoder.c",
@@ -1236,10 +1236,10 @@
     "output": ".pio/build/native_oidc/src/services/security/oidc/oidc.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/services/fieldbus/opcua_client/opcua_client.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/services/fieldbus/opcua_client/opcua_client.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/services/opcua/opcua_client/opcua_client.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/services/opcua/opcua_client/opcua_client.c",
     "directory": "@ROOT@",
-    "file": "src/services/fieldbus/opcua_client/opcua_client.c",
-    "output": ".pio/build/native_swar/src/services/fieldbus/opcua_client/opcua_client.o"
+    "file": "src/services/opcua/opcua_client/opcua_client.c",
+    "output": ".pio/build/native_swar/src/services/opcua/opcua_client/opcua_client.o"
   },
   {
     "command": "/usr/bin/gcc -o .pio/build/native_swar/src/services/energy/openadr/openadr.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/services/energy/openadr/openadr.c",
@@ -1488,10 +1488,10 @@
     "output": ".pio/build/native_swar/src/network_drivers/datalink/roaming.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/services/machine_tool/robotics/robotics.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/services/machine_tool/robotics/robotics.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/services/opcua/models/robotics/robotics.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/services/opcua/models/robotics/robotics.c",
     "directory": "@ROOT@",
-    "file": "src/services/machine_tool/robotics/robotics.c",
-    "output": ".pio/build/native_swar/src/services/machine_tool/robotics/robotics.o"
+    "file": "src/services/opcua/models/robotics/robotics.c",
+    "output": ".pio/build/native_swar/src/services/opcua/models/robotics/robotics.o"
   },
   {
     "command": "/usr/bin/g++ -o .pio/build/native_swar/src/server/peripherals/rtc/rtc.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/server/peripherals/rtc/rtc.cpp",
@@ -1974,10 +1974,10 @@
     "output": ".pio/build/native_swar/src/services/iot/xmpp/xmpp.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/services/machine_tool/umati/umati.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/services/machine_tool/umati/umati.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/services/opcua/models/umati/umati.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/services/opcua/models/umati/umati.c",
     "directory": "@ROOT@",
-    "file": "src/services/machine_tool/umati/umati.c",
-    "output": ".pio/build/native_swar/src/services/machine_tool/umati/umati.o"
+    "file": "src/services/opcua/models/umati/umati.c",
+    "output": ".pio/build/native_swar/src/services/opcua/models/umati/umati.o"
   },
   {
     "command": "/usr/bin/gcc -o .pio/build/native_swar/src/server/net/iface_bridge/iface_bridge_hw.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/server/net/iface_bridge/iface_bridge_hw.c",

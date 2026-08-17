@@ -200,7 +200,7 @@ void test_correct_method_still_dispatches()
 void test_slowloris_incomplete_request_reaped_past_deadline()
 {
     on_http("/res", HTTP_GET, handle_ok);
-    conn_pool[0].req_start_ms = 1;
+    http_req_start_ms[0] = 1;
     push_str(0, "GET /res HTTP/1.1\r\nHost: x\r\n");
     HttpConn.slot = 0;
     HttpConn.parse(HttpConn.internal);
@@ -214,14 +214,14 @@ void test_slowloris_incomplete_request_reaped_past_deadline()
     const char *r = tcp_captured();
     TEST_ASSERT_NOT_NULL(strstr(r, "408 Request Timeout"));
     TEST_ASSERT_NOT_NULL(strstr(r, "Connection: close\r\n"));
-    TEST_ASSERT_EQUAL(0, (int)conn_pool[0].req_start_ms);
+    TEST_ASSERT_EQUAL(0, (int)http_req_start_ms[0]);
     TEST_ASSERT_FALSE(handler_called);
 }
 
 void test_incomplete_request_survives_before_deadline()
 {
     on_http("/res", HTTP_GET, handle_ok);
-    conn_pool[0].req_start_ms = 1;
+    http_req_start_ms[0] = 1;
     push_str(0, "GET /res HTTP/1.1\r\nHost: x\r\n");
     HttpConn.slot = 0;
     HttpConn.parse(HttpConn.internal);
@@ -232,17 +232,17 @@ void test_incomplete_request_survives_before_deadline()
 
     TEST_ASSERT_NULL(strstr(tcp_captured(), "408"));
     TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)conn_pool[0].state);
-    TEST_ASSERT_NOT_EQUAL(0, (int)conn_pool[0].req_start_ms);
+    TEST_ASSERT_NOT_EQUAL(0, (int)http_req_start_ms[0]);
 }
 
 void test_completed_slow_request_not_reaped()
 {
 
     on_http("/res", HTTP_GET, handle_ok);
-    conn_pool[0].req_start_ms = 1;
+    http_req_start_ms[0] = 1;
     feed_and_handle(0, "GET /res HTTP/1.1\r\n\r\n");
     TEST_ASSERT_TRUE(handler_called);
-    TEST_ASSERT_EQUAL(0, (int)conn_pool[0].req_start_ms);
+    TEST_ASSERT_EQUAL(0, (int)http_req_start_ms[0]);
 
     tcp_capture_reset();
     set_millis(1 + PROTOCORE_REQUEST_TIMEOUT_MS + 1);
@@ -254,7 +254,7 @@ void test_streaming_body_upload_not_reaped_past_deadline()
 {
 
     on_http("/res", HTTP_POST, handle_ok);
-    conn_pool[0].req_start_ms = 1;
+    http_req_start_ms[0] = 1;
     http_pool[0].parse_state = PARSE_BODY;
     http_pool[0].content_length = 100000;
     http_pool[0].body_bytes_read = 10;

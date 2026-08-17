@@ -78,7 +78,7 @@ explanatory comments:
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
-#include "services/fieldbus/opcua/opcua.h"
+#include "services/opcua/opcua.h"
 
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";

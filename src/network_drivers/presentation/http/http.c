@@ -675,7 +675,10 @@ static proto_bool proto_authorize_request(uint8_t slot_id, HttpReq *req, const H
     }
 #endif
     uint32_t now = (uint32_t)Clock.ms;
-    uint32_t remain = auth_lockout_remaining_ms(&cip, now);
+    AuthLockout.args.ip = &cip;
+    AuthLockout.args.now_ms = now;
+    AuthLockout.remaining(protocore_auth_lockout_span());
+    uint32_t remain = AuthLockout.ms;
     if (remain > 0)
     {
         // Address is locked out: 429 + Retry-After, no credential check.
@@ -706,11 +709,14 @@ static proto_bool proto_authorize_request(uint8_t slot_id, HttpReq *req, const H
     // attempt: don't count it toward the lockout (nor reset the counter).
     if (ok)
     {
-        auth_lockout_succeed(&cip);
+        AuthLockout.args.ip = &cip;
+        AuthLockout.succeed(protocore_auth_lockout_span());
     }
     else if (!stale)
     {
-        auth_lockout_fail(&cip, now);
+        AuthLockout.args.ip = &cip;
+        AuthLockout.args.now_ms = now;
+        AuthLockout.fail(protocore_auth_lockout_span());
     }
 #endif
     if (!ok)

@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // On-device CCOUNT microbenchmark for the EUROMAP 77 (OPC 40077) IMM_MES_Interface model
-// (services/machine_tool/euromap77): the Read resolver (protocore_em77_read) answering a String leaf and a UInt64
-// production-counter leaf out of a bound EmImm, the Browse resolver (protocore_em77_browse) walking an
+// (services/machine_tool/euromap77): the Read resolver (em77_read) answering a String leaf and a UInt64
+// production-counter leaf out of a bound EmImm, the Browse resolver (em77_browse) walking an
 // 8-child container and the Objects-folder organizes reference, and the shared OPC UA Binary Variant
 // encoder (protocore_ua_w_variant, services/fieldbus/opcua) serializing a resolved UInt64 counter to wire bytes -
 // every call here is pure struct-field lookup / table walk / byte packing (no heap, no sockets).
@@ -18,7 +18,8 @@
 // then open the port to capture the repeating "DB ..." lines (each run repeats every ~5 s, so a
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
-#include "services/machine_tool/euromap77/euromap77.h"
+#include "services/opcua/opcua.h"
+#include "services/opcua/models/euromap77/euromap77.h"
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -65,7 +66,12 @@ void dbench_run(void)
     g_imm.active_job_values.job_good_parts_counter = 19000000003ULL;
     g_imm.active_job_values.job_bad_parts_counter = 1000000001ULL;
     g_imm.active_job_values.job_status = EM_JOB_IN_PRODUCTION;
-    protocore_em77_bind(&g_imm);
+    // Install rather than bind: the resolvers answer the server's handler contract, so they are
+    // reached the way the server reaches them.
+    Euromap77.install_args.imm = &g_imm;
+    Euromap77.install(protocore_euromap77_span());
+    const OpcUaReadHandler em77_read = protocore_opcua_read_handler();
+    const OpcUaBrowseHandler em77_browse = protocore_opcua_browse_handler();
 
     static OpcUaReference refs[8];
     static OpcUaVariant v;
@@ -78,17 +84,16 @@ void dbench_run(void)
         volatile bool sinkb = false;
         volatile int32_t sinki = 0;
 
-        DBENCH_OP("protocore_em77_read (string leaf)", 100000,
-                  sinkb = protocore_em77_read(PROTOCORE_EM77_NS, N_MI_MANUFACTURER, OPCUA_ATTR_VALUE, &v));
-        DBENCH_OP("protocore_em77_read (uint64 counter)", 100000,
-                  sinkb = protocore_em77_read(PROTOCORE_EM77_NS, N_AJV_JOBCYCLECOUNTER, OPCUA_ATTR_VALUE, &v));
-        DBENCH_OP("protocore_em77_browse (8-child obj)", 50000,
-                  sinki += protocore_em77_browse(PROTOCORE_EM77_NS, N_MACHINEINFO, refs, 8));
-        DBENCH_OP("protocore_em77_browse (Objects->IMM)", 100000, sinki += protocore_em77_browse(0, 85, refs, 8));
+        DBENCH_OP("em77_read (string leaf)", 100000,
+                  sinkb = em77_read(PROTOCORE_EM77_NS, N_MI_MANUFACTURER, OPCUA_ATTR_VALUE, &v));
+        DBENCH_OP("em77_read (uint64 counter)", 100000,
+                  sinkb = em77_read(PROTOCORE_EM77_NS, N_AJV_JOBCYCLECOUNTER, OPCUA_ATTR_VALUE, &v));
+        DBENCH_OP("em77_browse (8-child obj)", 50000, sinki += em77_browse(PROTOCORE_EM77_NS, N_MACHINEINFO, refs, 8));
+        DBENCH_OP("em77_browse (Objects->IMM)", 100000, sinki += em77_browse(0, 85, refs, 8));
 
         // Re-resolve the UInt64 counter, then encode the Variant it left in `v` to wire bytes - the
         // Read + Binary-encode pair a client's OPC UA Read Response actually walks.
-        protocore_em77_read(PROTOCORE_EM77_NS, N_AJV_JOBCYCLECOUNTER, OPCUA_ATTR_VALUE, &v);
+        em77_read(PROTOCORE_EM77_NS, N_AJV_JOBCYCLECOUNTER, OPCUA_ATTR_VALUE, &v);
         DBENCH_BULK("protocore_ua_w_variant (uint64)", 100000, 9,
                     (w = (UaWriter){wire, sizeof(wire), 0, true}, protocore_ua_w_variant(&w, &v)));
 
