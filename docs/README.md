@@ -408,6 +408,7 @@ src/
 │   │   ├── preempt_queue.c
 │   │   ├── preempt_queue.h
 │   │   ├── proto_handler.h
+│   │   ├── protocore.c
 │   │   ├── sleep_sched.c
 │   │   ├── sleep_sched.h
 │   │   ├── worker.c
@@ -749,7 +750,6 @@ src/
 │   │   └── gen_themes.py
 │   ├── __init__.py
 │   └── README.md
-├── protocore.c
 ├── protocore_config.h
 └── protocore_types.h
 ```
@@ -1360,6 +1360,7 @@ guards at compile time.
 | `PROTOCORE_BRIDGE_STREAM_CHUNK` | `256` | STREAM (UART) pipe chunk size (bytes) for server/net/iface_bridge - one socket<->UART hop. |
 | `PROTOCORE_BRIDGE_TXN_MAX` | `256` | Max write / read payload (bytes) per TRANSACTION frame (server/net/iface_bridge). |
 | `PROTOCORE_BRIDGE_UART_TXN_MS` | `50` | UART TRANSACTION read window (ms): how long a write-then-read waits for the read_len reply. |
+| `PROTOCORE_BUS_CAPTURE_BORROW` | `32u` |  |
 | `PROTOCORE_CHACHA20_BORROW` | `192` |  |
 | `PROTOCORE_CLIENT_RX_BUF` | `8192` | Per-connection wire receive ring size (bytes). |
 | `PROTOCORE_CLOSING_TIMEOUT_MS` | `2000` | Upper bound (ms) a slot may dwell in CONN_CLOSING after a graceful close before the idle sweep force-aborts it. |
@@ -1400,12 +1401,15 @@ guards at compile time.
 | `PROTOCORE_EDGE_CTYPE_MAX` | `64` | Stored Content-Type to replay. |
 | `PROTOCORE_EDGE_ETAG_MAX` | `64` | Stored validator (ETag, quotes included). |
 | `PROTOCORE_EDGE_LASTMOD_MAX` | `40` | Stored Last-Modified (RFC 1123 date). |
+| `PROTOCORE_EDGE_PROXY_BORROW` | `28672` |  |
+| `PROTOCORE_EDGE_PROXY_TLS_BORROW` | `128` |  |
 | `PROTOCORE_EM77_NS` | `1` | NamespaceIndex the EUROMAP 77 IMM_MES_Interface nodes live at (default 1). |
 | `PROTOCORE_ENFORCE_HOST_HEADER` | `1` | Enforce the RFC 7230 §5.4 Host-header requirement (default on). |
 | `PROTOCORE_ENOCEAN_MAX_DATA` | `512` | Reject an ESP3 telegram whose declared data length exceeds this (framing sanity). |
 | `PROTOCORE_ETH_W5500` | `0` |  |
 | `PROTOCORE_EXC_COREDUMP_CHUNK` | `512` | Chunk the core-dump image is streamed out of flash in. |
 | `PROTOCORE_FAILSAFE_MAX_LIFELINES` | `8` | Max monitored lifelines in the fail-safe registry (static, zero-heap). |
+| `PROTOCORE_FDC2214_I2C_ADDR` | `0x2A` | I2C address of the FDC2214, set by the ADDR pin: 0x2A when it is low, 0x2B when it is high. |
 | `PROTOCORE_FILESYSTEM_PATH_MAX` | `256` | Largest absolute path the SFTP/SCP server resolves (mount root + request path). |
 | `PROTOCORE_FTP_CHUNK` | `512` | Bytes staged per data-channel write when the session driver streams a payload. |
 | `PROTOCORE_FTP_CMD_MAX` | `256` | Suggested FTP control-command buffer size. |
@@ -1435,7 +1439,9 @@ guards at compile time.
 | `PROTOCORE_H3_QPACK_BLOCK` | `256` |  |
 | `PROTOCORE_H3_QPACK_SCRATCH` | `512` |  |
 | `PROTOCORE_HMMD_BAUD` | `115200` | HMMD UART baud rate (the module's factory default is 115200). |
+| `PROTOCORE_HMMD_BORROW` | `256` |  |
 | `PROTOCORE_HMMD_UART` | `2` | UART unit the HMMD is wired to. |
+| `PROTOCORE_HOTSWAP_BORROW` | `128` |  |
 | `PROTOCORE_HOTSWAP_FAIL_THRESHOLD` | `3` | Consecutive I/O failures that declare a removable volume gone. |
 | `PROTOCORE_HOTSWAP_PROBE_MS` | `2000` | Minimum gap between remount attempts while a volume is absent or faulted (ms). |
 | `PROTOCORE_HPACK_MAX_ENTRIES` | `128` | Max HPACK dynamic-table entries (>= PROTOCORE_HPACK_TABLE_BYTES / 32, the min entry size). |
@@ -1445,6 +1451,7 @@ guards at compile time.
 | `PROTOCORE_HTTP_CLIENT_CT_BUF_SIZE` | `4096` | Ciphertext receive-ring size for the https:// client, bytes. |
 | `PROTOCORE_HTTP_CLIENT_TIMEOUT_MS` | `8000` | Outbound HTTP client connect/response timeout in milliseconds. |
 | `PROTOCORE_HTTP_EMIT_DATE` | `0` | Auto-inject a `Date` response header (RFC 7231 7.1.1.2) when a wall-clock time is available. |
+| `PROTOCORE_I2C_DEVICE_BORROW` | `32` |  |
 | `PROTOCORE_INA219_CURRENT_LSB_UA` | `100` | Default INA219 current LSB in microamps per bit (calibration input). |
 | `PROTOCORE_INA219_I2C_ADDR` | `0x40` | I2C address of the INA219 (0x40 default; the A0/A1 pins select 0x40..0x4F). |
 | `PROTOCORE_INA219_SHUNT_MOHM` | `100` | Default INA219 shunt resistance in milliohms (calibration input). |
@@ -1452,7 +1459,9 @@ guards at compile time.
 | `PROTOCORE_JWT_MAX_LEN` | `512` | Maximum accepted JWT length in bytes (header.payload.signature). |
 | `PROTOCORE_KEEPALIVE_MAX_REQUESTS` | `100` | Maximum requests served on one keep-alive connection before it is closed. |
 | `PROTOCORE_LD2410_BAUD` | `256000` | LD2410 UART baud rate (the module's fixed factory default is 256000). |
+| `PROTOCORE_LD2410_BORROW` | `320` |  |
 | `PROTOCORE_LD2410_UART` | `2` | UART unit the LD2410 is wired to. |
+| `PROTOCORE_LDC1614_I2C_ADDR` | `0x2A` | I2C address of the LDC1614, set by the ADDR pin: 0x2A when it is low, 0x2B when it is high. |
 | `PROTOCORE_LOG_LINES` | `32` | Number of log lines retained in the ring. |
 | `PROTOCORE_LOG_LINE_LEN` | `96` | Maximum length of one stored log line (bytes, including null). |
 | `PROTOCORE_LORA_MAX_PAYLOAD` | `251` | Max LoRa payload bytes (SX127x FIFO is 256; RadioHead uses 251 + 4 header). |
@@ -1466,6 +1475,7 @@ guards at compile time.
 | `PROTOCORE_MODBUS_DISCRETE_INPUTS` | `64` | Number of Modbus discrete inputs (FC 2), single-bit read-only (BSS, bit-packed). |
 | `PROTOCORE_MODBUS_HOLDING_REGS` | `64` | Number of Modbus holding registers (FC 3/6/16), 16-bit R/W (BSS). |
 | `PROTOCORE_MODBUS_INPUT_REGS` | `64` | Number of Modbus input registers (FC 4), 16-bit read-only (BSS). |
+| `PROTOCORE_MPR121_BORROW` | `128` |  |
 | `PROTOCORE_MPR121_I2C_ADDR` | `0x5A` | I2C address of the MPR121 (0x5A default; 0x5B/0x5C/0x5D via the ADDR pin). |
 | `PROTOCORE_MPR121_RELEASE_THRESHOLD` | `6` | MPR121 per-electrode release threshold (delta counts; should be below the touch threshold). |
 | `PROTOCORE_MPR121_TOUCH_THRESHOLD` | `12` | MPR121 per-electrode touch threshold (delta counts from baseline; NXP AN3944 suggests ~4..12). |
@@ -1510,6 +1520,7 @@ guards at compile time.
 | `PROTOCORE_PQ_INTERNAL_PRIORITY` | `8` | Base FreeRTOS priority for the internal preempting lanes (DMA / forwarding / device access). |
 | `PROTOCORE_PQ_ITEM_SIZE` | `32` | Bytes per preempting-queue item (the posted item must fit). |
 | `PROTOCORE_PQ_STACK` | `4096` | Stack (bytes) for each preempting-queue processing task (ESP32). |
+| `PROTOCORE_PROVISIONING_BORROW` | `32` |  |
 | `PROTOCORE_QUIC_CONN_CTX_BORROW` | `12544` |  |
 | `PROTOCORE_QUIC_MAX_CONNS` | `2` | Simultaneous HTTP/3 connections. |
 | `PROTOCORE_RADIO_MAX_TX_DBM` | `0` | Max TX power cap in dBm (2..20); 0 = leave the platform default. |
@@ -1540,6 +1551,7 @@ guards at compile time.
 | `PROTOCORE_SIMATIC_BLOCK_MAX` | `256` | 3964R block-body buffer size (built/received bytes: DLE-stuffed payload + DLE ETX + BCC). |
 | `PROTOCORE_SIMATIC_QVZ_MS` | `2000` | 3964R QVZ (Quittungsverzugszeit): handshake acknowledge-delay timeout, ms. |
 | `PROTOCORE_SIMATIC_ZVZ_MS` | `200` | 3964R ZVZ (Zeichenverzugszeit): inter-character timeout while receiving a block, ms. |
+| `PROTOCORE_SMBUS_BORROW` | `64` |  |
 | `PROTOCORE_SMB_BUF` | `1024` | SMB2 client work-buffer size (bytes) for smb_client's request/response framing. |
 | `PROTOCORE_SMTP_CT_BUF_SIZE` | `4096` | Ciphertext receive-ring size for SMTPS, bytes (only used when the message is TLS). |
 | `PROTOCORE_SMTP_LINE_MAX` | `256` | Max length of one SMTP command / address line (bytes, incl. |
@@ -1591,6 +1603,8 @@ guards at compile time.
 | `PROTOCORE_UDP_RX_RING` | `2048` | Per-slot UDP receive ring, in bytes. |
 | `PROTOCORE_UDP_TELEMETRY_BUF` | `256` | Stack buffer for one telemetry line (bytes). |
 | `PROTOCORE_UMATI_NS` | `1` | NamespaceIndex the umati MachineTool nodes live at (default 1). |
+| `PROTOCORE_VL53L0X_I2C_ADDR` | `0x29` | I2C address of the VL53L0X. |
+| `PROTOCORE_WEBDAV_BORROW` | `4096` |  |
 | `PROTOCORE_WEBDAV_BUF_SIZE` | `2048` | Buffer (BSS) for a WebDAV 207 Multi-Status response, in bytes (see PROTOCORE_ENABLE_WEBDAV). |
 | `PROTOCORE_WEBDAV_MAX_ENTRIES` | `32` | Maximum children listed in a WebDAV Depth-1 PROPFIND (bounds the response). |
 | `PROTOCORE_WEBDAV_MAX_PROPS` | `16` | Maximum properties echoed in a WebDAV PROPPATCH 207 response (bounds the response). |
