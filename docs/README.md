@@ -1563,7 +1563,7 @@ guards at compile time.
 | `PROTOCORE_PROMISC_BORROW` | `16` |  |
 | `PROTOCORE_PROTOBUF_BORROW` | `512u` |  |
 | `PROTOCORE_PROVISIONING_BORROW` | `32` |  |
-| `PROTOCORE_QUIC_CONN_CTX_BORROW` | `12544` |  |
+| `PROTOCORE_QUIC_CONN_CTX_BORROW` | `13568` |  |
 | `PROTOCORE_QUIC_MAX_CONNS` | `2` | Simultaneous HTTP/3 connections. |
 | `PROTOCORE_RADIO_MAX_TX_DBM` | `0` | Max TX power cap in dBm (2..20); 0 = leave the platform default. |
 | `PROTOCORE_RADIO_POWER_BORROW` | `16` |  |
@@ -1646,13 +1646,13 @@ guards at compile time.
 | `PROTOCORE_THREAD_MAX_DATA` | `256` | Max spinel payload bytes carried in one HDLC-lite frame. |
 | `PROTOCORE_TIME_SOURCE_MAX` | `4` | Maximum registered time sources. |
 | `PROTOCORE_TLS13_KS_TERMS` | `12` |  |
-| `PROTOCORE_TLS13_SECRET_LEN` | `32` |  |
+| `PROTOCORE_TLS13_SECRET_MAX` | `48` |  |
 | `PROTOCORE_TLS_ACK_MULTI_CONN_DRAM` | `0` | Acknowledge that a MAX_TLS_CONNS > 1 build has been sized to fit. |
 | `PROTOCORE_TLS_ARENA_IN_PSRAM` | `0` | Place the TLS arena in external PSRAM instead of internal DRAM (ESP32). |
 | `PROTOCORE_TLS_CONN_MSG_CAP` | `1024` |  |
 | `PROTOCORE_TLS_CONN_PEERKEY_CAP` | `320` |  |
 | `PROTOCORE_TLS_CONN_REC_CAP` | `1024` |  |
-| `PROTOCORE_TLS_CONN_STATE_CAP` | `2816` |  |
+| `PROTOCORE_TLS_CONN_STATE_CAP` | `3680` |  |
 | `PROTOCORE_TLS_CONN_TERMS` | `5` |  |
 | `PROTOCORE_TLS_MAX_FRAG_LEN` | `0` | Cap TLS records via the Maximum Fragment Length extension (RFC 6066). |
 | `PROTOCORE_TLS_SEAM_OUT_CAP` | `2048` |  |

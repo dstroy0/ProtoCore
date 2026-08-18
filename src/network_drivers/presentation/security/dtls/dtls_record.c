@@ -61,6 +61,7 @@ static uint64_t seq_decode(uint64_t expected, uint64_t truncated, unsigned bits)
 static void expand_label(uint8_t *work, const uint8_t *secret, const char *label, uint8_t *out, size_t out_len)
 {
     Tls13Ks.bind.kdf = &DTLS13_KDF;
+    Tls13Ks.bind.is384 = PROTO_FALSE; // the record keys of a TLS_AES_128_GCM_SHA256 connection
     Tls13Ks.derive_args.work = work;
     Tls13Ks.derive_args.secret = secret;
     Tls13Ks.derive_args.label = label;

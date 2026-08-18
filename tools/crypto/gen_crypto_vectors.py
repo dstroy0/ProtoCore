@@ -20,6 +20,9 @@ OUT = os.path.join(ROOT, "test", "unit", "src", "crypto", "mac", "test_crypto_ka
 RSA_OUT = os.path.join(ROOT, "test", "unit", "src", "crypto", "asymmetric", "test_rsa_kat", "rsa_kat_data.inc")
 BN_OUT = os.path.join(ROOT, "test", "unit", "src", "crypto", "asymmetric", "test_bignum_group14", "bignum_kat_data.inc")
 HKDF384_OUT = os.path.join(ROOT, "test", "unit", "src", "crypto", "kdf", "test_hkdf_sha384", "hkdf_sha384_kat_data.inc")
+KS384_OUT = os.path.join(
+    ROOT, "test", "unit", "src", "network_drivers", "tls", "key_schedule", "test_tls13_kdf", "sha384_schedule.inc"
+)
 
 # json file -> (C array name, C struct type, ordered emit fields). Each field is
 # (json_key, kind); kind "hex"/"int" pull that key, "valid" derives 1/0 from the
@@ -123,6 +126,35 @@ HKDF384_SPECS = [
     ),
 ]
 
+# The whole RFC 8446 sec 7.1 schedule at SHA-384, term by term, for the key schedule's own suite. The
+# SHA-256 arm is pinned by the RFC 8448 trace the suite already carries; there is no published SHA-384
+# trace, so this one is openssl's.
+KS384_SPECS = [
+    (
+        "openssl_tls13_sha384_schedule.json",
+        "KAT_TLS13_SHA384",
+        "KatTls13Sha384",
+        [
+            ("ecdhe", "hex"),
+            ("ch_sh", "hex"),
+            ("ch_cv", "hex"),
+            ("ch_sfin", "hex"),
+            ("empty_hash", "hex"),
+            ("early", "hex"),
+            ("derived_early", "hex"),
+            ("handshake", "hex"),
+            ("c_hs", "hex"),
+            ("s_hs", "hex"),
+            ("derived_hs", "hex"),
+            ("master", "hex"),
+            ("c_ap", "hex"),
+            ("s_ap", "hex"),
+            ("finished_key", "hex"),
+            ("verify", "hex"),
+        ],
+    ),
+]
+
 # The group-14 modexp is its own table for the same reason: three 256-octet operands a row.
 BN_SPECS = [
     (
@@ -175,8 +207,12 @@ def main():
     emit(OUT, "External crypto known-answer vectors (Project Wycheproof + RFC appendices).", SPECS)
     emit(RSA_OUT, "RSASSA-PKCS1-v1.5 over RSA-2048 (Project Wycheproof verify + openssl sign).", RSA_SPECS)
     emit(BN_OUT, "RFC 3526 group-14 modular exponentiation (residues from CPython pow()).", BN_SPECS)
-    emit(HKDF384_OUT, "HKDF-SHA384 and TLS 1.3 HKDF-Expand-Label at SHA-384 (openssl over RFC 5869 inputs).",
-         HKDF384_SPECS)
+    emit(
+        HKDF384_OUT,
+        "HKDF-SHA384 and TLS 1.3 HKDF-Expand-Label at SHA-384 (openssl over RFC 5869 inputs).",
+        HKDF384_SPECS,
+    )
+    emit(KS384_OUT, "One RFC 8446 sec 7.1 key schedule at SHA-384, term by term (openssl).", KS384_SPECS)
 
 
 if __name__ == "__main__":

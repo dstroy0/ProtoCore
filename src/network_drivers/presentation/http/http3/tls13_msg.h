@@ -51,6 +51,7 @@ PROTOCORE_BEGIN_DECLS
 
 #define PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256 0x1301 ///< the one cipher suite we support, as its IANA code point
 #define TLS_GROUP_X25519 0x001d                       ///< the classical key-exchange group we support
+#define TLS_X25519_SHARE_LEN 32 ///< an X25519 key_share, and the shared secret it produces (RFC 7748 sec 6.1)
 #define TLS_GROUP_X25519MLKEM768 0x11ec ///< PQ/T hybrid group (ML-KEM-768 + X25519), when PROTOCORE_ENABLE_PQC_KEX
 #define TLS_SIG_ED25519 0x0807          ///< the one signature scheme we produce
 // SignatureScheme code points a CertificateVerify may carry (RFC 8446 sec 4.2.3). The

@@ -63,6 +63,9 @@ static void ks_bind(QuicTls *qt)
     Tls13Ks.bind.kdf = &TLS13_KDF;
     Tls13Ks.bind.ks = &qt->ks;
     Tls13Ks.bind.s = qt->ks_store;
+    // RFC 9001 sec 5.1: this handshake offers TLS_AES_128_GCM_SHA256 only, so the schedule's hash is
+    // SHA-256. It is stated rather than assumed because the schedule binds either.
+    Tls13Ks.bind.is384 = PROTO_FALSE;
 }
 
 // verify_data over @p transcript_hash under @p base_secret (RFC 8446 sec 4.4.4).
@@ -383,7 +386,7 @@ static proto_bool process_client_finished(QuicTls *qt, const uint8_t *msg, size_
         return PROTO_FALSE;
     }
     ks_finished(qt, qt->ks.s + TLS13_KS_CLIENT_HS, qt->hs_finished_hash, qt->ks.s + TLS13_KS_VERIFY);
-    if (!protocore_ct_eq(qt->ks.s + TLS13_KS_VERIFY, msg + 4, TLS13_SECRET_LEN))
+    if (!protocore_ct_eq(qt->ks.s + TLS13_KS_VERIFY, msg + 4, qt->ks.len))
     {
         fail(qt, TLS_ALERT_DECRYPT_ERROR);
         return PROTO_FALSE;

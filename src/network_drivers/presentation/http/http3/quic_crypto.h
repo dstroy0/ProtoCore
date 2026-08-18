@@ -43,7 +43,7 @@ PROTOCORE_BEGIN_DECLS
 /** @brief The client/server packet-protection secrets for one QUIC encryption level. */
 typedef struct
 {
-    _Alignas(8) uint8_t gcm[PROTOCORE_AES128GCM_BORROW]; ///< this direction's AEAD borrow. Carries both keyed
+    uint8_t gcm[PROTOCORE_AES128GCM_BORROW]; ///< this direction's AEAD borrow. Carries both keyed
                                                          ///< contexts: the record AEAD and the header-protection
                                                          ///< block. Replaces the raw keys, so neither stays
                                                          ///< resident, and both are keyed once.

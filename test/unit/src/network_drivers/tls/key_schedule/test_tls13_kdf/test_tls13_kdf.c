@@ -1057,6 +1057,20 @@ static void bind_early(const Tls13Kdf *kdf)
     Tls13Ks.bind.kdf = kdf;
     Tls13Ks.bind.ks = &g_ks;
     Tls13Ks.bind.s = g_ks_bytes;
+    Tls13Ks.bind.is384 = PROTO_FALSE;
+    Tls13Ks.early(NULL);
+}
+
+// The same, bound to the SHA-384 suite's hash. The borrow is the one region either arm runs out of,
+// so a schedule that ran under the other hash is wiped first: TLS13_KS_ZEROS is the first extract's
+// IKM and nothing ever writes it, which only holds if the bytes start zeroed.
+static void bind_early384(const Tls13Kdf *kdf)
+{
+    memset(g_ks_bytes, 0, sizeof(g_ks_bytes));
+    Tls13Ks.bind.kdf = kdf;
+    Tls13Ks.bind.ks = &g_ks;
+    Tls13Ks.bind.s = g_ks_bytes;
+    Tls13Ks.bind.is384 = PROTO_TRUE;
     Tls13Ks.early(NULL);
 }
 
@@ -1324,4 +1338,144 @@ void test_a_null_borrow_is_refused(void)
     {
         TEST_ASSERT_EQUAL_HEX8(0x5a, out[i]); // nothing was written
     }
+}
+
+// ---- the SHA-384 arm ------------------------------------------------------
+//
+// RFC 8446 sec 7.1 keys the schedule off the cipher suite's hash, and every case above runs the
+// SHA-256 arm against the RFC 8448 trace. There is no published SHA-384 trace, so this one is
+// openssl's: tools/harness.py crypto hkdf384 walks the same chain term by term with the openssl CLI
+// and refuses to emit anything unless it first reproduces RFC 5869 A.1, the RFC 8448 sec 3 "derived"
+// secret, RFC 6234 sec 8.5's SHA-384("abc") and RFC 4231 sec 4.2's HMAC-SHA-384.
+
+typedef struct
+{
+    int tc;
+    const char *ecdhe;
+    const char *ch_sh;
+    const char *ch_cv;
+    const char *ch_sfin;
+    const char *empty_hash;
+    const char *early;
+    const char *derived_early;
+    const char *handshake;
+    const char *c_hs;
+    const char *s_hs;
+    const char *derived_hs;
+    const char *master;
+    const char *c_ap;
+    const char *s_ap;
+    const char *finished_key;
+    const char *verify;
+} KatTls13Sha384;
+
+#include "sha384_schedule.inc"
+
+static uint8_t nib384(char c)
+{
+    return (uint8_t)(c <= '9' ? c - '0' : ((c | 0x20) - 'a' + 10));
+}
+
+static size_t unhex384(const char *h, uint8_t *out)
+{
+    size_t n = 0;
+    for (; h[0] && h[1]; h += 2)
+    {
+        out[n++] = (uint8_t)((nib384(h[0]) << 4) | nib384(h[1]));
+    }
+    return n;
+}
+
+// One term of the trace, compared against the slot the schedule wrote it into.
+static void expect_term(const char *want_hex, const uint8_t *got, const char *what)
+{
+    uint8_t want[TLS13_SECRET_MAX];
+    size_t n = unhex384(want_hex, want);
+    TEST_ASSERT_EQUAL_UINT_MESSAGE(48u, (unsigned)n, what);
+    TEST_ASSERT_EQUAL_HEX8_ARRAY_MESSAGE(want, got, 48, what);
+}
+
+// The same chain as test_rfc8448_secret_chain, one hash up. Every term is 48 octets and lands in the
+// slot the TLS13_KS_* offsets name, which are strides of TLS13_SECRET_MAX so they do not move.
+void test_sha384_secret_chain(void)
+{
+    const KatTls13Sha384 *v = &KAT_TLS13_SHA384[0];
+    uint8_t ecdhe[32], ch_sh[48], ch_sfin[48];
+    size_t ecdhe_len = unhex384(v->ecdhe, ecdhe);
+    unhex384(v->ch_sh, ch_sh);
+    unhex384(v->ch_sfin, ch_sfin);
+
+    bind_early384(&TLS13_KDF);
+    TEST_ASSERT_TRUE(Tls13Ks.ok);
+    TEST_ASSERT_EQUAL_UINT(48u, (unsigned)Tls13Ks.len);
+    expect_term(v->early, g_ks.s + TLS13_KS_EARLY, "early");
+
+    Tls13Ks.bind.ks = &g_ks;
+    Tls13Ks.step.ecdhe = ecdhe;
+    Tls13Ks.step.ecdhe_len = ecdhe_len;
+    Tls13Ks.step.ch_sh_hash = ch_sh;
+    Tls13Ks.handshake(NULL);
+
+    expect_term(v->empty_hash, g_ks.s + TLS13_KS_EMPTY_HASH, "SHA-384(\"\")");
+    expect_term(v->derived_early, g_ks.s + TLS13_KS_DERIVED, "Derive-Secret(early, \"derived\", \"\")");
+    expect_term(v->handshake, g_ks.s + TLS13_KS_HANDSHAKE, "handshake secret");
+    expect_term(v->c_hs, g_ks.s + TLS13_KS_CLIENT_HS, "c hs traffic");
+    expect_term(v->s_hs, g_ks.s + TLS13_KS_SERVER_HS, "s hs traffic");
+
+    Tls13Ks.bind.ks = &g_ks;
+    Tls13Ks.step.ch_sfin_hash = ch_sfin;
+    Tls13Ks.master(NULL);
+
+    expect_term(v->derived_hs, g_ks.s + TLS13_KS_DERIVED, "Derive-Secret(handshake, \"derived\", \"\")");
+    expect_term(v->master, g_ks.s + TLS13_KS_MASTER, "master secret");
+    expect_term(v->c_ap, g_ks.s + TLS13_KS_CLIENT_AP, "c ap traffic");
+    expect_term(v->s_ap, g_ks.s + TLS13_KS_SERVER_AP, "s ap traffic");
+}
+
+// RFC 8446 sec 4.4.4 at SHA-384: a 48-octet finished_key and a 48-octet verify_data.
+void test_sha384_finished_mac(void)
+{
+    const KatTls13Sha384 *v = &KAT_TLS13_SHA384[0];
+    uint8_t s_hs[48], ch_cv[48], verify[48];
+    unhex384(v->s_hs, s_hs);
+    unhex384(v->ch_cv, ch_cv);
+
+    bind_early384(&TLS13_KDF);
+    Tls13Ks.bind.ks = &g_ks;
+    Tls13Ks.finished_args.base_secret = s_hs;
+    Tls13Ks.finished_args.transcript_hash = ch_cv;
+    Tls13Ks.finished_args.out = verify;
+    Tls13Ks.finished_mac(NULL);
+
+    expect_term(v->finished_key, g_ks.s + TLS13_KS_FINISHED_KEY, "finished_key");
+    expect_term(v->verify, verify, "verify_data");
+}
+
+// The bound hash is what sets the secret length, and a caller reads it back rather than assuming it.
+void test_the_bound_hash_sets_the_secret_length(void)
+{
+    bind_early(&TLS13_KDF);
+    TEST_ASSERT_EQUAL_UINT(32u, (unsigned)Tls13Ks.len);
+    TEST_ASSERT_EQUAL_UINT(32u, (unsigned)g_ks.len);
+
+    bind_early384(&TLS13_KDF);
+    TEST_ASSERT_EQUAL_UINT(48u, (unsigned)Tls13Ks.len);
+    TEST_ASSERT_EQUAL_UINT(48u, (unsigned)g_ks.len);
+
+    // The layout does not move with the hash: a term is one TLS13_SECRET_MAX slot either way.
+    TEST_ASSERT_EQUAL_UINT(48u, (unsigned)TLS13_SECRET_MAX);
+    TEST_ASSERT_EQUAL_UINT(TLS13_SECRET_MAX, (unsigned)TLS13_KS_HANDSHAKE);
+}
+
+// Two schedules over the same inputs under different hashes are different schedules. Without this a
+// build that ignored the flag and ran SHA-256 throughout would still pass every SHA-256 case.
+void test_the_two_hashes_give_different_schedules(void)
+{
+    uint8_t early256[32];
+
+    bind_early(&TLS13_KDF);
+    memcpy(early256, g_ks.s + TLS13_KS_EARLY, sizeof(early256));
+
+    bind_early384(&TLS13_KDF);
+    TEST_ASSERT_NOT_EQUAL(0, memcmp(early256, g_ks.s + TLS13_KS_EARLY, sizeof(early256)));
 }

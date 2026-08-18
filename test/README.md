@@ -703,7 +703,7 @@ We test session and socket race conditions by interleaved function calling:
 
 <!-- BEGIN GENERATED test-directory (run test/harness.py readme gen) -->
 
-A thorough directory of all **5560 test cases** across **351 suites**. Expand a suite to see its test cases, and a test case to see its objective and assertions.
+A thorough directory of all **5568 test cases** across **351 suites**. Expand a suite to see its test cases, and a test case to see its objective and assertions.
 
 <details>
 <summary><b>test_accept_gate (19 tests)</b></summary>
@@ -60391,7 +60391,7 @@ A thorough directory of all **5560 test cases** across **351 suites**. Expand a 
 </details>
 
 <details>
-<summary><b>test_tls13_kdf (9 tests)</b></summary>
+<summary><b>test_tls13_kdf (13 tests)</b></summary>
 
   <details style="margin-left: 20px;">
     <summary><b>test_transcript_hashes_match_the_trace</b> &mdash; <i>Hashing only the ClientHello is a different transcript, so the anchors above are not vacuous.</i></summary>
@@ -60493,6 +60493,42 @@ A thorough directory of all **5560 test cases** across **351 suites**. Expand a 
       * <code>Assert false (Tls13Ks.ok)</code>
       * <code>Assert null (g_ks.s)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x5a, out[i]); // nothing was written</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_sha384_secret_chain</b> &mdash; <i>Sha384 secret chain</i></summary>
+
+    * **Objective**: Sha384 secret chain
+    * **Assertions**:
+      * <code>Assert true (Tls13Ks.ok)</code>
+      * <code>Assert equal uint (48u, (unsigned)Tls13Ks.len)</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_sha384_finished_mac</b> &mdash; <i>Sha384 finished mac</i></summary>
+
+    * **Objective**: Sha384 finished mac
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_the_bound_hash_sets_the_secret_length</b> &mdash; <i>The layout does not move with the hash: a term is one TLS13_SECRET_MAX slot either way.</i></summary>
+
+    * **Objective**: The layout does not move with the hash: a term is one TLS13_SECRET_MAX slot either way.
+    * **Assertions**:
+      * <code>Assert equal uint (32u, (unsigned)Tls13Ks.len)</code>
+      * <code>Assert equal uint (32u, (unsigned)g_ks.len)</code>
+      * <code>Assert equal uint (48u, (unsigned)Tls13Ks.len)</code>
+      * <code>Assert equal uint (48u, (unsigned)g_ks.len)</code>
+      * <code>Assert equal uint (48u, (unsigned)TLS13_SECRET_MAX)</code>
+      * <code>Assert equal uint (TLS13_SECRET_MAX, (unsigned)TLS13_KS_HANDSHAKE)</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_the_two_hashes_give_different_schedules</b> &mdash; <i>The two hashes give different schedules</i></summary>
+
+    * **Objective**: The two hashes give different schedules
+    * **Assertions**:
+      * <code>Assert not equal (0, memcmp(early256, g_ks.s + TLS13_KS_EARLY, sizeof(early256)))</code>
   </details>
 
 </details>
@@ -61290,7 +61326,7 @@ A thorough directory of all **5560 test cases** across **351 suites**. Expand a 
 </details>
 
 <details>
-<summary><b>test_tls_record (12 tests)</b></summary>
+<summary><b>test_tls_record (16 tests)</b></summary>
 
   <details style="margin-left: 20px;">
     <summary><b>test_rfc8448_protected_records</b> &mdash; <i>Record 0 under the client handshake key: the Finished message.</i></summary>
@@ -61464,6 +61500,47 @@ A thorough directory of all **5560 test cases** across **351 suites**. Expand a 
       * <code>TEST_ASSERT_EQUAL_UINT64(0u, g_keys.seq);</code>
       * <code>Assert equal uint (first, again)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8_ARRAY(saved, g_out, first);</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_sha384_suite_expands_the_published_iv</b> &mdash; <i>Sha384 suite expands the published iv</i></summary>
+
+    * **Objective**: Sha384 suite expands the published iv
+    * **Assertions**:
+      * <code>Assert true (g_keys.ready)</code>
+      * <code>TEST_ASSERT_EQUAL_UINT8_ARRAY(AP_IV_384, g_keys.iv, sizeof(AP_IV_384));</code>
+      * <code>TEST_ASSERT_EQUAL_UINT64(0u, g_keys.seq);</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_sha384_suite_round_trips_a_record</b> &mdash; <i>Sha384 suite round trips a record</i></summary>
+
+    * **Objective**: Sha384 suite round trips a record
+    * **Assertions**:
+      * <code>Assert true (n &gt; sizeof(APP_PAYLOAD))</code>
+      * <code>Assert true (unprotect(sealed, n, opened, sizeof(opened), &info))</code>
+      * <code>TEST_ASSERT_EQUAL_UINT8(PROTOCORE_TLS_CT_APPLICATION_DATA, info.content_type);</code>
+      * <code>Assert equal uint (sizeof(APP_PAYLOAD), info.pt_len)</code>
+      * <code>TEST_ASSERT_EQUAL_UINT8_ARRAY(APP_PAYLOAD, opened, sizeof(APP_PAYLOAD));</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_the_two_suites_do_not_open_each_other</b> &mdash; <i>And the two seals of the same plaintext are not the same bytes.</i></summary>
+
+    * **Objective**: And the two seals of the same plaintext are not the same bytes.
+    * **Assertions**:
+      * <code>Assert false (unprotect(sealed384, n384, opened, sizeof(opened), &info))</code>
+      * <code>Assert false (unprotect(sealed256, n256, opened, sizeof(opened), &info))</code>
+      * <code>Assert true (n384 != n256 || memcmp(sealed384, sealed256, n384) != 0)</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_sha384_suite_fails_closed_when_unkeyed</b> &mdash; <i>Sha384 suite fails closed when unkeyed</i></summary>
+
+    * **Objective**: Sha384 suite fails closed when unkeyed
+    * **Assertions**:
+      * <code>Assert false (g_keys.ready)</code>
+      * <code>TEST_ASSERT_EQUAL_UINT(0u,</code>
   </details>
 
 </details>
