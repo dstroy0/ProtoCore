@@ -34,15 +34,15 @@ SRC = ROOT / "src"
 # protocore.h is the library entry header and sits in include/, beside src/ rather than in it. It is
 # what pulls in most of the module headers, so a walk that skips it reports them all as unincluded.
 ENTRY = ROOT / "include"
-# core_setup/ sits beside src/ too, and every include of it writes that prefix, so its headers are
+# test/core_setup/ sits beside src/ too, and every include of it writes that prefix, so its headers are
 # keyed from the repo root. They carry a layer for resolve() and are not walked as sources.
-SETUP = ROOT / "core_setup"
+SETUP = ROOT / "test" / "core_setup"
 
 BASELINE = bl.path_for(__file__, "layering_baseline")
 
 # Low to high. The number is the rank an include may not increase.
 LAYERS = (
-    ("core_setup/", 0),
+    ("test/core_setup/", 0),
     ("shared/", 1),
     ("mmgr/", 2),
     ("crypto/", 3),
@@ -130,7 +130,7 @@ def sources():
 
 
 def setup_headers():
-    """core_setup/ headers, keyed from the repo root, which is the path an include of one names."""
+    """test/core_setup/ headers, keyed from the repo root, which is the path an include of one names."""
     for dirpath, dirs, files in os.walk(SETUP):
         dirs[:] = [d for d in dirs if d not in SKIP_DIRS]
         for fn in sorted(files):
@@ -186,7 +186,7 @@ def main(argv):
     known_files = {}
     for rel, path in sources():
         known_files[rel] = path
-    # What an include may name: the walked sources plus the core_setup/ headers under them.
+    # What an include may name: the walked sources plus the test/core_setup/ headers under them.
     targets = dict(known_files)
     for rel, path in setup_headers():
         targets.setdefault(rel, path)

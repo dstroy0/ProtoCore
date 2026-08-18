@@ -12,7 +12,7 @@ bare.py - cross-compile the core as a bare-metal image and report what it cannot
 The point is not the binary: it is the symbol list. A host build answers a question about the
 machine that compiled it, and its answers hide behind the host arm's own header inlines - the
 reason an earlier survey counted clock_gettime and longjmp as library needs when both came from
-core_setup/hal/host. Building with the cross compiler and -ffreestanding asks the question the
+test/core_setup/hal/host. Building with the cross compiler and -ffreestanding asks the question the
 device asks, and whatever is still undefined is what bare metal actually owes.
 
 The env list and the flags come from the same platformio.ini the native suite reads, through
@@ -107,21 +107,21 @@ BARE_ARCH = {
         "cc": os.path.join(ARM_BIN, "arm-none-eabi-gcc.exe"),
         "objdump": os.path.join(ARM_BIN, "arm-none-eabi-objdump.exe"),
         "march": ["-mcpu=cortex-m4", "-mthumb"],
-        "ld": os.path.join(ROOT, "core_setup", "link", "cortex_m.ld.in"),
-        "startup": "core_setup/boot/startup_cortex_m.c",
+        "ld": os.path.join(ROOT, "test", "core_setup", "link", "cortex_m.ld.in"),
+        "startup": "test/core_setup/boot/startup_cortex_m.c",
         "regions": REGIONS_ARM,
         "why": "the reference ARM target: has LDREX/STREX, so a read-modify-write is an instruction",
     },
     # armv6-m has no LDREX/STREX and rv32imc has no LR/SC, so a read-modify-write is a call into
     # __atomic_*_4 rather than an instruction. The ring claims and releases its slots with
     # atomic_fetch_or / atomic_fetch_and, which is where this library's locking actually is, so
-    # these two are the arches that prove core_setup/boot/protocore_atomic.c covers it.
+    # these two are the arches that prove test/core_setup/boot/protocore_atomic.c covers it.
     "cortex-m0": {
         "cc": os.path.join(ARM_BIN, "arm-none-eabi-gcc.exe"),
         "objdump": os.path.join(ARM_BIN, "arm-none-eabi-objdump.exe"),
         "march": ["-mcpu=cortex-m0", "-mthumb"],
-        "ld": os.path.join(ROOT, "core_setup", "link", "cortex_m.ld.in"),
-        "startup": "core_setup/boot/startup_cortex_m.c",
+        "ld": os.path.join(ROOT, "test", "core_setup", "link", "cortex_m.ld.in"),
+        "startup": "test/core_setup/boot/startup_cortex_m.c",
         "regions": REGIONS_ARM,
         "why": "armv6-m has no LDREX/STREX: the ring's slot claim becomes a call into __atomic_fetch_or_4",
     },
@@ -129,8 +129,8 @@ BARE_ARCH = {
         "cc": os.path.join(RV_BIN, "riscv32-esp-elf-gcc.exe"),
         "objdump": os.path.join(RV_BIN, "riscv32-esp-elf-objdump.exe"),
         "march": ["-march=rv32imc_zicsr", "-mabi=ilp32"],
-        "ld": os.path.join(ROOT, "core_setup", "link", "riscv32.ld.in"),
-        "startup": "core_setup/boot/startup_riscv32.S",
+        "ld": os.path.join(ROOT, "test", "core_setup", "link", "riscv32.ld.in"),
+        "startup": "test/core_setup/boot/startup_riscv32.S",
         "regions": REGIONS_RISCV,
         "why": "no A extension, so no LR/SC: the same read-modify-write becomes a call",
     },
@@ -138,8 +138,8 @@ BARE_ARCH = {
         "cc": os.path.join(RV_BIN, "riscv32-esp-elf-gcc.exe"),
         "objdump": os.path.join(RV_BIN, "riscv32-esp-elf-objdump.exe"),
         "march": ["-march=rv32imac_zicsr", "-mabi=ilp32"],
-        "ld": os.path.join(ROOT, "core_setup", "link", "riscv32.ld.in"),
-        "startup": "core_setup/boot/startup_riscv32.S",
+        "ld": os.path.join(ROOT, "test", "core_setup", "link", "riscv32.ld.in"),
+        "startup": "test/core_setup/boot/startup_riscv32.S",
         "regions": REGIONS_RISCV,
         "why": "the reference RISC-V target: the A extension inlines the read-modify-write",
     },
@@ -149,8 +149,8 @@ BARE_ARCH = {
         "cc": os.path.join(RV_BIN, "riscv32-esp-elf-gcc.exe"),
         "objdump": os.path.join(RV_BIN, "riscv32-esp-elf-objdump.exe"),
         "march": ["-march=rv32imc_zicsr", "-mabi=ilp32"],
-        "ld": os.path.join(ROOT, "core_setup", "link", "riscv32.ld.in"),
-        "startup": "core_setup/boot/startup_riscv32.S",
+        "ld": os.path.join(ROOT, "test", "core_setup", "link", "riscv32.ld.in"),
+        "startup": "test/core_setup/boot/startup_riscv32.S",
         "regions": REGIONS_ESP32C3,
         "why": "a real ESP32-C3 memory map, so the image boots under qemu-system-riscv32 -M esp32c3",
         "qemu": os.path.join(ESP_QEMU, "qemu-riscv32", QEMU_VER, "qemu", "bin", "qemu-system-riscv32.exe"),
@@ -161,19 +161,19 @@ BARE_ARCH = {
 # The runtime the image needs under it, beside whatever the env builds: the reset path, and the
 # things a freestanding compile emits calls to that no library provides.
 BARE_RUNTIME = [
-    "core_setup/boot/protocore_boot.c",
-    "core_setup/boot/startup_common.c",
-    "core_setup/boot/protocore_assert.c",
-    "core_setup/boot/protocore_atomic.c",
-    "core_setup/boot/protocore_trap.c",
-    "core_setup/boot/protocore_memfns.c",
-    "core_setup/boot/protocore_time.c",
+    "test/core_setup/boot/protocore_boot.c",
+    "test/core_setup/boot/startup_common.c",
+    "test/core_setup/boot/protocore_assert.c",
+    "test/core_setup/boot/protocore_atomic.c",
+    "test/core_setup/boot/protocore_trap.c",
+    "test/core_setup/boot/protocore_memfns.c",
+    "test/core_setup/boot/protocore_time.c",
     "src/mmgr/protomem.c",
     "src/mmgr/rawmemcpy.c",
     "src/mmgr/swar.c",
 ]
 
-# A TU that only wants the network arm's types is waiting on idemIP (core_setup/idemIP), which is
+# A TU that only wants the network arm's types is waiting on idemIP (test/core_setup/idemIP), which is
 # the low-level stack and is not written yet. A TU that only wants the scheduler seam is waiting on
 # a platform task arm. Both are known holes rather than findings, so they are counted apart from a
 # TU that fails for its own reasons.
@@ -232,7 +232,7 @@ def env_sources(e, arch, out_dir, sim=False):
     Most envs already list the mmgr sources the runtime rests on, and one object per source is what
     the linker wants: a second copy is a duplicate symbol, not a second definition.
     """
-    extra = ["core_setup/boot/protocore_sim_uart.c"] if sim else []
+    extra = ["test/core_setup/boot/protocore_sim_uart.c"] if sim else []
     srcs, seen = [], set()
     for s in harness._resolve_src(e["src"]) + BARE_RUNTIME + extra + [arch["startup"]]:
         k = s.replace("\\", "/")

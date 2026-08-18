@@ -15,7 +15,7 @@
 
 #if PROTOCORE_ENABLE_PREEMPT_QUEUE
 
-#include "core_setup/board_profiles/protocore_platform.h"
+#include "config/platform/platform.h"
 #include "mmgr/secure.h" // protocore_secure_persist_span: the item a lane's task receives into
 
 /**

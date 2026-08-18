@@ -29,6 +29,7 @@
 #define PROTOCORE_TCP_LOWER_H
 
 #include "../common.h"
+
 #include "protocore_config.h"
 
 PROTOCORE_BEGIN_DECLS

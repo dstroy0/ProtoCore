@@ -18,6 +18,7 @@
 #define PROTOCORE_PCAP_H
 
 #include "mmgr/endian.h"      // endian.wr32le / endian.wr16le - libpcap headers are little-endian
+
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 /** @brief libpcap header sizes. */

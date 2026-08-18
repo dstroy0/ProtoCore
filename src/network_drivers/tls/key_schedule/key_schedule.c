@@ -237,11 +237,55 @@ static void ks_finished_mac(uint8_t *restrict work)
                   Tls13Ks.finished_args.out);
 }
 
+// RFC 8446 sec 4.4.1: the Transcript-Hash runs under the same suite hash as the schedule, so it
+// dispatches on the bound flag rather than on a hash the caller names.
+
+static void ks_transcript_init(uint8_t *restrict work)
+{
+    if (Tls13Ks.bind.ks->is384)
+    {
+        Sha384.init(work);
+        return;
+    }
+    Sha256.init(work);
+}
+
+static void ks_transcript_update(uint8_t *restrict work)
+{
+    if (Tls13Ks.bind.ks->is384)
+    {
+        Sha384.update_args.data = Tls13Ks.transcript_args.data;
+        Sha384.update_args.len = Tls13Ks.transcript_args.len;
+        Sha384.update(work);
+        return;
+    }
+    Sha256.update_args.data = Tls13Ks.transcript_args.data;
+    Sha256.update_args.len = Tls13Ks.transcript_args.len;
+    Sha256.update(work);
+}
+
+// Finalizing compresses the padded blocks into a copy of the state, so the running context is
+// untouched and keeps taking messages.
+static void ks_transcript_peek(uint8_t *restrict work)
+{
+    if (Tls13Ks.bind.ks->is384)
+    {
+        Sha384.final_args.out = Tls13Ks.transcript_args.out;
+        Sha384.final(work);
+        return;
+    }
+    Sha256.final_args.out = Tls13Ks.transcript_args.out;
+    Sha256.final(work);
+}
+
 Tls13KsNs Tls13Ks = {.expand_label = ks_expand_label,
                      .derive_secret = ks_derive_secret,
                      .early = ks_early,
                      .handshake = ks_handshake,
                      .master = ks_master,
-                     .finished_mac = ks_finished_mac};
+                     .finished_mac = ks_finished_mac,
+                     .transcript_init = ks_transcript_init,
+                     .transcript_update = ks_transcript_update,
+                     .transcript_peek = ks_transcript_peek};
 
 #endif // PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_TLS_SOFTWARE

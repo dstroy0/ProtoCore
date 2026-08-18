@@ -3,6 +3,10 @@
 #ifndef PROTOCORE_RING_H
 #define PROTOCORE_RING_H
 
+#include "mmgr/rawmemcpy.h" // proto_raw_read: the producer span move
+#include "mmgr/span.h"      // protocore_cspan: the region a held slot keeps out
+#include <stdatomic.h>      // _Atomic, atomic_load_explicit, atomic_store_explicit, memory_order_*
+
 /**
  * @file ring.h
  * @brief Shared single-producer / single-consumer byte-ring primitive.
@@ -18,9 +22,6 @@
  * the tcpip_thread <-> worker/caller boundary on either core. No locks, no RMW.
  */
 
-#include "mmgr/rawmemcpy.h" // proto_raw_read: the producer span move
-#include "mmgr/span.h"      // protocore_cspan: the region a held slot keeps out
-#include <stdatomic.h>      // _Atomic, atomic_load_explicit, atomic_store_explicit, memory_order_*
 
 // ---------------------------------------------------------------------------
 // Cross-thread field access

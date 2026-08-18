@@ -78,8 +78,8 @@ typedef struct
     uint8_t ks_store[PROTOCORE_TLS13_KS_BORROW]; ///< the schedule's terms and its HKDF's bytes
     // The transcript hash and the one-off hashes taken beside it work out of these. Live and die with
     // this connection, so no hash on the handshake path touches a pool.
-    uint8_t hash_work[PROTOCORE_SHA256_BORROW];
-    uint8_t hash_work2[PROTOCORE_SHA256_BORROW];
+    uint8_t hash_work[PROTOCORE_TLS13_TRANSCRIPT_BORROW];
+    uint8_t hash_work2[PROTOCORE_TLS13_TRANSCRIPT_BORROW];
     uint8_t sign_work[PROTOCORE_SHA512_BORROW];    ///< the CertificateVerify signature's SHA-512
     uint8_t keys_work[PROTOCORE_QUIC_KEYS_BORROW]; ///< the packet-key expansion at each encryption level
 
@@ -97,7 +97,7 @@ typedef struct
     QuicPacketKeys ap_client; ///< 1-RTT: opens client packets
     QuicPacketKeys ap_server; ///< 1-RTT: seals server packets
 
-    uint8_t hs_finished_hash[32]; ///< H(ClientHello..server Finished), to verify client Finished
+    uint8_t hs_finished_hash[TLS13_SECRET_MAX]; ///< H(ClientHello..server Finished), to verify client Finished
 
 #if PROTOCORE_ENABLE_PQC_KEX
     uint8_t flight_initial[1400]; ///< outbound Initial CRYPTO (ServerHello; hybrid key_share is ~1.1 KB)

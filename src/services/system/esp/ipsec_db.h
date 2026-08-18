@@ -28,9 +28,10 @@
 #ifndef PROTOCORE_IPSEC_DB_H
 #define PROTOCORE_IPSEC_DB_H
 
-#include "protocore_config.h"              // the entry point: protocore_types.h for the widths
 #include "services/security/ikev2/ikev2.h" // the complete type a public struct below holds by value
 #include "services/system/esp/esp.h"       // the complete type a public struct below holds by value
+
+#include "protocore_config.h"              // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_IKEV2
 
@@ -124,7 +125,6 @@ typedef struct
     size_t count;
 } IpsecSad;
 
-#include "services/security/ikev2/ikev2.h" // IkeTrafficSelector: the type a parameter points at
 
 /** @brief What protocore_ipsec_spd_init takes: spd. */
 typedef struct

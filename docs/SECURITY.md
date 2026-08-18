@@ -839,7 +839,7 @@ removed.
 <details>
 <summary><b>Expand 7.10 Random Number Generation Details</b></summary>
 
-**Source:** `core_setup/hal/host/Arduino.h` (native stand-in),
+**Source:** `test/core_setup/hal/host/Arduino.h` (native stand-in),
 ESP-IDF `esp_random.h` (Arduino production)
 
 **Production (Arduino / ESP32)**
@@ -858,7 +858,7 @@ using `esp_fill_random()`, which wraps `esp_random()`. On ESP32:
 
 **Native test environment**
 
-The native stand-in in `core_setup/hal/host/Arduino.h` provides a time-seeded PRNG:
+The native stand-in in `test/core_setup/hal/host/Arduino.h` provides a time-seeded PRNG:
 
 ```c
 static inline uint32_t esp_random(void)
@@ -882,7 +882,7 @@ fixed test keys) and do not rely on the RNG producing cryptographically
 unpredictable output.
 
 The native stand-in is reached only through the host branch of
-`protocore_platform.h`: `core_setup/hal/host` is on the include path of the
+`protocore_platform.h`: `test/core_setup/hal/host` is on the include path of the
 `[native_base]` section every native environment extends, and an Arduino target
 resolves `Arduino.h` to the vendor SDK header instead.
 

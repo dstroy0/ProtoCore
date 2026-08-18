@@ -4,7 +4,7 @@
 """Every translation unit under src/ is exercised by a named test env.
 
 `src/` is protocol logic and nothing else, so every file in it runs on the host. The vendor seam
-that speaks to SDKs and only runs on silicon is core_setup/, which this does not scan, so EXEMPT
+that speaks to SDKs and only runs on silicon is test/core_setup/, which this does not scan, so EXEMPT
 is empty.
 
 The check is that a TU is named by at least one env's `build_src_filter` in
@@ -35,7 +35,7 @@ ROOT = dr.repo_root(__file__)
 MATRIX = os.path.join(ROOT, "test", "test_matrix.json")
 BASELINE = baseline.path_for(__file__)
 EXTS = (".c", ".cpp")
-EXEMPT = ()  # the vendor seam left src/ for core_setup/, which this does not scan
+EXEMPT = ()  # the vendor seam left src/ for test/core_setup/, which this does not scan
 
 
 def translation_units():

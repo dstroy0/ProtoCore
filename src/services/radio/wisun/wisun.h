@@ -21,8 +21,9 @@
 #ifndef PROTOCORE_WISUN_H
 #define PROTOCORE_WISUN_H
 
-#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 #include "shared/ip/ip.h"     // the complete type a public struct below holds by value
+
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_WISUN
 
@@ -55,7 +56,6 @@ typedef struct
     size_t cap;
 } WisunFan;
 
-#include "shared/ip/ip.h" // protocore_ip: the type a parameter points at
 
 /** @brief What build_coap takes: type, code, msg_id, token, tkl, ... */
 typedef struct

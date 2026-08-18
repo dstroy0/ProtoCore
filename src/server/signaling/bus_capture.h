@@ -23,8 +23,9 @@
 #ifndef PROTOCORE_BUS_CAPTURE_H
 #define PROTOCORE_BUS_CAPTURE_H
 
-#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 #include "shared/can/can.h"   // the complete type a public struct below holds by value
+
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_BUS_CAPTURE
 
@@ -45,7 +46,6 @@ PROTOCORE_BEGIN_DECLS
 /** @brief Sink for one captured CAN frame (already decoded into a ::CanFrame). */
 typedef void (*bus_capture_sink_fn)(const CanFrame *frame);
 
-#include "shared/can/can.h" // CanFrame: the type a parameter points at
 
 /** @brief What can_to_socketcan takes: f, out, cap. */
 typedef struct

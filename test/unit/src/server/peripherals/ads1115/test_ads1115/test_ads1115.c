@@ -14,7 +14,7 @@
 // and the word must come out 0xC583: an encoder with any field at the wrong offset cannot land on
 // the published number with one documented field changed.
 
-// The bus cases below drive a datasheet model of the part (core_setup/hal/host/devices/
+// The bus cases below drive a datasheet model of the part (test/core_setup/hal/host/devices/
 // ads1115_device.h) rather than a primed byte queue: a suite puts a voltage on a pin, the driver
 // composes its own transfers, and the code that comes back is the part's arithmetic on that
 // voltage. A field at the wrong offset, a byte in the wrong order, or a register read from the

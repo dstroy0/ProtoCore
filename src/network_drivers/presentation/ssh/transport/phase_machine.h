@@ -20,6 +20,7 @@
 
 #include "network_drivers/presentation/ssh/common.h"
 
+
 PROTOCORE_BEGIN_DECLS
 
 /** @brief SSH connection lifecycle phase. */

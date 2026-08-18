@@ -13,7 +13,7 @@
 
 #include "server/update/ota_rollback.h"
 
-#include "core_setup/hal/host/host_platform.h"
+#include "test/core_setup/hal/host/host_platform.h"
 #include "server/clock/clock.h"
 
 #include <unity.h>

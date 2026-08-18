@@ -13,7 +13,7 @@
 #include "server/core/worker.h"
 #include "mmgr/plaintext.h" // the persistent end this module's state is taken from
 
-#include "core_setup/board_profiles/protocore_platform.h" // the target's queues and tasks, under our names
+#include "config/platform/platform.h" // the target's queues and tasks, under our names
 #include "mmgr/arena.h" // protocore_worker_set_self: identity lives with the pools it indexes
 #include "mmgr/ring.h"  // PROTO_ATOMIC_LOAD/STORE: the run flag crosses tasks
 

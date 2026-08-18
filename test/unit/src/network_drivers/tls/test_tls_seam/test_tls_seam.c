@@ -15,7 +15,7 @@
 // suite reached them. These cases are what makes a stub impossible to reintroduce silently: each
 // one asserts on behavior a stub cannot produce.
 
-#include "network_drivers/tls/handshake/handshake.h"
+#include "network_drivers/tls/tls.h"
 #include "network_drivers/tls/tls.h"
 #include "network_drivers/transport/tcp/common.h"
 #include "network_drivers/transport/tcp/protocol/protocol.h"

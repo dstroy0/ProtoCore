@@ -18,8 +18,7 @@ static uint8_t quic_tp_work[16]; // the borrow an entry takes; QuicTp never read
 #include "crypto/pqc/mlkem.h" // MlKem (X25519MLKEM768 hybrid)
 #endif
 #include "crypto/asymmetric/curve25519.h"
-#include "crypto/ct_eq.h"       // protocore_ct_eq: the Finished compare
-#include "crypto/hash/sha256.h" // Sha256: the transcript this handshake keeps
+#include "crypto/ct_eq.h" // protocore_ct_eq: the Finished compare
 #include "mmgr/protomem.h"
 #include "network_drivers/presentation/http/http3/quic_tls.h"
 #include "network_drivers/presentation/http/http3/tls13_msg.h"
@@ -78,12 +77,32 @@ static void ks_finished(QuicTls *qt, const uint8_t *base_secret, const uint8_t *
     Tls13Ks.finished_mac(NULL);
 }
 
+// The Transcript-Hash runs under the suite's hash (RFC 8446 sec 4.4.1), so it goes through the key
+// schedule that bound it rather than naming one here.
+
+// Start a Transcript-Hash in @p ctx.
+static void transcript_start(QuicTls *qt, uint8_t *ctx)
+{
+    Tls13Ks.bind.ks = &qt->ks;
+    Tls13Ks.transcript_init(ctx);
+}
+
+// Fold @p len bytes of @p data into the transcript in @p ctx.
+static void transcript_add(QuicTls *qt, uint8_t *ctx, const uint8_t *data, size_t len)
+{
+    Tls13Ks.bind.ks = &qt->ks;
+    Tls13Ks.transcript_args.data = data;
+    Tls13Ks.transcript_args.len = len;
+    Tls13Ks.transcript_update(ctx);
+}
+
 // The running Transcript-Hash so far. Finalizing compresses the padded blocks into a copy of the
 // state, so the context comes out untouched and keeps taking messages.
-static void snapshot_hash(uint8_t *ctx, uint8_t out[32])
+static void snapshot_hash(QuicTls *qt, uint8_t *ctx, uint8_t *out)
 {
-    Sha256.final_args.out = out;
-    Sha256.final(ctx);
+    Tls13Ks.bind.ks = &qt->ks;
+    Tls13Ks.transcript_args.out = out;
+    Tls13Ks.transcript_peek(ctx);
 }
 
 // Append a handshake message to both the outbound flight buffer and the transcript.
@@ -97,9 +116,7 @@ static proto_bool emit(QuicTls *qt, uint8_t *flight, size_t cap, size_t *plen, s
         fail(qt, TLS_ALERT_INTERNAL_ERROR);
         return PROTO_FALSE;
     }
-    Sha256.update_args.data = flight + *plen;
-    Sha256.update_args.len = written;
-    Sha256.update(qt->transcript);
+    transcript_add(qt, qt->transcript, flight + *plen, written);
     *plen += written;
     return PROTO_TRUE;
 }
@@ -111,19 +128,16 @@ static proto_bool emit(QuicTls *qt, uint8_t *flight, size_t cap, size_t *plen, s
 // return-routability (Retry tokens), so the HRR carries no cookie. @p msg is ClientHello1.
 static proto_bool send_hello_retry(QuicTls *qt, const uint8_t *msg, size_t msg_len, const Tls13ClientHello *ch)
 {
-    uint8_t ch1_hash[32];
+    uint8_t ch1_hash[TLS13_SECRET_MAX];
     {
         uint8_t *t;
         t = qt->hash_work2;
-        Sha256.init(t);
-        Sha256.update_args.data = msg;
-        Sha256.update_args.len = msg_len;
-        Sha256.update(t);
-        Sha256.final_args.out = ch1_hash;
-        Sha256.final(t);
+        transcript_start(qt, t);
+        transcript_add(qt, t, msg, msg_len);
+        snapshot_hash(qt, t, ch1_hash);
     }
     qt->transcript = qt->hash_work;
-    Sha256.init(qt->transcript);
+    transcript_start(qt, qt->transcript);
     uint8_t mh[40];
     size_t mhn = protocore_tls13_build_message_hash(mh, sizeof(mh), ch1_hash);
     if (!mhn)
@@ -131,13 +145,12 @@ static proto_bool send_hello_retry(QuicTls *qt, const uint8_t *msg, size_t msg_l
         fail(qt, TLS_ALERT_INTERNAL_ERROR);
         return PROTO_FALSE;
     }
-    Sha256.update_args.data = mh;
-    Sha256.update_args.len = mhn;
-    Sha256.update(qt->transcript); // message_hash is transcript-only, never sent
+    transcript_add(qt, qt->transcript, mh, mhn); // message_hash is transcript-only, never sent
 
     qt->flight_initial_len = 0;
     size_t n = protocore_tls13_build_hello_retry_request(qt->flight_initial, sizeof(qt->flight_initial), ch->session_id,
-                                                         ch->session_id_len, TLS_GROUP_X25519MLKEM768, NULL, 0,
+                                                         ch->session_id_len, TLS_GROUP_X25519MLKEM768,
+                                                         PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256, NULL, 0,
                                                          /*dtls=*/PROTO_FALSE);
     if (!emit(qt, qt->flight_initial, sizeof(qt->flight_initial), &qt->flight_initial_len, n))
     {
@@ -277,9 +290,7 @@ static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t m
 
     // Fold the ClientHello into the transcript. On the happy path it is the first message; after a
     // HelloRetryRequest the transcript already holds message_hash || HRR, so this is ClientHello2.
-    Sha256.update_args.data = msg;
-    Sha256.update_args.len = msg_len;
-    Sha256.update(qt->transcript);
+    transcript_add(qt, qt->transcript, msg, msg_len);
 
     // ServerHello (Initial-level flight). The Initial CRYPTO is one contiguous byte stream, so after a
     // HelloRetryRequest the ServerHello is appended after the HRR already in flight_initial - build at the
@@ -287,7 +298,8 @@ static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t m
     size_t n = protocore_tls13_build_server_hello(qt->flight_initial + qt->flight_initial_len,
                                                   sizeof(qt->flight_initial) - qt->flight_initial_len, qt->cfg.random,
                                                   ch.session_id, ch.session_id_len, server_share, share_len, group,
-                                                  /*dtls=*/PROTO_FALSE, /*conn_id=*/NULL, /*conn_id_len=*/0);
+                                                  PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256, /*dtls=*/PROTO_FALSE,
+                                                  /*conn_id=*/NULL, /*conn_id_len=*/0);
     if (!emit(qt, qt->flight_initial, sizeof(qt->flight_initial), &qt->flight_initial_len, n))
     {
         return PROTO_FALSE;
@@ -295,8 +307,8 @@ static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t m
     }
 
     // Handshake keys from Transcript-Hash(ClientHello..ServerHello).
-    uint8_t hash[32];
-    snapshot_hash(qt->transcript, hash);
+    uint8_t hash[TLS13_SECRET_MAX];
+    snapshot_hash(qt, qt->transcript, hash);
     ks_bind(qt);
     Tls13Ks.early(NULL);
     Tls13Ks.step.ecdhe = ecdhe;
@@ -339,20 +351,21 @@ static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t m
     }
 
     // CertificateVerify signs Transcript-Hash(ClientHello..Certificate).
-    snapshot_hash(qt->transcript, hash);
+    snapshot_hash(qt, qt->transcript, hash);
     n = protocore_tls13_build_cert_verify(qt->sign_work, qt->flight_hs + qt->flight_hs_len,
-                                          sizeof(qt->flight_hs) - qt->flight_hs_len, hash, qt->cfg.ed25519_seed);
+                                          sizeof(qt->flight_hs) - qt->flight_hs_len, hash, qt->ks.len,
+                                          qt->cfg.ed25519_seed);
     if (!emit(qt, qt->flight_hs, sizeof(qt->flight_hs), &qt->flight_hs_len, n))
     {
         return PROTO_FALSE;
     }
 
     // Server Finished over Transcript-Hash(ClientHello..CertificateVerify).
-    snapshot_hash(qt->transcript, hash);
-    uint8_t verify[32];
+    snapshot_hash(qt, qt->transcript, hash);
+    uint8_t verify[TLS13_SECRET_MAX];
     ks_finished(qt, qt->ks.s + TLS13_KS_SERVER_HS, hash, verify);
     n = protocore_tls13_build_finished(qt->flight_hs + qt->flight_hs_len, sizeof(qt->flight_hs) - qt->flight_hs_len,
-                                       verify);
+                                       verify, qt->ks.len);
     if (!emit(qt, qt->flight_hs, sizeof(qt->flight_hs), &qt->flight_hs_len, n))
     {
         return PROTO_FALSE;
@@ -360,7 +373,7 @@ static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t m
 
     // 1-RTT keys from Transcript-Hash(ClientHello..server Finished); also the hash we verify the
     // client Finished against.
-    snapshot_hash(qt->transcript, qt->hs_finished_hash);
+    snapshot_hash(qt, qt->transcript, qt->hs_finished_hash);
     ks_bind(qt);
     Tls13Ks.step.ch_sfin_hash = qt->hs_finished_hash;
     Tls13Ks.master(NULL);
@@ -391,9 +404,7 @@ static proto_bool process_client_finished(QuicTls *qt, const uint8_t *msg, size_
         fail(qt, TLS_ALERT_DECRYPT_ERROR);
         return PROTO_FALSE;
     }
-    Sha256.update_args.data = msg;
-    Sha256.update_args.len = msg_len;
-    Sha256.update(qt->transcript);
+    transcript_add(qt, qt->transcript, msg, msg_len);
     qt->complete = PROTO_TRUE;
     qt->state = QTLS_DONE;
     return PROTO_TRUE;
@@ -418,7 +429,7 @@ void protocore_quic_tls_server_init(QuicTls *qt, const QuicTlsConfig *cfg)
     mem.zero(qt, sizeof(*qt));
     qt->cfg = *cfg;
     qt->transcript = qt->hash_work;
-    Sha256.init(qt->transcript);
+    transcript_start(qt, qt->transcript);
     qt->state = QTLS_START;
 }
 

@@ -37,7 +37,7 @@ function it walks past is not an error - the suite just passes without ever runn
 gen` names any such function rather than letting the silence stand. Step 3 also wires the
 pre-build hook (extra_scripts: pre:test/gen_test_runners.py), so step 2 re-runs on every build.
 
-A DRIVER FOR A PART ON A BUS is not tested by priming bytes. core_setup/hal/host/devices/ holds a
+A DRIVER FOR A PART ON A BUS is not tested by priming bytes. test/core_setup/hal/host/devices/ holds a
 device model per part, written from its datasheet with the section beside every constant, and the
 host bus consults it by address:
 
@@ -262,7 +262,7 @@ def write_verified(path, text, before, changed, expect):
 
 def module_path(src_path):
     """Where a src entry actually is. A first segment naming a directory beside src/ rather than
-    inside it (core_setup/, include/) is already repo-relative; anything else is src-relative."""
+    inside it (test/core_setup/, include/) is already repo-relative; anything else is src-relative."""
     p = src_path.replace("\\", "/")
     head = p.split("/", 1)[0]
     if not os.path.isdir(os.path.join(ROOT, "src", head)) and os.path.isdir(os.path.join(ROOT, head)):
@@ -536,11 +536,11 @@ build_flags =
     ; span that fails to allocate is then a real defect rather than a budget the env forgot to
     ; raise: the route table, the persist end and the scratch end all come out of this one pool.
     -DPROTOCORE_SECURE_ARENA_SIZE=262144
-    -I core_setup/hal/host
+    -I test/core_setup/hal/host
     -I test/support
     -I src
-    ; core_setup/ sits beside src/, not inside it, so the board profile an include names as
-    ; core_setup/board_profiles/... resolves from the repo root rather than from src/.
+    ; test/core_setup/ sits beside src/, not inside it, so the board profile an include names as
+    ; vendor/board_profiles/... resolves from the repo root rather than from src/.
     -I .
     ; PROTOCORE_HOST is NOT defined here. board_profiles/protocore_platform.h derives it from the vendor
     ; axis: nothing on a native build matches a vendor, so its else-arm defines it. Passing it on
@@ -590,11 +590,11 @@ def render_env(name, e, bases=frozenset()):
         for s in src:
             for b in bases:
                 s = s.replace(f"${{env:{b}.", f"${{{b}.")
-            # build_src_filter resolves against src/, and core_setup/ sits beside it, so a table
+            # build_src_filter resolves against src/, and test/core_setup/ sits beside it, so a table
             # entry naming the repo-relative path matches nothing and the file is silently left
             # out of the link. The table states the path from the repo root, the same way an
             # #include does; the step up is what the filter needs to reach it.
-            s = s.replace("<core_setup/", "<../core_setup/")
+            s = s.replace("<test/core_setup/", "<../test/core_setup/")
             lines.append(f"    {s}")
     tests = e.get("tests", [])
     if tests:
@@ -717,7 +717,7 @@ FORCE_FULL_PREFIX = (
     "tools/",
     ".github/workflows/",
     # The host branch of the platform: every native env resolves its vendor stand-ins here.
-    "core_setup/",
+    "test/core_setup/",
     "test/support/",
     "test/fixtures/",
     "test/servers/",
@@ -1042,7 +1042,7 @@ def _flag_split(flags):
             defs.append(f)
     # -Iinclude is PlatformIO's implicit include_dir, where protocore.h lives. Nothing here is pio,
     # so every path that compiles or scans a TU names it.
-    for base in ("-Icore_setup/hal/host", "-Itest/support", "-Isrc", "-Iinclude", "-I."):
+    for base in ("-Itest/core_setup/hal/host", "-Itest/support", "-Isrc", "-Iinclude", "-I."):
         if base not in incs:
             incs.append(base)
     return incs, defs
@@ -1051,8 +1051,8 @@ def _flag_split(flags):
 def _resolve_src(globs):
     """Expand an env's build_src_filter '+<glob>' entries into repo-relative .c paths.
 
-    An entry is read under src/ first, then from the repo root: core_setup/ is a root directory, so
-    the backends an env names there ("core_setup/hal/portable/portable_bignum.c") resolve from the
+    An entry is read under src/ first, then from the repo root: test/core_setup/ is a root directory, so
+    the backends an env names there ("test/core_setup/hal/portable/portable_bignum.c") resolve from the
     root and nowhere else. An entry matching neither is reported rather than dropped.
 
     A path is returned once however many entries reach it. An env that extends a stack base inherits
@@ -1603,7 +1603,7 @@ def lib_packages(envname):
 def _reached_headers(sdir):
     """Header names a suite includes, one level on from the host mocks it names.
 
-    A suite reaches littlefs through core_setup/hal/host/lfs_mock.h rather than by naming lfs.h, so
+    A suite reaches littlefs through test/core_setup/hal/host/lfs_mock.h rather than by naming lfs.h, so
     the includes of the headers it does name are read too.
     """
     names = set()
@@ -1614,7 +1614,7 @@ def _reached_headers(sdir):
                 text.append(open(os.path.join(sdir, f), encoding="utf-8", errors="replace").read())
     except OSError:
         return names
-    hal = os.path.join(ROOT, "core_setup", "hal", "host")
+    hal = os.path.join(ROOT, "test", "core_setup", "hal", "host")
     seen = set()
     i = 0
     while i < len(text):  # appended headers are scanned too, which is what "one level on" means
@@ -1655,6 +1655,39 @@ def gcovr_cmd():
 def _obj_for(objdir, src):
     """One object per source, named after its whole path: basenames repeat across src/."""
     return os.path.join(objdir, src.replace("/", "_").replace("\\", "_")[:-2] + ".o")
+
+
+_OWED = None
+
+
+def owed_includes(srcs):
+    """`-include` args for what a yanked header no longer carries (test/yanked_includes.json).
+
+    tools/dev_env/yank_includes.py takes an include out of a header and records, per source file,
+    what that file now owes. CMake forces it onto exactly that file; this path compiles an env in one
+    command, so the union over the env's sources is forced instead. An include guard makes the wider
+    reach a no-op, and a file that already had it is not listed.
+    """
+    global _OWED
+    if _OWED is None:
+        p = os.path.join(ROOT, "test", "yanked_includes.json")
+        try:
+            with open(p, encoding="utf-8") as f:
+                _OWED = json.load(f).get("owed", {})
+        except (OSError, ValueError):
+            _OWED = {}
+    if not _OWED:
+        return []
+    want = []
+    for s in srcs:
+        for w in _OWED.get(s.replace("\\", "/"), []):
+            h = w.strip('"<>')
+            if h not in want:
+                want.append(h)
+    out = []
+    for h in want:
+        out += ["-include", h]
+    return out
 
 
 def build_and_run(name, e, jobs, keep, verbose, debug=False, coverage=False):
@@ -1717,6 +1750,7 @@ def build_and_run(name, e, jobs, keep, verbose, debug=False, coverage=False):
             + defs
             + incs
             + ["-I" + os.path.relpath(sd, ROOT).replace("\\", "/")]
+            + owed_includes(srcs)
         )
         if coverage:
             objdir = os.path.join(ROOT, COV_BUILD, name)
@@ -2052,7 +2086,7 @@ def _subcommands(parser):
     return {}
 
 
-CORE_SETUP = findroot.at("core_setup")
+CORE_SETUP = findroot.at("test/core_setup")
 
 
 def _brief_of(path):
@@ -2084,7 +2118,7 @@ def print_core_setup_tree(width=96):
     accelerator, and the host arms that answer the same contracts in software so an accelerated arm is
     runnable and testable off target.
     """
-    print("core_setup/ - the platform layer, reached from src/ only through protocore_config.h")
+    print("test/core_setup/ - the platform layer, reached from src/ only through protocore_config.h")
     for dirpath, dirnames, filenames in os.walk(CORE_SETUP):
         dirnames.sort()
         rel = os.path.relpath(dirpath, ROOT).replace("\\", "/")

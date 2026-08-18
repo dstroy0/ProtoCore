@@ -21,9 +21,10 @@
 #ifndef PROTOCORE_BASE64_H
 #define PROTOCORE_BASE64_H
 
-#include "protocore_config.h" // PROTOCORE_BEGIN_DECLS: the .cpp benches and sketches include this header
 #include <stddef.h>
 #include <stdint.h>
+
+#include "protocore_config.h" // PROTOCORE_BEGIN_DECLS: the .cpp benches and sketches include this header
 
 PROTOCORE_BEGIN_DECLS
 

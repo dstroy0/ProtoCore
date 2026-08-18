@@ -17,6 +17,7 @@
 #include "mmgr/secure.h"        // protocore_secure_wipe (the canonical secure wipe)
 #include "network_drivers/presentation/ssh/common.h"
 #include "network_drivers/presentation/ssh/transport/phase_machine.h" // SshPhase: the session's phase
+
 #include "protocore_config.h"
 
 PROTOCORE_BEGIN_DECLS

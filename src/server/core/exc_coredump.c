@@ -14,7 +14,7 @@
  * seam mocked. The decoding/serialization of a panic stays pure in exc_decoder.c.
  */
 
-#include "core_setup/board_profiles/protocore_platform.h"
+#include "config/platform/platform.h"
 #include "mmgr/protomem.h"
 #include "mmgr/protostr.h"
 #include "server/core/exc_decoder.h"

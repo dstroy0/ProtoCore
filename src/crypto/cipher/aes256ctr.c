@@ -5,7 +5,7 @@
  * @file aes256ctr.c
  * @brief AES-256-CTR implementation (see aes256ctr.h).
  *
- * HW path: the AES-256 block runs on the part's AES accelerator (core_setup/hal/esp/esp_aes_hal.h).
+ * HW path: the AES-256 block runs on the part's AES accelerator (test/core_setup/hal/esp/esp_aes_hal.h).
  * SW path: the compact software AES-256 of aes_block.h (256-byte forward S-box + GF(2^8)
  * MixColumns). The CTR framing over that block - keystream, counter advance, XOR - is one body.
  *

@@ -37,11 +37,12 @@
 #ifndef PROTOCORE_TCP_COMMON_H
 #define PROTOCORE_TCP_COMMON_H
 
-#include "core_setup/board_profiles/protocore_platform.h"
+#include "config/platform/platform.h"
 #include "evt.h"       // EvtType, TcpEvt: what this layer posts to a listener queue
 #include "mmgr/ring.h" // PROTO_ATOMIC_LOAD/STORE + the shared SPSC ring drain primitive
-#include "protocore_config.h"
 #include "shared/ip/ip.h" // protocore_ip (family-tagged peer address)
+
+#include "protocore_config.h"
 
 PROTOCORE_BEGIN_DECLS
 

@@ -1,7 +1,7 @@
 // ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Host tests for the AES accelerator's host arm (core_setup/hal/host/host_aes_hal.h).
+// Host tests for the AES accelerator's host arm (test/core_setup/hal/host/host_aes_hal.h).
 //
 // This arm stands in for a peripheral, so what is asserted is that it answers with the bytes the
 // peripheral would: the FIPS 197 appendix C ECB vectors, at all three key lengths. Every mode built
@@ -12,7 +12,7 @@
 // the vectors: a block encrypt before any key load must not answer with something a caller could
 // mistake for ciphertext, and a second setkey must replace the first rather than accumulate.
 
-#include "core_setup/hal/host/host_aes_hal.h"
+#include "test/core_setup/hal/host/host_aes_hal.h"
 #include <string.h>
 
 #include <unity.h>

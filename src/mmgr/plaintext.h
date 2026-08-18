@@ -53,6 +53,7 @@
 #define PROTOCORE_PLAINTEXT_H
 
 #include "mmgr/span.h"
+
 #include "protocore_config.h"
 
 PROTOCORE_BEGIN_DECLS

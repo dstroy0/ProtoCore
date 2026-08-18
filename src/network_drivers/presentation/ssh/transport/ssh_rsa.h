@@ -32,6 +32,7 @@
 
 #include "crypto/asymmetric/rsa.h" // protocore_rsa_hash, PROTOCORE_RSA_KEY_BYTES/SIG_BYTES, Rsa
 
+
 PROTOCORE_BEGIN_DECLS
 
 /** @brief Maximum DER size for a PKCS#1 RSAPrivateKey with 2048-bit fields. */

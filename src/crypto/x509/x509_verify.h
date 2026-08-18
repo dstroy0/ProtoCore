@@ -26,6 +26,7 @@
 
 #include "crypto/x509/x509.h" // X509Cert: what a check is given
 
+
 PROTOCORE_BEGIN_DECLS
 
 /** @brief Why a link was refused. A caller that only needs yes or no reads ::X509VerifyNs::ok. */

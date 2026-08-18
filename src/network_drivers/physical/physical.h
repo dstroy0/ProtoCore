@@ -14,7 +14,7 @@
  * the 6-octet hardware address ARP resolves to (RFC 826 sec "Packet format", ar$hln = 6).
  *
  * Bring-up runs in the backend the PROTOCORE_VENDOR_* selector compiled
- * (core_setup/physical/<vendor>/), reached through the seam declared below. Failover between
+ * (test/core_setup/physical/<vendor>/), reached through the seam declared below. Failover between
  * interfaces belongs to the stack, which reselects the default route when a link drops, so this
  * layer adds no manager and no tick: it reads the live default route each time it is asked which
  * interface carries outbound traffic (RFC 1122 sec 3.3.1.2 gateway selection).
@@ -26,13 +26,14 @@
 #ifndef PROTOCORE_PHYSICAL_H
 #define PROTOCORE_PHYSICAL_H
 
-#include "core_setup/board_profiles/protocore_platform.h" // PROTOCORE_VENDOR_* selector (picks the L1 backend)
-#include "protocore_config.h"                             // protocore_if_kind
+#include "config/platform/platform.h" // PROTOCORE_VENDOR_* selector (picks the L1 backend)
 #include "shared/ip/ip.h"
 
+#include "protocore_config.h"                             // protocore_if_kind
+
 // There is always a physical (L1) backend to drive. The bring-up (radio, Ethernet PHY, the stack's
-// interface access) lives beside its owner - core_setup/physical/<vendor>/ for silicon,
-// core_setup/hal/host/physical/ everywhere else, which is a link that can actually be up and
+// interface access) lives beside its owner - test/core_setup/physical/<vendor>/ for silicon,
+// test/core_setup/hal/host/physical/ everywhere else, which is a link that can actually be up and
 // answers from it. Every build compiles one of the two, so a link is driven for real on a host as
 // well as on a part.
 #ifndef PROTOCORE_PHYSICAL_HAS_BACKEND
@@ -169,7 +170,7 @@ protocore_if_kind protocore_net_classify_ip(uint32_t egress_ip, uint32_t sta_ip,
  *
  * Power save and monitor mode are properties of the radio, so they belong to the layer that owns
  * the radio. These names carry no platform vocabulary; the flavoring happens at the edge, in
- * core_setup/physical/<vendor>/. Each one reports failure when the selected backend has no radio
+ * test/core_setup/physical/<vendor>/. Each one reports failure when the selected backend has no radio
  * (PROTOCORE_PHYSICAL_HAS_BACKEND == 0), so callers build and run headless on any target. They are
  * reached through PhysicalNs::radio, which is radio_power.h's handle.
  * ------------------------------------------------------------------------------------------ */

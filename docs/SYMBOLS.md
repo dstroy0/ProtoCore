@@ -35,7 +35,7 @@ C11, which every compiler in that list ships. Three of its features are load-bea
 
 No `namespace`. No `using namespace`. The table is the rule; the sections below are the reasoning.
 
-**The tree is mid-rename.** No `pc_` identifier is left in `src/`, `include/` or `core_setup/`; what
+**The tree is mid-rename.** No `pc_` identifier is left in `src/`, `include/` or `test/core_setup/`; what
 `check_symbols.py --check` still reports unconverted is the `PROTO_` macro prefix (`PROTO_TRUE`,
 `PROTO_FALSE`, `PROTO_ENUM_PACKED`, `PROTO_RAW`, `PROTO_ALIGN`, `PROTO_RAW_WORD`, `PROTO_DBL_*`) plus
 unprefixed macros such as `SSH_AUTH_TIMEOUT_MS`, `RFC1951` and `H3_NO_ERROR`.
@@ -52,9 +52,9 @@ every C library's token space.
 the most collided identifiers in embedded C, and the preprocessor has no scope to protect ours from a
 vendor SDK's. Every capacity bound carries `PROTOCORE_MAX_`, with no exception.
 
-**One exemption: `core_setup/`.** That is where vendor SDKs are spoken to, and their headers
-are full of names this law does not govern. A vendor symbol appears verbatim inside `core_setup/`
-and nowhere else, and everything `core_setup/` _exports_ still obeys the table above. The
+**One exemption: `test/core_setup/`.** That is where vendor SDKs are spoken to, and their headers
+are full of names this law does not govern. A vendor symbol appears verbatim inside `test/core_setup/`
+and nowhere else, and everything `test/core_setup/` _exports_ still obeys the table above. The
 exemption covers what a driver must consume, never what it publishes.
 
 ## 1. Prefixes, no namespaces
@@ -190,15 +190,15 @@ firmware serves and the Python that compiles them, so it carries `.html`, `.css`
 the directory is inert to the build. The rule for it is the input's own: an em-dash in an HTML
 document reaches ban #7 through the generated `.c`.
 
-**Two exceptions, the same boundary section 1 draws.** A `core_setup/` adapter whose entire job is
+**Two exceptions, the same boundary section 1 draws.** A `test/core_setup/` adapter whose entire job is
 to wrap a C++ vendor API keeps `.cpp`, because the extension selects the compiler and the vendor type
 cannot be named from C at all. Today that is three files:
 
 | File                                       | The C++ it wraps                                           |
 | ------------------------------------------ | ---------------------------------------------------------- |
-| `core_setup/hal/esp/esp_mnt_fs.cpp`        | an Arduino `fs::FS`, turned into a `protocore_mnt_backend` |
-| `core_setup/hal/esp/esp_nvs.cpp`           | an Arduino `Preferences` namespace, behind `nvs.h`         |
-| `core_setup/physical/esp/physical_esp.cpp` | the Arduino `WiFi` and `ETH` objects, behind `physical.h`  |
+| `test/core_setup/hal/esp/esp_mnt_fs.cpp`        | an Arduino `fs::FS`, turned into a `protocore_mnt_backend` |
+| `test/core_setup/hal/esp/esp_nvs.cpp`           | an Arduino `Preferences` namespace, behind `nvs.h`         |
+| `test/core_setup/physical/esp/physical_esp.cpp` | the Arduino `WiFi` and `ETH` objects, behind `physical.h`  |
 
 It covers what a driver must consume, never what it publishes: every name `physical_esp.cpp` defines
 is declared in `physical.h` between `PROTOCORE_BEGIN_DECLS` and `PROTOCORE_END_DECLS`, so every caller above
@@ -207,7 +207,7 @@ type, is a violation rather than an instance of this. The list is written down b
 unrecorded exception gets "fixed" by the next mechanical pass.
 
 Markdown is the documented exception to `snake_case`: docs use `UPPER_SNAKE`, including the per-die
-register references under `core_setup/hal/esp/`.
+register references under `test/core_setup/hal/esp/`.
 
 **Test environments and suites carry no house prefix.** They are `native_<topic>` and `test_<topic>`.
 A prefix prevents collisions in a shared global namespace; a test environment name lives only in

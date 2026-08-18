@@ -431,7 +431,7 @@ static void complete_handshake_from_flight(DtlsConn *conn, uint8_t *tr, uint16_t
             Sha256.final_args.out = h_ch_cert;
             Sha256.final(tr);
             uint8_t content[160];
-            size_t clen = protocore_tls13_cert_verify_content(content, sizeof(content), h_ch_cert, PROTO_TRUE);
+            size_t clen = protocore_tls13_cert_verify_content(content, sizeof(content), h_ch_cert, 32, PROTO_TRUE);
             TEST_ASSERT_TRUE(clen > 0);
             const uint8_t *sig = msg + 4 + 2 + 2;
             Ed25519.verify_args.pub = cert_pub;
@@ -499,7 +499,7 @@ static void complete_handshake_from_flight(DtlsConn *conn, uint8_t *tr, uint16_t
     Tls13Ks.finished_args.out = cfin_verify;
     Tls13Ks.finished_mac(NULL);
     uint8_t cfin[64];
-    size_t cfin_len = protocore_tls13_build_finished(cfin, sizeof(cfin), cfin_verify);
+    size_t cfin_len = protocore_tls13_build_finished(cfin, sizeof(cfin), cfin_verify, 32);
 
     DtlsRecordKeys cli_write;
     DtlsRecord.keys_derive(&cli_write, DTLS_CIPHER_AES_128_GCM_SHA256, 2, cks.s + TLS13_KS_CLIENT_HS);
@@ -685,8 +685,7 @@ static void test_cid_handshake(void)
     TEST_ASSERT_TRUE((ep2[0] & 0x10) != 0);
     TEST_ASSERT_EQUAL_MEMORY(client_cid, ep2 + 1, sizeof(client_cid));
 
-    complete_handshake_from_flight(&g_dtls, tr, 1, flight, (size_t)fl, client_cid, sizeof(client_cid), PROTO_FALSE,
-                                   0);
+    complete_handshake_from_flight(&g_dtls, tr, 1, flight, (size_t)fl, client_cid, sizeof(client_cid), PROTO_FALSE, 0);
 }
 
 static void test_hrr_group_renegotiation(void)
@@ -1150,7 +1149,7 @@ static proto_bool run_to_finished(DtlsConn *conn, DtlsServerConfig *cfg, ClientS
     Tls13Ks.finished_args.out = verify;
     Tls13Ks.finished_mac(NULL);
     uint8_t cfin[64];
-    size_t cfin_len = protocore_tls13_build_finished(cfin, sizeof(cfin), verify);
+    size_t cfin_len = protocore_tls13_build_finished(cfin, sizeof(cfin), verify, 32);
     if (cfin_len < 4)
     {
         return PROTO_FALSE;

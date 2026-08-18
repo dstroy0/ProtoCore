@@ -26,10 +26,11 @@
 #ifndef PROTOCORE_NET_ADDR_H
 #define PROTOCORE_NET_ADDR_H
 
+#include "config/platform/platform.h" // protocore_net_ip: the stack's own address type
+#include "shared/ip/ip.h"                                 // protocore_ip: the address everything above carries
+
 #include "protocore_config.h"
 
-#include "core_setup/board_profiles/protocore_platform.h" // protocore_net_ip: the stack's own address type
-#include "shared/ip/ip.h"                                 // protocore_ip: the address everything above carries
 
 PROTOCORE_BEGIN_DECLS
 

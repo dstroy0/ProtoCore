@@ -22,6 +22,7 @@
 
 #include "shared/time_compat/time_compat.h" // ::TimeCompat, time_t, and the entry point behind it
 
+
 /**
  * @brief Smallest buffer that holds an RFC 7231 IMF-fixdate plus its NUL.
  *

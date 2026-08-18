@@ -1407,7 +1407,7 @@ def gen_header(spec, original):
     )
 
 
-def rewrite_calls(spec, roots=("src", "test", "examples", "core_setup", "include")):
+def rewrite_calls(spec, roots=("src", "test", "examples", "vendor", "include")):
     """Every call to a flat name becomes staging + entry + the result member."""
     obj = spec["object"]
     byname = {e["flat"]: e for e in spec["entries"]}
@@ -1479,7 +1479,7 @@ def rewrite_calls(spec, roots=("src", "test", "examples", "core_setup", "include
     return total, skipped
 
 
-def rewrite_ns_calls(spec, roots=("src", "test", "examples", "core_setup", "include")):
+def rewrite_ns_calls(spec, roots=("src", "test", "examples", "vendor", "include")):
     """`X.entry(X.internal)` becomes `X.entry(work)` everywhere the object is driven.
 
     The operands are already on the namespace, so nothing is hoisted and nothing can be refused for
@@ -2062,7 +2062,7 @@ def main():
         emit(hp, hout)
         print("source:", spec["source"])
         emit(sp, sout)
-        total, files = P.convert_calls(spec, ["src", "test", "examples", "core_setup", "include"])
+        total, files = P.convert_calls(spec, ["src", "test", "examples", "vendor", "include"])
         print("call sites: %d" % total)
         for rel, n in files:
             print("   %-70s %d" % (rel, n))

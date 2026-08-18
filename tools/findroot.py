@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 # SPDX-License-Identifier: AGPL-3.0-or-later
-"""Where the repo root is, for every script under src/, examples/, core_setup/, tools/ and test/.
+"""Where the repo root is, for every script under src/, examples/, test/core_setup/, tools/ and test/.
 
 Searches upward from this file for `library.json` + `src`. This file sits at the root, so the
 answer does not depend on the caller's depth, its working directory, or how it was launched.

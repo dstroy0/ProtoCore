@@ -32,7 +32,7 @@
 #define PROTOCORE_ENABLE_MNT 1
 
 #include "protocore.h"
-#include "core_setup/hal/esp/esp_mnt_fs.h"
+#include "test/core_setup/hal/esp/esp_mnt_fs.h"
 #include "network_drivers/physical/physical.h"
 #include "server/storage/filesystem.h"
 #include <LittleFS.h>

@@ -25,9 +25,10 @@
 #define PROTOCORE_TCP_PROTOCOL_H
 
 #include "../evt.h"                                       // ConnState, TcpEvt, and the observability hook
-#include "core_setup/board_profiles/protocore_platform.h" // protocore_pcb, protocore_net_err: the types a call names
-#include "protocore_config.h"
+#include "config/platform/platform.h" // protocore_pcb, protocore_net_err: the types a call names
 #include "shared/ip/ip.h" // protocore_ip: where a peer address is written
+
+#include "protocore_config.h"
 
 PROTOCORE_BEGIN_DECLS
 

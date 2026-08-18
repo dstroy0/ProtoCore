@@ -140,6 +140,7 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern SnmpV3Ns SnmpV3;
 
+
 /**
  * @brief The PROTOCORE_SNMP_V3_BORROW bytes this module's state lives in.
  *

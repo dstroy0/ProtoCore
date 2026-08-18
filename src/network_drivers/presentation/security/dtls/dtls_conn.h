@@ -128,17 +128,17 @@ typedef struct
     uint8_t ks_store[PROTOCORE_TLS13_KS_BORROW]; ///< the schedule's terms and its HKDF's bytes
     // The transcript hash and the one-off hashes taken beside it work out of these. Live and die with
     // this connection, so no hash on the handshake path touches a pool.
-    uint8_t hash_work[PROTOCORE_SHA256_BORROW];
-    uint8_t hash_work2[PROTOCORE_SHA256_BORROW];
-    uint8_t sign_work[PROTOCORE_SHA512_BORROW];            ///< the CertificateVerify signature's SHA-512
-    uint8_t mac_work[PROTOCORE_HMAC_SHA256_BORROW];        ///< the stateless HelloRetryRequest cookie's MAC
-    DtlsRecordKeys ep2_srv;                                ///< epoch 2 server write keys (handshake traffic)
-    DtlsRecordKeys ep2_cli;                                ///< epoch 2 client read keys
-    DtlsRecordKeys ep3_srv;                                ///< epoch 3 server write keys (application traffic)
-    DtlsRecordKeys ep3_cli;                                ///< epoch 3 client read keys
-    proto_bool ep2_ready;                                  ///< epoch 2 keys installed
-    proto_bool ep3_ready;                                  ///< epoch 3 keys installed
-    uint8_t hs_finished_hash[PROTOCORE_SHA256_DIGEST_LEN]; ///< Transcript-Hash(CH..server Finished)
+    uint8_t hash_work[PROTOCORE_TLS13_TRANSCRIPT_BORROW];
+    uint8_t hash_work2[PROTOCORE_TLS13_TRANSCRIPT_BORROW];
+    uint8_t sign_work[PROTOCORE_SHA512_BORROW];     ///< the CertificateVerify signature's SHA-512
+    uint8_t mac_work[PROTOCORE_HMAC_SHA256_BORROW]; ///< the stateless HelloRetryRequest cookie's MAC
+    DtlsRecordKeys ep2_srv;                         ///< epoch 2 server write keys (handshake traffic)
+    DtlsRecordKeys ep2_cli;                         ///< epoch 2 client read keys
+    DtlsRecordKeys ep3_srv;                         ///< epoch 3 server write keys (application traffic)
+    DtlsRecordKeys ep3_cli;                         ///< epoch 3 client read keys
+    proto_bool ep2_ready;                           ///< epoch 2 keys installed
+    proto_bool ep3_ready;                           ///< epoch 3 keys installed
+    uint8_t hs_finished_hash[TLS13_SECRET_MAX];     ///< Transcript-Hash(CH..server Finished)
 
     uint64_t tx_seq_ep0;         ///< next outbound record sequence number, epoch 0
     uint64_t tx_seq_ep2;         ///< next outbound record sequence number, epoch 2

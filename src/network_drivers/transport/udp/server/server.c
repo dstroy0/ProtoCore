@@ -14,7 +14,7 @@
 #include "mmgr/plaintext.h"                       // the persistent end this module's state is taken from
 #include "network_drivers/transport/udp/common.h" // the wire layout the receive ring carries
 
-#include "core_setup/board_profiles/protocore_platform.h" // the stack's UDP, under our names
+#include "config/platform/platform.h" // the stack's UDP, under our names
 #include "network_drivers/transport/diffserv/diffserv.h"  // DSCP marking; compiles out when off
 #include "network_drivers/transport/net_addr/net_addr.h"  // NetAddr: the stack's address as a protocore_ip
 

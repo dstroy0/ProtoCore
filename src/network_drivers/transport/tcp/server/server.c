@@ -24,7 +24,7 @@
 #include "../lower/lower.h"          // TcpLower.apply_ttl: the TTL a new pcb is stamped with
 #include "../protocol/protocol.h"    // ConnPool: the slots an accept claims
 #include "../tcp.h"                  // the aggregate the halves hang off
-#include "core_setup/board_profiles/protocore_platform.h" // the stack's queues, under our names
+#include "config/platform/platform.h" // the stack's queues, under our names
 #include "mmgr/plaintext.h"                               // the persistent end this module's state is taken from
 #include "network_drivers/tls/tls.h"                      // TLS handshake begin (self-stubbing)
 #include "server/clock/clock.h"                           // protocore_millis() pluggable monotonic clock

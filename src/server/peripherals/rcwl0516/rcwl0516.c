@@ -24,7 +24,7 @@ PROTOCORE_BEGIN_DECLS
 
 #if !PROTOCORE_HAS_GPIO
 #error                                                                                                                 \
-    "ProtoCore: PROTOCORE_ENABLE_RCWL0516 needs a GPIO seam. Provide one in core_setup/hal/<vendor>, or turn the driver\
+    "ProtoCore: PROTOCORE_ENABLE_RCWL0516 needs a GPIO seam. Provide one in test/core_setup/hal/<vendor>, or turn the driver\
  off - there is no software stand-in for a part on the other end of a wire."
 #endif
 

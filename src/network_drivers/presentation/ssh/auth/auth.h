@@ -16,6 +16,7 @@
 
 #include "network_drivers/presentation/ssh/common.h"
 
+
 PROTOCORE_BEGIN_DECLS
 
 /** @brief Parsed SSH_MSG_USERAUTH_REQUEST. */

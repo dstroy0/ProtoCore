@@ -1,7 +1,7 @@
 // ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Host tests for the reset handler's loops (core_setup/boot/protocore_boot.h).
+// Host tests for the reset handler's loops (test/core_setup/boot/protocore_boot.h).
 //
 // No standard governs a startup file, so every expectation here is a PROPERTY, stated as such. The
 // load-bearing one is that each loop writes exactly the words it was given and not one more:
@@ -14,7 +14,7 @@
 // ask: paint at reset, count what is still painted later, and the difference is the high-water
 // mark.
 
-#include "core_setup/boot/protocore_boot.h"
+#include "test/core_setup/boot/protocore_boot.h"
 
 #include <unity.h>
 

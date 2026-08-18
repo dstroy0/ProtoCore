@@ -3,7 +3,7 @@
 //
 // Host tests for layer 1 driven through a real backend (network_drivers/physical/physical.h).
 //
-// The env declares PROTOCORE_PHYSICAL_HAS_BACKEND=1, so core_setup/hal/host/physical stands in for silicon
+// The env declares PROTOCORE_PHYSICAL_HAS_BACKEND=1, so test/core_setup/hal/host/physical stands in for silicon
 // and the link can actually be up. That is what makes the readouts checkable: the no-op stubs
 // answer every one of them with an empty value, so a caller that mishandles a live link reads
 // exactly like one that works.

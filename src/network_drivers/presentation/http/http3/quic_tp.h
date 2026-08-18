@@ -23,6 +23,7 @@
 #define PROTOCORE_QUIC_TP_H
 
 #include "network_drivers/presentation/http/http3/quic_packet.h" // the complete type a public struct below holds by value
+
 #include "protocore_config.h"                                    // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_HTTP3

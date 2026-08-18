@@ -14,7 +14,7 @@
  * **The width is a typedef, not a decision.** The algebra is identical at any width - the lane masks
  * are derived from ::protocore_swar_word rather than written out, so the carrier follows ::PROTO_SWAR_BITS
  * and every constant follows it. That knob defaults to the register width the die declares in
- * core_setup/board_profiles/, so nothing here infers a width from the toolchain.
+ * vendor/board_profiles/, so nothing here infers a width from the toolchain.
  *
  * **This is the access layer.** Load a word, test its lanes, name the lane that fired. Nothing here
  * walks a buffer or takes a capacity, which is what keeps the byte-order claim under
@@ -39,6 +39,7 @@
 #define PROTOCORE_SWAR_H
 
 #include "mmgr/rawmemcpy.h"   // proto_raw_load: the one owner of an unaligned wider load
+
 #include "protocore_config.h" // PROTO_SWAR_BITS: the platform's lane-carrier width
 
 PROTOCORE_BEGIN_DECLS

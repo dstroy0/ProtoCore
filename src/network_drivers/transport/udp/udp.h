@@ -28,10 +28,11 @@
 #ifndef PROTOCORE_UDP_H
 #define PROTOCORE_UDP_H
 
-#include "protocore_config.h"
-
 #include "network_drivers/transport/udp/client/client.h" // UdpClientNs: the sending half
 #include "network_drivers/transport/udp/server/server.h" // UdpListenerNs: the receiving half
+
+#include "protocore_config.h"
+
 
 PROTOCORE_BEGIN_DECLS
 

@@ -50,9 +50,16 @@ static_assert(PROTOCORE_AES128GCM_TAG_LEN == PROTOCORE_AESGCM_TAG_LEN,
               "both record AEADs must produce the same tag length the record body is sized on");
 
 // Whether the suite's key schedule and transcript run on SHA-384 (RFC 8446 sec 7.1).
-static proto_bool cipher_is384(TlsCipher c)
+proto_bool protocore_tls_cipher_is384(TlsCipher c)
 {
     return c == TLS_CIPHER_AES_256_GCM_SHA384 ? PROTO_TRUE : PROTO_FALSE;
+}
+
+// The suite's IANA CipherSuite code point (RFC 8446 sec B.4).
+uint16_t protocore_tls_cipher_code(TlsCipher c)
+{
+    return c == TLS_CIPHER_AES_256_GCM_SHA384 ? (uint16_t)PROTOCORE_TLS_SUITE_AES_256_GCM_SHA384
+                                              : (uint16_t)PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256;
 }
 
 // The AEAD key length the suite expands out of the traffic secret (RFC 8446 sec 7.3).
@@ -154,7 +161,7 @@ static void expand_label(TlsCipher cipher, uint8_t *work, const uint8_t *secret,
                          size_t out_len)
 {
     Tls13Ks.bind.kdf = &TLS13_KDF;
-    Tls13Ks.bind.is384 = cipher_is384(cipher);
+    Tls13Ks.bind.is384 = protocore_tls_cipher_is384(cipher);
     Tls13Ks.derive_args.work = work;
     Tls13Ks.derive_args.secret = secret;
     Tls13Ks.derive_args.label = label;

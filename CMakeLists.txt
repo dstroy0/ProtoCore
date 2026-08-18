@@ -23,7 +23,7 @@ option(PROTOCORE_WITH_ARDUINO "Build against arduino-esp32 (Arduino-as-component
 # Plain GLOB (no CONFIGURE_DEPENDS): IDF evaluates a component's CMakeLists in script mode
 # (cmake -P) to extract REQUIRES, and CONFIGURE_DEPENDS is illegal there. The glob is therefore
 # evaluated at configure time - run `idf.py reconfigure` after adding or removing a source file.
-file(GLOB_RECURSE PROTOCORE_SRCS "src/*.c" "src/*.cpp" "core_setup/*.c" "core_setup/*.cpp")
+file(GLOB_RECURSE PROTOCORE_SRCS "src/*.c" "src/*.cpp" "test/core_setup/*.c" "test/core_setup/*.cpp")
 
 set(PROTOCORE_REQUIRES
     lwip

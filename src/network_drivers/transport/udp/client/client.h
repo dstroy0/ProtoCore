@@ -23,8 +23,9 @@
 #ifndef PROTOCORE_UDP_CLIENT_H
 #define PROTOCORE_UDP_CLIENT_H
 
-#include "protocore_config.h"
 #include "shared/ip/ip.h" // protocore_ip: the destination, already an address
+
+#include "protocore_config.h"
 
 PROTOCORE_BEGIN_DECLS
 

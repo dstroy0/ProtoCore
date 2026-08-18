@@ -18,7 +18,7 @@ first or second line:
 Inserting before `Copyright` keeps whatever comment syntax the file already opened with, so C,
 Python, shell, markdown, linker scripts and assembly all take the same edit with no per-type table.
 
-Scope is scripts and source under src/, test/, core_setup/, include/ and tools/. Build output,
+Scope is scripts and source under src/, test/, test/core_setup/, include/ and tools/. Build output,
 __pycache__ and vendored trees are not source. Generated files carry a stamp emitted by their
 generator, so this tool skips them rather than writing a stamp the next regeneration would drop.
 
@@ -39,7 +39,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", "..", ".."))
 CFG = os.path.join(ROOT, ".bumpversion.cfg")
 
-SCOPE_DIRS = ("src", "test", "core_setup", "include", "tools")
+SCOPE_DIRS = ("src", "test", "vendor", "include", "tools")
 SKIP_DIRS = {
     ".git",
     ".pio",

@@ -15,7 +15,7 @@
 
 #include "server/core/provisioning_service/provisioning_service.h"
 
-#include "core_setup/hal/nvs.h"                          // the store the save / load / clear paths use
+#include "test/core_setup/hal/nvs.h"                          // the store the save / load / clear paths use
 #include "network_drivers/physical/physical.h"            // what begin() asked the radio for
 #include "network_drivers/transport/udp/server/server.h"  // the port the catch-all DNS bound
 

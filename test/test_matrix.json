@@ -1,5 +1,5 @@
 {
-  "_note": "Single source of truth for native test envs; run test/gen_test_envs.py to regenerate platformio.ini. A hardware path is host-testable: an env declares the capability it needs and the mocks under core_setup/hal/host stand in for silicon, including a queue keyed by handle. NEVER rewrite this file with json.dump: a whole-file re-render is valid JSON and reformats all 400 envs, so the diff stops naming what changed. Mutate it with harness.py env add/update/addsrc/remove, or from a script through harness.splice_replace + harness.write_verified, which refuses a write that moved an env it was not asked to move.",
+  "_note": "Single source of truth for native test envs; run test/gen_test_envs.py to regenerate platformio.ini. A hardware path is host-testable: an env declares the capability it needs and the mocks under test/core_setup/hal/host stand in for silicon, including a queue keyed by handle. NEVER rewrite this file with json.dump: a whole-file re-render is valid JSON and reformats all 400 envs, so the diff stops naming what changed. Mutate it with harness.py env add/update/addsrc/remove, or from a script through harness.splice_replace + harness.write_verified, which refuses a write that moved an env it was not asked to move.",
   "envs": {
     "native_accept_gate": {
       "desc": "Accept-time connection gates with their flags ON (PROTOCORE_ENABLE_ACCEPT_THROTTLE\n/ PER_IP_THROTTLE / IP_ALLOWLIST): the global fixed-window throttle, the per-source-IP\nbucket table (independent budgets, window rollover, the millis() wrap, bounded LRU\neviction), and the CIDR source-IP allowlist. Compiles the flag-guarded accept-callback\npaths that no other env builds. Budgets overridden small so the boundaries are explicit.",
@@ -39,7 +39,7 @@
         "+<network_drivers/presentation/http/sse/sse.c>",
         "+<network_drivers/session/sse/sse.c>",
         "+<network_drivers/presentation/codec/multipart/multipart.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/bytes.c>",
@@ -79,7 +79,7 @@
       "extra_scripts": ["pre:test/gen_test_runners.py"]
     },
     "native_ads1115": {
-      "desc": "ADS1115 16-bit ADC codec and its I2C binding (server/peripherals/ads1115): building the 16-bit config word for a single-shot single-ended reading (channel MUX, gain, data rate, start/mode/comparator bits, with out-of-range fallbacks), converting a signed 16-bit sample to microvolts across the gain's full-scale range, and reading a part end to end - the suite puts a voltage on a pin of the SBAS444E device model in core_setup/hal/host/devices/ and the driver's own transfers bring back the code the part computes for it.",
+      "desc": "ADS1115 16-bit ADC codec and its I2C binding (server/peripherals/ads1115): building the 16-bit config word for a single-shot single-ended reading (channel MUX, gain, data rate, start/mode/comparator bits, with out-of-range fallbacks), converting a signed 16-bit sample to microvolts across the gain's full-scale range, and reading a part end to end - the suite puts a voltage on a pin of the SBAS444E device model in test/core_setup/hal/host/devices/ and the driver's own transfers bring back the code the part computes for it.",
       "flags": [
         "-DPROTOCORE_ENABLE_ADS1115=1"
       ],
@@ -93,7 +93,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/span.c>",
         "+<mmgr/arena.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/server/peripherals/ads1115/test_ads1115"
@@ -133,7 +133,7 @@
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/swar.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": ["unit/src/mmgr/test_arena"],
       "extra_scripts": ["pre:test/gen_test_runners.py"]
@@ -173,7 +173,7 @@
         "+<mmgr/swar.c>",
         "+<shared/hex/hex.c>",
         "+<mmgr/float_bits.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": ["unit/src/server/security/audit_log/test_audit_log"],
       "extra_scripts": ["pre:test/gen_test_runners.py"]
@@ -311,11 +311,11 @@
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/swar.c>",
         "+<shared/pcap/pcap.c>",
-        "+<core_setup/hal/host/host_platform.c>",
+        "+<test/core_setup/hal/host/host_platform.c>",
         "+<mmgr/secure.c>",
         "+<mmgr/span.c>",
         "+<mmgr/arena.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/server/signaling/test_bus_capture"
@@ -348,7 +348,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/span.c>",
         "+<mmgr/arena.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/integration/peripherals/test_bus_wire"
@@ -497,7 +497,7 @@
         "+<server/core/worker.c>",
         "+<mmgr/arena.c>",
         "+<network_drivers/transport/tcp/client/client.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<network_drivers/network/dns/dns_resolver.c>",
         "+<network_drivers/network/dns/dns_wire.c>",
         "+<network_drivers/network/dns/dns.c>",
@@ -578,7 +578,7 @@
         "+<shared/hex/hex.c>",
         "+<mmgr/plaintext.c>",
         "+<mmgr/arena.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/protocols/transport/test_coap"
@@ -612,7 +612,7 @@
         "+<shared/hex/hex.c>",
         "+<mmgr/plaintext.c>",
         "+<mmgr/arena.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/protocols/transport/test_coap"
@@ -649,7 +649,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<server/core/worker.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/bytes.c>",
@@ -701,7 +701,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<server/core/worker.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/bytes.c>",
@@ -753,7 +753,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<server/core/worker.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/bytes.c>",
@@ -880,7 +880,7 @@
         "+<crypto/asymmetric/rsa.c>",
         "+<network_drivers/presentation/ssh/transport/ssh_rsa.c>",
         "+<crypto/asymmetric/bignum.c>",
-        "+<core_setup/hal/portable/portable_bignum.c>",
+        "+<test/core_setup/hal/portable/portable_bignum.c>",
         "+<crypto/hash/sha512.c>",
         "+<server/security/csrf/csrf.c>",
         "+<crypto/rng/rng.c>",
@@ -888,7 +888,7 @@
         "+<server/security/auth_lockout/auth_lockout.c>",
         "+<services/timing_position/time_source/time_source.c>",
         "+<server/storage/config_store/config_store.c>",
-        "+<core_setup/hal/host/host_nvs.c>",
+        "+<test/core_setup/hal/host/host_nvs.c>",
         "+<server/signaling/device_id.c>",
         "+<network_drivers/presentation/codec/inflate/inflate.c>",
         "+<network_drivers/presentation/codec/deflate/deflate.c>",
@@ -967,7 +967,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<server/core/worker.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/protoframe.c>",
         "+<mmgr/protostr.c>",
         "+<mmgr/protomem.c>",
@@ -988,9 +988,9 @@
         "+<shared/time_compat/time_compat.c>",
         "+<mmgr/float_bits.c>",
         "+<server/core/exc_coredump.c>",
-        "+<core_setup/hal/host/physical/physical_mock.c>",
-        "+<core_setup/hal/host/host_platform.c>",
-        "+<core_setup/hal/host/protocore_dma_host.c>",
+        "+<test/core_setup/hal/host/physical/physical_mock.c>",
+        "+<test/core_setup/hal/host/host_platform.c>",
+        "+<test/core_setup/hal/host/protocore_dma_host.c>",
         "+<server/clock/clock.c>",
         "+<services/file_transfer/http_delivery/http_delivery_routes.c>"
       ],
@@ -1035,7 +1035,7 @@
       "src": [
         "+<server/storage/config_store/config_store.c>",
         "+<server/storage/config_io/config_io.c>",
-        "+<core_setup/hal/host/host_nvs.c>",
+        "+<test/core_setup/hal/host/host_nvs.c>",
         "+<mmgr/protoframe.c>",
         "+<mmgr/protostr.c>",
         "+<mmgr/protomem.c>",
@@ -1047,7 +1047,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/span.c>",
         "+<mmgr/arena.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": ["unit/src/server/storage/config_io/test_config_io"],
       "extra_scripts": ["pre:test/gen_test_runners.py"]
@@ -1057,7 +1057,7 @@
       "flags": ["-DPROTOCORE_ENABLE_CONFIG_STORE=1"],
       "src": [
         "+<server/storage/config_store/config_store.c>",
-        "+<core_setup/hal/host/host_nvs.c>",
+        "+<test/core_setup/hal/host/host_nvs.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/protostr.c>",
         "+<mmgr/rawmemcpy.c>",
@@ -1065,7 +1065,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/span.c>",
         "+<mmgr/arena.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": ["unit/src/server/storage/config_store/test_config_store"],
       "extra_scripts": ["pre:test/gen_test_runners.py"]
@@ -1111,7 +1111,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<server/core/worker.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/endian.c>",
         "+<mmgr/rawmemcpy.c>",
@@ -1155,7 +1155,7 @@
         "+<src/crypto/asymmetric/ed25519.c>",
         "+<src/crypto/asymmetric/curve25519.c>",
         "+<src/crypto/asymmetric/bignum.c>",
-        "+<core_setup/hal/portable/portable_bignum.c>",
+        "+<test/core_setup/hal/portable/portable_bignum.c>",
         "+<src/crypto/hash/sha256.c>",
         "+<src/crypto/hash/sha512.c>",
         "+<src/mmgr/protomem.c>",
@@ -1167,7 +1167,7 @@
         "+<src/mmgr/span.c>",
         "+<src/mmgr/bytes.c>",
         "+<src/mmgr/endian.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<src/crypto/mac/hmac_sha256.c>"
       ],
       "tests": [
@@ -1197,7 +1197,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<server/core/worker.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/endian.c>",
         "+<mmgr/rawmemcpy.c>",
@@ -1206,9 +1206,9 @@
         "+<mmgr/protostr.c>",
         "+<crypto/mac/ghash.c>",
         "+<crypto/aead/aes128gcm.c>",
-        "+<core_setup/hal/host/host_sha_hal.c>",
-        "+<core_setup/hal/host/host_aes_hal.c>",
-        "+<core_setup/hal/host/host_hw_reg.c>"
+        "+<test/core_setup/hal/host/host_sha_hal.c>",
+        "+<test/core_setup/hal/host/host_aes_hal.c>",
+        "+<test/core_setup/hal/host/host_hw_reg.c>"
       ],
       "tests": [
         "unit/core_setup/hal/host/test_host_sha_hal",
@@ -1229,7 +1229,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<server/core/worker.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/protostr.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/endian.c>",
@@ -1370,11 +1370,11 @@
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/swar.c>",
         "+<shared/hex/hex.c>",
-        "+<core_setup/hal/host/host_platform.c>",
+        "+<test/core_setup/hal/host/host_platform.c>",
         "+<mmgr/arena.c>",
         "+<mmgr/secure.c>",
         "+<mmgr/span.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": ["unit/src/server/signaling/test_device_id"],
       "extra_scripts": ["pre:test/gen_test_runners.py"]
@@ -1460,7 +1460,7 @@
         "+<src/mmgr/swar.c>",
         "+<src/shared/hex/hex.c>",
         "+<src/mmgr/plaintext.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/plaintext.c>"
       ],
       "tests": [
@@ -1521,7 +1521,7 @@
         "+<mmgr/endian.c>",
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/swar.c>",
-        "+<core_setup/hal/host/host_sha_hal.c>"
+        "+<test/core_setup/hal/host/host_sha_hal.c>"
       ],
       "tests": ["unit/src/crypto/hash/test_digest_vectors"]
     },
@@ -1560,7 +1560,7 @@
         "+<mmgr/endian.c>",
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/swar.c>",
-        "+<core_setup/hal/host/host_sha_hal.c>"
+        "+<test/core_setup/hal/host/host_sha_hal.c>"
       ],
       "tests": [
         "unit/src/crypto/hash/test_sha384"
@@ -1610,7 +1610,7 @@
         "+<mmgr/endian.c>",
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/swar.c>",
-        "+<core_setup/hal/host/host_sha_hal.c>"
+        "+<test/core_setup/hal/host/host_sha_hal.c>"
       ],
       "tests": [
         "unit/src/crypto/mac/test_hmac_sha384"
@@ -1676,7 +1676,7 @@
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/swar.c>",
         "+<mmgr/span.c>",
-        "+<core_setup/hal/host/protocore_dma_host.c>"
+        "+<test/core_setup/hal/host/protocore_dma_host.c>"
       ],
       "tests": [
         "unit/protocols/mmgr/test_dma"
@@ -1750,7 +1750,7 @@
         "+<mmgr/span.c>",
         "+<mmgr/swar.c>",
         "+<shared/hex/hex.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/plaintext.c>"
       ],
       "tests": [
@@ -1784,7 +1784,7 @@
         "+<shared/hex/hex.c>",
         "+<mmgr/plaintext.c>",
         "+<mmgr/arena.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/protocols/network/test_dns_server"
@@ -1865,7 +1865,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<server/core/worker.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/endian.c>",
         "+<mmgr/rawmemcpy.c>",
@@ -1907,7 +1907,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<server/core/worker.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/endian.c>",
@@ -1936,7 +1936,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<server/core/worker.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/endian.c>",
         "+<mmgr/rawmemcpy.c>",
@@ -1961,7 +1961,7 @@
         "+<mmgr/span.c>",
         "+<mmgr/swar.c>",
         "+<mmgr/protostr.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/network_drivers/presentation/http/http3/test_dtls_tls13"
@@ -1997,7 +1997,7 @@
         "+<shared/hex/hex.c>",
         "+<mmgr/secure.c>",
         "+<mmgr/arena.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/protocols/web/test_edge_fetch"
@@ -2027,7 +2027,7 @@
         "+<mmgr/span.c>",
         "+<mmgr/arena.c>",
         "+<mmgr/plaintext.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/server/web/edge_cache/test_edge_cache_proxy"
@@ -2063,7 +2063,7 @@
         "+<services/net/http_client/http_client.c>",
         "+<mmgr/secure.c>",
         "+<mmgr/arena.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/file_conversion/server/web/edge_cache/test_edge_cache"
@@ -2105,7 +2105,7 @@
         "+<shared/hex/hex.c>",
         "+<mmgr/secure.c>",
         "+<mmgr/arena.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/protocols/web/test_edge_cache_sd"
@@ -2140,7 +2140,7 @@
         "+<shared/hex/hex.c>",
         "+<mmgr/secure.c>",
         "+<mmgr/arena.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/protocols/web/test_edge_mesh"
@@ -2222,7 +2222,7 @@
         "+<mmgr/plaintext.c>",
         "+<mmgr/secure.c>",
         "+<server/core/worker.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/endian.c>",
         "+<mmgr/rawmemcpy.c>",
@@ -2246,7 +2246,7 @@
         "+<mmgr/plaintext.c>",
         "+<mmgr/span.c>",
         "+<mmgr/arena.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/services/radio/espnow/test_espnow"
@@ -2270,7 +2270,7 @@
         "+<mmgr/plaintext.c>",
         "+<mmgr/span.c>",
         "+<mmgr/arena.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/file_conversion/services/opcua/models/euromap77/test_euromap77"
@@ -2294,7 +2294,7 @@
         "+<shared/hex/hex.c>",
         "+<mmgr/float_bits.c>",
         "+<server/core/exc_coredump.c>",
-        "+<core_setup/hal/host/host_platform.c>"
+        "+<test/core_setup/hal/host/host_platform.c>"
       ],
       "tests": [
         "unit/src/server/core/test_exc_decoder"
@@ -2317,7 +2317,7 @@
         "+<mmgr/plaintext.c>",
         "+<mmgr/arena.c>",
         "+<mmgr/span.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/server/core/test_failsafe"
@@ -2355,7 +2355,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/span.c>",
         "+<mmgr/arena.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/server/peripherals/fdc2214/test_fdc2214"
@@ -2425,7 +2425,7 @@
         "+<mmgr/plaintext.c>",
         "+<mmgr/arena.c>",
         "+<mmgr/span.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/services/net/flow_export/test_flow_export"
@@ -2472,11 +2472,11 @@
         "+<mmgr/swar.c>",
         "+<shared/ip/ip.c>",
         "+<shared/hex/hex.c>",
-        "+<core_setup/hal/host/physical/physical_mock.c>",
+        "+<test/core_setup/hal/host/physical/physical_mock.c>",
         "+<mmgr/plaintext.c>",
         "+<mmgr/span.c>",
         "+<mmgr/arena.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/protocols/net/test_forward"
@@ -2499,7 +2499,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/span.c>",
         "+<mmgr/arena.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/server/security/forwarded_trust/test_forwarded_trust"
@@ -2589,7 +2589,7 @@
         "+<mmgr/swar.c>",
         "+<shared/hex/hex.c>",
         "+<mmgr/plaintext.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<services/file_transfer/ftp/ftp.c>",
         "+<shared/log/log.c>",
         "+<mmgr/protoframe.c>",
@@ -2615,7 +2615,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/span.c>",
         "+<mmgr/arena.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/protocols/net/test_gateway"
@@ -2717,7 +2717,7 @@
         "+<mmgr/plaintext.c>",
         "+<mmgr/arena.c>",
         "+<mmgr/span.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/services/iot/graphql/test_graphql"
@@ -2753,11 +2753,11 @@
         "+<mmgr/swar.c>",
         "+<mmgr/float_bits.c>",
         "+<shared/hex/hex.c>",
-        "+<core_setup/hal/host/host_platform.c>",
+        "+<test/core_setup/hal/host/host_platform.c>",
         "+<mmgr/plaintext.c>",
         "+<mmgr/arena.c>",
         "+<mmgr/span.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/server/core/guardrails/test_guardrails"
@@ -2768,9 +2768,9 @@
     },
 
     "native_boot": {
-      "desc": "The reset handler's loops (core_setup/boot): the .data copy, the .bss zero and the stack paint that protocore_platform_stack_free() reads back. Host-run, so the same loops the silicon runs are exercised against caller-supplied regions carrying guard words on both ends.",
+      "desc": "The reset handler's loops (test/core_setup/boot): the .data copy, the .bss zero and the stack paint that protocore_platform_stack_free() reads back. Host-run, so the same loops the silicon runs are exercised against caller-supplied regions carrying guard words on both ends.",
       "flags": [],
-      "src": ["-<*>", "+<core_setup/boot/protocore_boot.c>"],
+      "src": ["-<*>", "+<test/core_setup/boot/protocore_boot.c>"],
       "tests": ["unit/core_setup/boot/test_boot"],
       "extra_scripts": ["pre:test/gen_test_runners.py"]
     },
@@ -2790,7 +2790,7 @@
         "+<mmgr/swar.c>",
         "+<mmgr/float_bits.c>",
         "+<shared/hex/hex.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": ["unit/protocols/http/test_h2_conn"]
     },
@@ -2834,7 +2834,7 @@
         "+<mmgr/swar.c>",
         "+<shared/hex/hex.c>",
         "+<mmgr/float_bits.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": ["unit/protocols/http/test_h2_server"]
     },
@@ -2866,7 +2866,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<server/core/worker.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/endian.c>",
         "+<mmgr/rawmemcpy.c>",
@@ -2913,7 +2913,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<server/core/worker.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/endian.c>",
         "+<mmgr/rawmemcpy.c>",
@@ -2969,7 +2969,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<server/core/worker.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/protostr.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/bytes.c>",
@@ -2990,7 +2990,7 @@
         "+<shared/hex/hex.c>",
         "+<crypto/mac/ghash.c>",
         "+<crypto/aead/aes128gcm.c>",
-        "+<core_setup/hal/host/protocore_dma_host.c>",
+        "+<test/core_setup/hal/host/protocore_dma_host.c>",
         "+<crypto/hash/sha384.c>",
         "+<crypto/mac/hmac_sha384.c>",
         "+<crypto/kdf/hkdf_sha384.c>"
@@ -3047,7 +3047,7 @@
         "+<mmgr/plaintext.c>",
         "+<mmgr/arena.c>",
         "+<mmgr/span.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/network_drivers/transport/happy_eyeballs/test_happy_eyeballs"
@@ -3107,7 +3107,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/span.c>",
         "+<mmgr/arena.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/server/peripherals/hmmd/test_hmmd"
@@ -3146,7 +3146,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/span.c>",
         "+<mmgr/arena.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/protocols/storage/test_hotswap"
@@ -3200,7 +3200,7 @@
         "+<shared/hex/hex.c>",
         "+<mmgr/secure.c>",
         "+<mmgr/arena.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/services/net/http_client/test_http_client"
@@ -3229,7 +3229,7 @@
         "+<shared/hex/hex.c>",
         "+<mmgr/secure.c>",
         "+<mmgr/arena.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": []
     },
@@ -3354,7 +3354,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/span.c>",
         "+<mmgr/arena.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/protocols/net/test_iface_bridge"
@@ -3378,7 +3378,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/span.c>",
         "+<mmgr/arena.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<network_drivers/transport/tcp/protocol/protocol.c>",
         "+<network_drivers/session/session.c>",
         "+<network_drivers/transport/tcp/tcp.c>",
@@ -3425,7 +3425,7 @@
         "+<crypto/asymmetric/curve25519.c>",
         "+<crypto/asymmetric/ecdsa.c>",
         "+<crypto/asymmetric/bignum.c>",
-        "+<core_setup/hal/portable/portable_bignum.c>",
+        "+<test/core_setup/hal/portable/portable_bignum.c>",
         "+<crypto/asymmetric/rsa.c>",
         "+<network_drivers/presentation/ssh/transport/ssh_rsa.c>",
         "+<crypto/hash/sha512.c>",
@@ -3433,8 +3433,8 @@
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<server/core/worker.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
-        "+<core_setup/hal/host/host_nvs.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/host/host_nvs.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/protostr.c>",
         "+<mmgr/bytes.c>",
@@ -3465,7 +3465,7 @@
         "+<crypto/asymmetric/curve25519.c>",
         "+<crypto/asymmetric/ecdsa.c>",
         "+<crypto/asymmetric/bignum.c>",
-        "+<core_setup/hal/portable/portable_bignum.c>",
+        "+<test/core_setup/hal/portable/portable_bignum.c>",
         "+<crypto/asymmetric/rsa.c>",
         "+<network_drivers/presentation/ssh/transport/ssh_rsa.c>",
         "+<crypto/hash/sha512.c>",
@@ -3473,8 +3473,8 @@
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<server/core/worker.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
-        "+<core_setup/hal/host/host_nvs.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/host/host_nvs.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/protostr.c>",
         "+<mmgr/bytes.c>",
@@ -3502,7 +3502,7 @@
         "+<crypto/asymmetric/curve25519.c>",
         "+<crypto/asymmetric/ecdsa.c>",
         "+<crypto/asymmetric/bignum.c>",
-        "+<core_setup/hal/portable/portable_bignum.c>",
+        "+<test/core_setup/hal/portable/portable_bignum.c>",
         "+<crypto/asymmetric/rsa.c>",
         "+<network_drivers/presentation/ssh/transport/ssh_rsa.c>",
         "+<crypto/hash/sha512.c>",
@@ -3510,8 +3510,8 @@
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<server/core/worker.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
-        "+<core_setup/hal/host/host_nvs.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/host/host_nvs.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/protostr.c>",
         "+<mmgr/bytes.c>",
@@ -3527,7 +3527,7 @@
       "extra_scripts": ["pre:test/gen_test_runners.py"]
     },
     "native_ina219": {
-      "desc": "INA219 current / power monitor (server/peripherals/ina219): decoding the bus-voltage register (bits 15:3, LSB 4 mV) and the signed shunt register (LSB 10 uV), computing the calibration register from the current LSB and shunt resistance, scaling the raw current / power registers by that LSB, and reading a part end to end - the suite applies a shunt drop and a bus voltage to the SBOS448G device model in core_setup/hal/host/devices/ and the part computes current and power from them by Eq 4 and Eq 5.",
+      "desc": "INA219 current / power monitor (server/peripherals/ina219): decoding the bus-voltage register (bits 15:3, LSB 4 mV) and the signed shunt register (LSB 10 uV), computing the calibration register from the current LSB and shunt resistance, scaling the raw current / power registers by that LSB, and reading a part end to end - the suite applies a shunt drop and a bus voltage to the SBOS448G device model in test/core_setup/hal/host/devices/ and the part computes current and power from them by Eq 4 and Eq 5.",
       "flags": [
         "-DPROTOCORE_ENABLE_INA219=1"
       ],
@@ -3540,7 +3540,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/span.c>",
         "+<mmgr/arena.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>"
       ],
       "tests": [
@@ -3618,7 +3618,7 @@
         "+<mmgr/plaintext.c>",
         "+<mmgr/secure.c>",
         "+<server/core/worker.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/endian.c>",
         "+<mmgr/rawmemcpy.c>",
@@ -3643,7 +3643,7 @@
         "+<mmgr/plaintext.c>",
         "+<mmgr/span.c>",
         "+<mmgr/arena.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/services/fieldbus/j1939/test_j1939"
@@ -3700,7 +3700,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<server/core/worker.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/protostr.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/endian.c>",
@@ -3747,7 +3747,7 @@
         "+<network_drivers/session/sse/sse.c>",
         "+<network_drivers/presentation/codec/multipart/multipart.c>",
         "+<crypto/hash/sha256.c>",
-        "+<server/core/protocore.c>",
+        "+<protocore.c>",
         "+<network_drivers/network/network.c>",
         "+<network_drivers/network/dns/dns.c>",
         "+<network_drivers/application/file_serving/file_serving.c>",
@@ -3758,7 +3758,7 @@
         "+<server/regex.c>",
         "+<server/io/middleware.c>",
         "+<server/io/webdav_handler.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/protoframe.c>",
         "+<server/clock/clock.c>",
         "+<network_drivers/presentation/http/route/http_route.c>",
@@ -3785,7 +3785,7 @@
         "+<mmgr/float_bits.c>",
         "+<crypto/rng/rng.c>",
         "+<crypto/cipher/chacha20.c>",
-        "+<core_setup/hal/host/protocore_dma_host.c>"
+        "+<test/core_setup/hal/host/protocore_dma_host.c>"
       ],
       "tests": [
         "unit/integration/server/test_keepalive"
@@ -3804,7 +3804,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/span.c>",
         "+<mmgr/arena.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/server/peripherals/ld2410/test_ld2410"
@@ -3827,7 +3827,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/span.c>",
         "+<mmgr/arena.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/server/peripherals/ldc1614/test_ldc1614"
@@ -3837,7 +3837,7 @@
       ]
     },
     "native_lfs_mock": {
-      "desc": "The littlefs-backed protocore_mnt_backend used by the host tests that need a real tree\n(core_setup/hal/host/lfs_mock.h): round-trip, seek, directory listing, stat, rename/remove,\nappend, and a full volume refusing rather than pretending. Real littlefs on a RAM\nblock device, so the host answers the way the device does.",
+      "desc": "The littlefs-backed protocore_mnt_backend used by the host tests that need a real tree\n(test/core_setup/hal/host/lfs_mock.h): round-trip, seek, directory listing, stat, rename/remove,\nappend, and a full volume refusing rather than pretending. Real littlefs on a RAM\nblock device, so the host answers the way the device does.",
       "flags": ["-DPROTOCORE_ENABLE_MNT=1"],
       "src": [
         "-<*>",
@@ -3881,7 +3881,7 @@
         "+<mmgr/plaintext.c>",
         "+<mmgr/arena.c>",
         "+<mmgr/span.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/shared/log/test_log"
@@ -3908,7 +3908,7 @@
         "+<mmgr/plaintext.c>",
         "+<mmgr/arena.c>",
         "+<mmgr/span.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/server/core/test_logbuf"
@@ -3968,7 +3968,7 @@
         "+<mmgr/plaintext.c>",
         "+<mmgr/arena.c>",
         "+<mmgr/span.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/services/iot/lwm2m/test_lwm2m_tlv"
@@ -4048,8 +4048,8 @@
         "+<mmgr/span.c>",
         "+<mmgr/swar.c>",
         "+<shared/hex/hex.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
-        "+<core_setup/hal/host/physical/physical_mock.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/host/physical/physical_mock.c>",
         "+<mmgr/plaintext.c>"
       ],
       "tests": [
@@ -4141,7 +4141,7 @@
         "+<mmgr/plaintext.c>",
         "+<mmgr/span.c>",
         "+<mmgr/arena.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/protocols/storage/test_mnt"
@@ -4167,7 +4167,7 @@
         "+<mmgr/plaintext.c>",
         "+<mmgr/span.c>",
         "+<mmgr/arena.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<network_drivers/transport/tcp/protocol/protocol.c>",
         "+<network_drivers/transport/tcp/server/server.c>",
         "+<network_drivers/transport/tcp/lower/lower.c>",
@@ -4202,7 +4202,7 @@
         "+<mmgr/plaintext.c>",
         "+<mmgr/span.c>",
         "+<mmgr/arena.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<network_drivers/transport/tcp/protocol/protocol.c>",
         "+<network_drivers/transport/tcp/server/server.c>",
         "+<network_drivers/transport/tcp/lower/lower.c>",
@@ -4217,7 +4217,7 @@
       ]
     },
     "native_mpr121": {
-      "desc": "MPR121 12-channel capacitive touch (server/peripherals/mpr121): decoding the two touch-status registers (ELEPROX at D4 and OVCF at D7 sit above the twelve electrodes), the 10-bit filtered-data pair, the AN3944 bring-up sequence builder, and programming a part end to end - the suite reads the registers back off the device model in core_setup/hal/host/devices/, where section 5.1 discards any configuration write made outside Stop Mode.",
+      "desc": "MPR121 12-channel capacitive touch (server/peripherals/mpr121): decoding the two touch-status registers (ELEPROX at D4 and OVCF at D7 sit above the twelve electrodes), the 10-bit filtered-data pair, the AN3944 bring-up sequence builder, and programming a part end to end - the suite reads the registers back off the device model in test/core_setup/hal/host/devices/, where section 5.1 discards any configuration write made outside Stop Mode.",
       "flags": [
         "-DPROTOCORE_ENABLE_MPR121=1"
       ],
@@ -4230,7 +4230,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/span.c>",
         "+<mmgr/arena.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/server/peripherals/mpr121/test_mpr121"
@@ -4256,7 +4256,7 @@
         "+<mmgr/span.c>",
         "+<mmgr/swar.c>",
         "+<shared/utf8/utf8.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/plaintext.c>"
       ],
       "tests": [
@@ -4285,7 +4285,7 @@
         "+<mmgr/span.c>",
         "+<mmgr/swar.c>",
         "+<shared/utf8/utf8.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/plaintext.c>"
       ],
       "tests": []
@@ -4396,11 +4396,11 @@
         "+<mmgr/swar.c>",
         "+<shared/ip/ip.c>",
         "+<shared/hex/hex.c>",
-        "+<core_setup/hal/host/physical/physical_mock.c>",
+        "+<test/core_setup/hal/host/physical/physical_mock.c>",
         "+<mmgr/plaintext.c>",
         "+<mmgr/arena.c>",
         "+<mmgr/span.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/network_drivers/physical/test_net_egress"
@@ -4427,11 +4427,11 @@
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/swar.c>",
-        "+<core_setup/hal/host/physical/physical_mock.c>",
+        "+<test/core_setup/hal/host/physical/physical_mock.c>",
         "+<mmgr/plaintext.c>",
         "+<mmgr/arena.c>",
         "+<mmgr/span.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/network_drivers/physical/test_net_egress"
@@ -4479,7 +4479,7 @@
         "+<mmgr/plaintext.c>",
         "+<mmgr/span.c>",
         "+<mmgr/arena.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/services/timing_position/nmea2000/test_nmea2000"
@@ -4541,7 +4541,7 @@
         "+<mmgr/float_bits.c>",
         "+<mmgr/plaintext.c>",
         "+<mmgr/arena.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/file_conversion/network_drivers/application/ntp_server/test_ntp_server"
@@ -4579,7 +4579,7 @@
         "+<shared/time_compat/time_compat.c>",
         "+<mmgr/membuild.c>",
         "+<mmgr/float_bits.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/plaintext.c>"
       ],
       "tests": [
@@ -4659,7 +4659,7 @@
         "+<mmgr/span.c>",
         "+<mmgr/secure.c>",
         "+<mmgr/arena.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/services/security/oauth2/test_oauth2_exchange"
@@ -4701,7 +4701,7 @@
         "+<mmgr/swar.c>",
         "+<shared/hex/hex.c>",
         "+<mmgr/plaintext.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<services/net/http_client/http_client.c>",
         "+<network_drivers/presentation/codec/json/json.c>",
         "+<mmgr/membuild.c>",
@@ -4733,7 +4733,7 @@
         "+<mmgr/span.c>",
         "+<mmgr/swar.c>",
         "+<shared/hex/hex.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/plaintext.c>"
       ],
       "tests": [
@@ -4761,16 +4761,16 @@
         "+<crypto/asymmetric/rsa.c>",
         "+<network_drivers/presentation/ssh/transport/ssh_rsa.c>",
         "+<crypto/asymmetric/bignum.c>",
-        "+<core_setup/hal/portable/portable_bignum.c>",
+        "+<test/core_setup/hal/portable/portable_bignum.c>",
         "+<crypto/hash/sha256.c>",
         "+<crypto/hash/sha512.c>",
         "+<mmgr/plaintext.c>",
         "+<mmgr/arena.c>",
         "+<server/core/worker.c>",
         "+<mmgr/secure.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/protostr.c>",
-        "+<core_setup/hal/host/host_nvs.c>",
+        "+<test/core_setup/hal/host/host_nvs.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/bytes.c>",
         "+<mmgr/endian.c>",
@@ -4860,7 +4860,7 @@
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/swar.c>",
-        "+<core_setup/hal/host/host_platform.c>"
+        "+<test/core_setup/hal/host/host_platform.c>"
       ],
       "tests": ["unit/src/server/update/test_ota_rollback"],
       "extra_scripts": ["pre:test/gen_test_runners.py"]
@@ -4894,8 +4894,8 @@
         "+<mmgr/float_bits.c>",
         "+<shared/hex/hex.c>",
         "+<server/storage/partition_monitor/partition_monitor_routes.c>",
-        "+<core_setup/hal/host/host_platform.c>",
-        "+<server/core/protocore.c>",
+        "+<test/core_setup/hal/host/host_platform.c>",
+        "+<protocore.c>",
         "+<server/io/response.c>",
         "+<network_drivers/presentation/presentation.c>",
         "+<network_drivers/presentation/http/http_parser/http_parser.c>",
@@ -4922,7 +4922,7 @@
         "+<server/storage/mnt.c>",
         "+<server/signaling/signaling.c>",
         "+<server/io/middleware.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<server/regex.c>"
       ],
       "tests": [
@@ -4950,8 +4950,8 @@
         "+<mmgr/float_bits.c>",
         "+<shared/hex/hex.c>",
         "+<server/storage/partition_monitor/partition_monitor_routes.c>",
-        "+<core_setup/hal/host/host_platform.c>",
-        "+<server/core/protocore.c>",
+        "+<test/core_setup/hal/host/host_platform.c>",
+        "+<protocore.c>",
         "+<server/io/response.c>",
         "+<network_drivers/presentation/presentation.c>",
         "+<network_drivers/presentation/http/http_parser/http_parser.c>",
@@ -4978,7 +4978,7 @@
         "+<server/storage/mnt.c>",
         "+<server/signaling/signaling.c>",
         "+<server/io/middleware.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<server/regex.c>"
       ],
       "tests": [
@@ -4995,7 +4995,7 @@
       "flags": ["-DPROTOCORE_ENABLE_WEBSOCKET=1", "-DPROTOCORE_ENABLE_SSE=1"]
     },
     "native_pca9685": {
-      "desc": "PCA9685 16-channel 12-bit PWM / servo driver (server/peripherals/pca9685): the PRE_SCALE value for a PWM frequency (Eq 1, hardware minimum 3), the per-channel register base, a servo pulse width as a 12-bit count, the five-byte channel write, and programming a part end to end - the suite reads the registers back off the Rev. 4 device model in core_setup/hal/host/devices/, where a PRE_SCALE write is blocked unless begin() slept the oscillator first.",
+      "desc": "PCA9685 16-channel 12-bit PWM / servo driver (server/peripherals/pca9685): the PRE_SCALE value for a PWM frequency (Eq 1, hardware minimum 3), the per-channel register base, a servo pulse width as a 12-bit count, the five-byte channel write, and programming a part end to end - the suite reads the registers back off the Rev. 4 device model in test/core_setup/hal/host/devices/, where a PRE_SCALE write is blocked unless begin() slept the oscillator first.",
       "flags": [
         "-DPROTOCORE_ENABLE_PCA9685=1"
       ],
@@ -5007,7 +5007,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/span.c>",
         "+<mmgr/arena.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>"
       ],
       "tests": [
@@ -5138,7 +5138,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<server/core/worker.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protostr.c>",
         "+<mmgr/protomem.c>",
@@ -5165,7 +5165,7 @@
       ]
     },
     "native_phy": {
-      "desc": "Layer 1 driven through a REAL backend: the env declares PROTOCORE_PHYSICAL_HAS_BACKEND=1,\nso and core_setup/hal/host/physical stands in for silicon instead of the\nno-op stubs in physical.c. Nothing else in the tree builds that backend, and without it every L1\nreadout answers empty - which means a caller that mishandles a live link reads exactly like one\nthat works, and no assertion can tell them apart. Here the link actually comes up: the station\nassociates and reports its SSID, channel and a negative dBm RSSI; the softAP takes its own address\nwithout stealing the route; Ethernet then takes the default route from the station, the way a\nstack picks one when both are up. That is also the only way to separate the same-signature members\na stub build cannot - eth->init from eth->ready, ip6->init from ip6->ready, and link->mac from\nlink->egress_mac, which return DIFFERENT addresses once a wired link carries traffic. Addresses\nare RFC 5737 TEST-NET-1 and RFC 3849 2001:db8::/32, the MACs are checked for the IEEE 802 U/L and\nI/G bits, the SSID cap is IEEE 802.11-2020 9.4.2.2's 32 octets, and a global IPv6 address is\nchecked not to be an RFC 4291 sec 2.5.6 link-local. PROTOCORE_RADIO_WIFI_PS is set to max modem so the\nkeep-awake refcount is provable: the first busy_hold forces sleep off and the balancing release\nrestores the configured mode, which is indistinguishable from the held state at the default of 0.\nThis is the only env that compiles radio_power.c's backend arm at all.",
+      "desc": "Layer 1 driven through a REAL backend: the env declares PROTOCORE_PHYSICAL_HAS_BACKEND=1,\nso and test/core_setup/hal/host/physical stands in for silicon instead of the\nno-op stubs in physical.c. Nothing else in the tree builds that backend, and without it every L1\nreadout answers empty - which means a caller that mishandles a live link reads exactly like one\nthat works, and no assertion can tell them apart. Here the link actually comes up: the station\nassociates and reports its SSID, channel and a negative dBm RSSI; the softAP takes its own address\nwithout stealing the route; Ethernet then takes the default route from the station, the way a\nstack picks one when both are up. That is also the only way to separate the same-signature members\na stub build cannot - eth->init from eth->ready, ip6->init from ip6->ready, and link->mac from\nlink->egress_mac, which return DIFFERENT addresses once a wired link carries traffic. Addresses\nare RFC 5737 TEST-NET-1 and RFC 3849 2001:db8::/32, the MACs are checked for the IEEE 802 U/L and\nI/G bits, the SSID cap is IEEE 802.11-2020 9.4.2.2's 32 octets, and a global IPv6 address is\nchecked not to be an RFC 4291 sec 2.5.6 link-local. PROTOCORE_RADIO_WIFI_PS is set to max modem so the\nkeep-awake refcount is provable: the first busy_hold forces sleep off and the balancing release\nrestores the configured mode, which is indistinguishable from the held state at the default of 0.\nThis is the only env that compiles radio_power.c's backend arm at all.",
       "flags": [
         "-DPROTOCORE_PHYSICAL_HAS_BACKEND=1",
         "-DPROTOCORE_ENABLE_ETHERNET=1",
@@ -5177,7 +5177,7 @@
         "-<*>",
         "+<network_drivers/physical/physical.c>",
         "+<network_drivers/physical/radio_power.c>",
-        "+<../core_setup/hal/host/physical/physical_mock.c>",
+        "+<../test/core_setup/hal/host/physical/physical_mock.c>",
         "+<shared/ip/ip.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
@@ -5186,7 +5186,7 @@
         "+<mmgr/plaintext.c>",
         "+<mmgr/span.c>",
         "+<mmgr/arena.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/network_drivers/physical/test_phy"
@@ -5196,7 +5196,7 @@
       ]
     },
     "native_l1_link": {
-      "desc": "Layer 1 driven through a real backend: the env declares PROTOCORE_PHYSICAL_HAS_BACKEND=1, so core_setup/hal/host/physical stands in for silicon instead of the no-op stubs in physical.c, and the link can actually come up. That is what makes the readouts checkable at all, since a stub answers every one of them with an empty value and a caller that mishandles a live link then reads exactly like one that works. The station associates and reports its SSID, its channel and a negative dBm RSSI; the softAP takes its own address without stealing the route; Ethernet then takes the default route from the station the way a stack picks one when both are up. It is also the only way to separate the same-signature calls a stub build cannot: eth_init from eth_ready, ip6_init from ip6_ready, and wifi_mac from egress_mac, which answer with DIFFERENT addresses once a wired link carries traffic. Addresses are RFC 5737 TEST-NET-1 and RFC 3849 2001:db8::/32, the hardware addresses are checked for the RFC 7042 sec 2.1 U/L and I/G bits, the SSID cap is IEEE 802.11-2020 9.4.2.2's 32 octets, and a global unicast IPv6 address (RFC 4291 sec 2.5.4) is checked not to be an RFC 4291 sec 2.5.6 link-local. PROTOCORE_RADIO_WIFI_PS is set to max modem so the keep-awake refcount is provable: the first hold forces doze off and the balancing release restores the configured mode, which at the default of 0 would be indistinguishable from the held state. This is the only env that compiles radio_power.c's backend arm at all.",
+      "desc": "Layer 1 driven through a real backend: the env declares PROTOCORE_PHYSICAL_HAS_BACKEND=1, so test/core_setup/hal/host/physical stands in for silicon instead of the no-op stubs in physical.c, and the link can actually come up. That is what makes the readouts checkable at all, since a stub answers every one of them with an empty value and a caller that mishandles a live link then reads exactly like one that works. The station associates and reports its SSID, its channel and a negative dBm RSSI; the softAP takes its own address without stealing the route; Ethernet then takes the default route from the station the way a stack picks one when both are up. It is also the only way to separate the same-signature calls a stub build cannot: eth_init from eth_ready, ip6_init from ip6_ready, and wifi_mac from egress_mac, which answer with DIFFERENT addresses once a wired link carries traffic. Addresses are RFC 5737 TEST-NET-1 and RFC 3849 2001:db8::/32, the hardware addresses are checked for the RFC 7042 sec 2.1 U/L and I/G bits, the SSID cap is IEEE 802.11-2020 9.4.2.2's 32 octets, and a global unicast IPv6 address (RFC 4291 sec 2.5.4) is checked not to be an RFC 4291 sec 2.5.6 link-local. PROTOCORE_RADIO_WIFI_PS is set to max modem so the keep-awake refcount is provable: the first hold forces doze off and the balancing release restores the configured mode, which at the default of 0 would be indistinguishable from the held state. This is the only env that compiles radio_power.c's backend arm at all.",
       "flags": [
         "-DPROTOCORE_PHYSICAL_HAS_BACKEND=1",
         "-DPROTOCORE_ENABLE_ETHERNET=1",
@@ -5207,7 +5207,7 @@
       "src": [
         "+<network_drivers/physical/physical.c>",
         "+<network_drivers/physical/radio_power.c>",
-        "+<../core_setup/hal/host/physical/physical_mock.c>",
+        "+<../test/core_setup/hal/host/physical/physical_mock.c>",
         "+<shared/ip/ip.c>",
         "+<shared/hex/hex.c>",
         "+<mmgr/protomem.c>",
@@ -5216,7 +5216,7 @@
         "+<mmgr/plaintext.c>",
         "+<mmgr/span.c>",
         "+<mmgr/arena.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/network_drivers/physical/test_phy"
@@ -5240,11 +5240,11 @@
         "+<mmgr/swar.c>",
         "+<shared/ip/ip.c>",
         "+<shared/hex/hex.c>",
-        "+<core_setup/hal/host/physical/physical_mock.c>",
+        "+<test/core_setup/hal/host/physical/physical_mock.c>",
         "+<mmgr/plaintext.c>",
         "+<mmgr/arena.c>",
         "+<mmgr/span.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/network_drivers/physical/test_iface"
@@ -5259,7 +5259,7 @@
         "+<mmgr/plaintext.c>",
         "+<mmgr/arena.c>",
         "+<server/core/worker.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/secure.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
@@ -5280,7 +5280,7 @@
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/swar.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": ["unit/src/mmgr/test_plaintext"],
       "extra_scripts": ["pre:test/gen_test_runners.py"]
@@ -5301,7 +5301,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/span.c>",
         "+<mmgr/arena.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/server/peripherals/test_pmbus"
@@ -5331,7 +5331,7 @@
         "+<mmgr/plaintext.c>",
         "+<mmgr/secure.c>",
         "+<server/core/worker.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/span.c>",
@@ -5359,11 +5359,11 @@
         "+<mmgr/swar.c>",
         "+<mmgr/float_bits.c>",
         "+<shared/hex/hex.c>",
-        "+<core_setup/hal/host/host_platform.c>",
+        "+<test/core_setup/hal/host/host_platform.c>",
         "+<mmgr/plaintext.c>",
         "+<mmgr/arena.c>",
         "+<mmgr/span.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/file_conversion/server/core/test_power_mgmt"
@@ -5463,9 +5463,9 @@
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/span.c>",
         "+<mmgr/swar.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/plaintext.c>",
-        "+<core_setup/hal/host/protocore_dma_host.c>"
+        "+<test/core_setup/hal/host/protocore_dma_host.c>"
       ],
       "tests": [
         "unit/src/server/core/test_preempt_queue"
@@ -5566,10 +5566,10 @@
         "+<mmgr/plaintext.c>",
         "+<mmgr/span.c>",
         "+<mmgr/arena.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<network_drivers/physical/physical.c>",
         "+<network_drivers/physical/radio_power.c>",
-        "+<core_setup/hal/host/physical/physical_mock.c>"
+        "+<test/core_setup/hal/host/physical/physical_mock.c>"
       ],
       "tests": [
         "unit/src/services/radio/promisc/test_promisc"
@@ -5592,7 +5592,7 @@
         "+<mmgr/plaintext.c>",
         "+<mmgr/arena.c>",
         "+<mmgr/span.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/services/iot/protobuf/test_protobuf"
@@ -5671,15 +5671,15 @@
         "+<shared/pcap/pcap.c>",
         "+<shared/time_compat/time_compat.c>",
         "+<mmgr/float_bits.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<network_drivers/physical/physical.c>",
         "+<network_drivers/transport/udp/udp.c>",
         "+<network_drivers/transport/udp/server/server.c>",
-        "+<core_setup/hal/host/host_nvs.c>",
-        "+<core_setup/hal/host/physical/physical_mock.c>",
+        "+<test/core_setup/hal/host/host_nvs.c>",
+        "+<test/core_setup/hal/host/physical/physical_mock.c>",
         "+<network_drivers/physical/radio_power.c>",
         "+<network_drivers/transport/udp/client/client.c>",
-        "+<core_setup/hal/host/protocore_dma_host.c>"
+        "+<test/core_setup/hal/host/protocore_dma_host.c>"
       ],
       "tests": [
         "unit/src/server/core/provisioning_service/test_provisioning"
@@ -5775,7 +5775,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<server/core/worker.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/endian.c>",
         "+<mmgr/rawmemcpy.c>",
@@ -5805,7 +5805,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<server/core/worker.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/endian.c>",
         "+<mmgr/rawmemcpy.c>",
@@ -5886,7 +5886,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<server/core/worker.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/bytes.c>",
@@ -5930,7 +5930,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<server/core/worker.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/endian.c>",
         "+<mmgr/rawmemcpy.c>",
@@ -5978,7 +5978,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<server/core/worker.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/endian.c>",
         "+<mmgr/rawmemcpy.c>",
@@ -6040,11 +6040,11 @@
         "+<mmgr/swar.c>",
         "+<shared/ip/ip.c>",
         "+<shared/hex/hex.c>",
-        "+<core_setup/hal/host/physical/physical_mock.c>",
+        "+<test/core_setup/hal/host/physical/physical_mock.c>",
         "+<mmgr/plaintext.c>",
         "+<mmgr/span.c>",
         "+<mmgr/arena.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/network_drivers/physical/test_radio_power"
@@ -6101,7 +6101,7 @@
         "+<network_drivers/session/sse/sse.c>",
         "+<network_drivers/presentation/codec/multipart/multipart.c>",
         "+<crypto/hash/sha256.c>",
-        "+<server/core/protocore.c>",
+        "+<protocore.c>",
         "+<network_drivers/network/network.c>",
         "+<network_drivers/network/dns/dns.c>",
         "+<network_drivers/presentation/http/route/http_route.c>",
@@ -6117,7 +6117,7 @@
         "+<server/regex.c>",
         "+<server/io/middleware.c>",
         "+<server/io/webdav_handler.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/protoframe.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protostr.c>",
@@ -6140,7 +6140,7 @@
         "+<mmgr/float_bits.c>",
         "+<crypto/rng/rng.c>",
         "+<crypto/cipher/chacha20.c>",
-        "+<core_setup/hal/host/protocore_dma_host.c>"
+        "+<test/core_setup/hal/host/protocore_dma_host.c>"
       ],
       "tests": [
         "unit/integration/server/test_range"
@@ -6185,7 +6185,7 @@
         "+<mmgr/plaintext.c>",
         "+<mmgr/span.c>",
         "+<mmgr/arena.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/server/peripherals/rcwl0516/test_rcwl0516"
@@ -6246,7 +6246,7 @@
         "+<mmgr/plaintext.c>",
         "+<shared/ip/ip.c>",
         "+<server/clock/clock.c>",
-        "+<core_setup/hal/host/host_platform.c>",
+        "+<test/core_setup/hal/host/host_platform.c>",
         "+<server/core/worker.c>",
         "+<network_drivers/transport/tcp/server/server.c>",
         "+<network_drivers/network/dns/dns_resolver.c>",
@@ -6254,7 +6254,7 @@
         "+<mmgr/span.c>",
         "+<mmgr/secure.c>",
         "+<shared/hex/hex.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<network_drivers/network/dns/dns_wire.c>",
         "+<network_drivers/presentation/presentation.c>",
         "+<network_drivers/transport/udp/server/server.c>",
@@ -6297,7 +6297,7 @@
             "+<shared/hex/hex.c>",
             "+<mmgr/plaintext.c>",
             "+<mmgr/arena.c>",
-            "+<core_setup/hal/portable/portable_platform.c>"
+            "+<test/core_setup/hal/portable/portable_platform.c>"
           ],
           "tests": [
             "unit/integration/application/test_response_headers"
@@ -6358,7 +6358,7 @@
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/span.c>",
         "+<mmgr/swar.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": ["unit/src/mmgr/test_roaming"],
       "extra_scripts": ["pre:test/gen_test_runners.py"]
@@ -6379,7 +6379,7 @@
         "+<mmgr/span.c>",
         "+<mmgr/arena.c>",
         "+<mmgr/secure.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/services/opcua/models/robotics/test_robotics"
@@ -6401,7 +6401,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/span.c>",
         "+<mmgr/arena.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/server/peripherals/rtc/test_rtc"
@@ -6468,7 +6468,7 @@
         "+<mmgr/plaintext.c>",
         "+<mmgr/span.c>",
         "+<mmgr/arena.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<network_drivers/transport/tcp/protocol/protocol.c>",
         "+<network_drivers/transport/tcp/server/server.c>",
         "+<network_drivers/transport/tcp/lower/lower.c>",
@@ -6504,7 +6504,7 @@
         "+<mmgr/plaintext.c>",
         "+<mmgr/span.c>",
         "+<mmgr/arena.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/network_drivers/session/scp/test_scp"
@@ -6578,7 +6578,7 @@
         "+<crypto/aead/aesgcm.c>",
         "+<crypto/asymmetric/ecdsa.c>",
         "+<crypto/asymmetric/bignum.c>",
-        "+<core_setup/hal/portable/portable_bignum.c>",
+        "+<test/core_setup/hal/portable/portable_bignum.c>",
         "+<crypto/asymmetric/rsa.c>",
         "+<network_drivers/presentation/ssh/transport/ssh_rsa.c>",
         "+<crypto/hash/sha512.c>",
@@ -6594,10 +6594,10 @@
         "+<network_drivers/presentation/ssh/app/server.c>",
         "+<network_drivers/presentation/ssh/network/network.c>",
         "+<mmgr/secure.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protostr.c>",
-        "+<core_setup/hal/host/host_nvs.c>",
+        "+<test/core_setup/hal/host/host_nvs.c>",
         "+<mmgr/protoframe.c>",
         "+<server/storage/mnt.c>",
         "+<server/storage/filesystem.c>",
@@ -6662,7 +6662,7 @@
         "+<mmgr/plaintext.c>",
         "+<mmgr/secure.c>",
         "+<server/core/worker.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/span.c>",
@@ -6685,7 +6685,7 @@
         "+<mmgr/plaintext.c>",
         "+<mmgr/span.c>",
         "+<mmgr/arena.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/server/peripherals/sen0192/test_sen0192"
@@ -6791,7 +6791,7 @@
         "+<crypto/aead/aesgcm.c>",
         "+<crypto/asymmetric/ecdsa.c>",
         "+<crypto/asymmetric/bignum.c>",
-        "+<core_setup/hal/portable/portable_bignum.c>",
+        "+<test/core_setup/hal/portable/portable_bignum.c>",
         "+<crypto/asymmetric/rsa.c>",
         "+<network_drivers/presentation/ssh/transport/ssh_rsa.c>",
         "+<crypto/hash/sha512.c>",
@@ -6807,10 +6807,10 @@
         "+<network_drivers/presentation/ssh/app/server.c>",
         "+<network_drivers/presentation/ssh/network/network.c>",
         "+<mmgr/secure.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protostr.c>",
-        "+<core_setup/hal/host/host_nvs.c>",
+        "+<test/core_setup/hal/host/host_nvs.c>",
         "+<mmgr/protoframe.c>",
         "+<network_drivers/application/sftp/ssh_sftp.c>",
         "+<network_drivers/application/sftp/sftp.c>",
@@ -6848,7 +6848,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/span.c>",
         "+<mmgr/arena.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/server/peripherals/sht3x/test_sht3x"
@@ -6879,7 +6879,7 @@
         "+<mmgr/plaintext.c>",
         "+<mmgr/arena.c>",
         "+<mmgr/span.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/server/signaling/test_signaling"
@@ -6901,7 +6901,7 @@
         "+<mmgr/plaintext.c>",
         "+<mmgr/span.c>",
         "+<mmgr/arena.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/services/fieldbus/simatic/test_simatic"
@@ -6943,7 +6943,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<server/core/worker.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/protomem.c>",
         "+<crypto/rng/rng.c>",
         "+<crypto/cipher/chacha20.c>",
@@ -6973,7 +6973,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<server/core/worker.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/endian.c>",
         "+<mmgr/rawmemcpy.c>",
@@ -6997,7 +6997,7 @@
         "+<mmgr/span.c>",
         "+<mmgr/endian.c>",
         "+<mmgr/swar.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": ["unit/src/network_drivers/application/smb/test_ntlm"],
       "extra_scripts": ["pre:test/gen_test_runners.py"]
@@ -7047,7 +7047,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<server/core/worker.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/endian.c>",
         "+<mmgr/rawmemcpy.c>",
@@ -7080,7 +7080,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<server/core/worker.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/protostr.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/endian.c>",
@@ -7109,7 +7109,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/span.c>",
         "+<mmgr/arena.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/server/peripherals/test_smbus"
@@ -7137,7 +7137,7 @@
         "+<shared/hex/hex.c>",
         "+<mmgr/secure.c>",
         "+<mmgr/arena.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/protocols/net/test_smtp"
@@ -7168,7 +7168,7 @@
         "+<shared/hex/hex.c>",
         "+<mmgr/plaintext.c>",
         "+<mmgr/arena.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/secure.c>"
       ],
       "tests": [
@@ -7209,7 +7209,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/arena.c>",
         "+<mmgr/span.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/services/net/snmp/test_snmp_trap"
@@ -7235,7 +7235,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/arena.c>",
         "+<mmgr/span.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/services/net/snmp/test_snmp_trap"
@@ -7269,7 +7269,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<server/core/worker.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/bytes.c>",
@@ -7320,7 +7320,7 @@
         "+<mmgr/plaintext.c>",
         "+<mmgr/span.c>",
         "+<mmgr/arena.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/protocols/net/test_southbound"
@@ -7370,7 +7370,7 @@
         "+<mmgr/plaintext.c>",
         "+<mmgr/arena.c>",
         "+<mmgr/span.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/services/iot/sparkplug/test_sparkplug"
@@ -7423,7 +7423,7 @@
         "+<crypto/aead/aesgcm.c>",
         "+<crypto/asymmetric/ecdsa.c>",
         "+<crypto/asymmetric/bignum.c>",
-        "+<core_setup/hal/portable/portable_bignum.c>",
+        "+<test/core_setup/hal/portable/portable_bignum.c>",
         "+<crypto/asymmetric/rsa.c>",
         "+<network_drivers/presentation/ssh/transport/ssh_rsa.c>",
         "+<crypto/hash/sha512.c>",
@@ -7441,10 +7441,10 @@
         "+<mmgr/arena.c>",
         "+<server/core/worker.c>",
         "+<mmgr/secure.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protostr.c>",
-        "+<core_setup/hal/host/host_nvs.c>",
+        "+<test/core_setup/hal/host/host_nvs.c>",
         "+<shared/ip/ip.c>",
         "+<network_drivers/transport/tcp/server/server.c>",
         "+<network_drivers/transport/tcp/tcp.c>",
@@ -7493,7 +7493,7 @@
         "+<mmgr/plaintext.c>",
         "+<mmgr/secure.c>",
         "+<server/core/worker.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/endian.c>",
         "+<mmgr/rawmemcpy.c>",
@@ -7514,14 +7514,14 @@
         "+<mmgr/plaintext.c>",
         "+<mmgr/secure.c>",
         "+<server/core/worker.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/endian.c>",
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/span.c>",
         "+<mmgr/swar.c>",
         "+<crypto/mac/ghash.c>",
-        "+<core_setup/hal/host/host_aes_hal.c>"
+        "+<test/core_setup/hal/host/host_aes_hal.c>"
       ],
       "tests": ["unit/src/crypto/aead/test_ssh_aesgcm"]
     },
@@ -7536,7 +7536,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<server/core/worker.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/span.c>",
@@ -7586,7 +7586,7 @@
         "+<crypto/aead/aesgcm.c>",
         "+<crypto/asymmetric/ecdsa.c>",
         "+<crypto/asymmetric/bignum.c>",
-        "+<core_setup/hal/portable/portable_bignum.c>",
+        "+<test/core_setup/hal/portable/portable_bignum.c>",
         "+<crypto/asymmetric/rsa.c>",
         "+<network_drivers/presentation/ssh/transport/ssh_rsa.c>",
         "+<crypto/hash/sha512.c>",
@@ -7604,10 +7604,10 @@
         "+<network_drivers/presentation/ssh/client/client.c>",
         "+<network_drivers/presentation/ssh/app/client.c>",
         "+<mmgr/secure.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protostr.c>",
-        "+<core_setup/hal/host/host_nvs.c>",
+        "+<test/core_setup/hal/host/host_nvs.c>",
         "+<mmgr/protoframe.c>",
         "+<network_drivers/network/network.c>",
         "+<network_drivers/network/dns/dns.c>",
@@ -7652,7 +7652,7 @@
         "+<crypto/aead/aesgcm.c>",
         "+<crypto/asymmetric/ecdsa.c>",
         "+<crypto/asymmetric/bignum.c>",
-        "+<core_setup/hal/portable/portable_bignum.c>",
+        "+<test/core_setup/hal/portable/portable_bignum.c>",
         "+<crypto/asymmetric/rsa.c>",
         "+<network_drivers/presentation/ssh/transport/ssh_rsa.c>",
         "+<network_drivers/presentation/ssh/transport/comp.c>",
@@ -7674,10 +7674,10 @@
         "+<mmgr/arena.c>",
         "+<server/core/worker.c>",
         "+<mmgr/secure.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protostr.c>",
-        "+<core_setup/hal/host/host_nvs.c>",
+        "+<test/core_setup/hal/host/host_nvs.c>",
         "+<shared/ip/ip.c>",
         "+<network_drivers/transport/tcp/server/server.c>",
         "+<network_drivers/transport/tcp/tcp.c>",
@@ -7741,7 +7741,7 @@
         "+<crypto/aead/aesgcm.c>",
         "+<crypto/asymmetric/ecdsa.c>",
         "+<crypto/asymmetric/bignum.c>",
-        "+<core_setup/hal/portable/portable_bignum.c>",
+        "+<test/core_setup/hal/portable/portable_bignum.c>",
         "+<crypto/asymmetric/rsa.c>",
         "+<network_drivers/presentation/ssh/transport/ssh_rsa.c>",
         "+<crypto/hash/sha512.c>",
@@ -7757,10 +7757,10 @@
         "+<network_drivers/presentation/ssh/app/server.c>",
         "+<network_drivers/presentation/ssh/network/network.c>",
         "+<mmgr/secure.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protostr.c>",
-        "+<core_setup/hal/host/host_nvs.c>",
+        "+<test/core_setup/hal/host/host_nvs.c>",
         "+<mmgr/bytes.c>",
         "+<mmgr/endian.c>",
         "+<mmgr/membuild.c>",
@@ -7791,7 +7791,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<server/core/worker.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/endian.c>",
         "+<mmgr/rawmemcpy.c>",
@@ -7815,13 +7815,13 @@
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<server/core/worker.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/endian.c>",
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/span.c>",
         "+<mmgr/swar.c>",
-        "+<core_setup/hal/host/host_crypto_hal.c>",
+        "+<test/core_setup/hal/host/host_crypto_hal.c>",
         "+<crypto/rng/rng.c>",
         "+<crypto/cipher/chacha20.c>"
       ],
@@ -7841,7 +7841,7 @@
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/span.c>",
         "+<mmgr/swar.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": ["unit/src/crypto/asymmetric/test_ssh_ed25519"],
       "extra_scripts": ["pre:test/gen_test_runners.py"]
@@ -7861,8 +7861,8 @@
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/span.c>",
         "+<mmgr/swar.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
-        "+<core_setup/hal/host/host_crypto_hal.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/host/host_crypto_hal.c>",
         "+<crypto/asymmetric/fe25519.c>"
       ],
       "tests": ["unit/src/crypto/asymmetric/test_ssh_ed25519"]
@@ -7885,8 +7885,8 @@
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/span.c>",
         "+<mmgr/swar.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
-        "+<core_setup/hal/portable/portable_bignum.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_bignum.c>"
       ],
       "tests": ["unit/src/crypto/asymmetric/test_rsa_kat"]
     },
@@ -7908,9 +7908,9 @@
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/span.c>",
         "+<mmgr/swar.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
-        "+<core_setup/hal/portable/portable_bignum.c>",
-        "+<core_setup/hal/host/host_crypto_hal.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_bignum.c>",
+        "+<test/core_setup/hal/host/host_crypto_hal.c>"
       ],
       "tests": ["unit/src/crypto/asymmetric/test_rsa_kat"]
     },
@@ -7925,8 +7925,8 @@
         "+<mmgr/plaintext.c>",
         "+<mmgr/secure.c>",
         "+<server/core/worker.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
-        "+<core_setup/hal/portable/portable_bignum.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_bignum.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/span.c>",
@@ -7945,13 +7945,13 @@
         "+<mmgr/plaintext.c>",
         "+<mmgr/secure.c>",
         "+<server/core/worker.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/span.c>",
         "+<mmgr/swar.c>",
-        "+<core_setup/hal/host/host_bignum.c>",
-        "+<core_setup/hal/host/host_crypto_hal.c>"
+        "+<test/core_setup/hal/host/host_bignum.c>",
+        "+<test/core_setup/hal/host/host_crypto_hal.c>"
       ],
       "tests": ["unit/src/crypto/asymmetric/test_bignum_group14"]
     },
@@ -7999,7 +7999,7 @@
         "+<network_drivers/transport/tcp/lower/lower.c>",
         "+<network_drivers/transport/tcp/server/server.c>",
         "+<shared/ip/ip.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<network_drivers/presentation/ssh/transport/ssh_kexhash.c>",
         "+<crypto/cipher/chacha20.c>"
       ],
@@ -8049,7 +8049,7 @@
         "+<crypto/aead/aesgcm.c>",
         "+<crypto/asymmetric/ecdsa.c>",
         "+<crypto/asymmetric/bignum.c>",
-        "+<core_setup/hal/portable/portable_bignum.c>",
+        "+<test/core_setup/hal/portable/portable_bignum.c>",
         "+<crypto/asymmetric/rsa.c>",
         "+<network_drivers/presentation/ssh/transport/ssh_rsa.c>",
         "+<crypto/hash/sha512.c>",
@@ -8065,10 +8065,10 @@
         "+<network_drivers/presentation/ssh/app/server.c>",
         "+<network_drivers/presentation/ssh/network/network.c>",
         "+<mmgr/secure.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protostr.c>",
-        "+<core_setup/hal/host/host_nvs.c>",
+        "+<test/core_setup/hal/host/host_nvs.c>",
         "+<mmgr/protoframe.c>",
         "+<network_drivers/network/network.c>",
         "+<network_drivers/network/dns/dns.c>",
@@ -8110,7 +8110,7 @@
         "+<crypto/aead/aesgcm.c>",
         "+<crypto/asymmetric/ecdsa.c>",
         "+<crypto/asymmetric/bignum.c>",
-        "+<core_setup/hal/portable/portable_bignum.c>",
+        "+<test/core_setup/hal/portable/portable_bignum.c>",
         "+<crypto/asymmetric/rsa.c>",
         "+<network_drivers/presentation/ssh/transport/ssh_rsa.c>",
         "+<crypto/hash/sha512.c>",
@@ -8128,10 +8128,10 @@
         "+<mmgr/arena.c>",
         "+<server/core/worker.c>",
         "+<mmgr/secure.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protostr.c>",
-        "+<core_setup/hal/host/host_nvs.c>",
+        "+<test/core_setup/hal/host/host_nvs.c>",
         "+<shared/ip/ip.c>",
         "+<network_drivers/transport/tcp/server/server.c>",
         "+<network_drivers/transport/tcp/tcp.c>",
@@ -8197,7 +8197,7 @@
         "+<crypto/aead/aesgcm.c>",
         "+<crypto/asymmetric/ecdsa.c>",
         "+<crypto/asymmetric/bignum.c>",
-        "+<core_setup/hal/portable/portable_bignum.c>",
+        "+<test/core_setup/hal/portable/portable_bignum.c>",
         "+<crypto/asymmetric/rsa.c>",
         "+<network_drivers/presentation/ssh/transport/ssh_rsa.c>",
         "+<crypto/hash/sha512.c>",
@@ -8215,10 +8215,10 @@
         "+<mmgr/arena.c>",
         "+<server/core/worker.c>",
         "+<mmgr/secure.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protostr.c>",
-        "+<core_setup/hal/host/host_nvs.c>",
+        "+<test/core_setup/hal/host/host_nvs.c>",
         "+<shared/ip/ip.c>",
         "+<network_drivers/transport/tcp/server/server.c>",
         "+<network_drivers/transport/tcp/tcp.c>",
@@ -8265,7 +8265,7 @@
         "+<crypto/aead/aesgcm.c>",
         "+<crypto/asymmetric/ecdsa.c>",
         "+<crypto/asymmetric/bignum.c>",
-        "+<core_setup/hal/portable/portable_bignum.c>",
+        "+<test/core_setup/hal/portable/portable_bignum.c>",
         "+<crypto/asymmetric/rsa.c>",
         "+<network_drivers/presentation/ssh/transport/ssh_rsa.c>",
         "+<crypto/hash/sha512.c>",
@@ -8283,10 +8283,10 @@
         "+<mmgr/arena.c>",
         "+<server/core/worker.c>",
         "+<mmgr/secure.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protostr.c>",
-        "+<core_setup/hal/host/host_nvs.c>",
+        "+<test/core_setup/hal/host/host_nvs.c>",
         "+<shared/ip/ip.c>",
         "+<network_drivers/transport/tcp/server/server.c>",
         "+<network_drivers/transport/tcp/tcp.c>",
@@ -8330,7 +8330,7 @@
         "+<crypto/aead/aesgcm.c>",
         "+<crypto/asymmetric/ecdsa.c>",
         "+<crypto/asymmetric/bignum.c>",
-        "+<core_setup/hal/portable/portable_bignum.c>",
+        "+<test/core_setup/hal/portable/portable_bignum.c>",
         "+<crypto/asymmetric/rsa.c>",
         "+<network_drivers/presentation/ssh/transport/ssh_rsa.c>",
         "+<crypto/hash/sha512.c>",
@@ -8351,10 +8351,10 @@
         "+<mmgr/arena.c>",
         "+<server/core/worker.c>",
         "+<mmgr/secure.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protostr.c>",
-        "+<core_setup/hal/host/host_nvs.c>",
+        "+<test/core_setup/hal/host/host_nvs.c>",
         "+<shared/ip/ip.c>",
         "+<network_drivers/transport/tcp/server/server.c>",
         "+<network_drivers/transport/tcp/tcp.c>",
@@ -8402,7 +8402,7 @@
         "+<mmgr/plaintext.c>",
         "+<mmgr/span.c>",
         "+<mmgr/arena.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/network_drivers/application/sftp/test_ssh_sftp"
@@ -8488,7 +8488,7 @@
         "+<network_drivers/session/sse/sse.c>",
         "+<network_drivers/presentation/codec/multipart/multipart.c>",
         "+<crypto/hash/sha256.c>",
-        "+<server/core/protocore.c>",
+        "+<protocore.c>",
         "+<network_drivers/application/file_serving/file_serving.c>",
         "+<network_drivers/application/http_range.c>",
         "+<network_drivers/presentation/http/auth/auth.c>",
@@ -8501,7 +8501,7 @@
         "+<network_drivers/application/web_assets.c>",
         "+<server/web/web_terminal/web_terminal.c>",
         "+<network_drivers/application/ntp_service/ntp_service.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/protoframe.c>",
         "+<server/clock/clock.c>",
         "+<network_drivers/presentation/http/route/http_route.c>",
@@ -8529,10 +8529,10 @@
         "+<shared/time_compat/time_compat.c>",
         "+<shared/utf8/utf8.c>",
         "+<mmgr/float_bits.c>",
-        "+<core_setup/hal/host/host_platform.c>",
+        "+<test/core_setup/hal/host/host_platform.c>",
         "+<crypto/rng/rng.c>",
         "+<crypto/cipher/chacha20.c>",
-        "+<core_setup/hal/host/protocore_dma_host.c>"
+        "+<test/core_setup/hal/host/protocore_dma_host.c>"
       ],
       "tests": []
     },
@@ -8562,7 +8562,7 @@
         "+<network_drivers/presentation/http/sse/sse.c>",
         "+<network_drivers/session/sse/sse.c>",
         "+<network_drivers/presentation/codec/multipart/multipart.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/bytes.c>",
@@ -8599,7 +8599,7 @@
         "+<shared/hex/hex.c>",
         "+<mmgr/plaintext.c>",
         "+<mmgr/arena.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/protocols/transport/test_statsd"
@@ -8666,14 +8666,14 @@
         "+<shared/hex/hex.c>",
         "+<mmgr/plaintext.c>",
         "+<mmgr/arena.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/protocols/transport/test_syslog"
       ]
     },
     "native_tcp": {
-      "desc": "The TCP path a stack drives, run on the host against the pcb driver in core_setup/hal/host. This is the only env that compiles the marshaled\narm of tcp_conn.c - every send, output, close, abort and recved the target routes through\npc_tcp_marshal - and the only one that drives a segment through the callbacks listener_accept_cb\ninstalled on the pcb rather than naming lowlevel_recv_cb directly.",
+      "desc": "The TCP path a stack drives, run on the host against the pcb driver in test/core_setup/hal/host. This is the only env that compiles the marshaled\narm of tcp_conn.c - every send, output, close, abort and recved the target routes through\npc_tcp_marshal - and the only one that drives a segment through the callbacks listener_accept_cb\ninstalled on the pcb rather than naming lowlevel_recv_cb directly.",
       "flags": [
         "-DPROTOCORE_HAS_NET_STACK=1"
       ],
@@ -8694,7 +8694,7 @@
         "+<mmgr/span.c>",
         "+<mmgr/swar.c>",
         "+<shared/hex/hex.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/plaintext.c>"
       ],
       "tests": [
@@ -8735,7 +8735,7 @@
         "+<mmgr/swar.c>",
         "+<shared/hex/hex.c>",
         "+<mmgr/plaintext.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/network_drivers/transport/tcp/client/test_tcp_client"
@@ -8763,7 +8763,7 @@
         "+<mmgr/swar.c>",
         "+<shared/hex/hex.c>",
         "+<mmgr/plaintext.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/network_drivers/transport/tcp/protocol/test_tcp_conn"
@@ -8794,7 +8794,7 @@
         "+<mmgr/swar.c>",
         "+<shared/hex/hex.c>",
         "+<mmgr/plaintext.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/network_drivers/transport/tcp/test_tcp_evt"
@@ -8839,7 +8839,7 @@
         "+<mmgr/swar.c>",
         "+<shared/hex/hex.c>",
         "+<mmgr/plaintext.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/network_drivers/transport/tcp/protocol/test_tcp_listener"
@@ -8867,7 +8867,7 @@
         "+<mmgr/swar.c>",
         "+<shared/hex/hex.c>",
         "+<mmgr/plaintext.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/network_drivers/transport/tcp/test_tcp"
@@ -8919,7 +8919,7 @@
         "+<shared/hex/hex.c>",
         "+<mmgr/float_bits.c>",
         "+<mmgr/plaintext.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/integration/session/test_telnet"
@@ -8993,7 +8993,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<server/core/worker.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/endian.c>",
         "+<mmgr/rawmemcpy.c>",
@@ -9030,7 +9030,7 @@
         "+<mmgr/span.c>",
         "+<mmgr/swar.c>",
         "+<mmgr/protostr.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/network_drivers/presentation/http/http3/test_tls13_msg"
@@ -9062,7 +9062,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<server/core/worker.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/endian.c>",
@@ -9079,7 +9079,7 @@
         "+<src/crypto/asymmetric/rsa.c>",
         "+<src/crypto/mac/hmac_sha256.c>",
         "+<src/crypto/asymmetric/bignum.c>",
-        "+<core_setup/hal/portable/portable_bignum.c>",
+        "+<test/core_setup/hal/portable/portable_bignum.c>",
         "+<crypto/hash/sha384.c>",
         "+<crypto/mac/hmac_sha384.c>",
         "+<crypto/kdf/hkdf_sha384.c>",
@@ -9120,7 +9120,7 @@
         "+<mmgr/plaintext.c>",
         "+<mmgr/protomem.c>",
         "+<server/core/worker.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/endian.c>",
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/span.c>",
@@ -9171,7 +9171,7 @@
         "+<src/shared/hex/hex.c>",
         "+<src/server/clock/clock.c>",
         "+<src/server/core/worker.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<src/crypto/hash/sha256.c>",
         "+<src/crypto/hash/sha512.c>",
         "+<src/crypto/mac/hmac_sha256.c>",
@@ -9193,7 +9193,7 @@
         "+<src/crypto/asymmetric/ecdsa.c>",
         "+<src/crypto/asymmetric/rsa.c>",
         "+<src/crypto/asymmetric/bignum.c>",
-        "+<core_setup/hal/portable/portable_bignum.c>",
+        "+<test/core_setup/hal/portable/portable_bignum.c>",
         "+<crypto/hash/sha384.c>",
         "+<crypto/mac/hmac_sha384.c>",
         "+<crypto/kdf/hkdf_sha384.c>",
@@ -9216,7 +9216,7 @@
         "+<mmgr/arena.c>",
         "+<mmgr/secure.c>",
         "+<mmgr/span.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": ["unit/src/services/security/totp/test_totp"],
       "extra_scripts": ["pre:test/gen_test_runners.py"]
@@ -9236,7 +9236,7 @@
         "+<mmgr/plaintext.c>",
         "+<mmgr/arena.c>",
         "+<mmgr/span.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/server/signaling/test_trace_capture"
@@ -9275,7 +9275,7 @@
       "extra_scripts": ["pre:test/gen_test_runners.py"]
     },
     "native_udp": {
-      "desc": "The UDP path a stack drives, run on the host against the pcb driver in core_setup/hal/host. Covers udp_listener + udp_client against the\nhost pcb driver: the receive ring, both send paths reaching the wire in the call that makes them,\nNetAddr carrying v4 and v6 both ways, the pbuf pool refusing, and the datagrams the core handed to the stack read back as a DLT_RAW libpcap\ncapture with synthesized IP and UDP headers (core_setup/hal/host/protocore_net_pcap.h).",
+      "desc": "The UDP path a stack drives, run on the host against the pcb driver in test/core_setup/hal/host. Covers udp_listener + udp_client against the\nhost pcb driver: the receive ring, both send paths reaching the wire in the call that makes them,\nNetAddr carrying v4 and v6 both ways, the pbuf pool refusing, and the datagrams the core handed to the stack read back as a DLT_RAW libpcap\ncapture with synthesized IP and UDP headers (test/core_setup/hal/host/protocore_net_pcap.h).",
       "flags": [
         "-DPROTOCORE_HAS_NET_STACK=1"
       ],
@@ -9295,7 +9295,7 @@
         "+<shared/pcap/pcap.c>",
         "+<mmgr/plaintext.c>",
         "+<mmgr/arena.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/integration/transport/test_udp"
@@ -9319,7 +9319,7 @@
         "+<mmgr/plaintext.c>",
         "+<mmgr/arena.c>",
         "+<mmgr/span.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/services/iot/udp_telemetry/test_udp_telemetry"
@@ -9349,7 +9349,7 @@
         "+<shared/hex/hex.c>",
         "+<mmgr/plaintext.c>",
         "+<mmgr/arena.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/integration/transport/test_udp_transport"
@@ -9371,7 +9371,7 @@
         "+<mmgr/span.c>",
         "+<mmgr/arena.c>",
         "+<mmgr/secure.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/services/opcua/models/umati/test_umati"
@@ -9381,7 +9381,7 @@
       ]
     },
     "native_upload": {
-      "desc": "Streaming file upload: POST body -> FS file via the parser streaming hook.\nSmall BODY_BUF_SIZE exercises multi-chunk streaming; the mock FS captures the\nwritten bytes (core_setup/hal/host/FS.h write-capture).",
+      "desc": "Streaming file upload: POST body -> FS file via the parser streaming hook.\nSmall BODY_BUF_SIZE exercises multi-chunk streaming; the mock FS captures the\nwritten bytes (test/core_setup/hal/host/FS.h write-capture).",
       "flags": [
         "-DPROTOCORE_ENFORCE_HOST_HEADER=0",
         "-DPROTOCORE_ENABLE_UPLOAD=1",
@@ -9413,7 +9413,7 @@
         "+<network_drivers/session/sse/sse.c>",
         "+<network_drivers/presentation/codec/multipart/multipart.c>",
         "+<crypto/hash/sha256.c>",
-        "+<server/core/protocore.c>",
+        "+<protocore.c>",
         "+<network_drivers/network/network.c>",
         "+<network_drivers/network/dns/dns.c>",
         "+<network_drivers/application/file_serving/file_serving.c>",
@@ -9425,7 +9425,7 @@
         "+<server/io/middleware.c>",
         "+<server/io/webdav_handler.c>",
         "+<network_drivers/application/upload_service/upload_service.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/protoframe.c>",
         "+<server/clock/clock.c>",
         "+<network_drivers/presentation/http/route/http_route.c>",
@@ -9452,7 +9452,7 @@
         "+<mmgr/float_bits.c>",
         "+<crypto/rng/rng.c>",
         "+<crypto/cipher/chacha20.c>",
-        "+<core_setup/hal/host/protocore_dma_host.c>"
+        "+<test/core_setup/hal/host/protocore_dma_host.c>"
       ],
       "tests": [
         "unit/integration/server/test_upload"
@@ -9487,7 +9487,7 @@
       "extra_scripts": ["pre:test/gen_test_runners.py"]
     },
     "native_vl53l0x": {
-      "desc": "VL53L0X time-of-flight ranging (server/peripherals/vl53l0x): the 16-bit distance from RESULT_RANGE_STATUS + 10 high octet first, the data-ready bits of RESULT_INTERRUPT_STATUS, the DeviceRangeStatus field in bits 6:3 where only 11 (RANGECOMPLETE) is a good ranging, and driving a part end to end - the suite puts a distance in front of the device model in core_setup/hal/host/devices/, which serves one measurement per interrupt so a driver that never clears it is caught.",
+      "desc": "VL53L0X time-of-flight ranging (server/peripherals/vl53l0x): the 16-bit distance from RESULT_RANGE_STATUS + 10 high octet first, the data-ready bits of RESULT_INTERRUPT_STATUS, the DeviceRangeStatus field in bits 6:3 where only 11 (RANGECOMPLETE) is a good ranging, and driving a part end to end - the suite puts a distance in front of the device model in test/core_setup/hal/host/devices/, which serves one measurement per interrupt so a driver that never clears it is caught.",
       "flags": [
         "-DPROTOCORE_ENABLE_VL53L0X=1"
       ],
@@ -9499,7 +9499,7 @@
         "+<mmgr/secure.c>",
         "+<mmgr/span.c>",
         "+<mmgr/arena.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/server/peripherals/vl53l0x/test_vl53l0x"
@@ -9637,7 +9637,7 @@
         "+<network_drivers/session/sse/sse.c>",
         "+<network_drivers/presentation/codec/multipart/multipart.c>",
         "+<crypto/hash/sha256.c>",
-        "+<server/core/protocore.c>",
+        "+<protocore.c>",
         "+<network_drivers/network/network.c>",
         "+<network_drivers/network/dns/dns.c>",
         "+<network_drivers/application/file_serving/file_serving.c>",
@@ -9652,7 +9652,7 @@
         "+<network_drivers/application/web_assets.c>",
         "+<server/web/web_terminal/web_terminal.c>",
         "+<network_drivers/application/webdav/webdav.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<mmgr/protoframe.c>",
         "+<server/clock/clock.c>",
         "+<server/storage/filesystem.c>",
@@ -9680,7 +9680,7 @@
         "+<shared/time_compat/time_compat.c>",
         "+<shared/utf8/utf8.c>",
         "+<mmgr/float_bits.c>",
-        "+<core_setup/hal/host/protocore_dma_host.c>"
+        "+<test/core_setup/hal/host/protocore_dma_host.c>"
       ],
       "tests": [
         "unit/integration/http/test_webdav_handler"
@@ -9724,7 +9724,7 @@
         "+<mmgr/plaintext.c>",
         "+<mmgr/span.c>",
         "+<mmgr/arena.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/services/radio/wifi_sniffer/test_wifi_sniffer"
@@ -9753,11 +9753,11 @@
         "+<mmgr/plaintext.c>",
         "+<mmgr/span.c>",
         "+<mmgr/arena.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<services/radio/promisc/promisc.c>",
         "+<network_drivers/physical/physical.c>",
         "+<network_drivers/physical/radio_power.c>",
-        "+<core_setup/hal/host/physical/physical_mock.c>",
+        "+<test/core_setup/hal/host/physical/physical_mock.c>",
         "+<shared/ip/ip.c>",
         "+<shared/hex/hex.c>"
       ],
@@ -9805,7 +9805,7 @@
         "+<mmgr/swar.c>",
         "+<shared/hex/hex.c>",
         "+<mmgr/plaintext.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/integration/transport/test_workers"
@@ -9835,7 +9835,7 @@
         "+<mmgr/swar.c>",
         "+<shared/hex/hex.c>",
         "+<mmgr/plaintext.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/integration/transport/test_workers"
@@ -9862,7 +9862,7 @@
         "+<crypto/cipher/chacha20.c>",
         "+<mmgr/secure.c>",
         "+<mmgr/arena.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": ["unit/src/services/net/ws_client/test_ws_client"],
       "extra_scripts": ["pre:test/gen_test_runners.py"]
@@ -9892,7 +9892,7 @@
         "+<crypto/cipher/chacha20.c>",
         "+<mmgr/secure.c>",
         "+<mmgr/arena.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": []
     },
@@ -9930,7 +9930,7 @@
         "+<network_drivers/presentation/codec/multipart/multipart.c>",
         "+<network_drivers/presentation/codec/inflate/inflate.c>",
         "+<network_drivers/presentation/codec/deflate/deflate.c>",
-        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protomem.c>",
         "+<network_drivers/presentation/codec/deflate/rfc1951.c>",

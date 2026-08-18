@@ -23,6 +23,7 @@
 
 #include "mmgr/span.h" // protocore_span / protocore_cspan - the region, bound with span.from()
 #include "network_drivers/presentation/codec/codec.h" // protocore_codec_type - one item vocabulary
+
 #include "protocore_config.h"
 
 PROTOCORE_BEGIN_DECLS

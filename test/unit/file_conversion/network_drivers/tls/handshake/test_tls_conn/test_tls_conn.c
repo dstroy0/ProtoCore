@@ -1,7 +1,7 @@
 // ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Host tests for the TLS 1.3 stream handshake driver (network_drivers/tls/handshake/handshake.h).
+// Host tests for the TLS 1.3 stream handshake driver (network_drivers/tls/tls.h).
 //
 // The load-bearing case is test_full_handshake_on_rfc8448_key_material. Every key this server runs
 // on is a published octet string: the X25519 pairs, the ServerHello Random and the ECDHE shared
@@ -26,7 +26,7 @@
 #include "crypto/asymmetric/ed25519.h"
 #include "crypto/hash/sha256.h"
 #include "crypto/hash/sha512.h"
-#include "network_drivers/tls/handshake/handshake.h"
+#include "network_drivers/tls/tls.h"
 #include "network_drivers/tls/key_schedule/key_schedule.h"
 #include "network_drivers/tls/record/record.h"
 #include "x509_fixture.h"
@@ -93,9 +93,9 @@ static uint8_t g_cli_ks_bytes[PROTOCORE_TLS13_KS_BORROW] __attribute__((aligned(
 static uint8_t g_cli_hash_work[PROTOCORE_SHA256_BORROW] __attribute__((aligned(4)));
 // Handed to Curve25519, Ed25519 and SHA-512 in turn, so it is sized for the widest of them:
 // PROTOCORE_ED25519_BORROW is 768 + PROTOCORE_SHA512_BORROW, above PROTOCORE_CURVE25519_BORROW.
-static uint8_t g_sign_work[PROTOCORE_ED25519_BORROW > PROTOCORE_CURVE25519_BORROW
-                               ? PROTOCORE_ED25519_BORROW
-                               : PROTOCORE_CURVE25519_BORROW] __attribute__((aligned(8)));
+static uint8_t g_sign_work[PROTOCORE_ED25519_BORROW > PROTOCORE_CURVE25519_BORROW ? PROTOCORE_ED25519_BORROW
+                                                                                  : PROTOCORE_CURVE25519_BORROW]
+    __attribute__((aligned(8)));
 static Tls13KeySchedule g_cli_ks;
 static uint8_t *g_cli_transcript;
 static TlsRecordKeys g_cli_hs_rx;
@@ -323,13 +323,13 @@ void test_rfc8446_cert_verify_content_worked_example(void)
     want[97] = 0x00;
     memset(want + 98, 0x01, 32);
 
-    TEST_ASSERT_EQUAL_UINT(130u, protocore_tls13_cert_verify_content(out, sizeof(out), hash, PROTO_TRUE));
+    TEST_ASSERT_EQUAL_UINT(130u, protocore_tls13_cert_verify_content(out, sizeof(out), hash, 32, PROTO_TRUE));
     TEST_ASSERT_EQUAL_UINT8_ARRAY(want, out, 130);
 
     // Same section: the client's context string differs by one word, so the two contents must not
     // be equal - that separation is the whole point of the string.
     memcpy(want + 64, CLIENT_CTX, 33);
-    TEST_ASSERT_EQUAL_UINT(130u, protocore_tls13_cert_verify_content(out, sizeof(out), hash, PROTO_FALSE));
+    TEST_ASSERT_EQUAL_UINT(130u, protocore_tls13_cert_verify_content(out, sizeof(out), hash, 32, PROTO_FALSE));
     TEST_ASSERT_EQUAL_UINT8_ARRAY(want, out, 130);
 }
 
@@ -533,7 +533,7 @@ void test_full_handshake_on_rfc8448_key_material(void)
     TEST_ASSERT_EQUAL_UINT(sizeof(FLIGHT), seen);
 
     uint8_t content[160];
-    size_t clen = protocore_tls13_cert_verify_content(content, sizeof(content), cert_verify_hash, PROTO_TRUE);
+    size_t clen = protocore_tls13_cert_verify_content(content, sizeof(content), cert_verify_hash, 32, PROTO_TRUE);
     TEST_ASSERT_EQUAL_UINT(130u, clen);
     Ed25519.verify_args.pub = peer_pub;
     Ed25519.verify_args.msg = content;
@@ -907,7 +907,8 @@ static size_t feed_records(TlsConn *into, const uint8_t *buf, size_t len, uint8_
     return written;
 }
 
-void test_client_and_server_complete_a_handshake(void)
+// Both ends of one handshake under @p cipher, through to application data in both directions.
+static void drive_full_handshake(TlsCipher cipher)
 {
     // The client offers its own ephemeral pair and requires the server's raw public key.
     memset(&g_cli_cfg, 0, sizeof(g_cli_cfg));
@@ -915,6 +916,8 @@ void test_client_and_server_complete_a_handshake(void)
     g_cli_cfg.random = SERVER_RANDOM; // any 32 fresh bytes; the trace's are as good as another's
     g_cli_cfg.peer_pub = SERVER_ED_PUB;
     g_cli_cfg.hostname = "example.com";
+    g_cli_cfg.cipher = cipher;
+    g_cfg.cipher = cipher;
 
     TlsConnection.conn = &g_cli_conn;
     TlsConnection.init_args.role = TLS_ROLE_CLIENT;
@@ -1001,6 +1004,68 @@ void test_client_and_server_complete_a_handshake(void)
     TEST_ASSERT_TRUE_MESSAGE(TlsConnection.ok, "the client could not open the server's record");
     TEST_ASSERT_EQUAL_UINT(sizeof(PING), got_len);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(PING, got, sizeof(PING));
+}
+
+void test_client_and_server_complete_a_handshake(void)
+{
+    drive_full_handshake(TLS_CIPHER_AES_128_GCM_SHA256);
+    TEST_ASSERT_EQUAL_UINT(32u, g_cli_conn.ks.len);
+    TEST_ASSERT_EQUAL_UINT(32u, g_conn.ks.len);
+}
+
+// RFC 8446 sec 7.1 keys the schedule off the suite's hash, and sec 4.4.1 runs the Transcript-Hash
+// under the same one, so TLS_AES_256_GCM_SHA384 moves the transcript, every secret and the record
+// AEAD together. The same state machine drives it: what changes is what the suite bound, not the
+// code path, and both ends reaching application data is what proves it.
+void test_the_sha384_suite_completes_a_handshake(void)
+{
+    drive_full_handshake(TLS_CIPHER_AES_256_GCM_SHA384);
+    TEST_ASSERT_EQUAL_UINT(48u, g_cli_conn.ks.len);
+    TEST_ASSERT_EQUAL_UINT(48u, g_conn.ks.len);
+    TEST_ASSERT_EQUAL_UINT8(TLS_CIPHER_AES_256_GCM_SHA384, g_cli_conn.ap_tx.cipher);
+    TEST_ASSERT_EQUAL_UINT8(TLS_CIPHER_AES_256_GCM_SHA384, g_conn.ap_rx.cipher);
+}
+
+// sec 4.1.3: the server selects "from the list in ClientHello.cipher_suites". A client offering only
+// 0x1301 to a listener configured for 0x1302 shares no suite, which is a handshake_failure and not a
+// ServerHello naming something the client never offered.
+void test_a_client_that_did_not_offer_the_listeners_suite_is_refused(void)
+{
+    memset(&g_cli_cfg, 0, sizeof(g_cli_cfg));
+    g_cli_cfg.ephemeral_priv = CLIENT_X25519_PRIV;
+    g_cli_cfg.random = SERVER_RANDOM;
+    g_cli_cfg.peer_pub = SERVER_ED_PUB;
+    g_cli_cfg.hostname = "example.com";
+    g_cli_cfg.cipher = TLS_CIPHER_AES_128_GCM_SHA256;
+    g_cfg.cipher = TLS_CIPHER_AES_256_GCM_SHA384;
+
+    TlsConnection.conn = &g_cli_conn;
+    TlsConnection.init_args.role = TLS_ROLE_CLIENT;
+    TlsConnection.init_args.cfg = &g_cli_cfg;
+    TlsConnection.init(NULL);
+    TEST_ASSERT_TRUE(TlsConnection.ok);
+
+    TlsConnection.conn = &g_conn;
+    TlsConnection.init_args.role = TLS_ROLE_SERVER;
+    TlsConnection.init_args.cfg = &g_cfg;
+    TlsConnection.init(NULL);
+    TEST_ASSERT_TRUE(TlsConnection.ok);
+
+    TlsConnection.conn = &g_cli_conn;
+    TlsConnection.out_args.out = g_cli_out;
+    TlsConnection.out_args.out_cap = sizeof(g_cli_out);
+    TlsConnection.start(NULL);
+    const size_t ch = TlsConnection.n;
+    TEST_ASSERT_NOT_EQUAL(0u, ch);
+
+    TlsConnection.conn = &g_conn;
+    memcpy(g_conn.rx, g_cli_out, ch);
+    TlsConnection.io.rx_len = ch;
+    TlsConnection.out_args.out = g_srv_out;
+    TlsConnection.out_args.out_cap = sizeof(g_srv_out);
+    TlsConnection.process(NULL);
+    TEST_ASSERT_EQUAL_INT(-1, TlsConnection.i32);
+    TEST_ASSERT_EQUAL_UINT8(ALERT_HANDSHAKE_FAILURE, server_alert());
 }
 
 // peer_pub is the whole of peer authentication on this arm, so a client configured with the wrong

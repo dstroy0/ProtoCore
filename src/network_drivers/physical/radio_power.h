@@ -30,6 +30,7 @@
 #define PROTOCORE_RADIO_POWER_H
 
 #include "network_drivers/physical/physical.h" // protocore_phy_ps, protocore_phy_frame_fn: the L1 contract
+
 #include "protocore_config.h"
 
 PROTOCORE_BEGIN_DECLS

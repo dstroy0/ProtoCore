@@ -15,7 +15,7 @@ Three subcommands, used by .github/workflows/esp32-build.yml:
       changed `src/services/<sub>/` feature (matched by the `services/<sub>/`
       include in its .ino). Any other changed library path - `src/` (protocore,
       shared primitives, network drivers, a top-level `services/*.h`),
-      `core_setup/`, or `include/` - is shared code and falls back to the FULL
+      `test/core_setup/`, or `include/` - is shared code and falls back to the FULL
       matrix, the safe default. Empty stdin -> FULL, so a workflow_dispatch /
       schedule / first push still rebuilds everything.
 
@@ -109,8 +109,8 @@ def affected_items(items, changed, base=None, head=None):
             continue  # additive gate -> inert for every example that does not enable it
         elif f.startswith("src/services/") and f.count("/") >= 3:
             features.add(f.split("/")[2])  # src/services/<group>/<module>/f.c -> "<group>"
-        elif f.startswith(("src/", "core_setup/", "include/")):
-            return items  # shared/core library source (CMakeLists.txt globs src/ + core_setup/) -> FULL
+        elif f.startswith(("src/", "test/core_setup/", "include/")):
+            return items  # shared/core library source (CMakeLists.txt globs src/ + test/core_setup/) -> FULL
         elif f == "tools/ci_tooling/generate/example_footprints.py" or (
             f.startswith(".github/workflows/") and f.endswith("build.yml")
         ):

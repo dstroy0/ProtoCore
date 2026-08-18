@@ -36,7 +36,6 @@ static uint8_t edge_fetch_work[16]; // the borrow an entry takes; EdgeFetch neve
 #include "network_drivers/transport/tcp/client/client.h"               // TcpClient: the dialed connection
 #include "network_drivers/transport/tcp/protocol/protocol.h"           // ConnPool: the accepted slot
 #include "network_drivers/transport/tcp/tcp.h"                         // protocore_client_*
-#include "network_drivers/transport/tcp/tcp.h"                         // protocore_conn_active
 #include "protocore.h"                                                 // PC, Middleware, MwResult, ChunkSource
 #include "server/clock/clock.h"                                        // protocore_millis
 #include "server/web/edge_cache/edge_fetch.h"
