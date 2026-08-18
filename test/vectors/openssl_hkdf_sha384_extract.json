@@ -1,0 +1,34 @@
+{
+ "source": "openssl kdf (OpenSSL 3.5.6 7 Apr 2026 (Library: OpenSSL 3.5.6 7 Apr 2026)) - HKDF-SHA384 mode EXTRACT_ONLY over the RFC 5869 A.1-A.3 inputs",
+ "commit": "",
+ "file": "openssl",
+ "vectors": [
+  {
+   "tcId": 1,
+   "comment": "RFC 5869 A.1 inputs at SHA-384",
+   "result": "valid",
+   "flags": [],
+   "salt": "000102030405060708090a0b0c",
+   "ikm": "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+   "prk": "704b39990779ce1dc548052c7dc39f303570dd13fb39f7acc564680bef80e8dec70ee9a7e1f3e293ef68eceb072a5ade"
+  },
+  {
+   "tcId": 2,
+   "comment": "RFC 5869 A.2 inputs at SHA-384 (80-octet salt, IKM and info)",
+   "result": "valid",
+   "flags": [],
+   "salt": "606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a8a9aaabacadaeaf",
+   "ikm": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f",
+   "prk": "b319f6831dff9314efb643baa29263b30e4a8d779fe31e9c901efd7de737c85b62e676d4dc87b0895c6a7dc97b52cebb"
+  },
+  {
+   "tcId": 3,
+   "comment": "RFC 5869 A.3 inputs at SHA-384 (zero-length salt and info)",
+   "result": "valid",
+   "flags": [],
+   "salt": "",
+   "ikm": "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+   "prk": "10e40cf072a4c5626e43dd22c1cf727d4bb140975c9ad0cbc8e45b40068f8f0ba57cdb598af9dfa6963a96899af047e5"
+  }
+ ]
+}

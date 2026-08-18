@@ -287,6 +287,16 @@ CRYPTO = {
         "verifier can check one, which is why the signer has to be outside this tree. Needs openssl "
         "on PATH. Run `crypto kat` after it to recompile the .inc the suite reads.",
     ),
+    "hkdf384": T(
+        "tools/crypto/gen_hkdf_sha384_vectors.py",
+        "hkdf384 [--check]",
+        "HKDF-SHA384 and TLS 1.3 HKDF-Expand-Label answers from openssl, over the RFC 5869 Appendix A "
+        "inputs. RFC 5869 tabulates HKDF only for SHA-256 and SHA-1 and RFC 8448's trace is SHA-256 "
+        "throughout, so there is no published SHA-384 vector to read. It calibrates first: --check "
+        "re-runs the SHA-256 forms against RFC 5869 A.1 and the RFC 8448 sec 3 'derived' secret and "
+        "writes nothing if either disagrees. Needs openssl on PATH. Run `crypto kat` after it to "
+        "recompile the .inc the suite reads.",
+    ),
     "tls": T(
         "tools/crypto/gen_tls_record_kat.py",
         "tls",
