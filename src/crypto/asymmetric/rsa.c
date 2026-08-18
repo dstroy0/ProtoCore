@@ -350,6 +350,99 @@ static void rsa_encode(uint8_t *restrict work)
     mem.cpy(ctx->em + 3 + pad_len + di_len, ctx->digest, digest_len);
 }
 
+// RFC 8017 sec B.2.1: the mask generation function PSS masks its data block with. Hash(seed ||
+// counter) blocks, concatenated, truncated to mask_len.
+static void mgf1_sha256(uint8_t *restrict work, const uint8_t *seed, size_t seed_len, uint8_t *mask, size_t mask_len)
+{
+    uint8_t buf[PROTOCORE_SHA256_DIGEST_LEN + 4u];
+    uint8_t block[PROTOCORE_SHA256_DIGEST_LEN];
+    mem.cpy(buf, seed, seed_len);
+    uint32_t counter = 0;
+    for (size_t off = 0; off < mask_len; counter++)
+    {
+        buf[seed_len + 0u] = (uint8_t)(counter >> 24);
+        buf[seed_len + 1u] = (uint8_t)(counter >> 16);
+        buf[seed_len + 2u] = (uint8_t)(counter >> 8);
+        buf[seed_len + 3u] = (uint8_t)counter;
+        Sha256.hash_args.data = buf;
+        Sha256.hash_args.len = seed_len + 4u;
+        Sha256.hash_args.out = block;
+        Sha256.hash(RSA_SHA256(work));
+        const size_t left = mask_len - off;
+        const size_t n = left < PROTOCORE_SHA256_DIGEST_LEN ? left : (size_t)PROTOCORE_SHA256_DIGEST_LEN;
+        mem.cpy(mask + off, block, n);
+        off += n;
+    }
+}
+
+// RFC 8017 sec 9.1.2 EMSA-PSS-VERIFY, with SHA-256, MGF1-SHA-256 and a salt as long as the digest -
+// which is what rsa_pss_rsae_sha256 names (RFC 8446 sec 4.2.3). emBits is modBits - 1 = 2047, so
+// emLen is the modulus length and exactly one leading bit must be zero.
+static proto_bool rsa_pss_consistent(uint8_t *restrict work)
+{
+    RsaCtx *ctx = RSA_CTX(work);
+    const size_t hlen = PROTOCORE_SHA256_DIGEST_LEN;
+    const size_t slen = hlen;
+    const size_t emlen = PROTOCORE_RSA_KEY_BYTES;
+    const uint8_t *em = ctx->recovered;
+
+    // step 2
+    Sha256.hash_args.data = ctx->msg;
+    Sha256.hash_args.len = ctx->msg_len;
+    Sha256.hash_args.out = ctx->digest;
+    Sha256.hash(RSA_SHA256(work));
+
+    // steps 3 and 4
+    if (emlen < hlen + slen + 2u || em[emlen - 1u] != 0xBCu)
+    {
+        return PROTO_FALSE;
+    }
+    // steps 5 and 6
+    const size_t dblen = emlen - hlen - 1u;
+    if ((em[0] & 0x80u) != 0u)
+    {
+        return PROTO_FALSE;
+    }
+    const uint8_t *h = em + dblen;
+
+    // steps 7, 8 and 9: the PKCS#1 v1.5 block is unused on this path, so it is the data block here.
+    uint8_t *db = ctx->em;
+    mgf1_sha256(work, h, hlen, db, dblen);
+    for (size_t i = 0; i < dblen; i++)
+    {
+        db[i] ^= em[i];
+    }
+    db[0] &= 0x7Fu;
+
+    // step 10
+    const size_t ps = emlen - hlen - slen - 2u;
+    for (size_t i = 0; i < ps; i++)
+    {
+        if (db[i] != 0u)
+        {
+            return PROTO_FALSE;
+        }
+    }
+    if (db[ps] != 0x01u)
+    {
+        return PROTO_FALSE;
+    }
+
+    // steps 11, 12 and 13: M' is eight zero octets, the message digest, then the recovered salt.
+    uint8_t mprime[8u + PROTOCORE_SHA256_DIGEST_LEN + PROTOCORE_SHA256_DIGEST_LEN];
+    uint8_t hprime[PROTOCORE_SHA256_DIGEST_LEN];
+    mem.set(mprime, 0, 8u);
+    mem.cpy(mprime + 8u, ctx->digest, hlen);
+    mem.cpy(mprime + 8u + hlen, db + ps + 1u, slen);
+    Sha256.hash_args.data = mprime;
+    Sha256.hash_args.len = sizeof(mprime);
+    Sha256.hash_args.out = hprime;
+    Sha256.hash(RSA_SHA256(work));
+
+    // step 14
+    return protocore_ct_eq(h, hprime, hlen);
+}
+
 // --- the entries -----------------------------------------------------------
 
 static void rsa_verify(uint8_t *restrict work)
@@ -395,8 +488,16 @@ static void rsa_verify(uint8_t *restrict work)
     ctx->msg = Rsa.verify_args.msg;
     ctx->msg_len = Rsa.verify_args.msg_len;
     ctx->hash = Rsa.verify_args.hash;
-    rsa_encode(work);
 
+    // PSS recovers a salt out of the block rather than rebuilding a deterministic one, so there is
+    // nothing to compare the block against and the check is its own.
+    if (ctx->hash == PROTOCORE_RSA_HASH_PSS_SHA256)
+    {
+        Rsa.ok = rsa_pss_consistent(work);
+        return;
+    }
+
+    rsa_encode(work);
     if (protocore_ct_eq(ctx->recovered, ctx->em, PROTOCORE_RSA_KEY_BYTES))
     {
         Rsa.ok = PROTO_TRUE;

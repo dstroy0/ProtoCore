@@ -15,7 +15,7 @@
  * key share X25519, and an Ed25519 certificate (the only signature scheme we produce - the in-tree
  * crypto has Ed25519 but no ECDSA P-256 or RSA-PSS). A ClientHello that offers none of these is a
  * handshake failure, decided by the state machine that drives this module. QUIC transport parameters
- * ride in the protocore_quic_transport_parameters extension (codepoint 0x39, RFC 9001 sec 8.2).
+ * ride in the quic_transport_parameters extension (codepoint 0x39, RFC 9001 sec 8.2).
  *
  * Pure, zero heap, host-tested against the RFC 8448 sec 3 ServerHello / Certificate / Finished bytes
  * and by ClientHello field extraction + an Ed25519 CertificateVerify sign/verify round-trip.
@@ -53,13 +53,18 @@ PROTOCORE_BEGIN_DECLS
 #define TLS_GROUP_X25519 0x001d                       ///< the classical key-exchange group we support
 #define TLS_GROUP_X25519MLKEM768 0x11ec ///< PQ/T hybrid group (ML-KEM-768 + X25519), when PROTOCORE_ENABLE_PQC_KEX
 #define TLS_SIG_ED25519 0x0807          ///< the one signature scheme we produce
+// SignatureScheme code points a CertificateVerify may carry (RFC 8446 sec 4.2.3). The
+// RSASSA-PKCS1-v1_5 values are deliberately absent: sec 4.2.3 says they "refer solely to signatures
+// which appear in certificates ... and are not defined for use in signed TLS handshake messages".
+#define TLS_SIG_ECDSA_SECP256R1_SHA256 0x0403 ///< ECDSA over P-256 with SHA-256
+#define TLS_SIG_RSA_PSS_RSAE_SHA256 0x0804    ///< RSASSA-PSS with an rsaEncryption key
 #define TLS_CERT_TYPE_X509 0            ///< RFC 7250 CertificateType: X.509 (IANA "TLS Certificate Types" 0)
 #define TLS_CERT_TYPE_RAW_PUBLIC_KEY                                                                                   \
     2                          ///< RFC 7250 CertificateType: RawPublicKey (IANA 2), when PROTOCORE_ENABLE_TLS_RPK
 #define TLS_VERSION_1_3 0x0304 ///< supported_versions selected value (TLS 1.3)
 #define PROTOCORE_TLS_VERSION_DTLS_1_3 0xFEFC    ///< supported_versions selected value (DTLS 1.3, RFC 9147)
 #define PROTOCORE_TLS_LEGACY_VERSION_DTLS 0xFEFD ///< legacy_version on the wire for DTLS (DTLS 1.2)
-#define TLS_EXT_QUIC_TRANSPORT_PARAMS 0x0039     ///< protocore_quic_transport_parameters (RFC 9001 sec 8.2)
+#define TLS_EXT_QUIC_TRANSPORT_PARAMS 0x0039     ///< quic_transport_parameters (RFC 9001 sec 8.2)
 
 /** @brief What the state machine needs out of a parsed ClientHello (pointers alias the input). */
 typedef struct
@@ -85,8 +90,8 @@ typedef struct
     proto_bool offers_h3_alpn;        ///< ALPN contains "h3"
     const uint8_t *alpn_list;         ///< the ProtocolNameList body (aliases input), or NULL when absent
     size_t alpn_list_len;             ///< how many bytes of it there are
-    const uint8_t *protocore_quic_tp; ///< raw protocore_quic_transport_parameters extension body (or NULL)
-    size_t protocore_quic_tp_len;
+    const uint8_t *quic_tp; ///< raw quic_transport_parameters extension body (or NULL)
+    size_t quic_tp_len;
     const uint8_t *sni; ///< first server_name host_name (or NULL), not NUL-terminated
     size_t sni_len;
     const uint8_t *cookie; ///< cookie extension body echoed after a HelloRetryRequest (or NULL); DTLS §5.1
@@ -105,6 +110,82 @@ typedef struct
  * through the offers_* flags rather than failing the parse, so the caller can send the right alert.
  */
 proto_bool protocore_tls13_parse_client_hello(const uint8_t *msg, size_t len, Tls13ClientHello *out, proto_bool dtls);
+
+/** @brief A parsed ServerHello (RFC 8446 sec 4.1.3). Pointer fields alias the input, not copied. */
+typedef struct
+{
+    const uint8_t *random;     ///< the 32-byte Random (aliases input)
+    const uint8_t *session_id; ///< legacy_session_id_echo (aliases input)
+    uint8_t session_id_len;
+    uint16_t cipher_suite;     ///< the suite the server selected
+    proto_bool selected_tls13; ///< supported_versions carried the 1.3 code point
+    proto_bool is_hrr;         ///< the Random is the fixed HelloRetryRequest value (sec 4.1.3)
+    proto_bool has_key_share;  ///< a key_share extension was present
+    uint16_t group;            ///< its NamedGroup: the server's share, or a HelloRetryRequest's selected_group
+    const uint8_t *share;      ///< the server's key_exchange (aliases input); NULL in a HelloRetryRequest
+    size_t share_len;
+    const uint8_t *cookie;     ///< cookie to echo in the retried ClientHello (aliases input), or NULL
+    size_t cookie_len;
+    proto_bool has_conn_id; ///< a connection_id extension was present (RFC 9146 / RFC 9147 §9)
+    const uint8_t *conn_id; ///< the CID to place in records sent to the server (aliases input)
+    size_t conn_id_len;
+} Tls13ServerHello;
+
+/**
+ * @brief Parse a ServerHello handshake message (@p msg includes the 4-byte handshake header).
+ *
+ * A HelloRetryRequest is a ServerHello carrying @ref protocore_tls13_hrr_random, so it parses here
+ * and is reported through @c is_hrr rather than as a separate message.
+ *
+ * @param dtls  true for DTLS, whose supported_versions selection is 0xFEFC (RFC 9147 §5.3).
+ * @return false if it is not a well-formed ServerHello.
+ */
+proto_bool protocore_tls13_parse_server_hello(const uint8_t *msg, size_t len, Tls13ServerHello *out, proto_bool dtls);
+
+/**
+ * @brief Build a ClientHello (RFC 8446 sec 4.1.2) offering TLS 1.3 / AES-128-GCM-SHA256, one
+ * @p group with its @p share, and ed25519.
+ *
+ * @c legacy_version is 0x0303 and @c legacy_compression_methods is the single zero byte sec 4.1.2
+ * requires. @p sni, @p alpn and @p cookie are each emitted only when non-null; @p cookie is what a
+ * HelloRetryRequest asked to have echoed. @p rpk_server_cert offers RawPublicKey (RFC 7250 sec 4.2).
+ * @return bytes written, or 0 on overflow.
+ */
+size_t protocore_tls13_build_client_hello(uint8_t *out, size_t cap, const uint8_t random[32],
+                                          const uint8_t *session_id, uint8_t session_id_len, const uint8_t *share,
+                                          size_t share_len, uint16_t group, const char *sni, const char *alpn,
+                                          const uint8_t *cookie, size_t cookie_len, proto_bool rpk_server_cert,
+                                          proto_bool dtls);
+
+/**
+ * @brief The first CertificateEntry's cert_data in a Certificate message (RFC 8446 sec 4.4.2).
+ *
+ * @p cert points into @p msg. The peer's chain may carry more entries; this reads the end-entity
+ * one, which is the first. @return false if it is not a well-formed Certificate.
+ */
+proto_bool protocore_tls13_parse_certificate(const uint8_t *msg, size_t len, const uint8_t **cert, size_t *cert_len);
+
+/**
+ * @brief The 32-byte Ed25519 key inside a DER SubjectPublicKeyInfo (RFC 8410 sec 4).
+ *
+ * The inverse of ::protocore_tls13_ed25519_spki. @return false unless @p spki is exactly the
+ * PROTOCORE_TLS13_ED25519_SPKI_LEN bytes that encoding has, with the id-Ed25519 prefix.
+ */
+proto_bool protocore_tls13_ed25519_from_spki(const uint8_t *spki, size_t len, const uint8_t **pub);
+
+/**
+ * @brief The algorithm and signature of a CertificateVerify (RFC 8446 sec 4.4.3).
+ *
+ * @p sig points into @p msg. @return false if it is not a well-formed CertificateVerify.
+ */
+proto_bool protocore_tls13_parse_cert_verify(const uint8_t *msg, size_t len, uint16_t *scheme, const uint8_t **sig,
+                                             size_t *sig_len);
+
+/**
+ * @brief The verify_data of a Finished (RFC 8446 sec 4.4.4). @p vd points into @p msg.
+ * @return false unless the body is exactly the 32 bytes SHA-256 makes it.
+ */
+proto_bool protocore_tls13_parse_finished(const uint8_t *msg, size_t len, const uint8_t **vd);
 
 /**
  * @brief Build a ServerHello (RFC 8446 sec 4.1.3) selecting TLS 1.3 / AES-128-GCM-SHA256 and a
@@ -129,14 +210,14 @@ size_t protocore_tls13_build_server_hello(uint8_t *out, size_t cap, const uint8_
 
 /**
  * @brief Build EncryptedExtensions (RFC 8446 sec 4.3.1) carrying ALPN "h3" and the server's
- * protocore_quic_transport_parameters (@p protocore_quic_tp, from protocore_quic_tp_encode).
+ * quic_transport_parameters (@p quic_tp, from QuicTp.encode).
  *
  * @param rpk_server_cert  when true (PROTOCORE_ENABLE_TLS_RPK), also emit the negotiated
  *                         server_certificate_type = RawPublicKey extension (RFC 7250 sec 4.2).
  * @return bytes written, or 0.
  */
-size_t protocore_tls13_build_encrypted_extensions(uint8_t *out, size_t cap, const uint8_t *protocore_quic_tp,
-                                                  size_t protocore_quic_tp_len, proto_bool rpk_server_cert);
+size_t protocore_tls13_build_encrypted_extensions(uint8_t *out, size_t cap, const uint8_t *quic_tp,
+                                                  size_t quic_tp_len, proto_bool rpk_server_cert);
 
 /**
  * @brief Build a Certificate message (RFC 8446 sec 4.4.2) with an empty request context and one
@@ -173,7 +254,7 @@ size_t protocore_tls13_build_certificate_rpk(uint8_t *out, size_t cap, const uin
  * @param seed             32-byte Ed25519 private seed.
  * @return bytes written, or 0 on overflow.
  */
-size_t protocore_tls13_build_cert_verify(uint8_t *work, uint8_t *out, size_t cap, const uint8_t transcript_hash[32],
+size_t protocore_tls13_build_cert_verify(uint8_t *sign_work, uint8_t *out, size_t cap, const uint8_t transcript_hash[32],
                                          const uint8_t seed[32]);
 
 /**

@@ -279,6 +279,14 @@ CRYPTO = {
         "mlkem",
         "A deterministic ML-KEM-768 Encaps known-answer vector, as a C header for test_pqc_mlkem.",
     ),
+    "pss": T(
+        "tools/crypto/gen_rsa_pss_vectors.py",
+        "pss",
+        "RSASSA-PSS signatures over the key openssl_rsa_2048_sign.json already publishes, signed by "
+        "openssl. PSS draws a random salt, so a signature cannot be recomputed and compared - only a "
+        "verifier can check one, which is why the signer has to be outside this tree. Needs openssl "
+        "on PATH. Run `crypto kat` after it to recompile the .inc the suite reads.",
+    ),
     "tls": T(
         "tools/crypto/gen_tls_record_kat.py",
         "tls",

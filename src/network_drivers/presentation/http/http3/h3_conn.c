@@ -8,11 +8,17 @@
 
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
+static uint8_t qpack_work[16]; // the borrow an entry takes; Qpack never reads it
+
+static uint8_t h3_frame_work[16]; // the borrow an entry takes; H3Frame never reads it
+
+static uint8_t quic_varint_work[16]; // the borrow an entry takes; QuicVarint never reads it
+
 #if PROTOCORE_ENABLE_HTTP3
 
-#include "network_drivers/presentation/http/http3/h3_conn.h"
 #include "mmgr/protomem.h"
 #include "mmgr/protostr.h"
+#include "network_drivers/presentation/http/http3/h3_conn.h"
 #include "network_drivers/presentation/http/http3/h3_frame.h"
 #include "network_drivers/presentation/http/http3/qpack.h"
 #include "network_drivers/presentation/http/http3/quic_conn.h"
@@ -216,8 +222,12 @@ static void dispatch_request(H3ConnCtx *h3, H3Stream *st)
     size_t off = 0;
     while (off < st->buf_len)
     {
-        H3Frame fr;
-        if (!protocore_h3_frame_parse(st->buf + off, st->buf_len - off, &fr))
+        H3FrameHeader fr;
+        H3Frame.parse_header_args.buf = st->buf + off;
+        H3Frame.parse_header_args.len = st->buf_len - off;
+        H3Frame.parse_header_args.out = &fr;
+        H3Frame.parse_header(h3_frame_work);
+        if (!H3Frame.ok)
         {
             break;
         }
@@ -243,7 +253,13 @@ static void dispatch_request(H3ConnCtx *h3, H3Stream *st)
         if (fr.type == H3_HEADERS)
         {
             ReqEmit e = {st};
-            protocore_qpack_decode(fp, (size_t)fr.length, scratch, PROTOCORE_H3_QPACK_SCRATCH, req_emit, &e);
+            Qpack.decode_args.block = fp;
+            Qpack.decode_args.len = (size_t)fr.length;
+            Qpack.decode_args.scratch = scratch;
+            Qpack.decode_args.scratch_cap = PROTOCORE_H3_QPACK_SCRATCH;
+            Qpack.decode_args.emit = req_emit;
+            Qpack.decode_args.ctx = &e;
+            Qpack.decode(qpack_work);
             st->have_headers = PROTO_TRUE;
         }
         else if (fr.type == H3_DATA)
@@ -290,7 +306,12 @@ static proto_bool protocore_h3_classify_uni_stream(H3ConnCtx *h3, H3Stream *st)
 {
     uint64_t type = 0;
     size_t c = 0;
-    if (!protocore_quic_varint_decode(st->buf, st->buf_len, &type, &c))
+    QuicVarint.decode_args.in = st->buf;
+    QuicVarint.decode_args.len = st->buf_len;
+    QuicVarint.decode_args.value = &type;
+    QuicVarint.decode_args.consumed = &c;
+    QuicVarint.decode(quic_varint_work);
+    if (!QuicVarint.ok)
     {
         return PROTO_FALSE; // need more bytes for the varint
     }
@@ -331,8 +352,12 @@ static void protocore_h3_consume_control(H3ConnCtx *h3, H3Stream *st)
     size_t off = 0;
     while (off < st->buf_len)
     {
-        H3Frame fr;
-        if (!protocore_h3_frame_parse(st->buf + off, st->buf_len - off, &fr))
+        H3FrameHeader fr;
+        H3Frame.parse_header_args.buf = st->buf + off;
+        H3Frame.parse_header_args.len = st->buf_len - off;
+        H3Frame.parse_header_args.out = &fr;
+        H3Frame.parse_header(h3_frame_work);
+        if (!H3Frame.ok)
         {
             break;
         }
@@ -355,8 +380,13 @@ static void protocore_h3_consume_control(H3ConnCtx *h3, H3Stream *st)
                 return;
             }
             h3->peer_settings_seen = PROTO_TRUE;
-            protocore_h3_settings_defaults(&h3->peer_settings);
-            if (!protocore_h3_parse_settings(st->buf + off + fr.header_len, (size_t)fr.length, &h3->peer_settings))
+            H3Frame.settings_defaults_args.s = &h3->peer_settings;
+            H3Frame.settings_defaults(h3_frame_work);
+            H3Frame.parse_settings_args.payload = st->buf + off + fr.header_len;
+            H3Frame.parse_settings_args.len = (size_t)fr.length;
+            H3Frame.parse_settings_args.s = &h3->peer_settings;
+            H3Frame.parse_settings(h3_frame_work);
+            if (!H3Frame.ok)
             {
                 h3_fail(h3, H3_SETTINGS_ERROR);
                 return;
@@ -418,10 +448,20 @@ static void on_handshake_done(void *app, uint8_t *qc)
 
     // Server control stream (id 3): stream type 0x00 + SETTINGS.
     uint8_t buf[64];
-    size_t p = protocore_quic_varint_encode(buf, sizeof(buf), 0x00);
+    QuicVarint.encode_args.out = buf;
+    QuicVarint.encode_args.cap = sizeof(buf);
+    QuicVarint.encode_args.value = 0x00;
+    QuicVarint.encode(quic_varint_work);
+    size_t p = QuicVarint.n;
     static const uint64_t ids[] = {H3_SETTINGS_QPACK_MAX_TABLE_CAPACITY, H3_SETTINGS_QPACK_BLOCKED_STREAMS};
     static const uint64_t vals[] = {0, 0};
-    p += protocore_h3_build_settings(buf + p, sizeof(buf) - p, ids, vals, 2);
+    H3Frame.build_settings_args.out = buf + p;
+    H3Frame.build_settings_args.cap = sizeof(buf) - p;
+    H3Frame.build_settings_args.ids = ids;
+    H3Frame.build_settings_args.vals = vals;
+    H3Frame.build_settings_args.n = 2;
+    H3Frame.build_settings(h3_frame_work);
+    p += H3Frame.n;
     QuicConn.bind.ctx = qc;
     QuicConn.stream_send_args.stream_id = 3;
     QuicConn.stream_send_args.data = buf;
@@ -431,14 +471,22 @@ static void on_handshake_done(void *app, uint8_t *qc)
 
     // QPACK encoder (id 7, type 0x02) and decoder (id 11, type 0x03) streams: type byte only.
     uint8_t t;
-    size_t n = protocore_quic_varint_encode(&t, 1, 0x02);
+    QuicVarint.encode_args.out = &t;
+    QuicVarint.encode_args.cap = 1;
+    QuicVarint.encode_args.value = 0x02;
+    QuicVarint.encode(quic_varint_work);
+    size_t n = QuicVarint.n;
     QuicConn.bind.ctx = qc;
     QuicConn.stream_send_args.stream_id = 7;
     QuicConn.stream_send_args.data = &t;
     QuicConn.stream_send_args.len = n;
     QuicConn.stream_send_args.fin = PROTO_FALSE;
     QuicConn.stream_send(QuicConn.internal);
-    n = protocore_quic_varint_encode(&t, 1, 0x03);
+    QuicVarint.encode_args.out = &t;
+    QuicVarint.encode_args.cap = 1;
+    QuicVarint.encode_args.value = 0x03;
+    QuicVarint.encode(quic_varint_work);
+    n = QuicVarint.n;
     QuicConn.bind.ctx = qc;
     QuicConn.stream_send_args.stream_id = 11;
     QuicConn.stream_send_args.data = &t;
@@ -468,7 +516,8 @@ static void h3_conn_open(H3ConnCtx *h3, uint8_t *qc, H3RequestFn on_request, voi
     {
         h3->streams[i].id = UINT64_MAX;
     }
-    protocore_h3_settings_defaults(&h3->peer_settings);
+    H3Frame.settings_defaults_args.s = &h3->peer_settings;
+    H3Frame.settings_defaults(h3_frame_work);
 
     QuicConnCallbacks cb = {on_stream_data, on_handshake_done, h3};
     QuicConn.bind.ctx = qc;
@@ -491,20 +540,36 @@ static proto_bool h3_conn_reply(H3ConnCtx *h3, uint64_t stream_id, int status, c
     uint8_t *out = h3->b + H3_OFF_OUT;
 
     // QPACK field section: prefix + :status + optional content-type + content-length.
-    size_t bp = protocore_qpack_encode_prefix(block, PROTOCORE_H3_QPACK_BLOCK);
+    Qpack.encode_prefix_args.out = block;
+    Qpack.encode_prefix_args.cap = PROTOCORE_H3_QPACK_BLOCK;
+    Qpack.encode_prefix(qpack_work);
+    size_t bp = Qpack.n;
     char st3[4];
     st3[0] = (char)('0' + (status / 100) % 10);
     st3[1] = (char)('0' + (status / 10) % 10);
     st3[2] = (char)('0' + status % 10);
     st3[3] = '\0';
-    bp += protocore_qpack_encode_header(block + bp, PROTOCORE_H3_QPACK_BLOCK - bp, ":status", 7, st3, 3);
+    Qpack.encode_header_args.out = block + bp;
+    Qpack.encode_header_args.cap = PROTOCORE_H3_QPACK_BLOCK - bp;
+    Qpack.encode_header_args.name = ":status";
+    Qpack.encode_header_args.name_len = 7;
+    Qpack.encode_header_args.value = st3;
+    Qpack.encode_header_args.value_len = 3;
+    Qpack.encode_header(qpack_work);
+    bp += Qpack.n;
     if (content_type)
     {
         // Cap above the largest content-type that can fit this block even at QPACK-Huffman's best
         // 5-bit/char (~PROTOCORE_H3_QPACK_BLOCK * 8/5), so an over-long value trips the encode's reject
         // below instead of being truncated into a fittable length (see the matching protocore_h2_conn note).
-        bp += protocore_qpack_encode_header(block + bp, PROTOCORE_H3_QPACK_BLOCK - bp, "content-type", 12, content_type,
-                                            str.len(content_type, (size_t)PROTOCORE_H3_QPACK_BLOCK * 2));
+        Qpack.encode_header_args.out = block + bp;
+        Qpack.encode_header_args.cap = PROTOCORE_H3_QPACK_BLOCK - bp;
+        Qpack.encode_header_args.name = "content-type";
+        Qpack.encode_header_args.name_len = 12;
+        Qpack.encode_header_args.value = content_type;
+        Qpack.encode_header_args.value_len = str.len(content_type, (size_t)PROTOCORE_H3_QPACK_BLOCK * 2);
+        Qpack.encode_header(qpack_work);
+        bp += Qpack.n;
     }
     char clen[16];
     size_t cl = 0;
@@ -523,10 +588,22 @@ static proto_bool h3_conn_reply(H3ConnCtx *h3, uint64_t stream_id, int status, c
             clen[cl++] = tmp[--n];
         }
     }
-    bp += protocore_qpack_encode_header(block + bp, PROTOCORE_H3_QPACK_BLOCK - bp, "content-length", 14, clen, cl);
+    Qpack.encode_header_args.out = block + bp;
+    Qpack.encode_header_args.cap = PROTOCORE_H3_QPACK_BLOCK - bp;
+    Qpack.encode_header_args.name = "content-length";
+    Qpack.encode_header_args.name_len = 14;
+    Qpack.encode_header_args.value = clen;
+    Qpack.encode_header_args.value_len = cl;
+    Qpack.encode_header(qpack_work);
+    bp += Qpack.n;
 
     // HEADERS frame + DATA frame, sent on the request stream with FIN.
-    size_t op = protocore_h3_build_headers(out, PROTOCORE_H3_STREAM_BUF, block, bp);
+    H3Frame.build_headers_args.out = out;
+    H3Frame.build_headers_args.cap = PROTOCORE_H3_STREAM_BUF;
+    H3Frame.build_headers_args.block = block;
+    H3Frame.build_headers_args.len = bp;
+    H3Frame.build_headers(h3_frame_work);
+    size_t op = H3Frame.n;
     if (!op)
     {
         return PROTO_FALSE;
@@ -534,7 +611,12 @@ static proto_bool h3_conn_reply(H3ConnCtx *h3, uint64_t stream_id, int status, c
     }
     if (body_len)
     {
-        size_t dn = protocore_h3_build_data(out + op, PROTOCORE_H3_STREAM_BUF - op, body, body_len);
+        H3Frame.build_data_args.out = out + op;
+        H3Frame.build_data_args.cap = PROTOCORE_H3_STREAM_BUF - op;
+        H3Frame.build_data_args.data = body;
+        H3Frame.build_data_args.len = body_len;
+        H3Frame.build_data(h3_frame_work);
+        size_t dn = H3Frame.n;
         if (!dn)
         {
             return PROTO_FALSE;

@@ -80,6 +80,14 @@ for stem, label in [
         % (openssl(stem + ".pem", "-subject"), carray("X509_" + label + "_DER", der), label, nb, label, na)
     )
 
+# The Ed25519 leaf's private seed. RFC 5958 wraps it as an OCTET STRING inside the PKCS#8
+# privateKey OCTET STRING, and RFC 8032 sec 5.1.5 makes the seed 32 octets, so it is the tail.
+seed = io.open(os.path.join(SRC, "ed25519_key.der"), "rb").read()[-32:]
+parts.append(
+    "\n// The private seed of the Ed25519 leaf above, so a suite can sign as that certificate.\n"
+    + carray("X509_ED25519_LEAF_SEED", seed)
+)
+
 parts.append("\n#endif // PROTOCORE_TEST_X509_FIXTURE_H\n")
 io.open(OUT, "w", encoding="utf-8", newline="").write("\n".join(parts))
 print("wrote %s (%d bytes)" % (OUT, os.path.getsize(OUT)))

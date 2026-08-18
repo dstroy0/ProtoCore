@@ -23,40 +23,88 @@
 #ifndef PROTOCORE_QPACK_H
 #define PROTOCORE_QPACK_H
 
-#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_HTTP3
 
 PROTOCORE_BEGIN_DECLS
 
+// This module holds nothing between calls, so it carves no borrow and states none. An entry
+// takes one all the same, and never reads it, so every namespace in the tree is invoked the
+// same way.
+
 /** @brief Callback invoked for each decoded header; return false to abort the decode. */
 typedef proto_bool (*QpackEmitFn)(void *ctx, const char *name, size_t name_len, const char *value, size_t value_len);
 
-/**
- * @brief Write the encoded field-section prefix for a static-only section.
- * Required Insert Count = 0, Base = 0 -> the two bytes {0x00, 0x00} (RFC 9204 sec 4.5.1).
- * @return bytes written (2), or 0 if @p cap < 2.
- */
-size_t protocore_qpack_encode_prefix(uint8_t *out, size_t cap);
+/** @brief What encode_prefix takes: out, cap. */
+typedef struct
+{
+    uint8_t *out;
+    size_t cap;
+} QpackEncodePrefixArgs;
+
+/** @brief What encode_header takes: out, cap, name, name_len, value, ... */
+typedef struct
+{
+    uint8_t *out;
+    size_t cap;
+    const char *name;
+    size_t name_len;
+    const char *value;
+    size_t value_len;
+} QpackEncodeHeaderArgs;
+
+/** @brief What decode takes: block, len, scratch, scratch_cap, emit, ... */
+typedef struct
+{
+    const uint8_t *block;
+    size_t len;
+    char *scratch; ///< caller buffer holding one header's name+value during each emit call
+    size_t scratch_cap;
+    QpackEmitFn emit;
+    void *ctx;
+} QpackDecodeArgs;
 
 /**
- * @brief Encode one header field (server side): a full static match -> Indexed Field Line; a name
- * match -> Literal Field Line with (static) Name Reference; otherwise Literal Field Line with
- * Literal Name. Strings are Huffman-coded when that is not longer.
- * @return bytes written, or 0 on overflow. A complete field section is protocore_qpack_encode_prefix()
- * followed by one protocore_qpack_encode_header() per field.
+ * @brief QPACK field-section compression for HTTP/3 (RFC 9204).
+ *
+ * A caller sets the members a call takes, invokes it through ::Qpack with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   Qpack.encode_prefix_args.out = ...;
+ *   Qpack.encode_prefix_args.cap = ...;
+ *   Qpack.encode_prefix(work);
+ *   // Qpack.n is what the call reports
+ *
+ * @var QpackNs::encode_prefix_args  what encode_prefix takes: out, cap
+ * @var QpackNs::encode_header_args  what encode_header takes: out, cap, name, name_len, value,
+ * @var QpackNs::decode_args  what decode takes: block, len, scratch, scratch_cap, emit,
+ * @var QpackNs::ok  true if the section decoded cleanly; false on malformed input, ...
+ * @var QpackNs::n  bytes written (2), or 0 if cap < 2
+ * @var QpackNs::encode_prefix  write the encoded field-section prefix for a static-only section. ...
+ * @var QpackNs::encode_header  encode one header field (server side): a full static match -> ...
+ * @var QpackNs::decode  decode a whole QPACK field section (prefix + representations), ...
+ *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
+ * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
+ * a caller drives every namespace the same way.
  */
-size_t protocore_qpack_encode_header(uint8_t *out, size_t cap, const char *name, size_t name_len, const char *value,
-                                     size_t value_len);
+typedef struct
+{
+    QpackEncodePrefixArgs encode_prefix_args;
+    QpackEncodeHeaderArgs encode_header_args;
+    QpackDecodeArgs decode_args;
 
-/**
- * @brief Decode a whole QPACK field section (prefix + representations), emitting each header.
- * @param scratch  caller buffer holding one header's name+value during each emit call.
- * @return true if the section decoded cleanly; false on malformed input, overflow, or any
- * dynamic-table reference (indexed/literal post-base, dynamic name/index, or non-zero RIC).
- */
-proto_bool protocore_qpack_decode(const uint8_t *block, size_t len, char *scratch, size_t scratch_cap, QpackEmitFn emit,
-                                  void *ctx);
+    proto_bool ok;
+    size_t n;
+
+    void (*const encode_prefix)(uint8_t *restrict work);
+    void (*const encode_header)(uint8_t *restrict work);
+    void (*const decode)(uint8_t *restrict work);
+} QpackNs;
+
+/** @brief The one symbol this module exports. */
+extern QpackNs Qpack;
 
 PROTOCORE_END_DECLS
 

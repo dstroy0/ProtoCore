@@ -586,7 +586,7 @@ def scan_ns(hpath):
     """
     s = io.open(hpath, encoding="utf-8").read()
     mod = os.path.splitext(os.path.basename(hpath))[0]
-    gate = re.search(r"^#if\s+(PROTOCORE_(?:ENABLE|NEED)_\w+)", s, re.M)
+    gate = find_gate(s)
     ns = re.search(r"\}\s*(\w+Ns)\s*;", s)
     obj = re.search(r"^\s*extern\s+(?:const\s+)?\w+Ns\s+(\w+)\s*;", s, re.M)
     cpath = hpath[:-1] + "c"
@@ -601,7 +601,7 @@ def scan_ns(hpath):
         "module": mod,
         "ns": ns.group(1) if ns else camel(mod) + "Ns",
         "object": obj.group(1) if obj else camel(mod),
-        "gate": gate.group(1) if gate else "",
+        "gate": gate,
         "header": os.path.relpath(hpath, R).replace("\\", "/"),
         "source": os.path.relpath(hpath, R).replace("\\", "/")[:-1] + "c",
         "borrow": "PROTOCORE_%s_BORROW" % mod.upper(),
@@ -641,6 +641,29 @@ def ns_owns_state(csrc):
     `<X>Ctx` beside it. Either one is state that belongs in the borrow.
     """
     return bool(re.search(r"struct\s+\w+Storage\b", csrc)) or bool(find_context(csrc))
+
+
+GATE_TOKEN = re.compile(r"PROTOCORE_(?:ENABLE|NEED|TLS|HAS)_\w+")
+
+
+def find_gate(s):
+    """The header's enable gate, as the whole `#if` condition.
+
+    A compound condition is the gate as written: tls13_msg.h and key_schedule.h are
+    `#if (PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_TLS_SOFTWARE)`. Matching only
+    a bare token after `#if` skipped that line and took the next `#if` in the file, which is an
+    inner capability arm - tls13_msg would have been regenerated under PROTOCORE_ENABLE_PQC_KEX and
+    would have vanished from every build without it. `#ifdef` / `#ifndef` do not match, so the
+    include guard is not read as a gate.
+    """
+    for m in re.finditer(r"^[ \t]*#[ \t]*if[ \t]+([^\n]*)$", s, re.M):
+        cond = re.sub(r"/\*.*?\*/", " ", m.group(1))
+        cond = re.sub(r"//.*$", "", cond).strip()
+        if cond.endswith("\\"):
+            continue  # a continued condition is not one this rewrites
+        if GATE_TOKEN.search(cond):
+            return cond
+    return ""
 
 
 def outside_conditionals(s, at, gate=None):
@@ -1034,7 +1057,7 @@ def scan(hpath):
     s = io.open(hpath, encoding="utf-8").read()
     mod = os.path.splitext(os.path.basename(hpath))[0]
     # ENABLE_ is the usual spelling, NEED_ the one a module gated by "some caller wants it" uses.
-    gate = re.search(r"^#if\s+(PROTOCORE_(?:ENABLE|NEED)_\w+)", s, re.M)
+    gate = find_gate(s)
     entries = []
     for m in DECL.finditer(s):
         ret = re.sub(r"\s+", " ", m.group("ret")).strip()
@@ -1102,7 +1125,7 @@ def scan(hpath):
         "module": mod,
         "ns": camel(mod) + "Ns",
         "object": camel(mod),
-        "gate": gate.group(1) if gate else "",
+        "gate": gate,
         "header": os.path.relpath(hpath, R).replace("\\", "/"),
         "source": os.path.relpath(hpath, R).replace("\\", "/")[:-1] + "c",
         "borrow": "PROTOCORE_%s_BORROW" % mod.upper(),

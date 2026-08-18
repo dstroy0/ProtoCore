@@ -29,6 +29,7 @@
 #include "network_drivers/tls/handshake/handshake.h"
 #include "network_drivers/tls/key_schedule/key_schedule.h"
 #include "network_drivers/tls/record/record.h"
+#include "x509_fixture.h"
 #include <string.h>
 
 #include <unity.h>
@@ -865,24 +866,359 @@ void test_a_failed_connection_stays_failed(void)
     TEST_ASSERT_FALSE(server_established());
 }
 
-// The client half of this driver is not built (handshake.h documents the server profile only), so it
-// cannot produce the ClientHello sec 4.1.2 requires. RFC 8446 sec 6.2: "internal_error: An internal
-// error unrelated to the peer or the correctness of the protocol ... makes it impossible to
-// continue" - code point 80 in the sec 6.2 AlertDescription registry.
-void test_the_client_role_refuses(void)
+// The client half drives the same driver from the other end, so the two are run against each other
+// in one process: every record one writes is fed to the other, and both must reach DONE. The key
+// material is the same published RFC 8448 sec 3 / RFC 8032 sec 7.1 TEST 1 octets the server cases
+// use, so a handshake that completes here completes on numbers the documents print.
+static TlsConn g_cli_conn;
+static TlsConnConfig g_cli_cfg;
+static uint8_t g_cli_out[2048];
+
+// A TLS record is content_type(1) legacy_record_version(2) length(2) then that many bytes
+// (RFC 8446 sec 5.1), so a flight of them is walked without knowing what is inside.
+static size_t record_len(const uint8_t *rec, size_t avail)
 {
-    uint8_t buf[256];
-    TlsConnection.conn = &g_conn;
+    if (avail < 5)
+    {
+        return 0;
+    }
+    const size_t n = 5u + be16(rec + 3);
+    return n <= avail ? n : 0;
+}
+
+// Feed every record in [buf, buf+len) to the connection now bound, returning what it wrote back.
+static size_t feed_records(TlsConn *into, const uint8_t *buf, size_t len, uint8_t *out, size_t out_cap)
+{
+    size_t written = 0;
+    for (size_t off = 0; off < len;)
+    {
+        const size_t rn = record_len(buf + off, len - off);
+        TEST_ASSERT_NOT_EQUAL_MESSAGE(0u, rn, "a record ran past the flight");
+        TlsConnection.conn = into;
+        memcpy(into->rx, buf + off, rn);
+        TlsConnection.io.rx_len = rn;
+        TlsConnection.out_args.out = out + written;
+        TlsConnection.out_args.out_cap = out_cap - written;
+        TlsConnection.process(NULL);
+        TEST_ASSERT_GREATER_OR_EQUAL_MESSAGE(0, TlsConnection.i32, "a record was refused");
+        written += (size_t)TlsConnection.i32;
+        off += rn;
+    }
+    return written;
+}
+
+void test_client_and_server_complete_a_handshake(void)
+{
+    // The client offers its own ephemeral pair and requires the server's raw public key.
+    memset(&g_cli_cfg, 0, sizeof(g_cli_cfg));
+    g_cli_cfg.ephemeral_priv = CLIENT_X25519_PRIV;
+    g_cli_cfg.random = SERVER_RANDOM; // any 32 fresh bytes; the trace's are as good as another's
+    g_cli_cfg.peer_pub = SERVER_ED_PUB;
+    g_cli_cfg.hostname = "example.com";
+
+    TlsConnection.conn = &g_cli_conn;
     TlsConnection.init_args.role = TLS_ROLE_CLIENT;
-    TlsConnection.init_args.cfg = &g_cfg;
+    TlsConnection.init_args.cfg = &g_cli_cfg;
     TlsConnection.init(NULL);
     TEST_ASSERT_TRUE(TlsConnection.ok);
 
     TlsConnection.conn = &g_conn;
-    TlsConnection.out_args.out = buf;
-    TlsConnection.out_args.out_cap = sizeof(buf);
+    TlsConnection.init_args.role = TLS_ROLE_SERVER;
+    TlsConnection.init_args.cfg = &g_cfg;
+    TlsConnection.init(NULL);
+    TEST_ASSERT_TRUE(TlsConnection.ok);
+
+    // ClientHello.
+    TlsConnection.conn = &g_cli_conn;
+    TlsConnection.out_args.out = g_cli_out;
+    TlsConnection.out_args.out_cap = sizeof(g_cli_out);
     TlsConnection.start(NULL);
-    TEST_ASSERT_EQUAL_UINT(0u, TlsConnection.n);
-    TEST_ASSERT_EQUAL_UINT8(ALERT_INTERNAL_ERROR, server_alert());
-    TEST_ASSERT_FALSE(server_established());
+    const size_t ch = TlsConnection.n;
+    TEST_ASSERT_NOT_EQUAL_MESSAGE(0u, ch, "the client wrote no ClientHello");
+
+    // The server answers with ServerHello + its encrypted flight.
+    const size_t flight = feed_records(&g_conn, g_cli_out, ch, g_srv_out, sizeof(g_srv_out));
+    TEST_ASSERT_NOT_EQUAL_MESSAGE(0u, flight, "the server wrote no flight");
+
+    // The client consumes that flight and answers with its Finished.
+    const size_t fin = feed_records(&g_cli_conn, g_srv_out, flight, g_cli_out, sizeof(g_cli_out));
+    TlsConnection.conn = &g_cli_conn;
+    TlsConnection.established(NULL);
+    TEST_ASSERT_TRUE_MESSAGE(TlsConnection.ok, "the client did not complete");
+    TlsConnection.alert(NULL);
+    TEST_ASSERT_EQUAL_UINT8(0u, TlsConnection.u8);
+    TEST_ASSERT_NOT_EQUAL_MESSAGE(0u, fin, "the client wrote no Finished");
+
+    // The server accepts it and is done too.
+    (void)feed_records(&g_conn, g_cli_out, fin, g_srv_out, sizeof(g_srv_out));
+    TEST_ASSERT_TRUE_MESSAGE(server_established(), "the server did not complete");
+    TEST_ASSERT_EQUAL_UINT8(0u, server_alert());
+
+    // Application data travels both ways under the keys the handshake installed.
+    static const uint8_t PING[11] = "hello world";
+    uint8_t rec[256];
+    uint8_t got[256];
+    size_t got_len = 0;
+
+    TlsConnection.conn = &g_cli_conn;
+    TlsConnection.io.data = PING;
+    TlsConnection.io.len = sizeof(PING);
+    TlsConnection.out_args.out = rec;
+    TlsConnection.out_args.out_cap = sizeof(rec);
+    TlsConnection.seal_app(NULL);
+    const size_t sealed = TlsConnection.n;
+    TEST_ASSERT_NOT_EQUAL(0u, sealed);
+
+    TlsConnection.conn = &g_conn;
+    TlsConnection.io.rec = rec;
+    TlsConnection.io.rec_len = sealed;
+    TlsConnection.out_args.out = got;
+    TlsConnection.out_args.out_cap = sizeof(got);
+    TlsConnection.out_args.out_len = &got_len;
+    TlsConnection.open_app(NULL);
+    TEST_ASSERT_TRUE_MESSAGE(TlsConnection.ok, "the server could not open the client's record");
+    TEST_ASSERT_EQUAL_UINT(sizeof(PING), got_len);
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(PING, got, sizeof(PING));
+
+    // And the other direction, which uses the opposite pair of traffic keys.
+    TlsConnection.conn = &g_conn;
+    TlsConnection.io.data = PING;
+    TlsConnection.io.len = sizeof(PING);
+    TlsConnection.out_args.out = rec;
+    TlsConnection.out_args.out_cap = sizeof(rec);
+    TlsConnection.seal_app(NULL);
+    const size_t sealed2 = TlsConnection.n;
+    TEST_ASSERT_NOT_EQUAL(0u, sealed2);
+
+    got_len = 0;
+    TlsConnection.conn = &g_cli_conn;
+    TlsConnection.io.rec = rec;
+    TlsConnection.io.rec_len = sealed2;
+    TlsConnection.out_args.out = got;
+    TlsConnection.out_args.out_cap = sizeof(got);
+    TlsConnection.out_args.out_len = &got_len;
+    TlsConnection.open_app(NULL);
+    TEST_ASSERT_TRUE_MESSAGE(TlsConnection.ok, "the client could not open the server's record");
+    TEST_ASSERT_EQUAL_UINT(sizeof(PING), got_len);
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(PING, got, sizeof(PING));
+}
+
+// peer_pub is the whole of peer authentication on this arm, so a client configured with the wrong
+// one must refuse the server's Certificate rather than complete (sec 4.4.2).
+void test_a_client_refuses_the_wrong_peer_key(void)
+{
+    static uint8_t WRONG[32];
+    memcpy(WRONG, SERVER_ED_PUB, sizeof(WRONG));
+    WRONG[0] ^= 0x01;
+
+    memset(&g_cli_cfg, 0, sizeof(g_cli_cfg));
+    g_cli_cfg.ephemeral_priv = CLIENT_X25519_PRIV;
+    g_cli_cfg.random = SERVER_RANDOM;
+    g_cli_cfg.peer_pub = WRONG;
+
+    TlsConnection.conn = &g_cli_conn;
+    TlsConnection.init_args.role = TLS_ROLE_CLIENT;
+    TlsConnection.init_args.cfg = &g_cli_cfg;
+    TlsConnection.init(NULL);
+    TlsConnection.conn = &g_conn;
+    TlsConnection.init_args.role = TLS_ROLE_SERVER;
+    TlsConnection.init_args.cfg = &g_cfg;
+    TlsConnection.init(NULL);
+
+    TlsConnection.conn = &g_cli_conn;
+    TlsConnection.out_args.out = g_cli_out;
+    TlsConnection.out_args.out_cap = sizeof(g_cli_out);
+    TlsConnection.start(NULL);
+    const size_t ch = TlsConnection.n;
+    const size_t flight = feed_records(&g_conn, g_cli_out, ch, g_srv_out, sizeof(g_srv_out));
+
+    // The flight is fed record by record until one is refused; the Certificate is that one.
+    proto_bool refused = PROTO_FALSE;
+    for (size_t off = 0; off < flight;)
+    {
+        const size_t rn = record_len(g_srv_out + off, flight - off);
+        TEST_ASSERT_NOT_EQUAL(0u, rn);
+        TlsConnection.conn = &g_cli_conn;
+        memcpy(g_cli_conn.rx, g_srv_out + off, rn);
+        TlsConnection.io.rx_len = rn;
+        TlsConnection.out_args.out = g_cli_out;
+        TlsConnection.out_args.out_cap = sizeof(g_cli_out);
+        TlsConnection.process(NULL);
+        if (TlsConnection.i32 < 0)
+        {
+            refused = PROTO_TRUE;
+            break;
+        }
+        off += rn;
+    }
+    TEST_ASSERT_TRUE_MESSAGE(refused, "the client accepted a key it was not configured for");
+    TlsConnection.conn = &g_cli_conn;
+    TlsConnection.established(NULL);
+    TEST_ASSERT_FALSE(TlsConnection.ok);
+    TlsConnection.alert(NULL);
+    TEST_ASSERT_EQUAL_UINT8(ALERT_HANDSHAKE_FAILURE, TlsConnection.u8);
+}
+
+// ---------------------------------------------------------------------------
+// The certificate path: the server presents a real X.509 leaf and the client
+// validates it to the anchor, matches the name, and checks the
+// CertificateVerify under the key that certificate carries. The certificates
+// are the OpenSSL-made fixture the crypto/x509 suites parse, so nothing here
+// is a certificate this codebase encoded for itself.
+// ---------------------------------------------------------------------------
+
+// Drive one full handshake with the two configurations given. Returns the client's state.
+static proto_bool run_handshake(TlsConnConfig *cli_cfg, TlsConnConfig *srv_cfg)
+{
+    TlsConnection.conn = &g_cli_conn;
+    TlsConnection.init_args.role = TLS_ROLE_CLIENT;
+    TlsConnection.init_args.cfg = cli_cfg;
+    TlsConnection.init(NULL);
+    if (!TlsConnection.ok)
+    {
+        return PROTO_FALSE;
+    }
+    TlsConnection.conn = &g_conn;
+    TlsConnection.init_args.role = TLS_ROLE_SERVER;
+    TlsConnection.init_args.cfg = srv_cfg;
+    TlsConnection.init(NULL);
+    if (!TlsConnection.ok)
+    {
+        return PROTO_FALSE;
+    }
+
+    TlsConnection.conn = &g_cli_conn;
+    TlsConnection.out_args.out = g_cli_out;
+    TlsConnection.out_args.out_cap = sizeof(g_cli_out);
+    TlsConnection.start(NULL);
+    const size_t ch = TlsConnection.n;
+    if (ch == 0)
+    {
+        return PROTO_FALSE;
+    }
+
+    const size_t flight = feed_records(&g_conn, g_cli_out, ch, g_srv_out, sizeof(g_srv_out));
+    if (flight == 0)
+    {
+        return PROTO_FALSE;
+    }
+
+    // Fed record by record so a refusal stops here rather than tripping feed_records' assertion.
+    size_t back = 0;
+    for (size_t off = 0; off < flight;)
+    {
+        const size_t rn = record_len(g_srv_out + off, flight - off);
+        if (rn == 0)
+        {
+            return PROTO_FALSE;
+        }
+        TlsConnection.conn = &g_cli_conn;
+        memcpy(g_cli_conn.rx, g_srv_out + off, rn);
+        TlsConnection.io.rx_len = rn;
+        TlsConnection.out_args.out = g_cli_out + back;
+        TlsConnection.out_args.out_cap = sizeof(g_cli_out) - back;
+        TlsConnection.process(NULL);
+        if (TlsConnection.i32 < 0)
+        {
+            return PROTO_FALSE;
+        }
+        back += (size_t)TlsConnection.i32; // the client's Finished, once the flight is closed
+        off += rn;
+    }
+    TlsConnection.conn = &g_cli_conn;
+    TlsConnection.established(NULL);
+    if (!TlsConnection.ok)
+    {
+        return PROTO_FALSE;
+    }
+    // The server has to accept that Finished for the handshake to be complete at both ends.
+    (void)feed_records(&g_conn, g_cli_out, back, g_srv_out, sizeof(g_srv_out));
+    return PROTO_TRUE;
+}
+
+// The certificate the fixture's Ed25519 leaf is, presented and validated for real.
+static void x509_configs(TlsConnConfig *cli, TlsConnConfig *srv, const char *host)
+{
+    memset(cli, 0, sizeof(*cli));
+    cli->ephemeral_priv = CLIENT_X25519_PRIV;
+    cli->random = SERVER_RANDOM;
+    cli->ca_der = X509_CA_ED25519_DER;
+    cli->ca_len = sizeof(X509_CA_ED25519_DER);
+    cli->hostname = host;
+    cli->now = X509_ED25519_NOT_BEFORE + 60u;
+
+    memset(srv, 0, sizeof(*srv));
+    srv->ed25519_seed = X509_ED25519_LEAF_SEED;
+    srv->ed25519_pub = NULL; // the certificate carries the key, not a raw public key
+    srv->ephemeral_priv = SERVER_X25519_PRIV;
+    srv->random = SERVER_RANDOM;
+    srv->cert_der = X509_ED25519_DER;
+    srv->cert_len = sizeof(X509_ED25519_DER);
+}
+
+void test_a_certificate_chain_authenticates_the_server(void)
+{
+    TlsConnConfig cli, srv;
+    x509_configs(&cli, &srv, "leaf.example.com");
+    TEST_ASSERT_TRUE_MESSAGE(run_handshake(&cli, &srv), "the certificate handshake did not complete");
+    TlsConnection.conn = &g_cli_conn;
+    TlsConnection.alert(NULL);
+    TEST_ASSERT_EQUAL_UINT8(0u, TlsConnection.u8);
+    TEST_ASSERT_TRUE_MESSAGE(server_established(), "the server did not complete");
+}
+
+// RFC 6125 sec 6.4: the certificate must speak for the name that was asked for. The same chain,
+// a name it does not carry, must not complete.
+void test_a_certificate_for_another_name_is_refused(void)
+{
+    TlsConnConfig cli, srv;
+    x509_configs(&cli, &srv, "wrong.example.com");
+    TEST_ASSERT_FALSE_MESSAGE(run_handshake(&cli, &srv), "a certificate for another name was accepted");
+    TlsConnection.conn = &g_cli_conn;
+    TlsConnection.alert(NULL);
+    TEST_ASSERT_EQUAL_UINT8(ALERT_HANDSHAKE_FAILURE, TlsConnection.u8);
+}
+
+// RFC 5280 sec 6.1: the chain has to reach the anchor the client was configured with. A different
+// CA's certificate is a good certificate signed by the wrong key.
+void test_a_chain_to_another_anchor_is_refused(void)
+{
+    TlsConnConfig cli, srv;
+    x509_configs(&cli, &srv, "leaf.example.com");
+    cli.ca_der = X509_CA_P256_DER; // a real CA, and not the one that signed this leaf
+    cli.ca_len = sizeof(X509_CA_P256_DER);
+    TEST_ASSERT_FALSE_MESSAGE(run_handshake(&cli, &srv), "a chain to the wrong anchor was accepted");
+    TlsConnection.conn = &g_cli_conn;
+    TlsConnection.alert(NULL);
+    TEST_ASSERT_EQUAL_UINT8(ALERT_HANDSHAKE_FAILURE, TlsConnection.u8);
+}
+
+// sec 6.1.3 (a)(2): a certificate outside its validity window is refused, both ways.
+void test_a_certificate_outside_its_validity_is_refused(void)
+{
+    TlsConnConfig cli, srv;
+    x509_configs(&cli, &srv, "leaf.example.com");
+    cli.now = X509_ED25519_NOT_BEFORE - 60u;
+    TEST_ASSERT_FALSE_MESSAGE(run_handshake(&cli, &srv), "a not-yet-valid certificate was accepted");
+
+    x509_configs(&cli, &srv, "leaf.example.com");
+    cli.now = X509_ED25519_NOT_AFTER + 60u;
+    TEST_ASSERT_FALSE_MESSAGE(run_handshake(&cli, &srv), "an expired certificate was accepted");
+}
+
+// The CertificateVerify is checked under the key the certificate carries, so a server that presents
+// this leaf while signing with another key must not be believed.
+void test_a_certificate_signed_by_the_wrong_key_is_refused(void)
+{
+    static uint8_t other_seed[32];
+    memcpy(other_seed, X509_ED25519_LEAF_SEED, sizeof(other_seed));
+    other_seed[0] ^= 0x01;
+
+    TlsConnConfig cli, srv;
+    x509_configs(&cli, &srv, "leaf.example.com");
+    srv.ed25519_seed = other_seed;
+    TEST_ASSERT_FALSE_MESSAGE(run_handshake(&cli, &srv), "a CertificateVerify under the wrong key was accepted");
+    TlsConnection.conn = &g_cli_conn;
+    TlsConnection.alert(NULL);
+    TEST_ASSERT_EQUAL_UINT8(ALERT_DECRYPT_ERROR, TlsConnection.u8);
 }

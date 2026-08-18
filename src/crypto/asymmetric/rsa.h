@@ -40,8 +40,9 @@ PROTOCORE_BEGIN_DECLS
  */
 typedef enum PROTO_ENUM_PACKED
 {
-    PROTOCORE_RSA_HASH_SHA256 = 0, ///< RSASSA-PKCS1-v1.5 with SHA-256
-    PROTOCORE_RSA_HASH_SHA512 = 1  ///< RSASSA-PKCS1-v1.5 with SHA-512
+    PROTOCORE_RSA_HASH_SHA256 = 0,    ///< RSASSA-PKCS1-v1.5 with SHA-256
+    PROTOCORE_RSA_HASH_SHA512 = 1,    ///< RSASSA-PKCS1-v1.5 with SHA-512
+    PROTOCORE_RSA_HASH_PSS_SHA256 = 2 ///< RSASSA-PSS with SHA-256, MGF1-SHA-256 and a 32-octet salt
 } protocore_rsa_hash;
 
 /** @brief Length of the DER DigestInfo wrapper for SHA-256 (RFC 8017 / RFC 5754). */

@@ -204,6 +204,7 @@ Every one takes `--check` to assert the tracked file already matches, which is h
 | `gen_crypto_vectors.py`      | W |                                             |               |
 | `gen_ed25519_comb.py`        | W |                                             |               |
 | `gen_mlkem_kat.py`           |   |                                             |               |
+| `gen_rsa_pss_vectors.py`     | W |                                             | openssl       |
 | `gen_ssh_host_key.py`        | W | `--header --name --out-dir --symbol --type` |               |
 | `gen_ssh_inflate_vectors.py` | W |                                             |               |
 | `gen_ssh_test_keys.py`       | W | `--if-absent`                               |               |

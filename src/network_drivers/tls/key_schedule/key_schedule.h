@@ -16,7 +16,7 @@
  * the handshake messages so far, so this module has no dependency on the message wire formats and is
  * host-testable in isolation against the RFC 8448 sec 3 worked trace (which lists every intermediate
  * secret and the (EC)DHE input directly). The QUIC packet-protection keys ({key, iv, hp}) are then
- * derived from these traffic secrets by protocore_quic_keys_from_secret() (RFC 9001 sec 5.1).
+ * derived from these traffic secrets by QuicCrypto.keys_from_secret (RFC 9001 sec 5.1).
  *
  * Pure, zero heap, host-tested against RFC 8448 sec 3.
  *

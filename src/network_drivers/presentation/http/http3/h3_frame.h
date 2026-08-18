@@ -17,11 +17,15 @@
 #ifndef PROTOCORE_H3_FRAME_H
 #define PROTOCORE_H3_FRAME_H
 
-#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_HTTP3
 
 PROTOCORE_BEGIN_DECLS
+
+// This module holds nothing between calls, so it carves no borrow and states none. An entry
+// takes one all the same, and never reads it, so every namespace in the tree is invoked the
+// same way.
 
 /** @brief HTTP/3 frame types (RFC 9114 sec 7.2 / 11.2.1). */
 #define H3_DATA 0x00
@@ -68,40 +72,154 @@ typedef struct
     uint64_t type;     ///< frame type
     uint64_t length;   ///< payload length
     size_t header_len; ///< bytes of the type + length varints
-} H3Frame;
+} H3FrameHeader;
 
-/** @brief The settings we track, with defaults after protocore_h3_settings_defaults(). */
+/** @brief The settings we track, with defaults after ::H3FrameNs::settings_defaults. */
 typedef struct
 {
-    uint64_t protocore_qpack_max_table_capacity; ///< default 0
+    uint64_t qpack_max_table_capacity; ///< default 0
     uint64_t max_field_section_size;             ///< default "unlimited"
-    uint64_t protocore_qpack_blocked_streams;    ///< default 0
+    uint64_t qpack_blocked_streams;    ///< default 0
 } H3Settings;
 
-/** @brief Parse a frame header (type + length varints) at @p buf. @return false if truncated. */
-proto_bool protocore_h3_frame_parse(const uint8_t *buf, size_t len, H3Frame *out);
+/** @brief What parse_header takes: buf, len, out. */
+typedef struct
+{
+    const uint8_t *buf;
+    size_t len;
+    H3FrameHeader *out;
+} H3FrameParseHeaderArgs;
 
-/** @brief Write a frame header (type + length varints). @return bytes written, or 0 on overflow. */
-size_t protocore_h3_frame_write_header(uint8_t *out, size_t cap, uint64_t type, uint64_t length);
+/** @brief What write_header takes: out, cap, type, length. */
+typedef struct
+{
+    uint8_t *out;
+    size_t cap;
+    uint64_t type;
+    uint64_t length;
+} H3FrameWriteHeaderArgs;
 
-/** @brief True if @p type is a reserved HTTP/2 frame type (0x02/0x06/0x08/0x09) - a connection error. */
-proto_bool protocore_h3_frame_type_reserved(uint64_t type);
+/** @brief What type_reserved takes: type. */
+typedef struct
+{
+    uint64_t type;
+} H3FrameTypeReservedArgs;
 
-/** @brief Fill @p s with the RFC default settings. */
-void protocore_h3_settings_defaults(H3Settings *s);
-/** @brief Apply a SETTINGS payload (id, value varint pairs) to @p s. @return false if malformed. */
-proto_bool protocore_h3_parse_settings(const uint8_t *payload, size_t len, H3Settings *s);
+/** @brief What settings_defaults takes: s. */
+typedef struct
+{
+    H3Settings *s;
+} H3FrameSettingsDefaultsArgs;
 
-// --- Frame builders (write a complete frame including its header) -----------------------------
+/** @brief What parse_settings takes: payload, len, s. */
+typedef struct
+{
+    const uint8_t *payload;
+    size_t len;
+    H3Settings *s;
+} H3FrameParseSettingsArgs;
 
-/** @brief DATA frame wrapping @p data. */
-size_t protocore_h3_build_data(uint8_t *out, size_t cap, const uint8_t *data, size_t len);
-/** @brief HEADERS frame wrapping a QPACK-encoded field section @p block. */
-size_t protocore_h3_build_headers(uint8_t *out, size_t cap, const uint8_t *block, size_t len);
-/** @brief SETTINGS frame from @p n (id, value) pairs. */
-size_t protocore_h3_build_settings(uint8_t *out, size_t cap, const uint64_t *ids, const uint64_t *vals, size_t n);
-/** @brief GOAWAY frame carrying @p stream_id (RFC 9114 sec 7.2.6). */
-size_t protocore_h3_build_goaway(uint8_t *out, size_t cap, uint64_t stream_id);
+/** @brief What build_data takes: out, cap, data, len. */
+typedef struct
+{
+    uint8_t *out;
+    size_t cap;
+    const uint8_t *data;
+    size_t len;
+} H3FrameBuildDataArgs;
+
+/** @brief What build_headers takes: out, cap, block, len. */
+typedef struct
+{
+    uint8_t *out;
+    size_t cap;
+    const uint8_t *block;
+    size_t len;
+} H3FrameBuildHeadersArgs;
+
+/** @brief What build_settings takes: out, cap, ids, vals, n. */
+typedef struct
+{
+    uint8_t *out;
+    size_t cap;
+    const uint64_t *ids;
+    const uint64_t *vals;
+    size_t n;
+} H3FrameBuildSettingsArgs;
+
+/** @brief What build_goaway takes: out, cap, stream_id. */
+typedef struct
+{
+    uint8_t *out;
+    size_t cap;
+    uint64_t stream_id;
+} H3FrameBuildGoawayArgs;
+
+/**
+ * @brief HTTP/3 framing (RFC 9114 sec 7) over QUIC varints.
+ *
+ * A caller sets the members a call takes, invokes it through ::H3Frame with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   H3Frame.parse_header_args.buf = ...;
+ *   H3Frame.parse_header_args.len = ...;
+ *   H3Frame.parse_header_args.out = ...;
+ *   H3Frame.parse_header(work);
+ *   // H3Frame.ok is what the call reports
+ *
+ * @var H3FrameNs::parse_header_args  what parse_header takes: buf, len, out
+ * @var H3FrameNs::write_header_args  what write_header takes: out, cap, type, length
+ * @var H3FrameNs::type_reserved_args  what type_reserved takes: type
+ * @var H3FrameNs::settings_defaults_args  what settings_defaults takes: s
+ * @var H3FrameNs::parse_settings_args  what parse_settings takes: payload, len, s
+ * @var H3FrameNs::build_data_args  what build_data takes: out, cap, data, len
+ * @var H3FrameNs::build_headers_args  what build_headers takes: out, cap, block, len
+ * @var H3FrameNs::build_settings_args  what build_settings takes: out, cap, ids, vals, n
+ * @var H3FrameNs::build_goaway_args  what build_goaway takes: out, cap, stream_id
+ * @var H3FrameNs::ok  a call's true/false outcome
+ * @var H3FrameNs::n  the count a call reports
+ * @var H3FrameNs::parse_header  parse a frame header (type + length varints) at buf. false if ...
+ * @var H3FrameNs::write_header  write a frame header (type + length varints). bytes written, or 0 ...
+ * @var H3FrameNs::type_reserved  true if type is a reserved HTTP/2 frame type (0x02/0x06/0x08/0x09) ...
+ * @var H3FrameNs::settings_defaults  fill s with the RFC default settings
+ * @var H3FrameNs::parse_settings  apply a SETTINGS payload (id, value varint pairs) to s. false if ...
+ * @var H3FrameNs::build_data  DATA frame wrapping data
+ * @var H3FrameNs::build_headers  HEADERS frame wrapping a QPACK-encoded field section block
+ * @var H3FrameNs::build_settings  SETTINGS frame from n (id, value) pairs
+ * @var H3FrameNs::build_goaway  GOAWAY frame carrying stream_id (RFC 9114 sec 7.2.6)
+ *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
+ * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
+ * a caller drives every namespace the same way.
+ */
+typedef struct
+{
+    H3FrameParseHeaderArgs parse_header_args;
+    H3FrameWriteHeaderArgs write_header_args;
+    H3FrameTypeReservedArgs type_reserved_args;
+    H3FrameSettingsDefaultsArgs settings_defaults_args;
+    H3FrameParseSettingsArgs parse_settings_args;
+    H3FrameBuildDataArgs build_data_args;
+    H3FrameBuildHeadersArgs build_headers_args;
+    H3FrameBuildSettingsArgs build_settings_args;
+    H3FrameBuildGoawayArgs build_goaway_args;
+
+    proto_bool ok;
+    size_t n;
+
+    void (*const parse_header)(uint8_t *restrict work);
+    void (*const write_header)(uint8_t *restrict work);
+    void (*const type_reserved)(uint8_t *restrict work);
+    void (*const settings_defaults)(uint8_t *restrict work);
+    void (*const parse_settings)(uint8_t *restrict work);
+    void (*const build_data)(uint8_t *restrict work);
+    void (*const build_headers)(uint8_t *restrict work);
+    void (*const build_settings)(uint8_t *restrict work);
+    void (*const build_goaway)(uint8_t *restrict work);
+} H3FrameNs;
+
+/** @brief The one symbol this module exports. */
+extern H3FrameNs H3Frame;
 
 PROTOCORE_END_DECLS
 

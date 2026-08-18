@@ -21,11 +21,15 @@
 #ifndef PROTOCORE_QUIC_PACKET_H
 #define PROTOCORE_QUIC_PACKET_H
 
-#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_HTTP3
 
 PROTOCORE_BEGIN_DECLS
+
+// This module holds nothing between calls, so it carves no borrow and states none. An entry
+// takes one all the same, and never reads it, so every namespace in the tree is invoked the
+// same way.
 
 #define QUIC_VERSION_1 0x00000001u ///< RFC 9000
 #define QUIC_MAX_CID_LEN 20        ///< maximum connection-ID length in QUIC version 1
@@ -61,43 +65,143 @@ typedef struct
     size_t hdr_len;                 ///< bytes up to the (protected) Packet Number field
 } QuicShortHeader;
 
-/** @brief True if byte 0 selects the long header form (0x80 set). */
-proto_bool protocore_quic_is_long_header(uint8_t first);
+/** @brief What is_long_header takes: first. */
+typedef struct
+{
+    uint8_t first;
+} QuicPacketIsLongHeaderArgs;
 
-/** @brief Parse a long header. @return false if truncated or a connection ID exceeds 20 bytes. */
-proto_bool protocore_quic_parse_long_header(const uint8_t *buf, size_t len, QuicLongHeader *out);
+/** @brief What parse_long_header takes: buf, len, out. */
+typedef struct
+{
+    const uint8_t *buf;
+    size_t len;
+    QuicLongHeader *out;
+} QuicPacketParseLongHeaderArgs;
+
+/** @brief What build_long_header takes: out, cap, type, version, ... */
+typedef struct
+{
+    uint8_t *out;
+    size_t cap;
+    uint8_t type;
+    uint32_t version;
+    const uint8_t *dcid;
+    uint8_t dcid_len;
+    const uint8_t *scid;
+    uint8_t scid_len;
+    uint8_t pn_len;
+} QuicPacketBuildLongHeaderArgs;
+
+/** @brief What parse_short_header takes: buf, len, dcid_len, out. */
+typedef struct
+{
+    const uint8_t *buf;
+    size_t len;
+    uint8_t dcid_len;
+    QuicShortHeader *out;
+} QuicPacketParseShortHeaderArgs;
+
+/** @brief What build_version_negotiation takes: out, cap, dcid, ... */
+typedef struct
+{
+    uint8_t *out;
+    size_t cap;
+    const uint8_t *dcid;
+    uint8_t dcid_len;
+    const uint8_t *scid;
+    uint8_t scid_len;
+    const uint32_t *versions;
+    size_t nversions;
+} QuicPacketBuildVersionNegotiationArgs;
+
+/** @brief What pn_length takes: full_pn, largest_acked. */
+typedef struct
+{
+    uint64_t full_pn;
+    int64_t largest_acked;
+} QuicPacketPnLengthArgs;
+
+/** @brief What pn_encode takes: out, cap, full_pn, largest_acked. */
+typedef struct
+{
+    uint8_t *out;
+    size_t cap;
+    uint64_t full_pn;
+    int64_t largest_acked;
+} QuicPacketPnEncodeArgs;
+
+/** @brief What pn_decode takes: largest_pn, truncated_pn, pn_nbits. */
+typedef struct
+{
+    uint64_t largest_pn;
+    uint64_t truncated_pn;
+    uint8_t pn_nbits;
+} QuicPacketPnDecodeArgs;
 
 /**
- * @brief Build a long header's invariant fields (first byte .. Source Connection ID). The caller
- * appends the type-specific fields (Token / Length / Packet Number / payload). @p pn_len is the
- * packet-number length in bytes (1..4); the reserved bits are written as 0 (pre-protection).
- * @return bytes written, or 0 on overflow / bad length.
+ * @brief QUIC packet headers and packet-number coding (RFC 9000 sec 17).
+ *
+ * A caller sets the members a call takes, invokes it through ::QuicPacket with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   QuicPacket.is_long_header_args.first = ...;
+ *   QuicPacket.is_long_header(work);
+ *   // QuicPacket.ok is what the call reports
+ *
+ * @var QuicPacketNs::is_long_header_args  what is_long_header takes: first
+ * @var QuicPacketNs::parse_long_header_args  what parse_long_header takes: buf, len, out
+ * @var QuicPacketNs::build_long_header_args  what build_long_header takes: out, cap, type, version,
+ * @var QuicPacketNs::parse_short_header_args  what parse_short_header takes: buf, len, dcid_len, out
+ * @var QuicPacketNs::build_version_negotiation_args  what build_version_negotiation takes: out, cap, dcid,
+ * @var QuicPacketNs::pn_length_args  what pn_length takes: full_pn, largest_acked
+ * @var QuicPacketNs::pn_encode_args  what pn_encode takes: out, cap, full_pn, largest_acked
+ * @var QuicPacketNs::pn_decode_args  what pn_decode takes: largest_pn, truncated_pn, pn_nbits
+ * @var QuicPacketNs::ok  a call's true/false outcome
+ * @var QuicPacketNs::n  bytes written, or 0 on overflow / bad length
+ * @var QuicPacketNs::u8  what a call reports
+ * @var QuicPacketNs::u64  what a call reports
+ * @var QuicPacketNs::is_long_header  true if byte 0 selects the long header form (0x80 set)
+ * @var QuicPacketNs::parse_long_header  parse a long header. false if truncated or a connection ID exceeds ...
+ * @var QuicPacketNs::build_long_header  build a long header's invariant fields (first byte .. Source ...
+ * @var QuicPacketNs::parse_short_header  parse a short (1-RTT) header given the locally chosen dcid_len. ...
+ * @var QuicPacketNs::build_version_negotiation  build a Version Negotiation packet (RFC 9000 sec 17.2.1): Version 0 ...
+ * @var QuicPacketNs::pn_length  packet-number length in bytes (1..4) for full_pn; largest_acked < 0 ...
+ * @var QuicPacketNs::pn_encode  encode full_pn truncated to ::QuicPacketNs::pn_length bytes, ...
+ * @var QuicPacketNs::pn_decode  recover the full packet number from a truncated_pn of pn_nbits bits ...
+ *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
+ * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
+ * a caller drives every namespace the same way.
  */
-size_t protocore_quic_build_long_header(uint8_t *out, size_t cap, uint8_t type, uint32_t version, const uint8_t *dcid,
-                                        uint8_t dcid_len, const uint8_t *scid, uint8_t scid_len, uint8_t pn_len);
+typedef struct
+{
+    QuicPacketIsLongHeaderArgs is_long_header_args;
+    QuicPacketParseLongHeaderArgs parse_long_header_args;
+    QuicPacketBuildLongHeaderArgs build_long_header_args;
+    QuicPacketParseShortHeaderArgs parse_short_header_args;
+    QuicPacketBuildVersionNegotiationArgs build_version_negotiation_args;
+    QuicPacketPnLengthArgs pn_length_args;
+    QuicPacketPnEncodeArgs pn_encode_args;
+    QuicPacketPnDecodeArgs pn_decode_args;
 
-/** @brief Parse a short (1-RTT) header given the locally chosen @p dcid_len. @return false if truncated. */
-proto_bool protocore_quic_parse_short_header(const uint8_t *buf, size_t len, uint8_t dcid_len, QuicShortHeader *out);
+    proto_bool ok;
+    size_t n;
+    uint8_t u8;
+    uint64_t u64;
 
-/**
- * @brief Build a Version Negotiation packet (RFC 9000 sec 17.2.1): Version 0 and the list of
- * @p versions the server supports. The caller passes the connection IDs already echoed (its DCID =
- * the received SCID, its SCID = the received DCID). @return bytes written, or 0 on overflow.
- */
-size_t protocore_quic_build_version_negotiation(uint8_t *out, size_t cap, const uint8_t *dcid, uint8_t dcid_len,
-                                                const uint8_t *scid, uint8_t scid_len, const uint32_t *versions,
-                                                size_t nversions);
+    void (*const is_long_header)(uint8_t *restrict work);
+    void (*const parse_long_header)(uint8_t *restrict work);
+    void (*const build_long_header)(uint8_t *restrict work);
+    void (*const parse_short_header)(uint8_t *restrict work);
+    void (*const build_version_negotiation)(uint8_t *restrict work);
+    void (*const pn_length)(uint8_t *restrict work);
+    void (*const pn_encode)(uint8_t *restrict work);
+    void (*const pn_decode)(uint8_t *restrict work);
+} QuicPacketNs;
 
-// --- Packet-number coding (RFC 9000 sec 17.1, Appendix A.2 / A.3) -----------------------------
-
-/** @brief Packet-number length in bytes (1..4) for @p full_pn; @p largest_acked < 0 means none. */
-uint8_t protocore_quic_pn_length(uint64_t full_pn, int64_t largest_acked);
-
-/** @brief Encode @p full_pn truncated to protocore_quic_pn_length() bytes, big-endian. @return bytes written or 0. */
-size_t protocore_quic_pn_encode(uint8_t *out, size_t cap, uint64_t full_pn, int64_t largest_acked);
-
-/** @brief Recover the full packet number from a @p truncated_pn of @p pn_nbits bits (Appendix A.3). */
-uint64_t protocore_quic_pn_decode(uint64_t largest_pn, uint64_t truncated_pn, uint8_t pn_nbits);
+/** @brief The one symbol this module exports. */
+extern QuicPacketNs QuicPacket;
 
 PROTOCORE_END_DECLS
 

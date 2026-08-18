@@ -7,7 +7,7 @@
  *
  * Drives the server side of the TLS 1.3 handshake that QUIC carries in CRYPTO frames. It ties the
  * key schedule (protocore_tls13_kdf), the handshake messages (protocore_tls13_msg), and the transport parameters
- * (protocore_quic_tp) together: it runs the transcript hash, consumes the client's ClientHello, produces the
+ * (quic_tp) together: it runs the transcript hash, consumes the client's ClientHello, produces the
  * server flight (ServerHello at the Initial level; EncryptedExtensions + Certificate +
  * CertificateVerify + Finished at the Handshake level), derives the Handshake and 1-RTT packet keys
  * for both directions, and verifies the client's Finished.

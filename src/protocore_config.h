@@ -7831,7 +7831,8 @@ from halves and is slower than the width it decomposes into"
 #define PROTOCORE_TLS13_SECRET_LEN 32
 #endif
 // The key share, the ECDHE secret, the transcript hash in hand, the Finished MAC, and
-// Transcript-Hash(CH..server Finished).
+// Transcript-Hash(CH..server Finished). The peer's public key is NOT one of these: it can be an
+// RSA modulus, so it has its own region (PROTOCORE_TLS_CONN_PEERKEY_CAP) rather than a 32-byte term.
 #ifndef PROTOCORE_TLS_CONN_TERMS
 #define PROTOCORE_TLS_CONN_TERMS 5
 #endif
@@ -7844,6 +7845,14 @@ from halves and is slower than the width it decomposes into"
 // 256 (SHA256_BORROW) + sizeof(Tls13ClientHello) + 1826 (TLS13_KS_BORROW) + 448 (SHA512_BORROW).
 #ifndef PROTOCORE_TLS_CONN_STATE_CAP
 #define PROTOCORE_TLS_CONN_STATE_CAP 2816
+#endif
+// The peer's subjectPublicKey, kept from the Certificate that carried it to the CertificateVerify
+// checked under it: the message buffer the certificate arrived in is reused by the next handshake
+// message, so a view over it would dangle. An RSA-2048 RSAPublicKey SEQUENCE is a little over 256
+// octets, a P-256 point 65 and an Ed25519 key 32, so this covers the widest and the header naming
+// its algorithm and length.
+#ifndef PROTOCORE_TLS_CONN_PEERKEY_CAP
+#define PROTOCORE_TLS_CONN_PEERKEY_CAP 320
 #endif
 // The terms of one TLS 1.3 key schedule: early, handshake and master secrets; the four traffic
 // secrets; the empty hash, the derived salt, the finished key, the zero IKM, and the Finished
@@ -7861,7 +7870,8 @@ from halves and is slower than the width it decomposes into"
 #ifndef PROTOCORE_WORK_TLS_CONN
 #define PROTOCORE_WORK_TLS_CONN                                                                                        \
     ((size_t)MAX_TLS_CONNS * ((size_t)PROTOCORE_TLS_CONN_MSG_CAP + (size_t)PROTOCORE_TLS_CONN_REC_CAP +                \
-                              (size_t)PROTOCORE_TLS_CONN_TERMS_CAP + (size_t)PROTOCORE_TLS_CONN_STATE_CAP))
+                              (size_t)PROTOCORE_TLS_CONN_TERMS_CAP + (size_t)PROTOCORE_TLS_CONN_STATE_CAP +            \
+                              (size_t)PROTOCORE_TLS_CONN_PEERKEY_CAP))
 #endif
 
 // The two tables a module holds for the life of the program rather than for the life of a call.

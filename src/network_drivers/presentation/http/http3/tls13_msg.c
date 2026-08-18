@@ -351,8 +351,8 @@ static void parse_extension(uint16_t type, const uint8_t *body, size_t blen, Tls
         break;
     }
     case TLS_EXT_QUIC_TRANSPORT_PARAMS:
-        out->protocore_quic_tp = body;
-        out->protocore_quic_tp_len = blen;
+        out->quic_tp = body;
+        out->quic_tp_len = blen;
         break;
     case TLS_EXT_COOKIE: {
         // Cookie { opaque cookie<1..2^16-1> } (RFC 8446 §4.2.2): 2-byte length then the cookie bytes.
@@ -543,6 +543,311 @@ size_t protocore_tls13_build_server_hello(uint8_t *out, size_t cap, const uint8_
     return w.ok ? w.pos : 0;
 }
 
+size_t protocore_tls13_build_client_hello(uint8_t *out, size_t cap, const uint8_t random[32],
+                                          const uint8_t *session_id, uint8_t session_id_len, const uint8_t *share,
+                                          size_t share_len, uint16_t group, const char *sni, const char *alpn,
+                                          const uint8_t *cookie, size_t cookie_len, proto_bool rpk_server_cert,
+                                          proto_bool dtls)
+{
+    Writer w = {out, cap, 0, PROTO_TRUE};
+    w_u8(&w, TLS_HS_CLIENT_HELLO);
+    size_t hs_len = w_mark(&w, 3);
+
+    // sec 4.1.2: legacy_version "MUST be set to 0x0303"; DTLS spells the same field 0xFEFD (RFC 9147 §5.3).
+    w_u16(&w, dtls ? PROTOCORE_TLS_LEGACY_VERSION_DTLS : (uint16_t)0x0303);
+    w_bytes(&w, random, 32);
+    w_u8(&w, session_id_len);
+    w_bytes(&w, session_id, session_id_len);
+    if (dtls)
+    {
+        w_u8(&w, 0); // legacy_cookie: zero length for a DTLS 1.3-only client (RFC 9147 §5.3)
+    }
+    w_u16(&w, 2); // cipher_suites: the one suite this stack answers
+    w_u16(&w, PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256);
+    w_u8(&w, 1);    // legacy_compression_methods "MUST contain exactly one byte,
+    w_u8(&w, 0x00); // set to zero" (sec 4.1.2)
+
+    size_t ext_len = w_mark(&w, 2);
+    // supported_versions: the ClientHello form is a u8-length-prefixed list (sec 4.2.1).
+    w_u16(&w, TLS_EXT_SUPPORTED_VERSIONS);
+    w_u16(&w, 3);
+    w_u8(&w, 2);
+    w_u16(&w, dtls ? PROTOCORE_TLS_VERSION_DTLS_1_3 : TLS_VERSION_1_3);
+    // supported_groups (sec 4.2.7): the one group this share is from.
+    w_u16(&w, TLS_EXT_SUPPORTED_GROUPS);
+    w_u16(&w, 4);
+    w_u16(&w, 2);
+    w_u16(&w, group);
+    // signature_algorithms (sec 4.2.3): the one scheme this stack produces and verifies.
+    w_u16(&w, TLS_EXT_SIGNATURE_ALGORITHMS);
+    w_u16(&w, 4);
+    w_u16(&w, 2);
+    w_u16(&w, TLS_SIG_ED25519);
+    // key_share: KeyShareEntry client_shares<0..2^16-1>, one entry (sec 4.2.8).
+    w_u16(&w, TLS_EXT_KEY_SHARE);
+    w_u16(&w, (uint16_t)(share_len + 6));
+    w_u16(&w, (uint16_t)(share_len + 4));
+    w_u16(&w, group);
+    w_u16(&w, (uint16_t)share_len);
+    w_bytes(&w, share, share_len);
+    // server_name: one host_name in a ServerNameList (RFC 6066 sec 3).
+    if (sni)
+    {
+        const size_t nl = str.len(sni, 255);
+        w_u16(&w, TLS_EXT_SERVER_NAME);
+        w_u16(&w, (uint16_t)(nl + 5));
+        w_u16(&w, (uint16_t)(nl + 3));
+        w_u8(&w, 0); // NameType host_name
+        w_u16(&w, (uint16_t)nl);
+        w_bytes(&w, (const uint8_t *)sni, nl);
+    }
+    // ALPN: one ProtocolName in the list (RFC 7301 sec 3.1).
+    if (alpn)
+    {
+        const size_t nl = str.len(alpn, 255);
+        w_u16(&w, TLS_EXT_ALPN);
+        w_u16(&w, (uint16_t)(nl + 3));
+        w_u16(&w, (uint16_t)(nl + 1));
+        w_u8(&w, (uint8_t)nl);
+        w_bytes(&w, (const uint8_t *)alpn, nl);
+    }
+    // cookie: echoed from the HelloRetryRequest that asked for it (sec 4.2.2).
+    if (cookie && cookie_len)
+    {
+        w_u16(&w, TLS_EXT_COOKIE);
+        w_u16(&w, (uint16_t)(cookie_len + 2));
+        w_u16(&w, (uint16_t)cookie_len);
+        w_bytes(&w, cookie, cookie_len);
+    }
+    // server_certificate_type: a 1-byte list of CertificateType (RFC 7250 sec 4.2), the form the
+    // server reads back.
+    if (rpk_server_cert)
+    {
+        w_u16(&w, TLS_EXT_SERVER_CERTIFICATE_TYPE);
+        w_u16(&w, 2);
+        w_u8(&w, 1);
+        w_u8(&w, TLS_CERT_TYPE_RAW_PUBLIC_KEY);
+    }
+    w_patch16(&w, ext_len);
+
+    w_patch24(&w, hs_len);
+    return w.ok ? w.pos : 0;
+}
+
+// The handshake header of a message of the expected type, with the body framed exactly. Every
+// parser below starts here, so a length that does not frame its own message is refused once.
+static proto_bool hs_body(const uint8_t *msg, size_t len, uint8_t want, Reader *r)
+{
+    uint8_t type = 0;
+    uint32_t body_len = 0;
+    r->buf = msg;
+    r->len = len;
+    r->pos = 0;
+    if (!r_u8(r, &type) || type != want || !r_u24(r, &body_len))
+    {
+        return PROTO_FALSE;
+    }
+    if (r->pos + body_len != len)
+    {
+        return PROTO_FALSE;
+    }
+    return PROTO_TRUE;
+}
+
+proto_bool protocore_tls13_parse_certificate(const uint8_t *msg, size_t len, const uint8_t **cert, size_t *cert_len)
+{
+    Reader r;
+    if (!hs_body(msg, len, TLS_HS_CERTIFICATE, &r))
+    {
+        return PROTO_FALSE;
+    }
+    uint8_t ctx_len = 0;
+    const uint8_t *ctx = NULL;
+    if (!r_u8(&r, &ctx_len) || !r_take(&r, ctx_len, &ctx))
+    {
+        return PROTO_FALSE;
+    }
+    uint32_t list_len = 0;
+    if (!r_u24(&r, &list_len) || r.pos + list_len != r.len)
+    {
+        return PROTO_FALSE;
+    }
+    // The end-entity certificate is the first CertificateEntry (sec 4.4.2).
+    uint32_t entry_len = 0;
+    if (!r_u24(&r, &entry_len) || entry_len == 0 || !r_take(&r, entry_len, cert))
+    {
+        return PROTO_FALSE;
+    }
+    *cert_len = entry_len;
+    uint16_t ext_len = 0;
+    const uint8_t *ext = NULL;
+    if (!r_u16(&r, &ext_len) || !r_take(&r, ext_len, &ext))
+    {
+        return PROTO_FALSE;
+    }
+    return PROTO_TRUE;
+}
+
+proto_bool protocore_tls13_ed25519_from_spki(const uint8_t *spki, size_t len, const uint8_t **pub)
+{
+    static const uint8_t PREFIX[12] = {0x30, 0x2a, 0x30, 0x05, 0x06, 0x03, 0x2b, 0x65, 0x70, 0x03, 0x21, 0x00};
+    if (len != PROTOCORE_TLS13_ED25519_SPKI_LEN || mem.cmp(spki, PREFIX, sizeof(PREFIX)) != 0)
+    {
+        return PROTO_FALSE;
+    }
+    *pub = spki + sizeof(PREFIX);
+    return PROTO_TRUE;
+}
+
+proto_bool protocore_tls13_parse_cert_verify(const uint8_t *msg, size_t len, uint16_t *scheme, const uint8_t **sig,
+                                             size_t *sig_len)
+{
+    Reader r;
+    if (!hs_body(msg, len, TLS_HS_CERTIFICATE_VERIFY, &r))
+    {
+        return PROTO_FALSE;
+    }
+    uint16_t slen = 0;
+    if (!r_u16(&r, scheme) || !r_u16(&r, &slen) || !r_take(&r, slen, sig) || r.pos != r.len)
+    {
+        return PROTO_FALSE;
+    }
+    *sig_len = slen;
+    return PROTO_TRUE;
+}
+
+proto_bool protocore_tls13_parse_finished(const uint8_t *msg, size_t len, const uint8_t **vd)
+{
+    Reader r;
+    if (!hs_body(msg, len, TLS_HS_FINISHED, &r))
+    {
+        return PROTO_FALSE;
+    }
+    // Hash.length for SHA-256, the one suite this stack answers.
+    return r_take(&r, 32, vd) && r.pos == r.len;
+}
+
+proto_bool protocore_tls13_parse_server_hello(const uint8_t *msg, size_t len, Tls13ServerHello *out, proto_bool dtls)
+{
+    mem.zero(out, sizeof(*out));
+
+    Reader r = {msg, len, 0};
+    uint8_t type = 0;
+    uint32_t body_len = 0;
+    if (!r_u8(&r, &type) || type != TLS_HS_SERVER_HELLO || !r_u24(&r, &body_len))
+    {
+        return PROTO_FALSE;
+    }
+    if (r.pos + body_len > len)
+    {
+        return PROTO_FALSE;
+    }
+    r.len = r.pos + body_len;
+
+    uint16_t legacy_version = 0;
+    if (!r_u16(&r, &legacy_version) || !r_take(&r, 32, &out->random))
+    {
+        return PROTO_FALSE;
+    }
+    // sec 4.1.3: a ServerHello carrying this Random is a HelloRetryRequest, not a real one.
+    out->is_hrr = mem.cmp(out->random, protocore_tls13_hrr_random, 32) == 0;
+
+    uint8_t sid_len = 0;
+    if (!r_u8(&r, &sid_len) || sid_len > 32 || !r_take(&r, sid_len, &out->session_id))
+    {
+        return PROTO_FALSE;
+    }
+    out->session_id_len = sid_len;
+
+    uint8_t comp = 0;
+    if (!r_u16(&r, &out->cipher_suite) || !r_u8(&r, &comp))
+    {
+        return PROTO_FALSE;
+    }
+    // sec 4.1.3: legacy_compression_method is a single byte and "MUST be 0".
+    if (comp != 0)
+    {
+        return PROTO_FALSE;
+    }
+
+    uint16_t exts_len = 0;
+    const uint8_t *exts = NULL;
+    if (!r_u16(&r, &exts_len) || !r_take(&r, exts_len, &exts))
+    {
+        return PROTO_FALSE;
+    }
+    const uint16_t want_version = dtls ? PROTOCORE_TLS_VERSION_DTLS_1_3 : TLS_VERSION_1_3;
+    for (size_t off = 0; off + 4 <= exts_len;)
+    {
+        const uint16_t ext = (uint16_t)((exts[off] << 8) | exts[off + 1]);
+        const size_t blen = (size_t)((exts[off + 2] << 8) | exts[off + 3]);
+        const uint8_t *body = exts + off + 4;
+        if (off + 4 + blen > exts_len)
+        {
+            return PROTO_FALSE;
+        }
+        off += 4 + blen;
+        switch (ext)
+        {
+        case TLS_EXT_SUPPORTED_VERSIONS:
+            // The ServerHello form is one selected_version, not a list (sec 4.2.1).
+            if (blen == 2 && ((body[0] << 8) | body[1]) == want_version)
+            {
+                out->selected_tls13 = PROTO_TRUE;
+            }
+            break;
+        case TLS_EXT_KEY_SHARE:
+            out->has_key_share = PROTO_TRUE;
+            if (out->is_hrr)
+            {
+                // KeyShareHelloRetryRequest is the selected_group alone (sec 4.2.8).
+                if (blen != 2)
+                {
+                    return PROTO_FALSE;
+                }
+                out->group = (uint16_t)((body[0] << 8) | body[1]);
+                break;
+            }
+            if (blen < 4)
+            {
+                return PROTO_FALSE;
+            }
+            out->group = (uint16_t)((body[0] << 8) | body[1]);
+            out->share_len = (size_t)((body[2] << 8) | body[3]);
+            if (4 + out->share_len != blen)
+            {
+                return PROTO_FALSE;
+            }
+            out->share = body + 4;
+            break;
+        case TLS_EXT_COOKIE:
+            if (blen < 2)
+            {
+                return PROTO_FALSE;
+            }
+            out->cookie_len = (size_t)((body[0] << 8) | body[1]);
+            if (2 + out->cookie_len != blen)
+            {
+                return PROTO_FALSE;
+            }
+            out->cookie = body + 2;
+            break;
+        case TLS_EXT_CONNECTION_ID:
+            if (blen < 1 || (size_t)body[0] + 1 != blen)
+            {
+                return PROTO_FALSE;
+            }
+            out->has_conn_id = PROTO_TRUE;
+            out->conn_id_len = body[0];
+            out->conn_id = body + 1;
+            break;
+        default:
+            break; // unknown extensions are read past
+        }
+    }
+    return PROTO_TRUE;
+}
+
 // SHA-256("HelloRetryRequest") - RFC 8446 §4.1.3. A ServerHello with this random is a HelloRetryRequest.
 const uint8_t protocore_tls13_hrr_random[32] = {0xCF, 0x21, 0xAD, 0x74, 0xE5, 0x9A, 0x61, 0x11, 0xBE, 0x1D, 0x8C,
                                                 0x02, 0x1E, 0x65, 0xB8, 0x91, 0xC2, 0xA2, 0x11, 0x16, 0x7A, 0xBB,
@@ -644,8 +949,8 @@ size_t protocore_tls13_build_message_hash(uint8_t *out, size_t cap, const uint8_
     return w.ok ? w.pos : 0;
 }
 
-size_t protocore_tls13_build_encrypted_extensions(uint8_t *out, size_t cap, const uint8_t *protocore_quic_tp,
-                                                  size_t protocore_quic_tp_len, proto_bool rpk_server_cert)
+size_t protocore_tls13_build_encrypted_extensions(uint8_t *out, size_t cap, const uint8_t *quic_tp,
+                                                  size_t quic_tp_len, proto_bool rpk_server_cert)
 {
     Writer w = {out, cap, 0, PROTO_TRUE};
     w_u8(&w, TLS_HS_ENCRYPTED_EXTENSIONS);
@@ -658,10 +963,10 @@ size_t protocore_tls13_build_encrypted_extensions(uint8_t *out, size_t cap, cons
     w_u16(&w, 3); // ProtocolNameList length
     w_u8(&w, 2);  // name length
     w_bytes(&w, (const uint8_t *)"h3", 2);
-    // protocore_quic_transport_parameters.
+    // quic_transport_parameters.
     w_u16(&w, TLS_EXT_QUIC_TRANSPORT_PARAMS);
-    w_u16(&w, (uint16_t)protocore_quic_tp_len);
-    w_bytes(&w, protocore_quic_tp, protocore_quic_tp_len);
+    w_u16(&w, (uint16_t)quic_tp_len);
+    w_bytes(&w, quic_tp, quic_tp_len);
 #if PROTOCORE_ENABLE_TLS_RPK
     // negotiated server_certificate_type = RawPublicKey (RFC 7250), when selected.
     if (rpk_server_cert)
@@ -740,7 +1045,7 @@ size_t protocore_tls13_cert_verify_content(uint8_t *out, size_t cap, const uint8
     return total;
 }
 
-size_t protocore_tls13_build_cert_verify(uint8_t *work, uint8_t *out, size_t cap, const uint8_t transcript_hash[32],
+size_t protocore_tls13_build_cert_verify(uint8_t *sign_work, uint8_t *out, size_t cap, const uint8_t transcript_hash[32],
                                          const uint8_t seed[32])
 {
     uint8_t content[64 + 33 + 1 + 32];
@@ -754,7 +1059,7 @@ size_t protocore_tls13_build_cert_verify(uint8_t *work, uint8_t *out, size_t cap
     Ed25519.sign_args.msg = content;
     Ed25519.sign_args.msg_len = clen;
     Ed25519.sign_args.sig = sig;
-    Ed25519.sign(work);
+    Ed25519.sign(sign_work);
 
     Writer w = {out, cap, 0, PROTO_TRUE};
     w_u8(&w, TLS_HS_CERTIFICATE_VERIFY);

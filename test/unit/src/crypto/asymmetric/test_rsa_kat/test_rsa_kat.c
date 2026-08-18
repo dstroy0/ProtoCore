@@ -146,6 +146,43 @@ void test_rsa_verify_sha512_wycheproof(void)
     run_verify(KAT_RSA_SHA512, ROWS(KAT_RSA_SHA512), PROTOCORE_RSA_HASH_SHA512);
 }
 
+// RSASSA-PSS (RFC 8017 sec 8.1.2): openssl signed these, and PSS draws a random salt, so nothing
+// here could have been produced by recomputing the encoding - only a verifier can check them.
+void test_rsa_verify_pss_sha256_openssl(void)
+{
+    run_verify(KAT_RSA_PSS, ROWS(KAT_RSA_PSS), PROTOCORE_RSA_HASH_PSS_SHA256);
+}
+
+// The padding mode is not a label on the block: a PSS signature must not verify as PKCS#1 v1.5, and
+// a v1.5 signature must not verify as PSS.
+void test_the_two_padding_modes_do_not_accept_each_other(void)
+{
+    for (size_t i = 0; i < ROWS(KAT_RSA_PSS); i++)
+    {
+        const KatRsaVerify *v = &KAT_RSA_PSS[i];
+        if (!v->valid)
+        {
+            continue;
+        }
+        uint8_t msg[MAXMSG];
+        const size_t msg_len = unhex(v->msg, msg);
+        TEST_ASSERT_FALSE_MESSAGE(verify_row(v, PROTOCORE_RSA_HASH_SHA256, msg, msg_len),
+                                  "a PSS signature verified as PKCS#1 v1.5");
+    }
+    for (size_t i = 0; i < ROWS(KAT_RSA_SHA256); i++)
+    {
+        const KatRsaVerify *v = &KAT_RSA_SHA256[i];
+        if (!v->valid)
+        {
+            continue;
+        }
+        uint8_t msg[MAXMSG];
+        const size_t msg_len = unhex(v->msg, msg);
+        TEST_ASSERT_FALSE_MESSAGE(verify_row(v, PROTOCORE_RSA_HASH_PSS_SHA256, msg, msg_len),
+                                  "a PKCS#1 v1.5 signature verified as PSS");
+    }
+}
+
 // A SHA-256 row presented as SHA-512 recovers the same block against a different expected one, so
 // every valid vector must stop verifying when the digest is swapped.
 void test_rsa_verify_rejects_the_wrong_digest(void)

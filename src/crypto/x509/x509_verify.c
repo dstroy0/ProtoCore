@@ -83,10 +83,8 @@ static void verdict(protocore_x509_status st)
 // The modulus is left-padded into a fixed PROTOCORE_RSA_KEY_BYTES field because that is what the
 // verifier takes, and the exponent into four octets. A modulus wider than the field is a key this
 // build cannot verify rather than one to truncate.
-static proto_bool rsa_key_split(const X509Cert *issuer, uint8_t *n_out, uint8_t *e_out)
+static proto_bool rsa_key_split(const uint8_t *der, size_t len, uint8_t *n_out, uint8_t *e_out)
 {
-    const uint8_t *der = issuer->key.p;
-    const size_t len = issuer->key.len;
 
     Der.read_args.buf = der;
     Der.read_args.len = len;
@@ -136,10 +134,8 @@ static proto_bool rsa_key_split(const X509Cert *issuer, uint8_t *n_out, uint8_t 
 
 // RFC 3279 sec 2.2.3: an ECDSA signature is SEQUENCE { r INTEGER, s INTEGER }, and the verifier
 // takes r || s as two fixed 32-octet big-endian fields. Each is left-padded into its half.
-static proto_bool ecdsa_sig_split(const X509Cert *cert, uint8_t out[PROTOCORE_ECDSA_P256_SIG_LEN])
+static proto_bool ecdsa_sig_split(const uint8_t *der, size_t len, uint8_t out[PROTOCORE_ECDSA_P256_SIG_LEN])
 {
-    const uint8_t *der = cert->sig.p;
-    const size_t len = cert->sig.len;
 
     Der.read_args.buf = der;
     Der.read_args.len = len;
@@ -185,6 +181,92 @@ static proto_bool ecdsa_sig_split(const X509Cert *cert, uint8_t out[PROTOCORE_EC
 // The checks
 // ---------------------------------------------------------------------------
 
+// One signature check: @p msg under the key a certificate carries, in @p alg. A certificate's TBS
+// under its issuer's key and a TLS CertificateVerify under a leaf's key are the same operation, so
+// the algorithm dispatch is written once and both entries below reach it.
+static void verify_under(const X509Cert *signer, protocore_x509_sig_alg alg, const uint8_t *msg, size_t msg_len,
+                         const uint8_t *sig, size_t sig_len, uint8_t *restrict work)
+{
+    switch (alg)
+    {
+    case PROTOCORE_X509_SIG_ED25519:
+        // RFC 8410 sec 6: the key is 32 raw octets and the signature 64.
+        if (signer->key_alg != PROTOCORE_X509_KEY_ED25519 || signer->key.len != 32u || sig_len != 64u)
+        {
+            verdict(PROTOCORE_X509_ERR_KEY_MALFORMED);
+            return;
+        }
+        Ed25519.verify_args.pub = signer->key.p;
+        Ed25519.verify_args.msg = msg;
+        Ed25519.verify_args.msg_len = msg_len;
+        Ed25519.verify_args.sig = sig;
+        Ed25519.verify(X509_VERIFY_ALG(work));
+        verdict(Ed25519.ok ? PROTOCORE_X509_OK : PROTOCORE_X509_ERR_BAD_SIGNATURE);
+        return;
+
+    case PROTOCORE_X509_SIG_ECDSA_SHA256: {
+        if (signer->key_alg != PROTOCORE_X509_KEY_EC_P256 || signer->key.len != PROTOCORE_ECDSA_P256_PUB_LEN)
+        {
+            verdict(PROTOCORE_X509_ERR_KEY_MALFORMED);
+            return;
+        }
+        uint8_t rs[PROTOCORE_ECDSA_P256_SIG_LEN];
+        if (!ecdsa_sig_split(sig, sig_len, rs))
+        {
+            verdict(PROTOCORE_X509_ERR_SIG_MALFORMED);
+            return;
+        }
+        Ecdsa.verify_args.pub = signer->key.p;
+        Ecdsa.verify_args.msg = msg;
+        Ecdsa.verify_args.mlen = msg_len;
+        Ecdsa.verify_args.sig = rs;
+        Ecdsa.verify(X509_VERIFY_ALG(work));
+        verdict(Ecdsa.ok ? PROTOCORE_X509_OK : PROTOCORE_X509_ERR_BAD_SIGNATURE);
+        return;
+    }
+
+    case PROTOCORE_X509_SIG_RSA_SHA256:
+    case PROTOCORE_X509_SIG_RSA_SHA512:
+    case PROTOCORE_X509_SIG_RSA_PSS: {
+        if (signer->key_alg != PROTOCORE_X509_KEY_RSA)
+        {
+            verdict(PROTOCORE_X509_ERR_KEY_MALFORMED);
+            return;
+        }
+        uint8_t *n = X509_VERIFY_CTX(work)->n;
+        uint8_t *e = X509_VERIFY_CTX(work)->e;
+        if (!rsa_key_split(signer->key.p, signer->key.len, n, e))
+        {
+            verdict(PROTOCORE_X509_ERR_KEY_MALFORMED);
+            return;
+        }
+        if (sig_len != PROTOCORE_RSA_KEY_BYTES)
+        {
+            verdict(PROTOCORE_X509_ERR_SIG_MALFORMED);
+            return;
+        }
+        Rsa.verify_args.n = n;
+        Rsa.verify_args.e = e;
+        Rsa.verify_args.msg = msg;
+        Rsa.verify_args.msg_len = msg_len;
+        Rsa.verify_args.sig = sig;
+        Rsa.verify_args.sig_len = sig_len;
+        Rsa.verify_args.hash = (alg == PROTOCORE_X509_SIG_RSA_SHA512)  ? PROTOCORE_RSA_HASH_SHA512
+                               : (alg == PROTOCORE_X509_SIG_RSA_PSS) ? PROTOCORE_RSA_HASH_PSS_SHA256
+                                                                     : PROTOCORE_RSA_HASH_SHA256;
+        Rsa.verify(X509_VERIFY_ALG(work));
+        verdict(Rsa.ok ? PROTOCORE_X509_OK : PROTOCORE_X509_ERR_BAD_SIGNATURE);
+        return;
+    }
+
+    default:
+        // An algorithm this build does not verify is refused rather than verified under one it
+        // does. RSA-PSS and the SHA-384 variants land here until their paths exist.
+        verdict(PROTOCORE_X509_ERR_ALG_UNSUPPORTED);
+        return;
+    }
+}
+
 static void x509_signature(uint8_t *restrict work)
 {
     if (!work)
@@ -199,83 +281,26 @@ static void x509_signature(uint8_t *restrict work)
         verdict(PROTOCORE_X509_ERR_ARGS);
         return;
     }
+    verify_under(issuer, cert->sig_alg, cert->tbs.p, cert->tbs.len, cert->sig.p, cert->sig.len, work);
+}
 
-    switch (cert->sig_alg)
+static void x509_message(uint8_t *restrict work)
+{
+    if (!work)
     {
-    case PROTOCORE_X509_SIG_ED25519:
-        // RFC 8410 sec 6: the key is 32 raw octets and the signature 64.
-        if (issuer->key_alg != PROTOCORE_X509_KEY_ED25519 || issuer->key.len != 32u || cert->sig.len != 64u)
-        {
-            verdict(PROTOCORE_X509_ERR_KEY_MALFORMED);
-            return;
-        }
-        Ed25519.verify_args.pub = issuer->key.p;
-        Ed25519.verify_args.msg = cert->tbs.p;
-        Ed25519.verify_args.msg_len = cert->tbs.len;
-        Ed25519.verify_args.sig = cert->sig.p;
-        Ed25519.verify(X509_VERIFY_ALG(work));
-        verdict(Ed25519.ok ? PROTOCORE_X509_OK : PROTOCORE_X509_ERR_BAD_SIGNATURE);
-        return;
-
-    case PROTOCORE_X509_SIG_ECDSA_SHA256: {
-        if (issuer->key_alg != PROTOCORE_X509_KEY_EC_P256 || issuer->key.len != PROTOCORE_ECDSA_P256_PUB_LEN)
-        {
-            verdict(PROTOCORE_X509_ERR_KEY_MALFORMED);
-            return;
-        }
-        uint8_t rs[PROTOCORE_ECDSA_P256_SIG_LEN];
-        if (!ecdsa_sig_split(cert, rs))
-        {
-            verdict(PROTOCORE_X509_ERR_SIG_MALFORMED);
-            return;
-        }
-        Ecdsa.verify_args.pub = issuer->key.p;
-        Ecdsa.verify_args.msg = cert->tbs.p;
-        Ecdsa.verify_args.mlen = cert->tbs.len;
-        Ecdsa.verify_args.sig = rs;
-        Ecdsa.verify(X509_VERIFY_ALG(work));
-        verdict(Ecdsa.ok ? PROTOCORE_X509_OK : PROTOCORE_X509_ERR_BAD_SIGNATURE);
+        verdict(PROTOCORE_X509_ERR_ARGS);
+        return; // the pool was short of this module's borrow
+    }
+    const X509Cert *signer = X509Verify.message_args.signer;
+    const uint8_t *msg = X509Verify.message_args.msg;
+    const uint8_t *sig = X509Verify.message_args.sig;
+    if (signer == NULL || signer->key.p == NULL || msg == NULL || sig == NULL)
+    {
+        verdict(PROTOCORE_X509_ERR_ARGS);
         return;
     }
-
-    case PROTOCORE_X509_SIG_RSA_SHA256:
-    case PROTOCORE_X509_SIG_RSA_SHA512: {
-        if (issuer->key_alg != PROTOCORE_X509_KEY_RSA)
-        {
-            verdict(PROTOCORE_X509_ERR_KEY_MALFORMED);
-            return;
-        }
-        uint8_t *n = X509_VERIFY_CTX(work)->n;
-        uint8_t *e = X509_VERIFY_CTX(work)->e;
-        if (!rsa_key_split(issuer, n, e))
-        {
-            verdict(PROTOCORE_X509_ERR_KEY_MALFORMED);
-            return;
-        }
-        if (cert->sig.len != PROTOCORE_RSA_KEY_BYTES)
-        {
-            verdict(PROTOCORE_X509_ERR_SIG_MALFORMED);
-            return;
-        }
-        Rsa.verify_args.n = n;
-        Rsa.verify_args.e = e;
-        Rsa.verify_args.msg = cert->tbs.p;
-        Rsa.verify_args.msg_len = cert->tbs.len;
-        Rsa.verify_args.sig = cert->sig.p;
-        Rsa.verify_args.sig_len = cert->sig.len;
-        Rsa.verify_args.hash =
-            (cert->sig_alg == PROTOCORE_X509_SIG_RSA_SHA512) ? PROTOCORE_RSA_HASH_SHA512 : PROTOCORE_RSA_HASH_SHA256;
-        Rsa.verify(X509_VERIFY_ALG(work));
-        verdict(Rsa.ok ? PROTOCORE_X509_OK : PROTOCORE_X509_ERR_BAD_SIGNATURE);
-        return;
-    }
-
-    default:
-        // An algorithm this build does not verify is refused rather than verified under one it
-        // does. RSA-PSS and the SHA-384 variants land here until their paths exist.
-        verdict(PROTOCORE_X509_ERR_ALG_UNSUPPORTED);
-        return;
-    }
+    verify_under(signer, X509Verify.message_args.alg, msg, X509Verify.message_args.msg_len, sig,
+                 X509Verify.message_args.sig_len, work);
 }
 
 static void x509_validity(uint8_t *restrict work)
@@ -374,6 +399,7 @@ X509VerifyNs X509Verify = {
     .validity = x509_validity,
     .may_sign = x509_may_sign,
     .link = x509_link,
+    .message = x509_message,
 };
 
 PROTOCORE_END_DECLS
