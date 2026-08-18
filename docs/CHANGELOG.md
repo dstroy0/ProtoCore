@@ -119,6 +119,8 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`dd95f04`](https://github.com/dstroy0/ProtoCore/commit/dd95f04b86bb3f09a0ea04086ff008630b78b2bc))
+- bump streetsidesoftware/cspell-action from 8 to 9 ([`fcc1fa8`](https://github.com/dstroy0/ProtoCore/commit/fcc1fa838b684f5cb52bf83f88f3078ac0f64de7))
 - update CHANGELOG.md [skip ci] ([`dfc31d6`](https://github.com/dstroy0/ProtoCore/commit/dfc31d658417c196efe98794f1975a4edea486f6))
 - update CHANGELOG.md [skip ci] ([`3002409`](https://github.com/dstroy0/ProtoCore/commit/3002409b6e579b82dadb6b68fb86da390c86d46d))
 - update CHANGELOG.md [skip ci] ([`338300d`](https://github.com/dstroy0/ProtoCore/commit/338300dee9eaa8c62690174110d8cf37123912ea))
@@ -380,6 +382,9 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- Merge branch 'main' of https://github.com/dstroy0/ProtoCore ([`5ee3bf6`](https://github.com/dstroy0/ProtoCore/commit/5ee3bf69f011aa53a8363b1c8c25abaeded08758))
+- Merge Dependabot #27: build(deps): bump streetsidesoftware/cspell-action from 8 to 9 ([`50622ba`](https://github.com/dstroy0/ProtoCore/commit/50622ba0dcf70970854aa51082b34cdb458a48d1))
+- (housekeeping): pimpl phase 3, public handles, internal ctx, fix tests ([`77b7d67`](https://github.com/dstroy0/ProtoCore/commit/77b7d6714047bb5f9689391f748b593fa6444468))
 - (housekeeping): pimpl phase 3, public handles, internal ctx, fix tests ([`7b35b3d`](https://github.com/dstroy0/ProtoCore/commit/7b35b3d961e245cbd7daeaa4648dacef2603b292))
 - Merge branch 'main' of https://github.com/dstroy0/ProtoCore ([`7b76817`](https://github.com/dstroy0/ProtoCore/commit/7b76817e1234ae45c4557deaf6115988bbecbf2f))
 - (housekeeping): pimpl phase 3, public handles, internal ctx, fix tests, format ([`3f238f9`](https://github.com/dstroy0/ProtoCore/commit/3f238f98cdc5ecd50d41bbb25424398a605487f8))
