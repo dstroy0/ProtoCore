@@ -119,6 +119,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`2b4babd`](https://github.com/dstroy0/ProtoCore/commit/2b4babdb5cb27de3a5a5c0dc64a3476f6de8a890))
 - update CHANGELOG.md [skip ci] ([`dd95f04`](https://github.com/dstroy0/ProtoCore/commit/dd95f04b86bb3f09a0ea04086ff008630b78b2bc))
 - bump streetsidesoftware/cspell-action from 8 to 9 ([`fcc1fa8`](https://github.com/dstroy0/ProtoCore/commit/fcc1fa838b684f5cb52bf83f88f3078ac0f64de7))
 - update CHANGELOG.md [skip ci] ([`dfc31d6`](https://github.com/dstroy0/ProtoCore/commit/dfc31d658417c196efe98794f1975a4edea486f6))
@@ -382,6 +383,9 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- Merge branch 'main' of https://github.com/dstroy0/ProtoCore ([`3fa2286`](https://github.com/dstroy0/ProtoCore/commit/3fa228601ffa48edf8be90e6617f46bfaa36d47b))
+- (housekeeping): pimpl phase 3, public handles, internal ctx, fix tests ([`d204265`](https://github.com/dstroy0/ProtoCore/commit/d204265ce19bd2d97af528d947fc1a016445ae3b))
+- (housekeeping): pimpl phase 3, public handles, internal ctx, fix tests ([`5b23bbb`](https://github.com/dstroy0/ProtoCore/commit/5b23bbbf564f9dda8b098aca9c139e15997373f3))
 - Merge branch 'main' of https://github.com/dstroy0/ProtoCore ([`5ee3bf6`](https://github.com/dstroy0/ProtoCore/commit/5ee3bf69f011aa53a8363b1c8c25abaeded08758))
 - Merge Dependabot #27: build(deps): bump streetsidesoftware/cspell-action from 8 to 9 ([`50622ba`](https://github.com/dstroy0/ProtoCore/commit/50622ba0dcf70970854aa51082b34cdb458a48d1))
 - (housekeeping): pimpl phase 3, public handles, internal ctx, fix tests ([`77b7d67`](https://github.com/dstroy0/ProtoCore/commit/77b7d6714047bb5f9689391f748b593fa6444468))
@@ -435,7 +439,7 @@ All notable changes to ProtoCore are documented here.
 - (docs): rename literals/funcs ([`7de0c7c`](https://github.com/dstroy0/ProtoCore/commit/7de0c7cc1ff6c4cfa35d891e12940638c507b3d4))
 - (docs): ssh suite first pass rfc correctness. ([`836b2ba`](https://github.com/dstroy0/ProtoCore/commit/836b2bae18f1d95a58734600d46298f5f6891272))
 - ssh audit P0a/P0b/P1 in flight ([`ed6f704`](https://github.com/dstroy0/ProtoCore/commit/ed6f704c5a17ada81ed792392b242857f66d56de))
-- restore src/, test/core_setup/, tools/, ci and docs to c4368d386 ([`23a24a7`](https://github.com/dstroy0/ProtoCore/commit/23a24a7d0b9fe4b157d5a9ba601379e3b4d78d6d))
+- restore src/, core_setup/, tools/, ci and docs to c4368d386 ([`23a24a7`](https://github.com/dstroy0/ProtoCore/commit/23a24a7d0b9fe4b157d5a9ba601379e3b4d78d6d))
 - Revert "fix(swar): the Ns table made every leaf an indirect always_inline call at -Og" ([`41fc9a1`](https://github.com/dstroy0/ProtoCore/commit/41fc9a1655835ab8ada6aae70b0d282aaa65353e))
 - Revert "fix(nvs): the two backends gave different wrong answers for a blob and a string" ([`ea49e97`](https://github.com/dstroy0/ProtoCore/commit/ea49e97545cee8dc48bb14fea94ddd682f93b9e4))
 - Revert "test(config): the blob test pinned the host double's truncation, not the contract" ([`2173298`](https://github.com/dstroy0/ProtoCore/commit/2173298dda6b0bea7735df67f8b2de926ae6cf8f))
@@ -803,8 +807,8 @@ All notable changes to ProtoCore are documented here.
 - sequence the finish before the strlen it is compared against ([`1eb34c4`](https://github.com/dstroy0/ProtoCore/commit/1eb34c46ec2e0543c48272a3883da77f51bf0570))
 - build_src_filter reaches core_setup with a step up ([`9101e43`](https://github.com/dstroy0/ProtoCore/commit/9101e43eac3966a4bc92b21cfe50e688017b057c))
 - TcpListener bound add to stop's slot - positional init against a reordered struct ([`c16e6d8`](https://github.com/dstroy0/ProtoCore/commit/c16e6d8e3092ef57f833e176d6d0cee3dbe90810))
-- put the repo root on the include path so test/core_setup/ resolves from src/ ([`04bbc72`](https://github.com/dstroy0/ProtoCore/commit/04bbc7250f27fbe291cafec662ce79ce9a8a64b0))
-- repoint every board_drivers/ include at test/core_setup/, which the move left dead ([`8ee96f8`](https://github.com/dstroy0/ProtoCore/commit/8ee96f805e0c889a5ead944ca43d45e714b437d7))
+- put the repo root on the include path so core_setup/ resolves from src/ ([`04bbc72`](https://github.com/dstroy0/ProtoCore/commit/04bbc7250f27fbe291cafec662ce79ce9a8a64b0))
+- repoint every board_drivers/ include at core_setup/, which the move left dead ([`8ee96f8`](https://github.com/dstroy0/ProtoCore/commit/8ee96f805e0c889a5ead944ca43d45e714b437d7))
 - the crypto vector generators resolved test/ relative to their own dir, which the move broke ([`f64434d`](https://github.com/dstroy0/ProtoCore/commit/f64434d9b4329d75d895f1c88467b2030157f3d9))
 - drop baseline entries for core_setup, which is not source ([`12913d8`](https://github.com/dstroy0/ProtoCore/commit/12913d833a717d7c1e4b16b7eff45a60fecd146f))
 - two generators could not run, and three wrote the tree when asked to check it ([`1b2dadf`](https://github.com/dstroy0/ProtoCore/commit/1b2dadfce4fc0352c3c4d8b924003341abc11c0a))
